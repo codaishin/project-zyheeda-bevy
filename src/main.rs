@@ -13,7 +13,7 @@ fn setup_simple_3d_scene(
 	mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
 	spawn_plane(&mut commands, &mut meshes, &mut materials);
-	spawn_cube(&mut commands, meshes, materials);
+	spawn_cube(&mut commands, &mut meshes, &mut materials);
 	spawn_light(&mut commands);
 	spawn_camera(&mut commands);
 }
@@ -32,8 +32,8 @@ fn spawn_plane(
 
 fn spawn_cube(
 	commands: &mut Commands,
-	mut meshes: ResMut<Assets<Mesh>>,
-	mut materials: ResMut<Assets<StandardMaterial>>,
+	meshes: &mut ResMut<Assets<Mesh>>,
+	materials: &mut ResMut<Assets<StandardMaterial>>,
 ) {
 	commands.spawn(PbrBundle {
 		mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
