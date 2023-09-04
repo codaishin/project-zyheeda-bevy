@@ -29,6 +29,17 @@ jobs:
         lfs: true
     - name: Install libraries
       run: sudo apt install -y librust-alsa-sys-dev libudev-dev
+    - name: Cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: ${{ runner.os }}-cargo-
     - name: Build
       run: cargo build
     - name: Clippy
