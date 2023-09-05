@@ -1,6 +1,9 @@
 {
 	"editor.inlayHints.enabled": "off",
 	"editor.formatOnSave": true,
+	"editor.rulers": [
+		100
+	],
 	"files.insertFinalNewline": true,
 	"files.trimTrailingWhitespace": true,
 	"editor.tabSize": 2,
