@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.11.2"
+
+[dev-dependencies]
+mockall = "0.11.2"
