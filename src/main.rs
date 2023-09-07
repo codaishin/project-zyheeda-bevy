@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod test_tools;
 
+mod components;
 mod traits;
 
 use bevy::prelude::*;
