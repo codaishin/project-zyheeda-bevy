@@ -6,11 +6,14 @@ mod systems;
 mod traits;
 
 use bevy::prelude::*;
+use components::CamOrbit;
+use systems::orbit::orbit_transform_on_mouse_motion;
 
 fn main() {
 	App::new()
 		.add_plugins(DefaultPlugins)
 		.add_systems(Startup, setup_simple_3d_scene)
+		.add_systems(Update, orbit_transform_on_mouse_motion::<CamOrbit>)
 		.run();
 }
 
@@ -63,8 +66,15 @@ fn spawn_light(commands: &mut Commands) {
 }
 
 fn spawn_camera(commands: &mut Commands) {
-	commands.spawn(Camera3dBundle {
-		transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-		..default()
-	});
+	commands.spawn((
+		Camera3dBundle {
+			transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+			..default()
+		},
+		CamOrbit {
+			center: Vec3::ZERO,
+			distance: 5.,
+			sensitivity: 0.001,
+		},
+	));
 }
