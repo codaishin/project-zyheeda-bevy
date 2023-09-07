@@ -2,6 +2,7 @@
 mod test_tools;
 
 mod components;
+mod systems;
 mod traits;
 
 use bevy::prelude::*;
