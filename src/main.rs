@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod test_tools;
 
+mod traits;
+
 use bevy::prelude::*;
 
 fn main() {
