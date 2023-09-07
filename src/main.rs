@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod test_tools;
+
 use bevy::prelude::*;
 
 fn main() {
