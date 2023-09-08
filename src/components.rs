@@ -32,3 +32,9 @@ impl UnitsPerSecond {
 pub struct SimpleMovement {
 	pub speed: UnitsPerSecond,
 }
+
+#[derive(Component)]
+pub struct Player {
+	// FIXME: this field is temporary until we can properly schedule behavior
+	pub move_target: Option<Vec3>,
+}
