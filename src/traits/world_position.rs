@@ -1,3 +1,5 @@
+mod mouse_position_event;
+
 use bevy::prelude::*;
 
 pub trait GetWorldPosition {
