@@ -29,6 +29,7 @@ fn move_camera_on_move_event() {
 	let mut orbit = _Orbit::new();
 	let agent = Transform::from_translation(Vec3::ZERO);
 	let angels = Vec2::new(3., 4.);
+	let mut input = Input::<MouseButton>::default();
 	let mut app = App::new();
 
 	orbit
@@ -44,6 +45,34 @@ fn move_camera_on_move_event() {
 	app.world
 		.resource_mut::<Events<MouseMotion>>()
 		.send(MouseMotion { delta: angels });
+	input.press(MouseButton::Right);
+	app.insert_resource(input);
+
+	app.update();
+}
+
+#[test]
+fn do_not_move_camera_when_not_right_mouse_button_pressed() {
+	let mut orbit = _Orbit::new();
+	let agent = Transform::from_translation(Vec3::ZERO);
+	let angels = Vec2::new(3., 4.);
+	let input = Input::<MouseButton>::default();
+	let mut app = App::new();
+
+	orbit
+		.mock
+		.expect_orbit()
+		.with(eq(agent), eq(angels))
+		.times(0)
+		.return_const(());
+
+	app.add_systems(Update, orbit_transform_on_mouse_motion::<_Orbit>);
+	app.add_event::<MouseMotion>();
+	app.world.spawn((orbit, agent));
+	app.world
+		.resource_mut::<Events<MouseMotion>>()
+		.send(MouseMotion { delta: angels });
+	app.insert_resource(input);
 
 	app.update();
 }
