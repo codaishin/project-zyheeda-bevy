@@ -5,9 +5,12 @@ mod components;
 mod systems;
 mod traits;
 
+use std::f32::consts::PI;
+
 use bevy::prelude::*;
 use components::CamOrbit;
 use systems::orbit::orbit_transform_on_mouse_motion;
+use traits::orbit::{Orbit, Vec2Radians};
 
 fn main() {
 	App::new()
@@ -66,15 +69,21 @@ fn spawn_light(commands: &mut Commands) {
 }
 
 fn spawn_camera(commands: &mut Commands) {
+	let mut transform = Transform::from_translation(Vec3::X);
+	let mut orbit = CamOrbit {
+		center: Vec3::ZERO,
+		distance: 5.,
+		sensitivity: 1.,
+	};
+
+	orbit.orbit(&mut transform, Vec2Radians::new(-PI / 3., PI / 3.));
+	orbit.sensitivity = 0.005;
+
 	commands.spawn((
 		Camera3dBundle {
-			transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+			transform,
 			..default()
 		},
-		CamOrbit {
-			center: Vec3::ZERO,
-			distance: 5.,
-			sensitivity: 0.001,
-		},
+		orbit,
 	));
 }
