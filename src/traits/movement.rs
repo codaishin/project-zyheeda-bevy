@@ -1,3 +1,5 @@
+mod simple_movement;
+
 use bevy::prelude::*;
 
 pub type Seconds = f32;
