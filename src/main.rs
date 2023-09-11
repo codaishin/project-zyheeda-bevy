@@ -2,21 +2,29 @@
 mod test_tools;
 
 mod components;
+mod events;
 mod systems;
 mod traits;
 
-use std::f32::consts::PI;
-
 use bevy::prelude::*;
-use components::CamOrbit;
-use systems::orbit::orbit_transform_on_mouse_motion;
+use components::{CamOrbit, Player, SimpleMovement, UnitsPerSecond};
+use events::MousePositionEvent;
+use std::f32::consts::PI;
+use systems::{
+	events::{get_ray, send_move_command},
+	movement::move_player,
+	orbit::orbit_transform_on_mouse_motion,
+};
 use traits::orbit::{Orbit, Vec2Radians};
 
 fn main() {
 	App::new()
 		.add_plugins(DefaultPlugins)
+		.add_event::<MousePositionEvent>()
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(Update, orbit_transform_on_mouse_motion::<CamOrbit>)
+		.add_systems(Update, send_move_command(MousePositionEvent::new, get_ray))
+		.add_systems(Update, move_player::<MousePositionEvent, SimpleMovement>)
 		.run();
 }
 
@@ -48,12 +56,18 @@ fn spawn_cube(
 	meshes: &mut ResMut<Assets<Mesh>>,
 	materials: &mut ResMut<Assets<StandardMaterial>>,
 ) {
-	commands.spawn(PbrBundle {
-		mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-		material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-		transform: Transform::from_xyz(0.0, 0.5, 0.0),
-		..default()
-	});
+	commands.spawn((
+		PbrBundle {
+			mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+			material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
+			transform: Transform::from_xyz(0.0, 0.5, 0.0),
+			..default()
+		},
+		SimpleMovement {
+			speed: UnitsPerSecond::new(1.),
+		},
+		Player { move_target: None },
+	));
 }
 
 fn spawn_light(commands: &mut Commands) {

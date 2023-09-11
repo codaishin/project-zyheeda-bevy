@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod units_per_second_tests;
+
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -5,4 +8,33 @@ pub struct CamOrbit {
 	pub center: Vec3,
 	pub distance: f32,
 	pub sensitivity: f32,
+}
+
+/// Represents units per second.
+/// Is clamped at minimum 0.
+#[derive(PartialEq, PartialOrd)]
+pub struct UnitsPerSecond(f32);
+
+impl UnitsPerSecond {
+	pub fn new(value: f32) -> Self {
+		match value < 0. {
+			true => Self(0.),
+			false => Self(value),
+		}
+	}
+
+	pub fn unpack(&self) -> f32 {
+		self.0
+	}
+}
+
+#[derive(Component)]
+pub struct SimpleMovement {
+	pub speed: UnitsPerSecond,
+}
+
+#[derive(Component)]
+pub struct Player {
+	// FIXME: this field is temporary until we can properly schedule behavior
+	pub move_target: Option<Vec3>,
 }
