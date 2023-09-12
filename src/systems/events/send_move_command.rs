@@ -1,8 +1,8 @@
+use crate::traits::new::New;
 use crate::traits::set_world_position_from_ray::SetWorldPositionFromRay;
 use bevy::prelude::*;
 
-pub fn send_move_command<TWorldPositionEvent: SetWorldPositionFromRay + Event>(
-	create_event: impl Fn() -> TWorldPositionEvent,
+pub fn send_move_command<TWorldPositionEvent: SetWorldPositionFromRay + New + Event>(
 	get_ray: impl Fn(&Window, &Camera, &GlobalTransform) -> Option<Ray>,
 ) -> Box<
 	impl Fn(
@@ -30,7 +30,7 @@ pub fn send_move_command<TWorldPositionEvent: SetWorldPositionFromRay + Event>(
 				return;
 			};
 
-			let mut event = create_event();
+			let mut event = TWorldPositionEvent::new();
 			event.set_world_position(ray);
 			event_writer.send(event);
 		},
@@ -45,18 +45,14 @@ pub fn get_ray(window: &Window, camera: &Camera, transform: &GlobalTransform) ->
 
 #[cfg(test)]
 mod tests {
-	use bevy::prelude::*;
-
-	use crate::traits::set_world_position_from_ray::SetWorldPositionFromRay;
-
-	use super::send_move_command;
+	use super::*;
 
 	#[derive(Event)]
 	struct _Event {
 		pub called_with_rays: Vec<Ray>,
 	}
 
-	impl _Event {
+	impl New for _Event {
 		fn new() -> Self {
 			Self {
 				called_with_rays: vec![],
@@ -107,7 +103,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			send_move_command(_Event::new, move |_, _, _| Some(expected_ray)),
+			send_move_command::<_Event>(move |_, _, _| Some(expected_ray)),
 		);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
@@ -133,7 +129,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			send_move_command(_Event::new, |_, _, _| {
+			send_move_command::<_Event>(|_, _, _| {
 				Some(Ray {
 					origin: Vec3::ZERO,
 					direction: Vec3::ONE,
@@ -153,7 +149,7 @@ mod tests {
 	fn no_event_when_no_ray() {
 		let (mut app, ..) = setup_app();
 
-		app.add_systems(Update, send_move_command(_Event::new, |_, _, _| None));
+		app.add_systems(Update, send_move_command::<_Event>(|_, _, _| None));
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -176,7 +172,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			send_move_command(_Event::new, move |w, c, c_t| {
+			send_move_command::<_Event>(move |w, c, c_t| {
 				assert_eq!(
 					(window_title.to_owned(), camera_order, cam_transform),
 					(w.title.to_owned(), c.order, *c_t)

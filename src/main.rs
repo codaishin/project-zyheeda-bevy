@@ -14,19 +14,16 @@ use systems::{
 	events::send_move_command::{get_ray, send_move_command},
 	movement::{move_on_orbit::move_on_orbit, move_player::move_player},
 };
-use traits::{
-	new::New,
-	orbit::{Orbit, Vec2Radians},
-};
+use traits::orbit::{Orbit, Vec2Radians};
 
 fn main() {
 	App::new()
 		.add_plugins(DefaultPlugins)
 		.add_event::<MouseEvent>()
 		.add_systems(Startup, setup_simple_3d_scene)
-		.add_systems(Update, move_on_orbit::<CamOrbit>)
-		.add_systems(Update, send_move_command(MouseEvent::new, get_ray))
+		.add_systems(Update, send_move_command::<MouseEvent>(get_ray))
 		.add_systems(Update, move_player::<MouseEvent, SimpleMovement>)
+		.add_systems(Update, move_on_orbit::<CamOrbit>)
 		.run();
 }
 
