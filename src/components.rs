@@ -1,6 +1,3 @@
-#[cfg(test)]
-mod units_per_second_tests;
-
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -37,4 +34,23 @@ pub struct SimpleMovement {
 pub struct Player {
 	// FIXME: this field is temporary until we can properly schedule behavior
 	pub move_target: Option<Vec3>,
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn set_value() {
+		let speed = UnitsPerSecond::new(42.);
+
+		assert_eq!(42., speed.unpack());
+	}
+
+	#[test]
+	fn min_zero() {
+		let speed = UnitsPerSecond::new(-42.);
+
+		assert_eq!(0., speed.unpack());
+	}
 }
