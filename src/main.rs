@@ -14,7 +14,10 @@ use systems::{
 	events::send_move_command::{get_ray, send_move_command},
 	movement::{move_on_orbit::move_on_orbit, move_player::move_player},
 };
-use traits::orbit::{Orbit, Vec2Radians};
+use traits::{
+	new::New,
+	orbit::{Orbit, Vec2Radians},
+};
 
 fn main() {
 	App::new()
