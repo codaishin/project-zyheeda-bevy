@@ -1,51 +1,39 @@
+use crate::traits::get_ray::GetRayFromCamera;
 use crate::traits::new::New;
 use crate::traits::set_world_position_from_ray::SetWorldPositionFromRay;
 use bevy::prelude::*;
 
-pub fn send_move_command<TWorldPositionEvent: SetWorldPositionFromRay + New + Event>(
-	get_ray: impl Fn(&Window, &Camera, &GlobalTransform) -> Option<Ray>,
-) -> Box<
-	impl Fn(
-		Res<Input<MouseButton>>,
-		Query<&Window>,
-		Query<(&Camera, &GlobalTransform)>,
-		EventWriter<TWorldPositionEvent>,
-	),
-> {
-	Box::new(
-		move |mouse: Res<Input<MouseButton>>,
-		      windows: Query<&Window>,
-		      query: Query<(&Camera, &GlobalTransform)>,
-		      mut event_writer: EventWriter<TWorldPositionEvent>| {
-			if !mouse.just_pressed(MouseButton::Left) {
-				return;
-			}
-			let Ok((cam, transform)) = query.get_single() else {
-				return; // FIXME: Handle properly
-			};
-			let Ok(window) = windows.get_single() else {
-				return; // FIXME: Handle properly
-			};
-			let Some(ray) = get_ray(window, cam, transform) else {
-				return;
-			};
+pub fn send_move_command<
+	TWorldPositionEvent: SetWorldPositionFromRay + New + Event,
+	TTools: GetRayFromCamera,
+>(
+	mouse: Res<Input<MouseButton>>,
+	windows: Query<&Window>,
+	query: Query<(&Camera, &GlobalTransform)>,
+	mut event_writer: EventWriter<TWorldPositionEvent>,
+) {
+	if !mouse.just_pressed(MouseButton::Left) {
+		return;
+	}
+	let Ok((camera, transform)) = query.get_single() else {
+		return; // FIXME: Handle properly
+	};
+	let Ok(window) = windows.get_single() else {
+		return; // FIXME: Handle properly
+	};
+	let Some(ray) = TTools::get_ray(camera, transform, window) else {
+		return;
+	};
 
-			let mut event = TWorldPositionEvent::new();
-			event.set_world_position(ray);
-			event_writer.send(event);
-		},
-	)
-}
-
-pub fn get_ray(window: &Window, camera: &Camera, transform: &GlobalTransform) -> Option<Ray> {
-	window
-		.cursor_position()
-		.and_then(|c| camera.viewport_to_world(transform, c))
+	let mut event = TWorldPositionEvent::new();
+	event.set_world_position(ray);
+	event_writer.send(event);
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use mockall::automock;
 
 	#[derive(Event)]
 	struct _Event {
@@ -96,15 +84,18 @@ mod tests {
 	#[test]
 	fn send_event_with_ray() {
 		let (mut app, ..) = setup_app();
-		let expected_ray = Ray {
-			origin: Vec3::ONE,
-			direction: Vec3::Z,
-		};
 
-		app.add_systems(
-			Update,
-			send_move_command::<_Event>(move |_, _, _| Some(expected_ray)),
-		);
+		struct _Tools {}
+		impl GetRayFromCamera for _Tools {
+			fn get_ray(_c: &Camera, _ct: &GlobalTransform, _w: &Window) -> Option<Ray> {
+				Some(Ray {
+					origin: Vec3::ONE,
+					direction: Vec3::Z,
+				})
+			}
+		}
+
+		app.add_systems(Update, send_move_command::<_Event, _Tools>);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -120,22 +111,30 @@ mod tests {
 			panic!("got {} ray calls, expected 1", event.called_with_rays.len())
 		};
 
-		assert_eq!(expected_ray, *ray)
+		assert_eq!(
+			Ray {
+				origin: Vec3::ONE,
+				direction: Vec3::Z,
+			},
+			*ray
+		)
 	}
 
 	#[test]
 	fn no_event_when_no_input() {
 		let (mut app, ..) = setup_app();
 
-		app.add_systems(
-			Update,
-			send_move_command::<_Event>(|_, _, _| {
+		struct _Tools {}
+		impl GetRayFromCamera for _Tools {
+			fn get_ray(_c: &Camera, _ct: &GlobalTransform, _w: &Window) -> Option<Ray> {
 				Some(Ray {
 					origin: Vec3::ZERO,
 					direction: Vec3::ONE,
 				})
-			}),
-		);
+			}
+		}
+
+		app.add_systems(Update, send_move_command::<_Event, _Tools>);
 		app.update();
 
 		let event_resource = app.world.resource::<Events<_Event>>();
@@ -149,7 +148,14 @@ mod tests {
 	fn no_event_when_no_ray() {
 		let (mut app, ..) = setup_app();
 
-		app.add_systems(Update, send_move_command::<_Event>(|_, _, _| None));
+		struct _Tools {}
+		impl GetRayFromCamera for _Tools {
+			fn get_ray(_c: &Camera, _ct: &GlobalTransform, _w: &Window) -> Option<Ray> {
+				None
+			}
+		}
+
+		app.add_systems(Update, send_move_command::<_Event, _Tools>);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -164,22 +170,31 @@ mod tests {
 
 	#[test]
 	fn call_get_cursor_pos_with_correct_args() {
-		let (mut app, cam_id, cam_transform, window_id) = setup_app();
-
-		// using fields as comparison for non equatable structs
+		let (mut app, cam_id, camera_transform, window_id) = setup_app();
 		let window_title = app.world.get::<Window>(window_id).unwrap().title.to_owned();
 		let camera_order = app.world.get::<Camera>(cam_id).unwrap().order;
 
-		app.add_systems(
-			Update,
-			send_move_command::<_Event>(move |w, c, c_t| {
-				assert_eq!(
-					(window_title.to_owned(), camera_order, cam_transform),
-					(w.title.to_owned(), c.order, *c_t)
-				);
+		pub struct _Tools {}
+
+		#[automock]
+		impl GetRayFromCamera for _Tools {
+			fn get_ray(_c: &Camera, _ct: &GlobalTransform, _w: &Window) -> Option<Ray> {
 				None
-			}),
-		);
+			}
+		}
+
+		let get_ray_context = Mock_Tools::get_ray_context();
+		get_ray_context
+			.expect()
+			.withf(move |arg_camera, arg_camera_transform, arg_window| {
+				// using fields values as comparison for non equatable structs Camera and Window
+				arg_camera.order == camera_order
+					&& *arg_camera_transform == camera_transform
+					&& arg_window.title == window_title
+			})
+			.return_const(None);
+
+		app.add_systems(Update, send_move_command::<_Event, Mock_Tools>);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
