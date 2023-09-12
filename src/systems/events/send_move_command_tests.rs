@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::traits::world_position::SetWorldPositionFromRay;
+use crate::traits::set_world_position_from_ray::SetWorldPositionFromRay;
 
 use super::send_move_command;
 

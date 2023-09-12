@@ -6,12 +6,12 @@ pub struct Plane {
 }
 
 #[derive(Event)]
-pub struct MousePositionEvent {
+pub struct MouseEvent {
 	pub collision_plane: Plane,
 	pub world_position: Option<Vec3>,
 }
 
-impl MousePositionEvent {
+impl MouseEvent {
 	pub fn new() -> Self {
 		Self {
 			collision_plane: Plane {

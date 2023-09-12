@@ -2,8 +2,8 @@ use super::move_player;
 use crate::{
 	components::Player,
 	traits::{
+		get_target::GetTarget,
 		movement::{Movement, Seconds},
-		world_position::GetWorldPosition,
 	},
 };
 use bevy::prelude::*;
@@ -37,9 +37,9 @@ impl _Movement {
 }
 
 #[automock]
-impl GetWorldPosition for _Event {
-	fn get_world_position(&self) -> Option<Vec3> {
-		self.mock.get_world_position()
+impl GetTarget for _Event {
+	fn get_target(&self) -> Option<Vec3> {
+		self.mock.get_target()
 	}
 }
 
@@ -77,11 +77,7 @@ fn move_player_once() {
 	let mut movement = _Movement::new();
 	let time_delta = Duration::from_millis(30);
 
-	event
-		.mock
-		.expect_get_world_position()
-		.times(1)
-		.return_const(target);
+	event.mock.expect_get_target().times(1).return_const(target);
 
 	movement
 		.mock
@@ -107,11 +103,7 @@ fn move_player_twice() {
 	let mut event = _Event::new();
 	let mut movement = _Movement::new();
 
-	event
-		.mock
-		.expect_get_world_position()
-		.times(1)
-		.return_const(target);
+	event.mock.expect_get_target().times(1).return_const(target);
 
 	movement
 		.mock
@@ -136,11 +128,7 @@ fn do_not_move_if_already_on_target() {
 	let mut event = _Event::new();
 	let mut movement = _Movement::new();
 
-	event
-		.mock
-		.expect_get_world_position()
-		.times(1)
-		.return_const(target);
+	event.mock.expect_get_target().times(1).return_const(target);
 
 	movement
 		.mock

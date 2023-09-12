@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod send_move_command_tests;
 
-use crate::traits::world_position::SetWorldPositionFromRay;
+use crate::traits::set_world_position_from_ray::SetWorldPositionFromRay;
 use bevy::prelude::*;
 
 pub fn get_ray(window: &Window, camera: &Camera, transform: &GlobalTransform) -> Option<Ray> {

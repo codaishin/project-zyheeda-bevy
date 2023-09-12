@@ -8,7 +8,7 @@ mod traits;
 
 use bevy::prelude::*;
 use components::{CamOrbit, Player, SimpleMovement, UnitsPerSecond};
-use events::MousePositionEvent;
+use events::MouseEvent;
 use std::f32::consts::PI;
 use systems::{
 	events::{get_ray, send_move_command},
@@ -20,11 +20,11 @@ use traits::orbit::{Orbit, Vec2Radians};
 fn main() {
 	App::new()
 		.add_plugins(DefaultPlugins)
-		.add_event::<MousePositionEvent>()
+		.add_event::<MouseEvent>()
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(Update, orbit_transform_on_mouse_motion::<CamOrbit>)
-		.add_systems(Update, send_move_command(MousePositionEvent::new, get_ray))
-		.add_systems(Update, move_player::<MousePositionEvent, SimpleMovement>)
+		.add_systems(Update, send_move_command(MouseEvent::new, get_ray))
+		.add_systems(Update, move_player::<MouseEvent, SimpleMovement>)
 		.run();
 }
 

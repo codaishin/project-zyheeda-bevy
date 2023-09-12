@@ -4,8 +4,8 @@ mod move_player_tests;
 use crate::{
 	components::Player,
 	traits::{
+		get_target::GetTarget,
 		movement::{Movement, Seconds},
-		world_position::GetWorldPosition,
 	},
 };
 use bevy::prelude::*;
@@ -28,7 +28,7 @@ fn execute_move(
 }
 
 pub fn move_player<
-	TWorldPositionEvent: GetWorldPosition + Event,
+	TWorldPositionEvent: GetTarget + Event,
 	TMovementComponent: Movement + Component,
 >(
 	time: Res<Time>,
@@ -38,7 +38,7 @@ pub fn move_player<
 	for (mut player, movement, mut transform) in query.iter_mut() {
 		player.move_target = event_reader
 			.iter()
-			.fold(player.move_target, |_, e| e.get_world_position());
+			.fold(player.move_target, |_, e| e.get_target());
 		execute_move(
 			&mut transform,
 			movement,
