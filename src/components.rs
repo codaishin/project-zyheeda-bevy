@@ -9,7 +9,7 @@ pub struct CamOrbit {
 
 /// Represents units per second.
 /// Is clamped at minimum 0.
-#[derive(PartialEq, PartialOrd, Clone, Copy)]
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
 pub struct UnitsPerSecond(f32);
 
 impl UnitsPerSecond {
@@ -25,7 +25,7 @@ impl UnitsPerSecond {
 	}
 }
 
-#[derive(Component, Clone, Copy)]
+#[derive(Component, Clone, Copy, PartialEq, Debug)]
 pub struct SimpleMovement {
 	pub speed: UnitsPerSecond,
 }
