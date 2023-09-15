@@ -9,7 +9,7 @@ pub struct CamOrbit {
 
 /// Represents units per second.
 /// Is clamped at minimum 0.
-#[derive(PartialEq, PartialOrd)]
+#[derive(PartialEq, PartialOrd, Clone, Copy)]
 pub struct UnitsPerSecond(f32);
 
 impl UnitsPerSecond {
@@ -25,7 +25,7 @@ impl UnitsPerSecond {
 	}
 }
 
-#[derive(Component)]
+#[derive(Component, Clone, Copy)]
 pub struct SimpleMovement {
 	pub speed: UnitsPerSecond,
 }
@@ -54,3 +54,6 @@ mod tests {
 		assert_eq!(0., speed.unpack());
 	}
 }
+
+#[derive(Component)]
+pub struct BehaviorSchedule(pub Vec<SimpleMovement>);
