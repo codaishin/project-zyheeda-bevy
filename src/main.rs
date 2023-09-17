@@ -8,22 +8,26 @@ mod tools;
 mod traits;
 
 use bevy::prelude::*;
-use components::{CamOrbit, Player, SimpleMovement, UnitsPerSecond};
-use events::MouseEvent;
+use components::{BehaviorSchedule, CamOrbit, Player, SimpleMovement, UnitsPerSecond};
+use events::{MouseEvent, MoveEvent};
 use std::f32::consts::PI;
 use systems::{
-	events::send_move_command::send_move_command,
+	events::mouse_left_move::mouse_left_move,
 	movement::{move_on_orbit::move_on_orbit, move_player::move_player},
 };
 use tools::Tools;
-use traits::orbit::{Orbit, Vec2Radians};
+use traits::{
+	new::New,
+	orbit::{Orbit, Vec2Radians},
+};
 
 fn main() {
 	App::new()
 		.add_plugins(DefaultPlugins)
 		.add_event::<MouseEvent>()
+		.add_event::<MoveEvent>()
 		.add_systems(Startup, setup_simple_3d_scene)
-		.add_systems(Update, send_move_command::<MouseEvent, Tools>)
+		.add_systems(Update, mouse_left_move::<MoveEvent, Tools>)
 		.add_systems(Update, move_player::<MouseEvent, SimpleMovement>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
 		.run();
@@ -69,6 +73,7 @@ fn spawn_cube(
 			speed: UnitsPerSecond::new(1.),
 		},
 		Player,
+		BehaviorSchedule::new(),
 	));
 }
 
