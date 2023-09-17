@@ -8,7 +8,7 @@ mod tools;
 mod traits;
 
 use bevy::prelude::*;
-use components::{BehaviorSchedule, CamOrbit, Player, SimpleMovement, UnitsPerSecond};
+use components::{BehaviorSchedule, CamOrbit, Player, SimpleMovement};
 use events::{MouseEvent, MoveEvent};
 use std::f32::consts::PI;
 use systems::{
@@ -73,10 +73,7 @@ fn spawn_cube(
 			transform: Transform::from_xyz(0.0, 0.5, 0.0),
 			..default()
 		},
-		SimpleMovement {
-			target: None,
-			speed: UnitsPerSecond::new(1.),
-		},
+		SimpleMovement { target: None },
 		Player,
 		BehaviorSchedule::new(),
 	));

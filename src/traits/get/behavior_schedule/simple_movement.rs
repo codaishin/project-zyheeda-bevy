@@ -17,10 +17,7 @@ mod tests {
 	use bevy::prelude::Vec3;
 
 	use super::*;
-	use crate::{
-		components::UnitsPerSecond,
-		traits::{add::Add, new::New},
-	};
+	use crate::traits::{add::Add, new::New};
 
 	#[test]
 	fn get_none() {
@@ -34,7 +31,6 @@ mod tests {
 		let mut scheduler = BehaviorSchedule::new();
 		let movement = SimpleMovement {
 			target: Some(Vec3::ONE),
-			speed: UnitsPerSecond::new(0.3),
 		};
 
 		scheduler.add(movement);
@@ -45,10 +41,7 @@ mod tests {
 	#[test]
 	fn get_none_if_target_none() {
 		let mut scheduler = BehaviorSchedule::new();
-		let movement = SimpleMovement {
-			target: None,
-			speed: UnitsPerSecond::new(0.3),
-		};
+		let movement = SimpleMovement { target: None };
 
 		scheduler.add(movement);
 

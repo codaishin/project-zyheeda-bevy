@@ -12,16 +12,12 @@ impl Add<SimpleMovement> for BehaviorSchedule {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::UnitsPerSecond;
 	use crate::traits::new::New;
 
 	#[test]
 	fn add() {
 		let mut schedule = BehaviorSchedule::new();
-		let movement = SimpleMovement {
-			target: None,
-			speed: UnitsPerSecond::new(4.),
-		};
+		let movement = SimpleMovement { target: None };
 		schedule.add(movement);
 
 		assert_eq!(&movement, schedule.0.first().unwrap());

@@ -14,16 +14,12 @@ impl SetTarget for SimpleMovement {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::UnitsPerSecond;
 	use bevy::prelude::Vec3;
 
 	#[test]
 	fn set_target() {
 		let target = Some(Vec3::X);
-		let mut movement = SimpleMovement {
-			target: None,
-			speed: UnitsPerSecond::new(0.),
-		};
+		let mut movement = SimpleMovement { target: None };
 
 		movement.set_target(target);
 
@@ -36,7 +32,6 @@ mod tests {
 		let original_target = Some(Vec3::Y);
 		let mut movement = SimpleMovement {
 			target: original_target,
-			speed: UnitsPerSecond::new(0.),
 		};
 
 		movement.set_target(target);

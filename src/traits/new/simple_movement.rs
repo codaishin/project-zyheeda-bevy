@@ -1,6 +1,6 @@
 use bevy::prelude::Vec3;
 
-use crate::components::{SimpleMovement, UnitsPerSecond};
+use crate::components::SimpleMovement;
 
 use super::New1;
 
@@ -8,7 +8,6 @@ impl New1<Vec3> for SimpleMovement {
 	fn new(target: Vec3) -> Self {
 		Self {
 			target: Some(target),
-			speed: UnitsPerSecond::new(0.),
 		}
 	}
 }

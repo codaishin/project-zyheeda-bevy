@@ -28,7 +28,7 @@ mod move_player_tests {
 		components::Player,
 		traits::{
 			get_target::GetTarget,
-			movement::{Movement, Seconds},
+			movement::{Movement, Units},
 			set_target::SetTarget,
 		},
 	};
@@ -72,7 +72,7 @@ mod move_player_tests {
 	mock!(
 		_Combined {}
 		impl Movement for _Combined {
-			fn update(&mut self, agent: &mut Transform, delta_time: Seconds) {}
+			fn update(&mut self, agent: &mut Transform, delta_time: Units) {}
 		}
 		impl SetTarget for _Combined {
 			fn set_target(&mut self, target: Option<Vec3>) {}
@@ -80,7 +80,7 @@ mod move_player_tests {
 	);
 
 	impl Movement for _Movement {
-		fn update(&mut self, agent: &mut Transform, delta_time: Seconds) {
+		fn update(&mut self, agent: &mut Transform, delta_time: Units) {
 			self.mock.update(agent, delta_time)
 		}
 	}

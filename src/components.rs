@@ -28,7 +28,6 @@ impl UnitsPerSecond {
 #[derive(Component, Clone, Copy, PartialEq, Debug)]
 pub struct SimpleMovement {
 	pub target: Option<Vec3>,
-	pub speed: UnitsPerSecond,
 }
 
 #[derive(Component)]
