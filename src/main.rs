@@ -14,6 +14,7 @@ use std::f32::consts::PI;
 use systems::{
 	events::mouse_left_move::mouse_left_move,
 	movement::{move_on_orbit::move_on_orbit, move_player::move_player},
+	player_behavior::schedule_targeted::schedule_targeted,
 };
 use tools::Tools;
 use traits::{
@@ -28,6 +29,10 @@ fn main() {
 		.add_event::<MoveEvent>()
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(Update, mouse_left_move::<MoveEvent, Tools>)
+		.add_systems(
+			Update,
+			schedule_targeted::<SimpleMovement, MoveEvent, BehaviorSchedule>,
+		)
 		.add_systems(Update, move_player::<MouseEvent, SimpleMovement>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
 		.run();
