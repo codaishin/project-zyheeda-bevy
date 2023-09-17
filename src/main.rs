@@ -65,9 +65,10 @@ fn spawn_cube(
 			..default()
 		},
 		SimpleMovement {
+			target: None,
 			speed: UnitsPerSecond::new(1.),
 		},
-		Player { move_target: None },
+		Player,
 	));
 }
 

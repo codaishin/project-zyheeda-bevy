@@ -19,6 +19,7 @@ mod tests {
 	fn add() {
 		let mut schedule = BehaviorSchedule::new();
 		let movement = SimpleMovement {
+			target: None,
 			speed: UnitsPerSecond::new(4.),
 		};
 		schedule.add(movement);

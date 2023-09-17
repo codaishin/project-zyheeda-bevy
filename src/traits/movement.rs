@@ -5,5 +5,5 @@ use bevy::prelude::*;
 pub type Seconds = f32;
 
 pub trait Movement {
-	fn move_towards(&self, agent: &mut Transform, target: Vec3, delta_time: Seconds);
+	fn update(&self, agent: &mut Transform, delta_time: Seconds);
 }

@@ -27,14 +27,12 @@ impl UnitsPerSecond {
 
 #[derive(Component, Clone, Copy, PartialEq, Debug)]
 pub struct SimpleMovement {
+	pub target: Option<Vec3>,
 	pub speed: UnitsPerSecond,
 }
 
 #[derive(Component)]
-pub struct Player {
-	// FIXME: this field is temporary until we can properly schedule behavior
-	pub move_target: Option<Vec3>,
-}
+pub struct Player;
 
 #[cfg(test)]
 mod tests {

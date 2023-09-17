@@ -28,6 +28,7 @@ mod tests {
 	fn get_first() {
 		let mut scheduler = BehaviorSchedule::new();
 		let movement = SimpleMovement {
+			target: None,
 			speed: UnitsPerSecond::new(0.3),
 		};
 
