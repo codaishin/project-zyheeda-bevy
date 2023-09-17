@@ -72,7 +72,7 @@ mod move_player_tests {
 	mock!(
 		_Combined {}
 		impl Movement for _Combined {
-			fn update(&self, agent: &mut Transform, delta_time: Seconds) {}
+			fn update(&mut self, agent: &mut Transform, delta_time: Seconds) {}
 		}
 		impl SetTarget for _Combined {
 			fn set_target(&mut self, target: Option<Vec3>) {}
@@ -80,7 +80,7 @@ mod move_player_tests {
 	);
 
 	impl Movement for _Movement {
-		fn update(&self, agent: &mut Transform, delta_time: Seconds) {
+		fn update(&mut self, agent: &mut Transform, delta_time: Seconds) {
 			self.mock.update(agent, delta_time)
 		}
 	}

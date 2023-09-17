@@ -5,12 +5,17 @@ use crate::{
 
 impl Get<SimpleMovement> for BehaviorSchedule {
 	fn get(&mut self) -> Option<&mut SimpleMovement> {
-		self.0.first_mut()
+		let first = self.0.first_mut()?;
+		_ = first.target?;
+
+		Some(first)
 	}
 }
 
 #[cfg(test)]
 mod tests {
+	use bevy::prelude::Vec3;
+
 	use super::*;
 	use crate::{
 		components::UnitsPerSecond,
@@ -28,12 +33,25 @@ mod tests {
 	fn get_first() {
 		let mut scheduler = BehaviorSchedule::new();
 		let movement = SimpleMovement {
-			target: None,
+			target: Some(Vec3::ONE),
 			speed: UnitsPerSecond::new(0.3),
 		};
 
 		scheduler.add(movement);
 
 		assert_eq!(&movement, scheduler.get().unwrap());
+	}
+
+	#[test]
+	fn get_none_if_target_none() {
+		let mut scheduler = BehaviorSchedule::new();
+		let movement = SimpleMovement {
+			target: None,
+			speed: UnitsPerSecond::new(0.3),
+		};
+
+		scheduler.add(movement);
+
+		assert!(scheduler.get().is_none());
 	}
 }

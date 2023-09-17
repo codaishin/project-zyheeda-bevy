@@ -3,7 +3,7 @@ use crate::components::SimpleMovement;
 use bevy::prelude::*;
 
 impl Movement for SimpleMovement {
-	fn update(&self, agent: &mut Transform, delta_time: Seconds) {
+	fn update(&mut self, agent: &mut Transform, delta_time: Seconds) {
 		let Some(target) = self.target else {
 			return;
 		};
@@ -11,10 +11,13 @@ impl Movement for SimpleMovement {
 		let direction = target - agent.translation;
 		let distance = self.speed.unpack() * delta_time;
 
-		match distance < direction.length() {
-			true => agent.translation += direction.normalize() * distance,
-			false => agent.translation = target,
-		};
+		if distance < direction.length() {
+			agent.translation += direction.normalize() * distance;
+			return;
+		}
+
+		agent.translation = target;
+		self.target = None;
 	}
 }
 
@@ -29,7 +32,7 @@ mod tests {
 
 	#[test]
 	fn move_to_target() {
-		let movement = SimpleMovement {
+		let mut movement = SimpleMovement {
 			target: Some(Vec3::X),
 			speed: UnitsPerSecond::new(1.),
 		};
@@ -42,7 +45,7 @@ mod tests {
 
 	#[test]
 	fn move_to_target_with_appropriate_speed() {
-		let movement = SimpleMovement {
+		let mut movement = SimpleMovement {
 			target: Some(Vec3::new(2., 0., 0.)),
 			speed: UnitsPerSecond::new(0.5),
 		};
@@ -55,7 +58,7 @@ mod tests {
 
 	#[test]
 	fn move_to_target_with_speed_scaled_on_delta() {
-		let movement = SimpleMovement {
+		let mut movement = SimpleMovement {
 			target: Some(Vec3::new(2., 0., 0.)),
 			speed: UnitsPerSecond::new(0.5),
 		};
@@ -68,7 +71,7 @@ mod tests {
 
 	#[test]
 	fn do_not_move_directly_if_speed_with_delta_too_small() {
-		let movement = SimpleMovement {
+		let mut movement = SimpleMovement {
 			target: Some(Vec3::new(2., 0., 0.)),
 			speed: UnitsPerSecond::new(2.),
 		};
@@ -81,7 +84,7 @@ mod tests {
 
 	#[test]
 	fn do_not_overshoot() {
-		let movement = SimpleMovement {
+		let mut movement = SimpleMovement {
 			target: Some(Vec3::X),
 			speed: UnitsPerSecond::new(2.),
 		};
@@ -94,7 +97,7 @@ mod tests {
 
 	#[test]
 	fn do_not_move_when_no_target() {
-		let movement = SimpleMovement {
+		let mut movement = SimpleMovement {
 			target: None,
 			speed: UnitsPerSecond::new(2.),
 		};
@@ -103,5 +106,18 @@ mod tests {
 		movement.update(&mut agent, 1.);
 
 		assert_eq!(Vec3::Y, agent.translation);
+	}
+
+	#[test]
+	fn set_target_none_when_target_reached() {
+		let mut movement = SimpleMovement {
+			target: Some(Vec3::ONE),
+			speed: UnitsPerSecond::new(100.),
+		};
+		let mut agent = Transform::from_translation(Vec3::ZERO);
+
+		movement.update(&mut agent, 1.);
+
+		assert!(movement.target.is_none());
 	}
 }
