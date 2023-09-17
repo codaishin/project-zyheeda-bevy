@@ -1,3 +1,4 @@
+use crate::behaviors::SimpleMovement;
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -25,13 +26,10 @@ impl UnitsPerSecond {
 	}
 }
 
-#[derive(Component, Clone, Copy, PartialEq, Debug)]
-pub struct SimpleMovement {
-	pub target: Option<Vec3>,
-}
-
 #[derive(Component)]
-pub struct Player;
+pub struct Player {
+	pub movement_speed: UnitsPerSecond,
+}
 
 #[cfg(test)]
 mod tests {

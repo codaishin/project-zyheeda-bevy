@@ -21,6 +21,8 @@ pub fn schedule_targeted<
 
 #[cfg(test)]
 mod tests {
+	use crate::components::UnitsPerSecond;
+
 	use super::*;
 	use bevy::prelude::App;
 	use mockall::automock;
@@ -82,7 +84,12 @@ mod tests {
 			.withf(move |behavior| behavior.target == event.target)
 			.times(1)
 			.return_const(());
-		app.world.spawn((Player, state));
+		app.world.spawn((
+			Player {
+				movement_speed: UnitsPerSecond::new(1.),
+			},
+			state,
+		));
 		app.add_event::<_Event>();
 		app.world.resource_mut::<Events<_Event>>().send(event);
 		app.update();

@@ -1,7 +1,4 @@
-use crate::{
-	components::{BehaviorSchedule, SimpleMovement},
-	traits::get::Get,
-};
+use crate::{behaviors::SimpleMovement, components::BehaviorSchedule, traits::get::Get};
 
 impl Get<SimpleMovement> for BehaviorSchedule {
 	fn get(&mut self) -> Option<&mut SimpleMovement> {

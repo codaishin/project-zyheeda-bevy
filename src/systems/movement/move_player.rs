@@ -1,93 +1,49 @@
 use crate::{
 	components::Player,
-	traits::{get_target::GetTarget, movement::Movement, set_target::SetTarget},
+	traits::{get::Get, movement::Movement},
 };
 use bevy::prelude::*;
 
-pub fn move_player<
-	TWorldPositionEvent: GetTarget + Event,
-	TMovementComponent: Movement + SetTarget + Component,
->(
+pub fn move_player<TMovementComponent: Movement, TState: Get<TMovementComponent> + Component>(
 	time: Res<Time>,
-	mut event_reader: EventReader<TWorldPositionEvent>,
-	mut query: Query<(&mut TMovementComponent, &mut Transform, &Player)>,
+	mut query: Query<(&mut TState, &mut Transform, &Player)>,
 ) {
-	let Ok((mut movement, mut transform, ..)) = query.get_single_mut() else {
+	let Ok((mut state, mut transform, player)) = query.get_single_mut() else {
 		return; //FIXME: Handle properly
 	};
-	for event in event_reader.iter() {
-		movement.set_target(event.get_target());
-	}
-	movement.update(&mut transform, time.delta_seconds());
+	let Some(movement) = state.get() else {
+		return;
+	};
+
+	let speed = player.movement_speed.unpack();
+	movement.update(&mut transform, time.delta_seconds() * speed);
 }
 
 #[cfg(test)]
 mod move_player_tests {
-	use super::move_player;
+	use super::*;
 	use crate::{
-		components::Player,
-		traits::{
-			get_target::GetTarget,
-			movement::{Movement, Units},
-			set_target::SetTarget,
-		},
+		components::{Player, UnitsPerSecond},
+		traits::movement::{Movement, Units},
 	};
-	use bevy::prelude::*;
-	use mockall::{automock, mock, predicate::eq};
+	use mockall::{automock, predicate::eq};
 	use std::time::Duration;
 
-	#[derive(Event)]
-	struct _Event {
-		mock: Mock_Event,
+	struct _Movement;
+
+	#[automock]
+	impl Movement for _Movement {
+		fn update(&mut self, _agent: &mut Transform, _delta_time: Units) {}
 	}
 
 	#[derive(Component)]
-	struct _Movement {
-		mock: Mock_Combined,
+	struct _State {
+		movement: Option<Mock_Movement>,
 	}
 
-	impl _Event {
-		pub fn new() -> Self {
-			Self {
-				mock: Mock_Event::new(),
-			}
-		}
-	}
-
-	impl _Movement {
-		pub fn new() -> Self {
-			Self {
-				mock: Mock_Combined::new(),
-			}
-		}
-	}
-
-	#[automock]
-	impl GetTarget for _Event {
-		fn get_target(&self) -> Option<Vec3> {
-			self.mock.get_target()
-		}
-	}
-
-	mock!(
-		_Combined {}
-		impl Movement for _Combined {
-			fn update(&mut self, agent: &mut Transform, delta_time: Units) {}
-		}
-		impl SetTarget for _Combined {
-			fn set_target(&mut self, target: Option<Vec3>) {}
-		}
-	);
-
-	impl Movement for _Movement {
-		fn update(&mut self, agent: &mut Transform, delta_time: Units) {
-			self.mock.update(agent, delta_time)
-		}
-	}
-
-	impl SetTarget for _Movement {
-		fn set_target(&mut self, target: Option<Vec3>) {
-			self.mock.set_target(target)
+	impl Get<Mock_Movement> for _State {
+		fn get(&mut self) -> Option<&mut Mock_Movement> {
+			self.movement.as_mut()
 		}
 	}
 
@@ -98,8 +54,7 @@ mod move_player_tests {
 		time.update();
 		app.insert_resource(time);
 		app.update();
-		app.add_systems(Update, move_player::<_Event, _Movement>);
-		app.add_event::<_Event>();
+		app.add_systems(Update, move_player::<Mock_Movement, _State>);
 
 		app
 	}
@@ -111,30 +66,26 @@ mod move_player_tests {
 
 		let last_update = time.last_update().unwrap();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let player = Player;
-		let target = Vec3::new(4., 5., 6.);
-
-		let mut event = _Event::new();
-		let mut movement = _Movement::new();
+		let player = Player {
+			movement_speed: UnitsPerSecond::new(5.),
+		};
 		let time_delta = Duration::from_millis(30);
+		let mut movement = Mock_Movement::new();
 
-		event.mock.expect_get_target().times(1).return_const(target);
 		movement
-			.mock
-			.expect_set_target()
-			.with(eq(Some(target)))
-			.times(1)
-			.return_const(());
-		movement
-			.mock
 			.expect_update()
-			.with(eq(transform), eq(time_delta.as_secs_f32()))
+			.with(eq(transform), eq(time_delta.as_secs_f32() * 5.))
 			.times(1)
 			.return_const(());
 
 		time.update_with_instant(last_update + time_delta);
-		app.world.spawn((player, movement, transform));
-		app.world.resource_mut::<Events<_Event>>().send(event);
+		app.world.spawn((
+			_State {
+				movement: Some(movement),
+			},
+			player,
+			transform,
+		));
 
 		app.update();
 	}
@@ -143,18 +94,20 @@ mod move_player_tests {
 	fn move_player_twice() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let player = Player;
-		let target = Vec3::new(4., 5., 6.);
+		let player = Player {
+			movement_speed: UnitsPerSecond::new(5.),
+		};
+		let mut movement = Mock_Movement::new();
 
-		let mut event = _Event::new();
-		let mut movement = _Movement::new();
+		movement.expect_update().times(2).return_const(());
 
-		event.mock.expect_get_target().times(1).return_const(target);
-		movement.mock.expect_set_target().times(1).return_const(());
-		movement.mock.expect_update().times(2).return_const(());
-
-		app.world.spawn((player, movement, transform));
-		app.world.resource_mut::<Events<_Event>>().send(event);
+		app.world.spawn((
+			_State {
+				movement: Some(movement),
+			},
+			player,
+			transform,
+		));
 
 		app.update();
 		app.update();

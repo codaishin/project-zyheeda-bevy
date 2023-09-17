@@ -1,7 +1,4 @@
-use crate::{
-	components::{BehaviorSchedule, SimpleMovement},
-	traits::add::Add,
-};
+use crate::{behaviors::SimpleMovement, components::BehaviorSchedule, traits::add::Add};
 
 impl Add<SimpleMovement> for BehaviorSchedule {
 	fn add(&mut self, value: SimpleMovement) {

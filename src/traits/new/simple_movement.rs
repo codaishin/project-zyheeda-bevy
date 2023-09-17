@@ -1,6 +1,6 @@
 use bevy::prelude::Vec3;
 
-use crate::components::SimpleMovement;
+use crate::behaviors::SimpleMovement;
 
 use super::New1;
 

@@ -1,14 +1,16 @@
 #[cfg(test)]
 mod test_tools;
 
+mod behaviors;
 mod components;
 mod events;
 mod systems;
 mod tools;
 mod traits;
 
+use behaviors::SimpleMovement;
 use bevy::prelude::*;
-use components::{BehaviorSchedule, CamOrbit, Player, SimpleMovement};
+use components::{BehaviorSchedule, CamOrbit, Player, UnitsPerSecond};
 use events::{MouseEvent, MoveEvent};
 use std::f32::consts::PI;
 use systems::{
@@ -33,7 +35,7 @@ fn main() {
 			Update,
 			schedule_targeted::<SimpleMovement, MoveEvent, BehaviorSchedule>,
 		)
-		.add_systems(Update, move_player::<MouseEvent, SimpleMovement>)
+		.add_systems(Update, move_player::<SimpleMovement, BehaviorSchedule>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
 		.run();
 }
@@ -73,8 +75,9 @@ fn spawn_cube(
 			transform: Transform::from_xyz(0.0, 0.5, 0.0),
 			..default()
 		},
-		SimpleMovement { target: None },
-		Player,
+		Player {
+			movement_speed: UnitsPerSecond::new(1.),
+		},
 		BehaviorSchedule::new(),
 	));
 }

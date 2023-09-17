@@ -1,5 +1,5 @@
 use super::{Movement, Units};
-use crate::components::SimpleMovement;
+use crate::behaviors::SimpleMovement;
 use bevy::prelude::*;
 
 impl Movement for SimpleMovement {
@@ -21,9 +21,8 @@ impl Movement for SimpleMovement {
 
 #[cfg(test)]
 mod tests {
+	use super::*;
 	use bevy::prelude::{Transform, Vec3};
-
-	use crate::{components::SimpleMovement, traits::movement::Movement};
 
 	#[test]
 	fn move_to_target() {
