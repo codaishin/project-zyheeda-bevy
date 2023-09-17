@@ -14,6 +14,7 @@ use components::{BehaviorSchedule, CamOrbit, Player, UnitsPerSecond};
 use events::{MouseEvent, MoveEvent};
 use std::f32::consts::PI;
 use systems::{
+	clean::clean,
 	events::mouse_left_move::mouse_left_move,
 	movement::{move_on_orbit::move_on_orbit, move_player::move_player},
 	player_behavior::schedule_targeted::schedule_targeted,
@@ -37,6 +38,7 @@ fn main() {
 		)
 		.add_systems(Update, move_player::<SimpleMovement, BehaviorSchedule>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
+		.add_systems(Update, clean::<BehaviorSchedule>)
 		.run();
 }
 
