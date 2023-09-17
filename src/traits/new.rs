@@ -1,6 +1,7 @@
 mod behavior_schedule;
 mod mouse_event;
 mod move_event;
+mod simple_movement;
 
 pub trait New {
 	fn new() -> Self;
