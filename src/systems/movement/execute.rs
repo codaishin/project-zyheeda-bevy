@@ -4,7 +4,7 @@ use crate::{
 };
 use bevy::prelude::*;
 
-pub fn move_player<TMovementComponent: Movement, TState: Get<TMovementComponent> + Component>(
+pub fn execute<TMovementComponent: Movement, TState: Get<TMovementComponent> + Component>(
 	time: Res<Time>,
 	mut query: Query<(&mut TState, &mut Transform, &Player)>,
 ) {
@@ -54,7 +54,7 @@ mod move_player_tests {
 		time.update();
 		app.insert_resource(time);
 		app.update();
-		app.add_systems(Update, move_player::<Mock_Movement, _State>);
+		app.add_systems(Update, execute::<Mock_Movement, _State>);
 
 		app
 	}

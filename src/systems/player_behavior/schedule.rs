@@ -2,9 +2,9 @@ use crate::traits::{add::Add, new::New1, target::Target};
 use crate::Player;
 use bevy::prelude::*;
 
-pub fn schedule_targeted<
-	TBehavior: New1<Vec3>,
+pub fn schedule<
 	TEvent: Target + Event,
+	TBehavior: New1<Vec3>,
 	TState: Add<TBehavior> + Component,
 >(
 	mut player: Query<(&mut TState, &Player)>,
@@ -76,7 +76,7 @@ mod tests {
 			target: Vec3::new(1., 2., 3.),
 		};
 
-		app.add_systems(Update, schedule_targeted::<_Behavior, _Event, _State>);
+		app.add_systems(Update, schedule::<_Event, _Behavior, _State>);
 
 		state
 			.mock

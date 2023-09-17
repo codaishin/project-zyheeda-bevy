@@ -1,8 +1,8 @@
-use crate::components::BehaviorSchedule;
+use crate::components::Behaviors;
 
 use super::Clean;
 
-impl Clean for BehaviorSchedule {
+impl Clean for Behaviors {
 	fn clean(&mut self) {
 		self.0 = self.0.drain(..).filter(|m| m.target.is_some()).collect();
 	}
@@ -20,7 +20,7 @@ mod tests {
 
 	#[test]
 	fn clean_simple_movement() {
-		let mut state = BehaviorSchedule::new();
+		let mut state = Behaviors::new();
 		state.add(SimpleMovement { target: None });
 
 		state.clean();
@@ -30,7 +30,7 @@ mod tests {
 
 	#[test]
 	fn clean_only_when_no_target() {
-		let mut state = BehaviorSchedule::new();
+		let mut state = Behaviors::new();
 		state.add(SimpleMovement { target: None });
 		state.add(SimpleMovement {
 			target: Some(Vec3::ZERO),

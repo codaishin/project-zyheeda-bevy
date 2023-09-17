@@ -1,1 +1,1 @@
-pub mod schedule_targeted;
+pub mod schedule;

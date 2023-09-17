@@ -10,14 +10,14 @@ mod traits;
 
 use behaviors::SimpleMovement;
 use bevy::prelude::*;
-use components::{BehaviorSchedule, CamOrbit, Player, UnitsPerSecond};
+use components::{Behaviors, CamOrbit, Player, UnitsPerSecond};
 use events::MoveEvent;
 use std::f32::consts::PI;
 use systems::{
 	clean::clean,
-	events::mouse_left_move::mouse_left_move,
-	movement::{move_on_orbit::move_on_orbit, move_player::move_player},
-	player_behavior::schedule_targeted::schedule_targeted,
+	events::mouse_left::mouse_left,
+	movement::{execute::execute, move_on_orbit::move_on_orbit},
+	player_behavior::schedule::schedule,
 };
 use tools::Tools;
 use traits::{
@@ -30,14 +30,11 @@ fn main() {
 		.add_plugins(DefaultPlugins)
 		.add_event::<MoveEvent>()
 		.add_systems(Startup, setup_simple_3d_scene)
-		.add_systems(Update, mouse_left_move::<MoveEvent, Tools>)
-		.add_systems(
-			Update,
-			schedule_targeted::<SimpleMovement, MoveEvent, BehaviorSchedule>,
-		)
-		.add_systems(Update, move_player::<SimpleMovement, BehaviorSchedule>)
+		.add_systems(Update, mouse_left::<Tools, MoveEvent>)
+		.add_systems(Update, schedule::<MoveEvent, SimpleMovement, Behaviors>)
+		.add_systems(Update, execute::<SimpleMovement, Behaviors>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
-		.add_systems(Update, clean::<BehaviorSchedule>)
+		.add_systems(Update, clean::<Behaviors>)
 		.run();
 }
 
@@ -79,7 +76,7 @@ fn spawn_cube(
 		Player {
 			movement_speed: UnitsPerSecond::new(1.),
 		},
-		BehaviorSchedule::new(),
+		Behaviors::new(),
 	));
 }
 

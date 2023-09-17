@@ -2,7 +2,7 @@ use crate::traits::get_ray::GetRayFromCamera;
 use crate::traits::new::New1;
 use bevy::prelude::*;
 
-pub fn mouse_left_move<TEvent: New1<Vec3> + Event, TTools: GetRayFromCamera>(
+pub fn mouse_left<TTools: GetRayFromCamera, TEvent: New1<Vec3> + Event>(
 	mouse: Res<Input<MouseButton>>,
 	windows: Query<&Window>,
 	query: Query<(&Camera, &GlobalTransform)>,
@@ -94,7 +94,7 @@ mod tests {
 			direction: -Vec3::Y,
 		}));
 
-		app.add_systems(Update, mouse_left_move::<_Event, Mock_Tools>);
+		app.add_systems(Update, mouse_left::<Mock_Tools, _Event>);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -140,7 +140,7 @@ mod tests {
 				direction: Vec3::X,
 			}));
 
-		app.add_systems(Update, mouse_left_move::<_Event, Mock_Tools>);
+		app.add_systems(Update, mouse_left::<Mock_Tools, _Event>);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -170,7 +170,7 @@ mod tests {
 			direction: -Vec3::Y,
 		}));
 
-		app.add_systems(Update, mouse_left_move::<_Event, Mock_Tools>);
+		app.add_systems(Update, mouse_left::<Mock_Tools, _Event>);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -207,7 +207,7 @@ mod tests {
 			direction: -Vec3::Y,
 		}));
 
-		app.add_systems(Update, mouse_left_move::<_Event, Mock_Tools>);
+		app.add_systems(Update, mouse_left::<Mock_Tools, _Event>);
 		app.update();
 
 		let event_rs = app.world.resource::<Events<_Event>>();
@@ -238,7 +238,7 @@ mod tests {
 			origin: Vec3::Y,
 			direction: -Vec3::Y,
 		}));
-		app.add_systems(Update, mouse_left_move::<_Event, Mock_Tools>);
+		app.add_systems(Update, mouse_left::<Mock_Tools, _Event>);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -274,7 +274,7 @@ mod tests {
 		}
 
 		get_ray.expect().return_const(None);
-		app.add_systems(Update, mouse_left_move::<_Event, Mock_Tools>);
+		app.add_systems(Update, mouse_left::<Mock_Tools, _Event>);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);

@@ -1,6 +1,6 @@
-use crate::{behaviors::SimpleMovement, components::BehaviorSchedule, traits::add::Add};
+use crate::{behaviors::SimpleMovement, components::Behaviors, traits::add::Add};
 
-impl Add<SimpleMovement> for BehaviorSchedule {
+impl Add<SimpleMovement> for Behaviors {
 	fn add(&mut self, value: SimpleMovement) {
 		self.0.push(value);
 	}
@@ -13,7 +13,7 @@ mod tests {
 
 	#[test]
 	fn add() {
-		let mut schedule = BehaviorSchedule::new();
+		let mut schedule = Behaviors::new();
 		let movement = SimpleMovement { target: None };
 		schedule.add(movement);
 

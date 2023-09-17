@@ -1,6 +1,6 @@
-use crate::{behaviors::SimpleMovement, components::BehaviorSchedule, traits::get::Get};
+use crate::{behaviors::SimpleMovement, components::Behaviors, traits::get::Get};
 
-impl Get<SimpleMovement> for BehaviorSchedule {
+impl Get<SimpleMovement> for Behaviors {
 	fn get(&mut self) -> Option<&mut SimpleMovement> {
 		let first = self.0.first_mut()?;
 		_ = first.target?;
@@ -18,14 +18,14 @@ mod tests {
 
 	#[test]
 	fn get_none() {
-		let mut scheduler = BehaviorSchedule::new();
+		let mut scheduler = Behaviors::new();
 
 		assert!(scheduler.get().is_none());
 	}
 
 	#[test]
 	fn get_first() {
-		let mut scheduler = BehaviorSchedule::new();
+		let mut scheduler = Behaviors::new();
 		let movement = SimpleMovement {
 			target: Some(Vec3::ONE),
 		};
@@ -37,7 +37,7 @@ mod tests {
 
 	#[test]
 	fn get_none_if_target_none() {
-		let mut scheduler = BehaviorSchedule::new();
+		let mut scheduler = Behaviors::new();
 		let movement = SimpleMovement { target: None };
 
 		scheduler.add(movement);

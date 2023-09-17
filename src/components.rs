@@ -51,4 +51,4 @@ mod tests {
 }
 
 #[derive(Component)]
-pub struct BehaviorSchedule(pub Vec<SimpleMovement>);
+pub struct Behaviors(pub Vec<SimpleMovement>);
