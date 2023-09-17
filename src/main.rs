@@ -11,7 +11,7 @@ mod traits;
 use behaviors::SimpleMovement;
 use bevy::prelude::*;
 use components::{BehaviorSchedule, CamOrbit, Player, UnitsPerSecond};
-use events::{MouseEvent, MoveEvent};
+use events::MoveEvent;
 use std::f32::consts::PI;
 use systems::{
 	clean::clean,
@@ -28,7 +28,6 @@ use traits::{
 fn main() {
 	App::new()
 		.add_plugins(DefaultPlugins)
-		.add_event::<MouseEvent>()
 		.add_event::<MoveEvent>()
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(Update, mouse_left_move::<MoveEvent, Tools>)
