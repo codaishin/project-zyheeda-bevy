@@ -28,7 +28,9 @@ jobs:
       with:
         lfs: true
     - name: Install libraries
-      run: sudo apt install -y librust-alsa-sys-dev libudev-dev
+      run: |
+        sudo apt update
+        sudo apt install -y librust-alsa-sys-dev libudev-dev
     - name: Cache
       uses: actions/cache@v3
       with:
