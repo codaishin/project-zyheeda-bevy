@@ -1,8 +1,7 @@
 use crate::traits::get_ray::GetRayFromCamera;
-use crate::traits::new::New1;
 use bevy::prelude::*;
 
-pub fn mouse_left<TTools: GetRayFromCamera, TEvent: New1<Vec3> + Event>(
+pub fn mouse_left<TTools: GetRayFromCamera, TEvent: From<Vec3> + Event>(
 	mouse: Res<Input<MouseButton>>,
 	windows: Query<&Window>,
 	query: Query<(&Camera, &GlobalTransform)>,
@@ -24,7 +23,7 @@ pub fn mouse_left<TTools: GetRayFromCamera, TEvent: New1<Vec3> + Event>(
 		return;
 	};
 
-	event_writer.send(TEvent::new(ray.origin + ray.direction * distance));
+	event_writer.send((ray.origin + ray.direction * distance).into());
 }
 
 #[cfg(test)]
@@ -38,8 +37,8 @@ mod tests {
 		pub vec: Vec3,
 	}
 
-	impl New1<Vec3> for _Event {
-		fn new(value: Vec3) -> Self {
+	impl From<Vec3> for _Event {
+		fn from(value: Vec3) -> Self {
 			Self { vec: value }
 		}
 	}

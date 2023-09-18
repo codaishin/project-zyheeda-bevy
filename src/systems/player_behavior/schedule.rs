@@ -1,10 +1,10 @@
-use crate::traits::{add::Add, new::New1, target::Target};
+use crate::traits::add::Add;
 use crate::Player;
 use bevy::prelude::*;
 
 pub fn schedule<
-	TEvent: Target + Event,
-	TBehavior: New1<Vec3>,
+	TEvent: Copy + Event,
+	TBehavior: From<TEvent>,
 	TState: Add<TBehavior> + Component,
 >(
 	mut player: Query<(&mut TState, &Player)>,
@@ -15,7 +15,7 @@ pub fn schedule<
 	};
 
 	for event in event_reader.iter() {
-		state.add(TBehavior::new(event.target()));
+		state.add(TBehavior::from(*event));
 	}
 }
 
@@ -27,24 +27,20 @@ mod tests {
 	use bevy::prelude::App;
 	use mockall::automock;
 
-	#[derive(Event)]
+	#[derive(Event, Clone, Copy)]
 	struct _Event {
 		pub target: Vec3,
-	}
-
-	impl Target for _Event {
-		fn target(&self) -> Vec3 {
-			self.target
-		}
 	}
 
 	pub struct _Behavior {
 		pub target: Vec3,
 	}
 
-	impl New1<Vec3> for _Behavior {
-		fn new(target: Vec3) -> Self {
-			Self { target }
+	impl From<_Event> for _Behavior {
+		fn from(event: _Event) -> Self {
+			Self {
+				target: event.target,
+			}
 		}
 	}
 
