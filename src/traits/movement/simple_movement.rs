@@ -1,85 +1,84 @@
-use super::{Movement, Seconds};
-use crate::components::SimpleMovement;
+use super::{Movement, Units};
+use crate::behaviors::SimpleMovement;
 use bevy::prelude::*;
 
 impl Movement for SimpleMovement {
-	fn move_towards(&self, agent: &mut Transform, target: Vec3, delta_time: Seconds) {
-		let direction = target - agent.translation;
-		let distance = self.speed.unpack() * delta_time;
-
-		match distance < direction.length() {
-			true => agent.translation += direction.normalize() * distance,
-			false => agent.translation = target,
+	fn update(&mut self, agent: &mut Transform, distance: Units) {
+		let Some(target) = self.target else {
+			return;
 		};
+		let direction = target - agent.translation;
+
+		if distance < direction.length() {
+			agent.translation += direction.normalize() * distance;
+			return;
+		}
+
+		agent.translation = target;
+		self.target = None;
 	}
 }
 
 #[cfg(test)]
 mod tests {
+	use super::*;
 	use bevy::prelude::{Transform, Vec3};
-
-	use crate::{
-		components::{SimpleMovement, UnitsPerSecond},
-		traits::movement::Movement,
-	};
 
 	#[test]
 	fn move_to_target() {
-		let movement = SimpleMovement {
-			speed: UnitsPerSecond::new(1.),
+		let mut movement = SimpleMovement {
+			target: Some(Vec3::X),
 		};
 		let mut agent = Transform::from_translation(Vec3::ZERO);
 
-		movement.move_towards(&mut agent, Vec3::X, 1.);
+		movement.update(&mut agent, 1.);
 
 		assert_eq!(Vec3::X, agent.translation);
 	}
 
 	#[test]
-	fn move_to_target_with_appropriate_speed() {
-		let movement = SimpleMovement {
-			speed: UnitsPerSecond::new(0.5),
+	fn do_not_move_fully_if_distance_too_small() {
+		let mut movement = SimpleMovement {
+			target: Some(Vec3::new(2., 0., 0.)),
 		};
 		let mut agent = Transform::from_translation(Vec3::ZERO);
 
-		movement.move_towards(&mut agent, Vec3::new(2., 0., 0.), 1.);
+		movement.update(&mut agent, 0.5);
 
 		assert_eq!(Vec3::X * 0.5, agent.translation);
 	}
 
 	#[test]
-	fn move_to_target_with_speed_scaled_on_delta() {
-		let movement = SimpleMovement {
-			speed: UnitsPerSecond::new(0.5),
-		};
-		let mut agent = Transform::from_translation(Vec3::ZERO);
-
-		movement.move_towards(&mut agent, Vec3::new(2., 0., 0.), 0.5);
-
-		assert_eq!(Vec3::X * 0.5 * 0.5, agent.translation);
-	}
-
-	#[test]
-	fn do_not_move_directly_if_speed_with_delta_too_small() {
-		let movement = SimpleMovement {
-			speed: UnitsPerSecond::new(2.),
-		};
-		let mut agent = Transform::from_translation(Vec3::ZERO);
-
-		movement.move_towards(&mut agent, Vec3::new(2., 0., 0.), 0.5);
-
-		assert_eq!(Vec3::X, agent.translation);
-	}
-
-	#[test]
 	fn do_not_overshoot() {
-		let movement = SimpleMovement {
-			speed: UnitsPerSecond::new(2.),
+		let mut movement = SimpleMovement {
+			target: Some(Vec3::X),
 		};
 		let mut agent = Transform::from_translation(Vec3::ZERO);
 
-		movement.move_towards(&mut agent, Vec3::X, 1.);
+		movement.update(&mut agent, 100.);
 
 		assert_eq!(Vec3::X, agent.translation);
+	}
+
+	#[test]
+	fn do_not_move_when_no_target() {
+		let mut movement = SimpleMovement { target: None };
+		let mut agent = Transform::from_translation(Vec3::Y);
+
+		movement.update(&mut agent, 1.);
+
+		assert_eq!(Vec3::Y, agent.translation);
+	}
+
+	#[test]
+	fn set_target_none_when_target_reached() {
+		let mut movement = SimpleMovement {
+			target: Some(Vec3::ONE),
+		};
+		let mut agent = Transform::from_translation(Vec3::ZERO);
+
+		movement.update(&mut agent, 100.);
+
+		assert!(movement.target.is_none());
 	}
 }

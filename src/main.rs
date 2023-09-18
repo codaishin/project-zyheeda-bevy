@@ -1,31 +1,40 @@
 #[cfg(test)]
 mod test_tools;
 
+mod behaviors;
 mod components;
 mod events;
 mod systems;
 mod tools;
 mod traits;
 
+use behaviors::SimpleMovement;
 use bevy::prelude::*;
-use components::{CamOrbit, Player, SimpleMovement, UnitsPerSecond};
-use events::MouseEvent;
+use components::{Behaviors, CamOrbit, Player, UnitsPerSecond};
+use events::MoveEvent;
 use std::f32::consts::PI;
 use systems::{
-	events::send_move_command::send_move_command,
-	movement::{move_on_orbit::move_on_orbit, move_player::move_player},
+	clean::clean,
+	events::mouse_left::mouse_left,
+	movement::{execute::execute, move_on_orbit::move_on_orbit},
+	player_behavior::schedule::schedule,
 };
 use tools::Tools;
-use traits::orbit::{Orbit, Vec2Radians};
+use traits::{
+	new::New,
+	orbit::{Orbit, Vec2Radians},
+};
 
 fn main() {
 	App::new()
 		.add_plugins(DefaultPlugins)
-		.add_event::<MouseEvent>()
+		.add_event::<MoveEvent>()
 		.add_systems(Startup, setup_simple_3d_scene)
-		.add_systems(Update, send_move_command::<MouseEvent, Tools>)
-		.add_systems(Update, move_player::<MouseEvent, SimpleMovement>)
+		.add_systems(Update, mouse_left::<Tools, MoveEvent>)
+		.add_systems(Update, schedule::<MoveEvent, SimpleMovement, Behaviors>)
+		.add_systems(Update, execute::<SimpleMovement, Behaviors>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
+		.add_systems(Update, clean::<Behaviors>)
 		.run();
 }
 
@@ -64,10 +73,10 @@ fn spawn_cube(
 			transform: Transform::from_xyz(0.0, 0.5, 0.0),
 			..default()
 		},
-		SimpleMovement {
-			speed: UnitsPerSecond::new(1.),
+		Player {
+			movement_speed: UnitsPerSecond::new(1.),
 		},
-		Player { move_target: None },
+		Behaviors::new(),
 	));
 }
 

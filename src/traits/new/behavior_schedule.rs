@@ -1,9 +1,9 @@
-use crate::components::BehaviorSchedule;
+use crate::components::Behaviors;
 use crate::traits::new::New;
 
-impl New for BehaviorSchedule {
+impl New for Behaviors {
 	fn new() -> Self {
-		BehaviorSchedule(vec![])
+		Behaviors(vec![])
 	}
 }
 
@@ -13,7 +13,7 @@ mod tests {
 
 	#[test]
 	fn create_new() {
-		let schedule = BehaviorSchedule::new();
+		let schedule = Behaviors::new();
 		assert!(schedule.0.is_empty());
 	}
 }

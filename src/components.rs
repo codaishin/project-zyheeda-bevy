@@ -1,3 +1,4 @@
+use crate::behaviors::SimpleMovement;
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -25,15 +26,9 @@ impl UnitsPerSecond {
 	}
 }
 
-#[derive(Component, Clone, Copy, PartialEq, Debug)]
-pub struct SimpleMovement {
-	pub speed: UnitsPerSecond,
-}
-
 #[derive(Component)]
 pub struct Player {
-	// FIXME: this field is temporary until we can properly schedule behavior
-	pub move_target: Option<Vec3>,
+	pub movement_speed: UnitsPerSecond,
 }
 
 #[cfg(test)]
@@ -56,4 +51,4 @@ mod tests {
 }
 
 #[derive(Component)]
-pub struct BehaviorSchedule(pub Vec<SimpleMovement>);
+pub struct Behaviors(pub Vec<SimpleMovement>);
