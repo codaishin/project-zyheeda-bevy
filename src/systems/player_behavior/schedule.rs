@@ -1,21 +1,27 @@
-use crate::traits::add::Add;
+use crate::traits::{add::Add, set::Set};
 use crate::Player;
 use bevy::prelude::*;
 
 pub fn schedule<
 	TEvent: Copy + Event,
-	TBehavior: From<TEvent>,
-	TState: Add<TBehavior> + Component,
+	TEnqueueEvent: Copy + Event,
+	TBehavior: From<TEvent> + From<TEnqueueEvent>,
+	TBehaviors: Set<TBehavior> + Add<TBehavior> + Component,
 >(
-	mut player: Query<(&mut TState, &Player)>,
+	mut player: Query<(&mut TBehaviors, &Player)>,
 	mut event_reader: EventReader<TEvent>,
+	mut enqueue_event_reader: EventReader<TEnqueueEvent>,
 ) {
-	let Ok((mut state, ..)) = player.get_single_mut() else {
+	let Ok((mut behaviors, ..)) = player.get_single_mut() else {
 		return; //FIXME: handle properly
 	};
 
+	for event in enqueue_event_reader.iter() {
+		behaviors.add(TBehavior::from(*event));
+	}
+
 	for event in event_reader.iter() {
-		state.add(TBehavior::from(*event));
+		behaviors.set(TBehavior::from(*event));
 	}
 }
 
@@ -25,10 +31,15 @@ mod tests {
 
 	use super::*;
 	use bevy::prelude::App;
-	use mockall::automock;
+	use mockall::mock;
 
 	#[derive(Event, Clone, Copy)]
 	struct _Event {
+		pub target: Vec3,
+	}
+
+	#[derive(Event, Clone, Copy)]
+	struct _EnqueueEvent {
 		pub target: Vec3,
 	}
 
@@ -44,37 +55,101 @@ mod tests {
 		}
 	}
 
-	#[derive(Component)]
-	struct _State {
-		pub mock: Mock_State,
-	}
-
-	impl _State {
-		fn new() -> Self {
+	impl From<_EnqueueEvent> for _Behavior {
+		fn from(event: _EnqueueEvent) -> Self {
 			Self {
-				mock: Mock_State::new(),
+				target: event.target,
 			}
 		}
 	}
 
-	#[automock]
-	impl Add<_Behavior> for _State {
+	#[derive(Component)]
+	struct _Behaviors {
+		pub mock: Mock_Behaviors,
+	}
+
+	impl _Behaviors {
+		fn new() -> Self {
+			Self {
+				mock: Mock_Behaviors::new(),
+			}
+		}
+	}
+
+	impl Set<_Behavior> for _Behaviors {
+		fn set(&mut self, value: _Behavior) {
+			self.mock.set(value)
+		}
+	}
+
+	impl Add<_Behavior> for _Behaviors {
 		fn add(&mut self, value: _Behavior) {
 			self.mock.add(value)
 		}
 	}
 
-	#[test]
-	fn do_schedule_move() {
+	mock! {
+		pub _Behaviors {}
+		impl Set<_Behavior> for _Behaviors {
+			fn set(&mut self, value: _Behavior);
+		}
+		impl Add<_Behavior> for _Behaviors {
+			fn add(&mut self, value: _Behavior);
+		}
+	}
+
+	fn setup_app() -> App {
 		let mut app = App::new();
-		let mut state = _State::new();
+		app.add_event::<_Event>();
+		app.add_event::<_EnqueueEvent>();
+
+		app
+	}
+
+	#[test]
+	fn set_movement() {
+		let mut app = setup_app();
+		let mut behaviors = _Behaviors::new();
 		let event = _Event {
 			target: Vec3::new(1., 2., 3.),
 		};
 
-		app.add_systems(Update, schedule::<_Event, _Behavior, _State>);
+		app.add_systems(
+			Update,
+			schedule::<_Event, _EnqueueEvent, _Behavior, _Behaviors>,
+		);
 
-		state
+		behaviors
+			.mock
+			.expect_set()
+			.withf(move |behavior| behavior.target == event.target)
+			.times(1)
+			.return_const(());
+		app.world.spawn((
+			Player {
+				movement_speed: UnitsPerSecond::new(1.),
+			},
+			behaviors,
+		));
+
+		app.world.resource_mut::<Events<_Event>>().send(event);
+		app.update();
+	}
+
+	#[test]
+	fn add_movement() {
+		let mut app = setup_app();
+		let mut behaviors = _Behaviors::new();
+		let event = _EnqueueEvent {
+			target: Vec3::new(1., 2., 3.),
+		};
+
+		app.add_systems(
+			Update,
+			schedule::<_Event, _EnqueueEvent, _Behavior, _Behaviors>,
+		);
+
+		behaviors
 			.mock
 			.expect_add()
 			.withf(move |behavior| behavior.target == event.target)
@@ -84,10 +159,12 @@ mod tests {
 			Player {
 				movement_speed: UnitsPerSecond::new(1.),
 			},
-			state,
+			behaviors,
 		));
-		app.add_event::<_Event>();
-		app.world.resource_mut::<Events<_Event>>().send(event);
+
+		app.world
+			.resource_mut::<Events<_EnqueueEvent>>()
+			.send(event);
 		app.update();
 	}
 }
