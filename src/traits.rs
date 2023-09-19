@@ -6,4 +6,5 @@ pub mod get_ray;
 pub mod movement;
 pub mod new;
 pub mod orbit;
+pub mod set;
 pub mod set_target;
