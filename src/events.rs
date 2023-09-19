@@ -4,3 +4,7 @@ use bevy::prelude::*;
 pub struct MoveEvent {
 	pub target: Vec3,
 }
+
+pub struct MoveEnqueueEvent {
+	pub target: Vec3,
+}
