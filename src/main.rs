@@ -32,7 +32,10 @@ fn main() {
 		.add_event::<MoveEnqueueEvent>()
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(Update, mouse_left::<Tools, MoveEvent, MoveEnqueueEvent>)
-		.add_systems(Update, schedule::<MoveEvent, SimpleMovement, Behaviors>)
+		.add_systems(
+			Update,
+			schedule::<MoveEvent, MoveEnqueueEvent, SimpleMovement, Behaviors>,
+		)
 		.add_systems(Update, execute::<SimpleMovement, Behaviors>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
 		.add_systems(Update, clean::<Behaviors>)
