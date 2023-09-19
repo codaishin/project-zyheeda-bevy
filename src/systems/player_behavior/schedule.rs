@@ -1,13 +1,13 @@
-use crate::traits::add::Add;
+use crate::traits::set::Set;
 use crate::Player;
 use bevy::prelude::*;
 
 pub fn schedule<
 	TEvent: Copy + Event,
 	TBehavior: From<TEvent>,
-	TState: Add<TBehavior> + Component,
+	TBehaviors: Set<TBehavior> + Component,
 >(
-	mut player: Query<(&mut TState, &Player)>,
+	mut player: Query<(&mut TBehaviors, &Player)>,
 	mut event_reader: EventReader<TEvent>,
 ) {
 	let Ok((mut state, ..)) = player.get_single_mut() else {
@@ -15,7 +15,7 @@ pub fn schedule<
 	};
 
 	for event in event_reader.iter() {
-		state.add(TBehavior::from(*event));
+		state.set(TBehavior::from(*event));
 	}
 }
 
@@ -58,9 +58,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl Add<_Behavior> for _State {
-		fn add(&mut self, value: _Behavior) {
-			self.mock.add(value)
+	impl Set<_Behavior> for _State {
+		fn set(&mut self, value: _Behavior) {
+			self.mock.set(value)
 		}
 	}
 
@@ -76,7 +76,7 @@ mod tests {
 
 		state
 			.mock
-			.expect_add()
+			.expect_set()
 			.withf(move |behavior| behavior.target == event.target)
 			.times(1)
 			.return_const(());
