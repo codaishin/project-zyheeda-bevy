@@ -10,6 +10,5 @@
 	"editor.indentSize": "tabSize",
 	"editor.insertSpaces": false,
 	"rust-analyzer.check.command": "clippy",
-	"explorer.sortOrder": "mixed",
 	"rust-analyzer.showUnlinkedFileNotification": false
 }
