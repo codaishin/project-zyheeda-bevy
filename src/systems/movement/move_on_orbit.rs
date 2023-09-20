@@ -12,10 +12,13 @@ pub fn move_on_orbit<TOrbitComponent: Orbit + Component>(
 	if !mouse.pressed(MouseButton::Right) {
 		return;
 	}
+
+	let Ok((orbit, mut transform)) = query.get_single_mut() else {
+		return;
+	};
+
 	for event in mouse_motion.iter() {
-		for (orbit, mut transform) in query.iter_mut() {
-			orbit.orbit(&mut transform, event.delta);
-		}
+		orbit.orbit(&mut transform, event.delta);
 	}
 }
 
@@ -47,13 +50,23 @@ mod tests {
 		}
 	}
 
+	fn setup_app() -> App {
+		let mut app = App::new();
+		let input = Input::<MouseButton>::default();
+
+		app.add_systems(Update, move_on_orbit::<_Orbit>);
+		app.add_event::<MouseMotion>();
+		app.insert_resource(input);
+
+		app
+	}
+
 	#[test]
 	fn move_camera_on_move_event() {
+		let mut app = setup_app();
 		let mut orbit = _Orbit::new();
 		let agent = Transform::from_translation(Vec3::ZERO);
 		let angels = Vec2::new(3., 4.);
-		let mut input = Input::<MouseButton>::default();
-		let mut app = App::new();
 
 		orbit
 			.mock
@@ -62,25 +75,23 @@ mod tests {
 			.times(1)
 			.return_const(());
 
-		app.add_systems(Update, move_on_orbit::<_Orbit>);
-		app.add_event::<MouseMotion>();
 		app.world.spawn((orbit, agent));
 		app.world
 			.resource_mut::<Events<MouseMotion>>()
 			.send(MouseMotion { delta: angels });
-		input.press(MouseButton::Right);
-		app.insert_resource(input);
+		app.world
+			.resource_mut::<Input<MouseButton>>()
+			.press(MouseButton::Right);
 
 		app.update();
 	}
 
 	#[test]
 	fn do_not_move_camera_when_not_right_mouse_button_pressed() {
+		let mut app = setup_app();
 		let mut orbit = _Orbit::new();
 		let agent = Transform::from_translation(Vec3::ZERO);
 		let angels = Vec2::new(3., 4.);
-		let input = Input::<MouseButton>::default();
-		let mut app = App::new();
 
 		orbit
 			.mock
@@ -89,13 +100,10 @@ mod tests {
 			.times(0)
 			.return_const(());
 
-		app.add_systems(Update, move_on_orbit::<_Orbit>);
-		app.add_event::<MouseMotion>();
 		app.world.spawn((orbit, agent));
 		app.world
 			.resource_mut::<Events<MouseMotion>>()
 			.send(MouseMotion { delta: angels });
-		app.insert_resource(input);
 
 		app.update();
 	}

@@ -16,7 +16,7 @@ use std::f32::consts::PI;
 use systems::{
 	clean::clean,
 	events::mouse_left::mouse_left,
-	movement::{execute::execute, move_on_orbit::move_on_orbit},
+	movement::{execute::execute, follow::follow, move_on_orbit::move_on_orbit},
 	player_behavior::schedule::schedule,
 };
 use tools::Tools;
@@ -37,6 +37,7 @@ fn main() {
 			schedule::<MoveEvent, MoveEnqueueEvent, SimpleMovement, Behaviors>,
 		)
 		.add_systems(Update, execute::<SimpleMovement, Behaviors>)
+		.add_systems(Update, follow::<Player, CamOrbit>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
 		.add_systems(Update, clean::<Behaviors>)
 		.run();
