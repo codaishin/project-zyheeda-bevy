@@ -9,6 +9,8 @@ impl Movement for SimpleMovement {
 		};
 		let direction = target - agent.translation;
 
+		agent.look_at(Vec3::new(target.x, agent.translation.y, target.z), Vec3::Y);
+
 		if distance < direction.length() {
 			agent.translation += direction.normalize() * distance;
 			return;
@@ -21,6 +23,8 @@ impl Movement for SimpleMovement {
 
 #[cfg(test)]
 mod tests {
+	use crate::test_tools::assert_eq_approx;
+
 	use super::*;
 	use bevy::prelude::{Transform, Vec3};
 
@@ -80,5 +84,29 @@ mod tests {
 		movement.update(&mut agent, 100.);
 
 		assert!(movement.target.is_none());
+	}
+
+	#[test]
+	fn set_forward() {
+		let mut movement = SimpleMovement {
+			target: Some(Vec3::X),
+		};
+		let mut agent = Transform::from_translation(Vec3::ZERO);
+
+		movement.update(&mut agent, 0.1);
+
+		assert_eq_approx(Vec3::X, agent.forward(), 0.00001);
+	}
+
+	#[test]
+	fn set_forward_ignoring_height_difference() {
+		let mut movement = SimpleMovement {
+			target: Some(Vec3::X),
+		};
+		let mut agent = Transform::from_translation(Vec3::new(0., -1., 0.));
+
+		movement.update(&mut agent, 0.1);
+
+		assert_eq_approx(Vec3::X, agent.forward(), 0.00001);
 	}
 }
