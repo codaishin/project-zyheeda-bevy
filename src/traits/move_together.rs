@@ -1,3 +1,5 @@
+mod cam_orbit;
+
 use bevy::prelude::{Transform, Vec3};
 
 pub trait MoveTogether {
