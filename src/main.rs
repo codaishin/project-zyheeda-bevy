@@ -47,9 +47,10 @@ fn setup_simple_3d_scene(
 	mut commands: Commands,
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut materials: ResMut<Assets<StandardMaterial>>,
+	asset_server: Res<AssetServer>,
 ) {
 	spawn_plane(&mut commands, &mut meshes, &mut materials);
-	spawn_cube(&mut commands, &mut meshes, &mut materials);
+	spawn_player(&mut commands, asset_server);
 	spawn_light(&mut commands);
 	spawn_camera(&mut commands);
 }
@@ -66,16 +67,10 @@ fn spawn_plane(
 	});
 }
 
-fn spawn_cube(
-	commands: &mut Commands,
-	meshes: &mut ResMut<Assets<Mesh>>,
-	materials: &mut ResMut<Assets<StandardMaterial>>,
-) {
+fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	commands.spawn((
-		PbrBundle {
-			mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-			material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-			transform: Transform::from_xyz(0.0, 0.5, 0.0),
+		SceneBundle {
+			scene: asset_server.load("models/player.gltf#Scene0"),
 			..default()
 		},
 		Player {
