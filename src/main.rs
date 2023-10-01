@@ -19,6 +19,7 @@ use std::f32::consts::PI;
 use systems::{
 	clean::clean,
 	events::mouse_left::mouse_left,
+	helpers::add_player_animator::add_player_animator,
 	movement::{execute::execute, follow::follow, move_on_orbit::move_on_orbit},
 	player_behavior::schedule::schedule,
 };
@@ -34,6 +35,7 @@ fn main() {
 		.add_event::<MoveEvent>()
 		.add_event::<MoveEnqueueEvent>()
 		.add_systems(Startup, setup_simple_3d_scene)
+		.add_systems(Update, add_player_animator)
 		.add_systems(Update, mouse_left::<Tools, MoveEvent, MoveEnqueueEvent>)
 		.add_systems(
 			Update,

@@ -52,3 +52,6 @@ mod tests {
 
 #[derive(Component)]
 pub struct Behaviors(pub Vec<SimpleMovement>);
+
+#[derive(Component)]
+pub struct PlayerAnimator;
