@@ -1,17 +1,25 @@
-use crate::{behavior::Behavior, components::Behaviors};
-
 use super::Clean;
+use crate::{
+	behavior::{Behavior, Idle},
+	components::Behaviors,
+};
+
+fn is_active(behavior: &Behavior) -> bool {
+	match behavior {
+		Behavior::SimpleMovement(movement) => movement.target.is_some(),
+		Behavior::Idle(_) => true,
+	}
+}
 
 impl Clean for Behaviors {
 	fn clean(&mut self) {
-		self.0 = self
-			.0
-			.drain(..)
-			.filter(|behavior| match behavior {
-				Behavior::SimpleMovement(movement) => movement.target.is_some(),
-				Behavior::Idle(_) => true,
-			})
-			.collect();
+		let cleaned: Vec<Behavior> = self.0.drain(..).filter(is_active).collect();
+
+		self.0 = if cleaned.is_empty() {
+			vec![Behavior::Idle(Idle)]
+		} else {
+			cleaned
+		};
 	}
 }
 
@@ -32,7 +40,7 @@ mod tests {
 
 		behavior.clean();
 
-		assert!(behavior.0.is_empty());
+		assert_eq!(vec![Behavior::Idle(Idle)], behavior.0);
 	}
 
 	#[test]
