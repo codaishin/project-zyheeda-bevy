@@ -1,3 +1,4 @@
+pub mod animations;
 pub mod clean;
 pub mod events;
 pub mod helpers;

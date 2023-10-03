@@ -9,7 +9,7 @@ mod systems;
 mod tools;
 mod traits;
 
-use behavior::SimpleMovement;
+use behavior::{Idle, SimpleMovement};
 use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
 use bevy::prelude::*;
 use components::{Behaviors, CamOrbit, Player, UnitsPerSecond};
@@ -17,6 +17,7 @@ use events::{MoveEnqueueEvent, MoveEvent};
 use resources::PlayerAnimations;
 use std::f32::consts::PI;
 use systems::{
+	animations::animate,
 	clean::clean,
 	events::mouse_left::mouse_left,
 	helpers::add_player_animator::add_player_animator,
@@ -44,6 +45,13 @@ fn main() {
 		.add_systems(Update, execute::<SimpleMovement, Behaviors>)
 		.add_systems(Update, follow::<Player, CamOrbit>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
+		.add_systems(
+			Update,
+			(
+				animate::<SimpleMovement, Behaviors, PlayerAnimations>,
+				animate::<Idle, Behaviors, PlayerAnimations>,
+			),
+		)
 		.add_systems(Update, clean::<Behaviors>)
 		.add_systems(Update, debug)
 		.run();
@@ -111,7 +119,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			..default()
 		},
 		Player {
-			movement_speed: UnitsPerSecond::new(1.),
+			movement_speed: UnitsPerSecond::new(0.75),
 		},
 		Behaviors::new(),
 	));
