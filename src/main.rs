@@ -10,6 +10,7 @@ mod tools;
 mod traits;
 
 use behaviors::SimpleMovement;
+use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
 use bevy::prelude::*;
 use components::{Behaviors, CamOrbit, Player, UnitsPerSecond};
 use events::{MoveEnqueueEvent, MoveEvent};
@@ -42,7 +43,34 @@ fn main() {
 		.add_systems(Update, follow::<Player, CamOrbit>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
 		.add_systems(Update, clean::<Behaviors>)
+		.add_systems(Update, debug)
 		.run();
+}
+
+fn debug(
+	keyboard: Res<Input<KeyCode>>,
+	all_entities: Query<Entity>,
+	entities: &Entities,
+	archetypes: &Archetypes,
+	components: &Components,
+) {
+	if !keyboard.just_pressed(KeyCode::F12) {
+		return;
+	}
+	for entity in all_entities.iter() {
+		println!("Entity: {:?}", entity);
+		let Some(entity_location) = entities.get(entity) else {
+			return;
+		};
+		let Some(archetype) = archetypes.get(entity_location.archetype_id) else {
+			return;
+		};
+		for component in archetype.components() {
+			if let Some(info) = components.get_info(component) {
+				println!("\tComponent: {}", info.name());
+			}
+		}
+	}
 }
 
 fn setup_simple_3d_scene(
