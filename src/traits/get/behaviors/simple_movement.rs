@@ -28,7 +28,9 @@ mod tests {
 	fn get_none() {
 		let mut scheduler = Behaviors::new();
 
-		assert!(scheduler.get().is_none());
+		assert!((&mut scheduler as &mut dyn Get<SimpleMovement>)
+			.get()
+			.is_none());
 	}
 
 	#[test]
@@ -48,8 +50,10 @@ mod tests {
 		let mut scheduler = Behaviors::new();
 		let movement = SimpleMovement { target: None };
 
-		scheduler.add(movement);
+		(&mut scheduler as &mut dyn Add<SimpleMovement>).add(movement);
 
-		assert!(scheduler.get().is_none());
+		assert!((&mut scheduler as &mut dyn Get<SimpleMovement>)
+			.get()
+			.is_none());
 	}
 }
