@@ -1,4 +1,4 @@
-pub mod behavior_schedule;
+pub mod behaviors;
 
 pub trait Clean {
 	fn clean(&mut self);

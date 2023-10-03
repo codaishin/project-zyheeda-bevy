@@ -1,4 +1,4 @@
-use crate::behaviors::SimpleMovement;
+use crate::behavior::Behavior;
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -51,4 +51,7 @@ mod tests {
 }
 
 #[derive(Component)]
-pub struct Behaviors(pub Vec<SimpleMovement>);
+pub struct Behaviors(pub Vec<Behavior>);
+
+#[derive(Component)]
+pub struct PlayerAnimator;

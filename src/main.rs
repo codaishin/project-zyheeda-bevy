@@ -1,21 +1,26 @@
 #[cfg(test)]
 mod test_tools;
 
-mod behaviors;
+mod behavior;
 mod components;
 mod events;
+mod resources;
 mod systems;
 mod tools;
 mod traits;
 
-use behaviors::SimpleMovement;
+use behavior::{Idle, SimpleMovement};
+use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
 use bevy::prelude::*;
 use components::{Behaviors, CamOrbit, Player, UnitsPerSecond};
 use events::{MoveEnqueueEvent, MoveEvent};
+use resources::PlayerAnimations;
 use std::f32::consts::PI;
 use systems::{
+	animations::animate,
 	clean::clean,
 	events::mouse_left::mouse_left,
+	helpers::add_player_animator::add_player_animator,
 	movement::{execute::execute, follow::follow, move_on_orbit::move_on_orbit},
 	player_behavior::schedule::schedule,
 };
@@ -31,6 +36,7 @@ fn main() {
 		.add_event::<MoveEvent>()
 		.add_event::<MoveEnqueueEvent>()
 		.add_systems(Startup, setup_simple_3d_scene)
+		.add_systems(Update, add_player_animator)
 		.add_systems(Update, mouse_left::<Tools, MoveEvent, MoveEnqueueEvent>)
 		.add_systems(
 			Update,
@@ -39,8 +45,42 @@ fn main() {
 		.add_systems(Update, execute::<SimpleMovement, Behaviors>)
 		.add_systems(Update, follow::<Player, CamOrbit>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
+		.add_systems(
+			Update,
+			(
+				animate::<SimpleMovement, Behaviors, PlayerAnimations>,
+				animate::<Idle, Behaviors, PlayerAnimations>,
+			),
+		)
 		.add_systems(Update, clean::<Behaviors>)
+		.add_systems(Update, debug)
 		.run();
+}
+
+fn debug(
+	keyboard: Res<Input<KeyCode>>,
+	all_entities: Query<Entity>,
+	entities: &Entities,
+	archetypes: &Archetypes,
+	components: &Components,
+) {
+	if !keyboard.just_pressed(KeyCode::F12) {
+		return;
+	}
+	for entity in all_entities.iter() {
+		println!("Entity: {:?}", entity);
+		let Some(entity_location) = entities.get(entity) else {
+			return;
+		};
+		let Some(archetype) = archetypes.get(entity_location.archetype_id) else {
+			return;
+		};
+		for component in archetype.components() {
+			if let Some(info) = components.get_info(component) {
+				println!("\tComponent: {}", info.name());
+			}
+		}
+	}
 }
 
 fn setup_simple_3d_scene(
@@ -68,13 +108,18 @@ fn spawn_plane(
 }
 
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
+	commands.insert_resource(PlayerAnimations {
+		idle: asset_server.load("models/player.gltf#Animation0"),
+		walk: asset_server.load("models/player.gltf#Animation1"),
+	});
+
 	commands.spawn((
 		SceneBundle {
 			scene: asset_server.load("models/player.gltf#Scene0"),
 			..default()
 		},
 		Player {
-			movement_speed: UnitsPerSecond::new(1.),
+			movement_speed: UnitsPerSecond::new(0.75),
 		},
 		Behaviors::new(),
 	));

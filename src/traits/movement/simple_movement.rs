@@ -1,5 +1,5 @@
 use super::{Movement, Units};
-use crate::behaviors::SimpleMovement;
+use crate::behavior::SimpleMovement;
 use bevy::prelude::*;
 
 impl Movement for SimpleMovement {

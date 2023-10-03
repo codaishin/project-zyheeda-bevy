@@ -1,4 +1,4 @@
-use crate::{behaviors::SimpleMovement, events::MoveEvent};
+use crate::{behavior::SimpleMovement, events::MoveEvent};
 
 impl From<MoveEvent> for SimpleMovement {
 	fn from(event: MoveEvent) -> Self {
