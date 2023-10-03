@@ -1,10 +1,17 @@
-use crate::components::Behaviors;
+use crate::{behavior::Behavior, components::Behaviors};
 
 use super::Clean;
 
 impl Clean for Behaviors {
 	fn clean(&mut self) {
-		self.0 = self.0.drain(..).filter(|m| m.target.is_some()).collect();
+		self.0 = self
+			.0
+			.drain(..)
+			.filter(|behavior| match behavior {
+				Behavior::SimpleMovement(movement) => movement.target.is_some(),
+				Behavior::Idle(_) => true,
+			})
+			.collect();
 	}
 }
 
@@ -14,38 +21,45 @@ mod tests {
 
 	use super::*;
 	use crate::{
-		behaviors::SimpleMovement,
-		traits::{add::Add, new::New},
+		behavior::{Idle, SimpleMovement},
+		traits::{add::Add, new::New, set::Set},
 	};
 
 	#[test]
 	fn clean_simple_movement() {
-		let mut state = Behaviors::new();
-		state.add(SimpleMovement { target: None });
+		let mut behavior = Behaviors::new();
+		behavior.add(SimpleMovement { target: None });
 
-		state.clean();
+		behavior.clean();
 
-		assert!(state.0.is_empty());
+		assert!(behavior.0.is_empty());
 	}
 
 	#[test]
-	fn clean_only_when_no_target() {
-		let mut state = Behaviors::new();
-		state.add(SimpleMovement { target: None });
-		state.add(SimpleMovement {
+	fn clean_only_when_simple_movement_has_no_target() {
+		let mut behavior = Behaviors::new();
+		behavior.add(SimpleMovement { target: None });
+		behavior.add(SimpleMovement {
 			target: Some(Vec3::ZERO),
 		});
 
-		state.clean();
+		behavior.clean();
 
 		assert_eq!(
-			(
-				1,
-				SimpleMovement {
-					target: Some(Vec3::ZERO),
-				}
-			),
-			(state.0.len(), state.0[0])
-		)
+			vec![Behavior::SimpleMovement(SimpleMovement {
+				target: Some(Vec3::ZERO)
+			})],
+			behavior.0
+		);
+	}
+
+	#[test]
+	fn do_not_clean_idle() {
+		let mut behaviors = Behaviors::new();
+		behaviors.set(Idle);
+
+		behaviors.clean();
+
+		assert_eq!(vec![Behavior::Idle(Idle)], behaviors.0);
 	}
 }

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test_tools;
 
-mod behaviors;
+mod behavior;
 mod components;
 mod events;
 mod resources;
@@ -9,7 +9,7 @@ mod systems;
 mod tools;
 mod traits;
 
-use behaviors::SimpleMovement;
+use behavior::SimpleMovement;
 use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
 use bevy::prelude::*;
 use components::{Behaviors, CamOrbit, Player, UnitsPerSecond};

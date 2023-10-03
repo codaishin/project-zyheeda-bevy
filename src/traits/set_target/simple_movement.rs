@@ -1,4 +1,4 @@
-use crate::behaviors::SimpleMovement;
+use crate::behavior::SimpleMovement;
 
 use super::SetTarget;
 

@@ -1,11 +1,19 @@
-use crate::{behaviors::SimpleMovement, components::Behaviors, traits::get::Get};
+use crate::{
+	behavior::{Behavior, SimpleMovement},
+	components::Behaviors,
+	traits::get::Get,
+};
 
 impl Get<SimpleMovement> for Behaviors {
 	fn get(&mut self) -> Option<&mut SimpleMovement> {
-		let first = self.0.first_mut()?;
-		_ = first.target?;
+		let movement = match self.0.first_mut()? {
+			Behavior::SimpleMovement(movement) => Some(movement),
+			_ => None,
+		}?;
 
-		Some(first)
+		_ = movement.target?;
+
+		Some(movement)
 	}
 }
 
