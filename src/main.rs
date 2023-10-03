@@ -4,6 +4,7 @@ mod test_tools;
 mod behaviors;
 mod components;
 mod events;
+mod resources;
 mod systems;
 mod tools;
 mod traits;
@@ -12,6 +13,7 @@ use behaviors::SimpleMovement;
 use bevy::prelude::*;
 use components::{Behaviors, CamOrbit, Player, UnitsPerSecond};
 use events::{MoveEnqueueEvent, MoveEvent};
+use resources::PlayerAnimations;
 use std::f32::consts::PI;
 use systems::{
 	clean::clean,
@@ -68,6 +70,11 @@ fn spawn_plane(
 }
 
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
+	commands.insert_resource(PlayerAnimations {
+		idle: asset_server.load("models/player.gltf#Animation0"),
+		walk: asset_server.load("models/player.gltf#Animation1"),
+	});
+
 	commands.spawn((
 		SceneBundle {
 			scene: asset_server.load("models/player.gltf#Scene0"),
