@@ -1,17 +1,13 @@
-use crate::traits::get_ray::GetRayFromCamera;
+use crate::{events::Enqueue, traits::get_ray::GetRayFromCamera};
 use bevy::prelude::*;
 
-pub fn mouse_left<
-	TTools: GetRayFromCamera,
-	TEvent: From<Vec3> + Event,
-	TEnqueueEvent: From<Vec3> + Event,
->(
+pub fn mouse_left<TTools: GetRayFromCamera, TEvent: From<Vec3> + Event>(
 	mouse: Res<Input<MouseButton>>,
 	keys: Res<Input<KeyCode>>,
 	windows: Query<&Window>,
 	query: Query<(&Camera, &GlobalTransform)>,
 	mut event_writer: EventWriter<TEvent>,
-	mut queue_event_writer: EventWriter<TEnqueueEvent>,
+	mut queue_event_writer: EventWriter<Enqueue<TEvent>>,
 ) {
 	if !mouse.just_pressed(MouseButton::Left) {
 		return;
@@ -32,7 +28,7 @@ pub fn mouse_left<
 	let target = ray.origin + ray.direction * distance;
 
 	if keys.pressed(KeyCode::ShiftLeft) {
-		queue_event_writer.send(target.into());
+		queue_event_writer.send(Enqueue(target.into()));
 	} else {
 		event_writer.send(target.into());
 	}
@@ -49,17 +45,6 @@ mod tests {
 	}
 
 	impl From<Vec3> for _Event {
-		fn from(vec: Vec3) -> Self {
-			Self { vec }
-		}
-	}
-
-	#[derive(Event)]
-	struct _EnqueueEvent {
-		pub vec: Vec3,
-	}
-
-	impl From<Vec3> for _EnqueueEvent {
 		fn from(vec: Vec3) -> Self {
 			Self { vec }
 		}
@@ -88,7 +73,7 @@ mod tests {
 		let window_id = app.world.spawn(window).id();
 
 		app.add_event::<_Event>();
-		app.add_event::<_EnqueueEvent>();
+		app.add_event::<Enqueue<_Event>>();
 		app.insert_resource(mouse);
 		app.insert_resource(keys);
 
@@ -118,7 +103,7 @@ mod tests {
 			direction: -Vec3::Y,
 		}));
 
-		app.add_systems(Update, mouse_left::<Mock_Tools, _Event, _EnqueueEvent>);
+		app.add_systems(Update, mouse_left::<Mock_Tools, _Event>);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -126,7 +111,7 @@ mod tests {
 
 		let event_rs = app.world.resource::<Events<_Event>>();
 		let event_rd = event_rs.get_reader();
-		let queue_event_rs = app.world.resource::<Events<_EnqueueEvent>>();
+		let queue_event_rs = app.world.resource::<Events<Enqueue<_Event>>>();
 		let queue_event_rd = queue_event_rs.get_reader();
 
 		assert_eq!(
@@ -158,7 +143,7 @@ mod tests {
 			direction: -Vec3::Y,
 		}));
 
-		app.add_systems(Update, mouse_left::<Mock_Tools, _Event, _EnqueueEvent>);
+		app.add_systems(Update, mouse_left::<Mock_Tools, _Event>);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -169,7 +154,7 @@ mod tests {
 
 		let event_rs = app.world.resource::<Events<_Event>>();
 		let event_rd = event_rs.get_reader();
-		let queue_event_rs = app.world.resource::<Events<_EnqueueEvent>>();
+		let queue_event_rs = app.world.resource::<Events<Enqueue<_Event>>>();
 		let queue_event_rd = queue_event_rs.get_reader();
 
 		assert_eq!(
@@ -212,7 +197,7 @@ mod tests {
 				direction: Vec3::X,
 			}));
 
-		app.add_systems(Update, mouse_left::<Mock_Tools, _Event, _EnqueueEvent>);
+		app.add_systems(Update, mouse_left::<Mock_Tools, _Event>);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -242,7 +227,7 @@ mod tests {
 			direction: -Vec3::Y,
 		}));
 
-		app.add_systems(Update, mouse_left::<Mock_Tools, _Event, _EnqueueEvent>);
+		app.add_systems(Update, mouse_left::<Mock_Tools, _Event>);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -277,7 +262,7 @@ mod tests {
 			direction: -Vec3::Y,
 		}));
 
-		app.add_systems(Update, mouse_left::<Mock_Tools, _Event, _EnqueueEvent>);
+		app.add_systems(Update, mouse_left::<Mock_Tools, _Event>);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -286,9 +271,9 @@ mod tests {
 			.press(KeyCode::ShiftLeft);
 		app.update();
 
-		let event_rs = app.world.resource::<Events<_EnqueueEvent>>();
+		let event_rs = app.world.resource::<Events<Enqueue<_Event>>>();
 		let mut event_rd = event_rs.get_reader();
-		let targets: Vec<Vec3> = event_rd.iter(event_rs).map(|e| e.vec).collect();
+		let targets: Vec<Vec3> = event_rd.iter(event_rs).map(|e| e.0.vec).collect();
 
 		assert_eq!(vec![Vec3::new(1., 0., 1.)], targets);
 	}
@@ -316,7 +301,7 @@ mod tests {
 			direction: -Vec3::Y,
 		}));
 
-		app.add_systems(Update, mouse_left::<Mock_Tools, _Event, _EnqueueEvent>);
+		app.add_systems(Update, mouse_left::<Mock_Tools, _Event>);
 		app.update();
 
 		let event_rs = app.world.resource::<Events<_Event>>();
@@ -347,7 +332,7 @@ mod tests {
 			origin: Vec3::Y,
 			direction: -Vec3::Y,
 		}));
-		app.add_systems(Update, mouse_left::<Mock_Tools, _Event, _EnqueueEvent>);
+		app.add_systems(Update, mouse_left::<Mock_Tools, _Event>);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -383,7 +368,7 @@ mod tests {
 		}
 
 		get_ray.expect().return_const(None);
-		app.add_systems(Update, mouse_left::<Mock_Tools, _Event, _EnqueueEvent>);
+		app.add_systems(Update, mouse_left::<Mock_Tools, _Event>);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);

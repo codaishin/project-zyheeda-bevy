@@ -13,7 +13,7 @@ use behavior::{Idle, SimpleMovement};
 use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
 use bevy::prelude::*;
 use components::{Behaviors, CamOrbit, Player, UnitsPerSecond};
-use events::{MoveEnqueueEvent, MoveEvent};
+use events::{Enqueue, MoveEvent};
 use resources::PlayerAnimations;
 use std::f32::consts::PI;
 use systems::{
@@ -34,14 +34,11 @@ fn main() {
 	App::new()
 		.add_plugins(DefaultPlugins)
 		.add_event::<MoveEvent>()
-		.add_event::<MoveEnqueueEvent>()
+		.add_event::<Enqueue<MoveEvent>>()
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(Update, add_player_animator)
-		.add_systems(Update, mouse_left::<Tools, MoveEvent, MoveEnqueueEvent>)
-		.add_systems(
-			Update,
-			schedule::<MoveEvent, MoveEnqueueEvent, SimpleMovement, Behaviors>,
-		)
+		.add_systems(Update, mouse_left::<Tools, MoveEvent>)
+		.add_systems(Update, schedule::<MoveEvent, SimpleMovement, Behaviors>)
 		.add_systems(Update, execute::<SimpleMovement, Behaviors>)
 		.add_systems(Update, follow::<Player, CamOrbit>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
