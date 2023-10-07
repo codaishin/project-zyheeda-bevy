@@ -7,7 +7,7 @@ use crate::{
 fn is_active(behavior: &Behavior) -> bool {
 	match behavior {
 		Behavior::SimpleMovement(movement) => movement.target.is_some(),
-		Behavior::Idle(_) => true,
+		Behavior::Idle(_) => false,
 	}
 }
 
@@ -69,5 +69,19 @@ mod tests {
 		behaviors.clean();
 
 		assert_eq!(vec![Behavior::Idle(Idle)], behaviors.0);
+	}
+
+	#[test]
+	fn clean_idle_when_any_other_enqueued() {
+		let mut behaviors = Behaviors::new();
+		let movement = SimpleMovement {
+			target: Some(Vec3::default()),
+		};
+		behaviors.set(Idle);
+		behaviors.add(movement);
+
+		behaviors.clean();
+
+		assert_eq!(vec![Behavior::SimpleMovement(movement)], behaviors.0);
 	}
 }
