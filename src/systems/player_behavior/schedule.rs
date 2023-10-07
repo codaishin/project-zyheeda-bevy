@@ -1,23 +1,23 @@
+use crate::events::Enqueue;
 use crate::traits::{add::Add, set::Set};
 use crate::Player;
 use bevy::prelude::*;
 
 pub fn schedule<
 	TEvent: Copy + Event,
-	TEnqueueEvent: Copy + Event,
-	TBehavior: From<TEvent> + From<TEnqueueEvent>,
+	TBehavior: From<TEvent>,
 	TBehaviors: Set<TBehavior> + Add<TBehavior> + Component,
 >(
 	mut player: Query<(&mut TBehaviors, &Player)>,
 	mut event_reader: EventReader<TEvent>,
-	mut enqueue_event_reader: EventReader<TEnqueueEvent>,
+	mut enqueue_event_reader: EventReader<Enqueue<TEvent>>,
 ) {
 	let Ok((mut behaviors, ..)) = player.get_single_mut() else {
 		return; //FIXME: handle properly
 	};
 
 	for event in enqueue_event_reader.iter() {
-		behaviors.add(TBehavior::from(*event));
+		behaviors.add(TBehavior::from(event.0));
 	}
 
 	for event in event_reader.iter() {
@@ -38,25 +38,12 @@ mod tests {
 		pub target: Vec3,
 	}
 
-	#[derive(Event, Clone, Copy)]
-	struct _EnqueueEvent {
-		pub target: Vec3,
-	}
-
 	pub struct _Behavior {
 		pub target: Vec3,
 	}
 
 	impl From<_Event> for _Behavior {
 		fn from(event: _Event) -> Self {
-			Self {
-				target: event.target,
-			}
-		}
-	}
-
-	impl From<_EnqueueEvent> for _Behavior {
-		fn from(event: _EnqueueEvent) -> Self {
 			Self {
 				target: event.target,
 			}
@@ -101,7 +88,7 @@ mod tests {
 	fn setup_app() -> App {
 		let mut app = App::new();
 		app.add_event::<_Event>();
-		app.add_event::<_EnqueueEvent>();
+		app.add_event::<Enqueue<_Event>>();
 
 		app
 	}
@@ -114,10 +101,7 @@ mod tests {
 			target: Vec3::new(1., 2., 3.),
 		};
 
-		app.add_systems(
-			Update,
-			schedule::<_Event, _EnqueueEvent, _Behavior, _Behaviors>,
-		);
+		app.add_systems(Update, schedule::<_Event, _Behavior, _Behaviors>);
 
 		behaviors
 			.mock
@@ -140,19 +124,16 @@ mod tests {
 	fn add_movement() {
 		let mut app = setup_app();
 		let mut behaviors = _Behaviors::new();
-		let event = _EnqueueEvent {
+		let event = Enqueue(_Event {
 			target: Vec3::new(1., 2., 3.),
-		};
+		});
 
-		app.add_systems(
-			Update,
-			schedule::<_Event, _EnqueueEvent, _Behavior, _Behaviors>,
-		);
+		app.add_systems(Update, schedule::<_Event, _Behavior, _Behaviors>);
 
 		behaviors
 			.mock
 			.expect_add()
-			.withf(move |behavior| behavior.target == event.target)
+			.withf(move |behavior| behavior.target == event.0.target)
 			.times(1)
 			.return_const(());
 		app.world.spawn((
@@ -163,7 +144,7 @@ mod tests {
 		));
 
 		app.world
-			.resource_mut::<Events<_EnqueueEvent>>()
+			.resource_mut::<Events<Enqueue<_Event>>>()
 			.send(event);
 		app.update();
 	}

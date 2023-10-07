@@ -6,6 +6,4 @@ pub struct MoveEvent {
 }
 
 #[derive(Event, Clone, Copy)]
-pub struct MoveEnqueueEvent {
-	pub target: Vec3,
-}
+pub struct Enqueue<T>(pub T);
