@@ -1,4 +1,4 @@
-use crate::behavior::Behavior;
+use crate::behavior::{Behavior, MovementMode};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -31,6 +31,7 @@ impl UnitsPerSecond {
 pub struct Player {
 	pub movement_speed: UnitsPerSecond,
 	pub run_speed: UnitsPerSecond,
+	pub movement_mode: MovementMode,
 }
 
 #[cfg(test)]

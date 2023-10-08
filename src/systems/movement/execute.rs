@@ -76,6 +76,7 @@ mod move_player_tests {
 		let player = Player {
 			movement_speed: UnitsPerSecond::new(5.),
 			run_speed: UnitsPerSecond::new(10.),
+			movement_mode: MovementMode::Walk,
 		};
 		let time_delta = Duration::from_millis(30);
 		let mut movement = Mock_Movement::new();
@@ -105,6 +106,7 @@ mod move_player_tests {
 		let player = Player {
 			movement_speed: UnitsPerSecond::new(5.),
 			run_speed: UnitsPerSecond::new(10.),
+			movement_mode: MovementMode::Walk,
 		};
 		let mut movement = Mock_Movement::new();
 
@@ -132,6 +134,7 @@ mod move_player_tests {
 		let player = Player {
 			movement_speed: UnitsPerSecond::new(5.),
 			run_speed: UnitsPerSecond::new(10.),
+			movement_mode: MovementMode::Walk,
 		};
 		let time_delta = Duration::from_millis(30);
 		let mut movement = Mock_Movement::new();

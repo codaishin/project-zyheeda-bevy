@@ -27,9 +27,8 @@ pub fn schedule<
 
 #[cfg(test)]
 mod tests {
-	use crate::components::UnitsPerSecond;
-
 	use super::*;
+	use crate::{behavior::MovementMode, components::UnitsPerSecond};
 	use bevy::prelude::App;
 	use mockall::mock;
 
@@ -113,6 +112,7 @@ mod tests {
 			Player {
 				movement_speed: UnitsPerSecond::new(1.),
 				run_speed: UnitsPerSecond::new(10.),
+				movement_mode: MovementMode::Walk,
 			},
 			behaviors,
 		));
@@ -141,6 +141,7 @@ mod tests {
 			Player {
 				movement_speed: UnitsPerSecond::new(1.),
 				run_speed: UnitsPerSecond::new(10.),
+				movement_mode: MovementMode::Walk,
 			},
 			behaviors,
 		));
