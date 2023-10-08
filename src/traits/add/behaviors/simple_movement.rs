@@ -1,12 +1,13 @@
 use crate::{
-	behavior::{Behavior, SimpleMovement},
+	behavior::{Behavior, MovementMode, SimpleMovement},
 	components::Behaviors,
 	traits::add::Add,
 };
 
 impl Add<SimpleMovement> for Behaviors {
 	fn add(&mut self, value: SimpleMovement) {
-		self.0.push(Behavior::SimpleMovement(value));
+		let walk_movement = Behavior::SimpleMovement((value, MovementMode::Walk));
+		self.0.push(walk_movement);
 	}
 }
 
@@ -22,6 +23,9 @@ mod tests {
 
 		schedule.add(movement);
 
-		assert_eq!(vec![Behavior::SimpleMovement(movement)], schedule.0);
+		assert_eq!(
+			vec![Behavior::SimpleMovement((movement, MovementMode::Walk))],
+			schedule.0
+		);
 	}
 }

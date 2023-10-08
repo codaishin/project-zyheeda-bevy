@@ -7,7 +7,7 @@ use crate::{
 impl Get<SimpleMovement> for Behaviors {
 	fn get(&mut self) -> Option<&mut SimpleMovement> {
 		let movement = match self.0.first_mut()? {
-			Behavior::SimpleMovement(movement) => Some(movement),
+			Behavior::SimpleMovement((movement, ..)) => Some(movement),
 			_ => None,
 		}?;
 

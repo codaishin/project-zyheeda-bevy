@@ -1,4 +1,5 @@
 use crate::{
+	behavior::MovementMode,
 	behavior::{Behavior, SimpleMovement},
 	components::Behaviors,
 	traits::set::Set,
@@ -6,7 +7,8 @@ use crate::{
 
 impl Set<SimpleMovement> for Behaviors {
 	fn set(&mut self, value: SimpleMovement) {
-		self.0 = vec![Behavior::SimpleMovement(value)];
+		let walk_movement = Behavior::SimpleMovement((value, MovementMode::Walk));
+		self.0 = vec![walk_movement];
 	}
 }
 
@@ -22,7 +24,10 @@ mod tests {
 
 		behaviors.set(movement);
 
-		assert_eq!(vec![Behavior::SimpleMovement(movement)], behaviors.0);
+		assert_eq!(
+			vec![Behavior::SimpleMovement((movement, MovementMode::Walk))],
+			behaviors.0
+		);
 	}
 
 	#[test]
@@ -31,13 +36,16 @@ mod tests {
 			target: Some(Vec3::ONE),
 		};
 		let mut behaviors = Behaviors(vec![
-			Behavior::SimpleMovement(SimpleMovement { target: None }),
-			Behavior::SimpleMovement(SimpleMovement { target: None }),
-			Behavior::SimpleMovement(SimpleMovement { target: None }),
+			Behavior::SimpleMovement((SimpleMovement { target: None }, MovementMode::Walk)),
+			Behavior::SimpleMovement((SimpleMovement { target: None }, MovementMode::Walk)),
+			Behavior::SimpleMovement((SimpleMovement { target: None }, MovementMode::Walk)),
 		]);
 
 		behaviors.set(movement);
 
-		assert_eq!(vec![Behavior::SimpleMovement(movement)], behaviors.0);
+		assert_eq!(
+			vec![Behavior::SimpleMovement((movement, MovementMode::Walk))],
+			behaviors.0
+		);
 	}
 }
