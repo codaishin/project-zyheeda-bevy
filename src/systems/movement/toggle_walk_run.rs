@@ -30,7 +30,7 @@ mod tests {
 		let mut app = App::new();
 		let keys = Input::<KeyCode>::default();
 		let player = Player {
-			movement_speed: UnitsPerSecond::new(0.1),
+			walk_speed: UnitsPerSecond::new(0.1),
 			run_speed: UnitsPerSecond::new(0.2),
 			movement_mode: MovementMode::Walk,
 		};
@@ -53,7 +53,7 @@ mod tests {
 		let mut app = App::new();
 		let keys = Input::<KeyCode>::default();
 		let player = Player {
-			movement_speed: UnitsPerSecond::new(0.1),
+			walk_speed: UnitsPerSecond::new(0.1),
 			run_speed: UnitsPerSecond::new(0.2),
 			movement_mode: MovementMode::Run,
 		};
@@ -76,7 +76,7 @@ mod tests {
 		let mut app = App::new();
 		let keys = Input::<KeyCode>::default();
 		let player = Player {
-			movement_speed: UnitsPerSecond::new(0.1),
+			walk_speed: UnitsPerSecond::new(0.1),
 			run_speed: UnitsPerSecond::new(0.2),
 			movement_mode: MovementMode::Walk,
 		};

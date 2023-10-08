@@ -119,7 +119,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			..default()
 		},
 		Player {
-			movement_speed: UnitsPerSecond::new(0.75),
+			walk_speed: UnitsPerSecond::new(0.75),
 			run_speed: UnitsPerSecond::new(2.),
 			movement_mode: MovementMode::Walk,
 		},

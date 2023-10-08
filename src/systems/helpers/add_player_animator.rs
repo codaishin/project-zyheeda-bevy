@@ -37,7 +37,7 @@ mod tests {
 		let player = app
 			.world
 			.spawn(Player {
-				movement_speed: UnitsPerSecond::new(0.),
+				walk_speed: UnitsPerSecond::new(0.),
 				run_speed: UnitsPerSecond::new(10.),
 				movement_mode: MovementMode::Walk,
 			})

@@ -20,7 +20,7 @@ pub fn execute<
 	};
 
 	let speed = match player.movement_mode {
-		MovementMode::Walk => player.movement_speed.to_f32(),
+		MovementMode::Walk => player.walk_speed.to_f32(),
 		MovementMode::Run => player.run_speed.to_f32(),
 	};
 
@@ -76,7 +76,7 @@ mod move_player_tests {
 		let last_update = time.last_update().unwrap();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let player = Player {
-			movement_speed: UnitsPerSecond::new(5.),
+			walk_speed: UnitsPerSecond::new(5.),
 			run_speed: UnitsPerSecond::new(10.),
 			movement_mode: MovementMode::Walk,
 		};
@@ -106,7 +106,7 @@ mod move_player_tests {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let player = Player {
-			movement_speed: UnitsPerSecond::new(5.),
+			walk_speed: UnitsPerSecond::new(5.),
 			run_speed: UnitsPerSecond::new(10.),
 			movement_mode: MovementMode::Walk,
 		};
@@ -134,7 +134,7 @@ mod move_player_tests {
 		let last_update = time.last_update().unwrap();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let player = Player {
-			movement_speed: UnitsPerSecond::new(5.),
+			walk_speed: UnitsPerSecond::new(5.),
 			run_speed: UnitsPerSecond::new(10.),
 			movement_mode: MovementMode::Run,
 		};
@@ -167,7 +167,7 @@ mod move_player_tests {
 		let last_update = time.last_update().unwrap();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let player = Player {
-			movement_speed: UnitsPerSecond::new(5.),
+			walk_speed: UnitsPerSecond::new(5.),
 			run_speed: UnitsPerSecond::new(10.),
 			movement_mode: MovementMode::Run,
 		};
@@ -198,7 +198,7 @@ mod move_player_tests {
 
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let player = Player {
-			movement_speed: UnitsPerSecond::new(5.),
+			walk_speed: UnitsPerSecond::new(5.),
 			run_speed: UnitsPerSecond::new(10.),
 			movement_mode: MovementMode::Walk,
 		};
@@ -231,7 +231,7 @@ mod move_player_tests {
 
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let player = Player {
-			movement_speed: UnitsPerSecond::new(5.),
+			walk_speed: UnitsPerSecond::new(5.),
 			run_speed: UnitsPerSecond::new(10.),
 			movement_mode: MovementMode::Run,
 		};

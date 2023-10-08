@@ -29,7 +29,7 @@ impl UnitsPerSecond {
 
 #[derive(Component)]
 pub struct Player {
-	pub movement_speed: UnitsPerSecond,
+	pub walk_speed: UnitsPerSecond,
 	pub run_speed: UnitsPerSecond,
 	pub movement_mode: MovementMode,
 }
