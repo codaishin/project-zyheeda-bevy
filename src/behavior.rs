@@ -10,6 +10,9 @@ pub enum MovementMode {
 	Walk,
 }
 
+#[derive(PartialEq, Debug)]
+pub struct Walk;
+
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Idle;
 

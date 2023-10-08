@@ -1,10 +1,10 @@
 use crate::{
 	behavior::{Behavior, SimpleMovement},
 	components::Behaviors,
-	traits::get::Get,
+	traits::get::GetMut,
 };
 
-impl Get<SimpleMovement> for Behaviors {
+impl GetMut<SimpleMovement> for Behaviors {
 	fn get(&mut self) -> Option<&mut SimpleMovement> {
 		let movement = match self.0.first_mut()? {
 			Behavior::SimpleMovement((movement, ..)) => Some(movement),
@@ -28,7 +28,7 @@ mod tests {
 	fn get_none() {
 		let mut scheduler = Behaviors::new();
 
-		assert!((&mut scheduler as &mut dyn Get<SimpleMovement>)
+		assert!((&mut scheduler as &mut dyn GetMut<SimpleMovement>)
 			.get()
 			.is_none());
 	}
@@ -52,7 +52,7 @@ mod tests {
 
 		(&mut scheduler as &mut dyn Add<SimpleMovement>).add(movement);
 
-		assert!((&mut scheduler as &mut dyn Get<SimpleMovement>)
+		assert!((&mut scheduler as &mut dyn GetMut<SimpleMovement>)
 			.get()
 			.is_none());
 	}

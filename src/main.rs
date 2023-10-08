@@ -9,7 +9,7 @@ mod systems;
 mod tools;
 mod traits;
 
-use behavior::{Idle, SimpleMovement};
+use behavior::{Idle, SimpleMovement, Walk};
 use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
 use bevy::prelude::*;
 use components::{Behaviors, CamOrbit, Player, UnitsPerSecond};
@@ -45,7 +45,7 @@ fn main() {
 		.add_systems(
 			Update,
 			(
-				animate::<SimpleMovement, Behaviors, PlayerAnimations>,
+				animate::<Walk, Behaviors, PlayerAnimations>,
 				animate::<Idle, Behaviors, PlayerAnimations>,
 			),
 		)

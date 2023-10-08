@@ -5,9 +5,9 @@ use crate::{
 };
 
 impl Get<Idle> for Behaviors {
-	fn get(&mut self) -> Option<&mut Idle> {
+	fn get(&mut self) -> Option<Idle> {
 		match self.0.first_mut() {
-			Some(Behavior::Idle(idle)) => Some(idle),
+			Some(Behavior::Idle(idle)) => Some(*idle),
 			_ => None,
 		}
 	}
@@ -32,6 +32,6 @@ mod tests {
 
 		(&mut scheduler as &mut dyn Set<Idle>).set(idle);
 
-		assert_eq!(&idle, scheduler.get().unwrap());
+		assert_eq!(idle, scheduler.get().unwrap());
 	}
 }

@@ -1,10 +1,10 @@
 use crate::{
 	components::Player,
-	traits::{get::Get, movement::Movement},
+	traits::{get::GetMut, movement::Movement},
 };
 use bevy::prelude::*;
 
-pub fn execute<TMovementComponent: Movement, TState: Get<TMovementComponent> + Component>(
+pub fn execute<TMovementComponent: Movement, TState: GetMut<TMovementComponent> + Component>(
 	time: Res<Time>,
 	mut query: Query<(&mut TState, &mut Transform, &Player)>,
 ) {
@@ -41,7 +41,7 @@ mod move_player_tests {
 		movement: Option<Mock_Movement>,
 	}
 
-	impl Get<Mock_Movement> for _State {
+	impl GetMut<Mock_Movement> for _State {
 		fn get(&mut self) -> Option<&mut Mock_Movement> {
 			self.movement.as_mut()
 		}
