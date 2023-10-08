@@ -9,7 +9,7 @@ mod systems;
 mod tools;
 mod traits;
 
-use behavior::{Idle, MovementMode, SimpleMovement, Walk};
+use behavior::{Idle, MovementMode, Run, SimpleMovement, Walk};
 use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
 use bevy::prelude::*;
 use components::{Behaviors, CamOrbit, Player, UnitsPerSecond};
@@ -46,8 +46,9 @@ fn main() {
 		.add_systems(
 			Update,
 			(
-				animate::<Walk, Behaviors, PlayerAnimations>,
 				animate::<Idle, Behaviors, PlayerAnimations>,
+				animate::<Walk, Behaviors, PlayerAnimations>,
+				animate::<Run, Behaviors, PlayerAnimations>,
 			),
 		)
 		.add_systems(Update, clean::<Behaviors>)
@@ -109,6 +110,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	commands.insert_resource(PlayerAnimations {
 		idle: asset_server.load("models/player.gltf#Animation2"),
 		walk: asset_server.load("models/player.gltf#Animation1"),
+		run: asset_server.load("models/player.gltf#Animation0"),
 	});
 
 	commands.spawn((

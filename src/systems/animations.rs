@@ -1,5 +1,5 @@
 use crate::{
-	behavior::{Idle, Walk},
+	behavior::{Idle, Run, Walk},
 	components::{Player, PlayerAnimator},
 	resources::PlayerAnimations,
 	traits::get::Get,
@@ -13,6 +13,12 @@ pub trait GetClip<T> {
 impl GetClip<Walk> for PlayerAnimations {
 	fn get_clip(&self) -> Handle<AnimationClip> {
 		self.walk.clone_weak()
+	}
+}
+
+impl GetClip<Run> for PlayerAnimations {
+	fn get_clip(&self) -> Handle<AnimationClip> {
+		self.run.clone_weak()
 	}
 }
 
