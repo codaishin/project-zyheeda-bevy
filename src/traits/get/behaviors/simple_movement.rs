@@ -1,17 +1,17 @@
 use crate::{
-	behavior::{Behavior, SimpleMovement},
+	behavior::{Behavior, MovementMode, SimpleMovement},
 	components::Behaviors,
-	traits::get::Get,
+	traits::get::GetMut,
 };
 
-impl Get<SimpleMovement> for Behaviors {
-	fn get(&mut self) -> Option<&mut SimpleMovement> {
+impl GetMut<(SimpleMovement, MovementMode)> for Behaviors {
+	fn get(&mut self) -> Option<&mut (SimpleMovement, MovementMode)> {
 		let movement = match self.0.first_mut()? {
 			Behavior::SimpleMovement(movement) => Some(movement),
 			_ => None,
 		}?;
 
-		_ = movement.target?;
+		_ = movement.0.target?;
 
 		Some(movement)
 	}
@@ -19,41 +19,45 @@ impl Get<SimpleMovement> for Behaviors {
 
 #[cfg(test)]
 mod tests {
-	use bevy::prelude::Vec3;
-
 	use super::*;
-	use crate::traits::{add::Add, new::New};
+	use crate::traits::new::New;
+	use bevy::prelude::Vec3;
 
 	#[test]
 	fn get_none() {
-		let mut scheduler = Behaviors::new();
+		let mut behaviors = Behaviors::new();
 
-		assert!((&mut scheduler as &mut dyn Get<SimpleMovement>)
-			.get()
-			.is_none());
+		let movement: Option<&mut (SimpleMovement, MovementMode)> = behaviors.get();
+
+		assert!(movement.is_none());
 	}
 
 	#[test]
 	fn get_first() {
-		let mut scheduler = Behaviors::new();
-		let movement = SimpleMovement {
-			target: Some(Vec3::ONE),
-		};
+		let mut behaviors = Behaviors::new();
+		let expected = (
+			SimpleMovement {
+				target: Some(Vec3::ONE),
+			},
+			MovementMode::Run,
+		);
 
-		scheduler.add(movement);
+		behaviors.0.push(Behavior::SimpleMovement(expected));
 
-		assert_eq!(&movement, scheduler.get().unwrap());
+		assert_eq!(&expected, behaviors.get().unwrap());
 	}
 
 	#[test]
 	fn get_none_if_target_none() {
-		let mut scheduler = Behaviors::new();
-		let movement = SimpleMovement { target: None };
+		let mut behaviors = Behaviors::new();
 
-		(&mut scheduler as &mut dyn Add<SimpleMovement>).add(movement);
+		behaviors.0.push(Behavior::SimpleMovement((
+			SimpleMovement { target: None },
+			MovementMode::Run,
+		)));
 
-		assert!((&mut scheduler as &mut dyn Get<SimpleMovement>)
-			.get()
-			.is_none());
+		let movement: Option<&mut (SimpleMovement, MovementMode)> = behaviors.get();
+
+		assert!(movement.is_none());
 	}
 }

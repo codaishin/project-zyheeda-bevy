@@ -28,7 +28,7 @@ pub fn add_player_animator(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::UnitsPerSecond;
+	use crate::{behavior::MovementMode, components::UnitsPerSecond};
 	use bevy::prelude::{App, Update};
 
 	#[test]
@@ -37,7 +37,9 @@ mod tests {
 		let player = app
 			.world
 			.spawn(Player {
-				movement_speed: UnitsPerSecond::new(0.),
+				walk_speed: UnitsPerSecond::new(0.),
+				run_speed: UnitsPerSecond::new(10.),
+				movement_mode: MovementMode::Walk,
 			})
 			.id();
 		let animator = app.world.spawn(AnimationPlayer::default()).id();

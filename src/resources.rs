@@ -4,4 +4,5 @@ use bevy::prelude::*;
 pub struct PlayerAnimations {
 	pub idle: Handle<AnimationClip>,
 	pub walk: Handle<AnimationClip>,
+	pub run: Handle<AnimationClip>,
 }

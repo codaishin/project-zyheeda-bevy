@@ -9,13 +9,14 @@ mod systems;
 mod tools;
 mod traits;
 
-use behavior::{Idle, SimpleMovement};
+use behavior::{Idle, MovementMode, Run, SimpleMovement, Walk};
 use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
 use bevy::prelude::*;
 use components::{Behaviors, CamOrbit, Player, UnitsPerSecond};
 use events::{Enqueue, MoveEvent};
 use resources::PlayerAnimations;
 use std::f32::consts::PI;
+use systems::movement::toggle_walk_run::toggle_walk_run;
 use systems::{
 	animations::animate,
 	clean::clean,
@@ -37,7 +38,7 @@ fn main() {
 		.add_event::<Enqueue<MoveEvent>>()
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(Update, add_player_animator)
-		.add_systems(Update, mouse_left::<Tools, MoveEvent>)
+		.add_systems(Update, (mouse_left::<Tools, MoveEvent>, toggle_walk_run))
 		.add_systems(Update, schedule::<MoveEvent, SimpleMovement, Behaviors>)
 		.add_systems(Update, execute::<SimpleMovement, Behaviors>)
 		.add_systems(Update, follow::<Player, CamOrbit>)
@@ -45,8 +46,9 @@ fn main() {
 		.add_systems(
 			Update,
 			(
-				animate::<SimpleMovement, Behaviors, PlayerAnimations>,
 				animate::<Idle, Behaviors, PlayerAnimations>,
+				animate::<Walk, Behaviors, PlayerAnimations>,
+				animate::<Run, Behaviors, PlayerAnimations>,
 			),
 		)
 		.add_systems(Update, clean::<Behaviors>)
@@ -108,6 +110,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	commands.insert_resource(PlayerAnimations {
 		idle: asset_server.load("models/player.gltf#Animation2"),
 		walk: asset_server.load("models/player.gltf#Animation1"),
+		run: asset_server.load("models/player.gltf#Animation0"),
 	});
 
 	commands.spawn((
@@ -116,7 +119,9 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			..default()
 		},
 		Player {
-			movement_speed: UnitsPerSecond::new(0.75),
+			walk_speed: UnitsPerSecond::new(0.75),
+			run_speed: UnitsPerSecond::new(2.),
+			movement_mode: MovementMode::Walk,
 		},
 		Behaviors::new(),
 	));

@@ -6,7 +6,7 @@ use crate::{
 
 fn is_active(behavior: &Behavior) -> bool {
 	match behavior {
-		Behavior::SimpleMovement(movement) => movement.target.is_some(),
+		Behavior::SimpleMovement((movement, ..)) => movement.target.is_some(),
 		Behavior::Idle(_) => false,
 	}
 }
@@ -29,7 +29,7 @@ mod tests {
 
 	use super::*;
 	use crate::{
-		behavior::{Idle, SimpleMovement},
+		behavior::{Idle, MovementMode, SimpleMovement},
 		traits::{add::Add, new::New, set::Set},
 	};
 
@@ -54,9 +54,12 @@ mod tests {
 		behavior.clean();
 
 		assert_eq!(
-			vec![Behavior::SimpleMovement(SimpleMovement {
-				target: Some(Vec3::ZERO)
-			})],
+			vec![Behavior::SimpleMovement((
+				SimpleMovement {
+					target: Some(Vec3::ZERO)
+				},
+				MovementMode::Walk
+			))],
 			behavior.0
 		);
 	}
@@ -82,6 +85,9 @@ mod tests {
 
 		behaviors.clean();
 
-		assert_eq!(vec![Behavior::SimpleMovement(movement)], behaviors.0);
+		assert_eq!(
+			vec![Behavior::SimpleMovement((movement, MovementMode::Walk))],
+			behaviors.0
+		);
 	}
 }

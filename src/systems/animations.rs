@@ -1,21 +1,24 @@
 use crate::{
-	behavior::{Idle, SimpleMovement},
+	behavior::{Idle, Run, Walk},
 	components::{Player, PlayerAnimator},
 	resources::PlayerAnimations,
 	traits::get::Get,
 };
 use bevy::prelude::*;
 
-// Not sure how to test animation playing yet, so we keep everything together in this file as it is
-// temporary
-
 pub trait GetClip<T> {
 	fn get_clip(&self) -> Handle<AnimationClip>;
 }
 
-impl GetClip<SimpleMovement> for PlayerAnimations {
+impl GetClip<Walk> for PlayerAnimations {
 	fn get_clip(&self) -> Handle<AnimationClip> {
 		self.walk.clone_weak()
+	}
+}
+
+impl GetClip<Run> for PlayerAnimations {
+	fn get_clip(&self) -> Handle<AnimationClip> {
+		self.run.clone_weak()
 	}
 }
 

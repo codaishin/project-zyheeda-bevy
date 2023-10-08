@@ -10,9 +10,8 @@ impl Empty for Behaviors {
 
 #[cfg(test)]
 mod tests {
-	use crate::behavior::{Behavior, SimpleMovement};
-
 	use super::*;
+	use crate::behavior::{Behavior, MovementMode, SimpleMovement};
 
 	#[test]
 	fn is_empty_true() {
@@ -23,9 +22,10 @@ mod tests {
 
 	#[test]
 	fn is_empty_false() {
-		let behaviors = Behaviors(vec![Behavior::SimpleMovement(SimpleMovement {
-			target: None,
-		})]);
+		let behaviors = Behaviors(vec![Behavior::SimpleMovement((
+			SimpleMovement { target: None },
+			MovementMode::Walk,
+		))]);
 
 		assert!(!behaviors.is_empty());
 	}
