@@ -106,7 +106,7 @@ fn spawn_plane(
 
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	commands.insert_resource(PlayerAnimations {
-		idle: asset_server.load("models/player.gltf#Animation0"),
+		idle: asset_server.load("models/player.gltf#Animation2"),
 		walk: asset_server.load("models/player.gltf#Animation1"),
 	});
 
