@@ -10,5 +10,9 @@
 	"editor.indentSize": "tabSize",
 	"editor.insertSpaces": false,
 	"rust-analyzer.check.command": "clippy",
-	"rust-analyzer.showUnlinkedFileNotification": false
+	"rust-analyzer.showUnlinkedFileNotification": false,
+	"cSpell.words": [
+		"consts",
+		"gltf"
+	]
 }
