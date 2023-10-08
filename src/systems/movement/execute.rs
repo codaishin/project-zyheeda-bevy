@@ -1,17 +1,21 @@
 use crate::{
+	behavior::MovementMode,
 	components::Player,
 	traits::{get::GetMut, movement::Movement},
 };
 use bevy::prelude::*;
 
-pub fn execute<TMovementComponent: Movement, TState: GetMut<TMovementComponent> + Component>(
+pub fn execute<
+	TMovementComponent: Movement,
+	TState: GetMut<(TMovementComponent, MovementMode)> + Component,
+>(
 	time: Res<Time>,
 	mut query: Query<(&mut TState, &mut Transform, &Player)>,
 ) {
 	let Ok((mut state, mut transform, player)) = query.get_single_mut() else {
 		return; //FIXME: Handle properly
 	};
-	let Some(movement) = state.get() else {
+	let Some((movement, _)) = state.get() else {
 		return;
 	};
 
@@ -38,11 +42,11 @@ mod move_player_tests {
 
 	#[derive(Component)]
 	struct _State {
-		movement: Option<Mock_Movement>,
+		movement: Option<(Mock_Movement, MovementMode)>,
 	}
 
-	impl GetMut<Mock_Movement> for _State {
-		fn get(&mut self) -> Option<&mut Mock_Movement> {
+	impl GetMut<(Mock_Movement, MovementMode)> for _State {
+		fn get(&mut self) -> Option<&mut (Mock_Movement, MovementMode)> {
 			self.movement.as_mut()
 		}
 	}
@@ -81,7 +85,7 @@ mod move_player_tests {
 		time.update_with_instant(last_update + time_delta);
 		app.world.spawn((
 			_State {
-				movement: Some(movement),
+				movement: Some((movement, MovementMode::Walk)),
 			},
 			player,
 			transform,
@@ -103,7 +107,7 @@ mod move_player_tests {
 
 		app.world.spawn((
 			_State {
-				movement: Some(movement),
+				movement: Some((movement, MovementMode::Walk)),
 			},
 			player,
 			transform,
