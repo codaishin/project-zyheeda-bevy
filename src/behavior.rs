@@ -8,10 +8,14 @@ pub struct SimpleMovement {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum MovementMode {
 	Walk,
+	Run,
 }
 
 #[derive(PartialEq, Debug)]
 pub struct Walk;
+
+#[derive(PartialEq, Debug)]
+pub struct Run;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Idle;

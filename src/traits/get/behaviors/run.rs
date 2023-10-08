@@ -1,13 +1,13 @@
 use crate::{
-	behavior::{Behavior, MovementMode, Walk},
+	behavior::{Behavior, MovementMode, Run},
 	components::Behaviors,
 	traits::get::Get,
 };
 
-impl Get<Walk> for Behaviors {
-	fn get(&mut self) -> Option<Walk> {
-		match self.0.first_mut() {
-			Some(Behavior::SimpleMovement((_, MovementMode::Walk))) => Some(Walk),
+impl Get<Run> for Behaviors {
+	fn get(&mut self) -> Option<Run> {
+		match self.0.first() {
+			Some(Behavior::SimpleMovement((_, MovementMode::Run))) => Some(Run),
 			_ => None,
 		}
 	}
@@ -22,37 +22,37 @@ mod tests {
 	};
 
 	#[test]
-	fn get_walk() {
-		let mut behaviors = Behaviors::new();
-		behaviors.0.push(Behavior::SimpleMovement((
-			SimpleMovement { target: None },
-			MovementMode::Walk,
-		)));
-
-		let walk: Option<Walk> = behaviors.get();
-
-		assert_eq!(Some(Walk), walk);
-	}
-
-	#[test]
-	fn get_none_when_no_movement() {
-		let mut behaviors = Behaviors::new();
-
-		let walk: Option<Walk> = behaviors.get();
-
-		assert_eq!(None, walk);
-	}
-
-	#[test]
-	fn get_none_when_not_walking() {
+	fn get_run() {
 		let mut behaviors = Behaviors::new();
 		behaviors.0.push(Behavior::SimpleMovement((
 			SimpleMovement { target: None },
 			MovementMode::Run,
 		)));
 
-		let walk: Option<Walk> = behaviors.get();
+		let run: Option<Run> = behaviors.get();
 
-		assert_eq!(None, walk);
+		assert_eq!(Some(Run), run);
+	}
+
+	#[test]
+	fn get_none_when_no_movement() {
+		let mut behaviors = Behaviors::new();
+
+		let run: Option<Run> = behaviors.get();
+
+		assert_eq!(None, run);
+	}
+
+	#[test]
+	fn get_none_when_not_running() {
+		let mut behaviors = Behaviors::new();
+		behaviors.0.push(Behavior::SimpleMovement((
+			SimpleMovement { target: None },
+			MovementMode::Walk,
+		)));
+
+		let run: Option<Run> = behaviors.get();
+
+		assert_eq!(None, run);
 	}
 }
