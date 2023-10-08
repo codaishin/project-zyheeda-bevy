@@ -117,6 +117,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		},
 		Player {
 			movement_speed: UnitsPerSecond::new(0.75),
+			run_speed: UnitsPerSecond::new(2.),
 		},
 		Behaviors::new(),
 	));

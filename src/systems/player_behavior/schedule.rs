@@ -112,6 +112,7 @@ mod tests {
 		app.world.spawn((
 			Player {
 				movement_speed: UnitsPerSecond::new(1.),
+				run_speed: UnitsPerSecond::new(10.),
 			},
 			behaviors,
 		));
@@ -139,6 +140,7 @@ mod tests {
 		app.world.spawn((
 			Player {
 				movement_speed: UnitsPerSecond::new(1.),
+				run_speed: UnitsPerSecond::new(10.),
 			},
 			behaviors,
 		));

@@ -38,6 +38,7 @@ mod tests {
 			.world
 			.spawn(Player {
 				movement_speed: UnitsPerSecond::new(0.),
+				run_speed: UnitsPerSecond::new(10.),
 			})
 			.id();
 		let animator = app.world.spawn(AnimationPlayer::default()).id();

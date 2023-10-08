@@ -15,11 +15,14 @@ pub fn execute<
 	let Ok((mut state, mut transform, player)) = query.get_single_mut() else {
 		return; //FIXME: Handle properly
 	};
-	let Some((movement, _)) = state.get() else {
+	let Some((movement, mode)) = state.get() else {
 		return;
 	};
 
-	let speed = player.movement_speed.unpack();
+	let speed = match mode {
+		MovementMode::Walk => player.movement_speed.to_f32(),
+		MovementMode::Run => player.run_speed.to_f32(),
+	};
 	movement.update(&mut transform, time.delta_seconds() * speed);
 }
 
@@ -72,6 +75,7 @@ mod move_player_tests {
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let player = Player {
 			movement_speed: UnitsPerSecond::new(5.),
+			run_speed: UnitsPerSecond::new(10.),
 		};
 		let time_delta = Duration::from_millis(30);
 		let mut movement = Mock_Movement::new();
@@ -100,6 +104,7 @@ mod move_player_tests {
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let player = Player {
 			movement_speed: UnitsPerSecond::new(5.),
+			run_speed: UnitsPerSecond::new(10.),
 		};
 		let mut movement = Mock_Movement::new();
 
@@ -114,6 +119,38 @@ mod move_player_tests {
 		));
 
 		app.update();
+		app.update();
+	}
+
+	#[test]
+	fn move_player_with_run_speed() {
+		let mut app = setup_app();
+		let mut time = app.world.resource_mut::<Time>();
+
+		let last_update = time.last_update().unwrap();
+		let transform = Transform::from_xyz(1., 2., 3.);
+		let player = Player {
+			movement_speed: UnitsPerSecond::new(5.),
+			run_speed: UnitsPerSecond::new(10.),
+		};
+		let time_delta = Duration::from_millis(30);
+		let mut movement = Mock_Movement::new();
+
+		movement
+			.expect_update()
+			.with(eq(transform), eq(time_delta.as_secs_f32() * 10.))
+			.times(1)
+			.return_const(());
+
+		time.update_with_instant(last_update + time_delta);
+		app.world.spawn((
+			_State {
+				movement: Some((movement, MovementMode::Run)),
+			},
+			player,
+			transform,
+		));
+
 		app.update();
 	}
 }
