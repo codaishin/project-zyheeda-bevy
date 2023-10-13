@@ -110,7 +110,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	commands.insert_resource(PlayerAnimations {
 		idle: asset_server.load("models/player.gltf#Animation2"),
 		walk: asset_server.load("models/player.gltf#Animation1"),
-		run: asset_server.load("models/player.gltf#Animation0"),
+		run: asset_server.load("models/player.gltf#Animation3"),
 	});
 
 	commands.spawn((
@@ -120,7 +120,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		},
 		Player {
 			walk_speed: UnitsPerSecond::new(0.75),
-			run_speed: UnitsPerSecond::new(2.),
+			run_speed: UnitsPerSecond::new(1.5),
 			movement_mode: MovementMode::Walk,
 		},
 		Behaviors::new(),
