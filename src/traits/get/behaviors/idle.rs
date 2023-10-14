@@ -5,8 +5,8 @@ use crate::{
 };
 
 impl Get<Idle> for Behaviors {
-	fn get(&mut self) -> Option<Idle> {
-		match self.0.first_mut() {
+	fn get(&self) -> Option<Idle> {
+		match self.0.first() {
 			Some(Behavior::Idle(idle)) => Some(*idle),
 			_ => None,
 		}

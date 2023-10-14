@@ -7,10 +7,10 @@ pub fn animate<
 	TAgent: Component,
 >(
 	animation: Res<Animation<TAgent, TBehavior>>,
-	mut behaviors: Query<&mut TBehaviors, With<TAgent>>,
+	mut agents: Query<(&TBehaviors, &Animator), With<TAgent>>,
 	mut animators: Query<&mut AnimationPlayer, With<Animator<TAgent>>>,
 ) {
-	let Ok(mut behaviors) = behaviors.get_single_mut() else {
+	let Ok(behaviors) = behaviors.get_single() else {
 		return; //FIXME: handle properly
 	};
 	let Ok(mut animator) = animators.get_single_mut() else {

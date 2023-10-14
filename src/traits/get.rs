@@ -5,5 +5,5 @@ pub trait GetMut<T> {
 }
 
 pub trait Get<T> {
-	fn get(&mut self) -> Option<T>;
+	fn get(&self) -> Option<T>;
 }

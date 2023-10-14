@@ -5,7 +5,7 @@ use crate::{
 };
 
 impl Get<Run> for Behaviors {
-	fn get(&mut self) -> Option<Run> {
+	fn get(&self) -> Option<Run> {
 		match self.0.first() {
 			Some(Behavior::SimpleMovement((_, MovementMode::Run))) => Some(Run),
 			_ => None,
@@ -36,7 +36,7 @@ mod tests {
 
 	#[test]
 	fn get_none_when_no_movement() {
-		let mut behaviors = Behaviors::new();
+		let behaviors = Behaviors::new();
 
 		let run: Option<Run> = behaviors.get();
 
