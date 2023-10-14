@@ -5,8 +5,9 @@ pub struct SimpleMovement {
 	pub target: Option<Vec3>,
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub enum MovementMode {
+	#[default]
 	Walk,
 	Run,
 }

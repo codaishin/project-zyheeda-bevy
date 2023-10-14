@@ -28,7 +28,6 @@ pub fn schedule<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{behavior::MovementMode, components::UnitsPerSecond};
 	use bevy::prelude::App;
 	use mockall::mock;
 
@@ -108,14 +107,7 @@ mod tests {
 			.withf(move |behavior| behavior.target == event.target)
 			.times(1)
 			.return_const(());
-		app.world.spawn((
-			Player {
-				walk_speed: UnitsPerSecond::new(1.),
-				run_speed: UnitsPerSecond::new(10.),
-				movement_mode: MovementMode::Walk,
-			},
-			behaviors,
-		));
+		app.world.spawn((Player { ..default() }, behaviors));
 
 		app.world.resource_mut::<Events<_Event>>().send(event);
 		app.update();
@@ -137,14 +129,7 @@ mod tests {
 			.withf(move |behavior| behavior.target == event.0.target)
 			.times(1)
 			.return_const(());
-		app.world.spawn((
-			Player {
-				walk_speed: UnitsPerSecond::new(1.),
-				run_speed: UnitsPerSecond::new(10.),
-				movement_mode: MovementMode::Walk,
-			},
-			behaviors,
-		));
+		app.world.spawn((Player { ..default() }, behaviors));
 
 		app.world
 			.resource_mut::<Events<Enqueue<_Event>>>()

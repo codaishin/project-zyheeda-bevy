@@ -1,6 +1,5 @@
 use crate::behavior::{Behavior, MovementMode};
 use bevy::prelude::*;
-use std::marker::PhantomData;
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -11,7 +10,7 @@ pub struct CamOrbit {
 
 /// Represents units per second.
 /// Is clamped at minimum 0.
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Default)]
 pub struct UnitsPerSecond(f32);
 
 impl UnitsPerSecond {
@@ -26,13 +25,6 @@ impl UnitsPerSecond {
 	pub fn to_f32(self) -> f32 {
 		self.0
 	}
-}
-
-#[derive(Component)]
-pub struct Player {
-	pub walk_speed: UnitsPerSecond,
-	pub run_speed: UnitsPerSecond,
-	pub movement_mode: MovementMode,
 }
 
 #[cfg(test)]
@@ -54,16 +46,17 @@ mod tests {
 	}
 }
 
+#[derive(Component, Default)]
+pub struct Player {
+	pub walk_speed: UnitsPerSecond,
+	pub run_speed: UnitsPerSecond,
+	pub movement_mode: MovementMode,
+}
+
 #[derive(Component)]
 pub struct Behaviors(pub Vec<Behavior>);
 
-#[derive(Component)]
-pub struct Animator<TAgent> {
-	agent: PhantomData<TAgent>,
-}
-
-impl<TAgent> Animator<TAgent> {
-	pub fn new() -> Self {
-		Self { agent: PhantomData }
-	}
+#[derive(Component, Default)]
+pub struct Animator {
+	pub animation_player_id: Option<Entity>,
 }
