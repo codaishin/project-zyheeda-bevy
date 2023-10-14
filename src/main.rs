@@ -14,14 +14,13 @@ use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
 use bevy::prelude::*;
 use components::{Behaviors, CamOrbit, Player, UnitsPerSecond};
 use events::{Enqueue, MoveEvent};
-use resources::PlayerAnimations;
+use resources::Animation;
 use std::f32::consts::PI;
 use systems::movement::toggle_walk_run::toggle_walk_run;
 use systems::{
-	animations::animate,
+	animations::{add_animator::add_animator, animate::animate},
 	clean::clean,
 	events::mouse_left::mouse_left,
-	helpers::add_player_animator::add_player_animator,
 	movement::{execute::execute, follow::follow, move_on_orbit::move_on_orbit},
 	player_behavior::schedule::schedule,
 };
@@ -37,7 +36,7 @@ fn main() {
 		.add_event::<MoveEvent>()
 		.add_event::<Enqueue<MoveEvent>>()
 		.add_systems(Startup, setup_simple_3d_scene)
-		.add_systems(Update, add_player_animator)
+		.add_systems(Update, add_animator::<Player>)
 		.add_systems(Update, (mouse_left::<Tools, MoveEvent>, toggle_walk_run))
 		.add_systems(Update, schedule::<MoveEvent, SimpleMovement, Behaviors>)
 		.add_systems(Update, execute::<SimpleMovement, Behaviors>)
@@ -46,9 +45,9 @@ fn main() {
 		.add_systems(
 			Update,
 			(
-				animate::<Idle, Behaviors, PlayerAnimations>,
-				animate::<Walk, Behaviors, PlayerAnimations>,
-				animate::<Run, Behaviors, PlayerAnimations>,
+				animate::<Idle, Behaviors, Player>,
+				animate::<Walk, Behaviors, Player>,
+				animate::<Run, Behaviors, Player>,
 			),
 		)
 		.add_systems(Update, clean::<Behaviors>)
@@ -107,11 +106,15 @@ fn spawn_plane(
 }
 
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
-	commands.insert_resource(PlayerAnimations {
-		idle: asset_server.load("models/player.gltf#Animation2"),
-		walk: asset_server.load("models/player.gltf#Animation1"),
-		run: asset_server.load("models/player.gltf#Animation3"),
-	});
+	commands.insert_resource(Animation::<Player, Idle>::new(
+		asset_server.load("models/player.gltf#Animation2"),
+	));
+	commands.insert_resource(Animation::<Player, Walk>::new(
+		asset_server.load("models/player.gltf#Animation1"),
+	));
+	commands.insert_resource(Animation::<Player, Run>::new(
+		asset_server.load("models/player.gltf#Animation3"),
+	));
 
 	commands.spawn((
 		SceneBundle {
