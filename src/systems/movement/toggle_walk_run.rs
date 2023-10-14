@@ -18,21 +18,16 @@ pub fn toggle_walk_run(mut player: Query<&mut Player>, keys: Res<Input<KeyCode>>
 
 #[cfg(test)]
 mod tests {
-	use crate::{
-		behavior::MovementMode,
-		components::{Player, UnitsPerSecond},
-	};
-
 	use super::*;
+	use crate::{behavior::MovementMode, components::Player};
 
 	#[test]
 	fn toggle_player_walk_to_run() {
 		let mut app = App::new();
 		let keys = Input::<KeyCode>::default();
 		let player = Player {
-			walk_speed: UnitsPerSecond::new(0.1),
-			run_speed: UnitsPerSecond::new(0.2),
 			movement_mode: MovementMode::Walk,
+			..default()
 		};
 
 		let player = app.world.spawn(player).id();
@@ -53,9 +48,8 @@ mod tests {
 		let mut app = App::new();
 		let keys = Input::<KeyCode>::default();
 		let player = Player {
-			walk_speed: UnitsPerSecond::new(0.1),
-			run_speed: UnitsPerSecond::new(0.2),
 			movement_mode: MovementMode::Run,
+			..default()
 		};
 
 		let player = app.world.spawn(player).id();
@@ -76,9 +70,8 @@ mod tests {
 		let mut app = App::new();
 		let keys = Input::<KeyCode>::default();
 		let player = Player {
-			walk_speed: UnitsPerSecond::new(0.1),
-			run_speed: UnitsPerSecond::new(0.2),
 			movement_mode: MovementMode::Walk,
+			..default()
 		};
 
 		let player = app.world.spawn(player).id();
