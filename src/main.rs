@@ -12,13 +12,13 @@ mod traits;
 use behavior::{Idle, MovementMode, Run, SimpleMovement, Walk};
 use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
 use bevy::prelude::*;
-use components::{Behaviors, CamOrbit, Player, UnitsPerSecond};
+use components::{Animator, Behaviors, CamOrbit, Player, UnitsPerSecond};
 use events::{Enqueue, MoveEvent};
 use resources::Animation;
 use std::f32::consts::PI;
 use systems::movement::toggle_walk_run::toggle_walk_run;
 use systems::{
-	animations::{add_animator::add_animator, animate::animate},
+	animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
 	clean::clean,
 	events::mouse_left::mouse_left,
 	movement::{execute::execute, follow::follow, move_on_orbit::move_on_orbit},
@@ -36,7 +36,7 @@ fn main() {
 		.add_event::<MoveEvent>()
 		.add_event::<Enqueue<MoveEvent>>()
 		.add_systems(Startup, setup_simple_3d_scene)
-		.add_systems(Update, add_animator::<Player>)
+		.add_systems(Update, link_animators_with_new_animation_players)
 		.add_systems(Update, (mouse_left::<Tools, MoveEvent>, toggle_walk_run))
 		.add_systems(Update, schedule::<MoveEvent, SimpleMovement, Behaviors>)
 		.add_systems(Update, execute::<SimpleMovement, Behaviors>)
@@ -126,6 +126,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			run_speed: UnitsPerSecond::new(1.5),
 			movement_mode: MovementMode::Walk,
 		},
+		Animator { ..default() },
 		Behaviors::new(),
 	));
 }
