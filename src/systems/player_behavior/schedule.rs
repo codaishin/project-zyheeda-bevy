@@ -1,6 +1,8 @@
-use crate::events::Enqueue;
-use crate::traits::{add::Add, set::Set};
-use crate::Player;
+use crate::{
+	components::Player,
+	events::Enqueue,
+	traits::{add::Add, set::Set},
+};
 use bevy::prelude::*;
 
 pub fn schedule<

@@ -1,5 +1,8 @@
-use crate::behavior::Behavior;
-use crate::{behavior::Idle, components::Behaviors, traits::set::Set};
+use crate::{
+	behavior::{Behavior, Idle},
+	components::Behaviors,
+	traits::set::Set,
+};
 
 impl Set<Idle> for Behaviors {
 	fn set(&mut self, value: Idle) {

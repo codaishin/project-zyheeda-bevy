@@ -1,2 +1,6 @@
 reorder_imports = true
 hard_tabs = true
+
+# requiring nightly
+imports_granularity = "Crate"
+imports_layout = "HorizontalVertical"

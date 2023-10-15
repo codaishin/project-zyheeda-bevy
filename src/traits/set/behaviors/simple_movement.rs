@@ -1,6 +1,5 @@
 use crate::{
-	behavior::MovementMode,
-	behavior::{Behavior, SimpleMovement},
+	behavior::{Behavior, MovementMode, SimpleMovement},
 	components::Behaviors,
 	traits::set::Set,
 };

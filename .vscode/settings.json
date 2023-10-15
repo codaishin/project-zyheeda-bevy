@@ -11,8 +11,12 @@
 	"editor.insertSpaces": false,
 	"rust-analyzer.check.command": "clippy",
 	"rust-analyzer.showUnlinkedFileNotification": false,
+	"rust-analyzer.rustfmt.extraArgs": [
+		"+nightly"
+	],
 	"cSpell.words": [
 		"consts",
-		"gltf"
+		"gltf",
+		"zyheeda"
 	]
 }

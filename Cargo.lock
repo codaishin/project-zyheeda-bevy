@@ -2703,7 +2703,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "45f10e75d83c7aec79a6aa46f897075890e156b105eebe51cfa0abce51af025f"
 
 [[package]]
-name = "project-zyheeda-bevy"
+name = "project-zyheeda"
 version = "0.1.0"
 dependencies = [
  "bevy",
