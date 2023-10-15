@@ -1,5 +1,4 @@
-use crate::components::Behaviors;
-use crate::traits::new::New;
+use crate::{components::Behaviors, traits::new::New};
 
 impl New for Behaviors {
 	fn new() -> Self {

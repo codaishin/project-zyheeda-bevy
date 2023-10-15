@@ -1,34 +1,31 @@
-#[cfg(test)]
-mod test_tools;
-
-mod behavior;
-mod components;
-mod events;
-mod resources;
-mod systems;
-mod tools;
-mod traits;
-
-use behavior::{Idle, MovementMode, Run, SimpleMovement, Walk};
-use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
-use bevy::prelude::*;
-use components::{Animator, Behaviors, CamOrbit, Player, UnitsPerSecond};
-use events::{Enqueue, MoveEvent};
-use resources::Animation;
+use bevy::{
+	ecs::{archetype::Archetypes, component::Components, entity::Entities},
+	prelude::*,
+};
+use project_zyheeda::{
+	behavior::{Idle, MovementMode, Run, SimpleMovement, Walk},
+	components::{Animator, Behaviors, CamOrbit, Player, UnitsPerSecond},
+	events::{Enqueue, MoveEvent},
+	resources::Animation,
+	systems::{
+		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
+		clean::clean,
+		events::mouse_left::mouse_left,
+		movement::{
+			execute::execute,
+			follow::follow,
+			move_on_orbit::move_on_orbit,
+			toggle_walk_run::toggle_walk_run,
+		},
+		player_behavior::schedule::schedule,
+	},
+	tools::Tools,
+	traits::{
+		new::New,
+		orbit::{Orbit, Vec2Radians},
+	},
+};
 use std::f32::consts::PI;
-use systems::movement::toggle_walk_run::toggle_walk_run;
-use systems::{
-	animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
-	clean::clean,
-	events::mouse_left::mouse_left,
-	movement::{execute::execute, follow::follow, move_on_orbit::move_on_orbit},
-	player_behavior::schedule::schedule,
-};
-use tools::Tools;
-use traits::{
-	new::New,
-	orbit::{Orbit, Vec2Radians},
-};
 
 fn main() {
 	App::new()
