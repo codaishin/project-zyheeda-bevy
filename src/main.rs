@@ -42,9 +42,9 @@ fn main() {
 		.add_systems(
 			Update,
 			(
-				animate::<Idle, Behaviors, Player>,
-				animate::<Walk, Behaviors, Player>,
-				animate::<Run, Behaviors, Player>,
+				animate::<Player, Behaviors, Idle>,
+				animate::<Player, Behaviors, Walk>,
+				animate::<Player, Behaviors, Run>,
 			),
 		)
 		.add_systems(Update, clean::<Behaviors>)

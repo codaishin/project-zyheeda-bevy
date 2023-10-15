@@ -9,9 +9,9 @@ fn active_agents<TBehavior, TBehaviors: Component + Get<TBehavior>>(
 }
 
 pub fn animate<
-	TBehavior: Send + Sync + 'static,
-	TBehaviors: Component + Get<TBehavior>,
 	TAgent: Component,
+	TBehaviors: Component + Get<TBehavior>,
+	TBehavior: Send + Sync + 'static,
 >(
 	animation: Res<Animation<TAgent, TBehavior>>,
 	mut agents: Query<(&TBehaviors, &Animator), With<TAgent>>,
