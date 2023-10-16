@@ -5,7 +5,7 @@ use crate::{
 };
 use bevy::prelude::*;
 
-pub fn schedule<
+pub fn player_schedule<
 	TEvent: Copy + Event,
 	TBehavior: From<TEvent>,
 	TBehaviors: Set<TBehavior> + Add<TBehavior> + Component,
@@ -101,7 +101,7 @@ mod tests {
 			target: Vec3::new(1., 2., 3.),
 		};
 
-		app.add_systems(Update, schedule::<_Event, _Behavior, _Behaviors>);
+		app.add_systems(Update, player_schedule::<_Event, _Behavior, _Behaviors>);
 
 		behaviors
 			.mock
@@ -123,7 +123,7 @@ mod tests {
 			target: Vec3::new(1., 2., 3.),
 		});
 
-		app.add_systems(Update, schedule::<_Event, _Behavior, _Behaviors>);
+		app.add_systems(Update, player_schedule::<_Event, _Behavior, _Behaviors>);
 
 		behaviors
 			.mock

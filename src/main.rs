@@ -17,7 +17,7 @@ use project_zyheeda::{
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::toggle_walk_run,
 		},
-		player_behavior::schedule::schedule,
+		player_behavior::schedule::player_schedule,
 	},
 	tools::Tools,
 	traits::{
@@ -35,7 +35,10 @@ fn main() {
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(Update, link_animators_with_new_animation_players)
 		.add_systems(Update, (mouse_left::<Tools, MoveEvent>, toggle_walk_run))
-		.add_systems(Update, schedule::<MoveEvent, SimpleMovement, Behaviors>)
+		.add_systems(
+			Update,
+			player_schedule::<MoveEvent, SimpleMovement, Behaviors>,
+		)
 		.add_systems(Update, execute::<SimpleMovement, Behaviors>)
 		.add_systems(Update, follow::<Player, CamOrbit>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
