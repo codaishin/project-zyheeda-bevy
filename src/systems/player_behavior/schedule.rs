@@ -14,9 +14,7 @@ pub fn player_schedule<
 	mut event_reader: EventReader<TEvent>,
 	mut enqueue_event_reader: EventReader<Enqueue<TEvent>>,
 ) {
-	let Ok((mut behaviors, ..)) = player.get_single_mut() else {
-		return; //FIXME: handle properly
-	};
+	let (mut behaviors, ..) = player.single_mut();
 
 	for event in enqueue_event_reader.iter() {
 		behaviors.add(TBehavior::from(event.0));
