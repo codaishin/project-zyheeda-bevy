@@ -1,4 +1,4 @@
-use crate::behavior::{BehaviorOld, MovementMode};
+use crate::behavior::BehaviorOld;
 use bevy::prelude::*;
 use std::{collections::VecDeque, marker::PhantomData};
 
@@ -51,7 +51,6 @@ mod tests {
 pub struct Player {
 	pub walk_speed: UnitsPerSecond,
 	pub run_speed: UnitsPerSecond,
-	pub movement_mode: MovementMode,
 }
 
 #[derive(Component)]

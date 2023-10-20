@@ -35,9 +35,8 @@ pub fn dequeue<
 
 #[cfg(test)]
 mod tests {
-	use crate::components::BusyExecuting;
-
 	use super::*;
+	use crate::components::BusyExecuting;
 	use bevy::{
 		prelude::{App, Update},
 		utils::default,

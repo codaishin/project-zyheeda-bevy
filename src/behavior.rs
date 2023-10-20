@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Component, Clone, Copy, PartialEq, Debug)]
 pub struct SimpleMovement {
-	pub target: Option<Vec3>,
+	pub target: Vec3,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
@@ -12,13 +12,13 @@ pub enum MovementMode {
 	Run,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Component, PartialEq, Debug)]
 pub struct Walk;
 
-#[derive(PartialEq, Debug)]
+#[derive(Component, PartialEq, Debug)]
 pub struct Run;
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Component, Clone, Copy, PartialEq, Debug)]
 pub struct Idle;
 
 #[derive(PartialEq, Debug)]
