@@ -77,19 +77,19 @@ impl<T> Default for Queue<T> {
 }
 
 #[derive(Component)]
-pub struct BusyExecuting<T> {
+pub struct Group<T> {
 	phantom_data: PhantomData<T>,
 }
 
-impl<T> BusyExecuting<T> {
-	fn new() -> Self {
+impl<T> Group<T> {
+	pub fn new() -> Self {
 		Self {
 			phantom_data: PhantomData,
 		}
 	}
 }
 
-impl<T> Default for BusyExecuting<T> {
+impl<T> Default for Group<T> {
 	fn default() -> Self {
 		Self::new()
 	}

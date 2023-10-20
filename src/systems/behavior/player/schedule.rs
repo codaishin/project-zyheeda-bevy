@@ -1,5 +1,5 @@
 use crate::{
-	components::{BusyExecuting, Player, Queue},
+	components::{Group, Player, Queue},
 	events::Enqueue,
 };
 use bevy::prelude::*;
@@ -18,19 +18,17 @@ pub fn player_enqueue<TEvent: Copy + Event, TBehavior: From<TEvent> + Send + Syn
 		for event in event_reader.iter() {
 			queue.0.clear();
 			queue.0.push_back((*event).into());
-			commands.entity(player).remove::<BusyExecuting<TBehavior>>();
+			commands.entity(player).remove::<Group<TBehavior>>();
 		}
 	}
 }
 
 #[cfg(test)]
 mod tests {
-	use std::collections::VecDeque;
-
-	use crate::components::BusyExecuting;
-
 	use super::*;
+	use crate::components::Group;
 	use bevy::prelude::App;
+	use std::collections::VecDeque;
 
 	#[derive(Event, Clone, Copy)]
 	struct Event {
@@ -65,9 +63,8 @@ mod tests {
 		let event = Event {
 			target: Vec3::new(1., 2., 3.),
 		};
-		let busy: BusyExecuting<Behavior> = default();
-
-		let player = app.world.spawn((player, queue, busy)).id();
+		let group = Group::<Behavior>::new();
+		let player = app.world.spawn((player, queue, group)).id();
 
 		app.add_systems(Update, player_enqueue::<Event, Behavior>);
 		app.world.resource_mut::<Events<Event>>().send(event);
@@ -75,14 +72,14 @@ mod tests {
 
 		let player = app.world.entity(player);
 		let queue = player.get::<Queue<Behavior>>().unwrap();
-		let is_busy = player.contains::<BusyExecuting<Behavior>>();
+		let group_is_active = player.contains::<Group<Behavior>>();
 
 		assert_eq!(
 			(
 				false,
 				&VecDeque::from([Behavior::MoveTo(Vec3::new(1., 2., 3.))])
 			),
-			(is_busy, &queue.0)
+			(group_is_active, &queue.0)
 		)
 	}
 
@@ -94,9 +91,8 @@ mod tests {
 		let event = Enqueue(Event {
 			target: Vec3::new(1., 2., 3.),
 		});
-		let busy: BusyExecuting<Behavior> = default();
-
-		let player = app.world.spawn((player, queue, busy)).id();
+		let group = Group::<Behavior>::new();
+		let player = app.world.spawn((player, queue, group)).id();
 
 		app.add_systems(Update, player_enqueue::<Event, Behavior>);
 		app.world
@@ -106,14 +102,14 @@ mod tests {
 
 		let player = app.world.entity(player);
 		let queue = player.get::<Queue<Behavior>>().unwrap();
-		let is_busy = player.contains::<BusyExecuting<Behavior>>();
+		let group_is_active = player.contains::<Group<Behavior>>();
 
 		assert_eq!(
 			(
 				true,
 				&VecDeque::from([Behavior::Jump, Behavior::MoveTo(Vec3::new(1., 2., 3.))])
 			),
-			(is_busy, &queue.0)
+			(group_is_active, &queue.0)
 		)
 	}
 }

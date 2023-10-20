@@ -48,9 +48,9 @@ fn main() {
 		.add_systems(
 			Update,
 			(
-				animate::<Player, Idle>,
-				animate::<Player, Walk>,
-				animate::<Player, Run>,
+				animate::<Player, Behavior, Idle>,
+				animate::<Player, Behavior, Walk>,
+				animate::<Player, Behavior, Run>,
 			),
 		)
 		.add_systems(Update, follow::<Player, CamOrbit>)
@@ -129,6 +129,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			walk_speed: UnitsPerSecond::new(0.75),
 			run_speed: UnitsPerSecond::new(1.5),
 		},
+		Walk,
 		Queue::<Behavior>::new(),
 		Animator { ..default() },
 	));

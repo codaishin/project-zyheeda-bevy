@@ -1,11 +1,5 @@
-use crate::components::{BusyExecuting, Queue};
-use bevy::{
-	prelude::{Bundle, Commands, Component, Entity, Query, With, Without},
-	utils::default,
-};
-
-type NotBusy<TAgent, TBehavior> = (With<TAgent>, Without<BusyExecuting<TBehavior>>);
-type AgentQueue<'state, TBehavior> = (Entity, &'state mut Queue<TBehavior>);
+use crate::components::{Group, Queue};
+use bevy::prelude::{Bundle, Commands, Component, Entity, Query, With, Without};
 
 fn match_first<TBehavior: Copy, TBundle: TryFrom<TBehavior>>(
 	queue: &Queue<TBehavior>,
@@ -13,22 +7,23 @@ fn match_first<TBehavior: Copy, TBundle: TryFrom<TBehavior>>(
 	queue.0.get(0).and_then(|b| TBundle::try_from(*b).ok())
 }
 
+#[allow(clippy::type_complexity)]
 pub fn dequeue<
 	TAgent: Component,
 	TBehavior: Copy + Send + Sync + 'static,
 	TBundle: Bundle + TryFrom<TBehavior>,
 >(
 	mut commands: Commands,
-	mut agents: Query<AgentQueue<TBehavior>, NotBusy<TAgent, TBehavior>>,
+	mut agents: Query<(Entity, &mut Queue<TBehavior>), (With<TAgent>, Without<Group<TBehavior>>)>,
 ) {
 	for (agent, mut queue) in agents.iter_mut() {
 		let mut agent = commands.entity(agent);
 
 		agent.remove::<TBundle>();
 		if let Some(bundle) = match_first::<TBehavior, TBundle>(&queue) {
-			let busy: BusyExecuting<TBehavior> = default();
+			let group = Group::<TBehavior>::new();
 			queue.0.pop_front();
-			agent.insert((bundle, busy));
+			agent.insert((bundle, group));
 		}
 	}
 }
@@ -36,7 +31,7 @@ pub fn dequeue<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::BusyExecuting;
+	use crate::components::Group;
 	use bevy::{
 		prelude::{App, Update},
 		utils::default,
@@ -87,7 +82,7 @@ mod tests {
 			(
 				agent.contains::<Sing>(),
 				agent.contains::<Pop>(),
-				agent.contains::<BusyExecuting<Behavior>>(),
+				agent.contains::<Group<Behavior>>(),
 				queue.0.len()
 			)
 		);
@@ -98,7 +93,7 @@ mod tests {
 		let mut app = App::new();
 		let queue = Queue(VecDeque::from([Behavior::Sing]));
 		let agent = Agent;
-		let running: BusyExecuting<Behavior> = default();
+		let running: Group<Behavior> = default();
 
 		let agent = app.world.spawn((agent, queue, running)).id();
 		app.add_systems(Update, dequeue::<Agent, Behavior, (Sing, Pop)>);
@@ -112,7 +107,7 @@ mod tests {
 			(
 				agent.contains::<Sing>(),
 				agent.contains::<Pop>(),
-				agent.contains::<BusyExecuting<Behavior>>(),
+				agent.contains::<Group<Behavior>>(),
 				queue.0.len()
 			)
 		);
