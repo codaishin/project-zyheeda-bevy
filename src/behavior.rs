@@ -18,15 +18,6 @@ pub struct Walk;
 #[derive(Component, PartialEq, Debug)]
 pub struct Run;
 
-#[derive(Component, Clone, Copy, PartialEq, Debug)]
-pub struct Idle;
-
-#[derive(PartialEq, Debug)]
-pub enum BehaviorOld {
-	SimpleMovement((SimpleMovement, MovementMode)),
-	Idle(Idle),
-}
-
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Behavior {
 	MoveTo(Vec3),
