@@ -1,5 +1,5 @@
 use crate::{
-	behavior::{Behavior, MovementMode, Run},
+	behavior::{BehaviorOld, MovementMode, Run},
 	components::Behaviors,
 	traits::get::Get,
 };
@@ -7,7 +7,7 @@ use crate::{
 impl Get<Run> for Behaviors {
 	fn get(&self) -> Option<Run> {
 		match self.0.first() {
-			Some(Behavior::SimpleMovement((_, MovementMode::Run))) => Some(Run),
+			Some(BehaviorOld::SimpleMovement((_, MovementMode::Run))) => Some(Run),
 			_ => None,
 		}
 	}
@@ -17,14 +17,14 @@ impl Get<Run> for Behaviors {
 mod tests {
 	use super::*;
 	use crate::{
-		behavior::{Behavior, MovementMode, SimpleMovement},
+		behavior::{BehaviorOld, MovementMode, SimpleMovement},
 		traits::new::New,
 	};
 
 	#[test]
 	fn get_run() {
 		let mut behaviors = Behaviors::new();
-		behaviors.0.push(Behavior::SimpleMovement((
+		behaviors.0.push(BehaviorOld::SimpleMovement((
 			SimpleMovement { target: None },
 			MovementMode::Run,
 		)));
@@ -46,7 +46,7 @@ mod tests {
 	#[test]
 	fn get_none_when_not_running() {
 		let mut behaviors = Behaviors::new();
-		behaviors.0.push(Behavior::SimpleMovement((
+		behaviors.0.push(BehaviorOld::SimpleMovement((
 			SimpleMovement { target: None },
 			MovementMode::Walk,
 		)));

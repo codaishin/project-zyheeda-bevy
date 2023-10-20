@@ -1,5 +1,5 @@
 use crate::{
-	behavior::{Behavior, Idle},
+	behavior::{BehaviorOld, Idle},
 	components::Behaviors,
 	traits::get::Get,
 };
@@ -7,7 +7,7 @@ use crate::{
 impl Get<Idle> for Behaviors {
 	fn get(&self) -> Option<Idle> {
 		match self.0.first() {
-			Some(Behavior::Idle(idle)) => Some(*idle),
+			Some(BehaviorOld::Idle(idle)) => Some(*idle),
 			_ => None,
 		}
 	}

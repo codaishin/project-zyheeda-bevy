@@ -1,5 +1,5 @@
 use crate::{
-	behavior::{Behavior, MovementMode, SimpleMovement},
+	behavior::{BehaviorOld, MovementMode, SimpleMovement},
 	components::Behaviors,
 	traits::get::GetMut,
 };
@@ -7,7 +7,7 @@ use crate::{
 impl GetMut<(SimpleMovement, MovementMode)> for Behaviors {
 	fn get(&mut self) -> Option<&mut (SimpleMovement, MovementMode)> {
 		let movement = match self.0.first_mut()? {
-			Behavior::SimpleMovement(movement) => Some(movement),
+			BehaviorOld::SimpleMovement(movement) => Some(movement),
 			_ => None,
 		}?;
 
@@ -42,7 +42,7 @@ mod tests {
 			MovementMode::Run,
 		);
 
-		behaviors.0.push(Behavior::SimpleMovement(expected));
+		behaviors.0.push(BehaviorOld::SimpleMovement(expected));
 
 		assert_eq!(&expected, behaviors.get().unwrap());
 	}
@@ -51,7 +51,7 @@ mod tests {
 	fn get_none_if_target_none() {
 		let mut behaviors = Behaviors::new();
 
-		behaviors.0.push(Behavior::SimpleMovement((
+		behaviors.0.push(BehaviorOld::SimpleMovement((
 			SimpleMovement { target: None },
 			MovementMode::Run,
 		)));

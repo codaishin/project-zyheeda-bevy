@@ -1,12 +1,12 @@
 use crate::{
-	behavior::{Behavior, Idle},
+	behavior::{BehaviorOld, Idle},
 	components::Behaviors,
 	traits::set::Set,
 };
 
 impl Set<Idle> for Behaviors {
 	fn set(&mut self, value: Idle) {
-		self.0 = vec![Behavior::Idle(value)]
+		self.0 = vec![BehaviorOld::Idle(value)]
 	}
 }
 
@@ -21,20 +21,20 @@ mod tests {
 
 		behaviors.set(idle);
 
-		assert_eq!(vec![Behavior::Idle(idle)], behaviors.0);
+		assert_eq!(vec![BehaviorOld::Idle(idle)], behaviors.0);
 	}
 
 	#[test]
 	fn override_existing() {
 		let idle = Idle;
 		let mut behaviors = Behaviors(vec![
-			Behavior::Idle(Idle),
-			Behavior::Idle(Idle),
-			Behavior::Idle(Idle),
+			BehaviorOld::Idle(Idle),
+			BehaviorOld::Idle(Idle),
+			BehaviorOld::Idle(Idle),
 		]);
 
 		behaviors.set(idle);
 
-		assert_eq!(vec![Behavior::Idle(idle)], behaviors.0);
+		assert_eq!(vec![BehaviorOld::Idle(idle)], behaviors.0);
 	}
 }

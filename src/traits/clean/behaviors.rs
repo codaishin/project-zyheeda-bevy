@@ -1,22 +1,22 @@
 use super::Clean;
 use crate::{
-	behavior::{Behavior, Idle},
+	behavior::{BehaviorOld, Idle},
 	components::Behaviors,
 };
 
-fn is_active(behavior: &Behavior) -> bool {
+fn is_active(behavior: &BehaviorOld) -> bool {
 	match behavior {
-		Behavior::SimpleMovement((movement, ..)) => movement.target.is_some(),
-		Behavior::Idle(_) => false,
+		BehaviorOld::SimpleMovement((movement, ..)) => movement.target.is_some(),
+		BehaviorOld::Idle(_) => false,
 	}
 }
 
 impl Clean for Behaviors {
 	fn clean(&mut self) {
-		let cleaned: Vec<Behavior> = self.0.drain(..).filter(is_active).collect();
+		let cleaned: Vec<BehaviorOld> = self.0.drain(..).filter(is_active).collect();
 
 		self.0 = if cleaned.is_empty() {
-			vec![Behavior::Idle(Idle)]
+			vec![BehaviorOld::Idle(Idle)]
 		} else {
 			cleaned
 		};
@@ -40,7 +40,7 @@ mod tests {
 
 		behavior.clean();
 
-		assert_eq!(vec![Behavior::Idle(Idle)], behavior.0);
+		assert_eq!(vec![BehaviorOld::Idle(Idle)], behavior.0);
 	}
 
 	#[test]
@@ -54,7 +54,7 @@ mod tests {
 		behavior.clean();
 
 		assert_eq!(
-			vec![Behavior::SimpleMovement((
+			vec![BehaviorOld::SimpleMovement((
 				SimpleMovement {
 					target: Some(Vec3::ZERO)
 				},
@@ -71,7 +71,7 @@ mod tests {
 
 		behaviors.clean();
 
-		assert_eq!(vec![Behavior::Idle(Idle)], behaviors.0);
+		assert_eq!(vec![BehaviorOld::Idle(Idle)], behaviors.0);
 	}
 
 	#[test]
@@ -86,7 +86,7 @@ mod tests {
 		behaviors.clean();
 
 		assert_eq!(
-			vec![Behavior::SimpleMovement((movement, MovementMode::Walk))],
+			vec![BehaviorOld::SimpleMovement((movement, MovementMode::Walk))],
 			behaviors.0
 		);
 	}

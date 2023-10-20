@@ -22,7 +22,12 @@ pub struct Run;
 pub struct Idle;
 
 #[derive(PartialEq, Debug)]
-pub enum Behavior {
+pub enum BehaviorOld {
 	SimpleMovement((SimpleMovement, MovementMode)),
 	Idle(Idle),
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Behavior {
+	MoveTo(Vec3),
 }

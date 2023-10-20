@@ -1,92 +1,58 @@
 use crate::{
-	components::Player,
+	components::{BusyExecuting, Player, Queue},
 	events::Enqueue,
-	traits::{add::Add, set::Set},
 };
 use bevy::prelude::*;
 
-pub fn player_schedule<
-	TEvent: Copy + Event,
-	TBehavior: From<TEvent>,
-	TBehaviors: Set<TBehavior> + Add<TBehavior> + Component,
->(
-	mut player: Query<(&mut TBehaviors, &Player)>,
+pub fn player_enqueue<TEvent: Copy + Event, TBehavior: From<TEvent> + Send + Sync + 'static>(
+	mut commands: Commands,
+	mut player: Query<(Entity, &mut Queue<TBehavior>), With<Player>>,
 	mut event_reader: EventReader<TEvent>,
 	mut enqueue_event_reader: EventReader<Enqueue<TEvent>>,
 ) {
-	let (mut behaviors, ..) = player.single_mut();
+	for (player, mut queue) in player.iter_mut() {
+		for event in enqueue_event_reader.iter() {
+			queue.0.push_back(event.0.into());
+		}
 
-	for event in enqueue_event_reader.iter() {
-		behaviors.add(TBehavior::from(event.0));
-	}
-
-	for event in event_reader.iter() {
-		behaviors.set(TBehavior::from(*event));
+		for event in event_reader.iter() {
+			queue.0.clear();
+			queue.0.push_back((*event).into());
+			commands.entity(player).remove::<BusyExecuting<TBehavior>>();
+		}
 	}
 }
 
 #[cfg(test)]
 mod tests {
+	use std::collections::VecDeque;
+
+	use crate::components::BusyExecuting;
+
 	use super::*;
 	use bevy::prelude::App;
-	use mockall::mock;
 
 	#[derive(Event, Clone, Copy)]
-	struct _Event {
+	struct Event {
 		pub target: Vec3,
 	}
 
-	pub struct _Behavior {
-		pub target: Vec3,
+	#[derive(PartialEq, Debug)]
+	enum Behavior {
+		MoveTo(Vec3),
+		Jump,
 	}
 
-	impl From<_Event> for _Behavior {
-		fn from(event: _Event) -> Self {
-			Self {
-				target: event.target,
-			}
-		}
-	}
-
-	#[derive(Component)]
-	struct _Behaviors {
-		pub mock: Mock_Behaviors,
-	}
-
-	impl _Behaviors {
-		fn new() -> Self {
-			Self {
-				mock: Mock_Behaviors::new(),
-			}
-		}
-	}
-
-	impl Set<_Behavior> for _Behaviors {
-		fn set(&mut self, value: _Behavior) {
-			self.mock.set(value)
-		}
-	}
-
-	impl Add<_Behavior> for _Behaviors {
-		fn add(&mut self, value: _Behavior) {
-			self.mock.add(value)
-		}
-	}
-
-	mock! {
-		pub _Behaviors {}
-		impl Set<_Behavior> for _Behaviors {
-			fn set(&mut self, value: _Behavior);
-		}
-		impl Add<_Behavior> for _Behaviors {
-			fn add(&mut self, value: _Behavior);
+	impl From<Event> for Behavior {
+		fn from(event: Event) -> Self {
+			Self::MoveTo(event.target)
 		}
 	}
 
 	fn setup_app() -> App {
 		let mut app = App::new();
-		app.add_event::<_Event>();
-		app.add_event::<Enqueue<_Event>>();
+		app.add_event::<Event>();
+		app.add_event::<Enqueue<Event>>();
 
 		app
 	}
@@ -94,46 +60,60 @@ mod tests {
 	#[test]
 	fn set_movement() {
 		let mut app = setup_app();
-		let mut behaviors = _Behaviors::new();
-		let event = _Event {
+		let player = Player { ..default() };
+		let queue = Queue::<Behavior>([Behavior::Jump].into());
+		let event = Event {
 			target: Vec3::new(1., 2., 3.),
 		};
+		let busy: BusyExecuting<Behavior> = default();
 
-		app.add_systems(Update, player_schedule::<_Event, _Behavior, _Behaviors>);
+		let player = app.world.spawn((player, queue, busy)).id();
 
-		behaviors
-			.mock
-			.expect_set()
-			.withf(move |behavior| behavior.target == event.target)
-			.times(1)
-			.return_const(());
-		app.world.spawn((Player { ..default() }, behaviors));
-
-		app.world.resource_mut::<Events<_Event>>().send(event);
+		app.add_systems(Update, player_enqueue::<Event, Behavior>);
+		app.world.resource_mut::<Events<Event>>().send(event);
 		app.update();
+
+		let player = app.world.entity(player);
+		let queue = player.get::<Queue<Behavior>>().unwrap();
+		let is_busy = player.contains::<BusyExecuting<Behavior>>();
+
+		assert_eq!(
+			(
+				false,
+				&VecDeque::from([Behavior::MoveTo(Vec3::new(1., 2., 3.))])
+			),
+			(is_busy, &queue.0)
+		)
 	}
 
 	#[test]
 	fn add_movement() {
 		let mut app = setup_app();
-		let mut behaviors = _Behaviors::new();
-		let event = Enqueue(_Event {
+		let player = Player { ..default() };
+		let queue = Queue::<Behavior>([Behavior::Jump].into());
+		let event = Enqueue(Event {
 			target: Vec3::new(1., 2., 3.),
 		});
+		let busy: BusyExecuting<Behavior> = default();
 
-		app.add_systems(Update, player_schedule::<_Event, _Behavior, _Behaviors>);
+		let player = app.world.spawn((player, queue, busy)).id();
 
-		behaviors
-			.mock
-			.expect_add()
-			.withf(move |behavior| behavior.target == event.0.target)
-			.times(1)
-			.return_const(());
-		app.world.spawn((Player { ..default() }, behaviors));
-
+		app.add_systems(Update, player_enqueue::<Event, Behavior>);
 		app.world
-			.resource_mut::<Events<Enqueue<_Event>>>()
+			.resource_mut::<Events<Enqueue<Event>>>()
 			.send(event);
 		app.update();
+
+		let player = app.world.entity(player);
+		let queue = player.get::<Queue<Behavior>>().unwrap();
+		let is_busy = player.contains::<BusyExecuting<Behavior>>();
+
+		assert_eq!(
+			(
+				true,
+				&VecDeque::from([Behavior::Jump, Behavior::MoveTo(Vec3::new(1., 2., 3.))])
+			),
+			(is_busy, &queue.0)
+		)
 	}
 }

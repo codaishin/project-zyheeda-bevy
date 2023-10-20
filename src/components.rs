@@ -1,4 +1,4 @@
-use crate::behavior::{Behavior, MovementMode};
+use crate::behavior::{BehaviorOld, MovementMode};
 use bevy::prelude::*;
 use std::{collections::VecDeque, marker::PhantomData};
 
@@ -55,7 +55,7 @@ pub struct Player {
 }
 
 #[derive(Component)]
-pub struct Behaviors(pub Vec<Behavior>);
+pub struct Behaviors(pub Vec<BehaviorOld>);
 
 #[derive(Component, Default)]
 pub struct Animator {
