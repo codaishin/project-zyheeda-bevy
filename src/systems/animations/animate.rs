@@ -1,7 +1,6 @@
 use crate::{components::Animator, resources::Animation};
 use bevy::prelude::*;
 
-#[allow(clippy::type_complexity)]
 pub fn animate<TAgent: Component, TBehavior: Component>(
 	animation: Res<Animation<TAgent, TBehavior>>,
 	mut animators: Query<&Animator, (With<TAgent>, With<TBehavior>)>,

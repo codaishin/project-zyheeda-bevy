@@ -3,8 +3,18 @@ use bevy::{
 	prelude::*,
 };
 use project_zyheeda::{
-	behavior::{Behavior, MovementMode, Run, SimpleMovement, Walk},
-	components::{Animator, CamOrbit, Idle, Player, Queue, UnitsPerSecond},
+	behavior::{Behavior, MovementMode},
+	components::{
+		Animator,
+		CamOrbit,
+		Idle,
+		Player,
+		Queue,
+		Run,
+		SimpleMovement,
+		UnitsPerSecond,
+		Walk,
+	},
 	events::{Enqueue, MoveEvent},
 	resources::Animation,
 	systems::{
@@ -123,7 +133,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			movement_mode: MovementMode::Walk,
 		},
 		Queue::<Behavior>::new(),
-		Idle,
+		// Idle,
 		Animator { ..default() },
 	));
 }

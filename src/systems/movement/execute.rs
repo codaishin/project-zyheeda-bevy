@@ -1,11 +1,10 @@
 use crate::{
-	behavior::{MovementMode, Run, Walk},
-	components::Idle,
+	behavior::MovementMode,
+	components::{Idle, Run, Walk},
 	traits::{movement::Movement, movement_data::MovementData},
 };
 use bevy::prelude::*;
 
-#[allow(clippy::type_complexity)]
 pub fn execute<TAgent: Component + MovementData, TMovement: Component + Movement>(
 	time: Res<Time>,
 	mut commands: Commands,

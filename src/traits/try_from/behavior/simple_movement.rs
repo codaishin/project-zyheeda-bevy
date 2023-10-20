@@ -1,4 +1,4 @@
-use crate::behavior::{Behavior, SimpleMovement};
+use crate::{behavior::Behavior, components::SimpleMovement};
 
 impl TryFrom<Behavior> for SimpleMovement {
 	type Error = ();

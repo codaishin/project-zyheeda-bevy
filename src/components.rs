@@ -76,3 +76,14 @@ impl<T> Default for Queue<T> {
 
 #[derive(Component)]
 pub struct Idle;
+
+#[derive(Component, PartialEq, Debug)]
+pub struct Walk;
+
+#[derive(Component, PartialEq, Debug)]
+pub struct Run;
+
+#[derive(Component, Clone, Copy, PartialEq, Debug)]
+pub struct SimpleMovement {
+	pub target: Vec3,
+}
