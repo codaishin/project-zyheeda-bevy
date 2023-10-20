@@ -16,7 +16,7 @@ pub fn dequeue<
 	TComponent: Component + TryFrom<TBehavior> + Debug,
 >(
 	mut commands: Commands,
-	mut agents: Query<(Entity, &mut Queue<TBehavior>), (With<TAgent>, With<Idle<TBehavior>>)>,
+	mut agents: Query<(Entity, &mut Queue<TBehavior>), (With<TAgent>, With<Idle>)>,
 ) {
 	for (agent, mut queue) in agents.iter_mut() {
 		let mut agent = commands.entity(agent);
@@ -25,7 +25,7 @@ pub fn dequeue<
 		if let Some(component) = match_first::<TBehavior, TComponent>(&queue) {
 			queue.0.pop_front();
 			agent.insert(component);
-			agent.remove::<Idle<TBehavior>>();
+			agent.remove::<Idle>();
 		}
 	}
 }
@@ -65,7 +65,7 @@ mod tests {
 		let mut app = App::new();
 		let queue = Queue(VecDeque::from([Behavior::Sing]));
 		let agent = Agent;
-		let idle = Idle::<Behavior>::new();
+		let idle = Idle;
 
 		let agent = app.world.spawn((agent, queue, idle)).id();
 		app.add_systems(Update, dequeue::<Agent, Behavior, Sing>);
@@ -78,7 +78,7 @@ mod tests {
 			(true, false, 0),
 			(
 				agent.contains::<Sing>(),
-				agent.contains::<Idle<Behavior>>(),
+				agent.contains::<Idle>(),
 				queue.0.len()
 			)
 		);
@@ -105,7 +105,7 @@ mod tests {
 		let mut app = App::new();
 		let queue = Queue(VecDeque::<Behavior>::from([]));
 		let agent = Agent;
-		let idle = Idle::<Behavior>::new();
+		let idle = Idle;
 		let sing = Sing;
 
 		let agent = app.world.spawn((agent, queue, sing, idle)).id();
@@ -122,7 +122,7 @@ mod tests {
 		let mut app = App::new();
 		let queue = Queue(VecDeque::from([Behavior::Dance]));
 		let agent = Agent;
-		let idle = Idle::<Behavior>::new();
+		let idle = Idle;
 
 		let agent = app.world.spawn((agent, queue, idle)).id();
 		app.add_systems(Update, dequeue::<Agent, Behavior, Sing>);

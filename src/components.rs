@@ -1,6 +1,6 @@
 use crate::behavior::MovementMode;
 use bevy::prelude::*;
-use std::{collections::VecDeque, marker::PhantomData};
+use std::collections::VecDeque;
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -75,20 +75,4 @@ impl<T> Default for Queue<T> {
 }
 
 #[derive(Component)]
-pub struct Idle<T> {
-	phantom_data: PhantomData<T>,
-}
-
-impl<T> Idle<T> {
-	pub fn new() -> Self {
-		Self {
-			phantom_data: PhantomData,
-		}
-	}
-}
-
-impl<T> Default for Idle<T> {
-	fn default() -> Self {
-		Self::new()
-	}
-}
+pub struct Idle;

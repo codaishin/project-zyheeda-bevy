@@ -18,7 +18,7 @@ pub fn player_enqueue<TEvent: Copy + Event, TBehavior: From<TEvent> + Send + Syn
 		for event in event_reader.iter() {
 			queue.0.clear();
 			queue.0.push_back((*event).into());
-			commands.entity(player).insert(Idle::<TBehavior>::new());
+			commands.entity(player).insert(Idle);
 		}
 	}
 }
@@ -71,7 +71,7 @@ mod tests {
 
 		let player = app.world.entity(player);
 		let queue = player.get::<Queue<Behavior>>().unwrap();
-		let is_idle = player.contains::<Idle<Behavior>>();
+		let is_idle = player.contains::<Idle>();
 
 		assert_eq!(
 			(
@@ -100,7 +100,7 @@ mod tests {
 
 		let player = app.world.entity(player);
 		let queue = player.get::<Queue<Behavior>>().unwrap();
-		let is_idle = player.contains::<Idle<Behavior>>();
+		let is_idle = player.contains::<Idle>();
 
 		assert_eq!(
 			(

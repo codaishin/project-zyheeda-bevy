@@ -6,11 +6,7 @@ use crate::{
 use bevy::prelude::*;
 
 #[allow(clippy::type_complexity)]
-pub fn execute<
-	TAgent: Component + MovementData,
-	TBehavior: Send + Sync + 'static,
-	TMovement: Component + Movement,
->(
+pub fn execute<TAgent: Component + MovementData, TMovement: Component + Movement>(
 	time: Res<Time>,
 	mut commands: Commands,
 	mut agents: Query<(Entity, &mut TMovement, &mut Transform, &TAgent)>,
@@ -22,7 +18,7 @@ pub fn execute<
 
 		match (is_done, movement_mode) {
 			(true, _) => {
-				entity.insert(Idle::<TBehavior>::new());
+				entity.insert(Idle);
 				entity.remove::<Run>();
 				entity.remove::<Walk>();
 			}
@@ -48,8 +44,6 @@ mod move_player_tests {
 	};
 	use mockall::{automock, predicate::eq};
 	use std::time::Duration;
-
-	struct Behavior;
 
 	#[derive(Component)]
 	struct Runner;
@@ -97,10 +91,7 @@ mod move_player_tests {
 		app.update();
 		app.add_systems(
 			Update,
-			(
-				execute::<Runner, Behavior, _Movement>,
-				execute::<Walker, Behavior, _Movement>,
-			),
+			(execute::<Runner, _Movement>, execute::<Walker, _Movement>),
 		);
 
 		app
@@ -160,7 +151,7 @@ mod move_player_tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<Idle<Behavior>>());
+		assert!(agent.contains::<Idle>());
 	}
 
 	#[test]
@@ -178,7 +169,7 @@ mod move_player_tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Idle<Behavior>>());
+		assert!(!agent.contains::<Idle>());
 	}
 
 	#[test]
