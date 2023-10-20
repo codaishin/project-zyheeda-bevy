@@ -1,12 +1,13 @@
 use crate::{
+	behavior::{MovementMode, Run, Walk},
 	components::Active,
-	traits::{movement::Movement, speed::Speed},
+	traits::{movement::Movement, movement_data::MovementData},
 };
 use bevy::prelude::*;
 
 #[allow(clippy::type_complexity)]
 pub fn execute<
-	TAgent: Component + Speed,
+	TAgent: Component + MovementData,
 	TBehavior: Send + Sync + 'static,
 	TMovement: Component + Movement,
 >(
@@ -14,11 +15,25 @@ pub fn execute<
 	mut commands: Commands,
 	mut agents: Query<(Entity, &mut TMovement, &mut Transform, &TAgent)>,
 ) {
-	for (id, mut movement, mut transform, agent) in agents.iter_mut() {
-		let speed = agent.get_speed().to_f32();
-		let is_done = movement.update(&mut transform, time.delta_seconds() * speed);
-		if is_done {
-			commands.entity(id).remove::<Active<TBehavior>>();
+	for (entity, mut movement, mut transform, agent) in agents.iter_mut() {
+		let mut entity = commands.entity(entity);
+		let (speed, movement_mode) = agent.get_movement_data();
+		let is_done = movement.update(&mut transform, time.delta_seconds() * speed.to_f32());
+
+		match (is_done, movement_mode) {
+			(true, _) => {
+				entity.remove::<Active<TBehavior>>();
+				entity.remove::<Run>();
+				entity.remove::<Walk>();
+			}
+			(_, MovementMode::Walk) => {
+				entity.remove::<Run>();
+				entity.insert(Walk);
+			}
+			(_, MovementMode::Run) => {
+				entity.remove::<Walk>();
+				entity.insert(Run);
+			}
 		}
 	}
 }
@@ -27,6 +42,7 @@ pub fn execute<
 mod move_player_tests {
 	use super::*;
 	use crate::{
+		behavior::MovementMode,
 		components::UnitsPerSecond,
 		traits::movement::{IsDone, Movement, Units},
 	};
@@ -36,13 +52,9 @@ mod move_player_tests {
 	struct Behavior;
 
 	#[derive(Component)]
-	struct Run;
-
+	struct Runner;
 	#[derive(Component)]
-	struct Walk;
-
-	#[derive(Component)]
-	struct Agent;
+	struct Walker;
 
 	#[derive(Component)]
 	struct _Movement {
@@ -64,9 +76,15 @@ mod move_player_tests {
 		}
 	}
 
-	impl Speed for Agent {
-		fn get_speed(&self) -> UnitsPerSecond {
-			UnitsPerSecond::new(11.)
+	impl MovementData for Runner {
+		fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode) {
+			(UnitsPerSecond::new(11.), MovementMode::Run)
+		}
+	}
+
+	impl MovementData for Walker {
+		fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode) {
+			(UnitsPerSecond::new(1.), MovementMode::Walk)
 		}
 	}
 
@@ -77,7 +95,13 @@ mod move_player_tests {
 		time.update();
 		app.insert_resource(time);
 		app.update();
-		app.add_systems(Update, execute::<Agent, Behavior, _Movement>);
+		app.add_systems(
+			Update,
+			(
+				execute::<Runner, Behavior, _Movement>,
+				execute::<Walker, Behavior, _Movement>,
+			),
+		);
 
 		app
 	}
@@ -89,8 +113,7 @@ mod move_player_tests {
 
 		let last_update = time.last_update().unwrap();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let agent = Agent;
-		let run = Run;
+		let agent = Runner;
 		let time_delta = Duration::from_millis(30);
 		let mut movement = _Movement::new();
 
@@ -102,7 +125,7 @@ mod move_player_tests {
 			.return_const(false);
 
 		time.update_with_instant(last_update + time_delta);
-		app.world.spawn((agent, movement, run, transform));
+		app.world.spawn((agent, movement, transform));
 
 		app.update();
 	}
@@ -111,13 +134,12 @@ mod move_player_tests {
 	fn move_agent_twice() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let agent = Agent;
-		let run = Run;
+		let agent = Runner;
 		let mut movement = _Movement::new();
 
 		movement.mock.expect_update().times(2).return_const(false);
 
-		app.world.spawn((agent, movement, run, transform));
+		app.world.spawn((agent, movement, transform));
 
 		app.update();
 		app.update();
@@ -127,13 +149,12 @@ mod move_player_tests {
 	fn remove_busy_when_done() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let agent = Agent;
-		let run = Run;
+		let agent = Runner;
 		let mut movement = _Movement::new();
 
 		movement.mock.expect_update().return_const(true);
 
-		let agent = app.world.spawn((agent, movement, run, transform)).id();
+		let agent = app.world.spawn((agent, movement, transform)).id();
 
 		app.update();
 
@@ -146,22 +167,102 @@ mod move_player_tests {
 	fn do_not_remove_active_when_not_done() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let agent = Agent;
-		let run = Run;
+		let agent = Runner;
 		let active = Active::<Behavior>::new();
 		let mut movement = _Movement::new();
 
 		movement.mock.expect_update().return_const(false);
 
-		let agent = app
-			.world
-			.spawn((agent, movement, run, transform, active))
-			.id();
+		let agent = app.world.spawn((agent, movement, transform, active)).id();
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
 		assert!(agent.contains::<Active<Behavior>>());
+	}
+
+	#[test]
+	fn set_run_and_remove_walk_component() {
+		let mut app = setup_app();
+		let transform = Transform::from_xyz(1., 2., 3.);
+		let agent = Runner;
+		let mut movement = _Movement::new();
+
+		movement.mock.expect_update().return_const(false);
+
+		let agent = app.world.spawn((agent, movement, transform, Walk)).id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			(false, true),
+			(agent.contains::<Walk>(), agent.contains::<Run>())
+		)
+	}
+
+	#[test]
+	fn remove_run_when_done() {
+		let mut app = setup_app();
+		let transform = Transform::from_xyz(1., 2., 3.);
+		let agent = Runner;
+		let mut movement = _Movement::new();
+
+		movement.mock.expect_update().return_const(true);
+
+		let agent = app.world.spawn((agent, movement, transform, Walk)).id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			(false, false),
+			(agent.contains::<Walk>(), agent.contains::<Run>())
+		)
+	}
+
+	#[test]
+	fn set_walk_and_remove_run_component() {
+		let mut app = setup_app();
+		let transform = Transform::from_xyz(1., 2., 3.);
+		let agent = Walker;
+		let mut movement = _Movement::new();
+
+		movement.mock.expect_update().return_const(false);
+
+		let agent = app.world.spawn((agent, movement, transform, Run)).id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			(true, false),
+			(agent.contains::<Walk>(), agent.contains::<Run>())
+		)
+	}
+
+	#[test]
+	fn remove_walk_when_done() {
+		let mut app = setup_app();
+		let transform = Transform::from_xyz(1., 2., 3.);
+		let agent = Walker;
+		let mut movement = _Movement::new();
+
+		movement.mock.expect_update().return_const(true);
+
+		let agent = app.world.spawn((agent, movement, transform, Run)).id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			(false, false),
+			(agent.contains::<Walk>(), agent.contains::<Run>())
+		)
 	}
 }
