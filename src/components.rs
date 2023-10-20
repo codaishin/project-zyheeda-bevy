@@ -1,5 +1,6 @@
 use crate::behavior::{Behavior, MovementMode};
 use bevy::prelude::*;
+use std::{collections::VecDeque, marker::PhantomData};
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -59,4 +60,20 @@ pub struct Behaviors(pub Vec<Behavior>);
 #[derive(Component, Default)]
 pub struct Animator {
 	pub animation_player_id: Option<Entity>,
+}
+
+#[derive(Component)]
+pub struct Queue<T>(pub VecDeque<T>);
+
+#[derive(Component)]
+pub struct BusyExecuting<T> {
+	phantom_data: PhantomData<T>,
+}
+
+impl<T> Default for BusyExecuting<T> {
+	fn default() -> Self {
+		Self {
+			phantom_data: default(),
+		}
+	}
 }

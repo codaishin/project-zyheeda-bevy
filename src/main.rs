@@ -9,6 +9,7 @@ use project_zyheeda::{
 	resources::Animation,
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
+		behavior::player::schedule::player_schedule,
 		clean::clean,
 		events::mouse_left::mouse_left,
 		movement::{
@@ -17,7 +18,6 @@ use project_zyheeda::{
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::toggle_walk_run,
 		},
-		player_behavior::schedule::player_schedule,
 	},
 	tools::Tools,
 	traits::{
