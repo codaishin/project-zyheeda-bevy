@@ -3,7 +3,7 @@ use bevy::{
 	prelude::*,
 };
 use project_zyheeda::{
-	behavior::{Behavior, Idle, Run, SimpleMovement, Walk},
+	behavior::{Behavior, Idle, MovementMode, Run, SimpleMovement, Walk},
 	components::{Animator, CamOrbit, Player, Queue, UnitsPerSecond},
 	events::{Enqueue, MoveEvent},
 	resources::Animation,
@@ -36,21 +36,13 @@ fn main() {
 		)
 		.add_systems(Update, player_enqueue::<MoveEvent, Behavior>)
 		.add_systems(Update, dequeue::<Player, Behavior, SimpleMovement>)
+		.add_systems(Update, (execute::<Player, Behavior, SimpleMovement>,))
 		.add_systems(
 			Update,
 			(
-				execute::<Player, Behavior, SimpleMovement, Walk>,
-				execute::<Player, Behavior, SimpleMovement, Run>,
-			),
-		)
-		.add_systems(Update, follow::<Player, CamOrbit>)
-		.add_systems(Update, move_on_orbit::<CamOrbit>)
-		.add_systems(
-			Update,
-			(
-				animate::<Player, Behavior, Idle>,
-				animate::<Player, Behavior, Walk>,
-				animate::<Player, Behavior, Run>,
+				animate::<Player, Idle>,
+				animate::<Player, Walk>,
+				animate::<Player, Run>,
 			),
 		)
 		.add_systems(Update, follow::<Player, CamOrbit>)
@@ -128,6 +120,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		Player {
 			walk_speed: UnitsPerSecond::new(0.75),
 			run_speed: UnitsPerSecond::new(1.5),
+			movement_mode: MovementMode::Walk,
 		},
 		Walk,
 		Queue::<Behavior>::new(),

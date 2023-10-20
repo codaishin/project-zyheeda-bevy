@@ -1,13 +1,10 @@
-use crate::{
-	components::{Animator, Group},
-	resources::Animation,
-};
+use crate::{components::Animator, resources::Animation};
 use bevy::prelude::*;
 
 #[allow(clippy::type_complexity)]
-pub fn animate<TAgent: Component, TBehaviors: Send + Sync + 'static, TBehavior: Component>(
+pub fn animate<TAgent: Component, TBehavior: Component>(
 	animation: Res<Animation<TAgent, TBehavior>>,
-	mut animators: Query<&Animator, (With<TAgent>, With<Group<TBehaviors>>, With<TBehavior>)>,
+	mut animators: Query<&Animator, (With<TAgent>, With<TBehavior>)>,
 	mut animation_players: Query<&mut AnimationPlayer>,
 ) {
 	for animation_player_id in animators.iter_mut().filter_map(|a| a.animation_player_id) {

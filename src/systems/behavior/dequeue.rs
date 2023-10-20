@@ -1,4 +1,4 @@
-use crate::components::{Group, Queue};
+use crate::components::{Active, Queue};
 use bevy::prelude::{Bundle, Commands, Component, Entity, Query, With, Without};
 
 fn match_first<TBehavior: Copy, TBundle: TryFrom<TBehavior>>(
@@ -14,14 +14,14 @@ pub fn dequeue<
 	TBundle: Bundle + TryFrom<TBehavior>,
 >(
 	mut commands: Commands,
-	mut agents: Query<(Entity, &mut Queue<TBehavior>), (With<TAgent>, Without<Group<TBehavior>>)>,
+	mut agents: Query<(Entity, &mut Queue<TBehavior>), (With<TAgent>, Without<Active<TBehavior>>)>,
 ) {
 	for (agent, mut queue) in agents.iter_mut() {
 		let mut agent = commands.entity(agent);
 
 		agent.remove::<TBundle>();
 		if let Some(bundle) = match_first::<TBehavior, TBundle>(&queue) {
-			let group = Group::<TBehavior>::new();
+			let group = Active::<TBehavior>::new();
 			queue.0.pop_front();
 			agent.insert((bundle, group));
 		}
@@ -31,7 +31,7 @@ pub fn dequeue<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Group;
+	use crate::components::Active;
 	use bevy::{
 		prelude::{App, Update},
 		utils::default,
@@ -82,7 +82,7 @@ mod tests {
 			(
 				agent.contains::<Sing>(),
 				agent.contains::<Pop>(),
-				agent.contains::<Group<Behavior>>(),
+				agent.contains::<Active<Behavior>>(),
 				queue.0.len()
 			)
 		);
@@ -93,7 +93,7 @@ mod tests {
 		let mut app = App::new();
 		let queue = Queue(VecDeque::from([Behavior::Sing]));
 		let agent = Agent;
-		let running: Group<Behavior> = default();
+		let running: Active<Behavior> = default();
 
 		let agent = app.world.spawn((agent, queue, running)).id();
 		app.add_systems(Update, dequeue::<Agent, Behavior, (Sing, Pop)>);
@@ -107,7 +107,7 @@ mod tests {
 			(
 				agent.contains::<Sing>(),
 				agent.contains::<Pop>(),
-				agent.contains::<Group<Behavior>>(),
+				agent.contains::<Active<Behavior>>(),
 				queue.0.len()
 			)
 		);

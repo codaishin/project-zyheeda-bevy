@@ -1,4 +1,4 @@
-use crate::behavior::BehaviorOld;
+use crate::behavior::{BehaviorOld, MovementMode};
 use bevy::prelude::*;
 use std::{collections::VecDeque, marker::PhantomData};
 
@@ -51,6 +51,7 @@ mod tests {
 pub struct Player {
 	pub walk_speed: UnitsPerSecond,
 	pub run_speed: UnitsPerSecond,
+	pub movement_mode: MovementMode,
 }
 
 #[derive(Component)]
@@ -77,11 +78,11 @@ impl<T> Default for Queue<T> {
 }
 
 #[derive(Component)]
-pub struct Group<T> {
+pub struct Active<T> {
 	phantom_data: PhantomData<T>,
 }
 
-impl<T> Group<T> {
+impl<T> Active<T> {
 	pub fn new() -> Self {
 		Self {
 			phantom_data: PhantomData,
@@ -89,7 +90,7 @@ impl<T> Group<T> {
 	}
 }
 
-impl<T> Default for Group<T> {
+impl<T> Default for Active<T> {
 	fn default() -> Self {
 		Self::new()
 	}

@@ -1,5 +1,5 @@
 use crate::{
-	components::{Group, Player, Queue},
+	components::{Active, Player, Queue},
 	events::Enqueue,
 };
 use bevy::prelude::*;
@@ -18,7 +18,7 @@ pub fn player_enqueue<TEvent: Copy + Event, TBehavior: From<TEvent> + Send + Syn
 		for event in event_reader.iter() {
 			queue.0.clear();
 			queue.0.push_back((*event).into());
-			commands.entity(player).remove::<Group<TBehavior>>();
+			commands.entity(player).remove::<Active<TBehavior>>();
 		}
 	}
 }
@@ -26,7 +26,7 @@ pub fn player_enqueue<TEvent: Copy + Event, TBehavior: From<TEvent> + Send + Syn
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Group;
+	use crate::components::Active;
 	use bevy::prelude::App;
 	use std::collections::VecDeque;
 
@@ -63,7 +63,7 @@ mod tests {
 		let event = Event {
 			target: Vec3::new(1., 2., 3.),
 		};
-		let group = Group::<Behavior>::new();
+		let group = Active::<Behavior>::new();
 		let player = app.world.spawn((player, queue, group)).id();
 
 		app.add_systems(Update, player_enqueue::<Event, Behavior>);
@@ -72,7 +72,7 @@ mod tests {
 
 		let player = app.world.entity(player);
 		let queue = player.get::<Queue<Behavior>>().unwrap();
-		let group_is_active = player.contains::<Group<Behavior>>();
+		let group_is_active = player.contains::<Active<Behavior>>();
 
 		assert_eq!(
 			(
@@ -91,7 +91,7 @@ mod tests {
 		let event = Enqueue(Event {
 			target: Vec3::new(1., 2., 3.),
 		});
-		let group = Group::<Behavior>::new();
+		let group = Active::<Behavior>::new();
 		let player = app.world.spawn((player, queue, group)).id();
 
 		app.add_systems(Update, player_enqueue::<Event, Behavior>);
@@ -102,7 +102,7 @@ mod tests {
 
 		let player = app.world.entity(player);
 		let queue = player.get::<Queue<Behavior>>().unwrap();
-		let group_is_active = player.contains::<Group<Behavior>>();
+		let group_is_active = player.contains::<Active<Behavior>>();
 
 		assert_eq!(
 			(
