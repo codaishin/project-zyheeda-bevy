@@ -1,5 +1,5 @@
 use crate::{
-	components::{Active, Player, Queue},
+	components::{Idle, Player, Queue},
 	events::Enqueue,
 };
 use bevy::prelude::*;
@@ -18,7 +18,7 @@ pub fn player_enqueue<TEvent: Copy + Event, TBehavior: From<TEvent> + Send + Syn
 		for event in event_reader.iter() {
 			queue.0.clear();
 			queue.0.push_back((*event).into());
-			commands.entity(player).remove::<Active<TBehavior>>();
+			commands.entity(player).insert(Idle::<TBehavior>::new());
 		}
 	}
 }
@@ -26,7 +26,7 @@ pub fn player_enqueue<TEvent: Copy + Event, TBehavior: From<TEvent> + Send + Syn
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Active;
+	use crate::components::Idle;
 	use bevy::prelude::App;
 	use std::collections::VecDeque;
 
@@ -63,8 +63,7 @@ mod tests {
 		let event = Event {
 			target: Vec3::new(1., 2., 3.),
 		};
-		let group = Active::<Behavior>::new();
-		let player = app.world.spawn((player, queue, group)).id();
+		let player = app.world.spawn((player, queue)).id();
 
 		app.add_systems(Update, player_enqueue::<Event, Behavior>);
 		app.world.resource_mut::<Events<Event>>().send(event);
@@ -72,14 +71,14 @@ mod tests {
 
 		let player = app.world.entity(player);
 		let queue = player.get::<Queue<Behavior>>().unwrap();
-		let group_is_active = player.contains::<Active<Behavior>>();
+		let is_idle = player.contains::<Idle<Behavior>>();
 
 		assert_eq!(
 			(
-				false,
+				true,
 				&VecDeque::from([Behavior::MoveTo(Vec3::new(1., 2., 3.))])
 			),
-			(group_is_active, &queue.0)
+			(is_idle, &queue.0)
 		)
 	}
 
@@ -91,8 +90,7 @@ mod tests {
 		let event = Enqueue(Event {
 			target: Vec3::new(1., 2., 3.),
 		});
-		let group = Active::<Behavior>::new();
-		let player = app.world.spawn((player, queue, group)).id();
+		let player = app.world.spawn((player, queue)).id();
 
 		app.add_systems(Update, player_enqueue::<Event, Behavior>);
 		app.world
@@ -102,14 +100,14 @@ mod tests {
 
 		let player = app.world.entity(player);
 		let queue = player.get::<Queue<Behavior>>().unwrap();
-		let group_is_active = player.contains::<Active<Behavior>>();
+		let is_idle = player.contains::<Idle<Behavior>>();
 
 		assert_eq!(
 			(
-				true,
+				false,
 				&VecDeque::from([Behavior::Jump, Behavior::MoveTo(Vec3::new(1., 2., 3.))])
 			),
-			(group_is_active, &queue.0)
+			(is_idle, &queue.0)
 		)
 	}
 }

@@ -1,29 +1,31 @@
-use crate::components::{Active, Queue};
-use bevy::prelude::{Bundle, Commands, Component, Entity, Query, With, Without};
+use std::fmt::Debug;
 
-fn match_first<TBehavior: Copy, TBundle: TryFrom<TBehavior>>(
+use crate::components::{Idle, Queue};
+use bevy::prelude::{Commands, Component, Entity, Query, With};
+
+fn match_first<TBehavior: Copy, TComponent: TryFrom<TBehavior>>(
 	queue: &Queue<TBehavior>,
-) -> Option<TBundle> {
-	queue.0.get(0).and_then(|b| TBundle::try_from(*b).ok())
+) -> Option<TComponent> {
+	queue.0.get(0).and_then(|b| TComponent::try_from(*b).ok())
 }
 
 #[allow(clippy::type_complexity)]
 pub fn dequeue<
 	TAgent: Component,
 	TBehavior: Copy + Send + Sync + 'static,
-	TBundle: Bundle + TryFrom<TBehavior>,
+	TComponent: Component + TryFrom<TBehavior> + Debug,
 >(
 	mut commands: Commands,
-	mut agents: Query<(Entity, &mut Queue<TBehavior>), (With<TAgent>, Without<Active<TBehavior>>)>,
+	mut agents: Query<(Entity, &mut Queue<TBehavior>), (With<TAgent>, With<Idle<TBehavior>>)>,
 ) {
 	for (agent, mut queue) in agents.iter_mut() {
 		let mut agent = commands.entity(agent);
 
-		agent.remove::<TBundle>();
-		if let Some(bundle) = match_first::<TBehavior, TBundle>(&queue) {
-			let group = Active::<TBehavior>::new();
+		agent.remove::<TComponent>();
+		if let Some(component) = match_first::<TBehavior, TComponent>(&queue) {
 			queue.0.pop_front();
-			agent.insert((bundle, group));
+			agent.insert(component);
+			agent.remove::<Idle<TBehavior>>();
 		}
 	}
 }
@@ -31,11 +33,8 @@ pub fn dequeue<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Active;
-	use bevy::{
-		prelude::{App, Update},
-		utils::default,
-	};
+	use crate::components::Idle;
+	use bevy::prelude::{App, Update};
 	use std::collections::VecDeque;
 
 	#[derive(Clone, Copy)]
@@ -44,18 +43,15 @@ mod tests {
 		Dance,
 	}
 
-	#[derive(Component)]
+	#[derive(Component, Debug)]
 	struct Sing;
 
-	#[derive(Component)]
-	struct Pop;
-
-	impl TryFrom<Behavior> for (Sing, Pop) {
+	impl TryFrom<Behavior> for Sing {
 		type Error = ();
 
 		fn try_from(value: Behavior) -> Result<Self, Self::Error> {
 			match value {
-				Behavior::Sing => Ok((Sing, Pop)),
+				Behavior::Sing => Ok(Sing),
 				_ => Err(()),
 			}
 		}
@@ -69,67 +65,56 @@ mod tests {
 		let mut app = App::new();
 		let queue = Queue(VecDeque::from([Behavior::Sing]));
 		let agent = Agent;
+		let idle = Idle::<Behavior>::new();
 
-		let agent = app.world.spawn((agent, queue)).id();
-		app.add_systems(Update, dequeue::<Agent, Behavior, (Sing, Pop)>);
+		let agent = app.world.spawn((agent, queue, idle)).id();
+		app.add_systems(Update, dequeue::<Agent, Behavior, Sing>);
 		app.update();
 
 		let agent = app.world.entity(agent);
 		let queue = agent.get::<Queue<Behavior>>().unwrap();
 
 		assert_eq!(
-			(true, true, true, 0),
+			(true, false, 0),
 			(
 				agent.contains::<Sing>(),
-				agent.contains::<Pop>(),
-				agent.contains::<Active<Behavior>>(),
+				agent.contains::<Idle<Behavior>>(),
 				queue.0.len()
 			)
 		);
 	}
 
 	#[test]
-	fn do_not_pop_when_something_is_running() {
+	fn do_not_pop_when_not_idling() {
 		let mut app = App::new();
 		let queue = Queue(VecDeque::from([Behavior::Sing]));
 		let agent = Agent;
-		let running: Active<Behavior> = default();
 
-		let agent = app.world.spawn((agent, queue, running)).id();
-		app.add_systems(Update, dequeue::<Agent, Behavior, (Sing, Pop)>);
+		let agent = app.world.spawn((agent, queue)).id();
+		app.add_systems(Update, dequeue::<Agent, Behavior, Sing>);
 		app.update();
 
 		let agent = app.world.entity(agent);
 		let queue = agent.get::<Queue<Behavior>>().unwrap();
 
-		assert_eq!(
-			(false, false, true, 1),
-			(
-				agent.contains::<Sing>(),
-				agent.contains::<Pop>(),
-				agent.contains::<Active<Behavior>>(),
-				queue.0.len()
-			)
-		);
+		assert_eq!((false, 1), (agent.contains::<Sing>(), queue.0.len()));
 	}
 
 	#[test]
-	fn remove_bundle_when_not_running() {
+	fn remove_component_when_idling() {
 		let mut app = App::new();
 		let queue = Queue(VecDeque::<Behavior>::from([]));
 		let agent = Agent;
+		let idle = Idle::<Behavior>::new();
 		let sing = Sing;
 
-		let agent = app.world.spawn((agent, queue, sing)).id();
-		app.add_systems(Update, dequeue::<Agent, Behavior, (Sing, Pop)>);
+		let agent = app.world.spawn((agent, queue, sing, idle)).id();
+		app.add_systems(Update, dequeue::<Agent, Behavior, Sing>);
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert_eq!(
-			(false, false),
-			(agent.contains::<Sing>(), agent.contains::<Pop>())
-		);
+		assert!(!agent.contains::<Sing>());
 	}
 
 	#[test]
@@ -137,21 +122,15 @@ mod tests {
 		let mut app = App::new();
 		let queue = Queue(VecDeque::from([Behavior::Dance]));
 		let agent = Agent;
+		let idle = Idle::<Behavior>::new();
 
-		let agent = app.world.spawn((agent, queue)).id();
-		app.add_systems(Update, dequeue::<Agent, Behavior, (Sing, Pop)>);
+		let agent = app.world.spawn((agent, queue, idle)).id();
+		app.add_systems(Update, dequeue::<Agent, Behavior, Sing>);
 		app.update();
 
 		let agent = app.world.entity(agent);
 		let queue = agent.get::<Queue<Behavior>>().unwrap();
 
-		assert_eq!(
-			(false, false, 1),
-			(
-				agent.contains::<Sing>(),
-				agent.contains::<Pop>(),
-				queue.0.len()
-			)
-		);
+		assert_eq!((false, 1), (agent.contains::<Sing>(), queue.0.len()));
 	}
 }

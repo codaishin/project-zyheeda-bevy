@@ -78,11 +78,11 @@ impl<T> Default for Queue<T> {
 }
 
 #[derive(Component)]
-pub struct Active<T> {
+pub struct Idle<T> {
 	phantom_data: PhantomData<T>,
 }
 
-impl<T> Active<T> {
+impl<T> Idle<T> {
 	pub fn new() -> Self {
 		Self {
 			phantom_data: PhantomData,
@@ -90,7 +90,7 @@ impl<T> Active<T> {
 	}
 }
 
-impl<T> Default for Active<T> {
+impl<T> Default for Idle<T> {
 	fn default() -> Self {
 		Self::new()
 	}

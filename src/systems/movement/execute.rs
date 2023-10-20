@@ -1,6 +1,6 @@
 use crate::{
 	behavior::{MovementMode, Run, Walk},
-	components::Active,
+	components::Idle,
 	traits::{movement::Movement, movement_data::MovementData},
 };
 use bevy::prelude::*;
@@ -22,7 +22,7 @@ pub fn execute<
 
 		match (is_done, movement_mode) {
 			(true, _) => {
-				entity.remove::<Active<TBehavior>>();
+				entity.insert(Idle::<TBehavior>::new());
 				entity.remove::<Run>();
 				entity.remove::<Walk>();
 			}
@@ -146,7 +146,7 @@ mod move_player_tests {
 	}
 
 	#[test]
-	fn remove_busy_when_done() {
+	fn add_idle_when_done() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let agent = Runner;
@@ -160,26 +160,25 @@ mod move_player_tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Active<Behavior>>());
+		assert!(agent.contains::<Idle<Behavior>>());
 	}
 
 	#[test]
-	fn do_not_remove_active_when_not_done() {
+	fn do_not_add_idle_when_not_done() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let agent = Runner;
-		let active = Active::<Behavior>::new();
 		let mut movement = _Movement::new();
 
 		movement.mock.expect_update().return_const(false);
 
-		let agent = app.world.spawn((agent, movement, transform, active)).id();
+		let agent = app.world.spawn((agent, movement, transform)).id();
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<Active<Behavior>>());
+		assert!(!agent.contains::<Idle<Behavior>>());
 	}
 
 	#[test]
