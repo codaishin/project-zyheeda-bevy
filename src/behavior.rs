@@ -27,7 +27,7 @@ pub enum BehaviorOld {
 	Idle(Idle),
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Behavior {
 	MoveTo(Vec3),
 }

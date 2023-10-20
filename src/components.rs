@@ -64,15 +64,33 @@ pub struct Animator {
 #[derive(Component)]
 pub struct Queue<T>(pub VecDeque<T>);
 
+impl<T> Queue<T> {
+	pub fn new() -> Self {
+		Self([].into())
+	}
+}
+
+impl<T> Default for Queue<T> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 #[derive(Component)]
 pub struct BusyExecuting<T> {
 	phantom_data: PhantomData<T>,
 }
 
+impl<T> BusyExecuting<T> {
+	fn new() -> Self {
+		Self {
+			phantom_data: PhantomData,
+		}
+	}
+}
+
 impl<T> Default for BusyExecuting<T> {
 	fn default() -> Self {
-		Self {
-			phantom_data: default(),
-		}
+		Self::new()
 	}
 }

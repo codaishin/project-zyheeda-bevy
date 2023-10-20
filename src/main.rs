@@ -4,12 +4,12 @@ use bevy::{
 };
 use project_zyheeda::{
 	behavior::{Behavior, Idle, Run, SimpleMovement, Walk},
-	components::{Animator, CamOrbit, Player, UnitsPerSecond},
+	components::{Animator, CamOrbit, Player, Queue, UnitsPerSecond},
 	events::{Enqueue, MoveEvent},
 	resources::Animation,
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
-		behavior::player::schedule::player_enqueue,
+		behavior::{dequeue::dequeue, player::schedule::player_enqueue},
 		events::mouse_left::mouse_left,
 		movement::{
 			execute::execute,
@@ -35,6 +35,7 @@ fn main() {
 			(mouse_left::<Tools, MoveEvent>, player_toggle_walk_run),
 		)
 		.add_systems(Update, player_enqueue::<MoveEvent, Behavior>)
+		.add_systems(Update, dequeue::<Player, Behavior, SimpleMovement>)
 		.add_systems(
 			Update,
 			(
@@ -52,6 +53,8 @@ fn main() {
 				animate::<Player, Run>,
 			),
 		)
+		.add_systems(Update, follow::<Player, CamOrbit>)
+		.add_systems(Update, move_on_orbit::<CamOrbit>)
 		.add_systems(Update, debug)
 		.run();
 }
@@ -126,7 +129,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			walk_speed: UnitsPerSecond::new(0.75),
 			run_speed: UnitsPerSecond::new(1.5),
 		},
-		Walk,
+		Queue::<Behavior>::new(),
 		Animator { ..default() },
 	));
 }

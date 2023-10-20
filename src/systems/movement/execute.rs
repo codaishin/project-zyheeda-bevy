@@ -12,7 +12,7 @@ pub fn execute<
 >(
 	mut commands: Commands,
 	time: Res<Time>,
-	mut agents: Query<(Entity, &mut TMovement, &mut Transform, &TAgent)>,
+	mut agents: Query<(Entity, &mut TMovement, &mut Transform, &TAgent), With<TMode>>,
 ) {
 	for (id, mut movement, mut transform, agent) in agents.iter_mut() {
 		let speed = agent.get_speed().to_f32();
@@ -37,6 +37,9 @@ mod move_player_tests {
 
 	#[derive(Component)]
 	struct Run;
+
+	#[derive(Component)]
+	struct Walk;
 
 	#[derive(Component)]
 	struct Agent;
@@ -67,6 +70,12 @@ mod move_player_tests {
 		}
 	}
 
+	impl Speed<Walk> for Agent {
+		fn get_speed(&self) -> UnitsPerSecond {
+			UnitsPerSecond::new(1.)
+		}
+	}
+
 	fn setup_app() -> App {
 		let mut app = App::new();
 		let mut time = Time::default();
@@ -74,13 +83,19 @@ mod move_player_tests {
 		time.update();
 		app.insert_resource(time);
 		app.update();
-		app.add_systems(Update, execute::<Agent, Behavior, _Movement, Run>);
+		app.add_systems(
+			Update,
+			(
+				execute::<Agent, Behavior, _Movement, Run>,
+				execute::<Agent, Behavior, _Movement, Walk>,
+			),
+		);
 
 		app
 	}
 
 	#[test]
-	fn move_agent_once() {
+	fn move_agent_once_with_run() {
 		let mut app = setup_app();
 		let mut time = app.world.resource_mut::<Time>();
 
@@ -100,6 +115,31 @@ mod move_player_tests {
 
 		time.update_with_instant(last_update + time_delta);
 		app.world.spawn((agent, movement, run, transform));
+
+		app.update();
+	}
+
+	#[test]
+	fn move_agent_once_with_walk() {
+		let mut app = setup_app();
+		let mut time = app.world.resource_mut::<Time>();
+
+		let last_update = time.last_update().unwrap();
+		let transform = Transform::from_xyz(1., 2., 3.);
+		let agent = Agent;
+		let walk = Walk;
+		let time_delta = Duration::from_millis(30);
+		let mut movement = _Movement::new();
+
+		movement
+			.mock
+			.expect_update()
+			.with(eq(transform), eq(time_delta.as_secs_f32() * 1.))
+			.times(1)
+			.return_const(false);
+
+		time.update_with_instant(last_update + time_delta);
+		app.world.spawn((agent, movement, walk, transform));
 
 		app.update();
 	}

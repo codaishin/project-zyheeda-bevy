@@ -14,8 +14,8 @@ fn match_first<TBehavior: Copy, TBundle: TryFrom<TBehavior>>(
 }
 
 pub fn dequeue<
-	TBehavior: Copy + Send + Sync + 'static,
 	TAgent: Component,
+	TBehavior: Copy + Send + Sync + 'static,
 	TBundle: Bundle + TryFrom<TBehavior>,
 >(
 	mut commands: Commands,
@@ -76,7 +76,7 @@ mod tests {
 		let agent = Agent;
 
 		let agent = app.world.spawn((agent, queue)).id();
-		app.add_systems(Update, dequeue::<Behavior, Agent, (Sing, Pop)>);
+		app.add_systems(Update, dequeue::<Agent, Behavior, (Sing, Pop)>);
 		app.update();
 
 		let agent = app.world.entity(agent);
@@ -101,7 +101,7 @@ mod tests {
 		let running: BusyExecuting<Behavior> = default();
 
 		let agent = app.world.spawn((agent, queue, running)).id();
-		app.add_systems(Update, dequeue::<Behavior, Agent, (Sing, Pop)>);
+		app.add_systems(Update, dequeue::<Agent, Behavior, (Sing, Pop)>);
 		app.update();
 
 		let agent = app.world.entity(agent);
@@ -126,7 +126,7 @@ mod tests {
 		let sing = Sing;
 
 		let agent = app.world.spawn((agent, queue, sing)).id();
-		app.add_systems(Update, dequeue::<Behavior, Agent, (Sing, Pop)>);
+		app.add_systems(Update, dequeue::<Agent, Behavior, (Sing, Pop)>);
 		app.update();
 
 		let agent = app.world.entity(agent);
@@ -144,7 +144,7 @@ mod tests {
 		let agent = Agent;
 
 		let agent = app.world.spawn((agent, queue)).id();
-		app.add_systems(Update, dequeue::<Behavior, Agent, (Sing, Pop)>);
+		app.add_systems(Update, dequeue::<Agent, Behavior, (Sing, Pop)>);
 		app.update();
 
 		let agent = app.world.entity(agent);
