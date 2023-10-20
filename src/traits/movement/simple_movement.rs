@@ -7,15 +7,14 @@ impl Movement for SimpleMovement {
 		let target = self.target;
 		let direction = target - agent.translation;
 
-		agent.look_at(Vec3::new(target.x, agent.translation.y, target.z), Vec3::Y);
-
-		if distance < direction.length() {
-			agent.translation += direction.normalize() * distance;
-			return false;
+		if distance > direction.length() {
+			agent.translation = target;
+			return true;
 		}
 
-		agent.translation = target;
-		true
+		agent.look_at(Vec3::new(target.x, agent.translation.y, target.z), Vec3::Y);
+		agent.translation += direction.normalize() * distance;
+		false
 	}
 }
 
@@ -96,5 +95,17 @@ mod tests {
 		movement.update(&mut agent, 0.1);
 
 		assert_eq_approx(Vec3::X, agent.forward(), 0.00001);
+	}
+
+	#[test]
+	fn no_rotation_change_when_on_target() {
+		let mut movement = SimpleMovement { target: Vec3::ONE };
+		let mut agent = Transform::from_translation(Vec3::ONE);
+
+		agent.look_at(Vec3::new(2., 1., 2.), Vec3::Y);
+
+		movement.update(&mut agent, 0.1);
+
+		assert_eq_approx(Vec3::new(2., 0., 2.).normalize(), agent.forward(), 0.00001);
 	}
 }
