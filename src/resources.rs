@@ -22,7 +22,7 @@ impl<TAgent, TBehavior> Animation<TAgent, TBehavior> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{behavior::Run, components::Player};
+	use crate::components::{Player, Run};
 	use bevy::{asset::HandleId, utils::Uuid};
 
 	#[test]

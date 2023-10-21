@@ -3,27 +3,33 @@ use bevy::{
 	prelude::*,
 };
 use project_zyheeda::{
-	behavior::{Idle, MovementMode, Run, SimpleMovement, Walk},
-	components::{Animator, Behaviors, CamOrbit, Player, UnitsPerSecond},
+	behavior::{Behavior, MovementMode},
+	components::{
+		Animator,
+		CamOrbit,
+		Idle,
+		Player,
+		Queue,
+		Run,
+		SimpleMovement,
+		UnitsPerSecond,
+		Walk,
+	},
 	events::{Enqueue, MoveEvent},
 	resources::Animation,
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
-		clean::clean,
+		behavior::{dequeue::dequeue, player::schedule::player_enqueue},
 		events::mouse_left::mouse_left,
 		movement::{
 			execute::execute,
 			follow::follow,
 			move_on_orbit::move_on_orbit,
-			toggle_walk_run::toggle_walk_run,
+			toggle_walk_run::player_toggle_walk_run,
 		},
-		player_behavior::schedule::schedule,
 	},
 	tools::Tools,
-	traits::{
-		new::New,
-		orbit::{Orbit, Vec2Radians},
-	},
+	traits::orbit::{Orbit, Vec2Radians},
 };
 use std::f32::consts::PI;
 
@@ -34,20 +40,23 @@ fn main() {
 		.add_event::<Enqueue<MoveEvent>>()
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(Update, link_animators_with_new_animation_players)
-		.add_systems(Update, (mouse_left::<Tools, MoveEvent>, toggle_walk_run))
-		.add_systems(Update, schedule::<MoveEvent, SimpleMovement, Behaviors>)
-		.add_systems(Update, execute::<SimpleMovement, Behaviors>)
-		.add_systems(Update, follow::<Player, CamOrbit>)
-		.add_systems(Update, move_on_orbit::<CamOrbit>)
+		.add_systems(
+			Update,
+			(mouse_left::<Tools, MoveEvent>, player_toggle_walk_run),
+		)
+		.add_systems(Update, player_enqueue::<MoveEvent, Behavior>)
+		.add_systems(Update, dequeue::<Player, Behavior, SimpleMovement>)
+		.add_systems(Update, (execute::<Player, SimpleMovement>,))
 		.add_systems(
 			Update,
 			(
-				animate::<Player, Behaviors, Idle>,
-				animate::<Player, Behaviors, Walk>,
-				animate::<Player, Behaviors, Run>,
+				animate::<Player, Idle>,
+				animate::<Player, Walk>,
+				animate::<Player, Run>,
 			),
 		)
-		.add_systems(Update, clean::<Behaviors>)
+		.add_systems(Update, follow::<Player, CamOrbit>)
+		.add_systems(Update, move_on_orbit::<CamOrbit>)
 		.add_systems(Update, debug)
 		.run();
 }
@@ -123,8 +132,9 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			run_speed: UnitsPerSecond::new(1.5),
 			movement_mode: MovementMode::Walk,
 		},
+		Queue::<Behavior>::new(),
+		// Idle,
 		Animator { ..default() },
-		Behaviors::new(),
 	));
 }
 

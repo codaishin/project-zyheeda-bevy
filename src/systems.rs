@@ -1,5 +1,4 @@
 pub mod animations;
-pub mod clean;
+pub mod behavior;
 pub mod events;
 pub mod movement;
-pub mod player_behavior;

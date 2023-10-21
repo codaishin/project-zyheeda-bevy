@@ -1,19 +1,17 @@
 use crate::{behavior::MovementMode, components::Player};
 use bevy::prelude::*;
 
-pub fn toggle_walk_run(mut player: Query<&mut Player>, keys: Res<Input<KeyCode>>) {
-	let Ok(mut player) = player.get_single_mut() else {
-		return; //FIXME: handle properly
-	};
-
+pub fn player_toggle_walk_run(mut player: Query<&mut Player>, keys: Res<Input<KeyCode>>) {
 	if !keys.just_pressed(KeyCode::NumpadSubtract) {
 		return;
 	}
 
-	player.movement_mode = match player.movement_mode {
-		MovementMode::Run => MovementMode::Walk,
-		MovementMode::Walk => MovementMode::Run,
-	};
+	for mut player in player.iter_mut() {
+		player.movement_mode = match player.movement_mode {
+			MovementMode::Walk => MovementMode::Run,
+			MovementMode::Run => MovementMode::Walk,
+		}
+	}
 }
 
 #[cfg(test)]
@@ -31,7 +29,7 @@ mod tests {
 		};
 
 		let player = app.world.spawn(player).id();
-		app.add_systems(Update, toggle_walk_run);
+		app.add_systems(Update, player_toggle_walk_run);
 		app.insert_resource(keys);
 		app.world
 			.resource_mut::<Input<KeyCode>>()
@@ -53,7 +51,7 @@ mod tests {
 		};
 
 		let player = app.world.spawn(player).id();
-		app.add_systems(Update, toggle_walk_run);
+		app.add_systems(Update, player_toggle_walk_run);
 		app.insert_resource(keys);
 		app.world
 			.resource_mut::<Input<KeyCode>>()
@@ -75,7 +73,7 @@ mod tests {
 		};
 
 		let player = app.world.spawn(player).id();
-		app.add_systems(Update, toggle_walk_run);
+		app.add_systems(Update, player_toggle_walk_run);
 		app.insert_resource(keys);
 
 		app.update();

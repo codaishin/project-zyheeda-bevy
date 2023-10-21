@@ -1,23 +1,20 @@
-use super::{Movement, Units};
-use crate::behavior::SimpleMovement;
+use super::{IsDone, Movement, Units};
+use crate::components::SimpleMovement;
 use bevy::prelude::*;
 
 impl Movement for SimpleMovement {
-	fn update(&mut self, agent: &mut Transform, distance: Units) {
-		let Some(target) = self.target else {
-			return;
-		};
+	fn update(&mut self, agent: &mut Transform, distance: Units) -> IsDone {
+		let target = self.target;
 		let direction = target - agent.translation;
 
-		agent.look_at(Vec3::new(target.x, agent.translation.y, target.z), Vec3::Y);
-
-		if distance < direction.length() {
-			agent.translation += direction.normalize() * distance;
-			return;
+		if distance > direction.length() {
+			agent.translation = target;
+			return true;
 		}
 
-		agent.translation = target;
-		self.target = None;
+		agent.look_at(Vec3::new(target.x, agent.translation.y, target.z), Vec3::Y);
+		agent.translation += direction.normalize() * distance;
+		false
 	}
 }
 
@@ -30,9 +27,7 @@ mod tests {
 
 	#[test]
 	fn move_to_target() {
-		let mut movement = SimpleMovement {
-			target: Some(Vec3::X),
-		};
+		let mut movement = SimpleMovement { target: Vec3::X };
 		let mut agent = Transform::from_translation(Vec3::ZERO);
 
 		movement.update(&mut agent, 1.);
@@ -43,7 +38,7 @@ mod tests {
 	#[test]
 	fn do_not_move_fully_if_distance_too_small() {
 		let mut movement = SimpleMovement {
-			target: Some(Vec3::new(2., 0., 0.)),
+			target: Vec3::new(2., 0., 0.),
 		};
 		let mut agent = Transform::from_translation(Vec3::ZERO);
 
@@ -54,9 +49,7 @@ mod tests {
 
 	#[test]
 	fn do_not_overshoot() {
-		let mut movement = SimpleMovement {
-			target: Some(Vec3::X),
-		};
+		let mut movement = SimpleMovement { target: Vec3::X };
 		let mut agent = Transform::from_translation(Vec3::ZERO);
 
 		movement.update(&mut agent, 100.);
@@ -65,32 +58,28 @@ mod tests {
 	}
 
 	#[test]
-	fn do_not_move_when_no_target() {
-		let mut movement = SimpleMovement { target: None };
-		let mut agent = Transform::from_translation(Vec3::Y);
+	fn done_when_target_reached() {
+		let mut movement = SimpleMovement { target: Vec3::ONE };
+		let mut agent = Transform::from_translation(Vec3::ZERO);
 
-		movement.update(&mut agent, 1.);
+		let is_done = movement.update(&mut agent, 100.);
 
-		assert_eq!(Vec3::Y, agent.translation);
+		assert!(is_done);
 	}
 
 	#[test]
-	fn set_target_none_when_target_reached() {
-		let mut movement = SimpleMovement {
-			target: Some(Vec3::ONE),
-		};
+	fn not_done_when_target_reached() {
+		let mut movement = SimpleMovement { target: Vec3::ONE };
 		let mut agent = Transform::from_translation(Vec3::ZERO);
 
-		movement.update(&mut agent, 100.);
+		let is_done = movement.update(&mut agent, 0.1);
 
-		assert!(movement.target.is_none());
+		assert!(!is_done);
 	}
 
 	#[test]
 	fn set_forward() {
-		let mut movement = SimpleMovement {
-			target: Some(Vec3::X),
-		};
+		let mut movement = SimpleMovement { target: Vec3::X };
 		let mut agent = Transform::from_translation(Vec3::ZERO);
 
 		movement.update(&mut agent, 0.1);
@@ -100,13 +89,23 @@ mod tests {
 
 	#[test]
 	fn set_forward_ignoring_height_difference() {
-		let mut movement = SimpleMovement {
-			target: Some(Vec3::X),
-		};
+		let mut movement = SimpleMovement { target: Vec3::X };
 		let mut agent = Transform::from_translation(Vec3::new(0., -1., 0.));
 
 		movement.update(&mut agent, 0.1);
 
 		assert_eq_approx(Vec3::X, agent.forward(), 0.00001);
+	}
+
+	#[test]
+	fn no_rotation_change_when_on_target() {
+		let mut movement = SimpleMovement { target: Vec3::ONE };
+		let mut agent = Transform::from_translation(Vec3::ONE);
+
+		agent.look_at(Vec3::new(2., 1., 2.), Vec3::Y);
+
+		movement.update(&mut agent, 0.1);
+
+		assert_eq_approx(Vec3::new(2., 0., 2.).normalize(), agent.forward(), 0.00001);
 	}
 }

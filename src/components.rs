@@ -1,5 +1,6 @@
-use crate::behavior::{Behavior, MovementMode};
+use crate::behavior::MovementMode;
 use bevy::prelude::*;
+use std::collections::VecDeque;
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -53,10 +54,36 @@ pub struct Player {
 	pub movement_mode: MovementMode,
 }
 
-#[derive(Component)]
-pub struct Behaviors(pub Vec<Behavior>);
-
 #[derive(Component, Default)]
 pub struct Animator {
 	pub animation_player_id: Option<Entity>,
+}
+
+#[derive(Component)]
+pub struct Queue<T>(pub VecDeque<T>);
+
+impl<T> Queue<T> {
+	pub fn new() -> Self {
+		Self([].into())
+	}
+}
+
+impl<T> Default for Queue<T> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
+#[derive(Component)]
+pub struct Idle;
+
+#[derive(Component, PartialEq, Debug)]
+pub struct Walk;
+
+#[derive(Component, PartialEq, Debug)]
+pub struct Run;
+
+#[derive(Component, Clone, Copy, PartialEq, Debug)]
+pub struct SimpleMovement {
+	pub target: Vec3,
 }
