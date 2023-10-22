@@ -1,6 +1,6 @@
-use std::marker::PhantomData;
+use std::{borrow::Cow, marker::PhantomData};
 
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashMap};
 
 #[derive(Resource)]
 pub struct Animation<TAgent, TBehavior> {
@@ -31,5 +31,31 @@ mod tests {
 		let animation = Animation::<Player, Run>::new(clip.clone_weak());
 
 		assert_eq!(clip, animation.clip);
+	}
+}
+
+#[derive(Resource)]
+pub struct Models(pub HashMap<Cow<'static, str>, Handle<Scene>>);
+
+type Key = str;
+type File = str;
+type SceneId = u8;
+
+impl Models {
+	pub fn new<const C: usize>(
+		pairs: [(&'static Key, &File, SceneId); C],
+		asset_server: &Res<AssetServer>,
+	) -> Self {
+		Models(
+			pairs
+				.map(|(key, file, scene_id)| {
+					(
+						Cow::from(key),
+						asset_server.load(format!("models/{file}#Scene{scene_id}")),
+					)
+				})
+				.into_iter()
+				.collect(),
+		)
 	}
 }

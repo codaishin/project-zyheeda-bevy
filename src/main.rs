@@ -16,7 +16,7 @@ use project_zyheeda::{
 		Walk,
 	},
 	events::{Enqueue, MoveEvent},
-	resources::Animation,
+	resources::{Animation, Models},
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
 		behavior::{dequeue::dequeue, player::schedule::player_enqueue},
@@ -39,6 +39,7 @@ fn main() {
 		.add_event::<MoveEvent>()
 		.add_event::<Enqueue<MoveEvent>>()
 		.add_systems(Startup, setup_simple_3d_scene)
+		.add_systems(Startup, load_models)
 		.add_systems(Update, link_animators_with_new_animation_players)
 		.add_systems(
 			Update,
@@ -85,6 +86,11 @@ fn debug(
 			}
 		}
 	}
+}
+
+fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
+	let models = Models::new([("pistol", "pistol.gltf", 0)], &asset_server);
+	commands.insert_resource(models);
 }
 
 fn setup_simple_3d_scene(
