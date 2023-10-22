@@ -1,6 +1,6 @@
-use crate::behavior::MovementMode;
-use bevy::prelude::*;
-use std::collections::VecDeque;
+use crate::{behavior::MovementMode, types::BoneName};
+use bevy::{prelude::*, utils::HashMap};
+use std::{borrow::Cow, collections::VecDeque};
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -86,4 +86,45 @@ pub struct Run;
 #[derive(Component, Clone, Copy, PartialEq, Debug)]
 pub struct SimpleMovement {
 	pub target: Vec3,
+}
+
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
+pub enum Side {
+	Right,
+	Left,
+}
+
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
+pub enum SlotKey {
+	Hand(Side),
+}
+
+#[derive(Component, Clone, PartialEq, Debug)]
+pub struct SlotInfos(pub HashMap<SlotKey, Cow<'static, BoneName>>);
+
+impl SlotInfos {
+	pub fn new<const C: usize>(pairs: [(SlotKey, &'static BoneName); C]) -> Self {
+		Self(pairs.map(|(k, v)| (k, Cow::from(v))).into())
+	}
+}
+
+#[derive(Component)]
+pub struct Slots(pub HashMap<SlotKey, Entity>);
+
+impl Slots {
+	pub fn new() -> Self {
+		Self(HashMap::new())
+	}
+}
+
+impl Default for Slots {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
+#[derive(Component)]
+pub struct Hold {
+	pub slot: SlotKey,
+	pub model: Cow<'static, str>,
 }

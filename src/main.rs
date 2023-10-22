@@ -12,6 +12,8 @@ use project_zyheeda::{
 		Queue,
 		Run,
 		SimpleMovement,
+		SlotInfos,
+		Slots,
 		UnitsPerSecond,
 		Walk,
 	},
@@ -27,6 +29,7 @@ use project_zyheeda::{
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
 		},
+		slots::add_slots,
 	},
 	tools::Tools,
 	traits::orbit::{Orbit, Vec2Radians},
@@ -40,6 +43,7 @@ fn main() {
 		.add_event::<Enqueue<MoveEvent>>()
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(Startup, load_models)
+		.add_systems(Update, add_slots)
 		.add_systems(Update, link_animators_with_new_animation_players)
 		.add_systems(
 			Update,
@@ -140,6 +144,8 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		},
 		Queue::<Behavior>::new(),
 		Idle,
+		SlotInfos::new([("right hand", "hand_slot.R")]),
+		Slots::new(),
 		Animator { ..default() },
 	));
 }

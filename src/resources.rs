@@ -2,6 +2,8 @@ use std::{borrow::Cow, marker::PhantomData};
 
 use bevy::{prelude::*, utils::HashMap};
 
+use crate::types::{File, Key, SceneId};
+
 #[derive(Resource)]
 pub struct Animation<TAgent, TBehavior> {
 	agent: PhantomData<TAgent>,
@@ -36,10 +38,6 @@ mod tests {
 
 #[derive(Resource)]
 pub struct Models(pub HashMap<Cow<'static, str>, Handle<Scene>>);
-
-type Key = str;
-type File = str;
-type SceneId = u8;
 
 impl Models {
 	pub fn new<const C: usize>(
