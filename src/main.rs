@@ -133,7 +133,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			movement_mode: MovementMode::Walk,
 		},
 		Queue::<Behavior>::new(),
-		// Idle,
+		Idle,
 		Animator { ..default() },
 	));
 }
