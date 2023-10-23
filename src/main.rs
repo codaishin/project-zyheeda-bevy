@@ -33,7 +33,6 @@ use project_zyheeda::{
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
 		},
-		slots::add_slots,
 	},
 	tools::Tools,
 	traits::orbit::{Orbit, Vec2Radians},
@@ -74,6 +73,7 @@ fn main() {
 fn debug(
 	keyboard: Res<Input<KeyCode>>,
 	all_entities: Query<Entity>,
+	names: Query<&Name>,
 	entities: &Entities,
 	archetypes: &Archetypes,
 	components: &Components,
@@ -83,6 +83,11 @@ fn debug(
 	}
 	for entity in all_entities.iter() {
 		println!("Entity: {:?}", entity);
+		let name = names.get(entity);
+		println!(
+			"Entity (Name): {}",
+			name.map(|n| n.as_str()).unwrap_or("No Name")
+		);
 		let Some(entity_location) = entities.get(entity) else {
 			return;
 		};
