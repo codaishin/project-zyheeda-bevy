@@ -7,12 +7,15 @@ use project_zyheeda::{
 	components::{
 		Animator,
 		CamOrbit,
+		Equip,
 		Idle,
 		Player,
 		Queue,
 		Run,
+		Side,
 		SimpleMovement,
 		SlotInfos,
+		SlotKey,
 		Slots,
 		UnitsPerSecond,
 		Walk,
@@ -23,6 +26,7 @@ use project_zyheeda::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
 		behavior::{dequeue::dequeue, player::schedule::player_enqueue},
 		events::mouse_left::mouse_left,
+		items::{equip::equip_item, slots::add_slots},
 		movement::{
 			execute::execute,
 			follow::follow,
@@ -63,6 +67,7 @@ fn main() {
 		.add_systems(Update, follow::<Player, CamOrbit>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
 		.add_systems(Update, debug)
+		.add_systems(Update, equip_item)
 		.run();
 }
 
@@ -144,8 +149,12 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		},
 		Queue::<Behavior>::new(),
 		Idle,
-		SlotInfos::new([("right hand", "hand_slot.R")]),
+		SlotInfos::new([(SlotKey::Hand(Side::Right), "hand_slot.R")]),
 		Slots::new(),
+		Equip {
+			slot: SlotKey::Hand(Side::Right),
+			model: "pistol".into(),
+		},
 		Animator { ..default() },
 	));
 }

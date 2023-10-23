@@ -1,8 +1,6 @@
-use std::{borrow::Cow, marker::PhantomData};
-
-use bevy::{prelude::*, utils::HashMap};
-
 use crate::types::{File, Key, SceneId};
+use bevy::prelude::*;
+use std::{borrow::Cow, collections::HashMap, marker::PhantomData};
 
 #[derive(Resource)]
 pub struct Animation<TAgent, TBehavior> {

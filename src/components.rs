@@ -123,8 +123,8 @@ impl Default for Slots {
 	}
 }
 
-#[derive(Component)]
-pub struct Hold {
+#[derive(Component, Debug)]
+pub struct Equip {
 	pub slot: SlotKey,
 	pub model: Cow<'static, str>,
 }
