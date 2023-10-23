@@ -7,20 +7,26 @@ use project_zyheeda::{
 	components::{
 		Animator,
 		CamOrbit,
+		Equip,
 		Idle,
 		Player,
 		Queue,
 		Run,
+		Side,
 		SimpleMovement,
+		SlotInfos,
+		SlotKey,
+		Slots,
 		UnitsPerSecond,
 		Walk,
 	},
 	events::{Enqueue, MoveEvent},
-	resources::Animation,
+	resources::{Animation, Models},
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
 		behavior::{dequeue::dequeue, player::schedule::player_enqueue},
 		events::mouse_left::mouse_left,
+		items::{equip::equip_item, slots::add_slots},
 		movement::{
 			execute::execute,
 			follow::follow,
@@ -39,6 +45,8 @@ fn main() {
 		.add_event::<MoveEvent>()
 		.add_event::<Enqueue<MoveEvent>>()
 		.add_systems(Startup, setup_simple_3d_scene)
+		.add_systems(Startup, load_models)
+		.add_systems(Update, add_slots)
 		.add_systems(Update, link_animators_with_new_animation_players)
 		.add_systems(
 			Update,
@@ -58,12 +66,14 @@ fn main() {
 		.add_systems(Update, follow::<Player, CamOrbit>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
 		.add_systems(Update, debug)
+		.add_systems(Update, equip_item)
 		.run();
 }
 
 fn debug(
 	keyboard: Res<Input<KeyCode>>,
 	all_entities: Query<Entity>,
+	names: Query<&Name>,
 	entities: &Entities,
 	archetypes: &Archetypes,
 	components: &Components,
@@ -73,6 +83,11 @@ fn debug(
 	}
 	for entity in all_entities.iter() {
 		println!("Entity: {:?}", entity);
+		let name = names.get(entity);
+		println!(
+			"Entity (Name): {}",
+			name.map(|n| n.as_str()).unwrap_or("No Name")
+		);
 		let Some(entity_location) = entities.get(entity) else {
 			return;
 		};
@@ -85,6 +100,11 @@ fn debug(
 			}
 		}
 	}
+}
+
+fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
+	let models = Models::new([("pistol", "pistol.gltf", 0)], &asset_server);
+	commands.insert_resource(models);
 }
 
 fn setup_simple_3d_scene(
@@ -133,7 +153,13 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			movement_mode: MovementMode::Walk,
 		},
 		Queue::<Behavior>::new(),
-		// Idle,
+		Idle,
+		SlotInfos::new([(SlotKey::Hand(Side::Right), "hand_slot.R")]),
+		Slots::new(),
+		Equip {
+			slot: SlotKey::Hand(Side::Right),
+			model: "pistol".into(),
+		},
 		Animator { ..default() },
 	));
 }

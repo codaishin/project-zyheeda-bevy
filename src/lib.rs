@@ -8,3 +8,4 @@ pub mod resources;
 pub mod systems;
 pub mod tools;
 pub mod traits;
+pub mod types;
