@@ -28,7 +28,7 @@ use project_zyheeda::{
 		events::mouse_left::mouse_left,
 		items::{equip::equip_item, slots::add_slots},
 		movement::{
-			execute::execute,
+			execute_move::execute_move,
 			follow::follow,
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
@@ -54,7 +54,7 @@ fn main() {
 		)
 		.add_systems(Update, player_enqueue::<MoveEvent, Behavior>)
 		.add_systems(Update, dequeue::<Player, Behavior, SimpleMovement>)
-		.add_systems(Update, (execute::<Player, SimpleMovement>,))
+		.add_systems(Update, (execute_move::<Player, SimpleMovement>,))
 		.add_systems(
 			Update,
 			(
