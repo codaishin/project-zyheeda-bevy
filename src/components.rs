@@ -109,8 +109,29 @@ impl SlotInfos {
 	}
 }
 
+#[derive(PartialEq, Debug)]
+pub enum Schedule {
+	Enqueue,
+	Override,
+}
+
+#[derive(PartialEq, Debug)]
+pub struct Slot {
+	pub entity: Entity,
+	pub schedule: Option<Schedule>,
+}
+
+impl Slot {
+	pub fn new(entity: Entity) -> Self {
+		Self {
+			entity,
+			schedule: None,
+		}
+	}
+}
+
 #[derive(Component)]
-pub struct Slots(pub HashMap<SlotKey, Entity>);
+pub struct Slots(pub HashMap<SlotKey, Slot>);
 
 impl Slots {
 	pub fn new() -> Self {

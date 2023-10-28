@@ -58,9 +58,9 @@ fn equip_item_to(
 		.0
 		.get(&item.slot)
 		.ok_or(NoMatch::Slot(item.slot))
-		.and_then(|slot| match scene_handles.get_mut(*slot) {
+		.and_then(|slot| match scene_handles.get_mut(slot.entity) {
 			Ok(slot_handle) => Ok(slot_handle),
-			Err(_) => Err(NoMatch::SceneHandle(*slot)),
+			Err(_) => Err(NoMatch::SceneHandle(slot.entity)),
 		})
 		.and_then(|slot_handle| {
 			let Some(model) = item.model.clone() else {
@@ -109,7 +109,7 @@ pub fn equip_items(
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Item, Side, SlotKey, Slots},
+		components::{Item, Side, Slot, SlotKey, Slots},
 		resources::Models,
 	};
 	use bevy::{
@@ -132,7 +132,7 @@ mod tests {
 			.spawn(Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 11)))
 			.id();
 		app.world.spawn((
-			Slots([(SlotKey::Hand(Side::Right), slot)].into()),
+			Slots([(SlotKey::Hand(Side::Right), Slot::new(slot))].into()),
 			Equip::new([Item {
 				slot: SlotKey::Hand(Side::Right),
 				model: Some("model key".into()),
@@ -161,7 +161,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Slots([(SlotKey::Hand(Side::Right), slot)].into()),
+				Slots([(SlotKey::Hand(Side::Right), Slot::new(slot))].into()),
 				Equip::new([Item {
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key".into()),
@@ -188,7 +188,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Slots([(SlotKey::Hand(Side::Right), slot)].into()),
+				Slots([(SlotKey::Hand(Side::Right), Slot::new(slot))].into()),
 				Equip::new([Item {
 					slot: SlotKey::Hand(Side::Right),
 					model: None,
@@ -219,7 +219,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Slots([(SlotKey::Hand(Side::Right), slot)].into()),
+				Slots([(SlotKey::Hand(Side::Right), Slot::new(slot))].into()),
 				Equip::new([Item {
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key".into()),
@@ -249,7 +249,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Slots([(SlotKey::Hand(Side::Right), slot)].into()),
+				Slots([(SlotKey::Hand(Side::Right), Slot::new(slot))].into()),
 				Equip::new([Item {
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("non matching model key".into()),
@@ -279,7 +279,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Slots([(SlotKey::Hand(Side::Left), slot)].into()),
+				Slots([(SlotKey::Hand(Side::Left), Slot::new(slot))].into()),
 				Equip::new([Item {
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key".into()),
@@ -309,7 +309,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Slots([(SlotKey::Hand(Side::Right), slot)].into()),
+				Slots([(SlotKey::Hand(Side::Right), Slot::new(slot))].into()),
 				Equip::new([
 					Item {
 						slot: SlotKey::Hand(Side::Right),

@@ -1,6 +1,4 @@
-use std::borrow::Cow;
-
-use crate::components::{SlotInfos, SlotKey, Slots};
+use crate::components::{Slot, SlotInfos, SlotKey, Slots};
 use bevy::{
 	prelude::{
 		BuildChildren,
@@ -15,6 +13,7 @@ use bevy::{
 	scene::SceneBundle,
 	utils::default,
 };
+use std::borrow::Cow;
 
 fn find_bone(
 	agent: Entity,
@@ -61,7 +60,7 @@ pub fn add_slots(
 			match find_bone(agent, &bone_name, &children, &bones) {
 				Some(bone) => {
 					let entity = new_slot_on(bone, &mut commands);
-					slots.0.insert(key, entity);
+					slots.0.insert(key, Slot::new(entity));
 					None
 				}
 				None => Some((key, bone_name)),
@@ -185,7 +184,10 @@ mod tests {
 		let slot = *bone.get::<Children>().and_then(|c| c.get(0)).unwrap();
 		let slots = app.world.entity(root).get::<Slots>().unwrap();
 
-		assert_eq!(HashMap::from([(SlotKey::Hand(Side::Left), slot)]), slots.0);
+		assert_eq!(
+			HashMap::from([(SlotKey::Hand(Side::Left), Slot::new(slot))]),
+			slots.0
+		);
 	}
 
 	#[test]
