@@ -4,8 +4,8 @@ use crate::{
 };
 use bevy::prelude::{Component, Input, KeyCode, MouseButton, Query, Res, With};
 
-fn set_schedule(
-	slot: &mut Slot,
+fn set_schedule<TBehavior>(
+	slot: &mut Slot<TBehavior>,
 	schedule: Schedule,
 	triggered_slot_keys: &[&SlotKey],
 	slot_key: &SlotKey,
@@ -16,8 +16,8 @@ fn set_schedule(
 	slot.schedule = Some(schedule);
 }
 
-fn set_schedules(
-	mut slots: bevy::prelude::Mut<'_, Slots>,
+fn set_schedules<TBehavior>(
+	slots: &mut Slots<TBehavior>,
 	schedule: Schedule,
 	triggered_slot_keys: &[&SlotKey],
 ) {
@@ -26,11 +26,11 @@ fn set_schedules(
 	}
 }
 
-pub fn activate_slot_via_mouse<TAgent: Component>(
+pub fn activate_slot_via_mouse<TAgent: Component, TBehavior: 'static>(
 	mouse: Res<Input<MouseButton>>,
 	keys: Res<Input<KeyCode>>,
 	mouse_button_map: Res<SlotMap<MouseButton>>,
-	mut query: Query<&mut Slots, With<TAgent>>,
+	mut query: Query<&mut Slots<TBehavior>, With<TAgent>>,
 ) {
 	let schedule = match keys.pressed(KeyCode::ShiftLeft) {
 		true => Schedule::Enqueue,
@@ -41,8 +41,8 @@ pub fn activate_slot_via_mouse<TAgent: Component>(
 		.filter_map(|mouse_button| mouse_button_map.0.get(mouse_button))
 		.collect();
 
-	for slots in &mut query {
-		set_schedules(slots, schedule, &triggered_slot_keys);
+	for mut slots in &mut query {
+		set_schedules(&mut slots, schedule, &triggered_slot_keys);
 	}
 }
 
@@ -58,6 +58,8 @@ mod tests {
 	#[derive(Component)]
 	struct Agent;
 
+	struct MockBehavior;
+
 	fn setup() -> App {
 		let mut app = App::new();
 		let mouse = Input::<MouseButton>::default();
@@ -67,14 +69,20 @@ mod tests {
 		app.insert_resource(mouse);
 		app.insert_resource(keys);
 		app.insert_resource(mouse_settings);
-		app.add_systems(Update, activate_slot_via_mouse::<Agent>);
+		app.add_systems(Update, activate_slot_via_mouse::<Agent, MockBehavior>);
 		app
 	}
 
 	#[test]
 	fn set_override() {
 		let mut app = setup();
-		let slots = Slots([(SlotKey::Legs, Slot::new(Entity::from_raw(42)))].into());
+		let slots = Slots(
+			[(
+				SlotKey::Legs,
+				Slot::<MockBehavior>::new(Entity::from_raw(42), None),
+			)]
+			.into(),
+		);
 		let slots = app.world.spawn((Agent, slots)).id();
 
 		app.world
@@ -87,7 +95,11 @@ mod tests {
 
 		app.update();
 
-		let slots = app.world.entity(slots).get::<Slots>().unwrap();
+		let slots = app
+			.world
+			.entity(slots)
+			.get::<Slots<MockBehavior>>()
+			.unwrap();
 		let slot = slots.0.get(&SlotKey::Legs).unwrap();
 
 		assert_eq!(Some(Schedule::Override), slot.schedule);
@@ -96,7 +108,13 @@ mod tests {
 	#[test]
 	fn do_not_set_when_not_on_agent() {
 		let mut app = setup();
-		let slots = Slots([(SlotKey::Legs, Slot::new(Entity::from_raw(42)))].into());
+		let slots = Slots(
+			[(
+				SlotKey::Legs,
+				Slot::<MockBehavior>::new(Entity::from_raw(42), None),
+			)]
+			.into(),
+		);
 		let slots = app.world.spawn(slots).id();
 
 		app.world
@@ -109,7 +127,11 @@ mod tests {
 
 		app.update();
 
-		let slots = app.world.entity(slots).get::<Slots>().unwrap();
+		let slots = app
+			.world
+			.entity(slots)
+			.get::<Slots<MockBehavior>>()
+			.unwrap();
 		let slot = slots.0.get(&SlotKey::Legs).unwrap();
 
 		assert_eq!(None, slot.schedule);
@@ -118,7 +140,13 @@ mod tests {
 	#[test]
 	fn do_not_set_when_mouse_button_not_correctly_mapped() {
 		let mut app = setup();
-		let slots = Slots([(SlotKey::Legs, Slot::new(Entity::from_raw(42)))].into());
+		let slots = Slots(
+			[(
+				SlotKey::Legs,
+				Slot::<MockBehavior>::new(Entity::from_raw(42), None),
+			)]
+			.into(),
+		);
 		let slots = app.world.spawn((Agent, slots)).id();
 
 		app.world
@@ -131,7 +159,11 @@ mod tests {
 
 		app.update();
 
-		let slots = app.world.entity(slots).get::<Slots>().unwrap();
+		let slots = app
+			.world
+			.entity(slots)
+			.get::<Slots<MockBehavior>>()
+			.unwrap();
 		let slot = slots.0.get(&SlotKey::Legs).unwrap();
 
 		assert_eq!(None, slot.schedule);
@@ -140,7 +172,13 @@ mod tests {
 	#[test]
 	fn set_enqueue() {
 		let mut app = setup();
-		let slots = Slots([(SlotKey::Legs, Slot::new(Entity::from_raw(42)))].into());
+		let slots = Slots(
+			[(
+				SlotKey::Legs,
+				Slot::<MockBehavior>::new(Entity::from_raw(42), None),
+			)]
+			.into(),
+		);
 		let slots = app.world.spawn((Agent, slots)).id();
 
 		app.world
@@ -156,7 +194,11 @@ mod tests {
 
 		app.update();
 
-		let slots = app.world.entity(slots).get::<Slots>().unwrap();
+		let slots = app
+			.world
+			.entity(slots)
+			.get::<Slots<MockBehavior>>()
+			.unwrap();
 		let slot = slots.0.get(&SlotKey::Legs).unwrap();
 
 		assert_eq!(Some(Schedule::Enqueue), slot.schedule);
@@ -176,7 +218,13 @@ mod tests {
 
 		app.update();
 
-		let slots = Slots([(SlotKey::Legs, Slot::new(Entity::from_raw(42)))].into());
+		let slots = Slots(
+			[(
+				SlotKey::Legs,
+				Slot::<MockBehavior>::new(Entity::from_raw(42), None),
+			)]
+			.into(),
+		);
 		let slots_entity = app.world.spawn((Agent, slots)).id();
 		app.world
 			.resource_mut::<Input<MouseButton>>()
@@ -184,7 +232,11 @@ mod tests {
 
 		app.update();
 
-		let slots = app.world.entity(slots_entity).get::<Slots>().unwrap();
+		let slots = app
+			.world
+			.entity(slots_entity)
+			.get::<Slots<MockBehavior>>()
+			.unwrap();
 		let slot = slots.0.get(&SlotKey::Legs).unwrap();
 
 		assert_eq!(None, slot.schedule);

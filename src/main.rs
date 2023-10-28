@@ -47,7 +47,7 @@ fn main() {
 		.add_event::<Enqueue<MoveEvent>>()
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(Startup, load_models)
-		.add_systems(Update, add_slots)
+		.add_systems(Update, add_slots::<Behavior>)
 		.add_systems(Update, link_animators_with_new_animation_players)
 		.add_systems(
 			Update,
@@ -67,7 +67,7 @@ fn main() {
 		.add_systems(Update, follow::<Player, CamOrbit>)
 		.add_systems(Update, move_on_orbit::<CamOrbit>)
 		.add_systems(Update, debug)
-		.add_systems(Update, equip_items)
+		.add_systems(Update, equip_items::<Behavior>)
 		.run();
 }
 
@@ -156,10 +156,11 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		Queue::<Behavior>::new(),
 		Idle,
 		SlotInfos::new([(SlotKey::Hand(Side::Right), "hand_slot.R")]),
-		Slots::new(),
-		Equip::new([Item {
+		Slots::<Behavior>::new(),
+		Equip::new([Item::<Behavior> {
 			slot: SlotKey::Hand(Side::Right),
 			model: Some("pistol".into()),
+			behavior: None,
 		}]),
 		Animator { ..default() },
 	));
