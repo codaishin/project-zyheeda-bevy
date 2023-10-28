@@ -127,7 +127,7 @@ impl Default for Slots {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Item {
 	pub slot: SlotKey,
-	pub model: Cow<'static, str>,
+	pub model: Option<Cow<'static, str>>,
 }
 
 #[derive(Component, Debug, PartialEq)]

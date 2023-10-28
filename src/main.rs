@@ -159,7 +159,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		Slots::new(),
 		Equip::new([Item {
 			slot: SlotKey::Hand(Side::Right),
-			model: "pistol".into(),
+			model: Some("pistol".into()),
 		}]),
 		Animator { ..default() },
 	));
