@@ -109,7 +109,7 @@ impl SlotInfos {
 	}
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum Schedule {
 	Enqueue,
 	Override,
