@@ -97,6 +97,7 @@ pub enum Side {
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum SlotKey {
 	Hand(Side),
+	Legs,
 }
 
 #[derive(Component, Clone, PartialEq, Debug)]
@@ -123,8 +124,17 @@ impl Default for Slots {
 	}
 }
 
-#[derive(Component, Debug)]
-pub struct Equip {
+#[derive(Debug, PartialEq, Clone)]
+pub struct Item {
 	pub slot: SlotKey,
 	pub model: Cow<'static, str>,
+}
+
+#[derive(Component, Debug, PartialEq)]
+pub struct Equip(pub Vec<Item>);
+
+impl Equip {
+	pub fn new<const N: usize>(items: [Item; N]) -> Self {
+		Self(items.into())
+	}
 }

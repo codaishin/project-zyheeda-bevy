@@ -1,13 +1,12 @@
-use std::borrow::Cow;
-
 use crate::{
-	components::{Equip, SlotKey, Slots},
+	components::{Equip, Item, SlotKey, Slots},
 	resources::Models,
 };
 use bevy::{
 	prelude::{error, info, Commands, Entity, Handle, Query, Res},
 	scene::Scene,
 };
+use std::borrow::Cow;
 
 enum NoMatching {
 	Slot(SlotKey),
@@ -15,48 +14,83 @@ enum NoMatching {
 	Model(Cow<'static, str>),
 }
 
-pub fn equip_item(
+type ShouldRetry = bool;
+
+fn try_set_model(
+	handles: Result<(bevy::prelude::Mut<Handle<Scene>>, &Handle<Scene>), NoMatching>,
+	item: &Item,
+) -> ShouldRetry {
+	match handles {
+		Ok((mut slot_handle, model_handle)) => {
+			*slot_handle = model_handle.clone();
+			false
+		}
+		Err(NoMatching::Model(model_key)) => {
+			error!("{:?}: no model found for {:?}, abandoning", item, model_key);
+			false
+		}
+		Err(NoMatching::Slot(slot)) => {
+			info!(
+				"{:?}: slot {:?} not found, retrying next update",
+				item, slot,
+			);
+			true
+		}
+		Err(NoMatching::SceneHandle(slot)) => {
+			error!("{:?}: {:?} has no Handle<Scene>, abandoning", item, slot);
+			false
+		}
+	}
+}
+
+fn equip_item_to(
+	slots: &Slots,
+	item: &Item,
+	models: &Res<Models>,
+	scene_handles: &mut Query<&mut Handle<Scene>>,
+) -> ShouldRetry {
+	let handles = slots
+		.0
+		.get(&item.slot)
+		.ok_or(NoMatching::Slot(item.slot))
+		.and_then(|slot| match scene_handles.get_mut(*slot) {
+			Ok(slot_handle) => Ok(slot_handle),
+			Err(_) => Err(NoMatching::SceneHandle(*slot)),
+		})
+		.and_then(|slot_handle| match models.0.get(&item.model) {
+			Some(model_handle) => Ok((slot_handle, model_handle)),
+			None => Err(NoMatching::Model(item.model.clone())),
+		});
+
+	try_set_model(handles, item)
+}
+
+fn equip_items_to(
+	slots: &Slots,
+	equip: &Equip,
+	models: &Res<'_, Models>,
+	scene_handles: &mut Query<&mut Handle<Scene>>,
+) -> Vec<Item> {
+	equip
+		.0
+		.iter()
+		.filter(|item| equip_item_to(slots, item, models, scene_handles))
+		.cloned()
+		.collect()
+}
+
+pub fn equip_items(
 	mut commands: Commands,
 	models: Res<Models>,
-	agent: Query<(Entity, &Slots, &Equip)>,
+	mut agent: Query<(Entity, &Slots, &mut Equip)>,
 	mut scene_handles: Query<&mut Handle<Scene>>,
 ) {
-	for (agent, slots, equip) in &agent {
-		let handles = slots
-			.0
-			.get(&equip.slot)
-			.ok_or(NoMatching::Slot(equip.slot))
-			.and_then(|slot| match scene_handles.get_mut(*slot) {
-				Ok(slot_handle) => Ok(slot_handle),
-				Err(_) => Err(NoMatching::SceneHandle(*slot)),
-			})
-			.and_then(|slot_handle| match models.0.get(&equip.model) {
-				Some(model_handle) => Ok((slot_handle, model_handle)),
-				None => Err(NoMatching::Model(equip.model.clone())),
-			});
-
-		match handles {
-			Ok((mut slot_handle, model_handle)) => {
-				*slot_handle = model_handle.clone();
-				commands.entity(agent).remove::<Equip>();
-			}
-			Err(NoMatching::Model(model_key)) => {
-				commands.entity(agent).remove::<Equip>();
-				error!(
-					"{:?}: no model found for {:?}, abandoning",
-					equip, model_key,
-				);
-			}
-			Err(NoMatching::Slot(slot)) => {
-				info!(
-					"{:?}: slot {:?} not found, retrying next update",
-					equip, slot,
-				)
-			}
-			Err(NoMatching::SceneHandle(slot)) => {
-				commands.entity(agent).remove::<Equip>();
-				error!("{:?}: {:?} has no Handle<Scene>, abandoning", equip, slot);
-			}
+	for (agent, slots, mut equip) in &mut agent {
+		let remainder = equip_items_to(slots, &equip, &models, &mut scene_handles);
+		if remainder.is_empty() {
+			commands.entity(agent).remove::<Equip>();
+		} else {
+			equip.0 = remainder;
 		}
 	}
 }
@@ -65,7 +99,7 @@ pub fn equip_item(
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Equip, Side, SlotKey, Slots},
+		components::{Item, Side, SlotKey, Slots},
 		resources::Models,
 	};
 	use bevy::{
@@ -89,12 +123,12 @@ mod tests {
 			.id();
 		app.world.spawn((
 			Slots([(SlotKey::Hand(Side::Right), slot)].into()),
-			Equip {
+			Equip::new([Item {
 				slot: SlotKey::Hand(Side::Right),
 				model: "model key".into(),
-			},
+			}]),
 		));
-		app.add_systems(Update, equip_item);
+		app.add_systems(Update, equip_items);
 
 		app.update();
 
@@ -118,13 +152,13 @@ mod tests {
 			.world
 			.spawn((
 				Slots([(SlotKey::Hand(Side::Right), slot)].into()),
-				Equip {
+				Equip::new([Item {
 					slot: SlotKey::Hand(Side::Right),
 					model: "model key".into(),
-				},
+				}]),
 			))
 			.id();
-		app.add_systems(Update, equip_item);
+		app.add_systems(Update, equip_items);
 
 		app.update();
 
@@ -145,13 +179,13 @@ mod tests {
 			.world
 			.spawn((
 				Slots([(SlotKey::Hand(Side::Right), slot)].into()),
-				Equip {
+				Equip::new([Item {
 					slot: SlotKey::Hand(Side::Right),
 					model: "model key".into(),
-				},
+				}]),
 			))
 			.id();
-		app.add_systems(Update, equip_item);
+		app.add_systems(Update, equip_items);
 
 		app.update();
 
@@ -175,13 +209,13 @@ mod tests {
 			.world
 			.spawn((
 				Slots([(SlotKey::Hand(Side::Right), slot)].into()),
-				Equip {
+				Equip::new([Item {
 					slot: SlotKey::Hand(Side::Right),
 					model: "non matching model key".into(),
-				},
+				}]),
 			))
 			.id();
-		app.add_systems(Update, equip_item);
+		app.add_systems(Update, equip_items);
 
 		app.update();
 
@@ -205,18 +239,65 @@ mod tests {
 			.world
 			.spawn((
 				Slots([(SlotKey::Hand(Side::Left), slot)].into()),
-				Equip {
+				Equip::new([Item {
 					slot: SlotKey::Hand(Side::Right),
 					model: "model key".into(),
-				},
+				}]),
 			))
 			.id();
-		app.add_systems(Update, equip_item);
+		app.add_systems(Update, equip_items);
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
 		assert!(agent.contains::<Equip>());
+	}
+
+	#[test]
+	fn evaluate_equip_per_item() {
+		let model_handle = Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 42));
+		let models = Models([(Cow::from("model key"), model_handle.clone())].into());
+
+		let mut app = App::new();
+		app.world.insert_resource(models);
+		let slot = app
+			.world
+			.spawn(Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 11)))
+			.id();
+		let agent = app
+			.world
+			.spawn((
+				Slots([(SlotKey::Hand(Side::Right), slot)].into()),
+				Equip::new([
+					Item {
+						slot: SlotKey::Hand(Side::Right),
+						model: "model key".into(),
+					},
+					Item {
+						slot: SlotKey::Legs,
+						model: "model key".into(),
+					},
+				]),
+			))
+			.id();
+		app.add_systems(Update, equip_items);
+
+		app.update();
+
+		let slot_handle = app.world.entity(slot).get::<Handle<Scene>>();
+		let agent = app.world.entity(agent);
+		let items = agent.get::<Equip>();
+
+		assert_eq!(
+			(
+				Some(model_handle),
+				Some(&Equip::new([Item {
+					slot: SlotKey::Legs,
+					model: "model key".into(),
+				}]))
+			),
+			(slot_handle.cloned(), items)
+		);
 	}
 }
