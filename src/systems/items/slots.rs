@@ -60,7 +60,13 @@ pub fn add_slots<TBehavior: 'static>(
 			match find_bone(agent, &bone_name, &children, &bones) {
 				Some(bone) => {
 					let entity = new_slot_on(bone, &mut commands);
-					slots.0.insert(key, Slot::new(entity, None));
+					slots.0.insert(
+						key,
+						Slot {
+							entity,
+							get_behavior: None,
+						},
+					);
 					None
 				}
 				None => Some((key, bone_name)),
@@ -190,7 +196,10 @@ mod tests {
 		assert_eq!(
 			HashMap::from([(
 				SlotKey::Hand(Side::Left),
-				Slot::<MockBehavior>::new(slot, None)
+				Slot::<MockBehavior> {
+					entity: slot,
+					get_behavior: None
+				}
 			)]),
 			slots.0
 		);

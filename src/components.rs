@@ -110,28 +110,23 @@ impl SlotInfos {
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
-pub enum Schedule {
+pub enum ScheduleMode {
 	Enqueue,
 	Override,
 }
 
-type GetBehaviorFn<TBehavior> = Option<fn(ray: Ray) -> Option<TBehavior>>;
+pub type GetBehaviorFn<TBehavior> = fn(ray: Ray) -> Option<TBehavior>;
+
+#[derive(Component, PartialEq, Debug)]
+pub struct Schedule<TBehavior> {
+	pub mode: ScheduleMode,
+	pub get_behaviors: Vec<GetBehaviorFn<TBehavior>>,
+}
 
 #[derive(PartialEq, Debug)]
 pub struct Slot<TBehavior> {
 	pub entity: Entity,
-	pub schedule: Option<Schedule>,
-	pub get_behavior: GetBehaviorFn<TBehavior>,
-}
-
-impl<TBehavior> Slot<TBehavior> {
-	pub fn new(entity: Entity, behavior: GetBehaviorFn<TBehavior>) -> Self {
-		Self {
-			entity,
-			get_behavior: behavior,
-			schedule: None,
-		}
-	}
+	pub get_behavior: Option<GetBehaviorFn<TBehavior>>,
 }
 
 #[derive(Component)]
@@ -153,7 +148,7 @@ impl<TBehavior> Default for Slots<TBehavior> {
 pub struct Item<TBehavior> {
 	pub slot: SlotKey,
 	pub model: Option<Cow<'static, str>>,
-	pub get_behavior: GetBehaviorFn<TBehavior>,
+	pub get_behavior: Option<GetBehaviorFn<TBehavior>>,
 }
 
 #[derive(Component, Debug, PartialEq)]

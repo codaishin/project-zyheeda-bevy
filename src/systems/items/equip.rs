@@ -148,7 +148,10 @@ mod tests {
 				Slots(
 					[(
 						SlotKey::Hand(Side::Right),
-						Slot::<MockBehavior>::new(slot, None),
+						Slot::<MockBehavior> {
+							entity: slot,
+							get_behavior: None,
+						},
 					)]
 					.into(),
 				),
@@ -174,7 +177,13 @@ mod tests {
 			.unwrap();
 
 		assert_eq!(
-			(Some(model), &Slot::new(slot, Some(mock_behavior))),
+			(
+				Some(model),
+				&Slot {
+					entity: slot,
+					get_behavior: Some(mock_behavior)
+				}
+			),
 			(slot_model.cloned(), slot_component)
 		);
 	}
@@ -196,7 +205,10 @@ mod tests {
 				Slots(
 					[(
 						SlotKey::Hand(Side::Right),
-						Slot::<MockBehavior>::new(slot, None),
+						Slot::<MockBehavior> {
+							entity: slot,
+							get_behavior: None,
+						},
 					)]
 					.into(),
 				),
@@ -230,7 +242,10 @@ mod tests {
 				Slots(
 					[(
 						SlotKey::Hand(Side::Right),
-						Slot::<MockBehavior>::new(slot, None),
+						Slot::<MockBehavior> {
+							entity: slot,
+							get_behavior: None,
+						},
 					)]
 					.into(),
 				),
@@ -268,7 +283,10 @@ mod tests {
 				Slots(
 					[(
 						SlotKey::Hand(Side::Right),
-						Slot::<MockBehavior>::new(slot, None),
+						Slot::<MockBehavior> {
+							entity: slot,
+							get_behavior: None,
+						},
 					)]
 					.into(),
 				),
@@ -305,7 +323,10 @@ mod tests {
 				Slots(
 					[(
 						SlotKey::Hand(Side::Right),
-						Slot::<MockBehavior>::new(slot, None),
+						Slot::<MockBehavior> {
+							entity: slot,
+							get_behavior: None,
+						},
 					)]
 					.into(),
 				),
@@ -342,7 +363,10 @@ mod tests {
 				Slots(
 					[(
 						SlotKey::Hand(Side::Left),
-						Slot::<MockBehavior>::new(slot, None),
+						Slot::<MockBehavior> {
+							entity: slot,
+							get_behavior: None,
+						},
 					)]
 					.into(),
 				),
@@ -379,7 +403,10 @@ mod tests {
 				Slots(
 					[(
 						SlotKey::Hand(Side::Right),
-						Slot::<MockBehavior>::new(slot, None),
+						Slot::<MockBehavior> {
+							entity: slot,
+							get_behavior: None,
+						},
 					)]
 					.into(),
 				),
