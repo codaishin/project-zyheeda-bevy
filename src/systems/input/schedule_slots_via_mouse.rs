@@ -26,7 +26,7 @@ fn set_schedules<TBehavior>(
 	}
 }
 
-pub fn activate_slot_via_mouse<TAgent: Component, TBehavior: 'static>(
+pub fn schedule_slots_via_mouse<TAgent: Component, TBehavior: 'static>(
 	mouse: Res<Input<MouseButton>>,
 	keys: Res<Input<KeyCode>>,
 	mouse_button_map: Res<SlotMap<MouseButton>>,
@@ -69,7 +69,7 @@ mod tests {
 		app.insert_resource(mouse);
 		app.insert_resource(keys);
 		app.insert_resource(mouse_settings);
-		app.add_systems(Update, activate_slot_via_mouse::<Agent, MockBehavior>);
+		app.add_systems(Update, schedule_slots_via_mouse::<Agent, MockBehavior>);
 		app
 	}
 
