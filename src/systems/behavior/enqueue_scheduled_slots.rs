@@ -17,11 +17,14 @@ fn enqueue_slot<TBehavior>(
 	commands: &mut Commands,
 	ray: Option<Ray>,
 ) {
-	let (Some(behavior), Some(ray)) = (slot.behavior, ray) else {
+	let (Some(get_behavior), Some(ray)) = (slot.get_behavior, ray) else {
 		return;
 	};
 
-	let behavior = behavior(ray);
+	let Some(behavior) = get_behavior(ray) else {
+		return;
+	};
+
 	match slot.schedule {
 		Some(Schedule::Enqueue) => queue.0.push_back(behavior),
 		Some(Schedule::Override) => {
@@ -137,7 +140,7 @@ mod tests {
 						Slot {
 							entity: Entity::from_raw(0),
 							schedule: Some(Schedule::Enqueue),
-							behavior: Some(|ray| MockBehavior { ray }),
+							get_behavior: Some(|ray| Some(MockBehavior { ray })),
 						},
 					)]
 					.into(),
@@ -200,7 +203,7 @@ mod tests {
 						Slot {
 							entity: Entity::from_raw(0),
 							schedule: Some(Schedule::Override),
-							behavior: Some(|ray| MockBehavior { ray }),
+							get_behavior: Some(|ray| Some(MockBehavior { ray })),
 						},
 					)]
 					.into(),
@@ -252,7 +255,7 @@ mod tests {
 						Slot {
 							entity: Entity::from_raw(0),
 							schedule: Some(Schedule::Enqueue),
-							behavior: Some(|ray| MockBehavior { ray }),
+							get_behavior: Some(|ray| Some(MockBehavior { ray })),
 						},
 					)]
 					.into(),
@@ -310,7 +313,7 @@ mod tests {
 					Slot {
 						entity: Entity::from_raw(0),
 						schedule: Some(Schedule::Enqueue),
-						behavior: Some(|ray| MockBehavior { ray }),
+						get_behavior: Some(|ray| Some(MockBehavior { ray })),
 					},
 				)]
 				.into(),

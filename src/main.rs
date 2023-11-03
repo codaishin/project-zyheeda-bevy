@@ -160,7 +160,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		Equip::new([Item::<Behavior> {
 			slot: SlotKey::Hand(Side::Right),
 			model: Some("pistol".into()),
-			behavior: None,
+			get_behavior: None,
 		}]),
 		Animator { ..default() },
 	));

@@ -31,7 +31,7 @@ fn set_slot<TBehavior: Debug>(
 	match slot_and_model {
 		Ok((slot, mut slot_model, item_model)) => {
 			*slot_model = item_model;
-			slot.behavior = item.behavior;
+			slot.get_behavior = item.get_behavior;
 			DONE
 		}
 		Err(NoMatch::Slot(slot)) => {
@@ -132,8 +132,8 @@ mod tests {
 		let model = Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 42));
 		let models = Models([(Cow::from("model key"), model.clone())].into());
 
-		fn mock_behavior(_: Ray) -> MockBehavior {
-			MockBehavior
+		fn mock_behavior(_: Ray) -> Option<MockBehavior> {
+			Some(MockBehavior)
 		}
 
 		let mut app = App::new();
@@ -153,7 +153,7 @@ mod tests {
 					.into(),
 				),
 				Equip::new([Item::<MockBehavior> {
-					behavior: Some(mock_behavior),
+					get_behavior: Some(mock_behavior),
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key".into()),
 				}]),
@@ -201,7 +201,7 @@ mod tests {
 					.into(),
 				),
 				Equip::new([Item::<MockBehavior> {
-					behavior: None,
+					get_behavior: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key".into()),
 				}]),
@@ -235,7 +235,7 @@ mod tests {
 					.into(),
 				),
 				Equip::new([Item::<MockBehavior> {
-					behavior: None,
+					get_behavior: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: None,
 				}]),
@@ -273,7 +273,7 @@ mod tests {
 					.into(),
 				),
 				Equip::new([Item::<MockBehavior> {
-					behavior: None,
+					get_behavior: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key".into()),
 				}]),
@@ -310,7 +310,7 @@ mod tests {
 					.into(),
 				),
 				Equip::new([Item::<MockBehavior> {
-					behavior: None,
+					get_behavior: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("non matching model key".into()),
 				}]),
@@ -347,7 +347,7 @@ mod tests {
 					.into(),
 				),
 				Equip::new([Item::<MockBehavior> {
-					behavior: None,
+					get_behavior: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key".into()),
 				}]),
@@ -385,12 +385,12 @@ mod tests {
 				),
 				Equip::new([
 					Item::<MockBehavior> {
-						behavior: None,
+						get_behavior: None,
 						slot: SlotKey::Hand(Side::Right),
 						model: Some("model key".into()),
 					},
 					Item::<MockBehavior> {
-						behavior: None,
+						get_behavior: None,
 						slot: SlotKey::Legs,
 						model: Some("model key".into()),
 					},
@@ -409,7 +409,7 @@ mod tests {
 			(
 				Some(model),
 				Some(&Equip::new([Item::<MockBehavior> {
-					behavior: None,
+					get_behavior: None,
 					slot: SlotKey::Legs,
 					model: Some("model key".into()),
 				}]))

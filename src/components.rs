@@ -115,18 +115,20 @@ pub enum Schedule {
 	Override,
 }
 
+type GetBehaviorFn<TBehavior> = Option<fn(ray: Ray) -> Option<TBehavior>>;
+
 #[derive(PartialEq, Debug)]
 pub struct Slot<TBehavior> {
 	pub entity: Entity,
 	pub schedule: Option<Schedule>,
-	pub behavior: Option<fn(ray: Ray) -> TBehavior>,
+	pub get_behavior: GetBehaviorFn<TBehavior>,
 }
 
 impl<TBehavior> Slot<TBehavior> {
-	pub fn new(entity: Entity, behavior: Option<fn(ray: Ray) -> TBehavior>) -> Self {
+	pub fn new(entity: Entity, behavior: GetBehaviorFn<TBehavior>) -> Self {
 		Self {
 			entity,
-			behavior,
+			get_behavior: behavior,
 			schedule: None,
 		}
 	}
@@ -151,7 +153,7 @@ impl<TBehavior> Default for Slots<TBehavior> {
 pub struct Item<TBehavior> {
 	pub slot: SlotKey,
 	pub model: Option<Cow<'static, str>>,
-	pub behavior: Option<fn(Ray) -> TBehavior>,
+	pub get_behavior: GetBehaviorFn<TBehavior>,
 }
 
 #[derive(Component, Debug, PartialEq)]
