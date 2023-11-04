@@ -22,11 +22,11 @@ use project_zyheeda::{
 		Walk,
 	},
 	events::{Enqueue, MoveEvent},
-	resources::{Animation, Models},
+	resources::{Animation, Models, SlotMap},
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
-		behavior::{dequeue::dequeue, player::schedule::player_enqueue},
-		events::mouse_left::mouse_left,
+		behavior::{dequeue::dequeue, schedule_behaviors::schedule_behaviors},
+		input::schedule_slots_via_mouse::schedule_slots_via_mouse,
 		items::{equip::equip_items, slots::add_slots},
 		movement::{
 			execute_move::execute_move,
@@ -45,15 +45,19 @@ fn main() {
 		.add_plugins(DefaultPlugins)
 		.add_event::<MoveEvent>()
 		.add_event::<Enqueue<MoveEvent>>()
-		.add_systems(Startup, setup_simple_3d_scene)
+		.add_systems(Startup, setup_input)
 		.add_systems(Startup, load_models)
+		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(Update, add_slots::<Behavior>)
 		.add_systems(Update, link_animators_with_new_animation_players)
 		.add_systems(
 			Update,
-			(mouse_left::<Tools, MoveEvent>, player_toggle_walk_run),
+			(
+				schedule_slots_via_mouse::<Player, Behavior>,
+				player_toggle_walk_run,
+			),
 		)
-		.add_systems(Update, player_enqueue::<MoveEvent, Behavior>)
+		.add_systems(Update, schedule_behaviors::<Player, Behavior, Tools>)
 		.add_systems(Update, dequeue::<Player, Behavior, SimpleMovement>)
 		.add_systems(Update, (execute_move::<Player, SimpleMovement>,))
 		.add_systems(
@@ -108,6 +112,15 @@ fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
 	commands.insert_resource(models);
 }
 
+fn setup_input(mut commands: Commands) {
+	commands.insert_resource(SlotMap::<MouseButton>(
+		[(MouseButton::Left, SlotKey::Legs)].into(),
+	));
+	commands.insert_resource(SlotMap::<KeyCode>(
+		[(KeyCode::E, SlotKey::Hand(Side::Right))].into(),
+	));
+}
+
 fn setup_simple_3d_scene(
 	mut commands: Commands,
 	mut meshes: ResMut<Assets<Mesh>>,
@@ -155,7 +168,10 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		},
 		Queue::<Behavior>::new(),
 		Idle,
-		SlotInfos::new([(SlotKey::Hand(Side::Right), "hand_slot.R")]),
+		SlotInfos::new([
+			(SlotKey::Hand(Side::Right), "hand_slot.R"),
+			(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
+		]),
 		Slots::<Behavior>::new(),
 		Equip::new([
 			Item {
