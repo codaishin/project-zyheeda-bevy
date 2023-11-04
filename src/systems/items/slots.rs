@@ -48,7 +48,7 @@ fn new_slot_on(parent: (Entity, Transform), commands: &mut Commands) -> Entity {
 	slot
 }
 
-pub fn add_slots<TBehavior: 'static>(
+pub fn add_item_slots<TBehavior: 'static>(
 	mut commands: Commands,
 	mut agent: Query<(Entity, &mut Slots<TBehavior>, &mut SlotInfos)>,
 	children: Query<&Children>,
@@ -111,7 +111,7 @@ mod tests {
 				SlotInfos::new([(SlotKey::Hand(Side::Left), "bone")]),
 			))
 			.push_children(&[bone]);
-		app.add_systems(Update, add_slots::<MockBehavior>);
+		app.add_systems(Update, add_item_slots::<MockBehavior>);
 
 		app.update();
 
@@ -134,7 +134,7 @@ mod tests {
 				SlotInfos::new([(SlotKey::Hand(Side::Left), "bone")]),
 			))
 			.push_children(&[bone]);
-		app.add_systems(Update, add_slots::<MockBehavior>);
+		app.add_systems(Update, add_item_slots::<MockBehavior>);
 
 		app.update();
 
@@ -159,7 +159,7 @@ mod tests {
 				SlotInfos::new([(SlotKey::Hand(Side::Left), "bone")]),
 			))
 			.push_children(&[bone]);
-		app.add_systems(Update, add_slots::<MockBehavior>);
+		app.add_systems(Update, add_item_slots::<MockBehavior>);
 
 		app.update();
 
@@ -185,7 +185,7 @@ mod tests {
 			))
 			.push_children(&[bone])
 			.id();
-		app.add_systems(Update, add_slots::<MockBehavior>);
+		app.add_systems(Update, add_item_slots::<MockBehavior>);
 
 		app.update();
 
@@ -220,7 +220,7 @@ mod tests {
 			))
 			.push_children(&[bone])
 			.id();
-		app.add_systems(Update, add_slots::<MockBehavior>);
+		app.add_systems(Update, add_item_slots::<MockBehavior>);
 
 		app.update();
 
@@ -247,7 +247,7 @@ mod tests {
 			))
 			.push_children(&[bone])
 			.id();
-		app.add_systems(Update, add_slots::<MockBehavior>);
+		app.add_systems(Update, add_item_slots::<MockBehavior>);
 
 		app.update();
 

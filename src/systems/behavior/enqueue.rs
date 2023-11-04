@@ -7,7 +7,7 @@ use bevy::{
 	window::Window,
 };
 
-fn schedule_agent_behavior<TBehavior>(
+fn enqueue_agent_behavior<TBehavior>(
 	agent: Entity,
 	queue: &mut Queue<TBehavior>,
 	schedule_mode: ScheduleMode,
@@ -29,7 +29,7 @@ fn schedule_agent_behavior<TBehavior>(
 	}
 }
 
-fn schedule_agent_behaviors<TBehavior>(
+fn enqueue_agent_behaviors<TBehavior>(
 	agent: Entity,
 	schedule: &Schedule<TBehavior>,
 	queue: &mut Queue<TBehavior>,
@@ -37,17 +37,13 @@ fn schedule_agent_behaviors<TBehavior>(
 	ray: Option<Ray>,
 ) {
 	for get_behavior in &schedule.get_behaviors {
-		schedule_agent_behavior(agent, queue, schedule.mode, get_behavior, commands, ray);
+		enqueue_agent_behavior(agent, queue, schedule.mode, get_behavior, commands, ray);
 	}
 }
 
 type Components<'a, TBehavior> = (Entity, &'a Schedule<TBehavior>, &'a mut Queue<TBehavior>);
 
-pub fn schedule_behaviors<
-	TAgent: Component,
-	TBehavior: Sync + Send + 'static,
-	TGetRay: GetRayFromCamera,
->(
+pub fn enqueue<TAgent: Component, TBehavior: Sync + Send + 'static, TGetRay: GetRayFromCamera>(
 	camera: Query<(&Camera, &GlobalTransform)>,
 	window: Query<&Window>,
 	mut agents: Query<Components<TBehavior>, With<TAgent>>,
@@ -62,7 +58,7 @@ pub fn schedule_behaviors<
 	let ray = TGetRay::get_ray(camera, camera_transform, window);
 
 	for (agent, schedule, mut queue) in &mut agents {
-		schedule_agent_behaviors(agent, schedule, &mut queue, &mut commands, ray);
+		enqueue_agent_behaviors(agent, schedule, &mut queue, &mut commands, ray);
 		commands.entity(agent).remove::<Schedule<TBehavior>>();
 	}
 }
@@ -118,7 +114,7 @@ mod tests {
 			title: "Window".to_owned(),
 			..default()
 		});
-		app.add_systems(Update, schedule_behaviors::<Agent, MockBehavior, TGetRay>);
+		app.add_systems(Update, enqueue::<Agent, MockBehavior, TGetRay>);
 
 		app
 	}

@@ -21,13 +21,12 @@ use project_zyheeda::{
 		UnitsPerSecond,
 		Walk,
 	},
-	events::{Enqueue, MoveEvent},
 	resources::{Animation, Models, SlotMap},
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
-		behavior::{dequeue::dequeue, schedule_behaviors::schedule_behaviors},
+		behavior::{dequeue::dequeue, enqueue::enqueue},
 		input::schedule_slots_via_mouse::schedule_slots_via_mouse,
-		items::{equip::equip_items, slots::add_slots},
+		items::{equip::equip_items, slots::add_item_slots},
 		movement::{
 			execute_move::execute_move,
 			follow::follow,
@@ -43,22 +42,21 @@ use std::f32::consts::PI;
 fn main() {
 	App::new()
 		.add_plugins(DefaultPlugins)
-		.add_event::<MoveEvent>()
-		.add_event::<Enqueue<MoveEvent>>()
 		.add_systems(Startup, setup_input)
 		.add_systems(Startup, load_models)
 		.add_systems(Startup, setup_simple_3d_scene)
-		.add_systems(Update, add_slots::<Behavior>)
-		.add_systems(Update, link_animators_with_new_animation_players)
+		.add_systems(PreUpdate, link_animators_with_new_animation_players)
+		.add_systems(PreUpdate, add_item_slots::<Behavior>)
+		.add_systems(Update, equip_items::<Behavior>)
 		.add_systems(
 			Update,
 			(
-				schedule_slots_via_mouse::<Player, Behavior>,
 				player_toggle_walk_run,
+				schedule_slots_via_mouse::<Player, Behavior>,
+				enqueue::<Player, Behavior, Tools>,
+				dequeue::<Player, Behavior, SimpleMovement>,
 			),
 		)
-		.add_systems(Update, schedule_behaviors::<Player, Behavior, Tools>)
-		.add_systems(Update, dequeue::<Player, Behavior, SimpleMovement>)
 		.add_systems(Update, (execute_move::<Player, SimpleMovement>,))
 		.add_systems(
 			Update,
@@ -68,10 +66,11 @@ fn main() {
 				animate::<Player, Run>,
 			),
 		)
-		.add_systems(Update, follow::<Player, CamOrbit>)
-		.add_systems(Update, move_on_orbit::<CamOrbit>)
+		.add_systems(
+			Update,
+			(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>),
+		)
 		.add_systems(Update, debug)
-		.add_systems(Update, equip_items::<Behavior>)
 		.run();
 }
 
