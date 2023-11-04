@@ -3,7 +3,7 @@ use bevy::{
 	prelude::*,
 };
 use project_zyheeda::{
-	behavior::{Behavior, MovementMode},
+	behaviors::{move_to::get_move_to, Behavior, MovementMode},
 	components::{
 		Animator,
 		CamOrbit,
@@ -157,11 +157,18 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		Idle,
 		SlotInfos::new([(SlotKey::Hand(Side::Right), "hand_slot.R")]),
 		Slots::<Behavior>::new(),
-		Equip::new([Item::<Behavior> {
-			slot: SlotKey::Hand(Side::Right),
-			model: Some("pistol".into()),
-			get_behavior: None,
-		}]),
+		Equip::new([
+			Item {
+				slot: SlotKey::Hand(Side::Right),
+				model: Some("pistol".into()),
+				get_behavior: None,
+			},
+			Item {
+				slot: SlotKey::Legs,
+				model: None,
+				get_behavior: Some(get_move_to),
+			},
+		]),
 		Animator { ..default() },
 	));
 }

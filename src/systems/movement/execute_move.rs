@@ -1,5 +1,5 @@
 use crate::{
-	behavior::MovementMode,
+	behaviors::MovementMode,
 	components::{Idle, Run, Walk},
 	traits::{movement::Movement, movement_data::MovementData},
 };
@@ -37,7 +37,7 @@ pub fn execute_move<TAgent: Component + MovementData, TMovement: Component + Mov
 mod move_player_tests {
 	use super::*;
 	use crate::{
-		behavior::MovementMode,
+		behaviors::MovementMode,
 		components::UnitsPerSecond,
 		traits::movement::{IsDone, Movement, Units},
 	};

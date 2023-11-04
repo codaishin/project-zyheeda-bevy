@@ -1,4 +1,4 @@
-use crate::{behavior::MovementMode, types::BoneName};
+use crate::{behaviors::MovementMode, types::BoneName};
 use bevy::{prelude::*, utils::HashMap};
 use std::{borrow::Cow, collections::VecDeque, fmt::Debug};
 
