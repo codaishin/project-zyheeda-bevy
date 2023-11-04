@@ -1,4 +1,4 @@
-use crate::components::{Slot, SlotInfos, SlotKey, Slots};
+use crate::components::{Slot, SlotBones, SlotKey, Slots};
 use bevy::{
 	prelude::{
 		BuildChildren,
@@ -50,7 +50,7 @@ fn new_slot_on(parent: (Entity, Transform), commands: &mut Commands) -> Entity {
 
 pub fn add_item_slots<TBehavior: 'static>(
 	mut commands: Commands,
-	mut agent: Query<(Entity, &mut Slots<TBehavior>, &mut SlotInfos)>,
+	mut agent: Query<(Entity, &mut Slots<TBehavior>, &mut SlotBones)>,
 	children: Query<&Children>,
 	bones: Query<(&Name, &Transform)>,
 ) {
@@ -80,7 +80,7 @@ pub fn add_item_slots<TBehavior: 'static>(
 			.filter_map(add_slot)
 			.collect();
 		if slot_infos.0.is_empty() {
-			commands.entity(agent).remove::<SlotInfos>();
+			commands.entity(agent).remove::<SlotBones>();
 		}
 	}
 }
@@ -108,7 +108,7 @@ mod tests {
 		app.world
 			.spawn((
 				Slots::<MockBehavior>::new(),
-				SlotInfos::new([(SlotKey::Hand(Side::Left), "bone")]),
+				SlotBones::new([(SlotKey::Hand(Side::Left), "bone")]),
 			))
 			.push_children(&[bone]);
 		app.add_systems(Update, add_item_slots::<MockBehavior>);
@@ -131,7 +131,7 @@ mod tests {
 		app.world
 			.spawn((
 				Slots::<MockBehavior>::new(),
-				SlotInfos::new([(SlotKey::Hand(Side::Left), "bone")]),
+				SlotBones::new([(SlotKey::Hand(Side::Left), "bone")]),
 			))
 			.push_children(&[bone]);
 		app.add_systems(Update, add_item_slots::<MockBehavior>);
@@ -156,7 +156,7 @@ mod tests {
 		app.world
 			.spawn((
 				Slots::<MockBehavior>::new(),
-				SlotInfos::new([(SlotKey::Hand(Side::Left), "bone")]),
+				SlotBones::new([(SlotKey::Hand(Side::Left), "bone")]),
 			))
 			.push_children(&[bone]);
 		app.add_systems(Update, add_item_slots::<MockBehavior>);
@@ -181,7 +181,7 @@ mod tests {
 			.world
 			.spawn((
 				Slots::<MockBehavior>::new(),
-				SlotInfos::new([(SlotKey::Hand(Side::Left), "bone")]),
+				SlotBones::new([(SlotKey::Hand(Side::Left), "bone")]),
 			))
 			.push_children(&[bone])
 			.id();
@@ -216,7 +216,7 @@ mod tests {
 			.world
 			.spawn((
 				Slots::<MockBehavior>::new(),
-				SlotInfos::new([(SlotKey::Hand(Side::Left), "bone")]),
+				SlotBones::new([(SlotKey::Hand(Side::Left), "bone")]),
 			))
 			.push_children(&[bone])
 			.id();
@@ -226,7 +226,7 @@ mod tests {
 
 		let root = app.world.entity(root);
 
-		assert!(!root.contains::<SlotInfos>());
+		assert!(!root.contains::<SlotBones>());
 	}
 
 	#[test]
@@ -240,7 +240,7 @@ mod tests {
 			.world
 			.spawn((
 				Slots::<MockBehavior>::new(),
-				SlotInfos::new([
+				SlotBones::new([
 					(SlotKey::Hand(Side::Left), "bone"),
 					(SlotKey::Hand(Side::Right), "bone2"),
 				]),
@@ -251,10 +251,10 @@ mod tests {
 
 		app.update();
 
-		let slot_infos = app.world.entity(root).get::<SlotInfos>();
+		let slot_infos = app.world.entity(root).get::<SlotBones>();
 
 		assert_eq!(
-			Some(&SlotInfos::new([(SlotKey::Hand(Side::Right), "bone2")])),
+			Some(&SlotBones::new([(SlotKey::Hand(Side::Right), "bone2")])),
 			slot_infos
 		);
 	}

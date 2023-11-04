@@ -88,9 +88,9 @@ pub enum SlotKey {
 }
 
 #[derive(Component, Clone, PartialEq, Debug)]
-pub struct SlotInfos(pub HashMap<SlotKey, Cow<'static, BoneName>>);
+pub struct SlotBones(pub HashMap<SlotKey, Cow<'static, BoneName>>);
 
-impl SlotInfos {
+impl SlotBones {
 	pub fn new<const C: usize>(pairs: [(SlotKey, &'static BoneName); C]) -> Self {
 		Self(pairs.map(|(k, v)| (k, Cow::from(v))).into())
 	}
