@@ -5,13 +5,13 @@ use bevy::{
 use project_zyheeda::{
 	behaviors::{move_to::get_move_to, Behavior, MovementMode},
 	components::{
+		queue::Queue,
 		Animator,
 		CamOrbit,
 		Equip,
 		Idle,
 		Item,
 		Player,
-		Queue,
 		Run,
 		Side,
 		SimpleMovement,
@@ -54,7 +54,7 @@ fn main() {
 				player_toggle_walk_run,
 				schedule_slots_via_mouse::<Player, Behavior>,
 				enqueue::<Player, Behavior, Tools>,
-				dequeue::<Player, Behavior, SimpleMovement>,
+				dequeue::<Player, Behavior>,
 			),
 		)
 		.add_systems(Update, (execute_move::<Player, SimpleMovement>,))
@@ -165,7 +165,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			run_speed: UnitsPerSecond::new(1.5),
 			movement_mode: MovementMode::Walk,
 		},
-		Queue::<Behavior>::new(),
+		Queue::<Behavior>::new([]),
 		Idle,
 		SlotInfos::new([
 			(SlotKey::Hand(Side::Right), "hand_slot.R"),

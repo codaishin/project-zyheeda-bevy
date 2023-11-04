@@ -1,6 +1,8 @@
+pub mod queue;
+
 use crate::{behaviors::MovementMode, types::BoneName};
 use bevy::{prelude::*, utils::HashMap};
-use std::{borrow::Cow, collections::VecDeque, fmt::Debug};
+use std::{borrow::Cow, fmt::Debug};
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -57,21 +59,6 @@ pub struct Player {
 #[derive(Component, Default)]
 pub struct Animator {
 	pub animation_player_id: Option<Entity>,
-}
-
-#[derive(Component)]
-pub struct Queue<T>(pub VecDeque<T>);
-
-impl<T> Queue<T> {
-	pub fn new() -> Self {
-		Self([].into())
-	}
-}
-
-impl<T> Default for Queue<T> {
-	fn default() -> Self {
-		Self::new()
-	}
 }
 
 #[derive(Component)]
