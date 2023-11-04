@@ -1,6 +1,6 @@
 use super::MovementData;
 use crate::{
-	behavior::MovementMode,
+	behaviors::MovementMode,
 	components::{Player, UnitsPerSecond},
 };
 

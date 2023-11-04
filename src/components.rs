@@ -1,6 +1,6 @@
-use crate::{behavior::MovementMode, types::BoneName};
+use crate::{behaviors::MovementMode, types::BoneName};
 use bevy::{prelude::*, utils::HashMap};
-use std::{borrow::Cow, collections::VecDeque};
+use std::{borrow::Cow, collections::VecDeque, fmt::Debug};
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -97,6 +97,7 @@ pub enum Side {
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum SlotKey {
 	Hand(Side),
+	Legs,
 }
 
 #[derive(Component, Clone, PartialEq, Debug)]
@@ -108,23 +109,53 @@ impl SlotInfos {
 	}
 }
 
-#[derive(Component)]
-pub struct Slots(pub HashMap<SlotKey, Entity>);
+#[derive(PartialEq, Debug, Clone, Copy)]
+pub enum ScheduleMode {
+	Enqueue,
+	Override,
+}
 
-impl Slots {
+pub type GetBehaviorFn<TBehavior> = fn(ray: Ray) -> Option<TBehavior>;
+
+#[derive(Component, PartialEq, Debug)]
+pub struct Schedule<TBehavior> {
+	pub mode: ScheduleMode,
+	pub get_behaviors: Vec<GetBehaviorFn<TBehavior>>,
+}
+
+#[derive(PartialEq, Debug)]
+pub struct Slot<TBehavior> {
+	pub entity: Entity,
+	pub get_behavior: Option<GetBehaviorFn<TBehavior>>,
+}
+
+#[derive(Component)]
+pub struct Slots<TBehavior>(pub HashMap<SlotKey, Slot<TBehavior>>);
+
+impl<TBehavior> Slots<TBehavior> {
 	pub fn new() -> Self {
 		Self(HashMap::new())
 	}
 }
 
-impl Default for Slots {
+impl<TBehavior> Default for Slots<TBehavior> {
 	fn default() -> Self {
 		Self::new()
 	}
 }
 
-#[derive(Component, Debug)]
-pub struct Equip {
+#[derive(Debug, PartialEq, Clone)]
+pub struct Item<TBehavior> {
 	pub slot: SlotKey,
-	pub model: Cow<'static, str>,
+	pub model: Option<Cow<'static, str>>,
+	pub get_behavior: Option<GetBehaviorFn<TBehavior>>,
+}
+
+#[derive(Component, Debug, PartialEq)]
+pub struct Equip<TBehavior>(pub Vec<Item<TBehavior>>);
+
+impl<TBehavior> Equip<TBehavior> {
+	pub fn new<const N: usize>(items: [Item<TBehavior>; N]) -> Self {
+		Self(items.into())
+	}
 }

@@ -1,3 +1,5 @@
+pub mod move_to;
+
 use bevy::prelude::*;
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]

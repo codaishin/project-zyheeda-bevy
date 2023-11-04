@@ -1,6 +1,9 @@
-use crate::types::{File, Key, SceneId};
+use crate::{
+	components::SlotKey,
+	types::{File, Key, SceneId},
+};
 use bevy::prelude::*;
-use std::{borrow::Cow, collections::HashMap, marker::PhantomData};
+use std::{borrow::Cow, collections::HashMap, hash::Hash, marker::PhantomData};
 
 #[derive(Resource)]
 pub struct Animation<TAgent, TBehavior> {
@@ -53,5 +56,19 @@ impl Models {
 				.into_iter()
 				.collect(),
 		)
+	}
+}
+
+#[derive(Resource)]
+pub struct SlotMap<TButton>(pub HashMap<TButton, SlotKey>)
+where
+	TButton: Eq + Hash;
+
+impl<TButton> SlotMap<TButton>
+where
+	TButton: Eq + Hash,
+{
+	pub fn new<const N: usize>(pairs: [(TButton, SlotKey); N]) -> Self {
+		Self(pairs.into())
 	}
 }

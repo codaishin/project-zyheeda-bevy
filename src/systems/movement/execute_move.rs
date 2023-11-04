@@ -1,11 +1,11 @@
 use crate::{
-	behavior::MovementMode,
+	behaviors::MovementMode,
 	components::{Idle, Run, Walk},
 	traits::{movement::Movement, movement_data::MovementData},
 };
 use bevy::prelude::*;
 
-pub fn execute<TAgent: Component + MovementData, TMovement: Component + Movement>(
+pub fn execute_move<TAgent: Component + MovementData, TMovement: Component + Movement>(
 	time: Res<Time>,
 	mut commands: Commands,
 	mut agents: Query<(Entity, &mut TMovement, &mut Transform, &TAgent)>,
@@ -37,7 +37,7 @@ pub fn execute<TAgent: Component + MovementData, TMovement: Component + Movement
 mod move_player_tests {
 	use super::*;
 	use crate::{
-		behavior::MovementMode,
+		behaviors::MovementMode,
 		components::UnitsPerSecond,
 		traits::movement::{IsDone, Movement, Units},
 	};
@@ -90,7 +90,10 @@ mod move_player_tests {
 		app.update();
 		app.add_systems(
 			Update,
-			(execute::<Runner, _Movement>, execute::<Walker, _Movement>),
+			(
+				execute_move::<Runner, _Movement>,
+				execute_move::<Walker, _Movement>,
+			),
 		);
 
 		app

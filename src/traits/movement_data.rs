@@ -1,4 +1,4 @@
-use crate::{behavior::MovementMode, components::UnitsPerSecond};
+use crate::{behaviors::MovementMode, components::UnitsPerSecond};
 pub mod player;
 
 pub trait MovementData {

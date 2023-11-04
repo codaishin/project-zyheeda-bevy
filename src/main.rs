@@ -3,12 +3,13 @@ use bevy::{
 	prelude::*,
 };
 use project_zyheeda::{
-	behavior::{Behavior, MovementMode},
+	behaviors::{move_to::get_move_to, Behavior, MovementMode},
 	components::{
 		Animator,
 		CamOrbit,
 		Equip,
 		Idle,
+		Item,
 		Player,
 		Queue,
 		Run,
@@ -20,15 +21,14 @@ use project_zyheeda::{
 		UnitsPerSecond,
 		Walk,
 	},
-	events::{Enqueue, MoveEvent},
-	resources::{Animation, Models},
+	resources::{Animation, Models, SlotMap},
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
-		behavior::{dequeue::dequeue, player::schedule::player_enqueue},
-		events::mouse_left::mouse_left,
-		items::{equip::equip_item, slots::add_slots},
+		behavior::{dequeue::dequeue, enqueue::enqueue},
+		input::schedule_slots_via_mouse::schedule_slots_via_mouse,
+		items::{equip::equip_items, slots::add_item_slots},
 		movement::{
-			execute::execute,
+			execute_move::execute_move,
 			follow::follow,
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
@@ -42,19 +42,22 @@ use std::f32::consts::PI;
 fn main() {
 	App::new()
 		.add_plugins(DefaultPlugins)
-		.add_event::<MoveEvent>()
-		.add_event::<Enqueue<MoveEvent>>()
-		.add_systems(Startup, setup_simple_3d_scene)
+		.add_systems(Startup, setup_input)
 		.add_systems(Startup, load_models)
-		.add_systems(Update, add_slots)
-		.add_systems(Update, link_animators_with_new_animation_players)
+		.add_systems(Startup, setup_simple_3d_scene)
+		.add_systems(PreUpdate, link_animators_with_new_animation_players)
+		.add_systems(PreUpdate, add_item_slots::<Behavior>)
+		.add_systems(Update, equip_items::<Behavior>)
 		.add_systems(
 			Update,
-			(mouse_left::<Tools, MoveEvent>, player_toggle_walk_run),
+			(
+				player_toggle_walk_run,
+				schedule_slots_via_mouse::<Player, Behavior>,
+				enqueue::<Player, Behavior, Tools>,
+				dequeue::<Player, Behavior, SimpleMovement>,
+			),
 		)
-		.add_systems(Update, player_enqueue::<MoveEvent, Behavior>)
-		.add_systems(Update, dequeue::<Player, Behavior, SimpleMovement>)
-		.add_systems(Update, (execute::<Player, SimpleMovement>,))
+		.add_systems(Update, (execute_move::<Player, SimpleMovement>,))
 		.add_systems(
 			Update,
 			(
@@ -63,10 +66,11 @@ fn main() {
 				animate::<Player, Run>,
 			),
 		)
-		.add_systems(Update, follow::<Player, CamOrbit>)
-		.add_systems(Update, move_on_orbit::<CamOrbit>)
+		.add_systems(
+			Update,
+			(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>),
+		)
 		.add_systems(Update, debug)
-		.add_systems(Update, equip_item)
 		.run();
 }
 
@@ -105,6 +109,15 @@ fn debug(
 fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
 	let models = Models::new([("pistol", "pistol.gltf", 0)], &asset_server);
 	commands.insert_resource(models);
+}
+
+fn setup_input(mut commands: Commands) {
+	commands.insert_resource(SlotMap::<MouseButton>(
+		[(MouseButton::Left, SlotKey::Legs)].into(),
+	));
+	commands.insert_resource(SlotMap::<KeyCode>(
+		[(KeyCode::E, SlotKey::Hand(Side::Right))].into(),
+	));
 }
 
 fn setup_simple_3d_scene(
@@ -154,12 +167,23 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		},
 		Queue::<Behavior>::new(),
 		Idle,
-		SlotInfos::new([(SlotKey::Hand(Side::Right), "hand_slot.R")]),
-		Slots::new(),
-		Equip {
-			slot: SlotKey::Hand(Side::Right),
-			model: "pistol".into(),
-		},
+		SlotInfos::new([
+			(SlotKey::Hand(Side::Right), "hand_slot.R"),
+			(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
+		]),
+		Slots::<Behavior>::new(),
+		Equip::new([
+			Item {
+				slot: SlotKey::Hand(Side::Right),
+				model: Some("pistol".into()),
+				get_behavior: None,
+			},
+			Item {
+				slot: SlotKey::Legs,
+				model: None,
+				get_behavior: Some(get_move_to),
+			},
+		]),
 		Animator { ..default() },
 	));
 }
