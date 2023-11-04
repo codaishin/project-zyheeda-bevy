@@ -4,8 +4,8 @@ use bevy::{
 };
 use project_zyheeda::{
 	behaviors::{move_to::get_move_to, Behavior, MovementMode},
+	bundles::Loadout,
 	components::{
-		queue::Queue,
 		Animator,
 		CamOrbit,
 		Equip,
@@ -15,9 +15,8 @@ use project_zyheeda::{
 		Run,
 		Side,
 		SimpleMovement,
-		SlotInfos,
+		SlotBones,
 		SlotKey,
-		Slots,
 		UnitsPerSecond,
 		Walk,
 	},
@@ -160,31 +159,30 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			scene: asset_server.load("models/player.gltf#Scene0"),
 			..default()
 		},
+		Animator { ..default() },
 		Player {
 			walk_speed: UnitsPerSecond::new(0.75),
 			run_speed: UnitsPerSecond::new(1.5),
 			movement_mode: MovementMode::Walk,
 		},
-		Queue::<Behavior>::new([]),
-		Idle,
-		SlotInfos::new([
-			(SlotKey::Hand(Side::Right), "hand_slot.R"),
-			(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
-		]),
-		Slots::<Behavior>::new(),
-		Equip::new([
-			Item {
-				slot: SlotKey::Hand(Side::Right),
-				model: Some("pistol".into()),
-				get_behavior: None,
-			},
-			Item {
-				slot: SlotKey::Legs,
-				model: None,
-				get_behavior: Some(get_move_to),
-			},
-		]),
-		Animator { ..default() },
+		Loadout::new(
+			SlotBones::new([
+				(SlotKey::Hand(Side::Right), "hand_slot.R"),
+				(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
+			]),
+			Equip::new([
+				Item {
+					slot: SlotKey::Hand(Side::Right),
+					model: Some("pistol".into()),
+					get_behavior: None,
+				},
+				Item {
+					slot: SlotKey::Legs,
+					model: None,
+					get_behavior: Some(get_move_to),
+				},
+			]),
+		),
 	));
 }
 

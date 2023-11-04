@@ -2,6 +2,7 @@
 pub mod test_tools;
 
 pub mod behaviors;
+pub mod bundles;
 pub mod components;
 pub mod resources;
 pub mod systems;
