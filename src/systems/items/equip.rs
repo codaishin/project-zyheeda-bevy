@@ -3,10 +3,11 @@ use crate::{
 	resources::Models,
 };
 use bevy::{
-	prelude::{error, info, Commands, Entity, Handle, Mut, Query, Res},
+	prelude::{Commands, Entity, Handle, Mut, Query, Res},
 	scene::Scene,
 };
 use std::{borrow::Cow, fmt::Debug};
+use tracing::{error, info};
 
 enum NoMatch {
 	Slot(SlotKey),
@@ -117,7 +118,7 @@ mod tests {
 		resources::Models,
 	};
 	use bevy::{
-		asset::HandleId,
+		asset::AssetId,
 		prelude::{App, Handle, Ray, Update},
 		scene::Scene,
 		utils::Uuid,
@@ -129,7 +130,9 @@ mod tests {
 
 	#[test]
 	fn equip_when_marked_to_equip() {
-		let model = Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 42));
+		let model = Handle::<Scene>::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		});
 		let models = Models([(Cow::from("model key"), model.clone())].into());
 
 		fn mock_behavior(_: Ray) -> Option<MockBehavior> {
@@ -140,7 +143,9 @@ mod tests {
 		app.world.insert_resource(models);
 		let slot = app
 			.world
-			.spawn(Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 11)))
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
 			.id();
 		let agent = app
 			.world
@@ -190,14 +195,18 @@ mod tests {
 
 	#[test]
 	fn remove_equip_component() {
-		let model = Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 42));
+		let model = Handle::<Scene>::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		});
 		let models = Models([(Cow::from("model key"), model.clone())].into());
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
 		let slot = app
 			.world
-			.spawn(Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 11)))
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
 			.id();
 		let agent = app
 			.world
@@ -234,7 +243,9 @@ mod tests {
 		app.world.insert_resource(Models([].into()));
 		let slot = app
 			.world
-			.spawn(Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 11)))
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
 			.id();
 		let agent = app
 			.world
@@ -271,7 +282,9 @@ mod tests {
 
 	#[test]
 	fn remove_equip_component_when_no_slot_scene_handle() {
-		let model = Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 42));
+		let model = Handle::<Scene>::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		});
 		let models = Models([(Cow::from("model key"), model.clone())].into());
 
 		let mut app = App::new();
@@ -308,14 +321,18 @@ mod tests {
 
 	#[test]
 	fn remove_equip_component_when_no_matching_model() {
-		let model = Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 42));
+		let model = Handle::<Scene>::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		});
 		let models = Models([(Cow::from("model key"), model.clone())].into());
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
 		let slot = app
 			.world
-			.spawn(Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 11)))
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
 			.id();
 		let agent = app
 			.world
@@ -348,14 +365,18 @@ mod tests {
 
 	#[test]
 	fn do_not_remove_equip_component_when_no_matching_slot() {
-		let model = Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 42));
+		let model = Handle::<Scene>::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		});
 		let models = Models([(Cow::from("model key"), model.clone())].into());
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
 		let slot = app
 			.world
-			.spawn(Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 11)))
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
 			.id();
 		let agent = app
 			.world
@@ -388,14 +409,18 @@ mod tests {
 
 	#[test]
 	fn evaluate_equip_per_item() {
-		let model = Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 42));
+		let model = Handle::<Scene>::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		});
 		let models = Models([(Cow::from("model key"), model.clone())].into());
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
 		let slot = app
 			.world
-			.spawn(Handle::<Scene>::weak(HandleId::new(Uuid::new_v4(), 11)))
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
 			.id();
 		let agent = app
 			.world

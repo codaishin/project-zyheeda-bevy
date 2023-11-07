@@ -17,7 +17,7 @@ pub fn move_on_orbit<TOrbitComponent: Orbit + Component>(
 		return;
 	};
 
-	for event in mouse_motion.iter() {
+	for event in mouse_motion.read() {
 		orbit.orbit(&mut transform, event.delta);
 	}
 }
