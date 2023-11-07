@@ -1,11 +1,15 @@
 use crate::{
 	behaviors::MovementMode,
-	components::{Idle, Run, Walk},
+	components::{Run, WaitNext, Walk},
 	traits::{movement::Movement, movement_data::MovementData},
 };
 use bevy::prelude::*;
 
-pub fn execute_move<TAgent: Component + MovementData, TMovement: Component + Movement>(
+pub fn execute_move<
+	TAgent: Component + MovementData,
+	TMovement: Component + Movement,
+	TBehavior: Send + Sync + 'static,
+>(
 	time: Res<Time>,
 	mut commands: Commands,
 	mut agents: Query<(Entity, &mut TMovement, &mut Transform, &TAgent)>,
@@ -17,9 +21,8 @@ pub fn execute_move<TAgent: Component + MovementData, TMovement: Component + Mov
 
 		match (is_done, movement_mode) {
 			(true, _) => {
-				entity.insert(Idle);
-				entity.remove::<Run>();
-				entity.remove::<Walk>();
+				entity.insert(WaitNext::<TBehavior>::new());
+				entity.remove::<(Run, Walk, TMovement)>();
 			}
 			(_, MovementMode::Walk) => {
 				entity.remove::<Run>();
@@ -43,6 +46,8 @@ mod move_player_tests {
 	};
 	use mockall::{automock, predicate::eq};
 	use std::time::Duration;
+
+	struct MockBehavior;
 
 	#[derive(Component)]
 	struct Runner;
@@ -91,8 +96,8 @@ mod move_player_tests {
 		app.add_systems(
 			Update,
 			(
-				execute_move::<Runner, _Movement>,
-				execute_move::<Walker, _Movement>,
+				execute_move::<Runner, _Movement, MockBehavior>,
+				execute_move::<Walker, _Movement, MockBehavior>,
 			),
 		);
 
@@ -153,7 +158,7 @@ mod move_player_tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<Idle>());
+		assert!(agent.contains::<WaitNext<MockBehavior>>());
 	}
 
 	#[test]
@@ -171,7 +176,7 @@ mod move_player_tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Idle>());
+		assert!(!agent.contains::<WaitNext<MockBehavior>>());
 	}
 
 	#[test]
@@ -256,5 +261,23 @@ mod move_player_tests {
 			(false, false),
 			(agent.contains::<Walk>(), agent.contains::<Run>())
 		)
+	}
+
+	#[test]
+	fn remove_movement_when_done() {
+		let mut app = setup_app();
+		let transform = Transform::from_xyz(1., 2., 3.);
+		let agent = Walker;
+		let mut movement = _Movement::new();
+
+		movement.mock.expect_update().return_const(true);
+
+		let agent = app.world.spawn((agent, movement, transform, Run)).id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert!(!agent.contains::<_Movement>());
 	}
 }

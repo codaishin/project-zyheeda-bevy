@@ -1,4 +1,4 @@
-use crate::components::{queue::Queue, Equip, Idle, SlotBones, Slots};
+use crate::components::{Equip, Queue, SlotBones, Slots, WaitNext};
 use bevy::prelude::Bundle;
 
 #[derive(Bundle)]
@@ -9,7 +9,7 @@ where
 	slot_bones: SlotBones,
 	slots: Slots<TBehavior>,
 	equipment: Equip<TBehavior>,
-	idle: Idle,
+	wait_next: WaitNext<TBehavior>,
 	queue: Queue<TBehavior>,
 }
 
@@ -22,8 +22,8 @@ where
 			slot_bones,
 			equipment,
 			slots: Slots::new(),
-			idle: Idle,
-			queue: Queue::new([]),
+			wait_next: WaitNext::new(),
+			queue: Queue([].into()),
 		}
 	}
 }

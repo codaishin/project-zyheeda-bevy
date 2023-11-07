@@ -1,5 +1,5 @@
 use crate::{
-	components::{queue::Queue, GetBehaviorFn, Idle, Schedule, ScheduleMode},
+	components::{GetBehaviorFn, Queue, Schedule, ScheduleMode, WaitNext},
 	traits::get_ray::GetRayFromCamera,
 };
 use bevy::{
@@ -7,7 +7,7 @@ use bevy::{
 	window::Window,
 };
 
-fn enqueue_agent_behavior<TBehavior: Copy>(
+fn enqueue_agent_behavior<TBehavior: Copy + Send + Sync + 'static>(
 	agent: Entity,
 	queue: &mut Queue<TBehavior>,
 	schedule_mode: ScheduleMode,
@@ -20,16 +20,16 @@ fn enqueue_agent_behavior<TBehavior: Copy>(
 	};
 
 	match schedule_mode {
-		ScheduleMode::Enqueue => queue.push_back(behavior),
+		ScheduleMode::Enqueue => queue.0.push_back(behavior),
 		ScheduleMode::Override => {
-			queue.clear();
-			queue.push_back(behavior);
-			commands.entity(agent).insert(Idle);
+			queue.0.clear();
+			queue.0.push_back(behavior);
+			commands.entity(agent).insert(WaitNext::<TBehavior>::new());
 		}
 	}
 }
 
-fn enqueue_agent_behaviors<TBehavior: Copy>(
+fn enqueue_agent_behaviors<TBehavior: Copy + Send + Sync + 'static>(
 	agent: Entity,
 	schedule: &Schedule<TBehavior>,
 	queue: &mut Queue<TBehavior>,
@@ -45,7 +45,7 @@ type Components<'a, TBehavior> = (Entity, &'a Schedule<TBehavior>, &'a mut Queue
 
 pub fn enqueue<
 	TAgent: Component,
-	TBehavior: Sync + Send + Copy + 'static,
+	TBehavior: Copy + Sync + Send + 'static,
 	TGetRay: GetRayFromCamera,
 >(
 	camera: Query<(&Camera, &GlobalTransform)>,
@@ -70,7 +70,7 @@ pub fn enqueue<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Idle, Schedule, ScheduleMode};
+	use crate::components::{Schedule, ScheduleMode, WaitNext};
 	use bevy::{
 		prelude::{App, Camera, Camera3dBundle, GlobalTransform, Ray, Update, Vec3},
 		utils::default,
@@ -134,20 +134,23 @@ mod tests {
 					mode: ScheduleMode::Enqueue,
 					get_behaviors: vec![|ray| Some(MockBehavior { ray })],
 				},
-				Queue::new([
-					MockBehavior {
-						ray: Ray {
-							origin: Vec3::Z,
-							direction: Vec3::Y,
+				Queue(
+					[
+						MockBehavior {
+							ray: Ray {
+								origin: Vec3::Z,
+								direction: Vec3::Y,
+							},
 						},
-					},
-					MockBehavior {
-						ray: Ray {
-							origin: Vec3::Z,
-							direction: Vec3::Y,
+						MockBehavior {
+							ray: Ray {
+								origin: Vec3::Z,
+								direction: Vec3::Y,
+							},
 						},
-					},
-				]),
+					]
+					.into(),
+				),
 			))
 			.id();
 
@@ -172,7 +175,7 @@ mod tests {
 				},
 				&MockBehavior { ray: DEFAULT_RAY }
 			],
-			queue.iter().collect::<Vec<&MockBehavior>>()
+			queue.0.iter().collect::<Vec<&MockBehavior>>()
 		);
 	}
 
@@ -187,20 +190,23 @@ mod tests {
 					mode: ScheduleMode::Override,
 					get_behaviors: vec![|ray| Some(MockBehavior { ray })],
 				},
-				Queue::new([
-					MockBehavior {
-						ray: Ray {
-							origin: Vec3::Z,
-							direction: Vec3::Y,
+				Queue(
+					[
+						MockBehavior {
+							ray: Ray {
+								origin: Vec3::Z,
+								direction: Vec3::Y,
+							},
 						},
-					},
-					MockBehavior {
-						ray: Ray {
-							origin: Vec3::Z,
-							direction: Vec3::Y,
+						MockBehavior {
+							ray: Ray {
+								origin: Vec3::Z,
+								direction: Vec3::Y,
+							},
 						},
-					},
-				]),
+					]
+					.into(),
+				),
 			))
 			.id();
 
@@ -212,8 +218,8 @@ mod tests {
 		assert_eq!(
 			(vec![&MockBehavior { ray: DEFAULT_RAY }], true),
 			(
-				queue.iter().collect::<Vec<&MockBehavior>>(),
-				agent.contains::<Idle>()
+				queue.0.iter().collect::<Vec<&MockBehavior>>(),
+				agent.contains::<WaitNext<MockBehavior>>()
 			)
 		);
 	}
@@ -229,7 +235,7 @@ mod tests {
 					mode: ScheduleMode::Override,
 					get_behaviors: vec![|ray| Some(MockBehavior { ray })],
 				},
-				Queue::<MockBehavior>::new([]),
+				Queue::<MockBehavior>([].into()),
 			))
 			.id();
 
@@ -278,7 +284,7 @@ mod tests {
 				mode: ScheduleMode::Override,
 				get_behaviors: vec![|ray| Some(MockBehavior { ray })],
 			},
-			Queue::<MockBehavior>::new([]),
+			Queue::<MockBehavior>([].into()),
 		));
 
 		app.update();
@@ -308,7 +314,7 @@ mod tests {
 
 		get_ray.expect().times(0).return_const(ray);
 
-		app.world.spawn((Agent, Queue::<MockBehavior>::new([])));
+		app.world.spawn((Agent, Queue::<MockBehavior>([].into())));
 
 		app.update();
 	}

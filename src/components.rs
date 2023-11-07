@@ -1,8 +1,9 @@
-pub mod queue;
-
 use crate::{behaviors::MovementMode, types::BoneName};
-use bevy::{prelude::*, utils::HashMap};
-use std::{borrow::Cow, fmt::Debug};
+use bevy::{
+	prelude::{Component, *},
+	utils::HashMap,
+};
+use std::{borrow::Cow, collections::VecDeque, fmt::Debug, marker::PhantomData};
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -62,7 +63,23 @@ pub struct Animator {
 }
 
 #[derive(Component)]
-pub struct Idle;
+pub struct WaitNext<TBehavior> {
+	phantom_data: PhantomData<TBehavior>,
+}
+
+impl<TBehavior> WaitNext<TBehavior> {
+	pub fn new() -> Self {
+		Self {
+			phantom_data: PhantomData,
+		}
+	}
+}
+
+impl<TBehavior> Default for WaitNext<TBehavior> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
 
 #[derive(Component, PartialEq, Debug)]
 pub struct Walk;
@@ -71,8 +88,18 @@ pub struct Walk;
 pub struct Run;
 
 #[derive(Component, Clone, Copy, PartialEq, Debug)]
-pub struct SimpleMovement {
+pub struct SimpleMovement<TBehavior> {
 	pub target: Vec3,
+	phantom_data: PhantomData<TBehavior>,
+}
+
+impl<TBehavior> SimpleMovement<TBehavior> {
+	pub fn new(target: Vec3) -> Self {
+		Self {
+			target,
+			phantom_data: PhantomData,
+		}
+	}
 }
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
@@ -146,3 +173,6 @@ impl<TBehavior> Equip<TBehavior> {
 		Self(items.into())
 	}
 }
+
+#[derive(Component)]
+pub struct Queue<T>(pub VecDeque<T>);

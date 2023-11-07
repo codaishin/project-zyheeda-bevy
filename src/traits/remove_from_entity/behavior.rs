@@ -4,7 +4,7 @@ use crate::{behaviors::Behavior, components::SimpleMovement};
 impl RemoveFromEntity for Behavior {
 	fn remove_from_entity(&self, entity: &mut bevy::ecs::system::EntityCommands) {
 		match self {
-			Behavior::MoveTo(_) => entity.remove::<SimpleMovement>(),
+			Behavior::MoveTo(_) => entity.remove::<SimpleMovement<Behavior>>(),
 		};
 	}
 }
@@ -23,13 +23,16 @@ mod tests {
 	fn remove_move_to() {
 		let mut app = App::new();
 		let behavior = Behavior::MoveTo(Vec3::ONE);
-		let entity = app.world.spawn(SimpleMovement { target: Vec3::ONE }).id();
+		let entity = app
+			.world
+			.spawn(SimpleMovement::<Behavior>::new(Vec3::ONE))
+			.id();
 
 		app.add_systems(Update, remove(entity, behavior));
 		app.update();
 
 		let entity = app.world.entity(entity);
 
-		assert!(!entity.contains::<SimpleMovement>());
+		assert!(!entity.contains::<SimpleMovement<Behavior>>());
 	}
 }

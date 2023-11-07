@@ -1,11 +1,11 @@
 use crate::{behaviors::Behavior, components::SimpleMovement};
 
-impl TryFrom<Behavior> for SimpleMovement {
+impl TryFrom<Behavior> for SimpleMovement<Behavior> {
 	type Error = ();
 
 	fn try_from(behavior: Behavior) -> Result<Self, Self::Error> {
 		match behavior {
-			Behavior::MoveTo(target) => Ok(SimpleMovement { target }),
+			Behavior::MoveTo(target) => Ok(SimpleMovement::new(target)),
 		}
 	}
 }
@@ -19,7 +19,7 @@ mod tests {
 	#[test]
 	fn get_simple_movement() {
 		let behavior = Behavior::MoveTo(Vec3::ONE);
-		let movement: Result<SimpleMovement, ()> = behavior.try_into();
+		let movement: Result<SimpleMovement<Behavior>, ()> = behavior.try_into();
 
 		assert_eq!(Ok(Vec3::ONE), movement.map(|m| m.target));
 	}
