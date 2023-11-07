@@ -1,6 +1,6 @@
 use crate::{
 	behaviors::MovementMode,
-	components::{Idle, Run, Walk},
+	components::{Run, WaitNext, Walk},
 	traits::{movement::Movement, movement_data::MovementData},
 };
 use bevy::prelude::*;
@@ -21,7 +21,7 @@ pub fn execute_move<
 
 		match (is_done, movement_mode) {
 			(true, _) => {
-				entity.insert(Idle::<TBehavior>::new());
+				entity.insert(WaitNext::<TBehavior>::new());
 				entity.remove::<(Run, Walk, TMovement)>();
 			}
 			(_, MovementMode::Walk) => {
@@ -158,7 +158,7 @@ mod move_player_tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<Idle<MockBehavior>>());
+		assert!(agent.contains::<WaitNext<MockBehavior>>());
 	}
 
 	#[test]
@@ -176,7 +176,7 @@ mod move_player_tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Idle<MockBehavior>>());
+		assert!(!agent.contains::<WaitNext<MockBehavior>>());
 	}
 
 	#[test]

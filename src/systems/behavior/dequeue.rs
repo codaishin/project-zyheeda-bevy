@@ -1,5 +1,5 @@
 use crate::{
-	components::{Idle, Queue},
+	components::{Queue, WaitNext},
 	traits::{insert_into_entity::InsertIntoEntity, remove_from_entity::RemoveFromEntity},
 };
 use bevy::prelude::{Commands, Component, Entity, Query, With};
@@ -10,14 +10,14 @@ pub fn dequeue<
 	TBehavior: Copy + Send + Sync + InsertIntoEntity + RemoveFromEntity + 'static,
 >(
 	mut commands: Commands,
-	mut agents: Query<(Entity, &mut Queue<TBehavior>), (With<TAgent>, With<Idle<TBehavior>>)>,
+	mut agents: Query<(Entity, &mut Queue<TBehavior>), (With<TAgent>, With<WaitNext<TBehavior>>)>,
 ) {
 	for (agent, mut queue) in agents.iter_mut() {
 		let mut agent = commands.entity(agent);
 
 		if let Some(behavior) = queue.0.pop_front() {
 			behavior.insert_into_entity(&mut agent);
-			agent.remove::<Idle<TBehavior>>();
+			agent.remove::<WaitNext<TBehavior>>();
 		}
 	}
 }
@@ -25,7 +25,7 @@ pub fn dequeue<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Idle;
+	use crate::components::WaitNext;
 	use bevy::{
 		ecs::system::EntityCommands,
 		prelude::{App, Update},
@@ -59,7 +59,7 @@ mod tests {
 		let mut app = App::new();
 		let queue = Queue([Behavior::Sing].into());
 		let agent = Agent;
-		let idle = Idle::<Behavior>::new();
+		let idle = WaitNext::<Behavior>::new();
 
 		let agent = app.world.spawn((agent, queue, idle)).id();
 		app.add_systems(Update, dequeue::<Agent, Behavior>);
@@ -72,7 +72,7 @@ mod tests {
 			(true, false, 0),
 			(
 				agent.contains::<Sing>(),
-				agent.contains::<Idle<Behavior>>(),
+				agent.contains::<WaitNext<Behavior>>(),
 				queue.0.len()
 			)
 		);

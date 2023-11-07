@@ -63,11 +63,11 @@ pub struct Animator {
 }
 
 #[derive(Component)]
-pub struct Idle<TBehavior> {
+pub struct WaitNext<TBehavior> {
 	phantom_data: PhantomData<TBehavior>,
 }
 
-impl<TBehavior> Idle<TBehavior> {
+impl<TBehavior> WaitNext<TBehavior> {
 	pub fn new() -> Self {
 		Self {
 			phantom_data: PhantomData,
@@ -75,7 +75,7 @@ impl<TBehavior> Idle<TBehavior> {
 	}
 }
 
-impl<TBehavior> Default for Idle<TBehavior> {
+impl<TBehavior> Default for WaitNext<TBehavior> {
 	fn default() -> Self {
 		Self::new()
 	}

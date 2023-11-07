@@ -1,5 +1,5 @@
 use crate::{
-	components::{GetBehaviorFn, Idle, Queue, Schedule, ScheduleMode},
+	components::{GetBehaviorFn, Queue, Schedule, ScheduleMode, WaitNext},
 	traits::get_ray::GetRayFromCamera,
 };
 use bevy::{
@@ -24,7 +24,7 @@ fn enqueue_agent_behavior<TBehavior: Copy + Send + Sync + 'static>(
 		ScheduleMode::Override => {
 			queue.0.clear();
 			queue.0.push_back(behavior);
-			commands.entity(agent).insert(Idle::<TBehavior>::new());
+			commands.entity(agent).insert(WaitNext::<TBehavior>::new());
 		}
 	}
 }
@@ -70,7 +70,7 @@ pub fn enqueue<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Idle, Schedule, ScheduleMode};
+	use crate::components::{Schedule, ScheduleMode, WaitNext};
 	use bevy::{
 		prelude::{App, Camera, Camera3dBundle, GlobalTransform, Ray, Update, Vec3},
 		utils::default,
@@ -219,7 +219,7 @@ mod tests {
 			(vec![&MockBehavior { ray: DEFAULT_RAY }], true),
 			(
 				queue.0.iter().collect::<Vec<&MockBehavior>>(),
-				agent.contains::<Idle<MockBehavior>>()
+				agent.contains::<WaitNext<MockBehavior>>()
 			)
 		);
 	}
