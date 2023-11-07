@@ -1,5 +1,5 @@
 use crate::{
-	components::{queue::Queue, GetBehaviorFn, Idle, Schedule, ScheduleMode},
+	components::{GetBehaviorFn, Idle, Queue, Schedule, ScheduleMode},
 	traits::get_ray::GetRayFromCamera,
 };
 use bevy::{
@@ -20,10 +20,10 @@ fn enqueue_agent_behavior<TBehavior: Copy + Send + Sync + 'static>(
 	};
 
 	match schedule_mode {
-		ScheduleMode::Enqueue => queue.push_back(behavior),
+		ScheduleMode::Enqueue => queue.0.push_back(behavior),
 		ScheduleMode::Override => {
-			queue.clear();
-			queue.push_back(behavior);
+			queue.0.clear();
+			queue.0.push_back(behavior);
 			commands.entity(agent).insert(Idle::<TBehavior>::new());
 		}
 	}
@@ -134,20 +134,23 @@ mod tests {
 					mode: ScheduleMode::Enqueue,
 					get_behaviors: vec![|ray| Some(MockBehavior { ray })],
 				},
-				Queue::new([
-					MockBehavior {
-						ray: Ray {
-							origin: Vec3::Z,
-							direction: Vec3::Y,
+				Queue(
+					[
+						MockBehavior {
+							ray: Ray {
+								origin: Vec3::Z,
+								direction: Vec3::Y,
+							},
 						},
-					},
-					MockBehavior {
-						ray: Ray {
-							origin: Vec3::Z,
-							direction: Vec3::Y,
+						MockBehavior {
+							ray: Ray {
+								origin: Vec3::Z,
+								direction: Vec3::Y,
+							},
 						},
-					},
-				]),
+					]
+					.into(),
+				),
 			))
 			.id();
 
@@ -172,7 +175,7 @@ mod tests {
 				},
 				&MockBehavior { ray: DEFAULT_RAY }
 			],
-			queue.iter().collect::<Vec<&MockBehavior>>()
+			queue.0.iter().collect::<Vec<&MockBehavior>>()
 		);
 	}
 
@@ -187,20 +190,23 @@ mod tests {
 					mode: ScheduleMode::Override,
 					get_behaviors: vec![|ray| Some(MockBehavior { ray })],
 				},
-				Queue::new([
-					MockBehavior {
-						ray: Ray {
-							origin: Vec3::Z,
-							direction: Vec3::Y,
+				Queue(
+					[
+						MockBehavior {
+							ray: Ray {
+								origin: Vec3::Z,
+								direction: Vec3::Y,
+							},
 						},
-					},
-					MockBehavior {
-						ray: Ray {
-							origin: Vec3::Z,
-							direction: Vec3::Y,
+						MockBehavior {
+							ray: Ray {
+								origin: Vec3::Z,
+								direction: Vec3::Y,
+							},
 						},
-					},
-				]),
+					]
+					.into(),
+				),
 			))
 			.id();
 
@@ -212,7 +218,7 @@ mod tests {
 		assert_eq!(
 			(vec![&MockBehavior { ray: DEFAULT_RAY }], true),
 			(
-				queue.iter().collect::<Vec<&MockBehavior>>(),
+				queue.0.iter().collect::<Vec<&MockBehavior>>(),
 				agent.contains::<Idle<MockBehavior>>()
 			)
 		);
@@ -229,7 +235,7 @@ mod tests {
 					mode: ScheduleMode::Override,
 					get_behaviors: vec![|ray| Some(MockBehavior { ray })],
 				},
-				Queue::<MockBehavior>::new([]),
+				Queue::<MockBehavior>([].into()),
 			))
 			.id();
 
@@ -278,7 +284,7 @@ mod tests {
 				mode: ScheduleMode::Override,
 				get_behaviors: vec![|ray| Some(MockBehavior { ray })],
 			},
-			Queue::<MockBehavior>::new([]),
+			Queue::<MockBehavior>([].into()),
 		));
 
 		app.update();
@@ -308,7 +314,7 @@ mod tests {
 
 		get_ray.expect().times(0).return_const(ray);
 
-		app.world.spawn((Agent, Queue::<MockBehavior>::new([])));
+		app.world.spawn((Agent, Queue::<MockBehavior>([].into())));
 
 		app.update();
 	}

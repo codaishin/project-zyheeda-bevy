@@ -1,8 +1,9 @@
-pub mod queue;
-
 use crate::{behaviors::MovementMode, types::BoneName};
-use bevy::{prelude::*, utils::HashMap};
-use std::{borrow::Cow, fmt::Debug, marker::PhantomData};
+use bevy::{
+	prelude::{Component, *},
+	utils::HashMap,
+};
+use std::{borrow::Cow, collections::VecDeque, fmt::Debug, marker::PhantomData};
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -172,3 +173,6 @@ impl<TBehavior> Equip<TBehavior> {
 		Self(items.into())
 	}
 }
+
+#[derive(Component)]
+pub struct Queue<T>(pub VecDeque<T>);

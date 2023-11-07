@@ -1,4 +1,4 @@
-use crate::components::{queue::Queue, Equip, Idle, SlotBones, Slots};
+use crate::components::{Equip, Idle, Queue, SlotBones, Slots};
 use bevy::prelude::Bundle;
 
 #[derive(Bundle)]
@@ -23,7 +23,7 @@ where
 			equipment,
 			slots: Slots::new(),
 			idle: Idle::new(),
-			queue: Queue::new([]),
+			queue: Queue([].into()),
 		}
 	}
 }

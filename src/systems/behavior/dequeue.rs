@@ -1,5 +1,5 @@
 use crate::{
-	components::{queue::Queue, Idle},
+	components::{Idle, Queue},
 	traits::{insert_into_entity::InsertIntoEntity, remove_from_entity::RemoveFromEntity},
 };
 use bevy::prelude::{Commands, Component, Entity, Query, With};
@@ -15,11 +15,7 @@ pub fn dequeue<
 	for (agent, mut queue) in agents.iter_mut() {
 		let mut agent = commands.entity(agent);
 
-		if let Some(behavior) = queue.popped_last() {
-			behavior.remove_from_entity(&mut agent);
-		}
-
-		if let Some(behavior) = queue.pop_front() {
+		if let Some(behavior) = queue.0.pop_front() {
 			behavior.insert_into_entity(&mut agent);
 			agent.remove::<Idle<TBehavior>>();
 		}
@@ -61,7 +57,7 @@ mod tests {
 	#[test]
 	fn pop_first_behavior_to_agent() {
 		let mut app = App::new();
-		let queue = Queue::new([Behavior::Sing]);
+		let queue = Queue([Behavior::Sing].into());
 		let agent = Agent;
 		let idle = Idle::<Behavior>::new();
 
@@ -77,7 +73,7 @@ mod tests {
 			(
 				agent.contains::<Sing>(),
 				agent.contains::<Idle<Behavior>>(),
-				queue.len()
+				queue.0.len()
 			)
 		);
 	}
@@ -85,7 +81,7 @@ mod tests {
 	#[test]
 	fn do_not_pop_when_not_idling() {
 		let mut app = App::new();
-		let queue = Queue::new([Behavior::Sing]);
+		let queue = Queue([Behavior::Sing].into());
 		let agent = Agent;
 
 		let agent = app.world.spawn((agent, queue)).id();
@@ -95,28 +91,6 @@ mod tests {
 		let agent = app.world.entity(agent);
 		let queue = agent.get::<Queue<Behavior>>().unwrap();
 
-		assert_eq!((false, 1), (agent.contains::<Sing>(), queue.len()));
-	}
-
-	#[test]
-	fn remove_last_component_when_idling() {
-		let mut app = App::new();
-		let queue = Queue::<Behavior>::new([Behavior::Sing]);
-		let agent = Agent;
-
-		let agent = app
-			.world
-			.spawn((agent, queue, Idle::<Behavior>::new()))
-			.id();
-
-		app.add_systems(Update, dequeue::<Agent, Behavior>);
-		app.update();
-
-		app.world.entity_mut(agent).insert(Idle::<Behavior>::new());
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert!(!agent.contains::<Sing>());
+		assert_eq!((false, 1), (agent.contains::<Sing>(), queue.0.len()));
 	}
 }
