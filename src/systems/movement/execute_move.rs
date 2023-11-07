@@ -22,8 +22,7 @@ pub fn execute_move<
 		match (is_done, movement_mode) {
 			(true, _) => {
 				entity.insert(Idle::<TBehavior>::new());
-				entity.remove::<Run>();
-				entity.remove::<Walk>();
+				entity.remove::<(Run, Walk, TMovement)>();
 			}
 			(_, MovementMode::Walk) => {
 				entity.remove::<Run>();
@@ -262,5 +261,23 @@ mod move_player_tests {
 			(false, false),
 			(agent.contains::<Walk>(), agent.contains::<Run>())
 		)
+	}
+
+	#[test]
+	fn remove_movement_when_done() {
+		let mut app = setup_app();
+		let transform = Transform::from_xyz(1., 2., 3.);
+		let agent = Walker;
+		let mut movement = _Movement::new();
+
+		movement.mock.expect_update().return_const(true);
+
+		let agent = app.world.spawn((agent, movement, transform, Run)).id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert!(!agent.contains::<_Movement>());
 	}
 }
