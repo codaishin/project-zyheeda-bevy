@@ -7,7 +7,7 @@ use bevy::{
 	window::Window,
 };
 
-fn enqueue_agent_behavior<TBehavior: Copy>(
+fn enqueue_agent_behavior<TBehavior: Copy + Send + Sync + 'static>(
 	agent: Entity,
 	queue: &mut Queue<TBehavior>,
 	schedule_mode: ScheduleMode,
@@ -24,12 +24,12 @@ fn enqueue_agent_behavior<TBehavior: Copy>(
 		ScheduleMode::Override => {
 			queue.clear();
 			queue.push_back(behavior);
-			commands.entity(agent).insert(Idle);
+			commands.entity(agent).insert(Idle::<TBehavior>::new());
 		}
 	}
 }
 
-fn enqueue_agent_behaviors<TBehavior: Copy>(
+fn enqueue_agent_behaviors<TBehavior: Copy + Send + Sync + 'static>(
 	agent: Entity,
 	schedule: &Schedule<TBehavior>,
 	queue: &mut Queue<TBehavior>,
@@ -45,7 +45,7 @@ type Components<'a, TBehavior> = (Entity, &'a Schedule<TBehavior>, &'a mut Queue
 
 pub fn enqueue<
 	TAgent: Component,
-	TBehavior: Sync + Send + Copy + 'static,
+	TBehavior: Copy + Sync + Send + 'static,
 	TGetRay: GetRayFromCamera,
 >(
 	camera: Query<(&Camera, &GlobalTransform)>,
@@ -213,7 +213,7 @@ mod tests {
 			(vec![&MockBehavior { ray: DEFAULT_RAY }], true),
 			(
 				queue.iter().collect::<Vec<&MockBehavior>>(),
-				agent.contains::<Idle>()
+				agent.contains::<Idle<MockBehavior>>()
 			)
 		);
 	}

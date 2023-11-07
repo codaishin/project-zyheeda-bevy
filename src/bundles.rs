@@ -9,7 +9,7 @@ where
 	slot_bones: SlotBones,
 	slots: Slots<TBehavior>,
 	equipment: Equip<TBehavior>,
-	idle: Idle,
+	idle: Idle<TBehavior>,
 	queue: Queue<TBehavior>,
 }
 
@@ -22,7 +22,7 @@ where
 			slot_bones,
 			equipment,
 			slots: Slots::new(),
-			idle: Idle,
+			idle: Idle::new(),
 			queue: Queue::new([]),
 		}
 	}

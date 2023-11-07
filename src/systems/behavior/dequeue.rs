@@ -10,7 +10,7 @@ pub fn dequeue<
 	TBehavior: Copy + Send + Sync + InsertIntoEntity + RemoveFromEntity + 'static,
 >(
 	mut commands: Commands,
-	mut agents: Query<(Entity, &mut Queue<TBehavior>), (With<TAgent>, With<Idle>)>,
+	mut agents: Query<(Entity, &mut Queue<TBehavior>), (With<TAgent>, With<Idle<TBehavior>>)>,
 ) {
 	for (agent, mut queue) in agents.iter_mut() {
 		let mut agent = commands.entity(agent);
@@ -21,7 +21,7 @@ pub fn dequeue<
 
 		if let Some(behavior) = queue.pop_front() {
 			behavior.insert_into_entity(&mut agent);
-			agent.remove::<Idle>();
+			agent.remove::<Idle<TBehavior>>();
 		}
 	}
 }
@@ -63,7 +63,7 @@ mod tests {
 		let mut app = App::new();
 		let queue = Queue::new([Behavior::Sing]);
 		let agent = Agent;
-		let idle = Idle;
+		let idle = Idle::<Behavior>::new();
 
 		let agent = app.world.spawn((agent, queue, idle)).id();
 		app.add_systems(Update, dequeue::<Agent, Behavior>);
@@ -76,7 +76,7 @@ mod tests {
 			(true, false, 0),
 			(
 				agent.contains::<Sing>(),
-				agent.contains::<Idle>(),
+				agent.contains::<Idle<Behavior>>(),
 				queue.len()
 			)
 		);
@@ -104,12 +104,15 @@ mod tests {
 		let queue = Queue::<Behavior>::new([Behavior::Sing]);
 		let agent = Agent;
 
-		let agent = app.world.spawn((agent, queue, Idle)).id();
+		let agent = app
+			.world
+			.spawn((agent, queue, Idle::<Behavior>::new()))
+			.id();
 
 		app.add_systems(Update, dequeue::<Agent, Behavior>);
 		app.update();
 
-		app.world.entity_mut(agent).insert(Idle);
+		app.world.entity_mut(agent).insert(Idle::<Behavior>::new());
 		app.update();
 
 		let agent = app.world.entity(agent);

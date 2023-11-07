@@ -56,11 +56,14 @@ fn main() {
 				dequeue::<Player, Behavior>,
 			),
 		)
-		.add_systems(Update, (execute_move::<Player, SimpleMovement>,))
+		.add_systems(
+			Update,
+			(execute_move::<Player, SimpleMovement<Behavior>, Behavior>,),
+		)
 		.add_systems(
 			Update,
 			(
-				animate::<Player, Idle>,
+				animate::<Player, Idle<Behavior>>,
 				animate::<Player, Walk>,
 				animate::<Player, Run>,
 			),
@@ -144,7 +147,7 @@ fn spawn_plane(
 }
 
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
-	commands.insert_resource(Animation::<Player, Idle>::new(
+	commands.insert_resource(Animation::<Player, Idle<Behavior>>::new(
 		asset_server.load("models/player.gltf#Animation2"),
 	));
 	commands.insert_resource(Animation::<Player, Walk>::new(

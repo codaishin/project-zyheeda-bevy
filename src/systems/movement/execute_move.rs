@@ -5,7 +5,11 @@ use crate::{
 };
 use bevy::prelude::*;
 
-pub fn execute_move<TAgent: Component + MovementData, TMovement: Component + Movement>(
+pub fn execute_move<
+	TAgent: Component + MovementData,
+	TMovement: Component + Movement,
+	TBehavior: Send + Sync + 'static,
+>(
 	time: Res<Time>,
 	mut commands: Commands,
 	mut agents: Query<(Entity, &mut TMovement, &mut Transform, &TAgent)>,
@@ -17,7 +21,7 @@ pub fn execute_move<TAgent: Component + MovementData, TMovement: Component + Mov
 
 		match (is_done, movement_mode) {
 			(true, _) => {
-				entity.insert(Idle);
+				entity.insert(Idle::<TBehavior>::new());
 				entity.remove::<Run>();
 				entity.remove::<Walk>();
 			}
@@ -43,6 +47,8 @@ mod move_player_tests {
 	};
 	use mockall::{automock, predicate::eq};
 	use std::time::Duration;
+
+	struct MockBehavior;
 
 	#[derive(Component)]
 	struct Runner;
@@ -91,8 +97,8 @@ mod move_player_tests {
 		app.add_systems(
 			Update,
 			(
-				execute_move::<Runner, _Movement>,
-				execute_move::<Walker, _Movement>,
+				execute_move::<Runner, _Movement, MockBehavior>,
+				execute_move::<Walker, _Movement, MockBehavior>,
 			),
 		);
 
@@ -153,7 +159,7 @@ mod move_player_tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<Idle>());
+		assert!(agent.contains::<Idle<MockBehavior>>());
 	}
 
 	#[test]
@@ -171,7 +177,7 @@ mod move_player_tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Idle>());
+		assert!(!agent.contains::<Idle<MockBehavior>>());
 	}
 
 	#[test]
