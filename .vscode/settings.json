@@ -15,10 +15,12 @@
 		"+nightly"
 	],
 	"cSpell.words": [
+		"automock",
 		"consts",
 		"Deque",
 		"gltf",
 		"Loadout",
+		"mockall",
 		"zyheeda"
 	]
 }
