@@ -10,7 +10,7 @@ pub fn execute_move<
 	TMovement: Component + Movement,
 	TBehavior: Send + Sync + 'static,
 >(
-	time: Res<Time>,
+	time: Res<Time<Real>>,
 	mut commands: Commands,
 	mut agents: Query<(Entity, &mut TMovement, &mut Transform, &TAgent)>,
 ) {
@@ -37,7 +37,7 @@ pub fn execute_move<
 }
 
 #[cfg(test)]
-mod move_player_tests {
+mod test {
 	use super::*;
 	use crate::{
 		behaviors::MovementMode,
@@ -88,7 +88,7 @@ mod move_player_tests {
 
 	fn setup_app() -> App {
 		let mut app = App::new();
-		let mut time = Time::default();
+		let mut time = Time::<Real>::default();
 
 		time.update();
 		app.insert_resource(time);
@@ -107,7 +107,7 @@ mod move_player_tests {
 	#[test]
 	fn move_agent_once() {
 		let mut app = setup_app();
-		let mut time = app.world.resource_mut::<Time>();
+		let mut time = app.world.resource_mut::<Time<Real>>();
 
 		let last_update = time.last_update().unwrap();
 		let transform = Transform::from_xyz(1., 2., 3.);

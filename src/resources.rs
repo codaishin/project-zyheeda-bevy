@@ -26,11 +26,13 @@ impl<TAgent, TBehavior> Animation<TAgent, TBehavior> {
 mod tests {
 	use super::*;
 	use crate::components::{Player, Run};
-	use bevy::{asset::HandleId, utils::Uuid};
+	use bevy::{asset::AssetId, utils::Uuid};
 
 	#[test]
 	fn set_clip() {
-		let clip = Handle::<AnimationClip>::weak(HandleId::new(Uuid::new_v4(), 42));
+		let clip = Handle::<AnimationClip>::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		});
 		let animation = Animation::<Player, Run>::new(clip.clone_weak());
 
 		assert_eq!(clip, animation.clip);
