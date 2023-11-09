@@ -9,6 +9,7 @@ use project_zyheeda::{
 		Animator,
 		CamOrbit,
 		Equip,
+		Idle,
 		Item,
 		Marker,
 		Player,
@@ -18,7 +19,6 @@ use project_zyheeda::{
 		SlotBones,
 		SlotKey,
 		UnitsPerSecond,
-		WaitNext,
 		Walk,
 	},
 	resources::{Animation, Models, SlotMap},
@@ -64,7 +64,7 @@ fn main() {
 		.add_systems(
 			Update,
 			(
-				animate::<Marker<(Player, WaitNext<Behavior>)>>,
+				animate::<Marker<(Player, Idle)>>,
 				animate::<Marker<(Player, Walk)>>,
 				animate::<Marker<(Player, Run)>>,
 			),
@@ -148,7 +148,7 @@ fn spawn_plane(
 }
 
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
-	commands.insert_resource(Animation::<Marker<(Player, WaitNext<Behavior>)>>::new(
+	commands.insert_resource(Animation::<Marker<(Player, Idle)>>::new(
 		asset_server.load("models/player.gltf#Animation2"),
 	));
 	commands.insert_resource(Animation::<Marker<(Player, Walk)>>::new(

@@ -1,5 +1,5 @@
 use crate::{
-	components::{Queue, WaitNext},
+	components::{Idle, Marker, Queue, WaitNext},
 	traits::{insert_into_entity::InsertIntoEntity, remove_from_entity::RemoveFromEntity},
 };
 use bevy::prelude::{Commands, Component, Entity, Query, With};
@@ -18,6 +18,9 @@ pub fn dequeue<
 		if let Some(behavior) = queue.0.pop_front() {
 			behavior.insert_into_entity(&mut agent);
 			agent.remove::<WaitNext<TBehavior>>();
+			agent.remove::<Marker<(TAgent, Idle)>>();
+		} else {
+			agent.insert(Marker::<(TAgent, Idle)>::new());
 		}
 	}
 }
@@ -25,10 +28,10 @@ pub fn dequeue<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::WaitNext;
+	use crate::components::{Idle, Marker, WaitNext};
 	use bevy::{
 		ecs::system::EntityCommands,
-		prelude::{App, Update},
+		prelude::{default, App, Update},
 	};
 
 	#[derive(Clone, Copy)]
@@ -59,9 +62,9 @@ mod tests {
 		let mut app = App::new();
 		let queue = Queue([Behavior::Sing].into());
 		let agent = Agent;
-		let idle = WaitNext::<Behavior>::new();
+		let wait = WaitNext::<Behavior>::new();
 
-		let agent = app.world.spawn((agent, queue, idle)).id();
+		let agent = app.world.spawn((agent, queue, wait)).id();
 		app.add_systems(Update, dequeue::<Agent, Behavior>);
 		app.update();
 
@@ -79,7 +82,7 @@ mod tests {
 	}
 
 	#[test]
-	fn do_not_pop_when_not_idling() {
+	fn do_not_pop_when_not_waiting_next() {
 		let mut app = App::new();
 		let queue = Queue([Behavior::Sing].into());
 		let agent = Agent;
@@ -92,5 +95,38 @@ mod tests {
 		let queue = agent.get::<Queue<Behavior>>().unwrap();
 
 		assert_eq!((false, 1), (agent.contains::<Sing>(), queue.0.len()));
+	}
+
+	#[test]
+	fn idle_when_nothing_to_pop() {
+		let mut app = App::new();
+		let queue: Queue<Behavior> = Queue(default());
+		let agent = Agent;
+		let wait = WaitNext::<Behavior>::new();
+
+		let agent = app.world.spawn((agent, queue, wait)).id();
+		app.add_systems(Update, dequeue::<Agent, Behavior>);
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert!(agent.contains::<Marker<(Agent, Idle)>>());
+	}
+
+	#[test]
+	fn remove_idle_when_something_to_pop() {
+		let mut app = App::new();
+		let queue = Queue([Behavior::Sing].into());
+		let agent = Agent;
+		let wait = WaitNext::<Behavior>::new();
+		let idle = Marker::<(Agent, Idle)>::new();
+
+		let agent = app.world.spawn((agent, queue, wait, idle)).id();
+		app.add_systems(Update, dequeue::<Agent, Behavior>);
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert!(!agent.contains::<Marker<(Agent, Idle)>>());
 	}
 }

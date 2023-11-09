@@ -85,6 +85,8 @@ pub struct Walk;
 
 pub struct Run;
 
+pub struct Idle;
+
 #[derive(Component)]
 pub struct Marker<T> {
 	phantom_data: PhantomData<T>,
