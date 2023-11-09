@@ -10,6 +10,7 @@ use project_zyheeda::{
 		CamOrbit,
 		Equip,
 		Item,
+		Marker,
 		Player,
 		Run,
 		Side,
@@ -63,9 +64,9 @@ fn main() {
 		.add_systems(
 			Update,
 			(
-				animate::<Player, WaitNext<Behavior>>,
-				animate::<Player, Walk>,
-				animate::<Player, Run>,
+				animate::<Marker<(Player, WaitNext<Behavior>)>>,
+				animate::<Marker<(Player, Walk)>>,
+				animate::<Marker<(Player, Run)>>,
 			),
 		)
 		.add_systems(
@@ -147,13 +148,13 @@ fn spawn_plane(
 }
 
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
-	commands.insert_resource(Animation::<Player, WaitNext<Behavior>>::new(
+	commands.insert_resource(Animation::<Marker<(Player, WaitNext<Behavior>)>>::new(
 		asset_server.load("models/player.gltf#Animation2"),
 	));
-	commands.insert_resource(Animation::<Player, Walk>::new(
+	commands.insert_resource(Animation::<Marker<(Player, Walk)>>::new(
 		asset_server.load("models/player.gltf#Animation1"),
 	));
-	commands.insert_resource(Animation::<Player, Run>::new(
+	commands.insert_resource(Animation::<Marker<(Player, Run)>>::new(
 		asset_server.load("models/player.gltf#Animation3"),
 	));
 

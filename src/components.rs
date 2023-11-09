@@ -81,11 +81,28 @@ impl<TBehavior> Default for WaitNext<TBehavior> {
 	}
 }
 
-#[derive(Component, PartialEq, Debug)]
 pub struct Walk;
 
-#[derive(Component, PartialEq, Debug)]
 pub struct Run;
+
+#[derive(Component)]
+pub struct Marker<T> {
+	phantom_data: PhantomData<T>,
+}
+
+impl<T> Marker<T> {
+	pub fn new() -> Self {
+		Self {
+			phantom_data: PhantomData,
+		}
+	}
+}
+
+impl<T> Default for Marker<T> {
+	fn default() -> Self {
+		Self::new()
+	}
+}
 
 #[derive(Component, Clone, Copy, PartialEq, Debug)]
 pub struct SimpleMovement<TBehavior> {

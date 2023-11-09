@@ -6,17 +6,15 @@ use bevy::prelude::*;
 use std::{borrow::Cow, collections::HashMap, hash::Hash, marker::PhantomData};
 
 #[derive(Resource)]
-pub struct Animation<TAgent, TBehavior> {
-	agent: PhantomData<TAgent>,
-	behavior: PhantomData<TBehavior>,
+pub struct Animation<TMarker> {
+	marker: PhantomData<TMarker>,
 	pub clip: Handle<AnimationClip>,
 }
 
-impl<TAgent, TBehavior> Animation<TAgent, TBehavior> {
+impl<TMarker> Animation<TMarker> {
 	pub fn new(clip: Handle<AnimationClip>) -> Self {
 		Self {
-			agent: PhantomData,
-			behavior: PhantomData,
+			marker: PhantomData,
 			clip,
 		}
 	}
@@ -25,7 +23,7 @@ impl<TAgent, TBehavior> Animation<TAgent, TBehavior> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Player, Run};
+	use crate::components::{Marker, Player, Run};
 	use bevy::{asset::AssetId, utils::Uuid};
 
 	#[test]
@@ -33,7 +31,7 @@ mod tests {
 		let clip = Handle::<AnimationClip>::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let animation = Animation::<Player, Run>::new(clip.clone_weak());
+		let animation = Animation::<Marker<(Player, Run)>>::new(clip.clone_weak());
 
 		assert_eq!(clip, animation.clip);
 	}

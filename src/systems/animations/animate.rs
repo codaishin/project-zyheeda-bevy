@@ -1,9 +1,9 @@
 use crate::{components::Animator, resources::Animation};
 use bevy::prelude::*;
 
-pub fn animate<TAgent: Component, TBehavior: Component>(
-	animation: Res<Animation<TAgent, TBehavior>>,
-	mut animators: Query<&Animator, (With<TAgent>, With<TBehavior>)>,
+pub fn animate<TMarker: Component>(
+	animation: Res<Animation<TMarker>>,
+	mut animators: Query<&Animator, With<TMarker>>,
 	mut animation_players: Query<&mut AnimationPlayer>,
 ) {
 	for animation_player_id in animators.iter_mut().filter_map(|a| a.animation_player_id) {
