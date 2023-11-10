@@ -1,5 +1,9 @@
 use crate::{
-	components::{Idle, Marker, Queue, WaitNext},
+	components::{
+		marker::{Idle, Marker},
+		Queue,
+		WaitNext,
+	},
 	traits::insert_into_entity::InsertIntoEntity,
 };
 use bevy::prelude::{Commands, Component, Entity, Query, With};
@@ -25,7 +29,7 @@ pub fn dequeue<TAgent: Component, TBehavior: Copy + Send + Sync + InsertIntoEnti
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Idle, Marker, WaitNext};
+	use crate::components::WaitNext;
 	use bevy::{
 		ecs::system::EntityCommands,
 		prelude::{default, App, Update},

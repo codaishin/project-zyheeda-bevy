@@ -1,3 +1,5 @@
+pub mod marker;
+
 use crate::{behaviors::MovementMode, types::BoneName};
 use bevy::{
 	prelude::{Component, *},
@@ -76,37 +78,6 @@ impl<TBehavior> WaitNext<TBehavior> {
 }
 
 impl<TBehavior> Default for WaitNext<TBehavior> {
-	fn default() -> Self {
-		Self::new()
-	}
-}
-
-pub struct Walk;
-
-pub struct Run;
-
-pub struct Idle;
-
-pub struct Shoot;
-
-pub struct Right;
-
-pub struct HandGun;
-
-#[derive(Component)]
-pub struct Marker<T> {
-	phantom_data: PhantomData<T>,
-}
-
-impl<T> Marker<T> {
-	pub fn new() -> Self {
-		Self {
-			phantom_data: PhantomData,
-		}
-	}
-}
-
-impl<T> Default for Marker<T> {
 	fn default() -> Self {
 		Self::new()
 	}
