@@ -10,6 +10,9 @@ pub struct Idle;
 pub struct Shoot;
 
 #[derive(PartialEq, Debug)]
+pub struct Left;
+
+#[derive(PartialEq, Debug)]
 pub struct Right;
 
 #[derive(PartialEq, Debug)]

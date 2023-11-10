@@ -7,6 +7,8 @@ use bevy::{
 };
 use std::{borrow::Cow, collections::VecDeque, fmt::Debug, marker::PhantomData};
 
+use self::marker::MarkerCommands;
+
 #[derive(Component)]
 pub struct CamOrbit {
 	pub center: Vec3,
@@ -94,6 +96,34 @@ impl<TBehavior> SimpleMovement<TBehavior> {
 		Self {
 			target,
 			phantom_data: PhantomData,
+		}
+	}
+}
+
+#[derive(PartialEq, Debug, Clone, Copy)]
+pub struct Seconds(pub f32);
+
+#[derive(PartialEq, Debug, Clone, Copy)]
+pub struct Cast {
+	pub pre: Seconds,
+	pub after: Seconds,
+}
+
+#[derive(Component, PartialEq, Debug)]
+pub struct Skill<TBehavior> {
+	pub ray: Ray,
+	pub cast: Cast,
+	pub animation: MarkerCommands,
+	phantom_behavior: PhantomData<TBehavior>,
+}
+
+impl<TBehavior> Skill<TBehavior> {
+	pub fn new(ray: Ray, cast: Cast, animation: MarkerCommands) -> Self {
+		Self {
+			ray,
+			cast,
+			animation,
+			phantom_behavior: PhantomData,
 		}
 	}
 }
