@@ -3,7 +3,7 @@ use bevy::{
 	prelude::*,
 };
 use project_zyheeda::{
-	behaviors::{move_to::get_move_to, Behavior, MovementMode},
+	behaviors::{Behavior, MovementMode},
 	bundles::Loadout,
 	components::{
 		marker::{HandGun, Idle, Marker, Right, Run, Shoot, Walk},
@@ -184,7 +184,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				Item {
 					slot: SlotKey::Legs,
 					model: None,
-					get_behavior: Some(get_move_to),
+					get_behavior: Some(Behavior::movement),
 				},
 			]),
 		),
