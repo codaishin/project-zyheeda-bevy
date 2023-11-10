@@ -25,12 +25,12 @@ pub fn execute_move<
 				entity.insert(WaitNext::<TBehavior>::new());
 			}
 			(_, MovementMode::Walk) => {
-				entity.remove::<Marker<(TAgent, Run)>>();
-				entity.insert(Marker::<(TAgent, Walk)>::new());
+				entity.remove::<Marker<Run>>();
+				entity.insert(Marker::<Walk>::new());
 			}
 			(_, MovementMode::Run) => {
-				entity.remove::<Marker<(TAgent, Walk)>>();
-				entity.insert(Marker::<(TAgent, Run)>::new());
+				entity.remove::<Marker<Walk>>();
+				entity.insert(Marker::<Run>::new());
 			}
 		}
 	}
@@ -190,7 +190,7 @@ mod test {
 
 		let agent = app
 			.world
-			.spawn((agent, movement, transform, Marker::<(AgentA, Walk)>::new()))
+			.spawn((agent, movement, transform, Marker::<Walk>::new()))
 			.id();
 
 		app.update();
@@ -200,8 +200,8 @@ mod test {
 		assert_eq!(
 			(false, true),
 			(
-				agent.contains::<Marker<(AgentA, Walk)>>(),
-				agent.contains::<Marker<(AgentA, Run)>>()
+				agent.contains::<Marker<Walk>>(),
+				agent.contains::<Marker<Run>>()
 			)
 		)
 	}
@@ -244,7 +244,7 @@ mod test {
 
 		let agent = app
 			.world
-			.spawn((agent, movement, transform, Marker::<(AgentB, Run)>::new()))
+			.spawn((agent, movement, transform, Marker::<Run>::new()))
 			.id();
 
 		app.update();
@@ -254,8 +254,8 @@ mod test {
 		assert_eq!(
 			(true, false),
 			(
-				agent.contains::<Marker<(AgentB, Walk)>>(),
-				agent.contains::<Marker<(AgentB, Run)>>()
+				agent.contains::<Marker<Walk>>(),
+				agent.contains::<Marker<Run>>()
 			)
 		)
 	}

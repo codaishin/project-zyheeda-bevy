@@ -67,10 +67,10 @@ fn main() {
 		.add_systems(
 			Update,
 			(
-				animate::<Marker<(Player, Idle)>>,
-				animate::<Marker<(Player, Walk)>>,
-				animate::<Marker<(Player, Run)>>,
-				animate::<Marker<(Player, Shoot, HandGun, Right)>>,
+				animate::<Player, Marker<Idle>>,
+				animate::<Player, Marker<Walk>>,
+				animate::<Player, Marker<Run>>,
+				animate::<Player, Marker<(Shoot, HandGun, Right)>>,
 			),
 		)
 		.add_systems(
@@ -152,16 +152,16 @@ fn spawn_plane(
 }
 
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
-	commands.insert_resource(Animation::<Marker<(Player, Idle)>>::new(
+	commands.insert_resource(Animation::<Player, Marker<Idle>>::new(
 		asset_server.load("models/player.gltf#Animation2"),
 	));
-	commands.insert_resource(Animation::<Marker<(Player, Walk)>>::new(
+	commands.insert_resource(Animation::<Player, Marker<Walk>>::new(
 		asset_server.load("models/player.gltf#Animation1"),
 	));
-	commands.insert_resource(Animation::<Marker<(Player, Run)>>::new(
+	commands.insert_resource(Animation::<Player, Marker<Run>>::new(
 		asset_server.load("models/player.gltf#Animation3"),
 	));
-	commands.insert_resource(Animation::<Marker<(Player, Shoot, HandGun, Right)>>::new(
+	commands.insert_resource(Animation::<Player, Marker<(Shoot, HandGun, Right)>>::new(
 		asset_server.load("models/player.gltf#Animation4"),
 	));
 

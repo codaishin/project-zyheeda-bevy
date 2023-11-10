@@ -15,9 +15,9 @@ pub fn dequeue<TAgent: Component, TBehavior: Copy + Send + Sync + InsertIntoEnti
 		if let Some(behavior) = queue.0.pop_front() {
 			behavior.insert_into_entity(&mut agent);
 			agent.remove::<WaitNext<TBehavior>>();
-			agent.remove::<Marker<(TAgent, Idle)>>();
+			agent.remove::<Marker<Idle>>();
 		} else {
-			agent.insert(Marker::<(TAgent, Idle)>::new());
+			agent.insert(Marker::<Idle>::new());
 		}
 	}
 }
@@ -101,7 +101,7 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<Marker<(Agent, Idle)>>());
+		assert!(agent.contains::<Marker<Idle>>());
 	}
 
 	#[test]
@@ -118,6 +118,6 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Marker<(Agent, Idle)>>());
+		assert!(!agent.contains::<Marker<Idle>>());
 	}
 }
