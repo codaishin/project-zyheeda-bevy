@@ -9,11 +9,14 @@ use project_zyheeda::{
 		Animator,
 		CamOrbit,
 		Equip,
+		HandGun,
 		Idle,
 		Item,
 		Marker,
 		Player,
+		Right,
 		Run,
+		Shoot,
 		Side,
 		SimpleMovement,
 		SlotBones,
@@ -67,6 +70,7 @@ fn main() {
 				animate::<Marker<(Player, Idle)>>,
 				animate::<Marker<(Player, Walk)>>,
 				animate::<Marker<(Player, Run)>>,
+				animate::<Marker<(Player, Shoot, HandGun, Right)>>,
 			),
 		)
 		.add_systems(
@@ -156,6 +160,9 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	));
 	commands.insert_resource(Animation::<Marker<(Player, Run)>>::new(
 		asset_server.load("models/player.gltf#Animation3"),
+	));
+	commands.insert_resource(Animation::<Marker<(Player, Shoot, HandGun, Right)>>::new(
+		asset_server.load("models/player.gltf#Animation4"),
 	));
 
 	commands.spawn((

@@ -87,6 +87,12 @@ pub struct Run;
 
 pub struct Idle;
 
+pub struct Shoot;
+
+pub struct Right;
+
+pub struct HandGun;
+
 #[derive(Component)]
 pub struct Marker<T> {
 	phantom_data: PhantomData<T>,
