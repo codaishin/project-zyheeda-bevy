@@ -1,14 +1,11 @@
 use crate::{
 	components::{Idle, Marker, Queue, WaitNext},
-	traits::{insert_into_entity::InsertIntoEntity, remove_from_entity::RemoveFromEntity},
+	traits::insert_into_entity::InsertIntoEntity,
 };
 use bevy::prelude::{Commands, Component, Entity, Query, With};
 
 #[allow(clippy::type_complexity)]
-pub fn dequeue<
-	TAgent: Component,
-	TBehavior: Copy + Send + Sync + InsertIntoEntity + RemoveFromEntity + 'static,
->(
+pub fn dequeue<TAgent: Component, TBehavior: Copy + Send + Sync + InsertIntoEntity + 'static>(
 	mut commands: Commands,
 	mut agents: Query<(Entity, &mut Queue<TBehavior>), (With<TAgent>, With<WaitNext<TBehavior>>)>,
 ) {
@@ -45,12 +42,6 @@ mod tests {
 	impl InsertIntoEntity for Behavior {
 		fn insert_into_entity(self, entity: &mut EntityCommands) {
 			entity.insert(Sing);
-		}
-	}
-
-	impl RemoveFromEntity for Behavior {
-		fn remove_from_entity(&self, entity: &mut EntityCommands) {
-			entity.remove::<Sing>();
 		}
 	}
 
