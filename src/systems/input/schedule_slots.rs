@@ -1,8 +1,10 @@
+use std::hash::Hash;
+
 use crate::{
 	components::{Schedule, ScheduleMode, SlotKey, Slots},
 	resources::SlotMap,
 };
-use bevy::prelude::{Commands, Component, Entity, Input, KeyCode, MouseButton, Query, Res, With};
+use bevy::prelude::{Commands, Component, Entity, Input, KeyCode, Query, Res, With};
 
 fn filter_triggered_behaviors<TBehavior: Copy>(
 	slots: &Slots<TBehavior>,
@@ -16,10 +18,14 @@ fn filter_triggered_behaviors<TBehavior: Copy>(
 		.collect()
 }
 
-pub fn schedule_slots_via_mouse<TAgent: Component, TBehavior: Copy + Sync + Send + 'static>(
-	mouse: Res<Input<MouseButton>>,
+pub fn schedule_slots<
+	TKey: Copy + Eq + Hash + Send + Sync,
+	TAgent: Component,
+	TBehavior: Copy + Sync + Send + 'static,
+>(
+	mouse: Res<Input<TKey>>,
 	keys: Res<Input<KeyCode>>,
-	mouse_button_map: Res<SlotMap<MouseButton>>,
+	mouse_button_map: Res<SlotMap<TKey>>,
 	agents: Query<(Entity, &Slots<TBehavior>), With<TAgent>>,
 	mut commands: Commands,
 ) {
@@ -72,7 +78,7 @@ mod tests {
 		app.insert_resource(mouse);
 		app.insert_resource(keys);
 		app.insert_resource(mouse_settings);
-		app.add_systems(Update, schedule_slots_via_mouse::<Agent, MockBehavior>);
+		app.add_systems(Update, schedule_slots::<MouseButton, Agent, MockBehavior>);
 		app
 	}
 

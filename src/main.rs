@@ -24,7 +24,7 @@ use project_zyheeda::{
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
 		behavior::{dequeue::dequeue, enqueue::enqueue},
-		input::schedule_slots_via_mouse::schedule_slots_via_mouse,
+		input::schedule_slots::schedule_slots,
 		items::{equip::equip_items, slots::add_item_slots},
 		movement::{
 			execute_move::execute_move,
@@ -53,7 +53,8 @@ fn main() {
 			Update,
 			(
 				player_toggle_walk_run,
-				schedule_slots_via_mouse::<Player, ItemBehavior>,
+				schedule_slots::<MouseButton, Player, ItemBehavior>,
+				schedule_slots::<KeyCode, Player, ItemBehavior>,
 				enqueue::<ItemBehavior, PlayerBehavior, Tools>,
 				dequeue::<PlayerBehavior>,
 			),
