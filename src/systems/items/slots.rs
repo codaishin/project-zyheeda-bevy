@@ -1,15 +1,6 @@
 use crate::components::{Slot, SlotBones, SlotKey, Slots};
 use bevy::{
-	prelude::{
-		BuildChildren,
-		Children,
-		Commands,
-		Entity,
-		HierarchyQueryExt,
-		Name,
-		Query,
-		Transform,
-	},
+	prelude::{BuildChildren, Children, Commands, Entity, HierarchyQueryExt, Name, Query},
 	scene::SceneBundle,
 	utils::default,
 };
@@ -19,32 +10,26 @@ fn find_bone(
 	agent: Entity,
 	bone_name: &str,
 	children: &Query<&Children>,
-	names: &Query<(&Name, &Transform)>,
-) -> Option<(Entity, Transform)> {
+	names: &Query<&Name>,
+) -> Option<Entity> {
 	children
 		.iter_descendants(agent)
 		.filter_map(|descendant| {
-			names.get(descendant).ok().map(|(name, transform)| {
-				if bone_name == name.as_str() {
-					Some((descendant, *transform))
-				} else {
-					None
-				}
-			})
+			names
+				.get(descendant)
+				.ok()
+				.map(|name| match bone_name == name.as_str() {
+					true => Some(descendant),
+					false => None,
+				})
 		})
 		.flatten()
 		.next()
 }
 
-fn new_slot_on(parent: (Entity, Transform), commands: &mut Commands) -> Entity {
-	let (parent_entity, parent_transform) = parent;
-	let slot = commands
-		.spawn(SceneBundle {
-			transform: Transform::from_rotation(parent_transform.rotation),
-			..default()
-		})
-		.id();
-	commands.entity(parent_entity).push_children(&[slot]);
+fn new_slot_on(parent: Entity, commands: &mut Commands) -> Entity {
+	let slot = commands.spawn(SceneBundle { ..default() }).id();
+	commands.entity(parent).push_children(&[slot]);
 	slot
 }
 
@@ -52,7 +37,7 @@ pub fn add_item_slots<TBehavior: 'static>(
 	mut commands: Commands,
 	mut agent: Query<(Entity, &mut Slots<TBehavior>, &mut SlotBones)>,
 	children: Query<&Children>,
-	bones: Query<(&Name, &Transform)>,
+	bones: Query<&Name>,
 ) {
 	for (agent, mut slots, mut slot_infos) in &mut agent {
 		let add_slot = |slot_info: (SlotKey, Cow<'static, str>)| {
@@ -146,7 +131,7 @@ mod tests {
 	}
 
 	#[test]
-	fn bone_child_has_same_rotation_as_its_parent() {
+	fn bone_child_has_rotation_zero() {
 		let mut app = App::new();
 		let rotation = Quat::from_axis_angle(Vec3::ONE, 1.);
 		let bone = app
@@ -167,7 +152,7 @@ mod tests {
 		let slot = *bone.get::<Children>().and_then(|c| c.get(0)).unwrap();
 		let slot_transform = app.world.entity(slot).get::<Transform>().unwrap();
 
-		assert_eq!(rotation, slot_transform.rotation);
+		assert_eq!(Quat::IDENTITY, slot_transform.rotation);
 	}
 
 	#[test]
