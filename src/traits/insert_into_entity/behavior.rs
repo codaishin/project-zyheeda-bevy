@@ -36,8 +36,10 @@ impl InsertIntoEntity for PlayerBehavior {
 
 #[cfg(test)]
 mod tests {
+	use std::time::Duration;
+
 	use super::*;
-	use crate::components::{Cast, Seconds, SimpleMovement, Skill};
+	use crate::components::{Cast, SimpleMovement, Skill};
 	use bevy::prelude::{App, Commands, Entity, Ray, Update, Vec3};
 
 	fn insert(entity: Entity, behavior: PlayerBehavior) -> impl FnMut(Commands) {
@@ -71,8 +73,8 @@ mod tests {
 			direction: Vec3::new(3., 2., 1.),
 		};
 		let cast = Cast {
-			pre: Seconds(1.2),
-			after: Seconds(3.4),
+			pre: Duration::from_millis(1200),
+			after: Duration::from_millis(3400),
 		};
 		let mut app = App::new();
 		let behavior = PlayerBehavior::ShootGun(ray, cast, Side::Right);
@@ -100,8 +102,8 @@ mod tests {
 			direction: Vec3::new(3., 2., 1.),
 		};
 		let cast = Cast {
-			pre: Seconds(1.2),
-			after: Seconds(3.4),
+			pre: Duration::from_millis(1200),
+			after: Duration::from_millis(3400),
 		};
 		let mut app = App::new();
 		let behavior = PlayerBehavior::ShootGun(ray, cast, Side::Left);

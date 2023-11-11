@@ -13,7 +13,6 @@ use project_zyheeda::{
 		Equip,
 		Item,
 		Player,
-		Seconds,
 		Side,
 		SimpleMovement,
 		SlotBones,
@@ -32,11 +31,12 @@ use project_zyheeda::{
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
 		},
+		skill::execute_skill,
 	},
 	tools::Tools,
 	traits::orbit::{Orbit, Vec2Radians},
 };
-use std::f32::consts::PI;
+use std::{f32::consts::PI, time::Duration};
 
 type PlayerLoadout = Loadout<ItemBehavior, PlayerBehavior>;
 
@@ -61,7 +61,10 @@ fn main() {
 		)
 		.add_systems(
 			Update,
-			(execute_move::<Player, SimpleMovement<PlayerBehavior>, PlayerBehavior>,),
+			(
+				execute_move::<Player, SimpleMovement<PlayerBehavior>, PlayerBehavior>,
+				execute_skill::<PlayerBehavior, ItemBehavior>,
+			),
 		)
 		.add_systems(
 			Update,
@@ -177,6 +180,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		},
 		PlayerLoadout::new(
 			SlotBones::new([
+				(SlotKey::SkillSpawn, "projectile_spawn"),
 				(SlotKey::Hand(Side::Right), "hand_slot.R"),
 				(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
 			]),
@@ -185,8 +189,8 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("pistol".into()),
 					behavior: Some(ItemBehavior::ShootGun(Cast {
-						pre: Seconds(0.5),
-						after: Seconds(0.3),
+						pre: Duration::from_millis(500),
+						after: Duration::from_millis(300),
 					})),
 				},
 				Item {
@@ -215,7 +219,7 @@ fn spawn_camera(commands: &mut Commands) {
 	let mut transform = Transform::from_translation(Vec3::X);
 	let mut orbit = CamOrbit {
 		center: Vec3::ZERO,
-		distance: 5.,
+		distance: 10.,
 		sensitivity: 1.,
 	};
 

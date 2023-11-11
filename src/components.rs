@@ -5,7 +5,7 @@ use bevy::{
 	prelude::{Component, *},
 	utils::HashMap,
 };
-use std::{borrow::Cow, collections::VecDeque, fmt::Debug, marker::PhantomData};
+use std::{borrow::Cow, collections::VecDeque, fmt::Debug, marker::PhantomData, time::Duration};
 
 use self::marker::MarkerCommands;
 
@@ -101,12 +101,9 @@ impl<TBehavior> SimpleMovement<TBehavior> {
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
-pub struct Seconds(pub f32);
-
-#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Cast {
-	pub pre: Seconds,
-	pub after: Seconds,
+	pub pre: Duration,
+	pub after: Duration,
 }
 
 #[derive(Component, PartialEq, Debug)]
@@ -136,6 +133,7 @@ pub enum Side {
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum SlotKey {
+	SkillSpawn,
 	Hand(Side),
 	Legs,
 }
@@ -200,3 +198,24 @@ impl<TBehavior> Equip<TBehavior> {
 
 #[derive(Component)]
 pub struct Queue<T>(pub VecDeque<T>);
+
+#[derive(Component)]
+pub struct TimeTracker<TBehavior> {
+	pub duration: Duration,
+	phantom_data: PhantomData<TBehavior>,
+}
+
+impl<T> TimeTracker<T> {
+	pub fn new() -> Self {
+		Self {
+			duration: Duration::ZERO,
+			phantom_data: PhantomData,
+		}
+	}
+}
+
+impl<T> Default for TimeTracker<T> {
+	fn default() -> Self {
+		Self::new()
+	}
+}

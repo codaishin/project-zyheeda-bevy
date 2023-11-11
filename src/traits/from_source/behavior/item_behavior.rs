@@ -88,8 +88,10 @@ mod from_item_behavior_move_tests {
 
 #[cfg(test)]
 mod from_item_behavior_shoot_tests {
+	use std::time::Duration;
+
 	use super::*;
-	use crate::components::{Cast, Seconds, Side};
+	use crate::components::{Cast, Side};
 
 	#[test]
 	fn test_shoot_right() {
@@ -98,8 +100,8 @@ mod from_item_behavior_shoot_tests {
 			direction: Vec3::Z,
 		};
 		let cast = Cast {
-			pre: Seconds(0.1),
-			after: Seconds(1.4),
+			pre: Duration::from_millis(100),
+			after: Duration::from_millis(1400),
 		};
 		let shoot = ItemBehavior::ShootGun(cast);
 
@@ -118,8 +120,8 @@ mod from_item_behavior_shoot_tests {
 			direction: Vec3::Z,
 		};
 		let cast = Cast {
-			pre: Seconds(0.1),
-			after: Seconds(1.4),
+			pre: Duration::from_millis(100),
+			after: Duration::from_millis(1400),
 		};
 		let shoot = ItemBehavior::ShootGun(cast);
 
@@ -135,8 +137,8 @@ mod from_item_behavior_shoot_tests {
 			direction: Vec3::Z,
 		};
 		let cast = Cast {
-			pre: Seconds(0.1),
-			after: Seconds(1.4),
+			pre: Duration::from_millis(100),
+			after: Duration::from_millis(1400),
 		};
 		let shoot = ItemBehavior::ShootGun(cast);
 
