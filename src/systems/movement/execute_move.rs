@@ -16,6 +16,7 @@ pub fn execute_move<
 	time: Res<Time<Real>>,
 	mut commands: Commands,
 	mut agents: Query<(Entity, &mut TMovement, &mut Transform, &TAgent)>,
+	waiting_agents: Query<Entity, (With<TMovement>, With<WaitNext<TBehavior>>)>,
 ) {
 	for (entity, mut movement, mut transform, agent) in agents.iter_mut() {
 		let mut entity = commands.entity(entity);
@@ -24,7 +25,7 @@ pub fn execute_move<
 
 		match (is_done, movement_mode) {
 			(true, _) => {
-				entity.remove::<(Marker<(TAgent, Run)>, Marker<(TAgent, Walk)>, TMovement)>();
+				entity.remove::<(Marker<Run>, Marker<Walk>, TMovement)>();
 				entity.insert(WaitNext::<TBehavior>::new());
 			}
 			(_, MovementMode::Walk) => {
@@ -36,6 +37,11 @@ pub fn execute_move<
 				entity.insert(Marker::<Run>::new());
 			}
 		}
+	}
+
+	for entity in &waiting_agents {
+		let mut entity = commands.entity(entity);
+		entity.remove::<(Marker<Run>, Marker<Walk>, TMovement)>();
 	}
 }
 
@@ -53,9 +59,9 @@ mod test {
 	struct MockBehavior;
 
 	#[derive(Component)]
-	struct AgentA;
+	struct AgentRun;
 	#[derive(Component)]
-	struct AgentB;
+	struct AgentWalk;
 
 	#[derive(Component)]
 	struct _Movement {
@@ -77,13 +83,13 @@ mod test {
 		}
 	}
 
-	impl MovementData for AgentA {
+	impl MovementData for AgentRun {
 		fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode) {
 			(UnitsPerSecond::new(11.), MovementMode::Run)
 		}
 	}
 
-	impl MovementData for AgentB {
+	impl MovementData for AgentWalk {
 		fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode) {
 			(UnitsPerSecond::new(1.), MovementMode::Walk)
 		}
@@ -99,8 +105,8 @@ mod test {
 		app.add_systems(
 			Update,
 			(
-				execute_move::<AgentA, _Movement, MockBehavior>,
-				execute_move::<AgentB, _Movement, MockBehavior>,
+				execute_move::<AgentRun, _Movement, MockBehavior>,
+				execute_move::<AgentWalk, _Movement, MockBehavior>,
 			),
 		);
 
@@ -114,7 +120,7 @@ mod test {
 
 		let last_update = time.last_update().unwrap();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let agent = AgentA;
+		let agent = AgentRun;
 		let time_delta = Duration::from_millis(30);
 		let mut movement = _Movement::new();
 
@@ -135,7 +141,7 @@ mod test {
 	fn move_agent_twice() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let agent = AgentA;
+		let agent = AgentRun;
 		let mut movement = _Movement::new();
 
 		movement.mock.expect_update().times(2).return_const(false);
@@ -150,7 +156,7 @@ mod test {
 	fn add_idle_when_done() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let agent = AgentA;
+		let agent = AgentRun;
 		let mut movement = _Movement::new();
 
 		movement.mock.expect_update().return_const(true);
@@ -168,7 +174,7 @@ mod test {
 	fn do_not_add_idle_when_not_done() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let agent = AgentA;
+		let agent = AgentRun;
 		let mut movement = _Movement::new();
 
 		movement.mock.expect_update().return_const(false);
@@ -186,7 +192,7 @@ mod test {
 	fn set_run_and_remove_walk_component() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let agent = AgentA;
+		let agent = AgentRun;
 		let mut movement = _Movement::new();
 
 		movement.mock.expect_update().return_const(false);
@@ -213,14 +219,19 @@ mod test {
 	fn remove_run_when_done() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let agent = AgentA;
+		let agent = AgentRun;
 		let mut movement = _Movement::new();
 
 		movement.mock.expect_update().return_const(true);
 
 		let agent = app
 			.world
-			.spawn((agent, movement, transform, Marker::<(AgentA, Walk)>::new()))
+			.spawn((
+				agent,
+				movement,
+				transform,
+				Marker::<(AgentRun, Walk)>::new(),
+			))
 			.id();
 
 		app.update();
@@ -230,8 +241,8 @@ mod test {
 		assert_eq!(
 			(false, false),
 			(
-				agent.contains::<Marker<(AgentA, Walk)>>(),
-				agent.contains::<Marker<(AgentA, Run)>>()
+				agent.contains::<Marker<Walk>>(),
+				agent.contains::<Marker<Run>>()
 			)
 		)
 	}
@@ -240,7 +251,7 @@ mod test {
 	fn set_walk_and_remove_run_component() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let agent = AgentB;
+		let agent = AgentWalk;
 		let mut movement = _Movement::new();
 
 		movement.mock.expect_update().return_const(false);
@@ -267,14 +278,19 @@ mod test {
 	fn remove_walk_when_done() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let agent = AgentB;
+		let agent = AgentWalk;
 		let mut movement = _Movement::new();
 
 		movement.mock.expect_update().return_const(true);
 
 		let agent = app
 			.world
-			.spawn((agent, movement, transform, Marker::<(AgentB, Run)>::new()))
+			.spawn((
+				agent,
+				movement,
+				transform,
+				Marker::<(AgentWalk, Run)>::new(),
+			))
 			.id();
 
 		app.update();
@@ -284,8 +300,8 @@ mod test {
 		assert_eq!(
 			(false, false),
 			(
-				agent.contains::<Marker<(AgentB, Walk)>>(),
-				agent.contains::<Marker<(AgentB, Run)>>()
+				agent.contains::<Marker<Walk>>(),
+				agent.contains::<Marker<Run>>()
 			)
 		)
 	}
@@ -294,14 +310,19 @@ mod test {
 	fn remove_movement_when_done() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let agent = AgentB;
+		let agent = AgentWalk;
 		let mut movement = _Movement::new();
 
 		movement.mock.expect_update().return_const(true);
 
 		let agent = app
 			.world
-			.spawn((agent, movement, transform, Marker::<(AgentB, Run)>::new()))
+			.spawn((
+				agent,
+				movement,
+				transform,
+				Marker::<(AgentWalk, Run)>::new(),
+			))
 			.id();
 
 		app.update();
@@ -309,5 +330,39 @@ mod test {
 		let agent = app.world.entity(agent);
 
 		assert!(!agent.contains::<_Movement>());
+	}
+
+	#[test]
+	fn remove_movement_when_waiting_next() {
+		let mut app = setup_app();
+		let transform = Transform::from_xyz(1., 2., 3.);
+		let agent = AgentWalk;
+		let mut movement = _Movement::new();
+
+		movement.mock.expect_update().return_const(false);
+
+		let agent = app
+			.world
+			.spawn((
+				agent,
+				movement,
+				transform,
+				Marker::<(AgentWalk, Run)>::new(),
+				WaitNext::<MockBehavior>::new(),
+			))
+			.id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			(false, false, false),
+			(
+				agent.contains::<_Movement>(),
+				agent.contains::<Marker<Run>>(),
+				agent.contains::<Marker<Walk>>()
+			)
+		);
 	}
 }
