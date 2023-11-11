@@ -9,9 +9,11 @@ use project_zyheeda::{
 		marker::{HandGun, Idle, Marker, Right, Run, Shoot, Walk},
 		Animator,
 		CamOrbit,
+		Cast,
 		Equip,
 		Item,
 		Player,
+		Seconds,
 		Side,
 		SimpleMovement,
 		SlotBones,
@@ -181,7 +183,10 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				Item {
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("pistol".into()),
-					behavior: None,
+					behavior: Some(ItemBehavior::ShootGun(Cast {
+						pre: Seconds(0.5),
+						after: Seconds(0.3),
+					})),
 				},
 				Item {
 					slot: SlotKey::Legs,

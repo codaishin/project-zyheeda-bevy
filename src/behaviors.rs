@@ -12,6 +12,7 @@ pub enum MovementMode {
 #[derive(Debug, Clone, Copy)]
 pub enum ItemBehavior {
 	Move,
+	ShootGun(Cast),
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
