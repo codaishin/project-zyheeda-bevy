@@ -25,14 +25,14 @@ const RETRY: ShouldRetry = true;
 type SlotModel<'a> = Mut<'a, Handle<Scene>>;
 type ItemModel = Handle<Scene>;
 
-fn set_slot<TBehavior: Debug>(
+fn set_slot<TBehavior: Debug + Copy>(
 	slot_and_model: Result<(&mut Slot<TBehavior>, SlotModel, ItemModel), NoMatch>,
 	item: &Item<TBehavior>,
 ) -> ShouldRetry {
 	match slot_and_model {
 		Ok((slot, mut slot_model, item_model)) => {
 			*slot_model = item_model;
-			slot.get_behavior = item.get_behavior;
+			slot.behavior = item.behavior;
 			DONE
 		}
 		Err(NoMatch::Slot(slot)) => {
@@ -53,7 +53,7 @@ fn set_slot<TBehavior: Debug>(
 	}
 }
 
-fn equip_item_to<TBehavior: Debug>(
+fn equip_item_to<TBehavior: Debug + Copy>(
 	slots: &mut Slots<TBehavior>,
 	item: &Item<TBehavior>,
 	models: &Res<Models>,
@@ -80,7 +80,7 @@ fn equip_item_to<TBehavior: Debug>(
 	set_slot(slot_and_model, item)
 }
 
-fn equip_items_to<TBehavior: Clone + Debug>(
+fn equip_items_to<TBehavior: Debug + Clone + Copy>(
 	slots: &mut Mut<Slots<TBehavior>>,
 	equip: &Equip<TBehavior>,
 	models: &Res<Models>,
@@ -94,7 +94,7 @@ fn equip_items_to<TBehavior: Clone + Debug>(
 		.collect()
 }
 
-pub fn equip_items<TBehavior: Clone + Debug + 'static>(
+pub fn equip_items<TBehavior: Debug + Clone + Copy + Send + Sync + 'static>(
 	mut commands: Commands,
 	models: Res<Models>,
 	mut agent: Query<(Entity, &mut Slots<TBehavior>, &mut Equip<TBehavior>)>,
@@ -119,13 +119,13 @@ mod tests {
 	};
 	use bevy::{
 		asset::AssetId,
-		prelude::{App, Handle, Ray, Update},
+		prelude::{App, Handle, Update},
 		scene::Scene,
 		utils::Uuid,
 	};
 	use std::borrow::Cow;
 
-	#[derive(Debug, Clone, PartialEq)]
+	#[derive(Debug, Clone, Copy, PartialEq)]
 	struct MockBehavior;
 
 	#[test]
@@ -134,10 +134,6 @@ mod tests {
 			uuid: Uuid::new_v4(),
 		});
 		let models = Models([(Cow::from("model key"), model.clone())].into());
-
-		fn mock_behavior(_: Ray) -> Option<MockBehavior> {
-			Some(MockBehavior)
-		}
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
@@ -155,13 +151,13 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot::<MockBehavior> {
 							entity: slot,
-							get_behavior: None,
+							behavior: None,
 						},
 					)]
 					.into(),
 				),
 				Equip::new([Item::<MockBehavior> {
-					get_behavior: Some(mock_behavior),
+					behavior: Some(MockBehavior),
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key".into()),
 				}]),
@@ -186,7 +182,7 @@ mod tests {
 				Some(model),
 				&Slot {
 					entity: slot,
-					get_behavior: Some(mock_behavior)
+					behavior: Some(MockBehavior)
 				}
 			),
 			(slot_model.cloned(), slot_component)
@@ -216,13 +212,13 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot::<MockBehavior> {
 							entity: slot,
-							get_behavior: None,
+							behavior: None,
 						},
 					)]
 					.into(),
 				),
 				Equip::new([Item::<MockBehavior> {
-					get_behavior: None,
+					behavior: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key".into()),
 				}]),
@@ -255,13 +251,13 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot::<MockBehavior> {
 							entity: slot,
-							get_behavior: None,
+							behavior: None,
 						},
 					)]
 					.into(),
 				),
 				Equip::new([Item::<MockBehavior> {
-					get_behavior: None,
+					behavior: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: None,
 				}]),
@@ -298,13 +294,13 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot::<MockBehavior> {
 							entity: slot,
-							get_behavior: None,
+							behavior: None,
 						},
 					)]
 					.into(),
 				),
 				Equip::new([Item::<MockBehavior> {
-					get_behavior: None,
+					behavior: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key".into()),
 				}]),
@@ -342,13 +338,13 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot::<MockBehavior> {
 							entity: slot,
-							get_behavior: None,
+							behavior: None,
 						},
 					)]
 					.into(),
 				),
 				Equip::new([Item::<MockBehavior> {
-					get_behavior: None,
+					behavior: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("non matching model key".into()),
 				}]),
@@ -386,13 +382,13 @@ mod tests {
 						SlotKey::Hand(Side::Left),
 						Slot::<MockBehavior> {
 							entity: slot,
-							get_behavior: None,
+							behavior: None,
 						},
 					)]
 					.into(),
 				),
 				Equip::new([Item::<MockBehavior> {
-					get_behavior: None,
+					behavior: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key".into()),
 				}]),
@@ -430,19 +426,19 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot::<MockBehavior> {
 							entity: slot,
-							get_behavior: None,
+							behavior: None,
 						},
 					)]
 					.into(),
 				),
 				Equip::new([
 					Item::<MockBehavior> {
-						get_behavior: None,
+						behavior: None,
 						slot: SlotKey::Hand(Side::Right),
 						model: Some("model key".into()),
 					},
 					Item::<MockBehavior> {
-						get_behavior: None,
+						behavior: None,
 						slot: SlotKey::Legs,
 						model: Some("model key".into()),
 					},
@@ -461,7 +457,7 @@ mod tests {
 			(
 				Some(model),
 				Some(&Equip::new([Item::<MockBehavior> {
-					get_behavior: None,
+					behavior: None,
 					slot: SlotKey::Legs,
 					model: Some("model key".into()),
 				}]))

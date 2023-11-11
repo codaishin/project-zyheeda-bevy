@@ -1,22 +1,22 @@
 use crate::{
-	components::{GetBehaviorFn, Schedule, ScheduleMode, SlotKey, Slots},
+	components::{Schedule, ScheduleMode, SlotKey, Slots},
 	resources::SlotMap,
 };
 use bevy::prelude::{Commands, Component, Entity, Input, KeyCode, MouseButton, Query, Res, With};
 
-fn filter_triggered_behavior_fns<TBehavior>(
+fn filter_triggered_behaviors<TBehavior: Copy>(
 	slots: &Slots<TBehavior>,
 	triggered_slot_keys: &[&SlotKey],
-) -> Vec<GetBehaviorFn<TBehavior>> {
+) -> Vec<(SlotKey, TBehavior)> {
 	slots
 		.0
 		.iter()
 		.filter(|(slot_key, ..)| triggered_slot_keys.contains(slot_key))
-		.filter_map(|(_, slot)| slot.get_behavior)
+		.filter_map(|(key, slot)| slot.behavior.map(|b| (*key, b)))
 		.collect()
 }
 
-pub fn schedule_slots_via_mouse<TAgent: Component, TBehavior: Sync + Send + 'static>(
+pub fn schedule_slots_via_mouse<TAgent: Component, TBehavior: Copy + Sync + Send + 'static>(
 	mouse: Res<Input<MouseButton>>,
 	keys: Res<Input<KeyCode>>,
 	mouse_button_map: Res<SlotMap<MouseButton>>,
@@ -38,11 +38,11 @@ pub fn schedule_slots_via_mouse<TAgent: Component, TBehavior: Sync + Send + 'sta
 	};
 
 	for (agent, slots) in &agents {
-		let get_behaviors = filter_triggered_behavior_fns(slots, &triggered_slot_keys);
-		if !get_behaviors.is_empty() {
+		let behaviors = filter_triggered_behaviors(slots, &triggered_slot_keys);
+		if !behaviors.is_empty() {
 			commands.entity(agent).insert(Schedule::<TBehavior> {
 				mode,
-				get_behaviors,
+				behaviors: behaviors.into_iter().collect(),
 			});
 		}
 	}
@@ -60,7 +60,7 @@ mod tests {
 	#[derive(Component)]
 	struct Agent;
 
-	#[derive(PartialEq, Debug)]
+	#[derive(PartialEq, Debug, Clone, Copy)]
 	struct MockBehavior;
 
 	fn setup() -> App {
@@ -78,17 +78,13 @@ mod tests {
 
 	#[test]
 	fn set_override() {
-		fn get_behavior(_ray: Ray) -> Option<MockBehavior> {
-			None
-		}
-
 		let mut app = setup();
 		let slots = Slots(
 			[(
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					get_behavior: Some(get_behavior),
+					behavior: Some(MockBehavior),
 				},
 			)]
 			.into(),
@@ -109,9 +105,9 @@ mod tests {
 		let schedule = agent.get::<Schedule<MockBehavior>>();
 
 		assert_eq!(
-			Some(&Schedule::<MockBehavior> {
+			Some(&Schedule {
 				mode: ScheduleMode::Override,
-				get_behaviors: vec![get_behavior]
+				behaviors: [(SlotKey::Legs, MockBehavior)].into()
 			}),
 			schedule
 		);
@@ -129,7 +125,7 @@ mod tests {
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					get_behavior: Some(get_behavior),
+					behavior: Some(get_behavior),
 				},
 			)]
 			.into(),
@@ -164,7 +160,7 @@ mod tests {
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					get_behavior: Some(get_behavior),
+					behavior: Some(get_behavior),
 				},
 			)]
 			.into(),
@@ -189,17 +185,13 @@ mod tests {
 
 	#[test]
 	fn set_enqueue() {
-		fn get_behavior(_ray: Ray) -> Option<MockBehavior> {
-			None
-		}
-
 		let mut app = setup();
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Right),
 				Slot {
 					entity: Entity::from_raw(42),
-					get_behavior: Some(get_behavior),
+					behavior: Some(MockBehavior),
 				},
 			)]
 			.into(),
@@ -209,10 +201,10 @@ mod tests {
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
 			.0
-			.insert(MouseButton::Right, SlotKey::Legs);
+			.insert(MouseButton::Left, SlotKey::Hand(Side::Right));
 		app.world
 			.resource_mut::<Input<MouseButton>>()
-			.press(MouseButton::Right);
+			.press(MouseButton::Left);
 		app.world
 			.resource_mut::<Input<KeyCode>>()
 			.press(KeyCode::ShiftLeft);
@@ -223,9 +215,9 @@ mod tests {
 		let schedule = agent.get::<Schedule<MockBehavior>>();
 
 		assert_eq!(
-			Some(&Schedule::<MockBehavior> {
+			Some(&Schedule {
 				mode: ScheduleMode::Enqueue,
-				get_behaviors: vec![get_behavior]
+				behaviors: [(SlotKey::Hand(Side::Right), MockBehavior)].into()
 			}),
 			schedule
 		);
@@ -254,7 +246,7 @@ mod tests {
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					get_behavior: Some(get_behavior),
+					behavior: Some(get_behavior),
 				},
 			)]
 			.into(),

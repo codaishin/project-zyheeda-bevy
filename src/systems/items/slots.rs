@@ -33,7 +33,7 @@ fn new_slot_on(parent: Entity, commands: &mut Commands) -> Entity {
 	slot
 }
 
-pub fn add_item_slots<TBehavior: 'static>(
+pub fn add_item_slots<TBehavior: Send + Sync + 'static>(
 	mut commands: Commands,
 	mut agent: Query<(Entity, &mut Slots<TBehavior>, &mut SlotBones)>,
 	children: Query<&Children>,
@@ -49,7 +49,7 @@ pub fn add_item_slots<TBehavior: 'static>(
 						key,
 						Slot {
 							entity,
-							get_behavior: None,
+							behavior: None,
 						},
 					);
 					None
@@ -183,7 +183,7 @@ mod tests {
 				SlotKey::Hand(Side::Left),
 				Slot::<MockBehavior> {
 					entity: slot,
-					get_behavior: None
+					behavior: None
 				}
 			)]),
 			slots.0

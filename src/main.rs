@@ -3,7 +3,7 @@ use bevy::{
 	prelude::*,
 };
 use project_zyheeda::{
-	behaviors::{Behavior, MovementMode},
+	behaviors::{ItemBehavior, MovementMode, PlayerBehavior},
 	bundles::Loadout,
 	components::{
 		marker::{HandGun, Idle, Marker, Right, Run, Shoot, Walk},
@@ -36,6 +36,8 @@ use project_zyheeda::{
 };
 use std::f32::consts::PI;
 
+type PlayerLoadout = Loadout<ItemBehavior, PlayerBehavior>;
+
 fn main() {
 	App::new()
 		.add_plugins(DefaultPlugins)
@@ -43,20 +45,20 @@ fn main() {
 		.add_systems(Startup, load_models)
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(PreUpdate, link_animators_with_new_animation_players)
-		.add_systems(PreUpdate, add_item_slots::<Behavior>)
-		.add_systems(Update, equip_items::<Behavior>)
+		.add_systems(PreUpdate, add_item_slots::<ItemBehavior>)
+		.add_systems(Update, equip_items::<ItemBehavior>)
 		.add_systems(
 			Update,
 			(
 				player_toggle_walk_run,
-				schedule_slots_via_mouse::<Player, Behavior>,
-				enqueue::<Player, Behavior, Tools>,
-				dequeue::<Player, Behavior>,
+				schedule_slots_via_mouse::<Player, ItemBehavior>,
+				enqueue::<ItemBehavior, PlayerBehavior, Tools>,
+				dequeue::<PlayerBehavior>,
 			),
 		)
 		.add_systems(
 			Update,
-			(execute_move::<Player, SimpleMovement<Behavior>, Behavior>,),
+			(execute_move::<Player, SimpleMovement<PlayerBehavior>, PlayerBehavior>,),
 		)
 		.add_systems(
 			Update,
@@ -170,7 +172,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			run_speed: UnitsPerSecond::new(1.5),
 			movement_mode: MovementMode::Walk,
 		},
-		Loadout::new(
+		PlayerLoadout::new(
 			SlotBones::new([
 				(SlotKey::Hand(Side::Right), "hand_slot.R"),
 				(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
@@ -179,12 +181,12 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				Item {
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("pistol".into()),
-					get_behavior: None,
+					behavior: None,
 				},
 				Item {
 					slot: SlotKey::Legs,
 					model: None,
-					get_behavior: Some(Behavior::movement),
+					behavior: Some(ItemBehavior::Move),
 				},
 			]),
 		),

@@ -1,6 +1,6 @@
 use super::InsertIntoEntity;
 use crate::{
-	behaviors::Behavior,
+	behaviors::PlayerBehavior,
 	components::{
 		marker::{HandGun, Left, Marker, Right, Shoot},
 		Side,
@@ -10,20 +10,26 @@ use crate::{
 };
 use bevy::ecs::system::EntityCommands;
 
-impl InsertIntoEntity for Behavior {
+impl InsertIntoEntity for PlayerBehavior {
 	fn insert_into_entity(self, entity: &mut EntityCommands) {
 		match self {
-			Behavior::MoveTo(target) => entity.insert(SimpleMovement::<Behavior>::new(target)),
-			Behavior::ShootGun(ray, cast, Side::Right) => entity.insert(Skill::<Behavior>::new(
-				ray,
-				cast,
-				Marker::<(Shoot, HandGun, Right)>::commands(),
-			)),
-			Behavior::ShootGun(ray, cast, Side::Left) => entity.insert(Skill::<Behavior>::new(
-				ray,
-				cast,
-				Marker::<(Shoot, HandGun, Left)>::commands(),
-			)),
+			PlayerBehavior::MoveTo(target) => {
+				entity.insert(SimpleMovement::<PlayerBehavior>::new(target))
+			}
+			PlayerBehavior::ShootGun(ray, cast, Side::Right) => {
+				entity.insert(Skill::<PlayerBehavior>::new(
+					ray,
+					cast,
+					Marker::<(Shoot, HandGun, Right)>::commands(),
+				))
+			}
+			PlayerBehavior::ShootGun(ray, cast, Side::Left) => {
+				entity.insert(Skill::<PlayerBehavior>::new(
+					ray,
+					cast,
+					Marker::<(Shoot, HandGun, Left)>::commands(),
+				))
+			}
 		};
 	}
 }
@@ -34,22 +40,28 @@ mod tests {
 	use crate::components::{Cast, Seconds, SimpleMovement, Skill};
 	use bevy::prelude::{App, Commands, Entity, Ray, Update, Vec3};
 
-	fn insert(entity: Entity, behavior: Behavior) -> impl FnMut(Commands) {
+	fn insert(entity: Entity, behavior: PlayerBehavior) -> impl FnMut(Commands) {
 		move |mut commands| behavior.insert_into_entity(&mut commands.entity(entity))
 	}
 
 	#[test]
 	fn insert_move_to() {
 		let mut app = App::new();
-		let behavior = Behavior::MoveTo(Vec3::ONE);
+		let behavior = PlayerBehavior::MoveTo(Vec3::ONE);
 		let entity = app.world.spawn(()).id();
 
 		app.add_systems(Update, insert(entity, behavior));
 		app.update();
 
-		let movement = app.world.entity(entity).get::<SimpleMovement<Behavior>>();
+		let movement = app
+			.world
+			.entity(entity)
+			.get::<SimpleMovement<PlayerBehavior>>();
 
-		assert_eq!(Some(&SimpleMovement::<Behavior>::new(Vec3::ONE)), movement);
+		assert_eq!(
+			Some(&SimpleMovement::<PlayerBehavior>::new(Vec3::ONE)),
+			movement
+		);
 	}
 
 	#[test]
@@ -63,16 +75,16 @@ mod tests {
 			after: Seconds(3.4),
 		};
 		let mut app = App::new();
-		let behavior = Behavior::ShootGun(ray, cast, Side::Right);
+		let behavior = PlayerBehavior::ShootGun(ray, cast, Side::Right);
 		let entity = app.world.spawn(()).id();
 
 		app.add_systems(Update, insert(entity, behavior));
 		app.update();
 
-		let movement = app.world.entity(entity).get::<Skill<Behavior>>();
+		let movement = app.world.entity(entity).get::<Skill<PlayerBehavior>>();
 
 		assert_eq!(
-			Some(&Skill::<Behavior>::new(
+			Some(&Skill::<PlayerBehavior>::new(
 				ray,
 				cast,
 				Marker::<(Shoot, HandGun, Right)>::commands()
@@ -92,16 +104,16 @@ mod tests {
 			after: Seconds(3.4),
 		};
 		let mut app = App::new();
-		let behavior = Behavior::ShootGun(ray, cast, Side::Left);
+		let behavior = PlayerBehavior::ShootGun(ray, cast, Side::Left);
 		let entity = app.world.spawn(()).id();
 
 		app.add_systems(Update, insert(entity, behavior));
 		app.update();
 
-		let movement = app.world.entity(entity).get::<Skill<Behavior>>();
+		let movement = app.world.entity(entity).get::<Skill<PlayerBehavior>>();
 
 		assert_eq!(
-			Some(&Skill::<Behavior>::new(
+			Some(&Skill::<PlayerBehavior>::new(
 				ray,
 				cast,
 				Marker::<(Shoot, HandGun, Left)>::commands()

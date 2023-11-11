@@ -2,22 +2,24 @@ use crate::components::{Equip, Queue, SlotBones, Slots, WaitNext};
 use bevy::prelude::Bundle;
 
 #[derive(Bundle)]
-pub struct Loadout<TBehavior>
+pub struct Loadout<TBehaviorItem, TBehaviorAgent>
 where
-	TBehavior: Sync + Send + Copy + 'static,
+	TBehaviorItem: Sync + Send + Copy + 'static,
+	TBehaviorAgent: Sync + Send + Copy + 'static,
 {
 	slot_bones: SlotBones,
-	slots: Slots<TBehavior>,
-	equipment: Equip<TBehavior>,
-	wait_next: WaitNext<TBehavior>,
-	queue: Queue<TBehavior>,
+	slots: Slots<TBehaviorItem>,
+	equipment: Equip<TBehaviorItem>,
+	wait_next: WaitNext<TBehaviorAgent>,
+	queue: Queue<TBehaviorAgent>,
 }
 
-impl<TBehavior> Loadout<TBehavior>
+impl<TBehaviorItem, TBehavior> Loadout<TBehaviorItem, TBehavior>
 where
+	TBehaviorItem: Sync + Send + Copy + 'static,
 	TBehavior: Sync + Send + Copy + 'static,
 {
-	pub fn new(slot_bones: SlotBones, equipment: Equip<TBehavior>) -> Self {
+	pub fn new(slot_bones: SlotBones, equipment: Equip<TBehaviorItem>) -> Self {
 		Self {
 			slot_bones,
 			equipment,

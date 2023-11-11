@@ -155,18 +155,16 @@ pub enum ScheduleMode {
 	Override,
 }
 
-pub type GetBehaviorFn<TBehavior> = fn(ray: Ray) -> Option<TBehavior>;
-
 #[derive(Component, PartialEq, Debug)]
 pub struct Schedule<TBehavior> {
 	pub mode: ScheduleMode,
-	pub get_behaviors: Vec<GetBehaviorFn<TBehavior>>,
+	pub behaviors: HashMap<SlotKey, TBehavior>,
 }
 
 #[derive(PartialEq, Debug)]
 pub struct Slot<TBehavior> {
 	pub entity: Entity,
-	pub get_behavior: Option<GetBehaviorFn<TBehavior>>,
+	pub behavior: Option<TBehavior>,
 }
 
 #[derive(Component)]
@@ -188,7 +186,7 @@ impl<TBehavior> Default for Slots<TBehavior> {
 pub struct Item<TBehavior> {
 	pub slot: SlotKey,
 	pub model: Option<Cow<'static, str>>,
-	pub get_behavior: Option<GetBehaviorFn<TBehavior>>,
+	pub behavior: Option<TBehavior>,
 }
 
 #[derive(Component, Debug, PartialEq)]
