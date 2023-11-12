@@ -3,13 +3,12 @@ use bevy::{
 	prelude::*,
 };
 use project_zyheeda::{
-	behaviors::{ItemBehavior, MovementMode, PlayerBehavior},
+	behaviors::{movement::movement, shoot_gun::shoot_gun, MovementMode},
 	bundles::Loadout,
 	components::{
 		marker::{HandGun, Idle, Marker, Right, Run, Shoot, Walk},
 		Animator,
 		CamOrbit,
-		Cast,
 		Equip,
 		Item,
 		Player,
@@ -36,9 +35,7 @@ use project_zyheeda::{
 	tools::Tools,
 	traits::orbit::{Orbit, Vec2Radians},
 };
-use std::{f32::consts::PI, time::Duration};
-
-type PlayerLoadout = Loadout<ItemBehavior, PlayerBehavior>;
+use std::f32::consts::PI;
 
 fn main() {
 	App::new()
@@ -47,24 +44,21 @@ fn main() {
 		.add_systems(Startup, load_models)
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(PreUpdate, link_animators_with_new_animation_players)
-		.add_systems(PreUpdate, add_item_slots::<ItemBehavior>)
-		.add_systems(Update, equip_items::<ItemBehavior>)
+		.add_systems(PreUpdate, add_item_slots)
+		.add_systems(Update, equip_items)
 		.add_systems(
 			Update,
 			(
 				player_toggle_walk_run,
-				schedule_slots::<MouseButton, Player, ItemBehavior>,
-				schedule_slots::<KeyCode, Player, ItemBehavior>,
-				enqueue::<ItemBehavior, PlayerBehavior, Tools>,
-				dequeue::<PlayerBehavior>,
+				schedule_slots::<MouseButton, Player>,
+				schedule_slots::<KeyCode, Player>,
+				enqueue::<Tools>,
+				dequeue,
 			),
 		)
 		.add_systems(
 			Update,
-			(
-				execute_move::<Player, SimpleMovement<PlayerBehavior>, PlayerBehavior>,
-				execute_skill::<PlayerBehavior, ItemBehavior>,
-			),
+			(execute_move::<Player, SimpleMovement>, execute_skill),
 		)
 		.add_systems(
 			Update,
@@ -178,7 +172,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			run_speed: UnitsPerSecond::new(1.5),
 			movement_mode: MovementMode::Walk,
 		},
-		PlayerLoadout::new(
+		Loadout::new(
 			SlotBones::new([
 				(SlotKey::SkillSpawn, "projectile_spawn"),
 				(SlotKey::Hand(Side::Right), "hand_slot.R"),
@@ -188,15 +182,12 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				Item {
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("pistol".into()),
-					behavior: Some(ItemBehavior::ShootGun(Cast {
-						pre: Duration::from_millis(500),
-						after: Duration::from_millis(300),
-					})),
+					behavior: Some(shoot_gun()),
 				},
 				Item {
 					slot: SlotKey::Legs,
 					model: None,
-					behavior: Some(ItemBehavior::Move),
+					behavior: Some(movement()),
 				},
 			]),
 		),

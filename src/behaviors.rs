@@ -1,6 +1,7 @@
-use bevy::prelude::*;
+pub mod movement;
+pub mod shoot_gun;
 
-use crate::components::{Cast, Side};
+use bevy::{ecs::system::EntityCommands, prelude::*};
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub enum MovementMode {
@@ -9,14 +10,15 @@ pub enum MovementMode {
 	Run,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum ItemBehavior {
-	Move,
-	ShootGun(Cast),
+pub type InsertComponentFn = fn(&mut EntityCommands, Ray);
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct Behavior {
+	pub insert_fn: InsertComponentFn,
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum PlayerBehavior {
-	MoveTo(Vec3),
-	ShootGun(Ray, Cast, Side),
+impl Behavior {
+	pub fn insert_into(&self, entity: &mut EntityCommands, ray: Ray) {
+		(self.insert_fn)(entity, ray)
+	}
 }

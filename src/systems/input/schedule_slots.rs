@@ -1,32 +1,16 @@
-use std::hash::Hash;
-
 use crate::{
+	behaviors::Behavior,
 	components::{Schedule, ScheduleMode, SlotKey, Slots},
 	resources::SlotMap,
 };
 use bevy::prelude::{Commands, Component, Entity, Input, KeyCode, Query, Res, With};
+use std::hash::Hash;
 
-fn filter_triggered_behaviors<TBehavior: Copy>(
-	slots: &Slots<TBehavior>,
-	triggered_slot_keys: &[&SlotKey],
-) -> Vec<(SlotKey, TBehavior)> {
-	slots
-		.0
-		.iter()
-		.filter(|(slot_key, ..)| triggered_slot_keys.contains(slot_key))
-		.filter_map(|(key, slot)| slot.behavior.map(|b| (*key, b)))
-		.collect()
-}
-
-pub fn schedule_slots<
-	TKey: Copy + Eq + Hash + Send + Sync,
-	TAgent: Component,
-	TBehavior: Copy + Sync + Send + 'static,
->(
+pub fn schedule_slots<TKey: Copy + Eq + Hash + Send + Sync, TAgent: Component>(
 	mouse: Res<Input<TKey>>,
 	keys: Res<Input<KeyCode>>,
 	mouse_button_map: Res<SlotMap<TKey>>,
-	agents: Query<(Entity, &Slots<TBehavior>), With<TAgent>>,
+	agents: Query<(Entity, &Slots), With<TAgent>>,
 	mut commands: Commands,
 ) {
 	let triggered_slot_keys = mouse
@@ -46,12 +30,24 @@ pub fn schedule_slots<
 	for (agent, slots) in &agents {
 		let behaviors = filter_triggered_behaviors(slots, &triggered_slot_keys);
 		if !behaviors.is_empty() {
-			commands.entity(agent).insert(Schedule::<TBehavior> {
+			commands.entity(agent).insert(Schedule {
 				mode,
 				behaviors: behaviors.into_iter().collect(),
 			});
 		}
 	}
+}
+
+fn filter_triggered_behaviors(
+	slots: &Slots,
+	triggered_slot_keys: &[&SlotKey],
+) -> Vec<(SlotKey, Behavior)> {
+	slots
+		.0
+		.iter()
+		.filter(|(slot_key, ..)| triggered_slot_keys.contains(slot_key))
+		.filter_map(|(key, slot)| slot.behavior.map(|b| (*key, b)))
+		.collect()
 }
 
 #[cfg(test)]
@@ -61,13 +57,13 @@ mod tests {
 		components::{Schedule, ScheduleMode, Side, Slot, SlotKey, Slots},
 		resources::SlotMap,
 	};
-	use bevy::prelude::{App, Component, Entity, Input, KeyCode, MouseButton, Ray, Update};
+	use bevy::{
+		ecs::system::EntityCommands,
+		prelude::{App, Component, Entity, Input, KeyCode, MouseButton, Ray, Update},
+	};
 
 	#[derive(Component)]
 	struct Agent;
-
-	#[derive(PartialEq, Debug, Clone, Copy)]
-	struct MockBehavior;
 
 	fn setup() -> App {
 		let mut app = App::new();
@@ -78,9 +74,11 @@ mod tests {
 		app.insert_resource(mouse);
 		app.insert_resource(keys);
 		app.insert_resource(mouse_settings);
-		app.add_systems(Update, schedule_slots::<MouseButton, Agent, MockBehavior>);
+		app.add_systems(Update, schedule_slots::<MouseButton, Agent>);
 		app
 	}
+
+	fn fake_behavior_insert<const T: char>(_entity: &mut EntityCommands, _ray: Ray) {}
 
 	#[test]
 	fn set_override() {
@@ -90,7 +88,9 @@ mod tests {
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					behavior: Some(MockBehavior),
+					behavior: Some(Behavior {
+						insert_fn: fake_behavior_insert::<'!'>,
+					}),
 				},
 			)]
 			.into(),
@@ -108,12 +108,18 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let schedule = agent.get::<Schedule<MockBehavior>>();
+		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(
 			Some(&Schedule {
 				mode: ScheduleMode::Override,
-				behaviors: [(SlotKey::Legs, MockBehavior)].into()
+				behaviors: [(
+					SlotKey::Legs,
+					Behavior {
+						insert_fn: fake_behavior_insert::<'!'>,
+					}
+				)]
+				.into()
 			}),
 			schedule
 		);
@@ -121,17 +127,15 @@ mod tests {
 
 	#[test]
 	fn do_not_set_when_not_on_agent() {
-		fn get_behavior(_ray: Ray) -> Option<MockBehavior> {
-			None
-		}
-
 		let mut app = setup();
 		let slots = Slots(
 			[(
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					behavior: Some(get_behavior),
+					behavior: Some(Behavior {
+						insert_fn: fake_behavior_insert::<'!'>,
+					}),
 				},
 			)]
 			.into(),
@@ -149,24 +153,22 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let schedule = agent.get::<Schedule<MockBehavior>>();
+		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(None, schedule);
 	}
 
 	#[test]
 	fn do_not_set_when_mouse_button_not_correctly_mapped() {
-		fn get_behavior(_ray: Ray) -> Option<MockBehavior> {
-			None
-		}
-
 		let mut app = setup();
 		let slots = Slots(
 			[(
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					behavior: Some(get_behavior),
+					behavior: Some(Behavior {
+						insert_fn: fake_behavior_insert::<'!'>,
+					}),
 				},
 			)]
 			.into(),
@@ -184,7 +186,7 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let schedule = agent.get::<Schedule<MockBehavior>>();
+		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(None, schedule);
 	}
@@ -197,7 +199,9 @@ mod tests {
 				SlotKey::Hand(Side::Right),
 				Slot {
 					entity: Entity::from_raw(42),
-					behavior: Some(MockBehavior),
+					behavior: Some(Behavior {
+						insert_fn: fake_behavior_insert::<'/'>,
+					}),
 				},
 			)]
 			.into(),
@@ -218,12 +222,18 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let schedule = agent.get::<Schedule<MockBehavior>>();
+		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(
 			Some(&Schedule {
 				mode: ScheduleMode::Enqueue,
-				behaviors: [(SlotKey::Hand(Side::Right), MockBehavior)].into()
+				behaviors: [(
+					SlotKey::Hand(Side::Right),
+					Behavior {
+						insert_fn: fake_behavior_insert::<'/'>,
+					}
+				)]
+				.into()
 			}),
 			schedule
 		);
@@ -231,10 +241,6 @@ mod tests {
 
 	#[test]
 	fn do_not_set_when_not_just_mouse_pressed() {
-		fn get_behavior(_ray: Ray) -> Option<MockBehavior> {
-			None
-		}
-
 		let mut app = setup();
 
 		app.world
@@ -252,7 +258,9 @@ mod tests {
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					behavior: Some(get_behavior),
+					behavior: Some(Behavior {
+						insert_fn: fake_behavior_insert::<'!'>,
+					}),
 				},
 			)]
 			.into(),
@@ -265,7 +273,7 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let schedule = agent.get::<Schedule<MockBehavior>>();
+		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(None, schedule);
 	}

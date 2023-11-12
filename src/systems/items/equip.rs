@@ -6,7 +6,7 @@ use bevy::{
 	prelude::{Commands, Entity, Handle, Mut, Query, Res},
 	scene::Scene,
 };
-use std::{borrow::Cow, fmt::Debug};
+use std::borrow::Cow;
 use tracing::{error, info};
 
 enum NoMatch {
@@ -16,7 +16,7 @@ enum NoMatch {
 }
 
 type ShouldRetry = bool;
-type ItemsToRetry<TBehavior> = Vec<Item<TBehavior>>;
+type ItemsToRetry = Vec<Item>;
 
 const DO_NOT_RETRY: ShouldRetry = false;
 const DONE: ShouldRetry = false;
@@ -25,9 +25,9 @@ const RETRY: ShouldRetry = true;
 type SlotModel<'a> = Mut<'a, Handle<Scene>>;
 type ItemModel = Handle<Scene>;
 
-fn set_slot<TBehavior: Debug + Copy>(
-	slot_and_model: Result<(&mut Slot<TBehavior>, SlotModel, ItemModel), NoMatch>,
-	item: &Item<TBehavior>,
+fn set_slot(
+	slot_and_model: Result<(&mut Slot, SlotModel, ItemModel), NoMatch>,
+	item: &Item,
 ) -> ShouldRetry {
 	match slot_and_model {
 		Ok((slot, mut slot_model, item_model)) => {
@@ -53,9 +53,9 @@ fn set_slot<TBehavior: Debug + Copy>(
 	}
 }
 
-fn equip_item_to<TBehavior: Debug + Copy>(
-	slots: &mut Slots<TBehavior>,
-	item: &Item<TBehavior>,
+fn equip_item_to(
+	slots: &mut Slots,
+	item: &Item,
 	models: &Res<Models>,
 	scene_models: &mut Query<&mut Handle<Scene>>,
 ) -> ShouldRetry {
@@ -80,12 +80,12 @@ fn equip_item_to<TBehavior: Debug + Copy>(
 	set_slot(slot_and_model, item)
 }
 
-fn equip_items_to<TBehavior: Debug + Clone + Copy>(
-	slots: &mut Mut<Slots<TBehavior>>,
-	equip: &Equip<TBehavior>,
+fn equip_items_to(
+	slots: &mut Mut<Slots>,
+	equip: &Equip,
 	models: &Res<Models>,
 	scene_handles: &mut Query<&mut Handle<Scene>>,
-) -> ItemsToRetry<TBehavior> {
+) -> ItemsToRetry {
 	equip
 		.0
 		.iter()
@@ -94,16 +94,16 @@ fn equip_items_to<TBehavior: Debug + Clone + Copy>(
 		.collect()
 }
 
-pub fn equip_items<TBehavior: Debug + Clone + Copy + Send + Sync + 'static>(
+pub fn equip_items(
 	mut commands: Commands,
 	models: Res<Models>,
-	mut agent: Query<(Entity, &mut Slots<TBehavior>, &mut Equip<TBehavior>)>,
+	mut agent: Query<(Entity, &mut Slots, &mut Equip)>,
 	mut scene_handles: Query<&mut Handle<Scene>>,
 ) {
 	for (agent, mut slots, mut equip) in &mut agent {
 		let items_to_retry = equip_items_to(&mut slots, &equip, &models, &mut scene_handles);
 		if items_to_retry.is_empty() {
-			commands.entity(agent).remove::<Equip<TBehavior>>();
+			commands.entity(agent).remove::<Equip>();
 		} else {
 			equip.0 = items_to_retry;
 		}
@@ -114,19 +114,20 @@ pub fn equip_items<TBehavior: Debug + Clone + Copy + Send + Sync + 'static>(
 mod tests {
 	use super::*;
 	use crate::{
+		behaviors::Behavior,
 		components::{Item, Side, Slot, SlotKey, Slots},
 		resources::Models,
 	};
 	use bevy::{
 		asset::AssetId,
-		prelude::{App, Handle, Update},
+		ecs::system::EntityCommands,
+		prelude::{App, Handle, Ray, Update},
 		scene::Scene,
 		utils::Uuid,
 	};
 	use std::borrow::Cow;
 
-	#[derive(Debug, Clone, Copy, PartialEq)]
-	struct MockBehavior;
+	fn fake_behavior_insert<const T: char>(_entity: &mut EntityCommands, _ray: Ray) {}
 
 	#[test]
 	fn equip_when_marked_to_equip() {
@@ -149,21 +150,23 @@ mod tests {
 				Slots(
 					[(
 						SlotKey::Hand(Side::Right),
-						Slot::<MockBehavior> {
+						Slot {
 							entity: slot,
 							behavior: None,
 						},
 					)]
 					.into(),
 				),
-				Equip::new([Item::<MockBehavior> {
-					behavior: Some(MockBehavior),
+				Equip::new([Item {
+					behavior: Some(Behavior {
+						insert_fn: fake_behavior_insert::<'!'>,
+					}),
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key".into()),
 				}]),
 			))
 			.id();
-		app.add_systems(Update, equip_items::<MockBehavior>);
+		app.add_systems(Update, equip_items);
 
 		app.update();
 
@@ -171,7 +174,7 @@ mod tests {
 		let slot_component = app
 			.world
 			.entity(agent)
-			.get::<Slots<MockBehavior>>()
+			.get::<Slots>()
 			.unwrap()
 			.0
 			.get(&SlotKey::Hand(Side::Right))
@@ -182,7 +185,9 @@ mod tests {
 				Some(model),
 				&Slot {
 					entity: slot,
-					behavior: Some(MockBehavior)
+					behavior: Some(Behavior {
+						insert_fn: fake_behavior_insert::<'!'>,
+					})
 				}
 			),
 			(slot_model.cloned(), slot_component)
@@ -210,27 +215,27 @@ mod tests {
 				Slots(
 					[(
 						SlotKey::Hand(Side::Right),
-						Slot::<MockBehavior> {
+						Slot {
 							entity: slot,
 							behavior: None,
 						},
 					)]
 					.into(),
 				),
-				Equip::new([Item::<MockBehavior> {
+				Equip::new([Item {
 					behavior: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key".into()),
 				}]),
 			))
 			.id();
-		app.add_systems(Update, equip_items::<MockBehavior>);
+		app.add_systems(Update, equip_items);
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Equip<MockBehavior>>());
+		assert!(!agent.contains::<Equip>());
 	}
 
 	#[test]
@@ -249,21 +254,21 @@ mod tests {
 				Slots(
 					[(
 						SlotKey::Hand(Side::Right),
-						Slot::<MockBehavior> {
+						Slot {
 							entity: slot,
 							behavior: None,
 						},
 					)]
 					.into(),
 				),
-				Equip::new([Item::<MockBehavior> {
+				Equip::new([Item {
 					behavior: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: None,
 				}]),
 			))
 			.id();
-		app.add_systems(Update, equip_items::<MockBehavior>);
+		app.add_systems(Update, equip_items);
 
 		app.update();
 
@@ -272,7 +277,7 @@ mod tests {
 
 		assert_eq!(
 			(Some(Handle::<Scene>::default()), false),
-			(slot_model.cloned(), agent.contains::<Equip<MockBehavior>>())
+			(slot_model.cloned(), agent.contains::<Equip>())
 		);
 	}
 
@@ -292,27 +297,27 @@ mod tests {
 				Slots(
 					[(
 						SlotKey::Hand(Side::Right),
-						Slot::<MockBehavior> {
+						Slot {
 							entity: slot,
 							behavior: None,
 						},
 					)]
 					.into(),
 				),
-				Equip::new([Item::<MockBehavior> {
+				Equip::new([Item {
 					behavior: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key".into()),
 				}]),
 			))
 			.id();
-		app.add_systems(Update, equip_items::<MockBehavior>);
+		app.add_systems(Update, equip_items);
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Equip<MockBehavior>>());
+		assert!(!agent.contains::<Equip>());
 	}
 
 	#[test]
@@ -336,27 +341,27 @@ mod tests {
 				Slots(
 					[(
 						SlotKey::Hand(Side::Right),
-						Slot::<MockBehavior> {
+						Slot {
 							entity: slot,
 							behavior: None,
 						},
 					)]
 					.into(),
 				),
-				Equip::new([Item::<MockBehavior> {
+				Equip::new([Item {
 					behavior: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("non matching model key".into()),
 				}]),
 			))
 			.id();
-		app.add_systems(Update, equip_items::<MockBehavior>);
+		app.add_systems(Update, equip_items);
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Equip<MockBehavior>>());
+		assert!(!agent.contains::<Equip>());
 	}
 
 	#[test]
@@ -380,27 +385,27 @@ mod tests {
 				Slots(
 					[(
 						SlotKey::Hand(Side::Left),
-						Slot::<MockBehavior> {
+						Slot {
 							entity: slot,
 							behavior: None,
 						},
 					)]
 					.into(),
 				),
-				Equip::new([Item::<MockBehavior> {
+				Equip::new([Item {
 					behavior: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key".into()),
 				}]),
 			))
 			.id();
-		app.add_systems(Update, equip_items::<MockBehavior>);
+		app.add_systems(Update, equip_items);
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<Equip<MockBehavior>>());
+		assert!(agent.contains::<Equip>());
 	}
 
 	#[test]
@@ -424,7 +429,7 @@ mod tests {
 				Slots(
 					[(
 						SlotKey::Hand(Side::Right),
-						Slot::<MockBehavior> {
+						Slot {
 							entity: slot,
 							behavior: None,
 						},
@@ -432,12 +437,12 @@ mod tests {
 					.into(),
 				),
 				Equip::new([
-					Item::<MockBehavior> {
+					Item {
 						behavior: None,
 						slot: SlotKey::Hand(Side::Right),
 						model: Some("model key".into()),
 					},
-					Item::<MockBehavior> {
+					Item {
 						behavior: None,
 						slot: SlotKey::Legs,
 						model: Some("model key".into()),
@@ -445,18 +450,18 @@ mod tests {
 				]),
 			))
 			.id();
-		app.add_systems(Update, equip_items::<MockBehavior>);
+		app.add_systems(Update, equip_items);
 
 		app.update();
 
 		let slot_model = app.world.entity(slot).get::<Handle<Scene>>();
 		let agent = app.world.entity(agent);
-		let items = agent.get::<Equip<MockBehavior>>();
+		let items = agent.get::<Equip>();
 
 		assert_eq!(
 			(
 				Some(model),
-				Some(&Equip::new([Item::<MockBehavior> {
+				Some(&Equip::new([Item {
 					behavior: None,
 					slot: SlotKey::Legs,
 					model: Some("model key".into()),

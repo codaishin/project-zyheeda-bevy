@@ -1,69 +1,17 @@
 use crate::{
+	behaviors::Behavior,
 	components::{Queue, Schedule, ScheduleMode, SlotKey, WaitNext},
-	traits::{from_source::FromSource, get_ray::GetRayFromCamera},
+	traits::get_ray::GetRayFromCamera,
 };
 use bevy::{
 	prelude::{Camera, Commands, Entity, GlobalTransform, Query, Ray},
 	window::Window,
 };
 
-fn enqueue_agent_behavior<
-	TBehaviorItem: Copy,
-	TBehavior: FromSource<TBehaviorItem, (SlotKey, Ray)> + Copy + Send + Sync + 'static,
->(
-	agent: Entity,
-	queue: &mut Queue<TBehavior>,
-	schedule_mode: ScheduleMode,
-	behavior_slot: (&SlotKey, &TBehaviorItem),
-	commands: &mut Commands,
-	ray: Option<Ray>,
-) {
-	let (slot_key, behavior) = behavior_slot;
-	let complete_behavior = |ray| TBehavior::from_source(*behavior, (*slot_key, ray));
-
-	let Some(behavior) = ray.and_then(complete_behavior) else {
-		return;
-	};
-
-	match schedule_mode {
-		ScheduleMode::Enqueue => queue.0.push_back(behavior),
-		ScheduleMode::Override => {
-			queue.0.clear();
-			queue.0.push_back(behavior);
-			commands.entity(agent).insert(WaitNext::<TBehavior>::new());
-		}
-	}
-}
-
-fn enqueue_agent_behaviors<
-	TBehaviorItem: Copy,
-	TBehavior: FromSource<TBehaviorItem, (SlotKey, Ray)> + Copy + Send + Sync + 'static,
->(
-	agent: Entity,
-	schedule: &Schedule<TBehaviorItem>,
-	queue: &mut Queue<TBehavior>,
-	commands: &mut Commands,
-	ray: Option<Ray>,
-) {
-	for behavior_slot in &schedule.behaviors {
-		enqueue_agent_behavior(agent, queue, schedule.mode, behavior_slot, commands, ray);
-	}
-}
-
-type Components<'a, TBehaviorItem, TBehavior> = (
-	Entity,
-	&'a Schedule<TBehaviorItem>,
-	&'a mut Queue<TBehavior>,
-);
-
-pub fn enqueue<
-	TBehaviorItem: Copy + Send + Sync + 'static,
-	TBehavior: FromSource<TBehaviorItem, (SlotKey, Ray)> + Copy + Send + Sync + 'static,
-	TGetRay: GetRayFromCamera,
->(
+pub fn enqueue<TGetRay: GetRayFromCamera>(
 	camera: Query<(&Camera, &GlobalTransform)>,
 	window: Query<&Window>,
-	mut agents: Query<Components<TBehaviorItem, TBehavior>>,
+	mut agents: Query<(Entity, &Schedule, &mut Queue)>,
 	mut commands: Commands,
 ) {
 	if agents.is_empty() {
@@ -76,7 +24,43 @@ pub fn enqueue<
 
 	for (agent, schedule, mut queue) in &mut agents {
 		enqueue_agent_behaviors(agent, schedule, &mut queue, &mut commands, ray);
-		commands.entity(agent).remove::<Schedule<TBehaviorItem>>();
+		commands.entity(agent).remove::<Schedule>();
+	}
+}
+
+fn enqueue_agent_behaviors(
+	agent: Entity,
+	schedule: &Schedule,
+	queue: &mut Queue,
+	commands: &mut Commands,
+	ray: Option<Ray>,
+) {
+	for behavior_slot in &schedule.behaviors {
+		enqueue_agent_behavior(agent, queue, schedule.mode, behavior_slot, commands, ray);
+	}
+}
+
+fn enqueue_agent_behavior(
+	agent: Entity,
+	queue: &mut Queue,
+	schedule_mode: ScheduleMode,
+	behavior_slot: (&SlotKey, &Behavior),
+	commands: &mut Commands,
+	ray: Option<Ray>,
+) {
+	let (_, behavior) = behavior_slot;
+
+	let Some(behavior_and_ray) = ray.map(|r| (*behavior, r)) else {
+		return;
+	};
+
+	match schedule_mode {
+		ScheduleMode::Enqueue => queue.0.push_back(behavior_and_ray),
+		ScheduleMode::Override => {
+			queue.0.clear();
+			queue.0.push_back(behavior_and_ray);
+			commands.entity(agent).insert(WaitNext);
+		}
 	}
 }
 
@@ -85,53 +69,31 @@ mod tests {
 	use super::*;
 	use crate::components::{Schedule, ScheduleMode, Side, WaitNext};
 	use bevy::{
+		ecs::system::EntityCommands,
 		prelude::{App, Camera, Camera3dBundle, GlobalTransform, Ray, Update, Vec3},
 		utils::default,
 		window::Window,
 	};
 	use mockall::automock;
 
-	#[derive(PartialEq, Debug, Clone, Copy)]
-	struct MockBehaviorPartial {
-		pub id: u32,
-	}
-
-	#[derive(PartialEq, Debug, Clone, Copy)]
-	struct MockBehavior {
-		pub id: u32,
-		pub slot_key: SlotKey,
-		pub ray: Ray,
-	}
-
-	impl FromSource<MockBehaviorPartial, (SlotKey, Ray)> for MockBehavior {
-		fn from_source(
-			source: MockBehaviorPartial,
-			(slot_key, ray): (SlotKey, Ray),
-		) -> Option<Self> {
-			Some(Self {
-				id: source.id,
-				slot_key,
-				ray,
-			})
-		}
-	}
-
-	const DEFAULT_RAY: Ray = Ray {
+	const TEST_RAY: Ray = Ray {
 		origin: Vec3::ONE,
 		direction: Vec3::Z,
 	};
 
-	struct GetDefaultRay;
+	struct GetTestRay;
 
-	impl GetRayFromCamera for GetDefaultRay {
+	impl GetRayFromCamera for GetTestRay {
 		fn get_ray(
 			_camera: &Camera,
 			_camera_transform: &GlobalTransform,
 			_window: &Window,
 		) -> Option<Ray> {
-			Some(DEFAULT_RAY)
+			Some(TEST_RAY)
 		}
 	}
+
+	fn fake_behavior_insert<const T: char>(_entity: &mut EntityCommands, _ray: Ray) {}
 
 	fn setup<TGetRay: GetRayFromCamera + 'static>() -> App {
 		let mut app = App::new();
@@ -148,42 +110,41 @@ mod tests {
 			title: "Window".to_owned(),
 			..default()
 		});
-		app.add_systems(
-			Update,
-			enqueue::<MockBehaviorPartial, MockBehavior, TGetRay>,
-		);
+		app.add_systems(Update, enqueue::<TGetRay>);
 
 		app
 	}
 
 	#[test]
 	fn set_enqueue() {
-		let mut app = setup::<GetDefaultRay>();
+		let mut app = setup::<GetTestRay>();
 		let agent = app
 			.world
 			.spawn((
 				Schedule {
 					mode: ScheduleMode::Enqueue,
-					behaviors: [(SlotKey::Hand(Side::Left), MockBehaviorPartial { id: 42 })].into(),
+					behaviors: [(
+						SlotKey::Hand(Side::Left),
+						Behavior {
+							insert_fn: fake_behavior_insert::<'c'>,
+						},
+					)]
+					.into(),
 				},
 				Queue(
 					[
-						MockBehavior {
-							id: 1,
-							slot_key: SlotKey::Legs,
-							ray: Ray {
-								origin: Vec3::Z,
-								direction: Vec3::Y,
+						(
+							Behavior {
+								insert_fn: fake_behavior_insert::<'a'>,
 							},
-						},
-						MockBehavior {
-							id: 2,
-							slot_key: SlotKey::Hand(Side::Right),
-							ray: Ray {
-								origin: Vec3::Z,
-								direction: Vec3::Y,
+							Ray::default(),
+						),
+						(
+							Behavior {
+								insert_fn: fake_behavior_insert::<'c'>,
 							},
-						},
+							Ray::default(),
+						),
 					]
 					.into(),
 				),
@@ -193,64 +154,63 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let queue = agent.get::<Queue<MockBehavior>>().unwrap();
+		let queue = agent.get::<Queue>().unwrap();
 
 		assert_eq!(
 			vec![
-				&MockBehavior {
-					id: 1,
-					slot_key: SlotKey::Legs,
-					ray: Ray {
-						origin: Vec3::Z,
-						direction: Vec3::Y,
+				&(
+					Behavior {
+						insert_fn: fake_behavior_insert::<'a'>,
 					},
-				},
-				&MockBehavior {
-					id: 2,
-					slot_key: SlotKey::Hand(Side::Right),
-					ray: Ray {
-						origin: Vec3::Z,
-						direction: Vec3::Y,
+					Ray::default(),
+				),
+				&(
+					Behavior {
+						insert_fn: fake_behavior_insert::<'c'>,
 					},
-				},
-				&MockBehavior {
-					id: 42,
-					slot_key: SlotKey::Hand(Side::Left),
-					ray: DEFAULT_RAY
-				}
+					Ray::default(),
+				),
+				&(
+					Behavior {
+						insert_fn: fake_behavior_insert::<'c'>,
+					},
+					TEST_RAY,
+				),
 			],
-			queue.0.iter().collect::<Vec<&MockBehavior>>()
+			queue.0.iter().collect::<Vec<&(Behavior, Ray)>>()
 		);
 	}
 
 	#[test]
 	fn set_override() {
-		let mut app = setup::<GetDefaultRay>();
+		let mut app = setup::<GetTestRay>();
 		let agent = app
 			.world
 			.spawn((
 				Schedule {
 					mode: ScheduleMode::Override,
-					behaviors: [(SlotKey::Hand(Side::Left), MockBehaviorPartial { id: 42 })].into(),
+					behaviors: [(
+						SlotKey::Hand(Side::Left),
+						Behavior {
+							insert_fn: fake_behavior_insert::<'c'>,
+						},
+					)]
+					.into(),
 				},
 				Queue(
 					[
-						MockBehavior {
-							id: 1,
-							slot_key: SlotKey::Legs,
-							ray: Ray {
-								origin: Vec3::Z,
-								direction: Vec3::Y,
+						(
+							Behavior {
+								insert_fn: fake_behavior_insert::<'a'>,
 							},
-						},
-						MockBehavior {
-							id: 2,
-							slot_key: SlotKey::Hand(Side::Right),
-							ray: Ray {
-								origin: Vec3::Z,
-								direction: Vec3::Y,
+							Ray::default(),
+						),
+						(
+							Behavior {
+								insert_fn: fake_behavior_insert::<'c'>,
 							},
-						},
+							Ray::default(),
+						),
 					]
 					.into(),
 				),
@@ -260,35 +220,39 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let queue = agent.get::<Queue<MockBehavior>>().unwrap();
+		let queue = agent.get::<Queue>().unwrap();
 
 		assert_eq!(
 			(
-				vec![&MockBehavior {
-					id: 42,
-					slot_key: SlotKey::Hand(Side::Left),
-					ray: DEFAULT_RAY
-				}],
+				vec![&(
+					Behavior {
+						insert_fn: fake_behavior_insert::<'c'>,
+					},
+					TEST_RAY,
+				),],
 				true
 			),
-			(
-				queue.0.iter().collect(),
-				agent.contains::<WaitNext<MockBehavior>>()
-			)
+			(queue.0.iter().collect(), agent.contains::<WaitNext>())
 		);
 	}
 
 	#[test]
 	fn remove_schedule() {
-		let mut app = setup::<GetDefaultRay>();
+		let mut app = setup::<GetTestRay>();
 		let agent = app
 			.world
 			.spawn((
 				Schedule {
 					mode: ScheduleMode::Override,
-					behaviors: [(SlotKey::Hand(Side::Left), MockBehaviorPartial { id: 42 })].into(),
+					behaviors: [(
+						SlotKey::Hand(Side::Left),
+						Behavior {
+							insert_fn: fake_behavior_insert::<'c'>,
+						},
+					)]
+					.into(),
 				},
-				Queue::<MockBehavior>([].into()),
+				Queue([].into()),
 			))
 			.id();
 
@@ -296,7 +260,7 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Schedule<MockBehaviorPartial>>());
+		assert!(!agent.contains::<Schedule>());
 	}
 
 	#[test]
@@ -334,9 +298,15 @@ mod tests {
 		app.world.spawn((
 			Schedule {
 				mode: ScheduleMode::Override,
-				behaviors: [(SlotKey::Hand(Side::Left), MockBehaviorPartial { id: 42 })].into(),
+				behaviors: [(
+					SlotKey::Hand(Side::Left),
+					Behavior {
+						insert_fn: fake_behavior_insert::<'c'>,
+					},
+				)]
+				.into(),
 			},
-			Queue::<MockBehavior>([].into()),
+			Queue([].into()),
 		));
 
 		app.update();
@@ -366,7 +336,7 @@ mod tests {
 
 		get_ray.expect().times(0).return_const(ray);
 
-		app.world.spawn(Queue::<MockBehavior>([].into()));
+		app.world.spawn(Queue([].into()));
 
 		app.update();
 	}

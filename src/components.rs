@@ -1,6 +1,9 @@
 pub mod marker;
 
-use crate::{behaviors::MovementMode, types::BoneName};
+use crate::{
+	behaviors::{Behavior, MovementMode},
+	types::BoneName,
+};
 use bevy::{
 	prelude::{Component, *},
 	utils::HashMap,
@@ -67,36 +70,16 @@ pub struct Animator {
 }
 
 #[derive(Component)]
-pub struct WaitNext<TBehavior> {
-	phantom_data: PhantomData<TBehavior>,
-}
-
-impl<TBehavior> WaitNext<TBehavior> {
-	pub fn new() -> Self {
-		Self {
-			phantom_data: PhantomData,
-		}
-	}
-}
-
-impl<TBehavior> Default for WaitNext<TBehavior> {
-	fn default() -> Self {
-		Self::new()
-	}
-}
+pub struct WaitNext;
 
 #[derive(Component, Clone, Copy, PartialEq, Debug)]
-pub struct SimpleMovement<TBehavior> {
+pub struct SimpleMovement {
 	pub target: Vec3,
-	phantom_data: PhantomData<TBehavior>,
 }
 
-impl<TBehavior> SimpleMovement<TBehavior> {
+impl SimpleMovement {
 	pub fn new(target: Vec3) -> Self {
-		Self {
-			target,
-			phantom_data: PhantomData,
-		}
+		Self { target }
 	}
 }
 
@@ -107,22 +90,10 @@ pub struct Cast {
 }
 
 #[derive(Component, PartialEq, Debug)]
-pub struct Skill<TBehavior> {
+pub struct Skill {
 	pub ray: Ray,
 	pub cast: Cast,
-	pub animation: MarkerCommands,
-	phantom_behavior: PhantomData<TBehavior>,
-}
-
-impl<TBehavior> Skill<TBehavior> {
-	pub fn new(ray: Ray, cast: Cast, animation: MarkerCommands) -> Self {
-		Self {
-			ray,
-			cast,
-			animation,
-			phantom_behavior: PhantomData,
-		}
-	}
+	pub marker_commands: MarkerCommands,
 }
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
@@ -154,50 +125,50 @@ pub enum ScheduleMode {
 }
 
 #[derive(Component, PartialEq, Debug)]
-pub struct Schedule<TBehavior> {
+pub struct Schedule {
 	pub mode: ScheduleMode,
-	pub behaviors: HashMap<SlotKey, TBehavior>,
+	pub behaviors: HashMap<SlotKey, Behavior>,
 }
 
 #[derive(PartialEq, Debug)]
-pub struct Slot<TBehavior> {
+pub struct Slot {
 	pub entity: Entity,
-	pub behavior: Option<TBehavior>,
+	pub behavior: Option<Behavior>,
 }
 
 #[derive(Component)]
-pub struct Slots<TBehavior>(pub HashMap<SlotKey, Slot<TBehavior>>);
+pub struct Slots(pub HashMap<SlotKey, Slot>);
 
-impl<TBehavior> Slots<TBehavior> {
+impl Slots {
 	pub fn new() -> Self {
 		Self(HashMap::new())
 	}
 }
 
-impl<TBehavior> Default for Slots<TBehavior> {
+impl Default for Slots {
 	fn default() -> Self {
 		Self::new()
 	}
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Item<TBehavior> {
+pub struct Item {
 	pub slot: SlotKey,
 	pub model: Option<Cow<'static, str>>,
-	pub behavior: Option<TBehavior>,
+	pub behavior: Option<Behavior>,
 }
 
 #[derive(Component, Debug, PartialEq)]
-pub struct Equip<TBehavior>(pub Vec<Item<TBehavior>>);
+pub struct Equip(pub Vec<Item>);
 
-impl<TBehavior> Equip<TBehavior> {
-	pub fn new<const N: usize>(items: [Item<TBehavior>; N]) -> Self {
+impl Equip {
+	pub fn new<const N: usize>(items: [Item; N]) -> Self {
 		Self(items.into())
 	}
 }
 
 #[derive(Component)]
-pub struct Queue<T>(pub VecDeque<T>);
+pub struct Queue(pub VecDeque<(Behavior, Ray)>);
 
 #[derive(Component)]
 pub struct TimeTracker<TBehavior> {

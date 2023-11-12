@@ -8,15 +8,11 @@ use crate::{
 };
 use bevy::prelude::*;
 
-pub fn execute_move<
-	TAgent: Component + MovementData,
-	TMovement: Component + Movement,
-	TBehavior: Send + Sync + 'static,
->(
+pub fn execute_move<TAgent: Component + MovementData, TMovement: Component + Movement>(
 	time: Res<Time<Real>>,
 	mut commands: Commands,
 	mut agents: Query<(Entity, &mut TMovement, &mut Transform, &TAgent)>,
-	waiting_agents: Query<Entity, (With<TMovement>, With<WaitNext<TBehavior>>)>,
+	waiting_agents: Query<Entity, (With<TMovement>, With<WaitNext>)>,
 ) {
 	for (entity, mut movement, mut transform, agent) in agents.iter_mut() {
 		let mut entity = commands.entity(entity);
@@ -26,7 +22,7 @@ pub fn execute_move<
 		match (is_done, movement_mode) {
 			(true, _) => {
 				entity.remove::<(Marker<Run>, Marker<Walk>, TMovement)>();
-				entity.insert(WaitNext::<TBehavior>::new());
+				entity.insert(WaitNext);
 			}
 			(_, MovementMode::Walk) => {
 				entity.remove::<Marker<Run>>();
@@ -55,8 +51,6 @@ mod test {
 	};
 	use mockall::{automock, predicate::eq};
 	use std::time::Duration;
-
-	struct MockBehavior;
 
 	#[derive(Component)]
 	struct AgentRun;
@@ -105,8 +99,8 @@ mod test {
 		app.add_systems(
 			Update,
 			(
-				execute_move::<AgentRun, _Movement, MockBehavior>,
-				execute_move::<AgentWalk, _Movement, MockBehavior>,
+				execute_move::<AgentRun, _Movement>,
+				execute_move::<AgentWalk, _Movement>,
 			),
 		);
 
@@ -167,7 +161,7 @@ mod test {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<WaitNext<MockBehavior>>());
+		assert!(agent.contains::<WaitNext>());
 	}
 
 	#[test]
@@ -185,7 +179,7 @@ mod test {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<WaitNext<MockBehavior>>());
+		assert!(!agent.contains::<WaitNext>());
 	}
 
 	#[test]
@@ -348,7 +342,7 @@ mod test {
 				movement,
 				transform,
 				Marker::<(AgentWalk, Run)>::new(),
-				WaitNext::<MockBehavior>::new(),
+				WaitNext,
 			))
 			.id();
 

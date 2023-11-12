@@ -1,124 +1,110 @@
+use std::time::Duration;
+
 use crate::components::{Skill, SlotKey, Slots, TimeTracker, WaitNext};
-use bevy::prelude::{
-	Commands,
-	Entity,
-	GlobalTransform,
-	Query,
-	Real,
-	Res,
-	Time,
-	Transform,
-	Vec3,
-	With,
-	Without,
+use bevy::{
+	ecs::system::EntityCommands,
+	prelude::{
+		Commands,
+		Entity,
+		GlobalTransform,
+		Mut,
+		Query,
+		Real,
+		Res,
+		Time,
+		Transform,
+		Vec3,
+		Without,
+	},
 };
 
-type NewSkills<'a, TBehavior, TSpawnSlot> = (
+type NewSkills<'a> = (Entity, &'a Skill, &'a mut Transform, &'a Slots);
+type RunningSkills<'a> = (
 	Entity,
-	&'a Skill<TBehavior>,
-	&'a mut Transform,
-	&'a Slots<TSpawnSlot>,
+	&'a Skill,
+	&'a mut TimeTracker<Skill>,
+	Option<&'a WaitNext>,
 );
-type RunningSkills<'a, TBehavior> = (
+type TrackedSkills<'a> = (
 	Entity,
-	&'a Skill<TBehavior>,
-	&'a mut TimeTracker<Skill<TBehavior>>,
+	&'a Skill,
+	Mut<'a, TimeTracker<Skill>>,
+	Option<&'a WaitNext>,
 );
-type Skills<'a, TBehavior> = (Entity, &'a Skill<TBehavior>);
 
-pub fn execute_skill<TBehavior: Send + Sync + 'static, TSpawnSlot: Send + Sync + 'static>(
+pub fn execute_skill(
 	time: Res<Time<Real>>,
 	mut commands: Commands,
-	mut agents_with_new_skill: Query<
-		NewSkills<TBehavior, TSpawnSlot>,
-		Without<TimeTracker<Skill<TBehavior>>>,
-	>,
-	mut agents_with_running_skill: Query<RunningSkills<TBehavior>>,
-	waiting_agents: Query<Skills<TBehavior>, With<WaitNext<TBehavior>>>,
+	mut agents_with_new_skill: Query<NewSkills, Without<TimeTracker<Skill>>>,
+	mut agents_with_running_skill: Query<RunningSkills>,
 	transforms: Query<&GlobalTransform>,
 ) {
-	let delta = time.delta();
-
 	for (agent, skill, mut transform, slots) in &mut agents_with_new_skill {
-		initialize_and_track(
-			&mut commands,
-			agent,
-			skill,
-			&mut transform,
-			slots,
-			&transforms,
-		);
+		let mut agent = commands.entity(agent);
+		insert_components_to(&mut agent, skill);
+		look_at_target(&mut transform, skill, slots, &transforms);
 	}
 
-	for (agent, skill, mut tracker) in &mut agents_with_running_skill {
-		update(&mut commands, agent, skill, &mut tracker, delta);
-	}
+	let agents_with_done_skill = agents_with_running_skill
+		.iter_mut()
+		.map(update_duration_with(time.delta()))
+		.filter(skill_is_done);
 
-	for (agent, skill) in &waiting_agents {
-		remove_and_untrack(&mut commands, agent, skill);
+	for (agent, skill, ..) in agents_with_done_skill {
+		let mut agent = commands.entity(agent);
+		remove_components_from(&mut agent, skill);
+		agent.insert(WaitNext);
 	}
 }
 
-fn initialize_and_track<TBehavior: Send + Sync + 'static, TSpawnSlot: Send + Sync + 'static>(
-	commands: &mut Commands,
-	agent: Entity,
-	skill: &Skill<TBehavior>,
+fn insert_components_to(agent: &mut EntityCommands, skill: &Skill) {
+	agent.insert(TimeTracker::<Skill>::new());
+	skill.marker_commands.insert_marker_on(agent);
+}
+
+fn remove_components_from(agent: &mut EntityCommands, skill: &Skill) {
+	agent.remove::<(Skill, TimeTracker<Skill>)>();
+	skill.marker_commands.remove_marker_on(agent);
+}
+
+fn update_duration_with<'a>(delta: Duration) -> impl Fn(TrackedSkills<'a>) -> TrackedSkills<'a> {
+	move |(agent, skill, mut tracker, wait_next)| {
+		tracker.duration += delta;
+		(agent, skill, tracker, wait_next)
+	}
+}
+
+fn skill_is_done((_, skill, tracker, wait_next): &TrackedSkills) -> bool {
+	wait_next.is_some() || tracker.duration >= skill.cast.pre + skill.cast.after
+}
+
+fn look_at_target(
 	transform: &mut Transform,
-	slots: &Slots<TSpawnSlot>,
+	skill: &Skill,
+	slots: &Slots,
 	transforms: &Query<&GlobalTransform>,
 ) {
-	let mut agent = commands.entity(agent);
-	agent.insert(TimeTracker::<Skill<TBehavior>>::new());
-	skill.animation.insert_marker_on(&mut agent);
-
-	let Some(spawn_slot) = slots.0.get(&SlotKey::SkillSpawn) else {
+	let Some(target) = get_target(skill, transform, slots, transforms) else {
 		return;
 	};
 
-	let Ok(spawn) = transforms.get(spawn_slot.entity) else {
-		return;
-	};
+	transform.look_at(target, Vec3::Y);
+}
 
-	let Some(ray_length) = skill.ray.intersect_plane(spawn.translation(), Vec3::Y) else {
-		return;
-	};
-
+fn get_target(
+	skill: &Skill,
+	transform: &mut Transform,
+	slots: &Slots,
+	transforms: &Query<&GlobalTransform>,
+) -> Option<Vec3> {
+	let ray_length = slots
+		.0
+		.get(&SlotKey::SkillSpawn)
+		.and_then(|slot| transforms.get(slot.entity).ok())
+		.and_then(|entity| skill.ray.intersect_plane(entity.translation(), Vec3::Y))?;
 	let target = skill.ray.origin + skill.ray.direction * ray_length;
 
-	transform.look_at(
-		Vec3::new(target.x, transform.translation.y, target.z),
-		Vec3::Y,
-	);
-}
-
-fn update<TBehavior: Send + Sync + 'static>(
-	commands: &mut Commands,
-	agent: Entity,
-	skill: &Skill<TBehavior>,
-	tracker: &mut TimeTracker<Skill<TBehavior>>,
-	delta: std::time::Duration,
-) {
-	let mut agent = commands.entity(agent);
-
-	tracker.duration += delta;
-
-	if tracker.duration < skill.cast.pre + skill.cast.after {
-		return;
-	}
-
-	agent.insert(WaitNext::<TBehavior>::new());
-	agent.remove::<(Skill<TBehavior>, TimeTracker<Skill<TBehavior>>)>();
-	skill.animation.remove_marker_on(&mut agent);
-}
-
-fn remove_and_untrack<TBehavior: Send + Sync + 'static>(
-	commands: &mut Commands,
-	agent: Entity,
-	skill: &Skill<TBehavior>,
-) {
-	let mut agent = commands.entity(agent);
-	agent.remove::<(Skill<TBehavior>, TimeTracker<Skill<TBehavior>>)>();
-	skill.animation.remove_marker_on(&mut agent);
+	Some(Vec3::new(target.x, transform.translation.y, target.z))
 }
 
 #[cfg(test)]
@@ -135,8 +121,6 @@ mod tests {
 	use std::time::Duration;
 
 	struct Tag;
-
-	struct MockBehavior;
 
 	const TEST_CAST: Cast = Cast {
 		pre: Duration::from_millis(100),
@@ -158,7 +142,7 @@ mod tests {
 
 		let agent = app
 			.world
-			.spawn(Slots::<()>(
+			.spawn(Slots(
 				[(
 					SlotKey::SkillSpawn,
 					Slot {
@@ -173,7 +157,7 @@ mod tests {
 		time.update();
 		app.insert_resource(time);
 		app.update();
-		app.add_systems(Update, execute_skill::<MockBehavior, ()>);
+		app.add_systems(Update, execute_skill);
 
 		(app, agent)
 	}
@@ -188,7 +172,11 @@ mod tests {
 	fn add_marker() {
 		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<MockBehavior>::new(TEST_RAY, TEST_CAST, Marker::<Tag>::commands()),
+			Skill {
+				ray: TEST_RAY,
+				cast: TEST_CAST,
+				marker_commands: Marker::<Tag>::commands(),
+			},
 			Transform::default(),
 		));
 
@@ -203,14 +191,14 @@ mod tests {
 	fn remove_marker() {
 		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<MockBehavior>::new(
-				TEST_RAY,
-				Cast {
+			Skill {
+				ray: TEST_RAY,
+				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				Marker::<Tag>::commands(),
-			),
+				marker_commands: Marker::<Tag>::commands(),
+			},
 			Transform::default(),
 		));
 
@@ -229,14 +217,14 @@ mod tests {
 	fn do_not_remove_marker_after_insufficient_time() {
 		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<MockBehavior>::new(
-				TEST_RAY,
-				Cast {
+			Skill {
+				ray: TEST_RAY,
+				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				Marker::<Tag>::commands(),
-			),
+				marker_commands: Marker::<Tag>::commands(),
+			},
 			Transform::default(),
 		));
 
@@ -255,14 +243,14 @@ mod tests {
 	fn remove_marker_after_incremental_deltas() {
 		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<MockBehavior>::new(
-				TEST_RAY,
-				Cast {
+			Skill {
+				ray: TEST_RAY,
+				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				Marker::<Tag>::commands(),
-			),
+				marker_commands: Marker::<Tag>::commands(),
+			},
 			Transform::default(),
 		));
 
@@ -285,14 +273,14 @@ mod tests {
 	fn remove_skill_and_tracker() {
 		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<MockBehavior>::new(
-				TEST_RAY,
-				Cast {
+			Skill {
+				ray: TEST_RAY,
+				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				Marker::<Tag>::commands(),
-			),
+				marker_commands: Marker::<Tag>::commands(),
+			},
 			Transform::default(),
 		));
 
@@ -307,8 +295,8 @@ mod tests {
 		assert_eq!(
 			(false, false),
 			(
-				agent.contains::<Skill<MockBehavior>>(),
-				agent.contains::<TimeTracker<Skill<MockBehavior>>>()
+				agent.contains::<Skill>(),
+				agent.contains::<TimeTracker<Skill>>()
 			)
 		);
 	}
@@ -317,14 +305,14 @@ mod tests {
 	fn add_wait_next() {
 		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<MockBehavior>::new(
-				TEST_RAY,
-				Cast {
+			Skill {
+				ray: TEST_RAY,
+				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				Marker::<Tag>::commands(),
-			),
+				marker_commands: Marker::<Tag>::commands(),
+			},
 			Transform::default(),
 		));
 
@@ -336,21 +324,21 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<WaitNext<MockBehavior>>());
+		assert!(agent.contains::<WaitNext>());
 	}
 
 	#[test]
 	fn do_not_add_add_wait_next_too_early() {
 		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<MockBehavior>::new(
-				TEST_RAY,
-				Cast {
+			Skill {
+				ray: TEST_RAY,
+				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				Marker::<Tag>::commands(),
-			),
+				marker_commands: Marker::<Tag>::commands(),
+			},
 			Transform::default(),
 		));
 
@@ -362,29 +350,27 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<WaitNext<MockBehavior>>());
+		assert!(!agent.contains::<WaitNext>());
 	}
 
 	#[test]
 	fn remove_all_related_components_when_waiting_next() {
 		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<MockBehavior>::new(
-				TEST_RAY,
-				Cast {
+			Skill {
+				ray: TEST_RAY,
+				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				Marker::<Tag>::commands(),
-			),
+				marker_commands: Marker::<Tag>::commands(),
+			},
 			Transform::default(),
 		));
 
 		app.update();
 
-		app.world
-			.entity_mut(agent)
-			.insert(WaitNext::<MockBehavior>::new());
+		app.world.entity_mut(agent).insert(WaitNext);
 
 		app.update();
 
@@ -393,8 +379,8 @@ mod tests {
 		assert_eq!(
 			(false, false, false),
 			(
-				agent.contains::<Skill<MockBehavior>>(),
-				agent.contains::<TimeTracker<Skill<MockBehavior>>>(),
+				agent.contains::<Skill>(),
+				agent.contains::<TimeTracker<Skill>>(),
 				agent.contains::<Marker<Tag>>(),
 			)
 		);
@@ -408,7 +394,11 @@ mod tests {
 			direction: Vec3::NEG_Y,
 		};
 		app.world.entity_mut(agent).insert((
-			Skill::<MockBehavior>::new(ray, TEST_CAST, Marker::<Tag>::commands()),
+			Skill {
+				ray,
+				cast: TEST_CAST,
+				marker_commands: Marker::<Tag>::commands(),
+			},
 			Transform::default(),
 		));
 
@@ -428,7 +418,11 @@ mod tests {
 			direction: Vec3::new(4., -3., 0.),
 		};
 		app.world.entity_mut(agent).insert((
-			Skill::<MockBehavior>::new(ray, TEST_CAST, Marker::<Tag>::commands()),
+			Skill {
+				ray,
+				cast: TEST_CAST,
+				marker_commands: Marker::<Tag>::commands(),
+			},
 			Transform::default(),
 		));
 
@@ -452,7 +446,11 @@ mod tests {
 			direction: Vec3::new(4., -3., 0.),
 		};
 		app.world.entity_mut(agent).insert((
-			Skill::<MockBehavior>::new(ray, TEST_CAST, Marker::<Tag>::commands()),
+			Skill {
+				ray,
+				cast: TEST_CAST,
+				marker_commands: Marker::<Tag>::commands(),
+			},
 			Transform::from_xyz(0., 3., 0.),
 		));
 
@@ -476,7 +474,11 @@ mod tests {
 			direction: Vec3::new(4., -3., 0.),
 		};
 		app.world.entity_mut(agent).insert((
-			Skill::<MockBehavior>::new(ray, TEST_CAST, Marker::<Tag>::commands()),
+			Skill {
+				ray,
+				cast: TEST_CAST,
+				marker_commands: Marker::<Tag>::commands(),
+			},
 			Transform::from_xyz(0., 0., 0.),
 		));
 
