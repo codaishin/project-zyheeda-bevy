@@ -18,6 +18,7 @@
 		"automock",
 		"consts",
 		"Deque",
+		"despawn",
 		"gltf",
 		"Loadout",
 		"mockall",
