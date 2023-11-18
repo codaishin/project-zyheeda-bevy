@@ -15,6 +15,7 @@ fn insert_fn(entity: &mut EntityCommands, ray: Ray) {
 			after: Duration::from_millis(100),
 		},
 		marker_commands: Marker::<(Shoot, HandGun, Right)>::commands(),
+		spawn_behavior: None,
 	});
 }
 
@@ -57,7 +58,8 @@ mod tests {
 					pre: Duration::from_millis(300),
 					after: Duration::from_millis(100)
 				},
-				marker_commands: Marker::<(Shoot, HandGun, Right)>::commands()
+				marker_commands: Marker::<(Shoot, HandGun, Right)>::commands(),
+				spawn_behavior: None,
 			}),
 			skill
 		);

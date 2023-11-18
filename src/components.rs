@@ -94,6 +94,7 @@ pub struct Skill {
 	pub ray: Ray,
 	pub cast: Cast,
 	pub marker_commands: MarkerCommands,
+	pub spawn_behavior: Option<fn(&mut Commands) -> Option<Entity>>,
 }
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
