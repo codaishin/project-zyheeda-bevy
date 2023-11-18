@@ -7,8 +7,8 @@ use crate::{
 impl MovementData for Player {
 	fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode) {
 		match self.movement_mode {
-			MovementMode::Walk => (self.walk_speed, MovementMode::Walk),
-			MovementMode::Run => (self.run_speed, MovementMode::Run),
+			MovementMode::Slow => (self.walk_speed, MovementMode::Slow),
+			MovementMode::Fast => (self.run_speed, MovementMode::Fast),
 		}
 	}
 }
@@ -22,12 +22,12 @@ mod tests {
 	fn get_walk_speed() {
 		let player = Player {
 			walk_speed: UnitsPerSecond::new(6.),
-			movement_mode: MovementMode::Walk,
+			movement_mode: MovementMode::Slow,
 			..default()
 		};
 
 		assert_eq!(
-			(UnitsPerSecond::new(6.), MovementMode::Walk),
+			(UnitsPerSecond::new(6.), MovementMode::Slow),
 			player.get_movement_data()
 		)
 	}
@@ -36,12 +36,12 @@ mod tests {
 	fn get_run_speed() {
 		let player = Player {
 			run_speed: UnitsPerSecond::new(60.),
-			movement_mode: MovementMode::Run,
+			movement_mode: MovementMode::Fast,
 			..default()
 		};
 
 		assert_eq!(
-			(UnitsPerSecond::new(60.), MovementMode::Run),
+			(UnitsPerSecond::new(60.), MovementMode::Fast),
 			player.get_movement_data()
 		)
 	}

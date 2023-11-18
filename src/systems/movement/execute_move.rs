@@ -1,7 +1,7 @@
 use crate::{
 	behaviors::MovementMode,
 	components::{
-		marker::{Marker, Run, Walk},
+		marker::{Fast, Marker, Slow},
 		WaitNext,
 	},
 	traits::{movement::Movement, movement_data::MovementData},
@@ -21,23 +21,23 @@ pub fn execute_move<TAgent: Component + MovementData, TMovement: Component + Mov
 
 		match (is_done, movement_mode) {
 			(true, _) => {
-				entity.remove::<(Marker<Run>, Marker<Walk>, TMovement)>();
+				entity.remove::<(Marker<Fast>, Marker<Slow>, TMovement)>();
 				entity.insert(WaitNext);
 			}
-			(_, MovementMode::Walk) => {
-				entity.remove::<Marker<Run>>();
-				entity.insert(Marker::<Walk>::new());
+			(_, MovementMode::Slow) => {
+				entity.remove::<Marker<Fast>>();
+				entity.insert(Marker::<Slow>::new());
 			}
-			(_, MovementMode::Run) => {
-				entity.remove::<Marker<Walk>>();
-				entity.insert(Marker::<Run>::new());
+			(_, MovementMode::Fast) => {
+				entity.remove::<Marker<Slow>>();
+				entity.insert(Marker::<Fast>::new());
 			}
 		}
 	}
 
 	for entity in &waiting_agents {
 		let mut entity = commands.entity(entity);
-		entity.remove::<(Marker<Run>, Marker<Walk>, TMovement)>();
+		entity.remove::<(Marker<Fast>, Marker<Slow>, TMovement)>();
 	}
 }
 
@@ -79,13 +79,13 @@ mod test {
 
 	impl MovementData for AgentRun {
 		fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode) {
-			(UnitsPerSecond::new(11.), MovementMode::Run)
+			(UnitsPerSecond::new(11.), MovementMode::Fast)
 		}
 	}
 
 	impl MovementData for AgentWalk {
 		fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode) {
-			(UnitsPerSecond::new(1.), MovementMode::Walk)
+			(UnitsPerSecond::new(1.), MovementMode::Slow)
 		}
 	}
 
@@ -193,7 +193,7 @@ mod test {
 
 		let agent = app
 			.world
-			.spawn((agent, movement, transform, Marker::<Walk>::new()))
+			.spawn((agent, movement, transform, Marker::<Slow>::new()))
 			.id();
 
 		app.update();
@@ -203,8 +203,8 @@ mod test {
 		assert_eq!(
 			(false, true),
 			(
-				agent.contains::<Marker<Walk>>(),
-				agent.contains::<Marker<Run>>()
+				agent.contains::<Marker<Slow>>(),
+				agent.contains::<Marker<Fast>>()
 			)
 		)
 	}
@@ -224,7 +224,7 @@ mod test {
 				agent,
 				movement,
 				transform,
-				Marker::<(AgentRun, Walk)>::new(),
+				Marker::<(AgentRun, Slow)>::new(),
 			))
 			.id();
 
@@ -235,8 +235,8 @@ mod test {
 		assert_eq!(
 			(false, false),
 			(
-				agent.contains::<Marker<Walk>>(),
-				agent.contains::<Marker<Run>>()
+				agent.contains::<Marker<Slow>>(),
+				agent.contains::<Marker<Fast>>()
 			)
 		)
 	}
@@ -252,7 +252,7 @@ mod test {
 
 		let agent = app
 			.world
-			.spawn((agent, movement, transform, Marker::<Run>::new()))
+			.spawn((agent, movement, transform, Marker::<Fast>::new()))
 			.id();
 
 		app.update();
@@ -262,8 +262,8 @@ mod test {
 		assert_eq!(
 			(true, false),
 			(
-				agent.contains::<Marker<Walk>>(),
-				agent.contains::<Marker<Run>>()
+				agent.contains::<Marker<Slow>>(),
+				agent.contains::<Marker<Fast>>()
 			)
 		)
 	}
@@ -283,7 +283,7 @@ mod test {
 				agent,
 				movement,
 				transform,
-				Marker::<(AgentWalk, Run)>::new(),
+				Marker::<(AgentWalk, Fast)>::new(),
 			))
 			.id();
 
@@ -294,8 +294,8 @@ mod test {
 		assert_eq!(
 			(false, false),
 			(
-				agent.contains::<Marker<Walk>>(),
-				agent.contains::<Marker<Run>>()
+				agent.contains::<Marker<Slow>>(),
+				agent.contains::<Marker<Fast>>()
 			)
 		)
 	}
@@ -315,7 +315,7 @@ mod test {
 				agent,
 				movement,
 				transform,
-				Marker::<(AgentWalk, Run)>::new(),
+				Marker::<(AgentWalk, Fast)>::new(),
 			))
 			.id();
 
@@ -341,7 +341,7 @@ mod test {
 				agent,
 				movement,
 				transform,
-				Marker::<(AgentWalk, Run)>::new(),
+				Marker::<(AgentWalk, Fast)>::new(),
 				WaitNext,
 			))
 			.id();
@@ -354,8 +354,8 @@ mod test {
 			(false, false, false),
 			(
 				agent.contains::<_Movement>(),
-				agent.contains::<Marker<Run>>(),
-				agent.contains::<Marker<Walk>>()
+				agent.contains::<Marker<Fast>>(),
+				agent.contains::<Marker<Slow>>()
 			)
 		);
 	}

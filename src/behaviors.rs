@@ -6,8 +6,8 @@ use bevy::{ecs::system::EntityCommands, prelude::*};
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub enum MovementMode {
 	#[default]
-	Walk,
-	Run,
+	Slow,
+	Fast,
 }
 
 pub type InsertComponentFn = fn(&mut EntityCommands, Ray);

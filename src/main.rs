@@ -6,7 +6,7 @@ use project_zyheeda::{
 	behaviors::{movement::movement, shoot_gun::shoot_gun, MovementMode},
 	bundles::Loadout,
 	components::{
-		marker::{HandGun, Idle, Marker, Right, Run, Shoot, Walk},
+		marker::{Fast, HandGun, Idle, Marker, Right, Shoot, Slow},
 		Animator,
 		CamOrbit,
 		Equip,
@@ -64,8 +64,8 @@ fn main() {
 			Update,
 			(
 				animate::<Player, Marker<Idle>>,
-				animate::<Player, Marker<Walk>>,
-				animate::<Player, Marker<Run>>,
+				animate::<Player, Marker<Slow>>,
+				animate::<Player, Marker<Fast>>,
 				animate::<Player, Marker<(Shoot, HandGun, Right)>>,
 			),
 		)
@@ -151,10 +151,10 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	commands.insert_resource(Animation::<Player, Marker<Idle>>::new(
 		asset_server.load("models/player.gltf#Animation2"),
 	));
-	commands.insert_resource(Animation::<Player, Marker<Walk>>::new(
+	commands.insert_resource(Animation::<Player, Marker<Slow>>::new(
 		asset_server.load("models/player.gltf#Animation1"),
 	));
-	commands.insert_resource(Animation::<Player, Marker<Run>>::new(
+	commands.insert_resource(Animation::<Player, Marker<Fast>>::new(
 		asset_server.load("models/player.gltf#Animation3"),
 	));
 	commands.insert_resource(Animation::<Player, Marker<(Shoot, HandGun, Right)>>::new(
@@ -170,7 +170,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		Player {
 			walk_speed: UnitsPerSecond::new(0.75),
 			run_speed: UnitsPerSecond::new(1.5),
-			movement_mode: MovementMode::Walk,
+			movement_mode: MovementMode::Slow,
 		},
 		Loadout::new(
 			SlotBones::new([

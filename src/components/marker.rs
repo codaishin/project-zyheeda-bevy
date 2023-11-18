@@ -1,9 +1,9 @@
 use bevy::{ecs::system::EntityCommands, prelude::Component};
 use std::marker::PhantomData;
 
-pub struct Walk;
+pub struct Slow;
 
-pub struct Run;
+pub struct Fast;
 
 pub struct Idle;
 

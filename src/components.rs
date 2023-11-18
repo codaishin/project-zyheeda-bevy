@@ -199,3 +199,8 @@ impl<T> Default for TimeTracker<T> {
 		Self::new()
 	}
 }
+
+#[derive(Component)]
+pub struct Projectile {
+	pub ray: Ray,
+}
