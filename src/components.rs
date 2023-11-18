@@ -89,12 +89,20 @@ pub struct Cast {
 	pub after: Duration,
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct Agent(pub Entity);
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct Spawner(pub GlobalTransform);
+
+pub type SpawnBehaviorFn = fn(&mut Commands, Agent, Spawner, Ray);
+
 #[derive(Component, PartialEq, Debug)]
 pub struct Skill {
 	pub ray: Ray,
 	pub cast: Cast,
 	pub marker_commands: MarkerCommands,
-	pub spawn_behavior: Option<fn(&mut Commands) -> Option<Entity>>,
+	pub spawn_behavior: Option<SpawnBehaviorFn>,
 }
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]

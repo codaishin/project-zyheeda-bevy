@@ -1,24 +1,25 @@
-use crate::components::{Skill, SlotKey, Slots, TimeTracker, WaitNext};
-use bevy::{
-	hierarchy::BuildChildren,
-	prelude::{
-		Commands,
-		Entity,
-		GlobalTransform,
-		Query,
-		Real,
-		Res,
-		Time,
-		Transform,
-		Vec3,
-		Without,
-	},
+use crate::components::{
+	Agent,
+	Skill,
+	SlotKey,
+	Slots,
+	SpawnBehaviorFn,
+	Spawner,
+	TimeTracker,
+	WaitNext,
 };
-
-type AgentEntity = Entity;
-type SpawnerEntity = Entity;
-type BehaviorEntity = Entity;
-type SpawnBehaviorFn = fn(&mut Commands) -> Option<BehaviorEntity>;
+use bevy::prelude::{
+	Commands,
+	Entity,
+	GlobalTransform,
+	Query,
+	Real,
+	Res,
+	Time,
+	Transform,
+	Vec3,
+	Without,
+};
 
 type Skills<'a> = (Entity, &'a Skill, &'a mut Transform, &'a Slots);
 type RunningSkills<'a> = (
@@ -38,16 +39,20 @@ pub fn execute_skill(
 ) {
 	let delta = time.delta();
 
-	for (agent, skill, mut transform, slots) in &mut agents_with_new_skill {
+	for (entity, skill, mut transform, slots) in &mut agents_with_new_skill {
+		let agent = Agent(entity);
+
 		look_at_target(&mut transform, skill, slots, &transforms);
 		mark_agent_as_running(&mut commands, skill, agent);
 	}
 
-	for (agent, mut skill, mut tracker, slots, wait_next) in &mut agents_with_running_skill {
+	for (entity, mut skill, mut tracker, slots, wait_next) in &mut agents_with_running_skill {
+		let agent = Agent(entity);
+
 		tracker.duration += delta;
 
-		if let Some((spawn_behavior, spawner)) = can_trigger_skill(&skill, &tracker, slots) {
-			trigger_skill(&mut commands, &mut skill, spawner, spawn_behavior);
+		if let Some((spawner, spawn_fn)) = can_trigger_skill(&skill, &tracker, slots, &transforms) {
+			trigger_skill(&mut commands, &mut skill, agent, spawner, spawn_fn);
 		}
 
 		if skill_is_done(&skill, &tracker, wait_next) {
@@ -56,14 +61,14 @@ pub fn execute_skill(
 	}
 }
 
-fn mark_agent_as_running(commands: &mut Commands, skill: &Skill, agent: AgentEntity) {
-	let mut agent = commands.entity(agent);
+fn mark_agent_as_running(commands: &mut Commands, skill: &Skill, agent: Agent) {
+	let mut agent = commands.entity(agent.0);
 	agent.insert(TimeTracker::<Skill>::new());
 	skill.marker_commands.insert_marker_on(&mut agent);
 }
 
-fn mark_agent_as_done(commands: &mut Commands, skill: &Skill, agent: AgentEntity) {
-	let mut agent = commands.entity(agent);
+fn mark_agent_as_done(commands: &mut Commands, skill: &Skill, agent: Agent) {
+	let mut agent = commands.entity(agent.0);
 	agent.insert(WaitNext);
 	agent.remove::<(Skill, TimeTracker<Skill>)>();
 	skill.marker_commands.remove_marker_on(&mut agent);
@@ -102,27 +107,28 @@ fn can_trigger_skill(
 	skill: &Skill,
 	tracker: &TimeTracker<Skill>,
 	slots: &Slots,
-) -> Option<(SpawnBehaviorFn, SpawnerEntity)> {
+	transforms: &Query<&GlobalTransform>,
+) -> Option<(Spawner, SpawnBehaviorFn)> {
 	if tracker.duration < skill.cast.pre {
 		return None;
 	}
 
-	Some((
-		skill.spawn_behavior?,
-		slots.0.get(&SlotKey::SkillSpawn)?.entity,
-	))
+	let spawner_slot = slots.0.get(&SlotKey::SkillSpawn)?;
+	let spawner_transform = transforms.get(spawner_slot.entity).ok()?;
+
+	Some((Spawner(*spawner_transform), skill.spawn_behavior?))
 }
 
 fn trigger_skill(
-	commands: &mut Commands,
+	cmd: &mut Commands,
 	skill: &mut Skill,
-	spawner: SpawnerEntity,
-	spawn_behavior: SpawnBehaviorFn,
+	agent: Agent,
+	spawner: Spawner,
+	spawn_behavior_fn: SpawnBehaviorFn,
 ) {
-	if let Some(behavior) = spawn_behavior(commands) {
-		commands.entity(spawner).add_child(behavior);
-	}
 	skill.spawn_behavior = None;
+
+	spawn_behavior_fn(cmd, agent, spawner, skill.ray)
 }
 
 fn skill_is_done(
@@ -142,16 +148,21 @@ mod tests {
 	};
 	use bevy::{
 		ecs::component::Component,
-		hierarchy::Children,
 		prelude::{App, Ray, Transform, Update, Vec3},
 		time::{Real, Time},
 	};
 	use std::time::Duration;
 
+	type AgentEntity = Entity;
+
 	struct Tag;
 
-	#[derive(Component)]
-	struct Bullet;
+	#[derive(Component, Debug, PartialEq)]
+	struct MockBehavior {
+		pub agent: Agent,
+		pub ray: Ray,
+		pub spawner: Spawner,
+	}
 
 	const TEST_CAST: Cast = Cast {
 		pre: Duration::from_millis(100),
@@ -162,7 +173,7 @@ mod tests {
 		direction: Vec3::NEG_ONE,
 	};
 
-	fn setup_app(skill_spawn_location: Vec3) -> (App, AgentEntity, SpawnerEntity) {
+	fn setup_app(skill_spawn_location: Vec3) -> (App, AgentEntity) {
 		let mut app = App::new();
 		let mut time = Time::<Real>::default();
 
@@ -190,7 +201,7 @@ mod tests {
 		app.update();
 		app.add_systems(Update, execute_skill);
 
-		(app, agent, skill_spawner)
+		(app, agent)
 	}
 
 	fn tick_time(app: &mut App, delta: Duration) {
@@ -201,7 +212,7 @@ mod tests {
 
 	#[test]
 	fn add_marker() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill {
 				ray: TEST_RAY,
@@ -221,7 +232,7 @@ mod tests {
 
 	#[test]
 	fn remove_marker() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill {
 				ray: TEST_RAY,
@@ -248,7 +259,7 @@ mod tests {
 
 	#[test]
 	fn do_not_remove_marker_after_insufficient_time() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill {
 				ray: TEST_RAY,
@@ -275,7 +286,7 @@ mod tests {
 
 	#[test]
 	fn remove_marker_after_incremental_deltas() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill {
 				ray: TEST_RAY,
@@ -306,7 +317,7 @@ mod tests {
 
 	#[test]
 	fn remove_skill_and_tracker() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill {
 				ray: TEST_RAY,
@@ -339,7 +350,7 @@ mod tests {
 
 	#[test]
 	fn add_wait_next() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill {
 				ray: TEST_RAY,
@@ -366,7 +377,7 @@ mod tests {
 
 	#[test]
 	fn do_not_add_add_wait_next_too_early() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill {
 				ray: TEST_RAY,
@@ -393,7 +404,7 @@ mod tests {
 
 	#[test]
 	fn remove_all_related_components_when_waiting_next() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill {
 				ray: TEST_RAY,
@@ -427,7 +438,7 @@ mod tests {
 
 	#[test]
 	fn use_ray_look_direction() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO);
 		let ray = Ray {
 			origin: Vec3::new(1., 10., 5.),
 			direction: Vec3::NEG_Y,
@@ -452,7 +463,7 @@ mod tests {
 
 	#[test]
 	fn use_odd_ray_look_direction() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO);
 		let ray = Ray {
 			origin: Vec3::new(0., 3., 0.),
 			direction: Vec3::new(4., -3., 0.),
@@ -481,7 +492,7 @@ mod tests {
 
 	#[test]
 	fn use_odd_ray_and_skill_spawn_for_look_direction() {
-		let (mut app, agent, ..) = setup_app(Vec3::new(0., 3., 0.));
+		let (mut app, agent) = setup_app(Vec3::new(0., 3., 0.));
 		let ray = Ray {
 			origin: Vec3::new(0., 6., 0.),
 			direction: Vec3::new(4., -3., 0.),
@@ -510,7 +521,7 @@ mod tests {
 
 	#[test]
 	fn look_horizontally() {
-		let (mut app, agent, ..) = setup_app(Vec3::new(0., 3., 0.));
+		let (mut app, agent) = setup_app(Vec3::new(0., 3., 0.));
 		let ray = Ray {
 			origin: Vec3::new(0., 6., 0.),
 			direction: Vec3::new(4., -3., 0.),
@@ -539,7 +550,7 @@ mod tests {
 
 	#[test]
 	fn spawn_behavior() {
-		let (mut app, agent, spawner) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill {
 				ray: TEST_RAY,
@@ -548,7 +559,13 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: Some(|commands| Some(commands.spawn(Bullet).id())),
+				spawn_behavior: Some(|commands, agent, spawner, ray| {
+					commands.spawn(MockBehavior {
+						agent,
+						ray,
+						spawner,
+					});
+				}),
 			},
 			Transform::default(),
 		));
@@ -559,18 +576,17 @@ mod tests {
 
 		app.update();
 
-		let bullet_as_child_of_spawner = app
+		let behavior = app
 			.world
-			.get::<Children>(spawner)
-			.and_then(|children| children.get(0))
-			.and_then(|bullet_entity| app.world.get::<Bullet>(*bullet_entity));
+			.iter_entities()
+			.find_map(|e| e.get::<MockBehavior>());
 
-		assert!(bullet_as_child_of_spawner.is_some());
+		assert!(behavior.is_some());
 	}
 
 	#[test]
 	fn not_spawned_before_pre_cast_behavior() {
-		let (mut app, agent, spawner) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill {
 				ray: TEST_RAY,
@@ -579,7 +595,13 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: Some(|commands| Some(commands.spawn(Bullet).id())),
+				spawn_behavior: Some(|commands, agent, spawner, ray| {
+					commands.spawn(MockBehavior {
+						agent,
+						ray,
+						spawner,
+					});
+				}),
 			},
 			Transform::default(),
 		));
@@ -590,18 +612,17 @@ mod tests {
 
 		app.update();
 
-		let bullet_as_child_of_spawner = app
+		let behavior = app
 			.world
-			.get::<Children>(spawner)
-			.and_then(|children| children.get(0))
-			.and_then(|bullet_entity| app.world.get::<Bullet>(*bullet_entity));
+			.iter_entities()
+			.find_map(|e| e.get::<MockBehavior>());
 
-		assert!(bullet_as_child_of_spawner.is_none());
+		assert!(behavior.is_none());
 	}
 
 	#[test]
 	fn not_spawned_multiple_times() {
-		let (mut app, agent, spawner) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill {
 				ray: TEST_RAY,
@@ -610,7 +631,13 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: Some(|commands| Some(commands.spawn(Bullet).id())),
+				spawn_behavior: Some(|commands, agent, spawner, ray| {
+					commands.spawn(MockBehavior {
+						agent,
+						ray,
+						spawner,
+					});
+				}),
 			},
 			Transform::default(),
 		));
@@ -625,18 +652,18 @@ mod tests {
 
 		app.update();
 
-		let bullet_as_child_of_spawner = app
+		let behaviors: Vec<_> = app
 			.world
-			.get::<Children>(spawner)
-			.and_then(|children| children.get(0..))
-			.map(|bullet_entities| bullet_entities.iter().map(|e| app.world.get::<Bullet>(*e)));
+			.iter_entities()
+			.filter_map(|e| e.get::<MockBehavior>())
+			.collect();
 
-		assert_eq!(Some(1), bullet_as_child_of_spawner.map(|b| b.len()));
+		assert_eq!(1, behaviors.len());
 	}
 
 	#[test]
 	fn not_spawned_multiple_times_with_not_perfectly_matching_deltas() {
-		let (mut app, agent, spawner) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill {
 				ray: TEST_RAY,
@@ -645,7 +672,13 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: Some(|commands| Some(commands.spawn(Bullet).id())),
+				spawn_behavior: Some(|commands, agent, spawner, ray| {
+					commands.spawn(MockBehavior {
+						agent,
+						ray,
+						spawner,
+					});
+				}),
 			},
 			Transform::default(),
 		));
@@ -660,12 +693,55 @@ mod tests {
 
 		app.update();
 
-		let bullet_as_child_of_spawner = app
+		let behaviors: Vec<_> = app
 			.world
-			.get::<Children>(spawner)
-			.and_then(|children| children.get(0..))
-			.map(|bullet_entities| bullet_entities.iter().map(|e| app.world.get::<Bullet>(*e)));
+			.iter_entities()
+			.filter_map(|e| e.get::<MockBehavior>())
+			.collect();
 
-		assert_eq!(Some(1), bullet_as_child_of_spawner.map(|b| b.len()));
+		assert_eq!(1, behaviors.len());
+	}
+
+	#[test]
+	fn spawn_behavior_with_proper_arguments() {
+		let (mut app, agent) = setup_app(Vec3::ONE);
+		app.world.entity_mut(agent).insert((
+			Skill {
+				ray: TEST_RAY,
+				cast: Cast {
+					pre: Duration::from_millis(500),
+					after: Duration::from_millis(200),
+				},
+				marker_commands: Marker::<Tag>::commands(),
+				spawn_behavior: Some(|commands, agent, spawner, ray| {
+					commands.spawn(MockBehavior {
+						agent,
+						ray,
+						spawner,
+					});
+				}),
+			},
+			Transform::default(),
+		));
+
+		app.update();
+
+		tick_time(&mut app, Duration::from_millis(500));
+
+		app.update();
+
+		let behavior = app
+			.world
+			.iter_entities()
+			.find_map(|e| e.get::<MockBehavior>());
+
+		assert_eq!(
+			Some(&MockBehavior {
+				agent: Agent(agent),
+				ray: TEST_RAY,
+				spawner: Spawner(GlobalTransform::from_translation(Vec3::ONE)),
+			}),
+			behavior
+		);
 	}
 }
