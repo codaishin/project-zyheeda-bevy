@@ -8,7 +8,7 @@ use bevy::{
 	prelude::{Component, *},
 	utils::HashMap,
 };
-use std::{borrow::Cow, collections::VecDeque, fmt::Debug, marker::PhantomData, time::Duration};
+use std::{collections::VecDeque, fmt::Debug, marker::PhantomData, time::Duration};
 
 use self::marker::MarkerCommands;
 
@@ -119,13 +119,7 @@ pub enum SlotKey {
 }
 
 #[derive(Component, Clone, PartialEq, Debug)]
-pub struct SlotBones(pub HashMap<SlotKey, Cow<'static, BoneName>>);
-
-impl SlotBones {
-	pub fn new<const C: usize>(pairs: [(SlotKey, &'static BoneName); C]) -> Self {
-		Self(pairs.map(|(k, v)| (k, Cow::from(v))).into())
-	}
-}
+pub struct SlotBones(pub HashMap<SlotKey, &'static BoneName>);
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum ScheduleMode {
@@ -163,7 +157,7 @@ impl Default for Slots {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Item {
 	pub slot: SlotKey,
-	pub model: Option<Cow<'static, str>>,
+	pub model: Option<&'static str>,
 	pub behavior: Option<Behavior>,
 }
 

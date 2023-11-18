@@ -6,13 +6,12 @@ use bevy::{
 	prelude::{Commands, Entity, Handle, Mut, Query, Res},
 	scene::Scene,
 };
-use std::borrow::Cow;
 use tracing::{error, info};
 
 enum NoMatch {
 	Slot(SlotKey),
 	SceneHandle(Entity),
-	Model(Cow<'static, str>),
+	Model(&'static str),
 }
 
 type ShouldRetry = bool;
@@ -68,10 +67,10 @@ fn equip_item_to(
 			Err(_) => Err(NoMatch::SceneHandle(slot.entity)),
 		})
 		.and_then(|(slot, slot_model)| {
-			let Some(model) = item.model.clone() else {
+			let Some(model) = item.model else {
 				return Ok((slot, slot_model, Handle::<Scene>::default()));
 			};
-			match models.0.get(&model) {
+			match models.0.get(model) {
 				Some(model) => Ok((slot, slot_model, model.clone())),
 				None => Err(NoMatch::Model(model)),
 			}
@@ -125,7 +124,6 @@ mod tests {
 		scene::Scene,
 		utils::Uuid,
 	};
-	use std::borrow::Cow;
 
 	fn fake_behavior_insert<const T: char>(_entity: &mut EntityCommands, _ray: Ray) {}
 
@@ -134,7 +132,7 @@ mod tests {
 		let model = Handle::<Scene>::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let models = Models([(Cow::from("model key"), model.clone())].into());
+		let models = Models([("model key", model.clone())].into());
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
@@ -162,7 +160,7 @@ mod tests {
 						insert_fn: fake_behavior_insert::<'!'>,
 					}),
 					slot: SlotKey::Hand(Side::Right),
-					model: Some("model key".into()),
+					model: Some("model key"),
 				}]),
 			))
 			.id();
@@ -199,7 +197,7 @@ mod tests {
 		let model = Handle::<Scene>::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let models = Models([(Cow::from("model key"), model.clone())].into());
+		let models = Models([("model key", model.clone())].into());
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
@@ -225,7 +223,7 @@ mod tests {
 				Equip::new([Item {
 					behavior: None,
 					slot: SlotKey::Hand(Side::Right),
-					model: Some("model key".into()),
+					model: Some("model key"),
 				}]),
 			))
 			.id();
@@ -286,7 +284,7 @@ mod tests {
 		let model = Handle::<Scene>::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let models = Models([(Cow::from("model key"), model.clone())].into());
+		let models = Models([("model key", model.clone())].into());
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
@@ -307,7 +305,7 @@ mod tests {
 				Equip::new([Item {
 					behavior: None,
 					slot: SlotKey::Hand(Side::Right),
-					model: Some("model key".into()),
+					model: Some("model key"),
 				}]),
 			))
 			.id();
@@ -325,7 +323,7 @@ mod tests {
 		let model = Handle::<Scene>::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let models = Models([(Cow::from("model key"), model.clone())].into());
+		let models = Models([("model key", model.clone())].into());
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
@@ -351,7 +349,7 @@ mod tests {
 				Equip::new([Item {
 					behavior: None,
 					slot: SlotKey::Hand(Side::Right),
-					model: Some("non matching model key".into()),
+					model: Some("non matching model key"),
 				}]),
 			))
 			.id();
@@ -369,7 +367,7 @@ mod tests {
 		let model = Handle::<Scene>::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let models = Models([(Cow::from("model key"), model.clone())].into());
+		let models = Models([("model key", model.clone())].into());
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
@@ -395,7 +393,7 @@ mod tests {
 				Equip::new([Item {
 					behavior: None,
 					slot: SlotKey::Hand(Side::Right),
-					model: Some("model key".into()),
+					model: Some("model key"),
 				}]),
 			))
 			.id();
@@ -413,7 +411,7 @@ mod tests {
 		let model = Handle::<Scene>::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let models = Models([(Cow::from("model key"), model.clone())].into());
+		let models = Models([("model key", model.clone())].into());
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
@@ -440,12 +438,12 @@ mod tests {
 					Item {
 						behavior: None,
 						slot: SlotKey::Hand(Side::Right),
-						model: Some("model key".into()),
+						model: Some("model key"),
 					},
 					Item {
 						behavior: None,
 						slot: SlotKey::Legs,
-						model: Some("model key".into()),
+						model: Some("model key"),
 					},
 				]),
 			))
@@ -464,7 +462,7 @@ mod tests {
 				Some(&Equip::new([Item {
 					behavior: None,
 					slot: SlotKey::Legs,
-					model: Some("model key".into()),
+					model: Some("model key"),
 				}]))
 			),
 			(slot_model.cloned(), items)

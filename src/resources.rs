@@ -3,7 +3,7 @@ use crate::{
 	types::{File, Key, SceneId},
 };
 use bevy::prelude::*;
-use std::{borrow::Cow, collections::HashMap, hash::Hash, marker::PhantomData};
+use std::{collections::HashMap, hash::Hash, marker::PhantomData};
 
 #[derive(Resource)]
 pub struct Animation<TAgent, TMarker> {
@@ -23,7 +23,7 @@ impl<TAgent, TMarker> Animation<TAgent, TMarker> {
 }
 
 #[derive(Resource)]
-pub struct Models(pub HashMap<Cow<'static, str>, Handle<Scene>>);
+pub struct Models(pub HashMap<&'static Key, Handle<Scene>>);
 
 impl Models {
 	pub fn new<const C: usize>(
@@ -34,7 +34,7 @@ impl Models {
 			pairs
 				.map(|(key, file, scene_id)| {
 					(
-						Cow::from(key),
+						key,
 						asset_server.load(format!("models/{file}#Scene{scene_id}")),
 					)
 				})

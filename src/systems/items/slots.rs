@@ -4,7 +4,6 @@ use bevy::{
 	scene::SceneBundle,
 	utils::default,
 };
-use std::borrow::Cow;
 
 fn find_bone(
 	agent: Entity,
@@ -40,9 +39,9 @@ pub fn add_item_slots(
 	bones: Query<&Name>,
 ) {
 	for (agent, mut slots, mut slot_infos) in &mut agent {
-		let add_slot = |slot_info: (SlotKey, Cow<'static, str>)| {
+		let add_slot = |slot_info: (SlotKey, &'static str)| {
 			let (key, bone_name) = slot_info;
-			match find_bone(agent, &bone_name, &children, &bones) {
+			match find_bone(agent, bone_name, &children, &bones) {
 				Some(bone) => {
 					let entity = new_slot_on(bone, &mut commands);
 					slots.0.insert(
@@ -93,7 +92,7 @@ mod tests {
 		app.world
 			.spawn((
 				Slots::new(),
-				SlotBones::new([(SlotKey::Hand(Side::Left), "bone")]),
+				SlotBones([(SlotKey::Hand(Side::Left), "bone")].into()),
 			))
 			.push_children(&[bone]);
 		app.add_systems(Update, add_item_slots);
@@ -116,7 +115,7 @@ mod tests {
 		app.world
 			.spawn((
 				Slots::new(),
-				SlotBones::new([(SlotKey::Hand(Side::Left), "bone")]),
+				SlotBones([(SlotKey::Hand(Side::Left), "bone")].into()),
 			))
 			.push_children(&[bone]);
 		app.add_systems(Update, add_item_slots);
@@ -141,7 +140,7 @@ mod tests {
 		app.world
 			.spawn((
 				Slots::new(),
-				SlotBones::new([(SlotKey::Hand(Side::Left), "bone")]),
+				SlotBones([(SlotKey::Hand(Side::Left), "bone")].into()),
 			))
 			.push_children(&[bone]);
 		app.add_systems(Update, add_item_slots);
@@ -166,7 +165,7 @@ mod tests {
 			.world
 			.spawn((
 				Slots::new(),
-				SlotBones::new([(SlotKey::Hand(Side::Left), "bone")]),
+				SlotBones([(SlotKey::Hand(Side::Left), "bone")].into()),
 			))
 			.push_children(&[bone])
 			.id();
@@ -201,7 +200,7 @@ mod tests {
 			.world
 			.spawn((
 				Slots::new(),
-				SlotBones::new([(SlotKey::Hand(Side::Left), "bone")]),
+				SlotBones([(SlotKey::Hand(Side::Left), "bone")].into()),
 			))
 			.push_children(&[bone])
 			.id();
@@ -225,10 +224,13 @@ mod tests {
 			.world
 			.spawn((
 				Slots::new(),
-				SlotBones::new([
-					(SlotKey::Hand(Side::Left), "bone"),
-					(SlotKey::Hand(Side::Right), "bone2"),
-				]),
+				SlotBones(
+					[
+						(SlotKey::Hand(Side::Left), "bone"),
+						(SlotKey::Hand(Side::Right), "bone2"),
+					]
+					.into(),
+				),
 			))
 			.push_children(&[bone])
 			.id();
@@ -239,7 +241,7 @@ mod tests {
 		let slot_infos = app.world.entity(root).get::<SlotBones>();
 
 		assert_eq!(
-			Some(&SlotBones::new([(SlotKey::Hand(Side::Right), "bone2")])),
+			Some(&SlotBones([(SlotKey::Hand(Side::Right), "bone2")].into())),
 			slot_infos
 		);
 	}

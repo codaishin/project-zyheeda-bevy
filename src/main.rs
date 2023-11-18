@@ -173,15 +173,18 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			movement_mode: MovementMode::Slow,
 		},
 		Loadout::new(
-			SlotBones::new([
-				(SlotKey::SkillSpawn, "projectile_spawn"),
-				(SlotKey::Hand(Side::Right), "hand_slot.R"),
-				(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
-			]),
+			SlotBones(
+				[
+					(SlotKey::SkillSpawn, "projectile_spawn"),
+					(SlotKey::Hand(Side::Right), "hand_slot.R"),
+					(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
+				]
+				.into(),
+			),
 			Equip::new([
 				Item {
 					slot: SlotKey::Hand(Side::Right),
-					model: Some("pistol".into()),
+					model: Some("pistol"),
 					behavior: Some(shoot_gun()),
 				},
 				Item {
