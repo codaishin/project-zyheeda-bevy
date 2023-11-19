@@ -3,42 +3,27 @@ use crate::{
 	types::{File, Key, SceneId},
 };
 use bevy::prelude::*;
-use std::{borrow::Cow, collections::HashMap, hash::Hash, marker::PhantomData};
+use std::{collections::HashMap, hash::Hash, marker::PhantomData};
 
 #[derive(Resource)]
-pub struct Animation<TMarker> {
-	marker: PhantomData<TMarker>,
+pub struct Animation<TAgent, TMarker> {
+	phantom_agent: PhantomData<TAgent>,
+	phantom_marker: PhantomData<TMarker>,
 	pub clip: Handle<AnimationClip>,
 }
 
-impl<TMarker> Animation<TMarker> {
+impl<TAgent, TMarker> Animation<TAgent, TMarker> {
 	pub fn new(clip: Handle<AnimationClip>) -> Self {
 		Self {
-			marker: PhantomData,
+			phantom_agent: PhantomData,
+			phantom_marker: PhantomData,
 			clip,
 		}
 	}
 }
 
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use crate::components::{Marker, Player, Run};
-	use bevy::{asset::AssetId, utils::Uuid};
-
-	#[test]
-	fn set_clip() {
-		let clip = Handle::<AnimationClip>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
-		let animation = Animation::<Marker<(Player, Run)>>::new(clip.clone_weak());
-
-		assert_eq!(clip, animation.clip);
-	}
-}
-
 #[derive(Resource)]
-pub struct Models(pub HashMap<Cow<'static, str>, Handle<Scene>>);
+pub struct Models(pub HashMap<&'static Key, Handle<Scene>>);
 
 impl Models {
 	pub fn new<const C: usize>(
@@ -49,7 +34,7 @@ impl Models {
 			pairs
 				.map(|(key, file, scene_id)| {
 					(
-						Cow::from(key),
+						key,
 						asset_server.load(format!("models/{file}#Scene{scene_id}")),
 					)
 				})

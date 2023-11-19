@@ -1,26 +1,16 @@
 use crate::{
-	components::{GetBehaviorFn, Schedule, ScheduleMode, SlotKey, Slots},
+	behaviors::Behavior,
+	components::{Schedule, ScheduleMode, SlotKey, Slots},
 	resources::SlotMap,
 };
-use bevy::prelude::{Commands, Component, Entity, Input, KeyCode, MouseButton, Query, Res, With};
+use bevy::prelude::{Commands, Component, Entity, Input, KeyCode, Query, Res, With};
+use std::hash::Hash;
 
-fn filter_triggered_behavior_fns<TBehavior>(
-	slots: &Slots<TBehavior>,
-	triggered_slot_keys: &[&SlotKey],
-) -> Vec<GetBehaviorFn<TBehavior>> {
-	slots
-		.0
-		.iter()
-		.filter(|(slot_key, ..)| triggered_slot_keys.contains(slot_key))
-		.filter_map(|(_, slot)| slot.get_behavior)
-		.collect()
-}
-
-pub fn schedule_slots_via_mouse<TAgent: Component, TBehavior: Sync + Send + 'static>(
-	mouse: Res<Input<MouseButton>>,
+pub fn schedule_slots<TKey: Copy + Eq + Hash + Send + Sync, TAgent: Component>(
+	mouse: Res<Input<TKey>>,
 	keys: Res<Input<KeyCode>>,
-	mouse_button_map: Res<SlotMap<MouseButton>>,
-	agents: Query<(Entity, &Slots<TBehavior>), With<TAgent>>,
+	mouse_button_map: Res<SlotMap<TKey>>,
+	agents: Query<(Entity, &Slots), With<TAgent>>,
 	mut commands: Commands,
 ) {
 	let triggered_slot_keys = mouse
@@ -38,14 +28,26 @@ pub fn schedule_slots_via_mouse<TAgent: Component, TBehavior: Sync + Send + 'sta
 	};
 
 	for (agent, slots) in &agents {
-		let get_behaviors = filter_triggered_behavior_fns(slots, &triggered_slot_keys);
-		if !get_behaviors.is_empty() {
-			commands.entity(agent).insert(Schedule::<TBehavior> {
+		let behaviors = filter_triggered_behaviors(slots, &triggered_slot_keys);
+		if !behaviors.is_empty() {
+			commands.entity(agent).insert(Schedule {
 				mode,
-				get_behaviors,
+				behaviors: behaviors.into_iter().collect(),
 			});
 		}
 	}
+}
+
+fn filter_triggered_behaviors(
+	slots: &Slots,
+	triggered_slot_keys: &[&SlotKey],
+) -> Vec<(SlotKey, Behavior)> {
+	slots
+		.0
+		.iter()
+		.filter(|(slot_key, ..)| triggered_slot_keys.contains(slot_key))
+		.filter_map(|(key, slot)| slot.behavior.map(|b| (*key, b)))
+		.collect()
 }
 
 #[cfg(test)]
@@ -55,13 +57,13 @@ mod tests {
 		components::{Schedule, ScheduleMode, Side, Slot, SlotKey, Slots},
 		resources::SlotMap,
 	};
-	use bevy::prelude::{App, Component, Entity, Input, KeyCode, MouseButton, Ray, Update};
+	use bevy::{
+		ecs::system::EntityCommands,
+		prelude::{App, Component, Entity, Input, KeyCode, MouseButton, Ray, Update},
+	};
 
 	#[derive(Component)]
 	struct Agent;
-
-	#[derive(PartialEq, Debug)]
-	struct MockBehavior;
 
 	fn setup() -> App {
 		let mut app = App::new();
@@ -72,23 +74,23 @@ mod tests {
 		app.insert_resource(mouse);
 		app.insert_resource(keys);
 		app.insert_resource(mouse_settings);
-		app.add_systems(Update, schedule_slots_via_mouse::<Agent, MockBehavior>);
+		app.add_systems(Update, schedule_slots::<MouseButton, Agent>);
 		app
 	}
 
+	fn fake_behavior_insert<const T: char>(_entity: &mut EntityCommands, _ray: Ray) {}
+
 	#[test]
 	fn set_override() {
-		fn get_behavior(_ray: Ray) -> Option<MockBehavior> {
-			None
-		}
-
 		let mut app = setup();
 		let slots = Slots(
 			[(
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					get_behavior: Some(get_behavior),
+					behavior: Some(Behavior {
+						insert_fn: fake_behavior_insert::<'!'>,
+					}),
 				},
 			)]
 			.into(),
@@ -106,12 +108,18 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let schedule = agent.get::<Schedule<MockBehavior>>();
+		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(
-			Some(&Schedule::<MockBehavior> {
+			Some(&Schedule {
 				mode: ScheduleMode::Override,
-				get_behaviors: vec![get_behavior]
+				behaviors: [(
+					SlotKey::Legs,
+					Behavior {
+						insert_fn: fake_behavior_insert::<'!'>,
+					}
+				)]
+				.into()
 			}),
 			schedule
 		);
@@ -119,17 +127,15 @@ mod tests {
 
 	#[test]
 	fn do_not_set_when_not_on_agent() {
-		fn get_behavior(_ray: Ray) -> Option<MockBehavior> {
-			None
-		}
-
 		let mut app = setup();
 		let slots = Slots(
 			[(
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					get_behavior: Some(get_behavior),
+					behavior: Some(Behavior {
+						insert_fn: fake_behavior_insert::<'!'>,
+					}),
 				},
 			)]
 			.into(),
@@ -147,24 +153,22 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let schedule = agent.get::<Schedule<MockBehavior>>();
+		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(None, schedule);
 	}
 
 	#[test]
 	fn do_not_set_when_mouse_button_not_correctly_mapped() {
-		fn get_behavior(_ray: Ray) -> Option<MockBehavior> {
-			None
-		}
-
 		let mut app = setup();
 		let slots = Slots(
 			[(
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					get_behavior: Some(get_behavior),
+					behavior: Some(Behavior {
+						insert_fn: fake_behavior_insert::<'!'>,
+					}),
 				},
 			)]
 			.into(),
@@ -182,24 +186,22 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let schedule = agent.get::<Schedule<MockBehavior>>();
+		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(None, schedule);
 	}
 
 	#[test]
 	fn set_enqueue() {
-		fn get_behavior(_ray: Ray) -> Option<MockBehavior> {
-			None
-		}
-
 		let mut app = setup();
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Right),
 				Slot {
 					entity: Entity::from_raw(42),
-					get_behavior: Some(get_behavior),
+					behavior: Some(Behavior {
+						insert_fn: fake_behavior_insert::<'/'>,
+					}),
 				},
 			)]
 			.into(),
@@ -209,10 +211,10 @@ mod tests {
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
 			.0
-			.insert(MouseButton::Right, SlotKey::Legs);
+			.insert(MouseButton::Left, SlotKey::Hand(Side::Right));
 		app.world
 			.resource_mut::<Input<MouseButton>>()
-			.press(MouseButton::Right);
+			.press(MouseButton::Left);
 		app.world
 			.resource_mut::<Input<KeyCode>>()
 			.press(KeyCode::ShiftLeft);
@@ -220,12 +222,18 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let schedule = agent.get::<Schedule<MockBehavior>>();
+		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(
-			Some(&Schedule::<MockBehavior> {
+			Some(&Schedule {
 				mode: ScheduleMode::Enqueue,
-				get_behaviors: vec![get_behavior]
+				behaviors: [(
+					SlotKey::Hand(Side::Right),
+					Behavior {
+						insert_fn: fake_behavior_insert::<'/'>,
+					}
+				)]
+				.into()
 			}),
 			schedule
 		);
@@ -233,10 +241,6 @@ mod tests {
 
 	#[test]
 	fn do_not_set_when_not_just_mouse_pressed() {
-		fn get_behavior(_ray: Ray) -> Option<MockBehavior> {
-			None
-		}
-
 		let mut app = setup();
 
 		app.world
@@ -254,7 +258,9 @@ mod tests {
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					get_behavior: Some(get_behavior),
+					behavior: Some(Behavior {
+						insert_fn: fake_behavior_insert::<'!'>,
+					}),
 				},
 			)]
 			.into(),
@@ -267,7 +273,7 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let schedule = agent.get::<Schedule<MockBehavior>>();
+		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(None, schedule);
 	}

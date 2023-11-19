@@ -8,8 +8,8 @@ pub fn player_toggle_walk_run(mut player: Query<&mut Player>, keys: Res<Input<Ke
 
 	for mut player in player.iter_mut() {
 		player.movement_mode = match player.movement_mode {
-			MovementMode::Walk => MovementMode::Run,
-			MovementMode::Run => MovementMode::Walk,
+			MovementMode::Slow => MovementMode::Fast,
+			MovementMode::Fast => MovementMode::Slow,
 		}
 	}
 }
@@ -24,7 +24,7 @@ mod tests {
 		let mut app = App::new();
 		let keys = Input::<KeyCode>::default();
 		let player = Player {
-			movement_mode: MovementMode::Walk,
+			movement_mode: MovementMode::Slow,
 			..default()
 		};
 
@@ -38,7 +38,7 @@ mod tests {
 		app.update();
 
 		let player = app.world.entity(player).get::<Player>().unwrap();
-		assert_eq!(MovementMode::Run, player.movement_mode);
+		assert_eq!(MovementMode::Fast, player.movement_mode);
 	}
 
 	#[test]
@@ -46,7 +46,7 @@ mod tests {
 		let mut app = App::new();
 		let keys = Input::<KeyCode>::default();
 		let player = Player {
-			movement_mode: MovementMode::Run,
+			movement_mode: MovementMode::Fast,
 			..default()
 		};
 
@@ -60,7 +60,7 @@ mod tests {
 		app.update();
 
 		let player = app.world.entity(player).get::<Player>().unwrap();
-		assert_eq!(MovementMode::Walk, player.movement_mode);
+		assert_eq!(MovementMode::Slow, player.movement_mode);
 	}
 
 	#[test]
@@ -68,7 +68,7 @@ mod tests {
 		let mut app = App::new();
 		let keys = Input::<KeyCode>::default();
 		let player = Player {
-			movement_mode: MovementMode::Walk,
+			movement_mode: MovementMode::Slow,
 			..default()
 		};
 
@@ -79,6 +79,6 @@ mod tests {
 		app.update();
 
 		let player = app.world.entity(player).get::<Player>().unwrap();
-		assert_eq!(MovementMode::Walk, player.movement_mode);
+		assert_eq!(MovementMode::Slow, player.movement_mode);
 	}
 }

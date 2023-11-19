@@ -3,36 +3,36 @@ use bevy::{
 	prelude::*,
 };
 use project_zyheeda::{
-	behaviors::{move_to::get_move_to, Behavior, MovementMode},
+	behaviors::{movement::movement, shoot_gun::shoot_gun, MovementMode},
 	bundles::Loadout,
 	components::{
+		marker::{Fast, HandGun, Idle, Marker, Right, Shoot, Slow},
 		Animator,
 		CamOrbit,
 		Equip,
-		Idle,
 		Item,
-		Marker,
 		Player,
-		Run,
+		Projectile,
 		Side,
 		SimpleMovement,
 		SlotBones,
 		SlotKey,
 		UnitsPerSecond,
-		Walk,
 	},
 	resources::{Animation, Models, SlotMap},
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
-		behavior::{dequeue::dequeue, enqueue::enqueue},
-		input::schedule_slots_via_mouse::schedule_slots_via_mouse,
+		behavior::{dequeue::dequeue, enqueue::enqueue, projectile::projectile},
+		input::schedule_slots::schedule_slots,
 		items::{equip::equip_items, slots::add_item_slots},
+		log::log,
 		movement::{
 			execute_move::execute_move,
 			follow::follow,
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
 		},
+		skill::execute_skill,
 	},
 	tools::Tools,
 	traits::orbit::{Orbit, Vec2Radians},
@@ -46,27 +46,36 @@ fn main() {
 		.add_systems(Startup, load_models)
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(PreUpdate, link_animators_with_new_animation_players)
-		.add_systems(PreUpdate, add_item_slots::<Behavior>)
-		.add_systems(Update, equip_items::<Behavior>)
+		.add_systems(PreUpdate, add_item_slots)
+		.add_systems(Update, equip_items)
 		.add_systems(
 			Update,
 			(
 				player_toggle_walk_run,
-				schedule_slots_via_mouse::<Player, Behavior>,
-				enqueue::<Player, Behavior, Tools>,
-				dequeue::<Player, Behavior>,
+				schedule_slots::<MouseButton, Player>,
+				schedule_slots::<KeyCode, Player>,
+				enqueue::<Tools>,
+				dequeue,
 			),
 		)
 		.add_systems(
 			Update,
-			(execute_move::<Player, SimpleMovement<Behavior>, Behavior>,),
+			(execute_skill, execute_move::<Player, SimpleMovement>),
 		)
 		.add_systems(
 			Update,
 			(
-				animate::<Marker<(Player, Idle)>>,
-				animate::<Marker<(Player, Walk)>>,
-				animate::<Marker<(Player, Run)>>,
+				projectile.pipe(log),
+				execute_move::<Projectile, SimpleMovement>,
+			),
+		)
+		.add_systems(
+			Update,
+			(
+				animate::<Player, Marker<Idle>>,
+				animate::<Player, Marker<Slow>>,
+				animate::<Player, Marker<Fast>>,
+				animate::<Player, Marker<(Shoot, HandGun, Right)>>,
 			),
 		)
 		.add_systems(
@@ -110,7 +119,13 @@ fn debug(
 }
 
 fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
-	let models = Models::new([("pistol", "pistol.gltf", 0)], &asset_server);
+	let models = Models::new(
+		[
+			("pistol", "pistol.gltf", 0),
+			("projectile", "projectile.gltf", 0),
+		],
+		&asset_server,
+	);
 	commands.insert_resource(models);
 }
 
@@ -148,14 +163,17 @@ fn spawn_plane(
 }
 
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
-	commands.insert_resource(Animation::<Marker<(Player, Idle)>>::new(
+	commands.insert_resource(Animation::<Player, Marker<Idle>>::new(
 		asset_server.load("models/player.gltf#Animation2"),
 	));
-	commands.insert_resource(Animation::<Marker<(Player, Walk)>>::new(
+	commands.insert_resource(Animation::<Player, Marker<Slow>>::new(
 		asset_server.load("models/player.gltf#Animation1"),
 	));
-	commands.insert_resource(Animation::<Marker<(Player, Run)>>::new(
+	commands.insert_resource(Animation::<Player, Marker<Fast>>::new(
 		asset_server.load("models/player.gltf#Animation3"),
+	));
+	commands.insert_resource(Animation::<Player, Marker<(Shoot, HandGun, Right)>>::new(
+		asset_server.load("models/player.gltf#Animation4"),
 	));
 
 	commands.spawn((
@@ -167,23 +185,27 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		Player {
 			walk_speed: UnitsPerSecond::new(0.75),
 			run_speed: UnitsPerSecond::new(1.5),
-			movement_mode: MovementMode::Walk,
+			movement_mode: MovementMode::Slow,
 		},
 		Loadout::new(
-			SlotBones::new([
-				(SlotKey::Hand(Side::Right), "hand_slot.R"),
-				(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
-			]),
+			SlotBones(
+				[
+					(SlotKey::SkillSpawn, "projectile_spawn"),
+					(SlotKey::Hand(Side::Right), "hand_slot.R"),
+					(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
+				]
+				.into(),
+			),
 			Equip::new([
 				Item {
 					slot: SlotKey::Hand(Side::Right),
-					model: Some("pistol".into()),
-					get_behavior: None,
+					model: Some("pistol"),
+					behavior: Some(shoot_gun()),
 				},
 				Item {
 					slot: SlotKey::Legs,
 					model: None,
-					get_behavior: Some(get_move_to),
+					behavior: Some(movement()),
 				},
 			]),
 		),
@@ -206,7 +228,7 @@ fn spawn_camera(commands: &mut Commands) {
 	let mut transform = Transform::from_translation(Vec3::X);
 	let mut orbit = CamOrbit {
 		center: Vec3::ZERO,
-		distance: 5.,
+		distance: 10.,
 		sensitivity: 1.,
 	};
 
