@@ -64,7 +64,7 @@ pub fn execute_skill(
 fn mark_agent_as_running(commands: &mut Commands, skill: &Skill, agent: Agent) {
 	let mut agent = commands.entity(agent.0);
 	agent.insert(TimeTracker::<Skill>::new());
-	skill.marker_commands.insert_marker_on(&mut agent);
+	skill.markers.insert_to(&mut agent);
 }
 
 fn mark_agent_as_done(commands: &mut Commands, skill: &mut Skill, agent: Agent) {
@@ -75,7 +75,7 @@ fn mark_agent_as_done(commands: &mut Commands, skill: &mut Skill, agent: Agent) 
 	let mut agent = commands.entity(agent.0);
 	agent.insert(WaitNext);
 	agent.remove::<(Skill, TimeTracker<Skill>)>();
-	skill.marker_commands.remove_marker_on(&mut agent);
+	skill.markers.remove_from(&mut agent);
 }
 
 fn get_target(
@@ -249,7 +249,7 @@ mod tests {
 			Skill {
 				ray: TEST_RAY,
 				cast: TEST_CAST,
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
 			},
 			Transform::default(),
@@ -272,7 +272,7 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
 			},
 			Transform::default(),
@@ -299,7 +299,7 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
 			},
 			Transform::default(),
@@ -326,7 +326,7 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
 			},
 			Transform::default(),
@@ -357,7 +357,7 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
 			},
 			Transform::default(),
@@ -390,7 +390,7 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
 			},
 			Transform::default(),
@@ -417,7 +417,7 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
 			},
 			Transform::default(),
@@ -444,7 +444,7 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
 			},
 			Transform::default(),
@@ -479,7 +479,7 @@ mod tests {
 			Skill {
 				ray,
 				cast: TEST_CAST,
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
 			},
 			Transform::default(),
@@ -504,7 +504,7 @@ mod tests {
 			Skill {
 				ray,
 				cast: TEST_CAST,
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
 			},
 			Transform::default(),
@@ -533,7 +533,7 @@ mod tests {
 			Skill {
 				ray,
 				cast: TEST_CAST,
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
 			},
 			Transform::from_xyz(0., 3., 0.),
@@ -562,7 +562,7 @@ mod tests {
 			Skill {
 				ray,
 				cast: TEST_CAST,
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
 			},
 			Transform::from_xyz(0., 0., 0.),
@@ -590,7 +590,7 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: MockBehavior::to_lazy(),
 			},
 			Transform::default(),
@@ -620,7 +620,7 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: MockBehavior::to_lazy(),
 			},
 			Transform::default(),
@@ -656,7 +656,7 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: MockBehavior::to_lazy(),
 			},
 			Transform::default(),
@@ -687,7 +687,7 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: MockBehavior::to_lazy(),
 			},
 			Transform::default(),
@@ -717,7 +717,7 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: MockBehavior::to_lazy(),
 			},
 			Transform::default(),
@@ -752,7 +752,7 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: MockBehavior::to_lazy(),
 			},
 			Transform::default(),
@@ -787,7 +787,7 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker_commands: Marker::<Tag>::commands(),
+				markers: Marker::<Tag>::commands(),
 				behavior: MockBehavior::to_lazy(),
 			},
 			Transform::default(),

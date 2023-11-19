@@ -30,8 +30,8 @@ impl<T: Send + Sync + 'static> Marker<T> {
 		}
 	}
 
-	pub fn commands() -> MarkerCommands {
-		MarkerCommands {
+	pub fn commands() -> Markers {
+		Markers {
 			insert_fn: insert_marker::<T>,
 			remove_fn: remove_marker::<T>,
 		}
@@ -45,17 +45,17 @@ impl<T: Send + Sync + 'static> Default for Marker<T> {
 }
 
 #[derive(PartialEq, Debug)]
-pub struct MarkerCommands {
+pub struct Markers {
 	insert_fn: fn(&mut EntityCommands),
 	remove_fn: fn(&mut EntityCommands),
 }
 
-impl MarkerCommands {
-	pub fn insert_marker_on(&self, entity: &mut EntityCommands) {
+impl Markers {
+	pub fn insert_to(&self, entity: &mut EntityCommands) {
 		(self.insert_fn)(entity)
 	}
 
-	pub fn remove_marker_on(&self, entity: &mut EntityCommands) {
+	pub fn remove_from(&self, entity: &mut EntityCommands) {
 		(self.remove_fn)(entity)
 	}
 }
@@ -73,10 +73,10 @@ mod tests {
 	use super::*;
 	use bevy::prelude::{App, Commands, Entity, Update};
 
-	fn insert(marker_commands: MarkerCommands, entity: Entity) -> impl Fn(Commands) {
+	fn insert(marker_commands: Markers, entity: Entity) -> impl Fn(Commands) {
 		move |mut commands| {
 			let mut entity = commands.entity(entity);
-			marker_commands.insert_marker_on(&mut entity);
+			marker_commands.insert_to(&mut entity);
 		}
 	}
 
@@ -94,10 +94,10 @@ mod tests {
 		assert!(entity.contains::<Marker<(f32, u32)>>());
 	}
 
-	fn remove(marker_commands: MarkerCommands, entity: Entity) -> impl Fn(Commands) {
+	fn remove(marker_commands: Markers, entity: Entity) -> impl Fn(Commands) {
 		move |mut commands| {
 			let mut entity = commands.entity(entity);
-			marker_commands.remove_marker_on(&mut entity);
+			marker_commands.remove_from(&mut entity);
 		}
 	}
 

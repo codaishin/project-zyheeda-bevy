@@ -11,7 +11,7 @@ use bevy::{
 };
 use std::{collections::VecDeque, fmt::Debug, marker::PhantomData, time::Duration};
 
-use self::{lazy::Lazy, marker::MarkerCommands};
+use self::{lazy::Lazy, marker::Markers};
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -102,7 +102,7 @@ pub type SpawnBehaviorFn = fn(&mut Commands, Agent, Spawner, Ray);
 pub struct Skill {
 	pub ray: Ray,
 	pub cast: Cast,
-	pub marker_commands: MarkerCommands,
+	pub markers: Markers,
 	pub behavior: Lazy,
 }
 

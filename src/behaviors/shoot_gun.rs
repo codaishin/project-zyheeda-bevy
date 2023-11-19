@@ -34,7 +34,7 @@ fn insert_fn(entity: &mut EntityCommands, ray: Ray) {
 			pre: Duration::from_millis(300),
 			after: Duration::from_millis(100),
 		},
-		marker_commands: Marker::<(Shoot, HandGun, Right)>::commands(),
+		markers: Marker::<(Shoot, HandGun, Right)>::commands(),
 		behavior: Lazy {
 			run_fn: Some(spawn_projectile),
 			stop_fn: None,
@@ -170,7 +170,7 @@ mod tests_shoot_gun {
 					pre: Duration::from_millis(300),
 					after: Duration::from_millis(100)
 				},
-				marker_commands: Marker::<(Shoot, HandGun, Right)>::commands(),
+				markers: Marker::<(Shoot, HandGun, Right)>::commands(),
 				behavior: Lazy {
 					run_fn: Some(spawn_projectile),
 					stop_fn: None
