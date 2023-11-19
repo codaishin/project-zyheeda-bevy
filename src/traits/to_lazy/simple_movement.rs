@@ -27,8 +27,11 @@ fn stop_fn(commands: &mut Commands, agent: Agent) {
 }
 
 impl ToLazy for SimpleMovement {
-	fn to_lazy() -> Option<Lazy> {
-		Some(Lazy::new(Some(run_fn), Some(stop_fn)))
+	fn to_lazy() -> Lazy {
+		Lazy {
+			run_fn: Some(run_fn),
+			stop_fn: Some(stop_fn),
+		}
 	}
 }
 

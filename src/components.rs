@@ -103,7 +103,7 @@ pub struct Skill {
 	pub ray: Ray,
 	pub cast: Cast,
 	pub marker_commands: MarkerCommands,
-	pub behavior: Option<Lazy>,
+	pub behavior: Lazy,
 }
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]

@@ -8,8 +8,11 @@ use bevy::{
 };
 
 impl ToLazy for Projectile {
-	fn to_lazy() -> Option<Lazy> {
-		Some(Lazy::new(Some(run_fn), None))
+	fn to_lazy() -> Lazy {
+		Lazy {
+			run_fn: Some(run_fn),
+			stop_fn: None,
+		}
 	}
 }
 

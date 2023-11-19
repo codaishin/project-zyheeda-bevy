@@ -1,4 +1,13 @@
-use crate::components::{lazy::Lazy, Agent, Skill, SlotKey, Slots, Spawner, TimeTracker, WaitNext};
+use crate::components::{
+	Agent,
+	Skill,
+	SlotKey,
+	Slots,
+	SpawnBehaviorFn,
+	Spawner,
+	TimeTracker,
+	WaitNext,
+};
 use bevy::prelude::{
 	Commands,
 	Entity,
@@ -42,12 +51,12 @@ pub fn execute_skill(
 
 		tracker.duration += delta;
 
-		if let Some((spawner, behavior)) = can_trigger_skill(&skill, &tracker, slots, &transforms) {
-			trigger_skill(&mut commands, &mut skill, agent, spawner, behavior);
+		if let Some((spawner, run)) = can_trigger_skill(&skill, &tracker, slots, &transforms) {
+			trigger_skill(&mut commands, &mut skill, agent, spawner, run);
 		}
 
 		if skill_is_done(&skill, &tracker, wait_next) {
-			mark_agent_as_done(&mut commands, &skill, agent);
+			mark_agent_as_done(&mut commands, &mut skill, agent);
 		}
 	}
 }
@@ -58,7 +67,11 @@ fn mark_agent_as_running(commands: &mut Commands, skill: &Skill, agent: Agent) {
 	skill.marker_commands.insert_marker_on(&mut agent);
 }
 
-fn mark_agent_as_done(commands: &mut Commands, skill: &Skill, agent: Agent) {
+fn mark_agent_as_done(commands: &mut Commands, skill: &mut Skill, agent: Agent) {
+	if let Some(stop) = skill.behavior.stop_fn {
+		stop(commands, agent)
+	}
+
 	let mut agent = commands.entity(agent.0);
 	agent.insert(WaitNext);
 	agent.remove::<(Skill, TimeTracker<Skill>)>();
@@ -99,7 +112,7 @@ fn can_trigger_skill(
 	tracker: &TimeTracker<Skill>,
 	slots: &Slots,
 	transforms: &Query<&GlobalTransform>,
-) -> Option<(Spawner, Lazy)> {
+) -> Option<(Spawner, SpawnBehaviorFn)> {
 	if tracker.duration < skill.cast.pre {
 		return None;
 	}
@@ -107,7 +120,7 @@ fn can_trigger_skill(
 	let spawner_slot = slots.0.get(&SlotKey::SkillSpawn)?;
 	let spawner_transform = transforms.get(spawner_slot.entity).ok()?;
 
-	Some((Spawner(*spawner_transform), skill.behavior?))
+	Some((Spawner(*spawner_transform), skill.behavior.run_fn?))
 }
 
 fn trigger_skill(
@@ -115,11 +128,11 @@ fn trigger_skill(
 	skill: &mut Skill,
 	agent: Agent,
 	spawner: Spawner,
-	behavior: Lazy,
+	run: SpawnBehaviorFn,
 ) {
-	skill.behavior = None;
+	skill.behavior.run_fn = None;
 
-	behavior.run(cmd, agent, spawner, skill.ray)
+	run(cmd, agent, spawner, skill.ray);
 }
 
 fn skill_is_done(
@@ -134,7 +147,7 @@ fn skill_is_done(
 mod tests {
 	use super::*;
 	use crate::{
-		components::{marker::Marker, Cast, Slot, SlotKey, WaitNext},
+		components::{lazy::Lazy, marker::Marker, Cast, Slot, SlotKey, WaitNext},
 		test_tools::assert_eq_approx,
 		traits::to_lazy::ToLazy,
 	};
@@ -156,18 +169,30 @@ mod tests {
 		pub spawner: Spawner,
 	}
 
+	#[derive(Component, Debug, PartialEq)]
+	struct MockIdle {
+		pub agent: Agent,
+	}
+
+	const REAL_LAZY: Lazy = Lazy {
+		run_fn: None,
+		stop_fn: None,
+	};
+
 	impl ToLazy for MockBehavior {
-		fn to_lazy() -> Option<Lazy> {
-			Some(Lazy::new(
-				Some(|commands, agent, spawner, ray| {
+		fn to_lazy() -> Lazy {
+			Lazy {
+				run_fn: Some(|commands, agent, spawner, ray| {
 					commands.spawn(MockBehavior {
 						agent,
 						ray,
 						spawner,
 					});
 				}),
-				None,
-			))
+				stop_fn: Some(|commands, agent| {
+					commands.spawn(MockIdle { agent });
+				}),
+			}
 		}
 	}
 
@@ -225,7 +250,7 @@ mod tests {
 				ray: TEST_RAY,
 				cast: TEST_CAST,
 				marker_commands: Marker::<Tag>::commands(),
-				behavior: None,
+				behavior: REAL_LAZY,
 			},
 			Transform::default(),
 		));
@@ -248,7 +273,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				behavior: None,
+				behavior: REAL_LAZY,
 			},
 			Transform::default(),
 		));
@@ -275,7 +300,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				behavior: None,
+				behavior: REAL_LAZY,
 			},
 			Transform::default(),
 		));
@@ -302,7 +327,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				behavior: None,
+				behavior: REAL_LAZY,
 			},
 			Transform::default(),
 		));
@@ -333,7 +358,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				behavior: None,
+				behavior: REAL_LAZY,
 			},
 			Transform::default(),
 		));
@@ -366,7 +391,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				behavior: None,
+				behavior: REAL_LAZY,
 			},
 			Transform::default(),
 		));
@@ -393,7 +418,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				behavior: None,
+				behavior: REAL_LAZY,
 			},
 			Transform::default(),
 		));
@@ -420,7 +445,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				behavior: None,
+				behavior: REAL_LAZY,
 			},
 			Transform::default(),
 		));
@@ -455,7 +480,7 @@ mod tests {
 				ray,
 				cast: TEST_CAST,
 				marker_commands: Marker::<Tag>::commands(),
-				behavior: None,
+				behavior: REAL_LAZY,
 			},
 			Transform::default(),
 		));
@@ -480,7 +505,7 @@ mod tests {
 				ray,
 				cast: TEST_CAST,
 				marker_commands: Marker::<Tag>::commands(),
-				behavior: None,
+				behavior: REAL_LAZY,
 			},
 			Transform::default(),
 		));
@@ -509,7 +534,7 @@ mod tests {
 				ray,
 				cast: TEST_CAST,
 				marker_commands: Marker::<Tag>::commands(),
-				behavior: None,
+				behavior: REAL_LAZY,
 			},
 			Transform::from_xyz(0., 3., 0.),
 		));
@@ -538,7 +563,7 @@ mod tests {
 				ray,
 				cast: TEST_CAST,
 				marker_commands: Marker::<Tag>::commands(),
-				behavior: None,
+				behavior: REAL_LAZY,
 			},
 			Transform::from_xyz(0., 0., 0.),
 		));
@@ -556,7 +581,7 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_behavior() {
+	fn start_behavior() {
 		let (mut app, agent) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill {
@@ -583,6 +608,73 @@ mod tests {
 			.find_map(|e| e.get::<MockBehavior>());
 
 		assert!(behavior.is_some());
+	}
+
+	#[test]
+	fn stop_behavior() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		app.world.entity_mut(agent).insert((
+			Skill {
+				ray: TEST_RAY,
+				cast: Cast {
+					pre: Duration::from_millis(500),
+					after: Duration::from_millis(200),
+				},
+				marker_commands: Marker::<Tag>::commands(),
+				behavior: MockBehavior::to_lazy(),
+			},
+			Transform::default(),
+		));
+
+		app.update();
+
+		tick_time(&mut app, Duration::from_millis(500));
+
+		app.update();
+
+		tick_time(&mut app, Duration::from_millis(200));
+
+		app.update();
+
+		let idle = app.world.iter_entities().find_map(|e| e.get::<MockIdle>());
+
+		assert_eq!(
+			Some(&MockIdle {
+				agent: Agent(agent)
+			}),
+			idle
+		);
+	}
+
+	#[test]
+	fn do_not_stop_behavior_before_skill_is_done() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		app.world.entity_mut(agent).insert((
+			Skill {
+				ray: TEST_RAY,
+				cast: Cast {
+					pre: Duration::from_millis(500),
+					after: Duration::from_millis(200),
+				},
+				marker_commands: Marker::<Tag>::commands(),
+				behavior: MockBehavior::to_lazy(),
+			},
+			Transform::default(),
+		));
+
+		app.update();
+
+		tick_time(&mut app, Duration::from_millis(500));
+
+		app.update();
+
+		tick_time(&mut app, Duration::from_millis(199));
+
+		app.update();
+
+		let idle = app.world.iter_entities().find_map(|e| e.get::<MockIdle>());
+
+		assert!(idle.is_none());
 	}
 
 	#[test]
