@@ -8,11 +8,13 @@ use crate::{
 };
 use bevy::prelude::*;
 
+type ShouldNotMove<TAgent, TMovement> = (With<TAgent>, With<TMovement>, With<WaitNext>);
+
 pub fn execute_move<TAgent: Component + MovementData, TMovement: Component + Movement>(
 	time: Res<Time<Real>>,
 	mut commands: Commands,
 	mut agents: Query<(Entity, &mut TMovement, &mut Transform, &TAgent)>,
-	waiting_agents: Query<Entity, (With<TMovement>, With<WaitNext>)>,
+	waiting_agents: Query<Entity, ShouldNotMove<TAgent, TMovement>>,
 ) {
 	for (entity, mut movement, mut transform, agent) in agents.iter_mut() {
 		let mut entity = commands.entity(entity);
@@ -220,12 +222,7 @@ mod test {
 
 		let agent = app
 			.world
-			.spawn((
-				agent,
-				movement,
-				transform,
-				Marker::<(AgentRun, Slow)>::new(),
-			))
+			.spawn((agent, movement, transform, Marker::<Slow>::new()))
 			.id();
 
 		app.update();
@@ -279,12 +276,7 @@ mod test {
 
 		let agent = app
 			.world
-			.spawn((
-				agent,
-				movement,
-				transform,
-				Marker::<(AgentWalk, Fast)>::new(),
-			))
+			.spawn((agent, movement, transform, Marker::<Fast>::new()))
 			.id();
 
 		app.update();
@@ -311,12 +303,7 @@ mod test {
 
 		let agent = app
 			.world
-			.spawn((
-				agent,
-				movement,
-				transform,
-				Marker::<(AgentWalk, Fast)>::new(),
-			))
+			.spawn((agent, movement, transform, Marker::<Fast>::new()))
 			.id();
 
 		app.update();
@@ -337,13 +324,7 @@ mod test {
 
 		let agent = app
 			.world
-			.spawn((
-				agent,
-				movement,
-				transform,
-				Marker::<(AgentWalk, Fast)>::new(),
-				WaitNext,
-			))
+			.spawn((agent, movement, transform, Marker::<Fast>::new(), WaitNext))
 			.id();
 
 		app.update();
@@ -356,6 +337,36 @@ mod test {
 				agent.contains::<_Movement>(),
 				agent.contains::<Marker<Fast>>(),
 				agent.contains::<Marker<Slow>>()
+			)
+		);
+	}
+
+	#[test]
+	fn do_not_remove_movement_when_waiting_next_on_other_agents() {
+		#[derive(Component)]
+		struct OtherAgent;
+
+		let mut app = setup_app();
+		let transform = Transform::from_xyz(1., 2., 3.);
+		let agent = OtherAgent;
+		let mut movement = _Movement::new();
+
+		movement.mock.expect_update().return_const(false);
+
+		let agent = app
+			.world
+			.spawn((agent, movement, transform, Marker::<Fast>::new(), WaitNext))
+			.id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			(true, true),
+			(
+				agent.contains::<_Movement>(),
+				agent.contains::<Marker<Fast>>(),
 			)
 		);
 	}
