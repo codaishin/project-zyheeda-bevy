@@ -1,12 +1,6 @@
-use crate::components::{
-	Agent,
-	Skill,
-	SlotKey,
-	Slots,
-	SpawnBehaviorFn,
-	Spawner,
-	TimeTracker,
-	WaitNext,
+use crate::{
+	behaviors::meta::{Agent, Spawner, StartBehaviorFn},
+	components::{Skill, SlotKey, Slots, TimeTracker, WaitNext},
 };
 use bevy::prelude::{
 	Commands,
@@ -112,7 +106,7 @@ fn can_trigger_skill(
 	tracker: &TimeTracker<Skill>,
 	slots: &Slots,
 	transforms: &Query<&GlobalTransform>,
-) -> Option<(Spawner, SpawnBehaviorFn)> {
+) -> Option<(Spawner, StartBehaviorFn)> {
 	if tracker.duration < skill.cast.pre {
 		return None;
 	}
@@ -128,7 +122,7 @@ fn trigger_skill(
 	skill: &mut Skill,
 	agent: Agent,
 	spawner: Spawner,
-	run: SpawnBehaviorFn,
+	run: StartBehaviorFn,
 ) {
 	skill.behavior.run_fn = None;
 
@@ -147,9 +141,10 @@ fn skill_is_done(
 mod tests {
 	use super::*;
 	use crate::{
-		components::{lazy::Lazy, marker::Marker, Cast, Slot, SlotKey, WaitNext},
+		behaviors::meta::BehaviorMeta,
+		components::{marker::Marker, Cast, Slot, SlotKey, WaitNext},
 		test_tools::assert_eq_approx,
-		traits::to_lazy::ToLazy,
+		traits::to_meta::ToMeta,
 	};
 	use bevy::{
 		ecs::component::Component,
@@ -174,14 +169,14 @@ mod tests {
 		pub agent: Agent,
 	}
 
-	const REAL_LAZY: Lazy = Lazy {
+	const REAL_LAZY: BehaviorMeta = BehaviorMeta {
 		run_fn: None,
 		stop_fn: None,
 	};
 
-	impl ToLazy for MockBehavior {
-		fn to_lazy() -> Lazy {
-			Lazy {
+	impl ToMeta for MockBehavior {
+		fn meta() -> BehaviorMeta {
+			BehaviorMeta {
 				run_fn: Some(|commands, agent, spawner, ray| {
 					commands.spawn(MockBehavior {
 						agent,
@@ -591,7 +586,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				markers: Marker::<Tag>::commands(),
-				behavior: MockBehavior::to_lazy(),
+				behavior: MockBehavior::meta(),
 			},
 			Transform::default(),
 		));
@@ -621,7 +616,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				markers: Marker::<Tag>::commands(),
-				behavior: MockBehavior::to_lazy(),
+				behavior: MockBehavior::meta(),
 			},
 			Transform::default(),
 		));
@@ -657,7 +652,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				markers: Marker::<Tag>::commands(),
-				behavior: MockBehavior::to_lazy(),
+				behavior: MockBehavior::meta(),
 			},
 			Transform::default(),
 		));
@@ -688,7 +683,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				markers: Marker::<Tag>::commands(),
-				behavior: MockBehavior::to_lazy(),
+				behavior: MockBehavior::meta(),
 			},
 			Transform::default(),
 		));
@@ -718,7 +713,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				markers: Marker::<Tag>::commands(),
-				behavior: MockBehavior::to_lazy(),
+				behavior: MockBehavior::meta(),
 			},
 			Transform::default(),
 		));
@@ -753,7 +748,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				markers: Marker::<Tag>::commands(),
-				behavior: MockBehavior::to_lazy(),
+				behavior: MockBehavior::meta(),
 			},
 			Transform::default(),
 		));
@@ -788,7 +783,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				markers: Marker::<Tag>::commands(),
-				behavior: MockBehavior::to_lazy(),
+				behavior: MockBehavior::meta(),
 			},
 			Transform::default(),
 		));

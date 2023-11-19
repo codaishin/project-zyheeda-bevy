@@ -1,8 +1,7 @@
-pub mod lazy;
 pub mod marker;
 
 use crate::{
-	behaviors::{Behavior, MovementMode},
+	behaviors::{meta::BehaviorMeta, Behavior, MovementMode},
 	types::BoneName,
 };
 use bevy::{
@@ -11,7 +10,7 @@ use bevy::{
 };
 use std::{collections::VecDeque, fmt::Debug, marker::PhantomData, time::Duration};
 
-use self::{lazy::Lazy, marker::Markers};
+use self::marker::Markers;
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -90,20 +89,12 @@ pub struct Cast {
 	pub after: Duration,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Agent(pub Entity);
-
-#[derive(Debug, PartialEq, Clone, Copy, Default)]
-pub struct Spawner(pub GlobalTransform);
-
-pub type SpawnBehaviorFn = fn(&mut Commands, Agent, Spawner, Ray);
-
 #[derive(Component, PartialEq, Debug)]
 pub struct Skill {
 	pub ray: Ray,
 	pub cast: Cast,
 	pub markers: Markers,
-	pub behavior: Lazy,
+	pub behavior: BehaviorMeta,
 }
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]

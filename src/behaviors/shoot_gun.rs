@@ -1,12 +1,12 @@
-use super::Behavior;
+use super::{
+	meta::{Agent, BehaviorMeta, Spawner},
+	Behavior,
+};
 use crate::components::{
-	lazy::Lazy,
 	marker::{HandGun, Marker, Right, Shoot},
-	Agent,
 	Cast,
 	Projectile,
 	Skill,
-	Spawner,
 };
 use bevy::{
 	ecs::system::{Commands, EntityCommands},
@@ -35,7 +35,7 @@ fn insert_fn(entity: &mut EntityCommands, ray: Ray) {
 			after: Duration::from_millis(100),
 		},
 		markers: Marker::<(Shoot, HandGun, Right)>::commands(),
-		behavior: Lazy {
+		behavior: BehaviorMeta {
 			run_fn: Some(spawn_projectile),
 			stop_fn: None,
 		},
@@ -171,7 +171,7 @@ mod tests_shoot_gun {
 					after: Duration::from_millis(100)
 				},
 				markers: Marker::<(Shoot, HandGun, Right)>::commands(),
-				behavior: Lazy {
+				behavior: BehaviorMeta {
 					run_fn: Some(spawn_projectile),
 					stop_fn: None
 				},

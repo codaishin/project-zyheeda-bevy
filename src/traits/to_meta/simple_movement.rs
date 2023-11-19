@@ -1,10 +1,10 @@
-use super::ToLazy;
-use crate::components::{
-	lazy::Lazy,
-	marker::{Fast, Marker, Slow},
-	Agent,
-	SimpleMovement,
-	Spawner,
+use super::ToMeta;
+use crate::{
+	behaviors::meta::{Agent, BehaviorMeta, Spawner},
+	components::{
+		marker::{Fast, Marker, Slow},
+		SimpleMovement,
+	},
 };
 use bevy::{
 	ecs::system::Commands,
@@ -26,9 +26,9 @@ fn stop_fn(commands: &mut Commands, agent: Agent) {
 		.remove::<(SimpleMovement, Marker<Fast>, Marker<Slow>)>();
 }
 
-impl ToLazy for SimpleMovement {
-	fn to_lazy() -> Lazy {
-		Lazy {
+impl ToMeta for SimpleMovement {
+	fn meta() -> BehaviorMeta {
+		BehaviorMeta {
 			run_fn: Some(run_fn),
 			stop_fn: Some(stop_fn),
 		}
@@ -40,14 +40,14 @@ mod tests {
 	use super::*;
 	use crate::{
 		test_tools::assert_eq_approx,
-		traits::to_lazy::test_tools::{run_lazy, stop_lazy},
+		traits::to_meta::test_tools::{run_lazy, stop_lazy},
 	};
 	use bevy::prelude::{App, Ray, Update, Vec3};
 
 	#[test]
 	fn move_to_zero() {
 		let mut app = App::new();
-		let lazy = SimpleMovement::to_lazy();
+		let lazy = SimpleMovement::meta();
 		let agent = Agent(app.world.spawn(()).id());
 		let ray = Ray {
 			origin: Vec3::Y,
@@ -65,7 +65,7 @@ mod tests {
 	#[test]
 	fn move_to_offset() {
 		let mut app = App::new();
-		let lazy = SimpleMovement::to_lazy();
+		let lazy = SimpleMovement::meta();
 		let agent = Agent(app.world.spawn(()).id());
 		let ray = Ray {
 			origin: Vec3::ONE,
@@ -83,7 +83,7 @@ mod tests {
 	#[test]
 	fn move_to_offset_2() {
 		let mut app = App::new();
-		let lazy = SimpleMovement::to_lazy();
+		let lazy = SimpleMovement::meta();
 		let agent = Agent(app.world.spawn(()).id());
 		let ray = Ray {
 			origin: Vec3::new(0., 4., 0.),
@@ -101,7 +101,7 @@ mod tests {
 	#[test]
 	fn remove_all_relevant_components() {
 		let mut app = App::new();
-		let lazy = SimpleMovement::to_lazy();
+		let lazy = SimpleMovement::meta();
 		let agent = Agent(
 			app.world
 				.spawn((

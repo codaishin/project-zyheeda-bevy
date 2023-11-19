@@ -1,19 +1,20 @@
+use crate::behaviors::meta::BehaviorMeta;
+
 pub mod projectile;
 pub mod simple_movement;
 
-use crate::components::lazy::Lazy;
-
-pub trait ToLazy {
-	fn to_lazy() -> Lazy;
+pub trait ToMeta {
+	fn meta() -> BehaviorMeta;
 }
 
 #[cfg(test)]
 pub mod test_tools {
-	use crate::components::{lazy::Lazy, Agent, Spawner};
+	use super::*;
+	use crate::behaviors::meta::{Agent, Spawner};
 	use bevy::{ecs::system::Commands, math::Ray};
 
 	pub fn run_lazy(
-		behavior: Lazy,
+		behavior: BehaviorMeta,
 		agent: Agent,
 		spawner: Spawner,
 		ray: Ray,
@@ -26,7 +27,7 @@ pub mod test_tools {
 		}
 	}
 
-	pub fn stop_lazy(behavior: Lazy, agent: Agent) -> impl FnMut(Commands) {
+	pub fn stop_lazy(behavior: BehaviorMeta, agent: Agent) -> impl FnMut(Commands) {
 		move |mut commands| {
 			let Some(stop) = behavior.stop_fn else {
 				return;

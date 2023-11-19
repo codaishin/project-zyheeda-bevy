@@ -1,5 +1,8 @@
-use super::ToLazy;
-use crate::components::{lazy::Lazy, Agent, Projectile, Spawner};
+use super::ToMeta;
+use crate::{
+	behaviors::meta::{Agent, BehaviorMeta, Spawner},
+	components::Projectile,
+};
 use bevy::{
 	ecs::system::Commands,
 	math::Ray,
@@ -7,9 +10,9 @@ use bevy::{
 	transform::components::Transform,
 };
 
-impl ToLazy for Projectile {
-	fn to_lazy() -> Lazy {
-		Lazy {
+impl ToMeta for Projectile {
+	fn meta() -> BehaviorMeta {
+		BehaviorMeta {
 			run_fn: Some(run_fn),
 			stop_fn: None,
 		}
@@ -30,7 +33,7 @@ fn run_fn(commands: &mut Commands, _: Agent, spawner: Spawner, ray: Ray) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::to_lazy::test_tools::run_lazy;
+	use crate::traits::to_meta::test_tools::run_lazy;
 	use bevy::{
 		app::{App, Update},
 		math::Vec3,
@@ -44,7 +47,7 @@ mod tests {
 	#[test]
 	fn spawn_projectile_with_ray() {
 		let mut app = App::new();
-		let lazy = Projectile::to_lazy();
+		let lazy = Projectile::meta();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let ray = Ray {
 			origin: Vec3::ONE,
@@ -65,7 +68,7 @@ mod tests {
 	#[test]
 	fn spawn_with_special_bundle() {
 		let mut app = App::new();
-		let lazy = Projectile::to_lazy();
+		let lazy = Projectile::meta();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let ray = Ray {
 			origin: Vec3::ONE,
@@ -96,7 +99,7 @@ mod tests {
 	#[test]
 	fn spawn_with_proper_location() {
 		let mut app = App::new();
-		let lazy = Projectile::to_lazy();
+		let lazy = Projectile::meta();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let ray = Ray {
 			origin: Vec3::ONE,

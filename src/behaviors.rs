@@ -1,3 +1,4 @@
+pub mod meta;
 pub mod movement;
 pub mod shoot_gun;
 
