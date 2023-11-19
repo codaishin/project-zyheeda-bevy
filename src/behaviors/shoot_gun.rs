@@ -17,7 +17,13 @@ use std::time::Duration;
 
 fn spawn_projectile(commands: &mut Commands, _: Agent, spawner: Spawner, ray: Ray) {
 	let transform = Transform::from_translation(spawner.0.translation());
-	commands.spawn((Projectile { ray }, SpatialBundle::from_transform(transform)));
+	commands.spawn((
+		Projectile {
+			target_ray: ray,
+			range: 10.,
+		},
+		SpatialBundle::from_transform(transform),
+	));
 }
 
 fn insert_fn(entity: &mut EntityCommands, ray: Ray) {
@@ -70,7 +76,7 @@ mod test_spawn_projectile {
 			.iter_entities()
 			.find_map(|e| e.get::<Projectile>());
 
-		assert_eq!(Some(ray), projectile.map(|p| p.ray));
+		assert_eq!(Some(ray), projectile.map(|p| p.target_ray));
 	}
 
 	#[test]

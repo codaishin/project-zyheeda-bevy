@@ -196,5 +196,6 @@ impl<T> Default for TimeTracker<T> {
 
 #[derive(Component)]
 pub struct Projectile {
-	pub ray: Ray,
+	pub target_ray: Ray,
+	pub range: f32,
 }

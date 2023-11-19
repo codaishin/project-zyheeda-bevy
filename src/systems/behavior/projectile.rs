@@ -36,12 +36,7 @@ pub fn projectile(
 	};
 
 	for (entity, projectile, transform) in &active_agents {
-		let ray_length = projectile
-			.ray
-			.intersect_plane(transform.translation(), Vec3::Y);
-
-		if let Some(ray_length) = ray_length {
-			let target = projectile.ray.origin + projectile.ray.direction * ray_length;
+		if let Some(target) = get_target(transform, projectile) {
 			let model = commands
 				.spawn(SceneBundle {
 					scene: scene.clone(),
@@ -56,6 +51,15 @@ pub fn projectile(
 	}
 
 	Ok(())
+}
+
+fn get_target(transform: &GlobalTransform, projectile: &Projectile) -> Option<Vec3> {
+	let current_position = transform.translation();
+	let ray = projectile.target_ray;
+	let target = ray.origin + ray.direction * ray.intersect_plane(current_position, Vec3::Y)?;
+	let direction = (target - current_position).normalize();
+
+	Some(current_position + direction * projectile.range)
 }
 
 #[cfg(test)]
@@ -115,7 +119,10 @@ mod tests {
 		let projectile = app
 			.world
 			.spawn((
-				Projectile { ray: SIMPLE_RAY },
+				Projectile {
+					target_ray: SIMPLE_RAY,
+					range: 1.,
+				},
 				GlobalTransform::from_xyz(0., 0., 0.),
 			))
 			.id();
@@ -144,7 +151,10 @@ mod tests {
 		let projectile = app
 			.world
 			.spawn((
-				Projectile { ray: SIMPLE_RAY },
+				Projectile {
+					target_ray: SIMPLE_RAY,
+					range: 1.,
+				},
 				GlobalTransform::from_xyz(0., 0., 0.),
 			))
 			.id();
@@ -181,10 +191,11 @@ mod tests {
 			.world
 			.spawn((
 				Projectile {
-					ray: Ray {
+					target_ray: Ray {
 						origin: Vec3::ONE,
 						direction: Vec3::NEG_Y,
 					},
+					range: 1.,
 				},
 				GlobalTransform::from_xyz(0., 0., 0.),
 			))
@@ -198,18 +209,19 @@ mod tests {
 	}
 
 	#[test]
-	fn compute_target_on_current_spawn_height() {
+	fn compute_target_on_current_spawn_height_and_range() {
 		let (mut app, ..) = setup([("projectile", Handle::default())]);
 		let projectile = app
 			.world
 			.spawn((
 				Projectile {
-					ray: Ray {
-						origin: Vec3::new(1., 20., 1.),
+					target_ray: Ray {
+						origin: Vec3::new(7., 20., 1.),
 						direction: Vec3::NEG_Y,
 					},
+					range: 5.,
 				},
-				GlobalTransform::from_xyz(0., 10., 0.),
+				GlobalTransform::from_xyz(4., 10., 1.),
 			))
 			.id();
 
@@ -220,7 +232,7 @@ mod tests {
 
 		assert_eq!(
 			&SimpleMovement {
-				target: Vec3::new(1., 10., 1.)
+				target: Vec3::new(9., 10., 1.)
 			},
 			simple_movement
 		);
@@ -235,7 +247,8 @@ mod tests {
 			.world
 			.spawn((
 				Projectile {
-					ray: Ray::default(),
+					target_ray: Ray::default(),
+					range: 1.,
 				},
 				GlobalTransform::from_xyz(0., 0., 0.),
 			))
@@ -273,7 +286,8 @@ mod tests {
 			.world
 			.spawn((
 				Projectile {
-					ray: Ray::default(),
+					target_ray: Ray::default(),
+					range: 1.,
 				},
 				GlobalTransform::from_xyz(0., 0., 0.),
 			))

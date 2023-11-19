@@ -23,7 +23,8 @@ mod tests {
 	#[test]
 	fn move_fast() {
 		let projectile = Projectile {
-			ray: Ray::default(),
+			target_ray: Ray::default(),
+			range: 1.,
 		};
 
 		assert_eq!(
