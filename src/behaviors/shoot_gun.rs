@@ -1,5 +1,6 @@
 use super::Behavior;
 use crate::components::{
+	lazy::Lazy,
 	marker::{HandGun, Marker, Right, Shoot},
 	Agent,
 	Cast,
@@ -34,7 +35,7 @@ fn insert_fn(entity: &mut EntityCommands, ray: Ray) {
 			after: Duration::from_millis(100),
 		},
 		marker_commands: Marker::<(Shoot, HandGun, Right)>::commands(),
-		spawn_behavior: Some(spawn_projectile),
+		behavior: Some(Lazy::new(Some(spawn_projectile), None)),
 	});
 }
 
@@ -167,7 +168,7 @@ mod tests_shoot_gun {
 					after: Duration::from_millis(100)
 				},
 				marker_commands: Marker::<(Shoot, HandGun, Right)>::commands(),
-				spawn_behavior: Some(spawn_projectile),
+				behavior: Some(Lazy::new(Some(spawn_projectile), None)),
 			}),
 			skill
 		);

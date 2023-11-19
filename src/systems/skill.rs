@@ -1,13 +1,4 @@
-use crate::components::{
-	Agent,
-	Skill,
-	SlotKey,
-	Slots,
-	SpawnBehaviorFn,
-	Spawner,
-	TimeTracker,
-	WaitNext,
-};
+use crate::components::{lazy::Lazy, Agent, Skill, SlotKey, Slots, Spawner, TimeTracker, WaitNext};
 use bevy::prelude::{
 	Commands,
 	Entity,
@@ -51,8 +42,8 @@ pub fn execute_skill(
 
 		tracker.duration += delta;
 
-		if let Some((spawner, spawn_fn)) = can_trigger_skill(&skill, &tracker, slots, &transforms) {
-			trigger_skill(&mut commands, &mut skill, agent, spawner, spawn_fn);
+		if let Some((spawner, behavior)) = can_trigger_skill(&skill, &tracker, slots, &transforms) {
+			trigger_skill(&mut commands, &mut skill, agent, spawner, behavior);
 		}
 
 		if skill_is_done(&skill, &tracker, wait_next) {
@@ -108,7 +99,7 @@ fn can_trigger_skill(
 	tracker: &TimeTracker<Skill>,
 	slots: &Slots,
 	transforms: &Query<&GlobalTransform>,
-) -> Option<(Spawner, SpawnBehaviorFn)> {
+) -> Option<(Spawner, Lazy)> {
 	if tracker.duration < skill.cast.pre {
 		return None;
 	}
@@ -116,7 +107,7 @@ fn can_trigger_skill(
 	let spawner_slot = slots.0.get(&SlotKey::SkillSpawn)?;
 	let spawner_transform = transforms.get(spawner_slot.entity).ok()?;
 
-	Some((Spawner(*spawner_transform), skill.spawn_behavior?))
+	Some((Spawner(*spawner_transform), skill.behavior?))
 }
 
 fn trigger_skill(
@@ -124,11 +115,11 @@ fn trigger_skill(
 	skill: &mut Skill,
 	agent: Agent,
 	spawner: Spawner,
-	spawn_behavior_fn: SpawnBehaviorFn,
+	behavior: Lazy,
 ) {
-	skill.spawn_behavior = None;
+	skill.behavior = None;
 
-	spawn_behavior_fn(cmd, agent, spawner, skill.ray)
+	behavior.run(cmd, agent, spawner, skill.ray)
 }
 
 fn skill_is_done(
@@ -145,6 +136,7 @@ mod tests {
 	use crate::{
 		components::{marker::Marker, Cast, Slot, SlotKey, WaitNext},
 		test_tools::assert_eq_approx,
+		traits::to_lazy::ToLazy,
 	};
 	use bevy::{
 		ecs::component::Component,
@@ -162,6 +154,21 @@ mod tests {
 		pub agent: Agent,
 		pub ray: Ray,
 		pub spawner: Spawner,
+	}
+
+	impl ToLazy for MockBehavior {
+		fn to_lazy() -> Option<Lazy> {
+			Some(Lazy::new(
+				Some(|commands, agent, spawner, ray| {
+					commands.spawn(MockBehavior {
+						agent,
+						ray,
+						spawner,
+					});
+				}),
+				None,
+			))
+		}
 	}
 
 	const TEST_CAST: Cast = Cast {
@@ -218,7 +225,7 @@ mod tests {
 				ray: TEST_RAY,
 				cast: TEST_CAST,
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: None,
+				behavior: None,
 			},
 			Transform::default(),
 		));
@@ -241,7 +248,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: None,
+				behavior: None,
 			},
 			Transform::default(),
 		));
@@ -268,7 +275,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: None,
+				behavior: None,
 			},
 			Transform::default(),
 		));
@@ -295,7 +302,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: None,
+				behavior: None,
 			},
 			Transform::default(),
 		));
@@ -326,7 +333,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: None,
+				behavior: None,
 			},
 			Transform::default(),
 		));
@@ -359,7 +366,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: None,
+				behavior: None,
 			},
 			Transform::default(),
 		));
@@ -386,7 +393,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: None,
+				behavior: None,
 			},
 			Transform::default(),
 		));
@@ -413,7 +420,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: None,
+				behavior: None,
 			},
 			Transform::default(),
 		));
@@ -448,7 +455,7 @@ mod tests {
 				ray,
 				cast: TEST_CAST,
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: None,
+				behavior: None,
 			},
 			Transform::default(),
 		));
@@ -473,7 +480,7 @@ mod tests {
 				ray,
 				cast: TEST_CAST,
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: None,
+				behavior: None,
 			},
 			Transform::default(),
 		));
@@ -502,7 +509,7 @@ mod tests {
 				ray,
 				cast: TEST_CAST,
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: None,
+				behavior: None,
 			},
 			Transform::from_xyz(0., 3., 0.),
 		));
@@ -531,7 +538,7 @@ mod tests {
 				ray,
 				cast: TEST_CAST,
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: None,
+				behavior: None,
 			},
 			Transform::from_xyz(0., 0., 0.),
 		));
@@ -559,13 +566,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: Some(|commands, agent, spawner, ray| {
-					commands.spawn(MockBehavior {
-						agent,
-						ray,
-						spawner,
-					});
-				}),
+				behavior: MockBehavior::to_lazy(),
 			},
 			Transform::default(),
 		));
@@ -595,13 +596,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: Some(|commands, agent, spawner, ray| {
-					commands.spawn(MockBehavior {
-						agent,
-						ray,
-						spawner,
-					});
-				}),
+				behavior: MockBehavior::to_lazy(),
 			},
 			Transform::default(),
 		));
@@ -631,13 +626,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: Some(|commands, agent, spawner, ray| {
-					commands.spawn(MockBehavior {
-						agent,
-						ray,
-						spawner,
-					});
-				}),
+				behavior: MockBehavior::to_lazy(),
 			},
 			Transform::default(),
 		));
@@ -672,13 +661,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: Some(|commands, agent, spawner, ray| {
-					commands.spawn(MockBehavior {
-						agent,
-						ray,
-						spawner,
-					});
-				}),
+				behavior: MockBehavior::to_lazy(),
 			},
 			Transform::default(),
 		));
@@ -713,13 +696,7 @@ mod tests {
 					after: Duration::from_millis(200),
 				},
 				marker_commands: Marker::<Tag>::commands(),
-				spawn_behavior: Some(|commands, agent, spawner, ray| {
-					commands.spawn(MockBehavior {
-						agent,
-						ray,
-						spawner,
-					});
-				}),
+				behavior: MockBehavior::to_lazy(),
 			},
 			Transform::default(),
 		));
