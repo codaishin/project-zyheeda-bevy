@@ -10,7 +10,7 @@ pub struct Spawner(pub GlobalTransform);
 pub type StopBehaviorFn = fn(&mut Commands, Agent);
 pub type StartBehaviorFn = fn(&mut Commands, Agent, Spawner, Ray);
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, Default)]
 pub struct BehaviorMeta {
 	pub run_fn: Option<StartBehaviorFn>,
 	pub stop_fn: Option<StopBehaviorFn>,

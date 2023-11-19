@@ -3,18 +3,20 @@ use bevy::{
 	prelude::*,
 };
 use project_zyheeda::{
-	behaviors::{movement::movement, shoot_gun::shoot_gun, MovementMode},
+	behaviors::MovementMode,
 	bundles::Loadout,
 	components::{
 		marker::{Fast, HandGun, Idle, Marker, Right, Shoot, Slow},
 		Animator,
 		CamOrbit,
+		Cast,
 		Equip,
 		Item,
 		Player,
 		Projectile,
 		Side,
 		SimpleMovement,
+		Skill,
 		SlotBones,
 		SlotKey,
 		UnitsPerSecond,
@@ -35,9 +37,12 @@ use project_zyheeda::{
 		skill::execute_skill,
 	},
 	tools::Tools,
-	traits::orbit::{Orbit, Vec2Radians},
+	traits::{
+		orbit::{Orbit, Vec2Radians},
+		to_meta::ToMeta,
+	},
 };
-use std::f32::consts::PI;
+use std::{f32::consts::PI, time::Duration};
 
 fn main() {
 	App::new()
@@ -200,12 +205,27 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				Item {
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("pistol"),
-					behavior: Some(shoot_gun()),
+					skill: Some(Skill {
+						cast: Cast {
+							pre: Duration::from_millis(300),
+							after: Duration::from_millis(100),
+						},
+						markers: Marker::<(Shoot, HandGun, Right)>::commands(),
+						behavior: Projectile::meta(),
+						..default()
+					}),
 				},
 				Item {
 					slot: SlotKey::Legs,
 					model: None,
-					behavior: Some(movement()),
+					skill: Some(Skill {
+						cast: Cast {
+							after: Duration::MAX,
+							..default()
+						},
+						behavior: SimpleMovement::meta(),
+						..default()
+					}),
 				},
 			]),
 		),

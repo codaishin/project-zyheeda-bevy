@@ -44,10 +44,21 @@ impl<T: Send + Sync + 'static> Default for Marker<T> {
 	}
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Markers {
 	insert_fn: fn(&mut EntityCommands),
 	remove_fn: fn(&mut EntityCommands),
+}
+
+fn do_nothing(_: &mut EntityCommands) {}
+
+impl Default for Markers {
+	fn default() -> Self {
+		Self {
+			insert_fn: do_nothing,
+			remove_fn: do_nothing,
+		}
+	}
 }
 
 impl Markers {

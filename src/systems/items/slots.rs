@@ -48,7 +48,7 @@ pub fn add_item_slots(
 						key,
 						Slot {
 							entity,
-							behavior: None,
+							skill: None,
 						},
 					);
 					None
@@ -182,7 +182,7 @@ mod tests {
 				SlotKey::Hand(Side::Left),
 				Slot {
 					entity: slot,
-					behavior: None
+					skill: None
 				}
 			)]),
 			slots.0

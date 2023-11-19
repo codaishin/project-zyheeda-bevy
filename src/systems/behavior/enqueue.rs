@@ -1,6 +1,5 @@
 use crate::{
-	behaviors::Behavior,
-	components::{Queue, Schedule, ScheduleMode, SlotKey, WaitNext},
+	components::{Queue, Schedule, ScheduleMode, Skill, SlotKey, WaitNext},
 	traits::get_ray::GetRayFromCamera,
 };
 use bevy::{
@@ -35,7 +34,7 @@ fn enqueue_agent_behaviors(
 	commands: &mut Commands,
 	ray: Option<Ray>,
 ) {
-	for behavior_slot in &schedule.behaviors {
+	for behavior_slot in &schedule.skills {
 		enqueue_agent_behavior(agent, queue, schedule.mode, behavior_slot, commands, ray);
 	}
 }
@@ -44,21 +43,21 @@ fn enqueue_agent_behavior(
 	agent: Entity,
 	queue: &mut Queue,
 	schedule_mode: ScheduleMode,
-	behavior_slot: (&SlotKey, &Behavior),
+	skill_slot: (&SlotKey, &Skill),
 	commands: &mut Commands,
 	ray: Option<Ray>,
 ) {
-	let (_, behavior) = behavior_slot;
+	let (_, skill) = skill_slot;
 
-	let Some(behavior_and_ray) = ray.map(|r| (*behavior, r)) else {
+	let Some(skill) = ray.map(|ray| skill.clone().with(ray)) else {
 		return;
 	};
 
 	match schedule_mode {
-		ScheduleMode::Enqueue => queue.0.push_back(behavior_and_ray),
+		ScheduleMode::Enqueue => queue.0.push_back(skill),
 		ScheduleMode::Override => {
 			queue.0.clear();
-			queue.0.push_back(behavior_and_ray);
+			queue.0.push_back(skill);
 			commands.entity(agent).insert(WaitNext);
 		}
 	}
@@ -67,14 +66,14 @@ fn enqueue_agent_behavior(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Schedule, ScheduleMode, Side, WaitNext};
+	use crate::components::{Cast, Schedule, ScheduleMode, Side, WaitNext};
 	use bevy::{
-		ecs::system::EntityCommands,
 		prelude::{App, Camera, Camera3dBundle, GlobalTransform, Ray, Update, Vec3},
 		utils::default,
 		window::Window,
 	};
 	use mockall::automock;
+	use std::time::Duration;
 
 	const TEST_RAY: Ray = Ray {
 		origin: Vec3::ONE,
@@ -92,8 +91,6 @@ mod tests {
 			Some(TEST_RAY)
 		}
 	}
-
-	fn fake_behavior_insert<const T: char>(_entity: &mut EntityCommands, _ray: Ray) {}
 
 	fn setup<TGetRay: GetRayFromCamera + 'static>() -> App {
 		let mut app = App::new();
@@ -123,28 +120,34 @@ mod tests {
 			.spawn((
 				Schedule {
 					mode: ScheduleMode::Enqueue,
-					behaviors: [(
+					skills: [(
 						SlotKey::Hand(Side::Left),
-						Behavior {
-							insert_fn: fake_behavior_insert::<'c'>,
+						Skill {
+							cast: Cast {
+								pre: Duration::from_millis(100),
+								..default()
+							},
+							..default()
 						},
 					)]
 					.into(),
 				},
 				Queue(
 					[
-						(
-							Behavior {
-								insert_fn: fake_behavior_insert::<'a'>,
+						Skill {
+							cast: Cast {
+								pre: Duration::from_millis(1),
+								..default()
 							},
-							Ray::default(),
-						),
-						(
-							Behavior {
-								insert_fn: fake_behavior_insert::<'c'>,
+							..default()
+						},
+						Skill {
+							cast: Cast {
+								pre: Duration::from_millis(2),
+								..default()
 							},
-							Ray::default(),
-						),
+							..default()
+						},
 					]
 					.into(),
 				),
@@ -158,26 +161,30 @@ mod tests {
 
 		assert_eq!(
 			vec![
-				&(
-					Behavior {
-						insert_fn: fake_behavior_insert::<'a'>,
+				&Skill {
+					cast: Cast {
+						pre: Duration::from_millis(1),
+						..default()
 					},
-					Ray::default(),
-				),
-				&(
-					Behavior {
-						insert_fn: fake_behavior_insert::<'c'>,
+					..default()
+				},
+				&Skill {
+					cast: Cast {
+						pre: Duration::from_millis(2),
+						..default()
 					},
-					Ray::default(),
-				),
-				&(
-					Behavior {
-						insert_fn: fake_behavior_insert::<'c'>,
+					..default()
+				},
+				&Skill {
+					cast: Cast {
+						pre: Duration::from_millis(100),
+						..default()
 					},
-					TEST_RAY,
-				),
+					data: TEST_RAY,
+					..default()
+				},
 			],
-			queue.0.iter().collect::<Vec<&(Behavior, Ray)>>()
+			queue.0.iter().collect::<Vec<&Skill<Ray>>>()
 		);
 	}
 
@@ -189,28 +196,34 @@ mod tests {
 			.spawn((
 				Schedule {
 					mode: ScheduleMode::Override,
-					behaviors: [(
+					skills: [(
 						SlotKey::Hand(Side::Left),
-						Behavior {
-							insert_fn: fake_behavior_insert::<'c'>,
+						Skill {
+							cast: Cast {
+								pre: Duration::from_millis(100),
+								..default()
+							},
+							..default()
 						},
 					)]
 					.into(),
 				},
 				Queue(
 					[
-						(
-							Behavior {
-								insert_fn: fake_behavior_insert::<'a'>,
+						Skill {
+							cast: Cast {
+								pre: Duration::from_millis(1),
+								..default()
 							},
-							Ray::default(),
-						),
-						(
-							Behavior {
-								insert_fn: fake_behavior_insert::<'c'>,
+							..default()
+						},
+						Skill {
+							cast: Cast {
+								pre: Duration::from_millis(2),
+								..default()
 							},
-							Ray::default(),
-						),
+							..default()
+						},
 					]
 					.into(),
 				),
@@ -224,12 +237,14 @@ mod tests {
 
 		assert_eq!(
 			(
-				vec![&(
-					Behavior {
-						insert_fn: fake_behavior_insert::<'c'>,
+				vec![&Skill {
+					cast: Cast {
+						pre: Duration::from_millis(100),
+						..default()
 					},
-					TEST_RAY,
-				),],
+					data: TEST_RAY,
+					..default()
+				},],
 				true
 			),
 			(queue.0.iter().collect(), agent.contains::<WaitNext>())
@@ -244,13 +259,7 @@ mod tests {
 			.spawn((
 				Schedule {
 					mode: ScheduleMode::Override,
-					behaviors: [(
-						SlotKey::Hand(Side::Left),
-						Behavior {
-							insert_fn: fake_behavior_insert::<'c'>,
-						},
-					)]
-					.into(),
+					skills: [(SlotKey::Hand(Side::Left), Skill::default())].into(),
 				},
 				Queue([].into()),
 			))
@@ -298,13 +307,7 @@ mod tests {
 		app.world.spawn((
 			Schedule {
 				mode: ScheduleMode::Override,
-				behaviors: [(
-					SlotKey::Hand(Side::Left),
-					Behavior {
-						insert_fn: fake_behavior_insert::<'c'>,
-					},
-				)]
-				.into(),
+				skills: [(SlotKey::Hand(Side::Left), Skill::default())].into(),
 			},
 			Queue([].into()),
 		));

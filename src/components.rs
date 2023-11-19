@@ -1,7 +1,7 @@
 pub mod marker;
 
 use crate::{
-	behaviors::{meta::BehaviorMeta, Behavior, MovementMode},
+	behaviors::{meta::BehaviorMeta, MovementMode},
 	types::BoneName,
 };
 use bevy::{
@@ -83,18 +83,29 @@ impl SimpleMovement {
 	}
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, Default)]
 pub struct Cast {
 	pub pre: Duration,
 	pub after: Duration,
 }
 
-#[derive(Component, PartialEq, Debug)]
-pub struct Skill {
-	pub ray: Ray,
+#[derive(Component, PartialEq, Debug, Clone, Default)]
+pub struct Skill<TData = ()> {
+	pub data: TData,
 	pub cast: Cast,
 	pub markers: Markers,
 	pub behavior: BehaviorMeta,
+}
+
+impl Skill {
+	pub fn with<T: Clone + Copy>(self, data: T) -> Skill<T> {
+		Skill {
+			data,
+			cast: self.cast,
+			markers: self.markers,
+			behavior: self.behavior,
+		}
+	}
 }
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
@@ -122,13 +133,13 @@ pub enum ScheduleMode {
 #[derive(Component, PartialEq, Debug)]
 pub struct Schedule {
 	pub mode: ScheduleMode,
-	pub behaviors: HashMap<SlotKey, Behavior>,
+	pub skills: HashMap<SlotKey, Skill>,
 }
 
 #[derive(PartialEq, Debug)]
 pub struct Slot {
 	pub entity: Entity,
-	pub behavior: Option<Behavior>,
+	pub skill: Option<Skill>,
 }
 
 #[derive(Component)]
@@ -150,7 +161,7 @@ impl Default for Slots {
 pub struct Item {
 	pub slot: SlotKey,
 	pub model: Option<&'static str>,
-	pub behavior: Option<Behavior>,
+	pub skill: Option<Skill>,
 }
 
 #[derive(Component, Debug, PartialEq)]
@@ -163,7 +174,7 @@ impl Equip {
 }
 
 #[derive(Component)]
-pub struct Queue(pub VecDeque<(Behavior, Ray)>);
+pub struct Queue(pub VecDeque<Skill<Ray>>);
 
 #[derive(Component)]
 pub struct TimeTracker<TBehavior> {

@@ -31,7 +31,7 @@ fn set_slot(
 	match slot_and_model {
 		Ok((slot, mut slot_model, item_model)) => {
 			*slot_model = item_model;
-			slot.behavior = item.behavior;
+			slot.skill = item.skill.clone();
 			DONE
 		}
 		Err(NoMatch::Slot(slot)) => {
@@ -113,22 +113,23 @@ pub fn equip_items(
 mod tests {
 	use super::*;
 	use crate::{
-		behaviors::Behavior,
-		components::{Item, Side, Slot, SlotKey, Slots},
+		behaviors::meta::{Agent, BehaviorMeta, Spawner},
+		components::{marker::Marker, Cast, Item, Side, Skill, Slot, SlotKey, Slots},
 		resources::Models,
 	};
 	use bevy::{
 		asset::AssetId,
-		ecs::system::EntityCommands,
 		prelude::{App, Handle, Ray, Update},
 		scene::Scene,
-		utils::Uuid,
+		utils::{default, Uuid},
 	};
-
-	fn fake_behavior_insert<const T: char>(_entity: &mut EntityCommands, _ray: Ray) {}
+	use std::time::Duration;
 
 	#[test]
 	fn equip_when_marked_to_equip() {
+		fn fake_start(_: &mut Commands, _: Agent, _: Spawner, _: Ray) {}
+		fn fake_stop(_: &mut Commands, _: Agent) {}
+
 		let model = Handle::<Scene>::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
@@ -150,14 +151,23 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot {
 							entity: slot,
-							behavior: None,
+							skill: None,
 						},
 					)]
 					.into(),
 				),
 				Equip::new([Item {
-					behavior: Some(Behavior {
-						insert_fn: fake_behavior_insert::<'!'>,
+					skill: Some(Skill {
+						cast: Cast {
+							pre: Duration::from_millis(1),
+							after: Duration::from_millis(2),
+						},
+						markers: Marker::<u32>::commands(),
+						behavior: BehaviorMeta {
+							run_fn: Some(fake_start),
+							stop_fn: Some(fake_stop),
+						},
+						..default()
 					}),
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key"),
@@ -183,8 +193,17 @@ mod tests {
 				Some(model),
 				&Slot {
 					entity: slot,
-					behavior: Some(Behavior {
-						insert_fn: fake_behavior_insert::<'!'>,
+					skill: Some(Skill {
+						cast: Cast {
+							pre: Duration::from_millis(1),
+							after: Duration::from_millis(2),
+						},
+						markers: Marker::<u32>::commands(),
+						behavior: BehaviorMeta {
+							run_fn: Some(fake_start),
+							stop_fn: Some(fake_stop),
+						},
+						..default()
 					})
 				}
 			),
@@ -215,13 +234,13 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot {
 							entity: slot,
-							behavior: None,
+							skill: None,
 						},
 					)]
 					.into(),
 				),
 				Equip::new([Item {
-					behavior: None,
+					skill: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key"),
 				}]),
@@ -254,13 +273,13 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot {
 							entity: slot,
-							behavior: None,
+							skill: None,
 						},
 					)]
 					.into(),
 				),
 				Equip::new([Item {
-					behavior: None,
+					skill: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: None,
 				}]),
@@ -297,13 +316,13 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot {
 							entity: slot,
-							behavior: None,
+							skill: None,
 						},
 					)]
 					.into(),
 				),
 				Equip::new([Item {
-					behavior: None,
+					skill: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key"),
 				}]),
@@ -341,13 +360,13 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot {
 							entity: slot,
-							behavior: None,
+							skill: None,
 						},
 					)]
 					.into(),
 				),
 				Equip::new([Item {
-					behavior: None,
+					skill: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("non matching model key"),
 				}]),
@@ -385,13 +404,13 @@ mod tests {
 						SlotKey::Hand(Side::Left),
 						Slot {
 							entity: slot,
-							behavior: None,
+							skill: None,
 						},
 					)]
 					.into(),
 				),
 				Equip::new([Item {
-					behavior: None,
+					skill: None,
 					slot: SlotKey::Hand(Side::Right),
 					model: Some("model key"),
 				}]),
@@ -429,19 +448,19 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot {
 							entity: slot,
-							behavior: None,
+							skill: None,
 						},
 					)]
 					.into(),
 				),
 				Equip::new([
 					Item {
-						behavior: None,
+						skill: None,
 						slot: SlotKey::Hand(Side::Right),
 						model: Some("model key"),
 					},
 					Item {
-						behavior: None,
+						skill: None,
 						slot: SlotKey::Legs,
 						model: Some("model key"),
 					},
@@ -460,7 +479,7 @@ mod tests {
 			(
 				Some(model),
 				Some(&Equip::new([Item {
-					behavior: None,
+					skill: None,
 					slot: SlotKey::Legs,
 					model: Some("model key"),
 				}]))
