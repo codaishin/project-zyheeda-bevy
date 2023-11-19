@@ -1,3 +1,4 @@
+pub mod projectile;
 pub mod simple_movement;
 
 use crate::components::lazy::Lazy;
