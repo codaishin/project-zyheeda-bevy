@@ -12,6 +12,7 @@ use project_zyheeda::{
 		Equip,
 		Item,
 		Player,
+		Projectile,
 		Side,
 		SimpleMovement,
 		SlotBones,
@@ -21,9 +22,10 @@ use project_zyheeda::{
 	resources::{Animation, Models, SlotMap},
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
-		behavior::{dequeue::dequeue, enqueue::enqueue},
+		behavior::{dequeue::dequeue, enqueue::enqueue, projectile::projectile},
 		input::schedule_slots::schedule_slots,
 		items::{equip::equip_items, slots::add_item_slots},
+		log::log,
 		movement::{
 			execute_move::execute_move,
 			follow::follow,
@@ -58,7 +60,14 @@ fn main() {
 		)
 		.add_systems(
 			Update,
-			(execute_move::<Player, SimpleMovement>, execute_skill),
+			(execute_skill, execute_move::<Player, SimpleMovement>),
+		)
+		.add_systems(
+			Update,
+			(
+				projectile.pipe(log),
+				execute_move::<Projectile, SimpleMovement>,
+			),
 		)
 		.add_systems(
 			Update,
@@ -110,7 +119,13 @@ fn debug(
 }
 
 fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
-	let models = Models::new([("pistol", "pistol.gltf", 0)], &asset_server);
+	let models = Models::new(
+		[
+			("pistol", "pistol.gltf", 0),
+			("projectile", "projectile.gltf", 0),
+		],
+		&asset_server,
+	);
 	commands.insert_resource(models);
 }
 
