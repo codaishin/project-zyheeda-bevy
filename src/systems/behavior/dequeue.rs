@@ -9,8 +9,8 @@ pub fn dequeue(mut commands: Commands, mut agents: Query<(Entity, &mut Queue), W
 	for (agent, mut queue) in agents.iter_mut() {
 		let mut agent = commands.entity(agent);
 
-		if let Some((behavior, ray)) = queue.0.pop_front() {
-			behavior.insert_into(&mut agent, ray);
+		if let Some(skill) = queue.0.pop_front() {
+			agent.insert(skill);
 			agent.remove::<WaitNext>();
 			agent.remove::<Marker<Idle>>();
 		} else {
@@ -22,36 +22,27 @@ pub fn dequeue(mut commands: Commands, mut agents: Query<(Entity, &mut Queue), W
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{behaviors::Behavior, components::WaitNext};
-	use bevy::{
-		ecs::system::EntityCommands,
-		prelude::{default, App, Component, Ray, Update, Vec3},
-	};
+	use crate::components::{Cast, Skill, WaitNext};
+	use bevy::prelude::{default, App, Ray, Update, Vec3};
+	use std::time::Duration;
 
 	const TEST_RAY: Ray = Ray {
 		origin: Vec3::ONE,
 		direction: Vec3::Y,
 	};
 
-	#[derive(Component, Debug)]
-	struct Sing {
-		pub ray: Ray,
-	}
-
-	fn insert_sing(entity: &mut EntityCommands, ray: Ray) {
-		entity.insert(Sing { ray });
-	}
-
 	#[test]
 	fn pop_first_behavior_to_agent() {
 		let mut app = App::new();
 		let queue = Queue(
-			[(
-				Behavior {
-					insert_fn: insert_sing,
+			[(Skill {
+				cast: Cast {
+					pre: Duration::from_millis(42),
+					..default()
 				},
-				TEST_RAY,
-			)]
+				data: TEST_RAY,
+				..default()
+			})]
 			.into(),
 		);
 		let agent = app.world.spawn((queue, WaitNext)).id();
@@ -65,7 +56,7 @@ mod tests {
 		assert_eq!(
 			(Some(TEST_RAY), false, 0),
 			(
-				agent.get::<Sing>().map(|s| s.ray),
+				agent.get::<Skill<Ray>>().map(|s| s.data),
 				agent.contains::<WaitNext>(),
 				queue.0.len()
 			)
@@ -75,15 +66,7 @@ mod tests {
 	#[test]
 	fn do_not_pop_when_not_waiting_next() {
 		let mut app = App::new();
-		let queue = Queue(
-			[(
-				Behavior {
-					insert_fn: insert_sing,
-				},
-				TEST_RAY,
-			)]
-			.into(),
-		);
+		let queue = Queue([Skill::default()].into());
 		let agent = app.world.spawn(queue).id();
 
 		app.add_systems(Update, dequeue);
@@ -92,7 +75,7 @@ mod tests {
 		let agent = app.world.entity(agent);
 		let queue = agent.get::<Queue>().unwrap();
 
-		assert_eq!((false, 1), (agent.contains::<Sing>(), queue.0.len()));
+		assert_eq!((false, 1), (agent.contains::<Skill<Ray>>(), queue.0.len()));
 	}
 
 	#[test]
@@ -111,15 +94,7 @@ mod tests {
 	#[test]
 	fn remove_idle_when_something_to_pop() {
 		let mut app = App::new();
-		let queue = Queue(
-			[(
-				Behavior {
-					insert_fn: insert_sing,
-				},
-				TEST_RAY,
-			)]
-			.into(),
-		);
+		let queue = Queue([Skill::default()].into());
 		let idle = Marker::<Idle>::new();
 
 		let agent = app.world.spawn((queue, WaitNext, idle)).id();

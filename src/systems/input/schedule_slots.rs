@@ -1,6 +1,5 @@
 use crate::{
-	behaviors::Behavior,
-	components::{Schedule, ScheduleMode, SlotKey, Slots},
+	components::{Schedule, ScheduleMode, Skill, SlotKey, Slots},
 	resources::SlotMap,
 };
 use bevy::prelude::{Commands, Component, Entity, Input, KeyCode, Query, Res, With};
@@ -32,7 +31,7 @@ pub fn schedule_slots<TKey: Copy + Eq + Hash + Send + Sync, TAgent: Component>(
 		if !behaviors.is_empty() {
 			commands.entity(agent).insert(Schedule {
 				mode,
-				behaviors: behaviors.into_iter().collect(),
+				skills: behaviors.into_iter().collect(),
 			});
 		}
 	}
@@ -41,29 +40,39 @@ pub fn schedule_slots<TKey: Copy + Eq + Hash + Send + Sync, TAgent: Component>(
 fn filter_triggered_behaviors(
 	slots: &Slots,
 	triggered_slot_keys: &[&SlotKey],
-) -> Vec<(SlotKey, Behavior)> {
+) -> Vec<(SlotKey, Skill)> {
 	slots
 		.0
 		.iter()
 		.filter(|(slot_key, ..)| triggered_slot_keys.contains(slot_key))
-		.filter_map(|(key, slot)| slot.behavior.map(|b| (*key, b)))
+		.filter_map(|(key, slot)| slot.skill.clone().map(|skill| (*key, skill)))
 		.collect()
 }
 
 #[cfg(test)]
 mod tests {
+	use std::time::Duration;
+
 	use super::*;
 	use crate::{
-		components::{Schedule, ScheduleMode, Side, Slot, SlotKey, Slots},
+		behaviors::meta::{Agent, BehaviorMeta, Spawner},
+		components::{marker::Marker, Cast, Schedule, ScheduleMode, Side, Slot, SlotKey, Slots},
 		resources::SlotMap,
 	};
-	use bevy::{
-		ecs::system::EntityCommands,
-		prelude::{App, Component, Entity, Input, KeyCode, MouseButton, Ray, Update},
+	use bevy::prelude::{
+		default,
+		App,
+		Component,
+		Entity,
+		Input,
+		KeyCode,
+		MouseButton,
+		Ray,
+		Update,
 	};
 
 	#[derive(Component)]
-	struct Agent;
+	struct TestAgent;
 
 	fn setup() -> App {
 		let mut app = App::new();
@@ -74,11 +83,12 @@ mod tests {
 		app.insert_resource(mouse);
 		app.insert_resource(keys);
 		app.insert_resource(mouse_settings);
-		app.add_systems(Update, schedule_slots::<MouseButton, Agent>);
+		app.add_systems(Update, schedule_slots::<MouseButton, TestAgent>);
 		app
 	}
 
-	fn fake_behavior_insert<const T: char>(_entity: &mut EntityCommands, _ray: Ray) {}
+	fn fake_start(_: &mut Commands, _: &Agent, _: &Spawner, _: &Ray) {}
+	fn fake_stop(_: &mut Commands, _: &Agent) {}
 
 	#[test]
 	fn set_override() {
@@ -88,14 +98,24 @@ mod tests {
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					behavior: Some(Behavior {
-						insert_fn: fake_behavior_insert::<'!'>,
+					skill: Some(Skill {
+						cast: Cast {
+							pre: Duration::from_millis(1),
+							after: Duration::from_millis(2),
+						},
+						markers: Marker::<u32>::commands(),
+						behavior: BehaviorMeta {
+							run_fn: Some(fake_start),
+							stop_fn: Some(fake_stop),
+							transform_fn: None,
+						},
+						..default()
 					}),
 				},
 			)]
 			.into(),
 		);
-		let agent = app.world.spawn((Agent, slots)).id();
+		let agent = app.world.spawn((TestAgent, slots)).id();
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
@@ -113,10 +133,20 @@ mod tests {
 		assert_eq!(
 			Some(&Schedule {
 				mode: ScheduleMode::Override,
-				behaviors: [(
+				skills: [(
 					SlotKey::Legs,
-					Behavior {
-						insert_fn: fake_behavior_insert::<'!'>,
+					Skill {
+						cast: Cast {
+							pre: Duration::from_millis(1),
+							after: Duration::from_millis(2),
+						},
+						markers: Marker::<u32>::commands(),
+						behavior: BehaviorMeta {
+							run_fn: Some(fake_start),
+							stop_fn: Some(fake_stop),
+							transform_fn: None,
+						},
+						..default()
 					}
 				)]
 				.into()
@@ -133,9 +163,7 @@ mod tests {
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					behavior: Some(Behavior {
-						insert_fn: fake_behavior_insert::<'!'>,
-					}),
+					skill: Some(Skill::default()),
 				},
 			)]
 			.into(),
@@ -166,14 +194,12 @@ mod tests {
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					behavior: Some(Behavior {
-						insert_fn: fake_behavior_insert::<'!'>,
-					}),
+					skill: Some(Skill::default()),
 				},
 			)]
 			.into(),
 		);
-		let agent = app.world.spawn((Agent, slots)).id();
+		let agent = app.world.spawn((TestAgent, slots)).id();
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
@@ -199,14 +225,24 @@ mod tests {
 				SlotKey::Hand(Side::Right),
 				Slot {
 					entity: Entity::from_raw(42),
-					behavior: Some(Behavior {
-						insert_fn: fake_behavior_insert::<'/'>,
+					skill: Some(Skill {
+						cast: Cast {
+							pre: Duration::from_millis(1),
+							after: Duration::from_millis(2),
+						},
+						markers: Marker::<u32>::commands(),
+						behavior: BehaviorMeta {
+							run_fn: Some(fake_start),
+							stop_fn: Some(fake_stop),
+							transform_fn: None,
+						},
+						..default()
 					}),
 				},
 			)]
 			.into(),
 		);
-		let agent = app.world.spawn((Agent, slots)).id();
+		let agent = app.world.spawn((TestAgent, slots)).id();
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
@@ -227,10 +263,20 @@ mod tests {
 		assert_eq!(
 			Some(&Schedule {
 				mode: ScheduleMode::Enqueue,
-				behaviors: [(
+				skills: [(
 					SlotKey::Hand(Side::Right),
-					Behavior {
-						insert_fn: fake_behavior_insert::<'/'>,
+					Skill {
+						cast: Cast {
+							pre: Duration::from_millis(1),
+							after: Duration::from_millis(2),
+						},
+						markers: Marker::<u32>::commands(),
+						behavior: BehaviorMeta {
+							run_fn: Some(fake_start),
+							stop_fn: Some(fake_stop),
+							transform_fn: None,
+						},
+						..default()
 					}
 				)]
 				.into()
@@ -258,14 +304,12 @@ mod tests {
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					behavior: Some(Behavior {
-						insert_fn: fake_behavior_insert::<'!'>,
-					}),
+					skill: Some(Skill::default()),
 				},
 			)]
 			.into(),
 		);
-		let agent = app.world.spawn((Agent, slots)).id();
+		let agent = app.world.spawn((TestAgent, slots)).id();
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.clear_just_pressed(MouseButton::Right);

@@ -8,13 +8,10 @@ use crate::{
 };
 use bevy::prelude::*;
 
-type ShouldNotMove<TAgent, TMovement> = (With<TAgent>, With<TMovement>, With<WaitNext>);
-
 pub fn execute_move<TAgent: Component + MovementData, TMovement: Component + Movement>(
 	time: Res<Time<Real>>,
 	mut commands: Commands,
 	mut agents: Query<(Entity, &mut TMovement, &mut Transform, &TAgent)>,
-	waiting_agents: Query<Entity, ShouldNotMove<TAgent, TMovement>>,
 ) {
 	for (entity, mut movement, mut transform, agent) in agents.iter_mut() {
 		let mut entity = commands.entity(entity);
@@ -35,11 +32,6 @@ pub fn execute_move<TAgent: Component + MovementData, TMovement: Component + Mov
 				entity.insert(Marker::<Fast>::new());
 			}
 		}
-	}
-
-	for entity in &waiting_agents {
-		let mut entity = commands.entity(entity);
-		entity.remove::<(Marker<Fast>, Marker<Slow>, TMovement)>();
 	}
 }
 
@@ -311,34 +303,6 @@ mod test {
 		let agent = app.world.entity(agent);
 
 		assert!(!agent.contains::<_Movement>());
-	}
-
-	#[test]
-	fn remove_movement_when_waiting_next() {
-		let mut app = setup_app();
-		let transform = Transform::from_xyz(1., 2., 3.);
-		let agent = AgentWalk;
-		let mut movement = _Movement::new();
-
-		movement.mock.expect_update().return_const(false);
-
-		let agent = app
-			.world
-			.spawn((agent, movement, transform, Marker::<Fast>::new(), WaitNext))
-			.id();
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			(false, false, false),
-			(
-				agent.contains::<_Movement>(),
-				agent.contains::<Marker<Fast>>(),
-				agent.contains::<Marker<Slow>>()
-			)
-		);
 	}
 
 	#[test]
