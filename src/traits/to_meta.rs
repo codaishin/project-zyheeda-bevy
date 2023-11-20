@@ -23,7 +23,7 @@ pub mod test_tools {
 			let Some(run) = behavior.run_fn else {
 				return;
 			};
-			run(&mut commands, agent, spawner, ray);
+			run(&mut commands, &agent, &spawner, &ray);
 		}
 	}
 
@@ -32,7 +32,7 @@ pub mod test_tools {
 			let Some(stop) = behavior.stop_fn else {
 				return;
 			};
-			stop(&mut commands, agent);
+			stop(&mut commands, &agent);
 		}
 	}
 }

@@ -127,8 +127,8 @@ mod tests {
 
 	#[test]
 	fn equip_when_marked_to_equip() {
-		fn fake_start(_: &mut Commands, _: Agent, _: Spawner, _: Ray) {}
-		fn fake_stop(_: &mut Commands, _: Agent) {}
+		fn fake_start(_: &mut Commands, _: &Agent, _: &Spawner, _: &Ray) {}
+		fn fake_stop(_: &mut Commands, _: &Agent) {}
 
 		let model = Handle::<Scene>::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
@@ -166,6 +166,7 @@ mod tests {
 						behavior: BehaviorMeta {
 							run_fn: Some(fake_start),
 							stop_fn: Some(fake_stop),
+							transform_fn: None,
 						},
 						..default()
 					}),
@@ -202,6 +203,7 @@ mod tests {
 						behavior: BehaviorMeta {
 							run_fn: Some(fake_start),
 							stop_fn: Some(fake_stop),
+							transform_fn: None,
 						},
 						..default()
 					})

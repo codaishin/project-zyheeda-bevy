@@ -11,7 +11,7 @@ use bevy::{
 	math::{Ray, Vec3},
 };
 
-fn run_fn(commands: &mut Commands, agent: Agent, _spawner: Spawner, ray: Ray) {
+fn run_fn(commands: &mut Commands, agent: &Agent, _spawner: &Spawner, ray: &Ray) {
 	let Some(length) = ray.intersect_plane(Vec3::ZERO, Vec3::Y) else {
 		return;
 	};
@@ -20,7 +20,7 @@ fn run_fn(commands: &mut Commands, agent: Agent, _spawner: Spawner, ray: Ray) {
 	});
 }
 
-fn stop_fn(commands: &mut Commands, agent: Agent) {
+fn stop_fn(commands: &mut Commands, agent: &Agent) {
 	commands
 		.entity(agent.0)
 		.remove::<(SimpleMovement, Marker<Fast>, Marker<Slow>)>();
@@ -31,6 +31,7 @@ impl ToMeta for SimpleMovement {
 		BehaviorMeta {
 			run_fn: Some(run_fn),
 			stop_fn: Some(stop_fn),
+			transform_fn: None,
 		}
 	}
 }

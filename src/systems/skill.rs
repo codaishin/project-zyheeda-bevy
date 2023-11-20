@@ -4,18 +4,7 @@ use crate::{
 };
 use bevy::{
 	math::Ray,
-	prelude::{
-		Commands,
-		Entity,
-		GlobalTransform,
-		Query,
-		Real,
-		Res,
-		Time,
-		Transform,
-		Vec3,
-		Without,
-	},
+	prelude::{Commands, Entity, GlobalTransform, Query, Real, Res, Time, Transform, Without},
 };
 
 type Skills<'a> = (Entity, &'a Skill<Ray>, &'a mut Transform, &'a Slots);
@@ -39,7 +28,7 @@ pub fn execute_skill(
 	for (entity, skill, mut transform, slots) in &mut agents_with_new_skill {
 		let agent = Agent(entity);
 
-		look_at_target(&mut transform, skill, slots, &transforms);
+		update_transform(&mut transform, skill, slots, &transforms);
 		mark_agent_as_running(&mut commands, skill, agent);
 	}
 
@@ -66,7 +55,7 @@ fn mark_agent_as_running(commands: &mut Commands, skill: &Skill<Ray>, agent: Age
 
 fn mark_agent_as_done(commands: &mut Commands, skill: &mut Skill<Ray>, agent: Agent) {
 	if let Some(stop) = skill.behavior.stop_fn {
-		stop(commands, agent)
+		stop(commands, &agent)
 	}
 
 	let mut agent = commands.entity(agent.0);
@@ -75,33 +64,23 @@ fn mark_agent_as_done(commands: &mut Commands, skill: &mut Skill<Ray>, agent: Ag
 	skill.markers.remove_from(&mut agent);
 }
 
-fn get_target(
-	skill: &Skill<Ray>,
-	transform: &mut Transform,
-	slots: &Slots,
-	transforms: &Query<&GlobalTransform>,
-) -> Option<Vec3> {
-	let ray_length = slots
-		.0
-		.get(&SlotKey::SkillSpawn)
-		.and_then(|slot| transforms.get(slot.entity).ok())
-		.and_then(|entity| skill.data.intersect_plane(entity.translation(), Vec3::Y))?;
-	let target = skill.data.origin + skill.data.direction * ray_length;
-
-	Some(Vec3::new(target.x, transform.translation.y, target.z))
-}
-
-fn look_at_target(
+fn update_transform(
 	transform: &mut Transform,
 	skill: &Skill<Ray>,
 	slots: &Slots,
 	transforms: &Query<&GlobalTransform>,
 ) {
-	let Some(target) = get_target(skill, transform, slots, transforms) else {
+	let Some(transform_fn) = skill.behavior.transform_fn else {
+		return;
+	};
+	let Some(slot) = slots.0.get(&SlotKey::SkillSpawn) else {
+		return;
+	};
+	let Ok(spawn_transform) = transforms.get(slot.entity) else {
 		return;
 	};
 
-	transform.look_at(target, Vec3::Y);
+	transform_fn(transform, &Spawner(*spawn_transform), &skill.data);
 }
 
 fn can_trigger_skill(
@@ -129,7 +108,7 @@ fn trigger_skill(
 ) {
 	skill.behavior.run_fn = None;
 
-	run(cmd, agent, spawner, skill.data);
+	run(cmd, &agent, &spawner, &skill.data);
 }
 
 fn skill_is_done(
@@ -146,7 +125,6 @@ mod tests {
 	use crate::{
 		behaviors::meta::BehaviorMeta,
 		components::{marker::Marker, Cast, Slot, SlotKey, WaitNext},
-		test_tools::assert_eq_approx,
 		traits::to_meta::ToMeta,
 	};
 	use bevy::{
@@ -154,11 +132,20 @@ mod tests {
 		prelude::{App, Ray, Transform, Update, Vec3},
 		time::{Real, Time},
 	};
+	use mockall::{automock, predicate::eq};
 	use std::time::Duration;
 
 	type AgentEntity = Entity;
+	type SpawnerEntity = Entity;
 
 	struct Tag;
+
+	struct _Tools;
+
+	#[automock]
+	impl _Tools {
+		pub fn _transform_fn(_transform: &mut Transform, _spawner: &Spawner, _ray: &Ray) {}
+	}
 
 	#[derive(Component, Debug, PartialEq)]
 	struct MockBehavior {
@@ -175,6 +162,7 @@ mod tests {
 	const REAL_LAZY: BehaviorMeta = BehaviorMeta {
 		run_fn: None,
 		stop_fn: None,
+		transform_fn: None,
 	};
 
 	impl ToMeta for MockBehavior {
@@ -182,14 +170,15 @@ mod tests {
 			BehaviorMeta {
 				run_fn: Some(|commands, agent, spawner, ray| {
 					commands.spawn(MockBehavior {
-						agent,
-						ray,
-						spawner,
+						agent: *agent,
+						ray: *ray,
+						spawner: *spawner,
 					});
 				}),
 				stop_fn: Some(|commands, agent| {
-					commands.spawn(MockIdle { agent });
+					commands.spawn(MockIdle { agent: *agent });
 				}),
+				transform_fn: None,
 			}
 		}
 	}
@@ -203,7 +192,7 @@ mod tests {
 		direction: Vec3::NEG_ONE,
 	};
 
-	fn setup_app(skill_spawn_location: Vec3) -> (App, AgentEntity) {
+	fn setup_app(skill_spawn_location: Vec3) -> (App, AgentEntity, SpawnerEntity) {
 		let mut app = App::new();
 		let mut time = Time::<Real>::default();
 
@@ -231,7 +220,7 @@ mod tests {
 		app.update();
 		app.add_systems(Update, execute_skill);
 
-		(app, agent)
+		(app, agent, skill_spawner)
 	}
 
 	fn tick_time(app: &mut App, delta: Duration) {
@@ -242,7 +231,7 @@ mod tests {
 
 	#[test]
 	fn add_marker() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Ray> {
 				data: TEST_RAY,
@@ -262,7 +251,7 @@ mod tests {
 
 	#[test]
 	fn remove_marker() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Ray> {
 				data: TEST_RAY,
@@ -289,7 +278,7 @@ mod tests {
 
 	#[test]
 	fn do_not_remove_marker_after_insufficient_time() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Ray> {
 				data: TEST_RAY,
@@ -316,7 +305,7 @@ mod tests {
 
 	#[test]
 	fn remove_marker_after_incremental_deltas() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Ray> {
 				data: TEST_RAY,
@@ -347,7 +336,7 @@ mod tests {
 
 	#[test]
 	fn remove_skill_and_tracker() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Ray> {
 				data: TEST_RAY,
@@ -380,7 +369,7 @@ mod tests {
 
 	#[test]
 	fn add_wait_next() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Ray> {
 				data: TEST_RAY,
@@ -407,7 +396,7 @@ mod tests {
 
 	#[test]
 	fn do_not_add_add_wait_next_too_early() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Ray> {
 				data: TEST_RAY,
@@ -434,7 +423,7 @@ mod tests {
 
 	#[test]
 	fn remove_all_related_components_when_waiting_next() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Ray> {
 				data: TEST_RAY,
@@ -467,120 +456,8 @@ mod tests {
 	}
 
 	#[test]
-	fn use_ray_look_direction() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
-		let ray = Ray {
-			origin: Vec3::new(1., 10., 5.),
-			direction: Vec3::NEG_Y,
-		};
-		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: ray,
-				cast: TEST_CAST,
-				markers: Marker::<Tag>::commands(),
-				behavior: REAL_LAZY,
-			},
-			Transform::default(),
-		));
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-		let agent = agent.get::<Transform>().unwrap();
-
-		assert_eq_approx(Vec3::new(1., 0., 5.).normalize(), agent.forward(), 0.000001);
-	}
-
-	#[test]
-	fn use_odd_ray_look_direction() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
-		let ray = Ray {
-			origin: Vec3::new(0., 3., 0.),
-			direction: Vec3::new(4., -3., 0.),
-		};
-		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: ray,
-				cast: TEST_CAST,
-				markers: Marker::<Tag>::commands(),
-				behavior: REAL_LAZY,
-			},
-			Transform::default(),
-		));
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-		let agent = agent.get::<Transform>().unwrap();
-
-		assert_eq_approx(
-			(Vec3::new(5., 0., 0.)).normalize(),
-			agent.forward(),
-			0.000001,
-		);
-	}
-
-	#[test]
-	fn use_odd_ray_and_skill_spawn_for_look_direction() {
-		let (mut app, agent) = setup_app(Vec3::new(0., 3., 0.));
-		let ray = Ray {
-			origin: Vec3::new(0., 6., 0.),
-			direction: Vec3::new(4., -3., 0.),
-		};
-		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: ray,
-				cast: TEST_CAST,
-				markers: Marker::<Tag>::commands(),
-				behavior: REAL_LAZY,
-			},
-			Transform::from_xyz(0., 3., 0.),
-		));
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-		let agent = agent.get::<Transform>().unwrap();
-
-		assert_eq_approx(
-			(Vec3::new(5., 0., 0.)).normalize(),
-			agent.forward(),
-			0.000001,
-		);
-	}
-
-	#[test]
-	fn look_horizontally() {
-		let (mut app, agent) = setup_app(Vec3::new(0., 3., 0.));
-		let ray = Ray {
-			origin: Vec3::new(0., 6., 0.),
-			direction: Vec3::new(4., -3., 0.),
-		};
-		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: ray,
-				cast: TEST_CAST,
-				markers: Marker::<Tag>::commands(),
-				behavior: REAL_LAZY,
-			},
-			Transform::from_xyz(0., 0., 0.),
-		));
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-		let agent = agent.get::<Transform>().unwrap();
-
-		assert_eq_approx(
-			(Vec3::new(5., 0., 0.)).normalize(),
-			agent.forward(),
-			0.000001,
-		);
-	}
-
-	#[test]
 	fn start_behavior() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Ray> {
 				data: TEST_RAY,
@@ -610,7 +487,7 @@ mod tests {
 
 	#[test]
 	fn stop_behavior() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Ray> {
 				data: TEST_RAY,
@@ -646,7 +523,7 @@ mod tests {
 
 	#[test]
 	fn do_not_stop_behavior_before_skill_is_done() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Ray> {
 				data: TEST_RAY,
@@ -677,7 +554,7 @@ mod tests {
 
 	#[test]
 	fn not_spawned_before_pre_cast_behavior() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Ray> {
 				data: TEST_RAY,
@@ -707,7 +584,7 @@ mod tests {
 
 	#[test]
 	fn not_spawned_multiple_times() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Ray> {
 				data: TEST_RAY,
@@ -742,7 +619,7 @@ mod tests {
 
 	#[test]
 	fn not_spawned_multiple_times_with_not_perfectly_matching_deltas() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Ray> {
 				data: TEST_RAY,
@@ -777,7 +654,7 @@ mod tests {
 
 	#[test]
 	fn spawn_behavior_with_proper_arguments() {
-		let (mut app, agent) = setup_app(Vec3::ONE);
+		let (mut app, agent, ..) = setup_app(Vec3::ONE);
 		app.world.entity_mut(agent).insert((
 			Skill::<Ray> {
 				data: TEST_RAY,
@@ -810,5 +687,39 @@ mod tests {
 			}),
 			behavior
 		);
+	}
+
+	#[test]
+	fn apply_transform_fn() {
+		let (mut app, agent, spawner) = setup_app(Vec3::ONE);
+
+		app.world.entity_mut(agent).insert((
+			Skill::<Ray> {
+				data: TEST_RAY,
+				cast: Cast {
+					pre: Duration::from_millis(500),
+					after: Duration::from_millis(200),
+				},
+				markers: Marker::<Tag>::commands(),
+				behavior: BehaviorMeta {
+					run_fn: None,
+					stop_fn: None,
+					transform_fn: Some(Mock_Tools::_transform_fn),
+				},
+			},
+			Transform::default(),
+		));
+
+		let spawner = Spawner(*app.world.entity(spawner).get::<GlobalTransform>().unwrap());
+		let agent = *app.world.entity(agent).get::<Transform>().unwrap();
+		let ctx = Mock_Tools::_transform_fn_context();
+		ctx.expect()
+			.once()
+			.with(eq(agent), eq(spawner), eq(TEST_RAY))
+			.return_const(());
+
+		tick_time(&mut app, Duration::from_millis(100));
+
+		app.update();
 	}
 }

@@ -87,8 +87,8 @@ mod tests {
 		app
 	}
 
-	fn fake_start(_: &mut Commands, _: Agent, _: Spawner, _: Ray) {}
-	fn fake_stop(_: &mut Commands, _: Agent) {}
+	fn fake_start(_: &mut Commands, _: &Agent, _: &Spawner, _: &Ray) {}
+	fn fake_stop(_: &mut Commands, _: &Agent) {}
 
 	#[test]
 	fn set_override() {
@@ -107,6 +107,7 @@ mod tests {
 						behavior: BehaviorMeta {
 							run_fn: Some(fake_start),
 							stop_fn: Some(fake_stop),
+							transform_fn: None,
 						},
 						..default()
 					}),
@@ -143,6 +144,7 @@ mod tests {
 						behavior: BehaviorMeta {
 							run_fn: Some(fake_start),
 							stop_fn: Some(fake_stop),
+							transform_fn: None,
 						},
 						..default()
 					}
@@ -232,6 +234,7 @@ mod tests {
 						behavior: BehaviorMeta {
 							run_fn: Some(fake_start),
 							stop_fn: Some(fake_stop),
+							transform_fn: None,
 						},
 						..default()
 					}),
@@ -271,6 +274,7 @@ mod tests {
 						behavior: BehaviorMeta {
 							run_fn: Some(fake_start),
 							stop_fn: Some(fake_stop),
+							transform_fn: None,
 						},
 						..default()
 					}

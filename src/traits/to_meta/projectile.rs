@@ -2,6 +2,7 @@ use super::ToMeta;
 use crate::{
 	behaviors::meta::{Agent, BehaviorMeta, Spawner},
 	components::Projectile,
+	tools::look_from_spawner,
 };
 use bevy::{
 	ecs::system::Commands,
@@ -15,15 +16,16 @@ impl ToMeta for Projectile {
 		BehaviorMeta {
 			run_fn: Some(run_fn),
 			stop_fn: None,
+			transform_fn: Some(look_from_spawner),
 		}
 	}
 }
 
-fn run_fn(commands: &mut Commands, _: Agent, spawner: Spawner, ray: Ray) {
+fn run_fn(commands: &mut Commands, _: &Agent, spawner: &Spawner, ray: &Ray) {
 	let transform = Transform::from_translation(spawner.0.translation());
 	commands.spawn((
 		Projectile {
-			target_ray: ray,
+			target_ray: *ray,
 			range: 10.,
 		},
 		SpatialBundle::from_transform(transform),
@@ -116,5 +118,15 @@ mod tests {
 			.unwrap();
 
 		assert_eq!(Vec3::new(1., 2., 3.), projectile_transform.translation)
+	}
+
+	#[test]
+	fn use_proper_transform_fn() {
+		let lazy = Projectile::meta();
+
+		assert_eq!(
+			Some(look_from_spawner as usize),
+			lazy.transform_fn.map(|f| f as usize)
+		);
 	}
 }
