@@ -159,19 +159,20 @@ impl Default for Slots {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Item {
-	pub slot: SlotKey,
 	pub model: Option<&'static str>,
 	pub skill: Option<Skill>,
 }
 
 #[derive(Component, Debug, PartialEq)]
-pub struct Equip(pub Vec<Item>);
+pub struct Collection<TElement>(pub Vec<TElement>);
 
-impl Equip {
-	pub fn new<const N: usize>(items: [Item; N]) -> Self {
-		Self(items.into())
+impl<TElement> Collection<TElement> {
+	pub fn new<const N: usize>(elements: [TElement; N]) -> Self {
+		Self(elements.into())
 	}
 }
+
+pub type Equipment = Collection<(SlotKey, Item)>;
 
 #[derive(Component)]
 pub struct Queue(pub VecDeque<Skill<Ray>>);

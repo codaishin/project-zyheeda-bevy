@@ -1,5 +1,5 @@
 use crate::{
-	components::{Equip, Item, Slot, SlotKey, Slots},
+	components::{Equipment, Item, Slot, SlotKey, Slots},
 	resources::Models,
 };
 use bevy::{
@@ -15,7 +15,7 @@ enum NoMatch {
 }
 
 type ShouldRetry = bool;
-type ItemsToRetry = Vec<Item>;
+type ItemsToRetry = Vec<(SlotKey, Item)>;
 
 const DO_NOT_RETRY: ShouldRetry = false;
 const DONE: ShouldRetry = false;
@@ -54,14 +54,14 @@ fn set_slot(
 
 fn equip_item_to(
 	slots: &mut Slots,
-	item: &Item,
+	(slot, item): &(SlotKey, Item),
 	models: &Res<Models>,
 	scene_models: &mut Query<&mut Handle<Scene>>,
 ) -> ShouldRetry {
 	let slot_and_model = slots
 		.0
-		.get_mut(&item.slot)
-		.ok_or(NoMatch::Slot(item.slot))
+		.get_mut(slot)
+		.ok_or(NoMatch::Slot(*slot))
 		.and_then(|slot| match scene_models.get_mut(slot.entity) {
 			Ok(slot_model) => Ok((slot, slot_model)),
 			Err(_) => Err(NoMatch::SceneHandle(slot.entity)),
@@ -81,7 +81,7 @@ fn equip_item_to(
 
 fn equip_items_to(
 	slots: &mut Mut<Slots>,
-	equip: &Equip,
+	equip: &Equipment,
 	models: &Res<Models>,
 	scene_handles: &mut Query<&mut Handle<Scene>>,
 ) -> ItemsToRetry {
@@ -96,13 +96,13 @@ fn equip_items_to(
 pub fn equip_items(
 	mut commands: Commands,
 	models: Res<Models>,
-	mut agent: Query<(Entity, &mut Slots, &mut Equip)>,
+	mut agent: Query<(Entity, &mut Slots, &mut Equipment)>,
 	mut scene_handles: Query<&mut Handle<Scene>>,
 ) {
 	for (agent, mut slots, mut equip) in &mut agent {
 		let items_to_retry = equip_items_to(&mut slots, &equip, &models, &mut scene_handles);
 		if items_to_retry.is_empty() {
-			commands.entity(agent).remove::<Equip>();
+			commands.entity(agent).remove::<Equipment>();
 		} else {
 			equip.0 = items_to_retry;
 		}
@@ -114,7 +114,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		behaviors::meta::{Agent, BehaviorMeta, Spawner},
-		components::{marker::Marker, Cast, Item, Side, Skill, Slot, SlotKey, Slots},
+		components::{marker::Marker, Cast, Collection, Item, Side, Skill, Slot, SlotKey, Slots},
 		resources::Models,
 	};
 	use bevy::{
@@ -156,23 +156,25 @@ mod tests {
 					)]
 					.into(),
 				),
-				Equip::new([Item {
-					skill: Some(Skill {
-						cast: Cast {
-							pre: Duration::from_millis(1),
-							after: Duration::from_millis(2),
-						},
-						markers: Marker::<u32>::commands(),
-						behavior: BehaviorMeta {
-							run_fn: Some(fake_start),
-							stop_fn: Some(fake_stop),
-							transform_fn: None,
-						},
-						..default()
-					}),
-					slot: SlotKey::Hand(Side::Right),
-					model: Some("model key"),
-				}]),
+				Collection::new([(
+					SlotKey::Hand(Side::Right),
+					Item {
+						skill: Some(Skill {
+							cast: Cast {
+								pre: Duration::from_millis(1),
+								after: Duration::from_millis(2),
+							},
+							markers: Marker::<u32>::commands(),
+							behavior: BehaviorMeta {
+								run_fn: Some(fake_start),
+								stop_fn: Some(fake_stop),
+								transform_fn: None,
+							},
+							..default()
+						}),
+						model: Some("model key"),
+					},
+				)]),
 			))
 			.id();
 		app.add_systems(Update, equip_items);
@@ -241,11 +243,13 @@ mod tests {
 					)]
 					.into(),
 				),
-				Equip::new([Item {
-					skill: None,
-					slot: SlotKey::Hand(Side::Right),
-					model: Some("model key"),
-				}]),
+				Collection::new([(
+					SlotKey::Hand(Side::Right),
+					Item {
+						skill: None,
+						model: Some("model key"),
+					},
+				)]),
 			))
 			.id();
 		app.add_systems(Update, equip_items);
@@ -254,7 +258,7 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Equip>());
+		assert!(!agent.contains::<Equipment>());
 	}
 
 	#[test]
@@ -280,11 +284,13 @@ mod tests {
 					)]
 					.into(),
 				),
-				Equip::new([Item {
-					skill: None,
-					slot: SlotKey::Hand(Side::Right),
-					model: None,
-				}]),
+				Collection::new([(
+					SlotKey::Hand(Side::Right),
+					Item {
+						skill: None,
+						model: None,
+					},
+				)]),
 			))
 			.id();
 		app.add_systems(Update, equip_items);
@@ -296,7 +302,7 @@ mod tests {
 
 		assert_eq!(
 			(Some(Handle::<Scene>::default()), false),
-			(slot_model.cloned(), agent.contains::<Equip>())
+			(slot_model.cloned(), agent.contains::<Equipment>())
 		);
 	}
 
@@ -323,11 +329,13 @@ mod tests {
 					)]
 					.into(),
 				),
-				Equip::new([Item {
-					skill: None,
-					slot: SlotKey::Hand(Side::Right),
-					model: Some("model key"),
-				}]),
+				Collection::new([(
+					SlotKey::Hand(Side::Right),
+					Item {
+						skill: None,
+						model: Some("model key"),
+					},
+				)]),
 			))
 			.id();
 		app.add_systems(Update, equip_items);
@@ -336,7 +344,7 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Equip>());
+		assert!(!agent.contains::<Equipment>());
 	}
 
 	#[test]
@@ -367,11 +375,13 @@ mod tests {
 					)]
 					.into(),
 				),
-				Equip::new([Item {
-					skill: None,
-					slot: SlotKey::Hand(Side::Right),
-					model: Some("non matching model key"),
-				}]),
+				Collection::new([(
+					SlotKey::Hand(Side::Right),
+					Item {
+						skill: None,
+						model: Some("model key"),
+					},
+				)]),
 			))
 			.id();
 		app.add_systems(Update, equip_items);
@@ -380,7 +390,7 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Equip>());
+		assert!(!agent.contains::<Equipment>());
 	}
 
 	#[test]
@@ -411,11 +421,13 @@ mod tests {
 					)]
 					.into(),
 				),
-				Equip::new([Item {
-					skill: None,
-					slot: SlotKey::Hand(Side::Right),
-					model: Some("model key"),
-				}]),
+				Collection::new([(
+					SlotKey::Hand(Side::Right),
+					Item {
+						skill: None,
+						model: Some("model key"),
+					},
+				)]),
 			))
 			.id();
 		app.add_systems(Update, equip_items);
@@ -424,7 +436,7 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<Equip>());
+		assert!(agent.contains::<Equipment>());
 	}
 
 	#[test]
@@ -455,17 +467,21 @@ mod tests {
 					)]
 					.into(),
 				),
-				Equip::new([
-					Item {
-						skill: None,
-						slot: SlotKey::Hand(Side::Right),
-						model: Some("model key"),
-					},
-					Item {
-						skill: None,
-						slot: SlotKey::Legs,
-						model: Some("model key"),
-					},
+				Collection::new([
+					(
+						SlotKey::Hand(Side::Right),
+						Item {
+							skill: None,
+							model: Some("model key"),
+						},
+					),
+					(
+						SlotKey::Legs,
+						Item {
+							skill: None,
+							model: Some("model key"),
+						},
+					),
 				]),
 			))
 			.id();
@@ -475,16 +491,18 @@ mod tests {
 
 		let slot_model = app.world.entity(slot).get::<Handle<Scene>>();
 		let agent = app.world.entity(agent);
-		let items = agent.get::<Equip>();
+		let items = agent.get::<Equipment>();
 
 		assert_eq!(
 			(
 				Some(model),
-				Some(&Equip::new([Item {
-					skill: None,
-					slot: SlotKey::Legs,
-					model: Some("model key"),
-				}]))
+				Some(&Collection::new([(
+					SlotKey::Legs,
+					Item {
+						skill: None,
+						model: Some("model key"),
+					}
+				),]))
 			),
 			(slot_model.cloned(), items)
 		);

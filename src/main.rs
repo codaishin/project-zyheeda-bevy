@@ -10,14 +10,12 @@ use project_zyheeda::{
 		Animator,
 		CamOrbit,
 		Cast,
-		Equip,
 		Item,
 		Player,
 		Projectile,
 		Side,
 		SimpleMovement,
 		Skill,
-		SlotBones,
 		SlotKey,
 		UnitsPerSecond,
 	},
@@ -193,41 +191,42 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			movement_mode: MovementMode::Slow,
 		},
 		Loadout::new(
-			SlotBones(
-				[
-					(SlotKey::SkillSpawn, "projectile_spawn"),
-					(SlotKey::Hand(Side::Right), "hand_slot.R"),
-					(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
-				]
-				.into(),
-			),
-			Equip::new([
-				Item {
-					slot: SlotKey::Hand(Side::Right),
-					model: Some("pistol"),
-					skill: Some(Skill {
-						cast: Cast {
-							pre: Duration::from_millis(300),
-							after: Duration::from_millis(100),
-						},
-						markers: Marker::<(Shoot, HandGun, Right)>::commands(),
-						behavior: Projectile::meta(),
-						..default()
-					}),
-				},
-				Item {
-					slot: SlotKey::Legs,
-					model: None,
-					skill: Some(Skill {
-						cast: Cast {
-							after: Duration::MAX,
+			[
+				(SlotKey::SkillSpawn, "projectile_spawn"),
+				(SlotKey::Hand(Side::Right), "hand_slot.R"),
+				(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
+			],
+			[
+				(
+					SlotKey::Hand(Side::Right),
+					Item {
+						model: Some("pistol"),
+						skill: Some(Skill {
+							cast: Cast {
+								pre: Duration::from_millis(300),
+								after: Duration::from_millis(100),
+							},
+							markers: Marker::<(Shoot, HandGun, Right)>::commands(),
+							behavior: Projectile::meta(),
 							..default()
-						},
-						behavior: SimpleMovement::meta(),
-						..default()
-					}),
-				},
-			]),
+						}),
+					},
+				),
+				(
+					SlotKey::Legs,
+					Item {
+						model: None,
+						skill: Some(Skill {
+							cast: Cast {
+								after: Duration::MAX,
+								..default()
+							},
+							behavior: SimpleMovement::meta(),
+							..default()
+						}),
+					},
+				),
+			],
 		),
 	));
 }
