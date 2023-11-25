@@ -1,35 +1,50 @@
 use crate::{
 	behaviors::meta::{Agent, Spawner, StartBehaviorFn},
-	components::{Skill, SlotKey, Slots, TimeTracker, WaitNext},
+	components::{Queued, Skill, SlotKey, Slots, TimeTracker, WaitNext},
+	errors::Error,
 };
-use bevy::{
-	math::Ray,
-	prelude::{Commands, Entity, GlobalTransform, Query, Real, Res, Time, Transform, Without},
+use bevy::prelude::{
+	Commands,
+	Entity,
+	GlobalTransform,
+	Query,
+	Real,
+	Res,
+	Time,
+	Transform,
+	Without,
 };
 
-type Skills<'a> = (Entity, &'a Skill<Ray>, &'a mut Transform, &'a Slots);
+type Skills<'a> = (Entity, &'a Skill<Queued>, &'a mut Transform, &'a Slots);
 type RunningSkills<'a> = (
 	Entity,
-	&'a mut Skill<Ray>,
-	&'a mut TimeTracker<Skill<Ray>>,
+	&'a mut Skill<Queued>,
+	&'a mut TimeTracker<Skill<Queued>>,
 	&'a Slots,
 	Option<&'a WaitNext>,
 );
 
+enum SkillStatus {
+	Inactive,
+	Done,
+	Running,
+}
+
 pub fn execute_skill(
 	time: Res<Time<Real>>,
 	mut commands: Commands,
-	mut agents_with_new_skill: Query<Skills, Without<TimeTracker<Skill<Ray>>>>,
+	mut agents_with_new_skill: Query<Skills, Without<TimeTracker<Skill<Queued>>>>,
 	mut agents_with_running_skill: Query<RunningSkills>,
 	transforms: Query<&GlobalTransform>,
-) {
+) -> Vec<Result<(), Error>> {
 	let delta = time.delta();
+	let mut results = Vec::new();
 
 	for (entity, skill, mut transform, slots) in &mut agents_with_new_skill {
 		let agent = Agent(entity);
 
 		update_transform(&mut transform, skill, slots, &transforms);
-		mark_agent_as_running(&mut commands, skill, agent);
+		results.push(mark_agent_as_running(&mut commands, skill, agent));
 	}
 
 	for (entity, mut skill, mut tracker, slots, wait_next) in &mut agents_with_running_skill {
@@ -41,32 +56,43 @@ pub fn execute_skill(
 			trigger_skill(&mut commands, &mut skill, agent, spawner, run);
 		}
 
-		if skill_is_done(&skill, &tracker, wait_next) {
-			mark_agent_as_done(&mut commands, &mut skill, agent);
-		}
+		results.push(match skill_status(&skill, &tracker, wait_next) {
+			SkillStatus::Running => Ok(()),
+			_ => mark_agent_as_done(&mut commands, &mut skill, agent),
+		});
 	}
+
+	results
 }
 
-fn mark_agent_as_running(commands: &mut Commands, skill: &Skill<Ray>, agent: Agent) {
+fn mark_agent_as_running(
+	commands: &mut Commands,
+	skill: &Skill<Queued>,
+	agent: Agent,
+) -> Result<(), Error> {
 	let mut agent = commands.entity(agent.0);
-	agent.insert(TimeTracker::<Skill<Ray>>::new());
-	skill.markers.insert_to(&mut agent);
+	agent.insert(TimeTracker::<Skill<Queued>>::new());
+	(skill.marker.insert_fn)(&mut agent, skill.data.slot)
 }
 
-fn mark_agent_as_done(commands: &mut Commands, skill: &mut Skill<Ray>, agent: Agent) {
+fn mark_agent_as_done(
+	commands: &mut Commands,
+	skill: &mut Skill<Queued>,
+	agent: Agent,
+) -> Result<(), Error> {
 	if let Some(stop) = skill.behavior.stop_fn {
 		stop(commands, &agent)
 	}
 
 	let mut agent = commands.entity(agent.0);
 	agent.insert(WaitNext);
-	agent.remove::<(Skill<Ray>, TimeTracker<Skill<Ray>>)>();
-	skill.markers.remove_from(&mut agent);
+	agent.remove::<(Skill<Queued>, TimeTracker<Skill<Queued>>)>();
+	(skill.marker.remove_fn)(&mut agent, skill.data.slot)
 }
 
 fn update_transform(
 	transform: &mut Transform,
-	skill: &Skill<Ray>,
+	skill: &Skill<Queued>,
 	slots: &Slots,
 	transforms: &Query<&GlobalTransform>,
 ) {
@@ -80,12 +106,12 @@ fn update_transform(
 		return;
 	};
 
-	transform_fn(transform, &Spawner(*spawn_transform), &skill.data);
+	transform_fn(transform, &Spawner(*spawn_transform), &skill.data.ray);
 }
 
 fn can_trigger_skill(
-	skill: &Skill<Ray>,
-	tracker: &TimeTracker<Skill<Ray>>,
+	skill: &Skill<Queued>,
+	tracker: &TimeTracker<Skill<Queued>>,
 	slots: &Slots,
 	transforms: &Query<&GlobalTransform>,
 ) -> Option<(Spawner, StartBehaviorFn)> {
@@ -101,22 +127,30 @@ fn can_trigger_skill(
 
 fn trigger_skill(
 	cmd: &mut Commands,
-	skill: &mut Skill<Ray>,
+	skill: &mut Skill<Queued>,
 	agent: Agent,
 	spawner: Spawner,
 	run: StartBehaviorFn,
 ) {
 	skill.behavior.run_fn = None;
 
-	run(cmd, &agent, &spawner, &skill.data);
+	run(cmd, &agent, &spawner, &skill.data.ray);
 }
 
-fn skill_is_done(
-	skill: &Skill<Ray>,
-	tracker: &TimeTracker<Skill<Ray>>,
+fn skill_status(
+	skill: &Skill<Queued>,
+	tracker: &TimeTracker<Skill<Queued>>,
 	wait_next: Option<&WaitNext>,
-) -> bool {
-	wait_next.is_some() || tracker.duration >= skill.cast.pre + skill.cast.after
+) -> SkillStatus {
+	if wait_next.is_some() {
+		return SkillStatus::Inactive;
+	}
+
+	if tracker.duration >= skill.cast.pre + skill.cast.after {
+		return SkillStatus::Done;
+	}
+
+	SkillStatus::Running
 }
 
 #[cfg(test)]
@@ -124,13 +158,17 @@ mod tests {
 	use super::*;
 	use crate::{
 		behaviors::meta::BehaviorMeta,
-		components::{marker::Marker, Cast, Slot, SlotKey, WaitNext},
-		traits::to_meta::ToMeta,
+		components::{Cast, Marker, Side, Slot, SlotKey, WaitNext},
+		errors::Level,
+		markers::meta::MarkerMeta,
+		systems::log::tests::{fake_log_error_lazy_many, FakeErrorLogMany},
+		traits::{behavior::GetBehaviorMeta, marker::GetMarkerMeta},
 	};
 	use bevy::{
-		ecs::component::Component,
+		ecs::{component::Component, system::IntoSystem},
 		prelude::{App, Ray, Transform, Update, Vec3},
 		time::{Real, Time},
+		utils::default,
 	};
 	use mockall::{automock, predicate::eq};
 	use std::time::Duration;
@@ -138,13 +176,42 @@ mod tests {
 	type AgentEntity = Entity;
 	type SpawnerEntity = Entity;
 
-	struct Tag;
+	struct Test;
+
+	struct SideNone;
+
+	struct SideLeft;
+
+	struct SideRight;
 
 	struct _Tools;
 
 	#[automock]
 	impl _Tools {
 		pub fn _transform_fn(_transform: &mut Transform, _spawner: &Spawner, _ray: &Ray) {}
+	}
+
+	impl GetMarkerMeta for Test {
+		fn marker() -> MarkerMeta {
+			MarkerMeta {
+				insert_fn: |entity, slot| {
+					match slot {
+						SlotKey::Hand(Side::Right) => entity.insert(Marker::<SideRight>::new()),
+						SlotKey::Hand(Side::Left) => entity.insert(Marker::<SideLeft>::new()),
+						_ => entity.insert(Marker::<SideNone>::new()),
+					};
+					Ok(())
+				},
+				remove_fn: |entity, slot| {
+					match slot {
+						SlotKey::Hand(Side::Right) => entity.remove::<Marker<SideRight>>(),
+						SlotKey::Hand(Side::Left) => entity.remove::<Marker<SideLeft>>(),
+						_ => entity.remove::<Marker<SideNone>>(),
+					};
+					Ok(())
+				},
+			}
+		}
 	}
 
 	#[derive(Component, Debug, PartialEq)]
@@ -165,8 +232,8 @@ mod tests {
 		transform_fn: None,
 	};
 
-	impl ToMeta for MockBehavior {
-		fn meta() -> BehaviorMeta {
+	impl GetBehaviorMeta for MockBehavior {
+		fn behavior() -> BehaviorMeta {
 			BehaviorMeta {
 				run_fn: Some(|commands, agent, spawner, ray| {
 					commands.spawn(MockBehavior {
@@ -218,7 +285,7 @@ mod tests {
 		time.update();
 		app.insert_resource(time);
 		app.update();
-		app.add_systems(Update, execute_skill);
+		app.add_systems(Update, execute_skill.pipe(fake_log_error_lazy_many(agent)));
 
 		(app, agent, skill_spawner)
 	}
@@ -233,11 +300,14 @@ mod tests {
 	fn add_marker() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
 				cast: TEST_CAST,
-				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
+				marker: Test::marker(),
 			},
 			Transform::default(),
 		));
@@ -246,21 +316,64 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<Marker<Tag>>());
+		assert!(agent.contains::<Marker<SideRight>>());
+	}
+
+	#[test]
+	fn return_add_marker_error() {
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
+		app.world.entity_mut(agent).insert((
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
+				cast: TEST_CAST,
+				behavior: REAL_LAZY,
+				marker: MarkerMeta {
+					insert_fn: |_, _| {
+						Err(Error {
+							msg: "some message".to_owned(),
+							lvl: Level::Warning,
+						})
+					},
+					remove_fn: |_, _| Ok(()),
+				},
+			},
+			Transform::default(),
+		));
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&FakeErrorLogMany(
+				[Error {
+					msg: "some message".to_owned(),
+					lvl: Level::Warning
+				}]
+				.into()
+			)),
+			agent.get::<FakeErrorLogMany>()
+		)
 	}
 
 	#[test]
 	fn remove_marker() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
+				marker: Test::marker(),
 			},
 			Transform::default(),
 		));
@@ -273,21 +386,70 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Marker<Tag>>());
+		assert!(!agent.contains::<Marker<SideLeft>>());
+	}
+	#[test]
+	fn return_remove_marker_error() {
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
+		app.world.entity_mut(agent).insert((
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
+				cast: Cast {
+					pre: Duration::from_millis(500),
+					after: Duration::from_millis(200),
+				},
+				behavior: REAL_LAZY,
+				marker: MarkerMeta {
+					insert_fn: |_, _| Ok(()),
+					remove_fn: |_, _| {
+						Err(Error {
+							msg: "some message".to_owned(),
+							lvl: Level::Warning,
+						})
+					},
+				},
+			},
+			Transform::default(),
+		));
+
+		app.update();
+
+		tick_time(&mut app, Duration::from_millis(700));
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&FakeErrorLogMany(
+				[Error {
+					msg: "some message".to_owned(),
+					lvl: Level::Warning
+				}]
+				.into()
+			)),
+			agent.get::<FakeErrorLogMany>()
+		)
 	}
 
 	#[test]
 	fn do_not_remove_marker_after_insufficient_time() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Left),
+				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
+				marker: Test::marker(),
 			},
 			Transform::default(),
 		));
@@ -300,21 +462,24 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<Marker<Tag>>());
+		assert!(agent.contains::<Marker<SideLeft>>());
 	}
 
 	#[test]
 	fn remove_marker_after_incremental_deltas() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
+				marker: Test::marker(),
 			},
 			Transform::default(),
 		));
@@ -331,21 +496,24 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Marker<Tag>>());
+		assert!(!agent.contains::<Marker<SideLeft>>());
 	}
 
 	#[test]
 	fn remove_skill_and_tracker() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
+				..default()
 			},
 			Transform::default(),
 		));
@@ -371,14 +539,17 @@ mod tests {
 	fn add_wait_next() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
+				..default()
 			},
 			Transform::default(),
 		));
@@ -398,14 +569,17 @@ mod tests {
 	fn do_not_add_add_wait_next_too_early() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
+				..default()
 			},
 			Transform::default(),
 		));
@@ -425,14 +599,17 @@ mod tests {
 	fn remove_all_related_components_when_waiting_next() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				markers: Marker::<Tag>::commands(),
 				behavior: REAL_LAZY,
+				..default()
 			},
 			Transform::default(),
 		));
@@ -448,9 +625,9 @@ mod tests {
 		assert_eq!(
 			(false, false, false),
 			(
-				agent.contains::<Skill<Ray>>(),
-				agent.contains::<TimeTracker<Skill<Ray>>>(),
-				agent.contains::<Marker<Tag>>(),
+				agent.contains::<Skill<Queued>>(),
+				agent.contains::<TimeTracker<Skill<Queued>>>(),
+				agent.contains::<Marker<SideLeft>>(),
 			)
 		);
 	}
@@ -459,14 +636,17 @@ mod tests {
 	fn start_behavior() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				markers: Marker::<Tag>::commands(),
-				behavior: MockBehavior::meta(),
+				behavior: MockBehavior::behavior(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -489,14 +669,17 @@ mod tests {
 	fn stop_behavior() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				markers: Marker::<Tag>::commands(),
-				behavior: MockBehavior::meta(),
+				behavior: MockBehavior::behavior(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -525,14 +708,17 @@ mod tests {
 	fn do_not_stop_behavior_before_skill_is_done() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				markers: Marker::<Tag>::commands(),
-				behavior: MockBehavior::meta(),
+				behavior: MockBehavior::behavior(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -556,14 +742,17 @@ mod tests {
 	fn not_spawned_before_pre_cast_behavior() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				markers: Marker::<Tag>::commands(),
-				behavior: MockBehavior::meta(),
+				behavior: MockBehavior::behavior(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -586,14 +775,17 @@ mod tests {
 	fn not_spawned_multiple_times() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				markers: Marker::<Tag>::commands(),
-				behavior: MockBehavior::meta(),
+				behavior: MockBehavior::behavior(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -621,14 +813,17 @@ mod tests {
 	fn not_spawned_multiple_times_with_not_perfectly_matching_deltas() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				markers: Marker::<Tag>::commands(),
-				behavior: MockBehavior::meta(),
+				behavior: MockBehavior::behavior(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -656,14 +851,17 @@ mod tests {
 	fn spawn_behavior_with_proper_arguments() {
 		let (mut app, agent, ..) = setup_app(Vec3::ONE);
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				markers: Marker::<Tag>::commands(),
-				behavior: MockBehavior::meta(),
+				behavior: MockBehavior::behavior(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -694,18 +892,21 @@ mod tests {
 		let (mut app, agent, spawner) = setup_app(Vec3::ONE);
 
 		app.world.entity_mut(agent).insert((
-			Skill::<Ray> {
-				data: TEST_RAY,
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				markers: Marker::<Tag>::commands(),
 				behavior: BehaviorMeta {
 					run_fn: None,
 					stop_fn: None,
 					transform_fn: Some(Mock_Tools::_transform_fn),
 				},
+				..default()
 			},
 			Transform::default(),
 		));

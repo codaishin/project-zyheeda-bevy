@@ -1,7 +1,6 @@
-use crate::components::{
-	marker::{Idle, Marker},
-	Queue,
-	WaitNext,
+use crate::{
+	components::{Marker, Queue, WaitNext},
+	markers::Idle,
 };
 use bevy::prelude::{Commands, Entity, Query, With};
 
@@ -22,7 +21,7 @@ pub fn dequeue(mut commands: Commands, mut agents: Query<(Entity, &mut Queue), W
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Cast, Skill, WaitNext};
+	use crate::components::{Cast, Queued, Skill, SlotKey, WaitNext};
 	use bevy::prelude::{default, App, Ray, Update, Vec3};
 	use std::time::Duration;
 
@@ -40,7 +39,10 @@ mod tests {
 					pre: Duration::from_millis(42),
 					..default()
 				},
-				data: TEST_RAY,
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::SkillSpawn,
+				},
 				..default()
 			})]
 			.into(),
@@ -54,9 +56,16 @@ mod tests {
 		let queue = agent.get::<Queue>().unwrap();
 
 		assert_eq!(
-			(Some(TEST_RAY), false, 0),
 			(
-				agent.get::<Skill<Ray>>().map(|s| s.data),
+				Some(Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::SkillSpawn,
+				}),
+				false,
+				0
+			),
+			(
+				agent.get::<Skill<Queued>>().map(|s| s.data),
 				agent.contains::<WaitNext>(),
 				queue.0.len()
 			)
@@ -75,7 +84,10 @@ mod tests {
 		let agent = app.world.entity(agent);
 		let queue = agent.get::<Queue>().unwrap();
 
-		assert_eq!((false, 1), (agent.contains::<Skill<Ray>>(), queue.0.len()));
+		assert_eq!(
+			(false, 1),
+			(agent.contains::<Skill<Queued>>(), queue.0.len())
+		);
 	}
 
 	#[test]

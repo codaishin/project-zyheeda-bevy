@@ -5,6 +5,7 @@ pub mod behaviors;
 pub mod bundles;
 pub mod components;
 pub mod errors;
+pub mod markers;
 pub mod resources;
 pub mod systems;
 pub mod tools;

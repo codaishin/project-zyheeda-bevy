@@ -1,10 +1,10 @@
-use crate::behaviors::meta::BehaviorMeta;
-
 pub mod projectile;
 pub mod simple_movement;
 
-pub trait ToMeta {
-	fn meta() -> BehaviorMeta;
+use crate::behaviors::meta::BehaviorMeta;
+
+pub trait GetBehaviorMeta {
+	fn behavior() -> BehaviorMeta;
 }
 
 #[cfg(test)]

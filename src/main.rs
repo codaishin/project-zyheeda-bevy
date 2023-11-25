@@ -6,28 +6,27 @@ use project_zyheeda::{
 	behaviors::MovementMode,
 	bundles::Loadout,
 	components::{
-		marker::{Fast, HandGun, Idle, Marker, Right, Shoot, Slow},
 		Animator,
 		CamOrbit,
 		Cast,
-		Equip,
 		Item,
+		Marker,
 		Player,
 		Projectile,
 		Side,
 		SimpleMovement,
 		Skill,
-		SlotBones,
 		SlotKey,
 		UnitsPerSecond,
 	},
+	markers::{Fast, HandGun, Idle, Right, Slow},
 	resources::{Animation, Models, SlotMap},
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
 		behavior::{dequeue::dequeue, enqueue::enqueue, projectile::projectile},
 		input::schedule_slots::schedule_slots,
 		items::{equip::equip_items, slots::add_item_slots},
-		log::log,
+		log::{log, log_many},
 		movement::{
 			execute_move::execute_move,
 			follow::follow,
@@ -38,8 +37,9 @@ use project_zyheeda::{
 	},
 	tools::Tools,
 	traits::{
+		behavior::GetBehaviorMeta,
+		marker::GetMarkerMeta,
 		orbit::{Orbit, Vec2Radians},
-		to_meta::ToMeta,
 	},
 };
 use std::{f32::consts::PI, time::Duration};
@@ -65,7 +65,10 @@ fn main() {
 		)
 		.add_systems(
 			Update,
-			(execute_skill, execute_move::<Player, SimpleMovement>),
+			(
+				execute_skill.pipe(log_many),
+				execute_move::<Player, SimpleMovement>,
+			),
 		)
 		.add_systems(
 			Update,
@@ -80,7 +83,7 @@ fn main() {
 				animate::<Player, Marker<Idle>>,
 				animate::<Player, Marker<Slow>>,
 				animate::<Player, Marker<Fast>>,
-				animate::<Player, Marker<(Shoot, HandGun, Right)>>,
+				animate::<Player, Marker<(HandGun, Right)>>,
 			),
 		)
 		.add_systems(
@@ -177,7 +180,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	commands.insert_resource(Animation::<Player, Marker<Fast>>::new(
 		asset_server.load("models/player.gltf#Animation3"),
 	));
-	commands.insert_resource(Animation::<Player, Marker<(Shoot, HandGun, Right)>>::new(
+	commands.insert_resource(Animation::<Player, Marker<(HandGun, Right)>>::new(
 		asset_server.load("models/player.gltf#Animation4"),
 	));
 
@@ -193,41 +196,42 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			movement_mode: MovementMode::Slow,
 		},
 		Loadout::new(
-			SlotBones(
-				[
-					(SlotKey::SkillSpawn, "projectile_spawn"),
-					(SlotKey::Hand(Side::Right), "hand_slot.R"),
-					(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
-				]
-				.into(),
-			),
-			Equip::new([
-				Item {
-					slot: SlotKey::Hand(Side::Right),
-					model: Some("pistol"),
-					skill: Some(Skill {
-						cast: Cast {
-							pre: Duration::from_millis(300),
-							after: Duration::from_millis(100),
-						},
-						markers: Marker::<(Shoot, HandGun, Right)>::commands(),
-						behavior: Projectile::meta(),
-						..default()
-					}),
-				},
-				Item {
-					slot: SlotKey::Legs,
-					model: None,
-					skill: Some(Skill {
-						cast: Cast {
-							after: Duration::MAX,
+			[
+				(SlotKey::SkillSpawn, "projectile_spawn"),
+				(SlotKey::Hand(Side::Right), "hand_slot.R"),
+				(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
+			],
+			[
+				(
+					SlotKey::Hand(Side::Right),
+					Item {
+						model: Some("pistol"),
+						skill: Some(Skill {
+							cast: Cast {
+								pre: Duration::from_millis(300),
+								after: Duration::from_millis(100),
+							},
+							marker: HandGun::marker(),
+							behavior: Projectile::behavior(),
 							..default()
-						},
-						behavior: SimpleMovement::meta(),
-						..default()
-					}),
-				},
-			]),
+						}),
+					},
+				),
+				(
+					SlotKey::Legs,
+					Item {
+						model: None,
+						skill: Some(Skill {
+							cast: Cast {
+								after: Duration::MAX,
+								..default()
+							},
+							behavior: SimpleMovement::behavior(),
+							..default()
+						}),
+					},
+				),
+			],
 		),
 	));
 }

@@ -1,9 +1,7 @@
 use crate::{
 	behaviors::MovementMode,
-	components::{
-		marker::{Fast, Marker, Slow},
-		WaitNext,
-	},
+	components::{Marker, WaitNext},
+	markers::{Fast, Slow},
 	traits::{movement::Movement, movement_data::MovementData},
 };
 use bevy::prelude::*;
