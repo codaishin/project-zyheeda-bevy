@@ -1,18 +1,25 @@
-use crate::errors::Error;
+use crate::errors::{Error, Level};
 use bevy::ecs::system::In;
-use tracing::error;
+use tracing::{error, warn};
+
+fn output(error: Error) {
+	match error.lvl {
+		Level::Error => error!("{}", error.msg),
+		Level::Warning => warn!("{}", error.msg),
+	}
+}
 
 pub fn log(result: In<Result<(), Error>>) {
 	let Err(error) = result.0 else {
 		return;
 	};
 
-	error!("{:?}", error)
+	output(error);
 }
 
 pub fn log_many(results: In<Vec<Result<(), Error>>>) {
 	for error in results.0.iter().filter_map(|result| result.clone().err()) {
-		error!("{:?}", error)
+		output(error);
 	}
 }
 

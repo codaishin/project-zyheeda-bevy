@@ -301,6 +301,7 @@ mod tests {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
+				name: "Some Skill",
 				data: Queued {
 					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
@@ -324,6 +325,7 @@ mod tests {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
+				name: "Some Skill",
 				data: Queued {
 					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
@@ -364,6 +366,7 @@ mod tests {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
+				name: "Some Skill",
 				data: Queued {
 					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
@@ -393,6 +396,7 @@ mod tests {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
+				name: "Some Skill",
 				data: Queued {
 					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
@@ -440,6 +444,7 @@ mod tests {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
+				name: "Some Skill",
 				data: Queued {
 					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Left),
@@ -470,6 +475,7 @@ mod tests {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
+				name: "Some Skill",
 				data: Queued {
 					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),

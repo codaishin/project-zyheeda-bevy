@@ -7,7 +7,13 @@ use bevy::{
 	prelude::{Component, *},
 	utils::HashMap,
 };
-use std::{collections::VecDeque, fmt::Debug, marker::PhantomData, time::Duration};
+use core::fmt::Display;
+use std::{
+	collections::VecDeque,
+	fmt::{Debug, Formatter, Result},
+	marker::PhantomData,
+	time::Duration,
+};
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -86,12 +92,22 @@ pub struct Cast {
 	pub after: Duration,
 }
 
-#[derive(Component, PartialEq, Debug, Clone, Default)]
+#[derive(Component, PartialEq, Debug, Clone, Copy, Default)]
 pub struct Skill<TData = ()> {
+	pub name: &'static str,
 	pub data: TData,
 	pub cast: Cast,
 	pub marker: MarkerMeta,
 	pub behavior: BehaviorMeta,
+}
+
+impl<T> Display for Skill<T> {
+	fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+		match self.name {
+			"" => write!(f, "Skill(<no name>)"),
+			name => write!(f, "Skill({})", name),
+		}
+	}
 }
 
 #[derive(Default, Debug, PartialEq, Clone, Copy)]
@@ -104,6 +120,7 @@ impl Skill {
 	pub fn with<T: Clone + Copy>(self, data: T) -> Skill<T> {
 		Skill {
 			data,
+			name: self.name,
 			cast: self.cast,
 			marker: self.marker,
 			behavior: self.behavior,
@@ -159,7 +176,7 @@ pub struct Schedule {
 	pub skills: HashMap<SlotKey, Skill>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Slot {
 	pub entity: Entity,
 	pub skill: Option<Skill>,
@@ -180,10 +197,20 @@ impl Default for Slots {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Item {
+	pub name: &'static str,
 	pub model: Option<&'static str>,
 	pub skill: Option<Skill>,
+}
+
+impl Display for Item {
+	fn fmt(&self, f: &mut Formatter) -> Result {
+		match self.skill {
+			Some(skill) => write!(f, "Item({}, {})", self.name, skill),
+			None => write!(f, "Item({}, <no skill>)", self.name),
+		}
+	}
 }
 
 #[derive(Component, Debug, PartialEq)]
