@@ -1,6 +1,6 @@
 use crate::{
 	components::{Projectile, SimpleMovement, WaitNext},
-	errors::Error,
+	errors::{Error, Level},
 	resources::Models,
 };
 use bevy::{
@@ -32,7 +32,10 @@ pub fn projectile(
 	}
 
 	let Some(scene) = models.0.get("projectile") else {
-		return Err(Error(KEY_ERROR.to_owned()));
+		return Err(Error {
+			msg: KEY_ERROR.to_owned(),
+			lvl: Level::Error,
+		});
 	};
 
 	for (entity, projectile, transform) in &active_agents {
@@ -64,7 +67,10 @@ fn get_target(transform: &GlobalTransform, projectile: &Projectile) -> Option<Ve
 
 #[cfg(test)]
 mod tests {
-	use crate::components::{SimpleMovement, WaitNext};
+	use crate::{
+		components::{SimpleMovement, WaitNext},
+		errors::Level,
+	};
 
 	use super::*;
 	use bevy::{
@@ -102,7 +108,10 @@ mod tests {
 		let mut app = App::new();
 		let logger = app
 			.world
-			.spawn(MockLog(Err(Error("Initial Fake Error".to_owned()))))
+			.spawn(MockLog(Err(Error {
+				msg: "Initial Fake Error".to_owned(),
+				lvl: Level::Error,
+			})))
 			.id();
 		app.add_systems(Update, projectile.pipe(log_result));
 		app.insert_resource(Models(model_data.into()));
@@ -167,7 +176,13 @@ mod tests {
 		let projectile_model = projectile.get::<Handle<Scene>>();
 
 		assert_eq!(
-			(Err(Error(KEY_ERROR.to_owned())), None),
+			(
+				Err(Error {
+					msg: KEY_ERROR.to_owned(),
+					lvl: Level::Error
+				}),
+				None
+			),
 			(system_return, projectile_model)
 		);
 	}

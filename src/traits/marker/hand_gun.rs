@@ -1,13 +1,16 @@
 use super::GetMarkerMeta;
 use crate::{
 	components::{Marker, Side, SlotKey},
-	errors::Error,
+	errors::{Error, Level},
 	markers::{meta::MarkerMeta, HandGun, Left, Right},
 };
 use bevy::ecs::system::EntityCommands;
 
 fn slot_error(slot: SlotKey) -> Error {
-	Error(format!("{:?} is not a valid handgun slot", slot))
+	Error {
+		msg: format!("{:?} is not a valid handgun slot", slot),
+		lvl: Level::Error,
+	}
 }
 
 fn add_hand_gun(entity: &mut EntityCommands, slot: SlotKey) -> Result<(), Error> {
