@@ -93,7 +93,7 @@ fn equip_items_to(
 		.collect()
 }
 
-pub fn equip_items(
+pub fn equip_item(
 	mut commands: Commands,
 	models: Res<Models>,
 	mut agent: Query<(Entity, &mut Slots, &mut Equipment)>,
@@ -176,7 +176,7 @@ mod tests {
 				)]),
 			))
 			.id();
-		app.add_systems(Update, equip_items);
+		app.add_systems(Update, equip_item);
 
 		app.update();
 
@@ -250,7 +250,7 @@ mod tests {
 				)]),
 			))
 			.id();
-		app.add_systems(Update, equip_items);
+		app.add_systems(Update, equip_item);
 
 		app.update();
 
@@ -291,7 +291,7 @@ mod tests {
 				)]),
 			))
 			.id();
-		app.add_systems(Update, equip_items);
+		app.add_systems(Update, equip_item);
 
 		app.update();
 
@@ -336,7 +336,7 @@ mod tests {
 				)]),
 			))
 			.id();
-		app.add_systems(Update, equip_items);
+		app.add_systems(Update, equip_item);
 
 		app.update();
 
@@ -382,7 +382,7 @@ mod tests {
 				)]),
 			))
 			.id();
-		app.add_systems(Update, equip_items);
+		app.add_systems(Update, equip_item);
 
 		app.update();
 
@@ -428,7 +428,7 @@ mod tests {
 				)]),
 			))
 			.id();
-		app.add_systems(Update, equip_items);
+		app.add_systems(Update, equip_item);
 
 		app.update();
 
@@ -483,7 +483,7 @@ mod tests {
 				]),
 			))
 			.id();
-		app.add_systems(Update, equip_items);
+		app.add_systems(Update, equip_item);
 
 		app.update();
 

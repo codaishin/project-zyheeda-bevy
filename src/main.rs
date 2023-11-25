@@ -25,7 +25,7 @@ use project_zyheeda::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
 		behavior::{dequeue::dequeue, enqueue::enqueue, projectile::projectile},
 		input::schedule_slots::schedule_slots,
-		items::{equip::equip_items, slots::add_item_slots},
+		items::{equip::equip_item, slots::add_item_slots},
 		log::{log, log_many},
 		movement::{
 			execute_move::execute_move,
@@ -52,7 +52,7 @@ fn main() {
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(PreUpdate, link_animators_with_new_animation_players)
 		.add_systems(PreUpdate, add_item_slots)
-		.add_systems(Update, equip_items)
+		.add_systems(Update, equip_item)
 		.add_systems(
 			Update,
 			(
