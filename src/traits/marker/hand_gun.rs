@@ -54,7 +54,8 @@ mod tests {
 	use crate::{
 		components::{Side, SlotKey},
 		markers::{Left, Right},
-		traits::marker::test_tools::{fake_log, insert_lazy, remove_lazy, FakeLog},
+		systems::log::tests::{fake_log_error_lazy, FakeErrorLog},
+		traits::marker::test_tools::{insert_lazy, remove_lazy},
 	};
 	use bevy::{
 		app::{App, Update},
@@ -70,7 +71,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			insert_lazy(marker, agent, slot).pipe(fake_log(agent)),
+			insert_lazy(marker, agent, slot).pipe(fake_log_error_lazy(agent)),
 		);
 		app.update();
 
@@ -80,7 +81,7 @@ mod tests {
 			(true, false),
 			(
 				agent.contains::<Marker<(HandGun, Right)>>(),
-				agent.contains::<FakeLog>()
+				agent.contains::<FakeErrorLog>()
 			)
 		);
 	}
@@ -94,7 +95,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			insert_lazy(marker, agent, slot).pipe(fake_log(agent)),
+			insert_lazy(marker, agent, slot).pipe(fake_log_error_lazy(agent)),
 		);
 		app.update();
 
@@ -104,7 +105,7 @@ mod tests {
 			(true, false),
 			(
 				agent.contains::<Marker<(HandGun, Left)>>(),
-				agent.contains::<FakeLog>()
+				agent.contains::<FakeErrorLog>()
 			)
 		);
 	}
@@ -118,7 +119,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			insert_lazy(marker, agent, slot).pipe(fake_log(agent)),
+			insert_lazy(marker, agent, slot).pipe(fake_log_error_lazy(agent)),
 		);
 		app.update();
 
@@ -129,7 +130,7 @@ mod tests {
 			(
 				agent.contains::<Marker<(HandGun, Left)>>(),
 				agent.contains::<Marker<(HandGun, Right)>>(),
-				agent.get::<FakeLog>().map(|l| l.error.clone()),
+				agent.get::<FakeErrorLog>().map(|log| log.0.clone()),
 			)
 		);
 	}
@@ -143,7 +144,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			remove_lazy(marker, agent, slot).pipe(fake_log(agent)),
+			remove_lazy(marker, agent, slot).pipe(fake_log_error_lazy(agent)),
 		);
 		app.update();
 
@@ -153,7 +154,7 @@ mod tests {
 			(false, false),
 			(
 				agent.contains::<Marker<(HandGun, Right)>>(),
-				agent.contains::<FakeLog>()
+				agent.contains::<FakeErrorLog>()
 			)
 		);
 	}
@@ -167,7 +168,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			remove_lazy(marker, agent, slot).pipe(fake_log(agent)),
+			remove_lazy(marker, agent, slot).pipe(fake_log_error_lazy(agent)),
 		);
 		app.update();
 
@@ -177,7 +178,7 @@ mod tests {
 			(false, false),
 			(
 				agent.contains::<Marker<(HandGun, Left)>>(),
-				agent.contains::<FakeLog>()
+				agent.contains::<FakeErrorLog>()
 			)
 		);
 	}
@@ -191,7 +192,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			remove_lazy(marker, agent, slot).pipe(fake_log(agent)),
+			remove_lazy(marker, agent, slot).pipe(fake_log_error_lazy(agent)),
 		);
 		app.update();
 
@@ -199,7 +200,7 @@ mod tests {
 
 		assert_eq!(
 			Some(slot_error(slot)),
-			agent.get::<FakeLog>().map(|l| l.error.clone())
+			agent.get::<FakeErrorLog>().map(|l| l.0.clone())
 		);
 	}
 }

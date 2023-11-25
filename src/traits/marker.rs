@@ -10,18 +10,7 @@ pub trait GetMarkerMeta {
 pub mod test_tools {
 	use super::*;
 	use crate::{components::SlotKey, errors::Error};
-	use bevy::{
-		ecs::{
-			component::Component,
-			system::{Commands, In},
-		},
-		prelude::Entity,
-	};
-
-	#[derive(Component)]
-	pub struct FakeLog {
-		pub error: Error,
-	}
+	use bevy::{ecs::system::Commands, prelude::Entity};
 
 	pub fn insert_lazy(
 		marker: MarkerMeta,
@@ -42,17 +31,6 @@ pub mod test_tools {
 		move |mut commands| {
 			let mut agent = commands.entity(agent);
 			(marker.remove_fn)(&mut agent, slot)
-		}
-	}
-
-	pub fn fake_log(agent: Entity) -> impl FnMut(In<Result<(), Error>>, Commands) {
-		move |result, mut commands| {
-			let Err(error) = result.0 else {
-				return;
-			};
-
-			let mut agent = commands.entity(agent);
-			agent.insert(FakeLog { error });
 		}
 	}
 }
