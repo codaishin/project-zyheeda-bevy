@@ -50,7 +50,7 @@ fn enqueue_agent_behavior(
 	let (slot, skill) = skill_slot;
 	let slot = *slot;
 
-	let Some(skill) = ray.map(|ray| skill.clone().with(Queued { ray, slot })) else {
+	let Some(skill) = ray.map(|ray| skill.with(Queued { ray, slot })) else {
 		return;
 	};
 

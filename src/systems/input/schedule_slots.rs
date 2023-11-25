@@ -45,7 +45,7 @@ fn filter_triggered_behaviors(
 		.0
 		.iter()
 		.filter(|(slot_key, ..)| triggered_slot_keys.contains(slot_key))
-		.filter_map(|(key, slot)| slot.skill.clone().map(|skill| (*key, skill)))
+		.filter_map(|(key, slot)| slot.skill.map(|skill| (*key, skill)))
 		.collect()
 }
 
