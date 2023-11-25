@@ -1,2 +1,2 @@
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Error(pub &'static str);
+#[derive(Debug, PartialEq, Clone)]
+pub struct Error(pub String);

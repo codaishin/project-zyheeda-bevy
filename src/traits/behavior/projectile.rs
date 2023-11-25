@@ -1,4 +1,4 @@
-use super::ToMeta;
+use super::GetBehaviorMeta;
 use crate::{
 	behaviors::meta::{Agent, BehaviorMeta, Spawner},
 	components::Projectile,
@@ -11,8 +11,8 @@ use bevy::{
 	transform::components::Transform,
 };
 
-impl ToMeta for Projectile {
-	fn meta() -> BehaviorMeta {
+impl GetBehaviorMeta for Projectile {
+	fn behavior() -> BehaviorMeta {
 		BehaviorMeta {
 			run_fn: Some(run_fn),
 			stop_fn: None,
@@ -35,7 +35,7 @@ fn run_fn(commands: &mut Commands, _: &Agent, spawner: &Spawner, ray: &Ray) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::to_meta::test_tools::run_lazy;
+	use crate::traits::behavior::test_tools::run_lazy;
 	use bevy::{
 		app::{App, Update},
 		math::Vec3,
@@ -49,7 +49,7 @@ mod tests {
 	#[test]
 	fn spawn_projectile_with_ray() {
 		let mut app = App::new();
-		let lazy = Projectile::meta();
+		let lazy = Projectile::behavior();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let ray = Ray {
 			origin: Vec3::ONE,
@@ -70,7 +70,7 @@ mod tests {
 	#[test]
 	fn spawn_with_special_bundle() {
 		let mut app = App::new();
-		let lazy = Projectile::meta();
+		let lazy = Projectile::behavior();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let ray = Ray {
 			origin: Vec3::ONE,
@@ -101,7 +101,7 @@ mod tests {
 	#[test]
 	fn spawn_with_proper_location() {
 		let mut app = App::new();
-		let lazy = Projectile::meta();
+		let lazy = Projectile::behavior();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let ray = Ray {
 			origin: Vec3::ONE,
@@ -122,7 +122,7 @@ mod tests {
 
 	#[test]
 	fn use_proper_transform_fn() {
-		let lazy = Projectile::meta();
+		let lazy = Projectile::behavior();
 
 		assert_eq!(
 			Some(look_from_spawner as usize),

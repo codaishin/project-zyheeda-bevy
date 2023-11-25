@@ -51,25 +51,13 @@ fn filter_triggered_behaviors(
 
 #[cfg(test)]
 mod tests {
-	use std::time::Duration;
-
 	use super::*;
 	use crate::{
-		behaviors::meta::{Agent, BehaviorMeta, Spawner},
-		components::{marker::Marker, Cast, Schedule, ScheduleMode, Side, Slot, SlotKey, Slots},
+		components::{Cast, Schedule, ScheduleMode, Side, Slot, SlotKey, Slots},
 		resources::SlotMap,
 	};
-	use bevy::prelude::{
-		default,
-		App,
-		Component,
-		Entity,
-		Input,
-		KeyCode,
-		MouseButton,
-		Ray,
-		Update,
-	};
+	use bevy::prelude::{default, App, Component, Entity, Input, KeyCode, MouseButton, Update};
+	use std::time::Duration;
 
 	#[derive(Component)]
 	struct TestAgent;
@@ -87,9 +75,6 @@ mod tests {
 		app
 	}
 
-	fn fake_start(_: &mut Commands, _: &Agent, _: &Spawner, _: &Ray) {}
-	fn fake_stop(_: &mut Commands, _: &Agent) {}
-
 	#[test]
 	fn set_override() {
 		let mut app = setup();
@@ -102,12 +87,6 @@ mod tests {
 						cast: Cast {
 							pre: Duration::from_millis(1),
 							after: Duration::from_millis(2),
-						},
-						markers: Marker::<u32>::commands(),
-						behavior: BehaviorMeta {
-							run_fn: Some(fake_start),
-							stop_fn: Some(fake_stop),
-							transform_fn: None,
 						},
 						..default()
 					}),
@@ -139,12 +118,6 @@ mod tests {
 						cast: Cast {
 							pre: Duration::from_millis(1),
 							after: Duration::from_millis(2),
-						},
-						markers: Marker::<u32>::commands(),
-						behavior: BehaviorMeta {
-							run_fn: Some(fake_start),
-							stop_fn: Some(fake_stop),
-							transform_fn: None,
 						},
 						..default()
 					}
@@ -230,12 +203,6 @@ mod tests {
 							pre: Duration::from_millis(1),
 							after: Duration::from_millis(2),
 						},
-						markers: Marker::<u32>::commands(),
-						behavior: BehaviorMeta {
-							run_fn: Some(fake_start),
-							stop_fn: Some(fake_stop),
-							transform_fn: None,
-						},
 						..default()
 					}),
 				},
@@ -269,12 +236,6 @@ mod tests {
 						cast: Cast {
 							pre: Duration::from_millis(1),
 							after: Duration::from_millis(2),
-						},
-						markers: Marker::<u32>::commands(),
-						behavior: BehaviorMeta {
-							run_fn: Some(fake_start),
-							stop_fn: Some(fake_stop),
-							transform_fn: None,
 						},
 						..default()
 					}

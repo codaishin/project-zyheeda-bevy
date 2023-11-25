@@ -32,7 +32,7 @@ pub fn projectile(
 	}
 
 	let Some(scene) = models.0.get("projectile") else {
-		return Err(Error(KEY_ERROR));
+		return Err(Error(KEY_ERROR.to_owned()));
 	};
 
 	for (entity, projectile, transform) in &active_agents {
@@ -102,7 +102,7 @@ mod tests {
 		let mut app = App::new();
 		let logger = app
 			.world
-			.spawn(MockLog(Err(Error("Initial Fake Error"))))
+			.spawn(MockLog(Err(Error("Initial Fake Error".to_owned()))))
 			.id();
 		app.add_systems(Update, projectile.pipe(log_result));
 		app.insert_resource(Models(model_data.into()));
@@ -131,7 +131,7 @@ mod tests {
 
 		let logger = app.world.entity(logger);
 		let projectile = app.world.entity(projectile);
-		let system_return = logger.get::<MockLog>().unwrap().0;
+		let system_return = logger.get::<MockLog>().unwrap().0.clone();
 		let projectile_model_on_child = projectile.get::<Children>().and_then(|children| {
 			children
 				.iter()
@@ -163,11 +163,11 @@ mod tests {
 
 		let logger = app.world.entity(logger);
 		let projectile = app.world.entity(projectile);
-		let system_return = logger.get::<MockLog>().unwrap().0;
+		let system_return = logger.get::<MockLog>().unwrap().0.clone();
 		let projectile_model = projectile.get::<Handle<Scene>>();
 
 		assert_eq!(
-			(Err(Error(KEY_ERROR)), None),
+			(Err(Error(KEY_ERROR.to_owned())), None),
 			(system_return, projectile_model)
 		);
 	}
@@ -179,7 +179,7 @@ mod tests {
 		app.update();
 
 		let logger = app.world.entity(logger);
-		let result = logger.get::<MockLog>().unwrap().0;
+		let result = logger.get::<MockLog>().unwrap().0.clone();
 
 		assert_eq!(Ok(()), result);
 	}

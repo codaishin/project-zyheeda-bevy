@@ -114,7 +114,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		behaviors::meta::{Agent, BehaviorMeta, Spawner},
-		components::{marker::Marker, Cast, Collection, Item, Side, Skill, Slot, SlotKey, Slots},
+		components::{Cast, Collection, Item, Side, Skill, Slot, SlotKey, Slots},
 		resources::Models,
 	};
 	use bevy::{
@@ -164,7 +164,6 @@ mod tests {
 								pre: Duration::from_millis(1),
 								after: Duration::from_millis(2),
 							},
-							markers: Marker::<u32>::commands(),
 							behavior: BehaviorMeta {
 								run_fn: Some(fake_start),
 								stop_fn: Some(fake_stop),
@@ -201,7 +200,6 @@ mod tests {
 							pre: Duration::from_millis(1),
 							after: Duration::from_millis(2),
 						},
-						markers: Marker::<u32>::commands(),
 						behavior: BehaviorMeta {
 							run_fn: Some(fake_start),
 							stop_fn: Some(fake_stop),

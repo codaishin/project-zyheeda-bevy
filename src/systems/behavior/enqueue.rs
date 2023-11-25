@@ -1,5 +1,5 @@
 use crate::{
-	components::{Queue, Schedule, ScheduleMode, Skill, SlotKey, WaitNext},
+	components::{Queue, Queued, Schedule, ScheduleMode, Skill, SlotKey, WaitNext},
 	traits::get_ray::GetRayFromCamera,
 };
 use bevy::{
@@ -47,9 +47,10 @@ fn enqueue_agent_behavior(
 	commands: &mut Commands,
 	ray: Option<Ray>,
 ) {
-	let (_, skill) = skill_slot;
+	let (slot, skill) = skill_slot;
+	let slot = *slot;
 
-	let Some(skill) = ray.map(|ray| skill.clone().with(ray)) else {
+	let Some(skill) = ray.map(|ray| skill.clone().with(Queued { ray, slot })) else {
 		return;
 	};
 
@@ -180,11 +181,14 @@ mod tests {
 						pre: Duration::from_millis(100),
 						..default()
 					},
-					data: TEST_RAY,
+					data: Queued {
+						ray: TEST_RAY,
+						slot: SlotKey::Hand(Side::Left)
+					},
 					..default()
 				},
 			],
-			queue.0.iter().collect::<Vec<&Skill<Ray>>>()
+			queue.0.iter().collect::<Vec<&Skill<Queued>>>()
 		);
 	}
 
@@ -242,7 +246,10 @@ mod tests {
 						pre: Duration::from_millis(100),
 						..default()
 					},
-					data: TEST_RAY,
+					data: Queued {
+						ray: TEST_RAY,
+						slot: SlotKey::Hand(Side::Left)
+					},
 					..default()
 				},],
 				true

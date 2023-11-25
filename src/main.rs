@@ -6,11 +6,11 @@ use project_zyheeda::{
 	behaviors::MovementMode,
 	bundles::Loadout,
 	components::{
-		marker::{Fast, HandGun, Idle, Marker, Right, Shoot, Slow},
 		Animator,
 		CamOrbit,
 		Cast,
 		Item,
+		Marker,
 		Player,
 		Projectile,
 		Side,
@@ -19,6 +19,7 @@ use project_zyheeda::{
 		SlotKey,
 		UnitsPerSecond,
 	},
+	markers::{Fast, HandGun, Idle, Right, Slow},
 	resources::{Animation, Models, SlotMap},
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
@@ -36,8 +37,9 @@ use project_zyheeda::{
 	},
 	tools::Tools,
 	traits::{
+		behavior::GetBehaviorMeta,
+		marker::GetMarkerMeta,
 		orbit::{Orbit, Vec2Radians},
-		to_meta::ToMeta,
 	},
 };
 use std::{f32::consts::PI, time::Duration};
@@ -78,7 +80,7 @@ fn main() {
 				animate::<Player, Marker<Idle>>,
 				animate::<Player, Marker<Slow>>,
 				animate::<Player, Marker<Fast>>,
-				animate::<Player, Marker<(Shoot, HandGun, Right)>>,
+				animate::<Player, Marker<(HandGun, Right)>>,
 			),
 		)
 		.add_systems(
@@ -175,7 +177,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	commands.insert_resource(Animation::<Player, Marker<Fast>>::new(
 		asset_server.load("models/player.gltf#Animation3"),
 	));
-	commands.insert_resource(Animation::<Player, Marker<(Shoot, HandGun, Right)>>::new(
+	commands.insert_resource(Animation::<Player, Marker<(HandGun, Right)>>::new(
 		asset_server.load("models/player.gltf#Animation4"),
 	));
 
@@ -206,8 +208,8 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 								pre: Duration::from_millis(300),
 								after: Duration::from_millis(100),
 							},
-							markers: Marker::<(Shoot, HandGun, Right)>::commands(),
-							behavior: Projectile::meta(),
+							marker: HandGun::marker(),
+							behavior: Projectile::behavior(),
 							..default()
 						}),
 					},
@@ -221,7 +223,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 								after: Duration::MAX,
 								..default()
 							},
-							behavior: SimpleMovement::meta(),
+							behavior: SimpleMovement::behavior(),
 							..default()
 						}),
 					},

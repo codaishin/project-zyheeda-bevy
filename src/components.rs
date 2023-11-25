@@ -1,7 +1,6 @@
-pub mod marker;
-
 use crate::{
 	behaviors::{meta::BehaviorMeta, MovementMode},
+	markers::meta::MarkerMeta,
 	types::BoneName,
 };
 use bevy::{
@@ -9,8 +8,6 @@ use bevy::{
 	utils::HashMap,
 };
 use std::{collections::VecDeque, fmt::Debug, marker::PhantomData, time::Duration};
-
-use self::marker::Markers;
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -93,8 +90,14 @@ pub struct Cast {
 pub struct Skill<TData = ()> {
 	pub data: TData,
 	pub cast: Cast,
-	pub markers: Markers,
+	pub marker: MarkerMeta,
 	pub behavior: BehaviorMeta,
+}
+
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
+pub struct Queued {
+	pub ray: Ray,
+	pub slot: SlotKey,
 }
 
 impl Skill {
@@ -102,9 +105,28 @@ impl Skill {
 		Skill {
 			data,
 			cast: self.cast,
-			markers: self.markers,
+			marker: self.marker,
 			behavior: self.behavior,
 		}
+	}
+}
+
+#[derive(Component)]
+pub struct Marker<T> {
+	phantom_data: PhantomData<T>,
+}
+
+impl<T> Marker<T> {
+	pub fn new() -> Self {
+		Self {
+			phantom_data: PhantomData,
+		}
+	}
+}
+
+impl<T> Default for Marker<T> {
+	fn default() -> Self {
+		Self::new()
 	}
 }
 
@@ -114,11 +136,12 @@ pub enum Side {
 	Left,
 }
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Default)]
 pub enum SlotKey {
+	#[default]
+	Legs,
 	SkillSpawn,
 	Hand(Side),
-	Legs,
 }
 
 #[derive(Component, Clone, PartialEq, Debug)]
@@ -175,7 +198,7 @@ impl<TElement> Collection<TElement> {
 pub type Equipment = Collection<(SlotKey, Item)>;
 
 #[derive(Component)]
-pub struct Queue(pub VecDeque<Skill<Ray>>);
+pub struct Queue(pub VecDeque<Skill<Queued>>);
 
 #[derive(Component)]
 pub struct TimeTracker<TBehavior> {
