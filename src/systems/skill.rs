@@ -1,6 +1,7 @@
 use crate::{
 	behaviors::meta::{Agent, Spawner, StartBehaviorFn},
 	components::{Queued, Skill, SlotKey, Slots, TimeTracker, WaitNext},
+	errors::Error,
 };
 use bevy::prelude::{
 	Commands,
@@ -23,20 +24,27 @@ type RunningSkills<'a> = (
 	Option<&'a WaitNext>,
 );
 
+enum SkillStatus {
+	Inactive,
+	Done,
+	Running,
+}
+
 pub fn execute_skill(
 	time: Res<Time<Real>>,
 	mut commands: Commands,
 	mut agents_with_new_skill: Query<Skills, Without<TimeTracker<Skill<Queued>>>>,
 	mut agents_with_running_skill: Query<RunningSkills>,
 	transforms: Query<&GlobalTransform>,
-) {
+) -> Vec<Result<(), Error>> {
 	let delta = time.delta();
+	let mut results = Vec::new();
 
 	for (entity, skill, mut transform, slots) in &mut agents_with_new_skill {
 		let agent = Agent(entity);
 
 		update_transform(&mut transform, skill, slots, &transforms);
-		mark_agent_as_running(&mut commands, skill, agent);
+		results.push(mark_agent_as_running(&mut commands, skill, agent));
 	}
 
 	for (entity, mut skill, mut tracker, slots, wait_next) in &mut agents_with_running_skill {
@@ -48,19 +56,30 @@ pub fn execute_skill(
 			trigger_skill(&mut commands, &mut skill, agent, spawner, run);
 		}
 
-		if skill_is_done(&skill, &tracker, wait_next) {
-			mark_agent_as_done(&mut commands, &mut skill, agent);
-		}
+		results.push(match skill_status(&skill, &tracker, wait_next) {
+			SkillStatus::Running => Ok(()),
+			_ => mark_agent_as_done(&mut commands, &mut skill, agent),
+		});
 	}
+
+	results
 }
 
-fn mark_agent_as_running(commands: &mut Commands, skill: &Skill<Queued>, agent: Agent) {
+fn mark_agent_as_running(
+	commands: &mut Commands,
+	skill: &Skill<Queued>,
+	agent: Agent,
+) -> Result<(), Error> {
 	let mut agent = commands.entity(agent.0);
 	agent.insert(TimeTracker::<Skill<Queued>>::new());
-	let _ = (skill.marker.insert_fn)(&mut agent, skill.data.slot);
+	(skill.marker.insert_fn)(&mut agent, skill.data.slot)
 }
 
-fn mark_agent_as_done(commands: &mut Commands, skill: &mut Skill<Queued>, agent: Agent) {
+fn mark_agent_as_done(
+	commands: &mut Commands,
+	skill: &mut Skill<Queued>,
+	agent: Agent,
+) -> Result<(), Error> {
 	if let Some(stop) = skill.behavior.stop_fn {
 		stop(commands, &agent)
 	}
@@ -68,7 +87,7 @@ fn mark_agent_as_done(commands: &mut Commands, skill: &mut Skill<Queued>, agent:
 	let mut agent = commands.entity(agent.0);
 	agent.insert(WaitNext);
 	agent.remove::<(Skill<Queued>, TimeTracker<Skill<Queued>>)>();
-	let _ = (skill.marker.remove_fn)(&mut agent, skill.data.slot);
+	(skill.marker.remove_fn)(&mut agent, skill.data.slot)
 }
 
 fn update_transform(
@@ -118,12 +137,20 @@ fn trigger_skill(
 	run(cmd, &agent, &spawner, &skill.data.ray);
 }
 
-fn skill_is_done(
+fn skill_status(
 	skill: &Skill<Queued>,
 	tracker: &TimeTracker<Skill<Queued>>,
 	wait_next: Option<&WaitNext>,
-) -> bool {
-	wait_next.is_some() || tracker.duration >= skill.cast.pre + skill.cast.after
+) -> SkillStatus {
+	if wait_next.is_some() {
+		return SkillStatus::Inactive;
+	}
+
+	if tracker.duration >= skill.cast.pre + skill.cast.after {
+		return SkillStatus::Done;
+	}
+
+	SkillStatus::Running
 }
 
 #[cfg(test)]
@@ -132,13 +159,16 @@ mod tests {
 	use crate::{
 		behaviors::meta::BehaviorMeta,
 		components::{Cast, Marker, Side, Slot, SlotKey, WaitNext},
+		errors::Level,
 		markers::meta::MarkerMeta,
+		systems::log::tests::{fake_log_error_lazy_many, FakeErrorLogMany},
 		traits::{behavior::GetBehaviorMeta, marker::GetMarkerMeta},
 	};
 	use bevy::{
-		ecs::component::Component,
+		ecs::{component::Component, system::IntoSystem},
 		prelude::{App, Ray, Transform, Update, Vec3},
 		time::{Real, Time},
+		utils::default,
 	};
 	use mockall::{automock, predicate::eq};
 	use std::time::Duration;
@@ -255,7 +285,7 @@ mod tests {
 		time.update();
 		app.insert_resource(time);
 		app.update();
-		app.add_systems(Update, execute_skill);
+		app.add_systems(Update, execute_skill.pipe(fake_log_error_lazy_many(agent)));
 
 		(app, agent, skill_spawner)
 	}
@@ -276,8 +306,8 @@ mod tests {
 					slot: SlotKey::Hand(Side::Right),
 				},
 				cast: TEST_CAST,
-				marker: Test::marker(),
 				behavior: REAL_LAZY,
+				marker: Test::marker(),
 			},
 			Transform::default(),
 		));
@@ -287,6 +317,46 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert!(agent.contains::<Marker<SideRight>>());
+	}
+
+	#[test]
+	fn return_add_marker_error() {
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
+		app.world.entity_mut(agent).insert((
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
+				cast: TEST_CAST,
+				behavior: REAL_LAZY,
+				marker: MarkerMeta {
+					insert_fn: |_, _| {
+						Err(Error {
+							msg: "some message".to_owned(),
+							lvl: Level::Warning,
+						})
+					},
+					remove_fn: |_, _| Ok(()),
+				},
+			},
+			Transform::default(),
+		));
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&FakeErrorLogMany(
+				[Error {
+					msg: "some message".to_owned(),
+					lvl: Level::Warning
+				}]
+				.into()
+			)),
+			agent.get::<FakeErrorLogMany>()
+		)
 	}
 
 	#[test]
@@ -302,8 +372,8 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker: Test::marker(),
 				behavior: REAL_LAZY,
+				marker: Test::marker(),
 			},
 			Transform::default(),
 		));
@@ -317,6 +387,52 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert!(!agent.contains::<Marker<SideLeft>>());
+	}
+	#[test]
+	fn return_remove_marker_error() {
+		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
+		app.world.entity_mut(agent).insert((
+			Skill::<Queued> {
+				data: Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Right),
+				},
+				cast: Cast {
+					pre: Duration::from_millis(500),
+					after: Duration::from_millis(200),
+				},
+				behavior: REAL_LAZY,
+				marker: MarkerMeta {
+					insert_fn: |_, _| Ok(()),
+					remove_fn: |_, _| {
+						Err(Error {
+							msg: "some message".to_owned(),
+							lvl: Level::Warning,
+						})
+					},
+				},
+			},
+			Transform::default(),
+		));
+
+		app.update();
+
+		tick_time(&mut app, Duration::from_millis(700));
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&FakeErrorLogMany(
+				[Error {
+					msg: "some message".to_owned(),
+					lvl: Level::Warning
+				}]
+				.into()
+			)),
+			agent.get::<FakeErrorLogMany>()
+		)
 	}
 
 	#[test]
@@ -332,8 +448,8 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker: Test::marker(),
 				behavior: REAL_LAZY,
+				marker: Test::marker(),
 			},
 			Transform::default(),
 		));
@@ -362,8 +478,8 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker: Test::marker(),
 				behavior: REAL_LAZY,
+				marker: Test::marker(),
 			},
 			Transform::default(),
 		));
@@ -396,8 +512,8 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker: Test::marker(),
 				behavior: REAL_LAZY,
+				..default()
 			},
 			Transform::default(),
 		));
@@ -432,8 +548,8 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker: Test::marker(),
 				behavior: REAL_LAZY,
+				..default()
 			},
 			Transform::default(),
 		));
@@ -462,8 +578,8 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker: Test::marker(),
 				behavior: REAL_LAZY,
+				..default()
 			},
 			Transform::default(),
 		));
@@ -492,8 +608,8 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker: Test::marker(),
 				behavior: REAL_LAZY,
+				..default()
 			},
 			Transform::default(),
 		));
@@ -529,8 +645,8 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker: Test::marker(),
 				behavior: MockBehavior::behavior(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -562,8 +678,8 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker: Test::marker(),
 				behavior: MockBehavior::behavior(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -601,8 +717,8 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker: Test::marker(),
 				behavior: MockBehavior::behavior(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -635,8 +751,8 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker: Test::marker(),
 				behavior: MockBehavior::behavior(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -668,8 +784,8 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker: Test::marker(),
 				behavior: MockBehavior::behavior(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -706,8 +822,8 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker: Test::marker(),
 				behavior: MockBehavior::behavior(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -744,8 +860,8 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker: Test::marker(),
 				behavior: MockBehavior::behavior(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -785,12 +901,12 @@ mod tests {
 					pre: Duration::from_millis(500),
 					after: Duration::from_millis(200),
 				},
-				marker: Test::marker(),
 				behavior: BehaviorMeta {
 					run_fn: None,
 					stop_fn: None,
 					transform_fn: Some(Mock_Tools::_transform_fn),
 				},
+				..default()
 			},
 			Transform::default(),
 		));

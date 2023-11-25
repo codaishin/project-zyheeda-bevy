@@ -26,7 +26,7 @@ use project_zyheeda::{
 		behavior::{dequeue::dequeue, enqueue::enqueue, projectile::projectile},
 		input::schedule_slots::schedule_slots,
 		items::{equip::equip_items, slots::add_item_slots},
-		log::log,
+		log::{log, log_many},
 		movement::{
 			execute_move::execute_move,
 			follow::follow,
@@ -65,7 +65,10 @@ fn main() {
 		)
 		.add_systems(
 			Update,
-			(execute_skill, execute_move::<Player, SimpleMovement>),
+			(
+				execute_skill.pipe(log_many),
+				execute_move::<Player, SimpleMovement>,
+			),
 		)
 		.add_systems(
 			Update,
