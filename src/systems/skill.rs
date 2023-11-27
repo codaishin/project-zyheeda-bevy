@@ -1,3 +1,7 @@
+pub mod dequeue;
+pub mod enqueue;
+pub mod projectile;
+
 use crate::{
 	behaviors::meta::{Agent, Spawner, StartBehaviorFn},
 	components::{Queued, Skill, SlotKey, Slots, TimeTracker, WaitNext},

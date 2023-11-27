@@ -23,7 +23,6 @@ use project_zyheeda::{
 	resources::{Animation, Models, SlotMap},
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
-		behavior::{dequeue::dequeue, enqueue::enqueue, projectile::projectile},
 		input::schedule_slots::schedule_slots,
 		items::{equip::equip_item, slots::add_item_slots},
 		log::{log, log_many},
@@ -33,7 +32,7 @@ use project_zyheeda::{
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
 		},
-		skill::execute_skill,
+		skill::{dequeue::dequeue, enqueue::enqueue, execute_skill, projectile::projectile},
 	},
 	tools::Tools,
 	traits::{
