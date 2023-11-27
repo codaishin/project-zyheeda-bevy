@@ -9,6 +9,7 @@ use project_zyheeda::{
 		Animator,
 		CamOrbit,
 		Cast,
+		DequeueMode,
 		Item,
 		Marker,
 		Player,
@@ -208,6 +209,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 						model: Some("pistol"),
 						skill: Some(Skill {
 							name: "Shoot Projectile",
+							dequeue: DequeueMode::Lazy,
 							cast: Cast {
 								pre: Duration::from_millis(300),
 								after: Duration::from_millis(100),

@@ -1,5 +1,5 @@
 use crate::{
-	components::{Queue, Queued, Schedule, ScheduleMode, Skill, SlotKey, WaitNext},
+	components::{DequeueMode, Queue, Queued, Schedule, ScheduleMode, Skill, SlotKey, WaitNext},
 	traits::get_ray::GetRayFromCamera,
 };
 use bevy::{
@@ -10,7 +10,7 @@ use bevy::{
 pub fn enqueue<TGetRay: GetRayFromCamera>(
 	camera: Query<(&Camera, &GlobalTransform)>,
 	window: Query<&Window>,
-	mut agents: Query<(Entity, &Schedule, &mut Queue)>,
+	mut agents: Query<(Entity, &Schedule, &mut Queue, Option<&Skill<Queued>>)>,
 	mut commands: Commands,
 ) {
 	if agents.is_empty() {
@@ -21,44 +21,52 @@ pub fn enqueue<TGetRay: GetRayFromCamera>(
 	let window = window.single();
 	let ray = TGetRay::get_ray(camera, camera_transform, window);
 
-	for (agent, schedule, mut queue) in &mut agents {
-		enqueue_agent_behaviors(agent, schedule, &mut queue, &mut commands, ray);
+	for (agent, schedule, mut queue, running) in &mut agents {
+		enqueue_skills(agent, schedule, &mut queue, running, &mut commands, ray);
 		commands.entity(agent).remove::<Schedule>();
 	}
 }
 
-fn enqueue_agent_behaviors(
+fn enqueue_skills(
 	agent: Entity,
 	schedule: &Schedule,
 	queue: &mut Queue,
+	running: Option<&Skill<Queued>>,
 	commands: &mut Commands,
 	ray: Option<Ray>,
 ) {
-	for behavior_slot in &schedule.skills {
-		enqueue_agent_behavior(agent, queue, schedule.mode, behavior_slot, commands, ray);
+	for slot in &schedule.skills {
+		enqueue_skill(agent, schedule, queue, running, slot, commands, ray);
 	}
 }
 
-fn enqueue_agent_behavior(
+fn enqueue_skill(
 	agent: Entity,
+	schedule: &Schedule,
 	queue: &mut Queue,
-	schedule_mode: ScheduleMode,
-	skill_slot: (&SlotKey, &Skill),
+	running: Option<&Skill<Queued>>,
+	slot: (&SlotKey, &Skill),
 	commands: &mut Commands,
 	ray: Option<Ray>,
 ) {
-	let (slot, skill) = skill_slot;
+	let (slot, skill) = slot;
 	let slot = *slot;
-
-	let Some(skill) = ray.map(|ray| skill.with(Queued { ray, slot })) else {
+	let Some(new) = ray.map(|ray| skill.with(Queued { ray, slot })) else {
 		return;
 	};
+	let running_dequeue = running.map(|s| s.dequeue).unwrap_or(DequeueMode::Eager);
 
-	match schedule_mode {
-		ScheduleMode::Enqueue => queue.0.push_back(skill),
-		ScheduleMode::Override => {
+	match (schedule.mode, new.dequeue, running_dequeue) {
+		(ScheduleMode::Enqueue, ..) => {
+			queue.0.push_back(new);
+		}
+		(ScheduleMode::Override, DequeueMode::Lazy, DequeueMode::Lazy) => {
 			queue.0.clear();
-			queue.0.push_back(skill);
+			queue.0.push_back(new);
+		}
+		(ScheduleMode::Override, ..) => {
+			queue.0.clear();
+			queue.0.push_back(new);
 			commands.entity(agent).insert(WaitNext);
 		}
 	}
@@ -67,7 +75,7 @@ fn enqueue_agent_behavior(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Cast, Schedule, ScheduleMode, Side, WaitNext};
+	use crate::components::{Cast, DequeueMode, Schedule, ScheduleMode, Side, WaitNext};
 	use bevy::{
 		prelude::{App, Camera, Camera3dBundle, GlobalTransform, Ray, Update, Vec3},
 		utils::default,
@@ -116,26 +124,25 @@ mod tests {
 	#[test]
 	fn set_enqueue() {
 		let mut app = setup::<GetTestRay>();
+		let new_skill = Skill {
+			dequeue: DequeueMode::Eager,
+			cast: Cast {
+				pre: Duration::from_millis(100),
+				..default()
+			},
+			..default()
+		};
 		let agent = app
 			.world
 			.spawn((
 				Schedule {
 					mode: ScheduleMode::Enqueue,
-					skills: [(
-						SlotKey::Hand(Side::Left),
-						Skill {
-							cast: Cast {
-								pre: Duration::from_millis(100),
-								..default()
-							},
-							..default()
-						},
-					)]
-					.into(),
+					skills: [(SlotKey::Hand(Side::Left), new_skill)].into(),
 				},
 				Queue(
 					[
 						Skill {
+							dequeue: DequeueMode::Eager,
 							cast: Cast {
 								pre: Duration::from_millis(1),
 								..default()
@@ -143,6 +150,7 @@ mod tests {
 							..default()
 						},
 						Skill {
+							dequeue: DequeueMode::Eager,
 							cast: Cast {
 								pre: Duration::from_millis(2),
 								..default()
@@ -163,6 +171,7 @@ mod tests {
 		assert_eq!(
 			vec![
 				&Skill {
+					dequeue: DequeueMode::Eager,
 					cast: Cast {
 						pre: Duration::from_millis(1),
 						..default()
@@ -170,6 +179,7 @@ mod tests {
 					..default()
 				},
 				&Skill {
+					dequeue: DequeueMode::Eager,
 					cast: Cast {
 						pre: Duration::from_millis(2),
 						..default()
@@ -177,6 +187,7 @@ mod tests {
 					..default()
 				},
 				&Skill {
+					dequeue: DequeueMode::Eager,
 					cast: Cast {
 						pre: Duration::from_millis(100),
 						..default()
@@ -195,22 +206,20 @@ mod tests {
 	#[test]
 	fn set_override() {
 		let mut app = setup::<GetTestRay>();
+		let new_skill = Skill {
+			dequeue: DequeueMode::Eager,
+			cast: Cast {
+				pre: Duration::from_millis(100),
+				..default()
+			},
+			..default()
+		};
 		let agent = app
 			.world
 			.spawn((
 				Schedule {
 					mode: ScheduleMode::Override,
-					skills: [(
-						SlotKey::Hand(Side::Left),
-						Skill {
-							cast: Cast {
-								pre: Duration::from_millis(100),
-								..default()
-							},
-							..default()
-						},
-					)]
-					.into(),
+					skills: [(SlotKey::Hand(Side::Left), new_skill)].into(),
 				},
 				Queue(
 					[
@@ -241,20 +250,121 @@ mod tests {
 
 		assert_eq!(
 			(
-				vec![&Skill {
-					cast: Cast {
-						pre: Duration::from_millis(100),
-						..default()
-					},
-					data: Queued {
-						ray: TEST_RAY,
-						slot: SlotKey::Hand(Side::Left)
-					},
-					..default()
-				},],
+				vec![&new_skill.with(Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Left)
+				})],
 				true
 			),
 			(queue.0.iter().collect(), agent.contains::<WaitNext>())
+		);
+	}
+
+	#[test]
+	fn set_override_without_wait_next_when_dequeue_is_lazy_in_new_and_running_skill() {
+		let mut app = setup::<GetTestRay>();
+		let new_skill = Skill {
+			dequeue: DequeueMode::Lazy,
+			cast: Cast {
+				pre: Duration::from_millis(100),
+				..default()
+			},
+			..default()
+		};
+		let agent = app
+			.world
+			.spawn((
+				Skill {
+					dequeue: DequeueMode::Lazy,
+					data: Queued {
+						ray: TEST_RAY,
+						slot: SlotKey::Hand(Side::Left),
+					},
+					cast: Cast {
+						pre: Duration::from_millis(1),
+						..default()
+					},
+					..default()
+				},
+				Schedule {
+					mode: ScheduleMode::Override,
+					skills: [(SlotKey::Hand(Side::Left), new_skill)].into(),
+				},
+				Queue([].into()),
+			))
+			.id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let queue = agent.get::<Queue>().unwrap();
+
+		assert_eq!(
+			(
+				vec![&new_skill.with(Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Left)
+				})],
+				false
+			),
+			(
+				queue.0.iter().collect::<Vec<&Skill<Queued>>>(),
+				agent.contains::<WaitNext>()
+			)
+		);
+	}
+
+	#[test]
+	fn set_override_with_wait_next_when_dequeue_is_not_eager_in_new_and_running_skill() {
+		let mut app = setup::<GetTestRay>();
+		let new_skill = Skill {
+			dequeue: DequeueMode::Lazy,
+			cast: Cast {
+				pre: Duration::from_millis(100),
+				..default()
+			},
+			..default()
+		};
+		let agent = app
+			.world
+			.spawn((
+				Skill {
+					dequeue: DequeueMode::Eager,
+					data: Queued {
+						ray: TEST_RAY,
+						slot: SlotKey::Hand(Side::Left),
+					},
+					cast: Cast {
+						pre: Duration::from_millis(1),
+						..default()
+					},
+					..default()
+				},
+				Schedule {
+					mode: ScheduleMode::Override,
+					skills: [(SlotKey::Hand(Side::Left), new_skill)].into(),
+				},
+				Queue([].into()),
+			))
+			.id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let queue = agent.get::<Queue>().unwrap();
+
+		assert_eq!(
+			(
+				vec![&new_skill.with(Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Left)
+				})],
+				true
+			),
+			(
+				queue.0.iter().collect::<Vec<&Skill<Queued>>>(),
+				agent.contains::<WaitNext>()
+			)
 		);
 	}
 
