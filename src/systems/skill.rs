@@ -231,6 +231,10 @@ mod tests {
 		stop_fn: None,
 		transform_fn: None,
 	};
+	const TEST_RAY: Ray = Ray {
+		origin: Vec3::Y,
+		direction: Vec3::NEG_ONE,
+	};
 
 	impl GetBehaviorMeta for MockBehavior {
 		fn behavior() -> BehaviorMeta {
@@ -253,10 +257,6 @@ mod tests {
 	const TEST_CAST: Cast = Cast {
 		pre: Duration::from_millis(100),
 		after: Duration::from_millis(100),
-	};
-	const TEST_RAY: Ray = Ray {
-		origin: Vec3::Y,
-		direction: Vec3::NEG_ONE,
 	};
 
 	fn setup_app(skill_spawn_location: Vec3) -> (App, AgentEntity, SpawnerEntity) {
@@ -303,12 +303,13 @@ mod tests {
 			Skill::<Queued> {
 				name: "Some Skill",
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: TEST_CAST,
 				behavior: REAL_LAZY,
 				marker: Test::marker(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -325,10 +326,9 @@ mod tests {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
-				name: "Some Skill",
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: TEST_CAST,
 				behavior: REAL_LAZY,
@@ -341,6 +341,7 @@ mod tests {
 					},
 					remove_fn: |_, _| Ok(()),
 				},
+				..default()
 			},
 			Transform::default(),
 		));
@@ -366,10 +367,9 @@ mod tests {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
-				name: "Some Skill",
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
@@ -377,6 +377,7 @@ mod tests {
 				},
 				behavior: REAL_LAZY,
 				marker: Test::marker(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -396,10 +397,9 @@ mod tests {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
-				name: "Some Skill",
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
@@ -415,6 +415,7 @@ mod tests {
 						})
 					},
 				},
+				..default()
 			},
 			Transform::default(),
 		));
@@ -444,10 +445,9 @@ mod tests {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
-				name: "Some Skill",
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Left),
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
@@ -455,6 +455,7 @@ mod tests {
 				},
 				behavior: REAL_LAZY,
 				marker: Test::marker(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -475,10 +476,9 @@ mod tests {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
-				name: "Some Skill",
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
@@ -486,6 +486,7 @@ mod tests {
 				},
 				behavior: REAL_LAZY,
 				marker: Test::marker(),
+				..default()
 			},
 			Transform::default(),
 		));
@@ -511,8 +512,8 @@ mod tests {
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
@@ -547,8 +548,8 @@ mod tests {
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
@@ -577,8 +578,8 @@ mod tests {
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
@@ -607,8 +608,8 @@ mod tests {
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
@@ -644,8 +645,8 @@ mod tests {
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
@@ -677,8 +678,8 @@ mod tests {
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
@@ -716,8 +717,8 @@ mod tests {
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
@@ -750,8 +751,8 @@ mod tests {
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
@@ -783,8 +784,8 @@ mod tests {
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
@@ -821,8 +822,8 @@ mod tests {
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
@@ -900,8 +901,8 @@ mod tests {
 		app.world.entity_mut(agent).insert((
 			Skill::<Queued> {
 				data: Queued {
-					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					ray: TEST_RAY,
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
