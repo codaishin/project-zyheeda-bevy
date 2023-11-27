@@ -9,6 +9,7 @@ use project_zyheeda::{
 		Animator,
 		CamOrbit,
 		Cast,
+		DequeueMode,
 		Item,
 		Marker,
 		Player,
@@ -23,7 +24,6 @@ use project_zyheeda::{
 	resources::{Animation, Models, SlotMap},
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
-		behavior::{dequeue::dequeue, enqueue::enqueue, projectile::projectile},
 		input::schedule_slots::schedule_slots,
 		items::{equip::equip_item, slots::add_item_slots},
 		log::{log, log_many},
@@ -33,7 +33,7 @@ use project_zyheeda::{
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
 		},
-		skill::execute_skill,
+		skill::{dequeue::dequeue, enqueue::enqueue, execute_skill, projectile::projectile},
 	},
 	tools::Tools,
 	traits::{
@@ -209,6 +209,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 						model: Some("pistol"),
 						skill: Some(Skill {
 							name: "Shoot Projectile",
+							dequeue: DequeueMode::Lazy,
 							cast: Cast {
 								pre: Duration::from_millis(300),
 								after: Duration::from_millis(100),
