@@ -1,15 +1,5 @@
 use crate::{
-	components::{
-		Active,
-		DequeueMode,
-		Queue,
-		Queued,
-		Schedule,
-		ScheduleMode,
-		Skill,
-		SlotKey,
-		WaitNext,
-	},
+	components::{Active, Queue, Queued, Schedule, ScheduleMode, Skill, SlotKey, WaitNext},
 	traits::get_ray::GetRayFromCamera,
 };
 use bevy::{
@@ -64,13 +54,15 @@ fn enqueue_skill(
 	let Some(new) = ray.map(|ray| skill.with(Queued { ray, slot })) else {
 		return;
 	};
-	let running_dequeue = running.map(|s| s.dequeue).unwrap_or(DequeueMode::Eager);
+	let soft_override = running
+		.map(|r| (new.marker.soft_override)(r, &new))
+		.unwrap_or(false);
 
-	match (schedule.mode, new.dequeue, running_dequeue) {
+	match (schedule.mode, soft_override) {
 		(ScheduleMode::Enqueue, ..) => {
 			queue.0.push_back(new);
 		}
-		(ScheduleMode::Override, DequeueMode::Lazy, DequeueMode::Lazy) => {
+		(ScheduleMode::Override, true) => {
 			queue.0.clear();
 			queue.0.push_back(new);
 		}
@@ -85,7 +77,10 @@ fn enqueue_skill(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Cast, DequeueMode, Schedule, ScheduleMode, Side, WaitNext};
+	use crate::{
+		components::{Cast, Schedule, ScheduleMode, Side, WaitNext},
+		markers::meta::MarkerMeta,
+	};
 	use bevy::{
 		prelude::{App, Camera, Camera3dBundle, GlobalTransform, Ray, Update, Vec3},
 		utils::default,
@@ -135,7 +130,6 @@ mod tests {
 	fn set_enqueue() {
 		let mut app = setup::<GetTestRay>();
 		let new_skill = Skill {
-			dequeue: DequeueMode::Eager,
 			cast: Cast {
 				pre: Duration::from_millis(100),
 				..default()
@@ -152,7 +146,6 @@ mod tests {
 				Queue(
 					[
 						Skill {
-							dequeue: DequeueMode::Eager,
 							cast: Cast {
 								pre: Duration::from_millis(1),
 								..default()
@@ -160,7 +153,6 @@ mod tests {
 							..default()
 						},
 						Skill {
-							dequeue: DequeueMode::Eager,
 							cast: Cast {
 								pre: Duration::from_millis(2),
 								..default()
@@ -181,7 +173,6 @@ mod tests {
 		assert_eq!(
 			vec![
 				&Skill {
-					dequeue: DequeueMode::Eager,
 					cast: Cast {
 						pre: Duration::from_millis(1),
 						..default()
@@ -189,7 +180,6 @@ mod tests {
 					..default()
 				},
 				&Skill {
-					dequeue: DequeueMode::Eager,
 					cast: Cast {
 						pre: Duration::from_millis(2),
 						..default()
@@ -197,7 +187,6 @@ mod tests {
 					..default()
 				},
 				&Skill {
-					dequeue: DequeueMode::Eager,
 					cast: Cast {
 						pre: Duration::from_millis(100),
 						..default()
@@ -217,7 +206,6 @@ mod tests {
 	fn set_override() {
 		let mut app = setup::<GetTestRay>();
 		let new_skill = Skill {
-			dequeue: DequeueMode::Eager,
 			cast: Cast {
 				pre: Duration::from_millis(100),
 				..default()
@@ -271,13 +259,18 @@ mod tests {
 	}
 
 	#[test]
-	fn set_override_without_wait_next_when_dequeue_is_lazy_in_new_and_running_skill() {
+	fn set_override_without_wait_next_when_soft_override_true() {
 		let mut app = setup::<GetTestRay>();
 		let new_skill = Skill {
-			dequeue: DequeueMode::Lazy,
+			name: "new",
 			cast: Cast {
 				pre: Duration::from_millis(100),
 				..default()
+			},
+			marker: MarkerMeta {
+				insert_fn: |_, _| Ok(()),
+				remove_fn: |_, _| Ok(()),
+				soft_override: |running, new| running.name == "running" && new.name == "new",
 			},
 			..default()
 		};
@@ -285,7 +278,7 @@ mod tests {
 			.world
 			.spawn((
 				Skill {
-					dequeue: DequeueMode::Lazy,
+					name: "running",
 					data: Active {
 						ray: TEST_RAY,
 						slot: SlotKey::Hand(Side::Left),
@@ -317,60 +310,6 @@ mod tests {
 					slot: SlotKey::Hand(Side::Left)
 				})],
 				false
-			),
-			(
-				queue.0.iter().collect::<Vec<&Skill<Queued>>>(),
-				agent.contains::<WaitNext>()
-			)
-		);
-	}
-
-	#[test]
-	fn set_override_with_wait_next_when_dequeue_is_not_eager_in_new_and_running_skill() {
-		let mut app = setup::<GetTestRay>();
-		let new_skill = Skill {
-			dequeue: DequeueMode::Lazy,
-			cast: Cast {
-				pre: Duration::from_millis(100),
-				..default()
-			},
-			..default()
-		};
-		let agent = app
-			.world
-			.spawn((
-				Skill {
-					dequeue: DequeueMode::Eager,
-					data: Queued {
-						ray: TEST_RAY,
-						slot: SlotKey::Hand(Side::Left),
-					},
-					cast: Cast {
-						pre: Duration::from_millis(1),
-						..default()
-					},
-					..default()
-				},
-				Schedule {
-					mode: ScheduleMode::Override,
-					skills: [(SlotKey::Hand(Side::Left), new_skill)].into(),
-				},
-				Queue([].into()),
-			))
-			.id();
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-		let queue = agent.get::<Queue>().unwrap();
-
-		assert_eq!(
-			(
-				vec![&new_skill.with(Queued {
-					ray: TEST_RAY,
-					slot: SlotKey::Hand(Side::Left)
-				})],
-				true
 			),
 			(
 				queue.0.iter().collect::<Vec<&Skill<Queued>>>(),

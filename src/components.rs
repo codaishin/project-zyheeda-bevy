@@ -92,13 +92,6 @@ pub struct Cast {
 	pub after: Duration,
 }
 
-#[derive(Default, Clone, Copy, PartialEq, Debug)]
-pub enum DequeueMode {
-	#[default]
-	Eager,
-	Lazy,
-}
-
 #[derive(Component, PartialEq, Debug, Clone, Copy, Default)]
 pub struct Skill<TData = ()> {
 	pub name: &'static str,
@@ -106,7 +99,6 @@ pub struct Skill<TData = ()> {
 	pub cast: Cast,
 	pub marker: MarkerMeta,
 	pub behavior: BehaviorMeta,
-	pub dequeue: DequeueMode,
 }
 
 impl<T> Display for Skill<T> {
@@ -139,7 +131,6 @@ impl Skill {
 			cast: self.cast,
 			marker: self.marker,
 			behavior: self.behavior,
-			dequeue: self.dequeue,
 		}
 	}
 }
@@ -152,7 +143,6 @@ impl<TSrc> Skill<TSrc> {
 			cast: self.cast,
 			marker: self.marker,
 			behavior: self.behavior,
-			dequeue: self.dequeue,
 		}
 	}
 }

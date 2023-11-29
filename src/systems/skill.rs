@@ -188,6 +188,7 @@ mod tests {
 					};
 					Ok(())
 				},
+				soft_override: |_, _| false,
 			}
 		}
 	}
@@ -287,7 +288,6 @@ mod tests {
 				cast: TEST_CAST,
 				behavior: REAL_LAZY,
 				marker: Test::marker(),
-				..default()
 			},
 			Transform::default(),
 		));
@@ -318,6 +318,7 @@ mod tests {
 						})
 					},
 					remove_fn: |_, _| Ok(()),
+					soft_override: |_, _| false,
 				},
 				..default()
 			},
@@ -392,6 +393,7 @@ mod tests {
 							lvl: Level::Warning,
 						})
 					},
+					soft_override: |_, _| false,
 				},
 				..default()
 			},

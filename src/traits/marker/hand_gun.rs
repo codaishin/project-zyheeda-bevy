@@ -1,10 +1,16 @@
 use super::GetMarkerMeta;
 use crate::{
-	components::{Marker, Side, SlotKey},
+	components::{Active, Marker, Queued, Side, Skill, SlotKey},
 	errors::{Error, Level},
 	markers::{meta::MarkerMeta, HandGun, Left, Right},
 };
 use bevy::ecs::system::EntityCommands;
+
+impl GetMarkerMeta for HandGun {
+	fn marker() -> MarkerMeta {
+		HANDGUN_META
+	}
+}
 
 fn slot_error(slot: SlotKey) -> Error {
 	Error {
@@ -13,7 +19,7 @@ fn slot_error(slot: SlotKey) -> Error {
 	}
 }
 
-fn add_hand_gun(entity: &mut EntityCommands, slot: SlotKey) -> Result<(), Error> {
+fn insert_fn(entity: &mut EntityCommands, slot: SlotKey) -> Result<(), Error> {
 	let SlotKey::Hand(side) = slot else {
 		return Err(slot_error(slot));
 	};
@@ -26,7 +32,7 @@ fn add_hand_gun(entity: &mut EntityCommands, slot: SlotKey) -> Result<(), Error>
 	Ok(())
 }
 
-fn remove_hand_gun(entity: &mut EntityCommands, slot: SlotKey) -> Result<(), Error> {
+fn remove_fn(entity: &mut EntityCommands, slot: SlotKey) -> Result<(), Error> {
 	let SlotKey::Hand(side) = slot else {
 		return Err(slot_error(slot));
 	};
@@ -39,14 +45,15 @@ fn remove_hand_gun(entity: &mut EntityCommands, slot: SlotKey) -> Result<(), Err
 	Ok(())
 }
 
-impl GetMarkerMeta for HandGun {
-	fn marker() -> MarkerMeta {
-		MarkerMeta {
-			insert_fn: add_hand_gun,
-			remove_fn: remove_hand_gun,
-		}
-	}
+fn soft_override(running: &Skill<Active>, new: &Skill<Queued>) -> bool {
+	running.marker == HANDGUN_META && new.marker == HANDGUN_META
 }
+
+const HANDGUN_META: MarkerMeta = MarkerMeta {
+	insert_fn,
+	remove_fn,
+	soft_override,
+};
 
 #[cfg(test)]
 mod tests {
@@ -60,6 +67,7 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		ecs::system::IntoSystem,
+		utils::default,
 	};
 
 	#[test]
@@ -202,5 +210,50 @@ mod tests {
 			Some(slot_error(slot)),
 			agent.get::<FakeErrorLog>().map(|l| l.0.clone())
 		);
+	}
+
+	#[test]
+	fn soft_override_true_when_both_skills_with_handgun_marker() {
+		let handgun_marker = HandGun::marker();
+		let running: Skill<Active> = Skill {
+			marker: HandGun::marker(),
+			..default()
+		};
+		let new: Skill<Queued> = Skill {
+			marker: HandGun::marker(),
+			..default()
+		};
+
+		assert!((handgun_marker.soft_override)(&running, &new));
+	}
+
+	#[test]
+	fn soft_override_false_when_running_skill_not_with_handgun_marker() {
+		let handgun_marker = HandGun::marker();
+		let running: Skill<Active> = Skill {
+			marker: default(),
+			..default()
+		};
+		let new: Skill<Queued> = Skill {
+			marker: HandGun::marker(),
+			..default()
+		};
+
+		assert!(!(handgun_marker.soft_override)(&running, &new));
+	}
+
+	#[test]
+	fn soft_override_false_when_new_skill_not_with_handgun_marker() {
+		let handgun_marker = HandGun::marker();
+		let running: Skill<Active> = Skill {
+			marker: HandGun::marker(),
+			..default()
+		};
+		let new: Skill<Queued> = Skill {
+			marker: default(),
+			..default()
+		};
+
+		assert!(!(handgun_marker.soft_override)(&running, &new));
 	}
 }
