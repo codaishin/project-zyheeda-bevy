@@ -1,5 +1,15 @@
 use crate::{
-	components::{DequeueMode, Queue, Queued, Schedule, ScheduleMode, Skill, SlotKey, WaitNext},
+	components::{
+		Active,
+		DequeueMode,
+		Queue,
+		Queued,
+		Schedule,
+		ScheduleMode,
+		Skill,
+		SlotKey,
+		WaitNext,
+	},
 	traits::get_ray::GetRayFromCamera,
 };
 use bevy::{
@@ -10,7 +20,7 @@ use bevy::{
 pub fn enqueue<TGetRay: GetRayFromCamera>(
 	camera: Query<(&Camera, &GlobalTransform)>,
 	window: Query<&Window>,
-	mut agents: Query<(Entity, &Schedule, &mut Queue, Option<&Skill<Queued>>)>,
+	mut agents: Query<(Entity, &Schedule, &mut Queue, Option<&Skill<Active>>)>,
 	mut commands: Commands,
 ) {
 	if agents.is_empty() {
@@ -31,7 +41,7 @@ fn enqueue_skills(
 	agent: Entity,
 	schedule: &Schedule,
 	queue: &mut Queue,
-	running: Option<&Skill<Queued>>,
+	running: Option<&Skill<Active>>,
 	commands: &mut Commands,
 	ray: Option<Ray>,
 ) {
@@ -44,7 +54,7 @@ fn enqueue_skill(
 	agent: Entity,
 	schedule: &Schedule,
 	queue: &mut Queue,
-	running: Option<&Skill<Queued>>,
+	running: Option<&Skill<Active>>,
 	slot: (&SlotKey, &Skill),
 	commands: &mut Commands,
 	ray: Option<Ray>,
@@ -276,9 +286,10 @@ mod tests {
 			.spawn((
 				Skill {
 					dequeue: DequeueMode::Lazy,
-					data: Queued {
+					data: Active {
 						ray: TEST_RAY,
 						slot: SlotKey::Hand(Side::Left),
+						..default()
 					},
 					cast: Cast {
 						pre: Duration::from_millis(1),

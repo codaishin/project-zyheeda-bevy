@@ -2,101 +2,94 @@ pub mod dequeue;
 pub mod enqueue;
 pub mod projectile;
 
+use std::time::Duration;
+
 use crate::{
-	behaviors::meta::{Agent, Spawner, StartBehaviorFn},
-	components::{Queued, Skill, SlotKey, Slots, TimeTracker, WaitNext},
+	behaviors::meta::{Agent, Spawner, StartBehaviorFn, StopBehaviorFn},
+	components::{Active, Skill, SlotKey, Slots, WaitNext},
 	errors::Error,
 };
-use bevy::prelude::{
-	Commands,
-	Entity,
-	GlobalTransform,
-	Query,
-	Real,
-	Res,
-	Time,
-	Transform,
-	Without,
+use bevy::{
+	ecs::system::EntityCommands,
+	prelude::{Commands, Entity, GlobalTransform, Query, Real, Res, Time, Transform},
 };
 
-type Skills<'a> = (Entity, &'a Skill<Queued>, &'a mut Transform, &'a Slots);
-type RunningSkills<'a> = (
+type Skills<'a> = (
 	Entity,
-	&'a mut Skill<Queued>,
-	&'a mut TimeTracker<Skill<Queued>>,
+	&'a mut Transform,
+	&'a mut Skill<Active>,
 	&'a Slots,
 	Option<&'a WaitNext>,
 );
 
-enum SkillStatus {
-	Inactive,
-	Done,
-	Running,
-}
-
 pub fn execute_skill(
 	time: Res<Time<Real>>,
 	mut commands: Commands,
-	mut agents_with_new_skill: Query<Skills, Without<TimeTracker<Skill<Queued>>>>,
-	mut agents_with_running_skill: Query<RunningSkills>,
+	mut agents: Query<Skills>,
 	transforms: Query<&GlobalTransform>,
 ) -> Vec<Result<(), Error>> {
 	let delta = time.delta();
 	let mut results = Vec::new();
 
-	for (entity, skill, mut transform, slots) in &mut agents_with_new_skill {
-		let agent = Agent(entity);
-
-		update_transform(&mut transform, skill, slots, &transforms);
-		results.push(mark_agent_as_running(&mut commands, skill, agent));
-	}
-
-	for (entity, mut skill, mut tracker, slots, wait_next) in &mut agents_with_running_skill {
-		let agent = Agent(entity);
-
-		tracker.duration += delta;
-
-		if let Some((spawner, run)) = can_trigger_skill(&skill, &tracker, slots, &transforms) {
-			trigger_skill(&mut commands, &mut skill, agent, spawner, run);
-		}
-
-		results.push(match skill_status(&skill, &tracker, wait_next) {
-			SkillStatus::Running => Ok(()),
-			_ => mark_agent_as_done(&mut commands, &mut skill, agent),
-		});
+	for (entity, mut transform, mut skill, slots, wait_next) in &mut agents {
+		let mut agent = (Agent(entity), commands.entity(entity));
+		let progress = (delta, wait_next);
+		results.push(execute_skill_on_agent(
+			&mut agent,
+			&mut skill,
+			&mut transform,
+			slots,
+			&transforms,
+			progress,
+		));
 	}
 
 	results
 }
 
-fn mark_agent_as_running(
-	commands: &mut Commands,
-	skill: &Skill<Queued>,
-	agent: Agent,
+fn execute_skill_on_agent(
+	agent: &mut (Agent, EntityCommands),
+	skill: &mut Skill<Active>,
+	transform: &mut Transform,
+	slots: &Slots,
+	transforms: &Query<&GlobalTransform>,
+	progress: (Duration, Option<&WaitNext>),
 ) -> Result<(), Error> {
-	let mut agent = commands.entity(agent.0);
-	agent.insert(TimeTracker::<Skill<Queued>>::new());
-	(skill.marker.insert_fn)(&mut agent, skill.data.slot)
-}
-
-fn mark_agent_as_done(
-	commands: &mut Commands,
-	skill: &mut Skill<Queued>,
-	agent: Agent,
-) -> Result<(), Error> {
-	if let Some(stop) = skill.behavior.stop_fn {
-		stop(commands, &agent)
+	if skill.data.duration.is_zero() {
+		update_transform(transform, skill, slots, transforms);
+		try_insert_markers(&mut agent.1, skill)?;
 	}
 
-	let mut agent = commands.entity(agent.0);
-	agent.insert(WaitNext);
-	agent.remove::<(Skill<Queued>, TimeTracker<Skill<Queued>>)>();
-	(skill.marker.remove_fn)(&mut agent, skill.data.slot)
+	skill.data.duration += progress.0;
+
+	let commands = agent.1.commands();
+
+	if let Some((spawner, run_skill)) = can_run_skill(skill, slots, transforms) {
+		run_skill(commands, &agent.0, &spawner, &skill.data.ray);
+		skill.behavior.run_fn = None;
+	}
+
+	if let Some(stop_skill) = can_stop_skill(skill, progress.1) {
+		stop_skill(commands, &agent.0);
+		agent.1.insert(WaitNext);
+		agent.1.remove::<Skill<Active>>();
+		try_remove_markers(&mut agent.1, skill)?;
+	}
+
+	Ok(())
+}
+
+fn try_insert_markers(agent: &mut EntityCommands, skill: &mut Skill<Active>) -> Result<(), Error> {
+	(skill.marker.insert_fn)(agent, skill.data.slot)
+}
+
+fn try_remove_markers(agent: &mut EntityCommands, skill: &mut Skill<Active>) -> Result<(), Error> {
+	(skill.marker.remove_fn)(agent, skill.data.slot)
 }
 
 fn update_transform(
 	transform: &mut Transform,
-	skill: &Skill<Queued>,
+	skill: &Skill<Active>,
 	slots: &Slots,
 	transforms: &Query<&GlobalTransform>,
 ) {
@@ -113,13 +106,12 @@ fn update_transform(
 	transform_fn(transform, &Spawner(*spawn_transform), &skill.data.ray);
 }
 
-fn can_trigger_skill(
-	skill: &Skill<Queued>,
-	tracker: &TimeTracker<Skill<Queued>>,
+fn can_run_skill(
+	skill: &Skill<Active>,
 	slots: &Slots,
 	transforms: &Query<&GlobalTransform>,
 ) -> Option<(Spawner, StartBehaviorFn)> {
-	if tracker.duration < skill.cast.pre {
+	if skill.data.duration < skill.cast.pre {
 		return None;
 	}
 
@@ -129,33 +121,15 @@ fn can_trigger_skill(
 	Some((Spawner(*spawner_transform), skill.behavior.run_fn?))
 }
 
-fn trigger_skill(
-	cmd: &mut Commands,
-	skill: &mut Skill<Queued>,
-	agent: Agent,
-	spawner: Spawner,
-	run: StartBehaviorFn,
-) {
-	skill.behavior.run_fn = None;
-
-	run(cmd, &agent, &spawner, &skill.data.ray);
-}
-
-fn skill_status(
-	skill: &Skill<Queued>,
-	tracker: &TimeTracker<Skill<Queued>>,
-	wait_next: Option<&WaitNext>,
-) -> SkillStatus {
-	if wait_next.is_some() {
-		return SkillStatus::Inactive;
+fn can_stop_skill(skill: &Skill<Active>, wait_next: Option<&WaitNext>) -> Option<StopBehaviorFn> {
+	if wait_next.is_none() && skill.data.duration < skill.cast.pre + skill.cast.after {
+		return None;
 	}
 
-	if tracker.duration >= skill.cast.pre + skill.cast.after {
-		return SkillStatus::Done;
-	}
-
-	SkillStatus::Running
+	Some(skill.behavior.stop_fn.unwrap_or(noop))
 }
+
+fn noop(_commands: &mut Commands, _agent: &Agent) {}
 
 #[cfg(test)]
 mod tests {
@@ -304,9 +278,9 @@ mod tests {
 	fn add_marker() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
+			Skill::<Active> {
 				name: "Some Skill",
-				data: Queued {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					..default()
 				},
@@ -329,8 +303,8 @@ mod tests {
 	fn return_add_marker_error() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					..default()
 				},
@@ -370,8 +344,8 @@ mod tests {
 	fn remove_marker() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					..default()
 				},
@@ -400,8 +374,8 @@ mod tests {
 	fn return_remove_marker_error() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					..default()
 				},
@@ -448,8 +422,8 @@ mod tests {
 	fn do_not_remove_marker_after_insufficient_time() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Left),
 					..default()
 				},
@@ -479,8 +453,8 @@ mod tests {
 	fn remove_marker_after_incremental_deltas() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					..default()
 				},
@@ -511,11 +485,11 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_skill_and_tracker() {
+	fn remove_skill() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					..default()
 				},
@@ -537,21 +511,15 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert_eq!(
-			(false, false),
-			(
-				agent.contains::<Skill>(),
-				agent.contains::<TimeTracker<Skill>>()
-			)
-		);
+		assert!(!agent.contains::<Skill>());
 	}
 
 	#[test]
 	fn add_wait_next() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					..default()
 				},
@@ -580,8 +548,8 @@ mod tests {
 	fn do_not_add_add_wait_next_too_early() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					..default()
 				},
@@ -610,8 +578,8 @@ mod tests {
 	fn remove_all_related_components_when_waiting_next() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					..default()
 				},
@@ -634,10 +602,9 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			(false, false, false),
+			(false, false),
 			(
-				agent.contains::<Skill<Queued>>(),
-				agent.contains::<TimeTracker<Skill<Queued>>>(),
+				agent.contains::<Skill<Active>>(),
 				agent.contains::<Marker<SideLeft>>(),
 			)
 		);
@@ -647,8 +614,8 @@ mod tests {
 	fn start_behavior() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					..default()
 				},
@@ -680,8 +647,8 @@ mod tests {
 	fn stop_behavior() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					..default()
 				},
@@ -719,8 +686,8 @@ mod tests {
 	fn do_not_stop_behavior_before_skill_is_done() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					..default()
 				},
@@ -753,8 +720,8 @@ mod tests {
 	fn not_spawned_before_pre_cast_behavior() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					..default()
 				},
@@ -786,8 +753,8 @@ mod tests {
 	fn not_spawned_multiple_times() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					..default()
 				},
@@ -824,8 +791,8 @@ mod tests {
 	fn not_spawned_multiple_times_with_not_perfectly_matching_deltas() {
 		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					..default()
 				},
@@ -862,10 +829,11 @@ mod tests {
 	fn spawn_behavior_with_proper_arguments() {
 		let (mut app, agent, ..) = setup_app(Vec3::ONE);
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					ray: TEST_RAY,
 					slot: SlotKey::Hand(Side::Right),
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),
@@ -903,10 +871,11 @@ mod tests {
 		let (mut app, agent, spawner) = setup_app(Vec3::ONE);
 
 		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
+			Skill::<Active> {
+				data: Active {
 					slot: SlotKey::Hand(Side::Right),
 					ray: TEST_RAY,
+					..default()
 				},
 				cast: Cast {
 					pre: Duration::from_millis(500),

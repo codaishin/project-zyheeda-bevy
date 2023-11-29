@@ -124,6 +124,13 @@ pub struct Queued {
 	pub slot: SlotKey,
 }
 
+#[derive(PartialEq, Debug, Clone, Copy, Default)]
+pub struct Active {
+	pub ray: Ray,
+	pub slot: SlotKey,
+	pub duration: Duration,
+}
+
 impl Skill {
 	pub fn with<T: Clone + Copy>(self, data: T) -> Skill<T> {
 		Skill {
@@ -134,6 +141,29 @@ impl Skill {
 			behavior: self.behavior,
 			dequeue: self.dequeue,
 		}
+	}
+}
+
+impl<TSrc> Skill<TSrc> {
+	pub fn map_data<TDst>(self, map: fn(TSrc) -> TDst) -> Skill<TDst> {
+		Skill {
+			name: self.name,
+			data: map(self.data),
+			cast: self.cast,
+			marker: self.marker,
+			behavior: self.behavior,
+			dequeue: self.dequeue,
+		}
+	}
+}
+
+impl Skill<Queued> {
+	pub fn to_active(self) -> Skill<Active> {
+		self.map_data(|Queued { ray, slot }| Active {
+			ray,
+			slot,
+			duration: Duration::ZERO,
+		})
 	}
 }
 
@@ -235,27 +265,6 @@ pub type Equipment = Collection<(SlotKey, Item)>;
 
 #[derive(Component)]
 pub struct Queue(pub VecDeque<Skill<Queued>>);
-
-#[derive(Component)]
-pub struct TimeTracker<TBehavior> {
-	pub duration: Duration,
-	phantom_data: PhantomData<TBehavior>,
-}
-
-impl<T> TimeTracker<T> {
-	pub fn new() -> Self {
-		Self {
-			duration: Duration::ZERO,
-			phantom_data: PhantomData,
-		}
-	}
-}
-
-impl<T> Default for TimeTracker<T> {
-	fn default() -> Self {
-		Self::new()
-	}
-}
 
 #[derive(Component)]
 pub struct Projectile {

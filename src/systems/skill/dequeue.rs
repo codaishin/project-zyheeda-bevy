@@ -9,7 +9,7 @@ pub fn dequeue(mut commands: Commands, mut agents: Query<(Entity, &mut Queue), W
 		let mut agent = commands.entity(agent);
 
 		if let Some(skill) = queue.0.pop_front() {
-			agent.insert(skill);
+			agent.insert(skill.to_active());
 			agent.remove::<WaitNext>();
 			agent.remove::<Marker<Idle>>();
 		} else {
@@ -21,7 +21,7 @@ pub fn dequeue(mut commands: Commands, mut agents: Query<(Entity, &mut Queue), W
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Cast, Queued, Skill, SlotKey, WaitNext};
+	use crate::components::{Active, Cast, Queued, Skill, SlotKey, WaitNext};
 	use bevy::prelude::{default, App, Ray, Update, Vec3};
 	use std::time::Duration;
 
@@ -57,15 +57,16 @@ mod tests {
 
 		assert_eq!(
 			(
-				Some(Queued {
+				Some(Active {
 					ray: TEST_RAY,
 					slot: SlotKey::SkillSpawn,
+					duration: Duration::ZERO
 				}),
 				false,
 				0
 			),
 			(
-				agent.get::<Skill<Queued>>().map(|s| s.data),
+				agent.get::<Skill<Active>>().map(|s| s.data),
 				agent.contains::<WaitNext>(),
 				queue.0.len()
 			)
