@@ -2,13 +2,13 @@ pub mod skill;
 
 use std::time::Duration;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum CastType {
 	Pre,
 	After,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum State {
 	New,
 	Activate,

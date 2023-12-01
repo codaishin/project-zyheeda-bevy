@@ -6,6 +6,7 @@ use project_zyheeda::{
 	behaviors::MovementMode,
 	bundles::Loadout,
 	components::{
+		Active,
 		Animator,
 		CamOrbit,
 		Cast,
@@ -65,7 +66,7 @@ fn main() {
 		.add_systems(
 			Update,
 			(
-				execute_skill.pipe(log_many),
+				execute_skill::<Skill<Active>>.pipe(log_many),
 				execute_move::<Player, SimpleMovement>,
 			),
 		)
