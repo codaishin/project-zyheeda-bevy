@@ -1,4 +1,5 @@
 pub mod behavior;
+pub mod cast_update;
 pub mod get_ray;
 pub mod marker;
 pub mod move_together;
