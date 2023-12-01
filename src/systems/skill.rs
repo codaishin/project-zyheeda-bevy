@@ -5,7 +5,7 @@ pub mod projectile;
 use std::time::Duration;
 
 use crate::{
-	behaviors::meta::{Agent, Spawner, StartBehaviorFn, StopBehaviorFn},
+	behaviors::meta::{Spawner, StartBehaviorFn, StopBehaviorFn},
 	components::{Active, Skill, SlotKey, Slots, WaitNext},
 	errors::Error,
 };
@@ -32,7 +32,7 @@ pub fn execute_skill(
 	let mut results = Vec::new();
 
 	for (entity, mut transform, mut skill, slots, wait_next) in &mut agents {
-		let mut agent = (Agent(entity), commands.entity(entity));
+		let mut agent = commands.entity(entity);
 		let progress = (delta, wait_next);
 		results.push(execute_skill_on_agent(
 			&mut agent,
@@ -48,7 +48,7 @@ pub fn execute_skill(
 }
 
 fn execute_skill_on_agent(
-	agent: &mut (Agent, EntityCommands),
+	agent: &mut EntityCommands,
 	skill: &mut Skill<Active>,
 	transform: &mut Transform,
 	slots: &Slots,
@@ -57,23 +57,21 @@ fn execute_skill_on_agent(
 ) -> Result<(), Error> {
 	if skill.data.duration.is_zero() {
 		update_transform(transform, skill, slots, transforms);
-		try_insert_markers(&mut agent.1, skill)?;
+		try_insert_markers(agent, skill)?;
 	}
 
 	skill.data.duration += progress.0;
 
-	let commands = agent.1.commands();
-
 	if let Some((spawner, run_skill)) = can_run_skill(skill, slots, transforms) {
-		run_skill(commands, &agent.0, &spawner, &skill.data.ray);
+		run_skill(agent, &spawner, &skill.data.ray);
 		skill.behavior.run_fn = None;
 	}
 
 	if let Some(stop_skill) = can_stop_skill(skill, progress.1) {
-		stop_skill(commands, &agent.0);
-		agent.1.insert(WaitNext);
-		agent.1.remove::<Skill<Active>>();
-		try_remove_markers(&mut agent.1, skill)?;
+		stop_skill(agent);
+		agent.insert(WaitNext);
+		agent.remove::<Skill<Active>>();
+		try_remove_markers(agent, skill)?;
 	}
 
 	Ok(())
@@ -129,7 +127,7 @@ fn can_stop_skill(skill: &Skill<Active>, wait_next: Option<&WaitNext>) -> Option
 	Some(skill.behavior.stop_fn.unwrap_or(noop))
 }
 
-fn noop(_commands: &mut Commands, _agent: &Agent) {}
+fn noop(_agent: &mut EntityCommands) {}
 
 #[cfg(test)]
 mod tests {
@@ -195,14 +193,14 @@ mod tests {
 
 	#[derive(Component, Debug, PartialEq)]
 	struct MockBehavior {
-		pub agent: Agent,
+		pub agent: Entity,
 		pub ray: Ray,
 		pub spawner: Spawner,
 	}
 
 	#[derive(Component, Debug, PartialEq)]
 	struct MockIdle {
-		pub agent: Agent,
+		pub agent: Entity,
 	}
 
 	const REAL_LAZY: BehaviorMeta = BehaviorMeta {
@@ -218,15 +216,17 @@ mod tests {
 	impl GetBehaviorMeta for MockBehavior {
 		fn behavior() -> BehaviorMeta {
 			BehaviorMeta {
-				run_fn: Some(|commands, agent, spawner, ray| {
-					commands.spawn(MockBehavior {
-						agent: *agent,
+				run_fn: Some(|agent, spawner, ray| {
+					let id = agent.id();
+					agent.commands().spawn(MockBehavior {
+						agent: id,
 						ray: *ray,
 						spawner: *spawner,
 					});
 				}),
-				stop_fn: Some(|commands, agent| {
-					commands.spawn(MockIdle { agent: *agent });
+				stop_fn: Some(|agent| {
+					let idle = MockIdle { agent: agent.id() };
+					agent.commands().spawn(idle);
 				}),
 				transform_fn: None,
 			}
@@ -676,12 +676,7 @@ mod tests {
 
 		let idle = app.world.iter_entities().find_map(|e| e.get::<MockIdle>());
 
-		assert_eq!(
-			Some(&MockIdle {
-				agent: Agent(agent)
-			}),
-			idle
-		);
+		assert_eq!(Some(&MockIdle { agent }), idle);
 	}
 
 	#[test]
@@ -860,7 +855,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&MockBehavior {
-				agent: Agent(agent),
+				agent,
 				ray: TEST_RAY,
 				spawner: Spawner(GlobalTransform::from_translation(Vec3::ONE)),
 			}),

@@ -1,11 +1,11 @@
 use super::GetBehaviorMeta;
 use crate::{
-	behaviors::meta::{Agent, BehaviorMeta, Spawner},
+	behaviors::meta::{BehaviorMeta, Spawner},
 	components::Projectile,
 	tools::look_from_spawner,
 };
 use bevy::{
-	ecs::system::Commands,
+	ecs::system::EntityCommands,
 	math::Ray,
 	prelude::SpatialBundle,
 	transform::components::Transform,
@@ -21,9 +21,9 @@ impl GetBehaviorMeta for Projectile {
 	}
 }
 
-fn run_fn(commands: &mut Commands, _: &Agent, spawner: &Spawner, ray: &Ray) {
+fn run_fn(agent: &mut EntityCommands, spawner: &Spawner, ray: &Ray) {
 	let transform = Transform::from_translation(spawner.0.translation());
-	commands.spawn((
+	agent.commands().spawn((
 		Projectile {
 			target_ray: *ray,
 			range: 10.,
@@ -39,12 +39,9 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		math::Vec3,
-		prelude::Entity,
 		render::view::{InheritedVisibility, ViewVisibility, Visibility},
 		transform::components::GlobalTransform,
 	};
-
-	const DEFAULT_AGENT: Agent = Agent(Entity::from_raw(42));
 
 	#[test]
 	fn spawn_projectile_with_ray() {
@@ -55,8 +52,9 @@ mod tests {
 			origin: Vec3::ONE,
 			direction: Vec3::NEG_INFINITY,
 		};
+		let agent = app.world.spawn(()).id();
 
-		app.add_systems(Update, run_lazy(lazy, DEFAULT_AGENT, spawner, ray));
+		app.add_systems(Update, run_lazy(lazy, agent, spawner, ray));
 		app.update();
 
 		let projectile = app
@@ -76,8 +74,9 @@ mod tests {
 			origin: Vec3::ONE,
 			direction: Vec3::NEG_INFINITY,
 		};
+		let agent = app.world.spawn(()).id();
 
-		app.add_systems(Update, run_lazy(lazy, DEFAULT_AGENT, spawner, ray));
+		app.add_systems(Update, run_lazy(lazy, agent, spawner, ray));
 		app.update();
 
 		let projectile = app
@@ -107,8 +106,9 @@ mod tests {
 			origin: Vec3::ONE,
 			direction: Vec3::NEG_INFINITY,
 		};
+		let agent = app.world.spawn(()).id();
 
-		app.add_systems(Update, run_lazy(lazy, DEFAULT_AGENT, spawner, ray));
+		app.add_systems(Update, run_lazy(lazy, agent, spawner, ray));
 		app.update();
 
 		let projectile_transform = app
