@@ -121,6 +121,7 @@ pub struct Active {
 	pub ray: Ray,
 	pub slot: SlotKey,
 	pub duration: Duration,
+	pub ignore_after_cast: bool,
 }
 
 impl Skill {
@@ -153,6 +154,7 @@ impl Skill<Queued> {
 			ray,
 			slot,
 			duration: Duration::ZERO,
+			ignore_after_cast: false,
 		})
 	}
 }

@@ -60,7 +60,8 @@ mod tests {
 				Some(Active {
 					ray: TEST_RAY,
 					slot: SlotKey::SkillSpawn,
-					duration: Duration::ZERO
+					duration: Duration::ZERO,
+					ignore_after_cast: false
 				}),
 				false,
 				0

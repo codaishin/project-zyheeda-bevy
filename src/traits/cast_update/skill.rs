@@ -2,29 +2,35 @@ use super::{CastType, CastUpdate, State};
 use crate::components::{Active, Skill};
 use std::time::Duration;
 
+fn new_or_active(skill: &Skill<Active>) -> State {
+	if skill.cast.pre == Duration::ZERO {
+		State::Activate
+	} else {
+		State::New
+	}
+}
+
+fn full_cast(skill: &Skill<Active>) -> Duration {
+	if skill.data.ignore_after_cast {
+		skill.cast.pre
+	} else {
+		skill.cast.pre + skill.cast.after
+	}
+}
+
 impl CastUpdate for Skill<Active> {
 	fn update(&mut self, delta: Duration) -> State {
 		let old_duration = self.data.duration;
 
 		self.data.duration += delta;
 
-		if old_duration == Duration::ZERO && self.cast.pre != Duration::ZERO {
-			return State::New;
+		match (old_duration, self.data.duration) {
+			(Duration::ZERO, _) => new_or_active(self),
+			(_, new_duration) if new_duration < self.cast.pre => State::Casting(CastType::Pre),
+			(old_duration, _) if old_duration < self.cast.pre => State::Activate,
+			(_, new_duration) if new_duration < full_cast(self) => State::Casting(CastType::After),
+			_ => State::Done,
 		}
-
-		if self.data.duration < self.cast.pre {
-			return State::Casting(CastType::Pre);
-		}
-
-		if old_duration <= self.cast.pre {
-			return State::Activate;
-		}
-
-		if self.data.duration < self.cast.pre + self.cast.after {
-			return State::Casting(CastType::After);
-		}
-
-		State::Done
 	}
 }
 
@@ -172,5 +178,55 @@ mod tests {
 			([State::Activate, State::Done], Duration::from_millis(2)),
 			(states, skill.data.duration)
 		);
+	}
+
+	#[test]
+	fn no_double_activate() {
+		let mut skill = Skill {
+			data: Active {
+				duration: Duration::from_millis(0),
+				..default()
+			},
+			cast: Cast {
+				pre: Duration::from_millis(100),
+				after: Duration::from_millis(100),
+			},
+			..default()
+		};
+
+		let states = [
+			skill.update(Duration::from_millis(50)),
+			skill.update(Duration::from_millis(50)),
+			skill.update(Duration::from_millis(50)),
+		];
+
+		assert_eq!(
+			[State::New, State::Activate, State::Casting(CastType::After)],
+			states
+		);
+	}
+
+	#[test]
+	fn ignore_after_cast() {
+		let mut skill = Skill {
+			data: Active {
+				duration: Duration::from_millis(0),
+				ignore_after_cast: true,
+				..default()
+			},
+			cast: Cast {
+				pre: Duration::from_millis(100),
+				after: Duration::from_millis(100),
+			},
+			..default()
+		};
+
+		let states = [
+			skill.update(Duration::from_millis(50)),
+			skill.update(Duration::from_millis(50)),
+			skill.update(Duration::from_millis(50)),
+		];
+
+		assert_eq!([State::New, State::Activate, State::Done], states);
 	}
 }
