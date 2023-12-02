@@ -9,14 +9,14 @@ use crate::{
 pub struct MarkerMeta {
 	pub insert_fn: fn(&mut EntityCommands, slot: SlotKey) -> Result<(), Error>,
 	pub remove_fn: fn(&mut EntityCommands, slot: SlotKey) -> Result<(), Error>,
-	pub soft_override: fn(&Skill<Active>, &Skill<Queued>) -> bool,
+	pub soft_override: fn(&mut Skill<Active>, &mut Skill<Queued>) -> bool,
 }
 
 fn noop(_: &mut EntityCommands, _: SlotKey) -> Result<(), Error> {
 	Ok(())
 }
 
-fn no_soft_override(_running: &Skill<Active>, _new: &Skill<Queued>) -> bool {
+fn no_soft_override(_running: &mut Skill<Active>, _new: &mut Skill<Queued>) -> bool {
 	false
 }
 

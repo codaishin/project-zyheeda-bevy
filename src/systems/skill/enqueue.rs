@@ -3,14 +3,14 @@ use crate::{
 	traits::get_ray::GetRayFromCamera,
 };
 use bevy::{
-	prelude::{Camera, Commands, Entity, GlobalTransform, Query, Ray},
+	prelude::{Camera, Commands, Entity, GlobalTransform, Mut, Query, Ray},
 	window::Window,
 };
 
 pub fn enqueue<TGetRay: GetRayFromCamera>(
 	camera: Query<(&Camera, &GlobalTransform)>,
 	window: Query<&Window>,
-	mut agents: Query<(Entity, &Schedule, &mut Queue, Option<&Skill<Active>>)>,
+	mut agents: Query<(Entity, &Schedule, &mut Queue, Option<&mut Skill<Active>>)>,
 	mut commands: Commands,
 ) {
 	if agents.is_empty() {
@@ -21,8 +21,15 @@ pub fn enqueue<TGetRay: GetRayFromCamera>(
 	let window = window.single();
 	let ray = TGetRay::get_ray(camera, camera_transform, window);
 
-	for (agent, schedule, mut queue, running) in &mut agents {
-		enqueue_skills(agent, schedule, &mut queue, running, &mut commands, ray);
+	for (agent, schedule, mut queue, mut running) in &mut agents {
+		enqueue_skills(
+			agent,
+			schedule,
+			&mut queue,
+			&mut running,
+			&mut commands,
+			ray,
+		);
 		commands.entity(agent).remove::<Schedule>();
 	}
 }
@@ -31,7 +38,7 @@ fn enqueue_skills(
 	agent: Entity,
 	schedule: &Schedule,
 	queue: &mut Queue,
-	running: Option<&Skill<Active>>,
+	running: &mut Option<Mut<Skill<Active>>>,
 	commands: &mut Commands,
 	ray: Option<Ray>,
 ) {
@@ -44,18 +51,19 @@ fn enqueue_skill(
 	agent: Entity,
 	schedule: &Schedule,
 	queue: &mut Queue,
-	running: Option<&Skill<Active>>,
+	running: &mut Option<Mut<Skill<Active>>>,
 	slot: (&SlotKey, &Skill),
 	commands: &mut Commands,
 	ray: Option<Ray>,
 ) {
 	let (slot, skill) = slot;
 	let slot = *slot;
-	let Some(new) = ray.map(|ray| skill.with(Queued { ray, slot })) else {
+	let Some(mut new) = ray.map(|ray| skill.with(Queued { ray, slot })) else {
 		return;
 	};
 	let soft_override = running
-		.map(|r| (new.marker.soft_override)(r, &new))
+		.as_mut()
+		.map(|running| (new.marker.soft_override)(running, &mut new))
 		.unwrap_or(false);
 
 	match (schedule.mode, soft_override) {
