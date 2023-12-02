@@ -83,8 +83,8 @@ fn main() {
 				animate::<Player, Marker<Idle>>,
 				animate::<Player, Marker<Slow>>,
 				animate::<Player, Marker<Fast>>,
-				animate::<Player, Marker<(HandGun, Right)>>,
 				animate::<Player, Marker<(HandGun, Left)>>,
+				animate::<Player, Marker<(HandGun, Right)>>,
 			),
 		)
 		.add_systems(
@@ -198,8 +198,8 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		skill: Some(Skill {
 			name: "Shoot Projectile",
 			cast: Cast {
-				pre: Duration::from_millis(300),
-				after: Duration::from_millis(100),
+				pre: Duration::from_millis(500),
+				after: Duration::from_millis(250),
 			},
 			marker: HandGun::marker(),
 			behavior: Projectile::behavior(),

@@ -276,9 +276,8 @@ mod tests {
 				..default()
 			},
 			marker: MarkerMeta {
-				insert_fn: |_, _| Ok(()),
-				remove_fn: |_, _| Ok(()),
 				soft_override: |running, new| running.name == "running" && new.name == "new",
+				..default()
 			},
 			..default()
 		};
