@@ -20,7 +20,7 @@ use project_zyheeda::{
 		SlotKey,
 		UnitsPerSecond,
 	},
-	markers::{Fast, HandGun, Idle, Left, Right, Slow},
+	markers::{Dual, Fast, HandGun, Idle, Left, Right, Slow},
 	resources::{Animation, Models, SlotMap},
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
@@ -84,7 +84,10 @@ fn main() {
 				animate::<Player, Marker<Slow>>,
 				animate::<Player, Marker<Fast>>,
 				animate::<Player, Marker<(HandGun, Left)>>,
+				animate::<Player, Marker<(HandGun, Left)>>,
+				animate::<Player, Marker<(HandGun, Left, Dual)>>,
 				animate::<Player, Marker<(HandGun, Right)>>,
+				animate::<Player, Marker<(HandGun, Right, Dual)>>,
 			),
 		)
 		.add_systems(
@@ -191,6 +194,12 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	commands.insert_resource(Animation::<Player, Marker<(HandGun, Left)>>::new(
 		asset_server.load("models/player.gltf#Animation5"),
 	));
+	commands.insert_resource(Animation::<Player, Marker<(HandGun, Right, Dual)>>::new(
+		asset_server.load("models/player.gltf#Animation6"),
+	));
+	commands.insert_resource(Animation::<Player, Marker<(HandGun, Left, Dual)>>::new(
+		asset_server.load("models/player.gltf#Animation7"),
+	));
 
 	let pistol = Item {
 		name: "Pistol",
@@ -199,7 +208,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			name: "Shoot Projectile",
 			cast: Cast {
 				pre: Duration::from_millis(500),
-				after: Duration::from_millis(250),
+				after: Duration::from_millis(500),
 			},
 			marker: HandGun::marker(),
 			behavior: Projectile::behavior(),
