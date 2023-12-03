@@ -6,10 +6,10 @@ use project_zyheeda::{
 	behaviors::MovementMode,
 	bundles::Loadout,
 	components::{
+		Active,
 		Animator,
 		CamOrbit,
 		Cast,
-		DequeueMode,
 		Item,
 		Marker,
 		Player,
@@ -20,7 +20,7 @@ use project_zyheeda::{
 		SlotKey,
 		UnitsPerSecond,
 	},
-	markers::{Fast, HandGun, Idle, Right, Slow},
+	markers::{Dual, Fast, HandGun, Idle, Left, Right, Slow},
 	resources::{Animation, Models, SlotMap},
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
@@ -66,7 +66,7 @@ fn main() {
 		.add_systems(
 			Update,
 			(
-				execute_skill.pipe(log_many),
+				execute_skill::<Skill<Active>>.pipe(log_many),
 				execute_move::<Player, SimpleMovement>,
 			),
 		)
@@ -83,7 +83,11 @@ fn main() {
 				animate::<Player, Marker<Idle>>,
 				animate::<Player, Marker<Slow>>,
 				animate::<Player, Marker<Fast>>,
+				animate::<Player, Marker<(HandGun, Left)>>,
+				animate::<Player, Marker<(HandGun, Left)>>,
+				animate::<Player, Marker<(HandGun, Left, Dual)>>,
 				animate::<Player, Marker<(HandGun, Right)>>,
+				animate::<Player, Marker<(HandGun, Right, Dual)>>,
 			),
 		)
 		.add_systems(
@@ -142,7 +146,11 @@ fn setup_input(mut commands: Commands) {
 		[(MouseButton::Left, SlotKey::Legs)].into(),
 	));
 	commands.insert_resource(SlotMap::<KeyCode>(
-		[(KeyCode::E, SlotKey::Hand(Side::Right))].into(),
+		[
+			(KeyCode::E, SlotKey::Hand(Side::Right)),
+			(KeyCode::Q, SlotKey::Hand(Side::Left)),
+		]
+		.into(),
 	));
 }
 
@@ -183,6 +191,43 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	commands.insert_resource(Animation::<Player, Marker<(HandGun, Right)>>::new(
 		asset_server.load("models/player.gltf#Animation4"),
 	));
+	commands.insert_resource(Animation::<Player, Marker<(HandGun, Left)>>::new(
+		asset_server.load("models/player.gltf#Animation5"),
+	));
+	commands.insert_resource(Animation::<Player, Marker<(HandGun, Right, Dual)>>::new(
+		asset_server.load("models/player.gltf#Animation6"),
+	));
+	commands.insert_resource(Animation::<Player, Marker<(HandGun, Left, Dual)>>::new(
+		asset_server.load("models/player.gltf#Animation7"),
+	));
+
+	let pistol = Item {
+		name: "Pistol",
+		model: Some("pistol"),
+		skill: Some(Skill {
+			name: "Shoot Projectile",
+			cast: Cast {
+				pre: Duration::from_millis(500),
+				after: Duration::from_millis(500),
+			},
+			marker: HandGun::marker(),
+			behavior: Projectile::behavior(),
+			..default()
+		}),
+	};
+	let legs = Item {
+		name: "Legs",
+		model: None,
+		skill: Some(Skill {
+			name: "Simple Movement",
+			cast: Cast {
+				after: Duration::MAX,
+				..default()
+			},
+			behavior: SimpleMovement::behavior(),
+			..default()
+		}),
+	};
 
 	commands.spawn((
 		SceneBundle {
@@ -199,43 +244,13 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			[
 				(SlotKey::SkillSpawn, "projectile_spawn"),
 				(SlotKey::Hand(Side::Right), "hand_slot.R"),
+				(SlotKey::Hand(Side::Left), "hand_slot.L"),
 				(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
 			],
 			[
-				(
-					SlotKey::Hand(Side::Right),
-					Item {
-						name: "Pistol",
-						model: Some("pistol"),
-						skill: Some(Skill {
-							name: "Shoot Projectile",
-							dequeue: DequeueMode::Lazy,
-							cast: Cast {
-								pre: Duration::from_millis(300),
-								after: Duration::from_millis(100),
-							},
-							marker: HandGun::marker(),
-							behavior: Projectile::behavior(),
-							..default()
-						}),
-					},
-				),
-				(
-					SlotKey::Legs,
-					Item {
-						name: "Walk",
-						model: None,
-						skill: Some(Skill {
-							name: "Simple Movement",
-							cast: Cast {
-								after: Duration::MAX,
-								..default()
-							},
-							behavior: SimpleMovement::behavior(),
-							..default()
-						}),
-					},
-				),
+				(SlotKey::Hand(Side::Right), pistol),
+				(SlotKey::Hand(Side::Left), pistol),
+				(SlotKey::Legs, legs),
 			],
 		),
 	));

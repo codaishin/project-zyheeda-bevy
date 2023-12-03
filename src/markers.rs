@@ -6,6 +6,8 @@ pub struct Fast;
 
 pub struct Idle;
 
+pub struct Dual;
+
 #[derive(PartialEq, Debug)]
 pub struct Left;
 

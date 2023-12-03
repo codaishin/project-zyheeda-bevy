@@ -3,267 +3,230 @@ pub mod enqueue;
 pub mod projectile;
 
 use crate::{
-	behaviors::meta::{Agent, Spawner, StartBehaviorFn},
-	components::{Queued, Skill, SlotKey, Slots, TimeTracker, WaitNext},
+	behaviors::meta::Spawner,
+	components::{SlotKey, Slots, WaitNext},
 	errors::Error,
+	traits::{
+		behavior_execution::BehaviorExecution,
+		cast_update::{CastUpdate, State},
+		marker_modify::MarkerModify,
+	},
 };
-use bevy::prelude::{
-	Commands,
-	Entity,
-	GlobalTransform,
-	Query,
-	Real,
-	Res,
-	Time,
-	Transform,
-	Without,
+use bevy::{
+	ecs::{component::Component, system::EntityCommands},
+	prelude::{Commands, Entity, GlobalTransform, Mut, Query, Real, Res, Time, Transform},
 };
+use std::time::Duration;
 
-type Skills<'a> = (Entity, &'a Skill<Queued>, &'a mut Transform, &'a Slots);
-type RunningSkills<'a> = (
+type Skills<'a, TSkill> = (
 	Entity,
-	&'a mut Skill<Queued>,
-	&'a mut TimeTracker<Skill<Queued>>,
+	&'a mut Transform,
+	&'a mut TSkill,
 	&'a Slots,
 	Option<&'a WaitNext>,
 );
 
-enum SkillStatus {
-	Inactive,
-	Done,
-	Running,
-}
-
-pub fn execute_skill(
+pub fn execute_skill<TSkill: CastUpdate + MarkerModify + BehaviorExecution + Component>(
 	time: Res<Time<Real>>,
 	mut commands: Commands,
-	mut agents_with_new_skill: Query<Skills, Without<TimeTracker<Skill<Queued>>>>,
-	mut agents_with_running_skill: Query<RunningSkills>,
+	mut agents: Query<Skills<TSkill>>,
 	transforms: Query<&GlobalTransform>,
 ) -> Vec<Result<(), Error>> {
 	let delta = time.delta();
-	let mut results = Vec::new();
+	let handle_skill = |(entity, mut transform, mut skill, slots, wait_next)| {
+		let agent = &mut commands.entity(entity);
+		let transform = &mut transform;
+		let skill = &mut skill;
+		let transforms = &transforms;
 
-	for (entity, skill, mut transform, slots) in &mut agents_with_new_skill {
-		let agent = Agent(entity);
-
-		update_transform(&mut transform, skill, slots, &transforms);
-		results.push(mark_agent_as_running(&mut commands, skill, agent));
-	}
-
-	for (entity, mut skill, mut tracker, slots, wait_next) in &mut agents_with_running_skill {
-		let agent = Agent(entity);
-
-		tracker.duration += delta;
-
-		if let Some((spawner, run)) = can_trigger_skill(&skill, &tracker, slots, &transforms) {
-			trigger_skill(&mut commands, &mut skill, agent, spawner, run);
+		match get_state(skill, &delta, wait_next) {
+			State::New => handle_new(agent, transform, skill, slots, transforms),
+			State::Activate => handle_active(agent, skill, slots, transforms),
+			State::Done => handle_done(agent, skill),
+			_ => Ok(()),
 		}
+	};
 
-		results.push(match skill_status(&skill, &tracker, wait_next) {
-			SkillStatus::Running => Ok(()),
-			_ => mark_agent_as_done(&mut commands, &mut skill, agent),
-		});
-	}
-
-	results
+	agents.iter_mut().map(handle_skill).collect()
 }
 
-fn mark_agent_as_running(
-	commands: &mut Commands,
-	skill: &Skill<Queued>,
-	agent: Agent,
-) -> Result<(), Error> {
-	let mut agent = commands.entity(agent.0);
-	agent.insert(TimeTracker::<Skill<Queued>>::new());
-	(skill.marker.insert_fn)(&mut agent, skill.data.slot)
-}
-
-fn mark_agent_as_done(
-	commands: &mut Commands,
-	skill: &mut Skill<Queued>,
-	agent: Agent,
-) -> Result<(), Error> {
-	if let Some(stop) = skill.behavior.stop_fn {
-		stop(commands, &agent)
+fn get_state<TSkill: CastUpdate>(
+	skill: &mut Mut<TSkill>,
+	delta: &Duration,
+	wait_next: Option<&WaitNext>,
+) -> State {
+	if wait_next.is_some() {
+		return State::Done;
 	}
 
-	let mut agent = commands.entity(agent.0);
+	skill.update(*delta)
+}
+
+fn handle_new<TSkill: MarkerModify + BehaviorExecution>(
+	agent: &mut EntityCommands,
+	transform: &mut Mut<Transform>,
+	skill: &mut Mut<TSkill>,
+	slots: &Slots,
+	transforms: &Query<&GlobalTransform>,
+) -> Result<(), Error> {
+	if let Some(spawner) = get_spawner(slots, transforms) {
+		skill.apply_transform(transform, &spawner);
+	};
+	skill.insert_markers(agent)
+}
+
+fn handle_active<TSkill: BehaviorExecution>(
+	agent: &mut EntityCommands,
+	skill: &mut Mut<TSkill>,
+	slots: &Slots,
+	transforms: &Query<&GlobalTransform>,
+) -> Result<(), Error> {
+	if let Some(spawner) = get_spawner(slots, transforms) {
+		skill.run(agent, &spawner);
+	};
+	Ok(())
+}
+
+fn handle_done<TSkill: CastUpdate + MarkerModify + BehaviorExecution + Component>(
+	agent: &mut EntityCommands,
+	skill: &mut Mut<TSkill>,
+) -> Result<(), Error> {
+	agent.remove::<TSkill>();
 	agent.insert(WaitNext);
-	agent.remove::<(Skill<Queued>, TimeTracker<Skill<Queued>>)>();
-	(skill.marker.remove_fn)(&mut agent, skill.data.slot)
+	skill.stop(agent);
+	skill.remove_markers(agent)
 }
 
-fn update_transform(
-	transform: &mut Transform,
-	skill: &Skill<Queued>,
-	slots: &Slots,
-	transforms: &Query<&GlobalTransform>,
-) {
-	let Some(transform_fn) = skill.behavior.transform_fn else {
-		return;
-	};
-	let Some(slot) = slots.0.get(&SlotKey::SkillSpawn) else {
-		return;
-	};
-	let Ok(spawn_transform) = transforms.get(slot.entity) else {
-		return;
-	};
-
-	transform_fn(transform, &Spawner(*spawn_transform), &skill.data.ray);
-}
-
-fn can_trigger_skill(
-	skill: &Skill<Queued>,
-	tracker: &TimeTracker<Skill<Queued>>,
-	slots: &Slots,
-	transforms: &Query<&GlobalTransform>,
-) -> Option<(Spawner, StartBehaviorFn)> {
-	if tracker.duration < skill.cast.pre {
-		return None;
-	}
-
+fn get_spawner(slots: &Slots, transforms: &Query<&GlobalTransform>) -> Option<Spawner> {
 	let spawner_slot = slots.0.get(&SlotKey::SkillSpawn)?;
 	let spawner_transform = transforms.get(spawner_slot.entity).ok()?;
-
-	Some((Spawner(*spawner_transform), skill.behavior.run_fn?))
-}
-
-fn trigger_skill(
-	cmd: &mut Commands,
-	skill: &mut Skill<Queued>,
-	agent: Agent,
-	spawner: Spawner,
-	run: StartBehaviorFn,
-) {
-	skill.behavior.run_fn = None;
-
-	run(cmd, &agent, &spawner, &skill.data.ray);
-}
-
-fn skill_status(
-	skill: &Skill<Queued>,
-	tracker: &TimeTracker<Skill<Queued>>,
-	wait_next: Option<&WaitNext>,
-) -> SkillStatus {
-	if wait_next.is_some() {
-		return SkillStatus::Inactive;
-	}
-
-	if tracker.duration >= skill.cast.pre + skill.cast.after {
-		return SkillStatus::Done;
-	}
-
-	SkillStatus::Running
+	Some(Spawner(*spawner_transform))
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use crate::{
-		behaviors::meta::BehaviorMeta,
-		components::{Cast, Marker, Side, Slot, SlotKey, WaitNext},
+		components::{Slot, SlotKey, WaitNext},
 		errors::Level,
-		markers::meta::MarkerMeta,
 		systems::log::tests::{fake_log_error_lazy_many, FakeErrorLogMany},
-		traits::{behavior::GetBehaviorMeta, marker::GetMarkerMeta},
+		traits::cast_update::{CastType, State},
 	};
 	use bevy::{
 		ecs::{component::Component, system::IntoSystem},
-		prelude::{App, Ray, Transform, Update, Vec3},
+		prelude::{App, Transform, Update, Vec3},
 		time::{Real, Time},
-		utils::default,
 	};
-	use mockall::{automock, predicate::eq};
+	use mockall::{mock, predicate::eq};
 	use std::time::Duration;
 
-	type AgentEntity = Entity;
-	type SpawnerEntity = Entity;
-
-	struct Test;
-
-	struct SideNone;
-
-	struct SideLeft;
-
-	struct SideRight;
-
-	struct _Tools;
-
-	#[automock]
-	impl _Tools {
-		pub fn _transform_fn(_transform: &mut Transform, _spawner: &Spawner, _ray: &Ray) {}
+	#[derive(PartialEq)]
+	enum MarkerOption {
+		Insert,
+		Remove,
 	}
 
-	impl GetMarkerMeta for Test {
-		fn marker() -> MarkerMeta {
-			MarkerMeta {
-				insert_fn: |entity, slot| {
-					match slot {
-						SlotKey::Hand(Side::Right) => entity.insert(Marker::<SideRight>::new()),
-						SlotKey::Hand(Side::Left) => entity.insert(Marker::<SideLeft>::new()),
-						_ => entity.insert(Marker::<SideNone>::new()),
-					};
-					Ok(())
-				},
-				remove_fn: |entity, slot| {
-					match slot {
-						SlotKey::Hand(Side::Right) => entity.remove::<Marker<SideRight>>(),
-						SlotKey::Hand(Side::Left) => entity.remove::<Marker<SideLeft>>(),
-						_ => entity.remove::<Marker<SideNone>>(),
-					};
-					Ok(())
-				},
+	#[derive(PartialEq)]
+	enum BehaviorOption {
+		Run,
+		Stop,
+		Transform,
+	}
+
+	#[derive(PartialEq)]
+	enum MockOption {
+		MarkerModify(MarkerOption),
+		BehaviorExecution(BehaviorOption),
+	}
+
+	#[derive(Component)]
+	struct _Skill {
+		pub mock: Mock_Skill,
+	}
+
+	impl _Skill {
+		pub fn without_default_setup_for<const N: usize>(no_setup: [MockOption; N]) -> Self {
+			let mut mock = Mock_Skill::new();
+
+			if !no_setup.contains(&MockOption::MarkerModify(MarkerOption::Insert)) {
+				mock.expect_insert_markers().return_const(Ok(()));
+			}
+			if !no_setup.contains(&MockOption::MarkerModify(MarkerOption::Remove)) {
+				mock.expect_remove_markers().return_const(Ok(()));
+			}
+			if !no_setup.contains(&MockOption::BehaviorExecution(BehaviorOption::Run)) {
+				mock.expect_run().return_const(());
+			}
+			if !no_setup.contains(&MockOption::BehaviorExecution(BehaviorOption::Stop)) {
+				mock.expect_stop().return_const(());
+			}
+			if !no_setup.contains(&MockOption::BehaviorExecution(BehaviorOption::Transform)) {
+				mock.expect_apply_transform().return_const(());
+			}
+
+			Self { mock }
+		}
+	}
+
+	impl CastUpdate for _Skill {
+		fn update(&mut self, delta: Duration) -> State {
+			self.mock.update(delta)
+		}
+	}
+
+	impl MarkerModify for _Skill {
+		fn insert_markers(&self, agent: &mut EntityCommands) -> Result<(), Error> {
+			self.mock.insert_markers(agent)
+		}
+
+		fn remove_markers(&self, agent: &mut EntityCommands) -> Result<(), Error> {
+			self.mock.remove_markers(agent)
+		}
+	}
+
+	impl BehaviorExecution for _Skill {
+		fn run(&self, agent: &mut EntityCommands, spawner: &Spawner) {
+			self.mock.run(agent, spawner)
+		}
+
+		fn stop(&self, agent: &mut EntityCommands) {
+			self.mock.stop(agent)
+		}
+
+		fn apply_transform(&self, transform: &mut Transform, spawner: &Spawner) {
+			self.mock.apply_transform(transform, spawner)
+		}
+	}
+
+	mock! {
+		_Skill {}
+		impl CastUpdate for _Skill {
+			fn update(&mut self, delta: Duration) -> State {
+				State::Done
+			}
+		}
+		impl MarkerModify for _Skill {
+			fn insert_markers<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>) -> Result<(), Error> {
+				Ok(())
+			}
+			fn remove_markers<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>) -> Result<(), Error>{
+				Ok(())
+			}
+		}
+		impl BehaviorExecution for _Skill {
+			fn run<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>, spawner: &Spawner) {
+				()
+			}
+			fn stop<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>) {
+				()
+			}
+			fn apply_transform(&self, transform: &mut Transform, spawner: &Spawner) {
+				()
 			}
 		}
 	}
 
-	#[derive(Component, Debug, PartialEq)]
-	struct MockBehavior {
-		pub agent: Agent,
-		pub ray: Ray,
-		pub spawner: Spawner,
-	}
-
-	#[derive(Component, Debug, PartialEq)]
-	struct MockIdle {
-		pub agent: Agent,
-	}
-
-	const REAL_LAZY: BehaviorMeta = BehaviorMeta {
-		run_fn: None,
-		stop_fn: None,
-		transform_fn: None,
-	};
-	const TEST_RAY: Ray = Ray {
-		origin: Vec3::Y,
-		direction: Vec3::NEG_ONE,
-	};
-
-	impl GetBehaviorMeta for MockBehavior {
-		fn behavior() -> BehaviorMeta {
-			BehaviorMeta {
-				run_fn: Some(|commands, agent, spawner, ray| {
-					commands.spawn(MockBehavior {
-						agent: *agent,
-						ray: *ray,
-						spawner: *spawner,
-					});
-				}),
-				stop_fn: Some(|commands, agent| {
-					commands.spawn(MockIdle { agent: *agent });
-				}),
-				transform_fn: None,
-			}
-		}
-	}
-
-	const TEST_CAST: Cast = Cast {
-		pre: Duration::from_millis(100),
-		after: Duration::from_millis(100),
-	};
-
-	fn setup_app(skill_spawn_location: Vec3) -> (App, AgentEntity, SpawnerEntity) {
+	fn setup_app(skill_spawn_location: Vec3) -> (App, Entity) {
 		let mut app = App::new();
 		let mut time = Time::<Real>::default();
 
@@ -289,9 +252,12 @@ mod tests {
 		time.update();
 		app.insert_resource(time);
 		app.update();
-		app.add_systems(Update, execute_skill.pipe(fake_log_error_lazy_many(agent)));
+		app.add_systems(
+			Update,
+			execute_skill::<_Skill>.pipe(fake_log_error_lazy_many(agent)),
+		);
 
-		(app, agent, skill_spawner)
+		(app, agent)
 	}
 
 	fn tick_time(app: &mut App, delta: Duration) {
@@ -301,54 +267,59 @@ mod tests {
 	}
 
 	#[test]
-	fn add_marker() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				name: "Some Skill",
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					..default()
-				},
-				cast: TEST_CAST,
-				behavior: REAL_LAZY,
-				marker: Test::marker(),
-				..default()
-			},
-			Transform::default(),
-		));
+	fn call_update_with_delta() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill = _Skill::without_default_setup_for([]);
 
+		skill
+			.mock
+			.expect_update()
+			.times(1)
+			.with(eq(Duration::from_millis(100)))
+			.return_const(State::Casting(CastType::Pre));
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
+
+		tick_time(&mut app, Duration::from_millis(100));
 		app.update();
+	}
 
-		let agent = app.world.entity(agent);
+	#[test]
+	fn add_marker() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill =
+			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
 
-		assert!(agent.contains::<Marker<SideRight>>());
+		skill.mock.expect_update().return_const(State::New);
+		skill
+			.mock
+			.expect_insert_markers()
+			.times(1)
+			.withf(move |a| a.id() == agent)
+			.return_const(Ok(()));
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
+		app.update();
 	}
 
 	#[test]
 	fn return_add_marker_error() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					..default()
-				},
-				cast: TEST_CAST,
-				behavior: REAL_LAZY,
-				marker: MarkerMeta {
-					insert_fn: |_, _| {
-						Err(Error {
-							msg: "some message".to_owned(),
-							lvl: Level::Warning,
-						})
-					},
-					remove_fn: |_, _| Ok(()),
-				},
-				..default()
-			},
-			Transform::default(),
-		));
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill =
+			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
+
+		skill.mock.expect_update().return_const(State::New);
+		skill.mock.expect_insert_markers().return_const(Err(Error {
+			msg: "some message".to_owned(),
+			lvl: Level::Warning,
+		}));
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
 
 		app.update();
 
@@ -364,69 +335,68 @@ mod tests {
 			)),
 			agent.get::<FakeErrorLogMany>()
 		)
+	}
+
+	#[test]
+	fn do_not_add_marker_when_not_new() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill =
+			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
+
+		skill
+			.mock
+			.expect_update()
+			.return_const(State::Casting(CastType::Pre));
+		skill
+			.mock
+			.expect_insert_markers()
+			.times(0)
+			.return_const(Ok(()));
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
+		app.update();
 	}
 
 	#[test]
 	fn remove_marker() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					..default()
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: REAL_LAZY,
-				marker: Test::marker(),
-				..default()
-			},
-			Transform::default(),
-		));
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill =
+			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Remove)]);
+
+		skill.mock.expect_update().return_const(State::Done);
+		skill
+			.mock
+			.expect_remove_markers()
+			.times(1)
+			.withf(move |a| a.id() == agent)
+			.return_const(Ok(()));
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
 
 		app.update();
-
-		tick_time(&mut app, Duration::from_millis(700));
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert!(!agent.contains::<Marker<SideLeft>>());
 	}
+
 	#[test]
-	fn return_remove_marker_error() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					..default()
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: REAL_LAZY,
-				marker: MarkerMeta {
-					insert_fn: |_, _| Ok(()),
-					remove_fn: |_, _| {
-						Err(Error {
-							msg: "some message".to_owned(),
-							lvl: Level::Warning,
-						})
-					},
-				},
-				..default()
-			},
-			Transform::default(),
-		));
+	fn remove_marker_error() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill =
+			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Remove)]);
+
+		skill.mock.expect_update().return_const(State::Done);
+		skill.mock.expect_remove_markers().return_const(Err(Error {
+			msg: "some message".to_owned(),
+			lvl: Level::Warning,
+		}));
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
 
 		app.update();
-
-		tick_time(&mut app, Duration::from_millis(700));
 
 		app.update();
 
@@ -445,129 +415,77 @@ mod tests {
 	}
 
 	#[test]
-	fn do_not_remove_marker_after_insufficient_time() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Left),
-					..default()
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: REAL_LAZY,
-				marker: Test::marker(),
-				..default()
-			},
-			Transform::default(),
-		));
+	fn do_not_remove_marker_when_not_done() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill =
+			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Remove)]);
+
+		skill
+			.mock
+			.expect_update()
+			.return_const(State::Casting(CastType::After));
+		skill
+			.mock
+			.expect_remove_markers()
+			.times(0)
+			.return_const(Ok(()));
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
 
 		app.update();
-
-		tick_time(&mut app, Duration::from_millis(699));
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert!(agent.contains::<Marker<SideLeft>>());
 	}
 
 	#[test]
-	fn remove_marker_after_incremental_deltas() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					..default()
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: REAL_LAZY,
-				marker: Test::marker(),
-				..default()
-			},
-			Transform::default(),
-		));
+	fn remove_skill() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill = _Skill::without_default_setup_for([]);
 
-		app.update();
+		skill.mock.expect_update().return_const(State::Done);
 
-		tick_time(&mut app, Duration::from_millis(350));
-
-		app.update();
-
-		tick_time(&mut app, Duration::from_millis(350));
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Marker<SideLeft>>());
+		assert!(!agent.contains::<_Skill>());
 	}
 
 	#[test]
-	fn remove_skill_and_tracker() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					..default()
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: REAL_LAZY,
-				..default()
-			},
-			Transform::default(),
-		));
+	fn do_not_remove_skill_when_not_done() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill = _Skill::without_default_setup_for([]);
 
-		app.update();
+		skill
+			.mock
+			.expect_update()
+			.return_const(State::Casting(CastType::After));
 
-		tick_time(&mut app, Duration::from_millis(700));
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert_eq!(
-			(false, false),
-			(
-				agent.contains::<Skill>(),
-				agent.contains::<TimeTracker<Skill>>()
-			)
-		);
+		assert!(agent.contains::<_Skill>());
 	}
 
 	#[test]
 	fn add_wait_next() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					..default()
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: REAL_LAZY,
-				..default()
-			},
-			Transform::default(),
-		));
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill = _Skill::without_default_setup_for([]);
 
-		app.update();
+		skill.mock.expect_update().return_const(State::Done);
 
-		tick_time(&mut app, Duration::from_millis(700));
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
 
 		app.update();
 
@@ -577,27 +495,18 @@ mod tests {
 	}
 
 	#[test]
-	fn do_not_add_add_wait_next_too_early() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					..default()
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: REAL_LAZY,
-				..default()
-			},
-			Transform::default(),
-		));
+	fn do_not_add_wait_next_when_not_done() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill = _Skill::without_default_setup_for([]);
 
-		app.update();
+		skill
+			.mock
+			.expect_update()
+			.return_const(State::Casting(CastType::Pre));
 
-		tick_time(&mut app, Duration::from_millis(699));
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
 
 		app.update();
 
@@ -608,329 +517,212 @@ mod tests {
 
 	#[test]
 	fn remove_all_related_components_when_waiting_next() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					..default()
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: REAL_LAZY,
-				..default()
-			},
-			Transform::default(),
-		));
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill =
+			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Remove)]);
+
+		skill
+			.mock
+			.expect_update()
+			.return_const(State::Casting(CastType::Pre));
+		skill
+			.mock
+			.expect_remove_markers()
+			.times(1)
+			.withf(move |a| a.id() == agent)
+			.return_const(Ok(()));
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default(), WaitNext));
 
 		app.update();
 
-		app.world.entity_mut(agent).insert(WaitNext);
+		let agent = app.world.entity(agent);
+
+		assert!(!agent.contains::<_Skill>());
+	}
+
+	#[test]
+	fn done_works_even_with_remove_marker_error() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill = _Skill::without_default_setup_for([
+			MockOption::MarkerModify(MarkerOption::Remove),
+			MockOption::BehaviorExecution(BehaviorOption::Stop),
+		]);
+
+		skill.mock.expect_update().return_const(State::Done);
+		skill.mock.expect_remove_markers().return_const(Err(Error {
+			msg: "".to_owned(),
+			lvl: Level::Error,
+		}));
+		skill.mock.expect_stop().times(1).return_const(());
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default(), WaitNext));
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			(false, false, false),
-			(
-				agent.contains::<Skill<Queued>>(),
-				agent.contains::<TimeTracker<Skill<Queued>>>(),
-				agent.contains::<Marker<SideLeft>>(),
-			)
+			(false, true),
+			(agent.contains::<_Skill>(), agent.contains::<WaitNext>())
 		);
 	}
 
 	#[test]
-	fn start_behavior() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					..default()
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: MockBehavior::behavior(),
-				..default()
-			},
-			Transform::default(),
-		));
+	fn run() {
+		let (mut app, agent) = setup_app(Vec3::new(1., 2., 3.));
+		let mut skill =
+			_Skill::without_default_setup_for([MockOption::BehaviorExecution(BehaviorOption::Run)]);
 
-		app.update();
-
-		tick_time(&mut app, Duration::from_millis(500));
-
-		app.update();
-
-		let behavior = app
-			.world
-			.iter_entities()
-			.find_map(|e| e.get::<MockBehavior>());
-
-		assert!(behavior.is_some());
-	}
-
-	#[test]
-	fn stop_behavior() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					..default()
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: MockBehavior::behavior(),
-				..default()
-			},
-			Transform::default(),
-		));
-
-		app.update();
-
-		tick_time(&mut app, Duration::from_millis(500));
-
-		app.update();
-
-		tick_time(&mut app, Duration::from_millis(200));
-
-		app.update();
-
-		let idle = app.world.iter_entities().find_map(|e| e.get::<MockIdle>());
-
-		assert_eq!(
-			Some(&MockIdle {
-				agent: Agent(agent)
-			}),
-			idle
-		);
-	}
-
-	#[test]
-	fn do_not_stop_behavior_before_skill_is_done() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					..default()
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: MockBehavior::behavior(),
-				..default()
-			},
-			Transform::default(),
-		));
-
-		app.update();
-
-		tick_time(&mut app, Duration::from_millis(500));
-
-		app.update();
-
-		tick_time(&mut app, Duration::from_millis(199));
-
-		app.update();
-
-		let idle = app.world.iter_entities().find_map(|e| e.get::<MockIdle>());
-
-		assert!(idle.is_none());
-	}
-
-	#[test]
-	fn not_spawned_before_pre_cast_behavior() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					..default()
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: MockBehavior::behavior(),
-				..default()
-			},
-			Transform::default(),
-		));
-
-		app.update();
-
-		tick_time(&mut app, Duration::from_millis(499));
-
-		app.update();
-
-		let behavior = app
-			.world
-			.iter_entities()
-			.find_map(|e| e.get::<MockBehavior>());
-
-		assert!(behavior.is_none());
-	}
-
-	#[test]
-	fn not_spawned_multiple_times() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					..default()
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: MockBehavior::behavior(),
-				..default()
-			},
-			Transform::default(),
-		));
-
-		app.update();
-
-		tick_time(&mut app, Duration::from_millis(500));
-
-		app.update();
-
-		tick_time(&mut app, Duration::from_millis(1));
-
-		app.update();
-
-		let behaviors: Vec<_> = app
-			.world
-			.iter_entities()
-			.filter_map(|e| e.get::<MockBehavior>())
-			.collect();
-
-		assert_eq!(1, behaviors.len());
-	}
-
-	#[test]
-	fn not_spawned_multiple_times_with_not_perfectly_matching_deltas() {
-		let (mut app, agent, ..) = setup_app(Vec3::ZERO);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					..default()
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: MockBehavior::behavior(),
-				..default()
-			},
-			Transform::default(),
-		));
-
-		app.update();
-
-		tick_time(&mut app, Duration::from_millis(501));
-
-		app.update();
-
-		tick_time(&mut app, Duration::from_millis(1));
-
-		app.update();
-
-		let behaviors: Vec<_> = app
-			.world
-			.iter_entities()
-			.filter_map(|e| e.get::<MockBehavior>())
-			.collect();
-
-		assert_eq!(1, behaviors.len());
-	}
-
-	#[test]
-	fn spawn_behavior_with_proper_arguments() {
-		let (mut app, agent, ..) = setup_app(Vec3::ONE);
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					ray: TEST_RAY,
-					slot: SlotKey::Hand(Side::Right),
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: MockBehavior::behavior(),
-				..default()
-			},
-			Transform::default(),
-		));
-
-		app.update();
-
-		tick_time(&mut app, Duration::from_millis(500));
-
-		app.update();
-
-		let behavior = app
-			.world
-			.iter_entities()
-			.find_map(|e| e.get::<MockBehavior>());
-
-		assert_eq!(
-			Some(&MockBehavior {
-				agent: Agent(agent),
-				ray: TEST_RAY,
-				spawner: Spawner(GlobalTransform::from_translation(Vec3::ONE)),
-			}),
-			behavior
-		);
-	}
-
-	#[test]
-	fn apply_transform_fn() {
-		let (mut app, agent, spawner) = setup_app(Vec3::ONE);
-
-		app.world.entity_mut(agent).insert((
-			Skill::<Queued> {
-				data: Queued {
-					slot: SlotKey::Hand(Side::Right),
-					ray: TEST_RAY,
-				},
-				cast: Cast {
-					pre: Duration::from_millis(500),
-					after: Duration::from_millis(200),
-				},
-				behavior: BehaviorMeta {
-					run_fn: None,
-					stop_fn: None,
-					transform_fn: Some(Mock_Tools::_transform_fn),
-				},
-				..default()
-			},
-			Transform::default(),
-		));
-
-		let spawner = Spawner(*app.world.entity(spawner).get::<GlobalTransform>().unwrap());
-		let agent = *app.world.entity(agent).get::<Transform>().unwrap();
-		let ctx = Mock_Tools::_transform_fn_context();
-		ctx.expect()
-			.once()
-			.with(eq(agent), eq(spawner), eq(TEST_RAY))
+		skill.mock.expect_update().return_const(State::Activate);
+		skill
+			.mock
+			.expect_run()
+			.times(1)
+			.withf(move |a, s| a.id() == agent && s.0 == GlobalTransform::from_xyz(1., 2., 3.))
 			.return_const(());
 
-		tick_time(&mut app, Duration::from_millis(100));
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
+
+		app.update();
+	}
+
+	#[test]
+	fn do_run_when_not_activating() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill =
+			_Skill::without_default_setup_for([MockOption::BehaviorExecution(BehaviorOption::Run)]);
+
+		skill
+			.mock
+			.expect_update()
+			.return_const(State::Casting(CastType::After));
+		skill.mock.expect_run().times(0).return_const(());
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
+
+		app.update();
+	}
+
+	#[test]
+	fn stop() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill = _Skill::without_default_setup_for([MockOption::BehaviorExecution(
+			BehaviorOption::Stop,
+		)]);
+
+		skill.mock.expect_update().return_const(State::Done);
+		skill
+			.mock
+			.expect_stop()
+			.times(1)
+			.withf(move |a| a.id() == agent)
+			.return_const(());
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
+
+		app.update();
+	}
+
+	#[test]
+	fn do_not_stop_when_not_done() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill = _Skill::without_default_setup_for([MockOption::BehaviorExecution(
+			BehaviorOption::Stop,
+		)]);
+
+		skill
+			.mock
+			.expect_update()
+			.return_const(State::Casting(CastType::Pre));
+		skill.mock.expect_stop().times(0).return_const(());
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
+
+		app.update();
+	}
+
+	#[test]
+	fn apply_transform() {
+		let (mut app, agent) = setup_app(Vec3::new(11., 12., 13.));
+		let mut skill = _Skill::without_default_setup_for([MockOption::BehaviorExecution(
+			BehaviorOption::Transform,
+		)]);
+
+		let spawner = Spawner(GlobalTransform::from_xyz(11., 12., 13.));
+		let transform = Transform::from_xyz(-1., -2., -3.);
+
+		skill.mock.expect_update().return_const(State::New);
+		skill
+			.mock
+			.expect_apply_transform()
+			.times(1)
+			.with(eq(transform), eq(spawner))
+			.return_const(());
+
+		app.world.entity_mut(agent).insert((skill, transform));
+
+		app.update();
+	}
+
+	#[test]
+	fn do_not_apply_transform_when_not_new() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill = _Skill::without_default_setup_for([MockOption::BehaviorExecution(
+			BehaviorOption::Transform,
+		)]);
+
+		skill
+			.mock
+			.expect_update()
+			.return_const(State::Casting(CastType::Pre));
+		skill
+			.mock
+			.expect_apply_transform()
+			.times(0)
+			.return_const(());
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
+
+		app.update();
+	}
+
+	#[test]
+	fn apply_transform_even_with_insert_marker_error() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill = _Skill::without_default_setup_for([
+			MockOption::MarkerModify(MarkerOption::Insert),
+			MockOption::BehaviorExecution(BehaviorOption::Transform),
+		]);
+
+		skill.mock.expect_update().return_const(State::New);
+		skill.mock.expect_insert_markers().return_const(Err(Error {
+			msg: "".to_owned(),
+			lvl: Level::Error,
+		}));
+		skill
+			.mock
+			.expect_apply_transform()
+			.times(1)
+			.return_const(());
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
 
 		app.update();
 	}

@@ -92,13 +92,6 @@ pub struct Cast {
 	pub after: Duration,
 }
 
-#[derive(Default, Clone, Copy, PartialEq, Debug)]
-pub enum DequeueMode {
-	#[default]
-	Eager,
-	Lazy,
-}
-
 #[derive(Component, PartialEq, Debug, Clone, Copy, Default)]
 pub struct Skill<TData = ()> {
 	pub name: &'static str,
@@ -106,7 +99,6 @@ pub struct Skill<TData = ()> {
 	pub cast: Cast,
 	pub marker: MarkerMeta,
 	pub behavior: BehaviorMeta,
-	pub dequeue: DequeueMode,
 }
 
 impl<T> Display for Skill<T> {
@@ -124,6 +116,14 @@ pub struct Queued {
 	pub slot: SlotKey,
 }
 
+#[derive(PartialEq, Debug, Clone, Copy, Default)]
+pub struct Active {
+	pub ray: Ray,
+	pub slot: SlotKey,
+	pub duration: Duration,
+	pub ignore_after_cast: bool,
+}
+
 impl Skill {
 	pub fn with<T: Clone + Copy>(self, data: T) -> Skill<T> {
 		Skill {
@@ -132,8 +132,30 @@ impl Skill {
 			cast: self.cast,
 			marker: self.marker,
 			behavior: self.behavior,
-			dequeue: self.dequeue,
 		}
+	}
+}
+
+impl<TSrc> Skill<TSrc> {
+	pub fn map_data<TDst>(self, map: fn(TSrc) -> TDst) -> Skill<TDst> {
+		Skill {
+			name: self.name,
+			data: map(self.data),
+			cast: self.cast,
+			marker: self.marker,
+			behavior: self.behavior,
+		}
+	}
+}
+
+impl Skill<Queued> {
+	pub fn to_active(self) -> Skill<Active> {
+		self.map_data(|Queued { ray, slot }| Active {
+			ray,
+			slot,
+			duration: Duration::ZERO,
+			ignore_after_cast: false,
+		})
 	}
 }
 
@@ -235,27 +257,6 @@ pub type Equipment = Collection<(SlotKey, Item)>;
 
 #[derive(Component)]
 pub struct Queue(pub VecDeque<Skill<Queued>>);
-
-#[derive(Component)]
-pub struct TimeTracker<TBehavior> {
-	pub duration: Duration,
-	phantom_data: PhantomData<TBehavior>,
-}
-
-impl<T> TimeTracker<T> {
-	pub fn new() -> Self {
-		Self {
-			duration: Duration::ZERO,
-			phantom_data: PhantomData,
-		}
-	}
-}
-
-impl<T> Default for TimeTracker<T> {
-	fn default() -> Self {
-		Self::new()
-	}
-}
 
 #[derive(Component)]
 pub struct Projectile {
