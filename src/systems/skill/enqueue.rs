@@ -1,13 +1,13 @@
 use crate::{
 	components::{Active, Queue, Queued, Schedule, ScheduleMode, Skill, SlotKey, WaitNext},
-	traits::get_ray::GetRayFromCamera,
+	traits::{get_ray::GetRayFromCamera, try_chain::TryChain},
 };
 use bevy::{
 	prelude::{Camera, Commands, Entity, GlobalTransform, Mut, Query, Ray},
 	window::Window,
 };
 
-pub fn enqueue<TGetRay: GetRayFromCamera>(
+pub fn enqueue<TTools: GetRayFromCamera + TryChain>(
 	camera: Query<(&Camera, &GlobalTransform)>,
 	window: Query<&Window>,
 	mut agents: Query<(Entity, &Schedule, &mut Queue, Option<&mut Skill<Active>>)>,
@@ -19,10 +19,10 @@ pub fn enqueue<TGetRay: GetRayFromCamera>(
 
 	let (camera, camera_transform) = camera.single();
 	let window = window.single();
-	let ray = TGetRay::get_ray(camera, camera_transform, window);
+	let ray = TTools::get_ray(camera, camera_transform, window);
 
 	for (agent, schedule, mut queue, mut running) in &mut agents {
-		enqueue_skills(
+		enqueue_skills::<TTools>(
 			agent,
 			schedule,
 			&mut queue,
@@ -34,7 +34,7 @@ pub fn enqueue<TGetRay: GetRayFromCamera>(
 	}
 }
 
-fn enqueue_skills(
+fn enqueue_skills<TTools: TryChain>(
 	agent: Entity,
 	schedule: &Schedule,
 	queue: &mut Queue,
@@ -43,11 +43,14 @@ fn enqueue_skills(
 	ray: Option<Ray>,
 ) {
 	for slot in &schedule.skills {
-		enqueue_skill(agent, schedule, queue, running, slot, commands, ray);
+		enqueue_skill::<TTools>(agent, schedule, queue, running, slot, commands, ray);
 	}
 }
 
-fn enqueue_skill(
+const CHAINED: bool = true;
+const NOT_CHAINED: bool = false;
+
+fn enqueue_skill<TTools: TryChain>(
 	agent: Entity,
 	schedule: &Schedule,
 	queue: &mut Queue,
@@ -61,22 +64,20 @@ fn enqueue_skill(
 	let Some(mut new) = ray.map(|ray| skill.with(Queued { ray, slot })) else {
 		return;
 	};
-	let soft_override = running
+	let chained = running
 		.as_mut()
-		.map(|running| (new.marker.soft_override)(running, &mut new))
-		.unwrap_or(false);
+		.map(|running| TTools::try_chain(running, &mut new))
+		.unwrap_or(NOT_CHAINED);
 
-	match (schedule.mode, soft_override) {
+	match (schedule.mode, chained) {
 		(ScheduleMode::Enqueue, ..) => {
 			queue.0.push_back(new);
 		}
-		(ScheduleMode::Override, true) => {
-			queue.0.clear();
-			queue.0.push_back(new);
+		(ScheduleMode::Override, CHAINED) => {
+			queue.0 = vec![new].into();
 		}
-		(ScheduleMode::Override, ..) => {
-			queue.0.clear();
-			queue.0.push_back(new);
+		(ScheduleMode::Override, NOT_CHAINED) => {
+			queue.0 = vec![new].into();
 			commands.entity(agent).insert(WaitNext);
 		}
 	}
@@ -85,16 +86,13 @@ fn enqueue_skill(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::{Cast, Schedule, ScheduleMode, Side, WaitNext},
-		markers::meta::MarkerMeta,
-	};
+	use crate::components::{Cast, Schedule, ScheduleMode, Side, WaitNext};
 	use bevy::{
 		prelude::{App, Camera, Camera3dBundle, GlobalTransform, Ray, Update, Vec3},
 		utils::default,
 		window::Window,
 	};
-	use mockall::automock;
+	use mockall::{mock, predicate::eq};
 	use std::time::Duration;
 
 	const TEST_RAY: Ray = Ray {
@@ -102,9 +100,9 @@ mod tests {
 		direction: Vec3::Z,
 	};
 
-	struct GetTestRay;
+	struct FakeTools;
 
-	impl GetRayFromCamera for GetTestRay {
+	impl GetRayFromCamera for FakeTools {
 		fn get_ray(
 			_camera: &Camera,
 			_camera_transform: &GlobalTransform,
@@ -114,7 +112,31 @@ mod tests {
 		}
 	}
 
-	fn setup<TGetRay: GetRayFromCamera + 'static>() -> App {
+	impl TryChain for FakeTools {
+		fn try_chain(_running: &mut Skill<Active>, _new: &mut Skill<Queued>) -> bool {
+			false
+		}
+	}
+
+	macro_rules! setup_mock {
+		($struct_name:ident) => {
+			mock! {
+				$struct_name {}
+				impl GetRayFromCamera for $struct_name{
+					fn get_ray(
+						_camera: &Camera,
+						_camera_transform: &GlobalTransform,
+						_window: &Window,
+					) -> Option<Ray> {}
+				}
+				impl TryChain for $struct_name {
+					fn try_chain(_running: &mut Skill<Active>, _new: &mut Skill<Queued>) -> bool {}
+				}
+			}
+		};
+	}
+
+	fn setup<TTools: GetRayFromCamera + TryChain + 'static>() -> App {
 		let mut app = App::new();
 
 		app.world.spawn(Camera3dBundle {
@@ -129,27 +151,30 @@ mod tests {
 			title: "Window".to_owned(),
 			..default()
 		});
-		app.add_systems(Update, enqueue::<TGetRay>);
+		app.add_systems(Update, enqueue::<TTools>);
 
 		app
 	}
 
 	#[test]
 	fn set_enqueue() {
-		let mut app = setup::<GetTestRay>();
-		let new_skill = Skill {
-			cast: Cast {
-				pre: Duration::from_millis(100),
-				..default()
-			},
-			..default()
-		};
+		let mut app = setup::<FakeTools>();
 		let agent = app
 			.world
 			.spawn((
 				Schedule {
 					mode: ScheduleMode::Enqueue,
-					skills: [(SlotKey::Hand(Side::Left), new_skill)].into(),
+					skills: [(
+						SlotKey::Hand(Side::Left),
+						Skill {
+							cast: Cast {
+								pre: Duration::from_millis(100),
+								..default()
+							},
+							..default()
+						},
+					)]
+					.into(),
 				},
 				Queue(
 					[
@@ -212,7 +237,7 @@ mod tests {
 
 	#[test]
 	fn set_override() {
-		let mut app = setup::<GetTestRay>();
+		let mut app = setup::<FakeTools>();
 		let new_skill = Skill {
 			cast: Cast {
 				pre: Duration::from_millis(100),
@@ -266,37 +291,38 @@ mod tests {
 		);
 	}
 
+	setup_mock!(_A);
+
 	#[test]
-	fn set_override_without_wait_next_when_soft_override_true() {
-		let mut app = setup::<GetTestRay>();
-		let new_skill = Skill {
-			name: "new",
-			cast: Cast {
-				pre: Duration::from_millis(100),
-				..default()
-			},
-			marker: MarkerMeta {
-				soft_override: |running, new| running.name == "running" && new.name == "new",
-				..default()
-			},
+	fn set_override_without_wait_next_when_try_chain_true() {
+		let mut app = setup::<Mock_A>();
+		let running_skill = Skill {
+			name: "running",
 			..default()
 		};
+		let new_skill = Skill {
+			name: "new",
+			..default()
+		};
+		let get_ray = Mock_A::get_ray_context();
+		get_ray.expect().return_const(Some(TEST_RAY));
+		let try_chain = Mock_A::try_chain_context();
+		try_chain
+			.expect()
+			.times(1)
+			.with(
+				eq(running_skill),
+				eq(new_skill.with(Queued {
+					ray: TEST_RAY,
+					slot: SlotKey::Hand(Side::Left),
+				})),
+			)
+			.return_const(true);
+
 		let agent = app
 			.world
 			.spawn((
-				Skill {
-					name: "running",
-					data: Active {
-						ray: TEST_RAY,
-						slot: SlotKey::Hand(Side::Left),
-						..default()
-					},
-					cast: Cast {
-						pre: Duration::from_millis(1),
-						..default()
-					},
-					..default()
-				},
+				running_skill,
 				Schedule {
 					mode: ScheduleMode::Override,
 					skills: [(SlotKey::Hand(Side::Left), new_skill)].into(),
@@ -327,7 +353,7 @@ mod tests {
 
 	#[test]
 	fn remove_schedule() {
-		let mut app = setup::<GetTestRay>();
+		let mut app = setup::<FakeTools>();
 		let agent = app
 			.world
 			.spawn((
@@ -346,28 +372,15 @@ mod tests {
 		assert!(!agent.contains::<Schedule>());
 	}
 
+	setup_mock!(_B);
+
 	#[test]
 	fn ray_from_camera_and_window() {
-		struct _GetRay;
-
-		#[automock]
-		impl GetRayFromCamera for _GetRay {
-			fn get_ray(
-				_camera: &Camera,
-				_camera_transform: &GlobalTransform,
-				_window: &Window,
-			) -> Option<Ray> {
-				None
-			}
-		}
-
-		let mut app = setup::<Mock_GetRay>();
-		let get_ray = Mock_GetRay::get_ray_context();
 		let ray = Ray {
 			origin: Vec3::ZERO,
 			direction: Vec3::ONE,
 		};
-
+		let get_ray = Mock_B::get_ray_context();
 		get_ray
 			.expect()
 			.withf(|cam, cam_transform, window| {
@@ -377,7 +390,10 @@ mod tests {
 			})
 			.times(1)
 			.return_const(ray);
+		let try_chain = Mock_B::try_chain_context();
+		try_chain.expect().return_const(false);
 
+		let mut app = setup::<Mock_B>();
 		app.world.spawn((
 			Schedule {
 				mode: ScheduleMode::Override,
@@ -389,30 +405,20 @@ mod tests {
 		app.update();
 	}
 
+	setup_mock!(_C);
+
 	#[test]
 	fn do_not_produce_ray_when_nothing_scheduled() {
-		struct _GetRay;
-
-		#[automock]
-		impl GetRayFromCamera for _GetRay {
-			fn get_ray(
-				_camera: &Camera,
-				_camera_transform: &GlobalTransform,
-				_window: &Window,
-			) -> Option<Ray> {
-				None
-			}
-		}
-
-		let mut app = setup::<Mock_GetRay>();
-		let get_ray = Mock_GetRay::get_ray_context();
 		let ray = Ray {
 			origin: Vec3::ZERO,
 			direction: Vec3::ONE,
 		};
-
+		let get_ray = Mock_C::get_ray_context();
 		get_ray.expect().times(0).return_const(ray);
+		let try_chain = Mock_C::try_chain_context();
+		try_chain.expect().return_const(false);
 
+		let mut app = setup::<Mock_C>();
 		app.world.spawn(Queue([].into()));
 
 		app.update();
