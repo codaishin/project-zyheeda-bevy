@@ -3,26 +3,34 @@ use crate::{
 	components::{Active, Marker, Queued, Side, Skill, SlotKey},
 	errors::{Error, Level},
 	markers::{
-		meta::{MarkerMeta, Tag},
+		meta::{Chain, MarkerMeta, MarkerModifyFn, Tag},
 		Dual,
 		HandGun,
 		Left,
 		Right,
 	},
 };
-use bevy::{ecs::system::EntityCommands, utils::default};
+use bevy::ecs::system::EntityCommands;
 
 impl GetMarkerMeta for HandGun {
 	fn marker() -> MarkerMeta {
 		MarkerMeta {
-			insert_fn: insert_fn::<(HandGun, Left), (HandGun, Right)>,
-			remove_fn: remove_fn::<(HandGun, Left), (HandGun, Right)>,
-			soft_override,
 			tag: Some(Tag::HandGun),
-			..default()
+			insert_fn: INSERT_SINGLE,
+			remove_fn: REMOVE_SINGLE,
+			chain: Chain {
+				can_chain,
+				modify_single,
+				modify_dual,
+			},
 		}
 	}
 }
+
+const INSERT_SINGLE: MarkerModifyFn = insert_fn::<(HandGun, Left), (HandGun, Right)>;
+const REMOVE_SINGLE: MarkerModifyFn = remove_fn::<(HandGun, Left), (HandGun, Right)>;
+const INSERT_DUAL: MarkerModifyFn = insert_fn::<(HandGun, Left, Dual), (HandGun, Right, Dual)>;
+const REMOVE_DUAL: MarkerModifyFn = remove_fn::<(HandGun, Left, Dual), (HandGun, Right, Dual)>;
 
 fn slot_error(slot: SlotKey) -> Error {
 	Error {
@@ -63,22 +71,20 @@ fn remove_fn<TLeft: Send + Sync + 'static, TRight: Send + Sync + 'static>(
 	Ok(())
 }
 
-fn soft_override(running: &mut Skill<Active>, new: &mut Skill<Queued>) -> bool {
-	if running.marker.tag != Some(Tag::HandGun) || new.marker.tag != Some(Tag::HandGun) {
-		running.data.ignore_after_cast = false;
-		return false;
-	}
-	match (running.data.slot, new.data.slot) {
-		(SlotKey::Hand(running_side), SlotKey::Hand(new_side)) if running_side != new_side => {
-			new.marker.insert_fn = insert_fn::<(HandGun, Left, Dual), (HandGun, Right, Dual)>;
-			new.marker.remove_fn = remove_fn::<(HandGun, Left, Dual), (HandGun, Right, Dual)>;
-			running.data.ignore_after_cast = true;
-		}
-		_ => {
-			running.data.ignore_after_cast = false;
-		}
-	}
-	true
+fn can_chain(running: &Skill<Active>, new: &Skill<Queued>) -> bool {
+	running.marker.tag == Some(Tag::HandGun) && new.marker.tag == Some(Tag::HandGun)
+}
+
+fn modify_single(running: &mut Skill<Active>, new: &mut Skill<Queued>) {
+	running.data.ignore_after_cast = false;
+	new.marker.insert_fn = INSERT_SINGLE;
+	new.marker.remove_fn = REMOVE_SINGLE;
+}
+
+fn modify_dual(running: &mut Skill<Active>, new: &mut Skill<Queued>) {
+	running.data.ignore_after_cast = true;
+	new.marker.insert_fn = INSERT_DUAL;
+	new.marker.remove_fn = REMOVE_DUAL;
 }
 
 #[cfg(test)]
@@ -256,168 +262,106 @@ mod tests {
 	}
 
 	#[test]
-	fn soft_override_true_when_both_skills_with_handgun_marker_different_sides() {
-		let handgun_marker = HandGun::marker();
-		let mut running = Skill {
-			marker: HandGun::marker(),
-			data: Active {
-				slot: SlotKey::Hand(Side::Left),
-				ignore_after_cast: false,
+	fn can_override_true() {
+		let can_chain = HandGun::marker().chain.can_chain;
+		let running = Skill {
+			marker: MarkerMeta {
+				tag: Some(Tag::HandGun),
 				..default()
 			},
 			..default()
 		};
-		let mut new = Skill {
-			data: Queued {
-				slot: SlotKey::Hand(Side::Right),
+		let new = Skill {
+			marker: MarkerMeta {
+				tag: Some(Tag::HandGun),
 				..default()
 			},
-			marker: HandGun::marker(),
 			..default()
 		};
 
-		assert_eq!(
-			(
-				true,
-				true,
-				MarkerMeta {
-					insert_fn: insert_fn::<(HandGun, Left, Dual), (HandGun, Right, Dual)>,
-					remove_fn: remove_fn::<(HandGun, Left, Dual), (HandGun, Right, Dual)>,
-					soft_override,
-					tag: Some(Tag::HandGun),
-					..default()
-				}
-			),
-			(
-				(handgun_marker.soft_override)(&mut running, &mut new),
-				running.data.ignore_after_cast,
-				new.marker,
-			)
-		);
+		assert!(can_chain(&running, &new));
 	}
 
 	#[test]
-	fn soft_override_true_when_both_skills_with_handgun_marker_same_side() {
-		let handgun_marker = HandGun::marker();
+	fn can_override_running_no_handgun_false() {
+		let can_chain = HandGun::marker().chain.can_chain;
+		let running = Skill {
+			marker: MarkerMeta {
+				tag: None,
+				..default()
+			},
+			..default()
+		};
+		let new = Skill {
+			marker: MarkerMeta {
+				tag: Some(Tag::HandGun),
+				..default()
+			},
+			..default()
+		};
+
+		assert!(!can_chain(&running, &new));
+	}
+
+	#[test]
+	fn can_override_new_no_handgun_false() {
+		let can_chain = HandGun::marker().chain.can_chain;
+		let running = Skill {
+			marker: MarkerMeta {
+				tag: Some(Tag::HandGun),
+				..default()
+			},
+			..default()
+		};
+		let new = Skill {
+			marker: MarkerMeta {
+				tag: None,
+				..default()
+			},
+			..default()
+		};
+
+		assert!(!can_chain(&running, &new));
+	}
+
+	#[test]
+	fn modify_single() {
+		let modify = HandGun::marker().chain.modify_single;
 		let mut running = Skill {
-			marker: HandGun::marker(),
 			data: Active {
-				slot: SlotKey::Hand(Side::Left),
 				ignore_after_cast: true,
 				..default()
 			},
 			..default()
 		};
-		let mut new = Skill {
-			data: Queued {
-				slot: SlotKey::Hand(Side::Left),
-				..default()
-			},
-			marker: HandGun::marker(),
-			..default()
-		};
+		let mut new = Skill { ..default() };
+
+		modify(&mut running, &mut new);
 
 		assert_eq!(
-			(true, false, HandGun::marker()),
+			(INSERT_SINGLE as usize, REMOVE_SINGLE as usize, false,),
 			(
-				(handgun_marker.soft_override)(&mut running, &mut new),
-				running.data.ignore_after_cast,
-				new.marker,
+				new.marker.insert_fn as usize,
+				new.marker.remove_fn as usize,
+				running.data.ignore_after_cast
 			)
 		);
 	}
 
 	#[test]
-	fn soft_override_true_when_both_skills_with_handgun_marker_single_not_hand_slot() {
-		let handgun_marker = HandGun::marker();
-		let mut running = Skill {
-			marker: HandGun::marker(),
-			data: Active {
-				slot: SlotKey::Legs,
-				ignore_after_cast: true,
-				..default()
-			},
-			..default()
-		};
-		let mut new = Skill {
-			data: Queued {
-				slot: SlotKey::Hand(Side::Left),
-				..default()
-			},
-			marker: HandGun::marker(),
-			..default()
-		};
+	fn modify_dual() {
+		let modify = HandGun::marker().chain.modify_dual;
+		let mut running = Skill { ..default() };
+		let mut new = Skill { ..default() };
+
+		modify(&mut running, &mut new);
 
 		assert_eq!(
-			(true, false, HandGun::marker()),
+			(INSERT_DUAL as usize, REMOVE_DUAL as usize, true,),
 			(
-				(handgun_marker.soft_override)(&mut running, &mut new),
-				running.data.ignore_after_cast,
-				new.marker,
-			)
-		);
-	}
-
-	#[test]
-	fn soft_override_false_when_running_skill_not_with_handgun_marker() {
-		let mut handgun_marker = HandGun::marker();
-		handgun_marker.tag = None;
-		let mut running = Skill {
-			marker: handgun_marker,
-			data: Active {
-				slot: SlotKey::Hand(Side::Left),
-				ignore_after_cast: true,
-				..default()
-			},
-			..default()
-		};
-		let mut new = Skill {
-			data: Queued {
-				slot: SlotKey::Hand(Side::Right),
-				..default()
-			},
-			marker: HandGun::marker(),
-			..default()
-		};
-
-		assert_eq!(
-			(false, false, HandGun::marker()),
-			(
-				(handgun_marker.soft_override)(&mut running, &mut new),
-				running.data.ignore_after_cast,
-				new.marker,
-			)
-		);
-	}
-
-	#[test]
-	fn soft_override_false_when_new_skill_not_with_handgun_marker() {
-		let mut handgun_marker = HandGun::marker();
-		handgun_marker.tag = None;
-		let mut running = Skill {
-			marker: HandGun::marker(),
-			data: Active {
-				slot: SlotKey::Hand(Side::Left),
-				ignore_after_cast: true,
-				..default()
-			},
-			..default()
-		};
-		let mut new = Skill {
-			data: Queued {
-				slot: SlotKey::Hand(Side::Right),
-				..default()
-			},
-			marker: handgun_marker,
-			..default()
-		};
-
-		assert_eq!(
-			(false, false, handgun_marker),
-			(
-				(handgun_marker.soft_override)(&mut running, &mut new),
-				running.data.ignore_after_cast,
-				new.marker,
+				new.marker.insert_fn as usize,
+				new.marker.remove_fn as usize,
+				running.data.ignore_after_cast
 			)
 		);
 	}

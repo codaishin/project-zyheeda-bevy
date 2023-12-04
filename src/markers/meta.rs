@@ -32,21 +32,18 @@ impl Default for Chain {
 	}
 }
 
+pub type MarkerModifyFn = fn(&mut EntityCommands, slot: SlotKey) -> Result<(), Error>;
+
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct MarkerMeta {
 	pub tag: Option<Tag>,
-	pub insert_fn: fn(&mut EntityCommands, slot: SlotKey) -> Result<(), Error>,
-	pub remove_fn: fn(&mut EntityCommands, slot: SlotKey) -> Result<(), Error>,
-	pub soft_override: fn(&mut Skill<Active>, &mut Skill<Queued>) -> bool,
+	pub insert_fn: MarkerModifyFn,
+	pub remove_fn: MarkerModifyFn,
 	pub chain: Chain,
 }
 
 fn noop(_: &mut EntityCommands, _: SlotKey) -> Result<(), Error> {
 	Ok(())
-}
-
-fn no_soft_override(_running: &mut Skill<Active>, _new: &mut Skill<Queued>) -> bool {
-	false
 }
 
 impl Default for MarkerMeta {
@@ -55,7 +52,6 @@ impl Default for MarkerMeta {
 			tag: None,
 			insert_fn: noop,
 			remove_fn: noop,
-			soft_override: no_soft_override,
 			chain: default(),
 		}
 	}
