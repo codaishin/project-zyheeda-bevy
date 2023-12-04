@@ -10,7 +10,7 @@ use crate::{
 		Right,
 	},
 };
-use bevy::ecs::system::EntityCommands;
+use bevy::{ecs::system::EntityCommands, utils::default};
 
 impl GetMarkerMeta for HandGun {
 	fn marker() -> MarkerMeta {
@@ -19,6 +19,7 @@ impl GetMarkerMeta for HandGun {
 			remove_fn: remove_fn::<(HandGun, Left), (HandGun, Right)>,
 			soft_override,
 			tag: Some(Tag::HandGun),
+			..default()
 		}
 	}
 }
@@ -283,7 +284,8 @@ mod tests {
 					insert_fn: insert_fn::<(HandGun, Left, Dual), (HandGun, Right, Dual)>,
 					remove_fn: remove_fn::<(HandGun, Left, Dual), (HandGun, Right, Dual)>,
 					soft_override,
-					tag: Some(Tag::HandGun)
+					tag: Some(Tag::HandGun),
+					..default()
 				}
 			),
 			(
