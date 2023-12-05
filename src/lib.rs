@@ -7,6 +7,7 @@ pub mod components;
 pub mod errors;
 pub mod markers;
 pub mod resources;
+pub mod states;
 pub mod systems;
 pub mod tools;
 pub mod traits;

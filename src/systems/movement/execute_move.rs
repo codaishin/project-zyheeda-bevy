@@ -6,8 +6,12 @@ use crate::{
 };
 use bevy::prelude::*;
 
-pub fn execute_move<TAgent: Component + MovementData, TMovement: Component + Movement>(
-	time: Res<Time<Real>>,
+pub fn execute_move<
+	TAgent: Component + MovementData,
+	TMovement: Component + Movement,
+	TTime: Send + Sync + Default + 'static,
+>(
+	time: Res<Time<TTime>>,
 	mut commands: Commands,
 	mut agents: Query<(Entity, &mut TMovement, &mut Transform, &TAgent)>,
 ) {
@@ -91,8 +95,8 @@ mod test {
 		app.add_systems(
 			Update,
 			(
-				execute_move::<AgentRun, _Movement>,
-				execute_move::<AgentWalk, _Movement>,
+				execute_move::<AgentRun, _Movement, Real>,
+				execute_move::<AgentWalk, _Movement, Real>,
 			),
 		);
 

@@ -14,7 +14,7 @@ use crate::{
 };
 use bevy::{
 	ecs::{component::Component, system::EntityCommands},
-	prelude::{Commands, Entity, GlobalTransform, Mut, Query, Real, Res, Time, Transform},
+	prelude::{Commands, Entity, GlobalTransform, Mut, Query, Res, Time, Transform},
 };
 use std::time::Duration;
 
@@ -26,8 +26,11 @@ type Skills<'a, TSkill> = (
 	Option<&'a WaitNext>,
 );
 
-pub fn execute_skill<TSkill: CastUpdate + MarkerModify + BehaviorExecution + Component>(
-	time: Res<Time<Real>>,
+pub fn execute_skill<
+	TSkill: CastUpdate + MarkerModify + BehaviorExecution + Component,
+	TTime: Send + Sync + Default + 'static,
+>(
+	time: Res<Time<TTime>>,
 	mut commands: Commands,
 	mut agents: Query<Skills<TSkill>>,
 	transforms: Query<&GlobalTransform>,
@@ -254,7 +257,7 @@ mod tests {
 		app.update();
 		app.add_systems(
 			Update,
-			execute_skill::<_Skill>.pipe(fake_log_error_lazy_many(agent)),
+			execute_skill::<_Skill, Real>.pipe(fake_log_error_lazy_many(agent)),
 		);
 
 		(app, agent)
