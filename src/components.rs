@@ -257,6 +257,7 @@ impl<TElement> Collection<TElement> {
 }
 
 pub type Inventory = Collection<Option<Item>>;
+pub type Equipment = Collection<(SlotKey, Option<Item>)>;
 
 #[derive(Component)]
 pub struct Queue(pub VecDeque<Skill<Queued>>);

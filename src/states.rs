@@ -5,5 +5,5 @@ pub enum GameState {
 	#[default]
 	None,
 	Running,
-	Menu,
+	InGameMenu,
 }
