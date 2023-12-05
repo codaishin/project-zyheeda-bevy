@@ -42,7 +42,11 @@ use project_zyheeda::{
 		orbit::{Orbit, Vec2Radians},
 	},
 };
-use std::{f32::consts::PI, time::Duration};
+use std::{
+	f32::consts::PI,
+	sync::{Arc, RwLock},
+	time::Duration,
+};
 
 fn main() {
 	App::new()
@@ -95,7 +99,92 @@ fn main() {
 			(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>),
 		)
 		.add_systems(Update, debug)
+		.add_systems(Startup, spawn_my_comps)
+		.add_systems(Update, count_count)
+		.add_systems(Update, print_count())
+		.add_systems(Update, run_field)
 		.run();
+}
+
+type ArcRwLock<T> = Arc<RwLock<T>>;
+
+#[derive(Component)]
+struct MyMutComp {
+	pub count_fn: ArcRwLock<dyn FnMut() + Send + Sync>,
+}
+
+#[derive(Component)]
+struct MyPrintComp {
+	pub print_fn: ArcRwLock<dyn Fn(u32) + Send + Sync>,
+}
+
+trait SomeTrait {
+	fn run(&self);
+}
+
+#[derive(Component)]
+struct MyTraitComp {
+	pub field: ArcRwLock<dyn SomeTrait + Send + Sync>,
+}
+
+struct MyImpl {
+	pub value: u32,
+}
+
+impl SomeTrait for MyImpl {
+	fn run(&self) {
+		println!("MyImpl: {}", self.value);
+	}
+}
+
+fn spawn_my_comps(mut commands: Commands) {
+	let count = Arc::new(RwLock::new(0));
+	let count_clone = count.clone();
+	let count_fn = Arc::new(RwLock::new(move || {
+		if let Ok(mut count) = count.try_write() {
+			*count += 1;
+		}
+	}));
+	let print_fn = Arc::new(RwLock::new(move |frame: u32| {
+		if let Ok(count) = count_clone.try_read() {
+			let count = *count;
+			println!("Frame: {}, Count: {}, Off: {}", frame, count, frame - count);
+		}
+	}));
+	let field = Arc::new(RwLock::new(MyImpl { value: 42 }));
+	commands.spawn((
+		MyMutComp { count_fn },
+		MyPrintComp { print_fn },
+		MyTraitComp { field },
+	));
+}
+
+fn print_count() -> impl FnMut(Query<&mut MyPrintComp>) {
+	let mut frame = 0;
+	move |mut query| {
+		frame += 1;
+		for c in &mut query {
+			if let Ok(func) = c.print_fn.try_read() {
+				func(frame);
+			}
+		}
+	}
+}
+
+fn count_count(mut query: Query<&mut MyMutComp>) {
+	for c in &mut query {
+		if let Ok(mut func) = c.count_fn.try_write() {
+			func();
+		}
+	}
+}
+
+fn run_field(query: Query<&MyTraitComp>) {
+	for c in &query {
+		if let Ok(field) = c.field.try_read() {
+			field.run();
+		}
+	}
 }
 
 fn debug(
