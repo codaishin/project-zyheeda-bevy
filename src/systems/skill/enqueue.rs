@@ -47,9 +47,6 @@ fn enqueue_skills<TTools: TryChain>(
 	}
 }
 
-const CHAINED: bool = true;
-const NOT_CHAINED: bool = false;
-
 fn enqueue_skill<TTools: TryChain>(
 	agent: Entity,
 	schedule: &Schedule,
@@ -64,22 +61,21 @@ fn enqueue_skill<TTools: TryChain>(
 	let Some(mut new) = ray.map(|ray| skill.with(Queued { ray, slot })) else {
 		return;
 	};
+
+	if schedule.mode == ScheduleMode::Enqueue {
+		queue.0.push_back(new);
+		return;
+	}
+
 	let chained = running
 		.as_mut()
 		.map(|running| TTools::try_chain(running, &mut new))
-		.unwrap_or(NOT_CHAINED);
+		.unwrap_or(false);
 
-	match (schedule.mode, chained) {
-		(ScheduleMode::Enqueue, ..) => {
-			queue.0.push_back(new);
-		}
-		(ScheduleMode::Override, CHAINED) => {
-			queue.0 = vec![new].into();
-		}
-		(ScheduleMode::Override, NOT_CHAINED) => {
-			queue.0 = vec![new].into();
-			commands.entity(agent).insert(WaitNext);
-		}
+	queue.0 = vec![new].into();
+
+	if !chained {
+		commands.entity(agent).insert(WaitNext);
 	}
 }
 
@@ -100,9 +96,9 @@ mod tests {
 		direction: Vec3::Z,
 	};
 
-	struct FakeTools;
+	struct _Tools;
 
-	impl GetRayFromCamera for FakeTools {
+	impl GetRayFromCamera for _Tools {
 		fn get_ray(
 			_camera: &Camera,
 			_camera_transform: &GlobalTransform,
@@ -112,7 +108,7 @@ mod tests {
 		}
 	}
 
-	impl TryChain for FakeTools {
+	impl TryChain for _Tools {
 		fn try_chain(_running: &mut Skill<Active>, _new: &mut Skill<Queued>) -> bool {
 			false
 		}
@@ -158,7 +154,7 @@ mod tests {
 
 	#[test]
 	fn set_enqueue() {
-		let mut app = setup::<FakeTools>();
+		let mut app = setup::<_Tools>();
 		let agent = app
 			.world
 			.spawn((
@@ -237,7 +233,7 @@ mod tests {
 
 	#[test]
 	fn set_override() {
-		let mut app = setup::<FakeTools>();
+		let mut app = setup::<_Tools>();
 		let new_skill = Skill {
 			cast: Cast {
 				pre: Duration::from_millis(100),
@@ -305,8 +301,9 @@ mod tests {
 			..default()
 		};
 		let get_ray = Mock_A::get_ray_context();
-		get_ray.expect().return_const(Some(TEST_RAY));
 		let try_chain = Mock_A::try_chain_context();
+
+		get_ray.expect().return_const(Some(TEST_RAY));
 		try_chain
 			.expect()
 			.times(1)
@@ -353,17 +350,12 @@ mod tests {
 
 	#[test]
 	fn remove_schedule() {
-		let mut app = setup::<FakeTools>();
-		let agent = app
-			.world
-			.spawn((
-				Schedule {
-					mode: ScheduleMode::Override,
-					skills: [(SlotKey::Hand(Side::Left), Skill::default())].into(),
-				},
-				Queue([].into()),
-			))
-			.id();
+		let mut app = setup::<_Tools>();
+		let schedule = Schedule {
+			mode: ScheduleMode::Override,
+			skills: [(SlotKey::Hand(Side::Left), Skill::default())].into(),
+		};
+		let agent = app.world.spawn((schedule, Queue([].into()))).id();
 
 		app.update();
 
@@ -376,11 +368,13 @@ mod tests {
 
 	#[test]
 	fn ray_from_camera_and_window() {
+		let get_ray = Mock_B::get_ray_context();
+		let try_chain = Mock_B::try_chain_context();
 		let ray = Ray {
 			origin: Vec3::ZERO,
 			direction: Vec3::ONE,
 		};
-		let get_ray = Mock_B::get_ray_context();
+
 		get_ray
 			.expect()
 			.withf(|cam, cam_transform, window| {
@@ -390,7 +384,6 @@ mod tests {
 			})
 			.times(1)
 			.return_const(ray);
-		let try_chain = Mock_B::try_chain_context();
 		try_chain.expect().return_const(false);
 
 		let mut app = setup::<Mock_B>();
@@ -409,17 +402,45 @@ mod tests {
 
 	#[test]
 	fn do_not_produce_ray_when_nothing_scheduled() {
+		let get_ray = Mock_C::get_ray_context();
+		let try_chain = Mock_C::try_chain_context();
 		let ray = Ray {
 			origin: Vec3::ZERO,
 			direction: Vec3::ONE,
 		};
-		let get_ray = Mock_C::get_ray_context();
+
 		get_ray.expect().times(0).return_const(ray);
-		let try_chain = Mock_C::try_chain_context();
 		try_chain.expect().return_const(false);
 
 		let mut app = setup::<Mock_C>();
 		app.world.spawn(Queue([].into()));
+
+		app.update();
+	}
+
+	setup_mock!(_D);
+
+	#[test]
+	fn do_try_chain_on_enqueue() {
+		let get_ray = Mock_D::get_ray_context();
+		let try_chain = Mock_D::try_chain_context();
+		let ray = Ray {
+			origin: Vec3::ZERO,
+			direction: Vec3::ONE,
+		};
+
+		get_ray.expect().return_const(ray);
+		try_chain.expect().never().return_const(false);
+
+		let mut app = setup::<Mock_D>();
+		app.world.spawn((
+			Schedule {
+				mode: ScheduleMode::Enqueue,
+				skills: [(SlotKey::Hand(Side::Left), Skill::default())].into(),
+			},
+			Skill::<Active>::default(),
+			Queue([].into()),
+		));
 
 		app.update();
 	}
