@@ -263,3 +263,6 @@ pub struct Projectile {
 	pub target_ray: Ray,
 	pub range: f32,
 }
+
+#[derive(Component)]
+pub struct Inventory(pub Vec<Item>);
