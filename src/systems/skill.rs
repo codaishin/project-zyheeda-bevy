@@ -245,7 +245,7 @@ mod tests {
 					SlotKey::SkillSpawn,
 					Slot {
 						entity: skill_spawner,
-						skill: None,
+						item: None,
 					},
 				)]
 				.into(),

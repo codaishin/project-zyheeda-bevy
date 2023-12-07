@@ -210,7 +210,7 @@ pub struct Schedule {
 #[derive(PartialEq, Debug, Clone)]
 pub struct Slot {
 	pub entity: Entity,
-	pub skill: Option<Skill>,
+	pub item: Option<Item>,
 }
 
 #[derive(Component)]
@@ -228,7 +228,7 @@ impl Default for Slots {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct Item {
 	pub name: &'static str,
 	pub model: Option<&'static str>,

@@ -80,7 +80,7 @@ fn equip_item_to(
 	let mut slot_handle = get_slot_handle(item, slot.entity, scene_handles)?;
 	let model = get_model(item, models)?;
 
-	slot.skill = item.skill;
+	slot.item = Some(*item);
 	*slot_handle = model.clone();
 
 	Ok(())
@@ -181,7 +181,7 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot {
 							entity: slot,
-							skill: None,
+							item: None,
 						},
 					)]
 					.into(),
@@ -218,9 +218,13 @@ mod tests {
 				Some(model),
 				&Slot {
 					entity: slot,
-					skill: Some(Skill {
-						name: "Some Skill",
-						..default()
+					item: Some(Item {
+						name: "Some Item",
+						skill: Some(Skill {
+							name: "Some Skill",
+							..default()
+						}),
+						model: Some("model key"),
 					}),
 				}
 			),
@@ -251,7 +255,7 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot {
 							entity: slot,
-							skill: None,
+							item: None,
 						},
 					)]
 					.into(),
@@ -291,12 +295,16 @@ mod tests {
 				Some(Handle::default()),
 				&Slot {
 					entity: slot,
-					skill: Some(Skill {
-						cast: Cast {
-							pre: Duration::from_millis(1),
-							after: Duration::from_millis(2),
-						},
-						..default()
+					item: Some(Item {
+						name: "Some Item",
+						skill: Some(Skill {
+							cast: Cast {
+								pre: Duration::from_millis(1),
+								after: Duration::from_millis(2),
+							},
+							..default()
+						}),
+						model: None,
 					})
 				}
 			),
@@ -327,7 +335,7 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot {
 							entity: slot,
-							skill: None,
+							item: None,
 						},
 					)]
 					.into(),
@@ -369,7 +377,7 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot {
 							entity: slot,
-							skill: None,
+							item: None,
 						},
 					)]
 					.into(),
@@ -415,7 +423,7 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot {
 							entity: slot,
-							skill: None,
+							item: None,
 						},
 					)]
 					.into(),
@@ -462,7 +470,7 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot {
 							entity: slot,
-							skill: None,
+							item: None,
 						},
 					)]
 					.into(),
@@ -509,7 +517,7 @@ mod tests {
 						SlotKey::Hand(Side::Left),
 						Slot {
 							entity: slot,
-							skill: None,
+							item: None,
 						},
 					)]
 					.into(),
@@ -556,7 +564,7 @@ mod tests {
 						SlotKey::Hand(Side::Right),
 						Slot {
 							entity: slot,
-							skill: None,
+							item: None,
 						},
 					)]
 					.into(),
@@ -671,7 +679,7 @@ mod tests {
 						SlotKey::Hand(Side::Left),
 						Slot {
 							entity: slot,
-							skill: None,
+							item: None,
 						},
 					)]
 					.into(),
@@ -717,7 +725,7 @@ mod tests {
 						SlotKey::Hand(Side::Left),
 						Slot {
 							entity: slot,
-							skill: None,
+							item: None,
 						},
 					)]
 					.into(),

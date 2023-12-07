@@ -44,13 +44,7 @@ pub fn add_item_slots(
 			match find_bone(agent, bone_name, &children, &bones) {
 				Some(bone) => {
 					let entity = new_slot_on(bone, &mut commands);
-					slots.0.insert(
-						key,
-						Slot {
-							entity,
-							skill: None,
-						},
-					);
+					slots.0.insert(key, Slot { entity, item: None });
 					None
 				}
 				None => Some((key, bone_name)),
@@ -182,7 +176,7 @@ mod tests {
 				SlotKey::Hand(Side::Left),
 				Slot {
 					entity: slot,
-					skill: None
+					item: None
 				}
 			)]),
 			slots.0
