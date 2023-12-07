@@ -1,5 +1,5 @@
 use crate::{
-	components::{Collection, Equipment, Item, Queue, SlotBones, SlotKey, Slots, WaitNext},
+	components::{Collection, Item, Queue, SlotBones, SlotKey, Slots, WaitNext},
 	types::BoneName,
 };
 use bevy::prelude::Bundle;
@@ -8,7 +8,7 @@ use bevy::prelude::Bundle;
 pub struct Loadout {
 	slot_bones: SlotBones,
 	slots: Slots,
-	equipment: Equipment,
+	equipment: Collection<(SlotKey, Option<Item>)>,
 	wait_next: WaitNext,
 	queue: Queue,
 }
@@ -16,7 +16,7 @@ pub struct Loadout {
 impl Loadout {
 	pub fn new<const B: usize, const E: usize>(
 		slot_bones: [(SlotKey, &'static BoneName); B],
-		equipment: [(SlotKey, Item); E],
+		equipment: [(SlotKey, Option<Item>); E],
 	) -> Self {
 		Self {
 			slot_bones: SlotBones(slot_bones.into()),

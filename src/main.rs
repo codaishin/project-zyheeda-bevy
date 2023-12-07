@@ -56,7 +56,10 @@ fn main() {
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(PreUpdate, link_animators_with_new_animation_players)
 		.add_systems(PreUpdate, add_item_slots)
-		.add_systems(Update, equip_item.pipe(log_many))
+		.add_systems(
+			Update,
+			equip_item::<Player, (SlotKey, Option<Item>)>.pipe(log_many),
+		)
 		.add_systems(
 			Update,
 			(
@@ -264,9 +267,9 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
 			],
 			[
-				(SlotKey::Hand(Side::Right), pistol),
-				(SlotKey::Hand(Side::Left), pistol),
-				(SlotKey::Legs, legs),
+				(SlotKey::Hand(Side::Right), pistol.into()),
+				(SlotKey::Hand(Side::Left), pistol.into()),
+				(SlotKey::Legs, legs.into()),
 			],
 		),
 	));

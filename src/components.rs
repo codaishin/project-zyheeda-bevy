@@ -253,8 +253,6 @@ impl<TElement> Collection<TElement> {
 	}
 }
 
-pub type Equipment = Collection<(SlotKey, Item)>;
-
 #[derive(Component)]
 pub struct Queue(pub VecDeque<Skill<Queued>>);
 
@@ -263,6 +261,3 @@ pub struct Projectile {
 	pub target_ray: Ray,
 	pub range: f32,
 }
-
-#[derive(Component)]
-pub struct Inventory(pub Vec<Item>);
