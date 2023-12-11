@@ -79,23 +79,19 @@ fn equip_items_to<
 ) -> SourcesWithErrors<(TItemAccessor, Result<(), Error>)> {
 	let try_swap_items = |src: &TItemAccessor| {
 		let (slot_key, new_item) = src.get_key_and_item(component);
-		let new_item = new_item?;
-		Some(
-			match equip_new_and_return_old_item(slots, scene_handles, &(slot_key, new_item), models)
-			{
-				Err(error) => (src.with_item(Some(new_item), component), Err(error)),
-				Ok(old) => (src.with_item(old, component), Ok(())),
-			},
-		)
+		match equip_new_and_return_old_item(slots, scene_handles, (slot_key, new_item), models) {
+			Err(error) => (src.with_item(new_item, component), Err(error)),
+			Ok(old) => (src.with_item(old, component), Ok(())),
+		}
 	};
 
-	equip.0.iter().filter_map(try_swap_items).collect()
+	equip.0.iter().map(try_swap_items).collect()
 }
 
 fn equip_new_and_return_old_item(
 	slots: &mut Mut<Slots>,
 	scene_handles: &mut Query<&mut Handle<Scene>>,
-	(slot_key, item): &(SlotKey, Item),
+	(slot_key, item): (SlotKey, Option<Item>),
 	models: &Res<Models>,
 ) -> Result<Option<Item>, Error> {
 	let slot = get_slot(item, slots, slot_key)?;
@@ -103,25 +99,25 @@ fn equip_new_and_return_old_item(
 	let model = get_model(item, models)?;
 
 	let original_item = slot.item;
-	slot.item = Some(*item);
+	slot.item = item;
 	*slot_handle = model.clone();
 
 	Ok(original_item)
 }
 
 fn get_slot<'a>(
-	item: &'a Item,
+	item: Option<Item>,
 	slots: &'a mut Mut<'_, Slots>,
-	slot_key: &'a SlotKey,
+	slot_key: SlotKey,
 ) -> Result<&'a mut Slot, Error> {
-	match slots.0.get_mut(slot_key) {
-		None => Err(slot_warning(item, *slot_key)),
+	match slots.0.get_mut(&slot_key) {
+		None => Err(slot_warning(item, slot_key)),
 		Some(slot) => Ok(slot),
 	}
 }
 
 fn get_slot_handle<'a>(
-	item: &Item,
+	item: Option<Item>,
 	slot: Entity,
 	scene_handles: &'a mut Query<&mut Handle<Scene>>,
 ) -> Result<Mut<'a, Handle<Scene>>, Error> {
@@ -131,7 +127,11 @@ fn get_slot_handle<'a>(
 	}
 }
 
-fn get_model(item: &Item, models: &Res<Models>) -> Result<Handle<Scene>, Error> {
+fn get_model(item: Option<Item>, models: &Res<Models>) -> Result<Handle<Scene>, Error> {
+	let Some(item) = item else {
+		return Ok(Handle::default());
+	};
+
 	let Some(model_key) = item.model else {
 		return Ok(Handle::default());
 	};
@@ -143,23 +143,26 @@ fn get_model(item: &Item, models: &Res<Models>) -> Result<Handle<Scene>, Error> 
 	Ok(model.clone())
 }
 
-fn slot_warning(item: &Item, slot: SlotKey) -> Error {
+fn slot_warning(item: Option<Item>, slot: SlotKey) -> Error {
 	Error {
-		msg: format!("{}: slot {:?} not found, retrying next update", item, slot),
+		msg: format!(
+			"{:#?}: slot {:#?} not found, retrying next update",
+			item, slot
+		),
 		lvl: Level::Warning,
 	}
 }
 
-fn model_error(item: &Item, model_key: &str) -> Error {
+fn model_error(item: Item, model_key: &str) -> Error {
 	Error {
 		msg: format!("{}: no model found for {}, abandoning", item, model_key),
 		lvl: Level::Error,
 	}
 }
 
-fn scene_handle_error(item: &Item, slot: Entity) -> Error {
+fn scene_handle_error(item: Option<Item>, slot: Entity) -> Error {
 	Error {
-		msg: format!("{}: {:?} has no Handle<Scene>, abandoning", item, slot),
+		msg: format!("{:#?}: {:#?} has no Handle<Scene>, abandoning", item, slot),
 		lvl: Level::Error,
 	}
 }
@@ -289,6 +292,78 @@ mod tests {
 						}),
 						model: Some("model key"),
 					}),
+				}
+			),
+			(slot_model.cloned(), slot_component)
+		);
+	}
+
+	#[test]
+	fn equip_none_when_marked_to_equip() {
+		let model = Handle::<Scene>::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		});
+		let models = Models([("model key", model.clone())].into());
+
+		let mut app = App::new();
+		app.world.insert_resource(models);
+		let slot = app
+			.world
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
+			.id();
+		let agent = app
+			.world
+			.spawn((
+				_Container { name: "my comp" },
+				Slots(
+					[(
+						SlotKey::Hand(Side::Right),
+						Slot {
+							entity: slot,
+							item: Some(Item {
+								name: "Some Item",
+								skill: Some(Skill {
+									name: "Some Skill",
+									..default()
+								}),
+								model: Some("model key"),
+							}),
+						},
+					)]
+					.into(),
+				),
+				Collection::new([_Source {
+					slot: SlotKey::Hand(Side::Right),
+					item: None,
+					..default()
+				}]),
+			))
+			.id();
+		app.add_systems(
+			Update,
+			equip_item::<_Container, _Source>.pipe(fake_log_error_lazy_many(agent)),
+		);
+
+		app.update();
+
+		let slot_model = app.world.entity(slot).get::<Handle<Scene>>();
+		let slot_component = app
+			.world
+			.entity(agent)
+			.get::<Slots>()
+			.unwrap()
+			.0
+			.get(&SlotKey::Hand(Side::Right))
+			.unwrap();
+
+		assert_eq!(
+			(
+				Some(Handle::default()),
+				&Slot {
+					entity: slot,
+					item: None,
 				}
 			),
 			(slot_model.cloned(), slot_component)
@@ -889,7 +964,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&FakeErrorLogMany(
-				[slot_warning(&item, SlotKey::Hand(Side::Left))].into()
+				[slot_warning(Some(item), SlotKey::Hand(Side::Left))].into()
 			)),
 			agent.get::<FakeErrorLogMany>()
 		);
@@ -946,7 +1021,7 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			Some(&FakeErrorLogMany([model_error(&item, "model key")].into())),
+			Some(&FakeErrorLogMany([model_error(item, "model key")].into())),
 			agent.get::<FakeErrorLogMany>()
 		);
 	}
@@ -1000,7 +1075,9 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			Some(&FakeErrorLogMany([scene_handle_error(&item, slot)].into())),
+			Some(&FakeErrorLogMany(
+				[scene_handle_error(Some(item), slot)].into()
+			)),
 			agent.get::<FakeErrorLogMany>()
 		);
 	}
