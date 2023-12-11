@@ -253,6 +253,8 @@ impl<TElement> Collection<TElement> {
 	}
 }
 
+pub type Inventory = Collection<Option<Item>>;
+
 #[derive(Component)]
 pub struct Queue(pub VecDeque<Skill<Queued>>);
 
@@ -260,4 +262,10 @@ pub struct Queue(pub VecDeque<Skill<Queued>>);
 pub struct Projectile {
 	pub target_ray: Ray,
 	pub range: f32,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Swap {
+	pub inventory_key: usize,
+	pub slot_key: SlotKey,
 }

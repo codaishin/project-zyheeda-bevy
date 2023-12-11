@@ -1,3 +1,4 @@
+pub mod inventory;
 pub mod tuple_slot_key_item;
 
 pub trait Accessor<TContainer, TGet, TSet> {

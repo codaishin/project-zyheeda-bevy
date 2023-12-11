@@ -10,6 +10,7 @@ use project_zyheeda::{
 		Animator,
 		CamOrbit,
 		Cast,
+		Inventory,
 		Item,
 		Marker,
 		Player,
@@ -18,6 +19,7 @@ use project_zyheeda::{
 		SimpleMovement,
 		Skill,
 		SlotKey,
+		Swap,
 		UnitsPerSecond,
 	},
 	markers::{Dual, Fast, HandGun, Idle, Left, Right, Slow},
@@ -58,7 +60,10 @@ fn main() {
 		.add_systems(PreUpdate, add_item_slots)
 		.add_systems(
 			Update,
-			equip_item::<Player, (SlotKey, Option<Item>)>.pipe(log_many),
+			(
+				equip_item::<Player, (SlotKey, Option<Item>)>.pipe(log_many),
+				equip_item::<Inventory, Swap>.pipe(log_many),
+			),
 		)
 		.add_systems(
 			Update,
@@ -259,6 +264,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			run_speed: UnitsPerSecond::new(1.5),
 			movement_mode: MovementMode::Slow,
 		},
+		Inventory::new([]),
 		Loadout::new(
 			[
 				(SlotKey::SkillSpawn, "projectile_spawn"),
