@@ -1,14 +1,14 @@
 use super::Accessor;
 use crate::components::{Inventory, Item, SlotKey, Swap};
 
-impl Accessor<Inventory, (SlotKey, Item), Item> for Swap {
-	fn get_key_and_item(&self, inventory: &Inventory) -> Option<(SlotKey, Item)> {
+impl Accessor<Inventory, (SlotKey, Option<Item>), Item> for Swap {
+	fn get_key_and_item(&self, inventory: &Inventory) -> (SlotKey, Option<Item>) {
 		let inventory = &inventory.0;
 
 		if self.inventory_key >= inventory.len() {
-			return None;
+			return (self.slot_key, None);
 		}
-		inventory[self.inventory_key].map(|item| (self.slot_key, item))
+		(self.slot_key, inventory[self.inventory_key])
 	}
 
 	fn with_item(&self, item: Option<Item>, inventory: &mut Inventory) -> Self {
@@ -49,7 +49,7 @@ mod tests {
 			slot_key,
 		};
 
-		assert_eq!(Some((slot_key, item)), swap.get_key_and_item(&inventory));
+		assert_eq!((slot_key, Some(item)), swap.get_key_and_item(&inventory));
 	}
 
 	#[test]
@@ -65,7 +65,7 @@ mod tests {
 			slot_key,
 		};
 
-		assert_eq!(Some((slot_key, item)), swap.get_key_and_item(&inventory));
+		assert_eq!((slot_key, Some(item)), swap.get_key_and_item(&inventory));
 	}
 
 	#[test]
@@ -81,7 +81,7 @@ mod tests {
 			slot_key,
 		};
 
-		assert_eq!(Some((slot_key, item)), swap.get_key_and_item(&inventory));
+		assert_eq!((slot_key, Some(item)), swap.get_key_and_item(&inventory));
 	}
 
 	#[test]
@@ -97,7 +97,7 @@ mod tests {
 			slot_key,
 		};
 
-		assert_eq!(None, swap.get_key_and_item(&inventory));
+		assert_eq!((slot_key, None), swap.get_key_and_item(&inventory));
 	}
 
 	#[test]

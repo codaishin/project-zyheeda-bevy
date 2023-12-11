@@ -12,7 +12,7 @@ use bevy::{
 
 pub fn equip_item<
 	TContainer: Component,
-	TItemAccessor: Accessor<TContainer, (SlotKey, Item), Item> + Send + Sync + 'static,
+	TItemAccessor: Accessor<TContainer, (SlotKey, Option<Item>), Item> + Send + Sync + 'static,
 >(
 	mut commands: Commands,
 	models: Res<Models>,
@@ -69,7 +69,7 @@ type SourcesWithErrors<TItemAccessor> = Vec<TItemAccessor>;
 
 fn equip_items_to<
 	TContainer: Component,
-	TItemAccessor: Accessor<TContainer, (SlotKey, Item), Item>,
+	TItemAccessor: Accessor<TContainer, (SlotKey, Option<Item>), Item>,
 >(
 	slots: &mut Mut<Slots>,
 	scene_handles: &mut Query<&mut Handle<Scene>>,
@@ -78,7 +78,8 @@ fn equip_items_to<
 	models: &Res<Models>,
 ) -> SourcesWithErrors<(TItemAccessor, Result<(), Error>)> {
 	let try_swap_items = |src: &TItemAccessor| {
-		let (slot_key, new_item) = src.get_key_and_item(component)?;
+		let (slot_key, new_item) = src.get_key_and_item(component);
+		let new_item = new_item?;
 		Some(
 			match equip_new_and_return_old_item(slots, scene_handles, &(slot_key, new_item), models)
 			{
@@ -201,10 +202,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl Accessor<_Container, (SlotKey, Item), Item> for _Source {
-		fn get_key_and_item(&self, _component: &_Container) -> Option<(SlotKey, Item)> {
-			let item = self.item?;
-			Some((self.slot, item))
+	impl Accessor<_Container, (SlotKey, Option<Item>), Item> for _Source {
+		fn get_key_and_item(&self, _component: &_Container) -> (SlotKey, Option<Item>) {
+			(self.slot, self.item)
 		}
 
 		fn with_item(&self, item: Option<Item>, _component: &mut _Container) -> Self {
@@ -318,10 +318,10 @@ mod tests {
 			.with(eq(component))
 			.return_const((
 				SlotKey::Hand(Side::Right),
-				Item {
+				Some(Item {
 					name: "Some Item",
 					..default()
-				},
+				}),
 			));
 		mock_source
 			.expect_with_item()
@@ -376,10 +376,10 @@ mod tests {
 			.with(eq(component))
 			.return_const((
 				SlotKey::Hand(Side::Right),
-				Item {
+				Some(Item {
 					name: "Some Item",
 					..default()
-				},
+				}),
 			));
 		mock_source
 			.expect_with_item()

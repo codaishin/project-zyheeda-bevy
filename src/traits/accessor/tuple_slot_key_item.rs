@@ -1,11 +1,9 @@
 use super::Accessor;
 use crate::components::{Item, Player, SlotKey};
 
-impl Accessor<Player, (SlotKey, Item), Item> for (SlotKey, Option<Item>) {
-	fn get_key_and_item(&self, _: &Player) -> Option<(SlotKey, Item)> {
-		let (slot_key, item) = *self;
-		let item = item?;
-		Some((slot_key, item))
+impl Accessor<Player, (SlotKey, Option<Item>), Item> for (SlotKey, Option<Item>) {
+	fn get_key_and_item(&self, _: &Player) -> (SlotKey, Option<Item>) {
+		*self
 	}
 
 	fn with_item(&self, item: Option<Item>, _: &mut Player) -> Self {
@@ -31,7 +29,7 @@ mod tests {
 		let source = (slot_key, Some(item));
 
 		assert_eq!(
-			Some((slot_key, item)),
+			(slot_key, Some(item)),
 			source.get_key_and_item(&Player::default())
 		)
 	}
@@ -41,7 +39,10 @@ mod tests {
 		let slot_key = SlotKey::Hand(Side::Left);
 		let source = (slot_key, None);
 
-		assert_eq!(None, source.get_key_and_item(&Player::default()))
+		assert_eq!(
+			(slot_key, None),
+			source.get_key_and_item(&Player::default())
+		)
 	}
 
 	#[test]
