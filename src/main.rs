@@ -29,7 +29,7 @@ use project_zyheeda::{
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
 		input::schedule_slots::schedule_slots,
-		items::{equip::equip_item, slots::add_item_slots},
+		items::{equip::equip_item, slots::add_item_slots, swap::swap_equipped_items},
 		log::{log, log_many},
 		movement::{
 			execute_move::execute_move,
@@ -65,6 +65,7 @@ fn main() {
 				equip_item::<Player, (SlotKey, Option<Item>)>.pipe(log_many),
 				equip_item::<Inventory, Swap<InventoryKey, SlotKey>>.pipe(log_many),
 				equip_item::<Inventory, Swap<SlotKey, InventoryKey>>.pipe(log_many),
+				swap_equipped_items.pipe(log_many),
 			),
 		)
 		.add_systems(
