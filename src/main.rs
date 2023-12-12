@@ -11,6 +11,7 @@ use project_zyheeda::{
 		CamOrbit,
 		Cast,
 		Inventory,
+		InventoryKey,
 		Item,
 		Marker,
 		Player,
@@ -62,7 +63,8 @@ fn main() {
 			Update,
 			(
 				equip_item::<Player, (SlotKey, Option<Item>)>.pipe(log_many),
-				equip_item::<Inventory, Swap>.pipe(log_many),
+				equip_item::<Inventory, Swap<InventoryKey, SlotKey>>.pipe(log_many),
+				equip_item::<Inventory, Swap<SlotKey, InventoryKey>>.pipe(log_many),
 			),
 		)
 		.add_systems(

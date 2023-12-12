@@ -192,6 +192,9 @@ pub enum SlotKey {
 	Hand(Side),
 }
 
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct InventoryKey(pub usize);
+
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct SlotBones(pub HashMap<SlotKey, &'static BoneName>);
 
@@ -265,7 +268,4 @@ pub struct Projectile {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Swap {
-	pub inventory_key: usize,
-	pub slot_key: SlotKey,
-}
+pub struct Swap<T1, T2>(pub T1, pub T2);
