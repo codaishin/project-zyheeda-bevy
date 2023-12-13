@@ -5,8 +5,14 @@ mod traits;
 
 use self::{
 	components::{InventoryPanel, InventoryScreen},
-	systems::{colors::panel_color, despawn::despawn, set_state::set_state, spawn::spawn},
-	tools::PanelState,
+	systems::{
+		colors::panel_color,
+		despawn::despawn,
+		set_state::set_state,
+		spawn::spawn,
+		toggle_state::toggle_state,
+	},
+	tools::{MenuState, PanelState},
 };
 use crate::{
 	components::{Collection, Inventory, InventoryKey, Player, SlotKey, Slots, Swap, TargetPanel},
@@ -21,17 +27,10 @@ struct Drag<T> {
 	pub key: T,
 }
 
-#[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
-enum MenuState {
-	#[default]
-	None,
-	Inventory,
-}
-
 impl Plugin for IngameMenuPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_state::<MenuState>()
-			.add_systems(Update, toggle_inventory)
+			.add_systems(Update, toggle_state::<MenuState, Inventory>)
 			.add_systems(
 				OnEnter(MenuState::Inventory),
 				(spawn::<InventoryScreen>, set_state::<GameRunning, Off>),
@@ -50,20 +49,6 @@ impl Plugin for IngameMenuPlugin {
 				)
 					.run_if(in_state(MenuState::Inventory)),
 			);
-	}
-}
-
-fn toggle_inventory(
-	keys: Res<Input<KeyCode>>,
-	current_state: Res<State<MenuState>>,
-	mut next_state: ResMut<NextState<MenuState>>,
-) {
-	if keys.just_pressed(KeyCode::I) {
-		let state = match current_state.get() {
-			MenuState::Inventory => MenuState::None,
-			MenuState::None => MenuState::Inventory,
-		};
-		next_state.set(state);
 	}
 }
 
