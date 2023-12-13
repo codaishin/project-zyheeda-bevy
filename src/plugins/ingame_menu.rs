@@ -9,32 +9,16 @@ use self::{
 	tools::PanelState,
 };
 use crate::{
-	components::{
-		Collection,
-		Inventory,
-		InventoryKey,
-		Player,
-		Side,
-		Slot,
-		SlotKey,
-		Slots,
-		Swap,
-		TargetPanel,
-	},
+	components::{Collection, Inventory, InventoryKey, Player, SlotKey, Slots, Swap, TargetPanel},
 	states::{GameRunning, Off, On},
 };
 use bevy::prelude::*;
-
-const EQUIPMENT_SLOTS: [(SlotKey, &str); 2] = [
-	(SlotKey::Hand(Side::Left), "Left Hand"),
-	(SlotKey::Hand(Side::Right), "Right Hand"),
-];
 
 pub struct IngameMenuPlugin;
 
 #[derive(Component, Debug)]
 struct Drag<T> {
-	pub value: T,
+	pub key: T,
 }
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
@@ -87,15 +71,14 @@ fn update_slots(
 	slots: Query<&Slots>,
 	agents: Query<Entity, With<Player>>,
 	mut texts: Query<&mut Text>,
-	mut slot_buttons: Query<(&TargetPanel<Slot>, &Children, &mut InventoryPanel), With<Button>>,
+	mut slot_buttons: Query<(&TargetPanel<SlotKey>, &Children, &mut InventoryPanel), With<Button>>,
 ) {
 	let player = agents.single();
 
 	for (target_panel, children, mut panel) in &mut slot_buttons {
 		let mut txt = texts.get_mut(children[0]).unwrap();
 		let slots = slots.get(player).unwrap();
-		let (slot_key, _) = EQUIPMENT_SLOTS[target_panel.index];
-		match slots.0.get(&slot_key).and_then(|s| s.item) {
+		match slots.0.get(&target_panel.key).and_then(|s| s.item) {
 			Some(item) => {
 				txt.sections[0].value = item.name.to_string();
 				*panel = PanelState::Filled.into();
@@ -113,7 +96,7 @@ fn update_item(
 	agents: Query<Entity, With<Player>>,
 	mut texts: Query<&mut Text>,
 	mut inventory_buttons: Query<
-		(&TargetPanel<Inventory>, &Children, &mut InventoryPanel),
+		(&TargetPanel<InventoryKey>, &Children, &mut InventoryPanel),
 		With<Button>,
 	>,
 ) {
@@ -122,7 +105,7 @@ fn update_item(
 	for (target_panel, children, mut panel) in &mut inventory_buttons {
 		let mut txt = texts.get_mut(children[0]).unwrap();
 		let inventory = inventory.get(player).unwrap();
-		match inventory.0.get(target_panel.index) {
+		match inventory.0.get(target_panel.key.0) {
 			Some(Some(item)) => {
 				txt.sections[0].value = item.name.to_string();
 				*panel = PanelState::Filled.into();
@@ -137,15 +120,15 @@ fn update_item(
 
 type Panels<'a> = (
 	&'a Interaction,
-	Option<&'a TargetPanel<Inventory>>,
-	Option<&'a TargetPanel<Slot>>,
+	Option<&'a TargetPanel<InventoryKey>>,
+	Option<&'a TargetPanel<SlotKey>>,
 );
 
 fn drag_and_drop(
 	mut commands: Commands,
 	mouse: Res<Input<MouseButton>>,
 	agents: Query<Entity, With<Player>>,
-	drag_from_inventory: Query<&Drag<usize>>,
+	drag_from_inventory: Query<&Drag<InventoryKey>>,
 	drag_from_equipment: Query<&Drag<SlotKey>>,
 	mut panels: Query<Panels, With<Button>>,
 ) {
@@ -159,12 +142,12 @@ fn drag_and_drop(
 		match (interaction, mouse_pressed, mouse_released) {
 			(Interaction::Pressed, true, false) => match (inv_p, equ_p) {
 				(Some(panel), _) => {
-					let value = panel.index;
-					commands.entity(player).insert(Drag { value });
+					let key = panel.key;
+					commands.entity(player).insert(Drag { key });
 				}
 				(_, Some(panel)) => {
-					let (value, _) = EQUIPMENT_SLOTS[panel.index];
-					commands.entity(player).insert(Drag { value });
+					let key = panel.key;
+					commands.entity(player).insert(Drag { key });
 				}
 				_ => {
 					println!("PRESSING INCOMPATIBLE BUTTONS, SHOULD NOT HAVE HAPPENED")
@@ -172,35 +155,27 @@ fn drag_and_drop(
 			},
 			(Interaction::Hovered, false, true) => match (inv_p, inv_d, equ_p, equ_d) {
 				(Some(inv_p), _, _, Ok(equ_d)) => {
-					let inventory_key = inv_p.index;
-					let slot_key = equ_d.value;
-					commands.entity(player).insert(Collection::new([Swap(
-						InventoryKey(inventory_key),
-						slot_key,
-					)]));
+					commands
+						.entity(player)
+						.insert(Collection::new([Swap(inv_p.key, equ_d.key)]));
 					commands.entity(player).remove::<Drag<SlotKey>>();
 				}
 				(_, _, Some(equ_p), Ok(equ_d)) => {
-					let (slot_key, _) = EQUIPMENT_SLOTS[equ_p.index];
 					commands
 						.entity(player)
-						.insert(Collection::new([Swap(slot_key, equ_d.value)]));
+						.insert(Collection::new([Swap(equ_p.key, equ_d.key)]));
 					commands.entity(player).remove::<Drag<SlotKey>>();
 				}
 				(_, Ok(inv_d), Some(equ_p), _) => {
-					let (slot_key, _) = EQUIPMENT_SLOTS[equ_p.index];
-					let inventory_key = inv_d.value;
-					commands.entity(player).insert(Collection::new([Swap(
-						InventoryKey(inventory_key),
-						slot_key,
-					)]));
+					commands
+						.entity(player)
+						.insert(Collection::new([Swap(inv_d.key, equ_p.key)]));
 					commands.entity(player).remove::<Drag<usize>>();
 				}
 				(Some(inv_p), Ok(inv_d), ..) => {
-					commands.entity(player).insert(Collection::new([Swap(
-						InventoryKey(inv_p.index),
-						InventoryKey(inv_d.value),
-					)]));
+					commands
+						.entity(player)
+						.insert(Collection::new([Swap(inv_p.key, inv_d.key)]));
 					commands.entity(player).remove::<Drag<usize>>();
 				}
 				combination => {

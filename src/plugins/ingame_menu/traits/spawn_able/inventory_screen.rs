@@ -1,6 +1,6 @@
 use super::SpawnAble;
 use crate::{
-	components::{Inventory, Side, Slot, SlotKey, TargetPanel},
+	components::{InventoryKey, Side, SlotKey, TargetPanel},
 	plugins::ingame_menu::{
 		components::{InventoryPanel, InventoryScreen},
 		tools::PanelState,
@@ -21,6 +21,7 @@ use bevy::{
 	},
 	utils::default,
 };
+use std::usize;
 
 const EQUIPMENT_SLOTS: [(SlotKey, &str); 2] = [
 	(SlotKey::Hand(Side::Left), "Left Hand"),
@@ -74,9 +75,14 @@ fn add_inventory(colors: BaseColors) -> impl Fn(&mut ChildBuilder) {
 			})
 			.with_children(|parent| {
 				add_title(parent, "Inventory", colors);
-				add::<Inventory>(parent, None, 5, 5, 0, colors);
+				add(parent, None, 5, 5, 0, colors, InventoryKey);
 			});
 	}
+}
+
+fn slot_key_from_index(index: usize) -> SlotKey {
+	let (key, _) = EQUIPMENT_SLOTS[index];
+	key
 }
 
 fn add_equipment(colors: BaseColors) -> impl Fn(&mut ChildBuilder) {
@@ -94,7 +100,7 @@ fn add_equipment(colors: BaseColors) -> impl Fn(&mut ChildBuilder) {
 			.with_children(|parent| {
 				add_title(parent, "Equipment", colors);
 				for (index, (_, name)) in EQUIPMENT_SLOTS.iter().enumerate() {
-					add::<Slot>(parent, Some(name), 1, 1, index, colors);
+					add(parent, Some(name), 1, 1, index, colors, slot_key_from_index);
 				}
 			});
 	}
@@ -122,13 +128,14 @@ fn add_title(parent: &mut ChildBuilder, title: &str, colors: BaseColors) {
 		});
 }
 
-fn add<T: Sync + Send + 'static>(
+fn add<TKey: Sync + Send + 'static>(
 	parent: &mut ChildBuilder,
 	label: Option<&str>,
 	x: u32,
 	y: u32,
 	start_index: usize,
 	colors: BaseColors,
+	parse_key: fn(usize) -> TKey,
 ) {
 	let mut index = start_index;
 	for _ in 0..y {
@@ -153,9 +160,10 @@ fn add<T: Sync + Send + 'static>(
 					));
 				}
 				for _ in 0..x {
+					let key = parse_key(index);
 					parent
 						.spawn((
-							TargetPanel::<T>::new(index),
+							TargetPanel { key },
 							InventoryPanel::from(PanelState::Empty),
 							get_panel_button(),
 						))
