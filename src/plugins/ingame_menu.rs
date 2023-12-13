@@ -3,46 +3,34 @@ mod systems;
 mod tools;
 mod traits;
 
+use self::{
+	components::{InventoryPanel, InventoryScreen},
+	systems::{colors::panel_color, despawn::despawn, set_state::set_state, spawn::spawn},
+	tools::{InventoryColors, PanelState},
+};
 use crate::{
-	components::{Collection, Inventory, InventoryKey, Player, Side, Slot, SlotKey, Slots, Swap},
+	components::{
+		Collection,
+		Inventory,
+		InventoryKey,
+		Player,
+		Side,
+		Slot,
+		SlotKey,
+		Slots,
+		Swap,
+		TargetPanel,
+	},
 	states::{GameRunning, Off, On},
 };
 use bevy::prelude::*;
-use std::marker::PhantomData;
 
-use self::{
-	components::InventoryPanel,
-	systems::{despawn::despawn, panel_colors::panel_color, set_state::set_state},
-	tools::{InventoryColors, PanelState},
-};
-
-const TEXT_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
-const EMPTY_BUTTON: Color = Color::rgb(0.35, 0.35, 0.35);
-const BACKGROUND_COLOR: Color = Color::rgba(0.5, 0.5, 0.5, 0.5);
 const EQUIPMENT_SLOTS: [(SlotKey, &str); 2] = [
 	(SlotKey::Hand(Side::Left), "Left Hand"),
 	(SlotKey::Hand(Side::Right), "Right Hand"),
 ];
 
 pub struct IngameMenuPlugin;
-
-#[derive(Component, Default)]
-pub struct InventoryScreen;
-
-#[derive(Component, Debug)]
-struct TargetPanel<T> {
-	pub index: usize,
-	phantom_data: PhantomData<T>,
-}
-
-impl<T> TargetPanel<T> {
-	pub fn new(index: usize) -> Self {
-		Self {
-			index,
-			phantom_data: PhantomData,
-		}
-	}
-}
 
 #[derive(Component, Debug)]
 struct Drag<T> {
@@ -63,7 +51,7 @@ impl Plugin for IngameMenuPlugin {
 			.add_systems(
 				OnEnter(MenuState::Inventory),
 				(
-					spawn_screen::<InventoryScreen>,
+					spawn::<InventoryScreen, InventoryColors>,
 					set_state::<GameRunning, Off>,
 				),
 			)
@@ -96,163 +84,6 @@ fn toggle_inventory(
 		};
 		next_state.set(state);
 	}
-}
-
-fn get_panel_button() -> ButtonBundle {
-	let slot_style = Style {
-		width: Val::Px(65.0),
-		height: Val::Px(65.0),
-		margin: UiRect::all(Val::Px(2.0)),
-		justify_content: JustifyContent::Center,
-		align_items: AlignItems::Center,
-		..default()
-	};
-	ButtonBundle {
-		style: slot_style.clone(),
-		background_color: EMPTY_BUTTON.into(),
-		..default()
-	}
-}
-
-fn add_title(parent: &mut ChildBuilder, title: &str) {
-	parent
-		.spawn(NodeBundle {
-			style: Style {
-				flex_direction: FlexDirection::Row,
-				align_items: AlignItems::Center,
-				..default()
-			},
-			..default()
-		})
-		.with_children(|parent| {
-			parent.spawn(TextBundle::from_section(
-				title,
-				TextStyle {
-					font_size: 40.0,
-					color: TEXT_COLOR,
-					..default()
-				},
-			));
-		});
-}
-
-fn add<T: Sync + Send + 'static>(
-	parent: &mut ChildBuilder,
-	label: Option<&str>,
-	x: u32,
-	y: u32,
-	start_index: usize,
-) {
-	let mut index = start_index;
-	for _ in 0..y {
-		parent
-			.spawn(NodeBundle {
-				style: Style {
-					flex_direction: FlexDirection::Row,
-					align_items: AlignItems::Center,
-					..default()
-				},
-				..default()
-			})
-			.with_children(|parent| {
-				if let Some(label) = label {
-					parent.spawn(TextBundle::from_section(
-						label,
-						TextStyle {
-							font_size: 20.0,
-							color: TEXT_COLOR,
-							..default()
-						},
-					));
-				}
-				for _ in 0..x {
-					parent
-						.spawn((
-							TargetPanel::<T>::new(index),
-							InventoryPanel::from(PanelState::Empty),
-							get_panel_button(),
-						))
-						.with_children(|parent| {
-							parent.spawn(TextBundle::from_section(
-								"<Empty>",
-								TextStyle {
-									font_size: 15.0,
-									color: TEXT_COLOR,
-									..default()
-								},
-							));
-						});
-					index += 1;
-				}
-			});
-	}
-}
-
-fn add_inventory(parent: &mut ChildBuilder) {
-	parent
-		.spawn(NodeBundle {
-			style: Style {
-				flex_direction: FlexDirection::Column,
-				align_items: AlignItems::Center,
-				margin: UiRect::all(Val::Px(5.0)),
-				..default()
-			},
-			..default()
-		})
-		.with_children(|parent| {
-			add_title(parent, "Inventory");
-			add::<Inventory>(parent, None, 5, 5, 0);
-		});
-}
-
-fn add_equipment(parent: &mut ChildBuilder) {
-	parent
-		.spawn(NodeBundle {
-			style: Style {
-				flex_direction: FlexDirection::Column,
-				align_items: AlignItems::End,
-				margin: UiRect::all(Val::Px(5.0)),
-				..default()
-			},
-			..default()
-		})
-		.with_children(|parent| {
-			add_title(parent, "Equipment");
-			for (index, (_, name)) in EQUIPMENT_SLOTS.iter().enumerate() {
-				add::<Slot>(parent, Some(name), 1, 1, index);
-			}
-		});
-}
-
-fn spawn_screen<TScreen: Component + Default>(mut commands: Commands) {
-	commands
-		.spawn((
-			NodeBundle {
-				style: Style {
-					width: Val::Vw(100.0),
-					height: Val::Vh(100.0),
-					align_items: AlignItems::Center,
-					justify_content: JustifyContent::Center,
-					..default()
-				},
-				background_color: BACKGROUND_COLOR.into(),
-				..default()
-			},
-			TScreen::default(),
-		))
-		.with_children(|parent| {
-			parent
-				.spawn(NodeBundle {
-					style: Style {
-						flex_direction: FlexDirection::Row,
-						align_items: AlignItems::Start,
-						..default()
-					},
-					..default()
-				})
-				.with_children(add_equipment)
-				.with_children(add_inventory);
-		});
 }
 
 fn update_slots(

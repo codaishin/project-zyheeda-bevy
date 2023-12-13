@@ -270,3 +270,18 @@ pub struct Projectile {
 
 #[derive(Debug, PartialEq)]
 pub struct Swap<T1, T2>(pub T1, pub T2);
+
+#[derive(Component, Debug)]
+pub struct TargetPanel<T> {
+	pub index: usize,
+	phantom_data: PhantomData<T>,
+}
+
+impl<T> TargetPanel<T> {
+	pub fn new(index: usize) -> Self {
+		Self {
+			index,
+			phantom_data: PhantomData,
+		}
+	}
+}

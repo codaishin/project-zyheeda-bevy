@@ -1,6 +1,6 @@
 use crate::plugins::ingame_menu::{
 	tools::PanelState,
-	traits::{panel_colors::GetPanelColors, panel_state::GetPanelState},
+	traits::{colors::GetPanelColors, panel_state::GetPanelState},
 };
 use bevy::{
 	ecs::{component::Component, system::Query},
@@ -24,7 +24,7 @@ pub fn panel_color<TPanel: Component + GetPanelState, TGetPAnelColors: GetPanelC
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::plugins::ingame_menu::traits::panel_colors::PanelColors;
+	use crate::plugins::ingame_menu::traits::colors::PanelColors;
 	use bevy::{
 		app::{App, Update},
 		render::color::Color,
