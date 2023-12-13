@@ -1,3 +1,8 @@
+mod components;
+mod systems;
+mod tools;
+mod traits;
+
 use crate::{
 	components::{Collection, Inventory, InventoryKey, Player, Side, Slot, SlotKey, Slots, Swap},
 	states::GameState,
@@ -5,11 +10,14 @@ use crate::{
 use bevy::prelude::*;
 use std::marker::PhantomData;
 
+use self::{
+	components::InventoryPanel,
+	systems::panel_colors::panel_color,
+	tools::{InventoryColors, PanelState},
+};
+
 const TEXT_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
 const EMPTY_BUTTON: Color = Color::rgb(0.35, 0.35, 0.35);
-const BUSY_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
-const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
-const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 const BACKGROUND_COLOR: Color = Color::rgba(0.5, 0.5, 0.5, 0.5);
 const EQUIPMENT_SLOTS: [(SlotKey, &str); 2] = [
 	(SlotKey::Hand(Side::Left), "Left Hand"),
@@ -21,16 +29,13 @@ pub struct IngameMenuPlugin;
 #[derive(Component, Default)]
 pub struct InventoryScreen;
 
-#[derive(Component)]
-pub struct Busy;
-
 #[derive(Component, Debug)]
-struct Panel<T> {
+struct TargetPanel<T> {
 	pub index: usize,
 	phantom_data: PhantomData<T>,
 }
 
-impl<T> Panel<T> {
+impl<T> TargetPanel<T> {
 	pub fn new(index: usize) -> Self {
 		Self {
 			index,
@@ -65,7 +70,12 @@ impl Plugin for IngameMenuPlugin {
 			)
 			.add_systems(
 				Update,
-				(color_buttons, drag_and_drop, update_slots, update_item)
+				(
+					panel_color::<InventoryPanel, InventoryColors>,
+					drag_and_drop,
+					update_slots,
+					update_item,
+				)
 					.run_if(in_state(MenuState::Inventory)),
 			);
 	}
@@ -171,7 +181,11 @@ fn add<T: Sync + Send + 'static>(
 				}
 				for _ in 0..x {
 					parent
-						.spawn((Panel::<T>::new(index), get_panel_button()))
+						.spawn((
+							TargetPanel::<T>::new(index),
+							InventoryPanel::from(PanelState::Empty),
+							get_panel_button(),
+						))
 						.with_children(|parent| {
 							parent.spawn(TextBundle::from_section(
 								"<Empty>",
@@ -255,67 +269,53 @@ fn spawn_screen<TScreen: Component + Default>(mut commands: Commands) {
 		});
 }
 
-type ButtonColorComponents<'a> = (&'a Interaction, &'a mut BackgroundColor, Option<&'a Busy>);
-
-fn color_buttons(mut interaction_query: Query<ButtonColorComponents, With<Button>>) {
-	for (interaction, mut color, busy) in &mut interaction_query {
-		*color = match (interaction, busy) {
-			(Interaction::Pressed, _) => PRESSED_BUTTON.into(),
-			(Interaction::Hovered, _) => HOVERED_BUTTON.into(),
-			(Interaction::None, Some(_)) => BUSY_BUTTON.into(),
-			(Interaction::None, None) => EMPTY_BUTTON.into(),
-		}
-	}
-}
-
 fn update_slots(
-	mut commands: Commands,
 	slots: Query<&Slots>,
 	agents: Query<Entity, With<Player>>,
 	mut texts: Query<&mut Text>,
-	mut slot_buttons: Query<(Entity, &Panel<Slot>, &Children), With<Button>>,
+	mut slot_buttons: Query<(&TargetPanel<Slot>, &Children, &mut InventoryPanel), With<Button>>,
 ) {
 	let player = agents.single();
 
-	for (entity, panel, children) in &mut slot_buttons {
-		let mut entity = commands.entity(entity);
+	for (target_panel, children, mut panel) in &mut slot_buttons {
 		let mut txt = texts.get_mut(children[0]).unwrap();
 		let slots = slots.get(player).unwrap();
-		let (slot_key, _) = EQUIPMENT_SLOTS[panel.index];
+		let (slot_key, _) = EQUIPMENT_SLOTS[target_panel.index];
 		match slots.0.get(&slot_key).and_then(|s| s.item) {
 			Some(item) => {
 				txt.sections[0].value = item.name.to_string();
-				entity.insert(Busy);
+				*panel = PanelState::Filled.into();
 			}
 			_ => {
 				txt.sections[0].value = "<Empty>".to_string();
-				entity.remove::<Busy>();
+				*panel = PanelState::Empty.into();
 			}
 		};
 	}
 }
 
 fn update_item(
-	mut commands: Commands,
 	inventory: Query<&Inventory>,
 	agents: Query<Entity, With<Player>>,
 	mut texts: Query<&mut Text>,
-	inventory_buttons: Query<(Entity, &Panel<Inventory>, &Children), With<Button>>,
+	mut inventory_buttons: Query<
+		(&TargetPanel<Inventory>, &Children, &mut InventoryPanel),
+		With<Button>,
+	>,
 ) {
 	let player = agents.single();
 
-	for (entity, panel, children) in &inventory_buttons {
-		let mut entity = commands.entity(entity);
+	for (target_panel, children, mut panel) in &mut inventory_buttons {
 		let mut txt = texts.get_mut(children[0]).unwrap();
 		let inventory = inventory.get(player).unwrap();
-		match inventory.0.get(panel.index) {
+		match inventory.0.get(target_panel.index) {
 			Some(Some(item)) => {
 				txt.sections[0].value = item.name.to_string();
-				entity.insert(Busy);
+				*panel = PanelState::Filled.into();
 			}
 			_ => {
 				txt.sections[0].value = "<Empty>".to_string();
-				entity.remove::<Busy>();
+				*panel = PanelState::Empty.into();
 			}
 		};
 	}
@@ -323,8 +323,8 @@ fn update_item(
 
 type Panels<'a> = (
 	&'a Interaction,
-	Option<&'a Panel<Inventory>>,
-	Option<&'a Panel<Slot>>,
+	Option<&'a TargetPanel<Inventory>>,
+	Option<&'a TargetPanel<Slot>>,
 );
 
 fn drag_and_drop(
