@@ -12,7 +12,7 @@ use std::marker::PhantomData;
 
 use self::{
 	components::InventoryPanel,
-	systems::{panel_colors::panel_color, set_state::set_state},
+	systems::{despawn::despawn, panel_colors::panel_color, set_state::set_state},
 	tools::{InventoryColors, PanelState},
 };
 
@@ -69,10 +69,7 @@ impl Plugin for IngameMenuPlugin {
 			)
 			.add_systems(
 				OnExit(MenuState::Inventory),
-				(
-					despawn_screen::<InventoryScreen>,
-					set_state::<GameRunning, On>,
-				),
+				(despawn::<InventoryScreen>, set_state::<GameRunning, On>),
 			)
 			.add_systems(
 				Update,
@@ -98,15 +95,6 @@ fn toggle_inventory(
 			MenuState::None => MenuState::Inventory,
 		};
 		next_state.set(state);
-	}
-}
-
-fn despawn_screen<TScreen: Component>(
-	mut commands: Commands,
-	screens: Query<Entity, With<TScreen>>,
-) {
-	for entity in &screens {
-		commands.entity(entity).despawn_recursive();
 	}
 }
 
