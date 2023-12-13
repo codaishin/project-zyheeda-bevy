@@ -4,10 +4,8 @@ use bevy::{
 	hierarchy::BuildChildren,
 };
 
-pub fn spawn<TComponent: SpawnAble + Component, TGetBaseColors: GetBaseColors>(
-	mut commands: Commands,
-) {
-	let colors = TGetBaseColors::get_base_colors();
+pub fn spawn<TComponent: SpawnAble + GetBaseColors + Component>(mut commands: Commands) {
+	let colors = TComponent::get_base_colors();
 
 	commands
 		.spawn(TComponent::bundle(colors))
@@ -51,9 +49,7 @@ mod tests {
 		}
 	}
 
-	struct _Colors;
-
-	impl GetBaseColors for _Colors {
+	impl GetBaseColors for _Component {
 		fn get_base_colors() -> BaseColors {
 			BaseColors {
 				background: Color::rgb(0.1, 0.2, 0.3),
@@ -66,7 +62,7 @@ mod tests {
 	fn spawn_bundle() {
 		let mut app = App::new();
 
-		app.add_systems(Update, spawn::<_Component, _Colors>);
+		app.add_systems(Update, spawn::<_Component>);
 		app.update();
 
 		let entity_with_component = app
@@ -87,7 +83,7 @@ mod tests {
 	fn bundle_colors() {
 		let mut app = App::new();
 
-		app.add_systems(Update, spawn::<_Component, _Colors>);
+		app.add_systems(Update, spawn::<_Component>);
 		app.update();
 
 		let component = app
@@ -96,14 +92,14 @@ mod tests {
 			.find_map(|e| e.get::<_Component>())
 			.unwrap();
 
-		assert_eq!(_Colors::get_base_colors(), component.0);
+		assert_eq!(_Component::get_base_colors(), component.0);
 	}
 
 	#[test]
 	fn spawn_children() {
 		let mut app = App::new();
 
-		app.add_systems(Update, spawn::<_Component, _Colors>);
+		app.add_systems(Update, spawn::<_Component>);
 		app.update();
 
 		let entity_with_component = app
@@ -125,7 +121,7 @@ mod tests {
 	fn children_colors() {
 		let mut app = App::new();
 
-		app.add_systems(Update, spawn::<_Component, _Colors>);
+		app.add_systems(Update, spawn::<_Component>);
 		app.update();
 
 		let child = app
@@ -134,6 +130,6 @@ mod tests {
 			.find_map(|e| e.get::<_Child>())
 			.unwrap();
 
-		assert_eq!(_Colors::get_base_colors(), child.0);
+		assert_eq!(_Component::get_base_colors(), child.0);
 	}
 }

@@ -1,8 +1,8 @@
 use super::{BaseColors, GetBaseColors, GetPanelColors, PanelColors};
-use crate::plugins::ingame_menu::tools::InventoryColors;
+use crate::plugins::ingame_menu::components::{InventoryPanel, InventoryScreen};
 use bevy::render::color::Color;
 
-impl GetPanelColors for InventoryColors {
+impl GetPanelColors for InventoryPanel {
 	fn get_panel_colors() -> PanelColors {
 		PanelColors {
 			pressed: Color::rgb(0.35, 0.75, 0.35),
@@ -13,7 +13,7 @@ impl GetPanelColors for InventoryColors {
 	}
 }
 
-impl GetBaseColors for InventoryColors {
+impl GetBaseColors for InventoryScreen {
 	fn get_base_colors() -> BaseColors {
 		BaseColors {
 			background: Color::rgba(0.5, 0.5, 0.5, 0.5),

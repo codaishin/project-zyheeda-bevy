@@ -6,7 +6,7 @@ mod traits;
 use self::{
 	components::{InventoryPanel, InventoryScreen},
 	systems::{colors::panel_color, despawn::despawn, set_state::set_state, spawn::spawn},
-	tools::{InventoryColors, PanelState},
+	tools::PanelState,
 };
 use crate::{
 	components::{
@@ -50,10 +50,7 @@ impl Plugin for IngameMenuPlugin {
 			.add_systems(Update, toggle_inventory)
 			.add_systems(
 				OnEnter(MenuState::Inventory),
-				(
-					spawn::<InventoryScreen, InventoryColors>,
-					set_state::<GameRunning, Off>,
-				),
+				(spawn::<InventoryScreen>, set_state::<GameRunning, Off>),
 			)
 			.add_systems(
 				OnExit(MenuState::Inventory),
@@ -62,7 +59,7 @@ impl Plugin for IngameMenuPlugin {
 			.add_systems(
 				Update,
 				(
-					panel_color::<InventoryPanel, InventoryColors>,
+					panel_color::<InventoryPanel>,
 					drag_and_drop,
 					update_slots,
 					update_item,
