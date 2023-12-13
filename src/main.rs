@@ -26,7 +26,7 @@ use project_zyheeda::{
 	markers::{Dual, Fast, HandGun, Idle, Left, Right, Slow},
 	plugins::ingame_menu::IngameMenuPlugin,
 	resources::{Animation, Models, SlotMap},
-	states::GameState,
+	states::GameRunning,
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
 		input::schedule_slots::schedule_slots,
@@ -57,9 +57,9 @@ fn main() {
 	App::new()
 		.add_plugins(DefaultPlugins)
 		.add_plugins(IngameMenuPlugin)
-		.add_state::<GameState>()
-		.add_systems(OnEnter(GameState::Running), pause_virtual_time::<false>)
-		.add_systems(OnExit(GameState::Running), pause_virtual_time::<true>)
+		.add_state::<GameRunning>()
+		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
+		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
 		.add_systems(Startup, setup_input)
 		.add_systems(Startup, load_models)
 		.add_systems(Startup, setup_simple_3d_scene)
@@ -74,7 +74,7 @@ fn main() {
 				enqueue::<Tools>,
 				dequeue, // sets skill activity marker, so it MUST run before skill execution systems
 			)
-				.run_if(in_state(GameState::Running)),
+				.run_if(in_state(GameRunning::On)),
 		)
 		.add_systems(
 			Update,
@@ -103,7 +103,7 @@ fn main() {
 		.add_systems(
 			Update,
 			(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>)
-				.run_if(in_state(GameState::Running)),
+				.run_if(in_state(GameRunning::On)),
 		)
 		.add_systems(
 			Update,
@@ -191,13 +191,13 @@ fn setup_simple_3d_scene(
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut materials: ResMut<Assets<StandardMaterial>>,
 	asset_server: Res<AssetServer>,
-	mut next_state: ResMut<NextState<GameState>>,
+	mut next_state: ResMut<NextState<GameRunning>>,
 ) {
 	spawn_plane(&mut commands, &mut meshes, &mut materials);
 	spawn_player(&mut commands, asset_server);
 	spawn_light(&mut commands);
 	spawn_camera(&mut commands);
-	next_state.set(GameState::Running);
+	next_state.set(GameRunning::On);
 }
 
 fn spawn_plane(

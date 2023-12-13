@@ -5,14 +5,14 @@ mod traits;
 
 use crate::{
 	components::{Collection, Inventory, InventoryKey, Player, Side, Slot, SlotKey, Slots, Swap},
-	states::GameState,
+	states::{GameRunning, Off, On},
 };
 use bevy::prelude::*;
 use std::marker::PhantomData;
 
 use self::{
 	components::InventoryPanel,
-	systems::panel_colors::panel_color,
+	systems::{panel_colors::panel_color, set_state::set_state},
 	tools::{InventoryColors, PanelState},
 };
 
@@ -62,11 +62,17 @@ impl Plugin for IngameMenuPlugin {
 			.add_systems(Update, toggle_inventory)
 			.add_systems(
 				OnEnter(MenuState::Inventory),
-				(spawn_screen::<InventoryScreen>, run_game::<false>),
+				(
+					spawn_screen::<InventoryScreen>,
+					set_state::<GameRunning, Off>,
+				),
 			)
 			.add_systems(
 				OnExit(MenuState::Inventory),
-				(despawn_screen::<InventoryScreen>, run_game::<true>),
+				(
+					despawn_screen::<InventoryScreen>,
+					set_state::<GameRunning, On>,
+				),
 			)
 			.add_systems(
 				Update,
@@ -78,14 +84,6 @@ impl Plugin for IngameMenuPlugin {
 				)
 					.run_if(in_state(MenuState::Inventory)),
 			);
-	}
-}
-
-fn run_game<const RUN: bool>(mut next_state: ResMut<NextState<GameState>>) {
-	if RUN {
-		next_state.set(GameState::Running);
-	} else {
-		next_state.set(GameState::InGameMenu);
 	}
 }
 
