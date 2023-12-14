@@ -1,6 +1,6 @@
 use super::SpawnAble;
 use crate::{
-	components::{InventoryKey, Side, SlotKey, TargetPanel},
+	components::{DadPanel, InventoryKey, Side, SlotKey},
 	plugins::ingame_menu::{
 		components::{InventoryPanel, InventoryScreen},
 		tools::PanelState,
@@ -163,7 +163,7 @@ fn add<TKey: Sync + Send + 'static>(
 					let key = parse_key(index);
 					parent
 						.spawn((
-							TargetPanel { key },
+							DadPanel(key),
 							InventoryPanel::from(PanelState::Empty),
 							get_panel_button(),
 						))

@@ -1,0 +1,83 @@
+use crate::components::{Dad, DadPanel};
+use bevy::{
+	ecs::{
+		component::Component,
+		query::With,
+		system::{Commands, Query},
+	},
+	prelude::Entity,
+	ui::Interaction,
+};
+
+pub fn drag<TAgent: Component, TKey: Send + Sync + Copy + 'static>(
+	mut commands: Commands,
+	agents: Query<Entity, With<TAgent>>,
+	panels: Query<(&Interaction, &DadPanel<TKey>)>,
+) {
+	let Some((.., panel)) = panels.iter().find(is_pressed) else {
+		return;
+	};
+
+	let agent = agents.single();
+	commands.entity(agent).insert(Dad(panel.0));
+}
+
+fn is_pressed<TDadPanel>((interaction, _): &(&Interaction, &DadPanel<TDadPanel>)) -> bool {
+	Interaction::Pressed == **interaction
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::components::Dad;
+	use bevy::app::{App, Update};
+
+	#[derive(Component)]
+	struct _Agent;
+
+	#[test]
+	fn drag_panel_on_pressed() {
+		let mut app = App::new();
+
+		let agent = app.world.spawn(_Agent).id();
+		app.world.spawn((Interaction::Pressed, DadPanel(42_u32)));
+		app.add_systems(Update, drag::<_Agent, u32>);
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let dad = agent.get::<Dad<u32>>();
+
+		assert_eq!(Some(&Dad(42)), dad);
+	}
+
+	#[test]
+	fn drag_panel_on_pressed_when_multiple_panels_exist() {
+		let mut app = App::new();
+
+		let agent = app.world.spawn(_Agent).id();
+		app.world.spawn((Interaction::Pressed, DadPanel(42_u32)));
+		app.world.spawn((Interaction::None, DadPanel(0_u32)));
+		app.add_systems(Update, drag::<_Agent, u32>);
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let dad = agent.get::<Dad<u32>>();
+
+		assert_eq!(Some(&Dad(42)), dad);
+	}
+
+	#[test]
+	fn no_drag_when_not_pressed() {
+		let mut app = App::new();
+
+		let agent = app.world.spawn(_Agent).id();
+		app.world.spawn((Interaction::Hovered, DadPanel(42_u32)));
+		app.add_systems(Update, drag::<_Agent, u32>);
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let dad = agent.get::<Dad<u32>>();
+
+		assert_eq!(None, dad);
+	}
+}
