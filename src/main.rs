@@ -10,6 +10,8 @@ use project_zyheeda::{
 		Animator,
 		CamOrbit,
 		Cast,
+		Inventory,
+		InventoryKey,
 		Item,
 		Marker,
 		Player,
@@ -18,14 +20,21 @@ use project_zyheeda::{
 		SimpleMovement,
 		Skill,
 		SlotKey,
+		Swap,
 		UnitsPerSecond,
 	},
 	markers::{Dual, Fast, HandGun, Idle, Left, Right, Slow},
+	plugins::ingame_menu::IngameMenuPlugin,
 	resources::{Animation, Models, SlotMap},
+	states::GameRunning,
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
 		input::schedule_slots::schedule_slots,
-		items::{equip::equip_item, slots::add_item_slots},
+		items::{
+			equip::equip_item,
+			slots::add_item_slots,
+			swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
+		},
 		log::{log, log_many},
 		movement::{
 			execute_move::execute_move,
@@ -47,35 +56,54 @@ use std::{f32::consts::PI, time::Duration};
 fn main() {
 	App::new()
 		.add_plugins(DefaultPlugins)
+		.add_plugins(IngameMenuPlugin)
+		.add_state::<GameRunning>()
+		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
+		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
 		.add_systems(Startup, setup_input)
 		.add_systems(Startup, load_models)
 		.add_systems(Startup, setup_simple_3d_scene)
-		.add_systems(PreUpdate, link_animators_with_new_animation_players)
-		.add_systems(PreUpdate, add_item_slots)
-		.add_systems(Update, equip_item.pipe(log_many))
 		.add_systems(
-			Update,
+			PreUpdate,
 			(
+				link_animators_with_new_animation_players,
+				add_item_slots,
 				player_toggle_walk_run,
 				schedule_slots::<MouseButton, Player>,
 				schedule_slots::<KeyCode, Player>,
 				enqueue::<Tools>,
-				dequeue,
+				dequeue, // sets skill activity marker, so it MUST run before skill execution systems
+			)
+				.run_if(in_state(GameRunning::On)),
+		)
+		.add_systems(
+			Update,
+			(
+				equip_item::<Player, (SlotKey, Option<Item>)>.pipe(log_many),
+				equip_item::<Inventory, Swap<InventoryKey, SlotKey>>.pipe(log_many),
+				equip_item::<Inventory, Swap<SlotKey, InventoryKey>>.pipe(log_many),
+				swap_equipped_items.pipe(log_many),
+				swap_inventory_items,
 			),
 		)
 		.add_systems(
 			Update,
 			(
-				execute_skill::<Skill<Active>>.pipe(log_many),
-				execute_move::<Player, SimpleMovement>,
+				execute_skill::<Skill<Active>, Virtual>.pipe(log_many),
+				execute_move::<Player, SimpleMovement, Virtual>,
 			),
 		)
 		.add_systems(
 			Update,
 			(
 				projectile.pipe(log),
-				execute_move::<Projectile, SimpleMovement>,
+				execute_move::<Projectile, SimpleMovement, Virtual>,
 			),
+		)
+		.add_systems(
+			Update,
+			(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>)
+				.run_if(in_state(GameRunning::On)),
 		)
 		.add_systems(
 			Update,
@@ -90,12 +118,16 @@ fn main() {
 				animate::<Player, Marker<(HandGun, Right, Dual)>>,
 			),
 		)
-		.add_systems(
-			Update,
-			(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>),
-		)
 		.add_systems(Update, debug)
 		.run();
+}
+
+fn pause_virtual_time<const PAUSE: bool>(mut time: ResMut<Time<Virtual>>) {
+	if PAUSE {
+		time.pause();
+	} else {
+		time.unpause();
+	}
 }
 
 fn debug(
@@ -159,11 +191,13 @@ fn setup_simple_3d_scene(
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut materials: ResMut<Assets<StandardMaterial>>,
 	asset_server: Res<AssetServer>,
+	mut next_state: ResMut<NextState<GameRunning>>,
 ) {
 	spawn_plane(&mut commands, &mut meshes, &mut materials);
 	spawn_player(&mut commands, asset_server);
 	spawn_light(&mut commands);
 	spawn_camera(&mut commands);
+	next_state.set(GameRunning::On);
 }
 
 fn spawn_plane(
@@ -201,8 +235,36 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		asset_server.load("models/player.gltf#Animation7"),
 	));
 
-	let pistol = Item {
-		name: "Pistol",
+	let pistol_a = Item {
+		name: "Pistol A",
+		model: Some("pistol"),
+		skill: Some(Skill {
+			name: "Shoot Projectile",
+			cast: Cast {
+				pre: Duration::from_millis(500),
+				after: Duration::from_millis(500),
+			},
+			marker: HandGun::marker(),
+			behavior: Projectile::behavior(),
+			..default()
+		}),
+	};
+	let pistol_b = Item {
+		name: "Pistol B",
+		model: Some("pistol"),
+		skill: Some(Skill {
+			name: "Shoot Projectile",
+			cast: Cast {
+				pre: Duration::from_millis(500),
+				after: Duration::from_millis(500),
+			},
+			marker: HandGun::marker(),
+			behavior: Projectile::behavior(),
+			..default()
+		}),
+	};
+	let pistol_c = Item {
+		name: "Pistol C",
 		model: Some("pistol"),
 		skill: Some(Skill {
 			name: "Shoot Projectile",
@@ -240,17 +302,18 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			run_speed: UnitsPerSecond::new(1.5),
 			movement_mode: MovementMode::Slow,
 		},
+		Inventory::new([None, None, Some(pistol_c)]),
 		Loadout::new(
 			[
 				(SlotKey::SkillSpawn, "projectile_spawn"),
-				(SlotKey::Hand(Side::Right), "hand_slot.R"),
 				(SlotKey::Hand(Side::Left), "hand_slot.L"),
+				(SlotKey::Hand(Side::Right), "hand_slot.R"),
 				(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
 			],
 			[
-				(SlotKey::Hand(Side::Right), pistol),
-				(SlotKey::Hand(Side::Left), pistol),
-				(SlotKey::Legs, legs),
+				(SlotKey::Hand(Side::Left), pistol_a.into()),
+				(SlotKey::Hand(Side::Right), pistol_b.into()),
+				(SlotKey::Legs, legs.into()),
 			],
 		),
 	));

@@ -192,6 +192,9 @@ pub enum SlotKey {
 	Hand(Side),
 }
 
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct InventoryKey(pub usize);
+
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct SlotBones(pub HashMap<SlotKey, &'static BoneName>);
 
@@ -210,7 +213,7 @@ pub struct Schedule {
 #[derive(PartialEq, Debug, Clone)]
 pub struct Slot {
 	pub entity: Entity,
-	pub skill: Option<Skill>,
+	pub item: Option<Item>,
 }
 
 #[derive(Component)]
@@ -228,7 +231,7 @@ impl Default for Slots {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct Item {
 	pub name: &'static str,
 	pub model: Option<&'static str>,
@@ -253,7 +256,8 @@ impl<TElement> Collection<TElement> {
 	}
 }
 
-pub type Equipment = Collection<(SlotKey, Item)>;
+pub type Inventory = Collection<Option<Item>>;
+pub type Equipment = Collection<(SlotKey, Option<Item>)>;
 
 #[derive(Component)]
 pub struct Queue(pub VecDeque<Skill<Queued>>);
@@ -263,3 +267,12 @@ pub struct Projectile {
 	pub target_ray: Ray,
 	pub range: f32,
 }
+
+#[derive(Debug, PartialEq)]
+pub struct Swap<T1, T2>(pub T1, pub T2);
+
+#[derive(Component, Debug, Clone, Copy)]
+pub struct KeyedPanel<TKey>(pub TKey);
+
+#[derive(Component, Debug, PartialEq, Clone, Copy)]
+pub struct Dad<T>(pub T);

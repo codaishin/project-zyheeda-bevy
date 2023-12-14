@@ -45,7 +45,7 @@ fn filter_triggered_behaviors(
 		.0
 		.iter()
 		.filter(|(slot_key, ..)| triggered_slot_keys.contains(slot_key))
-		.filter_map(|(key, slot)| slot.skill.map(|skill| (*key, skill)))
+		.filter_map(|(key, slot)| Some((*key, slot.item?.skill?)))
 		.collect()
 }
 
@@ -53,7 +53,7 @@ fn filter_triggered_behaviors(
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Cast, Schedule, ScheduleMode, Side, Slot, SlotKey, Slots},
+		components::{Cast, Item, Schedule, ScheduleMode, Side, Slot, SlotKey, Slots},
 		resources::SlotMap,
 	};
 	use bevy::prelude::{default, App, Component, Entity, Input, KeyCode, MouseButton, Update};
@@ -83,11 +83,14 @@ mod tests {
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					skill: Some(Skill {
-						cast: Cast {
-							pre: Duration::from_millis(1),
-							after: Duration::from_millis(2),
-						},
+					item: Some(Item {
+						skill: Some(Skill {
+							cast: Cast {
+								pre: Duration::from_millis(1),
+								after: Duration::from_millis(2),
+							},
+							..default()
+						}),
 						..default()
 					}),
 				},
@@ -136,7 +139,7 @@ mod tests {
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					skill: Some(Skill::default()),
+					item: Some(Item::default()),
 				},
 			)]
 			.into(),
@@ -167,7 +170,7 @@ mod tests {
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					skill: Some(Skill::default()),
+					item: Some(Item::default()),
 				},
 			)]
 			.into(),
@@ -198,11 +201,14 @@ mod tests {
 				SlotKey::Hand(Side::Right),
 				Slot {
 					entity: Entity::from_raw(42),
-					skill: Some(Skill {
-						cast: Cast {
-							pre: Duration::from_millis(1),
-							after: Duration::from_millis(2),
-						},
+					item: Some(Item {
+						skill: Some(Skill {
+							cast: Cast {
+								pre: Duration::from_millis(1),
+								after: Duration::from_millis(2),
+							},
+							..default()
+						}),
 						..default()
 					}),
 				},
@@ -265,7 +271,7 @@ mod tests {
 				SlotKey::Legs,
 				Slot {
 					entity: Entity::from_raw(42),
-					skill: Some(Skill::default()),
+					item: Some(Item::default()),
 				},
 			)]
 			.into(),

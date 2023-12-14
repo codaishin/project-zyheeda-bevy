@@ -16,7 +16,7 @@ pub struct Loadout {
 impl Loadout {
 	pub fn new<const B: usize, const E: usize>(
 		slot_bones: [(SlotKey, &'static BoneName); B],
-		equipment: [(SlotKey, Item); E],
+		equipment: [(SlotKey, Option<Item>); E],
 	) -> Self {
 		Self {
 			slot_bones: SlotBones(slot_bones.into()),
