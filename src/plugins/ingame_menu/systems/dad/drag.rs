@@ -1,4 +1,4 @@
-use crate::components::{Dad, DadPanel};
+use crate::components::{Dad, KeyedPanel};
 use bevy::{
 	ecs::{
 		component::Component,
@@ -12,7 +12,7 @@ use bevy::{
 pub fn drag<TAgent: Component, TKey: Send + Sync + Copy + 'static>(
 	mut commands: Commands,
 	agents: Query<Entity, With<TAgent>>,
-	panels: Query<(&Interaction, &DadPanel<TKey>)>,
+	panels: Query<(&Interaction, &KeyedPanel<TKey>)>,
 ) {
 	let Some((.., panel)) = panels.iter().find(is_pressed) else {
 		return;
@@ -22,7 +22,7 @@ pub fn drag<TAgent: Component, TKey: Send + Sync + Copy + 'static>(
 	commands.entity(agent).insert(Dad(panel.0));
 }
 
-fn is_pressed<TDadPanel>((interaction, _): &(&Interaction, &DadPanel<TDadPanel>)) -> bool {
+fn is_pressed<TKeyedPanel>((interaction, _): &(&Interaction, &KeyedPanel<TKeyedPanel>)) -> bool {
 	Interaction::Pressed == **interaction
 }
 
@@ -40,7 +40,7 @@ mod tests {
 		let mut app = App::new();
 
 		let agent = app.world.spawn(_Agent).id();
-		app.world.spawn((Interaction::Pressed, DadPanel(42_u32)));
+		app.world.spawn((Interaction::Pressed, KeyedPanel(42_u32)));
 		app.add_systems(Update, drag::<_Agent, u32>);
 		app.update();
 
@@ -55,8 +55,8 @@ mod tests {
 		let mut app = App::new();
 
 		let agent = app.world.spawn(_Agent).id();
-		app.world.spawn((Interaction::Pressed, DadPanel(42_u32)));
-		app.world.spawn((Interaction::None, DadPanel(0_u32)));
+		app.world.spawn((Interaction::Pressed, KeyedPanel(42_u32)));
+		app.world.spawn((Interaction::None, KeyedPanel(0_u32)));
 		app.add_systems(Update, drag::<_Agent, u32>);
 		app.update();
 
@@ -71,7 +71,7 @@ mod tests {
 		let mut app = App::new();
 
 		let agent = app.world.spawn(_Agent).id();
-		app.world.spawn((Interaction::Hovered, DadPanel(42_u32)));
+		app.world.spawn((Interaction::Hovered, KeyedPanel(42_u32)));
 		app.add_systems(Update, drag::<_Agent, u32>);
 		app.update();
 

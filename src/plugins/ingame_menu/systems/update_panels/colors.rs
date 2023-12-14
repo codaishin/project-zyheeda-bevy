@@ -1,18 +1,18 @@
 use crate::plugins::ingame_menu::{
 	tools::PanelState,
-	traits::{colors::GetPanelColors, panel_state::GetPanelState},
+	traits::{colors::GetPanelColors, get::Get},
 };
 use bevy::{
 	ecs::{component::Component, system::Query},
 	ui::{BackgroundColor, Interaction},
 };
 
-pub fn panel_color<TPanel: Component + GetPanelState + GetPanelColors>(
+pub fn panel_colors<TPanel: Component + Get<(), PanelState> + GetPanelColors>(
 	mut panels: Query<(&mut BackgroundColor, &Interaction, &TPanel)>,
 ) {
 	let colors = TPanel::get_panel_colors();
 	for (mut color, interaction, panel) in &mut panels {
-		*color = match (interaction, panel.get_panel_state()) {
+		*color = match (interaction, panel.get(())) {
 			(Interaction::Pressed, ..) => colors.pressed.into(),
 			(Interaction::Hovered, ..) => colors.hovered.into(),
 			(.., PanelState::Empty) => colors.empty.into(),
@@ -34,8 +34,8 @@ mod tests {
 	#[derive(Component)]
 	struct _Empty;
 
-	impl GetPanelState for _Empty {
-		fn get_panel_state(&self) -> PanelState {
+	impl Get<(), PanelState> for _Empty {
+		fn get(&self, _: ()) -> PanelState {
 			PanelState::Empty
 		}
 	}
@@ -43,8 +43,8 @@ mod tests {
 	#[derive(Component)]
 	struct _Filled;
 
-	impl GetPanelState for _Filled {
-		fn get_panel_state(&self) -> PanelState {
+	impl Get<(), PanelState> for _Filled {
+		fn get(&self, _: ()) -> PanelState {
 			PanelState::Filled
 		}
 	}
@@ -83,7 +83,7 @@ mod tests {
 			))
 			.id();
 
-		app.add_systems(Update, panel_color::<_Empty>);
+		app.add_systems(Update, panel_colors::<_Empty>);
 		app.update();
 
 		let color = app.world.entity(agent).get::<BackgroundColor>().unwrap().0;
@@ -103,7 +103,7 @@ mod tests {
 			))
 			.id();
 
-		app.add_systems(Update, panel_color::<_Empty>);
+		app.add_systems(Update, panel_colors::<_Empty>);
 		app.update();
 
 		let color = app.world.entity(agent).get::<BackgroundColor>().unwrap().0;
@@ -123,7 +123,7 @@ mod tests {
 			))
 			.id();
 
-		app.add_systems(Update, panel_color::<_Empty>);
+		app.add_systems(Update, panel_colors::<_Empty>);
 		app.update();
 
 		let color = app.world.entity(agent).get::<BackgroundColor>().unwrap().0;
@@ -143,7 +143,7 @@ mod tests {
 			))
 			.id();
 
-		app.add_systems(Update, panel_color::<_Filled>);
+		app.add_systems(Update, panel_colors::<_Filled>);
 		app.update();
 
 		let color = app.world.entity(agent).get::<BackgroundColor>().unwrap().0;

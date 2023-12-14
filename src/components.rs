@@ -272,7 +272,7 @@ pub struct Projectile {
 pub struct Swap<T1, T2>(pub T1, pub T2);
 
 #[derive(Component, Debug, Clone, Copy)]
-pub struct DadPanel<TKey>(pub TKey);
+pub struct KeyedPanel<TKey>(pub TKey);
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 pub struct Dad<T>(pub T);

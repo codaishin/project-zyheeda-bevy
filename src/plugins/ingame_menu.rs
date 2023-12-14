@@ -6,17 +6,17 @@ mod traits;
 use self::{
 	components::{InventoryPanel, InventoryScreen},
 	systems::{
-		colors::panel_color,
 		dad::{drag::drag, drop::drop},
 		despawn::despawn,
 		set_state::set_state,
 		spawn::spawn,
 		toggle_state::toggle_state,
+		update_panels::{colors::panel_colors, states::panel_states},
 	},
-	tools::{MenuState, PanelState},
+	tools::MenuState,
 };
 use crate::{
-	components::{DadPanel, Inventory, InventoryKey, Player, SlotKey, Slots, Swap},
+	components::{Inventory, InventoryKey, Player, SlotKey, Slots, Swap},
 	states::{GameRunning, Off, On},
 };
 use bevy::prelude::*;
@@ -38,68 +38,17 @@ impl Plugin for IngameMenuPlugin {
 			.add_systems(
 				Update,
 				(
-					panel_color::<InventoryPanel>,
+					panel_colors::<InventoryPanel>,
+					panel_states::<InventoryPanel, InventoryKey, Inventory>,
+					panel_states::<InventoryPanel, SlotKey, Slots>,
 					drag::<Player, InventoryKey>,
 					drag::<Player, SlotKey>,
 					drop::<Player, InventoryKey, InventoryKey, Swap<InventoryKey, InventoryKey>>,
 					drop::<Player, SlotKey, SlotKey, Swap<SlotKey, SlotKey>>,
 					drop::<Player, SlotKey, InventoryKey, Swap<SlotKey, InventoryKey>>,
 					drop::<Player, InventoryKey, SlotKey, Swap<InventoryKey, SlotKey>>,
-					update_slots,
-					update_item,
 				)
 					.run_if(in_state(MenuState::Inventory)),
 			);
-	}
-}
-
-fn update_slots(
-	slots: Query<&Slots>,
-	agents: Query<Entity, With<Player>>,
-	mut texts: Query<&mut Text>,
-	mut slot_buttons: Query<(&DadPanel<SlotKey>, &Children, &mut InventoryPanel), With<Button>>,
-) {
-	let player = agents.single();
-
-	for (target_panel, children, mut panel) in &mut slot_buttons {
-		let mut txt = texts.get_mut(children[0]).unwrap();
-		let slots = slots.get(player).unwrap();
-		match slots.0.get(&target_panel.0).and_then(|s| s.item) {
-			Some(item) => {
-				txt.sections[0].value = item.name.to_string();
-				*panel = PanelState::Filled.into();
-			}
-			_ => {
-				txt.sections[0].value = "<Empty>".to_string();
-				*panel = PanelState::Empty.into();
-			}
-		};
-	}
-}
-
-fn update_item(
-	inventory: Query<&Inventory>,
-	agents: Query<Entity, With<Player>>,
-	mut texts: Query<&mut Text>,
-	mut inventory_buttons: Query<
-		(&DadPanel<InventoryKey>, &Children, &mut InventoryPanel),
-		With<Button>,
-	>,
-) {
-	let player = agents.single();
-
-	for (target_panel, children, mut panel) in &mut inventory_buttons {
-		let mut txt = texts.get_mut(children[0]).unwrap();
-		let inventory = inventory.get(player).unwrap();
-		match inventory.0.get(target_panel.0 .0) {
-			Some(Some(item)) => {
-				txt.sections[0].value = item.name.to_string();
-				*panel = PanelState::Filled.into();
-			}
-			_ => {
-				txt.sections[0].value = "<Empty>".to_string();
-				*panel = PanelState::Empty.into();
-			}
-		};
 	}
 }

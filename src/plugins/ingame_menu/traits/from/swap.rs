@@ -1,1 +1,1 @@
-pub mod tuple_dad_dad_panel;
+pub mod tuple_dad_keyed_panel;
