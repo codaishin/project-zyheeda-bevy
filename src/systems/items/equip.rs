@@ -28,7 +28,7 @@ pub fn equip_item<
 
 	for (agent, mut slots, mut equip, mut component) in &mut agent {
 		let mut agent = commands.entity(agent);
-		let fails = equip_items_to::<TContainer, TItemAccessor>(
+		let accessors_and_results = equip_items::<TContainer, TItemAccessor>(
 			&mut slots,
 			&mut scene_handles,
 			&mut component,
@@ -37,7 +37,7 @@ pub fn equip_item<
 		);
 		let mut retry: Vec<TItemAccessor> = vec![];
 
-		update_retries_and_results(fails, &mut retry, &mut results);
+		push_retries_and_results(accessors_and_results, &mut retry, &mut results);
 
 		if retry.is_empty() {
 			agent.remove::<Collection<TItemAccessor>>();
@@ -49,7 +49,7 @@ pub fn equip_item<
 	results
 }
 
-fn update_retries_and_results<TItemAccessor>(
+fn push_retries_and_results<TItemAccessor>(
 	fails: Vec<(TItemAccessor, Result<(), Error>)>,
 	retry: &mut Vec<TItemAccessor>,
 	results: &mut Vec<Result<(), Error>>,
@@ -65,9 +65,7 @@ fn update_retries_and_results<TItemAccessor>(
 	}
 }
 
-type SourcesWithErrors<TItemAccessor> = Vec<TItemAccessor>;
-
-fn equip_items_to<
+fn equip_items<
 	TContainer: Component,
 	TItemAccessor: Accessor<TContainer, (SlotKey, Option<Item>), Item>,
 >(
@@ -76,19 +74,19 @@ fn equip_items_to<
 	component: &mut TContainer,
 	equip: &Collection<TItemAccessor>,
 	models: &Res<Models>,
-) -> SourcesWithErrors<(TItemAccessor, Result<(), Error>)> {
-	let try_swap_items = |src: &TItemAccessor| {
-		let (slot_key, new_item) = src.get_key_and_item(component);
-		match equip_new_and_return_old_item(slots, scene_handles, (slot_key, new_item), models) {
-			Err(error) => (src.with_item(new_item, component), Err(error)),
-			Ok(old) => (src.with_item(old, component), Ok(())),
+) -> Vec<(TItemAccessor, Result<(), Error>)> {
+	let try_swap_items = |accessor: &TItemAccessor| {
+		let (slot_key, accessor_item) = accessor.get_key_and_item(component);
+		match equip_and_return_old_item(slots, scene_handles, (slot_key, accessor_item), models) {
+			Err(error) => (accessor.with_item(accessor_item, component), Err(error)),
+			Ok(old) => (accessor.with_item(old, component), Ok(())),
 		}
 	};
 
 	equip.0.iter().map(try_swap_items).collect()
 }
 
-fn equip_new_and_return_old_item(
+fn equip_and_return_old_item(
 	slots: &mut Mut<Slots>,
 	scene_handles: &mut Query<&mut Handle<Scene>>,
 	(slot_key, item): (SlotKey, Option<Item>),
