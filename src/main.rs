@@ -42,7 +42,12 @@ use project_zyheeda::{
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
 		},
-		skill::{dequeue::dequeue, enqueue::enqueue, execute_skill, projectile::projectile},
+		skill::{
+			dequeue::dequeue,
+			enqueue::enqueue,
+			execute_skill::execute_skill,
+			projectile::projectile,
+		},
 	},
 	tools::Tools,
 	traits::{
