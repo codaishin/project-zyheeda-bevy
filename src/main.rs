@@ -294,6 +294,36 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			..default()
 		}),
 	};
+	let sword_a = Item {
+		name: "Sword A",
+		model: Some("sword"),
+		skill: Some(Skill {
+			name: "Swing Sword",
+			cast: Cast {
+				pre: Duration::from_millis(0),
+				after: Duration::from_millis(700),
+			},
+			soft_override: true,
+			marker: Sword::marker(),
+			behavior: Sword::behavior(),
+			..default()
+		}),
+	};
+	let sword_b = Item {
+		name: "Sword B",
+		model: Some("sword"),
+		skill: Some(Skill {
+			name: "Swing Sword",
+			cast: Cast {
+				pre: Duration::from_millis(0),
+				after: Duration::from_millis(700),
+			},
+			soft_override: true,
+			marker: Sword::marker(),
+			behavior: Sword::behavior(),
+			..default()
+		}),
+	};
 	let legs = Item {
 		name: "Legs",
 		model: None,
@@ -319,7 +349,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			run_speed: UnitsPerSecond::new(1.5),
 			movement_mode: MovementMode::Slow,
 		},
-		Inventory::new([None, None, Some(pistol_c)]),
+		Inventory::new([Some(sword_a), Some(sword_b), Some(pistol_c)]),
 		Loadout::new(
 			[
 				(SlotKey::SkillSpawn, "projectile_spawn"),
