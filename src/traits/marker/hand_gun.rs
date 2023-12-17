@@ -3,7 +3,7 @@ use crate::{
 	components::{Active, Marker, Queued, Side, Skill, SlotKey},
 	errors::{Error, Level},
 	markers::{
-		meta::{Chain, MarkerMeta, MarkerModifyFn, Tag},
+		meta::{MarkerMeta, MarkerModifyFn, SkillModify},
 		Dual,
 		HandGun,
 		Left,
@@ -15,13 +15,11 @@ use bevy::ecs::system::EntityCommands;
 impl GetMarkerMeta for HandGun {
 	fn marker() -> MarkerMeta {
 		MarkerMeta {
-			tag: Some(Tag::HandGun),
 			insert_fn: INSERT_SINGLE,
 			remove_fn: REMOVE_SINGLE,
-			chain: Chain {
-				can_chain,
-				modify_single,
-				modify_dual,
+			skill_modify: SkillModify {
+				modify_single_fn: modify_single,
+				modify_dual_fn: modify_dual,
 			},
 		}
 	}
@@ -69,10 +67,6 @@ fn remove_fn<TLeft: Send + Sync + 'static, TRight: Send + Sync + 'static>(
 	};
 
 	Ok(())
-}
-
-fn can_chain(running: &Skill<Active>, new: &Skill<Queued>) -> bool {
-	running.marker.tag == Some(Tag::HandGun) && new.marker.tag == Some(Tag::HandGun)
 }
 
 fn modify_single(running: &mut Skill<Active>, new: &mut Skill<Queued>) {
@@ -262,71 +256,8 @@ mod tests {
 	}
 
 	#[test]
-	fn can_override_true() {
-		let can_chain = HandGun::marker().chain.can_chain;
-		let running = Skill {
-			marker: MarkerMeta {
-				tag: Some(Tag::HandGun),
-				..default()
-			},
-			..default()
-		};
-		let new = Skill {
-			marker: MarkerMeta {
-				tag: Some(Tag::HandGun),
-				..default()
-			},
-			..default()
-		};
-
-		assert!(can_chain(&running, &new));
-	}
-
-	#[test]
-	fn can_override_running_no_handgun_false() {
-		let can_chain = HandGun::marker().chain.can_chain;
-		let running = Skill {
-			marker: MarkerMeta {
-				tag: None,
-				..default()
-			},
-			..default()
-		};
-		let new = Skill {
-			marker: MarkerMeta {
-				tag: Some(Tag::HandGun),
-				..default()
-			},
-			..default()
-		};
-
-		assert!(!can_chain(&running, &new));
-	}
-
-	#[test]
-	fn can_override_new_no_handgun_false() {
-		let can_chain = HandGun::marker().chain.can_chain;
-		let running = Skill {
-			marker: MarkerMeta {
-				tag: Some(Tag::HandGun),
-				..default()
-			},
-			..default()
-		};
-		let new = Skill {
-			marker: MarkerMeta {
-				tag: None,
-				..default()
-			},
-			..default()
-		};
-
-		assert!(!can_chain(&running, &new));
-	}
-
-	#[test]
 	fn modify_single() {
-		let modify = HandGun::marker().chain.modify_single;
+		let modify = HandGun::marker().skill_modify.modify_single_fn;
 		let mut running = Skill {
 			data: Active {
 				ignore_after_cast: true,
@@ -350,7 +281,7 @@ mod tests {
 
 	#[test]
 	fn modify_dual() {
-		let modify = HandGun::marker().chain.modify_dual;
+		let modify = HandGun::marker().skill_modify.modify_dual_fn;
 		let mut running = Skill { ..default() };
 		let mut new = Skill { ..default() };
 

@@ -1,13 +1,13 @@
 use crate::{
 	components::{Active, Queue, Queued, Schedule, ScheduleMode, Skill, SlotKey, WaitNext},
-	traits::{get_ray::GetRayFromCamera, try_chain::TryChain},
+	traits::{get_ray::GetRayFromCamera, try_soft_override::TrySoftOverride},
 };
 use bevy::{
 	prelude::{Camera, Commands, Entity, GlobalTransform, Mut, Query, Ray},
 	window::Window,
 };
 
-pub fn enqueue<TTools: GetRayFromCamera + TryChain>(
+pub fn enqueue<TTools: GetRayFromCamera + TrySoftOverride>(
 	camera: Query<(&Camera, &GlobalTransform)>,
 	window: Query<&Window>,
 	mut agents: Query<(Entity, &Schedule, &mut Queue, Option<&mut Skill<Active>>)>,
@@ -34,7 +34,7 @@ pub fn enqueue<TTools: GetRayFromCamera + TryChain>(
 	}
 }
 
-fn enqueue_skills<TTools: TryChain>(
+fn enqueue_skills<TTools: TrySoftOverride>(
 	agent: Entity,
 	schedule: &Schedule,
 	queue: &mut Queue,
@@ -47,7 +47,7 @@ fn enqueue_skills<TTools: TryChain>(
 	}
 }
 
-fn enqueue_skill<TTools: TryChain>(
+fn enqueue_skill<TTools: TrySoftOverride>(
 	agent: Entity,
 	schedule: &Schedule,
 	queue: &mut Queue,
@@ -67,14 +67,14 @@ fn enqueue_skill<TTools: TryChain>(
 		return;
 	}
 
-	let chained = running
+	let override_soft = running
 		.as_mut()
-		.map(|running| TTools::try_chain(running, &mut new))
+		.map(|running| TTools::try_soft_override(running, &mut new))
 		.unwrap_or(false);
 
 	queue.0 = vec![new].into();
 
-	if !chained {
+	if !override_soft {
 		commands.entity(agent).insert(WaitNext);
 	}
 }
@@ -108,8 +108,8 @@ mod tests {
 		}
 	}
 
-	impl TryChain for _Tools {
-		fn try_chain(_running: &mut Skill<Active>, _new: &mut Skill<Queued>) -> bool {
+	impl TrySoftOverride for _Tools {
+		fn try_soft_override(_running: &mut Skill<Active>, _new: &mut Skill<Queued>) -> bool {
 			false
 		}
 	}
@@ -125,14 +125,14 @@ mod tests {
 						_window: &Window,
 					) -> Option<Ray> {}
 				}
-				impl TryChain for $struct_name {
-					fn try_chain(_running: &mut Skill<Active>, _new: &mut Skill<Queued>) -> bool {}
+				impl TrySoftOverride for $struct_name {
+					fn try_soft_override(_running: &mut Skill<Active>, _new: &mut Skill<Queued>) -> bool {}
 				}
 			}
 		};
 	}
 
-	fn setup<TTools: GetRayFromCamera + TryChain + 'static>() -> App {
+	fn setup<TTools: GetRayFromCamera + TrySoftOverride + 'static>() -> App {
 		let mut app = App::new();
 
 		app.world.spawn(Camera3dBundle {
@@ -301,10 +301,10 @@ mod tests {
 			..default()
 		};
 		let get_ray = Mock_A::get_ray_context();
-		let try_chain = Mock_A::try_chain_context();
+		let try_soft_override = Mock_A::try_soft_override_context();
 
 		get_ray.expect().return_const(Some(TEST_RAY));
-		try_chain
+		try_soft_override
 			.expect()
 			.times(1)
 			.with(
@@ -369,7 +369,7 @@ mod tests {
 	#[test]
 	fn ray_from_camera_and_window() {
 		let get_ray = Mock_B::get_ray_context();
-		let try_chain = Mock_B::try_chain_context();
+		let try_soft_override = Mock_B::try_soft_override_context();
 		let ray = Ray {
 			origin: Vec3::ZERO,
 			direction: Vec3::ONE,
@@ -384,7 +384,7 @@ mod tests {
 			})
 			.times(1)
 			.return_const(ray);
-		try_chain.expect().return_const(false);
+		try_soft_override.expect().return_const(false);
 
 		let mut app = setup::<Mock_B>();
 		app.world.spawn((
@@ -403,14 +403,14 @@ mod tests {
 	#[test]
 	fn do_not_produce_ray_when_nothing_scheduled() {
 		let get_ray = Mock_C::get_ray_context();
-		let try_chain = Mock_C::try_chain_context();
+		let try_soft_override = Mock_C::try_soft_override_context();
 		let ray = Ray {
 			origin: Vec3::ZERO,
 			direction: Vec3::ONE,
 		};
 
 		get_ray.expect().times(0).return_const(ray);
-		try_chain.expect().return_const(false);
+		try_soft_override.expect().return_const(false);
 
 		let mut app = setup::<Mock_C>();
 		app.world.spawn(Queue([].into()));
@@ -423,14 +423,14 @@ mod tests {
 	#[test]
 	fn do_try_chain_on_enqueue() {
 		let get_ray = Mock_D::get_ray_context();
-		let try_chain = Mock_D::try_chain_context();
+		let try_soft_override = Mock_D::try_soft_override_context();
 		let ray = Ray {
 			origin: Vec3::ZERO,
 			direction: Vec3::ONE,
 		};
 
 		get_ray.expect().return_const(ray);
-		try_chain.expect().never().return_const(false);
+		try_soft_override.expect().never().return_const(false);
 
 		let mut app = setup::<Mock_D>();
 		app.world.spawn((

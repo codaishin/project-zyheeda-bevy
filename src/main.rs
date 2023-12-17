@@ -258,6 +258,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				pre: Duration::from_millis(500),
 				after: Duration::from_millis(500),
 			},
+			soft_override: true,
 			marker: HandGun::marker(),
 			behavior: Projectile::behavior(),
 			..default()
@@ -272,6 +273,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				pre: Duration::from_millis(500),
 				after: Duration::from_millis(500),
 			},
+			soft_override: true,
 			marker: HandGun::marker(),
 			behavior: Projectile::behavior(),
 			..default()
@@ -286,6 +288,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				pre: Duration::from_millis(500),
 				after: Duration::from_millis(500),
 			},
+			soft_override: true,
 			marker: HandGun::marker(),
 			behavior: Projectile::behavior(),
 			..default()
