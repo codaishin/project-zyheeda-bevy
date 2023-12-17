@@ -49,7 +49,7 @@ use project_zyheeda::{
 			projectile::projectile,
 		},
 	},
-	tools::Tools,
+	tools::{Once, Repeat, Tools},
 	traits::{
 		behavior::GetBehaviorMeta,
 		marker::GetMarkerMeta,
@@ -113,16 +113,16 @@ fn main() {
 		.add_systems(
 			Update,
 			(
-				animate::<Player, Marker<Idle>>,
-				animate::<Player, Marker<Slow>>,
-				animate::<Player, Marker<Fast>>,
-				animate::<Player, Marker<(HandGun, Left)>>,
-				animate::<Player, Marker<(HandGun, Left)>>,
-				animate::<Player, Marker<(HandGun, Left, Dual)>>,
-				animate::<Player, Marker<(HandGun, Right)>>,
-				animate::<Player, Marker<(HandGun, Right, Dual)>>,
-				animate::<Player, Marker<(Sword, Left)>>,
-				animate::<Player, Marker<(Sword, Right)>>,
+				animate::<Player, Marker<Idle>, Repeat>,
+				animate::<Player, Marker<Slow>, Repeat>,
+				animate::<Player, Marker<Fast>, Repeat>,
+				animate::<Player, Marker<(HandGun, Left)>, Once>,
+				animate::<Player, Marker<(HandGun, Left)>, Once>,
+				animate::<Player, Marker<(HandGun, Left, Dual)>, Once>,
+				animate::<Player, Marker<(HandGun, Right)>, Once>,
+				animate::<Player, Marker<(HandGun, Right, Dual)>, Once>,
+				animate::<Player, Marker<(Sword, Left)>, Once>,
+				animate::<Player, Marker<(Sword, Right)>, Once>,
 			),
 		)
 		.add_systems(Update, debug)

@@ -5,7 +5,11 @@ use bevy::{
 };
 
 ///Serves as a struct to implement static traits on
-pub struct Tools {}
+pub struct Tools;
+
+pub struct Once;
+
+pub struct Repeat;
 
 pub fn look_from_spawner(agent: &mut Transform, spawner: &Spawner, ray: &Ray) {
 	let spawner = spawner.0.translation();
