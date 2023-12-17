@@ -23,7 +23,7 @@ use project_zyheeda::{
 		Swap,
 		UnitsPerSecond,
 	},
-	markers::{Dual, Fast, HandGun, Idle, Left, Right, Slow},
+	markers::{Dual, Fast, HandGun, Idle, Left, Right, Slow, Sword},
 	plugins::ingame_menu::IngameMenuPlugin,
 	resources::{Animation, Models, SlotMap},
 	states::GameRunning,
@@ -121,6 +121,8 @@ fn main() {
 				animate::<Player, Marker<(HandGun, Left, Dual)>>,
 				animate::<Player, Marker<(HandGun, Right)>>,
 				animate::<Player, Marker<(HandGun, Right, Dual)>>,
+				animate::<Player, Marker<(Sword, Left)>>,
+				animate::<Player, Marker<(Sword, Right)>>,
 			),
 		)
 		.add_systems(Update, debug)
@@ -171,6 +173,7 @@ fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
 	let models = Models::new(
 		[
 			("pistol", "pistol.gltf", 0),
+			("sword", "sword.gltf", 0),
 			("projectile", "projectile.gltf", 0),
 		],
 		&asset_server,
@@ -238,6 +241,12 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	));
 	commands.insert_resource(Animation::<Player, Marker<(HandGun, Left, Dual)>>::new(
 		asset_server.load("models/player.gltf#Animation7"),
+	));
+	commands.insert_resource(Animation::<Player, Marker<(Sword, Right)>>::new(
+		asset_server.load("models/player.gltf#Animation8"),
+	));
+	commands.insert_resource(Animation::<Player, Marker<(Sword, Left)>>::new(
+		asset_server.load("models/player.gltf#Animation9"),
 	));
 
 	let pistol_a = Item {
