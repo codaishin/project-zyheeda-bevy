@@ -23,7 +23,7 @@ use project_zyheeda::{
 		Swap,
 		UnitsPerSecond,
 	},
-	markers::{Dual, Fast, HandGun, Idle, Left, Right, Slow},
+	markers::{Dual, Fast, HandGun, Idle, Left, Right, Slow, Sword},
 	plugins::ingame_menu::IngameMenuPlugin,
 	resources::{Animation, Models, SlotMap},
 	states::GameRunning,
@@ -49,7 +49,7 @@ use project_zyheeda::{
 			projectile::projectile,
 		},
 	},
-	tools::Tools,
+	tools::{Once, Repeat, Tools},
 	traits::{
 		behavior::GetBehaviorMeta,
 		marker::GetMarkerMeta,
@@ -113,14 +113,16 @@ fn main() {
 		.add_systems(
 			Update,
 			(
-				animate::<Player, Marker<Idle>>,
-				animate::<Player, Marker<Slow>>,
-				animate::<Player, Marker<Fast>>,
-				animate::<Player, Marker<(HandGun, Left)>>,
-				animate::<Player, Marker<(HandGun, Left)>>,
-				animate::<Player, Marker<(HandGun, Left, Dual)>>,
-				animate::<Player, Marker<(HandGun, Right)>>,
-				animate::<Player, Marker<(HandGun, Right, Dual)>>,
+				animate::<Player, Marker<Idle>, Repeat>,
+				animate::<Player, Marker<Slow>, Repeat>,
+				animate::<Player, Marker<Fast>, Repeat>,
+				animate::<Player, Marker<(HandGun, Left)>, Once>,
+				animate::<Player, Marker<(HandGun, Left)>, Once>,
+				animate::<Player, Marker<(HandGun, Left, Dual)>, Once>,
+				animate::<Player, Marker<(HandGun, Right)>, Once>,
+				animate::<Player, Marker<(HandGun, Right, Dual)>, Once>,
+				animate::<Player, Marker<(Sword, Left)>, Once>,
+				animate::<Player, Marker<(Sword, Right)>, Once>,
 			),
 		)
 		.add_systems(Update, debug)
@@ -171,6 +173,7 @@ fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
 	let models = Models::new(
 		[
 			("pistol", "pistol.gltf", 0),
+			("sword", "sword.gltf", 0),
 			("projectile", "projectile.gltf", 0),
 		],
 		&asset_server,
@@ -239,6 +242,12 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	commands.insert_resource(Animation::<Player, Marker<(HandGun, Left, Dual)>>::new(
 		asset_server.load("models/player.gltf#Animation7"),
 	));
+	commands.insert_resource(Animation::<Player, Marker<(Sword, Right)>>::new(
+		asset_server.load("models/player.gltf#Animation8"),
+	));
+	commands.insert_resource(Animation::<Player, Marker<(Sword, Left)>>::new(
+		asset_server.load("models/player.gltf#Animation9"),
+	));
 
 	let pistol_a = Item {
 		name: "Pistol A",
@@ -249,6 +258,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				pre: Duration::from_millis(500),
 				after: Duration::from_millis(500),
 			},
+			soft_override: true,
 			marker: HandGun::marker(),
 			behavior: Projectile::behavior(),
 			..default()
@@ -263,6 +273,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				pre: Duration::from_millis(500),
 				after: Duration::from_millis(500),
 			},
+			soft_override: true,
 			marker: HandGun::marker(),
 			behavior: Projectile::behavior(),
 			..default()
@@ -277,8 +288,39 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				pre: Duration::from_millis(500),
 				after: Duration::from_millis(500),
 			},
+			soft_override: true,
 			marker: HandGun::marker(),
 			behavior: Projectile::behavior(),
+			..default()
+		}),
+	};
+	let sword_a = Item {
+		name: "Sword A",
+		model: Some("sword"),
+		skill: Some(Skill {
+			name: "Swing Sword",
+			cast: Cast {
+				pre: Duration::from_millis(0),
+				after: Duration::from_millis(700),
+			},
+			soft_override: true,
+			marker: Sword::marker(),
+			behavior: Sword::behavior(),
+			..default()
+		}),
+	};
+	let sword_b = Item {
+		name: "Sword B",
+		model: Some("sword"),
+		skill: Some(Skill {
+			name: "Swing Sword",
+			cast: Cast {
+				pre: Duration::from_millis(0),
+				after: Duration::from_millis(700),
+			},
+			soft_override: true,
+			marker: Sword::marker(),
+			behavior: Sword::behavior(),
 			..default()
 		}),
 	};
@@ -307,7 +349,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			run_speed: UnitsPerSecond::new(1.5),
 			movement_mode: MovementMode::Slow,
 		},
-		Inventory::new([None, None, Some(pistol_c)]),
+		Inventory::new([Some(sword_a), Some(sword_b), Some(pistol_c)]),
 		Loadout::new(
 			[
 				(SlotKey::SkillSpawn, "projectile_spawn"),

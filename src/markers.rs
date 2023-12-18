@@ -16,3 +16,6 @@ pub struct Right;
 
 #[derive(PartialEq, Debug)]
 pub struct HandGun;
+
+#[derive(PartialEq, Debug)]
+pub struct Sword;

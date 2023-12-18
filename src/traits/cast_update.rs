@@ -9,9 +9,15 @@ pub enum CastType {
 }
 
 #[derive(PartialEq, Debug, Clone)]
+pub enum AgeType {
+	New,
+	Old,
+}
+
+#[derive(PartialEq, Debug, Clone)]
 pub enum State {
 	New,
-	Activate,
+	Active(AgeType),
 	Done,
 	Casting(CastType),
 }

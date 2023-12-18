@@ -1,5 +1,6 @@
 pub mod projectile;
 pub mod simple_movement;
+pub mod sword;
 
 use crate::behaviors::meta::BehaviorMeta;
 

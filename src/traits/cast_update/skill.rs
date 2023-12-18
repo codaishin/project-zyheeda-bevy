@@ -1,10 +1,10 @@
-use super::{CastType, CastUpdate, State};
+use super::{AgeType, CastType, CastUpdate, State};
 use crate::components::{Active, Skill};
 use std::time::Duration;
 
 fn new_or_active(skill: &Skill<Active>) -> State {
 	if skill.cast.pre == Duration::ZERO {
-		State::Activate
+		State::Active(AgeType::New)
 	} else {
 		State::New
 	}
@@ -27,7 +27,7 @@ impl CastUpdate for Skill<Active> {
 		match (old_duration, self.data.duration) {
 			(Duration::ZERO, _) => new_or_active(self),
 			(_, new_duration) if new_duration < self.cast.pre => State::Casting(CastType::Pre),
-			(old_duration, _) if old_duration < self.cast.pre => State::Activate,
+			(old_duration, _) if old_duration < self.cast.pre => State::Active(AgeType::Old),
 			(_, new_duration) if new_duration < full_cast(self) => State::Casting(CastType::After),
 			_ => State::Done,
 		}
@@ -98,7 +98,10 @@ mod tests {
 			..default()
 		};
 
-		assert_eq!(State::Activate, skill.update(Duration::from_millis(99)));
+		assert_eq!(
+			State::Active(AgeType::Old),
+			skill.update(Duration::from_millis(99))
+		);
 	}
 
 	#[test]
@@ -115,7 +118,10 @@ mod tests {
 			..default()
 		};
 
-		assert_eq!(State::Activate, skill.update(Duration::from_millis(100)));
+		assert_eq!(
+			State::Active(AgeType::Old),
+			skill.update(Duration::from_millis(100))
+		);
 	}
 
 	#[test]
@@ -175,7 +181,10 @@ mod tests {
 		];
 
 		assert_eq!(
-			([State::Activate, State::Done], Duration::from_millis(2)),
+			(
+				[State::Active(AgeType::New), State::Done],
+				Duration::from_millis(2)
+			),
 			(states, skill.data.duration)
 		);
 	}
@@ -201,7 +210,11 @@ mod tests {
 		];
 
 		assert_eq!(
-			[State::New, State::Activate, State::Casting(CastType::After)],
+			[
+				State::New,
+				State::Active(AgeType::Old),
+				State::Casting(CastType::After)
+			],
 			states
 		);
 	}
@@ -227,6 +240,9 @@ mod tests {
 			skill.update(Duration::from_millis(50)),
 		];
 
-		assert_eq!([State::New, State::Activate, State::Done], states);
+		assert_eq!(
+			[State::New, State::Active(AgeType::Old), State::Done],
+			states
+		);
 	}
 }

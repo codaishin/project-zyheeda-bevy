@@ -97,6 +97,7 @@ pub struct Skill<TData = ()> {
 	pub name: &'static str,
 	pub data: TData,
 	pub cast: Cast,
+	pub soft_override: bool,
 	pub marker: MarkerMeta,
 	pub behavior: BehaviorMeta,
 }
@@ -130,6 +131,7 @@ impl Skill {
 			data,
 			name: self.name,
 			cast: self.cast,
+			soft_override: self.soft_override,
 			marker: self.marker,
 			behavior: self.behavior,
 		}
@@ -143,6 +145,7 @@ impl<TSrc> Skill<TSrc> {
 			data: map(self.data),
 			cast: self.cast,
 			marker: self.marker,
+			soft_override: self.soft_override,
 			behavior: self.behavior,
 		}
 	}

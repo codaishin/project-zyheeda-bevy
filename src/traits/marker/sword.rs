@@ -1,38 +1,29 @@
 use super::GetMarkerMeta;
 use crate::{
-	components::{Active, Marker, Queued, Side, Skill, SlotKey},
+	components::{Marker, Side, SlotKey},
 	errors::{Error, Level},
 	markers::{
-		meta::{MarkerMeta, MarkerModifyFn, SkillModify},
-		Dual,
-		HandGun,
+		meta::{MarkerMeta, SkillModify},
 		Left,
 		Right,
+		Sword,
 	},
 };
 use bevy::ecs::system::EntityCommands;
 
-impl GetMarkerMeta for HandGun {
+impl GetMarkerMeta for Sword {
 	fn marker() -> MarkerMeta {
 		MarkerMeta {
-			insert_fn: INSERT_SINGLE,
-			remove_fn: REMOVE_SINGLE,
-			skill_modify: SkillModify {
-				modify_single_fn: modify_single,
-				modify_dual_fn: modify_dual,
-			},
+			insert_fn: insert_fn::<(Sword, Left), (Sword, Right)>,
+			remove_fn: remove_fn::<(Sword, Left), (Sword, Right)>,
+			skill_modify: SkillModify::default(),
 		}
 	}
 }
 
-const INSERT_SINGLE: MarkerModifyFn = insert_fn::<(HandGun, Left), (HandGun, Right)>;
-const REMOVE_SINGLE: MarkerModifyFn = remove_fn::<(HandGun, Left), (HandGun, Right)>;
-const INSERT_DUAL: MarkerModifyFn = insert_fn::<(HandGun, Left, Dual), (HandGun, Right, Dual)>;
-const REMOVE_DUAL: MarkerModifyFn = remove_fn::<(HandGun, Left, Dual), (HandGun, Right, Dual)>;
-
 fn slot_error(slot: SlotKey) -> Error {
 	Error {
-		msg: format!("{:?} is not a valid handgun slot", slot),
+		msg: format!("{:?} is not a valid sword slot", slot),
 		lvl: Level::Error,
 	}
 }
@@ -67,21 +58,6 @@ fn remove_fn<TLeft: Send + Sync + 'static, TRight: Send + Sync + 'static>(
 	};
 
 	Ok(())
-}
-
-fn modify_single(running: &mut Skill<Active>, new: &mut Skill<Queued>) {
-	running.data.ignore_after_cast = false;
-	new.marker.insert_fn = INSERT_SINGLE;
-	new.marker.remove_fn = REMOVE_SINGLE;
-}
-
-fn modify_dual(running: &mut Skill<Active>, new: &mut Skill<Queued>) {
-	if running.marker.insert_fn != INSERT_SINGLE && running.marker.insert_fn != INSERT_DUAL {
-		return;
-	}
-	running.data.ignore_after_cast = true;
-	new.marker.insert_fn = INSERT_DUAL;
-	new.marker.remove_fn = REMOVE_DUAL;
 }
 
 #[cfg(test)]
@@ -255,113 +231,6 @@ mod tests {
 		assert_eq!(
 			Some(slot_error(slot)),
 			agent.get::<FakeErrorLog>().map(|l| l.0.clone())
-		);
-	}
-
-	#[test]
-	fn modify_single() {
-		let modify = HandGun::marker().skill_modify.modify_single_fn;
-		let mut running = Skill {
-			data: Active {
-				ignore_after_cast: true,
-				..default()
-			},
-			..default()
-		};
-		let mut new = Skill { ..default() };
-
-		modify(&mut running, &mut new);
-
-		assert_eq!(
-			(INSERT_SINGLE as usize, REMOVE_SINGLE as usize, false,),
-			(
-				new.marker.insert_fn as usize,
-				new.marker.remove_fn as usize,
-				running.data.ignore_after_cast
-			)
-		);
-	}
-
-	#[test]
-	fn modify_dual_dual_markers() {
-		let mut running = Skill {
-			marker: MarkerMeta {
-				insert_fn: INSERT_SINGLE,
-				..default()
-			},
-			..default()
-		};
-		let mut new = Skill {
-			marker: HandGun::marker(),
-			..default()
-		};
-
-		(new.marker.skill_modify.modify_dual_fn)(&mut running, &mut new);
-
-		assert_eq!(
-			(INSERT_DUAL as usize, REMOVE_DUAL as usize, true,),
-			(
-				new.marker.insert_fn as usize,
-				new.marker.remove_fn as usize,
-				running.data.ignore_after_cast
-			)
-		);
-	}
-
-	#[test]
-	fn modify_dual_when_running_with_unknown_markers_then_no_modification() {
-		let mut running = Skill {
-			data: Active {
-				ignore_after_cast: false,
-				..default()
-			},
-			marker: MarkerMeta { ..default() },
-			..default()
-		};
-		let mut new = Skill {
-			marker: HandGun::marker(),
-			..default()
-		};
-
-		(new.marker.skill_modify.modify_dual_fn)(&mut running, &mut new);
-
-		assert_eq!(
-			(INSERT_SINGLE as usize, REMOVE_SINGLE as usize, false,),
-			(
-				new.marker.insert_fn as usize,
-				new.marker.remove_fn as usize,
-				running.data.ignore_after_cast
-			)
-		);
-	}
-
-	#[test]
-	fn modify_dual_when_running_with_dual_markers_then_modification() {
-		let mut running = Skill {
-			data: Active {
-				ignore_after_cast: false,
-				..default()
-			},
-			marker: MarkerMeta {
-				insert_fn: INSERT_DUAL,
-				..default()
-			},
-			..default()
-		};
-		let mut new = Skill {
-			marker: HandGun::marker(),
-			..default()
-		};
-
-		(new.marker.skill_modify.modify_dual_fn)(&mut running, &mut new);
-
-		assert_eq!(
-			(INSERT_DUAL as usize, REMOVE_DUAL as usize, true,),
-			(
-				new.marker.insert_fn as usize,
-				new.marker.remove_fn as usize,
-				running.data.ignore_after_cast
-			)
 		);
 	}
 }
