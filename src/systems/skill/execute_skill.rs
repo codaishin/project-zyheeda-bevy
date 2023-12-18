@@ -4,7 +4,7 @@ use crate::{
 	errors::Error,
 	traits::{
 		behavior_execution::BehaviorExecution,
-		cast_update::{CastUpdate, State},
+		cast_update::{AgeType, CastUpdate, State},
 		marker_modify::MarkerModify,
 	},
 };
@@ -38,12 +38,27 @@ pub fn execute_skill<
 		let skill = &mut skill;
 		let transforms = &transforms;
 
-		match get_state(skill, &delta, wait_next) {
-			State::New => handle_new(agent, transform, skill, slots, transforms),
-			State::Activate => handle_active(agent, skill, slots, transforms),
-			State::Done => handle_done(agent, skill),
-			_ => Ok(()),
+		let state = get_state(skill, &delta, wait_next);
+
+		if state == State::New {
+			return handle_new(agent, transform, skill, slots, transforms);
 		}
+
+		if state == State::Done {
+			return handle_done(agent, skill);
+		}
+
+		let State::Active(age) = state else {
+			return Ok(());
+		};
+
+		handle_active(agent, skill, slots, transforms);
+
+		if age == AgeType::New {
+			return handle_new(agent, transform, skill, slots, transforms);
+		}
+
+		Ok(())
 	};
 
 	agents.iter_mut().map(handle_skill).collect()
@@ -79,11 +94,11 @@ fn handle_active<TSkill: BehaviorExecution>(
 	skill: &mut Mut<TSkill>,
 	slots: &Slots,
 	transforms: &Query<&GlobalTransform>,
-) -> Result<(), Error> {
-	if let Some(spawner) = get_spawner(slots, transforms) {
-		skill.run(agent, &spawner);
+) {
+	let Some(spawner) = get_spawner(slots, transforms) else {
+		return;
 	};
-	Ok(())
+	skill.run(agent, &spawner);
 }
 
 fn handle_done<TSkill: CastUpdate + MarkerModify + BehaviorExecution + Component>(
@@ -285,7 +300,7 @@ mod tests {
 	}
 
 	#[test]
-	fn add_marker() {
+	fn add_marker_when_new() {
 		let (mut app, agent) = setup_app(Vec3::ZERO);
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
@@ -356,6 +371,64 @@ mod tests {
 			.entity_mut(agent)
 			.insert((skill, Transform::default()));
 		app.update();
+	}
+
+	#[test]
+	fn add_marker_when_new_and_active() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill =
+			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
+
+		skill
+			.mock
+			.expect_update()
+			.return_const(State::Active(AgeType::New));
+		skill
+			.mock
+			.expect_insert_markers()
+			.times(1)
+			.withf(move |a| a.id() == agent)
+			.return_const(Ok(()));
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
+		app.update();
+	}
+
+	#[test]
+	fn return_add_marker_error_when_new_active() {
+		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let mut skill =
+			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
+
+		skill
+			.mock
+			.expect_update()
+			.return_const(State::Active(AgeType::New));
+		skill.mock.expect_insert_markers().return_const(Err(Error {
+			msg: "some message".to_owned(),
+			lvl: Level::Warning,
+		}));
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&FakeErrorLogMany(
+				[Error {
+					msg: "some message".to_owned(),
+					lvl: Level::Warning
+				}]
+				.into()
+			)),
+			agent.get::<FakeErrorLogMany>()
+		)
 	}
 
 	#[test]
@@ -577,7 +650,10 @@ mod tests {
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::BehaviorExecution(BehaviorOption::Run)]);
 
-		skill.mock.expect_update().return_const(State::Activate);
+		skill
+			.mock
+			.expect_update()
+			.return_const(State::Active(AgeType::Old));
 		skill
 			.mock
 			.expect_run()
@@ -603,6 +679,30 @@ mod tests {
 			.expect_update()
 			.return_const(State::Casting(CastType::After));
 		skill.mock.expect_run().times(0).return_const(());
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
+
+		app.update();
+	}
+
+	#[test]
+	fn run_when_new_active() {
+		let (mut app, agent) = setup_app(Vec3::new(1., 2., 3.));
+		let mut skill =
+			_Skill::without_default_setup_for([MockOption::BehaviorExecution(BehaviorOption::Run)]);
+
+		skill
+			.mock
+			.expect_update()
+			.return_const(State::Active(AgeType::New));
+		skill
+			.mock
+			.expect_run()
+			.times(1)
+			.withf(move |a, s| a.id() == agent && s.0 == GlobalTransform::from_xyz(1., 2., 3.))
+			.return_const(());
 
 		app.world
 			.entity_mut(agent)
