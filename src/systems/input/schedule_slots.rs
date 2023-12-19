@@ -87,7 +87,8 @@ mod tests {
 						skill: Some(Skill {
 							cast: Cast {
 								pre: Duration::from_millis(1),
-								after: Duration::from_millis(2),
+								active: Duration::from_millis(2),
+								after: Duration::from_millis(3),
 							},
 							..default()
 						}),
@@ -120,7 +121,8 @@ mod tests {
 					Skill {
 						cast: Cast {
 							pre: Duration::from_millis(1),
-							after: Duration::from_millis(2),
+							active: Duration::from_millis(2),
+							after: Duration::from_millis(3),
 						},
 						..default()
 					}
@@ -205,7 +207,8 @@ mod tests {
 						skill: Some(Skill {
 							cast: Cast {
 								pre: Duration::from_millis(1),
-								after: Duration::from_millis(2),
+								active: Duration::from_millis(2),
+								after: Duration::from_millis(3),
 							},
 							..default()
 						}),
@@ -241,7 +244,8 @@ mod tests {
 					Skill {
 						cast: Cast {
 							pre: Duration::from_millis(1),
-							after: Duration::from_millis(2),
+							active: Duration::from_millis(2),
+							after: Duration::from_millis(3),
 						},
 						..default()
 					}

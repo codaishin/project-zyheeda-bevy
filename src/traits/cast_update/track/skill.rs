@@ -7,30 +7,39 @@ use std::time::Duration;
 impl CastUpdate for Track<Skill<Active>> {
 	fn update(&mut self, delta: Duration) -> State {
 		let skill = &self.current;
-		let old_duration = self.duration;
+		let old = self.duration;
 
 		self.duration += delta;
 
-		match (old_duration, self.duration) {
-			(Duration::ZERO, _) => new_or_active(skill),
-			(_, new_duration) if new_duration < skill.cast.pre => State::Casting(CastType::Pre),
-			(old_duration, _) if old_duration < skill.cast.pre => State::Active(AgeType::Old),
-			(_, new_duration) if new_duration < full_cast(skill) => State::Casting(CastType::After),
+		match (old, self.duration) {
+			(Duration::ZERO, _) => new_or_activate(skill),
+			(_, new) if new < pre_cast(skill) => State::Casting(CastType::Pre),
+			(old, _) if old < pre_cast(skill) => State::Activate(AgeType::Old),
+			(_, new) if new < active_cast(skill) => State::Active,
+			(_, new) if new < after_cast(skill) => State::Casting(CastType::After),
 			_ => State::Done,
 		}
 	}
 }
 
-fn new_or_active(skill: &Skill<Active>) -> State {
+fn new_or_activate(skill: &Skill<Active>) -> State {
 	if skill.cast.pre == Duration::ZERO {
-		State::Active(AgeType::New)
+		State::Activate(AgeType::New)
 	} else {
 		State::New
 	}
 }
 
-fn full_cast(skill: &Skill<Active>) -> Duration {
-	skill.cast.pre + skill.cast.after
+fn pre_cast(skill: &Skill<Active>) -> Duration {
+	skill.cast.pre
+}
+
+fn active_cast(skill: &Skill<Active>) -> Duration {
+	skill.cast.pre + skill.cast.active
+}
+
+fn after_cast(skill: &Skill<Active>) -> Duration {
+	skill.cast.pre + skill.cast.active + skill.cast.after
 }
 
 #[cfg(test)]
@@ -45,6 +54,7 @@ mod tests {
 			data: Active { ..default() },
 			cast: Cast {
 				pre: Duration::from_millis(100),
+				active: Duration::from_millis(100),
 				after: Duration::from_millis(100),
 			},
 			..default()
@@ -64,6 +74,7 @@ mod tests {
 			data: Active { ..default() },
 			cast: Cast {
 				pre: Duration::from_millis(100),
+				active: Duration::from_millis(100),
 				after: Duration::from_millis(100),
 			},
 			..default()
@@ -89,6 +100,7 @@ mod tests {
 			data: Active::default(),
 			cast: Cast {
 				pre: Duration::from_millis(100),
+				active: Duration::from_millis(100),
 				after: Duration::from_millis(100),
 			},
 			..default()
@@ -96,7 +108,7 @@ mod tests {
 		track.duration = Duration::from_millis(1);
 
 		assert_eq!(
-			State::Active(AgeType::Old),
+			State::Activate(AgeType::Old),
 			track.update(Duration::from_millis(99))
 		);
 	}
@@ -107,6 +119,7 @@ mod tests {
 			data: Active::default(),
 			cast: Cast {
 				pre: Duration::from_millis(100),
+				active: Duration::from_millis(100),
 				after: Duration::from_millis(100),
 			},
 			..default()
@@ -114,9 +127,25 @@ mod tests {
 		track.duration = Duration::from_millis(1);
 
 		assert_eq!(
-			State::Active(AgeType::Old),
+			State::Activate(AgeType::Old),
 			track.update(Duration::from_millis(100))
 		);
+	}
+
+	#[test]
+	fn update_state_active() {
+		let mut track = Track::new(Skill {
+			data: Active::default(),
+			cast: Cast {
+				pre: Duration::from_millis(100),
+				active: Duration::from_millis(100),
+				after: Duration::from_millis(100),
+			},
+			..default()
+		});
+		track.duration = Duration::from_millis(101);
+
+		assert_eq!(State::Active, track.update(Duration::from_millis(90)));
 	}
 
 	#[test]
@@ -125,11 +154,12 @@ mod tests {
 			data: Active::default(),
 			cast: Cast {
 				pre: Duration::from_millis(100),
+				active: Duration::from_millis(100),
 				after: Duration::from_millis(100),
 			},
 			..default()
 		});
-		track.duration = Duration::from_millis(101);
+		track.duration = Duration::from_millis(201);
 
 		assert_eq!(
 			State::Casting(CastType::After),
@@ -143,11 +173,12 @@ mod tests {
 			data: Active::default(),
 			cast: Cast {
 				pre: Duration::from_millis(100),
+				active: Duration::from_millis(100),
 				after: Duration::from_millis(100),
 			},
 			..default()
 		});
-		track.duration = Duration::from_millis(101);
+		track.duration = Duration::from_millis(201);
 
 		assert_eq!(State::Done, track.update(Duration::from_millis(100)));
 	}
@@ -157,8 +188,9 @@ mod tests {
 		let mut track = Track::new(Skill {
 			data: Active::default(),
 			cast: Cast {
-				pre: Duration::from_millis(0),
-				after: Duration::from_millis(0),
+				pre: Duration::ZERO,
+				active: Duration::ZERO,
+				after: Duration::ZERO,
 			},
 			..default()
 		});
@@ -171,7 +203,7 @@ mod tests {
 
 		assert_eq!(
 			(
-				[State::Active(AgeType::New), State::Done],
+				[State::Activate(AgeType::New), State::Done],
 				Duration::from_millis(2)
 			),
 			(states, track.duration)
@@ -184,6 +216,7 @@ mod tests {
 			data: Active::default(),
 			cast: Cast {
 				pre: Duration::from_millis(100),
+				active: Duration::from_millis(100),
 				after: Duration::from_millis(100),
 			},
 			..default()
@@ -197,11 +230,7 @@ mod tests {
 		];
 
 		assert_eq!(
-			[
-				State::New,
-				State::Active(AgeType::Old),
-				State::Casting(CastType::After)
-			],
+			[State::New, State::Activate(AgeType::Old), State::Active],
 			states
 		);
 	}

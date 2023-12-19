@@ -89,6 +89,7 @@ impl SimpleMovement {
 #[derive(PartialEq, Debug, Clone, Copy, Default)]
 pub struct Cast {
 	pub pre: Duration,
+	pub active: Duration,
 	pub after: Duration,
 }
 

@@ -257,6 +257,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			name: "Shoot Projectile",
 			cast: Cast {
 				pre: Duration::from_millis(500),
+				active: Duration::ZERO,
 				after: Duration::from_millis(500),
 			},
 			soft_override: true,
@@ -272,6 +273,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			name: "Shoot Projectile",
 			cast: Cast {
 				pre: Duration::from_millis(500),
+				active: Duration::ZERO,
 				after: Duration::from_millis(500),
 			},
 			soft_override: true,
@@ -287,6 +289,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			name: "Shoot Projectile",
 			cast: Cast {
 				pre: Duration::from_millis(500),
+				active: Duration::ZERO,
 				after: Duration::from_millis(500),
 			},
 			soft_override: true,
@@ -302,7 +305,8 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			name: "Swing Sword",
 			cast: Cast {
 				pre: Duration::from_millis(0),
-				after: Duration::from_millis(700),
+				active: Duration::from_millis(500),
+				after: Duration::from_millis(200),
 			},
 			soft_override: true,
 			marker: Sword::marker(),
@@ -317,7 +321,8 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			name: "Swing Sword",
 			cast: Cast {
 				pre: Duration::from_millis(0),
-				after: Duration::from_millis(700),
+				active: Duration::from_millis(500),
+				after: Duration::from_millis(200),
 			},
 			soft_override: true,
 			marker: Sword::marker(),
