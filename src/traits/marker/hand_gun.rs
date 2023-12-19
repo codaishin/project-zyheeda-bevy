@@ -11,6 +11,7 @@ use crate::{
 	},
 };
 use bevy::ecs::system::EntityCommands;
+use std::time::Duration;
 
 impl GetMarkerMeta for HandGun {
 	fn marker() -> MarkerMeta {
@@ -70,14 +71,12 @@ fn remove_fn<TLeft: Send + Sync + 'static, TRight: Send + Sync + 'static>(
 }
 
 fn modify_single(running: &Skill<Active>, new: &Skill<Queued>) -> (Skill<Active>, Skill<Queued>) {
-	let mut running = *running;
 	let mut new = *new;
 
-	running.data.ignore_after_cast = false;
 	new.marker.insert_fn = INSERT_SINGLE;
 	new.marker.remove_fn = REMOVE_SINGLE;
 
-	(running, new)
+	(*running, new)
 }
 
 fn modify_dual(running: &Skill<Active>, new: &Skill<Queued>) -> (Skill<Active>, Skill<Queued>) {
@@ -88,7 +87,7 @@ fn modify_dual(running: &Skill<Active>, new: &Skill<Queued>) -> (Skill<Active>, 
 		return (running, new);
 	}
 
-	running.data.ignore_after_cast = true;
+	running.cast.after = Duration::ZERO;
 	new.marker.insert_fn = INSERT_DUAL;
 	new.marker.remove_fn = REMOVE_DUAL;
 
@@ -97,9 +96,11 @@ fn modify_dual(running: &Skill<Active>, new: &Skill<Queued>) -> (Skill<Active>, 
 
 #[cfg(test)]
 mod tests {
+	use std::time::Duration;
+
 	use super::*;
 	use crate::{
-		components::{Side, SlotKey},
+		components::{Cast, Side, SlotKey},
 		systems::log::tests::{fake_log_error_lazy, FakeErrorLog},
 		traits::marker::test_tools::{insert_lazy, remove_lazy},
 	};
@@ -273,8 +274,8 @@ mod tests {
 	fn modify_single() {
 		let modify = HandGun::marker().skill_modify.update_single_fn;
 		let running = Skill {
-			data: Active {
-				ignore_after_cast: true,
+			cast: Cast {
+				after: Duration::from_millis(42),
 				..default()
 			},
 			..default()
@@ -284,11 +285,15 @@ mod tests {
 		let (running, new) = modify(&running, &new);
 
 		assert_eq!(
-			(INSERT_SINGLE as usize, REMOVE_SINGLE as usize, false,),
+			(
+				INSERT_SINGLE as usize,
+				REMOVE_SINGLE as usize,
+				Duration::from_millis(42)
+			),
 			(
 				new.marker.insert_fn as usize,
 				new.marker.remove_fn as usize,
-				running.data.ignore_after_cast
+				running.cast.after
 			)
 		);
 	}
@@ -297,8 +302,8 @@ mod tests {
 	fn modify_dual_dual_markers() {
 		let modify = HandGun::marker().skill_modify.update_dual_fn;
 		let running = Skill {
-			data: Active {
-				ignore_after_cast: false,
+			cast: Cast {
+				after: Duration::from_millis(42),
 				..default()
 			},
 			marker: MarkerMeta {
@@ -321,8 +326,8 @@ mod tests {
 		assert_eq!(
 			(
 				Skill {
-					data: Active {
-						ignore_after_cast: true,
+					cast: Cast {
+						after: Duration::ZERO,
 						..default()
 					},
 					marker: MarkerMeta {
@@ -359,8 +364,8 @@ mod tests {
 	fn modify_dual_when_running_with_dual_markers_then_modification() {
 		let modify = HandGun::marker().skill_modify.update_dual_fn;
 		let running = Skill {
-			data: Active {
-				ignore_after_cast: false,
+			cast: Cast {
+				after: Duration::from_millis(42),
 				..default()
 			},
 			marker: MarkerMeta {
@@ -383,8 +388,8 @@ mod tests {
 		assert_eq!(
 			(
 				Skill {
-					data: Active {
-						ignore_after_cast: true,
+					cast: Cast {
+						after: Duration::ZERO,
 						..default()
 					},
 					marker: MarkerMeta {

@@ -121,7 +121,6 @@ pub struct Queued {
 pub struct Active {
 	pub ray: Ray,
 	pub slot: SlotKey,
-	pub ignore_after_cast: bool,
 }
 
 impl Skill {
@@ -152,11 +151,7 @@ impl<TSrc> Skill<TSrc> {
 
 impl Skill<Queued> {
 	pub fn to_active(self) -> Skill<Active> {
-		self.map_data(|Queued { ray, slot }| Active {
-			ray,
-			slot,
-			ignore_after_cast: false,
-		})
+		self.map_data(|Queued { ray, slot }| Active { ray, slot })
 	}
 }
 

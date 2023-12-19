@@ -61,12 +61,10 @@ mod tests {
 					Active {
 						ray: TEST_RAY,
 						slot: SlotKey::SkillSpawn,
-						ignore_after_cast: false
 					},
 					Active {
 						ray: TEST_RAY,
 						slot: SlotKey::SkillSpawn,
-						ignore_after_cast: false
 					}
 				)),
 				false,

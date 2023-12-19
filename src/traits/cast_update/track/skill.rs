@@ -30,11 +30,7 @@ fn new_or_active(skill: &Skill<Active>) -> State {
 }
 
 fn full_cast(skill: &Skill<Active>) -> Duration {
-	if skill.data.ignore_after_cast {
-		skill.cast.pre
-	} else {
-		skill.cast.pre + skill.cast.after
-	}
+	skill.cast.pre + skill.cast.after
 }
 
 #[cfg(test)]
@@ -206,33 +202,6 @@ mod tests {
 				State::Active(AgeType::Old),
 				State::Casting(CastType::After)
 			],
-			states
-		);
-	}
-
-	#[test]
-	fn ignore_after_cast() {
-		let mut track = Track::new(Skill {
-			data: Active {
-				ignore_after_cast: true,
-				..default()
-			},
-			cast: Cast {
-				pre: Duration::from_millis(100),
-				after: Duration::from_millis(100),
-			},
-			..default()
-		});
-		track.duration = Duration::ZERO;
-
-		let states = [
-			track.update(Duration::from_millis(50)),
-			track.update(Duration::from_millis(50)),
-			track.update(Duration::from_millis(50)),
-		];
-
-		assert_eq!(
-			[State::New, State::Active(AgeType::Old), State::Done],
 			states
 		);
 	}
