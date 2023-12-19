@@ -21,6 +21,7 @@ use project_zyheeda::{
 		Skill,
 		SlotKey,
 		Swap,
+		Track,
 		UnitsPerSecond,
 	},
 	markers::{Dual, Fast, HandGun, Idle, Left, Right, Slow, Sword},
@@ -94,7 +95,7 @@ fn main() {
 		.add_systems(
 			Update,
 			(
-				execute_skill::<Skill<Active>, Virtual>.pipe(log_many),
+				execute_skill::<Track<Skill<Active>>, Virtual>.pipe(log_many),
 				execute_move::<Player, SimpleMovement, Virtual>,
 			),
 		)

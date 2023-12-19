@@ -1,17 +1,17 @@
-use super::MarkerModify;
 use crate::{
-	components::{Active, Skill},
+	components::{Active, Skill, Track},
 	errors::Error,
+	traits::marker_modify::MarkerModify,
 };
 use bevy::ecs::system::EntityCommands;
 
-impl MarkerModify for Skill<Active> {
+impl MarkerModify for Track<Skill<Active>> {
 	fn insert_markers(&self, agent: &mut EntityCommands) -> Result<(), Error> {
-		(self.marker.insert_fn)(agent, self.data.slot)
+		(self.current.marker.insert_fn)(agent, self.current.data.slot)
 	}
 
 	fn remove_markers(&self, agent: &mut EntityCommands) -> Result<(), Error> {
-		(self.marker.remove_fn)(agent, self.data.slot)
+		(self.current.marker.remove_fn)(agent, self.current.data.slot)
 	}
 }
 
@@ -40,7 +40,7 @@ mod tests {
 		let mut app = App::new();
 		let agent = app.world.spawn(()).id();
 		let slot = SlotKey::Hand(Side::Right);
-		let skill = Skill {
+		let track = Track::new(Skill {
 			data: Active { slot, ..default() },
 			marker: MarkerMeta {
 				insert_fn: |agent, slot| {
@@ -50,9 +50,9 @@ mod tests {
 				..default()
 			},
 			..default()
-		};
+		});
 
-		app.add_systems(Update, insert_system(agent, skill));
+		app.add_systems(Update, insert_system(agent, track));
 		app.update();
 
 		let marker = app.world.entity(agent).get::<MockMarker>();
@@ -65,7 +65,7 @@ mod tests {
 		let mut app = App::new();
 		let agent = app.world.spawn(()).id();
 		let slot = SlotKey::Hand(Side::Right);
-		let skill = Skill {
+		let track = Track::new(Skill {
 			data: Active { slot, ..default() },
 			marker: MarkerMeta {
 				insert_fn: |_, _| {
@@ -77,9 +77,9 @@ mod tests {
 				..default()
 			},
 			..default()
-		};
+		});
 
-		app.add_systems(Update, insert_system(agent, skill));
+		app.add_systems(Update, insert_system(agent, track));
 		app.update();
 
 		let result = app.world.entity(agent).get::<FakeResult>().unwrap();
@@ -98,7 +98,7 @@ mod tests {
 		let mut app = App::new();
 		let agent = app.world.spawn(()).id();
 		let slot = SlotKey::Hand(Side::Left);
-		let skill = Skill {
+		let track = Track::new(Skill {
 			data: Active { slot, ..default() },
 			marker: MarkerMeta {
 				remove_fn: |agent, slot| {
@@ -108,9 +108,9 @@ mod tests {
 				..default()
 			},
 			..default()
-		};
+		});
 
-		app.add_systems(Update, remove_system(agent, skill));
+		app.add_systems(Update, remove_system(agent, track));
 		app.update();
 
 		let marker = app.world.entity(agent).get::<MockMarker>();
@@ -123,7 +123,7 @@ mod tests {
 		let mut app = App::new();
 		let agent = app.world.spawn(()).id();
 		let slot = SlotKey::Hand(Side::Right);
-		let skill = Skill {
+		let track = Track::new(Skill {
 			data: Active { slot, ..default() },
 			marker: MarkerMeta {
 				remove_fn: |_, _| {
@@ -135,9 +135,9 @@ mod tests {
 				..default()
 			},
 			..default()
-		};
+		});
 
-		app.add_systems(Update, remove_system(agent, skill));
+		app.add_systems(Update, remove_system(agent, track));
 		app.update();
 
 		let result = app.world.entity(agent).get::<FakeResult>().unwrap();

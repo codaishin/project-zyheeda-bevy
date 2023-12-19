@@ -1,4 +1,4 @@
-pub mod skill;
+pub mod track;
 
 use crate::behaviors::meta::Spawner;
 use bevy::{ecs::system::EntityCommands, transform::components::Transform};

@@ -121,7 +121,6 @@ pub struct Queued {
 pub struct Active {
 	pub ray: Ray,
 	pub slot: SlotKey,
-	pub duration: Duration,
 	pub ignore_after_cast: bool,
 }
 
@@ -156,7 +155,6 @@ impl Skill<Queued> {
 		self.map_data(|Queued { ray, slot }| Active {
 			ray,
 			slot,
-			duration: Duration::ZERO,
 			ignore_after_cast: false,
 		})
 	}
@@ -279,3 +277,20 @@ pub struct KeyedPanel<TKey>(pub TKey);
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 pub struct Dad<T>(pub T);
+
+#[derive(Component, Debug, PartialEq)]
+pub struct Track<T> {
+	pub original: T,
+	pub current: T,
+	pub duration: Duration,
+}
+
+impl<T: Copy> Track<T> {
+	pub fn new(original: T) -> Self {
+		Self {
+			original,
+			current: original,
+			duration: Duration::ZERO,
+		}
+	}
+}
