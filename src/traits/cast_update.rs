@@ -1,4 +1,4 @@
-pub mod skill;
+pub mod track;
 
 use std::time::Duration;
 
@@ -17,10 +17,12 @@ pub enum AgeType {
 #[derive(PartialEq, Debug, Clone)]
 pub enum State {
 	New,
-	Active(AgeType),
+	Activate(AgeType),
+	Active,
 	Done,
 	Casting(CastType),
 }
+
 pub trait CastUpdate {
 	fn update(&mut self, delta: Duration) -> State;
 }

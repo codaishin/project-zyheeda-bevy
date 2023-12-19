@@ -89,6 +89,7 @@ impl SimpleMovement {
 #[derive(PartialEq, Debug, Clone, Copy, Default)]
 pub struct Cast {
 	pub pre: Duration,
+	pub active: Duration,
 	pub after: Duration,
 }
 
@@ -121,8 +122,6 @@ pub struct Queued {
 pub struct Active {
 	pub ray: Ray,
 	pub slot: SlotKey,
-	pub duration: Duration,
-	pub ignore_after_cast: bool,
 }
 
 impl Skill {
@@ -153,12 +152,7 @@ impl<TSrc> Skill<TSrc> {
 
 impl Skill<Queued> {
 	pub fn to_active(self) -> Skill<Active> {
-		self.map_data(|Queued { ray, slot }| Active {
-			ray,
-			slot,
-			duration: Duration::ZERO,
-			ignore_after_cast: false,
-		})
+		self.map_data(|Queued { ray, slot }| Active { ray, slot })
 	}
 }
 
@@ -279,3 +273,20 @@ pub struct KeyedPanel<TKey>(pub TKey);
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 pub struct Dad<T>(pub T);
+
+#[derive(Component, Debug, PartialEq)]
+pub struct Track<T> {
+	pub original: T,
+	pub current: T,
+	pub duration: Duration,
+}
+
+impl<T: Copy> Track<T> {
+	pub fn new(original: T) -> Self {
+		Self {
+			original,
+			current: original,
+			duration: Duration::ZERO,
+		}
+	}
+}

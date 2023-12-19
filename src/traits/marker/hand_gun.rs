@@ -11,6 +11,7 @@ use crate::{
 	},
 };
 use bevy::ecs::system::EntityCommands;
+use std::time::Duration;
 
 impl GetMarkerMeta for HandGun {
 	fn marker() -> MarkerMeta {
@@ -18,8 +19,8 @@ impl GetMarkerMeta for HandGun {
 			insert_fn: INSERT_SINGLE,
 			remove_fn: REMOVE_SINGLE,
 			skill_modify: SkillModify {
-				modify_single_fn: modify_single,
-				modify_dual_fn: modify_dual,
+				update_single_fn: modify_single,
+				update_dual_fn: modify_dual,
 			},
 		}
 	}
@@ -69,26 +70,37 @@ fn remove_fn<TLeft: Send + Sync + 'static, TRight: Send + Sync + 'static>(
 	Ok(())
 }
 
-fn modify_single(running: &mut Skill<Active>, new: &mut Skill<Queued>) {
-	running.data.ignore_after_cast = false;
+fn modify_single(running: &Skill<Active>, new: &Skill<Queued>) -> (Skill<Active>, Skill<Queued>) {
+	let mut new = *new;
+
 	new.marker.insert_fn = INSERT_SINGLE;
 	new.marker.remove_fn = REMOVE_SINGLE;
+
+	(*running, new)
 }
 
-fn modify_dual(running: &mut Skill<Active>, new: &mut Skill<Queued>) {
+fn modify_dual(running: &Skill<Active>, new: &Skill<Queued>) -> (Skill<Active>, Skill<Queued>) {
+	let mut running = *running;
+	let mut new = *new;
+
 	if running.marker.insert_fn != INSERT_SINGLE && running.marker.insert_fn != INSERT_DUAL {
-		return;
+		return (running, new);
 	}
-	running.data.ignore_after_cast = true;
+
+	running.cast.after = Duration::ZERO;
 	new.marker.insert_fn = INSERT_DUAL;
 	new.marker.remove_fn = REMOVE_DUAL;
+
+	(running, new)
 }
 
 #[cfg(test)]
 mod tests {
+	use std::time::Duration;
+
 	use super::*;
 	use crate::{
-		components::{Side, SlotKey},
+		components::{Cast, Side, SlotKey},
 		systems::log::tests::{fake_log_error_lazy, FakeErrorLog},
 		traits::marker::test_tools::{insert_lazy, remove_lazy},
 	};
@@ -260,108 +272,144 @@ mod tests {
 
 	#[test]
 	fn modify_single() {
-		let modify = HandGun::marker().skill_modify.modify_single_fn;
-		let mut running = Skill {
-			data: Active {
-				ignore_after_cast: true,
+		let modify = HandGun::marker().skill_modify.update_single_fn;
+		let running = Skill {
+			cast: Cast {
+				after: Duration::from_millis(42),
 				..default()
 			},
 			..default()
 		};
-		let mut new = Skill { ..default() };
+		let new = Skill { ..default() };
 
-		modify(&mut running, &mut new);
+		let (running, new) = modify(&running, &new);
 
 		assert_eq!(
-			(INSERT_SINGLE as usize, REMOVE_SINGLE as usize, false,),
+			(
+				INSERT_SINGLE as usize,
+				REMOVE_SINGLE as usize,
+				Duration::from_millis(42)
+			),
 			(
 				new.marker.insert_fn as usize,
 				new.marker.remove_fn as usize,
-				running.data.ignore_after_cast
+				running.cast.after
 			)
 		);
 	}
 
 	#[test]
 	fn modify_dual_dual_markers() {
-		let mut running = Skill {
+		let modify = HandGun::marker().skill_modify.update_dual_fn;
+		let running = Skill {
+			cast: Cast {
+				after: Duration::from_millis(42),
+				..default()
+			},
 			marker: MarkerMeta {
 				insert_fn: INSERT_SINGLE,
+				remove_fn: REMOVE_SINGLE,
 				..default()
 			},
 			..default()
 		};
-		let mut new = Skill {
-			marker: HandGun::marker(),
+		let new = Skill {
+			data: Queued { ..default() },
+			marker: MarkerMeta {
+				insert_fn: INSERT_SINGLE,
+				remove_fn: REMOVE_SINGLE,
+				..default()
+			},
 			..default()
 		};
 
-		(new.marker.skill_modify.modify_dual_fn)(&mut running, &mut new);
-
 		assert_eq!(
-			(INSERT_DUAL as usize, REMOVE_DUAL as usize, true,),
 			(
-				new.marker.insert_fn as usize,
-				new.marker.remove_fn as usize,
-				running.data.ignore_after_cast
-			)
+				Skill {
+					cast: Cast {
+						after: Duration::ZERO,
+						..default()
+					},
+					marker: MarkerMeta {
+						insert_fn: INSERT_SINGLE,
+						remove_fn: REMOVE_SINGLE,
+						..default()
+					},
+					..default()
+				},
+				Skill {
+					data: Queued { ..default() },
+					marker: MarkerMeta {
+						insert_fn: INSERT_DUAL,
+						remove_fn: REMOVE_DUAL,
+						..default()
+					},
+					..default()
+				}
+			),
+			modify(&running, &new)
 		);
 	}
 
 	#[test]
 	fn modify_dual_when_running_with_unknown_markers_then_no_modification() {
-		let mut running = Skill {
-			data: Active {
-				ignore_after_cast: false,
-				..default()
-			},
-			marker: MarkerMeta { ..default() },
-			..default()
-		};
-		let mut new = Skill {
-			marker: HandGun::marker(),
-			..default()
-		};
+		let modify = HandGun::marker().skill_modify.update_dual_fn;
+		let running = Skill::default();
+		let new = Skill::default();
 
-		(new.marker.skill_modify.modify_dual_fn)(&mut running, &mut new);
-
-		assert_eq!(
-			(INSERT_SINGLE as usize, REMOVE_SINGLE as usize, false,),
-			(
-				new.marker.insert_fn as usize,
-				new.marker.remove_fn as usize,
-				running.data.ignore_after_cast
-			)
-		);
+		assert_eq!((running, new), modify(&running, &new));
 	}
 
 	#[test]
 	fn modify_dual_when_running_with_dual_markers_then_modification() {
-		let mut running = Skill {
-			data: Active {
-				ignore_after_cast: false,
+		let modify = HandGun::marker().skill_modify.update_dual_fn;
+		let running = Skill {
+			cast: Cast {
+				after: Duration::from_millis(42),
 				..default()
 			},
 			marker: MarkerMeta {
-				insert_fn: INSERT_DUAL,
+				insert_fn: INSERT_SINGLE,
+				remove_fn: REMOVE_SINGLE,
 				..default()
 			},
 			..default()
 		};
-		let mut new = Skill {
-			marker: HandGun::marker(),
+		let new = Skill {
+			data: Queued { ..default() },
+			marker: MarkerMeta {
+				insert_fn: INSERT_DUAL,
+				remove_fn: REMOVE_DUAL,
+				..default()
+			},
 			..default()
 		};
 
-		(new.marker.skill_modify.modify_dual_fn)(&mut running, &mut new);
-
 		assert_eq!(
-			(INSERT_DUAL as usize, REMOVE_DUAL as usize, true,),
 			(
-				new.marker.insert_fn as usize,
-				new.marker.remove_fn as usize,
-				running.data.ignore_after_cast
-			)
+				Skill {
+					cast: Cast {
+						after: Duration::ZERO,
+						..default()
+					},
+					marker: MarkerMeta {
+						insert_fn: INSERT_SINGLE,
+						remove_fn: REMOVE_SINGLE,
+						..default()
+					},
+					..default()
+				},
+				Skill {
+					data: Queued { ..default() },
+					marker: MarkerMeta {
+						insert_fn: INSERT_DUAL,
+						remove_fn: REMOVE_DUAL,
+						..default()
+					},
+					..default()
+				}
+			),
+			modify(&running, &new)
 		);
 	}
 }

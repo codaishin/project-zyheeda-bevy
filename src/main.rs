@@ -21,6 +21,7 @@ use project_zyheeda::{
 		Skill,
 		SlotKey,
 		Swap,
+		Track,
 		UnitsPerSecond,
 	},
 	markers::{Dual, Fast, HandGun, Idle, Left, Right, Slow, Sword},
@@ -94,7 +95,7 @@ fn main() {
 		.add_systems(
 			Update,
 			(
-				execute_skill::<Skill<Active>, Virtual>.pipe(log_many),
+				execute_skill::<Track<Skill<Active>>, Virtual>.pipe(log_many),
 				execute_move::<Player, SimpleMovement, Virtual>,
 			),
 		)
@@ -256,6 +257,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			name: "Shoot Projectile",
 			cast: Cast {
 				pre: Duration::from_millis(500),
+				active: Duration::ZERO,
 				after: Duration::from_millis(500),
 			},
 			soft_override: true,
@@ -271,6 +273,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			name: "Shoot Projectile",
 			cast: Cast {
 				pre: Duration::from_millis(500),
+				active: Duration::ZERO,
 				after: Duration::from_millis(500),
 			},
 			soft_override: true,
@@ -286,6 +289,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			name: "Shoot Projectile",
 			cast: Cast {
 				pre: Duration::from_millis(500),
+				active: Duration::ZERO,
 				after: Duration::from_millis(500),
 			},
 			soft_override: true,
@@ -301,7 +305,8 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			name: "Swing Sword",
 			cast: Cast {
 				pre: Duration::from_millis(0),
-				after: Duration::from_millis(700),
+				active: Duration::from_millis(500),
+				after: Duration::from_millis(200),
 			},
 			soft_override: true,
 			marker: Sword::marker(),
@@ -316,7 +321,8 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			name: "Swing Sword",
 			cast: Cast {
 				pre: Duration::from_millis(0),
-				after: Duration::from_millis(700),
+				active: Duration::from_millis(500),
+				after: Duration::from_millis(200),
 			},
 			soft_override: true,
 			marker: Sword::marker(),

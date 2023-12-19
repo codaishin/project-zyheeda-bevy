@@ -48,7 +48,7 @@ pub fn execute_skill<
 			return handle_done(agent, skill);
 		}
 
-		let State::Active(age) = state else {
+		let State::Activate(age) = state else {
 			return Ok(());
 		};
 
@@ -382,7 +382,7 @@ mod tests {
 		skill
 			.mock
 			.expect_update()
-			.return_const(State::Active(AgeType::New));
+			.return_const(State::Activate(AgeType::New));
 		skill
 			.mock
 			.expect_insert_markers()
@@ -405,7 +405,7 @@ mod tests {
 		skill
 			.mock
 			.expect_update()
-			.return_const(State::Active(AgeType::New));
+			.return_const(State::Activate(AgeType::New));
 		skill.mock.expect_insert_markers().return_const(Err(Error {
 			msg: "some message".to_owned(),
 			lvl: Level::Warning,
@@ -653,7 +653,7 @@ mod tests {
 		skill
 			.mock
 			.expect_update()
-			.return_const(State::Active(AgeType::Old));
+			.return_const(State::Activate(AgeType::Old));
 		skill
 			.mock
 			.expect_run()
@@ -696,7 +696,7 @@ mod tests {
 		skill
 			.mock
 			.expect_update()
-			.return_const(State::Active(AgeType::New));
+			.return_const(State::Activate(AgeType::New));
 		skill
 			.mock
 			.expect_run()

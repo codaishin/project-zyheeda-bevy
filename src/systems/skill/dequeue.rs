@@ -1,5 +1,5 @@
 use crate::{
-	components::{Marker, Queue, WaitNext},
+	components::{Marker, Queue, Track, WaitNext},
 	markers::Idle,
 };
 use bevy::prelude::{Commands, Entity, Query, With};
@@ -9,7 +9,7 @@ pub fn dequeue(mut commands: Commands, mut agents: Query<(Entity, &mut Queue), W
 		let mut agent = commands.entity(agent);
 
 		if let Some(skill) = queue.0.pop_front() {
-			agent.insert(skill.to_active());
+			agent.insert(Track::new(skill.to_active()));
 			agent.remove::<WaitNext>();
 			agent.remove::<Marker<Idle>>();
 		} else {
@@ -57,17 +57,23 @@ mod tests {
 
 		assert_eq!(
 			(
-				Some(Active {
-					ray: TEST_RAY,
-					slot: SlotKey::SkillSpawn,
-					duration: Duration::ZERO,
-					ignore_after_cast: false
-				}),
+				Some((
+					Active {
+						ray: TEST_RAY,
+						slot: SlotKey::SkillSpawn,
+					},
+					Active {
+						ray: TEST_RAY,
+						slot: SlotKey::SkillSpawn,
+					}
+				)),
 				false,
 				0
 			),
 			(
-				agent.get::<Skill<Active>>().map(|s| s.data),
+				agent
+					.get::<Track<Skill<Active>>>()
+					.map(|t| (t.original.data, t.current.data)),
 				agent.contains::<WaitNext>(),
 				queue.0.len()
 			)
