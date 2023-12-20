@@ -1,6 +1,6 @@
 use super::GetMarkerMeta;
 use crate::{
-	components::{Active, Marker, Queued, Side, Skill, SlotKey},
+	components::{Active, Marker, Queued, Side, SlotKey},
 	errors::{Error, Level},
 	markers::{
 		meta::{MarkerMeta, MarkerModifyFn, SkillModify},
@@ -9,6 +9,7 @@ use crate::{
 		Left,
 		Right,
 	},
+	skill::Skill,
 };
 use bevy::ecs::system::EntityCommands;
 use std::time::Duration;
@@ -100,7 +101,8 @@ mod tests {
 
 	use super::*;
 	use crate::{
-		components::{Cast, Side, SlotKey},
+		components::{Side, SlotKey},
+		skill::Cast,
 		systems::log::tests::{fake_log_error_lazy, FakeErrorLog},
 		traits::marker::test_tools::{insert_lazy, remove_lazy},
 	};

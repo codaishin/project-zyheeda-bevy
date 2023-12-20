@@ -1,6 +1,7 @@
 use crate::{
-	components::{Schedule, ScheduleMode, Skill, SlotKey, Slots},
+	components::{Schedule, ScheduleMode, SlotKey, Slots},
 	resources::SlotMap,
+	skill::Skill,
 };
 use bevy::prelude::{Commands, Component, Entity, Input, KeyCode, Query, Res, With};
 use std::hash::Hash;
@@ -53,8 +54,9 @@ fn filter_triggered_behaviors(
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Cast, Item, Schedule, ScheduleMode, Side, Slot, SlotKey, Slots},
+		components::{Item, Schedule, ScheduleMode, Side, Slot, SlotKey, Slots},
 		resources::SlotMap,
+		skill::Cast,
 	};
 	use bevy::prelude::{default, App, Component, Entity, Input, KeyCode, MouseButton, Update};
 	use std::time::Duration;

@@ -169,8 +169,9 @@ fn scene_handle_error(item: Option<Item>, slot: Entity) -> Error {
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Cast, Collection, Item, Side, Skill, Slot, SlotKey, Slots},
+		components::{Collection, Item, Side, Slot, SlotKey, Slots},
 		resources::Models,
+		skill::{Cast, Skill},
 		systems::log::tests::{fake_log_error_lazy_many, FakeErrorLogMany},
 	};
 	use bevy::{

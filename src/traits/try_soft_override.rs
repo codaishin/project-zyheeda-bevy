@@ -1,6 +1,8 @@
 pub mod tools;
-
-use crate::components::{Active, Queued, Skill};
+use crate::{
+	components::{Active, Queued},
+	skill::Skill,
+};
 
 pub trait TrySoftOverride {
 	fn try_soft_override(

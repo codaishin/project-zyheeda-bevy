@@ -9,7 +9,6 @@ use project_zyheeda::{
 		Active,
 		Animator,
 		CamOrbit,
-		Cast,
 		Inventory,
 		InventoryKey,
 		Item,
@@ -18,7 +17,6 @@ use project_zyheeda::{
 		Projectile,
 		Side,
 		SimpleMovement,
-		Skill,
 		SlotKey,
 		Swap,
 		Track,
@@ -27,6 +25,7 @@ use project_zyheeda::{
 	markers::{Dual, Fast, HandGun, Idle, Left, Right, Slow, Sword},
 	plugins::ingame_menu::IngameMenuPlugin,
 	resources::{Animation, Models, SlotMap},
+	skill::{Cast, Skill},
 	states::GameRunning,
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},

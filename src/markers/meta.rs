@@ -1,6 +1,7 @@
 use crate::{
-	components::{Active, Queued, Skill, SlotKey},
+	components::{Active, Queued, SlotKey},
 	errors::Error,
+	skill::Skill,
 };
 use bevy::{ecs::system::EntityCommands, utils::default};
 

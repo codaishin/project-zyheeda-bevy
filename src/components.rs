@@ -1,8 +1,4 @@
-use crate::{
-	behaviors::{meta::BehaviorMeta, MovementMode},
-	markers::meta::MarkerMeta,
-	types::BoneName,
-};
+use crate::{behaviors::MovementMode, skill::Skill, types::BoneName};
 use bevy::{
 	prelude::{Component, *},
 	utils::HashMap,
@@ -83,32 +79,6 @@ pub struct SimpleMovement {
 impl SimpleMovement {
 	pub fn new(target: Vec3) -> Self {
 		Self { target }
-	}
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Default)]
-pub struct Cast {
-	pub pre: Duration,
-	pub active: Duration,
-	pub after: Duration,
-}
-
-#[derive(Component, PartialEq, Debug, Clone, Copy, Default)]
-pub struct Skill<TData = ()> {
-	pub name: &'static str,
-	pub data: TData,
-	pub cast: Cast,
-	pub soft_override: bool,
-	pub marker: MarkerMeta,
-	pub behavior: BehaviorMeta,
-}
-
-impl<T> Display for Skill<T> {
-	fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-		match self.name {
-			"" => write!(f, "Skill(<no name>)"),
-			name => write!(f, "Skill({})", name),
-		}
 	}
 }
 

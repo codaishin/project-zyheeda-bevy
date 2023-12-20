@@ -8,6 +8,7 @@ pub mod errors;
 pub mod markers;
 pub mod plugins;
 pub mod resources;
+pub mod skill;
 pub mod states;
 pub mod systems;
 pub mod tools;

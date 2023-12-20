@@ -21,7 +21,10 @@ pub fn dequeue(mut commands: Commands, mut agents: Query<(Entity, &mut Queue), W
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Active, Cast, Queued, Skill, SlotKey, WaitNext};
+	use crate::{
+		components::{Active, Queued, SlotKey, WaitNext},
+		skill::{Cast, Skill},
+	};
 	use bevy::prelude::{default, App, Ray, Update, Vec3};
 	use std::time::Duration;
 
@@ -94,7 +97,7 @@ mod tests {
 
 		assert_eq!(
 			(false, 1),
-			(agent.contains::<Skill<Queued>>(), queue.0.len())
+			(agent.contains::<Track<Skill<Queued>>>(), queue.0.len())
 		);
 	}
 

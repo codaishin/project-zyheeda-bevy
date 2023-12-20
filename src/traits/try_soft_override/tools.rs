@@ -1,6 +1,7 @@
 use super::TrySoftOverride;
 use crate::{
-	components::{Active, Queued, Skill, SlotKey},
+	components::{Active, Queued, SlotKey},
+	skill::Skill,
 	tools::Tools,
 };
 

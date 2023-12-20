@@ -1,5 +1,6 @@
 use crate::{
-	components::{Active, Queue, Queued, Schedule, ScheduleMode, Skill, SlotKey, Track, WaitNext},
+	components::{Active, Queue, Queued, Schedule, ScheduleMode, SlotKey, Track, WaitNext},
+	skill::Skill,
 	traits::{get_ray::GetRayFromCamera, try_soft_override::TrySoftOverride},
 };
 use bevy::{
@@ -100,7 +101,10 @@ fn override_hard(queue: &mut Queue, new: &Skill<Queued>, agent: &mut EntityComma
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Cast, Schedule, ScheduleMode, Side, WaitNext};
+	use crate::{
+		components::{Schedule, ScheduleMode, Side, WaitNext},
+		skill::Cast,
+	};
 	use bevy::{
 		prelude::{App, Camera, Camera3dBundle, GlobalTransform, Ray, Update, Vec3},
 		utils::default,
