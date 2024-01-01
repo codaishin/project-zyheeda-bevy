@@ -22,9 +22,10 @@ use project_zyheeda::{
 		Track,
 		UnitsPerSecond,
 	},
+	errors::Error,
 	markers::{Dual, Fast, HandGun, Idle, Left, Right, Slow, Sword},
 	plugins::ingame_menu::IngameMenuPlugin,
-	resources::{Animation, Models, SlotMap},
+	resources::{skill_templates::SkillTemplates, Animation, Models, SlotMap},
 	skill::{Cast, Skill},
 	states::GameRunning,
 	systems::{
@@ -65,6 +66,7 @@ fn main() {
 		.add_state::<GameRunning>()
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
+		.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
 		.add_systems(Startup, setup_input)
 		.add_systems(Startup, load_models)
 		.add_systems(Startup, setup_simple_3d_scene)
@@ -199,13 +201,60 @@ fn setup_simple_3d_scene(
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut materials: ResMut<Assets<StandardMaterial>>,
 	asset_server: Res<AssetServer>,
+	skill_templates: Res<SkillTemplates>,
 	mut next_state: ResMut<NextState<GameRunning>>,
 ) {
 	spawn_plane(&mut commands, &mut meshes, &mut materials);
-	spawn_player(&mut commands, asset_server);
+	spawn_player(&mut commands, asset_server, skill_templates);
 	spawn_light(&mut commands);
 	spawn_camera(&mut commands);
 	next_state.set(GameRunning::On);
+}
+
+fn setup_skill_templates(mut commands: Commands) -> Vec<Result<(), Error>> {
+	let (templates, errors) = SkillTemplates::new([
+		Skill {
+			name: "Swing Sword",
+			cast: Cast {
+				pre: Duration::from_millis(0),
+				active: Duration::from_millis(500),
+				after: Duration::from_millis(200),
+			},
+			soft_override: true,
+			marker: Sword::hand_markers(),
+			behavior: Sword::behavior(),
+			..default()
+		},
+		Skill {
+			name: "Shoot Projectile",
+			cast: Cast {
+				pre: Duration::from_millis(500),
+				active: Duration::ZERO,
+				after: Duration::from_millis(500),
+			},
+			soft_override: true,
+			marker: HandGun::hand_markers(),
+			behavior: Projectile::behavior(),
+			..default()
+		},
+		Skill {
+			name: "Simple Movement",
+			cast: Cast {
+				after: Duration::MAX,
+				..default()
+			},
+			behavior: SimpleMovement::behavior(),
+			..default()
+		},
+	]);
+
+	commands.insert_resource(templates);
+
+	errors
+		.iter()
+		.cloned()
+		.map(Err)
+		.collect::<Vec<Result<(), Error>>>()
 }
 
 fn spawn_plane(
@@ -220,7 +269,11 @@ fn spawn_plane(
 	});
 }
 
-fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
+fn spawn_player(
+	commands: &mut Commands,
+	asset_server: Res<AssetServer>,
+	skill_templates: Res<SkillTemplates>,
+) {
 	commands.insert_resource(Animation::<Player, Marker<Idle>>::new(
 		asset_server.load("models/player.gltf#Animation2"),
 	));
@@ -252,95 +305,32 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	let pistol_a = Item {
 		name: "Pistol A",
 		model: Some("pistol"),
-		skill: Some(Skill {
-			name: "Shoot Projectile",
-			cast: Cast {
-				pre: Duration::from_millis(500),
-				active: Duration::ZERO,
-				after: Duration::from_millis(500),
-			},
-			soft_override: true,
-			marker: HandGun::hand_markers(),
-			behavior: Projectile::behavior(),
-			..default()
-		}),
+		skill: skill_templates.get("Shoot Projectile").cloned(),
 	};
 	let pistol_b = Item {
 		name: "Pistol B",
 		model: Some("pistol"),
-		skill: Some(Skill {
-			name: "Shoot Projectile",
-			cast: Cast {
-				pre: Duration::from_millis(500),
-				active: Duration::ZERO,
-				after: Duration::from_millis(500),
-			},
-			soft_override: true,
-			marker: HandGun::hand_markers(),
-			behavior: Projectile::behavior(),
-			..default()
-		}),
+		skill: skill_templates.get("Shoot Projectile").cloned(),
 	};
 	let pistol_c = Item {
 		name: "Pistol C",
 		model: Some("pistol"),
-		skill: Some(Skill {
-			name: "Shoot Projectile",
-			cast: Cast {
-				pre: Duration::from_millis(500),
-				active: Duration::ZERO,
-				after: Duration::from_millis(500),
-			},
-			soft_override: true,
-			marker: HandGun::hand_markers(),
-			behavior: Projectile::behavior(),
-			..default()
-		}),
+		skill: skill_templates.get("Shoot Projectile").cloned(),
 	};
 	let sword_a = Item {
 		name: "Sword A",
 		model: Some("sword"),
-		skill: Some(Skill {
-			name: "Swing Sword",
-			cast: Cast {
-				pre: Duration::from_millis(0),
-				active: Duration::from_millis(500),
-				after: Duration::from_millis(200),
-			},
-			soft_override: true,
-			marker: Sword::hand_markers(),
-			behavior: Sword::behavior(),
-			..default()
-		}),
+		skill: skill_templates.get("Swing Sword").cloned(),
 	};
 	let sword_b = Item {
 		name: "Sword B",
 		model: Some("sword"),
-		skill: Some(Skill {
-			name: "Swing Sword",
-			cast: Cast {
-				pre: Duration::from_millis(0),
-				active: Duration::from_millis(500),
-				after: Duration::from_millis(200),
-			},
-			soft_override: true,
-			marker: Sword::hand_markers(),
-			behavior: Sword::behavior(),
-			..default()
-		}),
+		skill: skill_templates.get("Swing Sword").cloned(),
 	};
 	let legs = Item {
 		name: "Legs",
 		model: None,
-		skill: Some(Skill {
-			name: "Simple Movement",
-			cast: Cast {
-				after: Duration::MAX,
-				..default()
-			},
-			behavior: SimpleMovement::behavior(),
-			..default()
-		}),
+		skill: skill_templates.get("Simple Movement").cloned(),
 	};
 
 	commands.spawn((

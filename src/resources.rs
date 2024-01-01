@@ -1,3 +1,5 @@
+pub mod skill_templates;
+
 use crate::{
 	components::SlotKey,
 	types::{File, Key, SceneId},
