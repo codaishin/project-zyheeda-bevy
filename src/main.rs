@@ -52,7 +52,7 @@ use project_zyheeda::{
 	tools::{Once, Repeat, Tools},
 	traits::{
 		behavior::GetBehaviorMeta,
-		marker::GetMarkerMeta,
+		marker::GetMarkerHandMarkerMeta,
 		orbit::{Orbit, Vec2Radians},
 	},
 };
@@ -260,7 +260,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				after: Duration::from_millis(500),
 			},
 			soft_override: true,
-			marker: HandGun::marker(),
+			marker: HandGun::hand_markers(),
 			behavior: Projectile::behavior(),
 			..default()
 		}),
@@ -276,7 +276,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				after: Duration::from_millis(500),
 			},
 			soft_override: true,
-			marker: HandGun::marker(),
+			marker: HandGun::hand_markers(),
 			behavior: Projectile::behavior(),
 			..default()
 		}),
@@ -292,7 +292,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				after: Duration::from_millis(500),
 			},
 			soft_override: true,
-			marker: HandGun::marker(),
+			marker: HandGun::hand_markers(),
 			behavior: Projectile::behavior(),
 			..default()
 		}),
@@ -308,7 +308,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				after: Duration::from_millis(200),
 			},
 			soft_override: true,
-			marker: Sword::marker(),
+			marker: Sword::hand_markers(),
 			behavior: Sword::behavior(),
 			..default()
 		}),
@@ -324,7 +324,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				after: Duration::from_millis(200),
 			},
 			soft_override: true,
-			marker: Sword::marker(),
+			marker: Sword::hand_markers(),
 			behavior: Sword::behavior(),
 			..default()
 		}),
