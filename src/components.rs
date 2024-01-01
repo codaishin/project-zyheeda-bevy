@@ -1,11 +1,8 @@
 use crate::{behaviors::MovementMode, skill::Skill, types::BoneName};
-use bevy::{
-	prelude::{Component, *},
-	utils::HashMap,
-};
+use bevy::prelude::{Component, *};
 use core::fmt::Display;
 use std::{
-	collections::VecDeque,
+	collections::{HashMap, VecDeque},
 	fmt::{Debug, Formatter, Result},
 	marker::PhantomData,
 	time::Duration,
@@ -181,6 +178,7 @@ pub struct Schedule {
 pub struct Slot {
 	pub entity: Entity,
 	pub item: Option<Item>,
+	pub alternative_skill: Option<Skill>,
 }
 
 #[derive(Component)]

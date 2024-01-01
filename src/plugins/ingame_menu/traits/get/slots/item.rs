@@ -26,6 +26,7 @@ mod tests {
 						name: "my item",
 						..default()
 					}),
+					alternative_skill: None,
 				},
 			)]
 			.into(),
@@ -51,6 +52,7 @@ mod tests {
 						name: "my item",
 						..default()
 					}),
+					alternative_skill: None,
 				},
 			)]
 			.into(),
@@ -76,6 +78,7 @@ mod tests {
 						name: "my item",
 						..default()
 					}),
+					alternative_skill: None,
 				},
 			)]
 			.into(),

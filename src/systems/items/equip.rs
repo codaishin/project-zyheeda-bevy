@@ -98,6 +98,7 @@ fn equip_and_return_old_item(
 
 	let original_item = slot.item;
 	slot.item = item;
+	slot.alternative_skill = None;
 	*slot_handle = model.clone();
 
 	Ok(original_item)
@@ -243,6 +244,10 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
+							alternative_skill: Some(Skill {
+								name: "alternative",
+								..default()
+							}),
 						},
 					)]
 					.into(),
@@ -291,6 +296,7 @@ mod tests {
 						}),
 						model: Some("model key"),
 					}),
+					alternative_skill: None,
 				}
 			),
 			(slot_model.cloned(), slot_component)
@@ -329,6 +335,7 @@ mod tests {
 								}),
 								model: Some("model key"),
 							}),
+							alternative_skill: None,
 						},
 					)]
 					.into(),
@@ -363,6 +370,7 @@ mod tests {
 				&Slot {
 					entity: slot,
 					item: None,
+					alternative_skill: None,
 				}
 			),
 			(slot_model.cloned(), slot_component)
@@ -410,6 +418,7 @@ mod tests {
 					Slot {
 						entity: slot,
 						item: None,
+						alternative_skill: None,
 					},
 				)]
 				.into(),
@@ -477,6 +486,7 @@ mod tests {
 							name: "Current Item",
 							..default()
 						}),
+						alternative_skill: None,
 					},
 				)]
 				.into(),
@@ -517,6 +527,7 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
+							alternative_skill: None,
 						},
 					)]
 					.into(),
@@ -572,7 +583,8 @@ mod tests {
 							..default()
 						}),
 						model: None,
-					})
+					}),
+					alternative_skill: None,
 				}
 			),
 			(slot_model.cloned(), slot_component)
@@ -604,6 +616,7 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
+							alternative_skill: None,
 						},
 					)]
 					.into(),
@@ -651,6 +664,7 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
+							alternative_skill: None,
 						},
 					)]
 					.into(),
@@ -702,6 +716,7 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
+							alternative_skill: None,
 						},
 					)]
 					.into(),
@@ -754,6 +769,7 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
+							alternative_skill: None,
 						},
 					)]
 					.into(),
@@ -806,6 +822,7 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
+							alternative_skill: None,
 						},
 					)]
 					.into(),
@@ -871,6 +888,7 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
+							alternative_skill: None,
 						},
 					)]
 					.into(),
@@ -1001,6 +1019,7 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
+							alternative_skill: None,
 						},
 					)]
 					.into(),
@@ -1055,6 +1074,7 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
+							alternative_skill: None,
 						},
 					)]
 					.into(),

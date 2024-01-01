@@ -44,7 +44,14 @@ pub fn add_item_slots(
 			match find_bone(agent, bone_name, &children, &bones) {
 				Some(bone) => {
 					let entity = new_slot_on(bone, &mut commands);
-					slots.0.insert(key, Slot { entity, item: None });
+					slots.0.insert(
+						key,
+						Slot {
+							entity,
+							item: None,
+							alternative_skill: None,
+						},
+					);
 					None
 				}
 				None => Some((key, bone_name)),
@@ -65,12 +72,13 @@ pub fn add_item_slots(
 
 #[cfg(test)]
 mod tests {
+	use std::collections::HashMap;
+
 	use super::*;
 	use crate::components::Side;
 	use bevy::{
 		prelude::{App, BuildWorldChildren, Handle, Name, Quat, Transform, Update, Vec3},
 		scene::Scene,
-		utils::HashMap,
 	};
 
 	#[derive(PartialEq, Debug)]
@@ -176,7 +184,8 @@ mod tests {
 				SlotKey::Hand(Side::Left),
 				Slot {
 					entity: slot,
-					item: None
+					item: None,
+					alternative_skill: None,
 				}
 			)]),
 			slots.0
