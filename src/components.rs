@@ -123,7 +123,7 @@ impl Skill<Queued> {
 	}
 }
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq)]
 pub struct Marker<T> {
 	phantom_data: PhantomData<T>,
 }
@@ -244,16 +244,14 @@ pub struct Dad<T>(pub T);
 
 #[derive(Component, Debug, PartialEq)]
 pub struct Track<T> {
-	pub original: T,
-	pub current: T,
+	pub value: T,
 	pub duration: Duration,
 }
 
 impl<T: Copy> Track<T> {
-	pub fn new(original: T) -> Self {
+	pub fn new(value: T) -> Self {
 		Self {
-			original,
-			current: original,
+			value,
 			duration: Duration::ZERO,
 		}
 	}

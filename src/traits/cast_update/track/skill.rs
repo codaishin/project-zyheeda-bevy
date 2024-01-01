@@ -7,7 +7,7 @@ use std::time::Duration;
 
 impl CastUpdate for Track<Skill<Active>> {
 	fn update(&mut self, delta: Duration) -> State {
-		let skill = &self.current;
+		let skill = &self.value;
 		let old = self.duration;
 
 		self.duration += delta;

@@ -8,24 +8,24 @@ use bevy::{ecs::system::EntityCommands, transform::components::Transform};
 
 impl BehaviorExecution for Track<Skill<Active>> {
 	fn run(&self, agent: &mut EntityCommands, spawner: &Spawner) {
-		let Some(run) = self.current.behavior.run_fn else {
+		let Some(run) = self.value.behavior.run_fn else {
 			return;
 		};
-		run(agent, spawner, &self.current.data.ray);
+		run(agent, spawner, &self.value.data.ray);
 	}
 
 	fn stop(&self, agent: &mut EntityCommands) {
-		let Some(stop) = self.current.behavior.stop_fn else {
+		let Some(stop) = self.value.behavior.stop_fn else {
 			return;
 		};
 		stop(agent);
 	}
 
 	fn apply_transform(&self, transform: &mut Transform, spawner: &Spawner) {
-		let Some(apply_transform) = self.current.behavior.transform_fn else {
+		let Some(apply_transform) = self.value.behavior.transform_fn else {
 			return;
 		};
-		apply_transform(transform, spawner, &self.current.data.ray);
+		apply_transform(transform, spawner, &self.value.data.ray);
 	}
 }
 

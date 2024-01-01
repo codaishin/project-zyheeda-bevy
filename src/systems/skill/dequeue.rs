@@ -60,23 +60,15 @@ mod tests {
 
 		assert_eq!(
 			(
-				Some((
-					Active {
-						ray: TEST_RAY,
-						slot: SlotKey::SkillSpawn,
-					},
-					Active {
-						ray: TEST_RAY,
-						slot: SlotKey::SkillSpawn,
-					}
-				)),
+				Some(Active {
+					ray: TEST_RAY,
+					slot: SlotKey::SkillSpawn,
+				}),
 				false,
 				0
 			),
 			(
-				agent
-					.get::<Track<Skill<Active>>>()
-					.map(|t| (t.original.data, t.current.data)),
+				agent.get::<Track<Skill<Active>>>().map(|t| t.value.data),
 				agent.contains::<WaitNext>(),
 				queue.0.len()
 			)

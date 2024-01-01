@@ -8,11 +8,11 @@ use bevy::ecs::system::EntityCommands;
 
 impl MarkerModify for Track<Skill<Active>> {
 	fn insert_markers(&self, agent: &mut EntityCommands) -> Result<(), Error> {
-		(self.current.marker.insert_fn)(agent, self.current.data.slot)
+		(self.value.marker.insert_fn)(agent, self.value.data.slot)
 	}
 
 	fn remove_markers(&self, agent: &mut EntityCommands) -> Result<(), Error> {
-		(self.current.marker.remove_fn)(agent, self.current.data.slot)
+		(self.value.marker.remove_fn)(agent, self.value.data.slot)
 	}
 }
 
