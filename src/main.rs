@@ -8,9 +8,11 @@ use project_zyheeda::{
 	components::{
 		Animator,
 		CamOrbit,
+		ComboTreeTemplate,
 		Inventory,
 		InventoryKey,
 		Item,
+		ItemType,
 		Marker,
 		Player,
 		Projectile,
@@ -22,10 +24,21 @@ use project_zyheeda::{
 		UnitsPerSecond,
 	},
 	errors::Error,
-	markers::{Dual, Fast, HandGun, Idle, Left, Right, Slow, Sword},
+	markers::{
+		functions::{insert_hand_marker_fn, remove_hand_marker_fn},
+		meta::MarkerMeta,
+		Dual,
+		Fast,
+		HandGun,
+		Idle,
+		Left,
+		Right,
+		Slow,
+		Sword,
+	},
 	plugins::ingame_menu::IngameMenuPlugin,
 	resources::{skill_templates::SkillTemplates, Animation, Models, SlotMap},
-	skill::{Active, Cast, Skill},
+	skill::{Active, Cast, Skill, SkillComboNext, SkillComboTree},
 	states::GameRunning,
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
@@ -43,6 +56,7 @@ use project_zyheeda::{
 			toggle_walk_run::player_toggle_walk_run,
 		},
 		skill::{
+			chain_combo_skills::chain_combo_skills,
 			dequeue::dequeue,
 			enqueue::enqueue,
 			execute_skill::execute_skill,
@@ -56,7 +70,11 @@ use project_zyheeda::{
 		orbit::{Orbit, Vec2Radians},
 	},
 };
-use std::{f32::consts::PI, time::Duration};
+use std::{
+	collections::{HashMap, HashSet},
+	f32::consts::PI,
+	time::Duration,
+};
 
 fn main() {
 	App::new()
@@ -95,6 +113,7 @@ fn main() {
 		.add_systems(
 			Update,
 			(
+				chain_combo_skills::<SkillComboNext>,
 				execute_skill::<Track<Skill<Active>>, Virtual>.pipe(log_many),
 				execute_move::<Player, SimpleMovement, Virtual>,
 			),
@@ -222,10 +241,11 @@ fn setup_skill_templates(mut commands: Commands) -> Vec<Result<(), Error>> {
 			soft_override: true,
 			marker: Sword::hand_markers(),
 			behavior: Sword::behavior(),
+			is_usable_with: HashSet::from([ItemType::Sword]),
 			..default()
 		},
 		Skill {
-			name: "Shoot Projectile",
+			name: "Shoot Hand Gun",
 			cast: Cast {
 				pre: Duration::from_millis(500),
 				active: Duration::ZERO,
@@ -234,6 +254,23 @@ fn setup_skill_templates(mut commands: Commands) -> Vec<Result<(), Error>> {
 			soft_override: true,
 			marker: HandGun::hand_markers(),
 			behavior: Projectile::behavior(),
+			is_usable_with: HashSet::from([ItemType::Pistol]),
+			..default()
+		},
+		Skill {
+			name: "Shoot Hand Gun Dual",
+			cast: Cast {
+				pre: Duration::from_millis(500),
+				active: Duration::ZERO,
+				after: Duration::from_millis(500),
+			},
+			soft_override: true,
+			marker: MarkerMeta {
+				insert_fn: insert_hand_marker_fn::<(HandGun, Left, Dual), (HandGun, Right, Dual)>,
+				remove_fn: remove_hand_marker_fn::<(HandGun, Left, Dual), (HandGun, Right, Dual)>,
+			},
+			behavior: Projectile::behavior(),
+			is_usable_with: HashSet::from([ItemType::Pistol]),
 			..default()
 		},
 		Skill {
@@ -243,6 +280,7 @@ fn setup_skill_templates(mut commands: Commands) -> Vec<Result<(), Error>> {
 				..default()
 			},
 			behavior: SimpleMovement::behavior(),
+			is_usable_with: HashSet::from([ItemType::Legs]),
 			..default()
 		},
 	]);
@@ -304,39 +342,81 @@ fn spawn_player(
 	let pistol_a = Item {
 		name: "Pistol A",
 		model: Some("pistol"),
-		skill: skill_templates.get("Shoot Projectile").cloned(),
-		..default()
+		skill: skill_templates.get("Shoot Hand Gun").cloned(),
+		item_type: HashSet::from([ItemType::Pistol]),
 	};
 	let pistol_b = Item {
 		name: "Pistol B",
 		model: Some("pistol"),
-		skill: skill_templates.get("Shoot Projectile").cloned(),
-		..default()
+		skill: skill_templates.get("Shoot Hand Gun").cloned(),
+		item_type: HashSet::from([ItemType::Pistol]),
 	};
 	let pistol_c = Item {
 		name: "Pistol C",
 		model: Some("pistol"),
-		skill: skill_templates.get("Shoot Projectile").cloned(),
-		..default()
+		skill: skill_templates.get("Shoot Hand Gun").cloned(),
+		item_type: HashSet::from([ItemType::Pistol]),
 	};
 	let sword_a = Item {
 		name: "Sword A",
 		model: Some("sword"),
 		skill: skill_templates.get("Swing Sword").cloned(),
-		..default()
+		item_type: HashSet::from([ItemType::Sword]),
 	};
 	let sword_b = Item {
 		name: "Sword B",
 		model: Some("sword"),
 		skill: skill_templates.get("Swing Sword").cloned(),
-		..default()
+		item_type: HashSet::from([ItemType::Sword]),
 	};
 	let legs = Item {
 		name: "Legs",
 		model: None,
 		skill: skill_templates.get("Simple Movement").cloned(),
-		..default()
+		item_type: HashSet::from([ItemType::Legs]),
 	};
+
+	// FIXME: Use a more sensible pattern to register predefined combos
+	let mut skill_combos = ComboTreeTemplate(default());
+	let shoot_hand_gun = skill_templates.get("Shoot Hand Gun");
+	let shoot_hand_gun_dual = skill_templates.get("Shoot Hand Gun Dual");
+	if let (Some(shoot_hand_gun), Some(shoot_hand_gun_dual)) = (shoot_hand_gun, shoot_hand_gun_dual)
+	{
+		skill_combos.0 = HashMap::from([
+			(
+				SlotKey::Hand(Side::Main),
+				SkillComboTree {
+					skill: shoot_hand_gun.clone(),
+					next: SkillComboNext::Tree(HashMap::from([(
+						SlotKey::Hand(Side::Off),
+						SkillComboTree {
+							skill: shoot_hand_gun_dual.clone(),
+							next: SkillComboNext::Alternate {
+								slot_key: SlotKey::Hand(Side::Main),
+								skill: shoot_hand_gun_dual.clone(),
+							},
+						},
+					)])),
+				},
+			),
+			(
+				SlotKey::Hand(Side::Off),
+				SkillComboTree {
+					skill: shoot_hand_gun.clone(),
+					next: SkillComboNext::Tree(HashMap::from([(
+						SlotKey::Hand(Side::Main),
+						SkillComboTree {
+							skill: shoot_hand_gun_dual.clone(),
+							next: SkillComboNext::Alternate {
+								slot_key: SlotKey::Hand(Side::Off),
+								skill: shoot_hand_gun_dual.clone(),
+							},
+						},
+					)])),
+				},
+			),
+		]);
+	}
 
 	commands.spawn((
 		SceneBundle {
@@ -363,6 +443,7 @@ fn spawn_player(
 				(SlotKey::Legs, legs.into()),
 			],
 		),
+		skill_combos,
 	));
 }
 
