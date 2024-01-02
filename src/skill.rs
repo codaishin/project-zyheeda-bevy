@@ -1,5 +1,6 @@
-use crate::{behaviors::meta::BehaviorMeta, markers::meta::MarkerMeta};
+use crate::{behaviors::meta::BehaviorMeta, components::SlotKey, markers::meta::MarkerMeta};
 use std::{
+	collections::HashMap,
 	fmt::{Display, Formatter, Result},
 	time::Duration,
 };
@@ -28,4 +29,10 @@ impl<T> Display for Skill<T> {
 			name => write!(f, "Skill({})", name),
 		}
 	}
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct SkillComboTree {
+	pub skill: Skill,
+	pub next: HashMap<SlotKey, SkillComboTree>,
 }

@@ -49,7 +49,7 @@ pub fn add_item_slots(
 						Slot {
 							entity,
 							item: None,
-							alternative_skill: None,
+							combo_skill: None,
 						},
 					);
 					None
@@ -94,7 +94,7 @@ mod tests {
 		app.world
 			.spawn((
 				Slots::new(),
-				SlotBones([(SlotKey::Hand(Side::Left), "bone")].into()),
+				SlotBones([(SlotKey::Hand(Side::Off), "bone")].into()),
 			))
 			.push_children(&[bone]);
 		app.add_systems(Update, add_item_slots);
@@ -117,7 +117,7 @@ mod tests {
 		app.world
 			.spawn((
 				Slots::new(),
-				SlotBones([(SlotKey::Hand(Side::Left), "bone")].into()),
+				SlotBones([(SlotKey::Hand(Side::Off), "bone")].into()),
 			))
 			.push_children(&[bone]);
 		app.add_systems(Update, add_item_slots);
@@ -142,7 +142,7 @@ mod tests {
 		app.world
 			.spawn((
 				Slots::new(),
-				SlotBones([(SlotKey::Hand(Side::Left), "bone")].into()),
+				SlotBones([(SlotKey::Hand(Side::Off), "bone")].into()),
 			))
 			.push_children(&[bone]);
 		app.add_systems(Update, add_item_slots);
@@ -167,7 +167,7 @@ mod tests {
 			.world
 			.spawn((
 				Slots::new(),
-				SlotBones([(SlotKey::Hand(Side::Left), "bone")].into()),
+				SlotBones([(SlotKey::Hand(Side::Off), "bone")].into()),
 			))
 			.push_children(&[bone])
 			.id();
@@ -181,11 +181,11 @@ mod tests {
 
 		assert_eq!(
 			HashMap::from([(
-				SlotKey::Hand(Side::Left),
+				SlotKey::Hand(Side::Off),
 				Slot {
 					entity: slot,
 					item: None,
-					alternative_skill: None,
+					combo_skill: None,
 				}
 			)]),
 			slots.0
@@ -203,7 +203,7 @@ mod tests {
 			.world
 			.spawn((
 				Slots::new(),
-				SlotBones([(SlotKey::Hand(Side::Left), "bone")].into()),
+				SlotBones([(SlotKey::Hand(Side::Off), "bone")].into()),
 			))
 			.push_children(&[bone])
 			.id();
@@ -229,8 +229,8 @@ mod tests {
 				Slots::new(),
 				SlotBones(
 					[
-						(SlotKey::Hand(Side::Left), "bone"),
-						(SlotKey::Hand(Side::Right), "bone2"),
+						(SlotKey::Hand(Side::Off), "bone"),
+						(SlotKey::Hand(Side::Main), "bone2"),
 					]
 					.into(),
 				),
@@ -244,7 +244,7 @@ mod tests {
 		let slot_infos = app.world.entity(root).get::<SlotBones>();
 
 		assert_eq!(
-			Some(&SlotBones([(SlotKey::Hand(Side::Right), "bone2")].into())),
+			Some(&SlotBones([(SlotKey::Hand(Side::Main), "bone2")].into())),
 			slot_infos
 		);
 	}

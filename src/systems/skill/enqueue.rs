@@ -168,7 +168,7 @@ mod tests {
 				Schedule {
 					mode: ScheduleMode::Enqueue,
 					skills: [(
-						SlotKey::Hand(Side::Left),
+						SlotKey::Hand(Side::Off),
 						Skill {
 							cast: Cast {
 								pre: Duration::from_millis(100),
@@ -229,7 +229,7 @@ mod tests {
 					},
 					data: Queued {
 						ray: TEST_RAY,
-						slot: SlotKey::Hand(Side::Left)
+						slot: SlotKey::Hand(Side::Off)
 					},
 					..default()
 				},
@@ -253,7 +253,7 @@ mod tests {
 			.spawn((
 				Schedule {
 					mode: ScheduleMode::Override,
-					skills: [(SlotKey::Hand(Side::Left), new_skill)].into(),
+					skills: [(SlotKey::Hand(Side::Off), new_skill)].into(),
 				},
 				Queue(
 					[
@@ -286,7 +286,7 @@ mod tests {
 			(
 				vec![&new_skill.with(Queued {
 					ray: TEST_RAY,
-					slot: SlotKey::Hand(Side::Left)
+					slot: SlotKey::Hand(Side::Off)
 				})],
 				true
 			),
@@ -314,7 +314,7 @@ mod tests {
 				Track::new(running_skill),
 				Schedule {
 					mode: ScheduleMode::Override,
-					skills: [(SlotKey::Hand(Side::Left), new_skill)].into(),
+					skills: [(SlotKey::Hand(Side::Off), new_skill)].into(),
 				},
 				Queue([].into()),
 			))
@@ -329,7 +329,7 @@ mod tests {
 			(
 				vec![&new_skill.with(Queued {
 					ray: TEST_RAY,
-					slot: SlotKey::Hand(Side::Left)
+					slot: SlotKey::Hand(Side::Off)
 				})],
 				&Track::new(running_skill),
 				false,
@@ -362,7 +362,7 @@ mod tests {
 				Track::new(running_skill),
 				Schedule {
 					mode: ScheduleMode::Override,
-					skills: [(SlotKey::Hand(Side::Left), new_skill)].into(),
+					skills: [(SlotKey::Hand(Side::Off), new_skill)].into(),
 				},
 				Queue([].into()),
 			))
@@ -377,7 +377,7 @@ mod tests {
 			(
 				vec![&new_skill.with(Queued {
 					ray: TEST_RAY,
-					slot: SlotKey::Hand(Side::Left)
+					slot: SlotKey::Hand(Side::Off)
 				})],
 				&Track::new(running_skill),
 				true,
@@ -410,7 +410,7 @@ mod tests {
 				Track::new(running_skill),
 				Schedule {
 					mode: ScheduleMode::Override,
-					skills: [(SlotKey::Hand(Side::Left), new_skill)].into(),
+					skills: [(SlotKey::Hand(Side::Off), new_skill)].into(),
 				},
 				Queue([].into()),
 			))
@@ -425,7 +425,7 @@ mod tests {
 			(
 				vec![&new_skill.with(Queued {
 					ray: TEST_RAY,
-					slot: SlotKey::Hand(Side::Left)
+					slot: SlotKey::Hand(Side::Off)
 				})],
 				&Track::new(running_skill),
 				true,
@@ -443,7 +443,7 @@ mod tests {
 		let mut app = setup::<_ToolsSomeRay>();
 		let schedule = Schedule {
 			mode: ScheduleMode::Override,
-			skills: [(SlotKey::Hand(Side::Left), Skill::default())].into(),
+			skills: [(SlotKey::Hand(Side::Off), Skill::default())].into(),
 		};
 		let agent = app.world.spawn((schedule, Queue([].into()))).id();
 
@@ -473,7 +473,7 @@ mod tests {
 		app.world.spawn((
 			Schedule {
 				mode: ScheduleMode::Override,
-				skills: [(SlotKey::Hand(Side::Left), Skill::default())].into(),
+				skills: [(SlotKey::Hand(Side::Off), Skill::default())].into(),
 			},
 			Queue([].into()),
 		));
@@ -500,7 +500,7 @@ mod tests {
 		app.world.spawn((
 			Schedule {
 				mode: ScheduleMode::Enqueue,
-				skills: [(SlotKey::Hand(Side::Left), Skill::default())].into(),
+				skills: [(SlotKey::Hand(Side::Off), Skill::default())].into(),
 			},
 			Track::new(Skill::<Active>::default()),
 			Queue([].into()),

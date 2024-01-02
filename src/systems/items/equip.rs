@@ -98,7 +98,7 @@ fn equip_and_return_old_item(
 
 	let original_item = slot.item;
 	slot.item = item;
-	slot.alternative_skill = None;
+	slot.combo_skill = None;
 	*slot_handle = model.clone();
 
 	Ok(original_item)
@@ -240,11 +240,11 @@ mod tests {
 				_Container { name: "my comp" },
 				Slots(
 					[(
-						SlotKey::Hand(Side::Right),
+						SlotKey::Hand(Side::Main),
 						Slot {
 							entity: slot,
 							item: None,
-							alternative_skill: Some(Skill {
+							combo_skill: Some(Skill {
 								name: "alternative",
 								..default()
 							}),
@@ -253,7 +253,7 @@ mod tests {
 					.into(),
 				),
 				Collection::new([_Source {
-					slot: SlotKey::Hand(Side::Right),
+					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
 						skill: Some(Skill {
@@ -280,7 +280,7 @@ mod tests {
 			.get::<Slots>()
 			.unwrap()
 			.0
-			.get(&SlotKey::Hand(Side::Right))
+			.get(&SlotKey::Hand(Side::Main))
 			.unwrap();
 
 		assert_eq!(
@@ -296,7 +296,7 @@ mod tests {
 						}),
 						model: Some("model key"),
 					}),
-					alternative_skill: None,
+					combo_skill: None,
 				}
 			),
 			(slot_model.cloned(), slot_component)
@@ -324,7 +324,7 @@ mod tests {
 				_Container { name: "my comp" },
 				Slots(
 					[(
-						SlotKey::Hand(Side::Right),
+						SlotKey::Hand(Side::Main),
 						Slot {
 							entity: slot,
 							item: Some(Item {
@@ -335,13 +335,13 @@ mod tests {
 								}),
 								model: Some("model key"),
 							}),
-							alternative_skill: None,
+							combo_skill: None,
 						},
 					)]
 					.into(),
 				),
 				Collection::new([_Source {
-					slot: SlotKey::Hand(Side::Right),
+					slot: SlotKey::Hand(Side::Main),
 					item: None,
 					..default()
 				}]),
@@ -361,7 +361,7 @@ mod tests {
 			.get::<Slots>()
 			.unwrap()
 			.0
-			.get(&SlotKey::Hand(Side::Right))
+			.get(&SlotKey::Hand(Side::Main))
 			.unwrap();
 
 		assert_eq!(
@@ -370,7 +370,7 @@ mod tests {
 				&Slot {
 					entity: slot,
 					item: None,
-					alternative_skill: None,
+					combo_skill: None,
 				}
 			),
 			(slot_model.cloned(), slot_component)
@@ -399,7 +399,7 @@ mod tests {
 			.times(1)
 			.with(eq(component))
 			.return_const((
-				SlotKey::Hand(Side::Right),
+				SlotKey::Hand(Side::Main),
 				Some(Item {
 					name: "Some Item",
 					..default()
@@ -414,11 +414,11 @@ mod tests {
 		app.world.entity_mut(agent).insert((
 			Slots(
 				[(
-					SlotKey::Hand(Side::Right),
+					SlotKey::Hand(Side::Main),
 					Slot {
 						entity: slot,
 						item: None,
-						alternative_skill: None,
+						combo_skill: None,
 					},
 				)]
 				.into(),
@@ -458,7 +458,7 @@ mod tests {
 			.times(1)
 			.with(eq(component))
 			.return_const((
-				SlotKey::Hand(Side::Right),
+				SlotKey::Hand(Side::Main),
 				Some(Item {
 					name: "Some Item",
 					..default()
@@ -479,14 +479,14 @@ mod tests {
 		app.world.entity_mut(agent).insert((
 			Slots(
 				[(
-					SlotKey::Hand(Side::Right),
+					SlotKey::Hand(Side::Main),
 					Slot {
 						entity: slot,
 						item: Some(Item {
 							name: "Current Item",
 							..default()
 						}),
-						alternative_skill: None,
+						combo_skill: None,
 					},
 				)]
 				.into(),
@@ -523,17 +523,17 @@ mod tests {
 				_Container { name: "my comp" },
 				Slots(
 					[(
-						SlotKey::Hand(Side::Right),
+						SlotKey::Hand(Side::Main),
 						Slot {
 							entity: slot,
 							item: None,
-							alternative_skill: None,
+							combo_skill: None,
 						},
 					)]
 					.into(),
 				),
 				Collection::new([_Source {
-					slot: SlotKey::Hand(Side::Right),
+					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
 						skill: Some(Skill {
@@ -564,7 +564,7 @@ mod tests {
 			.get::<Slots>()
 			.unwrap()
 			.0
-			.get(&SlotKey::Hand(Side::Right))
+			.get(&SlotKey::Hand(Side::Main))
 			.unwrap();
 
 		assert_eq!(
@@ -584,7 +584,7 @@ mod tests {
 						}),
 						model: None,
 					}),
-					alternative_skill: None,
+					combo_skill: None,
 				}
 			),
 			(slot_model.cloned(), slot_component)
@@ -612,17 +612,17 @@ mod tests {
 				_Container { name: "my comp" },
 				Slots(
 					[(
-						SlotKey::Hand(Side::Right),
+						SlotKey::Hand(Side::Main),
 						Slot {
 							entity: slot,
 							item: None,
-							alternative_skill: None,
+							combo_skill: None,
 						},
 					)]
 					.into(),
 				),
 				Collection::new([_Source {
-					slot: SlotKey::Hand(Side::Right),
+					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
 						skill: None,
@@ -660,17 +660,17 @@ mod tests {
 				_Container { name: "my comp" },
 				Slots(
 					[(
-						SlotKey::Hand(Side::Right),
+						SlotKey::Hand(Side::Main),
 						Slot {
 							entity: slot,
 							item: None,
-							alternative_skill: None,
+							combo_skill: None,
 						},
 					)]
 					.into(),
 				),
 				Collection::new([_Source {
-					slot: SlotKey::Hand(Side::Right),
+					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
 						skill: None,
@@ -712,17 +712,17 @@ mod tests {
 				_Container { name: "my comp" },
 				Slots(
 					[(
-						SlotKey::Hand(Side::Right),
+						SlotKey::Hand(Side::Main),
 						Slot {
 							entity: slot,
 							item: None,
-							alternative_skill: None,
+							combo_skill: None,
 						},
 					)]
 					.into(),
 				),
 				Collection::new([_Source {
-					slot: SlotKey::Hand(Side::Right),
+					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
 						skill: None,
@@ -765,17 +765,17 @@ mod tests {
 				_Container { name: "my comp" },
 				Slots(
 					[(
-						SlotKey::Hand(Side::Right),
+						SlotKey::Hand(Side::Main),
 						Slot {
 							entity: slot,
 							item: None,
-							alternative_skill: None,
+							combo_skill: None,
 						},
 					)]
 					.into(),
 				),
 				Collection::new([_Source {
-					slot: SlotKey::Hand(Side::Right),
+					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
 						skill: None,
@@ -818,17 +818,17 @@ mod tests {
 				_Container { name: "my comp" },
 				Slots(
 					[(
-						SlotKey::Hand(Side::Left),
+						SlotKey::Hand(Side::Off),
 						Slot {
 							entity: slot,
 							item: None,
-							alternative_skill: None,
+							combo_skill: None,
 						},
 					)]
 					.into(),
 				),
 				Collection::new([_Source {
-					slot: SlotKey::Hand(Side::Right),
+					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
 						skill: None,
@@ -849,7 +849,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&Collection::new([_Source {
-				slot: SlotKey::Hand(Side::Right),
+				slot: SlotKey::Hand(Side::Main),
 				item: Some(Item {
 					name: "Some Item",
 					skill: None,
@@ -884,18 +884,18 @@ mod tests {
 				},
 				Slots(
 					[(
-						SlotKey::Hand(Side::Right),
+						SlotKey::Hand(Side::Main),
 						Slot {
 							entity: slot,
 							item: None,
-							alternative_skill: None,
+							combo_skill: None,
 						},
 					)]
 					.into(),
 				),
 				Collection::new([
 					_Source {
-						slot: SlotKey::Hand(Side::Right),
+						slot: SlotKey::Hand(Side::Main),
 						item: Some(Item {
 							name: "Some Item",
 							skill: None,
@@ -966,7 +966,7 @@ mod tests {
 				_Container { name: "my comp" },
 				Slots([].into()),
 				Collection::new([_Source {
-					slot: SlotKey::Hand(Side::Left),
+					slot: SlotKey::Hand(Side::Off),
 					item: Some(item),
 					..default()
 				}]),
@@ -983,7 +983,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&FakeErrorLogMany(
-				[slot_warning(Some(item), SlotKey::Hand(Side::Left))].into()
+				[slot_warning(Some(item), SlotKey::Hand(Side::Off))].into()
 			)),
 			agent.get::<FakeErrorLogMany>()
 		);
@@ -1015,17 +1015,17 @@ mod tests {
 				_Container { name: "my comp" },
 				Slots(
 					[(
-						SlotKey::Hand(Side::Left),
+						SlotKey::Hand(Side::Off),
 						Slot {
 							entity: slot,
 							item: None,
-							alternative_skill: None,
+							combo_skill: None,
 						},
 					)]
 					.into(),
 				),
 				Collection::new([_Source {
-					slot: SlotKey::Hand(Side::Left),
+					slot: SlotKey::Hand(Side::Off),
 					item: Some(item),
 					..default()
 				}]),
@@ -1070,17 +1070,17 @@ mod tests {
 				_Container { name: "my comp" },
 				Slots(
 					[(
-						SlotKey::Hand(Side::Left),
+						SlotKey::Hand(Side::Off),
 						Slot {
 							entity: slot,
 							item: None,
-							alternative_skill: None,
+							combo_skill: None,
 						},
 					)]
 					.into(),
 				),
 				Collection::new([_Source {
-					slot: SlotKey::Hand(Side::Left),
+					slot: SlotKey::Hand(Side::Off),
 					item: Some(item),
 					..default()
 				}]),

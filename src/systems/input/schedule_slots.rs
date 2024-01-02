@@ -46,7 +46,7 @@ fn filter_triggered_behaviors(
 		.0
 		.iter()
 		.filter(|(slot_key, ..)| triggered_slot_keys.contains(slot_key))
-		.filter_map(|(key, slot)| Some((*key, slot.alternative_skill.or(slot.item?.skill)?)))
+		.filter_map(|(key, slot)| Some((*key, slot.combo_skill.or(slot.item?.skill)?)))
 		.collect()
 }
 
@@ -90,7 +90,7 @@ mod tests {
 						}),
 						..default()
 					}),
-					alternative_skill: None,
+					combo_skill: None,
 				},
 			)]
 			.into(),
@@ -141,7 +141,7 @@ mod tests {
 						}),
 						..default()
 					}),
-					alternative_skill: Some(Skill {
+					combo_skill: Some(Skill {
 						name: "alternative skill",
 						..default()
 					}),
@@ -189,7 +189,7 @@ mod tests {
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item::default()),
-					alternative_skill: None,
+					combo_skill: None,
 				},
 			)]
 			.into(),
@@ -221,7 +221,7 @@ mod tests {
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item::default()),
-					alternative_skill: None,
+					combo_skill: None,
 				},
 			)]
 			.into(),
@@ -231,7 +231,7 @@ mod tests {
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
 			.0
-			.insert(MouseButton::Right, SlotKey::Hand(Side::Left));
+			.insert(MouseButton::Right, SlotKey::Hand(Side::Off));
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Right);
@@ -249,7 +249,7 @@ mod tests {
 		let mut app = setup();
 		let slots = Slots(
 			[(
-				SlotKey::Hand(Side::Right),
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -259,7 +259,7 @@ mod tests {
 						}),
 						..default()
 					}),
-					alternative_skill: None,
+					combo_skill: None,
 				},
 			)]
 			.into(),
@@ -269,7 +269,7 @@ mod tests {
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
 			.0
-			.insert(MouseButton::Left, SlotKey::Hand(Side::Right));
+			.insert(MouseButton::Left, SlotKey::Hand(Side::Main));
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -286,7 +286,7 @@ mod tests {
 			Some(&Schedule {
 				mode: ScheduleMode::Enqueue,
 				skills: [(
-					SlotKey::Hand(Side::Right),
+					SlotKey::Hand(Side::Main),
 					Skill {
 						name: "skill",
 						..default()
@@ -303,7 +303,7 @@ mod tests {
 		let mut app = setup();
 		let slots = Slots(
 			[(
-				SlotKey::Hand(Side::Right),
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -313,7 +313,7 @@ mod tests {
 						}),
 						..default()
 					}),
-					alternative_skill: Some(Skill {
+					combo_skill: Some(Skill {
 						name: "alternative skill",
 						..default()
 					}),
@@ -326,7 +326,7 @@ mod tests {
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
 			.0
-			.insert(MouseButton::Left, SlotKey::Hand(Side::Right));
+			.insert(MouseButton::Left, SlotKey::Hand(Side::Main));
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -343,7 +343,7 @@ mod tests {
 			Some(&Schedule {
 				mode: ScheduleMode::Enqueue,
 				skills: [(
-					SlotKey::Hand(Side::Right),
+					SlotKey::Hand(Side::Main),
 					Skill {
 						name: "alternative skill",
 						..default()
@@ -375,7 +375,7 @@ mod tests {
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item::default()),
-					alternative_skill: None,
+					combo_skill: None,
 				},
 			)]
 			.into(),

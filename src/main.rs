@@ -189,8 +189,8 @@ fn setup_input(mut commands: Commands) {
 	));
 	commands.insert_resource(SlotMap::<KeyCode>(
 		[
-			(KeyCode::E, SlotKey::Hand(Side::Right)),
-			(KeyCode::Q, SlotKey::Hand(Side::Left)),
+			(KeyCode::E, SlotKey::Hand(Side::Main)),
+			(KeyCode::Q, SlotKey::Hand(Side::Off)),
 		]
 		.into(),
 	));
@@ -348,13 +348,13 @@ fn spawn_player(
 		Loadout::new(
 			[
 				(SlotKey::SkillSpawn, "projectile_spawn"),
-				(SlotKey::Hand(Side::Left), "hand_slot.L"),
-				(SlotKey::Hand(Side::Right), "hand_slot.R"),
+				(SlotKey::Hand(Side::Off), "hand_slot.L"),
+				(SlotKey::Hand(Side::Main), "hand_slot.R"),
 				(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
 			],
 			[
-				(SlotKey::Hand(Side::Left), pistol_a.into()),
-				(SlotKey::Hand(Side::Right), pistol_b.into()),
+				(SlotKey::Hand(Side::Off), pistol_a.into()),
+				(SlotKey::Hand(Side::Main), pistol_b.into()),
 				(SlotKey::Legs, legs.into()),
 			],
 		),

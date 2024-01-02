@@ -16,17 +16,17 @@ mod tests {
 	use bevy::{prelude::Entity, utils::default};
 
 	#[test]
-	fn get_hand_left() {
+	fn get_off_hand() {
 		let slots = Slots(
 			[(
-				SlotKey::Hand(Side::Left),
+				SlotKey::Hand(Side::Off),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
 						name: "my item",
 						..default()
 					}),
-					alternative_skill: None,
+					combo_skill: None,
 				},
 			)]
 			.into(),
@@ -37,7 +37,7 @@ mod tests {
 				name: "my item",
 				..default()
 			}),
-			slots.get(SlotKey::Hand(Side::Left))
+			slots.get(SlotKey::Hand(Side::Off))
 		);
 	}
 
@@ -52,7 +52,7 @@ mod tests {
 						name: "my item",
 						..default()
 					}),
-					alternative_skill: None,
+					combo_skill: None,
 				},
 			)]
 			.into(),
@@ -78,12 +78,12 @@ mod tests {
 						name: "my item",
 						..default()
 					}),
-					alternative_skill: None,
+					combo_skill: None,
 				},
 			)]
 			.into(),
 		);
 
-		assert_eq!(None, slots.get(SlotKey::Hand(Side::Right)));
+		assert_eq!(None, slots.get(SlotKey::Hand(Side::Main)));
 	}
 }

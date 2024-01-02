@@ -4,7 +4,7 @@ use crate::{
 };
 use bevy::ecs::system::EntityCommands;
 
-pub fn insert_hand_marker_fn<TLeft: Send + Sync + 'static, TRight: Send + Sync + 'static>(
+pub fn insert_hand_marker_fn<TOff: Send + Sync + 'static, TMain: Send + Sync + 'static>(
 	entity: &mut EntityCommands,
 	slot: SlotKey,
 ) -> Result<(), Error> {
@@ -13,8 +13,8 @@ pub fn insert_hand_marker_fn<TLeft: Send + Sync + 'static, TRight: Send + Sync +
 	};
 
 	match side {
-		Side::Left => entity.insert(Marker::<TLeft>::new()),
-		Side::Right => entity.insert(Marker::<TRight>::new()),
+		Side::Off => entity.insert(Marker::<TOff>::new()),
+		Side::Main => entity.insert(Marker::<TMain>::new()),
 	};
 
 	Ok(())
@@ -27,7 +27,7 @@ fn slot_error(slot: SlotKey) -> Error {
 	}
 }
 
-pub fn remove_hand_marker_fn<TLeft: Send + Sync + 'static, TRight: Send + Sync + 'static>(
+pub fn remove_hand_marker_fn<TOff: Send + Sync + 'static, TMain: Send + Sync + 'static>(
 	entity: &mut EntityCommands,
 	slot: SlotKey,
 ) -> Result<(), Error> {
@@ -36,8 +36,8 @@ pub fn remove_hand_marker_fn<TLeft: Send + Sync + 'static, TRight: Send + Sync +
 	};
 
 	match side {
-		Side::Left => entity.remove::<Marker<TLeft>>(),
-		Side::Right => entity.remove::<Marker<TRight>>(),
+		Side::Off => entity.remove::<Marker<TOff>>(),
+		Side::Main => entity.remove::<Marker<TMain>>(),
 	};
 
 	Ok(())
@@ -74,8 +74,8 @@ mod insert_hand_tests {
 	}
 
 	#[test]
-	fn insert_left() {
-		let (mut app, agent) = setup(SlotKey::Hand(Side::Left));
+	fn insert_off_hand() {
+		let (mut app, agent) = setup(SlotKey::Hand(Side::Off));
 
 		app.update();
 
@@ -85,8 +85,8 @@ mod insert_hand_tests {
 	}
 
 	#[test]
-	fn insert_right() {
-		let (mut app, agent) = setup(SlotKey::Hand(Side::Right));
+	fn insert_main_hand() {
+		let (mut app, agent) = setup(SlotKey::Hand(Side::Main));
 
 		app.update();
 
@@ -141,8 +141,8 @@ mod remove_hand_tests {
 	}
 
 	#[test]
-	fn remove_left() {
-		let (mut app, agent) = setup_and_add_marker::<_Left>(SlotKey::Hand(Side::Left));
+	fn remove_off_hand() {
+		let (mut app, agent) = setup_and_add_marker::<_Left>(SlotKey::Hand(Side::Off));
 
 		app.update();
 
@@ -152,8 +152,8 @@ mod remove_hand_tests {
 	}
 
 	#[test]
-	fn remove_right() {
-		let (mut app, agent) = setup_and_add_marker::<_Right>(SlotKey::Hand(Side::Right));
+	fn remove_main_hand() {
+		let (mut app, agent) = setup_and_add_marker::<_Right>(SlotKey::Hand(Side::Main));
 
 		app.update();
 

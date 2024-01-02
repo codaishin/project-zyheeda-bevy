@@ -1,5 +1,9 @@
-use crate::{behaviors::MovementMode, skill::Skill, types::BoneName};
-use bevy::prelude::{Component, *};
+use crate::{
+	behaviors::MovementMode,
+	skill::{Skill, SkillComboTree},
+	types::BoneName,
+};
+use bevy::prelude::{Component, Entity, Ray, Vec3};
 use core::fmt::Display;
 use std::{
 	collections::{HashMap, VecDeque},
@@ -144,8 +148,8 @@ impl<T> Default for Marker<T> {
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum Side {
-	Right,
-	Left,
+	Main,
+	Off,
 }
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Default)]
@@ -178,7 +182,7 @@ pub struct Schedule {
 pub struct Slot {
 	pub entity: Entity,
 	pub item: Option<Item>,
-	pub alternative_skill: Option<Skill>,
+	pub combo_skill: Option<Skill>,
 }
 
 #[derive(Component)]
@@ -256,3 +260,9 @@ impl<T: Copy> Track<T> {
 		}
 	}
 }
+
+#[derive(Component)]
+pub struct ComboTrees(pub HashMap<SlotKey, SkillComboTree>);
+
+#[derive(Component, PartialEq, Debug)]
+pub struct ComboTreesRunning(pub HashMap<SlotKey, SkillComboTree>);

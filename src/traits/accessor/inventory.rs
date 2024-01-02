@@ -74,7 +74,7 @@ mod test_swap_inventory_key_slot_key {
 
 	#[test]
 	fn get_slot_key() {
-		let slot_key = SlotKey::Hand(Side::Left);
+		let slot_key = SlotKey::Hand(Side::Off);
 		let item = Item {
 			name: "my item",
 			..default()
@@ -87,7 +87,7 @@ mod test_swap_inventory_key_slot_key {
 
 	#[test]
 	fn get_out_of_range() {
-		let slot_key = SlotKey::Hand(Side::Left);
+		let slot_key = SlotKey::Hand(Side::Off);
 		let item = Item {
 			name: "my item",
 			..default()
@@ -109,7 +109,7 @@ mod test_swap_inventory_key_slot_key {
 			..default()
 		};
 		let mut inventory = Inventory::new([Some(orig)]);
-		let swap = Swap(InventoryKey(0), SlotKey::Hand(Side::Left));
+		let swap = Swap(InventoryKey(0), SlotKey::Hand(Side::Off));
 		let copy = swap.with_item(Some(replace), &mut inventory);
 
 		assert_eq!((swap, vec![Some(replace)]), (copy, inventory.0));
@@ -126,7 +126,7 @@ mod test_swap_inventory_key_slot_key {
 			..default()
 		};
 		let mut inventory = Inventory::new([Some(item)]);
-		let swap = Swap(InventoryKey(1), SlotKey::Hand(Side::Left));
+		let swap = Swap(InventoryKey(1), SlotKey::Hand(Side::Off));
 		let copy = swap.with_item(Some(new), &mut inventory);
 
 		assert_eq!((swap, vec![Some(item), Some(new)]), (copy, inventory.0));
@@ -143,7 +143,7 @@ mod test_swap_inventory_key_slot_key {
 			..default()
 		};
 		let mut inventory = Inventory::new([Some(item)]);
-		let swap = Swap(InventoryKey(3), SlotKey::Hand(Side::Left));
+		let swap = Swap(InventoryKey(3), SlotKey::Hand(Side::Off));
 		let copy = swap.with_item(Some(new), &mut inventory);
 
 		assert_eq!(
@@ -187,7 +187,7 @@ mod test_swap_slot_key_inventory_key {
 
 	#[test]
 	fn get_slot_key() {
-		let slot_key = SlotKey::Hand(Side::Left);
+		let slot_key = SlotKey::Hand(Side::Off);
 		let item = Item {
 			name: "my item",
 			..default()
@@ -200,7 +200,7 @@ mod test_swap_slot_key_inventory_key {
 
 	#[test]
 	fn get_out_of_range() {
-		let slot_key = SlotKey::Hand(Side::Left);
+		let slot_key = SlotKey::Hand(Side::Off);
 		let item = Item {
 			name: "my item",
 			..default()
@@ -222,7 +222,7 @@ mod test_swap_slot_key_inventory_key {
 			..default()
 		};
 		let mut inventory = Inventory::new([Some(orig)]);
-		let swap = Swap(SlotKey::Hand(Side::Left), InventoryKey(0));
+		let swap = Swap(SlotKey::Hand(Side::Off), InventoryKey(0));
 		let copy = swap.with_item(Some(replace), &mut inventory);
 
 		assert_eq!((swap, vec![Some(replace)]), (copy, inventory.0));
@@ -239,7 +239,7 @@ mod test_swap_slot_key_inventory_key {
 			..default()
 		};
 		let mut inventory = Inventory::new([Some(item)]);
-		let swap = Swap(SlotKey::Hand(Side::Left), InventoryKey(1));
+		let swap = Swap(SlotKey::Hand(Side::Off), InventoryKey(1));
 		let copy = swap.with_item(Some(new), &mut inventory);
 
 		assert_eq!((swap, vec![Some(item), Some(new)]), (copy, inventory.0));
@@ -256,7 +256,7 @@ mod test_swap_slot_key_inventory_key {
 			..default()
 		};
 		let mut inventory = Inventory::new([Some(item)]);
-		let swap = Swap(SlotKey::Hand(Side::Left), InventoryKey(3));
+		let swap = Swap(SlotKey::Hand(Side::Off), InventoryKey(3));
 		let copy = swap.with_item(Some(new), &mut inventory);
 
 		assert_eq!(

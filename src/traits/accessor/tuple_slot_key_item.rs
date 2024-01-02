@@ -20,7 +20,7 @@ mod tests {
 
 	#[test]
 	fn pull_slot_and_item() {
-		let slot_key = SlotKey::Hand(Side::Left);
+		let slot_key = SlotKey::Hand(Side::Off);
 		let item = Item {
 			name: "Some Item",
 			..default()
@@ -36,7 +36,7 @@ mod tests {
 
 	#[test]
 	fn pull_none() {
-		let slot_key = SlotKey::Hand(Side::Left);
+		let slot_key = SlotKey::Hand(Side::Off);
 		let source = (slot_key, None);
 
 		assert_eq!(
@@ -47,7 +47,7 @@ mod tests {
 
 	#[test]
 	fn push_item() {
-		let slot_key = SlotKey::Hand(Side::Left);
+		let slot_key = SlotKey::Hand(Side::Off);
 		let item = Item {
 			name: "Some Item",
 			..default()

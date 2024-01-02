@@ -125,31 +125,31 @@ mod tests {
 				Slots(
 					[
 						(
-							SlotKey::Hand(Side::Left),
+							SlotKey::Hand(Side::Off),
 							Slot {
 								entity: slot_handle_left_id,
 								item: Some(Item {
 									name: "left item",
 									..default()
 								}),
-								alternative_skill: None,
+								combo_skill: None,
 							},
 						),
 						(
-							SlotKey::Hand(Side::Right),
+							SlotKey::Hand(Side::Main),
 							Slot {
 								entity: slot_handle_right_id,
 								item: Some(Item {
 									name: "right item",
 									..default()
 								}),
-								alternative_skill: None,
+								combo_skill: None,
 							},
 						),
 					]
 					.into(),
 				),
-				Collection([Swap(SlotKey::Hand(Side::Left), SlotKey::Hand(Side::Right))].into()),
+				Collection([Swap(SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main))].into()),
 			))
 			.id();
 
@@ -168,8 +168,8 @@ mod tests {
 		);
 		let slots = app.world.entity(agent).get::<Slots>().unwrap();
 		let new_items = (
-			slots.0.get(&SlotKey::Hand(Side::Left)).unwrap().item,
-			slots.0.get(&SlotKey::Hand(Side::Right)).unwrap().item,
+			slots.0.get(&SlotKey::Hand(Side::Off)).unwrap().item,
+			slots.0.get(&SlotKey::Hand(Side::Main)).unwrap().item,
 		);
 		let errors = app.world.entity(agent).get::<FakeErrorLogMany>();
 
@@ -218,7 +218,7 @@ mod tests {
 			.world
 			.spawn((
 				Slots([].into()),
-				Collection([Swap(SlotKey::Hand(Side::Left), SlotKey::Hand(Side::Right))].into()),
+				Collection([Swap(SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main))].into()),
 			))
 			.id();
 
@@ -232,8 +232,8 @@ mod tests {
 
 		assert_eq!(
 			vec![
-				no_slot(SlotKey::Hand(Side::Left)),
-				no_slot(SlotKey::Hand(Side::Right))
+				no_slot(SlotKey::Hand(Side::Off)),
+				no_slot(SlotKey::Hand(Side::Main))
 			],
 			errors.0
 		)
@@ -248,31 +248,31 @@ mod tests {
 				Slots(
 					[
 						(
-							SlotKey::Hand(Side::Left),
+							SlotKey::Hand(Side::Off),
 							Slot {
 								entity: Entity::from_raw(42),
 								item: Some(Item {
 									name: "left item",
 									..default()
 								}),
-								alternative_skill: None,
+								combo_skill: None,
 							},
 						),
 						(
-							SlotKey::Hand(Side::Right),
+							SlotKey::Hand(Side::Main),
 							Slot {
 								entity: Entity::from_raw(43),
 								item: Some(Item {
 									name: "right item",
 									..default()
 								}),
-								alternative_skill: None,
+								combo_skill: None,
 							},
 						),
 					]
 					.into(),
 				),
-				Collection([Swap(SlotKey::Hand(Side::Left), SlotKey::Hand(Side::Right))].into()),
+				Collection([Swap(SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main))].into()),
 			))
 			.id();
 
@@ -286,8 +286,8 @@ mod tests {
 
 		assert_eq!(
 			vec![
-				handle_error(SlotKey::Hand(Side::Left)),
-				handle_error(SlotKey::Hand(Side::Right))
+				handle_error(SlotKey::Hand(Side::Off)),
+				handle_error(SlotKey::Hand(Side::Main))
 			],
 			errors.0
 		)

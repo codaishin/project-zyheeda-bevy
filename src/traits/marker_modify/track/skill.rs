@@ -40,7 +40,7 @@ mod tests {
 	fn insert_markers() {
 		let mut app = App::new();
 		let agent = app.world.spawn(()).id();
-		let slot = SlotKey::Hand(Side::Right);
+		let slot = SlotKey::Hand(Side::Main);
 		let track = Track::new(Skill {
 			data: Active { slot, ..default() },
 			marker: MarkerMeta {
@@ -65,7 +65,7 @@ mod tests {
 	fn insert_markers_result() {
 		let mut app = App::new();
 		let agent = app.world.spawn(()).id();
-		let slot = SlotKey::Hand(Side::Right);
+		let slot = SlotKey::Hand(Side::Main);
 		let track = Track::new(Skill {
 			data: Active { slot, ..default() },
 			marker: MarkerMeta {
@@ -98,7 +98,7 @@ mod tests {
 	fn remove_markers() {
 		let mut app = App::new();
 		let agent = app.world.spawn(()).id();
-		let slot = SlotKey::Hand(Side::Left);
+		let slot = SlotKey::Hand(Side::Off);
 		let track = Track::new(Skill {
 			data: Active { slot, ..default() },
 			marker: MarkerMeta {
@@ -123,7 +123,7 @@ mod tests {
 	fn remove_markers_result() {
 		let mut app = App::new();
 		let agent = app.world.spawn(()).id();
-		let slot = SlotKey::Hand(Side::Right);
+		let slot = SlotKey::Hand(Side::Main);
 		let track = Track::new(Skill {
 			data: Active { slot, ..default() },
 			marker: MarkerMeta {
