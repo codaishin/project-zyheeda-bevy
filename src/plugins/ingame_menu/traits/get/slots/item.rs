@@ -5,7 +5,7 @@ use crate::{
 
 impl Get<SlotKey, Option<Item>> for Slots {
 	fn get(&self, key: SlotKey) -> Option<Item> {
-		self.0.get(&key).and_then(|slot| slot.item)
+		self.0.get(&key).and_then(|slot| slot.item.clone())
 	}
 }
 

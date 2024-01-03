@@ -168,8 +168,13 @@ mod tests {
 		);
 		let slots = app.world.entity(agent).get::<Slots>().unwrap();
 		let new_items = (
-			slots.0.get(&SlotKey::Hand(Side::Off)).unwrap().item,
-			slots.0.get(&SlotKey::Hand(Side::Main)).unwrap().item,
+			slots.0.get(&SlotKey::Hand(Side::Off)).unwrap().item.clone(),
+			slots
+				.0
+				.get(&SlotKey::Hand(Side::Main))
+				.unwrap()
+				.item
+				.clone(),
 		);
 		let errors = app.world.entity(agent).get::<FakeErrorLogMany>();
 

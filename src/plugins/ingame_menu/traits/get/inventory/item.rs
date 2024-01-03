@@ -5,7 +5,7 @@ use crate::{
 
 impl Get<InventoryKey, Option<Item>> for Inventory {
 	fn get(&self, key: InventoryKey) -> Option<Item> {
-		self.0.get(key.0).and_then(|item| *item)
+		self.0.get(key.0).and_then(|item| item.clone())
 	}
 }
 

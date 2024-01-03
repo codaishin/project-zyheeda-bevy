@@ -9,6 +9,7 @@ use bevy::{
 	prelude::{Commands, Entity, Handle, Mut, Query, Res},
 	scene::Scene,
 };
+use std::mem::swap;
 
 pub fn equip_item<
 	TContainer: Component,
@@ -76,9 +77,10 @@ fn equip_items<
 	models: &Res<Models>,
 ) -> Vec<(TItemAccessor, Result<(), Error>)> {
 	let try_swap_items = |accessor: &TItemAccessor| {
-		let (slot_key, accessor_item) = accessor.get_key_and_item(component);
-		match equip_and_return_old_item(slots, scene_handles, (slot_key, accessor_item), models) {
-			Err(error) => (accessor.with_item(accessor_item, component), Err(error)),
+		let (slot_key, acc_item) = accessor.get_key_and_item(component);
+		match equip_and_return_old_item(slots, scene_handles, (slot_key, acc_item.as_ref()), models)
+		{
+			Err(error) => (accessor.with_item(acc_item, component), Err(error)),
 			Ok(old) => (accessor.with_item(old, component), Ok(())),
 		}
 	};
@@ -89,23 +91,24 @@ fn equip_items<
 fn equip_and_return_old_item(
 	slots: &mut Mut<Slots>,
 	scene_handles: &mut Query<&mut Handle<Scene>>,
-	(slot_key, item): (SlotKey, Option<Item>),
+	(slot_key, item): (SlotKey, Option<&Item>),
 	models: &Res<Models>,
 ) -> Result<Option<Item>, Error> {
 	let slot = get_slot(item, slots, slot_key)?;
 	let mut slot_handle = get_slot_handle(item, slot.entity, scene_handles)?;
 	let model = get_model(item, models)?;
 
-	let original_item = slot.item;
-	slot.item = item;
+	let mut item = item.cloned();
+	swap(&mut item, &mut slot.item);
+
 	slot.combo_skill = None;
 	*slot_handle = model.clone();
 
-	Ok(original_item)
+	Ok(item)
 }
 
 fn get_slot<'a>(
-	item: Option<Item>,
+	item: Option<&Item>,
 	slots: &'a mut Mut<'_, Slots>,
 	slot_key: SlotKey,
 ) -> Result<&'a mut Slot, Error> {
@@ -116,7 +119,7 @@ fn get_slot<'a>(
 }
 
 fn get_slot_handle<'a>(
-	item: Option<Item>,
+	item: Option<&Item>,
 	slot: Entity,
 	scene_handles: &'a mut Query<&mut Handle<Scene>>,
 ) -> Result<Mut<'a, Handle<Scene>>, Error> {
@@ -126,7 +129,7 @@ fn get_slot_handle<'a>(
 	}
 }
 
-fn get_model(item: Option<Item>, models: &Res<Models>) -> Result<Handle<Scene>, Error> {
+fn get_model(item: Option<&Item>, models: &Res<Models>) -> Result<Handle<Scene>, Error> {
 	let Some(item) = item else {
 		return Ok(Handle::default());
 	};
@@ -142,7 +145,7 @@ fn get_model(item: Option<Item>, models: &Res<Models>) -> Result<Handle<Scene>, 
 	Ok(model.clone())
 }
 
-fn slot_warning(item: Option<Item>, slot: SlotKey) -> Error {
+fn slot_warning(item: Option<&Item>, slot: SlotKey) -> Error {
 	Error {
 		msg: format!(
 			"{:#?}: slot {:#?} not found, retrying next update",
@@ -152,14 +155,14 @@ fn slot_warning(item: Option<Item>, slot: SlotKey) -> Error {
 	}
 }
 
-fn model_error(item: Item, model_key: &str) -> Error {
+fn model_error(item: &Item, model_key: &str) -> Error {
 	Error {
 		msg: format!("{}: no model found for {}, abandoning", item, model_key),
 		lvl: Level::Error,
 	}
 }
 
-fn scene_handle_error(item: Option<Item>, slot: Entity) -> Error {
+fn scene_handle_error(item: Option<&Item>, slot: Entity) -> Error {
 	Error {
 		msg: format!("{:#?}: {:#?} has no Handle<Scene>, abandoning", item, slot),
 		lvl: Level::Error,
@@ -207,7 +210,7 @@ mod tests {
 	#[automock]
 	impl Accessor<_Container, (SlotKey, Option<Item>), Item> for _Source {
 		fn get_key_and_item(&self, _component: &_Container) -> (SlotKey, Option<Item>) {
-			(self.slot, self.item)
+			(self.slot, self.item.clone())
 		}
 
 		fn with_item(&self, item: Option<Item>, _component: &mut _Container) -> Self {
@@ -261,6 +264,7 @@ mod tests {
 							..default()
 						}),
 						model: Some("model key"),
+						..default()
 					}),
 					..default()
 				}]),
@@ -295,6 +299,7 @@ mod tests {
 							..default()
 						}),
 						model: Some("model key"),
+						..default()
 					}),
 					combo_skill: None,
 				}
@@ -334,6 +339,7 @@ mod tests {
 									..default()
 								}),
 								model: Some("model key"),
+								..default()
 							}),
 							combo_skill: None,
 						},
@@ -545,6 +551,7 @@ mod tests {
 							..default()
 						}),
 						model: None,
+						..default()
 					}),
 					..default()
 				}]),
@@ -583,6 +590,7 @@ mod tests {
 							..default()
 						}),
 						model: None,
+						..default()
 					}),
 					combo_skill: None,
 				}
@@ -627,6 +635,7 @@ mod tests {
 						name: "Some Item",
 						skill: None,
 						model: Some("model key"),
+						..default()
 					}),
 					..default()
 				}]),
@@ -675,6 +684,7 @@ mod tests {
 						name: "Some Item",
 						skill: None,
 						model: None,
+						..default()
 					}),
 					..default()
 				}]),
@@ -727,6 +737,7 @@ mod tests {
 						name: "Some Item",
 						skill: None,
 						model: Some("model key"),
+						..default()
 					}),
 					..default()
 				}]),
@@ -780,6 +791,7 @@ mod tests {
 						name: "Some Item",
 						skill: None,
 						model: Some("model key"),
+						..default()
 					}),
 					..default()
 				}]),
@@ -833,6 +845,7 @@ mod tests {
 						name: "Some Item",
 						skill: None,
 						model: Some("model key"),
+						..default()
 					}),
 					..default()
 				}]),
@@ -854,6 +867,7 @@ mod tests {
 					name: "Some Item",
 					skill: None,
 					model: Some("model key"),
+					..default()
 				}),
 				r#type: _Type::Updated,
 			}])),
@@ -900,6 +914,7 @@ mod tests {
 							name: "Some Item",
 							skill: None,
 							model: Some("model key"),
+							..default()
 						}),
 						..default()
 					},
@@ -909,6 +924,7 @@ mod tests {
 							name: "Some Item",
 							skill: None,
 							model: Some("model key"),
+							..default()
 						}),
 						..default()
 					},
@@ -935,6 +951,7 @@ mod tests {
 						name: "Some Item",
 						skill: None,
 						model: Some("model key"),
+						..default()
 					}),
 					r#type: _Type::Updated
 				}]))
@@ -956,6 +973,7 @@ mod tests {
 				..default()
 			}),
 			model: Some("model key"),
+			..default()
 		};
 
 		let mut app = App::new();
@@ -967,7 +985,7 @@ mod tests {
 				Slots([].into()),
 				Collection::new([_Source {
 					slot: SlotKey::Hand(Side::Off),
-					item: Some(item),
+					item: Some(item.clone()),
 					..default()
 				}]),
 			))
@@ -983,7 +1001,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&FakeErrorLogMany(
-				[slot_warning(Some(item), SlotKey::Hand(Side::Off))].into()
+				[slot_warning(Some(&item), SlotKey::Hand(Side::Off))].into()
 			)),
 			agent.get::<FakeErrorLogMany>()
 		);
@@ -999,6 +1017,7 @@ mod tests {
 				..default()
 			}),
 			model: Some("model key"),
+			..default()
 		};
 
 		let mut app = App::new();
@@ -1026,7 +1045,7 @@ mod tests {
 				),
 				Collection::new([_Source {
 					slot: SlotKey::Hand(Side::Off),
-					item: Some(item),
+					item: Some(item.clone()),
 					..default()
 				}]),
 			))
@@ -1041,7 +1060,7 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			Some(&FakeErrorLogMany([model_error(item, "model key")].into())),
+			Some(&FakeErrorLogMany([model_error(&item, "model key")].into())),
 			agent.get::<FakeErrorLogMany>()
 		);
 	}
@@ -1059,6 +1078,7 @@ mod tests {
 				..default()
 			}),
 			model: Some("model key"),
+			..default()
 		};
 
 		let mut app = App::new();
@@ -1081,7 +1101,7 @@ mod tests {
 				),
 				Collection::new([_Source {
 					slot: SlotKey::Hand(Side::Off),
-					item: Some(item),
+					item: Some(item.clone()),
 					..default()
 				}]),
 			))
@@ -1097,7 +1117,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&FakeErrorLogMany(
-				[scene_handle_error(Some(item), slot)].into()
+				[scene_handle_error(Some(&item), slot)].into()
 			)),
 			agent.get::<FakeErrorLogMany>()
 		);

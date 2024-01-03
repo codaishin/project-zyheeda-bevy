@@ -6,7 +6,7 @@ use crate::{
 use bevy::prelude::{Component, Entity, Ray, Vec3};
 use core::fmt::Display;
 use std::{
-	collections::{HashMap, VecDeque},
+	collections::{HashMap, HashSet, VecDeque},
 	fmt::{Debug, Formatter, Result},
 	marker::PhantomData,
 	time::Duration,
@@ -200,11 +200,18 @@ impl Default for Slots {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Default)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+pub enum ItemType {
+	Pistol,
+	Sword,
+}
+
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct Item {
 	pub name: &'static str,
 	pub model: Option<&'static str>,
 	pub skill: Option<Skill>,
+	pub item_type: HashSet<ItemType>,
 }
 
 impl Display for Item {

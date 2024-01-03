@@ -306,31 +306,37 @@ fn spawn_player(
 		name: "Pistol A",
 		model: Some("pistol"),
 		skill: skill_templates.get("Shoot Projectile").cloned(),
+		..default()
 	};
 	let pistol_b = Item {
 		name: "Pistol B",
 		model: Some("pistol"),
 		skill: skill_templates.get("Shoot Projectile").cloned(),
+		..default()
 	};
 	let pistol_c = Item {
 		name: "Pistol C",
 		model: Some("pistol"),
 		skill: skill_templates.get("Shoot Projectile").cloned(),
+		..default()
 	};
 	let sword_a = Item {
 		name: "Sword A",
 		model: Some("sword"),
 		skill: skill_templates.get("Swing Sword").cloned(),
+		..default()
 	};
 	let sword_b = Item {
 		name: "Sword B",
 		model: Some("sword"),
 		skill: skill_templates.get("Swing Sword").cloned(),
+		..default()
 	};
 	let legs = Item {
 		name: "Legs",
 		model: None,
 		skill: skill_templates.get("Simple Movement").cloned(),
+		..default()
 	};
 
 	commands.spawn((

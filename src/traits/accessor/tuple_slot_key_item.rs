@@ -3,7 +3,7 @@ use crate::components::{Item, Player, SlotKey};
 
 impl Accessor<Player, (SlotKey, Option<Item>), Item> for (SlotKey, Option<Item>) {
 	fn get_key_and_item(&self, _: &Player) -> (SlotKey, Option<Item>) {
-		*self
+		self.clone()
 	}
 
 	fn with_item(&self, item: Option<Item>, _: &mut Player) -> Self {
@@ -26,7 +26,7 @@ mod tests {
 			..default()
 		};
 
-		let source = (slot_key, Some(item));
+		let source = (slot_key, Some(item.clone()));
 
 		assert_eq!(
 			(slot_key, Some(item)),
@@ -57,7 +57,8 @@ mod tests {
 			..default()
 		};
 
-		let source = (slot_key, Some(item)).with_item(Some(other_item), &mut Player::default());
+		let source =
+			(slot_key, Some(item)).with_item(Some(other_item.clone()), &mut Player::default());
 
 		assert_eq!((slot_key, Some(other_item)), source);
 	}
