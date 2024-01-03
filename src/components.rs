@@ -104,6 +104,7 @@ impl Skill {
 			soft_override: self.soft_override,
 			marker: self.marker,
 			behavior: self.behavior,
+			is_usable_with: self.is_usable_with,
 		}
 	}
 }
@@ -117,6 +118,7 @@ impl<TSrc> Skill<TSrc> {
 			marker: self.marker,
 			soft_override: self.soft_override,
 			behavior: self.behavior,
+			is_usable_with: self.is_usable_with,
 		}
 	}
 }
@@ -216,7 +218,7 @@ pub struct Item {
 
 impl Display for Item {
 	fn fmt(&self, f: &mut Formatter) -> Result {
-		match self.skill {
+		match &self.skill {
 			Some(skill) => write!(f, "Item({}, {})", self.name, skill),
 			None => write!(f, "Item({}, <no skill>)", self.name),
 		}
@@ -259,10 +261,10 @@ pub struct Track<T> {
 	pub duration: Duration,
 }
 
-impl<T: Copy> Track<T> {
+impl<T: Clone> Track<T> {
 	pub fn new(value: T) -> Self {
 		Self {
-			value,
+			value: value.clone(),
 			duration: Duration::ZERO,
 		}
 	}

@@ -60,7 +60,7 @@ fn enqueue_skill(
 ) {
 	let (slot, skill) = slot;
 	let slot = *slot;
-	let Some(new) = ray.map(|ray| skill.with(Queued { ray, slot })) else {
+	let Some(new) = ray.map(|ray| skill.clone().with(Queued { ray, slot })) else {
 		return;
 	};
 
@@ -80,15 +80,15 @@ fn enqueue_skill(
 }
 
 fn enqueue_to(queue: &mut Queue, new: &Skill<Queued>) {
-	queue.0.push_back(*new);
+	queue.0.push_back(new.clone());
 }
 
 fn override_soft(queue: &mut Queue, new: &Skill<Queued>) {
-	queue.0 = vec![*new].into();
+	queue.0 = vec![new.clone()].into();
 }
 
 fn override_hard(queue: &mut Queue, new: &Skill<Queued>, agent: &mut EntityCommands) {
-	queue.0 = vec![*new].into();
+	queue.0 = vec![new.clone()].into();
 	agent.insert(WaitNext);
 }
 
@@ -253,7 +253,7 @@ mod tests {
 			.spawn((
 				Schedule {
 					mode: ScheduleMode::Override,
-					skills: [(SlotKey::Hand(Side::Off), new_skill)].into(),
+					skills: [(SlotKey::Hand(Side::Off), new_skill.clone())].into(),
 				},
 				Queue(
 					[
@@ -311,10 +311,10 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Track::new(running_skill),
+				Track::new(running_skill.clone()),
 				Schedule {
 					mode: ScheduleMode::Override,
-					skills: [(SlotKey::Hand(Side::Off), new_skill)].into(),
+					skills: [(SlotKey::Hand(Side::Off), new_skill.clone())].into(),
 				},
 				Queue([].into()),
 			))
@@ -359,10 +359,10 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Track::new(running_skill),
+				Track::new(running_skill.clone()),
 				Schedule {
 					mode: ScheduleMode::Override,
-					skills: [(SlotKey::Hand(Side::Off), new_skill)].into(),
+					skills: [(SlotKey::Hand(Side::Off), new_skill.clone())].into(),
 				},
 				Queue([].into()),
 			))
@@ -407,10 +407,10 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Track::new(running_skill),
+				Track::new(running_skill.clone()),
 				Schedule {
 					mode: ScheduleMode::Override,
-					skills: [(SlotKey::Hand(Side::Off), new_skill)].into(),
+					skills: [(SlotKey::Hand(Side::Off), new_skill.clone())].into(),
 				},
 				Queue([].into()),
 			))

@@ -84,7 +84,7 @@ fn update_slot(slots: &mut Mut<Slots>, slot_key: &SlotKey, skill: &Skill) {
 	let Some(slot) = slots.0.get_mut(slot_key) else {
 		return;
 	};
-	slot.combo_skill = Some(*skill);
+	slot.combo_skill = Some(skill.clone());
 }
 
 #[cfg(test)]

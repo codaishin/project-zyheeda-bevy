@@ -212,7 +212,7 @@ fn setup_simple_3d_scene(
 }
 
 fn setup_skill_templates(mut commands: Commands) -> Vec<Result<(), Error>> {
-	let (templates, errors) = SkillTemplates::new([
+	let (templates, errors) = SkillTemplates::new(&[
 		Skill {
 			name: "Swing Sword",
 			cast: Cast {

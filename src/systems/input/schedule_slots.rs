@@ -46,7 +46,9 @@ fn filter_triggered_behaviors(
 		.0
 		.iter()
 		.filter(|(slot_key, ..)| triggered_slot_keys.contains(slot_key))
-		.filter_map(|(key, slot)| Some((*key, slot.combo_skill.or(slot.item.clone()?.skill)?)))
+		.filter_map(|(key, slot)| {
+			Some((*key, slot.combo_skill.clone().or(slot.item.clone()?.skill)?))
+		})
 		.collect()
 }
 

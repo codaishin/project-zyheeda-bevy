@@ -1,6 +1,10 @@
-use crate::{behaviors::meta::BehaviorMeta, components::SlotKey, markers::meta::MarkerMeta};
+use crate::{
+	behaviors::meta::BehaviorMeta,
+	components::{ItemType, SlotKey},
+	markers::meta::MarkerMeta,
+};
 use std::{
-	collections::HashMap,
+	collections::{HashMap, HashSet},
 	fmt::{Display, Formatter, Result},
 	time::Duration,
 };
@@ -12,7 +16,7 @@ pub struct Cast {
 	pub after: Duration,
 }
 
-#[derive(PartialEq, Debug, Clone, Copy, Default)]
+#[derive(PartialEq, Debug, Clone, Default)]
 pub struct Skill<TData = ()> {
 	pub name: &'static str,
 	pub data: TData,
@@ -20,6 +24,7 @@ pub struct Skill<TData = ()> {
 	pub soft_override: bool,
 	pub marker: MarkerMeta,
 	pub behavior: BehaviorMeta,
+	pub is_usable_with: HashSet<ItemType>,
 }
 
 impl<T> Display for Skill<T> {

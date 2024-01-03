@@ -9,13 +9,13 @@ use std::collections::{hash_map::Entry::Vacant, HashMap};
 pub struct SkillTemplates(HashMap<&'static str, Skill>);
 
 impl SkillTemplates {
-	pub fn new<const N: usize>(skills: [Skill; N]) -> (Self, Vec<Error>) {
+	pub fn new<const N: usize>(skills: &[Skill; N]) -> (Self, Vec<Error>) {
 		let mut templates = HashMap::<&'static str, Skill>::new();
 		let mut errors: Vec<Error> = vec![];
 
-		for skill in &skills {
+		for skill in skills {
 			if let Vacant(entry) = templates.entry(skill.name) {
-				entry.insert(*skill);
+				entry.insert(skill.clone());
 			} else {
 				errors.push(duplication_error(skill.name));
 			}
@@ -56,7 +56,7 @@ mod tests {
 				..default()
 			},
 		];
-		let (templates, errors) = SkillTemplates::new(skills);
+		let (templates, errors) = SkillTemplates::new(&skills);
 		let map: HashMap<&'static str, Skill> = skills.map(|s| (s.name, s)).into();
 
 		assert_eq!((map, vec![]), (templates.0, errors),);
@@ -82,7 +82,7 @@ mod tests {
 				..default()
 			},
 		];
-		let (templates, errors) = SkillTemplates::new(skills);
+		let (templates, errors) = SkillTemplates::new(&skills);
 		let map: HashMap<&'static str, Skill> = skills.map(|s| (s.name, s)).into();
 
 		assert_eq!(
@@ -103,7 +103,7 @@ mod tests {
 				..default()
 			},
 		];
-		let (templates, ..) = SkillTemplates::new(skills);
+		let (templates, ..) = SkillTemplates::new(&skills);
 
 		assert_eq!(Some(&skills[1]), templates.get("2"));
 	}
