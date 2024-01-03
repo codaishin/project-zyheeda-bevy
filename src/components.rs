@@ -160,6 +160,7 @@ impl Default for Slots {
 pub enum ItemType {
 	Pistol,
 	Sword,
+	Legs,
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
@@ -224,7 +225,7 @@ impl<T: Clone> Track<T> {
 	}
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct ComboTrees(pub HashMap<SlotKey, SkillComboTree>);
 
 #[derive(Component, PartialEq, Debug)]
