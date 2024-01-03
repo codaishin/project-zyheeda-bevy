@@ -1,6 +1,6 @@
 use crate::{
-	components::{Active, Queue, Queued, Schedule, ScheduleMode, SlotKey, Track, WaitNext},
-	skill::Skill,
+	components::{Queue, Schedule, ScheduleMode, SlotKey, Track, WaitNext},
+	skill::{Active, Queued, Skill},
 	traits::get_ray::GetRayFromCamera,
 };
 use bevy::{
@@ -44,8 +44,8 @@ fn enqueue_skills(
 	commands: &mut Commands,
 	ray: Option<Ray>,
 ) {
-	for slot in &schedule.skills {
-		enqueue_skill(agent, schedule, queue, track, slot, commands, ray);
+	for scheduled in &schedule.skills {
+		enqueue_skill(agent, schedule, queue, track, scheduled, commands, ray);
 	}
 }
 
@@ -54,13 +54,17 @@ fn enqueue_skill(
 	schedule: &Schedule,
 	queue: &mut Queue,
 	track: Option<&Track<Skill<Active>>>,
-	slot: (&SlotKey, &Skill),
+	(slot, skill): (&SlotKey, &Skill),
 	commands: &mut Commands,
 	ray: Option<Ray>,
 ) {
-	let (slot, skill) = slot;
 	let slot = *slot;
-	let Some(new) = ray.map(|ray| skill.clone().with(Queued { ray, slot })) else {
+	let Some(new) = ray.map(|ray| {
+		skill.clone().with(&Queued {
+			ray,
+			slot_key: slot,
+		})
+	}) else {
 		return;
 	};
 
@@ -229,7 +233,7 @@ mod tests {
 					},
 					data: Queued {
 						ray: TEST_RAY,
-						slot: SlotKey::Hand(Side::Off)
+						slot_key: SlotKey::Hand(Side::Off),
 					},
 					..default()
 				},
@@ -284,9 +288,9 @@ mod tests {
 
 		assert_eq!(
 			(
-				vec![&new_skill.with(Queued {
+				vec![&new_skill.with(&Queued {
 					ray: TEST_RAY,
-					slot: SlotKey::Hand(Side::Off)
+					slot_key: SlotKey::Hand(Side::Off),
 				})],
 				true
 			),
@@ -327,9 +331,9 @@ mod tests {
 
 		assert_eq!(
 			(
-				vec![&new_skill.with(Queued {
+				vec![&new_skill.with(&Queued {
 					ray: TEST_RAY,
-					slot: SlotKey::Hand(Side::Off)
+					slot_key: SlotKey::Hand(Side::Off),
 				})],
 				&Track::new(running_skill),
 				false,
@@ -375,9 +379,9 @@ mod tests {
 
 		assert_eq!(
 			(
-				vec![&new_skill.with(Queued {
+				vec![&new_skill.with(&Queued {
 					ray: TEST_RAY,
-					slot: SlotKey::Hand(Side::Off)
+					slot_key: SlotKey::Hand(Side::Off),
 				})],
 				&Track::new(running_skill),
 				true,
@@ -423,9 +427,9 @@ mod tests {
 
 		assert_eq!(
 			(
-				vec![&new_skill.with(Queued {
+				vec![&new_skill.with(&Queued {
 					ray: TEST_RAY,
-					slot: SlotKey::Hand(Side::Off)
+					slot_key: SlotKey::Hand(Side::Off),
 				})],
 				&Track::new(running_skill),
 				true,

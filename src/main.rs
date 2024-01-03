@@ -6,7 +6,6 @@ use project_zyheeda::{
 	behaviors::MovementMode,
 	bundles::Loadout,
 	components::{
-		Active,
 		Animator,
 		CamOrbit,
 		Inventory,
@@ -26,7 +25,7 @@ use project_zyheeda::{
 	markers::{Dual, Fast, HandGun, Idle, Left, Right, Slow, Sword},
 	plugins::ingame_menu::IngameMenuPlugin,
 	resources::{skill_templates::SkillTemplates, Animation, Models, SlotMap},
-	skill::{Cast, Skill},
+	skill::{Active, Cast, Skill},
 	states::GameRunning,
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},

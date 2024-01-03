@@ -22,8 +22,8 @@ pub fn dequeue(mut commands: Commands, mut agents: Query<(Entity, &mut Queue), W
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Active, Queued, SlotKey, WaitNext},
-		skill::{Cast, Skill},
+		components::{SlotKey, WaitNext},
+		skill::{Active, Cast, Queued, Skill},
 	};
 	use bevy::prelude::{default, App, Ray, Update, Vec3};
 	use std::time::Duration;
@@ -44,7 +44,7 @@ mod tests {
 				},
 				data: Queued {
 					ray: TEST_RAY,
-					slot: SlotKey::SkillSpawn,
+					slot_key: SlotKey::SkillSpawn,
 				},
 				..default()
 			})]
@@ -62,13 +62,15 @@ mod tests {
 			(
 				Some(Active {
 					ray: TEST_RAY,
-					slot: SlotKey::SkillSpawn,
+					slot_key: SlotKey::SkillSpawn,
 				}),
 				false,
 				0
 			),
 			(
-				agent.get::<Track<Skill<Active>>>().map(|t| t.value.data),
+				agent
+					.get::<Track<Skill<Active>>>()
+					.map(|t| t.value.data.clone()),
 				agent.contains::<WaitNext>(),
 				queue.0.len()
 			)

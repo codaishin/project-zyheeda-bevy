@@ -1,6 +1,6 @@
 use crate::{
 	behaviors::MovementMode,
-	skill::{Skill, SkillComboTree},
+	skill::{Queued, Skill, SkillComboTree},
 	types::BoneName,
 };
 use bevy::prelude::{Component, Entity, Ray, Vec3};
@@ -80,52 +80,6 @@ pub struct SimpleMovement {
 impl SimpleMovement {
 	pub fn new(target: Vec3) -> Self {
 		Self { target }
-	}
-}
-
-#[derive(Default, Debug, PartialEq, Clone, Copy)]
-pub struct Queued {
-	pub ray: Ray,
-	pub slot: SlotKey,
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Default)]
-pub struct Active {
-	pub ray: Ray,
-	pub slot: SlotKey,
-}
-
-impl Skill {
-	pub fn with<T: Clone + Copy>(self, data: T) -> Skill<T> {
-		Skill {
-			data,
-			name: self.name,
-			cast: self.cast,
-			soft_override: self.soft_override,
-			marker: self.marker,
-			behavior: self.behavior,
-			is_usable_with: self.is_usable_with,
-		}
-	}
-}
-
-impl<TSrc> Skill<TSrc> {
-	pub fn map_data<TDst>(self, map: fn(TSrc) -> TDst) -> Skill<TDst> {
-		Skill {
-			name: self.name,
-			data: map(self.data),
-			cast: self.cast,
-			marker: self.marker,
-			soft_override: self.soft_override,
-			behavior: self.behavior,
-			is_usable_with: self.is_usable_with,
-		}
-	}
-}
-
-impl Skill<Queued> {
-	pub fn to_active(self) -> Skill<Active> {
-		self.map_data(|Queued { ray, slot }| Active { ray, slot })
 	}
 }
 

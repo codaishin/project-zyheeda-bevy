@@ -1,6 +1,6 @@
 use crate::{
-	components::{Active, Track},
-	skill::Skill,
+	components::Track,
+	skill::{Active, Skill},
 	traits::cast_update::{AgeType, CastType, CastUpdate, State},
 };
 use std::time::Duration;

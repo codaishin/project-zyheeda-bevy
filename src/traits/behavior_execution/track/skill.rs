@@ -1,7 +1,7 @@
 use crate::{
 	behaviors::meta::Spawner,
-	components::{Active, Track},
-	skill::Skill,
+	components::Track,
+	skill::{Active, Skill},
 	traits::behavior_execution::BehaviorExecution,
 };
 use bevy::{ecs::system::EntityCommands, transform::components::Transform};

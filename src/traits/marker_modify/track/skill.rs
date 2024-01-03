@@ -1,18 +1,18 @@
 use crate::{
-	components::{Active, Track},
+	components::Track,
 	errors::Error,
-	skill::Skill,
+	skill::{Active, Skill},
 	traits::marker_modify::MarkerModify,
 };
 use bevy::ecs::system::EntityCommands;
 
 impl MarkerModify for Track<Skill<Active>> {
 	fn insert_markers(&self, agent: &mut EntityCommands) -> Result<(), Error> {
-		(self.value.marker.insert_fn)(agent, self.value.data.slot)
+		(self.value.marker.insert_fn)(agent, self.value.data.slot_key)
 	}
 
 	fn remove_markers(&self, agent: &mut EntityCommands) -> Result<(), Error> {
-		(self.value.marker.remove_fn)(agent, self.value.data.slot)
+		(self.value.marker.remove_fn)(agent, self.value.data.slot_key)
 	}
 }
 
@@ -42,7 +42,10 @@ mod tests {
 		let agent = app.world.spawn(()).id();
 		let slot = SlotKey::Hand(Side::Main);
 		let track = Track::new(Skill {
-			data: Active { slot, ..default() },
+			data: Active {
+				slot_key: slot,
+				..default()
+			},
 			marker: MarkerMeta {
 				insert_fn: |agent, slot| {
 					agent.insert(MockMarker { slot });
@@ -67,7 +70,10 @@ mod tests {
 		let agent = app.world.spawn(()).id();
 		let slot = SlotKey::Hand(Side::Main);
 		let track = Track::new(Skill {
-			data: Active { slot, ..default() },
+			data: Active {
+				slot_key: slot,
+				..default()
+			},
 			marker: MarkerMeta {
 				insert_fn: |_, _| {
 					Err(Error {
@@ -100,7 +106,10 @@ mod tests {
 		let agent = app.world.spawn(()).id();
 		let slot = SlotKey::Hand(Side::Off);
 		let track = Track::new(Skill {
-			data: Active { slot, ..default() },
+			data: Active {
+				slot_key: slot,
+				..default()
+			},
 			marker: MarkerMeta {
 				remove_fn: |agent, slot| {
 					agent.insert(MockMarker { slot });
@@ -125,7 +134,10 @@ mod tests {
 		let agent = app.world.spawn(()).id();
 		let slot = SlotKey::Hand(Side::Main);
 		let track = Track::new(Skill {
-			data: Active { slot, ..default() },
+			data: Active {
+				slot_key: slot,
+				..default()
+			},
 			marker: MarkerMeta {
 				remove_fn: |_, _| {
 					Err(Error {

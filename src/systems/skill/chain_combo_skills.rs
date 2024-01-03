@@ -1,6 +1,6 @@
 use crate::{
-	components::{Active, ComboTrees, ComboTreesRunning, SlotKey, Slots, Track, WaitNext},
-	skill::{Skill, SkillComboTree},
+	components::{ComboTrees, ComboTreesRunning, SlotKey, Slots, Track, WaitNext},
+	skill::{Active, Skill, SkillComboTree},
 };
 use bevy::{
 	ecs::{
@@ -51,8 +51,8 @@ fn get_tree(
 	combo_trees_running: Option<&ComboTreesRunning>,
 	track: &Track<Skill<Active>>,
 ) -> Option<SkillComboTree> {
-	let tree_running = combo_trees_running.and_then(|t| t.0.get(&track.value.data.slot));
-	let tree = combo_trees.0.get(&track.value.data.slot);
+	let tree_running = combo_trees_running.and_then(|t| t.0.get(&track.value.data.slot_key));
+	let tree = combo_trees.0.get(&track.value.data.slot_key);
 	let tree = match (tree_running, tree) {
 		(Some(tree), _) if !tree.next.is_empty() => Some(tree),
 		(_, Some(tree)) => Some(tree),
@@ -129,8 +129,8 @@ mod tests {
 	];
 
 	fn setup(running_skill_slot_key: SlotKey, combo_trees: ComboTrees) -> (App, Entity) {
-		let track = Track::new(running_skill().with(Active {
-			slot: running_skill_slot_key,
+		let track = Track::new(running_skill().with(&Active {
+			slot_key: running_skill_slot_key,
 			..default()
 		}));
 

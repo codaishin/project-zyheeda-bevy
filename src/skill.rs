@@ -3,6 +3,7 @@ use crate::{
 	components::{ItemType, SlotKey},
 	markers::meta::MarkerMeta,
 };
+use bevy::math::Ray;
 use std::{
 	collections::{HashMap, HashSet},
 	fmt::{Display, Formatter, Result},
@@ -40,4 +41,53 @@ impl<T> Display for Skill<T> {
 pub struct SkillComboTree {
 	pub skill: Skill,
 	pub next: HashMap<SlotKey, SkillComboTree>,
+}
+
+#[derive(Default, Debug, PartialEq, Clone)]
+pub struct Queued {
+	pub ray: Ray,
+	pub slot_key: SlotKey,
+}
+
+#[derive(PartialEq, Debug, Clone, Default)]
+pub struct Active {
+	pub ray: Ray,
+	pub slot_key: SlotKey,
+}
+
+impl Skill {
+	pub fn with<T: Clone>(self, data: &T) -> Skill<T> {
+		Skill {
+			data: data.clone(),
+			name: self.name,
+			cast: self.cast,
+			soft_override: self.soft_override,
+			marker: self.marker,
+			behavior: self.behavior,
+			is_usable_with: self.is_usable_with,
+		}
+	}
+}
+
+impl<TSrc> Skill<TSrc> {
+	pub fn map_data<TDst>(self, map: fn(TSrc) -> TDst) -> Skill<TDst> {
+		Skill {
+			name: self.name,
+			data: map(self.data),
+			cast: self.cast,
+			marker: self.marker,
+			soft_override: self.soft_override,
+			behavior: self.behavior,
+			is_usable_with: self.is_usable_with,
+		}
+	}
+}
+
+impl Skill<Queued> {
+	pub fn to_active(self) -> Skill<Active> {
+		self.map_data(|queued| Active {
+			ray: queued.ray,
+			slot_key: queued.slot_key,
+		})
+	}
 }
