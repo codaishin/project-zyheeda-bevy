@@ -1,0 +1,88 @@
+use super::ComboNext;
+use crate::{
+	components::SlotKey,
+	skill::{Active, Skill, SkillComboNext, SkillComboTree},
+};
+
+impl ComboNext for SkillComboNext {
+	fn to_branches(&self, skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
+		match &self {
+			SkillComboNext::Tree(tree) => tree.clone().into_iter().collect(),
+			SkillComboNext::Alternate {
+				slot_key,
+				skill: alternate_skill,
+			} => {
+				vec![(
+					*slot_key,
+					SkillComboTree {
+						skill: alternate_skill.clone(),
+						next: SkillComboNext::Alternate {
+							slot_key: skill.data.slot_key,
+							skill: skill.clone().map_data(|_| ()),
+						},
+					},
+				)]
+			}
+		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::components::Side;
+	use bevy::utils::default;
+	use std::collections::HashMap;
+
+	#[test]
+	fn tree_to_branches() {
+		let branches = [(
+			SlotKey::Legs,
+			SkillComboTree {
+				skill: Skill {
+					name: "my skill",
+					..default()
+				},
+				next: SkillComboNext::done(),
+			},
+		)];
+		let next = SkillComboNext::Tree(HashMap::from(branches.clone()));
+		assert_eq!(branches.to_vec(), next.to_branches(&default()));
+	}
+
+	#[test]
+	fn alternate_to_branches() {
+		let next = SkillComboNext::Alternate {
+			slot_key: SlotKey::Hand(Side::Off),
+			skill: Skill {
+				name: "alternate skill",
+				..default()
+			},
+		};
+		let skill = Skill {
+			name: "skill",
+			data: Active {
+				slot_key: SlotKey::Hand(Side::Main),
+				..default()
+			},
+			..default()
+		};
+
+		assert_eq!(
+			vec![(
+				SlotKey::Hand(Side::Off),
+				SkillComboTree {
+					skill: Skill {
+						name: "alternate skill",
+						..default()
+					},
+					next: SkillComboNext::Alternate {
+						slot_key: SlotKey::Hand(Side::Main),
+						skill: skill.clone().map_data(|_| ()),
+					},
+				},
+			)],
+			next.to_branches(&skill)
+		);
+	}
+}

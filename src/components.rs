@@ -226,7 +226,7 @@ impl<T: Clone> Track<T> {
 }
 
 #[derive(Component, Clone)]
-pub struct ComboTrees(pub HashMap<SlotKey, SkillComboTree>);
+pub struct ComboTreeTemplate<TNext>(pub HashMap<SlotKey, SkillComboTree<TNext>>);
 
 #[derive(Component, PartialEq, Debug)]
-pub struct ComboTreesRunning(pub HashMap<SlotKey, SkillComboTree>);
+pub struct ComboTreeRunning<TNext>(pub HashMap<SlotKey, SkillComboTree<TNext>>);

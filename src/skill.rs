@@ -38,9 +38,21 @@ impl<T> Display for Skill<T> {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub struct SkillComboTree {
+pub enum SkillComboNext {
+	Tree(HashMap<SlotKey, SkillComboTree<SkillComboNext>>),
+	Alternate { slot_key: SlotKey, skill: Skill },
+}
+
+impl SkillComboNext {
+	pub fn done() -> SkillComboNext {
+		SkillComboNext::Tree(HashMap::new())
+	}
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct SkillComboTree<TNext> {
 	pub skill: Skill,
-	pub next: HashMap<SlotKey, SkillComboTree>,
+	pub next: TNext,
 }
 
 #[derive(Default, Debug, PartialEq, Clone)]
