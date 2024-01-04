@@ -5,7 +5,7 @@ use crate::{
 
 impl Get<SlotKey, Option<Item>> for Slots {
 	fn get(&self, key: SlotKey) -> Option<Item> {
-		self.0.get(&key).and_then(|slot| slot.item)
+		self.0.get(&key).and_then(|slot| slot.item.clone())
 	}
 }
 
@@ -16,16 +16,17 @@ mod tests {
 	use bevy::{prelude::Entity, utils::default};
 
 	#[test]
-	fn get_hand_left() {
+	fn get_off_hand() {
 		let slots = Slots(
 			[(
-				SlotKey::Hand(Side::Left),
+				SlotKey::Hand(Side::Off),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
 						name: "my item",
 						..default()
 					}),
+					combo_skill: None,
 				},
 			)]
 			.into(),
@@ -36,7 +37,7 @@ mod tests {
 				name: "my item",
 				..default()
 			}),
-			slots.get(SlotKey::Hand(Side::Left))
+			slots.get(SlotKey::Hand(Side::Off))
 		);
 	}
 
@@ -51,6 +52,7 @@ mod tests {
 						name: "my item",
 						..default()
 					}),
+					combo_skill: None,
 				},
 			)]
 			.into(),
@@ -76,11 +78,12 @@ mod tests {
 						name: "my item",
 						..default()
 					}),
+					combo_skill: None,
 				},
 			)]
 			.into(),
 		);
 
-		assert_eq!(None, slots.get(SlotKey::Hand(Side::Right)));
+		assert_eq!(None, slots.get(SlotKey::Hand(Side::Main)));
 	}
 }

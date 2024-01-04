@@ -1,12 +1,13 @@
 use crate::{
-	components::{Active, Skill, Track},
+	components::Track,
+	skill::{Active, Skill},
 	traits::cast_update::{AgeType, CastType, CastUpdate, State},
 };
 use std::time::Duration;
 
 impl CastUpdate for Track<Skill<Active>> {
 	fn update(&mut self, delta: Duration) -> State {
-		let skill = &self.current;
+		let skill = &self.value;
 		let old = self.duration;
 
 		self.duration += delta;
@@ -45,7 +46,7 @@ fn after_cast(skill: &Skill<Active>) -> Duration {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Cast;
+	use crate::skill::Cast;
 	use bevy::utils::default;
 
 	#[test]

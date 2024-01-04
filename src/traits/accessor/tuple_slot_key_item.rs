@@ -3,7 +3,7 @@ use crate::components::{Item, Player, SlotKey};
 
 impl Accessor<Player, (SlotKey, Option<Item>), Item> for (SlotKey, Option<Item>) {
 	fn get_key_and_item(&self, _: &Player) -> (SlotKey, Option<Item>) {
-		*self
+		self.clone()
 	}
 
 	fn with_item(&self, item: Option<Item>, _: &mut Player) -> Self {
@@ -20,13 +20,13 @@ mod tests {
 
 	#[test]
 	fn pull_slot_and_item() {
-		let slot_key = SlotKey::Hand(Side::Left);
+		let slot_key = SlotKey::Hand(Side::Off);
 		let item = Item {
 			name: "Some Item",
 			..default()
 		};
 
-		let source = (slot_key, Some(item));
+		let source = (slot_key, Some(item.clone()));
 
 		assert_eq!(
 			(slot_key, Some(item)),
@@ -36,7 +36,7 @@ mod tests {
 
 	#[test]
 	fn pull_none() {
-		let slot_key = SlotKey::Hand(Side::Left);
+		let slot_key = SlotKey::Hand(Side::Off);
 		let source = (slot_key, None);
 
 		assert_eq!(
@@ -47,7 +47,7 @@ mod tests {
 
 	#[test]
 	fn push_item() {
-		let slot_key = SlotKey::Hand(Side::Left);
+		let slot_key = SlotKey::Hand(Side::Off);
 		let item = Item {
 			name: "Some Item",
 			..default()
@@ -57,7 +57,8 @@ mod tests {
 			..default()
 		};
 
-		let source = (slot_key, Some(item)).with_item(Some(other_item), &mut Player::default());
+		let source =
+			(slot_key, Some(item)).with_item(Some(other_item.clone()), &mut Player::default());
 
 		assert_eq!((slot_key, Some(other_item)), source);
 	}

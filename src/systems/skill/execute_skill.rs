@@ -257,6 +257,7 @@ mod tests {
 					Slot {
 						entity: skill_spawner,
 						item: None,
+						combo_skill: None,
 					},
 				)]
 				.into(),

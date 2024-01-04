@@ -1,37 +1,44 @@
-pub mod hand_gun;
-pub mod sword;
+use crate::markers::{
+	functions::{insert_hand_marker_fn, remove_hand_marker_fn},
+	meta::MarkerMeta,
+	Left,
+	Right,
+};
 
-use crate::markers::meta::MarkerMeta;
+pub trait GetMarkerHandMarkerMeta {
+	fn hand_markers() -> MarkerMeta;
+}
 
-pub trait GetMarkerMeta {
-	fn marker() -> MarkerMeta;
+impl<T: Send + Sync + 'static> GetMarkerHandMarkerMeta for T {
+	fn hand_markers() -> MarkerMeta {
+		MarkerMeta {
+			insert_fn: insert_hand_marker_fn::<(T, Left), (T, Right)>,
+			remove_fn: remove_hand_marker_fn::<(T, Left), (T, Right)>,
+		}
+	}
 }
 
 #[cfg(test)]
-pub mod test_tools {
+mod tests {
 	use super::*;
-	use crate::{components::SlotKey, errors::Error};
-	use bevy::{ecs::system::Commands, prelude::Entity};
 
-	pub fn insert_lazy(
-		marker: MarkerMeta,
-		agent: Entity,
-		slot: SlotKey,
-	) -> impl FnMut(Commands) -> Result<(), Error> {
-		move |mut commands| {
-			let mut agent = commands.entity(agent);
-			(marker.insert_fn)(&mut agent, slot)
-		}
+	#[test]
+	fn insert_fn() {
+		let markers = u32::hand_markers();
+
+		assert_eq!(
+			insert_hand_marker_fn::<(u32, Left), (u32, Right)> as usize,
+			markers.insert_fn as usize,
+		)
 	}
 
-	pub fn remove_lazy(
-		marker: MarkerMeta,
-		agent: Entity,
-		slot: SlotKey,
-	) -> impl FnMut(Commands) -> Result<(), Error> {
-		move |mut commands| {
-			let mut agent = commands.entity(agent);
-			(marker.remove_fn)(&mut agent, slot)
-		}
+	#[test]
+	fn remove_fn() {
+		let markers = u32::hand_markers();
+
+		assert_eq!(
+			remove_hand_marker_fn::<(u32, Left), (u32, Right)> as usize,
+			markers.remove_fn as usize,
+		)
 	}
 }

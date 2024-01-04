@@ -24,8 +24,8 @@ use bevy::{
 use std::usize;
 
 const EQUIPMENT_SLOTS: [(SlotKey, &str); 2] = [
-	(SlotKey::Hand(Side::Left), "Left Hand"),
-	(SlotKey::Hand(Side::Right), "Right Hand"),
+	(SlotKey::Hand(Side::Off), "Off Hand"),
+	(SlotKey::Hand(Side::Main), "Main Hand"),
 ];
 
 impl SpawnAble for InventoryScreen {

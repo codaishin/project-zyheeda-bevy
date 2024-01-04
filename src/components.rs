@@ -1,15 +1,12 @@
 use crate::{
-	behaviors::{meta::BehaviorMeta, MovementMode},
-	markers::meta::MarkerMeta,
+	behaviors::MovementMode,
+	skill::{Queued, Skill, SkillComboTree},
 	types::BoneName,
 };
-use bevy::{
-	prelude::{Component, *},
-	utils::HashMap,
-};
+use bevy::prelude::{Component, Entity, Ray, Vec3};
 use core::fmt::Display;
 use std::{
-	collections::VecDeque,
+	collections::{HashMap, HashSet, VecDeque},
 	fmt::{Debug, Formatter, Result},
 	marker::PhantomData,
 	time::Duration,
@@ -86,77 +83,7 @@ impl SimpleMovement {
 	}
 }
 
-#[derive(PartialEq, Debug, Clone, Copy, Default)]
-pub struct Cast {
-	pub pre: Duration,
-	pub active: Duration,
-	pub after: Duration,
-}
-
-#[derive(Component, PartialEq, Debug, Clone, Copy, Default)]
-pub struct Skill<TData = ()> {
-	pub name: &'static str,
-	pub data: TData,
-	pub cast: Cast,
-	pub soft_override: bool,
-	pub marker: MarkerMeta,
-	pub behavior: BehaviorMeta,
-}
-
-impl<T> Display for Skill<T> {
-	fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-		match self.name {
-			"" => write!(f, "Skill(<no name>)"),
-			name => write!(f, "Skill({})", name),
-		}
-	}
-}
-
-#[derive(Default, Debug, PartialEq, Clone, Copy)]
-pub struct Queued {
-	pub ray: Ray,
-	pub slot: SlotKey,
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Default)]
-pub struct Active {
-	pub ray: Ray,
-	pub slot: SlotKey,
-}
-
-impl Skill {
-	pub fn with<T: Clone + Copy>(self, data: T) -> Skill<T> {
-		Skill {
-			data,
-			name: self.name,
-			cast: self.cast,
-			soft_override: self.soft_override,
-			marker: self.marker,
-			behavior: self.behavior,
-		}
-	}
-}
-
-impl<TSrc> Skill<TSrc> {
-	pub fn map_data<TDst>(self, map: fn(TSrc) -> TDst) -> Skill<TDst> {
-		Skill {
-			name: self.name,
-			data: map(self.data),
-			cast: self.cast,
-			marker: self.marker,
-			soft_override: self.soft_override,
-			behavior: self.behavior,
-		}
-	}
-}
-
-impl Skill<Queued> {
-	pub fn to_active(self) -> Skill<Active> {
-		self.map_data(|Queued { ray, slot }| Active { ray, slot })
-	}
-}
-
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq)]
 pub struct Marker<T> {
 	phantom_data: PhantomData<T>,
 }
@@ -177,8 +104,8 @@ impl<T> Default for Marker<T> {
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum Side {
-	Right,
-	Left,
+	Main,
+	Off,
 }
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Default)]
@@ -211,6 +138,7 @@ pub struct Schedule {
 pub struct Slot {
 	pub entity: Entity,
 	pub item: Option<Item>,
+	pub combo_skill: Option<Skill>,
 }
 
 #[derive(Component)]
@@ -228,16 +156,24 @@ impl Default for Slots {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Default)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+pub enum ItemType {
+	Pistol,
+	Sword,
+	Legs,
+}
+
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct Item {
 	pub name: &'static str,
 	pub model: Option<&'static str>,
 	pub skill: Option<Skill>,
+	pub item_type: HashSet<ItemType>,
 }
 
 impl Display for Item {
 	fn fmt(&self, f: &mut Formatter) -> Result {
-		match self.skill {
+		match &self.skill {
 			Some(skill) => write!(f, "Item({}, {})", self.name, skill),
 			None => write!(f, "Item({}, <no skill>)", self.name),
 		}
@@ -276,17 +212,21 @@ pub struct Dad<T>(pub T);
 
 #[derive(Component, Debug, PartialEq)]
 pub struct Track<T> {
-	pub original: T,
-	pub current: T,
+	pub value: T,
 	pub duration: Duration,
 }
 
-impl<T: Copy> Track<T> {
-	pub fn new(original: T) -> Self {
+impl<T: Clone> Track<T> {
+	pub fn new(value: T) -> Self {
 		Self {
-			original,
-			current: original,
+			value: value.clone(),
 			duration: Duration::ZERO,
 		}
 	}
 }
+
+#[derive(Component, Clone)]
+pub struct ComboTreeTemplate<TNext>(pub HashMap<SlotKey, SkillComboTree<TNext>>);
+
+#[derive(Component, PartialEq, Debug)]
+pub struct ComboTreeRunning<TNext>(pub HashMap<SlotKey, SkillComboTree<TNext>>);

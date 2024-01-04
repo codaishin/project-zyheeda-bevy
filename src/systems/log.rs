@@ -32,7 +32,7 @@ pub mod tests {
 	#[derive(Component, PartialEq, Debug)]
 	pub struct FakeErrorLogMany(pub Vec<Error>);
 
-	#[derive(Component)]
+	#[derive(Component, Debug, PartialEq)]
 	pub struct FakeErrorLog(pub Error);
 
 	pub fn fake_log_error_lazy_many(

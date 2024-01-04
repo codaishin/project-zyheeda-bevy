@@ -1,6 +1,7 @@
 use crate::{
-	components::{Schedule, ScheduleMode, Skill, SlotKey, Slots},
+	components::{Schedule, ScheduleMode, SlotKey, Slots},
 	resources::SlotMap,
+	skill::Skill,
 };
 use bevy::prelude::{Commands, Component, Entity, Input, KeyCode, Query, Res, With};
 use std::hash::Hash;
@@ -45,7 +46,9 @@ fn filter_triggered_behaviors(
 		.0
 		.iter()
 		.filter(|(slot_key, ..)| triggered_slot_keys.contains(slot_key))
-		.filter_map(|(key, slot)| Some((*key, slot.item?.skill?)))
+		.filter_map(|(key, slot)| {
+			Some((*key, slot.combo_skill.clone().or(slot.item.clone()?.skill)?))
+		})
 		.collect()
 }
 
@@ -53,11 +56,10 @@ fn filter_triggered_behaviors(
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Cast, Item, Schedule, ScheduleMode, Side, Slot, SlotKey, Slots},
+		components::{Item, Schedule, ScheduleMode, Side, Slot, SlotKey, Slots},
 		resources::SlotMap,
 	};
 	use bevy::prelude::{default, App, Component, Entity, Input, KeyCode, MouseButton, Update};
-	use std::time::Duration;
 
 	#[derive(Component)]
 	struct TestAgent;
@@ -85,13 +87,64 @@ mod tests {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
 						skill: Some(Skill {
-							cast: Cast {
-								pre: Duration::from_millis(1),
-								active: Duration::from_millis(2),
-								after: Duration::from_millis(3),
-							},
+							name: "skill",
 							..default()
 						}),
+						..default()
+					}),
+					combo_skill: None,
+				},
+			)]
+			.into(),
+		);
+		let agent = app.world.spawn((TestAgent, slots)).id();
+
+		app.world
+			.resource_mut::<SlotMap<MouseButton>>()
+			.0
+			.insert(MouseButton::Right, SlotKey::Legs);
+		app.world
+			.resource_mut::<Input<MouseButton>>()
+			.press(MouseButton::Right);
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let schedule = agent.get::<Schedule>();
+
+		assert_eq!(
+			Some(&Schedule {
+				mode: ScheduleMode::Override,
+				skills: [(
+					SlotKey::Legs,
+					Skill {
+						name: "skill",
+						..default()
+					}
+				)]
+				.into()
+			}),
+			schedule
+		);
+	}
+
+	#[test]
+	fn set_override_alternative() {
+		let mut app = setup();
+		let slots = Slots(
+			[(
+				SlotKey::Legs,
+				Slot {
+					entity: Entity::from_raw(42),
+					item: Some(Item {
+						skill: Some(Skill {
+							name: "skill",
+							..default()
+						}),
+						..default()
+					}),
+					combo_skill: Some(Skill {
+						name: "alternative skill",
 						..default()
 					}),
 				},
@@ -119,11 +172,7 @@ mod tests {
 				skills: [(
 					SlotKey::Legs,
 					Skill {
-						cast: Cast {
-							pre: Duration::from_millis(1),
-							active: Duration::from_millis(2),
-							after: Duration::from_millis(3),
-						},
+						name: "alternative skill",
 						..default()
 					}
 				)]
@@ -142,6 +191,7 @@ mod tests {
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item::default()),
+					combo_skill: None,
 				},
 			)]
 			.into(),
@@ -173,6 +223,7 @@ mod tests {
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item::default()),
+					combo_skill: None,
 				},
 			)]
 			.into(),
@@ -182,7 +233,7 @@ mod tests {
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
 			.0
-			.insert(MouseButton::Right, SlotKey::Hand(Side::Left));
+			.insert(MouseButton::Right, SlotKey::Hand(Side::Off));
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Right);
@@ -200,20 +251,17 @@ mod tests {
 		let mut app = setup();
 		let slots = Slots(
 			[(
-				SlotKey::Hand(Side::Right),
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
 						skill: Some(Skill {
-							cast: Cast {
-								pre: Duration::from_millis(1),
-								active: Duration::from_millis(2),
-								after: Duration::from_millis(3),
-							},
+							name: "skill",
 							..default()
 						}),
 						..default()
 					}),
+					combo_skill: None,
 				},
 			)]
 			.into(),
@@ -223,7 +271,7 @@ mod tests {
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
 			.0
-			.insert(MouseButton::Left, SlotKey::Hand(Side::Right));
+			.insert(MouseButton::Left, SlotKey::Hand(Side::Main));
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -240,13 +288,66 @@ mod tests {
 			Some(&Schedule {
 				mode: ScheduleMode::Enqueue,
 				skills: [(
-					SlotKey::Hand(Side::Right),
+					SlotKey::Hand(Side::Main),
 					Skill {
-						cast: Cast {
-							pre: Duration::from_millis(1),
-							active: Duration::from_millis(2),
-							after: Duration::from_millis(3),
-						},
+						name: "skill",
+						..default()
+					}
+				)]
+				.into()
+			}),
+			schedule
+		);
+	}
+
+	#[test]
+	fn set_enqueue_alternative() {
+		let mut app = setup();
+		let slots = Slots(
+			[(
+				SlotKey::Hand(Side::Main),
+				Slot {
+					entity: Entity::from_raw(42),
+					item: Some(Item {
+						skill: Some(Skill {
+							name: "skill",
+							..default()
+						}),
+						..default()
+					}),
+					combo_skill: Some(Skill {
+						name: "alternative skill",
+						..default()
+					}),
+				},
+			)]
+			.into(),
+		);
+		let agent = app.world.spawn((TestAgent, slots)).id();
+
+		app.world
+			.resource_mut::<SlotMap<MouseButton>>()
+			.0
+			.insert(MouseButton::Left, SlotKey::Hand(Side::Main));
+		app.world
+			.resource_mut::<Input<MouseButton>>()
+			.press(MouseButton::Left);
+		app.world
+			.resource_mut::<Input<KeyCode>>()
+			.press(KeyCode::ShiftLeft);
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let schedule = agent.get::<Schedule>();
+
+		assert_eq!(
+			Some(&Schedule {
+				mode: ScheduleMode::Enqueue,
+				skills: [(
+					SlotKey::Hand(Side::Main),
+					Skill {
+						name: "alternative skill",
 						..default()
 					}
 				)]
@@ -276,6 +377,7 @@ mod tests {
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item::default()),
+					combo_skill: None,
 				},
 			)]
 			.into(),
