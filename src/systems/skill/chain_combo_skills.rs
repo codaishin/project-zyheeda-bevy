@@ -11,6 +11,7 @@ use bevy::{
 	},
 	prelude::Entity,
 };
+use std::collections::HashMap;
 
 type ComboComponents<'a, TNext> = (
 	Entity,
@@ -54,11 +55,16 @@ fn update_combos<TNext: Clone + ComboNext + Send + Sync + 'static>(
 		return;
 	};
 
-	let updated_successfully = combos
+	let updated_successfully: HashMap<_, _> = combos
 		.clone()
 		.into_iter()
 		.filter(|(slot_key, tree)| update_slot(slots, slot_key, &tree.skill))
 		.collect();
+
+	if updated_successfully.is_empty() {
+		return;
+	}
+
 	agent.insert(ComboTreeRunning(updated_successfully));
 }
 
@@ -822,7 +828,7 @@ mod tests {
 	}
 
 	#[test]
-	fn add_only_usable_branches_to_running_next() {
+	fn add_only_valid_combos_to_running_next() {
 		let skill = &skill_usable_with(&[ItemType::Sword])
 			.named("combo-start")
 			.active_on(SlotKey::Hand(Side::Off));
@@ -871,6 +877,35 @@ mod tests {
 			)]))),
 			combo_tree_running
 		);
+	}
+
+	#[test]
+	fn remove_running_when_no_combo_valid() {
+		let skill = &skill_usable_with(&[ItemType::Sword])
+			.named("combo-start")
+			.active_on(SlotKey::Hand(Side::Off));
+		let unusable_type = HashSet::from([ItemType::Pistol]);
+		let slots_item_types = &[(skill.data.slot_key, skill.is_usable_with.clone())];
+		let combo_tree = ComboTreeTemplate(HashMap::from([(
+			skill.data.slot_key,
+			SkillComboTree {
+				skill: skill_usable_with(&[]).named("combo-start"),
+				next: _Next(vec![(
+					skill.data.slot_key,
+					SkillComboTree {
+						skill: skill_usable_with(&unusable_type).named("combo skill"),
+						next: _Next(vec![]),
+					},
+				)]),
+			},
+		)]));
+
+		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert!(!agent.contains::<ComboTreeRunning<_Next>>());
 	}
 
 	#[test]
