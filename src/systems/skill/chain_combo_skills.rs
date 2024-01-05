@@ -11,6 +11,7 @@ use bevy::{
 	},
 	prelude::Entity,
 };
+use std::collections::HashMap;
 
 type ComboComponents<'a, TNext> = (
 	Entity,
@@ -50,17 +51,20 @@ fn update_combos<TNext: Clone + ComboNext + Send + Sync + 'static>(
 	combo_tree_t: &ComboTreeTemplate<TNext>,
 	combo_tree_r: Option<&ComboTreeRunning<TNext>>,
 ) {
-	let Some((trigger, combos)) = get_combos(&skill.value, combo_tree_t, combo_tree_r) else {
+	let Some(combos) = get_combos(&skill.value, combo_tree_t, combo_tree_r) else {
 		return;
 	};
-	if skill.value.name != trigger.name {
-		return;
-	}
-	let updated_successfully = combos
+
+	let updated_successfully: HashMap<_, _> = combos
 		.clone()
 		.into_iter()
 		.filter(|(slot_key, tree)| update_slot(slots, slot_key, &tree.skill))
 		.collect();
+
+	if updated_successfully.is_empty() {
+		return;
+	}
+
 	agent.insert(ComboTreeRunning(updated_successfully));
 }
 
@@ -68,18 +72,25 @@ fn get_combos<'a, TNext: ComboNext>(
 	skill: &'a Skill<Active>,
 	combo_tree_t: &'a ComboTreeTemplate<TNext>,
 	combo_tree_r: Option<&'a ComboTreeRunning<TNext>>,
-) -> Option<(&'a Skill, Combos<TNext>)> {
-	let branches_running = combo_tree_r
-		.and_then(|trees| trees.0.get(&skill.data.slot_key))
-		.map(|tree| (&tree.skill, tree.next.to_branches(skill)))
-		.filter(|(_, branches)| !branches.is_empty());
+) -> Option<Combos<TNext>> {
+	let combos_r = combo_tree_r
+		.and_then(|tree| tree.0.get(&skill.data.slot_key))
+		.map(|combo| (&combo.skill, combo.next.to_vec(skill)))
+		.filter(|(_, combo)| !combo.is_empty());
 
-	if let Some((skill, branches)) = branches_running {
-		return Some((skill, branches));
+	let (combo_trigger, combos) = match combos_r {
+		Some((combo_trigger, combos)) => (combo_trigger, combos),
+		None => {
+			let combo = combo_tree_t.0.get(&skill.data.slot_key)?;
+			(&combo.skill, combo.next.to_vec(skill))
+		}
+	};
+
+	if skill.name != combo_trigger.name {
+		return None;
 	}
 
-	let tree = combo_tree_t.0.get(&skill.data.slot_key)?;
-	Some((&tree.skill, tree.next.to_branches(skill)))
+	Some(combos)
 }
 
 fn clear_combos<TNext: Sync + Send + 'static>(agent: &mut EntityCommands, slots: &mut Mut<Slots>) {
@@ -234,7 +245,7 @@ mod tests {
 	mock! {
 		_Next{}
 		impl ComboNext for _Next {
-			fn to_branches(&self, _skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
+			fn to_vec(&self, _skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
 				self.0.clone()
 			}
 		}
@@ -246,7 +257,7 @@ mod tests {
 	}
 
 	impl ComboNext for _Next {
-		fn to_branches(&self, _skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
+		fn to_vec(&self, _skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
 			self.0.clone()
 		}
 	}
@@ -817,7 +828,7 @@ mod tests {
 	}
 
 	#[test]
-	fn add_only_usable_branches_to_running_next() {
+	fn add_only_valid_combos_to_running_next() {
 		let skill = &skill_usable_with(&[ItemType::Sword])
 			.named("combo-start")
 			.active_on(SlotKey::Hand(Side::Off));
@@ -866,6 +877,35 @@ mod tests {
 			)]))),
 			combo_tree_running
 		);
+	}
+
+	#[test]
+	fn remove_running_when_no_combo_valid() {
+		let skill = &skill_usable_with(&[ItemType::Sword])
+			.named("combo-start")
+			.active_on(SlotKey::Hand(Side::Off));
+		let unusable_type = HashSet::from([ItemType::Pistol]);
+		let slots_item_types = &[(skill.data.slot_key, skill.is_usable_with.clone())];
+		let combo_tree = ComboTreeTemplate(HashMap::from([(
+			skill.data.slot_key,
+			SkillComboTree {
+				skill: skill_usable_with(&[]).named("combo-start"),
+				next: _Next(vec![(
+					skill.data.slot_key,
+					SkillComboTree {
+						skill: skill_usable_with(&unusable_type).named("combo skill"),
+						next: _Next(vec![]),
+					},
+				)]),
+			},
+		)]));
+
+		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert!(!agent.contains::<ComboTreeRunning<_Next>>());
 	}
 
 	#[test]
@@ -956,7 +996,7 @@ mod tests {
 			.named("combo-start")
 			.active_on(SlotKey::Hand(Side::Off));
 		let mut next = Mock_Next::new();
-		next.expect_to_branches()
+		next.expect_to_vec()
 			.times(1)
 			.with(eq(skill.clone()))
 			.return_const(vec![]);
@@ -984,7 +1024,7 @@ mod tests {
 
 		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
 		let mut next = Mock_Next::new();
-		next.expect_to_branches()
+		next.expect_to_vec()
 			.times(1)
 			.with(eq(skill.clone()))
 			.return_const(vec![]);
