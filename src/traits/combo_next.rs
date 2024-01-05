@@ -9,5 +9,5 @@ pub trait ComboNext
 where
 	Self: Sized,
 {
-	fn to_branches(&self, skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)>;
+	fn to_vec(&self, skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)>;
 }

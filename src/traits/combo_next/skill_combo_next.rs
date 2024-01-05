@@ -5,7 +5,7 @@ use crate::{
 };
 
 impl ComboNext for SkillComboNext {
-	fn to_branches(&self, skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
+	fn to_vec(&self, skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
 		match &self {
 			SkillComboNext::Tree(tree) => tree.clone().into_iter().collect(),
 			SkillComboNext::Alternate {
@@ -47,7 +47,7 @@ mod tests {
 			},
 		)];
 		let next = SkillComboNext::Tree(HashMap::from(branches.clone()));
-		assert_eq!(branches.to_vec(), next.to_branches(&default()));
+		assert_eq!(branches.to_vec(), next.to_vec(&default()));
 	}
 
 	#[test]
@@ -82,7 +82,7 @@ mod tests {
 					},
 				},
 			)],
-			next.to_branches(&skill)
+			next.to_vec(&skill)
 		);
 	}
 }
