@@ -1,7 +1,4 @@
-use bevy::{
-	ecs::{archetype::Archetypes, component::Components, entity::Entities},
-	prelude::*,
-};
+use bevy::prelude::*;
 use project_zyheeda::{
 	behaviors::MovementMode,
 	bundles::Loadout,
@@ -77,8 +74,18 @@ use std::{
 };
 
 fn main() {
-	App::new()
-		.add_plugins(DefaultPlugins)
+	let app = &mut App::new();
+
+	prepare_game(app);
+
+	#[cfg(debug_assertions)]
+	debug_utils::prepare_debug(app);
+
+	app.run();
+}
+
+fn prepare_game(app: &mut App) {
+	app.add_plugins(DefaultPlugins)
 		.add_plugins(IngameMenuPlugin)
 		.add_state::<GameRunning>()
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
@@ -144,9 +151,93 @@ fn main() {
 				animate::<Player, Marker<(Sword, Left)>, Once>,
 				animate::<Player, Marker<(Sword, Right)>, Once>,
 			),
-		)
-		.add_systems(Update, debug)
-		.run();
+		);
+}
+
+#[cfg(debug_assertions)]
+pub mod debug_utils {
+	use super::*;
+	use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
+	use std::ops::Not;
+
+	pub fn prepare_debug(app: &mut App) {
+		app.insert_resource(ShowGizmos::No)
+			.add_systems(Update, debug)
+			.add_systems(Update, toggle_gizmos)
+			.add_systems(Update, forward_gizmo(&["projectile_spawn"], &Color::BLUE));
+	}
+
+	fn debug(
+		keyboard: Res<Input<KeyCode>>,
+		all_entities: Query<Entity>,
+		names: Query<&Name>,
+		entities: &Entities,
+		archetypes: &Archetypes,
+		components: &Components,
+	) {
+		if !keyboard.just_pressed(KeyCode::F12) {
+			return;
+		}
+		for entity in all_entities.iter() {
+			println!("Entity: {:?}", entity);
+			let name = names.get(entity);
+			println!(
+				"Entity (Name): {}",
+				name.map(|n| n.as_str()).unwrap_or("No Name")
+			);
+			let Some(entity_location) = entities.get(entity) else {
+				return;
+			};
+			let Some(archetype) = archetypes.get(entity_location.archetype_id) else {
+				return;
+			};
+			for component in archetype.components() {
+				if let Some(info) = components.get_info(component) {
+					println!("\tComponent: {}", info.name());
+				}
+			}
+		}
+	}
+
+	#[derive(Resource, PartialEq, Clone, Copy)]
+	enum ShowGizmos {
+		Yes,
+		No,
+	}
+
+	impl Not for ShowGizmos {
+		type Output = ShowGizmos;
+
+		fn not(self) -> Self::Output {
+			match self {
+				ShowGizmos::Yes => ShowGizmos::No,
+				ShowGizmos::No => ShowGizmos::Yes,
+			}
+		}
+	}
+
+	fn toggle_gizmos(mut show_gizmos: ResMut<ShowGizmos>, keys: Res<Input<KeyCode>>) {
+		if keys.just_pressed(KeyCode::F11) {
+			*show_gizmos = !*show_gizmos;
+		}
+	}
+
+	fn forward_gizmo<const N: usize>(
+		targets: &'static [&str; N],
+		color: &'static Color,
+	) -> impl Fn(Gizmos, Query<(&Name, &GlobalTransform)>, Res<ShowGizmos>) {
+		|mut gizmos, agents, show_gizmos| {
+			if *show_gizmos == ShowGizmos::No {
+				return;
+			}
+
+			for (name, transform) in &agents {
+				if targets.contains(&name.as_str()) {
+					gizmos.ray(transform.translation(), transform.forward() * 10., *color);
+				}
+			}
+		}
+	}
 }
 
 fn pause_virtual_time<const PAUSE: bool>(mut time: ResMut<Time<Virtual>>) {
@@ -154,38 +245,6 @@ fn pause_virtual_time<const PAUSE: bool>(mut time: ResMut<Time<Virtual>>) {
 		time.pause();
 	} else {
 		time.unpause();
-	}
-}
-
-fn debug(
-	keyboard: Res<Input<KeyCode>>,
-	all_entities: Query<Entity>,
-	names: Query<&Name>,
-	entities: &Entities,
-	archetypes: &Archetypes,
-	components: &Components,
-) {
-	if !keyboard.just_pressed(KeyCode::F12) {
-		return;
-	}
-	for entity in all_entities.iter() {
-		println!("Entity: {:?}", entity);
-		let name = names.get(entity);
-		println!(
-			"Entity (Name): {}",
-			name.map(|n| n.as_str()).unwrap_or("No Name")
-		);
-		let Some(entity_location) = entities.get(entity) else {
-			return;
-		};
-		let Some(archetype) = archetypes.get(entity_location.archetype_id) else {
-			return;
-		};
-		for component in archetype.components() {
-			if let Some(info) = components.get_info(component) {
-				println!("\tComponent: {}", info.name());
-			}
-		}
 	}
 }
 
