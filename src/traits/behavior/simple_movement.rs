@@ -7,9 +7,10 @@ use crate::{
 use bevy::{
 	ecs::system::EntityCommands,
 	math::{Ray, Vec3},
+	transform::components::Transform,
 };
 
-fn run_fn(agent: &mut EntityCommands, _spawner: &Spawner, ray: &Ray) {
+fn run_fn(agent: &mut EntityCommands, _agent_transform: &Transform, _spawner: &Spawner, ray: &Ray) {
 	let Some(length) = ray.intersect_plane(Vec3::ZERO, Vec3::Y) else {
 		return;
 	};
@@ -39,7 +40,10 @@ mod tests {
 		test_tools::assert_eq_approx,
 		traits::behavior::test_tools::{run_lazy, stop_lazy},
 	};
-	use bevy::prelude::{App, Ray, Update, Vec3};
+	use bevy::{
+		prelude::{App, Ray, Update, Vec3},
+		utils::default,
+	};
 
 	#[test]
 	fn move_to_zero() {
@@ -51,7 +55,10 @@ mod tests {
 			direction: Vec3::NEG_Y,
 		};
 
-		app.add_systems(Update, run_lazy(behavior, agent, Spawner::default(), ray));
+		app.add_systems(
+			Update,
+			run_lazy(behavior, agent, default(), Spawner::default(), ray),
+		);
 		app.update();
 
 		let movement = app.world.entity(agent).get::<SimpleMovement>();
@@ -69,7 +76,10 @@ mod tests {
 			direction: Vec3::NEG_Y,
 		};
 
-		app.add_systems(Update, run_lazy(behavior, agent, Spawner::default(), ray));
+		app.add_systems(
+			Update,
+			run_lazy(behavior, agent, default(), Spawner::default(), ray),
+		);
 		app.update();
 
 		let movement = app.world.entity(agent).get::<SimpleMovement>().unwrap();
@@ -87,7 +97,10 @@ mod tests {
 			direction: Vec3::new(0., -4., 3.),
 		};
 
-		app.add_systems(Update, run_lazy(behavior, agent, Spawner::default(), ray));
+		app.add_systems(
+			Update,
+			run_lazy(behavior, agent, default(), Spawner::default(), ray),
+		);
 		app.update();
 
 		let movement = app.world.entity(agent).get::<SimpleMovement>().unwrap();

@@ -7,11 +7,11 @@ use crate::{
 use bevy::{ecs::system::EntityCommands, transform::components::Transform};
 
 impl BehaviorExecution for Track<Skill<Active>> {
-	fn run(&self, agent: &mut EntityCommands, spawner: &Spawner) {
+	fn run(&self, agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner) {
 		let Some(run) = self.value.behavior.run_fn else {
 			return;
 		};
-		run(agent, spawner, &self.value.data.ray);
+		run(agent, agent_transform, spawner, &self.value.data.ray);
 	}
 
 	fn stop(&self, agent: &mut EntityCommands) {
@@ -52,7 +52,12 @@ mod tests {
 	struct _Tools;
 
 	trait StartFn {
-		fn run(_agent: &mut EntityCommands, _spawner: &Spawner, _ray: &Ray);
+		fn run(
+			_agent: &mut EntityCommands,
+			_agent_transform: &Transform,
+			_spawner: &Spawner,
+			_ray: &Ray,
+		);
 	}
 
 	trait StopFn {
@@ -68,6 +73,7 @@ mod tests {
 		impl StartFn for _Tools {
 			fn run<'a, 'b, 'c>(
 				_agent: &mut EntityCommands<'a, 'b, 'c>,
+				_agent_transform: &Transform,
 				_spawner: &Spawner,
 				_ray: &Ray,
 			) {
@@ -98,14 +104,20 @@ mod tests {
 				..default()
 			}))
 			.id();
+		let transform = Transform::from_xyz(1., 2., 3.);
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let ctx = Mock_Tools::run_context();
 		ctx.expect()
 			.times(1)
-			.withf(move |a, s, r| a.id() == agent && *s == spawner && *r == TEST_RAY)
+			.withf(move |a, t, s, r| {
+				a.id() == agent && *t == transform && *s == spawner && *r == TEST_RAY
+			})
 			.return_const(());
 
-		app.add_systems(Update, run_system::<Track<Skill<Active>>>(agent, spawner));
+		app.add_systems(
+			Update,
+			run_system::<Track<Skill<Active>>>(agent, transform, spawner),
+		);
 		app.update();
 	}
 

@@ -52,7 +52,7 @@ pub fn execute_skill<
 			return Ok(());
 		};
 
-		handle_active(agent, skill, slots, transforms);
+		handle_active(agent, transform, skill, slots, transforms);
 
 		if age == AgeType::New {
 			return handle_new(agent, transform, skill, slots, transforms);
@@ -91,6 +91,7 @@ fn handle_new<TSkill: MarkerModify + BehaviorExecution>(
 
 fn handle_active<TSkill: BehaviorExecution>(
 	agent: &mut EntityCommands,
+	agent_transform: &Transform,
 	skill: &mut Mut<TSkill>,
 	slots: &Slots,
 	transforms: &Query<&GlobalTransform>,
@@ -98,7 +99,7 @@ fn handle_active<TSkill: BehaviorExecution>(
 	let Some(spawner) = get_spawner(slots, transforms) else {
 		return;
 	};
-	skill.run(agent, &spawner);
+	skill.run(agent, agent_transform, &spawner);
 }
 
 fn handle_done<TSkill: CastUpdate + MarkerModify + BehaviorExecution + Component>(
@@ -199,8 +200,8 @@ mod tests {
 	}
 
 	impl BehaviorExecution for _Skill {
-		fn run(&self, agent: &mut EntityCommands, spawner: &Spawner) {
-			self.mock.run(agent, spawner)
+		fn run(&self, agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner) {
+			self.mock.run(agent, agent_transform, spawner)
 		}
 
 		fn stop(&self, agent: &mut EntityCommands) {
@@ -228,7 +229,7 @@ mod tests {
 			}
 		}
 		impl BehaviorExecution for _Skill {
-			fn run<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>, spawner: &Spawner) {
+			fn run<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>, agent_transform: &Transform, spawner: &Spawner) {
 				()
 			}
 			fn stop<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>) {
@@ -240,7 +241,7 @@ mod tests {
 		}
 	}
 
-	fn setup_app(skill_spawn_location: Vec3) -> (App, Entity) {
+	fn setup_app(skill_spawn_location: Vec3, agent_location: Vec3) -> (App, Entity) {
 		let mut app = App::new();
 		let mut time = Time::<Real>::default();
 
@@ -251,16 +252,19 @@ mod tests {
 
 		let agent = app
 			.world
-			.spawn(Slots(
-				[(
-					SlotKey::SkillSpawn,
-					Slot {
-						entity: skill_spawner,
-						item: None,
-						combo_skill: None,
-					},
-				)]
-				.into(),
+			.spawn((
+				Slots(
+					[(
+						SlotKey::SkillSpawn,
+						Slot {
+							entity: skill_spawner,
+							item: None,
+							combo_skill: None,
+						},
+					)]
+					.into(),
+				),
+				Transform::from_translation(agent_location),
 			))
 			.id();
 
@@ -283,7 +287,7 @@ mod tests {
 
 	#[test]
 	fn call_update_with_delta() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill
@@ -302,7 +306,7 @@ mod tests {
 
 	#[test]
 	fn add_marker_when_new() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
 
@@ -322,7 +326,7 @@ mod tests {
 
 	#[test]
 	fn return_add_marker_error() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
 
@@ -354,7 +358,7 @@ mod tests {
 
 	#[test]
 	fn do_not_add_marker_when_not_new() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
 
@@ -376,7 +380,7 @@ mod tests {
 
 	#[test]
 	fn add_marker_when_new_and_active() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
 
@@ -399,7 +403,7 @@ mod tests {
 
 	#[test]
 	fn return_add_marker_error_when_new_active() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
 
@@ -434,7 +438,7 @@ mod tests {
 
 	#[test]
 	fn remove_marker() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Remove)]);
 
@@ -455,7 +459,7 @@ mod tests {
 
 	#[test]
 	fn remove_marker_error() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Remove)]);
 
@@ -489,7 +493,7 @@ mod tests {
 
 	#[test]
 	fn do_not_remove_marker_when_not_done() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Remove)]);
 
@@ -512,7 +516,7 @@ mod tests {
 
 	#[test]
 	fn remove_skill() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill.mock.expect_update().return_const(State::Done);
@@ -530,7 +534,7 @@ mod tests {
 
 	#[test]
 	fn do_not_remove_skill_when_not_done() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill
@@ -551,7 +555,7 @@ mod tests {
 
 	#[test]
 	fn add_wait_next() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill.mock.expect_update().return_const(State::Done);
@@ -569,7 +573,7 @@ mod tests {
 
 	#[test]
 	fn do_not_add_wait_next_when_not_done() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill
@@ -590,7 +594,7 @@ mod tests {
 
 	#[test]
 	fn remove_all_related_components_when_waiting_next() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Remove)]);
 
@@ -618,7 +622,7 @@ mod tests {
 
 	#[test]
 	fn done_works_even_with_remove_marker_error() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([
 			MockOption::MarkerModify(MarkerOption::Remove),
 			MockOption::BehaviorExecution(BehaviorOption::Stop),
@@ -647,7 +651,7 @@ mod tests {
 
 	#[test]
 	fn run() {
-		let (mut app, agent) = setup_app(Vec3::new(1., 2., 3.));
+		let (mut app, agent) = setup_app(Vec3::new(1., 2., 3.), Vec3::new(3., 4., 5.));
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::BehaviorExecution(BehaviorOption::Run)]);
 
@@ -659,19 +663,21 @@ mod tests {
 			.mock
 			.expect_run()
 			.times(1)
-			.withf(move |a, s| a.id() == agent && s.0 == GlobalTransform::from_xyz(1., 2., 3.))
+			.withf(move |a, a_t, s| {
+				a.id() == agent
+					&& *a_t == Transform::from_xyz(3., 4., 5.)
+					&& s.0 == GlobalTransform::from_xyz(1., 2., 3.)
+			})
 			.return_const(());
 
-		app.world
-			.entity_mut(agent)
-			.insert((skill, Transform::default()));
+		app.world.entity_mut(agent).insert(skill);
 
 		app.update();
 	}
 
 	#[test]
 	fn do_run_when_not_activating() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::BehaviorExecution(BehaviorOption::Run)]);
 
@@ -690,7 +696,7 @@ mod tests {
 
 	#[test]
 	fn run_when_new_active() {
-		let (mut app, agent) = setup_app(Vec3::new(1., 2., 3.));
+		let (mut app, agent) = setup_app(Vec3::new(1., 2., 3.), Vec3::new(3., 4., 5.));
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::BehaviorExecution(BehaviorOption::Run)]);
 
@@ -702,19 +708,21 @@ mod tests {
 			.mock
 			.expect_run()
 			.times(1)
-			.withf(move |a, s| a.id() == agent && s.0 == GlobalTransform::from_xyz(1., 2., 3.))
+			.withf(move |a, a_t, s| {
+				a.id() == agent
+					&& *a_t == Transform::from_xyz(3., 4., 5.)
+					&& s.0 == GlobalTransform::from_xyz(1., 2., 3.)
+			})
 			.return_const(());
 
-		app.world
-			.entity_mut(agent)
-			.insert((skill, Transform::default()));
+		app.world.entity_mut(agent).insert(skill);
 
 		app.update();
 	}
 
 	#[test]
 	fn stop() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([MockOption::BehaviorExecution(
 			BehaviorOption::Stop,
 		)]);
@@ -736,7 +744,7 @@ mod tests {
 
 	#[test]
 	fn do_not_stop_when_not_done() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([MockOption::BehaviorExecution(
 			BehaviorOption::Stop,
 		)]);
@@ -756,7 +764,7 @@ mod tests {
 
 	#[test]
 	fn apply_transform() {
-		let (mut app, agent) = setup_app(Vec3::new(11., 12., 13.));
+		let (mut app, agent) = setup_app(Vec3::new(11., 12., 13.), Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([MockOption::BehaviorExecution(
 			BehaviorOption::Transform,
 		)]);
@@ -779,7 +787,7 @@ mod tests {
 
 	#[test]
 	fn do_not_apply_transform_when_not_new() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([MockOption::BehaviorExecution(
 			BehaviorOption::Transform,
 		)]);
@@ -803,7 +811,7 @@ mod tests {
 
 	#[test]
 	fn apply_transform_even_with_insert_marker_error() {
-		let (mut app, agent) = setup_app(Vec3::ZERO);
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([
 			MockOption::MarkerModify(MarkerOption::Insert),
 			MockOption::BehaviorExecution(BehaviorOption::Transform),

@@ -8,7 +8,7 @@ use bevy::{
 pub struct Spawner(pub GlobalTransform);
 
 pub type TransformFN = fn(&mut Transform, &Spawner, &Ray);
-pub type StartBehaviorFn = fn(&mut EntityCommands, &Spawner, &Ray);
+pub type StartBehaviorFn = fn(&mut EntityCommands, &Transform, &Spawner, &Ray);
 pub type StopBehaviorFn = fn(&mut EntityCommands);
 
 #[derive(PartialEq, Debug, Clone, Copy, Default)]

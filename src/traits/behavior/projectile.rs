@@ -21,7 +21,7 @@ impl GetBehaviorMeta for Projectile {
 	}
 }
 
-fn run_fn(agent: &mut EntityCommands, spawner: &Spawner, ray: &Ray) {
+fn run_fn(agent: &mut EntityCommands, _: &Transform, spawner: &Spawner, ray: &Ray) {
 	let transform = Transform::from_translation(spawner.0.translation());
 	agent.commands().spawn((
 		Projectile {
@@ -41,6 +41,7 @@ mod tests {
 		math::Vec3,
 		render::view::{InheritedVisibility, ViewVisibility, Visibility},
 		transform::components::GlobalTransform,
+		utils::default,
 	};
 
 	#[test]
@@ -54,7 +55,7 @@ mod tests {
 		};
 		let agent = app.world.spawn(()).id();
 
-		app.add_systems(Update, run_lazy(lazy, agent, spawner, ray));
+		app.add_systems(Update, run_lazy(lazy, agent, default(), spawner, ray));
 		app.update();
 
 		let projectile = app
@@ -76,7 +77,7 @@ mod tests {
 		};
 		let agent = app.world.spawn(()).id();
 
-		app.add_systems(Update, run_lazy(lazy, agent, spawner, ray));
+		app.add_systems(Update, run_lazy(lazy, agent, default(), spawner, ray));
 		app.update();
 
 		let projectile = app
@@ -108,7 +109,7 @@ mod tests {
 		};
 		let agent = app.world.spawn(()).id();
 
-		app.add_systems(Update, run_lazy(lazy, agent, spawner, ray));
+		app.add_systems(Update, run_lazy(lazy, agent, default(), spawner, ray));
 		app.update();
 
 		let projectile_transform = app

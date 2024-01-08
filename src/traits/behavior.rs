@@ -12,11 +12,17 @@ pub trait GetBehaviorMeta {
 pub mod test_tools {
 	use super::*;
 	use crate::behaviors::meta::Spawner;
-	use bevy::{ecs::system::Commands, math::Ray, prelude::Entity};
+	use bevy::{
+		ecs::system::Commands,
+		math::Ray,
+		prelude::Entity,
+		transform::components::Transform,
+	};
 
 	pub fn run_lazy(
 		behavior: BehaviorMeta,
 		agent: Entity,
+		agent_transform: Transform,
 		spawner: Spawner,
 		ray: Ray,
 	) -> impl FnMut(Commands) {
@@ -24,7 +30,8 @@ pub mod test_tools {
 			let Some(run) = behavior.run_fn else {
 				return;
 			};
-			run(&mut commands.entity(agent), &spawner, &ray);
+			let mut agent = commands.entity(agent);
+			run(&mut agent, &agent_transform, &spawner, &ray);
 		}
 	}
 
