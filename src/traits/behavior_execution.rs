@@ -4,7 +4,7 @@ use crate::behaviors::meta::Spawner;
 use bevy::{ecs::system::EntityCommands, transform::components::Transform};
 
 pub trait BehaviorExecution {
-	fn run(&self, agent: &mut EntityCommands, spawner: &Spawner);
+	fn run(&self, agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner);
 	fn stop(&self, agent: &mut EntityCommands);
 	fn apply_transform(&self, transform: &mut Transform, spawner: &Spawner);
 }
@@ -22,11 +22,12 @@ pub mod test_tools {
 
 	pub fn run_system<TExecute: BehaviorExecution + Component>(
 		agent: Entity,
+		agent_transform: Transform,
 		spawner: Spawner,
 	) -> impl FnMut(Commands, Query<&mut TExecute>) {
 		move |mut commands, mut executes| {
 			let execute = executes.single_mut();
-			execute.run(&mut commands.entity(agent), &spawner);
+			execute.run(&mut commands.entity(agent), &agent_transform, &spawner);
 		}
 	}
 

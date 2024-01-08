@@ -3,7 +3,7 @@ use crate::{
 	skill::{Queued, Skill, SkillComboTree},
 	types::BoneName,
 };
-use bevy::prelude::{Component, Entity, Ray, Vec3};
+use bevy::prelude::{Component, Entity, Vec3};
 use core::fmt::Display;
 use std::{
 	collections::{HashMap, HashSet, VecDeque},
@@ -195,9 +195,9 @@ pub type Equipment = Collection<(SlotKey, Option<Item>)>;
 #[derive(Component)]
 pub struct Queue(pub VecDeque<Skill<Queued>>);
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct Projectile {
-	pub target_ray: Ray,
+	pub direction: Vec3,
 	pub range: f32,
 }
 

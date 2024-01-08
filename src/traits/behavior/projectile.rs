@@ -21,12 +21,12 @@ impl GetBehaviorMeta for Projectile {
 	}
 }
 
-fn run_fn(agent: &mut EntityCommands, spawner: &Spawner, ray: &Ray) {
+fn run_fn(agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner, _: &Ray) {
 	let transform = Transform::from_translation(spawner.0.translation());
 	agent.commands().spawn((
 		Projectile {
-			target_ray: *ray,
 			range: 10.,
+			direction: agent_transform.forward(),
 		},
 		SpatialBundle::from_transform(transform),
 	));
@@ -35,26 +35,33 @@ fn run_fn(agent: &mut EntityCommands, spawner: &Spawner, ray: &Ray) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::behavior::test_tools::run_lazy;
+	use crate::{test_tools::assert_eq_approx, traits::behavior::test_tools::run_lazy};
 	use bevy::{
 		app::{App, Update},
 		math::Vec3,
 		render::view::{InheritedVisibility, ViewVisibility, Visibility},
 		transform::components::GlobalTransform,
+		utils::default,
 	};
 
 	#[test]
-	fn spawn_projectile_with_ray() {
+	fn spawn_projectile_with_agent_forward() {
 		let mut app = App::new();
 		let lazy = Projectile::behavior();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
-		let ray = Ray {
-			origin: Vec3::ONE,
-			direction: Vec3::NEG_INFINITY,
-		};
+		let forward = Vec3::new(8., 9., 10.);
 		let agent = app.world.spawn(()).id();
 
-		app.add_systems(Update, run_lazy(lazy, agent, spawner, ray));
+		app.add_systems(
+			Update,
+			run_lazy(
+				lazy,
+				agent,
+				Transform::default().looking_at(forward, Vec3::Y),
+				spawner,
+				Ray::default(),
+			),
+		);
 		app.update();
 
 		let projectile = app
@@ -62,7 +69,11 @@ mod tests {
 			.iter_entities()
 			.find_map(|e| e.get::<Projectile>());
 
-		assert_eq!(Some(ray), projectile.map(|p| p.target_ray));
+		assert_eq_approx!(
+			Some(forward.normalize()),
+			projectile.map(|p| p.direction),
+			0.0001
+		);
 	}
 
 	#[test]
@@ -76,7 +87,7 @@ mod tests {
 		};
 		let agent = app.world.spawn(()).id();
 
-		app.add_systems(Update, run_lazy(lazy, agent, spawner, ray));
+		app.add_systems(Update, run_lazy(lazy, agent, default(), spawner, ray));
 		app.update();
 
 		let projectile = app
@@ -108,7 +119,7 @@ mod tests {
 		};
 		let agent = app.world.spawn(()).id();
 
-		app.add_systems(Update, run_lazy(lazy, agent, spawner, ray));
+		app.add_systems(Update, run_lazy(lazy, agent, default(), spawner, ray));
 		app.update();
 
 		let projectile_transform = app

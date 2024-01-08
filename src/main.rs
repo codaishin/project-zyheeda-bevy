@@ -164,7 +164,10 @@ pub mod debug_utils {
 		app.insert_resource(ShowGizmos::No)
 			.add_systems(Update, debug)
 			.add_systems(Update, toggle_gizmos)
-			.add_systems(Update, forward_gizmo(&["projectile_spawn"], &Color::BLUE));
+			.add_systems(
+				Update,
+				forward_gizmo(&["projectile_spawn", "Player"], &Color::BLUE),
+			);
 	}
 
 	fn debug(
@@ -478,6 +481,7 @@ fn spawn_player(
 	}
 
 	commands.spawn((
+		Name::from("Player"),
 		SceneBundle {
 			scene: asset_server.load("models/player.gltf#Scene0"),
 			..default()

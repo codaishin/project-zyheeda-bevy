@@ -76,7 +76,7 @@ mod test_look_from_spawner {
 		let agent = app.world.entity(agent);
 		let agent = agent.get::<Transform>().unwrap();
 
-		assert_eq_approx(Vec3::new(1., 0., 0.), agent.forward(), 0.000001);
+		assert_eq_approx!(Vec3::new(1., 0., 0.), agent.forward(), 0.000001);
 	}
 
 	#[test]
@@ -93,7 +93,7 @@ mod test_look_from_spawner {
 		let agent = app.world.entity(agent);
 		let agent = agent.get::<Transform>().unwrap();
 
-		assert_eq_approx(Vec3::new(1., 0., 0.), agent.forward(), 0.000001);
+		assert_eq_approx!(Vec3::new(1., 0., 0.), agent.forward(), 0.000001);
 	}
 
 	#[test]
@@ -110,7 +110,7 @@ mod test_look_from_spawner {
 		let agent = app.world.entity(agent);
 		let agent = agent.get::<Transform>().unwrap();
 
-		assert_eq_approx(Vec3::new(1., 0., 5.).normalize(), agent.forward(), 0.000001);
+		assert_eq_approx!(Vec3::new(1., 0., 5.).normalize(), agent.forward(), 0.000001);
 	}
 
 	#[test]
@@ -127,6 +127,6 @@ mod test_look_from_spawner {
 		let agent = app.world.entity(agent);
 		let agent = agent.get::<Transform>().unwrap();
 
-		assert_eq_approx(Vec3::new(1., 0., 0.), agent.forward(), 0.000001);
+		assert_eq_approx!(Vec3::new(1., 0., 0.), agent.forward(), 0.000001);
 	}
 }
