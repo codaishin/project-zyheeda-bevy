@@ -18,11 +18,9 @@ impl Orbit for CamOrbit {
 
 #[cfg(test)]
 mod tests {
-	use std::f32::consts::PI;
-
-	use crate::test_tools::assert_eq_approx;
-
 	use super::*;
+	use crate::test_tools::assert_eq_approx;
+	use std::f32::consts::PI;
 
 	#[test]
 	fn apply_distance() {
@@ -35,7 +33,7 @@ mod tests {
 
 		cam_orbit.orbit(&mut agent, Vec2Radians::ZERO);
 
-		assert_eq_approx(Vec3::new(11., 0., 0.), agent.translation, 0.00001);
+		assert_eq_approx!(Vec3::new(11., 0., 0.), agent.translation, 0.00001);
 	}
 
 	#[test]
@@ -49,7 +47,7 @@ mod tests {
 
 		cam_orbit.orbit(&mut agent, Vec2Radians::ZERO);
 
-		assert_eq_approx(Vec3::new(1., 12., 1.), agent.translation, 0.00001);
+		assert_eq_approx!(Vec3::new(1., 12., 1.), agent.translation, 0.00001);
 	}
 
 	#[test]
@@ -64,7 +62,7 @@ mod tests {
 
 		cam_orbit.orbit(&mut agent, Vec2Radians::new(quarter_circle, 0.));
 
-		assert_eq_approx(Vec3::new(0., 2., 3.), agent.translation, 0.00001);
+		assert_eq_approx!(Vec3::new(0., 2., 3.), agent.translation, 0.00001);
 	}
 
 	#[test]
@@ -79,7 +77,7 @@ mod tests {
 
 		cam_orbit.orbit(&mut agent, Vec2Radians::new(0., quarter_circle));
 
-		assert_eq_approx(Vec3::new(0., 5., 0.), agent.translation, 0.00001);
+		assert_eq_approx!(Vec3::new(0., 5., 0.), agent.translation, 0.00001);
 	}
 
 	#[test]
@@ -94,7 +92,7 @@ mod tests {
 
 		cam_orbit.orbit(&mut agent, Vec2Radians::new(half_circle, half_circle));
 
-		assert_eq_approx(Vec3::Y, agent.translation, 0.00001);
+		assert_eq_approx!(Vec3::Y, agent.translation, 0.00001);
 	}
 
 	#[test]
@@ -110,6 +108,6 @@ mod tests {
 
 		let expected_forward = (cam_orbit.center - agent.translation).normalize();
 
-		assert_eq_approx(expected_forward, agent.forward(), 0.00001);
+		assert_eq_approx!(expected_forward, agent.forward(), 0.00001);
 	}
 }

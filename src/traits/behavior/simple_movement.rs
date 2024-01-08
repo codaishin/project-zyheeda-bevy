@@ -92,7 +92,7 @@ mod tests {
 
 		let movement = app.world.entity(agent).get::<SimpleMovement>().unwrap();
 
-		assert_eq_approx(Vec3::new(0., 0., 3.), movement.target, 0.000001);
+		assert_eq_approx!(Vec3::new(0., 0., 3.), movement.target, 0.000001);
 	}
 
 	#[test]

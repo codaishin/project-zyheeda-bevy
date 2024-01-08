@@ -20,9 +20,8 @@ impl Movement for SimpleMovement {
 
 #[cfg(test)]
 mod tests {
-	use crate::test_tools::assert_eq_approx;
-
 	use super::*;
+	use crate::test_tools::assert_eq_approx;
 	use bevy::prelude::{Transform, Vec3};
 
 	#[test]
@@ -82,7 +81,7 @@ mod tests {
 
 		movement.update(&mut agent, 0.1);
 
-		assert_eq_approx(Vec3::X, agent.forward(), 0.00001);
+		assert_eq_approx!(Vec3::X, agent.forward(), 0.00001);
 	}
 
 	#[test]
@@ -92,7 +91,7 @@ mod tests {
 
 		movement.update(&mut agent, 0.1);
 
-		assert_eq_approx(Vec3::X, agent.forward(), 0.00001);
+		assert_eq_approx!(Vec3::X, agent.forward(), 0.00001);
 	}
 
 	#[test]
@@ -104,6 +103,6 @@ mod tests {
 
 		movement.update(&mut agent, 0.1);
 
-		assert_eq_approx(Vec3::new(2., 0., 2.).normalize(), agent.forward(), 0.00001);
+		assert_eq_approx!(Vec3::new(2., 0., 2.).normalize(), agent.forward(), 0.00001);
 	}
 }
