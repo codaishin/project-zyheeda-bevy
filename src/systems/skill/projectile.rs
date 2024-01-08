@@ -39,36 +39,25 @@ pub fn projectile(
 	};
 
 	for (entity, projectile, transform) in &active_agents {
-		if let Some(target) = get_target(transform, projectile) {
-			let model = commands
-				.spawn(SceneBundle {
-					scene: scene.clone(),
-					..default()
-				})
-				.id();
-			commands
-				.entity(entity)
-				.insert(SimpleMovement { target })
-				.add_child(model);
-		}
+		let model = commands
+			.spawn(SceneBundle {
+				scene: scene.clone(),
+				..default()
+			})
+			.id();
+		commands
+			.entity(entity)
+			.insert(SimpleMovement {
+				target: get_target(transform, projectile),
+			})
+			.add_child(model);
 	}
 
 	Ok(())
 }
 
-fn get_target(transform: &GlobalTransform, projectile: &Projectile) -> Option<Vec3> {
-	let current_position = transform.translation();
-	let direction = match projectile.agent_forward {
-		Some(direction) => direction,
-		None => {
-			let ray = projectile.target_ray;
-			let target =
-				ray.origin + ray.direction * ray.intersect_plane(current_position, Vec3::Y)?;
-			(target - current_position).normalize()
-		}
-	};
-
-	Some(current_position + direction * projectile.range)
+fn get_target(transform: &GlobalTransform, projectile: &Projectile) -> Vec3 {
+	transform.translation() + projectile.direction * projectile.range
 }
 
 #[cfg(test)]
@@ -87,7 +76,7 @@ mod tests {
 			system::{In, IntoSystem},
 		},
 		hierarchy::{BuildWorldChildren, Children},
-		math::{Ray, Vec3},
+		math::Vec3,
 		scene::Scene,
 		transform::components::GlobalTransform,
 		utils::Uuid,
@@ -97,11 +86,6 @@ mod tests {
 	struct MockLog(pub Result<(), Error>);
 
 	type LoggerEntity = Entity;
-
-	const SIMPLE_RAY: Ray = Ray {
-		origin: Vec3::Y,
-		direction: Vec3::NEG_Y,
-	};
 
 	fn log_result(result: In<Result<(), Error>>, mut loggers: Query<&mut MockLog>) {
 		let mut logger = loggers.single_mut();
@@ -135,7 +119,6 @@ mod tests {
 			.world
 			.spawn((
 				Projectile {
-					target_ray: SIMPLE_RAY,
 					range: 1.,
 					..default()
 				},
@@ -168,7 +151,6 @@ mod tests {
 			.world
 			.spawn((
 				Projectile {
-					target_ray: SIMPLE_RAY,
 					range: 1.,
 					..default()
 				},
@@ -214,10 +196,6 @@ mod tests {
 			.world
 			.spawn((
 				Projectile {
-					target_ray: Ray {
-						origin: Vec3::ONE,
-						direction: Vec3::NEG_Y,
-					},
 					range: 1.,
 					..default()
 				},
@@ -233,37 +211,6 @@ mod tests {
 	}
 
 	#[test]
-	fn compute_target_on_current_spawn_height_and_range() {
-		let (mut app, ..) = setup([("projectile", Handle::default())]);
-		let projectile = app
-			.world
-			.spawn((
-				Projectile {
-					target_ray: Ray {
-						origin: Vec3::new(7., 20., 1.),
-						direction: Vec3::NEG_Y,
-					},
-					range: 5.,
-					..default()
-				},
-				GlobalTransform::from_xyz(4., 10., 1.),
-			))
-			.id();
-
-		app.update();
-
-		let projectile = app.world.entity(projectile);
-		let simple_movement = projectile.get::<SimpleMovement>().unwrap();
-
-		assert_eq!(
-			&SimpleMovement {
-				target: Vec3::new(9., 10., 1.)
-			},
-			simple_movement
-		);
-	}
-
-	#[test]
 	fn compute_target_from_agent_forward_and_range() {
 		let (mut app, ..) = setup([("projectile", Handle::default())]);
 		let forward = Vec3::new(1., 0., 1.).normalize();
@@ -271,12 +218,8 @@ mod tests {
 			.world
 			.spawn((
 				Projectile {
-					target_ray: Ray {
-						origin: Vec3::new(42., 42., 42.),
-						direction: Vec3::NEG_Y,
-					},
 					range: 5.,
-					agent_forward: Some(forward),
+					direction: forward,
 				},
 				GlobalTransform::from_xyz(1., 2., 3.),
 			))
@@ -299,7 +242,6 @@ mod tests {
 			.world
 			.spawn((
 				Projectile {
-					target_ray: Ray::default(),
 					range: 1.,
 					..default()
 				},
@@ -330,33 +272,5 @@ mod tests {
 		let non_projectile = app.world.get_entity(non_projectile);
 
 		assert!(non_projectile.is_some());
-	}
-
-	#[test]
-	fn do_nothing_when_no_valid_target() {
-		let (mut app, ..) = setup([("projectile", Handle::default())]);
-		let projectile = app
-			.world
-			.spawn((
-				Projectile {
-					target_ray: Ray::default(),
-					range: 1.,
-					..default()
-				},
-				GlobalTransform::from_xyz(0., 0., 0.),
-			))
-			.id();
-
-		app.update();
-
-		let projectile = app.world.entity(projectile);
-
-		assert_eq!(
-			(false, false),
-			(
-				projectile.contains::<SimpleMovement>(),
-				projectile.contains::<Handle<Scene>>()
-			)
-		);
 	}
 }

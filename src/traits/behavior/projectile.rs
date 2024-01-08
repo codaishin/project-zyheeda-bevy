@@ -21,14 +21,12 @@ impl GetBehaviorMeta for Projectile {
 	}
 }
 
-fn run_fn(agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner, ray: &Ray) {
+fn run_fn(agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner, _: &Ray) {
 	let transform = Transform::from_translation(spawner.0.translation());
-	let agent_forward = Some(agent_transform.forward());
 	agent.commands().spawn((
 		Projectile {
-			target_ray: *ray,
 			range: 10.,
-			agent_forward,
+			direction: agent_transform.forward(),
 		},
 		SpatialBundle::from_transform(transform),
 	));
@@ -45,31 +43,6 @@ mod tests {
 		transform::components::GlobalTransform,
 		utils::default,
 	};
-
-	#[test]
-	fn spawn_projectile_with_ray() {
-		let mut app = App::new();
-		let lazy = Projectile::behavior();
-		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
-		let ray = Ray {
-			origin: Vec3::ONE,
-			direction: Vec3::new(2., 2., 4.),
-		};
-		let agent = app.world.spawn(()).id();
-
-		app.add_systems(
-			Update,
-			run_lazy(lazy, agent, Transform::default(), spawner, ray),
-		);
-		app.update();
-
-		let projectile = app
-			.world
-			.iter_entities()
-			.find_map(|e| e.get::<Projectile>());
-
-		assert_eq!(Some(ray), projectile.map(|p| p.target_ray));
-	}
 
 	#[test]
 	fn spawn_projectile_with_agent_forward() {
@@ -98,7 +71,7 @@ mod tests {
 
 		assert_eq_approx!(
 			Some(forward.normalize()),
-			projectile.and_then(|p| p.agent_forward),
+			projectile.map(|p| p.direction),
 			0.0001
 		);
 	}
