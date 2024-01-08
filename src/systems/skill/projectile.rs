@@ -58,9 +58,15 @@ pub fn projectile(
 
 fn get_target(transform: &GlobalTransform, projectile: &Projectile) -> Option<Vec3> {
 	let current_position = transform.translation();
-	let ray = projectile.target_ray;
-	let target = ray.origin + ray.direction * ray.intersect_plane(current_position, Vec3::Y)?;
-	let direction = (target - current_position).normalize();
+	let direction = match projectile.agent_forward {
+		Some(direction) => direction,
+		None => {
+			let ray = projectile.target_ray;
+			let target =
+				ray.origin + ray.direction * ray.intersect_plane(current_position, Vec3::Y)?;
+			(target - current_position).normalize()
+		}
+	};
 
 	Some(current_position + direction * projectile.range)
 }
@@ -255,6 +261,33 @@ mod tests {
 			},
 			simple_movement
 		);
+	}
+
+	#[test]
+	fn compute_target_from_agent_forward_and_range() {
+		let (mut app, ..) = setup([("projectile", Handle::default())]);
+		let forward = Vec3::new(1., 0., 1.).normalize();
+		let projectile = app
+			.world
+			.spawn((
+				Projectile {
+					target_ray: Ray {
+						origin: Vec3::new(42., 42., 42.),
+						direction: Vec3::NEG_Y,
+					},
+					range: 5.,
+					agent_forward: Some(forward),
+				},
+				GlobalTransform::from_xyz(1., 2., 3.),
+			))
+			.id();
+
+		app.update();
+
+		let projectile = app.world.entity(projectile);
+		let simple_movement = projectile.get::<SimpleMovement>().unwrap();
+
+		assert_eq!(Vec3::new(1., 2., 3.) + forward * 5., simple_movement.target);
 	}
 
 	#[test]
