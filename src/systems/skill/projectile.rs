@@ -131,6 +131,7 @@ mod tests {
 				Projectile {
 					target_ray: SIMPLE_RAY,
 					range: 1.,
+					..default()
 				},
 				GlobalTransform::from_xyz(0., 0., 0.),
 			))
@@ -163,6 +164,7 @@ mod tests {
 				Projectile {
 					target_ray: SIMPLE_RAY,
 					range: 1.,
+					..default()
 				},
 				GlobalTransform::from_xyz(0., 0., 0.),
 			))
@@ -211,6 +213,7 @@ mod tests {
 						direction: Vec3::NEG_Y,
 					},
 					range: 1.,
+					..default()
 				},
 				GlobalTransform::from_xyz(0., 0., 0.),
 			))
@@ -235,6 +238,7 @@ mod tests {
 						direction: Vec3::NEG_Y,
 					},
 					range: 5.,
+					..default()
 				},
 				GlobalTransform::from_xyz(4., 10., 1.),
 			))
@@ -264,6 +268,7 @@ mod tests {
 				Projectile {
 					target_ray: Ray::default(),
 					range: 1.,
+					..default()
 				},
 				GlobalTransform::from_xyz(0., 0., 0.),
 			))
@@ -303,6 +308,7 @@ mod tests {
 				Projectile {
 					target_ray: Ray::default(),
 					range: 1.,
+					..default()
 				},
 				GlobalTransform::from_xyz(0., 0., 0.),
 			))

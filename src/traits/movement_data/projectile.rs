@@ -18,14 +18,11 @@ impl MovementData for Projectile {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::math::Ray;
+	use bevy::utils::default;
 
 	#[test]
 	fn move_fast() {
-		let projectile = Projectile {
-			target_ray: Ray::default(),
-			range: 1.,
-		};
+		let projectile = Projectile { ..default() };
 
 		assert_eq!(
 			(

@@ -21,12 +21,14 @@ impl GetBehaviorMeta for Projectile {
 	}
 }
 
-fn run_fn(agent: &mut EntityCommands, _: &Transform, spawner: &Spawner, ray: &Ray) {
+fn run_fn(agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner, ray: &Ray) {
 	let transform = Transform::from_translation(spawner.0.translation());
+	let agent_forward = Some(agent_transform.forward());
 	agent.commands().spawn((
 		Projectile {
 			target_ray: *ray,
 			range: 10.,
+			agent_forward,
 		},
 		SpatialBundle::from_transform(transform),
 	));
@@ -35,7 +37,7 @@ fn run_fn(agent: &mut EntityCommands, _: &Transform, spawner: &Spawner, ray: &Ra
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::behavior::test_tools::run_lazy;
+	use crate::{test_tools::assert_eq_approx, traits::behavior::test_tools::run_lazy};
 	use bevy::{
 		app::{App, Update},
 		math::Vec3,
@@ -51,11 +53,14 @@ mod tests {
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let ray = Ray {
 			origin: Vec3::ONE,
-			direction: Vec3::NEG_INFINITY,
+			direction: Vec3::new(2., 2., 4.),
 		};
 		let agent = app.world.spawn(()).id();
 
-		app.add_systems(Update, run_lazy(lazy, agent, default(), spawner, ray));
+		app.add_systems(
+			Update,
+			run_lazy(lazy, agent, Transform::default(), spawner, ray),
+		);
 		app.update();
 
 		let projectile = app
@@ -64,6 +69,38 @@ mod tests {
 			.find_map(|e| e.get::<Projectile>());
 
 		assert_eq!(Some(ray), projectile.map(|p| p.target_ray));
+	}
+
+	#[test]
+	fn spawn_projectile_with_agent_forward() {
+		let mut app = App::new();
+		let lazy = Projectile::behavior();
+		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
+		let forward = Vec3::new(8., 9., 10.);
+		let agent = app.world.spawn(()).id();
+
+		app.add_systems(
+			Update,
+			run_lazy(
+				lazy,
+				agent,
+				Transform::default().looking_at(forward, Vec3::Y),
+				spawner,
+				Ray::default(),
+			),
+		);
+		app.update();
+
+		let projectile = app
+			.world
+			.iter_entities()
+			.find_map(|e| e.get::<Projectile>());
+
+		assert_eq_approx!(
+			Some(forward.normalize()),
+			projectile.and_then(|p| p.agent_forward),
+			0.0001
+		);
 	}
 
 	#[test]

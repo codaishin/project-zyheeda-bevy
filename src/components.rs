@@ -195,8 +195,9 @@ pub type Equipment = Collection<(SlotKey, Option<Item>)>;
 #[derive(Component)]
 pub struct Queue(pub VecDeque<Skill<Queued>>);
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct Projectile {
+	pub agent_forward: Option<Vec3>,
 	pub target_ray: Ray,
 	pub range: f32,
 }
