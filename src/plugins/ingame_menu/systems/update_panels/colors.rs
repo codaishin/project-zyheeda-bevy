@@ -1,16 +1,16 @@
 use crate::plugins::ingame_menu::{
 	tools::PanelState,
-	traits::{colors::GetPanelColors, get::Get},
+	traits::{colors::HasPanelColors, get::Get},
 };
 use bevy::{
 	ecs::{component::Component, system::Query},
 	ui::{BackgroundColor, Interaction},
 };
 
-pub fn panel_colors<TPanel: Component + Get<(), PanelState> + GetPanelColors>(
+pub fn panel_colors<TPanel: Component + Get<(), PanelState> + HasPanelColors>(
 	mut panels: Query<(&mut BackgroundColor, &Interaction, &TPanel)>,
 ) {
-	let colors = TPanel::get_panel_colors();
+	let colors = TPanel::PANEL_COLORS;
 	for (mut color, interaction, panel) in &mut panels {
 		*color = match (interaction, panel.get(())) {
 			(Interaction::Pressed, ..) => colors.pressed.into(),
@@ -49,26 +49,24 @@ mod tests {
 		}
 	}
 
-	impl GetPanelColors for _Empty {
-		fn get_panel_colors() -> PanelColors {
-			PanelColors {
-				pressed: Color::rgb(1., 0., 0.),
-				hovered: Color::rgb(0.5, 0., 0.),
-				empty: Color::rgb(0.25, 0., 0.),
-				filled: Color::rgb(0.125, 0., 0.),
-			}
-		}
+	impl HasPanelColors for _Empty {
+		const PANEL_COLORS: PanelColors = PanelColors {
+			pressed: Color::rgb(1., 0., 0.),
+			hovered: Color::rgb(0.5, 0., 0.),
+			empty: Color::rgb(0.25, 0., 0.),
+			filled: Color::rgb(0.125, 0., 0.),
+			text: Color::rgb(0.0625, 0., 0.),
+		};
 	}
 
-	impl GetPanelColors for _Filled {
-		fn get_panel_colors() -> PanelColors {
-			PanelColors {
-				pressed: Color::rgb(1., 0., 0.),
-				hovered: Color::rgb(0.5, 0., 0.),
-				empty: Color::rgb(0.25, 0., 0.),
-				filled: Color::rgb(0.125, 0., 0.),
-			}
-		}
+	impl HasPanelColors for _Filled {
+		const PANEL_COLORS: PanelColors = PanelColors {
+			pressed: Color::rgb(1., 0., 0.),
+			hovered: Color::rgb(0.5, 0., 0.),
+			empty: Color::rgb(0.25, 0., 0.),
+			filled: Color::rgb(0.125, 0., 0.),
+			text: Color::rgb(0.0625, 0., 0.),
+		};
 	}
 
 	#[test]
@@ -88,7 +86,7 @@ mod tests {
 
 		let color = app.world.entity(agent).get::<BackgroundColor>().unwrap().0;
 
-		assert_eq!(color, _Empty::get_panel_colors().pressed);
+		assert_eq!(color, _Empty::PANEL_COLORS.pressed);
 	}
 
 	#[test]
@@ -108,7 +106,7 @@ mod tests {
 
 		let color = app.world.entity(agent).get::<BackgroundColor>().unwrap().0;
 
-		assert_eq!(color, _Empty::get_panel_colors().hovered);
+		assert_eq!(color, _Empty::PANEL_COLORS.hovered);
 	}
 
 	#[test]
@@ -128,7 +126,7 @@ mod tests {
 
 		let color = app.world.entity(agent).get::<BackgroundColor>().unwrap().0;
 
-		assert_eq!(color, _Empty::get_panel_colors().empty);
+		assert_eq!(color, _Empty::PANEL_COLORS.empty);
 	}
 
 	#[test]
@@ -148,6 +146,6 @@ mod tests {
 
 		let color = app.world.entity(agent).get::<BackgroundColor>().unwrap().0;
 
-		assert_eq!(color, _Filled::get_panel_colors().filled);
+		assert_eq!(color, _Empty::PANEL_COLORS.filled);
 	}
 }

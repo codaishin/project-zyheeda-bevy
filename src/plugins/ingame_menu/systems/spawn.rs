@@ -1,61 +1,86 @@
-use crate::plugins::ingame_menu::traits::{colors::GetBaseColors, spawn_able::SpawnAble};
+use crate::plugins::ingame_menu::traits::{
+	children::Children,
+	colors::HasBackgroundColor,
+	spawn::Spawn,
+};
 use bevy::{
 	ecs::{component::Component, system::Commands},
 	hierarchy::BuildChildren,
+	render::color::Color,
+	ui::node_bundles::NodeBundle,
+	utils::default,
 };
 
-pub fn spawn<TComponent: SpawnAble + GetBaseColors + Component>(mut commands: Commands) {
-	let colors = TComponent::get_base_colors();
-
+pub fn spawn<TComponent: Spawn + Children + Component + HasBackgroundColor>(
+	mut commands: Commands,
+) {
+	let (style, component) = TComponent::spawn();
 	commands
-		.spawn(TComponent::bundle(colors))
-		.with_children(|parent| TComponent::children(colors, parent));
+		.spawn((
+			NodeBundle {
+				style,
+				background_color: TComponent::BACKGROUND_COLOR.unwrap_or(Color::NONE).into(),
+				..default()
+			},
+			component,
+		))
+		.with_children(|parent| TComponent::children(parent));
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::plugins::ingame_menu::traits::colors::BaseColors;
 	use bevy::{
 		app::{App, Update},
-		hierarchy::Parent,
+		hierarchy::{ChildBuilder, Parent},
 		prelude::default,
 		render::color::Color,
-		ui::{node_bundles::NodeBundle, Style, Val},
+		ui::{BackgroundColor, Style, Val},
 	};
 
 	#[derive(Component)]
-	struct _Component(BaseColors);
+	struct _Component;
 
 	#[derive(Component)]
-	struct _Child(BaseColors);
+	struct _Child;
 
-	impl SpawnAble for _Component {
-		fn bundle(colors: BaseColors) -> (bevy::prelude::NodeBundle, Self) {
+	impl Spawn for _Component {
+		fn spawn() -> (Style, Self) {
 			(
-				NodeBundle {
-					style: Style {
-						width: Val::Px(42.),
-						..default()
-					},
+				Style {
+					width: Val::Px(42.),
 					..default()
 				},
-				Self(colors),
+				Self,
 			)
-		}
-
-		fn children(colors: BaseColors, parent: &mut bevy::prelude::ChildBuilder) {
-			parent.spawn(_Child(colors));
 		}
 	}
 
-	impl GetBaseColors for _Component {
-		fn get_base_colors() -> BaseColors {
-			BaseColors {
-				background: Color::rgb(0.1, 0.2, 0.3),
-				text: Color::rgb(0.3, 0.2, 0.1),
-			}
+	impl Children for _Component {
+		fn children(parent: &mut ChildBuilder) {
+			parent.spawn(_Child);
 		}
+	}
+
+	impl HasBackgroundColor for _Component {
+		const BACKGROUND_COLOR: Option<Color> = Some(Color::rgb(0.1, 0.2, 0.3));
+	}
+
+	#[derive(Component)]
+	struct _ComponentWithoutBackgroundColor;
+
+	impl Spawn for _ComponentWithoutBackgroundColor {
+		fn spawn() -> (Style, Self) {
+			(Style::default(), Self)
+		}
+	}
+
+	impl Children for _ComponentWithoutBackgroundColor {
+		fn children(_parent: &mut ChildBuilder) {}
+	}
+
+	impl HasBackgroundColor for _ComponentWithoutBackgroundColor {
+		const BACKGROUND_COLOR: Option<Color> = None;
 	}
 
 	#[test]
@@ -71,28 +96,40 @@ mod tests {
 			.find(|e| e.contains::<_Component>());
 
 		assert_eq!(
-			Some(&Style {
-				width: Val::Px(42.),
-				..default()
-			}),
-			entity_with_component.and_then(|e| e.get::<Style>())
+			(
+				Some(&Style {
+					width: Val::Px(42.),
+					..default()
+				}),
+				Some(_Component::BACKGROUND_COLOR.unwrap())
+			),
+			(
+				entity_with_component.and_then(|entity| entity.get::<Style>()),
+				entity_with_component.and_then(|entity| entity
+					.get::<BackgroundColor>()
+					.map(|background_color| background_color.0))
+			)
 		)
 	}
 
 	#[test]
-	fn bundle_colors() {
+	fn spawn_bundle_without_background_color() {
 		let mut app = App::new();
 
-		app.add_systems(Update, spawn::<_Component>);
+		app.add_systems(Update, spawn::<_ComponentWithoutBackgroundColor>);
 		app.update();
 
-		let component = app
+		let entity_with_component = app
 			.world
 			.iter_entities()
-			.find_map(|e| e.get::<_Component>())
-			.unwrap();
+			.find(|e| e.contains::<_ComponentWithoutBackgroundColor>());
 
-		assert_eq!(_Component::get_base_colors(), component.0);
+		assert_eq!(
+			Some(Color::NONE),
+			entity_with_component.and_then(|entity| entity
+				.get::<BackgroundColor>()
+				.map(|background_color| background_color.0))
+		)
 	}
 
 	#[test]
@@ -115,21 +152,5 @@ mod tests {
 			.and_then(|e| e.get::<Parent>());
 
 		assert_eq!(Some(entity_with_component), child_parent.map(|p| p.get()))
-	}
-
-	#[test]
-	fn children_colors() {
-		let mut app = App::new();
-
-		app.add_systems(Update, spawn::<_Component>);
-		app.update();
-
-		let child = app
-			.world
-			.iter_entities()
-			.find_map(|e| e.get::<_Child>())
-			.unwrap();
-
-		assert_eq!(_Component::get_base_colors(), child.0);
 	}
 }

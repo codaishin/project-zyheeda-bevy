@@ -4,14 +4,18 @@ mod tools;
 mod traits;
 
 use self::{
-	components::{InventoryPanel, InventoryScreen},
+	components::{InventoryPanel, InventoryScreen, QuickbarPanel, UIOverlay},
 	systems::{
 		dad::{drag::drag, drop::drop},
 		despawn::despawn,
 		set_state::set_state,
 		spawn::spawn,
 		toggle_state::toggle_state,
-		update_panels::{colors::panel_colors, states::panel_states},
+		update_panels::{
+			colors::panel_colors,
+			container_states::panel_container_states,
+			quickbar::quickbar,
+		},
 	},
 	tools::MenuState,
 };
@@ -39,8 +43,8 @@ impl Plugin for IngameMenuPlugin {
 				Update,
 				(
 					panel_colors::<InventoryPanel>,
-					panel_states::<InventoryPanel, InventoryKey, Inventory>,
-					panel_states::<InventoryPanel, SlotKey, Slots>,
+					panel_container_states::<InventoryPanel, InventoryKey, Inventory>,
+					panel_container_states::<InventoryPanel, SlotKey, Slots>,
 					drag::<Player, InventoryKey>,
 					drag::<Player, SlotKey>,
 					drop::<Player, InventoryKey, InventoryKey, Swap<InventoryKey, InventoryKey>>,
@@ -49,6 +53,12 @@ impl Plugin for IngameMenuPlugin {
 					drop::<Player, InventoryKey, SlotKey, Swap<InventoryKey, SlotKey>>,
 				)
 					.run_if(in_state(MenuState::Inventory)),
+			)
+			.add_systems(OnEnter(MenuState::None), spawn::<UIOverlay>)
+			.add_systems(OnExit(MenuState::None), despawn::<UIOverlay>)
+			.add_systems(
+				Update,
+				(quickbar, panel_colors::<QuickbarPanel>).run_if(in_state(MenuState::None)),
 			);
 	}
 }

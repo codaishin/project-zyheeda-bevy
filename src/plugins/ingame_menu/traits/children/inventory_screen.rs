@@ -1,10 +1,10 @@
-use super::SpawnAble;
+use super::Children;
 use crate::{
 	components::{InventoryKey, KeyedPanel, Side, SlotKey},
 	plugins::ingame_menu::{
 		components::{InventoryPanel, InventoryScreen},
 		tools::PanelState,
-		traits::colors::BaseColors,
+		traits::colors::HasPanelColors,
 	},
 };
 use bevy::{
@@ -28,25 +28,8 @@ const EQUIPMENT_SLOTS: [(SlotKey, &str); 2] = [
 	(SlotKey::Hand(Side::Main), "Main Hand"),
 ];
 
-impl SpawnAble for InventoryScreen {
-	fn bundle(colors: BaseColors) -> (bevy::prelude::NodeBundle, Self) {
-		(
-			NodeBundle {
-				style: Style {
-					width: Val::Vw(100.0),
-					height: Val::Vh(100.0),
-					align_items: AlignItems::Center,
-					justify_content: JustifyContent::Center,
-					..default()
-				},
-				background_color: colors.background.into(),
-				..default()
-			},
-			InventoryScreen,
-		)
-	}
-
-	fn children(colors: BaseColors, parent: &mut ChildBuilder) {
+impl Children for InventoryScreen {
+	fn children(parent: &mut ChildBuilder) {
 		parent
 			.spawn(NodeBundle {
 				style: Style {
@@ -56,12 +39,12 @@ impl SpawnAble for InventoryScreen {
 				},
 				..default()
 			})
-			.with_children(add_equipment(colors))
-			.with_children(add_inventory(colors));
+			.with_children(add_equipment())
+			.with_children(add_inventory());
 	}
 }
 
-fn add_inventory(colors: BaseColors) -> impl Fn(&mut ChildBuilder) {
+fn add_inventory() -> impl Fn(&mut ChildBuilder) {
 	move |parent| {
 		parent
 			.spawn(NodeBundle {
@@ -74,8 +57,8 @@ fn add_inventory(colors: BaseColors) -> impl Fn(&mut ChildBuilder) {
 				..default()
 			})
 			.with_children(|parent| {
-				add_title(parent, "Inventory", colors);
-				add(parent, None, 5, 5, 0, colors, InventoryKey);
+				add_title(parent, "Inventory");
+				add(parent, None, 5, 5, 0, InventoryKey);
 			});
 	}
 }
@@ -85,7 +68,7 @@ fn slot_key_from_index(index: usize) -> SlotKey {
 	key
 }
 
-fn add_equipment(colors: BaseColors) -> impl Fn(&mut ChildBuilder) {
+fn add_equipment() -> impl Fn(&mut ChildBuilder) {
 	move |parent| {
 		parent
 			.spawn(NodeBundle {
@@ -98,15 +81,15 @@ fn add_equipment(colors: BaseColors) -> impl Fn(&mut ChildBuilder) {
 				..default()
 			})
 			.with_children(|parent| {
-				add_title(parent, "Equipment", colors);
+				add_title(parent, "Equipment");
 				for (index, (_, name)) in EQUIPMENT_SLOTS.iter().enumerate() {
-					add(parent, Some(name), 1, 1, index, colors, slot_key_from_index);
+					add(parent, Some(name), 1, 1, index, slot_key_from_index);
 				}
 			});
 	}
 }
 
-fn add_title(parent: &mut ChildBuilder, title: &str, colors: BaseColors) {
+fn add_title(parent: &mut ChildBuilder, title: &str) {
 	parent
 		.spawn(NodeBundle {
 			style: Style {
@@ -121,7 +104,7 @@ fn add_title(parent: &mut ChildBuilder, title: &str, colors: BaseColors) {
 				title,
 				TextStyle {
 					font_size: 40.0,
-					color: colors.text,
+					color: InventoryPanel::PANEL_COLORS.text,
 					..default()
 				},
 			));
@@ -134,7 +117,6 @@ fn add<TKey: Sync + Send + 'static>(
 	x: u32,
 	y: u32,
 	start_index: usize,
-	colors: BaseColors,
 	parse_key: fn(usize) -> TKey,
 ) {
 	let mut index = start_index;
@@ -154,7 +136,7 @@ fn add<TKey: Sync + Send + 'static>(
 						label,
 						TextStyle {
 							font_size: 20.0,
-							color: colors.text,
+							color: InventoryPanel::PANEL_COLORS.text,
 							..default()
 						},
 					));
@@ -172,7 +154,7 @@ fn add<TKey: Sync + Send + 'static>(
 								"<Empty>",
 								TextStyle {
 									font_size: 15.0,
-									color: colors.text,
+									color: InventoryPanel::PANEL_COLORS.text,
 									..default()
 								},
 							));

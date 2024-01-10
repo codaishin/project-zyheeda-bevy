@@ -12,7 +12,7 @@ use bevy::{
 	text::Text,
 };
 
-pub fn panel_states<
+pub fn panel_container_states<
 	TPanel: Component + Set<(), PanelState>,
 	TKey: Copy + Send + Sync + 'static,
 	TContainer: Component + Get<TKey, Option<Item>>,
@@ -99,7 +99,7 @@ mod tests {
 	#[test]
 	fn set_empty() {
 		let mut app = App::new();
-		app.add_systems(Update, panel_states::<_Panel, usize, _Container>);
+		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 
 		let mut container = _Container::new();
 		container.mock.expect_get().return_const(None);
@@ -129,7 +129,7 @@ mod tests {
 	#[test]
 	fn set_filled() {
 		let mut app = App::new();
-		app.add_systems(Update, panel_states::<_Panel, usize, _Container>);
+		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 
 		let mut container = _Container::new();
 		container.mock.expect_get().return_const(Item {
@@ -162,7 +162,7 @@ mod tests {
 	#[test]
 	fn still_set_state_when_no_children() {
 		let mut app = App::new();
-		app.add_systems(Update, panel_states::<_Panel, usize, _Container>);
+		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 
 		let mut container = _Container::new();
 		container.mock.expect_get().return_const(None);
@@ -179,7 +179,7 @@ mod tests {
 	#[test]
 	fn set_when_text_not_first_child() {
 		let mut app = App::new();
-		app.add_systems(Update, panel_states::<_Panel, usize, _Container>);
+		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 
 		let mut container = _Container::new();
 		container.mock.expect_get().return_const(Item {
@@ -213,7 +213,7 @@ mod tests {
 	#[test]
 	fn add_section_when_text_has_no_sections() {
 		let mut app = App::new();
-		app.add_systems(Update, panel_states::<_Panel, usize, _Container>);
+		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 
 		let mut container = _Container::new();
 		container.mock.expect_get().return_const(Item {
