@@ -47,6 +47,9 @@ impl Models {
 }
 
 #[derive(Resource)]
+pub struct SkillIcons(pub HashMap<&'static str, Handle<Image>>);
+
+#[derive(Resource)]
 pub struct SlotMap<TButton>(pub HashMap<TButton, SlotKey>)
 where
 	TButton: Eq + Hash;

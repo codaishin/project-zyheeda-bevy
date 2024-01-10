@@ -34,7 +34,7 @@ use project_zyheeda::{
 		Sword,
 	},
 	plugins::ingame_menu::IngameMenuPlugin,
-	resources::{skill_templates::SkillTemplates, Animation, Models, SlotMap},
+	resources::{skill_templates::SkillTemplates, Animation, Models, SkillIcons, SlotMap},
 	skill::{Active, Cast, Skill, SkillComboNext, SkillComboTree},
 	states::GameRunning,
 	systems::{
@@ -291,7 +291,10 @@ fn setup_simple_3d_scene(
 	next_state.set(GameRunning::On);
 }
 
-fn setup_skill_templates(mut commands: Commands) -> Vec<Result<(), Error>> {
+fn setup_skill_templates(
+	mut commands: Commands,
+	assert_server: Res<AssetServer>,
+) -> Vec<Result<(), Error>> {
 	let (templates, errors) = SkillTemplates::new(&[
 		Skill {
 			name: "Swing Sword",
@@ -346,8 +349,17 @@ fn setup_skill_templates(mut commands: Commands) -> Vec<Result<(), Error>> {
 			..default()
 		},
 	]);
+	let skill_icons = SkillIcons(HashMap::from([
+		("Swing Sword", assert_server.load("icons/sword_down.png")),
+		("Shoot Hand Gun", assert_server.load("icons/pistol.png")),
+		(
+			"Shoot Hand Gun Dual",
+			assert_server.load("icons/pistol_dual.png"),
+		),
+	]));
 
 	commands.insert_resource(templates);
+	commands.insert_resource(skill_icons);
 
 	errors
 		.iter()
