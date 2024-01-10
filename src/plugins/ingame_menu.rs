@@ -11,7 +11,11 @@ use self::{
 		set_state::set_state,
 		spawn::spawn,
 		toggle_state::toggle_state,
-		update_panels::{colors::panel_colors, container_states::panel_container_states},
+		update_panels::{
+			colors::panel_colors,
+			container_states::panel_container_states,
+			quickbar::quickbar,
+		},
 	},
 	tools::MenuState,
 };
@@ -54,7 +58,7 @@ impl Plugin for IngameMenuPlugin {
 			.add_systems(OnExit(MenuState::None), despawn::<UIOverlay>)
 			.add_systems(
 				Update,
-				panel_colors::<QuickbarPanel>.run_if(in_state(MenuState::None)),
+				(quickbar, panel_colors::<QuickbarPanel>).run_if(in_state(MenuState::None)),
 			);
 	}
 }
