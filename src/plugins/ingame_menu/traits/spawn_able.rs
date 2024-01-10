@@ -1,9 +1,8 @@
 pub mod inventory_screen;
 
-use super::colors::BaseColors;
-use bevy::{hierarchy::ChildBuilder, ui::node_bundles::NodeBundle};
+use bevy::{hierarchy::ChildBuilder, ui::Style};
 
 pub trait SpawnAble {
-	fn bundle(colors: BaseColors) -> (NodeBundle, Self);
-	fn children(colors: BaseColors, parent: &mut ChildBuilder);
+	fn spawn() -> (Style, Self);
+	fn children(parent: &mut ChildBuilder);
 }

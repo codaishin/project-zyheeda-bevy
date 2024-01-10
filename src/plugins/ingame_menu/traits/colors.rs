@@ -2,23 +2,18 @@ pub mod inventory_colors;
 
 use bevy::render::color::Color;
 
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub struct BaseColors {
-	pub background: Color,
-	pub text: Color,
-}
-
 pub struct PanelColors {
 	pub pressed: Color,
 	pub hovered: Color,
 	pub empty: Color,
 	pub filled: Color,
+	pub text: Color,
 }
 
-pub trait GetBaseColors {
-	fn get_base_colors() -> BaseColors;
+pub trait HasBackgroundColor {
+	const BACKGROUND_COLOR: Option<Color>;
 }
 
-pub trait GetPanelColors {
-	fn get_panel_colors() -> PanelColors;
+pub trait HasPanelColors {
+	const PANEL_COLORS: PanelColors;
 }
