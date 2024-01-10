@@ -7,5 +7,11 @@ impl HasBackgroundColor for UIOverlay {
 }
 
 impl HasPanelColors for QuickbarPanel {
-	const PANEL_COLORS: PanelColors = DEFAULT_PANEL_COLORS;
+	const PANEL_COLORS: PanelColors = PanelColors {
+		pressed: DEFAULT_PANEL_COLORS.filled,
+		hovered: DEFAULT_PANEL_COLORS.filled,
+		empty: DEFAULT_PANEL_COLORS.empty,
+		filled: DEFAULT_PANEL_COLORS.filled,
+		text: DEFAULT_PANEL_COLORS.text,
+	};
 }

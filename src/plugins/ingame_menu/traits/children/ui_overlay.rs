@@ -4,11 +4,11 @@ use crate::{
 	plugins::ingame_menu::{
 		components::{Quickbar, QuickbarPanel, UIOverlay},
 		tools::PanelState,
+		traits::colors::HasPanelColors,
 	},
 };
 use bevy::{
 	hierarchy::{BuildChildren, ChildBuilder},
-	render::color::Color,
 	ui::{
 		node_bundles::{ButtonBundle, NodeBundle},
 		AlignItems,
@@ -32,34 +32,54 @@ impl Children for UIOverlay {
 						border: UiRect::all(Val::Px(20.)),
 						..default()
 					},
-					background_color: Color::GREEN.into(),
 					..default()
 				},
 			))
 			.with_children(|quickbar| {
-				quickbar.spawn((
-					QuickbarPanel {
-						key: SlotKey::Hand(Side::Main),
-						state: PanelState::Empty,
-					},
-					get_panel_button(),
-				));
-				quickbar.spawn((
-					QuickbarPanel {
-						key: SlotKey::Hand(Side::Off),
-						state: PanelState::Empty,
-					},
-					get_panel_button(),
-				));
+				quickbar
+					.spawn(get_background())
+					.with_children(|background| {
+						background.spawn(get_quickbar_bundle(SlotKey::Hand(Side::Main)));
+					});
+				quickbar
+					.spawn(get_background())
+					.with_children(|background| {
+						background.spawn(get_quickbar_bundle(SlotKey::Hand(Side::Off)));
+					});
 			});
+	}
+}
+
+fn get_quickbar_bundle(key: SlotKey) -> (QuickbarPanel, ButtonBundle) {
+	(
+		QuickbarPanel {
+			key,
+			state: PanelState::Empty,
+		},
+		get_panel_button(),
+	)
+}
+
+fn get_background() -> NodeBundle {
+	let slot_style = Style {
+		width: Val::Px(65.0),
+		height: Val::Px(65.0),
+		margin: UiRect::all(Val::Px(2.0)),
+		justify_content: JustifyContent::Center,
+		align_items: AlignItems::Center,
+		..default()
+	};
+	NodeBundle {
+		style: slot_style.clone(),
+		background_color: QuickbarPanel::PANEL_COLORS.empty.into(),
+		..default()
 	}
 }
 
 fn get_panel_button() -> ButtonBundle {
 	let slot_style = Style {
-		width: Val::Px(65.0),
-		height: Val::Px(65.0),
-		margin: UiRect::all(Val::Px(2.0)),
+		width: Val::Percent(100.),
+		height: Val::Percent(100.),
 		justify_content: JustifyContent::Center,
 		align_items: AlignItems::Center,
 		..default()
