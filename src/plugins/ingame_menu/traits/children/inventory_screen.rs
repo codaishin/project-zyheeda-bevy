@@ -1,4 +1,4 @@
-use super::SpawnAble;
+use super::Children;
 use crate::{
 	components::{InventoryKey, KeyedPanel, Side, SlotKey},
 	plugins::ingame_menu::{
@@ -28,20 +28,7 @@ const EQUIPMENT_SLOTS: [(SlotKey, &str); 2] = [
 	(SlotKey::Hand(Side::Main), "Main Hand"),
 ];
 
-impl SpawnAble for InventoryScreen {
-	fn spawn() -> (Style, Self) {
-		(
-			Style {
-				width: Val::Vw(100.0),
-				height: Val::Vh(100.0),
-				align_items: AlignItems::Center,
-				justify_content: JustifyContent::Center,
-				..default()
-			},
-			InventoryScreen,
-		)
-	}
-
+impl Children for InventoryScreen {
 	fn children(parent: &mut ChildBuilder) {
 		parent
 			.spawn(NodeBundle {

@@ -1,4 +1,8 @@
-use crate::plugins::ingame_menu::traits::{colors::HasBackgroundColor, spawn_able::SpawnAble};
+use crate::plugins::ingame_menu::traits::{
+	children::Children,
+	colors::HasBackgroundColor,
+	spawn::Spawn,
+};
 use bevy::{
 	ecs::{component::Component, system::Commands},
 	hierarchy::BuildChildren,
@@ -7,7 +11,9 @@ use bevy::{
 	utils::default,
 };
 
-pub fn spawn<TComponent: SpawnAble + Component + HasBackgroundColor>(mut commands: Commands) {
+pub fn spawn<TComponent: Spawn + Children + Component + HasBackgroundColor>(
+	mut commands: Commands,
+) {
 	let (style, component) = TComponent::spawn();
 	commands
 		.spawn((
@@ -38,7 +44,7 @@ mod tests {
 	#[derive(Component)]
 	struct _Child;
 
-	impl SpawnAble for _Component {
+	impl Spawn for _Component {
 		fn spawn() -> (Style, Self) {
 			(
 				Style {
@@ -48,7 +54,9 @@ mod tests {
 				Self,
 			)
 		}
+	}
 
+	impl Children for _Component {
 		fn children(parent: &mut ChildBuilder) {
 			parent.spawn(_Child);
 		}
@@ -61,11 +69,13 @@ mod tests {
 	#[derive(Component)]
 	struct _ComponentWithoutBackgroundColor;
 
-	impl SpawnAble for _ComponentWithoutBackgroundColor {
+	impl Spawn for _ComponentWithoutBackgroundColor {
 		fn spawn() -> (Style, Self) {
 			(Style::default(), Self)
 		}
+	}
 
+	impl Children for _ComponentWithoutBackgroundColor {
 		fn children(_parent: &mut ChildBuilder) {}
 	}
 

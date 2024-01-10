@@ -1,25 +1,13 @@
-use super::SpawnAble;
+use super::Children;
 use crate::plugins::ingame_menu::components::{Quickbar, UIOverlay};
 use bevy::{
 	hierarchy::ChildBuilder,
 	render::color::Color,
-	ui::{node_bundles::NodeBundle, FlexDirection, Style, UiRect, Val},
+	ui::{node_bundles::NodeBundle, Style, UiRect, Val},
 	utils::default,
 };
 
-impl SpawnAble for UIOverlay {
-	fn spawn() -> (Style, Self) {
-		(
-			Style {
-				width: Val::Percent(100.0),
-				height: Val::Percent(100.0),
-				flex_direction: FlexDirection::ColumnReverse,
-				..default()
-			},
-			Self,
-		)
-	}
-
+impl Children for UIOverlay {
 	fn children(parent: &mut ChildBuilder) {
 		parent.spawn((
 			Quickbar,
