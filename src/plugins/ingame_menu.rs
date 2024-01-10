@@ -11,7 +11,7 @@ use self::{
 		set_state::set_state,
 		spawn::spawn,
 		toggle_state::toggle_state,
-		update_panels::{colors::panel_colors, states::panel_states},
+		update_panels::{colors::panel_colors, container_states::panel_container_states},
 	},
 	tools::MenuState,
 };
@@ -39,8 +39,8 @@ impl Plugin for IngameMenuPlugin {
 				Update,
 				(
 					panel_colors::<InventoryPanel>,
-					panel_states::<InventoryPanel, InventoryKey, Inventory>,
-					panel_states::<InventoryPanel, SlotKey, Slots>,
+					panel_container_states::<InventoryPanel, InventoryKey, Inventory>,
+					panel_container_states::<InventoryPanel, SlotKey, Slots>,
 					drag::<Player, InventoryKey>,
 					drag::<Player, SlotKey>,
 					drop::<Player, InventoryKey, InventoryKey, Swap<InventoryKey, InventoryKey>>,
