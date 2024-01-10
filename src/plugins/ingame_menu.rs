@@ -4,7 +4,7 @@ mod tools;
 mod traits;
 
 use self::{
-	components::{InventoryPanel, InventoryScreen},
+	components::{InventoryPanel, InventoryScreen, QuickbarPanel, UIOverlay},
 	systems::{
 		dad::{drag::drag, drop::drop},
 		despawn::despawn,
@@ -49,6 +49,12 @@ impl Plugin for IngameMenuPlugin {
 					drop::<Player, InventoryKey, SlotKey, Swap<InventoryKey, SlotKey>>,
 				)
 					.run_if(in_state(MenuState::Inventory)),
+			)
+			.add_systems(OnEnter(MenuState::None), spawn::<UIOverlay>)
+			.add_systems(OnExit(MenuState::None), despawn::<UIOverlay>)
+			.add_systems(
+				Update,
+				panel_colors::<QuickbarPanel>.run_if(in_state(MenuState::None)),
 			);
 	}
 }

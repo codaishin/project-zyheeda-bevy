@@ -6,3 +6,12 @@ pub struct InventoryPanel(pub PanelState);
 
 #[derive(Component)]
 pub struct InventoryScreen;
+
+#[derive(Component)]
+pub struct QuickbarPanel;
+
+#[derive(Component)]
+pub struct Quickbar;
+
+#[derive(Component)]
+pub struct UIOverlay;
