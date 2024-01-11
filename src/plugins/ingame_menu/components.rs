@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::{components::SlotKey, plugins::ingame_menu::tools::PanelState};
 use bevy::ecs::component::Component;
 
@@ -6,6 +8,21 @@ pub struct InventoryPanel(pub PanelState);
 
 #[derive(Component)]
 pub struct InventoryScreen;
+
+#[derive(Component)]
+pub struct Label<T, TKey> {
+	pub key: TKey,
+	phantom_data: PhantomData<T>,
+}
+
+impl<T, TKey> Label<T, TKey> {
+	pub fn new(key: TKey) -> Self {
+		Self {
+			key,
+			phantom_data: PhantomData,
+		}
+	}
+}
 
 #[derive(Component)]
 pub struct QuickbarPanel {
