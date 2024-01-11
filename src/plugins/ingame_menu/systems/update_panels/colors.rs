@@ -1,14 +1,15 @@
 use crate::plugins::ingame_menu::{
+	components::ColorOverride,
 	tools::PanelState,
 	traits::{colors::HasPanelColors, get::Get},
 };
 use bevy::{
-	ecs::{component::Component, system::Query},
+	ecs::{component::Component, query::Without, system::Query},
 	ui::{BackgroundColor, Interaction},
 };
 
 pub fn panel_colors<TPanel: Component + Get<(), PanelState> + HasPanelColors>(
-	mut panels: Query<(&mut BackgroundColor, &Interaction, &TPanel)>,
+	mut panels: Query<(&mut BackgroundColor, &Interaction, &TPanel), Without<ColorOverride>>,
 ) {
 	let colors = TPanel::PANEL_COLORS;
 	for (mut color, interaction, panel) in &mut panels {
@@ -24,7 +25,7 @@ pub fn panel_colors<TPanel: Component + Get<(), PanelState> + HasPanelColors>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::plugins::ingame_menu::traits::colors::PanelColors;
+	use crate::plugins::ingame_menu::{components::ColorOverride, traits::colors::PanelColors};
 	use bevy::{
 		app::{App, Update},
 		render::color::Color,
@@ -147,5 +148,26 @@ mod tests {
 		let color = app.world.entity(agent).get::<BackgroundColor>().unwrap().0;
 
 		assert_eq!(color, _Empty::PANEL_COLORS.filled);
+	}
+
+	#[test]
+	fn ignore_when_color_override_set() {
+		let mut app = App::new();
+		let agent = app
+			.world
+			.spawn((
+				_Empty,
+				Interaction::Pressed,
+				BackgroundColor(Color::rgb(0.1, 0.2, 0.3)),
+				ColorOverride,
+			))
+			.id();
+
+		app.add_systems(Update, panel_colors::<_Empty>);
+		app.update();
+
+		let color = app.world.entity(agent).get::<BackgroundColor>().unwrap().0;
+
+		assert_eq!(color, Color::rgb(0.1, 0.2, 0.3));
 	}
 }

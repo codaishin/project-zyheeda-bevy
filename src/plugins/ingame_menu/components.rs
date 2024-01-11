@@ -31,7 +31,13 @@ pub struct QuickbarPanel {
 }
 
 #[derive(Component)]
+pub struct QuickbarPanelBackground(pub SlotKey);
+
+#[derive(Component)]
 pub struct Quickbar;
 
 #[derive(Component)]
 pub struct UIOverlay;
+
+#[derive(Component)]
+pub struct ColorOverride;

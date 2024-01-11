@@ -26,3 +26,7 @@ pub const DEFAULT_PANEL_COLORS: PanelColors = PanelColors {
 pub trait HasPanelColors {
 	const PANEL_COLORS: PanelColors;
 }
+
+pub trait HasActiveColor {
+	const ACTIVE_COLOR: Color;
+}

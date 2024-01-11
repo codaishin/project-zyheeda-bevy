@@ -13,6 +13,7 @@ use self::{
 		spawn::spawn,
 		toggle_state::toggle_state,
 		update_panels::{
+			activity_colors_override::panel_activity_colors_override,
 			colors::panel_colors,
 			container_states::panel_container_states,
 			quickbar::quickbar,
@@ -62,8 +63,9 @@ impl Plugin for IngameMenuPlugin {
 				Update,
 				(
 					quickbar,
-					panel_colors::<QuickbarPanel>,
 					update_label_text::<QuickbarPanel>,
+					panel_colors::<QuickbarPanel>,
+					panel_activity_colors_override::<QuickbarPanel>,
 				)
 					.run_if(in_state(MenuState::None)),
 			)
