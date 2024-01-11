@@ -7,22 +7,22 @@ use bevy::prelude::{Commands, Component, Entity, Input, KeyCode, Query, Res, Wit
 use std::hash::Hash;
 
 pub fn schedule_slots<TKey: Copy + Eq + Hash + Send + Sync, TAgent: Component>(
-	trigger_keys: Res<Input<TKey>>,
-	chain_keys: Res<Input<KeyCode>>,
-	slot_map: Res<SlotMap<TKey>>,
+	mouse: Res<Input<TKey>>,
+	keys: Res<Input<KeyCode>>,
+	mouse_button_map: Res<SlotMap<TKey>>,
 	agents: Query<(Entity, &Slots), With<TAgent>>,
 	mut commands: Commands,
 ) {
-	let triggered_slot_keys = trigger_keys
+	let triggered_slot_keys = mouse
 		.get_just_pressed()
-		.filter_map(|trigger_key| slot_map.0.get(trigger_key))
+		.filter_map(|mouse_button| mouse_button_map.slots.get(mouse_button))
 		.collect::<Vec<&SlotKey>>();
 
 	if triggered_slot_keys.is_empty() {
 		return;
 	}
 
-	let mode = match chain_keys.pressed(KeyCode::ShiftLeft) {
+	let mode = match keys.pressed(KeyCode::ShiftLeft) {
 		true => ScheduleMode::Enqueue,
 		false => ScheduleMode::Override,
 	};
@@ -101,7 +101,7 @@ mod tests {
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
-			.0
+			.slots
 			.insert(MouseButton::Right, SlotKey::Legs);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
@@ -155,7 +155,7 @@ mod tests {
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
-			.0
+			.slots
 			.insert(MouseButton::Right, SlotKey::Legs);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
@@ -200,7 +200,7 @@ mod tests {
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
-			.0
+			.slots
 			.insert(MouseButton::Right, SlotKey::Legs);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
@@ -232,7 +232,7 @@ mod tests {
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
-			.0
+			.slots
 			.insert(MouseButton::Right, SlotKey::Hand(Side::Off));
 		app.world
 			.resource_mut::<Input<MouseButton>>()
@@ -270,7 +270,7 @@ mod tests {
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
-			.0
+			.slots
 			.insert(MouseButton::Left, SlotKey::Hand(Side::Main));
 		app.world
 			.resource_mut::<Input<MouseButton>>()
@@ -327,7 +327,7 @@ mod tests {
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
-			.0
+			.slots
 			.insert(MouseButton::Left, SlotKey::Hand(Side::Main));
 		app.world
 			.resource_mut::<Input<MouseButton>>()
@@ -363,7 +363,7 @@ mod tests {
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
-			.0
+			.slots
 			.insert(MouseButton::Right, SlotKey::Legs);
 		app.world
 			.resource_mut::<Input<MouseButton>>()

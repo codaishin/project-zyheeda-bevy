@@ -264,16 +264,15 @@ fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn setup_input(mut commands: Commands) {
-	commands.insert_resource(SlotMap::<MouseButton>(
-		[(MouseButton::Left, SlotKey::Legs)].into(),
-	));
-	commands.insert_resource(SlotMap::<KeyCode>(
-		[
-			(KeyCode::E, SlotKey::Hand(Side::Main)),
-			(KeyCode::Q, SlotKey::Hand(Side::Off)),
-		]
-		.into(),
-	));
+	commands.insert_resource(SlotMap::<MouseButton>::new([(
+		MouseButton::Left,
+		SlotKey::Legs,
+		"Mouse Left",
+	)]));
+	commands.insert_resource(SlotMap::<KeyCode>::new([
+		(KeyCode::E, SlotKey::Hand(Side::Main), "E"),
+		(KeyCode::Q, SlotKey::Hand(Side::Off), "Q"),
+	]));
 }
 
 fn setup_simple_3d_scene(

@@ -49,16 +49,66 @@ impl Models {
 #[derive(Resource)]
 pub struct SkillIcons(pub HashMap<&'static str, Handle<Image>>);
 
-#[derive(Resource)]
-pub struct SlotMap<TButton>(pub HashMap<TButton, SlotKey>)
-where
-	TButton: Eq + Hash;
+type UIInputDisplay = &'static str;
 
-impl<TButton> SlotMap<TButton>
+#[derive(Resource)]
+pub struct SlotMap<TButton>
 where
 	TButton: Eq + Hash,
 {
-	pub fn new<const N: usize>(pairs: [(TButton, SlotKey); N]) -> Self {
-		Self(pairs.into())
+	pub slots: HashMap<TButton, SlotKey>,
+	pub ui_input_display: HashMap<SlotKey, UIInputDisplay>,
+}
+
+impl<TButton> SlotMap<TButton>
+where
+	TButton: Copy + Eq + Hash,
+{
+	pub fn new<const N: usize>(init: [(TButton, SlotKey, UIInputDisplay); N]) -> Self {
+		let mut map = Self {
+			slots: [].into(),
+			ui_input_display: [].into(),
+		};
+
+		for (button, slot_key, ui_input_display) in &init {
+			map.slots.insert(*button, *slot_key);
+			map.ui_input_display.insert(*slot_key, ui_input_display);
+		}
+
+		map
+	}
+}
+
+#[cfg(test)]
+mod test_slot_map {
+	use super::*;
+
+	#[test]
+	fn init_slots() {
+		let map = SlotMap::new([
+			(KeyCode::A, SlotKey::Legs, ""),
+			(KeyCode::B, SlotKey::SkillSpawn, ""),
+		]);
+
+		assert_eq!(
+			HashMap::from([
+				(KeyCode::A, SlotKey::Legs),
+				(KeyCode::B, SlotKey::SkillSpawn)
+			]),
+			map.slots
+		)
+	}
+
+	#[test]
+	fn init_ui_input_display() {
+		let map = SlotMap::new([
+			(KeyCode::A, SlotKey::Legs, "A"),
+			(KeyCode::B, SlotKey::SkillSpawn, "B"),
+		]);
+
+		assert_eq!(
+			HashMap::from([(SlotKey::Legs, "A"), (SlotKey::SkillSpawn, "B")]),
+			map.ui_input_display
+		)
 	}
 }
