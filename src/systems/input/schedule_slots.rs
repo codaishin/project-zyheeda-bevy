@@ -7,22 +7,22 @@ use bevy::prelude::{Commands, Component, Entity, Input, KeyCode, Query, Res, Wit
 use std::hash::Hash;
 
 pub fn schedule_slots<TKey: Copy + Eq + Hash + Send + Sync, TAgent: Component>(
-	mouse: Res<Input<TKey>>,
-	keys: Res<Input<KeyCode>>,
-	mouse_button_map: Res<SlotMap<TKey>>,
+	trigger_keys: Res<Input<TKey>>,
+	chain_keys: Res<Input<KeyCode>>,
+	slot_map: Res<SlotMap<TKey>>,
 	agents: Query<(Entity, &Slots), With<TAgent>>,
 	mut commands: Commands,
 ) {
-	let triggered_slot_keys = mouse
+	let triggered_slot_keys = trigger_keys
 		.get_just_pressed()
-		.filter_map(|mouse_button| mouse_button_map.0.get(mouse_button))
+		.filter_map(|trigger_key| slot_map.0.get(trigger_key))
 		.collect::<Vec<&SlotKey>>();
 
 	if triggered_slot_keys.is_empty() {
 		return;
 	}
 
-	let mode = match keys.pressed(KeyCode::ShiftLeft) {
+	let mode = match chain_keys.pressed(KeyCode::ShiftLeft) {
 		true => ScheduleMode::Enqueue,
 		false => ScheduleMode::Override,
 	};
