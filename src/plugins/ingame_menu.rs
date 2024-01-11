@@ -8,6 +8,7 @@ use self::{
 	systems::{
 		dad::{drag::drag, drop::drop},
 		despawn::despawn,
+		set_mouse_context::set_mouse_context,
 		set_state::set_state,
 		spawn::spawn,
 		toggle_state::toggle_state,
@@ -65,6 +66,7 @@ impl Plugin for IngameMenuPlugin {
 					update_label_text::<QuickbarPanel>,
 				)
 					.run_if(in_state(MenuState::None)),
-			);
+			)
+			.add_systems(Update, set_mouse_context);
 	}
 }
