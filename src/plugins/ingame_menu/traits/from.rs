@@ -1,2 +1,2 @@
-pub mod inventory_panel;
-pub mod swap;
+pub mod panel_state;
+pub mod tuples;

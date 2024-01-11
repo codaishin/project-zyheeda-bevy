@@ -8,13 +8,16 @@ use self::{
 	systems::{
 		dad::{drag::drag, drop::drop},
 		despawn::despawn,
+		set_mouse_context::set_mouse_context,
 		set_state::set_state,
 		spawn::spawn,
 		toggle_state::toggle_state,
 		update_panels::{
+			activity_colors_override::panel_activity_colors_override,
 			colors::panel_colors,
 			container_states::panel_container_states,
 			quickbar::quickbar,
+			update_label_text::update_label_text,
 		},
 	},
 	tools::MenuState,
@@ -58,7 +61,14 @@ impl Plugin for IngameMenuPlugin {
 			.add_systems(OnExit(MenuState::None), despawn::<UIOverlay>)
 			.add_systems(
 				Update,
-				(quickbar, panel_colors::<QuickbarPanel>).run_if(in_state(MenuState::None)),
-			);
+				(
+					quickbar,
+					update_label_text::<QuickbarPanel>,
+					panel_colors::<QuickbarPanel>,
+					panel_activity_colors_override::<QuickbarPanel>,
+				)
+					.run_if(in_state(MenuState::None)),
+			)
+			.add_systems(Update, set_mouse_context);
 	}
 }

@@ -11,3 +11,10 @@ pub enum GameRunning {
 pub struct On;
 
 pub struct Off;
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Default, States)]
+pub enum MouseContext {
+	#[default]
+	Default,
+	UI,
+}

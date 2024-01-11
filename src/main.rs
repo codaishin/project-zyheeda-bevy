@@ -36,7 +36,7 @@ use project_zyheeda::{
 	plugins::ingame_menu::IngameMenuPlugin,
 	resources::{skill_templates::SkillTemplates, Animation, Models, SkillIcons, SlotMap},
 	skill::{Active, Cast, Skill, SkillComboNext, SkillComboTree},
-	states::GameRunning,
+	states::{GameRunning, MouseContext},
 	systems::{
 		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
 		input::schedule_slots::schedule_slots,
@@ -88,6 +88,7 @@ fn prepare_game(app: &mut App) {
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(IngameMenuPlugin)
 		.add_state::<GameRunning>()
+		.add_state::<MouseContext>()
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
 		.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
@@ -96,12 +97,20 @@ fn prepare_game(app: &mut App) {
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(
 			PreUpdate,
+			schedule_slots::<MouseButton, Player>
+				.run_if(in_state(MouseContext::Default))
+				.run_if(in_state(GameRunning::On)),
+		)
+		.add_systems(
+			PreUpdate,
+			schedule_slots::<KeyCode, Player>.run_if(in_state(GameRunning::On)),
+		)
+		.add_systems(
+			PreUpdate,
 			(
 				link_animators_with_new_animation_players,
 				add_item_slots,
 				player_toggle_walk_run,
-				schedule_slots::<MouseButton, Player>,
-				schedule_slots::<KeyCode, Player>,
 				enqueue::<Tools>,
 				dequeue, // sets skill activity marker, so it MUST run before skill execution systems
 			)
@@ -264,16 +273,15 @@ fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn setup_input(mut commands: Commands) {
-	commands.insert_resource(SlotMap::<MouseButton>(
-		[(MouseButton::Left, SlotKey::Legs)].into(),
-	));
-	commands.insert_resource(SlotMap::<KeyCode>(
-		[
-			(KeyCode::E, SlotKey::Hand(Side::Main)),
-			(KeyCode::Q, SlotKey::Hand(Side::Off)),
-		]
-		.into(),
-	));
+	commands.insert_resource(SlotMap::<MouseButton>::new([(
+		MouseButton::Left,
+		SlotKey::Legs,
+		"Mouse Left",
+	)]));
+	commands.insert_resource(SlotMap::<KeyCode>::new([
+		(KeyCode::E, SlotKey::Hand(Side::Main), "E"),
+		(KeyCode::Q, SlotKey::Hand(Side::Off), "Q"),
+	]));
 }
 
 fn setup_simple_3d_scene(

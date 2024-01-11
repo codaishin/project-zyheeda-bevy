@@ -15,7 +15,7 @@ pub fn schedule_slots<TKey: Copy + Eq + Hash + Send + Sync, TAgent: Component>(
 ) {
 	let triggered_slot_keys = mouse
 		.get_just_pressed()
-		.filter_map(|mouse_button| mouse_button_map.0.get(mouse_button))
+		.filter_map(|mouse_button| mouse_button_map.slots.get(mouse_button))
 		.collect::<Vec<&SlotKey>>();
 
 	if triggered_slot_keys.is_empty() {
@@ -101,7 +101,7 @@ mod tests {
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
-			.0
+			.slots
 			.insert(MouseButton::Right, SlotKey::Legs);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
@@ -155,7 +155,7 @@ mod tests {
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
-			.0
+			.slots
 			.insert(MouseButton::Right, SlotKey::Legs);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
@@ -200,7 +200,7 @@ mod tests {
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
-			.0
+			.slots
 			.insert(MouseButton::Right, SlotKey::Legs);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
@@ -232,7 +232,7 @@ mod tests {
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
-			.0
+			.slots
 			.insert(MouseButton::Right, SlotKey::Hand(Side::Off));
 		app.world
 			.resource_mut::<Input<MouseButton>>()
@@ -270,7 +270,7 @@ mod tests {
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
-			.0
+			.slots
 			.insert(MouseButton::Left, SlotKey::Hand(Side::Main));
 		app.world
 			.resource_mut::<Input<MouseButton>>()
@@ -327,7 +327,7 @@ mod tests {
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
-			.0
+			.slots
 			.insert(MouseButton::Left, SlotKey::Hand(Side::Main));
 		app.world
 			.resource_mut::<Input<MouseButton>>()
@@ -363,7 +363,7 @@ mod tests {
 
 		app.world
 			.resource_mut::<SlotMap<MouseButton>>()
-			.0
+			.slots
 			.insert(MouseButton::Right, SlotKey::Legs);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
