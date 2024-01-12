@@ -102,7 +102,7 @@ fn prepare_game(app: &mut App) {
 		.add_systems(
 			PreUpdate,
 			schedule_slots::<MouseButton, Player>
-				.run_if(in_state(MouseContext::Default))
+				.run_if(in_state(MouseContext::<KeyCode>::Default))
 				.run_if(in_state(GameRunning::On)),
 		)
 		.add_systems(
