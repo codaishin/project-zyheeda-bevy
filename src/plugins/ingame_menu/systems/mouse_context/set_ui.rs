@@ -16,10 +16,18 @@ pub fn set_ui_mouse_context(
 		return;
 	}
 
+	if next_already_set(&next_state) {
+		return;
+	}
+
 	next_state.set(match interactions.iter().all(is_none) {
 		true => MouseContext::Default,
 		false => MouseContext::UI,
 	});
+}
+
+fn next_already_set(next_state: &ResMut<NextState<MouseContext>>) -> bool {
+	matches!(&next_state.0, Some(next_state) if next_state != &MouseContext::Default)
 }
 
 fn is_none(interaction: &Interaction) -> bool {
@@ -32,7 +40,7 @@ mod tests {
 	use crate::states::MouseContext;
 	use bevy::{
 		app::{App, Update},
-		ecs::schedule::State,
+		ecs::schedule::{IntoSystemConfigs, State},
 		input::keyboard::KeyCode,
 		ui::Interaction,
 	};
@@ -145,6 +153,54 @@ mod tests {
 
 		assert_eq!(
 			&MouseContext::Triggered(KeyCode::A),
+			app.world
+				.get_resource::<State<MouseContext>>()
+				.unwrap()
+				.get()
+		);
+	}
+
+	#[test]
+	fn ignore_when_next_state_is_already_set() {
+		let mut app = App::new();
+
+		fn set_next(mut next: ResMut<NextState<MouseContext>>) {
+			next.set(MouseContext::Primed(KeyCode::A));
+		}
+
+		app.add_systems(Update, (set_next, set_ui_mouse_context).chain());
+		app.add_state::<MouseContext>();
+		app.world.spawn(Interaction::Hovered);
+
+		app.update();
+		app.update();
+
+		assert_eq!(
+			&MouseContext::Primed(KeyCode::A),
+			app.world
+				.get_resource::<State<MouseContext>>()
+				.unwrap()
+				.get()
+		);
+	}
+
+	#[test]
+	fn wet_when_next_state_is_set_to_default() {
+		let mut app = App::new();
+
+		fn set_next(mut next: ResMut<NextState<MouseContext>>) {
+			next.set(MouseContext::Default);
+		}
+
+		app.add_systems(Update, (set_next, set_ui_mouse_context).chain());
+		app.add_state::<MouseContext>();
+		app.world.spawn(Interaction::Hovered);
+
+		app.update();
+		app.update();
+
+		assert_eq!(
+			&MouseContext::UI,
 			app.world
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
