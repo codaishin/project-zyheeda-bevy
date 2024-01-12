@@ -42,8 +42,8 @@ fn add_quickbar(parent: &mut ChildBuilder) {
 			},
 		))
 		.with_children(|quickbar| {
-			add_slot(quickbar, &SlotKey::Hand(Side::Main));
 			add_slot(quickbar, &SlotKey::Hand(Side::Off));
+			add_slot(quickbar, &SlotKey::Hand(Side::Main));
 		});
 }
 
