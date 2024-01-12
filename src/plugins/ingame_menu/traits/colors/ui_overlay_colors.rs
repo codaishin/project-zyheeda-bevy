@@ -2,6 +2,7 @@ use super::{
 	HasActiveColor,
 	HasBackgroundColor,
 	HasPanelColors,
+	HasQueuedColor,
 	PanelColors,
 	DEFAULT_PANEL_COLORS,
 };
@@ -24,4 +25,8 @@ impl HasPanelColors for QuickbarPanel {
 
 impl HasActiveColor for QuickbarPanel {
 	const ACTIVE_COLOR: Color = Color::GREEN;
+}
+
+impl HasQueuedColor for QuickbarPanel {
+	const QUEUED_COLOR: Color = Color::YELLOW_GREEN;
 }

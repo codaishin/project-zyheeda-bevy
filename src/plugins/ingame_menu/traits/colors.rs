@@ -30,3 +30,7 @@ pub trait HasPanelColors {
 pub trait HasActiveColor {
 	const ACTIVE_COLOR: Color;
 }
+
+pub trait HasQueuedColor {
+	const QUEUED_COLOR: Color;
+}

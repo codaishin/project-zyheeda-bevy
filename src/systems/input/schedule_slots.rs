@@ -2,21 +2,31 @@ use crate::{
 	components::{Schedule, ScheduleMode, SlotKey, Slots},
 	resources::SlotMap,
 	skill::Skill,
+	states::MouseContext,
 };
-use bevy::prelude::{Commands, Component, Entity, Input, KeyCode, Query, Res, With};
-use std::hash::Hash;
+use bevy::{
+	ecs::schedule::State,
+	prelude::{Commands, Component, Entity, Input, KeyCode, Query, Res, With},
+};
+use std::{fmt::Debug, hash::Hash};
 
-pub fn schedule_slots<TKey: Copy + Eq + Hash + Send + Sync, TAgent: Component>(
-	mouse: Res<Input<TKey>>,
+pub fn schedule_slots<TKey: Copy + Eq + Hash + Debug + Send + Sync, TAgent: Component>(
+	input: Res<Input<TKey>>,
+	mouse_context: Option<Res<State<MouseContext<TKey>>>>,
 	keys: Res<Input<KeyCode>>,
-	mouse_button_map: Res<SlotMap<TKey>>,
+	slot_map: Res<SlotMap<TKey>>,
 	agents: Query<(Entity, &Slots), With<TAgent>>,
 	mut commands: Commands,
 ) {
-	let triggered_slot_keys = mouse
+	let mut triggered_slot_keys: Vec<_> = input
 		.get_just_pressed()
-		.filter_map(|mouse_button| mouse_button_map.slots.get(mouse_button))
-		.collect::<Vec<&SlotKey>>();
+		.filter_map(|key| slot_map.slots.get(key))
+		.cloned()
+		.collect();
+
+	if let Some(slot_key) = triggered_mouse_context_key(mouse_context, &slot_map) {
+		triggered_slot_keys.push(slot_key);
+	}
 
 	if triggered_slot_keys.is_empty() {
 		return;
@@ -38,9 +48,19 @@ pub fn schedule_slots<TKey: Copy + Eq + Hash + Send + Sync, TAgent: Component>(
 	}
 }
 
+fn triggered_mouse_context_key<TKey: Copy + Eq + Hash + Debug + Send + Sync>(
+	mouse_context: Option<Res<State<MouseContext<TKey>>>>,
+	slot_map: &Res<SlotMap<TKey>>,
+) -> Option<SlotKey> {
+	match *mouse_context?.get() {
+		MouseContext::Triggered(key) => slot_map.slots.get(&key).copied(),
+		_ => None,
+	}
+}
+
 fn filter_triggered_behaviors(
 	slots: &Slots,
-	triggered_slot_keys: &[&SlotKey],
+	triggered_slot_keys: &[SlotKey],
 ) -> Vec<(SlotKey, Skill)> {
 	slots
 		.0
@@ -59,21 +79,23 @@ mod tests {
 		components::{Item, Schedule, ScheduleMode, Side, Slot, SlotKey, Slots},
 		resources::SlotMap,
 	};
-	use bevy::prelude::{default, App, Component, Entity, Input, KeyCode, MouseButton, Update};
+	use bevy::{
+		ecs::schedule::NextState,
+		prelude::{default, App, Component, Entity, Input, KeyCode, MouseButton, Update},
+	};
 
 	#[derive(Component)]
 	struct TestAgent;
 
 	fn setup() -> App {
 		let mut app = App::new();
-		let mouse = Input::<MouseButton>::default();
-		let keys = Input::<KeyCode>::default();
-		let mouse_settings = SlotMap::<MouseButton>::new([]);
 
-		app.insert_resource(mouse);
-		app.insert_resource(keys);
-		app.insert_resource(mouse_settings);
-		app.add_systems(Update, schedule_slots::<MouseButton, TestAgent>);
+		app.insert_resource(Input::<MouseButton>::default())
+			.insert_resource(Input::<KeyCode>::default())
+			.insert_resource(SlotMap::<MouseButton>::new([]))
+			.add_state::<MouseContext<MouseButton>>()
+			.add_systems(Update, schedule_slots::<MouseButton, TestAgent>);
+
 		app
 	}
 
@@ -393,5 +415,56 @@ mod tests {
 		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(None, schedule);
+	}
+
+	#[test]
+	fn set_override_via_triggered_mouse_context() {
+		let mut app = setup();
+		let slots = Slots(
+			[(
+				SlotKey::Legs,
+				Slot {
+					entity: Entity::from_raw(42),
+					item: Some(Item {
+						skill: Some(Skill {
+							name: "skill",
+							..default()
+						}),
+						..default()
+					}),
+					combo_skill: None,
+				},
+			)]
+			.into(),
+		);
+		let agent = app.world.spawn((TestAgent, slots)).id();
+
+		app.world
+			.resource_mut::<SlotMap<MouseButton>>()
+			.slots
+			.insert(MouseButton::Right, SlotKey::Legs);
+		app.world
+			.resource_mut::<NextState<MouseContext<MouseButton>>>()
+			.set(MouseContext::Triggered(MouseButton::Right));
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let schedule = agent.get::<Schedule>();
+
+		assert_eq!(
+			Some(&Schedule {
+				mode: ScheduleMode::Override,
+				skills: [(
+					SlotKey::Legs,
+					Skill {
+						name: "skill",
+						..default()
+					}
+				)]
+				.into()
+			}),
+			schedule
+		);
 	}
 }

@@ -46,6 +46,10 @@ use project_zyheeda::{
 			swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
 		},
 		log::{log, log_many},
+		mouse_context::{
+			clear_triggered::clear_triggered_mouse_context,
+			trigger_primed::trigger_primed_mouse_context,
+		},
 		movement::{
 			execute_move::execute_move,
 			follow::follow,
@@ -98,7 +102,7 @@ fn prepare_game(app: &mut App) {
 		.add_systems(
 			PreUpdate,
 			schedule_slots::<MouseButton, Player>
-				.run_if(in_state(MouseContext::Default))
+				.run_if(in_state(MouseContext::<KeyCode>::Default))
 				.run_if(in_state(GameRunning::On)),
 		)
 		.add_systems(
@@ -115,6 +119,10 @@ fn prepare_game(app: &mut App) {
 				dequeue, // sets skill activity marker, so it MUST run before skill execution systems
 			)
 				.run_if(in_state(GameRunning::On)),
+		)
+		.add_systems(
+			Update,
+			(clear_triggered_mouse_context, trigger_primed_mouse_context),
 		)
 		.add_systems(
 			Update,
