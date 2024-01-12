@@ -1,4 +1,4 @@
-use bevy::ecs::schedule::States;
+use bevy::{ecs::schedule::States, input::keyboard::KeyCode};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Default, States)]
 pub enum GameRunning {
@@ -17,4 +17,6 @@ pub enum MouseContext {
 	#[default]
 	Default,
 	UI,
+	Primed(KeyCode),
+	Triggered(KeyCode),
 }
