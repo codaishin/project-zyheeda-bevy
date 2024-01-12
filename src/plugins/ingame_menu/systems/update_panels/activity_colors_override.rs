@@ -1,9 +1,9 @@
 use crate::{
-	components::{Player, SlotKey, Track},
+	components::{Player, Queue, SlotKey, Track},
 	plugins::ingame_menu::{
 		components::ColorOverride,
 		traits::{
-			colors::{HasActiveColor, HasPanelColors},
+			colors::{HasActiveColor, HasPanelColors, HasQueuedColor},
 			get::Get,
 		},
 	},
@@ -15,45 +15,73 @@ use bevy::{
 	ecs::{
 		component::Component,
 		entity::Entity,
-		query::With,
+		query::{QuerySingleError, With},
 		schedule::State,
-		system::{Commands, Query, Res},
+		system::{Commands, EntityCommands, Query, Res},
+		world::Mut,
 	},
 	input::keyboard::KeyCode,
+	render::color::Color,
 	ui::BackgroundColor,
 };
 
+type ActiveSkill<'a> = Option<&'a Track<Skill<Active>>>;
+
 pub fn panel_activity_colors_override<
-	TPanel: HasActiveColor + HasPanelColors + Get<(), SlotKey> + Component,
+	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + Get<(), SlotKey> + Component,
 >(
 	mut commands: Commands,
 	mut buttons: Query<(Entity, &mut BackgroundColor, &TPanel)>,
-	player: Query<&Track<Skill<Active>>, With<Player>>,
+	player: Query<(ActiveSkill, &Queue), With<Player>>,
 	slot_map: Res<SlotMap<KeyCode>>,
 	mouse_context: Res<State<MouseContext>>,
 ) {
-	let active_slot_key = &player.get_single().map(|track| track.value.data.slot_key);
-	let primed_slot_key = match mouse_context.get() {
+	let player_slots = &player.get_single().map(|(track, queue)| {
+		(
+			track.map(|t| t.value.data.slot_key),
+			queue.0.iter().map(|s| s.data.slot_key).collect::<Vec<_>>(),
+		)
+	});
+	let primed_slots = match mouse_context.get() {
 		MouseContext::Primed(key) => slot_map.slots.get(key),
 		_ => None,
 	};
 
-	for (entity, mut background_color, panel) in &mut buttons {
-		let mut entity = commands.entity(entity);
+	for (entity, background_color, panel) in &mut buttons {
+		update_color_override(
+			get_color::<TPanel>(player_slots, primed_slots, &panel.get(())),
+			commands.entity(entity),
+			background_color,
+		);
+	}
+}
 
-		match (active_slot_key, primed_slot_key) {
-			(Ok(active_key), _) if active_key == &panel.get(()) => {
-				*background_color = TPanel::ACTIVE_COLOR.into();
-				entity.insert(ColorOverride);
-			}
-			(_, Some(primed_key)) if primed_key == &panel.get(()) => {
-				*background_color = TPanel::PANEL_COLORS.pressed.into();
-				entity.insert(ColorOverride);
-			}
-			_ => {
-				entity.remove::<ColorOverride>();
-			}
-		};
+fn get_color<TPanel: HasActiveColor + HasPanelColors + HasQueuedColor>(
+	player_slots: &Result<(Option<SlotKey>, Vec<SlotKey>), QuerySingleError>,
+	primed_slot: Option<&SlotKey>,
+	panel_key: &SlotKey,
+) -> Option<bevy::prelude::Color> {
+	match (player_slots, primed_slot) {
+		(Ok((Some(active), _)), _) if active == panel_key => Some(TPanel::ACTIVE_COLOR),
+		(Ok((_, queued)), _) if queued.contains(panel_key) => Some(TPanel::QUEUED_COLOR),
+		(_, Some(primed)) if primed == panel_key => Some(TPanel::PANEL_COLORS.pressed),
+		_ => None,
+	}
+}
+
+fn update_color_override(
+	color: Option<Color>,
+	mut entity: EntityCommands,
+	mut background_color: Mut<BackgroundColor>,
+) {
+	match color {
+		Some(color) => {
+			entity.insert(ColorOverride);
+			*background_color = color.into();
+		}
+		None => {
+			entity.remove::<ColorOverride>();
+		}
 	}
 }
 
@@ -61,15 +89,16 @@ pub fn panel_activity_colors_override<
 mod tests {
 	use super::*;
 	use crate::{
-		components::SlotKey,
+		components::{Queue, SlotKey},
 		plugins::ingame_menu::{
 			components::ColorOverride,
 			traits::{
-				colors::{HasPanelColors, PanelColors},
+				colors::{HasPanelColors, HasQueuedColor, PanelColors},
 				get::Get,
 			},
 		},
 		resources::SlotMap,
+		skill::Queued,
 		states::MouseContext,
 	};
 	use bevy::{
@@ -85,6 +114,10 @@ mod tests {
 
 	impl HasActiveColor for _Panel {
 		const ACTIVE_COLOR: Color = Color::BEIGE;
+	}
+
+	impl HasQueuedColor for _Panel {
+		const QUEUED_COLOR: Color = Color::ANTIQUE_WHITE;
 	}
 
 	impl HasPanelColors for _Panel {
@@ -107,13 +140,13 @@ mod tests {
 		slot_key: Option<SlotKey>,
 		bundle: TBundle,
 		slot_map: [(KeyCode, SlotKey, &'static str); N],
-	) -> (App, Entity) {
+	) -> (App, Entity, Entity) {
 		let mut app = App::new();
 
 		app.add_systems(Update, panel_activity_colors_override::<_Panel>);
 		app.add_state::<MouseContext>();
 		app.insert_resource(SlotMap::<KeyCode>::new(slot_map));
-		let player = app.world.spawn(Player::default()).id();
+		let player = app.world.spawn((Player::default(), Queue([].into()))).id();
 		let panel = app.world.spawn(bundle).id();
 
 		if let Some(slot_key) = slot_key {
@@ -124,13 +157,13 @@ mod tests {
 			})));
 		}
 
-		(app, panel)
+		(app, panel, player)
 	}
 
 	#[test]
 	fn set_to_active_when_matching_skill_active() {
 		let bundle = (BackgroundColor::from(Color::NONE), _Panel(SlotKey::Legs));
-		let (mut app, panel) = setup(Some(SlotKey::Legs), bundle, []);
+		let (mut app, panel, _) = setup(Some(SlotKey::Legs), bundle, []);
 
 		app.update();
 
@@ -150,7 +183,7 @@ mod tests {
 			_Panel(SlotKey::Legs),
 			ColorOverride,
 		);
-		let (mut app, panel) = setup(Some(SlotKey::SkillSpawn), bundle, []);
+		let (mut app, panel, _) = setup(Some(SlotKey::SkillSpawn), bundle, []);
 
 		app.update();
 
@@ -170,7 +203,7 @@ mod tests {
 			_Panel(SlotKey::Legs),
 			ColorOverride,
 		);
-		let (mut app, panel) = setup(None, bundle, []);
+		let (mut app, panel, _) = setup(None, bundle, []);
 
 		app.update();
 
@@ -186,7 +219,7 @@ mod tests {
 	#[test]
 	fn set_to_pressed_when_matching_key_primed_in_mouse_context() {
 		let bundle = (BackgroundColor::from(Color::NONE), _Panel(SlotKey::Legs));
-		let (mut app, panel) = setup(None, bundle, [(KeyCode::Q, SlotKey::Legs, "")]);
+		let (mut app, panel, _) = setup(None, bundle, [(KeyCode::Q, SlotKey::Legs, "")]);
 
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
@@ -200,6 +233,29 @@ mod tests {
 
 		assert_eq!(
 			(_Panel::PANEL_COLORS.pressed, true),
+			(color.0, panel.contains::<ColorOverride>())
+		)
+	}
+
+	#[test]
+	fn set_to_queued_when_matching_with_queued_skill() {
+		let bundle = (BackgroundColor::from(Color::NONE), _Panel(SlotKey::Legs));
+		let (mut app, panel, player) = setup(None, bundle, []);
+
+		let mut player = app.world.entity_mut(player);
+		let mut queue = player.get_mut::<Queue>().unwrap();
+		queue.0.push_back(Skill::default().with(&Queued {
+			slot_key: SlotKey::Legs,
+			..default()
+		}));
+
+		app.update();
+
+		let panel = app.world.entity(panel);
+		let color = panel.get::<BackgroundColor>().unwrap();
+
+		assert_eq!(
+			(_Panel::QUEUED_COLOR, true),
 			(color.0, panel.contains::<ColorOverride>())
 		)
 	}
