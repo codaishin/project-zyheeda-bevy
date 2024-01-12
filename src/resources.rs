@@ -58,6 +58,7 @@ where
 {
 	pub slots: HashMap<TButton, SlotKey>,
 	pub ui_input_display: HashMap<SlotKey, UIInputDisplay>,
+	pub keys: HashMap<SlotKey, TButton>,
 }
 
 impl<TButton> SlotMap<TButton>
@@ -68,11 +69,13 @@ where
 		let mut map = Self {
 			slots: [].into(),
 			ui_input_display: [].into(),
+			keys: [].into(),
 		};
 
 		for (button, slot_key, ui_input_display) in &init {
 			map.slots.insert(*button, *slot_key);
 			map.ui_input_display.insert(*slot_key, ui_input_display);
+			map.keys.insert(*slot_key, *button);
 		}
 
 		map
@@ -109,6 +112,22 @@ mod test_slot_map {
 		assert_eq!(
 			HashMap::from([(SlotKey::Legs, "A"), (SlotKey::SkillSpawn, "B")]),
 			map.ui_input_display
+		)
+	}
+
+	#[test]
+	fn init_keys() {
+		let map = SlotMap::new([
+			(KeyCode::A, SlotKey::Legs, "A"),
+			(KeyCode::B, SlotKey::SkillSpawn, "B"),
+		]);
+
+		assert_eq!(
+			HashMap::from([
+				(SlotKey::Legs, KeyCode::A),
+				(SlotKey::SkillSpawn, KeyCode::B)
+			]),
+			map.keys
 		)
 	}
 }
