@@ -1,6 +1,7 @@
 use crate::{
 	behaviors::MovementMode,
 	skill::{Queued, Skill, SkillComboTree},
+	traits::recourse_key::ResourceKey,
 	types::BoneName,
 };
 use bevy::prelude::{Component, Entity, Vec3};
@@ -115,6 +116,12 @@ pub enum PlayerAnimationStates {
 	Fast,
 	Shoot(Handed),
 	SwordStrike(Side),
+}
+
+#[derive(Component)]
+pub enum Animate<T: ResourceKey> {
+	Replay(T),
+	Repeat(T),
 }
 
 #[derive(Component)]

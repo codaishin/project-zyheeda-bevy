@@ -43,6 +43,7 @@ use project_zyheeda::{
 			animate::animate,
 			link_animator::link_animators_with_new_animation_players,
 			load_animations::load_animations,
+			play_animations::play_animations,
 		},
 		input::schedule_slots::schedule_slots,
 		items::{
@@ -177,6 +178,10 @@ fn prepare_game(app: &mut App) {
 				animate::<Player, Marker<(Sword, Left)>, Once>,
 				animate::<Player, Marker<(Sword, Right)>, Once>,
 			),
+		)
+		.add_systems(
+			Update,
+			play_animations::<PlayerAnimationStates, AnimationPlayer>,
 		);
 }
 
