@@ -5,6 +5,7 @@ pub mod cast_update;
 pub mod combo_next;
 pub mod get_ray;
 pub mod get_state;
+pub mod load_asset;
 pub mod marker;
 pub mod marker_modify;
 pub mod move_together;
