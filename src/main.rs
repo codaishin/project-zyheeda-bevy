@@ -12,6 +12,7 @@ use project_zyheeda::{
 		ItemType,
 		Marker,
 		Player,
+		PlayerAnimationStates,
 		Projectile,
 		Side,
 		SimpleMovement,
@@ -38,7 +39,11 @@ use project_zyheeda::{
 	skill::{Active, Cast, Skill, SkillComboNext, SkillComboTree},
 	states::{GameRunning, MouseContext},
 	systems::{
-		animations::{animate::animate, link_animator::link_animators_with_new_animation_players},
+		animations::{
+			animate::animate,
+			link_animator::link_animators_with_new_animation_players,
+			load_animations::load_animations,
+		},
 		input::schedule_slots::schedule_slots,
 		items::{
 			equip::equip_item,
@@ -95,6 +100,10 @@ fn prepare_game(app: &mut App) {
 		.add_state::<MouseContext>()
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
+		.add_systems(
+			PreStartup,
+			load_animations::<PlayerAnimationStates, AssetServer>,
+		)
 		.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
 		.add_systems(Startup, setup_input)
 		.add_systems(Startup, load_models)
