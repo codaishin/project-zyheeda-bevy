@@ -102,6 +102,24 @@ impl<T> Default for Marker<T> {
 	}
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Handed {
+	Single(Side),
+	Dual(Side),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PlayerAnimationStates {
+	Idle,
+	Slow,
+	Fast,
+	Shoot(Handed),
+	SwordStrike(Side),
+}
+
+#[derive(Component)]
+pub struct Mark<T>(pub T);
+
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum Side {
 	Main,
