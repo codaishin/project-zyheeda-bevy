@@ -1,8 +1,8 @@
 use super::GetBehaviorMeta;
-use crate::{behaviors::meta::BehaviorMeta, markers::Sword, tools::look_from_spawner};
+use crate::{behaviors::meta::BehaviorMeta, skill::SwordStrike, tools::look_from_spawner};
 use bevy::utils::default;
 
-impl GetBehaviorMeta for Sword {
+impl GetBehaviorMeta for SwordStrike {
 	fn behavior() -> BehaviorMeta {
 		BehaviorMeta {
 			transform_fn: Some(look_from_spawner),
@@ -17,7 +17,7 @@ mod tests {
 
 	#[test]
 	fn use_proper_transform_fn() {
-		let lazy = Sword::behavior();
+		let lazy = SwordStrike::behavior();
 
 		assert_eq!(
 			Some(look_from_spawner as usize),

@@ -1,8 +1,7 @@
 use super::GetBehaviorMeta;
 use crate::{
 	behaviors::meta::{BehaviorMeta, Spawner},
-	components::{Marker, SimpleMovement},
-	markers::{Fast, Slow},
+	components::SimpleMovement,
 };
 use bevy::{
 	ecs::system::EntityCommands,
@@ -20,7 +19,7 @@ fn run_fn(agent: &mut EntityCommands, _agent_transform: &Transform, _spawner: &S
 }
 
 fn stop_fn(agent: &mut EntityCommands) {
-	agent.remove::<(SimpleMovement, Marker<Fast>, Marker<Slow>)>();
+	agent.remove::<SimpleMovement>();
 }
 
 impl GetBehaviorMeta for SimpleMovement {
@@ -109,16 +108,12 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_all_relevant_components() {
+	fn remove_simple_movement() {
 		let mut app = App::new();
 		let behavior = SimpleMovement::behavior();
 		let agent = app
 			.world
-			.spawn((
-				SimpleMovement { target: Vec3::ZERO },
-				Marker::<Fast>::new(),
-				Marker::<Slow>::new(),
-			))
+			.spawn((SimpleMovement { target: Vec3::ZERO },))
 			.id();
 
 		app.add_systems(Update, stop_lazy(behavior, agent));
@@ -126,13 +121,6 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert_eq!(
-			(false, false, false),
-			(
-				agent.contains::<SimpleMovement>(),
-				agent.contains::<Marker<Fast>>(),
-				agent.contains::<Marker<Slow>>()
-			)
-		);
+		assert!(!agent.contains::<SimpleMovement>());
 	}
 }

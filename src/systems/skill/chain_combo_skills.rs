@@ -1,5 +1,15 @@
 use crate::{
-	components::{ComboTreeRunning, ComboTreeTemplate, Item, SlotKey, Slots, Track, WaitNext},
+	components::{
+		ComboTreeRunning,
+		ComboTreeTemplate,
+		Item,
+		PlayerSkills,
+		SideUnset,
+		SlotKey,
+		Slots,
+		Track,
+		WaitNext,
+	},
 	skill::{Active, Skill, SkillComboTree},
 	traits::combo_next::ComboNext,
 };
@@ -15,15 +25,20 @@ use std::collections::HashMap;
 
 type ComboComponents<'a, TNext> = (
 	Entity,
-	&'a Track<Skill<Active>>,
+	&'a Track<Skill<PlayerSkills<SideUnset>, Active>>,
 	&'a ComboTreeTemplate<TNext>,
 	Option<&'a ComboTreeRunning<TNext>>,
 	&'a mut Slots,
 );
-type JustStarted = (Added<Track<Skill<Active>>>, Without<WaitNext>);
+type JustStarted = (
+	Added<Track<Skill<PlayerSkills<SideUnset>, Active>>>,
+	Without<WaitNext>,
+);
 type Combos<TNext> = Vec<(SlotKey, SkillComboTree<TNext>)>;
 
-pub fn chain_combo_skills<TNext: Clone + ComboNext + Send + Sync + 'static>(
+pub fn chain_combo_skills<
+	TNext: Clone + ComboNext<PlayerSkills<SideUnset>> + Send + Sync + 'static,
+>(
 	mut commands: Commands,
 	mut idle: Query<(Entity, &mut Slots), Added<WaitNext>>,
 	mut newly_active: Query<ComboComponents<TNext>, JustStarted>,
@@ -44,10 +59,10 @@ pub fn chain_combo_skills<TNext: Clone + ComboNext + Send + Sync + 'static>(
 	}
 }
 
-fn update_combos<TNext: Clone + ComboNext + Send + Sync + 'static>(
+fn update_combos<TNext: Clone + ComboNext<PlayerSkills<SideUnset>> + Send + Sync + 'static>(
 	slots: &mut Mut<Slots>,
 	agent: &mut EntityCommands,
-	skill: &Track<Skill<Active>>,
+	skill: &Track<Skill<PlayerSkills<SideUnset>, Active>>,
 	combo_tree_t: &ComboTreeTemplate<TNext>,
 	combo_tree_r: Option<&ComboTreeRunning<TNext>>,
 ) {
@@ -68,8 +83,8 @@ fn update_combos<TNext: Clone + ComboNext + Send + Sync + 'static>(
 	agent.insert(ComboTreeRunning(updated_successfully));
 }
 
-fn get_combos<'a, TNext: ComboNext>(
-	skill: &'a Skill<Active>,
+fn get_combos<'a, TNext: ComboNext<PlayerSkills<SideUnset>>>(
+	skill: &'a Skill<PlayerSkills<SideUnset>, Active>,
 	combo_tree_t: &'a ComboTreeTemplate<TNext>,
 	combo_tree_r: Option<&'a ComboTreeRunning<TNext>>,
 ) -> Option<Combos<TNext>> {
@@ -163,8 +178,8 @@ mod tests {
 		),
 	];
 
-	fn setup<TNext: Clone + ComboNext + Sync + Send + 'static>(
-		running_skill: &Skill<Active>,
+	fn setup<TNext: Clone + ComboNext<PlayerSkills<SideUnset>> + Sync + Send + 'static>(
+		running_skill: &Skill<PlayerSkills<SideUnset>, Active>,
 		combo_tree: ComboTreeTemplate<TNext>,
 		item_types: &[(SlotKey, HashSet<ItemType>)],
 	) -> (App, Entity) {
@@ -227,11 +242,11 @@ mod tests {
 	}
 
 	trait ActiveOn {
-		fn active_on(&self, slot_key: SlotKey) -> Skill<Active>;
+		fn active_on(&self, slot_key: SlotKey) -> Skill<PlayerSkills<SideUnset>, Active>;
 	}
 
 	impl ActiveOn for Skill {
-		fn active_on(&self, slot_key: SlotKey) -> Skill<Active> {
+		fn active_on(&self, slot_key: SlotKey) -> Skill<PlayerSkills<SideUnset>, Active> {
 			self.clone().with(&Active {
 				slot_key,
 				..default()
@@ -244,8 +259,8 @@ mod tests {
 
 	mock! {
 		_Next{}
-		impl ComboNext for _Next {
-			fn to_vec(&self, _skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
+		impl ComboNext<PlayerSkills<SideUnset>> for _Next {
+			fn to_vec(&self, _skill: &Skill<PlayerSkills<SideUnset>,Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
 				self.0.clone()
 			}
 		}
@@ -256,8 +271,11 @@ mod tests {
 		}
 	}
 
-	impl ComboNext for _Next {
-		fn to_vec(&self, _skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
+	impl ComboNext<PlayerSkills<SideUnset>> for _Next {
+		fn to_vec(
+			&self,
+			_skill: &Skill<PlayerSkills<SideUnset>, Active>,
+		) -> Vec<(SlotKey, SkillComboTree<Self>)> {
 			self.0.clone()
 		}
 	}
@@ -644,7 +662,9 @@ mod tests {
 			slot.combo_skill = Some(skill_usable_with(&[]))
 		}
 		app.world.entity_mut(id).insert(WaitNext);
-		app.world.entity_mut(id).remove::<Track<Skill<Active>>>();
+		app.world
+			.entity_mut(id)
+			.remove::<Track<Skill<PlayerSkills<SideUnset>, Active>>>();
 		app.update();
 
 		let agent = app.world.entity(id);

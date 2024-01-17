@@ -1,28 +1,20 @@
 pub mod skill_templates;
-
 use crate::{
 	components::SlotKey,
 	types::{File, Key, SceneId},
 };
-use bevy::prelude::*;
-use std::{collections::HashMap, hash::Hash, marker::PhantomData};
+use bevy::{
+	animation::AnimationClip,
+	asset::{AssetServer, Handle},
+	ecs::system::Resource,
+	prelude::Res,
+	render::texture::Image,
+	scene::Scene,
+};
+use std::{collections::HashMap, hash::Hash};
 
 #[derive(Resource)]
-pub struct Animation<TAgent, TMarker> {
-	phantom_agent: PhantomData<TAgent>,
-	phantom_marker: PhantomData<TMarker>,
-	pub clip: Handle<AnimationClip>,
-}
-
-impl<TAgent, TMarker> Animation<TAgent, TMarker> {
-	pub fn new(clip: Handle<AnimationClip>) -> Self {
-		Self {
-			phantom_agent: PhantomData,
-			phantom_marker: PhantomData,
-			clip,
-		}
-	}
-}
+pub struct Animations<T>(pub HashMap<T, Handle<AnimationClip>>);
 
 #[derive(Resource)]
 pub struct Models(pub HashMap<&'static Key, Handle<Scene>>);
@@ -85,6 +77,7 @@ where
 #[cfg(test)]
 mod test_slot_map {
 	use super::*;
+	use bevy::input::keyboard::KeyCode;
 
 	#[test]
 	fn init_slots() {

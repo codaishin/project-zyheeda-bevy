@@ -1,7 +1,6 @@
 use crate::{
 	behaviors::meta::BehaviorMeta,
-	components::{ItemType, SlotKey},
-	markers::meta::MarkerMeta,
+	components::{ItemType, PlayerSkills, SideUnset, SlotKey},
 };
 use bevy::math::Ray;
 use std::{
@@ -17,18 +16,32 @@ pub struct Cast {
 	pub after: Duration,
 }
 
-#[derive(PartialEq, Debug, Clone, Default)]
-pub struct Skill<TData = ()> {
+#[derive(PartialEq, Debug, Clone)]
+pub struct Skill<TAnimationKey = PlayerSkills<SideUnset>, TData = ()> {
 	pub name: &'static str,
 	pub data: TData,
 	pub cast: Cast,
 	pub soft_override: bool,
-	pub marker: MarkerMeta,
+	pub animate: TAnimationKey,
 	pub behavior: BehaviorMeta,
 	pub is_usable_with: HashSet<ItemType>,
 }
 
-impl<T> Display for Skill<T> {
+impl<TData: Default> Default for Skill<PlayerSkills<SideUnset>, TData> {
+	fn default() -> Self {
+		Self {
+			name: Default::default(),
+			data: Default::default(),
+			cast: Default::default(),
+			soft_override: Default::default(),
+			animate: Default::default(),
+			behavior: Default::default(),
+			is_usable_with: Default::default(),
+		}
+	}
+}
+
+impl<TAnimationKey, TData> Display for Skill<TAnimationKey, TData> {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result {
 		match self.name {
 			"" => write!(f, "Skill(<no name>)"),
@@ -68,26 +81,26 @@ pub struct Active {
 }
 
 impl Skill {
-	pub fn with<T: Clone>(self, data: &T) -> Skill<T> {
+	pub fn with<TData: Clone>(self, data: &TData) -> Skill<PlayerSkills<SideUnset>, TData> {
 		Skill {
 			data: data.clone(),
 			name: self.name,
 			cast: self.cast,
 			soft_override: self.soft_override,
-			marker: self.marker,
+			animate: self.animate,
 			behavior: self.behavior,
 			is_usable_with: self.is_usable_with,
 		}
 	}
 }
 
-impl<TSrc> Skill<TSrc> {
-	pub fn map_data<TDst>(self, map: fn(TSrc) -> TDst) -> Skill<TDst> {
+impl<TAnimationKey, TSrc> Skill<TAnimationKey, TSrc> {
+	pub fn map_data<TDst>(self, map: fn(TSrc) -> TDst) -> Skill<TAnimationKey, TDst> {
 		Skill {
 			name: self.name,
 			data: map(self.data),
 			cast: self.cast,
-			marker: self.marker,
+			animate: self.animate,
 			soft_override: self.soft_override,
 			behavior: self.behavior,
 			is_usable_with: self.is_usable_with,
@@ -95,11 +108,13 @@ impl<TSrc> Skill<TSrc> {
 	}
 }
 
-impl Skill<Queued> {
-	pub fn to_active(self) -> Skill<Active> {
+impl<TAnimationKey> Skill<TAnimationKey, Queued> {
+	pub fn to_active(self) -> Skill<TAnimationKey, Active> {
 		self.map_data(|queued| Active {
 			ray: queued.ray,
 			slot_key: queued.slot_key,
 		})
 	}
 }
+
+pub struct SwordStrike;

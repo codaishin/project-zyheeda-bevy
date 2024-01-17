@@ -8,7 +8,6 @@ use core::fmt::Display;
 use std::{
 	collections::{HashMap, HashSet, VecDeque},
 	fmt::{Debug, Formatter, Result},
-	marker::PhantomData,
 	time::Duration,
 };
 
@@ -83,30 +82,54 @@ impl SimpleMovement {
 	}
 }
 
-#[derive(Component, Debug, PartialEq)]
-pub struct Marker<T> {
-	phantom_data: PhantomData<T>,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Handed<TSide> {
+	Single(TSide),
+	Dual(TSide),
 }
 
-impl<T> Marker<T> {
-	pub fn new() -> Self {
-		Self {
-			phantom_data: PhantomData,
+impl Handed<SideUnset> {
+	pub fn on(self, side: Side) -> Handed<Side> {
+		match self {
+			Handed::Single(_) => Handed::Single(side),
+			Handed::Dual(_) => Handed::Dual(side),
 		}
 	}
 }
 
-impl<T> Default for Marker<T> {
-	fn default() -> Self {
-		Self::new()
-	}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum PlayerSkills<TSide> {
+	#[default]
+	Idle,
+	Shoot(Handed<TSide>),
+	SwordStrike(TSide),
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PlayerMovement {
+	Walk,
+	Run,
+}
+
+#[derive(Component, PartialEq, Debug, Clone, Copy, Default)]
+pub enum Animate<T: Copy + Clone> {
+	#[default]
+	None,
+	Replay(T),
+	Repeat(T),
+}
+
+#[derive(Component)]
+pub struct Mark<T>(pub T);
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum Side {
 	Main,
 	Off,
 }
+
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
+pub struct SideUnset;
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Default)]
 pub enum SlotKey {
@@ -193,7 +216,15 @@ pub type Inventory = Collection<Option<Item>>;
 pub type Equipment = Collection<(SlotKey, Option<Item>)>;
 
 #[derive(Component)]
-pub struct Queue(pub VecDeque<Skill<Queued>>);
+pub struct Queue<TAnimationKey = PlayerSkills<SideUnset>>(
+	pub VecDeque<Skill<TAnimationKey, Queued>>,
+);
+
+impl Default for Queue {
+	fn default() -> Self {
+		Self(Default::default())
+	}
+}
 
 #[derive(Component, Default)]
 pub struct Projectile {

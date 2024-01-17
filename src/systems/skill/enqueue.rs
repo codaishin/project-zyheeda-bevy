@@ -1,5 +1,14 @@
 use crate::{
-	components::{Queue, Schedule, ScheduleMode, SlotKey, Track, WaitNext},
+	components::{
+		PlayerSkills,
+		Queue,
+		Schedule,
+		ScheduleMode,
+		SideUnset,
+		SlotKey,
+		Track,
+		WaitNext,
+	},
 	skill::{Active, Queued, Skill},
 	traits::get_ray::GetRayFromCamera,
 };
@@ -13,7 +22,7 @@ type Components<'a> = (
 	Entity,
 	&'a Schedule,
 	&'a mut Queue,
-	Option<&'a Track<Skill<Active>>>,
+	Option<&'a Track<Skill<PlayerSkills<SideUnset>, Active>>>,
 );
 
 pub fn enqueue<TTools: GetRayFromCamera>(
@@ -40,7 +49,7 @@ fn enqueue_skills(
 	agent: Entity,
 	schedule: &Schedule,
 	queue: &mut Queue,
-	track: Option<&Track<Skill<Active>>>,
+	track: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
 	commands: &mut Commands,
 	ray: Option<Ray>,
 ) {
@@ -53,7 +62,7 @@ fn enqueue_skill(
 	agent: Entity,
 	schedule: &Schedule,
 	queue: &mut Queue,
-	track: Option<&Track<Skill<Active>>>,
+	track: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
 	(slot, skill): (&SlotKey, &Skill),
 	commands: &mut Commands,
 	ray: Option<Ray>,
@@ -83,15 +92,19 @@ fn enqueue_skill(
 	override_soft(queue, &new);
 }
 
-fn enqueue_to(queue: &mut Queue, new: &Skill<Queued>) {
+fn enqueue_to(queue: &mut Queue, new: &Skill<PlayerSkills<SideUnset>, Queued>) {
 	queue.0.push_back(new.clone());
 }
 
-fn override_soft(queue: &mut Queue, new: &Skill<Queued>) {
+fn override_soft(queue: &mut Queue, new: &Skill<PlayerSkills<SideUnset>, Queued>) {
 	queue.0 = vec![new.clone()].into();
 }
 
-fn override_hard(queue: &mut Queue, new: &Skill<Queued>, agent: &mut EntityCommands) {
+fn override_hard(
+	queue: &mut Queue,
+	new: &Skill<PlayerSkills<SideUnset>, Queued>,
+	agent: &mut EntityCommands,
+) {
 	queue.0 = vec![new.clone()].into();
 	agent.insert(WaitNext);
 }
@@ -183,7 +196,7 @@ mod tests {
 					)]
 					.into(),
 				},
-				Queue(
+				Queue::<PlayerSkills<SideUnset>>(
 					[
 						Skill {
 							cast: Cast {
@@ -238,7 +251,10 @@ mod tests {
 					..default()
 				},
 			],
-			queue.0.iter().collect::<Vec<&Skill<Queued>>>()
+			queue
+				.0
+				.iter()
+				.collect::<Vec<&Skill<PlayerSkills<SideUnset>, Queued>>>()
 		);
 	}
 
@@ -259,7 +275,7 @@ mod tests {
 					mode: ScheduleMode::Override,
 					skills: [(SlotKey::Hand(Side::Off), new_skill.clone())].into(),
 				},
-				Queue(
+				Queue::<PlayerSkills<SideUnset>>(
 					[
 						Skill {
 							cast: Cast {
@@ -320,7 +336,7 @@ mod tests {
 					mode: ScheduleMode::Override,
 					skills: [(SlotKey::Hand(Side::Off), new_skill.clone())].into(),
 				},
-				Queue([].into()),
+				Queue::default(),
 			))
 			.id();
 
@@ -339,8 +355,13 @@ mod tests {
 				false,
 			),
 			(
-				queue.0.iter().collect::<Vec<&Skill<Queued>>>(),
-				agent.get::<Track<Skill<Active>>>().unwrap(),
+				queue
+					.0
+					.iter()
+					.collect::<Vec<&Skill<PlayerSkills<SideUnset>, Queued>>>(),
+				agent
+					.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
+					.unwrap(),
 				agent.contains::<WaitNext>(),
 			)
 		);
@@ -368,7 +389,7 @@ mod tests {
 					mode: ScheduleMode::Override,
 					skills: [(SlotKey::Hand(Side::Off), new_skill.clone())].into(),
 				},
-				Queue([].into()),
+				Queue::default(),
 			))
 			.id();
 
@@ -387,8 +408,13 @@ mod tests {
 				true,
 			),
 			(
-				queue.0.iter().collect::<Vec<&Skill<Queued>>>(),
-				agent.get::<Track<Skill<Active>>>().unwrap(),
+				queue
+					.0
+					.iter()
+					.collect::<Vec<&Skill<PlayerSkills<SideUnset>, Queued>>>(),
+				agent
+					.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
+					.unwrap(),
 				agent.contains::<WaitNext>(),
 			)
 		);
@@ -416,7 +442,7 @@ mod tests {
 					mode: ScheduleMode::Override,
 					skills: [(SlotKey::Hand(Side::Off), new_skill.clone())].into(),
 				},
-				Queue([].into()),
+				Queue::default(),
 			))
 			.id();
 
@@ -435,8 +461,13 @@ mod tests {
 				true,
 			),
 			(
-				queue.0.iter().collect::<Vec<&Skill<Queued>>>(),
-				agent.get::<Track<Skill<Active>>>().unwrap(),
+				queue
+					.0
+					.iter()
+					.collect::<Vec<&Skill<PlayerSkills<SideUnset>, Queued>>>(),
+				agent
+					.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
+					.unwrap(),
 				agent.contains::<WaitNext>(),
 			)
 		);
@@ -449,7 +480,7 @@ mod tests {
 			mode: ScheduleMode::Override,
 			skills: [(SlotKey::Hand(Side::Off), Skill::default())].into(),
 		};
-		let agent = app.world.spawn((schedule, Queue([].into()))).id();
+		let agent = app.world.spawn((schedule, Queue::default())).id();
 
 		app.update();
 
@@ -479,7 +510,7 @@ mod tests {
 				mode: ScheduleMode::Override,
 				skills: [(SlotKey::Hand(Side::Off), Skill::default())].into(),
 			},
-			Queue([].into()),
+			Queue::default(),
 		));
 
 		app.update();
@@ -493,7 +524,7 @@ mod tests {
 		get_ray.expect().times(0).return_const(TEST_RAY);
 
 		let mut app = setup::<Mock_GetRayFromCamNotCalled>();
-		app.world.spawn(Queue([].into()));
+		app.world.spawn(Queue::default());
 
 		app.update();
 	}
@@ -506,8 +537,8 @@ mod tests {
 				mode: ScheduleMode::Enqueue,
 				skills: [(SlotKey::Hand(Side::Off), Skill::default())].into(),
 			},
-			Track::new(Skill::<Active>::default()),
-			Queue([].into()),
+			Track::new(Skill::<PlayerSkills<SideUnset>, Active>::default()),
+			Queue::default(),
 		));
 
 		app.update();

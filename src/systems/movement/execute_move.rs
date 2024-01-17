@@ -1,38 +1,40 @@
 use crate::{
-	behaviors::MovementMode,
-	components::{Marker, WaitNext},
-	markers::{Fast, Slow},
+	components::{Animate, WaitNext},
 	traits::{movement::Movement, movement_data::MovementData},
 };
 use bevy::prelude::*;
 
+type Components<'a, TAnimationKey, TAgent, TMovement> = (
+	Entity,
+	&'a mut TMovement,
+	&'a mut Transform,
+	&'a TAgent,
+	Option<&'a Animate<TAnimationKey>>,
+);
+
 pub fn execute_move<
-	TAgent: Component + MovementData,
+	TAnimationKey: PartialEq + Clone + Copy + Send + Sync + 'static,
+	TAgent: Component + MovementData<TAnimationKey>,
 	TMovement: Component + Movement,
 	TTime: Send + Sync + Default + 'static,
 >(
 	time: Res<Time<TTime>>,
 	mut commands: Commands,
-	mut agents: Query<(Entity, &mut TMovement, &mut Transform, &TAgent)>,
+	mut agents: Query<Components<TAnimationKey, TAgent, TMovement>>,
 ) {
-	for (entity, mut movement, mut transform, agent) in agents.iter_mut() {
+	for (entity, mut movement, mut transform, agent, running_animate) in agents.iter_mut() {
 		let mut entity = commands.entity(entity);
-		let (speed, movement_mode) = agent.get_movement_data();
+		let (speed, animate) = agent.get_movement_data();
 		let is_done = movement.update(&mut transform, time.delta_seconds() * speed.to_f32());
 
-		match (is_done, movement_mode) {
-			(true, _) => {
-				entity.remove::<(Marker<Fast>, Marker<Slow>, TMovement)>();
-				entity.insert(WaitNext);
+		if is_done {
+			entity.insert(WaitNext);
+			entity.remove::<TMovement>();
+			if matches!(running_animate, Some(running_animate) if running_animate == &animate) {
+				entity.remove::<Animate<TAnimationKey>>();
 			}
-			(_, MovementMode::Slow) => {
-				entity.remove::<Marker<Fast>>();
-				entity.insert(Marker::<Slow>::new());
-			}
-			(_, MovementMode::Fast) => {
-				entity.remove::<Marker<Slow>>();
-				entity.insert(Marker::<Fast>::new());
-			}
+		} else {
+			entity.insert(animate);
 		}
 	}
 }
@@ -41,8 +43,7 @@ pub fn execute_move<
 mod test {
 	use super::*;
 	use crate::{
-		behaviors::MovementMode,
-		components::UnitsPerSecond,
+		components::{Animate, UnitsPerSecond},
 		traits::movement::{IsDone, Movement, Units},
 	};
 	use mockall::{automock, predicate::eq};
@@ -50,8 +51,15 @@ mod test {
 
 	#[derive(Component)]
 	struct AgentRun;
+
 	#[derive(Component)]
 	struct AgentWalk;
+
+	#[derive(Clone, Copy, PartialEq, Debug)]
+	enum _Key {
+		Slow,
+		Fast,
+	}
 
 	#[derive(Component)]
 	struct _Movement {
@@ -73,15 +81,15 @@ mod test {
 		}
 	}
 
-	impl MovementData for AgentRun {
-		fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode) {
-			(UnitsPerSecond::new(11.), MovementMode::Fast)
+	impl MovementData<_Key> for AgentRun {
+		fn get_movement_data(&self) -> (UnitsPerSecond, Animate<_Key>) {
+			(UnitsPerSecond::new(11.), Animate::Repeat(_Key::Fast))
 		}
 	}
 
-	impl MovementData for AgentWalk {
-		fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode) {
-			(UnitsPerSecond::new(1.), MovementMode::Slow)
+	impl MovementData<_Key> for AgentWalk {
+		fn get_movement_data(&self) -> (UnitsPerSecond, Animate<_Key>) {
+			(UnitsPerSecond::new(1.), Animate::Repeat(_Key::Slow))
 		}
 	}
 
@@ -95,8 +103,8 @@ mod test {
 		app.add_systems(
 			Update,
 			(
-				execute_move::<AgentRun, _Movement, Real>,
-				execute_move::<AgentWalk, _Movement, Real>,
+				execute_move::<_Key, AgentRun, _Movement, Real>,
+				execute_move::<_Key, AgentWalk, _Movement, Real>,
 			),
 		);
 
@@ -179,7 +187,7 @@ mod test {
 	}
 
 	#[test]
-	fn set_run_and_remove_walk_component() {
+	fn set_fast() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let agent = AgentRun;
@@ -187,53 +195,39 @@ mod test {
 
 		movement.mock.expect_update().return_const(false);
 
-		let agent = app
-			.world
-			.spawn((agent, movement, transform, Marker::<Slow>::new()))
-			.id();
+		let agent = app.world.spawn((agent, movement, transform)).id();
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			(false, true),
-			(
-				agent.contains::<Marker<Slow>>(),
-				agent.contains::<Marker<Fast>>()
-			)
-		)
+			Some(&Animate::Repeat(_Key::Fast)),
+			agent.get::<Animate<_Key>>()
+		);
 	}
 
 	#[test]
-	fn remove_run_when_done() {
+	fn remove_fast_when_done() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let agent = AgentRun;
 		let mut movement = _Movement::new();
+		let (_, animate) = agent.get_movement_data();
 
 		movement.mock.expect_update().return_const(true);
 
-		let agent = app
-			.world
-			.spawn((agent, movement, transform, Marker::<Slow>::new()))
-			.id();
+		let agent = app.world.spawn((agent, movement, transform, animate)).id();
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert_eq!(
-			(false, false),
-			(
-				agent.contains::<Marker<Slow>>(),
-				agent.contains::<Marker<Fast>>()
-			)
-		)
+		assert!(!agent.contains::<Animate<_Key>>());
 	}
 
 	#[test]
-	fn set_walk_and_remove_run_component() {
+	fn set_slow() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let agent = AgentWalk;
@@ -241,49 +235,35 @@ mod test {
 
 		movement.mock.expect_update().return_const(false);
 
-		let agent = app
-			.world
-			.spawn((agent, movement, transform, Marker::<Fast>::new()))
-			.id();
+		let agent = app.world.spawn((agent, movement, transform)).id();
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			(true, false),
-			(
-				agent.contains::<Marker<Slow>>(),
-				agent.contains::<Marker<Fast>>()
-			)
-		)
+			Some(&Animate::Repeat(_Key::Slow)),
+			agent.get::<Animate<_Key>>()
+		);
 	}
 
 	#[test]
-	fn remove_walk_when_done() {
+	fn remove_slow_when_done() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let agent = AgentWalk;
 		let mut movement = _Movement::new();
+		let (_, animate) = agent.get_movement_data();
 
 		movement.mock.expect_update().return_const(true);
 
-		let agent = app
-			.world
-			.spawn((agent, movement, transform, Marker::<Fast>::new()))
-			.id();
+		let agent = app.world.spawn((agent, movement, transform, animate)).id();
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert_eq!(
-			(false, false),
-			(
-				agent.contains::<Marker<Slow>>(),
-				agent.contains::<Marker<Fast>>()
-			)
-		)
+		assert!(!agent.contains::<Animate<_Key>>());
 	}
 
 	#[test]
@@ -295,10 +275,7 @@ mod test {
 
 		movement.mock.expect_update().return_const(true);
 
-		let agent = app
-			.world
-			.spawn((agent, movement, transform, Marker::<Fast>::new()))
-			.id();
+		let agent = app.world.spawn((agent, movement, transform)).id();
 
 		app.update();
 
@@ -308,32 +285,21 @@ mod test {
 	}
 
 	#[test]
-	fn do_not_remove_movement_when_waiting_next_on_other_agents() {
-		#[derive(Component)]
-		struct OtherAgent;
-
+	fn do_not_remove_animate_when_not_matching_move_mode() {
 		let mut app = setup_app();
 		let transform = Transform::from_xyz(1., 2., 3.);
-		let agent = OtherAgent;
+		let agent = AgentWalk;
 		let mut movement = _Movement::new();
+		let (_, animate) = AgentRun.get_movement_data();
 
-		movement.mock.expect_update().return_const(false);
+		movement.mock.expect_update().return_const(true);
 
-		let agent = app
-			.world
-			.spawn((agent, movement, transform, Marker::<Fast>::new(), WaitNext))
-			.id();
+		let agent = app.world.spawn((agent, movement, transform, animate)).id();
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert_eq!(
-			(true, true),
-			(
-				agent.contains::<_Movement>(),
-				agent.contains::<Marker<Fast>>(),
-			)
-		);
+		assert_eq!(Some(&animate), agent.get::<Animate<_Key>>());
 	}
 }

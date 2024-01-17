@@ -1,11 +1,11 @@
-pub mod once;
-pub mod repeat;
+pub mod animation_player;
 
-use bevy::{
-	animation::{AnimationClip, AnimationPlayer},
-	asset::Handle,
-};
+use bevy::{animation::AnimationClip, asset::Handle};
 
-pub trait PlayAnimation {
-	fn play(player: &mut AnimationPlayer, animation: &Handle<AnimationClip>);
+pub trait RepeatAnimation {
+	fn repeat(&mut self, animation: &Handle<AnimationClip>);
+}
+
+pub trait ReplayAnimation {
+	fn replay(&mut self, animation: &Handle<AnimationClip>);
 }
