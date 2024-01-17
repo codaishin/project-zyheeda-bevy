@@ -6,7 +6,7 @@ use crate::{
 };
 use bevy::{ecs::system::EntityCommands, transform::components::Transform};
 
-impl BehaviorExecution for Track<Skill<Active>> {
+impl<TAnimationKey> BehaviorExecution for Track<Skill<TAnimationKey, Active>> {
 	fn run(&self, agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner) {
 		let Some(run) = self.value.behavior.run_fn else {
 			return;
@@ -34,6 +34,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		behaviors::meta::BehaviorMeta,
+		components::{PlayerSkills, SideUnset},
 		traits::behavior_execution::test_tools::{run_system, stop_system},
 	};
 	use bevy::{
@@ -116,7 +117,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			run_system::<Track<Skill<Active>>>(agent, transform, spawner),
+			run_system::<Track<Skill<PlayerSkills<SideUnset>, Active>>>(agent, transform, spawner),
 		);
 		app.update();
 	}
@@ -143,7 +144,10 @@ mod tests {
 			.withf(move |a| a.id() == agent)
 			.return_const(());
 
-		app.add_systems(Update, stop_system::<Track<Skill<Active>>>(agent));
+		app.add_systems(
+			Update,
+			stop_system::<Track<Skill<PlayerSkills<SideUnset>, Active>>>(agent),
+		);
 		app.update();
 	}
 

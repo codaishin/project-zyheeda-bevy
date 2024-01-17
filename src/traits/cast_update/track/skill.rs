@@ -5,7 +5,7 @@ use crate::{
 };
 use std::time::Duration;
 
-impl CastUpdate for Track<Skill<Active>> {
+impl<TAnimationKey> CastUpdate for Track<Skill<TAnimationKey, Active>> {
 	fn update(&mut self, delta: Duration) -> State {
 		let skill = &self.value;
 		let old = self.duration;
@@ -23,7 +23,7 @@ impl CastUpdate for Track<Skill<Active>> {
 	}
 }
 
-fn new_or_activate(skill: &Skill<Active>) -> State {
+fn new_or_activate<TAnimationKey>(skill: &Skill<TAnimationKey, Active>) -> State {
 	if skill.cast.pre == Duration::ZERO {
 		State::Activate(AgeType::New)
 	} else {
@@ -31,15 +31,15 @@ fn new_or_activate(skill: &Skill<Active>) -> State {
 	}
 }
 
-fn pre_cast(skill: &Skill<Active>) -> Duration {
+fn pre_cast<TAnimationKey>(skill: &Skill<TAnimationKey, Active>) -> Duration {
 	skill.cast.pre
 }
 
-fn active_cast(skill: &Skill<Active>) -> Duration {
+fn active_cast<TAnimationKey>(skill: &Skill<TAnimationKey, Active>) -> Duration {
 	skill.cast.pre + skill.cast.active
 }
 
-fn after_cast(skill: &Skill<Active>) -> Duration {
+fn after_cast<TAnimationKey>(skill: &Skill<TAnimationKey, Active>) -> Duration {
 	skill.cast.pre + skill.cast.active + skill.cast.after
 }
 

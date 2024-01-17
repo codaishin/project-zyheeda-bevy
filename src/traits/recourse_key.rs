@@ -1,4 +1,5 @@
 pub mod player_animation_states;
+pub mod player_movement;
 
 pub trait ResourceKey
 where

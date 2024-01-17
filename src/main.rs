@@ -6,15 +6,17 @@ use project_zyheeda::{
 		Animator,
 		CamOrbit,
 		ComboTreeTemplate,
+		Handed,
 		Inventory,
 		InventoryKey,
 		Item,
 		ItemType,
-		Marker,
 		Player,
-		PlayerAnimationStates,
+		PlayerMovement,
+		PlayerSkills,
 		Projectile,
 		Side,
+		SideUnset,
 		SimpleMovement,
 		SlotKey,
 		Swap,
@@ -22,25 +24,12 @@ use project_zyheeda::{
 		UnitsPerSecond,
 	},
 	errors::Error,
-	markers::{
-		functions::{insert_hand_marker_fn, remove_hand_marker_fn},
-		meta::MarkerMeta,
-		Dual,
-		Fast,
-		HandGun,
-		Idle,
-		Left,
-		Right,
-		Slow,
-		Sword,
-	},
 	plugins::ingame_menu::IngameMenuPlugin,
-	resources::{skill_templates::SkillTemplates, Animation, Models, SkillIcons, SlotMap},
-	skill::{Active, Cast, Skill, SkillComboNext, SkillComboTree},
+	resources::{skill_templates::SkillTemplates, Models, SkillIcons, SlotMap},
+	skill::{Active, Cast, Skill, SkillComboNext, SkillComboTree, SwordStrike},
 	states::{GameRunning, MouseContext},
 	systems::{
 		animations::{
-			animate::animate,
 			link_animator::link_animators_with_new_animation_players,
 			load_animations::load_animations,
 			play_animations::play_animations,
@@ -70,10 +59,9 @@ use project_zyheeda::{
 			projectile::projectile,
 		},
 	},
-	tools::{Once, Repeat, Tools},
+	tools::Tools,
 	traits::{
 		behavior::GetBehaviorMeta,
-		marker::GetMarkerHandMarkerMeta,
 		orbit::{Orbit, Vec2Radians},
 	},
 };
@@ -103,7 +91,10 @@ fn prepare_game(app: &mut App) {
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
 		.add_systems(
 			PreStartup,
-			load_animations::<PlayerAnimationStates, AssetServer>,
+			(
+				load_animations::<PlayerSkills<Side>, AssetServer>,
+				load_animations::<PlayerMovement, AssetServer>,
+			),
 		)
 		.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
 		.add_systems(Startup, setup_input)
@@ -148,15 +139,20 @@ fn prepare_game(app: &mut App) {
 			Update,
 			(
 				chain_combo_skills::<SkillComboNext>,
-				execute_skill::<Track<Skill<Active>>, Virtual>.pipe(log_many),
-				execute_move::<Player, SimpleMovement, Virtual>,
-			),
+				execute_skill::<
+					PlayerSkills<Side>,
+					Track<Skill<PlayerSkills<SideUnset>, Active>>,
+					Virtual,
+				>,
+				execute_move::<PlayerMovement, Player, SimpleMovement, Virtual>,
+			)
+				.chain(),
 		)
 		.add_systems(
 			Update,
 			(
 				projectile.pipe(log),
-				execute_move::<Projectile, SimpleMovement, Virtual>,
+				execute_move::<(), Projectile, SimpleMovement, Virtual>,
 			),
 		)
 		.add_systems(
@@ -167,21 +163,10 @@ fn prepare_game(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				animate::<Player, Marker<Idle>, Repeat>,
-				animate::<Player, Marker<Slow>, Repeat>,
-				animate::<Player, Marker<Fast>, Repeat>,
-				animate::<Player, Marker<(HandGun, Left)>, Once>,
-				animate::<Player, Marker<(HandGun, Left)>, Once>,
-				animate::<Player, Marker<(HandGun, Left, Dual)>, Once>,
-				animate::<Player, Marker<(HandGun, Right)>, Once>,
-				animate::<Player, Marker<(HandGun, Right, Dual)>, Once>,
-				animate::<Player, Marker<(Sword, Left)>, Once>,
-				animate::<Player, Marker<(Sword, Right)>, Once>,
-			),
-		)
-		.add_systems(
-			Update,
-			play_animations::<PlayerAnimationStates, AnimationPlayer>,
+				play_animations::<PlayerMovement, AnimationPlayer>,
+				play_animations::<PlayerSkills<Side>, AnimationPlayer>,
+			)
+				.chain(),
 		);
 }
 
@@ -334,8 +319,8 @@ fn setup_skill_templates(
 				after: Duration::from_millis(200),
 			},
 			soft_override: true,
-			marker: Sword::hand_markers(),
-			behavior: Sword::behavior(),
+			animate: PlayerSkills::SwordStrike(SideUnset),
+			behavior: SwordStrike::behavior(),
 			is_usable_with: HashSet::from([ItemType::Sword]),
 			..default()
 		},
@@ -347,7 +332,7 @@ fn setup_skill_templates(
 				after: Duration::from_millis(500),
 			},
 			soft_override: true,
-			marker: HandGun::hand_markers(),
+			animate: PlayerSkills::Shoot(Handed::Single(SideUnset)),
 			behavior: Projectile::behavior(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
 			..default()
@@ -360,10 +345,7 @@ fn setup_skill_templates(
 				after: Duration::from_millis(500),
 			},
 			soft_override: true,
-			marker: MarkerMeta {
-				insert_fn: insert_hand_marker_fn::<(HandGun, Left, Dual), (HandGun, Right, Dual)>,
-				remove_fn: remove_hand_marker_fn::<(HandGun, Left, Dual), (HandGun, Right, Dual)>,
-			},
+			animate: PlayerSkills::Shoot(Handed::Dual(SideUnset)),
 			behavior: Projectile::behavior(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
 			..default()
@@ -415,34 +397,6 @@ fn spawn_player(
 	asset_server: Res<AssetServer>,
 	skill_templates: Res<SkillTemplates>,
 ) {
-	commands.insert_resource(Animation::<Player, Marker<Idle>>::new(
-		asset_server.load("models/player.gltf#Animation2"),
-	));
-	commands.insert_resource(Animation::<Player, Marker<Slow>>::new(
-		asset_server.load("models/player.gltf#Animation1"),
-	));
-	commands.insert_resource(Animation::<Player, Marker<Fast>>::new(
-		asset_server.load("models/player.gltf#Animation3"),
-	));
-	commands.insert_resource(Animation::<Player, Marker<(HandGun, Right)>>::new(
-		asset_server.load("models/player.gltf#Animation4"),
-	));
-	commands.insert_resource(Animation::<Player, Marker<(HandGun, Left)>>::new(
-		asset_server.load("models/player.gltf#Animation5"),
-	));
-	commands.insert_resource(Animation::<Player, Marker<(HandGun, Right, Dual)>>::new(
-		asset_server.load("models/player.gltf#Animation6"),
-	));
-	commands.insert_resource(Animation::<Player, Marker<(HandGun, Left, Dual)>>::new(
-		asset_server.load("models/player.gltf#Animation7"),
-	));
-	commands.insert_resource(Animation::<Player, Marker<(Sword, Right)>>::new(
-		asset_server.load("models/player.gltf#Animation8"),
-	));
-	commands.insert_resource(Animation::<Player, Marker<(Sword, Left)>>::new(
-		asset_server.load("models/player.gltf#Animation9"),
-	));
-
 	let pistol_a = Item {
 		name: "Pistol A",
 		model: Some("pistol"),

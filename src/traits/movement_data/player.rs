@@ -1,14 +1,14 @@
 use super::MovementData;
 use crate::{
 	behaviors::MovementMode,
-	components::{Player, UnitsPerSecond},
+	components::{Animate, Player, PlayerMovement, UnitsPerSecond},
 };
 
-impl MovementData for Player {
-	fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode) {
+impl MovementData<PlayerMovement> for Player {
+	fn get_movement_data(&self) -> (UnitsPerSecond, Animate<PlayerMovement>) {
 		match self.movement_mode {
-			MovementMode::Slow => (self.walk_speed, MovementMode::Slow),
-			MovementMode::Fast => (self.run_speed, MovementMode::Fast),
+			MovementMode::Slow => (self.walk_speed, Animate::Repeat(PlayerMovement::Walk)),
+			MovementMode::Fast => (self.run_speed, Animate::Repeat(PlayerMovement::Run)),
 		}
 	}
 }
@@ -27,7 +27,10 @@ mod tests {
 		};
 
 		assert_eq!(
-			(UnitsPerSecond::new(6.), MovementMode::Slow),
+			(
+				UnitsPerSecond::new(6.),
+				Animate::Repeat(PlayerMovement::Walk)
+			),
 			player.get_movement_data()
 		)
 	}
@@ -41,7 +44,10 @@ mod tests {
 		};
 
 		assert_eq!(
-			(UnitsPerSecond::new(60.), MovementMode::Fast),
+			(
+				UnitsPerSecond::new(60.),
+				Animate::Repeat(PlayerMovement::Run)
+			),
 			player.get_movement_data()
 		)
 	}

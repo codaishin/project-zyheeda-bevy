@@ -1,11 +1,10 @@
 use crate::{
 	behaviors::meta::Spawner,
-	components::{SlotKey, Slots, WaitNext},
-	errors::Error,
+	components::{Animate, SlotKey, Slots, WaitNext},
 	traits::{
 		behavior_execution::BehaviorExecution,
 		cast_update::{AgeType, CastUpdate, State},
-		marker_modify::MarkerModify,
+		get_animation::GetAnimation,
 	},
 };
 use bevy::{
@@ -14,25 +13,27 @@ use bevy::{
 };
 use std::time::Duration;
 
-type Skills<'a, TSkill> = (
+type Skills<'a, TAnimationKey, TSkill> = (
 	Entity,
 	&'a mut Transform,
 	&'a mut TSkill,
 	&'a Slots,
 	Option<&'a WaitNext>,
+	Option<&'a Animate<TAnimationKey>>,
 );
 
 pub fn execute_skill<
-	TSkill: CastUpdate + MarkerModify + BehaviorExecution + Component,
+	TAnimationKey: Copy + Clone + PartialEq + Send + Sync + 'static,
+	TSkill: CastUpdate + BehaviorExecution + GetAnimation<TAnimationKey> + Component,
 	TTime: Send + Sync + Default + 'static,
 >(
 	time: Res<Time<TTime>>,
 	mut commands: Commands,
-	mut agents: Query<Skills<TSkill>>,
+	mut agents: Query<Skills<TAnimationKey, TSkill>>,
 	transforms: Query<&GlobalTransform>,
-) -> Vec<Result<(), Error>> {
+) {
 	let delta = time.delta();
-	let handle_skill = |(entity, mut transform, mut skill, slots, wait_next)| {
+	for (entity, mut transform, mut skill, slots, wait_next, animate) in &mut agents {
 		let agent = &mut commands.entity(entity);
 		let transform = &mut transform;
 		let skill = &mut skill;
@@ -45,23 +46,19 @@ pub fn execute_skill<
 		}
 
 		if state == State::Done {
-			return handle_done(agent, skill);
+			return handle_done(agent, skill, animate);
 		}
 
 		let State::Activate(age) = state else {
-			return Ok(());
+			return;
 		};
 
 		handle_active(agent, transform, skill, slots, transforms);
 
 		if age == AgeType::New {
-			return handle_new(agent, transform, skill, slots, transforms);
+			handle_new(agent, transform, skill, slots, transforms);
 		}
-
-		Ok(())
-	};
-
-	agents.iter_mut().map(handle_skill).collect()
+	}
 }
 
 fn get_state<TSkill: CastUpdate>(
@@ -76,17 +73,20 @@ fn get_state<TSkill: CastUpdate>(
 	skill.update(*delta)
 }
 
-fn handle_new<TSkill: MarkerModify + BehaviorExecution>(
+fn handle_new<
+	TAnimationKey: Clone + Copy + Send + Sync + 'static,
+	TSkill: BehaviorExecution + GetAnimation<TAnimationKey>,
+>(
 	agent: &mut EntityCommands,
 	transform: &mut Mut<Transform>,
 	skill: &mut Mut<TSkill>,
 	slots: &Slots,
 	transforms: &Query<&GlobalTransform>,
-) -> Result<(), Error> {
+) {
 	if let Some(spawner) = get_spawner(slots, transforms) {
 		skill.apply_transform(transform, &spawner);
 	};
-	skill.insert_markers(agent)
+	agent.insert(skill.animate());
 }
 
 fn handle_active<TSkill: BehaviorExecution>(
@@ -102,14 +102,34 @@ fn handle_active<TSkill: BehaviorExecution>(
 	skill.run(agent, agent_transform, &spawner);
 }
 
-fn handle_done<TSkill: CastUpdate + MarkerModify + BehaviorExecution + Component>(
+fn handle_done<
+	TAnimationKey: Copy + Clone + Send + Sync + PartialEq + 'static,
+	TSkill: CastUpdate + BehaviorExecution + GetAnimation<TAnimationKey> + Component,
+>(
 	agent: &mut EntityCommands,
 	skill: &mut Mut<TSkill>,
-) -> Result<(), Error> {
+	animate: Option<&Animate<TAnimationKey>>,
+) {
 	agent.remove::<TSkill>();
+	if current_animation_is_from_skill(skill, animate) {
+		agent.remove::<Animate<TAnimationKey>>();
+	}
 	agent.insert(WaitNext);
 	skill.stop(agent);
-	skill.remove_markers(agent)
+}
+
+fn current_animation_is_from_skill<
+	TAnimationKey: Clone + Copy + Send + Sync + PartialEq + 'static,
+	TSkill: CastUpdate + BehaviorExecution + GetAnimation<TAnimationKey> + Component,
+>(
+	skill: &mut Mut<TSkill>,
+	animate: Option<&Animate<TAnimationKey>>,
+) -> bool {
+	let Some(animate) = animate else {
+		return false;
+	};
+
+	animate == &skill.animate()
 }
 
 fn get_spawner(slots: &Slots, transforms: &Query<&GlobalTransform>) -> Option<Spawner> {
@@ -122,24 +142,16 @@ fn get_spawner(slots: &Slots, transforms: &Query<&GlobalTransform>) -> Option<Sp
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Slot, SlotKey, WaitNext},
-		errors::Level,
-		systems::log::tests::{fake_log_error_lazy_many, FakeErrorLogMany},
+		components::{Animate, Slot, SlotKey, WaitNext},
 		traits::cast_update::{CastType, State},
 	};
 	use bevy::{
-		ecs::{component::Component, system::IntoSystem},
+		ecs::component::Component,
 		prelude::{App, Transform, Update, Vec3},
 		time::{Real, Time},
 	};
 	use mockall::{mock, predicate::eq};
 	use std::time::Duration;
-
-	#[derive(PartialEq)]
-	enum MarkerOption {
-		Insert,
-		Remove,
-	}
 
 	#[derive(PartialEq)]
 	enum BehaviorOption {
@@ -150,8 +162,13 @@ mod tests {
 
 	#[derive(PartialEq)]
 	enum MockOption {
-		MarkerModify(MarkerOption),
 		BehaviorExecution(BehaviorOption),
+		Animate,
+	}
+
+	#[derive(Debug, PartialEq, Clone, Copy)]
+	enum _AnimationKey {
+		A,
 	}
 
 	#[derive(Component)]
@@ -163,12 +180,6 @@ mod tests {
 		pub fn without_default_setup_for<const N: usize>(no_setup: [MockOption; N]) -> Self {
 			let mut mock = Mock_Skill::new();
 
-			if !no_setup.contains(&MockOption::MarkerModify(MarkerOption::Insert)) {
-				mock.expect_insert_markers().return_const(Ok(()));
-			}
-			if !no_setup.contains(&MockOption::MarkerModify(MarkerOption::Remove)) {
-				mock.expect_remove_markers().return_const(Ok(()));
-			}
 			if !no_setup.contains(&MockOption::BehaviorExecution(BehaviorOption::Run)) {
 				mock.expect_run().return_const(());
 			}
@@ -178,6 +189,9 @@ mod tests {
 			if !no_setup.contains(&MockOption::BehaviorExecution(BehaviorOption::Transform)) {
 				mock.expect_apply_transform().return_const(());
 			}
+			if !no_setup.contains(&MockOption::Animate) {
+				mock.expect_animate().return_const(Animate::None);
+			}
 
 			Self { mock }
 		}
@@ -186,16 +200,6 @@ mod tests {
 	impl CastUpdate for _Skill {
 		fn update(&mut self, delta: Duration) -> State {
 			self.mock.update(delta)
-		}
-	}
-
-	impl MarkerModify for _Skill {
-		fn insert_markers(&self, agent: &mut EntityCommands) -> Result<(), Error> {
-			self.mock.insert_markers(agent)
-		}
-
-		fn remove_markers(&self, agent: &mut EntityCommands) -> Result<(), Error> {
-			self.mock.remove_markers(agent)
 		}
 	}
 
@@ -213,31 +217,24 @@ mod tests {
 		}
 	}
 
+	impl GetAnimation<_AnimationKey> for _Skill {
+		fn animate(&self) -> Animate<_AnimationKey> {
+			self.mock.animate()
+		}
+	}
+
 	mock! {
 		_Skill {}
 		impl CastUpdate for _Skill {
-			fn update(&mut self, delta: Duration) -> State {
-				State::Done
-			}
-		}
-		impl MarkerModify for _Skill {
-			fn insert_markers<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>) -> Result<(), Error> {
-				Ok(())
-			}
-			fn remove_markers<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>) -> Result<(), Error>{
-				Ok(())
-			}
+			fn update(&mut self, delta: Duration) -> State {}
 		}
 		impl BehaviorExecution for _Skill {
-			fn run<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>, agent_transform: &Transform, spawner: &Spawner) {
-				()
-			}
-			fn stop<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>) {
-				()
-			}
-			fn apply_transform(&self, transform: &mut Transform, spawner: &Spawner) {
-				()
-			}
+			fn run<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>, agent_transform: &Transform, spawner: &Spawner) {}
+			fn stop<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>) {}
+			fn apply_transform(&self, transform: &mut Transform, spawner: &Spawner) {}
+		}
+		impl GetAnimation<_AnimationKey> for _Skill {
+			fn animate(&self) -> Animate<_AnimationKey> {}
 		}
 	}
 
@@ -271,10 +268,7 @@ mod tests {
 		time.update();
 		app.insert_resource(time);
 		app.update();
-		app.add_systems(
-			Update,
-			execute_skill::<_Skill, Real>.pipe(fake_log_error_lazy_many(agent)),
-		);
+		app.add_systems(Update, execute_skill::<_AnimationKey, _Skill, Real>);
 
 		(app, agent)
 	}
@@ -305,84 +299,46 @@ mod tests {
 	}
 
 	#[test]
-	fn add_marker_when_new() {
+	fn add_animation_when_new() {
 		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill =
-			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
+		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill.mock.expect_update().return_const(State::New);
-		skill
-			.mock
-			.expect_insert_markers()
-			.times(1)
-			.withf(move |a| a.id() == agent)
-			.return_const(Ok(()));
 
 		app.world
 			.entity_mut(agent)
 			.insert((skill, Transform::default()));
-		app.update();
-	}
-
-	#[test]
-	fn return_add_marker_error() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill =
-			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
-
-		skill.mock.expect_update().return_const(State::New);
-		skill.mock.expect_insert_markers().return_const(Err(Error {
-			msg: "some message".to_owned(),
-			lvl: Level::Warning,
-		}));
-
-		app.world
-			.entity_mut(agent)
-			.insert((skill, Transform::default()));
-
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert_eq!(
-			Some(&FakeErrorLogMany(
-				[Error {
-					msg: "some message".to_owned(),
-					lvl: Level::Warning
-				}]
-				.into()
-			)),
-			agent.get::<FakeErrorLogMany>()
-		)
+		assert_eq!(Some(&Animate::None), agent.get::<Animate<_AnimationKey>>());
 	}
 
 	#[test]
-	fn do_not_add_marker_when_not_new() {
+	fn do_not_add_animate_when_not_new() {
 		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill =
-			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
+		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill
 			.mock
 			.expect_update()
 			.return_const(State::Casting(CastType::Pre));
-		skill
-			.mock
-			.expect_insert_markers()
-			.times(0)
-			.return_const(Ok(()));
 
 		app.world
 			.entity_mut(agent)
 			.insert((skill, Transform::default()));
 		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert!(!agent.contains::<Animate<_AnimationKey>>());
 	}
 
 	#[test]
 	fn add_marker_when_new_and_active() {
 		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill =
-			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
+		let mut skill = _Skill::without_default_setup_for([MockOption::Animate]);
 
 		skill
 			.mock
@@ -390,112 +346,80 @@ mod tests {
 			.return_const(State::Activate(AgeType::New));
 		skill
 			.mock
-			.expect_insert_markers()
+			.expect_animate()
 			.times(1)
-			.withf(move |a| a.id() == agent)
-			.return_const(Ok(()));
+			.return_const(Animate::Repeat(_AnimationKey::A));
 
 		app.world
 			.entity_mut(agent)
 			.insert((skill, Transform::default()));
 		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&Animate::Repeat(_AnimationKey::A)),
+			agent.get::<Animate<_AnimationKey>>()
+		);
 	}
 
 	#[test]
-	fn return_add_marker_error_when_new_active() {
+	fn remove_animation() {
 		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill =
-			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Insert)]);
+		let mut skill = _Skill::without_default_setup_for([MockOption::Animate]);
 
+		skill.mock.expect_update().return_const(State::Done);
 		skill
 			.mock
-			.expect_update()
-			.return_const(State::Activate(AgeType::New));
-		skill.mock.expect_insert_markers().return_const(Err(Error {
-			msg: "some message".to_owned(),
-			lvl: Level::Warning,
-		}));
+			.expect_animate()
+			.times(1)
+			.return_const(Animate::Repeat(_AnimationKey::A));
 
-		app.world
-			.entity_mut(agent)
-			.insert((skill, Transform::default()));
+		app.world.entity_mut(agent).insert((
+			skill,
+			Transform::default(),
+			Animate::Repeat(_AnimationKey::A),
+		));
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert!(!agent.contains::<Animate<_AnimationKey>>());
+	}
+
+	#[test]
+	fn do_not_remove_not_matching_animation() {
+		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let mut skill = _Skill::without_default_setup_for([MockOption::Animate]);
+
+		skill.mock.expect_update().return_const(State::Done);
+		skill
+			.mock
+			.expect_animate()
+			.times(1)
+			.return_const(Animate::Replay(_AnimationKey::A));
+
+		app.world.entity_mut(agent).insert((
+			skill,
+			Transform::default(),
+			Animate::Repeat(_AnimationKey::A),
+		));
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			Some(&FakeErrorLogMany(
-				[Error {
-					msg: "some message".to_owned(),
-					lvl: Level::Warning
-				}]
-				.into()
-			)),
-			agent.get::<FakeErrorLogMany>()
-		)
+			Some(&Animate::Repeat(_AnimationKey::A)),
+			agent.get::<Animate<_AnimationKey>>()
+		);
 	}
 
 	#[test]
-	fn remove_marker() {
+	fn do_not_remove_animate_when_not_done() {
 		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill =
-			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Remove)]);
-
-		skill.mock.expect_update().return_const(State::Done);
-		skill
-			.mock
-			.expect_remove_markers()
-			.times(1)
-			.withf(move |a| a.id() == agent)
-			.return_const(Ok(()));
-
-		app.world
-			.entity_mut(agent)
-			.insert((skill, Transform::default()));
-
-		app.update();
-	}
-
-	#[test]
-	fn remove_marker_error() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill =
-			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Remove)]);
-
-		skill.mock.expect_update().return_const(State::Done);
-		skill.mock.expect_remove_markers().return_const(Err(Error {
-			msg: "some message".to_owned(),
-			lvl: Level::Warning,
-		}));
-
-		app.world
-			.entity_mut(agent)
-			.insert((skill, Transform::default()));
-
-		app.update();
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			Some(&FakeErrorLogMany(
-				[Error {
-					msg: "some message".to_owned(),
-					lvl: Level::Warning
-				}]
-				.into()
-			)),
-			agent.get::<FakeErrorLogMany>()
-		)
-	}
-
-	#[test]
-	fn do_not_remove_marker_when_not_done() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill =
-			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Remove)]);
+		let mut skill = _Skill::without_default_setup_for([MockOption::Animate]);
 
 		skill
 			.mock
@@ -503,15 +427,23 @@ mod tests {
 			.return_const(State::Casting(CastType::After));
 		skill
 			.mock
-			.expect_remove_markers()
-			.times(0)
-			.return_const(Ok(()));
+			.expect_animate()
+			.return_const(Animate::Replay(_AnimationKey::A));
 
-		app.world
-			.entity_mut(agent)
-			.insert((skill, Transform::default()));
+		app.world.entity_mut(agent).insert((
+			skill,
+			Transform::default(),
+			Animate::Replay(_AnimationKey::A),
+		));
 
 		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&Animate::Replay(_AnimationKey::A)),
+			agent.get::<Animate<_AnimationKey>>()
+		);
 	}
 
 	#[test]
@@ -595,8 +527,7 @@ mod tests {
 	#[test]
 	fn remove_all_related_components_when_waiting_next() {
 		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill =
-			_Skill::without_default_setup_for([MockOption::MarkerModify(MarkerOption::Remove)]);
+		let mut skill = _Skill::without_default_setup_for([MockOption::Animate]);
 
 		skill
 			.mock
@@ -604,48 +535,27 @@ mod tests {
 			.return_const(State::Casting(CastType::Pre));
 		skill
 			.mock
-			.expect_remove_markers()
+			.expect_animate()
 			.times(1)
-			.withf(move |a| a.id() == agent)
-			.return_const(Ok(()));
+			.return_const(Animate::Repeat(_AnimationKey::A));
 
-		app.world
-			.entity_mut(agent)
-			.insert((skill, Transform::default(), WaitNext));
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert!(!agent.contains::<_Skill>());
-	}
-
-	#[test]
-	fn done_works_even_with_remove_marker_error() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill = _Skill::without_default_setup_for([
-			MockOption::MarkerModify(MarkerOption::Remove),
-			MockOption::BehaviorExecution(BehaviorOption::Stop),
-		]);
-
-		skill.mock.expect_update().return_const(State::Done);
-		skill.mock.expect_remove_markers().return_const(Err(Error {
-			msg: "".to_owned(),
-			lvl: Level::Error,
-		}));
-		skill.mock.expect_stop().times(1).return_const(());
-
-		app.world
-			.entity_mut(agent)
-			.insert((skill, Transform::default(), WaitNext));
+		app.world.entity_mut(agent).insert((
+			skill,
+			Transform::default(),
+			Animate::Repeat(_AnimationKey::A),
+			WaitNext,
+		));
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			(false, true),
-			(agent.contains::<_Skill>(), agent.contains::<WaitNext>())
+			(false, false),
+			(
+				agent.contains::<_Skill>(),
+				agent.contains::<Animate<_AnimationKey>>()
+			)
 		);
 	}
 
@@ -800,32 +710,6 @@ mod tests {
 			.mock
 			.expect_apply_transform()
 			.times(0)
-			.return_const(());
-
-		app.world
-			.entity_mut(agent)
-			.insert((skill, Transform::default()));
-
-		app.update();
-	}
-
-	#[test]
-	fn apply_transform_even_with_insert_marker_error() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill = _Skill::without_default_setup_for([
-			MockOption::MarkerModify(MarkerOption::Insert),
-			MockOption::BehaviorExecution(BehaviorOption::Transform),
-		]);
-
-		skill.mock.expect_update().return_const(State::New);
-		skill.mock.expect_insert_markers().return_const(Err(Error {
-			msg: "".to_owned(),
-			lvl: Level::Error,
-		}));
-		skill
-			.mock
-			.expect_apply_transform()
-			.times(1)
 			.return_const(());
 
 		app.world

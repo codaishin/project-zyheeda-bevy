@@ -1,7 +1,6 @@
 pub mod skill_templates;
 use crate::{
 	components::SlotKey,
-	traits::recourse_key::ResourceKey,
 	types::{File, Key, SceneId},
 };
 use bevy::{
@@ -12,27 +11,10 @@ use bevy::{
 	render::texture::Image,
 	scene::Scene,
 };
-use std::{collections::HashMap, hash::Hash, marker::PhantomData};
+use std::{collections::HashMap, hash::Hash};
 
 #[derive(Resource)]
-pub struct Animation<TAgent, TMarker> {
-	phantom_agent: PhantomData<TAgent>,
-	phantom_marker: PhantomData<TMarker>,
-	pub clip: Handle<AnimationClip>,
-}
-
-impl<TAgent, TMarker> Animation<TAgent, TMarker> {
-	pub fn new(clip: Handle<AnimationClip>) -> Self {
-		Self {
-			phantom_agent: PhantomData,
-			phantom_marker: PhantomData,
-			clip,
-		}
-	}
-}
-
-#[derive(Resource)]
-pub struct Animations<T: ResourceKey>(pub HashMap<T, Handle<AnimationClip>>);
+pub struct Animations<T>(pub HashMap<T, Handle<AnimationClip>>);
 
 #[derive(Resource)]
 pub struct Models(pub HashMap<&'static Key, Handle<Scene>>);

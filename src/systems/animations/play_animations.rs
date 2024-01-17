@@ -1,10 +1,7 @@
 use crate::{
 	components::{Animate, Animator},
 	resources::Animations,
-	traits::{
-		play_animation::{RepeatAnimation, ReplayAnimation},
-		recourse_key::ResourceKey,
-	},
+	traits::play_animation::{RepeatAnimation, ReplayAnimation},
 };
 use bevy::{
 	animation::AnimationClip,
@@ -19,7 +16,7 @@ use bevy::{
 use std::hash::Hash;
 
 pub fn play_animations<
-	TAnimationKey: ResourceKey + Hash + Eq + Sync + Send + 'static,
+	TAnimationKey: Clone + Copy + Hash + Eq + Sync + Send + 'static,
 	TAnimationPlayer: Component + RepeatAnimation + ReplayAnimation,
 >(
 	mut commands: Commands,
@@ -34,7 +31,7 @@ pub fn play_animations<
 }
 
 fn play_animation<
-	TAnimationKey: ResourceKey + Hash + Eq + Sync + Send + 'static,
+	TAnimationKey: Clone + Copy + Hash + Eq + Sync + Send + 'static,
 	TAnimationPlayer: Component + RepeatAnimation + ReplayAnimation,
 >(
 	animation_players: &mut Query<&mut TAnimationPlayer>,
@@ -49,6 +46,7 @@ fn play_animation<
 	match animate {
 		Animate::Replay(key) => replay(animation_player, animations.0.get(key)),
 		Animate::Repeat(key) => repeat(animation_player, animations.0.get(key)),
+		_ => (),
 	};
 }
 
@@ -84,7 +82,6 @@ fn repeat<TAnimationPlayer: RepeatAnimation>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::recourse_key::Iter;
 	use bevy::{
 		animation::AnimationClip,
 		app::{App, Update},
@@ -98,20 +95,6 @@ mod tests {
 	enum _Key {
 		A,
 		B,
-	}
-
-	impl ResourceKey for _Key {
-		fn resource_keys() -> Iter<Self> {
-			Iter(None)
-		}
-
-		fn get_next(_: &Iter<Self>) -> Option<Self> {
-			None
-		}
-
-		fn get_resource_path(_: &Self) -> String {
-			"does not matter".to_owned()
-		}
 	}
 
 	#[derive(Component)]
