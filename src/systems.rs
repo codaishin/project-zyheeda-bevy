@@ -4,4 +4,5 @@ pub mod items;
 pub mod log;
 pub mod mouse_context;
 pub mod movement;
+pub mod procedural;
 pub mod skill;
