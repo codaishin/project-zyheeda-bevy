@@ -22,8 +22,10 @@
 		"gltf",
 		"ingame",
 		"Loadout",
+		"Mapface",
 		"mockall",
 		"quickbar",
+		"tonemapping",
 		"zyheeda"
 	]
 }

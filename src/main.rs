@@ -1,4 +1,7 @@
-use bevy::prelude::*;
+use bevy::{
+	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
+	prelude::*,
+};
 use project_zyheeda::{
 	behaviors::MovementMode,
 	bundles::Loadout,
@@ -531,9 +534,15 @@ fn spawn_camera(commands: &mut Commands) {
 
 	commands.spawn((
 		Camera3dBundle {
+			camera: Camera {
+				hdr: true,
+				..default()
+			},
+			tonemapping: Tonemapping::TonyMcMapface,
 			transform,
 			..default()
 		},
+		BloomSettings::default(),
 		orbit,
 	));
 }
