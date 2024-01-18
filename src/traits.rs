@@ -12,4 +12,5 @@ pub mod movement;
 pub mod movement_data;
 pub mod orbit;
 pub mod play_animation;
+pub mod projectile;
 pub mod recourse_key;
