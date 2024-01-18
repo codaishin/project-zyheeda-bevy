@@ -14,6 +14,7 @@ use project_zyheeda::{
 		InventoryKey,
 		Item,
 		ItemType,
+		Plasma,
 		Player,
 		PlayerMovement,
 		PlayerSkills,
@@ -43,7 +44,7 @@ use project_zyheeda::{
 			slots::add_item_slots,
 			swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
 		},
-		log::{log, log_many},
+		log::log_many,
 		mouse_context::{
 			clear_triggered::clear_triggered_mouse_context,
 			trigger_primed::trigger_primed_mouse_context,
@@ -54,12 +55,12 @@ use project_zyheeda::{
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
 		},
+		procedural::projectile::projectile,
 		skill::{
 			chain_combo_skills::chain_combo_skills,
 			dequeue::dequeue,
 			enqueue::enqueue,
 			execute_skill::execute_skill,
-			projectile::projectile,
 		},
 	},
 	tools::Tools,
@@ -154,8 +155,8 @@ fn prepare_game(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				projectile.pipe(log),
-				execute_move::<(), Projectile, SimpleMovement, Virtual>,
+				projectile::<Projectile<Plasma>>,
+				execute_move::<(), Projectile<Plasma>, SimpleMovement, Virtual>,
 			),
 		)
 		.add_systems(
@@ -336,7 +337,7 @@ fn setup_skill_templates(
 			},
 			soft_override: true,
 			animate: PlayerSkills::Shoot(Handed::Single(SideUnset)),
-			behavior: Projectile::behavior(),
+			behavior: Projectile::<Plasma>::behavior(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
 			..default()
 		},
@@ -349,7 +350,7 @@ fn setup_skill_templates(
 			},
 			soft_override: true,
 			animate: PlayerSkills::Shoot(Handed::Dual(SideUnset)),
-			behavior: Projectile::behavior(),
+			behavior: Projectile::<Plasma>::behavior(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
 			..default()
 		},

@@ -1,3 +1,6 @@
+#[allow(clippy::module_inception)]
+pub mod projectile;
+
 use bevy::{math::Vec3, pbr::StandardMaterial, render::mesh::Mesh};
 
 pub trait ProjectileModelData {

@@ -11,23 +11,25 @@ use bevy::{
 	transform::components::Transform,
 };
 
-impl GetBehaviorMeta for Projectile {
+impl<T: Send + Sync + 'static> GetBehaviorMeta for Projectile<T> {
 	fn behavior() -> BehaviorMeta {
 		BehaviorMeta {
-			run_fn: Some(run_fn),
+			run_fn: Some(run_fn::<T>),
 			stop_fn: None,
 			transform_fn: Some(look_from_spawner),
 		}
 	}
 }
 
-fn run_fn(agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner, _: &Ray) {
+fn run_fn<T: Send + Sync + 'static>(
+	agent: &mut EntityCommands,
+	agent_transform: &Transform,
+	spawner: &Spawner,
+	_: &Ray,
+) {
 	let transform = Transform::from_translation(spawner.0.translation());
 	agent.commands().spawn((
-		Projectile {
-			range: 10.,
-			direction: agent_transform.forward(),
-		},
+		Projectile::<T>::new(agent_transform.forward(), 10.),
 		SpatialBundle::from_transform(transform),
 	));
 }
@@ -47,7 +49,7 @@ mod tests {
 	#[test]
 	fn spawn_projectile_with_agent_forward() {
 		let mut app = App::new();
-		let lazy = Projectile::behavior();
+		let lazy = Projectile::<()>::behavior();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let forward = Vec3::new(8., 9., 10.);
 		let agent = app.world.spawn(()).id();
@@ -67,7 +69,7 @@ mod tests {
 		let projectile = app
 			.world
 			.iter_entities()
-			.find_map(|e| e.get::<Projectile>());
+			.find_map(|e| e.get::<Projectile<()>>());
 
 		assert_eq_approx!(
 			Some(forward.normalize()),
@@ -79,7 +81,7 @@ mod tests {
 	#[test]
 	fn spawn_with_special_bundle() {
 		let mut app = App::new();
-		let lazy = Projectile::behavior();
+		let lazy = Projectile::<()>::behavior();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let ray = Ray {
 			origin: Vec3::ONE,
@@ -93,7 +95,7 @@ mod tests {
 		let projectile = app
 			.world
 			.iter_entities()
-			.find(|e| e.contains::<Projectile>())
+			.find(|e| e.contains::<Projectile<()>>())
 			.unwrap();
 
 		assert_eq!(
@@ -111,7 +113,7 @@ mod tests {
 	#[test]
 	fn spawn_with_proper_location() {
 		let mut app = App::new();
-		let lazy = Projectile::behavior();
+		let lazy = Projectile::<()>::behavior();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let ray = Ray {
 			origin: Vec3::ONE,
@@ -133,7 +135,7 @@ mod tests {
 
 	#[test]
 	fn use_proper_transform_fn() {
-		let lazy = Projectile::behavior();
+		let lazy = Projectile::<()>::behavior();
 
 		assert_eq!(
 			Some(look_from_spawner as usize),

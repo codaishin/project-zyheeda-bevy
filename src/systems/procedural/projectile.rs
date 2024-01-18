@@ -24,7 +24,7 @@ pub fn projectile<TProjectile: ProjectileModelData + ProjectileBehaviorData + Co
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut local: Local<Option<(Handle<StandardMaterial>, Handle<Mesh>)>>,
 	projectiles: Query<(Entity, &TProjectile, &GlobalTransform), Added<TProjectile>>,
-	waiting: Query<Entity, With<WaitNext>>,
+	waiting: Query<Entity, (With<WaitNext>, With<TProjectile>)>,
 ) {
 	for entity in &waiting {
 		commands.entity(entity).despawn_recursive();
@@ -287,6 +287,25 @@ mod tests {
 				.filter(|entity| entity.contains::<Handle<Mesh>>()
 					|| entity.contains::<Handle<StandardMaterial>>()
 					|| entity.contains::<SimpleMovement>())
+				.count()
+		);
+	}
+
+	#[test]
+	fn do_not_despawn_when_projectile_missing() {
+		#[derive(Component)]
+		struct _Decoy;
+
+		let mut app = setup();
+
+		app.world.spawn((_Decoy, WaitNext));
+		app.update();
+
+		assert_eq!(
+			1,
+			app.world
+				.iter_entities()
+				.filter(|entity| entity.contains::<_Decoy>())
 				.count()
 		);
 	}

@@ -8,6 +8,7 @@ use core::fmt::Display;
 use std::{
 	collections::{HashMap, HashSet, VecDeque},
 	fmt::{Debug, Formatter, Result},
+	marker::PhantomData,
 	time::Duration,
 };
 
@@ -226,10 +227,23 @@ impl Default for Queue {
 	}
 }
 
+pub struct Plasma;
+
 #[derive(Component, Default)]
-pub struct Projectile {
+pub struct Projectile<T> {
 	pub direction: Vec3,
 	pub range: f32,
+	phantom_data: PhantomData<T>,
+}
+
+impl<T> Projectile<T> {
+	pub fn new(direction: Vec3, range: f32) -> Self {
+		Self {
+			direction,
+			range,
+			phantom_data: PhantomData,
+		}
+	}
 }
 
 #[derive(Debug, PartialEq)]
