@@ -20,10 +20,13 @@
 		"Deque",
 		"despawn",
 		"gltf",
+		"Icosphere",
 		"ingame",
 		"Loadout",
+		"Mapface",
 		"mockall",
 		"quickbar",
+		"tonemapping",
 		"zyheeda"
 	]
 }

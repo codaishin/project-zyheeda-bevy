@@ -1,9 +1,9 @@
 use super::MovementData;
 use crate::components::{Animate, Projectile, UnitsPerSecond};
 
-const PROJECTILE_MOVE_SPEED: f32 = 10.;
+const PROJECTILE_MOVE_SPEED: f32 = 15.;
 
-impl MovementData<()> for Projectile {
+impl<T> MovementData<()> for Projectile<T> {
 	fn get_movement_data(&self) -> (UnitsPerSecond, Animate<()>) {
 		(UnitsPerSecond::new(PROJECTILE_MOVE_SPEED), Animate::None)
 	}
@@ -16,7 +16,7 @@ mod tests {
 
 	#[test]
 	fn move_fast() {
-		let projectile = Projectile { ..default() };
+		let projectile = Projectile::<()>::new(default(), default());
 
 		assert_eq!(
 			(UnitsPerSecond::new(PROJECTILE_MOVE_SPEED), Animate::None),
