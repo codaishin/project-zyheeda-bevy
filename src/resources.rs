@@ -1,7 +1,6 @@
 pub mod skill_templates;
 use crate::{
 	components::SlotKey,
-	traits::model::Model,
 	types::{File, Key, SceneId},
 };
 use bevy::{
@@ -40,13 +39,13 @@ impl Models {
 }
 
 #[derive(Resource, Default)]
-pub struct ModelData<TMaterial: Asset, TModel: Model<TMaterial>> {
+pub struct ModelData<TMaterial: Asset, TModel> {
 	pub material: Handle<TMaterial>,
 	pub mesh: Handle<Mesh>,
 	phantom_data: PhantomData<TModel>,
 }
 
-impl<TMaterial: Asset, TModel: Model<TMaterial>> ModelData<TMaterial, TModel> {
+impl<TMaterial: Asset, TModel> ModelData<TMaterial, TModel> {
 	pub fn new(material: Handle<TMaterial>, mesh: Handle<Mesh>) -> Self {
 		Self {
 			material,
