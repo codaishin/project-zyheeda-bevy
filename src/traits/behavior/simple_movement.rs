@@ -36,7 +36,7 @@ impl GetBehaviorMeta for SimpleMovement {
 mod tests {
 	use super::*;
 	use crate::{
-		test_tools::assert_eq_approx,
+		test_tools::utils::assert_eq_approx,
 		traits::behavior::test_tools::{run_lazy, stop_lazy},
 	};
 	use bevy::{

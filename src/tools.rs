@@ -55,7 +55,7 @@ mod test_look_from_spawner {
 		test_tools::{as_system, setup_app},
 		*,
 	};
-	use crate::test_tools::assert_eq_approx;
+	use crate::test_tools::utils::assert_eq_approx;
 	use bevy::{math::Vec3, prelude::Update};
 
 	#[test]

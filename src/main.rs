@@ -9,6 +9,7 @@ use project_zyheeda::{
 		Animator,
 		CamOrbit,
 		ComboTreeTemplate,
+		Dummy,
 		Handed,
 		Inventory,
 		InventoryKey,
@@ -55,7 +56,11 @@ use project_zyheeda::{
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
 		},
-		procedural::projectile::projectile,
+		procedural::{
+			projectile_behavior::projectile_behavior,
+			render::render,
+			store_model_data::store_model_data,
+		},
 		skill::{
 			chain_combo_skills::chain_combo_skills,
 			dequeue::dequeue,
@@ -102,7 +107,14 @@ fn prepare_game(app: &mut App) {
 		)
 		.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
 		.add_systems(Startup, setup_input)
-		.add_systems(Startup, load_models)
+		.add_systems(
+			Startup,
+			(
+				load_models,
+				store_model_data::<StandardMaterial, Projectile<Plasma>>,
+				store_model_data::<StandardMaterial, Dummy>,
+			),
+		)
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(
 			PreUpdate,
@@ -155,9 +167,11 @@ fn prepare_game(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				projectile::<Projectile<Plasma>>,
+				render::<Projectile<Plasma>>,
+				projectile_behavior::<Projectile<Plasma>>,
 				execute_move::<(), Projectile<Plasma>, SimpleMovement, Virtual>,
-			),
+			)
+				.chain(),
 		)
 		.add_systems(
 			Update,
@@ -171,7 +185,8 @@ fn prepare_game(app: &mut App) {
 				play_animations::<PlayerSkills<Side>, AnimationPlayer>,
 			)
 				.chain(),
-		);
+		)
+		.add_systems(Update, render::<Dummy>);
 }
 
 #[cfg(debug_assertions)]
@@ -303,6 +318,7 @@ fn setup_simple_3d_scene(
 	spawn_player(&mut commands, asset_server, skill_templates);
 	spawn_light(&mut commands);
 	spawn_camera(&mut commands);
+	spawn_dummies(&mut commands);
 	next_state.set(GameRunning::On);
 }
 
@@ -541,5 +557,24 @@ fn spawn_camera(commands: &mut Commands) {
 		},
 		BloomSettings::default(),
 		orbit,
+	));
+}
+
+fn spawn_dummies(commands: &mut Commands) {
+	commands.spawn((
+		Dummy,
+		SpatialBundle::from_transform(Transform::from_xyz(2., 0., 2.)),
+	));
+	commands.spawn((
+		Dummy,
+		SpatialBundle::from_transform(Transform::from_xyz(-2., 0., 2.)),
+	));
+	commands.spawn((
+		Dummy,
+		SpatialBundle::from_transform(Transform::from_xyz(2., 0., -2.)),
+	));
+	commands.spawn((
+		Dummy,
+		SpatialBundle::from_transform(Transform::from_xyz(-2., 0., -2.)),
 	));
 }

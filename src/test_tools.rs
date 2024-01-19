@@ -1,43 +1,62 @@
-use bevy::prelude::*;
+#[cfg(test)]
+pub mod utils {
+	use bevy::prelude::*;
 
-pub trait ApproxEqual<TTolerance> {
-	fn approx_equal(&self, other: &Self, tolerance: &TTolerance) -> bool;
-}
-
-impl ApproxEqual<f32> for Vec3 {
-	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
-		self.abs_diff_eq(*other, *tolerance)
+	pub trait ApproxEqual<TTolerance> {
+		fn approx_equal(&self, other: &Self, tolerance: &TTolerance) -> bool;
 	}
-}
 
-impl<T: ApproxEqual<f32>> ApproxEqual<f32> for Option<T> {
-	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
-		match (self, other) {
-			(None, None) => true,
-			(Some(value_s), Some(value_o)) => value_s.approx_equal(value_o, tolerance),
-			_ => false,
+	impl ApproxEqual<f32> for Vec3 {
+		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+			self.abs_diff_eq(*other, *tolerance)
 		}
 	}
-}
 
-pub fn approx_equal<TEq: ApproxEqual<TT>, TT>(left: &TEq, right: &TEq, tolerance: &TT) -> bool {
-	left.approx_equal(right, tolerance)
-}
-
-macro_rules! assert_eq_approx {
-	($left:expr, $right:expr, $tolerance:expr) => {
-		match (&$left, &$right, &$tolerance) {
-			(left_val, right_val, tolerance_val) => {
-				assert!(
-					crate::test_tools::approx_equal(left_val, right_val, tolerance_val),
-					"approx equal failed:\n     left: {}\n    right: {}\ntolerance: {}\n",
-					format!("\x1b[31m{:?}\x1b[0m", left_val),
-					format!("\x1b[31m{:?}\x1b[0m", right_val),
-					format!("\x1b[33m{:?}\x1b[0m", tolerance_val),
-				);
+	impl<T: ApproxEqual<f32>> ApproxEqual<f32> for Option<T> {
+		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+			match (self, other) {
+				(None, None) => true,
+				(Some(value_s), Some(value_o)) => value_s.approx_equal(value_o, tolerance),
+				_ => false,
 			}
 		}
-	};
-}
+	}
 
-pub(crate) use assert_eq_approx;
+	pub fn approx_equal<TEq: ApproxEqual<TT>, TT>(left: &TEq, right: &TEq, tolerance: &TT) -> bool {
+		left.approx_equal(right, tolerance)
+	}
+
+	macro_rules! assert_eq_approx {
+		($left:expr, $right:expr, $tolerance:expr) => {
+			match (&$left, &$right, &$tolerance) {
+				(left_val, right_val, tolerance_val) => {
+					assert!(
+						crate::test_tools::utils::approx_equal(left_val, right_val, tolerance_val),
+						"approx equal failed:\n     left: {}\n    right: {}\ntolerance: {}\n",
+						format!("\x1b[31m{:?}\x1b[0m", left_val),
+						format!("\x1b[31m{:?}\x1b[0m", right_val),
+						format!("\x1b[33m{:?}\x1b[0m", tolerance_val),
+					);
+				}
+			}
+		};
+	}
+
+	pub(crate) use assert_eq_approx;
+
+	pub trait GetImmediateChildren<TComponent: Component> {
+		fn get_immediate_children<'a>(entity: &Entity, app: &'a App) -> Vec<&'a TComponent>;
+	}
+
+	impl<TComponent: Component> GetImmediateChildren<TComponent> for TComponent {
+		fn get_immediate_children<'a>(entity: &Entity, app: &'a App) -> Vec<&'a TComponent> {
+			match app.world.entity(*entity).get::<Children>() {
+				None => vec![],
+				Some(children) => children
+					.iter()
+					.filter_map(|entity| app.world.entity(*entity).get::<TComponent>())
+					.collect(),
+			}
+		}
+	}
+}
