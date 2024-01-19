@@ -1,3 +1,4 @@
+pub mod dummy;
 pub mod projectile;
 
 use bevy::{asset::Asset, render::mesh::Mesh};

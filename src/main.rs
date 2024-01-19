@@ -9,6 +9,7 @@ use project_zyheeda::{
 		Animator,
 		CamOrbit,
 		ComboTreeTemplate,
+		Dummy,
 		Handed,
 		Inventory,
 		InventoryKey,
@@ -107,6 +108,7 @@ fn prepare_game(app: &mut App) {
 			(
 				load_models,
 				store_model_data::<StandardMaterial, Projectile<Plasma>>,
+				store_model_data::<StandardMaterial, Dummy>,
 			),
 		)
 		.add_systems(Startup, setup_simple_3d_scene)
@@ -179,7 +181,8 @@ fn prepare_game(app: &mut App) {
 				play_animations::<PlayerSkills<Side>, AnimationPlayer>,
 			)
 				.chain(),
-		);
+		)
+		.add_systems(Update, spawn::<Dummy>);
 }
 
 #[cfg(debug_assertions)]
@@ -311,6 +314,7 @@ fn setup_simple_3d_scene(
 	spawn_player(&mut commands, asset_server, skill_templates);
 	spawn_light(&mut commands);
 	spawn_camera(&mut commands);
+	spawn_dummies(&mut commands);
 	next_state.set(GameRunning::On);
 }
 
@@ -549,5 +553,24 @@ fn spawn_camera(commands: &mut Commands) {
 		},
 		BloomSettings::default(),
 		orbit,
+	));
+}
+
+fn spawn_dummies(commands: &mut Commands) {
+	commands.spawn((
+		Dummy,
+		SpatialBundle::from_transform(Transform::from_xyz(2., 0., 2.)),
+	));
+	commands.spawn((
+		Dummy,
+		SpatialBundle::from_transform(Transform::from_xyz(-2., 0., 2.)),
+	));
+	commands.spawn((
+		Dummy,
+		SpatialBundle::from_transform(Transform::from_xyz(2., 0., -2.)),
+	));
+	commands.spawn((
+		Dummy,
+		SpatialBundle::from_transform(Transform::from_xyz(-2., 0., -2.)),
 	));
 }

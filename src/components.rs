@@ -275,3 +275,6 @@ pub struct ComboTreeTemplate<TNext>(pub HashMap<SlotKey, SkillComboTree<TNext>>)
 
 #[derive(Component, PartialEq, Debug)]
 pub struct ComboTreeRunning<TNext>(pub HashMap<SlotKey, SkillComboTree<TNext>>);
+
+#[derive(Component)]
+pub struct Dummy;
