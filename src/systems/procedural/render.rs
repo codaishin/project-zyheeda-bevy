@@ -11,7 +11,7 @@ use bevy::{
 	prelude::default,
 };
 
-pub fn spawn<TComponent: Component>(
+pub fn render<TComponent: Component>(
 	mut commands: Commands,
 	agents: Query<Entity, Added<TComponent>>,
 	model_data: Res<ModelData<StandardMaterial, TComponent>>,
@@ -47,7 +47,7 @@ mod tests {
 	fn setup(model_data: ModelData<StandardMaterial, _Model>) -> App {
 		let mut app = App::new();
 		app.insert_resource(model_data);
-		app.add_systems(Update, spawn::<_Model>);
+		app.add_systems(Update, render::<_Model>);
 
 		app
 	}

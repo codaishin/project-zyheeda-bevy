@@ -56,7 +56,11 @@ use project_zyheeda::{
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
 		},
-		procedural::{projectile::projectile, spawn::spawn, store_model_data::store_model_data},
+		procedural::{
+			projectile_behavior::projectile_behavior,
+			render::render,
+			store_model_data::store_model_data,
+		},
 		skill::{
 			chain_combo_skills::chain_combo_skills,
 			dequeue::dequeue,
@@ -163,8 +167,8 @@ fn prepare_game(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				spawn::<Projectile<Plasma>>,
-				projectile::<Projectile<Plasma>>,
+				render::<Projectile<Plasma>>,
+				projectile_behavior::<Projectile<Plasma>>,
 				execute_move::<(), Projectile<Plasma>, SimpleMovement, Virtual>,
 			)
 				.chain(),
@@ -182,7 +186,7 @@ fn prepare_game(app: &mut App) {
 			)
 				.chain(),
 		)
-		.add_systems(Update, spawn::<Dummy>);
+		.add_systems(Update, render::<Dummy>);
 }
 
 #[cfg(debug_assertions)]

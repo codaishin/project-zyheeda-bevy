@@ -14,7 +14,7 @@ use bevy::{
 	transform::components::GlobalTransform,
 };
 
-pub fn projectile<TProjectile: ProjectileBehavior + Component>(
+pub fn projectile_behavior<TProjectile: ProjectileBehavior + Component>(
 	mut commands: Commands,
 	projectiles: Query<(Entity, &TProjectile, &GlobalTransform), Added<TProjectile>>,
 	done: Query<Entity, (With<WaitNext>, With<TProjectile>)>,
@@ -64,7 +64,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new();
-		app.add_systems(Update, projectile::<_Projectile>);
+		app.add_systems(Update, projectile_behavior::<_Projectile>);
 
 		app
 	}
