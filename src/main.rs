@@ -55,7 +55,7 @@ use project_zyheeda::{
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
 		},
-		procedural::projectile::projectile,
+		procedural::{projectile::projectile, store_model_data::store_model_data},
 		skill::{
 			chain_combo_skills::chain_combo_skills,
 			dequeue::dequeue,
@@ -102,7 +102,13 @@ fn prepare_game(app: &mut App) {
 		)
 		.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
 		.add_systems(Startup, setup_input)
-		.add_systems(Startup, load_models)
+		.add_systems(
+			Startup,
+			(
+				load_models,
+				store_model_data::<StandardMaterial, Projectile<Plasma>>,
+			),
+		)
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(
 			PreUpdate,

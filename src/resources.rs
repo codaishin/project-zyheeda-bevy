@@ -1,17 +1,18 @@
 pub mod skill_templates;
 use crate::{
 	components::SlotKey,
+	traits::model::Model,
 	types::{File, Key, SceneId},
 };
 use bevy::{
 	animation::AnimationClip,
-	asset::{AssetServer, Handle},
+	asset::{Asset, AssetServer, Handle},
 	ecs::system::Resource,
 	prelude::Res,
-	render::texture::Image,
+	render::{mesh::Mesh, texture::Image},
 	scene::Scene,
 };
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash, marker::PhantomData};
 
 #[derive(Resource)]
 pub struct Animations<T>(pub HashMap<T, Handle<AnimationClip>>);
@@ -35,6 +36,23 @@ impl Models {
 				.into_iter()
 				.collect(),
 		)
+	}
+}
+
+#[derive(Resource, Default)]
+pub struct ModelData<TMaterial: Asset, TModel: Model<TMaterial>> {
+	pub material: Handle<TMaterial>,
+	pub mesh: Handle<Mesh>,
+	phantom_data: PhantomData<TModel>,
+}
+
+impl<TMaterial: Asset, TModel: Model<TMaterial>> ModelData<TMaterial, TModel> {
+	pub fn new(material: Handle<TMaterial>, mesh: Handle<Mesh>) -> Self {
+		Self {
+			material,
+			mesh,
+			phantom_data: PhantomData,
+		}
 	}
 }
 
