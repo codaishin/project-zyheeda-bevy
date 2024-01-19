@@ -1,6 +1,6 @@
 use crate::{
 	components::{SimpleMovement, WaitNext},
-	traits::projectile::{ProjectileBehaviorData, ProjectileModelData},
+	traits::{model::Model, projectile_behavior::ProjectileBehavior},
 };
 use bevy::{
 	asset::{Assets, Handle},
@@ -18,7 +18,7 @@ use bevy::{
 	utils::default,
 };
 
-pub fn projectile<TProjectile: ProjectileModelData + ProjectileBehaviorData + Component>(
+pub fn projectile<TProjectile: Model<StandardMaterial> + ProjectileBehavior + Component>(
 	mut commands: Commands,
 	mut materials: ResMut<Assets<StandardMaterial>>,
 	mut meshes: ResMut<Assets<Mesh>>,
@@ -49,7 +49,7 @@ pub fn projectile<TProjectile: ProjectileModelData + ProjectileBehaviorData + Co
 	}
 }
 
-fn get_target<TProjectile: ProjectileBehaviorData>(
+fn get_target<TProjectile: ProjectileBehavior>(
 	projectile: &TProjectile,
 	transform: &GlobalTransform,
 ) -> Vec3 {
@@ -100,7 +100,7 @@ mod tests {
 		pub range: f32,
 	}
 
-	impl ProjectileBehaviorData for _Projectile {
+	impl ProjectileBehavior for _Projectile {
 		fn direction(&self) -> bevy::prelude::Vec3 {
 			self.direction
 		}
@@ -109,7 +109,7 @@ mod tests {
 		}
 	}
 
-	impl ProjectileModelData for _Projectile {
+	impl Model<StandardMaterial> for _Projectile {
 		fn material() -> StandardMaterial {
 			StandardMaterial {
 				base_color: Color::RED,
