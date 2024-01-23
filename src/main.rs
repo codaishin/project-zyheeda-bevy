@@ -57,6 +57,7 @@ use project_zyheeda::{
 			toggle_walk_run::player_toggle_walk_run,
 		},
 		procedural::{
+			collider::collider,
 			projectile_behavior::projectile_behavior,
 			render::render,
 			store_model_data::store_model_data,
@@ -168,6 +169,7 @@ fn prepare_game(app: &mut App) {
 			Update,
 			(
 				render::<Projectile<Plasma>>,
+				collider::<Projectile<Plasma>>,
 				projectile_behavior::<Projectile<Plasma>>,
 				execute_move::<(), Projectile<Plasma>, SimpleMovement, Virtual>,
 			)
@@ -186,7 +188,7 @@ fn prepare_game(app: &mut App) {
 			)
 				.chain(),
 		)
-		.add_systems(Update, render::<Dummy>);
+		.add_systems(Update, (render::<Dummy>, collider::<Dummy>).chain());
 }
 
 #[cfg(debug_assertions)]
