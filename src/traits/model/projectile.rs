@@ -1,4 +1,4 @@
-use super::{Model, Offset, Shape};
+use super::{GetCollider, GetRigidBody, Model, Offset, Shape};
 use crate::components::{Plasma, Projectile};
 use bevy::{
 	math::Vec3,
@@ -9,10 +9,26 @@ use bevy::{
 	},
 	utils::default,
 };
+use bevy_rapier3d::{dynamics::RigidBody, geometry::Collider};
 
 impl<T> Offset for Projectile<T> {
 	fn offset() -> Vec3 {
 		Vec3::ZERO
+	}
+}
+
+impl<T> GetCollider for Projectile<T>
+where
+	Projectile<T>: Shape<Sphere>,
+{
+	fn collider() -> bevy_rapier3d::prelude::Collider {
+		Collider::ball(Projectile::<T>::shape().0)
+	}
+}
+
+impl<T> GetRigidBody for Projectile<T> {
+	fn rigid_body() -> RigidBody {
+		RigidBody::Fixed
 	}
 }
 

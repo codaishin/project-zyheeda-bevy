@@ -1,4 +1,4 @@
-use super::{Model, Offset, Shape};
+use super::{GetCollider, GetRigidBody, Model, Offset, Shape};
 use crate::components::Dummy;
 use bevy::{
 	math::Vec3,
@@ -12,6 +12,7 @@ use bevy::{
 	},
 	utils::default,
 };
+use bevy_rapier3d::{dynamics::RigidBody, geometry::Collider};
 
 pub struct Cuboid(pub Vec3);
 
@@ -38,5 +39,18 @@ impl Model<StandardMaterial> for Dummy {
 	fn mesh() -> Mesh {
 		let dimensions = Self::shape().0;
 		shape::Box::new(dimensions.x, dimensions.y, dimensions.z).into()
+	}
+}
+
+impl GetCollider for Dummy {
+	fn collider() -> Collider {
+		let dimensions = Dummy::shape().0;
+		Collider::cuboid(dimensions.x / 2., dimensions.y / 2., dimensions.z / 2.)
+	}
+}
+
+impl GetRigidBody for Dummy {
+	fn rigid_body() -> RigidBody {
+		RigidBody::Fixed
 	}
 }
