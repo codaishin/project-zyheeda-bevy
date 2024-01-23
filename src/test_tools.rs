@@ -44,19 +44,35 @@ pub mod utils {
 
 	pub(crate) use assert_eq_approx;
 
-	pub trait GetImmediateChildren<TComponent: Component> {
-		fn get_immediate_children<'a>(entity: &Entity, app: &'a App) -> Vec<&'a TComponent>;
+	pub trait GetImmediateChildren
+	where
+		Self: Copy,
+	{
+		fn get_immediate_children(entity: &Entity, app: &App) -> Vec<Self>;
 	}
 
-	impl<TComponent: Component> GetImmediateChildren<TComponent> for TComponent {
-		fn get_immediate_children<'a>(entity: &Entity, app: &'a App) -> Vec<&'a TComponent> {
+	impl GetImmediateChildren for Entity {
+		fn get_immediate_children(entity: &Entity, app: &App) -> Vec<Self> {
 			match app.world.entity(*entity).get::<Children>() {
 				None => vec![],
-				Some(children) => children
-					.iter()
-					.filter_map(|entity| app.world.entity(*entity).get::<TComponent>())
-					.collect(),
+				Some(children) => children.iter().cloned().collect(),
 			}
+		}
+	}
+
+	pub trait GetImmediateChildComponents
+	where
+		Self: Component,
+	{
+		fn get_immediate_children<'a>(entity: &Entity, app: &'a App) -> Vec<&'a Self>;
+	}
+
+	impl<TComponent: Component> GetImmediateChildComponents for TComponent {
+		fn get_immediate_children<'a>(entity: &Entity, app: &'a App) -> Vec<&'a Self> {
+			Entity::get_immediate_children(entity, app)
+				.iter()
+				.filter_map(|entity| app.world.entity(*entity).get::<TComponent>())
+				.collect()
 		}
 	}
 }
