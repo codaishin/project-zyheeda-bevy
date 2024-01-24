@@ -1,6 +1,7 @@
-use super::Model;
+use super::{GetCollider, GetRigidBody, Model, Offset, Shape};
 use crate::components::{Plasma, Projectile};
 use bevy::{
+	math::Vec3,
 	pbr::StandardMaterial,
 	render::{
 		color::Color,
@@ -8,6 +9,36 @@ use bevy::{
 	},
 	utils::default,
 };
+use bevy_rapier3d::{dynamics::RigidBody, geometry::Collider};
+
+impl<T> Offset for Projectile<T> {
+	fn offset() -> Vec3 {
+		Vec3::ZERO
+	}
+}
+
+impl<T> GetCollider for Projectile<T>
+where
+	Projectile<T>: Shape<Sphere>,
+{
+	fn collider() -> bevy_rapier3d::prelude::Collider {
+		Collider::ball(Projectile::<T>::shape().0)
+	}
+}
+
+impl<T> GetRigidBody for Projectile<T> {
+	fn rigid_body() -> RigidBody {
+		RigidBody::Fixed
+	}
+}
+
+pub struct Sphere(pub f32);
+
+impl Shape<Sphere> for Projectile<Plasma> {
+	fn shape() -> Sphere {
+		Sphere(0.05)
+	}
+}
 
 impl Model<StandardMaterial> for Projectile<Plasma> {
 	fn material() -> StandardMaterial {
@@ -19,7 +50,7 @@ impl Model<StandardMaterial> for Projectile<Plasma> {
 
 	fn mesh() -> Mesh {
 		Icosphere {
-			radius: 0.05,
+			radius: Self::shape().0,
 			subdivisions: 5,
 		}
 		.try_into()

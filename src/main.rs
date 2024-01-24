@@ -2,6 +2,10 @@ use bevy::{
 	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
 	prelude::*,
 };
+use bevy_rapier3d::{
+	pipeline::{CollisionEvent, ContactForceEvent},
+	prelude::*,
+};
 use project_zyheeda::{
 	behaviors::MovementMode,
 	bundles::Loadout,
@@ -40,6 +44,7 @@ use project_zyheeda::{
 			play_animations::play_animations,
 		},
 		input::schedule_slots::schedule_slots,
+		interactions::destroy_on_collision::destroy_on_collision,
 		items::{
 			equip::equip_item,
 			slots::add_item_slots,
@@ -57,6 +62,7 @@ use project_zyheeda::{
 			toggle_walk_run::player_toggle_walk_run,
 		},
 		procedural::{
+			collider::collider,
 			projectile_behavior::projectile_behavior,
 			render::render,
 			store_model_data::store_model_data,
@@ -94,6 +100,7 @@ fn main() {
 fn prepare_game(app: &mut App) {
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(IngameMenuPlugin)
+		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_state::<GameRunning>()
 		.add_state::<MouseContext>()
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
@@ -168,6 +175,7 @@ fn prepare_game(app: &mut App) {
 			Update,
 			(
 				render::<Projectile<Plasma>>,
+				collider::<Projectile<Plasma>>,
 				projectile_behavior::<Projectile<Plasma>>,
 				execute_move::<(), Projectile<Plasma>, SimpleMovement, Virtual>,
 			)
@@ -186,7 +194,8 @@ fn prepare_game(app: &mut App) {
 			)
 				.chain(),
 		)
-		.add_systems(Update, render::<Dummy>);
+		.add_systems(Update, (render::<Dummy>, collider::<Dummy>).chain())
+		.add_systems(PostUpdate, destroy_on_collision);
 }
 
 #[cfg(debug_assertions)]
@@ -196,13 +205,28 @@ pub mod debug_utils {
 	use std::ops::Not;
 
 	pub fn prepare_debug(app: &mut App) {
-		app.insert_resource(ShowGizmos::No)
+		app.add_plugins(RapierDebugRenderPlugin::default())
+			.insert_resource(ShowGizmos::No)
 			.add_systems(Update, debug)
 			.add_systems(Update, toggle_gizmos)
 			.add_systems(
 				Update,
 				forward_gizmo(&["projectile_spawn", "Player"], &Color::BLUE),
-			);
+			)
+			.add_systems(Update, display_events);
+	}
+
+	fn display_events(
+		mut collision_events: EventReader<CollisionEvent>,
+		mut contact_force_events: EventReader<ContactForceEvent>,
+	) {
+		for collision_event in collision_events.read() {
+			println!("Received collision event: {:?}", collision_event);
+		}
+
+		for contact_force_event in contact_force_events.read() {
+			println!("Received contact force event: {:?}", contact_force_event);
+		}
 	}
 
 	fn debug(
