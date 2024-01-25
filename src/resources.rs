@@ -7,6 +7,7 @@ use bevy::{
 	animation::AnimationClip,
 	asset::{Asset, AssetServer, Handle},
 	ecs::system::Resource,
+	math::Ray,
 	prelude::Res,
 	render::{mesh::Mesh, texture::Image},
 	scene::Scene,
@@ -141,3 +142,6 @@ mod test_slot_map {
 		)
 	}
 }
+
+#[derive(Resource, Default)]
+pub struct CamRay(pub Option<Ray>);
