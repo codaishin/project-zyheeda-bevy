@@ -9,13 +9,12 @@ use crate::{
 		Track,
 		WaitNext,
 	},
+	resources::CamRay,
 	skill::{Active, Queued, Skill},
-	traits::get_ray::GetRayFromCamera,
 };
 use bevy::{
-	ecs::system::EntityCommands,
-	prelude::{Camera, Commands, Entity, GlobalTransform, Query, Ray},
-	window::Window,
+	ecs::system::{EntityCommands, Res},
+	prelude::{Commands, Entity, Query, Ray},
 };
 
 type Components<'a> = (
@@ -25,19 +24,12 @@ type Components<'a> = (
 	Option<&'a Track<Skill<PlayerSkills<SideUnset>, Active>>>,
 );
 
-pub fn enqueue<TTools: GetRayFromCamera>(
-	camera: Query<(&Camera, &GlobalTransform)>,
-	window: Query<&Window>,
-	mut agents: Query<Components>,
-	mut commands: Commands,
-) {
+pub fn enqueue(mut agents: Query<Components>, mut commands: Commands, cam_ray: Res<CamRay>) {
 	if agents.is_empty() {
 		return;
 	}
 
-	let (camera, camera_transform) = camera.single();
-	let window = window.single();
-	let ray = TTools::get_ray(camera, camera_transform, window);
+	let ray = cam_ray.0;
 
 	for (agent, schedule, mut queue, tracks) in &mut agents {
 		enqueue_skills(agent, schedule, &mut queue, tracks, &mut commands, ray);
@@ -117,11 +109,9 @@ mod tests {
 		skill::Cast,
 	};
 	use bevy::{
-		prelude::{App, Camera, Camera3dBundle, GlobalTransform, Ray, Update, Vec3},
+		prelude::{App, Ray, Update, Vec3},
 		utils::default,
-		window::Window,
 	};
-	use mockall::mock;
 	use std::time::Duration;
 
 	const TEST_RAY: Ray = Ray {
@@ -129,56 +119,18 @@ mod tests {
 		direction: Vec3::Z,
 	};
 
-	struct _ToolsSomeRay;
-
-	impl GetRayFromCamera for _ToolsSomeRay {
-		fn get_ray(
-			_camera: &Camera,
-			_camera_transform: &GlobalTransform,
-			_window: &Window,
-		) -> Option<Ray> {
-			Some(TEST_RAY)
-		}
-	}
-
-	macro_rules! setup_mock {
-		($struct_name:ident) => {
-			mock! {
-				$struct_name {}
-				impl GetRayFromCamera for $struct_name{
-					fn get_ray(
-						_camera: &Camera,
-						_camera_transform: &GlobalTransform,
-						_window: &Window,
-					) -> Option<Ray> {}
-				}
-			}
-		};
-	}
-
-	fn setup<TTools: GetRayFromCamera + 'static>() -> App {
+	fn setup(ray: Option<Ray>) -> App {
 		let mut app = App::new();
 
-		app.world.spawn(Camera3dBundle {
-			camera: Camera {
-				order: 42,
-				..default()
-			},
-			global_transform: GlobalTransform::from_xyz(4., 3., 2.),
-			..default()
-		});
-		app.world.spawn(Window {
-			title: "Window".to_owned(),
-			..default()
-		});
-		app.add_systems(Update, enqueue::<TTools>);
+		app.insert_resource(CamRay(ray));
+		app.add_systems(Update, enqueue);
 
 		app
 	}
 
 	#[test]
 	fn set_enqueue() {
-		let mut app = setup::<_ToolsSomeRay>();
+		let mut app = setup(Some(TEST_RAY));
 		let agent = app
 			.world
 			.spawn((
@@ -260,7 +212,7 @@ mod tests {
 
 	#[test]
 	fn set_override() {
-		let mut app = setup::<_ToolsSomeRay>();
+		let mut app = setup(Some(TEST_RAY));
 		let new_skill = Skill {
 			cast: Cast {
 				pre: Duration::from_millis(100),
@@ -316,7 +268,7 @@ mod tests {
 
 	#[test]
 	fn set_override_without_wait_next_when_new_and_running_soft_override() {
-		let mut app = setup::<_ToolsSomeRay>();
+		let mut app = setup(Some(TEST_RAY));
 		let running_skill = Skill {
 			name: "running current",
 			soft_override: true,
@@ -369,7 +321,7 @@ mod tests {
 
 	#[test]
 	fn set_override_with_wait_next_when_soft_override_running_soft_override_false() {
-		let mut app = setup::<_ToolsSomeRay>();
+		let mut app = setup(Some(TEST_RAY));
 		let running_skill = Skill {
 			name: "running",
 			soft_override: false,
@@ -422,7 +374,7 @@ mod tests {
 
 	#[test]
 	fn set_override_with_wait_next_when_soft_override_new_soft_override_false() {
-		let mut app = setup::<_ToolsSomeRay>();
+		let mut app = setup(Some(TEST_RAY));
 		let running_skill = Skill {
 			name: "running",
 			soft_override: true,
@@ -475,7 +427,7 @@ mod tests {
 
 	#[test]
 	fn remove_schedule() {
-		let mut app = setup::<_ToolsSomeRay>();
+		let mut app = setup(Some(TEST_RAY));
 		let schedule = Schedule {
 			mode: ScheduleMode::Override,
 			skills: [(SlotKey::Hand(Side::Off), Skill::default())].into(),
@@ -489,49 +441,9 @@ mod tests {
 		assert!(!agent.contains::<Schedule>());
 	}
 
-	setup_mock!(_RayFromCam);
-
-	#[test]
-	fn ray_from_camera_and_window() {
-		let get_ray = Mock_RayFromCam::get_ray_context();
-		get_ray
-			.expect()
-			.withf(|cam, cam_transform, window| {
-				*cam_transform == GlobalTransform::from_xyz(4., 3., 2.)
-				// using specific values for non-equatable variables
-				&& cam.order == 42 && window.title == "Window"
-			})
-			.times(1)
-			.return_const(TEST_RAY);
-
-		let mut app = setup::<Mock_RayFromCam>();
-		app.world.spawn((
-			Schedule {
-				mode: ScheduleMode::Override,
-				skills: [(SlotKey::Hand(Side::Off), Skill::default())].into(),
-			},
-			Queue::default(),
-		));
-
-		app.update();
-	}
-
-	setup_mock!(_GetRayFromCamNotCalled);
-
-	#[test]
-	fn do_not_produce_ray_when_nothing_scheduled() {
-		let get_ray = Mock_GetRayFromCamNotCalled::get_ray_context();
-		get_ray.expect().times(0).return_const(TEST_RAY);
-
-		let mut app = setup::<Mock_GetRayFromCamNotCalled>();
-		app.world.spawn(Queue::default());
-
-		app.update();
-	}
-
 	#[test]
 	fn try_soft_override_on_enqueue() {
-		let mut app = setup::<_ToolsSomeRay>();
+		let mut app = setup(Some(TEST_RAY));
 		app.world.spawn((
 			Schedule {
 				mode: ScheduleMode::Enqueue,

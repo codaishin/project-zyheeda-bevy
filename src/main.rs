@@ -123,7 +123,7 @@ fn prepare_game(app: &mut App) {
 			),
 		)
 		.add_systems(Startup, setup_simple_3d_scene)
-		.add_systems(PreUpdate, set_cam_ray::<Tools>)
+		.add_systems(First, set_cam_ray::<Tools>)
 		.add_systems(
 			PreUpdate,
 			schedule_slots::<MouseButton, Player>
@@ -140,7 +140,7 @@ fn prepare_game(app: &mut App) {
 				link_animators_with_new_animation_players,
 				add_item_slots,
 				player_toggle_walk_run,
-				enqueue::<Tools>,
+				enqueue,
 				dequeue, // sets skill activity marker, so it MUST run before skill execution systems
 			)
 				.run_if(in_state(GameRunning::On)),
