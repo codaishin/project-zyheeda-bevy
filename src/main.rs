@@ -43,7 +43,7 @@ use project_zyheeda::{
 			load_animations::load_animations,
 			play_animations::play_animations,
 		},
-		input::schedule_slots::schedule_slots,
+		input::{schedule_slots::schedule_slots, set_cam_ray::set_cam_ray},
 		interactions::destroy_on_collision::destroy_on_collision,
 		items::{
 			equip::equip_item,
@@ -123,6 +123,7 @@ fn prepare_game(app: &mut App) {
 			),
 		)
 		.add_systems(Startup, setup_simple_3d_scene)
+		.add_systems(PreUpdate, set_cam_ray::<Tools>)
 		.add_systems(
 			PreUpdate,
 			schedule_slots::<MouseButton, Player>
