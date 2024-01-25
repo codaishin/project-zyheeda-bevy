@@ -43,7 +43,11 @@ use project_zyheeda::{
 			load_animations::load_animations,
 			play_animations::play_animations,
 		},
-		input::{schedule_slots::schedule_slots, set_cam_ray::set_cam_ray},
+		input::{
+			schedule_slots::schedule_slots,
+			set_cam_ray::set_cam_ray,
+			set_mouse_hover::set_mouse_hover,
+		},
 		interactions::destroy_on_collision::destroy_on_collision,
 		items::{
 			equip::equip_item,
@@ -123,7 +127,10 @@ fn prepare_game(app: &mut App) {
 			),
 		)
 		.add_systems(Startup, setup_simple_3d_scene)
-		.add_systems(First, set_cam_ray::<Tools>)
+		.add_systems(
+			First,
+			(set_cam_ray::<Tools>, set_mouse_hover::<RapierContext>).chain(),
+		)
 		.add_systems(
 			PreUpdate,
 			schedule_slots::<MouseButton, Player>
@@ -587,18 +594,22 @@ fn spawn_camera(commands: &mut Commands) {
 
 fn spawn_dummies(commands: &mut Commands) {
 	commands.spawn((
+		Name::new("Dummy A"),
 		Dummy,
 		SpatialBundle::from_transform(Transform::from_xyz(2., 0., 2.)),
 	));
 	commands.spawn((
+		Name::new("Dummy B"),
 		Dummy,
 		SpatialBundle::from_transform(Transform::from_xyz(-2., 0., 2.)),
 	));
 	commands.spawn((
+		Name::new("Dummy C"),
 		Dummy,
 		SpatialBundle::from_transform(Transform::from_xyz(2., 0., -2.)),
 	));
 	commands.spawn((
+		Name::new("Dummy D"),
 		Dummy,
 		SpatialBundle::from_transform(Transform::from_xyz(-2., 0., -2.)),
 	));

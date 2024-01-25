@@ -1,6 +1,7 @@
 pub mod accessor;
 pub mod behavior;
 pub mod behavior_execution;
+pub mod cast_ray;
 pub mod cast_update;
 pub mod combo_next;
 pub mod get_animation;
