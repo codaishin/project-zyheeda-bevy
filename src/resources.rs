@@ -6,7 +6,7 @@ use crate::{
 use bevy::{
 	animation::AnimationClip,
 	asset::{Asset, AssetServer, Handle},
-	ecs::system::Resource,
+	ecs::{entity::Entity, system::Resource},
 	math::Ray,
 	prelude::Res,
 	render::{mesh::Mesh, texture::Image},
@@ -145,3 +145,9 @@ mod test_slot_map {
 
 #[derive(Resource, Default)]
 pub struct CamRay(pub Option<Ray>);
+
+#[derive(Resource, Default, Debug, PartialEq)]
+pub struct MouseHover {
+	pub root: Option<Entity>,
+	pub collider: Option<Entity>,
+}
