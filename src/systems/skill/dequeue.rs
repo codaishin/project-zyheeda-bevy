@@ -41,7 +41,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{Animate, SlotKey, WaitNext},
-		skill::{Active, Cast, Queued, Skill},
+		skill::{Active, Cast, Queued, SelectInfo, Skill},
 	};
 	use bevy::prelude::{default, App, Ray, Update, Vec3};
 	use std::time::Duration;
@@ -88,7 +88,10 @@ mod tests {
 					..default()
 				},
 				data: Queued {
-					ray: TEST_RAY,
+					select_info: SelectInfo {
+						ray: TEST_RAY,
+						..default()
+					},
 					slot_key: SlotKey::SkillSpawn,
 				},
 				..default()
@@ -106,7 +109,10 @@ mod tests {
 		assert_eq!(
 			(
 				Some(Active {
-					ray: TEST_RAY,
+					select_info: SelectInfo {
+						ray: TEST_RAY,
+						..default()
+					},
 					slot_key: SlotKey::SkillSpawn,
 				}),
 				false,

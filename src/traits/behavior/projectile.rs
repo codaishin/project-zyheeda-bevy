@@ -2,14 +2,10 @@ use super::GetBehaviorMeta;
 use crate::{
 	behaviors::meta::{BehaviorMeta, Spawner},
 	components::Projectile,
+	skill::SelectInfo,
 	tools::look_from_spawner,
 };
-use bevy::{
-	ecs::system::EntityCommands,
-	math::Ray,
-	prelude::SpatialBundle,
-	transform::components::Transform,
-};
+use bevy::{ecs::system::EntityCommands, prelude::SpatialBundle, transform::components::Transform};
 
 impl<T: Send + Sync + 'static> GetBehaviorMeta for Projectile<T> {
 	fn behavior() -> BehaviorMeta {
@@ -25,7 +21,7 @@ fn run_fn<T: Send + Sync + 'static>(
 	agent: &mut EntityCommands,
 	agent_transform: &Transform,
 	spawner: &Spawner,
-	_: &Ray,
+	_: &SelectInfo,
 ) {
 	let transform = Transform::from_translation(spawner.0.translation());
 	agent.commands().spawn((
@@ -40,7 +36,7 @@ mod tests {
 	use crate::{test_tools::utils::assert_eq_approx, traits::behavior::test_tools::run_lazy};
 	use bevy::{
 		app::{App, Update},
-		math::Vec3,
+		math::{Ray, Vec3},
 		render::view::{InheritedVisibility, ViewVisibility, Visibility},
 		transform::components::GlobalTransform,
 		utils::default,
@@ -61,7 +57,7 @@ mod tests {
 				agent,
 				Transform::default().looking_at(forward, Vec3::Y),
 				spawner,
-				Ray::default(),
+				SelectInfo::default(),
 			),
 		);
 		app.update();
@@ -83,13 +79,19 @@ mod tests {
 		let mut app = App::new();
 		let lazy = Projectile::<()>::behavior();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
-		let ray = Ray {
-			origin: Vec3::ONE,
-			direction: Vec3::NEG_INFINITY,
+		let select_info = SelectInfo {
+			ray: Ray {
+				origin: Vec3::ONE,
+				direction: Vec3::NEG_INFINITY,
+			},
+			..default()
 		};
 		let agent = app.world.spawn(()).id();
 
-		app.add_systems(Update, run_lazy(lazy, agent, default(), spawner, ray));
+		app.add_systems(
+			Update,
+			run_lazy(lazy, agent, default(), spawner, select_info),
+		);
 		app.update();
 
 		let projectile = app
@@ -115,13 +117,19 @@ mod tests {
 		let mut app = App::new();
 		let lazy = Projectile::<()>::behavior();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
-		let ray = Ray {
-			origin: Vec3::ONE,
-			direction: Vec3::NEG_INFINITY,
+		let select_info = SelectInfo {
+			ray: Ray {
+				origin: Vec3::ONE,
+				direction: Vec3::NEG_INFINITY,
+			},
+			..default()
 		};
 		let agent = app.world.spawn(()).id();
 
-		app.add_systems(Update, run_lazy(lazy, agent, default(), spawner, ray));
+		app.add_systems(
+			Update,
+			run_lazy(lazy, agent, default(), spawner, select_info),
+		);
 		app.update();
 
 		let projectile_transform = app

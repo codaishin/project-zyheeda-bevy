@@ -1,6 +1,7 @@
 use crate::{
 	behaviors::meta::BehaviorMeta,
 	components::{ItemType, PlayerSkills, SideUnset, SlotKey},
+	resources::MouseHover,
 };
 use bevy::math::Ray;
 use std::{
@@ -68,15 +69,21 @@ pub struct SkillComboTree<TNext> {
 	pub next: TNext,
 }
 
-#[derive(Default, Debug, PartialEq, Clone)]
-pub struct Queued {
+#[derive(Debug, PartialEq, Clone, Default)]
+pub struct SelectInfo {
 	pub ray: Ray,
+	pub hover: MouseHover,
+}
+
+#[derive(Debug, PartialEq, Clone, Default)]
+pub struct Queued {
+	pub select_info: SelectInfo,
 	pub slot_key: SlotKey,
 }
 
-#[derive(PartialEq, Debug, Clone, Default)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct Active {
-	pub ray: Ray,
+	pub select_info: SelectInfo,
 	pub slot_key: SlotKey,
 }
 
@@ -111,7 +118,7 @@ impl<TAnimationKey, TSrc> Skill<TAnimationKey, TSrc> {
 impl<TAnimationKey> Skill<TAnimationKey, Queued> {
 	pub fn to_active(self) -> Skill<TAnimationKey, Active> {
 		self.map_data(|queued| Active {
-			ray: queued.ray,
+			select_info: queued.select_info,
 			slot_key: queued.slot_key,
 		})
 	}

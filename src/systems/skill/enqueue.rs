@@ -10,11 +10,12 @@ use crate::{
 		WaitNext,
 	},
 	resources::CamRay,
-	skill::{Active, Queued, Skill},
+	skill::{Active, Queued, SelectInfo, Skill},
 };
 use bevy::{
 	ecs::system::{EntityCommands, Res},
 	prelude::{Commands, Entity, Query, Ray},
+	utils::default,
 };
 
 type Components<'a> = (
@@ -62,7 +63,7 @@ fn enqueue_skill(
 	let slot = *slot;
 	let Some(new) = ray.map(|ray| {
 		skill.clone().with(&Queued {
-			ray,
+			select_info: SelectInfo { ray, ..default() },
 			slot_key: slot,
 		})
 	}) else {
@@ -197,7 +198,10 @@ mod tests {
 						..default()
 					},
 					data: Queued {
-						ray: TEST_RAY,
+						select_info: SelectInfo {
+							ray: TEST_RAY,
+							..default()
+						},
 						slot_key: SlotKey::Hand(Side::Off),
 					},
 					..default()
@@ -257,7 +261,10 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					ray: TEST_RAY,
+					select_info: SelectInfo {
+						ray: TEST_RAY,
+						..default()
+					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],
 				true
@@ -300,7 +307,10 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					ray: TEST_RAY,
+					select_info: SelectInfo {
+						ray: TEST_RAY,
+						..default()
+					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],
 				&Track::new(running_skill),
@@ -353,7 +363,10 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					ray: TEST_RAY,
+					select_info: SelectInfo {
+						ray: TEST_RAY,
+						..default()
+					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],
 				&Track::new(running_skill),
@@ -406,7 +419,10 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					ray: TEST_RAY,
+					select_info: SelectInfo {
+						ray: TEST_RAY,
+						..default()
+					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],
 				&Track::new(running_skill),
