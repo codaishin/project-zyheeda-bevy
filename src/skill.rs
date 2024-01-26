@@ -1,5 +1,5 @@
 use crate::{
-	behaviors::meta::BehaviorMeta,
+	behaviors::meta::{BehaviorMeta, Target},
 	components::{ItemType, PlayerSkills, SideUnset, SlotKey},
 	resources::MouseHover,
 };
@@ -69,21 +69,30 @@ pub struct SkillComboTree<TNext> {
 	pub next: TNext,
 }
 
-#[derive(Debug, PartialEq, Clone, Default)]
-pub struct SelectInfo {
+#[derive(Debug, PartialEq, Clone)]
+pub struct SelectInfo<T> {
 	pub ray: Ray,
-	pub hover: MouseHover,
+	pub hover: MouseHover<T>,
+}
+
+impl<T> Default for SelectInfo<T> {
+	fn default() -> Self {
+		Self {
+			ray: Ray::default(),
+			hover: MouseHover::<T>::default(),
+		}
+	}
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Queued {
-	pub select_info: SelectInfo,
+	pub select_info: Target,
 	pub slot_key: SlotKey,
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Active {
-	pub select_info: SelectInfo,
+	pub select_info: Target,
 	pub slot_key: SlotKey,
 }
 

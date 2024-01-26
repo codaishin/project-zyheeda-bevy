@@ -11,7 +11,7 @@ pub trait GetBehaviorMeta {
 #[cfg(test)]
 pub mod test_tools {
 	use super::*;
-	use crate::{behaviors::meta::Spawner, skill::SelectInfo};
+	use crate::behaviors::meta::{Spawner, Target};
 	use bevy::{ecs::system::Commands, prelude::Entity, transform::components::Transform};
 
 	pub fn run_lazy(
@@ -19,7 +19,7 @@ pub mod test_tools {
 		agent: Entity,
 		agent_transform: Transform,
 		spawner: Spawner,
-		select_info: SelectInfo,
+		select_info: Target,
 	) -> impl FnMut(Commands) {
 		move |mut commands| {
 			let Some(run) = behavior.run_fn else {

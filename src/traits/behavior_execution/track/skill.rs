@@ -38,10 +38,9 @@ impl<TAnimationKey> BehaviorExecution for Track<Skill<TAnimationKey, Active>> {
 mod tests {
 	use super::*;
 	use crate::{
-		behaviors::meta::BehaviorMeta,
+		behaviors::meta::{BehaviorMeta, Outdated, Target},
 		components::{PlayerSkills, SideUnset},
 		resources::MouseHover,
-		skill::SelectInfo,
 		traits::behavior_execution::test_tools::{run_system, stop_system},
 	};
 	use bevy::{
@@ -53,14 +52,20 @@ mod tests {
 	};
 	use mockall::{mock, predicate::eq};
 
-	const TEST_SELECT_INFO: SelectInfo = SelectInfo {
+	const TEST_TARGET: Target = Target {
 		ray: Ray {
 			origin: Vec3::Y,
 			direction: Vec3::NEG_ONE,
 		},
 		hover: MouseHover {
-			collider: Some(Entity::from_raw(42)),
-			root: Some(Entity::from_raw(420)),
+			collider: Some(Outdated {
+				entity: Entity::from_raw(42),
+				transform: Transform::from_xyz(0., 4., 2.),
+			}),
+			root: Some(Outdated {
+				entity: Entity::from_raw(420),
+				transform: Transform::from_xyz(4., 2., 0.),
+			}),
 		},
 	};
 
@@ -71,7 +76,7 @@ mod tests {
 			_agent: &mut EntityCommands,
 			_agent_transform: &Transform,
 			_spawner: &Spawner,
-			_ray: &SelectInfo,
+			_target: &Target,
 		);
 	}
 
@@ -80,7 +85,7 @@ mod tests {
 	}
 
 	trait TransformFn {
-		fn transform(_agent: &mut Transform, _spawner: &Spawner, _ray: &SelectInfo);
+		fn transform(_agent: &mut Transform, _spawner: &Spawner, _ray: &Target);
 	}
 
 	mock! {
@@ -90,7 +95,7 @@ mod tests {
 				_agent: &mut EntityCommands<'a, 'b, 'c>,
 				_agent_transform: &Transform,
 				_spawner: &Spawner,
-				_ray: &SelectInfo,
+				_target: &Target,
 			) {
 			}
 		}
@@ -98,7 +103,7 @@ mod tests {
 			fn stop<'a, 'b, 'c>(_agent: &mut EntityCommands<'a, 'b, 'c>) {}
 		}
 		impl TransformFn for _Tools {
-			fn transform(_agent: &mut Transform, _spawner: &Spawner, _ray: &SelectInfo) {}
+			fn transform(_agent: &mut Transform, _spawner: &Spawner, _target: &Target) {}
 		}
 	}
 
@@ -109,7 +114,7 @@ mod tests {
 			.world
 			.spawn(Track::new(Skill {
 				data: Active {
-					select_info: TEST_SELECT_INFO,
+					select_info: TEST_TARGET,
 					..default()
 				},
 				behavior: BehaviorMeta {
@@ -125,7 +130,7 @@ mod tests {
 		ctx.expect()
 			.times(1)
 			.withf(move |a, t, s, i| {
-				a.id() == agent && *t == transform && *s == spawner && *i == TEST_SELECT_INFO
+				a.id() == agent && *t == transform && *s == spawner && *i == TEST_TARGET
 			})
 			.return_const(());
 
@@ -171,7 +176,7 @@ mod tests {
 		let spawner = Spawner(GlobalTransform::from_xyz(22., 33., 44.));
 		let track = Track::new(Skill {
 			data: Active {
-				select_info: TEST_SELECT_INFO,
+				select_info: TEST_TARGET,
 				..default()
 			},
 			behavior: BehaviorMeta {
@@ -184,7 +189,7 @@ mod tests {
 		let ctx = Mock_Tools::transform_context();
 		ctx.expect()
 			.times(1)
-			.with(eq(transform), eq(spawner), eq(TEST_SELECT_INFO))
+			.with(eq(transform), eq(spawner), eq(TEST_TARGET))
 			.return_const(());
 
 		track.apply_transform(&mut transform, &spawner);

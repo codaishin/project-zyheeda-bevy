@@ -1,15 +1,16 @@
-use crate::{behaviors::meta::Spawner, skill::SelectInfo};
+use crate::behaviors::meta::{Spawner, Target};
 use bevy::{math::Vec3, transform::components::Transform};
 
 ///Serves as a struct to implement static traits on
 pub struct Tools;
 
-pub fn look_from_spawner(agent: &mut Transform, spawner: &Spawner, select_info: &SelectInfo) {
+pub fn look_from_spawner(agent: &mut Transform, spawner: &Spawner, target: &Target) {
 	let spawner = spawner.0.translation();
-	let Some(ray_length) = select_info.ray.intersect_plane(spawner, Vec3::Y) else {
+	let ray = target.ray;
+	let Some(ray_length) = ray.intersect_plane(spawner, Vec3::Y) else {
 		return;
 	};
-	let target = select_info.ray.origin + select_info.ray.direction * ray_length;
+	let target = ray.origin + ray.direction * ray_length;
 
 	agent.look_at(Vec3::new(target.x, agent.translation.y, target.z), Vec3::Y);
 }
@@ -28,7 +29,7 @@ mod test_tools {
 
 	pub fn as_system(
 		transform_fn: TransformFN,
-		select_info: SelectInfo,
+		select_info: Target,
 	) -> impl Fn(Query<&mut Transform>, Query<&GlobalTransform>) {
 		move |mut transforms, global_transforms| {
 			let mut transform = transforms.single_mut();
@@ -62,7 +63,7 @@ mod test_look_from_spawner {
 	#[test]
 	fn use_odd_ray_and_skill_spawn_for_look_direction() {
 		let (mut app, agent) = setup_app(Vec3::new(0., 3., 0.), Vec3::new(0., 3., 0.));
-		let select_info = SelectInfo {
+		let target = Target {
 			ray: Ray {
 				origin: Vec3::new(0., 6., 0.),
 				direction: Vec3::new(4., -3., 0.),
@@ -70,7 +71,7 @@ mod test_look_from_spawner {
 			..default()
 		};
 
-		app.add_systems(Update, as_system(look_from_spawner, select_info));
+		app.add_systems(Update, as_system(look_from_spawner, target));
 		app.update();
 
 		let agent = app.world.entity(agent);
@@ -82,7 +83,7 @@ mod test_look_from_spawner {
 	#[test]
 	fn use_odd_ray_look_direction() {
 		let (mut app, agent) = setup_app(Vec3::default(), Vec3::ZERO);
-		let select_info = SelectInfo {
+		let target = Target {
 			ray: Ray {
 				origin: Vec3::new(0., 3., 0.),
 				direction: Vec3::new(4., -3., 0.),
@@ -90,7 +91,7 @@ mod test_look_from_spawner {
 			..default()
 		};
 
-		app.add_systems(Update, as_system(look_from_spawner, select_info));
+		app.add_systems(Update, as_system(look_from_spawner, target));
 		app.update();
 
 		let agent = app.world.entity(agent);
@@ -102,7 +103,7 @@ mod test_look_from_spawner {
 	#[test]
 	fn use_ray_look_direction() {
 		let (mut app, agent) = setup_app(Vec3::default(), Vec3::ZERO);
-		let select_info = SelectInfo {
+		let target = Target {
 			ray: Ray {
 				origin: Vec3::new(1., 10., 5.),
 				direction: Vec3::NEG_Y,
@@ -110,7 +111,7 @@ mod test_look_from_spawner {
 			..default()
 		};
 
-		app.add_systems(Update, as_system(look_from_spawner, select_info));
+		app.add_systems(Update, as_system(look_from_spawner, target));
 		app.update();
 
 		let agent = app.world.entity(agent);
@@ -122,7 +123,7 @@ mod test_look_from_spawner {
 	#[test]
 	fn look_horizontally() {
 		let (mut app, agent) = setup_app(Vec3::new(0., 0., 0.), Vec3::new(0., 3., 0.));
-		let select_info = SelectInfo {
+		let target = Target {
 			ray: Ray {
 				origin: Vec3::new(0., 6., 0.),
 				direction: Vec3::new(4., -3., 0.),
@@ -130,7 +131,7 @@ mod test_look_from_spawner {
 			..default()
 		};
 
-		app.add_systems(Update, as_system(look_from_spawner, select_info));
+		app.add_systems(Update, as_system(look_from_spawner, target));
 		app.update();
 
 		let agent = app.world.entity(agent);

@@ -1,15 +1,21 @@
+use crate::skill::SelectInfo;
 use bevy::{
-	ecs::system::EntityCommands,
+	ecs::{entity::Entity, system::EntityCommands},
 	transform::components::{GlobalTransform, Transform},
 };
-
-use crate::skill::SelectInfo;
 
 #[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct Spawner(pub GlobalTransform);
 
-pub type TransformFN = fn(&mut Transform, &Spawner, &SelectInfo);
-pub type StartBehaviorFn = fn(&mut EntityCommands, &Transform, &Spawner, &SelectInfo);
+#[derive(Debug, PartialEq, Clone)]
+pub struct Outdated {
+	pub entity: Entity,
+	pub transform: GlobalTransform,
+}
+
+pub type Target = SelectInfo<Outdated>;
+pub type TransformFN = fn(&mut Transform, &Spawner, &Target);
+pub type StartBehaviorFn = fn(&mut EntityCommands, &Transform, &Spawner, &Target);
 pub type StopBehaviorFn = fn(&mut EntityCommands);
 
 #[derive(PartialEq, Debug, Clone, Copy, Default)]

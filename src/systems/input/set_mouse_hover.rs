@@ -85,7 +85,7 @@ mod tests {
 
 		app.update();
 
-		let mouse_hover = app.world.get_resource::<MouseHover>();
+		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
 
 		assert_eq!(Some(collider), mouse_hover.and_then(|mh| mh.collider));
 	}
@@ -103,7 +103,7 @@ mod tests {
 
 		app.update();
 
-		let mouse_hover = app.world.get_resource::<MouseHover>();
+		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
 
 		assert_eq!(Some(root), mouse_hover.and_then(|mh| mh.root));
 	}
@@ -116,7 +116,7 @@ mod tests {
 
 		app.update();
 
-		let mouse_hover = app.world.get_resource::<MouseHover>();
+		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
 
 		assert_eq!(
 			Some(&MouseHover {
@@ -139,7 +139,7 @@ mod tests {
 
 		app.update();
 
-		let mouse_hover = app.world.get_resource::<MouseHover>();
+		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
 
 		assert_eq!(
 			Some(&MouseHover {

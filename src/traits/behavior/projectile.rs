@@ -1,8 +1,7 @@
 use super::GetBehaviorMeta;
 use crate::{
-	behaviors::meta::{BehaviorMeta, Spawner},
+	behaviors::meta::{BehaviorMeta, Spawner, Target},
 	components::Projectile,
-	skill::SelectInfo,
 	tools::look_from_spawner,
 };
 use bevy::{ecs::system::EntityCommands, prelude::SpatialBundle, transform::components::Transform};
@@ -21,7 +20,7 @@ fn run_fn<T: Send + Sync + 'static>(
 	agent: &mut EntityCommands,
 	agent_transform: &Transform,
 	spawner: &Spawner,
-	_: &SelectInfo,
+	_: &Target,
 ) {
 	let transform = Transform::from_translation(spawner.0.translation());
 	agent.commands().spawn((
@@ -57,7 +56,7 @@ mod tests {
 				agent,
 				Transform::default().looking_at(forward, Vec3::Y),
 				spawner,
-				SelectInfo::default(),
+				Target::default(),
 			),
 		);
 		app.update();
@@ -79,7 +78,7 @@ mod tests {
 		let mut app = App::new();
 		let lazy = Projectile::<()>::behavior();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
-		let select_info = SelectInfo {
+		let select_info = Target {
 			ray: Ray {
 				origin: Vec3::ONE,
 				direction: Vec3::NEG_INFINITY,
@@ -117,7 +116,7 @@ mod tests {
 		let mut app = App::new();
 		let lazy = Projectile::<()>::behavior();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
-		let select_info = SelectInfo {
+		let select_info = Target {
 			ray: Ray {
 				origin: Vec3::ONE,
 				direction: Vec3::NEG_INFINITY,
