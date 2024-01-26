@@ -2,10 +2,7 @@ use bevy::{
 	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
 	prelude::*,
 };
-use bevy_rapier3d::{
-	pipeline::{CollisionEvent, ContactForceEvent},
-	prelude::*,
-};
+use bevy_rapier3d::prelude::*;
 use project_zyheeda::{
 	behaviors::MovementMode,
 	bundles::Loadout,
