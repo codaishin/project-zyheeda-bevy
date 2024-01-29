@@ -1,4 +1,5 @@
 use crate::{
+	behaviors::meta::{Outdated, Target},
 	components::{
 		PlayerSkills,
 		Queue,
@@ -9,13 +10,13 @@ use crate::{
 		Track,
 		WaitNext,
 	},
-	resources::CamRay,
-	skill::{Active, Queued, SelectInfo, Skill},
+	resources::{CamRay, MouseHover},
+	skill::{Active, Queued, Skill},
 };
 use bevy::{
 	ecs::system::{EntityCommands, Res},
-	prelude::{Commands, Entity, Query, Ray},
-	utils::default,
+	prelude::{Commands, Entity, Query},
+	transform::components::GlobalTransform,
 };
 
 type Components<'a> = (
@@ -25,17 +26,44 @@ type Components<'a> = (
 	Option<&'a Track<Skill<PlayerSkills<SideUnset>, Active>>>,
 );
 
-pub fn enqueue(mut agents: Query<Components>, mut commands: Commands, cam_ray: Res<CamRay>) {
+pub fn enqueue(
+	mut agents: Query<Components>,
+	mut commands: Commands,
+	transforms: Query<&GlobalTransform>,
+	cam_ray: Res<CamRay>,
+	mouse_hover: Res<MouseHover>,
+) {
 	if agents.is_empty() {
 		return;
 	}
 
-	let ray = cam_ray.0;
+	let select = get_select(&cam_ray, &mouse_hover, &transforms);
 
 	for (agent, schedule, mut queue, tracks) in &mut agents {
-		enqueue_skills(agent, schedule, &mut queue, tracks, &mut commands, ray);
+		enqueue_skills(agent, schedule, &mut queue, tracks, &mut commands, &select);
 		commands.entity(agent).remove::<Schedule>();
 	}
+}
+
+fn get_select(
+	ray: &CamRay,
+	hover: &MouseHover,
+	transforms: &Query<&GlobalTransform>,
+) -> Option<Target> {
+	let ray = ray.0?;
+	let collider = get_outdated(hover.collider, transforms);
+	let root = get_outdated(hover.root, transforms);
+
+	Some(Target {
+		ray,
+		hover: MouseHover { root, collider },
+	})
+}
+
+fn get_outdated(entity: Option<Entity>, transforms: &Query<&GlobalTransform>) -> Option<Outdated> {
+	let entity = entity?;
+	let transform = transforms.get(entity).cloned().ok()?;
+	Some(Outdated { entity, transform })
 }
 
 fn enqueue_skills(
@@ -44,10 +72,10 @@ fn enqueue_skills(
 	queue: &mut Queue,
 	track: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
 	commands: &mut Commands,
-	ray: Option<Ray>,
+	select: &Option<Target>,
 ) {
 	for scheduled in &schedule.skills {
-		enqueue_skill(agent, schedule, queue, track, scheduled, commands, ray);
+		enqueue_skill(agent, schedule, queue, track, scheduled, commands, select);
 	}
 }
 
@@ -58,31 +86,30 @@ fn enqueue_skill(
 	track: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
 	(slot, skill): (&SlotKey, &Skill),
 	commands: &mut Commands,
-	ray: Option<Ray>,
+	select: &Option<Target>,
 ) {
-	let slot = *slot;
-	let Some(new) = ray.map(|ray| {
+	let slot_key = *slot;
+	let new = select.clone().map(|select_info| {
 		skill.clone().with(&Queued {
-			select_info: SelectInfo { ray, ..default() },
-			slot_key: slot,
+			select_info,
+			slot_key,
 		})
-	}) else {
+	});
+	let Some(new) = new else {
 		return;
 	};
 
-	if schedule.mode == ScheduleMode::Enqueue {
-		return enqueue_to(queue, &new);
+	match (schedule.mode, track) {
+		(ScheduleMode::Override, Some(track)) if track.value.soft_override && new.soft_override => {
+			override_soft(queue, &new);
+		}
+		(ScheduleMode::Override, _) => {
+			override_hard(queue, &new, &mut commands.entity(agent));
+		}
+		(ScheduleMode::Enqueue, _) => {
+			enqueue_to(queue, &new);
+		}
 	}
-
-	let Some(track) = track else {
-		return override_hard(queue, &new, &mut commands.entity(agent));
-	};
-
-	if !track.value.soft_override || !new.soft_override {
-		return override_hard(queue, &new, &mut commands.entity(agent));
-	}
-
-	override_soft(queue, &new);
 }
 
 fn enqueue_to(queue: &mut Queue, new: &Skill<PlayerSkills<SideUnset>, Queued>) {
@@ -106,11 +133,14 @@ fn override_hard(
 mod tests {
 	use super::*;
 	use crate::{
+		behaviors::meta::Outdated,
 		components::{Schedule, ScheduleMode, Side, WaitNext},
+		resources::MouseHover,
 		skill::Cast,
 	};
 	use bevy::{
 		prelude::{App, Ray, Update, Vec3},
+		transform::components::GlobalTransform,
 		utils::default,
 	};
 	use std::time::Duration;
@@ -123,10 +153,47 @@ mod tests {
 	fn setup(ray: Option<Ray>) -> App {
 		let mut app = App::new();
 
+		let root = app.world.spawn(GlobalTransform::from_xyz(1., 2., 3.)).id();
+		let collider = app.world.spawn(GlobalTransform::from_xyz(4., 5., 6.)).id();
+
 		app.insert_resource(CamRay(ray));
+		app.insert_resource(MouseHover {
+			collider: Some(collider),
+			root: Some(root),
+		});
 		app.add_systems(Update, enqueue);
 
 		app
+	}
+
+	fn root_and_collider_hover(app: &App) -> Option<(Outdated, Outdated)> {
+		let hover = app.world.get_resource::<MouseHover<Entity>>()?;
+		let root = hover.root?;
+		let collider = hover.collider?;
+		let root_transform = app.world.entity(root).get::<GlobalTransform>()?;
+		let collider_transform = app.world.entity(collider).get::<GlobalTransform>()?;
+
+		Some((
+			Outdated {
+				entity: root,
+				transform: *root_transform,
+			},
+			Outdated {
+				entity: collider,
+				transform: *collider_transform,
+			},
+		))
+	}
+
+	fn mouse_hover_target_info(app: &App) -> MouseHover<Outdated> {
+		let Some((root, collider)) = root_and_collider_hover(app) else {
+			return MouseHover::default();
+		};
+
+		MouseHover {
+			root: Some(root),
+			collider: Some(collider),
+		}
 	}
 
 	#[test]
@@ -198,9 +265,9 @@ mod tests {
 						..default()
 					},
 					data: Queued {
-						select_info: SelectInfo {
+						select_info: Target {
 							ray: TEST_RAY,
-							..default()
+							hover: mouse_hover_target_info(&app),
 						},
 						slot_key: SlotKey::Hand(Side::Off),
 					},
@@ -261,9 +328,9 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					select_info: SelectInfo {
+					select_info: Target {
 						ray: TEST_RAY,
-						..default()
+						hover: mouse_hover_target_info(&app),
 					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],
@@ -307,9 +374,9 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					select_info: SelectInfo {
+					select_info: Target {
 						ray: TEST_RAY,
-						..default()
+						hover: mouse_hover_target_info(&app),
 					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],
@@ -363,9 +430,9 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					select_info: SelectInfo {
+					select_info: Target {
 						ray: TEST_RAY,
-						..default()
+						hover: mouse_hover_target_info(&app),
 					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],
@@ -419,9 +486,9 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					select_info: SelectInfo {
+					select_info: Target {
 						ray: TEST_RAY,
-						..default()
+						hover: mouse_hover_target_info(&app),
 					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],

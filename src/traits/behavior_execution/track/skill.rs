@@ -52,22 +52,24 @@ mod tests {
 	};
 	use mockall::{mock, predicate::eq};
 
-	const TEST_TARGET: Target = Target {
-		ray: Ray {
-			origin: Vec3::Y,
-			direction: Vec3::NEG_ONE,
-		},
-		hover: MouseHover {
-			collider: Some(Outdated {
-				entity: Entity::from_raw(42),
-				transform: Transform::from_xyz(0., 4., 2.),
-			}),
-			root: Some(Outdated {
-				entity: Entity::from_raw(420),
-				transform: Transform::from_xyz(4., 2., 0.),
-			}),
-		},
-	};
+	fn test_target() -> Target {
+		Target {
+			ray: Ray {
+				origin: Vec3::Y,
+				direction: Vec3::NEG_ONE,
+			},
+			hover: MouseHover {
+				collider: Some(Outdated {
+					entity: Entity::from_raw(42),
+					transform: GlobalTransform::from_xyz(0., 4., 2.),
+				}),
+				root: Some(Outdated {
+					entity: Entity::from_raw(420),
+					transform: GlobalTransform::from_xyz(4., 2., 0.),
+				}),
+			},
+		}
+	}
 
 	struct _Tools;
 
@@ -114,7 +116,7 @@ mod tests {
 			.world
 			.spawn(Track::new(Skill {
 				data: Active {
-					select_info: TEST_TARGET,
+					select_info: test_target(),
 					..default()
 				},
 				behavior: BehaviorMeta {
@@ -130,7 +132,7 @@ mod tests {
 		ctx.expect()
 			.times(1)
 			.withf(move |a, t, s, i| {
-				a.id() == agent && *t == transform && *s == spawner && *i == TEST_TARGET
+				a.id() == agent && *t == transform && *s == spawner && *i == test_target()
 			})
 			.return_const(());
 
@@ -176,7 +178,7 @@ mod tests {
 		let spawner = Spawner(GlobalTransform::from_xyz(22., 33., 44.));
 		let track = Track::new(Skill {
 			data: Active {
-				select_info: TEST_TARGET,
+				select_info: test_target(),
 				..default()
 			},
 			behavior: BehaviorMeta {
@@ -189,7 +191,7 @@ mod tests {
 		let ctx = Mock_Tools::transform_context();
 		ctx.expect()
 			.times(1)
-			.with(eq(transform), eq(spawner), eq(TEST_TARGET))
+			.with(eq(transform), eq(spawner), eq(test_target()))
 			.return_const(());
 
 		track.apply_transform(&mut transform, &spawner);
