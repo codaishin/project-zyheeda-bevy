@@ -1,5 +1,5 @@
 use crate::{
-	components::{SimpleMovement, WaitNext},
+	components::{DequeueNext, SimpleMovement},
 	traits::projectile_behavior::ProjectileBehavior,
 };
 use bevy::{
@@ -17,7 +17,7 @@ use bevy::{
 pub fn projectile_behavior<TProjectile: ProjectileBehavior + Component>(
 	mut commands: Commands,
 	projectiles: Query<(Entity, &TProjectile, &GlobalTransform), Added<TProjectile>>,
-	done: Query<Entity, (With<WaitNext>, With<TProjectile>)>,
+	done: Query<Entity, (With<DequeueNext>, With<TProjectile>)>,
 ) {
 	for entity in &done {
 		commands.entity(entity).despawn_recursive();
@@ -39,7 +39,7 @@ fn get_target<TProjectile: ProjectileBehavior>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{SimpleMovement, WaitNext};
+	use crate::components::{DequeueNext, SimpleMovement};
 	use bevy::{
 		app::{App, Update},
 		ecs::component::Component,
@@ -146,7 +146,7 @@ mod tests {
 
 		app.update();
 
-		app.world.entity_mut(projectile).insert(WaitNext);
+		app.world.entity_mut(projectile).insert(DequeueNext);
 
 		app.update();
 
@@ -166,7 +166,7 @@ mod tests {
 
 		let mut app = setup();
 
-		app.world.spawn((_Decoy, WaitNext));
+		app.world.spawn((_Decoy, DequeueNext));
 		app.update();
 
 		assert_eq!(

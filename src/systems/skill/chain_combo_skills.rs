@@ -2,13 +2,13 @@ use crate::{
 	components::{
 		ComboTreeRunning,
 		ComboTreeTemplate,
+		DequeueNext,
 		Item,
 		PlayerSkills,
 		SideUnset,
 		SlotKey,
 		Slots,
 		Track,
-		WaitNext,
 	},
 	skill::{Active, Skill, SkillComboTree},
 	traits::combo_next::ComboNext,
@@ -32,7 +32,7 @@ type ComboComponents<'a, TNext> = (
 );
 type JustStarted = (
 	Added<Track<Skill<PlayerSkills<SideUnset>, Active>>>,
-	Without<WaitNext>,
+	Without<DequeueNext>,
 );
 type Combos<TNext> = Vec<(SlotKey, SkillComboTree<TNext>)>;
 
@@ -40,10 +40,10 @@ pub fn chain_combo_skills<
 	TNext: Clone + ComboNext<PlayerSkills<SideUnset>> + Send + Sync + 'static,
 >(
 	mut commands: Commands,
-	mut idle: Query<(Entity, &mut Slots), Added<WaitNext>>,
+	mut newly_idle: Query<(Entity, &mut Slots), Added<DequeueNext>>,
 	mut newly_active: Query<ComboComponents<TNext>, JustStarted>,
 ) {
-	for (agent, mut slots) in &mut idle {
+	for (agent, mut slots) in &mut newly_idle {
 		let agent = &mut commands.entity(agent);
 		let slots = &mut slots;
 
@@ -661,7 +661,7 @@ mod tests {
 		for slot in slots.0.values_mut() {
 			slot.combo_skill = Some(skill_usable_with(&[]))
 		}
-		app.world.entity_mut(id).insert(WaitNext);
+		app.world.entity_mut(id).insert(DequeueNext);
 		app.world
 			.entity_mut(id)
 			.remove::<Track<Skill<PlayerSkills<SideUnset>, Active>>>();

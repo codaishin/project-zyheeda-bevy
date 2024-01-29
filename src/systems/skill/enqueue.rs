@@ -1,6 +1,7 @@
 use crate::{
 	behaviors::meta::{Outdated, Target},
 	components::{
+		DequeueNext,
 		PlayerSkills,
 		Queue,
 		Schedule,
@@ -8,7 +9,6 @@ use crate::{
 		SideUnset,
 		SlotKey,
 		Track,
-		WaitNext,
 	},
 	resources::{CamRay, MouseHover},
 	skill::{Active, Queued, Skill},
@@ -126,7 +126,7 @@ fn override_hard(
 	agent: &mut EntityCommands,
 ) {
 	queue.0 = vec![new.clone()].into();
-	agent.insert(WaitNext);
+	agent.insert(DequeueNext);
 }
 
 #[cfg(test)]
@@ -134,7 +134,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		behaviors::meta::Outdated,
-		components::{Schedule, ScheduleMode, Side, WaitNext},
+		components::{DequeueNext, Schedule, ScheduleMode, Side},
 		resources::MouseHover,
 		skill::Cast,
 	};
@@ -336,7 +336,7 @@ mod tests {
 				})],
 				true
 			),
-			(queue.0.iter().collect(), agent.contains::<WaitNext>())
+			(queue.0.iter().collect(), agent.contains::<DequeueNext>())
 		);
 	}
 
@@ -391,7 +391,7 @@ mod tests {
 				agent
 					.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
 					.unwrap(),
-				agent.contains::<WaitNext>(),
+				agent.contains::<DequeueNext>(),
 			)
 		);
 	}
@@ -447,7 +447,7 @@ mod tests {
 				agent
 					.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
 					.unwrap(),
-				agent.contains::<WaitNext>(),
+				agent.contains::<DequeueNext>(),
 			)
 		);
 	}
@@ -503,7 +503,7 @@ mod tests {
 				agent
 					.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
 					.unwrap(),
-				agent.contains::<WaitNext>(),
+				agent.contains::<DequeueNext>(),
 			)
 		);
 	}
