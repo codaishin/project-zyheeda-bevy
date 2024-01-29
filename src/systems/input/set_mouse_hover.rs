@@ -1,6 +1,6 @@
 use crate::{
 	components::ColliderRoot,
-	resources::{CamRay, MouseHover},
+	resources::{CamRay, ColliderInfo, MouseHover},
 	traits::cast_ray::{CastRay, TimeOfImpact},
 };
 use bevy::ecs::{
@@ -15,10 +15,10 @@ pub fn set_mouse_hover<TCastRay: CastRay + Resource>(
 	roots: Query<&ColliderRoot>,
 ) {
 	let mouse_hover = match ray_cast(cam_ray, ray_caster) {
-		Some((collider, ..)) => MouseHover {
-			collider: Some(collider),
+		Some((collider, ..)) => MouseHover(Some(ColliderInfo {
+			collider,
 			root: get_root(roots, collider),
-		},
+		})),
 		_ => MouseHover::default(),
 	};
 
@@ -87,7 +87,12 @@ mod tests {
 
 		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
 
-		assert_eq!(Some(collider), mouse_hover.and_then(|mh| mh.collider));
+		assert_eq!(
+			Some(collider),
+			mouse_hover
+				.and_then(|mh| mh.0.clone())
+				.map(|ci| ci.collider)
+		);
 	}
 
 	#[test]
@@ -105,7 +110,10 @@ mod tests {
 
 		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
 
-		assert_eq!(Some(root), mouse_hover.and_then(|mh| mh.root));
+		assert_eq!(
+			Some(Some(root)),
+			mouse_hover.and_then(|mh| mh.0.clone()).map(|ci| ci.root)
+		);
 	}
 
 	#[test]
@@ -118,13 +126,7 @@ mod tests {
 
 		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
 
-		assert_eq!(
-			Some(&MouseHover {
-				root: None,
-				collider: None
-			}),
-			mouse_hover
-		);
+		assert_eq!(Some(&MouseHover(None)), mouse_hover);
 	}
 
 	#[test]
@@ -141,13 +143,7 @@ mod tests {
 
 		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
 
-		assert_eq!(
-			Some(&MouseHover {
-				root: None,
-				collider: None
-			}),
-			mouse_hover
-		);
+		assert_eq!(Some(&MouseHover(None)), mouse_hover);
 	}
 
 	#[test]

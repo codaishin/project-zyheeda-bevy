@@ -11,12 +11,7 @@ impl<TAnimationKey> BehaviorExecution for Track<Skill<TAnimationKey, Active>> {
 		let Some(run) = self.value.behavior.run_fn else {
 			return;
 		};
-		run(
-			agent,
-			agent_transform,
-			spawner,
-			&self.value.data.select_info,
-		);
+		run(agent, agent_transform, spawner, &self.value.data.target);
 	}
 
 	fn stop(&self, agent: &mut EntityCommands) {
@@ -30,7 +25,7 @@ impl<TAnimationKey> BehaviorExecution for Track<Skill<TAnimationKey, Active>> {
 		let Some(apply_transform) = self.value.behavior.transform_fn else {
 			return;
 		};
-		apply_transform(transform, spawner, &self.value.data.select_info);
+		apply_transform(transform, spawner, &self.value.data.target);
 	}
 }
 
@@ -40,7 +35,7 @@ mod tests {
 	use crate::{
 		behaviors::meta::{BehaviorMeta, Outdated, Target},
 		components::{PlayerSkills, SideUnset},
-		resources::MouseHover,
+		resources::ColliderInfo,
 		traits::behavior_execution::test_tools::{run_system, stop_system},
 	};
 	use bevy::{
@@ -58,16 +53,16 @@ mod tests {
 				origin: Vec3::Y,
 				direction: Vec3::NEG_ONE,
 			},
-			hover: MouseHover {
-				collider: Some(Outdated {
+			collision_info: Some(ColliderInfo {
+				collider: Outdated {
 					entity: Entity::from_raw(42),
-					transform: GlobalTransform::from_xyz(0., 4., 2.),
-				}),
+					component: GlobalTransform::from_xyz(0., 4., 2.),
+				},
 				root: Some(Outdated {
 					entity: Entity::from_raw(420),
-					transform: GlobalTransform::from_xyz(4., 2., 0.),
+					component: GlobalTransform::from_xyz(4., 2., 0.),
 				}),
-			},
+			}),
 		}
 	}
 
@@ -116,7 +111,7 @@ mod tests {
 			.world
 			.spawn(Track::new(Skill {
 				data: Active {
-					select_info: test_target(),
+					target: test_target(),
 					..default()
 				},
 				behavior: BehaviorMeta {
@@ -178,7 +173,7 @@ mod tests {
 		let spawner = Spawner(GlobalTransform::from_xyz(22., 33., 44.));
 		let track = Track::new(Skill {
 			data: Active {
-				select_info: test_target(),
+				target: test_target(),
 				..default()
 			},
 			behavior: BehaviorMeta {

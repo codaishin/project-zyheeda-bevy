@@ -18,3 +18,4 @@ pub mod procedural;
 pub mod projectile_behavior;
 pub mod recourse_key;
 pub mod remove_conditionally;
+pub mod with_component;

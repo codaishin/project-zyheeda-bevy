@@ -86,7 +86,7 @@ mod tests {
 					..default()
 				},
 				data: Queued {
-					select_info: SelectInfo {
+					target: SelectInfo {
 						ray: TEST_RAY,
 						..default()
 					},
@@ -107,7 +107,7 @@ mod tests {
 		assert_eq!(
 			(
 				Some(Active {
-					select_info: SelectInfo {
+					target: SelectInfo {
 						ray: TEST_RAY,
 						..default()
 					},

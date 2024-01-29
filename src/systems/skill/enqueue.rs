@@ -1,5 +1,5 @@
 use crate::{
-	behaviors::meta::{Outdated, Target},
+	behaviors::meta::Target,
 	components::{
 		DequeueNext,
 		PlayerSkills,
@@ -10,11 +10,12 @@ use crate::{
 		SlotKey,
 		Track,
 	},
-	resources::{CamRay, MouseHover},
+	resources::CamRay,
 	skill::{Active, Queued, Skill},
+	traits::with_component::WithComponent,
 };
 use bevy::{
-	ecs::system::{EntityCommands, Res},
+	ecs::system::{EntityCommands, Res, Resource},
 	prelude::{Commands, Entity, Query},
 	transform::components::GlobalTransform,
 };
@@ -26,56 +27,46 @@ type Components<'a> = (
 	Option<&'a Track<Skill<PlayerSkills<SideUnset>, Active>>>,
 );
 
-pub fn enqueue(
+pub fn enqueue<TTargetIds: WithComponent<GlobalTransform> + Resource>(
 	mut agents: Query<Components>,
 	mut commands: Commands,
 	transforms: Query<&GlobalTransform>,
 	cam_ray: Res<CamRay>,
-	mouse_hover: Res<MouseHover>,
+	target_ids: Res<TTargetIds>,
 ) {
 	if agents.is_empty() {
 		return;
 	}
 
-	let select = get_select(&cam_ray, &mouse_hover, &transforms);
+	let target = get_target(&cam_ray, target_ids.as_ref(), &transforms);
 
-	for (agent, schedule, mut queue, tracks) in &mut agents {
-		enqueue_skills(agent, schedule, &mut queue, tracks, &mut commands, &select);
+	for (agent, schedule, mut queue, active) in &mut agents {
+		enqueue_skills(agent, schedule, &mut queue, active, &mut commands, &target);
 		commands.entity(agent).remove::<Schedule>();
 	}
 }
 
-fn get_select(
+fn get_target<TTargetIds: WithComponent<GlobalTransform>>(
 	ray: &CamRay,
-	hover: &MouseHover,
+	target_ids: &TTargetIds,
 	transforms: &Query<&GlobalTransform>,
 ) -> Option<Target> {
-	let ray = ray.0?;
-	let collider = get_outdated(hover.collider, transforms);
-	let root = get_outdated(hover.root, transforms);
-
 	Some(Target {
-		ray,
-		hover: MouseHover { root, collider },
+		ray: ray.0?,
+		collision_info: target_ids.with_component(transforms),
 	})
-}
-
-fn get_outdated(entity: Option<Entity>, transforms: &Query<&GlobalTransform>) -> Option<Outdated> {
-	let entity = entity?;
-	let transform = transforms.get(entity).cloned().ok()?;
-	Some(Outdated { entity, transform })
 }
 
 fn enqueue_skills(
 	agent: Entity,
 	schedule: &Schedule,
 	queue: &mut Queue,
-	track: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
+	active: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
 	commands: &mut Commands,
-	select: &Option<Target>,
+	target: &Option<Target>,
 ) {
 	for scheduled in &schedule.skills {
-		enqueue_skill(agent, schedule, queue, track, scheduled, commands, select);
+		enqueue_skill(agent, schedule, queue, active, scheduled, commands, target);
 	}
 }
 
@@ -83,23 +74,21 @@ fn enqueue_skill(
 	agent: Entity,
 	schedule: &Schedule,
 	queue: &mut Queue,
-	track: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
+	active: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
 	(slot, skill): (&SlotKey, &Skill),
 	commands: &mut Commands,
-	select: &Option<Target>,
+	target: &Option<Target>,
 ) {
-	let slot_key = *slot;
-	let new = select.clone().map(|select_info| {
-		skill.clone().with(&Queued {
-			select_info,
-			slot_key,
-		})
-	});
-	let Some(new) = new else {
+	let Some(target) = target else {
 		return;
 	};
 
-	match (schedule.mode, track) {
+	let new = skill.clone().with(&Queued {
+		target: target.clone(),
+		slot_key: *slot,
+	});
+
+	match (schedule.mode, active) {
 		(ScheduleMode::Override, Some(track)) if track.value.soft_override && new.soft_override => {
 			override_soft(queue, &new);
 		}
@@ -135,7 +124,7 @@ mod tests {
 	use crate::{
 		behaviors::meta::Outdated,
 		components::{DequeueNext, Schedule, ScheduleMode, Side},
-		resources::MouseHover,
+		resources::ColliderInfo,
 		skill::Cast,
 	};
 	use bevy::{
@@ -143,62 +132,66 @@ mod tests {
 		transform::components::GlobalTransform,
 		utils::default,
 	};
-	use std::time::Duration;
+	use std::{
+		sync::{Arc, Mutex},
+		time::Duration,
+	};
 
 	const TEST_RAY: Ray = Ray {
 		origin: Vec3::ONE,
 		direction: Vec3::Z,
 	};
 
-	fn setup(ray: Option<Ray>) -> App {
-		let mut app = App::new();
+	#[derive(Resource)]
+	struct _FakeTargetIds {
+		pub returns: Option<ColliderInfo<Outdated<GlobalTransform>>>,
+		pub tracked_transform_args: Arc<Mutex<Vec<GlobalTransform>>>,
+	}
 
-		let root = app.world.spawn(GlobalTransform::from_xyz(1., 2., 3.)).id();
-		let collider = app.world.spawn(GlobalTransform::from_xyz(4., 5., 6.)).id();
+	impl WithComponent<GlobalTransform> for _FakeTargetIds {
+		fn with_component(
+			&self,
+			query: &Query<&GlobalTransform>,
+		) -> Option<ColliderInfo<Outdated<GlobalTransform>>> {
+			if let Ok(mut t) = self.tracked_transform_args.lock() {
+				for transform in query {
+					t.push(*transform);
+				}
+			}
+			self.returns.clone()
+		}
+	}
+
+	type FakeTargetTransforms = Option<ColliderInfo<Outdated<GlobalTransform>>>;
+	type TrackedTransformArgs = Arc<Mutex<Vec<GlobalTransform>>>;
+
+	fn setup(ray: Option<Ray>) -> (App, FakeTargetTransforms, TrackedTransformArgs) {
+		let mut app = App::new();
+		let tracked_transform_args = Arc::new(Mutex::new(vec![]));
+		let fake_target_transforms = Some(ColliderInfo {
+			collider: Outdated {
+				entity: Entity::from_raw(42),
+				component: GlobalTransform::from_xyz(1., 2., 3.),
+			},
+			root: Some(Outdated {
+				entity: Entity::from_raw(43),
+				component: GlobalTransform::from_xyz(4., 5., 6.),
+			}),
+		});
 
 		app.insert_resource(CamRay(ray));
-		app.insert_resource(MouseHover {
-			collider: Some(collider),
-			root: Some(root),
+		app.insert_resource(_FakeTargetIds {
+			returns: fake_target_transforms.clone(),
+			tracked_transform_args: tracked_transform_args.clone(),
 		});
-		app.add_systems(Update, enqueue);
+		app.add_systems(Update, enqueue::<_FakeTargetIds>);
 
-		app
-	}
-
-	fn root_and_collider_hover(app: &App) -> Option<(Outdated, Outdated)> {
-		let hover = app.world.get_resource::<MouseHover<Entity>>()?;
-		let root = hover.root?;
-		let collider = hover.collider?;
-		let root_transform = app.world.entity(root).get::<GlobalTransform>()?;
-		let collider_transform = app.world.entity(collider).get::<GlobalTransform>()?;
-
-		Some((
-			Outdated {
-				entity: root,
-				transform: *root_transform,
-			},
-			Outdated {
-				entity: collider,
-				transform: *collider_transform,
-			},
-		))
-	}
-
-	fn mouse_hover_target_info(app: &App) -> MouseHover<Outdated> {
-		let Some((root, collider)) = root_and_collider_hover(app) else {
-			return MouseHover::default();
-		};
-
-		MouseHover {
-			root: Some(root),
-			collider: Some(collider),
-		}
+		(app, fake_target_transforms, tracked_transform_args)
 	}
 
 	#[test]
 	fn set_enqueue() {
-		let mut app = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
 		let agent = app
 			.world
 			.spawn((
@@ -265,9 +258,9 @@ mod tests {
 						..default()
 					},
 					data: Queued {
-						select_info: Target {
+						target: Target {
 							ray: TEST_RAY,
-							hover: mouse_hover_target_info(&app),
+							collision_info,
 						},
 						slot_key: SlotKey::Hand(Side::Off),
 					},
@@ -283,7 +276,7 @@ mod tests {
 
 	#[test]
 	fn set_override() {
-		let mut app = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
 		let new_skill = Skill {
 			cast: Cast {
 				pre: Duration::from_millis(100),
@@ -328,9 +321,9 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					select_info: Target {
+					target: Target {
 						ray: TEST_RAY,
-						hover: mouse_hover_target_info(&app),
+						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],
@@ -341,8 +334,56 @@ mod tests {
 	}
 
 	#[test]
+	fn call_with_correct_transform_query() {
+		let (mut app, .., tracked_transform_args) = setup(Some(TEST_RAY));
+		let transforms = vec![
+			GlobalTransform::from_xyz(11., 12., 13.),
+			GlobalTransform::from_xyz(1., 11., 111.),
+		];
+		for transform in &transforms {
+			app.world.spawn(*transform);
+		}
+		app.world.spawn((
+			Schedule {
+				mode: ScheduleMode::Enqueue,
+				skills: [(
+					SlotKey::Hand(Side::Off),
+					Skill {
+						cast: Cast {
+							pre: Duration::from_millis(100),
+							..default()
+						},
+						..default()
+					},
+				)]
+				.into(),
+			},
+			Queue::<PlayerSkills<SideUnset>>(
+				[Skill {
+					cast: Cast {
+						pre: Duration::from_millis(1),
+						..default()
+					},
+					..default()
+				}]
+				.into(),
+			),
+		));
+
+		app.update();
+
+		let Ok(args) = tracked_transform_args.try_lock() else {
+			panic!("Failed to read tracked arguments");
+		};
+
+		let args: Vec<_> = args.iter().cloned().collect();
+
+		assert_eq!(transforms, args);
+	}
+
+	#[test]
 	fn set_override_without_wait_next_when_new_and_running_soft_override() {
-		let mut app = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
 		let running_skill = Skill {
 			name: "running current",
 			soft_override: true,
@@ -374,9 +415,9 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					select_info: Target {
+					target: Target {
 						ray: TEST_RAY,
-						hover: mouse_hover_target_info(&app),
+						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],
@@ -398,7 +439,7 @@ mod tests {
 
 	#[test]
 	fn set_override_with_wait_next_when_soft_override_running_soft_override_false() {
-		let mut app = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
 		let running_skill = Skill {
 			name: "running",
 			soft_override: false,
@@ -430,9 +471,9 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					select_info: Target {
+					target: Target {
 						ray: TEST_RAY,
-						hover: mouse_hover_target_info(&app),
+						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],
@@ -454,7 +495,7 @@ mod tests {
 
 	#[test]
 	fn set_override_with_wait_next_when_soft_override_new_soft_override_false() {
-		let mut app = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
 		let running_skill = Skill {
 			name: "running",
 			soft_override: true,
@@ -486,9 +527,9 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					select_info: Target {
+					target: Target {
 						ray: TEST_RAY,
-						hover: mouse_hover_target_info(&app),
+						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],
@@ -510,7 +551,7 @@ mod tests {
 
 	#[test]
 	fn remove_schedule() {
-		let mut app = setup(Some(TEST_RAY));
+		let (mut app, ..) = setup(Some(TEST_RAY));
 		let schedule = Schedule {
 			mode: ScheduleMode::Override,
 			skills: [(SlotKey::Hand(Side::Off), Skill::default())].into(),
@@ -526,7 +567,7 @@ mod tests {
 
 	#[test]
 	fn try_soft_override_on_enqueue() {
-		let mut app = setup(Some(TEST_RAY));
+		let (mut app, ..) = setup(Some(TEST_RAY));
 		app.world.spawn((
 			Schedule {
 				mode: ScheduleMode::Enqueue,

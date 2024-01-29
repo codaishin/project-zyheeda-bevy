@@ -146,17 +146,17 @@ mod test_slot_map {
 #[derive(Resource, Default)]
 pub struct CamRay(pub Option<Ray>);
 
-#[derive(Resource, Debug, PartialEq, Clone)]
-pub struct MouseHover<T = Entity> {
+#[derive(Debug, PartialEq, Clone)]
+pub struct ColliderInfo<T> {
+	pub collider: T,
 	pub root: Option<T>,
-	pub collider: Option<T>,
 }
+
+#[derive(Resource, Debug, PartialEq, Clone)]
+pub struct MouseHover<T = Entity>(pub Option<ColliderInfo<T>>);
 
 impl<T> Default for MouseHover<T> {
 	fn default() -> Self {
-		Self {
-			root: None,
-			collider: None,
-		}
+		Self(None)
 	}
 }

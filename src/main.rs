@@ -31,7 +31,7 @@ use project_zyheeda::{
 	},
 	errors::Error,
 	plugins::ingame_menu::IngameMenuPlugin,
-	resources::{skill_templates::SkillTemplates, Models, SkillIcons, SlotMap},
+	resources::{skill_templates::SkillTemplates, Models, MouseHover, SkillIcons, SlotMap},
 	skill::{Active, Cast, Skill, SkillComboNext, SkillComboTree, SwordStrike},
 	states::{GameRunning, MouseContext},
 	systems::{
@@ -144,7 +144,7 @@ fn prepare_game(app: &mut App) {
 				link_animators_with_new_animation_players,
 				add_item_slots,
 				player_toggle_walk_run,
-				enqueue,
+				enqueue::<MouseHover>,
 				dequeue, // sets skill activity marker, so it MUST run before skill execution systems
 			)
 				.run_if(in_state(GameRunning::On)),
