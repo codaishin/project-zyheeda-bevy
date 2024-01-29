@@ -1,10 +1,25 @@
 use crate::behaviors::meta::{Spawner, Target};
-use bevy::{math::Vec3, transform::components::Transform};
+use bevy::{
+	math::Vec3,
+	transform::components::{GlobalTransform, Transform},
+};
 
 ///Serves as a struct to implement static traits on
 pub struct Tools;
 
 pub fn look_from_spawner(agent: &mut Transform, spawner: &Spawner, target: &Target) {
+	match target.collision_info.clone().and_then(|ci| ci.root) {
+		Some(root) => use_target_transform(agent, root.component),
+		_ => use_ray(agent, spawner, target),
+	}
+}
+
+fn use_target_transform(agent: &mut Transform, target: GlobalTransform) {
+	let target = target.translation();
+	look_horizontally(agent, target);
+}
+
+fn use_ray(agent: &mut Transform, spawner: &Spawner, target: &Target) {
 	let spawner = spawner.0.translation();
 	let ray = target.ray;
 	let Some(ray_length) = ray.intersect_plane(spawner, Vec3::Y) else {
@@ -12,6 +27,10 @@ pub fn look_from_spawner(agent: &mut Transform, spawner: &Spawner, target: &Targ
 	};
 	let target = ray.origin + ray.direction * ray_length;
 
+	look_horizontally(agent, target);
+}
+
+fn look_horizontally(agent: &mut Transform, target: Vec3) {
 	agent.look_at(Vec3::new(target.x, agent.translation.y, target.z), Vec3::Y);
 }
 
@@ -53,10 +72,16 @@ mod test_look_from_spawner {
 		test_tools::{as_system, setup_app},
 		*,
 	};
-	use crate::test_tools::utils::assert_eq_approx;
+	use crate::{
+		behaviors::meta::Outdated,
+		resources::ColliderInfo,
+		test_tools::utils::assert_eq_approx,
+	};
 	use bevy::{
+		ecs::entity::Entity,
 		math::{Ray, Vec3},
 		prelude::Update,
+		transform::components::GlobalTransform,
 		utils::default,
 	};
 
@@ -138,5 +163,65 @@ mod test_look_from_spawner {
 		let agent = agent.get::<Transform>().unwrap();
 
 		assert_eq_approx!(Vec3::new(1., 0., 0.), agent.forward(), 0.000001);
+	}
+
+	#[test]
+	fn look_at_target_root_transform() {
+		let (mut app, agent) = setup_app(Vec3::new(0., 0., 0.), Vec3::new(0., 3., 0.));
+		let target = Target {
+			ray: Ray::default(),
+			collision_info: Some(ColliderInfo {
+				collider: Outdated {
+					entity: Entity::from_raw(100),
+					component: GlobalTransform::from_xyz(0., 0., 0.),
+				},
+				root: Some(Outdated {
+					entity: Entity::from_raw(101),
+					component: GlobalTransform::from_xyz(10., 0., 20.),
+				}),
+			}),
+		};
+
+		app.add_systems(Update, as_system(look_from_spawner, target));
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let agent = agent.get::<Transform>().unwrap();
+
+		assert_eq_approx!(
+			Vec3::new(10., 0., 20.).normalize(),
+			agent.forward(),
+			0.000001
+		);
+	}
+
+	#[test]
+	fn look_at_target_root_transform_horizontally() {
+		let (mut app, agent) = setup_app(Vec3::new(0., 10., 0.), Vec3::new(0., 3., 0.));
+		let target = Target {
+			ray: Ray::default(),
+			collision_info: Some(ColliderInfo {
+				collider: Outdated {
+					entity: Entity::from_raw(100),
+					component: GlobalTransform::from_xyz(0., 0., 0.),
+				},
+				root: Some(Outdated {
+					entity: Entity::from_raw(101),
+					component: GlobalTransform::from_xyz(10., 0., 20.),
+				}),
+			}),
+		};
+
+		app.add_systems(Update, as_system(look_from_spawner, target));
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let agent = agent.get::<Transform>().unwrap();
+
+		assert_eq_approx!(
+			Vec3::new(10., 0., 20.).normalize(),
+			agent.forward(),
+			0.000001
+		);
 	}
 }
