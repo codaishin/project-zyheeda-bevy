@@ -1,6 +1,6 @@
 use crate::{
 	behaviors::meta::Spawner,
-	components::{Animate, SlotKey, Slots, WaitNext},
+	components::{Animate, DequeueNext, SlotKey, Slots},
 	traits::{
 		behavior_execution::BehaviorExecution,
 		cast_update::{AgeType, CastUpdate, State},
@@ -18,7 +18,7 @@ type Skills<'a, TAnimationKey, TSkill> = (
 	&'a mut Transform,
 	&'a mut TSkill,
 	&'a Slots,
-	Option<&'a WaitNext>,
+	Option<&'a DequeueNext>,
 	Option<&'a Animate<TAnimationKey>>,
 );
 
@@ -64,7 +64,7 @@ pub fn execute_skill<
 fn get_state<TSkill: CastUpdate>(
 	skill: &mut Mut<TSkill>,
 	delta: &Duration,
-	wait_next: Option<&WaitNext>,
+	wait_next: Option<&DequeueNext>,
 ) -> State {
 	if wait_next.is_some() {
 		return State::Done;
@@ -114,7 +114,7 @@ fn handle_done<
 	if current_animation_is_from_skill(skill, animate) {
 		agent.remove::<Animate<TAnimationKey>>();
 	}
-	agent.insert(WaitNext);
+	agent.insert(DequeueNext);
 	skill.stop(agent);
 }
 
@@ -142,7 +142,7 @@ fn get_spawner(slots: &Slots, transforms: &Query<&GlobalTransform>) -> Option<Sp
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Animate, Slot, SlotKey, WaitNext},
+		components::{Animate, DequeueNext, Slot, SlotKey},
 		traits::cast_update::{CastType, State},
 	};
 	use bevy::{
@@ -500,7 +500,7 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<WaitNext>());
+		assert!(agent.contains::<DequeueNext>());
 	}
 
 	#[test]
@@ -521,7 +521,7 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<WaitNext>());
+		assert!(!agent.contains::<DequeueNext>());
 	}
 
 	#[test]
@@ -543,7 +543,7 @@ mod tests {
 			skill,
 			Transform::default(),
 			Animate::Repeat(_AnimationKey::A),
-			WaitNext,
+			DequeueNext,
 		));
 
 		app.update();

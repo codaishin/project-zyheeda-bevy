@@ -1,6 +1,6 @@
 use crate::{
-	components::{Animate, Queue, Track, WaitNext},
-	traits::get_animation::HasIdle,
+	components::{Animate, DequeueNext, Queue, Track},
+	traits::{get_animation::HasIdle, remove_conditionally::RemoveConditionally},
 };
 use bevy::prelude::{Commands, Entity, Query, With};
 
@@ -15,21 +15,19 @@ pub fn dequeue<
 	TAnimationKey: PartialEq + Clone + Copy + Sync + Send + 'static,
 >(
 	mut commands: Commands,
-	mut agents: Query<Components<TAnimationTemplate, TAnimationKey>, With<WaitNext>>,
+	mut agents: Query<Components<TAnimationTemplate, TAnimationKey>, With<DequeueNext>>,
 ) where
 	Queue<TAnimationTemplate>: HasIdle<TAnimationKey>,
 {
 	let idle = &Queue::<TAnimationTemplate>::IDLE;
 
-	for (agent, mut queue, animate) in agents.iter_mut() {
+	for (agent, mut queue, current_animation) in agents.iter_mut() {
 		let mut agent = commands.entity(agent);
 
 		if let Some(skill) = queue.0.pop_front() {
 			agent.insert(Track::new(skill.to_active()));
-			agent.remove::<WaitNext>();
-			if matches!(animate, Some(animate) if animate == idle) {
-				agent.remove::<Animate<TAnimationKey>>();
-			}
+			agent.remove::<DequeueNext>();
+			agent.remove_conditionally(current_animation, |a| a == idle);
 		} else {
 			agent.insert(*idle);
 		}
@@ -40,8 +38,8 @@ pub fn dequeue<
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Animate, SlotKey, WaitNext},
-		skill::{Active, Cast, Queued, Skill},
+		components::{Animate, DequeueNext, SlotKey},
+		skill::{Active, Cast, Queued, SelectInfo, Skill},
 	};
 	use bevy::prelude::{default, App, Ray, Update, Vec3};
 	use std::time::Duration;
@@ -88,14 +86,17 @@ mod tests {
 					..default()
 				},
 				data: Queued {
-					ray: TEST_RAY,
+					target: SelectInfo {
+						ray: TEST_RAY,
+						..default()
+					},
 					slot_key: SlotKey::SkillSpawn,
 				},
 				..default()
 			})]
 			.into(),
 		);
-		let agent = app.world.spawn((queue, WaitNext)).id();
+		let agent = app.world.spawn((queue, DequeueNext)).id();
 
 		app.add_systems(Update, dequeue::<_Template, _Key>);
 		app.update();
@@ -106,7 +107,10 @@ mod tests {
 		assert_eq!(
 			(
 				Some(Active {
-					ray: TEST_RAY,
+					target: SelectInfo {
+						ray: TEST_RAY,
+						..default()
+					},
 					slot_key: SlotKey::SkillSpawn,
 				}),
 				false,
@@ -116,7 +120,7 @@ mod tests {
 				agent
 					.get::<Track<Skill<_Template, Active>>>()
 					.map(|t| t.value.data.clone()),
-				agent.contains::<WaitNext>(),
+				agent.contains::<DequeueNext>(),
 				queue.0.len()
 			)
 		);
@@ -148,7 +152,7 @@ mod tests {
 		let mut app = App::new();
 		let agent = app
 			.world
-			.spawn((Queue::<_Template>([].into()), WaitNext))
+			.spawn((Queue::<_Template>([].into()), DequeueNext))
 			.id();
 
 		app.add_systems(Update, dequeue::<_Template, _Key>);
@@ -169,7 +173,7 @@ mod tests {
 
 		let agent = app
 			.world
-			.spawn((queue, WaitNext, Queue::<_Template>::IDLE))
+			.spawn((queue, DequeueNext, Queue::<_Template>::IDLE))
 			.id();
 		app.add_systems(Update, dequeue::<_Template, _Key>);
 		app.update();
@@ -186,7 +190,7 @@ mod tests {
 
 		let agent = app
 			.world
-			.spawn((queue, WaitNext, Animate::Replay(_Key::NotIdle)))
+			.spawn((queue, DequeueNext, Animate::Replay(_Key::NotIdle)))
 			.id();
 		app.add_systems(Update, dequeue::<_Template, _Key>);
 		app.update();

@@ -1,21 +1,22 @@
 use super::GetBehaviorMeta;
 use crate::{
-	behaviors::meta::{BehaviorMeta, Spawner},
+	behaviors::meta::{BehaviorMeta, Spawner, Target},
 	components::SimpleMovement,
 };
-use bevy::{
-	ecs::system::EntityCommands,
-	math::{Ray, Vec3},
-	transform::components::Transform,
-};
+use bevy::{ecs::system::EntityCommands, math::Vec3, transform::components::Transform};
 
-fn run_fn(agent: &mut EntityCommands, _agent_transform: &Transform, _spawner: &Spawner, ray: &Ray) {
+fn run_fn(
+	agent: &mut EntityCommands,
+	_agent_transform: &Transform,
+	_spawner: &Spawner,
+	target: &Target,
+) {
+	let ray = target.ray;
 	let Some(length) = ray.intersect_plane(Vec3::ZERO, Vec3::Y) else {
 		return;
 	};
-	agent.insert(SimpleMovement {
-		target: ray.origin + ray.direction * length,
-	});
+	let target = ray.origin + ray.direction * length;
+	agent.insert(SimpleMovement { target });
 }
 
 fn stop_fn(agent: &mut EntityCommands) {
@@ -49,14 +50,17 @@ mod tests {
 		let mut app = App::new();
 		let behavior = SimpleMovement::behavior();
 		let agent = app.world.spawn(()).id();
-		let ray = Ray {
-			origin: Vec3::Y,
-			direction: Vec3::NEG_Y,
+		let target = Target {
+			ray: Ray {
+				origin: Vec3::Y,
+				direction: Vec3::NEG_Y,
+			},
+			..default()
 		};
 
 		app.add_systems(
 			Update,
-			run_lazy(behavior, agent, default(), Spawner::default(), ray),
+			run_lazy(behavior, agent, default(), Spawner::default(), target),
 		);
 		app.update();
 
@@ -70,14 +74,17 @@ mod tests {
 		let mut app = App::new();
 		let behavior = SimpleMovement::behavior();
 		let agent = app.world.spawn(()).id();
-		let ray = Ray {
-			origin: Vec3::ONE,
-			direction: Vec3::NEG_Y,
+		let target = Target {
+			ray: Ray {
+				origin: Vec3::ONE,
+				direction: Vec3::NEG_Y,
+			},
+			..default()
 		};
 
 		app.add_systems(
 			Update,
-			run_lazy(behavior, agent, default(), Spawner::default(), ray),
+			run_lazy(behavior, agent, default(), Spawner::default(), target),
 		);
 		app.update();
 
@@ -91,14 +98,17 @@ mod tests {
 		let mut app = App::new();
 		let behavior = SimpleMovement::behavior();
 		let agent = app.world.spawn(()).id();
-		let ray = Ray {
-			origin: Vec3::new(0., 4., 0.),
-			direction: Vec3::new(0., -4., 3.),
+		let target = Target {
+			ray: Ray {
+				origin: Vec3::new(0., 4., 0.),
+				direction: Vec3::new(0., -4., 3.),
+			},
+			..default()
 		};
 
 		app.add_systems(
 			Update,
-			run_lazy(behavior, agent, default(), Spawner::default(), ray),
+			run_lazy(behavior, agent, default(), Spawner::default(), target),
 		);
 		app.update();
 

@@ -11,7 +11,7 @@ impl<TAnimationKey> BehaviorExecution for Track<Skill<TAnimationKey, Active>> {
 		let Some(run) = self.value.behavior.run_fn else {
 			return;
 		};
-		run(agent, agent_transform, spawner, &self.value.data.ray);
+		run(agent, agent_transform, spawner, &self.value.data.target);
 	}
 
 	fn stop(&self, agent: &mut EntityCommands) {
@@ -25,7 +25,7 @@ impl<TAnimationKey> BehaviorExecution for Track<Skill<TAnimationKey, Active>> {
 		let Some(apply_transform) = self.value.behavior.transform_fn else {
 			return;
 		};
-		apply_transform(transform, spawner, &self.value.data.ray);
+		apply_transform(transform, spawner, &self.value.data.target);
 	}
 }
 
@@ -33,22 +33,38 @@ impl<TAnimationKey> BehaviorExecution for Track<Skill<TAnimationKey, Active>> {
 mod tests {
 	use super::*;
 	use crate::{
-		behaviors::meta::BehaviorMeta,
+		behaviors::meta::{BehaviorMeta, Outdated, Target},
 		components::{PlayerSkills, SideUnset},
+		resources::ColliderInfo,
 		traits::behavior_execution::test_tools::{run_system, stop_system},
 	};
 	use bevy::{
 		app::{App, Update},
+		ecs::entity::Entity,
 		math::{Ray, Vec3},
 		transform::components::{GlobalTransform, Transform},
 		utils::default,
 	};
 	use mockall::{mock, predicate::eq};
 
-	const TEST_RAY: Ray = Ray {
-		origin: Vec3::Y,
-		direction: Vec3::NEG_ONE,
-	};
+	fn test_target() -> Target {
+		Target {
+			ray: Ray {
+				origin: Vec3::Y,
+				direction: Vec3::NEG_ONE,
+			},
+			collision_info: Some(ColliderInfo {
+				collider: Outdated {
+					entity: Entity::from_raw(42),
+					component: GlobalTransform::from_xyz(0., 4., 2.),
+				},
+				root: Some(Outdated {
+					entity: Entity::from_raw(420),
+					component: GlobalTransform::from_xyz(4., 2., 0.),
+				}),
+			}),
+		}
+	}
 
 	struct _Tools;
 
@@ -57,7 +73,7 @@ mod tests {
 			_agent: &mut EntityCommands,
 			_agent_transform: &Transform,
 			_spawner: &Spawner,
-			_ray: &Ray,
+			_target: &Target,
 		);
 	}
 
@@ -66,7 +82,7 @@ mod tests {
 	}
 
 	trait TransformFn {
-		fn transform(_agent: &mut Transform, _spawner: &Spawner, _ray: &Ray);
+		fn transform(_agent: &mut Transform, _spawner: &Spawner, _ray: &Target);
 	}
 
 	mock! {
@@ -76,7 +92,7 @@ mod tests {
 				_agent: &mut EntityCommands<'a, 'b, 'c>,
 				_agent_transform: &Transform,
 				_spawner: &Spawner,
-				_ray: &Ray,
+				_target: &Target,
 			) {
 			}
 		}
@@ -84,7 +100,7 @@ mod tests {
 			fn stop<'a, 'b, 'c>(_agent: &mut EntityCommands<'a, 'b, 'c>) {}
 		}
 		impl TransformFn for _Tools {
-			fn transform(_agent: &mut Transform, _spawner: &Spawner, _ray: &Ray) {}
+			fn transform(_agent: &mut Transform, _spawner: &Spawner, _target: &Target) {}
 		}
 	}
 
@@ -95,7 +111,7 @@ mod tests {
 			.world
 			.spawn(Track::new(Skill {
 				data: Active {
-					ray: TEST_RAY,
+					target: test_target(),
 					..default()
 				},
 				behavior: BehaviorMeta {
@@ -110,8 +126,8 @@ mod tests {
 		let ctx = Mock_Tools::run_context();
 		ctx.expect()
 			.times(1)
-			.withf(move |a, t, s, r| {
-				a.id() == agent && *t == transform && *s == spawner && *r == TEST_RAY
+			.withf(move |a, t, s, i| {
+				a.id() == agent && *t == transform && *s == spawner && *i == test_target()
 			})
 			.return_const(());
 
@@ -157,7 +173,7 @@ mod tests {
 		let spawner = Spawner(GlobalTransform::from_xyz(22., 33., 44.));
 		let track = Track::new(Skill {
 			data: Active {
-				ray: TEST_RAY,
+				target: test_target(),
 				..default()
 			},
 			behavior: BehaviorMeta {
@@ -170,7 +186,7 @@ mod tests {
 		let ctx = Mock_Tools::transform_context();
 		ctx.expect()
 			.times(1)
-			.with(eq(transform), eq(spawner), eq(TEST_RAY))
+			.with(eq(transform), eq(spawner), eq(test_target()))
 			.return_const(());
 
 		track.apply_transform(&mut transform, &spawner);

@@ -1,5 +1,7 @@
 use crate::{
+	behaviors::meta::Target,
 	components::{
+		DequeueNext,
 		PlayerSkills,
 		Queue,
 		Schedule,
@@ -7,14 +9,15 @@ use crate::{
 		SideUnset,
 		SlotKey,
 		Track,
-		WaitNext,
 	},
 	resources::CamRay,
 	skill::{Active, Queued, Skill},
+	traits::with_component::WithComponent,
 };
 use bevy::{
-	ecs::system::{EntityCommands, Res},
-	prelude::{Commands, Entity, Query, Ray},
+	ecs::system::{EntityCommands, Res, Resource},
+	prelude::{Commands, Entity, Query},
+	transform::components::GlobalTransform,
 };
 
 type Components<'a> = (
@@ -24,29 +27,46 @@ type Components<'a> = (
 	Option<&'a Track<Skill<PlayerSkills<SideUnset>, Active>>>,
 );
 
-pub fn enqueue(mut agents: Query<Components>, mut commands: Commands, cam_ray: Res<CamRay>) {
+pub fn enqueue<TTargetIds: WithComponent<GlobalTransform> + Resource>(
+	mut agents: Query<Components>,
+	mut commands: Commands,
+	transforms: Query<&GlobalTransform>,
+	cam_ray: Res<CamRay>,
+	target_ids: Res<TTargetIds>,
+) {
 	if agents.is_empty() {
 		return;
 	}
 
-	let ray = cam_ray.0;
+	let target = get_target(&cam_ray, target_ids.as_ref(), &transforms);
 
-	for (agent, schedule, mut queue, tracks) in &mut agents {
-		enqueue_skills(agent, schedule, &mut queue, tracks, &mut commands, ray);
+	for (agent, schedule, mut queue, active) in &mut agents {
+		enqueue_skills(agent, schedule, &mut queue, active, &mut commands, &target);
 		commands.entity(agent).remove::<Schedule>();
 	}
+}
+
+fn get_target<TTargetIds: WithComponent<GlobalTransform>>(
+	ray: &CamRay,
+	target_ids: &TTargetIds,
+	transforms: &Query<&GlobalTransform>,
+) -> Option<Target> {
+	Some(Target {
+		ray: ray.0?,
+		collision_info: target_ids.with_component(transforms),
+	})
 }
 
 fn enqueue_skills(
 	agent: Entity,
 	schedule: &Schedule,
 	queue: &mut Queue,
-	track: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
+	active: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
 	commands: &mut Commands,
-	ray: Option<Ray>,
+	target: &Option<Target>,
 ) {
 	for scheduled in &schedule.skills {
-		enqueue_skill(agent, schedule, queue, track, scheduled, commands, ray);
+		enqueue_skill(agent, schedule, queue, active, scheduled, commands, target);
 	}
 }
 
@@ -54,34 +74,31 @@ fn enqueue_skill(
 	agent: Entity,
 	schedule: &Schedule,
 	queue: &mut Queue,
-	track: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
+	active: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
 	(slot, skill): (&SlotKey, &Skill),
 	commands: &mut Commands,
-	ray: Option<Ray>,
+	target: &Option<Target>,
 ) {
-	let slot = *slot;
-	let Some(new) = ray.map(|ray| {
-		skill.clone().with(&Queued {
-			ray,
-			slot_key: slot,
-		})
-	}) else {
+	let Some(target) = target else {
 		return;
 	};
 
-	if schedule.mode == ScheduleMode::Enqueue {
-		return enqueue_to(queue, &new);
+	let new = skill.clone().with(&Queued {
+		target: target.clone(),
+		slot_key: *slot,
+	});
+
+	match (schedule.mode, active) {
+		(ScheduleMode::Override, Some(track)) if track.value.soft_override && new.soft_override => {
+			override_soft(queue, &new);
+		}
+		(ScheduleMode::Override, _) => {
+			override_hard(queue, &new, &mut commands.entity(agent));
+		}
+		(ScheduleMode::Enqueue, _) => {
+			enqueue_to(queue, &new);
+		}
 	}
-
-	let Some(track) = track else {
-		return override_hard(queue, &new, &mut commands.entity(agent));
-	};
-
-	if !track.value.soft_override || !new.soft_override {
-		return override_hard(queue, &new, &mut commands.entity(agent));
-	}
-
-	override_soft(queue, &new);
 }
 
 fn enqueue_to(queue: &mut Queue, new: &Skill<PlayerSkills<SideUnset>, Queued>) {
@@ -98,39 +115,83 @@ fn override_hard(
 	agent: &mut EntityCommands,
 ) {
 	queue.0 = vec![new.clone()].into();
-	agent.insert(WaitNext);
+	agent.insert(DequeueNext);
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Schedule, ScheduleMode, Side, WaitNext},
+		behaviors::meta::Outdated,
+		components::{DequeueNext, Schedule, ScheduleMode, Side},
+		resources::ColliderInfo,
 		skill::Cast,
 	};
 	use bevy::{
 		prelude::{App, Ray, Update, Vec3},
+		transform::components::GlobalTransform,
 		utils::default,
 	};
-	use std::time::Duration;
+	use std::{
+		sync::{Arc, Mutex},
+		time::Duration,
+	};
 
 	const TEST_RAY: Ray = Ray {
 		origin: Vec3::ONE,
 		direction: Vec3::Z,
 	};
 
-	fn setup(ray: Option<Ray>) -> App {
+	#[derive(Resource)]
+	struct _FakeTargetIds {
+		pub returns: Option<ColliderInfo<Outdated<GlobalTransform>>>,
+		pub tracked_transform_args: Arc<Mutex<Vec<GlobalTransform>>>,
+	}
+
+	impl WithComponent<GlobalTransform> for _FakeTargetIds {
+		fn with_component(
+			&self,
+			query: &Query<&GlobalTransform>,
+		) -> Option<ColliderInfo<Outdated<GlobalTransform>>> {
+			if let Ok(mut t) = self.tracked_transform_args.lock() {
+				for transform in query {
+					t.push(*transform);
+				}
+			}
+			self.returns.clone()
+		}
+	}
+
+	type FakeTargetTransforms = Option<ColliderInfo<Outdated<GlobalTransform>>>;
+	type TrackedTransformArgs = Arc<Mutex<Vec<GlobalTransform>>>;
+
+	fn setup(ray: Option<Ray>) -> (App, FakeTargetTransforms, TrackedTransformArgs) {
 		let mut app = App::new();
+		let tracked_transform_args = Arc::new(Mutex::new(vec![]));
+		let fake_target_transforms = Some(ColliderInfo {
+			collider: Outdated {
+				entity: Entity::from_raw(42),
+				component: GlobalTransform::from_xyz(1., 2., 3.),
+			},
+			root: Some(Outdated {
+				entity: Entity::from_raw(43),
+				component: GlobalTransform::from_xyz(4., 5., 6.),
+			}),
+		});
 
 		app.insert_resource(CamRay(ray));
-		app.add_systems(Update, enqueue);
+		app.insert_resource(_FakeTargetIds {
+			returns: fake_target_transforms.clone(),
+			tracked_transform_args: tracked_transform_args.clone(),
+		});
+		app.add_systems(Update, enqueue::<_FakeTargetIds>);
 
-		app
+		(app, fake_target_transforms, tracked_transform_args)
 	}
 
 	#[test]
 	fn set_enqueue() {
-		let mut app = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
 		let agent = app
 			.world
 			.spawn((
@@ -197,7 +258,10 @@ mod tests {
 						..default()
 					},
 					data: Queued {
-						ray: TEST_RAY,
+						target: Target {
+							ray: TEST_RAY,
+							collision_info,
+						},
 						slot_key: SlotKey::Hand(Side::Off),
 					},
 					..default()
@@ -212,7 +276,7 @@ mod tests {
 
 	#[test]
 	fn set_override() {
-		let mut app = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
 		let new_skill = Skill {
 			cast: Cast {
 				pre: Duration::from_millis(100),
@@ -257,18 +321,69 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					ray: TEST_RAY,
+					target: Target {
+						ray: TEST_RAY,
+						collision_info,
+					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],
 				true
 			),
-			(queue.0.iter().collect(), agent.contains::<WaitNext>())
+			(queue.0.iter().collect(), agent.contains::<DequeueNext>())
 		);
 	}
 
 	#[test]
+	fn call_with_correct_transform_query() {
+		let (mut app, .., tracked_transform_args) = setup(Some(TEST_RAY));
+		let transforms = vec![
+			GlobalTransform::from_xyz(11., 12., 13.),
+			GlobalTransform::from_xyz(1., 11., 111.),
+		];
+		for transform in &transforms {
+			app.world.spawn(*transform);
+		}
+		app.world.spawn((
+			Schedule {
+				mode: ScheduleMode::Enqueue,
+				skills: [(
+					SlotKey::Hand(Side::Off),
+					Skill {
+						cast: Cast {
+							pre: Duration::from_millis(100),
+							..default()
+						},
+						..default()
+					},
+				)]
+				.into(),
+			},
+			Queue::<PlayerSkills<SideUnset>>(
+				[Skill {
+					cast: Cast {
+						pre: Duration::from_millis(1),
+						..default()
+					},
+					..default()
+				}]
+				.into(),
+			),
+		));
+
+		app.update();
+
+		let Ok(args) = tracked_transform_args.try_lock() else {
+			panic!("Failed to read tracked arguments");
+		};
+
+		let args: Vec<_> = args.iter().cloned().collect();
+
+		assert_eq!(transforms, args);
+	}
+
+	#[test]
 	fn set_override_without_wait_next_when_new_and_running_soft_override() {
-		let mut app = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
 		let running_skill = Skill {
 			name: "running current",
 			soft_override: true,
@@ -300,7 +415,10 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					ray: TEST_RAY,
+					target: Target {
+						ray: TEST_RAY,
+						collision_info,
+					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],
 				&Track::new(running_skill),
@@ -314,14 +432,14 @@ mod tests {
 				agent
 					.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
 					.unwrap(),
-				agent.contains::<WaitNext>(),
+				agent.contains::<DequeueNext>(),
 			)
 		);
 	}
 
 	#[test]
 	fn set_override_with_wait_next_when_soft_override_running_soft_override_false() {
-		let mut app = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
 		let running_skill = Skill {
 			name: "running",
 			soft_override: false,
@@ -353,7 +471,10 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					ray: TEST_RAY,
+					target: Target {
+						ray: TEST_RAY,
+						collision_info,
+					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],
 				&Track::new(running_skill),
@@ -367,14 +488,14 @@ mod tests {
 				agent
 					.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
 					.unwrap(),
-				agent.contains::<WaitNext>(),
+				agent.contains::<DequeueNext>(),
 			)
 		);
 	}
 
 	#[test]
 	fn set_override_with_wait_next_when_soft_override_new_soft_override_false() {
-		let mut app = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
 		let running_skill = Skill {
 			name: "running",
 			soft_override: true,
@@ -406,7 +527,10 @@ mod tests {
 		assert_eq!(
 			(
 				vec![&new_skill.with(&Queued {
-					ray: TEST_RAY,
+					target: Target {
+						ray: TEST_RAY,
+						collision_info,
+					},
 					slot_key: SlotKey::Hand(Side::Off),
 				})],
 				&Track::new(running_skill),
@@ -420,14 +544,14 @@ mod tests {
 				agent
 					.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
 					.unwrap(),
-				agent.contains::<WaitNext>(),
+				agent.contains::<DequeueNext>(),
 			)
 		);
 	}
 
 	#[test]
 	fn remove_schedule() {
-		let mut app = setup(Some(TEST_RAY));
+		let (mut app, ..) = setup(Some(TEST_RAY));
 		let schedule = Schedule {
 			mode: ScheduleMode::Override,
 			skills: [(SlotKey::Hand(Side::Off), Skill::default())].into(),
@@ -443,7 +567,7 @@ mod tests {
 
 	#[test]
 	fn try_soft_override_on_enqueue() {
-		let mut app = setup(Some(TEST_RAY));
+		let (mut app, ..) = setup(Some(TEST_RAY));
 		app.world.spawn((
 			Schedule {
 				mode: ScheduleMode::Enqueue,

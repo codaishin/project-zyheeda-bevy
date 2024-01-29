@@ -1,6 +1,10 @@
 use crate::{
-	components::{Animate, WaitNext},
-	traits::{movement::Movement, movement_data::MovementData},
+	components::{Animate, DequeueNext},
+	traits::{
+		movement::Movement,
+		movement_data::MovementData,
+		remove_conditionally::RemoveConditionally,
+	},
 };
 use bevy::prelude::*;
 
@@ -22,19 +26,17 @@ pub fn execute_move<
 	mut commands: Commands,
 	mut agents: Query<Components<TAnimationKey, TAgent, TMovement>>,
 ) {
-	for (entity, mut movement, mut transform, agent, running_animate) in agents.iter_mut() {
+	for (entity, mut movement, mut transform, agent, current_animation) in agents.iter_mut() {
 		let mut entity = commands.entity(entity);
-		let (speed, animate) = agent.get_movement_data();
+		let (speed, movement_animation) = agent.get_movement_data();
 		let is_done = movement.update(&mut transform, time.delta_seconds() * speed.to_f32());
 
 		if is_done {
-			entity.insert(WaitNext);
+			entity.insert(DequeueNext);
 			entity.remove::<TMovement>();
-			if matches!(running_animate, Some(running_animate) if running_animate == &animate) {
-				entity.remove::<Animate<TAnimationKey>>();
-			}
+			entity.remove_conditionally(current_animation, |a| a == &movement_animation);
 		} else {
-			entity.insert(animate);
+			entity.insert(movement_animation);
 		}
 	}
 }
@@ -165,7 +167,7 @@ mod test {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<WaitNext>());
+		assert!(agent.contains::<DequeueNext>());
 	}
 
 	#[test]
@@ -183,7 +185,7 @@ mod test {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<WaitNext>());
+		assert!(!agent.contains::<DequeueNext>());
 	}
 
 	#[test]

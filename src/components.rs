@@ -70,7 +70,7 @@ pub struct Animator {
 }
 
 #[derive(Component)]
-pub struct WaitNext;
+pub struct DequeueNext;
 
 #[derive(Component, Clone, Copy, PartialEq, Debug)]
 pub struct SimpleMovement {

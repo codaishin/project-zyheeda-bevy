@@ -2,10 +2,7 @@ use bevy::{
 	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
 	prelude::*,
 };
-use bevy_rapier3d::{
-	pipeline::{CollisionEvent, ContactForceEvent},
-	prelude::*,
-};
+use bevy_rapier3d::prelude::*;
 use project_zyheeda::{
 	behaviors::MovementMode,
 	bundles::Loadout,
@@ -34,7 +31,7 @@ use project_zyheeda::{
 	},
 	errors::Error,
 	plugins::ingame_menu::IngameMenuPlugin,
-	resources::{skill_templates::SkillTemplates, Models, SkillIcons, SlotMap},
+	resources::{skill_templates::SkillTemplates, Models, MouseHover, SkillIcons, SlotMap},
 	skill::{Active, Cast, Skill, SkillComboNext, SkillComboTree, SwordStrike},
 	states::{GameRunning, MouseContext},
 	systems::{
@@ -43,7 +40,11 @@ use project_zyheeda::{
 			load_animations::load_animations,
 			play_animations::play_animations,
 		},
-		input::{schedule_slots::schedule_slots, set_cam_ray::set_cam_ray},
+		input::{
+			schedule_slots::schedule_slots,
+			set_cam_ray::set_cam_ray,
+			set_mouse_hover::set_mouse_hover,
+		},
 		interactions::destroy_on_collision::destroy_on_collision,
 		items::{
 			equip::equip_item,
@@ -123,7 +124,10 @@ fn prepare_game(app: &mut App) {
 			),
 		)
 		.add_systems(Startup, setup_simple_3d_scene)
-		.add_systems(First, set_cam_ray::<Tools>)
+		.add_systems(
+			First,
+			(set_cam_ray::<Tools>, set_mouse_hover::<RapierContext>).chain(),
+		)
 		.add_systems(
 			PreUpdate,
 			schedule_slots::<MouseButton, Player>
@@ -140,7 +144,7 @@ fn prepare_game(app: &mut App) {
 				link_animators_with_new_animation_players,
 				add_item_slots,
 				player_toggle_walk_run,
-				enqueue,
+				enqueue::<MouseHover>,
 				dequeue, // sets skill activity marker, so it MUST run before skill execution systems
 			)
 				.run_if(in_state(GameRunning::On)),
@@ -587,18 +591,22 @@ fn spawn_camera(commands: &mut Commands) {
 
 fn spawn_dummies(commands: &mut Commands) {
 	commands.spawn((
+		Name::new("Dummy A"),
 		Dummy,
 		SpatialBundle::from_transform(Transform::from_xyz(2., 0., 2.)),
 	));
 	commands.spawn((
+		Name::new("Dummy B"),
 		Dummy,
 		SpatialBundle::from_transform(Transform::from_xyz(-2., 0., 2.)),
 	));
 	commands.spawn((
+		Name::new("Dummy C"),
 		Dummy,
 		SpatialBundle::from_transform(Transform::from_xyz(2., 0., -2.)),
 	));
 	commands.spawn((
+		Name::new("Dummy D"),
 		Dummy,
 		SpatialBundle::from_transform(Transform::from_xyz(-2., 0., -2.)),
 	));

@@ -1,6 +1,7 @@
 pub mod accessor;
 pub mod behavior;
 pub mod behavior_execution;
+pub mod cast_ray;
 pub mod cast_update;
 pub mod combo_next;
 pub mod get_animation;
@@ -16,3 +17,5 @@ pub mod play_animation;
 pub mod procedural;
 pub mod projectile_behavior;
 pub mod recourse_key;
+pub mod remove_conditionally;
+pub mod with_component;
