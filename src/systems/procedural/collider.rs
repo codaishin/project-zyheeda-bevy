@@ -10,7 +10,7 @@ use bevy::{
 		system::{Commands, Query},
 	},
 	hierarchy::{BuildChildren, ChildBuilder},
-	transform::components::Transform,
+	transform::{components::Transform, TransformBundle},
 };
 use bevy_rapier3d::{
 	geometry::{ActiveEvents, Sensor},
@@ -31,7 +31,7 @@ pub fn collider<TSource: Component + GetCollider + Offset + GetRigidBody>(
 
 fn child<TSource: GetCollider + Offset + GetRigidBody>(parent: &mut ChildBuilder) {
 	parent.spawn((
-		Transform::from_translation(TSource::offset()),
+		TransformBundle::from_transform(Transform::from_translation(TSource::offset())),
 		ColliderRoot(parent.parent_entity()),
 		TSource::collider(),
 		Sensor,
@@ -50,7 +50,7 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		math::Vec3,
-		transform::components::Transform,
+		transform::components::{GlobalTransform, Transform},
 	};
 	use bevy_rapier3d::{dynamics::RigidBody, geometry::Collider};
 
@@ -101,10 +101,17 @@ mod tests {
 
 		app.update();
 
+		let global_transforms = GlobalTransform::get_immediate_children(&agent, &app);
+		let global_transform = global_transforms.first();
 		let transforms = Transform::get_immediate_children(&agent, &app);
 		let transform = transforms.first();
 
-		assert_eq!(Some(&&Transform::from_xyz(42., 43., 44.)), transform);
+		let bundle = TransformBundle::from_transform(Transform::from_xyz(42., 43., 44.));
+
+		assert_eq!(
+			(Some(&&bundle.global), Some(&&bundle.local)),
+			(global_transform, transform)
+		);
 	}
 
 	#[test]
