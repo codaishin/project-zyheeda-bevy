@@ -39,24 +39,21 @@ pub fn execute_skill<
 		let skill = &mut skill;
 		let transforms = &transforms;
 
-		let state = get_state(skill, &delta, wait_next);
-
-		if state == State::New {
-			return handle_new(agent, transform, skill, slots, transforms);
-		}
-
-		if state == State::Done {
-			return handle_done(agent, skill, animate);
-		}
-
-		let State::Activate(age) = state else {
-			return;
-		};
-
-		handle_active(agent, transform, skill, slots, transforms);
-
-		if age == AgeType::New {
-			handle_new(agent, transform, skill, slots, transforms);
+		match get_state(skill, &delta, wait_next) {
+			State::New => {
+				handle_new(agent, transform, skill, slots, transforms);
+			}
+			State::Done => {
+				handle_done(agent, skill, animate);
+			}
+			State::Activate(AgeType::New) => {
+				handle_active(agent, transform, skill, slots, transforms);
+				handle_new(agent, transform, skill, slots, transforms);
+			}
+			State::Activate(_) => {
+				handle_active(agent, transform, skill, slots, transforms);
+			}
+			_ => {}
 		}
 	}
 }
