@@ -4,8 +4,9 @@ use std::time::Duration;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum CastType {
-	Pre,
-	After,
+	PreTransition,
+	PreActivation,
+	AfterActivation,
 }
 
 #[derive(PartialEq, Debug, Clone)]

@@ -91,6 +91,7 @@ mod tests {
 						..default()
 					},
 					slot_key: SlotKey::SkillSpawn,
+					pre_transition: Duration::MAX,
 				},
 				..default()
 			})]
@@ -112,6 +113,7 @@ mod tests {
 						..default()
 					},
 					slot_key: SlotKey::SkillSpawn,
+					pre_transition: Duration::MAX,
 				}),
 				false,
 				0

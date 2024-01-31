@@ -88,12 +88,14 @@ impl<T> Default for SelectInfo<T> {
 pub struct Queued {
 	pub target: Target,
 	pub slot_key: SlotKey,
+	pub pre_transition: Duration,
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Active {
 	pub target: Target,
 	pub slot_key: SlotKey,
+	pub pre_transition: Duration,
 }
 
 impl Skill {
@@ -129,6 +131,7 @@ impl<TAnimationKey> Skill<TAnimationKey, Queued> {
 		self.map_data(|queued| Active {
 			target: queued.target,
 			slot_key: queued.slot_key,
+			pre_transition: queued.pre_transition,
 		})
 	}
 }

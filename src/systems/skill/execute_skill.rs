@@ -284,7 +284,7 @@ mod tests {
 			.expect_update()
 			.times(1)
 			.with(eq(Duration::from_millis(100)))
-			.return_const(State::Casting(CastType::Pre));
+			.return_const(State::Casting(CastType::PreActivation));
 		app.world
 			.entity_mut(agent)
 			.insert((skill, Transform::default()));
@@ -318,7 +318,7 @@ mod tests {
 		skill
 			.mock
 			.expect_update()
-			.return_const(State::Casting(CastType::Pre));
+			.return_const(State::Casting(CastType::PreActivation));
 
 		app.world
 			.entity_mut(agent)
@@ -419,7 +419,7 @@ mod tests {
 		skill
 			.mock
 			.expect_update()
-			.return_const(State::Casting(CastType::After));
+			.return_const(State::Casting(CastType::AfterActivation));
 		skill
 			.mock
 			.expect_animate()
@@ -467,7 +467,7 @@ mod tests {
 		skill
 			.mock
 			.expect_update()
-			.return_const(State::Casting(CastType::After));
+			.return_const(State::Casting(CastType::AfterActivation));
 
 		app.world
 			.entity_mut(agent)
@@ -506,7 +506,7 @@ mod tests {
 		skill
 			.mock
 			.expect_update()
-			.return_const(State::Casting(CastType::Pre));
+			.return_const(State::Casting(CastType::PreActivation));
 
 		app.world
 			.entity_mut(agent)
@@ -527,7 +527,7 @@ mod tests {
 		skill
 			.mock
 			.expect_update()
-			.return_const(State::Casting(CastType::Pre));
+			.return_const(State::Casting(CastType::PreActivation));
 		skill
 			.mock
 			.expect_animate()
@@ -589,7 +589,7 @@ mod tests {
 		skill
 			.mock
 			.expect_update()
-			.return_const(State::Casting(CastType::After));
+			.return_const(State::Casting(CastType::AfterActivation));
 		skill.mock.expect_run().times(0).return_const(());
 
 		app.world
@@ -657,7 +657,7 @@ mod tests {
 		skill
 			.mock
 			.expect_update()
-			.return_const(State::Casting(CastType::Pre));
+			.return_const(State::Casting(CastType::PreActivation));
 		skill.mock.expect_stop().times(0).return_const(());
 
 		app.world
@@ -700,7 +700,7 @@ mod tests {
 		skill
 			.mock
 			.expect_update()
-			.return_const(State::Casting(CastType::Pre));
+			.return_const(State::Casting(CastType::PreActivation));
 		skill
 			.mock
 			.expect_apply_transform()

@@ -10,6 +10,7 @@ use bevy::{
 	prelude::{Commands, Entity, Query},
 	transform::components::GlobalTransform,
 };
+use std::time::Duration;
 
 type Components<'a> = (
 	Entity,
@@ -86,7 +87,11 @@ fn as_queued(
 	(slot_key, skill): (SlotKey, Skill),
 	target: Target,
 ) -> Skill<PlayerSkills<SideUnset>, Queued> {
-	skill.with(&Queued { target, slot_key })
+	skill.with(&Queued {
+		target,
+		slot_key,
+		pre_transition: Duration::MAX,
+	})
 }
 
 fn enqueue_to(queue: &mut Queue, new: Skill<PlayerSkills<SideUnset>, Queued>) {
@@ -247,6 +252,7 @@ mod tests {
 							collision_info,
 						},
 						slot_key: SlotKey::Hand(Side::Off),
+						pre_transition: Duration::MAX,
 					},
 					..default()
 				},
@@ -307,6 +313,7 @@ mod tests {
 						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
+					pre_transition: Duration::MAX,
 				})],
 				true
 			),
@@ -394,6 +401,7 @@ mod tests {
 						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
+					pre_transition: Duration::MAX,
 				})],
 				&Track::new(running_skill),
 				false,
@@ -447,6 +455,7 @@ mod tests {
 						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
+					pre_transition: Duration::MAX,
 				})],
 				&Track::new(running_skill),
 				true,
@@ -500,6 +509,7 @@ mod tests {
 						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
+					pre_transition: Duration::MAX,
 				})],
 				&Track::new(running_skill),
 				true,

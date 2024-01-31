@@ -14,10 +14,10 @@ impl<TAnimationKey> CastUpdate for Track<Skill<TAnimationKey, Active>> {
 
 		match (old, self.duration) {
 			(Duration::ZERO, _) => new_or_activate(skill),
-			(_, new) if new < pre_cast(skill) => State::Casting(CastType::Pre),
+			(_, new) if new < pre_cast(skill) => State::Casting(CastType::PreActivation),
 			(old, _) if old < pre_cast(skill) => State::Activate(AgeType::Old),
 			(_, new) if new < active_cast(skill) => State::Active,
-			(_, new) if new < after_cast(skill) => State::Casting(CastType::After),
+			(_, new) if new < after_cast(skill) => State::Casting(CastType::AfterActivation),
 			_ => State::Done,
 		}
 	}
@@ -88,7 +88,7 @@ mod tests {
 
 		assert_eq!(
 			(
-				[State::New, State::Casting(CastType::Pre)],
+				[State::New, State::Casting(CastType::PreActivation)],
 				Duration::from_millis(65)
 			),
 			(states, track.duration)
@@ -163,7 +163,7 @@ mod tests {
 		track.duration = Duration::from_millis(201);
 
 		assert_eq!(
-			State::Casting(CastType::After),
+			State::Casting(CastType::AfterActivation),
 			track.update(Duration::from_millis(90))
 		);
 	}
