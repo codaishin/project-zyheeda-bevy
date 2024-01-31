@@ -104,7 +104,8 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(IngameMenuPlugin)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_state::<GameRunning>()
-		.add_state::<MouseContext>()
+		.add_state::<MouseContext<KeyCode>>()
+		.add_state::<MouseContext<MouseButton>>()
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
 		.add_systems(

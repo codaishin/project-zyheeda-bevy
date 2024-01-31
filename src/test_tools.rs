@@ -1,6 +1,7 @@
 #[cfg(test)]
 pub mod utils {
-	use bevy::prelude::*;
+	use bevy::{prelude::*, time::Time};
+	use std::time::Duration;
 
 	pub trait ApproxEqual<TTolerance> {
 		fn approx_equal(&self, other: &Self, tolerance: &TTolerance) -> bool;
@@ -73,6 +74,21 @@ pub mod utils {
 				.iter()
 				.filter_map(|entity| app.world.entity(*entity).get::<TComponent>())
 				.collect()
+		}
+	}
+
+	pub trait TickTime {
+		fn tick_time(&mut self, delta: Duration);
+	}
+
+	impl TickTime for App {
+		fn tick_time(&mut self, delta: Duration) {
+			let mut time = self.world.resource_mut::<Time<Real>>();
+			if time.last_update().is_none() {
+				time.update();
+			}
+			let last_update = time.last_update().unwrap();
+			time.update_with_instant(last_update + delta);
 		}
 	}
 }

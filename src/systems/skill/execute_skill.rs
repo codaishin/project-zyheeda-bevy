@@ -143,6 +143,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{Animate, DequeueNext, Slot, SlotKey},
+		test_tools::utils::TickTime,
 		traits::cast_update::{CastType, State},
 	};
 	use bevy::{
@@ -273,12 +274,6 @@ mod tests {
 		(app, agent)
 	}
 
-	fn tick_time(app: &mut App, delta: Duration) {
-		let mut time = app.world.resource_mut::<Time<Real>>();
-		let last_update = time.last_update().unwrap();
-		time.update_with_instant(last_update + delta);
-	}
-
 	#[test]
 	fn call_update_with_delta() {
 		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
@@ -294,7 +289,7 @@ mod tests {
 			.entity_mut(agent)
 			.insert((skill, Transform::default()));
 
-		tick_time(&mut app, Duration::from_millis(100));
+		app.tick_time(Duration::from_millis(100));
 		app.update();
 	}
 

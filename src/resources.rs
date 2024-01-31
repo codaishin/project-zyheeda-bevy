@@ -71,6 +71,16 @@ where
 	pub keys: HashMap<SlotKey, TButton>,
 }
 
+impl<TButton: Eq + Hash> Default for SlotMap<TButton> {
+	fn default() -> Self {
+		Self {
+			slots: Default::default(),
+			ui_input_display: Default::default(),
+			keys: Default::default(),
+		}
+	}
+}
+
 impl<TButton> SlotMap<TButton>
 where
 	TButton: Copy + Eq + Hash,
