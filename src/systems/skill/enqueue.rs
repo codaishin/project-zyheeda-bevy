@@ -6,7 +6,10 @@ use crate::{
 	traits::with_component::WithComponent,
 };
 use bevy::{
-	ecs::system::{EntityCommands, Res, Resource},
+	ecs::{
+		system::{EntityCommands, Res, Resource},
+		world::Mut,
+	},
 	prelude::{Commands, Entity, Query},
 	transform::components::GlobalTransform,
 };
@@ -16,7 +19,7 @@ type Components<'a> = (
 	Entity,
 	&'a Schedule,
 	&'a mut Queue,
-	Option<&'a Track<Skill<PlayerSkills<SideUnset>, Active>>>,
+	Option<&'a mut Track<Skill<PlayerSkills<SideUnset>, Active>>>,
 );
 
 pub fn enqueue<TTargetIds: WithComponent<GlobalTransform> + Resource>(
@@ -32,44 +35,51 @@ pub fn enqueue<TTargetIds: WithComponent<GlobalTransform> + Resource>(
 
 	let target = get_target(&cam_ray, target_ids.as_ref(), &transforms);
 
-	for (agent, schedule, mut queue, active) in &mut agents {
-		enqueue_skill(agent, schedule, &mut queue, active, &mut commands, &target);
-		commands.entity(agent).remove::<Schedule>();
+	for (agent, schedule, queue, active) in &mut agents {
+		let mut agent = commands.entity(agent);
+		agent.remove::<Schedule>();
+		enqueue_skill(schedule, queue, active, agent, &target);
 	}
 }
 
+type ActiveSkill<'a> = Option<Mut<'a, Track<Skill<PlayerSkills<SideUnset>, Active>>>>;
+
 fn enqueue_skill(
-	agent: Entity,
 	schedule: &Schedule,
-	queue: &mut Queue,
-	active: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
-	commands: &mut Commands,
+	mut queue: Mut<Queue>,
+	active: ActiveSkill,
+	agent: EntityCommands,
 	target: &Option<Target>,
 ) {
 	let Some(target) = target else {
 		return;
 	};
 
-	match (schedule, active) {
-		(Schedule::Override((slot_key, skill)), Some(track))
-			if track.value.soft_override && skill.soft_override =>
-		{
-			override_soft(queue, as_queued((*slot_key, skill.clone()), target.clone()));
+	match (schedule, active, queue.0.back_mut()) {
+		(Schedule::Override(new), Some(active), ..) if both_soft(&active, new) => {
+			override_soft(queue, as_queued(new.clone(), target.clone()));
 		}
-		(Schedule::Override(new), _) => {
-			override_hard(
-				queue,
-				as_queued(new.clone(), target.clone()),
-				&mut commands.entity(agent),
-			);
+		(Schedule::Override(new), ..) => {
+			override_hard(queue, as_queued(new.clone(), target.clone()), agent);
 		}
-		(Schedule::Enqueue(new), _) => {
+		(Schedule::Enqueue(new), ..) => {
 			enqueue_to(queue, as_queued(new.clone(), target.clone()));
 		}
-		(Schedule::TransitionAfter(_), _) => {
-			todo!()
+		(Schedule::TransitionAfter(time), .., Some(last_queued)) => {
+			last_queued.data.pre_transition = *time;
 		}
+		(Schedule::TransitionAfter(time), Some(mut active), ..) => {
+			active.value.data.pre_transition = *time;
+		}
+		_ => {}
 	}
+}
+
+fn both_soft(
+	track: &Mut<Track<Skill<PlayerSkills<SideUnset>, Active>>>,
+	(_, skill): &(SlotKey, Skill),
+) -> bool {
+	track.value.soft_override && skill.soft_override
 }
 
 fn get_target<TTargetIds: WithComponent<GlobalTransform>>(
@@ -94,18 +104,18 @@ fn as_queued(
 	})
 }
 
-fn enqueue_to(queue: &mut Queue, new: Skill<PlayerSkills<SideUnset>, Queued>) {
+fn enqueue_to(mut queue: Mut<Queue>, new: Skill<PlayerSkills<SideUnset>, Queued>) {
 	queue.0.push_back(new);
 }
 
-fn override_soft(queue: &mut Queue, new: Skill<PlayerSkills<SideUnset>, Queued>) {
+fn override_soft(mut queue: Mut<Queue>, new: Skill<PlayerSkills<SideUnset>, Queued>) {
 	queue.0 = vec![new].into();
 }
 
 fn override_hard(
-	queue: &mut Queue,
+	mut queue: Mut<Queue>,
 	new: Skill<PlayerSkills<SideUnset>, Queued>,
-	agent: &mut EntityCommands,
+	mut agent: EntityCommands,
 ) {
 	queue.0 = vec![new].into();
 	agent.insert(DequeueNext);
@@ -550,5 +560,141 @@ mod tests {
 		));
 
 		app.update();
+	}
+
+	#[test]
+	fn transition_in_queue() {
+		let (mut app, ..) = setup(Some(TEST_RAY));
+		let agent = app
+			.world
+			.spawn((
+				Schedule::TransitionAfter(Duration::from_secs(3)),
+				Queue::<PlayerSkills<SideUnset>>(
+					[
+						Skill { ..default() },
+						Skill {
+							name: "last in queue",
+							..default()
+						},
+					]
+					.into(),
+				),
+			))
+			.id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let queue = agent.get::<Queue>().unwrap();
+
+		assert_eq!(
+			vec![
+				&Skill { ..default() },
+				&Skill {
+					name: "last in queue",
+					data: Queued {
+						pre_transition: Duration::from_secs(3),
+						..default()
+					},
+					..default()
+				},
+			],
+			queue
+				.0
+				.iter()
+				.collect::<Vec<&Skill<PlayerSkills<SideUnset>, Queued>>>()
+		);
+	}
+
+	#[test]
+	fn transition_active() {
+		let (mut app, ..) = setup(Some(TEST_RAY));
+		let agent = app
+			.world
+			.spawn((
+				Schedule::TransitionAfter(Duration::from_millis(100)),
+				Queue::<PlayerSkills<SideUnset>>([].into()),
+				Track::new(Skill {
+					name: "active skill",
+					data: Active::default(),
+					..default()
+				}),
+			))
+			.id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let active = agent
+			.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
+			.unwrap();
+
+		assert_eq!(
+			Skill {
+				name: "active skill",
+				data: Active {
+					pre_transition: Duration::from_millis(100),
+					..default()
+				},
+				..default()
+			},
+			active.value
+		);
+	}
+
+	#[test]
+	fn transition_last_in_queue_even_with_active() {
+		let (mut app, ..) = setup(Some(TEST_RAY));
+		let agent = app
+			.world
+			.spawn((
+				Schedule::TransitionAfter(Duration::from_millis(101)),
+				Queue::<PlayerSkills<SideUnset>>(
+					[
+						Skill { ..default() },
+						Skill {
+							name: "last in queue",
+							..default()
+						},
+					]
+					.into(),
+				),
+				Track::new(Skill {
+					name: "active skill",
+					data: Active::default(),
+					..default()
+				}),
+			))
+			.id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let active = agent
+			.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
+			.unwrap();
+		let queue = agent.get::<Queue>().unwrap();
+
+		assert_eq!(
+			(
+				Skill {
+					name: "active skill",
+					data: Active { ..default() },
+					..default()
+				},
+				vec![
+					&Skill { ..default() },
+					&Skill {
+						name: "last in queue",
+						data: Queued {
+							pre_transition: Duration::from_millis(101),
+							..default()
+						},
+						..default()
+					},
+				],
+			),
+			(active.value.clone(), queue.0.iter().collect::<Vec<_>>())
+		);
 	}
 }
