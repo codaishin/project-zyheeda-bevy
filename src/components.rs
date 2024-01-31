@@ -146,16 +146,11 @@ pub struct InventoryKey(pub usize);
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct SlotBones(pub HashMap<SlotKey, &'static BoneName>);
 
-#[derive(PartialEq, Debug, Clone, Copy)]
-pub enum ScheduleMode {
-	Enqueue,
-	Override,
-}
-
 #[derive(Component, PartialEq, Debug)]
-pub struct Schedule {
-	pub mode: ScheduleMode,
-	pub skills: HashMap<SlotKey, Skill>,
+pub enum Schedule {
+	Enqueue((SlotKey, Skill)),
+	Override((SlotKey, Skill)),
+	TransitionAfter(Duration),
 }
 
 #[derive(PartialEq, Debug, Clone)]

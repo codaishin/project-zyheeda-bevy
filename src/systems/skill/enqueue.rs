@@ -1,15 +1,6 @@
 use crate::{
 	behaviors::meta::Target,
-	components::{
-		DequeueNext,
-		PlayerSkills,
-		Queue,
-		Schedule,
-		ScheduleMode,
-		SideUnset,
-		SlotKey,
-		Track,
-	},
+	components::{DequeueNext, PlayerSkills, Queue, Schedule, SideUnset, SlotKey, Track},
 	resources::CamRay,
 	skill::{Active, Queued, Skill},
 	traits::with_component::WithComponent,
@@ -41,8 +32,42 @@ pub fn enqueue<TTargetIds: WithComponent<GlobalTransform> + Resource>(
 	let target = get_target(&cam_ray, target_ids.as_ref(), &transforms);
 
 	for (agent, schedule, mut queue, active) in &mut agents {
-		enqueue_skills(agent, schedule, &mut queue, active, &mut commands, &target);
+		enqueue_skill(agent, schedule, &mut queue, active, &mut commands, &target);
 		commands.entity(agent).remove::<Schedule>();
+	}
+}
+
+fn enqueue_skill(
+	agent: Entity,
+	schedule: &Schedule,
+	queue: &mut Queue,
+	active: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
+	commands: &mut Commands,
+	target: &Option<Target>,
+) {
+	let Some(target) = target else {
+		return;
+	};
+
+	match (schedule, active) {
+		(Schedule::Override((slot_key, skill)), Some(track))
+			if track.value.soft_override && skill.soft_override =>
+		{
+			override_soft(queue, as_queued((*slot_key, skill.clone()), target.clone()));
+		}
+		(Schedule::Override(new), _) => {
+			override_hard(
+				queue,
+				as_queued(new.clone(), target.clone()),
+				&mut commands.entity(agent),
+			);
+		}
+		(Schedule::Enqueue(new), _) => {
+			enqueue_to(queue, as_queued(new.clone(), target.clone()));
+		}
+		(Schedule::TransitionAfter(_), _) => {
+			todo!()
+		}
 	}
 }
 
@@ -57,64 +82,27 @@ fn get_target<TTargetIds: WithComponent<GlobalTransform>>(
 	})
 }
 
-fn enqueue_skills(
-	agent: Entity,
-	schedule: &Schedule,
-	queue: &mut Queue,
-	active: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
-	commands: &mut Commands,
-	target: &Option<Target>,
-) {
-	for scheduled in &schedule.skills {
-		enqueue_skill(agent, schedule, queue, active, scheduled, commands, target);
-	}
+fn as_queued(
+	(slot_key, skill): (SlotKey, Skill),
+	target: Target,
+) -> Skill<PlayerSkills<SideUnset>, Queued> {
+	skill.with(&Queued { target, slot_key })
 }
 
-fn enqueue_skill(
-	agent: Entity,
-	schedule: &Schedule,
-	queue: &mut Queue,
-	active: Option<&Track<Skill<PlayerSkills<SideUnset>, Active>>>,
-	(slot, skill): (&SlotKey, &Skill),
-	commands: &mut Commands,
-	target: &Option<Target>,
-) {
-	let Some(target) = target else {
-		return;
-	};
-
-	let new = skill.clone().with(&Queued {
-		target: target.clone(),
-		slot_key: *slot,
-	});
-
-	match (schedule.mode, active) {
-		(ScheduleMode::Override, Some(track)) if track.value.soft_override && new.soft_override => {
-			override_soft(queue, &new);
-		}
-		(ScheduleMode::Override, _) => {
-			override_hard(queue, &new, &mut commands.entity(agent));
-		}
-		(ScheduleMode::Enqueue, _) => {
-			enqueue_to(queue, &new);
-		}
-	}
+fn enqueue_to(queue: &mut Queue, new: Skill<PlayerSkills<SideUnset>, Queued>) {
+	queue.0.push_back(new);
 }
 
-fn enqueue_to(queue: &mut Queue, new: &Skill<PlayerSkills<SideUnset>, Queued>) {
-	queue.0.push_back(new.clone());
-}
-
-fn override_soft(queue: &mut Queue, new: &Skill<PlayerSkills<SideUnset>, Queued>) {
-	queue.0 = vec![new.clone()].into();
+fn override_soft(queue: &mut Queue, new: Skill<PlayerSkills<SideUnset>, Queued>) {
+	queue.0 = vec![new].into();
 }
 
 fn override_hard(
 	queue: &mut Queue,
-	new: &Skill<PlayerSkills<SideUnset>, Queued>,
+	new: Skill<PlayerSkills<SideUnset>, Queued>,
 	agent: &mut EntityCommands,
 ) {
-	queue.0 = vec![new.clone()].into();
+	queue.0 = vec![new].into();
 	agent.insert(DequeueNext);
 }
 
@@ -123,7 +111,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		behaviors::meta::Outdated,
-		components::{DequeueNext, Schedule, ScheduleMode, Side},
+		components::{DequeueNext, Schedule, Side},
 		resources::ColliderInfo,
 		skill::Cast,
 	};
@@ -195,20 +183,16 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Schedule {
-					mode: ScheduleMode::Enqueue,
-					skills: [(
-						SlotKey::Hand(Side::Off),
-						Skill {
-							cast: Cast {
-								pre: Duration::from_millis(100),
-								..default()
-							},
+				Schedule::Enqueue((
+					SlotKey::Hand(Side::Off),
+					Skill {
+						cast: Cast {
+							pre: Duration::from_millis(100),
 							..default()
 						},
-					)]
-					.into(),
-				},
+						..default()
+					},
+				)),
 				Queue::<PlayerSkills<SideUnset>>(
 					[
 						Skill {
@@ -287,10 +271,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Schedule {
-					mode: ScheduleMode::Override,
-					skills: [(SlotKey::Hand(Side::Off), new_skill.clone())].into(),
-				},
+				Schedule::Override((SlotKey::Hand(Side::Off), new_skill.clone())),
 				Queue::<PlayerSkills<SideUnset>>(
 					[
 						Skill {
@@ -344,20 +325,16 @@ mod tests {
 			app.world.spawn(*transform);
 		}
 		app.world.spawn((
-			Schedule {
-				mode: ScheduleMode::Enqueue,
-				skills: [(
-					SlotKey::Hand(Side::Off),
-					Skill {
-						cast: Cast {
-							pre: Duration::from_millis(100),
-							..default()
-						},
+			Schedule::Enqueue((
+				SlotKey::Hand(Side::Off),
+				Skill {
+					cast: Cast {
+						pre: Duration::from_millis(100),
 						..default()
 					},
-				)]
-				.into(),
-			},
+					..default()
+				},
+			)),
 			Queue::<PlayerSkills<SideUnset>>(
 				[Skill {
 					cast: Cast {
@@ -399,10 +376,7 @@ mod tests {
 			.world
 			.spawn((
 				Track::new(running_skill.clone()),
-				Schedule {
-					mode: ScheduleMode::Override,
-					skills: [(SlotKey::Hand(Side::Off), new_skill.clone())].into(),
-				},
+				Schedule::Override((SlotKey::Hand(Side::Off), new_skill.clone())),
 				Queue::default(),
 			))
 			.id();
@@ -455,10 +429,7 @@ mod tests {
 			.world
 			.spawn((
 				Track::new(running_skill.clone()),
-				Schedule {
-					mode: ScheduleMode::Override,
-					skills: [(SlotKey::Hand(Side::Off), new_skill.clone())].into(),
-				},
+				Schedule::Override((SlotKey::Hand(Side::Off), new_skill.clone())),
 				Queue::default(),
 			))
 			.id();
@@ -511,10 +482,7 @@ mod tests {
 			.world
 			.spawn((
 				Track::new(running_skill.clone()),
-				Schedule {
-					mode: ScheduleMode::Override,
-					skills: [(SlotKey::Hand(Side::Off), new_skill.clone())].into(),
-				},
+				Schedule::Override((SlotKey::Hand(Side::Off), new_skill.clone())),
 				Queue::default(),
 			))
 			.id();
@@ -552,10 +520,7 @@ mod tests {
 	#[test]
 	fn remove_schedule() {
 		let (mut app, ..) = setup(Some(TEST_RAY));
-		let schedule = Schedule {
-			mode: ScheduleMode::Override,
-			skills: [(SlotKey::Hand(Side::Off), Skill::default())].into(),
-		};
+		let schedule = Schedule::Override((SlotKey::Hand(Side::Off), Skill::default()));
 		let agent = app.world.spawn((schedule, Queue::default())).id();
 
 		app.update();
@@ -569,10 +534,7 @@ mod tests {
 	fn try_soft_override_on_enqueue() {
 		let (mut app, ..) = setup(Some(TEST_RAY));
 		app.world.spawn((
-			Schedule {
-				mode: ScheduleMode::Enqueue,
-				skills: [(SlotKey::Hand(Side::Off), Skill::default())].into(),
-			},
+			Schedule::Enqueue((SlotKey::Hand(Side::Off), Skill::default())),
 			Track::new(Skill::<PlayerSkills<SideUnset>, Active>::default()),
 			Queue::default(),
 		));

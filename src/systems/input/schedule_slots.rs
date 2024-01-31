@@ -1,5 +1,5 @@
 use crate::{
-	components::{Schedule, ScheduleMode, SlotKey, Slots},
+	components::{Schedule, SlotKey, Slots},
 	resources::SlotMap,
 	skill::Skill,
 	states::MouseContext,
@@ -16,39 +16,38 @@ pub fn schedule_slots<TKey: Copy + Eq + Hash + Debug + Send + Sync, TAgent: Comp
 	keys: Res<Input<KeyCode>>,
 	slot_map: Res<SlotMap<TKey>>,
 	agents: Query<(Entity, &Slots), With<TAgent>>,
-	mut commands: Commands,
+	commands: Commands,
 ) {
-	let mut triggered_slot_keys: Vec<_> = input
+	let triggered_slot_key = input
 		.get_just_pressed()
-		.filter_map(|key| slot_map.slots.get(key))
+		.find_map(|key| slot_map.slots.get(key))
 		.cloned()
-		.collect();
+		.or_else(|| get_from_mouse_context(mouse_context, &slot_map));
 
-	if let Some(slot_key) = triggered_mouse_context_key(mouse_context, &slot_map) {
-		triggered_slot_keys.push(slot_key);
-	}
-
-	if triggered_slot_keys.is_empty() {
+	let Some(triggered_slot_key) = triggered_slot_key else {
 		return;
-	}
-
-	let mode = match keys.pressed(KeyCode::ShiftLeft) {
-		true => ScheduleMode::Enqueue,
-		false => ScheduleMode::Override,
 	};
 
+	match keys.pressed(KeyCode::ShiftLeft) {
+		true => new_skills(Schedule::Enqueue, commands, agents, triggered_slot_key),
+		false => new_skills(Schedule::Override, commands, agents, triggered_slot_key),
+	};
+}
+
+fn new_skills<TAgent: Component>(
+	schedule: fn((SlotKey, Skill)) -> Schedule,
+	mut commands: Commands,
+	agents: Query<(Entity, &Slots), With<TAgent>>,
+	triggered_slot_key: SlotKey,
+) {
 	for (agent, slots) in &agents {
-		let behaviors = filter_triggered_behaviors(slots, &triggered_slot_keys);
-		if !behaviors.is_empty() {
-			commands.entity(agent).insert(Schedule {
-				mode,
-				skills: behaviors.into_iter().collect(),
-			});
+		if let Some(skill) = get_slot_skill(slots, triggered_slot_key) {
+			commands.entity(agent).insert(schedule(skill));
 		}
 	}
 }
 
-fn triggered_mouse_context_key<TKey: Copy + Eq + Hash + Debug + Send + Sync>(
+fn get_from_mouse_context<TKey: Copy + Eq + Hash + Debug + Send + Sync>(
 	mouse_context: Option<Res<State<MouseContext<TKey>>>>,
 	slot_map: &Res<SlotMap<TKey>>,
 ) -> Option<SlotKey> {
@@ -58,25 +57,21 @@ fn triggered_mouse_context_key<TKey: Copy + Eq + Hash + Debug + Send + Sync>(
 	}
 }
 
-fn filter_triggered_behaviors(
-	slots: &Slots,
-	triggered_slot_keys: &[SlotKey],
-) -> Vec<(SlotKey, Skill)> {
+fn get_slot_skill(slots: &Slots, triggered_slot_key: SlotKey) -> Option<(SlotKey, Skill)> {
 	slots
 		.0
 		.iter()
-		.filter(|(slot_key, ..)| triggered_slot_keys.contains(slot_key))
-		.filter_map(|(key, slot)| {
+		.filter(|(slot_key, ..)| slot_key == &&triggered_slot_key)
+		.find_map(|(key, slot)| {
 			Some((*key, slot.combo_skill.clone().or(slot.item.clone()?.skill)?))
 		})
-		.collect()
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Item, Schedule, ScheduleMode, Side, Slot, SlotKey, Slots},
+		components::{Item, Schedule, Side, Slot, SlotKey, Slots},
 		resources::SlotMap,
 	};
 	use bevy::{
@@ -135,17 +130,13 @@ mod tests {
 		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(
-			Some(&Schedule {
-				mode: ScheduleMode::Override,
-				skills: [(
-					SlotKey::Legs,
-					Skill {
-						name: "skill",
-						..default()
-					}
-				)]
-				.into()
-			}),
+			Some(&Schedule::Override((
+				SlotKey::Legs,
+				Skill {
+					name: "skill",
+					..default()
+				}
+			))),
 			schedule
 		);
 	}
@@ -189,17 +180,13 @@ mod tests {
 		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(
-			Some(&Schedule {
-				mode: ScheduleMode::Override,
-				skills: [(
-					SlotKey::Legs,
-					Skill {
-						name: "alternative skill",
-						..default()
-					}
-				)]
-				.into()
-			}),
+			Some(&Schedule::Override((
+				SlotKey::Legs,
+				Skill {
+					name: "alternative skill",
+					..default()
+				}
+			))),
 			schedule
 		);
 	}
@@ -307,17 +294,13 @@ mod tests {
 		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(
-			Some(&Schedule {
-				mode: ScheduleMode::Enqueue,
-				skills: [(
-					SlotKey::Hand(Side::Main),
-					Skill {
-						name: "skill",
-						..default()
-					}
-				)]
-				.into()
-			}),
+			Some(&Schedule::Enqueue((
+				SlotKey::Hand(Side::Main),
+				Skill {
+					name: "skill",
+					..default()
+				}
+			))),
 			schedule
 		);
 	}
@@ -364,17 +347,13 @@ mod tests {
 		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(
-			Some(&Schedule {
-				mode: ScheduleMode::Enqueue,
-				skills: [(
-					SlotKey::Hand(Side::Main),
-					Skill {
-						name: "alternative skill",
-						..default()
-					}
-				)]
-				.into()
-			}),
+			Some(&Schedule::Enqueue((
+				SlotKey::Hand(Side::Main),
+				Skill {
+					name: "alternative skill",
+					..default()
+				}
+			))),
 			schedule
 		);
 	}
@@ -453,17 +432,13 @@ mod tests {
 		let schedule = agent.get::<Schedule>();
 
 		assert_eq!(
-			Some(&Schedule {
-				mode: ScheduleMode::Override,
-				skills: [(
-					SlotKey::Legs,
-					Skill {
-						name: "skill",
-						..default()
-					}
-				)]
-				.into()
-			}),
+			Some(&Schedule::Override((
+				SlotKey::Legs,
+				Skill {
+					name: "skill",
+					..default()
+				}
+			))),
 			schedule
 		);
 	}
