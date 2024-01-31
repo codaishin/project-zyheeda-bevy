@@ -23,5 +23,7 @@ where
 	Default,
 	UI,
 	Primed(TKey),
+	JustTriggered(TKey),
 	Triggered(TKey),
+	JustReleased(TKey),
 }

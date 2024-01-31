@@ -53,7 +53,8 @@ use project_zyheeda::{
 		},
 		log::log_many,
 		mouse_context::{
-			clear_triggered::clear_triggered_mouse_context,
+			advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
+			release::release_triggered_mouse_context,
 			trigger_primed::trigger_primed_mouse_context,
 		},
 		movement::{
@@ -151,7 +152,12 @@ fn prepare_game(app: &mut App) {
 		)
 		.add_systems(
 			Update,
-			(clear_triggered_mouse_context, trigger_primed_mouse_context),
+			(
+				trigger_primed_mouse_context,
+				advance_just_triggered_mouse_context,
+				release_triggered_mouse_context,
+				advance_just_released_mouse_context,
+			),
 		)
 		.add_systems(
 			Update,

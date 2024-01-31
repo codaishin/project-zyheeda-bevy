@@ -52,7 +52,7 @@ fn get_from_mouse_context<TKey: Copy + Eq + Hash + Debug + Send + Sync>(
 	slot_map: &Res<SlotMap<TKey>>,
 ) -> Option<SlotKey> {
 	match *mouse_context?.get() {
-		MouseContext::Triggered(key) => slot_map.slots.get(&key).copied(),
+		MouseContext::JustTriggered(key) => slot_map.slots.get(&key).copied(),
 		_ => None,
 	}
 }
@@ -424,7 +424,7 @@ mod tests {
 			.insert(MouseButton::Right, SlotKey::Legs);
 		app.world
 			.resource_mut::<NextState<MouseContext<MouseButton>>>()
-			.set(MouseContext::Triggered(MouseButton::Right));
+			.set(MouseContext::JustTriggered(MouseButton::Right));
 
 		app.update();
 
