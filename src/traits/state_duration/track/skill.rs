@@ -12,6 +12,7 @@ impl StateDuration<SkillState> for Track<Skill<PlayerSkills<SideUnset>, Active>>
 
 	fn get_state_duration(&self, key: SkillState) -> Duration {
 		match key {
+			SkillState::PreTransition => self.value.data.pre_transition,
 			SkillState::PreCast => self.value.cast.pre,
 			SkillState::Active => self.value.cast.active,
 			SkillState::AfterCast => self.value.cast.after,

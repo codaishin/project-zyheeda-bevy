@@ -140,6 +140,7 @@ pub struct SwordStrike;
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq, Hash)]
 pub enum SkillState {
+	PreTransition,
 	PreCast,
 	Active,
 	AfterCast,
