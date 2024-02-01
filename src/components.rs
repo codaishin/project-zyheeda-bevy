@@ -253,14 +253,14 @@ pub struct Dad<T>(pub T);
 #[derive(Component, Debug, PartialEq)]
 pub struct Track<T> {
 	pub value: T,
-	pub duration: Duration,
+	pub elapsed: Duration,
 }
 
 impl<T: Clone> Track<T> {
 	pub fn new(value: T) -> Self {
 		Self {
 			value: value.clone(),
-			duration: Duration::ZERO,
+			elapsed: Duration::ZERO,
 		}
 	}
 }
