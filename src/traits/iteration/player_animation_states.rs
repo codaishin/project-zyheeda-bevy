@@ -1,15 +1,15 @@
-use super::{Iter, ResourceKey};
+use super::{Iter, IterKey, KeyValue};
 use crate::components::{Handed, PlayerSkills, Side};
 
 const BASE_PATH: &str = "models/player.gltf#";
 
-impl ResourceKey for PlayerSkills<Side> {
-	fn resource_keys() -> Iter<Self> {
+impl IterKey for PlayerSkills<Side> {
+	fn iterator() -> Iter<Self> {
 		Iter(Some(PlayerSkills::Idle))
 	}
 
-	fn get_next(current: &Iter<Self>) -> Option<Self> {
-		match &current.0? {
+	fn next(current: &Iter<Self>) -> Option<Self> {
+		match current.0? {
 			Self::Idle => Some(Self::Shoot(Handed::Single(Side::Main))),
 			Self::Shoot(Handed::Single(Side::Main)) => Some(Self::Shoot(Handed::Single(Side::Off))),
 			Self::Shoot(Handed::Single(Side::Off)) => Some(Self::Shoot(Handed::Dual(Side::Main))),
@@ -19,9 +19,11 @@ impl ResourceKey for PlayerSkills<Side> {
 			Self::SwordStrike(Side::Off) => None,
 		}
 	}
+}
 
-	fn get_resource_path(value: &Self) -> String {
-		let value = match value {
+impl KeyValue<String> for PlayerSkills<Side> {
+	fn get_value(self) -> String {
+		let value = match self {
 			Self::Idle => "Animation2",
 			Self::Shoot(Handed::Single(Side::Main)) => "Animation4",
 			Self::Shoot(Handed::Single(Side::Off)) => "Animation5",
@@ -42,14 +44,17 @@ mod tests {
 
 	#[test]
 	fn all_contain_base_path() {
-		assert!(PlayerSkills::resource_keys().all(|(_, path)| path.starts_with(BASE_PATH)))
+		assert!(PlayerSkills::iterator()
+			.map(PlayerSkills::<Side>::get_value)
+			.all(|path| path.starts_with(BASE_PATH)))
 	}
 
 	#[test]
 	fn no_duplicate_keys() {
-		let keys = PlayerSkills::resource_keys();
-		let unique_keys = HashSet::from_iter(PlayerSkills::resource_keys().map(|(key, _)| key));
-		let unique_strings = HashSet::from_iter(PlayerSkills::resource_keys().map(|(_, str)| str));
+		let keys = PlayerSkills::iterator();
+		let unique_keys = HashSet::from_iter(PlayerSkills::iterator());
+		let unique_strings =
+			HashSet::from_iter(PlayerSkills::iterator().map(PlayerSkills::<Side>::get_value));
 
 		assert_eq!(
 			(7, 7, 7),
