@@ -137,3 +137,10 @@ impl<TAnimationKey> Skill<TAnimationKey, Queued> {
 }
 
 pub struct SwordStrike;
+
+#[derive(PartialEq, Debug, Clone, Copy, Eq, Hash)]
+pub enum SkillState {
+	PreCast,
+	Active,
+	AfterCast,
+}
