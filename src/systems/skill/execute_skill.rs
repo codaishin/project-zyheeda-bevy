@@ -45,6 +45,9 @@ pub fn execute_skill<
 		if states.contains(&StateMeta::First) {
 			handle_new(agent, agent_transform, skill, slots, transforms);
 		}
+		if states.contains(&StateMeta::In(SkillState::PreTransition)) {
+			apply_transform(skill, agent_transform, slots, transforms);
+		}
 		if states.contains(&StateMeta::Leaving(SkillState::PreCast)) {
 			handle_active(agent, agent_transform, skill, slots, transforms);
 		}
@@ -76,10 +79,19 @@ fn handle_new<
 	slots: &Slots,
 	transforms: &Query<&GlobalTransform>,
 ) {
+	apply_transform(skill, transform, slots, transforms);
+	agent.insert(skill.animate());
+}
+
+fn apply_transform<TSkill: BehaviorExecution>(
+	skill: &Mut<TSkill>,
+	transform: &mut Mut<Transform>,
+	slots: &Slots,
+	transforms: &Query<&GlobalTransform>,
+) {
 	if let Some(spawner) = get_spawner(slots, transforms) {
 		skill.apply_transform(transform, &spawner);
 	};
-	agent.insert(skill.animate());
 }
 
 fn handle_active<TSkill: BehaviorExecution>(
@@ -696,6 +708,34 @@ mod tests {
 		app.world
 			.entity_mut(agent)
 			.insert((skill, Transform::default()));
+
+		app.update();
+	}
+
+	#[test]
+	fn apply_transform_in_pre_transition() {
+		let (mut app, agent) = setup_app(Vec3::new(11., 12., 13.), Vec3::ZERO);
+		let mut skill = _Skill::without_default_setup_for([MockOption::BehaviorExecution(
+			BehaviorOption::Transform,
+		)]);
+
+		let spawner = Spawner(GlobalTransform::from_xyz(11., 12., 13.));
+		let transform = Transform::from_xyz(-1., -2., -3.);
+
+		skill
+			.mock
+			.expect_update_state()
+			.return_const(HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
+				SkillState::PreTransition,
+			)]));
+		skill
+			.mock
+			.expect_apply_transform()
+			.times(1)
+			.with(eq(transform), eq(spawner))
+			.return_const(());
+
+		app.world.entity_mut(agent).insert((skill, transform));
 
 		app.update();
 	}
