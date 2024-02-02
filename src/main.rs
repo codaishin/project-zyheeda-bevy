@@ -132,23 +132,25 @@ fn prepare_game(app: &mut App) {
 		)
 		.add_systems(
 			PreUpdate,
-			schedule_slots::<MouseButton, Player>
-				.run_if(in_state(MouseContext::<KeyCode>::Default))
+			(link_animators_with_new_animation_players, add_item_slots),
+		)
+		.add_systems(
+			First,
+			(
+				schedule_slots::<MouseButton, Player>
+					.run_if(in_state(MouseContext::<KeyCode>::Default)),
+				schedule_slots::<KeyCode, Player>,
+			)
 				.run_if(in_state(GameRunning::On)),
 		)
 		.add_systems(
 			PreUpdate,
-			schedule_slots::<KeyCode, Player>.run_if(in_state(GameRunning::On)),
-		)
-		.add_systems(
-			PreUpdate,
 			(
-				link_animators_with_new_animation_players,
-				add_item_slots,
 				player_toggle_walk_run,
 				enqueue::<MouseHover>,
 				dequeue, // sets skill activity marker, so it MUST run before skill execution systems
 			)
+				.chain()
 				.run_if(in_state(GameRunning::On)),
 		)
 		.add_systems(
