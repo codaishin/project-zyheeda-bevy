@@ -104,8 +104,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(IngameMenuPlugin)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_state::<GameRunning>()
-		.add_state::<MouseContext<KeyCode>>()
-		.add_state::<MouseContext<MouseButton>>()
+		.add_state::<MouseContext>()
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
 		.add_systems(
@@ -137,9 +136,10 @@ fn prepare_game(app: &mut App) {
 		.add_systems(
 			First,
 			(
-				schedule_slots::<MouseButton, Player>
+				schedule_slots::<KeyCode, Player, Input<KeyCode>, Input<KeyCode>>,
+				schedule_slots::<KeyCode, Player, State<MouseContext>, Input<KeyCode>>,
+				schedule_slots::<MouseButton, Player, Input<MouseButton>, Input<KeyCode>>
 					.run_if(in_state(MouseContext::<KeyCode>::Default)),
-				schedule_slots::<KeyCode, Player>,
 			)
 				.run_if(in_state(GameRunning::On)),
 		)
@@ -368,6 +368,7 @@ fn setup_skill_templates(
 		Skill {
 			name: "Swing Sword",
 			cast: Cast {
+				aim: Duration::ZERO,
 				pre: Duration::from_millis(0),
 				active: Duration::from_millis(500),
 				after: Duration::from_millis(200),
@@ -384,6 +385,7 @@ fn setup_skill_templates(
 				pre: Duration::from_millis(100),
 				active: Duration::ZERO,
 				after: Duration::from_millis(100),
+				..default()
 			},
 			soft_override: true,
 			animate: PlayerSkills::Shoot(Handed::Single(SideUnset)),
@@ -397,6 +399,7 @@ fn setup_skill_templates(
 				pre: Duration::from_millis(100),
 				active: Duration::ZERO,
 				after: Duration::from_millis(100),
+				..default()
 			},
 			soft_override: true,
 			animate: PlayerSkills::Shoot(Handed::Dual(SideUnset)),
@@ -407,6 +410,7 @@ fn setup_skill_templates(
 		Skill {
 			name: "Simple Movement",
 			cast: Cast {
+				aim: Duration::ZERO,
 				after: Duration::MAX,
 				..default()
 			},

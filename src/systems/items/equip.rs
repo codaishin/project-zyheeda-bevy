@@ -547,6 +547,7 @@ mod tests {
 								pre: Duration::from_millis(1),
 								active: Duration::from_millis(2),
 								after: Duration::from_millis(3),
+								..default()
 							},
 							..default()
 						}),
@@ -586,6 +587,7 @@ mod tests {
 								pre: Duration::from_millis(1),
 								active: Duration::from_millis(2),
 								after: Duration::from_millis(3),
+								..default()
 							},
 							..default()
 						}),

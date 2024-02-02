@@ -45,7 +45,7 @@ pub fn execute_skill<
 		if states.contains(&StateMeta::First) {
 			handle_new(agent, agent_transform, skill, slots, transforms);
 		}
-		if states.contains(&StateMeta::In(SkillState::PreTransition)) {
+		if states.contains(&StateMeta::In(SkillState::Aim)) {
 			apply_transform(skill, agent_transform, slots, transforms);
 		}
 		if states.contains(&StateMeta::Leaving(SkillState::PreCast)) {
@@ -713,7 +713,7 @@ mod tests {
 	}
 
 	#[test]
-	fn apply_transform_in_pre_transition() {
+	fn apply_transform_when_aiming() {
 		let (mut app, agent) = setup_app(Vec3::new(11., 12., 13.), Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([MockOption::BehaviorExecution(
 			BehaviorOption::Transform,
@@ -726,7 +726,7 @@ mod tests {
 			.mock
 			.expect_update_state()
 			.return_const(HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
-				SkillState::PreTransition,
+				SkillState::Aim,
 			)]));
 		skill
 			.mock

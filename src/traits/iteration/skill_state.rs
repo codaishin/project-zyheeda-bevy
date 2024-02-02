@@ -3,12 +3,12 @@ use crate::skill::SkillState;
 
 impl IterKey for SkillState {
 	fn iterator() -> Iter<Self> {
-		Iter(Some(SkillState::PreTransition))
+		Iter(Some(SkillState::Aim))
 	}
 
 	fn next(current: &Iter<Self>) -> Option<Self> {
 		match current.0? {
-			SkillState::PreTransition => Some(SkillState::PreCast),
+			SkillState::Aim => Some(SkillState::PreCast),
 			SkillState::PreCast => Some(SkillState::Active),
 			SkillState::Active => Some(SkillState::AfterCast),
 			SkillState::AfterCast => None,
@@ -24,7 +24,7 @@ mod tests {
 	fn get_states() {
 		assert_eq!(
 			vec![
-				SkillState::PreTransition,
+				SkillState::Aim,
 				SkillState::PreCast,
 				SkillState::Active,
 				SkillState::AfterCast

@@ -150,7 +150,7 @@ pub struct SlotBones(pub HashMap<SlotKey, &'static BoneName>);
 pub enum Schedule {
 	Enqueue((SlotKey, Skill)),
 	Override((SlotKey, Skill)),
-	TransitionAfter(Duration),
+	StopAimAfter(Duration),
 	UpdateTarget,
 }
 

@@ -13,7 +13,6 @@ use bevy::{
 	prelude::{Commands, Entity, Query},
 	transform::components::GlobalTransform,
 };
-use std::time::Duration;
 
 type Components<'a> = (
 	Entity,
@@ -65,11 +64,11 @@ fn apply_schedule(
 		(Schedule::Enqueue(new), ..) => {
 			enqueue_to(queue, as_queued(new.clone(), target.clone()));
 		}
-		(Schedule::TransitionAfter(time), .., Some(last_queued)) => {
-			last_queued.data.pre_transition = *time;
+		(Schedule::StopAimAfter(time), .., Some(last_queued)) => {
+			last_queued.cast.aim = *time;
 		}
-		(Schedule::TransitionAfter(time), Some(mut active), ..) => {
-			active.value.data.pre_transition = *time;
+		(Schedule::StopAimAfter(time), Some(mut active), ..) => {
+			active.value.cast.aim = *time;
 		}
 		(Schedule::UpdateTarget, .., Some(last_queued)) => {
 			last_queued.data.target = target.clone();
@@ -103,11 +102,7 @@ fn as_queued(
 	(slot_key, skill): (SlotKey, Skill),
 	target: Target,
 ) -> Skill<PlayerSkills<SideUnset>, Queued> {
-	skill.with(&Queued {
-		target,
-		slot_key,
-		pre_transition: Duration::MAX,
-	})
+	skill.with(&Queued { target, slot_key })
 }
 
 fn enqueue_to(mut queue: Mut<Queue>, new: Skill<PlayerSkills<SideUnset>, Queued>) {
@@ -268,7 +263,6 @@ mod tests {
 							collision_info,
 						},
 						slot_key: SlotKey::Hand(Side::Off),
-						pre_transition: Duration::MAX,
 					},
 					..default()
 				},
@@ -329,7 +323,6 @@ mod tests {
 						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
-					pre_transition: Duration::MAX,
 				})],
 				true
 			),
@@ -417,7 +410,6 @@ mod tests {
 						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
-					pre_transition: Duration::MAX,
 				})],
 				&Track::new(running_skill),
 				false,
@@ -471,7 +463,6 @@ mod tests {
 						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
-					pre_transition: Duration::MAX,
 				})],
 				&Track::new(running_skill),
 				true,
@@ -525,7 +516,6 @@ mod tests {
 						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
-					pre_transition: Duration::MAX,
 				})],
 				&Track::new(running_skill),
 				true,
@@ -569,12 +559,12 @@ mod tests {
 	}
 
 	#[test]
-	fn transition_in_queue() {
+	fn update_aim_in_queue() {
 		let (mut app, ..) = setup(Some(TEST_RAY));
 		let agent = app
 			.world
 			.spawn((
-				Schedule::TransitionAfter(Duration::from_secs(3)),
+				Schedule::StopAimAfter(Duration::from_secs(3)),
 				Queue::<PlayerSkills<SideUnset>>(
 					[
 						Skill { ..default() },
@@ -598,8 +588,8 @@ mod tests {
 				&Skill { ..default() },
 				&Skill {
 					name: "last in queue",
-					data: Queued {
-						pre_transition: Duration::from_secs(3),
+					cast: Cast {
+						aim: Duration::from_secs(3),
 						..default()
 					},
 					..default()
@@ -613,12 +603,12 @@ mod tests {
 	}
 
 	#[test]
-	fn transition_active() {
+	fn update_aim_active() {
 		let (mut app, ..) = setup(Some(TEST_RAY));
 		let agent = app
 			.world
 			.spawn((
-				Schedule::TransitionAfter(Duration::from_millis(100)),
+				Schedule::StopAimAfter(Duration::from_millis(100)),
 				Queue::<PlayerSkills<SideUnset>>([].into()),
 				Track::new(Skill {
 					name: "active skill",
@@ -638,8 +628,9 @@ mod tests {
 		assert_eq!(
 			Skill {
 				name: "active skill",
-				data: Active {
-					pre_transition: Duration::from_millis(100),
+				data: Active::default(),
+				cast: Cast {
+					aim: Duration::from_millis(100),
 					..default()
 				},
 				..default()
@@ -649,12 +640,12 @@ mod tests {
 	}
 
 	#[test]
-	fn transition_last_in_queue_even_with_active() {
+	fn aim_last_in_queue_even_with_active() {
 		let (mut app, ..) = setup(Some(TEST_RAY));
 		let agent = app
 			.world
 			.spawn((
-				Schedule::TransitionAfter(Duration::from_millis(101)),
+				Schedule::StopAimAfter(Duration::from_millis(101)),
 				Queue::<PlayerSkills<SideUnset>>(
 					[
 						Skill { ..default() },
@@ -692,8 +683,9 @@ mod tests {
 					&Skill { ..default() },
 					&Skill {
 						name: "last in queue",
-						data: Queued {
-							pre_transition: Duration::from_millis(101),
+						data: Queued::default(),
+						cast: Cast {
+							aim: Duration::from_millis(101),
 							..default()
 						},
 						..default()

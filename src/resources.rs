@@ -61,7 +61,7 @@ pub struct SkillIcons(pub HashMap<&'static str, Handle<Image>>);
 
 type UIInputDisplay = &'static str;
 
-#[derive(Resource)]
+#[derive(Resource, Debug, PartialEq, Clone)]
 pub struct SlotMap<TButton>
 where
 	TButton: Eq + Hash,

@@ -10,11 +10,23 @@ use std::{
 	time::Duration,
 };
 
-#[derive(PartialEq, Debug, Clone, Copy, Default)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Cast {
+	pub aim: Duration,
 	pub pre: Duration,
 	pub active: Duration,
 	pub after: Duration,
+}
+
+impl Default for Cast {
+	fn default() -> Self {
+		Self {
+			aim: Duration::MAX,
+			pre: Default::default(),
+			active: Default::default(),
+			after: Default::default(),
+		}
+	}
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -88,14 +100,12 @@ impl<T> Default for SelectInfo<T> {
 pub struct Queued {
 	pub target: Target,
 	pub slot_key: SlotKey,
-	pub pre_transition: Duration,
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Active {
 	pub target: Target,
 	pub slot_key: SlotKey,
-	pub pre_transition: Duration,
 }
 
 impl Skill {
@@ -131,7 +141,6 @@ impl<TAnimationKey> Skill<TAnimationKey, Queued> {
 		self.map_data(|queued| Active {
 			target: queued.target,
 			slot_key: queued.slot_key,
-			pre_transition: queued.pre_transition,
 		})
 	}
 }
@@ -140,7 +149,7 @@ pub struct SwordStrike;
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq, Hash)]
 pub enum SkillState {
-	PreTransition,
+	Aim,
 	PreCast,
 	Active,
 	AfterCast,
