@@ -28,14 +28,20 @@ pub fn schedule_slots<TKey: Copy + Eq + Hash + Debug + Send + Sync, TAgent: Comp
 		.find_map(|key| slot_map.slots.get(key))
 		.cloned()
 		.or_else(|| just_triggered_mouse_context(&mouse_context, &slot_map));
+	let pressing = input
+		.get_pressed()
+		.find_map(|key| slot_map.slots.get(key))
+		.cloned()
+		.or_else(|| triggered_mouse_context(&mouse_context, &slot_map));
 	let released = input
 		.get_just_released()
 		.find_map(|key| slot_map.slots.get(key))
 		.cloned()
 		.or_else(|| just_released_mouse_context(&mouse_context, &slot_map));
 
-	match (pressed, released) {
+	match (pressed, pressing, released) {
 		(Some(pressed), ..) => schedule_new(mode(keys), commands, added_new, agents, pressed, time),
+		(_, Some(pressing), _) => update_target(commands, added_new, agents, pressing),
 		(.., Some(released)) => schedule_transition(commands, added_new, agents, released, time),
 		_ => (),
 	};
@@ -64,6 +70,23 @@ fn schedule_new<TAgent: Component>(
 	*last_added = Some((pressed, time.elapsed()));
 }
 
+fn update_target<TAgent: Component>(
+	mut commands: Commands,
+	last_added: Local<Option<(SlotKey, Duration)>>,
+	agents: Query<(Entity, &Slots), With<TAgent>>,
+	pressing: SlotKey,
+) {
+	let Some((add_slot, ..)) = *last_added else {
+		return;
+	};
+	if add_slot != pressing {
+		return;
+	}
+	for (agent, ..) in &agents {
+		commands.entity(agent).insert(Schedule::UpdateTarget);
+	}
+}
+
 fn schedule_transition<TAgent: Component>(
 	mut commands: Commands,
 	last_added: Local<Option<(SlotKey, Duration)>>,
@@ -78,6 +101,7 @@ fn schedule_transition<TAgent: Component>(
 		return;
 	}
 	let pre_transition_time = time.elapsed() - add_time;
+
 	for (agent, ..) in &agents {
 		commands
 			.entity(agent)
@@ -90,6 +114,16 @@ fn just_triggered_mouse_context<TKey: Copy + Eq + Hash + Debug + Send + Sync>(
 	slot_map: &Res<SlotMap<TKey>>,
 ) -> Option<SlotKey> {
 	let MouseContext::JustTriggered(key) = mouse_context.get() else {
+		return None;
+	};
+	slot_map.slots.get(key).copied()
+}
+
+fn triggered_mouse_context<TKey: Copy + Eq + Hash + Debug + Send + Sync>(
+	mouse_context: &Res<State<MouseContext<TKey>>>,
+	slot_map: &Res<SlotMap<TKey>>,
+) -> Option<SlotKey> {
+	let MouseContext::Triggered(key) = mouse_context.get() else {
 		return None;
 	};
 	slot_map.slots.get(key).copied()
@@ -408,7 +442,7 @@ mod tests {
 	}
 
 	#[test]
-	fn do_not_set_when_not_just_mouse_pressed() {
+	fn do_not_override_when_not_just_mouse_pressed() {
 		let mut app = setup();
 
 		app.world
@@ -442,7 +476,7 @@ mod tests {
 		let agent = app.world.entity(agent);
 		let schedule = agent.get::<Schedule>();
 
-		assert_eq!(None, schedule);
+		assert!(!matches!(schedule, Some(&Schedule::Override(_))));
 	}
 
 	#[test]
@@ -526,12 +560,6 @@ mod tests {
 
 		app.world
 			.resource_mut::<Input<MouseButton>>()
-			.press(MouseButton::Right);
-
-		app.update();
-
-		app.world
-			.resource_mut::<Input<MouseButton>>()
 			.clear_just_pressed(MouseButton::Right);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
@@ -575,15 +603,13 @@ mod tests {
 			.resource_mut::<SlotMap<MouseButton>>()
 			.slots
 			.insert(MouseButton::Right, SlotKey::Legs);
+
 		app.world
-			.resource_mut::<Input<MouseButton>>()
-			.press(MouseButton::Right);
+			.resource_mut::<NextState<MouseContext<MouseButton>>>()
+			.set(MouseContext::JustTriggered(MouseButton::Right));
 
 		app.update();
 
-		app.world
-			.resource_mut::<Input<MouseButton>>()
-			.clear_just_pressed(MouseButton::Right);
 		app.world
 			.resource_mut::<NextState<MouseContext<MouseButton>>>()
 			.set(MouseContext::JustReleased(MouseButton::Right));
@@ -698,9 +724,6 @@ mod tests {
 			.clear_just_pressed(MouseButton::Left);
 
 		app.world
-			.resource_mut::<Input<MouseButton>>()
-			.clear_just_pressed(MouseButton::Right);
-		app.world
 			.resource_mut::<NextState<MouseContext<MouseButton>>>()
 			.set(MouseContext::JustReleased(MouseButton::Right));
 
@@ -709,15 +732,160 @@ mod tests {
 		let agent = app.world.entity(agent);
 		let schedule = agent.get::<Schedule>();
 
-		assert_eq!(
-			Some(&Schedule::Override((
-				SlotKey::Hand(Side::Off),
-				Skill {
-					name: "off skill",
-					..default()
-				}
-			))),
-			schedule
+		assert_eq!(Some(&Schedule::UpdateTarget), schedule);
+	}
+
+	#[test]
+	fn set_update_target_on_hold_button() {
+		let mut app = setup();
+		let slots = Slots(
+			[(
+				SlotKey::Legs,
+				Slot {
+					entity: Entity::from_raw(42),
+					item: Some(Item {
+						skill: Some(Skill {
+							name: "skill",
+							..default()
+						}),
+						..default()
+					}),
+					combo_skill: None,
+				},
+			)]
+			.into(),
 		);
+		let agent = app.world.spawn((TestAgent, slots)).id();
+
+		app.world
+			.resource_mut::<SlotMap<MouseButton>>()
+			.slots
+			.insert(MouseButton::Right, SlotKey::Legs);
+		app.world
+			.resource_mut::<Input<MouseButton>>()
+			.press(MouseButton::Right);
+
+		app.update();
+
+		app.world
+			.resource_mut::<Input<MouseButton>>()
+			.clear_just_pressed(MouseButton::Right);
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let schedule = agent.get::<Schedule>();
+
+		assert_eq!(Some(&Schedule::UpdateTarget), schedule);
+	}
+
+	#[test]
+	fn set_update_target_on_triggered_mouse_context() {
+		let mut app = setup();
+		let slots = Slots(
+			[(
+				SlotKey::Legs,
+				Slot {
+					entity: Entity::from_raw(42),
+					item: Some(Item {
+						skill: Some(Skill {
+							name: "skill",
+							..default()
+						}),
+						..default()
+					}),
+					combo_skill: None,
+				},
+			)]
+			.into(),
+		);
+		let agent = app.world.spawn((TestAgent, slots)).id();
+
+		app.world
+			.resource_mut::<SlotMap<MouseButton>>()
+			.slots
+			.insert(MouseButton::Right, SlotKey::Legs);
+
+		app.world
+			.resource_mut::<NextState<MouseContext<MouseButton>>>()
+			.set(MouseContext::JustTriggered(MouseButton::Right));
+
+		app.update();
+
+		app.world
+			.resource_mut::<NextState<MouseContext<MouseButton>>>()
+			.set(MouseContext::Triggered(MouseButton::Right));
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let schedule = agent.get::<Schedule>();
+
+		assert_eq!(Some(&Schedule::UpdateTarget), schedule);
+	}
+
+	#[test]
+	fn do_not_update_target_when_pressing_does_not_match_original_pressed() {
+		let mut app = setup();
+		let slots = Slots(
+			[
+				(
+					SlotKey::Hand(Side::Off),
+					Slot {
+						entity: Entity::from_raw(42),
+						item: Some(Item {
+							skill: Some(Skill {
+								name: "off skill",
+								..default()
+							}),
+							..default()
+						}),
+						combo_skill: None,
+					},
+				),
+				(
+					SlotKey::Hand(Side::Main),
+					Slot {
+						entity: Entity::from_raw(44),
+						item: Some(Item {
+							skill: Some(Skill {
+								name: "main skill",
+								..default()
+							}),
+							..default()
+						}),
+						combo_skill: None,
+					},
+				),
+			]
+			.into(),
+		);
+		let agent = app.world.spawn((TestAgent, slots)).id();
+
+		app.world
+			.resource_mut::<SlotMap<MouseButton>>()
+			.slots
+			.insert(MouseButton::Left, SlotKey::Hand(Side::Off));
+		app.world
+			.resource_mut::<SlotMap<MouseButton>>()
+			.slots
+			.insert(MouseButton::Right, SlotKey::Hand(Side::Main));
+
+		app.world
+			.resource_mut::<NextState<MouseContext<MouseButton>>>()
+			.set(MouseContext::JustTriggered(MouseButton::Left));
+
+		app.update();
+
+		app.world
+			.resource_mut::<NextState<MouseContext<MouseButton>>>()
+			.set(MouseContext::Triggered(MouseButton::Right));
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let schedule = agent.get::<Schedule>();
+
+		assert!(matches!(schedule, Some(&Schedule::Override(_))));
 	}
 }

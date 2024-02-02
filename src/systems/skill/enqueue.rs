@@ -38,13 +38,13 @@ pub fn enqueue<TTargetIds: WithComponent<GlobalTransform> + Resource>(
 	for (agent, schedule, queue, active) in &mut agents {
 		let mut agent = commands.entity(agent);
 		agent.remove::<Schedule>();
-		enqueue_skill(schedule, queue, active, agent, &target);
+		apply_schedule(schedule, queue, active, agent, &target);
 	}
 }
 
 type ActiveSkill<'a> = Option<Mut<'a, Track<Skill<PlayerSkills<SideUnset>, Active>>>>;
 
-fn enqueue_skill(
+fn apply_schedule(
 	schedule: &Schedule,
 	mut queue: Mut<Queue>,
 	active: ActiveSkill,
@@ -70,6 +70,12 @@ fn enqueue_skill(
 		}
 		(Schedule::TransitionAfter(time), Some(mut active), ..) => {
 			active.value.data.pre_transition = *time;
+		}
+		(Schedule::UpdateTarget, .., Some(last_queued)) => {
+			last_queued.data.target = target.clone();
+		}
+		(Schedule::UpdateTarget, Some(mut active), ..) => {
+			active.value.data.target = target.clone();
 		}
 		_ => {}
 	}
@@ -430,7 +436,7 @@ mod tests {
 	}
 
 	#[test]
-	fn set_override_with_wait_next_when_soft_override_running_soft_override_false() {
+	fn set_override_with_wait_next_when_running_soft_override_false() {
 		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
 		let running_skill = Skill {
 			name: "running",
@@ -695,6 +701,104 @@ mod tests {
 				],
 			),
 			(active.value.clone(), queue.0.iter().collect::<Vec<_>>())
+		);
+	}
+
+	#[test]
+	fn update_target_of_active() {
+		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
+		let agent = app
+			.world
+			.spawn((
+				Schedule::UpdateTarget,
+				Queue::<PlayerSkills<SideUnset>>([].into()),
+				Track::new(Skill {
+					name: "active skill",
+					data: Active {
+						target: Target::default(),
+						..default()
+					},
+					..default()
+				}),
+			))
+			.id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let track = agent
+			.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
+			.unwrap();
+
+		assert_eq!(
+			Target {
+				ray: TEST_RAY,
+				collision_info,
+			},
+			track.value.data.target
+		);
+	}
+
+	#[test]
+	fn update_target_of_last_queued() {
+		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
+		let agent = app
+			.world
+			.spawn((
+				Schedule::UpdateTarget,
+				Queue::<PlayerSkills<SideUnset>>(
+					[
+						Skill {
+							name: "not last",
+							..default()
+						},
+						Skill {
+							name: "last",
+							..default()
+						},
+					]
+					.into(),
+				),
+				Track::new(Skill {
+					data: Active::default(),
+					..default()
+				}),
+			))
+			.id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+		let active = agent
+			.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
+			.unwrap();
+		let queue = agent.get::<Queue>().unwrap();
+
+		assert_eq!(
+			(
+				&Track::new(Skill {
+					data: Active::default(),
+					..default()
+				}),
+				vec![
+					&Skill {
+						name: "not last",
+						..default()
+					},
+					&Skill {
+						name: "last",
+						data: Queued {
+							target: Target {
+								ray: TEST_RAY,
+								collision_info,
+							},
+							..default()
+						},
+						..default()
+					},
+				]
+			),
+			(active, queue.0.iter().collect::<Vec<_>>()),
 		);
 	}
 }

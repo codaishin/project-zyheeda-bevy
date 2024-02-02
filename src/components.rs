@@ -151,6 +151,7 @@ pub enum Schedule {
 	Enqueue((SlotKey, Skill)),
 	Override((SlotKey, Skill)),
 	TransitionAfter(Duration),
+	UpdateTarget,
 }
 
 #[derive(PartialEq, Debug, Clone)]
