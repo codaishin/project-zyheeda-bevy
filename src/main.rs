@@ -381,9 +381,9 @@ fn setup_skill_templates(
 		Skill {
 			name: "Shoot Hand Gun",
 			cast: Cast {
-				pre: Duration::from_millis(500),
+				pre: Duration::from_millis(100),
 				active: Duration::ZERO,
-				after: Duration::from_millis(500),
+				after: Duration::from_millis(100),
 			},
 			soft_override: true,
 			animate: PlayerSkills::Shoot(Handed::Single(SideUnset)),
@@ -394,9 +394,9 @@ fn setup_skill_templates(
 		Skill {
 			name: "Shoot Hand Gun Dual",
 			cast: Cast {
-				pre: Duration::from_millis(500),
+				pre: Duration::from_millis(100),
 				active: Duration::ZERO,
-				after: Duration::from_millis(500),
+				after: Duration::from_millis(100),
 			},
 			soft_override: true,
 			animate: PlayerSkills::Shoot(Handed::Dual(SideUnset)),
