@@ -6,6 +6,7 @@ pub mod combo_next;
 pub mod get_animation;
 pub mod get_ray;
 pub mod get_state;
+pub mod input_state;
 pub mod iteration;
 pub mod load_asset;
 pub mod model;
