@@ -53,7 +53,8 @@ use project_zyheeda::{
 		},
 		log::log_many,
 		mouse_context::{
-			clear_triggered::clear_triggered_mouse_context,
+			advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
+			release::release_triggered_mouse_context,
 			trigger_primed::trigger_primed_mouse_context,
 		},
 		movement::{
@@ -130,28 +131,36 @@ fn prepare_game(app: &mut App) {
 		)
 		.add_systems(
 			PreUpdate,
-			schedule_slots::<MouseButton, Player>
-				.run_if(in_state(MouseContext::<KeyCode>::Default))
-				.run_if(in_state(GameRunning::On)),
+			(link_animators_with_new_animation_players, add_item_slots),
 		)
 		.add_systems(
-			PreUpdate,
-			schedule_slots::<KeyCode, Player>.run_if(in_state(GameRunning::On)),
-		)
-		.add_systems(
-			PreUpdate,
+			First,
 			(
-				link_animators_with_new_animation_players,
-				add_item_slots,
-				player_toggle_walk_run,
-				enqueue::<MouseHover>,
-				dequeue, // sets skill activity marker, so it MUST run before skill execution systems
+				schedule_slots::<KeyCode, Player, Input<KeyCode>, Input<KeyCode>>,
+				schedule_slots::<KeyCode, Player, State<MouseContext>, Input<KeyCode>>,
+				schedule_slots::<MouseButton, Player, Input<MouseButton>, Input<KeyCode>>
+					.run_if(in_state(MouseContext::<KeyCode>::Default)),
 			)
 				.run_if(in_state(GameRunning::On)),
 		)
 		.add_systems(
+			PreUpdate,
+			(
+				player_toggle_walk_run,
+				enqueue::<MouseHover>,
+				dequeue, // sets skill activity marker, so it MUST run before skill execution systems
+			)
+				.chain()
+				.run_if(in_state(GameRunning::On)),
+		)
+		.add_systems(
 			Update,
-			(clear_triggered_mouse_context, trigger_primed_mouse_context),
+			(
+				trigger_primed_mouse_context,
+				advance_just_triggered_mouse_context,
+				release_triggered_mouse_context,
+				advance_just_released_mouse_context,
+			),
 		)
 		.add_systems(
 			Update,
@@ -359,6 +368,7 @@ fn setup_skill_templates(
 		Skill {
 			name: "Swing Sword",
 			cast: Cast {
+				aim: Duration::ZERO,
 				pre: Duration::from_millis(0),
 				active: Duration::from_millis(500),
 				after: Duration::from_millis(200),
@@ -372,9 +382,10 @@ fn setup_skill_templates(
 		Skill {
 			name: "Shoot Hand Gun",
 			cast: Cast {
-				pre: Duration::from_millis(500),
+				pre: Duration::from_millis(100),
 				active: Duration::ZERO,
-				after: Duration::from_millis(500),
+				after: Duration::from_millis(100),
+				..default()
 			},
 			soft_override: true,
 			animate: PlayerSkills::Shoot(Handed::Single(SideUnset)),
@@ -385,9 +396,10 @@ fn setup_skill_templates(
 		Skill {
 			name: "Shoot Hand Gun Dual",
 			cast: Cast {
-				pre: Duration::from_millis(500),
+				pre: Duration::from_millis(100),
 				active: Duration::ZERO,
-				after: Duration::from_millis(500),
+				after: Duration::from_millis(100),
+				..default()
 			},
 			soft_override: true,
 			animate: PlayerSkills::Shoot(Handed::Dual(SideUnset)),
@@ -398,6 +410,7 @@ fn setup_skill_templates(
 		Skill {
 			name: "Simple Movement",
 			cast: Cast {
+				aim: Duration::ZERO,
 				after: Duration::MAX,
 				..default()
 			},

@@ -12,7 +12,7 @@ pub fn set_ui_mouse_context(
 	mut next_state: ResMut<NextState<MouseContext>>,
 	interactions: Query<&Interaction>,
 ) {
-	if let MouseContext::Primed(_) | MouseContext::Triggered(_) = current_state.get() {
+	if primed_or_triggered(current_state.get()) {
 		return;
 	}
 
@@ -24,6 +24,13 @@ pub fn set_ui_mouse_context(
 		true => MouseContext::Default,
 		false => MouseContext::UI,
 	});
+}
+
+fn primed_or_triggered(context: &MouseContext) -> bool {
+	matches!(
+		context,
+		MouseContext::Primed(_) | MouseContext::Triggered(_) | MouseContext::JustTriggered(_)
+	)
 }
 
 fn next_already_set(next_state: &ResMut<NextState<MouseContext>>) -> bool {
@@ -130,6 +137,29 @@ mod tests {
 
 		assert_eq!(
 			&MouseContext::Primed(KeyCode::A),
+			app.world
+				.get_resource::<State<MouseContext>>()
+				.unwrap()
+				.get()
+		);
+	}
+
+	#[test]
+	fn ignore_when_mouse_context_is_mouse_context_just_triggered() {
+		let mut app = App::new();
+
+		app.add_systems(Update, set_ui_mouse_context);
+		app.add_state::<MouseContext>();
+		app.world.spawn(Interaction::None);
+		app.world
+			.resource_mut::<NextState<MouseContext>>()
+			.set(MouseContext::JustTriggered(KeyCode::A));
+
+		app.update();
+		app.update();
+
+		assert_eq!(
+			&MouseContext::JustTriggered(KeyCode::A),
 			app.world
 				.get_resource::<State<MouseContext>>()
 				.unwrap()

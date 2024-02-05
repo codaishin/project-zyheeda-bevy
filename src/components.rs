@@ -146,16 +146,12 @@ pub struct InventoryKey(pub usize);
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct SlotBones(pub HashMap<SlotKey, &'static BoneName>);
 
-#[derive(PartialEq, Debug, Clone, Copy)]
-pub enum ScheduleMode {
-	Enqueue,
-	Override,
-}
-
 #[derive(Component, PartialEq, Debug)]
-pub struct Schedule {
-	pub mode: ScheduleMode,
-	pub skills: HashMap<SlotKey, Skill>,
+pub enum Schedule {
+	Enqueue((SlotKey, Skill)),
+	Override((SlotKey, Skill)),
+	StopAimAfter(Duration),
+	UpdateTarget,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -258,14 +254,14 @@ pub struct Dad<T>(pub T);
 #[derive(Component, Debug, PartialEq)]
 pub struct Track<T> {
 	pub value: T,
-	pub duration: Duration,
+	pub elapsed: Duration,
 }
 
 impl<T: Clone> Track<T> {
 	pub fn new(value: T) -> Self {
 		Self {
 			value: value.clone(),
-			duration: Duration::ZERO,
+			elapsed: Duration::ZERO,
 		}
 	}
 }

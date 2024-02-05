@@ -61,7 +61,7 @@ pub struct SkillIcons(pub HashMap<&'static str, Handle<Image>>);
 
 type UIInputDisplay = &'static str;
 
-#[derive(Resource)]
+#[derive(Resource, Debug, PartialEq, Clone)]
 pub struct SlotMap<TButton>
 where
 	TButton: Eq + Hash,
@@ -69,6 +69,16 @@ where
 	pub slots: HashMap<TButton, SlotKey>,
 	pub ui_input_display: HashMap<SlotKey, UIInputDisplay>,
 	pub keys: HashMap<SlotKey, TButton>,
+}
+
+impl<TButton: Eq + Hash> Default for SlotMap<TButton> {
+	fn default() -> Self {
+		Self {
+			slots: Default::default(),
+			ui_input_display: Default::default(),
+			keys: Default::default(),
+		}
+	}
 }
 
 impl<TButton> SlotMap<TButton>

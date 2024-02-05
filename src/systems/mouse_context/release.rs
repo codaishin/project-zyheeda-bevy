@@ -7,18 +7,17 @@ use bevy::{
 	input::{mouse::MouseButton, Input},
 };
 
-pub fn trigger_primed_mouse_context(
+pub fn release_triggered_mouse_context(
 	mouse_input: Res<Input<MouseButton>>,
-	mouse_context: Res<State<MouseContext>>,
+	context: Res<State<MouseContext>>,
 	mut next_mouse_context: ResMut<NextState<MouseContext>>,
 ) {
-	if !mouse_input.just_pressed(MouseButton::Left) {
+	if !mouse_input.just_released(MouseButton::Left) {
 		return;
 	}
-	let MouseContext::Primed(key) = mouse_context.get() else {
-		return;
-	};
-	next_mouse_context.set(MouseContext::JustTriggered(*key));
+	if let MouseContext::Triggered(key) | MouseContext::JustTriggered(key) = context.get() {
+		next_mouse_context.set(MouseContext::JustReleased(*key));
+	}
 }
 
 #[cfg(test)]
@@ -27,24 +26,27 @@ mod tests {
 	use crate::states::MouseContext;
 	use bevy::{
 		app::{App, Update},
-		ecs::schedule::NextState,
+		ecs::schedule::{NextState, State},
 		input::{keyboard::KeyCode, mouse::MouseButton, Input},
 	};
 
 	#[test]
-	fn trigger() {
+	fn release_from_triggered() {
 		let mut app = App::new();
 		let mut mouse_input = Input::<MouseButton>::default();
 
 		mouse_input.press(MouseButton::Left);
+		app.update();
+		mouse_input.release(MouseButton::Left);
+
 		app.insert_resource(mouse_input);
 		app.add_state::<MouseContext>();
 		app.world
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
-			.set(MouseContext::Primed(KeyCode::U));
+			.set(MouseContext::Triggered(KeyCode::U));
 
-		app.add_systems(Update, trigger_primed_mouse_context);
+		app.add_systems(Update, release_triggered_mouse_context);
 		app.update();
 		app.update();
 
@@ -54,28 +56,26 @@ mod tests {
 			.unwrap()
 			.get();
 
-		assert_eq!(&MouseContext::JustTriggered(KeyCode::U), context);
+		assert_eq!(&MouseContext::JustReleased(KeyCode::U), context);
 	}
 
 	#[test]
-	fn do_not_trigger_when_mouse_left_not_just_pressed() {
+	fn release_from_just_triggered() {
 		let mut app = App::new();
 		let mut mouse_input = Input::<MouseButton>::default();
 
 		mouse_input.press(MouseButton::Left);
+		app.update();
+		mouse_input.release(MouseButton::Left);
+
 		app.insert_resource(mouse_input);
 		app.add_state::<MouseContext>();
 		app.world
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
-			.set(MouseContext::Primed(KeyCode::U));
+			.set(MouseContext::JustTriggered(KeyCode::U));
 
-		app.update();
-		app.world
-			.get_resource_mut::<Input<MouseButton>>()
-			.unwrap()
-			.clear_just_pressed(MouseButton::Left);
-		app.add_systems(Update, trigger_primed_mouse_context);
+		app.add_systems(Update, release_triggered_mouse_context);
 		app.update();
 		app.update();
 
@@ -85,23 +85,27 @@ mod tests {
 			.unwrap()
 			.get();
 
-		assert_eq!(&MouseContext::Primed(KeyCode::U), context);
+		assert_eq!(&MouseContext::JustReleased(KeyCode::U), context);
 	}
 
 	#[test]
-	fn do_not_trigger_when_no_mouse_context_key() {
+	fn do_not_release_when_mouse_left_not_just_released() {
 		let mut app = App::new();
 		let mut mouse_input = Input::<MouseButton>::default();
 
 		mouse_input.press(MouseButton::Left);
+		app.update();
+		mouse_input.release(MouseButton::Left);
+		app.update();
+		mouse_input.clear_just_released(MouseButton::Left);
+
 		app.insert_resource(mouse_input);
 		app.add_state::<MouseContext>();
 		app.world
-			.get_resource_mut::<NextState<MouseContext>>()
-			.unwrap()
-			.set(MouseContext::UI);
+			.resource_mut::<NextState<MouseContext>>()
+			.set(MouseContext::Triggered(KeyCode::U));
 
-		app.add_systems(Update, trigger_primed_mouse_context);
+		app.add_systems(Update, release_triggered_mouse_context);
 		app.update();
 		app.update();
 
@@ -111,32 +115,6 @@ mod tests {
 			.unwrap()
 			.get();
 
-		assert_eq!(&MouseContext::UI, context);
-	}
-
-	#[test]
-	fn trigger_other_key() {
-		let mut app = App::new();
-		let mut mouse_input = Input::<MouseButton>::default();
-
-		mouse_input.press(MouseButton::Left);
-		app.insert_resource(mouse_input);
-		app.add_state::<MouseContext>();
-		app.world
-			.get_resource_mut::<NextState<MouseContext>>()
-			.unwrap()
-			.set(MouseContext::Primed(KeyCode::O));
-
-		app.add_systems(Update, trigger_primed_mouse_context);
-		app.update();
-		app.update();
-
-		let context = app
-			.world
-			.get_resource::<State<MouseContext>>()
-			.unwrap()
-			.get();
-
-		assert_eq!(&MouseContext::JustTriggered(KeyCode::O), context);
+		assert_eq!(&MouseContext::Triggered(KeyCode::U), context);
 	}
 }

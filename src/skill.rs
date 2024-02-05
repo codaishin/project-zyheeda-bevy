@@ -10,11 +10,23 @@ use std::{
 	time::Duration,
 };
 
-#[derive(PartialEq, Debug, Clone, Copy, Default)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Cast {
+	pub aim: Duration,
 	pub pre: Duration,
 	pub active: Duration,
 	pub after: Duration,
+}
+
+impl Default for Cast {
+	fn default() -> Self {
+		Self {
+			aim: Duration::MAX,
+			pre: Default::default(),
+			active: Default::default(),
+			after: Default::default(),
+		}
+	}
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -134,3 +146,11 @@ impl<TAnimationKey> Skill<TAnimationKey, Queued> {
 }
 
 pub struct SwordStrike;
+
+#[derive(PartialEq, Debug, Clone, Copy, Eq, Hash)]
+pub enum SkillState {
+	Aim,
+	PreCast,
+	Active,
+	AfterCast,
+}

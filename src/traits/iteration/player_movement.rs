@@ -1,22 +1,24 @@
-use super::{Iter, ResourceKey};
+use super::{Iter, IterKey, KeyValue};
 use crate::components::PlayerMovement;
 
 const BASE_PATH: &str = "models/player.gltf#";
 
-impl ResourceKey for PlayerMovement {
-	fn resource_keys() -> Iter<Self> {
+impl IterKey for PlayerMovement {
+	fn iterator() -> Iter<Self> {
 		Iter(Some(PlayerMovement::Walk))
 	}
 
-	fn get_next(current: &Iter<Self>) -> Option<Self> {
+	fn next(current: &Iter<Self>) -> Option<Self> {
 		match current.0? {
 			Self::Walk => Some(PlayerMovement::Run),
 			Self::Run => None,
 		}
 	}
+}
 
-	fn get_resource_path(value: &Self) -> String {
-		let value = match value {
+impl KeyValue<String> for PlayerMovement {
+	fn get_value(self) -> String {
+		let value = match self {
 			Self::Walk => "Animation1",
 			Self::Run => "Animation3",
 		};
@@ -32,15 +34,17 @@ mod tests {
 
 	#[test]
 	fn all_contain_base_path() {
-		assert!(PlayerMovement::resource_keys().all(|(_, path)| path.starts_with(BASE_PATH)))
+		assert!(PlayerMovement::iterator()
+			.map(PlayerMovement::get_value)
+			.all(|path| path.starts_with(BASE_PATH)));
 	}
 
 	#[test]
 	fn no_duplicate_keys() {
-		let keys = PlayerMovement::resource_keys();
-		let unique_keys = HashSet::from_iter(PlayerMovement::resource_keys().map(|(key, _)| key));
+		let keys = PlayerMovement::iterator();
+		let unique_keys = HashSet::from_iter(PlayerMovement::iterator());
 		let unique_strings =
-			HashSet::from_iter(PlayerMovement::resource_keys().map(|(_, str)| str));
+			HashSet::from_iter(PlayerMovement::iterator().map(PlayerMovement::get_value));
 
 		assert_eq!(
 			(2, 2, 2),
