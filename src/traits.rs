@@ -15,6 +15,7 @@ pub mod movement;
 pub mod movement_data;
 pub mod orbit;
 pub mod play_animation;
+pub mod prefab;
 pub mod procedural;
 pub mod projectile_behavior;
 pub mod remove_conditionally;

@@ -170,3 +170,9 @@ impl<T> Default for MouseHover<T> {
 		Self(None)
 	}
 }
+
+#[derive(Resource)]
+pub struct Prefab<TParent, TChildren> {
+	pub parent: TParent,
+	pub children: TChildren,
+}
