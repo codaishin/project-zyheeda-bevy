@@ -20,16 +20,16 @@ const DUMMY_DIMENSIONS: Vec3 = Vec3 {
 	z: 0.4,
 };
 
-impl CreatePrefab<FlatPrefab<(), Sensor>, StandardMaterial> for Dummy {
+impl CreatePrefab<FlatPrefab<Dummy, (), Sensor>, StandardMaterial> for Dummy {
 	fn create_prefab(
 		mut materials: ResMut<Assets<StandardMaterial>>,
 		mut meshes: ResMut<Assets<Mesh>>,
-	) -> Result<FlatPrefab<(), Sensor>, Error> {
+	) -> Result<FlatPrefab<Dummy, (), Sensor>, Error> {
 		let transform = Transform::from_xyz(0., 1., 0.);
 
-		Ok(Prefab {
-			parent: (),
-			children: (
+		Ok(Prefab::new(
+			(),
+			(
 				PbrBundle {
 					transform,
 					material: materials.add(StandardMaterial {
@@ -52,6 +52,6 @@ impl CreatePrefab<FlatPrefab<(), Sensor>, StandardMaterial> for Dummy {
 					),
 				),
 			),
-		})
+		))
 	}
 }
