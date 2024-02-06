@@ -35,8 +35,8 @@ impl Loadout {
 	}
 }
 
-#[derive(Bundle, Clone)]
-pub struct ColliderBundle<TExtra: Bundle + Clone> {
+#[derive(Bundle, Clone, Default)]
+pub struct ColliderBundle<TExtra: Bundle + Clone + Default> {
 	pub collider: Collider,
 	pub transform: TransformBundle,
 	pub active_events: ActiveEvents,

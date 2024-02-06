@@ -1,4 +1,4 @@
-use super::{flat_model::FlatPrefab, CreatePrefab};
+use super::{simple_model::SimpleModelPrefab, CreatePrefab};
 use crate::{bundles::ColliderBundle, components::Dummy, errors::Error, resources::Prefab};
 use bevy::{
 	asset::Assets,
@@ -20,11 +20,11 @@ const DUMMY_DIMENSIONS: Vec3 = Vec3 {
 	z: 0.4,
 };
 
-impl CreatePrefab<FlatPrefab<Dummy, (), Sensor>, StandardMaterial> for Dummy {
+impl CreatePrefab<SimpleModelPrefab<Dummy, (), Sensor>, StandardMaterial> for Dummy {
 	fn create_prefab(
 		mut materials: ResMut<Assets<StandardMaterial>>,
 		mut meshes: ResMut<Assets<Mesh>>,
-	) -> Result<FlatPrefab<Dummy, (), Sensor>, Error> {
+	) -> Result<SimpleModelPrefab<Dummy, (), Sensor>, Error> {
 		let transform = Transform::from_xyz(0., 1., 0.);
 
 		Ok(Prefab::new(

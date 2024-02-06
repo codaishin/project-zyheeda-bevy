@@ -1,4 +1,4 @@
-use super::{flat_model::FlatPrefab, CreatePrefab};
+use super::{simple_model::SimpleModelPrefab, CreatePrefab};
 use crate::{
 	bundles::ColliderBundle,
 	components::{Plasma, Projectile},
@@ -41,13 +41,13 @@ fn sphere(type_name: &'static str, radius: f32) -> Result<Mesh, Error> {
 
 const PLASMA_RADIUS: f32 = 0.05;
 
-impl CreatePrefab<FlatPrefab<Projectile<Plasma>, RigidBody, Sensor>, StandardMaterial>
+impl CreatePrefab<SimpleModelPrefab<Projectile<Plasma>, RigidBody, Sensor>, StandardMaterial>
 	for Projectile<Plasma>
 {
 	fn create_prefab(
 		mut materials: ResMut<Assets<StandardMaterial>>,
 		mut meshes: ResMut<Assets<Mesh>>,
-	) -> Result<FlatPrefab<Projectile<Plasma>, RigidBody, Sensor>, Error> {
+	) -> Result<SimpleModelPrefab<Projectile<Plasma>, RigidBody, Sensor>, Error> {
 		let transform = Transform::from_translation(Vec3::ZERO);
 
 		Ok(Prefab::new(

@@ -51,7 +51,7 @@ use project_zyheeda::{
 			slots::add_item_slots,
 			swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
 		},
-		log::log_many,
+		log::{log, log_many},
 		mouse_context::{
 			advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
 			release::release_triggered_mouse_context,
@@ -63,6 +63,7 @@ use project_zyheeda::{
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
 		},
+		prefab::register::register,
 		procedural::{
 			collider::collider,
 			projectile_behavior::projectile_behavior,
@@ -80,6 +81,7 @@ use project_zyheeda::{
 	traits::{
 		behavior::GetBehaviorMeta,
 		orbit::{Orbit, Vec2Radians},
+		prefab::simple_model::SimpleModelPrefab,
 	},
 };
 use std::{
@@ -98,6 +100,8 @@ fn main() {
 
 	app.run();
 }
+
+type Nothing = ();
 
 fn prepare_game(app: &mut App) {
 	app.add_plugins(DefaultPlugins)
@@ -122,6 +126,19 @@ fn prepare_game(app: &mut App) {
 				load_models,
 				store_model_data::<StandardMaterial, Projectile<Plasma>>,
 				store_model_data::<StandardMaterial, Dummy>,
+			),
+		)
+		.add_systems(
+			Startup,
+			(
+				register::<Dummy, SimpleModelPrefab<Dummy, Nothing, Sensor>, StandardMaterial>
+					.pipe(log),
+				register::<
+					Projectile<Plasma>,
+					SimpleModelPrefab<Projectile<Plasma>, RigidBody, Sensor>,
+					StandardMaterial,
+				>
+					.pipe(log),
 			),
 		)
 		.add_systems(Startup, setup_simple_3d_scene)
