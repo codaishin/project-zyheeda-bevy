@@ -3,16 +3,20 @@ use crate::{bundles::ColliderBundle, components::ColliderRoot, resources::Prefab
 use bevy::{
 	ecs::{bundle::Bundle, system::EntityCommands},
 	hierarchy::BuildChildren,
-	pbr::PbrBundle,
 };
 use bevy_rapier3d::geometry::Sensor;
 
-pub type SimpleModelPrefab<TFor, TParent> = Prefab<TFor, TParent, (PbrBundle, ColliderBundle)>;
+pub type ComplexCollidablePrefab<TFor, TParent, TChildren, const N: usize> =
+	Prefab<TFor, TParent, ([TChildren; N], ColliderBundle)>;
 
-impl<TFor, TParent: Bundle + Clone> SpawnPrefab<TFor> for SimpleModelPrefab<TFor, TParent> {
+impl<TFor, TParent: Bundle + Clone, TChildren: Bundle + Clone, const N: usize> SpawnPrefab<TFor>
+	for ComplexCollidablePrefab<TFor, TParent, TChildren, N>
+{
 	fn spawn_prefab(&self, parent: &mut EntityCommands) {
 		parent.insert(self.parent.clone()).with_children(|parent| {
-			parent.spawn(self.children.0.clone());
+			for child in self.children.0.iter() {
+				parent.spawn(child.clone());
+			}
 			parent.spawn((
 				self.children.1.clone(),
 				Sensor,
@@ -24,10 +28,12 @@ impl<TFor, TParent: Bundle + Clone> SpawnPrefab<TFor> for SimpleModelPrefab<TFor
 
 #[cfg(test)]
 mod tests {
+	use crate::components::ColliderRoot;
+
 	use super::*;
 	use bevy::{
+		self,
 		app::{App, Update},
-		asset::{AssetId, Handle},
 		ecs::{
 			component::Component,
 			entity::Entity,
@@ -35,24 +41,21 @@ mod tests {
 			system::{Commands, Query, Res, Resource},
 		},
 		hierarchy::Parent,
-		pbr::StandardMaterial,
-		render::{
-			mesh::Mesh,
-			view::{InheritedVisibility, ViewVisibility, Visibility},
-		},
 		transform::{
 			components::{GlobalTransform, Transform},
 			TransformBundle,
 		},
-		utils::Uuid,
 	};
-	use bevy_rapier3d::geometry::{ActiveCollisionTypes, ActiveEvents, Collider};
+	use bevy_rapier3d::geometry::{ActiveCollisionTypes, ActiveEvents, Collider, Sensor};
 
 	#[derive(Component)]
 	struct _Agent;
 
 	#[derive(Component, Clone, Debug, PartialEq, Default)]
 	struct _Parent(&'static str);
+
+	#[derive(Component, Clone, Debug, PartialEq, Default)]
+	struct _Child(&'static str);
 
 	fn run_with_root_reference<T: SpawnPrefab<_Agent> + Resource>(
 		prefab: &Res<T>,
@@ -61,9 +64,11 @@ mod tests {
 		prefab.spawn_prefab(commands)
 	}
 
+	type TestPrefab = ComplexCollidablePrefab<_Agent, _Parent, _Child, 2>;
+
 	fn run_spawn(
 		mut commands: Commands,
-		prefab: Res<SimpleModelPrefab<_Agent, _Parent>>,
+		prefab: Res<TestPrefab>,
 		agents: Query<Entity, With<_Agent>>,
 	) {
 		for agent in &agents {
@@ -75,9 +80,12 @@ mod tests {
 	fn spawn_parent_bundle() {
 		let mut app = App::new();
 		app.add_systems(Update, run_spawn);
-		app.insert_resource(SimpleModelPrefab::<_Agent, _Parent>::new(
+		app.insert_resource(TestPrefab::new(
 			_Parent("parent"),
-			(PbrBundle::default(), ColliderBundle::default()),
+			(
+				[_Child::default(), _Child::default()],
+				ColliderBundle::default(),
+			),
 		));
 
 		let agent = app.world.spawn(_Agent).id();
@@ -90,61 +98,33 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_pbr_bundle_on_first_child() {
+	fn spawn_children() {
 		let mut app = App::new();
-		let bundle = PbrBundle {
-			mesh: Handle::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}),
-			material: Handle::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}),
-			transform: Transform::from_xyz(1., 2., 3.),
-			global_transform: GlobalTransform::from_xyz(4., 5., 6.),
-			visibility: Visibility::Hidden,
-			inherited_visibility: InheritedVisibility::HIDDEN,
-			view_visibility: ViewVisibility::HIDDEN,
-		};
 		app.add_systems(Update, run_spawn);
-		app.insert_resource(SimpleModelPrefab::<_Agent, _Parent>::new(
+		app.insert_resource(TestPrefab::new(
 			_Parent::default(),
-			(bundle.clone(), ColliderBundle::default()),
+			(
+				[_Child("child a"), _Child("child b")],
+				ColliderBundle::default(),
+			),
 		));
 
 		let agent = app.world.spawn(_Agent).id();
 
 		app.update();
 
-		let (child, ..) = app
+		let children = app
 			.world
 			.iter_entities()
 			.filter_map(|entity| Some((entity, entity.get::<Parent>()?)))
-			.find(|(_, parent)| parent.get() == agent)
-			.unwrap();
-		assert_eq!(
-			(
-				Some(&bundle.mesh),
-				Some(&bundle.material),
-				Some(&bundle.transform),
-				Some(&bundle.global_transform),
-				Some(&bundle.visibility),
-				Some(&bundle.inherited_visibility),
-				Some(&bundle.view_visibility),
-			),
-			(
-				child.get::<Handle<Mesh>>(),
-				child.get::<Handle<StandardMaterial>>(),
-				child.get::<Transform>(),
-				child.get::<GlobalTransform>(),
-				child.get::<Visibility>(),
-				child.get::<InheritedVisibility>(),
-				child.get::<ViewVisibility>(),
-			)
-		);
+			.filter(|(_, parent)| parent.get() == agent)
+			.filter_map(|(entity, _)| entity.get::<_Child>())
+			.collect::<Vec<_>>();
+		assert_eq!(vec![&_Child("child a"), &_Child("child b")], children);
 	}
 
 	#[test]
-	fn spawn_collider_bundle_on_second_child() {
+	fn spawn_collider_bundle_on_third_child() {
 		let mut app = App::new();
 		let bundle = ColliderBundle {
 			collider: Collider::ball(4.),
@@ -153,9 +133,9 @@ mod tests {
 			active_collision_types: ActiveCollisionTypes::DYNAMIC_KINEMATIC,
 		};
 		app.add_systems(Update, run_spawn);
-		app.insert_resource(SimpleModelPrefab::<_Agent, _Parent>::new(
+		app.insert_resource(TestPrefab::new(
 			_Parent::default(),
-			(PbrBundle::default(), bundle.clone()),
+			([_Child::default(), _Child::default()], bundle.clone()),
 		));
 
 		let agent = app.world.spawn(_Agent).id();
@@ -166,7 +146,7 @@ mod tests {
 			.world
 			.iter_entities()
 			.filter_map(|entity| Some((entity, entity.get::<Parent>()?)))
-			.skip(1)
+			.skip(2)
 			.find(|(_, parent)| parent.get() == agent)
 			.unwrap();
 		assert_eq!(
@@ -190,12 +170,15 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_sensor_on_second_child() {
+	fn spawn_sensor_on_second_third() {
 		let mut app = App::new();
 		app.add_systems(Update, run_spawn);
-		app.insert_resource(SimpleModelPrefab::<_Agent, _Parent>::new(
+		app.insert_resource(TestPrefab::new(
 			_Parent::default(),
-			(PbrBundle::default(), ColliderBundle::default()),
+			(
+				[_Child::default(), _Child::default()],
+				ColliderBundle::default(),
+			),
 		));
 
 		let agent = app.world.spawn(_Agent).id();
@@ -206,19 +189,22 @@ mod tests {
 			.world
 			.iter_entities()
 			.filter_map(|entity| Some((entity, entity.get::<Parent>()?)))
-			.skip(1)
+			.skip(2)
 			.find(|(_, parent)| parent.get() == agent)
 			.unwrap();
 		assert!(child.contains::<Sensor>());
 	}
 
 	#[test]
-	fn spawn_collider_root_on_second_child() {
+	fn spawn_collider_root_on_third_child() {
 		let mut app = App::new();
 		app.add_systems(Update, run_spawn);
-		app.insert_resource(SimpleModelPrefab::<_Agent, _Parent>::new(
+		app.insert_resource(TestPrefab::new(
 			_Parent::default(),
-			(PbrBundle::default(), ColliderBundle::default()),
+			(
+				[_Child::default(), _Child::default()],
+				ColliderBundle::default(),
+			),
 		));
 
 		let agent = app.world.spawn(_Agent).id();
@@ -229,7 +215,7 @@ mod tests {
 			.world
 			.iter_entities()
 			.filter_map(|entity| Some((entity, entity.get::<Parent>()?)))
-			.skip(1)
+			.skip(2)
 			.find(|(_, parent)| parent.get() == agent)
 			.unwrap();
 		assert_eq!(Some(&ColliderRoot(agent)), child.get::<ColliderRoot>());

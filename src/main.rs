@@ -10,7 +10,6 @@ use project_zyheeda::{
 		Animator,
 		CamOrbit,
 		ComboTreeTemplate,
-		Dummy,
 		Handed,
 		Inventory,
 		InventoryKey,
@@ -28,6 +27,7 @@ use project_zyheeda::{
 		Swap,
 		Track,
 		UnitsPerSecond,
+		VoidSphere,
 	},
 	errors::Error,
 	plugins::ingame_menu::IngameMenuPlugin,
@@ -71,12 +71,13 @@ use project_zyheeda::{
 			enqueue::enqueue,
 			execute_skill::execute_skill,
 		},
+		void_sphere::ring_rotation::ring_rotation,
 	},
 	tools::Tools,
 	traits::{
 		behavior::GetBehaviorMeta,
 		orbit::{Orbit, Vec2Radians},
-		prefab::simple_model::SimpleModelPrefab,
+		prefab::{projectile::ProjectilePrefab, void_sphere::VoidSpherePrefab},
 	},
 };
 use std::{
@@ -95,8 +96,6 @@ fn main() {
 
 	app.run();
 }
-
-type Nothing = ();
 
 fn prepare_game(app: &mut App) {
 	app.add_plugins(DefaultPlugins)
@@ -119,12 +118,8 @@ fn prepare_game(app: &mut App) {
 		.add_systems(
 			Startup,
 			(
-				register::<Dummy, SimpleModelPrefab<Dummy, Nothing>, StandardMaterial>.pipe(log),
-				register::<
-					Projectile<Plasma>,
-					SimpleModelPrefab<Projectile<Plasma>, RigidBody>,
-					StandardMaterial,
-				>
+				register::<VoidSphere, VoidSpherePrefab, StandardMaterial>.pipe(log),
+				register::<Projectile<Plasma>, ProjectilePrefab<Plasma>, StandardMaterial>
 					.pipe(log),
 			),
 		)
@@ -192,7 +187,7 @@ fn prepare_game(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				instantiate::<Projectile<Plasma>, SimpleModelPrefab<Projectile<Plasma>, RigidBody>>,
+				instantiate::<Projectile<Plasma>, ProjectilePrefab<Plasma>>,
 				projectile_behavior::<Projectile<Plasma>>,
 				execute_move::<(), Projectile<Plasma>, SimpleMovement, Virtual>,
 			)
@@ -213,7 +208,7 @@ fn prepare_game(app: &mut App) {
 		)
 		.add_systems(
 			Update,
-			instantiate::<Dummy, SimpleModelPrefab<Dummy, Nothing>>,
+			(instantiate::<VoidSphere, VoidSpherePrefab>, ring_rotation),
 		)
 		.add_systems(PostUpdate, destroy_on_collision);
 }
@@ -362,7 +357,7 @@ fn setup_simple_3d_scene(
 	spawn_player(&mut commands, asset_server, skill_templates);
 	spawn_light(&mut commands);
 	spawn_camera(&mut commands);
-	spawn_dummies(&mut commands);
+	spawn_void_spheres(&mut commands);
 	next_state.set(GameRunning::On);
 }
 
@@ -608,25 +603,25 @@ fn spawn_camera(commands: &mut Commands) {
 	));
 }
 
-fn spawn_dummies(commands: &mut Commands) {
+fn spawn_void_spheres(commands: &mut Commands) {
 	commands.spawn((
-		Name::new("Dummy A"),
-		Dummy,
+		Name::new("Sphere A"),
+		VoidSphere,
 		SpatialBundle::from_transform(Transform::from_xyz(2., 0., 2.)),
 	));
 	commands.spawn((
-		Name::new("Dummy B"),
-		Dummy,
+		Name::new("Sphere B"),
+		VoidSphere,
 		SpatialBundle::from_transform(Transform::from_xyz(-2., 0., 2.)),
 	));
 	commands.spawn((
-		Name::new("Dummy C"),
-		Dummy,
+		Name::new("Sphere C"),
+		VoidSphere,
 		SpatialBundle::from_transform(Transform::from_xyz(2., 0., -2.)),
 	));
 	commands.spawn((
-		Name::new("Dummy D"),
-		Dummy,
+		Name::new("Sphere D"),
+		VoidSphere,
 		SpatialBundle::from_transform(Transform::from_xyz(-2., 0., -2.)),
 	));
 }

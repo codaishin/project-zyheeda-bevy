@@ -8,3 +8,4 @@ pub mod movement;
 pub mod prefab;
 pub mod procedural;
 pub mod skill;
+pub mod void_sphere;
