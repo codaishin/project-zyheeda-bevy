@@ -1,8 +1,8 @@
-use super::{simple_model::SimpleModelPrefab, CreatePrefab};
+use super::{simple_collidable::SimpleCollidablePrefab, sphere, CreatePrefab};
 use crate::{
 	bundles::ColliderBundle,
 	components::{Plasma, Projectile},
-	errors::{Error, Level},
+	errors::Error,
 	resources::Prefab,
 };
 use bevy::{
@@ -10,55 +10,35 @@ use bevy::{
 	ecs::system::ResMut,
 	math::Vec3,
 	pbr::{PbrBundle, StandardMaterial},
-	render::{
-		color::Color,
-		mesh::{shape::Icosphere, Mesh},
-	},
+	render::{color::Color, mesh::Mesh},
 	transform::components::Transform,
 	utils::default,
 };
 use bevy_rapier3d::{dynamics::RigidBody, geometry::Collider};
 
-macro_rules! projectile_error {
-	($t:expr, $e:expr) => {
-		format!("Cannot create prefab for projectile ({}): {}", $t, $e)
-	};
-}
-
-fn sphere(type_name: &'static str, radius: f32) -> Result<Mesh, Error> {
-	Mesh::try_from(Icosphere {
-		radius,
-		subdivisions: 5,
-	})
-	.map_err(|err| Error {
-		lvl: Level::Error,
-		msg: projectile_error!(type_name, err),
-	})
-}
+pub type ProjectilePrefab<T> = SimpleCollidablePrefab<Projectile<T>, RigidBody, PbrBundle>;
 
 const PLASMA_RADIUS: f32 = 0.05;
 
-impl CreatePrefab<SimpleModelPrefab<Projectile<Plasma>, RigidBody>, StandardMaterial>
-	for Projectile<Plasma>
-{
+impl CreatePrefab<ProjectilePrefab<Plasma>, StandardMaterial> for Projectile<Plasma> {
 	fn create_prefab(
 		mut materials: ResMut<Assets<StandardMaterial>>,
 		mut meshes: ResMut<Assets<Mesh>>,
-	) -> Result<SimpleModelPrefab<Projectile<Plasma>, RigidBody>, Error> {
+	) -> Result<ProjectilePrefab<Plasma>, Error> {
 		let transform = Transform::from_translation(Vec3::ZERO);
 
 		Ok(Prefab::new(
 			RigidBody::Fixed,
 			(
-				PbrBundle {
+				[PbrBundle {
 					transform,
 					material: materials.add(StandardMaterial {
 						emissive: Color::rgb_linear(2.0, 13.99, 13.99),
 						..default()
 					}),
-					mesh: meshes.add(sphere("plasma", PLASMA_RADIUS)?),
+					mesh: meshes.add(sphere(PLASMA_RADIUS, || "Cannot create plasma projectile")?),
 					..default()
-				},
+				}],
 				ColliderBundle::new_static_collider(transform, Collider::ball(PLASMA_RADIUS)),
 			),
 		))

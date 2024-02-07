@@ -1,4 +1,4 @@
-use super::{simple_model::SimpleModelPrefab, CreatePrefab};
+use super::{simple_collidable::SimpleCollidablePrefab, CreatePrefab};
 use crate::{bundles::ColliderBundle, components::Dummy, errors::Error, resources::Prefab};
 use bevy::{
 	asset::Assets,
@@ -14,23 +14,25 @@ use bevy::{
 };
 use bevy_rapier3d::geometry::Collider;
 
+pub type DummyPrefab = SimpleCollidablePrefab<Dummy, (), PbrBundle>;
+
 const DUMMY_DIMENSIONS: Vec3 = Vec3 {
 	x: 0.4,
 	y: 2.,
 	z: 0.4,
 };
 
-impl CreatePrefab<SimpleModelPrefab<Dummy, ()>, StandardMaterial> for Dummy {
+impl CreatePrefab<DummyPrefab, StandardMaterial> for Dummy {
 	fn create_prefab(
 		mut materials: ResMut<Assets<StandardMaterial>>,
 		mut meshes: ResMut<Assets<Mesh>>,
-	) -> Result<SimpleModelPrefab<Dummy, ()>, Error> {
+	) -> Result<DummyPrefab, Error> {
 		let transform = Transform::from_xyz(0., 1., 0.);
 
 		Ok(Prefab::new(
 			(),
 			(
-				PbrBundle {
+				[PbrBundle {
 					transform,
 					material: materials.add(StandardMaterial {
 						base_color: Color::GRAY,
@@ -42,7 +44,7 @@ impl CreatePrefab<SimpleModelPrefab<Dummy, ()>, StandardMaterial> for Dummy {
 						DUMMY_DIMENSIONS.z,
 					))),
 					..default()
-				},
+				}],
 				ColliderBundle::new_static_collider(
 					transform,
 					Collider::cuboid(

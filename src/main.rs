@@ -76,7 +76,7 @@ use project_zyheeda::{
 	traits::{
 		behavior::GetBehaviorMeta,
 		orbit::{Orbit, Vec2Radians},
-		prefab::simple_model::SimpleModelPrefab,
+		prefab::{dummy::DummyPrefab, projectile::ProjectilePrefab},
 	},
 };
 use std::{
@@ -95,8 +95,6 @@ fn main() {
 
 	app.run();
 }
-
-type Nothing = ();
 
 fn prepare_game(app: &mut App) {
 	app.add_plugins(DefaultPlugins)
@@ -119,12 +117,8 @@ fn prepare_game(app: &mut App) {
 		.add_systems(
 			Startup,
 			(
-				register::<Dummy, SimpleModelPrefab<Dummy, Nothing>, StandardMaterial>.pipe(log),
-				register::<
-					Projectile<Plasma>,
-					SimpleModelPrefab<Projectile<Plasma>, RigidBody>,
-					StandardMaterial,
-				>
+				register::<Dummy, DummyPrefab, StandardMaterial>.pipe(log),
+				register::<Projectile<Plasma>, ProjectilePrefab<Plasma>, StandardMaterial>
 					.pipe(log),
 			),
 		)
@@ -192,7 +186,7 @@ fn prepare_game(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				instantiate::<Projectile<Plasma>, SimpleModelPrefab<Projectile<Plasma>, RigidBody>>,
+				instantiate::<Projectile<Plasma>, ProjectilePrefab<Plasma>>,
 				projectile_behavior::<Projectile<Plasma>>,
 				execute_move::<(), Projectile<Plasma>, SimpleMovement, Virtual>,
 			)
@@ -211,10 +205,7 @@ fn prepare_game(app: &mut App) {
 			)
 				.chain(),
 		)
-		.add_systems(
-			Update,
-			instantiate::<Dummy, SimpleModelPrefab<Dummy, Nothing>>,
-		)
+		.add_systems(Update, instantiate::<Dummy, DummyPrefab>)
 		.add_systems(PostUpdate, destroy_on_collision);
 }
 
