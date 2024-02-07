@@ -170,3 +170,20 @@ impl<T> Default for MouseHover<T> {
 		Self(None)
 	}
 }
+
+#[derive(Resource)]
+pub struct Prefab<TFor, TParent, TChildren> {
+	pub parent: TParent,
+	pub children: TChildren,
+	phantom_data: PhantomData<TFor>,
+}
+
+impl<TFor, TParent, TChildren> Prefab<TFor, TParent, TChildren> {
+	pub fn new(parent: TParent, children: TChildren) -> Self {
+		Self {
+			parent,
+			children,
+			phantom_data: PhantomData,
+		}
+	}
+}

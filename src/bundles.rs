@@ -2,7 +2,14 @@ use crate::{
 	components::{Collection, DequeueNext, Equipment, Item, Queue, SlotBones, SlotKey, Slots},
 	types::BoneName,
 };
-use bevy::prelude::Bundle;
+use bevy::{
+	prelude::Bundle,
+	transform::{components::Transform, TransformBundle},
+};
+use bevy_rapier3d::{
+	geometry::{ActiveEvents, Collider},
+	prelude::ActiveCollisionTypes,
+};
 
 #[derive(Bundle)]
 pub struct Loadout {
@@ -24,6 +31,25 @@ impl Loadout {
 			slots: Slots::new(),
 			dequeue_next: DequeueNext,
 			queue: Queue([].into()),
+		}
+	}
+}
+
+#[derive(Bundle, Clone, Default)]
+pub struct ColliderBundle {
+	pub collider: Collider,
+	pub transform: TransformBundle,
+	pub active_events: ActiveEvents,
+	pub active_collision_types: ActiveCollisionTypes,
+}
+
+impl ColliderBundle {
+	pub fn new_static_collider(transform: Transform, collider: Collider) -> Self {
+		Self {
+			transform: TransformBundle::from_transform(transform),
+			collider,
+			active_events: ActiveEvents::COLLISION_EVENTS,
+			active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
 		}
 	}
 }
