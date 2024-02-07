@@ -63,13 +63,8 @@ use project_zyheeda::{
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
 		},
-		prefab::register::register,
-		procedural::{
-			collider::collider,
-			projectile_behavior::projectile_behavior,
-			render::render,
-			store_model_data::store_model_data,
-		},
+		prefab::{instantiate::instantiate, register::register},
+		procedural::projectile_behavior::projectile_behavior,
 		skill::{
 			chain_combo_skills::chain_combo_skills,
 			dequeue::dequeue,
@@ -120,22 +115,14 @@ fn prepare_game(app: &mut App) {
 		)
 		.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
 		.add_systems(Startup, setup_input)
+		.add_systems(Startup, load_models)
 		.add_systems(
 			Startup,
 			(
-				load_models,
-				store_model_data::<StandardMaterial, Projectile<Plasma>>,
-				store_model_data::<StandardMaterial, Dummy>,
-			),
-		)
-		.add_systems(
-			Startup,
-			(
-				register::<Dummy, SimpleModelPrefab<Dummy, Nothing, Sensor>, StandardMaterial>
-					.pipe(log),
+				register::<Dummy, SimpleModelPrefab<Dummy, Nothing>, StandardMaterial>.pipe(log),
 				register::<
 					Projectile<Plasma>,
-					SimpleModelPrefab<Projectile<Plasma>, RigidBody, Sensor>,
+					SimpleModelPrefab<Projectile<Plasma>, RigidBody>,
 					StandardMaterial,
 				>
 					.pipe(log),
@@ -205,8 +192,7 @@ fn prepare_game(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				render::<Projectile<Plasma>>,
-				collider::<Projectile<Plasma>>,
+				instantiate::<Projectile<Plasma>, SimpleModelPrefab<Projectile<Plasma>, RigidBody>>,
 				projectile_behavior::<Projectile<Plasma>>,
 				execute_move::<(), Projectile<Plasma>, SimpleMovement, Virtual>,
 			)
@@ -225,7 +211,10 @@ fn prepare_game(app: &mut App) {
 			)
 				.chain(),
 		)
-		.add_systems(Update, (render::<Dummy>, collider::<Dummy>).chain())
+		.add_systems(
+			Update,
+			instantiate::<Dummy, SimpleModelPrefab<Dummy, Nothing>>,
+		)
 		.add_systems(PostUpdate, destroy_on_collision);
 }
 
