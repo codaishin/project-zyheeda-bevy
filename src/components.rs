@@ -64,6 +64,9 @@ pub struct Player {
 	pub movement_mode: MovementMode,
 }
 
+#[derive(Component)]
+pub struct VoidSphere;
+
 #[derive(Component, Default)]
 pub struct Animator {
 	pub animation_player_id: Option<Entity>,
