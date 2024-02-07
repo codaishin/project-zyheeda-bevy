@@ -17,10 +17,7 @@ use bevy::{
 	transform::components::Transform,
 	utils::default,
 };
-use bevy_rapier3d::{
-	dynamics::RigidBody,
-	geometry::{Collider, Sensor},
-};
+use bevy_rapier3d::{dynamics::RigidBody, geometry::Collider};
 
 macro_rules! projectile_error {
 	($t:expr, $e:expr) => {
@@ -41,13 +38,13 @@ fn sphere(type_name: &'static str, radius: f32) -> Result<Mesh, Error> {
 
 const PLASMA_RADIUS: f32 = 0.05;
 
-impl CreatePrefab<SimpleModelPrefab<Projectile<Plasma>, RigidBody, Sensor>, StandardMaterial>
+impl CreatePrefab<SimpleModelPrefab<Projectile<Plasma>, RigidBody>, StandardMaterial>
 	for Projectile<Plasma>
 {
 	fn create_prefab(
 		mut materials: ResMut<Assets<StandardMaterial>>,
 		mut meshes: ResMut<Assets<Mesh>>,
-	) -> Result<SimpleModelPrefab<Projectile<Plasma>, RigidBody, Sensor>, Error> {
+	) -> Result<SimpleModelPrefab<Projectile<Plasma>, RigidBody>, Error> {
 		let transform = Transform::from_translation(Vec3::ZERO);
 
 		Ok(Prefab::new(

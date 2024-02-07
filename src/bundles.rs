@@ -7,7 +7,7 @@ use bevy::{
 	transform::{components::Transform, TransformBundle},
 };
 use bevy_rapier3d::{
-	geometry::{ActiveEvents, Collider, Sensor},
+	geometry::{ActiveEvents, Collider},
 	prelude::ActiveCollisionTypes,
 };
 
@@ -36,22 +36,20 @@ impl Loadout {
 }
 
 #[derive(Bundle, Clone, Default)]
-pub struct ColliderBundle<TExtra: Bundle + Clone + Default> {
+pub struct ColliderBundle {
 	pub collider: Collider,
 	pub transform: TransformBundle,
 	pub active_events: ActiveEvents,
 	pub active_collision_types: ActiveCollisionTypes,
-	pub extra: TExtra,
 }
 
-impl ColliderBundle<Sensor> {
+impl ColliderBundle {
 	pub fn new_static_collider(transform: Transform, collider: Collider) -> Self {
 		Self {
 			transform: TransformBundle::from_transform(transform),
 			collider,
 			active_events: ActiveEvents::COLLISION_EVENTS,
 			active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
-			extra: Sensor,
 		}
 	}
 }

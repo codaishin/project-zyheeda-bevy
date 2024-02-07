@@ -12,7 +12,7 @@ use bevy::{
 	transform::components::Transform,
 	utils::default,
 };
-use bevy_rapier3d::geometry::{Collider, Sensor};
+use bevy_rapier3d::geometry::Collider;
 
 const DUMMY_DIMENSIONS: Vec3 = Vec3 {
 	x: 0.4,
@@ -20,11 +20,11 @@ const DUMMY_DIMENSIONS: Vec3 = Vec3 {
 	z: 0.4,
 };
 
-impl CreatePrefab<SimpleModelPrefab<Dummy, (), Sensor>, StandardMaterial> for Dummy {
+impl CreatePrefab<SimpleModelPrefab<Dummy, ()>, StandardMaterial> for Dummy {
 	fn create_prefab(
 		mut materials: ResMut<Assets<StandardMaterial>>,
 		mut meshes: ResMut<Assets<Mesh>>,
-	) -> Result<SimpleModelPrefab<Dummy, (), Sensor>, Error> {
+	) -> Result<SimpleModelPrefab<Dummy, ()>, Error> {
 		let transform = Transform::from_xyz(0., 1., 0.);
 
 		Ok(Prefab::new(

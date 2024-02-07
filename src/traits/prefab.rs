@@ -5,11 +5,7 @@ pub mod simple_model;
 use crate::errors::Error;
 use bevy::{
 	asset::{Asset, Assets},
-	ecs::{
-		bundle::Bundle,
-		entity::Entity,
-		system::{EntityCommands, ResMut},
-	},
+	ecs::system::{EntityCommands, ResMut},
 	pbr::StandardMaterial,
 	render::mesh::Mesh,
 };
@@ -21,6 +17,6 @@ pub trait CreatePrefab<TPrefab, TMaterial: Asset = StandardMaterial> {
 	) -> Result<TPrefab, Error>;
 }
 
-pub trait SpawnPrefab<TRootReference: From<Entity> + Bundle> {
+pub trait SpawnPrefab<TFor> {
 	fn spawn_prefab(&self, parent: &mut EntityCommands);
 }
