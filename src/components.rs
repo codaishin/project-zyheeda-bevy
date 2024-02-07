@@ -67,6 +67,13 @@ pub struct Player {
 #[derive(Component)]
 pub struct VoidSphere;
 
+#[derive(Component, Clone)]
+pub enum VoidSpherePart {
+	Core,
+	RingA(UnitsPerSecond),
+	RingB(UnitsPerSecond),
+}
+
 #[derive(Component, Default)]
 pub struct Animator {
 	pub animation_player_id: Option<Entity>,

@@ -1,7 +1,9 @@
-use std::f32::consts::PI;
-
 use super::{complex_collidable::ComplexCollidablePrefab, sphere, CreatePrefab};
-use crate::{bundles::ColliderBundle, components::VoidSphere, errors::Error};
+use crate::{
+	bundles::ColliderBundle,
+	components::{UnitsPerSecond, VoidSphere, VoidSpherePart},
+	errors::Error,
+};
 use bevy::{
 	asset::Assets,
 	ecs::{bundle::Bundle, system::ResMut},
@@ -15,18 +17,21 @@ use bevy::{
 	utils::default,
 };
 use bevy_rapier3d::geometry::Collider;
+use std::f32::consts::PI;
 
 #[derive(Bundle)]
 pub struct PbrVoidSphereBundle {
 	pbr_bundle: PbrBundle,
 	not_shadow_caster: NotShadowCaster,
+	void_sphere_part: VoidSpherePart,
 }
 
 impl PbrVoidSphereBundle {
-	pub fn new(pbr_bundle: PbrBundle) -> Self {
+	pub fn new(pbr_bundle: PbrBundle, part: VoidSpherePart) -> Self {
 		Self {
 			pbr_bundle,
 			not_shadow_caster: NotShadowCaster,
+			void_sphere_part: part,
 		}
 	}
 }
@@ -36,6 +41,7 @@ impl Clone for PbrVoidSphereBundle {
 		Self {
 			pbr_bundle: self.pbr_bundle.clone(),
 			not_shadow_caster: NotShadowCaster,
+			void_sphere_part: self.void_sphere_part.clone(),
 		}
 	}
 }
@@ -78,24 +84,33 @@ impl CreatePrefab<VoidSpherePrefab> for VoidSphere {
 			(),
 			(
 				[
-					PbrVoidSphereBundle::new(PbrBundle {
-						mesh: core_mesh,
-						material: core_material,
-						transform,
-						..default()
-					}),
-					PbrVoidSphereBundle::new(PbrBundle {
-						mesh: torus_mesh.clone(),
-						material: torus_material.clone(),
-						transform,
-						..default()
-					}),
-					PbrVoidSphereBundle::new(PbrBundle {
-						mesh: torus_mesh.clone(),
-						material: torus_material.clone(),
-						transform: transform_2nd_ring,
-						..default()
-					}),
+					PbrVoidSphereBundle::new(
+						PbrBundle {
+							mesh: core_mesh,
+							material: core_material,
+							transform,
+							..default()
+						},
+						VoidSpherePart::Core,
+					),
+					PbrVoidSphereBundle::new(
+						PbrBundle {
+							mesh: torus_mesh.clone(),
+							material: torus_material.clone(),
+							transform,
+							..default()
+						},
+						VoidSpherePart::RingA(UnitsPerSecond::new(PI / 50.)),
+					),
+					PbrVoidSphereBundle::new(
+						PbrBundle {
+							mesh: torus_mesh.clone(),
+							material: torus_material.clone(),
+							transform: transform_2nd_ring,
+							..default()
+						},
+						VoidSpherePart::RingB(UnitsPerSecond::new(PI / 75.)),
+					),
 				],
 				ColliderBundle {
 					transform: TransformBundle::from_transform(transform),

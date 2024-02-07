@@ -71,6 +71,7 @@ use project_zyheeda::{
 			enqueue::enqueue,
 			execute_skill::execute_skill,
 		},
+		void_sphere::ring_rotation::ring_rotation,
 	},
 	tools::Tools,
 	traits::{
@@ -205,7 +206,10 @@ fn prepare_game(app: &mut App) {
 			)
 				.chain(),
 		)
-		.add_systems(Update, instantiate::<VoidSphere, VoidSpherePrefab>)
+		.add_systems(
+			Update,
+			(instantiate::<VoidSphere, VoidSpherePrefab>, ring_rotation),
+		)
 		.add_systems(PostUpdate, destroy_on_collision);
 }
 
