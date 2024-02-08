@@ -1,27 +1,14 @@
-pub mod complex_collidable;
 pub mod dummy;
 pub mod projectile;
-pub mod simple_collidable;
 pub mod void_sphere;
 
 use crate::errors::{Error, Level};
 use bevy::{
-	asset::{Asset, Assets, Handle},
-	ecs::system::{EntityCommands, ResMut},
+	asset::Handle,
+	ecs::system::EntityCommands,
 	pbr::StandardMaterial,
 	render::mesh::{shape::Icosphere, Mesh},
 };
-
-pub trait CreatePrefab<TPrefab, TMaterial: Asset = StandardMaterial> {
-	fn create_prefab(
-		materials: ResMut<Assets<TMaterial>>,
-		meshes: ResMut<Assets<Mesh>>,
-	) -> Result<TPrefab, Error>;
-}
-
-pub trait SpawnPrefab<TFor> {
-	fn spawn_prefab(&self, parent: &mut EntityCommands);
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ProjectileType {

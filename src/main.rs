@@ -52,7 +52,7 @@ use project_zyheeda::{
 			slots::add_item_slots,
 			swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
 		},
-		log::{log, log_many},
+		log::log_many,
 		mouse_context::{
 			advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
 			release::release_triggered_mouse_context,
@@ -64,7 +64,7 @@ use project_zyheeda::{
 			move_on_orbit::move_on_orbit,
 			toggle_walk_run::player_toggle_walk_run,
 		},
-		prefab::{instantiate::instantiate, register::register},
+		prefab::instantiate::instantiate,
 		skill::{
 			chain_combo_skills::chain_combo_skills,
 			dequeue::dequeue,
@@ -77,7 +77,7 @@ use project_zyheeda::{
 	traits::{
 		behavior::GetBehaviorMeta,
 		orbit::{Orbit, Vec2Radians},
-		prefab::{projectile::ProjectilePrefab, void_sphere::VoidSpherePrefab, AssetKey},
+		prefab::AssetKey,
 	},
 };
 use std::{
@@ -117,14 +117,6 @@ fn prepare_game(app: &mut App) {
 		.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
 		.add_systems(Startup, setup_input)
 		.add_systems(Startup, load_models)
-		.add_systems(
-			Startup,
-			(
-				register::<VoidSphere, VoidSpherePrefab, StandardMaterial>.pipe(log),
-				register::<Projectile<Plasma>, ProjectilePrefab<Plasma>, StandardMaterial>
-					.pipe(log),
-			),
-		)
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(
 			First,
