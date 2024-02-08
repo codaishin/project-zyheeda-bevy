@@ -23,18 +23,18 @@ pub trait SpawnPrefab<TFor> {
 	fn spawn_prefab(&self, parent: &mut EntityCommands);
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ProjectileType {
 	Plasma,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum VoidPart {
 	Core,
 	Ring,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AssetKey {
 	Projectile(ProjectileType),
 	Dummy,

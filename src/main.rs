@@ -31,7 +31,7 @@ use project_zyheeda::{
 	},
 	errors::Error,
 	plugins::ingame_menu::IngameMenuPlugin,
-	resources::{skill_templates::SkillTemplates, Models, MouseHover, SkillIcons, SlotMap},
+	resources::{skill_templates::SkillTemplates, Models, MouseHover, Shared, SkillIcons, SlotMap},
 	skill::{Active, Cast, Skill, SkillComboNext, SkillComboTree, SwordStrike},
 	states::{GameRunning, MouseContext},
 	systems::{
@@ -77,7 +77,7 @@ use project_zyheeda::{
 	traits::{
 		behavior::GetBehaviorMeta,
 		orbit::{Orbit, Vec2Radians},
-		prefab::{projectile::ProjectilePrefab, void_sphere::VoidSpherePrefab},
+		prefab::{projectile::ProjectilePrefab, void_sphere::VoidSpherePrefab, AssetKey},
 	},
 };
 use std::{
@@ -103,6 +103,8 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_state::<GameRunning>()
 		.add_state::<MouseContext>()
+		.init_resource::<Shared<AssetKey, Handle<Mesh>>>()
+		.init_resource::<Shared<AssetKey, Handle<StandardMaterial>>>()
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
 		.add_systems(
@@ -187,7 +189,7 @@ fn prepare_game(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				instantiate::<Projectile<Plasma>, ProjectilePrefab<Plasma>>,
+				instantiate::<Projectile<Plasma>>.pipe(log_many),
 				projectile_behavior::<Projectile<Plasma>>,
 				execute_move::<(), Projectile<Plasma>, SimpleMovement, Virtual>,
 			)
@@ -209,7 +211,7 @@ fn prepare_game(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				instantiate::<VoidSphere, VoidSpherePrefab>,
+				instantiate::<VoidSphere>.pipe(log_many),
 				ring_rotation,
 				void_sphere_behavior,
 				execute_move::<(), VoidSphere, SimpleMovement, Virtual>,
