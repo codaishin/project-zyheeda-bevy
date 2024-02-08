@@ -40,6 +40,7 @@ use project_zyheeda::{
 			load_animations::load_animations,
 			play_animations::play_animations,
 		},
+		behavior::{projectile::projectile_behavior, void_sphere::void_sphere_behavior},
 		input::{
 			schedule_slots::schedule_slots,
 			set_cam_ray::set_cam_ray,
@@ -64,7 +65,6 @@ use project_zyheeda::{
 			toggle_walk_run::player_toggle_walk_run,
 		},
 		prefab::{instantiate::instantiate, register::register},
-		procedural::projectile_behavior::projectile_behavior,
 		skill::{
 			chain_combo_skills::chain_combo_skills,
 			dequeue::dequeue,
@@ -208,7 +208,12 @@ fn prepare_game(app: &mut App) {
 		)
 		.add_systems(
 			Update,
-			(instantiate::<VoidSphere, VoidSpherePrefab>, ring_rotation),
+			(
+				instantiate::<VoidSphere, VoidSpherePrefab>,
+				ring_rotation,
+				void_sphere_behavior,
+				execute_move::<(), VoidSphere, SimpleMovement, Virtual>,
+			),
 		)
 		.add_systems(PostUpdate, destroy_on_collision);
 }
