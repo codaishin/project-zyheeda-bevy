@@ -6,7 +6,7 @@ pub mod void_sphere;
 
 use crate::errors::{Error, Level};
 use bevy::{
-	asset::{Asset, Assets},
+	asset::{Asset, Assets, Handle},
 	ecs::system::{EntityCommands, ResMut},
 	pbr::StandardMaterial,
 	render::mesh::{shape::Icosphere, Mesh},
@@ -21,6 +21,32 @@ pub trait CreatePrefab<TPrefab, TMaterial: Asset = StandardMaterial> {
 
 pub trait SpawnPrefab<TFor> {
 	fn spawn_prefab(&self, parent: &mut EntityCommands);
+}
+
+#[derive(Clone, Copy)]
+pub enum ProjectileType {
+	Plasma,
+}
+
+#[derive(Clone, Copy)]
+pub enum VoidPart {
+	Core,
+	Ring,
+}
+
+#[derive(Clone, Copy)]
+pub enum AssetKey {
+	Projectile(ProjectileType),
+	Dummy,
+	VoidSphere(VoidPart),
+}
+
+pub trait Instantiate {
+	fn instantiate(
+		on: &mut EntityCommands,
+		get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
+		get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
+	) -> Result<(), Error>;
 }
 
 macro_rules! projectile_error {
