@@ -1,5 +1,6 @@
 pub mod player;
 pub mod projectile;
+pub mod void_sphere;
 
 use crate::components::{Animate, UnitsPerSecond};
 
