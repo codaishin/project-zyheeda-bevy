@@ -11,6 +11,7 @@ use project_zyheeda::{
 		CamOrbit,
 		ComboTreeTemplate,
 		Handed,
+		Health,
 		Inventory,
 		InventoryKey,
 		Item,
@@ -535,6 +536,7 @@ fn spawn_player(
 
 	commands.spawn((
 		Name::from("Player"),
+		Health::new(100),
 		SceneBundle {
 			scene: asset_server.load("models/player.gltf#Scene0"),
 			..default()
