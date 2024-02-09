@@ -309,7 +309,7 @@ pub struct ColliderRoot(pub Entity);
 #[derive(Component)]
 pub struct Bar<T> {
 	pub position: Option<Vec2>,
-	pub for_entity: Entity,
+	pub ui: Option<Entity>,
 	pub current: f32,
 	pub max: f32,
 	pub scale: f32,
@@ -317,16 +317,10 @@ pub struct Bar<T> {
 }
 
 impl<T> Bar<T> {
-	pub fn new(
-		position: Option<Vec2>,
-		for_entity: Entity,
-		current: f32,
-		max: f32,
-		scale: f32,
-	) -> Self {
+	pub fn new(position: Option<Vec2>, current: f32, max: f32, scale: f32) -> Self {
 		Self {
 			position,
-			for_entity,
+			ui: None,
 			current,
 			max,
 			scale,
