@@ -6,7 +6,7 @@ use crate::{
 };
 use bevy::{
 	asset::Handle,
-	ecs::bundle::Bundle,
+	ecs::{bundle::Bundle, system::EntityCommands},
 	hierarchy::BuildChildren,
 	math::Vec3,
 	pbr::{NotShadowCaster, PbrBundle, StandardMaterial},
@@ -17,7 +17,10 @@ use bevy::{
 	transform::{components::Transform, TransformBundle},
 	utils::default,
 };
-use bevy_rapier3d::geometry::Collider;
+use bevy_rapier3d::{
+	dynamics::{GravityScale, RigidBody},
+	geometry::Collider,
+};
 use std::f32::consts::PI;
 
 #[derive(Bundle)]
@@ -55,7 +58,7 @@ const VOID_SPHERE_GROUND_OFFSET: Vec3 = Vec3::new(0., 1.2, 0.);
 
 impl Instantiate for VoidSphere {
 	fn instantiate(
-		on: &mut bevy::ecs::system::EntityCommands,
+		on: &mut EntityCommands,
 		mut get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
 		mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
 	) -> Result<(), Error> {
@@ -82,6 +85,7 @@ impl Instantiate for VoidSphere {
 		let mut transform_2nd_ring = transform;
 		transform_2nd_ring.rotate_axis(Vec3::Z, PI / 2.);
 
+		on.insert((RigidBody::Dynamic, GravityScale(0.)));
 		on.with_children(|parent| {
 			parent.spawn(PbrVoidSphereBundle::new(
 				PbrBundle {
