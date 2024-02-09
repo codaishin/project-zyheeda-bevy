@@ -72,6 +72,7 @@ use project_zyheeda::{
 			enqueue::enqueue,
 			execute_skill::execute_skill,
 		},
+		ui::{bar::bar, render_bar::render_bar},
 		void_sphere::ring_rotation::ring_rotation,
 	},
 	tools::Tools,
@@ -208,6 +209,15 @@ fn prepare_game(app: &mut App) {
 				ring_rotation,
 				void_sphere_behavior,
 			),
+		)
+		.add_systems(
+			Update,
+			(
+				bar::<Player, Health, Camera>,
+				bar::<VoidSphere, Health, Camera>,
+				render_bar::<Health>,
+			)
+				.chain(),
 		)
 		.add_systems(PostUpdate, destroy_on_collision);
 }
