@@ -206,7 +206,6 @@ fn prepare_game(app: &mut App) {
 				instantiate::<VoidSphere>.pipe(log_many),
 				ring_rotation,
 				void_sphere_behavior,
-				execute_move::<(), VoidSphere, SimpleMovement, Virtual>,
 			),
 		)
 		.add_systems(PostUpdate, destroy_on_collision);

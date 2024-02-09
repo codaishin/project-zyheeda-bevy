@@ -1,4 +1,7 @@
-use crate::components::{Player, SimpleMovement, VoidSphere};
+use crate::{
+	components::{Player, VoidSphere},
+	traits::movement_data::MovementData,
+};
 use bevy::{
 	ecs::{
 		entity::Entity,
@@ -7,10 +10,11 @@ use bevy::{
 	},
 	transform::components::Transform,
 };
+use bevy_rapier3d::dynamics::Velocity;
 
 pub fn void_sphere_behavior(
 	mut commands: Commands,
-	void_spheres: Query<Entity, With<VoidSphere>>,
+	void_spheres: Query<(Entity, &Transform, &VoidSphere)>,
 	players: Query<&Transform, With<Player>>,
 ) {
 	let Ok(player_transform) = players.get_single() else {
@@ -18,22 +22,28 @@ pub fn void_sphere_behavior(
 	};
 	let target = player_transform.translation;
 
-	for void_sphere in &void_spheres {
-		commands
-			.entity(void_sphere)
-			.insert(SimpleMovement { target });
+	for (id, transform, void_sphere) in &void_spheres {
+		let (speed, ..) = void_sphere.get_movement_data();
+		let position = transform.translation;
+		commands.entity(id).insert(Velocity::linear(
+			(target - position).normalize() * speed.to_f32(),
+		));
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Player, SimpleMovement, VoidSphere};
+	use crate::{
+		components::{Player, VoidSphere},
+		traits::movement_data::MovementData,
+	};
 	use bevy::{
 		app::{App, Update},
 		math::Vec3,
 		transform::components::Transform,
 	};
+	use bevy_rapier3d::dynamics::Velocity;
 
 	fn setup(player_position: Vec3) -> App {
 		let mut app = App::new();
@@ -47,32 +57,46 @@ mod tests {
 	}
 
 	#[test]
-	fn follow_player() {
+	fn velocity_to_follow_player() {
 		let player_position = Vec3::new(1., 2., 3.);
 		let mut app = setup(player_position);
-		let void_sphere = app.world.spawn(VoidSphere).id();
+		let void_sphere = VoidSphere;
+		let (speed, ..) = void_sphere.get_movement_data();
+		let void_sphere = app.world.spawn((Transform::default(), void_sphere)).id();
 
 		app.update();
 
 		let void_sphere = app.world.entity(void_sphere);
 
 		assert_eq!(
-			Some(&SimpleMovement {
-				target: player_position
-			}),
-			void_sphere.get::<SimpleMovement>()
+			Some(&Velocity::linear(
+				player_position.normalize() * speed.to_f32()
+			)),
+			void_sphere.get::<Velocity>()
 		);
 	}
 
 	#[test]
-	fn apply_only_to_void_spheres() {
-		let mut app = setup(Vec3::default());
-		let not_void_sphere = app.world.spawn_empty().id();
+	fn velocity_to_follow_player_from_offset() {
+		let player_position = Vec3::new(1., 2., 3.);
+		let mut app = setup(player_position);
+		let void_sphere = VoidSphere;
+		let (speed, ..) = void_sphere.get_movement_data();
+		let position = Vec3::new(4., 5., 6.);
+		let void_sphere = app
+			.world
+			.spawn((Transform::from_translation(position), void_sphere))
+			.id();
 
 		app.update();
 
-		let not_void_sphere = app.world.entity(not_void_sphere);
+		let void_sphere = app.world.entity(void_sphere);
 
-		assert_eq!(None, not_void_sphere.get::<SimpleMovement>());
+		assert_eq!(
+			Some(&Velocity::linear(
+				(player_position - position).normalize() * speed.to_f32()
+			)),
+			void_sphere.get::<Velocity>()
+		);
 	}
 }
