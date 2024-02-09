@@ -3,7 +3,10 @@ use crate::{
 	skill::{Queued, Skill, SkillComboTree},
 	types::BoneName,
 };
-use bevy::prelude::{Component, Entity, Vec3};
+use bevy::{
+	math::Vec2,
+	prelude::{Component, Entity, Vec3},
+};
 use core::fmt::Display;
 use std::{
 	collections::{HashMap, HashSet, VecDeque},
@@ -72,6 +75,21 @@ pub enum VoidSpherePart {
 	Core,
 	RingA(UnitsPerSecond),
 	RingB(UnitsPerSecond),
+}
+
+#[derive(Component)]
+pub struct Health {
+	pub current: u8,
+	pub max: u8,
+}
+
+impl Health {
+	pub fn new(value: u8) -> Self {
+		Self {
+			current: value,
+			max: value,
+		}
+	}
 }
 
 #[derive(Component, Default)]
@@ -287,3 +305,32 @@ pub struct Dummy;
 
 #[derive(Component, PartialEq, Debug)]
 pub struct ColliderRoot(pub Entity);
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct UI {
+	pub background: Entity,
+	pub foreground: Entity,
+}
+
+#[derive(Component)]
+pub struct Bar<T> {
+	pub position: Option<Vec2>,
+	pub ui: Option<UI>,
+	pub current: f32,
+	pub max: f32,
+	pub scale: f32,
+	pub phantom_data: PhantomData<T>,
+}
+
+impl<T> Bar<T> {
+	pub fn new(position: Option<Vec2>, current: f32, max: f32, scale: f32) -> Self {
+		Self {
+			position,
+			ui: None,
+			current,
+			max,
+			scale,
+			phantom_data: PhantomData,
+		}
+	}
+}

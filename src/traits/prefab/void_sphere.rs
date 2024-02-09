@@ -1,7 +1,7 @@
 use super::{sphere, AssetKey, Instantiate, VoidPart};
 use crate::{
 	bundles::ColliderBundle,
-	components::{ColliderRoot, UnitsPerSecond, VoidSphere, VoidSpherePart},
+	components::{ColliderRoot, Health, UnitsPerSecond, VoidSphere, VoidSpherePart},
 	errors::Error,
 };
 use bevy::{
@@ -85,7 +85,7 @@ impl Instantiate for VoidSphere {
 		let mut transform_2nd_ring = transform;
 		transform_2nd_ring.rotate_axis(Vec3::Z, PI / 2.);
 
-		on.insert((RigidBody::Dynamic, GravityScale(0.)));
+		on.insert((RigidBody::Dynamic, GravityScale(0.), Health::new(5)));
 		on.with_children(|parent| {
 			parent.spawn(PbrVoidSphereBundle::new(
 				PbrBundle {
