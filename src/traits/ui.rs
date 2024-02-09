@@ -1,6 +1,6 @@
 pub mod health;
 
-use bevy::math::Vec3;
+use bevy::{math::Vec3, render::color::Color};
 
 pub trait UIBarOffset<T> {
 	fn ui_bar_offset() -> Vec3;
@@ -12,4 +12,9 @@ pub trait UIBarScale<T> {
 
 pub trait UIBarUpdate<T> {
 	fn update(&mut self, value: &T);
+}
+
+pub trait UIBarColors {
+	fn background_color() -> Color;
+	fn foreground_color() -> Color;
 }
