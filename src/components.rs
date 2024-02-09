@@ -306,10 +306,16 @@ pub struct Dummy;
 #[derive(Component, PartialEq, Debug)]
 pub struct ColliderRoot(pub Entity);
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct UI {
+	pub background: Entity,
+	pub foreground: Entity,
+}
+
 #[derive(Component)]
 pub struct Bar<T> {
 	pub position: Option<Vec2>,
-	pub ui: Option<Entity>,
+	pub ui: Option<UI>,
 	pub current: f32,
 	pub max: f32,
 	pub scale: f32,
