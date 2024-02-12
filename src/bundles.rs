@@ -1,5 +1,5 @@
 use crate::{
-	components::{Collection, DequeueNext, Equipment, Item, Queue, SlotBones, SlotKey, Slots},
+	components::{DequeueNext, SlotBones},
 	types::BoneName,
 };
 use bevy::{
@@ -10,6 +10,7 @@ use bevy_rapier3d::{
 	geometry::{ActiveEvents, Collider},
 	prelude::ActiveCollisionTypes,
 };
+use common::components::{Collection, Equipment, Item, Queue, SlotKey, Slots};
 
 #[derive(Bundle)]
 pub struct Loadout {

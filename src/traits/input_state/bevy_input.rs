@@ -1,4 +1,4 @@
-use crate::{components::SlotKey, resources::SlotMap};
+use common::{components::SlotKey, resources::SlotMap};
 
 use super::{InputState, ShouldEnqueue};
 use bevy::input::{keyboard::KeyCode, Input};
@@ -36,8 +36,8 @@ impl ShouldEnqueue for Input<KeyCode> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Side;
 	use bevy::input::keyboard::KeyCode;
+	use common::components::Side;
 	use std::collections::HashSet;
 
 	#[test]

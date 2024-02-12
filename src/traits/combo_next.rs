@@ -1,6 +1,6 @@
 pub mod skill_combo_next;
 
-use crate::{
+use common::{
 	components::SlotKey,
 	skill::{Active, Skill, SkillComboTree},
 };

@@ -1,7 +1,5 @@
 use crate::{
-	behaviors::meta::Spawner,
-	components::{Animate, DequeueNext, SlotKey, Slots},
-	skill::SkillState,
+	components::{Animate, DequeueNext},
 	traits::{
 		behavior_execution::BehaviorExecution,
 		get_animation::GetAnimation,
@@ -11,6 +9,11 @@ use crate::{
 use bevy::{
 	ecs::{component::Component, system::EntityCommands},
 	prelude::{Commands, Entity, GlobalTransform, Mut, Query, Res, Time, Transform},
+};
+use common::{
+	behaviors::meta::Spawner,
+	components::{SlotKey, Slots},
+	skill::SkillState,
 };
 use std::{collections::HashSet, time::Duration};
 
@@ -147,8 +150,7 @@ fn get_spawner(slots: &Slots, transforms: &Query<&GlobalTransform>) -> Option<Sp
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Animate, DequeueNext, Slot, SlotKey},
-		test_tools::utils::TickTime,
+		components::{Animate, DequeueNext},
 		traits::state_duration::StateMeta,
 	};
 	use bevy::{
@@ -156,6 +158,7 @@ mod tests {
 		prelude::{App, Transform, Update, Vec3},
 		time::{Real, Time},
 	};
+	use common::{components::Slot, test_tools::utils::TickTime};
 	use mockall::{mock, predicate::eq};
 	use std::time::Duration;
 

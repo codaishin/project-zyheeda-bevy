@@ -21,8 +21,8 @@ impl Movement for SimpleMovement {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::test_tools::utils::assert_eq_approx;
 	use bevy::prelude::{Transform, Vec3};
+	use common::test_tools::utils::assert_eq_approx;
 
 	#[test]
 	fn move_to_target() {

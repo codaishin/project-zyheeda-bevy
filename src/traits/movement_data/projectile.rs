@@ -1,5 +1,6 @@
 use super::MovementData;
-use crate::components::{Animate, Projectile, UnitsPerSecond};
+use crate::components::{Animate, Projectile};
+use common::tools::UnitsPerSecond;
 
 const PROJECTILE_MOVE_SPEED: f32 = 15.;
 

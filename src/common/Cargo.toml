@@ -1,0 +1,12 @@
+[package]
+name = "common"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bevy.workspace = true
+bevy_rapier3d.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+mockall.workspace = true

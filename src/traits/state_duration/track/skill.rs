@@ -1,7 +1,7 @@
-use crate::{
-	components::{PlayerSkills, SideUnset, Track},
-	skill::{Active, Skill, SkillState},
-	traits::state_duration::StateDuration,
+use crate::traits::state_duration::StateDuration;
+use common::{
+	components::{SideUnset, Track},
+	skill::{Active, PlayerSkills, Skill, SkillState},
 };
 use std::time::Duration;
 
@@ -23,8 +23,8 @@ impl StateDuration<SkillState> for Track<Skill<PlayerSkills<SideUnset>, Active>>
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::skill::{Cast, SkillState};
 	use bevy::utils::default;
+	use common::skill::Cast;
 
 	#[test]
 	fn get_phasing_times() {

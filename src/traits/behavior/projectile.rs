@@ -1,10 +1,10 @@
 use super::GetBehaviorMeta;
-use crate::{
+use crate::components::Projectile;
+use bevy::{ecs::system::EntityCommands, prelude::SpatialBundle, transform::components::Transform};
+use common::{
 	behaviors::meta::{BehaviorMeta, Spawner, Target},
-	components::Projectile,
 	tools::look_from_spawner,
 };
-use bevy::{ecs::system::EntityCommands, prelude::SpatialBundle, transform::components::Transform};
 
 impl<T: Send + Sync + 'static> GetBehaviorMeta for Projectile<T> {
 	fn behavior() -> BehaviorMeta {
@@ -32,7 +32,7 @@ fn run_fn<T: Send + Sync + 'static>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{test_tools::utils::assert_eq_approx, traits::behavior::test_tools::run_lazy};
+	use crate::traits::behavior::test_tools::run_lazy;
 	use bevy::{
 		app::{App, Update},
 		math::{Ray, Vec3},
@@ -40,6 +40,7 @@ mod tests {
 		transform::components::GlobalTransform,
 		utils::default,
 	};
+	use common::test_tools::utils::assert_eq_approx;
 
 	#[test]
 	fn spawn_projectile_with_agent_forward() {

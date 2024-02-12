@@ -1,9 +1,7 @@
 use super::GetBehaviorMeta;
-use crate::{
-	behaviors::meta::{BehaviorMeta, Spawner, Target},
-	components::SimpleMovement,
-};
+use crate::components::SimpleMovement;
 use bevy::{ecs::system::EntityCommands, math::Vec3, transform::components::Transform};
+use common::behaviors::meta::{BehaviorMeta, Spawner, Target};
 
 fn run_fn(
 	agent: &mut EntityCommands,
@@ -36,14 +34,12 @@ impl GetBehaviorMeta for SimpleMovement {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		test_tools::utils::assert_eq_approx,
-		traits::behavior::test_tools::{run_lazy, stop_lazy},
-	};
+	use crate::traits::behavior::test_tools::{run_lazy, stop_lazy};
 	use bevy::{
 		prelude::{App, Ray, Update, Vec3},
 		utils::default,
 	};
+	use common::test_tools::utils::assert_eq_approx;
 
 	#[test]
 	fn move_to_zero() {

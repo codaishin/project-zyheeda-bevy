@@ -3,38 +3,43 @@ use bevy::{
 	prelude::*,
 };
 use bevy_rapier3d::prelude::*;
-use project_zyheeda::{
+use common::{
 	behaviors::MovementMode,
+	components::{
+		Handed,
+		Inventory,
+		InventoryKey,
+		Item,
+		ItemType,
+		Player,
+		Side,
+		SideUnset,
+		SlotKey,
+		Swap,
+		Track,
+		VoidSphere,
+	},
+	errors::Error,
+	resources::{MouseHover, SkillIcons, SlotMap},
+	skill::{Active, Cast, PlayerSkills, Skill, SkillComboNext, SkillComboTree, SwordStrike},
+	states::{GameRunning, MouseContext},
+	systems::log::log_many,
+	tools::{Tools, UnitsPerSecond},
+};
+use ingame_menu::IngameMenuPlugin;
+use project_zyheeda::{
 	bundles::Loadout,
 	components::{
 		Animator,
 		CamOrbit,
 		ComboTreeTemplate,
-		Handed,
 		Health,
-		Inventory,
-		InventoryKey,
-		Item,
-		ItemType,
 		Plasma,
-		Player,
 		PlayerMovement,
-		PlayerSkills,
 		Projectile,
-		Side,
-		SideUnset,
 		SimpleMovement,
-		SlotKey,
-		Swap,
-		Track,
-		UnitsPerSecond,
-		VoidSphere,
 	},
-	errors::Error,
-	plugins::ingame_menu::IngameMenuPlugin,
-	resources::{skill_templates::SkillTemplates, Models, MouseHover, Shared, SkillIcons, SlotMap},
-	skill::{Active, Cast, Skill, SkillComboNext, SkillComboTree, SwordStrike},
-	states::{GameRunning, MouseContext},
+	resources::{skill_templates::SkillTemplates, Models, Shared},
 	systems::{
 		animations::{
 			link_animator::link_animators_with_new_animation_players,
@@ -48,12 +53,7 @@ use project_zyheeda::{
 			set_mouse_hover::set_mouse_hover,
 		},
 		interactions::destroy_on_collision::destroy_on_collision,
-		items::{
-			equip::equip_item,
-			slots::add_item_slots,
-			swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
-		},
-		log::log_many,
+		items::{equip::equip_item, slots::add_item_slots},
 		mouse_context::{
 			advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
 			release::release_triggered_mouse_context,
@@ -75,7 +75,6 @@ use project_zyheeda::{
 		ui::{bar::bar, render_bar::render_bar},
 		void_sphere::ring_rotation::ring_rotation,
 	},
-	tools::Tools,
 	traits::{
 		behavior::GetBehaviorMeta,
 		orbit::{Orbit, Vec2Radians},
@@ -163,8 +162,6 @@ fn prepare_game(app: &mut App) {
 				equip_item::<Player, (SlotKey, Option<Item>)>.pipe(log_many),
 				equip_item::<Inventory, Swap<InventoryKey, SlotKey>>.pipe(log_many),
 				equip_item::<Inventory, Swap<SlotKey, InventoryKey>>.pipe(log_many),
-				swap_equipped_items.pipe(log_many),
-				swap_inventory_items,
 			),
 		)
 		.add_systems(
@@ -555,7 +552,7 @@ fn spawn_player(
 		Player {
 			walk_speed: UnitsPerSecond::new(0.75),
 			run_speed: UnitsPerSecond::new(1.5),
-			movement_mode: MovementMode::Slow,
+			movement_mode: MovementMode::Fast,
 		},
 		Inventory::new([Some(sword_a), Some(sword_b), Some(pistol_c)]),
 		Loadout::new(

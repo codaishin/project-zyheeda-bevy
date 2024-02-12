@@ -1,13 +1,13 @@
-use crate::{
-	components::{Collection, Item, Slot, SlotKey, Slots},
-	errors::{Error, Level},
-	resources::Models,
-	traits::accessor::Accessor,
-};
+use crate::resources::Models;
 use bevy::{
 	ecs::component::Component,
 	prelude::{Commands, Entity, Handle, Mut, Query, Res},
 	scene::Scene,
+};
+use common::{
+	components::{Collection, Item, Slot, SlotKey, Slots},
+	errors::{Error, Level},
+	traits::accessor::Accessor,
 };
 use std::mem::swap;
 
@@ -172,18 +172,18 @@ fn scene_handle_error(item: Option<&Item>, slot: Entity) -> Error {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::{Collection, Item, Side, Slot, SlotKey, Slots},
-		resources::Models,
-		skill::{Cast, Skill},
-		systems::log::tests::{fake_log_error_lazy_many, FakeErrorLogMany},
-	};
+	use crate::resources::Models;
 	use bevy::{
 		asset::AssetId,
 		ecs::system::{In, IntoSystem},
 		prelude::{App, Handle, Update},
 		scene::Scene,
 		utils::{default, Uuid},
+	};
+	use common::{
+		components::{Collection, Item, Side, Slot, SlotKey, Slots},
+		skill::{Cast, Skill},
+		systems::log::test_tools::{fake_log_error_lazy_many, FakeErrorLogMany},
 	};
 	use mockall::{automock, predicate::eq};
 	use std::time::Duration;

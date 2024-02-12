@@ -1,4 +1,3 @@
-use crate::states::MouseContext;
 use bevy::{
 	ecs::{
 		schedule::{NextState, State},
@@ -6,6 +5,7 @@ use bevy::{
 	},
 	input::{mouse::MouseButton, Input},
 };
+use common::states::MouseContext;
 
 pub fn release_triggered_mouse_context(
 	mouse_input: Res<Input<MouseButton>>,
@@ -23,7 +23,6 @@ pub fn release_triggered_mouse_context(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::states::MouseContext;
 	use bevy::{
 		app::{App, Update},
 		ecs::schedule::{NextState, State},

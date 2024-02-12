@@ -1,8 +1,8 @@
-use crate::states::MouseContext;
 use bevy::ecs::{
 	schedule::{NextState, State},
 	system::{Res, ResMut},
 };
+use common::states::MouseContext;
 
 pub fn advance_just_triggered_mouse_context(
 	mouse_context: Res<State<MouseContext>>,
@@ -27,7 +27,6 @@ pub fn advance_just_released_mouse_context(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::states::MouseContext;
 	use bevy::{
 		app::{App, Update},
 		ecs::schedule::{NextState, State},

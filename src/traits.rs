@@ -1,4 +1,3 @@
-pub mod accessor;
 pub mod behavior;
 pub mod behavior_execution;
 pub mod cast_ray;
@@ -6,7 +5,6 @@ pub mod combo_next;
 pub mod get_animation;
 pub mod get_ray;
 pub mod get_screen_position;
-pub mod get_state;
 pub mod input_state;
 pub mod iteration;
 pub mod load_asset;

@@ -45,9 +45,10 @@ pub fn execute_move<
 mod test {
 	use super::*;
 	use crate::{
-		components::{Animate, UnitsPerSecond},
+		components::Animate,
 		traits::movement::{IsDone, Movement, Units},
 	};
+	use common::tools::UnitsPerSecond;
 	use mockall::{automock, predicate::eq};
 	use std::time::Duration;
 

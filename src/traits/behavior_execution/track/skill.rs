@@ -1,10 +1,10 @@
-use crate::{
+use crate::traits::behavior_execution::BehaviorExecution;
+use bevy::{ecs::system::EntityCommands, transform::components::Transform};
+use common::{
 	behaviors::meta::Spawner,
 	components::Track,
 	skill::{Active, Skill},
-	traits::behavior_execution::BehaviorExecution,
 };
-use bevy::{ecs::system::EntityCommands, transform::components::Transform};
 
 impl<TAnimationKey> BehaviorExecution for Track<Skill<TAnimationKey, Active>> {
 	fn run(&self, agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner) {
@@ -32,18 +32,19 @@ impl<TAnimationKey> BehaviorExecution for Track<Skill<TAnimationKey, Active>> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		behaviors::meta::{BehaviorMeta, Outdated, Target},
-		components::{PlayerSkills, SideUnset},
-		resources::ColliderInfo,
-		traits::behavior_execution::test_tools::{run_system, stop_system},
-	};
+	use crate::traits::behavior_execution::test_tools::{run_system, stop_system};
 	use bevy::{
 		app::{App, Update},
 		ecs::entity::Entity,
 		math::{Ray, Vec3},
 		transform::components::{GlobalTransform, Transform},
 		utils::default,
+	};
+	use common::{
+		behaviors::meta::{BehaviorMeta, Outdated, Target},
+		components::SideUnset,
+		resources::ColliderInfo,
+		skill::PlayerSkills,
 	};
 	use mockall::{mock, predicate::eq};
 
@@ -109,7 +110,7 @@ mod tests {
 		let mut app = App::new();
 		let agent = app
 			.world
-			.spawn(Track::new(Skill {
+			.spawn(Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
 				data: Active {
 					target: test_target(),
 					..default()
@@ -145,7 +146,7 @@ mod tests {
 		let mut app = App::new();
 		let agent = app
 			.world
-			.spawn(Track::new(Skill {
+			.spawn(Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
 				data: Active { ..default() },
 				behavior: BehaviorMeta {
 					stop_fn: Some(Mock_Tools::stop),
@@ -171,7 +172,7 @@ mod tests {
 	fn execute_transform_fn() {
 		let mut transform = Transform::from_xyz(11., 12., 13.);
 		let spawner = Spawner(GlobalTransform::from_xyz(22., 33., 44.));
-		let track = Track::new(Skill {
+		let track = Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
 			data: Active {
 				target: test_target(),
 				..default()
