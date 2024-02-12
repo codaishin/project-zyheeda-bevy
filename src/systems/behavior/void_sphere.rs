@@ -1,7 +1,4 @@
-use crate::{
-	components::{Player, VoidSphere},
-	traits::movement_data::MovementData,
-};
+use crate::traits::movement_data::MovementData;
 use bevy::{
 	ecs::{
 		entity::Entity,
@@ -11,6 +8,7 @@ use bevy::{
 	transform::components::Transform,
 };
 use bevy_rapier3d::dynamics::Velocity;
+use common::components::{Player, VoidSphere};
 
 pub fn void_sphere_behavior(
 	mut commands: Commands,
@@ -34,10 +32,7 @@ pub fn void_sphere_behavior(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::{Player, VoidSphere},
-		traits::movement_data::MovementData,
-	};
+	use crate::traits::movement_data::MovementData;
 	use bevy::{
 		app::{App, Update},
 		math::Vec3,

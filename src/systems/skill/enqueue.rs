@@ -1,8 +1,6 @@
 use crate::{
-	behaviors::meta::Target,
-	components::{DequeueNext, PlayerSkills, Queue, Schedule, SideUnset, SlotKey, Track},
+	components::{DequeueNext, Schedule},
 	resources::CamRay,
-	skill::{Active, Queued, Skill},
 	traits::with_component::WithComponent,
 };
 use bevy::{
@@ -12,6 +10,11 @@ use bevy::{
 	},
 	prelude::{Commands, Entity, Query},
 	transform::components::GlobalTransform,
+};
+use common::{
+	behaviors::meta::Target,
+	components::{Queue, SideUnset, SlotKey, Track},
+	skill::{Active, PlayerSkills, Queued, Skill},
 };
 
 type Components<'a> = (
@@ -125,16 +128,16 @@ fn override_hard(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		behaviors::meta::Outdated,
-		components::{DequeueNext, Schedule, Side},
-		resources::ColliderInfo,
-		skill::Cast,
-	};
 	use bevy::{
 		prelude::{App, Ray, Update, Vec3},
 		transform::components::GlobalTransform,
 		utils::default,
+	};
+	use common::{
+		behaviors::meta::Outdated,
+		components::Side,
+		resources::ColliderInfo,
+		skill::Cast,
 	};
 	use std::{
 		sync::{Arc, Mutex},
@@ -610,9 +613,8 @@ mod tests {
 			.spawn((
 				Schedule::StopAimAfter(Duration::from_millis(100)),
 				Queue::<PlayerSkills<SideUnset>>([].into()),
-				Track::new(Skill {
+				Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
 					name: "active skill",
-					data: Active::default(),
 					..default()
 				}),
 			))
@@ -656,9 +658,8 @@ mod tests {
 					]
 					.into(),
 				),
-				Track::new(Skill {
+				Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
 					name: "active skill",
-					data: Active::default(),
 					..default()
 				}),
 			))
@@ -704,7 +705,7 @@ mod tests {
 			.spawn((
 				Schedule::UpdateTarget,
 				Queue::<PlayerSkills<SideUnset>>([].into()),
-				Track::new(Skill {
+				Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
 					name: "active skill",
 					data: Active {
 						target: Target::default(),
@@ -751,10 +752,7 @@ mod tests {
 					]
 					.into(),
 				),
-				Track::new(Skill {
-					data: Active::default(),
-					..default()
-				}),
+				Track::new(Skill::<PlayerSkills<SideUnset>, Active>::default()),
 			))
 			.id();
 

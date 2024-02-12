@@ -1,5 +1,5 @@
-use crate::{behaviors::MovementMode, components::Player};
 use bevy::prelude::*;
+use common::{behaviors::MovementMode, components::Player};
 
 pub fn player_toggle_walk_run(mut player: Query<&mut Player>, keys: Res<Input<KeyCode>>) {
 	if !keys.just_pressed(KeyCode::NumpadSubtract) {
@@ -17,7 +17,6 @@ pub fn player_toggle_walk_run(mut player: Query<&mut Player>, keys: Res<Input<Ke
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{behaviors::MovementMode, components::Player};
 
 	#[test]
 	fn toggle_player_walk_to_run() {

@@ -2,13 +2,13 @@ pub mod dummy;
 pub mod projectile;
 pub mod void_sphere;
 
-use crate::errors::{Error, Level};
 use bevy::{
 	asset::Handle,
 	ecs::system::EntityCommands,
 	pbr::StandardMaterial,
 	render::mesh::{shape::Icosphere, Mesh},
 };
+use common::errors::{Error, Level};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ProjectileType {

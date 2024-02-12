@@ -1,8 +1,8 @@
-use crate::{
+use bevy::ecs::{component::Component, entity::Entity, system::Query};
+use common::{
 	behaviors::meta::Outdated,
 	resources::{ColliderInfo, MouseHover},
 };
-use bevy::ecs::{component::Component, entity::Entity, system::Query};
 
 pub trait WithComponent<T: Component + Copy> {
 	fn with_component(&self, query: &Query<&T>) -> Option<ColliderInfo<Outdated<T>>>;

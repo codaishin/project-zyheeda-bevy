@@ -1,16 +1,5 @@
 use crate::{
-	components::{
-		ComboTreeRunning,
-		ComboTreeTemplate,
-		DequeueNext,
-		Item,
-		PlayerSkills,
-		SideUnset,
-		SlotKey,
-		Slots,
-		Track,
-	},
-	skill::{Active, Skill, SkillComboTree},
+	components::{ComboTreeRunning, ComboTreeTemplate, DequeueNext},
 	traits::combo_next::ComboNext,
 };
 use bevy::{
@@ -20,6 +9,10 @@ use bevy::{
 		world::Mut,
 	},
 	prelude::Entity,
+};
+use common::{
+	components::{Item, SideUnset, SlotKey, Slots, Track},
+	skill::{Active, PlayerSkills, Skill, SkillComboTree},
 };
 use std::collections::HashMap;
 
@@ -139,15 +132,12 @@ fn item_cannot_use_skill(item: &Item, skill: &Skill) -> bool {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::{Item, ItemType, Side, Slot, SlotKey},
-		skill::SkillComboTree,
-	};
 	use bevy::{
 		app::{App, Update},
 		ecs::entity::Entity,
 		utils::default,
 	};
+	use common::components::{ItemType, Side, Slot};
 	use mockall::{mock, predicate::eq};
 	use std::collections::{HashMap, HashSet};
 

@@ -1,7 +1,8 @@
 use super::GetAnimation;
-use crate::{
-	components::{Animate, PlayerSkills, Side, SideUnset, SlotKey, Track},
-	skill::{Active, Skill},
+use crate::components::Animate;
+use common::{
+	components::{Side, SideUnset, SlotKey, Track},
+	skill::{Active, PlayerSkills, Skill},
 };
 
 impl GetAnimation<PlayerSkills<Side>> for Track<Skill<PlayerSkills<SideUnset>, Active>> {
@@ -22,8 +23,8 @@ impl GetAnimation<PlayerSkills<Side>> for Track<Skill<PlayerSkills<SideUnset>, A
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Handed, PlayerSkills, SideUnset, SlotKey};
 	use bevy::prelude::default;
+	use common::components::Handed;
 
 	#[test]
 	fn get_simple_repeat_animations() {

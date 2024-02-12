@@ -1,5 +1,8 @@
 use super::{Iter, IterKey, KeyValue};
-use crate::components::{Handed, PlayerSkills, Side};
+use common::{
+	components::{Handed, Side},
+	skill::PlayerSkills,
+};
 
 const BASE_PATH: &str = "models/player.gltf#";
 

@@ -19,7 +19,7 @@ impl Orbit for CamOrbit {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::test_tools::utils::assert_eq_approx;
+	use common::test_tools::utils::assert_eq_approx;
 	use std::f32::consts::PI;
 
 	#[test]

@@ -1,9 +1,10 @@
-use crate::components::{Slot, SlotBones, SlotKey, Slots};
+use crate::components::SlotBones;
 use bevy::{
 	prelude::{BuildChildren, Children, Commands, Entity, HierarchyQueryExt, Name, Query},
 	scene::SceneBundle,
 	utils::default,
 };
+use common::components::{Slot, SlotKey, Slots};
 
 fn find_bone(
 	agent: Entity,
@@ -72,14 +73,13 @@ pub fn add_item_slots(
 
 #[cfg(test)]
 mod tests {
-	use std::collections::HashMap;
-
 	use super::*;
-	use crate::components::Side;
 	use bevy::{
 		prelude::{App, BuildWorldChildren, Handle, Name, Quat, Transform, Update, Vec3},
 		scene::Scene,
 	};
+	use common::components::Side;
+	use std::collections::HashMap;
 
 	#[derive(PartialEq, Debug)]
 	struct MockBehavior;

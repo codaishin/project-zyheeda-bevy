@@ -1,8 +1,6 @@
 use super::MovementData;
-use crate::{
-	behaviors::MovementMode,
-	components::{Animate, Player, PlayerMovement, UnitsPerSecond},
-};
+use crate::components::{Animate, PlayerMovement};
+use common::{behaviors::MovementMode, components::Player, tools::UnitsPerSecond};
 
 impl MovementData<PlayerMovement> for Player {
 	fn get_movement_data(&self) -> (UnitsPerSecond, Animate<PlayerMovement>) {

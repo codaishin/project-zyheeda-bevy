@@ -1,5 +1,9 @@
 use super::HasIdle;
-use crate::components::{Animate, PlayerSkills, Queue, Side, SideUnset};
+use crate::components::Animate;
+use common::{
+	components::{Queue, Side, SideUnset},
+	skill::PlayerSkills,
+};
 
 impl HasIdle<PlayerSkills<Side>> for Queue<PlayerSkills<SideUnset>> {
 	const IDLE: Animate<PlayerSkills<Side>> = Animate::Repeat(PlayerSkills::Idle);

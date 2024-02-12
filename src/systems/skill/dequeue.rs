@@ -1,8 +1,9 @@
 use crate::{
-	components::{Animate, DequeueNext, Queue, Track},
+	components::{Animate, DequeueNext},
 	traits::{get_animation::HasIdle, remove_conditionally::RemoveConditionally},
 };
 use bevy::prelude::{Commands, Entity, Query, With};
+use common::components::{Queue, Track};
 
 type Components<'a, TAnimationTemplate, TAnimationKey> = (
 	Entity,
@@ -37,11 +38,12 @@ pub fn dequeue<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::{Animate, DequeueNext, SlotKey},
+	use crate::components::{Animate, DequeueNext};
+	use bevy::prelude::{default, App, Ray, Update, Vec3};
+	use common::{
+		components::SlotKey,
 		skill::{Active, Cast, Queued, SelectInfo, Skill},
 	};
-	use bevy::prelude::{default, App, Ray, Update, Vec3};
 	use std::time::Duration;
 
 	const TEST_RAY: Ray = Ray {
@@ -60,20 +62,6 @@ mod tests {
 
 	impl HasIdle<_Key> for Queue<_Template> {
 		const IDLE: Animate<_Key> = Animate::Replay(_Key::Idle);
-	}
-
-	impl Default for Skill<_Template, Queued> {
-		fn default() -> Self {
-			Self {
-				name: Default::default(),
-				data: Default::default(),
-				cast: Default::default(),
-				soft_override: Default::default(),
-				animate: Default::default(),
-				behavior: Default::default(),
-				is_usable_with: Default::default(),
-			}
-		}
 	}
 
 	#[test]

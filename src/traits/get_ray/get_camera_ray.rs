@@ -1,9 +1,9 @@
 use super::GetRayFromCamera;
-use crate::tools::Tools;
 use bevy::{
 	prelude::{Camera, GlobalTransform, Ray},
 	window::Window,
 };
+use common::tools::Tools;
 
 impl GetRayFromCamera for Tools {
 	fn get_ray(

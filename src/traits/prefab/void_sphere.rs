@@ -1,8 +1,7 @@
 use super::{sphere, AssetKey, Instantiate, VoidPart};
 use crate::{
 	bundles::ColliderBundle,
-	components::{ColliderRoot, Health, UnitsPerSecond, VoidSphere, VoidSpherePart},
-	errors::Error,
+	components::{ColliderRoot, Health, VoidSpherePart},
 };
 use bevy::{
 	asset::Handle,
@@ -21,6 +20,7 @@ use bevy_rapier3d::{
 	dynamics::{GravityScale, RigidBody},
 	geometry::Collider,
 };
+use common::{components::VoidSphere, errors::Error, tools::UnitsPerSecond};
 use std::f32::consts::PI;
 
 #[derive(Bundle)]

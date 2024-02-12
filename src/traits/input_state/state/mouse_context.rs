@@ -1,10 +1,6 @@
-use crate::{
-	components::SlotKey,
-	resources::SlotMap,
-	states::MouseContext,
-	traits::input_state::InputState,
-};
+use crate::traits::input_state::InputState;
 use bevy::{ecs::schedule::State, input::keyboard::KeyCode};
+use common::{components::SlotKey, resources::SlotMap, states::MouseContext};
 
 impl InputState<KeyCode> for State<MouseContext<KeyCode>> {
 	fn just_pressed_slots(&self, map: &SlotMap<KeyCode>) -> Vec<SlotKey> {
@@ -39,8 +35,8 @@ fn get_slot_key(map: &SlotMap<KeyCode>, key: &KeyCode) -> Vec<SlotKey> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Side;
 	use bevy::input::keyboard::KeyCode;
+	use common::components::Side;
 	use std::collections::HashSet;
 
 	#[test]

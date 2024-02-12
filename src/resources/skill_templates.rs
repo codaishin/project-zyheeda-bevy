@@ -1,8 +1,8 @@
-use crate::{
+use bevy::ecs::system::Resource;
+use common::{
 	errors::{Error, Level},
 	skill::Skill,
 };
-use bevy::ecs::system::Resource;
 use std::collections::{hash_map::Entry::Vacant, HashMap};
 
 #[derive(Resource)]

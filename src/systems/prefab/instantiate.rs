@@ -1,5 +1,4 @@
 use crate::{
-	errors::Error,
 	resources::Shared,
 	traits::prefab::{AssetKey, Instantiate},
 };
@@ -14,6 +13,7 @@ use bevy::{
 	pbr::StandardMaterial,
 	render::mesh::Mesh,
 };
+use common::errors::Error;
 
 pub fn instantiate<TAgent: Component + Instantiate>(
 	mut commands: Commands,
@@ -37,12 +37,7 @@ pub fn instantiate<TAgent: Component + Instantiate>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		errors::{Error, Level},
-		resources::Shared,
-		systems::log::tests::{fake_log_error_lazy_many, FakeErrorLogMany},
-		traits::prefab::AssetKey,
-	};
+	use crate::{resources::Shared, traits::prefab::AssetKey};
 	use bevy::{
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},
@@ -50,6 +45,10 @@ mod tests {
 		hierarchy::{BuildChildren, Parent},
 		render::{color::Color, mesh::shape::UVSphere},
 		utils::default,
+	};
+	use common::{
+		errors::Level,
+		systems::log::test_tools::{fake_log_error_lazy_many, FakeErrorLogMany},
 	};
 
 	#[derive(Component)]

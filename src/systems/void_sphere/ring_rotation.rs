@@ -23,11 +23,12 @@ pub fn ring_rotation(mut agents: Query<(&mut Transform, &VoidSpherePart)>) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{UnitsPerSecond, VoidSpherePart};
+	use crate::components::VoidSpherePart;
 	use bevy::{
 		app::{App, Update},
 		transform::components::Transform,
 	};
+	use common::tools::UnitsPerSecond;
 
 	#[test]
 	fn rotate_ring_a() {

@@ -1,6 +1,6 @@
 use super::GetBehaviorMeta;
-use crate::{behaviors::meta::BehaviorMeta, skill::SwordStrike, tools::look_from_spawner};
 use bevy::utils::default;
+use common::{behaviors::meta::BehaviorMeta, skill::SwordStrike, tools::look_from_spawner};
 
 impl GetBehaviorMeta for SwordStrike {
 	fn behavior() -> BehaviorMeta {

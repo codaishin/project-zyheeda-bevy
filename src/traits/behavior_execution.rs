@@ -1,7 +1,7 @@
 pub mod track;
 
-use crate::behaviors::meta::Spawner;
 use bevy::{ecs::system::EntityCommands, transform::components::Transform};
+use common::behaviors::meta::Spawner;
 
 pub trait BehaviorExecution {
 	fn run(&self, agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner);

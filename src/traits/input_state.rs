@@ -1,7 +1,7 @@
 pub mod bevy_input;
 pub mod state;
 
-use crate::{components::SlotKey, resources::SlotMap};
+use common::{components::SlotKey, resources::SlotMap};
 use std::hash::Hash;
 
 pub trait InputState<TKey: Eq + Hash> {

@@ -1,15 +1,19 @@
-use crate::{
-	components::{Schedule, SlotKey, Slots},
-	resources::SlotMap,
-	skill::Skill,
-	traits::input_state::{InputState, ShouldEnqueue},
-};
 use bevy::{
 	ecs::system::Resource,
 	prelude::{Commands, Component, Entity, Query, Res, With},
 	time::{Real, Time},
 };
+use common::{
+	components::{SlotKey, Slots},
+	resources::SlotMap,
+	skill::Skill,
+};
 use std::{fmt::Debug, hash::Hash, time::Duration};
+
+use crate::{
+	components::Schedule,
+	traits::input_state::{InputState, ShouldEnqueue},
+};
 
 #[derive(Component, Debug, PartialEq)]
 pub struct CurrentlyScheduling {
@@ -154,14 +158,13 @@ fn get_skill_and_slot(slots: &Slots, slot_keys: &[SlotKey]) -> Option<(SlotKey, 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::{Item, Schedule, Side, Slot, SlotKey, Slots},
-		resources::SlotMap,
-		test_tools::utils::TickTime,
-	};
 	use bevy::{
 		prelude::{default, App, Component, Entity, KeyCode, Update},
 		time::{Real, Time},
+	};
+	use common::{
+		components::{Item, Side, Slot},
+		test_tools::utils::TickTime,
 	};
 	use mockall::{mock, predicate::eq};
 

@@ -1,7 +1,7 @@
 use super::ComboNext;
-use crate::{
-	components::{PlayerSkills, SideUnset, SlotKey},
-	skill::{Active, Skill, SkillComboNext, SkillComboTree},
+use common::{
+	components::{SideUnset, SlotKey},
+	skill::{Active, PlayerSkills, Skill, SkillComboNext, SkillComboTree},
 };
 
 impl ComboNext<PlayerSkills<SideUnset>> for SkillComboNext {
@@ -33,8 +33,8 @@ impl ComboNext<PlayerSkills<SideUnset>> for SkillComboNext {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Side;
 	use bevy::utils::default;
+	use common::components::Side;
 	use std::collections::HashMap;
 
 	#[test]

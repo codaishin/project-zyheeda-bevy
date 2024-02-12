@@ -2,7 +2,6 @@ use super::{AssetKey, Instantiate};
 use crate::{
 	bundles::ColliderBundle,
 	components::{ColliderRoot, Dummy},
-	errors::Error,
 };
 use bevy::{
 	asset::Handle,
@@ -17,6 +16,7 @@ use bevy::{
 	utils::default,
 };
 use bevy_rapier3d::geometry::Collider;
+use common::errors::Error;
 
 const DUMMY_DIMENSIONS: Vec3 = Vec3 {
 	x: 0.4,
