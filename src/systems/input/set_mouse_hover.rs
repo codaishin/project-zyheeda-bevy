@@ -1,5 +1,4 @@
 use crate::{
-	components::ColliderRoot,
 	resources::CamRay,
 	traits::cast_ray::{CastRay, TimeOfImpact},
 };
@@ -7,7 +6,10 @@ use bevy::ecs::{
 	entity::Entity,
 	system::{Commands, Query, Res, Resource},
 };
-use common::resources::{ColliderInfo, MouseHover};
+use common::{
+	components::ColliderRoot,
+	resources::{ColliderInfo, MouseHover},
+};
 
 pub fn set_mouse_hover<TCastRay: CastRay + Resource>(
 	mut commands: Commands,

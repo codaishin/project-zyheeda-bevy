@@ -28,6 +28,7 @@ tracing.workspace = true
 common.workspace = true
 ingame_menu = { path = "src/plugins/ingame_menu" }
 bars = { path = "src/plugins/bars" }
+interactions = { path = "src/plugins/interactions" }
 
 [dev-dependencies]
 mockall.workspace = true

@@ -95,6 +95,3 @@ pub struct ComboTreeRunning<TNext>(pub HashMap<SlotKey, SkillComboTree<TNext>>);
 
 #[derive(Component)]
 pub struct Dummy;
-
-#[derive(Component, PartialEq, Debug)]
-pub struct ColliderRoot(pub Entity);
