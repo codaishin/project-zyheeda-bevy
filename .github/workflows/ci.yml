@@ -48,5 +48,7 @@ jobs:
       run: cargo build
     - name: Clippy
       run: cargo clippy
-    - name: Test
+    - name: Build Tests
+      run: cargo test --workspace --no-run
+    - name: Run Tests
       run: cargo test --workspace
