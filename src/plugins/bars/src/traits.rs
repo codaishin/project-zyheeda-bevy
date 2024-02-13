@@ -1,8 +1,19 @@
+pub mod health;
+
 use bevy::{
 	math::{Vec2, Vec3},
-	render::camera::Camera,
+	render::{camera::Camera, color::Color},
 	transform::components::GlobalTransform,
 };
+
+pub trait UIBarUpdate<T> {
+	fn update(&mut self, value: &T);
+}
+
+pub trait UIBarColors {
+	fn background_color() -> Color;
+	fn foreground_color() -> Color;
+}
 
 pub trait GetScreenPosition {
 	fn get_screen_position(

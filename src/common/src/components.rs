@@ -141,3 +141,18 @@ pub struct Player {
 
 #[derive(Component)]
 pub struct VoidSphere;
+
+#[derive(Component)]
+pub struct Health {
+	pub current: u8,
+	pub max: u8,
+}
+
+impl Health {
+	pub fn new(value: u8) -> Self {
+		Self {
+			current: value,
+			max: value,
+		}
+	}
+}

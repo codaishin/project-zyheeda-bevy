@@ -1,3 +1,4 @@
+use bars::{components::Bar, BarsPlugin};
 use bevy::{
 	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
 	prelude::*,
@@ -7,6 +8,7 @@ use common::{
 	behaviors::MovementMode,
 	components::{
 		Handed,
+		Health,
 		Inventory,
 		InventoryKey,
 		Item,
@@ -33,7 +35,6 @@ use project_zyheeda::{
 		Animator,
 		CamOrbit,
 		ComboTreeTemplate,
-		Health,
 		Plasma,
 		PlayerMovement,
 		Projectile,
@@ -72,7 +73,6 @@ use project_zyheeda::{
 			enqueue::enqueue,
 			execute_skill::execute_skill,
 		},
-		ui::{bar::bar, render_bar::render_bar},
 		void_sphere::ring_rotation::ring_rotation,
 	},
 	traits::{
@@ -100,8 +100,9 @@ fn main() {
 
 fn prepare_game(app: &mut App) {
 	app.add_plugins(DefaultPlugins)
-		.add_plugins(IngameMenuPlugin)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+		.add_plugins(IngameMenuPlugin)
+		.add_plugins(BarsPlugin)
 		.add_state::<GameRunning>()
 		.add_state::<MouseContext>()
 		.init_resource::<Shared<AssetKey, Handle<Mesh>>>()
@@ -206,15 +207,6 @@ fn prepare_game(app: &mut App) {
 				ring_rotation,
 				void_sphere_behavior,
 			),
-		)
-		.add_systems(
-			Update,
-			(
-				bar::<Player, Health, Camera>,
-				bar::<VoidSphere, Health, Camera>,
-				render_bar::<Health>,
-			)
-				.chain(),
 		)
 		.add_systems(PostUpdate, destroy_on_collision);
 }
@@ -544,6 +536,7 @@ fn spawn_player(
 	commands.spawn((
 		Name::from("Player"),
 		Health::new(100),
+		Bar::default(),
 		SceneBundle {
 			scene: asset_server.load("models/player.gltf#Scene0"),
 			..default()
