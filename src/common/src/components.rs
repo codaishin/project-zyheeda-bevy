@@ -144,12 +144,12 @@ pub struct VoidSphere;
 
 #[derive(Component, Debug, PartialEq)]
 pub struct Health {
-	pub current: u8,
-	pub max: u8,
+	pub current: i16,
+	pub max: i16,
 }
 
 impl Health {
-	pub fn new(value: u8) -> Self {
+	pub fn new(value: i16) -> Self {
 		Self {
 			current: value,
 			max: value,
@@ -161,4 +161,4 @@ impl Health {
 pub struct ColliderRoot(pub Entity);
 
 #[derive(Component)]
-pub struct DealsDamage(pub u8);
+pub struct DealsDamage(pub i16);
