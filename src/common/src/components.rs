@@ -142,7 +142,7 @@ pub struct Player {
 #[derive(Component)]
 pub struct VoidSphere;
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq)]
 pub struct Health {
 	pub current: u8,
 	pub max: u8,
@@ -159,3 +159,6 @@ impl Health {
 
 #[derive(Component, PartialEq, Debug)]
 pub struct ColliderRoot(pub Entity);
+
+#[derive(Component)]
+pub struct DealsDamage(pub u8);
