@@ -1,9 +1,6 @@
 use crate::{
 	components::Bar,
-	traits::{
-		get_screen_position::GetScreenPosition,
-		ui::{UIBarOffset, UIBarScale, UIBarUpdate},
-	},
+	traits::{GetScreenPosition, UIBarOffset, UIBarScale, UIBarUpdate},
 };
 use bevy::{
 	ecs::{

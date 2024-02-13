@@ -1,9 +1,6 @@
-use crate::{
-	components::Health,
-	traits::ui::{UIBarOffset, UIBarScale},
-};
+use crate::traits::{UIBarOffset, UIBarScale};
 use bevy::math::Vec3;
-use common::components::Player;
+use common::components::{Health, Player};
 
 impl UIBarOffset<Health> for Player {
 	fn ui_bar_offset() -> Vec3 {

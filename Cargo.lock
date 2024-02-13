@@ -3014,6 +3014,7 @@ checksum = "0f0f7f43585c34e4fdd7497d746bc32e14458cf11c69341cc0587b1d825dde42"
 name = "project-zyheeda"
 version = "0.1.0"
 dependencies = [
+ "bars",
  "bevy",
  "bevy_rapier3d",
  "common",

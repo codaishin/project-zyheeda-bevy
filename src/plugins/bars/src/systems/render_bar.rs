@@ -1,6 +1,6 @@
 use crate::{
 	components::{Bar, UI},
-	traits::ui::UIBarColors,
+	traits::UIBarColors,
 };
 use bevy::{
 	ecs::{

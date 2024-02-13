@@ -1,9 +1,9 @@
-use bevy::render::color::Color;
-
 use crate::{
-	components::{Bar, Health},
-	traits::ui::{UIBarColors, UIBarUpdate},
+	components::Bar,
+	traits::{UIBarColors, UIBarUpdate},
 };
+use bevy::render::color::Color;
+use common::components::Health;
 
 impl UIBarUpdate<Health> for Bar<Health> {
 	fn update(&mut self, value: &Health) {

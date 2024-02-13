@@ -1,9 +1,6 @@
-use crate::{
-	components::Health,
-	traits::ui::{UIBarOffset, UIBarScale},
-};
+use crate::traits::{UIBarOffset, UIBarScale};
 use bevy::math::Vec3;
-use common::components::VoidSphere;
+use common::components::{Health, VoidSphere};
 
 impl UIBarOffset<Health> for VoidSphere {
 	fn ui_bar_offset() -> Vec3 {

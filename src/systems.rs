@@ -7,5 +7,4 @@ pub mod mouse_context;
 pub mod movement;
 pub mod prefab;
 pub mod skill;
-pub mod ui;
 pub mod void_sphere;
