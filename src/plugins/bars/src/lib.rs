@@ -1,4 +1,4 @@
-mod components;
+pub mod components;
 mod systems;
 mod traits;
 
@@ -7,7 +7,7 @@ use bevy::{
 	ecs::schedule::IntoSystemConfigs,
 	render::camera::Camera,
 };
-use common::components::{Health, Player, VoidSphere};
+use common::components::Health;
 use systems::{bar::bar, render_bar::render_bar};
 
 pub struct BarsPlugin;
@@ -16,12 +16,7 @@ impl Plugin for BarsPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_systems(
 			Update,
-			(
-				bar::<Player, Health, Camera>,
-				bar::<VoidSphere, Health, Camera>,
-				render_bar::<Health>,
-			)
-				.chain(),
+			(bar::<Health, Camera>, render_bar::<Health>).chain(),
 		);
 	}
 }

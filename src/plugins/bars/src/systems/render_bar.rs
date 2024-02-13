@@ -1,5 +1,5 @@
 use crate::{
-	components::{Bar, UI},
+	components::{Bar, BarValues, UI},
 	traits::UIBarColors,
 };
 use bevy::{
@@ -20,35 +20,36 @@ const BASE_DIMENSIONS: Vec2 = Vec2::new(100., 10.);
 #[derive(Component)]
 pub struct BackGroundRef(Entity);
 
-pub fn render_bar<T: Send + Sync + 'static>(
+pub(crate) fn render_bar<T: Send + Sync + 'static>(
 	mut commands: Commands,
-	mut bars: Query<(Entity, &mut Bar<T>)>,
+	mut bars: Query<(Entity, &Bar, &mut BarValues<T>)>,
 	mut styles: Query<&mut Style>,
 	backgrounds: Query<(Entity, &BackGroundRef)>,
 ) where
-	Bar<T>: UIBarColors,
+	BarValues<T>: UIBarColors,
 {
 	for (background, ..) in backgrounds.iter().filter(|(_, b)| bars.get(b.0).is_err()) {
-		remove_bar_nodes(&mut commands, background);
+		remove(&mut commands, background);
 	}
 
-	for (bar_id, bar) in &mut bars {
-		match (bar.position, bar.ui) {
-			(Some(position), None) => add_bar_nodes(bar, &mut commands, bar_id, position),
-			(Some(position), Some(ui)) => update_bar_nodes(&mut styles, ui, bar, position),
-			(None, Some(ui)) => remove_bar_nodes(&mut commands, ui.background),
+	for (bar_id, bar, bar_values) in &mut bars {
+		match (bar.position, bar_values.ui) {
+			(Some(position), None) => add_ui(&mut commands, bar_id, bar, bar_values, position),
+			(Some(position), Some(ui)) => update_ui(&mut styles, ui, bar, bar_values, position),
+			(None, Some(ui)) => remove(&mut commands, ui.background),
 			_ => noop(),
 		}
 	}
 }
 
-fn add_bar_nodes<T: Send + Sync + 'static>(
-	mut bar: Mut<Bar<T>>,
+fn add_ui<T: Send + Sync + 'static>(
 	commands: &mut Commands,
 	bar_id: Entity,
+	bar: &Bar,
+	mut bar_values: Mut<BarValues<T>>,
 	position: Vec2,
 ) where
-	Bar<T>: UIBarColors,
+	BarValues<T>: UIBarColors,
 {
 	let scaled_dimension = BASE_DIMENSIONS * bar.scale;
 	let background = commands
@@ -63,7 +64,7 @@ fn add_bar_nodes<T: Send + Sync + 'static>(
 					top: Val::Px(position.y - scaled_dimension.y / 2.),
 					..default()
 				},
-				background_color: BackgroundColor::from(Bar::<T>::background_color()),
+				background_color: BackgroundColor::from(BarValues::<T>::background_color()),
 				..default()
 			},
 		))
@@ -71,33 +72,39 @@ fn add_bar_nodes<T: Send + Sync + 'static>(
 	let foreground = commands
 		.spawn(NodeBundle {
 			style: Style {
-				width: Val::Percent(bar.current / bar.max * 100.),
+				width: Val::Percent(bar_values.current / bar_values.max * 100.),
 				height: Val::Percent(100.),
 				..default()
 			},
-			background_color: BackgroundColor::from(Bar::<T>::foreground_color()),
+			background_color: BackgroundColor::from(BarValues::<T>::foreground_color()),
 			..default()
 		})
 		.set_parent(background)
 		.id();
-	bar.ui = Some(UI {
+	bar_values.ui = Some(UI {
 		foreground,
 		background,
 	});
 }
 
-fn update_bar_nodes<T>(styles: &mut Query<&mut Style>, ui: UI, bar: Mut<Bar<T>>, position: Vec2) {
+fn update_ui<T>(
+	styles: &mut Query<&mut Style>,
+	ui: UI,
+	bar: &Bar,
+	bar_values: Mut<BarValues<T>>,
+	position: Vec2,
+) {
 	if let Ok(mut background) = styles.get_mut(ui.background) {
 		let scaled_dimension = BASE_DIMENSIONS * bar.scale;
 		background.left = Val::Px(position.x - scaled_dimension.x / 2.);
 		background.top = Val::Px(position.y - scaled_dimension.y / 2.);
 	}
 	if let Ok(mut foreground) = styles.get_mut(ui.foreground) {
-		foreground.width = Val::Percent(bar.current / bar.max * 100.);
+		foreground.width = Val::Percent(bar_values.current / bar_values.max * 100.);
 	}
 }
 
-fn remove_bar_nodes(commands: &mut Commands, id: Entity) {
+fn remove(commands: &mut Commands, id: Entity) {
 	commands.entity(id).despawn_recursive()
 }
 
@@ -117,7 +124,7 @@ mod tests {
 
 	struct _Display;
 
-	impl UIBarColors for Bar<_Display> {
+	impl UIBarColors for BarValues<_Display> {
 		fn background_color() -> Color {
 			Color::BLACK
 		}
@@ -140,8 +147,12 @@ mod tests {
 		let mut app = App::new();
 		app.add_systems(Update, render_bar::<_Display>);
 
-		let bar = Bar::<_Display>::new(Some(Vec2::default()), 0., 0., 1.);
-		let bar = app.world.spawn(bar).id();
+		let bar = Bar {
+			position: Some(default()),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(0., 0.);
+		let bar = app.world.spawn((bar, bar_values)).id();
 
 		app.update();
 
@@ -157,7 +168,7 @@ mod tests {
 			.filter(with_parent)
 			.find_map(|e| Some((e.id(), e.get::<Node>()?)))
 			.unwrap();
-		let bar = app.world.entity(bar).get::<Bar<_Display>>().unwrap();
+		let bar = app.world.entity(bar).get::<BarValues<_Display>>().unwrap();
 
 		assert_eq!(
 			Some(UI {
@@ -173,8 +184,13 @@ mod tests {
 		let mut app = App::new();
 		app.add_systems(Update, render_bar::<_Display>);
 
-		let bar = Bar::<_Display>::new(Some(Vec2::default()), 0., 0., 1.);
-		app.world.spawn(bar);
+		let bar = Bar {
+			scale: 1.,
+			position: Some(default()),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(0., 0.);
+		app.world.spawn((bar, bar_values));
 
 		app.update();
 
@@ -196,8 +212,13 @@ mod tests {
 		let mut app = App::new();
 		app.add_systems(Update, render_bar::<_Display>);
 
-		let bar = Bar::<_Display>::new(Some(Vec2::default()), 0., 0., 2.);
-		app.world.spawn(bar);
+		let bar = Bar {
+			scale: 2.,
+			position: Some(default()),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(0., 0.);
+		app.world.spawn((bar, bar_values));
 
 		app.update();
 
@@ -222,8 +243,13 @@ mod tests {
 		let mut app = App::new();
 		app.add_systems(Update, render_bar::<_Display>);
 
-		let bar = Bar::<_Display>::new(Some(Vec2::new(300., 400.)), 0., 0., 1.);
-		app.world.spawn(bar);
+		let bar = Bar {
+			scale: 1.,
+			position: Some(Vec2::new(300., 400.)),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(0., 0.);
+		app.world.spawn((bar, bar_values));
 
 		app.update();
 
@@ -245,52 +271,17 @@ mod tests {
 	}
 
 	#[test]
-	fn set_background_color() {
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
-		let bar = Bar::<_Display>::new(Some(Vec2::default()), 0., 0., 1.);
-		app.world.spawn(bar);
-
-		app.update();
-
-		let color = app
-			.world
-			.iter_entities()
-			.filter(no_parent)
-			.find_map(|e| e.get::<BackgroundColor>())
-			.unwrap();
-
-		assert_eq!(Bar::<_Display>::background_color(), color.0);
-	}
-
-	#[test]
-	fn set_foreground_color() {
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
-		let bar = Bar::<_Display>::new(Some(Vec2::default()), 0., 0., 1.);
-		app.world.spawn(bar);
-
-		app.update();
-
-		let color = app
-			.world
-			.iter_entities()
-			.filter(with_parent)
-			.find_map(|e| e.get::<BackgroundColor>())
-			.unwrap();
-
-		assert_eq!(Bar::<_Display>::foreground_color(), color.0);
-	}
-
-	#[test]
 	fn set_position_scaled() {
 		let mut app = App::new();
 		app.add_systems(Update, render_bar::<_Display>);
 
-		let bar = Bar::<_Display>::new(Some(Vec2::new(300., 400.)), 0., 0., 2.);
-		app.world.spawn(bar);
+		let bar = Bar {
+			scale: 2.,
+			position: Some(Vec2::new(300., 400.)),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(0., 0.);
+		app.world.spawn((bar, bar_values));
 
 		app.update();
 
@@ -312,12 +303,64 @@ mod tests {
 	}
 
 	#[test]
+	fn set_background_color() {
+		let mut app = App::new();
+		app.add_systems(Update, render_bar::<_Display>);
+
+		let bar = Bar {
+			position: Some(default()),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(0., 0.);
+		app.world.spawn((bar, bar_values));
+
+		app.update();
+
+		let color = app
+			.world
+			.iter_entities()
+			.filter(no_parent)
+			.find_map(|e| e.get::<BackgroundColor>())
+			.unwrap();
+
+		assert_eq!(BarValues::<_Display>::background_color(), color.0);
+	}
+
+	#[test]
+	fn set_foreground_color() {
+		let mut app = App::new();
+		app.add_systems(Update, render_bar::<_Display>);
+
+		let bar = Bar {
+			position: Some(default()),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(0., 0.);
+		app.world.spawn((bar, bar_values));
+
+		app.update();
+
+		let color = app
+			.world
+			.iter_entities()
+			.filter(with_parent)
+			.find_map(|e| e.get::<BackgroundColor>())
+			.unwrap();
+
+		assert_eq!(BarValues::<_Display>::foreground_color(), color.0);
+	}
+
+	#[test]
 	fn set_fill() {
 		let mut app = App::new();
 		app.add_systems(Update, render_bar::<_Display>);
 
-		let bar = Bar::<_Display>::new(Some(Vec2::new(300., 400.)), 10., 50., 2.);
-		app.world.spawn(bar);
+		let bar = Bar {
+			position: Some(default()),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(10., 50.);
+		app.world.spawn((bar, bar_values));
 
 		app.update();
 
@@ -336,13 +379,18 @@ mod tests {
 		let mut app = App::new();
 		app.add_systems(Update, render_bar::<_Display>);
 
-		let bar = Bar::<_Display>::new(Some(Vec2::new(300., 400.)), 0., 0., 1.);
-		let bar = app.world.spawn(bar).id();
+		let bar = Bar {
+			scale: 1.,
+			position: Some(Vec2::new(300., 400.)),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(0., 0.);
+		let bar = app.world.spawn((bar, bar_values)).id();
 
 		app.update();
 
 		let mut bar = app.world.entity_mut(bar);
-		let mut bar = bar.get_mut::<Bar<_Display>>().unwrap();
+		let mut bar = bar.get_mut::<Bar>().unwrap();
 		bar.position = Some(Vec2::new(100., 200.));
 
 		app.update();
@@ -370,13 +418,18 @@ mod tests {
 		let mut app = App::new();
 		app.add_systems(Update, render_bar::<_Display>);
 
-		let bar = Bar::<_Display>::new(Some(Vec2::new(300., 400.)), 0., 0., 2.);
-		let bar = app.world.spawn(bar).id();
+		let bar = Bar {
+			scale: 2.,
+			position: Some(Vec2::new(300., 400.)),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(0., 0.);
+		let bar = app.world.spawn((bar, bar_values)).id();
 
 		app.update();
 
 		let mut bar = app.world.entity_mut(bar);
-		let mut bar = bar.get_mut::<Bar<_Display>>().unwrap();
+		let mut bar = bar.get_mut::<Bar>().unwrap();
 		bar.position = Some(Vec2::new(100., 200.));
 
 		app.update();
@@ -404,15 +457,19 @@ mod tests {
 		let mut app = App::new();
 		app.add_systems(Update, render_bar::<_Display>);
 
-		let bar = Bar::<_Display>::new(Some(Vec2::new(300., 400.)), 0., 0., 2.);
-		let bar = app.world.spawn(bar).id();
+		let bar = Bar {
+			position: Some(default()),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(0., 0.);
+		let bar = app.world.spawn((bar, bar_values)).id();
 
 		app.update();
 
 		let mut bar = app.world.entity_mut(bar);
-		let mut bar = bar.get_mut::<Bar<_Display>>().unwrap();
-		bar.max = 200.;
-		bar.current = 120.;
+		let mut bar_values = bar.get_mut::<BarValues<_Display>>().unwrap();
+		bar_values.max = 200.;
+		bar_values.current = 120.;
 
 		app.update();
 
@@ -434,8 +491,12 @@ mod tests {
 		let mut app = App::new();
 		app.add_systems(Update, render_bar::<_Display>);
 
-		let bar = Bar::<_Display>::new(Some(Vec2::default()), 0., 0., 1.);
-		let bar = app.world.spawn(bar).id();
+		let bar = Bar {
+			position: Some(default()),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(0., 0.);
+		let bar = app.world.spawn((bar, bar_values)).id();
 
 		app.update();
 
@@ -466,8 +527,12 @@ mod tests {
 		let mut app = App::new();
 		app.add_systems(Update, render_bar::<_Display>);
 
-		let bar = Bar::<_Display>::new(Some(Vec2::default()), 0., 0., 1.);
-		let bar = app.world.spawn(bar).id();
+		let bar = Bar {
+			position: Some(default()),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(0., 0.);
+		let bar = app.world.spawn((bar, bar_values)).id();
 
 		app.update();
 
@@ -481,7 +546,7 @@ mod tests {
 			parent.spawn(_Child);
 		});
 		let mut bar = app.world.entity_mut(bar);
-		let mut bar = bar.get_mut::<Bar<_Display>>().unwrap();
+		let mut bar = bar.get_mut::<Bar>().unwrap();
 		bar.position = None;
 
 		app.update();

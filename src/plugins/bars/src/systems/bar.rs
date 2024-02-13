@@ -1,80 +1,68 @@
 use crate::{
-	components::Bar,
-	traits::{GetScreenPosition, UIBarOffset, UIBarScale, UIBarUpdate},
+	components::{Bar, BarValues},
+	traits::{GetScreenPosition, UIBarUpdate},
 };
 use bevy::{
 	ecs::{
 		component::Component,
 		entity::Entity,
-		query::{Added, With},
+		query::Without,
 		system::{Commands, Query},
 	},
-	math::Vec3,
 	transform::components::GlobalTransform,
 };
 
-type NoBarComponents<'a, TDisplay> = (Entity, &'a GlobalTransform, &'a TDisplay);
-type BarComponents<'a, TDisplay> = (&'a GlobalTransform, &'a TDisplay, &'a mut Bar<TDisplay>);
+type WithOutBarValues<'a, TSource> = (Entity, &'a GlobalTransform, &'a TSource, &'a mut Bar);
+type WithBarValues<'a, TSource> = (
+	&'a GlobalTransform,
+	&'a TSource,
+	&'a mut Bar,
+	&'a mut BarValues<TSource>,
+);
 
-pub fn bar<
-	TAgent: Component + UIBarOffset<TDisplay> + UIBarScale<TDisplay>,
-	TDisplay: Component,
-	TCamera: Component + GetScreenPosition,
->(
+pub(crate) fn bar<TSource: Component, TCamera: Component + GetScreenPosition>(
 	commands: Commands,
-	without_bar: Query<NoBarComponents<TDisplay>, (With<TAgent>, Added<TDisplay>)>,
-	with_bar: Query<BarComponents<TDisplay>, With<TAgent>>,
+	without_bar_values: Query<WithOutBarValues<TSource>, Without<BarValues<TSource>>>,
+	with_bar_values: Query<WithBarValues<TSource>>,
 	camera: Query<(&TCamera, &GlobalTransform)>,
 ) where
-	Bar<TDisplay>: UIBarUpdate<TDisplay>,
+	BarValues<TSource>: UIBarUpdate<TSource>,
 {
 	let Ok((camera, camera_transform)) = camera.get_single() else {
 		return;
 	};
-	let offset = TAgent::ui_bar_offset();
-	add_bars(commands, without_bar, camera, camera_transform, offset);
-	update_bars(with_bar, camera, camera_transform, offset);
+	add_bar_values(commands, without_bar_values, camera, camera_transform);
+	update_bar_values(with_bar_values, camera, camera_transform);
 }
 
-fn add_bars<
-	TAgent: Component + UIBarOffset<TDisplay> + UIBarScale<TDisplay>,
-	TDisplay: Component,
-	TCamera: Component + GetScreenPosition,
->(
+fn add_bar_values<TSource: Component, TCamera: Component + GetScreenPosition>(
 	mut commands: Commands,
-	agents: Query<NoBarComponents<TDisplay>, (With<TAgent>, Added<TDisplay>)>,
+	mut agents: Query<WithOutBarValues<TSource>, Without<BarValues<TSource>>>,
 	camera: &TCamera,
 	camera_transform: &GlobalTransform,
-	offset: Vec3,
 ) where
-	Bar<TDisplay>: UIBarUpdate<TDisplay>,
+	BarValues<TSource>: UIBarUpdate<TSource>,
 {
-	for (id, transform, display) in &agents {
-		let world_position = transform.translation() + offset;
-		let screen_position = camera.get_screen_position(camera_transform, world_position);
-		let mut bar = Bar::<TDisplay>::new(screen_position, 0., 0., TAgent::ui_bar_scale());
-		bar.update(display);
-		commands.entity(id).insert(bar);
+	for (id, transform, display, mut bar) in &mut agents {
+		let world_position = transform.translation() + bar.offset;
+		bar.position = camera.get_screen_position(camera_transform, world_position);
+		let mut bar_values = BarValues::<TSource>::default();
+		bar_values.update(display);
+		commands.entity(id).insert(bar_values);
 	}
 }
 
-fn update_bars<
-	TAgent: Component + UIBarOffset<TDisplay> + UIBarScale<TDisplay>,
-	TDisplay: Component,
-	TCamera: Component + GetScreenPosition,
->(
-	mut agents: Query<BarComponents<TDisplay>, With<TAgent>>,
+fn update_bar_values<TSource: Component, TCamera: Component + GetScreenPosition>(
+	mut agents: Query<WithBarValues<TSource>>,
 	camera: &TCamera,
 	camera_transform: &GlobalTransform,
-	offset: Vec3,
 ) where
-	Bar<TDisplay>: UIBarUpdate<TDisplay>,
+	BarValues<TSource>: UIBarUpdate<TSource>,
 {
-	for (transform, display, mut bar) in &mut agents {
-		let world_position = transform.translation() + offset;
-		let screen_position = camera.get_screen_position(camera_transform, world_position);
-		bar.position = screen_position;
-		bar.update(display);
+	for (transform, display, mut bar, mut bar_values) in &mut agents {
+		let world_position = transform.translation() + bar.offset;
+		bar.position = camera.get_screen_position(camera_transform, world_position);
+		bar_values.update(display);
 	}
 }
 
@@ -105,29 +93,14 @@ mod tests {
 		}
 	}
 
-	#[derive(Component)]
-	pub struct _Agent;
-
 	#[derive(Component, Default)]
-	pub struct _Display {
+	pub struct _Source {
 		current: u8,
 		max: u8,
 	}
 
-	impl UIBarOffset<_Display> for _Agent {
-		fn ui_bar_offset() -> Vec3 {
-			Vec3::new(1., 2., 3.)
-		}
-	}
-
-	impl UIBarScale<_Display> for _Agent {
-		fn ui_bar_scale() -> f32 {
-			1.3
-		}
-	}
-
-	impl UIBarUpdate<_Display> for Bar<_Display> {
-		fn update(&mut self, value: &_Display) {
+	impl UIBarUpdate<_Source> for BarValues<_Source> {
+		fn update(&mut self, value: &_Source) {
 			self.current = value.current as f32;
 			self.max = value.max as f32;
 		}
@@ -135,7 +108,7 @@ mod tests {
 
 	fn setup(camera: Option<(_Camera, GlobalTransform)>) -> App {
 		let mut app = App::new();
-		app.add_systems(Update, bar::<_Agent, _Display, _Camera>);
+		app.add_systems(Update, bar::<_Source, _Camera>);
 
 		match camera {
 			None => {
@@ -155,60 +128,42 @@ mod tests {
 	}
 
 	#[test]
-	fn add_new_bar_when_new() {
+	fn add_new_bar_values_when_new() {
 		let mut app = setup(None);
 		let agent = app
 			.world
-			.spawn((GlobalTransform::default(), _Agent, _Display::default()))
+			.spawn((
+				GlobalTransform::default(),
+				Bar::new(Vec3::default(), 0.),
+				_Source::default(),
+			))
 			.id();
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<Bar<_Display>>());
+		assert!(agent.contains::<BarValues<_Source>>());
 	}
 
 	#[test]
-	fn do_not_add_when_display_not_new() {
-		let mut app = setup(None);
-
-		let agent = app
-			.world
-			.spawn((GlobalTransform::default(), _Display::default()))
-			.id();
-
-		app.update();
-
-		app.world.entity_mut(agent).insert(_Agent);
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert!(!agent.contains::<Bar<_Display>>());
-	}
-
-	#[test]
-	fn create_offset_with_camera_transform_and_agent_position_plus_ui_bar_offset() {
+	fn set_position_with_camera_transform_and_agent_position_plus_ui_bar_offset() {
 		let camera_transform = GlobalTransform::from_xyz(4., 5., 6.);
+		let offset = Vec3::new(1., 2., 3.);
 		let mut camera = _Camera::default();
 		camera
 			.mock
 			.expect_get_screen_position()
 			.times(1)
-			.with(
-				eq(camera_transform),
-				eq(Vec3::new(5., 3., 9.) + _Agent::ui_bar_offset()),
-			)
+			.with(eq(camera_transform), eq(Vec3::new(5., 3., 9.) + offset))
 			.return_const(Vec2::default());
 
 		let mut app = setup(Some((camera, camera_transform)));
 
 		app.world.spawn((
 			GlobalTransform::from_xyz(5., 3., 9.),
-			_Agent,
-			_Display::default(),
+			Bar::new(offset, 0.),
+			_Source::default(),
 		));
 
 		app.update();
@@ -226,7 +181,11 @@ mod tests {
 
 		let agent = app
 			.world
-			.spawn((GlobalTransform::default(), _Agent, _Display::default()))
+			.spawn((
+				GlobalTransform::default(),
+				Bar::default(),
+				_Source::default(),
+			))
 			.id();
 
 		app.update();
@@ -235,36 +194,20 @@ mod tests {
 
 		assert_eq!(
 			Some(Some(Vec2::new(42., 24.))),
-			agent.get::<Bar<_Display>>().map(|b| b.position)
+			agent.get::<Bar>().map(|b| b.position)
 		);
 	}
 
 	#[test]
-	fn set_bar_scale() {
-		let mut app = setup(None);
-
-		let agent = app
-			.world
-			.spawn((GlobalTransform::default(), _Agent, _Display::default()))
-			.id();
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(Some(1.3), agent.get::<Bar<_Display>>().map(|b| b.scale));
-	}
-
-	#[test]
-	fn set_bar_current_and_max() {
+	fn set_bar_values_current_and_max() {
 		let mut app = setup(None);
 
 		let agent = app
 			.world
 			.spawn((
 				GlobalTransform::default(),
-				_Agent,
-				_Display { current: 1, max: 2 },
+				Bar::default(),
+				_Source { current: 1, max: 2 },
 			))
 			.id();
 
@@ -274,30 +217,30 @@ mod tests {
 
 		assert_eq!(
 			Some((1., 2.)),
-			agent.get::<Bar<_Display>>().map(|b| (b.current, b.max))
+			agent
+				.get::<BarValues<_Source>>()
+				.map(|b| (b.current, b.max))
 		);
 	}
 
 	#[test]
-	fn create_offset_with_camera_transform_and_agent_position_plus_ui_bar_offset_on_update() {
+	fn set_position_with_camera_transform_and_agent_position_plus_ui_bar_offset_on_update() {
 		let camera_transform = GlobalTransform::from_xyz(4., 5., 6.);
+		let offset = Vec3::new(11., 12., 13.);
 		let mut camera = _Camera::default();
 		camera
 			.mock
 			.expect_get_screen_position()
 			.times(2)
-			.with(
-				eq(camera_transform),
-				eq(Vec3::new(5., 3., 9.) + _Agent::ui_bar_offset()),
-			)
+			.with(eq(camera_transform), eq(Vec3::new(5., 3., 9.) + offset))
 			.return_const(Vec2::default());
 
 		let mut app = setup(Some((camera, camera_transform)));
 
 		app.world.spawn((
 			GlobalTransform::from_xyz(5., 3., 9.),
-			_Agent,
-			_Display::default(),
+			Bar::new(offset, 0.),
+			_Source::default(),
 		));
 
 		app.update();
@@ -317,7 +260,11 @@ mod tests {
 
 		let agent = app
 			.world
-			.spawn((GlobalTransform::default(), _Agent, _Display::default()))
+			.spawn((
+				GlobalTransform::default(),
+				Bar::default(),
+				_Source::default(),
+			))
 			.id();
 
 		app.update();
@@ -327,27 +274,27 @@ mod tests {
 
 		assert_eq!(
 			Some(Some(Vec2::new(22., 33.))),
-			agent.get::<Bar<_Display>>().map(|b| b.position)
+			agent.get::<Bar>().map(|b| b.position)
 		);
 	}
 
 	#[test]
-	fn update_bar_current_and_max() {
+	fn update_bar_values_current_and_max() {
 		let mut app = setup(None);
 
 		let agent = app
 			.world
 			.spawn((
 				GlobalTransform::default(),
-				_Agent,
-				_Display { current: 1, max: 2 },
+				Bar::default(),
+				_Source { current: 1, max: 2 },
 			))
 			.id();
 
 		app.update();
 
 		let mut agent_mut = app.world.entity_mut(agent);
-		let mut display = agent_mut.get_mut::<_Display>().unwrap();
+		let mut display = agent_mut.get_mut::<_Source>().unwrap();
 		display.current = 10;
 		display.max = 33;
 
@@ -357,7 +304,9 @@ mod tests {
 
 		assert_eq!(
 			Some((10., 33.)),
-			agent.get::<Bar<_Display>>().map(|b| (b.current, b.max))
+			agent
+				.get::<BarValues<_Source>>()
+				.map(|b| (b.current, b.max))
 		);
 	}
 }

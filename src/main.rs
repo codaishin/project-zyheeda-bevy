@@ -1,4 +1,4 @@
-use bars::BarsPlugin;
+use bars::{components::Bar, BarsPlugin};
 use bevy::{
 	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
 	prelude::*,
@@ -536,6 +536,7 @@ fn spawn_player(
 	commands.spawn((
 		Name::from("Player"),
 		Health::new(100),
+		Bar::default(),
 		SceneBundle {
 			scene: asset_server.load("models/player.gltf#Scene0"),
 			..default()

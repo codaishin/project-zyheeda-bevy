@@ -3,6 +3,7 @@ use crate::{
 	bundles::ColliderBundle,
 	components::{ColliderRoot, VoidSpherePart},
 };
+use bars::components::Bar;
 use bevy::{
 	asset::Handle,
 	ecs::{bundle::Bundle, system::EntityCommands},
@@ -89,7 +90,12 @@ impl Instantiate for VoidSphere {
 		let mut transform_2nd_ring = transform;
 		transform_2nd_ring.rotate_axis(Vec3::Z, PI / 2.);
 
-		on.insert((RigidBody::Dynamic, GravityScale(0.), Health::new(5)));
+		on.insert((
+			RigidBody::Dynamic,
+			GravityScale(0.),
+			Health::new(5),
+			Bar::default(),
+		));
 		on.with_children(|parent| {
 			parent.spawn(PbrVoidSphereBundle::new(
 				PbrBundle {
