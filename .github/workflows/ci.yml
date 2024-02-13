@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         lfs: true
     - name: Install nightly
@@ -22,31 +22,34 @@ jobs:
     - name: Format
       run: cargo +nightly fmt --check --all
 
-  tests:
+  linting:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         lfs: true
     - name: Install libraries
       run: |
         sudo apt update
         sudo apt install -y librust-alsa-sys-dev libudev-dev
-    - name: Cache
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: ${{ runner.os }}-cargo-
     - name: Build
       run: cargo build
     - name: Clippy
       run: cargo clippy
-    - name: Test
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        lfs: true
+    - name: Install libraries
+      run: |
+        sudo apt update
+        sudo apt install -y librust-alsa-sys-dev libudev-dev
+    - name: Build Tests
+      run: cargo test --workspace --no-run
+    - name: Run Tests
       run: cargo test --workspace
