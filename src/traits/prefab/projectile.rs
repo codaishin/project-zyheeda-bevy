@@ -16,7 +16,10 @@ use bevy_rapier3d::{
 	dynamics::RigidBody,
 	geometry::{Collider, Sensor},
 };
-use common::{components::ColliderRoot, errors::Error};
+use common::{
+	components::{ColliderRoot, DealsDamage},
+	errors::Error,
+};
 
 const PLASMA_RADIUS: f32 = 0.05;
 
@@ -34,19 +37,20 @@ impl Instantiate for Projectile<Plasma> {
 			..default()
 		};
 
-		on.insert(RigidBody::Fixed).with_children(|parent| {
-			parent.spawn(PbrBundle {
-				transform,
-				mesh: get_mesh_handle(key, mesh),
-				material: get_material_handle(key, material),
-				..default()
+		on.insert((RigidBody::Fixed, DealsDamage(1)))
+			.with_children(|parent| {
+				parent.spawn(PbrBundle {
+					transform,
+					mesh: get_mesh_handle(key, mesh),
+					material: get_material_handle(key, material),
+					..default()
+				});
+				parent.spawn((
+					ColliderBundle::new_static_collider(transform, Collider::ball(PLASMA_RADIUS)),
+					Sensor,
+					ColliderRoot(parent.parent_entity()),
+				));
 			});
-			parent.spawn((
-				ColliderBundle::new_static_collider(transform, Collider::ball(PLASMA_RADIUS)),
-				Sensor,
-				ColliderRoot(parent.parent_entity()),
-			));
-		});
 
 		Ok(())
 	}
