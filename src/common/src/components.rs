@@ -156,3 +156,6 @@ impl Health {
 		}
 	}
 }
+
+#[derive(Component, PartialEq, Debug)]
+pub struct ColliderRoot(pub Entity);

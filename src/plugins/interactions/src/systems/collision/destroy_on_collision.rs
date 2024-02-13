@@ -1,4 +1,3 @@
-use crate::components::ColliderRoot;
 use bevy::{
 	ecs::{
 		entity::Entity,
@@ -8,6 +7,7 @@ use bevy::{
 	hierarchy::DespawnRecursiveExt,
 };
 use bevy_rapier3d::pipeline::CollisionEvent;
+use common::components::ColliderRoot;
 
 pub fn destroy_on_collision(
 	mut commands: Commands,
@@ -41,7 +41,6 @@ fn despawn_from_root(commands: &mut Commands, entity: Entity, roots: &Query<&Col
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::ColliderRoot;
 	use bevy::{
 		app::{App, Update},
 		hierarchy::BuildWorldChildren,

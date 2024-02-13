@@ -1,7 +1,7 @@
 use super::{sphere, AssetKey, Instantiate, ProjectileType};
 use crate::{
 	bundles::ColliderBundle,
-	components::{ColliderRoot, Plasma, Projectile},
+	components::{Plasma, Projectile},
 };
 use bevy::{
 	asset::Handle,
@@ -16,7 +16,7 @@ use bevy_rapier3d::{
 	dynamics::RigidBody,
 	geometry::{Collider, Sensor},
 };
-use common::errors::Error;
+use common::{components::ColliderRoot, errors::Error};
 
 const PLASMA_RADIUS: f32 = 0.05;
 

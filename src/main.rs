@@ -54,7 +54,6 @@ use project_zyheeda::{
 			set_cam_ray::set_cam_ray,
 			set_mouse_hover::set_mouse_hover,
 		},
-		interactions::destroy_on_collision::destroy_on_collision,
 		items::{equip::equip_item, slots::add_item_slots},
 		mouse_context::{
 			advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
@@ -209,8 +208,7 @@ fn prepare_game(app: &mut App) {
 				ring_rotation,
 				void_sphere_behavior,
 			),
-		)
-		.add_systems(PostUpdate, destroy_on_collision);
+		);
 }
 
 #[cfg(debug_assertions)]
