@@ -2148,6 +2148,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "interactions"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_rapier3d",
+ "common",
+ "mockall",
+ "tracing",
+]
+
+[[package]]
 name = "io-kit-sys"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3019,6 +3030,7 @@ dependencies = [
  "bevy_rapier3d",
  "common",
  "ingame_menu",
+ "interactions",
  "mockall",
  "tracing",
 ]

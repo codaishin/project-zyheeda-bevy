@@ -29,6 +29,7 @@ use common::{
 	tools::{Tools, UnitsPerSecond},
 };
 use ingame_menu::IngameMenuPlugin;
+use interactions::InteractionsPlugin;
 use project_zyheeda::{
 	bundles::Loadout,
 	components::{
@@ -102,6 +103,7 @@ fn prepare_game(app: &mut App) {
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(IngameMenuPlugin)
+		.add_plugins(InteractionsPlugin)
 		.add_plugins(BarsPlugin)
 		.add_state::<GameRunning>()
 		.add_state::<MouseContext>()
