@@ -3,10 +3,14 @@ use crate::{
 	skill::{PlayerSkills, Queued, Skill},
 	tools::UnitsPerSecond,
 };
-use bevy::ecs::{component::Component, entity::Entity};
+use bevy::{
+	ecs::{component::Component, entity::Entity},
+	math::Vec3,
+};
 use std::{
 	collections::{HashMap, HashSet, VecDeque},
 	fmt::{Display, Formatter, Result},
+	marker::PhantomData,
 	time::Duration,
 };
 
@@ -162,3 +166,30 @@ pub struct ColliderRoot(pub Entity);
 
 #[derive(Component)]
 pub struct DealsDamage(pub i16);
+
+pub struct Plasma;
+
+#[derive(Component, Default)]
+pub struct Projectile<T> {
+	pub direction: Vec3,
+	pub range: f32,
+	phantom_data: PhantomData<T>,
+}
+
+impl<T> Projectile<T> {
+	pub fn new(direction: Vec3, range: f32) -> Self {
+		Self {
+			direction,
+			range,
+			phantom_data: PhantomData,
+		}
+	}
+}
+
+#[derive(Component, PartialEq, Debug, Clone, Copy, Default)]
+pub enum Animate<T: Copy + Clone> {
+	#[default]
+	None,
+	Replay(T),
+	Repeat(T),
+}

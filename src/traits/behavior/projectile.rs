@@ -1,8 +1,8 @@
 use super::GetBehaviorMeta;
-use crate::components::Projectile;
 use bevy::{ecs::system::EntityCommands, prelude::SpatialBundle, transform::components::Transform};
 use common::{
 	behaviors::meta::{BehaviorMeta, Spawner, Target},
+	components::Projectile,
 	tools::look_from_spawner,
 };
 

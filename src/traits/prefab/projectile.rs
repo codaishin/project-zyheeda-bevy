@@ -1,8 +1,5 @@
 use super::{sphere, AssetKey, Instantiate, ProjectileType};
-use crate::{
-	bundles::ColliderBundle,
-	components::{Plasma, Projectile},
-};
+use crate::bundles::ColliderBundle;
 use bevy::{
 	asset::Handle,
 	hierarchy::BuildChildren,
@@ -17,7 +14,7 @@ use bevy_rapier3d::{
 	geometry::{Collider, Sensor},
 };
 use common::{
-	components::{ColliderRoot, DealsDamage},
+	components::{ColliderRoot, DealsDamage, Plasma, Projectile},
 	errors::Error,
 };
 

@@ -1,10 +1,10 @@
-use crate::traits::orbit::Orbit;
+use crate::traits::Orbit;
 use bevy::{
 	input::{mouse::MouseMotion, *},
 	prelude::*,
 };
 
-pub fn move_on_orbit<TOrbitComponent: Orbit + Component>(
+pub(crate) fn move_on_orbit<TOrbitComponent: Orbit + Component>(
 	mouse: Res<Input<MouseButton>>,
 	mut mouse_motion: EventReader<MouseMotion>,
 	mut query: Query<(&TOrbitComponent, &mut Transform)>,
@@ -24,11 +24,10 @@ pub fn move_on_orbit<TOrbitComponent: Orbit + Component>(
 
 #[cfg(test)]
 mod tests {
-	use bevy::{ecs::event::Events, input::mouse::MouseMotion, prelude::*};
-	use mockall::{automock, predicate::eq};
-
 	use super::*;
-	use crate::traits::orbit::{Orbit, Vec2Radians};
+	use crate::traits::{Orbit, Vec2Radians};
+	use bevy::{ecs::event::Events, input::mouse::MouseMotion};
+	use mockall::{automock, predicate::eq};
 
 	#[derive(Component)]
 	struct _Orbit {

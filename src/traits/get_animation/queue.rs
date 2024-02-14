@@ -1,7 +1,6 @@
 use super::HasIdle;
-use crate::components::Animate;
 use common::{
-	components::{Queue, Side, SideUnset},
+	components::{Animate, Queue, Side, SideUnset},
 	skill::PlayerSkills,
 };
 

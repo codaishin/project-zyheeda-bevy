@@ -1,6 +1,19 @@
-use super::MovementData;
-use crate::components::{Animate, Projectile};
-use common::tools::UnitsPerSecond;
+use super::{MovementData, ProjectileBehavior};
+use bevy::{self, math::Vec3};
+use common::{
+	components::{Animate, Projectile},
+	tools::UnitsPerSecond,
+};
+
+impl<T> ProjectileBehavior for Projectile<T> {
+	fn direction(&self) -> Vec3 {
+		self.direction
+	}
+
+	fn range(&self) -> f32 {
+		self.range
+	}
+}
 
 const PROJECTILE_MOVE_SPEED: f32 = 15.;
 

@@ -1,5 +1,5 @@
 use crate::{
-	components::{Animate, Animator},
+	components::Animator,
 	resources::Animations,
 	traits::play_animation::{RepeatAnimation, ReplayAnimation},
 };
@@ -13,6 +13,7 @@ use bevy::{
 		world::Mut,
 	},
 };
+use common::components::Animate;
 use std::hash::Hash;
 
 pub fn play_animations<

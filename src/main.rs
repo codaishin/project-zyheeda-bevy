@@ -1,4 +1,9 @@
 use bars::{components::Bar, BarsPlugin};
+use behaviors::{
+	components::{CamOrbit, PlayerMovement, SimpleMovement},
+	traits::{Orbit, Vec2Radians},
+	BehaviorsPlugin,
+};
 use bevy::{
 	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
 	prelude::*,
@@ -13,7 +18,9 @@ use common::{
 		InventoryKey,
 		Item,
 		ItemType,
+		Plasma,
 		Player,
+		Projectile,
 		Side,
 		SideUnset,
 		SlotKey,
@@ -32,15 +39,7 @@ use ingame_menu::IngameMenuPlugin;
 use interactions::InteractionsPlugin;
 use project_zyheeda::{
 	bundles::Loadout,
-	components::{
-		Animator,
-		CamOrbit,
-		ComboTreeTemplate,
-		Plasma,
-		PlayerMovement,
-		Projectile,
-		SimpleMovement,
-	},
+	components::{Animator, ComboTreeTemplate},
 	resources::{skill_templates::SkillTemplates, Models, Shared},
 	systems::{
 		animations::{
@@ -48,7 +47,6 @@ use project_zyheeda::{
 			load_animations::load_animations,
 			play_animations::play_animations,
 		},
-		behavior::{projectile::projectile_behavior, void_sphere::void_sphere_behavior},
 		input::{
 			schedule_slots::schedule_slots,
 			set_cam_ray::set_cam_ray,
@@ -60,12 +58,7 @@ use project_zyheeda::{
 			release::release_triggered_mouse_context,
 			trigger_primed::trigger_primed_mouse_context,
 		},
-		movement::{
-			execute_move::execute_move,
-			follow::follow,
-			move_on_orbit::move_on_orbit,
-			toggle_walk_run::player_toggle_walk_run,
-		},
+		movement::toggle_walk_run::player_toggle_walk_run,
 		prefab::instantiate::instantiate,
 		skill::{
 			chain_combo_skills::chain_combo_skills,
@@ -75,11 +68,7 @@ use project_zyheeda::{
 		},
 		void_sphere::ring_rotation::ring_rotation,
 	},
-	traits::{
-		behavior::GetBehaviorMeta,
-		orbit::{Orbit, Vec2Radians},
-		prefab::AssetKey,
-	},
+	traits::{behavior::GetBehaviorMeta, prefab::AssetKey},
 };
 use std::{
 	collections::{HashMap, HashSet},
@@ -104,6 +93,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(IngameMenuPlugin)
 		.add_plugins(InteractionsPlugin)
 		.add_plugins(BarsPlugin)
+		.add_plugins(BehaviorsPlugin)
 		.add_state::<GameRunning>()
 		.add_state::<MouseContext>()
 		.init_resource::<Shared<AssetKey, Handle<Mesh>>>()
@@ -175,24 +165,10 @@ fn prepare_game(app: &mut App) {
 					Track<Skill<PlayerSkills<SideUnset>, Active>>,
 					Virtual,
 				>,
-				execute_move::<PlayerMovement, Player, SimpleMovement, Virtual>,
 			)
 				.chain(),
 		)
-		.add_systems(
-			Update,
-			(
-				instantiate::<Projectile<Plasma>>.pipe(log_many),
-				projectile_behavior::<Projectile<Plasma>>,
-				execute_move::<(), Projectile<Plasma>, SimpleMovement, Virtual>,
-			)
-				.chain(),
-		)
-		.add_systems(
-			Update,
-			(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>)
-				.run_if(in_state(GameRunning::On)),
-		)
+		.add_systems(Update, instantiate::<Projectile<Plasma>>.pipe(log_many))
 		.add_systems(
 			Update,
 			(
@@ -203,11 +179,7 @@ fn prepare_game(app: &mut App) {
 		)
 		.add_systems(
 			Update,
-			(
-				instantiate::<VoidSphere>.pipe(log_many),
-				ring_rotation,
-				void_sphere_behavior,
-			),
+			(instantiate::<VoidSphere>.pipe(log_many), ring_rotation),
 		);
 }
 

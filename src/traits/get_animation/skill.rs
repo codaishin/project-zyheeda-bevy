@@ -1,7 +1,6 @@
 use super::GetAnimation;
-use crate::components::Animate;
 use common::{
-	components::{Side, SideUnset, SlotKey, Track},
+	components::{Animate, Side, SideUnset, SlotKey, Track},
 	skill::{Active, PlayerSkills, Skill},
 };
 
