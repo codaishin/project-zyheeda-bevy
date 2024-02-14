@@ -1,5 +1,4 @@
 use super::{GetCollider, GetRigidBody, Model, Offset, Shape};
-use crate::components::{Plasma, Projectile};
 use bevy::{
 	math::Vec3,
 	pbr::StandardMaterial,
@@ -10,6 +9,7 @@ use bevy::{
 	utils::default,
 };
 use bevy_rapier3d::{dynamics::RigidBody, geometry::Collider};
+use common::components::{Plasma, Projectile};
 
 impl<T> Offset for Projectile<T> {
 	fn offset() -> Vec3 {

@@ -1,9 +1,7 @@
-use crate::{
-	components::{Animate, DequeueNext},
-	traits::{get_animation::HasIdle, remove_conditionally::RemoveConditionally},
-};
+use crate::traits::{get_animation::HasIdle, remove_conditionally::RemoveConditionally};
+use behaviors::components::Idle;
 use bevy::prelude::{Commands, Entity, Query, With};
-use common::components::{Queue, Track};
+use common::components::{Animate, Queue, Track};
 
 type Components<'a, TAnimationTemplate, TAnimationKey> = (
 	Entity,
@@ -16,7 +14,7 @@ pub fn dequeue<
 	TAnimationKey: PartialEq + Clone + Copy + Sync + Send + 'static,
 >(
 	mut commands: Commands,
-	mut agents: Query<Components<TAnimationTemplate, TAnimationKey>, With<DequeueNext>>,
+	mut agents: Query<Components<TAnimationTemplate, TAnimationKey>, With<Idle>>,
 ) where
 	Queue<TAnimationTemplate>: HasIdle<TAnimationKey>,
 {
@@ -27,7 +25,7 @@ pub fn dequeue<
 
 		if let Some(skill) = queue.0.pop_front() {
 			agent.insert(Track::new(skill.to_active()));
-			agent.remove::<DequeueNext>();
+			agent.remove::<Idle>();
 			agent.remove_conditionally(current_animation, |a| a == idle);
 		} else {
 			agent.insert(*idle);
@@ -38,7 +36,6 @@ pub fn dequeue<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Animate, DequeueNext};
 	use bevy::prelude::{default, App, Ray, Update, Vec3};
 	use common::{
 		components::SlotKey,
@@ -84,7 +81,7 @@ mod tests {
 			})]
 			.into(),
 		);
-		let agent = app.world.spawn((queue, DequeueNext)).id();
+		let agent = app.world.spawn((queue, Idle)).id();
 
 		app.add_systems(Update, dequeue::<_Template, _Key>);
 		app.update();
@@ -108,7 +105,7 @@ mod tests {
 				agent
 					.get::<Track<Skill<_Template, Active>>>()
 					.map(|t| t.value.data.clone()),
-				agent.contains::<DequeueNext>(),
+				agent.contains::<Idle>(),
 				queue.0.len()
 			)
 		);
@@ -138,10 +135,7 @@ mod tests {
 	#[test]
 	fn idle_when_nothing_to_pop() {
 		let mut app = App::new();
-		let agent = app
-			.world
-			.spawn((Queue::<_Template>([].into()), DequeueNext))
-			.id();
+		let agent = app.world.spawn((Queue::<_Template>([].into()), Idle)).id();
 
 		app.add_systems(Update, dequeue::<_Template, _Key>);
 		app.update();
@@ -161,7 +155,7 @@ mod tests {
 
 		let agent = app
 			.world
-			.spawn((queue, DequeueNext, Queue::<_Template>::IDLE))
+			.spawn((queue, Idle, Queue::<_Template>::IDLE))
 			.id();
 		app.add_systems(Update, dequeue::<_Template, _Key>);
 		app.update();
@@ -178,7 +172,7 @@ mod tests {
 
 		let agent = app
 			.world
-			.spawn((queue, DequeueNext, Animate::Replay(_Key::NotIdle)))
+			.spawn((queue, Idle, Animate::Replay(_Key::NotIdle)))
 			.id();
 		app.add_systems(Update, dequeue::<_Template, _Key>);
 		app.update();

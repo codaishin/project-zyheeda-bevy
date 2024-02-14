@@ -1,6 +1,8 @@
 use super::MovementData;
-use crate::components::Animate;
-use common::{components::VoidSphere, tools::UnitsPerSecond};
+use common::{
+	components::{Animate, VoidSphere},
+	tools::UnitsPerSecond,
+};
 
 const VOID_SPHERE_MOVE_SPEED: f32 = 1.;
 

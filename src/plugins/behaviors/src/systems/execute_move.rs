@@ -1,12 +1,9 @@
 use crate::{
-	components::{Animate, DequeueNext},
-	traits::{
-		movement::Movement,
-		movement_data::MovementData,
-		remove_conditionally::RemoveConditionally,
-	},
+	components::Idle,
+	traits::{Movement, MovementData},
 };
 use bevy::prelude::*;
+use common::{components::Animate, traits::remove_conditionally::RemoveConditionally};
 
 type Components<'a, TAnimationKey, TAgent, TMovement> = (
 	Entity,
@@ -16,7 +13,7 @@ type Components<'a, TAnimationKey, TAgent, TMovement> = (
 	Option<&'a Animate<TAnimationKey>>,
 );
 
-pub fn execute_move<
+pub(crate) fn execute_move<
 	TAnimationKey: PartialEq + Clone + Copy + Send + Sync + 'static,
 	TAgent: Component + MovementData<TAnimationKey>,
 	TMovement: Component + Movement,
@@ -32,7 +29,7 @@ pub fn execute_move<
 		let is_done = movement.update(&mut transform, time.delta_seconds() * speed.to_f32());
 
 		if is_done {
-			entity.insert(DequeueNext);
+			entity.insert(Idle);
 			entity.remove::<TMovement>();
 			entity.remove_conditionally(current_animation, |a| a == &movement_animation);
 		} else {
@@ -44,10 +41,7 @@ pub fn execute_move<
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{
-		components::Animate,
-		traits::movement::{IsDone, Movement, Units},
-	};
+	use crate::traits::{IsDone, MovementData, Units};
 	use common::tools::UnitsPerSecond;
 	use mockall::{automock, predicate::eq};
 	use std::time::Duration;
@@ -168,7 +162,7 @@ mod test {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<DequeueNext>());
+		assert!(agent.contains::<Idle>());
 	}
 
 	#[test]
@@ -186,7 +180,7 @@ mod test {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<DequeueNext>());
+		assert!(!agent.contains::<Idle>());
 	}
 
 	#[test]

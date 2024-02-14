@@ -1,5 +1,5 @@
 use super::GetBehaviorMeta;
-use crate::components::SimpleMovement;
+use behaviors::components::SimpleMovement;
 use bevy::{ecs::system::EntityCommands, math::Vec3, transform::components::Transform};
 use common::behaviors::meta::{BehaviorMeta, Spawner, Target};
 

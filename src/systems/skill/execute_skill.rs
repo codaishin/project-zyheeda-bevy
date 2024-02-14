@@ -1,18 +1,16 @@
-use crate::{
-	components::{Animate, DequeueNext},
-	traits::{
-		behavior_execution::BehaviorExecution,
-		get_animation::GetAnimation,
-		state_duration::{StateMeta, StateUpdate},
-	},
+use crate::traits::{
+	behavior_execution::BehaviorExecution,
+	get_animation::GetAnimation,
+	state_duration::{StateMeta, StateUpdate},
 };
+use behaviors::components::Idle;
 use bevy::{
 	ecs::{component::Component, system::EntityCommands},
 	prelude::{Commands, Entity, GlobalTransform, Mut, Query, Res, Time, Transform},
 };
 use common::{
 	behaviors::meta::Spawner,
-	components::{SlotKey, Slots},
+	components::{Animate, SlotKey, Slots},
 	skill::SkillState,
 };
 use std::{collections::HashSet, time::Duration};
@@ -22,7 +20,7 @@ type Skills<'a, TAnimationKey, TSkill> = (
 	&'a mut Transform,
 	&'a mut TSkill,
 	&'a Slots,
-	Option<&'a DequeueNext>,
+	Option<&'a Idle>,
 	Option<&'a Animate<TAnimationKey>>,
 );
 
@@ -63,7 +61,7 @@ pub fn execute_skill<
 fn get_states<TSkill: StateUpdate<SkillState>>(
 	skill: &mut Mut<TSkill>,
 	delta: &Duration,
-	wait_next: Option<&DequeueNext>,
+	wait_next: Option<&Idle>,
 ) -> HashSet<StateMeta<SkillState>> {
 	if wait_next.is_some() {
 		return [StateMeta::Leaving(SkillState::AfterCast)].into();
@@ -122,7 +120,7 @@ fn handle_done<
 	if current_animation_is_from_skill(skill, animate) {
 		agent.remove::<Animate<TAnimationKey>>();
 	}
-	agent.insert(DequeueNext);
+	agent.insert(Idle);
 	skill.stop(agent);
 }
 
@@ -149,10 +147,7 @@ fn get_spawner(slots: &Slots, transforms: &Query<&GlobalTransform>) -> Option<Sp
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::{Animate, DequeueNext},
-		traits::state_duration::StateMeta,
-	};
+	use crate::traits::state_duration::StateMeta;
 	use bevy::{
 		ecs::component::Component,
 		prelude::{App, Transform, Update, Vec3},
@@ -504,7 +499,7 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<DequeueNext>());
+		assert!(agent.contains::<Idle>());
 	}
 
 	#[test]
@@ -527,7 +522,7 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<DequeueNext>());
+		assert!(!agent.contains::<Idle>());
 	}
 
 	#[test]
@@ -549,7 +544,7 @@ mod tests {
 			skill,
 			Transform::default(),
 			Animate::Repeat(_AnimationKey::A),
-			DequeueNext,
+			Idle,
 		));
 
 		app.update();

@@ -1,4 +1,4 @@
-use crate::traits::movement_data::MovementData;
+use crate::traits::MovementData;
 use bevy::{
 	ecs::{
 		entity::Entity,
@@ -10,7 +10,7 @@ use bevy::{
 use bevy_rapier3d::dynamics::Velocity;
 use common::components::{Player, VoidSphere};
 
-pub fn void_sphere_behavior(
+pub(crate) fn void_sphere_behavior(
 	mut commands: Commands,
 	void_spheres: Query<(Entity, &Transform, &VoidSphere)>,
 	players: Query<&Transform, With<Player>>,
@@ -32,7 +32,7 @@ pub fn void_sphere_behavior(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::movement_data::MovementData;
+	use crate::traits::MovementData;
 	use bevy::{
 		app::{App, Update},
 		math::Vec3,

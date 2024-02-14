@@ -342,6 +342,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 
 [[package]]
+name = "behaviors"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_rapier3d",
+ "common",
+ "mockall",
+ "tracing",
+]
+
+[[package]]
 name = "bevy"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3026,6 +3037,7 @@ name = "project-zyheeda"
 version = "0.1.0"
 dependencies = [
  "bars",
+ "behaviors",
  "bevy",
  "bevy_rapier3d",
  "common",

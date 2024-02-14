@@ -1,7 +1,8 @@
 use crate::{
-	components::{ComboTreeRunning, ComboTreeTemplate, DequeueNext},
+	components::{ComboTreeRunning, ComboTreeTemplate},
 	traits::combo_next::ComboNext,
 };
+use behaviors::components::Idle;
 use bevy::{
 	ecs::{
 		query::{Added, Without},
@@ -25,7 +26,7 @@ type ComboComponents<'a, TNext> = (
 );
 type JustStarted = (
 	Added<Track<Skill<PlayerSkills<SideUnset>, Active>>>,
-	Without<DequeueNext>,
+	Without<Idle>,
 );
 type Combos<TNext> = Vec<(SlotKey, SkillComboTree<TNext>)>;
 
@@ -33,7 +34,7 @@ pub fn chain_combo_skills<
 	TNext: Clone + ComboNext<PlayerSkills<SideUnset>> + Send + Sync + 'static,
 >(
 	mut commands: Commands,
-	mut newly_idle: Query<(Entity, &mut Slots), Added<DequeueNext>>,
+	mut newly_idle: Query<(Entity, &mut Slots), Added<Idle>>,
 	mut newly_active: Query<ComboComponents<TNext>, JustStarted>,
 ) {
 	for (agent, mut slots) in &mut newly_idle {
@@ -651,7 +652,7 @@ mod tests {
 		for slot in slots.0.values_mut() {
 			slot.combo_skill = Some(skill_usable_with(&[]))
 		}
-		app.world.entity_mut(id).insert(DequeueNext);
+		app.world.entity_mut(id).insert(Idle);
 		app.world
 			.entity_mut(id)
 			.remove::<Track<Skill<PlayerSkills<SideUnset>, Active>>>();

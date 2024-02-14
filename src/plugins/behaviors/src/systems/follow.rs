@@ -1,7 +1,7 @@
-use crate::traits::move_together::MoveTogether;
+use crate::traits::MoveTogether;
 use bevy::prelude::{Component, Query, Transform, With, Without};
 
-pub fn follow<TTarget: Component, TMover: MoveTogether + Component>(
+pub(crate) fn follow<TTarget: Component, TMover: MoveTogether + Component>(
 	target: Query<(&Transform, With<TTarget>)>,
 	mut follower: Query<(&mut Transform, &mut TMover, Without<TTarget>)>,
 ) {
@@ -16,9 +16,7 @@ pub fn follow<TTarget: Component, TMover: MoveTogether + Component>(
 }
 
 #[cfg(test)]
-mod test {
-	use crate::traits::move_together::MoveTogether;
-
+mod tests {
 	use super::*;
 	use bevy::prelude::{App, Component, Transform, Update, Vec3};
 	use mockall::{automock, predicate::eq};

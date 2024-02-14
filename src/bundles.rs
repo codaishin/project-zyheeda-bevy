@@ -1,7 +1,5 @@
-use crate::{
-	components::{DequeueNext, SlotBones},
-	types::BoneName,
-};
+use crate::{components::SlotBones, types::BoneName};
+use behaviors::components::Idle;
 use bevy::{
 	prelude::Bundle,
 	transform::{components::Transform, TransformBundle},
@@ -17,7 +15,7 @@ pub struct Loadout {
 	slot_bones: SlotBones,
 	slots: Slots,
 	equipment: Equipment,
-	dequeue_next: DequeueNext,
+	dequeue_next: Idle,
 	queue: Queue,
 }
 
@@ -30,7 +28,7 @@ impl Loadout {
 			slot_bones: SlotBones(slot_bones.into()),
 			equipment: Collection(equipment.into()),
 			slots: Slots::new(),
-			dequeue_next: DequeueNext,
+			dequeue_next: Idle,
 			queue: Queue([].into()),
 		}
 	}

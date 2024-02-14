@@ -1,8 +1,5 @@
-use crate::{
-	components::{DequeueNext, Schedule},
-	resources::CamRay,
-	traits::with_component::WithComponent,
-};
+use crate::{components::Schedule, resources::CamRay, traits::with_component::WithComponent};
+use behaviors::components::Idle;
 use bevy::{
 	ecs::{
 		system::{EntityCommands, Res, Resource},
@@ -122,7 +119,7 @@ fn override_hard(
 	mut agent: EntityCommands,
 ) {
 	queue.0 = vec![new].into();
-	agent.insert(DequeueNext);
+	agent.insert(Idle);
 }
 
 #[cfg(test)]
@@ -329,7 +326,7 @@ mod tests {
 				})],
 				true
 			),
-			(queue.0.iter().collect(), agent.contains::<DequeueNext>())
+			(queue.0.iter().collect(), agent.contains::<Idle>())
 		);
 	}
 
@@ -425,7 +422,7 @@ mod tests {
 				agent
 					.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
 					.unwrap(),
-				agent.contains::<DequeueNext>(),
+				agent.contains::<Idle>(),
 			)
 		);
 	}
@@ -478,7 +475,7 @@ mod tests {
 				agent
 					.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
 					.unwrap(),
-				agent.contains::<DequeueNext>(),
+				agent.contains::<Idle>(),
 			)
 		);
 	}
@@ -531,7 +528,7 @@ mod tests {
 				agent
 					.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
 					.unwrap(),
-				agent.contains::<DequeueNext>(),
+				agent.contains::<Idle>(),
 			)
 		);
 	}
