@@ -1,5 +1,6 @@
 use super::{sphere, AssetKey, Instantiate, ProjectileType};
 use crate::bundles::ColliderBundle;
+use behaviors::components::{MovementConfig, MovementMode};
 use bevy::{
 	asset::Handle,
 	hierarchy::BuildChildren,
@@ -16,6 +17,7 @@ use bevy_rapier3d::{
 use common::{
 	components::{ColliderRoot, DealsDamage, Plasma, Projectile},
 	errors::Error,
+	tools::UnitsPerSecond,
 };
 
 const PLASMA_RADIUS: f32 = 0.05;
@@ -34,20 +36,27 @@ impl Instantiate for Projectile<Plasma> {
 			..default()
 		};
 
-		on.insert((RigidBody::Fixed, DealsDamage(1)))
-			.with_children(|parent| {
-				parent.spawn(PbrBundle {
-					transform,
-					mesh: get_mesh_handle(key, mesh),
-					material: get_material_handle(key, material),
-					..default()
-				});
-				parent.spawn((
-					ColliderBundle::new_static_collider(transform, Collider::ball(PLASMA_RADIUS)),
-					Sensor,
-					ColliderRoot(parent.parent_entity()),
-				));
+		on.insert((
+			RigidBody::Fixed,
+			DealsDamage(1),
+			MovementConfig::Constant {
+				mode: MovementMode::Fast,
+				speed: UnitsPerSecond::new(15.),
+			},
+		))
+		.with_children(|parent| {
+			parent.spawn(PbrBundle {
+				transform,
+				mesh: get_mesh_handle(key, mesh),
+				material: get_material_handle(key, material),
+				..default()
 			});
+			parent.spawn((
+				ColliderBundle::new_static_collider(transform, Collider::ball(PLASMA_RADIUS)),
+				Sensor,
+				ColliderRoot(parent.parent_entity()),
+			));
+		});
 
 		Ok(())
 	}

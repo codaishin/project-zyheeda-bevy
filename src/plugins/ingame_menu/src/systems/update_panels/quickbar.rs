@@ -113,7 +113,7 @@ mod tests {
 		let icons = SkillIcons(HashMap::from([("my skill", handle.clone())]));
 		app.insert_resource(icons);
 		app.world.spawn((
-			Player::default(),
+			Player,
 			Slots(HashMap::from([(
 				SlotKey::Hand(Side::Main),
 				Slot {
@@ -157,7 +157,7 @@ mod tests {
 		]));
 		app.insert_resource(icons);
 		app.world.spawn((
-			Player::default(),
+			Player,
 			Slots(HashMap::from([(
 				SlotKey::Hand(Side::Main),
 				Slot {
@@ -195,7 +195,7 @@ mod tests {
 		let icons = SkillIcons(HashMap::from([]));
 		app.insert_resource(icons);
 		app.world.spawn((
-			Player::default(),
+			Player,
 			Slots(HashMap::from([(
 				SlotKey::Hand(Side::Main),
 				Slot {
@@ -236,7 +236,7 @@ mod tests {
 		let icons = SkillIcons(HashMap::from([("my skill", handle.clone())]));
 		app.insert_resource(icons);
 		app.world.spawn((
-			Player::default(),
+			Player,
 			Slots(HashMap::from([(
 				SlotKey::Hand(Side::Main),
 				Slot {

@@ -1,17 +1,28 @@
+use behaviors::components::{MovementConfig, MovementMode};
 use bevy::prelude::*;
-use common::{behaviors::MovementMode, components::Player};
+use common::components::Player;
 
-pub fn player_toggle_walk_run(mut player: Query<&mut Player>, keys: Res<Input<KeyCode>>) {
+pub fn player_toggle_walk_run(
+	mut player: Query<&mut MovementConfig, With<Player>>,
+	keys: Res<Input<KeyCode>>,
+) {
 	if !keys.just_pressed(KeyCode::NumpadSubtract) {
 		return;
 	}
 
-	for mut player in player.iter_mut() {
-		player.movement_mode = match player.movement_mode {
-			MovementMode::Slow => MovementMode::Fast,
-			MovementMode::Fast => MovementMode::Slow,
-		}
+	for mut config in player.iter_mut() {
+		update_config(&mut config);
 	}
+}
+
+fn update_config(config: &mut MovementConfig) {
+	let MovementConfig::Dynamic { current_mode, .. } = config else {
+		return;
+	};
+	*current_mode = match current_mode {
+		MovementMode::Slow => MovementMode::Fast,
+		MovementMode::Fast => MovementMode::Slow,
+	};
 }
 
 #[cfg(test)]
@@ -22,12 +33,13 @@ mod tests {
 	fn toggle_player_walk_to_run() {
 		let mut app = App::new();
 		let keys = Input::<KeyCode>::default();
-		let player = Player {
-			movement_mode: MovementMode::Slow,
-			..default()
+		let config = MovementConfig::Dynamic {
+			current_mode: MovementMode::Slow,
+			fast_speed: default(),
+			slow_speed: default(),
 		};
 
-		let player = app.world.spawn(player).id();
+		let player = app.world.spawn((Player, config)).id();
 		app.add_systems(Update, player_toggle_walk_run);
 		app.insert_resource(keys);
 		app.world
@@ -36,20 +48,28 @@ mod tests {
 
 		app.update();
 
-		let player = app.world.entity(player).get::<Player>().unwrap();
-		assert_eq!(MovementMode::Fast, player.movement_mode);
+		let current = app
+			.world
+			.entity(player)
+			.get::<MovementConfig>()
+			.and_then(|m| match m {
+				MovementConfig::Dynamic { current_mode, .. } => Some(current_mode),
+				_ => None,
+			});
+		assert_eq!(Some(&MovementMode::Fast), current);
 	}
 
 	#[test]
 	fn toggle_player_run_to_walk() {
 		let mut app = App::new();
 		let keys = Input::<KeyCode>::default();
-		let player = Player {
-			movement_mode: MovementMode::Fast,
-			..default()
+		let config = MovementConfig::Dynamic {
+			current_mode: MovementMode::Fast,
+			fast_speed: default(),
+			slow_speed: default(),
 		};
 
-		let player = app.world.spawn(player).id();
+		let player = app.world.spawn((Player, config)).id();
 		app.add_systems(Update, player_toggle_walk_run);
 		app.insert_resource(keys);
 		app.world
@@ -58,26 +78,41 @@ mod tests {
 
 		app.update();
 
-		let player = app.world.entity(player).get::<Player>().unwrap();
-		assert_eq!(MovementMode::Slow, player.movement_mode);
+		let current = app
+			.world
+			.entity(player)
+			.get::<MovementConfig>()
+			.and_then(|m| match m {
+				MovementConfig::Dynamic { current_mode, .. } => Some(current_mode),
+				_ => None,
+			});
+		assert_eq!(Some(&MovementMode::Slow), current);
 	}
 
 	#[test]
 	fn no_toggle_when_no_input() {
 		let mut app = App::new();
 		let keys = Input::<KeyCode>::default();
-		let player = Player {
-			movement_mode: MovementMode::Slow,
-			..default()
+		let config = MovementConfig::Dynamic {
+			current_mode: MovementMode::Slow,
+			fast_speed: default(),
+			slow_speed: default(),
 		};
 
-		let player = app.world.spawn(player).id();
+		let player = app.world.spawn((Player, config)).id();
 		app.add_systems(Update, player_toggle_walk_run);
 		app.insert_resource(keys);
 
 		app.update();
 
-		let player = app.world.entity(player).get::<Player>().unwrap();
-		assert_eq!(MovementMode::Slow, player.movement_mode);
+		let current = app
+			.world
+			.entity(player)
+			.get::<MovementConfig>()
+			.and_then(|m| match m {
+				MovementConfig::Dynamic { current_mode, .. } => Some(current_mode),
+				_ => None,
+			});
+		assert_eq!(Some(&MovementMode::Slow), current);
 	}
 }

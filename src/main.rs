@@ -1,6 +1,6 @@
 use bars::{components::Bar, BarsPlugin};
 use behaviors::{
-	components::{CamOrbit, PlayerMovement, SimpleMovement},
+	components::{CamOrbit, MovementConfig, MovementMode, PlayerMovement, SimpleMovement},
 	traits::{Orbit, Vec2Radians},
 	BehaviorsPlugin,
 };
@@ -10,7 +10,6 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::*;
 use common::{
-	behaviors::MovementMode,
 	components::{
 		Handed,
 		Health,
@@ -514,10 +513,11 @@ fn spawn_player(
 			..default()
 		},
 		Animator { ..default() },
-		Player {
-			walk_speed: UnitsPerSecond::new(0.75),
-			run_speed: UnitsPerSecond::new(1.5),
-			movement_mode: MovementMode::Fast,
+		Player,
+		MovementConfig::Dynamic {
+			current_mode: MovementMode::Fast,
+			slow_speed: UnitsPerSecond::new(0.75),
+			fast_speed: UnitsPerSecond::new(1.5),
 		},
 		Inventory::new([Some(sword_a), Some(sword_b), Some(pistol_c)]),
 		Loadout::new(

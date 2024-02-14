@@ -136,7 +136,7 @@ mod tests {
 		app.add_systems(Update, panel_activity_colors_override::<_Panel>);
 		app.add_state::<MouseContext>();
 		app.insert_resource(SlotMap::<KeyCode>::new(slot_map));
-		let player = app.world.spawn((Player::default(), Queue::default())).id();
+		let player = app.world.spawn((Player, Queue::default())).id();
 		let panel = app.world.spawn(bundle).id();
 
 		if let Some(slot_key) = slot_key {

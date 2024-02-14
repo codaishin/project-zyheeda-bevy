@@ -11,7 +11,7 @@ use common::{
 	components::{Plasma, Player, Projectile},
 	states::GameRunning,
 };
-use components::{CamOrbit, PlayerMovement, SimpleMovement};
+use components::{CamOrbit, MovementConfig, SimpleMovement};
 use systems::{
 	execute_move::execute_move,
 	follow::follow,
@@ -31,12 +31,9 @@ impl Plugin for BehaviorsPlugin {
 		)
 		.add_systems(
 			Update,
-			(
-				execute_move::<PlayerMovement, Player, SimpleMovement, Virtual>,
-				execute_move::<(), Projectile<Plasma>, SimpleMovement, Virtual>,
-			),
+			(execute_move::<MovementConfig, SimpleMovement, Virtual>,),
 		)
 		.add_systems(Update, projectile_behavior::<Projectile<Plasma>>)
-		.add_systems(Update, void_sphere_behavior);
+		.add_systems(Update, void_sphere_behavior::<MovementConfig>);
 	}
 }
