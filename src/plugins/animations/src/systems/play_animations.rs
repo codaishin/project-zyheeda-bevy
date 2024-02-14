@@ -1,7 +1,7 @@
 use crate::{
 	components::Animator,
-	resources::Animations,
-	traits::play_animation::{RepeatAnimation, ReplayAnimation},
+	resource::Animations,
+	traits::{RepeatAnimation, ReplayAnimation},
 };
 use bevy::{
 	animation::AnimationClip,
@@ -16,7 +16,7 @@ use bevy::{
 use common::components::Animate;
 use std::hash::Hash;
 
-pub fn play_animations<
+pub(crate) fn play_animations<
 	TAnimationKey: Clone + Copy + Hash + Eq + Sync + Send + 'static,
 	TAnimationPlayer: Component + RepeatAnimation + ReplayAnimation,
 >(

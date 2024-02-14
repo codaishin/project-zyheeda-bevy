@@ -1,18 +1,16 @@
-use crate::{
-	resources::Animations,
-	traits::{
-		iteration::{IterKey, KeyValue},
-		load_asset::LoadAsset,
-	},
-};
+use crate::resource::Animations;
 use bevy::{
 	animation::AnimationClip,
 	asset::Handle,
 	ecs::system::{Commands, Res, Resource},
 };
+use common::traits::{
+	iteration::{IterKey, KeyValue},
+	load_asset::LoadAsset,
+};
 use std::{collections::HashMap, hash::Hash};
 
-pub fn load_animations<
+pub(crate) fn load_animations<
 	TAnimationKey: IterKey + KeyValue<String> + Copy + Send + Sync + Eq + Hash + 'static,
 	TLoadAnimation: LoadAsset<AnimationClip> + Resource,
 >(
@@ -35,13 +33,13 @@ fn load_asset_from<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::iteration::Iter;
 	use bevy::{
 		animation::AnimationClip,
 		app::{App, Update},
 		asset::{AssetId, AssetPath, Handle},
 		utils::Uuid,
 	};
+	use common::traits::iteration::Iter;
 
 	#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 	enum _Key {

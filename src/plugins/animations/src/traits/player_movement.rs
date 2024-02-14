@@ -1,5 +1,5 @@
-use super::{Iter, IterKey, KeyValue};
-use behaviors::components::PlayerMovement;
+use crate::components::PlayerMovement;
+use common::traits::iteration::{Iter, IterKey, KeyValue};
 
 const BASE_PATH: &str = "models/player.gltf#";
 

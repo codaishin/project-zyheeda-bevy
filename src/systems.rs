@@ -1,4 +1,3 @@
-pub mod animations;
 pub mod input;
 pub mod items;
 pub mod mouse_context;

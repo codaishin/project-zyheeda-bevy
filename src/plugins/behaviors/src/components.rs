@@ -22,12 +22,6 @@ impl SimpleMovement {
 #[derive(Component)]
 pub struct Idle;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PlayerMovement {
-	Walk,
-	Run,
-}
-
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub enum MovementMode {
 	#[default]

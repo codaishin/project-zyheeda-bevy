@@ -1,6 +1,7 @@
+use animations::{components::Animator, AnimationsPlugin};
 use bars::{components::Bar, BarsPlugin};
 use behaviors::{
-	components::{CamOrbit, MovementConfig, MovementMode, PlayerMovement, SimpleMovement},
+	components::{CamOrbit, MovementConfig, MovementMode, SimpleMovement},
 	traits::{Orbit, Vec2Radians},
 	BehaviorsPlugin,
 };
@@ -38,14 +39,9 @@ use ingame_menu::IngameMenuPlugin;
 use interactions::InteractionsPlugin;
 use project_zyheeda::{
 	bundles::Loadout,
-	components::{Animator, ComboTreeTemplate},
+	components::ComboTreeTemplate,
 	resources::{skill_templates::SkillTemplates, Models, Shared},
 	systems::{
-		animations::{
-			link_animator::link_animators_with_new_animation_players,
-			load_animations::load_animations,
-			play_animations::play_animations,
-		},
 		input::{
 			schedule_slots::schedule_slots,
 			set_cam_ray::set_cam_ray,
@@ -93,19 +89,13 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(InteractionsPlugin)
 		.add_plugins(BarsPlugin)
 		.add_plugins(BehaviorsPlugin)
+		.add_plugins(AnimationsPlugin)
 		.add_state::<GameRunning>()
 		.add_state::<MouseContext>()
 		.init_resource::<Shared<AssetKey, Handle<Mesh>>>()
 		.init_resource::<Shared<AssetKey, Handle<StandardMaterial>>>()
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
-		.add_systems(
-			PreStartup,
-			(
-				load_animations::<PlayerSkills<Side>, AssetServer>,
-				load_animations::<PlayerMovement, AssetServer>,
-			),
-		)
 		.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
 		.add_systems(Startup, setup_input)
 		.add_systems(Startup, load_models)
@@ -114,10 +104,7 @@ fn prepare_game(app: &mut App) {
 			First,
 			(set_cam_ray::<Tools>, set_mouse_hover::<RapierContext>).chain(),
 		)
-		.add_systems(
-			PreUpdate,
-			(link_animators_with_new_animation_players, add_item_slots),
-		)
+		.add_systems(PreUpdate, add_item_slots)
 		.add_systems(
 			First,
 			(
@@ -168,14 +155,6 @@ fn prepare_game(app: &mut App) {
 				.chain(),
 		)
 		.add_systems(Update, instantiate::<Projectile<Plasma>>.pipe(log_many))
-		.add_systems(
-			Update,
-			(
-				play_animations::<PlayerMovement, AnimationPlayer>,
-				play_animations::<PlayerSkills<Side>, AnimationPlayer>,
-			)
-				.chain(),
-		)
 		.add_systems(
 			Update,
 			(instantiate::<VoidSphere>.pipe(log_many), ring_rotation),

@@ -1,5 +1,5 @@
 use crate::types::BoneName;
-use bevy::prelude::{Component, Entity};
+use bevy::prelude::Component;
 use common::{
 	components::SlotKey,
 	skill::{Skill, SkillComboTree},
@@ -12,11 +12,6 @@ pub enum VoidSpherePart {
 	Core,
 	RingA(UnitsPerSecond),
 	RingB(UnitsPerSecond),
-}
-
-#[derive(Component, Default)]
-pub struct Animator {
-	pub animation_player_id: Option<Entity>,
 }
 
 #[derive(Component)]

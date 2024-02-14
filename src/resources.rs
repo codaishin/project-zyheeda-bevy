@@ -1,7 +1,6 @@
 pub mod skill_templates;
 use crate::types::{File, Key, SceneId};
 use bevy::{
-	animation::AnimationClip,
 	asset::{Asset, AssetServer, Handle},
 	ecs::system::Resource,
 	math::Ray,
@@ -17,9 +16,6 @@ use std::{
 	hash::Hash,
 	marker::PhantomData,
 };
-
-#[derive(Resource)]
-pub struct Animations<T>(pub HashMap<T, Handle<AnimationClip>>);
 
 #[derive(Resource)]
 pub struct Models(pub HashMap<&'static Key, Handle<Scene>>);
