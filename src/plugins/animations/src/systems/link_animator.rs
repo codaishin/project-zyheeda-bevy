@@ -1,16 +1,14 @@
+use crate::components::Animator;
 use bevy::prelude::*;
 
-use crate::components::Animator;
-
-fn link_with_parent_animator(
-	animation_player: Entity,
-	parent: Entity,
-	animators: &mut Query<&mut Animator>,
+pub(crate) fn link_animators_with_new_animation_players(
+	mut animators: Query<&mut Animator>,
+	animation_players: Query<Entity, Added<AnimationPlayer>>,
+	parents: Query<&Parent>,
 ) {
-	let Ok(mut animator) = animators.get_mut(parent) else {
-		return;
-	};
-	animator.animation_player_id = Some(animation_player);
+	for animation_player in &animation_players {
+		link_with_parent_animators(animation_player, &parents, &mut animators);
+	}
 }
 
 fn link_with_parent_animators(
@@ -23,14 +21,15 @@ fn link_with_parent_animators(
 	}
 }
 
-pub fn link_animators_with_new_animation_players(
-	mut animators: Query<&mut Animator>,
-	animation_players: Query<Entity, Added<AnimationPlayer>>,
-	parents: Query<&Parent>,
+fn link_with_parent_animator(
+	animation_player: Entity,
+	parent: Entity,
+	animators: &mut Query<&mut Animator>,
 ) {
-	for animation_player in &animation_players {
-		link_with_parent_animators(animation_player, &parents, &mut animators);
-	}
+	let Ok(mut animator) = animators.get_mut(parent) else {
+		return;
+	};
+	animator.animation_player_id = Some(animation_player);
 }
 
 #[cfg(test)]

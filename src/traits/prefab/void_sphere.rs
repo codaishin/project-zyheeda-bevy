@@ -1,6 +1,7 @@
 use super::{sphere, AssetKey, Instantiate, VoidPart};
 use crate::{bundles::ColliderBundle, components::VoidSpherePart};
 use bars::components::Bar;
+use behaviors::components::{MovementConfig, MovementMode};
 use bevy::{
 	asset::Handle,
 	ecs::{bundle::Bundle, system::EntityCommands},
@@ -92,6 +93,10 @@ impl Instantiate for VoidSphere {
 			GravityScale(0.),
 			Health::new(5),
 			Bar::default(),
+			MovementConfig::Constant {
+				mode: MovementMode::Slow,
+				speed: UnitsPerSecond::new(1.),
+			},
 		));
 		on.with_children(|parent| {
 			parent.spawn(PbrVoidSphereBundle::new(

@@ -28,10 +28,7 @@ mod tests {
 
 		let source = (slot_key, Some(item.clone()));
 
-		assert_eq!(
-			(slot_key, Some(item)),
-			source.get_key_and_item(&Player::default())
-		)
+		assert_eq!((slot_key, Some(item)), source.get_key_and_item(&Player))
 	}
 
 	#[test]
@@ -39,10 +36,7 @@ mod tests {
 		let slot_key = SlotKey::Hand(Side::Off);
 		let source = (slot_key, None);
 
-		assert_eq!(
-			(slot_key, None),
-			source.get_key_and_item(&Player::default())
-		)
+		assert_eq!((slot_key, None), source.get_key_and_item(&Player))
 	}
 
 	#[test]
@@ -57,8 +51,7 @@ mod tests {
 			..default()
 		};
 
-		let source =
-			(slot_key, Some(item)).with_item(Some(other_item.clone()), &mut Player::default());
+		let source = (slot_key, Some(item)).with_item(Some(other_item.clone()), &mut Player);
 
 		assert_eq!((slot_key, Some(other_item)), source);
 	}

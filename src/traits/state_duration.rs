@@ -1,6 +1,5 @@
 pub mod track;
 
-use super::iteration::IterKey;
 use std::{
 	cmp::Ordering,
 	collections::HashSet,
@@ -8,6 +7,8 @@ use std::{
 	ops::{Add, Sub},
 	time::Duration,
 };
+
+use common::traits::iteration::IterKey;
 
 #[derive(PartialEq, Debug, Clone, Eq, Hash)]
 pub enum StateMeta<TStateName: Clone> {
@@ -166,7 +167,7 @@ fn zero_duration_meta<TStateName: IterKey + Copy + Clone + Eq + Hash + 'static>(
 
 #[cfg(test)]
 mod tests {
-	use crate::traits::iteration::Iter;
+	use common::traits::iteration::Iter;
 
 	use super::*;
 

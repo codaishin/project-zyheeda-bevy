@@ -1,8 +1,4 @@
-use crate::{
-	behaviors::MovementMode,
-	skill::{PlayerSkills, Queued, Skill},
-	tools::UnitsPerSecond,
-};
+use crate::skill::{PlayerSkills, Queued, Skill};
 use bevy::{
 	ecs::{component::Component, entity::Entity},
 	math::Vec3,
@@ -137,11 +133,7 @@ impl Default for Queue {
 }
 
 #[derive(Component, Default)]
-pub struct Player {
-	pub walk_speed: UnitsPerSecond,
-	pub run_speed: UnitsPerSecond,
-	pub movement_mode: MovementMode,
-}
+pub struct Player;
 
 #[derive(Component)]
 pub struct VoidSphere;

@@ -176,6 +176,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "animations"
+version = "0.1.0"
+dependencies = [
+ "behaviors",
+ "bevy",
+ "bevy_rapier3d",
+ "common",
+ "mockall",
+ "tracing",
+]
+
+[[package]]
 name = "approx"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3036,6 +3048,7 @@ checksum = "0f0f7f43585c34e4fdd7497d746bc32e14458cf11c69341cc0587b1d825dde42"
 name = "project-zyheeda"
 version = "0.1.0"
 dependencies = [
+ "animations",
  "bars",
  "behaviors",
  "bevy",

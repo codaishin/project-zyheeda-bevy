@@ -1,14 +1,14 @@
 pub(crate) mod cam_orbit;
-pub(crate) mod player;
+pub(crate) mod movement_config;
 pub(crate) mod projectile;
 pub(crate) mod simple_movement;
-pub(crate) mod void_sphere;
 
+use crate::components::MovementMode;
 use bevy::{
 	math::{Vec2, Vec3},
 	transform::components::Transform,
 };
-use common::{components::Animate, tools::UnitsPerSecond};
+use common::tools::UnitsPerSecond;
 
 pub(crate) type Units = f32;
 pub(crate) type IsDone = bool;
@@ -19,8 +19,8 @@ pub(crate) trait ProjectileBehavior {
 	fn range(&self) -> f32;
 }
 
-pub(crate) trait MovementData<TAnimationKey: Clone + Copy> {
-	fn get_movement_data(&self) -> (UnitsPerSecond, Animate<TAnimationKey>);
+pub(crate) trait MovementData {
+	fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode);
 }
 
 pub trait Orbit {

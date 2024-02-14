@@ -1,5 +1,5 @@
 use super::{Iter, IterKey};
-use common::skill::SkillState;
+use crate::skill::SkillState;
 
 impl IterKey for SkillState {
 	fn iterator() -> Iter<Self> {

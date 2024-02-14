@@ -1,5 +1,5 @@
 use super::{Iter, IterKey, KeyValue};
-use common::{
+use crate::{
 	components::{Handed, Side},
 	skill::PlayerSkills,
 };

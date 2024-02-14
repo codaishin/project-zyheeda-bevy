@@ -1,4 +1,5 @@
 use bevy::{ecs::component::Component, math::Vec3};
+use common::tools::UnitsPerSecond;
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -21,8 +22,22 @@ impl SimpleMovement {
 #[derive(Component)]
 pub struct Idle;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PlayerMovement {
-	Walk,
-	Run,
+#[derive(Clone, Copy, PartialEq, Debug, Default)]
+pub enum MovementMode {
+	#[default]
+	Fast,
+	Slow,
+}
+
+#[derive(Component, Clone, Copy)]
+pub enum MovementConfig {
+	Constant {
+		mode: MovementMode,
+		speed: UnitsPerSecond,
+	},
+	Dynamic {
+		current_mode: MovementMode,
+		fast_speed: UnitsPerSecond,
+		slow_speed: UnitsPerSecond,
+	},
 }
