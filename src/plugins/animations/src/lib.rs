@@ -3,17 +3,22 @@ mod resource;
 mod systems;
 mod traits;
 
+use behaviors::components::SimpleMovement;
 use bevy::{
 	animation::AnimationPlayer,
 	app::{App, Plugin, PreStartup, PreUpdate, Update},
 	asset::AssetServer,
 };
-use common::{components::Side, skill::PlayerSkills};
+use common::{
+	components::{Player, Side},
+	skill::PlayerSkills,
+};
 use components::PlayerMovement;
 use systems::{
 	link_animator::link_animators_with_new_animation_players,
 	load_animations::load_animations,
 	play_animations::play_animations,
+	set_movement_animation::set_movement_animation,
 };
 
 pub struct AnimationsPlugin;
@@ -28,6 +33,10 @@ impl Plugin for AnimationsPlugin {
 			),
 		)
 		.add_systems(PreUpdate, link_animators_with_new_animation_players)
+		.add_systems(
+			Update,
+			set_movement_animation::<Player, SimpleMovement, PlayerMovement>,
+		)
 		.add_systems(
 			Update,
 			(

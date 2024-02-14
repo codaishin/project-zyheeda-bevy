@@ -29,7 +29,7 @@ pub enum MovementMode {
 	Slow,
 }
 
-#[derive(Component)]
+#[derive(Component, Clone, Copy)]
 pub enum MovementConfig {
 	Constant {
 		mode: MovementMode,
