@@ -1,5 +1,9 @@
 pub mod utils {
-	use bevy::{prelude::*, time::Time};
+	use bevy::{
+		ecs::schedule::{ExecutorKind, ScheduleLabel},
+		prelude::*,
+		time::Time,
+	};
 	use std::time::Duration;
 
 	pub trait ApproxEqual<TTolerance> {
@@ -89,6 +93,24 @@ pub mod utils {
 			}
 			let last_update = time.last_update().unwrap();
 			time.update_with_instant(last_update + delta);
+		}
+	}
+
+	pub trait SingleThreadedApp {
+		fn new_single_threaded<const N: usize>(labels: [impl ScheduleLabel; N]) -> Self;
+	}
+
+	impl SingleThreadedApp for App {
+		fn new_single_threaded<const N: usize>(labels: [impl ScheduleLabel; N]) -> Self {
+			let mut app = App::new();
+
+			for label in labels {
+				app.edit_schedule(label, |schedule| {
+					schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+				});
+			}
+
+			app
 		}
 	}
 }
