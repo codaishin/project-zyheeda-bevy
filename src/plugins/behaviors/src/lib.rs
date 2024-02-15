@@ -3,14 +3,11 @@ mod systems;
 pub mod traits;
 
 use bevy::{
-	app::{Plugin, Update},
-	ecs::schedule::{common_conditions::in_state, IntoSystemConfigs},
+	app::{App, Plugin, Update},
+	ecs::schedule::{common_conditions::in_state, IntoSystemConfigs, States},
 	time::Virtual,
 };
-use common::{
-	components::{Plasma, Player, Projectile},
-	states::GameRunning,
-};
+use common::components::{Plasma, Player, Projectile};
 use components::{CamOrbit, MovementConfig, SimpleMovement};
 use systems::{
 	execute_move::execute_move,
@@ -20,14 +17,24 @@ use systems::{
 	void_sphere::void_sphere_behavior,
 };
 
-pub struct BehaviorsPlugin;
+pub struct BehaviorsPlugin<TCamActiveState: States + Clone + Send + Sync + 'static> {
+	cam_behavior_state: TCamActiveState,
+}
 
-impl Plugin for BehaviorsPlugin {
-	fn build(&self, app: &mut bevy::prelude::App) {
+impl<TCamActiveState: States + Clone + Send + Sync + 'static> BehaviorsPlugin<TCamActiveState> {
+	pub fn cam_behavior_if(cam_behavior_state: TCamActiveState) -> Self {
+		Self { cam_behavior_state }
+	}
+}
+
+impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
+	for BehaviorsPlugin<TCamActiveState>
+{
+	fn build(&self, app: &mut App) {
 		app.add_systems(
 			Update,
 			(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>)
-				.run_if(in_state(GameRunning::On)),
+				.run_if(in_state(self.cam_behavior_state.clone())),
 		)
 		.add_systems(
 			Update,
