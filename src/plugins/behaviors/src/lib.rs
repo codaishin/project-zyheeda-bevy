@@ -3,7 +3,7 @@ mod systems;
 pub mod traits;
 
 use bevy::{
-	app::{Plugin, Update},
+	app::{App, Plugin, Update},
 	ecs::schedule::{common_conditions::in_state, IntoSystemConfigs, States},
 	time::Virtual,
 };
@@ -30,7 +30,7 @@ impl<TCamActiveState: States + Clone + Send + Sync + 'static> BehaviorsPlugin<TC
 impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
 	for BehaviorsPlugin<TCamActiveState>
 {
-	fn build(&self, app: &mut bevy::prelude::App) {
+	fn build(&self, app: &mut App) {
 		app.add_systems(
 			Update,
 			(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>)
