@@ -1,4 +1,7 @@
-use bevy::{ecs::component::Component, math::Vec3};
+use bevy::{
+	ecs::{component::Component, entity::Entity},
+	math::Vec3,
+};
 use common::tools::UnitsPerSecond;
 
 #[derive(Component)]
@@ -27,3 +30,10 @@ pub enum MovementConfig {
 		slow_speed: UnitsPerSecond,
 	},
 }
+
+#[derive(Component, Debug, PartialEq)]
+pub(crate) struct Chase(pub Entity);
+
+
+#[derive(Component)]
+pub struct FollowPlayer;

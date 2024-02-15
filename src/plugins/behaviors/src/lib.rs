@@ -11,11 +11,11 @@ use common::components::{Plasma, Player, Projectile};
 use components::{CamOrbit, MovementConfig};
 use skills::components::SimpleMovement;
 use systems::{
+	chase::chase,
 	execute_move::execute_move,
 	follow::follow,
 	move_on_orbit::move_on_orbit,
 	projectile::projectile_behavior,
-	void_sphere::void_sphere_behavior,
 };
 
 pub struct BehaviorsPlugin<TCamActiveState: States + Clone + Send + Sync + 'static> {
@@ -42,6 +42,6 @@ impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
 			(execute_move::<MovementConfig, SimpleMovement, Virtual>,),
 		)
 		.add_systems(Update, projectile_behavior::<Projectile<Plasma>>)
-		.add_systems(Update, void_sphere_behavior::<MovementConfig>);
+		.add_systems(Update, chase::<MovementConfig>);
 	}
 }
