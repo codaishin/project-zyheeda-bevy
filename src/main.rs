@@ -88,7 +88,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(IngameMenuPlugin)
 		.add_plugins(InteractionsPlugin)
 		.add_plugins(BarsPlugin)
-		.add_plugins(BehaviorsPlugin)
+		.add_plugins(BehaviorsPlugin::cam_behavior_if(GameRunning::On))
 		.add_plugins(AnimationsPlugin)
 		.add_state::<GameRunning>()
 		.add_state::<MouseContext>()
