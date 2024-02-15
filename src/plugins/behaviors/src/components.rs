@@ -34,6 +34,18 @@ pub enum MovementConfig {
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct Chase(pub Entity);
 
+#[derive(Component, Debug, PartialEq)]
+pub(crate) struct Attack(pub Entity);
 
-#[derive(Component)]
-pub struct FollowPlayer;
+#[derive(Clone, Copy)]
+pub enum Foe {
+	Player,
+	Entity(Entity),
+}
+
+#[derive(Component, Clone, Copy)]
+pub struct Enemy {
+	pub attack_range: f32,
+	pub aggro_range: f32,
+	pub foe: Foe,
+}

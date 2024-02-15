@@ -12,6 +12,7 @@ use components::{CamOrbit, MovementConfig};
 use skills::components::SimpleMovement;
 use systems::{
 	chase::chase,
+	enemy::enemy,
 	execute_move::execute_move,
 	follow::follow,
 	move_on_orbit::move_on_orbit,
@@ -42,6 +43,6 @@ impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
 			(execute_move::<MovementConfig, SimpleMovement, Virtual>,),
 		)
 		.add_systems(Update, projectile_behavior::<Projectile<Plasma>>)
-		.add_systems(Update, chase::<MovementConfig>);
+		.add_systems(Update, (enemy, chase::<MovementConfig>).chain());
 	}
 }

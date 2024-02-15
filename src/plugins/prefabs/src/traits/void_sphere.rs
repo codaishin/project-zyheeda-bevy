@@ -1,6 +1,6 @@
 use super::{sphere, AssetKey, Instantiate, VoidPart};
 use bars::components::Bar;
-use behaviors::components::{MovementConfig, MovementMode};
+use behaviors::components::{Enemy, Foe, MovementConfig, MovementMode};
 use bevy::{
 	asset::Handle,
 	ecs::{bundle::Bundle, system::EntityCommands},
@@ -97,6 +97,11 @@ impl Instantiate for VoidSphere {
 			MovementConfig::Constant {
 				mode: MovementMode::Slow,
 				speed: UnitsPerSecond::new(1.),
+			},
+			Enemy {
+				attack_range: 5.,
+				aggro_range: 10.,
+				foe: Foe::Player,
 			},
 		));
 		on.with_children(|parent| {
