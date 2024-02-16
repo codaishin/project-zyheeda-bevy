@@ -1,5 +1,6 @@
 use super::ActOn;
-use common::components::{DealsDamage, Health};
+use crate::components::DealsDamage;
+use common::components::Health;
 
 impl ActOn<Health> for DealsDamage {
 	fn act_on(&mut self, target: &mut Health) {

@@ -10,7 +10,7 @@ tracing.workspace = true
 bars.workspace = true
 behaviors.workspace = true
 common.workspace = true
-
+interactions.workspace = true
 
 [dev-dependencies]
 mockall.workspace = true

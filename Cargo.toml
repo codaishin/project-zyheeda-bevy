@@ -15,6 +15,7 @@ mockall = "0.11.2"
 bars = { path = "src/plugins/bars" }
 behaviors = { path = "src/plugins/behaviors" }
 common = { path = "src/common" }
+interactions = { path = "src/plugins/interactions" }
 prefabs = { path = "src/plugins/prefabs" }
 skills = { path = "src/plugins/skills" }
 
@@ -32,11 +33,12 @@ tracing.workspace = true
 bars.workspace = true
 behaviors.workspace = true
 common.workspace = true
+interactions.workspace = true
 prefabs.workspace = true
 skills.workspace = true
 animations = { path = "src/plugins/animations" }
 ingame_menu = { path = "src/plugins/ingame_menu" }
-interactions = { path = "src/plugins/interactions" }
+
 
 [dev-dependencies]
 mockall.workspace = true

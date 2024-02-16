@@ -15,10 +15,11 @@ use bevy_rapier3d::{
 };
 use common::{
 	bundles::ColliderBundle,
-	components::{ColliderRoot, DealsDamage, Plasma, Projectile},
+	components::{ColliderRoot, Plasma, Projectile},
 	errors::Error,
 	tools::UnitsPerSecond,
 };
+use interactions::components::DealsDamage;
 
 const PLASMA_RADIUS: f32 = 0.05;
 

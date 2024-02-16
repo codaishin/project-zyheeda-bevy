@@ -57,9 +57,6 @@ impl Health {
 #[derive(Component, PartialEq, Debug)]
 pub struct ColliderRoot(pub Entity);
 
-#[derive(Component)]
-pub struct DealsDamage(pub i16);
-
 pub struct Plasma;
 
 #[derive(Component, Default)]

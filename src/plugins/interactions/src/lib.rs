@@ -1,9 +1,10 @@
-mod components;
+pub mod components;
 mod systems;
 mod traits;
 
 use bevy::app::{App, Plugin, PostUpdate, Update};
-use common::components::{DealsDamage, Health};
+use common::components::Health;
+use components::DealsDamage;
 use systems::{
 	collision::interaction::collision_interaction,
 	destroy::destroy,
