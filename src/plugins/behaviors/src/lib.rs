@@ -8,7 +8,8 @@ use bevy::{
 	time::Virtual,
 };
 use common::components::{Plasma, Player, Projectile};
-use components::{CamOrbit, MovementConfig, SimpleMovement};
+use components::{CamOrbit, MovementConfig};
+use skills::components::SimpleMovement;
 use systems::{
 	execute_move::execute_move,
 	follow::follow,

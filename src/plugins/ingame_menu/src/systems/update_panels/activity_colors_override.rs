@@ -18,8 +18,9 @@ use bevy::{
 	render::color::Color,
 	ui::BackgroundColor,
 };
-use common::{
-	components::{Player, Queue, SideUnset, SlotKey, Track},
+use common::components::Player;
+use skills::{
+	components::{Queue, SideUnset, SlotKey, Track},
 	resources::SlotMap,
 	skill::{Active, PlayerSkills, Skill},
 	states::MouseContext,
@@ -97,7 +98,7 @@ mod tests {
 		prelude::default,
 		render::color::Color,
 	};
-	use common::skill::Queued;
+	use skills::skill::Queued;
 
 	#[derive(Component)]
 	struct _Panel(pub SlotKey);

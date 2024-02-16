@@ -1,5 +1,5 @@
 use crate::traits::get::Get;
-use common::components::{Inventory, InventoryKey, Item};
+use skills::components::{Inventory, InventoryKey, Item};
 
 impl Get<InventoryKey, Option<Item>> for Inventory {
 	fn get(&self, key: InventoryKey) -> Option<Item> {

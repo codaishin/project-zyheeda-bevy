@@ -14,6 +14,7 @@ tracing = "0.1.40"
 mockall = "0.11.2"
 common = { path = "src/common" }
 behaviors = { path = "src/plugins/behaviors" }
+skills = { path = "src/plugins/skills" }
 
 # Core Package Settings
 
@@ -27,10 +28,11 @@ bevy.workspace = true
 bevy_rapier3d.workspace = true
 tracing.workspace = true
 common.workspace = true
+behaviors.workspace = true
+skills.workspace = true
 ingame_menu = { path = "src/plugins/ingame_menu" }
 bars = { path = "src/plugins/bars" }
 interactions = { path = "src/plugins/interactions" }
-behaviors.workspace = true
 animations = { path = "src/plugins/animations" }
 
 [dev-dependencies]

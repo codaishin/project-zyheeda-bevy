@@ -1,12 +1,7 @@
-pub mod skill_templates;
-use crate::types::{File, Key, SceneId};
 use bevy::{
-	asset::{Asset, AssetServer, Handle},
+	asset::{Asset, Handle},
 	ecs::system::Resource,
-	math::Ray,
-	prelude::Res,
 	render::mesh::Mesh,
-	scene::Scene,
 };
 use std::{
 	collections::{
@@ -16,28 +11,6 @@ use std::{
 	hash::Hash,
 	marker::PhantomData,
 };
-
-#[derive(Resource)]
-pub struct Models(pub HashMap<&'static Key, Handle<Scene>>);
-
-impl Models {
-	pub fn new<const C: usize>(
-		pairs: [(&'static Key, &File, SceneId); C],
-		asset_server: &Res<AssetServer>,
-	) -> Self {
-		Models(
-			pairs
-				.map(|(key, file, scene_id)| {
-					(
-						key,
-						asset_server.load(format!("models/{file}#Scene{scene_id}")),
-					)
-				})
-				.into_iter()
-				.collect(),
-		)
-	}
-}
 
 #[derive(Resource, Default)]
 pub struct ModelData<TMaterial: Asset, TModel> {
@@ -55,9 +28,6 @@ impl<TMaterial: Asset, TModel> ModelData<TMaterial, TModel> {
 		}
 	}
 }
-
-#[derive(Resource, Default)]
-pub struct CamRay(pub Option<Ray>);
 
 #[derive(Resource)]
 pub struct Prefab<TFor, TParent, TChildren> {

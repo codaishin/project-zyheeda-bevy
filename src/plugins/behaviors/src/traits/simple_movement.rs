@@ -1,6 +1,6 @@
 use super::{IsDone, Movement, Units};
-use crate::components::SimpleMovement;
 use bevy::prelude::*;
+use skills::components::SimpleMovement;
 
 impl Movement for SimpleMovement {
 	fn update(&mut self, agent: &mut Transform, distance: Units) -> IsDone {

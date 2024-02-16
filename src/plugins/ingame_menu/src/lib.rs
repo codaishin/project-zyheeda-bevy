@@ -23,10 +23,10 @@ use self::{
 	tools::MenuState,
 };
 use bevy::prelude::*;
-use common::{
-	components::{Inventory, InventoryKey, Player, SlotKey, Slots},
+use common::{components::Player, systems::log::log_many};
+use skills::{
+	components::{Inventory, InventoryKey, SlotKey, Slots},
 	states::{GameRunning, Off, On},
-	systems::log::log_many,
 };
 use systems::items::swap::{
 	equipped_items::swap_equipped_items,

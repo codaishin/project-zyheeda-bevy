@@ -8,9 +8,10 @@ use bevy::{
 	scene::Scene,
 };
 use common::{
-	components::{Collection, SlotKey, Slots, Swap},
+	components::{Collection, Swap},
 	errors::{Error, Level},
 };
+use skills::components::{SlotKey, Slots};
 
 type SlotsToSwap<'a> = (
 	Entity,
@@ -104,9 +105,10 @@ mod tests {
 		utils::Uuid,
 	};
 	use common::{
-		components::{Item, Side, Slot},
+		components::Side,
 		systems::log::test_tools::{fake_log_error_lazy_many, FakeErrorLogMany},
 	};
+	use skills::components::{Item, Slot};
 
 	#[test]
 	fn swap_items() {

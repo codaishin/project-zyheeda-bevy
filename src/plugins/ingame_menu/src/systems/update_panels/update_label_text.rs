@@ -5,7 +5,7 @@ use bevy::{
 	prelude::{default, Res},
 	text::{Text, TextSection},
 };
-use common::{components::SlotKey, resources::SlotMap};
+use skills::{components::SlotKey, resources::SlotMap};
 
 type Labels<'a, T> = (&'a Label<T, SlotKey>, &'a mut Text);
 

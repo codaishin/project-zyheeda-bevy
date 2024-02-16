@@ -1,8 +1,6 @@
-use crate::{
-	components::Idle,
-	traits::{Movement, MovementData},
-};
+use crate::traits::{Movement, MovementData};
 use bevy::prelude::*;
+use skills::components::SkillsIdle;
 
 type Components<'a, TAgent, TMovement> = (Entity, &'a mut TMovement, &'a mut Transform, &'a TAgent);
 
@@ -21,7 +19,7 @@ pub(crate) fn execute_move<
 		let is_done = movement.update(&mut transform, time.delta_seconds() * speed.to_f32());
 
 		if is_done {
-			entity.insert(Idle);
+			entity.insert(SkillsIdle);
 			entity.remove::<TMovement>();
 		}
 	}
@@ -148,7 +146,7 @@ mod test {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<Idle>());
+		assert!(agent.contains::<SkillsIdle>());
 	}
 
 	#[test]
@@ -166,7 +164,7 @@ mod test {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Idle>());
+		assert!(!agent.contains::<SkillsIdle>());
 	}
 
 	#[test]
