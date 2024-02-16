@@ -3,6 +3,7 @@ use bevy::{
 	math::Vec3,
 };
 use common::tools::UnitsPerSecond;
+use std::time::Duration;
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -36,6 +37,9 @@ pub(crate) struct Chase(pub Entity);
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct Attack(pub Entity);
+
+#[derive(Component, Debug, PartialEq)]
+pub(crate) struct CoolDown(pub Duration);
 
 #[derive(Clone, Copy)]
 pub enum Foe {

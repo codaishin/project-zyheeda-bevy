@@ -17,6 +17,7 @@ use systems::{
 	follow::follow,
 	move_on_orbit::move_on_orbit,
 	projectile::projectile_behavior,
+	update_cool_downs::update_cool_downs,
 };
 
 pub struct BehaviorsPlugin<TCamActiveState: States + Clone + Send + Sync + 'static> {
@@ -38,6 +39,7 @@ impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
 			(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>)
 				.run_if(in_state(self.cam_behavior_state.clone())),
 		)
+		.add_systems(Update, update_cool_downs::<Virtual>)
 		.add_systems(
 			Update,
 			(execute_move::<MovementConfig, SimpleMovement, Virtual>,),
