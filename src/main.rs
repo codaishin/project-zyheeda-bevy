@@ -1,7 +1,7 @@
 use animations::{components::Animator, AnimationsPlugin};
 use bars::{components::Bar, BarsPlugin};
 use behaviors::{
-	components::{CamOrbit, MovementConfig, MovementMode, SimpleMovement},
+	components::{CamOrbit, MovementConfig, MovementMode},
 	traits::{Orbit, Vec2Radians},
 	BehaviorsPlugin,
 };
@@ -11,65 +11,23 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{
-		Handed,
-		Health,
-		Inventory,
-		InventoryKey,
-		Item,
-		ItemType,
-		Plasma,
-		Player,
-		Projectile,
-		Side,
-		SideUnset,
-		SlotKey,
-		Swap,
-		Track,
-		VoidSphere,
-	},
-	errors::Error,
-	resources::{MouseHover, SkillIcons, SlotMap},
-	skill::{Active, Cast, PlayerSkills, Skill, SkillComboNext, SkillComboTree, SwordStrike},
-	states::{GameRunning, MouseContext},
+	components::{Health, Plasma, Player, Projectile, VoidSphere},
 	systems::log::log_many,
-	tools::{Tools, UnitsPerSecond},
+	tools::UnitsPerSecond,
 };
 use ingame_menu::IngameMenuPlugin;
 use interactions::InteractionsPlugin;
 use project_zyheeda::{
-	bundles::Loadout,
-	components::ComboTreeTemplate,
-	resources::{skill_templates::SkillTemplates, Models, Shared},
+	resources::Shared,
 	systems::{
-		input::{
-			schedule_slots::schedule_slots,
-			set_cam_ray::set_cam_ray,
-			set_mouse_hover::set_mouse_hover,
-		},
-		items::{equip::equip_item, slots::add_item_slots},
-		mouse_context::{
-			advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
-			release::release_triggered_mouse_context,
-			trigger_primed::trigger_primed_mouse_context,
-		},
 		movement::toggle_walk_run::player_toggle_walk_run,
 		prefab::instantiate::instantiate,
-		skill::{
-			chain_combo_skills::chain_combo_skills,
-			dequeue::dequeue,
-			enqueue::enqueue,
-			execute_skill::execute_skill,
-		},
 		void_sphere::ring_rotation::ring_rotation,
 	},
-	traits::{behavior::GetBehaviorMeta, prefab::AssetKey},
+	traits::prefab::AssetKey,
 };
-use std::{
-	collections::{HashMap, HashSet},
-	f32::consts::PI,
-	time::Duration,
-};
+use skills::{states::GameRunning, SkillsPlugin};
+use std::f32::consts::PI;
 
 fn main() {
 	let app = &mut App::new();
@@ -88,72 +46,16 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(IngameMenuPlugin)
 		.add_plugins(InteractionsPlugin)
 		.add_plugins(BarsPlugin)
+		.add_plugins(SkillsPlugin)
 		.add_plugins(BehaviorsPlugin::cam_behavior_if(GameRunning::On))
 		.add_plugins(AnimationsPlugin)
 		.add_state::<GameRunning>()
-		.add_state::<MouseContext>()
 		.init_resource::<Shared<AssetKey, Handle<Mesh>>>()
 		.init_resource::<Shared<AssetKey, Handle<StandardMaterial>>>()
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
-		.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
-		.add_systems(Startup, setup_input)
-		.add_systems(Startup, load_models)
 		.add_systems(Startup, setup_simple_3d_scene)
-		.add_systems(
-			First,
-			(set_cam_ray::<Tools>, set_mouse_hover::<RapierContext>).chain(),
-		)
-		.add_systems(PreUpdate, add_item_slots)
-		.add_systems(
-			First,
-			(
-				schedule_slots::<KeyCode, Player, Input<KeyCode>, Input<KeyCode>>,
-				schedule_slots::<KeyCode, Player, State<MouseContext>, Input<KeyCode>>,
-				schedule_slots::<MouseButton, Player, Input<MouseButton>, Input<KeyCode>>
-					.run_if(in_state(MouseContext::<KeyCode>::Default)),
-			)
-				.run_if(in_state(GameRunning::On)),
-		)
-		.add_systems(
-			PreUpdate,
-			(
-				player_toggle_walk_run,
-				enqueue::<MouseHover>,
-				dequeue, // sets skill activity marker, so it MUST run before skill execution systems
-			)
-				.chain()
-				.run_if(in_state(GameRunning::On)),
-		)
-		.add_systems(
-			Update,
-			(
-				trigger_primed_mouse_context,
-				advance_just_triggered_mouse_context,
-				release_triggered_mouse_context,
-				advance_just_released_mouse_context,
-			),
-		)
-		.add_systems(
-			Update,
-			(
-				equip_item::<Player, (SlotKey, Option<Item>)>.pipe(log_many),
-				equip_item::<Inventory, Swap<InventoryKey, SlotKey>>.pipe(log_many),
-				equip_item::<Inventory, Swap<SlotKey, InventoryKey>>.pipe(log_many),
-			),
-		)
-		.add_systems(
-			Update,
-			(
-				chain_combo_skills::<SkillComboNext>,
-				execute_skill::<
-					PlayerSkills<Side>,
-					Track<Skill<PlayerSkills<SideUnset>, Active>>,
-					Virtual,
-				>,
-			)
-				.chain(),
-		)
+		.add_systems(PreUpdate, player_toggle_walk_run)
 		.add_systems(Update, instantiate::<Projectile<Plasma>>.pipe(log_many))
 		.add_systems(
 			Update,
@@ -273,118 +175,19 @@ fn pause_virtual_time<const PAUSE: bool>(mut time: ResMut<Time<Virtual>>) {
 	}
 }
 
-fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
-	let models = Models::new(
-		[("pistol", "pistol.gltf", 0), ("sword", "sword.gltf", 0)],
-		&asset_server,
-	);
-	commands.insert_resource(models);
-}
-
-fn setup_input(mut commands: Commands) {
-	commands.insert_resource(SlotMap::<MouseButton>::new([(
-		MouseButton::Left,
-		SlotKey::Legs,
-		"Mouse Left",
-	)]));
-	commands.insert_resource(SlotMap::<KeyCode>::new([
-		(KeyCode::E, SlotKey::Hand(Side::Main), "E"),
-		(KeyCode::Q, SlotKey::Hand(Side::Off), "Q"),
-	]));
-}
-
 fn setup_simple_3d_scene(
 	mut commands: Commands,
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut materials: ResMut<Assets<StandardMaterial>>,
 	asset_server: Res<AssetServer>,
-	skill_templates: Res<SkillTemplates>,
 	mut next_state: ResMut<NextState<GameRunning>>,
 ) {
 	spawn_plane(&mut commands, &mut meshes, &mut materials);
-	spawn_player(&mut commands, asset_server, skill_templates);
+	spawn_player(&mut commands, asset_server);
 	spawn_light(&mut commands);
 	spawn_camera(&mut commands);
 	spawn_void_spheres(&mut commands);
 	next_state.set(GameRunning::On);
-}
-
-fn setup_skill_templates(
-	mut commands: Commands,
-	assert_server: Res<AssetServer>,
-) -> Vec<Result<(), Error>> {
-	let (templates, errors) = SkillTemplates::new(&[
-		Skill {
-			name: "Swing Sword",
-			cast: Cast {
-				aim: Duration::ZERO,
-				pre: Duration::from_millis(0),
-				active: Duration::from_millis(500),
-				after: Duration::from_millis(200),
-			},
-			soft_override: true,
-			animate: PlayerSkills::SwordStrike(SideUnset),
-			behavior: SwordStrike::behavior(),
-			is_usable_with: HashSet::from([ItemType::Sword]),
-			..default()
-		},
-		Skill {
-			name: "Shoot Hand Gun",
-			cast: Cast {
-				pre: Duration::from_millis(100),
-				active: Duration::ZERO,
-				after: Duration::from_millis(100),
-				..default()
-			},
-			soft_override: true,
-			animate: PlayerSkills::Shoot(Handed::Single(SideUnset)),
-			behavior: Projectile::<Plasma>::behavior(),
-			is_usable_with: HashSet::from([ItemType::Pistol]),
-			..default()
-		},
-		Skill {
-			name: "Shoot Hand Gun Dual",
-			cast: Cast {
-				pre: Duration::from_millis(100),
-				active: Duration::ZERO,
-				after: Duration::from_millis(100),
-				..default()
-			},
-			soft_override: true,
-			animate: PlayerSkills::Shoot(Handed::Dual(SideUnset)),
-			behavior: Projectile::<Plasma>::behavior(),
-			is_usable_with: HashSet::from([ItemType::Pistol]),
-			..default()
-		},
-		Skill {
-			name: "Simple Movement",
-			cast: Cast {
-				aim: Duration::ZERO,
-				after: Duration::MAX,
-				..default()
-			},
-			behavior: SimpleMovement::behavior(),
-			is_usable_with: HashSet::from([ItemType::Legs]),
-			..default()
-		},
-	]);
-	let skill_icons = SkillIcons(HashMap::from([
-		("Swing Sword", assert_server.load("icons/sword_down.png")),
-		("Shoot Hand Gun", assert_server.load("icons/pistol.png")),
-		(
-			"Shoot Hand Gun Dual",
-			assert_server.load("icons/pistol_dual.png"),
-		),
-	]));
-
-	commands.insert_resource(templates);
-	commands.insert_resource(skill_icons);
-
-	errors
-		.iter()
-		.cloned()
-		.map(Err)
-		.collect::<Vec<Result<(), Error>>>()
 }
 
 fn spawn_plane(
@@ -399,90 +202,7 @@ fn spawn_plane(
 	});
 }
 
-fn spawn_player(
-	commands: &mut Commands,
-	asset_server: Res<AssetServer>,
-	skill_templates: Res<SkillTemplates>,
-) {
-	let pistol_a = Item {
-		name: "Pistol A",
-		model: Some("pistol"),
-		skill: skill_templates.get("Shoot Hand Gun").cloned(),
-		item_type: HashSet::from([ItemType::Pistol]),
-	};
-	let pistol_b = Item {
-		name: "Pistol B",
-		model: Some("pistol"),
-		skill: skill_templates.get("Shoot Hand Gun").cloned(),
-		item_type: HashSet::from([ItemType::Pistol]),
-	};
-	let pistol_c = Item {
-		name: "Pistol C",
-		model: Some("pistol"),
-		skill: skill_templates.get("Shoot Hand Gun").cloned(),
-		item_type: HashSet::from([ItemType::Pistol]),
-	};
-	let sword_a = Item {
-		name: "Sword A",
-		model: Some("sword"),
-		skill: skill_templates.get("Swing Sword").cloned(),
-		item_type: HashSet::from([ItemType::Sword]),
-	};
-	let sword_b = Item {
-		name: "Sword B",
-		model: Some("sword"),
-		skill: skill_templates.get("Swing Sword").cloned(),
-		item_type: HashSet::from([ItemType::Sword]),
-	};
-	let legs = Item {
-		name: "Legs",
-		model: None,
-		skill: skill_templates.get("Simple Movement").cloned(),
-		item_type: HashSet::from([ItemType::Legs]),
-	};
-
-	// FIXME: Use a more sensible pattern to register predefined combos
-	let mut skill_combos = ComboTreeTemplate(default());
-	let shoot_hand_gun = skill_templates.get("Shoot Hand Gun");
-	let shoot_hand_gun_dual = skill_templates.get("Shoot Hand Gun Dual");
-	if let (Some(shoot_hand_gun), Some(shoot_hand_gun_dual)) = (shoot_hand_gun, shoot_hand_gun_dual)
-	{
-		skill_combos.0 = HashMap::from([
-			(
-				SlotKey::Hand(Side::Main),
-				SkillComboTree {
-					skill: shoot_hand_gun.clone(),
-					next: SkillComboNext::Tree(HashMap::from([(
-						SlotKey::Hand(Side::Off),
-						SkillComboTree {
-							skill: shoot_hand_gun_dual.clone(),
-							next: SkillComboNext::Alternate {
-								slot_key: SlotKey::Hand(Side::Main),
-								skill: shoot_hand_gun_dual.clone(),
-							},
-						},
-					)])),
-				},
-			),
-			(
-				SlotKey::Hand(Side::Off),
-				SkillComboTree {
-					skill: shoot_hand_gun.clone(),
-					next: SkillComboNext::Tree(HashMap::from([(
-						SlotKey::Hand(Side::Main),
-						SkillComboTree {
-							skill: shoot_hand_gun_dual.clone(),
-							next: SkillComboNext::Alternate {
-								slot_key: SlotKey::Hand(Side::Off),
-								skill: shoot_hand_gun_dual.clone(),
-							},
-						},
-					)])),
-				},
-			),
-		]);
-	}
-
+fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	commands.spawn((
 		Name::from("Player"),
 		Health::new(100),
@@ -498,21 +218,6 @@ fn spawn_player(
 			slow_speed: UnitsPerSecond::new(0.75),
 			fast_speed: UnitsPerSecond::new(1.5),
 		},
-		Inventory::new([Some(sword_a), Some(sword_b), Some(pistol_c)]),
-		Loadout::new(
-			[
-				(SlotKey::SkillSpawn, "projectile_spawn"),
-				(SlotKey::Hand(Side::Off), "hand_slot.L"),
-				(SlotKey::Hand(Side::Main), "hand_slot.R"),
-				(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
-			],
-			[
-				(SlotKey::Hand(Side::Off), pistol_a.into()),
-				(SlotKey::Hand(Side::Main), pistol_b.into()),
-				(SlotKey::Legs, legs.into()),
-			],
-		),
-		skill_combos,
 	));
 }
 

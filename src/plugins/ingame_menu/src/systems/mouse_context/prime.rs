@@ -8,7 +8,7 @@ use bevy::{
 	input::keyboard::KeyCode,
 	ui::Interaction,
 };
-use common::{components::SlotKey, resources::SlotMap, states::MouseContext};
+use skills::{components::SlotKey, resources::SlotMap, states::MouseContext};
 
 pub fn prime_mouse_context<TPanel: Get<(), SlotKey> + Component>(
 	mut mouse_context: ResMut<NextState<MouseContext>>,

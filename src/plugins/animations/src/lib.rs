@@ -3,17 +3,14 @@ mod resource;
 mod systems;
 mod traits;
 
-use behaviors::components::SimpleMovement;
 use bevy::{
 	animation::AnimationPlayer,
 	app::{App, Plugin, PreStartup, PreUpdate, Update},
 	asset::AssetServer,
 };
-use common::{
-	components::{Player, Side},
-	skill::PlayerSkills,
-};
+use common::components::{Player, Side};
 use components::PlayerMovement;
+use skills::{components::SimpleMovement, skill::PlayerSkills};
 use systems::{
 	link_animator::link_animators_with_new_animation_players,
 	load_animations::load_animations,

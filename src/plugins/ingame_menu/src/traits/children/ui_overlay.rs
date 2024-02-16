@@ -17,7 +17,8 @@ use bevy::{
 	},
 	utils::default,
 };
-use common::components::{Side, SlotKey};
+use common::components::Side;
+use skills::components::SlotKey;
 
 impl Children for UIOverlay {
 	fn children(parent: &mut ChildBuilder) {

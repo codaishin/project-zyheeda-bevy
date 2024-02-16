@@ -2,7 +2,8 @@ use bevy::{
 	ecs::system::{Commands, Query},
 	prelude::{Entity, Mut},
 };
-use common::components::{Collection, Inventory, InventoryKey, Item, Swap};
+use common::components::{Collection, Swap};
+use skills::components::{Inventory, InventoryKey, Item};
 use std::cmp::max;
 
 type ItemsToSwap<'a> = (
@@ -42,7 +43,7 @@ mod tests {
 		app::{App, Update},
 		prelude::default,
 	};
-	use common::components::Item;
+	use skills::components::Item;
 
 	#[test]
 	fn swap_items() {

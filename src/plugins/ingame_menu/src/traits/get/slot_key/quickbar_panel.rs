@@ -1,5 +1,5 @@
 use crate::{components::QuickbarPanel, traits::get::Get};
-use common::components::SlotKey;
+use skills::components::SlotKey;
 
 impl Get<(), SlotKey> for QuickbarPanel {
 	fn get(&self, _: ()) -> SlotKey {

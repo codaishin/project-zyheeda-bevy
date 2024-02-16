@@ -1,6 +1,6 @@
 use crate::tools::PanelState;
 use bevy::ecs::component::Component;
-use common::components::SlotKey;
+use skills::components::SlotKey;
 use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]

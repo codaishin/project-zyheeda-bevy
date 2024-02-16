@@ -9,7 +9,7 @@ use bevy::{
 	prelude::Entity,
 	text::Text,
 };
-use common::components::Item;
+use skills::components::Item;
 
 pub fn panel_container_states<
 	TPanel: Component + Set<(), PanelState>,

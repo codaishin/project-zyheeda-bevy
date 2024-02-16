@@ -1,5 +1,5 @@
 use crate::{tools::MenuState, traits::inverted::Inverted};
-use common::components::Inventory;
+use skills::components::Inventory;
 
 impl Inverted<Inventory> for MenuState {
 	fn inverted(&self) -> Self {

@@ -1,6 +1,6 @@
 use super::KeyJustPressed;
 use bevy::{input::keyboard::KeyCode, prelude::Input};
-use common::components::Inventory;
+use skills::components::Inventory;
 
 impl KeyJustPressed for Inventory {
 	fn just_pressed(input: &Input<KeyCode>) -> bool {

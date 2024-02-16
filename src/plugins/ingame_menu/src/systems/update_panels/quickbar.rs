@@ -9,8 +9,9 @@ use bevy::{
 	render::texture::Image,
 	ui::UiImage,
 };
-use common::{
-	components::{Player, SlotKey, Slots},
+use common::components::Player;
+use skills::{
+	components::{SlotKey, Slots},
 	resources::SkillIcons,
 };
 
@@ -76,8 +77,9 @@ mod tests {
 		ui::UiImage,
 		utils::{default, Uuid},
 	};
-	use common::{
-		components::{Item, Side, Slot},
+	use common::components::Side;
+	use skills::{
+		components::{Item, Slot},
 		skill::Skill,
 	};
 	use std::collections::HashMap;

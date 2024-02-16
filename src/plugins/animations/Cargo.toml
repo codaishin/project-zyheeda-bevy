@@ -9,6 +9,7 @@ bevy_rapier3d.workspace = true
 tracing.workspace = true
 common.workspace = true
 behaviors.workspace = true
+skills.workspace = true
 
 [dev-dependencies]
 mockall.workspace = true

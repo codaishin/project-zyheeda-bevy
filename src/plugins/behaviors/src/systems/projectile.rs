@@ -1,7 +1,4 @@
-use crate::{
-	components::{Idle, SimpleMovement},
-	traits::ProjectileBehavior,
-};
+use crate::traits::ProjectileBehavior;
 use bevy::{
 	ecs::{
 		component::Component,
@@ -13,11 +10,12 @@ use bevy::{
 	math::Vec3,
 	transform::components::GlobalTransform,
 };
+use skills::components::{SimpleMovement, SkillsIdle};
 
 pub(crate) fn projectile_behavior<TProjectile: ProjectileBehavior + Component>(
 	mut commands: Commands,
 	projectiles: Query<(Entity, &TProjectile, &GlobalTransform), Added<TProjectile>>,
-	done: Query<Entity, (With<Idle>, With<TProjectile>)>,
+	done: Query<Entity, (With<SkillsIdle>, With<TProjectile>)>,
 ) {
 	for entity in &done {
 		commands.entity(entity).despawn_recursive();
@@ -39,7 +37,6 @@ fn get_target<TProjectile: ProjectileBehavior>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Idle, SimpleMovement};
 	use bevy::{
 		app::{App, Update},
 		ecs::component::Component,
@@ -146,7 +143,7 @@ mod tests {
 
 		app.update();
 
-		app.world.entity_mut(projectile).insert(Idle);
+		app.world.entity_mut(projectile).insert(SkillsIdle);
 
 		app.update();
 
@@ -166,7 +163,7 @@ mod tests {
 
 		let mut app = setup();
 
-		app.world.spawn((_Decoy, Idle));
+		app.world.spawn((_Decoy, SkillsIdle));
 		app.update();
 
 		assert_eq!(

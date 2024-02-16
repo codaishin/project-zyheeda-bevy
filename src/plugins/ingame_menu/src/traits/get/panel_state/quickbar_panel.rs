@@ -9,7 +9,7 @@ impl Get<(), PanelState> for QuickbarPanel {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::components::SlotKey;
+	use skills::components::SlotKey;
 
 	#[test]
 	fn get_empty() {
