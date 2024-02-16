@@ -1,5 +1,5 @@
 use bevy::{
-	ecs::{component::Component, entity::Entity},
+	ecs::{component::Component, entity::Entity, system::Commands},
 	math::Vec3,
 };
 use common::tools::UnitsPerSecond;
@@ -38,8 +38,20 @@ pub(crate) struct Chase(pub Entity);
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct Attack(pub Entity);
 
+#[derive(Debug, PartialEq)]
+pub struct Attacker(pub Entity);
+
+#[derive(Debug, PartialEq)]
+pub struct Target(pub Entity);
+
+#[derive(Component)]
+pub struct AttackConfig {
+	pub attack: fn(&mut Commands, Attacker, Target),
+	pub cool_down: Duration,
+}
+
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct CoolDown(pub Duration);
+pub(crate) struct OnCoolDown(pub Duration);
 
 #[derive(Clone, Copy)]
 pub enum Foe {

@@ -1,4 +1,4 @@
-use crate::components::CoolDown;
+use crate::components::OnCoolDown;
 use bevy::{
 	ecs::{
 		entity::Entity,
@@ -9,14 +9,14 @@ use bevy::{
 
 pub(crate) fn update_cool_downs<TTime: Default + Send + Sync + 'static>(
 	mut commands: Commands,
-	mut cool_downs: Query<(Entity, &mut CoolDown)>,
+	mut cool_downs: Query<(Entity, &mut OnCoolDown)>,
 	time: Res<Time<TTime>>,
 ) {
 	let delta = time.delta();
 
 	for (id, mut cool_down) in &mut cool_downs {
 		if cool_down.0 <= delta {
-			commands.entity(id).remove::<CoolDown>();
+			commands.entity(id).remove::<OnCoolDown>();
 		} else {
 			cool_down.0 -= delta;
 		}
@@ -44,7 +44,10 @@ mod tests {
 	#[test]
 	fn reduce_by_delta() {
 		let mut app = setup();
-		let cool_down = app.world.spawn(CoolDown(Duration::from_millis(1000))).id();
+		let cool_down = app
+			.world
+			.spawn(OnCoolDown(Duration::from_millis(1000)))
+			.id();
 
 		app.tick_time(Duration::from_millis(42));
 		app.update();
@@ -52,34 +55,34 @@ mod tests {
 		let cool_down = app.world.entity(cool_down);
 
 		assert_eq!(
-			Some(&CoolDown(Duration::from_millis(958))),
-			cool_down.get::<CoolDown>()
+			Some(&OnCoolDown(Duration::from_millis(958))),
+			cool_down.get::<OnCoolDown>()
 		);
 	}
 
 	#[test]
 	fn remove_if_remaining_cool_down_is_zero() {
 		let mut app = setup();
-		let cool_down = app.world.spawn(CoolDown(Duration::from_millis(42))).id();
+		let cool_down = app.world.spawn(OnCoolDown(Duration::from_millis(42))).id();
 
 		app.tick_time(Duration::from_millis(42));
 		app.update();
 
 		let cool_down = app.world.entity(cool_down);
 
-		assert_eq!(None, cool_down.get::<CoolDown>());
+		assert_eq!(None, cool_down.get::<OnCoolDown>());
 	}
 
 	#[test]
 	fn remove_if_remaining_cool_down_is_negative() {
 		let mut app = setup();
-		let cool_down = app.world.spawn(CoolDown(Duration::from_millis(10))).id();
+		let cool_down = app.world.spawn(OnCoolDown(Duration::from_millis(10))).id();
 
 		app.tick_time(Duration::from_millis(42));
 		app.update();
 
 		let cool_down = app.world.entity(cool_down);
 
-		assert_eq!(None, cool_down.get::<CoolDown>());
+		assert_eq!(None, cool_down.get::<OnCoolDown>());
 	}
 }
