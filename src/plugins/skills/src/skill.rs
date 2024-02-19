@@ -1,10 +1,10 @@
 use crate::components::{Handed, ItemType, SideUnset, SlotKey};
 use bevy::{
-	ecs::{component::Component, entity::Entity, system::EntityCommands},
+	ecs::system::EntityCommands,
 	math::Ray,
 	transform::components::{GlobalTransform, Transform},
 };
-use common::resources::ColliderInfo;
+use common::{components::Outdated, resources::ColliderInfo};
 use std::{
 	collections::{HashMap, HashSet},
 	fmt::{Display, Formatter, Result},
@@ -160,12 +160,6 @@ pub(crate) enum SkillComboNext {
 
 #[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct Spawner(pub GlobalTransform);
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Outdated<TComponent: Component> {
-	pub entity: Entity,
-	pub component: TComponent,
-}
 
 pub type Target = SelectInfo<Outdated<GlobalTransform>>;
 pub type TransformFN = fn(&mut Transform, &Spawner, &Target);

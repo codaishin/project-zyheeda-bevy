@@ -17,7 +17,7 @@ pub(crate) mod tuple_slot_key_item;
 use crate::{
 	components::SlotKey,
 	resources::SlotMap,
-	skill::{Active, Outdated, Skill, SkillComboTree, SkillExecution, Spawner},
+	skill::{Active, Skill, SkillComboTree, SkillExecution, Spawner},
 };
 use bevy::{
 	ecs::{
@@ -26,7 +26,10 @@ use bevy::{
 	},
 	transform::components::Transform,
 };
-use common::{components::Animate, resources::ColliderInfo};
+use common::{
+	components::{Animate, Outdated},
+	resources::ColliderInfo,
+};
 use std::hash::Hash;
 
 pub(crate) trait ComboNext<TAnimationKey>

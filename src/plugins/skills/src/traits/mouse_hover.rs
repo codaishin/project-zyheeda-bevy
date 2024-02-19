@@ -1,7 +1,9 @@
 use super::WithComponent;
-use crate::skill::Outdated;
 use bevy::ecs::{component::Component, entity::Entity, system::Query};
-use common::resources::{ColliderInfo, MouseHover};
+use common::{
+	components::Outdated,
+	resources::{ColliderInfo, MouseHover},
+};
 
 impl<T: Component + Copy> WithComponent<T> for MouseHover {
 	fn with_component(&self, query: &Query<&T>) -> Option<ColliderInfo<Outdated<T>>> {

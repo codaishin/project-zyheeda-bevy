@@ -75,3 +75,9 @@ pub enum Animate<T: Copy + Clone> {
 	Replay(T),
 	Repeat(T),
 }
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Outdated<TComponent: Component> {
+	pub entity: Entity,
+	pub component: TComponent,
+}
