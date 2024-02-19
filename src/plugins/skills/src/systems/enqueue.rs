@@ -123,18 +123,17 @@ fn override_hard(
 
 #[cfg(test)]
 mod tests {
-	use crate::{
-		skill::{Cast, Outdated},
-		traits::WithComponent,
-	};
-
 	use super::*;
+	use crate::{skill::Cast, traits::WithComponent};
 	use bevy::{
 		prelude::{App, Ray, Update, Vec3},
 		transform::components::GlobalTransform,
 		utils::default,
 	};
-	use common::{components::Side, resources::ColliderInfo};
+	use common::{
+		components::{Outdated, Side},
+		resources::ColliderInfo,
+	};
 	use std::{
 		sync::{Arc, Mutex},
 		time::Duration,

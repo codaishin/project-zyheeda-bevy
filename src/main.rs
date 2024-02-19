@@ -11,20 +11,15 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{Health, Plasma, Player, Projectile, VoidSphere},
-	systems::log::log_many,
+	components::{Health, Player, VoidSphere},
 	tools::UnitsPerSecond,
 };
 use ingame_menu::IngameMenuPlugin;
 use interactions::InteractionsPlugin;
-use project_zyheeda::{
-	resources::Shared,
-	systems::{
-		movement::toggle_walk_run::player_toggle_walk_run,
-		prefab::instantiate::instantiate,
-		void_sphere::ring_rotation::ring_rotation,
-	},
-	traits::prefab::AssetKey,
+use prefabs::PrefabsPlugin;
+use project_zyheeda::systems::{
+	movement::toggle_walk_run::player_toggle_walk_run,
+	void_sphere::ring_rotation::ring_rotation,
 };
 use skills::{states::GameRunning, SkillsPlugin};
 use std::f32::consts::PI;
@@ -43,6 +38,7 @@ fn main() {
 fn prepare_game(app: &mut App) {
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+		.add_plugins(PrefabsPlugin)
 		.add_plugins(IngameMenuPlugin)
 		.add_plugins(InteractionsPlugin)
 		.add_plugins(BarsPlugin)
@@ -50,17 +46,11 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(BehaviorsPlugin::cam_behavior_if(GameRunning::On))
 		.add_plugins(AnimationsPlugin)
 		.add_state::<GameRunning>()
-		.init_resource::<Shared<AssetKey, Handle<Mesh>>>()
-		.init_resource::<Shared<AssetKey, Handle<StandardMaterial>>>()
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
 		.add_systems(Startup, setup_simple_3d_scene)
 		.add_systems(PreUpdate, player_toggle_walk_run)
-		.add_systems(Update, instantiate::<Projectile<Plasma>>.pipe(log_many))
-		.add_systems(
-			Update,
-			(instantiate::<VoidSphere>.pipe(log_many), ring_rotation),
-		);
+		.add_systems(Update, ring_rotation);
 }
 
 #[cfg(debug_assertions)]

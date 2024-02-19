@@ -1,5 +1,4 @@
 use super::{AssetKey, Instantiate};
-use crate::{bundles::ColliderBundle, components::Dummy};
 use bevy::{
 	asset::Handle,
 	hierarchy::BuildChildren,
@@ -13,7 +12,11 @@ use bevy::{
 	utils::default,
 };
 use bevy_rapier3d::geometry::Collider;
-use common::{components::ColliderRoot, errors::Error};
+use common::{
+	bundles::ColliderBundle,
+	components::{ColliderRoot, Dummy},
+	errors::Error,
+};
 
 const DUMMY_DIMENSIONS: Vec3 = Vec3 {
 	x: 0.4,
@@ -23,6 +26,7 @@ const DUMMY_DIMENSIONS: Vec3 = Vec3 {
 
 impl Instantiate for Dummy {
 	fn instantiate(
+		&self,
 		on: &mut bevy::ecs::system::EntityCommands,
 		mut get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
 		mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,

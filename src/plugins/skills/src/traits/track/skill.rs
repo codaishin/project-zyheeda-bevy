@@ -99,7 +99,7 @@ mod tests_execution {
 	use super::*;
 	use crate::{
 		components::SideUnset,
-		skill::{Outdated, PlayerSkills, SkillExecution, Target},
+		skill::{PlayerSkills, SkillExecution, Target},
 		traits::test_tools::{run_system, stop_system},
 	};
 	use bevy::{
@@ -109,8 +109,7 @@ mod tests_execution {
 		transform::components::{GlobalTransform, Transform},
 		utils::default,
 	};
-
-	use common::resources::ColliderInfo;
+	use common::{components::Outdated, resources::ColliderInfo};
 	use mockall::{mock, predicate::eq};
 
 	fn test_target() -> Target {

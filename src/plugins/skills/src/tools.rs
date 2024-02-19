@@ -65,8 +65,6 @@ mod test_tools {
 
 #[cfg(test)]
 mod test_look_from_spawner {
-	use crate::skill::Outdated;
-
 	use super::{
 		test_tools::{as_system, setup_app},
 		*,
@@ -78,7 +76,7 @@ mod test_look_from_spawner {
 		transform::components::GlobalTransform,
 		utils::default,
 	};
-	use common::{assert_eq_approx, resources::ColliderInfo};
+	use common::{assert_eq_approx, components::Outdated, resources::ColliderInfo};
 
 	#[test]
 	fn use_odd_ray_and_skill_spawn_for_look_direction() {

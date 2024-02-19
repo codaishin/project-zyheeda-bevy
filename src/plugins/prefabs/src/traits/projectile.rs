@@ -1,5 +1,4 @@
 use super::{sphere, AssetKey, Instantiate, ProjectileType};
-use crate::bundles::ColliderBundle;
 use behaviors::components::{MovementConfig, MovementMode};
 use bevy::{
 	asset::Handle,
@@ -15,6 +14,7 @@ use bevy_rapier3d::{
 	geometry::{Collider, Sensor},
 };
 use common::{
+	bundles::ColliderBundle,
 	components::{ColliderRoot, DealsDamage, Plasma, Projectile},
 	errors::Error,
 	tools::UnitsPerSecond,
@@ -24,6 +24,7 @@ const PLASMA_RADIUS: f32 = 0.05;
 
 impl Instantiate for Projectile<Plasma> {
 	fn instantiate(
+		&self,
 		on: &mut bevy::ecs::system::EntityCommands,
 		mut get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
 		mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,

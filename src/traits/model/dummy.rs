@@ -1,5 +1,4 @@
 use super::{GetCollider, GetRigidBody, Model, Offset, Shape};
-use crate::components::Dummy;
 use bevy::{
 	math::Vec3,
 	pbr::StandardMaterial,
@@ -13,6 +12,7 @@ use bevy::{
 	utils::default,
 };
 use bevy_rapier3d::{dynamics::RigidBody, geometry::Collider};
+use common::components::Dummy;
 
 pub struct Cuboid(pub Vec3);
 
