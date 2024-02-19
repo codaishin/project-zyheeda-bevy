@@ -12,8 +12,9 @@ bevy = "0.12.0"
 bevy_rapier3d = "0.23.0"
 tracing = "0.1.40"
 mockall = "0.11.2"
-common = { path = "src/common" }
 behaviors = { path = "src/plugins/behaviors" }
+common = { path = "src/common" }
+prefabs = { path = "src/plugins/prefabs" }
 skills = { path = "src/plugins/skills" }
 
 # Core Package Settings
@@ -27,13 +28,14 @@ edition.workspace = true
 bevy.workspace = true
 bevy_rapier3d.workspace = true
 tracing.workspace = true
-common.workspace = true
 behaviors.workspace = true
+common.workspace = true
+prefabs.workspace = true
 skills.workspace = true
-ingame_menu = { path = "src/plugins/ingame_menu" }
-bars = { path = "src/plugins/bars" }
-interactions = { path = "src/plugins/interactions" }
 animations = { path = "src/plugins/animations" }
+bars = { path = "src/plugins/bars" }
+ingame_menu = { path = "src/plugins/ingame_menu" }
+interactions = { path = "src/plugins/interactions" }
 
 [dev-dependencies]
 mockall.workspace = true
