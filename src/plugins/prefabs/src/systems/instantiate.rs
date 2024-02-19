@@ -18,11 +18,11 @@ pub fn instantiate<TAgent: Component + Instantiate>(
 	mut materials: ResMut<Assets<StandardMaterial>>,
 	mut shared_meshes: ResMut<Shared<AssetKey, Handle<Mesh>>>,
 	mut shared_materials: ResMut<Shared<AssetKey, Handle<StandardMaterial>>>,
-	agents: Query<Entity, Added<TAgent>>,
+	agents: Query<(Entity, &TAgent), Added<TAgent>>,
 ) -> Vec<Result<(), Error>> {
-	let instantiate = |agent| {
-		TAgent::instantiate(
-			&mut commands.entity(agent),
+	let instantiate = |(entity, agent): (Entity, &TAgent)| {
+		agent.instantiate(
+			&mut commands.entity(entity),
 			|key, mesh| shared_meshes.get_handle(key, || meshes.add(mesh.clone())),
 			|key, mat| shared_materials.get_handle(key, || materials.add(mat.clone())),
 		)
@@ -52,6 +52,7 @@ mod tests {
 
 	impl Instantiate for _Agent {
 		fn instantiate(
+			&self,
 			on: &mut EntityCommands,
 			mut get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
 			mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
@@ -81,6 +82,7 @@ mod tests {
 
 	impl Instantiate for _AgentWithChildren {
 		fn instantiate(
+			&self,
 			on: &mut EntityCommands,
 			_: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
 			_: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
@@ -97,6 +99,7 @@ mod tests {
 
 	impl Instantiate for _AgentWithInstantiationError {
 		fn instantiate(
+			&self,
 			_: &mut EntityCommands,
 			_: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
 			_: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,

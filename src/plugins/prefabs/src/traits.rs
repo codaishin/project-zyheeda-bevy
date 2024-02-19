@@ -30,6 +30,7 @@ pub enum AssetKey {
 
 pub trait Instantiate {
 	fn instantiate(
+		&self,
 		on: &mut EntityCommands,
 		get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
 		get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,

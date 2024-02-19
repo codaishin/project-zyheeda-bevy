@@ -61,6 +61,7 @@ const VOID_SPHERE_GROUND_OFFSET: Vec3 = Vec3::new(0., 1.2, 0.);
 
 impl Instantiate for VoidSphere {
 	fn instantiate(
+		&self,
 		on: &mut EntityCommands,
 		mut get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
 		mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,

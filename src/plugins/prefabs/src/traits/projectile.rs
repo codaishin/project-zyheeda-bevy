@@ -24,6 +24,7 @@ const PLASMA_RADIUS: f32 = 0.05;
 
 impl Instantiate for Projectile<Plasma> {
 	fn instantiate(
+		&self,
 		on: &mut bevy::ecs::system::EntityCommands,
 		mut get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
 		mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,

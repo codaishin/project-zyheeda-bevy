@@ -26,6 +26,7 @@ const DUMMY_DIMENSIONS: Vec3 = Vec3 {
 
 impl Instantiate for Dummy {
 	fn instantiate(
+		&self,
 		on: &mut bevy::ecs::system::EntityCommands,
 		mut get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
 		mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
