@@ -1,5 +1,4 @@
 use super::{sphere, AssetKey, Instantiate, ProjectileType};
-use crate::bundles::ColliderBundle;
 use behaviors::components::{MovementConfig, MovementMode};
 use bevy::{
 	asset::Handle,
@@ -15,6 +14,7 @@ use bevy_rapier3d::{
 	geometry::{Collider, Sensor},
 };
 use common::{
+	bundles::ColliderBundle,
 	components::{ColliderRoot, DealsDamage, Plasma, Projectile},
 	errors::Error,
 	tools::UnitsPerSecond,

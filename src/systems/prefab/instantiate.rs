@@ -1,7 +1,4 @@
-use crate::{
-	resources::Shared,
-	traits::prefab::{AssetKey, Instantiate},
-};
+use crate::resources::Shared;
 use bevy::{
 	asset::{Assets, Handle},
 	ecs::{
@@ -14,6 +11,7 @@ use bevy::{
 	render::mesh::Mesh,
 };
 use common::errors::Error;
+use prefabs::traits::{AssetKey, Instantiate};
 
 pub fn instantiate<TAgent: Component + Instantiate>(
 	mut commands: Commands,
@@ -37,7 +35,7 @@ pub fn instantiate<TAgent: Component + Instantiate>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{resources::Shared, traits::prefab::AssetKey};
+	use crate::resources::Shared;
 	use bevy::{
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},

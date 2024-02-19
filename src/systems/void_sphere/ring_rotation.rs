@@ -1,5 +1,5 @@
-use crate::components::VoidSpherePart;
 use bevy::{ecs::system::Query, transform::components::Transform};
+use common::components::VoidSpherePart;
 
 pub fn ring_rotation(mut agents: Query<(&mut Transform, &VoidSpherePart)>) {
 	for (mut transform, part) in &mut agents {
@@ -23,12 +23,11 @@ pub fn ring_rotation(mut agents: Query<(&mut Transform, &VoidSpherePart)>) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::VoidSpherePart;
 	use bevy::{
 		app::{App, Update},
 		transform::components::Transform,
 	};
-	use common::tools::UnitsPerSecond;
+	use common::{components::VoidSpherePart, tools::UnitsPerSecond};
 
 	#[test]
 	fn rotate_ring_a() {

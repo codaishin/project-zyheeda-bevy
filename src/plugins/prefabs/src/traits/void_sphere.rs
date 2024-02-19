@@ -1,5 +1,4 @@
 use super::{sphere, AssetKey, Instantiate, VoidPart};
-use crate::{bundles::ColliderBundle, components::VoidSpherePart};
 use bars::components::Bar;
 use behaviors::components::{MovementConfig, MovementMode};
 use bevy::{
@@ -20,7 +19,8 @@ use bevy_rapier3d::{
 	geometry::Collider,
 };
 use common::{
-	components::{ColliderRoot, Health, VoidSphere},
+	bundles::ColliderBundle,
+	components::{ColliderRoot, Health, VoidSphere, VoidSpherePart},
 	errors::Error,
 	tools::UnitsPerSecond,
 };

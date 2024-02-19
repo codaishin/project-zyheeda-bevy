@@ -1,3 +1,4 @@
+use crate::tools::UnitsPerSecond;
 use bevy::{
 	ecs::{component::Component, entity::Entity},
 	math::Vec3,
@@ -26,7 +27,17 @@ pub enum Side {
 pub struct Player;
 
 #[derive(Component)]
+pub struct Dummy;
+
+#[derive(Component)]
 pub struct VoidSphere;
+
+#[derive(Component, Clone)]
+pub enum VoidSpherePart {
+	Core,
+	RingA(UnitsPerSecond),
+	RingB(UnitsPerSecond),
+}
 
 #[derive(Component, Debug, PartialEq)]
 pub struct Health {

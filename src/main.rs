@@ -17,6 +17,7 @@ use common::{
 };
 use ingame_menu::IngameMenuPlugin;
 use interactions::InteractionsPlugin;
+use prefabs::traits::AssetKey;
 use project_zyheeda::{
 	resources::Shared,
 	systems::{
@@ -24,7 +25,6 @@ use project_zyheeda::{
 		prefab::instantiate::instantiate,
 		void_sphere::ring_rotation::ring_rotation,
 	},
-	traits::prefab::AssetKey,
 };
 use skills::{states::GameRunning, SkillsPlugin};
 use std::f32::consts::PI;
