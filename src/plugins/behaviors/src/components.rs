@@ -1,6 +1,7 @@
 use bevy::{
 	ecs::{component::Component, entity::Entity, system::Commands},
 	math::Vec3,
+	render::color::Color,
 };
 use common::{components::VoidSphere, tools::UnitsPerSecond};
 use std::time::Duration;
@@ -68,17 +69,23 @@ pub struct Enemy {
 
 #[derive(Component, Clone, Copy)]
 pub struct Beam {
-	pub source: Entity,
 	pub target: Entity,
 	pub range: f32,
 }
 
 impl Beam {
 	pub fn attack(commands: &mut Commands, attacker: Attacker, target: Target) {
-		commands.spawn(Beam {
-			source: attacker.0,
+		commands.entity(attacker.0).insert(Beam {
 			target: target.0,
 			range: VoidSphere::ATTACK_RANGE,
 		});
 	}
+}
+
+#[derive(Component, Debug, PartialEq)]
+pub(crate) struct ActiveBeam {
+	pub from: Vec3,
+	pub to: Vec3,
+	pub color: Color,
+	pub emission: Color,
 }
