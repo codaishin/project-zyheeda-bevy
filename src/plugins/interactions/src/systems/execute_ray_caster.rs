@@ -5,12 +5,14 @@ use crate::{
 use bevy::ecs::{
 	entity::Entity,
 	event::EventWriter,
-	system::{Query, Res, Resource},
+	query::Added,
+	system::{Commands, Query, Res, Resource},
 };
 use common::traits::cast_ray::CastRay;
 
 pub(crate) fn execute_ray_caster<TCastRay: CastRay<RayCaster> + Resource>(
-	ray_casters: Query<(Entity, &RayCaster)>,
+	mut commands: Commands,
+	ray_casters: Query<(Entity, &RayCaster), Added<RayCaster>>,
 	cast_ray: Res<TCastRay>,
 	mut ray_cast_events: EventWriter<RayCastEvent>,
 ) {
@@ -22,6 +24,7 @@ pub(crate) fn execute_ray_caster<TCastRay: CastRay<RayCaster> + Resource>(
 			Some((target, toi)) => RayCastTarget::Some { target, toi },
 		};
 		ray_cast_events.send(RayCastEvent { source, target });
+		commands.entity(source).remove::<RayCaster>();
 	}
 }
 
@@ -137,5 +140,51 @@ mod tests {
 			}],
 			events
 		);
+	}
+
+	#[test]
+	fn cast_ray_only_once() {
+		let mut app = App::new_single_threaded([Update]);
+		let mut cast_ray = _CastRay::default();
+		let ray_caster = RayCaster {
+			origin: Vec3::ZERO,
+			direction: Vec3::ONE,
+			max_toi: TimeOfImpact(42.),
+			solid: true,
+			filter: default(),
+		};
+		cast_ray.mock.expect_cast_ray().times(1).return_const(None);
+
+		app.insert_resource(cast_ray);
+		app.add_event::<RayCastEvent>();
+		app.add_systems(Update, execute_ray_caster::<_CastRay>);
+		app.world.spawn(ray_caster);
+		app.update();
+		app.update();
+	}
+
+	#[test]
+	fn remove_ray_caster() {
+		let mut app = App::new_single_threaded([Update]);
+		let mut cast_ray = _CastRay::default();
+		let ray_caster = RayCaster {
+			origin: Vec3::ZERO,
+			direction: Vec3::ONE,
+			max_toi: TimeOfImpact(42.),
+			solid: true,
+			filter: default(),
+		};
+		cast_ray.mock.expect_cast_ray().return_const(None);
+
+		app.insert_resource(cast_ray);
+		app.add_event::<RayCastEvent>();
+		app.add_systems(Update, execute_ray_caster::<_CastRay>);
+		let ray_caster = app.world.spawn(ray_caster).id();
+
+		app.update();
+
+		let ray_caster = app.world.entity(ray_caster);
+
+		assert!(!ray_caster.contains::<RayCaster>());
 	}
 }
