@@ -1,8 +1,5 @@
 use crate::skill::{PlayerSkills, Queued, Skill, SkillComboTree};
-use bevy::{
-	ecs::{component::Component, entity::Entity},
-	math::Vec3,
-};
+use bevy::ecs::{component::Component, entity::Entity};
 use common::components::{Collection, Side};
 use std::{
 	collections::{HashMap, HashSet, VecDeque},
@@ -125,24 +122,10 @@ pub enum ItemType {
 	Legs,
 }
 
-#[derive(Component)]
-pub struct SkillsIdle;
-
 #[derive(Component, PartialEq, Debug)]
 pub(crate) enum Schedule {
 	Enqueue((SlotKey, Skill)),
 	Override((SlotKey, Skill)),
 	StopAimAfter(Duration),
 	UpdateTarget,
-}
-
-#[derive(Component, Clone, Copy, PartialEq, Debug)]
-pub struct SimpleMovement {
-	pub target: Vec3,
-}
-
-impl SimpleMovement {
-	pub fn new(target: Vec3) -> Self {
-		Self { target }
-	}
 }

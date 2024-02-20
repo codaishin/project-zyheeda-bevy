@@ -1,7 +1,9 @@
+pub(crate) mod active_beam;
 pub(crate) mod cam_orbit;
 pub(crate) mod movement_config;
 pub(crate) mod projectile;
 pub(crate) mod simple_movement;
+pub(crate) mod void_sphere;
 
 use crate::components::MovementMode;
 use bevy::{

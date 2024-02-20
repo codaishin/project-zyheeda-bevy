@@ -1,7 +1,7 @@
 use animations::{components::Animator, AnimationsPlugin};
 use bars::{components::Bar, BarsPlugin};
 use behaviors::{
-	components::{CamOrbit, MovementConfig, MovementMode},
+	components::{CamOrbit, MovementConfig, MovementMode, VoidSphere},
 	traits::{Orbit, Vec2Radians},
 	BehaviorsPlugin,
 };
@@ -11,7 +11,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{Health, Player, VoidSphere},
+	components::{Health, Player},
 	tools::UnitsPerSecond,
 };
 use ingame_menu::IngameMenuPlugin;

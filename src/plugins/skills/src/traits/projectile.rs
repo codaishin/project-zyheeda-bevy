@@ -3,8 +3,8 @@ use crate::{
 	skill::{SkillExecution, Spawner, Target},
 	tools::look_from_spawner,
 };
+use behaviors::components::Projectile;
 use bevy::{ecs::system::EntityCommands, prelude::SpatialBundle, transform::components::Transform};
-use common::components::Projectile;
 
 impl<T: Send + Sync + 'static> GetExecution for Projectile<T> {
 	fn execution() -> SkillExecution {

@@ -7,6 +7,7 @@ mod systems;
 mod tools;
 mod traits;
 
+use behaviors::components::{Plasma, Projectile, SimpleMovement};
 use bevy::{
 	app::{First, Plugin, PreStartup, PreUpdate, Update},
 	asset::AssetServer,
@@ -23,7 +24,7 @@ use bevy::{
 use bevy_rapier3d::plugin::RapierContext;
 use bundles::Loadout;
 use common::{
-	components::{Plasma, Player, Projectile, Side, Swap},
+	components::{Player, Side, Swap},
 	errors::Error,
 	resources::{Models, MouseHover},
 	systems::log::log_many,
@@ -37,7 +38,6 @@ use components::{
 	Item,
 	ItemType,
 	SideUnset,
-	SimpleMovement,
 	SlotKey,
 	Track,
 };

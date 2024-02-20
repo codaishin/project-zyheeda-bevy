@@ -7,19 +7,14 @@ use bevy::{
 	pbr::StandardMaterial,
 	render::mesh::Mesh,
 };
-use common::{
-	components::{Plasma, Projectile, VoidSphere},
-	resources::Shared,
-};
-use traits::{AssetKey, RegisterPrefab};
+use common::resources::Shared;
+use traits::AssetKey;
 
 pub struct PrefabsPlugin;
 
 impl Plugin for PrefabsPlugin {
 	fn build(&self, app: &mut App) {
 		app.init_resource::<Shared<AssetKey, Handle<Mesh>>>()
-			.init_resource::<Shared<AssetKey, Handle<StandardMaterial>>>()
-			.register_prefab::<Projectile<Plasma>>()
-			.register_prefab::<VoidSphere>();
+			.init_resource::<Shared<AssetKey, Handle<StandardMaterial>>>();
 	}
 }

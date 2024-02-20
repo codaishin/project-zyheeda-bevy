@@ -7,9 +7,10 @@ edition.workspace = true
 bevy.workspace = true
 bevy_rapier3d.workspace = true
 tracing.workspace = true
+bars.workspace = true
 common.workspace = true
 interactions.workspace = true
-skills.workspace = true
+prefabs.workspace = true
 
 [dev-dependencies]
 mockall.workspace = true

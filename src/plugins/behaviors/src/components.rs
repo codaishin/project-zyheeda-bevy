@@ -3,14 +3,59 @@ use bevy::{
 	math::Vec3,
 	render::color::Color,
 };
-use common::{components::VoidSphere, tools::UnitsPerSecond};
-use std::time::Duration;
+use common::tools::UnitsPerSecond;
+use std::{marker::PhantomData, time::Duration};
 
 #[derive(Component)]
 pub struct CamOrbit {
 	pub center: Vec3,
 	pub distance: f32,
 	pub sensitivity: f32,
+}
+
+pub struct Plasma;
+
+#[derive(Component, Default)]
+pub struct Projectile<T> {
+	pub direction: Vec3,
+	pub range: f32,
+	phantom_data: PhantomData<T>,
+}
+
+impl<T> Projectile<T> {
+	pub fn new(direction: Vec3, range: f32) -> Self {
+		Self {
+			direction,
+			range,
+			phantom_data: PhantomData,
+		}
+	}
+}
+
+#[derive(Component)]
+pub struct VoidSphere;
+
+impl VoidSphere {
+	pub const AGGRO_RANGE: f32 = 10.;
+	pub const ATTACK_RANGE: f32 = 5.;
+}
+
+#[derive(Component, Clone)]
+pub enum VoidSpherePart {
+	Core,
+	RingA(UnitsPerSecond),
+	RingB(UnitsPerSecond),
+}
+
+#[derive(Component, Clone, Copy, PartialEq, Debug)]
+pub struct SimpleMovement {
+	pub target: Vec3,
+}
+
+impl SimpleMovement {
+	pub fn new(target: Vec3) -> Self {
+		Self { target }
+	}
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]

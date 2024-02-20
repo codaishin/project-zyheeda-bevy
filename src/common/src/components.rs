@@ -1,9 +1,4 @@
-use crate::tools::UnitsPerSecond;
-use bevy::{
-	ecs::{component::Component, entity::Entity},
-	math::Vec3,
-};
-use std::marker::PhantomData;
+use bevy::ecs::{component::Component, entity::Entity};
 
 #[derive(Debug, PartialEq)]
 pub struct Swap<T1, T2>(pub T1, pub T2);
@@ -27,22 +22,10 @@ pub enum Side {
 pub struct Player;
 
 #[derive(Component)]
-pub struct Dummy;
+pub struct Idle;
 
 #[derive(Component)]
-pub struct VoidSphere;
-
-impl VoidSphere {
-	pub const AGGRO_RANGE: f32 = 10.;
-	pub const ATTACK_RANGE: f32 = 5.;
-}
-
-#[derive(Component, Clone)]
-pub enum VoidSpherePart {
-	Core,
-	RingA(UnitsPerSecond),
-	RingB(UnitsPerSecond),
-}
+pub struct Dummy;
 
 #[derive(Component, Debug, PartialEq)]
 pub struct Health {
@@ -61,25 +44,6 @@ impl Health {
 
 #[derive(Component, PartialEq, Debug)]
 pub struct ColliderRoot(pub Entity);
-
-pub struct Plasma;
-
-#[derive(Component, Default)]
-pub struct Projectile<T> {
-	pub direction: Vec3,
-	pub range: f32,
-	phantom_data: PhantomData<T>,
-}
-
-impl<T> Projectile<T> {
-	pub fn new(direction: Vec3, range: f32) -> Self {
-		Self {
-			direction,
-			range,
-			phantom_data: PhantomData,
-		}
-	}
-}
 
 #[derive(Component, PartialEq, Debug, Clone, Copy, Default)]
 pub enum Animate<T: Copy + Clone> {

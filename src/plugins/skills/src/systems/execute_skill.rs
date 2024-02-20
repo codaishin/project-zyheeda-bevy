@@ -1,5 +1,5 @@
 use crate::{
-	components::{SkillsIdle, SlotKey, Slots},
+	components::{SlotKey, Slots},
 	skill::{SkillState, Spawner},
 	traits::{Execution, GetAnimation},
 };
@@ -14,7 +14,7 @@ use bevy::{
 	transform::components::{GlobalTransform, Transform},
 };
 use common::{
-	components::Animate,
+	components::{Animate, Idle},
 	traits::state_duration::{StateMeta, StateUpdate},
 };
 use std::{collections::HashSet, time::Duration};
@@ -24,7 +24,7 @@ type Skills<'a, TAnimationKey, TSkill> = (
 	&'a mut Transform,
 	&'a mut TSkill,
 	&'a Slots,
-	Option<&'a SkillsIdle>,
+	Option<&'a Idle>,
 	Option<&'a Animate<TAnimationKey>>,
 );
 
@@ -65,7 +65,7 @@ pub(crate) fn execute_skill<
 fn get_states<TSkill: StateUpdate<SkillState>>(
 	skill: &mut Mut<TSkill>,
 	delta: &Duration,
-	wait_next: Option<&SkillsIdle>,
+	wait_next: Option<&Idle>,
 ) -> HashSet<StateMeta<SkillState>> {
 	if wait_next.is_some() {
 		return [StateMeta::Leaving(SkillState::AfterCast)].into();
@@ -124,7 +124,7 @@ fn handle_done<
 	if current_animation_is_from_skill(skill, animate) {
 		agent.remove::<Animate<TAnimationKey>>();
 	}
-	agent.insert(SkillsIdle);
+	agent.insert(Idle);
 	skill.stop(agent);
 }
 
@@ -504,7 +504,7 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(agent.contains::<SkillsIdle>());
+		assert!(agent.contains::<Idle>());
 	}
 
 	#[test]
@@ -527,7 +527,7 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<SkillsIdle>());
+		assert!(!agent.contains::<Idle>());
 	}
 
 	#[test]
@@ -549,7 +549,7 @@ mod tests {
 			skill,
 			Transform::default(),
 			Animate::Repeat(_AnimationKey::A),
-			SkillsIdle,
+			Idle,
 		));
 
 		app.update();

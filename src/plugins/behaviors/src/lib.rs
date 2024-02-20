@@ -7,9 +7,9 @@ use bevy::{
 	ecs::schedule::{common_conditions::in_state, IntoSystemConfigs, States},
 	time::Virtual,
 };
-use common::components::{Plasma, Player, Projectile};
-use components::{CamOrbit, MovementConfig};
-use skills::components::SimpleMovement;
+use common::components::Player;
+use components::{CamOrbit, MovementConfig, Plasma, Projectile, SimpleMovement, VoidSphere};
+use prefabs::traits::RegisterPrefab;
 use systems::{
 	attack::{attack, beam::execute_beam},
 	chase::chase,
@@ -35,18 +35,20 @@ impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
 	for BehaviorsPlugin<TCamActiveState>
 {
 	fn build(&self, app: &mut App) {
-		app.add_systems(
-			Update,
-			(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>)
-				.run_if(in_state(self.cam_behavior_state.clone())),
-		)
-		.add_systems(Update, update_cool_downs::<Virtual>)
-		.add_systems(
-			Update,
-			(execute_move::<MovementConfig, SimpleMovement, Virtual>,),
-		)
-		.add_systems(Update, projectile_behavior::<Projectile<Plasma>>)
-		.add_systems(Update, (enemy, chase::<MovementConfig>, attack).chain())
-		.add_systems(Update, execute_beam);
+		app.register_prefab::<Projectile<Plasma>>()
+			.register_prefab::<VoidSphere>()
+			.add_systems(
+				Update,
+				(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>)
+					.run_if(in_state(self.cam_behavior_state.clone())),
+			)
+			.add_systems(Update, update_cool_downs::<Virtual>)
+			.add_systems(
+				Update,
+				(execute_move::<MovementConfig, SimpleMovement, Virtual>,),
+			)
+			.add_systems(Update, projectile_behavior::<Projectile<Plasma>>)
+			.add_systems(Update, (enemy, chase::<MovementConfig>, attack).chain())
+			.add_systems(Update, execute_beam);
 	}
 }

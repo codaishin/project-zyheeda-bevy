@@ -1,6 +1,14 @@
-use super::{sphere, AssetKey, Instantiate, VoidPart};
+use crate::components::{
+	AttackConfig,
+	Beam,
+	Enemy,
+	Foe,
+	MovementConfig,
+	MovementMode,
+	VoidSphere,
+	VoidSpherePart,
+};
 use bars::components::Bar;
-use behaviors::components::{AttackConfig, Beam, Enemy, Foe, MovementConfig, MovementMode};
 use bevy::{
 	asset::Handle,
 	ecs::{bundle::Bundle, system::EntityCommands},
@@ -20,10 +28,11 @@ use bevy_rapier3d::{
 };
 use common::{
 	bundles::ColliderBundle,
-	components::{ColliderRoot, Health, VoidSphere, VoidSpherePart},
+	components::{ColliderRoot, Health},
 	errors::Error,
 	tools::UnitsPerSecond,
 };
+use prefabs::traits::{sphere, AssetKey, Instantiate, VoidPart};
 use std::{f32::consts::PI, time::Duration};
 
 #[derive(Bundle)]

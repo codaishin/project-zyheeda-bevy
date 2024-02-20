@@ -1,7 +1,6 @@
 pub mod app;
 pub(crate) mod dummy;
 pub(crate) mod projectile;
-pub(crate) mod void_sphere;
 
 use bevy::{
 	asset::Handle,
@@ -48,7 +47,7 @@ macro_rules! projectile_error {
 	};
 }
 
-fn sphere(radius: f32, error_msg: fn() -> &'static str) -> Result<Mesh, Error> {
+pub fn sphere(radius: f32, error_msg: fn() -> &'static str) -> Result<Mesh, Error> {
 	Mesh::try_from(Icosphere {
 		radius,
 		subdivisions: 5,
