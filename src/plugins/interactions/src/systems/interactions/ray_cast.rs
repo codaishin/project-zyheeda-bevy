@@ -54,7 +54,10 @@ fn get_actor_and_target<'a, TActor: Component, TTarget: Component>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::app::{App, Update};
+	use bevy::{
+		app::{App, Update},
+		math::Ray,
+	};
 	use common::traits::cast_ray::TimeOfImpact;
 	use mockall::{automock, predicate::eq};
 
@@ -101,6 +104,7 @@ mod tests {
 			source: actor,
 			target: RayCastTarget::Some {
 				target: coll_target,
+				ray: Ray::default(),
 				toi: TimeOfImpact::default(),
 			},
 		});

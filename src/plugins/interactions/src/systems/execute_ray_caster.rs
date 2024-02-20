@@ -2,11 +2,14 @@ use crate::{
 	components::RayCaster,
 	events::{RayCastEvent, RayCastTarget},
 };
-use bevy::ecs::{
-	entity::Entity,
-	event::EventWriter,
-	query::Added,
-	system::{Commands, Query, Res, Resource},
+use bevy::{
+	ecs::{
+		entity::Entity,
+		event::EventWriter,
+		query::Added,
+		system::{Commands, Query, Res, Resource},
+	},
+	math::Ray,
 };
 use common::traits::cast_ray::CastRay;
 
@@ -19,9 +22,13 @@ pub(crate) fn execute_ray_caster<TCastRay: CastRay<RayCaster> + Resource>(
 	for (source, ray_caster) in &ray_casters {
 		let hit = cast_ray.cast_ray(ray_caster.clone());
 		let max_toi = ray_caster.max_toi;
+		let ray = Ray {
+			origin: ray_caster.origin,
+			direction: ray_caster.direction,
+		};
 		let target = match hit {
-			None => RayCastTarget::None { max_toi },
-			Some((target, toi)) => RayCastTarget::Some { target, toi },
+			None => RayCastTarget::None { ray, max_toi },
+			Some((target, toi)) => RayCastTarget::Some { target, ray, toi },
 		};
 		ray_cast_events.send(RayCastEvent { source, target });
 		commands.entity(source).remove::<RayCaster>();
@@ -90,7 +97,14 @@ mod tests {
 		app.insert_resource(cast_ray);
 		app.add_event::<RayCastEvent>();
 		app.add_systems(Update, execute_ray_caster::<_CastRay>);
-		let ray_caster = app.world.spawn(RayCaster::default()).id();
+		let ray_caster = app
+			.world
+			.spawn(RayCaster {
+				origin: Vec3::ONE,
+				direction: Vec3::Y,
+				..default()
+			})
+			.id();
 		app.update();
 
 		let events = app.world.resource::<Events<RayCastEvent>>();
@@ -102,6 +116,10 @@ mod tests {
 				source: ray_caster,
 				target: RayCastTarget::Some {
 					target: Entity::from_raw(42),
+					ray: Ray {
+						origin: Vec3::ONE,
+						direction: Vec3::Y
+					},
 					toi: TimeOfImpact(42.)
 				}
 			}],
@@ -122,6 +140,8 @@ mod tests {
 			.world
 			.spawn(RayCaster {
 				max_toi: TimeOfImpact(420.),
+				origin: Vec3::ONE,
+				direction: Vec3::Y,
 				..default()
 			})
 			.id();
@@ -135,6 +155,10 @@ mod tests {
 			vec![&RayCastEvent {
 				source: ray_caster,
 				target: RayCastTarget::None {
+					ray: Ray {
+						origin: Vec3::ONE,
+						direction: Vec3::Y
+					},
 					max_toi: TimeOfImpact(420.)
 				}
 			}],
