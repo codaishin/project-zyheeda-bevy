@@ -1,3 +1,5 @@
+pub(crate) mod beam;
+
 use crate::components::{Attack, AttackConfig, Attacker, OnCoolDown, Target};
 use bevy::ecs::{
 	entity::Entity,

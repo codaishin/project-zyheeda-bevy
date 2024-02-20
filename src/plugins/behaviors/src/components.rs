@@ -2,7 +2,7 @@ use bevy::{
 	ecs::{component::Component, entity::Entity, system::Commands},
 	math::Vec3,
 };
-use common::tools::UnitsPerSecond;
+use common::{components::VoidSphere, tools::UnitsPerSecond};
 use std::time::Duration;
 
 #[derive(Component)]
@@ -38,10 +38,10 @@ pub(crate) struct Chase(pub Entity);
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct Attack(pub Entity);
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Attacker(pub Entity);
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Target(pub Entity);
 
 #[derive(Component)]
@@ -61,7 +61,24 @@ pub enum Foe {
 
 #[derive(Component, Clone, Copy)]
 pub struct Enemy {
-	pub attack_range: f32,
 	pub aggro_range: f32,
+	pub attack_range: f32,
 	pub foe: Foe,
+}
+
+#[derive(Component, Clone, Copy)]
+pub struct Beam {
+	pub source: Entity,
+	pub target: Entity,
+	pub range: f32,
+}
+
+impl Beam {
+	pub fn attack(commands: &mut Commands, attacker: Attacker, target: Target) {
+		commands.spawn(Beam {
+			source: attacker.0,
+			target: target.0,
+			range: VoidSphere::ATTACK_RANGE,
+		});
+	}
 }

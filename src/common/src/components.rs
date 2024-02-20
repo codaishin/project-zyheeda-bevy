@@ -32,6 +32,11 @@ pub struct Dummy;
 #[derive(Component)]
 pub struct VoidSphere;
 
+impl VoidSphere {
+	pub const AGGRO_RANGE: f32 = 10.;
+	pub const ATTACK_RANGE: f32 = 5.;
+}
+
 #[derive(Component, Clone)]
 pub enum VoidSpherePart {
 	Core,

@@ -1,6 +1,6 @@
 use super::{sphere, AssetKey, Instantiate, VoidPart};
 use bars::components::Bar;
-use behaviors::components::{Enemy, Foe, MovementConfig, MovementMode};
+use behaviors::components::{AttackConfig, Beam, Enemy, Foe, MovementConfig, MovementMode};
 use bevy::{
 	asset::Handle,
 	ecs::{bundle::Bundle, system::EntityCommands},
@@ -24,7 +24,7 @@ use common::{
 	errors::Error,
 	tools::UnitsPerSecond,
 };
-use std::f32::consts::PI;
+use std::{f32::consts::PI, time::Duration};
 
 #[derive(Bundle)]
 pub struct PbrVoidSphereBundle {
@@ -98,9 +98,13 @@ impl Instantiate for VoidSphere {
 				mode: MovementMode::Slow,
 				speed: UnitsPerSecond::new(1.),
 			},
+			AttackConfig {
+				attack: Beam::attack,
+				cool_down: Duration::from_secs(2),
+			},
 			Enemy {
-				attack_range: 5.,
-				aggro_range: 10.,
+				aggro_range: VoidSphere::AGGRO_RANGE,
+				attack_range: VoidSphere::ATTACK_RANGE,
 				foe: Foe::Player,
 			},
 		));
