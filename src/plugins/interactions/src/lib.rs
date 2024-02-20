@@ -1,5 +1,5 @@
 pub mod components;
-mod events;
+pub mod events;
 mod systems;
 mod traits;
 

@@ -1,6 +1,6 @@
 use crate::components::RayCaster;
 use bevy::ecs::entity::Entity;
-use bevy_rapier3d::plugin::RapierContext;
+use bevy_rapier3d::{pipeline::QueryFilter, plugin::RapierContext};
 use common::traits::cast_ray::{CastRay, TimeOfImpact};
 
 impl CastRay<RayCaster> for RapierContext {
@@ -10,7 +10,7 @@ impl CastRay<RayCaster> for RapierContext {
 			ray.direction,
 			ray.max_toi.0,
 			ray.solid,
-			(ray.get_filter)(),
+			QueryFilter::from(ray.filter),
 		)
 		.map(|(entity, toi)| (entity, TimeOfImpact(toi)))
 	}

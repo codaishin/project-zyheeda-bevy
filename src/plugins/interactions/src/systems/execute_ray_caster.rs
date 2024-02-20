@@ -35,7 +35,6 @@ mod tests {
 		math::Vec3,
 		utils::default,
 	};
-	use bevy_rapier3d::pipeline::QueryFilter;
 	use common::{test_tools::utils::SingleThreadedApp, traits::cast_ray::TimeOfImpact};
 	use mockall::{automock, predicate::eq};
 
@@ -60,7 +59,7 @@ mod tests {
 			direction: Vec3::ONE,
 			max_toi: TimeOfImpact(42.),
 			solid: true,
-			get_filter: QueryFilter::default,
+			filter: default(),
 		};
 		cast_ray
 			.mock
