@@ -1,5 +1,14 @@
-use crate::{events::RayCastEvent, traits::ActOn};
-use bevy::ecs::{component::Component, event::EventReader, system::Query, world::Mut};
+use crate::{
+	events::{RayCastEvent, RayCastTarget},
+	traits::ActOn,
+};
+use bevy::ecs::{
+	component::Component,
+	entity::Entity,
+	event::EventReader,
+	system::Query,
+	world::Mut,
+};
 use common::components::ColliderRoot;
 
 pub(crate) fn ray_cast_interaction<TActor: ActOn<TTarget> + Component, TTarget: Component>(
@@ -8,37 +17,36 @@ pub(crate) fn ray_cast_interaction<TActor: ActOn<TTarget> + Component, TTarget: 
 	mut actors: Query<&mut TActor>,
 	mut targets: Query<&mut TTarget>,
 ) {
-	let target_root_entity = |event: &RayCastEvent| {
-		let target_root = roots.get(event.target).ok()?;
-		Some(RayCastEvent {
-			source: event.source,
-			target: target_root.0,
-		})
+	let target_root_entity = |event: &RayCastEvent| match event.target {
+		RayCastTarget::None { .. } => None,
+		RayCastTarget::Some { target, .. } => Some((event.source, roots.get(target).ok()?.0)),
 	};
 
-	for event in ray_casts.read().filter_map(target_root_entity) {
-		handle_collision_interaction(event, &mut actors, &mut targets);
+	for (source, target) in ray_casts.read().filter_map(target_root_entity) {
+		handle_collision_interaction(source, target, &mut actors, &mut targets);
 	}
 }
 
 fn handle_collision_interaction<TActor: ActOn<TTarget> + Component, TTarget: Component>(
-	event: RayCastEvent,
+	src: Entity,
+	tgt: Entity,
 	actors: &mut Query<&mut TActor>,
 	targets: &mut Query<&mut TTarget>,
 ) {
-	let Some((mut actor, mut target)) = get_actor_and_target(event, actors, targets) else {
+	let Some((mut actor, mut target)) = get_actor_and_target(src, tgt, actors, targets) else {
 		return;
 	};
 	actor.act_on(&mut target);
 }
 
 fn get_actor_and_target<'a, TActor: Component, TTarget: Component>(
-	event: RayCastEvent,
+	src: Entity,
+	tgt: Entity,
 	actors: &'a mut Query<&mut TActor>,
 	targets: &'a mut Query<&mut TTarget>,
 ) -> Option<(Mut<'a, TActor>, Mut<'a, TTarget>)> {
-	let actor = actors.get_mut(event.source).ok()?;
-	let target = targets.get_mut(event.target).ok()?;
+	let actor = actors.get_mut(src).ok()?;
+	let target = targets.get_mut(tgt).ok()?;
 
 	Some((actor, target))
 }
@@ -47,6 +55,7 @@ fn get_actor_and_target<'a, TActor: Component, TTarget: Component>(
 mod tests {
 	use super::*;
 	use bevy::app::{App, Update};
+	use common::traits::cast_ray::TimeOfImpact;
 	use mockall::{automock, predicate::eq};
 
 	#[derive(Component, Default)]
@@ -90,7 +99,10 @@ mod tests {
 
 		app.world.send_event(RayCastEvent {
 			source: actor,
-			target: coll_target,
+			target: RayCastTarget::Some {
+				target: coll_target,
+				toi: TimeOfImpact::default(),
+			},
 		});
 
 		app.update();

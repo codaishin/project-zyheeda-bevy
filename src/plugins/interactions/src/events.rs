@@ -1,7 +1,14 @@
 use bevy::ecs::{entity::Entity, event::Event};
+use common::traits::cast_ray::TimeOfImpact;
 
 #[derive(Event, Debug, PartialEq)]
-pub(crate) struct RayCastEvent {
+pub struct RayCastEvent {
 	pub source: Entity,
-	pub target: Entity,
+	pub target: RayCastTarget,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum RayCastTarget {
+	None { max_toi: TimeOfImpact },
+	Some { target: Entity, toi: TimeOfImpact },
 }
