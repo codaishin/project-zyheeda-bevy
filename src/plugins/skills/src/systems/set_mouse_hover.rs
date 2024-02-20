@@ -1,6 +1,9 @@
-use bevy::ecs::{
-	entity::Entity,
-	system::{Commands, Query, Res, Resource},
+use bevy::{
+	ecs::{
+		entity::Entity,
+		system::{Commands, Query, Res, Resource},
+	},
+	math::Ray,
 };
 use common::{
 	components::ColliderRoot,
@@ -8,7 +11,7 @@ use common::{
 	traits::cast_ray::{CastRay, TimeOfImpact},
 };
 
-pub(crate) fn set_mouse_hover<TCastRay: CastRay + Resource>(
+pub(crate) fn set_mouse_hover<TCastRay: CastRay<Ray> + Resource>(
 	mut commands: Commands,
 	cam_ray: Option<Res<CamRay>>,
 	ray_caster: Res<TCastRay>,
@@ -25,7 +28,7 @@ pub(crate) fn set_mouse_hover<TCastRay: CastRay + Resource>(
 	commands.insert_resource(mouse_hover);
 }
 
-fn ray_cast<TCastRay: CastRay + Resource>(
+fn ray_cast<TCastRay: CastRay<Ray> + Resource>(
 	cam_ray: Option<Res<CamRay>>,
 	ray_caster: Res<TCastRay>,
 ) -> Option<(Entity, TimeOfImpact)> {
@@ -53,7 +56,7 @@ mod tests {
 	}
 
 	#[automock]
-	impl CastRay for _CastRay {
+	impl CastRay<Ray> for _CastRay {
 		fn cast_ray(&self, ray: Ray) -> Option<(Entity, TimeOfImpact)> {
 			self.mock.cast_ray(ray)
 		}

@@ -1,11 +1,11 @@
 pub mod rapier_context;
 
-use bevy::{ecs::entity::Entity, math::Ray};
+use bevy::ecs::entity::Entity;
 use bevy_rapier3d::math::Real;
 
-#[derive(Clone)]
+#[derive(Debug, Default, PartialEq, Clone)]
 pub struct TimeOfImpact(pub Real);
 
-pub trait CastRay {
-	fn cast_ray(&self, ray: Ray) -> Option<(Entity, TimeOfImpact)>;
+pub trait CastRay<TRayData> {
+	fn cast_ray(&self, ray: TRayData) -> Option<(Entity, TimeOfImpact)>;
 }

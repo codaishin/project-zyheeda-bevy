@@ -7,12 +7,14 @@ use bevy::{
 	app::{App, Plugin, PostUpdate, Update},
 	ecs::component::Component,
 };
+use bevy_rapier3d::plugin::RapierContext;
 use common::components::Health;
 use components::DealsDamage;
 use events::RayCastEvent;
 use systems::{
 	destroy::destroy,
 	destroy_dead::set_dead_to_be_destroyed,
+	execute_ray_caster::execute_ray_caster,
 	interactions::{collision::collision_interaction, ray_cast::ray_cast_interaction},
 };
 use traits::ActOn;
@@ -23,6 +25,7 @@ impl Plugin for InteractionsPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_event::<RayCastEvent>()
 			.add_interaction::<DealsDamage, Health>()
+			.add_systems(Update, execute_ray_caster::<RapierContext>)
 			.add_systems(Update, set_dead_to_be_destroyed)
 			.add_systems(PostUpdate, destroy);
 	}
