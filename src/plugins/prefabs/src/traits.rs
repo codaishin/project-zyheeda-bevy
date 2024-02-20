@@ -1,10 +1,11 @@
-pub mod dummy;
-pub mod projectile;
-pub mod void_sphere;
+pub mod app;
+pub(crate) mod dummy;
+pub(crate) mod projectile;
+pub(crate) mod void_sphere;
 
 use bevy::{
 	asset::Handle,
-	ecs::system::EntityCommands,
+	ecs::{component::Component, system::EntityCommands},
 	pbr::StandardMaterial,
 	render::mesh::{shape::Icosphere, Mesh},
 };
@@ -35,6 +36,10 @@ pub trait Instantiate {
 		get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
 		get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
 	) -> Result<(), Error>;
+}
+
+pub trait RegisterPrefab {
+	fn register_prefab<TPrefab: Instantiate + Component>(&mut self) -> &mut Self;
 }
 
 macro_rules! projectile_error {
