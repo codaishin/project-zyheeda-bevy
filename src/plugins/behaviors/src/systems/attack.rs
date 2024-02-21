@@ -12,7 +12,8 @@ pub(crate) fn attack(
 	attackers: Query<(Entity, &Attack, &AttackConfig), Without<OnCoolDown>>,
 ) {
 	for (id, attack, conf, ..) in &attackers {
-		(conf.attack)(&mut commands, Attacker(id), Target(attack.0));
+		let spawn = &conf.spawn;
+		spawn.attack(&mut commands, Attacker(id), Target(attack.0));
 		commands.entity(id).insert(OnCoolDown(conf.cool_down));
 	}
 }
@@ -20,7 +21,10 @@ pub(crate) fn attack(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Attacker, Target};
+	use crate::{
+		components::{Attacker, Target},
+		traits::{SpawnAttack, ToArc},
+	};
 	use bevy::{
 		app::{App, Update},
 		ecs::component::Component,
@@ -34,8 +38,12 @@ mod tests {
 		target: Target,
 	}
 
-	fn fake_attack(commands: &mut Commands, attacker: Attacker, target: Target) {
-		commands.spawn(_FakeAttack { attacker, target });
+	struct _FakeAttackConfig;
+
+	impl SpawnAttack for _FakeAttackConfig {
+		fn attack(&self, commands: &mut Commands, attacker: Attacker, target: Target) {
+			commands.spawn(_FakeAttack { attacker, target });
+		}
 	}
 
 	fn setup() -> App {
@@ -53,7 +61,7 @@ mod tests {
 			.spawn((
 				Attack(Entity::from_raw(11)),
 				AttackConfig {
-					attack: fake_attack,
+					spawn: _FakeAttackConfig.to_arc(),
 					cool_down: Duration::ZERO,
 				},
 			))
@@ -83,7 +91,7 @@ mod tests {
 			.spawn((
 				Attack(Entity::from_raw(11)),
 				AttackConfig {
-					attack: fake_attack,
+					spawn: _FakeAttackConfig.to_arc(),
 					cool_down: Duration::from_secs(42),
 				},
 			))
@@ -108,7 +116,7 @@ mod tests {
 				Attack(Entity::from_raw(11)),
 				OnCoolDown(Duration::from_millis(100)),
 				AttackConfig {
-					attack: fake_attack,
+					spawn: _FakeAttackConfig.to_arc(),
 					cool_down: Duration::ZERO,
 				},
 			))

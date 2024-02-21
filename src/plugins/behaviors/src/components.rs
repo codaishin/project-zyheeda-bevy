@@ -1,10 +1,11 @@
+use crate::traits::SpawnAttack;
 use bevy::{
 	ecs::{component::Component, entity::Entity, system::Commands},
 	math::Vec3,
 	render::color::Color,
 };
 use common::tools::UnitsPerSecond;
-use std::{marker::PhantomData, time::Duration};
+use std::{marker::PhantomData, sync::Arc, time::Duration};
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -92,7 +93,7 @@ pub struct Target(pub Entity);
 
 #[derive(Component)]
 pub struct AttackConfig {
-	pub attack: fn(&mut Commands, Attacker, Target),
+	pub spawn: Arc<dyn SpawnAttack + Sync + Send + 'static>,
 	pub cool_down: Duration,
 }
 
@@ -112,25 +113,34 @@ pub struct Enemy {
 	pub foe: Foe,
 }
 
-#[derive(Component, Clone, Copy)]
-pub struct Beam {
+#[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
+pub struct BeamConfig {
+	pub color: Color,
+	pub emissive: Color,
+}
+
+impl SpawnAttack for BeamConfig {
+	fn attack(&self, commands: &mut Commands, attacker: Attacker, target: Target) {
+		commands.entity(attacker.0).insert((
+			*self,
+			BeamCommand {
+				target: target.0,
+				range: VoidSphere::ATTACK_RANGE,
+			},
+		));
+	}
+}
+
+#[derive(Component, Clone, Copy, Debug, PartialEq)]
+pub struct BeamCommand {
 	pub target: Entity,
 	pub range: f32,
 }
 
-impl Beam {
-	pub fn attack(commands: &mut Commands, attacker: Attacker, target: Target) {
-		commands.entity(attacker.0).insert(Beam {
-			target: target.0,
-			range: VoidSphere::ATTACK_RANGE,
-		});
-	}
-}
-
-#[derive(Component, Debug, PartialEq)]
-pub(crate) struct ActiveBeam {
+#[derive(Component, Default, Debug, PartialEq)]
+pub(crate) struct Beam {
 	pub from: Vec3,
 	pub to: Vec3,
 	pub color: Color,
-	pub emission: Color,
+	pub emissive: Color,
 }

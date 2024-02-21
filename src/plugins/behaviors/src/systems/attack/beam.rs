@@ -1,12 +1,12 @@
-use crate::components::{ActiveBeam, Beam};
+use crate::components::{Beam, BeamCommand, BeamConfig};
 use bevy::{
 	ecs::{
 		entity::Entity,
 		event::EventReader,
+		query::Added,
 		system::{Commands, Query},
 	},
 	math::{Ray, Vec3},
-	render::color::Color,
 	transform::components::GlobalTransform,
 };
 use bevy_rapier3d::pipeline::QueryFilter;
@@ -19,40 +19,44 @@ use interactions::{
 pub(crate) fn execute_beam(
 	mut commands: Commands,
 	mut ray_cast_events: EventReader<RayCastEvent>,
-	beamers: Query<(Entity, &GlobalTransform, &Beam)>,
+	beam_commands: Query<(Entity, &GlobalTransform, &BeamCommand), Added<BeamCommand>>,
+	beam_configs: Query<&BeamConfig>,
 	transforms: Query<&GlobalTransform>,
 ) {
-	let origin_and_target = |(id, transform, beam): (Entity, &GlobalTransform, &Beam)| {
-		let target = transforms.get(beam.target).ok()?.translation();
+	let origin_and_target = |(id, transform, cmd): (Entity, &GlobalTransform, &BeamCommand)| {
+		let target = transforms.get(cmd.target).ok()?.translation();
 		let filter: RayFilter = QueryFilter::default()
 			.exclude_rigid_body(id)
 			.try_into()
 			.ok()?;
-		Some((id, *beam, transform.translation(), target, filter))
+		Some((id, *cmd, transform.translation(), target, filter))
 	};
-	let event_source_is_beam = |event: &&RayCastEvent| beamers.contains(event.source);
+	let beam_config = |event: &RayCastEvent| Some((*event, beam_configs.get(event.source).ok()?));
 
-	for (id, beam, origin, target, filter) in beamers.iter().filter_map(origin_and_target) {
+	for (id, cmd, origin, target, filter) in beam_commands.iter().filter_map(origin_and_target) {
 		commands.entity(id).insert(RayCaster {
 			origin,
 			direction: (target - origin).normalize(),
 			solid: true,
 			filter,
-			max_toi: TimeOfImpact(beam.range),
+			max_toi: TimeOfImpact(cmd.range),
 		});
 	}
 
-	for event in ray_cast_events.read().filter(event_source_is_beam) {
+	for (event, cfg) in ray_cast_events.read().filter_map(beam_config) {
 		let (from, to) = match event.target {
 			RayCastTarget::Some { ray, toi, .. } => get_beam_range(ray, toi),
 			RayCastTarget::None { ray, max_toi } => get_beam_range(ray, max_toi),
 		};
-		commands.spawn(ActiveBeam {
+		commands.spawn(Beam {
 			from,
 			to,
-			color: Color::BLACK,
-			emission: Color::rgb_linear(13.99, 13.99, 13.99),
+			color: cfg.color,
+			emissive: cfg.emissive,
 		});
+		commands
+			.entity(event.source)
+			.remove::<(BeamCommand, BeamConfig)>();
 	}
 }
 
@@ -63,7 +67,7 @@ fn get_beam_range(ray: Ray, toi: TimeOfImpact) -> (Vec3, Vec3) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::ActiveBeam;
+	use crate::components::{Beam, BeamConfig};
 	use bevy::{
 		app::{App, Update},
 		ecs::entity::Entity,
@@ -87,14 +91,15 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_ray_caster() {
+	fn insert_ray_caster() {
 		let mut app = setup();
 		let target = app.world.spawn(GlobalTransform::from_xyz(1., 0., 4.)).id();
 		let beamer = app
 			.world
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 0.),
-				Beam {
+				BeamConfig::default(),
+				BeamCommand {
 					target,
 					range: 100.,
 				},
@@ -121,13 +126,44 @@ mod tests {
 	}
 
 	#[test]
+	fn do_not_insert_ray_caster_multiple_times() {
+		let mut app = setup();
+		let target = app.world.spawn(GlobalTransform::from_xyz(1., 0., 4.)).id();
+		let beamer = app
+			.world
+			.spawn((
+				GlobalTransform::from_xyz(1., 0., 0.),
+				BeamConfig::default(),
+				BeamCommand {
+					target,
+					range: 100.,
+				},
+			))
+			.id();
+
+		app.update();
+
+		app.world.entity_mut(beamer).remove::<RayCaster>();
+
+		app.update();
+
+		let ray_caster = app.world.entity(beamer).get::<RayCaster>();
+
+		assert_eq!(None, ray_caster);
+	}
+
+	#[test]
 	fn spawn_beam_from_hit() {
 		let mut app = setup();
 		let source = app
 			.world
 			.spawn((
 				GlobalTransform::default(),
-				Beam {
+				BeamConfig {
+					color: Color::CYAN,
+					emissive: Color::ORANGE,
+				},
+				BeamCommand {
 					target: Entity::from_raw(default()),
 					range: default(),
 				},
@@ -147,18 +183,14 @@ mod tests {
 
 		app.update();
 
-		let active_beam = app
-			.world
-			.iter_entities()
-			.find_map(|e| e.get::<ActiveBeam>());
+		let active_beam = app.world.iter_entities().find_map(|e| e.get::<Beam>());
 
 		assert_eq!(
-			Some(&ActiveBeam {
+			Some(&Beam {
 				from: Vec3::Z,
 				to: Vec3::new(0., 10., 1.),
-				// FIXME: Color values need to be configurable in some way
-				color: Color::BLACK,
-				emission: Color::rgb_linear(13.99, 13.99, 13.99)
+				color: Color::CYAN,
+				emissive: Color::ORANGE
 			}),
 			active_beam
 		);
@@ -171,7 +203,8 @@ mod tests {
 			.world
 			.spawn((
 				GlobalTransform::default(),
-				Beam {
+				BeamConfig::default(),
+				BeamCommand {
 					target: Entity::from_raw(default()),
 					range: default(),
 				},
@@ -190,24 +223,20 @@ mod tests {
 
 		app.update();
 
-		let active_beam = app
-			.world
-			.iter_entities()
-			.find_map(|e| e.get::<ActiveBeam>());
+		let active_beam = app.world.iter_entities().find_map(|e| e.get::<Beam>());
 
 		assert_eq!(
-			Some(&ActiveBeam {
+			Some(&Beam {
 				from: Vec3::Z,
 				to: Vec3::new(0., 4., 1.),
-				color: Color::BLACK,
-				emission: Color::rgb_linear(13.99, 13.99, 13.99)
+				..default()
 			}),
 			active_beam
 		);
 	}
 
 	#[test]
-	fn do_not_spawn_when_event_source_not_a_beam() {
+	fn do_not_spawn_when_event_source_not_a_beam_command() {
 		let mut app = setup();
 		let source = app.world.spawn_empty().id();
 		app.world.send_event(RayCastEvent {
@@ -224,11 +253,86 @@ mod tests {
 
 		app.update();
 
-		let active_beam = app
-			.world
-			.iter_entities()
-			.find_map(|e| e.get::<ActiveBeam>());
+		let active_beam = app.world.iter_entities().find_map(|e| e.get::<Beam>());
 
 		assert_eq!(None, active_beam);
+	}
+
+	#[test]
+	fn beam_on_not_newly_added_beam_command() {
+		let mut app = setup();
+		let source = app
+			.world
+			.spawn((
+				GlobalTransform::default(),
+				BeamConfig::default(),
+				BeamCommand {
+					target: Entity::from_raw(default()),
+					range: default(),
+				},
+			))
+			.id();
+
+		app.update();
+
+		app.world.send_event(RayCastEvent {
+			source,
+			target: RayCastTarget::Some {
+				target: Entity::from_raw(default()),
+				ray: Ray {
+					origin: Vec3::Z,
+					direction: Vec3::Y,
+				},
+				toi: TimeOfImpact(10.),
+			},
+		});
+
+		app.update();
+
+		let active_beam = app.world.iter_entities().find_map(|e| e.get::<Beam>());
+
+		assert_eq!(
+			Some(&Beam {
+				from: Vec3::Z,
+				to: Vec3::new(0., 10., 1.),
+				..default()
+			}),
+			active_beam
+		);
+	}
+
+	#[test]
+	fn remove_beam_cmd_when_beam_added() {
+		let mut app = setup();
+		let source = app
+			.world
+			.spawn((
+				GlobalTransform::default(),
+				BeamConfig::default(),
+				BeamCommand {
+					target: Entity::from_raw(default()),
+					range: default(),
+				},
+			))
+			.id();
+
+		app.world.send_event(RayCastEvent {
+			source,
+			target: RayCastTarget::Some {
+				target: Entity::from_raw(default()),
+				ray: Ray {
+					origin: Vec3::Z,
+					direction: Vec3::Y,
+				},
+				toi: TimeOfImpact(10.),
+			},
+		});
+
+		app.update();
+
+		let beam_cmd = app.world.entity(source).get::<BeamCommand>();
+		let beam_cfg = app.world.entity(source).get::<BeamConfig>();
+
+		assert_eq!((None, None), (beam_cmd, beam_cfg));
 	}
 }

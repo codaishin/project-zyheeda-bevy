@@ -4,13 +4,13 @@ use bevy::{
 };
 use common::traits::cast_ray::TimeOfImpact;
 
-#[derive(Event, Debug, PartialEq)]
+#[derive(Event, Debug, PartialEq, Clone, Copy)]
 pub struct RayCastEvent {
 	pub source: Entity,
 	pub target: RayCastTarget,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum RayCastTarget {
 	None {
 		ray: Ray,
