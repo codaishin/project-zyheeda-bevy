@@ -10,26 +10,37 @@ use bevy::{
 	transform::components::GlobalTransform,
 };
 use bevy_rapier3d::pipeline::QueryFilter;
-use common::traits::cast_ray::TimeOfImpact;
+use common::{components::GroundOffset, traits::cast_ray::TimeOfImpact};
 use interactions::{
 	components::{RayCaster, RayFilter},
 	events::{RayCastEvent, RayCastTarget},
 };
 
+type CommandComponents<'a> = (
+	Entity,
+	&'a GlobalTransform,
+	Option<&'a GroundOffset>,
+	&'a BeamCommand,
+);
+
 pub(crate) fn execute_beam(
 	mut commands: Commands,
 	mut ray_cast_events: EventReader<RayCastEvent>,
-	beam_commands: Query<(Entity, &GlobalTransform, &BeamCommand), Added<BeamCommand>>,
+	beam_commands: Query<CommandComponents, Added<BeamCommand>>,
 	beam_configs: Query<&BeamConfig>,
-	transforms: Query<&GlobalTransform>,
+	targets: Query<(&GlobalTransform, Option<&GroundOffset>)>,
 ) {
-	let origin_and_target = |(id, transform, cmd): (Entity, &GlobalTransform, &BeamCommand)| {
-		let target = transforms.get(cmd.target).ok()?.translation();
+	let origin_and_target = |(id, transform, offset, cmd): CommandComponents| {
+		let (target_transform, target_offset) = targets.get(cmd.target).ok()?;
+		let target_offset = target_offset.map_or(Vec3::ZERO, |o| o.0);
+		let target = target_transform.translation() + target_offset;
+		let offset = offset.map_or(Vec3::ZERO, |o| o.0);
+		let origin = transform.translation() + offset;
 		let filter: RayFilter = QueryFilter::default()
 			.exclude_rigid_body(id)
 			.try_into()
 			.ok()?;
-		Some((id, *cmd, transform.translation(), target, filter))
+		Some((id, *cmd, origin, target, filter))
 	};
 	let beam_config = |event: &RayCastEvent| Some((*event, beam_configs.get(event.source).ok()?));
 
@@ -76,7 +87,11 @@ mod tests {
 		render::color::Color,
 	};
 	use bevy_rapier3d::pipeline::QueryFilter;
-	use common::{test_tools::utils::SingleThreadedApp, traits::cast_ray::TimeOfImpact};
+	use common::{
+		components::GroundOffset,
+		test_tools::utils::SingleThreadedApp,
+		traits::cast_ray::TimeOfImpact,
+	};
 	use interactions::{
 		components::RayCaster,
 		events::{RayCastEvent, RayCastTarget},
@@ -114,6 +129,83 @@ mod tests {
 			Some(&RayCaster {
 				origin: Vec3::new(1., 0., 0.),
 				direction: Vec3::new(0., 0., 1.),
+				max_toi: TimeOfImpact(100.),
+				solid: true,
+				filter: QueryFilter::default()
+					.exclude_rigid_body(beamer)
+					.try_into()
+					.unwrap(),
+			}),
+			ray_caster
+		);
+	}
+
+	#[test]
+	fn insert_ray_caster_with_ground_offset_for_target() {
+		let mut app = setup();
+		let target = app
+			.world
+			.spawn((
+				GlobalTransform::from_xyz(1., 0., 4.),
+				GroundOffset(Vec3::new(0., 1., 0.)),
+			))
+			.id();
+		let beamer = app
+			.world
+			.spawn((
+				GlobalTransform::from_xyz(1., 0., 0.),
+				BeamConfig::default(),
+				BeamCommand {
+					target,
+					range: 100.,
+				},
+			))
+			.id();
+
+		app.update();
+
+		let ray_caster = app.world.entity(beamer).get::<RayCaster>();
+
+		assert_eq!(
+			Some(&RayCaster {
+				origin: Vec3::new(1., 0., 0.),
+				direction: Vec3::new(0., 1., 4.).normalize(),
+				max_toi: TimeOfImpact(100.),
+				solid: true,
+				filter: QueryFilter::default()
+					.exclude_rigid_body(beamer)
+					.try_into()
+					.unwrap(),
+			}),
+			ray_caster
+		);
+	}
+
+	#[test]
+	fn insert_ray_caster_with_ground_offset_for_source() {
+		let mut app = setup();
+		let target = app.world.spawn(GlobalTransform::from_xyz(1., 0., 4.)).id();
+		let beamer = app
+			.world
+			.spawn((
+				GlobalTransform::from_xyz(1., 0., 0.),
+				GroundOffset(Vec3::new(0., 1., 0.)),
+				BeamConfig::default(),
+				BeamCommand {
+					target,
+					range: 100.,
+				},
+			))
+			.id();
+
+		app.update();
+
+		let ray_caster = app.world.entity(beamer).get::<RayCaster>();
+
+		assert_eq!(
+			Some(&RayCaster {
+				origin: Vec3::new(1., 1., 0.),
+				direction: Vec3::new(0., -1., 4.).normalize(),
 				max_toi: TimeOfImpact(100.),
 				solid: true,
 				filter: QueryFilter::default()

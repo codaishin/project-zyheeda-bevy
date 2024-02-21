@@ -1,4 +1,7 @@
-use bevy::ecs::{component::Component, entity::Entity};
+use bevy::{
+	ecs::{component::Component, entity::Entity},
+	math::Vec3,
+};
 
 #[derive(Debug, PartialEq)]
 pub struct Swap<T1, T2>(pub T1, pub T2);
@@ -17,6 +20,9 @@ pub enum Side {
 	Main,
 	Off,
 }
+
+#[derive(Component)]
+pub struct GroundOffset(pub Vec3);
 
 #[derive(Component, Default)]
 pub struct Player;
