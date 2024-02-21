@@ -113,10 +113,14 @@ pub struct Enemy {
 	pub foe: Foe,
 }
 
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct LifeTime(pub Duration);
+
 #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
 pub struct BeamConfig {
 	pub color: Color,
 	pub emissive: Color,
+	pub lifetime: Duration,
 }
 
 impl SpawnAttack for BeamConfig {

@@ -1,4 +1,4 @@
-use crate::components::{Beam, BeamCommand, BeamConfig};
+use crate::components::{Beam, BeamCommand, BeamConfig, LifeTime};
 use bevy::{
 	ecs::{
 		entity::Entity,
@@ -59,12 +59,15 @@ pub(crate) fn execute_beam(
 			RayCastTarget::Some { ray, toi, .. } => get_beam_range(ray, toi),
 			RayCastTarget::None { ray, max_toi } => get_beam_range(ray, max_toi),
 		};
-		commands.spawn(Beam {
-			from,
-			to,
-			color: cfg.color,
-			emissive: cfg.emissive,
-		});
+		commands.spawn((
+			Beam {
+				from,
+				to,
+				color: cfg.color,
+				emissive: cfg.emissive,
+			},
+			LifeTime(cfg.lifetime),
+		));
 		commands
 			.entity(event.source)
 			.remove::<(BeamCommand, BeamConfig)>();
@@ -77,8 +80,10 @@ fn get_beam_range(ray: Ray, toi: TimeOfImpact) -> (Vec3, Vec3) {
 
 #[cfg(test)]
 mod tests {
+	use std::time::Duration;
+
 	use super::*;
-	use crate::components::{Beam, BeamConfig};
+	use crate::components::{Beam, BeamConfig, LifeTime};
 	use bevy::{
 		app::{App, Update},
 		ecs::entity::Entity,
@@ -254,6 +259,7 @@ mod tests {
 				BeamConfig {
 					color: Color::CYAN,
 					emissive: Color::ORANGE,
+					lifetime: Duration::from_millis(100),
 				},
 				BeamCommand {
 					target: Entity::from_raw(default()),
@@ -275,15 +281,21 @@ mod tests {
 
 		app.update();
 
-		let active_beam = app.world.iter_entities().find_map(|e| e.get::<Beam>());
+		let active_beam = app
+			.world
+			.iter_entities()
+			.find_map(|e| Some((e.get::<Beam>()?, e.get::<LifeTime>()?)));
 
 		assert_eq!(
-			Some(&Beam {
-				from: Vec3::Z,
-				to: Vec3::new(0., 10., 1.),
-				color: Color::CYAN,
-				emissive: Color::ORANGE
-			}),
+			Some((
+				&Beam {
+					from: Vec3::Z,
+					to: Vec3::new(0., 10., 1.),
+					color: Color::CYAN,
+					emissive: Color::ORANGE
+				},
+				&LifeTime(Duration::from_millis(100))
+			)),
 			active_beam
 		);
 	}
@@ -295,7 +307,11 @@ mod tests {
 			.world
 			.spawn((
 				GlobalTransform::default(),
-				BeamConfig::default(),
+				BeamConfig {
+					color: Color::CYAN,
+					emissive: Color::ORANGE,
+					lifetime: Duration::from_millis(1000),
+				},
 				BeamCommand {
 					target: Entity::from_raw(default()),
 					range: default(),
@@ -315,14 +331,21 @@ mod tests {
 
 		app.update();
 
-		let active_beam = app.world.iter_entities().find_map(|e| e.get::<Beam>());
+		let active_beam = app
+			.world
+			.iter_entities()
+			.find_map(|e| Some((e.get::<Beam>()?, e.get::<LifeTime>()?)));
 
 		assert_eq!(
-			Some(&Beam {
-				from: Vec3::Z,
-				to: Vec3::new(0., 4., 1.),
-				..default()
-			}),
+			Some((
+				&Beam {
+					from: Vec3::Z,
+					to: Vec3::new(0., 4., 1.),
+					color: Color::CYAN,
+					emissive: Color::ORANGE,
+				},
+				&LifeTime(Duration::from_millis(1000))
+			)),
 			active_beam
 		);
 	}
