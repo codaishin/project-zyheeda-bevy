@@ -57,6 +57,7 @@ fn prepare_game(app: &mut App) {
 pub mod debug_utils {
 	use super::*;
 	use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
+	use interactions::events::RayCastEvent;
 	use std::ops::Not;
 
 	pub fn prepare_debug(app: &mut App) {
@@ -74,6 +75,7 @@ pub mod debug_utils {
 	fn display_events(
 		mut collision_events: EventReader<CollisionEvent>,
 		mut contact_force_events: EventReader<ContactForceEvent>,
+		mut ray_cast_events: EventReader<RayCastEvent>,
 	) {
 		for collision_event in collision_events.read() {
 			println!("Received collision event: {:?}", collision_event);
@@ -81,6 +83,10 @@ pub mod debug_utils {
 
 		for contact_force_event in contact_force_events.read() {
 			println!("Received contact force event: {:?}", contact_force_event);
+		}
+
+		for ray_cast_event in ray_cast_events.read() {
+			println!("Received ray cast event: {:?}", ray_cast_event);
 		}
 	}
 
