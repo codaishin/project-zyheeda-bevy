@@ -26,6 +26,7 @@ pub enum AssetKey {
 	Projectile(ProjectileType),
 	Dummy,
 	VoidSphere(VoidPart),
+	Beam,
 }
 
 pub trait Instantiate {

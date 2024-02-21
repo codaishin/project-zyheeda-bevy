@@ -1,6 +1,7 @@
+use super::ToArc;
 use crate::components::{
 	AttackConfig,
-	Beam,
+	BeamConfig,
 	Enemy,
 	Foe,
 	MovementConfig,
@@ -28,7 +29,7 @@ use bevy_rapier3d::{
 };
 use common::{
 	bundles::ColliderBundle,
-	components::{ColliderRoot, Health},
+	components::{ColliderRoot, GroundOffset, Health},
 	errors::Error,
 	tools::UnitsPerSecond,
 };
@@ -99,6 +100,7 @@ impl Instantiate for VoidSphere {
 		transform_2nd_ring.rotate_axis(Vec3::Z, PI / 2.);
 
 		on.insert((
+			GroundOffset(VOID_SPHERE_GROUND_OFFSET),
 			RigidBody::Dynamic,
 			GravityScale(0.),
 			Health::new(5),
@@ -108,7 +110,12 @@ impl Instantiate for VoidSphere {
 				speed: UnitsPerSecond::new(1.),
 			},
 			AttackConfig {
-				attack: Beam::attack,
+				spawn: BeamConfig {
+					color: Color::BLACK,
+					emissive: Color::rgb_linear(13.99, 13.99, 13.99),
+					lifetime: Duration::from_millis(200),
+				}
+				.to_arc(),
 				cool_down: Duration::from_secs(2),
 			},
 			Enemy {

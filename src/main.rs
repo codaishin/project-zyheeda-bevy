@@ -11,7 +11,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{Health, Player},
+	components::{ColliderRoot, GroundOffset, Health, Player},
 	tools::UnitsPerSecond,
 };
 use ingame_menu::IngameMenuPlugin;
@@ -199,22 +199,31 @@ fn spawn_plane(
 }
 
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
-	commands.spawn((
-		Name::from("Player"),
-		Health::new(100),
-		Bar::default(),
-		SceneBundle {
-			scene: asset_server.load("models/player.gltf#Scene0"),
-			..default()
-		},
-		Animator { ..default() },
-		Player,
-		MovementConfig::Dynamic {
-			current_mode: MovementMode::Fast,
-			slow_speed: UnitsPerSecond::new(0.75),
-			fast_speed: UnitsPerSecond::new(1.5),
-		},
-	));
+	commands
+		.spawn((
+			Name::from("Player"),
+			Health::new(100),
+			Bar::default(),
+			SceneBundle {
+				scene: asset_server.load("models/player.gltf#Scene0"),
+				..default()
+			},
+			Animator { ..default() },
+			GroundOffset(Vec3::Y),
+			Player,
+			MovementConfig::Dynamic {
+				current_mode: MovementMode::Fast,
+				slow_speed: UnitsPerSecond::new(0.75),
+				fast_speed: UnitsPerSecond::new(1.5),
+			},
+			RigidBody::KinematicPositionBased,
+		))
+		.with_children(|parent| {
+			parent.spawn((
+				Collider::capsule(Vec3::new(0.0, 0.2, -0.05), Vec3::new(0.0, 1.4, -0.05), 0.2),
+				ColliderRoot(parent.parent_entity()),
+			));
+		});
 }
 
 fn spawn_light(commands: &mut Commands) {

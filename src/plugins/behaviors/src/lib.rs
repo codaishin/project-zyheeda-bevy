@@ -8,7 +8,7 @@ use bevy::{
 	time::Virtual,
 };
 use common::components::Player;
-use components::{CamOrbit, MovementConfig, Plasma, Projectile, SimpleMovement, VoidSphere};
+use components::{Beam, CamOrbit, MovementConfig, Plasma, Projectile, SimpleMovement, VoidSphere};
 use prefabs::traits::RegisterPrefab;
 use systems::{
 	attack::{attack, beam::execute_beam},
@@ -38,6 +38,7 @@ impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
 	fn build(&self, app: &mut App) {
 		app.register_prefab::<Projectile<Plasma>>()
 			.register_prefab::<VoidSphere>()
+			.register_prefab::<Beam>()
 			.add_systems(
 				Update,
 				(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>)
