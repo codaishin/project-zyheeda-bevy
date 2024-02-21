@@ -20,6 +20,7 @@ type CommandComponents<'a> = (
 	Entity,
 	&'a GlobalTransform,
 	Option<&'a GroundOffset>,
+	&'a BeamConfig,
 	&'a BeamCommand,
 );
 
@@ -30,7 +31,7 @@ pub(crate) fn execute_beam(
 	beam_configs: Query<&BeamConfig>,
 	targets: Query<(&GlobalTransform, Option<&GroundOffset>)>,
 ) {
-	let origin_and_target = |(id, transform, offset, cmd): CommandComponents| {
+	let origin_and_target = |(id, transform, offset, cfg, cmd): CommandComponents| {
 		let (target_transform, target_offset) = targets.get(cmd.target).ok()?;
 		let target_offset = target_offset.map_or(Vec3::ZERO, |o| o.0);
 		let target = target_transform.translation() + target_offset;
@@ -40,17 +41,17 @@ pub(crate) fn execute_beam(
 			.exclude_rigid_body(id)
 			.try_into()
 			.ok()?;
-		Some((id, *cmd, origin, target, filter))
+		Some((id, *cfg, origin, target, filter))
 	};
 	let beam_config = |event: &RayCastEvent| Some((*event, beam_configs.get(event.source).ok()?));
 
-	for (id, cmd, origin, target, filter) in beam_commands.iter().filter_map(origin_and_target) {
+	for (id, cfg, origin, target, filter) in beam_commands.iter().filter_map(origin_and_target) {
 		commands.entity(id).insert(RayCaster {
 			origin,
 			direction: (target - origin).normalize(),
 			solid: true,
 			filter,
-			max_toi: TimeOfImpact(cmd.range),
+			max_toi: TimeOfImpact(cfg.range),
 		});
 	}
 
@@ -118,11 +119,11 @@ mod tests {
 			.world
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 0.),
-				BeamConfig::default(),
-				BeamCommand {
-					target,
+				BeamConfig {
 					range: 100.,
+					..default()
 				},
+				BeamCommand { target },
 			))
 			.id();
 
@@ -159,11 +160,11 @@ mod tests {
 			.world
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 0.),
-				BeamConfig::default(),
-				BeamCommand {
-					target,
+				BeamConfig {
 					range: 100.,
+					..default()
 				},
+				BeamCommand { target },
 			))
 			.id();
 
@@ -195,11 +196,11 @@ mod tests {
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 0.),
 				GroundOffset(Vec3::new(0., 1., 0.)),
-				BeamConfig::default(),
-				BeamCommand {
-					target,
+				BeamConfig {
 					range: 100.,
+					..default()
 				},
+				BeamCommand { target },
 			))
 			.id();
 
@@ -230,11 +231,11 @@ mod tests {
 			.world
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 0.),
-				BeamConfig::default(),
-				BeamCommand {
-					target,
+				BeamConfig {
 					range: 100.,
+					..default()
 				},
+				BeamCommand { target },
 			))
 			.id();
 
@@ -260,10 +261,10 @@ mod tests {
 					color: Color::CYAN,
 					emissive: Color::ORANGE,
 					lifetime: Duration::from_millis(100),
+					..default()
 				},
 				BeamCommand {
 					target: Entity::from_raw(default()),
-					range: default(),
 				},
 			))
 			.id();
@@ -311,10 +312,10 @@ mod tests {
 					color: Color::CYAN,
 					emissive: Color::ORANGE,
 					lifetime: Duration::from_millis(1000),
+					range: default(),
 				},
 				BeamCommand {
 					target: Entity::from_raw(default()),
-					range: default(),
 				},
 			))
 			.id();
@@ -383,7 +384,6 @@ mod tests {
 				BeamConfig::default(),
 				BeamCommand {
 					target: Entity::from_raw(default()),
-					range: default(),
 				},
 			))
 			.id();
@@ -426,7 +426,6 @@ mod tests {
 				BeamConfig::default(),
 				BeamCommand {
 					target: Entity::from_raw(default()),
-					range: default(),
 				},
 			))
 			.id();

@@ -114,6 +114,7 @@ impl Instantiate for VoidSphere {
 					color: Color::BLACK,
 					emissive: Color::rgb_linear(13.99, 13.99, 13.99),
 					lifetime: Duration::from_millis(200),
+					range: VoidSphere::ATTACK_RANGE,
 				}
 				.to_arc(),
 				cool_down: Duration::from_secs(2),
