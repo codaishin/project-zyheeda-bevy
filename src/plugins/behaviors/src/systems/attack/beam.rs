@@ -12,7 +12,7 @@ use bevy::{
 use bevy_rapier3d::pipeline::QueryFilter;
 use common::{components::GroundOffset, traits::cast_ray::TimeOfImpact};
 use interactions::{
-	components::{RayCaster, RayFilter},
+	components::RayCaster,
 	events::{RayCastEvent, RayCastTarget},
 };
 
@@ -31,17 +31,18 @@ pub(crate) fn execute_beam(
 	beam_configs: Query<&BeamConfig>,
 	targets: Query<(&GlobalTransform, Option<&GroundOffset>)>,
 ) {
-	let origin_and_target = |(id, transform, offset, cfg, cmd): CommandComponents| {
+	let origin_and_target = |(id, origin_transform, origin_offset, cfg, cmd): CommandComponents| {
 		let (target_transform, target_offset) = targets.get(cmd.target).ok()?;
-		let target_offset = target_offset.map_or(Vec3::ZERO, |o| o.0);
-		let target = target_transform.translation() + target_offset;
-		let offset = offset.map_or(Vec3::ZERO, |o| o.0);
-		let origin = transform.translation() + offset;
-		let filter: RayFilter = QueryFilter::default()
-			.exclude_rigid_body(id)
-			.try_into()
-			.ok()?;
-		Some((id, *cfg, origin, target, filter))
+		Some((
+			id,
+			*cfg,
+			translation(origin_transform, origin_offset),
+			translation(target_transform, target_offset),
+			QueryFilter::default()
+				.exclude_rigid_body(id)
+				.try_into()
+				.ok()?,
+		))
 	};
 	let beam_config = |event: &RayCastEvent| Some((*event, beam_configs.get(event.source).ok()?));
 
@@ -73,6 +74,10 @@ pub(crate) fn execute_beam(
 			.entity(event.source)
 			.remove::<(BeamCommand, BeamConfig)>();
 	}
+}
+
+fn translation(transform: &GlobalTransform, offset: Option<&GroundOffset>) -> Vec3 {
+	transform.translation() + offset.map_or(Vec3::ZERO, |offset| offset.0)
 }
 
 fn get_beam_range(ray: Ray, toi: TimeOfImpact) -> (Vec3, Vec3) {
