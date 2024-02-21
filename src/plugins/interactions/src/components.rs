@@ -7,7 +7,7 @@ use bevy_rapier3d::{
 	pipeline::{QueryFilter, QueryFilterFlags},
 };
 use common::traits::cast_ray::TimeOfImpact;
-use std::collections::HashSet;
+use std::{collections::HashSet, time::Duration};
 
 #[derive(Component, Default, Debug, PartialEq, Clone)]
 pub struct RayCaster {
@@ -81,6 +81,11 @@ pub(crate) struct Destroy;
 
 #[derive(Component)]
 pub struct DealsDamage(pub i16);
+
+pub struct Repeat<TActor> {
+	pub actor: TActor,
+	pub pause: Duration,
+}
 
 #[cfg(test)]
 mod tests_ray_filter_from_query_filter {

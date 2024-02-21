@@ -1,16 +1,22 @@
 use crate::traits::ActOn;
 use bevy::{
-	ecs::{component::Component, entity::Entity, event::EventReader, system::Query},
+	ecs::{
+		component::Component,
+		entity::Entity,
+		event::EventReader,
+		system::{Commands, Query},
+	},
 	prelude::Mut,
 };
 use bevy_rapier3d::pipeline::CollisionEvent;
 use common::components::ColliderRoot;
 
 pub(crate) fn collision_interaction<TActor: ActOn<TTarget> + Component, TTarget: Component>(
+	mut commands: Commands,
 	mut collisions: EventReader<CollisionEvent>,
-	roots: Query<&ColliderRoot>,
 	mut actors: Query<&mut TActor>,
 	mut targets: Query<&mut TTarget>,
+	roots: Query<&ColliderRoot>,
 ) {
 	let root_entities = |event: &CollisionEvent| match event {
 		CollisionEvent::Started(a, b, _) => get_roots(*a, *b, &roots),
@@ -18,7 +24,7 @@ pub(crate) fn collision_interaction<TActor: ActOn<TTarget> + Component, TTarget:
 	};
 
 	for (a, b) in collisions.read().filter_map(root_entities) {
-		handle_collision_interaction(a, b, &mut actors, &mut targets);
+		handle_collision_interaction(a, b, &mut actors, &mut targets, &mut commands);
 	}
 }
 
@@ -34,12 +40,15 @@ fn handle_collision_interaction<TActor: ActOn<TTarget> + Component, TTarget: Com
 	b: Entity,
 	actors: &mut Query<&mut TActor>,
 	targets: &mut Query<&mut TTarget>,
+	commands: &mut Commands,
 ) {
 	if let Some((mut actor, mut target)) = get_actor_and_target(a, b, actors, targets) {
 		actor.act_on(&mut target);
+		commands.entity(a).remove::<TActor>();
 	}
 	if let Some((mut actor, mut target)) = get_actor_and_target(b, a, actors, targets) {
 		actor.act_on(&mut target);
+		commands.entity(b).remove::<TActor>();
 	}
 }
 
@@ -135,5 +144,55 @@ mod tests {
 		));
 
 		app.update();
+	}
+
+	#[test]
+	fn remove_actor() {
+		let mut app = setup();
+		let mut actor = _Actor::default();
+		let target = _Target;
+		actor.mock.expect_act_on().return_const(());
+
+		let actor = app.world.spawn(actor).id();
+		let target = app.world.spawn(target).id();
+		let coll_actor = app.world.spawn(ColliderRoot(actor)).id();
+		let coll_target = app.world.spawn(ColliderRoot(target)).id();
+
+		app.world.send_event(CollisionEvent::Started(
+			coll_actor,
+			coll_target,
+			CollisionEventFlags::empty(),
+		));
+
+		app.update();
+
+		let actor = app.world.entity(actor);
+
+		assert!(!actor.contains::<_Actor>());
+	}
+
+	#[test]
+	fn remove_actor_reversed() {
+		let mut app = setup();
+		let mut actor = _Actor::default();
+		let target = _Target;
+		actor.mock.expect_act_on().return_const(());
+
+		let actor = app.world.spawn(actor).id();
+		let target = app.world.spawn(target).id();
+		let coll_actor = app.world.spawn(ColliderRoot(actor)).id();
+		let coll_target = app.world.spawn(ColliderRoot(target)).id();
+
+		app.world.send_event(CollisionEvent::Started(
+			coll_target,
+			coll_actor,
+			CollisionEventFlags::empty(),
+		));
+
+		app.update();
+
+		let actor = app.world.entity(actor);
+
+		assert!(!actor.contains::<_Actor>());
 	}
 }

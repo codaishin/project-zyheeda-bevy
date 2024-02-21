@@ -6,16 +6,17 @@ use bevy::ecs::{
 	component::Component,
 	entity::Entity,
 	event::EventReader,
-	system::Query,
+	system::{Commands, Query},
 	world::Mut,
 };
 use common::components::ColliderRoot;
 
 pub(crate) fn ray_cast_interaction<TActor: ActOn<TTarget> + Component, TTarget: Component>(
+	mut commands: Commands,
 	mut ray_casts: EventReader<RayCastEvent>,
-	roots: Query<&ColliderRoot>,
 	mut actors: Query<&mut TActor>,
 	mut targets: Query<&mut TTarget>,
+	roots: Query<&ColliderRoot>,
 ) {
 	let target_root_entity = |event: &RayCastEvent| match event.target {
 		RayCastTarget::None { .. } => None,
@@ -23,7 +24,7 @@ pub(crate) fn ray_cast_interaction<TActor: ActOn<TTarget> + Component, TTarget: 
 	};
 
 	for (source, target) in ray_casts.read().filter_map(target_root_entity) {
-		handle_collision_interaction(source, target, &mut actors, &mut targets);
+		handle_collision_interaction(source, target, &mut actors, &mut targets, &mut commands);
 	}
 }
 
@@ -32,11 +33,13 @@ fn handle_collision_interaction<TActor: ActOn<TTarget> + Component, TTarget: Com
 	tgt: Entity,
 	actors: &mut Query<&mut TActor>,
 	targets: &mut Query<&mut TTarget>,
+	commands: &mut Commands,
 ) {
 	let Some((mut actor, mut target)) = get_actor_and_target(src, tgt, actors, targets) else {
 		return;
 	};
 	actor.act_on(&mut target);
+	commands.entity(src).remove::<TActor>();
 }
 
 fn get_actor_and_target<'a, TActor: Component, TTarget: Component>(
@@ -110,5 +113,32 @@ mod tests {
 		});
 
 		app.update();
+	}
+
+	#[test]
+	fn remove_actor() {
+		let mut app = setup();
+		let mut actor = _Actor::default();
+		let target = _Target;
+		actor.mock.expect_act_on().return_const(());
+
+		let actor = app.world.spawn(actor).id();
+		let target = app.world.spawn(target).id();
+		let coll_target = app.world.spawn(ColliderRoot(target)).id();
+
+		app.world.send_event(RayCastEvent {
+			source: actor,
+			target: RayCastTarget::Some {
+				target: coll_target,
+				ray: Ray::default(),
+				toi: TimeOfImpact::default(),
+			},
+		});
+
+		app.update();
+
+		let actor = app.world.entity(actor);
+
+		assert!(!actor.contains::<_Actor>());
 	}
 }
