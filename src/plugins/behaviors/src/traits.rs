@@ -1,14 +1,18 @@
+pub(crate) mod beam;
 pub(crate) mod cam_orbit;
 pub(crate) mod movement_config;
 pub(crate) mod projectile;
 pub(crate) mod simple_movement;
+pub(crate) mod void_sphere;
 
-use crate::components::MovementMode;
+use crate::components::{Attacker, MovementMode, Target};
 use bevy::{
+	ecs::system::Commands,
 	math::{Vec2, Vec3},
 	transform::components::Transform,
 };
 use common::tools::UnitsPerSecond;
+use std::sync::Arc;
 
 pub(crate) type Units = f32;
 pub(crate) type IsDone = bool;
@@ -33,4 +37,18 @@ pub(crate) trait MoveTogether {
 
 pub(crate) trait Movement {
 	fn update(&mut self, agent: &mut Transform, distance: Units) -> IsDone;
+}
+
+pub trait SpawnAttack {
+	fn attack(&self, commands: &mut Commands, attacker: Attacker, target: Target);
+}
+
+pub trait ToArc {
+	fn to_arc(self) -> Arc<Self>;
+}
+
+impl<T: SpawnAttack> ToArc for T {
+	fn to_arc(self) -> Arc<Self> {
+		Arc::new(self)
+	}
 }

@@ -1,14 +1,5 @@
 use crate::{
-	components::{
-		ComboTreeRunning,
-		ComboTreeTemplate,
-		Item,
-		SideUnset,
-		SkillsIdle,
-		SlotKey,
-		Slots,
-		Track,
-	},
+	components::{ComboTreeRunning, ComboTreeTemplate, Item, SideUnset, SlotKey, Slots, Track},
 	skill::{Active, PlayerSkills, Skill, SkillComboTree},
 	traits::ComboNext,
 };
@@ -20,6 +11,7 @@ use bevy::{
 	},
 	prelude::Entity,
 };
+use common::components::Idle;
 use std::collections::HashMap;
 
 type ComboComponents<'a, TNext> = (
@@ -31,7 +23,7 @@ type ComboComponents<'a, TNext> = (
 );
 type JustStarted = (
 	Added<Track<Skill<PlayerSkills<SideUnset>, Active>>>,
-	Without<SkillsIdle>,
+	Without<Idle>,
 );
 type Combos<TNext> = Vec<(SlotKey, SkillComboTree<TNext>)>;
 
@@ -39,7 +31,7 @@ pub(crate) fn chain_combo_skills<
 	TNext: Clone + ComboNext<PlayerSkills<SideUnset>> + Send + Sync + 'static,
 >(
 	mut commands: Commands,
-	mut newly_idle: Query<(Entity, &mut Slots), Added<SkillsIdle>>,
+	mut newly_idle: Query<(Entity, &mut Slots), Added<Idle>>,
 	mut newly_active: Query<ComboComponents<TNext>, JustStarted>,
 ) {
 	for (agent, mut slots) in &mut newly_idle {
@@ -658,7 +650,7 @@ mod tests {
 		for slot in slots.0.values_mut() {
 			slot.combo_skill = Some(skill_usable_with(&[]))
 		}
-		app.world.entity_mut(id).insert(SkillsIdle);
+		app.world.entity_mut(id).insert(Idle);
 		app.world
 			.entity_mut(id)
 			.remove::<Track<Skill<PlayerSkills<SideUnset>, Active>>>();

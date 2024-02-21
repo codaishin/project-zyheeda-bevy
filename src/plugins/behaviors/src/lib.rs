@@ -7,15 +7,19 @@ use bevy::{
 	ecs::schedule::{common_conditions::in_state, IntoSystemConfigs, States},
 	time::Virtual,
 };
-use common::components::{Plasma, Player, Projectile};
-use components::{CamOrbit, MovementConfig};
-use skills::components::SimpleMovement;
+use common::components::Player;
+use components::{Beam, CamOrbit, MovementConfig, Plasma, Projectile, SimpleMovement, VoidSphere};
+use prefabs::traits::RegisterPrefab;
 use systems::{
+	attack::{attack, beam::execute_beam},
+	chase::chase,
+	enemy::enemy,
 	execute_move::execute_move,
 	follow::follow,
 	move_on_orbit::move_on_orbit,
 	projectile::projectile_behavior,
-	void_sphere::void_sphere_behavior,
+	update_cool_downs::update_cool_downs,
+	update_life_times::update_lifetimes,
 };
 
 pub struct BehaviorsPlugin<TCamActiveState: States + Clone + Send + Sync + 'static> {
@@ -32,16 +36,24 @@ impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
 	for BehaviorsPlugin<TCamActiveState>
 {
 	fn build(&self, app: &mut App) {
-		app.add_systems(
-			Update,
-			(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>)
-				.run_if(in_state(self.cam_behavior_state.clone())),
-		)
-		.add_systems(
-			Update,
-			(execute_move::<MovementConfig, SimpleMovement, Virtual>,),
-		)
-		.add_systems(Update, projectile_behavior::<Projectile<Plasma>>)
-		.add_systems(Update, void_sphere_behavior::<MovementConfig>);
+		app.register_prefab::<Projectile<Plasma>>()
+			.register_prefab::<VoidSphere>()
+			.register_prefab::<Beam>()
+			.add_systems(
+				Update,
+				(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>)
+					.run_if(in_state(self.cam_behavior_state.clone())),
+			)
+			.add_systems(
+				Update,
+				(update_cool_downs::<Virtual>, update_lifetimes::<Virtual>),
+			)
+			.add_systems(
+				Update,
+				(execute_move::<MovementConfig, SimpleMovement, Virtual>,),
+			)
+			.add_systems(Update, projectile_behavior::<Projectile<Plasma>>)
+			.add_systems(Update, (enemy, chase::<MovementConfig>, attack).chain())
+			.add_systems(Update, execute_beam);
 	}
 }

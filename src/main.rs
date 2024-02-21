@@ -1,7 +1,7 @@
 use animations::{components::Animator, AnimationsPlugin};
 use bars::{components::Bar, BarsPlugin};
 use behaviors::{
-	components::{CamOrbit, MovementConfig, MovementMode},
+	components::{CamOrbit, MovementConfig, MovementMode, VoidSphere},
 	traits::{Orbit, Vec2Radians},
 	BehaviorsPlugin,
 };
@@ -11,7 +11,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{Health, Player, VoidSphere},
+	components::{ColliderRoot, GroundOffset, Health, Player},
 	tools::UnitsPerSecond,
 };
 use ingame_menu::IngameMenuPlugin;
@@ -57,6 +57,7 @@ fn prepare_game(app: &mut App) {
 pub mod debug_utils {
 	use super::*;
 	use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
+	use interactions::events::RayCastEvent;
 	use std::ops::Not;
 
 	pub fn prepare_debug(app: &mut App) {
@@ -74,6 +75,7 @@ pub mod debug_utils {
 	fn display_events(
 		mut collision_events: EventReader<CollisionEvent>,
 		mut contact_force_events: EventReader<ContactForceEvent>,
+		mut ray_cast_events: EventReader<RayCastEvent>,
 	) {
 		for collision_event in collision_events.read() {
 			println!("Received collision event: {:?}", collision_event);
@@ -81,6 +83,10 @@ pub mod debug_utils {
 
 		for contact_force_event in contact_force_events.read() {
 			println!("Received contact force event: {:?}", contact_force_event);
+		}
+
+		for ray_cast_event in ray_cast_events.read() {
+			println!("Received ray cast event: {:?}", ray_cast_event);
 		}
 	}
 
@@ -193,22 +199,31 @@ fn spawn_plane(
 }
 
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
-	commands.spawn((
-		Name::from("Player"),
-		Health::new(100),
-		Bar::default(),
-		SceneBundle {
-			scene: asset_server.load("models/player.gltf#Scene0"),
-			..default()
-		},
-		Animator { ..default() },
-		Player,
-		MovementConfig::Dynamic {
-			current_mode: MovementMode::Fast,
-			slow_speed: UnitsPerSecond::new(0.75),
-			fast_speed: UnitsPerSecond::new(1.5),
-		},
-	));
+	commands
+		.spawn((
+			Name::from("Player"),
+			Health::new(100),
+			Bar::default(),
+			SceneBundle {
+				scene: asset_server.load("models/player.gltf#Scene0"),
+				..default()
+			},
+			Animator { ..default() },
+			GroundOffset(Vec3::Y),
+			Player,
+			MovementConfig::Dynamic {
+				current_mode: MovementMode::Fast,
+				slow_speed: UnitsPerSecond::new(0.75),
+				fast_speed: UnitsPerSecond::new(1.5),
+			},
+			RigidBody::KinematicPositionBased,
+		))
+		.with_children(|parent| {
+			parent.spawn((
+				Collider::capsule(Vec3::new(0.0, 0.2, -0.05), Vec3::new(0.0, 1.4, -0.05), 0.2),
+				ColliderRoot(parent.parent_entity()),
+			));
+		});
 }
 
 fn spawn_light(commands: &mut Commands) {

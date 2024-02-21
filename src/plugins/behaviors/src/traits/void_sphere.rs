@@ -1,6 +1,15 @@
-use super::{sphere, AssetKey, Instantiate, VoidPart};
+use super::ToArc;
+use crate::components::{
+	AttackConfig,
+	BeamConfig,
+	Enemy,
+	Foe,
+	MovementConfig,
+	MovementMode,
+	VoidSphere,
+	VoidSpherePart,
+};
 use bars::components::Bar;
-use behaviors::components::{MovementConfig, MovementMode};
 use bevy::{
 	asset::Handle,
 	ecs::{bundle::Bundle, system::EntityCommands},
@@ -20,11 +29,12 @@ use bevy_rapier3d::{
 };
 use common::{
 	bundles::ColliderBundle,
-	components::{ColliderRoot, Health, VoidSphere, VoidSpherePart},
+	components::{ColliderRoot, GroundOffset, Health},
 	errors::Error,
 	tools::UnitsPerSecond,
 };
-use std::f32::consts::PI;
+use prefabs::traits::{sphere, AssetKey, Instantiate, VoidPart};
+use std::{f32::consts::PI, time::Duration};
 
 #[derive(Bundle)]
 pub struct PbrVoidSphereBundle {
@@ -90,6 +100,7 @@ impl Instantiate for VoidSphere {
 		transform_2nd_ring.rotate_axis(Vec3::Z, PI / 2.);
 
 		on.insert((
+			GroundOffset(VOID_SPHERE_GROUND_OFFSET),
 			RigidBody::Dynamic,
 			GravityScale(0.),
 			Health::new(5),
@@ -97,6 +108,21 @@ impl Instantiate for VoidSphere {
 			MovementConfig::Constant {
 				mode: MovementMode::Slow,
 				speed: UnitsPerSecond::new(1.),
+			},
+			AttackConfig {
+				spawn: BeamConfig {
+					color: Color::BLACK,
+					emissive: Color::rgb_linear(13.99, 13.99, 13.99),
+					lifetime: Duration::from_millis(200),
+					range: VoidSphere::ATTACK_RANGE,
+				}
+				.to_arc(),
+				cool_down: Duration::from_secs(2),
+			},
+			Enemy {
+				aggro_range: VoidSphere::AGGRO_RANGE,
+				attack_range: VoidSphere::ATTACK_RANGE,
+				foe: Foe::Player,
 			},
 		));
 		on.with_children(|parent| {

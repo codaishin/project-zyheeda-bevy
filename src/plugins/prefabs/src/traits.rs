@@ -1,10 +1,10 @@
-pub mod dummy;
-pub mod projectile;
-pub mod void_sphere;
+pub mod app;
+pub(crate) mod dummy;
+pub(crate) mod projectile;
 
 use bevy::{
 	asset::Handle,
-	ecs::system::EntityCommands,
+	ecs::{component::Component, system::EntityCommands},
 	pbr::StandardMaterial,
 	render::mesh::{shape::Icosphere, Mesh},
 };
@@ -26,6 +26,7 @@ pub enum AssetKey {
 	Projectile(ProjectileType),
 	Dummy,
 	VoidSphere(VoidPart),
+	Beam,
 }
 
 pub trait Instantiate {
@@ -37,13 +38,17 @@ pub trait Instantiate {
 	) -> Result<(), Error>;
 }
 
+pub trait RegisterPrefab {
+	fn register_prefab<TPrefab: Instantiate + Component>(&mut self) -> &mut Self;
+}
+
 macro_rules! projectile_error {
 	($t:expr, $e:expr) => {
 		format!("{}: {}", $t, $e)
 	};
 }
 
-fn sphere(radius: f32, error_msg: fn() -> &'static str) -> Result<Mesh, Error> {
+pub fn sphere(radius: f32, error_msg: fn() -> &'static str) -> Result<Mesh, Error> {
 	Mesh::try_from(Icosphere {
 		radius,
 		subdivisions: 5,

@@ -2,27 +2,19 @@ mod systems;
 pub mod traits;
 
 use bevy::{
-	app::{Plugin, Update},
+	app::{App, Plugin},
 	asset::Handle,
-	ecs::system::IntoSystem,
 	pbr::StandardMaterial,
 	render::mesh::Mesh,
 };
-use common::{
-	components::{Plasma, Projectile, VoidSphere},
-	resources::Shared,
-	systems::log::log_many,
-};
-use systems::instantiate::instantiate;
+use common::resources::Shared;
 use traits::AssetKey;
 
 pub struct PrefabsPlugin;
 
 impl Plugin for PrefabsPlugin {
-	fn build(&self, app: &mut bevy::prelude::App) {
+	fn build(&self, app: &mut App) {
 		app.init_resource::<Shared<AssetKey, Handle<Mesh>>>()
-			.init_resource::<Shared<AssetKey, Handle<StandardMaterial>>>()
-			.add_systems(Update, instantiate::<Projectile<Plasma>>.pipe(log_many))
-			.add_systems(Update, instantiate::<VoidSphere>.pipe(log_many));
+			.init_resource::<Shared<AssetKey, Handle<StandardMaterial>>>();
 	}
 }

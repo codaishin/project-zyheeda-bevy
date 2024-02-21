@@ -1,9 +1,6 @@
-use crate::{
-	components::SimpleMovement,
-	skill::{SkillExecution, Spawner, Target},
-};
-
 use super::GetExecution;
+use crate::skill::{SkillExecution, Spawner, Target};
+use behaviors::components::SimpleMovement;
 use bevy::{ecs::system::EntityCommands, math::Vec3, transform::components::Transform};
 
 fn run_fn(

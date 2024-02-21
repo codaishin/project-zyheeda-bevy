@@ -1,5 +1,5 @@
 use crate::{
-	components::{Queue, Schedule, SideUnset, SkillsIdle, SlotKey, Track},
+	components::{Queue, Schedule, SideUnset, SlotKey, Track},
 	skill::{Active, PlayerSkills, Queued, Skill, Target},
 	traits::WithComponent,
 };
@@ -11,7 +11,7 @@ use bevy::{
 	prelude::{Commands, Entity, Query},
 	transform::components::GlobalTransform,
 };
-use common::resources::CamRay;
+use common::{components::Idle, resources::CamRay};
 
 type Components<'a> = (
 	Entity,
@@ -118,7 +118,7 @@ fn override_hard(
 	mut agent: EntityCommands,
 ) {
 	queue.0 = vec![new].into();
-	agent.insert(SkillsIdle);
+	agent.insert(Idle);
 }
 
 #[cfg(test)]
@@ -324,7 +324,7 @@ mod tests {
 				})],
 				true
 			),
-			(queue.0.iter().collect(), agent.contains::<SkillsIdle>())
+			(queue.0.iter().collect(), agent.contains::<Idle>())
 		);
 	}
 
@@ -420,7 +420,7 @@ mod tests {
 				agent
 					.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
 					.unwrap(),
-				agent.contains::<SkillsIdle>(),
+				agent.contains::<Idle>(),
 			)
 		);
 	}
@@ -473,7 +473,7 @@ mod tests {
 				agent
 					.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
 					.unwrap(),
-				agent.contains::<SkillsIdle>(),
+				agent.contains::<Idle>(),
 			)
 		);
 	}
@@ -526,7 +526,7 @@ mod tests {
 				agent
 					.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
 					.unwrap(),
-				agent.contains::<SkillsIdle>(),
+				agent.contains::<Idle>(),
 			)
 		);
 	}

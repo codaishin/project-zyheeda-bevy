@@ -3,7 +3,7 @@ use bevy_rapier3d::{math::Real, pipeline::QueryFilter, plugin::RapierContext};
 
 use super::{CastRay, TimeOfImpact};
 
-impl CastRay for RapierContext {
+impl CastRay<Ray> for RapierContext {
 	fn cast_ray(&self, ray: Ray) -> Option<(Entity, TimeOfImpact)> {
 		self.cast_ray(
 			ray.origin,
