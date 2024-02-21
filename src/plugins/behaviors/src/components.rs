@@ -5,6 +5,7 @@ use bevy::{
 	render::color::Color,
 };
 use common::tools::UnitsPerSecond;
+use interactions::components::DealsDamage;
 use std::{marker::PhantomData, sync::Arc, time::Duration};
 
 #[derive(Component)]
@@ -131,6 +132,7 @@ impl SpawnAttack for BeamConfig {
 				target: target.0,
 				range: VoidSphere::ATTACK_RANGE,
 			},
+			DealsDamage(1),
 		));
 	}
 }
