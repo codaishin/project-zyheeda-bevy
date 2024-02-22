@@ -18,8 +18,8 @@ use systems::{
 	execute_ray_caster::execute_ray_caster,
 	interactions::{
 		collision::collision_interaction,
+		delay::delay,
 		ray_cast::ray_cast_interaction,
-		repeat::repeat,
 	},
 };
 use traits::ActOn;
@@ -51,7 +51,7 @@ impl AddInteraction for App {
 			(
 				collision_interaction::<TActor, TTarget>,
 				ray_cast_interaction::<TActor, TTarget>,
-				repeat::<TActor, TTarget, Virtual>,
+				delay::<TActor, TTarget, Virtual>,
 			)
 				.chain(),
 		)

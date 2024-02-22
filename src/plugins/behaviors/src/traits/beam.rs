@@ -10,7 +10,7 @@ use bevy::{
 	utils::default,
 };
 use common::errors::Error;
-use interactions::components::{DealsDamage, RepeatAfter};
+use interactions::components::{DealsDamage, InitDelay, Repeat};
 use prefabs::traits::{AssetKey, Instantiate};
 use std::{f32::consts::PI, time::Duration};
 
@@ -34,18 +34,22 @@ impl Instantiate for Beam {
 			..default()
 		};
 
-		on.insert(DealsDamage(self.damage).repeat_after(Duration::from_secs(1)))
-			.with_children(|parent| {
-				parent.spawn((
-					PbrBundle {
-						material: get_material_handle(key, material),
-						mesh: get_mesh_handle(key, mesh),
-						transform: Transform::from_rotation(Quat::from_rotation_x(PI / 2.)),
-						..default()
-					},
-					NotShadowCaster,
-				));
-			});
+		on.insert(
+			DealsDamage(self.damage)
+				.after(Duration::from_millis(100))
+				.repeat(),
+		)
+		.with_children(|parent| {
+			parent.spawn((
+				PbrBundle {
+					material: get_material_handle(key, material),
+					mesh: get_mesh_handle(key, mesh),
+					transform: Transform::from_rotation(Quat::from_rotation_x(PI / 2.)),
+					..default()
+				},
+				NotShadowCaster,
+			));
+		});
 
 		Ok(())
 	}

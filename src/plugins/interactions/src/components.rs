@@ -83,28 +83,46 @@ pub(crate) struct Destroy;
 #[derive(Component, Clone)]
 pub struct DealsDamage(pub i16);
 
-#[derive(Component)]
-pub struct Repeat<TActor: ActOn<TTarget> + Clone, TTarget> {
+#[derive(Component, Debug, PartialEq)]
+pub struct Delay<TActor: ActOn<TTarget> + Clone, TTarget> {
 	pub actor: TActor,
 	pub after: Duration,
 	pub(crate) timer: Duration,
+	pub(crate) repeat: bool,
 	phantom_data: PhantomData<TTarget>,
 }
 
-pub trait RepeatAfter<TTarget>
+pub trait InitDelay<TTarget>
 where
 	Self: Clone + ActOn<TTarget>,
 {
-	fn repeat_after(self, duration: Duration) -> Repeat<Self, TTarget>;
+	fn after(self, duration: Duration) -> Delay<Self, TTarget>;
 }
 
-impl<TActor: Clone + ActOn<TTarget>, TTarget> RepeatAfter<TTarget> for TActor {
-	fn repeat_after(self, duration: Duration) -> Repeat<Self, TTarget> {
-		Repeat {
+impl<TActor: Clone + ActOn<TTarget>, TTarget> InitDelay<TTarget> for TActor {
+	fn after(self, duration: Duration) -> Delay<Self, TTarget> {
+		Delay {
 			actor: self,
 			after: duration,
 			timer: duration,
+			repeat: false,
 			phantom_data: PhantomData,
+		}
+	}
+}
+
+pub trait Repeat {
+	fn repeat(self) -> Self;
+}
+
+impl<TActor: Clone + ActOn<TTarget>, TTarget> Repeat for Delay<TActor, TTarget> {
+	fn repeat(self) -> Self {
+		Self {
+			repeat: true,
+			actor: self.actor,
+			after: self.after,
+			timer: self.timer,
+			phantom_data: self.phantom_data,
 		}
 	}
 }

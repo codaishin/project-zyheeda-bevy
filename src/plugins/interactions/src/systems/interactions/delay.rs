@@ -1,38 +1,51 @@
-use crate::{components::Repeat, traits::ActOn};
+use crate::{components::Delay, traits::ActOn};
 use bevy::{
 	ecs::{
 		component::Component,
 		entity::Entity,
 		system::{Commands, Query, Res},
+		world::Mut,
 	},
 	time::Time,
 };
 
-pub(crate) fn repeat<
+pub(crate) fn delay<
 	TActor: ActOn<TTarget> + Clone + Component,
 	TTarget: Send + Sync + 'static,
 	TTime: Default + Send + Sync + 'static,
 >(
 	mut commands: Commands,
 	time: Res<Time<TTime>>,
-	mut repeaters: Query<(Entity, &mut Repeat<TActor, TTarget>)>,
+	mut delays: Query<(Entity, &mut Delay<TActor, TTarget>)>,
 ) {
 	let delta = time.delta();
 
-	for (id, mut repeater) in &mut repeaters {
-		if delta < repeater.timer {
-			repeater.timer -= delta;
+	for (id, mut delay) in &mut delays {
+		if delta < delay.timer {
+			delay.timer -= delta;
 		} else {
-			commands.entity(id).insert(repeater.actor.clone());
-			repeater.timer = repeater.after;
+			trigger(delay, &mut commands, id);
 		}
+	}
+}
+
+fn trigger<TActor: ActOn<TTarget> + Clone + Component, TTarget: Send + Sync + 'static>(
+	mut delay: Mut<Delay<TActor, TTarget>>,
+	commands: &mut Commands,
+	id: Entity,
+) {
+	commands.entity(id).insert(delay.actor.clone());
+	if delay.repeat {
+		delay.timer = delay.after;
+	} else {
+		commands.entity(id).remove::<Delay<TActor, TTarget>>();
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::RepeatAfter;
+	use crate::components::{InitDelay, Repeat};
 	use bevy::{
 		app::{App, Update},
 		time::Real,
@@ -43,6 +56,7 @@ mod tests {
 	#[derive(Component, Debug, PartialEq, Clone)]
 	struct _Actor;
 
+	#[derive(Component, Debug, PartialEq, Clone)]
 	struct _Target;
 
 	impl ActOn<_Target> for _Actor {
@@ -51,7 +65,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new_single_threaded([Update]);
-		app.add_systems(Update, repeat::<_Actor, _Target, Real>);
+		app.add_systems(Update, delay::<_Actor, _Target, Real>);
 		app.init_resource::<Time<Real>>();
 
 		app
@@ -62,7 +76,7 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world
-			.spawn(_Actor.repeat_after(Duration::from_millis(42)))
+			.spawn(_Actor.after(Duration::from_millis(42)))
 			.id();
 
 		app.tick_time(Duration::from_millis(10));
@@ -71,7 +85,7 @@ mod tests {
 		let repeater = app
 			.world
 			.entity(agent)
-			.get::<Repeat<_Actor, _Target>>()
+			.get::<Delay<_Actor, _Target>>()
 			.unwrap();
 
 		assert_eq!(Duration::from_millis(32), repeater.timer);
@@ -82,7 +96,7 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world
-			.spawn(_Actor.repeat_after(Duration::from_millis(42)))
+			.spawn(_Actor.after(Duration::from_millis(42)))
 			.id();
 
 		app.tick_time(Duration::from_millis(42));
@@ -98,7 +112,7 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world
-			.spawn(_Actor.repeat_after(Duration::from_millis(42)))
+			.spawn(_Actor.after(Duration::from_millis(42)))
 			.id();
 
 		app.tick_time(Duration::from_millis(41));
@@ -114,7 +128,7 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world
-			.spawn(_Actor.repeat_after(Duration::from_millis(42)))
+			.spawn(_Actor.after(Duration::from_millis(42)))
 			.id();
 
 		app.tick_time(Duration::from_millis(43));
@@ -126,11 +140,27 @@ mod tests {
 	}
 
 	#[test]
+	fn remove_delay_when_repeat_not_set() {
+		let mut app = setup();
+		let agent = app
+			.world
+			.spawn(_Actor.after(Duration::from_millis(42)))
+			.id();
+
+		app.tick_time(Duration::from_millis(42));
+		app.update();
+
+		let repeater = app.world.entity(agent).get::<Delay<_Actor, _Target>>();
+
+		assert_eq!(None, repeater);
+	}
+
+	#[test]
 	fn reset_repeater_timer() {
 		let mut app = setup();
 		let agent = app
 			.world
-			.spawn(_Actor.repeat_after(Duration::from_millis(42)))
+			.spawn(_Actor.after(Duration::from_millis(42)).repeat())
 			.id();
 
 		app.tick_time(Duration::from_millis(21));
@@ -142,7 +172,7 @@ mod tests {
 		let repeater = app
 			.world
 			.entity(agent)
-			.get::<Repeat<_Actor, _Target>>()
+			.get::<Delay<_Actor, _Target>>()
 			.unwrap();
 
 		assert_eq!(Duration::from_millis(42), repeater.timer);
