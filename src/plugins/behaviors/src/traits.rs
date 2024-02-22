@@ -1,4 +1,5 @@
 pub(crate) mod beam;
+pub(crate) mod beam_config;
 pub(crate) mod cam_orbit;
 pub(crate) mod movement_config;
 pub(crate) mod projectile;
@@ -39,8 +40,10 @@ pub(crate) trait Movement {
 	fn update(&mut self, agent: &mut Transform, distance: Units) -> IsDone;
 }
 
+type DespawnFn = Arc<dyn Fn(&mut Commands) + Sync + Send>;
+
 pub trait SpawnAttack {
-	fn attack(&self, commands: &mut Commands, attacker: Attacker, target: Target);
+	fn spawn(&self, commands: &mut Commands, attacker: Attacker, target: Target) -> DespawnFn;
 }
 
 pub trait ToArc {

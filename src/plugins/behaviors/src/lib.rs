@@ -3,7 +3,7 @@ mod systems;
 pub mod traits;
 
 use bevy::{
-	app::{App, Plugin, Update},
+	app::{App, Plugin, PostUpdate, Update},
 	ecs::schedule::{common_conditions::in_state, IntoSystemConfigs, States},
 	time::Virtual,
 };
@@ -11,8 +11,9 @@ use common::components::Player;
 use components::{Beam, CamOrbit, MovementConfig, Plasma, Projectile, SimpleMovement, VoidSphere};
 use prefabs::traits::RegisterPrefab;
 use systems::{
-	attack::{attack, beam::execute_beam},
+	attack::{attack, execute_beam::execute_beam},
 	chase::chase,
+	despawn_delayed::despawn_delayed,
 	enemy::enemy,
 	execute_move::execute_move,
 	follow::follow,
@@ -54,6 +55,7 @@ impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
 			)
 			.add_systems(Update, projectile_behavior::<Projectile<Plasma>>)
 			.add_systems(Update, (enemy, chase::<MovementConfig>, attack).chain())
-			.add_systems(Update, execute_beam);
+			.add_systems(Update, execute_beam)
+			.add_systems(PostUpdate, despawn_delayed);
 	}
 }

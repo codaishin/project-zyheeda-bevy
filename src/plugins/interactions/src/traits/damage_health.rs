@@ -3,8 +3,8 @@ use crate::components::DealsDamage;
 use common::components::Health;
 
 impl ActOn<Health> for DealsDamage {
-	fn act_on(&mut self, target: &mut Health) {
-		target.current -= self.0;
+	fn act_on(&mut self, health: &mut Health) {
+		health.current -= self.0;
 	}
 }
 

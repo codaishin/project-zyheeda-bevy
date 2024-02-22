@@ -1,29 +1,29 @@
-use crate::{
-	events::{RayCastEvent, RayCastTarget},
-	traits::ActOn,
-};
+use crate::{events::RayCastEvent, traits::ActOn};
 use bevy::ecs::{
 	component::Component,
 	entity::Entity,
 	event::EventReader,
-	system::Query,
+	system::{Commands, Query},
 	world::Mut,
 };
 use common::components::ColliderRoot;
 
 pub(crate) fn ray_cast_interaction<TActor: ActOn<TTarget> + Component, TTarget: Component>(
+	mut commands: Commands,
 	mut ray_casts: EventReader<RayCastEvent>,
-	roots: Query<&ColliderRoot>,
 	mut actors: Query<&mut TActor>,
 	mut targets: Query<&mut TTarget>,
+	roots: Query<&ColliderRoot>,
 ) {
-	let target_root_entity = |event: &RayCastEvent| match event.target {
-		RayCastTarget::None { .. } => None,
-		RayCastTarget::Some { target, .. } => Some((event.source, roots.get(target).ok()?.0)),
+	let target_root_entity = |event: &RayCastEvent| {
+		event
+			.target
+			.entity
+			.and_then(|entity| Some((event.source, roots.get(entity).ok()?.0)))
 	};
 
 	for (source, target) in ray_casts.read().filter_map(target_root_entity) {
-		handle_collision_interaction(source, target, &mut actors, &mut targets);
+		handle_collision_interaction(source, target, &mut actors, &mut targets, &mut commands);
 	}
 }
 
@@ -32,11 +32,13 @@ fn handle_collision_interaction<TActor: ActOn<TTarget> + Component, TTarget: Com
 	tgt: Entity,
 	actors: &mut Query<&mut TActor>,
 	targets: &mut Query<&mut TTarget>,
+	commands: &mut Commands,
 ) {
 	let Some((mut actor, mut target)) = get_actor_and_target(src, tgt, actors, targets) else {
 		return;
 	};
 	actor.act_on(&mut target);
+	commands.entity(src).remove::<TActor>();
 }
 
 fn get_actor_and_target<'a, TActor: Component, TTarget: Component>(
@@ -53,6 +55,8 @@ fn get_actor_and_target<'a, TActor: Component, TTarget: Component>(
 
 #[cfg(test)]
 mod tests {
+	use crate::events::RayCastTarget;
+
 	use super::*;
 	use bevy::{
 		app::{App, Update},
@@ -102,13 +106,40 @@ mod tests {
 
 		app.world.send_event(RayCastEvent {
 			source: actor,
-			target: RayCastTarget::Some {
-				target: coll_target,
+			target: RayCastTarget {
+				entity: Some(coll_target),
 				ray: Ray::default(),
 				toi: TimeOfImpact::default(),
 			},
 		});
 
 		app.update();
+	}
+
+	#[test]
+	fn remove_actor() {
+		let mut app = setup();
+		let mut actor = _Actor::default();
+		let target = _Target;
+		actor.mock.expect_act_on().return_const(());
+
+		let actor = app.world.spawn(actor).id();
+		let target = app.world.spawn(target).id();
+		let coll_target = app.world.spawn(ColliderRoot(target)).id();
+
+		app.world.send_event(RayCastEvent {
+			source: actor,
+			target: RayCastTarget {
+				entity: Some(coll_target),
+				ray: Ray::default(),
+				toi: TimeOfImpact::default(),
+			},
+		});
+
+		app.update();
+
+		let actor = app.world.entity(actor);
+
+		assert!(!actor.contains::<_Actor>());
 	}
 }

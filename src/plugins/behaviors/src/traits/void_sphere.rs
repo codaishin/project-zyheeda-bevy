@@ -111,13 +111,14 @@ impl Instantiate for VoidSphere {
 			},
 			AttackConfig {
 				spawn: BeamConfig {
+					damage: 1,
 					color: Color::BLACK,
 					emissive: Color::rgb_linear(13.99, 13.99, 13.99),
-					lifetime: Duration::from_millis(200),
+					lifetime: Duration::from_secs(1),
 					range: VoidSphere::ATTACK_RANGE,
 				}
 				.to_arc(),
-				cool_down: Duration::from_secs(2),
+				cool_down: Duration::from_secs(5),
 			},
 			Enemy {
 				aggro_range: VoidSphere::AGGRO_RANGE,

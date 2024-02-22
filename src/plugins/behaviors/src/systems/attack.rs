@@ -1,20 +1,38 @@
-pub(crate) mod beam;
+pub(crate) mod execute_beam;
 
 use crate::components::{Attack, AttackConfig, Attacker, OnCoolDown, Target};
 use bevy::ecs::{
+	component::Component,
 	entity::Entity,
 	query::Without,
+	removal_detection::RemovedComponents,
 	system::{Commands, Query},
 };
+use std::sync::Arc;
+
+#[derive(Component)]
+pub(crate) struct Despawn(Arc<dyn Fn(&mut Commands) + Sync + Send>);
 
 pub(crate) fn attack(
 	mut commands: Commands,
+	mut removed_attacks: RemovedComponents<Attack>,
 	attackers: Query<(Entity, &Attack, &AttackConfig), Without<OnCoolDown>>,
+	despawns: Query<&Despawn>,
 ) {
 	for (id, attack, conf, ..) in &attackers {
 		let spawn = &conf.spawn;
-		spawn.attack(&mut commands, Attacker(id), Target(attack.0));
-		commands.entity(id).insert(OnCoolDown(conf.cool_down));
+		let despawn = spawn.spawn(&mut commands, Attacker(id), Target(attack.0));
+		commands
+			.entity(id)
+			.insert((OnCoolDown(conf.cool_down), Despawn(despawn)));
+	}
+
+	for id in removed_attacks.read() {
+		let Ok(despawn) = despawns.get(id) else {
+			continue;
+		};
+		(despawn.0)(&mut commands);
+		commands.entity(id).remove::<Despawn>();
 	}
 }
 
@@ -30,7 +48,7 @@ mod tests {
 		ecs::component::Component,
 	};
 	use common::test_tools::utils::SingleThreadedApp;
-	use std::time::Duration;
+	use std::{sync::Arc, time::Duration};
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _FakeAttack {
@@ -41,8 +59,16 @@ mod tests {
 	struct _FakeAttackConfig;
 
 	impl SpawnAttack for _FakeAttackConfig {
-		fn attack(&self, commands: &mut Commands, attacker: Attacker, target: Target) {
-			commands.spawn(_FakeAttack { attacker, target });
+		fn spawn(
+			&self,
+			commands: &mut Commands,
+			attacker: Attacker,
+			target: Target,
+		) -> Arc<dyn Fn(&mut Commands) + Sync + Send> {
+			let attack = commands.spawn(_FakeAttack { attacker, target }).id();
+			Arc::new(move |commands| {
+				commands.entity(attack).despawn();
+			})
 		}
 	}
 
@@ -54,7 +80,7 @@ mod tests {
 	}
 
 	#[test]
-	fn use_attack_function() {
+	fn use_spawn_function() {
 		let mut app = setup();
 		let attacker = app
 			.world
@@ -134,5 +160,58 @@ mod tests {
 			(None, Some(&OnCoolDown(Duration::from_millis(100)))),
 			(fake_attack, attacker.get::<OnCoolDown>())
 		);
+	}
+
+	#[test]
+	fn use_despawn_function_when_attack_removed() {
+		let mut app = setup();
+		let attacker = app
+			.world
+			.spawn((
+				Attack(Entity::from_raw(11)),
+				AttackConfig {
+					spawn: _FakeAttackConfig.to_arc(),
+					cool_down: Duration::ZERO,
+				},
+			))
+			.id();
+
+		app.update();
+
+		app.world.entity_mut(attacker).remove::<Attack>();
+
+		app.update();
+
+		let fake_attack = app
+			.world
+			.iter_entities()
+			.find_map(|e| e.get::<_FakeAttack>());
+
+		assert_eq!(None, fake_attack);
+	}
+
+	#[test]
+	fn remove_despawn_component_when_attack_removed() {
+		let mut app = setup();
+		let attacker = app
+			.world
+			.spawn((
+				Attack(Entity::from_raw(11)),
+				AttackConfig {
+					spawn: _FakeAttackConfig.to_arc(),
+					cool_down: Duration::ZERO,
+				},
+			))
+			.id();
+
+		app.update();
+
+		app.world.entity_mut(attacker).remove::<Attack>();
+
+		app.update();
+
+		let despawners = app.world.iter_entities().find_map(|e| e.get::<Despawn>());
+
+		assert!(despawners.is_none());
 	}
 }

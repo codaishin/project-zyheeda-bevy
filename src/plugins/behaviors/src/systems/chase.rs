@@ -22,7 +22,10 @@ pub(crate) fn chase<TMovementConfig: Component + MovementData>(
 	});
 
 	for id in removed_chasers.read() {
-		commands.entity(id).insert(Velocity::zero());
+		let Some(mut entity) = commands.get_entity(id) else {
+			continue;
+		};
+		entity.insert(Velocity::zero());
 	}
 
 	for (id, transform, conf, target) in chasers_with_valid_target {

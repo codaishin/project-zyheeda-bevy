@@ -1,11 +1,10 @@
 use crate::traits::SpawnAttack;
 use bevy::{
-	ecs::{component::Component, entity::Entity, system::Commands},
+	ecs::{component::Component, entity::Entity},
 	math::Vec3,
 	render::color::Color,
 };
 use common::tools::UnitsPerSecond;
-use interactions::components::DealsDamage;
 use std::{marker::PhantomData, sync::Arc, time::Duration};
 
 #[derive(Component)]
@@ -94,7 +93,7 @@ pub struct Target(pub Entity);
 
 #[derive(Component)]
 pub struct AttackConfig {
-	pub spawn: Arc<dyn SpawnAttack + Sync + Send + 'static>,
+	pub spawn: Arc<dyn SpawnAttack + Sync + Send>,
 	pub cool_down: Duration,
 }
 
@@ -119,29 +118,22 @@ pub(crate) struct LifeTime(pub Duration);
 
 #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
 pub struct BeamConfig {
+	pub damage: i16,
 	pub color: Color,
 	pub emissive: Color,
 	pub lifetime: Duration,
 	pub range: f32,
 }
 
-impl SpawnAttack for BeamConfig {
-	fn attack(&self, commands: &mut Commands, attacker: Attacker, target: Target) {
-		commands.entity(attacker.0).insert((
-			*self,
-			BeamCommand { target: target.0 },
-			DealsDamage(1),
-		));
-	}
-}
-
 #[derive(Component, Clone, Copy, Debug, PartialEq)]
 pub struct BeamCommand {
+	pub source: Entity,
 	pub target: Entity,
 }
 
 #[derive(Component, Default, Debug, PartialEq)]
 pub(crate) struct Beam {
+	pub damage: i16,
 	pub from: Vec3,
 	pub to: Vec3,
 	pub color: Color,

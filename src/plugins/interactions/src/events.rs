@@ -10,15 +10,9 @@ pub struct RayCastEvent {
 	pub target: RayCastTarget,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum RayCastTarget {
-	None {
-		ray: Ray,
-		max_toi: TimeOfImpact,
-	},
-	Some {
-		target: Entity,
-		ray: Ray,
-		toi: TimeOfImpact,
-	},
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
+pub struct RayCastTarget {
+	pub entity: Option<Entity>,
+	pub ray: Ray,
+	pub toi: TimeOfImpact,
 }

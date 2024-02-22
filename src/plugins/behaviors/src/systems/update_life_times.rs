@@ -1,25 +1,27 @@
+use super::despawn_delayed::{DespawnAfterFrames, DESPAWN_DELAY};
 use crate::components::LifeTime;
 use bevy::{
 	ecs::{
 		entity::Entity,
 		system::{Commands, Query, Res},
 	},
-	hierarchy::DespawnRecursiveExt,
 	time::Time,
 };
 
 pub(crate) fn update_lifetimes<TTime: Default + Sync + Send + 'static>(
 	mut commands: Commands,
-	mut lifetimes: Query<(Entity, &mut LifeTime)>,
+	mut lifetimes: Query<(Entity, &mut LifeTime, Option<&DespawnAfterFrames>)>,
 	time: Res<Time<TTime>>,
 ) {
 	let delta = time.delta();
 
-	for (id, mut lifetime) in &mut lifetimes {
+	for (id, mut lifetime, despawn) in &mut lifetimes {
 		if delta < lifetime.0 {
 			lifetime.0 -= delta;
-		} else {
-			commands.entity(id).despawn_recursive();
+		} else if despawn.is_none() {
+			commands
+				.entity(id)
+				.insert(DespawnAfterFrames(DESPAWN_DELAY));
 		}
 	}
 }
@@ -29,7 +31,6 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		hierarchy::BuildWorldChildren,
 		time::Real,
 	};
 	use common::test_tools::utils::{SingleThreadedApp, TickTime};
@@ -57,42 +58,53 @@ mod tests {
 	}
 
 	#[test]
-	fn despawn_when_lifetime_zero() {
+	fn mark_despawn_when_lifetime_zero() {
 		let mut app = setup();
 		let lifetime = app.world.spawn(LifeTime(Duration::from_secs(100))).id();
 
 		app.tick_time(Duration::from_secs(100));
 		app.update();
 
-		let lifetime = app.world.get_entity(lifetime);
+		let lifetime = app.world.entity(lifetime);
 
-		assert!(lifetime.is_none());
+		assert_eq!(
+			Some(&DespawnAfterFrames(DESPAWN_DELAY)),
+			lifetime.get::<DespawnAfterFrames>()
+		);
 	}
 
 	#[test]
-	fn despawn_when_lifetime_below_zero() {
+	fn mark_despawn_when_lifetime_below_zero() {
 		let mut app = setup();
 		let lifetime = app.world.spawn(LifeTime(Duration::from_secs(100))).id();
 
 		app.tick_time(Duration::from_secs(101));
 		app.update();
 
-		let lifetime = app.world.get_entity(lifetime);
+		let lifetime = app.world.entity(lifetime);
 
-		assert!(lifetime.is_none());
+		assert_eq!(
+			Some(&DespawnAfterFrames(DESPAWN_DELAY)),
+			lifetime.get::<DespawnAfterFrames>()
+		);
 	}
 
 	#[test]
-	fn despawn_recursive() {
+	fn do_not_add_despawn_when_already_present() {
 		let mut app = setup();
-		let lifetime = app.world.spawn(LifeTime(Duration::from_secs(100))).id();
-		let child = app.world.spawn_empty().set_parent(lifetime).id();
+		let lifetime = app
+			.world
+			.spawn((LifeTime(Duration::from_secs(100)), DespawnAfterFrames(100)))
+			.id();
 
 		app.tick_time(Duration::from_secs(100));
 		app.update();
 
-		let child = app.world.get_entity(child);
+		let lifetime = app.world.entity(lifetime);
 
-		assert!(child.is_none());
+		assert_eq!(
+			Some(&DespawnAfterFrames(100)),
+			lifetime.get::<DespawnAfterFrames>()
+		);
 	}
 }

@@ -21,14 +21,21 @@ pub(crate) fn execute_ray_caster<TCastRay: CastRay<RayCaster> + Resource>(
 ) {
 	for (source, ray_caster) in &ray_casters {
 		let hit = cast_ray.cast_ray(ray_caster.clone());
-		let max_toi = ray_caster.max_toi;
 		let ray = Ray {
 			origin: ray_caster.origin,
 			direction: ray_caster.direction,
 		};
 		let target = match hit {
-			None => RayCastTarget::None { ray, max_toi },
-			Some((target, toi)) => RayCastTarget::Some { target, ray, toi },
+			None => RayCastTarget {
+				entity: None,
+				ray,
+				toi: ray_caster.max_toi,
+			},
+			Some((target, toi)) => RayCastTarget {
+				entity: Some(target),
+				ray,
+				toi,
+			},
 		};
 		ray_cast_events.send(RayCastEvent { source, target });
 		commands.entity(source).remove::<RayCaster>();
@@ -114,8 +121,8 @@ mod tests {
 		assert_eq!(
 			vec![&RayCastEvent {
 				source: ray_caster,
-				target: RayCastTarget::Some {
-					target: Entity::from_raw(42),
+				target: RayCastTarget {
+					entity: Some(Entity::from_raw(42)),
 					ray: Ray {
 						origin: Vec3::ONE,
 						direction: Vec3::Y
@@ -154,12 +161,13 @@ mod tests {
 		assert_eq!(
 			vec![&RayCastEvent {
 				source: ray_caster,
-				target: RayCastTarget::None {
+				target: RayCastTarget {
+					entity: None,
 					ray: Ray {
 						origin: Vec3::ONE,
 						direction: Vec3::Y
 					},
-					max_toi: TimeOfImpact(420.)
+					toi: TimeOfImpact(420.)
 				}
 			}],
 			events
