@@ -93,7 +93,7 @@ pub struct Target(pub Entity);
 
 #[derive(Component)]
 pub struct AttackConfig {
-	pub spawn: Arc<dyn SpawnAttack + Sync + Send + 'static>,
+	pub spawn: Arc<dyn SpawnAttack + Sync + Send>,
 	pub cool_down: Duration,
 }
 
