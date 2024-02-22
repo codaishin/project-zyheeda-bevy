@@ -4,9 +4,10 @@ use bevy::{
 		component::Component,
 		entity::Entity,
 		event::EventReader,
-		query::Without,
+		removal_detection::RemovedComponents,
 		system::{Commands, Query},
 	},
+	hierarchy::DespawnRecursiveExt,
 	math::{Ray, Vec3},
 	prelude::SpatialBundle,
 	transform::{
@@ -18,12 +19,13 @@ use bevy_rapier3d::pipeline::QueryFilter;
 use common::{components::GroundOffset, traits::cast_ray::TimeOfImpact};
 use interactions::{components::RayCaster, events::RayCastEvent};
 
-type CommandComponents<'a> = (
+type BeamCommandComponents<'a> = (
 	Entity,
 	&'a GlobalTransform,
 	Option<&'a GroundOffset>,
 	&'a BeamConfig,
 	&'a BeamCommand,
+	Option<&'a SustainsBeam>,
 );
 
 #[derive(Component, Debug, PartialEq)]
@@ -32,32 +34,30 @@ pub(crate) struct SustainsBeam(Entity);
 pub(crate) fn execute_beam(
 	mut commands: Commands,
 	mut ray_cast_events: EventReader<RayCastEvent>,
-	beam_commands: Query<CommandComponents>,
-	not_sustaining: Query<&BeamConfig, Without<SustainsBeam>>,
-	sustaining: Query<&SustainsBeam>,
+	agents: Query<BeamCommandComponents>,
+	sustains: Query<&SustainsBeam>,
 	beams: Query<&Beam>,
 	targets: Query<(&GlobalTransform, Option<&GroundOffset>)>,
+	mut removed_commands: RemovedComponents<BeamCommand>,
 ) {
-	for beam_command in &beam_commands {
-		ray_cast(&mut commands, &targets, beam_command);
+	for agent in &agents {
+		ray_cast(&mut commands, &targets, agent);
 	}
 
 	for event in ray_cast_events.read() {
-		spawn_beam(&mut commands, &not_sustaining, event);
-		update_beam(&mut commands, &sustaining, event, &beams);
+		spawn_beam(&mut commands, &agents, event);
+		update_beam(&mut commands, &agents, event, &beams);
+	}
+
+	for id in removed_commands.read() {
+		remove_outdated_beams(&mut commands, &sustains, id);
 	}
 }
 
 fn ray_cast(
 	commands: &mut Commands,
 	targets: &Query<(&GlobalTransform, Option<&GroundOffset>)>,
-	(id, origin_transform, origin_offset, cfg, cmd): (
-		Entity,
-		&GlobalTransform,
-		Option<&GroundOffset>,
-		&BeamConfig,
-		&BeamCommand,
-	),
+	(id, origin_transform, origin_offset, cfg, cmd, ..): BeamCommandComponents,
 ) {
 	let Ok((target_transform, target_offset)) = targets.get(cmd.target) else {
 		return;
@@ -78,10 +78,10 @@ fn ray_cast(
 
 fn spawn_beam(
 	commands: &mut Commands,
-	not_sustaining: &Query<&BeamConfig, Without<SustainsBeam>>,
+	agents: &Query<BeamCommandComponents>,
 	event: &RayCastEvent,
 ) {
-	let Ok(cfg) = not_sustaining.get(event.source) else {
+	let Ok((_, _, _, cfg, _, None)) = agents.get(event.source) else {
 		return;
 	};
 
@@ -105,11 +105,11 @@ fn spawn_beam(
 
 fn update_beam(
 	commands: &mut Commands,
-	sustaining: &Query<&SustainsBeam>,
+	agents: &Query<BeamCommandComponents>,
 	event: &RayCastEvent,
 	beams: &Query<&Beam>,
 ) {
-	let Ok(sustains) = sustaining.get(event.source) else {
+	let Ok((.., Some(sustains))) = agents.get(event.source) else {
 		return;
 	};
 
@@ -125,6 +125,13 @@ fn update_beam(
 	commands
 		.entity(sustains.0)
 		.insert(TransformBundle::from(transform));
+}
+
+fn remove_outdated_beams(commands: &mut Commands, sustains: &Query<&SustainsBeam>, id: Entity) {
+	if let Ok(sustain) = sustains.get(id) {
+		commands.entity(sustain.0).despawn_recursive();
+	};
+	commands.entity(id).remove::<SustainsBeam>();
 }
 
 fn translation(transform: &GlobalTransform, offset: Option<&GroundOffset>) -> Vec3 {
@@ -148,6 +155,7 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		ecs::entity::Entity,
+		hierarchy::BuildWorldChildren,
 		math::{Ray, Vec3},
 		prelude::default,
 		render::{
@@ -489,7 +497,17 @@ mod tests {
 	fn update_sustained_beam() {
 		let mut app = setup();
 		let beam = app.world.spawn(Beam::default()).id();
-		let source = app.world.spawn(SustainsBeam(beam)).id();
+		let source = app
+			.world
+			.spawn((
+				SustainsBeam(beam),
+				GlobalTransform::default(),
+				BeamConfig::default(),
+				BeamCommand {
+					target: Entity::from_raw(default()),
+				},
+			))
+			.id();
 		app.world.send_event(RayCastEvent {
 			source,
 			target: RayCastTarget {
@@ -535,6 +553,7 @@ mod tests {
 			.world
 			.spawn((
 				SustainsBeam(non_beam),
+				GlobalTransform::default(),
 				BeamConfig::default(),
 				BeamCommand {
 					target: Entity::from_raw(default()),
@@ -556,6 +575,45 @@ mod tests {
 				source.get::<SustainsBeam>(),
 				source.get::<BeamConfig>(),
 				source.get::<BeamCommand>(),
+			)
+		);
+	}
+
+	#[test]
+	fn remove_beam_and_sustain_when_beam_command_gone() {
+		let mut app = setup();
+		let beam = app.world.spawn(Beam::default()).id();
+		let child = app.world.spawn_empty().set_parent(beam).id();
+		let source = app
+			.world
+			.spawn((
+				SustainsBeam(beam),
+				GlobalTransform::default(),
+				BeamConfig::default(),
+				BeamCommand {
+					target: Entity::from_raw(default()),
+				},
+			))
+			.id();
+
+		app.update();
+
+		app.world.entity_mut(source).remove::<BeamCommand>();
+
+		app.update();
+
+		let beams = app.world.iter_entities().filter_map(|e| e.get::<Beam>());
+		let sustains = app
+			.world
+			.iter_entities()
+			.filter_map(|e| e.get::<SustainsBeam>());
+
+		assert_eq!(
+			(0, 0, true),
+			(
+				beams.count(),
+				sustains.count(),
+				app.world.get_entity(child).is_none()
 			)
 		);
 	}
