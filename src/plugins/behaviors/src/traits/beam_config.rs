@@ -4,8 +4,12 @@ use bevy::ecs::system::Commands;
 
 impl SpawnAttack for BeamConfig {
 	fn attack(&self, commands: &mut Commands, attacker: Attacker, target: Target) {
-		commands
-			.entity(attacker.0)
-			.insert((*self, BeamCommand { target: target.0 }));
+		commands.spawn((
+			*self,
+			BeamCommand {
+				source: attacker.0,
+				target: target.0,
+			},
+		));
 	}
 }

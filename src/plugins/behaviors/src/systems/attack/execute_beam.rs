@@ -1,13 +1,10 @@
 use crate::components::{Beam, BeamCommand, BeamConfig, LifeTime};
 use bevy::{
 	ecs::{
-		component::Component,
 		entity::Entity,
 		event::EventReader,
-		removal_detection::RemovedComponents,
 		system::{Commands, Query},
 	},
-	hierarchy::DespawnRecursiveExt,
 	math::{Ray, Vec3},
 	prelude::SpatialBundle,
 	transform::{
@@ -19,57 +16,42 @@ use bevy_rapier3d::pipeline::QueryFilter;
 use common::{components::GroundOffset, traits::cast_ray::TimeOfImpact};
 use interactions::{components::RayCaster, events::RayCastEvent};
 
-type BeamCommandComponents<'a> = (
-	Entity,
-	&'a GlobalTransform,
-	Option<&'a GroundOffset>,
-	&'a BeamConfig,
-	&'a BeamCommand,
-	Option<&'a SustainsBeam>,
-);
-
-#[derive(Component, Debug, PartialEq)]
-pub(crate) struct SustainsBeam(Entity);
-
 pub(crate) fn execute_beam(
 	mut commands: Commands,
 	mut ray_cast_events: EventReader<RayCastEvent>,
-	agents: Query<BeamCommandComponents>,
-	sustains: Query<&SustainsBeam>,
-	beams: Query<&Beam>,
-	targets: Query<(&GlobalTransform, Option<&GroundOffset>)>,
-	mut removed_commands: RemovedComponents<BeamCommand>,
+	beam_commands: Query<(Entity, &BeamConfig, &BeamCommand, Option<&Beam>)>,
+	transforms: Query<(&GlobalTransform, Option<&GroundOffset>)>,
 ) {
-	for agent in &agents {
-		ray_cast(&mut commands, &targets, agent);
+	for command in &beam_commands {
+		ray_cast(&mut commands, &transforms, command);
 	}
 
 	for event in ray_cast_events.read() {
-		spawn_beam(&mut commands, &agents, event);
-		update_beam(&mut commands, &agents, event, &beams);
-	}
-
-	for id in removed_commands.read() {
-		remove_outdated_beams(&mut commands, &sustains, id);
+		spawn_beam(&mut commands, &beam_commands, event);
+		update_beam(&mut commands, &beam_commands, event);
 	}
 }
 
 fn ray_cast(
 	commands: &mut Commands,
-	targets: &Query<(&GlobalTransform, Option<&GroundOffset>)>,
-	(id, origin_transform, origin_offset, cfg, cmd, ..): BeamCommandComponents,
+	transforms: &Query<(&GlobalTransform, Option<&GroundOffset>)>,
+	(id, cfg, cmd, ..): (Entity, &BeamConfig, &BeamCommand, Option<&Beam>),
 ) {
-	let Ok((target_transform, target_offset)) = targets.get(cmd.target) else {
+	let BeamCommand { source, target } = *cmd;
+	let Ok((source_transform, source_offset)) = transforms.get(source) else {
 		return;
 	};
-	let Ok(filter) = QueryFilter::default().exclude_rigid_body(id).try_into() else {
+	let Ok((target_transform, target_offset)) = transforms.get(target) else {
 		return;
 	};
-	let origin = translation(origin_transform, origin_offset);
+	let Ok(filter) = QueryFilter::default().exclude_rigid_body(source).try_into() else {
+		return;
+	};
+	let source = translation(source_transform, source_offset);
 	let target = translation(target_transform, target_offset);
 	commands.entity(id).insert(RayCaster {
-		origin,
-		direction: (target - origin).normalize(),
+		origin: source,
+		direction: (target - source).normalize(),
 		solid: true,
 		filter,
 		max_toi: TimeOfImpact(cfg.range),
@@ -78,60 +60,40 @@ fn ray_cast(
 
 fn spawn_beam(
 	commands: &mut Commands,
-	agents: &Query<BeamCommandComponents>,
+	beam_commands: &Query<(Entity, &BeamConfig, &BeamCommand, Option<&Beam>)>,
 	event: &RayCastEvent,
 ) {
-	let Ok((_, _, _, cfg, _, None)) = agents.get(event.source) else {
+	let Ok((id, cfg, _, None)) = beam_commands.get(event.source) else {
 		return;
 	};
 
 	let (from, to) = get_beam_range(event.target.ray, event.target.toi);
 	let transform = get_beam_transform(from, to, event);
-	let beam = commands
-		.spawn((
-			SpatialBundle::from_transform(transform),
-			Beam {
-				from,
-				to,
-				damage: cfg.damage,
-				color: cfg.color,
-				emissive: cfg.emissive,
-			},
-			LifeTime(cfg.lifetime),
-		))
-		.id();
-	commands.entity(event.source).insert(SustainsBeam(beam));
+	commands.entity(id).insert((
+		SpatialBundle::from_transform(transform),
+		Beam {
+			from,
+			to,
+			damage: cfg.damage,
+			color: cfg.color,
+			emissive: cfg.emissive,
+		},
+		LifeTime(cfg.lifetime),
+	));
 }
 
 fn update_beam(
 	commands: &mut Commands,
-	agents: &Query<BeamCommandComponents>,
+	agents: &Query<(Entity, &BeamConfig, &BeamCommand, Option<&Beam>)>,
 	event: &RayCastEvent,
-	beams: &Query<&Beam>,
 ) {
-	let Ok((.., Some(sustains))) = agents.get(event.source) else {
+	let Ok((id, _, _, Some(_))) = agents.get(event.source) else {
 		return;
 	};
-
-	if !beams.contains(sustains.0) {
-		commands
-			.entity(event.source)
-			.remove::<(BeamCommand, BeamConfig, SustainsBeam)>();
-		return;
-	}
 
 	let (from, to) = get_beam_range(event.target.ray, event.target.toi);
 	let transform = get_beam_transform(from, to, event);
-	commands
-		.entity(sustains.0)
-		.insert(TransformBundle::from(transform));
-}
-
-fn remove_outdated_beams(commands: &mut Commands, sustains: &Query<&SustainsBeam>, id: Entity) {
-	if let Ok(sustain) = sustains.get(id) {
-		commands.entity(sustain.0).despawn_recursive();
-	};
-	commands.entity(id).remove::<SustainsBeam>();
+	commands.entity(id).insert(TransformBundle::from(transform));
 }
 
 fn translation(transform: &GlobalTransform, offset: Option<&GroundOffset>) -> Vec3 {
@@ -155,7 +117,6 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		ecs::entity::Entity,
-		hierarchy::BuildWorldChildren,
 		math::{Ray, Vec3},
 		prelude::default,
 		render::{
@@ -187,22 +148,22 @@ mod tests {
 	#[test]
 	fn insert_ray_caster() {
 		let mut app = setup();
+		let source = app.world.spawn(GlobalTransform::from_xyz(1., 0., 0.)).id();
 		let target = app.world.spawn(GlobalTransform::from_xyz(1., 0., 4.)).id();
-		let beamer = app
+		let beam = app
 			.world
 			.spawn((
-				GlobalTransform::from_xyz(1., 0., 0.),
 				BeamConfig {
 					range: 100.,
 					..default()
 				},
-				BeamCommand { target },
+				BeamCommand { source, target },
 			))
 			.id();
 
 		app.update();
 
-		let ray_caster = app.world.entity(beamer).get::<RayCaster>();
+		let ray_caster = app.world.entity(beam).get::<RayCaster>();
 
 		assert_eq!(
 			Some(&RayCaster {
@@ -211,7 +172,7 @@ mod tests {
 				max_toi: TimeOfImpact(100.),
 				solid: true,
 				filter: QueryFilter::default()
-					.exclude_rigid_body(beamer)
+					.exclude_rigid_body(source)
 					.try_into()
 					.unwrap(),
 			}),
@@ -222,6 +183,7 @@ mod tests {
 	#[test]
 	fn insert_ray_caster_with_ground_offset_for_target() {
 		let mut app = setup();
+		let source = app.world.spawn(GlobalTransform::from_xyz(1., 0., 0.)).id();
 		let target = app
 			.world
 			.spawn((
@@ -229,21 +191,20 @@ mod tests {
 				GroundOffset(Vec3::new(0., 1., 0.)),
 			))
 			.id();
-		let beamer = app
+		let beam = app
 			.world
 			.spawn((
-				GlobalTransform::from_xyz(1., 0., 0.),
 				BeamConfig {
 					range: 100.,
 					..default()
 				},
-				BeamCommand { target },
+				BeamCommand { source, target },
 			))
 			.id();
 
 		app.update();
 
-		let ray_caster = app.world.entity(beamer).get::<RayCaster>();
+		let ray_caster = app.world.entity(beam).get::<RayCaster>();
 
 		assert_eq!(
 			Some(&RayCaster {
@@ -252,7 +213,7 @@ mod tests {
 				max_toi: TimeOfImpact(100.),
 				solid: true,
 				filter: QueryFilter::default()
-					.exclude_rigid_body(beamer)
+					.exclude_rigid_body(source)
 					.try_into()
 					.unwrap(),
 			}),
@@ -263,23 +224,28 @@ mod tests {
 	#[test]
 	fn insert_ray_caster_with_ground_offset_for_source() {
 		let mut app = setup();
-		let target = app.world.spawn(GlobalTransform::from_xyz(1., 0., 4.)).id();
-		let beamer = app
+		let source = app
 			.world
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 0.),
 				GroundOffset(Vec3::new(0., 1., 0.)),
+			))
+			.id();
+		let target = app.world.spawn(GlobalTransform::from_xyz(1., 0., 4.)).id();
+		let beam = app
+			.world
+			.spawn((
 				BeamConfig {
 					range: 100.,
 					..default()
 				},
-				BeamCommand { target },
+				BeamCommand { source, target },
 			))
 			.id();
 
 		app.update();
 
-		let ray_caster = app.world.entity(beamer).get::<RayCaster>();
+		let ray_caster = app.world.entity(beam).get::<RayCaster>();
 
 		assert_eq!(
 			Some(&RayCaster {
@@ -288,7 +254,7 @@ mod tests {
 				max_toi: TimeOfImpact(100.),
 				solid: true,
 				filter: QueryFilter::default()
-					.exclude_rigid_body(beamer)
+					.exclude_rigid_body(source)
 					.try_into()
 					.unwrap(),
 			}),
@@ -299,10 +265,10 @@ mod tests {
 	#[test]
 	fn spawn_beam_from_hit() {
 		let mut app = setup();
-		let source = app
+		let source = app.world.spawn(GlobalTransform::default()).id();
+		let beam = app
 			.world
 			.spawn((
-				GlobalTransform::default(),
 				BeamConfig {
 					color: Color::CYAN,
 					emissive: Color::ORANGE,
@@ -311,12 +277,13 @@ mod tests {
 					..default()
 				},
 				BeamCommand {
+					source,
 					target: Entity::from_raw(default()),
 				},
 			))
 			.id();
 		app.world.send_event(RayCastEvent {
-			source,
+			source: beam,
 			target: RayCastTarget {
 				ray: Ray {
 					origin: Vec3::Z,
@@ -329,120 +296,39 @@ mod tests {
 
 		app.update();
 
-		let (beam_id, beam, beam_lifetime) = app
-			.world
-			.iter_entities()
-			.find_map(|e| Some((e.id(), e.get::<Beam>()?, e.get::<LifeTime>()?)))
-			.unwrap();
-		let sustains_beam = app.world.entity(source).get::<SustainsBeam>().unwrap();
+		let beam = app.world.entity(beam);
 
 		assert_eq!(
 			(
-				&Beam {
+				Some(&Beam {
 					from: Vec3::Z,
 					to: Vec3::new(0., 10., 1.),
 					damage: 42,
 					color: Color::CYAN,
 					emissive: Color::ORANGE
-				},
-				&LifeTime(Duration::from_millis(100)),
-				&SustainsBeam(beam_id)
+				}),
+				Some(&LifeTime(Duration::from_millis(100))),
 			),
-			(beam, beam_lifetime, sustains_beam)
-		);
-	}
-
-	#[test]
-	fn do_not_spawn_when_event_source_sustains_a_beam_already() {
-		let mut app = setup();
-		let fake_beam = app.world.spawn_empty().id();
-		let source = app
-			.world
-			.spawn((
-				SustainsBeam(fake_beam),
-				GlobalTransform::default(),
-				BeamConfig::default(),
-				BeamCommand {
-					target: Entity::from_raw(default()),
-				},
-			))
-			.id();
-		app.world.send_event(RayCastEvent {
-			source,
-			target: RayCastTarget {
-				ray: Ray {
-					origin: Vec3::Z,
-					direction: Vec3::Y,
-				},
-				toi: TimeOfImpact(4.),
-				..default()
-			},
-		});
-
-		app.update();
-
-		let active_beam = app.world.iter_entities().find_map(|e| e.get::<Beam>());
-
-		assert_eq!(None, active_beam);
-	}
-
-	#[test]
-	fn beam_on_not_newly_added_beam_command() {
-		let mut app = setup();
-		let source = app
-			.world
-			.spawn((
-				GlobalTransform::default(),
-				BeamConfig::default(),
-				BeamCommand {
-					target: Entity::from_raw(default()),
-				},
-			))
-			.id();
-
-		app.update();
-
-		app.world.send_event(RayCastEvent {
-			source,
-			target: RayCastTarget {
-				entity: Some(Entity::from_raw(default())),
-				ray: Ray {
-					origin: Vec3::Z,
-					direction: Vec3::Y,
-				},
-				toi: TimeOfImpact(10.),
-			},
-		});
-
-		app.update();
-
-		let active_beam = app.world.iter_entities().find_map(|e| e.get::<Beam>());
-
-		assert_eq!(
-			Some(&Beam {
-				from: Vec3::Z,
-				to: Vec3::new(0., 10., 1.),
-				..default()
-			}),
-			active_beam
+			(beam.get::<Beam>(), beam.get::<LifeTime>())
 		);
 	}
 
 	#[test]
 	fn set_spatial_bundle() {
 		let mut app = setup();
-		let source = app
+		let source = app.world.spawn(GlobalTransform::default()).id();
+		let beam = app
 			.world
 			.spawn((
-				GlobalTransform::default(),
 				BeamConfig::default(),
 				BeamCommand {
+					source,
 					target: Entity::from_raw(default()),
 				},
 			))
 			.id();
 		app.world.send_event(RayCastEvent {
-			source,
+			source: beam,
 			target: RayCastTarget {
 				ray: Ray {
 					origin: Vec3::new(0., 1., 0.),
@@ -457,9 +343,8 @@ mod tests {
 
 		let bundle = app
 			.world
-			.iter_entities()
-			.filter(|e| e.contains::<Beam>())
-			.find_map(|e| {
+			.get_entity(beam)
+			.and_then(|e| {
 				Some(SpatialBundle {
 					visibility: *e.get::<Visibility>()?,
 					inherited_visibility: *e.get::<InheritedVisibility>()?,
@@ -494,22 +379,21 @@ mod tests {
 	}
 
 	#[test]
-	fn update_sustained_beam() {
+	fn update_beam() {
 		let mut app = setup();
-		let beam = app.world.spawn(Beam::default()).id();
-		let source = app
+		let source = app.world.spawn(GlobalTransform::default()).id();
+		let beam = app
 			.world
 			.spawn((
-				SustainsBeam(beam),
-				GlobalTransform::default(),
 				BeamConfig::default(),
 				BeamCommand {
+					source,
 					target: Entity::from_raw(default()),
 				},
 			))
 			.id();
 		app.world.send_event(RayCastEvent {
-			source,
+			source: beam,
 			target: RayCastTarget {
 				ray: Ray {
 					origin: Vec3::new(0., 1., 0.),
@@ -522,11 +406,12 @@ mod tests {
 
 		app.update();
 
+		app.update();
+
 		let bundle = app
 			.world
-			.iter_entities()
-			.filter(|e| e.contains::<Beam>())
-			.find_map(|e| {
+			.get_entity(beam)
+			.and_then(|e| {
 				Some(TransformBundle {
 					local: *e.get::<Transform>()?,
 					global: *e.get::<GlobalTransform>()?,
@@ -542,79 +427,6 @@ mod tests {
 		assert_eq!(
 			(expected_bundle.local, expected_bundle.global,),
 			(bundle.local, bundle.global,)
-		);
-	}
-
-	#[test]
-	fn remove_beam_control_components() {
-		let mut app = setup();
-		let non_beam = app.world.spawn_empty().id();
-		let source = app
-			.world
-			.spawn((
-				SustainsBeam(non_beam),
-				GlobalTransform::default(),
-				BeamConfig::default(),
-				BeamCommand {
-					target: Entity::from_raw(default()),
-				},
-			))
-			.id();
-		app.world.send_event(RayCastEvent {
-			source,
-			target: RayCastTarget::default(),
-		});
-
-		app.update();
-
-		let source = app.world.entity(source);
-
-		assert_eq!(
-			(None, None, None),
-			(
-				source.get::<SustainsBeam>(),
-				source.get::<BeamConfig>(),
-				source.get::<BeamCommand>(),
-			)
-		);
-	}
-
-	#[test]
-	fn remove_beam_and_sustain_when_beam_command_gone() {
-		let mut app = setup();
-		let beam = app.world.spawn(Beam::default()).id();
-		let child = app.world.spawn_empty().set_parent(beam).id();
-		let source = app
-			.world
-			.spawn((
-				SustainsBeam(beam),
-				GlobalTransform::default(),
-				BeamConfig::default(),
-				BeamCommand {
-					target: Entity::from_raw(default()),
-				},
-			))
-			.id();
-
-		app.update();
-
-		app.world.entity_mut(source).remove::<BeamCommand>();
-
-		app.update();
-
-		let beams = app.world.iter_entities().filter_map(|e| e.get::<Beam>());
-		let sustains = app
-			.world
-			.iter_entities()
-			.filter_map(|e| e.get::<SustainsBeam>());
-
-		assert_eq!(
-			(0, 0, true),
-			(
-				beams.count(),
-				sustains.count(),
-				app.world.get_entity(child).is_none()
-			)
 		);
 	}
 }

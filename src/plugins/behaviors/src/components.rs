@@ -127,6 +127,7 @@ pub struct BeamConfig {
 
 #[derive(Component, Clone, Copy, Debug, PartialEq)]
 pub struct BeamCommand {
+	pub source: Entity,
 	pub target: Entity,
 }
 
