@@ -3,9 +3,8 @@ use bevy::{
 	asset::Handle,
 	ecs::system::EntityCommands,
 	hierarchy::BuildChildren,
-	math::{Quat, Vec3},
+	math::Quat,
 	pbr::{AlphaMode, NotShadowCaster, PbrBundle, StandardMaterial},
-	prelude::SpatialBundle,
 	render::mesh::{shape::Cylinder, Mesh},
 	transform::components::Transform,
 	utils::default,
@@ -34,27 +33,19 @@ impl Instantiate for Beam {
 			alpha_mode: AlphaMode::Add,
 			..default()
 		};
-		let direction = self.to - self.from;
-		let height = direction.length();
-		let mut transform =
-			Transform::from_translation((self.from + self.to) / 2.).looking_at(self.to, Vec3::Y);
-		transform.scale.z = height;
 
-		on.insert((
-			SpatialBundle::from_transform(transform),
-			DealsDamage(self.damage).repeat_after(Duration::from_secs(1)),
-		))
-		.with_children(|parent| {
-			parent.spawn((
-				PbrBundle {
-					material: get_material_handle(key, material),
-					mesh: get_mesh_handle(key, mesh),
-					transform: Transform::from_rotation(Quat::from_rotation_x(PI / 2.)),
-					..default()
-				},
-				NotShadowCaster,
-			));
-		});
+		on.insert(DealsDamage(self.damage).repeat_after(Duration::from_secs(1)))
+			.with_children(|parent| {
+				parent.spawn((
+					PbrBundle {
+						material: get_material_handle(key, material),
+						mesh: get_mesh_handle(key, mesh),
+						transform: Transform::from_rotation(Quat::from_rotation_x(PI / 2.)),
+						..default()
+					},
+					NotShadowCaster,
+				));
+			});
 
 		Ok(())
 	}

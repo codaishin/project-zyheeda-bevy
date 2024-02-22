@@ -118,7 +118,7 @@ impl Instantiate for VoidSphere {
 					range: VoidSphere::ATTACK_RANGE,
 				}
 				.to_arc(),
-				cool_down: Duration::from_secs(2),
+				cool_down: Duration::from_secs(5),
 			},
 			Enemy {
 				aggro_range: VoidSphere::AGGRO_RANGE,

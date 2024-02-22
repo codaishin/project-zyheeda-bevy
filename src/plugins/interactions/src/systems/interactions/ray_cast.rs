@@ -1,7 +1,4 @@
-use crate::{
-	events::{RayCastEvent, RayCastTarget},
-	traits::ActOn,
-};
+use crate::{events::RayCastEvent, traits::ActOn};
 use bevy::ecs::{
 	component::Component,
 	entity::Entity,
@@ -18,9 +15,11 @@ pub(crate) fn ray_cast_interaction<TActor: ActOn<TTarget> + Component, TTarget: 
 	mut targets: Query<&mut TTarget>,
 	roots: Query<&ColliderRoot>,
 ) {
-	let target_root_entity = |event: &RayCastEvent| match event.target {
-		RayCastTarget::None { .. } => None,
-		RayCastTarget::Some { target, .. } => Some((event.source, roots.get(target).ok()?.0)),
+	let target_root_entity = |event: &RayCastEvent| {
+		event
+			.target
+			.entity
+			.and_then(|entity| Some((event.source, roots.get(entity).ok()?.0)))
 	};
 
 	for (source, target) in ray_casts.read().filter_map(target_root_entity) {
@@ -56,6 +55,8 @@ fn get_actor_and_target<'a, TActor: Component, TTarget: Component>(
 
 #[cfg(test)]
 mod tests {
+	use crate::events::RayCastTarget;
+
 	use super::*;
 	use bevy::{
 		app::{App, Update},
@@ -105,8 +106,8 @@ mod tests {
 
 		app.world.send_event(RayCastEvent {
 			source: actor,
-			target: RayCastTarget::Some {
-				target: coll_target,
+			target: RayCastTarget {
+				entity: Some(coll_target),
 				ray: Ray::default(),
 				toi: TimeOfImpact::default(),
 			},
@@ -128,8 +129,8 @@ mod tests {
 
 		app.world.send_event(RayCastEvent {
 			source: actor,
-			target: RayCastTarget::Some {
-				target: coll_target,
+			target: RayCastTarget {
+				entity: Some(coll_target),
 				ray: Ray::default(),
 				toi: TimeOfImpact::default(),
 			},
