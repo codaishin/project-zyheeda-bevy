@@ -47,9 +47,12 @@ fn ray_cast(
 	let Ok(filter) = QueryFilter::default().exclude_rigid_body(source).try_into() else {
 		return;
 	};
+	let Some(mut entity) = commands.get_entity(id) else {
+		return;
+	};
 	let source = translation(source_transform, source_offset);
 	let target = translation(target_transform, target_offset);
-	commands.entity(id).insert(RayCaster {
+	entity.insert(RayCaster {
 		origin: source,
 		direction: (target - source).normalize(),
 		solid: true,
@@ -66,10 +69,13 @@ fn spawn_beam(
 	let Ok((id, cfg, _, None)) = beam_commands.get(event.source) else {
 		return;
 	};
+	let Some(mut entity) = commands.get_entity(id) else {
+		return;
+	};
 
 	let (from, to) = get_beam_range(event.target.ray, event.target.toi);
 	let transform = get_beam_transform(from, to, event);
-	commands.entity(id).insert((
+	entity.insert((
 		SpatialBundle::from_transform(transform),
 		Beam {
 			from,
@@ -90,10 +96,13 @@ fn update_beam(
 	let Ok((id, _, _, Some(_))) = agents.get(event.source) else {
 		return;
 	};
+	let Some(mut entity) = commands.get_entity(id) else {
+		return;
+	};
 
 	let (from, to) = get_beam_range(event.target.ray, event.target.toi);
 	let transform = get_beam_transform(from, to, event);
-	commands.entity(id).insert(TransformBundle::from(transform));
+	entity.insert(TransformBundle::from(transform));
 }
 
 fn translation(transform: &GlobalTransform, offset: Option<&GroundOffset>) -> Vec3 {
