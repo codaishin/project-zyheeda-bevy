@@ -65,6 +65,7 @@ pub(crate) fn execute_beam(
 			Beam {
 				from,
 				to,
+				damage: cfg.damage,
 				color: cfg.color,
 				emissive: cfg.emissive,
 			},
@@ -266,6 +267,7 @@ mod tests {
 					color: Color::CYAN,
 					emissive: Color::ORANGE,
 					lifetime: Duration::from_millis(100),
+					damage: 42,
 					..default()
 				},
 				BeamCommand {
@@ -297,6 +299,7 @@ mod tests {
 				&Beam {
 					from: Vec3::Z,
 					to: Vec3::new(0., 10., 1.),
+					damage: 42,
 					color: Color::CYAN,
 					emissive: Color::ORANGE
 				},
@@ -317,7 +320,7 @@ mod tests {
 					color: Color::CYAN,
 					emissive: Color::ORANGE,
 					lifetime: Duration::from_millis(1000),
-					range: default(),
+					..default()
 				},
 				BeamCommand {
 					target: Entity::from_raw(default()),
@@ -349,6 +352,7 @@ mod tests {
 					to: Vec3::new(0., 4., 1.),
 					color: Color::CYAN,
 					emissive: Color::ORANGE,
+					..default()
 				},
 				&LifeTime(Duration::from_millis(1000))
 			)),

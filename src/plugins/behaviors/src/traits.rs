@@ -1,4 +1,5 @@
 pub(crate) mod beam;
+pub(crate) mod beam_config;
 pub(crate) mod cam_orbit;
 pub(crate) mod movement_config;
 pub(crate) mod projectile;

@@ -11,8 +11,9 @@ use bevy::{
 	utils::default,
 };
 use common::errors::Error;
+use interactions::components::{DealsDamage, RepeatAfter};
 use prefabs::traits::{AssetKey, Instantiate};
-use std::f32::consts::PI;
+use std::{f32::consts::PI, time::Duration};
 
 impl Instantiate for Beam {
 	fn instantiate(
@@ -39,18 +40,21 @@ impl Instantiate for Beam {
 			Transform::from_translation((self.from + self.to) / 2.).looking_at(self.to, Vec3::Y);
 		transform.scale.z = height;
 
-		on.insert(SpatialBundle::from_transform(transform))
-			.with_children(|parent| {
-				parent.spawn((
-					PbrBundle {
-						material: get_material_handle(key, material),
-						mesh: get_mesh_handle(key, mesh),
-						transform: Transform::from_rotation(Quat::from_rotation_x(PI / 2.)),
-						..default()
-					},
-					NotShadowCaster,
-				));
-			});
+		on.insert((
+			SpatialBundle::from_transform(transform),
+			DealsDamage(self.damage).repeat_after(Duration::from_secs(1)),
+		))
+		.with_children(|parent| {
+			parent.spawn((
+				PbrBundle {
+					material: get_material_handle(key, material),
+					mesh: get_mesh_handle(key, mesh),
+					transform: Transform::from_rotation(Quat::from_rotation_x(PI / 2.)),
+					..default()
+				},
+				NotShadowCaster,
+			));
+		});
 
 		Ok(())
 	}

@@ -1,3 +1,4 @@
+use crate::traits::ActOn;
 use bevy::{
 	ecs::{component::Component, entity::Entity},
 	math::Vec3,
@@ -7,7 +8,7 @@ use bevy_rapier3d::{
 	pipeline::{QueryFilter, QueryFilterFlags},
 };
 use common::traits::cast_ray::TimeOfImpact;
-use std::{collections::HashSet, time::Duration};
+use std::{collections::HashSet, marker::PhantomData, time::Duration};
 
 #[derive(Component, Default, Debug, PartialEq, Clone)]
 pub struct RayCaster {
@@ -79,12 +80,33 @@ impl<'a> From<RayFilter> for QueryFilter<'a> {
 #[derive(Component)]
 pub(crate) struct Destroy;
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct DealsDamage(pub i16);
 
-pub struct Repeat<TActor> {
+#[derive(Component)]
+pub struct Repeat<TActor: ActOn<TTarget> + Clone, TTarget> {
 	pub actor: TActor,
-	pub pause: Duration,
+	pub after: Duration,
+	pub(crate) timer: Duration,
+	phantom_data: PhantomData<TTarget>,
+}
+
+pub trait RepeatAfter<TTarget>
+where
+	Self: Clone + ActOn<TTarget>,
+{
+	fn repeat_after(self, duration: Duration) -> Repeat<Self, TTarget>;
+}
+
+impl<TActor: Clone + ActOn<TTarget>, TTarget> RepeatAfter<TTarget> for TActor {
+	fn repeat_after(self, duration: Duration) -> Repeat<Self, TTarget> {
+		Repeat {
+			actor: self,
+			after: duration,
+			timer: duration,
+			phantom_data: PhantomData,
+		}
+	}
 }
 
 #[cfg(test)]
