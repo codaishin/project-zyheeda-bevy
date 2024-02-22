@@ -1,5 +1,6 @@
 pub(crate) mod attack;
 pub(crate) mod chase;
+pub(crate) mod despawn_delayed;
 pub(crate) mod enemy;
 pub(crate) mod execute_move;
 pub(crate) mod follow;
