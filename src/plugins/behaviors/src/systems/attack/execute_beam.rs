@@ -52,7 +52,7 @@ fn ray_cast(
 	};
 	let source = translation(source_transform, source_offset);
 	let target = translation(target_transform, target_offset);
-	entity.insert(RayCaster {
+	entity.try_insert(RayCaster {
 		origin: source,
 		direction: (target - source).normalize(),
 		solid: true,
