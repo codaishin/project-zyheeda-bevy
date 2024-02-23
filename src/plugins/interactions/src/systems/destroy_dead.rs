@@ -7,7 +7,7 @@ use common::components::Health;
 
 pub(crate) fn set_dead_to_be_destroyed(mut commands: Commands, agents: Query<(Entity, &Health)>) {
 	for id in agents.iter().filter_map(dead) {
-		commands.entity(id).insert(Destroy);
+		commands.entity(id).insert(Destroy::Immediately);
 	}
 }
 
