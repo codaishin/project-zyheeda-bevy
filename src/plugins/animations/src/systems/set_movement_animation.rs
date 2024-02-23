@@ -25,7 +25,9 @@ pub(crate) fn set_movement_animation<
 			.insert(Animate::Repeat(TAnimationKey::from(*config)));
 	}
 	for id in stopped_agents.read() {
-		commands.entity(id).remove::<Animate<TAnimationKey>>();
+		if let Some(mut entity) = commands.get_entity(id) {
+			entity.remove::<Animate<TAnimationKey>>();
+		}
 	}
 }
 

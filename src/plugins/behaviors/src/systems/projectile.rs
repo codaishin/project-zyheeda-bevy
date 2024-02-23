@@ -3,6 +3,7 @@ use bevy::{
 	ecs::{
 		component::Component,
 		entity::Entity,
+		event::EventReader,
 		query::{Added, With},
 		system::{Commands, Query},
 	},
@@ -10,20 +11,36 @@ use bevy::{
 	math::Vec3,
 	transform::components::GlobalTransform,
 };
-use common::components::Idle;
+use bevy_rapier3d::pipeline::CollisionEvent;
+use common::components::{ColliderRoot, Idle};
 
 pub(crate) fn projectile_behavior<TProjectile: ProjectileBehavior + Component>(
 	mut commands: Commands,
-	projectiles: Query<(Entity, &TProjectile, &GlobalTransform), Added<TProjectile>>,
+	mut collision_events: EventReader<CollisionEvent>,
+	new_projectiles: Query<(Entity, &TProjectile, &GlobalTransform), Added<TProjectile>>,
 	done: Query<Entity, (With<Idle>, With<TProjectile>)>,
+	projectiles: Query<Entity, With<TProjectile>>,
+	roots: Query<&ColliderRoot>,
 ) {
 	for entity in &done {
 		commands.entity(entity).despawn_recursive();
 	}
 
-	for (id, projectile, transform) in &projectiles {
+	for (id, projectile, transform) in &new_projectiles {
 		let target = get_target(projectile, transform);
 		commands.entity(id).insert(SimpleMovement { target });
+	}
+
+	for collision in collision_events.read() {
+		let CollisionEvent::Started(a, b, ..) = collision else {
+			continue;
+		};
+		if let Ok(projectile) = roots.get(*a).and_then(|r| projectiles.get(r.0)) {
+			commands.entity(projectile).despawn_recursive();
+		}
+		if let Ok(projectile) = roots.get(*b).and_then(|r| projectiles.get(r.0)) {
+			commands.entity(projectile).despawn_recursive();
+		}
 	}
 }
 
@@ -43,6 +60,8 @@ mod tests {
 		hierarchy::BuildWorldChildren,
 		math::Vec3,
 	};
+	use bevy_rapier3d::{pipeline::CollisionEvent, rapier::geometry::CollisionEventFlags};
+	use common::components::ColliderRoot;
 
 	#[derive(Component, Default)]
 	struct _Projectile {
@@ -62,6 +81,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new();
 		app.add_systems(Update, projectile_behavior::<_Projectile>);
+		app.add_event::<CollisionEvent>();
 
 		app
 	}
@@ -173,5 +193,71 @@ mod tests {
 				.filter(|entity| entity.contains::<_Decoy>())
 				.count()
 		);
+	}
+
+	#[test]
+	fn despawn_on_collision() {
+		let mut app = setup();
+
+		let projectile = app
+			.world
+			.spawn((
+				_Projectile::default(),
+				GlobalTransform::from_translation(Vec3::ZERO),
+			))
+			.id();
+		let collider = app
+			.world
+			.spawn(ColliderRoot(projectile))
+			.set_parent(projectile)
+			.id();
+
+		app.update();
+
+		app.world.send_event(CollisionEvent::Started(
+			collider,
+			Entity::from_raw(42),
+			CollisionEventFlags::SENSOR,
+		));
+
+		app.update();
+
+		let projectile = app.world.get_entity(projectile);
+		let collider = app.world.get_entity(collider);
+
+		assert_eq!((true, true), (projectile.is_none(), collider.is_none()));
+	}
+
+	#[test]
+	fn despawn_on_collision_reversed() {
+		let mut app = setup();
+
+		let projectile = app
+			.world
+			.spawn((
+				_Projectile::default(),
+				GlobalTransform::from_translation(Vec3::ZERO),
+			))
+			.id();
+		let collider = app
+			.world
+			.spawn(ColliderRoot(projectile))
+			.set_parent(projectile)
+			.id();
+
+		app.update();
+
+		app.world.send_event(CollisionEvent::Started(
+			Entity::from_raw(42),
+			collider,
+			CollisionEventFlags::SENSOR,
+		));
+
+		app.update();
+
+		let projectile = app.world.get_entity(projectile);
+		let collider = app.world.get_entity(collider);
+
+		assert_eq!((true, true), (projectile.is_none(), collider.is_none()));
 	}
 }
