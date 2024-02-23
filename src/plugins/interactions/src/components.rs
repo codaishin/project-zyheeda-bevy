@@ -77,8 +77,18 @@ impl<'a> From<RayFilter> for QueryFilter<'a> {
 	}
 }
 
+#[derive(Component, Debug, PartialEq)]
+pub enum Destroy {
+	Immediately,
+	AfterFrames(u8),
+}
+
+impl Destroy {
+	pub const DELAYED: Destroy = Destroy::AfterFrames(2);
+}
+
 #[derive(Component)]
-pub(crate) struct Destroy;
+pub struct Fragile;
 
 #[derive(Component, Clone)]
 pub struct DealsDamage(pub i16);

@@ -1,4 +1,3 @@
-use super::despawn_delayed::{DespawnAfterFrames, DESPAWN_DELAY};
 use crate::components::LifeTime;
 use bevy::{
 	ecs::{
@@ -7,10 +6,11 @@ use bevy::{
 	},
 	time::Time,
 };
+use interactions::components::Destroy;
 
 pub(crate) fn update_lifetimes<TTime: Default + Sync + Send + 'static>(
 	mut commands: Commands,
-	mut lifetimes: Query<(Entity, &mut LifeTime, Option<&DespawnAfterFrames>)>,
+	mut lifetimes: Query<(Entity, &mut LifeTime, Option<&Destroy>)>,
 	time: Res<Time<TTime>>,
 ) {
 	let delta = time.delta();
@@ -19,9 +19,7 @@ pub(crate) fn update_lifetimes<TTime: Default + Sync + Send + 'static>(
 		if delta < lifetime.0 {
 			lifetime.0 -= delta;
 		} else if despawn.is_none() {
-			commands
-				.entity(id)
-				.insert(DespawnAfterFrames(DESPAWN_DELAY));
+			commands.entity(id).insert(Destroy::DELAYED);
 		}
 	}
 }
@@ -67,10 +65,7 @@ mod tests {
 
 		let lifetime = app.world.entity(lifetime);
 
-		assert_eq!(
-			Some(&DespawnAfterFrames(DESPAWN_DELAY)),
-			lifetime.get::<DespawnAfterFrames>()
-		);
+		assert_eq!(Some(&Destroy::DELAYED), lifetime.get::<Destroy>());
 	}
 
 	#[test]
@@ -83,10 +78,7 @@ mod tests {
 
 		let lifetime = app.world.entity(lifetime);
 
-		assert_eq!(
-			Some(&DespawnAfterFrames(DESPAWN_DELAY)),
-			lifetime.get::<DespawnAfterFrames>()
-		);
+		assert_eq!(Some(&Destroy::DELAYED), lifetime.get::<Destroy>());
 	}
 
 	#[test]
@@ -94,7 +86,10 @@ mod tests {
 		let mut app = setup();
 		let lifetime = app
 			.world
-			.spawn((LifeTime(Duration::from_secs(100)), DespawnAfterFrames(100)))
+			.spawn((
+				LifeTime(Duration::from_secs(100)),
+				Destroy::AfterFrames(100),
+			))
 			.id();
 
 		app.tick_time(Duration::from_secs(100));
@@ -102,9 +97,6 @@ mod tests {
 
 		let lifetime = app.world.entity(lifetime);
 
-		assert_eq!(
-			Some(&DespawnAfterFrames(100)),
-			lifetime.get::<DespawnAfterFrames>()
-		);
+		assert_eq!(Some(&Destroy::AfterFrames(100)), lifetime.get::<Destroy>());
 	}
 }

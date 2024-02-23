@@ -2,15 +2,19 @@ use crate::components::Destroy;
 use bevy::{
 	ecs::{
 		entity::Entity,
-		query::With,
 		system::{Commands, Query},
 	},
 	hierarchy::DespawnRecursiveExt,
 };
 
-pub(crate) fn destroy(mut commands: Commands, agents: Query<Entity, With<Destroy>>) {
-	for agent in &agents {
-		commands.entity(agent).despawn_recursive();
+pub(crate) fn destroy(mut commands: Commands, mut agents: Query<(Entity, &mut Destroy)>) {
+	for (id, mut destroy) in &mut agents {
+		match *destroy {
+			Destroy::Immediately | Destroy::AfterFrames(0) => {
+				commands.entity(id).despawn_recursive()
+			}
+			Destroy::AfterFrames(count) => *destroy = Destroy::AfterFrames(count - 1),
+		};
 	}
 }
 
@@ -33,7 +37,7 @@ mod tests {
 	#[test]
 	fn despawn_when_destroy_component_attached() {
 		let mut app = setup();
-		let agent = app.world.spawn(Destroy).id();
+		let agent = app.world.spawn(Destroy::Immediately).id();
 
 		app.update();
 
@@ -53,11 +57,37 @@ mod tests {
 	#[test]
 	fn despawn_recursive_when_destroy_component_attached() {
 		let mut app = setup();
-		let agent = app.world.spawn(Destroy).id();
+		let agent = app.world.spawn(Destroy::Immediately).id();
 		let child = app.world.spawn_empty().set_parent(agent).id();
 
 		app.update();
 
 		assert!(!app.world.iter_entities().any(|e| e.id() == child));
+	}
+
+	#[test]
+	fn decrease_delay_counter() {
+		let mut app = setup();
+		let despawn = app.world.spawn(Destroy::AfterFrames(10)).id();
+
+		app.update();
+
+		let despawn = app.world.entity(despawn);
+
+		assert_eq!(Some(&Destroy::AfterFrames(9)), despawn.get::<Destroy>());
+	}
+
+	#[test]
+	fn despawn() {
+		let mut app = setup();
+		let despawn = app.world.spawn(Destroy::AfterFrames(0)).id();
+		let child = app.world.spawn_empty().set_parent(despawn).id();
+
+		app.update();
+
+		let despawn = app.world.get_entity(despawn);
+		let child = app.world.get_entity(child);
+
+		assert_eq!((true, true), (despawn.is_none(), child.is_none()));
 	}
 }
