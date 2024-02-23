@@ -87,6 +87,9 @@ impl Destroy {
 	pub const DELAYED: Destroy = Destroy::AfterFrames(2);
 }
 
+#[derive(Component)]
+pub struct Fragile;
+
 #[derive(Component, Clone)]
 pub struct DealsDamage(pub i16);
 

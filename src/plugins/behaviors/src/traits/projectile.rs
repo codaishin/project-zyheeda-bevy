@@ -20,7 +20,7 @@ use common::{
 	errors::Error,
 	tools::UnitsPerSecond,
 };
-use interactions::components::DealsDamage;
+use interactions::components::{DealsDamage, Fragile};
 use prefabs::traits::{sphere, AssetKey, Instantiate, ProjectileType};
 
 impl<T> ProjectileBehavior for Projectile<T> {
@@ -53,6 +53,7 @@ impl Instantiate for Projectile<Plasma> {
 		on.insert((
 			RigidBody::Fixed,
 			DealsDamage(1),
+			Fragile,
 			MovementConfig::Constant {
 				mode: MovementMode::Fast,
 				speed: UnitsPerSecond::new(15.),
