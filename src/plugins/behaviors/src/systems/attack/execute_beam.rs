@@ -5,6 +5,7 @@ use bevy::{
 		event::EventReader,
 		system::{Commands, Query},
 	},
+	hierarchy::DespawnRecursiveExt,
 	math::{Ray, Vec3},
 	prelude::SpatialBundle,
 	transform::{
@@ -22,13 +23,27 @@ pub(crate) fn execute_beam(
 	beam_commands: Query<(Entity, &BeamConfig, &BeamCommand, Option<&Beam>)>,
 	transforms: Query<(&GlobalTransform, Option<&GroundOffset>)>,
 ) {
-	for command in &beam_commands {
-		ray_cast(&mut commands, &transforms, command);
+	for beam_command in &beam_commands {
+		ray_cast_or_despawn(&mut commands, &transforms, beam_command);
 	}
 
 	for event in ray_cast_events.read() {
 		spawn_beam(&mut commands, &beam_commands, event);
 		update_beam(&mut commands, &beam_commands, event);
+	}
+}
+
+fn ray_cast_or_despawn(
+	commands: &mut Commands,
+	transforms: &Query<(&GlobalTransform, Option<&GroundOffset>)>,
+	beam_command: (Entity, &BeamConfig, &BeamCommand, Option<&Beam>),
+) {
+	let (id, _, BeamCommand { source, .. }, ..) = beam_command;
+	let source_exists = commands.get_entity(*source).is_some();
+	match (source_exists, commands.get_entity(id)) {
+		(false, Some(beam)) => beam.despawn_recursive(),
+		(true, _) => ray_cast(commands, transforms, beam_command),
+		_ => {}
 	}
 }
 
@@ -47,12 +62,12 @@ fn ray_cast(
 	let Ok(filter) = QueryFilter::default().exclude_rigid_body(source).try_into() else {
 		return;
 	};
-	let Some(mut entity) = commands.get_entity(id) else {
+	let Some(mut beam) = commands.get_entity(id) else {
 		return;
 	};
 	let source = translation(source_transform, source_offset);
 	let target = translation(target_transform, target_offset);
-	entity.try_insert(RayCaster {
+	beam.try_insert(RayCaster {
 		origin: source,
 		direction: (target - source).normalize(),
 		solid: true,
@@ -69,13 +84,13 @@ fn spawn_beam(
 	let Ok((id, cfg, _, None)) = beam_commands.get(event.source) else {
 		return;
 	};
-	let Some(mut entity) = commands.get_entity(id) else {
+	let Some(mut beam) = commands.get_entity(id) else {
 		return;
 	};
 
 	let (from, to) = get_beam_range(event.target.ray, event.target.toi);
 	let transform = get_beam_transform(from, to, event);
-	entity.insert((
+	beam.try_insert((
 		SpatialBundle::from_transform(transform),
 		Beam {
 			from,
@@ -96,13 +111,13 @@ fn update_beam(
 	let Ok((id, _, _, Some(_))) = agents.get(event.source) else {
 		return;
 	};
-	let Some(mut entity) = commands.get_entity(id) else {
+	let Some(mut beam) = commands.get_entity(id) else {
 		return;
 	};
 
 	let (from, to) = get_beam_range(event.target.ray, event.target.toi);
 	let transform = get_beam_transform(from, to, event);
-	entity.insert(TransformBundle::from(transform));
+	beam.try_insert(TransformBundle::from(transform));
 }
 
 fn translation(transform: &GlobalTransform, offset: Option<&GroundOffset>) -> Vec3 {
@@ -126,6 +141,7 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		ecs::entity::Entity,
+		hierarchy::BuildWorldChildren,
 		math::{Ray, Vec3},
 		prelude::default,
 		render::{
@@ -437,5 +453,44 @@ mod tests {
 			(expected_bundle.local, expected_bundle.global,),
 			(bundle.local, bundle.global,)
 		);
+	}
+
+	#[test]
+	fn remove_beam_when_source_not_removed() {
+		let mut app = setup();
+		let source = app.world.spawn(GlobalTransform::default()).id();
+		let beam = app
+			.world
+			.spawn((
+				BeamConfig::default(),
+				BeamCommand {
+					source,
+					target: Entity::from_raw(default()),
+				},
+			))
+			.id();
+		let child = app.world.spawn_empty().set_parent(beam).id();
+		app.world.send_event(RayCastEvent {
+			source: beam,
+			target: RayCastTarget {
+				ray: Ray {
+					origin: Vec3::new(0., 1., 0.),
+					direction: Vec3::new(1., 0., 0.),
+				},
+				toi: TimeOfImpact(10.),
+				..default()
+			},
+		});
+
+		app.update();
+
+		app.world.entity_mut(source).despawn();
+
+		app.update();
+
+		let beam = app.world.get_entity(beam);
+		let child = app.world.get_entity(child);
+
+		assert_eq!((true, true), (beam.is_none(), child.is_none()));
 	}
 }
