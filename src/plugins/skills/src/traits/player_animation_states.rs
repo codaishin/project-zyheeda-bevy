@@ -4,7 +4,7 @@ use common::{
 	traits::iteration::{Iter, IterKey, KeyValue},
 };
 
-const BASE_PATH: &str = "models/player.gltf#";
+const BASE_PATH: &str = "models/player.glb#";
 
 impl IterKey for PlayerSkills<Side> {
 	fn iterator() -> Iter<Self> {
