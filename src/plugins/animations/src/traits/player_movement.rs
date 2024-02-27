@@ -2,7 +2,7 @@ use crate::components::PlayerMovement;
 use behaviors::components::{MovementConfig, MovementMode};
 use common::traits::iteration::{Iter, IterKey, KeyValue};
 
-const BASE_PATH: &str = "models/player.gltf#";
+const BASE_PATH: &str = "models/player.glb#";
 
 impl IterKey for PlayerMovement {
 	fn iterator() -> Iter<Self> {
