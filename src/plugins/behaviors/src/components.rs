@@ -15,7 +15,10 @@ pub struct CamOrbit {
 }
 
 #[derive(Component)]
-pub struct FaceCursor;
+pub enum Face {
+	Cursor,
+	Entity(Entity),
+}
 
 pub struct Plasma;
 

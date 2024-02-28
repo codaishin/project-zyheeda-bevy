@@ -1,33 +1,56 @@
-use crate::components::FaceCursor;
+use crate::components::Face;
 use bevy::{
 	ecs::{
-		query::With,
-		system::{ParamSet, Query, Res, Resource},
+		entity::Entity,
+		system::{Query, Res, Resource},
 	},
 	math::Vec3,
 	transform::components::Transform,
 };
-use common::{resources::MouseHover, traits::intersect_at::IntersectAt};
+use common::{components::ColliderRoot, resources::MouseHover, traits::intersect_at::IntersectAt};
 
-type Agents<'a> = Query<'a, 'a, &'a mut Transform, With<FaceCursor>>;
-type Transforms<'a> = Query<'a, 'a, &'a Transform>;
-
-pub fn face_cursor<TCursor: IntersectAt + Resource>(
-	mut set: ParamSet<(Agents, Transforms)>,
+pub(crate) fn face_cursor<TCursor: IntersectAt + Resource>(
+	mut transforms: Query<&mut Transform>,
+	agents: Query<(Entity, &Face)>,
+	roots: Query<&ColliderRoot>,
 	cursor: Res<TCursor>,
 	hover: Res<MouseHover>,
 ) {
-	let Some(target) = get_target(&mut set, &cursor, &hover) else {
-		return;
-	};
+	let cursor_target = get_target(&transforms, &cursor, &hover);
+	let face_targets = get_face_targets(&transforms, agents, roots, cursor_target);
 
-	for mut agent in &mut set.p0() {
-		agent.look_at(target, Vec3::Y);
+	for (id, target) in face_targets {
+		apply_facing(&mut transforms, id, target);
 	}
 }
 
+fn apply_facing(transforms: &mut Query<&mut Transform>, id: Entity, target: Vec3) {
+	let Ok(mut transform) = transforms.get_mut(id) else {
+		return;
+	};
+	transform.look_at(target, Vec3::Y);
+}
+
+fn get_face_targets(
+	transforms: &Query<&mut Transform>,
+	agents: Query<(Entity, &Face)>,
+	roots: Query<&ColliderRoot>,
+	cursor_target: Option<Vec3>,
+) -> Vec<(Entity, Vec3)> {
+	agents
+		.iter()
+		.filter_map(|(id, face)| {
+			let target = match face {
+				Face::Cursor => cursor_target,
+				Face::Entity(entity) => get_translation(get_root(*entity, &roots), transforms),
+			};
+			Some((id, target?))
+		})
+		.collect()
+}
+
 fn get_target<TCursor: IntersectAt + Resource>(
-	set: &mut ParamSet<(Agents, Transforms)>,
+	transforms: &Query<&mut Transform>,
 	cursor: &Res<TCursor>,
 	hover: &Res<MouseHover>,
 ) -> Option<Vec3> {
@@ -36,7 +59,15 @@ fn get_target<TCursor: IntersectAt + Resource>(
 	};
 
 	let entity = collider_info.root.unwrap_or(collider_info.collider);
-	set.p1().get(entity).ok().map(|t| t.translation)
+	get_translation(entity, transforms)
+}
+
+fn get_translation(entity: Entity, transforms: &Query<&mut Transform>) -> Option<Vec3> {
+	transforms.get(entity).ok().map(|t| t.translation)
+}
+
+fn get_root(entity: Entity, roots: &Query<&ColliderRoot>) -> Entity {
+	roots.get(entity).map(|r| r.0).unwrap_or(entity)
 }
 
 #[cfg(test)]
@@ -84,7 +115,7 @@ mod tests {
 		let mut app = setup(cursor);
 		let agent = app
 			.world
-			.spawn((Transform::from_xyz(4., 5., 6.), FaceCursor))
+			.spawn((Transform::from_xyz(4., 5., 6.), Face::Cursor))
 			.id();
 
 		app.update();
@@ -143,7 +174,7 @@ mod tests {
 
 		let agent = app
 			.world
-			.spawn((Transform::from_xyz(4., 5., 6.), FaceCursor))
+			.spawn((Transform::from_xyz(4., 5., 6.), Face::Cursor))
 			.id();
 
 		let root = app.world.spawn(Transform::from_xyz(10., 11., 12.)).id();
@@ -174,7 +205,7 @@ mod tests {
 
 		let agent = app
 			.world
-			.spawn((Transform::from_xyz(4., 5., 6.), FaceCursor))
+			.spawn((Transform::from_xyz(4., 5., 6.), Face::Cursor))
 			.id();
 
 		let collider = app.world.spawn(Transform::from_xyz(10., 11., 12.)).id();
@@ -182,6 +213,57 @@ mod tests {
 			collider,
 			root: None,
 		})));
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
+			agent.get::<Transform>()
+		);
+	}
+
+	#[test]
+	fn face_hovering_entity_with_collider_root() {
+		let mut cursor = _Cursor::default();
+		cursor
+			.mock
+			.expect_intersect_at()
+			.return_const(Vec3::new(1., 2., 3.));
+		let mut app = setup(cursor);
+
+		let root = app.world.spawn(Transform::from_xyz(10., 11., 12.)).id();
+		let collider = app.world.spawn(ColliderRoot(root)).id();
+		let agent = app
+			.world
+			.spawn((Transform::from_xyz(4., 5., 6.), Face::Entity(collider)))
+			.id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
+			agent.get::<Transform>()
+		);
+	}
+
+	#[test]
+	fn face_hovering_entity_with_no_collider_root() {
+		let mut cursor = _Cursor::default();
+		cursor
+			.mock
+			.expect_intersect_at()
+			.return_const(Vec3::new(1., 2., 3.));
+		let mut app = setup(cursor);
+
+		let collider = app.world.spawn(Transform::from_xyz(10., 11., 12.)).id();
+		let agent = app
+			.world
+			.spawn((Transform::from_xyz(4., 5., 6.), Face::Entity(collider)))
+			.id();
 
 		app.update();
 
