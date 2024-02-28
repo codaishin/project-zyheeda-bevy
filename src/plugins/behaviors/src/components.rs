@@ -22,7 +22,7 @@ pub enum Face {
 	Translation(Vec3),
 }
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq)]
 pub struct OverrideFace(pub Face);
 
 #[derive(Component, Debug, PartialEq)]

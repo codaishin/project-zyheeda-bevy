@@ -4,7 +4,6 @@ pub mod resources;
 pub mod skill;
 pub mod states;
 mod systems;
-mod tools;
 mod traits;
 
 use behaviors::components::{Plasma, Projectile};

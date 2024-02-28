@@ -168,7 +168,6 @@ pub type StopBehaviorFn = fn(&mut EntityCommands);
 
 #[derive(PartialEq, Debug, Clone, Copy, Default)]
 pub struct SkillExecution {
-	pub transform_fn: Option<TransformFN>,
 	pub run_fn: Option<StartBehaviorFn>,
 	pub stop_fn: Option<StopBehaviorFn>,
 }
