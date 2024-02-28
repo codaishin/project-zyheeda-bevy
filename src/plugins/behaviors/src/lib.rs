@@ -8,7 +8,7 @@ use bevy::{
 	ecs::schedule::{common_conditions::in_state, IntoSystemConfigs, States},
 	time::Virtual,
 };
-use common::components::Player;
+use common::{components::Player, resources::CamRay};
 use components::{Beam, CamOrbit, MovementConfig, Plasma, Projectile, SimpleMovement, VoidSphere};
 use events::MoveInputEvent;
 use prefabs::traits::RegisterPrefab;
@@ -48,7 +48,7 @@ impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
 			.register_prefab::<Beam>()
 			.add_systems(
 				Update,
-				(trigger_move_input_event, move_player_on_event).chain(),
+				(trigger_move_input_event::<CamRay>, move_player_on_event).chain(),
 			)
 			.add_systems(
 				Update,

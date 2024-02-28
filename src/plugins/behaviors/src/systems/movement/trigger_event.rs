@@ -1,26 +1,25 @@
 use crate::events::MoveInputEvent;
 use bevy::{
-	ecs::{event::EventWriter, system::Res},
+	ecs::{
+		event::EventWriter,
+		system::{Res, Resource},
+	},
 	input::{mouse::MouseButton, Input},
-	math::Vec3,
 };
-use common::resources::CamRay;
+use common::traits::intersect_at::IntersectAt;
 
-pub(crate) fn trigger_move_input_event(
+pub(crate) fn trigger_move_input_event<TRay: IntersectAt + Resource>(
 	mouse_input: Res<Input<MouseButton>>,
-	cam_ray: Res<CamRay>,
+	cam_ray: Res<TRay>,
 	mut move_input_events: EventWriter<MoveInputEvent>,
 ) {
 	if !mouse_input.pressed(MouseButton::Left) {
 		return;
 	}
-	let Some(ray) = cam_ray.0 else {
+	let Some(intersection) = cam_ray.intersect_at(0.) else {
 		return;
 	};
-	let Some(toi) = ray.intersect_plane(Vec3::ZERO, Vec3::Y) else {
-		return;
-	};
-	move_input_events.send(MoveInputEvent(ray.origin + ray.direction * toi));
+	move_input_events.send(MoveInputEvent(intersection));
 }
 
 #[cfg(test)]
@@ -30,16 +29,29 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		ecs::event::Events,
-		math::Ray,
+		math::Vec3,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{test_tools::utils::SingleThreadedApp, traits::intersect_at::IntersectAt};
+	use mockall::{automock, predicate::eq};
 
-	fn setup(cam_ray: Option<Ray>) -> App {
+	#[derive(Resource, Default)]
+	struct _Ray {
+		mock: Mock_Ray,
+	}
+
+	#[automock]
+	impl IntersectAt for _Ray {
+		fn intersect_at(&self, height: f32) -> Option<Vec3> {
+			self.mock.intersect_at(height)
+		}
+	}
+
+	fn setup(ray: _Ray) -> App {
 		let mut app = App::new_single_threaded([Update]);
-		app.add_systems(Update, trigger_move_input_event);
+		app.add_systems(Update, trigger_move_input_event::<_Ray>);
 		app.add_event::<MoveInputEvent>();
 		app.init_resource::<Input<MouseButton>>();
-		app.insert_resource(CamRay(cam_ray));
+		app.insert_resource(ray);
 
 		app
 	}
@@ -53,10 +65,11 @@ mod tests {
 
 	#[test]
 	fn trigger_immediately_on_left_mouse_press() {
-		let mut app = setup(Some(Ray {
-			origin: Vec3::ONE,
-			direction: Vec3::NEG_Y,
-		}));
+		let mut ray = _Ray::default();
+		ray.mock
+			.expect_intersect_at()
+			.return_const(Vec3::new(1., 2., 3.));
+		let mut app = setup(ray);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -64,14 +77,16 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			vec![MoveInputEvent(Vec3::new(1., 0., 1.))],
+			vec![MoveInputEvent(Vec3::new(1., 2., 3.))],
 			move_input_events(&app)
 		);
 	}
 
 	#[test]
 	fn no_event_when_other_mouse_button_pressed() {
-		let mut app = setup(Some(Ray::default()));
+		let mut ray = _Ray::default();
+		ray.mock.expect_intersect_at().return_const(Vec3::default());
+		let mut app = setup(ray);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Middle);
@@ -82,8 +97,10 @@ mod tests {
 	}
 
 	#[test]
-	fn no_event_when_no_ray() {
-		let mut app = setup(None);
+	fn no_event_when_no_intersection() {
+		let mut ray = _Ray::default();
+		ray.mock.expect_intersect_at().return_const(None);
+		let mut app = setup(ray);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
@@ -94,20 +111,18 @@ mod tests {
 	}
 
 	#[test]
-	fn use_ray_intersection_with_zero_elevation_plane() {
-		let mut app = setup(Some(Ray {
-			origin: Vec3::new(1., 4., 1.),
-			direction: Vec3::new(3., -4., 0.).normalize(),
-		}));
+	fn call_intersect_with_height_zero() {
+		let mut ray = _Ray::default();
+		ray.mock
+			.expect_intersect_at()
+			.with(eq(0.))
+			.times(1)
+			.return_const(None);
+		let mut app = setup(ray);
 		app.world
 			.resource_mut::<Input<MouseButton>>()
 			.press(MouseButton::Left);
 
 		app.update();
-
-		assert_eq!(
-			vec![MoveInputEvent(Vec3::new(4., 0., 1.))],
-			move_input_events(&app)
-		);
 	}
 }
