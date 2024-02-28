@@ -1,4 +1,5 @@
 pub mod components;
+mod events;
 mod systems;
 pub mod traits;
 
@@ -9,14 +10,19 @@ use bevy::{
 };
 use common::components::Player;
 use components::{Beam, CamOrbit, MovementConfig, Plasma, Projectile, SimpleMovement, VoidSphere};
+use events::MoveInputEvent;
 use prefabs::traits::RegisterPrefab;
 use systems::{
 	attack::{attack, execute_beam::execute_beam},
 	chase::chase,
 	enemy::enemy,
-	execute_move::execute_move,
 	follow::follow,
 	move_on_orbit::move_on_orbit,
+	movement::{
+		execute_move::execute_move,
+		move_player_on_event::move_player_on_event,
+		trigger_event::trigger_move_input_event,
+	},
 	projectile::projectile_behavior,
 	update_cool_downs::update_cool_downs,
 	update_life_times::update_lifetimes,
@@ -36,9 +42,14 @@ impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
 	for BehaviorsPlugin<TCamActiveState>
 {
 	fn build(&self, app: &mut App) {
-		app.register_prefab::<Projectile<Plasma>>()
+		app.add_event::<MoveInputEvent>()
+			.register_prefab::<Projectile<Plasma>>()
 			.register_prefab::<VoidSphere>()
 			.register_prefab::<Beam>()
+			.add_systems(
+				Update,
+				(trigger_move_input_event, move_player_on_event).chain(),
+			)
 			.add_systems(
 				Update,
 				(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>)
