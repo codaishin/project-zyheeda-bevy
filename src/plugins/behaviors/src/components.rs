@@ -18,6 +18,7 @@ pub struct CamOrbit {
 pub enum Face {
 	Cursor,
 	Entity(Entity),
+	Translation(Vec3),
 }
 
 pub struct Plasma;

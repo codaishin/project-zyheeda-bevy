@@ -16,7 +16,7 @@ use systems::{
 	attack::{attack, execute_beam::execute_beam},
 	chase::chase,
 	enemy::enemy,
-	face_cursor::face_cursor,
+	face::face,
 	follow::follow,
 	move_on_orbit::move_on_orbit,
 	movement::{
@@ -64,7 +64,7 @@ impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
 				Update,
 				(
 					execute_move::<MovementConfig, SimpleMovement, Virtual>,
-					face_cursor::<CamRay>,
+					face::<CamRay>,
 				)
 					.chain(),
 			)

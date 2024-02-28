@@ -9,7 +9,7 @@ use bevy::{
 };
 use common::{components::ColliderRoot, resources::MouseHover, traits::intersect_at::IntersectAt};
 
-pub(crate) fn face_cursor<TCursor: IntersectAt + Resource>(
+pub(crate) fn face<TCursor: IntersectAt + Resource>(
 	mut transforms: Query<&mut Transform>,
 	agents: Query<(Entity, &Face)>,
 	roots: Query<&ColliderRoot>,
@@ -43,6 +43,7 @@ fn get_face_targets(
 			let target = match face {
 				Face::Cursor => cursor_target,
 				Face::Entity(entity) => get_translation(get_root(*entity, &roots), transforms),
+				Face::Translation(translation) => Some(*translation),
 			};
 			Some((id, target?))
 		})
@@ -98,7 +99,7 @@ mod tests {
 
 	fn setup(cursor: _Cursor) -> App {
 		let mut app = App::new_single_threaded([Update]);
-		app.add_systems(Update, face_cursor::<_Cursor>);
+		app.add_systems(Update, face::<_Cursor>);
 		app.insert_resource(cursor);
 		app.init_resource::<MouseHover>();
 
@@ -263,6 +264,33 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((Transform::from_xyz(4., 5., 6.), Face::Entity(collider)))
+			.id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
+			agent.get::<Transform>()
+		);
+	}
+
+	#[test]
+	fn face_translation() {
+		let mut cursor = _Cursor::default();
+		cursor
+			.mock
+			.expect_intersect_at()
+			.return_const(Vec3::new(1., 2., 3.));
+		let mut app = setup(cursor);
+
+		let agent = app
+			.world
+			.spawn((
+				Transform::from_xyz(4., 5., 6.),
+				Face::Translation(Vec3::new(10., 11., 12.)),
+			))
 			.id();
 
 		app.update();
