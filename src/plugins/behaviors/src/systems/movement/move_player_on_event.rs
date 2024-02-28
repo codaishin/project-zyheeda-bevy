@@ -1,6 +1,7 @@
 use crate::{
 	components::{Face, SetFace, SimpleMovement},
 	events::MoveInputEvent,
+	traits::RemoveComponent,
 };
 use bevy::ecs::{
 	entity::Entity,
@@ -25,7 +26,10 @@ pub(crate) fn move_player_on_event(
 	for event in move_input_events.read() {
 		let target = event.0;
 		player.try_insert((
-			SimpleMovement { target },
+			SimpleMovement {
+				target,
+				cleanup: Some(SetFace::get_remover()),
+			},
 			SetFace(Face::Translation(target)),
 		));
 	}
@@ -62,7 +66,8 @@ mod tests {
 		assert_eq!(
 			(
 				Some(&SimpleMovement {
-					target: Vec3::new(1., 2., 3.)
+					target: Vec3::new(1., 2., 3.),
+					cleanup: Some(SetFace::get_remover()),
 				}),
 				Some(&SetFace(Face::Translation(Vec3::new(1., 2., 3.))))
 			),

@@ -9,6 +9,7 @@ use bevy::{
 	hierarchy::DespawnRecursiveExt,
 	math::Vec3,
 	transform::components::GlobalTransform,
+	utils::default,
 };
 use common::components::Idle;
 
@@ -23,7 +24,10 @@ pub(crate) fn projectile_behavior<TProjectile: ProjectileBehavior + Component>(
 
 	for (id, projectile, transform) in &projectiles {
 		let target = get_target(projectile, transform);
-		commands.entity(id).insert(SimpleMovement { target });
+		commands.entity(id).insert(SimpleMovement {
+			target,
+			..default()
+		});
 	}
 }
 
@@ -87,7 +91,8 @@ mod tests {
 
 		assert_eq!(
 			Some(&SimpleMovement {
-				target: Vec3::new(1., 2., 3.) * 42.
+				target: Vec3::new(1., 2., 3.) * 42.,
+				..default()
 			}),
 			projectile.get::<SimpleMovement>()
 		);
@@ -114,7 +119,8 @@ mod tests {
 
 		assert_eq!(
 			Some(&SimpleMovement {
-				target: Vec3::new(10., 20., 30.) + Vec3::new(1., 2., 3.) * 42.
+				target: Vec3::new(10., 20., 30.) + Vec3::new(1., 2., 3.) * 42.,
+				..default()
 			}),
 			projectile.get::<SimpleMovement>()
 		);
