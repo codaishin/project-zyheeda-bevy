@@ -158,7 +158,7 @@ mod tests {
 			},
 		),
 		(
-			SlotKey::Legs,
+			SlotKey::SkillSpawn,
 			Slot {
 				entity: Entity::from_raw(44),
 				item: None,

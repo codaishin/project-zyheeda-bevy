@@ -5,7 +5,6 @@ pub(crate) mod mouse_hover;
 pub(crate) mod player_animation_states;
 pub(crate) mod projectile;
 pub(crate) mod queue;
-pub(crate) mod simple_movement;
 pub(crate) mod skill;
 pub(crate) mod skill_combo_next;
 pub(crate) mod skill_state;
@@ -117,15 +116,6 @@ pub(crate) mod test_tools {
 			};
 			let mut agent = commands.entity(agent);
 			run(&mut agent, &agent_transform, &spawner, &select_info);
-		}
-	}
-
-	pub fn stop_lazy(behavior: SkillExecution, agent: Entity) -> impl FnMut(Commands) {
-		move |mut commands| {
-			let Some(stop) = behavior.stop_fn else {
-				return;
-			};
-			stop(&mut commands.entity(agent));
 		}
 	}
 }

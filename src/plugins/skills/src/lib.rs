@@ -7,7 +7,7 @@ mod systems;
 mod tools;
 mod traits;
 
-use behaviors::components::{Plasma, Projectile, SimpleMovement};
+use behaviors::components::{Plasma, Projectile};
 use bevy::{
 	app::{First, Plugin, PreStartup, PreUpdate, Update},
 	asset::AssetServer,
@@ -17,7 +17,7 @@ use bevy::{
 		schedule::{common_conditions::in_state, IntoSystemConfigs, State},
 		system::{Commands, IntoSystem, Query, Res},
 	},
-	input::{keyboard::KeyCode, mouse::MouseButton, Input},
+	input::{keyboard::KeyCode, Input},
 	prelude::default,
 	time::Virtual,
 };
@@ -83,8 +83,6 @@ impl Plugin for SkillsPlugin {
 				(
 					schedule_slots::<KeyCode, Player, Input<KeyCode>, Input<KeyCode>>,
 					schedule_slots::<KeyCode, Player, State<MouseContext>, Input<KeyCode>>,
-					schedule_slots::<MouseButton, Player, Input<MouseButton>, Input<KeyCode>>
-						.run_if(in_state(MouseContext::<KeyCode>::Default)),
 				)
 					.run_if(in_state(GameRunning::On)),
 			)
@@ -140,12 +138,7 @@ fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn setup_input(mut commands: Commands) {
-	commands.insert_resource(SlotMap::<MouseButton>::new([(
-		MouseButton::Left,
-		SlotKey::Legs,
-		"Mouse Left",
-	)]));
-	commands.insert_resource(SlotMap::<KeyCode>::new([
+	commands.insert_resource(SlotMap::new([
 		(KeyCode::E, SlotKey::Hand(Side::Main), "E"),
 		(KeyCode::Q, SlotKey::Hand(Side::Off), "Q"),
 	]));
@@ -196,17 +189,6 @@ fn setup_skill_templates(
 			animate: PlayerSkills::Shoot(Handed::Dual(SideUnset)),
 			execution: Projectile::<Plasma>::execution(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
-			..default()
-		},
-		Skill {
-			name: "Simple Movement",
-			cast: Cast {
-				aim: Duration::ZERO,
-				after: Duration::MAX,
-				..default()
-			},
-			execution: SimpleMovement::execution(),
-			is_usable_with: HashSet::from([ItemType::Legs]),
 			..default()
 		},
 	]);
@@ -268,12 +250,6 @@ fn set_player_items(
 		skill: skill_templates.get("Swing Sword").cloned(),
 		item_type: HashSet::from([ItemType::Sword]),
 	};
-	let legs = Item {
-		name: "Legs",
-		model: None,
-		skill: skill_templates.get("Simple Movement").cloned(),
-		item_type: HashSet::from([ItemType::Legs]),
-	};
 
 	// FIXME: Use a more sensible pattern to register predefined combos
 	let mut skill_combos = ComboTreeTemplate(default());
@@ -325,12 +301,10 @@ fn set_player_items(
 				(SlotKey::SkillSpawn, "projectile_spawn"),
 				(SlotKey::Hand(Side::Off), "hand_slot.L"),
 				(SlotKey::Hand(Side::Main), "hand_slot.R"),
-				(SlotKey::Legs, "root"), // FIXME: using root as placeholder for now
 			],
 			[
 				(SlotKey::Hand(Side::Off), pistol_a.into()),
 				(SlotKey::Hand(Side::Main), pistol_b.into()),
-				(SlotKey::Legs, legs.into()),
 			],
 		),
 		skill_combos,

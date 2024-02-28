@@ -1,13 +1,18 @@
 pub mod skill_templates;
 
 use crate::components::SlotKey;
-use bevy::{asset::Handle, ecs::system::Resource, render::texture::Image};
+use bevy::{
+	asset::Handle,
+	ecs::system::Resource,
+	input::keyboard::KeyCode,
+	render::texture::Image,
+};
 use std::{collections::HashMap, hash::Hash};
 
 type UIInputDisplay = &'static str;
 
 #[derive(Resource, Debug, PartialEq, Clone)]
-pub struct SlotMap<TButton>
+pub struct SlotMap<TButton = KeyCode>
 where
 	TButton: Eq + Hash,
 {
@@ -51,17 +56,18 @@ where
 mod test_slot_map {
 	use super::*;
 	use bevy::input::keyboard::KeyCode;
+	use common::components::Side;
 
 	#[test]
 	fn init_slots() {
 		let map = SlotMap::new([
-			(KeyCode::A, SlotKey::Legs, ""),
+			(KeyCode::A, SlotKey::Hand(Side::Main), ""),
 			(KeyCode::B, SlotKey::SkillSpawn, ""),
 		]);
 
 		assert_eq!(
 			HashMap::from([
-				(KeyCode::A, SlotKey::Legs),
+				(KeyCode::A, SlotKey::Hand(Side::Main)),
 				(KeyCode::B, SlotKey::SkillSpawn)
 			]),
 			map.slots
@@ -71,12 +77,12 @@ mod test_slot_map {
 	#[test]
 	fn init_ui_input_display() {
 		let map = SlotMap::new([
-			(KeyCode::A, SlotKey::Legs, "A"),
+			(KeyCode::A, SlotKey::Hand(Side::Main), "A"),
 			(KeyCode::B, SlotKey::SkillSpawn, "B"),
 		]);
 
 		assert_eq!(
-			HashMap::from([(SlotKey::Legs, "A"), (SlotKey::SkillSpawn, "B")]),
+			HashMap::from([(SlotKey::Hand(Side::Main), "A"), (SlotKey::SkillSpawn, "B")]),
 			map.ui_input_display
 		)
 	}
@@ -84,13 +90,13 @@ mod test_slot_map {
 	#[test]
 	fn init_keys() {
 		let map = SlotMap::new([
-			(KeyCode::A, SlotKey::Legs, "A"),
+			(KeyCode::A, SlotKey::Hand(Side::Main), "A"),
 			(KeyCode::B, SlotKey::SkillSpawn, "B"),
 		]);
 
 		assert_eq!(
 			HashMap::from([
-				(SlotKey::Legs, KeyCode::A),
+				(SlotKey::Hand(Side::Main), KeyCode::A),
 				(SlotKey::SkillSpawn, KeyCode::B)
 			]),
 			map.keys

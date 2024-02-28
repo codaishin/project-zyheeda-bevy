@@ -110,7 +110,6 @@ pub struct SideUnset;
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Default)]
 pub enum SlotKey {
 	#[default]
-	Legs,
 	SkillSpawn,
 	Hand(Side),
 }

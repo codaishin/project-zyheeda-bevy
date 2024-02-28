@@ -40,7 +40,7 @@ mod tests {
 	#[test]
 	fn tree_to_branches() {
 		let branches = [(
-			SlotKey::Legs,
+			SlotKey::Hand(Side::Main),
 			SkillComboTree {
 				skill: Skill {
 					name: "my skill",

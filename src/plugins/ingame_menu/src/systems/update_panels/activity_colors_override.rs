@@ -98,6 +98,7 @@ mod tests {
 		prelude::default,
 		render::color::Color,
 	};
+	use common::components::Side;
 	use skills::skill::Queued;
 
 	#[derive(Component)]
@@ -153,8 +154,11 @@ mod tests {
 
 	#[test]
 	fn set_to_active_when_matching_skill_active() {
-		let bundle = (BackgroundColor::from(Color::NONE), _Panel(SlotKey::Legs));
-		let (mut app, panel, _) = setup(Some(SlotKey::Legs), bundle, []);
+		let bundle = (
+			BackgroundColor::from(Color::NONE),
+			_Panel(SlotKey::Hand(Side::Main)),
+		);
+		let (mut app, panel, _) = setup(Some(SlotKey::Hand(Side::Main)), bundle, []);
 
 		app.update();
 
@@ -171,7 +175,7 @@ mod tests {
 	fn no_override_when_no_matching_skill_active() {
 		let bundle = (
 			BackgroundColor::from(Color::NONE),
-			_Panel(SlotKey::Legs),
+			_Panel(SlotKey::Hand(Side::Main)),
 			ColorOverride,
 		);
 		let (mut app, panel, _) = setup(Some(SlotKey::SkillSpawn), bundle, []);
@@ -191,7 +195,7 @@ mod tests {
 	fn no_override_when_no_skill_active() {
 		let bundle = (
 			BackgroundColor::from(Color::NONE),
-			_Panel(SlotKey::Legs),
+			_Panel(SlotKey::Hand(Side::Main)),
 			ColorOverride,
 		);
 		let (mut app, panel, _) = setup(None, bundle, []);
@@ -209,8 +213,12 @@ mod tests {
 
 	#[test]
 	fn set_to_pressed_when_matching_key_primed_in_mouse_context() {
-		let bundle = (BackgroundColor::from(Color::NONE), _Panel(SlotKey::Legs));
-		let (mut app, panel, _) = setup(None, bundle, [(KeyCode::Q, SlotKey::Legs, "")]);
+		let bundle = (
+			BackgroundColor::from(Color::NONE),
+			_Panel(SlotKey::Hand(Side::Main)),
+		);
+		let (mut app, panel, _) =
+			setup(None, bundle, [(KeyCode::Q, SlotKey::Hand(Side::Main), "")]);
 
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
@@ -230,13 +238,16 @@ mod tests {
 
 	#[test]
 	fn set_to_queued_when_matching_with_queued_skill() {
-		let bundle = (BackgroundColor::from(Color::NONE), _Panel(SlotKey::Legs));
+		let bundle = (
+			BackgroundColor::from(Color::NONE),
+			_Panel(SlotKey::Hand(Side::Main)),
+		);
 		let (mut app, panel, player) = setup(None, bundle, []);
 
 		let mut player = app.world.entity_mut(player);
 		let mut queue = player.get_mut::<Queue>().unwrap();
 		queue.0.push_back(Skill::default().with(&Queued {
-			slot_key: SlotKey::Legs,
+			slot_key: SlotKey::Hand(Side::Main),
 			..default()
 		}));
 

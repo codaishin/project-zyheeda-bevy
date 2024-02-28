@@ -43,6 +43,7 @@ mod test {
 		input::keyboard::KeyCode,
 		ui::Interaction,
 	};
+	use common::components::Side;
 
 	#[derive(Component)]
 	struct _Panel(pub SlotKey);
@@ -58,9 +59,9 @@ mod test {
 		let mut app = App::new();
 
 		app.add_state::<MouseContext>();
-		app.insert_resource(SlotMap::new([(KeyCode::Z, SlotKey::Legs, "")]));
+		app.insert_resource(SlotMap::new([(KeyCode::Z, SlotKey::Hand(Side::Main), "")]));
 		app.world
-			.spawn((_Panel(SlotKey::Legs), Interaction::Pressed));
+			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::Pressed));
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
@@ -82,8 +83,9 @@ mod test {
 		let mut app = App::new();
 
 		app.add_state::<MouseContext>();
-		app.insert_resource(SlotMap::new([(KeyCode::Z, SlotKey::Legs, "")]));
-		app.world.spawn((_Panel(SlotKey::Legs), Interaction::None));
+		app.insert_resource(SlotMap::new([(KeyCode::Z, SlotKey::Hand(Side::Main), "")]));
+		app.world
+			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::None));
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
@@ -105,9 +107,9 @@ mod test {
 		let mut app = App::new();
 
 		app.add_state::<MouseContext>();
-		app.insert_resource(SlotMap::new([(KeyCode::T, SlotKey::Legs, "")]));
+		app.insert_resource(SlotMap::new([(KeyCode::T, SlotKey::Hand(Side::Main), "")]));
 		app.world
-			.spawn((_Panel(SlotKey::Legs), Interaction::Pressed));
+			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::Pressed));
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);

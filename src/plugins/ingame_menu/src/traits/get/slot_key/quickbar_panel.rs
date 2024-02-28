@@ -16,11 +16,11 @@ mod tests {
 	#[test]
 	fn get_legs() {
 		let panel = QuickbarPanel {
-			key: SlotKey::Legs,
+			key: SlotKey::Hand(Side::Off),
 			state: PanelState::Empty,
 		};
 
-		assert_eq!(SlotKey::Legs, panel.get(()));
+		assert_eq!(SlotKey::Hand(Side::Off), panel.get(()));
 	}
 
 	#[test]
