@@ -12,7 +12,6 @@ impl Movement for SimpleMovement {
 			return true;
 		}
 
-		agent.look_at(Vec3::new(target.x, agent.translation.y, target.z), Vec3::Y);
 		agent.translation += direction.normalize() * distance;
 		false
 	}
@@ -72,26 +71,6 @@ mod tests {
 		let is_done = movement.update(&mut agent, 0.1);
 
 		assert!(!is_done);
-	}
-
-	#[test]
-	fn set_forward() {
-		let mut movement = SimpleMovement::new(Vec3::X);
-		let mut agent = Transform::from_translation(Vec3::ZERO);
-
-		movement.update(&mut agent, 0.1);
-
-		assert_eq_approx!(Vec3::X, agent.forward(), 0.00001);
-	}
-
-	#[test]
-	fn set_forward_ignoring_height_difference() {
-		let mut movement = SimpleMovement::new(Vec3::X);
-		let mut agent = Transform::from_translation(Vec3::new(0., -1., 0.));
-
-		movement.update(&mut agent, 0.1);
-
-		assert_eq_approx!(Vec3::X, agent.forward(), 0.00001);
 	}
 
 	#[test]
