@@ -5,7 +5,10 @@ pub mod traits;
 
 use bevy::{
 	app::{App, Plugin, Update},
-	ecs::schedule::{common_conditions::in_state, IntoSystemConfigs, States},
+	ecs::{
+		schedule::{common_conditions::in_state, IntoSystemConfigs, States},
+		system::IntoSystem,
+	},
 	time::Virtual,
 };
 use common::{components::Player, resources::CamRay};
@@ -16,7 +19,7 @@ use systems::{
 	attack::{attack, execute_beam::execute_beam},
 	chase::chase,
 	enemy::enemy,
-	face::face,
+	face::{execute_face::execute_face, get_faces::get_faces},
 	follow::follow,
 	move_on_orbit::move_on_orbit,
 	movement::{
@@ -64,7 +67,7 @@ impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
 				Update,
 				(
 					execute_move::<MovementConfig, SimpleMovement, Virtual>,
-					face::<CamRay>,
+					get_faces.pipe(execute_face::<CamRay>),
 				)
 					.chain(),
 			)

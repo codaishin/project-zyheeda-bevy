@@ -1,12 +1,13 @@
 pub(crate) mod beam;
 pub(crate) mod beam_config;
 pub(crate) mod cam_orbit;
+pub(crate) mod face_command;
 pub(crate) mod movement_config;
 pub(crate) mod projectile;
 pub(crate) mod simple_movement;
 pub(crate) mod void_sphere;
 
-use crate::components::{Attacker, MovementMode, Target};
+use crate::components::{Attacker, Face, MovementMode, Target};
 use bevy::{
 	ecs::system::Commands,
 	math::{Vec2, Vec3},
@@ -54,4 +55,8 @@ impl<T: SpawnAttack> ToArc for T {
 	fn to_arc(self) -> Arc<Self> {
 		Arc::new(self)
 	}
+}
+
+pub trait ReadFace {
+	fn read(&mut self) -> Face;
 }

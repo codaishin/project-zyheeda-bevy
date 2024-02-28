@@ -1,7 +1,7 @@
 use animations::{components::Animator, AnimationsPlugin};
 use bars::{components::Bar, BarsPlugin};
 use behaviors::{
-	components::{CamOrbit, Face, MovementConfig, MovementMode, VoidSphere},
+	components::{CamOrbit, MovementConfig, MovementMode, VoidSphere},
 	traits::{Orbit, Vec2Radians},
 	BehaviorsPlugin,
 };
@@ -213,7 +213,6 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			Animator { ..default() },
 			GroundOffset(Vec3::Y),
 			Player,
-			Face::Cursor,
 			MovementConfig::Dynamic {
 				current_mode: MovementMode::Fast,
 				slow_speed: UnitsPerSecond::new(0.75),

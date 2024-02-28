@@ -1,11 +1,11 @@
 use crate::traits::SpawnAttack;
 use bevy::{
-	ecs::{component::Component, entity::Entity},
+	ecs::{component::Component, entity::Entity, system::EntityCommands},
 	math::Vec3,
 	render::color::Color,
 };
 use common::tools::UnitsPerSecond;
-use std::{marker::PhantomData, sync::Arc, time::Duration};
+use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
 
 #[derive(Component)]
 pub struct CamOrbit {
@@ -14,12 +14,19 @@ pub struct CamOrbit {
 	pub sensitivity: f32,
 }
 
-#[derive(Component)]
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub enum Face {
+	#[default]
 	Cursor,
 	Entity(Entity),
 	Translation(Vec3),
 }
+
+#[derive(Component)]
+pub struct OverrideFace(pub Face);
+
+#[derive(Component)]
+pub struct SetFace(pub Face);
 
 pub struct Plasma;
 
@@ -55,15 +62,10 @@ pub enum VoidSpherePart {
 	RingB(UnitsPerSecond),
 }
 
-#[derive(Component, Clone, Copy, PartialEq, Debug)]
+#[derive(Component, Clone, PartialEq, Debug, Default)]
 pub struct SimpleMovement {
 	pub target: Vec3,
-}
-
-impl SimpleMovement {
-	pub fn new(target: Vec3) -> Self {
-		Self { target }
-	}
+	pub cleanup: Option<fn(&mut EntityCommands)>,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
