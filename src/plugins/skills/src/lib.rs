@@ -21,14 +21,12 @@ use bevy::{
 	prelude::default,
 	time::Virtual,
 };
-use bevy_rapier3d::plugin::RapierContext;
 use bundles::Loadout;
 use common::{
 	components::{Player, Side, Swap},
 	errors::Error,
 	resources::{Models, MouseHover},
 	systems::log::log_many,
-	tools::Tools,
 };
 use components::{
 	ComboTreeTemplate,
@@ -60,8 +58,6 @@ use systems::{
 		trigger_primed::trigger_primed_mouse_context,
 	},
 	schedule_slots::schedule_slots,
-	set_cam_ray::set_cam_ray,
-	set_mouse_hover::set_mouse_hover,
 	slots::add_item_slots,
 };
 use traits::GetExecution;
@@ -74,10 +70,6 @@ impl Plugin for SkillsPlugin {
 			.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
 			.add_systems(PreStartup, load_models)
 			.add_systems(PreStartup, setup_input)
-			.add_systems(
-				First,
-				(set_cam_ray::<Tools>, set_mouse_hover::<RapierContext>).chain(),
-			)
 			.add_systems(
 				First,
 				(

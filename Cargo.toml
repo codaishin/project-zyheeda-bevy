@@ -1,7 +1,7 @@
 # Workspace Settings
 
 [workspace]
-members = ["src/common", "src/plugins/*"]
+members = ["src/plugins/*"]
 
 [workspace.package]
 version = "0.1.0"
@@ -14,7 +14,7 @@ tracing = "0.1.40"
 mockall = "0.11.2"
 bars = { path = "src/plugins/bars" }
 behaviors = { path = "src/plugins/behaviors" }
-common = { path = "src/common" }
+common = { path = "src/plugins/common" }
 interactions = { path = "src/plugins/interactions" }
 prefabs = { path = "src/plugins/prefabs" }
 skills = { path = "src/plugins/skills" }

@@ -1,14 +1,14 @@
+use crate::{
+	components::ColliderRoot,
+	resources::{CamRay, ColliderInfo, MouseHover},
+	traits::cast_ray::{CastRay, TimeOfImpact},
+};
 use bevy::{
 	ecs::{
 		entity::Entity,
 		system::{Commands, Query, Res, Resource},
 	},
 	math::Ray,
-};
-use common::{
-	components::ColliderRoot,
-	resources::{CamRay, ColliderInfo, MouseHover},
-	traits::cast_ray::{CastRay, TimeOfImpact},
 };
 
 pub(crate) fn set_mouse_hover<TCastRay: CastRay<Ray> + Resource>(
@@ -42,12 +42,12 @@ fn get_root(roots: Query<&ColliderRoot>, entity: Entity) -> Option<Entity> {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::traits::cast_ray::TimeOfImpact;
 	use bevy::{
 		app::{App, Update},
 		ecs::entity::Entity,
 		math::{Ray, Vec3},
 	};
-	use common::traits::cast_ray::TimeOfImpact;
 	use mockall::{automock, predicate::eq};
 
 	#[derive(Resource, Default)]
