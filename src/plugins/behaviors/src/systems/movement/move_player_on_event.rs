@@ -1,4 +1,7 @@
-use crate::{components::SimpleMovement, events::MoveInputEvent};
+use crate::{
+	components::{Face, SetFace, SimpleMovement},
+	events::MoveInputEvent,
+};
 use bevy::ecs::{
 	entity::Entity,
 	event::EventReader,
@@ -20,14 +23,18 @@ pub(crate) fn move_player_on_event(
 	};
 
 	for event in move_input_events.read() {
-		player.try_insert(SimpleMovement { target: event.0 });
+		let target = event.0;
+		player.try_insert((
+			SimpleMovement { target },
+			SetFace(Face::Translation(target)),
+		));
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::SimpleMovement;
+	use crate::components::{Face, SetFace, SimpleMovement};
 	use bevy::{
 		app::{App, Update},
 		math::Vec3,
@@ -53,10 +60,13 @@ mod tests {
 		let player = app.world.entity(player);
 
 		assert_eq!(
-			Some(&SimpleMovement {
-				target: Vec3::new(1., 2., 3.)
-			}),
-			player.get::<SimpleMovement>()
+			(
+				Some(&SimpleMovement {
+					target: Vec3::new(1., 2., 3.)
+				}),
+				Some(&SetFace(Face::Translation(Vec3::new(1., 2., 3.))))
+			),
+			(player.get::<SimpleMovement>(), player.get::<SetFace>())
 		);
 	}
 }

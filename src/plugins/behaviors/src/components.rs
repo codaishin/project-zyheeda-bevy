@@ -25,7 +25,7 @@ pub enum Face {
 #[derive(Component)]
 pub struct OverrideFace(pub Face);
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq)]
 pub struct SetFace(pub Face);
 
 pub struct Plasma;
