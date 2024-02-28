@@ -14,6 +14,9 @@ pub struct CamOrbit {
 	pub sensitivity: f32,
 }
 
+#[derive(Component)]
+pub struct FaceCursor;
+
 pub struct Plasma;
 
 #[derive(Component, Default)]
