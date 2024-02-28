@@ -1,8 +1,9 @@
 use crate::components::PlayerMovement;
 use behaviors::components::{MovementConfig, MovementMode};
-use common::traits::iteration::{Iter, IterKey, KeyValue};
-
-const BASE_PATH: &str = "models/player.glb#";
+use common::{
+	components::Player,
+	traits::iteration::{Iter, IterKey, KeyValue},
+};
 
 impl IterKey for PlayerMovement {
 	fn iterator() -> Iter<Self> {
@@ -24,7 +25,7 @@ impl KeyValue<String> for PlayerMovement {
 			Self::Run => "Animation3",
 		};
 
-		BASE_PATH.to_owned() + value
+		Player::MODEL_PATH.to_owned() + "#" + value
 	}
 }
 
@@ -58,9 +59,10 @@ mod test_iteration {
 
 	#[test]
 	fn all_contain_base_path() {
+		let model_path_with_hash = Player::MODEL_PATH.to_owned() + "#";
 		assert!(PlayerMovement::iterator()
 			.map(PlayerMovement::get_value)
-			.all(|path| path.starts_with(BASE_PATH)));
+			.all(|path| path.starts_with(&model_path_with_hash)));
 	}
 
 	#[test]

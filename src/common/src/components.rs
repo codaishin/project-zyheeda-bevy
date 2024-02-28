@@ -27,6 +27,10 @@ pub struct GroundOffset(pub Vec3);
 #[derive(Component, Default)]
 pub struct Player;
 
+impl Player {
+	pub const MODEL_PATH: &str = "models/player.glb";
+}
+
 #[derive(Component)]
 pub struct Idle;
 

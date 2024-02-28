@@ -1,10 +1,8 @@
 use crate::{components::Handed, skill::PlayerSkills};
 use common::{
-	components::Side,
+	components::{Player, Side},
 	traits::iteration::{Iter, IterKey, KeyValue},
 };
-
-const BASE_PATH: &str = "models/player.glb#";
 
 impl IterKey for PlayerSkills<Side> {
 	fn iterator() -> Iter<Self> {
@@ -36,7 +34,7 @@ impl KeyValue<String> for PlayerSkills<Side> {
 			Self::SwordStrike(Side::Off) => "Animation9",
 		};
 
-		BASE_PATH.to_owned() + value
+		Player::MODEL_PATH.to_owned() + "#" + value
 	}
 }
 
@@ -47,9 +45,10 @@ mod tests {
 
 	#[test]
 	fn all_contain_base_path() {
+		let model_path_with_hash = Player::MODEL_PATH.to_owned() + "#";
 		assert!(PlayerSkills::iterator()
 			.map(PlayerSkills::<Side>::get_value)
-			.all(|path| path.starts_with(BASE_PATH)))
+			.all(|path| path.starts_with(&model_path_with_hash)))
 	}
 
 	#[test]
