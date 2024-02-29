@@ -9,6 +9,7 @@ use bevy::{
 	ecs::{
 		component::Component,
 		entity::Entity,
+		query::With,
 		system::{Commands, In, Query, Res},
 		world::Mut,
 	},
@@ -18,14 +19,15 @@ use std::{collections::HashSet, hash::Hash};
 
 pub(crate) type PlayingAnimations = HashSet<Entity>;
 
-pub(crate) fn play_animations<
+pub(crate) fn active_animation<
+	TAgent: Component,
 	TAnimationKey: Clone + Copy + Hash + Eq + Sync + Send + 'static,
 	TAnimationPlayer: Component + RepeatAnimation + ReplayAnimation,
 >(
 	playing_animations: In<PlayingAnimations>,
 	mut commands: Commands,
 	animations: Res<Animations<TAnimationKey>>,
-	agents: Query<(Entity, &Animator, &Animate<TAnimationKey>)>,
+	agents: Query<(Entity, &Animator, &Animate<TAnimationKey>), With<TAgent>>,
 	mut animation_players: Query<&mut TAnimationPlayer>,
 ) -> PlayingAnimations {
 	let not_already_playing = |(agent, ..): &(Entity, &Animator, &Animate<TAnimationKey>)| {
@@ -123,36 +125,31 @@ mod tests {
 	}
 
 	#[derive(Component)]
-	struct _Player {
-		pub mock: Mock_Player,
+	struct _Agent;
+
+	#[derive(Component, Default)]
+	struct _AnimationPlayer {
+		pub mock: Mock_AnimationPlayer,
 	}
 
-	impl _Player {
-		pub fn new() -> Self {
-			_Player {
-				mock: Mock_Player::new(),
-			}
-		}
-	}
-
-	impl RepeatAnimation for _Player {
+	impl RepeatAnimation for _AnimationPlayer {
 		fn repeat(&mut self, animation: &Handle<AnimationClip>) {
 			self.mock.repeat(animation)
 		}
 	}
 
-	impl ReplayAnimation for _Player {
+	impl ReplayAnimation for _AnimationPlayer {
 		fn replay(&mut self, animation: &Handle<AnimationClip>) {
 			self.mock.replay(animation)
 		}
 	}
 
 	mock! {
-		_Player {}
-		impl RepeatAnimation for _Player {
+		_AnimationPlayer {}
+		impl RepeatAnimation for _AnimationPlayer {
 			fn repeat(&mut self, _animation: &Handle<AnimationClip>) {}
 		}
-		impl ReplayAnimation for _Player {
+		impl ReplayAnimation for _AnimationPlayer {
 			fn replay(&mut self, _animation: &Handle<AnimationClip>) {}
 		}
 	}
@@ -163,14 +160,16 @@ mod tests {
 	#[derive(Resource, Default)]
 	struct _FakeAlreadyPlaying(HashSet<Entity>);
 
+	impl _FakeAlreadyPlaying {
+		fn system(fakes: Res<_FakeAlreadyPlaying>) -> PlayingAnimations {
+			fakes.0.clone()
+		}
+	}
+
 	fn track_playing(playing: In<PlayingAnimations>, mut commands: Commands) {
 		for entity in playing.0 {
 			commands.entity(entity).insert(_Playing);
 		}
-	}
-
-	fn fake_already_playing(fakes: Res<_FakeAlreadyPlaying>) -> PlayingAnimations {
-		fakes.0.clone()
 	}
 
 	fn setup() -> App {
@@ -178,8 +177,8 @@ mod tests {
 		app.init_resource::<_FakeAlreadyPlaying>();
 		app.add_systems(
 			Update,
-			fake_already_playing
-				.pipe(play_animations::<_Key, _Player>)
+			_FakeAlreadyPlaying::system
+				.pipe(active_animation::<_Agent, _Key, _AnimationPlayer>)
 				.pipe(track_playing),
 		);
 
@@ -189,7 +188,7 @@ mod tests {
 	#[test]
 	fn replay_animation() {
 		let mut app = setup();
-		let mut mock_player = _Player::new();
+		let mut mock_animation_player = _AnimationPlayer::default();
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
@@ -198,16 +197,17 @@ mod tests {
 			(_Key::B, Handle::default()),
 		])));
 
-		mock_player
+		mock_animation_player
 			.mock
 			.expect_replay()
 			.times(1)
 			.with(eq(handle.clone()))
 			.return_const(());
-		mock_player.mock.expect_repeat().return_const(());
+		mock_animation_player.mock.expect_repeat().return_const(());
 
-		let animation_player_id = Some(app.world.spawn(mock_player).id());
+		let animation_player_id = Some(app.world.spawn(mock_animation_player).id());
 		app.world.spawn((
+			_Agent,
 			Animator {
 				animation_player_id,
 			},
@@ -220,7 +220,7 @@ mod tests {
 	#[test]
 	fn repeat_animation() {
 		let mut app = setup();
-		let mut mock_player = _Player::new();
+		let mut mock_animation_player = _AnimationPlayer::default();
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
@@ -229,15 +229,70 @@ mod tests {
 			(_Key::B, Handle::default()),
 		])));
 
-		mock_player
+		mock_animation_player
 			.mock
 			.expect_repeat()
 			.times(1)
 			.with(eq(handle.clone()))
 			.return_const(());
-		mock_player.mock.expect_replay().return_const(());
+		mock_animation_player.mock.expect_replay().return_const(());
 
-		let animation_player_id = Some(app.world.spawn(mock_player).id());
+		let animation_player_id = Some(app.world.spawn(mock_animation_player).id());
+		app.world.spawn((
+			_Agent,
+			Animator {
+				animation_player_id,
+			},
+			Animate::Repeat(_Key::A),
+		));
+
+		app.update();
+	}
+
+	#[test]
+	fn do_not_replay_animation_when_not_with_agent() {
+		let mut app = setup();
+		let mut mock_animation_player = _AnimationPlayer::default();
+		app.insert_resource(Animations(HashMap::from([
+			(_Key::A, Handle::default()),
+			(_Key::B, Handle::default()),
+		])));
+
+		mock_animation_player
+			.mock
+			.expect_replay()
+			.never()
+			.return_const(());
+		mock_animation_player.mock.expect_repeat().return_const(());
+
+		let animation_player_id = Some(app.world.spawn(mock_animation_player).id());
+		app.world.spawn((
+			Animator {
+				animation_player_id,
+			},
+			Animate::Replay(_Key::A),
+		));
+
+		app.update();
+	}
+
+	#[test]
+	fn do_not_repeat_animation_when_not_with_agent() {
+		let mut app = setup();
+		let mut mock_animation_player = _AnimationPlayer::default();
+		app.insert_resource(Animations(HashMap::from([
+			(_Key::A, Handle::default()),
+			(_Key::B, Handle::default()),
+		])));
+
+		mock_animation_player.mock.expect_replay().return_const(());
+		mock_animation_player
+			.mock
+			.expect_repeat()
+			.never()
+			.return_const(());
+
+		let animation_player_id = Some(app.world.spawn(mock_animation_player).id());
 		app.world.spawn((
 			Animator {
 				animation_player_id,
@@ -251,7 +306,7 @@ mod tests {
 	#[test]
 	fn remove_animate() {
 		let mut app = setup();
-		let mut mock_player = _Player::new();
+		let mut mock_animation_player = _AnimationPlayer::default();
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
@@ -260,13 +315,14 @@ mod tests {
 			(_Key::B, Handle::default()),
 		])));
 
-		mock_player.mock.expect_replay().return_const(());
-		mock_player.mock.expect_repeat().return_const(());
+		mock_animation_player.mock.expect_replay().return_const(());
+		mock_animation_player.mock.expect_repeat().return_const(());
 
-		let animation_player_id = Some(app.world.spawn(mock_player).id());
+		let animation_player_id = Some(app.world.spawn(mock_animation_player).id());
 		let agent = app
 			.world
 			.spawn((
+				_Agent,
 				Animator {
 					animation_player_id,
 				},
@@ -284,19 +340,20 @@ mod tests {
 	#[test]
 	fn return_playing_animations() {
 		let mut app = setup();
-		let mut mock_player = _Player::new();
+		let mut mock_animation_player = _AnimationPlayer::default();
 		app.insert_resource(Animations(HashMap::from([
 			(_Key::A, Handle::default()),
 			(_Key::B, Handle::default()),
 		])));
 
-		mock_player.mock.expect_replay().return_const(());
-		mock_player.mock.expect_repeat().return_const(());
+		mock_animation_player.mock.expect_replay().return_const(());
+		mock_animation_player.mock.expect_repeat().return_const(());
 
-		let animation_player_id = Some(app.world.spawn(mock_player).id());
+		let animation_player_id = Some(app.world.spawn(mock_animation_player).id());
 		let animate = app
 			.world
 			.spawn((
+				_Agent,
 				Animator {
 					animation_player_id,
 				},
@@ -335,19 +392,28 @@ mod tests {
 	#[test]
 	fn do_not_play_animation_when_contained_in_incoming_playing_animations() {
 		let mut app = setup();
-		let mut mock_player = _Player::new();
+		let mut mock_animation_player = _AnimationPlayer::default();
 		app.insert_resource(Animations(HashMap::from([
 			(_Key::A, Handle::default()),
 			(_Key::B, Handle::default()),
 		])));
 
-		mock_player.mock.expect_replay().never().return_const(());
-		mock_player.mock.expect_repeat().never().return_const(());
+		mock_animation_player
+			.mock
+			.expect_replay()
+			.never()
+			.return_const(());
+		mock_animation_player
+			.mock
+			.expect_repeat()
+			.never()
+			.return_const(());
 
-		let animation_player_id = Some(app.world.spawn(mock_player).id());
+		let animation_player_id = Some(app.world.spawn(mock_animation_player).id());
 		let animate = app
 			.world
 			.spawn((
+				_Agent,
 				Animator {
 					animation_player_id,
 				},
@@ -368,19 +434,20 @@ mod tests {
 	#[test]
 	fn do_not_return_playing_animations_when_animation_is_none() {
 		let mut app = setup();
-		let mut mock_player = _Player::new();
+		let mut mock_animation_player = _AnimationPlayer::default();
 		app.insert_resource(Animations(HashMap::from([
 			(_Key::A, Handle::default()),
 			(_Key::B, Handle::default()),
 		])));
 
-		mock_player.mock.expect_replay().return_const(());
-		mock_player.mock.expect_repeat().return_const(());
+		mock_animation_player.mock.expect_replay().return_const(());
+		mock_animation_player.mock.expect_repeat().return_const(());
 
-		let animation_player_id = Some(app.world.spawn(mock_player).id());
+		let animation_player_id = Some(app.world.spawn(mock_animation_player).id());
 		let animate = app
 			.world
 			.spawn((
+				_Agent,
 				Animator {
 					animation_player_id,
 				},

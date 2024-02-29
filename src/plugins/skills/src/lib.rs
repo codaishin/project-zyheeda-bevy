@@ -82,7 +82,7 @@ impl Plugin for SkillsPlugin {
 				PreUpdate,
 				(
 					enqueue::<MouseHover>,
-					dequeue::<PlayerSkills<SideUnset>, PlayerSkills<Side>>, // sets skill activity marker, so it MUST run before skill execution systems
+					dequeue::<PlayerSkills<SideUnset>>, // sets skill activity marker, so it MUST run before skill execution systems
 				)
 					.chain()
 					.run_if(in_state(GameRunning::On)),
@@ -149,7 +149,7 @@ fn setup_skill_templates(
 				after: Duration::from_millis(200),
 			},
 			soft_override: true,
-			animate: PlayerSkills::SwordStrike(SideUnset),
+			animate: Some(PlayerSkills::SwordStrike(SideUnset)),
 			execution: SwordStrike::execution(),
 			is_usable_with: HashSet::from([ItemType::Sword]),
 			..default()
@@ -163,7 +163,7 @@ fn setup_skill_templates(
 				..default()
 			},
 			soft_override: true,
-			animate: PlayerSkills::Shoot(Handed::Single(SideUnset)),
+			animate: Some(PlayerSkills::Shoot(Handed::Single(SideUnset))),
 			execution: Projectile::<Plasma>::execution(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
 			..default()
@@ -177,7 +177,7 @@ fn setup_skill_templates(
 				..default()
 			},
 			soft_override: true,
-			animate: PlayerSkills::Shoot(Handed::Dual(SideUnset)),
+			animate: Some(PlayerSkills::Shoot(Handed::Dual(SideUnset))),
 			execution: Projectile::<Plasma>::execution(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
 			..default()

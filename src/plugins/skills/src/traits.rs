@@ -2,9 +2,8 @@ pub(crate) mod bevy_input;
 pub(crate) mod game_state;
 pub(crate) mod inventory;
 pub(crate) mod mouse_hover;
-pub(crate) mod player_animation_states;
+pub(crate) mod player_skills;
 pub(crate) mod projectile;
-pub(crate) mod queue;
 pub(crate) mod skill;
 pub(crate) mod skill_combo_next;
 pub(crate) mod skill_state;
@@ -40,10 +39,6 @@ where
 
 pub(crate) trait GetAnimation<TAnimationKey: Clone + Copy> {
 	fn animate(&self) -> Animate<TAnimationKey>;
-}
-
-pub(crate) trait HasIdle<TAnimationKey: Clone + Copy> {
-	const IDLE: Animate<TAnimationKey>;
 }
 
 pub(crate) trait WithComponent<T: Component + Copy> {

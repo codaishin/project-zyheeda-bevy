@@ -1,22 +1,25 @@
+mod animation_keys;
 pub mod components;
 mod resource;
 mod systems;
 mod traits;
 
+use animation_keys::PlayerIdle;
 use behaviors::components::SimpleMovement;
 use bevy::{
 	animation::AnimationPlayer,
-	app::{App, Plugin, PreStartup, PreUpdate, Update},
+	app::{App, Plugin, PostUpdate, PreStartup, PreUpdate, Update},
 	asset::AssetServer,
-	ecs::system::{In, IntoSystem},
+	ecs::system::IntoSystem,
 };
 use common::components::{Player, Side};
 use components::PlayerMovement;
 use skills::skill::PlayerSkills;
 use systems::{
+	active_animation::active_animation,
+	idle_animation::idle_animation,
 	link_animator::link_animators_with_new_animation_players,
 	load_animations::load_animations,
-	play_animations::play_animations,
 	set_movement_animation::set_movement_animation,
 };
 
@@ -29,6 +32,7 @@ impl Plugin for AnimationsPlugin {
 			(
 				load_animations::<PlayerMovement, AssetServer>,
 				load_animations::<PlayerSkills<Side>, AssetServer>,
+				load_animations::<PlayerIdle, AssetServer>,
 			),
 		)
 		.add_systems(PreUpdate, link_animators_with_new_animation_players)
@@ -37,11 +41,11 @@ impl Plugin for AnimationsPlugin {
 			set_movement_animation::<Player, SimpleMovement, PlayerMovement>,
 		)
 		.add_systems(
-			Update,
+			PostUpdate,
 			start
-				.pipe(play_animations::<PlayerSkills<Side>, AnimationPlayer>)
-				.pipe(play_animations::<PlayerMovement, AnimationPlayer>)
-				.pipe(drop),
+				.pipe(active_animation::<Player, PlayerSkills<Side>, AnimationPlayer>)
+				.pipe(active_animation::<Player, PlayerMovement, AnimationPlayer>)
+				.pipe(idle_animation::<Player, PlayerIdle, AnimationPlayer>),
 		);
 	}
 }
@@ -49,5 +53,3 @@ impl Plugin for AnimationsPlugin {
 fn start<T: Default>() -> T {
 	T::default()
 }
-
-fn drop<T>(_: In<T>) {}

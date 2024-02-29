@@ -17,12 +17,12 @@ pub struct Skill<TAnimationKey = PlayerSkills<SideUnset>, TData = ()> {
 	pub data: TData,
 	pub cast: Cast,
 	pub soft_override: bool,
-	pub animate: TAnimationKey,
+	pub animate: Option<TAnimationKey>,
 	pub execution: SkillExecution,
 	pub is_usable_with: HashSet<ItemType>,
 }
 
-impl<TAnimationKey: Default, TData: Default> Default for Skill<TAnimationKey, TData> {
+impl<TAnimationKey, TData: Default> Default for Skill<TAnimationKey, TData> {
 	fn default() -> Self {
 		Self {
 			name: Default::default(),
@@ -55,10 +55,8 @@ impl Default for Cast {
 	}
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PlayerSkills<TSide> {
-	#[default]
-	Idle,
 	Shoot(Handed<TSide>),
 	SwordStrike(TSide),
 }
