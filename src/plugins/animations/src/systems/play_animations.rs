@@ -9,26 +9,48 @@ use bevy::{
 	ecs::{
 		component::Component,
 		entity::Entity,
-		system::{Commands, Query, Res},
+		system::{Commands, In, Query, Res},
 		world::Mut,
 	},
 };
 use common::components::Animate;
-use std::hash::Hash;
+use std::{collections::HashSet, hash::Hash};
+
+pub(crate) type PlayingAnimations = HashSet<Entity>;
 
 pub(crate) fn play_animations<
 	TAnimationKey: Clone + Copy + Hash + Eq + Sync + Send + 'static,
 	TAnimationPlayer: Component + RepeatAnimation + ReplayAnimation,
 >(
+	playing_animations: In<PlayingAnimations>,
 	mut commands: Commands,
 	animations: Res<Animations<TAnimationKey>>,
 	agents: Query<(Entity, &Animator, &Animate<TAnimationKey>)>,
 	mut animation_players: Query<&mut TAnimationPlayer>,
-) {
-	for (agent, animator, animate) in &agents {
+) -> PlayingAnimations {
+	let not_already_playing = |(agent, ..): &(Entity, &Animator, &Animate<TAnimationKey>)| {
+		!playing_animations.0.contains(agent)
+	};
+	let execute_animation = |(agent, animator, animate)| {
 		play_animation(&mut animation_players, animator, animate, &animations);
 		commands.entity(agent).remove::<Animate<TAnimationKey>>();
-	}
+		agent
+	};
+	let mut busy = agents
+		.iter()
+		.filter(not_already_playing)
+		.filter(not_animate_none)
+		.map(execute_animation)
+		.collect::<HashSet<_>>();
+
+	busy.extend(playing_animations.0);
+	busy
+}
+
+fn not_animate_none<TAnimationKey: Clone + Copy + Hash + Eq + Sync + Send + 'static>(
+	(.., animate): &(Entity, &Animator, &Animate<TAnimationKey>),
+) -> bool {
+	animate != &&Animate::<TAnimationKey>::None
 }
 
 fn play_animation<
@@ -87,8 +109,10 @@ mod tests {
 		animation::AnimationClip,
 		app::{App, Update},
 		asset::{AssetId, Handle},
+		ecs::system::{In, IntoSystem, Resource},
 		utils::Uuid,
 	};
+	use common::test_tools::utils::SingleThreadedApp;
 	use mockall::{mock, predicate::eq};
 	use std::collections::HashMap;
 
@@ -133,9 +157,38 @@ mod tests {
 		}
 	}
 
+	#[derive(Component, Debug, PartialEq)]
+	struct _Playing;
+
+	#[derive(Resource, Default)]
+	struct _FakeAlreadyPlaying(HashSet<Entity>);
+
+	fn track_playing(playing: In<PlayingAnimations>, mut commands: Commands) {
+		for entity in playing.0 {
+			commands.entity(entity).insert(_Playing);
+		}
+	}
+
+	fn fake_already_playing(fakes: Res<_FakeAlreadyPlaying>) -> PlayingAnimations {
+		fakes.0.clone()
+	}
+
+	fn setup() -> App {
+		let mut app = App::new_single_threaded([Update]);
+		app.init_resource::<_FakeAlreadyPlaying>();
+		app.add_systems(
+			Update,
+			fake_already_playing
+				.pipe(play_animations::<_Key, _Player>)
+				.pipe(track_playing),
+		);
+
+		app
+	}
+
 	#[test]
 	fn replay_animation() {
-		let mut app = App::new();
+		let mut app = setup();
 		let mut mock_player = _Player::new();
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
@@ -161,13 +214,12 @@ mod tests {
 			Animate::Replay(_Key::A),
 		));
 
-		app.add_systems(Update, play_animations::<_Key, _Player>);
 		app.update();
 	}
 
 	#[test]
 	fn repeat_animation() {
-		let mut app = App::new();
+		let mut app = setup();
 		let mut mock_player = _Player::new();
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
@@ -193,13 +245,12 @@ mod tests {
 			Animate::Repeat(_Key::A),
 		));
 
-		app.add_systems(Update, play_animations::<_Key, _Player>);
 		app.update();
 	}
 
 	#[test]
 	fn remove_animate() {
-		let mut app = App::new();
+		let mut app = setup();
 		let mut mock_player = _Player::new();
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
@@ -223,11 +274,124 @@ mod tests {
 			))
 			.id();
 
-		app.add_systems(Update, play_animations::<_Key, _Player>);
 		app.update();
 
 		let agent = app.world.entity(agent);
 
 		assert!(!agent.contains::<Animate<_Key>>());
+	}
+
+	#[test]
+	fn return_playing_animations() {
+		let mut app = setup();
+		let mut mock_player = _Player::new();
+		app.insert_resource(Animations(HashMap::from([
+			(_Key::A, Handle::default()),
+			(_Key::B, Handle::default()),
+		])));
+
+		mock_player.mock.expect_replay().return_const(());
+		mock_player.mock.expect_repeat().return_const(());
+
+		let animation_player_id = Some(app.world.spawn(mock_player).id());
+		let animate = app
+			.world
+			.spawn((
+				Animator {
+					animation_player_id,
+				},
+				Animate::Replay(_Key::A),
+			))
+			.id();
+
+		app.update();
+
+		let animate = app.world.entity(animate);
+
+		assert_eq!(Some(&_Playing), animate.get::<_Playing>());
+	}
+
+	#[test]
+	fn return_incoming_playing_animations() {
+		let mut app = setup();
+		app.insert_resource(Animations(HashMap::from([
+			(_Key::A, Handle::default()),
+			(_Key::B, Handle::default()),
+		])));
+
+		let fake_busy = app.world.spawn_empty().id();
+		app.world
+			.resource_mut::<_FakeAlreadyPlaying>()
+			.0
+			.insert(fake_busy);
+
+		app.update();
+
+		let fake_busy = app.world.entity(fake_busy);
+
+		assert_eq!(Some(&_Playing), fake_busy.get::<_Playing>());
+	}
+
+	#[test]
+	fn do_not_play_animation_when_contained_in_incoming_playing_animations() {
+		let mut app = setup();
+		let mut mock_player = _Player::new();
+		app.insert_resource(Animations(HashMap::from([
+			(_Key::A, Handle::default()),
+			(_Key::B, Handle::default()),
+		])));
+
+		mock_player.mock.expect_replay().never().return_const(());
+		mock_player.mock.expect_repeat().never().return_const(());
+
+		let animation_player_id = Some(app.world.spawn(mock_player).id());
+		let animate = app
+			.world
+			.spawn((
+				Animator {
+					animation_player_id,
+				},
+				Animate::Replay(_Key::A),
+			))
+			.id();
+		app.world
+			.resource_mut::<_FakeAlreadyPlaying>()
+			.0
+			.insert(animate);
+
+		app.update();
+
+		let animate = app.world.entity(animate);
+
+		assert_eq!(Some(&_Playing), animate.get::<_Playing>());
+	}
+	#[test]
+	fn do_not_return_playing_animations_when_animation_is_none() {
+		let mut app = setup();
+		let mut mock_player = _Player::new();
+		app.insert_resource(Animations(HashMap::from([
+			(_Key::A, Handle::default()),
+			(_Key::B, Handle::default()),
+		])));
+
+		mock_player.mock.expect_replay().return_const(());
+		mock_player.mock.expect_repeat().return_const(());
+
+		let animation_player_id = Some(app.world.spawn(mock_player).id());
+		let animate = app
+			.world
+			.spawn((
+				Animator {
+					animation_player_id,
+				},
+				Animate::<_Key>::None,
+			))
+			.id();
+
+		app.update();
+
+		let animate = app.world.entity(animate);
+
+		assert_eq!(None, animate.get::<_Playing>());
 	}
 }

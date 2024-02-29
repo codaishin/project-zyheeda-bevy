@@ -8,6 +8,7 @@ use bevy::{
 	animation::AnimationPlayer,
 	app::{App, Plugin, PreStartup, PreUpdate, Update},
 	asset::AssetServer,
+	ecs::system::{In, IntoSystem},
 };
 use common::components::{Player, Side};
 use components::PlayerMovement;
@@ -37,10 +38,16 @@ impl Plugin for AnimationsPlugin {
 		)
 		.add_systems(
 			Update,
-			(
-				play_animations::<PlayerMovement, AnimationPlayer>,
-				play_animations::<PlayerSkills<Side>, AnimationPlayer>,
-			),
+			start
+				.pipe(play_animations::<PlayerSkills<Side>, AnimationPlayer>)
+				.pipe(play_animations::<PlayerMovement, AnimationPlayer>)
+				.pipe(drop),
 		);
 	}
 }
+
+fn start<T: Default>() -> T {
+	T::default()
+}
+
+fn drop<T>(_: In<T>) {}
