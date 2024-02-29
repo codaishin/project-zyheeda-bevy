@@ -5,6 +5,4 @@ pub(crate) mod equip;
 pub(crate) mod execute_skill;
 pub(crate) mod mouse_context;
 pub(crate) mod schedule_slots;
-pub(crate) mod set_cam_ray;
-pub(crate) mod set_mouse_hover;
 pub(crate) mod slots;

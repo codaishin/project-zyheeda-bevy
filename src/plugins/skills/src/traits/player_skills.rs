@@ -1,19 +1,16 @@
 use crate::{components::Handed, skill::PlayerSkills};
 use common::{
-	components::Side,
+	components::{Player, Side},
 	traits::iteration::{Iter, IterKey, KeyValue},
 };
 
-const BASE_PATH: &str = "models/player.glb#";
-
 impl IterKey for PlayerSkills<Side> {
 	fn iterator() -> Iter<Self> {
-		Iter(Some(PlayerSkills::Idle))
+		Iter(Some(Self::Shoot(Handed::Single(Side::Main))))
 	}
 
 	fn next(current: &Iter<Self>) -> Option<Self> {
 		match current.0? {
-			Self::Idle => Some(Self::Shoot(Handed::Single(Side::Main))),
 			Self::Shoot(Handed::Single(Side::Main)) => Some(Self::Shoot(Handed::Single(Side::Off))),
 			Self::Shoot(Handed::Single(Side::Off)) => Some(Self::Shoot(Handed::Dual(Side::Main))),
 			Self::Shoot(Handed::Dual(Side::Main)) => Some(Self::Shoot(Handed::Dual(Side::Off))),
@@ -27,7 +24,6 @@ impl IterKey for PlayerSkills<Side> {
 impl KeyValue<String> for PlayerSkills<Side> {
 	fn get_value(self) -> String {
 		let value = match self {
-			Self::Idle => "Animation2",
 			Self::Shoot(Handed::Single(Side::Main)) => "Animation4",
 			Self::Shoot(Handed::Single(Side::Off)) => "Animation5",
 			Self::Shoot(Handed::Dual(Side::Main)) => "Animation6",
@@ -36,7 +32,7 @@ impl KeyValue<String> for PlayerSkills<Side> {
 			Self::SwordStrike(Side::Off) => "Animation9",
 		};
 
-		BASE_PATH.to_owned() + value
+		Player::MODEL_PATH.to_owned() + "#" + value
 	}
 }
 
@@ -47,9 +43,10 @@ mod tests {
 
 	#[test]
 	fn all_contain_base_path() {
+		let model_path_with_hash = Player::MODEL_PATH.to_owned() + "#";
 		assert!(PlayerSkills::iterator()
 			.map(PlayerSkills::<Side>::get_value)
-			.all(|path| path.starts_with(BASE_PATH)))
+			.all(|path| path.starts_with(&model_path_with_hash)))
 	}
 
 	#[test]
@@ -60,7 +57,7 @@ mod tests {
 			HashSet::from_iter(PlayerSkills::iterator().map(PlayerSkills::<Side>::get_value));
 
 		assert_eq!(
-			(7, 7, 7),
+			(6, 6, 6),
 			(keys.count(), unique_keys.len(), unique_strings.len())
 		);
 	}

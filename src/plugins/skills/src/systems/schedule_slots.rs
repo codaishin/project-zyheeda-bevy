@@ -252,12 +252,12 @@ mod tests {
 	#[test]
 	fn set_override() {
 		let mut app = setup(Keys {
-			just_pressed: vec![SlotKey::Legs],
+			just_pressed: vec![SlotKey::Hand(Side::Main)],
 			..default()
 		});
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -283,14 +283,14 @@ mod tests {
 		assert_eq!(
 			(
 				Some(&Schedule::Override((
-					SlotKey::Legs,
+					SlotKey::Hand(Side::Main),
 					Skill {
 						name: "skill",
 						..default()
 					}
 				))),
 				Some(&CurrentlyScheduling {
-					slot: SlotKey::Legs,
+					slot: SlotKey::Hand(Side::Main),
 					time_stamp: app.world.resource::<Time<Real>>().elapsed()
 				})
 			),
@@ -301,12 +301,12 @@ mod tests {
 	#[test]
 	fn set_override_combo() {
 		let mut app = setup(Keys {
-			just_pressed: vec![SlotKey::Legs],
+			just_pressed: vec![SlotKey::Hand(Side::Main)],
 			..default()
 		});
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -333,7 +333,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&Schedule::Override((
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Skill {
 					name: "combo skill",
 					..default()
@@ -346,12 +346,12 @@ mod tests {
 	#[test]
 	fn do_not_set_when_no_skill() {
 		let mut app = setup(Keys {
-			just_pressed: vec![SlotKey::Legs],
+			just_pressed: vec![SlotKey::Hand(Side::Main)],
 			..default()
 		});
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item::default()),
@@ -373,12 +373,12 @@ mod tests {
 	#[test]
 	fn do_not_set_when_currently_scheduling_agent() {
 		let mut app = setup(Keys {
-			just_pressed: vec![SlotKey::Legs],
+			just_pressed: vec![SlotKey::Hand(Side::Main)],
 			..default()
 		});
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -399,7 +399,7 @@ mod tests {
 				_Agent,
 				slots,
 				CurrentlyScheduling {
-					slot: SlotKey::Legs,
+					slot: SlotKey::Hand(Side::Main),
 					time_stamp: Duration::ZERO,
 				},
 			))
@@ -416,12 +416,12 @@ mod tests {
 	#[test]
 	fn do_not_set_when_no_agent() {
 		let mut app = setup(Keys {
-			just_pressed: vec![SlotKey::Legs],
+			just_pressed: vec![SlotKey::Hand(Side::Main)],
 			..default()
 		});
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -449,12 +449,12 @@ mod tests {
 	#[test]
 	fn set_when_2nd_pressed_key_matches_a_slot() {
 		let mut app = setup(Keys {
-			just_pressed: vec![SlotKey::Hand(Side::Main), SlotKey::Legs],
+			just_pressed: vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
 			..default()
 		});
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -481,14 +481,14 @@ mod tests {
 		assert_eq!(
 			(
 				Some(&Schedule::Override((
-					SlotKey::Legs,
+					SlotKey::Hand(Side::Main),
 					Skill {
 						name: "skill",
 						..default()
 					}
 				))),
 				Some(&CurrentlyScheduling {
-					slot: SlotKey::Legs,
+					slot: SlotKey::Hand(Side::Main),
 					time_stamp: app.world.resource::<Time<Real>>().elapsed()
 				})
 			),
@@ -499,13 +499,13 @@ mod tests {
 	#[test]
 	fn set_enqueue() {
 		let mut app = setup(Keys {
-			just_pressed: vec![SlotKey::Legs],
+			just_pressed: vec![SlotKey::Hand(Side::Main)],
 			should_enqueue: true,
 			..default()
 		});
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -532,14 +532,14 @@ mod tests {
 		assert_eq!(
 			(
 				Some(&Schedule::Enqueue((
-					SlotKey::Legs,
+					SlotKey::Hand(Side::Main),
 					Skill {
 						name: "skill",
 						..default()
 					}
 				))),
 				Some(&CurrentlyScheduling {
-					slot: SlotKey::Legs,
+					slot: SlotKey::Hand(Side::Main),
 					time_stamp: app.world.resource::<Time<Real>>().elapsed()
 				})
 			),
@@ -550,13 +550,13 @@ mod tests {
 	#[test]
 	fn set_enqueue_combo_skill() {
 		let mut app = setup(Keys {
-			just_pressed: vec![SlotKey::Legs],
+			just_pressed: vec![SlotKey::Hand(Side::Main)],
 			should_enqueue: true,
 			..default()
 		});
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -583,7 +583,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&Schedule::Enqueue((
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Skill {
 					name: "combo skill",
 					..default()
@@ -596,12 +596,12 @@ mod tests {
 	#[test]
 	fn set_aim() {
 		let mut app = setup(Keys {
-			just_released: vec![SlotKey::Legs],
+			just_released: vec![SlotKey::Hand(Side::Main)],
 			..default()
 		});
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -623,7 +623,7 @@ mod tests {
 				_Agent,
 				slots,
 				CurrentlyScheduling {
-					slot: SlotKey::Legs,
+					slot: SlotKey::Hand(Side::Main),
 					time_stamp,
 				},
 			))
@@ -653,7 +653,7 @@ mod tests {
 		});
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -681,12 +681,12 @@ mod tests {
 	#[test]
 	fn set_aim_with_2nd_just_released_key() {
 		let mut app = setup(Keys {
-			just_released: vec![SlotKey::Hand(Side::Main), SlotKey::Legs],
+			just_released: vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
 			..default()
 		});
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -708,7 +708,7 @@ mod tests {
 				_Agent,
 				slots,
 				CurrentlyScheduling {
-					slot: SlotKey::Legs,
+					slot: SlotKey::Hand(Side::Main),
 					time_stamp,
 				},
 			))
@@ -729,12 +729,12 @@ mod tests {
 	#[test]
 	fn update_target_on_hold() {
 		let mut app = setup(Keys {
-			pressed: vec![SlotKey::Legs],
+			pressed: vec![SlotKey::Hand(Side::Main)],
 			..default()
 		});
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -756,7 +756,7 @@ mod tests {
 				_Agent,
 				slots,
 				CurrentlyScheduling {
-					slot: SlotKey::Legs,
+					slot: SlotKey::Hand(Side::Main),
 					time_stamp,
 				},
 			))
@@ -779,7 +779,7 @@ mod tests {
 		});
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -801,7 +801,7 @@ mod tests {
 				_Agent,
 				slots,
 				CurrentlyScheduling {
-					slot: SlotKey::Legs,
+					slot: SlotKey::Hand(Side::Off),
 					time_stamp,
 				},
 			))
@@ -819,12 +819,12 @@ mod tests {
 	#[test]
 	fn update_target_with_2nd_hold_key() {
 		let mut app = setup(Keys {
-			pressed: vec![SlotKey::Hand(Side::Main), SlotKey::Legs],
+			pressed: vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
 			..default()
 		});
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -846,7 +846,7 @@ mod tests {
 				_Agent,
 				slots,
 				CurrentlyScheduling {
-					slot: SlotKey::Legs,
+					slot: SlotKey::Hand(Side::Main),
 					time_stamp,
 				},
 			))
@@ -864,7 +864,7 @@ mod tests {
 	#[test]
 	fn call_just_pressed_with_slot_map() {
 		let mut app = App::new();
-		let slot_map = SlotMap::new([(KeyCode::A, SlotKey::Legs, "")]);
+		let slot_map = SlotMap::new([(KeyCode::A, SlotKey::Hand(Side::Main), "")]);
 
 		app.init_resource::<Time<Real>>();
 		app.insert_resource(slot_map.clone());
@@ -889,7 +889,7 @@ mod tests {
 	#[test]
 	fn call_pressed_with_slot_map() {
 		let mut app = App::new();
-		let slot_map = SlotMap::new([(KeyCode::A, SlotKey::Legs, "")]);
+		let slot_map = SlotMap::new([(KeyCode::A, SlotKey::Hand(Side::Main), "")]);
 
 		app.init_resource::<Time<Real>>();
 		app.insert_resource(slot_map.clone());
@@ -914,7 +914,7 @@ mod tests {
 	#[test]
 	fn call_just_released_with_slot_map() {
 		let mut app = App::new();
-		let slot_map = SlotMap::new([(KeyCode::A, SlotKey::Legs, "")]);
+		let slot_map = SlotMap::new([(KeyCode::A, SlotKey::Hand(Side::Main), "")]);
 
 		app.init_resource::<Time<Real>>();
 		app.insert_resource(slot_map.clone());

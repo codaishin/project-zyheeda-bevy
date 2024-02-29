@@ -13,6 +13,7 @@ use bevy_rapier3d::prelude::*;
 use common::{
 	components::{ColliderRoot, GroundOffset, Health, Player},
 	tools::UnitsPerSecond,
+	CommonPlugin,
 };
 use ingame_menu::IngameMenuPlugin;
 use interactions::InteractionsPlugin;
@@ -38,6 +39,7 @@ fn main() {
 fn prepare_game(app: &mut App) {
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+		.add_plugins(CommonPlugin)
 		.add_plugins(PrefabsPlugin)
 		.add_plugins(IngameMenuPlugin)
 		.add_plugins(InteractionsPlugin)
@@ -205,7 +207,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			Health::new(100),
 			Bar::default(),
 			SceneBundle {
-				scene: asset_server.load("models/player.glb#Scene0"),
+				scene: asset_server.load(Player::MODEL_PATH.to_owned() + "#Scene0"),
 				..default()
 			},
 			Animator { ..default() },

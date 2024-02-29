@@ -44,6 +44,7 @@ fn set_first_section(text: &mut Mut<Text>, value: &str) {
 mod tests {
 	use super::*;
 	use bevy::app::{App, Update};
+	use common::components::Side;
 
 	struct _T;
 
@@ -51,10 +52,17 @@ mod tests {
 	fn add_section_to_text() {
 		let mut app = App::new();
 
-		app.insert_resource(SlotMap::new([(KeyCode::Q, SlotKey::Legs, "IIIIII")]));
+		app.insert_resource(SlotMap::new([(
+			KeyCode::Q,
+			SlotKey::Hand(Side::Main),
+			"IIIIII",
+		)]));
 		let id = app
 			.world
-			.spawn((Label::<_T, SlotKey>::new(SlotKey::Legs), Text::default()))
+			.spawn((
+				Label::<_T, SlotKey>::new(SlotKey::Hand(Side::Main)),
+				Text::default(),
+			))
 			.id();
 
 		app.add_systems(Update, update_label_text::<_T>);
@@ -72,11 +80,15 @@ mod tests {
 	fn override_first_section() {
 		let mut app = App::new();
 
-		app.insert_resource(SlotMap::new([(KeyCode::Q, SlotKey::Legs, "IIIIII")]));
+		app.insert_resource(SlotMap::new([(
+			KeyCode::Q,
+			SlotKey::Hand(Side::Main),
+			"IIIIII",
+		)]));
 		let id = app
 			.world
 			.spawn((
-				Label::<_T, SlotKey>::new(SlotKey::Legs),
+				Label::<_T, SlotKey>::new(SlotKey::Hand(Side::Main)),
 				Text::from_section("OVERRIDE THIS", default()),
 			))
 			.id();

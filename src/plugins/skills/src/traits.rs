@@ -2,10 +2,8 @@ pub(crate) mod bevy_input;
 pub(crate) mod game_state;
 pub(crate) mod inventory;
 pub(crate) mod mouse_hover;
-pub(crate) mod player_animation_states;
+pub(crate) mod player_skills;
 pub(crate) mod projectile;
-pub(crate) mod queue;
-pub(crate) mod simple_movement;
 pub(crate) mod skill;
 pub(crate) mod skill_combo_next;
 pub(crate) mod skill_state;
@@ -43,10 +41,6 @@ pub(crate) trait GetAnimation<TAnimationKey: Clone + Copy> {
 	fn animate(&self) -> Animate<TAnimationKey>;
 }
 
-pub(crate) trait HasIdle<TAnimationKey: Clone + Copy> {
-	const IDLE: Animate<TAnimationKey>;
-}
-
 pub(crate) trait WithComponent<T: Component + Copy> {
 	fn with_component(&self, query: &Query<&T>) -> Option<ColliderInfo<Outdated<T>>>;
 }
@@ -58,7 +52,6 @@ pub trait GetExecution {
 pub(crate) trait Execution {
 	fn run(&self, agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner);
 	fn stop(&self, agent: &mut EntityCommands);
-	fn apply_transform(&self, transform: &mut Transform, spawner: &Spawner);
 }
 
 pub trait InputState<TKey: Eq + Hash> {
@@ -117,15 +110,6 @@ pub(crate) mod test_tools {
 			};
 			let mut agent = commands.entity(agent);
 			run(&mut agent, &agent_transform, &spawner, &select_info);
-		}
-	}
-
-	pub fn stop_lazy(behavior: SkillExecution, agent: Entity) -> impl FnMut(Commands) {
-		move |mut commands| {
-			let Some(stop) = behavior.stop_fn else {
-				return;
-			};
-			stop(&mut commands.entity(agent));
 		}
 	}
 }

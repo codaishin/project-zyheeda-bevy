@@ -1,5 +1,6 @@
 pub(crate) mod beam;
 pub(crate) mod beam_config;
+pub(crate) mod bundle;
 pub(crate) mod cam_orbit;
 pub(crate) mod movement_config;
 pub(crate) mod projectile;
@@ -8,7 +9,10 @@ pub(crate) mod void_sphere;
 
 use crate::components::{Attacker, MovementMode, Target};
 use bevy::{
-	ecs::system::Commands,
+	ecs::{
+		bundle::Bundle,
+		system::{Commands, EntityCommands},
+	},
 	math::{Vec2, Vec3},
 	transform::components::Transform,
 };
@@ -38,6 +42,7 @@ pub(crate) trait MoveTogether {
 
 pub(crate) trait Movement {
 	fn update(&mut self, agent: &mut Transform, distance: Units) -> IsDone;
+	fn cleanup(&self, agent: &mut EntityCommands);
 }
 
 type DespawnFn = Arc<dyn Fn(&mut Commands) + Sync + Send>;
@@ -54,4 +59,8 @@ impl<T: SpawnAttack> ToArc for T {
 	fn to_arc(self) -> Arc<Self> {
 		Arc::new(self)
 	}
+}
+
+pub trait RemoveComponent<T: Bundle> {
+	fn get_remover() -> fn(&mut EntityCommands);
 }

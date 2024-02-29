@@ -19,6 +19,7 @@ pub(crate) fn execute_move<
 		let is_done = movement.update(&mut transform, time.delta_seconds() * speed.to_f32());
 
 		if is_done {
+			movement.cleanup(&mut entity);
 			entity.insert(Idle);
 			entity.remove::<TMovement>();
 		}
@@ -32,6 +33,7 @@ mod test {
 		components::MovementMode,
 		traits::{IsDone, MovementData, Units},
 	};
+	use bevy::ecs::system::EntityCommands;
 	use common::tools::UnitsPerSecond;
 	use mockall::{automock, predicate::eq};
 	use std::time::Duration;
@@ -47,6 +49,9 @@ mod test {
 		pub mock: Mock_Movement,
 	}
 
+	#[derive(Component)]
+	struct _Cleaned;
+
 	impl _Movement {
 		fn new() -> Self {
 			Self {
@@ -59,6 +64,11 @@ mod test {
 	impl Movement for _Movement {
 		fn update(&mut self, agent: &mut Transform, distance: Units) -> IsDone {
 			self.mock.update(agent, distance)
+		}
+
+		#[allow(clippy::needless_lifetimes)]
+		fn cleanup<'w, 's, 'a>(&self, agent: &mut EntityCommands<'w, 's, 'a>) {
+			agent.insert(_Cleaned);
 		}
 	}
 
@@ -183,5 +193,23 @@ mod test {
 		let agent = app.world.entity(agent);
 
 		assert!(!agent.contains::<_Movement>());
+	}
+
+	#[test]
+	fn call_cleanup_when_done() {
+		let mut app = setup_app();
+		let transform = Transform::from_xyz(1., 2., 3.);
+		let config = ConfigSlow;
+		let mut movement = _Movement::new();
+
+		movement.mock.expect_update().return_const(true);
+
+		let agent = app.world.spawn((config, movement, transform)).id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert!(agent.contains::<_Cleaned>());
 	}
 }

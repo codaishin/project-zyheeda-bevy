@@ -36,13 +36,6 @@ impl<TAnimationKey> Execution for Track<Skill<TAnimationKey, Active>> {
 		};
 		stop(agent);
 	}
-
-	fn apply_transform(&self, transform: &mut Transform, spawner: &Spawner) {
-		let Some(apply_transform) = self.value.execution.transform_fn else {
-			return;
-		};
-		apply_transform(transform, spawner, &self.value.data.target);
-	}
 }
 
 #[cfg(test)]
@@ -110,7 +103,7 @@ mod tests_execution {
 		utils::default,
 	};
 	use common::{components::Outdated, resources::ColliderInfo};
-	use mockall::{mock, predicate::eq};
+	use mockall::mock;
 
 	fn test_target() -> Target {
 		Target {
@@ -146,10 +139,6 @@ mod tests_execution {
 		fn stop(_agent: &mut EntityCommands);
 	}
 
-	trait TransformFn {
-		fn transform(_agent: &mut Transform, _spawner: &Spawner, _ray: &Target);
-	}
-
 	mock! {
 		_Tools{}
 		impl StartFn for _Tools {
@@ -163,9 +152,6 @@ mod tests_execution {
 		}
 		impl StopFn for _Tools {
 			fn stop<'a, 'b, 'c>(_agent: &mut EntityCommands<'a, 'b, 'c>) {}
-		}
-		impl TransformFn for _Tools {
-			fn transform(_agent: &mut Transform, _spawner: &Spawner, _target: &Target) {}
 		}
 	}
 
@@ -230,30 +216,5 @@ mod tests_execution {
 			stop_system::<Track<Skill<PlayerSkills<SideUnset>, Active>>>(agent),
 		);
 		app.update();
-	}
-
-	#[test]
-	fn execute_transform_fn() {
-		let mut transform = Transform::from_xyz(11., 12., 13.);
-		let spawner = Spawner(GlobalTransform::from_xyz(22., 33., 44.));
-		let track = Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
-			data: Active {
-				target: test_target(),
-				..default()
-			},
-			execution: SkillExecution {
-				transform_fn: Some(Mock_Tools::transform),
-				..default()
-			},
-			..default()
-		});
-
-		let ctx = Mock_Tools::transform_context();
-		ctx.expect()
-			.times(1)
-			.with(eq(transform), eq(spawner), eq(test_target()))
-			.return_const(());
-
-		track.apply_transform(&mut transform, &spawner);
 	}
 }

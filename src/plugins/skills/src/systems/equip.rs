@@ -922,7 +922,7 @@ mod tests {
 						..default()
 					},
 					_Source {
-						slot: SlotKey::Legs,
+						slot: SlotKey::SkillSpawn,
 						item: Some(Item {
 							name: "Some Item",
 							skill: None,
@@ -949,7 +949,7 @@ mod tests {
 			(
 				Some(model),
 				Some(&Collection::new([_Source {
-					slot: SlotKey::Legs,
+					slot: SlotKey::SkillSpawn,
 					item: Some(Item {
 						name: "Some Item",
 						skill: None,

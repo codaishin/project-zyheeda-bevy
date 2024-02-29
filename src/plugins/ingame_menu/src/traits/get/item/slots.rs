@@ -41,10 +41,10 @@ mod tests {
 	}
 
 	#[test]
-	fn get_legs() {
+	fn get_main_hand() {
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -62,7 +62,7 @@ mod tests {
 				name: "my item",
 				..default()
 			}),
-			slots.get(SlotKey::Legs)
+			slots.get(SlotKey::Hand(Side::Main))
 		);
 	}
 
@@ -70,7 +70,7 @@ mod tests {
 	fn get_none() {
 		let slots = Slots(
 			[(
-				SlotKey::Legs,
+				SlotKey::Hand(Side::Main),
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item {
@@ -83,6 +83,6 @@ mod tests {
 			.into(),
 		);
 
-		assert_eq!(None, slots.get(SlotKey::Hand(Side::Main)));
+		assert_eq!(None, slots.get(SlotKey::Hand(Side::Off)));
 	}
 }

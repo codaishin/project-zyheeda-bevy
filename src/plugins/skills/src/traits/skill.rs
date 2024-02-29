@@ -7,8 +7,10 @@ use common::components::{Animate, Side};
 
 impl GetAnimation<PlayerSkills<Side>> for Track<Skill<PlayerSkills<SideUnset>, Active>> {
 	fn animate(&self) -> Animate<PlayerSkills<Side>> {
-		match (self.value.animate, self.value.data.slot_key) {
-			(PlayerSkills::Idle, _) => Animate::Repeat(PlayerSkills::Idle),
+		let Some(animate) = self.value.animate else {
+			return Animate::None;
+		};
+		match (animate, self.value.data.slot_key) {
 			(PlayerSkills::Shoot(dual_or_single), SlotKey::Hand(side)) => {
 				Animate::Repeat(PlayerSkills::Shoot(dual_or_single.on(side)))
 			}
@@ -27,22 +29,6 @@ mod tests {
 	use bevy::prelude::default;
 
 	#[test]
-	fn get_simple_repeat_animations() {
-		let animates: [PlayerSkills<SideUnset>; 1] = [PlayerSkills::Idle];
-		let tracks = animates.map(|animate| {
-			Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
-				animate,
-				..default()
-			})
-		});
-
-		assert_eq!(
-			[Animate::<PlayerSkills<Side>>::Repeat(PlayerSkills::Idle)],
-			tracks.map(|track| track.animate())
-		);
-	}
-
-	#[test]
 	fn get_shoot_animations() {
 		let animates = [
 			PlayerSkills::Shoot(Handed::Single(SideUnset)),
@@ -54,7 +40,7 @@ mod tests {
 					slot_key: SlotKey::Hand(Side::Main),
 					..default()
 				},
-				animate,
+				animate: Some(animate),
 				..default()
 			})
 		});
@@ -64,7 +50,7 @@ mod tests {
 					slot_key: SlotKey::Hand(Side::Off),
 					..default()
 				},
-				animate,
+				animate: Some(animate),
 				..default()
 			})
 		});
@@ -95,7 +81,7 @@ mod tests {
 				slot_key: SlotKey::Hand(Side::Main),
 				..default()
 			},
-			animate,
+			animate: Some(animate),
 			..default()
 		});
 		let off_track = Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
@@ -103,7 +89,7 @@ mod tests {
 				slot_key: SlotKey::Hand(Side::Off),
 				..default()
 			},
-			animate,
+			animate: Some(animate),
 			..default()
 		});
 

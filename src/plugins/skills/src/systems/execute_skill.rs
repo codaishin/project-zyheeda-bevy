@@ -3,6 +3,7 @@ use crate::{
 	skill::{SkillState, Spawner},
 	traits::{Execution, GetAnimation},
 };
+use behaviors::components::{Face, OverrideFace};
 use bevy::{
 	ecs::{
 		component::Component,
@@ -19,13 +20,12 @@ use common::{
 };
 use std::{collections::HashSet, time::Duration};
 
-type Skills<'a, TAnimationKey, TSkill> = (
+type Skills<'a, TSkill> = (
 	Entity,
 	&'a mut Transform,
 	&'a mut TSkill,
 	&'a Slots,
 	Option<&'a Idle>,
-	Option<&'a Animate<TAnimationKey>>,
 );
 
 pub(crate) fn execute_skill<
@@ -35,29 +35,31 @@ pub(crate) fn execute_skill<
 >(
 	time: Res<Time<TTime>>,
 	mut commands: Commands,
-	mut agents: Query<Skills<TAnimationKey, TSkill>>,
+	mut agents: Query<Skills<TSkill>>,
 	transforms: Query<&GlobalTransform>,
 ) {
 	let delta = time.delta();
-	for (entity, mut agent_transform, mut skill, slots, wait_next, animate) in &mut agents {
+	for (entity, mut agent_transform, mut skill, slots, idle) in &mut agents {
 		let agent = &mut commands.entity(entity);
 		let agent_transform = &mut agent_transform;
 		let skill = &mut skill;
 		let transforms = &transforms;
 
-		let states = get_states(skill, &delta, wait_next);
+		let states = get_states(skill, &delta, idle);
 
 		if states.contains(&StateMeta::First) {
-			handle_new(agent, agent_transform, skill, slots, transforms);
+			agent.try_insert(OverrideFace(Face::Cursor));
 		}
 		if states.contains(&StateMeta::In(SkillState::Aim)) {
-			apply_transform(skill, agent_transform, slots, transforms);
+			agent.try_insert(OverrideFace(Face::Cursor));
 		}
 		if states.contains(&StateMeta::Leaving(SkillState::PreCast)) {
 			handle_active(agent, agent_transform, skill, slots, transforms);
 		}
 		if states.contains(&StateMeta::Leaving(SkillState::AfterCast)) {
-			handle_done(agent, skill, animate);
+			handle_done(agent, skill);
+		} else {
+			agent.try_insert(skill.animate());
 		}
 	}
 }
@@ -72,31 +74,6 @@ fn get_states<TSkill: StateUpdate<SkillState>>(
 	}
 
 	skill.update_state(*delta)
-}
-
-fn handle_new<
-	TAnimationKey: Clone + Copy + Send + Sync + 'static,
-	TSkill: Execution + GetAnimation<TAnimationKey>,
->(
-	agent: &mut EntityCommands,
-	transform: &mut Mut<Transform>,
-	skill: &mut Mut<TSkill>,
-	slots: &Slots,
-	transforms: &Query<&GlobalTransform>,
-) {
-	apply_transform(skill, transform, slots, transforms);
-	agent.insert(skill.animate());
-}
-
-fn apply_transform<TSkill: Execution>(
-	skill: &Mut<TSkill>,
-	transform: &mut Mut<Transform>,
-	slots: &Slots,
-	transforms: &Query<&GlobalTransform>,
-) {
-	if let Some(spawner) = get_spawner(slots, transforms) {
-		skill.apply_transform(transform, &spawner);
-	};
 }
 
 fn handle_active<TSkill: Execution>(
@@ -118,28 +95,10 @@ fn handle_done<
 >(
 	agent: &mut EntityCommands,
 	skill: &mut Mut<TSkill>,
-	animate: Option<&Animate<TAnimationKey>>,
 ) {
-	agent.remove::<TSkill>();
-	if current_animation_is_from_skill(skill, animate) {
-		agent.remove::<Animate<TAnimationKey>>();
-	}
-	agent.insert(Idle);
+	agent.try_insert(Idle);
+	agent.remove::<(TSkill, OverrideFace, Animate<TAnimationKey>)>();
 	skill.stop(agent);
-}
-
-fn current_animation_is_from_skill<
-	TAnimationKey: Clone + Copy + Send + Sync + PartialEq + 'static,
-	TSkill: GetAnimation<TAnimationKey> + Component,
->(
-	skill: &mut Mut<TSkill>,
-	animate: Option<&Animate<TAnimationKey>>,
-) -> bool {
-	let Some(animate) = animate else {
-		return false;
-	};
-
-	animate == &skill.animate()
 }
 
 fn get_spawner(slots: &Slots, transforms: &Query<&GlobalTransform>) -> Option<Spawner> {
@@ -153,6 +112,7 @@ mod tests {
 	use crate::components::Slot;
 
 	use super::*;
+	use behaviors::components::{Face, OverrideFace};
 	use bevy::{
 		ecs::component::Component,
 		prelude::{App, Transform, Update, Vec3},
@@ -166,7 +126,6 @@ mod tests {
 	enum BehaviorOption {
 		Run,
 		Stop,
-		Transform,
 	}
 
 	#[derive(PartialEq)]
@@ -195,9 +154,6 @@ mod tests {
 			if !no_setup.contains(&MockOption::BehaviorExecution(BehaviorOption::Stop)) {
 				mock.expect_stop().return_const(());
 			}
-			if !no_setup.contains(&MockOption::BehaviorExecution(BehaviorOption::Transform)) {
-				mock.expect_apply_transform().return_const(());
-			}
 			if !no_setup.contains(&MockOption::Animate) {
 				mock.expect_animate().return_const(Animate::None);
 			}
@@ -220,10 +176,6 @@ mod tests {
 		fn stop(&self, agent: &mut EntityCommands) {
 			self.mock.stop(agent)
 		}
-
-		fn apply_transform(&self, transform: &mut Transform, spawner: &Spawner) {
-			self.mock.apply_transform(transform, spawner)
-		}
 	}
 
 	impl GetAnimation<_AnimationKey> for _Skill {
@@ -240,7 +192,6 @@ mod tests {
 		impl Execution for _Skill {
 			fn run<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>, agent_transform: &Transform, spawner: &Spawner) {}
 			fn stop<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>) {}
-			fn apply_transform(&self, transform: &mut Transform, spawner: &Spawner) {}
 		}
 		impl GetAnimation<_AnimationKey> for _Skill {
 			fn animate(&self) -> Animate<_AnimationKey> {}
@@ -302,52 +253,49 @@ mod tests {
 	}
 
 	#[test]
-	fn add_animation_when_new() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill = _Skill::without_default_setup_for([]);
+	fn add_animation_on_each_state_except_when_done() {
+		//FIXME: This needs to be some kind of fixture. Maybe try `rstest` crate?
+		let states = [
+			StateMeta::First,
+			StateMeta::In(SkillState::PreCast),
+			StateMeta::Leaving(SkillState::PreCast),
+			StateMeta::In(SkillState::Aim),
+			StateMeta::Leaving(SkillState::Aim),
+			StateMeta::In(SkillState::Active),
+			StateMeta::Leaving(SkillState::Active),
+			StateMeta::In(SkillState::AfterCast),
+		];
 
-		skill
-			.mock
-			.expect_update_state()
-			.return_const(HashSet::<StateMeta<SkillState>>::from([StateMeta::First]));
+		for state in states {
+			let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+			let mut skill = _Skill::without_default_setup_for([MockOption::Animate]);
+			skill
+				.mock
+				.expect_update_state()
+				.return_const(HashSet::<StateMeta<SkillState>>::from([state]));
+			skill
+				.mock
+				.expect_animate()
+				.return_const(Animate::Repeat(_AnimationKey::A));
 
-		app.world
-			.entity_mut(agent)
-			.insert((skill, Transform::default()));
-		app.update();
+			app.world
+				.entity_mut(agent)
+				.insert((skill, Transform::default()));
+			app.update();
 
-		let agent = app.world.entity(agent);
+			let agent = app.world.entity(agent);
 
-		assert_eq!(Some(&Animate::None), agent.get::<Animate<_AnimationKey>>());
+			assert_eq!(
+				Some(&Animate::Repeat(_AnimationKey::A)),
+				agent.get::<Animate<_AnimationKey>>()
+			);
+		}
 	}
 
 	#[test]
-	fn do_not_add_animate_when_not_new() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill = _Skill::without_default_setup_for([]);
-
-		skill
-			.mock
-			.expect_update_state()
-			.return_const(HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
-				SkillState::Active,
-			)]));
-
-		app.world
-			.entity_mut(agent)
-			.insert((skill, Transform::default()));
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert!(!agent.contains::<Animate<_AnimationKey>>());
-	}
-
-	#[test]
-	fn remove_animation() {
+	fn no_animation_when_done() {
 		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([MockOption::Animate]);
-
 		skill
 			.mock
 			.expect_update_state()
@@ -357,85 +305,16 @@ mod tests {
 		skill
 			.mock
 			.expect_animate()
-			.times(1)
 			.return_const(Animate::Repeat(_AnimationKey::A));
 
-		app.world.entity_mut(agent).insert((
-			skill,
-			Transform::default(),
-			Animate::Repeat(_AnimationKey::A),
-		));
-
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Animate<_AnimationKey>>());
-	}
-
-	#[test]
-	fn do_not_remove_not_matching_animation() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill = _Skill::without_default_setup_for([MockOption::Animate]);
-
-		skill
-			.mock
-			.expect_update_state()
-			.return_const(HashSet::<StateMeta<SkillState>>::from([
-				StateMeta::Leaving(SkillState::AfterCast),
-			]));
-		skill
-			.mock
-			.expect_animate()
-			.times(1)
-			.return_const(Animate::Replay(_AnimationKey::A));
-
-		app.world.entity_mut(agent).insert((
-			skill,
-			Transform::default(),
-			Animate::Repeat(_AnimationKey::A),
-		));
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			Some(&Animate::Repeat(_AnimationKey::A)),
-			agent.get::<Animate<_AnimationKey>>()
-		);
-	}
-
-	#[test]
-	fn do_not_remove_animate_when_not_done() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill = _Skill::without_default_setup_for([MockOption::Animate]);
-
-		skill
-			.mock
-			.expect_update_state()
-			.return_const(HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
-				SkillState::AfterCast,
-			)]));
-		skill
-			.mock
-			.expect_animate()
-			.return_const(Animate::Replay(_AnimationKey::A));
-
-		app.world.entity_mut(agent).insert((
-			skill,
-			Transform::default(),
-			Animate::Replay(_AnimationKey::A),
-		));
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			Some(&Animate::Replay(_AnimationKey::A)),
-			agent.get::<Animate<_AnimationKey>>()
-		);
+		assert_eq!(None, agent.get::<Animate<_AnimationKey>>());
 	}
 
 	#[test]
@@ -485,7 +364,7 @@ mod tests {
 	}
 
 	#[test]
-	fn add_wait_next() {
+	fn add_idle() {
 		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
@@ -508,7 +387,7 @@ mod tests {
 	}
 
 	#[test]
-	fn do_not_add_wait_next_when_not_done() {
+	fn do_not_add_idle_when_not_done() {
 		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
@@ -531,7 +410,7 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_all_related_components_when_dequeue_next_present() {
+	fn remove_all_related_components_when_idle_present() {
 		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([MockOption::Animate]);
 
@@ -542,7 +421,7 @@ mod tests {
 		skill
 			.mock
 			.expect_animate()
-			.times(1)
+			.never()
 			.return_const(Animate::Repeat(_AnimationKey::A));
 
 		app.world.entity_mut(agent).insert((
@@ -664,37 +543,33 @@ mod tests {
 	}
 
 	#[test]
-	fn apply_transform() {
+	fn apply_facing() {
 		let (mut app, agent) = setup_app(Vec3::new(11., 12., 13.), Vec3::ZERO);
-		let mut skill = _Skill::without_default_setup_for([MockOption::BehaviorExecution(
-			BehaviorOption::Transform,
-		)]);
-
-		let spawner = Spawner(GlobalTransform::from_xyz(11., 12., 13.));
-		let transform = Transform::from_xyz(-1., -2., -3.);
+		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill
 			.mock
 			.expect_update_state()
 			.return_const(HashSet::<StateMeta<SkillState>>::from([StateMeta::First]));
-		skill
-			.mock
-			.expect_apply_transform()
-			.times(1)
-			.with(eq(transform), eq(spawner))
-			.return_const(());
 
-		app.world.entity_mut(agent).insert((skill, transform));
+		app.world
+			.entity_mut(agent)
+			.insert((skill, Transform::default()));
 
 		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&OverrideFace(Face::Cursor)),
+			agent.get::<OverrideFace>()
+		);
 	}
 
 	#[test]
-	fn do_not_apply_transform_when_not_new() {
+	fn do_not_apply_facing_when_not_new() {
 		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
-		let mut skill = _Skill::without_default_setup_for([MockOption::BehaviorExecution(
-			BehaviorOption::Transform,
-		)]);
+		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill
 			.mock
@@ -702,27 +577,23 @@ mod tests {
 			.return_const(HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
 				SkillState::Active,
 			)]));
-		skill
-			.mock
-			.expect_apply_transform()
-			.times(0)
-			.return_const(());
 
 		app.world
 			.entity_mut(agent)
 			.insert((skill, Transform::default()));
 
 		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(None, agent.get::<OverrideFace>());
 	}
 
 	#[test]
 	fn apply_transform_when_aiming() {
 		let (mut app, agent) = setup_app(Vec3::new(11., 12., 13.), Vec3::ZERO);
-		let mut skill = _Skill::without_default_setup_for([MockOption::BehaviorExecution(
-			BehaviorOption::Transform,
-		)]);
+		let mut skill = _Skill::without_default_setup_for([]);
 
-		let spawner = Spawner(GlobalTransform::from_xyz(11., 12., 13.));
 		let transform = Transform::from_xyz(-1., -2., -3.);
 
 		skill
@@ -731,15 +602,41 @@ mod tests {
 			.return_const(HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
 				SkillState::Aim,
 			)]));
-		skill
-			.mock
-			.expect_apply_transform()
-			.times(1)
-			.with(eq(transform), eq(spawner))
-			.return_const(());
 
 		app.world.entity_mut(agent).insert((skill, transform));
 
 		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&OverrideFace(Face::Cursor)),
+			agent.get::<OverrideFace>()
+		);
+	}
+
+	#[test]
+	fn no_transform_when_skill_ended() {
+		let (mut app, agent) = setup_app(Vec3::new(11., 12., 13.), Vec3::ZERO);
+		let mut skill = _Skill::without_default_setup_for([]);
+
+		let transform = Transform::from_xyz(-1., -2., -3.);
+
+		skill
+			.mock
+			.expect_update_state()
+			.return_const(HashSet::<StateMeta<SkillState>>::from([
+				StateMeta::Leaving(SkillState::AfterCast),
+			]));
+
+		app.world
+			.entity_mut(agent)
+			.insert((skill, transform, OverrideFace(Face::Cursor)));
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(None, agent.get::<OverrideFace>());
 	}
 }

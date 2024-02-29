@@ -48,7 +48,7 @@ mod test_swap_inventory_key_slot_key {
 
 	#[test]
 	fn get_item() {
-		let slot_key = SlotKey::Legs;
+		let slot_key = SlotKey::Hand(Side::Off);
 		let item = Item {
 			name: "my item",
 			..default()
@@ -61,7 +61,7 @@ mod test_swap_inventory_key_slot_key {
 
 	#[test]
 	fn get_second_item() {
-		let slot_key = SlotKey::Legs;
+		let slot_key = SlotKey::Hand(Side::Off);
 		let item = Item {
 			name: "my second item",
 			..default()
@@ -74,7 +74,7 @@ mod test_swap_inventory_key_slot_key {
 
 	#[test]
 	fn get_slot_key() {
-		let slot_key = SlotKey::Hand(Side::Off);
+		let slot_key = SlotKey::Hand(Side::Main);
 		let item = Item {
 			name: "my item",
 			..default()
@@ -161,7 +161,7 @@ mod test_swap_slot_key_inventory_key {
 
 	#[test]
 	fn get_item() {
-		let slot_key = SlotKey::Legs;
+		let slot_key = SlotKey::Hand(Side::Off);
 		let item = Item {
 			name: "my item",
 			..default()
@@ -174,7 +174,7 @@ mod test_swap_slot_key_inventory_key {
 
 	#[test]
 	fn get_second_item() {
-		let slot_key = SlotKey::Legs;
+		let slot_key = SlotKey::Hand(Side::Off);
 		let item = Item {
 			name: "my second item",
 			..default()

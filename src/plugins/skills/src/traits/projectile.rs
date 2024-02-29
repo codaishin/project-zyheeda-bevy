@@ -1,8 +1,5 @@
 use super::GetExecution;
-use crate::{
-	skill::{SkillExecution, Spawner, Target},
-	tools::look_from_spawner,
-};
+use crate::skill::{SkillExecution, Spawner, Target};
 use behaviors::components::Projectile;
 use bevy::{ecs::system::EntityCommands, prelude::SpatialBundle, transform::components::Transform};
 
@@ -11,7 +8,6 @@ impl<T: Send + Sync + 'static> GetExecution for Projectile<T> {
 		SkillExecution {
 			run_fn: Some(run_fn::<T>),
 			stop_fn: None,
-			transform_fn: Some(look_from_spawner),
 		}
 	}
 }
@@ -139,15 +135,5 @@ mod tests {
 			.unwrap();
 
 		assert_eq!(Vec3::new(1., 2., 3.), projectile_transform.translation)
-	}
-
-	#[test]
-	fn use_proper_transform_fn() {
-		let lazy = Projectile::<()>::execution();
-
-		assert_eq!(
-			Some(look_from_spawner as usize),
-			lazy.transform_fn.map(|f| f as usize)
-		);
 	}
 }
