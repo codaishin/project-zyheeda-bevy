@@ -61,14 +61,14 @@ mod test_slot_map {
 	#[test]
 	fn init_slots() {
 		let map = SlotMap::new([
-			(KeyCode::A, SlotKey::Hand(Side::Main), ""),
-			(KeyCode::B, SlotKey::SkillSpawn, ""),
+			(KeyCode::KeyA, SlotKey::Hand(Side::Main), ""),
+			(KeyCode::KeyB, SlotKey::SkillSpawn, ""),
 		]);
 
 		assert_eq!(
 			HashMap::from([
-				(KeyCode::A, SlotKey::Hand(Side::Main)),
-				(KeyCode::B, SlotKey::SkillSpawn)
+				(KeyCode::KeyA, SlotKey::Hand(Side::Main)),
+				(KeyCode::KeyB, SlotKey::SkillSpawn)
 			]),
 			map.slots
 		)
@@ -77,8 +77,8 @@ mod test_slot_map {
 	#[test]
 	fn init_ui_input_display() {
 		let map = SlotMap::new([
-			(KeyCode::A, SlotKey::Hand(Side::Main), "A"),
-			(KeyCode::B, SlotKey::SkillSpawn, "B"),
+			(KeyCode::KeyA, SlotKey::Hand(Side::Main), "A"),
+			(KeyCode::KeyB, SlotKey::SkillSpawn, "B"),
 		]);
 
 		assert_eq!(
@@ -90,14 +90,14 @@ mod test_slot_map {
 	#[test]
 	fn init_keys() {
 		let map = SlotMap::new([
-			(KeyCode::A, SlotKey::Hand(Side::Main), "A"),
-			(KeyCode::B, SlotKey::SkillSpawn, "B"),
+			(KeyCode::KeyA, SlotKey::Hand(Side::Main), "A"),
+			(KeyCode::KeyB, SlotKey::SkillSpawn, "B"),
 		]);
 
 		assert_eq!(
 			HashMap::from([
-				(SlotKey::Hand(Side::Main), KeyCode::A),
-				(SlotKey::SkillSpawn, KeyCode::B)
+				(SlotKey::Hand(Side::Main), KeyCode::KeyA),
+				(SlotKey::SkillSpawn, KeyCode::KeyB)
 			]),
 			map.keys
 		)

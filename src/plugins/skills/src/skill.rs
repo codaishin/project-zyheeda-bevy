@@ -1,7 +1,7 @@
 use crate::components::{Handed, ItemType, SideUnset, SlotKey};
 use bevy::{
 	ecs::system::EntityCommands,
-	math::Ray,
+	math::{primitives::Direction3d, Ray3d, Vec3},
 	transform::components::{GlobalTransform, Transform},
 };
 use common::{components::Outdated, resources::ColliderInfo};
@@ -72,14 +72,17 @@ impl<TAnimationKey, TData> Display for Skill<TAnimationKey, TData> {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct SelectInfo<T> {
-	pub ray: Ray,
+	pub ray: Ray3d,
 	pub collision_info: Option<ColliderInfo<T>>,
 }
 
 impl<T> Default for SelectInfo<T> {
 	fn default() -> Self {
 		Self {
-			ray: Ray::default(),
+			ray: Ray3d {
+				origin: Vec3::ZERO,
+				direction: Direction3d::NEG_Z,
+			},
 			collision_info: None,
 		}
 	}

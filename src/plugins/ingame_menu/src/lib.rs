@@ -37,7 +37,7 @@ pub struct IngameMenuPlugin;
 
 impl Plugin for IngameMenuPlugin {
 	fn build(&self, app: &mut App) {
-		app.add_state::<MenuState>()
+		app.init_state::<MenuState>()
 			.add_systems(Update, toggle_state::<MenuState, Inventory>)
 			.add_systems(
 				OnEnter(MenuState::Inventory),

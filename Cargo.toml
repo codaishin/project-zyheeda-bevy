@@ -1,5 +1,3 @@
-# Workspace Settings
-
 [workspace]
 members = ["src/plugins/*"]
 
@@ -8,10 +6,10 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace.dependencies]
-bevy = "0.12.0"
-bevy_rapier3d = "0.23.0"
+bevy = "0.13.0"
+bevy_rapier3d = "=0.25.0"
 tracing = "0.1.40"
-mockall = "0.11.2"
+mockall = "=0.12.1"
 bars = { path = "src/plugins/bars" }
 behaviors = { path = "src/plugins/behaviors" }
 common = { path = "src/plugins/common" }
@@ -19,7 +17,17 @@ interactions = { path = "src/plugins/interactions" }
 prefabs = { path = "src/plugins/prefabs" }
 skills = { path = "src/plugins/skills" }
 
-# Core Package Settings
+[profile.test]
+opt-level = 0
+
+[profile.test.package."*"]
+opt-level = 0
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
 
 [package]
 name = "project-zyheeda"
@@ -27,6 +35,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+bevy-inspector-egui = "=0.23.4"
 bevy.workspace = true
 bevy_rapier3d.workspace = true
 tracing.workspace = true

@@ -53,7 +53,7 @@ mod tests {
 		let mut app = App::new();
 
 		app.insert_resource(SlotMap::new([(
-			KeyCode::Q,
+			KeyCode::KeyQ,
 			SlotKey::Hand(Side::Main),
 			"IIIIII",
 		)]));
@@ -81,7 +81,7 @@ mod tests {
 		let mut app = App::new();
 
 		app.insert_resource(SlotMap::new([(
-			KeyCode::Q,
+			KeyCode::KeyQ,
 			SlotKey::Hand(Side::Main),
 			"IIIIII",
 		)]));

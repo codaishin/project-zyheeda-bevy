@@ -56,7 +56,7 @@ mod tests {
 		let mut app = App::new();
 
 		app.add_systems(Update, set_ui_mouse_context);
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.world.spawn(Interaction::Hovered);
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
@@ -79,7 +79,7 @@ mod tests {
 		let mut app = App::new();
 
 		app.add_systems(Update, set_ui_mouse_context);
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.world.spawn(Interaction::Pressed);
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
@@ -102,7 +102,7 @@ mod tests {
 		let mut app = App::new();
 
 		app.add_systems(Update, set_ui_mouse_context);
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.world.spawn(Interaction::None);
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
@@ -125,17 +125,17 @@ mod tests {
 		let mut app = App::new();
 
 		app.add_systems(Update, set_ui_mouse_context);
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.world.spawn(Interaction::None);
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::Primed(KeyCode::A));
+			.set(MouseContext::Primed(KeyCode::KeyA));
 
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&MouseContext::Primed(KeyCode::A),
+			&MouseContext::Primed(KeyCode::KeyA),
 			app.world
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
@@ -148,17 +148,17 @@ mod tests {
 		let mut app = App::new();
 
 		app.add_systems(Update, set_ui_mouse_context);
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.world.spawn(Interaction::None);
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::JustTriggered(KeyCode::A));
+			.set(MouseContext::JustTriggered(KeyCode::KeyA));
 
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&MouseContext::JustTriggered(KeyCode::A),
+			&MouseContext::JustTriggered(KeyCode::KeyA),
 			app.world
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
@@ -171,17 +171,17 @@ mod tests {
 		let mut app = App::new();
 
 		app.add_systems(Update, set_ui_mouse_context);
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.world.spawn(Interaction::None);
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::Triggered(KeyCode::A));
+			.set(MouseContext::Triggered(KeyCode::KeyA));
 
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&MouseContext::Triggered(KeyCode::A),
+			&MouseContext::Triggered(KeyCode::KeyA),
 			app.world
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
@@ -194,18 +194,18 @@ mod tests {
 		let mut app = App::new();
 
 		fn set_next(mut next: ResMut<NextState<MouseContext>>) {
-			next.set(MouseContext::Primed(KeyCode::A));
+			next.set(MouseContext::Primed(KeyCode::KeyA));
 		}
 
 		app.add_systems(Update, (set_next, set_ui_mouse_context).chain());
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.world.spawn(Interaction::Hovered);
 
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&MouseContext::Primed(KeyCode::A),
+			&MouseContext::Primed(KeyCode::KeyA),
 			app.world
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
@@ -222,7 +222,7 @@ mod tests {
 		}
 
 		app.add_systems(Update, (set_next, set_ui_mouse_context).chain());
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.world.spawn(Interaction::Hovered);
 
 		app.update();

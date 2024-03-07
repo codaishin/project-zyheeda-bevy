@@ -45,17 +45,17 @@ mod tests {
 		app::{App, Update},
 		ecs::component::Component,
 		hierarchy::BuildWorldChildren,
-		math::Vec3,
+		math::{primitives::Direction3d, Vec3},
 	};
 
-	#[derive(Component, Default)]
+	#[derive(Component)]
 	struct _Projectile {
-		pub direction: Vec3,
+		pub direction: Direction3d,
 		pub range: f32,
 	}
 
 	impl ProjectileBehavior for _Projectile {
-		fn direction(&self) -> bevy::prelude::Vec3 {
+		fn direction(&self) -> Direction3d {
 			self.direction
 		}
 		fn range(&self) -> f32 {
@@ -78,7 +78,7 @@ mod tests {
 			.world
 			.spawn((
 				_Projectile {
-					direction: Vec3::new(1., 2., 3.),
+					direction: Vec3::new(1., 2., 3.).try_into().unwrap(),
 					range: 42.,
 				},
 				GlobalTransform::from_translation(Vec3::ZERO),
@@ -91,7 +91,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&SimpleMovement {
-				target: Vec3::new(1., 2., 3.) * 42.,
+				target: Vec3::new(1., 2., 3.).normalize() * 42.,
 				..default()
 			}),
 			projectile.get::<SimpleMovement>()
@@ -106,7 +106,7 @@ mod tests {
 			.world
 			.spawn((
 				_Projectile {
-					direction: Vec3::new(1., 2., 3.),
+					direction: Vec3::new(1., 2., 3.).try_into().unwrap(),
 					range: 42.,
 				},
 				GlobalTransform::from_translation(Vec3::new(10., 20., 30.)),
@@ -119,7 +119,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&SimpleMovement {
-				target: Vec3::new(10., 20., 30.) + Vec3::new(1., 2., 3.) * 42.,
+				target: Vec3::new(10., 20., 30.) + Vec3::new(1., 2., 3.).normalize() * 42.,
 				..default()
 			}),
 			projectile.get::<SimpleMovement>()
@@ -137,7 +137,7 @@ mod tests {
 			.world
 			.spawn((
 				_Projectile {
-					direction: Vec3::new(1., 2., 3.),
+					direction: Vec3::new(1., 2., 3.).try_into().unwrap(),
 					range: 42.,
 				},
 				GlobalTransform::from_translation(Vec3::ZERO),

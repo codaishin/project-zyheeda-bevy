@@ -8,7 +8,7 @@ pub trait RemoveConditionally {
 	);
 }
 
-impl RemoveConditionally for EntityCommands<'_, '_, '_> {
+impl RemoveConditionally for EntityCommands<'_> {
 	fn remove_conditionally<T: Component>(
 		&mut self,
 		component: Option<&T>,

@@ -8,7 +8,9 @@ use behaviors::{
 use bevy::{
 	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
 	prelude::*,
+	render::mesh::PlaneMeshBuilder,
 };
+
 use bevy_rapier3d::prelude::*;
 use common::{
 	components::{ColliderRoot, GroundOffset, Health, Player},
@@ -37,7 +39,8 @@ fn main() {
 }
 
 fn prepare_game(app: &mut App) {
-	app.add_plugins(DefaultPlugins)
+	app.init_state::<GameRunning>()
+		.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
 		.add_plugins(PrefabsPlugin)
@@ -47,7 +50,6 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(SkillsPlugin)
 		.add_plugins(BehaviorsPlugin::cam_behavior_if(GameRunning::On))
 		.add_plugins(AnimationsPlugin)
-		.add_state::<GameRunning>()
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
 		.add_systems(Startup, setup_simple_3d_scene)
@@ -59,12 +61,14 @@ fn prepare_game(app: &mut App) {
 pub mod debug_utils {
 	use super::*;
 	use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
+	use bevy_inspector_egui::quick::WorldInspectorPlugin;
 	use interactions::events::RayCastEvent;
 	use std::ops::Not;
 
 	pub fn prepare_debug(app: &mut App) {
-		app.add_plugins(RapierDebugRenderPlugin::default())
-			.insert_resource(ShowGizmos::No)
+		app.insert_resource(ShowGizmos::No)
+			.add_plugins(WorldInspectorPlugin::new())
+			.add_plugins(RapierDebugRenderPlugin::default())
 			.add_systems(Update, debug)
 			.add_systems(Update, toggle_gizmos)
 			.add_systems(
@@ -93,7 +97,7 @@ pub mod debug_utils {
 	}
 
 	fn debug(
-		keyboard: Res<Input<KeyCode>>,
+		keyboard: Res<ButtonInput<KeyCode>>,
 		all_entities: Query<Entity>,
 		names: Query<&Name>,
 		entities: &Entities,
@@ -141,7 +145,7 @@ pub mod debug_utils {
 		}
 	}
 
-	fn toggle_gizmos(mut show_gizmos: ResMut<ShowGizmos>, keys: Res<Input<KeyCode>>) {
+	fn toggle_gizmos(mut show_gizmos: ResMut<ShowGizmos>, keys: Res<ButtonInput<KeyCode>>) {
 		if keys.just_pressed(KeyCode::F11) {
 			*show_gizmos = !*show_gizmos;
 		}
@@ -194,8 +198,8 @@ fn spawn_plane(
 	materials: &mut ResMut<Assets<StandardMaterial>>,
 ) {
 	commands.spawn(PbrBundle {
-		mesh: meshes.add(shape::Plane::from_size(5.0).into()),
-		material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
+		mesh: meshes.add(PlaneMeshBuilder::from_size(Vec2::new(5., 5.))),
+		material: materials.add(Color::rgb(0.3, 0.5, 0.3)),
 		..default()
 	});
 }
@@ -231,7 +235,6 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 fn spawn_light(commands: &mut Commands) {
 	commands.spawn(PointLightBundle {
 		point_light: PointLight {
-			intensity: 1500.0,
 			shadows_enabled: true,
 			..default()
 		},

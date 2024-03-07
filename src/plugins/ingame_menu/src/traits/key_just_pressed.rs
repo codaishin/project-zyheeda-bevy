@@ -1,7 +1,7 @@
 pub mod inventory;
 
-use bevy::prelude::{Input, KeyCode};
+use bevy::{input::ButtonInput, prelude::KeyCode};
 
 pub trait KeyJustPressed {
-	fn just_pressed(input: &Input<KeyCode>) -> bool;
+	fn just_pressed(input: &ButtonInput<KeyCode>) -> bool;
 }

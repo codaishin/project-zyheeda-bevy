@@ -4,12 +4,12 @@ use bevy::{
 		event::EventWriter,
 		system::{Res, Resource},
 	},
-	input::{mouse::MouseButton, Input},
+	input::{mouse::MouseButton, ButtonInput},
 };
 use common::traits::intersect_at::IntersectAt;
 
 pub(crate) fn trigger_move_input_event<TRay: IntersectAt + Resource>(
-	mouse_input: Res<Input<MouseButton>>,
+	mouse_input: Res<ButtonInput<MouseButton>>,
 	cam_ray: Res<TRay>,
 	mut move_input_events: EventWriter<MoveInputEvent>,
 ) {
@@ -50,7 +50,7 @@ mod tests {
 		let mut app = App::new_single_threaded([Update]);
 		app.add_systems(Update, trigger_move_input_event::<_Ray>);
 		app.add_event::<MoveInputEvent>();
-		app.init_resource::<Input<MouseButton>>();
+		app.init_resource::<ButtonInput<MouseButton>>();
 		app.insert_resource(ray);
 
 		app
@@ -71,7 +71,7 @@ mod tests {
 			.return_const(Vec3::new(1., 2., 3.));
 		let mut app = setup(ray);
 		app.world
-			.resource_mut::<Input<MouseButton>>()
+			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Left);
 
 		app.update();
@@ -88,7 +88,7 @@ mod tests {
 		ray.mock.expect_intersect_at().return_const(Vec3::default());
 		let mut app = setup(ray);
 		app.world
-			.resource_mut::<Input<MouseButton>>()
+			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Middle);
 
 		app.update();
@@ -102,7 +102,7 @@ mod tests {
 		ray.mock.expect_intersect_at().return_const(None);
 		let mut app = setup(ray);
 		app.world
-			.resource_mut::<Input<MouseButton>>()
+			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Left);
 
 		app.update();
@@ -120,7 +120,7 @@ mod tests {
 			.return_const(None);
 		let mut app = setup(ray);
 		app.world
-			.resource_mut::<Input<MouseButton>>()
+			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Left);
 
 		app.update();

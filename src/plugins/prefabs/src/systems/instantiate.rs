@@ -39,7 +39,8 @@ mod tests {
 		asset::{Asset, AssetId, Handle},
 		ecs::system::{EntityCommands, IntoSystem},
 		hierarchy::{BuildChildren, Parent},
-		render::{color::Color, mesh::shape::UVSphere},
+		math::primitives::Sphere,
+		render::color::Color,
 		utils::default,
 	};
 	use common::{
@@ -58,13 +59,7 @@ mod tests {
 			mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
 		) -> Result<(), Error> {
 			on.insert((
-				get_mesh_handle(
-					AssetKey::Dummy,
-					Mesh::from(UVSphere {
-						radius: 11.,
-						..default()
-					}),
-				),
+				get_mesh_handle(AssetKey::Dummy, Mesh::from(Sphere { radius: 11. })),
 				get_material_handle(
 					AssetKey::Dummy,
 					StandardMaterial {
@@ -150,11 +145,7 @@ mod tests {
 		let mesh = get_original_asset_from_resources(&mesh.id(), &app).unwrap();
 
 		assert_eq!(
-			Mesh::from(UVSphere {
-				radius: 11.,
-				..default()
-			})
-			.primitive_topology(),
+			Mesh::from(Sphere { radius: 11. }).primitive_topology(),
 			mesh.primitive_topology()
 		);
 	}

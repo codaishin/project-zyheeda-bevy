@@ -2,12 +2,9 @@ use super::{AssetKey, Instantiate};
 use bevy::{
 	asset::Handle,
 	hierarchy::BuildChildren,
-	math::Vec3,
+	math::{primitives::Cuboid, Vec3},
 	pbr::{PbrBundle, StandardMaterial},
-	render::{
-		color::Color,
-		mesh::{shape, Mesh},
-	},
+	render::{color::Color, mesh::Mesh},
 	transform::components::Transform,
 	utils::default,
 };
@@ -33,7 +30,7 @@ impl Instantiate for Dummy {
 	) -> Result<(), Error> {
 		let transform = Transform::from_xyz(0., 1., 0.);
 		let key = AssetKey::Dummy;
-		let mesh = Mesh::from(shape::Box::new(
+		let mesh = Mesh::from(Cuboid::new(
 			DUMMY_DIMENSIONS.x,
 			DUMMY_DIMENSIONS.y,
 			DUMMY_DIMENSIONS.z,

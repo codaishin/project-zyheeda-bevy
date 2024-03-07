@@ -13,7 +13,7 @@ use bevy::{
 		bundle::Bundle,
 		system::{Commands, EntityCommands},
 	},
-	math::{Vec2, Vec3},
+	math::{primitives::Direction3d, Vec2, Vec3},
 	transform::components::Transform,
 };
 use common::tools::UnitsPerSecond;
@@ -24,7 +24,7 @@ pub(crate) type IsDone = bool;
 pub type Vec2Radians = Vec2;
 
 pub(crate) trait ProjectileBehavior {
-	fn direction(&self) -> Vec3;
+	fn direction(&self) -> Direction3d;
 	fn range(&self) -> f32;
 }
 

@@ -864,7 +864,7 @@ mod tests {
 	#[test]
 	fn call_just_pressed_with_slot_map() {
 		let mut app = App::new();
-		let slot_map = SlotMap::new([(KeyCode::A, SlotKey::Hand(Side::Main), "")]);
+		let slot_map = SlotMap::new([(KeyCode::KeyA, SlotKey::Hand(Side::Main), "")]);
 
 		app.init_resource::<Time<Real>>();
 		app.insert_resource(slot_map.clone());
@@ -889,7 +889,7 @@ mod tests {
 	#[test]
 	fn call_pressed_with_slot_map() {
 		let mut app = App::new();
-		let slot_map = SlotMap::new([(KeyCode::A, SlotKey::Hand(Side::Main), "")]);
+		let slot_map = SlotMap::new([(KeyCode::KeyA, SlotKey::Hand(Side::Main), "")]);
 
 		app.init_resource::<Time<Real>>();
 		app.insert_resource(slot_map.clone());
@@ -914,7 +914,7 @@ mod tests {
 	#[test]
 	fn call_just_released_with_slot_map() {
 		let mut app = App::new();
-		let slot_map = SlotMap::new([(KeyCode::A, SlotKey::Hand(Side::Main), "")]);
+		let slot_map = SlotMap::new([(KeyCode::KeyA, SlotKey::Hand(Side::Main), "")]);
 
 		app.init_resource::<Time<Real>>();
 		app.insert_resource(slot_map.clone());

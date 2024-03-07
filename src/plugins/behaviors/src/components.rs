@@ -1,7 +1,7 @@
 use crate::traits::SpawnAttack;
 use bevy::{
 	ecs::{component::Component, entity::Entity, system::EntityCommands},
-	math::Vec3,
+	math::{primitives::Direction3d, Vec3},
 	render::color::Color,
 };
 use common::tools::UnitsPerSecond;
@@ -30,15 +30,25 @@ pub struct SetFace(pub Face);
 
 pub struct Plasma;
 
-#[derive(Component, Default)]
+#[derive(Component)]
 pub struct Projectile<T> {
-	pub direction: Vec3,
+	pub direction: Direction3d,
 	pub range: f32,
 	phantom_data: PhantomData<T>,
 }
 
+impl<T> Default for Projectile<T> {
+	fn default() -> Self {
+		Self {
+			direction: Direction3d::NEG_Z,
+			range: Default::default(),
+			phantom_data: Default::default(),
+		}
+	}
+}
+
 impl<T> Projectile<T> {
-	pub fn new(direction: Vec3, range: f32) -> Self {
+	pub fn new(direction: Direction3d, range: f32) -> Self {
 		Self {
 			direction,
 			range,

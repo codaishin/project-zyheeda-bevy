@@ -5,14 +5,15 @@ use bevy::{
 		schedule::{NextState, States},
 		system::ResMut,
 	},
-	prelude::{Input, KeyCode, Res, State},
+	input::ButtonInput,
+	prelude::{KeyCode, Res, State},
 };
 
 pub fn toggle_state<
 	TState: Inverted<TComponent> + States,
 	TComponent: KeyJustPressed + Component,
 >(
-	keys: Res<Input<KeyCode>>,
+	keys: Res<ButtonInput<KeyCode>>,
 	current_state: Res<State<TState>>,
 	mut state: ResMut<NextState<TState>>,
 ) {
@@ -43,8 +44,8 @@ mod tests {
 	struct _Component;
 
 	impl KeyJustPressed for _Component {
-		fn just_pressed(input: &Input<KeyCode>) -> bool {
-			input.pressed(KeyCode::Apps)
+		fn just_pressed(input: &ButtonInput<KeyCode>) -> bool {
+			input.pressed(KeyCode::KeyJ)
 		}
 	}
 
@@ -60,8 +61,8 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new();
 
-		app.insert_resource(Input::<KeyCode>::default());
-		app.add_state::<_State>();
+		app.insert_resource(ButtonInput::<KeyCode>::default());
+		app.init_state::<_State>();
 		app.add_systems(Update, toggle_state::<_State, _Component>);
 
 		app
@@ -70,8 +71,11 @@ mod tests {
 	#[test]
 	fn toggle_on() {
 		let mut app = setup();
-		let mut input = app.world.get_resource_mut::<Input<KeyCode>>().unwrap();
-		input.press(KeyCode::Apps);
+		let mut input = app
+			.world
+			.get_resource_mut::<ButtonInput<KeyCode>>()
+			.unwrap();
+		input.press(KeyCode::KeyJ);
 
 		app.update();
 		app.update();
@@ -83,8 +87,11 @@ mod tests {
 	#[test]
 	fn toggle_off() {
 		let mut app = setup();
-		let mut input = app.world.get_resource_mut::<Input<KeyCode>>().unwrap();
-		input.press(KeyCode::Apps);
+		let mut input = app
+			.world
+			.get_resource_mut::<ButtonInput<KeyCode>>()
+			.unwrap();
+		input.press(KeyCode::KeyJ);
 
 		app.update();
 		app.update();

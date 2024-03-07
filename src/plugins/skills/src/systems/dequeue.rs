@@ -26,13 +26,18 @@ mod tests {
 		components::SlotKey,
 		skill::{Active, Cast, Queued, SelectInfo, Skill},
 	};
-	use bevy::prelude::{default, App, Ray, Update, Vec3};
+	use bevy::{
+		math::{primitives::Direction3d, Ray3d},
+		prelude::{default, App, Update, Vec3},
+	};
 	use std::time::Duration;
 
-	const TEST_RAY: Ray = Ray {
-		origin: Vec3::ONE,
-		direction: Vec3::Y,
-	};
+	fn test_ray() -> Ray3d {
+		Ray3d {
+			origin: Vec3::ONE,
+			direction: Direction3d::Y,
+		}
+	}
 
 	#[derive(Clone, Copy, Default)]
 	struct _Template;
@@ -48,7 +53,7 @@ mod tests {
 				},
 				data: Queued {
 					target: SelectInfo {
-						ray: TEST_RAY,
+						ray: test_ray(),
 						..default()
 					},
 					slot_key: SlotKey::SkillSpawn,
@@ -69,7 +74,7 @@ mod tests {
 			(
 				Some(Active {
 					target: SelectInfo {
-						ray: TEST_RAY,
+						ray: test_ray(),
 						..default()
 					},
 					slot_key: SlotKey::SkillSpawn,

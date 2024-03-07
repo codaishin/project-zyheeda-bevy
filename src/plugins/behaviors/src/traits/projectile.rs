@@ -4,7 +4,7 @@ use bevy::{
 	self,
 	asset::Handle,
 	hierarchy::BuildChildren,
-	math::Vec3,
+	math::{primitives::Direction3d, Vec3},
 	pbr::{PbrBundle, StandardMaterial},
 	render::{color::Color, mesh::Mesh},
 	transform::components::Transform,
@@ -24,7 +24,7 @@ use interactions::components::{DealsDamage, Fragile};
 use prefabs::traits::{sphere, AssetKey, Instantiate, ProjectileType};
 
 impl<T> ProjectileBehavior for Projectile<T> {
-	fn direction(&self) -> Vec3 {
+	fn direction(&self) -> Direction3d {
 		self.direction
 	}
 
@@ -46,7 +46,7 @@ impl Instantiate for Projectile<Plasma> {
 		let transform = Transform::from_translation(Vec3::ZERO);
 		let mesh = sphere(PLASMA_RADIUS, || "Cannot create plasma projectile")?;
 		let material = StandardMaterial {
-			emissive: Color::rgb_linear(2.0, 13.99, 13.99),
+			emissive: Color::rgb_linear(0.0, 23000.0, 23000.0),
 			..default()
 		};
 

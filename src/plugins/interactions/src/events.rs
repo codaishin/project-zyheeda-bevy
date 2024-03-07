@@ -1,6 +1,6 @@
 use bevy::{
 	ecs::{entity::Entity, event::Event},
-	math::Ray,
+	math::{primitives::Direction3d, Ray3d, Vec3},
 };
 use common::traits::cast_ray::TimeOfImpact;
 
@@ -10,9 +10,22 @@ pub struct RayCastEvent {
 	pub target: RayCastTarget,
 }
 
-#[derive(Default, Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct RayCastTarget {
 	pub entity: Option<Entity>,
-	pub ray: Ray,
+	pub ray: Ray3d,
 	pub toi: TimeOfImpact,
+}
+
+impl Default for RayCastTarget {
+	fn default() -> Self {
+		Self {
+			entity: None,
+			ray: Ray3d {
+				origin: Vec3::ZERO,
+				direction: Direction3d::NEG_Z,
+			},
+			toi: TimeOfImpact::default(),
+		}
+	}
 }

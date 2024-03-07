@@ -14,12 +14,9 @@ use bevy::{
 	asset::Handle,
 	ecs::{bundle::Bundle, system::EntityCommands},
 	hierarchy::BuildChildren,
-	math::Vec3,
+	math::{primitives::Torus, Vec3},
 	pbr::{NotShadowCaster, PbrBundle, StandardMaterial},
-	render::{
-		color::Color,
-		mesh::{shape::Torus, Mesh},
-	},
+	render::{color::Color, mesh::Mesh},
 	transform::{components::Transform, TransformBundle},
 	utils::default,
 };
@@ -87,13 +84,12 @@ impl Instantiate for VoidSphere {
 			"Cannot create void sphere core"
 		})?;
 		let ring_material = StandardMaterial {
-			emissive: Color::rgb_linear(13.99, 13.99, 13.99),
+			emissive: Color::rgb_linear(23000.0, 23000.0, 23000.0),
 			..default()
 		};
 		let ring_mesh = Mesh::from(Torus {
-			radius: VOID_SPHERE_TORUS_RADIUS,
-			ring_radius: VOID_SPHERE_TORUS_RING_RADIUS,
-			..default()
+			major_radius: VOID_SPHERE_TORUS_RADIUS,
+			minor_radius: VOID_SPHERE_TORUS_RING_RADIUS,
 		});
 		let transform = Transform::from_translation(VOID_SPHERE_GROUND_OFFSET);
 		let mut transform_2nd_ring = transform;
@@ -113,7 +109,7 @@ impl Instantiate for VoidSphere {
 				spawn: BeamConfig {
 					damage: 1,
 					color: Color::BLACK,
-					emissive: Color::rgb_linear(13.99, 13.99, 13.99),
+					emissive: Color::rgb_linear(23000.0, 23000.0, 23000.0),
 					lifetime: Duration::from_secs(1),
 					range: VoidSphere::ATTACK_RANGE,
 				}

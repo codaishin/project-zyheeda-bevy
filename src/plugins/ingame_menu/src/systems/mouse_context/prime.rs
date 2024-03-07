@@ -58,8 +58,12 @@ mod test {
 	fn prime() {
 		let mut app = App::new();
 
-		app.add_state::<MouseContext>();
-		app.insert_resource(SlotMap::new([(KeyCode::Z, SlotKey::Hand(Side::Main), "")]));
+		app.init_state::<MouseContext>();
+		app.insert_resource(SlotMap::new([(
+			KeyCode::KeyZ,
+			SlotKey::Hand(Side::Main),
+			"",
+		)]));
 		app.world
 			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::Pressed));
 		app.world
@@ -75,15 +79,19 @@ mod test {
 			.get_resource::<State<MouseContext>>()
 			.map(|s| s.get());
 
-		assert_eq!(Some(&MouseContext::Primed(KeyCode::Z)), mouse_context);
+		assert_eq!(Some(&MouseContext::Primed(KeyCode::KeyZ)), mouse_context);
 	}
 
 	#[test]
 	fn do_not_prime_when_not_pressed() {
 		let mut app = App::new();
 
-		app.add_state::<MouseContext>();
-		app.insert_resource(SlotMap::new([(KeyCode::Z, SlotKey::Hand(Side::Main), "")]));
+		app.init_state::<MouseContext>();
+		app.insert_resource(SlotMap::new([(
+			KeyCode::KeyZ,
+			SlotKey::Hand(Side::Main),
+			"",
+		)]));
 		app.world
 			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::None));
 		app.world
@@ -106,8 +114,12 @@ mod test {
 	fn prime_with_different_key() {
 		let mut app = App::new();
 
-		app.add_state::<MouseContext>();
-		app.insert_resource(SlotMap::new([(KeyCode::T, SlotKey::Hand(Side::Main), "")]));
+		app.init_state::<MouseContext>();
+		app.insert_resource(SlotMap::new([(
+			KeyCode::KeyT,
+			SlotKey::Hand(Side::Main),
+			"",
+		)]));
 		app.world
 			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::Pressed));
 		app.world
@@ -123,6 +135,6 @@ mod test {
 			.get_resource::<State<MouseContext>>()
 			.map(|s| s.get());
 
-		assert_eq!(Some(&MouseContext::Primed(KeyCode::T)), mouse_context);
+		assert_eq!(Some(&MouseContext::Primed(KeyCode::KeyT)), mouse_context);
 	}
 }

@@ -136,7 +136,7 @@ mod tests {
 		let mut app = App::new();
 
 		app.add_systems(Update, panel_activity_colors_override::<_Panel>);
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.insert_resource(SlotMap::<KeyCode>::new(slot_map));
 		let player = app.world.spawn((Player, Queue::default())).id();
 		let panel = app.world.spawn(bundle).id();
@@ -217,12 +217,15 @@ mod tests {
 			BackgroundColor::from(Color::NONE),
 			_Panel(SlotKey::Hand(Side::Main)),
 		);
-		let (mut app, panel, _) =
-			setup(None, bundle, [(KeyCode::Q, SlotKey::Hand(Side::Main), "")]);
+		let (mut app, panel, _) = setup(
+			None,
+			bundle,
+			[(KeyCode::KeyQ, SlotKey::Hand(Side::Main), "")],
+		);
 
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::Primed(KeyCode::Q));
+			.set(MouseContext::Primed(KeyCode::KeyQ));
 
 		app.update();
 		app.update();

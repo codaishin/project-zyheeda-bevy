@@ -126,7 +126,8 @@ mod tests {
 	use super::*;
 	use crate::{skill::Cast, traits::WithComponent};
 	use bevy::{
-		prelude::{App, Ray, Update, Vec3},
+		math::{primitives::Direction3d, Ray3d},
+		prelude::{App, Update, Vec3},
 		transform::components::GlobalTransform,
 		utils::default,
 	};
@@ -139,10 +140,12 @@ mod tests {
 		time::Duration,
 	};
 
-	const TEST_RAY: Ray = Ray {
-		origin: Vec3::ONE,
-		direction: Vec3::Z,
-	};
+	fn test_ray() -> Option<Ray3d> {
+		Some(Ray3d {
+			origin: Vec3::ONE,
+			direction: Direction3d::Z,
+		})
+	}
 
 	#[derive(Resource)]
 	struct _FakeTargetIds {
@@ -167,7 +170,7 @@ mod tests {
 	type FakeTargetTransforms = Option<ColliderInfo<Outdated<GlobalTransform>>>;
 	type TrackedTransformArgs = Arc<Mutex<Vec<GlobalTransform>>>;
 
-	fn setup(ray: Option<Ray>) -> (App, FakeTargetTransforms, TrackedTransformArgs) {
+	fn setup(ray: Option<Ray3d>) -> (App, FakeTargetTransforms, TrackedTransformArgs) {
 		let mut app = App::new();
 		let tracked_transform_args = Arc::new(Mutex::new(vec![]));
 		let fake_target_transforms = Some(ColliderInfo {
@@ -193,7 +196,7 @@ mod tests {
 
 	#[test]
 	fn set_enqueue() {
-		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(test_ray());
 		let agent = app
 			.world
 			.spawn((
@@ -257,7 +260,7 @@ mod tests {
 					},
 					data: Queued {
 						target: Target {
-							ray: TEST_RAY,
+							ray: test_ray().unwrap(),
 							collision_info,
 						},
 						slot_key: SlotKey::Hand(Side::Off),
@@ -274,7 +277,7 @@ mod tests {
 
 	#[test]
 	fn set_override() {
-		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(test_ray());
 		let new_skill = Skill {
 			cast: Cast {
 				pre: Duration::from_millis(100),
@@ -317,7 +320,7 @@ mod tests {
 			(
 				vec![&new_skill.with(&Queued {
 					target: Target {
-						ray: TEST_RAY,
+						ray: test_ray().unwrap(),
 						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
@@ -330,7 +333,7 @@ mod tests {
 
 	#[test]
 	fn call_with_correct_transform_query() {
-		let (mut app, .., tracked_transform_args) = setup(Some(TEST_RAY));
+		let (mut app, .., tracked_transform_args) = setup(test_ray());
 		let transforms = vec![
 			GlobalTransform::from_xyz(11., 12., 13.),
 			GlobalTransform::from_xyz(1., 11., 111.),
@@ -374,7 +377,7 @@ mod tests {
 
 	#[test]
 	fn set_override_without_wait_next_when_new_and_running_soft_override() {
-		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(test_ray());
 		let running_skill = Skill {
 			name: "running current",
 			soft_override: true,
@@ -404,7 +407,7 @@ mod tests {
 			(
 				vec![&new_skill.with(&Queued {
 					target: Target {
-						ray: TEST_RAY,
+						ray: test_ray().unwrap(),
 						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
@@ -427,7 +430,7 @@ mod tests {
 
 	#[test]
 	fn set_override_with_wait_next_when_running_soft_override_false() {
-		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(test_ray());
 		let running_skill = Skill {
 			name: "running",
 			soft_override: false,
@@ -457,7 +460,7 @@ mod tests {
 			(
 				vec![&new_skill.with(&Queued {
 					target: Target {
-						ray: TEST_RAY,
+						ray: test_ray().unwrap(),
 						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
@@ -480,7 +483,7 @@ mod tests {
 
 	#[test]
 	fn set_override_with_wait_next_when_soft_override_new_soft_override_false() {
-		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(test_ray());
 		let running_skill = Skill {
 			name: "running",
 			soft_override: true,
@@ -510,7 +513,7 @@ mod tests {
 			(
 				vec![&new_skill.with(&Queued {
 					target: Target {
-						ray: TEST_RAY,
+						ray: test_ray().unwrap(),
 						collision_info,
 					},
 					slot_key: SlotKey::Hand(Side::Off),
@@ -533,7 +536,7 @@ mod tests {
 
 	#[test]
 	fn remove_schedule() {
-		let (mut app, ..) = setup(Some(TEST_RAY));
+		let (mut app, ..) = setup(test_ray());
 		let schedule = Schedule::Override((SlotKey::Hand(Side::Off), Skill::default()));
 		let agent = app.world.spawn((schedule, Queue::default())).id();
 
@@ -546,7 +549,7 @@ mod tests {
 
 	#[test]
 	fn try_soft_override_on_enqueue() {
-		let (mut app, ..) = setup(Some(TEST_RAY));
+		let (mut app, ..) = setup(test_ray());
 		app.world.spawn((
 			Schedule::Enqueue((SlotKey::Hand(Side::Off), Skill::default())),
 			Track::new(Skill::<PlayerSkills<SideUnset>, Active>::default()),
@@ -558,7 +561,7 @@ mod tests {
 
 	#[test]
 	fn update_aim_in_queue() {
-		let (mut app, ..) = setup(Some(TEST_RAY));
+		let (mut app, ..) = setup(test_ray());
 		let agent = app
 			.world
 			.spawn((
@@ -602,7 +605,7 @@ mod tests {
 
 	#[test]
 	fn update_aim_active() {
-		let (mut app, ..) = setup(Some(TEST_RAY));
+		let (mut app, ..) = setup(test_ray());
 		let agent = app
 			.world
 			.spawn((
@@ -638,7 +641,7 @@ mod tests {
 
 	#[test]
 	fn aim_last_in_queue_even_with_active() {
-		let (mut app, ..) = setup(Some(TEST_RAY));
+		let (mut app, ..) = setup(test_ray());
 		let agent = app
 			.world
 			.spawn((
@@ -694,7 +697,7 @@ mod tests {
 
 	#[test]
 	fn update_target_of_active() {
-		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(test_ray());
 		let agent = app
 			.world
 			.spawn((
@@ -720,7 +723,7 @@ mod tests {
 
 		assert_eq!(
 			Target {
-				ray: TEST_RAY,
+				ray: test_ray().unwrap(),
 				collision_info,
 			},
 			track.value.data.target
@@ -729,7 +732,7 @@ mod tests {
 
 	#[test]
 	fn update_target_of_last_queued() {
-		let (mut app, collision_info, ..) = setup(Some(TEST_RAY));
+		let (mut app, collision_info, ..) = setup(test_ray());
 		let agent = app
 			.world
 			.spawn((
@@ -774,7 +777,7 @@ mod tests {
 						name: "last",
 						data: Queued {
 							target: Target {
-								ray: TEST_RAY,
+								ray: test_ray().unwrap(),
 								collision_info,
 							},
 							..default()

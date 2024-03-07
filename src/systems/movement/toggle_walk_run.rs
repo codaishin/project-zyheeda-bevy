@@ -4,7 +4,7 @@ use common::components::Player;
 
 pub fn player_toggle_walk_run(
 	mut player: Query<&mut MovementConfig, With<Player>>,
-	keys: Res<Input<KeyCode>>,
+	keys: Res<ButtonInput<KeyCode>>,
 ) {
 	if !keys.just_pressed(KeyCode::NumpadSubtract) {
 		return;
@@ -32,7 +32,7 @@ mod tests {
 	#[test]
 	fn toggle_player_walk_to_run() {
 		let mut app = App::new();
-		let keys = Input::<KeyCode>::default();
+		let keys = ButtonInput::<KeyCode>::default();
 		let config = MovementConfig::Dynamic {
 			current_mode: MovementMode::Slow,
 			fast_speed: default(),
@@ -43,7 +43,7 @@ mod tests {
 		app.add_systems(Update, player_toggle_walk_run);
 		app.insert_resource(keys);
 		app.world
-			.resource_mut::<Input<KeyCode>>()
+			.resource_mut::<ButtonInput<KeyCode>>()
 			.press(KeyCode::NumpadSubtract);
 
 		app.update();
@@ -62,7 +62,7 @@ mod tests {
 	#[test]
 	fn toggle_player_run_to_walk() {
 		let mut app = App::new();
-		let keys = Input::<KeyCode>::default();
+		let keys = ButtonInput::<KeyCode>::default();
 		let config = MovementConfig::Dynamic {
 			current_mode: MovementMode::Fast,
 			fast_speed: default(),
@@ -73,7 +73,7 @@ mod tests {
 		app.add_systems(Update, player_toggle_walk_run);
 		app.insert_resource(keys);
 		app.world
-			.resource_mut::<Input<KeyCode>>()
+			.resource_mut::<ButtonInput<KeyCode>>()
 			.press(KeyCode::NumpadSubtract);
 
 		app.update();
@@ -92,7 +92,7 @@ mod tests {
 	#[test]
 	fn no_toggle_when_no_input() {
 		let mut app = App::new();
-		let keys = Input::<KeyCode>::default();
+		let keys = ButtonInput::<KeyCode>::default();
 		let config = MovementConfig::Dynamic {
 			current_mode: MovementMode::Slow,
 			fast_speed: default(),

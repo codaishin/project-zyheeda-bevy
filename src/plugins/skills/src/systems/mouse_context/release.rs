@@ -4,11 +4,11 @@ use bevy::{
 		schedule::{NextState, State},
 		system::{Res, ResMut},
 	},
-	input::{mouse::MouseButton, Input},
+	input::{mouse::MouseButton, ButtonInput},
 };
 
 pub(crate) fn release_triggered_mouse_context(
-	mouse_input: Res<Input<MouseButton>>,
+	mouse_input: Res<ButtonInput<MouseButton>>,
 	context: Res<State<MouseContext>>,
 	mut next_mouse_context: ResMut<NextState<MouseContext>>,
 ) {
@@ -26,24 +26,24 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		ecs::schedule::{NextState, State},
-		input::{keyboard::KeyCode, mouse::MouseButton, Input},
+		input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
 	};
 
 	#[test]
 	fn release_from_triggered() {
 		let mut app = App::new();
-		let mut mouse_input = Input::<MouseButton>::default();
+		let mut mouse_input = ButtonInput::<MouseButton>::default();
 
 		mouse_input.press(MouseButton::Left);
 		app.update();
 		mouse_input.release(MouseButton::Left);
 
 		app.insert_resource(mouse_input);
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.world
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
-			.set(MouseContext::Triggered(KeyCode::U));
+			.set(MouseContext::Triggered(KeyCode::KeyU));
 
 		app.add_systems(Update, release_triggered_mouse_context);
 		app.update();
@@ -55,24 +55,24 @@ mod tests {
 			.unwrap()
 			.get();
 
-		assert_eq!(&MouseContext::JustReleased(KeyCode::U), context);
+		assert_eq!(&MouseContext::JustReleased(KeyCode::KeyU), context);
 	}
 
 	#[test]
 	fn release_from_just_triggered() {
 		let mut app = App::new();
-		let mut mouse_input = Input::<MouseButton>::default();
+		let mut mouse_input = ButtonInput::<MouseButton>::default();
 
 		mouse_input.press(MouseButton::Left);
 		app.update();
 		mouse_input.release(MouseButton::Left);
 
 		app.insert_resource(mouse_input);
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.world
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
-			.set(MouseContext::JustTriggered(KeyCode::U));
+			.set(MouseContext::JustTriggered(KeyCode::KeyU));
 
 		app.add_systems(Update, release_triggered_mouse_context);
 		app.update();
@@ -84,13 +84,13 @@ mod tests {
 			.unwrap()
 			.get();
 
-		assert_eq!(&MouseContext::JustReleased(KeyCode::U), context);
+		assert_eq!(&MouseContext::JustReleased(KeyCode::KeyU), context);
 	}
 
 	#[test]
 	fn do_not_release_when_mouse_left_not_just_released() {
 		let mut app = App::new();
-		let mut mouse_input = Input::<MouseButton>::default();
+		let mut mouse_input = ButtonInput::<MouseButton>::default();
 
 		mouse_input.press(MouseButton::Left);
 		app.update();
@@ -99,10 +99,10 @@ mod tests {
 		mouse_input.clear_just_released(MouseButton::Left);
 
 		app.insert_resource(mouse_input);
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::Triggered(KeyCode::U));
+			.set(MouseContext::Triggered(KeyCode::KeyU));
 
 		app.add_systems(Update, release_triggered_mouse_context);
 		app.update();
@@ -114,6 +114,6 @@ mod tests {
 			.unwrap()
 			.get();
 
-		assert_eq!(&MouseContext::Triggered(KeyCode::U), context);
+		assert_eq!(&MouseContext::Triggered(KeyCode::KeyU), context);
 	}
 }
