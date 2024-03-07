@@ -49,8 +49,8 @@ pub trait GetExecution {
 	fn execution() -> SkillExecution;
 }
 
-pub(crate) trait GetSlot {
-	fn slot(&self) -> SlotKey;
+pub(crate) trait GetSlots {
+	fn slots(&self) -> Vec<SlotKey>;
 }
 
 pub(crate) trait Execution {
