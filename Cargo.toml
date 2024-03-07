@@ -9,7 +9,7 @@ edition = "2021"
 bevy = "0.13.0"
 bevy_rapier3d = "=0.25.0"
 tracing = "0.1.40"
-mockall = "0.11.2"
+mockall = "=0.12.1"
 bars = { path = "src/plugins/bars" }
 behaviors = { path = "src/plugins/behaviors" }
 common = { path = "src/plugins/common" }
