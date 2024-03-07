@@ -49,6 +49,10 @@ pub trait GetExecution {
 	fn execution() -> SkillExecution;
 }
 
+pub(crate) trait GetSlot {
+	fn slot(&self) -> SlotKey;
+}
+
 pub(crate) trait Execution {
 	fn run(&self, agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner);
 	fn stop(&self, agent: &mut EntityCommands);

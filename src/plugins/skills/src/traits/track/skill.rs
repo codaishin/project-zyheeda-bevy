@@ -1,7 +1,7 @@
 use crate::{
-	components::Track,
+	components::{SlotKey, Track},
 	skill::{Active, Skill, SkillState, Spawner},
-	traits::Execution,
+	traits::{Execution, GetSlot},
 };
 use bevy::{ecs::system::EntityCommands, transform::components::Transform};
 use common::traits::state_duration::StateDuration;
@@ -35,6 +35,12 @@ impl<TAnimationKey> Execution for Track<Skill<TAnimationKey, Active>> {
 			return;
 		};
 		stop(agent);
+	}
+}
+
+impl<TAnimationKey> GetSlot for Track<Skill<TAnimationKey, Active>> {
+	fn slot(&self) -> SlotKey {
+		self.value.data.slot_key
 	}
 }
 
@@ -216,5 +222,39 @@ mod tests_execution {
 			stop_system::<Track<Skill<PlayerSkills<SideUnset>, Active>>>(agent),
 		);
 		app.update();
+	}
+}
+
+#[cfg(test)]
+mod test_get_slot {
+	use super::*;
+	use crate::skill::PlayerSkills;
+	use bevy::utils::default;
+	use common::components::Side;
+
+	#[test]
+	fn get_slot() {
+		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
+			data: Active {
+				slot_key: SlotKey::Hand(Side::Off),
+				..default()
+			},
+			..default()
+		});
+
+		assert_eq!(SlotKey::Hand(Side::Off), track.slot());
+	}
+
+	#[test]
+	fn get_other_slot() {
+		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
+			data: Active {
+				slot_key: SlotKey::Hand(Side::Main),
+				..default()
+			},
+			..default()
+		});
+
+		assert_eq!(SlotKey::Hand(Side::Main), track.slot());
 	}
 }
