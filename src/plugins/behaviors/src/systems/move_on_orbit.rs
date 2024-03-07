@@ -1,11 +1,8 @@
 use crate::traits::Orbit;
-use bevy::{
-	input::{mouse::MouseMotion, *},
-	prelude::*,
-};
+use bevy::{input::mouse::MouseMotion, prelude::*};
 
 pub(crate) fn move_on_orbit<TOrbitComponent: Orbit + Component>(
-	mouse: Res<Input<MouseButton>>,
+	mouse: Res<ButtonInput<MouseButton>>,
 	mut mouse_motion: EventReader<MouseMotion>,
 	mut query: Query<(&TOrbitComponent, &mut Transform)>,
 ) {
@@ -57,7 +54,7 @@ mod tests {
 
 	fn setup_app() -> App {
 		let mut app = App::new_single_threaded([Update]);
-		let input = Input::<MouseButton>::default();
+		let input = ButtonInput::<MouseButton>::default();
 
 		app.add_systems(Update, move_on_orbit::<_Orbit>);
 		// Not using `add_event`, because we don't want events to be cleared between frames
@@ -88,7 +85,7 @@ mod tests {
 			.resource_mut::<Events<MouseMotion>>()
 			.send(MouseMotion { delta: angels });
 		app.world
-			.resource_mut::<Input<MouseButton>>()
+			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Right);
 
 		app.update();
@@ -147,7 +144,7 @@ mod tests {
 			.resource_mut::<Events<MouseMotion>>()
 			.send(MouseMotion { delta: angels });
 		app.world
-			.resource_mut::<Input<MouseButton>>()
+			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Right);
 
 		app.update();

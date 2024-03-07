@@ -1,7 +1,7 @@
 use crate::traits::ActOn;
 use bevy::{
 	ecs::{component::Component, entity::Entity},
-	math::Vec3,
+	math::{primitives::Direction3d, Vec3},
 };
 use bevy_rapier3d::{
 	geometry::CollisionGroups,
@@ -10,13 +10,25 @@ use bevy_rapier3d::{
 use common::traits::cast_ray::TimeOfImpact;
 use std::{collections::HashSet, marker::PhantomData, time::Duration};
 
-#[derive(Component, Default, Debug, PartialEq, Clone)]
+#[derive(Component, Debug, PartialEq, Clone)]
 pub struct RayCaster {
 	pub origin: Vec3,
-	pub direction: Vec3,
+	pub direction: Direction3d,
 	pub max_toi: TimeOfImpact,
 	pub solid: bool,
 	pub filter: RayFilter,
+}
+
+impl Default for RayCaster {
+	fn default() -> Self {
+		Self {
+			origin: Default::default(),
+			direction: Direction3d::NEG_Z,
+			max_toi: Default::default(),
+			solid: Default::default(),
+			filter: Default::default(),
+		}
+	}
 }
 
 #[derive(Default, Debug, PartialEq, Clone)]

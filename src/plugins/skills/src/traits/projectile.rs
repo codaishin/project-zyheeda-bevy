@@ -31,7 +31,7 @@ mod tests {
 	use crate::traits::test_tools::run_lazy;
 	use bevy::{
 		app::{App, Update},
-		math::{Ray, Vec3},
+		math::{primitives::Direction3d, Ray3d, Vec3},
 		render::view::{InheritedVisibility, ViewVisibility, Visibility},
 		transform::components::GlobalTransform,
 		utils::default,
@@ -65,7 +65,7 @@ mod tests {
 
 		assert_eq_approx!(
 			Some(forward.normalize()),
-			projectile.map(|p| p.direction),
+			projectile.map(|p| p.direction.into()),
 			0.0001
 		);
 	}
@@ -76,9 +76,9 @@ mod tests {
 		let lazy = Projectile::<()>::execution();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let select_info = Target {
-			ray: Ray {
+			ray: Ray3d {
 				origin: Vec3::ONE,
-				direction: Vec3::NEG_INFINITY,
+				direction: Direction3d::NEG_Y,
 			},
 			..default()
 		};
@@ -114,9 +114,9 @@ mod tests {
 		let lazy = Projectile::<()>::execution();
 		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let select_info = Target {
-			ray: Ray {
+			ray: Ray3d {
 				origin: Vec3::ONE,
-				direction: Vec3::NEG_INFINITY,
+				direction: Direction3d::NEG_Y,
 			},
 			..default()
 		};

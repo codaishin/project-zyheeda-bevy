@@ -16,7 +16,7 @@ use bevy::{
 		schedule::{common_conditions::in_state, IntoSystemConfigs, State},
 		system::{Commands, IntoSystem, Query, Res},
 	},
-	input::{keyboard::KeyCode, Input},
+	input::{keyboard::KeyCode, ButtonInput},
 	prelude::default,
 	time::Virtual,
 };
@@ -65,15 +65,15 @@ pub struct SkillsPlugin;
 
 impl Plugin for SkillsPlugin {
 	fn build(&self, app: &mut bevy::prelude::App) {
-		app.add_state::<MouseContext>()
+		app.init_state::<MouseContext>()
 			.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
 			.add_systems(PreStartup, load_models)
 			.add_systems(PreStartup, setup_input)
 			.add_systems(
 				First,
 				(
-					schedule_slots::<KeyCode, Player, Input<KeyCode>, Input<KeyCode>>,
-					schedule_slots::<KeyCode, Player, State<MouseContext>, Input<KeyCode>>,
+					schedule_slots::<KeyCode, Player, ButtonInput<KeyCode>, ButtonInput<KeyCode>>,
+					schedule_slots::<KeyCode, Player, State<MouseContext>, ButtonInput<KeyCode>>,
 				)
 					.run_if(in_state(GameRunning::On)),
 			)
@@ -130,8 +130,8 @@ fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
 
 fn setup_input(mut commands: Commands) {
 	commands.insert_resource(SlotMap::new([
-		(KeyCode::E, SlotKey::Hand(Side::Main), "E"),
-		(KeyCode::Q, SlotKey::Hand(Side::Off), "Q"),
+		(KeyCode::KeyE, SlotKey::Hand(Side::Main), "E"),
+		(KeyCode::KeyQ, SlotKey::Hand(Side::Off), "Q"),
 	]));
 }
 

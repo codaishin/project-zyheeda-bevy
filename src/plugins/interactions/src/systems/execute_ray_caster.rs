@@ -9,7 +9,7 @@ use bevy::{
 		query::Added,
 		system::{Commands, Query, Res, Resource},
 	},
-	math::Ray,
+	math::Ray3d,
 };
 use common::traits::cast_ray::CastRay;
 
@@ -21,7 +21,7 @@ pub(crate) fn execute_ray_caster<TCastRay: CastRay<RayCaster> + Resource>(
 ) {
 	for (source, ray_caster) in &ray_casters {
 		let hit = cast_ray.cast_ray(ray_caster.clone());
-		let ray = Ray {
+		let ray = Ray3d {
 			origin: ray_caster.origin,
 			direction: ray_caster.direction,
 		};
@@ -49,7 +49,7 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		ecs::{entity::Entity, event::Events},
-		math::Vec3,
+		math::{primitives::Direction3d, Vec3},
 		utils::default,
 	};
 	use common::{test_tools::utils::SingleThreadedApp, traits::cast_ray::TimeOfImpact};
@@ -73,7 +73,7 @@ mod tests {
 		let mut cast_ray = _CastRay::default();
 		let ray_caster = RayCaster {
 			origin: Vec3::ZERO,
-			direction: Vec3::ONE,
+			direction: Direction3d::NEG_Y,
 			max_toi: TimeOfImpact(42.),
 			solid: true,
 			filter: default(),
@@ -108,7 +108,7 @@ mod tests {
 			.world
 			.spawn(RayCaster {
 				origin: Vec3::ONE,
-				direction: Vec3::Y,
+				direction: Direction3d::Y,
 				..default()
 			})
 			.id();
@@ -123,9 +123,9 @@ mod tests {
 				source: ray_caster,
 				target: RayCastTarget {
 					entity: Some(Entity::from_raw(42)),
-					ray: Ray {
+					ray: Ray3d {
 						origin: Vec3::ONE,
-						direction: Vec3::Y
+						direction: Direction3d::Y
 					},
 					toi: TimeOfImpact(42.)
 				}
@@ -148,7 +148,7 @@ mod tests {
 			.spawn(RayCaster {
 				max_toi: TimeOfImpact(420.),
 				origin: Vec3::ONE,
-				direction: Vec3::Y,
+				direction: Direction3d::Y,
 				..default()
 			})
 			.id();
@@ -163,9 +163,9 @@ mod tests {
 				source: ray_caster,
 				target: RayCastTarget {
 					entity: None,
-					ray: Ray {
+					ray: Ray3d {
 						origin: Vec3::ONE,
-						direction: Vec3::Y
+						direction: Direction3d::Y
 					},
 					toi: TimeOfImpact(420.)
 				}
@@ -180,7 +180,7 @@ mod tests {
 		let mut cast_ray = _CastRay::default();
 		let ray_caster = RayCaster {
 			origin: Vec3::ZERO,
-			direction: Vec3::ONE,
+			direction: Direction3d::NEG_Y,
 			max_toi: TimeOfImpact(42.),
 			solid: true,
 			filter: default(),
@@ -201,7 +201,7 @@ mod tests {
 		let mut cast_ray = _CastRay::default();
 		let ray_caster = RayCaster {
 			origin: Vec3::ZERO,
-			direction: Vec3::ONE,
+			direction: Direction3d::NEG_Y,
 			max_toi: TimeOfImpact(42.),
 			solid: true,
 			filter: default(),

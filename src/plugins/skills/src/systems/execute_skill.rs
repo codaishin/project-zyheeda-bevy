@@ -190,8 +190,8 @@ mod tests {
 			fn update_state(&mut self, delta: Duration) -> HashSet<StateMeta<SkillState>> {}
 		}
 		impl Execution for _Skill {
-			fn run<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>, agent_transform: &Transform, spawner: &Spawner) {}
-			fn stop<'a, 'b, 'c>(&self, agent: &mut EntityCommands<'a, 'b, 'c>) {}
+			fn run<'a>(&self, agent: &mut EntityCommands<'a>, agent_transform: &Transform, spawner: &Spawner) {}
+			fn stop<'a>(&self, agent: &mut EntityCommands<'a>) {}
 		}
 		impl GetAnimation<_AnimationKey> for _Skill {
 			fn animate(&self) -> Animate<_AnimationKey> {}

@@ -98,7 +98,7 @@ mod tests_execution {
 	use bevy::{
 		app::{App, Update},
 		ecs::entity::Entity,
-		math::{Ray, Vec3},
+		math::{Ray3d, Vec3},
 		transform::components::{GlobalTransform, Transform},
 		utils::default,
 	};
@@ -107,9 +107,9 @@ mod tests_execution {
 
 	fn test_target() -> Target {
 		Target {
-			ray: Ray {
+			ray: Ray3d {
 				origin: Vec3::Y,
-				direction: Vec3::NEG_ONE,
+				direction: Vec3::NEG_ONE.try_into().unwrap(),
 			},
 			collision_info: Some(ColliderInfo {
 				collider: Outdated {
@@ -142,8 +142,8 @@ mod tests_execution {
 	mock! {
 		_Tools{}
 		impl StartFn for _Tools {
-			fn run<'a, 'b, 'c>(
-				_agent: &mut EntityCommands<'a, 'b, 'c>,
+			fn run<'a>(
+				_agent: &mut EntityCommands<'a>,
 				_agent_transform: &Transform,
 				_spawner: &Spawner,
 				_target: &Target,
@@ -151,7 +151,7 @@ mod tests_execution {
 			}
 		}
 		impl StopFn for _Tools {
-			fn stop<'a, 'b, 'c>(_agent: &mut EntityCommands<'a, 'b, 'c>) {}
+			fn stop<'a>(_agent: &mut EntityCommands<'a>) {}
 		}
 	}
 

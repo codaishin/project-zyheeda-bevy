@@ -8,10 +8,10 @@ use bevy::{
 		entity::Entity,
 		system::{Commands, Query, Res, Resource},
 	},
-	math::Ray,
+	math::Ray3d,
 };
 
-pub(crate) fn set_mouse_hover<TCastRay: CastRay<Ray> + Resource>(
+pub(crate) fn set_mouse_hover<TCastRay: CastRay<Ray3d> + Resource>(
 	mut commands: Commands,
 	cam_ray: Option<Res<CamRay>>,
 	ray_caster: Res<TCastRay>,
@@ -28,7 +28,7 @@ pub(crate) fn set_mouse_hover<TCastRay: CastRay<Ray> + Resource>(
 	commands.insert_resource(mouse_hover);
 }
 
-fn ray_cast<TCastRay: CastRay<Ray> + Resource>(
+fn ray_cast<TCastRay: CastRay<Ray3d> + Resource>(
 	cam_ray: Option<Res<CamRay>>,
 	ray_caster: Res<TCastRay>,
 ) -> Option<(Entity, TimeOfImpact)> {
@@ -46,7 +46,7 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		ecs::entity::Entity,
-		math::{Ray, Vec3},
+		math::{Ray3d, Vec3},
 	};
 	use mockall::{automock, predicate::eq};
 
@@ -56,13 +56,13 @@ mod tests {
 	}
 
 	#[automock]
-	impl CastRay<Ray> for _CastRay {
-		fn cast_ray(&self, ray: Ray) -> Option<(Entity, TimeOfImpact)> {
+	impl CastRay<Ray3d> for _CastRay {
+		fn cast_ray(&self, ray: Ray3d) -> Option<(Entity, TimeOfImpact)> {
 			self.mock.cast_ray(ray)
 		}
 	}
 
-	fn setup(ray: Option<Ray>) -> App {
+	fn setup(ray: Option<Ray3d>) -> App {
 		let mut app = App::new();
 
 		app.init_resource::<_CastRay>();
@@ -71,14 +71,16 @@ mod tests {
 		app
 	}
 
-	const TEST_RAY: Ray = Ray {
-		origin: Vec3::new(5., 6., 7.),
-		direction: Vec3::new(11., 12., 13.),
-	};
+	fn test_ray() -> Option<Ray3d> {
+		Some(Ray3d {
+			origin: Vec3::new(5., 6., 7.),
+			direction: Vec3::new(11., 12., 13.).try_into().unwrap(),
+		})
+	}
 
 	#[test]
 	fn add_target_collider() {
-		let mut app = setup(Some(TEST_RAY));
+		let mut app = setup(test_ray());
 		let collider = app.world.spawn_empty().id();
 		let mut cast_ray = app.world.resource_mut::<_CastRay>();
 		cast_ray
@@ -100,7 +102,7 @@ mod tests {
 
 	#[test]
 	fn add_target_root() {
-		let mut app = setup(Some(TEST_RAY));
+		let mut app = setup(test_ray());
 		let root = app.world.spawn_empty().id();
 		let collider = app.world.spawn(ColliderRoot(root)).id();
 		let mut cast_ray = app.world.resource_mut::<_CastRay>();
@@ -121,7 +123,7 @@ mod tests {
 
 	#[test]
 	fn set_mouse_hover_none_when_no_collision() {
-		let mut app = setup(Some(TEST_RAY));
+		let mut app = setup(test_ray());
 		let mut cast_ray = app.world.resource_mut::<_CastRay>();
 		cast_ray.mock.expect_cast_ray().return_const(None);
 
@@ -151,14 +153,14 @@ mod tests {
 
 	#[test]
 	fn call_cast_ray_with_parameters() {
-		let mut app = setup(Some(TEST_RAY));
+		let mut app = setup(test_ray());
 		let mut cast_ray = app.world.resource_mut::<_CastRay>();
 
 		cast_ray
 			.mock
 			.expect_cast_ray()
 			.times(1)
-			.with(eq(TEST_RAY))
+			.with(eq(test_ray().unwrap()))
 			.return_const(None);
 
 		app.update();

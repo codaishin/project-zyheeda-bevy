@@ -67,7 +67,7 @@ mod test {
 		}
 
 		#[allow(clippy::needless_lifetimes)]
-		fn cleanup<'w, 's, 'a>(&self, agent: &mut EntityCommands<'w, 's, 'a>) {
+		fn cleanup<'a>(&self, agent: &mut EntityCommands<'a>) {
 			agent.insert(_Cleaned);
 		}
 	}

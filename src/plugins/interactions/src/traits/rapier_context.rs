@@ -7,7 +7,7 @@ impl CastRay<RayCaster> for RapierContext {
 	fn cast_ray(&self, ray: RayCaster) -> Option<(Entity, TimeOfImpact)> {
 		self.cast_ray(
 			ray.origin,
-			ray.direction,
+			ray.direction.into(),
 			ray.max_toi.0,
 			ray.solid,
 			QueryFilter::from(ray.filter),

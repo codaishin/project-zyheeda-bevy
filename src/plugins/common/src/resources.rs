@@ -4,7 +4,7 @@ use bevy::{
 		entity::Entity,
 		system::{Res, Resource},
 	},
-	math::Ray,
+	math::Ray3d,
 	scene::Scene,
 };
 use std::{
@@ -31,7 +31,7 @@ impl<T> Default for MouseHover<T> {
 }
 
 #[derive(Resource, Default)]
-pub struct CamRay(pub Option<Ray>);
+pub struct CamRay(pub Option<Ray3d>);
 
 #[derive(Resource)]
 pub struct Models(pub HashMap<&'static str, Handle<Scene>>);

@@ -6,7 +6,7 @@ use bevy::{
 		system::{Commands, Query},
 	},
 	hierarchy::DespawnRecursiveExt,
-	math::{Ray, Vec3},
+	math::{primitives::Direction3d, Ray3d, Vec3},
 	prelude::SpatialBundle,
 	transform::{
 		components::{GlobalTransform, Transform},
@@ -65,11 +65,14 @@ fn ray_cast(
 	let Some(mut beam) = commands.get_entity(id) else {
 		return;
 	};
-	let source = translation(source_transform, source_offset);
+	let origin = translation(source_transform, source_offset);
 	let target = translation(target_transform, target_offset);
+	let Ok(direction) = Direction3d::new(target - origin) else {
+		return;
+	};
 	beam.try_insert(RayCaster {
-		origin: source,
-		direction: (target - source).normalize(),
+		origin,
+		direction,
 		solid: true,
 		filter,
 		max_toi: TimeOfImpact(cfg.range),
@@ -124,7 +127,7 @@ fn translation(transform: &GlobalTransform, offset: Option<&GroundOffset>) -> Ve
 	transform.translation() + offset.map_or(Vec3::ZERO, |offset| offset.0)
 }
 
-fn get_beam_range(ray: Ray, toi: TimeOfImpact) -> (Vec3, Vec3) {
+fn get_beam_range(ray: Ray3d, toi: TimeOfImpact) -> (Vec3, Vec3) {
 	(ray.origin, ray.origin + ray.direction * toi.0)
 }
 
@@ -142,7 +145,7 @@ mod tests {
 		app::{App, Update},
 		ecs::entity::Entity,
 		hierarchy::BuildWorldChildren,
-		math::{Ray, Vec3},
+		math::Vec3,
 		prelude::default,
 		render::{
 			color::Color,
@@ -193,7 +196,7 @@ mod tests {
 		assert_eq!(
 			Some(&RayCaster {
 				origin: Vec3::new(1., 0., 0.),
-				direction: Vec3::new(0., 0., 1.),
+				direction: Direction3d::Z,
 				max_toi: TimeOfImpact(100.),
 				solid: true,
 				filter: QueryFilter::default()
@@ -234,7 +237,7 @@ mod tests {
 		assert_eq!(
 			Some(&RayCaster {
 				origin: Vec3::new(1., 0., 0.),
-				direction: Vec3::new(0., 1., 4.).normalize(),
+				direction: Vec3::new(0., 1., 4.).normalize().try_into().unwrap(),
 				max_toi: TimeOfImpact(100.),
 				solid: true,
 				filter: QueryFilter::default()
@@ -275,7 +278,7 @@ mod tests {
 		assert_eq!(
 			Some(&RayCaster {
 				origin: Vec3::new(1., 1., 0.),
-				direction: Vec3::new(0., -1., 4.).normalize(),
+				direction: Vec3::new(0., -1., 4.).normalize().try_into().unwrap(),
 				max_toi: TimeOfImpact(100.),
 				solid: true,
 				filter: QueryFilter::default()
@@ -310,9 +313,9 @@ mod tests {
 		app.world.send_event(RayCastEvent {
 			source: beam,
 			target: RayCastTarget {
-				ray: Ray {
+				ray: Ray3d {
 					origin: Vec3::Z,
-					direction: Vec3::Y,
+					direction: Direction3d::Y,
 				},
 				toi: TimeOfImpact(10.),
 				..default()
@@ -355,9 +358,9 @@ mod tests {
 		app.world.send_event(RayCastEvent {
 			source: beam,
 			target: RayCastTarget {
-				ray: Ray {
+				ray: Ray3d {
 					origin: Vec3::new(0., 1., 0.),
-					direction: Vec3::new(1., 0., 0.),
+					direction: Direction3d::X,
 				},
 				toi: TimeOfImpact(10.),
 				..default()
@@ -420,9 +423,9 @@ mod tests {
 		app.world.send_event(RayCastEvent {
 			source: beam,
 			target: RayCastTarget {
-				ray: Ray {
+				ray: Ray3d {
 					origin: Vec3::new(0., 1., 0.),
-					direction: Vec3::new(1., 0., 0.),
+					direction: Direction3d::X,
 				},
 				toi: TimeOfImpact(10.),
 				..default()
@@ -473,9 +476,9 @@ mod tests {
 		app.world.send_event(RayCastEvent {
 			source: beam,
 			target: RayCastTarget {
-				ray: Ray {
+				ray: Ray3d {
 					origin: Vec3::new(0., 1., 0.),
-					direction: Vec3::new(1., 0., 0.),
+					direction: Direction3d::X,
 				},
 				toi: TimeOfImpact(10.),
 				..default()

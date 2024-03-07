@@ -1,9 +1,9 @@
 use super::{InputState, ShouldEnqueue};
 use crate::{components::SlotKey, resources::SlotMap};
-use bevy::input::{keyboard::KeyCode, Input};
+use bevy::input::{keyboard::KeyCode, ButtonInput};
 use std::hash::Hash;
 
-impl<TKey: Eq + Hash + Copy + Send + Sync> InputState<TKey> for Input<TKey> {
+impl<TKey: Eq + Hash + Copy + Send + Sync> InputState<TKey> for ButtonInput<TKey> {
 	fn just_pressed_slots(&self, map: &SlotMap<TKey>) -> Vec<SlotKey> {
 		self.get_just_pressed()
 			.filter_map(|k| map.slots.get(k))
@@ -26,7 +26,7 @@ impl<TKey: Eq + Hash + Copy + Send + Sync> InputState<TKey> for Input<TKey> {
 	}
 }
 
-impl ShouldEnqueue for Input<KeyCode> {
+impl ShouldEnqueue for ButtonInput<KeyCode> {
 	fn should_enqueue(&self) -> bool {
 		self.pressed(KeyCode::ShiftLeft)
 	}
@@ -41,16 +41,16 @@ mod tests {
 
 	#[test]
 	fn get_just_pressed() {
-		let mut input = Input::<KeyCode>::default();
-		input.press(KeyCode::A);
-		input.press(KeyCode::B);
-		input.press(KeyCode::C);
-		input.press(KeyCode::D);
-		input.clear_just_pressed(KeyCode::D);
+		let mut input = ButtonInput::<KeyCode>::default();
+		input.press(KeyCode::KeyA);
+		input.press(KeyCode::KeyB);
+		input.press(KeyCode::KeyC);
+		input.press(KeyCode::KeyD);
+		input.clear_just_pressed(KeyCode::KeyD);
 		let slot_map = SlotMap::new([
-			(KeyCode::A, SlotKey::SkillSpawn, ""),
-			(KeyCode::C, SlotKey::Hand(Side::Main), ""),
-			(KeyCode::D, SlotKey::Hand(Side::Off), ""),
+			(KeyCode::KeyA, SlotKey::SkillSpawn, ""),
+			(KeyCode::KeyC, SlotKey::Hand(Side::Main), ""),
+			(KeyCode::KeyD, SlotKey::Hand(Side::Off), ""),
 		]);
 
 		assert_eq!(
@@ -61,19 +61,19 @@ mod tests {
 
 	#[test]
 	fn get_pressed() {
-		let mut input = Input::<KeyCode>::default();
-		input.press(KeyCode::A);
-		input.press(KeyCode::B);
-		input.press(KeyCode::C);
-		input.press(KeyCode::D);
-		input.clear_just_pressed(KeyCode::A);
-		input.clear_just_pressed(KeyCode::B);
-		input.clear_just_pressed(KeyCode::C);
-		input.clear_just_pressed(KeyCode::D);
+		let mut input = ButtonInput::<KeyCode>::default();
+		input.press(KeyCode::KeyA);
+		input.press(KeyCode::KeyB);
+		input.press(KeyCode::KeyC);
+		input.press(KeyCode::KeyD);
+		input.clear_just_pressed(KeyCode::KeyA);
+		input.clear_just_pressed(KeyCode::KeyB);
+		input.clear_just_pressed(KeyCode::KeyC);
+		input.clear_just_pressed(KeyCode::KeyD);
 		let slot_map = SlotMap::new([
-			(KeyCode::A, SlotKey::SkillSpawn, ""),
-			(KeyCode::C, SlotKey::Hand(Side::Main), ""),
-			(KeyCode::D, SlotKey::Hand(Side::Off), ""),
+			(KeyCode::KeyA, SlotKey::SkillSpawn, ""),
+			(KeyCode::KeyC, SlotKey::Hand(Side::Main), ""),
+			(KeyCode::KeyD, SlotKey::Hand(Side::Off), ""),
 		]);
 
 		assert_eq!(
@@ -87,22 +87,22 @@ mod tests {
 	}
 	#[test]
 	fn get_just_released() {
-		let mut input = Input::<KeyCode>::default();
-		input.press(KeyCode::A);
-		input.press(KeyCode::B);
-		input.press(KeyCode::C);
-		input.press(KeyCode::D);
-		input.release(KeyCode::A);
-		input.release(KeyCode::B);
-		input.release(KeyCode::C);
-		input.clear_just_pressed(KeyCode::A);
-		input.clear_just_pressed(KeyCode::B);
-		input.clear_just_pressed(KeyCode::C);
-		input.clear_just_pressed(KeyCode::D);
+		let mut input = ButtonInput::<KeyCode>::default();
+		input.press(KeyCode::KeyA);
+		input.press(KeyCode::KeyB);
+		input.press(KeyCode::KeyC);
+		input.press(KeyCode::KeyD);
+		input.release(KeyCode::KeyA);
+		input.release(KeyCode::KeyB);
+		input.release(KeyCode::KeyC);
+		input.clear_just_pressed(KeyCode::KeyA);
+		input.clear_just_pressed(KeyCode::KeyB);
+		input.clear_just_pressed(KeyCode::KeyC);
+		input.clear_just_pressed(KeyCode::KeyD);
 		let slot_map = SlotMap::new([
-			(KeyCode::A, SlotKey::SkillSpawn, ""),
-			(KeyCode::C, SlotKey::Hand(Side::Main), ""),
-			(KeyCode::D, SlotKey::Hand(Side::Off), ""),
+			(KeyCode::KeyA, SlotKey::SkillSpawn, ""),
+			(KeyCode::KeyC, SlotKey::Hand(Side::Main), ""),
+			(KeyCode::KeyD, SlotKey::Hand(Side::Off), ""),
 		]);
 
 		assert_eq!(
@@ -113,14 +113,14 @@ mod tests {
 
 	#[test]
 	fn should_enqueue_false() {
-		let input = Input::<KeyCode>::default();
+		let input = ButtonInput::<KeyCode>::default();
 
 		assert!(!input.should_enqueue());
 	}
 
 	#[test]
 	fn should_enqueue_true() {
-		let mut input = Input::<KeyCode>::default();
+		let mut input = ButtonInput::<KeyCode>::default();
 		input.press(KeyCode::ShiftLeft);
 		input.clear_just_pressed(KeyCode::ShiftLeft);
 

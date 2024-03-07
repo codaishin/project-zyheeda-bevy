@@ -5,7 +5,8 @@ use bevy::{
 		query::With,
 		system::{Commands, Query},
 	},
-	prelude::{Entity, Input, MouseButton, Res},
+	input::ButtonInput,
+	prelude::{Entity, MouseButton, Res},
 	ui::Interaction,
 };
 use common::components::{Collection, Swap};
@@ -18,7 +19,7 @@ pub fn drop<
 	mut commands: Commands,
 	agents: Query<(Entity, &Dad<TKeyDad>), With<TAgent>>,
 	panels: Query<(&Interaction, &KeyedPanel<TKeyKeyedPanel>)>,
-	mouse: Res<Input<MouseButton>>,
+	mouse: Res<ButtonInput<MouseButton>>,
 ) {
 	if !mouse.just_released(MouseButton::Left) {
 		return;
@@ -54,7 +55,7 @@ mod tests {
 
 	fn setup<T1: Copy + Send + Sync + 'static, T2: Copy + Send + Sync + 'static>() -> App {
 		let mut app = App::new();
-		app.insert_resource(Input::<MouseButton>::default());
+		app.insert_resource(ButtonInput::<MouseButton>::default());
 		app.add_systems(Update, drop::<_Agent, T1, T2>);
 
 		app
@@ -62,12 +63,12 @@ mod tests {
 
 	fn press_and_release_mouse_left(app: &mut App) {
 		app.world
-			.get_resource_mut::<Input<MouseButton>>()
+			.get_resource_mut::<ButtonInput<MouseButton>>()
 			.unwrap()
 			.press(MouseButton::Left);
 		app.update();
 		app.world
-			.get_resource_mut::<Input<MouseButton>>()
+			.get_resource_mut::<ButtonInput<MouseButton>>()
 			.unwrap()
 			.release(MouseButton::Left);
 	}

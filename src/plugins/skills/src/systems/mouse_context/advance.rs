@@ -37,11 +37,11 @@ mod tests {
 	fn advance_to_triggered() {
 		let mut app = App::new();
 
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.world
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
-			.set(MouseContext::JustTriggered(KeyCode::B));
+			.set(MouseContext::JustTriggered(KeyCode::KeyB));
 
 		app.add_systems(Update, advance_just_triggered_mouse_context);
 		app.update();
@@ -53,18 +53,18 @@ mod tests {
 			.unwrap()
 			.get();
 
-		assert_eq!(&MouseContext::Triggered(KeyCode::B), mouse_context);
+		assert_eq!(&MouseContext::Triggered(KeyCode::KeyB), mouse_context);
 	}
 
 	#[test]
 	fn do_not_advance_to_triggered_when_no_key_pressed() {
 		let mut app = App::new();
 
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.world
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
-			.set(MouseContext::Primed(KeyCode::B));
+			.set(MouseContext::Primed(KeyCode::KeyB));
 
 		app.add_systems(Update, advance_just_triggered_mouse_context);
 		app.update();
@@ -76,18 +76,18 @@ mod tests {
 			.unwrap()
 			.get();
 
-		assert_eq!(&MouseContext::Primed(KeyCode::B), mouse_context);
+		assert_eq!(&MouseContext::Primed(KeyCode::KeyB), mouse_context);
 	}
 
 	#[test]
 	fn advance_to_default() {
 		let mut app = App::new();
 
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.world
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
-			.set(MouseContext::JustReleased(KeyCode::B));
+			.set(MouseContext::JustReleased(KeyCode::KeyB));
 
 		app.add_systems(Update, advance_just_released_mouse_context);
 		app.update();
@@ -106,11 +106,11 @@ mod tests {
 	fn do_not_advance_to_default_when_no_key_released() {
 		let mut app = App::new();
 
-		app.add_state::<MouseContext>();
+		app.init_state::<MouseContext>();
 		app.world
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
-			.set(MouseContext::Primed(KeyCode::B));
+			.set(MouseContext::Primed(KeyCode::KeyB));
 
 		app.add_systems(Update, advance_just_released_mouse_context);
 		app.update();
@@ -122,6 +122,6 @@ mod tests {
 			.unwrap()
 			.get();
 
-		assert_eq!(&MouseContext::Primed(KeyCode::B), mouse_context);
+		assert_eq!(&MouseContext::Primed(KeyCode::KeyB), mouse_context);
 	}
 }

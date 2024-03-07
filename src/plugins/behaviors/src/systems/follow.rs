@@ -2,10 +2,10 @@ use crate::traits::MoveTogether;
 use bevy::prelude::{Component, Query, Transform, With, Without};
 
 pub(crate) fn follow<TTarget: Component, TMover: MoveTogether + Component>(
-	target: Query<(&Transform, With<TTarget>)>,
-	mut follower: Query<(&mut Transform, &mut TMover, Without<TTarget>)>,
+	targets: Query<&Transform, With<TTarget>>,
+	mut follower: Query<(&mut Transform, &mut TMover), Without<TTarget>>,
 ) {
-	let Ok((target, ..)) = target.get_single() else {
+	let Ok(target) = targets.get_single() else {
 		return; //FIXME: Handle properly;
 	};
 	let Ok((mut follower, mut mover, ..)) = follower.get_single_mut() else {

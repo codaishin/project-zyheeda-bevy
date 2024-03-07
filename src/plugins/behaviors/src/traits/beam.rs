@@ -3,9 +3,9 @@ use bevy::{
 	asset::Handle,
 	ecs::system::EntityCommands,
 	hierarchy::BuildChildren,
-	math::Quat,
+	math::{primitives::Cylinder, Quat},
 	pbr::{AlphaMode, NotShadowCaster, PbrBundle, StandardMaterial},
-	render::mesh::{shape::Cylinder, Mesh},
+	render::mesh::Mesh,
 	transform::components::Transform,
 	utils::default,
 };
@@ -24,8 +24,7 @@ impl Instantiate for Beam {
 		let key = AssetKey::Beam;
 		let mesh = Mesh::from(Cylinder {
 			radius: 0.01,
-			height: 1.,
-			..default()
+			half_height: 0.5,
 		});
 		let material = StandardMaterial {
 			base_color: self.color,

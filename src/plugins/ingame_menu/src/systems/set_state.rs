@@ -37,7 +37,7 @@ mod tests {
 	fn toggle_on() {
 		let mut app = App::new();
 
-		app.add_state::<_State>();
+		app.init_state::<_State>();
 		app.add_systems(Update, set_state::<_State, _A>);
 		app.update();
 		app.update();
