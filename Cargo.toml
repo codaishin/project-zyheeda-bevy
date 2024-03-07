@@ -17,11 +17,15 @@ interactions = { path = "src/plugins/interactions" }
 prefabs = { path = "src/plugins/prefabs" }
 skills = { path = "src/plugins/skills" }
 
-# Enable a small amount of optimization in debug mode
+[profile.test]
+opt-level = 0
+
+[profile.test.package."*"]
+opt-level = 0
+
 [profile.dev]
 opt-level = 1
 
-# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
 [profile.dev.package."*"]
 opt-level = 3
 
