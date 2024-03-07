@@ -59,12 +59,14 @@ fn prepare_game(app: &mut App) {
 pub mod debug_utils {
 	use super::*;
 	use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
+	use bevy_inspector_egui::quick::WorldInspectorPlugin;
 	use interactions::events::RayCastEvent;
 	use std::ops::Not;
 
 	pub fn prepare_debug(app: &mut App) {
-		app.add_plugins(RapierDebugRenderPlugin::default())
-			.insert_resource(ShowGizmos::No)
+		app.insert_resource(ShowGizmos::No)
+			.add_plugins(WorldInspectorPlugin::new())
+			.add_plugins(RapierDebugRenderPlugin::default())
 			.add_systems(Update, debug)
 			.add_systems(Update, toggle_gizmos)
 			.add_systems(

@@ -28,7 +28,7 @@ pub struct GroundOffset(pub Vec3);
 pub struct Player;
 
 impl Player {
-	pub const MODEL_PATH: &str = "models/player.glb";
+	pub const MODEL_PATH: &'static str = "models/player.glb";
 }
 
 #[derive(Component)]

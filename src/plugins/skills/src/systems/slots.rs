@@ -123,7 +123,7 @@ mod tests {
 		app.update();
 
 		let bone = app.world.entity(bone);
-		let slot = *bone.get::<Children>().and_then(|c| c.get(0)).unwrap();
+		let slot = *bone.get::<Children>().and_then(|c| c.first()).unwrap();
 		let slot = app.world.entity(slot);
 
 		assert!(slot.contains::<Handle<Scene>>());
@@ -148,7 +148,7 @@ mod tests {
 		app.update();
 
 		let bone = app.world.entity(bone);
-		let slot = *bone.get::<Children>().and_then(|c| c.get(0)).unwrap();
+		let slot = *bone.get::<Children>().and_then(|c| c.first()).unwrap();
 		let slot_transform = app.world.entity(slot).get::<Transform>().unwrap();
 
 		assert_eq!(Quat::IDENTITY, slot_transform.rotation);
@@ -174,7 +174,7 @@ mod tests {
 		app.update();
 
 		let bone = app.world.entity(bone);
-		let slot = *bone.get::<Children>().and_then(|c| c.get(0)).unwrap();
+		let slot = *bone.get::<Children>().and_then(|c| c.first()).unwrap();
 		let slots = app.world.entity(root).get::<Slots>().unwrap();
 
 		assert_eq!(
