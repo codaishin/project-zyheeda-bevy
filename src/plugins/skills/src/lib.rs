@@ -180,6 +180,7 @@ fn setup_skill_templates(
 			animate: Some(PlayerSkills::Shoot(Handed::Dual(SideUnset))),
 			execution: Projectile::<Plasma>::execution(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
+			dual_wield: true,
 			..default()
 		},
 	]);

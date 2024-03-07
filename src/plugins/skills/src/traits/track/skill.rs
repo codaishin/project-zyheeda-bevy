@@ -1,10 +1,10 @@
 use crate::{
-	components::Track,
+	components::{SlotKey, Track},
 	skill::{Active, Skill, SkillState, Spawner},
-	traits::Execution,
+	traits::{Execution, GetSlots},
 };
 use bevy::{ecs::system::EntityCommands, transform::components::Transform};
-use common::traits::state_duration::StateDuration;
+use common::{components::Side, traits::state_duration::StateDuration};
 use std::time::Duration;
 
 impl<TAnimationKey, TData> StateDuration<SkillState> for Track<Skill<TAnimationKey, TData>> {
@@ -35,6 +35,20 @@ impl<TAnimationKey> Execution for Track<Skill<TAnimationKey, Active>> {
 			return;
 		};
 		stop(agent);
+	}
+}
+
+impl<TAnimationKey> GetSlots for Track<Skill<TAnimationKey, Active>> {
+	fn slots(&self) -> Vec<SlotKey> {
+		match (self.value.data.slot_key, self.value.dual_wield) {
+			(SlotKey::Hand(Side::Main), true) => {
+				vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]
+			}
+			(SlotKey::Hand(Side::Off), true) => {
+				vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)]
+			}
+			(slot_key, ..) => vec![slot_key],
+		}
 	}
 }
 
@@ -216,5 +230,86 @@ mod tests_execution {
 			stop_system::<Track<Skill<PlayerSkills<SideUnset>, Active>>>(agent),
 		);
 		app.update();
+	}
+}
+
+#[cfg(test)]
+mod test_get_slot {
+	use super::*;
+	use crate::skill::PlayerSkills;
+	use bevy::utils::default;
+	use common::components::Side;
+
+	#[test]
+	fn get_main() {
+		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
+			data: Active {
+				slot_key: SlotKey::Hand(Side::Off),
+				..default()
+			},
+			..default()
+		});
+
+		assert_eq!(vec![SlotKey::Hand(Side::Off)], track.slots());
+	}
+
+	#[test]
+	fn get_off() {
+		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
+			data: Active {
+				slot_key: SlotKey::Hand(Side::Main),
+				..default()
+			},
+			..default()
+		});
+
+		assert_eq!(vec![SlotKey::Hand(Side::Main)], track.slots());
+	}
+
+	#[test]
+	fn get_dual_main() {
+		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
+			data: Active {
+				slot_key: SlotKey::Hand(Side::Main),
+				..default()
+			},
+			dual_wield: true,
+			..default()
+		});
+
+		assert_eq!(
+			vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
+			track.slots()
+		);
+	}
+
+	#[test]
+	fn get_dual_off() {
+		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
+			data: Active {
+				slot_key: SlotKey::Hand(Side::Off),
+				..default()
+			},
+			dual_wield: true,
+			..default()
+		});
+
+		assert_eq!(
+			vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+			track.slots()
+		);
+	}
+
+	#[test]
+	fn get_skill_spawn() {
+		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
+			data: Active {
+				slot_key: SlotKey::SkillSpawn,
+				..default()
+			},
+			..default()
+		});
+
+		assert_eq!(vec![SlotKey::SkillSpawn], track.slots());
 	}
 }

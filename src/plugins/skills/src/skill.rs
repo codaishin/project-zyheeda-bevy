@@ -20,6 +20,7 @@ pub struct Skill<TAnimationKey = PlayerSkills<SideUnset>, TData = ()> {
 	pub animate: Option<TAnimationKey>,
 	pub execution: SkillExecution,
 	pub is_usable_with: HashSet<ItemType>,
+	pub dual_wield: bool,
 }
 
 impl<TAnimationKey, TData: Default> Default for Skill<TAnimationKey, TData> {
@@ -32,6 +33,7 @@ impl<TAnimationKey, TData: Default> Default for Skill<TAnimationKey, TData> {
 			animate: Default::default(),
 			execution: Default::default(),
 			is_usable_with: Default::default(),
+			dual_wield: Default::default(),
 		}
 	}
 }
@@ -110,6 +112,7 @@ impl Skill {
 			animate: self.animate,
 			execution: self.execution,
 			is_usable_with: self.is_usable_with,
+			dual_wield: self.dual_wield,
 		}
 	}
 }
@@ -124,6 +127,7 @@ impl<TAnimationKey, TSrc> Skill<TAnimationKey, TSrc> {
 			soft_override: self.soft_override,
 			execution: self.execution,
 			is_usable_with: self.is_usable_with,
+			dual_wield: self.dual_wield,
 		}
 	}
 }
