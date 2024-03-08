@@ -2,6 +2,7 @@ use bevy::{
 	ecs::{component::Component, entity::Entity},
 	math::Vec3,
 };
+use std::marker::PhantomData;
 
 #[derive(Debug, PartialEq)]
 pub struct Swap<T1, T2>(pub T1, pub T2);
@@ -67,4 +68,19 @@ pub enum Animate<T: Copy + Clone> {
 pub struct Outdated<TComponent: Component> {
 	pub entity: Entity,
 	pub component: TComponent,
+}
+
+#[derive(Component, Debug, PartialEq)]
+pub struct OwnedBy<TOwner> {
+	pub owner: Entity,
+	owner_type: PhantomData<TOwner>,
+}
+
+impl<T> OwnedBy<T> {
+	pub fn with(owner: Entity) -> Self {
+		Self {
+			owner,
+			owner_type: PhantomData,
+		}
+	}
 }

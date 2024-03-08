@@ -1,53 +1,29 @@
-use std::marker::PhantomData;
-
 use crate::{
 	components::{Bar, BarValues, UI},
 	traits::UIBarColors,
 };
 use bevy::{
 	ecs::{
-		component::Component,
 		entity::Entity,
 		system::{Commands, Query},
 		world::Mut,
 	},
-	hierarchy::{BuildChildren, DespawnRecursiveExt},
+	hierarchy::BuildChildren,
 	math::Vec2,
 	prelude::default,
 	ui::{node_bundles::NodeBundle, BackgroundColor, PositionType, Style, Val},
 };
+use common::components::OwnedBy;
 
 const BASE_DIMENSIONS: Vec2 = Vec2::new(100., 10.);
-
-#[derive(Component)]
-pub struct Owned<TOwner> {
-	owner: Entity,
-	owner_type: PhantomData<TOwner>,
-}
-
-impl<T> Owned<T> {
-	fn by(owner: Entity) -> Self {
-		Self {
-			owner,
-			owner_type: PhantomData,
-		}
-	}
-}
 
 pub(crate) fn render_bar<T: Send + Sync + 'static>(
 	mut commands: Commands,
 	mut bars: Query<(Entity, &Bar, &mut BarValues<T>)>,
 	mut styles: Query<&mut Style>,
-	backgrounds: Query<(Entity, &Owned<Bar>)>,
 ) where
 	BarValues<T>: UIBarColors,
 {
-	let not_owned = |(_, owned): &(Entity, &Owned<Bar>)| bars.get(owned.owner).is_err();
-
-	for (background, ..) in backgrounds.iter().filter(not_owned) {
-		remove(&mut commands, background);
-	}
-
 	for (bar_id, bar, bar_values) in &mut bars {
 		match (bar.position, bar_values.ui) {
 			(Some(position), None) => add_ui(&mut commands, bar_id, bar, bar_values, position),
@@ -69,7 +45,7 @@ fn add_ui<T: Send + Sync + 'static>(
 	let scaled_dimension = BASE_DIMENSIONS * bar.scale;
 	let background = commands
 		.spawn((
-			Owned::<Bar>::by(bar_id),
+			OwnedBy::<Bar>::with(bar_id),
 			NodeBundle {
 				style: Style {
 					width: Val::Px(scaled_dimension.x),
@@ -119,13 +95,6 @@ fn update_ui<T>(
 	}
 }
 
-fn remove(commands: &mut Commands, id: Entity) {
-	let Some(entity) = commands.get_entity(id) else {
-		return;
-	};
-	entity.despawn_recursive();
-}
-
 fn noop() {}
 
 #[cfg(test)]
@@ -133,8 +102,8 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		ecs::{component::Component, world::EntityRef},
-		hierarchy::{BuildWorldChildren, Parent},
+		ecs::world::EntityRef,
+		hierarchy::Parent,
 		math::Vec2,
 		render::color::Color,
 		ui::{BackgroundColor, Node},
@@ -194,6 +163,34 @@ mod tests {
 				foreground
 			}),
 			bar.ui
+		);
+	}
+
+	#[test]
+	fn add_ownership_on_top_node() {
+		let mut app = App::new();
+		app.add_systems(Update, render_bar::<_Display>);
+
+		let bar = Bar {
+			position: Some(default()),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(0., 0.);
+		let bar = app.world.spawn((bar, bar_values)).id();
+
+		app.update();
+
+		let (background, ..) = app
+			.world
+			.iter_entities()
+			.filter(no_parent)
+			.find_map(|e| Some((e.id(), e.get::<Node>()?)))
+			.unwrap();
+		let background = app.world.entity(background);
+
+		assert_eq!(
+			Some(&OwnedBy::<Bar>::with(bar)),
+			background.get::<OwnedBy<Bar>>()
 		);
 	}
 
@@ -499,41 +496,5 @@ mod tests {
 			.unwrap();
 
 		assert_eq!(Val::Percent(120. / 200. * 100.), style.width);
-	}
-
-	#[test]
-	fn remove_node_recursive_when_bar_removed() {
-		#[derive(Component)]
-		struct _Child;
-
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
-		let bar = Bar {
-			position: Some(default()),
-			..default()
-		};
-		let bar_values = BarValues::<_Display>::new(0., 0.);
-		let bar = app.world.spawn((bar, bar_values)).id();
-
-		app.update();
-
-		let (node_id, ..) = app
-			.world
-			.iter_entities()
-			.filter(no_parent)
-			.find_map(|e| Some((e.id(), e.get::<Node>()?)))
-			.unwrap();
-		app.world.entity_mut(node_id).with_children(|parent| {
-			parent.spawn(_Child);
-		});
-		app.world.entity_mut(bar).despawn();
-
-		app.update();
-
-		let nodes = app.world.iter_entities().filter_map(|e| e.get::<Node>());
-		let children = app.world.iter_entities().filter_map(|e| e.get::<_Child>());
-
-		assert_eq!((0, 0), (nodes.count(), children.count()));
 	}
 }
