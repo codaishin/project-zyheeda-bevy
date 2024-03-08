@@ -270,24 +270,19 @@ fn spawn_camera(commands: &mut Commands) {
 }
 
 fn spawn_void_spheres(commands: &mut Commands) {
-	commands.spawn((
-		Name::new("Sphere A"),
-		VoidSphere,
-		SpatialBundle::from_transform(Transform::from_xyz(2., 0., 2.)),
-	));
-	commands.spawn((
-		Name::new("Sphere B"),
-		VoidSphere,
-		SpatialBundle::from_transform(Transform::from_xyz(-2., 0., 2.)),
-	));
-	commands.spawn((
-		Name::new("Sphere C"),
-		VoidSphere,
-		SpatialBundle::from_transform(Transform::from_xyz(2., 0., -2.)),
-	));
-	commands.spawn((
-		Name::new("Sphere D"),
-		VoidSphere,
-		SpatialBundle::from_transform(Transform::from_xyz(-2., 0., -2.)),
-	));
+	let directions = [
+		("Sphere A", Vec3::new(1., 0., 1.)),
+		("Sphere B", Vec3::new(-1., 0., 1.)),
+		("Sphere C", Vec3::new(1., 0., -1.)),
+		("Sphere D", Vec3::new(-1., 0., -1.)),
+	];
+	let distance = 10.;
+
+	for (name, direction) in directions {
+		commands.spawn((
+			Name::new(name),
+			VoidSphere,
+			SpatialBundle::from_transform(Transform::from_translation(direction * distance)),
+		));
+	}
 }
