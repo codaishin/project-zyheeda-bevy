@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::{
 	components::{Bar, BarValues, UI},
 	traits::UIBarColors,
@@ -18,17 +20,31 @@ use bevy::{
 const BASE_DIMENSIONS: Vec2 = Vec2::new(100., 10.);
 
 #[derive(Component)]
-pub struct BackGroundRef(Entity);
+pub struct Owned<TOwner> {
+	owner: Entity,
+	owner_type: PhantomData<TOwner>,
+}
+
+impl<T> Owned<T> {
+	fn by(owner: Entity) -> Self {
+		Self {
+			owner,
+			owner_type: PhantomData,
+		}
+	}
+}
 
 pub(crate) fn render_bar<T: Send + Sync + 'static>(
 	mut commands: Commands,
 	mut bars: Query<(Entity, &Bar, &mut BarValues<T>)>,
 	mut styles: Query<&mut Style>,
-	backgrounds: Query<(Entity, &BackGroundRef)>,
+	backgrounds: Query<(Entity, &Owned<Bar>)>,
 ) where
 	BarValues<T>: UIBarColors,
 {
-	for (background, ..) in backgrounds.iter().filter(|(_, b)| bars.get(b.0).is_err()) {
+	let not_owned = |(_, owned): &(Entity, &Owned<Bar>)| bars.get(owned.owner).is_err();
+
+	for (background, ..) in backgrounds.iter().filter(not_owned) {
 		remove(&mut commands, background);
 	}
 
@@ -36,7 +52,6 @@ pub(crate) fn render_bar<T: Send + Sync + 'static>(
 		match (bar.position, bar_values.ui) {
 			(Some(position), None) => add_ui(&mut commands, bar_id, bar, bar_values, position),
 			(Some(position), Some(ui)) => update_ui(&mut styles, ui, bar, bar_values, position),
-			(None, Some(ui)) => remove(&mut commands, ui.background),
 			_ => noop(),
 		}
 	}
@@ -54,7 +69,7 @@ fn add_ui<T: Send + Sync + 'static>(
 	let scaled_dimension = BASE_DIMENSIONS * bar.scale;
 	let background = commands
 		.spawn((
-			BackGroundRef(bar_id),
+			Owned::<Bar>::by(bar_id),
 			NodeBundle {
 				style: Style {
 					width: Val::Px(scaled_dimension.x),
@@ -105,7 +120,10 @@ fn update_ui<T>(
 }
 
 fn remove(commands: &mut Commands, id: Entity) {
-	commands.entity(id).despawn_recursive()
+	let Some(entity) = commands.get_entity(id) else {
+		return;
+	};
+	entity.despawn_recursive();
 }
 
 fn noop() {}
@@ -510,44 +528,6 @@ mod tests {
 			parent.spawn(_Child);
 		});
 		app.world.entity_mut(bar).despawn();
-
-		app.update();
-
-		let nodes = app.world.iter_entities().filter_map(|e| e.get::<Node>());
-		let children = app.world.iter_entities().filter_map(|e| e.get::<_Child>());
-
-		assert_eq!((0, 0), (nodes.count(), children.count()));
-	}
-
-	#[test]
-	fn remove_node_recursive_when_bar_position_is_none() {
-		#[derive(Component)]
-		struct _Child;
-
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
-		let bar = Bar {
-			position: Some(default()),
-			..default()
-		};
-		let bar_values = BarValues::<_Display>::new(0., 0.);
-		let bar = app.world.spawn((bar, bar_values)).id();
-
-		app.update();
-
-		let (node_id, ..) = app
-			.world
-			.iter_entities()
-			.filter(no_parent)
-			.find_map(|e| Some((e.id(), e.get::<Node>()?)))
-			.unwrap();
-		app.world.entity_mut(node_id).with_children(|parent| {
-			parent.spawn(_Child);
-		});
-		let mut bar = app.world.entity_mut(bar);
-		let mut bar = bar.get_mut::<Bar>().unwrap();
-		bar.position = None;
 
 		app.update();
 
