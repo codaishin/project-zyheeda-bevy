@@ -13,7 +13,7 @@ use bevy::{
 
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{ColliderRoot, GroundOffset, Health, Player},
+	components::{ColliderRoot, GroundOffset, Health, MainCamera, Player},
 	tools::UnitsPerSecond,
 	CommonPlugin,
 };
@@ -255,6 +255,7 @@ fn spawn_camera(commands: &mut Commands) {
 	orbit.sensitivity = 0.005;
 
 	commands.spawn((
+		MainCamera,
 		Camera3dBundle {
 			camera: Camera {
 				hdr: true,

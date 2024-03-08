@@ -84,3 +84,6 @@ impl<T> OwnedBy<T> {
 		}
 	}
 }
+
+#[derive(Component)]
+pub struct MainCamera;

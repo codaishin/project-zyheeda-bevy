@@ -2,15 +2,16 @@ use crate::{resources::CamRay, traits::get_ray::GetCamRay};
 use bevy::{
 	ecs::{
 		component::Component,
+		query::With,
 		system::{Commands, Query},
 	},
 	transform::components::GlobalTransform,
 	window::Window,
 };
 
-pub(crate) fn set_cam_ray<TCamera: GetCamRay + Component>(
+pub(crate) fn set_cam_ray<TCamera: GetCamRay + Component, TLabel: Component>(
 	mut commands: Commands,
-	camera: Query<(&TCamera, &GlobalTransform)>,
+	camera: Query<(&TCamera, &GlobalTransform), With<TLabel>>,
 	window: Query<&Window>,
 ) {
 	let (camera, camera_transform) = camera.single();
@@ -22,9 +23,10 @@ pub(crate) fn set_cam_ray<TCamera: GetCamRay + Component>(
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::test_tools::utils::SingleThreadedApp;
 	use bevy::{
 		app::{App, Update},
-		math::{Ray3d, Vec3},
+		math::{primitives::Direction3d, Ray3d, Vec3},
 		utils::default,
 	};
 	use mockall::automock;
@@ -34,6 +36,9 @@ mod tests {
 		mock: Mock_Camera,
 	}
 
+	#[derive(Component)]
+	struct _Label;
+
 	#[automock]
 	impl GetCamRay for _Camera {
 		fn get_ray(&self, camera_transform: &GlobalTransform, window: &Window) -> Option<Ray3d> {
@@ -42,15 +47,15 @@ mod tests {
 	}
 
 	fn setup(cam: _Camera) -> App {
-		let mut app = App::new();
+		let mut app = App::new_single_threaded([Update]);
 
 		app.world
-			.spawn((cam, GlobalTransform::from_xyz(4., 3., 2.)));
+			.spawn((cam, _Label, GlobalTransform::from_xyz(4., 3., 2.)));
 		app.world.spawn(Window {
 			title: "Window".to_owned(),
 			..default()
 		});
-		app.add_systems(Update, set_cam_ray::<_Camera>);
+		app.add_systems(Update, set_cam_ray::<_Camera, _Label>);
 
 		app
 	}
@@ -105,6 +110,20 @@ mod tests {
 			.return_const(None);
 
 		let mut app = setup(cam);
+
+		app.update();
+	}
+
+	#[test]
+	fn no_panic_when_not_labeled_camera_present() {
+		let mut cam = _Camera::default();
+		cam.mock.expect_get_ray().return_const(Ray3d {
+			origin: Vec3::ZERO,
+			direction: Direction3d::NEG_Z,
+		});
+		let mut app = setup(cam);
+		app.world
+			.spawn((_Camera::default(), GlobalTransform::default()));
 
 		app.update();
 	}
