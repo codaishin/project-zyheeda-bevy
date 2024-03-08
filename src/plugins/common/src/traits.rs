@@ -5,5 +5,6 @@ pub mod get_state;
 pub mod intersect_at;
 pub mod iteration;
 pub mod load_asset;
+pub mod ownership_relation;
 pub mod remove_conditionally;
 pub mod state_duration;

@@ -4,39 +4,30 @@ use crate::{
 };
 use bevy::{
 	ecs::{
-		component::Component,
 		entity::Entity,
 		system::{Commands, Query},
 		world::Mut,
 	},
-	hierarchy::{BuildChildren, DespawnRecursiveExt},
+	hierarchy::BuildChildren,
 	math::Vec2,
 	prelude::default,
 	ui::{node_bundles::NodeBundle, BackgroundColor, PositionType, Style, Val},
 };
+use common::components::OwnedBy;
 
 const BASE_DIMENSIONS: Vec2 = Vec2::new(100., 10.);
-
-#[derive(Component)]
-pub struct BackGroundRef(Entity);
 
 pub(crate) fn render_bar<T: Send + Sync + 'static>(
 	mut commands: Commands,
 	mut bars: Query<(Entity, &Bar, &mut BarValues<T>)>,
 	mut styles: Query<&mut Style>,
-	backgrounds: Query<(Entity, &BackGroundRef)>,
 ) where
 	BarValues<T>: UIBarColors,
 {
-	for (background, ..) in backgrounds.iter().filter(|(_, b)| bars.get(b.0).is_err()) {
-		remove(&mut commands, background);
-	}
-
 	for (bar_id, bar, bar_values) in &mut bars {
 		match (bar.position, bar_values.ui) {
 			(Some(position), None) => add_ui(&mut commands, bar_id, bar, bar_values, position),
 			(Some(position), Some(ui)) => update_ui(&mut styles, ui, bar, bar_values, position),
-			(None, Some(ui)) => remove(&mut commands, ui.background),
 			_ => noop(),
 		}
 	}
@@ -54,7 +45,7 @@ fn add_ui<T: Send + Sync + 'static>(
 	let scaled_dimension = BASE_DIMENSIONS * bar.scale;
 	let background = commands
 		.spawn((
-			BackGroundRef(bar_id),
+			OwnedBy::<Bar>::with(bar_id),
 			NodeBundle {
 				style: Style {
 					width: Val::Px(scaled_dimension.x),
@@ -104,10 +95,6 @@ fn update_ui<T>(
 	}
 }
 
-fn remove(commands: &mut Commands, id: Entity) {
-	commands.entity(id).despawn_recursive()
-}
-
 fn noop() {}
 
 #[cfg(test)]
@@ -115,8 +102,8 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		ecs::{component::Component, world::EntityRef},
-		hierarchy::{BuildWorldChildren, Parent},
+		ecs::world::EntityRef,
+		hierarchy::Parent,
 		math::Vec2,
 		render::color::Color,
 		ui::{BackgroundColor, Node},
@@ -176,6 +163,34 @@ mod tests {
 				foreground
 			}),
 			bar.ui
+		);
+	}
+
+	#[test]
+	fn add_ownership_on_top_node() {
+		let mut app = App::new();
+		app.add_systems(Update, render_bar::<_Display>);
+
+		let bar = Bar {
+			position: Some(default()),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(0., 0.);
+		let bar = app.world.spawn((bar, bar_values)).id();
+
+		app.update();
+
+		let (background, ..) = app
+			.world
+			.iter_entities()
+			.filter(no_parent)
+			.find_map(|e| Some((e.id(), e.get::<Node>()?)))
+			.unwrap();
+		let background = app.world.entity(background);
+
+		assert_eq!(
+			Some(&OwnedBy::<Bar>::with(bar)),
+			background.get::<OwnedBy<Bar>>()
 		);
 	}
 
@@ -481,79 +496,5 @@ mod tests {
 			.unwrap();
 
 		assert_eq!(Val::Percent(120. / 200. * 100.), style.width);
-	}
-
-	#[test]
-	fn remove_node_recursive_when_bar_removed() {
-		#[derive(Component)]
-		struct _Child;
-
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
-		let bar = Bar {
-			position: Some(default()),
-			..default()
-		};
-		let bar_values = BarValues::<_Display>::new(0., 0.);
-		let bar = app.world.spawn((bar, bar_values)).id();
-
-		app.update();
-
-		let (node_id, ..) = app
-			.world
-			.iter_entities()
-			.filter(no_parent)
-			.find_map(|e| Some((e.id(), e.get::<Node>()?)))
-			.unwrap();
-		app.world.entity_mut(node_id).with_children(|parent| {
-			parent.spawn(_Child);
-		});
-		app.world.entity_mut(bar).despawn();
-
-		app.update();
-
-		let nodes = app.world.iter_entities().filter_map(|e| e.get::<Node>());
-		let children = app.world.iter_entities().filter_map(|e| e.get::<_Child>());
-
-		assert_eq!((0, 0), (nodes.count(), children.count()));
-	}
-
-	#[test]
-	fn remove_node_recursive_when_bar_position_is_none() {
-		#[derive(Component)]
-		struct _Child;
-
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
-		let bar = Bar {
-			position: Some(default()),
-			..default()
-		};
-		let bar_values = BarValues::<_Display>::new(0., 0.);
-		let bar = app.world.spawn((bar, bar_values)).id();
-
-		app.update();
-
-		let (node_id, ..) = app
-			.world
-			.iter_entities()
-			.filter(no_parent)
-			.find_map(|e| Some((e.id(), e.get::<Node>()?)))
-			.unwrap();
-		app.world.entity_mut(node_id).with_children(|parent| {
-			parent.spawn(_Child);
-		});
-		let mut bar = app.world.entity_mut(bar);
-		let mut bar = bar.get_mut::<Bar>().unwrap();
-		bar.position = None;
-
-		app.update();
-
-		let nodes = app.world.iter_entities().filter_map(|e| e.get::<Node>());
-		let children = app.world.iter_entities().filter_map(|e| e.get::<_Child>());
-
-		assert_eq!((0, 0), (nodes.count(), children.count()));
 	}
 }

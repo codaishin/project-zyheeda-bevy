@@ -41,7 +41,7 @@ impl<T> Default for BarValues<T> {
 	}
 }
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq)]
 pub struct Bar {
 	pub offset: Vec3,
 	pub scale: f32,
