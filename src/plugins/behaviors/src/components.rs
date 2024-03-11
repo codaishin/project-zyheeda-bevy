@@ -1,6 +1,6 @@
-use crate::traits::SpawnAttack;
+use crate::traits::{RemoveComponent, SpawnAttack};
 use bevy::{
-	ecs::{component::Component, entity::Entity, system::EntityCommands},
+	ecs::{bundle::Bundle, component::Component, entity::Entity, system::EntityCommands},
 	math::{primitives::Direction3d, Vec3},
 	render::color::Color,
 };
@@ -72,10 +72,35 @@ pub enum VoidSpherePart {
 	RingB(UnitsPerSecond),
 }
 
+#[derive(PartialEq, Debug)]
+pub struct PositionBased;
+
+#[derive(PartialEq, Debug)]
+pub struct VelocityBased;
+
 #[derive(Component, Clone, PartialEq, Debug, Default)]
-pub struct SimpleMovement {
-	pub target: Vec3,
-	pub cleanup: Option<fn(&mut EntityCommands)>,
+pub struct Movement<TMovement> {
+	pub(crate) target: Vec3,
+	pub(crate) cleanup: Option<fn(&mut EntityCommands)>,
+	phantom_data: PhantomData<TMovement>,
+}
+
+impl<TMovement> Movement<TMovement> {
+	pub fn to(target: Vec3) -> Self {
+		Self {
+			target,
+			cleanup: None,
+			phantom_data: PhantomData,
+		}
+	}
+
+	pub fn remove_on_cleanup<TBundle: Bundle>(self) -> Self {
+		Self {
+			target: self.target,
+			cleanup: Some(TBundle::get_remover()),
+			phantom_data: self.phantom_data,
+		}
+	}
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]

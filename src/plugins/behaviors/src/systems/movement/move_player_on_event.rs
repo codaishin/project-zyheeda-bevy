@@ -1,7 +1,6 @@
 use crate::{
-	components::{Face, SetFace, SimpleMovement},
+	components::{Face, Movement, SetFace, VelocityBased},
 	events::MoveInputEvent,
-	traits::RemoveComponent,
 };
 use bevy::ecs::{
 	entity::Entity,
@@ -26,10 +25,7 @@ pub(crate) fn move_player_on_event(
 	for event in move_input_events.read() {
 		let target = event.0;
 		player.try_insert((
-			SimpleMovement {
-				target,
-				cleanup: Some(SetFace::get_remover()),
-			},
+			Movement::<VelocityBased>::to(target).remove_on_cleanup::<SetFace>(),
 			SetFace(Face::Translation(target)),
 		));
 	}
@@ -38,7 +34,7 @@ pub(crate) fn move_player_on_event(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Face, SetFace, SimpleMovement};
+	use crate::components::{Face, Movement, SetFace};
 	use bevy::{
 		app::{App, Update},
 		math::Vec3,
@@ -65,13 +61,16 @@ mod tests {
 
 		assert_eq!(
 			(
-				Some(&SimpleMovement {
-					target: Vec3::new(1., 2., 3.),
-					cleanup: Some(SetFace::get_remover()),
-				}),
+				Some(
+					&Movement::<VelocityBased>::to(Vec3::new(1., 2., 3.),)
+						.remove_on_cleanup::<SetFace>()
+				),
 				Some(&SetFace(Face::Translation(Vec3::new(1., 2., 3.))))
 			),
-			(player.get::<SimpleMovement>(), player.get::<SetFace>())
+			(
+				player.get::<Movement<VelocityBased>>(),
+				player.get::<SetFace>()
+			)
 		);
 	}
 }

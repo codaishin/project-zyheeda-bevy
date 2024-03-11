@@ -5,7 +5,7 @@ mod systems;
 mod traits;
 
 use animation_keys::PlayerIdle;
-use behaviors::components::SimpleMovement;
+use behaviors::components::{Movement, VelocityBased};
 use bevy::{
 	animation::AnimationPlayer,
 	app::{App, Plugin, PostUpdate, PreStartup, PreUpdate, Update},
@@ -38,7 +38,7 @@ impl Plugin for AnimationsPlugin {
 		.add_systems(PreUpdate, link_animators_with_new_animation_players)
 		.add_systems(
 			Update,
-			set_movement_animation::<Player, SimpleMovement, PlayerMovement>,
+			set_movement_animation::<Player, Movement<VelocityBased>, PlayerMovement>,
 		)
 		.add_systems(
 			PostUpdate,

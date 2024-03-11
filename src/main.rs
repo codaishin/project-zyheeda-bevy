@@ -222,7 +222,9 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				slow_speed: UnitsPerSecond::new(0.75),
 				fast_speed: UnitsPerSecond::new(1.5),
 			},
-			RigidBody::KinematicPositionBased,
+			RigidBody::Dynamic,
+			GravityScale(0.),
+			LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y,
 		))
 		.with_children(|parent| {
 			parent.spawn((

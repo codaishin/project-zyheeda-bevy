@@ -2,9 +2,9 @@ pub(crate) mod beam;
 pub(crate) mod beam_config;
 pub(crate) mod bundle;
 pub(crate) mod cam_orbit;
+pub(crate) mod movement;
 pub(crate) mod movement_config;
 pub(crate) mod projectile;
-pub(crate) mod simple_movement;
 pub(crate) mod void_sphere;
 
 use crate::components::{Attacker, MovementMode, Target};
@@ -20,8 +20,22 @@ use common::tools::UnitsPerSecond;
 use std::sync::Arc;
 
 pub(crate) type Units = f32;
-pub(crate) type IsDone = bool;
 pub type Vec2Radians = Vec2;
+
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
+pub(crate) struct IsDone(bool);
+
+impl IsDone {
+	pub fn is_done(&self) -> bool {
+		self.0
+	}
+}
+
+impl From<bool> for IsDone {
+	fn from(value: bool) -> Self {
+		Self(value)
+	}
+}
 
 pub(crate) trait ProjectileBehavior {
 	fn direction(&self) -> Direction3d;
@@ -40,8 +54,15 @@ pub(crate) trait MoveTogether {
 	fn move_together_with(&mut self, transform: &mut Transform, new_position: Vec3);
 }
 
-pub(crate) trait Movement {
+pub(crate) trait MovementPositionBased {
 	fn update(&mut self, agent: &mut Transform, distance: Units) -> IsDone;
+}
+
+pub(crate) trait MovementVelocityBased {
+	fn update(&self, agent: &mut EntityCommands, position: Vec3, speed: UnitsPerSecond) -> IsDone;
+}
+
+pub(crate) trait Cleanup {
 	fn cleanup(&self, agent: &mut EntityCommands);
 }
 
