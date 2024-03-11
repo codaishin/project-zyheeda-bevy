@@ -32,7 +32,7 @@ impl Player {
 	pub const MODEL_PATH: &'static str = "models/player.glb";
 }
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq)]
 pub struct Idle;
 
 #[derive(Component)]

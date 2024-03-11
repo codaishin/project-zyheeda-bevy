@@ -1,4 +1,7 @@
-use crate::{components::SimpleMovement, traits::ProjectileBehavior};
+use crate::{
+	components::{Movement, PositionBased},
+	traits::ProjectileBehavior,
+};
 use bevy::{
 	ecs::{
 		component::Component,
@@ -9,7 +12,6 @@ use bevy::{
 	hierarchy::DespawnRecursiveExt,
 	math::Vec3,
 	transform::components::GlobalTransform,
-	utils::default,
 };
 use common::components::Idle;
 
@@ -24,10 +26,9 @@ pub(crate) fn projectile_behavior<TProjectile: ProjectileBehavior + Component>(
 
 	for (id, projectile, transform) in &projectiles {
 		let target = get_target(projectile, transform);
-		commands.entity(id).insert(SimpleMovement {
-			target,
-			..default()
-		});
+		commands
+			.entity(id)
+			.insert(Movement::<PositionBased>::to(target));
 	}
 }
 
@@ -90,11 +91,10 @@ mod tests {
 		let projectile = app.world.entity(projectile);
 
 		assert_eq!(
-			Some(&SimpleMovement {
-				target: Vec3::new(1., 2., 3.).normalize() * 42.,
-				..default()
-			}),
-			projectile.get::<SimpleMovement>()
+			Some(&Movement::<PositionBased>::to(
+				Vec3::new(1., 2., 3.).normalize() * 42.
+			)),
+			projectile.get::<Movement<PositionBased>>()
 		);
 	}
 
@@ -118,11 +118,10 @@ mod tests {
 		let projectile = app.world.entity(projectile);
 
 		assert_eq!(
-			Some(&SimpleMovement {
-				target: Vec3::new(10., 20., 30.) + Vec3::new(1., 2., 3.).normalize() * 42.,
-				..default()
-			}),
-			projectile.get::<SimpleMovement>()
+			Some(&Movement::<PositionBased>::to(
+				Vec3::new(10., 20., 30.) + Vec3::new(1., 2., 3.).normalize() * 42.
+			)),
+			projectile.get::<Movement<PositionBased>>()
 		);
 	}
 
@@ -157,7 +156,8 @@ mod tests {
 			0,
 			app.world
 				.iter_entities()
-				.filter(|entity| entity.contains::<_Child>() || entity.contains::<SimpleMovement>())
+				.filter(|entity| entity.contains::<_Child>()
+					|| entity.contains::<Movement<PositionBased>>())
 				.count()
 		);
 	}

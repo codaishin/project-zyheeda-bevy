@@ -12,7 +12,17 @@ use bevy::{
 	time::Virtual,
 };
 use common::{components::Player, resources::CamRay};
-use components::{Beam, CamOrbit, MovementConfig, Plasma, Projectile, SimpleMovement, VoidSphere};
+use components::{
+	Beam,
+	CamOrbit,
+	Movement,
+	MovementConfig,
+	Plasma,
+	PositionBased,
+	Projectile,
+	VelocityBased,
+	VoidSphere,
+};
 use events::MoveInputEvent;
 use prefabs::traits::RegisterPrefab;
 use systems::{
@@ -21,9 +31,11 @@ use systems::{
 	enemy::enemy,
 	face::{execute_face::execute_face, get_faces::get_faces},
 	follow::follow,
+	idle::idle,
 	move_on_orbit::move_on_orbit,
 	movement::{
-		execute_move::execute_move,
+		execute_move_position_based::execute_move_position_based,
+		execute_move_velocity_based::execute_move_velocity_based,
 		move_player_on_event::move_player_on_event,
 		trigger_event::trigger_move_input_event,
 	},
@@ -66,7 +78,10 @@ impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
 			.add_systems(
 				Update,
 				(
-					execute_move::<MovementConfig, SimpleMovement, Virtual>,
+					execute_move_position_based::<MovementConfig, Movement<PositionBased>, Virtual>
+						.pipe(idle),
+					execute_move_velocity_based::<MovementConfig, Movement<VelocityBased>>
+						.pipe(idle),
 					get_faces.pipe(execute_face::<CamRay>),
 				)
 					.chain(),
