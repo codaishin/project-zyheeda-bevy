@@ -88,5 +88,5 @@ impl<T> OwnedBy<T> {
 #[derive(Component)]
 pub struct MainCamera;
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq)]
 pub struct NoTarget;
