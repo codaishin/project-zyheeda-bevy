@@ -19,6 +19,7 @@ use common::{
 };
 use ingame_menu::IngameMenuPlugin;
 use interactions::InteractionsPlugin;
+use map_generation::MapGenerationPlugin;
 use prefabs::PrefabsPlugin;
 use project_zyheeda::systems::{
 	movement::toggle_walk_run::player_toggle_walk_run,
@@ -50,6 +51,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(SkillsPlugin)
 		.add_plugins(BehaviorsPlugin::cam_behavior_if(GameRunning::On))
 		.add_plugins(AnimationsPlugin)
+		.add_plugins(MapGenerationPlugin)
 		.insert_resource(ClearColor(Color::BLACK))
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)

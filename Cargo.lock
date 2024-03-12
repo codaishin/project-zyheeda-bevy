@@ -2617,6 +2617,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "map_generation"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_rapier3d",
+ "common",
+ "mockall",
+]
+
+[[package]]
 name = "matchers"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3356,6 +3366,7 @@ dependencies = [
  "common",
  "ingame_menu",
  "interactions",
+ "map_generation",
  "mockall",
  "prefabs",
  "skills",
