@@ -32,7 +32,7 @@ pub(crate) enum Cell {
 #[derive(Debug, PartialEq)]
 pub(crate) struct Cells(pub Vec<Vec<Cell>>);
 
-#[derive(TypePath, Asset)]
+#[derive(TypePath, Asset, Debug, PartialEq)]
 pub struct Map(pub Cells);
 
 pub struct MapLoader<TParser> {

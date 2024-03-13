@@ -6,13 +6,16 @@ mod traits;
 
 use bevy::{
 	app::{App, Plugin, Startup, Update},
-	asset::{AssetApp, AssetServer, Assets},
-	ecs::system::{Commands, Res},
+	asset::{AssetApp, AssetServer},
 };
-use components::{Corner, LoadLevelCommand, Wall};
-use map_loader::{Map, MapLoader};
+use components::{Corner, Wall};
+use map_loader::{Cell, Map, MapLoader};
 use parsers::ParseStringToCells;
-use systems::{add_colliders::add_colliders, begin_level_load::begin_level_load};
+use systems::{
+	add_colliders::add_colliders,
+	begin_level_load::begin_level_load,
+	finish_level_load::finish_level_load,
+};
 
 pub struct MapGenerationPlugin;
 
@@ -21,18 +24,7 @@ impl Plugin for MapGenerationPlugin {
 		app.init_asset::<Map>()
 			.register_asset_loader(MapLoader::<ParseStringToCells>::default())
 			.add_systems(Startup, begin_level_load::<AssetServer>)
-			.add_systems(Update, (add_colliders::<Wall>, add_colliders::<Corner>))
-			.add_systems(
-				Update,
-				|mut commands: Commands,
-				 maps: Res<Assets<Map>>,
-				 load_level: Option<Res<LoadLevelCommand>>| {
-					let Some(map) = load_level.and_then(|load| maps.get(&load.0)) else {
-						return;
-					};
-					println!("{:?}", map.0);
-					commands.remove_resource::<LoadLevelCommand>();
-				},
-			);
+			.add_systems(Update, finish_level_load::<AssetServer, Map, Cell>)
+			.add_systems(Update, (add_colliders::<Wall>, add_colliders::<Corner>));
 	}
 }

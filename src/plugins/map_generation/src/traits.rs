@@ -1,5 +1,7 @@
 pub(crate) mod asset_server;
+pub(crate) mod cell;
 pub(crate) mod corner;
+pub(crate) mod map;
 pub(crate) mod parse_string_to_cells;
 pub(crate) mod wall;
 
@@ -19,4 +21,9 @@ pub(crate) trait LoadMap {
 
 pub(crate) trait StringToCells {
 	fn string_to_cells(raw: &str) -> Cells;
+}
+
+pub(crate) trait MapAsset<TCell> {
+	const CELL_DISTANCE: f32;
+	fn cells(&self) -> Vec<Vec<TCell>>;
 }

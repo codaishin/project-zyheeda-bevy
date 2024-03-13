@@ -8,9 +8,7 @@ use behaviors::{
 use bevy::{
 	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
 	prelude::*,
-	render::mesh::PlaneMeshBuilder,
 };
-
 use bevy_rapier3d::prelude::*;
 use common::{
 	components::{ColliderRoot, GroundOffset, Health, MainCamera, Player},
@@ -182,29 +180,14 @@ fn pause_virtual_time<const PAUSE: bool>(mut time: ResMut<Time<Virtual>>) {
 
 fn setup_simple_3d_scene(
 	mut commands: Commands,
-	mut meshes: ResMut<Assets<Mesh>>,
-	mut materials: ResMut<Assets<StandardMaterial>>,
 	asset_server: Res<AssetServer>,
 	mut next_state: ResMut<NextState<GameRunning>>,
 ) {
-	spawn_plane(&mut commands, &mut meshes, &mut materials);
 	spawn_player(&mut commands, asset_server);
 	spawn_light(&mut commands);
 	spawn_camera(&mut commands);
 	spawn_void_spheres(&mut commands);
 	next_state.set(GameRunning::On);
-}
-
-fn spawn_plane(
-	commands: &mut Commands,
-	meshes: &mut ResMut<Assets<Mesh>>,
-	materials: &mut ResMut<Assets<StandardMaterial>>,
-) {
-	commands.spawn(PbrBundle {
-		mesh: meshes.add(PlaneMeshBuilder::from_size(Vec2::new(5., 5.))),
-		material: materials.add(Color::rgb(0.3, 0.5, 0.3)),
-		..default()
-	});
 }
 
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {

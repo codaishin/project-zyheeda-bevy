@@ -46,7 +46,7 @@ mod tests {
 
 		app.update();
 
-		let level_command = app.world.get_resource::<LoadLevelCommand>();
+		let level_command = app.world.get_resource::<LoadLevelCommand<Map>>();
 
 		assert_eq!(Some(&LoadLevelCommand(handle)), level_command);
 	}
