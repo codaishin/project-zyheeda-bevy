@@ -15,6 +15,7 @@ impl From<String> for Map {
 		let lines: Vec<String> = value
 			.split('\n')
 			.map(strip_white_spaces())
+			.map(reverse)
 			.filter(non_empty())
 			.collect();
 
@@ -39,6 +40,10 @@ fn strip_white_spaces() -> impl FnMut(&str) -> String {
 			.filter(|c| !c.is_whitespace())
 			.collect::<String>()
 	}
+}
+
+fn reverse(line: String) -> String {
+	line.chars().rev().collect()
 }
 
 fn non_empty() -> impl FnMut(&String) -> bool {
@@ -210,7 +215,7 @@ mod tests {
 
 	#[test]
 	fn skip_white_spaces() {
-		let raw = "c x".to_string();
+		let raw = "x c".to_string();
 		let map = Map::from(raw);
 
 		assert_eq!(
@@ -223,10 +228,10 @@ mod tests {
 	}
 
 	#[test]
-	fn process_multiple_lines() {
+	fn process_multiple_lines_mirrored() {
 		let raw = "
-		  cx
-		  xc
+			xc
+			cx
 		"
 		.to_string();
 		let map = Map::from(raw);
@@ -308,10 +313,10 @@ mod tests {
 	}
 
 	#[test]
-	fn corridor_ends_with_left_upper_corner() {
+	fn corridor_mirrored_ends_with_left_upper_corner() {
 		let raw = "
 		  c c
-			c x
+			x c
 		"
 		.to_string();
 		let map = Map::from(raw);
@@ -329,10 +334,10 @@ mod tests {
 	}
 
 	#[test]
-	fn corridor_ends_with_right_upper_corner() {
+	fn corridor_mirrored_ends_with_right_upper_corner() {
 		let raw = "
 		  c c
-			x c
+			c x
 		"
 		.to_string();
 		let map = Map::from(raw);
@@ -350,9 +355,9 @@ mod tests {
 	}
 
 	#[test]
-	fn corridor_ends_with_left_lower_corner() {
+	fn corridor_mirrored_ends_with_left_lower_corner() {
 		let raw = "
-		  c x
+		  x c
 		  c c
 		"
 		.to_string();
@@ -371,9 +376,9 @@ mod tests {
 	}
 
 	#[test]
-	fn corridor_ends_with_right_lower_corner() {
+	fn corridor_mirrored_ends_with_right_lower_corner() {
 		let raw = "
-		  x c
+		  c x
 		  c c
 		"
 		.to_string();
@@ -392,7 +397,7 @@ mod tests {
 	}
 
 	#[test]
-	fn corridor_ends_with_t_down() {
+	fn corridor_mirrored_ends_with_t_down() {
 		let raw = "
 		  c c c
 		  x c x
@@ -418,7 +423,7 @@ mod tests {
 	}
 
 	#[test]
-	fn corridor_ends_with_t_up() {
+	fn corridor_mirrored_ends_with_t_up() {
 		let raw = "
 			x c x
 			c c c
@@ -444,11 +449,11 @@ mod tests {
 	}
 
 	#[test]
-	fn corridor_ends_with_t_right() {
+	fn corridor_mirrored_ends_with_t_right() {
 		let raw = "
-			c x
+			x c
 			c c
-			c x
+			x c
 		"
 		.to_string();
 		let map = Map::from(raw);
@@ -467,11 +472,11 @@ mod tests {
 	}
 
 	#[test]
-	fn corridor_ends_with_t_left() {
+	fn corridor_mirrored_ends_with_t_left() {
 		let raw = "
-			x c
+			c x
 			c c
-			x c
+			c x
 		"
 		.to_string();
 		let map = Map::from(raw);
@@ -490,7 +495,7 @@ mod tests {
 	}
 
 	#[test]
-	fn corridor_ends_with_cross() {
+	fn corridor_mirrored_ends_with_cross() {
 		let raw = "
 			x c x
 			c c c
