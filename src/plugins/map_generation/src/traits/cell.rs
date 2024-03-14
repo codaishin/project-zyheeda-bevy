@@ -1,6 +1,6 @@
 use crate::{
 	components::Corridor,
-	map_loader::{Cell, Shape},
+	map::{Cell, Shape},
 };
 use bevy::math::primitives::Direction3d;
 use common::traits::iteration::KeyValue;

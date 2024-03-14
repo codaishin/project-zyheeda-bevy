@@ -12,7 +12,7 @@ pub(crate) fn begin_level_load<TLoadMap: LoadMap + Resource>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::LoadLevelCommand, map_loader::Map};
+	use crate::{components::LoadLevelCommand, map::Map};
 	use bevy::{
 		app::{App, Update},
 		asset::{AssetId, Handle},
