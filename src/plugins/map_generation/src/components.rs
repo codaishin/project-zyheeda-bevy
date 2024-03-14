@@ -1,7 +1,5 @@
-use bevy::{
-	asset::{Asset, Handle},
-	ecs::system::Resource,
-};
+use crate::map::Map;
+use bevy::{asset::Handle, ecs::system::Resource, reflect::TypePath};
 
 pub(crate) struct Wall;
 
@@ -14,4 +12,4 @@ impl Corridor {
 }
 
 #[derive(Resource, Debug, PartialEq)]
-pub(crate) struct LoadLevelCommand<TMap: Asset>(pub Handle<TMap>);
+pub(crate) struct LoadLevelCommand<TCell: TypePath + Send + Sync>(pub Handle<Map<TCell>>);

@@ -1,8 +1,9 @@
-use crate::{components::LoadLevelCommand, traits::MapAsset};
+use crate::{components::LoadLevelCommand, map::Map, traits::CellDistance};
 use bevy::{
-	asset::{Asset, Assets},
+	asset::Assets,
 	ecs::system::{Commands, Res, Resource},
 	math::{primitives::Direction3d, Vec3},
+	reflect::TypePath,
 	scene::{Scene, SceneBundle},
 	transform::components::Transform,
 	utils::default,
@@ -11,18 +12,17 @@ use common::traits::{iteration::KeyValue, load_asset::LoadAsset};
 
 pub(crate) fn finish_level_load<
 	TAssetLoader: LoadAsset<Scene> + Resource,
-	TMap: MapAsset<TCell> + Asset,
-	TCell: KeyValue<Option<(Direction3d, String)>>,
+	TCell: KeyValue<Option<(Direction3d, String)>> + CellDistance + TypePath + Sync + Send + Clone,
 >(
 	mut commands: Commands,
 	asset_loader: Res<TAssetLoader>,
-	maps: Res<Assets<TMap>>,
-	load_level_cmd: Option<Res<LoadLevelCommand<TMap>>>,
+	maps: Res<Assets<Map<TCell>>>,
+	load_level_cmd: Option<Res<LoadLevelCommand<TCell>>>,
 ) {
 	let Some(cells) = get_map_cells(load_level_cmd, maps) else {
 		return;
 	};
-	let Some((start_x, start_z)) = get_start_x_z(&cells, TMap::CELL_DISTANCE) else {
+	let Some((start_x, start_z)) = get_start_x_z(&cells, TCell::CELL_DISTANCE) else {
 		return;
 	};
 
@@ -31,23 +31,23 @@ pub(crate) fn finish_level_load<
 	for cell_line in cells {
 		for cell in cell_line {
 			spawn_cell(&mut commands, &asset_loader, cell, &position);
-			position.x += TMap::CELL_DISTANCE;
+			position.x -= TCell::CELL_DISTANCE;
 		}
 		position.x = start_x;
-		position.z -= TMap::CELL_DISTANCE;
+		position.z -= TCell::CELL_DISTANCE;
 	}
 
-	commands.remove_resource::<LoadLevelCommand<TMap>>();
+	commands.remove_resource::<LoadLevelCommand<TCell>>();
 }
 
-fn get_map_cells<TMap: MapAsset<TCell> + Asset, TCell>(
-	load_level_cmd: Option<Res<LoadLevelCommand<TMap>>>,
-	maps: Res<Assets<TMap>>,
+fn get_map_cells<TCell: TypePath + Sync + Send + Clone>(
+	load_level_cmd: Option<Res<LoadLevelCommand<TCell>>>,
+	maps: Res<Assets<Map<TCell>>>,
 ) -> Option<Vec<Vec<TCell>>> {
 	let map_handle = &load_level_cmd?.0;
 	let map = maps.get(map_handle)?;
 
-	Some(map.cells())
+	Some(map.0.clone())
 }
 
 fn spawn_cell<
@@ -72,7 +72,7 @@ fn spawn_cell<
 fn get_start_x_z<T>(cells: &[Vec<T>], cell_distance: f32) -> Option<(f32, f32)> {
 	let max_x = cells.iter().map(|line| line.len()).max()? as f32 * cell_distance;
 	let max_z = cells.len() as f32 * cell_distance;
-	let start_x = (cell_distance - max_x) / 2.;
+	let start_x = (max_x - cell_distance) / 2.;
 	let start_z = (max_z - cell_distance) / 2.;
 	Some((start_x, start_z))
 }
@@ -82,7 +82,7 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		asset::{AssetId, AssetPath, Handle},
+		asset::{Asset, AssetId, AssetPath, Handle},
 		reflect::TypePath,
 		transform::components::Transform,
 		utils::Uuid,
@@ -112,7 +112,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Clone, Debug, PartialEq)]
+	#[derive(Clone, Debug, PartialEq, TypePath)]
 	struct _Cell(Option<(Direction3d, String)>);
 
 	impl KeyValue<Option<(Direction3d, String)>> for _Cell {
@@ -121,25 +121,15 @@ mod tests {
 		}
 	}
 
-	#[derive(TypePath, Asset, Debug, PartialEq)]
-	struct _Map(Vec<Vec<_Cell>>);
-
-	impl MapAsset<_Cell> for _Map {
+	impl CellDistance for _Cell {
 		const CELL_DISTANCE: f32 = 4.;
-
-		fn cells(&self) -> Vec<Vec<_Cell>> {
-			self.0.clone()
-		}
 	}
 
 	fn setup() -> App {
 		let mut app = App::new_single_threaded([Update]);
-		app.add_systems(
-			Update,
-			finish_level_load::<_AssetLoader<Scene>, _Map, _Cell>,
-		);
+		app.add_systems(Update, finish_level_load::<_AssetLoader<Scene>, _Cell>);
 		app.init_resource::<_AssetLoader<Scene>>();
-		app.init_resource::<Assets<_Map>>();
+		app.init_resource::<Assets<Map<_Cell>>>();
 
 		app
 	}
@@ -150,11 +140,11 @@ mod tests {
 		})
 	}
 
-	fn add_map(app: &mut App, cells: Vec<Vec<_Cell>>) -> Handle<_Map> {
-		let handle = new_handle::<_Map>();
+	fn add_map(app: &mut App, cells: Vec<Vec<_Cell>>) -> Handle<Map<_Cell>> {
+		let handle = new_handle::<Map<_Cell>>();
 		app.world
-			.resource_mut::<Assets<_Map>>()
-			.insert(handle.clone(), _Map(cells));
+			.resource_mut::<Assets<Map<_Cell>>>()
+			.insert(handle.clone(), Map(cells));
 		handle
 	}
 
@@ -180,7 +170,7 @@ mod tests {
 
 		app.update();
 
-		let cmd = app.world.get_resource::<LoadLevelCommand<_Map>>();
+		let cmd = app.world.get_resource::<LoadLevelCommand<Map<_Cell>>>();
 
 		assert_eq!(None, cmd);
 	}
@@ -255,8 +245,8 @@ mod tests {
 
 		assert_eq!(
 			vec![
-				(&scene_handle_a.clone(), &Transform::from_xyz(-2., 0., 0.)),
-				(&scene_handle_b.clone(), &Transform::from_xyz(2., 0., 0.))
+				(&scene_handle_a.clone(), &Transform::from_xyz(2., 0., 0.)),
+				(&scene_handle_b.clone(), &Transform::from_xyz(-2., 0., 0.))
 			],
 			scenes_and_transforms
 		);
@@ -346,7 +336,7 @@ mod tests {
 		assert_eq!(
 			Some((
 				&scene_handle,
-				&Transform::from_xyz(2., 0., 0.).looking_to(Vec3::Z, Vec3::Y)
+				&Transform::from_xyz(-2., 0., 0.).looking_to(Vec3::Z, Vec3::Y)
 			)),
 			scene_and_transform
 		);
@@ -391,15 +381,15 @@ mod tests {
 
 		assert_eq!(
 			vec![
-				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., 4.)),
-				(&scene_handle.clone(), &Transform::from_xyz(0., 0., 4.)),
 				(&scene_handle.clone(), &Transform::from_xyz(4., 0., 4.)),
-				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., 0.)),
-				(&scene_handle.clone(), &Transform::from_xyz(0., 0., 0.)),
+				(&scene_handle.clone(), &Transform::from_xyz(0., 0., 4.)),
+				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., 4.)),
 				(&scene_handle.clone(), &Transform::from_xyz(4., 0., 0.)),
-				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., -4.)),
-				(&scene_handle.clone(), &Transform::from_xyz(0., 0., -4.)),
+				(&scene_handle.clone(), &Transform::from_xyz(0., 0., 0.)),
+				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., 0.)),
 				(&scene_handle.clone(), &Transform::from_xyz(4., 0., -4.)),
+				(&scene_handle.clone(), &Transform::from_xyz(0., 0., -4.)),
+				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., -4.)),
 			],
 			scenes_and_transforms
 		);
@@ -439,12 +429,12 @@ mod tests {
 
 		assert_eq!(
 			vec![
-				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., 4.)),
+				(&scene_handle.clone(), &Transform::from_xyz(4., 0., 4.)),
 				(&scene_handle.clone(), &Transform::from_xyz(0., 0., 4.)),
-				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., 0.)),
-				(&scene_handle.clone(), &Transform::from_xyz(0., 0., 0.)),
 				(&scene_handle.clone(), &Transform::from_xyz(4., 0., 0.)),
-				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., -4.)),
+				(&scene_handle.clone(), &Transform::from_xyz(0., 0., 0.)),
+				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., 0.)),
+				(&scene_handle.clone(), &Transform::from_xyz(4., 0., -4.)),
 			],
 			scenes_and_transforms
 		);

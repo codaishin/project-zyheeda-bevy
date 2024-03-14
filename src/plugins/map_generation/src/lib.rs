@@ -9,7 +9,7 @@ use bevy::{
 	asset::{AssetApp, AssetServer},
 };
 use components::{Corner, Wall};
-use map::{Cell, Map};
+use map::{Map, MapCell};
 use map_loader::TextLoader;
 use systems::{
 	add_colliders::add_colliders,
@@ -21,10 +21,10 @@ pub struct MapGenerationPlugin;
 
 impl Plugin for MapGenerationPlugin {
 	fn build(&self, app: &mut App) {
-		app.init_asset::<Map>()
-			.register_asset_loader(TextLoader::<Map>::default())
-			.add_systems(Startup, begin_level_load::<AssetServer>)
-			.add_systems(Update, finish_level_load::<AssetServer, Map, Cell>)
+		app.init_asset::<Map<MapCell>>()
+			.register_asset_loader(TextLoader::<Map<MapCell>>::default())
+			.add_systems(Startup, (begin_level_load::<AssetServer, MapCell>,))
+			.add_systems(Update, (finish_level_load::<AssetServer, MapCell>,))
 			.add_systems(Update, (add_colliders::<Wall>, add_colliders::<Corner>));
 	}
 }

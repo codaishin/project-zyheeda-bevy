@@ -1,8 +1,14 @@
 use crate::{components::LoadLevelCommand, map::Map};
-use bevy::ecs::system::{Commands, Res, Resource};
+use bevy::{
+	ecs::system::{Commands, Res, Resource},
+	reflect::TypePath,
+};
 use common::traits::load_asset::LoadAsset;
 
-pub(crate) fn begin_level_load<TLoadMap: LoadAsset<Map> + Resource>(
+pub(crate) fn begin_level_load<
+	TLoadMap: LoadAsset<Map<TCell>> + Resource,
+	TCell: TypePath + Sync + Send,
+>(
 	mut commands: Commands,
 	map_loader: Res<TLoadMap>,
 ) {
@@ -16,17 +22,21 @@ mod tests {
 	use crate::{components::LoadLevelCommand, map::Map};
 	use bevy::{
 		app::{App, Update},
-		asset::{AssetId, AssetPath, Handle},
+		asset::{Asset, AssetId, AssetPath, Handle},
+		reflect::TypePath,
 		utils::Uuid,
 	};
 	use common::test_tools::utils::SingleThreadedApp;
 	use std::collections::HashMap;
 
-	#[derive(Resource, Default)]
-	struct _LoadMap(HashMap<String, Handle<Map>>);
+	#[derive(TypePath, Asset, Debug, PartialEq)]
+	struct _Cell;
 
-	impl LoadAsset<Map> for _LoadMap {
-		fn load_asset<'a, TPath: Into<AssetPath<'a>>>(&self, path: TPath) -> Handle<Map> {
+	#[derive(Resource, Default)]
+	struct _LoadMap(HashMap<String, Handle<Map<_Cell>>>);
+
+	impl LoadAsset<Map<_Cell>> for _LoadMap {
+		fn load_asset<'a, TPath: Into<AssetPath<'a>>>(&self, path: TPath) -> Handle<Map<_Cell>> {
 			let path: AssetPath = path.into();
 			self.0
 				.iter()
@@ -34,7 +44,7 @@ mod tests {
 					true => Some(value.clone()),
 					false => None,
 				})
-				.unwrap_or(Handle::<Map>::Weak(AssetId::Uuid {
+				.unwrap_or(Handle::<Map<_Cell>>::Weak(AssetId::Uuid {
 					uuid: Uuid::new_v4(),
 				}))
 				.clone()
@@ -44,7 +54,7 @@ mod tests {
 	fn setup(load_map: _LoadMap) -> App {
 		let mut app = App::new_single_threaded([Update]);
 		app.insert_resource(load_map);
-		app.add_systems(Update, begin_level_load::<_LoadMap>);
+		app.add_systems(Update, begin_level_load::<_LoadMap, _Cell>);
 
 		app
 	}
@@ -60,7 +70,7 @@ mod tests {
 
 		app.update();
 
-		let level_command = app.world.get_resource::<LoadLevelCommand<Map>>();
+		let level_command = app.world.get_resource::<LoadLevelCommand<_Cell>>();
 
 		assert_eq!(Some(&LoadLevelCommand(handle)), level_command);
 	}

@@ -1,6 +1,6 @@
-pub(crate) mod cell;
 pub(crate) mod corner;
 pub(crate) mod map;
+pub(crate) mod map_cell;
 pub(crate) mod wall;
 
 use bevy_rapier3d::geometry::Collider;
@@ -11,7 +11,6 @@ pub(crate) trait ColliderDefinition {
 	fn collider() -> Collider;
 }
 
-pub(crate) trait MapAsset<TCell> {
+pub(crate) trait CellDistance {
 	const CELL_DISTANCE: f32;
-	fn cells(&self) -> Vec<Vec<TCell>>;
 }
