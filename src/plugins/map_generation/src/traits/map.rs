@@ -283,9 +283,9 @@ mod tests {
 	#[test]
 	fn corridor_ends_with_straight_vertically() {
 		let raw = "
-		  x c x
 			x c x
-      x c x
+			x c x
+			x c x
 		"
 		.to_string();
 		let map = Map::from(raw);
@@ -315,7 +315,7 @@ mod tests {
 	#[test]
 	fn corridor_mirrored_ends_with_left_upper_corner() {
 		let raw = "
-		  c c
+			c c
 			x c
 		"
 		.to_string();
@@ -336,7 +336,7 @@ mod tests {
 	#[test]
 	fn corridor_mirrored_ends_with_right_upper_corner() {
 		let raw = "
-		  c c
+			c c
 			c x
 		"
 		.to_string();
@@ -357,8 +357,8 @@ mod tests {
 	#[test]
 	fn corridor_mirrored_ends_with_left_lower_corner() {
 		let raw = "
-		  x c
-		  c c
+			x c
+			c c
 		"
 		.to_string();
 		let map = Map::from(raw);
@@ -378,8 +378,8 @@ mod tests {
 	#[test]
 	fn corridor_mirrored_ends_with_right_lower_corner() {
 		let raw = "
-		  c x
-		  c c
+			c x
+			c c
 		"
 		.to_string();
 		let map = Map::from(raw);
@@ -399,8 +399,8 @@ mod tests {
 	#[test]
 	fn corridor_mirrored_ends_with_t_down() {
 		let raw = "
-		  c c c
-		  x c x
+			c c c
+			x c x
 		"
 		.to_string();
 		let map = Map::from(raw);
