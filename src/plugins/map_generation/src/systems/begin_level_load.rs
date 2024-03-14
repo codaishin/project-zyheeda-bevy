@@ -1,11 +1,12 @@
-use crate::{components::LoadLevelCommand, traits::LoadMap};
+use crate::{components::LoadLevelCommand, map::Map};
 use bevy::ecs::system::{Commands, Res, Resource};
+use common::traits::load_asset::LoadAsset;
 
-pub(crate) fn begin_level_load<TLoadMap: LoadMap + Resource>(
+pub(crate) fn begin_level_load<TLoadMap: LoadAsset<Map> + Resource>(
 	mut commands: Commands,
 	map_loader: Res<TLoadMap>,
 ) {
-	let map = map_loader.load();
+	let map = map_loader.load_asset("maps/map.txt");
 	commands.insert_resource(LoadLevelCommand(map));
 }
 
@@ -15,17 +16,28 @@ mod tests {
 	use crate::{components::LoadLevelCommand, map::Map};
 	use bevy::{
 		app::{App, Update},
-		asset::{AssetId, Handle},
+		asset::{AssetId, AssetPath, Handle},
 		utils::Uuid,
 	};
 	use common::test_tools::utils::SingleThreadedApp;
+	use std::collections::HashMap;
 
 	#[derive(Resource, Default)]
-	struct _LoadMap(Handle<Map>);
+	struct _LoadMap(HashMap<String, Handle<Map>>);
 
-	impl LoadMap for _LoadMap {
-		fn load(&self) -> Handle<Map> {
-			self.0.clone()
+	impl LoadAsset<Map> for _LoadMap {
+		fn load_asset<'a, TPath: Into<AssetPath<'a>>>(&self, path: TPath) -> Handle<Map> {
+			let path: AssetPath = path.into();
+			self.0
+				.iter()
+				.find_map(|(key, value)| match AssetPath::from(key) == path {
+					true => Some(value.clone()),
+					false => None,
+				})
+				.unwrap_or(Handle::<Map>::Weak(AssetId::Uuid {
+					uuid: Uuid::new_v4(),
+				}))
+				.clone()
 		}
 	}
 
@@ -42,7 +54,9 @@ mod tests {
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let mut app = setup(_LoadMap(handle.clone()));
+		let mut app = setup(_LoadMap(
+			[("maps/map.txt".to_owned(), handle.clone())].into(),
+		));
 
 		app.update();
 
