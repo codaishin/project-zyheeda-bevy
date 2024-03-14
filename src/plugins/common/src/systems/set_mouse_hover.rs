@@ -1,11 +1,12 @@
 use crate::{
-	components::ColliderRoot,
+	components::{ColliderRoot, NoTarget},
 	resources::{CamRay, ColliderInfo, MouseHover},
 	traits::cast_ray::{CastRay, TimeOfImpact},
 };
 use bevy::{
 	ecs::{
 		entity::Entity,
+		query::With,
 		system::{Commands, Query, Res, Resource},
 	},
 	math::Ray3d,
@@ -16,16 +17,29 @@ pub(crate) fn set_mouse_hover<TCastRay: CastRay<Ray3d> + Resource>(
 	cam_ray: Option<Res<CamRay>>,
 	ray_caster: Res<TCastRay>,
 	roots: Query<&ColliderRoot>,
+	non_target_ables: Query<(), With<NoTarget>>,
 ) {
 	let mouse_hover = match ray_cast(cam_ray, ray_caster) {
-		Some((collider, ..)) => MouseHover(Some(ColliderInfo {
-			collider,
-			root: get_root(roots, collider),
-		})),
+		Some((collider, ..)) => get_mouse_hover(collider, roots, non_target_ables),
 		_ => MouseHover::default(),
 	};
 
 	commands.insert_resource(mouse_hover);
+}
+
+fn get_mouse_hover(
+	collider: Entity,
+	roots: Query<&ColliderRoot>,
+	non_target_ables: Query<(), With<NoTarget>>,
+) -> MouseHover {
+	if non_target_ables.contains(collider) {
+		return MouseHover(None);
+	}
+
+	match get_root(collider, roots) {
+		Some(root) if non_target_ables.contains(root) => MouseHover(None),
+		root => MouseHover(Some(ColliderInfo { collider, root })),
+	}
 }
 
 fn ray_cast<TCastRay: CastRay<Ray3d> + Resource>(
@@ -35,14 +49,14 @@ fn ray_cast<TCastRay: CastRay<Ray3d> + Resource>(
 	ray_caster.cast_ray(cam_ray?.0?)
 }
 
-fn get_root(roots: Query<&ColliderRoot>, entity: Entity) -> Option<Entity> {
+fn get_root(entity: Entity, roots: Query<&ColliderRoot>) -> Option<Entity> {
 	roots.get(entity).map(|r| r.0).ok()
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::cast_ray::TimeOfImpact;
+	use crate::{components::NoTarget, traits::cast_ray::TimeOfImpact};
 	use bevy::{
 		app::{App, Update},
 		ecs::entity::Entity,
@@ -149,6 +163,41 @@ mod tests {
 		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
 
 		assert_eq!(Some(&MouseHover(None)), mouse_hover);
+	}
+
+	#[test]
+	fn set_mouse_hover_none_when_collider_root_marked_as_no_target() {
+		let mut app = setup(test_ray());
+		let root = app.world.spawn(NoTarget).id();
+		let collider = app.world.spawn(ColliderRoot(root)).id();
+		let mut cast_ray = app.world.resource_mut::<_CastRay>();
+		cast_ray
+			.mock
+			.expect_cast_ray()
+			.return_const((collider, TimeOfImpact(0.)));
+
+		app.update();
+
+		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
+
+		assert_eq!(Some(&MouseHover::default()), mouse_hover);
+	}
+
+	#[test]
+	fn set_mouse_hover_none_when_collider_marked_as_no_target() {
+		let mut app = setup(test_ray());
+		let collider = app.world.spawn(NoTarget).id();
+		let mut cast_ray = app.world.resource_mut::<_CastRay>();
+		cast_ray
+			.mock
+			.expect_cast_ray()
+			.return_const((collider, TimeOfImpact(0.)));
+
+		app.update();
+
+		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
+
+		assert_eq!(Some(&MouseHover::default()), mouse_hover);
 	}
 
 	#[test]

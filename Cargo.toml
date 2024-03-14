@@ -47,6 +47,7 @@ prefabs.workspace = true
 skills.workspace = true
 animations = { path = "src/plugins/animations" }
 ingame_menu = { path = "src/plugins/ingame_menu" }
+map_generation = { path = "src/plugins/map_generation" }
 
 
 [dev-dependencies]
