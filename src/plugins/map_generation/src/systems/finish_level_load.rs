@@ -16,39 +16,65 @@ pub(crate) fn finish_level_load<
 >(
 	mut commands: Commands,
 	asset_loader: Res<TAssetLoader>,
-	map: Res<Assets<TMap>>,
+	maps: Res<Assets<TMap>>,
 	load_level_cmd: Option<Res<LoadLevelCommand<TMap>>>,
 ) {
-	let Some(cmd) = load_level_cmd else {
+	let Some(cells) = get_map_cells(load_level_cmd, maps) else {
 		return;
 	};
-	let Some(map) = map.get(&cmd.0) else {
+	let Some((start_x, start_z)) = get_start_x_z(&cells, TMap::CELL_DISTANCE) else {
 		return;
 	};
 
-	let mut position = Vec3::ZERO;
+	let mut position = Vec3::new(start_x, 0., start_z);
 
-	for cell_line in map.cells() {
-		position.x = 0.;
+	for cell_line in cells {
 		for cell in cell_line {
-			let Some((direction, path)) = cell.get_value() else {
-				position.x += TMap::CELL_DISTANCE;
-				continue;
-			};
-			let direction = Vec3::from(direction);
-			let scene = asset_loader.load_asset(path.clone());
-			let transform = Transform::from_translation(position).looking_to(direction, Vec3::Y);
-			commands.spawn(SceneBundle {
-				scene,
-				transform,
-				..default()
-			});
+			spawn_cell(&mut commands, &asset_loader, cell, &position);
 			position.x += TMap::CELL_DISTANCE;
 		}
+		position.x = start_x;
 		position.z -= TMap::CELL_DISTANCE;
 	}
 
 	commands.remove_resource::<LoadLevelCommand<TMap>>();
+}
+
+fn get_map_cells<TMap: MapAsset<TCell> + Asset, TCell>(
+	load_level_cmd: Option<Res<LoadLevelCommand<TMap>>>,
+	maps: Res<Assets<TMap>>,
+) -> Option<Vec<Vec<TCell>>> {
+	let map_handle = &load_level_cmd?.0;
+	let map = maps.get(map_handle)?;
+
+	Some(map.cells())
+}
+
+fn spawn_cell<
+	TCell: KeyValue<Option<(Direction3d, String)>>,
+	TAssetLoader: LoadAsset<Scene> + Resource,
+>(
+	commands: &mut Commands,
+	asset_loader: &Res<TAssetLoader>,
+	cell: TCell,
+	position: &Vec3,
+) {
+	let Some((direction, path)) = cell.get_value() else {
+		return;
+	};
+	commands.spawn(SceneBundle {
+		scene: asset_loader.load_asset(path.clone()),
+		transform: Transform::from_translation(*position).looking_to(direction.into(), Vec3::Y),
+		..default()
+	});
+}
+
+fn get_start_x_z<T>(cells: &[Vec<T>], cell_distance: f32) -> Option<(f32, f32)> {
+	let max_x = cells.iter().map(|line| line.len()).max()? as f32 * cell_distance;
+	let max_z = cells.len() as f32 * cell_distance;
+	let start_x = (cell_distance - max_x) / 2.;
+	let start_z = (max_z - cell_distance) / 2.;
+	Some((start_x, start_z))
 }
 
 #[cfg(test)]
@@ -229,8 +255,8 @@ mod tests {
 
 		assert_eq!(
 			vec![
-				(&scene_handle_a.clone(), &Transform::from_xyz(0., 0., 0.)),
-				(&scene_handle_b.clone(), &Transform::from_xyz(4., 0., 0.))
+				(&scene_handle_a.clone(), &Transform::from_xyz(-2., 0., 0.)),
+				(&scene_handle_b.clone(), &Transform::from_xyz(2., 0., 0.))
 			],
 			scenes_and_transforms
 		);
@@ -263,8 +289,8 @@ mod tests {
 
 		assert_eq!(
 			vec![
-				(&scene_handle_a.clone(), &Transform::from_xyz(0., 0., 0.)),
-				(&scene_handle_b.clone(), &Transform::from_xyz(0., 0., -4.))
+				(&scene_handle_a.clone(), &Transform::from_xyz(0., 0., 2.)),
+				(&scene_handle_b.clone(), &Transform::from_xyz(0., 0., -2.))
 			],
 			scenes_and_transforms
 		);
@@ -320,9 +346,107 @@ mod tests {
 		assert_eq!(
 			Some((
 				&scene_handle,
-				&Transform::from_xyz(4., 0., 0.).looking_to(Vec3::Z, Vec3::Y)
+				&Transform::from_xyz(2., 0., 0.).looking_to(Vec3::Z, Vec3::Y)
 			)),
 			scene_and_transform
+		);
+	}
+
+	#[test]
+	fn center_map() {
+		let mut app = setup();
+		let scene_handle = add_scene(&mut app, "A");
+		let map_handle = add_map(
+			&mut app,
+			vec![
+				vec![
+					_Cell(Some((Direction3d::NEG_Z, "A".to_owned()))),
+					_Cell(Some((Direction3d::NEG_Z, "A".to_owned()))),
+					_Cell(Some((Direction3d::NEG_Z, "A".to_owned()))),
+				],
+				vec![
+					_Cell(Some((Direction3d::NEG_Z, "A".to_owned()))),
+					_Cell(Some((Direction3d::NEG_Z, "A".to_owned()))),
+					_Cell(Some((Direction3d::NEG_Z, "A".to_owned()))),
+				],
+				vec![
+					_Cell(Some((Direction3d::NEG_Z, "A".to_owned()))),
+					_Cell(Some((Direction3d::NEG_Z, "A".to_owned()))),
+					_Cell(Some((Direction3d::NEG_Z, "A".to_owned()))),
+				],
+			],
+		);
+		app.world.insert_resource(LoadLevelCommand(map_handle));
+
+		app.update();
+
+		let scenes_and_transforms: Vec<_> = app
+			.world
+			.iter_entities()
+			.filter_map(|e| {
+				e.get::<Handle<Scene>>()
+					.and_then(|s| Some((s, e.get::<Transform>()?)))
+			})
+			.collect();
+
+		assert_eq!(
+			vec![
+				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., 4.)),
+				(&scene_handle.clone(), &Transform::from_xyz(0., 0., 4.)),
+				(&scene_handle.clone(), &Transform::from_xyz(4., 0., 4.)),
+				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., 0.)),
+				(&scene_handle.clone(), &Transform::from_xyz(0., 0., 0.)),
+				(&scene_handle.clone(), &Transform::from_xyz(4., 0., 0.)),
+				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., -4.)),
+				(&scene_handle.clone(), &Transform::from_xyz(0., 0., -4.)),
+				(&scene_handle.clone(), &Transform::from_xyz(4., 0., -4.)),
+			],
+			scenes_and_transforms
+		);
+	}
+
+	#[test]
+	fn center_map_with_uneven_row_lengths() {
+		let mut app = setup();
+		let scene_handle = add_scene(&mut app, "A");
+		let map_handle = add_map(
+			&mut app,
+			vec![
+				vec![
+					_Cell(Some((Direction3d::NEG_Z, "A".to_owned()))),
+					_Cell(Some((Direction3d::NEG_Z, "A".to_owned()))),
+				],
+				vec![
+					_Cell(Some((Direction3d::NEG_Z, "A".to_owned()))),
+					_Cell(Some((Direction3d::NEG_Z, "A".to_owned()))),
+					_Cell(Some((Direction3d::NEG_Z, "A".to_owned()))),
+				],
+				vec![_Cell(Some((Direction3d::NEG_Z, "A".to_owned())))],
+			],
+		);
+		app.world.insert_resource(LoadLevelCommand(map_handle));
+
+		app.update();
+
+		let scenes_and_transforms: Vec<_> = app
+			.world
+			.iter_entities()
+			.filter_map(|e| {
+				e.get::<Handle<Scene>>()
+					.and_then(|s| Some((s, e.get::<Transform>()?)))
+			})
+			.collect();
+
+		assert_eq!(
+			vec![
+				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., 4.)),
+				(&scene_handle.clone(), &Transform::from_xyz(0., 0., 4.)),
+				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., 0.)),
+				(&scene_handle.clone(), &Transform::from_xyz(0., 0., 0.)),
+				(&scene_handle.clone(), &Transform::from_xyz(4., 0., 0.)),
+				(&scene_handle.clone(), &Transform::from_xyz(-4., 0., -4.)),
+			],
+			scenes_and_transforms
 		);
 	}
 }
