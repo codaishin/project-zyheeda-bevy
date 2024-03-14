@@ -14,9 +14,9 @@ impl From<String> for Map {
 	fn from(value: String) -> Self {
 		let lines: Vec<String> = value
 			.split('\n')
-			.map(strip_white_spaces())
+			.map(strip_white_spaces)
 			.map(reverse)
-			.filter(non_empty())
+			.filter(|line| non_empty(line))
 			.collect();
 
 		let map = lines.iter().enumerate().map(parse(&lines)).collect();
@@ -34,20 +34,18 @@ fn parse(lines: &'_ [String]) -> impl FnMut((usize, &String)) -> Vec<Cell> + '_ 
 	}
 }
 
-fn strip_white_spaces() -> impl FnMut(&str) -> String {
-	|line| {
-		line.chars()
-			.filter(|c| !c.is_whitespace())
-			.collect::<String>()
-	}
+fn strip_white_spaces(line: &str) -> String {
+	line.chars()
+		.filter(|c| !c.is_whitespace())
+		.collect::<String>()
+}
+
+fn non_empty(line: &str) -> bool {
+	!line.is_empty()
 }
 
 fn reverse(line: String) -> String {
 	line.chars().rev().collect()
-}
-
-fn non_empty() -> impl FnMut(&String) -> bool {
-	|line| !line.is_empty()
 }
 
 struct Cross {
