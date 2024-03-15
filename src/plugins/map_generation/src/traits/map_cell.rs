@@ -4,7 +4,7 @@ use crate::{
 	map::{MapCell, Shape},
 };
 use bevy::math::primitives::Direction3d;
-use common::traits::{iteration::KeyValue, load_asset::Path};
+use common::traits::load_asset::Path;
 
 pub(crate) struct CellIsEmpty;
 
@@ -30,10 +30,10 @@ impl TryFrom<MapCell> for Path {
 	}
 }
 
-impl KeyValue<Direction3d> for MapCell {
-	fn get_value(&self) -> Direction3d {
-		match self {
-			MapCell::Corridor(direction, _) => *direction,
+impl From<MapCell> for Direction3d {
+	fn from(value: MapCell) -> Self {
+		match value {
+			MapCell::Corridor(direction, _) => direction,
 			MapCell::Empty => Direction3d::NEG_Z,
 		}
 	}

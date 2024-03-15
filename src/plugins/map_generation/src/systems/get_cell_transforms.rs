@@ -6,15 +6,15 @@ use bevy::{
 	reflect::TypePath,
 	transform::components::Transform,
 };
-use common::traits::iteration::KeyValue;
 
-pub(crate) fn get_cell_transforms<
-	TCell: KeyValue<Direction3d> + CellDistance + TypePath + Sync + Send + Clone,
->(
+pub(crate) fn get_cell_transforms<TCell: CellDistance + TypePath + Sync + Send + Clone>(
 	mut commands: Commands,
 	maps: Res<Assets<Map<TCell>>>,
 	load_level_cmd: Option<Res<LoadLevelCommand<TCell>>>,
-) -> Vec<(Transform, TCell)> {
+) -> Vec<(Transform, TCell)>
+where
+	Direction3d: From<TCell>,
+{
 	let Some(cells) = get_map_cells(load_level_cmd, maps) else {
 		return vec![];
 	};
@@ -49,8 +49,11 @@ fn get_map_cells<TCell: TypePath + Sync + Send + Clone>(
 	Some(map.0.clone())
 }
 
-fn transform<TCell: KeyValue<Direction3d>>(cell: &TCell, position: Vec3) -> Transform {
-	let direction = cell.get_value().into();
+fn transform<TCell: Clone>(cell: &TCell, position: Vec3) -> Transform
+where
+	Direction3d: From<TCell>,
+{
+	let direction = Vec3::from(Direction3d::from(cell.clone()));
 
 	Transform::from_translation(position).looking_to(direction, Vec3::Y)
 }
@@ -79,9 +82,9 @@ mod tests {
 	#[derive(Clone, Debug, PartialEq, TypePath)]
 	struct _Cell(Direction3d);
 
-	impl KeyValue<Direction3d> for _Cell {
-		fn get_value(&self) -> Direction3d {
-			self.0
+	impl From<_Cell> for Direction3d {
+		fn from(value: _Cell) -> Self {
+			value.0
 		}
 	}
 
