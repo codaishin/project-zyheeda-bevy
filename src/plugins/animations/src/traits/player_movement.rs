@@ -19,7 +19,7 @@ impl IterKey for PlayerMovement {
 }
 
 impl KeyValue<String> for PlayerMovement {
-	fn get_value(self) -> String {
+	fn get_value(&self) -> String {
 		let value = match self {
 			Self::Walk => "Animation1",
 			Self::Run => "Animation3",
@@ -61,7 +61,7 @@ mod test_iteration {
 	fn all_contain_base_path() {
 		let model_path_with_hash = Player::MODEL_PATH.to_owned() + "#";
 		assert!(PlayerMovement::iterator()
-			.map(PlayerMovement::get_value)
+			.map(|m| m.get_value())
 			.all(|path| path.starts_with(&model_path_with_hash)));
 	}
 
@@ -69,8 +69,7 @@ mod test_iteration {
 	fn no_duplicate_keys() {
 		let keys = PlayerMovement::iterator();
 		let unique_keys = HashSet::from_iter(PlayerMovement::iterator());
-		let unique_strings =
-			HashSet::from_iter(PlayerMovement::iterator().map(PlayerMovement::get_value));
+		let unique_strings = HashSet::from_iter(PlayerMovement::iterator().map(|m| m.get_value()));
 
 		assert_eq!(
 			(2, 2, 2),

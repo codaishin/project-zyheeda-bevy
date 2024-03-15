@@ -7,24 +7,32 @@ use common::traits::iteration::KeyValue;
 
 use super::{map::Cross, CellDistance};
 
-impl KeyValue<Option<(Direction3d, String)>> for MapCell {
-	fn get_value(self) -> Option<(Direction3d, String)> {
-		let value = match self {
-			MapCell::Corridor(direction, Shape::Single) => Some((direction, "single")),
-			MapCell::Corridor(direction, Shape::End) => Some((direction, "end")),
-			MapCell::Corridor(direction, Shape::Straight) => Some((direction, "straight")),
-			MapCell::Corridor(direction, Shape::Cross2) => Some((direction, "corner")),
-			MapCell::Corridor(direction, Shape::Cross3) => Some((direction, "t")),
-			MapCell::Corridor(direction, Shape::Cross4) => Some((direction, "cross")),
+impl KeyValue<Option<String>> for MapCell {
+	fn get_value(&self) -> Option<String> {
+		let name = match self {
+			MapCell::Corridor(_, Shape::Single) => Some("single"),
+			MapCell::Corridor(_, Shape::End) => Some("end"),
+			MapCell::Corridor(_, Shape::Straight) => Some("straight"),
+			MapCell::Corridor(_, Shape::Cross2) => Some("corner"),
+			MapCell::Corridor(_, Shape::Cross3) => Some("t"),
+			MapCell::Corridor(_, Shape::Cross4) => Some("cross"),
 			MapCell::Empty => None,
 		};
 
-		let (direction, suffix) = value?;
-
-		Some((
-			direction,
-			format!("{}{}.glb#Scene0", Corridor::MODEL_PATH_PREFIX, suffix),
+		Some(format!(
+			"{}{}.glb#Scene0",
+			Corridor::MODEL_PATH_PREFIX,
+			name?
 		))
+	}
+}
+
+impl KeyValue<Direction3d> for MapCell {
+	fn get_value(&self) -> Direction3d {
+		match self {
+			MapCell::Corridor(direction, _) => *direction,
+			MapCell::Empty => Direction3d::NEG_Z,
+		}
 	}
 }
 

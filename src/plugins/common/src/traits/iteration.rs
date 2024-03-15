@@ -7,7 +7,7 @@ where
 }
 
 pub trait KeyValue<TValue> {
-	fn get_value(self) -> TValue;
+	fn get_value(&self) -> TValue;
 }
 
 pub struct Iter<TValue>(pub Option<TValue>);

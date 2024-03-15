@@ -15,7 +15,7 @@ impl IterKey for PlayerIdle {
 }
 
 impl KeyValue<String> for PlayerIdle {
-	fn get_value(self) -> String {
+	fn get_value(&self) -> String {
 		Player::MODEL_PATH.to_owned() + "#Animation2"
 	}
 }

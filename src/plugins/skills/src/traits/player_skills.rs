@@ -22,7 +22,7 @@ impl IterKey for PlayerSkills<Side> {
 }
 
 impl KeyValue<String> for PlayerSkills<Side> {
-	fn get_value(self) -> String {
+	fn get_value(&self) -> String {
 		let value = match self {
 			Self::Shoot(Handed::Single(Side::Main)) => "Animation4",
 			Self::Shoot(Handed::Single(Side::Off)) => "Animation5",
@@ -45,7 +45,7 @@ mod tests {
 	fn all_contain_base_path() {
 		let model_path_with_hash = Player::MODEL_PATH.to_owned() + "#";
 		assert!(PlayerSkills::iterator()
-			.map(PlayerSkills::<Side>::get_value)
+			.map(|s| s.get_value())
 			.all(|path| path.starts_with(&model_path_with_hash)))
 	}
 
@@ -53,8 +53,7 @@ mod tests {
 	fn no_duplicate_keys() {
 		let keys = PlayerSkills::iterator();
 		let unique_keys = HashSet::from_iter(PlayerSkills::iterator());
-		let unique_strings =
-			HashSet::from_iter(PlayerSkills::iterator().map(PlayerSkills::<Side>::get_value));
+		let unique_strings = HashSet::from_iter(PlayerSkills::iterator().map(|s| s.get_value()));
 
 		assert_eq!(
 			(6, 6, 6),

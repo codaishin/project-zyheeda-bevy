@@ -61,7 +61,7 @@ mod tests {
 	}
 
 	impl KeyValue<String> for _Key {
-		fn get_value(self) -> String {
+		fn get_value(&self) -> String {
 			match self {
 				_Key::A => "A".to_owned(),
 				_Key::B => "B".to_owned(),
