@@ -1,7 +1,28 @@
 pub mod asset_server;
 
-use bevy::asset::{Asset, AssetPath, Handle};
+use bevy::asset::{Asset, Handle};
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Path(String);
+
+impl Path {
+	pub fn as_string(&self) -> &String {
+		&self.0
+	}
+}
+
+impl From<String> for Path {
+	fn from(value: String) -> Self {
+		Self(value)
+	}
+}
+
+impl<'a> From<&'a str> for Path {
+	fn from(value: &'a str) -> Self {
+		Self(value.to_owned())
+	}
+}
 
 pub trait LoadAsset<TAsset: Asset> {
-	fn load_asset<'a, TPath: Into<AssetPath<'a>>>(&self, path: TPath) -> Handle<TAsset>;
+	fn load_asset(&self, path: Path) -> Handle<TAsset>;
 }

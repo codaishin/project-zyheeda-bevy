@@ -1,29 +1,32 @@
+use super::{map::Cross, CellDistance};
 use crate::{
 	components::Corridor,
 	map::{MapCell, Shape},
 };
 use bevy::math::primitives::Direction3d;
-use common::traits::iteration::KeyValue;
+use common::traits::{iteration::KeyValue, load_asset::Path};
 
-use super::{map::Cross, CellDistance};
+pub(crate) struct CellIsEmpty;
 
-impl KeyValue<Option<String>> for MapCell {
-	fn get_value(&self) -> Option<String> {
-		let name = match self {
-			MapCell::Corridor(_, Shape::Single) => Some("single"),
-			MapCell::Corridor(_, Shape::End) => Some("end"),
-			MapCell::Corridor(_, Shape::Straight) => Some("straight"),
-			MapCell::Corridor(_, Shape::Cross2) => Some("corner"),
-			MapCell::Corridor(_, Shape::Cross3) => Some("t"),
-			MapCell::Corridor(_, Shape::Cross4) => Some("cross"),
-			MapCell::Empty => None,
+impl TryFrom<MapCell> for Path {
+	type Error = CellIsEmpty;
+
+	fn try_from(value: MapCell) -> Result<Self, Self::Error> {
+		let name = match value {
+			MapCell::Corridor(_, Shape::Single) => Ok("single"),
+			MapCell::Corridor(_, Shape::End) => Ok("end"),
+			MapCell::Corridor(_, Shape::Straight) => Ok("straight"),
+			MapCell::Corridor(_, Shape::Cross2) => Ok("corner"),
+			MapCell::Corridor(_, Shape::Cross3) => Ok("t"),
+			MapCell::Corridor(_, Shape::Cross4) => Ok("cross"),
+			MapCell::Empty => Err(CellIsEmpty),
 		};
 
-		Some(format!(
+		Ok(Path::from(format!(
 			"{}{}.glb#Scene0",
 			Corridor::MODEL_PATH_PREFIX,
 			name?
-		))
+		)))
 	}
 }
 

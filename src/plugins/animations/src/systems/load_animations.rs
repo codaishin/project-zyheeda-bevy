@@ -5,29 +5,31 @@ use bevy::{
 	ecs::system::{Commands, Res, Resource},
 };
 use common::traits::{
-	iteration::{IterKey, KeyValue},
-	load_asset::LoadAsset,
+	iteration::IterKey,
+	load_asset::{LoadAsset, Path},
 };
 use std::{collections::HashMap, hash::Hash};
 
 pub(crate) fn load_animations<
-	TAnimationKey: IterKey + KeyValue<String> + Copy + Send + Sync + Eq + Hash + 'static,
+	TAnimationKey: IterKey + Copy + Send + Sync + Eq + Hash + 'static,
 	TLoadAnimation: LoadAsset<AnimationClip> + Resource,
 >(
 	mut commands: Commands,
 	source: Res<TLoadAnimation>,
-) {
+) where
+	Path: From<TAnimationKey>,
+{
 	let animations = TAnimationKey::iterator().map(load_asset_from(source));
 	commands.insert_resource(Animations(HashMap::from_iter(animations)));
 }
 
-fn load_asset_from<
-	TAnimationKey: KeyValue<String> + Copy,
-	TLoadAnimation: LoadAsset<AnimationClip> + Resource,
->(
+fn load_asset_from<TAnimationKey: Copy, TLoadAnimation: LoadAsset<AnimationClip> + Resource>(
 	source: Res<TLoadAnimation>,
-) -> impl Fn(TAnimationKey) -> (TAnimationKey, Handle<AnimationClip>) + '_ {
-	move |key| (key, source.load_asset(key.get_value()))
+) -> impl Fn(TAnimationKey) -> (TAnimationKey, Handle<AnimationClip>) + '_
+where
+	Path: From<TAnimationKey>,
+{
+	move |key| (key, source.load_asset(key.into()))
 }
 
 #[cfg(test)]
@@ -36,10 +38,11 @@ mod tests {
 	use bevy::{
 		animation::AnimationClip,
 		app::{App, Update},
-		asset::{AssetId, AssetPath, Handle},
+		asset::{AssetId, Handle},
 		utils::Uuid,
 	};
-	use common::traits::iteration::Iter;
+	use common::traits::{iteration::Iter, load_asset::Path};
+	use mockall::{automock, predicate::eq};
 
 	#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 	enum _Key {
@@ -60,36 +63,39 @@ mod tests {
 		}
 	}
 
-	impl KeyValue<String> for _Key {
-		fn get_value(&self) -> String {
-			match self {
-				_Key::A => "A".to_owned(),
-				_Key::B => "B".to_owned(),
+	impl From<_Key> for Path {
+		fn from(value: _Key) -> Self {
+			match value {
+				_Key::A => "A".into(),
+				_Key::B => "B".into(),
 			}
 		}
 	}
 
-	#[derive(Resource)]
-	struct _LoadAsset(HashMap<String, Handle<AnimationClip>>);
+	#[derive(Resource, Default)]
+	struct _LoadAsset {
+		mock: Mock_LoadAsset,
+	}
 
+	#[automock]
 	impl LoadAsset<AnimationClip> for _LoadAsset {
-		fn load_asset<'a, TPath: Into<AssetPath<'a>>>(&self, path: TPath) -> Handle<AnimationClip> {
-			let path: AssetPath = path.into();
-			self.0
-				.iter()
-				.find_map(|(key, value)| match AssetPath::from(key) == path {
-					true => Some(value.clone()),
-					false => None,
-				})
-				.unwrap_or(Handle::default())
+		fn load_asset(&self, path: Path) -> Handle<AnimationClip> {
+			self.mock.load_asset(path)
 		}
 	}
 
 	#[test]
 	fn add_animations() {
 		let mut app = App::new();
+		let mut load_asset = _LoadAsset::default();
+		load_asset
+			.mock
+			.expect_load_asset()
+			.return_const(Handle::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}));
 
-		app.insert_resource(_LoadAsset(HashMap::from([])));
+		app.insert_resource(load_asset);
 		app.add_systems(Update, load_animations::<_Key, _LoadAsset>);
 		app.update();
 
@@ -105,11 +111,19 @@ mod tests {
 		let handle_b = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
+		let mut load_asset = _LoadAsset::default();
+		load_asset
+			.mock
+			.expect_load_asset()
+			.with(eq(Path::from("A")))
+			.return_const(handle_a.clone());
+		load_asset
+			.mock
+			.expect_load_asset()
+			.with(eq(Path::from("B")))
+			.return_const(handle_b.clone());
 
-		app.insert_resource(_LoadAsset(HashMap::from([
-			("A".to_owned(), handle_a.clone()),
-			("B".to_owned(), handle_b.clone()),
-		])));
+		app.insert_resource(load_asset);
 		app.add_systems(Update, load_animations::<_Key, _LoadAsset>);
 		app.update();
 

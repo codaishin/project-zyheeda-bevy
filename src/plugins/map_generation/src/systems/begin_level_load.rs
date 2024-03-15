@@ -3,7 +3,7 @@ use bevy::{
 	ecs::system::{Commands, Res, Resource},
 	reflect::TypePath,
 };
-use common::traits::load_asset::LoadAsset;
+use common::traits::load_asset::{LoadAsset, Path};
 
 pub(crate) fn begin_level_load<
 	TLoadMap: LoadAsset<Map<TCell>> + Resource,
@@ -12,7 +12,7 @@ pub(crate) fn begin_level_load<
 	mut commands: Commands,
 	map_loader: Res<TLoadMap>,
 ) {
-	let map = map_loader.load_asset("maps/map.txt");
+	let map = map_loader.load_asset(Path::from("maps/map.txt"));
 	commands.insert_resource(LoadLevelCommand(map));
 }
 
@@ -22,32 +22,25 @@ mod tests {
 	use crate::{components::LoadLevelCommand, map::Map};
 	use bevy::{
 		app::{App, Update},
-		asset::{Asset, AssetId, AssetPath, Handle},
+		asset::{Asset, AssetId, Handle},
 		reflect::TypePath,
 		utils::Uuid,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
-	use std::collections::HashMap;
+	use common::{test_tools::utils::SingleThreadedApp, traits::load_asset::Path};
+	use mockall::{automock, predicate::eq};
 
 	#[derive(TypePath, Asset, Debug, PartialEq)]
 	struct _Cell;
 
 	#[derive(Resource, Default)]
-	struct _LoadMap(HashMap<String, Handle<Map<_Cell>>>);
+	struct _LoadMap {
+		mock: Mock_LoadMap,
+	}
 
+	#[automock]
 	impl LoadAsset<Map<_Cell>> for _LoadMap {
-		fn load_asset<'a, TPath: Into<AssetPath<'a>>>(&self, path: TPath) -> Handle<Map<_Cell>> {
-			let path: AssetPath = path.into();
-			self.0
-				.iter()
-				.find_map(|(key, value)| match AssetPath::from(key) == path {
-					true => Some(value.clone()),
-					false => None,
-				})
-				.unwrap_or(Handle::<Map<_Cell>>::Weak(AssetId::Uuid {
-					uuid: Uuid::new_v4(),
-				}))
-				.clone()
+		fn load_asset(&self, path: Path) -> Handle<Map<_Cell>> {
+			self.mock.load_asset(path)
 		}
 	}
 
@@ -64,9 +57,14 @@ mod tests {
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let mut app = setup(_LoadMap(
-			[("maps/map.txt".to_owned(), handle.clone())].into(),
-		));
+		let mut load_map = _LoadMap::default();
+		load_map
+			.mock
+			.expect_load_asset()
+			.times(1)
+			.with(eq(Path::from("maps/map.txt")))
+			.return_const(handle.clone());
+		let mut app = setup(load_map);
 
 		app.update();
 

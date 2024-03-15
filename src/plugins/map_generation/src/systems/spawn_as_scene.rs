@@ -4,16 +4,15 @@ use bevy::{
 	transform::components::Transform,
 	utils::default,
 };
-use common::traits::{iteration::KeyValue, load_asset::LoadAsset};
+use common::traits::load_asset::{LoadAsset, Path};
 
-pub(crate) fn spawn_as_scene<
-	TCell: KeyValue<Option<String>>,
-	TAsset: LoadAsset<Scene> + Resource,
->(
+pub(crate) fn spawn_as_scene<TCell: Clone, TAsset: LoadAsset<Scene> + Resource>(
 	cells: In<Vec<(Transform, TCell)>>,
 	mut commands: Commands,
 	load_asset: Res<TAsset>,
-) {
+) where
+	Path: TryFrom<TCell>,
+{
 	for (transform, path) in cells.0.iter().filter_map(with_cell_path) {
 		let scene = load_asset.load_asset(path);
 		commands.spawn(SceneBundle {
@@ -24,63 +23,48 @@ pub(crate) fn spawn_as_scene<
 	}
 }
 
-fn with_cell_path<TCell: KeyValue<Option<String>>>(
-	(transform, cell): &(Transform, TCell),
-) -> Option<(Transform, String)> {
-	Some((*transform, cell.get_value()?))
+fn with_cell_path<TCell: Clone>((transform, cell): &(Transform, TCell)) -> Option<(Transform, Path)>
+where
+	Path: TryFrom<TCell>,
+{
+	Some((*transform, Path::try_from(cell.clone()).ok()?))
 }
 
 #[cfg(test)]
 mod tests {
-	use std::collections::HashMap;
-
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		asset::{AssetId, AssetPath, Handle},
+		asset::{AssetId, Handle},
 		ecs::system::IntoSystem,
 		utils::Uuid,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{test_tools::utils::SingleThreadedApp, traits::load_asset::Path};
+	use mockall::{automock, predicate::eq};
 
 	#[derive(Clone)]
-	struct _Cell(Option<&'static str>);
+	struct _Cell(Option<Path>);
 
-	impl KeyValue<Option<String>> for _Cell {
-		fn get_value(&self) -> Option<String> {
-			self.0.map(|s| s.to_string())
+	impl TryFrom<_Cell> for Path {
+		type Error = ();
+
+		fn try_from(value: _Cell) -> Result<Self, Self::Error> {
+			match value.0 {
+				Some(path) => Ok(path),
+				None => Err(()),
+			}
 		}
 	}
 
 	#[derive(Resource, Default)]
-	struct _LoadScene(HashMap<&'static str, Handle<Scene>>);
-
-	impl _LoadScene {
-		fn new_asset(&mut self, path: &'static str) -> Handle<Scene> {
-			let handle = Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			});
-			self.0.insert(path, handle.clone());
-
-			handle
-		}
+	struct _LoadScene {
+		mock: Mock_LoadScene,
 	}
 
+	#[automock]
 	impl LoadAsset<Scene> for _LoadScene {
-		fn load_asset<'a, TPath: Into<AssetPath<'a>>>(&self, path: TPath) -> Handle<Scene> {
-			let path: AssetPath = path.into();
-			self.0
-				.iter()
-				.find_map(
-					|(key, value)| match AssetPath::from(key.to_string()) == path {
-						true => Some(value),
-						false => None,
-					},
-				)
-				.unwrap_or(&Handle::<Scene>::Weak(AssetId::Uuid {
-					uuid: Uuid::new_v4(),
-				}))
-				.clone()
+		fn load_asset(&self, path: Path) -> Handle<Scene> {
+			self.mock.load_asset(path)
 		}
 	}
 
@@ -99,8 +83,20 @@ mod tests {
 
 	#[test]
 	fn spawn_scene_with_transform() {
-		let mut app = setup(vec![(Transform::from_xyz(1., 2., 3.), _Cell(Some("A")))]);
-		let scene = app.world.resource_mut::<_LoadScene>().new_asset("A");
+		let scene = Handle::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		});
+		let mut app = setup(vec![(
+			Transform::from_xyz(1., 2., 3.),
+			_Cell(Some(Path::from("A"))),
+		)]);
+		app.world
+			.resource_mut::<_LoadScene>()
+			.mock
+			.expect_load_asset()
+			.times(1)
+			.with(eq(Path::from("A")))
+			.return_const(scene.clone());
 
 		app.update();
 
