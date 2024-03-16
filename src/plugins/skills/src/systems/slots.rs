@@ -5,6 +5,7 @@ use bevy::{
 	scene::SceneBundle,
 	utils::default,
 };
+use common::traits::try_remove_from::TryRemoveFrom;
 
 pub(crate) fn add_item_slots(
 	mut commands: Commands,
@@ -38,7 +39,7 @@ pub(crate) fn add_item_slots(
 			.filter_map(add_slot)
 			.collect();
 		if slot_infos.0.is_empty() {
-			commands.entity(agent).remove::<SlotBones>();
+			commands.try_remove_from::<SlotBones>(agent);
 		}
 	}
 }

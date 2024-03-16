@@ -6,7 +6,10 @@ use bevy::ecs::{
 	removal_detection::RemovedComponents,
 	system::{Commands, Query},
 };
-use common::components::Animate;
+use common::{
+	components::Animate,
+	traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
+};
 
 type WithMovingAgent<TAgent, TMovement> = (With<TAgent>, With<TMovement>);
 
@@ -20,14 +23,11 @@ pub(crate) fn set_movement_animation<
 	mut stopped_agents: RemovedComponents<TMovement>,
 ) {
 	for (id, config) in &moving_agents {
-		commands
-			.entity(id)
-			.insert(Animate::Repeat(TAnimationKey::from(*config)));
+		commands.try_insert_on(id, Animate::Repeat(TAnimationKey::from(*config)));
 	}
+
 	for id in stopped_agents.read() {
-		if let Some(mut entity) = commands.get_entity(id) {
-			entity.remove::<Animate<TAnimationKey>>();
-		}
+		commands.try_remove_from::<Animate<TAnimationKey>>(id);
 	}
 }
 

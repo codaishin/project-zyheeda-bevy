@@ -8,6 +8,7 @@ use bevy::{
 	prelude::Entity,
 	ui::Interaction,
 };
+use common::traits::try_insert_on::TryInsertOn;
 
 pub fn drag<TAgent: Component, TKey: Send + Sync + Copy + 'static>(
 	mut commands: Commands,
@@ -19,7 +20,7 @@ pub fn drag<TAgent: Component, TKey: Send + Sync + Copy + 'static>(
 	};
 
 	let agent = agents.single();
-	commands.entity(agent).insert(Dad(panel.0));
+	commands.try_insert_on(agent, Dad(panel.0));
 }
 
 fn is_pressed<TKeyedPanel>((interaction, _): &(&Interaction, &KeyedPanel<TKeyedPanel>)) -> bool {

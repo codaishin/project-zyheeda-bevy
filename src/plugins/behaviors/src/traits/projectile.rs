@@ -50,7 +50,7 @@ impl Instantiate for Projectile<Plasma> {
 			..default()
 		};
 
-		on.insert((
+		on.try_insert((
 			RigidBody::Fixed,
 			DealsDamage(1),
 			Fragile,

@@ -8,6 +8,7 @@ use bevy::ecs::{
 	removal_detection::RemovedComponents,
 	system::{Commands, Query},
 };
+use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
 use std::sync::Arc;
 
 #[derive(Component)]
@@ -22,9 +23,7 @@ pub(crate) fn attack(
 	for (id, attack, conf, ..) in &attackers {
 		let spawn = &conf.spawn;
 		let despawn = spawn.spawn(&mut commands, Attacker(id), Target(attack.0));
-		commands
-			.entity(id)
-			.insert((OnCoolDown(conf.cool_down), Despawn(despawn)));
+		commands.try_insert_on(id, (OnCoolDown(conf.cool_down), Despawn(despawn)));
 	}
 
 	for id in removed_attacks.read() {
@@ -32,7 +31,7 @@ pub(crate) fn attack(
 			continue;
 		};
 		(despawn.0)(&mut commands);
-		commands.entity(id).remove::<Despawn>();
+		commands.try_remove_from::<Despawn>(id);
 	}
 }
 

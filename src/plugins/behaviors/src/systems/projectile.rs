@@ -13,7 +13,7 @@ use bevy::{
 	math::Vec3,
 	transform::components::GlobalTransform,
 };
-use common::components::Idle;
+use common::{components::Idle, traits::try_insert_on::TryInsertOn};
 
 pub(crate) fn projectile_behavior<TProjectile: ProjectileBehavior + Component>(
 	mut commands: Commands,
@@ -26,9 +26,7 @@ pub(crate) fn projectile_behavior<TProjectile: ProjectileBehavior + Component>(
 
 	for (id, projectile, transform) in &projectiles {
 		let target = get_target(projectile, transform);
-		commands
-			.entity(id)
-			.insert(Movement::<PositionBased>::to(target));
+		commands.try_insert_on(id, Movement::<PositionBased>::to(target));
 	}
 }
 

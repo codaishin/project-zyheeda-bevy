@@ -10,6 +10,7 @@ use bevy::{
 use common::{
 	components::{Collection, Swap},
 	errors::{Error, Level},
+	traits::try_remove_from::TryRemoveFrom,
 };
 use skills::components::{SlotKey, Slots};
 
@@ -31,8 +32,7 @@ pub fn swap_equipped_items(
 			results.extend_from_slice(&do_swap(swap, &mut slots, &mut handles));
 		}
 
-		let mut agent = commands.entity(agent);
-		agent.remove::<Collection<Swap<SlotKey, SlotKey>>>();
+		commands.try_remove_from::<Collection<Swap<SlotKey, SlotKey>>>(agent);
 	}
 
 	results

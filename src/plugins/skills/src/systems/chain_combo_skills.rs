@@ -35,14 +35,18 @@ pub(crate) fn chain_combo_skills<
 	mut newly_active: Query<ComboComponents<TNext>, JustStarted>,
 ) {
 	for (agent, mut slots) in &mut newly_idle {
-		let agent = &mut commands.entity(agent);
+		let Some(agent) = &mut commands.get_entity(agent) else {
+			continue;
+		};
 		let slots = &mut slots;
 
 		clear_combos::<TNext>(agent, slots);
 	}
 
 	for (agent, skill, combo_tree_t, combo_tree_r, mut slots) in &mut newly_active {
-		let agent = &mut commands.entity(agent);
+		let Some(agent) = &mut commands.get_entity(agent) else {
+			continue;
+		};
 		let slots = &mut slots;
 
 		clear_combos::<TNext>(agent, slots);
@@ -71,7 +75,7 @@ fn update_combos<TNext: Clone + ComboNext<PlayerSkills<SideUnset>> + Send + Sync
 		return;
 	}
 
-	agent.insert(ComboTreeRunning(updated_successfully));
+	agent.try_insert(ComboTreeRunning(updated_successfully));
 }
 
 fn get_combos<'a, TNext: ComboNext<PlayerSkills<SideUnset>>>(

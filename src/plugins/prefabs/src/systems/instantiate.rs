@@ -10,7 +10,10 @@ use bevy::{
 	pbr::StandardMaterial,
 	render::mesh::Mesh,
 };
-use common::{errors::Error, resources::Shared};
+use common::{
+	errors::{Error, Level},
+	resources::Shared,
+};
 
 pub fn instantiate<TAgent: Component + Instantiate>(
 	mut commands: Commands,
@@ -21,8 +24,14 @@ pub fn instantiate<TAgent: Component + Instantiate>(
 	agents: Query<(Entity, &TAgent), Added<TAgent>>,
 ) -> Vec<Result<(), Error>> {
 	let instantiate = |(entity, agent): (Entity, &TAgent)| {
+		let Some(mut entity) = commands.get_entity(entity) else {
+			return Err(Error {
+				msg: format!("Cannot instantiate prefab, because {entity:?} does not exist",),
+				lvl: Level::Error,
+			});
+		};
 		agent.instantiate(
-			&mut commands.entity(entity),
+			&mut entity,
 			|key, mesh| shared_meshes.get_handle(key, || meshes.add(mesh.clone())),
 			|key, mat| shared_materials.get_handle(key, || materials.add(mat.clone())),
 		)
@@ -58,7 +67,7 @@ mod tests {
 			mut get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
 			mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
 		) -> Result<(), Error> {
-			on.insert((
+			on.try_insert((
 				get_mesh_handle(AssetKey::Dummy, Mesh::from(Sphere { radius: 11. })),
 				get_material_handle(
 					AssetKey::Dummy,

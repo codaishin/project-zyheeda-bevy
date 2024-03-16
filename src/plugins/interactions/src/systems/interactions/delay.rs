@@ -8,6 +8,7 @@ use bevy::{
 	},
 	time::Time,
 };
+use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
 
 pub(crate) fn delay<
 	TActor: ActOn<TTarget> + Clone + Component,
@@ -34,11 +35,11 @@ fn trigger<TActor: ActOn<TTarget> + Clone + Component, TTarget: Send + Sync + 's
 	commands: &mut Commands,
 	id: Entity,
 ) {
-	commands.entity(id).insert(delay.actor.clone());
+	commands.try_insert_on(id, delay.actor.clone());
 	if delay.repeat {
 		delay.timer = delay.after;
 	} else {
-		commands.entity(id).remove::<Delay<TActor, TTarget>>();
+		commands.try_remove_from::<Delay<TActor, TTarget>>(id);
 	}
 }
 

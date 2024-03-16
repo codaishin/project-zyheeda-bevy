@@ -3,11 +3,11 @@ use bevy::ecs::{
 	entity::Entity,
 	system::{Commands, Query},
 };
-use common::components::Health;
+use common::{components::Health, traits::try_insert_on::TryInsertOn};
 
 pub(crate) fn set_dead_to_be_destroyed(mut commands: Commands, agents: Query<(Entity, &Health)>) {
 	for id in agents.iter().filter_map(dead) {
-		commands.entity(id).insert(Destroy::Immediately);
+		commands.try_insert_on(id, Destroy::Immediately);
 	}
 }
 

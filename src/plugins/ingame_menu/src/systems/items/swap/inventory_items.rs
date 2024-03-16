@@ -2,7 +2,10 @@ use bevy::{
 	ecs::system::{Commands, Query},
 	prelude::{Entity, Mut},
 };
-use common::components::{Collection, Swap};
+use common::{
+	components::{Collection, Swap},
+	traits::try_remove_from::TryRemoveFrom,
+};
 use skills::components::{Inventory, InventoryKey, Item};
 use std::cmp::max;
 
@@ -18,8 +21,7 @@ pub fn swap_inventory_items(mut commands: Commands, mut items_to_swap: Query<Ite
 			do_swap(&mut inventory, swap);
 		}
 
-		let mut agent = commands.entity(agent);
-		agent.remove::<Collection<Swap<InventoryKey, InventoryKey>>>();
+		commands.try_remove_from::<Collection<Swap<InventoryKey, InventoryKey>>>(agent);
 	}
 }
 

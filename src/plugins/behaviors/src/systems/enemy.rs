@@ -26,19 +26,22 @@ pub(crate) fn enemy(
 	};
 
 	for (id, agent, foe, distance) in agents.iter().filter_map(valid_foe) {
-		let mut enemy_commands = commands.entity(id);
+		let Some(mut entity) = commands.get_entity(id) else {
+			continue;
+		};
+
 		match strategy(agent, distance) {
 			Strategy::Attack => {
-				enemy_commands.insert(Attack(foe));
-				enemy_commands.remove::<Chase>();
+				entity.try_insert(Attack(foe));
+				entity.remove::<Chase>();
 			}
 			Strategy::Chase => {
-				enemy_commands.insert(Chase(foe));
-				enemy_commands.remove::<Attack>();
+				entity.try_insert(Chase(foe));
+				entity.remove::<Attack>();
 			}
 			Strategy::Idle => {
-				enemy_commands.remove::<Chase>();
-				enemy_commands.remove::<Attack>();
+				entity.remove::<Chase>();
+				entity.remove::<Attack>();
 			}
 		}
 	}

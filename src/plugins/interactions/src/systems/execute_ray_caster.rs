@@ -11,7 +11,7 @@ use bevy::{
 	},
 	math::Ray3d,
 };
-use common::traits::cast_ray::CastRay;
+use common::traits::{cast_ray::CastRay, try_remove_from::TryRemoveFrom};
 
 pub(crate) fn execute_ray_caster<TCastRay: CastRay<RayCaster> + Resource>(
 	mut commands: Commands,
@@ -38,7 +38,7 @@ pub(crate) fn execute_ray_caster<TCastRay: CastRay<RayCaster> + Resource>(
 			},
 		};
 		ray_cast_events.send(RayCastEvent { source, target });
-		commands.entity(source).remove::<RayCaster>();
+		commands.try_remove_from::<RayCaster>(source);
 	}
 }
 

@@ -6,6 +6,7 @@ use bevy::{
 	},
 	time::Time,
 };
+use common::traits::try_remove_from::TryRemoveFrom;
 
 pub(crate) fn update_cool_downs<TTime: Default + Send + Sync + 'static>(
 	mut commands: Commands,
@@ -16,7 +17,7 @@ pub(crate) fn update_cool_downs<TTime: Default + Send + Sync + 'static>(
 
 	for (id, mut cool_down) in &mut cool_downs {
 		if cool_down.0 <= delta {
-			commands.entity(id).remove::<OnCoolDown>();
+			commands.try_remove_from::<OnCoolDown>(id);
 		} else {
 			cool_down.0 -= delta;
 		}
