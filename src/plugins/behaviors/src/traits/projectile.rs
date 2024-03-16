@@ -44,7 +44,7 @@ impl Instantiate for Projectile<Plasma> {
 	) -> Result<(), Error> {
 		let key = AssetKey::Projectile(ProjectileType::Plasma);
 		let transform = Transform::from_translation(Vec3::ZERO);
-		let mesh = sphere(PLASMA_RADIUS, || "Cannot create plasma projectile")?;
+		let mesh = sphere(PLASMA_RADIUS);
 		let material = StandardMaterial {
 			emissive: Color::rgb_linear(0.0, 23000.0, 23000.0),
 			..default()

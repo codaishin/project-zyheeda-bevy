@@ -6,7 +6,7 @@ use bevy::{
 };
 use common::traits::load_asset::{LoadAsset, Path};
 
-pub(crate) fn spawn_as_scene<TCell: Clone, TAsset: LoadAsset<Scene> + Resource>(
+pub(crate) fn spawn_scene<TCell: Clone, TAsset: LoadAsset<Scene> + Resource>(
 	cells: In<Vec<(Transform, TCell)>>,
 	mut commands: Commands,
 	load_asset: Res<TAsset>,
@@ -75,7 +75,7 @@ mod tests {
 		app.init_resource::<_LoadScene>();
 		app.add_systems(
 			Update,
-			(return_cells).pipe(spawn_as_scene::<_Cell, _LoadScene>),
+			(return_cells).pipe(spawn_scene::<_Cell, _LoadScene>),
 		);
 
 		app

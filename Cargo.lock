@@ -2624,6 +2624,7 @@ dependencies = [
  "bevy_rapier3d",
  "common",
  "mockall",
+ "prefabs",
 ]
 
 [[package]]

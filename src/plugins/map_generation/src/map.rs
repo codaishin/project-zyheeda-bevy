@@ -16,5 +16,11 @@ pub(crate) enum MapCell {
 	Empty,
 }
 
+#[derive(Debug, PartialEq, Clone, Copy, TypePath)]
+pub(crate) enum LightCell {
+	Point(Direction3d),
+	Empty,
+}
+
 #[derive(TypePath, Asset, Debug, PartialEq)]
 pub(crate) struct Map<TCell: TypePath + Sync + Send>(pub Vec<Vec<TCell>>);

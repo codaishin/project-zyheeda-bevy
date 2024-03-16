@@ -1,4 +1,4 @@
-use super::{map::Cross, CellDistance};
+use super::{map::Cross, CellDistance, CellIsEmpty, SourcePath};
 use crate::{
 	components::Corridor,
 	map::{MapCell, Shape},
@@ -6,7 +6,11 @@ use crate::{
 use bevy::math::primitives::Direction3d;
 use common::traits::load_asset::Path;
 
-pub(crate) struct CellIsEmpty;
+impl SourcePath for MapCell {
+	fn source_path() -> Path {
+		Path::from("maps/map.txt")
+	}
+}
 
 impl TryFrom<MapCell> for Path {
 	type Error = CellIsEmpty;

@@ -1,18 +1,18 @@
-use crate::{components::LoadLevelCommand, map::Map};
+use crate::{components::LoadLevelCommand, map::Map, traits::SourcePath};
 use bevy::{
 	ecs::system::{Commands, Res, Resource},
 	reflect::TypePath,
 };
-use common::traits::load_asset::{LoadAsset, Path};
+use common::traits::load_asset::LoadAsset;
 
 pub(crate) fn begin_level_load<
 	TLoadMap: LoadAsset<Map<TCell>> + Resource,
-	TCell: TypePath + Sync + Send,
+	TCell: SourcePath + TypePath + Sync + Send,
 >(
 	mut commands: Commands,
 	map_loader: Res<TLoadMap>,
 ) {
-	let map = map_loader.load_asset(Path::from("maps/map.txt"));
+	let map = map_loader.load_asset(TCell::source_path());
 	commands.insert_resource(LoadLevelCommand(map));
 }
 
@@ -31,6 +31,12 @@ mod tests {
 
 	#[derive(TypePath, Asset, Debug, PartialEq)]
 	struct _Cell;
+
+	impl SourcePath for _Cell {
+		fn source_path() -> Path {
+			Path::from("aaa/bbb/ccc.file_format")
+		}
+	}
 
 	#[derive(Resource, Default)]
 	struct _LoadMap {
@@ -62,7 +68,7 @@ mod tests {
 			.mock
 			.expect_load_asset()
 			.times(1)
-			.with(eq(Path::from("maps/map.txt")))
+			.with(eq(Path::from("aaa/bbb/ccc.file_format")))
 			.return_const(handle.clone());
 		let mut app = setup(load_map);
 
