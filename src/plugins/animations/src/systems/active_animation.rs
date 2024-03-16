@@ -14,7 +14,7 @@ use bevy::{
 		world::Mut,
 	},
 };
-use common::components::Animate;
+use common::{components::Animate, traits::try_remove_from::TryRemoveFrom};
 use std::{collections::HashSet, hash::Hash};
 
 pub(crate) type PlayingAnimations = HashSet<Entity>;
@@ -35,7 +35,7 @@ pub(crate) fn active_animation<
 	};
 	let execute_animation = |(agent, animator, animate)| {
 		play_animation(&mut animation_players, animator, animate, &animations);
-		commands.entity(agent).remove::<Animate<TAnimationKey>>();
+		commands.try_remove_from::<Animate<TAnimationKey>>(agent);
 		agent
 	};
 	let mut busy = agents

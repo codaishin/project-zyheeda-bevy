@@ -6,7 +6,7 @@ use bevy::ecs::{
 	system::{Commands, Query},
 };
 use bevy_rapier3d::pipeline::CollisionEvent;
-use common::components::ColliderRoot;
+use common::{components::ColliderRoot, traits::try_insert_on::TryInsertOn};
 
 pub(crate) fn destroy_fragile(
 	mut commands: Commands,
@@ -19,10 +19,10 @@ pub(crate) fn destroy_fragile(
 			continue;
 		};
 		if let Ok(entity) = roots.get(*a).and_then(|r| fragiles.get(r.0)) {
-			commands.entity(entity).insert(Destroy::Immediately);
+			commands.try_insert_on(entity, Destroy::Immediately);
 		}
 		if let Ok(entity) = roots.get(*b).and_then(|r| fragiles.get(r.0)) {
-			commands.entity(entity).insert(Destroy::Immediately);
+			commands.try_insert_on(entity, Destroy::Immediately);
 		}
 	}
 }

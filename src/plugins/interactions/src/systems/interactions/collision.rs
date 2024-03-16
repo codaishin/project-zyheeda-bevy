@@ -9,7 +9,7 @@ use bevy::{
 	prelude::Mut,
 };
 use bevy_rapier3d::pipeline::CollisionEvent;
-use common::components::ColliderRoot;
+use common::{components::ColliderRoot, traits::try_remove_from::TryRemoveFrom};
 
 pub(crate) fn collision_interaction<TActor: ActOn<TTarget> + Component, TTarget: Component>(
 	mut commands: Commands,
@@ -44,11 +44,11 @@ fn handle_collision_interaction<TActor: ActOn<TTarget> + Component, TTarget: Com
 ) {
 	if let Some((mut actor, mut target)) = get_actor_and_target(a, b, actors, targets) {
 		actor.act_on(&mut target);
-		commands.entity(a).remove::<TActor>();
+		commands.try_remove_from::<TActor>(a);
 	}
 	if let Some((mut actor, mut target)) = get_actor_and_target(b, a, actors, targets) {
 		actor.act_on(&mut target);
-		commands.entity(b).remove::<TActor>();
+		commands.try_remove_from::<TActor>(b);
 	}
 }
 

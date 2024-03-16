@@ -93,7 +93,7 @@ impl Instantiate for VoidSphere {
 		let mut transform_2nd_ring = transform;
 		transform_2nd_ring.rotate_axis(Vec3::Z, PI / 2.);
 
-		on.insert((
+		on.try_insert((
 			GroundOffset(VOID_SPHERE_GROUND_OFFSET),
 			RigidBody::Dynamic,
 			GravityScale(0.),

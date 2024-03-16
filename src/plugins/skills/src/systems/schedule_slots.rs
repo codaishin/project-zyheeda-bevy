@@ -9,6 +9,7 @@ use bevy::{
 	prelude::{Commands, Component, Entity, Query, Res, With},
 	time::{Real, Time},
 };
+use common::traits::try_insert_on::TryInsertOn;
 use std::{fmt::Debug, hash::Hash, time::Duration};
 
 #[derive(Component, Debug, PartialEq)]
@@ -76,9 +77,13 @@ fn schedule_new<TAgent: Component>(
 	let time_stamp = time.elapsed();
 
 	for (agent, slot, skill) in valid_agents {
-		let mut agent = commands.entity(agent);
-		agent.insert(new_schedule((slot, skill)));
-		agent.insert(CurrentlyScheduling { slot, time_stamp });
+		commands.try_insert_on(
+			agent,
+			(
+				new_schedule((slot, skill)),
+				CurrentlyScheduling { slot, time_stamp },
+			),
+		);
 	}
 }
 
@@ -92,7 +97,7 @@ fn update_target<TAgent: Component>(
 		.filter_map(currently_scheduling_matches(pressed));
 
 	for (agent, _) in valid_agents {
-		commands.entity(agent).insert(Schedule::UpdateTarget);
+		commands.try_insert_on(agent, Schedule::UpdateTarget);
 	}
 }
 
@@ -109,8 +114,10 @@ fn schedule_aim<TAgent: Component>(
 
 	for (agent, currently_scheduling) in valid_agents {
 		let aim_duration = elapsed - currently_scheduling.time_stamp;
-		let mut agent = commands.entity(agent);
-		agent.insert(Schedule::StopAimAfter(aim_duration));
+		let Some(mut agent) = commands.get_entity(agent) else {
+			continue;
+		};
+		agent.try_insert(Schedule::StopAimAfter(aim_duration));
 		agent.remove::<CurrentlyScheduling>();
 	}
 }

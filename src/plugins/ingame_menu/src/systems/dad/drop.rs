@@ -33,8 +33,11 @@ pub fn drop<
 		return;
 	};
 
-	let mut agent = commands.entity(agent);
-	agent.insert(Collection::new([Swap(dad.0, keyed_panel.0)]));
+	let Some(mut agent) = commands.get_entity(agent) else {
+		return;
+	};
+
+	agent.try_insert(Collection::new([Swap(dad.0, keyed_panel.0)]));
 	agent.remove::<Dad<TKeyDad>>();
 }
 

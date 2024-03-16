@@ -34,7 +34,9 @@ pub(crate) fn enqueue<TTargetIds: WithComponent<GlobalTransform> + Resource>(
 	let target = get_target(&cam_ray, target_ids.as_ref(), &transforms);
 
 	for (agent, schedule, queue, active) in &mut agents {
-		let mut agent = commands.entity(agent);
+		let Some(mut agent) = commands.get_entity(agent) else {
+			continue;
+		};
 		agent.remove::<Schedule>();
 		apply_schedule(schedule, queue, active, agent, &target);
 	}
@@ -118,7 +120,7 @@ fn override_hard(
 	mut agent: EntityCommands,
 ) {
 	queue.0 = vec![new].into();
-	agent.insert(Idle);
+	agent.try_insert(Idle);
 }
 
 #[cfg(test)]

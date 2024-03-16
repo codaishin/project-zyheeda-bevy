@@ -6,6 +6,7 @@ use bevy::{
 	},
 	time::Time,
 };
+use common::traits::try_insert_on::TryInsertOn;
 use interactions::components::Destroy;
 
 pub(crate) fn update_lifetimes<TTime: Default + Sync + Send + 'static>(
@@ -19,7 +20,7 @@ pub(crate) fn update_lifetimes<TTime: Default + Sync + Send + 'static>(
 		if delta < lifetime.0 {
 			lifetime.0 -= delta;
 		} else if despawn.is_none() {
-			commands.entity(id).insert(Destroy::DELAYED);
+			commands.try_insert_on(id, Destroy::DELAYED);
 		}
 	}
 }

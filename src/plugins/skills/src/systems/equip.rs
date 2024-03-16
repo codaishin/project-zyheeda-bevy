@@ -8,7 +8,7 @@ use common::{
 	components::Collection,
 	errors::{Error, Level},
 	resources::Models,
-	traits::accessor::Accessor,
+	traits::{accessor::Accessor, try_remove_from::TryRemoveFrom},
 };
 use std::mem::swap;
 
@@ -29,7 +29,6 @@ pub fn equip_item<
 	let mut results = Vec::new();
 
 	for (agent, mut slots, mut equip, mut component) in &mut agent {
-		let mut agent = commands.entity(agent);
 		let accessors_and_results = equip_items::<TContainer, TItemAccessor>(
 			&mut slots,
 			&mut scene_handles,
@@ -42,7 +41,7 @@ pub fn equip_item<
 		push_retries_and_results(accessors_and_results, &mut retry, &mut results);
 
 		if retry.is_empty() {
-			agent.remove::<Collection<TItemAccessor>>();
+			commands.try_remove_from::<Collection<TItemAccessor>>(agent);
 		} else {
 			equip.0 = retry;
 		}

@@ -33,7 +33,7 @@ impl Instantiate for Beam {
 			..default()
 		};
 
-		on.insert(
+		on.try_insert(
 			DealsDamage(self.damage)
 				.after(Duration::from_millis(100))
 				.repeat(),

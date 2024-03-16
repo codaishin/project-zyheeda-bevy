@@ -9,6 +9,7 @@ use bevy::{
 	transform::components::GlobalTransform,
 };
 use bevy_rapier3d::dynamics::Velocity;
+use common::traits::try_insert_on::TryInsertOn;
 
 pub(crate) fn chase<TMovementConfig: Component + MovementData>(
 	mut commands: Commands,
@@ -22,18 +23,16 @@ pub(crate) fn chase<TMovementConfig: Component + MovementData>(
 	});
 
 	for id in removed_chasers.read() {
-		let Some(mut entity) = commands.get_entity(id) else {
-			continue;
-		};
-		entity.insert(Velocity::zero());
+		commands.try_insert_on(id, Velocity::zero());
 	}
 
 	for (id, transform, conf, target) in chasers_with_valid_target {
 		let (speed, ..) = conf.get_movement_data();
 		let position = transform.translation();
-		commands.entity(id).insert(Velocity::linear(
-			(target - position).normalize() * speed.to_f32(),
-		));
+		commands.try_insert_on(
+			id,
+			Velocity::linear((target - position).normalize() * speed.to_f32()),
+		);
 	}
 }
 

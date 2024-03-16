@@ -49,9 +49,12 @@ pub fn panel_activity_colors_override<
 	};
 
 	for (entity, background_color, panel) in &mut buttons {
+		let Some(entity) = commands.get_entity(entity) else {
+			continue;
+		};
 		update_color_override(
 			get_color::<TPanel>(player_slots, primed_slots, &panel.get(())),
-			commands.entity(entity),
+			entity,
 			background_color,
 		);
 	}
@@ -77,7 +80,7 @@ fn update_color_override(
 ) {
 	match color {
 		Some(color) => {
-			entity.insert(ColorOverride);
+			entity.try_insert(ColorOverride);
 			*background_color = color.into();
 		}
 		None => {

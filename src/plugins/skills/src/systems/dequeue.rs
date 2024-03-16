@@ -9,12 +9,15 @@ pub(crate) fn dequeue<TAnimationTemplate: Clone + Copy + Sync + Send + 'static>(
 	mut agents: Query<Components<TAnimationTemplate>, With<Idle>>,
 ) {
 	for (agent, mut queue) in agents.iter_mut() {
-		let mut agent = commands.entity(agent);
+		let Some(mut agent) = commands.get_entity(agent) else {
+			continue;
+		};
 
 		let Some(skill) = queue.0.pop_front() else {
 			continue;
 		};
-		agent.insert(Track::new(skill.to_active()));
+
+		agent.try_insert(Track::new(skill.to_active()));
 		agent.remove::<Idle>();
 	}
 }

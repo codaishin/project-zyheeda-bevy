@@ -6,7 +6,7 @@ use bevy::ecs::{
 	system::{Commands, Query},
 	world::Mut,
 };
-use common::components::ColliderRoot;
+use common::{components::ColliderRoot, traits::try_remove_from::TryRemoveFrom};
 
 pub(crate) fn ray_cast_interaction<TActor: ActOn<TTarget> + Component, TTarget: Component>(
 	mut commands: Commands,
@@ -38,7 +38,7 @@ fn handle_collision_interaction<TActor: ActOn<TTarget> + Component, TTarget: Com
 		return;
 	};
 	actor.act_on(&mut target);
-	commands.entity(src).remove::<TActor>();
+	commands.try_remove_from::<TActor>(src);
 }
 
 fn get_actor_and_target<'a, TActor: Component, TTarget: Component>(

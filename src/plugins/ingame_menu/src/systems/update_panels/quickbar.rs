@@ -9,7 +9,7 @@ use bevy::{
 	render::texture::Image,
 	ui::UiImage,
 };
-use common::components::Player;
+use common::{components::Player, traits::try_insert_on::TryInsertOn};
 use skills::{
 	components::{SlotKey, Slots},
 	resources::SkillIcons,
@@ -28,10 +28,9 @@ pub fn quickbar(
 
 	for (id, mut panel) in &mut panels {
 		let (state, image) = get_state_and_image(&panel.key, slots, &icons, default_icon);
-		let panel_entity = &mut commands.entity(id);
 
 		panel.state = state;
-		panel_entity.insert(image);
+		commands.try_insert_on(id, image);
 	}
 }
 
