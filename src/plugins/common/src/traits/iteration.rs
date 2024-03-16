@@ -6,10 +6,6 @@ where
 	fn next(current: &Iter<Self>) -> Option<Self>;
 }
 
-pub trait KeyValue<TValue> {
-	fn get_value(self) -> TValue;
-}
-
 pub struct Iter<TValue>(pub Option<TValue>);
 
 impl<TIterKey: IterKey + Copy> Iterator for Iter<TIterKey> {

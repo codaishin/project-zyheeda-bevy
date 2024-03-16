@@ -1,8 +1,8 @@
-use super::LoadAsset;
-use bevy::asset::{Asset, AssetPath, AssetServer, Handle};
+use super::{LoadAsset, Path};
+use bevy::asset::{Asset, AssetServer, Handle};
 
 impl<TAsset: Asset> LoadAsset<TAsset> for AssetServer {
-	fn load_asset<'a, TPath: Into<AssetPath<'a>>>(&self, path: TPath) -> Handle<TAsset> {
-		self.load(path)
+	fn load_asset(&self, path: Path) -> Handle<TAsset> {
+		self.load(path.0)
 	}
 }

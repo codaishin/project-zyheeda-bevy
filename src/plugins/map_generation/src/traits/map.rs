@@ -1,35 +1,27 @@
-use super::MapAsset;
-use crate::map::{Cell, Cells, Map, Shape};
-use bevy::math::primitives::Direction3d;
+use crate::map::Map;
+use bevy::reflect::TypePath;
 
-impl MapAsset<Cell> for Map {
-	const CELL_DISTANCE: f32 = 2.;
-
-	fn cells(&self) -> Vec<Vec<Cell>> {
-		self.0 .0.clone()
-	}
-}
-
-impl From<String> for Map {
+impl<TCell: From<Cross> + TypePath + Sync + Send> From<String> for Map<TCell> {
 	fn from(value: String) -> Self {
 		let lines: Vec<String> = value
 			.split('\n')
 			.map(strip_white_spaces)
-			.map(reverse)
 			.filter(|line| non_empty(line))
 			.collect();
 
 		let map = lines.iter().enumerate().map(parse(&lines)).collect();
 
-		Self(Cells(map))
+		Self(map)
 	}
 }
 
-fn parse(lines: &'_ [String]) -> impl FnMut((usize, &String)) -> Vec<Cell> + '_ {
+fn parse<TCell: From<Cross>>(
+	lines: &'_ [String],
+) -> impl FnMut((usize, &String)) -> Vec<TCell> + '_ {
 	move |(line_i, line)| {
 		line.chars()
 			.enumerate()
-			.map(|(char_i, char)| Cell::from(Cross::new(lines, line_i, char, char_i)))
+			.map(|(char_i, char)| TCell::from(Cross::new(lines, line_i, char, char_i)))
 			.collect()
 	}
 }
@@ -44,16 +36,13 @@ fn non_empty(line: &str) -> bool {
 	!line.is_empty()
 }
 
-fn reverse(line: String) -> String {
-	line.chars().rev().collect()
-}
-
-struct Cross {
-	middle: char,
-	up: Option<char>,
-	down: Option<char>,
-	left: Option<char>,
-	right: Option<char>,
+#[derive(Default, Debug, PartialEq)]
+pub(crate) struct Cross {
+	pub middle: char,
+	pub up: Option<char>,
+	pub down: Option<char>,
+	pub left: Option<char>,
+	pub right: Option<char>,
 }
 
 impl Cross {
@@ -77,136 +66,52 @@ impl Cross {
 	}
 }
 
-impl From<Cross> for Cell {
-	fn from(cross: Cross) -> Self {
-		match cross {
-			// Cross
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				down: Some('c'),
-				right: Some('c'),
-				left: Some('c'),
-			} => Cell::Corridor(Direction3d::NEG_Z, Shape::Cross4),
-			// T
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				down: Some('c'),
-				left: Some('c'),
-				..
-			} => Cell::Corridor(Direction3d::NEG_X, Shape::Cross3),
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				left: Some('c'),
-				right: Some('c'),
-				..
-			} => Cell::Corridor(Direction3d::Z, Shape::Cross3),
-			Cross {
-				middle: 'c',
-				down: Some('c'),
-				left: Some('c'),
-				right: Some('c'),
-				..
-			} => Cell::Corridor(Direction3d::NEG_Z, Shape::Cross3),
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				down: Some('c'),
-				right: Some('c'),
-				..
-			} => Cell::Corridor(Direction3d::X, Shape::Cross3),
-			// Corners
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				left: Some('c'),
-				..
-			} => Cell::Corridor(Direction3d::Z, Shape::Cross2),
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				right: Some('c'),
-				..
-			} => Cell::Corridor(Direction3d::X, Shape::Cross2),
-			Cross {
-				middle: 'c',
-				down: Some('c'),
-				left: Some('c'),
-				..
-			} => Cell::Corridor(Direction3d::NEG_X, Shape::Cross2),
-			Cross {
-				middle: 'c',
-				down: Some('c'),
-				right: Some('c'),
-				..
-			} => Cell::Corridor(Direction3d::NEG_Z, Shape::Cross2),
-			// Straights
-			Cross {
-				middle: 'c',
-				right: Some('c'),
-				left: Some('c'),
-				..
-			} => Cell::Corridor(Direction3d::X, Shape::Straight),
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				down: Some('c'),
-				..
-			} => Cell::Corridor(Direction3d::NEG_Z, Shape::Straight),
-			// Ends
-			Cross {
-				middle: 'c',
-				right: Some('c'),
-				..
-			} => Cell::Corridor(Direction3d::X, Shape::End),
-			Cross {
-				middle: 'c',
-				left: Some('c'),
-				..
-			} => Cell::Corridor(Direction3d::NEG_X, Shape::End),
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				..
-			} => Cell::Corridor(Direction3d::Z, Shape::End),
-			Cross {
-				middle: 'c',
-				down: Some('c'),
-				..
-			} => Cell::Corridor(Direction3d::NEG_Z, Shape::End),
-			// Single
-			Cross { middle: 'c', .. } => Cell::Corridor(Direction3d::NEG_Z, Shape::Single),
-			// None
-			_ => Cell::Empty,
-		}
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::map::{Cell, Shape};
+	use bevy::utils::default;
 
-	#[test]
-	fn single_empty() {
-		let raw = "x".to_string();
-		let map = Map::from(raw);
+	#[derive(TypePath, Debug, PartialEq)]
+	struct _Cell(Cross);
 
-		assert_eq!(Map(Cells(vec![vec![Cell::Empty]])), map);
+	impl From<Cross> for _Cell {
+		fn from(value: Cross) -> Self {
+			_Cell(value)
+		}
 	}
 
 	#[test]
-	fn single_corridor() {
-		let raw = "c".to_string();
-		let map = Map::from(raw);
+	fn single() {
+		let raw = "x".to_string();
+		let map = Map::<_Cell>::from(raw);
 
 		assert_eq!(
-			Map(Cells(vec![vec![Cell::Corridor(
-				Direction3d::NEG_Z,
-				Shape::Single
-			)]])),
+			Map(vec![vec![_Cell(Cross {
+				middle: 'x',
+				..default()
+			})]]),
+			map
+		);
+	}
+
+	#[test]
+	fn double() {
+		let raw = "cx".to_string();
+		let map = Map::<_Cell>::from(raw);
+
+		assert_eq!(
+			Map(vec![vec![
+				_Cell(Cross {
+					middle: 'c',
+					right: Some('x'),
+					..default()
+				}),
+				_Cell(Cross {
+					middle: 'x',
+					left: Some('c'),
+					..default()
+				})
+			]]),
 			map
 		);
 	}
@@ -214,312 +119,103 @@ mod tests {
 	#[test]
 	fn skip_white_spaces() {
 		let raw = "x c".to_string();
-		let map = Map::from(raw);
+		let map = Map::<_Cell>::from(raw);
 
 		assert_eq!(
-			Map(Cells(vec![vec![
-				Cell::Corridor(Direction3d::NEG_Z, Shape::Single),
-				Cell::Empty
-			]])),
+			Map(vec![vec![
+				_Cell(Cross {
+					middle: 'x',
+					right: Some('c'),
+					..default()
+				}),
+				_Cell(Cross {
+					middle: 'c',
+					left: Some('x'),
+					..default()
+				})
+			]]),
 			map
 		);
 	}
 
 	#[test]
-	fn process_multiple_lines_mirrored() {
+	fn process_multiple_lines() {
 		let raw = "
-			xc
-			cx
+			xct
+			erj
+			lpn
 		"
 		.to_string();
 		let map = Map::from(raw);
 
 		assert_eq!(
-			Map(Cells(vec![
+			Map(vec![
 				vec![
-					Cell::Corridor(Direction3d::NEG_Z, Shape::Single),
-					Cell::Empty
+					_Cell(Cross {
+						middle: 'x',
+						down: Some('e'),
+						right: Some('c'),
+						..default()
+					}),
+					_Cell(Cross {
+						middle: 'c',
+						down: Some('r'),
+						left: Some('x'),
+						right: Some('t'),
+						..default()
+					}),
+					_Cell(Cross {
+						middle: 't',
+						down: Some('j'),
+						left: Some('c'),
+						..default()
+					}),
 				],
 				vec![
-					Cell::Empty,
-					Cell::Corridor(Direction3d::NEG_Z, Shape::Single)
+					_Cell(Cross {
+						middle: 'e',
+						up: Some('x'),
+						down: Some('l'),
+						right: Some('r'),
+						..default()
+					}),
+					_Cell(Cross {
+						middle: 'r',
+						up: Some('c'),
+						down: Some('p'),
+						left: Some('e'),
+						right: Some('j'),
+					}),
+					_Cell(Cross {
+						middle: 'j',
+						up: Some('t'),
+						down: Some('n'),
+						left: Some('r'),
+						..default()
+					}),
+				],
+				vec![
+					_Cell(Cross {
+						middle: 'l',
+						up: Some('e'),
+						right: Some('p'),
+						..default()
+					}),
+					_Cell(Cross {
+						middle: 'p',
+						up: Some('r'),
+						right: Some('n'),
+						left: Some('l'),
+						..default()
+					}),
+					_Cell(Cross {
+						middle: 'n',
+						up: Some('j'),
+						left: Some('p'),
+						..default()
+					}),
 				]
-			])),
-			map
-		);
-	}
-
-	#[test]
-	fn corridor_ends() {
-		let raw = "cc".to_string();
-		let map = Map::from(raw);
-
-		assert_eq!(
-			Map(Cells(vec![vec![
-				Cell::Corridor(Direction3d::X, Shape::End),
-				Cell::Corridor(Direction3d::NEG_X, Shape::End),
-			]])),
-			map
-		);
-	}
-
-	#[test]
-	fn corridor_ends_with_straight_horizontally() {
-		let raw = "ccc".to_string();
-		let map = Map::from(raw);
-
-		assert_eq!(
-			Map(Cells(vec![vec![
-				Cell::Corridor(Direction3d::X, Shape::End),
-				Cell::Corridor(Direction3d::X, Shape::Straight),
-				Cell::Corridor(Direction3d::NEG_X, Shape::End),
-			]])),
-			map
-		);
-	}
-
-	#[test]
-	fn corridor_ends_with_straight_vertically() {
-		let raw = "
-			x c x
-			x c x
-			x c x
-		"
-		.to_string();
-		let map = Map::from(raw);
-
-		assert_eq!(
-			Map(Cells(vec![
-				vec![
-					Cell::Empty,
-					Cell::Corridor(Direction3d::NEG_Z, Shape::End),
-					Cell::Empty,
-				],
-				vec![
-					Cell::Empty,
-					Cell::Corridor(Direction3d::NEG_Z, Shape::Straight),
-					Cell::Empty,
-				],
-				vec![
-					Cell::Empty,
-					Cell::Corridor(Direction3d::Z, Shape::End),
-					Cell::Empty,
-				]
-			])),
-			map
-		);
-	}
-
-	#[test]
-	fn corridor_mirrored_ends_with_left_upper_corner() {
-		let raw = "
-			c c
-			x c
-		"
-		.to_string();
-		let map = Map::from(raw);
-
-		assert_eq!(
-			Map(Cells(vec![
-				vec![
-					Cell::Corridor(Direction3d::NEG_Z, Shape::Cross2),
-					Cell::Corridor(Direction3d::NEG_X, Shape::End),
-				],
-				vec![Cell::Corridor(Direction3d::Z, Shape::End), Cell::Empty,],
-			])),
-			map
-		);
-	}
-
-	#[test]
-	fn corridor_mirrored_ends_with_right_upper_corner() {
-		let raw = "
-			c c
-			c x
-		"
-		.to_string();
-		let map = Map::from(raw);
-
-		assert_eq!(
-			Map(Cells(vec![
-				vec![
-					Cell::Corridor(Direction3d::X, Shape::End),
-					Cell::Corridor(Direction3d::NEG_X, Shape::Cross2),
-				],
-				vec![Cell::Empty, Cell::Corridor(Direction3d::Z, Shape::End),],
-			])),
-			map
-		);
-	}
-
-	#[test]
-	fn corridor_mirrored_ends_with_left_lower_corner() {
-		let raw = "
-			x c
-			c c
-		"
-		.to_string();
-		let map = Map::from(raw);
-
-		assert_eq!(
-			Map(Cells(vec![
-				vec![Cell::Corridor(Direction3d::NEG_Z, Shape::End), Cell::Empty,],
-				vec![
-					Cell::Corridor(Direction3d::X, Shape::Cross2),
-					Cell::Corridor(Direction3d::NEG_X, Shape::End),
-				],
-			])),
-			map
-		);
-	}
-
-	#[test]
-	fn corridor_mirrored_ends_with_right_lower_corner() {
-		let raw = "
-			c x
-			c c
-		"
-		.to_string();
-		let map = Map::from(raw);
-
-		assert_eq!(
-			Map(Cells(vec![
-				vec![Cell::Empty, Cell::Corridor(Direction3d::NEG_Z, Shape::End),],
-				vec![
-					Cell::Corridor(Direction3d::X, Shape::End),
-					Cell::Corridor(Direction3d::Z, Shape::Cross2),
-				],
-			])),
-			map
-		);
-	}
-
-	#[test]
-	fn corridor_mirrored_ends_with_t_down() {
-		let raw = "
-			c c c
-			x c x
-		"
-		.to_string();
-		let map = Map::from(raw);
-
-		assert_eq!(
-			Map(Cells(vec![
-				vec![
-					Cell::Corridor(Direction3d::X, Shape::End),
-					Cell::Corridor(Direction3d::NEG_Z, Shape::Cross3),
-					Cell::Corridor(Direction3d::NEG_X, Shape::End),
-				],
-				vec![
-					Cell::Empty,
-					Cell::Corridor(Direction3d::Z, Shape::End),
-					Cell::Empty,
-				],
-			])),
-			map
-		);
-	}
-
-	#[test]
-	fn corridor_mirrored_ends_with_t_up() {
-		let raw = "
-			x c x
-			c c c
-		"
-		.to_string();
-		let map = Map::from(raw);
-
-		assert_eq!(
-			Map(Cells(vec![
-				vec![
-					Cell::Empty,
-					Cell::Corridor(Direction3d::NEG_Z, Shape::End),
-					Cell::Empty,
-				],
-				vec![
-					Cell::Corridor(Direction3d::X, Shape::End),
-					Cell::Corridor(Direction3d::Z, Shape::Cross3),
-					Cell::Corridor(Direction3d::NEG_X, Shape::End),
-				],
-			])),
-			map
-		);
-	}
-
-	#[test]
-	fn corridor_mirrored_ends_with_t_right() {
-		let raw = "
-			x c
-			c c
-			x c
-		"
-		.to_string();
-		let map = Map::from(raw);
-
-		assert_eq!(
-			Map(Cells(vec![
-				vec![Cell::Corridor(Direction3d::NEG_Z, Shape::End), Cell::Empty,],
-				vec![
-					Cell::Corridor(Direction3d::X, Shape::Cross3),
-					Cell::Corridor(Direction3d::NEG_X, Shape::End),
-				],
-				vec![Cell::Corridor(Direction3d::Z, Shape::End), Cell::Empty,],
-			])),
-			map
-		);
-	}
-
-	#[test]
-	fn corridor_mirrored_ends_with_t_left() {
-		let raw = "
-			c x
-			c c
-			c x
-		"
-		.to_string();
-		let map = Map::from(raw);
-
-		assert_eq!(
-			Map(Cells(vec![
-				vec![Cell::Empty, Cell::Corridor(Direction3d::NEG_Z, Shape::End),],
-				vec![
-					Cell::Corridor(Direction3d::X, Shape::End),
-					Cell::Corridor(Direction3d::NEG_X, Shape::Cross3),
-				],
-				vec![Cell::Empty, Cell::Corridor(Direction3d::Z, Shape::End),],
-			])),
-			map
-		);
-	}
-
-	#[test]
-	fn corridor_mirrored_ends_with_cross() {
-		let raw = "
-			x c x
-			c c c
-			x c x
-		"
-		.to_string();
-		let map = Map::from(raw);
-
-		assert_eq!(
-			Map(Cells(vec![
-				vec![
-					Cell::Empty,
-					Cell::Corridor(Direction3d::NEG_Z, Shape::End),
-					Cell::Empty,
-				],
-				vec![
-					Cell::Corridor(Direction3d::X, Shape::End),
-					Cell::Corridor(Direction3d::NEG_Z, Shape::Cross4),
-					Cell::Corridor(Direction3d::NEG_X, Shape::End),
-				],
-				vec![
-					Cell::Empty,
-					Cell::Corridor(Direction3d::Z, Shape::End),
-					Cell::Empty,
-				],
-			])),
+			]),
 			map
 		);
 	}

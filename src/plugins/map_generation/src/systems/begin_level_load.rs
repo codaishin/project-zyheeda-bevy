@@ -1,12 +1,18 @@
-use crate::{components::LoadLevelCommand, map::Map};
-use bevy::ecs::system::{Commands, Res, Resource};
+use crate::{components::LoadLevelCommand, map::Map, traits::SourcePath};
+use bevy::{
+	ecs::system::{Commands, Res, Resource},
+	reflect::TypePath,
+};
 use common::traits::load_asset::LoadAsset;
 
-pub(crate) fn begin_level_load<TLoadMap: LoadAsset<Map> + Resource>(
+pub(crate) fn begin_level_load<
+	TLoadMap: LoadAsset<Map<TCell>> + Resource,
+	TCell: SourcePath + TypePath + Sync + Send,
+>(
 	mut commands: Commands,
 	map_loader: Res<TLoadMap>,
 ) {
-	let map = map_loader.load_asset("maps/map.txt");
+	let map = map_loader.load_asset(TCell::source_path());
 	commands.insert_resource(LoadLevelCommand(map));
 }
 
@@ -16,35 +22,38 @@ mod tests {
 	use crate::{components::LoadLevelCommand, map::Map};
 	use bevy::{
 		app::{App, Update},
-		asset::{AssetId, AssetPath, Handle},
+		asset::{Asset, AssetId, Handle},
+		reflect::TypePath,
 		utils::Uuid,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
-	use std::collections::HashMap;
+	use common::{test_tools::utils::SingleThreadedApp, traits::load_asset::Path};
+	use mockall::{automock, predicate::eq};
+
+	#[derive(TypePath, Asset, Debug, PartialEq)]
+	struct _Cell;
+
+	impl SourcePath for _Cell {
+		fn source_path() -> Path {
+			Path::from("aaa/bbb/ccc.file_format")
+		}
+	}
 
 	#[derive(Resource, Default)]
-	struct _LoadMap(HashMap<String, Handle<Map>>);
+	struct _LoadMap {
+		mock: Mock_LoadMap,
+	}
 
-	impl LoadAsset<Map> for _LoadMap {
-		fn load_asset<'a, TPath: Into<AssetPath<'a>>>(&self, path: TPath) -> Handle<Map> {
-			let path: AssetPath = path.into();
-			self.0
-				.iter()
-				.find_map(|(key, value)| match AssetPath::from(key) == path {
-					true => Some(value.clone()),
-					false => None,
-				})
-				.unwrap_or(Handle::<Map>::Weak(AssetId::Uuid {
-					uuid: Uuid::new_v4(),
-				}))
-				.clone()
+	#[automock]
+	impl LoadAsset<Map<_Cell>> for _LoadMap {
+		fn load_asset(&self, path: Path) -> Handle<Map<_Cell>> {
+			self.mock.load_asset(path)
 		}
 	}
 
 	fn setup(load_map: _LoadMap) -> App {
 		let mut app = App::new_single_threaded([Update]);
 		app.insert_resource(load_map);
-		app.add_systems(Update, begin_level_load::<_LoadMap>);
+		app.add_systems(Update, begin_level_load::<_LoadMap, _Cell>);
 
 		app
 	}
@@ -54,13 +63,18 @@ mod tests {
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let mut app = setup(_LoadMap(
-			[("maps/map.txt".to_owned(), handle.clone())].into(),
-		));
+		let mut load_map = _LoadMap::default();
+		load_map
+			.mock
+			.expect_load_asset()
+			.times(1)
+			.with(eq(Path::from("aaa/bbb/ccc.file_format")))
+			.return_const(handle.clone());
+		let mut app = setup(load_map);
 
 		app.update();
 
-		let level_command = app.world.get_resource::<LoadLevelCommand<Map>>();
+		let level_command = app.world.get_resource::<LoadLevelCommand<_Cell>>();
 
 		assert_eq!(Some(&LoadLevelCommand(handle)), level_command);
 	}

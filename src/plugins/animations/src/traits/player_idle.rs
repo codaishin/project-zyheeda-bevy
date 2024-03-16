@@ -1,7 +1,10 @@
 use crate::animation_keys::PlayerIdle;
 use common::{
 	components::Player,
-	traits::iteration::{Iter, IterKey, KeyValue},
+	traits::{
+		iteration::{Iter, IterKey},
+		load_asset::Path,
+	},
 };
 
 impl IterKey for PlayerIdle {
@@ -14,9 +17,9 @@ impl IterKey for PlayerIdle {
 	}
 }
 
-impl KeyValue<String> for PlayerIdle {
-	fn get_value(self) -> String {
-		Player::MODEL_PATH.to_owned() + "#Animation2"
+impl From<PlayerIdle> for Path {
+	fn from(_: PlayerIdle) -> Self {
+		Path::from(Player::MODEL_PATH.to_owned() + "#Animation2")
 	}
 }
 
@@ -33,7 +36,10 @@ mod tests {
 
 	#[test]
 	fn values() {
-		let iterations: Vec<_> = PlayerIdle::iterator().map(|i| i.get_value()).collect();
+		let iterations: Vec<_> = PlayerIdle::iterator()
+			.map(Path::from)
+			.map(|path| path.as_string().clone())
+			.collect();
 
 		assert_eq!(
 			vec![Player::MODEL_PATH.to_owned() + "#Animation2"],

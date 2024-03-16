@@ -10,14 +10,17 @@ pub(crate) enum Shape {
 	Cross4,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) enum Cell {
+#[derive(Debug, PartialEq, Clone, Copy, TypePath)]
+pub(crate) enum MapCell {
 	Corridor(Direction3d, Shape),
 	Empty,
 }
 
-#[derive(Debug, PartialEq)]
-pub(crate) struct Cells(pub Vec<Vec<Cell>>);
+#[derive(Debug, PartialEq, Clone, Copy, TypePath)]
+pub(crate) enum LightCell {
+	Point(Direction3d),
+	Empty,
+}
 
 #[derive(TypePath, Asset, Debug, PartialEq)]
-pub struct Map(pub Cells);
+pub(crate) struct Map<TCell: TypePath + Sync + Send>(pub Vec<Vec<TCell>>);

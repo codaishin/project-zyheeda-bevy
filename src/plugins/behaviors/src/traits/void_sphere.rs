@@ -80,9 +80,7 @@ impl Instantiate for VoidSphere {
 			metallic: 1.,
 			..default()
 		};
-		let core_mesh = sphere(VOID_SPHERE_INNER_RADIUS, || {
-			"Cannot create void sphere core"
-		})?;
+		let core_mesh = sphere(VOID_SPHERE_INNER_RADIUS);
 		let ring_material = StandardMaterial {
 			emissive: Color::rgb_linear(23000.0, 23000.0, 23000.0),
 			..default()

@@ -2,7 +2,10 @@ use crate::components::PlayerMovement;
 use behaviors::components::{MovementConfig, MovementMode};
 use common::{
 	components::Player,
-	traits::iteration::{Iter, IterKey, KeyValue},
+	traits::{
+		iteration::{Iter, IterKey},
+		load_asset::Path,
+	},
 };
 
 impl IterKey for PlayerMovement {
@@ -18,14 +21,14 @@ impl IterKey for PlayerMovement {
 	}
 }
 
-impl KeyValue<String> for PlayerMovement {
-	fn get_value(self) -> String {
-		let value = match self {
-			Self::Walk => "Animation1",
-			Self::Run => "Animation3",
+impl From<PlayerMovement> for Path {
+	fn from(value: PlayerMovement) -> Self {
+		let value = match value {
+			PlayerMovement::Walk => "Animation1",
+			PlayerMovement::Run => "Animation3",
 		};
 
-		Player::MODEL_PATH.to_owned() + "#" + value
+		Path::from(Player::MODEL_PATH.to_owned() + "#" + value)
 	}
 }
 
@@ -61,16 +64,19 @@ mod test_iteration {
 	fn all_contain_base_path() {
 		let model_path_with_hash = Player::MODEL_PATH.to_owned() + "#";
 		assert!(PlayerMovement::iterator()
-			.map(PlayerMovement::get_value)
-			.all(|path| path.starts_with(&model_path_with_hash)));
+			.map(Path::from)
+			.all(|path| path.as_string().starts_with(&model_path_with_hash)));
 	}
 
 	#[test]
 	fn no_duplicate_keys() {
 		let keys = PlayerMovement::iterator();
 		let unique_keys = HashSet::from_iter(PlayerMovement::iterator());
-		let unique_strings =
-			HashSet::from_iter(PlayerMovement::iterator().map(PlayerMovement::get_value));
+		let unique_strings = HashSet::from_iter(
+			PlayerMovement::iterator()
+				.map(Path::from)
+				.map(|p| p.as_string().clone()),
+		);
 
 		assert_eq!(
 			(2, 2, 2),

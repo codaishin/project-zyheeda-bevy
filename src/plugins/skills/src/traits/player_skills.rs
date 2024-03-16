@@ -1,7 +1,10 @@
 use crate::{components::Handed, skill::PlayerSkills};
 use common::{
 	components::{Player, Side},
-	traits::iteration::{Iter, IterKey, KeyValue},
+	traits::{
+		iteration::{Iter, IterKey},
+		load_asset::Path,
+	},
 };
 
 impl IterKey for PlayerSkills<Side> {
@@ -21,18 +24,18 @@ impl IterKey for PlayerSkills<Side> {
 	}
 }
 
-impl KeyValue<String> for PlayerSkills<Side> {
-	fn get_value(self) -> String {
-		let value = match self {
-			Self::Shoot(Handed::Single(Side::Main)) => "Animation4",
-			Self::Shoot(Handed::Single(Side::Off)) => "Animation5",
-			Self::Shoot(Handed::Dual(Side::Main)) => "Animation6",
-			Self::Shoot(Handed::Dual(Side::Off)) => "Animation7",
-			Self::SwordStrike(Side::Main) => "Animation8",
-			Self::SwordStrike(Side::Off) => "Animation9",
+impl From<PlayerSkills<Side>> for Path {
+	fn from(value: PlayerSkills<Side>) -> Self {
+		let value = match value {
+			PlayerSkills::Shoot(Handed::Single(Side::Main)) => "Animation4",
+			PlayerSkills::Shoot(Handed::Single(Side::Off)) => "Animation5",
+			PlayerSkills::Shoot(Handed::Dual(Side::Main)) => "Animation6",
+			PlayerSkills::Shoot(Handed::Dual(Side::Off)) => "Animation7",
+			PlayerSkills::SwordStrike(Side::Main) => "Animation8",
+			PlayerSkills::SwordStrike(Side::Off) => "Animation9",
 		};
 
-		Player::MODEL_PATH.to_owned() + "#" + value
+		Path::from(Player::MODEL_PATH.to_owned() + "#" + value)
 	}
 }
 
@@ -45,16 +48,19 @@ mod tests {
 	fn all_contain_base_path() {
 		let model_path_with_hash = Player::MODEL_PATH.to_owned() + "#";
 		assert!(PlayerSkills::iterator()
-			.map(PlayerSkills::<Side>::get_value)
-			.all(|path| path.starts_with(&model_path_with_hash)))
+			.map(Path::from)
+			.all(|path| path.as_string().starts_with(&model_path_with_hash)))
 	}
 
 	#[test]
 	fn no_duplicate_keys() {
 		let keys = PlayerSkills::iterator();
 		let unique_keys = HashSet::from_iter(PlayerSkills::iterator());
-		let unique_strings =
-			HashSet::from_iter(PlayerSkills::iterator().map(PlayerSkills::<Side>::get_value));
+		let unique_strings = HashSet::from_iter(
+			PlayerSkills::iterator()
+				.map(Path::from)
+				.map(|path| path.as_string().clone()),
+		);
 
 		assert_eq!(
 			(6, 6, 6),

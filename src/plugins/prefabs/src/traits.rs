@@ -28,6 +28,7 @@ pub enum AssetKey {
 	Dummy,
 	VoidSphere(VoidPart),
 	Beam,
+	Light,
 }
 
 pub trait Instantiate {
@@ -43,6 +44,6 @@ pub trait RegisterPrefab {
 	fn register_prefab<TPrefab: Instantiate + Component>(&mut self) -> &mut Self;
 }
 
-pub fn sphere(radius: f32, _: fn() -> &'static str) -> Result<Mesh, Error> {
-	Ok(Mesh::from(Sphere { radius }))
+pub fn sphere(radius: f32) -> Mesh {
+	Mesh::from(Sphere { radius })
 }

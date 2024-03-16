@@ -184,7 +184,6 @@ fn setup_simple_3d_scene(
 	mut next_state: ResMut<NextState<GameRunning>>,
 ) {
 	spawn_player(&mut commands, asset_server);
-	spawn_light(&mut commands);
 	spawn_camera(&mut commands);
 	spawn_void_spheres(&mut commands);
 	next_state.set(GameRunning::On);
@@ -218,17 +217,6 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				ColliderRoot(parent.parent_entity()),
 			));
 		});
-}
-
-fn spawn_light(commands: &mut Commands) {
-	commands.spawn(PointLightBundle {
-		point_light: PointLight {
-			shadows_enabled: true,
-			..default()
-		},
-		transform: Transform::from_xyz(4.0, 8.0, 4.0),
-		..default()
-	});
 }
 
 fn spawn_camera(commands: &mut Commands) {
