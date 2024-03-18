@@ -7,6 +7,7 @@ use bevy::{
 	reflect::TypePath,
 };
 
+#[derive(Clone)]
 pub(crate) struct Wall;
 
 pub(crate) struct Corner;
@@ -22,7 +23,7 @@ pub(crate) struct LoadLevelCommand<TCell: TypePath + Send + Sync>(pub Handle<Map
 
 pub(crate) struct Floating;
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub(crate) struct Light<T>(PhantomData<T>);
 
 impl<T> Default for Light<T> {

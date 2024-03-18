@@ -3,17 +3,20 @@ mod map;
 mod map_loader;
 mod systems;
 mod traits;
+mod types;
 
 use bevy::{
 	app::{App, Plugin, Startup, Update},
 	asset::AssetServer,
 	ecs::system::IntoSystem,
 };
+use bevy_rapier3d::geometry::Collider;
+use common::components::NoTarget;
 use components::{Corner, Floating, Light, Wall};
 use map::{LightCell, MapCell};
 use prefabs::traits::RegisterPrefab;
 use systems::{
-	add_colliders::add_colliders,
+	add_component::add_component,
 	get_cell_transforms::get_cell_transforms,
 	spawn_procedural::spawn_procedural,
 	spawn_scene::spawn_scene,
@@ -34,6 +37,13 @@ impl Plugin for MapGenerationPlugin {
 					get_cell_transforms::<LightCell>.pipe(spawn_procedural),
 				),
 			)
-			.add_systems(Update, (add_colliders::<Wall>, add_colliders::<Corner>));
+			.add_systems(
+				Update,
+				(
+					add_component::<Wall, (Collider, NoTarget)>,
+					add_component::<Corner, (Collider, NoTarget)>,
+					add_component::<Light<Wall>, Light<Wall>>,
+				),
+			);
 	}
 }

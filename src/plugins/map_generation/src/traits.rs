@@ -6,23 +6,21 @@ pub(crate) mod map;
 pub(crate) mod map_cell;
 pub(crate) mod wall;
 
+use self::map::Cross;
+use crate::types::ForChildren;
 use bevy::{
 	app::App,
-	ecs::{schedule::ScheduleLabel, system::Commands},
+	ecs::{bundle::Bundle, schedule::ScheduleLabel, system::Commands},
 	reflect::TypePath,
 	transform::components::Transform,
 };
-use bevy_rapier3d::geometry::Collider;
 use common::traits::load_asset::Path;
-
-use self::map::Cross;
 
 pub(crate) struct CellIsEmpty;
 
-pub(crate) trait ColliderDefinition {
-	const IS_TARGET: bool;
+pub(crate) trait Definition<TBundle: Bundle> {
 	fn target_names() -> Vec<String>;
-	fn collider() -> Collider;
+	fn bundle() -> (TBundle, ForChildren);
 }
 
 pub(crate) trait CellDistance {
