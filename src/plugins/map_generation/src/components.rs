@@ -20,7 +20,7 @@ impl Corridor {
 #[derive(Resource, Debug, PartialEq)]
 pub(crate) struct LoadLevelCommand<TCell: TypePath + Send + Sync>(pub Handle<Map<TCell>>);
 
-pub(crate) struct Point;
+pub(crate) struct Floating;
 
 #[derive(Component)]
 pub(crate) struct Light<T>(PhantomData<T>);

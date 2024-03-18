@@ -1,0 +1,7 @@
+f x f x x x x
+x x x x x f p
+x x f x x f p
+x x x x x x x
+x x x x x x x
+x x f f f x x
+x x x x x x x

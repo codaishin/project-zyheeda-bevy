@@ -1,4 +1,4 @@
-use crate::components::{Light, Point};
+use crate::components::{Floating, Light};
 use bevy::{
 	asset::Handle,
 	ecs::system::EntityCommands,
@@ -11,7 +11,7 @@ use bevy::{
 use common::errors::Error;
 use prefabs::traits::{sphere, AssetKey, Instantiate};
 
-impl Instantiate for Light<Point> {
+impl Instantiate for Light<Floating> {
 	fn instantiate(
 		&self,
 		on: &mut EntityCommands,

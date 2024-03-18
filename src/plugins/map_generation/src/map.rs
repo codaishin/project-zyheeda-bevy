@@ -18,7 +18,7 @@ pub(crate) enum MapCell {
 
 #[derive(Debug, PartialEq, Clone, Copy, TypePath)]
 pub(crate) enum LightCell {
-	Point(Direction3d),
+	Floating,
 	Empty,
 }
 
