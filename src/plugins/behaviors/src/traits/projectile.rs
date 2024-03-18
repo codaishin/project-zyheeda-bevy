@@ -5,7 +5,7 @@ use bevy::{
 	asset::Handle,
 	hierarchy::BuildChildren,
 	math::{primitives::Direction3d, Vec3},
-	pbr::{PbrBundle, StandardMaterial},
+	pbr::{PbrBundle, PointLight, PointLightBundle, StandardMaterial},
 	render::{color::Color, mesh::Mesh},
 	transform::components::Transform,
 	utils::default,
@@ -44,9 +44,10 @@ impl Instantiate for Projectile<Plasma> {
 	) -> Result<(), Error> {
 		let key = AssetKey::Projectile(ProjectileType::Plasma);
 		let transform = Transform::from_translation(Vec3::ZERO);
+		let color = Color::rgb_linear(0., 1., 1.);
 		let mesh = sphere(PLASMA_RADIUS);
 		let material = StandardMaterial {
-			emissive: Color::rgb_linear(0.0, 23000.0, 23000.0),
+			emissive: color * 230000.0,
 			..default()
 		};
 
@@ -71,6 +72,15 @@ impl Instantiate for Projectile<Plasma> {
 				Sensor,
 				ColliderRoot(parent.parent_entity()),
 			));
+			parent.spawn(PointLightBundle {
+				point_light: PointLight {
+					color,
+					intensity: 8000.,
+					shadows_enabled: true,
+					..default()
+				},
+				..default()
+			});
 		});
 
 		Ok(())
