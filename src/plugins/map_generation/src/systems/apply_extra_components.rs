@@ -2,15 +2,13 @@ use crate::traits::Definition;
 use bevy::{
 	core::Name,
 	ecs::{
-		bundle::Bundle,
 		entity::Entity,
 		query::Added,
 		system::{Commands, Query},
 	},
 };
-use common::traits::try_insert_on::TryInsertOn;
 
-pub(crate) fn add_component<TDefinition: Definition<TBundle>, TBundle: Bundle>(
+pub(crate) fn apply_extra_components<TDefinition: Definition>(
 	mut commands: Commands,
 	new: Query<(Entity, &Name), Added<Name>>,
 ) {
@@ -21,7 +19,10 @@ pub(crate) fn add_component<TDefinition: Definition<TBundle>, TBundle: Bundle>(
 	let target_names = TDefinition::target_names();
 
 	for (id, ..) in new.iter().filter(contained_in(target_names)) {
-		commands.try_insert_on(id, TDefinition::bundle());
+		let Some(entity) = &mut commands.get_entity(id) else {
+			continue;
+		};
+		TDefinition::insert_bundle(entity);
 	}
 }
 
@@ -34,7 +35,7 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		ecs::component::Component,
+		ecs::{component::Component, system::EntityCommands},
 	};
 	use common::test_tools::utils::SingleThreadedApp;
 	use mockall::automock;
@@ -44,19 +45,19 @@ mod tests {
 	#[derive(Component, Debug, PartialEq, Clone)]
 	struct _Component;
 
-	impl Definition<_Component> for _Definition {
+	impl Definition for _Definition {
 		fn target_names() -> Vec<String> {
 			vec!["AAA".to_owned()]
 		}
 
-		fn bundle() -> _Component {
-			_Component
+		fn insert_bundle(entity: &mut EntityCommands) {
+			entity.insert(_Component);
 		}
 	}
 
-	fn setup<TDefinition: Definition<_Component> + 'static>() -> App {
+	fn setup<TDefinition: Definition + 'static>() -> App {
 		let mut app = App::new_single_threaded([Update]);
-		app.add_systems(Update, add_component::<TDefinition, _Component>);
+		app.add_systems(Update, apply_extra_components::<TDefinition>);
 
 		app
 	}
@@ -104,12 +105,13 @@ mod tests {
 	struct _Definition2;
 
 	#[automock]
-	impl Definition<_Component> for _Definition2 {
+	impl Definition for _Definition2 {
 		fn target_names() -> Vec<String> {
 			todo!()
 		}
 
-		fn bundle() -> _Component {
+		#[allow(clippy::needless_lifetimes)]
+		fn insert_bundle<'a>(_entity: &mut EntityCommands<'a>) {
 			todo!()
 		}
 	}

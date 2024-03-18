@@ -1,12 +1,13 @@
 use super::Definition;
 use crate::components::Corner;
+use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::geometry::Collider;
 use common::components::NoTarget;
 
 const SIDES: [&str; 4] = ["NXNZ", "NXPZ", "PXPZ", "PXNZ"];
 const SUFFIXES: [&str; 3] = ["", "HalfLeft", "HalfRight"];
 
-impl Definition<(Collider, NoTarget)> for Corner {
+impl Definition for Corner {
 	fn target_names() -> Vec<String> {
 		let build_name = |side| move |suffix| format!("Corner{}Wall{}Data", side, suffix);
 		let build_names = |side| SUFFIXES.iter().map(build_name(side));
@@ -14,8 +15,8 @@ impl Definition<(Collider, NoTarget)> for Corner {
 		SIDES.iter().flat_map(build_names).collect()
 	}
 
-	fn bundle() -> (Collider, NoTarget) {
-		(Collider::cuboid(0.05, 1., 0.05), NoTarget)
+	fn insert_bundle(entity: &mut EntityCommands) {
+		entity.try_insert((Collider::cuboid(0.05, 1., 0.05), NoTarget));
 	}
 }
 

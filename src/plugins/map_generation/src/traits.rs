@@ -9,7 +9,10 @@ pub(crate) mod wall;
 use self::map::Cross;
 use bevy::{
 	app::App,
-	ecs::{bundle::Bundle, schedule::ScheduleLabel, system::Commands},
+	ecs::{
+		schedule::ScheduleLabel,
+		system::{Commands, EntityCommands},
+	},
 	reflect::TypePath,
 	transform::components::Transform,
 };
@@ -17,9 +20,9 @@ use common::traits::load_asset::Path;
 
 pub(crate) struct CellIsEmpty;
 
-pub(crate) trait Definition<TBundle: Bundle> {
+pub(crate) trait Definition {
 	fn target_names() -> Vec<String>;
-	fn bundle() -> TBundle;
+	fn insert_bundle(entity: &mut EntityCommands);
 }
 
 pub(crate) trait CellDistance {

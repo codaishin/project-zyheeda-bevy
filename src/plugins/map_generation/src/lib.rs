@@ -9,13 +9,11 @@ use bevy::{
 	asset::AssetServer,
 	ecs::system::IntoSystem,
 };
-use bevy_rapier3d::geometry::Collider;
-use common::components::NoTarget;
 use components::{Corner, Floating, Light, Wall};
 use map::{LightCell, MapCell};
 use prefabs::traits::RegisterPrefab;
 use systems::{
-	add_component::add_component,
+	apply_extra_components::apply_extra_components,
 	get_cell_transforms::get_cell_transforms,
 	spawn_procedural::spawn_procedural,
 	spawn_scene::spawn_scene,
@@ -40,9 +38,9 @@ impl Plugin for MapGenerationPlugin {
 			.add_systems(
 				Update,
 				(
-					add_component::<Wall, (Collider, NoTarget)>,
-					add_component::<Corner, (Collider, NoTarget)>,
-					add_component::<Light<Wall>, Light<Wall>>,
+					apply_extra_components::<Wall>,
+					apply_extra_components::<Corner>,
+					apply_extra_components::<Light<Wall>>,
 				),
 			);
 	}

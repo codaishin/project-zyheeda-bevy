@@ -12,7 +12,7 @@ use bevy::{
 use common::errors::Error;
 use prefabs::traits::{AssetKey, Instantiate, LightType};
 
-impl Definition<Light<Wall>> for Light<Wall> {
+impl Definition for Light<Wall> {
 	fn target_names() -> Vec<String> {
 		vec![
 			"LightNZData".to_owned(),
@@ -22,8 +22,8 @@ impl Definition<Light<Wall>> for Light<Wall> {
 		]
 	}
 
-	fn bundle() -> Light<Wall> {
-		Light::<Wall>::default()
+	fn insert_bundle(entity: &mut EntityCommands) {
+		entity.try_insert(Light::<Wall>::default());
 	}
 }
 
