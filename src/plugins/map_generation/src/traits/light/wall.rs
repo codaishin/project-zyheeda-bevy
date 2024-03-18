@@ -5,9 +5,10 @@ use crate::{
 use bevy::{
 	asset::Handle,
 	ecs::system::EntityCommands,
+	hierarchy::BuildChildren,
 	pbr::{PointLight, PointLightBundle, StandardMaterial},
 	prelude::default,
-	render::{color::Color, mesh::Mesh},
+	render::{color::Color, mesh::Mesh, view::Visibility},
 };
 use common::errors::Error;
 use prefabs::traits::{AssetKey, Instantiate, LightType};
@@ -34,24 +35,25 @@ impl Instantiate for Light<Wall> {
 		_: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
 		mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
 	) -> Result<(), Error> {
-		on.try_insert((
-			PointLightBundle {
+		on.try_insert(get_material_handle(
+			AssetKey::Light(LightType::Wall),
+			StandardMaterial {
+				base_color: Color::WHITE,
+				emissive: Color::rgb_linear(23000.0, 23000.0, 23000.0),
+				..default()
+			},
+		))
+		.with_children(|parent| {
+			parent.spawn(PointLightBundle {
 				point_light: PointLight {
-					shadows_enabled: true,
+					shadows_enabled: false,
 					intensity: 4000.,
 					..default()
 				},
+				visibility: Visibility::Visible,
 				..default()
-			},
-			get_material_handle(
-				AssetKey::Light(LightType::Wall),
-				StandardMaterial {
-					base_color: Color::WHITE,
-					emissive: Color::rgb_linear(23000.0, 23000.0, 23000.0),
-					..default()
-				},
-			),
-		));
+			});
+		});
 
 		Ok(())
 	}
