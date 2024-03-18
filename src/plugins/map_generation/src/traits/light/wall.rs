@@ -39,7 +39,7 @@ impl Instantiate for Light<Wall> {
 			AssetKey::Light(LightType::Wall),
 			StandardMaterial {
 				base_color: Color::WHITE,
-				emissive: Color::rgb_linear(23000.0, 23000.0, 23000.0),
+				emissive: Color::rgb_linear(14000.0, 14000.0, 14000.0),
 				..default()
 			},
 		))
