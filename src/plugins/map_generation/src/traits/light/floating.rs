@@ -9,7 +9,7 @@ use bevy::{
 	utils::default,
 };
 use common::errors::Error;
-use prefabs::traits::{sphere, AssetKey, Instantiate};
+use prefabs::traits::{sphere, AssetKey, Instantiate, LightType};
 
 impl Instantiate for Light<Floating> {
 	fn instantiate(
@@ -19,9 +19,9 @@ impl Instantiate for Light<Floating> {
 		mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
 	) -> Result<(), Error> {
 		let radius = 0.1;
-		let mesh = get_mesh_handle(AssetKey::Light, sphere(radius));
+		let mesh = get_mesh_handle(AssetKey::Light(LightType::Floating), sphere(radius));
 		let material = get_material_handle(
-			AssetKey::Light,
+			AssetKey::Light(LightType::Floating),
 			StandardMaterial {
 				base_color: Color::WHITE,
 				emissive: Color::rgb_linear(23000.0, 23000.0, 23000.0),

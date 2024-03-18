@@ -28,6 +28,7 @@ pub struct MapGenerationPlugin;
 impl Plugin for MapGenerationPlugin {
 	fn build(&self, app: &mut App) {
 		app.register_prefab::<Light<Floating>>()
+			.register_prefab::<Light<Wall>>()
 			.register_map_cell::<MapCell>(Startup)
 			.register_map_cell::<LightCell>(Startup)
 			.add_systems(
