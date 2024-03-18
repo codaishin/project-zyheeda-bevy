@@ -23,12 +23,18 @@ pub enum VoidPart {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub enum LightType {
+	Floating,
+	Wall,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AssetKey {
 	Projectile(ProjectileType),
 	Dummy,
 	VoidSphere(VoidPart),
 	Beam,
-	Light,
+	Light(LightType),
 }
 
 pub trait Instantiate {

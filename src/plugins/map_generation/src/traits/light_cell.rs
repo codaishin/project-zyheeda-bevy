@@ -1,6 +1,6 @@
 use super::{map::Cross, CellDistance, SourcePath, Spawn};
 use crate::{
-	components::{Light, Point},
+	components::{Floating, Light},
 	map::LightCell,
 };
 use bevy::{
@@ -12,16 +12,13 @@ use common::traits::load_asset::Path;
 
 impl SourcePath for LightCell {
 	fn source_path() -> Path {
-		Path::from("maps/light_map.txt")
+		Path::from("maps/map_floating_lights.txt")
 	}
 }
 
 impl From<LightCell> for Direction3d {
-	fn from(value: LightCell) -> Direction3d {
-		match value {
-			LightCell::Point(direction) => direction,
-			LightCell::Empty => Direction3d::NEG_Z,
-		}
+	fn from(_: LightCell) -> Direction3d {
+		Direction3d::NEG_Z
 	}
 }
 
@@ -31,17 +28,17 @@ impl CellDistance for LightCell {
 
 impl Spawn for LightCell {
 	fn spawn(&self, commands: &mut Commands, at: Transform) {
-		let LightCell::Point(_) = self else {
+		let LightCell::Floating = self else {
 			return;
 		};
-		commands.spawn((Light::<Point>::default(), TransformBundle::from(at)));
+		commands.spawn((Light::<Floating>::default(), TransformBundle::from(at)));
 	}
 }
 
 impl From<Cross> for LightCell {
 	fn from(cross: Cross) -> Self {
 		match cross {
-			Cross { middle: 'p', .. } => LightCell::Point(Direction3d::NEG_Z),
+			Cross { middle: 'f', .. } => LightCell::Floating,
 			_ => LightCell::Empty,
 		}
 	}

@@ -9,11 +9,11 @@ use bevy::{
 	asset::AssetServer,
 	ecs::system::IntoSystem,
 };
-use components::{Corner, Light, Point, Wall};
+use components::{Corner, Floating, Light, Wall};
 use map::{LightCell, MapCell};
 use prefabs::traits::RegisterPrefab;
 use systems::{
-	add_colliders::add_colliders,
+	apply_extra_components::apply_extra_components,
 	get_cell_transforms::get_cell_transforms,
 	spawn_procedural::spawn_procedural,
 	spawn_scene::spawn_scene,
@@ -24,7 +24,8 @@ pub struct MapGenerationPlugin;
 
 impl Plugin for MapGenerationPlugin {
 	fn build(&self, app: &mut App) {
-		app.register_prefab::<Light<Point>>()
+		app.register_prefab::<Light<Floating>>()
+			.register_prefab::<Light<Wall>>()
 			.register_map_cell::<MapCell>(Startup)
 			.register_map_cell::<LightCell>(Startup)
 			.add_systems(
@@ -34,6 +35,13 @@ impl Plugin for MapGenerationPlugin {
 					get_cell_transforms::<LightCell>.pipe(spawn_procedural),
 				),
 			)
-			.add_systems(Update, (add_colliders::<Wall>, add_colliders::<Corner>));
+			.add_systems(
+				Update,
+				(
+					apply_extra_components::<Wall>,
+					apply_extra_components::<Corner>,
+					apply_extra_components::<Light<Wall>>,
+				),
+			);
 	}
 }

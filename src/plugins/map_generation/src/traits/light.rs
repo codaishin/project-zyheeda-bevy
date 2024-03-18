@@ -1,1 +1,2 @@
-pub(crate) mod point;
+pub(crate) mod floating;
+pub(crate) mod wall;
