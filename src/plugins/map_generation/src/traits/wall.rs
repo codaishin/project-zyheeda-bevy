@@ -7,10 +7,10 @@ impl ColliderDefinition for Wall {
 
 	fn target_names() -> Vec<String> {
 		vec![
-			"WallA".to_owned(),
-			"WallB".to_owned(),
-			"WallC".to_owned(),
-			"WallD".to_owned(),
+			"WallNZ".to_owned(),
+			"WallNX".to_owned(),
+			"WallPZ".to_owned(),
+			"WallPX".to_owned(),
 		]
 	}
 

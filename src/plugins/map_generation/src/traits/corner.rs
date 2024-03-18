@@ -2,7 +2,7 @@ use super::ColliderDefinition;
 use crate::components::Corner;
 use bevy_rapier3d::geometry::Collider;
 
-const SIDES: [&str; 4] = ["A", "B", "C", "D"];
+const SIDES: [&str; 4] = ["NXNZ", "NXPZ", "PXPZ", "PXNZ"];
 const SUFFIXES: [&str; 3] = ["", "HalfLeft", "HalfRight"];
 
 impl ColliderDefinition for Corner {
