@@ -1,7 +1,6 @@
 use crate::{
 	components::{Light, Wall},
 	traits::Definition,
-	types::ForChildren,
 };
 use bevy::{
 	asset::Handle,
@@ -16,15 +15,15 @@ use prefabs::traits::{AssetKey, Instantiate, LightType};
 impl Definition<Light<Wall>> for Light<Wall> {
 	fn target_names() -> Vec<String> {
 		vec![
-			"LightNZ".to_owned(),
-			"LightNX".to_owned(),
-			"LightPZ".to_owned(),
-			"LightPX".to_owned(),
+			"LightNZData".to_owned(),
+			"LightNXData".to_owned(),
+			"LightPZData".to_owned(),
+			"LightPXData".to_owned(),
 		]
 	}
 
-	fn bundle() -> (Light<Wall>, ForChildren) {
-		(Light::<Wall>::default(), ForChildren::from(true))
+	fn bundle() -> Light<Wall> {
+		Light::<Wall>::default()
 	}
 }
 

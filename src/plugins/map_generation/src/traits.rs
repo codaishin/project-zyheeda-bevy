@@ -7,7 +7,6 @@ pub(crate) mod map_cell;
 pub(crate) mod wall;
 
 use self::map::Cross;
-use crate::types::ForChildren;
 use bevy::{
 	app::App,
 	ecs::{bundle::Bundle, schedule::ScheduleLabel, system::Commands},
@@ -20,7 +19,7 @@ pub(crate) struct CellIsEmpty;
 
 pub(crate) trait Definition<TBundle: Bundle> {
 	fn target_names() -> Vec<String>;
-	fn bundle() -> (TBundle, ForChildren);
+	fn bundle() -> TBundle;
 }
 
 pub(crate) trait CellDistance {

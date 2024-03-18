@@ -3,7 +3,6 @@ mod map;
 mod map_loader;
 mod systems;
 mod traits;
-mod types;
 
 use bevy::{
 	app::{App, Plugin, Startup, Update},
