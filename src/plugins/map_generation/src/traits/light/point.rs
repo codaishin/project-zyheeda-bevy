@@ -4,7 +4,7 @@ use bevy::{
 	ecs::system::EntityCommands,
 	hierarchy::BuildChildren,
 	pbr::{NotShadowCaster, PbrBundle, PointLight, PointLightBundle, StandardMaterial},
-	render::{color::Color, mesh::Mesh},
+	render::{color::Color, mesh::Mesh, view::VisibilityBundle},
 	transform::components::Transform,
 	utils::default,
 };
@@ -30,29 +30,30 @@ impl Instantiate for Light<Point> {
 		);
 		let transform = Transform::from_xyz(0., 1.8, 0.);
 
-		on.with_children(|parent| {
-			parent
-				.spawn((
-					PbrBundle {
-						mesh,
-						material,
-						transform,
-						..default()
-					},
-					NotShadowCaster,
-				))
-				.with_children(|parent| {
-					parent.spawn((PointLightBundle {
-						point_light: PointLight {
-							shadows_enabled: true,
-							intensity: 10_000.0,
-							radius,
+		on.try_insert(VisibilityBundle::default())
+			.with_children(|parent| {
+				parent
+					.spawn((
+						PbrBundle {
+							mesh,
+							material,
+							transform,
 							..default()
 						},
-						..default()
-					},));
-				});
-		});
+						NotShadowCaster,
+					))
+					.with_children(|parent| {
+						parent.spawn((PointLightBundle {
+							point_light: PointLight {
+								shadows_enabled: true,
+								intensity: 10_000.0,
+								radius,
+								..default()
+							},
+							..default()
+						},));
+					});
+			});
 
 		Ok(())
 	}
