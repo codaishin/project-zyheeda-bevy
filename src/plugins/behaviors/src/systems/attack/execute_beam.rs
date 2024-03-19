@@ -13,9 +13,12 @@ use bevy::{
 		TransformBundle,
 	},
 };
-use bevy_rapier3d::pipeline::QueryFilter;
+use bevy_rapier3d::pipeline::{QueryFilter, QueryFilterFlags};
 use common::{components::GroundOffset, traits::cast_ray::TimeOfImpact};
-use interactions::{components::RayCaster, events::RayCastEvent};
+use interactions::{
+	components::{RayCaster, RayFilter},
+	events::RayCastEvent,
+};
 
 pub(crate) fn execute_beam(
 	mut commands: Commands,
@@ -59,7 +62,7 @@ fn ray_cast(
 	let Ok((target_transform, target_offset)) = transforms.get(target) else {
 		return;
 	};
-	let Ok(filter) = QueryFilter::default().exclude_rigid_body(source).try_into() else {
+	let Some(filter) = get_filter(source) else {
 		return;
 	};
 	let Some(mut beam) = commands.get_entity(id) else {
@@ -77,6 +80,13 @@ fn ray_cast(
 		filter,
 		max_toi: TimeOfImpact(cfg.range),
 	});
+}
+
+fn get_filter(source: Entity) -> Option<RayFilter> {
+	QueryFilter::from(QueryFilterFlags::EXCLUDE_SENSORS)
+		.exclude_rigid_body(source)
+		.try_into()
+		.ok()
 }
 
 fn spawn_beam(
@@ -199,7 +209,7 @@ mod tests {
 				direction: Direction3d::Z,
 				max_toi: TimeOfImpact(100.),
 				solid: true,
-				filter: QueryFilter::default()
+				filter: QueryFilter::from(QueryFilterFlags::EXCLUDE_SENSORS)
 					.exclude_rigid_body(source)
 					.try_into()
 					.unwrap(),
@@ -240,7 +250,7 @@ mod tests {
 				direction: Vec3::new(0., 1., 4.).normalize().try_into().unwrap(),
 				max_toi: TimeOfImpact(100.),
 				solid: true,
-				filter: QueryFilter::default()
+				filter: QueryFilter::from(QueryFilterFlags::EXCLUDE_SENSORS)
 					.exclude_rigid_body(source)
 					.try_into()
 					.unwrap(),
@@ -281,7 +291,7 @@ mod tests {
 				direction: Vec3::new(0., -1., 4.).normalize().try_into().unwrap(),
 				max_toi: TimeOfImpact(100.),
 				solid: true,
-				filter: QueryFilter::default()
+				filter: QueryFilter::from(QueryFilterFlags::EXCLUDE_SENSORS)
 					.exclude_rigid_body(source)
 					.try_into()
 					.unwrap(),
