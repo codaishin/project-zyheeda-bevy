@@ -223,7 +223,7 @@ fn spawn_camera(commands: &mut Commands) {
 	let mut transform = Transform::from_translation(Vec3::X);
 	let mut orbit = CamOrbit {
 		center: Vec3::ZERO,
-		distance: 10.,
+		distance: 15.,
 		sensitivity: 1.,
 	};
 
