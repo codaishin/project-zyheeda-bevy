@@ -18,8 +18,6 @@ use bevy::{
 };
 use common::traits::load_asset::Path;
 
-pub(crate) struct CellIsEmpty;
-
 pub(crate) trait Definition {
 	fn target_names() -> Vec<String>;
 	fn insert_bundle(entity: &mut EntityCommands);

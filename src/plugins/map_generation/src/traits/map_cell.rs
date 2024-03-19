@@ -1,4 +1,4 @@
-use super::{map::Cross, CellDistance, CellIsEmpty, SourcePath};
+use super::{map::Cross, CellDistance, SourcePath};
 use crate::{
 	components::Corridor,
 	map::{MapCell, Shape},
@@ -13,25 +13,31 @@ impl SourcePath for MapCell {
 }
 
 impl TryFrom<MapCell> for Path {
-	type Error = CellIsEmpty;
+	type Error = ();
 
 	fn try_from(value: MapCell) -> Result<Self, Self::Error> {
-		let name = match value {
-			MapCell::Corridor(_, Shape::Single) => Ok("single"),
-			MapCell::Corridor(_, Shape::End) => Ok("end"),
-			MapCell::Corridor(_, Shape::Straight) => Ok("straight"),
-			MapCell::Corridor(_, Shape::Cross2) => Ok("corner"),
-			MapCell::Corridor(_, Shape::Cross3) => Ok("t"),
-			MapCell::Corridor(_, Shape::Cross4) => Ok("cross"),
-			MapCell::Empty => Err(CellIsEmpty),
-		};
-
-		Ok(Path::from(format!(
-			"{}{}.glb#Scene0",
-			Corridor::MODEL_PATH_PREFIX,
-			name?
-		)))
+		match value {
+			MapCell::Corridor(_, Shape::Single) => corridor("single"),
+			MapCell::Corridor(_, Shape::End) => corridor("end"),
+			MapCell::Corridor(_, Shape::Straight) => corridor("straight"),
+			MapCell::Corridor(_, Shape::Cross2) => corridor("corner"),
+			MapCell::Corridor(_, Shape::Cross3) => corridor("t"),
+			MapCell::Corridor(_, Shape::Cross4) => corridor("cross"),
+			MapCell::Empty => empty_cell(),
+		}
 	}
+}
+
+fn corridor(suffix: &'static str) -> Result<Path, ()> {
+	Ok(Path::from(format!(
+		"{}{}.glb#Scene0",
+		Corridor::MODEL_PATH_PREFIX,
+		suffix
+	)))
+}
+
+fn empty_cell() -> Result<Path, ()> {
+	Ok(Path::from("models/empty.glb#Scene0"))
 }
 
 impl From<MapCell> for Direction3d {
