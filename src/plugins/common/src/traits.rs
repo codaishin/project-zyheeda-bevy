@@ -2,6 +2,7 @@ pub mod accessor;
 pub mod cast_ray;
 pub mod get_ray;
 pub mod get_state;
+pub mod has_collisions;
 pub mod intersect_at;
 pub mod iteration;
 pub mod load_asset;
