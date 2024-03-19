@@ -1,5 +1,5 @@
 [package]
-name = "map_generation"
+name = "light"
 version.workspace = true
 edition.workspace = true
 
@@ -7,8 +7,6 @@ edition.workspace = true
 bevy.workspace = true
 bevy_rapier3d.workspace = true
 common.workspace = true
-light.workspace = true
-prefabs.workspace = true
 
 [dev-dependencies]
 mockall.workspace = true
