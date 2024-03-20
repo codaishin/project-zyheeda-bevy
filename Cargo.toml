@@ -15,6 +15,7 @@ behaviors = { path = "src/plugins/behaviors" }
 common = { path = "src/plugins/common" }
 interactions = { path = "src/plugins/interactions" }
 light = { path = "src/plugins/light" }
+macros = { path = "src/plugins/macros" }
 prefabs = { path = "src/plugins/prefabs" }
 skills = { path = "src/plugins/skills" }
 
@@ -45,6 +46,7 @@ behaviors.workspace = true
 common.workspace = true
 interactions.workspace = true
 light.workspace = true
+macros.workspace = true
 prefabs.workspace = true
 skills.workspace = true
 animations = { path = "src/plugins/animations" }

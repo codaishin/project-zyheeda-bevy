@@ -29,6 +29,7 @@ use common::{
 	components::{ColliderRoot, GroundOffset, Health},
 	errors::Error,
 	tools::UnitsPerSecond,
+	traits::clamp_zero_positive::ClampZeroPositive,
 };
 use prefabs::traits::{sphere, AssetKey, Instantiate, VoidPart};
 use std::{f32::consts::PI, time::Duration};

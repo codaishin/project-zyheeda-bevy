@@ -1,5 +1,6 @@
 pub mod accessor;
 pub mod cast_ray;
+pub mod clamp_zero_positive;
 pub mod get_ray;
 pub mod get_state;
 pub mod has_collisions;

@@ -13,6 +13,7 @@ use bevy_rapier3d::prelude::*;
 use common::{
 	components::{ColliderRoot, GroundOffset, Health, MainCamera, Player},
 	tools::UnitsPerSecond,
+	traits::clamp_zero_positive::ClampZeroPositive,
 	CommonPlugin,
 };
 use ingame_menu::IngameMenuPlugin;

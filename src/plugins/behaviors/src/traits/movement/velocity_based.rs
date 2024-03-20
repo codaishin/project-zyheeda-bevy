@@ -4,13 +4,13 @@ use crate::{
 };
 use bevy::{ecs::system::EntityCommands, math::Vec3};
 use bevy_rapier3d::dynamics::Velocity;
-use common::tools::UnitsPerSecond;
+use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
 
 const SENSITIVITY: f32 = 0.1;
 
 impl MovementVelocityBased for Movement<VelocityBased> {
 	fn update(&self, agent: &mut EntityCommands, position: Vec3, speed: UnitsPerSecond) -> IsDone {
-		let speed = speed.to_f32();
+		let speed = speed.value();
 		let direction = self.target - position;
 
 		if direction.length() < SENSITIVITY * speed {
@@ -79,7 +79,7 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let direction = (target - position).normalize() * speed.to_f32();
+		let direction = (target - position).normalize() * speed.value();
 
 		assert_eq!(Some(&Velocity::linear(direction)), agent.get::<Velocity>());
 	}

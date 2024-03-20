@@ -45,7 +45,11 @@ mod tests {
 		math::Vec3,
 		transform::components::Transform,
 	};
-	use common::{test_tools::utils::SingleThreadedApp, tools::UnitsPerSecond};
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		tools::UnitsPerSecond,
+		traits::clamp_zero_positive::ClampZeroPositive,
+	};
 
 	#[derive(Component)]
 	struct ConfigFast;
