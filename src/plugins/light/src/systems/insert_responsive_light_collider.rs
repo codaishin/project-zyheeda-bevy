@@ -5,7 +5,7 @@ use bevy::ecs::{
 	system::{Commands, Query},
 };
 use bevy_rapier3d::geometry::{ActiveEvents, Collider, CollidingEntities, Sensor};
-use common::traits::try_insert_on::TryInsertOn;
+use common::traits::{clamp_zero_positive::ClampZeroPositive, try_insert_on::TryInsertOn};
 
 pub(crate) fn insert_responsive_light_collider(
 	new: Query<(Entity, &ResponsiveLight), Added<ResponsiveLight>>,
@@ -15,7 +15,7 @@ pub(crate) fn insert_responsive_light_collider(
 		commands.try_insert_on(
 			id,
 			(
-				Collider::ball(light.range),
+				Collider::ball(light.data.range.value()),
 				Sensor,
 				ActiveEvents::COLLISION_EVENTS,
 				CollidingEntities::default(),
@@ -27,13 +27,17 @@ pub(crate) fn insert_responsive_light_collider(
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::components::ResponsiveLightData;
 	use bevy::{
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},
 		utils::Uuid,
 	};
 	use bevy_rapier3d::geometry::ActiveEvents;
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		tools::{Intensity, IntensityChangePerSecond, Units},
+	};
 
 	fn setup() -> App {
 		let mut app = App::new_single_threaded([Update]);
@@ -54,11 +58,15 @@ mod tests {
 		let light = app
 			.world
 			.spawn(ResponsiveLight {
-				range: 42.,
 				model: Entity::from_raw(1),
 				light: Entity::from_raw(2),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
+				data: ResponsiveLightData {
+					range: Units::new(42.),
+					light_on_material: new_handle(),
+					light_off_material: new_handle(),
+					max: Intensity::new(100.),
+					change: IntensityChangePerSecond::new(10.),
+				},
 			})
 			.id();
 
@@ -88,11 +96,15 @@ mod tests {
 		let light = app
 			.world
 			.spawn(ResponsiveLight {
-				range: 42.,
 				model: Entity::from_raw(1),
 				light: Entity::from_raw(2),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
+				data: ResponsiveLightData {
+					range: Units::new(42.),
+					light_on_material: new_handle(),
+					light_off_material: new_handle(),
+					max: Intensity::new(100.),
+					change: IntensityChangePerSecond::new(10.),
+				},
 			})
 			.id();
 

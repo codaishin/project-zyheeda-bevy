@@ -10,8 +10,12 @@ use bevy::{
 	prelude::default,
 	render::{color::Color, mesh::Mesh, view::Visibility},
 };
-use common::{errors::Error, traits::try_insert_on::TryInsertOn};
-use light::components::ResponsiveLight;
+use common::{
+	errors::Error,
+	tools::{Intensity, IntensityChangePerSecond, Units},
+	traits::{clamp_zero_positive::ClampZeroPositive, try_insert_on::TryInsertOn},
+};
+use light::components::{ResponsiveLight, ResponsiveLightData};
 use prefabs::traits::{AssetKey, Instantiate, LightStatus, LightType};
 
 impl Definition for Light<Wall> {
@@ -59,7 +63,7 @@ impl Instantiate for Light<Wall> {
 			.spawn(PointLightBundle {
 				point_light: PointLight {
 					shadows_enabled: false,
-					intensity: 4000.,
+					intensity: 0.,
 					..default()
 				},
 				visibility: Visibility::Hidden,
@@ -72,11 +76,15 @@ impl Instantiate for Light<Wall> {
 			(
 				light_off_material.clone(),
 				ResponsiveLight {
-					range: 3.5,
 					model,
 					light,
-					light_on_material,
-					light_off_material,
+					data: ResponsiveLightData {
+						range: Units::new(3.5),
+						light_on_material,
+						light_off_material,
+						max: Intensity::new(8000.),
+						change: IntensityChangePerSecond::new(4000.),
+					},
 				},
 			),
 		);
