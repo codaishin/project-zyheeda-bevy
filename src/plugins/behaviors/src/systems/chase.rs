@@ -9,7 +9,7 @@ use bevy::{
 	transform::components::GlobalTransform,
 };
 use bevy_rapier3d::dynamics::Velocity;
-use common::traits::try_insert_on::TryInsertOn;
+use common::traits::{clamp_zero_positive::ClampZeroPositive, try_insert_on::TryInsertOn};
 
 pub(crate) fn chase<TMovementConfig: Component + MovementData>(
 	mut commands: Commands,
@@ -31,7 +31,7 @@ pub(crate) fn chase<TMovementConfig: Component + MovementData>(
 		let position = transform.translation();
 		commands.try_insert_on(
 			id,
-			Velocity::linear((target - position).normalize() * speed.to_f32()),
+			Velocity::linear((target - position).normalize() * speed.value()),
 		);
 	}
 }

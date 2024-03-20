@@ -13,10 +13,12 @@ use bevy_rapier3d::prelude::*;
 use common::{
 	components::{ColliderRoot, GroundOffset, Health, MainCamera, Player},
 	tools::UnitsPerSecond,
+	traits::clamp_zero_positive::ClampZeroPositive,
 	CommonPlugin,
 };
 use ingame_menu::IngameMenuPlugin;
 use interactions::InteractionsPlugin;
+use light::{components::ResponsiveLightTrigger, LightPlugin};
 use map_generation::MapGenerationPlugin;
 use prefabs::PrefabsPlugin;
 use project_zyheeda::systems::{
@@ -49,6 +51,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(SkillsPlugin)
 		.add_plugins(BehaviorsPlugin::cam_behavior_if(GameRunning::On))
 		.add_plugins(AnimationsPlugin)
+		.add_plugins(LightPlugin)
 		.add_plugins(MapGenerationPlugin)
 		.insert_resource(ClearColor(Color::BLACK))
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
@@ -213,6 +216,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		))
 		.with_children(|parent| {
 			parent.spawn((
+				ResponsiveLightTrigger,
 				Collider::capsule(Vec3::new(0.0, 0.2, -0.05), Vec3::new(0.0, 1.4, -0.05), 0.2),
 				ColliderRoot(parent.parent_entity()),
 			));

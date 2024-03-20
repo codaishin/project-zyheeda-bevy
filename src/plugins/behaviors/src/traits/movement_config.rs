@@ -23,6 +23,7 @@ impl MovementData for MovementConfig {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use common::traits::clamp_zero_positive::ClampZeroPositive;
 
 	#[test]
 	fn get_constant() {

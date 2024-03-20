@@ -347,6 +347,7 @@ dependencies = [
  "bevy_rapier3d",
  "common",
  "interactions",
+ "light",
  "mockall",
  "prefabs",
  "tracing",
@@ -1463,6 +1464,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_rapier3d",
+ "macros",
  "mockall",
  "tracing",
 ]
@@ -2577,6 +2579,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "light"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_rapier3d",
+ "common",
+ "mockall",
+]
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2608,6 +2620,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "macros"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "malloc_buf"
 version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2623,6 +2643,7 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
+ "light",
  "mockall",
  "prefabs",
 ]
@@ -3367,6 +3388,8 @@ dependencies = [
  "common",
  "ingame_menu",
  "interactions",
+ "light",
+ "macros",
  "map_generation",
  "mockall",
  "prefabs",

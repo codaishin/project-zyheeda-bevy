@@ -1,40 +1,32 @@
+use crate::traits::clamp_zero_positive::ClampZeroPositive;
+use macros::ClampZeroPositive;
+
 ///Serves as a struct to implement static traits on
 pub struct Tools;
 
-/// Represents units per second.
-/// Is clamped at minimum 0.
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Default)]
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Default, ClampZeroPositive)]
 pub struct UnitsPerSecond(f32);
 
-impl UnitsPerSecond {
-	pub fn new(value: f32) -> Self {
-		if value < 0. {
-			Self(0.)
-		} else {
-			Self(value)
-		}
-	}
+#[derive(Debug, PartialEq, Clone, ClampZeroPositive)]
+pub struct Units(f32);
 
-	pub fn to_f32(self) -> f32 {
-		self.0
-	}
-}
+#[derive(Debug, PartialEq, Clone, ClampZeroPositive)]
+pub struct Intensity(f32);
+
+#[derive(Debug, PartialEq, Clone, ClampZeroPositive)]
+pub struct IntensityChangePerSecond(f32);
 
 #[cfg(test)]
-mod test_units_per_seconds {
+mod test_clamp_zero_positive_on_units_per_second {
 	use super::*;
 
 	#[test]
 	fn set_value() {
-		let speed = UnitsPerSecond::new(42.);
-
-		assert_eq!(42., speed.to_f32());
+		assert_eq!(42., UnitsPerSecond::new(42.).value());
 	}
 
 	#[test]
 	fn min_zero() {
-		let speed = UnitsPerSecond::new(-42.);
-
-		assert_eq!(0., speed.to_f32());
+		assert_eq!(0., UnitsPerSecond::new(-42.).value());
 	}
 }

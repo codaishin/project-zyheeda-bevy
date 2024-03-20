@@ -1,5 +1,5 @@
 use bevy::{ecs::entity::Entity, math::Ray3d};
-use bevy_rapier3d::{math::Real, pipeline::QueryFilter, plugin::RapierContext};
+use bevy_rapier3d::{math::Real, pipeline::QueryFilterFlags, plugin::RapierContext};
 
 use super::{CastRay, TimeOfImpact};
 
@@ -10,7 +10,7 @@ impl CastRay<Ray3d> for RapierContext {
 			ray.direction.into(),
 			Real::MAX,
 			true,
-			QueryFilter::default(),
+			QueryFilterFlags::EXCLUDE_SENSORS.into(),
 		)
 		.map(|(entity, toi)| (entity, TimeOfImpact(toi)))
 	}

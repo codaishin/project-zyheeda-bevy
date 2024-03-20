@@ -1,13 +1,12 @@
 [package]
-name = "common"
+name = "light"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
 bevy.workspace = true
 bevy_rapier3d.workspace = true
-tracing.workspace = true
-macros.workspace = true
+common.workspace = true
 
 [dev-dependencies]
 mockall.workspace = true

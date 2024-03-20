@@ -3,6 +3,7 @@ use crate::{
 	traits::{MovementData, MovementPositionBased},
 };
 use bevy::prelude::*;
+use common::traits::clamp_zero_positive::ClampZeroPositive;
 
 type Components<'a, TConfig, TMovement> =
 	(Entity, &'a mut TMovement, &'a mut Transform, &'a TConfig);
@@ -19,7 +20,7 @@ pub(crate) fn execute_move_position_based<
 		.iter_mut()
 		.filter_map(|(entity, mut movement, mut transform, config)| {
 			let (speed, ..) = config.get_movement_data();
-			let distance = time.delta_seconds() * speed.to_f32();
+			let distance = time.delta_seconds() * speed.value();
 
 			match movement.update(&mut transform, distance).is_done() {
 				true => Some(entity),

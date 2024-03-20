@@ -19,6 +19,7 @@ use common::{
 	components::ColliderRoot,
 	errors::Error,
 	tools::UnitsPerSecond,
+	traits::clamp_zero_positive::ClampZeroPositive,
 };
 use interactions::components::{DealsDamage, Fragile};
 use prefabs::traits::{sphere, AssetKey, Instantiate, ProjectileType};
