@@ -10,8 +10,9 @@ use bevy::{
 	prelude::default,
 	render::{color::Color, mesh::Mesh, view::Visibility},
 };
-use common::errors::Error;
-use prefabs::traits::{AssetKey, Instantiate, LightType};
+use common::{errors::Error, traits::try_insert_on::TryInsertOn};
+use light::components::ResponsiveLight;
+use prefabs::traits::{AssetKey, Instantiate, LightStatus, LightType};
 
 impl Definition for Light<Wall> {
 	fn target_names() -> Vec<String> {
@@ -35,25 +36,50 @@ impl Instantiate for Light<Wall> {
 		_: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
 		mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
 	) -> Result<(), Error> {
-		on.try_insert(get_material_handle(
-			AssetKey::Light(LightType::Wall),
+		let model = on.id();
+		let mut commands = on.commands();
+
+		let light_on_material = get_material_handle(
+			AssetKey::Light(LightType::Wall(LightStatus::On)),
 			StandardMaterial {
 				base_color: Color::WHITE,
 				emissive: Color::rgb_linear(14000.0, 14000.0, 14000.0),
 				..default()
 			},
-		))
-		.with_children(|parent| {
-			parent.spawn(PointLightBundle {
+		);
+		let light_off_material = get_material_handle(
+			AssetKey::Light(LightType::Wall(LightStatus::Off)),
+			StandardMaterial {
+				base_color: Color::BLACK,
+				..default()
+			},
+		);
+
+		let light = commands
+			.spawn(PointLightBundle {
 				point_light: PointLight {
 					shadows_enabled: false,
 					intensity: 4000.,
 					..default()
 				},
-				visibility: Visibility::Visible,
+				visibility: Visibility::Hidden,
 				..default()
-			});
-		});
+			})
+			.set_parent(model)
+			.id();
+		commands.try_insert_on(
+			model,
+			(
+				light_off_material.clone(),
+				ResponsiveLight {
+					range: 3.5,
+					model,
+					light,
+					light_on_material,
+					light_off_material,
+				},
+			),
+		);
 
 		Ok(())
 	}

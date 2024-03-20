@@ -17,7 +17,7 @@ use common::{
 };
 use ingame_menu::IngameMenuPlugin;
 use interactions::InteractionsPlugin;
-use light::LightPlugin;
+use light::{components::ResponsiveLightTrigger, LightPlugin};
 use map_generation::MapGenerationPlugin;
 use prefabs::PrefabsPlugin;
 use project_zyheeda::systems::{
@@ -215,6 +215,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 		))
 		.with_children(|parent| {
 			parent.spawn((
+				ResponsiveLightTrigger,
 				Collider::capsule(Vec3::new(0.0, 0.2, -0.05), Vec3::new(0.0, 1.4, -0.05), 0.2),
 				ColliderRoot(parent.parent_entity()),
 			));

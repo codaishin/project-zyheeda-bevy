@@ -23,9 +23,15 @@ pub enum VoidPart {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub enum LightStatus {
+	On,
+	Off,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum LightType {
 	Floating,
-	Wall,
+	Wall(LightStatus),
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
