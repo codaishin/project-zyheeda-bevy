@@ -16,8 +16,10 @@ impl SourcePath for MapCell {
 	}
 }
 
+pub struct CellIsEmpty;
+
 impl TryFrom<MapCell> for Path {
-	type Error = ();
+	type Error = CellIsEmpty;
 
 	fn try_from(value: MapCell) -> Result<Self, Self::Error> {
 		match value {
@@ -32,7 +34,7 @@ impl TryFrom<MapCell> for Path {
 	}
 }
 
-fn corridor(suffix: &'static str) -> Result<Path, ()> {
+fn corridor(suffix: &'static str) -> Result<Path, CellIsEmpty> {
 	Ok(Path::from(format!(
 		"{}{}.glb#Scene0",
 		Corridor::MODEL_PATH_PREFIX,
@@ -40,8 +42,8 @@ fn corridor(suffix: &'static str) -> Result<Path, ()> {
 	)))
 }
 
-fn empty_cell() -> Result<Path, ()> {
-	Ok(Path::from("models/empty.glb#Scene0"))
+fn empty_cell() -> Result<Path, CellIsEmpty> {
+	Err(CellIsEmpty)
 }
 
 impl From<MapCell> for Direction3d {
