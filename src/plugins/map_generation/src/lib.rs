@@ -9,7 +9,7 @@ use bevy::{
 	asset::AssetServer,
 	ecs::system::IntoSystem,
 };
-use components::{Corner, Floating, Light, Wall};
+use components::{Corner, Floating, Light, Wall, WallBack};
 use map::{LightCell, MapCell};
 use prefabs::traits::RegisterPrefab;
 use systems::{
@@ -17,6 +17,7 @@ use systems::{
 	get_cell_transforms::get_cell_transforms,
 	spawn_procedural::spawn_procedural,
 	spawn_scene::spawn_scene,
+	unlit_material::unlit_material,
 };
 use traits::RegisterMapCell;
 
@@ -39,9 +40,11 @@ impl Plugin for MapGenerationPlugin {
 				Update,
 				(
 					apply_extra_components::<Wall>,
+					apply_extra_components::<WallBack>,
 					apply_extra_components::<Corner>,
 					apply_extra_components::<Light<Wall>>,
 				),
-			);
+			)
+			.add_systems(Update, unlit_material);
 	}
 }

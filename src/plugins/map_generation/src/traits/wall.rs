@@ -1,5 +1,5 @@
 use super::Definition;
-use crate::components::Wall;
+use crate::components::{Unlit, Wall, WallBack};
 use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::geometry::Collider;
 use common::components::NoTarget;
@@ -16,5 +16,20 @@ impl Definition for Wall {
 
 	fn insert_bundle(entity: &mut EntityCommands) {
 		entity.try_insert((Collider::cuboid(0.9, 1., 0.05), NoTarget));
+	}
+}
+
+impl Definition for WallBack {
+	fn target_names() -> Vec<String> {
+		vec![
+			"WallNZBackData".to_owned(),
+			"WallPZBackData".to_owned(),
+			"WallNXBackData".to_owned(),
+			"WallPXBackData".to_owned(),
+		]
+	}
+
+	fn insert_bundle(entity: &mut EntityCommands) {
+		entity.try_insert(Unlit);
 	}
 }
