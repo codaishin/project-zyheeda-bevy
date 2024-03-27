@@ -10,7 +10,7 @@ use bevy::{
 #[derive(Clone)]
 pub(crate) struct Wall;
 
-pub(crate) struct Corner;
+pub(crate) struct WallBack;
 
 pub(crate) struct Corridor;
 
@@ -31,3 +31,6 @@ impl<T> Default for Light<T> {
 		Self(Default::default())
 	}
 }
+
+#[derive(Component)]
+pub(crate) struct Unlit;

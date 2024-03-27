@@ -1,12 +1,11 @@
 pub(crate) mod app;
-pub(crate) mod corner;
 pub(crate) mod light;
 pub(crate) mod light_cell;
 pub(crate) mod map;
 pub(crate) mod map_cell;
 pub(crate) mod wall;
 
-use self::map::Cross;
+use self::map::MapWindow;
 use bevy::{
 	app::App,
 	ecs::{
@@ -18,7 +17,7 @@ use bevy::{
 };
 use common::traits::load_asset::Path;
 
-pub(crate) trait Definition {
+pub(crate) trait ExtraComponentsDefinition {
 	fn target_names() -> Vec<String>;
 	fn insert_bundle(entity: &mut EntityCommands);
 }
@@ -36,7 +35,7 @@ pub trait SourcePath {
 }
 
 pub trait RegisterMapCell {
-	fn register_map_cell<TCell: TypePath + Send + Sync + From<Cross> + SourcePath>(
+	fn register_map_cell<TCell: TypePath + Send + Sync + From<MapWindow> + SourcePath>(
 		&mut self,
 		label: impl ScheduleLabel,
 	) -> &mut App;

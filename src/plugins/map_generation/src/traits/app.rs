@@ -1,4 +1,4 @@
-use super::{map::Cross, RegisterMapCell, SourcePath};
+use super::{map::MapWindow, RegisterMapCell, SourcePath};
 use crate::{map::Map, map_loader::TextLoader, systems::begin_level_load::begin_level_load};
 use bevy::{
 	app::App,
@@ -8,7 +8,7 @@ use bevy::{
 };
 
 impl RegisterMapCell for App {
-	fn register_map_cell<TCell: TypePath + Send + Sync + From<Cross> + SourcePath>(
+	fn register_map_cell<TCell: TypePath + Send + Sync + From<MapWindow> + SourcePath>(
 		&mut self,
 		begin_load: impl ScheduleLabel,
 	) -> &mut App {

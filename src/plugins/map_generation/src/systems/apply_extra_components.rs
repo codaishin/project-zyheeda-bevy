@@ -1,4 +1,4 @@
-use crate::traits::Definition;
+use crate::traits::ExtraComponentsDefinition;
 use bevy::{
 	core::Name,
 	ecs::{
@@ -8,7 +8,7 @@ use bevy::{
 	},
 };
 
-pub(crate) fn apply_extra_components<TDefinition: Definition>(
+pub(crate) fn apply_extra_components<TDefinition: ExtraComponentsDefinition>(
 	mut commands: Commands,
 	new: Query<(Entity, &Name), Added<Name>>,
 ) {
@@ -45,7 +45,7 @@ mod tests {
 	#[derive(Component, Debug, PartialEq, Clone)]
 	struct _Component;
 
-	impl Definition for _Definition {
+	impl ExtraComponentsDefinition for _Definition {
 		fn target_names() -> Vec<String> {
 			vec!["AAA".to_owned()]
 		}
@@ -55,7 +55,7 @@ mod tests {
 		}
 	}
 
-	fn setup<TDefinition: Definition + 'static>() -> App {
+	fn setup<TDefinition: ExtraComponentsDefinition + 'static>() -> App {
 		let mut app = App::new_single_threaded([Update]);
 		app.add_systems(Update, apply_extra_components::<TDefinition>);
 
@@ -105,7 +105,7 @@ mod tests {
 	struct _Definition2;
 
 	#[automock]
-	impl Definition for _Definition2 {
+	impl ExtraComponentsDefinition for _Definition2 {
 		fn target_names() -> Vec<String> {
 			todo!()
 		}
