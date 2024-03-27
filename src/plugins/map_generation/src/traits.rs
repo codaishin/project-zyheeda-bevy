@@ -1,5 +1,4 @@
 pub(crate) mod app;
-pub(crate) mod corner;
 pub(crate) mod light;
 pub(crate) mod light_cell;
 pub(crate) mod map;

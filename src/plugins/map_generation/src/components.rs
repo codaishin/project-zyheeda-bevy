@@ -12,8 +12,6 @@ pub(crate) struct Wall;
 
 pub(crate) struct WallBack;
 
-pub(crate) struct Corner;
-
 pub(crate) struct Corridor;
 
 impl Corridor {
