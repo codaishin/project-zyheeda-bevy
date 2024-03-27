@@ -15,7 +15,7 @@ impl ExtraComponentsDefinition for Wall {
 	}
 
 	fn insert_bundle(entity: &mut EntityCommands) {
-		entity.try_insert((Collider::cuboid(0.9, 1., 0.05), NoTarget));
+		entity.try_insert((Collider::cuboid(1., 1., 0.05), NoTarget));
 	}
 }
 
