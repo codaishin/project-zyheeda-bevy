@@ -6,7 +6,7 @@ pub(crate) mod map;
 pub(crate) mod map_cell;
 pub(crate) mod wall;
 
-use self::map::Cross;
+use self::map::MapWindow;
 use bevy::{
 	app::App,
 	ecs::{
@@ -36,7 +36,7 @@ pub trait SourcePath {
 }
 
 pub trait RegisterMapCell {
-	fn register_map_cell<TCell: TypePath + Send + Sync + From<Cross> + SourcePath>(
+	fn register_map_cell<TCell: TypePath + Send + Sync + From<MapWindow> + SourcePath>(
 		&mut self,
 		label: impl ScheduleLabel,
 	) -> &mut App;

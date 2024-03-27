@@ -1,4 +1,8 @@
-use super::{map::Cross, CellDistance, SourcePath};
+use super::{
+	map::{MapWindow, Neighbors, Tile},
+	CellDistance,
+	SourcePath,
+};
 use crate::{
 	components::Corridor,
 	map::{MapCell, Shape},
@@ -53,107 +57,147 @@ impl CellDistance for MapCell {
 	const CELL_DISTANCE: f32 = 2.;
 }
 
-impl From<Cross> for MapCell {
-	fn from(cross: Cross) -> Self {
+impl From<MapWindow> for MapCell {
+	fn from(cross: MapWindow) -> Self {
 		match cross {
 			// Cross
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				down: Some('c'),
-				right: Some('c'),
-				left: Some('c'),
+			MapWindow {
+				focus: 'c',
+				neighbors:
+					Neighbors {
+						up: Tile::Occupied,
+						down: Tile::Occupied,
+						right: Tile::Occupied,
+						left: Tile::Occupied,
+					},
 			} => MapCell::Corridor(Direction3d::NEG_Z, Shape::Cross4),
 			// T
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				down: Some('c'),
-				left: Some('c'),
-				..
+			MapWindow {
+				focus: 'c',
+				neighbors:
+					Neighbors {
+						up: Tile::Occupied,
+						down: Tile::Occupied,
+						left: Tile::Occupied,
+						..
+					},
 			} => MapCell::Corridor(Direction3d::X, Shape::Cross3),
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				left: Some('c'),
-				right: Some('c'),
-				..
+			MapWindow {
+				focus: 'c',
+				neighbors:
+					Neighbors {
+						up: Tile::Occupied,
+						left: Tile::Occupied,
+						right: Tile::Occupied,
+						..
+					},
 			} => MapCell::Corridor(Direction3d::Z, Shape::Cross3),
-			Cross {
-				middle: 'c',
-				down: Some('c'),
-				left: Some('c'),
-				right: Some('c'),
-				..
+			MapWindow {
+				focus: 'c',
+				neighbors:
+					Neighbors {
+						down: Tile::Occupied,
+						left: Tile::Occupied,
+						right: Tile::Occupied,
+						..
+					},
 			} => MapCell::Corridor(Direction3d::NEG_Z, Shape::Cross3),
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				down: Some('c'),
-				right: Some('c'),
-				..
+			MapWindow {
+				focus: 'c',
+				neighbors:
+					Neighbors {
+						up: Tile::Occupied,
+						down: Tile::Occupied,
+						right: Tile::Occupied,
+						..
+					},
 			} => MapCell::Corridor(Direction3d::NEG_X, Shape::Cross3),
 			// Corners
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				left: Some('c'),
-				..
+			MapWindow {
+				focus: 'c',
+				neighbors:
+					Neighbors {
+						up: Tile::Occupied,
+						left: Tile::Occupied,
+						..
+					},
 			} => MapCell::Corridor(Direction3d::X, Shape::Cross2),
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				right: Some('c'),
-				..
+			MapWindow {
+				focus: 'c',
+				neighbors:
+					Neighbors {
+						up: Tile::Occupied,
+						right: Tile::Occupied,
+						..
+					},
 			} => MapCell::Corridor(Direction3d::Z, Shape::Cross2),
-			Cross {
-				middle: 'c',
-				down: Some('c'),
-				left: Some('c'),
-				..
+			MapWindow {
+				focus: 'c',
+				neighbors:
+					Neighbors {
+						down: Tile::Occupied,
+						left: Tile::Occupied,
+						..
+					},
 			} => MapCell::Corridor(Direction3d::NEG_Z, Shape::Cross2),
-			Cross {
-				middle: 'c',
-				down: Some('c'),
-				right: Some('c'),
-				..
+			MapWindow {
+				focus: 'c',
+				neighbors:
+					Neighbors {
+						down: Tile::Occupied,
+						right: Tile::Occupied,
+						..
+					},
 			} => MapCell::Corridor(Direction3d::NEG_X, Shape::Cross2),
 			// Straights
-			Cross {
-				middle: 'c',
-				right: Some('c'),
-				left: Some('c'),
-				..
+			MapWindow {
+				focus: 'c',
+				neighbors:
+					Neighbors {
+						right: Tile::Occupied,
+						left: Tile::Occupied,
+						..
+					},
 			} => MapCell::Corridor(Direction3d::NEG_X, Shape::Straight),
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				down: Some('c'),
-				..
+			MapWindow {
+				focus: 'c',
+				neighbors:
+					Neighbors {
+						up: Tile::Occupied,
+						down: Tile::Occupied,
+						..
+					},
 			} => MapCell::Corridor(Direction3d::NEG_Z, Shape::Straight),
 			// Ends
-			Cross {
-				middle: 'c',
-				right: Some('c'),
-				..
+			MapWindow {
+				focus: 'c',
+				neighbors: Neighbors {
+					right: Tile::Occupied,
+					..
+				},
 			} => MapCell::Corridor(Direction3d::NEG_X, Shape::End),
-			Cross {
-				middle: 'c',
-				left: Some('c'),
-				..
+			MapWindow {
+				focus: 'c',
+				neighbors: Neighbors {
+					left: Tile::Occupied,
+					..
+				},
 			} => MapCell::Corridor(Direction3d::X, Shape::End),
-			Cross {
-				middle: 'c',
-				up: Some('c'),
-				..
+			MapWindow {
+				focus: 'c',
+				neighbors: Neighbors {
+					up: Tile::Occupied, ..
+				},
 			} => MapCell::Corridor(Direction3d::Z, Shape::End),
-			Cross {
-				middle: 'c',
-				down: Some('c'),
-				..
+			MapWindow {
+				focus: 'c',
+				neighbors: Neighbors {
+					down: Tile::Occupied,
+					..
+				},
 			} => MapCell::Corridor(Direction3d::NEG_Z, Shape::End),
 			// Single
-			Cross { middle: 'c', .. } => MapCell::Corridor(Direction3d::NEG_Z, Shape::Single),
+			MapWindow { focus: 'c', .. } => MapCell::Corridor(Direction3d::NEG_Z, Shape::Single),
 			// None
 			_ => MapCell::Empty,
 		}
@@ -167,8 +211,8 @@ mod tests {
 
 	#[test]
 	fn empty() {
-		let cross = Cross {
-			middle: 'x',
+		let cross = MapWindow {
+			focus: 'x',
 			..default()
 		};
 
@@ -177,10 +221,12 @@ mod tests {
 
 	#[test]
 	fn corridor_end_right() {
-		let cross = Cross {
-			middle: 'c',
-			right: Some('c'),
-			..default()
+		let cross = MapWindow {
+			focus: 'c',
+			neighbors: Neighbors {
+				right: Tile::Occupied,
+				..default()
+			},
 		};
 
 		assert_eq!(
@@ -191,10 +237,12 @@ mod tests {
 
 	#[test]
 	fn corridor_end_left() {
-		let cross = Cross {
-			middle: 'c',
-			left: Some('c'),
-			..default()
+		let cross = MapWindow {
+			focus: 'c',
+			neighbors: Neighbors {
+				left: Tile::Occupied,
+				..default()
+			},
 		};
 
 		assert_eq!(
@@ -205,11 +253,13 @@ mod tests {
 
 	#[test]
 	fn corridor_straight_horizontally() {
-		let cross = Cross {
-			middle: 'c',
-			left: Some('c'),
-			right: Some('c'),
-			..default()
+		let cross = MapWindow {
+			focus: 'c',
+			neighbors: Neighbors {
+				left: Tile::Occupied,
+				right: Tile::Occupied,
+				..default()
+			},
 		};
 
 		assert_eq!(
@@ -220,11 +270,13 @@ mod tests {
 
 	#[test]
 	fn corridor_straight_vertically() {
-		let cross = Cross {
-			middle: 'c',
-			left: Some('c'),
-			right: Some('c'),
-			..default()
+		let cross = MapWindow {
+			focus: 'c',
+			neighbors: Neighbors {
+				left: Tile::Occupied,
+				right: Tile::Occupied,
+				..default()
+			},
 		};
 
 		assert_eq!(
@@ -235,11 +287,13 @@ mod tests {
 
 	#[test]
 	fn corridor_left_upper_corner() {
-		let cross = Cross {
-			middle: 'c',
-			down: Some('c'),
-			right: Some('c'),
-			..default()
+		let cross = MapWindow {
+			focus: 'c',
+			neighbors: Neighbors {
+				down: Tile::Occupied,
+				right: Tile::Occupied,
+				..default()
+			},
 		};
 
 		assert_eq!(
@@ -250,11 +304,13 @@ mod tests {
 
 	#[test]
 	fn corridor_right_upper_corner() {
-		let cross = Cross {
-			middle: 'c',
-			down: Some('c'),
-			left: Some('c'),
-			..default()
+		let cross = MapWindow {
+			focus: 'c',
+			neighbors: Neighbors {
+				down: Tile::Occupied,
+				left: Tile::Occupied,
+				..default()
+			},
 		};
 
 		assert_eq!(
@@ -265,11 +321,13 @@ mod tests {
 
 	#[test]
 	fn corridor_left_lower_corner() {
-		let cross = Cross {
-			middle: 'c',
-			right: Some('c'),
-			up: Some('c'),
-			..default()
+		let cross = MapWindow {
+			focus: 'c',
+			neighbors: Neighbors {
+				right: Tile::Occupied,
+				up: Tile::Occupied,
+				..default()
+			},
 		};
 
 		assert_eq!(
@@ -280,11 +338,13 @@ mod tests {
 
 	#[test]
 	fn corridor_right_lower_corner() {
-		let cross = Cross {
-			middle: 'c',
-			left: Some('c'),
-			up: Some('c'),
-			..default()
+		let cross = MapWindow {
+			focus: 'c',
+			neighbors: Neighbors {
+				left: Tile::Occupied,
+				up: Tile::Occupied,
+				..default()
+			},
 		};
 
 		assert_eq!(
@@ -295,12 +355,14 @@ mod tests {
 
 	#[test]
 	fn corridor_t_down() {
-		let cross = Cross {
-			middle: 'c',
-			left: Some('c'),
-			right: Some('c'),
-			down: Some('c'),
-			..default()
+		let cross = MapWindow {
+			focus: 'c',
+			neighbors: Neighbors {
+				left: Tile::Occupied,
+				right: Tile::Occupied,
+				down: Tile::Occupied,
+				..default()
+			},
 		};
 
 		assert_eq!(
@@ -311,12 +373,14 @@ mod tests {
 
 	#[test]
 	fn corridor_t_up() {
-		let cross = Cross {
-			middle: 'c',
-			left: Some('c'),
-			right: Some('c'),
-			up: Some('c'),
-			..default()
+		let cross = MapWindow {
+			focus: 'c',
+			neighbors: Neighbors {
+				left: Tile::Occupied,
+				right: Tile::Occupied,
+				up: Tile::Occupied,
+				..default()
+			},
 		};
 
 		assert_eq!(
@@ -327,12 +391,14 @@ mod tests {
 
 	#[test]
 	fn corridor_t_right() {
-		let cross = Cross {
-			middle: 'c',
-			down: Some('c'),
-			right: Some('c'),
-			up: Some('c'),
-			..default()
+		let cross = MapWindow {
+			focus: 'c',
+			neighbors: Neighbors {
+				down: Tile::Occupied,
+				right: Tile::Occupied,
+				up: Tile::Occupied,
+				..default()
+			},
 		};
 
 		assert_eq!(
@@ -343,12 +409,14 @@ mod tests {
 
 	#[test]
 	fn corridor_t_left() {
-		let cross = Cross {
-			middle: 'c',
-			down: Some('c'),
-			left: Some('c'),
-			up: Some('c'),
-			..default()
+		let cross = MapWindow {
+			focus: 'c',
+			neighbors: Neighbors {
+				down: Tile::Occupied,
+				left: Tile::Occupied,
+				up: Tile::Occupied,
+				..default()
+			},
 		};
 
 		assert_eq!(
@@ -359,12 +427,14 @@ mod tests {
 
 	#[test]
 	fn corridor_cross() {
-		let cross = Cross {
-			middle: 'c',
-			up: Some('c'),
-			down: Some('c'),
-			left: Some('c'),
-			right: Some('c'),
+		let cross = MapWindow {
+			focus: 'c',
+			neighbors: Neighbors {
+				up: Tile::Occupied,
+				down: Tile::Occupied,
+				left: Tile::Occupied,
+				right: Tile::Occupied,
+			},
 		};
 
 		assert_eq!(

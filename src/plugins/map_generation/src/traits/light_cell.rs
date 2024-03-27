@@ -1,4 +1,4 @@
-use super::{map::Cross, CellDistance, SourcePath, Spawn};
+use super::{map::MapWindow, CellDistance, SourcePath, Spawn};
 use crate::{
 	components::{Floating, Light},
 	map::LightCell,
@@ -35,10 +35,10 @@ impl Spawn for LightCell {
 	}
 }
 
-impl From<Cross> for LightCell {
-	fn from(cross: Cross) -> Self {
+impl From<MapWindow> for LightCell {
+	fn from(cross: MapWindow) -> Self {
 		match cross {
-			Cross { middle: 'f', .. } => LightCell::Floating,
+			MapWindow { focus: 'f', .. } => LightCell::Floating,
 			_ => LightCell::Empty,
 		}
 	}
