@@ -1,6 +1,6 @@
 use crate::{
 	components::{Light, Wall},
-	traits::Definition,
+	traits::ExtraComponentsDefinition,
 };
 use bevy::{
 	asset::Handle,
@@ -18,7 +18,7 @@ use common::{
 use light::components::{ResponsiveLight, ResponsiveLightData};
 use prefabs::traits::{AssetKey, Instantiate, LightStatus, LightType};
 
-impl Definition for Light<Wall> {
+impl ExtraComponentsDefinition for Light<Wall> {
 	fn target_names() -> Vec<String> {
 		vec![
 			"LightNZData".to_owned(),

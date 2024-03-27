@@ -18,7 +18,7 @@ use bevy::{
 };
 use common::traits::load_asset::Path;
 
-pub(crate) trait Definition {
+pub(crate) trait ExtraComponentsDefinition {
 	fn target_names() -> Vec<String>;
 	fn insert_bundle(entity: &mut EntityCommands);
 }

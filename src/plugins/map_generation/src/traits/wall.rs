@@ -1,10 +1,10 @@
-use super::Definition;
+use super::ExtraComponentsDefinition;
 use crate::components::{Unlit, Wall, WallBack};
 use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::geometry::Collider;
 use common::components::NoTarget;
 
-impl Definition for Wall {
+impl ExtraComponentsDefinition for Wall {
 	fn target_names() -> Vec<String> {
 		vec![
 			"WallNZData".to_owned(),
@@ -19,7 +19,7 @@ impl Definition for Wall {
 	}
 }
 
-impl Definition for WallBack {
+impl ExtraComponentsDefinition for WallBack {
 	fn target_names() -> Vec<String> {
 		vec![
 			"WallNZBackData".to_owned(),

@@ -1,4 +1,4 @@
-use super::Definition;
+use super::ExtraComponentsDefinition;
 use crate::components::Corner;
 use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::geometry::Collider;
@@ -7,7 +7,7 @@ use common::components::NoTarget;
 const SIDES: [&str; 4] = ["NXNZ", "NXPZ", "PXPZ", "PXNZ"];
 const SUFFIXES: [&str; 3] = ["", "HalfLeft", "HalfRight"];
 
-impl Definition for Corner {
+impl ExtraComponentsDefinition for Corner {
 	fn target_names() -> Vec<String> {
 		let build_name = |side| move |suffix| format!("Corner{}Wall{}Data", side, suffix);
 		let build_names = |side| SUFFIXES.iter().map(build_name(side));
