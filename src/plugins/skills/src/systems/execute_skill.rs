@@ -1,6 +1,6 @@
 use crate::{
 	components::{Slot, SlotKey, Slots},
-	skill::{SkillState, Spawner},
+	skill::{SkillState, Spawner, Target},
 	traits::{Execution, GetAnimation, GetSlots},
 };
 use behaviors::components::{Face, OverrideFace};
@@ -10,12 +10,14 @@ use bevy::{
 		entity::Entity,
 		system::{Commands, EntityCommands, Query, Res},
 	},
+	math::Ray3d,
 	render::view::Visibility,
 	time::Time,
 	transform::components::{GlobalTransform, Transform},
 };
 use common::{
-	components::{Animate, Idle},
+	components::{Animate, Idle, Outdated},
+	resources::{CamRay, ColliderInfo, MouseHover},
 	traits::state_duration::{StateMeta, StateUpdate},
 };
 use std::{collections::HashSet, time::Duration};
@@ -33,8 +35,10 @@ pub(crate) fn execute_skill<
 	TSkill: StateUpdate<SkillState> + Execution + GetAnimation<TAnimationKey> + GetSlots + Component,
 	TTime: Send + Sync + Default + 'static,
 >(
-	time: Res<Time<TTime>>,
 	mut commands: Commands,
+	time: Res<Time<TTime>>,
+	cam_ray: Res<CamRay>,
+	mouse_hover: Res<MouseHover>,
 	mut agents: Query<Skills<TSkill>>,
 	transforms: Query<&GlobalTransform>,
 ) {
@@ -57,7 +61,15 @@ pub(crate) fn execute_skill<
 			agent.try_insert(OverrideFace(Face::Cursor));
 		}
 		if states.contains(&StateMeta::Leaving(SkillState::PreCast)) {
-			handle_active(agent, agent_transform, skill, slots, transforms);
+			handle_active(
+				agent,
+				skill,
+				agent_transform,
+				transforms,
+				slots,
+				&cam_ray,
+				&mouse_hover,
+			);
 		}
 		if states.contains(&StateMeta::Leaving(SkillState::AfterCast)) {
 			handle_done(agent, skill, slots);
@@ -102,17 +114,47 @@ fn handle_new<TSkill: GetSlots>(agent: &mut EntityCommands, skill: &mut TSkill, 
 	set_slots_visibility(agent.commands(), skill, slots, Visibility::Inherited);
 }
 
+fn get_target(
+	transforms: &Query<&GlobalTransform>,
+	ray: Ray3d,
+	hover: &Option<ColliderInfo<Entity>>,
+) -> Target {
+	Target {
+		ray,
+		collision_info: hover.as_ref().and_then(|hover| {
+			Some(ColliderInfo {
+				collider: Outdated {
+					entity: hover.collider,
+					component: *transforms.get(hover.collider).ok()?,
+				},
+				root: hover.root.and_then(|entity| {
+					transforms.get(entity).ok().map(|transform| Outdated {
+						entity,
+						component: *transform,
+					})
+				}),
+			})
+		}),
+	}
+}
+
 fn handle_active<TSkill: Execution>(
 	agent: &mut EntityCommands,
-	agent_transform: &Transform,
 	skill: &mut TSkill,
-	slots: &Slots,
+	agent_transform: &Transform,
 	transforms: &Query<&GlobalTransform>,
+	slots: &Slots,
+	cam_ray: &Res<CamRay>,
+	mouse_hover: &Res<MouseHover>,
 ) {
 	let Some(spawner) = get_spawner(slots, transforms) else {
 		return;
 	};
-	skill.run(agent, agent_transform, &spawner);
+	let Some(ray) = cam_ray.0 else {
+		return;
+	};
+	let target = get_target(transforms, ray, &mouse_hover.0);
+	skill.run(agent, agent_transform, &spawner, &target);
 }
 
 fn handle_done<
@@ -141,12 +183,16 @@ mod tests {
 	use crate::components::Slot;
 	use behaviors::components::{Face, OverrideFace};
 	use bevy::{
-		ecs::component::Component,
+		math::Ray3d,
 		prelude::{App, Transform, Update, Vec3},
 		render::view::Visibility,
 		time::{Real, Time},
 	};
-	use common::{components::Side, test_tools::utils::TickTime};
+	use common::{
+		components::{Outdated, Side},
+		resources::{CamRay, ColliderInfo, MouseHover},
+		test_tools::utils::{SingleThreadedApp, TickTime},
+	};
 	use mockall::{mock, predicate::eq};
 	use std::time::Duration;
 
@@ -201,8 +247,14 @@ mod tests {
 	}
 
 	impl Execution for _Skill {
-		fn run(&self, agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner) {
-			self.mock.run(agent, agent_transform, spawner)
+		fn run(
+			&self,
+			agent: &mut EntityCommands,
+			agent_transform: &Transform,
+			spawner: &Spawner,
+			target: &Target,
+		) {
+			self.mock.run(agent, agent_transform, spawner, target)
 		}
 
 		fn stop(&self, agent: &mut EntityCommands) {
@@ -228,7 +280,7 @@ mod tests {
 			fn update_state(&mut self, delta: Duration) -> HashSet<StateMeta<SkillState>> {}
 		}
 		impl Execution for _Skill {
-			fn run<'a>(&self, agent: &mut EntityCommands<'a>, agent_transform: &Transform, spawner: &Spawner) {}
+			fn run<'a>(&self, agent: &mut EntityCommands<'a>, agent_transform: &Transform, spawner: &Spawner, target: &Target) {}
 			fn stop<'a>(&self, agent: &mut EntityCommands<'a>) {}
 		}
 		impl GetAnimation<_AnimationKey> for _Skill {
@@ -239,8 +291,8 @@ mod tests {
 		}
 	}
 
-	fn setup_app(skill_spawn_location: Vec3, agent_location: Vec3) -> (App, Entity) {
-		let mut app = App::new();
+	fn setup(skill_spawn_location: Vec3, agent_location: Vec3) -> (App, Entity) {
+		let mut app = App::new_single_threaded([Update]);
 		let mut time = Time::<Real>::default();
 
 		let skill_spawner = app
@@ -288,6 +340,8 @@ mod tests {
 
 		time.update();
 		app.insert_resource(time);
+		app.init_resource::<CamRay>();
+		app.init_resource::<MouseHover>();
 		app.update();
 		app.add_systems(Update, execute_skill::<_AnimationKey, _Skill, Real>);
 
@@ -296,7 +350,7 @@ mod tests {
 
 	#[test]
 	fn call_update_with_delta() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill
@@ -328,7 +382,7 @@ mod tests {
 		];
 
 		for state in states {
-			let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+			let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 			let mut skill = _Skill::without_default_setup_for([MockOption::Animate]);
 			skill
 				.mock
@@ -355,7 +409,7 @@ mod tests {
 
 	#[test]
 	fn set_slot_visible_on_first() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([MockOption::Slot]);
 		skill
 			.mock
@@ -384,7 +438,7 @@ mod tests {
 
 	#[test]
 	fn set_multiple_slots_visible_on_first() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([MockOption::Slot]);
 		skill
 			.mock
@@ -421,7 +475,7 @@ mod tests {
 
 	#[test]
 	fn hide_slot_when_done() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([MockOption::Slot]);
 		skill
 			.mock
@@ -453,7 +507,7 @@ mod tests {
 
 	#[test]
 	fn hide_multiple_slots_when_done() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([MockOption::Slot]);
 		skill
 			.mock
@@ -492,7 +546,7 @@ mod tests {
 
 	#[test]
 	fn no_animation_when_done() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([MockOption::Animate]);
 		skill
 			.mock
@@ -517,7 +571,7 @@ mod tests {
 
 	#[test]
 	fn remove_skill() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill
@@ -540,7 +594,7 @@ mod tests {
 
 	#[test]
 	fn do_not_remove_skill_when_not_done() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill
@@ -563,7 +617,7 @@ mod tests {
 
 	#[test]
 	fn add_idle() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill
@@ -586,7 +640,7 @@ mod tests {
 
 	#[test]
 	fn do_not_add_idle_when_not_done() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill
@@ -609,7 +663,7 @@ mod tests {
 
 	#[test]
 	fn remove_all_related_components_when_idle_present() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([MockOption::Animate]);
 
 		skill
@@ -644,9 +698,21 @@ mod tests {
 
 	#[test]
 	fn run() {
-		let (mut app, agent) = setup_app(Vec3::new(1., 2., 3.), Vec3::new(3., 4., 5.));
+		let skill_spawn_location = Vec3::new(1., 2., 3.);
+		let agent_location = Vec3::new(3., 4., 5.);
+		let (mut app, agent_entity) = setup(skill_spawn_location, agent_location);
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::BehaviorExecution(BehaviorOption::Run)]);
+		let ray = Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(4., 5., 6.));
+		let mouse_hover_transform = GlobalTransform::from_xyz(10., 10., 10.);
+		let mouse_hover = app.world.spawn(mouse_hover_transform).id();
+		let mouse_hover_root_transform = GlobalTransform::from_xyz(11., 11., 11.);
+		let mouse_hover_root = app.world.spawn(mouse_hover_root_transform).id();
+		app.insert_resource(CamRay(Some(ray)));
+		app.insert_resource(MouseHover(Some(ColliderInfo {
+			collider: mouse_hover,
+			root: Some(mouse_hover_root),
+		})));
 
 		skill
 			.mock
@@ -658,21 +724,40 @@ mod tests {
 			.mock
 			.expect_run()
 			.times(1)
-			.withf(move |a, a_t, s| {
-				a.id() == agent
-					&& *a_t == Transform::from_xyz(3., 4., 5.)
-					&& s.0 == GlobalTransform::from_xyz(1., 2., 3.)
+			.withf(move |agent, agent_transform, skill_spawn, target| {
+				assert_eq!(
+					(
+						agent_entity,
+						&Transform::from_translation(agent_location),
+						GlobalTransform::from_translation(skill_spawn_location),
+						&Target {
+							ray,
+							collision_info: Some(ColliderInfo {
+								collider: Outdated {
+									entity: mouse_hover,
+									component: mouse_hover_transform,
+								},
+								root: Some(Outdated {
+									entity: mouse_hover_root,
+									component: mouse_hover_root_transform,
+								}),
+							}),
+						}
+					),
+					(agent.id(), agent_transform, skill_spawn.0, target)
+				);
+				true
 			})
 			.return_const(());
 
-		app.world.entity_mut(agent).insert(skill);
+		app.world.entity_mut(agent_entity).insert(skill);
 
 		app.update();
 	}
 
 	#[test]
 	fn do_run_when_not_activating_this_frame() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 		let mut skill =
 			_Skill::without_default_setup_for([MockOption::BehaviorExecution(BehaviorOption::Run)]);
 
@@ -693,7 +778,7 @@ mod tests {
 
 	#[test]
 	fn stop() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([MockOption::BehaviorExecution(
 			BehaviorOption::Stop,
 		)]);
@@ -720,7 +805,7 @@ mod tests {
 
 	#[test]
 	fn do_not_stop_when_not_done() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([MockOption::BehaviorExecution(
 			BehaviorOption::Stop,
 		)]);
@@ -742,7 +827,7 @@ mod tests {
 
 	#[test]
 	fn apply_facing() {
-		let (mut app, agent) = setup_app(Vec3::new(11., 12., 13.), Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::new(11., 12., 13.), Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill
@@ -766,7 +851,7 @@ mod tests {
 
 	#[test]
 	fn do_not_apply_facing_when_not_new() {
-		let (mut app, agent) = setup_app(Vec3::ZERO, Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::ZERO, Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
 		skill
@@ -789,7 +874,7 @@ mod tests {
 
 	#[test]
 	fn apply_transform_when_aiming() {
-		let (mut app, agent) = setup_app(Vec3::new(11., 12., 13.), Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::new(11., 12., 13.), Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
 		let transform = Transform::from_xyz(-1., -2., -3.);
@@ -815,7 +900,7 @@ mod tests {
 
 	#[test]
 	fn no_transform_when_skill_ended() {
-		let (mut app, agent) = setup_app(Vec3::new(11., 12., 13.), Vec3::ZERO);
+		let (mut app, agent) = setup(Vec3::new(11., 12., 13.), Vec3::ZERO);
 		let mut skill = _Skill::without_default_setup_for([]);
 
 		let transform = Transform::from_xyz(-1., -2., -3.);

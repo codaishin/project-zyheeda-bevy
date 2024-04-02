@@ -20,7 +20,7 @@ impl ComboNext<PlayerSkills<SideUnset>> for SkillComboNext {
 					SkillComboTree {
 						skill: alternate_skill.clone(),
 						next: SkillComboNext::Alternate {
-							slot_key: skill.data.slot_key,
+							slot_key: skill.data.0,
 							skill: skill.clone().map_data(|_| ()),
 						},
 					},
@@ -64,10 +64,7 @@ mod tests {
 		};
 		let skill = Skill {
 			name: "skill",
-			data: Active {
-				slot_key: SlotKey::Hand(Side::Main),
-				..default()
-			},
+			data: Active(SlotKey::Hand(Side::Main)),
 			..default()
 		};
 

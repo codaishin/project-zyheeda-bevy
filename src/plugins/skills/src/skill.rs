@@ -91,21 +91,15 @@ impl<T> Default for SelectInfo<T> {
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
-pub struct Queued {
-	pub target: Target,
-	pub slot_key: SlotKey,
-}
+pub struct Queued(pub SlotKey);
 
 #[derive(Debug, PartialEq, Clone, Default)]
-pub struct Active {
-	pub target: Target,
-	pub slot_key: SlotKey,
-}
+pub struct Active(pub SlotKey);
 
 impl Skill {
-	pub fn with<TData: Clone>(self, data: &TData) -> Skill<PlayerSkills<SideUnset>, TData> {
+	pub fn with<TData: Clone>(self, data: TData) -> Skill<PlayerSkills<SideUnset>, TData> {
 		Skill {
-			data: data.clone(),
+			data,
 			name: self.name,
 			cast: self.cast,
 			soft_override: self.soft_override,
@@ -134,10 +128,7 @@ impl<TAnimationKey, TSrc> Skill<TAnimationKey, TSrc> {
 
 impl<TAnimationKey> Skill<TAnimationKey, Queued> {
 	pub fn to_active(self) -> Skill<TAnimationKey, Active> {
-		self.map_data(|queued| Active {
-			target: queued.target,
-			slot_key: queued.slot_key,
-		})
+		self.map_data(|queued| Active(queued.0))
 	}
 }
 

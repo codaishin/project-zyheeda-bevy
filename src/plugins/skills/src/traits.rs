@@ -15,7 +15,7 @@ pub(crate) mod tuple_slot_key_item;
 use crate::{
 	components::SlotKey,
 	resources::SlotMap,
-	skill::{Active, Skill, SkillComboTree, SkillExecution, Spawner},
+	skill::{Active, Skill, SkillComboTree, SkillExecution, Spawner, Target},
 };
 use bevy::{
 	ecs::{
@@ -54,7 +54,13 @@ pub(crate) trait GetSlots {
 }
 
 pub(crate) trait Execution {
-	fn run(&self, agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner);
+	fn run(
+		&self,
+		agent: &mut EntityCommands,
+		agent_transform: &Transform,
+		spawner: &Spawner,
+		target: &Target,
+	);
 	fn stop(&self, agent: &mut EntityCommands);
 }
 
@@ -85,10 +91,16 @@ pub(crate) mod test_tools {
 		agent: Entity,
 		agent_transform: Transform,
 		spawner: Spawner,
+		target: Target,
 	) -> impl FnMut(Commands, Query<&mut TExecute>) {
 		move |mut commands, mut executes| {
 			let execute = executes.single_mut();
-			execute.run(&mut commands.entity(agent), &agent_transform, &spawner);
+			execute.run(
+				&mut commands.entity(agent),
+				&agent_transform,
+				&spawner,
+				&target,
+			);
 		}
 	}
 
