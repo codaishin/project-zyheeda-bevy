@@ -10,7 +10,7 @@ impl GetAnimation<PlayerSkills<Side>> for Track<Skill<PlayerSkills<SideUnset>, A
 		let Some(animate) = self.value.animate else {
 			return Animate::None;
 		};
-		match (animate, self.value.data.slot_key) {
+		match (animate, self.value.data.0) {
 			(PlayerSkills::Shoot(dual_or_single), SlotKey::Hand(side)) => {
 				Animate::Repeat(PlayerSkills::Shoot(dual_or_single.on(side)))
 			}
@@ -36,20 +36,14 @@ mod tests {
 		];
 		let main_tracks = animates.map(|animate| {
 			Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
-				data: Active {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
+				data: Active(SlotKey::Hand(Side::Main)),
 				animate: Some(animate),
 				..default()
 			})
 		});
 		let off_tracks = animates.map(|animate| {
 			Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
-				data: Active {
-					slot_key: SlotKey::Hand(Side::Off),
-					..default()
-				},
+				data: Active(SlotKey::Hand(Side::Off)),
 				animate: Some(animate),
 				..default()
 			})
@@ -77,18 +71,12 @@ mod tests {
 	fn get_sword_strike_animations() {
 		let animate = PlayerSkills::SwordStrike(SideUnset);
 		let main_track = Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
-			data: Active {
-				slot_key: SlotKey::Hand(Side::Main),
-				..default()
-			},
+			data: Active(SlotKey::Hand(Side::Main)),
 			animate: Some(animate),
 			..default()
 		});
 		let off_track = Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
-			data: Active {
-				slot_key: SlotKey::Hand(Side::Off),
-				..default()
-			},
+			data: Active(SlotKey::Hand(Side::Off)),
 			animate: Some(animate),
 			..default()
 		});

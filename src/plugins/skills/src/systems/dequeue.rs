@@ -27,20 +27,10 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::SlotKey,
-		skill::{Active, Cast, Queued, SelectInfo, Skill},
+		skill::{Active, Cast, Queued, Skill},
 	};
-	use bevy::{
-		math::{primitives::Direction3d, Ray3d},
-		prelude::{default, App, Update, Vec3},
-	};
+	use bevy::prelude::{default, App, Update};
 	use std::time::Duration;
-
-	fn test_ray() -> Ray3d {
-		Ray3d {
-			origin: Vec3::ONE,
-			direction: Direction3d::Y,
-		}
-	}
 
 	#[derive(Clone, Copy, Default)]
 	struct _Template;
@@ -54,13 +44,7 @@ mod tests {
 					pre: Duration::from_millis(42),
 					..default()
 				},
-				data: Queued {
-					target: SelectInfo {
-						ray: test_ray(),
-						..default()
-					},
-					slot_key: SlotKey::SkillSpawn,
-				},
+				data: Queued(SlotKey::SkillSpawn),
 				..default()
 			})]
 			.into(),
@@ -74,17 +58,7 @@ mod tests {
 		let queue = agent.get::<Queue<_Template>>().unwrap();
 
 		assert_eq!(
-			(
-				Some(Active {
-					target: SelectInfo {
-						ray: test_ray(),
-						..default()
-					},
-					slot_key: SlotKey::SkillSpawn,
-				}),
-				false,
-				0
-			),
+			(Some(Active(SlotKey::SkillSpawn)), false, 0),
 			(
 				agent
 					.get::<Track<Skill<_Template, Active>>>()

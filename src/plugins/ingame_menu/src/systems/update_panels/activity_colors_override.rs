@@ -39,8 +39,8 @@ pub fn panel_activity_colors_override<
 ) {
 	let player_slots = &player.get_single().map(|(track, queue)| {
 		(
-			track.map(|t| t.value.data.slot_key),
-			queue.0.iter().map(|s| s.data.slot_key).collect::<Vec<_>>(),
+			track.map(|t| t.value.data.0),
+			queue.0.iter().map(|s| s.data.0).collect::<Vec<_>>(),
 		)
 	});
 	let primed_slots = match mouse_context.get() {
@@ -98,7 +98,6 @@ mod tests {
 		app::{App, Update},
 		ecs::{bundle::Bundle, schedule::NextState},
 		input::keyboard::KeyCode,
-		prelude::default,
 		render::color::Color,
 	};
 	use common::components::Side;
@@ -146,10 +145,7 @@ mod tests {
 
 		if let Some(slot_key) = slot_key {
 			let mut player = app.world.entity_mut(player);
-			player.insert(Track::new(Skill::default().with(&Active {
-				slot_key,
-				..default()
-			})));
+			player.insert(Track::new(Skill::default().with(Active(slot_key))));
 		}
 
 		(app, panel, player)
@@ -252,10 +248,9 @@ mod tests {
 
 		let mut player = app.world.entity_mut(player);
 		let mut queue = player.get_mut::<Queue>().unwrap();
-		queue.0.push_back(Skill::default().with(&Queued {
-			slot_key: SlotKey::Hand(Side::Main),
-			..default()
-		}));
+		queue
+			.0
+			.push_back(Skill::default().with(Queued(SlotKey::Hand(Side::Main))));
 
 		app.update();
 

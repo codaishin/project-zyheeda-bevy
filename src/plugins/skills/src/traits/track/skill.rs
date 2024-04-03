@@ -1,6 +1,6 @@
 use crate::{
 	components::{SlotKey, Track},
-	skill::{Active, Skill, SkillState, Spawner},
+	skill::{Active, Skill, SkillState, Spawner, Target},
 	traits::{Execution, GetSlots},
 };
 use bevy::{ecs::system::EntityCommands, transform::components::Transform};
@@ -23,11 +23,17 @@ impl<TAnimationKey, TData> StateDuration<SkillState> for Track<Skill<TAnimationK
 }
 
 impl<TAnimationKey> Execution for Track<Skill<TAnimationKey, Active>> {
-	fn run(&self, agent: &mut EntityCommands, agent_transform: &Transform, spawner: &Spawner) {
+	fn run(
+		&self,
+		agent: &mut EntityCommands,
+		agent_transform: &Transform,
+		spawner: &Spawner,
+		target: &Target,
+	) {
 		let Some(run) = self.value.execution.run_fn else {
 			return;
 		};
-		run(agent, agent_transform, spawner, &self.value.data.target);
+		run(agent, agent_transform, spawner, target);
 	}
 
 	fn stop(&self, agent: &mut EntityCommands) {
@@ -40,7 +46,7 @@ impl<TAnimationKey> Execution for Track<Skill<TAnimationKey, Active>> {
 
 impl<TAnimationKey> GetSlots for Track<Skill<TAnimationKey, Active>> {
 	fn slots(&self) -> Vec<SlotKey> {
-		match (self.value.data.slot_key, self.value.dual_wield) {
+		match (self.value.data.0, self.value.dual_wield) {
 			(SlotKey::Hand(Side::Main), true) => {
 				vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]
 			}
@@ -175,10 +181,6 @@ mod tests_execution {
 		let agent = app
 			.world
 			.spawn(Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
-				data: Active {
-					target: test_target(),
-					..default()
-				},
 				execution: SkillExecution {
 					run_fn: Some(Mock_Tools::run),
 					..default()
@@ -198,7 +200,12 @@ mod tests_execution {
 
 		app.add_systems(
 			Update,
-			run_system::<Track<Skill<PlayerSkills<SideUnset>, Active>>>(agent, transform, spawner),
+			run_system::<Track<Skill<PlayerSkills<SideUnset>, Active>>>(
+				agent,
+				transform,
+				spawner,
+				test_target(),
+			),
 		);
 		app.update();
 	}
@@ -243,10 +250,7 @@ mod test_get_slot {
 	#[test]
 	fn get_main() {
 		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
-			data: Active {
-				slot_key: SlotKey::Hand(Side::Off),
-				..default()
-			},
+			data: Active(SlotKey::Hand(Side::Off)),
 			..default()
 		});
 
@@ -256,10 +260,7 @@ mod test_get_slot {
 	#[test]
 	fn get_off() {
 		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
-			data: Active {
-				slot_key: SlotKey::Hand(Side::Main),
-				..default()
-			},
+			data: Active(SlotKey::Hand(Side::Main)),
 			..default()
 		});
 
@@ -269,10 +270,7 @@ mod test_get_slot {
 	#[test]
 	fn get_dual_main() {
 		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
-			data: Active {
-				slot_key: SlotKey::Hand(Side::Main),
-				..default()
-			},
+			data: Active(SlotKey::Hand(Side::Main)),
 			dual_wield: true,
 			..default()
 		});
@@ -286,10 +284,7 @@ mod test_get_slot {
 	#[test]
 	fn get_dual_off() {
 		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
-			data: Active {
-				slot_key: SlotKey::Hand(Side::Off),
-				..default()
-			},
+			data: Active(SlotKey::Hand(Side::Off)),
 			dual_wield: true,
 			..default()
 		});
@@ -303,10 +298,7 @@ mod test_get_slot {
 	#[test]
 	fn get_skill_spawn() {
 		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
-			data: Active {
-				slot_key: SlotKey::SkillSpawn,
-				..default()
-			},
+			data: Active(SlotKey::SkillSpawn),
 			..default()
 		});
 
