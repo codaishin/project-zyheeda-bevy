@@ -1,9 +1,8 @@
 use crate::{
 	components::{SlotKey, Track},
-	skill::{Active, Skill, SkillState, Spawner, Target},
+	skill::{Active, Skill, SkillState, StartBehaviorFn, StopBehaviorFn},
 	traits::{Execution, GetSlots},
 };
-use bevy::{ecs::system::EntityCommands, transform::components::Transform};
 use common::{components::Side, traits::state_duration::StateDuration};
 use std::time::Duration;
 
@@ -23,24 +22,12 @@ impl<TAnimationKey, TData> StateDuration<SkillState> for Track<Skill<TAnimationK
 }
 
 impl<TAnimationKey> Execution for Track<Skill<TAnimationKey, Active>> {
-	fn run(
-		&self,
-		agent: &mut EntityCommands,
-		agent_transform: &Transform,
-		spawner: &Spawner,
-		target: &Target,
-	) {
-		let Some(run) = self.value.execution.run_fn else {
-			return;
-		};
-		run(agent, agent_transform, spawner, target);
+	fn get_start(&self) -> Option<StartBehaviorFn> {
+		self.value.execution.run_fn
 	}
 
-	fn stop(&self, agent: &mut EntityCommands) {
-		let Some(stop) = self.value.execution.stop_fn else {
-			return;
-		};
-		stop(agent);
+	fn get_stop(&self) -> Option<StopBehaviorFn> {
+		self.value.execution.stop_fn
 	}
 }
 
@@ -112,12 +99,12 @@ mod tests_execution {
 	use super::*;
 	use crate::{
 		components::SideUnset,
-		skill::{PlayerSkills, SkillExecution, Target},
+		skill::{PlayerSkills, SkillExecution, Spawner, Target},
 		traits::test_tools::{run_system, stop_system},
 	};
 	use bevy::{
 		app::{App, Update},
-		ecs::entity::Entity,
+		ecs::{entity::Entity, system::EntityCommands},
 		math::{Ray3d, Vec3},
 		transform::components::{GlobalTransform, Transform},
 		utils::default,

@@ -1,4 +1,4 @@
-use crate::skill::{PlayerSkills, Queued, Skill, SkillComboTree};
+use crate::skill::{PlayerSkills, Queued, Skill, SkillComboTree, StartBehaviorFn, StopBehaviorFn};
 use bevy::ecs::{component::Component, entity::Entity};
 use common::components::{Collection, Side};
 use std::{
@@ -133,4 +133,10 @@ pub(crate) enum Schedule {
 pub(crate) enum SlotVisibility {
 	Inherited(Vec<SlotKey>),
 	Hidden(Vec<SlotKey>),
+}
+
+#[derive(Component, Debug, PartialEq)]
+pub(crate) enum SkillExecution {
+	Start(StartBehaviorFn),
+	Stop(StopBehaviorFn),
 }
