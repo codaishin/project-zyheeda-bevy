@@ -15,15 +15,9 @@ pub(crate) mod tuple_slot_key_item;
 use crate::{
 	components::SlotKey,
 	resources::SlotMap,
-	skill::{Active, Skill, SkillComboTree, SkillExecution, Spawner, Target},
+	skill::{Active, Skill, SkillComboTree, SkillExecution, StartBehaviorFn, StopBehaviorFn},
 };
-use bevy::{
-	ecs::{
-		component::Component,
-		system::{EntityCommands, Query},
-	},
-	transform::components::Transform,
-};
+use bevy::ecs::{component::Component, system::Query};
 use common::{
 	components::{Animate, Outdated},
 	resources::ColliderInfo,
@@ -54,14 +48,8 @@ pub(crate) trait GetSlots {
 }
 
 pub(crate) trait Execution {
-	fn run(
-		&self,
-		agent: &mut EntityCommands,
-		agent_transform: &Transform,
-		spawner: &Spawner,
-		target: &Target,
-	);
-	fn stop(&self, agent: &mut EntityCommands);
+	fn get_start(&self) -> Option<StartBehaviorFn>;
+	fn get_stop(&self) -> Option<StopBehaviorFn>;
 }
 
 pub trait InputState<TKey: Eq + Hash> {
@@ -95,7 +83,10 @@ pub(crate) mod test_tools {
 	) -> impl FnMut(Commands, Query<&mut TExecute>) {
 		move |mut commands, mut executes| {
 			let execute = executes.single_mut();
-			execute.run(
+			let Some(run) = execute.get_start() else {
+				return;
+			};
+			run(
 				&mut commands.entity(agent),
 				&agent_transform,
 				&spawner,
@@ -109,7 +100,10 @@ pub(crate) mod test_tools {
 	) -> impl FnMut(Commands, Query<&TExecute>) {
 		move |mut commands, executes| {
 			let execute = executes.single();
-			execute.stop(&mut commands.entity(agent));
+			let Some(stop) = execute.get_stop() else {
+				return;
+			};
+			stop(&mut commands.entity(agent));
 		}
 	}
 
