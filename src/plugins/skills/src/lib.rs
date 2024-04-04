@@ -57,6 +57,7 @@ use systems::{
 		trigger_primed::trigger_primed_mouse_context,
 	},
 	schedule_slots::schedule_slots,
+	set_slot_visibility::set_slot_visibility,
 	slots::add_item_slots,
 };
 use traits::GetExecution;
@@ -114,6 +115,7 @@ impl Plugin for SkillsPlugin {
 						Track<Skill<PlayerSkills<SideUnset>, Active>>,
 						Virtual,
 					>,
+					set_slot_visibility,
 				)
 					.chain(),
 			);

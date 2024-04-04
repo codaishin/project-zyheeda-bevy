@@ -128,3 +128,9 @@ pub(crate) enum Schedule {
 	StopAimAfter(Duration),
 	UpdateTarget,
 }
+
+#[derive(Component, Debug, PartialEq)]
+pub(crate) enum SlotVisibility {
+	Inherited(Vec<SlotKey>),
+	Hidden(Vec<SlotKey>),
+}

@@ -1,5 +1,5 @@
 use crate::{
-	components::{Slot, SlotKey, Slots},
+	components::{SlotKey, SlotVisibility, Slots},
 	skill::{SkillState, Spawner, Target},
 	traits::{Execution, GetAnimation, GetSlots},
 };
@@ -11,7 +11,6 @@ use bevy::{
 		system::{Commands, EntityCommands, Query, Res},
 	},
 	math::Ray3d,
-	render::view::Visibility,
 	time::Time,
 	transform::components::{GlobalTransform, Transform},
 };
@@ -51,11 +50,11 @@ pub(crate) fn execute_skill<
 		let agent_transform = &mut agent_transform;
 		let skill: &mut TSkill = &mut skill;
 		let transforms = &transforms;
-
 		let states = get_states(skill, &delta, idle);
 
 		if states.contains(&StateMeta::First) {
-			handle_new(agent, skill, slots);
+			agent.try_insert(OverrideFace(Face::Cursor));
+			agent.try_insert(SlotVisibility::Inherited(skill.slots()));
 		}
 		if states.contains(&StateMeta::In(SkillState::Aim)) {
 			agent.try_insert(OverrideFace(Face::Cursor));
@@ -71,30 +70,16 @@ pub(crate) fn execute_skill<
 				&mouse_hover,
 			);
 		}
+
 		if states.contains(&StateMeta::Leaving(SkillState::AfterCast)) {
-			handle_done(agent, skill, slots);
+			agent.try_insert(Idle);
+			agent.try_insert(SlotVisibility::Hidden(skill.slots()));
+			agent.remove::<(TSkill, OverrideFace, Animate<TAnimationKey>)>();
+			skill.stop(agent);
 		} else {
 			agent.try_insert(skill.animate());
 		}
 	}
-}
-
-fn set_slots_visibility<TSkill: GetSlots>(
-	mut commands: Commands,
-	skill: &TSkill,
-	slots: &Slots,
-	visibility: Visibility,
-) {
-	for slot in skill.slots().iter().filter_map(|s| slots.0.get(s)) {
-		set_slot_visibility(&mut commands, slot, visibility);
-	}
-}
-
-fn set_slot_visibility(commands: &mut Commands, slot: &Slot, visibility: Visibility) {
-	let Some(mut entity) = commands.get_entity(slot.entity) else {
-		return;
-	};
-	entity.try_insert(visibility);
 }
 
 fn get_states<TSkill: StateUpdate<SkillState>>(
@@ -105,13 +90,7 @@ fn get_states<TSkill: StateUpdate<SkillState>>(
 	if wait_next.is_some() {
 		return [StateMeta::Leaving(SkillState::AfterCast)].into();
 	}
-
 	skill.update_state(*delta)
-}
-
-fn handle_new<TSkill: GetSlots>(agent: &mut EntityCommands, skill: &mut TSkill, slots: &Slots) {
-	agent.try_insert(OverrideFace(Face::Cursor));
-	set_slots_visibility(agent.commands(), skill, slots, Visibility::Inherited);
 }
 
 fn get_target(
@@ -157,20 +136,6 @@ fn handle_active<TSkill: Execution>(
 	skill.run(agent, agent_transform, &spawner, &target);
 }
 
-fn handle_done<
-	TAnimationKey: Copy + Clone + Send + Sync + PartialEq + 'static,
-	TSkill: Execution + GetAnimation<TAnimationKey> + GetSlots + Component,
->(
-	agent: &mut EntityCommands,
-	skill: &mut TSkill,
-	slots: &Slots,
-) {
-	agent.try_insert(Idle);
-	agent.remove::<(TSkill, OverrideFace, Animate<TAnimationKey>)>();
-	skill.stop(agent);
-	set_slots_visibility(agent.commands(), skill, slots, Visibility::Hidden);
-}
-
 fn get_spawner(slots: &Slots, transforms: &Query<&GlobalTransform>) -> Option<Spawner> {
 	let spawner_slot = slots.0.get(&SlotKey::SkillSpawn)?;
 	let spawner_transform = transforms.get(spawner_slot.entity).ok()?;
@@ -180,12 +145,11 @@ fn get_spawner(slots: &Slots, transforms: &Query<&GlobalTransform>) -> Option<Sp
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Slot;
+	use crate::components::{Slot, SlotVisibility};
 	use behaviors::components::{Face, OverrideFace};
 	use bevy::{
 		math::Ray3d,
 		prelude::{App, Transform, Update, Vec3},
-		render::view::Visibility,
 		time::{Real, Time},
 	};
 	use common::{
@@ -426,14 +390,11 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let slots = agent.get::<Slots>().unwrap();
-		let slot = slots
-			.0
-			.get(&SlotKey::Hand(Side::Main))
-			.map(|s| app.world.entity(s.entity))
-			.unwrap();
 
-		assert_eq!(Some(&Visibility::Inherited), slot.get::<Visibility>());
+		assert_eq!(
+			Some(&SlotVisibility::Inherited(vec![SlotKey::Hand(Side::Main)])),
+			agent.get::<SlotVisibility>()
+		);
 	}
 
 	#[test]
@@ -455,21 +416,13 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let slots = agent.get::<Slots>().unwrap();
-		let main = slots
-			.0
-			.get(&SlotKey::Hand(Side::Main))
-			.map(|s| app.world.entity(s.entity))
-			.unwrap();
-		let off = slots
-			.0
-			.get(&SlotKey::Hand(Side::Off))
-			.map(|s| app.world.entity(s.entity))
-			.unwrap();
 
 		assert_eq!(
-			(Some(&Visibility::Inherited), Some(&Visibility::Inherited)),
-			(main.get::<Visibility>(), off.get::<Visibility>())
+			Some(&SlotVisibility::Inherited(vec![
+				SlotKey::Hand(Side::Main),
+				SlotKey::Hand(Side::Off)
+			])),
+			agent.get::<SlotVisibility>()
 		);
 	}
 
@@ -495,14 +448,11 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let slots = agent.get::<Slots>().unwrap();
-		let slot = slots
-			.0
-			.get(&SlotKey::Hand(Side::Off))
-			.map(|s| app.world.entity(s.entity))
-			.unwrap();
 
-		assert_eq!(Some(&Visibility::Hidden), slot.get::<Visibility>());
+		assert_eq!(
+			Some(&SlotVisibility::Hidden(vec![SlotKey::Hand(Side::Off)])),
+			agent.get::<SlotVisibility>()
+		);
 	}
 
 	#[test]
@@ -526,21 +476,13 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let slots = agent.get::<Slots>().unwrap();
-		let main = slots
-			.0
-			.get(&SlotKey::Hand(Side::Main))
-			.map(|s| app.world.entity(s.entity))
-			.unwrap();
-		let off = slots
-			.0
-			.get(&SlotKey::Hand(Side::Off))
-			.map(|s| app.world.entity(s.entity))
-			.unwrap();
 
 		assert_eq!(
-			(Some(&Visibility::Hidden), Some(&Visibility::Hidden)),
-			(main.get::<Visibility>(), off.get::<Visibility>())
+			Some(&SlotVisibility::Hidden(vec![
+				SlotKey::Hand(Side::Main),
+				SlotKey::Hand(Side::Off)
+			])),
+			agent.get::<SlotVisibility>()
 		);
 	}
 
