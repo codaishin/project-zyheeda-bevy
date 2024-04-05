@@ -60,7 +60,7 @@ impl Display for Item {
 pub type Inventory = Collection<Option<Item>>;
 pub type Equipment = Collection<(SlotKey, Option<Item>)>;
 
-#[derive(Component)]
+#[derive(Component, PartialEq, Debug)]
 pub struct Queue<TAnimationKey = PlayerSkills<SideUnset>>(
 	pub VecDeque<Skill<TAnimationKey, Queued>>,
 );

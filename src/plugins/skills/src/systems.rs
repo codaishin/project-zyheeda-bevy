@@ -6,6 +6,7 @@ pub(crate) mod get_input;
 pub(crate) mod mouse_context;
 pub(crate) mod schedule_slots;
 pub(crate) mod set_slot_visibility;
+pub(crate) mod skill_controller;
 pub(crate) mod skill_execution;
 pub(crate) mod skill_state_component_dispatch;
 pub(crate) mod slots;
