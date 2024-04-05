@@ -1,14 +1,11 @@
 use super::ComboNext;
 use crate::{
-	components::{SideUnset, SlotKey},
-	skill::{Active, PlayerSkills, Skill, SkillComboNext, SkillComboTree},
+	components::SlotKey,
+	skill::{Active, Skill, SkillComboNext, SkillComboTree},
 };
 
-impl ComboNext<PlayerSkills<SideUnset>> for SkillComboNext {
-	fn to_vec(
-		&self,
-		skill: &Skill<PlayerSkills<SideUnset>, Active>,
-	) -> Vec<(SlotKey, SkillComboTree<Self>)> {
+impl ComboNext for SkillComboNext {
+	fn to_vec(&self, skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
 		match &self {
 			SkillComboNext::Tree(tree) => tree.clone().into_iter().collect(),
 			SkillComboNext::Alternate {

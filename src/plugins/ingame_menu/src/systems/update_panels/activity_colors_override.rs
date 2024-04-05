@@ -20,13 +20,13 @@ use bevy::{
 };
 use common::components::Player;
 use skills::{
-	components::{Queue, SideUnset, SlotKey, Track},
+	components::{Queue, SlotKey, Track},
 	resources::SlotMap,
-	skill::{Active, PlayerSkills, Skill},
+	skill::{Active, Skill},
 	states::MouseContext,
 };
 
-type ActiveSkill<'a> = Option<&'a Track<Skill<PlayerSkills<SideUnset>, Active>>>;
+type ActiveSkill<'a> = Option<&'a Track<Skill<Active>>>;
 
 pub fn panel_activity_colors_override<
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + Get<(), SlotKey> + Component,

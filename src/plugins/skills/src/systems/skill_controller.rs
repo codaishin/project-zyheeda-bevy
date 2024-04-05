@@ -1,7 +1,7 @@
 use super::get_inputs::Input;
 use crate::{
-	components::{Queue, SideUnset, SlotKey, Slots, Track},
-	skill::{Active, PlayerSkills, Queued, Skill},
+	components::{Queue, SlotKey, Slots, Track},
+	skill::{Active, Queued, Skill},
 };
 use bevy::{
 	ecs::system::{In, Local, Query, Res},
@@ -13,7 +13,7 @@ type TrackTime = HashMap<SlotKey, Duration>;
 type Components<'a> = (
 	&'a Slots,
 	&'a mut Queue,
-	Option<&'a mut Track<Skill<PlayerSkills<SideUnset>, Active>>>,
+	Option<&'a mut Track<Skill<Active>>>,
 );
 
 pub(crate) fn skill_controller<TTime: Default + Send + Sync + 'static>(
@@ -67,7 +67,7 @@ fn update_skill_aim_times<TTime: Default + Send + Sync + 'static>(
 	times: &Local<HashMap<SlotKey, Duration>>,
 	time: &Res<Time<TTime>>,
 	queue: &mut Queue,
-	mut active_skill: Option<&mut Track<Skill<PlayerSkills<SideUnset>, Active>>>,
+	mut active_skill: Option<&mut Track<Skill<Active>>>,
 ) {
 	let get_key_time = |key| Some((key, times.get(key)?));
 
@@ -81,7 +81,7 @@ fn update_skill_aim_time<TTime: Default + Send + Sync + 'static>(
 	time: &Res<Time<TTime>>,
 	duration: &Duration,
 	queue: &mut Queue,
-	active_skill: &mut Option<&mut Track<Skill<PlayerSkills<SideUnset>, Active>>>,
+	active_skill: &mut Option<&mut Track<Skill<Active>>>,
 ) {
 	if update_aim_time_in_queue(key, time, duration, queue) {
 		return;
@@ -106,7 +106,7 @@ fn update_aim_time_on_active<TTime: Default + Send + Sync + 'static>(
 	key: &SlotKey,
 	time: &Res<Time<TTime>>,
 	duration: &Duration,
-	active_skill: &mut Option<&mut Track<Skill<PlayerSkills<SideUnset>, Active>>>,
+	active_skill: &mut Option<&mut Track<Skill<Active>>>,
 ) {
 	let Some(skill) = active_skill.as_mut() else {
 		return;
@@ -117,10 +117,7 @@ fn update_aim_time_on_active<TTime: Default + Send + Sync + 'static>(
 	skill.value.cast.aim = time.elapsed() - *duration;
 }
 
-fn get_queued_skill<'a>(
-	key: &SlotKey,
-	queue: &'a mut Queue,
-) -> Option<&'a mut Skill<PlayerSkills<SideUnset>, Queued>> {
+fn get_queued_skill<'a>(key: &SlotKey, queue: &'a mut Queue) -> Option<&'a mut Skill<Queued>> {
 	queue.0.iter_mut().rev().find(|skill| &skill.data.0 == key)
 }
 
@@ -581,7 +578,7 @@ mod tests {
 				}
 				.with(Active(SlotKey::Hand(Side::Main))),
 			)),
-			agent.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
+			agent.get::<Track<Skill<Active>>>()
 		);
 	}
 
@@ -628,7 +625,7 @@ mod tests {
 			Some(&Track::new(
 				Skill::default().with(Active(SlotKey::Hand(Side::Off))),
 			)),
-			agent.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
+			agent.get::<Track<Skill<Active>>>()
 		);
 	}
 
@@ -685,7 +682,7 @@ mod tests {
 				}
 				.with(Active(SlotKey::Hand(Side::Main))),
 			)),
-			agent.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
+			agent.get::<Track<Skill<Active>>>()
 		);
 	}
 
@@ -742,10 +739,7 @@ mod tests {
 					Skill::default().with(Active(SlotKey::Hand(Side::Main))),
 				))
 			),
-			(
-				agent.get::<Queue>(),
-				agent.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
-			)
+			(agent.get::<Queue>(), agent.get::<Track<Skill<Active>>>())
 		);
 	}
 }

@@ -1,11 +1,11 @@
 use super::GetAnimation;
 use crate::{
-	components::{SideUnset, SlotKey, Track},
+	components::{SlotKey, Track},
 	skill::{Active, PlayerSkills, Skill},
 };
 use common::components::{Animate, Side};
 
-impl GetAnimation<PlayerSkills<Side>> for Track<Skill<PlayerSkills<SideUnset>, Active>> {
+impl GetAnimation<PlayerSkills<Side>> for Track<Skill<Active>> {
 	fn animate(&self) -> Animate<PlayerSkills<Side>> {
 		let Some(animate) = self.value.animate else {
 			return Animate::None;
@@ -25,7 +25,7 @@ impl GetAnimation<PlayerSkills<Side>> for Track<Skill<PlayerSkills<SideUnset>, A
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Handed;
+	use crate::components::{Handed, SideUnset};
 	use bevy::prelude::default;
 
 	#[test]
@@ -35,14 +35,14 @@ mod tests {
 			PlayerSkills::Shoot(Handed::Dual(SideUnset)),
 		];
 		let main_tracks = animates.map(|animate| {
-			Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
+			Track::new(Skill {
 				data: Active(SlotKey::Hand(Side::Main)),
 				animate: Some(animate),
 				..default()
 			})
 		});
 		let off_tracks = animates.map(|animate| {
-			Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
+			Track::new(Skill {
 				data: Active(SlotKey::Hand(Side::Off)),
 				animate: Some(animate),
 				..default()
@@ -70,12 +70,12 @@ mod tests {
 	#[test]
 	fn get_sword_strike_animations() {
 		let animate = PlayerSkills::SwordStrike(SideUnset);
-		let main_track = Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
+		let main_track = Track::new(Skill {
 			data: Active(SlotKey::Hand(Side::Main)),
 			animate: Some(animate),
 			..default()
 		});
-		let off_track = Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
+		let off_track = Track::new(Skill {
 			data: Active(SlotKey::Hand(Side::Off)),
 			animate: Some(animate),
 			..default()

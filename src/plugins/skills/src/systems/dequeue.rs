@@ -1,24 +1,26 @@
-use crate::components::{Queue, Track};
-use bevy::prelude::{Commands, Entity, Query, With};
-use common::components::Idle;
+use crate::{
+	components::{Queue, Track},
+	skill::{Active, Skill},
+};
+use bevy::{
+	ecs::query::Without,
+	prelude::{Commands, Entity, Query},
+};
 
-type Components<'a, TAnimationTemplate> = (Entity, &'a mut Queue<TAnimationTemplate>);
-
-pub(crate) fn dequeue<TAnimationTemplate: Clone + Copy + Sync + Send + 'static>(
+pub(crate) fn dequeue(
 	mut commands: Commands,
-	mut agents: Query<Components<TAnimationTemplate>, With<Idle>>,
+	mut agents: Query<(Entity, &mut Queue), Without<Track<Skill<Active>>>>,
 ) {
 	for (agent, mut queue) in agents.iter_mut() {
-		let Some(mut agent) = commands.get_entity(agent) else {
-			continue;
-		};
-
 		let Some(skill) = queue.0.pop_front() else {
 			continue;
 		};
 
+		let Some(mut agent) = commands.get_entity(agent) else {
+			continue;
+		};
+
 		agent.try_insert(Track::new(skill.to_active()));
-		agent.remove::<Idle>();
 	}
 }
 
@@ -30,15 +32,13 @@ mod tests {
 		skill::{Active, Cast, Queued, Skill},
 	};
 	use bevy::prelude::{default, App, Update};
+	use common::components::Side;
 	use std::time::Duration;
-
-	#[derive(Clone, Copy, Default)]
-	struct _Template;
 
 	#[test]
 	fn pop_first_behavior_to_agent() {
 		let mut app = App::new();
-		let queue = Queue::<_Template>(
+		let queue = Queue(
 			[(Skill {
 				cast: Cast {
 					pre: Duration::from_millis(42),
@@ -49,44 +49,49 @@ mod tests {
 			})]
 			.into(),
 		);
-		let agent = app.world.spawn((queue, Idle)).id();
+		let agent = app.world.spawn(queue).id();
 
-		app.add_systems(Update, dequeue::<_Template>);
+		app.add_systems(Update, dequeue);
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let queue = agent.get::<Queue<_Template>>().unwrap();
+		let queue = agent.get::<Queue>().unwrap();
 
 		assert_eq!(
-			(Some(Active(SlotKey::SkillSpawn)), false, 0),
+			(Some(Active(SlotKey::SkillSpawn)), 0),
 			(
 				agent
-					.get::<Track<Skill<_Template, Active>>>()
+					.get::<Track<Skill<Active>>>()
 					.map(|t| t.value.data.clone()),
-				agent.contains::<Idle>(),
 				queue.0.len()
 			)
 		);
 	}
 
 	#[test]
-	fn do_not_pop_when_not_idle() {
+	fn do_not_pop_when_track_present() {
 		let mut app = App::new();
-		let queue = Queue::<_Template>([Skill::default()].into());
-		let agent = app.world.spawn(queue).id();
+		let queue = Queue([Skill::default()].into());
+		let agent = app
+			.world
+			.spawn((
+				queue,
+				Track::new(Skill {
+					data: Active(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+			))
+			.id();
 
-		app.add_systems(Update, dequeue::<_Template>);
+		app.add_systems(Update, dequeue);
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let queue = agent.get::<Queue<_Template>>().unwrap();
+		let queue = agent.get::<Queue>().unwrap();
 
 		assert_eq!(
 			(false, 1),
-			(
-				agent.contains::<Track<Skill<_Template, Queued>>>(),
-				queue.0.len()
-			)
+			(agent.contains::<Track<Skill<Queued>>>(), queue.0.len())
 		);
 	}
 }

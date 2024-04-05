@@ -6,7 +6,7 @@ use crate::{
 use common::{components::Side, traits::state_duration::StateDuration};
 use std::time::Duration;
 
-impl<TAnimationKey, TData> StateDuration<SkillState> for Track<Skill<TAnimationKey, TData>> {
+impl<TData> StateDuration<SkillState> for Track<Skill<TData>> {
 	fn elapsed_mut(&mut self) -> &mut Duration {
 		&mut self.elapsed
 	}
@@ -21,7 +21,7 @@ impl<TAnimationKey, TData> StateDuration<SkillState> for Track<Skill<TAnimationK
 	}
 }
 
-impl<TAnimationKey> Execution for Track<Skill<TAnimationKey, Active>> {
+impl Execution for Track<Skill<Active>> {
 	fn get_start(&self) -> Option<StartBehaviorFn> {
 		self.value.execution.run_fn
 	}
@@ -31,7 +31,7 @@ impl<TAnimationKey> Execution for Track<Skill<TAnimationKey, Active>> {
 	}
 }
 
-impl<TAnimationKey> GetSlots for Track<Skill<TAnimationKey, Active>> {
+impl GetSlots for Track<Skill<Active>> {
 	fn slots(&self) -> Vec<SlotKey> {
 		match (self.value.data.0, self.value.dual_wield) {
 			(SlotKey::Hand(Side::Main), true) => {
@@ -53,7 +53,7 @@ mod tests_state_duration {
 
 	#[test]
 	fn get_phasing_times() {
-		let track = Track::new(Skill::<(), ()> {
+		let track = Track::new(Skill::<()> {
 			data: (),
 			cast: Cast {
 				aim: Duration::from_millis(42),
@@ -83,7 +83,7 @@ mod tests_state_duration {
 
 	#[test]
 	fn get_duration() {
-		let mut track = Track::new(Skill::<(), ()> {
+		let mut track = Track::new(Skill::<()> {
 			data: (),
 			..default()
 		});
@@ -98,8 +98,7 @@ mod tests_state_duration {
 mod tests_execution {
 	use super::*;
 	use crate::{
-		components::SideUnset,
-		skill::{PlayerSkills, SkillExecution, Spawner, Target},
+		skill::{SkillExecution, Spawner, Target},
 		traits::test_tools::{run_system, stop_system},
 	};
 	use bevy::{
@@ -167,7 +166,7 @@ mod tests_execution {
 		let mut app = App::new();
 		let agent = app
 			.world
-			.spawn(Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
+			.spawn(Track::new(Skill::<Active> {
 				execution: SkillExecution {
 					run_fn: Some(Mock_Tools::run),
 					..default()
@@ -187,12 +186,7 @@ mod tests_execution {
 
 		app.add_systems(
 			Update,
-			run_system::<Track<Skill<PlayerSkills<SideUnset>, Active>>>(
-				agent,
-				transform,
-				spawner,
-				test_target(),
-			),
+			run_system::<Track<Skill<Active>>>(agent, transform, spawner, test_target()),
 		);
 		app.update();
 	}
@@ -204,7 +198,7 @@ mod tests_execution {
 		let mut app = App::new();
 		let agent = app
 			.world
-			.spawn(Track::new(Skill::<PlayerSkills<SideUnset>, Active> {
+			.spawn(Track::new(Skill::<Active> {
 				data: Active { ..default() },
 				execution: SkillExecution {
 					stop_fn: Some(Mock_Tools::stop),
@@ -219,10 +213,7 @@ mod tests_execution {
 			.withf(move |a| a.id() == agent)
 			.return_const(());
 
-		app.add_systems(
-			Update,
-			stop_system::<Track<Skill<PlayerSkills<SideUnset>, Active>>>(agent),
-		);
+		app.add_systems(Update, stop_system::<Track<Skill<Active>>>(agent));
 		app.update();
 	}
 }
@@ -230,13 +221,12 @@ mod tests_execution {
 #[cfg(test)]
 mod test_get_slot {
 	use super::*;
-	use crate::skill::PlayerSkills;
 	use bevy::utils::default;
 	use common::components::Side;
 
 	#[test]
 	fn get_main() {
-		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
+		let track = Track::new(Skill {
 			data: Active(SlotKey::Hand(Side::Off)),
 			..default()
 		});
@@ -246,7 +236,7 @@ mod test_get_slot {
 
 	#[test]
 	fn get_off() {
-		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
+		let track = Track::new(Skill {
 			data: Active(SlotKey::Hand(Side::Main)),
 			..default()
 		});
@@ -256,7 +246,7 @@ mod test_get_slot {
 
 	#[test]
 	fn get_dual_main() {
-		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
+		let track = Track::new(Skill {
 			data: Active(SlotKey::Hand(Side::Main)),
 			dual_wield: true,
 			..default()
@@ -270,7 +260,7 @@ mod test_get_slot {
 
 	#[test]
 	fn get_dual_off() {
-		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
+		let track = Track::new(Skill {
 			data: Active(SlotKey::Hand(Side::Off)),
 			dual_wield: true,
 			..default()
@@ -284,7 +274,7 @@ mod test_get_slot {
 
 	#[test]
 	fn get_skill_spawn() {
-		let track = Track::new(Skill::<PlayerSkills<Side>, Active> {
+		let track = Track::new(Skill {
 			data: Active(SlotKey::SkillSpawn),
 			..default()
 		});
