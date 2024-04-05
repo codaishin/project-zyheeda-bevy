@@ -13,12 +13,11 @@ use bevy::{
 	time::Time,
 };
 use common::{
-	components::{Animate, Idle},
+	components::Animate,
 	traits::state_duration::{StateMeta, StateUpdate},
 };
-use std::{collections::HashSet, time::Duration};
 
-type Skills<'a, TSkill> = (Entity, &'a mut TSkill, Option<&'a Idle>);
+type Skills<'a, TSkill> = (Entity, &'a mut TSkill);
 
 pub(crate) fn skill_state_component_dispatch<
 	TAnimationKey: Copy + Clone + PartialEq + Send + Sync + 'static,
@@ -30,13 +29,13 @@ pub(crate) fn skill_state_component_dispatch<
 	mut agents: Query<Skills<TSkillTrack>>,
 ) {
 	let delta = time.delta();
-	for (entity, mut skill, idle) in &mut agents {
+	for (entity, mut skill) in &mut agents {
 		let Some(agent) = &mut commands.get_entity(entity) else {
 			continue;
 		};
 
 		let skill: &mut TSkillTrack = &mut skill;
-		let states = get_states(skill, &delta, idle);
+		let states = skill.update_state(delta);
 
 		if states.contains(&StateMeta::First) {
 			agent.try_insert(OverrideFace(Face::Cursor));
@@ -50,7 +49,6 @@ pub(crate) fn skill_state_component_dispatch<
 		}
 
 		if states.contains(&StateMeta::Leaving(SkillState::AfterCast)) {
-			agent.try_insert(Idle);
 			agent.try_insert(SlotVisibility::Hidden(skill.slots()));
 			agent.remove::<(TSkillTrack, OverrideFace, Animate<TAnimationKey>)>();
 			insert_skill_execution_stop(agent, skill);
@@ -58,17 +56,6 @@ pub(crate) fn skill_state_component_dispatch<
 			agent.try_insert(skill.animate());
 		}
 	}
-}
-
-fn get_states<TSkill: StateUpdate<SkillState>>(
-	skill: &mut TSkill,
-	delta: &Duration,
-	wait_next: Option<&Idle>,
-) -> HashSet<StateMeta<SkillState>> {
-	if wait_next.is_some() {
-		return [StateMeta::Leaving(SkillState::AfterCast)].into();
-	}
-	skill.update_state(*delta)
 }
 
 fn insert_skill_execution_start<TSkill: Execution>(agent: &mut EntityCommands, skill: &mut TSkill) {
@@ -104,7 +91,7 @@ mod tests {
 		test_tools::utils::{SingleThreadedApp, TickTime},
 	};
 	use mockall::{mock, predicate::eq};
-	use std::time::Duration;
+	use std::{collections::HashSet, time::Duration};
 
 	#[derive(PartialEq)]
 	enum BehaviorOption {
@@ -454,87 +441,6 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert!(agent.contains::<_Skill>());
-	}
-
-	#[test]
-	fn add_idle() {
-		let (mut app, agent) = setup();
-		let mut skill = _Skill::without_default_setup_for([]);
-
-		skill
-			.mock
-			.expect_update_state()
-			.return_const(HashSet::<StateMeta<SkillState>>::from([
-				StateMeta::Leaving(SkillState::AfterCast),
-			]));
-
-		app.world
-			.entity_mut(agent)
-			.insert((skill, Transform::default()));
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert!(agent.contains::<Idle>());
-	}
-
-	#[test]
-	fn do_not_add_idle_when_not_done() {
-		let (mut app, agent) = setup();
-		let mut skill = _Skill::without_default_setup_for([]);
-
-		skill
-			.mock
-			.expect_update_state()
-			.return_const(HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
-				SkillState::AfterCast,
-			)]));
-
-		app.world
-			.entity_mut(agent)
-			.insert((skill, Transform::default()));
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert!(!agent.contains::<Idle>());
-	}
-
-	#[test]
-	fn remove_all_related_components_when_idle_present() {
-		let (mut app, agent) = setup();
-		let mut skill = _Skill::without_default_setup_for([MockOption::Animate]);
-
-		skill
-			.mock
-			.expect_update_state()
-			.return_const(HashSet::<StateMeta<SkillState>>::default());
-		skill
-			.mock
-			.expect_animate()
-			.never()
-			.return_const(Animate::Repeat(_AnimationKey::A));
-
-		app.world.entity_mut(agent).insert((
-			skill,
-			Transform::default(),
-			Animate::Repeat(_AnimationKey::A),
-			Idle,
-		));
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			(false, false),
-			(
-				agent.contains::<_Skill>(),
-				agent.contains::<Animate<_AnimationKey>>()
-			)
-		);
 	}
 
 	#[test]
