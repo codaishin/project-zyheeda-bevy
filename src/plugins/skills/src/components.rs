@@ -60,7 +60,7 @@ impl Display for Item {
 pub type Inventory = Collection<Option<Item>>;
 pub type Equipment = Collection<(SlotKey, Option<Item>)>;
 
-#[derive(Component)]
+#[derive(Component, PartialEq, Debug)]
 pub struct Queue<TAnimationKey = PlayerSkills<SideUnset>>(
 	pub VecDeque<Skill<TAnimationKey, Queued>>,
 );
@@ -119,14 +119,6 @@ pub enum ItemType {
 	Pistol,
 	Sword,
 	Legs,
-}
-
-#[derive(Component, PartialEq, Debug)]
-pub(crate) enum Schedule {
-	Enqueue((SlotKey, Skill)),
-	Override((SlotKey, Skill)),
-	StopAimAfter(Duration),
-	UpdateTarget,
 }
 
 #[derive(Component, Debug, PartialEq)]

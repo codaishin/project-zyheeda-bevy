@@ -8,7 +8,7 @@ mod traits;
 
 use behaviors::components::{Plasma, Projectile};
 use bevy::{
-	app::{First, Plugin, PreStartup, PreUpdate, Update},
+	app::{Plugin, PreStartup, PreUpdate, Update},
 	asset::AssetServer,
 	ecs::{
 		entity::Entity,
@@ -24,7 +24,7 @@ use bundles::Loadout;
 use common::{
 	components::{Player, Side, Swap},
 	errors::Error,
-	resources::{Models, MouseHover},
+	resources::Models,
 	systems::log::log_many,
 };
 use components::{
@@ -48,15 +48,15 @@ use std::{
 use systems::{
 	chain_combo_skills::chain_combo_skills,
 	dequeue::dequeue,
-	enqueue::enqueue,
 	equip::equip_item,
+	get_inputs::get_inputs,
 	mouse_context::{
 		advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
 		release::release_triggered_mouse_context,
 		trigger_primed::trigger_primed_mouse_context,
 	},
-	schedule_slots::schedule_slots,
 	set_slot_visibility::set_slot_visibility,
+	skill_controller::skill_controller,
 	skill_execution::skill_execution,
 	skill_state_component_dispatch::skill_state_component_dispatch,
 	slots::add_item_slots,
@@ -71,19 +71,12 @@ impl Plugin for SkillsPlugin {
 			.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
 			.add_systems(PreStartup, load_models)
 			.add_systems(PreStartup, setup_input)
-			.add_systems(
-				First,
-				(
-					schedule_slots::<KeyCode, Player, ButtonInput<KeyCode>, ButtonInput<KeyCode>>,
-					schedule_slots::<KeyCode, Player, State<MouseContext>, ButtonInput<KeyCode>>,
-				)
-					.run_if(in_state(GameRunning::On)),
-			)
 			.add_systems(PreUpdate, add_item_slots)
 			.add_systems(
 				PreUpdate,
 				(
-					enqueue::<MouseHover>,
+					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
+						.pipe(skill_controller::<Virtual>),
 					dequeue::<PlayerSkills<SideUnset>>, // sets skill activity marker, so it MUST run before skill execution systems
 				)
 					.chain()
