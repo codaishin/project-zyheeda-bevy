@@ -1,4 +1,4 @@
-use crate::skill::{PlayerSkills, Queued, Skill, SkillComboTree, StartBehaviorFn, StopBehaviorFn};
+use crate::skill::{Queued, Skill, SkillComboTree, StartBehaviorFn, StopBehaviorFn};
 use bevy::ecs::{component::Component, entity::Entity};
 use common::components::{Collection, Side};
 use std::{
@@ -60,16 +60,8 @@ impl Display for Item {
 pub type Inventory = Collection<Option<Item>>;
 pub type Equipment = Collection<(SlotKey, Option<Item>)>;
 
-#[derive(Component, PartialEq, Debug)]
-pub struct Queue<TAnimationKey = PlayerSkills<SideUnset>>(
-	pub VecDeque<Skill<TAnimationKey, Queued>>,
-);
-
-impl Default for Queue {
-	fn default() -> Self {
-		Self(Default::default())
-	}
-}
+#[derive(Component, PartialEq, Debug, Default)]
+pub struct Queue(pub VecDeque<Skill<Queued>>);
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct InventoryKey(pub usize);

@@ -2,12 +2,7 @@ use crate::components::{Queue, Track};
 use bevy::prelude::{Commands, Entity, Query, With};
 use common::components::Idle;
 
-type Components<'a, TAnimationTemplate> = (Entity, &'a mut Queue<TAnimationTemplate>);
-
-pub(crate) fn dequeue<TAnimationTemplate: Clone + Copy + Sync + Send + 'static>(
-	mut commands: Commands,
-	mut agents: Query<Components<TAnimationTemplate>, With<Idle>>,
-) {
+pub(crate) fn dequeue(mut commands: Commands, mut agents: Query<(Entity, &mut Queue), With<Idle>>) {
 	for (agent, mut queue) in agents.iter_mut() {
 		let Some(mut agent) = commands.get_entity(agent) else {
 			continue;
@@ -32,13 +27,10 @@ mod tests {
 	use bevy::prelude::{default, App, Update};
 	use std::time::Duration;
 
-	#[derive(Clone, Copy, Default)]
-	struct _Template;
-
 	#[test]
 	fn pop_first_behavior_to_agent() {
 		let mut app = App::new();
-		let queue = Queue::<_Template>(
+		let queue = Queue(
 			[(Skill {
 				cast: Cast {
 					pre: Duration::from_millis(42),
@@ -51,17 +43,17 @@ mod tests {
 		);
 		let agent = app.world.spawn((queue, Idle)).id();
 
-		app.add_systems(Update, dequeue::<_Template>);
+		app.add_systems(Update, dequeue);
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let queue = agent.get::<Queue<_Template>>().unwrap();
+		let queue = agent.get::<Queue>().unwrap();
 
 		assert_eq!(
 			(Some(Active(SlotKey::SkillSpawn)), false, 0),
 			(
 				agent
-					.get::<Track<Skill<_Template, Active>>>()
+					.get::<Track<Skill<Active>>>()
 					.map(|t| t.value.data.clone()),
 				agent.contains::<Idle>(),
 				queue.0.len()
@@ -72,21 +64,18 @@ mod tests {
 	#[test]
 	fn do_not_pop_when_not_idle() {
 		let mut app = App::new();
-		let queue = Queue::<_Template>([Skill::default()].into());
+		let queue = Queue([Skill::default()].into());
 		let agent = app.world.spawn(queue).id();
 
-		app.add_systems(Update, dequeue::<_Template>);
+		app.add_systems(Update, dequeue);
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let queue = agent.get::<Queue<_Template>>().unwrap();
+		let queue = agent.get::<Queue>().unwrap();
 
 		assert_eq!(
 			(false, 1),
-			(
-				agent.contains::<Track<Skill<_Template, Queued>>>(),
-				queue.0.len()
-			)
+			(agent.contains::<Track<Skill<Queued>>>(), queue.0.len())
 		);
 	}
 }

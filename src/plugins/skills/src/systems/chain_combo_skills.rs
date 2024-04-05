@@ -1,6 +1,6 @@
 use crate::{
-	components::{ComboTreeRunning, ComboTreeTemplate, Item, SideUnset, SlotKey, Slots, Track},
-	skill::{Active, PlayerSkills, Skill, SkillComboTree},
+	components::{ComboTreeRunning, ComboTreeTemplate, Item, SlotKey, Slots, Track},
+	skill::{Active, Skill, SkillComboTree},
 	traits::ComboNext,
 };
 use bevy::{
@@ -16,20 +16,15 @@ use std::collections::HashMap;
 
 type ComboComponents<'a, TNext> = (
 	Entity,
-	&'a Track<Skill<PlayerSkills<SideUnset>, Active>>,
+	&'a Track<Skill<Active>>,
 	&'a ComboTreeTemplate<TNext>,
 	Option<&'a ComboTreeRunning<TNext>>,
 	&'a mut Slots,
 );
-type JustStarted = (
-	Added<Track<Skill<PlayerSkills<SideUnset>, Active>>>,
-	Without<Idle>,
-);
+type JustStarted = (Added<Track<Skill<Active>>>, Without<Idle>);
 type Combos<TNext> = Vec<(SlotKey, SkillComboTree<TNext>)>;
 
-pub(crate) fn chain_combo_skills<
-	TNext: Clone + ComboNext<PlayerSkills<SideUnset>> + Send + Sync + 'static,
->(
+pub(crate) fn chain_combo_skills<TNext: Clone + ComboNext + Send + Sync + 'static>(
 	mut commands: Commands,
 	mut newly_idle: Query<(Entity, &mut Slots), Added<Idle>>,
 	mut newly_active: Query<ComboComponents<TNext>, JustStarted>,
@@ -54,10 +49,10 @@ pub(crate) fn chain_combo_skills<
 	}
 }
 
-fn update_combos<TNext: Clone + ComboNext<PlayerSkills<SideUnset>> + Send + Sync + 'static>(
+fn update_combos<TNext: Clone + ComboNext + Send + Sync + 'static>(
 	slots: &mut Mut<Slots>,
 	agent: &mut EntityCommands,
-	skill: &Track<Skill<PlayerSkills<SideUnset>, Active>>,
+	skill: &Track<Skill<Active>>,
 	combo_tree_t: &ComboTreeTemplate<TNext>,
 	combo_tree_r: Option<&ComboTreeRunning<TNext>>,
 ) {
@@ -78,8 +73,8 @@ fn update_combos<TNext: Clone + ComboNext<PlayerSkills<SideUnset>> + Send + Sync
 	agent.try_insert(ComboTreeRunning(updated_successfully));
 }
 
-fn get_combos<'a, TNext: ComboNext<PlayerSkills<SideUnset>>>(
-	skill: &'a Skill<PlayerSkills<SideUnset>, Active>,
+fn get_combos<'a, TNext: ComboNext>(
+	skill: &'a Skill<Active>,
 	combo_tree_t: &'a ComboTreeTemplate<TNext>,
 	combo_tree_r: Option<&'a ComboTreeRunning<TNext>>,
 ) -> Option<Combos<TNext>> {
@@ -171,8 +166,8 @@ mod tests {
 		),
 	];
 
-	fn setup<TNext: Clone + ComboNext<PlayerSkills<SideUnset>> + Sync + Send + 'static>(
-		running_skill: &Skill<PlayerSkills<SideUnset>, Active>,
+	fn setup<TNext: Clone + ComboNext + Sync + Send + 'static>(
+		running_skill: &Skill<Active>,
 		combo_tree: ComboTreeTemplate<TNext>,
 		item_types: &[(SlotKey, HashSet<ItemType>)],
 	) -> (App, Entity) {
@@ -235,11 +230,11 @@ mod tests {
 	}
 
 	trait ActiveOn {
-		fn active_on(&self, slot_key: SlotKey) -> Skill<PlayerSkills<SideUnset>, Active>;
+		fn active_on(&self, slot_key: SlotKey) -> Skill<Active>;
 	}
 
 	impl ActiveOn for Skill {
-		fn active_on(&self, slot_key: SlotKey) -> Skill<PlayerSkills<SideUnset>, Active> {
+		fn active_on(&self, slot_key: SlotKey) -> Skill<Active> {
 			self.clone().with(Active(slot_key))
 		}
 	}
@@ -249,8 +244,8 @@ mod tests {
 
 	mock! {
 		_Next{}
-		impl ComboNext<PlayerSkills<SideUnset>> for _Next {
-			fn to_vec(&self, _skill: &Skill<PlayerSkills<SideUnset>,Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
+		impl ComboNext for _Next {
+			fn to_vec(&self, _skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
 				self.0.clone()
 			}
 		}
@@ -261,11 +256,8 @@ mod tests {
 		}
 	}
 
-	impl ComboNext<PlayerSkills<SideUnset>> for _Next {
-		fn to_vec(
-			&self,
-			_skill: &Skill<PlayerSkills<SideUnset>, Active>,
-		) -> Vec<(SlotKey, SkillComboTree<Self>)> {
+	impl ComboNext for _Next {
+		fn to_vec(&self, _skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
 			self.0.clone()
 		}
 	}
@@ -627,9 +619,7 @@ mod tests {
 			slot.combo_skill = Some(skill_usable_with(&[]))
 		}
 		app.world.entity_mut(id).insert(Idle);
-		app.world
-			.entity_mut(id)
-			.remove::<Track<Skill<PlayerSkills<SideUnset>, Active>>>();
+		app.world.entity_mut(id).remove::<Track<Skill<Active>>>();
 		app.update();
 
 		let agent = app.world.entity(id);

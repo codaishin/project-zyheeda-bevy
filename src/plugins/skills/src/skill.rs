@@ -12,18 +12,18 @@ use std::{
 };
 
 #[derive(PartialEq, Debug, Clone)]
-pub struct Skill<TAnimationKey = PlayerSkills<SideUnset>, TData = ()> {
+pub struct Skill<TData = ()> {
 	pub name: &'static str,
 	pub data: TData,
 	pub cast: Cast,
 	pub soft_override: bool,
-	pub animate: Option<TAnimationKey>,
+	pub animate: Option<PlayerSkills<SideUnset>>,
 	pub execution: SkillExecution,
 	pub is_usable_with: HashSet<ItemType>,
 	pub dual_wield: bool,
 }
 
-impl<TAnimationKey, TData: Default> Default for Skill<TAnimationKey, TData> {
+impl<TData: Default> Default for Skill<TData> {
 	fn default() -> Self {
 		Self {
 			name: Default::default(),
@@ -63,7 +63,7 @@ pub enum PlayerSkills<TSide> {
 	SwordStrike(TSide),
 }
 
-impl<TAnimationKey, TData> Display for Skill<TAnimationKey, TData> {
+impl<TData> Display for Skill<TData> {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result {
 		match self.name {
 			"" => write!(f, "Skill(<no name>)"),
@@ -97,7 +97,7 @@ pub struct Queued(pub SlotKey);
 pub struct Active(pub SlotKey);
 
 impl Skill {
-	pub fn with<TData: Clone>(self, data: TData) -> Skill<PlayerSkills<SideUnset>, TData> {
+	pub fn with<TData: Clone>(self, data: TData) -> Skill<TData> {
 		Skill {
 			data,
 			name: self.name,
@@ -111,8 +111,8 @@ impl Skill {
 	}
 }
 
-impl<TAnimationKey, TSrc> Skill<TAnimationKey, TSrc> {
-	pub fn map_data<TDst>(self, map: fn(TSrc) -> TDst) -> Skill<TAnimationKey, TDst> {
+impl<TSrc> Skill<TSrc> {
+	pub fn map_data<TDst>(self, map: fn(TSrc) -> TDst) -> Skill<TDst> {
 		Skill {
 			name: self.name,
 			data: map(self.data),
@@ -126,8 +126,8 @@ impl<TAnimationKey, TSrc> Skill<TAnimationKey, TSrc> {
 	}
 }
 
-impl<TAnimationKey> Skill<TAnimationKey, Queued> {
-	pub fn to_active(self) -> Skill<TAnimationKey, Active> {
+impl Skill<Queued> {
+	pub fn to_active(self) -> Skill<Active> {
 		self.map_data(|queued| Active(queued.0))
 	}
 }

@@ -77,7 +77,7 @@ impl Plugin for SkillsPlugin {
 				(
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
 						.pipe(skill_controller::<Virtual>),
-					dequeue::<PlayerSkills<SideUnset>>, // sets skill activity marker, so it MUST run before skill execution systems
+					dequeue, // sets skill activity marker, so it MUST run before skill execution systems
 				)
 					.chain()
 					.run_if(in_state(GameRunning::On)),
@@ -106,7 +106,7 @@ impl Plugin for SkillsPlugin {
 					chain_combo_skills::<SkillComboNext>,
 					skill_state_component_dispatch::<
 						PlayerSkills<Side>,
-						Track<Skill<PlayerSkills<SideUnset>, Active>>,
+						Track<Skill<Active>>,
 						Virtual,
 					>,
 					set_slot_visibility,
