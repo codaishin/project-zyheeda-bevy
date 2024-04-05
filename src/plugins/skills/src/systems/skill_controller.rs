@@ -24,7 +24,7 @@ pub(crate) fn skill_controller<TTime: Default + Send + Sync + 'static>(
 ) {
 	for (slots, mut queue, mut active) in &mut agents {
 		enqueue_new_skills(&input, &mut times, &time, &mut queue, slots);
-		update_skill_aim_time(&input, &times, &time, &mut queue, active.as_deref_mut());
+		update_skill_aim_times(&input, &times, &time, &mut queue, active.as_deref_mut());
 	}
 }
 
@@ -62,7 +62,7 @@ fn get_slot_skill(key: &SlotKey, slots: &Slots) -> Option<Skill> {
 		.and_then(|i| i.skill)
 }
 
-fn update_skill_aim_time<TTime: Default + Send + Sync + 'static>(
+fn update_skill_aim_times<TTime: Default + Send + Sync + 'static>(
 	input: &In<Input>,
 	times: &Local<HashMap<SlotKey, Duration>>,
 	time: &Res<Time<TTime>>,
@@ -72,9 +72,21 @@ fn update_skill_aim_time<TTime: Default + Send + Sync + 'static>(
 	let get_key_time = |key| Some((key, times.get(key)?));
 
 	for (key, duration) in input.just_released.iter().filter_map(get_key_time) {
-		update_aim_time_in_queue(key, time, duration, queue);
-		update_aim_time_on_active(key, time, duration, &mut active_skill);
+		update_skill_aim_time(key, time, duration, queue, &mut active_skill);
 	}
+}
+
+fn update_skill_aim_time<TTime: Default + Send + Sync + 'static>(
+	key: &SlotKey,
+	time: &Res<Time<TTime>>,
+	duration: &Duration,
+	queue: &mut Queue,
+	active_skill: &mut Option<&mut Track<Skill<PlayerSkills<SideUnset>, Active>>>,
+) {
+	if update_aim_time_in_queue(key, time, duration, queue) {
+		return;
+	}
+	update_aim_time_on_active(key, time, duration, active_skill);
 }
 
 fn update_aim_time_in_queue<TTime: Default + Send + Sync + 'static>(
@@ -82,11 +94,12 @@ fn update_aim_time_in_queue<TTime: Default + Send + Sync + 'static>(
 	time: &Res<Time<TTime>>,
 	duration: &Duration,
 	queue: &mut Queue,
-) {
+) -> bool {
 	let Some(skill) = get_queued_skill(key, queue) else {
-		return;
+		return false;
 	};
 	skill.cast.aim = time.elapsed() - *duration;
+	true
 }
 
 fn update_aim_time_on_active<TTime: Default + Send + Sync + 'static>(
@@ -108,7 +121,7 @@ fn get_queued_skill<'a>(
 	key: &SlotKey,
 	queue: &'a mut Queue,
 ) -> Option<&'a mut Skill<PlayerSkills<SideUnset>, Queued>> {
-	queue.0.iter_mut().find(|skill| &skill.data.0 == key)
+	queue.0.iter_mut().rev().find(|skill| &skill.data.0 == key)
 }
 
 #[cfg(test)]
@@ -460,6 +473,65 @@ mod tests {
 	}
 
 	#[test]
+	fn update_aim_time_from_queue_back() {
+		let mut app = setup();
+		let agent = app
+			.world
+			.spawn((
+				Slots(HashMap::from([(
+					SlotKey::Hand(Side::Main),
+					Slot {
+						entity: Entity::from_raw(42),
+						item: Some(Item {
+							skill: Some(Skill {
+								name: "main",
+								..default()
+							}),
+							..default()
+						}),
+						combo_skill: None,
+					},
+				)])),
+				Queue(VecDeque::from([Skill {
+					name: "other",
+					..default()
+				}
+				.with(Queued(SlotKey::Hand(Side::Main)))])),
+			))
+			.id();
+
+		app.world.resource_mut::<_Input>().0.just_pressed = vec![SlotKey::Hand(Side::Main)];
+		app.update();
+
+		app.tick_time(Duration::from_millis(100));
+		app.world.resource_mut::<_Input>().0.just_pressed = vec![];
+		app.world.resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&Queue(VecDeque::from([
+				Skill {
+					name: "other",
+					..default()
+				}
+				.with(Queued(SlotKey::Hand(Side::Main))),
+				Skill {
+					name: "main",
+					cast: Cast {
+						aim: Duration::from_millis(100),
+						..default()
+					},
+					..default()
+				}
+				.with(Queued(SlotKey::Hand(Side::Main)))
+			]))),
+			agent.get::<Queue>()
+		);
+	}
+
+	#[test]
 	fn update_aim_time_on_active() {
 		let mut app = setup();
 		let agent = app
@@ -614,6 +686,66 @@ mod tests {
 				.with(Active(SlotKey::Hand(Side::Main))),
 			)),
 			agent.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
+		);
+	}
+
+	#[test]
+	fn update_aim_time_in_queue_even_if_same_key_is_active() {
+		let mut app = setup();
+		let agent = app
+			.world
+			.spawn((
+				Slots(HashMap::from([(
+					SlotKey::Hand(Side::Main),
+					Slot {
+						entity: Entity::from_raw(42),
+						item: Some(Item {
+							skill: Some(Skill {
+								name: "main",
+								..default()
+							}),
+							..default()
+						}),
+						combo_skill: None,
+					},
+				)])),
+				Queue::default(),
+			))
+			.id();
+
+		app.world.resource_mut::<_Input>().0.just_pressed = vec![SlotKey::Hand(Side::Main)];
+		app.update();
+
+		app.world.entity_mut(agent).insert(Track::new(
+			Skill::default().with(Active(SlotKey::Hand(Side::Main))),
+		));
+
+		app.tick_time(Duration::from_millis(100));
+		app.world.resource_mut::<_Input>().0.just_pressed = vec![];
+		app.world.resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			(
+				Some(&Queue(VecDeque::from([Skill {
+					name: "main",
+					cast: Cast {
+						aim: Duration::from_millis(100),
+						..default()
+					},
+					..default()
+				}
+				.with(Queued(SlotKey::Hand(Side::Main)))]))),
+				Some(&Track::new(
+					Skill::default().with(Active(SlotKey::Hand(Side::Main))),
+				))
+			),
+			(
+				agent.get::<Queue>(),
+				agent.get::<Track<Skill<PlayerSkills<SideUnset>, Active>>>()
+			)
 		);
 	}
 }
