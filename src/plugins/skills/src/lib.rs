@@ -49,7 +49,7 @@ use systems::{
 	chain_combo_skills::chain_combo_skills,
 	dequeue::dequeue,
 	equip::equip_item,
-	get_input::get_input,
+	get_inputs::get_inputs,
 	mouse_context::{
 		advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
 		release::release_triggered_mouse_context,
@@ -75,8 +75,8 @@ impl Plugin for SkillsPlugin {
 			.add_systems(
 				PreUpdate,
 				(
-					get_input::<ButtonInput<KeyCode>>.pipe(skill_controller::<Virtual>),
-					get_input::<State<MouseContext<KeyCode>>>.pipe(skill_controller::<Virtual>),
+					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
+						.pipe(skill_controller::<Virtual>),
 					dequeue::<PlayerSkills<SideUnset>>, // sets skill activity marker, so it MUST run before skill execution systems
 				)
 					.chain()

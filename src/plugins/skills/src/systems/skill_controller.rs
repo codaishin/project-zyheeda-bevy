@@ -1,4 +1,4 @@
-use super::get_input::Input;
+use super::get_inputs::Input;
 use crate::{
 	components::{Queue, SideUnset, SlotKey, Slots, Track},
 	skill::{Active, PlayerSkills, Queued, Skill},
