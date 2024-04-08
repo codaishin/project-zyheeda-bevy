@@ -21,7 +21,7 @@ impl Loadout {
 			equipment: Collection(equipment.into()),
 			slots: Slots::new(),
 			dequeue_next: Idle,
-			queue: Queue([].into()),
+			queue: Queue::default(),
 		}
 	}
 }

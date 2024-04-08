@@ -25,7 +25,7 @@ use self::{
 use bevy::prelude::*;
 use common::{components::Player, systems::log::log_many};
 use skills::{
-	components::{Inventory, InventoryKey, SlotKey, Slots},
+	components::{queue::Queue, Inventory, InventoryKey, SlotKey, Slots},
 	states::{GameRunning, Off, On},
 };
 use systems::items::swap::{
@@ -74,7 +74,7 @@ impl Plugin for IngameMenuPlugin {
 					quickbar,
 					update_label_text::<QuickbarPanel>,
 					panel_colors::<QuickbarPanel>,
-					panel_activity_colors_override::<QuickbarPanel>,
+					panel_activity_colors_override::<Queue, QuickbarPanel>,
 				)
 					.run_if(in_state(MenuState::None)),
 			)

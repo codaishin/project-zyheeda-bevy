@@ -6,7 +6,7 @@ use bevy::ecs::component::Component;
 use std::collections::VecDeque;
 
 #[derive(Component, PartialEq, Debug, Default)]
-pub struct Queue(pub VecDeque<Skill<Queued>>);
+pub struct Queue(VecDeque<Skill<Queued>>);
 
 impl Enqueue<Skill<Queued>> for Queue {
 	fn enqueue(&mut self, item: Skill<Queued>) {
