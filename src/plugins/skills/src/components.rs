@@ -1,8 +1,10 @@
-use crate::skill::{Queued, Skill, SkillComboTree, StartBehaviorFn, StopBehaviorFn};
+pub mod queue;
+
+use crate::skill::{Skill, SkillComboTree, StartBehaviorFn, StopBehaviorFn};
 use bevy::ecs::{component::Component, entity::Entity};
 use common::components::{Collection, Side};
 use std::{
-	collections::{HashMap, HashSet, VecDeque},
+	collections::{HashMap, HashSet},
 	fmt::{Display, Formatter, Result},
 	time::Duration,
 };
@@ -59,9 +61,6 @@ impl Display for Item {
 
 pub type Inventory = Collection<Option<Item>>;
 pub type Equipment = Collection<(SlotKey, Option<Item>)>;
-
-#[derive(Component, PartialEq, Debug, Default)]
-pub struct Queue(pub VecDeque<Skill<Queued>>);
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct InventoryKey(pub usize);

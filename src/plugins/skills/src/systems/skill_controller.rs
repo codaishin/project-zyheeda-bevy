@@ -1,6 +1,6 @@
 use super::get_inputs::Input;
 use crate::{
-	components::{Queue, SlotKey, Slots, Track},
+	components::{queue::Queue, SlotKey, Slots, Track},
 	skill::{Active, Queued, Skill},
 };
 use bevy::{
@@ -125,7 +125,7 @@ fn get_queued_skill<'a>(key: &SlotKey, queue: &'a mut Queue) -> Option<&'a mut S
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Item, Queue, Slot, SlotKey, Slots, Track},
+		components::{Item, Slot, SlotKey, Slots, Track},
 		skill::{Active, Cast, Queued, Skill},
 	};
 	use bevy::{

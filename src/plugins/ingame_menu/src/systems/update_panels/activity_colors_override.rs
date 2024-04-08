@@ -20,7 +20,7 @@ use bevy::{
 };
 use common::components::Player;
 use skills::{
-	components::{Queue, SlotKey, Track},
+	components::{queue::Queue, SlotKey, Track},
 	resources::SlotMap,
 	skill::{Active, Skill},
 	states::MouseContext,

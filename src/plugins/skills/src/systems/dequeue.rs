@@ -1,5 +1,5 @@
 use crate::{
-	components::{Queue, Track},
+	components::{queue::Queue, Track},
 	skill::{Active, Skill},
 };
 use bevy::{

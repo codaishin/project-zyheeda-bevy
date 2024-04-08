@@ -4,7 +4,7 @@ pub mod resources;
 pub mod skill;
 pub mod states;
 mod systems;
-mod traits;
+pub mod traits;
 
 use behaviors::components::{Plasma, Projectile};
 use bevy::{
