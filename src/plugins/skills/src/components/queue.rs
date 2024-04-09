@@ -8,71 +8,136 @@ use std::{collections::VecDeque, marker::PhantomData};
 #[derive(Debug, PartialEq)]
 pub struct DequeueAble;
 
+#[derive(Debug, PartialEq)]
 pub struct EnqueueAble;
 
-#[derive(Component, PartialEq, Debug)]
-pub struct Queue<TState = DequeueAble> {
-	queue: VecDeque<Skill<Queued>>,
-	state: PhantomData<TState>,
+#[derive(Component)]
+pub enum Queue<TEnqueue = QueueCollection<EnqueueAble>, TDequeue = QueueCollection<DequeueAble>> {
+	Enqueue(TEnqueue),
+	Dequeue(TDequeue),
 }
 
 impl Default for Queue {
 	fn default() -> Self {
-		Self {
+		Queue::Dequeue(QueueCollection {
 			queue: default(),
-			state: default(),
+			state: PhantomData,
+		})
+	}
+}
+
+impl Iter<Skill<Queued>> for Queue {
+	fn iter<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
+	where
+		Skill<Queued>: 'a,
+	{
+		match self {
+			Queue::Dequeue(q) => q.queue.iter(),
+			Queue::Enqueue(q) => q.queue.iter(),
 		}
 	}
 }
 
-impl Queue {
+#[cfg(test)]
+mod test_queue {
+	use super::*;
+	use crate::components::SlotKey;
+	use common::components::Side;
+
+	#[test]
+	fn iter_dequeue_able() {
+		let queue = Queue::Dequeue(QueueCollection::new([
+			Skill {
+				name: "skill a",
+				data: Queued(SlotKey::Hand(Side::Off)),
+				..default()
+			},
+			Skill {
+				name: "skill b",
+				data: Queued(SlotKey::Hand(Side::Main)),
+				..default()
+			},
+		]));
+
+		assert_eq!(
+			vec![
+				&Skill {
+					name: "skill a",
+					data: Queued(SlotKey::Hand(Side::Off)),
+					..default()
+				},
+				&Skill {
+					name: "skill b",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}
+			],
+			queue.iter().collect::<Vec<_>>()
+		)
+	}
+
+	#[test]
+	fn iter_enqueue_able() {
+		let queue = Queue::Enqueue(QueueCollection::new([
+			Skill {
+				name: "skill a",
+				data: Queued(SlotKey::Hand(Side::Off)),
+				..default()
+			},
+			Skill {
+				name: "skill b",
+				data: Queued(SlotKey::Hand(Side::Main)),
+				..default()
+			},
+		]));
+
+		assert_eq!(
+			vec![
+				&Skill {
+					name: "skill a",
+					data: Queued(SlotKey::Hand(Side::Off)),
+					..default()
+				},
+				&Skill {
+					name: "skill b",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}
+			],
+			queue.iter().collect::<Vec<_>>()
+		)
+	}
+}
+
+#[derive(PartialEq, Debug)]
+pub struct QueueCollection<TState> {
+	queue: VecDeque<Skill<Queued>>,
+	state: PhantomData<TState>,
+}
+
+impl<TState> QueueCollection<TState> {
 	#[cfg(test)]
-	fn new<const N: usize>(queue: [Skill<Queued>; N]) -> Self {
+	pub(crate) fn new<const N: usize>(queue: [Skill<Queued>; N]) -> Self {
 		Self {
 			queue: VecDeque::from(queue),
 			state: PhantomData,
 		}
 	}
-
-	pub fn to_enqueue_able(self) -> Queue<EnqueueAble> {
-		Queue {
-			queue: self.queue,
-			state: PhantomData,
-		}
-	}
 }
 
-impl Queue<EnqueueAble> {
-	pub fn to_dequeue_able(self) -> Queue<DequeueAble> {
-		Queue {
-			queue: self.queue,
-			state: PhantomData,
-		}
-	}
-}
-
-impl Enqueue<Skill<Queued>> for Queue<EnqueueAble> {
+impl Enqueue<Skill<Queued>> for QueueCollection<EnqueueAble> {
 	fn enqueue(&mut self, item: Skill<Queued>) {
 		self.queue.push_back(item);
 	}
 }
 
-impl Dequeue<Skill<Queued>> for Queue {
+impl Dequeue<Skill<Queued>> for QueueCollection<DequeueAble> {
 	fn dequeue(&mut self) -> Option<Skill<Queued>> {
 		self.queue.pop_front()
 	}
 }
 
-impl<TState> Iter<Skill<Queued>> for Queue<TState> {
-	fn iter<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
-	where
-		Skill<Queued>: 'a,
-	{
-		self.queue.iter()
-	}
-}
-
-impl IterMut<Skill<Queued>> for Queue<EnqueueAble> {
+impl IterMut<Skill<Queued>> for QueueCollection<EnqueueAble> {
 	fn iter_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut Skill<Queued>>
 	where
 		Skill<Queued>: 'a,
@@ -82,7 +147,7 @@ impl IterMut<Skill<Queued>> for Queue<EnqueueAble> {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_queue_collection {
 	use super::*;
 	use crate::components::SlotKey;
 	use bevy::utils::default;
@@ -90,7 +155,7 @@ mod tests {
 
 	#[test]
 	fn enqueue_one_skill() {
-		let mut queue = Queue::default().to_enqueue_able();
+		let mut queue = QueueCollection::new([]);
 		queue.enqueue(Skill {
 			name: "my skill",
 			data: Queued(SlotKey::Hand(Side::Main)),
@@ -98,18 +163,18 @@ mod tests {
 		});
 
 		assert_eq!(
-			Queue::new([Skill {
+			QueueCollection::new([Skill {
 				name: "my skill",
 				data: Queued(SlotKey::Hand(Side::Main)),
 				..default()
 			}]),
-			queue.to_dequeue_able()
+			queue
 		);
 	}
 
 	#[test]
 	fn enqueue_two_skills() {
-		let mut queue = Queue::default().to_enqueue_able();
+		let mut queue = QueueCollection::new([]);
 		queue.enqueue(Skill {
 			name: "skill a",
 			data: Queued(SlotKey::Hand(Side::Off)),
@@ -122,7 +187,7 @@ mod tests {
 		});
 
 		assert_eq!(
-			Queue::new([
+			QueueCollection::new([
 				Skill {
 					name: "skill a",
 					data: Queued(SlotKey::Hand(Side::Off)),
@@ -132,15 +197,15 @@ mod tests {
 					name: "skill b",
 					data: Queued(SlotKey::Hand(Side::Main)),
 					..default()
-				}
+				},
 			]),
-			queue.to_dequeue_able()
+			queue
 		);
 	}
 
 	#[test]
 	fn dequeue_one_skill() {
-		let mut queue = Queue::new([Skill {
+		let mut queue = QueueCollection::new([Skill {
 			name: "my skill",
 			data: Queued(SlotKey::Hand(Side::Main)),
 			..default()
@@ -153,7 +218,7 @@ mod tests {
 					data: Queued(SlotKey::Hand(Side::Main)),
 					..default()
 				}),
-				Queue::default()
+				QueueCollection::new([])
 			),
 			(queue.dequeue(), queue)
 		);
@@ -161,7 +226,7 @@ mod tests {
 
 	#[test]
 	fn dequeue_two_skill() {
-		let mut queue = Queue::new([
+		let mut queue = QueueCollection::new([
 			Skill {
 				name: "skill a",
 				data: Queued(SlotKey::Hand(Side::Off)),
@@ -188,46 +253,15 @@ mod tests {
 						..default()
 					})
 				],
-				Queue::default()
+				QueueCollection::new([])
 			),
 			([queue.dequeue(), queue.dequeue()], queue)
 		);
 	}
 
 	#[test]
-	fn as_slice() {
-		let mut queue = Queue::default().to_enqueue_able();
-		queue.enqueue(Skill {
-			name: "skill a",
-			data: Queued(SlotKey::Hand(Side::Off)),
-			..default()
-		});
-		queue.enqueue(Skill {
-			name: "skill b",
-			data: Queued(SlotKey::Hand(Side::Main)),
-			..default()
-		});
-
-		assert_eq!(
-			vec![
-				&Skill {
-					name: "skill a",
-					data: Queued(SlotKey::Hand(Side::Off)),
-					..default()
-				},
-				&Skill {
-					name: "skill b",
-					data: Queued(SlotKey::Hand(Side::Main)),
-					..default()
-				}
-			],
-			queue.iter().collect::<Vec<_>>()
-		)
-	}
-
-	#[test]
 	fn as_slice_mut() {
-		let mut queue = Queue::default().to_enqueue_able();
+		let mut queue = QueueCollection::new([]);
 		queue.enqueue(Skill {
 			name: "skill a",
 			data: Queued(SlotKey::Hand(Side::Off)),
