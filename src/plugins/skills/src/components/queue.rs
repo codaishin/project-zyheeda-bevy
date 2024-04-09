@@ -11,7 +11,7 @@ pub struct DequeueAble;
 #[derive(Debug, PartialEq)]
 pub struct EnqueueAble;
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq)]
 pub enum Queue<TEnqueue = QueueCollection<EnqueueAble>, TDequeue = QueueCollection<DequeueAble>> {
 	Enqueue(TEnqueue),
 	Dequeue(TDequeue),
@@ -113,6 +113,33 @@ mod test_queue {
 pub struct QueueCollection<TState> {
 	queue: VecDeque<Skill<Queued>>,
 	state: PhantomData<TState>,
+}
+
+impl<T> Clone for QueueCollection<T> {
+	fn clone(&self) -> Self {
+		Self {
+			queue: self.queue.clone(),
+			state: PhantomData,
+		}
+	}
+}
+
+impl From<QueueCollection<EnqueueAble>> for QueueCollection<DequeueAble> {
+	fn from(value: QueueCollection<EnqueueAble>) -> Self {
+		QueueCollection {
+			queue: value.queue,
+			state: PhantomData,
+		}
+	}
+}
+
+impl From<QueueCollection<DequeueAble>> for QueueCollection<EnqueueAble> {
+	fn from(value: QueueCollection<DequeueAble>) -> Self {
+		QueueCollection {
+			queue: value.queue,
+			state: PhantomData,
+		}
+	}
 }
 
 impl<TState> QueueCollection<TState> {
