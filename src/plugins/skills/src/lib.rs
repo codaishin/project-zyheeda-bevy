@@ -28,7 +28,7 @@ use common::{
 	systems::log::log_many,
 };
 use components::{
-	queue::Queue,
+	queue::{EnqueueAble, Queue},
 	ComboTreeTemplate,
 	Handed,
 	Inventory,
@@ -77,7 +77,7 @@ impl Plugin for SkillsPlugin {
 				PreUpdate,
 				(
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
-						.pipe(skill_controller::<Queue, Virtual>),
+						.pipe(skill_controller::<Queue<EnqueueAble>, Virtual>),
 					dequeue::<Queue>, // sets skill activity marker, so it MUST run before skill execution systems
 				)
 					.chain()
