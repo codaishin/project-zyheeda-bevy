@@ -1,4 +1,4 @@
-use crate::components::{BoneName, Equipment, Item, Queue, SlotBones, SlotKey, Slots};
+use crate::components::{queue::Queue, BoneName, Equipment, Item, SlotBones, SlotKey, Slots};
 use bevy::ecs::bundle::Bundle;
 use common::components::{Collection, Idle};
 
@@ -21,7 +21,7 @@ impl Loadout {
 			equipment: Collection(equipment.into()),
 			slots: Slots::new(),
 			dequeue_next: Idle,
-			queue: Queue([].into()),
+			queue: Queue::default(),
 		}
 	}
 }

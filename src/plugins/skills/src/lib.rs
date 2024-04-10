@@ -4,7 +4,7 @@ pub mod resources;
 pub mod skill;
 pub mod states;
 mod systems;
-mod traits;
+pub mod traits;
 
 use behaviors::components::{Plasma, Projectile};
 use bevy::{
@@ -28,6 +28,7 @@ use common::{
 	systems::log::log_many,
 };
 use components::{
+	queue::{DequeueAble, EnqueueAble, QueueCollection},
 	ComboTreeTemplate,
 	Handed,
 	Inventory,
@@ -55,6 +56,10 @@ use systems::{
 		release::release_triggered_mouse_context,
 		trigger_primed::trigger_primed_mouse_context,
 	},
+	queue::{
+		set_queue_to_dequeue::set_queue_to_dequeue,
+		set_queue_to_enqueue::set_queue_to_enqueue,
+	},
 	set_slot_visibility::set_slot_visibility,
 	skill_controller::skill_controller,
 	skill_execution::skill_execution,
@@ -75,9 +80,12 @@ impl Plugin for SkillsPlugin {
 			.add_systems(
 				PreUpdate,
 				(
+					set_queue_to_enqueue,
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
-						.pipe(skill_controller::<Virtual>),
-					dequeue, // sets skill activity marker, so it MUST run before skill execution systems
+						.pipe(skill_controller::<QueueCollection<EnqueueAble>, Virtual>)
+						.pipe(log_many),
+					set_queue_to_dequeue,
+					dequeue::<QueueCollection<DequeueAble>>.pipe(log_many), // sets skill activity marker, so it MUST run before skill execution systems
 				)
 					.chain()
 					.run_if(in_state(GameRunning::On)),

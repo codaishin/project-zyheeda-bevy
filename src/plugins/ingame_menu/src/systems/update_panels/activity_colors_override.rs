@@ -20,27 +20,29 @@ use bevy::{
 };
 use common::components::Player;
 use skills::{
-	components::{Queue, SlotKey, Track},
+	components::{SlotKey, Track},
 	resources::SlotMap,
-	skill::{Active, Skill},
+	skill::{Active, Queued, Skill},
 	states::MouseContext,
+	traits::Iter,
 };
 
 type ActiveSkill<'a> = Option<&'a Track<Skill<Active>>>;
 
 pub fn panel_activity_colors_override<
+	TQueue: Component + Iter<Skill<Queued>>,
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + Get<(), SlotKey> + Component,
 >(
 	mut commands: Commands,
 	mut buttons: Query<(Entity, &mut BackgroundColor, &TPanel)>,
-	player: Query<(ActiveSkill, &Queue), With<Player>>,
+	player: Query<(ActiveSkill, &TQueue), With<Player>>,
 	slot_map: Res<SlotMap<KeyCode>>,
 	mouse_context: Res<State<MouseContext>>,
 ) {
 	let player_slots = &player.get_single().map(|(track, queue)| {
 		(
 			track.map(|t| t.value.data.0),
-			queue.0.iter().map(|s| s.data.0).collect::<Vec<_>>(),
+			queue.iter().map(|s| s.data.0).collect::<Vec<_>>(),
 		)
 	});
 	let primed_slots = match mouse_context.get() {
@@ -99,6 +101,7 @@ mod tests {
 		ecs::{bundle::Bundle, schedule::NextState},
 		input::keyboard::KeyCode,
 		render::color::Color,
+		utils::default,
 	};
 	use common::components::Side;
 	use skills::skill::Queued;
@@ -130,6 +133,20 @@ mod tests {
 		}
 	}
 
+	#[derive(Component, Default)]
+	struct _Queue {
+		queued: Vec<Skill<Queued>>,
+	}
+
+	impl Iter<Skill<Queued>> for _Queue {
+		fn iter<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
+		where
+			Skill<Queued>: 'a,
+		{
+			self.queued.iter()
+		}
+	}
+
 	fn setup<TBundle: Bundle, const N: usize>(
 		slot_key: Option<SlotKey>,
 		bundle: TBundle,
@@ -137,10 +154,10 @@ mod tests {
 	) -> (App, Entity, Entity) {
 		let mut app = App::new();
 
-		app.add_systems(Update, panel_activity_colors_override::<_Panel>);
+		app.add_systems(Update, panel_activity_colors_override::<_Queue, _Panel>);
 		app.init_state::<MouseContext>();
 		app.insert_resource(SlotMap::<KeyCode>::new(slot_map));
-		let player = app.world.spawn((Player, Queue::default())).id();
+		let player = app.world.spawn((Player, _Queue::default())).id();
 		let panel = app.world.spawn(bundle).id();
 
 		if let Some(slot_key) = slot_key {
@@ -246,11 +263,12 @@ mod tests {
 		);
 		let (mut app, panel, player) = setup(None, bundle, []);
 
-		let mut player = app.world.entity_mut(player);
-		let mut queue = player.get_mut::<Queue>().unwrap();
-		queue
-			.0
-			.push_back(Skill::default().with(Queued(SlotKey::Hand(Side::Main))));
+		app.world.entity_mut(player).insert(_Queue {
+			queued: vec![Skill {
+				data: Queued(SlotKey::Hand(Side::Main)),
+				..default()
+			}],
+		});
 
 		app.update();
 

@@ -24,6 +24,26 @@ use common::{
 };
 use std::hash::Hash;
 
+pub(crate) trait Enqueue<TItem> {
+	fn enqueue(&mut self, item: TItem);
+}
+
+pub(crate) trait Dequeue<TItem> {
+	fn dequeue(&mut self) -> Option<TItem>;
+}
+
+pub trait Iter<TItem> {
+	fn iter<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a TItem>
+	where
+		TItem: 'a;
+}
+
+pub(crate) trait IterMut<TItem> {
+	fn iter_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut TItem>
+	where
+		TItem: 'a;
+}
+
 pub(crate) trait ComboNext
 where
 	Self: Sized,

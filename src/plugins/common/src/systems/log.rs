@@ -26,10 +26,16 @@ pub fn log_many(results: In<Vec<Result<(), Error>>>) {
 pub mod test_tools {
 	use super::*;
 	use ::bevy::prelude::Entity;
-	use bevy::ecs::{component::Component, system::Commands};
+	use bevy::ecs::{
+		component::Component,
+		system::{Commands, Resource},
+	};
 
 	#[derive(Component, PartialEq, Debug)]
 	pub struct FakeErrorLogMany(pub Vec<Error>);
+
+	#[derive(Resource, PartialEq, Debug)]
+	pub struct FakeErrorLogManyResource(pub Vec<Error>);
 
 	#[derive(Component, Debug, PartialEq)]
 	pub struct FakeErrorLog(pub Error);
@@ -51,6 +57,22 @@ pub mod test_tools {
 			let mut entity = commands.entity(entity);
 			entity.insert(FakeErrorLogMany(errors));
 		}
+	}
+
+	pub fn fake_log_error_many_recourse(
+		result: In<Vec<Result<(), Error>>>,
+		mut commands: Commands,
+	) {
+		let errors: Vec<_> = result
+			.0
+			.iter()
+			.filter_map(|result| result.clone().err())
+			.collect();
+
+		if errors.is_empty() {
+			return;
+		}
+		commands.insert_resource(FakeErrorLogManyResource(errors));
 	}
 
 	pub fn fake_log_error_lazy(agent: Entity) -> impl FnMut(In<Result<(), Error>>, Commands) {
