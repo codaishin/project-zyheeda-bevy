@@ -4,7 +4,7 @@ use crate::{
 		Track,
 	},
 	skill::{Active, Queued, Skill},
-	traits::Dequeue,
+	traits::TryDequeue,
 	Error,
 };
 use bevy::{
@@ -22,7 +22,7 @@ fn no_dequeue_mode(id: Entity) -> String {
 	format!("{id:?}: Attempted dequeue on a queue set to enqueue")
 }
 
-pub(crate) fn dequeue<TDequeue: Dequeue<Skill<Queued>> + Send + Sync + 'static>(
+pub(crate) fn dequeue<TDequeue: TryDequeue<Skill<Queued>> + Send + Sync + 'static>(
 	mut commands: Commands,
 	mut agents: Query<Components<TDequeue>, Without<Track<Skill<Active>>>>,
 ) -> Vec<Result<(), Error>> {
@@ -32,7 +32,7 @@ pub(crate) fn dequeue<TDequeue: Dequeue<Skill<Queued>> + Send + Sync + 'static>(
 		.collect()
 }
 
-fn dequeue_to_active<TDequeue: Dequeue<Skill<Queued>>>(
+fn dequeue_to_active<TDequeue: TryDequeue<Skill<Queued>>>(
 	commands: &mut Commands,
 	queue: &mut Queue<QueueCollection<EnqueueAble>, TDequeue>,
 	agent: Entity,
@@ -44,7 +44,7 @@ fn dequeue_to_active<TDequeue: Dequeue<Skill<Queued>>>(
 		});
 	};
 
-	let Some(skill) = queue.dequeue() else {
+	let Some(skill) = queue.try_dequeue() else {
 		return Ok(());
 	};
 
@@ -79,8 +79,8 @@ mod tests {
 
 	mock! {
 		_Dequeue {}
-		impl Dequeue<Skill<Queued>> for _Dequeue {
-			fn dequeue(&mut self) -> Option<Skill<Queued>> {}
+		impl TryDequeue<Skill<Queued>> for _Dequeue {
+			fn try_dequeue(&mut self) -> Option<Skill<Queued>> {}
 		}
 	}
 
@@ -100,7 +100,7 @@ mod tests {
 	fn dequeue_behavior_to_agent() {
 		let mut app = setup();
 		let mut queue = Mock_Dequeue::default();
-		queue.expect_dequeue().return_const(Some(Skill {
+		queue.expect_try_dequeue().return_const(Some(Skill {
 			cast: Cast {
 				pre: Duration::from_millis(42),
 				..default()
@@ -126,7 +126,7 @@ mod tests {
 	fn no_dequeue_when_track_present() {
 		let mut app = setup();
 		let mut queue = Mock_Dequeue::default();
-		queue.expect_dequeue().never().return_const(None);
+		queue.expect_try_dequeue().never().return_const(None);
 
 		app.world.spawn((
 			_TestQueue::Dequeue(queue),
@@ -162,7 +162,7 @@ mod tests {
 	fn no_error_when_queue_in_dequeue_state() {
 		let mut app = setup();
 		let mut queue = Mock_Dequeue::default();
-		queue.expect_dequeue().return_const(None);
+		queue.expect_try_dequeue().return_const(None);
 
 		app.world.spawn(_TestQueue::Dequeue(queue));
 

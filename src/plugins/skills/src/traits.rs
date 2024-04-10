@@ -15,12 +15,21 @@ pub(crate) mod tuple_slot_key_item;
 use crate::{
 	components::SlotKey,
 	resources::SlotMap,
-	skill::{Active, Skill, SkillComboTree, SkillExecution, StartBehaviorFn, StopBehaviorFn},
+	skill::{
+		Active,
+		Skill,
+		SkillComboTree,
+		SkillExecution,
+		SkillState,
+		StartBehaviorFn,
+		StopBehaviorFn,
+	},
 };
 use bevy::ecs::{component::Component, system::Query};
 use common::{
 	components::{Animate, Outdated},
 	resources::ColliderInfo,
+	traits::state_duration::StateDuration,
 };
 use std::hash::Hash;
 
@@ -28,8 +37,8 @@ pub(crate) trait Enqueue<TItem> {
 	fn enqueue(&mut self, item: TItem);
 }
 
-pub(crate) trait Dequeue<TItem> {
-	fn dequeue(&mut self) -> Option<TItem>;
+pub(crate) trait TryDequeue<TItem> {
+	fn try_dequeue(&mut self) -> Option<TItem>;
 }
 
 pub trait Iter<TItem> {
@@ -42,6 +51,11 @@ pub(crate) trait IterMut<TItem> {
 	fn iter_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut TItem>
 	where
 		TItem: 'a;
+}
+
+pub(crate) trait GetStateManager {
+	fn get_state_manager(&mut self) -> Option<impl StateDuration<SkillState>>;
+	fn clear_state_manager(&mut self);
 }
 
 pub(crate) trait ComboNext
