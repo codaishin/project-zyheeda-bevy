@@ -21,6 +21,7 @@ use bevy::ecs::{component::Component, system::Query};
 use common::{
 	components::{Animate, Outdated},
 	resources::ColliderInfo,
+	traits::state_duration::StateUpdate,
 };
 use std::hash::Hash;
 
@@ -44,8 +45,10 @@ pub(crate) trait IterMut<TItem> {
 		TItem: 'a;
 }
 
-pub(crate) trait GetActive<'a, TActive> {
-	fn get_active(&'a mut self) -> Option<TActive>;
+pub(crate) trait GetActiveSkill<TAnimationKey: Clone + Copy, TSkillState: Clone> {
+	fn get_active(
+		&mut self,
+	) -> Option<impl Execution + GetAnimation<TAnimationKey> + GetSlots + StateUpdate<TSkillState>>;
 	fn clear_active(&mut self);
 }
 

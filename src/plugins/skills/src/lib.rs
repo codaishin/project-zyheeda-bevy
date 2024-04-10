@@ -37,10 +37,9 @@ use components::{
 	ItemType,
 	SideUnset,
 	SlotKey,
-	Track,
 };
 use resources::{skill_templates::SkillTemplates, SkillIcons, SlotMap};
-use skill::{Active, Cast, PlayerSkills, Skill, SkillComboNext, SkillComboTree, SwordStrike};
+use skill::{Cast, PlayerSkills, Skill, SkillComboNext, SkillComboTree, SwordStrike};
 use states::{GameRunning, MouseContext};
 use std::{
 	collections::{HashMap, HashSet},
@@ -61,9 +60,9 @@ use systems::{
 		set_queue_to_enqueue::set_queue_to_enqueue,
 	},
 	set_slot_visibility::set_slot_visibility,
+	skill_activity_dispatch::skill_activity_dispatch,
 	skill_controller::skill_controller,
 	skill_execution::skill_execution,
-	skill_state_component_dispatch::skill_state_component_dispatch,
 	slots::add_item_slots,
 };
 use traits::GetExecution;
@@ -85,7 +84,13 @@ impl Plugin for SkillsPlugin {
 						.pipe(skill_controller::<QueueCollection<EnqueueAble>, Virtual>)
 						.pipe(log_many),
 					set_queue_to_dequeue,
-					dequeue::<QueueCollection<DequeueAble>>.pipe(log_many), // sets skill activity marker, so it MUST run before skill execution systems
+					skill_activity_dispatch::<
+						PlayerSkills<Side>,
+						QueueCollection<DequeueAble>,
+						Virtual,
+					>
+						.pipe(log_many),
+					dequeue::<QueueCollection<DequeueAble>>.pipe(log_many),
 				)
 					.chain()
 					.run_if(in_state(GameRunning::On)),
@@ -112,11 +117,6 @@ impl Plugin for SkillsPlugin {
 				Update,
 				(
 					chain_combo_skills::<SkillComboNext>,
-					skill_state_component_dispatch::<
-						PlayerSkills<Side>,
-						Track<Skill<Active>>,
-						Virtual,
-					>,
 					set_slot_visibility,
 					skill_execution,
 				)

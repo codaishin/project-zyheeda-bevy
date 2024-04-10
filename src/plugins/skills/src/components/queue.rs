@@ -1,6 +1,15 @@
 use crate::{
 	skill::{PlayerSkills, Queued, Skill, SkillState, StartBehaviorFn, StopBehaviorFn},
-	traits::{Enqueue, Execution, GetActive, GetAnimation, GetSlots, Iter, IterMut, TryDequeue},
+	traits::{
+		Enqueue,
+		Execution,
+		GetActiveSkill,
+		GetAnimation,
+		GetSlots,
+		Iter,
+		IterMut,
+		TryDequeue,
+	},
 };
 use bevy::{ecs::component::Component, utils::default};
 use common::{
@@ -393,23 +402,12 @@ struct ActiveSkill<'a> {
 	skill: &'a Skill<Queued>,
 }
 
-impl<'a> StateDuration<SkillState> for ActiveSkill<'a> {
-	fn get_state_duration(&self, key: SkillState) -> Duration {
-		match key {
-			SkillState::Aim => self.skill.cast.aim,
-			SkillState::PreCast => self.skill.cast.pre,
-			SkillState::Active => self.skill.cast.active,
-			SkillState::AfterCast => self.skill.cast.after,
-		}
-	}
-
-	fn elapsed_mut(&mut self) -> &mut Duration {
-		self.duration
-	}
-}
-
-impl<'a> GetActive<'a, ActiveSkill<'a>> for QueueCollection<DequeueAble> {
-	fn get_active(&'a mut self) -> Option<ActiveSkill<'a>> {
+impl GetActiveSkill<PlayerSkills<Side>, SkillState> for QueueCollection<DequeueAble> {
+	fn get_active(
+		&mut self,
+	) -> Option<
+		impl Execution + GetAnimation<PlayerSkills<Side>> + GetSlots + StateDuration<SkillState>,
+	> {
 		let skill = self.queue.front()?;
 
 		if self.duration.is_none() {
@@ -424,6 +422,21 @@ impl<'a> GetActive<'a, ActiveSkill<'a>> for QueueCollection<DequeueAble> {
 
 	fn clear_active(&mut self) {
 		self.duration = None;
+	}
+}
+
+impl<'a> StateDuration<SkillState> for ActiveSkill<'a> {
+	fn get_state_duration(&self, key: SkillState) -> Duration {
+		match key {
+			SkillState::Aim => self.skill.cast.aim,
+			SkillState::PreCast => self.skill.cast.pre,
+			SkillState::Active => self.skill.cast.active,
+			SkillState::AfterCast => self.skill.cast.after,
+		}
+	}
+
+	fn elapsed_mut(&mut self) -> &mut Duration {
+		self.duration
 	}
 }
 
