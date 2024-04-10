@@ -166,11 +166,11 @@ impl Enqueue<Skill<Queued>> for QueueCollection<EnqueueAble> {
 }
 
 impl TryDequeue<Skill<Queued>> for QueueCollection<DequeueAble> {
-	fn try_dequeue(&mut self) -> Option<Skill<Queued>> {
+	fn try_dequeue(&mut self) {
 		if self.duration.is_some() {
-			return None;
+			return;
 		}
-		self.queue.pop_front()
+		self.queue.pop_front();
 	}
 }
 
@@ -248,17 +248,9 @@ mod test_queue_collection {
 			..default()
 		}]);
 
-		assert_eq!(
-			(
-				Some(Skill {
-					name: "my skill",
-					data: Queued(SlotKey::Hand(Side::Main)),
-					..default()
-				}),
-				QueueCollection::new([])
-			),
-			(queue.try_dequeue(), queue)
-		);
+		queue.try_dequeue();
+
+		assert_eq!(QueueCollection::new([]), queue);
 	}
 
 	#[test]
@@ -276,23 +268,24 @@ mod test_queue_collection {
 			},
 		]);
 
+		queue.try_dequeue();
+
+		let queue_a: Vec<_> = queue.queue.iter().cloned().collect();
+
+		queue.try_dequeue();
+
+		let queue_b: Vec<_> = queue.queue.iter().cloned().collect();
+
 		assert_eq!(
 			(
-				[
-					Some(Skill {
-						name: "skill a",
-						data: Queued(SlotKey::Hand(Side::Off)),
-						..default()
-					}),
-					Some(Skill {
-						name: "skill b",
-						data: Queued(SlotKey::Hand(Side::Main)),
-						..default()
-					})
-				],
-				QueueCollection::new([])
+				vec![Skill {
+					name: "skill b",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+				vec![]
 			),
-			([queue.try_dequeue(), queue.try_dequeue()], queue)
+			(queue_a, queue_b)
 		);
 	}
 
@@ -548,15 +541,14 @@ mod test_state_duration {
 			state: PhantomData,
 		};
 
+		queue.try_dequeue();
+
 		assert_eq!(
-			(
-				None,
-				VecDeque::from([Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
-					..default()
-				}])
-			),
-			(queue.try_dequeue(), queue.queue)
+			VecDeque::from([Skill {
+				data: Queued(SlotKey::Hand(Side::Main)),
+				..default()
+			}]),
+			queue.queue
 		);
 	}
 

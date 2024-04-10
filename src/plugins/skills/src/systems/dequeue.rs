@@ -1,16 +1,10 @@
 use crate::{
-	components::{
-		queue::{EnqueueAble, Queue, QueueCollection},
-		Track,
-	},
-	skill::{Active, Queued, Skill},
+	components::queue::{EnqueueAble, Queue, QueueCollection},
+	skill::{Queued, Skill},
 	traits::TryDequeue,
 	Error,
 };
-use bevy::{
-	ecs::query::Without,
-	prelude::{Commands, Entity, Query},
-};
+use bevy::prelude::{Entity, Query};
 use common::errors::Level;
 
 type Components<'a, TDequeue> = (
@@ -23,17 +17,15 @@ fn no_dequeue_mode(id: Entity) -> String {
 }
 
 pub(crate) fn dequeue<TDequeue: TryDequeue<Skill<Queued>> + Send + Sync + 'static>(
-	mut commands: Commands,
-	mut agents: Query<Components<TDequeue>, Without<Track<Skill<Active>>>>,
+	mut agents: Query<Components<TDequeue>>,
 ) -> Vec<Result<(), Error>> {
 	agents
 		.iter_mut()
-		.map(|(agent, mut queue)| dequeue_to_active(&mut commands, &mut queue, agent))
+		.map(|(agent, mut queue)| dequeue_to_active(&mut queue, agent))
 		.collect()
 }
 
 fn dequeue_to_active<TDequeue: TryDequeue<Skill<Queued>>>(
-	commands: &mut Commands,
 	queue: &mut Queue<QueueCollection<EnqueueAble>, TDequeue>,
 	agent: Entity,
 ) -> Result<(), Error> {
@@ -44,15 +36,7 @@ fn dequeue_to_active<TDequeue: TryDequeue<Skill<Queued>>>(
 		});
 	};
 
-	let Some(skill) = queue.try_dequeue() else {
-		return Ok(());
-	};
-
-	let Some(mut agent) = commands.get_entity(agent) else {
-		return Ok(());
-	};
-
-	agent.try_insert(Track::new(skill.to_active()));
+	queue.try_dequeue();
 
 	Ok(())
 }
@@ -60,27 +44,22 @@ fn dequeue_to_active<TDequeue: TryDequeue<Skill<Queued>>>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::SlotKey,
-		skill::{Active, Cast, Queued, Skill},
-	};
+	use crate::skill::{Queued, Skill};
 	use bevy::{
 		ecs::system::IntoSystem,
-		prelude::{default, App, Update},
+		prelude::{App, Update},
 	};
 	use common::{
-		components::Side,
 		errors::Level,
 		systems::log::test_tools::{fake_log_error_many_recourse, FakeErrorLogManyResource},
 		test_tools::utils::SingleThreadedApp,
 	};
 	use mockall::mock;
-	use std::time::Duration;
 
 	mock! {
 		_Dequeue {}
 		impl TryDequeue<Skill<Queued>> for _Dequeue {
-			fn try_dequeue(&mut self) -> Option<Skill<Queued>> {}
+			fn try_dequeue(&mut self) {}
 		}
 	}
 
@@ -97,44 +76,12 @@ mod tests {
 	}
 
 	#[test]
-	fn dequeue_behavior_to_agent() {
+	fn try_dequeue() {
 		let mut app = setup();
 		let mut queue = Mock_Dequeue::default();
-		queue.expect_try_dequeue().return_const(Some(Skill {
-			cast: Cast {
-				pre: Duration::from_millis(42),
-				..default()
-			},
-			data: Queued(SlotKey::SkillSpawn),
-			..default()
-		}));
-		let agent = app.world.spawn(_TestQueue::Dequeue(queue)).id();
+		queue.expect_try_dequeue().times(1).return_const(());
 
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			Some(Active(SlotKey::SkillSpawn)),
-			agent
-				.get::<Track<Skill<Active>>>()
-				.map(|t| t.value.data.clone()),
-		);
-	}
-
-	#[test]
-	fn no_dequeue_when_track_present() {
-		let mut app = setup();
-		let mut queue = Mock_Dequeue::default();
-		queue.expect_try_dequeue().never().return_const(None);
-
-		app.world.spawn((
-			_TestQueue::Dequeue(queue),
-			Track::new(Skill {
-				data: Active(SlotKey::Hand(Side::Main)),
-				..default()
-			}),
-		));
+		app.world.spawn(_TestQueue::Dequeue(queue));
 
 		app.update();
 	}
@@ -162,7 +109,7 @@ mod tests {
 	fn no_error_when_queue_in_dequeue_state() {
 		let mut app = setup();
 		let mut queue = Mock_Dequeue::default();
-		queue.expect_try_dequeue().return_const(None);
+		queue.expect_try_dequeue().return_const(());
 
 		app.world.spawn(_TestQueue::Dequeue(queue));
 

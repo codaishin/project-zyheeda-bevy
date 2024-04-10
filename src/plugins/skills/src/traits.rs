@@ -38,7 +38,7 @@ pub(crate) trait Enqueue<TItem> {
 }
 
 pub(crate) trait TryDequeue<TItem> {
-	fn try_dequeue(&mut self) -> Option<TItem>;
+	fn try_dequeue(&mut self);
 }
 
 pub trait Iter<TItem> {
