@@ -1,10 +1,15 @@
 use crate::{
-	skill::{Queued, Skill, SkillState},
-	traits::{Enqueue, GetStateManager, Iter, IterMut, TryDequeue},
+	skill::{PlayerSkills, Queued, Skill, SkillState, StartBehaviorFn, StopBehaviorFn},
+	traits::{Enqueue, Execution, GetActive, GetAnimation, GetSlots, Iter, IterMut, TryDequeue},
 };
 use bevy::{ecs::component::Component, utils::default};
-use common::traits::state_duration::StateDuration;
+use common::{
+	components::{Animate, Side},
+	traits::state_duration::StateDuration,
+};
 use std::{collections::VecDeque, marker::PhantomData, time::Duration};
+
+use super::SlotKey;
 
 #[derive(Debug, PartialEq)]
 pub struct DequeueAble;
@@ -383,41 +388,94 @@ mod test_queue_collection {
 	}
 }
 
-impl StateDuration<SkillState> for (&mut Duration, &Skill<Queued>) {
+struct ActiveSkill<'a> {
+	duration: &'a mut Duration,
+	skill: &'a Skill<Queued>,
+}
+
+impl<'a> StateDuration<SkillState> for ActiveSkill<'a> {
 	fn get_state_duration(&self, key: SkillState) -> Duration {
 		match key {
-			SkillState::Aim => self.1.cast.aim,
-			SkillState::PreCast => self.1.cast.pre,
-			SkillState::Active => self.1.cast.active,
-			SkillState::AfterCast => self.1.cast.after,
+			SkillState::Aim => self.skill.cast.aim,
+			SkillState::PreCast => self.skill.cast.pre,
+			SkillState::Active => self.skill.cast.active,
+			SkillState::AfterCast => self.skill.cast.after,
 		}
 	}
 
 	fn elapsed_mut(&mut self) -> &mut Duration {
-		self.0
+		self.duration
 	}
 }
 
-impl GetStateManager for QueueCollection<DequeueAble> {
-	fn get_state_manager(&mut self) -> Option<impl StateDuration<SkillState>> {
+impl<'a> GetActive<'a, ActiveSkill<'a>> for QueueCollection<DequeueAble> {
+	fn get_active(&'a mut self) -> Option<ActiveSkill<'a>> {
 		let skill = self.queue.front()?;
 
 		if self.duration.is_none() {
 			self.duration = Some(Duration::default());
 		}
 
-		Some((self.duration.as_mut()?, skill))
+		Some(ActiveSkill {
+			duration: self.duration.as_mut()?,
+			skill,
+		})
 	}
 
-	fn clear_state_manager(&mut self) {
+	fn clear_active(&mut self) {
 		self.duration = None;
 	}
 }
 
+impl<'a> Execution for ActiveSkill<'a> {
+	fn get_start(&self) -> Option<StartBehaviorFn> {
+		self.skill.execution.run_fn
+	}
+
+	fn get_stop(&self) -> Option<StopBehaviorFn> {
+		self.skill.execution.stop_fn
+	}
+}
+
+impl<'a> GetAnimation<PlayerSkills<Side>> for ActiveSkill<'a> {
+	fn animate(&self) -> Animate<PlayerSkills<Side>> {
+		let Some(animate) = self.skill.animate else {
+			return Animate::None;
+		};
+		match (animate, self.skill.data.0) {
+			(PlayerSkills::Shoot(dual_or_single), SlotKey::Hand(side)) => {
+				Animate::Repeat(PlayerSkills::Shoot(dual_or_single.on(side)))
+			}
+			(PlayerSkills::SwordStrike(_), SlotKey::Hand(side)) => {
+				Animate::Replay(PlayerSkills::SwordStrike(side))
+			}
+			_ => Animate::None,
+		}
+	}
+}
+
+impl<'a> GetSlots for ActiveSkill<'a> {
+	fn slots(&self) -> Vec<SlotKey> {
+		match (self.skill.data.0, self.skill.dual_wield) {
+			(SlotKey::Hand(Side::Main), true) => {
+				vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]
+			}
+			(SlotKey::Hand(Side::Off), true) => {
+				vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)]
+			}
+			(slot_key, ..) => vec![slot_key],
+		}
+	}
+}
+
 #[cfg(test)]
-mod test_state_duration {
+mod test_queue_active_skill {
 	use super::*;
-	use crate::{components::SlotKey, skill::Cast};
+	use crate::{
+		components::{Handed, SideUnset, SlotKey},
+		skill::{Cast, SkillExecution, Spawner, Target},
+	};
+	use bevy::{ecs::system::EntityCommands, transform::components::Transform};
 	use common::components::Side;
 
 	#[test]
@@ -437,7 +495,7 @@ mod test_state_duration {
 			state: PhantomData,
 		};
 
-		let manager = queue.get_state_manager().unwrap();
+		let manager = queue.get_active().unwrap();
 
 		assert_eq!(
 			[
@@ -479,7 +537,7 @@ mod test_state_duration {
 			state: PhantomData,
 		};
 
-		let manager = queue.get_state_manager().unwrap();
+		let manager = queue.get_active().unwrap();
 
 		assert_eq!(
 			[
@@ -509,7 +567,7 @@ mod test_state_duration {
 			state: PhantomData,
 		};
 
-		let mut manager = queue.get_state_manager().unwrap();
+		let mut manager = queue.get_active().unwrap();
 
 		assert_eq!(&mut Duration::from_secs(11), manager.elapsed_mut())
 	}
@@ -525,7 +583,7 @@ mod test_state_duration {
 			state: PhantomData,
 		};
 
-		queue.clear_state_manager();
+		queue.clear_active();
 
 		assert_eq!(None, queue.duration);
 	}
@@ -566,7 +624,7 @@ mod test_state_duration {
 		assert_eq!(
 			(Some(Duration::default()), Some(Duration::default())),
 			(
-				queue.get_state_manager().map(|mut m| *m.elapsed_mut()),
+				queue.get_active().map(|mut m| *m.elapsed_mut()),
 				queue.duration
 			)
 		);
@@ -580,8 +638,206 @@ mod test_state_duration {
 			state: PhantomData::<DequeueAble>,
 		};
 
-		queue.get_state_manager();
+		queue.get_active();
 
 		assert_eq!(None, queue.duration);
+	}
+
+	#[test]
+	fn test_start_behavior_fn() {
+		fn run(_: &mut EntityCommands, _: &Transform, _: &Spawner, _: &Target) {}
+
+		let active = ActiveSkill {
+			skill: &Skill {
+				data: Queued(SlotKey::Hand(Side::Main)),
+				execution: SkillExecution {
+					run_fn: Some(run),
+					..default()
+				},
+				..default()
+			},
+			duration: &mut Duration::default(),
+		};
+
+		assert_eq!(Some(run as usize), active.get_start().map(|f| f as usize));
+	}
+
+	#[test]
+	fn test_stop_behavior_fn() {
+		fn stop(_: &mut EntityCommands) {}
+
+		let active = ActiveSkill {
+			skill: &Skill {
+				data: Queued(SlotKey::Hand(Side::Main)),
+				execution: SkillExecution {
+					stop_fn: Some(stop),
+					..default()
+				},
+				..default()
+			},
+			duration: &mut Duration::default(),
+		};
+
+		assert_eq!(Some(stop as usize), active.get_stop().map(|f| f as usize));
+	}
+
+	#[test]
+	fn get_shoot_animations() {
+		let actives_main = [
+			ActiveSkill {
+				duration: &mut Duration::default(),
+				skill: &Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					animate: Some(PlayerSkills::Shoot(Handed::Single(SideUnset))),
+					..default()
+				},
+			},
+			ActiveSkill {
+				duration: &mut Duration::default(),
+				skill: &Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					animate: Some(PlayerSkills::Shoot(Handed::Dual(SideUnset))),
+					..default()
+				},
+			},
+		];
+		let actives_off = [
+			ActiveSkill {
+				duration: &mut Duration::default(),
+				skill: &Skill {
+					data: Queued(SlotKey::Hand(Side::Off)),
+					animate: Some(PlayerSkills::Shoot(Handed::Single(SideUnset))),
+					..default()
+				},
+			},
+			ActiveSkill {
+				duration: &mut Duration::default(),
+				skill: &Skill {
+					data: Queued(SlotKey::Hand(Side::Off)),
+					animate: Some(PlayerSkills::Shoot(Handed::Dual(SideUnset))),
+					..default()
+				},
+			},
+		];
+
+		assert_eq!(
+			(
+				[
+					Animate::Repeat(PlayerSkills::Shoot(Handed::Single(Side::Main))),
+					Animate::Repeat(PlayerSkills::Shoot(Handed::Dual(Side::Main)))
+				],
+				[
+					Animate::Repeat(PlayerSkills::Shoot(Handed::Single(Side::Off))),
+					Animate::Repeat(PlayerSkills::Shoot(Handed::Dual(Side::Off)))
+				],
+			),
+			(
+				actives_main.map(|track| track.animate()),
+				actives_off.map(|track| track.animate())
+			)
+		)
+	}
+
+	#[test]
+	fn get_sword_strike_animations() {
+		let animate = PlayerSkills::SwordStrike(SideUnset);
+		let active_main = ActiveSkill {
+			duration: &mut Duration::default(),
+			skill: &Skill {
+				data: Queued(SlotKey::Hand(Side::Main)),
+				animate: Some(animate),
+				..default()
+			},
+		};
+		let active_off = ActiveSkill {
+			duration: &mut Duration::default(),
+			skill: &Skill {
+				data: Queued(SlotKey::Hand(Side::Off)),
+				animate: Some(animate),
+				..default()
+			},
+		};
+
+		assert_eq!(
+			[
+				Animate::Replay(PlayerSkills::SwordStrike(Side::Main)),
+				Animate::Replay(PlayerSkills::SwordStrike(Side::Off))
+			],
+			[active_main.animate(), active_off.animate()]
+		)
+	}
+
+	#[test]
+	fn get_main_slot() {
+		let active = ActiveSkill {
+			duration: &mut Duration::default(),
+			skill: &Skill {
+				data: Queued(SlotKey::Hand(Side::Off)),
+				..default()
+			},
+		};
+
+		assert_eq!(vec![SlotKey::Hand(Side::Off)], active.slots());
+	}
+
+	#[test]
+	fn get_off_slot() {
+		let active = ActiveSkill {
+			duration: &mut Duration::default(),
+			skill: &Skill {
+				data: Queued(SlotKey::Hand(Side::Main)),
+				..default()
+			},
+		};
+
+		assert_eq!(vec![SlotKey::Hand(Side::Main)], active.slots());
+	}
+
+	#[test]
+	fn get_dual_main_slots() {
+		let active = ActiveSkill {
+			duration: &mut Duration::default(),
+			skill: &Skill {
+				data: Queued(SlotKey::Hand(Side::Main)),
+				dual_wield: true,
+				..default()
+			},
+		};
+
+		assert_eq!(
+			vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
+			active.slots()
+		);
+	}
+
+	#[test]
+	fn get_dual_off_slots() {
+		let active = ActiveSkill {
+			duration: &mut Duration::default(),
+			skill: &Skill {
+				data: Queued(SlotKey::Hand(Side::Off)),
+				dual_wield: true,
+				..default()
+			},
+		};
+
+		assert_eq!(
+			vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+			active.slots()
+		);
+	}
+
+	#[test]
+	fn get_skill_spawn_slot() {
+		let active = ActiveSkill {
+			duration: &mut Duration::default(),
+			skill: &Skill {
+				data: Queued(SlotKey::SkillSpawn),
+				dual_wield: true,
+				..default()
+			},
+		};
+
+		assert_eq!(vec![SlotKey::SkillSpawn], active.slots());
 	}
 }
