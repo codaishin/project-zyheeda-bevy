@@ -15,7 +15,7 @@ pub(crate) mod tuple_slot_key_item;
 use crate::{
 	components::SlotKey,
 	resources::SlotMap,
-	skill::{Active, Skill, SkillComboTree, SkillExecution, StartBehaviorFn, StopBehaviorFn},
+	skill::{Queued, Skill, SkillComboTree, SkillExecution, StartBehaviorFn, StopBehaviorFn},
 };
 use bevy::ecs::{component::Component, system::Query};
 use common::{
@@ -68,7 +68,7 @@ pub(crate) trait ComboNext
 where
 	Self: Sized,
 {
-	fn to_vec(&self, skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)>;
+	fn to_vec(&self, trigger_skill: &Skill<Queued>) -> Vec<(SlotKey, SkillComboTree<Self>)>;
 }
 
 pub(crate) trait GetAnimation<TAnimationKey: Clone + Copy> {

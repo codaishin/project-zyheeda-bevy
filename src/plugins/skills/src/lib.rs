@@ -83,6 +83,7 @@ impl Plugin for SkillsPlugin {
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
 						.pipe(skill_controller::<QueueCollection<EnqueueAble>, Virtual>)
 						.pipe(log_many),
+					chain_combo_skills::<SkillComboNext, QueueCollection<EnqueueAble>>,
 					set_queue_to_dequeue,
 					skill_activity_dispatch::<
 						PlayerSkills<Side>,
@@ -90,6 +91,8 @@ impl Plugin for SkillsPlugin {
 						Virtual,
 					>
 						.pipe(log_many),
+					set_slot_visibility,
+					skill_execution,
 					dequeue::<QueueCollection<DequeueAble>>.pipe(log_many),
 				)
 					.chain()
@@ -112,15 +115,6 @@ impl Plugin for SkillsPlugin {
 					equip_item::<Inventory, Swap<InventoryKey, SlotKey>>.pipe(log_many),
 					equip_item::<Inventory, Swap<SlotKey, InventoryKey>>.pipe(log_many),
 				),
-			)
-			.add_systems(
-				Update,
-				(
-					chain_combo_skills::<SkillComboNext>,
-					set_slot_visibility,
-					skill_execution,
-				)
-					.chain(),
 			);
 	}
 }
