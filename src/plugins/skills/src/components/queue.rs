@@ -1,3 +1,4 @@
+use super::SlotKey;
 use crate::{
 	skill::{PlayerSkills, Queued, Skill, SkillState, StartBehaviorFn, StopBehaviorFn},
 	traits::{
@@ -5,6 +6,7 @@ use crate::{
 		Execution,
 		GetActiveSkill,
 		GetAnimation,
+		GetOldLastMut,
 		GetSlots,
 		Iter,
 		IterMut,
@@ -18,8 +20,6 @@ use common::{
 	traits::state_duration::StateDuration,
 };
 use std::{collections::VecDeque, time::Duration};
-
-use super::SlotKey;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct DequeueAble;
@@ -220,6 +220,15 @@ impl IterRecentMut<Skill<Queued>> for QueueCollection<EnqueueAble> {
 		Skill<Queued>: 'a,
 	{
 		self.queue.iter_mut().skip(self.state.start_index)
+	}
+}
+
+impl GetOldLastMut<Skill<Queued>> for QueueCollection<EnqueueAble> {
+	fn get_old_last_mut<'a>(&'a mut self) -> Option<&'a mut Skill<Queued>>
+	where
+		Skill<Queued>: 'a,
+	{
+		self.queue.iter_mut().take(self.state.start_index).last()
 	}
 }
 
@@ -493,6 +502,47 @@ mod test_queue_collection {
 				}
 			],
 			queue.iter_recent_mut().collect::<Vec<_>>()
+		)
+	}
+
+	#[test]
+	fn get_old_last_mut() {
+		let mut queue = QueueCollection::<EnqueueAble>::new([Skill {
+			name: "a",
+			data: Queued(SlotKey::SkillSpawn),
+			..default()
+		}]);
+
+		assert_eq!(
+			Some(&mut Skill {
+				name: "a",
+				data: Queued(SlotKey::SkillSpawn),
+				..default()
+			}),
+			queue.get_old_last_mut()
+		)
+	}
+
+	#[test]
+	fn get_old_last_mut_with_later_enqueues() {
+		let mut queue = QueueCollection::<EnqueueAble>::new([Skill {
+			name: "a",
+			data: Queued(SlotKey::SkillSpawn),
+			..default()
+		}]);
+		queue.enqueue(Skill {
+			name: "b",
+			data: Queued(SlotKey::Hand(Side::Main)),
+			..default()
+		});
+
+		assert_eq!(
+			Some(&mut Skill {
+				name: "a",
+				data: Queued(SlotKey::SkillSpawn),
+				..default()
+			}),
+			queue.get_old_last_mut()
 		)
 	}
 }

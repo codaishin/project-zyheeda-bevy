@@ -51,6 +51,12 @@ pub(crate) trait IterRecentMut<TItem> {
 		TItem: 'a;
 }
 
+pub(crate) trait GetOldLastMut<TItem> {
+	fn get_old_last_mut<'a>(&'a mut self) -> Option<&'a mut TItem>
+	where
+		TItem: 'a;
+}
+
 pub(crate) trait GetActiveSkill<TAnimationKey: Clone + Copy, TSkillState: Clone> {
 	fn get_active(
 		&mut self,
