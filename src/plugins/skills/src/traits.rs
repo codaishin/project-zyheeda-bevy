@@ -45,6 +45,12 @@ pub(crate) trait IterMut<TItem> {
 		TItem: 'a;
 }
 
+pub(crate) trait IterRecentMut<TItem> {
+	fn iter_recent_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut TItem>
+	where
+		TItem: 'a;
+}
+
 pub(crate) trait GetActiveSkill<TAnimationKey: Clone + Copy, TSkillState: Clone> {
 	fn get_active(
 		&mut self,
