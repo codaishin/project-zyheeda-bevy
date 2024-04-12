@@ -77,7 +77,7 @@ impl Plugin for SkillsPlugin {
 			.add_systems(PreStartup, setup_input)
 			.add_systems(PreUpdate, add_item_slots)
 			.add_systems(
-				PreUpdate,
+				Update,
 				(
 					set_queue_to_enqueue,
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
