@@ -93,9 +93,6 @@ impl<T> Default for SelectInfo<T> {
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Queued(pub SlotKey);
 
-#[derive(Debug, PartialEq, Clone, Default)]
-pub struct Active(pub SlotKey);
-
 impl Skill {
 	pub fn with<TData: Clone>(self, data: TData) -> Skill<TData> {
 		Skill {
@@ -123,12 +120,6 @@ impl<TSrc> Skill<TSrc> {
 			is_usable_with: self.is_usable_with,
 			dual_wield: self.dual_wield,
 		}
-	}
-}
-
-impl Skill<Queued> {
-	pub fn to_active(self) -> Skill<Active> {
-		self.map_data(|queued| Active(queued.0))
 	}
 }
 

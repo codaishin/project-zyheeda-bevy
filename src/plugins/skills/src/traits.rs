@@ -4,12 +4,10 @@ pub(crate) mod inventory;
 pub(crate) mod mouse_hover;
 pub(crate) mod player_skills;
 pub(crate) mod projectile;
-pub(crate) mod skill;
 pub(crate) mod skill_combo_next;
 pub(crate) mod skill_state;
 pub(crate) mod state;
 pub(crate) mod sword;
-pub(crate) mod track;
 pub(crate) mod tuple_slot_key_item;
 
 use crate::{
@@ -106,46 +104,7 @@ pub trait ShouldEnqueue {
 pub(crate) mod test_tools {
 	use super::*;
 	use crate::skill::{Spawner, Target};
-	use bevy::{
-		ecs::{
-			component::Component,
-			system::{Commands, Query},
-		},
-		prelude::Entity,
-		transform::components::Transform,
-	};
-
-	pub(crate) fn run_system<TExecute: Execution + Component>(
-		agent: Entity,
-		agent_transform: Transform,
-		spawner: Spawner,
-		target: Target,
-	) -> impl FnMut(Commands, Query<&mut TExecute>) {
-		move |mut commands, mut executes| {
-			let execute = executes.single_mut();
-			let Some(run) = execute.get_start() else {
-				return;
-			};
-			run(
-				&mut commands.entity(agent),
-				&agent_transform,
-				&spawner,
-				&target,
-			);
-		}
-	}
-
-	pub(crate) fn stop_system<TExecute: Execution + Component>(
-		agent: Entity,
-	) -> impl FnMut(Commands, Query<&TExecute>) {
-		move |mut commands, executes| {
-			let execute = executes.single();
-			let Some(stop) = execute.get_stop() else {
-				return;
-			};
-			stop(&mut commands.entity(agent));
-		}
-	}
+	use bevy::{ecs::system::Commands, prelude::Entity, transform::components::Transform};
 
 	pub fn run_lazy(
 		behavior: SkillExecution,
