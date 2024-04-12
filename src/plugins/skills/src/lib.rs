@@ -147,7 +147,6 @@ fn setup_skill_templates(
 				active: Duration::from_millis(500),
 				after: Duration::from_millis(200),
 			},
-			soft_override: true,
 			animate: Some(PlayerSkills::SwordStrike(SideUnset)),
 			execution: SwordStrike::execution(),
 			is_usable_with: HashSet::from([ItemType::Sword]),
@@ -161,7 +160,6 @@ fn setup_skill_templates(
 				after: Duration::from_millis(100),
 				..default()
 			},
-			soft_override: true,
 			animate: Some(PlayerSkills::Shoot(Handed::Single(SideUnset))),
 			execution: Projectile::<Plasma>::execution(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
@@ -175,7 +173,6 @@ fn setup_skill_templates(
 				after: Duration::from_millis(100),
 				..default()
 			},
-			soft_override: true,
 			animate: Some(PlayerSkills::Shoot(Handed::Dual(SideUnset))),
 			execution: Projectile::<Plasma>::execution(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
