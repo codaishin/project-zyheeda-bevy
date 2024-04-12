@@ -1,1008 +1,932 @@
+use std::collections::HashMap;
+
 use crate::{
-	components::{ComboTreeRunning, ComboTreeTemplate, Item, SlotKey, Slots, Track},
-	skill::{Active, Skill, SkillComboTree},
-	traits::ComboNext,
+	components::{
+		queue::{DequeueAble, Queue, QueueCollection},
+		ComboTreeRunning,
+		ComboTreeTemplate,
+		SlotKey,
+	},
+	skill::{Queued, Skill, SkillComboTree},
+	traits::{ComboNext, GetOldLastMut, IterRecentMut},
 };
 use bevy::{
 	ecs::{
-		query::{Added, Without},
-		system::{Commands, EntityCommands, Query},
-		world::Mut,
+		entity::Entity,
+		system::{Commands, Query},
 	},
-	prelude::Entity,
+	utils::default,
 };
-use common::components::Idle;
-use std::collections::HashMap;
+use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
 
-type ComboComponents<'a, TNext> = (
+type ComboComponents<'a, TNext, TEnqueue> = (
 	Entity,
-	&'a Track<Skill<Active>>,
+	&'a mut Queue<TEnqueue, QueueCollection<DequeueAble>>,
 	&'a ComboTreeTemplate<TNext>,
 	Option<&'a ComboTreeRunning<TNext>>,
-	&'a mut Slots,
 );
-type JustStarted = (Added<Track<Skill<Active>>>, Without<Idle>);
-type Combos<TNext> = Vec<(SlotKey, SkillComboTree<TNext>)>;
 
-pub(crate) fn chain_combo_skills<TNext: Clone + ComboNext + Send + Sync + 'static>(
+pub(crate) fn chain_combo_skills<
+	TNext: Clone + ComboNext + Send + Sync + 'static,
+	TEnqueue: GetOldLastMut<Skill<Queued>> + IterRecentMut<Skill<Queued>> + Send + Sync + 'static,
+>(
 	mut commands: Commands,
-	mut newly_idle: Query<(Entity, &mut Slots), Added<Idle>>,
-	mut newly_active: Query<ComboComponents<TNext>, JustStarted>,
+	mut agents: Query<ComboComponents<TNext, TEnqueue>>,
 ) {
-	for (agent, mut slots) in &mut newly_idle {
-		let Some(agent) = &mut commands.get_entity(agent) else {
+	for (id, mut queue, template, running_template) in &mut agents {
+		let Queue::Enqueue(enqueue) = queue.as_mut() else {
 			continue;
 		};
-		let slots = &mut slots;
-
-		clear_combos::<TNext>(agent, slots);
-	}
-
-	for (agent, skill, combo_tree_t, combo_tree_r, mut slots) in &mut newly_active {
-		let Some(agent) = &mut commands.get_entity(agent) else {
+		let Some(mut trigger_skill) = get_trigger_skill(enqueue) else {
+			commands.try_remove_from::<ComboTreeRunning<TNext>>(id);
 			continue;
 		};
-		let slots = &mut slots;
 
-		clear_combos::<TNext>(agent, slots);
-		update_combos(slots, agent, skill, combo_tree_t, combo_tree_r);
-	}
-}
+		let mut running_combos = running_template.map(|r| r.0.clone()).unwrap_or_default();
+		let mut recently_queued_skills = enqueue.iter_recent_mut();
+		let mut apply_skill_combos = || {
+			let triggers = match running_combos.is_empty() {
+				true => &template.0,
+				false => &running_combos,
+			};
 
-fn update_combos<TNext: Clone + ComboNext + Send + Sync + 'static>(
-	slots: &mut Mut<Slots>,
-	agent: &mut EntityCommands,
-	skill: &Track<Skill<Active>>,
-	combo_tree_t: &ComboTreeTemplate<TNext>,
-	combo_tree_r: Option<&ComboTreeRunning<TNext>>,
-) {
-	let Some(combos) = get_combos(&skill.value, combo_tree_t, combo_tree_r) else {
-		return;
-	};
+			let Some(combo_skill) = recently_queued_skills.next() else {
+				return false;
+			};
 
-	let updated_successfully: HashMap<_, _> = combos
-		.clone()
-		.into_iter()
-		.filter(|(slot_key, tree)| update_slot(slots, slot_key, &tree.skill))
-		.collect();
+			let Some(trigger) = triggers.get(&trigger_skill.data.0) else {
+				running_combos = default();
+				return false;
+			};
 
-	if updated_successfully.is_empty() {
-		return;
-	}
+			if trigger.skill.name != trigger_skill.name {
+				running_combos = default();
+				return false;
+			}
 
-	agent.try_insert(ComboTreeRunning(updated_successfully));
-}
+			let Some((key, combo)) = get_combo(trigger, &trigger_skill, combo_skill) else {
+				running_combos = default();
+				return false;
+			};
 
-fn get_combos<'a, TNext: ComboNext>(
-	skill: &'a Skill<Active>,
-	combo_tree_t: &'a ComboTreeTemplate<TNext>,
-	combo_tree_r: Option<&'a ComboTreeRunning<TNext>>,
-) -> Option<Combos<TNext>> {
-	let combos_r = combo_tree_r
-		.and_then(|tree| tree.0.get(&skill.data.0))
-		.map(|combo| (&combo.skill, combo.next.to_vec(skill)))
-		.filter(|(_, combo)| !combo.is_empty());
+			*combo_skill = combo.skill.clone().with(combo_skill.data.clone());
 
-	let (combo_trigger, combos) = match combos_r {
-		Some((combo_trigger, combos)) => (combo_trigger, combos),
-		None => {
-			let combo = combo_tree_t.0.get(&skill.data.0)?;
-			(&combo.skill, combo.next.to_vec(skill))
+			running_combos = HashMap::from([(key, combo.clone())]);
+			trigger_skill = combo_skill.clone();
+
+			true
+		};
+
+		// would prefer a recursive call, but can't call lambda from within the same lambda,
+		// so we iterate and mutate the would be call arguments.
+		while apply_skill_combos() {}
+
+		if running_combos.is_empty() {
+			commands.try_remove_from::<ComboTreeRunning<TNext>>(id);
+		} else {
+			commands.try_insert_on(id, ComboTreeRunning(running_combos));
 		}
-	};
-
-	if skill.name != combo_trigger.name {
-		return None;
 	}
-
-	Some(combos)
 }
 
-fn clear_combos<TNext: Sync + Send + 'static>(agent: &mut EntityCommands, slots: &mut Mut<Slots>) {
-	for slot in &mut slots.0.values_mut() {
-		slot.combo_skill = None;
-	}
-	agent.remove::<ComboTreeRunning<TNext>>();
+fn get_trigger_skill<TEnqueue: GetOldLastMut<Skill<Queued>>>(
+	enqueue: &mut TEnqueue,
+) -> Option<Skill<Queued>> {
+	enqueue.get_old_last_mut().cloned()
 }
 
-fn update_slot(slots: &mut Mut<Slots>, slot_key: &SlotKey, skill: &Skill) -> bool {
-	let Some(slot) = slots.0.get_mut(slot_key) else {
-		return false;
-	};
-
-	let Some(item) = &slot.item else {
-		return false;
-	};
-
-	if item_cannot_use_skill(item, skill) {
-		return false;
-	};
-
-	slot.combo_skill = Some(skill.clone());
-	true
-}
-
-fn item_cannot_use_skill(item: &Item, skill: &Skill) -> bool {
-	skill.is_usable_with.intersection(&item.item_type).count() == 0
+fn get_combo<TNext: Clone + ComboNext + Send + Sync + 'static>(
+	trigger: &SkillComboTree<TNext>,
+	trigger_skill: &Skill<Queued>,
+	combo_skill: &Skill<Queued>,
+) -> Option<(SlotKey, SkillComboTree<TNext>)> {
+	trigger
+		.next
+		.to_vec(trigger_skill)
+		.into_iter()
+		.find(|(k, _)| k == &combo_skill.data.0)
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{ItemType, Slot};
+	use crate::{components::SlotKey, skill::SkillComboTree};
 	use bevy::{
 		app::{App, Update},
-		ecs::entity::Entity,
 		utils::default,
 	};
-	use common::components::Side;
+	use common::{components::Side, test_tools::utils::SingleThreadedApp};
 	use mockall::{mock, predicate::eq};
-	use std::collections::{HashMap, HashSet};
+	use std::collections::HashMap;
 
-	static SLOTS: [(SlotKey, Slot); 3] = [
-		(
-			SlotKey::Hand(Side::Off),
-			Slot {
-				entity: Entity::from_raw(42),
-				item: None,
-				combo_skill: None,
-			},
-		),
-		(
-			SlotKey::Hand(Side::Main),
-			Slot {
-				entity: Entity::from_raw(43),
-				item: None,
-				combo_skill: None,
-			},
-		),
-		(
-			SlotKey::SkillSpawn,
-			Slot {
-				entity: Entity::from_raw(44),
-				item: None,
-				combo_skill: None,
-			},
-		),
-	];
-
-	fn setup<TNext: Clone + ComboNext + Sync + Send + 'static>(
-		running_skill: &Skill<Active>,
-		combo_tree: ComboTreeTemplate<TNext>,
-		item_types: &[(SlotKey, HashSet<ItemType>)],
-	) -> (App, Entity) {
-		let track = Track::new(running_skill.clone());
-		let item_types: HashMap<SlotKey, HashSet<ItemType>> =
-			HashMap::from_iter(item_types.iter().cloned());
-		let slots = SLOTS.clone().map(|(key, mut slot)| {
-			if let Some(item_type) = item_types.get(&key) {
-				slot.item = Some(Item {
-					item_type: item_type.clone(),
-					..default()
-				});
-			}
-			(key, slot)
-		});
-
-		let mut app = App::new();
-		let agent = app
-			.world
-			.spawn((combo_tree, track, Slots(HashMap::from(slots))))
-			.id();
-		app.add_systems(Update, chain_combo_skills::<TNext>);
-
-		(app, agent)
+	#[derive(Debug, PartialEq)]
+	struct _Enqueue {
+		added_last_frame: Option<Skill<Queued>>,
+		added_this_frame: Vec<Skill<Queued>>,
 	}
 
-	fn skill_usable_with<TItemTypes: ItemTypes>(types: TItemTypes) -> Skill {
-		Skill {
-			is_usable_with: types.to_set(),
-			..default()
+	impl GetOldLastMut<Skill<Queued>> for _Enqueue {
+		fn get_old_last_mut<'a>(&'a mut self) -> Option<&'a mut Skill<Queued>>
+		where
+			Skill<Queued>: 'a,
+		{
+			self.added_last_frame.as_mut()
 		}
 	}
 
-	trait ItemTypes {
-		fn to_set(&self) -> HashSet<ItemType>;
-	}
-
-	impl<const N: usize> ItemTypes for &[ItemType; N] {
-		fn to_set(&self) -> HashSet<ItemType> {
-			HashSet::from_iter(self.iter().cloned())
+	impl IterRecentMut<Skill<Queued>> for _Enqueue {
+		fn iter_recent_mut<'a>(
+			&'a mut self,
+		) -> impl DoubleEndedIterator<Item = &'a mut Skill<Queued>>
+		where
+			Skill<Queued>: 'a,
+		{
+			self.added_this_frame.iter_mut()
 		}
 	}
 
-	impl ItemTypes for &HashSet<ItemType> {
-		fn to_set(&self) -> HashSet<ItemType> {
-			HashSet::from_iter(self.iter().cloned())
-		}
-	}
-
-	trait Named {
-		fn named(&self, name: &'static str) -> Self;
-	}
-
-	impl Named for Skill {
-		fn named(&self, name: &'static str) -> Self {
-			let mut skill = self.clone();
-			skill.name = name;
-			skill
-		}
-	}
-
-	trait ActiveOn {
-		fn active_on(&self, slot_key: SlotKey) -> Skill<Active>;
-	}
-
-	impl ActiveOn for Skill {
-		fn active_on(&self, slot_key: SlotKey) -> Skill<Active> {
-			self.clone().with(Active(slot_key))
-		}
-	}
-
-	#[derive(PartialEq, Debug, Clone)]
-	struct _Next(Vec<(SlotKey, SkillComboTree<_Next>)>);
-
-	mock! {
-		_Next{}
-		impl ComboNext for _Next {
-			fn to_vec(&self, _skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
-				self.0.clone()
-			}
-		}
-		impl Clone for _Next {
-			fn clone(&self) -> Self {
-				Self(self.0.clone())
-			}
-		}
-	}
+	#[derive(Clone, Debug, PartialEq)]
+	struct _Next(Vec<(SlotKey, SkillComboTree<Self>)>);
 
 	impl ComboNext for _Next {
-		fn to_vec(&self, _skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
+		fn to_vec(&self, _skill: &Skill<Queued>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
 			self.0.clone()
 		}
 	}
 
-	#[test]
-	fn set_slot_combo_skill_of_same_slot_key() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-		let combo_tree = ComboTreeTemplate(HashMap::from([(
-			skill.data.0,
-			SkillComboTree {
-				skill: skill_usable_with(&[]).named("combo-start"),
-				next: _Next(vec![(
-					skill.data.0,
-					SkillComboTree {
-						skill: skill_usable_with(&skill.is_usable_with).named("combo skill"),
-						next: _Next(vec![]),
-					},
-				)]),
-			},
-		)]));
-
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
-		app.update();
-
-		let agent = app.world.entity(agent);
-		let slot = agent.get::<Slots>().unwrap().0.get(&skill.data.0).unwrap();
-
-		assert_eq!(
-			Some(skill_usable_with(&skill.is_usable_with).named("combo skill")),
-			slot.combo_skill
-		);
-	}
-
-	#[test]
-	fn set_slot_combo_skill_of_other_slot_key() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let other_slot_key = SlotKey::Hand(Side::Main);
-		let slots_item_types = &[
-			(skill.data.0, skill.is_usable_with.clone()),
-			(other_slot_key, skill.is_usable_with.clone()),
-		];
-		let combo_tree = ComboTreeTemplate(HashMap::from([(
-			skill.data.0,
-			SkillComboTree {
-				skill: skill_usable_with(&[]).named("combo-start"),
-				next: _Next(vec![(
-					other_slot_key,
-					SkillComboTree {
-						skill: skill_usable_with(&skill.is_usable_with).named("combo skill"),
-						next: _Next(vec![]),
-					},
-				)]),
-			},
-		)]));
-
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
-		app.update();
-
-		let agent = app.world.entity(agent);
-		let slot = agent
-			.get::<Slots>()
-			.unwrap()
-			.0
-			.get(&other_slot_key)
-			.unwrap();
-
-		assert_eq!(
-			Some(skill_usable_with(&skill.is_usable_with).named("combo skill")),
-			slot.combo_skill
-		);
-	}
-
-	#[test]
-	fn do_not_set_slot_combo_when_on_skill_name_mismatch() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-		let combo_tree = ComboTreeTemplate(HashMap::from([(
-			skill.data.0,
-			SkillComboTree {
-				skill: skill_usable_with(&[]).named("not combo-start"),
-				next: _Next(vec![(
-					skill.data.0,
-					SkillComboTree {
-						skill: skill_usable_with(&skill.is_usable_with).named("combo skill"),
-						next: _Next(vec![]),
-					},
-				)]),
-			},
-		)]));
-
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
-		app.update();
-
-		let agent = app.world.entity(agent);
-		let slot = agent.get::<Slots>().unwrap().0.get(&skill.data.0).unwrap();
-
-		assert_eq!(None, slot.combo_skill);
-	}
-
-	#[test]
-	fn do_not_set_slot_combo_when_running_skill_does_not_match_combo_slot() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-		let other_slot_key = SlotKey::Hand(Side::Main);
-		let combo_tree = ComboTreeTemplate(HashMap::from([(
-			other_slot_key,
-			SkillComboTree {
-				skill: skill_usable_with(&[]).named("combo-start"),
-				next: _Next(vec![(
-					skill.data.0,
-					SkillComboTree {
-						skill: skill_usable_with(&skill.is_usable_with).named("combo skill"),
-						next: _Next(vec![]),
-					},
-				)]),
-			},
-		)]));
-
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
-		app.update();
-
-		let agent = app.world.entity(agent);
-		let slot = agent.get::<Slots>().unwrap().0.get(&skill.data.0).unwrap();
-
-		assert_eq!(None, slot.combo_skill);
-	}
-
-	#[test]
-	fn do_not_set_slot_combo_when_combo_skill_not_usable_by_slot_item() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let slots_item_types = &[(skill.data.0, HashSet::from([ItemType::Pistol]))];
-		let combo_tree = ComboTreeTemplate(HashMap::from([(
-			skill.data.0,
-			SkillComboTree {
-				skill: skill_usable_with(&[]).named("combo-start"),
-				next: _Next(vec![(
-					skill.data.0,
-					SkillComboTree {
-						skill: skill_usable_with(&skill.is_usable_with).named("combo skill"),
-						next: _Next(vec![]),
-					},
-				)]),
-			},
-		)]));
-
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
-		app.update();
-
-		let agent = app.world.entity(agent);
-		let slot = agent.get::<Slots>().unwrap().0.get(&skill.data.0).unwrap();
-
-		assert_eq!(None, slot.combo_skill);
-	}
-
-	#[test]
-	fn set_slot_combo_when_combo_skill_usable_by_slot_item_via_intersection() {
-		let skill = &skill_usable_with(&[ItemType::Sword, ItemType::Legs])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let slots_item_types = &[(
-			skill.data.0,
-			HashSet::from([ItemType::Pistol, ItemType::Legs]),
-		)];
-		let combo_tree = ComboTreeTemplate(HashMap::from([(
-			skill.data.0,
-			SkillComboTree {
-				skill: skill_usable_with(&[]).named("combo-start"),
-				next: _Next(vec![(
-					skill.data.0,
-					SkillComboTree {
-						skill: skill_usable_with(&skill.is_usable_with).named("combo skill"),
-						next: _Next(vec![]),
-					},
-				)]),
-			},
-		)]));
-
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
-		app.update();
-
-		let agent = app.world.entity(agent);
-		let slot = agent.get::<Slots>().unwrap().0.get(&skill.data.0).unwrap();
-
-		assert_eq!(
-			Some(skill_usable_with(&skill.is_usable_with).named("combo skill")),
-			slot.combo_skill
-		);
-	}
-
-	#[test]
-	fn set_slot_combo_skill_of_non_combo_slots_to_none() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let combo_skill = &skill_usable_with(&skill.is_usable_with).named("combo skill");
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-		let combo_tree = ComboTreeTemplate(HashMap::from([(
-			skill.data.0,
-			SkillComboTree {
-				skill: skill_usable_with(&[]).named("combo-start"),
-				next: _Next(vec![(
-					skill.data.0,
-					SkillComboTree {
-						skill: combo_skill.clone(),
-						next: _Next(vec![]),
-					},
-				)]),
-			},
-		)]));
-
-		let (mut app, id) = setup(skill, combo_tree, slots_item_types);
-		let mut agent = app.world.entity_mut(id);
-		let mut slots = agent.get_mut::<Slots>().unwrap();
-		for slot in slots.0.values_mut() {
-			slot.combo_skill = Some(skill_usable_with(&[]))
+	mock! {
+		_Next{}
+		impl ComboNext for _Next {
+			fn to_vec(&self, _skill: &Skill<Queued>) -> Vec<(SlotKey, SkillComboTree<Self>)> {}
 		}
-		app.update();
-
-		let agent = app.world.entity(id);
-		let slots = agent.get::<Slots>().unwrap();
-		let expected_slot_skills: HashMap<_, _> = SLOTS
-			.clone()
-			.into_iter()
-			.map(|(key, _)| {
-				if key == skill.data.0 {
-					(key, Some(combo_skill.clone()))
-				} else {
-					(key, None)
-				}
-			})
-			.collect();
-		let got_slot_skills: HashMap<_, _> = slots
-			.0
-			.clone()
-			.into_iter()
-			.map(|(key, slot)| (key, slot.combo_skill))
-			.collect();
-
-		assert_eq!(expected_slot_skills, got_slot_skills)
-	}
-
-	#[test]
-	fn set_slot_combo_skill_to_none_on_name_mismatch() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-		let combo_tree = ComboTreeTemplate(HashMap::from([(
-			skill.data.0,
-			SkillComboTree {
-				skill: skill_usable_with(&[]).named("not combo-start"),
-				next: _Next(vec![(
-					skill.data.0,
-					SkillComboTree {
-						skill: skill_usable_with(&skill.is_usable_with).named("combo skill"),
-						next: _Next(vec![]),
-					},
-				)]),
-			},
-		)]));
-
-		let (mut app, id) = setup(skill, combo_tree, slots_item_types);
-		let mut agent = app.world.entity_mut(id);
-		let mut slots = agent.get_mut::<Slots>().unwrap();
-		for slot in slots.0.values_mut() {
-			slot.combo_skill = Some(skill_usable_with(&[]))
+		impl Clone for _Next {
+			fn clone(&self) -> Self {}
 		}
-		app.update();
+	}
 
-		let agent = app.world.entity(id);
-		let slots = agent.get::<Slots>().unwrap();
-		let expected_slot_skills: HashMap<_, _> = SLOTS
-			.clone()
-			.into_iter()
-			.map(|(key, _)| (key, None))
-			.collect();
-		let got_slot_skills: HashMap<_, _> = slots
-			.0
-			.clone()
-			.into_iter()
-			.map(|(key, slot)| (key, slot.combo_skill))
-			.collect();
+	fn empty_mock() -> Mock_Next {
+		let mut fake_clone = Mock_Next::default();
+		fake_clone.expect_clone().returning(empty_mock);
+		fake_clone.expect_to_vec().return_const(vec![]);
+		fake_clone
+	}
 
-		assert_eq!(expected_slot_skills, got_slot_skills)
+	fn setup<TNext: ComboNext + Clone + Send + Sync + 'static, const N: usize>(
+		combos_template: [(SlotKey, SkillComboTree<TNext>); N],
+		queue: Queue<_Enqueue, QueueCollection<DequeueAble>>,
+	) -> (App, Entity) {
+		let mut app = App::new_single_threaded([Update]);
+		app.add_systems(Update, chain_combo_skills::<TNext, _Enqueue>);
+
+		let agent = app
+			.world
+			.spawn((ComboTreeTemplate(HashMap::from(combos_template)), queue))
+			.id();
+
+		(app, agent)
 	}
 
 	#[test]
-	fn set_slot_combo_skill_to_none_on_slot_mismatch() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let other_slot_key = SlotKey::Hand(Side::Main);
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-		let combo_tree = ComboTreeTemplate(HashMap::from([(
-			other_slot_key,
-			SkillComboTree {
-				skill: skill_usable_with(&[]).named("combo-start"),
-				next: _Next(vec![(
-					skill.data.0,
-					SkillComboTree {
-						skill: skill_usable_with(&skill.is_usable_with).named("combo skill"),
-						next: _Next(vec![]),
-					},
-				)]),
-			},
-		)]));
-
-		let (mut app, id) = setup(skill, combo_tree, slots_item_types);
-		let mut agent = app.world.entity_mut(id);
-		let mut slots = agent.get_mut::<Slots>().unwrap();
-		for slot in slots.0.values_mut() {
-			slot.combo_skill = Some(skill_usable_with(&[]))
-		}
-		app.update();
-
-		let agent = app.world.entity(id);
-		let slots = agent.get::<Slots>().unwrap();
-		let expected_slot_skills: HashMap<_, _> = SLOTS
-			.clone()
-			.into_iter()
-			.map(|(key, _)| (key, None))
-			.collect();
-		let got_slot_skills: HashMap<_, _> = slots
-			.0
-			.clone()
-			.into_iter()
-			.map(|(key, slot)| (key, slot.combo_skill))
-			.collect();
-
-		assert_eq!(expected_slot_skills, got_slot_skills)
-	}
-
-	#[test]
-	fn set_slot_combo_skill_to_none_when_waiting() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-
-		let (mut app, id) = setup::<_Next>(
-			skill,
-			ComboTreeTemplate(HashMap::from([])),
-			slots_item_types,
-		);
-		let mut agent = app.world.entity_mut(id);
-		let mut slots = agent.get_mut::<Slots>().unwrap();
-		for slot in slots.0.values_mut() {
-			slot.combo_skill = Some(skill_usable_with(&[]))
-		}
-		app.world.entity_mut(id).insert(Idle);
-		app.world.entity_mut(id).remove::<Track<Skill<Active>>>();
-		app.update();
-
-		let agent = app.world.entity(id);
-		let slots = agent.get::<Slots>().unwrap();
-		let expected_slot_skills: HashMap<_, _> = SLOTS
-			.clone()
-			.into_iter()
-			.map(|(key, _)| (key, None))
-			.collect();
-		let got_slot_skills: HashMap<_, _> = slots
-			.0
-			.clone()
-			.into_iter()
-			.map(|(key, slot)| (key, slot.combo_skill))
-			.collect();
-
-		assert_eq!(expected_slot_skills, got_slot_skills)
-	}
-
-	#[test]
-	fn update_combo_tree_running_next() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-		let next_values = [(
-			skill.data.0,
-			SkillComboTree {
-				skill: skill_usable_with(&skill.is_usable_with).named("combo skill"),
-				next: _Next(vec![]),
-			},
-		)];
-		let combo_tree = ComboTreeTemplate(HashMap::from([(
-			skill.data.0,
-			SkillComboTree {
-				skill: skill_usable_with(&[]).named("combo-start"),
-				next: _Next(next_values.to_vec()),
-			},
-		)]));
-
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
-		app.world
-			.entity_mut(agent)
-			.insert(ComboTreeRunning(HashMap::from([(
-				skill.data.0,
+	fn set_set_combo_from_template() {
+		let (mut app, agent) = setup(
+			[(
+				SlotKey::Hand(Side::Main),
 				SkillComboTree {
-					skill: skill_usable_with(&[]).named("other combo skill"),
-					next: _Next(vec![]),
-				},
-			)])));
-		app.update();
-
-		let agent = app.world.entity(agent);
-		let combo_tree_running = agent.get::<ComboTreeRunning<_Next>>();
-
-		assert_eq!(
-			Some(&ComboTreeRunning(HashMap::from(next_values))),
-			combo_tree_running
-		);
-	}
-
-	#[test]
-	fn add_combo_tree_running_with_next() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-		let next_values = [(
-			skill.data.0,
-			SkillComboTree {
-				skill: skill_usable_with(&skill.is_usable_with).named("combo skill"),
-				next: _Next(vec![]),
-			},
-		)];
-		let combo_tree = ComboTreeTemplate(HashMap::from([(
-			skill.data.0,
-			SkillComboTree {
-				skill: skill_usable_with(&[]).named("combo-start"),
-				next: _Next(next_values.to_vec()),
-			},
-		)]));
-
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
-		app.update();
-
-		let agent = app.world.entity(agent);
-		let combo_tree_running = agent.get::<ComboTreeRunning<_Next>>();
-
-		assert_eq!(
-			Some(&ComboTreeRunning(HashMap::from(next_values))),
-			combo_tree_running
-		);
-	}
-
-	#[test]
-	fn remove_combo_tree_running_when_next_empty() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let combo_tree = ComboTreeTemplate::<_Next>(HashMap::from([]));
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
-		app.world
-			.entity_mut(agent)
-			.insert(ComboTreeRunning(HashMap::from([(
-				skill.data.0,
-				SkillComboTree {
-					skill: skill_usable_with(&[]).named("combo-start"),
-					next: _Next(vec![]),
-				},
-			)])));
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert!(!agent.contains::<ComboTreeRunning<_Next>>());
-	}
-
-	#[test]
-	fn remove_combo_tree_running_on_name_mismatch() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-		let combo_tree = ComboTreeTemplate::<_Next>(HashMap::from([]));
-
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
-		app.world
-			.entity_mut(agent)
-			.insert(ComboTreeRunning(HashMap::from([(
-				skill.data.0,
-				SkillComboTree {
-					skill: skill_usable_with(&[]).named("not combo-start"),
+					skill: Skill {
+						name: "trigger a",
+						..default()
+					},
 					next: _Next(vec![(
-						skill.data.0,
+						SlotKey::Hand(Side::Main),
 						SkillComboTree {
-							skill: skill_usable_with(&skill.is_usable_with).named("combo skill"),
+							skill: Skill {
+								name: "combo a",
+								..default()
+							},
 							next: _Next(vec![]),
 						},
 					)]),
 				},
-			)])));
+			)],
+			Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+		);
+
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<ComboTreeRunning<_Next>>());
+		assert_eq!(
+			&Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					name: "combo a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+			agent
+				.get::<Queue<_Enqueue, QueueCollection<DequeueAble>>>()
+				.unwrap()
+		)
 	}
 
 	#[test]
-	fn remove_combo_tree_running_when_slot_mismatch() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-		let mismatched_slot_key = SlotKey::Hand(Side::Main);
-		let combo_tree = ComboTreeTemplate::<_Next>(HashMap::from([]));
-
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
-		app.world
-			.entity_mut(agent)
-			.insert(ComboTreeRunning(HashMap::from([(
-				mismatched_slot_key,
+	fn do_not_set_set_combo_from_template_when_trigger_key_mismatch() {
+		let (mut app, agent) = setup(
+			[(
+				SlotKey::Hand(Side::Off),
 				SkillComboTree {
-					skill: skill_usable_with(&[]).named("combo-start"),
+					skill: Skill {
+						name: "trigger a",
+						..default()
+					},
 					next: _Next(vec![(
-						skill.data.0,
+						SlotKey::Hand(Side::Main),
 						SkillComboTree {
-							skill: skill_usable_with(&skill.is_usable_with).named("combo skill"),
+							skill: Skill {
+								name: "combo a",
+								..default()
+							},
 							next: _Next(vec![]),
 						},
 					)]),
 				},
-			)])));
+			)],
+			Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+		);
+
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<ComboTreeRunning<_Next>>());
+		assert_eq!(
+			&Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+			agent
+				.get::<Queue<_Enqueue, QueueCollection<DequeueAble>>>()
+				.unwrap()
+		)
 	}
 
 	#[test]
-	fn add_only_valid_combos_to_running_next() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let other_slot_key = SlotKey::Hand(Side::Main);
-		let unusable_type = HashSet::from([ItemType::Pistol]);
-		let slots_item_types = &[
-			(skill.data.0, skill.is_usable_with.clone()),
-			(other_slot_key, skill.is_usable_with.clone()),
-		];
-		let combo_tree = ComboTreeTemplate(HashMap::from([(
-			skill.data.0,
-			SkillComboTree {
-				skill: skill_usable_with(&[]).named("combo-start"),
-				next: _Next(vec![
-					(
-						skill.data.0,
+	fn do_not_set_set_combo_from_template_when_trigger_name_mismatch() {
+		let (mut app, agent) = setup(
+			[(
+				SlotKey::Hand(Side::Main),
+				SkillComboTree {
+					skill: Skill {
+						name: "trigger b",
+						..default()
+					},
+					next: _Next(vec![(
+						SlotKey::Hand(Side::Main),
 						SkillComboTree {
-							skill: skill_usable_with(&skill.is_usable_with).named("combo skill"),
+							skill: Skill {
+								name: "combo a",
+								..default()
+							},
 							next: _Next(vec![]),
 						},
-					),
-					(
-						other_slot_key,
-						SkillComboTree {
-							skill: skill_usable_with(&unusable_type).named("unusable combo skill"),
-							next: _Next(vec![]),
-						},
-					),
-				]),
-			},
-		)]));
+					)]),
+				},
+			)],
+			Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+		);
 
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let combo_tree_running = agent.get::<ComboTreeRunning<_Next>>();
+
+		assert_eq!(
+			&Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+			agent
+				.get::<Queue<_Enqueue, QueueCollection<DequeueAble>>>()
+				.unwrap()
+		)
+	}
+
+	#[test]
+	fn do_not_set_set_combo_from_template_when_combo_key_mismatch() {
+		let (mut app, agent) = setup(
+			[(
+				SlotKey::Hand(Side::Main),
+				SkillComboTree {
+					skill: Skill {
+						name: "trigger a",
+						..default()
+					},
+					next: _Next(vec![(
+						SlotKey::Hand(Side::Off),
+						SkillComboTree {
+							skill: Skill {
+								name: "combo a",
+								..default()
+							},
+							next: _Next(vec![]),
+						},
+					)]),
+				},
+			)],
+			Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+		);
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			&Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+			agent
+				.get::<Queue<_Enqueue, QueueCollection<DequeueAble>>>()
+				.unwrap()
+		)
+	}
+
+	#[test]
+	fn call_next_to_vec_with_combo_skill_candidate() {
+		let mut next = Mock_Next::default();
+		next.expect_to_vec()
+			.times(1)
+			.with(eq(Skill {
+				name: "trigger a",
+				data: Queued(SlotKey::Hand(Side::Main)),
+				..default()
+			}))
+			.return_const(vec![]);
+		next.expect_clone().returning(empty_mock);
+
+		let (mut app, ..) = setup(
+			[(
+				SlotKey::Hand(Side::Main),
+				SkillComboTree {
+					skill: Skill {
+						name: "trigger a",
+						..default()
+					},
+					next,
+				},
+			)],
+			Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					name: "other",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+		);
+
+		app.update();
+	}
+
+	#[test]
+	fn set_running_combo_template_from_template_subtree() {
+		let (mut app, agent) = setup(
+			[(
+				SlotKey::Hand(Side::Main),
+				SkillComboTree {
+					skill: Skill {
+						name: "trigger a",
+						..default()
+					},
+					next: _Next(vec![(
+						SlotKey::Hand(Side::Main),
+						SkillComboTree {
+							skill: Skill {
+								name: "combo a",
+								..default()
+							},
+							next: _Next(vec![(
+								SlotKey::Hand(Side::Off),
+								SkillComboTree {
+									skill: Skill {
+										name: "combo b",
+										..default()
+									},
+									next: _Next(vec![]),
+								},
+							)]),
+						},
+					)]),
+				},
+			)],
+			Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+		);
+
+		app.update();
+
+		let agent = app.world.entity(agent);
 
 		assert_eq!(
 			Some(&ComboTreeRunning(HashMap::from([(
-				skill.data.0,
+				SlotKey::Hand(Side::Main),
 				SkillComboTree {
-					skill: skill_usable_with(&skill.is_usable_with).named("combo skill"),
-					next: _Next(vec![]),
+					skill: Skill {
+						name: "combo a",
+						..default()
+					},
+					next: _Next(vec![(
+						SlotKey::Hand(Side::Off),
+						SkillComboTree {
+							skill: Skill {
+								name: "combo b",
+								..default()
+							},
+							next: _Next(vec![]),
+						},
+					)]),
 				},
 			)]))),
-			combo_tree_running
-		);
+			agent.get::<ComboTreeRunning<_Next>>()
+		)
 	}
 
 	#[test]
-	fn remove_running_when_no_combo_valid() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let unusable_type = HashSet::from([ItemType::Pistol]);
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-		let combo_tree = ComboTreeTemplate(HashMap::from([(
-			skill.data.0,
-			SkillComboTree {
-				skill: skill_usable_with(&[]).named("combo-start"),
-				next: _Next(vec![(
-					skill.data.0,
-					SkillComboTree {
-						skill: skill_usable_with(&unusable_type).named("combo skill"),
-						next: _Next(vec![]),
+	fn use_running_combo_template() {
+		let (mut app, agent) = setup(
+			[(
+				SlotKey::Hand(Side::Main),
+				SkillComboTree {
+					skill: Skill {
+						name: "trigger a",
+						..default()
 					},
-				)]),
-			},
-		)]));
-
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert!(!agent.contains::<ComboTreeRunning<_Next>>());
-	}
-
-	#[test]
-	fn use_running_if_present() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let combo_skill = &skill_usable_with(&skill.is_usable_with).named("combo skill");
-		let combo_tree = ComboTreeTemplate::<_Next>(HashMap::from([]));
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
+					next: _Next(vec![(
+						SlotKey::Hand(Side::Main),
+						SkillComboTree {
+							skill: Skill {
+								name: "do not use this combo",
+								..default()
+							},
+							next: _Next(vec![]),
+						},
+					)]),
+				},
+			)],
+			Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+		);
 
 		app.world
 			.entity_mut(agent)
 			.insert(ComboTreeRunning(HashMap::from([(
-				skill.data.0,
+				SlotKey::Hand(Side::Main),
 				SkillComboTree {
-					skill: skill_usable_with(&[]).named("combo-start"),
+					skill: Skill {
+						name: "trigger a",
+						..default()
+					},
 					next: _Next(vec![(
-						skill.data.0,
+						SlotKey::Hand(Side::Main),
 						SkillComboTree {
-							skill: combo_skill.clone(),
+							skill: Skill {
+								name: "combo a",
+								..default()
+							},
 							next: _Next(vec![]),
 						},
 					)]),
 				},
 			)])));
+
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let slot = agent.get::<Slots>().unwrap().0.get(&skill.data.0).unwrap();
 
-		assert_eq!(Some(combo_skill.clone()), slot.combo_skill);
+		assert_eq!(
+			&Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					name: "combo a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+			agent
+				.get::<Queue<_Enqueue, QueueCollection<DequeueAble>>>()
+				.unwrap()
+		)
 	}
 
 	#[test]
-	fn use_combo_tree_if_running_next_is_empty() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let combo_skill = &skill_usable_with(&skill.is_usable_with).named("combo skill");
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-		let combo_tree = ComboTreeTemplate(HashMap::from([(
-			skill.data.0,
-			SkillComboTree {
-				skill: skill_usable_with(&[]).named("combo-start"),
-				next: _Next(vec![(
-					skill.data.0,
-					SkillComboTree {
-						skill: combo_skill.clone(),
-						next: _Next(vec![]),
+	fn ignore_running_combo_template_if_empty() {
+		let (mut app, agent) = setup(
+			[(
+				SlotKey::Hand(Side::Main),
+				SkillComboTree {
+					skill: Skill {
+						name: "trigger a",
+						..default()
 					},
-				)]),
-			},
-		)]));
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
+					next: _Next(vec![(
+						SlotKey::Hand(Side::Main),
+						SkillComboTree {
+							skill: Skill {
+								name: "combo a",
+								..default()
+							},
+							next: _Next(vec![]),
+						},
+					)]),
+				},
+			)],
+			Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+		);
 
 		app.world
 			.entity_mut(agent)
-			.insert(ComboTreeRunning(HashMap::from([(
-				skill.data.0,
-				SkillComboTree {
-					skill: skill_usable_with(&[]).named("combo-start"),
-					next: _Next(vec![]),
-				},
-			)])));
+			.insert(ComboTreeRunning::<_Next>(HashMap::from([])));
+
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let slot = agent.get::<Slots>().unwrap().0.get(&skill.data.0).unwrap();
 
-		assert_eq!(Some(combo_skill.clone()), slot.combo_skill);
+		assert_eq!(
+			&Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					name: "combo a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+			agent
+				.get::<Queue<_Enqueue, QueueCollection<DequeueAble>>>()
+				.unwrap()
+		)
 	}
 
 	#[test]
-	fn call_to_branches_with_combo_start_skill() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let mut next = Mock_Next::new();
-		next.expect_to_vec()
-			.times(1)
-			.with(eq(skill.clone()))
-			.return_const(vec![]);
-		next.expect_clone().returning(Mock_Next::new);
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-		let combo_tree = ComboTreeTemplate(HashMap::from([(
-			skill.data.0,
-			SkillComboTree {
-				skill: skill_usable_with(&[]).named("combo-start"),
-				next,
-			},
-		)]));
+	fn remove_running_combo_when_no_last_skill() {
+		let (mut app, agent) = setup(
+			[(
+				SlotKey::Hand(Side::Main),
+				SkillComboTree {
+					skill: Skill {
+						name: "trigger a",
+						..default()
+					},
+					next: _Next(vec![(
+						SlotKey::Hand(Side::Main),
+						SkillComboTree {
+							skill: Skill {
+								name: "combo a",
+								..default()
+							},
+							next: _Next(vec![]),
+						},
+					)]),
+				},
+			)],
+			Queue::Enqueue(_Enqueue {
+				added_last_frame: None,
+				added_this_frame: vec![Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+		);
 
-		let (mut app, ..) = setup(skill, combo_tree, slots_item_types);
-		app.update();
-	}
-
-	#[test]
-	fn call_to_branches_with_combo_start_skill_on_running() {
-		let skill = &skill_usable_with(&[ItemType::Sword])
-			.named("combo-start")
-			.active_on(SlotKey::Hand(Side::Off));
-		let slots_item_types = &[(skill.data.0, skill.is_usable_with.clone())];
-		let combo_tree = ComboTreeTemplate::<Mock_Next>(HashMap::from([]));
-
-		let (mut app, agent) = setup(skill, combo_tree, slots_item_types);
-		let mut next = Mock_Next::new();
-		next.expect_to_vec()
-			.times(1)
-			.with(eq(skill.clone()))
-			.return_const(vec![]);
-		next.expect_clone().returning(Mock_Next::new);
 		app.world
 			.entity_mut(agent)
-			.insert(ComboTreeRunning(HashMap::from([(
-				skill.data.0,
-				SkillComboTree {
-					skill: skill_usable_with(&[]).named("combo-start"),
-					next,
-				},
-			)])));
+			.insert(ComboTreeRunning::<_Next>(default()));
+
 		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(None, agent.get::<ComboTreeRunning<_Next>>())
+	}
+
+	#[test]
+	fn remove_running_combo_when_trigger_key_mismatch() {
+		let (mut app, agent) = setup(
+			[(
+				SlotKey::Hand(Side::Off),
+				SkillComboTree {
+					skill: Skill {
+						name: "trigger a",
+						..default()
+					},
+					next: _Next(vec![(
+						SlotKey::Hand(Side::Main),
+						SkillComboTree {
+							skill: Skill {
+								name: "combo a",
+								..default()
+							},
+							next: _Next(vec![]),
+						},
+					)]),
+				},
+			)],
+			Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+		);
+
+		app.world
+			.entity_mut(agent)
+			.insert(ComboTreeRunning::<_Next>(default()));
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(None, agent.get::<ComboTreeRunning<_Next>>())
+	}
+
+	#[test]
+	fn remove_running_combo_when_trigger_name_mismatch() {
+		let (mut app, agent) = setup(
+			[(
+				SlotKey::Hand(Side::Main),
+				SkillComboTree {
+					skill: Skill {
+						name: "wrong trigger name",
+						..default()
+					},
+					next: _Next(vec![(
+						SlotKey::Hand(Side::Main),
+						SkillComboTree {
+							skill: Skill {
+								name: "combo a",
+								..default()
+							},
+							next: _Next(vec![]),
+						},
+					)]),
+				},
+			)],
+			Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+		);
+
+		app.world
+			.entity_mut(agent)
+			.insert(ComboTreeRunning::<_Next>(default()));
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(None, agent.get::<ComboTreeRunning<_Next>>())
+	}
+
+	#[test]
+	fn remove_running_combo_when_combo_key_mismatch() {
+		let (mut app, agent) = setup(
+			[(
+				SlotKey::Hand(Side::Main),
+				SkillComboTree {
+					skill: Skill {
+						name: "trigger a",
+						..default()
+					},
+					next: _Next(vec![(
+						SlotKey::Hand(Side::Off),
+						SkillComboTree {
+							skill: Skill {
+								name: "combo a",
+								..default()
+							},
+							next: _Next(vec![]),
+						},
+					)]),
+				},
+			)],
+			Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![Skill {
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}],
+			}),
+		);
+
+		app.world
+			.entity_mut(agent)
+			.insert(ComboTreeRunning::<_Next>(default()));
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(None, agent.get::<ComboTreeRunning<_Next>>())
+	}
+
+	#[test]
+	fn set_set_combo_from_template_for_combo_chain() {
+		let (mut app, agent) = setup(
+			[(
+				SlotKey::Hand(Side::Main),
+				SkillComboTree {
+					skill: Skill {
+						name: "trigger a",
+						..default()
+					},
+					next: _Next(vec![(
+						SlotKey::Hand(Side::Main),
+						SkillComboTree {
+							skill: Skill {
+								name: "combo a",
+								..default()
+							},
+							next: _Next(vec![(
+								SlotKey::Hand(Side::Main),
+								SkillComboTree {
+									skill: Skill {
+										name: "combo b",
+										..default()
+									},
+									next: _Next(vec![]),
+								},
+							)]),
+						},
+					)]),
+				},
+			)],
+			Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![
+					Skill {
+						data: Queued(SlotKey::Hand(Side::Main)),
+						..default()
+					},
+					Skill {
+						data: Queued(SlotKey::Hand(Side::Main)),
+						..default()
+					},
+				],
+			}),
+		);
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			&Queue::Enqueue(_Enqueue {
+				added_last_frame: Some(Skill {
+					name: "trigger a",
+					data: Queued(SlotKey::Hand(Side::Main)),
+					..default()
+				}),
+				added_this_frame: vec![
+					Skill {
+						name: "combo a",
+						data: Queued(SlotKey::Hand(Side::Main)),
+						..default()
+					},
+					Skill {
+						name: "combo b",
+						data: Queued(SlotKey::Hand(Side::Main)),
+						..default()
+					}
+				],
+			}),
+			agent
+				.get::<Queue<_Enqueue, QueueCollection<DequeueAble>>>()
+				.unwrap()
+		)
 	}
 }

@@ -1,7 +1,7 @@
 use super::get_inputs::Input;
 use crate::{
-	components::{queue::Queue, SlotKey, Slots, Track},
-	skill::{Active, Queued, Skill},
+	components::{queue::Queue, SlotKey, Slots},
+	skill::{Queued, Skill},
 	traits::{Enqueue, IterMut},
 };
 use bevy::{
@@ -15,12 +15,7 @@ use common::errors::Level;
 use std::{collections::HashMap, time::Duration};
 
 type TrackTime = HashMap<SlotKey, Duration>;
-type Components<'a, TEnqueue> = (
-	Entity,
-	&'a Slots,
-	&'a mut Queue<TEnqueue>,
-	Option<&'a mut Track<Skill<Active>>>,
-);
+type Components<'a, TEnqueue> = (Entity, &'a Slots, &'a mut Queue<TEnqueue>);
 use crate::Error;
 
 fn no_enqueue_mode(id: Entity) -> String {
@@ -38,7 +33,7 @@ pub(crate) fn skill_controller<
 ) -> Vec<Result<(), Error>> {
 	agents
 		.iter_mut()
-		.map(|(id, slots, mut queue, mut active)| {
+		.map(|(id, slots, mut queue)| {
 			let Queue::Enqueue(queue) = queue.as_mut() else {
 				return Err(Error {
 					msg: no_enqueue_mode(id),
@@ -46,7 +41,7 @@ pub(crate) fn skill_controller<
 				});
 			};
 			enqueue_new_skills(&input, &mut times, &time, queue, slots);
-			update_skill_aim_times(&input, &times, &time, queue, active.as_deref_mut());
+			update_skill_aim_times(&input, &times, &time, queue);
 			Ok(())
 		})
 		.collect()
@@ -94,26 +89,12 @@ fn update_skill_aim_times<
 	times: &Local<HashMap<SlotKey, Duration>>,
 	time: &Res<Time<TTime>>,
 	queue: &mut TQueue,
-	mut active_skill: Option<&mut Track<Skill<Active>>>,
 ) {
 	let get_key_time = |key| Some((key, times.get(key)?));
 
 	for (key, duration) in input.just_released.iter().filter_map(get_key_time) {
-		update_skill_aim_time(key, time, duration, queue, &mut active_skill);
+		update_aim_time_in_queue(key, time, duration, queue);
 	}
-}
-
-fn update_skill_aim_time<TQueue: IterMut<Skill<Queued>>, TTime: Default + Send + Sync + 'static>(
-	key: &SlotKey,
-	time: &Res<Time<TTime>>,
-	duration: &Duration,
-	queue: &mut TQueue,
-	active_skill: &mut Option<&mut Track<Skill<Active>>>,
-) {
-	if update_aim_time_in_queue(key, time, duration, queue) {
-		return;
-	}
-	update_aim_time_on_active(key, time, duration, active_skill);
 }
 
 fn update_aim_time_in_queue<
@@ -132,21 +113,6 @@ fn update_aim_time_in_queue<
 	true
 }
 
-fn update_aim_time_on_active<TTime: Default + Send + Sync + 'static>(
-	key: &SlotKey,
-	time: &Res<Time<TTime>>,
-	duration: &Duration,
-	active_skill: &mut Option<&mut Track<Skill<Active>>>,
-) {
-	let Some(skill) = active_skill.as_mut() else {
-		return;
-	};
-	if &skill.value.data.0 != key {
-		return;
-	}
-	skill.value.cast.aim = time.elapsed() - *duration;
-}
-
 fn get_queued_skill<'a, TQueue: IterMut<Skill<Queued>>>(
 	key: &SlotKey,
 	queue: &'a mut TQueue,
@@ -158,15 +124,14 @@ fn get_queued_skill<'a, TQueue: IterMut<Skill<Queued>>>(
 mod tests {
 	use super::*;
 	use crate::{
-		components::{queue::QueueCollection, Item, Slot, SlotKey, Slots, Track},
-		skill::{Active, Cast, Queued, Skill},
+		components::{queue::QueueCollection, Item, Slot, SlotKey, Slots},
+		skill::{Cast, Queued, Skill},
 	};
 	use bevy::{
 		app::{App, Update},
 		ecs::{
 			entity::Entity,
 			system::{IntoSystem, Resource},
-			world::Mut,
 		},
 		time::{Real, Time},
 		utils::default,
@@ -208,13 +173,6 @@ mod tests {
 		match queue {
 			_TestQueue::Enqueue(queue) => Some(queue),
 			_TestQueue::Dequeue(_) => None,
-		}
-	}
-
-	fn clear_enqueue(mut queue: Mut<_TestQueue>) {
-		match queue.as_mut() {
-			_TestQueue::Enqueue(queue) => queue.queued = vec![],
-			_TestQueue::Dequeue(_) => (),
 		}
 	}
 
@@ -583,237 +541,6 @@ mod tests {
 				]
 			}),
 			agent.get::<_TestQueue>().and_then(get_enqueue)
-		);
-	}
-
-	#[test]
-	fn update_aim_time_on_active() {
-		let mut app = setup();
-		let agent = app
-			.world
-			.spawn((
-				Slots(HashMap::from([(
-					SlotKey::Hand(Side::Main),
-					Slot {
-						entity: Entity::from_raw(42),
-						item: Some(Item {
-							skill: Some(Skill {
-								name: "main",
-								..default()
-							}),
-							..default()
-						}),
-						combo_skill: None,
-					},
-				)])),
-				_TestQueue::Enqueue(_Enqueue::default()),
-			))
-			.id();
-
-		app.world.resource_mut::<_Input>().0.just_pressed = vec![SlotKey::Hand(Side::Main)];
-		app.update();
-
-		app.world
-			.entity_mut(agent)
-			.get_mut::<_TestQueue>()
-			.map(clear_enqueue);
-		app.world.entity_mut(agent).insert(Track::new(Skill {
-			data: Active(SlotKey::Hand(Side::Main)),
-			..default()
-		}));
-
-		app.tick_time(Duration::from_millis(100));
-		app.world.resource_mut::<_Input>().0.just_pressed = vec![];
-		app.world.resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			Some(&Track::new(Skill {
-				data: Active(SlotKey::Hand(Side::Main)),
-				cast: Cast {
-					aim: Duration::from_millis(100),
-					..default()
-				},
-				..default()
-			},)),
-			agent.get::<Track<Skill<Active>>>()
-		);
-	}
-
-	#[test]
-	fn do_not_update_aim_time_on_active_if_slot_key_does_not_match() {
-		let mut app = setup();
-		let agent = app
-			.world
-			.spawn((
-				Slots(HashMap::from([(
-					SlotKey::Hand(Side::Main),
-					Slot {
-						entity: Entity::from_raw(42),
-						item: Some(Item {
-							skill: Some(Skill {
-								name: "main",
-								..default()
-							}),
-							..default()
-						}),
-						combo_skill: None,
-					},
-				)])),
-				_TestQueue::Enqueue(_Enqueue::default()),
-			))
-			.id();
-
-		app.world.resource_mut::<_Input>().0.just_pressed = vec![SlotKey::Hand(Side::Main)];
-		app.update();
-
-		app.world
-			.entity_mut(agent)
-			.get_mut::<_TestQueue>()
-			.map(clear_enqueue);
-		app.world.entity_mut(agent).insert(Track::new(Skill {
-			data: Active(SlotKey::Hand(Side::Off)),
-			..default()
-		}));
-
-		app.tick_time(Duration::from_millis(100));
-		app.world.resource_mut::<_Input>().0.just_pressed = vec![];
-		app.world.resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			Some(&Track::new(Skill {
-				data: Active(SlotKey::Hand(Side::Off)),
-				..default()
-			},)),
-			agent.get::<Track<Skill<Active>>>()
-		);
-	}
-
-	#[test]
-	fn update_aim_time_on_active_over_multiple_frames() {
-		let mut app = setup();
-		let agent = app
-			.world
-			.spawn((
-				Slots(HashMap::from([(
-					SlotKey::Hand(Side::Main),
-					Slot {
-						entity: Entity::from_raw(42),
-						item: Some(Item {
-							skill: Some(Skill {
-								name: "main",
-								..default()
-							}),
-							..default()
-						}),
-						combo_skill: None,
-					},
-				)])),
-				_TestQueue::Enqueue(_Enqueue::default()),
-			))
-			.id();
-
-		app.world.resource_mut::<_Input>().0.just_pressed = vec![SlotKey::Hand(Side::Main)];
-		app.update();
-
-		app.world
-			.entity_mut(agent)
-			.get_mut::<_TestQueue>()
-			.map(clear_enqueue);
-		app.world.entity_mut(agent).insert(Track::new(Skill {
-			data: Active(SlotKey::Hand(Side::Main)),
-			..default()
-		}));
-
-		app.tick_time(Duration::from_millis(100));
-		app.world.resource_mut::<_Input>().0.just_pressed = vec![];
-		app.update();
-
-		app.tick_time(Duration::from_millis(100));
-		app.world.resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			Some(&Track::new(Skill {
-				data: Active(SlotKey::Hand(Side::Main)),
-				cast: Cast {
-					aim: Duration::from_millis(200),
-					..default()
-				},
-				..default()
-			},)),
-			agent.get::<Track<Skill<Active>>>()
-		);
-	}
-
-	#[test]
-	fn update_aim_time_in_queue_even_if_same_key_is_active() {
-		let mut app = setup();
-		let agent = app
-			.world
-			.spawn((
-				Slots(HashMap::from([(
-					SlotKey::Hand(Side::Main),
-					Slot {
-						entity: Entity::from_raw(42),
-						item: Some(Item {
-							skill: Some(Skill {
-								name: "main",
-								..default()
-							}),
-							..default()
-						}),
-						combo_skill: None,
-					},
-				)])),
-				_TestQueue::Enqueue(_Enqueue::default()),
-			))
-			.id();
-
-		app.world.resource_mut::<_Input>().0.just_pressed = vec![SlotKey::Hand(Side::Main)];
-		app.update();
-
-		app.world.entity_mut(agent).insert(Track::new(Skill {
-			data: Active(SlotKey::Hand(Side::Main)),
-			..default()
-		}));
-
-		app.tick_time(Duration::from_millis(100));
-		app.world.resource_mut::<_Input>().0.just_pressed = vec![];
-		app.world.resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			(
-				Some(&_Enqueue {
-					queued: vec![Skill {
-						name: "main",
-						data: Queued(SlotKey::Hand(Side::Main)),
-						cast: Cast {
-							aim: Duration::from_millis(100),
-							..default()
-						},
-						..default()
-					},]
-				}),
-				Some(&Track::new(Skill {
-					data: Active(SlotKey::Hand(Side::Main)),
-					..default()
-				},))
-			),
-			(
-				agent.get::<_TestQueue>().and_then(get_enqueue),
-				agent.get::<Track<Skill<Active>>>()
-			)
 		);
 	}
 

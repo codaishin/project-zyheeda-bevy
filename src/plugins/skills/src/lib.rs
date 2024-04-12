@@ -37,10 +37,9 @@ use components::{
 	ItemType,
 	SideUnset,
 	SlotKey,
-	Track,
 };
 use resources::{skill_templates::SkillTemplates, SkillIcons, SlotMap};
-use skill::{Active, Cast, PlayerSkills, Skill, SkillComboNext, SkillComboTree, SwordStrike};
+use skill::{Cast, PlayerSkills, Skill, SkillComboNext, SkillComboTree, SwordStrike};
 use states::{GameRunning, MouseContext};
 use std::{
 	collections::{HashMap, HashSet},
@@ -61,9 +60,9 @@ use systems::{
 		set_queue_to_enqueue::set_queue_to_enqueue,
 	},
 	set_slot_visibility::set_slot_visibility,
+	skill_activity_dispatch::skill_activity_dispatch,
 	skill_controller::skill_controller,
 	skill_execution::skill_execution,
-	skill_state_component_dispatch::skill_state_component_dispatch,
 	slots::add_item_slots,
 };
 use traits::GetExecution;
@@ -78,14 +77,23 @@ impl Plugin for SkillsPlugin {
 			.add_systems(PreStartup, setup_input)
 			.add_systems(PreUpdate, add_item_slots)
 			.add_systems(
-				PreUpdate,
+				Update,
 				(
 					set_queue_to_enqueue,
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
 						.pipe(skill_controller::<QueueCollection<EnqueueAble>, Virtual>)
 						.pipe(log_many),
+					chain_combo_skills::<SkillComboNext, QueueCollection<EnqueueAble>>,
 					set_queue_to_dequeue,
-					dequeue::<QueueCollection<DequeueAble>>.pipe(log_many), // sets skill activity marker, so it MUST run before skill execution systems
+					skill_activity_dispatch::<
+						PlayerSkills<Side>,
+						QueueCollection<DequeueAble>,
+						Virtual,
+					>
+						.pipe(log_many),
+					set_slot_visibility,
+					skill_execution,
+					dequeue::<QueueCollection<DequeueAble>>.pipe(log_many),
 				)
 					.chain()
 					.run_if(in_state(GameRunning::On)),
@@ -107,20 +115,6 @@ impl Plugin for SkillsPlugin {
 					equip_item::<Inventory, Swap<InventoryKey, SlotKey>>.pipe(log_many),
 					equip_item::<Inventory, Swap<SlotKey, InventoryKey>>.pipe(log_many),
 				),
-			)
-			.add_systems(
-				Update,
-				(
-					chain_combo_skills::<SkillComboNext>,
-					skill_state_component_dispatch::<
-						PlayerSkills<Side>,
-						Track<Skill<Active>>,
-						Virtual,
-					>,
-					set_slot_visibility,
-					skill_execution,
-				)
-					.chain(),
 			);
 	}
 }
@@ -153,7 +147,6 @@ fn setup_skill_templates(
 				active: Duration::from_millis(500),
 				after: Duration::from_millis(200),
 			},
-			soft_override: true,
 			animate: Some(PlayerSkills::SwordStrike(SideUnset)),
 			execution: SwordStrike::execution(),
 			is_usable_with: HashSet::from([ItemType::Sword]),
@@ -167,7 +160,6 @@ fn setup_skill_templates(
 				after: Duration::from_millis(100),
 				..default()
 			},
-			soft_override: true,
 			animate: Some(PlayerSkills::Shoot(Handed::Single(SideUnset))),
 			execution: Projectile::<Plasma>::execution(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
@@ -181,7 +173,6 @@ fn setup_skill_templates(
 				after: Duration::from_millis(100),
 				..default()
 			},
-			soft_override: true,
 			animate: Some(PlayerSkills::Shoot(Handed::Dual(SideUnset))),
 			execution: Projectile::<Plasma>::execution(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),

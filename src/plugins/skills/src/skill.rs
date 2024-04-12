@@ -16,7 +16,6 @@ pub struct Skill<TData = ()> {
 	pub name: &'static str,
 	pub data: TData,
 	pub cast: Cast,
-	pub soft_override: bool,
 	pub animate: Option<PlayerSkills<SideUnset>>,
 	pub execution: SkillExecution,
 	pub is_usable_with: HashSet<ItemType>,
@@ -29,7 +28,6 @@ impl<TData: Default> Default for Skill<TData> {
 			name: Default::default(),
 			data: Default::default(),
 			cast: Default::default(),
-			soft_override: Default::default(),
 			animate: Default::default(),
 			execution: Default::default(),
 			is_usable_with: Default::default(),
@@ -93,16 +91,12 @@ impl<T> Default for SelectInfo<T> {
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Queued(pub SlotKey);
 
-#[derive(Debug, PartialEq, Clone, Default)]
-pub struct Active(pub SlotKey);
-
 impl Skill {
 	pub fn with<TData: Clone>(self, data: TData) -> Skill<TData> {
 		Skill {
 			data,
 			name: self.name,
 			cast: self.cast,
-			soft_override: self.soft_override,
 			animate: self.animate,
 			execution: self.execution,
 			is_usable_with: self.is_usable_with,
@@ -118,17 +112,10 @@ impl<TSrc> Skill<TSrc> {
 			data: map(self.data),
 			cast: self.cast,
 			animate: self.animate,
-			soft_override: self.soft_override,
 			execution: self.execution,
 			is_usable_with: self.is_usable_with,
 			dual_wield: self.dual_wield,
 		}
-	}
-}
-
-impl Skill<Queued> {
-	pub fn to_active(self) -> Skill<Active> {
-		self.map_data(|queued| Active(queued.0))
 	}
 }
 

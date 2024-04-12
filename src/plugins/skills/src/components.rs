@@ -6,7 +6,6 @@ use common::components::{Collection, Side};
 use std::{
 	collections::{HashMap, HashSet},
 	fmt::{Display, Formatter, Result},
-	time::Duration,
 };
 
 #[derive(Component, Clone)]
@@ -64,21 +63,6 @@ pub type Equipment = Collection<(SlotKey, Option<Item>)>;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct InventoryKey(pub usize);
-
-#[derive(Component, Debug, PartialEq)]
-pub struct Track<T> {
-	pub value: T,
-	pub elapsed: Duration,
-}
-
-impl<T: Clone> Track<T> {
-	pub fn new(value: T) -> Self {
-		Self {
-			value: value.clone(),
-			elapsed: Duration::ZERO,
-		}
-	}
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Handed<TSide> {

@@ -1,24 +1,21 @@
 use super::ComboNext;
 use crate::{
 	components::SlotKey,
-	skill::{Active, Skill, SkillComboNext, SkillComboTree},
+	skill::{Queued, Skill, SkillComboNext, SkillComboTree},
 };
 
 impl ComboNext for SkillComboNext {
-	fn to_vec(&self, skill: &Skill<Active>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
+	fn to_vec(&self, trigger_skill: &Skill<Queued>) -> Vec<(SlotKey, SkillComboTree<Self>)> {
 		match &self {
 			SkillComboNext::Tree(tree) => tree.clone().into_iter().collect(),
-			SkillComboNext::Alternate {
-				slot_key,
-				skill: alternate_skill,
-			} => {
+			SkillComboNext::Alternate { slot_key, skill } => {
 				vec![(
 					*slot_key,
 					SkillComboTree {
-						skill: alternate_skill.clone(),
+						skill: skill.clone(),
 						next: SkillComboNext::Alternate {
-							slot_key: skill.data.0,
-							skill: skill.clone().map_data(|_| ()),
+							slot_key: trigger_skill.data.0,
+							skill: trigger_skill.clone().map_data(|_| ()),
 						},
 					},
 				)]
@@ -61,7 +58,7 @@ mod tests {
 		};
 		let skill = Skill {
 			name: "skill",
-			data: Active(SlotKey::Hand(Side::Main)),
+			data: Queued(SlotKey::Hand(Side::Main)),
 			..default()
 		};
 
