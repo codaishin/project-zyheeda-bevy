@@ -60,8 +60,8 @@ use systems::{
 		set_queue_to_enqueue::set_queue_to_enqueue,
 	},
 	set_slot_visibility::set_slot_visibility,
+	skill_activation::skill_activation,
 	skill_activity_dispatch::skill_activity_dispatch,
-	skill_controller::skill_controller,
 	skill_execution::skill_execution,
 	slots::add_item_slots,
 };
@@ -81,7 +81,7 @@ impl Plugin for SkillsPlugin {
 				(
 					set_queue_to_enqueue,
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
-						.pipe(skill_controller::<QueueCollection<EnqueueAble>, Virtual>)
+						.pipe(skill_activation::<QueueCollection<EnqueueAble>>)
 						.pipe(log_many),
 					chain_combo_skills::<SkillComboNext, QueueCollection<EnqueueAble>>,
 					set_queue_to_dequeue,
