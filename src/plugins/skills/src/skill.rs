@@ -36,23 +36,11 @@ impl<TData: Default> Default for Skill<TData> {
 	}
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, Default)]
 pub struct Cast {
-	pub aim: Duration,
 	pub pre: Duration,
 	pub active: Duration,
 	pub after: Duration,
-}
-
-impl Default for Cast {
-	fn default() -> Self {
-		Self {
-			aim: Duration::MAX,
-			pre: Default::default(),
-			active: Default::default(),
-			after: Default::default(),
-		}
-	}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -89,7 +77,18 @@ impl<T> Default for SelectInfo<T> {
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
-pub struct Queued(pub SlotKey);
+pub enum Activation {
+	#[default]
+	Waiting,
+	Primed,
+	ActiveAfter(Duration),
+}
+
+#[derive(Debug, PartialEq, Clone, Default)]
+pub struct Queued {
+	pub slot_key: SlotKey,
+	pub mode: Activation,
+}
 
 impl Skill {
 	pub fn with<TData: Clone>(self, data: TData) -> Skill<TData> {

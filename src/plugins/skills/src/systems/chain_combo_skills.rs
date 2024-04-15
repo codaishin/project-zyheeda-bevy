@@ -54,7 +54,7 @@ pub(crate) fn chain_combo_skills<
 				return false;
 			};
 
-			let Some(trigger) = triggers.get(&trigger_skill.data.0) else {
+			let Some(trigger) = triggers.get(&trigger_skill.data.slot_key) else {
 				running_combos = default();
 				return false;
 			};
@@ -104,7 +104,7 @@ fn get_combo<TNext: Clone + ComboNext + Send + Sync + 'static>(
 		.next
 		.to_vec(trigger_skill)
 		.into_iter()
-		.find(|(k, _)| k == &combo_skill.data.0)
+		.find(|(k, _)| k == &combo_skill.data.slot_key)
 }
 
 #[cfg(test)]
@@ -211,11 +211,17 @@ mod tests {
 			Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -229,12 +235,18 @@ mod tests {
 			&Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
 					name: "combo a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -269,11 +281,17 @@ mod tests {
 			Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -287,11 +305,17 @@ mod tests {
 			&Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -326,11 +350,17 @@ mod tests {
 			Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -344,11 +374,17 @@ mod tests {
 			&Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -383,11 +419,17 @@ mod tests {
 			Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -401,11 +443,17 @@ mod tests {
 			&Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -422,7 +470,10 @@ mod tests {
 			.times(1)
 			.with(eq(Skill {
 				name: "trigger a",
-				data: Queued(SlotKey::Hand(Side::Main)),
+				data: Queued {
+					slot_key: SlotKey::Hand(Side::Main),
+					..default()
+				},
 				..default()
 			}))
 			.return_const(vec![]);
@@ -442,12 +493,18 @@ mod tests {
 			Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
 					name: "other",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -490,11 +547,17 @@ mod tests {
 			Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -553,11 +616,17 @@ mod tests {
 			Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -593,12 +662,18 @@ mod tests {
 			&Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
 					name: "combo a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -633,11 +708,17 @@ mod tests {
 			Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -655,12 +736,18 @@ mod tests {
 			&Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
 					name: "combo a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -695,7 +782,10 @@ mod tests {
 			Queue::Enqueue(_Enqueue {
 				added_last_frame: None,
 				added_this_frame: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -737,11 +827,17 @@ mod tests {
 			Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -783,11 +879,17 @@ mod tests {
 			Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -829,11 +931,17 @@ mod tests {
 			Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			}),
@@ -884,16 +992,25 @@ mod tests {
 			Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![
 					Skill {
-						data: Queued(SlotKey::Hand(Side::Main)),
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Main),
+							..default()
+						},
 						..default()
 					},
 					Skill {
-						data: Queued(SlotKey::Hand(Side::Main)),
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Main),
+							..default()
+						},
 						..default()
 					},
 				],
@@ -908,18 +1025,27 @@ mod tests {
 			&Queue::Enqueue(_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}),
 				added_this_frame: vec![
 					Skill {
 						name: "combo a",
-						data: Queued(SlotKey::Hand(Side::Main)),
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Main),
+							..default()
+						},
 						..default()
 					},
 					Skill {
 						name: "combo b",
-						data: Queued(SlotKey::Hand(Side::Main)),
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Main),
+							..default()
+						},
 						..default()
 					}
 				],

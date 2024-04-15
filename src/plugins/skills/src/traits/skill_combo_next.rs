@@ -14,7 +14,7 @@ impl ComboNext for SkillComboNext {
 					SkillComboTree {
 						skill: skill.clone(),
 						next: SkillComboNext::Alternate {
-							slot_key: trigger_skill.data.0,
+							slot_key: trigger_skill.data.slot_key,
 							skill: trigger_skill.clone().map_data(|_| ()),
 						},
 					},
@@ -58,7 +58,10 @@ mod tests {
 		};
 		let skill = Skill {
 			name: "skill",
-			data: Queued(SlotKey::Hand(Side::Main)),
+			data: Queued {
+				slot_key: SlotKey::Hand(Side::Main),
+				..default()
+			},
 			..default()
 		};
 
