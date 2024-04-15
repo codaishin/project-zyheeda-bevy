@@ -42,7 +42,10 @@ mod tests {
 			.world
 			.spawn(Queue::Enqueue(QueueCollection::new([Skill {
 				name: "A",
-				data: Queued(SlotKey::Hand(Side::Main)),
+				data: Queued {
+					slot_key: SlotKey::Hand(Side::Main),
+					..default()
+				},
 				..default()
 			}])))
 			.id();
@@ -54,7 +57,10 @@ mod tests {
 		assert_eq!(
 			Some(&Queue::Dequeue(QueueCollection::new([Skill {
 				name: "A",
-				data: Queued(SlotKey::Hand(Side::Main)),
+				data: Queued {
+					slot_key: SlotKey::Hand(Side::Main),
+					..default()
+				},
 				..default()
 			}]))),
 			agent.get::<Queue>()
@@ -68,7 +74,10 @@ mod tests {
 			.world
 			.spawn(Queue::Dequeue(QueueCollection::new([Skill {
 				name: "A",
-				data: Queued(SlotKey::Hand(Side::Main)),
+				data: Queued {
+					slot_key: SlotKey::Hand(Side::Main),
+					..default()
+				},
 				..default()
 			}])))
 			.id();
@@ -80,7 +89,10 @@ mod tests {
 		assert_eq!(
 			Some(&Queue::Dequeue(QueueCollection::new([Skill {
 				name: "A",
-				data: Queued(SlotKey::Hand(Side::Main)),
+				data: Queued {
+					slot_key: SlotKey::Hand(Side::Main),
+					..default()
+				},
 				..default()
 			}]))),
 			agent.get::<Queue>()

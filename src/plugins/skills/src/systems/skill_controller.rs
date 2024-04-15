@@ -10,6 +10,7 @@ use bevy::{
 		system::{In, Local, Query, Res},
 	},
 	time::Time,
+	utils::default,
 };
 use common::errors::Level;
 use std::{collections::HashMap, time::Duration};
@@ -70,7 +71,10 @@ fn enqueue_new_skill<TQueue: Enqueue<Skill<Queued>>, TTime: Default + Send + Syn
 		return;
 	};
 	times.insert(*key, time.elapsed());
-	queue.enqueue(skill.with(Queued(*key)));
+	queue.enqueue(skill.with(Queued {
+		slot_key: *key,
+		..default()
+	}));
 }
 
 fn get_slot_skill(key: &SlotKey, slots: &Slots) -> Option<Skill> {
@@ -117,7 +121,10 @@ fn get_queued_skill<'a, TQueue: IterMut<Skill<Queued>>>(
 	key: &SlotKey,
 	queue: &'a mut TQueue,
 ) -> Option<&'a mut Skill<Queued>> {
-	queue.iter_mut().rev().find(|skill| &skill.data.0 == key)
+	queue
+		.iter_mut()
+		.rev()
+		.find(|skill| &skill.data.slot_key == key)
 }
 
 #[cfg(test)]
@@ -224,7 +231,10 @@ mod tests {
 			Some(&_Enqueue {
 				queued: vec![Skill {
 					name: "my skill",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}]
 			}),
@@ -270,7 +280,10 @@ mod tests {
 			Some(&_Enqueue {
 				queued: vec![Skill {
 					name: "main",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					cast: Cast {
 						aim: Duration::from_millis(100),
 						..default()
@@ -326,7 +339,10 @@ mod tests {
 			Some(&_Enqueue {
 				queued: vec![Skill {
 					name: "main",
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					cast: Cast {
 						aim: Duration::from_millis(300),
 						..default()
@@ -360,7 +376,10 @@ mod tests {
 				)])),
 				_TestQueue::Enqueue(_Enqueue {
 					queued: vec![Skill {
-						data: Queued(SlotKey::Hand(Side::Off)),
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Off),
+							..default()
+						},
 						..default()
 					}],
 				}),
@@ -381,12 +400,18 @@ mod tests {
 			Some(&_Enqueue {
 				queued: vec![
 					Skill {
-						data: Queued(SlotKey::Hand(Side::Off)),
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Off),
+							..default()
+						},
 						..default()
 					},
 					Skill {
 						name: "main",
-						data: Queued(SlotKey::Hand(Side::Main)),
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Main),
+							..default()
+						},
 						cast: Cast {
 							aim: Duration::from_millis(100),
 							..default()
@@ -459,7 +484,10 @@ mod tests {
 				queued: vec![
 					Skill {
 						name: "main",
-						data: Queued(SlotKey::Hand(Side::Main)),
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Main),
+							..default()
+						},
 						cast: Cast {
 							aim: Duration::from_millis(200),
 							..default()
@@ -468,7 +496,10 @@ mod tests {
 					},
 					Skill {
 						name: "off",
-						data: Queued(SlotKey::Hand(Side::Off)),
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Off),
+							..default()
+						},
 						cast: Cast {
 							aim: Duration::from_millis(100),
 							..default()
@@ -504,7 +535,10 @@ mod tests {
 				_TestQueue::Enqueue(_Enqueue {
 					queued: vec![Skill {
 						name: "other",
-						data: Queued(SlotKey::Hand(Side::Main)),
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Main),
+							..default()
+						},
 						..default()
 					}],
 				}),
@@ -526,12 +560,18 @@ mod tests {
 				queued: vec![
 					Skill {
 						name: "other",
-						data: Queued(SlotKey::Hand(Side::Main)),
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Main),
+							..default()
+						},
 						..default()
 					},
 					Skill {
 						name: "main",
-						data: Queued(SlotKey::Hand(Side::Main)),
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Main),
+							..default()
+						},
 						cast: Cast {
 							aim: Duration::from_millis(100),
 							..default()

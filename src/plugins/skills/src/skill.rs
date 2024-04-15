@@ -89,7 +89,18 @@ impl<T> Default for SelectInfo<T> {
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
-pub struct Queued(pub SlotKey);
+pub enum Activation {
+	#[default]
+	Waiting,
+	Primed,
+	ActiveAfter(Duration),
+}
+
+#[derive(Debug, PartialEq, Clone, Default)]
+pub struct Queued {
+	pub slot_key: SlotKey,
+	pub mode: Activation,
+}
 
 impl Skill {
 	pub fn with<TData: Clone>(self, data: TData) -> Skill<TData> {

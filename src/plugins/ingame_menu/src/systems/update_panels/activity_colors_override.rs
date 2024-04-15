@@ -39,7 +39,7 @@ pub fn panel_activity_colors_override<
 ) {
 	let player_slots = &player
 		.get_single()
-		.map(|queue| queue.iter().map(|s| s.data.0).collect::<Vec<_>>());
+		.map(|queue| queue.iter().map(|s| s.data.slot_key).collect::<Vec<_>>());
 	let primed_slots = match mouse_context.get() {
 		MouseContext::Primed(key) => slot_map.slots.get(key),
 		_ => None,
@@ -173,7 +173,10 @@ mod tests {
 			Player,
 			_Queue {
 				queued: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Main)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
 					..default()
 				}],
 			},
@@ -203,7 +206,10 @@ mod tests {
 			Player,
 			_Queue {
 				queued: vec![Skill {
-					data: Queued(SlotKey::Hand(Side::Off)),
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Off),
+						..default()
+					},
 					..default()
 				}],
 			},
@@ -281,11 +287,17 @@ mod tests {
 			_Queue {
 				queued: vec![
 					Skill {
-						data: Queued(SlotKey::Hand(Side::Off)),
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Off),
+							..default()
+						},
 						..default()
 					},
 					Skill {
-						data: Queued(SlotKey::Hand(Side::Main)),
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Main),
+							..default()
+						},
 						..default()
 					},
 				],
