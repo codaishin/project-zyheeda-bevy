@@ -142,7 +142,6 @@ fn setup_skill_templates(
 		Skill {
 			name: "Swing Sword",
 			cast: Cast {
-				aim: Duration::ZERO,
 				pre: Duration::from_millis(0),
 				active: Duration::from_millis(500),
 				after: Duration::from_millis(200),
@@ -158,7 +157,6 @@ fn setup_skill_templates(
 				pre: Duration::from_millis(100),
 				active: Duration::ZERO,
 				after: Duration::from_millis(100),
-				..default()
 			},
 			animate: Some(PlayerSkills::Shoot(Handed::Single(SideUnset))),
 			execution: Projectile::<Plasma>::execution(),
@@ -171,7 +169,6 @@ fn setup_skill_templates(
 				pre: Duration::from_millis(100),
 				active: Duration::ZERO,
 				after: Duration::from_millis(100),
-				..default()
 			},
 			animate: Some(PlayerSkills::Shoot(Handed::Dual(SideUnset))),
 			execution: Projectile::<Plasma>::execution(),

@@ -781,7 +781,6 @@ mod test_queue_active_skill {
 						pre: Duration::from_millis(1),
 						active: Duration::from_millis(2),
 						after: Duration::from_millis(3),
-						..default()
 					},
 					..default()
 				},
@@ -823,7 +822,6 @@ mod test_queue_active_skill {
 						pre: Duration::from_millis(1),
 						active: Duration::from_millis(2),
 						after: Duration::from_millis(3),
-						..default()
 					},
 					..default()
 				},
@@ -865,7 +863,6 @@ mod test_queue_active_skill {
 						pre: Duration::from_millis(1),
 						active: Duration::from_millis(2),
 						after: Duration::from_millis(3),
-						..default()
 					},
 					..default()
 				},

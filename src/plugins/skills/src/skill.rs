@@ -36,23 +36,11 @@ impl<TData: Default> Default for Skill<TData> {
 	}
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, Default)]
 pub struct Cast {
-	pub aim: Duration,
 	pub pre: Duration,
 	pub active: Duration,
 	pub after: Duration,
-}
-
-impl Default for Cast {
-	fn default() -> Self {
-		Self {
-			aim: Duration::MAX,
-			pre: Default::default(),
-			active: Default::default(),
-			after: Default::default(),
-		}
-	}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
