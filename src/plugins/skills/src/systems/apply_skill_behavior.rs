@@ -15,7 +15,7 @@ use common::{
 	resources::{CamRay, MouseHover},
 };
 
-pub(crate) fn skill_execution(
+pub(crate) fn apply_skill_behavior(
 	mut commands: Commands,
 	cam_ray: Res<CamRay>,
 	mouse_hover: Res<MouseHover>,
@@ -111,7 +111,7 @@ mod tests {
 		let mut app = App::new_single_threaded([Update]);
 		app.init_resource::<CamRay>();
 		app.init_resource::<MouseHover>();
-		app.add_systems(Update, skill_execution);
+		app.add_systems(Update, apply_skill_behavior);
 
 		app
 	}

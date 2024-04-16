@@ -1,49 +1,42 @@
-use std::collections::HashMap;
-
 use crate::{
-	components::{
-		queue::{DequeueAble, Queue, QueueCollection},
-		ComboTreeRunning,
-		ComboTreeTemplate,
-		SlotKey,
-	},
+	components::{ComboTreeRunning, ComboTreeTemplate, SlotKey},
 	skill::{Queued, Skill, SkillComboTree},
-	traits::{ComboNext, GetOldLastMut, IterRecentMut},
+	traits::{ComboNext, IterAddedMut, LastUnchangedMut},
 };
 use bevy::{
 	ecs::{
+		component::Component,
 		entity::Entity,
 		system::{Commands, Query},
 	},
 	utils::default,
 };
 use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
+use std::collections::HashMap;
 
-type ComboComponents<'a, TNext, TEnqueue> = (
+type ComboComponents<'a, TNext, TSkills> = (
 	Entity,
-	&'a mut Queue<TEnqueue, QueueCollection<DequeueAble>>,
+	&'a mut TSkills,
 	&'a ComboTreeTemplate<TNext>,
 	Option<&'a ComboTreeRunning<TNext>>,
 );
 
-pub(crate) fn chain_combo_skills<
+pub(crate) fn update_skill_combos<
 	TNext: Clone + ComboNext + Send + Sync + 'static,
-	TEnqueue: GetOldLastMut<Skill<Queued>> + IterRecentMut<Skill<Queued>> + Send + Sync + 'static,
+	TSkills: LastUnchangedMut<Skill<Queued>> + IterAddedMut<Skill<Queued>> + Component,
 >(
 	mut commands: Commands,
-	mut agents: Query<ComboComponents<TNext, TEnqueue>>,
+	mut agents: Query<ComboComponents<TNext, TSkills>>,
 ) {
-	for (id, mut queue, template, running_template) in &mut agents {
-		let Queue::Enqueue(enqueue) = queue.as_mut() else {
-			continue;
-		};
+	for (id, mut enqueue, template, running_template) in &mut agents {
+		let enqueue = enqueue.as_mut();
 		let Some(mut trigger_skill) = get_trigger_skill(enqueue) else {
 			commands.try_remove_from::<ComboTreeRunning<TNext>>(id);
 			continue;
 		};
 
 		let mut running_combos = running_template.map(|r| r.0.clone()).unwrap_or_default();
-		let mut recently_queued_skills = enqueue.iter_recent_mut();
+		let mut recently_queued_skills = enqueue.iter_added_mut();
 		let mut apply_skill_combos = || {
 			let triggers = match running_combos.is_empty() {
 				true => &template.0,
@@ -89,10 +82,10 @@ pub(crate) fn chain_combo_skills<
 	}
 }
 
-fn get_trigger_skill<TEnqueue: GetOldLastMut<Skill<Queued>>>(
-	enqueue: &mut TEnqueue,
+fn get_trigger_skill<TSkills: LastUnchangedMut<Skill<Queued>>>(
+	enqueue: &mut TSkills,
 ) -> Option<Skill<Queued>> {
-	enqueue.get_old_last_mut().cloned()
+	enqueue.last_unchanged_mut().cloned()
 }
 
 fn get_combo<TNext: Clone + ComboNext + Send + Sync + 'static>(
@@ -119,14 +112,14 @@ mod tests {
 	use mockall::{mock, predicate::eq};
 	use std::collections::HashMap;
 
-	#[derive(Debug, PartialEq)]
+	#[derive(Component, Debug, PartialEq)]
 	struct _Enqueue {
 		added_last_frame: Option<Skill<Queued>>,
 		added_this_frame: Vec<Skill<Queued>>,
 	}
 
-	impl GetOldLastMut<Skill<Queued>> for _Enqueue {
-		fn get_old_last_mut<'a>(&'a mut self) -> Option<&'a mut Skill<Queued>>
+	impl LastUnchangedMut<Skill<Queued>> for _Enqueue {
+		fn last_unchanged_mut<'a>(&'a mut self) -> Option<&'a mut Skill<Queued>>
 		where
 			Skill<Queued>: 'a,
 		{
@@ -134,8 +127,8 @@ mod tests {
 		}
 	}
 
-	impl IterRecentMut<Skill<Queued>> for _Enqueue {
-		fn iter_recent_mut<'a>(
+	impl IterAddedMut<Skill<Queued>> for _Enqueue {
+		fn iter_added_mut<'a>(
 			&'a mut self,
 		) -> impl DoubleEndedIterator<Item = &'a mut Skill<Queued>>
 		where
@@ -173,10 +166,10 @@ mod tests {
 
 	fn setup<TNext: ComboNext + Clone + Send + Sync + 'static, const N: usize>(
 		combos_template: [(SlotKey, SkillComboTree<TNext>); N],
-		queue: Queue<_Enqueue, QueueCollection<DequeueAble>>,
+		queue: _Enqueue,
 	) -> (App, Entity) {
 		let mut app = App::new_single_threaded([Update]);
-		app.add_systems(Update, chain_combo_skills::<TNext, _Enqueue>);
+		app.add_systems(Update, update_skill_combos::<TNext, _Enqueue>);
 
 		let agent = app
 			.world
@@ -208,7 +201,7 @@ mod tests {
 					)]),
 				},
 			)],
-			Queue::Enqueue(_Enqueue {
+			_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -224,7 +217,7 @@ mod tests {
 					},
 					..default()
 				}],
-			}),
+			},
 		);
 
 		app.update();
@@ -232,7 +225,7 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			&Queue::Enqueue(_Enqueue {
+			&_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -249,10 +242,8 @@ mod tests {
 					},
 					..default()
 				}],
-			}),
-			agent
-				.get::<Queue<_Enqueue, QueueCollection<DequeueAble>>>()
-				.unwrap()
+			},
+			agent.get::<_Enqueue>().unwrap()
 		)
 	}
 
@@ -278,7 +269,7 @@ mod tests {
 					)]),
 				},
 			)],
-			Queue::Enqueue(_Enqueue {
+			_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -294,7 +285,7 @@ mod tests {
 					},
 					..default()
 				}],
-			}),
+			},
 		);
 
 		app.update();
@@ -302,7 +293,7 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			&Queue::Enqueue(_Enqueue {
+			Some(&_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -319,9 +310,7 @@ mod tests {
 					..default()
 				}],
 			}),
-			agent
-				.get::<Queue<_Enqueue, QueueCollection<DequeueAble>>>()
-				.unwrap()
+			agent.get::<_Enqueue>()
 		)
 	}
 
@@ -347,7 +336,7 @@ mod tests {
 					)]),
 				},
 			)],
-			Queue::Enqueue(_Enqueue {
+			_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -363,7 +352,7 @@ mod tests {
 					},
 					..default()
 				}],
-			}),
+			},
 		);
 
 		app.update();
@@ -371,7 +360,7 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			&Queue::Enqueue(_Enqueue {
+			Some(&_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -388,9 +377,7 @@ mod tests {
 					..default()
 				}],
 			}),
-			agent
-				.get::<Queue<_Enqueue, QueueCollection<DequeueAble>>>()
-				.unwrap()
+			agent.get::<_Enqueue>()
 		)
 	}
 
@@ -416,7 +403,7 @@ mod tests {
 					)]),
 				},
 			)],
-			Queue::Enqueue(_Enqueue {
+			_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -432,7 +419,7 @@ mod tests {
 					},
 					..default()
 				}],
-			}),
+			},
 		);
 
 		app.update();
@@ -440,7 +427,7 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			&Queue::Enqueue(_Enqueue {
+			Some(&_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -457,9 +444,7 @@ mod tests {
 					..default()
 				}],
 			}),
-			agent
-				.get::<Queue<_Enqueue, QueueCollection<DequeueAble>>>()
-				.unwrap()
+			agent.get::<_Enqueue>()
 		)
 	}
 
@@ -490,7 +475,7 @@ mod tests {
 					next,
 				},
 			)],
-			Queue::Enqueue(_Enqueue {
+			_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -507,7 +492,7 @@ mod tests {
 					},
 					..default()
 				}],
-			}),
+			},
 		);
 
 		app.update();
@@ -544,7 +529,7 @@ mod tests {
 					)]),
 				},
 			)],
-			Queue::Enqueue(_Enqueue {
+			_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -560,7 +545,7 @@ mod tests {
 					},
 					..default()
 				}],
-			}),
+			},
 		);
 
 		app.update();
@@ -613,7 +598,7 @@ mod tests {
 					)]),
 				},
 			)],
-			Queue::Enqueue(_Enqueue {
+			_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -629,7 +614,7 @@ mod tests {
 					},
 					..default()
 				}],
-			}),
+			},
 		);
 
 		app.world
@@ -659,7 +644,7 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			&Queue::Enqueue(_Enqueue {
+			&_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -676,10 +661,8 @@ mod tests {
 					},
 					..default()
 				}],
-			}),
-			agent
-				.get::<Queue<_Enqueue, QueueCollection<DequeueAble>>>()
-				.unwrap()
+			},
+			agent.get::<_Enqueue>().unwrap()
 		)
 	}
 
@@ -705,7 +688,7 @@ mod tests {
 					)]),
 				},
 			)],
-			Queue::Enqueue(_Enqueue {
+			_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -721,7 +704,7 @@ mod tests {
 					},
 					..default()
 				}],
-			}),
+			},
 		);
 
 		app.world
@@ -733,7 +716,7 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			&Queue::Enqueue(_Enqueue {
+			Some(&_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -751,9 +734,7 @@ mod tests {
 					..default()
 				}],
 			}),
-			agent
-				.get::<Queue<_Enqueue, QueueCollection<DequeueAble>>>()
-				.unwrap()
+			agent.get::<_Enqueue>()
 		)
 	}
 
@@ -779,7 +760,7 @@ mod tests {
 					)]),
 				},
 			)],
-			Queue::Enqueue(_Enqueue {
+			_Enqueue {
 				added_last_frame: None,
 				added_this_frame: vec![Skill {
 					data: Queued {
@@ -788,7 +769,7 @@ mod tests {
 					},
 					..default()
 				}],
-			}),
+			},
 		);
 
 		app.world
@@ -824,7 +805,7 @@ mod tests {
 					)]),
 				},
 			)],
-			Queue::Enqueue(_Enqueue {
+			_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -840,7 +821,7 @@ mod tests {
 					},
 					..default()
 				}],
-			}),
+			},
 		);
 
 		app.world
@@ -876,7 +857,7 @@ mod tests {
 					)]),
 				},
 			)],
-			Queue::Enqueue(_Enqueue {
+			_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -892,7 +873,7 @@ mod tests {
 					},
 					..default()
 				}],
-			}),
+			},
 		);
 
 		app.world
@@ -928,7 +909,7 @@ mod tests {
 					)]),
 				},
 			)],
-			Queue::Enqueue(_Enqueue {
+			_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -944,7 +925,7 @@ mod tests {
 					},
 					..default()
 				}],
-			}),
+			},
 		);
 
 		app.world
@@ -989,7 +970,7 @@ mod tests {
 					)]),
 				},
 			)],
-			Queue::Enqueue(_Enqueue {
+			_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -1014,7 +995,7 @@ mod tests {
 						..default()
 					},
 				],
-			}),
+			},
 		);
 
 		app.update();
@@ -1022,7 +1003,7 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			&Queue::Enqueue(_Enqueue {
+			&_Enqueue {
 				added_last_frame: Some(Skill {
 					name: "trigger a",
 					data: Queued {
@@ -1049,10 +1030,8 @@ mod tests {
 						..default()
 					}
 				],
-			}),
-			agent
-				.get::<Queue<_Enqueue, QueueCollection<DequeueAble>>>()
-				.unwrap()
+			},
+			agent.get::<_Enqueue>().unwrap()
 		)
 	}
 }

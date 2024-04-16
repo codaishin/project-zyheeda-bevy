@@ -4,56 +4,47 @@ use crate::{
 	traits::{
 		Enqueue,
 		Execution,
+		Flush,
 		GetActiveSkill,
 		GetAnimation,
-		GetOldLastMut,
 		GetSlots,
 		Iter,
+		IterAddedMut,
 		IterMut,
-		IterRecentMut,
-		TryDequeue,
+		LastUnchangedMut,
 	},
 };
-use bevy::{ecs::component::Component, utils::default};
+use bevy::ecs::component::Component;
 use common::{
 	components::{Animate, Side},
 	traits::state_duration::StateDuration,
 };
 use std::{collections::VecDeque, time::Duration};
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct DequeueAble;
-
-impl From<usize> for DequeueAble {
-	fn from(_: usize) -> Self {
-		Self
-	}
+#[derive(PartialEq, Debug, Default, Clone)]
+enum State {
+	#[default]
+	Flushed,
+	Changed {
+		len_before_change: usize,
+	},
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct EnqueueAble {
-	start_index: usize,
+#[derive(Component, PartialEq, Debug, Default)]
+pub struct Queue {
+	queue: VecDeque<Skill<Queued>>,
+	duration: Option<Duration>,
+	state: State,
 }
 
-impl From<usize> for EnqueueAble {
-	fn from(start_index: usize) -> Self {
-		Self { start_index }
-	}
-}
-
-#[derive(Component, Debug, PartialEq)]
-pub enum Queue<TEnqueue = QueueCollection<EnqueueAble>, TDequeue = QueueCollection<DequeueAble>> {
-	Enqueue(TEnqueue),
-	Dequeue(TDequeue),
-}
-
-impl Default for Queue {
-	fn default() -> Self {
-		Queue::Dequeue(QueueCollection {
-			queue: default(),
+#[cfg(test)]
+impl Queue {
+	pub fn new<const N: usize>(items: [Skill<Queued>; N]) -> Self {
+		Self {
+			queue: VecDeque::from(items),
 			duration: None,
-			state: DequeueAble,
-		})
+			state: State::Flushed,
+		}
 	}
 }
 
@@ -62,174 +53,33 @@ impl Iter<Skill<Queued>> for Queue {
 	where
 		Skill<Queued>: 'a,
 	{
-		match self {
-			Queue::Dequeue(q) => q.queue.iter(),
-			Queue::Enqueue(q) => q.queue.iter(),
-		}
+		self.queue.iter()
 	}
 }
 
-#[cfg(test)]
-mod test_queue {
-	use super::*;
-	use crate::components::SlotKey;
-	use common::components::Side;
-
-	#[test]
-	fn iter_dequeue_able() {
-		let queue = Queue::Dequeue(QueueCollection::new([
-			Skill {
-				name: "skill a",
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Off),
-					..default()
-				},
-				..default()
-			},
-			Skill {
-				name: "skill b",
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
-				..default()
-			},
-		]));
-
-		assert_eq!(
-			vec![
-				&Skill {
-					name: "skill a",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Off),
-						..default()
-					},
-					..default()
-				},
-				&Skill {
-					name: "skill b",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
-						..default()
-					},
-					..default()
-				}
-			],
-			queue.iter().collect::<Vec<_>>()
-		)
-	}
-
-	#[test]
-	fn iter_enqueue_able() {
-		let queue = Queue::Enqueue(QueueCollection::new([
-			Skill {
-				name: "skill a",
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Off),
-					..default()
-				},
-				..default()
-			},
-			Skill {
-				name: "skill b",
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
-				..default()
-			},
-		]));
-
-		assert_eq!(
-			vec![
-				&Skill {
-					name: "skill a",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Off),
-						..default()
-					},
-					..default()
-				},
-				&Skill {
-					name: "skill b",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
-						..default()
-					},
-					..default()
-				}
-			],
-			queue.iter().collect::<Vec<_>>()
-		)
-	}
-}
-
-#[derive(PartialEq, Debug, Default)]
-pub struct QueueCollection<TState> {
-	queue: VecDeque<Skill<Queued>>,
-	duration: Option<Duration>,
-	state: TState,
-}
-
-impl<TState: Clone> Clone for QueueCollection<TState> {
-	fn clone(&self) -> Self {
-		Self {
-			queue: self.queue.clone(),
-			duration: self.duration,
-			state: self.state.clone(),
-		}
-	}
-}
-
-impl From<QueueCollection<EnqueueAble>> for QueueCollection<DequeueAble> {
-	fn from(value: QueueCollection<EnqueueAble>) -> Self {
-		QueueCollection {
-			queue: value.queue,
-			duration: value.duration,
-			state: DequeueAble,
-		}
-	}
-}
-
-impl From<QueueCollection<DequeueAble>> for QueueCollection<EnqueueAble> {
-	fn from(value: QueueCollection<DequeueAble>) -> Self {
-		let start_index = value.queue.len();
-
-		QueueCollection {
-			queue: value.queue,
-			duration: value.duration,
-			state: EnqueueAble { start_index },
-		}
-	}
-}
-
-impl<TState: From<usize>> QueueCollection<TState> {
-	#[cfg(test)]
-	pub(crate) fn new<const N: usize>(queue: [Skill<Queued>; N]) -> Self {
-		Self {
-			queue: VecDeque::from(queue),
-			duration: None,
-			state: TState::from(N),
-		}
-	}
-}
-
-impl Enqueue<Skill<Queued>> for QueueCollection<EnqueueAble> {
+impl Enqueue<Skill<Queued>> for Queue {
 	fn enqueue(&mut self, item: Skill<Queued>) {
+		if self.state == State::Flushed {
+			let len_before_change = self.queue.len();
+			self.state = State::Changed { len_before_change }
+		}
 		self.queue.push_back(item);
 	}
 }
 
-impl TryDequeue<Skill<Queued>> for QueueCollection<DequeueAble> {
-	fn try_dequeue(&mut self) {
+impl Flush for Queue {
+	fn flush(&mut self) {
+		self.state = State::Flushed;
+
 		if self.duration.is_some() {
 			return;
 		}
+
 		self.queue.pop_front();
 	}
 }
 
-impl IterMut<Skill<Queued>> for QueueCollection<EnqueueAble> {
+impl IterMut<Skill<Queued>> for Queue {
 	fn iter_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut Skill<Queued>>
 	where
 		Skill<Queued>: 'a,
@@ -238,21 +88,31 @@ impl IterMut<Skill<Queued>> for QueueCollection<EnqueueAble> {
 	}
 }
 
-impl IterRecentMut<Skill<Queued>> for QueueCollection<EnqueueAble> {
-	fn iter_recent_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut Skill<Queued>>
+impl IterAddedMut<Skill<Queued>> for Queue {
+	fn iter_added_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut Skill<Queued>>
 	where
 		Skill<Queued>: 'a,
 	{
-		self.queue.iter_mut().skip(self.state.start_index)
+		let unchanged_len = match self.state {
+			State::Flushed => self.queue.len(),
+			State::Changed { len_before_change } => len_before_change,
+		};
+
+		self.queue.iter_mut().skip(unchanged_len)
 	}
 }
 
-impl GetOldLastMut<Skill<Queued>> for QueueCollection<EnqueueAble> {
-	fn get_old_last_mut<'a>(&'a mut self) -> Option<&'a mut Skill<Queued>>
+impl LastUnchangedMut<Skill<Queued>> for Queue {
+	fn last_unchanged_mut<'a>(&'a mut self) -> Option<&'a mut Skill<Queued>>
 	where
 		Skill<Queued>: 'a,
 	{
-		self.queue.iter_mut().take(self.state.start_index).last()
+		let unchanged_len = match self.state {
+			State::Flushed => self.queue.len(),
+			State::Changed { len_before_change } => len_before_change,
+		};
+
+		self.queue.iter_mut().take(unchanged_len).last()
 	}
 }
 
@@ -265,7 +125,7 @@ mod test_queue_collection {
 
 	#[test]
 	fn enqueue_one_skill() {
-		let mut queue = QueueCollection::new([]);
+		let mut queue = Queue::new([]);
 		queue.enqueue(Skill {
 			name: "my skill",
 			data: Queued {
@@ -276,25 +136,21 @@ mod test_queue_collection {
 		});
 
 		assert_eq!(
-			QueueCollection {
-				queue: VecDeque::from([Skill {
-					name: "my skill",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
-						..default()
-					},
+			VecDeque::from([Skill {
+				name: "my skill",
+				data: Queued {
+					slot_key: SlotKey::Hand(Side::Main),
 					..default()
-				}]),
-				duration: None,
-				state: EnqueueAble { start_index: 0 }
-			},
-			queue
+				},
+				..default()
+			}]),
+			queue.queue
 		);
 	}
 
 	#[test]
 	fn enqueue_two_skills() {
-		let mut queue = QueueCollection::new([]);
+		let mut queue = Queue::new([]);
 		queue.enqueue(Skill {
 			name: "skill a",
 			data: Queued {
@@ -313,35 +169,31 @@ mod test_queue_collection {
 		});
 
 		assert_eq!(
-			QueueCollection {
-				queue: VecDeque::from([
-					Skill {
-						name: "skill a",
-						data: Queued {
-							slot_key: SlotKey::Hand(Side::Off),
-							..default()
-						},
+			VecDeque::from([
+				Skill {
+					name: "skill a",
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Off),
 						..default()
 					},
-					Skill {
-						name: "skill b",
-						data: Queued {
-							slot_key: SlotKey::Hand(Side::Main),
-							..default()
-						},
+					..default()
+				},
+				Skill {
+					name: "skill b",
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
 						..default()
 					},
-				]),
-				duration: None,
-				state: EnqueueAble { start_index: 0 }
-			},
-			queue
+					..default()
+				},
+			]),
+			queue.queue
 		);
 	}
 
 	#[test]
-	fn dequeue_one_skill() {
-		let mut queue = QueueCollection::new([Skill {
+	fn flush_with_one_skill() {
+		let mut queue = Queue::new([Skill {
 			name: "my skill",
 			data: Queued {
 				slot_key: SlotKey::Hand(Side::Main),
@@ -350,14 +202,14 @@ mod test_queue_collection {
 			..default()
 		}]);
 
-		queue.try_dequeue();
+		queue.flush();
 
-		assert_eq!(QueueCollection::new([]), queue);
+		assert_eq!(Queue::new([]), queue);
 	}
 
 	#[test]
-	fn dequeue_two_skill() {
-		let mut queue = QueueCollection::new([
+	fn flush_with_two_skill() {
+		let mut queue = Queue::new([
 			Skill {
 				name: "skill a",
 				data: Queued {
@@ -376,33 +228,85 @@ mod test_queue_collection {
 			},
 		]);
 
-		queue.try_dequeue();
+		queue.flush();
 
-		let queue_a: Vec<_> = queue.queue.iter().cloned().collect();
+		let queue_after_1_flush = Queue {
+			queue: queue.queue.clone(),
+			duration: queue.duration,
+			state: queue.state.clone(),
+		};
 
-		queue.try_dequeue();
+		queue.flush();
 
-		let queue_b: Vec<_> = queue.queue.iter().cloned().collect();
+		let queue_after_2_flushes = Queue {
+			queue: queue.queue.clone(),
+			duration: queue.duration,
+			state: queue.state.clone(),
+		};
 
 		assert_eq!(
 			(
-				vec![Skill {
+				Queue::new([Skill {
 					name: "skill b",
 					data: Queued {
 						slot_key: SlotKey::Hand(Side::Main),
 						..default()
 					},
 					..default()
-				}],
-				vec![]
+				},]),
+				Queue::new([])
 			),
-			(queue_a, queue_b)
+			(queue_after_1_flush, queue_after_2_flushes)
 		);
 	}
 
 	#[test]
-	fn as_slice_mut() {
-		let mut queue = QueueCollection::new([]);
+	fn iter() {
+		let queue = Queue::new([
+			Skill {
+				name: "skill a",
+				data: Queued {
+					slot_key: SlotKey::Hand(Side::Off),
+					..default()
+				},
+				..default()
+			},
+			Skill {
+				name: "skill b",
+				data: Queued {
+					slot_key: SlotKey::Hand(Side::Main),
+					..default()
+				},
+				..default()
+			},
+		]);
+
+		assert_eq!(
+			vec![
+				&Skill {
+					name: "skill a",
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Off),
+						..default()
+					},
+					..default()
+				},
+				&Skill {
+					name: "skill b",
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
+					..default()
+				}
+			],
+			queue.iter().collect::<Vec<_>>()
+		)
+	}
+
+	#[test]
+	fn iter_mut() {
+		let mut queue = Queue::new([]);
 		queue.enqueue(Skill {
 			name: "skill a",
 			data: Queued {
@@ -444,85 +348,8 @@ mod test_queue_collection {
 	}
 
 	#[test]
-	fn clone() {
-		let queue = QueueCollection {
-			duration: Some(Duration::from_millis(42)),
-			queue: VecDeque::from([Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
-				..default()
-			}]),
-			state: (),
-		};
-
-		assert_eq!(queue, queue.clone())
-	}
-
-	#[test]
-	fn dequeue_to_enqueue() {
-		let queue = QueueCollection {
-			duration: Some(Duration::from_millis(42)),
-			queue: VecDeque::from([Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
-				..default()
-			}]),
-			state: DequeueAble,
-		};
-
-		assert_eq!(
-			QueueCollection {
-				duration: Some(Duration::from_millis(42)),
-				queue: VecDeque::from([Skill {
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
-						..default()
-					},
-					..default()
-				}]),
-				state: EnqueueAble { start_index: 1 },
-			},
-			queue.into()
-		)
-	}
-
-	#[test]
-	fn enqueue_to_dequeue() {
-		let queue = QueueCollection {
-			duration: Some(Duration::from_millis(42)),
-			queue: VecDeque::from([Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
-				..default()
-			}]),
-			state: EnqueueAble { start_index: 1 },
-		};
-
-		assert_eq!(
-			QueueCollection {
-				duration: Some(Duration::from_millis(42)),
-				queue: VecDeque::from([Skill {
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
-						..default()
-					},
-					..default()
-				}]),
-				state: DequeueAble,
-			},
-			queue.into()
-		)
-	}
-
-	#[test]
 	fn iter_recent_mut() {
-		let mut queue = QueueCollection::<EnqueueAble>::new([]);
+		let mut queue = Queue::new([]);
 		queue.enqueue(Skill {
 			name: "a",
 			data: Queued {
@@ -559,13 +386,13 @@ mod test_queue_collection {
 					..default()
 				}
 			],
-			queue.iter_recent_mut().collect::<Vec<_>>()
+			queue.iter_added_mut().collect::<Vec<_>>()
 		)
 	}
 
 	#[test]
 	fn iter_recent_mut_only_new() {
-		let mut queue = QueueCollection::<EnqueueAble>::new([Skill {
+		let mut queue = Queue::new([Skill {
 			name: "a",
 			data: Queued {
 				slot_key: SlotKey::SkillSpawn,
@@ -609,13 +436,84 @@ mod test_queue_collection {
 					..default()
 				}
 			],
-			queue.iter_recent_mut().collect::<Vec<_>>()
+			queue.iter_added_mut().collect::<Vec<_>>()
+		)
+	}
+
+	#[test]
+	fn iter_recent_mut_empty_after_flush() {
+		let mut queue = Queue::new([Skill {
+			name: "a",
+			data: Queued {
+				slot_key: SlotKey::SkillSpawn,
+				..default()
+			},
+			..default()
+		}]);
+		queue.enqueue(Skill {
+			name: "b",
+			data: Queued {
+				slot_key: SlotKey::Hand(Side::Main),
+				..default()
+			},
+			..default()
+		});
+		queue.enqueue(Skill {
+			name: "c",
+			data: Queued {
+				slot_key: SlotKey::Hand(Side::Off),
+				..default()
+			},
+			..default()
+		});
+
+		queue.flush();
+
+		assert_eq!(
+			vec![] as Vec<&mut Skill<Queued>>,
+			queue.iter_added_mut().collect::<Vec<_>>()
+		)
+	}
+
+	#[test]
+	fn iter_recent_mut_empty_after_flush_with_active_duration() {
+		let mut queue = Queue::new([Skill {
+			name: "a",
+			data: Queued {
+				slot_key: SlotKey::SkillSpawn,
+				..default()
+			},
+			..default()
+		}]);
+		queue.enqueue(Skill {
+			name: "b",
+			data: Queued {
+				slot_key: SlotKey::Hand(Side::Main),
+				..default()
+			},
+			..default()
+		});
+		queue.enqueue(Skill {
+			name: "c",
+			data: Queued {
+				slot_key: SlotKey::Hand(Side::Off),
+				..default()
+			},
+			..default()
+		});
+
+		queue.duration = Some(Duration::from_millis(42));
+		queue.flush();
+
+		assert_eq!(
+			vec![] as Vec<&mut Skill<Queued>>,
+			queue.iter_added_mut().collect::<Vec<_>>()
 		)
 	}
 
 	#[test]
 	fn get_old_last_mut() {
-		let mut queue = QueueCollection::<EnqueueAble>::new([Skill {
+		let mut queue = Queue::new([Skill {
 			name: "a",
 			data: Queued {
 				slot_key: SlotKey::SkillSpawn,
@@ -633,13 +531,13 @@ mod test_queue_collection {
 				},
 				..default()
 			}),
-			queue.get_old_last_mut()
+			queue.last_unchanged_mut()
 		)
 	}
 
 	#[test]
 	fn get_old_last_mut_with_later_enqueues() {
-		let mut queue = QueueCollection::<EnqueueAble>::new([Skill {
+		let mut queue = Queue::new([Skill {
 			name: "a",
 			data: Queued {
 				slot_key: SlotKey::SkillSpawn,
@@ -665,7 +563,7 @@ mod test_queue_collection {
 				},
 				..default()
 			}),
-			queue.get_old_last_mut()
+			queue.last_unchanged_mut()
 		)
 	}
 }
@@ -675,7 +573,7 @@ struct ActiveSkill<'a> {
 	skill: &'a mut Skill<Queued>,
 }
 
-impl GetActiveSkill<PlayerSkills<Side>, SkillState> for QueueCollection<DequeueAble> {
+impl GetActiveSkill<PlayerSkills<Side>, SkillState> for Queue {
 	fn get_active(
 		&mut self,
 	) -> Option<
@@ -765,12 +663,12 @@ mod test_queue_active_skill {
 		components::{Handed, SideUnset, SlotKey},
 		skill::{Cast, SkillExecution, Spawner, Target},
 	};
-	use bevy::{ecs::system::EntityCommands, transform::components::Transform};
+	use bevy::{ecs::system::EntityCommands, prelude::default, transform::components::Transform};
 	use common::components::Side;
 
 	#[test]
 	fn get_phasing_times_waiting() {
-		let mut queue = QueueCollection {
+		let mut queue = Queue {
 			queue: VecDeque::from([
 				Skill {
 					data: Queued {
@@ -786,8 +684,7 @@ mod test_queue_active_skill {
 				},
 				Skill::default(),
 			]),
-			state: DequeueAble,
-			duration: None,
+			..default()
 		};
 
 		let manager = queue.get_active().unwrap();
@@ -811,7 +708,7 @@ mod test_queue_active_skill {
 
 	#[test]
 	fn get_phasing_times_primed() {
-		let mut queue = QueueCollection {
+		let mut queue = Queue {
 			queue: VecDeque::from([
 				Skill {
 					data: Queued {
@@ -827,8 +724,7 @@ mod test_queue_active_skill {
 				},
 				Skill::default(),
 			]),
-			state: DequeueAble,
-			duration: None,
+			..default()
 		};
 
 		let manager = queue.get_active().unwrap();
@@ -852,7 +748,7 @@ mod test_queue_active_skill {
 
 	#[test]
 	fn get_phasing_times_active() {
-		let mut queue = QueueCollection {
+		let mut queue = Queue {
 			queue: VecDeque::from([
 				Skill {
 					data: Queued {
@@ -868,8 +764,7 @@ mod test_queue_active_skill {
 				},
 				Skill::default(),
 			]),
-			state: DequeueAble,
-			duration: None,
+			..default()
 		};
 
 		let manager = queue.get_active().unwrap();
@@ -893,7 +788,7 @@ mod test_queue_active_skill {
 
 	#[test]
 	fn get_duration() {
-		let mut queue = QueueCollection {
+		let mut queue = Queue {
 			duration: Some(Duration::from_secs(11)),
 			queue: VecDeque::from([Skill {
 				data: Queued {
@@ -902,7 +797,7 @@ mod test_queue_active_skill {
 				},
 				..default()
 			}]),
-			state: DequeueAble,
+			..default()
 		};
 
 		let mut manager = queue.get_active().unwrap();
@@ -912,7 +807,7 @@ mod test_queue_active_skill {
 
 	#[test]
 	fn if_first_skill_primed_set_active_with_current_duration() {
-		let mut queue = QueueCollection {
+		let mut queue = Queue {
 			duration: Some(Duration::from_secs(11)),
 			queue: VecDeque::from([Skill {
 				data: Queued {
@@ -921,7 +816,7 @@ mod test_queue_active_skill {
 				},
 				..default()
 			}]),
-			state: DequeueAble,
+			..default()
 		};
 
 		{
@@ -937,7 +832,7 @@ mod test_queue_active_skill {
 
 	#[test]
 	fn clear_duration_when_calling_clear() {
-		let mut queue = QueueCollection {
+		let mut queue = Queue {
 			duration: Some(Duration::from_secs(11)),
 			queue: VecDeque::from([Skill {
 				data: Queued {
@@ -946,7 +841,7 @@ mod test_queue_active_skill {
 				},
 				..default()
 			}]),
-			state: DequeueAble,
+			..default()
 		};
 
 		queue.clear_active();
@@ -955,8 +850,8 @@ mod test_queue_active_skill {
 	}
 
 	#[test]
-	fn no_dequeue_when_duration_set() {
-		let mut queue = QueueCollection {
+	fn do_not_pop_front_on_flush_when_duration_set() {
+		let mut queue = Queue {
 			duration: Some(Duration::from_secs(11)),
 			queue: VecDeque::from([Skill {
 				data: Queued {
@@ -965,10 +860,10 @@ mod test_queue_active_skill {
 				},
 				..default()
 			}]),
-			state: DequeueAble,
+			..default()
 		};
 
-		queue.try_dequeue();
+		queue.flush();
 
 		assert_eq!(
 			VecDeque::from([Skill {
@@ -984,7 +879,7 @@ mod test_queue_active_skill {
 
 	#[test]
 	fn set_default_duration_when_getting_manager() {
-		let mut queue = QueueCollection {
+		let mut queue = Queue {
 			duration: None,
 			queue: VecDeque::from([Skill {
 				data: Queued {
@@ -993,7 +888,7 @@ mod test_queue_active_skill {
 				},
 				..default()
 			}]),
-			state: DequeueAble,
+			..default()
 		};
 
 		assert_eq!(
@@ -1007,10 +902,9 @@ mod test_queue_active_skill {
 
 	#[test]
 	fn do_not_set_default_duration_when_getting_manager_when_queue_is_empty() {
-		let mut queue = QueueCollection {
-			duration: None,
-			queue: default(),
-			state: DequeueAble,
+		let mut queue = Queue {
+			queue: VecDeque::from([]),
+			..default()
 		};
 
 		queue.get_active();

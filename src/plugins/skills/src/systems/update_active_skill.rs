@@ -1,29 +1,19 @@
-use std::time::Duration;
-
 use crate::{
-	components::{
-		queue::{EnqueueAble, Queue, QueueCollection},
-		SkillExecution,
-		SlotVisibility,
-	},
+	components::{SkillExecution, SlotVisibility},
 	skill::SkillState,
 	traits::{Execution, GetActiveSkill, GetAnimation, GetSlots},
-	Error,
 };
 use behaviors::components::{Face, OverrideFace};
 use bevy::{
 	ecs::{
+		component::Component,
 		entity::Entity,
 		system::{Commands, EntityCommands, Query, Res},
 	},
 	time::Time,
 };
-use common::{
-	errors::Level,
-	traits::state_duration::{StateMeta, StateUpdate},
-};
-
-type QueueWithActive<TDequeue> = Queue<QueueCollection<EnqueueAble>, TDequeue>;
+use common::traits::state_duration::{StateMeta, StateUpdate};
+use std::time::Duration;
 
 #[derive(PartialEq)]
 enum State {
@@ -31,52 +21,37 @@ enum State {
 	Busy,
 }
 
-fn no_dequeue_mode(id: Entity) -> String {
-	format!("{id:?}: Attempted dequeue on a queue set to enqueue")
-}
-
-pub(crate) fn skill_activity_dispatch<
+pub(crate) fn update_active_skill<
 	TAnimationKey: Copy + Clone + PartialEq + Send + Sync + 'static,
-	TDequeue: GetActiveSkill<TAnimationKey, SkillState> + Sync + Send + 'static,
+	TGetSkill: GetActiveSkill<TAnimationKey, SkillState> + Component,
 	TTime: Send + Sync + Default + 'static,
 >(
 	time: Res<Time<TTime>>,
 	mut commands: Commands,
-	mut agents: Query<(Entity, &mut QueueWithActive<TDequeue>)>,
-) -> Vec<Result<(), Error>> {
+	mut agents: Query<(Entity, &mut TGetSkill)>,
+) {
 	let delta = time.delta();
 
-	agents
-		.iter_mut()
-		.map(|(entity, mut queue)| {
-			let Queue::Dequeue(dequeue) = queue.as_mut() else {
-				return Err(Error {
-					msg: no_dequeue_mode(entity),
-					lvl: Level::Error,
-				});
-			};
+	for (entity, mut dequeue) in &mut agents {
+		let Some(agent) = &mut commands.get_entity(entity) else {
+			continue;
+		};
+		let dequeue = dequeue.as_mut();
 
-			let Some(agent) = &mut commands.get_entity(entity) else {
-				return Ok(());
-			};
+		if advance_skill(agent, dequeue, delta) == State::Busy {
+			continue;
+		}
 
-			if advance_skill(agent, dequeue, delta) == State::Busy {
-				return Ok(());
-			}
-
-			dequeue.clear_active();
-
-			Ok(())
-		})
-		.collect()
+		dequeue.clear_active();
+	}
 }
 
 fn advance_skill<
 	TAnimationKey: Copy + Clone + PartialEq + Send + Sync + 'static,
-	TDequeue: GetActiveSkill<TAnimationKey, SkillState> + Sync + Send + 'static,
+	TGetSkill: GetActiveSkill<TAnimationKey, SkillState> + Sync + Send + 'static,
 >(
 	agent: &mut EntityCommands,
-	dequeue: &mut TDequeue,
+	dequeue: &mut TGetSkill,
 	delta: Duration,
 ) -> State {
 	let Some(skill) = &mut dequeue.get_active() else {
@@ -134,14 +109,12 @@ mod tests {
 	};
 	use behaviors::components::{Face, OverrideFace};
 	use bevy::{
-		ecs::system::{EntityCommands, IntoSystem},
+		ecs::system::EntityCommands,
 		prelude::{App, Transform, Update},
 		time::{Real, Time},
 	};
 	use common::{
 		components::{Animate, Side},
-		errors::Level,
-		systems::log::test_tools::{fake_log_error_many_recourse, FakeErrorLogManyResource},
 		test_tools::utils::{SingleThreadedApp, TickTime},
 	};
 	use mockall::{mock, predicate::eq};
@@ -165,8 +138,8 @@ mod tests {
 		A,
 	}
 
-	#[derive(Default)]
-	struct _Queue {
+	#[derive(Component, Default)]
+	struct _Dequeue {
 		pub active: Option<Box<dyn FnMut() -> Mock_Skill + Sync + Send>>,
 	}
 
@@ -191,7 +164,7 @@ mod tests {
 		mock
 	}
 
-	impl GetActiveSkill<_AnimationKey, SkillState> for _Queue {
+	impl GetActiveSkill<_AnimationKey, SkillState> for _Dequeue {
 		fn clear_active(&mut self) {
 			self.active = None;
 		}
@@ -229,11 +202,7 @@ mod tests {
 		time.update();
 		app.insert_resource(time);
 		app.update();
-		app.add_systems(
-			Update,
-			skill_activity_dispatch::<_AnimationKey, _Queue, Real>
-				.pipe(fake_log_error_many_recourse),
-		);
+		app.add_systems(Update, update_active_skill::<_AnimationKey, _Dequeue, Real>);
 
 		(app, agent)
 	}
@@ -242,7 +211,7 @@ mod tests {
 	fn call_update_with_delta() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			QueueWithActive::Dequeue(_Queue {
+			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
 					skill
@@ -252,7 +221,7 @@ mod tests {
 						.return_const(HashSet::<StateMeta<SkillState>>::default());
 					skill
 				})),
-			}),
+			},
 			Transform::default(),
 		));
 
@@ -278,7 +247,7 @@ mod tests {
 			let (mut app, agent) = setup();
 
 			app.world.entity_mut(agent).insert((
-				QueueWithActive::Dequeue(_Queue {
+				_Dequeue {
 					active: Some(Box::new(move || {
 						let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
 						skill
@@ -289,7 +258,7 @@ mod tests {
 							.return_const(Animate::Repeat(_AnimationKey::A));
 						skill
 					})),
-				}),
+				},
 				Transform::default(),
 			));
 			app.update();
@@ -307,7 +276,7 @@ mod tests {
 	fn set_slot_visible_on_first() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			QueueWithActive::Dequeue(_Queue {
+			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Slot]);
 					skill
@@ -318,7 +287,7 @@ mod tests {
 						.return_const(vec![SlotKey::Hand(Side::Main)]);
 					skill
 				})),
-			}),
+			},
 			Transform::default(),
 		));
 		app.update();
@@ -335,7 +304,7 @@ mod tests {
 	fn set_multiple_slots_visible_on_first() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			QueueWithActive::Dequeue(_Queue {
+			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Slot]);
 					skill
@@ -346,7 +315,7 @@ mod tests {
 						.return_const(vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]);
 					skill
 				})),
-			}),
+			},
 			Transform::default(),
 		));
 		app.update();
@@ -366,7 +335,7 @@ mod tests {
 	fn hide_slot_when_done() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			QueueWithActive::Dequeue(_Queue {
+			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Slot]);
 					skill.expect_update_state().return_const(
@@ -379,7 +348,7 @@ mod tests {
 						.return_const(vec![SlotKey::Hand(Side::Off)]);
 					skill
 				})),
-			}),
+			},
 			Transform::default(),
 		));
 
@@ -397,7 +366,7 @@ mod tests {
 	fn hide_multiple_slots_when_done() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			QueueWithActive::Dequeue(_Queue {
+			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Slot]);
 					skill.expect_update_state().return_const(
@@ -410,7 +379,7 @@ mod tests {
 						.return_const(vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]);
 					skill
 				})),
-			}),
+			},
 			Transform::default(),
 		));
 		app.update();
@@ -430,7 +399,7 @@ mod tests {
 	fn no_animation_when_done() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			QueueWithActive::Dequeue(_Queue {
+			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
 					skill.expect_update_state().return_const(
@@ -443,7 +412,7 @@ mod tests {
 						.return_const(Animate::Repeat(_AnimationKey::A));
 					skill
 				})),
-			}),
+			},
 			Transform::default(),
 		));
 		app.update();
@@ -457,7 +426,7 @@ mod tests {
 	fn clear_queue_of_active() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			QueueWithActive::Dequeue(_Queue {
+			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
 					skill.expect_update_state().return_const(
@@ -467,7 +436,7 @@ mod tests {
 					);
 					skill
 				})),
-			}),
+			},
 			Transform::default(),
 		));
 
@@ -475,18 +444,14 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		let Queue::Dequeue(queue) = agent.get::<QueueWithActive<_Queue>>().unwrap() else {
-			panic!("WAS ENQUEUE")
-		};
-
-		assert!(queue.active.is_none());
+		assert!(agent.get::<_Dequeue>().unwrap().active.is_none());
 	}
 
 	#[test]
 	fn do_not_remove_skill_when_not_done() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			QueueWithActive::Dequeue(_Queue {
+			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
 					skill.expect_update_state().return_const(
@@ -496,7 +461,7 @@ mod tests {
 					);
 					skill
 				})),
-			}),
+			},
 			Transform::default(),
 		));
 
@@ -504,11 +469,7 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		let Queue::Dequeue(queue) = agent.get::<QueueWithActive<_Queue>>().unwrap() else {
-			panic!("WAS ENQUEUE")
-		};
-
-		assert!(queue.active.is_some());
+		assert!(agent.get::<_Dequeue>().unwrap().active.is_some());
 	}
 
 	#[test]
@@ -516,23 +477,21 @@ mod tests {
 		fn start_behavior(_: &mut EntityCommands, _: &Transform, _: &Spawner, _: &Target) {}
 
 		let (mut app, agent) = setup();
-		app.world
-			.entity_mut(agent)
-			.insert(QueueWithActive::Dequeue(_Queue {
-				active: Some(Box::new(|| {
-					let mut skill =
-						mock_skill_without_default_setup_for([MockOption::BehaviorExecution(
-							BehaviorOption::Run,
-						)]);
-					skill.expect_update_state().return_const(
-						HashSet::<StateMeta<SkillState>>::from([StateMeta::Leaving(
-							SkillState::PreCast,
-						)]),
-					);
-					skill.expect_get_start().returning(|| Some(start_behavior));
-					skill
-				})),
-			}));
+		app.world.entity_mut(agent).insert(_Dequeue {
+			active: Some(Box::new(|| {
+				let mut skill =
+					mock_skill_without_default_setup_for([MockOption::BehaviorExecution(
+						BehaviorOption::Run,
+					)]);
+				skill
+					.expect_update_state()
+					.return_const(HashSet::<StateMeta<SkillState>>::from([
+						StateMeta::Leaving(SkillState::PreCast),
+					]));
+				skill.expect_get_start().returning(|| Some(start_behavior));
+				skill
+			})),
+		});
 
 		app.update();
 
@@ -548,7 +507,7 @@ mod tests {
 	fn do_run_when_not_activating_this_frame() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			QueueWithActive::Dequeue(_Queue {
+			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill =
 						mock_skill_without_default_setup_for([MockOption::BehaviorExecution(
@@ -561,7 +520,7 @@ mod tests {
 					skill.expect_get_start().never().return_const(None);
 					skill
 				})),
-			}),
+			},
 			Transform::default(),
 		));
 
@@ -574,7 +533,7 @@ mod tests {
 
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			QueueWithActive::Dequeue(_Queue {
+			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill =
 						mock_skill_without_default_setup_for([MockOption::BehaviorExecution(
@@ -588,7 +547,7 @@ mod tests {
 					skill.expect_get_stop().returning(|| Some(stop_fn));
 					skill
 				})),
-			}),
+			},
 			Transform::default(),
 		));
 
@@ -606,7 +565,7 @@ mod tests {
 	fn do_not_stop_when_not_done() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			QueueWithActive::Dequeue(_Queue {
+			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill =
 						mock_skill_without_default_setup_for([MockOption::BehaviorExecution(
@@ -619,7 +578,7 @@ mod tests {
 					skill.expect_get_stop().never().return_const(None);
 					skill
 				})),
-			}),
+			},
 			Transform::default(),
 		));
 
@@ -630,7 +589,7 @@ mod tests {
 	fn apply_facing() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			QueueWithActive::Dequeue(_Queue {
+			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
 					skill
@@ -638,7 +597,7 @@ mod tests {
 						.return_const(HashSet::<StateMeta<SkillState>>::from([StateMeta::First]));
 					skill
 				})),
-			}),
+			},
 			Transform::default(),
 		));
 
@@ -656,7 +615,7 @@ mod tests {
 	fn do_not_apply_facing_override_when_not_new() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			QueueWithActive::Dequeue(_Queue {
+			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
 					skill.expect_update_state().return_const(
@@ -664,7 +623,7 @@ mod tests {
 					);
 					skill
 				})),
-			}),
+			},
 			Transform::default(),
 		));
 
@@ -679,7 +638,7 @@ mod tests {
 	fn apply_apply_facing_override_when_aiming() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			QueueWithActive::Dequeue(_Queue {
+			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
 					skill.expect_update_state().return_const(
@@ -687,7 +646,7 @@ mod tests {
 					);
 					skill
 				})),
-			}),
+			},
 			Transform::from_xyz(-1., -2., -3.),
 		));
 
@@ -705,7 +664,7 @@ mod tests {
 	fn no_facing_override_when_skill_ended() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			QueueWithActive::Dequeue(_Queue {
+			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
 					skill.expect_update_state().return_const(
@@ -715,7 +674,7 @@ mod tests {
 					);
 					skill
 				})),
-			}),
+			},
 			Transform::from_xyz(-1., -2., -3.),
 			OverrideFace(Face::Cursor),
 		));
@@ -725,29 +684,5 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(None, agent.get::<OverrideFace>());
-	}
-
-	#[test]
-	fn error_when_queue_in_enqueue_state() {
-		let (mut app, agent) = setup();
-		let agent = app
-			.world
-			.entity_mut(agent)
-			.insert((
-				QueueWithActive::<_Queue>::Enqueue(QueueCollection::new([])),
-				Transform::from_xyz(-1., -2., -3.),
-				OverrideFace(Face::Cursor),
-			))
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&FakeErrorLogManyResource(vec![Error {
-				msg: no_dequeue_mode(agent),
-				lvl: Level::Error
-			}])),
-			app.world.get_resource::<FakeErrorLogManyResource>()
-		);
 	}
 }
