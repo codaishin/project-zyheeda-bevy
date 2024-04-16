@@ -1,6 +1,6 @@
 pub(crate) mod chain_combo_skills;
-pub(crate) mod dequeue;
 pub(crate) mod equip;
+pub(crate) mod flush;
 pub(crate) mod get_inputs;
 pub(crate) mod mouse_context;
 pub(crate) mod set_slot_visibility;

@@ -27,8 +27,8 @@ pub(crate) trait Enqueue<TItem> {
 	fn enqueue(&mut self, item: TItem);
 }
 
-pub(crate) trait TryDequeue<TItem> {
-	fn try_dequeue(&mut self);
+pub(crate) trait Flush {
+	fn flush(&mut self);
 }
 
 pub trait Iter<TItem> {
@@ -43,14 +43,14 @@ pub(crate) trait IterMut<TItem> {
 		TItem: 'a;
 }
 
-pub(crate) trait IterRecentMut<TItem> {
-	fn iter_recent_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut TItem>
+pub(crate) trait IterAddedMut<TItem> {
+	fn iter_added_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut TItem>
 	where
 		TItem: 'a;
 }
 
-pub(crate) trait GetOldLastMut<TItem> {
-	fn get_old_last_mut<'a>(&'a mut self) -> Option<&'a mut TItem>
+pub(crate) trait LastUnchangedMut<TItem> {
+	fn last_unchanged_mut<'a>(&'a mut self) -> Option<&'a mut TItem>
 	where
 		TItem: 'a;
 }

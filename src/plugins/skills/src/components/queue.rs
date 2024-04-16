@@ -4,14 +4,14 @@ use crate::{
 	traits::{
 		Enqueue,
 		Execution,
+		Flush,
 		GetActiveSkill,
 		GetAnimation,
-		GetOldLastMut,
 		GetSlots,
 		Iter,
+		IterAddedMut,
 		IterMut,
-		IterRecentMut,
-		TryDequeue,
+		LastUnchangedMut,
 	},
 };
 use bevy::ecs::component::Component;
@@ -67,8 +67,8 @@ impl Enqueue<Skill<Queued>> for Queue {
 	}
 }
 
-impl TryDequeue<Skill<Queued>> for Queue {
-	fn try_dequeue(&mut self) {
+impl Flush for Queue {
+	fn flush(&mut self) {
 		self.state = State::Flushed;
 
 		if self.duration.is_some() {
@@ -88,31 +88,31 @@ impl IterMut<Skill<Queued>> for Queue {
 	}
 }
 
-impl IterRecentMut<Skill<Queued>> for Queue {
-	fn iter_recent_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut Skill<Queued>>
+impl IterAddedMut<Skill<Queued>> for Queue {
+	fn iter_added_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut Skill<Queued>>
 	where
 		Skill<Queued>: 'a,
 	{
-		let old_len = match self.state {
+		let unchanged_len = match self.state {
 			State::Flushed => self.queue.len(),
 			State::Changed { len_before_change } => len_before_change,
 		};
 
-		self.queue.iter_mut().skip(old_len)
+		self.queue.iter_mut().skip(unchanged_len)
 	}
 }
 
-impl GetOldLastMut<Skill<Queued>> for Queue {
-	fn get_old_last_mut<'a>(&'a mut self) -> Option<&'a mut Skill<Queued>>
+impl LastUnchangedMut<Skill<Queued>> for Queue {
+	fn last_unchanged_mut<'a>(&'a mut self) -> Option<&'a mut Skill<Queued>>
 	where
 		Skill<Queued>: 'a,
 	{
-		let old_len = match self.state {
+		let unchanged_len = match self.state {
 			State::Flushed => self.queue.len(),
 			State::Changed { len_before_change } => len_before_change,
 		};
 
-		self.queue.iter_mut().take(old_len).last()
+		self.queue.iter_mut().take(unchanged_len).last()
 	}
 }
 
@@ -192,7 +192,7 @@ mod test_queue_collection {
 	}
 
 	#[test]
-	fn dequeue_one_skill() {
+	fn flush_with_one_skill() {
 		let mut queue = Queue::new([Skill {
 			name: "my skill",
 			data: Queued {
@@ -202,13 +202,13 @@ mod test_queue_collection {
 			..default()
 		}]);
 
-		queue.try_dequeue();
+		queue.flush();
 
 		assert_eq!(Queue::new([]), queue);
 	}
 
 	#[test]
-	fn dequeue_two_skill() {
+	fn flush_with_two_skill() {
 		let mut queue = Queue::new([
 			Skill {
 				name: "skill a",
@@ -228,17 +228,17 @@ mod test_queue_collection {
 			},
 		]);
 
-		queue.try_dequeue();
+		queue.flush();
 
-		let queue_after_1_dequeue = Queue {
+		let queue_after_1_flush = Queue {
 			queue: queue.queue.clone(),
 			duration: queue.duration,
 			state: queue.state.clone(),
 		};
 
-		queue.try_dequeue();
+		queue.flush();
 
-		let queue_after_2_dequeues = Queue {
+		let queue_after_2_flushes = Queue {
 			queue: queue.queue.clone(),
 			duration: queue.duration,
 			state: queue.state.clone(),
@@ -256,7 +256,7 @@ mod test_queue_collection {
 				},]),
 				Queue::new([])
 			),
-			(queue_after_1_dequeue, queue_after_2_dequeues)
+			(queue_after_1_flush, queue_after_2_flushes)
 		);
 	}
 
@@ -386,7 +386,7 @@ mod test_queue_collection {
 					..default()
 				}
 			],
-			queue.iter_recent_mut().collect::<Vec<_>>()
+			queue.iter_added_mut().collect::<Vec<_>>()
 		)
 	}
 
@@ -436,7 +436,7 @@ mod test_queue_collection {
 					..default()
 				}
 			],
-			queue.iter_recent_mut().collect::<Vec<_>>()
+			queue.iter_added_mut().collect::<Vec<_>>()
 		)
 	}
 
@@ -467,11 +467,11 @@ mod test_queue_collection {
 			..default()
 		});
 
-		queue.try_dequeue();
+		queue.flush();
 
 		assert_eq!(
 			vec![] as Vec<&mut Skill<Queued>>,
-			queue.iter_recent_mut().collect::<Vec<_>>()
+			queue.iter_added_mut().collect::<Vec<_>>()
 		)
 	}
 
@@ -503,11 +503,11 @@ mod test_queue_collection {
 		});
 
 		queue.duration = Some(Duration::from_millis(42));
-		queue.try_dequeue();
+		queue.flush();
 
 		assert_eq!(
 			vec![] as Vec<&mut Skill<Queued>>,
-			queue.iter_recent_mut().collect::<Vec<_>>()
+			queue.iter_added_mut().collect::<Vec<_>>()
 		)
 	}
 
@@ -531,7 +531,7 @@ mod test_queue_collection {
 				},
 				..default()
 			}),
-			queue.get_old_last_mut()
+			queue.last_unchanged_mut()
 		)
 	}
 
@@ -563,7 +563,7 @@ mod test_queue_collection {
 				},
 				..default()
 			}),
-			queue.get_old_last_mut()
+			queue.last_unchanged_mut()
 		)
 	}
 }
@@ -850,7 +850,7 @@ mod test_queue_active_skill {
 	}
 
 	#[test]
-	fn no_dequeue_when_duration_set() {
+	fn do_not_pop_front_on_flush_when_duration_set() {
 		let mut queue = Queue {
 			duration: Some(Duration::from_secs(11)),
 			queue: VecDeque::from([Skill {
@@ -863,7 +863,7 @@ mod test_queue_active_skill {
 			..default()
 		};
 
-		queue.try_dequeue();
+		queue.flush();
 
 		assert_eq!(
 			VecDeque::from([Skill {

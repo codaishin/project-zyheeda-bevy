@@ -1,7 +1,7 @@
 use crate::{
 	components::{ComboTreeRunning, ComboTreeTemplate, SlotKey},
 	skill::{Queued, Skill, SkillComboTree},
-	traits::{ComboNext, GetOldLastMut, IterRecentMut},
+	traits::{ComboNext, IterAddedMut, LastUnchangedMut},
 };
 use bevy::{
 	ecs::{
@@ -23,7 +23,7 @@ type ComboComponents<'a, TNext, TEnqueue> = (
 
 pub(crate) fn chain_combo_skills<
 	TNext: Clone + ComboNext + Send + Sync + 'static,
-	TEnqueue: GetOldLastMut<Skill<Queued>> + IterRecentMut<Skill<Queued>> + Component,
+	TEnqueue: LastUnchangedMut<Skill<Queued>> + IterAddedMut<Skill<Queued>> + Component,
 >(
 	mut commands: Commands,
 	mut agents: Query<ComboComponents<TNext, TEnqueue>>,
@@ -36,7 +36,7 @@ pub(crate) fn chain_combo_skills<
 		};
 
 		let mut running_combos = running_template.map(|r| r.0.clone()).unwrap_or_default();
-		let mut recently_queued_skills = enqueue.iter_recent_mut();
+		let mut recently_queued_skills = enqueue.iter_added_mut();
 		let mut apply_skill_combos = || {
 			let triggers = match running_combos.is_empty() {
 				true => &template.0,
@@ -82,10 +82,10 @@ pub(crate) fn chain_combo_skills<
 	}
 }
 
-fn get_trigger_skill<TEnqueue: GetOldLastMut<Skill<Queued>>>(
+fn get_trigger_skill<TEnqueue: LastUnchangedMut<Skill<Queued>>>(
 	enqueue: &mut TEnqueue,
 ) -> Option<Skill<Queued>> {
-	enqueue.get_old_last_mut().cloned()
+	enqueue.last_unchanged_mut().cloned()
 }
 
 fn get_combo<TNext: Clone + ComboNext + Send + Sync + 'static>(
@@ -118,8 +118,8 @@ mod tests {
 		added_this_frame: Vec<Skill<Queued>>,
 	}
 
-	impl GetOldLastMut<Skill<Queued>> for _Enqueue {
-		fn get_old_last_mut<'a>(&'a mut self) -> Option<&'a mut Skill<Queued>>
+	impl LastUnchangedMut<Skill<Queued>> for _Enqueue {
+		fn last_unchanged_mut<'a>(&'a mut self) -> Option<&'a mut Skill<Queued>>
 		where
 			Skill<Queued>: 'a,
 		{
@@ -127,8 +127,8 @@ mod tests {
 		}
 	}
 
-	impl IterRecentMut<Skill<Queued>> for _Enqueue {
-		fn iter_recent_mut<'a>(
+	impl IterAddedMut<Skill<Queued>> for _Enqueue {
+		fn iter_added_mut<'a>(
 			&'a mut self,
 		) -> impl DoubleEndedIterator<Item = &'a mut Skill<Queued>>
 		where

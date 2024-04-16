@@ -47,8 +47,8 @@ use std::{
 };
 use systems::{
 	chain_combo_skills::chain_combo_skills,
-	dequeue::dequeue,
 	equip::equip_item,
+	flush::flush,
 	get_inputs::get_inputs,
 	mouse_context::{
 		advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
@@ -81,7 +81,7 @@ impl Plugin for SkillsPlugin {
 					skill_activity_dispatch::<PlayerSkills<Side>, Queue, Virtual>,
 					set_slot_visibility,
 					skill_execution,
-					dequeue::<Queue>,
+					flush::<Queue>,
 				)
 					.chain()
 					.run_if(in_state(GameRunning::On)),

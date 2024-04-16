@@ -24,12 +24,12 @@ enum State {
 
 pub(crate) fn skill_activity_dispatch<
 	TAnimationKey: Copy + Clone + PartialEq + Send + Sync + 'static,
-	TDequeue: GetActiveSkill<TAnimationKey, SkillState> + Component,
+	TGetSkill: GetActiveSkill<TAnimationKey, SkillState> + Component,
 	TTime: Send + Sync + Default + 'static,
 >(
 	time: Res<Time<TTime>>,
 	mut commands: Commands,
-	mut agents: Query<(Entity, &mut TDequeue)>,
+	mut agents: Query<(Entity, &mut TGetSkill)>,
 ) {
 	let delta = time.delta();
 
@@ -49,10 +49,10 @@ pub(crate) fn skill_activity_dispatch<
 
 fn advance_skill<
 	TAnimationKey: Copy + Clone + PartialEq + Send + Sync + 'static,
-	TDequeue: GetActiveSkill<TAnimationKey, SkillState> + Sync + Send + 'static,
+	TGetSkill: GetActiveSkill<TAnimationKey, SkillState> + Sync + Send + 'static,
 >(
 	agent: &mut EntityCommands,
-	dequeue: &mut TDequeue,
+	dequeue: &mut TGetSkill,
 	delta: Duration,
 ) -> State {
 	let Some(skill) = &mut dequeue.get_active() else {
