@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::{
 	components::{SkillExecution, SlotVisibility},
 	skill::SkillState,
@@ -15,6 +13,7 @@ use bevy::{
 	time::Time,
 };
 use common::traits::state_duration::{StateMeta, StateUpdate};
+use std::time::Duration;
 
 #[derive(PartialEq)]
 enum State {
@@ -22,7 +21,7 @@ enum State {
 	Busy,
 }
 
-pub(crate) fn skill_activity_dispatch<
+pub(crate) fn update_active_skill<
 	TAnimationKey: Copy + Clone + PartialEq + Send + Sync + 'static,
 	TGetSkill: GetActiveSkill<TAnimationKey, SkillState> + Component,
 	TTime: Send + Sync + Default + 'static,
@@ -203,10 +202,7 @@ mod tests {
 		time.update();
 		app.insert_resource(time);
 		app.update();
-		app.add_systems(
-			Update,
-			skill_activity_dispatch::<_AnimationKey, _Dequeue, Real>,
-		);
+		app.add_systems(Update, update_active_skill::<_AnimationKey, _Dequeue, Real>);
 
 		(app, agent)
 	}

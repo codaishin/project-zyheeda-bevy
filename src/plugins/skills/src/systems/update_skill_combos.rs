@@ -14,19 +14,19 @@ use bevy::{
 use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
 use std::collections::HashMap;
 
-type ComboComponents<'a, TNext, TEnqueue> = (
+type ComboComponents<'a, TNext, TSkills> = (
 	Entity,
-	&'a mut TEnqueue,
+	&'a mut TSkills,
 	&'a ComboTreeTemplate<TNext>,
 	Option<&'a ComboTreeRunning<TNext>>,
 );
 
-pub(crate) fn chain_combo_skills<
+pub(crate) fn update_skill_combos<
 	TNext: Clone + ComboNext + Send + Sync + 'static,
-	TEnqueue: LastUnchangedMut<Skill<Queued>> + IterAddedMut<Skill<Queued>> + Component,
+	TSkills: LastUnchangedMut<Skill<Queued>> + IterAddedMut<Skill<Queued>> + Component,
 >(
 	mut commands: Commands,
-	mut agents: Query<ComboComponents<TNext, TEnqueue>>,
+	mut agents: Query<ComboComponents<TNext, TSkills>>,
 ) {
 	for (id, mut enqueue, template, running_template) in &mut agents {
 		let enqueue = enqueue.as_mut();
@@ -82,8 +82,8 @@ pub(crate) fn chain_combo_skills<
 	}
 }
 
-fn get_trigger_skill<TEnqueue: LastUnchangedMut<Skill<Queued>>>(
-	enqueue: &mut TEnqueue,
+fn get_trigger_skill<TSkills: LastUnchangedMut<Skill<Queued>>>(
+	enqueue: &mut TSkills,
 ) -> Option<Skill<Queued>> {
 	enqueue.last_unchanged_mut().cloned()
 }
@@ -169,7 +169,7 @@ mod tests {
 		queue: _Enqueue,
 	) -> (App, Entity) {
 		let mut app = App::new_single_threaded([Update]);
-		app.add_systems(Update, chain_combo_skills::<TNext, _Enqueue>);
+		app.add_systems(Update, update_skill_combos::<TNext, _Enqueue>);
 
 		let agent = app
 			.world

@@ -12,7 +12,7 @@ use bevy::{
 	utils::default,
 };
 
-pub(crate) fn skill_activation<
+pub(crate) fn enqueue_skills<
 	TEnqueue: Enqueue<Skill<Queued>> + IterMut<Skill<Queued>> + Component,
 >(
 	input: In<Input>,
@@ -124,7 +124,7 @@ mod tests {
 		app.init_resource::<_Input>();
 		app.add_systems(
 			Update,
-			(move |input: Res<_Input>| input.0.clone()).pipe(skill_activation::<_Enqueue>),
+			(move |input: Res<_Input>| input.0.clone()).pipe(enqueue_skills::<_Enqueue>),
 		);
 
 		app

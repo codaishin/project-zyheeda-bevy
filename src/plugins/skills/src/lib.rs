@@ -46,7 +46,8 @@ use std::{
 	time::Duration,
 };
 use systems::{
-	chain_combo_skills::chain_combo_skills,
+	apply_skill_behavior::apply_skill_behavior,
+	enqueue_skills::enqueue_skills,
 	equip::equip_item,
 	flush::flush,
 	get_inputs::get_inputs,
@@ -56,10 +57,9 @@ use systems::{
 		trigger_primed::trigger_primed_mouse_context,
 	},
 	set_slot_visibility::set_slot_visibility,
-	skill_activation::skill_activation,
-	skill_activity_dispatch::skill_activity_dispatch,
-	skill_execution::skill_execution,
 	slots::add_item_slots,
+	update_active_skill::update_active_skill,
+	update_skill_combos::update_skill_combos,
 };
 use traits::GetExecution;
 
@@ -76,11 +76,11 @@ impl Plugin for SkillsPlugin {
 				Update,
 				(
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
-						.pipe(skill_activation::<Queue>),
-					chain_combo_skills::<SkillComboNext, Queue>,
-					skill_activity_dispatch::<PlayerSkills<Side>, Queue, Virtual>,
+						.pipe(enqueue_skills::<Queue>),
+					update_skill_combos::<SkillComboNext, Queue>,
+					update_active_skill::<PlayerSkills<Side>, Queue, Virtual>,
 					set_slot_visibility,
-					skill_execution,
+					apply_skill_behavior,
 					flush::<Queue>,
 				)
 					.chain()
