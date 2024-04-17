@@ -37,6 +37,7 @@ use components::{
 	ItemType,
 	SideUnset,
 	SlotKey,
+	Slots,
 };
 use resources::{skill_templates::SkillTemplates, SkillIcons, SlotMap};
 use skill::{Cast, PlayerSkills, Skill, SkillComboNext, SkillComboTree, SwordStrike};
@@ -76,7 +77,7 @@ impl Plugin for SkillsPlugin {
 				Update,
 				(
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
-						.pipe(enqueue_skills::<Queue>),
+						.pipe(enqueue_skills::<Slots, Queue>),
 					update_skill_combos::<SkillComboNext, Queue>,
 					update_active_skill::<PlayerSkills<Side>, Queue, Virtual>,
 					set_slot_visibility,

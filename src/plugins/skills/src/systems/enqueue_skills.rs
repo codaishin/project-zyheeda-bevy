@@ -1,6 +1,6 @@
 use super::get_inputs::Input;
 use crate::{
-	components::{SlotKey, Slots},
+	components::SlotKey,
 	skill::{Activation, Queued, Skill},
 	traits::{Enqueue, IterMut},
 };
@@ -8,47 +8,41 @@ use bevy::ecs::{
 	component::Component,
 	system::{In, Query},
 };
+use common::traits::look_up::LookUp;
 
 pub(crate) fn enqueue_skills<
+	TSkillSource: LookUp<SlotKey, Skill> + Component,
 	TEnqueue: Enqueue<(Skill, SlotKey)> + IterMut<Skill<Queued>> + Component,
 >(
 	input: In<Input>,
-	mut agents: Query<(&Slots, &mut TEnqueue)>,
+	mut agents: Query<(&TSkillSource, &mut TEnqueue)>,
 ) {
-	for (slots, mut queue) in &mut agents {
+	for (skills, mut queue) in &mut agents {
 		let queue = queue.as_mut();
-		enqueue_new_skills(&input, queue, slots);
+		enqueue_new_skills(&input, queue, skills);
 		prime_skills(&input, queue);
 	}
 }
 
-fn enqueue_new_skills<TEnqueue: Enqueue<(Skill, SlotKey)>>(
+fn enqueue_new_skills<TSkillSource: LookUp<SlotKey, Skill>, TEnqueue: Enqueue<(Skill, SlotKey)>>(
 	input: &In<Input>,
 	queue: &mut TEnqueue,
-	slots: &Slots,
+	skills: &TSkillSource,
 ) {
 	for key in input.just_pressed.iter() {
-		enqueue_new_skill(key, slots, queue);
+		enqueue_new_skill(key, skills, queue);
 	}
 }
 
-fn enqueue_new_skill<TQueue: Enqueue<(Skill, SlotKey)>>(
+fn enqueue_new_skill<TSkillSource: LookUp<SlotKey, Skill>, TQueue: Enqueue<(Skill, SlotKey)>>(
 	key: &SlotKey,
-	slots: &Slots,
+	skills: &TSkillSource,
 	queue: &mut TQueue,
 ) {
-	let Some(skill) = get_slot_skill(key, slots) else {
+	let Some(skill) = skills.get(key).cloned() else {
 		return;
 	};
 	queue.enqueue((skill, *key));
-}
-
-fn get_slot_skill(key: &SlotKey, slots: &Slots) -> Option<Skill> {
-	slots
-		.0
-		.get(key)
-		.and_then(|s| s.item.clone())
-		.and_then(|i| i.skill)
 }
 
 fn prime_skills<TQueue: IterMut<Skill<Queued>>>(input: &In<Input>, queue: &mut TQueue) {
@@ -74,25 +68,32 @@ fn get_queued_skill<'a, TQueue: IterMut<Skill<Queued>>>(
 
 #[cfg(test)]
 mod tests {
+	use std::collections::HashMap;
+
 	use super::*;
 	use crate::{
-		components::{Item, Slot, SlotKey, Slots},
+		components::SlotKey,
 		skill::{Queued, Skill},
 	};
 	use bevy::{
 		app::{App, Update},
-		ecs::{
-			entity::Entity,
-			system::{IntoSystem, Res, Resource},
-		},
+		ecs::system::{IntoSystem, Res, Resource},
 		utils::default,
 	};
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
 	use mockall::{automock, predicate::eq};
-	use std::collections::HashMap;
 
 	#[derive(Resource, Default)]
 	struct _Input(Input);
+
+	#[derive(Component, Default)]
+	struct _Skills(HashMap<SlotKey, Skill>);
+
+	impl LookUp<SlotKey, Skill> for _Skills {
+		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Skill> {
+			self.0.get(key)
+		}
+	}
 
 	#[derive(Component, Default)]
 	struct _Enqueue {
@@ -121,7 +122,7 @@ mod tests {
 		app.init_resource::<_Input>();
 		app.add_systems(
 			Update,
-			(move |input: Res<_Input>| input.0.clone()).pipe(enqueue_skills::<_Enqueue>),
+			(move |input: Res<_Input>| input.0.clone()).pipe(enqueue_skills::<_Skills, _Enqueue>),
 		);
 
 		app
@@ -130,38 +131,24 @@ mod tests {
 	#[test]
 	fn enqueue_skill() {
 		let mut app = setup();
+		let slot = SlotKey::Hand(Side::Main);
+		let skill = Skill {
+			name: "my skill",
+			..default()
+		};
 		let mut enqueue = _Enqueue::default();
+
 		enqueue
 			.mock
 			.expect_enqueue()
 			.times(1)
-			.with(eq((
-				Skill {
-					name: "my skill",
-					..default()
-				},
-				SlotKey::Hand(Side::Main),
-			)))
+			.with(eq((skill.clone(), slot)))
 			.return_const(());
 
-		app.world.spawn((
-			Slots(HashMap::from([(
-				SlotKey::Hand(Side::Main),
-				Slot {
-					entity: Entity::from_raw(42),
-					item: Some(Item {
-						skill: Some(Skill {
-							name: "my skill",
-							..default()
-						}),
-						..default()
-					}),
-				},
-			)])),
-			enqueue,
-		));
+		app.world
+			.spawn((_Skills(HashMap::from([(slot, skill)])), enqueue));
 
-		app.world.resource_mut::<_Input>().0.just_pressed = vec![SlotKey::Hand(Side::Main)];
+		app.world.resource_mut::<_Input>().0.just_pressed = vec![slot];
 		app.update();
 	}
 
@@ -171,7 +158,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Slots::default(),
+				_Skills::default(),
 				_Enqueue {
 					queued: vec![Skill {
 						name: "a",
@@ -211,7 +198,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Slots::default(),
+				_Skills::default(),
 				_Enqueue {
 					queued: vec![
 						Skill {
@@ -271,7 +258,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Slots::default(),
+				_Skills::default(),
 				_Enqueue {
 					queued: vec![
 						Skill {
