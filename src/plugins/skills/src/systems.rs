@@ -1,5 +1,5 @@
 pub(crate) mod apply_skill_behavior;
-pub(crate) mod enqueue_skills;
+pub(crate) mod enqueue;
 pub(crate) mod equip;
 pub(crate) mod flush;
 pub(crate) mod get_inputs;

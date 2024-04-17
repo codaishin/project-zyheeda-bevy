@@ -1,4 +1,7 @@
-use crate::components::{Handed, ItemType, SideUnset, SlotKey};
+use crate::{
+	components::{Handed, ItemType, SideUnset, SlotKey},
+	traits::Prime,
+};
 use bevy::{
 	ecs::system::EntityCommands,
 	math::{primitives::Direction3d, Ray3d, Vec3},
@@ -115,6 +118,52 @@ impl<TSrc> Skill<TSrc> {
 			is_usable_with: self.is_usable_with,
 			dual_wield: self.dual_wield,
 		}
+	}
+}
+
+impl Prime for Skill<Queued> {
+	fn prime(&mut self) {
+		if self.data.mode != Activation::Waiting {
+			return;
+		}
+		self.data.mode = Activation::Primed;
+	}
+}
+
+#[cfg(test)]
+mod test_skill {
+	use super::*;
+	use bevy::utils::default;
+
+	#[test]
+	fn prime_skill() {
+		let mut skill = Skill {
+			data: Queued {
+				mode: Activation::Waiting,
+				..default()
+			},
+			..default()
+		};
+		skill.prime();
+
+		assert_eq!(Activation::Primed, skill.data.mode);
+	}
+
+	#[test]
+	fn do_not_prime_active() {
+		let mut skill = Skill {
+			data: Queued {
+				mode: Activation::ActiveAfter(Duration::from_millis(123)),
+				..default()
+			},
+			..default()
+		};
+		skill.prime();
+
+		assert_eq!(
+			Activation::ActiveAfter(Duration::from_millis(123)),
+			skill.data.mode
+		);
 	}
 }
 

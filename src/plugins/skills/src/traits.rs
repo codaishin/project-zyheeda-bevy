@@ -37,8 +37,10 @@ pub trait Iter<TItem> {
 		TItem: 'a;
 }
 
-pub(crate) trait IterMut<TItem> {
-	fn iter_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut TItem>
+pub(crate) trait IterMutWithKeys<TKey, TItem> {
+	fn iter_mut_with_keys<'a>(
+		&'a mut self,
+	) -> impl DoubleEndedIterator<Item = (TKey, &'a mut TItem)>
 	where
 		TItem: 'a;
 }
@@ -53,6 +55,10 @@ pub(crate) trait LastUnchangedMut<TItem> {
 	fn last_unchanged_mut<'a>(&'a mut self) -> Option<&'a mut TItem>
 	where
 		TItem: 'a;
+}
+
+pub(crate) trait Prime {
+	fn prime(&mut self);
 }
 
 pub(crate) trait GetActiveSkill<TAnimationKey: Clone + Copy, TSkillState: Clone> {

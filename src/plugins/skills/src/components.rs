@@ -2,7 +2,10 @@ pub mod queue;
 
 use crate::skill::{Skill, SkillComboTree, StartBehaviorFn, StopBehaviorFn};
 use bevy::ecs::{component::Component, entity::Entity};
-use common::components::{Collection, Side};
+use common::{
+	components::{Collection, Side},
+	traits::look_up::LookUp,
+};
 use std::{
 	collections::{HashMap, HashSet},
 	fmt::{Display, Formatter, Result},
@@ -37,6 +40,14 @@ impl Slots {
 impl Default for Slots {
 	fn default() -> Self {
 		Self::new()
+	}
+}
+
+impl LookUp<SlotKey, Skill> for Slots {
+	fn get(&self, key: &SlotKey) -> Option<&Skill> {
+		let slot = self.0.get(key)?;
+		let item = slot.item.as_ref()?;
+		item.skill.as_ref()
 	}
 }
 
