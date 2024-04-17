@@ -14,7 +14,7 @@ use crate::{
 		LastUnchangedMut,
 	},
 };
-use bevy::ecs::component::Component;
+use bevy::{ecs::component::Component, utils::default};
 use common::{
 	components::{Animate, Side},
 	traits::state_duration::StateDuration,
@@ -57,13 +57,19 @@ impl Iter<Skill<Queued>> for Queue {
 	}
 }
 
-impl Enqueue<Skill<Queued>> for Queue {
-	fn enqueue(&mut self, item: Skill<Queued>) {
+impl Enqueue<(Skill, SlotKey)> for Queue {
+	fn enqueue(&mut self, item: (Skill, SlotKey)) {
 		if self.state == State::Flushed {
 			let len_before_change = self.queue.len();
 			self.state = State::Changed { len_before_change }
 		}
-		self.queue.push_back(item);
+
+		let (skill, slot_key) = item;
+
+		self.queue.push_back(skill.with(Queued {
+			slot_key,
+			..default()
+		}));
 	}
 }
 
@@ -126,14 +132,13 @@ mod test_queue_collection {
 	#[test]
 	fn enqueue_one_skill() {
 		let mut queue = Queue::new([]);
-		queue.enqueue(Skill {
-			name: "my skill",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Main),
+		queue.enqueue((
+			Skill {
+				name: "my skill",
 				..default()
 			},
-			..default()
-		});
+			SlotKey::Hand(Side::Main),
+		));
 
 		assert_eq!(
 			VecDeque::from([Skill {
@@ -151,22 +156,20 @@ mod test_queue_collection {
 	#[test]
 	fn enqueue_two_skills() {
 		let mut queue = Queue::new([]);
-		queue.enqueue(Skill {
-			name: "skill a",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Off),
+		queue.enqueue((
+			Skill {
+				name: "skill a",
 				..default()
 			},
-			..default()
-		});
-		queue.enqueue(Skill {
-			name: "skill b",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Main),
+			SlotKey::Hand(Side::Off),
+		));
+		queue.enqueue((
+			Skill {
+				name: "skill b",
 				..default()
 			},
-			..default()
-		});
+			SlotKey::Hand(Side::Main),
+		));
 
 		assert_eq!(
 			VecDeque::from([
@@ -307,22 +310,20 @@ mod test_queue_collection {
 	#[test]
 	fn iter_mut() {
 		let mut queue = Queue::new([]);
-		queue.enqueue(Skill {
-			name: "skill a",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Off),
+		queue.enqueue((
+			Skill {
+				name: "skill a",
 				..default()
 			},
-			..default()
-		});
-		queue.enqueue(Skill {
-			name: "skill b",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Main),
+			SlotKey::Hand(Side::Off),
+		));
+		queue.enqueue((
+			Skill {
+				name: "skill b",
 				..default()
 			},
-			..default()
-		});
+			SlotKey::Hand(Side::Main),
+		));
 
 		assert_eq!(
 			vec![
@@ -350,22 +351,21 @@ mod test_queue_collection {
 	#[test]
 	fn iter_recent_mut() {
 		let mut queue = Queue::new([]);
-		queue.enqueue(Skill {
-			name: "a",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Main),
+		queue.enqueue((
+			Skill {
+				name: "a",
+
 				..default()
 			},
-			..default()
-		});
-		queue.enqueue(Skill {
-			name: "b",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Off),
+			SlotKey::Hand(Side::Main),
+		));
+		queue.enqueue((
+			Skill {
+				name: "b",
 				..default()
 			},
-			..default()
-		});
+			SlotKey::Hand(Side::Off),
+		));
 
 		assert_eq!(
 			vec![
@@ -400,22 +400,22 @@ mod test_queue_collection {
 			},
 			..default()
 		}]);
-		queue.enqueue(Skill {
-			name: "b",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Main),
+		queue.enqueue((
+			Skill {
+				name: "b",
+
 				..default()
 			},
-			..default()
-		});
-		queue.enqueue(Skill {
-			name: "c",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Off),
+			SlotKey::Hand(Side::Main),
+		));
+		queue.enqueue((
+			Skill {
+				name: "c",
+
 				..default()
 			},
-			..default()
-		});
+			SlotKey::Hand(Side::Off),
+		));
 
 		assert_eq!(
 			vec![
@@ -450,22 +450,22 @@ mod test_queue_collection {
 			},
 			..default()
 		}]);
-		queue.enqueue(Skill {
-			name: "b",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Main),
+		queue.enqueue((
+			Skill {
+				name: "b",
+
 				..default()
 			},
-			..default()
-		});
-		queue.enqueue(Skill {
-			name: "c",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Off),
+			SlotKey::Hand(Side::Main),
+		));
+		queue.enqueue((
+			Skill {
+				name: "c",
+
 				..default()
 			},
-			..default()
-		});
+			SlotKey::Hand(Side::Off),
+		));
 
 		queue.flush();
 
@@ -485,22 +485,22 @@ mod test_queue_collection {
 			},
 			..default()
 		}]);
-		queue.enqueue(Skill {
-			name: "b",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Main),
+		queue.enqueue((
+			Skill {
+				name: "b",
+
 				..default()
 			},
-			..default()
-		});
-		queue.enqueue(Skill {
-			name: "c",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Off),
+			SlotKey::Hand(Side::Main),
+		));
+		queue.enqueue((
+			Skill {
+				name: "c",
+
 				..default()
 			},
-			..default()
-		});
+			SlotKey::Hand(Side::Off),
+		));
 
 		queue.duration = Some(Duration::from_millis(42));
 		queue.flush();
@@ -545,14 +545,13 @@ mod test_queue_collection {
 			},
 			..default()
 		}]);
-		queue.enqueue(Skill {
-			name: "b",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Main),
+		queue.enqueue((
+			Skill {
+				name: "b",
 				..default()
 			},
-			..default()
-		});
+			SlotKey::Hand(Side::Main),
+		));
 
 		assert_eq!(
 			Some(&mut Skill {

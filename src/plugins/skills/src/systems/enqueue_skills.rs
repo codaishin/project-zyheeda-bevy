@@ -4,16 +4,13 @@ use crate::{
 	skill::{Activation, Queued, Skill},
 	traits::{Enqueue, IterMut},
 };
-use bevy::{
-	ecs::{
-		component::Component,
-		system::{In, Query},
-	},
-	utils::default,
+use bevy::ecs::{
+	component::Component,
+	system::{In, Query},
 };
 
 pub(crate) fn enqueue_skills<
-	TEnqueue: Enqueue<Skill<Queued>> + IterMut<Skill<Queued>> + Component,
+	TEnqueue: Enqueue<(Skill, SlotKey)> + IterMut<Skill<Queued>> + Component,
 >(
 	input: In<Input>,
 	mut agents: Query<(&Slots, &mut TEnqueue)>,
@@ -25,7 +22,7 @@ pub(crate) fn enqueue_skills<
 	}
 }
 
-fn enqueue_new_skills<TEnqueue: Enqueue<Skill<Queued>>>(
+fn enqueue_new_skills<TEnqueue: Enqueue<(Skill, SlotKey)>>(
 	input: &In<Input>,
 	queue: &mut TEnqueue,
 	slots: &Slots,
@@ -35,7 +32,7 @@ fn enqueue_new_skills<TEnqueue: Enqueue<Skill<Queued>>>(
 	}
 }
 
-fn enqueue_new_skill<TQueue: Enqueue<Skill<Queued>>>(
+fn enqueue_new_skill<TQueue: Enqueue<(Skill, SlotKey)>>(
 	key: &SlotKey,
 	slots: &Slots,
 	queue: &mut TQueue,
@@ -43,10 +40,7 @@ fn enqueue_new_skill<TQueue: Enqueue<Skill<Queued>>>(
 	let Some(skill) = get_slot_skill(key, slots) else {
 		return;
 	};
-	queue.enqueue(skill.with(Queued {
-		slot_key: *key,
-		..default()
-	}));
+	queue.enqueue((skill, *key));
 }
 
 fn get_slot_skill(key: &SlotKey, slots: &Slots) -> Option<Skill> {
@@ -94,19 +88,22 @@ mod tests {
 		utils::default,
 	};
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
+	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
 
 	#[derive(Resource, Default)]
 	struct _Input(Input);
 
-	#[derive(Component, Default, Debug, PartialEq)]
+	#[derive(Component, Default)]
 	struct _Enqueue {
+		mock: Mock_Enqueue,
 		queued: Vec<Skill<Queued>>,
 	}
 
-	impl Enqueue<Skill<Queued>> for _Enqueue {
-		fn enqueue(&mut self, item: Skill<Queued>) {
-			self.queued.push(item)
+	#[automock]
+	impl Enqueue<(Skill, SlotKey)> for _Enqueue {
+		fn enqueue(&mut self, item: (Skill, SlotKey)) {
+			self.mock.enqueue(item)
 		}
 	}
 
@@ -133,44 +130,39 @@ mod tests {
 	#[test]
 	fn enqueue_skill() {
 		let mut app = setup();
-		let agent = app
-			.world
-			.spawn((
-				Slots(HashMap::from([(
-					SlotKey::Hand(Side::Main),
-					Slot {
-						entity: Entity::from_raw(42),
-						item: Some(Item {
-							skill: Some(Skill {
-								name: "my skill",
-								..default()
-							}),
+		let mut enqueue = _Enqueue::default();
+		enqueue
+			.mock
+			.expect_enqueue()
+			.times(1)
+			.with(eq((
+				Skill {
+					name: "my skill",
+					..default()
+				},
+				SlotKey::Hand(Side::Main),
+			)))
+			.return_const(());
+
+		app.world.spawn((
+			Slots(HashMap::from([(
+				SlotKey::Hand(Side::Main),
+				Slot {
+					entity: Entity::from_raw(42),
+					item: Some(Item {
+						skill: Some(Skill {
+							name: "my skill",
 							..default()
 						}),
-					},
-				)])),
-				_Enqueue::default(),
-			))
-			.id();
+						..default()
+					}),
+				},
+			)])),
+			enqueue,
+		));
 
 		app.world.resource_mut::<_Input>().0.just_pressed = vec![SlotKey::Hand(Side::Main)];
 		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			Some(&_Enqueue {
-				queued: vec![Skill {
-					name: "my skill",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
-						mode: Activation::Waiting,
-					},
-					..default()
-				}]
-			}),
-			agent.get::<_Enqueue>()
-		);
 	}
 
 	#[test]
@@ -179,25 +171,20 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Slots(HashMap::from([(
-					SlotKey::Hand(Side::Main),
-					Slot {
-						entity: Entity::from_raw(42),
-						item: Some(Item {
-							skill: Some(Skill {
-								name: "main",
-								..default()
-							}),
-							..default()
-						}),
-					},
-				)])),
-				_Enqueue::default(),
+				Slots::default(),
+				_Enqueue {
+					queued: vec![Skill {
+						name: "a",
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Main),
+							mode: Activation::Primed,
+						},
+						..default()
+					}],
+					..default()
+				},
 			))
 			.id();
-
-		app.world.resource_mut::<_Input>().0.just_pressed = vec![SlotKey::Hand(Side::Main)];
-		app.update();
 
 		app.world.resource_mut::<_Input>().0.just_pressed = vec![];
 		app.world.resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
@@ -206,17 +193,15 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			Some(&_Enqueue {
-				queued: vec![Skill {
-					name: "main",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
-						mode: Activation::Primed,
-					},
-					..default()
-				}]
-			}),
-			agent.get::<_Enqueue>(),
+			Some(&vec![Skill {
+				name: "a",
+				data: Queued {
+					slot_key: SlotKey::Hand(Side::Main),
+					mode: Activation::Primed,
+				},
+				..default()
+			}]),
+			agent.get::<_Enqueue>().map(|e| &e.queued),
 		);
 	}
 
@@ -226,33 +211,30 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Slots(HashMap::from([(
-					SlotKey::Hand(Side::Main),
-					Slot {
-						entity: Entity::from_raw(42),
-						item: Some(Item {
-							skill: Some(Skill {
-								name: "main",
-								..default()
-							}),
-							..default()
-						}),
-					},
-				)])),
+				Slots::default(),
 				_Enqueue {
-					queued: vec![Skill {
-						data: Queued {
-							slot_key: SlotKey::Hand(Side::Off),
+					queued: vec![
+						Skill {
+							name: "a",
+							data: Queued {
+								slot_key: SlotKey::Hand(Side::Off),
+								..default()
+							},
 							..default()
 						},
-						..default()
-					}],
+						Skill {
+							name: "b",
+							data: Queued {
+								slot_key: SlotKey::Hand(Side::Main),
+								..default()
+							},
+							..default()
+						},
+					],
+					..default()
 				},
 			))
 			.id();
-
-		app.world.resource_mut::<_Input>().0.just_pressed = vec![SlotKey::Hand(Side::Main)];
-		app.update();
 
 		app.world.resource_mut::<_Input>().0.just_pressed = vec![];
 		app.world.resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
@@ -261,26 +243,25 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			Some(&_Enqueue {
-				queued: vec![
-					Skill {
-						data: Queued {
-							slot_key: SlotKey::Hand(Side::Off),
-							..default()
-						},
+			Some(&vec![
+				Skill {
+					name: "a",
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Off),
 						..default()
 					},
-					Skill {
-						name: "main",
-						data: Queued {
-							slot_key: SlotKey::Hand(Side::Main),
-							mode: Activation::Primed,
-						},
-						..default()
-					}
-				]
-			}),
-			agent.get::<_Enqueue>()
+					..default()
+				},
+				Skill {
+					name: "b",
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						mode: Activation::Primed,
+					},
+					..default()
+				},
+			]),
+			agent.get::<_Enqueue>().map(|e| &e.queued)
 		);
 	}
 
@@ -290,34 +271,30 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Slots(HashMap::from([(
-					SlotKey::Hand(Side::Main),
-					Slot {
-						entity: Entity::from_raw(42),
-						item: Some(Item {
-							skill: Some(Skill {
-								name: "main",
-								..default()
-							}),
-							..default()
-						}),
-					},
-				)])),
+				Slots::default(),
 				_Enqueue {
-					queued: vec![Skill {
-						name: "other",
-						data: Queued {
-							slot_key: SlotKey::Hand(Side::Main),
+					queued: vec![
+						Skill {
+							name: "a",
+							data: Queued {
+								slot_key: SlotKey::Hand(Side::Main),
+								..default()
+							},
 							..default()
 						},
-						..default()
-					}],
+						Skill {
+							name: "b",
+							data: Queued {
+								slot_key: SlotKey::Hand(Side::Main),
+								..default()
+							},
+							..default()
+						},
+					],
+					..default()
 				},
 			))
 			.id();
-
-		app.world.resource_mut::<_Input>().0.just_pressed = vec![SlotKey::Hand(Side::Main)];
-		app.update();
 
 		app.world.resource_mut::<_Input>().0.just_pressed = vec![];
 		app.world.resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
@@ -326,27 +303,25 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			Some(&_Enqueue {
-				queued: vec![
-					Skill {
-						name: "other",
-						data: Queued {
-							slot_key: SlotKey::Hand(Side::Main),
-							mode: Activation::Primed,
-						},
-						..default()
+			Some(&vec![
+				Skill {
+					name: "a",
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						mode: Activation::Primed,
 					},
-					Skill {
-						name: "main",
-						data: Queued {
-							slot_key: SlotKey::Hand(Side::Main),
-							mode: Activation::Primed,
-						},
-						..default()
+					..default()
+				},
+				Skill {
+					name: "b",
+					data: Queued {
+						slot_key: SlotKey::Hand(Side::Main),
+						mode: Activation::Primed,
 					},
-				]
-			}),
-			agent.get::<_Enqueue>()
+					..default()
+				},
+			]),
+			agent.get::<_Enqueue>().map(|e| &e.queued)
 		);
 	}
 }
