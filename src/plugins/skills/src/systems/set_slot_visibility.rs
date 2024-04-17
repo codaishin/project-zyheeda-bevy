@@ -65,7 +65,6 @@ mod tests {
 						Slot {
 							entity: skill_spawn,
 							item: None,
-							combo_skill: None,
 						},
 					),
 					(
@@ -73,7 +72,6 @@ mod tests {
 						Slot {
 							entity: main_hand,
 							item: None,
-							combo_skill: None,
 						},
 					),
 					(
@@ -81,7 +79,6 @@ mod tests {
 						Slot {
 							entity: off_hand,
 							item: None,
-							combo_skill: None,
 						},
 					),
 				]

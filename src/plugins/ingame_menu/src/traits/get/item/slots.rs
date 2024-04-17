@@ -25,7 +25,6 @@ mod tests {
 						name: "my item",
 						..default()
 					}),
-					combo_skill: None,
 				},
 			)]
 			.into(),
@@ -51,7 +50,6 @@ mod tests {
 						name: "my item",
 						..default()
 					}),
-					combo_skill: None,
 				},
 			)]
 			.into(),
@@ -77,7 +75,6 @@ mod tests {
 						name: "my item",
 						..default()
 					}),
-					combo_skill: None,
 				},
 			)]
 			.into(),

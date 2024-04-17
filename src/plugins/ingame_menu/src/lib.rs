@@ -71,7 +71,7 @@ impl Plugin for IngameMenuPlugin {
 			.add_systems(
 				Update,
 				(
-					quickbar,
+					quickbar::<Queue>,
 					update_label_text::<QuickbarPanel>,
 					panel_colors::<QuickbarPanel>,
 					panel_activity_colors_override::<Queue, QuickbarPanel>,

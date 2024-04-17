@@ -147,7 +147,6 @@ mod tests {
 							}),
 							..default()
 						}),
-						combo_skill: None,
 					},
 				)])),
 				_Enqueue::default(),
@@ -191,7 +190,6 @@ mod tests {
 							}),
 							..default()
 						}),
-						combo_skill: None,
 					},
 				)])),
 				_Enqueue::default(),
@@ -239,7 +237,6 @@ mod tests {
 							}),
 							..default()
 						}),
-						combo_skill: None,
 					},
 				)])),
 				_Enqueue {
@@ -304,7 +301,6 @@ mod tests {
 							}),
 							..default()
 						}),
-						combo_skill: None,
 					},
 				)])),
 				_Enqueue {

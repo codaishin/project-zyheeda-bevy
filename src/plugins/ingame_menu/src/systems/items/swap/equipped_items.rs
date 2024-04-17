@@ -134,7 +134,6 @@ mod tests {
 									name: "left item",
 									..default()
 								}),
-								combo_skill: None,
 							},
 						),
 						(
@@ -145,7 +144,6 @@ mod tests {
 									name: "right item",
 									..default()
 								}),
-								combo_skill: None,
 							},
 						),
 					]
@@ -262,7 +260,6 @@ mod tests {
 									name: "left item",
 									..default()
 								}),
-								combo_skill: None,
 							},
 						),
 						(
@@ -273,7 +270,6 @@ mod tests {
 									name: "right item",
 									..default()
 								}),
-								combo_skill: None,
 							},
 						),
 					]

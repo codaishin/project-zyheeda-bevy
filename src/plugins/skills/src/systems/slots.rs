@@ -23,7 +23,6 @@ pub(crate) fn add_item_slots(
 						Slot {
 							entity: new_slot_on(bone, &mut commands),
 							item: None,
-							combo_skill: None,
 						},
 					);
 					None
@@ -193,7 +192,6 @@ mod tests {
 				Slot {
 					entity: slot,
 					item: None,
-					combo_skill: None,
 				}
 			)]),
 			slots.0
