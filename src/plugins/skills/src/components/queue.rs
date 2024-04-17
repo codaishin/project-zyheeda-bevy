@@ -10,7 +10,7 @@ use crate::{
 		GetSlots,
 		Iter,
 		IterAddedMut,
-		IterMut,
+		IterMutWithKeys,
 		LastUnchangedMut,
 	},
 };
@@ -85,12 +85,14 @@ impl Flush for Queue {
 	}
 }
 
-impl IterMut<Skill<Queued>> for Queue {
-	fn iter_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut Skill<Queued>>
+impl IterMutWithKeys<SlotKey, Skill<Queued>> for Queue {
+	fn iter_mut_with_keys<'a>(
+		&'a mut self,
+	) -> impl DoubleEndedIterator<Item = (SlotKey, &'a mut Skill<Queued>)>
 	where
 		Skill<Queued>: 'a,
 	{
-		self.queue.iter_mut()
+		self.queue.iter_mut().map(|s| (s.data.slot_key, s))
 	}
 }
 
@@ -308,7 +310,7 @@ mod test_queue_collection {
 	}
 
 	#[test]
-	fn iter_mut() {
+	fn iter_mut_with_keys() {
 		let mut queue = Queue::new([]);
 		queue.enqueue((
 			Skill {
@@ -327,24 +329,30 @@ mod test_queue_collection {
 
 		assert_eq!(
 			vec![
-				&Skill {
-					name: "skill a",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Off),
+				(
+					SlotKey::Hand(Side::Off),
+					&mut Skill {
+						name: "skill a",
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Off),
+							..default()
+						},
 						..default()
-					},
-					..default()
-				},
-				&Skill {
-					name: "skill b",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
+					}
+				),
+				(
+					SlotKey::Hand(Side::Main),
+					&mut Skill {
+						name: "skill b",
+						data: Queued {
+							slot_key: SlotKey::Hand(Side::Main),
+							..default()
+						},
 						..default()
-					},
-					..default()
-				}
+					}
+				)
 			],
-			queue.iter_mut().collect::<Vec<_>>()
+			queue.iter_mut_with_keys().collect::<Vec<_>>()
 		)
 	}
 

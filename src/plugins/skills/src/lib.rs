@@ -40,7 +40,7 @@ use components::{
 	Slots,
 };
 use resources::{skill_templates::SkillTemplates, SkillIcons, SlotMap};
-use skill::{Cast, PlayerSkills, Skill, SkillComboNext, SkillComboTree, SwordStrike};
+use skill::{Cast, PlayerSkills, Queued, Skill, SkillComboNext, SkillComboTree, SwordStrike};
 use states::{GameRunning, MouseContext};
 use std::{
 	collections::{HashMap, HashSet},
@@ -48,7 +48,7 @@ use std::{
 };
 use systems::{
 	apply_skill_behavior::apply_skill_behavior,
-	enqueue_skills::enqueue_skills,
+	enqueue::enqueue,
 	equip::equip_item,
 	flush::flush,
 	get_inputs::get_inputs,
@@ -77,7 +77,7 @@ impl Plugin for SkillsPlugin {
 				Update,
 				(
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
-						.pipe(enqueue_skills::<Slots, Queue>),
+						.pipe(enqueue::<Slots, Skill, Queue, Skill<Queued>>),
 					update_skill_combos::<SkillComboNext, Queue>,
 					update_active_skill::<PlayerSkills<Side>, Queue, Virtual>,
 					set_slot_visibility,
