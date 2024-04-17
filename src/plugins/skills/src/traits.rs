@@ -55,6 +55,10 @@ pub(crate) trait LastUnchangedMut<TItem> {
 		TItem: 'a;
 }
 
+pub(crate) trait Prime {
+	fn prime(&mut self);
+}
+
 pub(crate) trait GetActiveSkill<TAnimationKey: Clone + Copy, TSkillState: Clone> {
 	fn get_active(
 		&mut self,
