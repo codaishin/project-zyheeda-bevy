@@ -138,7 +138,6 @@ mod tests {
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item::with_skill_name("my skill")),
-					combo_skill: None,
 				},
 			)])),
 			_Queue::default(),
@@ -183,7 +182,6 @@ mod tests {
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item::with_skill_name("my skill")),
-					combo_skill: None,
 				},
 			)])),
 			_Queue(vec![Skill::with_skill_name("my combo skill").with(
@@ -233,7 +231,6 @@ mod tests {
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item::with_skill_name("my skill")),
-					combo_skill: None,
 				},
 			)])),
 			_Queue(vec![Skill::with_skill_name("my combo skill").with(
@@ -277,7 +274,6 @@ mod tests {
 				Slot {
 					entity: Entity::from_raw(42),
 					item: Some(Item::with_skill_name("my skill")),
-					combo_skill: Some(Skill::with_skill_name("my combo skill")),
 				},
 			)])),
 			_Queue::default(),
@@ -319,7 +315,6 @@ mod tests {
 				Slot {
 					entity: Entity::from_raw(42),
 					item: None,
-					combo_skill: None,
 				},
 			)])),
 			_Queue::default(),

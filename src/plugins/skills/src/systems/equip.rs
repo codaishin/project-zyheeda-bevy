@@ -101,7 +101,6 @@ fn equip_and_return_old_item(
 	let mut item = item.cloned();
 	swap(&mut item, &mut slot.item);
 
-	slot.combo_skill = None;
 	*slot_handle = model.clone();
 
 	Ok(item)
@@ -247,10 +246,6 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
-							combo_skill: Some(Skill {
-								name: "alternative",
-								..default()
-							}),
 						},
 					)]
 					.into(),
@@ -301,7 +296,6 @@ mod tests {
 						model: Some("model key"),
 						..default()
 					}),
-					combo_skill: None,
 				}
 			),
 			(slot_model.cloned(), slot_component)
@@ -341,7 +335,6 @@ mod tests {
 								model: Some("model key"),
 								..default()
 							}),
-							combo_skill: None,
 						},
 					)]
 					.into(),
@@ -376,7 +369,6 @@ mod tests {
 				&Slot {
 					entity: slot,
 					item: None,
-					combo_skill: None,
 				}
 			),
 			(slot_model.cloned(), slot_component)
@@ -424,7 +416,6 @@ mod tests {
 					Slot {
 						entity: slot,
 						item: None,
-						combo_skill: None,
 					},
 				)]
 				.into(),
@@ -492,7 +483,6 @@ mod tests {
 							name: "Current Item",
 							..default()
 						}),
-						combo_skill: None,
 					},
 				)]
 				.into(),
@@ -533,7 +523,6 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
-							combo_skill: None,
 						},
 					)]
 					.into(),
@@ -592,7 +581,6 @@ mod tests {
 						model: None,
 						..default()
 					}),
-					combo_skill: None,
 				}
 			),
 			(slot_model.cloned(), slot_component)
@@ -624,7 +612,6 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
-							combo_skill: None,
 						},
 					)]
 					.into(),
@@ -673,7 +660,6 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
-							combo_skill: None,
 						},
 					)]
 					.into(),
@@ -726,7 +712,6 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
-							combo_skill: None,
 						},
 					)]
 					.into(),
@@ -780,7 +765,6 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
-							combo_skill: None,
 						},
 					)]
 					.into(),
@@ -834,7 +818,6 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
-							combo_skill: None,
 						},
 					)]
 					.into(),
@@ -902,7 +885,6 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
-							combo_skill: None,
 						},
 					)]
 					.into(),
@@ -1038,7 +1020,6 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
-							combo_skill: None,
 						},
 					)]
 					.into(),
@@ -1094,7 +1075,6 @@ mod tests {
 						Slot {
 							entity: slot,
 							item: None,
-							combo_skill: None,
 						},
 					)]
 					.into(),

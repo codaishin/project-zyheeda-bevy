@@ -18,7 +18,6 @@ pub(crate) struct ComboTreeRunning<TNext>(pub HashMap<SlotKey, SkillComboTree<TN
 pub struct Slot {
 	pub entity: Entity,
 	pub item: Option<Item>,
-	pub combo_skill: Option<Skill>,
 }
 
 pub(crate) type BoneName = str;
