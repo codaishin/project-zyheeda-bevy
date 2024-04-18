@@ -11,7 +11,7 @@ pub(crate) mod sword;
 pub(crate) mod tuple_slot_key_item;
 
 use crate::{
-	components::SlotKey,
+	components::{SlotKey, Slots},
 	resources::SlotMap,
 	skill::{Queued, Skill, SkillComboTree, SkillExecution, StartBehaviorFn, StopBehaviorFn},
 };
@@ -73,6 +73,10 @@ where
 	Self: Sized,
 {
 	fn to_vec(&self, trigger_skill: &Skill<Queued>) -> Vec<(SlotKey, SkillComboTree<Self>)>;
+}
+
+pub(crate) trait NextCombo {
+	fn next(&mut self, trigger_skill: &Skill<Queued>, slots: &Slots) -> Option<Skill>;
 }
 
 pub(crate) trait GetAnimation<TAnimationKey: Clone + Copy> {

@@ -1,3 +1,4 @@
+pub mod combos;
 pub mod queue;
 
 use crate::skill::{Skill, SkillComboTree, StartBehaviorFn, StopBehaviorFn};
