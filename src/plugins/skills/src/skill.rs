@@ -9,7 +9,7 @@ use bevy::{
 };
 use common::{components::Outdated, resources::ColliderInfo};
 use std::{
-	collections::{HashMap, HashSet},
+	collections::HashSet,
 	fmt::{Display, Formatter, Result},
 	time::Duration,
 };
@@ -181,12 +181,6 @@ pub(crate) enum SkillState {
 pub(crate) struct SkillComboTree<TNext> {
 	pub skill: Skill,
 	pub next: TNext,
-}
-
-#[derive(PartialEq, Debug, Clone)]
-pub(crate) enum SkillComboNext {
-	Tree(HashMap<SlotKey, SkillComboTree<SkillComboNext>>),
-	Alternate { slot_key: SlotKey, skill: Skill },
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Default)]

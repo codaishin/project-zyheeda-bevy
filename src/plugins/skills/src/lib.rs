@@ -28,8 +28,8 @@ use common::{
 	systems::log::log_many,
 };
 use components::{
+	combos::{ComboNode, Combos},
 	queue::Queue,
-	ComboTreeTemplate,
 	Handed,
 	Inventory,
 	InventoryKey,
@@ -40,10 +40,10 @@ use components::{
 	Slots,
 };
 use resources::{skill_templates::SkillTemplates, SkillIcons, SlotMap};
-use skill::{Cast, PlayerSkills, Queued, Skill, SkillComboNext, SkillComboTree, SwordStrike};
+use skill::{Cast, PlayerSkills, Queued, Skill, SwordStrike};
 use states::{GameRunning, MouseContext};
 use std::{
-	collections::{HashMap, HashSet},
+	collections::{HashMap, HashSet, VecDeque},
 	time::Duration,
 };
 use systems::{
@@ -78,7 +78,7 @@ impl Plugin for SkillsPlugin {
 				(
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
 						.pipe(enqueue::<Slots, Skill, Queue, Skill<Queued>>),
-					update_skill_combos::<SkillComboNext, Queue>,
+					update_skill_combos::<Combos, Queue>,
 					update_active_skill::<PlayerSkills<Side>, Queue, Virtual>,
 					set_slot_visibility,
 					apply_skill_behavior,
@@ -226,45 +226,33 @@ fn set_player_items(
 	};
 
 	// FIXME: Use a more sensible pattern to register predefined combos
-	let mut skill_combos = ComboTreeTemplate(default());
+	let mut skill_combos = Combos::default();
 	let shoot_hand_gun = skill_templates.get("Shoot Hand Gun");
 	let shoot_hand_gun_dual = skill_templates.get("Shoot Hand Gun Dual");
 	if let (Some(shoot_hand_gun), Some(shoot_hand_gun_dual)) = (shoot_hand_gun, shoot_hand_gun_dual)
 	{
-		skill_combos.0 = HashMap::from([
+		skill_combos = Combos::new(ComboNode::Tree(HashMap::from([
 			(
 				SlotKey::Hand(Side::Main),
-				SkillComboTree {
-					skill: shoot_hand_gun.clone(),
-					next: SkillComboNext::Tree(HashMap::from([(
-						SlotKey::Hand(Side::Off),
-						SkillComboTree {
-							skill: shoot_hand_gun_dual.clone(),
-							next: SkillComboNext::Alternate {
-								slot_key: SlotKey::Hand(Side::Main),
-								skill: shoot_hand_gun_dual.clone(),
-							},
-						},
-					)])),
-				},
+				(
+					shoot_hand_gun.clone(),
+					ComboNode::Circle(VecDeque::from([
+						(SlotKey::Hand(Side::Off), shoot_hand_gun_dual.clone()),
+						(SlotKey::Hand(Side::Main), shoot_hand_gun_dual.clone()),
+					])),
+				),
 			),
 			(
 				SlotKey::Hand(Side::Off),
-				SkillComboTree {
-					skill: shoot_hand_gun.clone(),
-					next: SkillComboNext::Tree(HashMap::from([(
-						SlotKey::Hand(Side::Main),
-						SkillComboTree {
-							skill: shoot_hand_gun_dual.clone(),
-							next: SkillComboNext::Alternate {
-								slot_key: SlotKey::Hand(Side::Off),
-								skill: shoot_hand_gun_dual.clone(),
-							},
-						},
-					)])),
-				},
+				(
+					shoot_hand_gun.clone(),
+					ComboNode::Circle(VecDeque::from([
+						(SlotKey::Hand(Side::Main), shoot_hand_gun_dual.clone()),
+						(SlotKey::Hand(Side::Off), shoot_hand_gun_dual.clone()),
+					])),
+				),
 			),
-		]);
+		])));
 	}
 
 	let mut player = commands.entity(player);

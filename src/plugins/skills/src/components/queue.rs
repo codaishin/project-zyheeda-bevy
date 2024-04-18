@@ -11,7 +11,6 @@ use crate::{
 		Iter,
 		IterAddedMut,
 		IterMutWithKeys,
-		LastUnchangedMut,
 	},
 };
 use bevy::{ecs::component::Component, utils::default};
@@ -107,20 +106,6 @@ impl IterAddedMut<Skill<Queued>> for Queue {
 		};
 
 		self.queue.iter_mut().skip(unchanged_len)
-	}
-}
-
-impl LastUnchangedMut<Skill<Queued>> for Queue {
-	fn last_unchanged_mut<'a>(&'a mut self) -> Option<&'a mut Skill<Queued>>
-	where
-		Skill<Queued>: 'a,
-	{
-		let unchanged_len = match self.state {
-			State::Flushed => self.queue.len(),
-			State::Changed { len_before_change } => len_before_change,
-		};
-
-		self.queue.iter_mut().take(unchanged_len).last()
 	}
 }
 
@@ -516,61 +501,6 @@ mod test_queue_collection {
 		assert_eq!(
 			vec![] as Vec<&mut Skill<Queued>>,
 			queue.iter_added_mut().collect::<Vec<_>>()
-		)
-	}
-
-	#[test]
-	fn get_old_last_mut() {
-		let mut queue = Queue::new([Skill {
-			name: "a",
-			data: Queued {
-				slot_key: SlotKey::SkillSpawn,
-				..default()
-			},
-			..default()
-		}]);
-
-		assert_eq!(
-			Some(&mut Skill {
-				name: "a",
-				data: Queued {
-					slot_key: SlotKey::SkillSpawn,
-					..default()
-				},
-				..default()
-			}),
-			queue.last_unchanged_mut()
-		)
-	}
-
-	#[test]
-	fn get_old_last_mut_with_later_enqueues() {
-		let mut queue = Queue::new([Skill {
-			name: "a",
-			data: Queued {
-				slot_key: SlotKey::SkillSpawn,
-				..default()
-			},
-			..default()
-		}]);
-		queue.enqueue((
-			Skill {
-				name: "b",
-				..default()
-			},
-			SlotKey::Hand(Side::Main),
-		));
-
-		assert_eq!(
-			Some(&mut Skill {
-				name: "a",
-				data: Queued {
-					slot_key: SlotKey::SkillSpawn,
-					..default()
-				},
-				..default()
-			}),
-			queue.last_unchanged_mut()
 		)
 	}
 }

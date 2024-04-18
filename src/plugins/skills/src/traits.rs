@@ -4,16 +4,15 @@ pub(crate) mod inventory;
 pub(crate) mod mouse_hover;
 pub(crate) mod player_skills;
 pub(crate) mod projectile;
-pub(crate) mod skill_combo_next;
 pub(crate) mod skill_state;
 pub(crate) mod state;
 pub(crate) mod sword;
 pub(crate) mod tuple_slot_key_item;
 
 use crate::{
-	components::SlotKey,
+	components::{SlotKey, Slots},
 	resources::SlotMap,
-	skill::{Queued, Skill, SkillComboTree, SkillExecution, StartBehaviorFn, StopBehaviorFn},
+	skill::{Skill, SkillExecution, StartBehaviorFn, StopBehaviorFn},
 };
 use bevy::ecs::{component::Component, system::Query};
 use common::{
@@ -51,12 +50,6 @@ pub(crate) trait IterAddedMut<TItem> {
 		TItem: 'a;
 }
 
-pub(crate) trait LastUnchangedMut<TItem> {
-	fn last_unchanged_mut<'a>(&'a mut self) -> Option<&'a mut TItem>
-	where
-		TItem: 'a;
-}
-
 pub(crate) trait Prime {
 	fn prime(&mut self);
 }
@@ -68,11 +61,8 @@ pub(crate) trait GetActiveSkill<TAnimationKey: Clone + Copy, TSkillState: Clone>
 	fn clear_active(&mut self);
 }
 
-pub(crate) trait ComboNext
-where
-	Self: Sized,
-{
-	fn to_vec(&self, trigger_skill: &Skill<Queued>) -> Vec<(SlotKey, SkillComboTree<Self>)>;
+pub(crate) trait NextCombo {
+	fn next(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill>;
 }
 
 pub(crate) trait GetAnimation<TAnimationKey: Clone + Copy> {
