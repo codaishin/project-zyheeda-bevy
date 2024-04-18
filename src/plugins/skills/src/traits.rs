@@ -4,7 +4,6 @@ pub(crate) mod inventory;
 pub(crate) mod mouse_hover;
 pub(crate) mod player_skills;
 pub(crate) mod projectile;
-pub(crate) mod skill_combo_next;
 pub(crate) mod skill_state;
 pub(crate) mod state;
 pub(crate) mod sword;
@@ -13,7 +12,7 @@ pub(crate) mod tuple_slot_key_item;
 use crate::{
 	components::{SlotKey, Slots},
 	resources::SlotMap,
-	skill::{Queued, Skill, SkillComboTree, SkillExecution, StartBehaviorFn, StopBehaviorFn},
+	skill::{Queued, Skill, SkillExecution, StartBehaviorFn, StopBehaviorFn},
 };
 use bevy::ecs::{component::Component, system::Query};
 use common::{
@@ -66,13 +65,6 @@ pub(crate) trait GetActiveSkill<TAnimationKey: Clone + Copy, TSkillState: Clone>
 		&mut self,
 	) -> Option<impl Execution + GetAnimation<TAnimationKey> + GetSlots + StateUpdate<TSkillState>>;
 	fn clear_active(&mut self);
-}
-
-pub(crate) trait ComboNext
-where
-	Self: Sized,
-{
-	fn to_vec(&self, trigger_skill: &Skill<Queued>) -> Vec<(SlotKey, SkillComboTree<Self>)>;
 }
 
 pub(crate) trait NextCombo {

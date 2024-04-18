@@ -29,7 +29,7 @@ pub(crate) type BoneName = str;
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct SlotBones(pub HashMap<SlotKey, &'static BoneName>);
 
-#[derive(Component)]
+#[derive(Component, Clone, PartialEq, Debug)]
 pub struct Slots(pub HashMap<SlotKey, Slot>);
 
 impl Slots {
