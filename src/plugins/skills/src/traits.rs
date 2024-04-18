@@ -50,12 +50,6 @@ pub(crate) trait IterAddedMut<TItem> {
 		TItem: 'a;
 }
 
-pub(crate) trait LastUnchangedMut<TItem> {
-	fn last_unchanged_mut<'a>(&'a mut self) -> Option<&'a mut TItem>
-	where
-		TItem: 'a;
-}
-
 pub(crate) trait Prime {
 	fn prime(&mut self);
 }
