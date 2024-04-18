@@ -16,7 +16,7 @@ pub(crate) fn update_skill_combos<
 			combos.flush();
 		}
 		for skill in skills.iter_added_mut() {
-			let Some(combo) = combos.next(skill, slots) else {
+			let Some(combo) = combos.next(&skill.data.slot_key, slots) else {
 				continue;
 			};
 			*skill = combo.with(skill.data.clone());
@@ -48,7 +48,7 @@ mod tests {
 	mock! {
 		_Combos {}
 		impl NextCombo for _Combos {
-			fn next(&mut self, trigger_skill: &Skill<Queued>, slots: &Slots) -> Option<Skill> {}
+			fn next(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill> {}
 		}
 		impl Flush for _Combos {
 			fn flush(&mut self) {}
@@ -56,8 +56,8 @@ mod tests {
 	}
 
 	impl NextCombo for _Combos {
-		fn next(&mut self, trigger_skill: &Skill<Queued>, slots: &Slots) -> Option<Skill> {
-			self.mock.next(trigger_skill, slots)
+		fn next(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill> {
+			self.mock.next(trigger, slots)
 		}
 	}
 
@@ -112,10 +112,18 @@ mod tests {
 		)]));
 		let skill_a = Skill {
 			name: "skill a",
+			data: Queued {
+				slot_key: SlotKey::Hand(Side::Main),
+				..default()
+			},
 			..default()
 		};
 		let skill_b = Skill {
 			name: "skill b",
+			data: Queued {
+				slot_key: SlotKey::Hand(Side::Off),
+				..default()
+			},
 			..default()
 		};
 		let mut combos = _Combos::default();
@@ -124,13 +132,13 @@ mod tests {
 			.mock
 			.expect_next()
 			.times(1)
-			.with(eq(skill_a.clone()), eq(slots.clone()))
+			.with(eq(SlotKey::Hand(Side::Main)), eq(slots.clone()))
 			.return_const(Skill::default());
 		combos
 			.mock
 			.expect_next()
 			.times(1)
-			.with(eq(skill_b.clone()), eq(slots.clone()))
+			.with(eq(SlotKey::Hand(Side::Off)), eq(slots.clone()))
 			.return_const(Skill::default());
 		let skills = _Skills {
 			recent: vec![skill_a, skill_b],
@@ -172,7 +180,7 @@ mod tests {
 		combos
 			.mock
 			.expect_next()
-			.with(eq(skill_a.clone()), eq(slots.clone()))
+			.with(eq(SlotKey::Hand(Side::Main)), eq(slots.clone()))
 			.return_const(Skill {
 				name: "replace a",
 				..default()
@@ -180,7 +188,7 @@ mod tests {
 		combos
 			.mock
 			.expect_next()
-			.with(eq(skill_b.clone()), eq(slots.clone()))
+			.with(eq(SlotKey::Hand(Side::Off)), eq(slots.clone()))
 			.return_const(Skill {
 				name: "replace a",
 				..default()

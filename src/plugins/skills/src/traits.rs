@@ -12,7 +12,7 @@ pub(crate) mod tuple_slot_key_item;
 use crate::{
 	components::{SlotKey, Slots},
 	resources::SlotMap,
-	skill::{Queued, Skill, SkillExecution, StartBehaviorFn, StopBehaviorFn},
+	skill::{Skill, SkillExecution, StartBehaviorFn, StopBehaviorFn},
 };
 use bevy::ecs::{component::Component, system::Query};
 use common::{
@@ -68,7 +68,7 @@ pub(crate) trait GetActiveSkill<TAnimationKey: Clone + Copy, TSkillState: Clone>
 }
 
 pub(crate) trait NextCombo {
-	fn next(&mut self, trigger_skill: &Skill<Queued>, slots: &Slots) -> Option<Skill>;
+	fn next(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill>;
 }
 
 pub(crate) trait GetAnimation<TAnimationKey: Clone + Copy> {
