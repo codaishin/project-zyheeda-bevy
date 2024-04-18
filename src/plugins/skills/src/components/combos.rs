@@ -12,14 +12,14 @@ pub enum ComboNode {
 	Circle(VecDeque<(SlotKey, Skill)>),
 }
 
-trait GetNext
+trait _GetSkillAndNextCombo
 where
 	Self: Sized,
 {
 	fn next(&self, trigger: &SlotKey, slots: &Slots) -> Option<(Skill, Self)>;
 }
 
-impl GetNext for ComboNode {
+impl _GetSkillAndNextCombo for ComboNode {
 	fn next(&self, trigger: &SlotKey, slots: &Slots) -> Option<(Skill, Self)> {
 		match self {
 			ComboNode::Tree(tree) => tree
@@ -81,20 +81,28 @@ impl Default for Combos {
 	}
 }
 
-impl<TComboNode: GetNext> NextCombo for Combos<TComboNode> {
+impl<TComboNode: _GetSkillAndNextCombo> NextCombo for Combos<TComboNode> {
 	fn next(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill> {
-		let Some((skill, next)) = self
-			.current
-			.as_ref()
-			.unwrap_or(&self.value)
-			.next(trigger, slots)
-		else {
+		let Some((skill, next_combo)) = skill_and_next_combo(self, trigger, slots) else {
 			self.current = None;
 			return None;
 		};
-		self.current = Some(next);
+
+		self.current = Some(next_combo);
 		Some(skill)
 	}
+}
+
+fn skill_and_next_combo<TComboNode: _GetSkillAndNextCombo>(
+	combo: &mut Combos<TComboNode>,
+	trigger: &SlotKey,
+	slots: &Slots,
+) -> Option<(Skill, TComboNode)> {
+	combo
+		.current
+		.as_ref()
+		.and_then(|current| current.next(trigger, slots))
+		.or_else(|| combo.value.next(trigger, slots))
 }
 
 impl<T> Flush for Combos<T> {
@@ -475,7 +483,7 @@ mod test_combos {
 
 	mock! {
 		_Next {}
-		impl GetNext for _Next {
+		impl _GetSkillAndNextCombo for _Next {
 			fn next(&self, _trigger: &SlotKey, _slots: &Slots) -> Option<(Skill, Self)>;
 		}
 	}
@@ -548,51 +556,56 @@ mod test_combos {
 			},
 		)]));
 		let slots_clone = slots.clone();
-		let trigger = SlotKey::Hand(Side::Off);
+		let trigger_a = SlotKey::Hand(Side::Off);
+		let trigger_b = SlotKey::Hand(Side::Main);
 
-		let mut mock = Mock_Next::default();
-		mock.expect_next().times(1).returning(move |_, _| {
-			let mut mock = Mock_Next::default();
-			mock.expect_next()
-				.times(1)
-				.with(eq(trigger), eq(slots_clone.clone()))
-				.returning(|_, _| None);
-			Some((Skill::default(), mock))
-		});
+		let mut subsequent = Mock_Next::default();
+		subsequent
+			.expect_next()
+			.times(1)
+			.with(eq(trigger_b), eq(slots_clone.clone()))
+			.returning(|_, _| None);
 
-		let mut combos = Combos::new(mock);
+		let mut top = Mock_Next::default();
+		top.expect_next()
+			.with(eq(trigger_a), eq(slots.clone()))
+			.return_once(move |_, _| Some((Skill::default(), subsequent)));
+		top.expect_next()
+			.with(eq(trigger_b), eq(slots.clone()))
+			.returning(|_, _| None);
 
-		combos.next(&trigger, &slots);
-		combos.next(&trigger, &slots);
+		let mut combos = Combos::new(top);
+
+		combos.next(&trigger_a, &slots);
+		combos.next(&trigger_b, &slots);
 	}
 
 	#[test]
-	fn reset_to_use_top_next_after_none_return() {
-		let mut mock = Mock_Next::default();
-		mock.expect_next().times(2).returning(move |_, _| {
-			let mut mock = Mock_Next::default();
-			mock.expect_next().times(1).returning(|_, _| None);
-			Some((Skill::default(), mock))
+	fn reset_to_call_top_after_none_return() {
+		let mut top = Mock_Next::default();
+		top.expect_next().times(3).returning(move |_, _| {
+			let mut subsequent = Mock_Next::default();
+			subsequent.expect_next().returning(|_, _| None);
+			Some((Skill::default(), subsequent))
 		});
 
-		let mut combos = Combos::new(mock);
+		let mut combos = Combos::new(top);
 
 		combos.next(&default(), &default()); // 1st top call
-		combos.next(&default(), &default()); // new subsequent called once
-		combos.next(&default(), &default()); // 2nd top call
-		combos.next(&default(), &default()); // new subsequent called once
+		combos.next(&default(), &default()); // new subsequent call, 2nd top call
+		combos.next(&default(), &default()); // 3rd top call
 	}
 
 	#[test]
-	fn reset_to_use_top_next_after_flush() {
-		let mut mock = Mock_Next::default();
-		mock.expect_next().times(2).returning(move |_, _| {
-			let mut mock = Mock_Next::default();
-			mock.expect_next().never().returning(|_, _| None);
-			Some((Skill::default(), mock))
+	fn reset_to_call_top_after_flush() {
+		let mut top = Mock_Next::default();
+		top.expect_next().times(2).returning(move |_, _| {
+			let mut subsequent = Mock_Next::default();
+			subsequent.expect_next().never().returning(|_, _| None);
+			Some((Skill::default(), subsequent))
 		});
 
-		let mut combos = Combos::new(mock);
+		let mut combos = Combos::new(top);
 
 		combos.next(&default(), &default());
 		combos.flush();
