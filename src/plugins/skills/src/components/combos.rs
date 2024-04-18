@@ -1,7 +1,7 @@
 use super::{SlotKey, Slots};
 use crate::{
 	skill::{Queued, Skill},
-	traits::NextCombo,
+	traits::{Flush, NextCombo},
 };
 use bevy::{ecs::component::Component, prelude::default};
 use std::collections::{HashMap, VecDeque};
@@ -56,6 +56,12 @@ impl NextCombo for Combos {
 		}
 
 		Some(skill.clone())
+	}
+}
+
+impl Flush for Combos {
+	fn flush(&mut self) {
+		self.current = None;
 	}
 }
 
@@ -744,6 +750,60 @@ mod test_combos {
 				})
 			),
 			(dropped, first)
+		);
+	}
+
+	#[test]
+	fn reset_on_flush() {
+		let slots = Slots(HashMap::from([(
+			SlotKey::Hand(Side::Main),
+			Slot {
+				entity: Entity::from_raw(123),
+				item: Some(Item {
+					item_type: HashSet::from([ItemType::Pistol]),
+					..default()
+				}),
+			},
+		)]));
+		let skill = Skill {
+			data: Queued {
+				slot_key: SlotKey::Hand(Side::Main),
+				..default()
+			},
+			..default()
+		};
+		let mut combos = Combos::new(ComboNode::Circle(VecDeque::from([
+			(
+				SlotKey::Hand(Side::Main),
+				Skill {
+					name: "combo skill a",
+					is_usable_with: HashSet::from([ItemType::Pistol]),
+					..default()
+				},
+			),
+			(
+				SlotKey::Hand(Side::Main),
+				Skill {
+					name: "combo skill b",
+					is_usable_with: HashSet::from([ItemType::Pistol]),
+					..default()
+				},
+			),
+		])));
+
+		_ = combos.next(&skill, &slots);
+
+		combos.flush();
+
+		let next = combos.next(&skill, &slots);
+
+		assert_eq!(
+			Some(Skill {
+				name: "combo skill a",
+				is_usable_with: HashSet::from([ItemType::Pistol]),
+				..default()
+			}),
+			next
 		);
 	}
 }
