@@ -9,9 +9,14 @@ use bevy::{
 		schedule::{common_conditions::in_state, IntoSystemConfigs},
 		system::IntoSystem,
 	},
+	input::keyboard::KeyCode,
 	time::Virtual,
 };
-use common::{components::Player, resources::CamRay, states::GameRunning};
+use common::{
+	components::Player,
+	resources::CamRay,
+	states::{GameRunning, MouseContext},
+};
 use components::{
 	Beam,
 	CamOrbit,
@@ -56,7 +61,8 @@ impl Plugin for BehaviorsPlugin {
 				Update,
 				(trigger_move_input_event::<CamRay>, move_player_on_event)
 					.chain()
-					.run_if(in_state(GameRunning::On)),
+					.run_if(in_state(GameRunning::On))
+					.run_if(in_state(MouseContext::<KeyCode>::Default)),
 			)
 			.add_systems(
 				Update,
