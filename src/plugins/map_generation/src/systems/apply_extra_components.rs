@@ -56,7 +56,7 @@ mod tests {
 	}
 
 	fn setup<TDefinition: ExtraComponentsDefinition + 'static>() -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		app.add_systems(Update, apply_extra_components::<TDefinition>);
 
 		app

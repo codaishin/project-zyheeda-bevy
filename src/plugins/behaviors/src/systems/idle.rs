@@ -65,7 +65,7 @@ mod tests {
 	struct _DoIdle(Vec<Entity>);
 
 	fn setup() -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<_DoIdle>();
 		app.add_systems(
 			Update,

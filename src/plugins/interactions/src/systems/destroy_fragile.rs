@@ -55,7 +55,7 @@ mod tests {
 	use common::{components::ColliderRoot, test_tools::utils::SingleThreadedApp};
 
 	fn setup() -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		app.add_systems(Update, destroy_fragile);
 		app.add_event::<CollisionEvent>();
 

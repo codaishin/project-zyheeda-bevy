@@ -108,7 +108,7 @@ mod tests {
 	use mockall::mock;
 
 	fn setup() -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<CamRay>();
 		app.init_resource::<MouseHover>();
 		app.add_systems(Update, apply_skill_behavior);

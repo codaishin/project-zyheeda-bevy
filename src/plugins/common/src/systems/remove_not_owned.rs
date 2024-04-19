@@ -41,7 +41,7 @@ mod tests {
 	struct _Owner;
 
 	fn setup() -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		app.add_systems(Update, remove_not_owned::<_Owner>);
 
 		app

@@ -47,7 +47,7 @@ mod tests {
 	}
 
 	fn setup(ray: _Ray) -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		app.add_systems(Update, trigger_move_input_event::<_Ray>);
 		app.add_event::<MoveInputEvent>();
 		app.init_resource::<ButtonInput<MouseButton>>();

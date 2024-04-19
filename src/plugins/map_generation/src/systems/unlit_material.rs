@@ -32,7 +32,7 @@ mod tests {
 	use common::test_tools::utils::SingleThreadedApp;
 
 	fn setup() -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<Assets<StandardMaterial>>();
 		app.add_systems(Update, unlit_material);
 

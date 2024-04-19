@@ -69,7 +69,7 @@ mod tests {
 
 	#[test]
 	fn cast_ray() {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		let mut cast_ray = _CastRay::default();
 		let ray_caster = RayCaster {
 			origin: Vec3::ZERO,
@@ -94,7 +94,7 @@ mod tests {
 
 	#[test]
 	fn add_cast_ray_event_with_target() {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		let mut cast_ray = _CastRay::default();
 		cast_ray
 			.mock
@@ -136,7 +136,7 @@ mod tests {
 
 	#[test]
 	fn add_cast_ray_event_without_target() {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		let mut cast_ray = _CastRay::default();
 		cast_ray.mock.expect_cast_ray().return_const(None);
 
@@ -176,7 +176,7 @@ mod tests {
 
 	#[test]
 	fn cast_ray_only_once() {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		let mut cast_ray = _CastRay::default();
 		let ray_caster = RayCaster {
 			origin: Vec3::ZERO,
@@ -197,7 +197,7 @@ mod tests {
 
 	#[test]
 	fn remove_ray_caster() {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		let mut cast_ray = _CastRay::default();
 		let ray_caster = RayCaster {
 			origin: Vec3::ZERO,
