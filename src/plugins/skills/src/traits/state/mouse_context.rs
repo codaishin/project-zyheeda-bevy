@@ -1,5 +1,6 @@
-use crate::{components::SlotKey, resources::SlotMap, states::MouseContext, traits::InputState};
+use crate::{components::SlotKey, resources::SlotMap, traits::InputState};
 use bevy::{ecs::schedule::State, input::keyboard::KeyCode};
+use common::states::MouseContext;
 
 impl InputState<KeyCode> for State<MouseContext<KeyCode>> {
 	fn just_pressed_slots(&self, map: &SlotMap<KeyCode>) -> Vec<SlotKey> {

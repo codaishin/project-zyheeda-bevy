@@ -1,4 +1,3 @@
-use crate::states::MouseContext;
 use bevy::{
 	ecs::{
 		schedule::{NextState, State},
@@ -6,6 +5,7 @@ use bevy::{
 	},
 	input::{mouse::MouseButton, ButtonInput},
 };
+use common::states::MouseContext;
 
 pub(crate) fn trigger_primed_mouse_context(
 	mouse_input: Res<ButtonInput<MouseButton>>,

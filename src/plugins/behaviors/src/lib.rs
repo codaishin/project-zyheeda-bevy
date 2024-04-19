@@ -6,12 +6,17 @@ pub mod traits;
 use bevy::{
 	app::{App, Plugin, Update},
 	ecs::{
-		schedule::{common_conditions::in_state, IntoSystemConfigs, States},
+		schedule::{common_conditions::in_state, IntoSystemConfigs},
 		system::IntoSystem,
 	},
+	input::keyboard::KeyCode,
 	time::Virtual,
 };
-use common::{components::Player, resources::CamRay};
+use common::{
+	components::Player,
+	resources::CamRay,
+	states::{GameRunning, MouseContext},
+};
 use components::{
 	Beam,
 	CamOrbit,
@@ -44,19 +49,9 @@ use systems::{
 	update_life_times::update_lifetimes,
 };
 
-pub struct BehaviorsPlugin<TCamActiveState: States + Clone + Send + Sync + 'static> {
-	cam_behavior_state: TCamActiveState,
-}
+pub struct BehaviorsPlugin;
 
-impl<TCamActiveState: States + Clone + Send + Sync + 'static> BehaviorsPlugin<TCamActiveState> {
-	pub fn cam_behavior_if(cam_behavior_state: TCamActiveState) -> Self {
-		Self { cam_behavior_state }
-	}
-}
-
-impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
-	for BehaviorsPlugin<TCamActiveState>
-{
+impl Plugin for BehaviorsPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_event::<MoveInputEvent>()
 			.register_prefab::<Projectile<Plasma>>()
@@ -64,12 +59,15 @@ impl<TCamActiveState: States + Clone + Send + Sync + 'static> Plugin
 			.register_prefab::<Beam>()
 			.add_systems(
 				Update,
-				(trigger_move_input_event::<CamRay>, move_player_on_event).chain(),
+				(trigger_move_input_event::<CamRay>, move_player_on_event)
+					.chain()
+					.run_if(in_state(GameRunning::On))
+					.run_if(in_state(MouseContext::<KeyCode>::Default)),
 			)
 			.add_systems(
 				Update,
 				(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>)
-					.run_if(in_state(self.cam_behavior_state.clone())),
+					.run_if(in_state(GameRunning::On)),
 			)
 			.add_systems(
 				Update,

@@ -2,7 +2,6 @@ mod bundles;
 pub mod components;
 pub mod resources;
 pub mod skill;
-pub mod states;
 mod systems;
 pub mod traits;
 
@@ -25,6 +24,7 @@ use common::{
 	components::{Player, Side, Swap},
 	errors::Error,
 	resources::Models,
+	states::{GameRunning, MouseContext},
 	systems::log::log_many,
 };
 use components::{
@@ -41,7 +41,6 @@ use components::{
 };
 use resources::{skill_templates::SkillTemplates, SkillIcons, SlotMap};
 use skill::{Cast, PlayerSkills, Queued, Skill, SwordStrike};
-use states::{GameRunning, MouseContext};
 use std::{
 	collections::{HashMap, HashSet, VecDeque},
 	time::Duration,
@@ -68,8 +67,7 @@ pub struct SkillsPlugin;
 
 impl Plugin for SkillsPlugin {
 	fn build(&self, app: &mut bevy::prelude::App) {
-		app.init_state::<MouseContext>()
-			.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
+		app.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
 			.add_systems(PreStartup, load_models)
 			.add_systems(PreStartup, setup_input)
 			.add_systems(PreUpdate, add_item_slots)

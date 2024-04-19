@@ -12,6 +12,7 @@ use bevy::{
 use bevy_rapier3d::prelude::*;
 use common::{
 	components::{ColliderRoot, GroundOffset, Health, MainCamera, Player},
+	states::GameRunning,
 	tools::UnitsPerSecond,
 	traits::clamp_zero_positive::ClampZeroPositive,
 	CommonPlugin,
@@ -25,7 +26,7 @@ use project_zyheeda::systems::{
 	movement::toggle_walk_run::player_toggle_walk_run,
 	void_sphere::ring_rotation::ring_rotation,
 };
-use skills::{states::GameRunning, SkillsPlugin};
+use skills::SkillsPlugin;
 use std::f32::consts::PI;
 
 fn main() {
@@ -40,8 +41,7 @@ fn main() {
 }
 
 fn prepare_game(app: &mut App) {
-	app.init_state::<GameRunning>()
-		.add_plugins(DefaultPlugins)
+	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
 		.add_plugins(PrefabsPlugin)
@@ -49,7 +49,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(InteractionsPlugin)
 		.add_plugins(BarsPlugin)
 		.add_plugins(SkillsPlugin)
-		.add_plugins(BehaviorsPlugin::cam_behavior_if(GameRunning::On))
+		.add_plugins(BehaviorsPlugin)
 		.add_plugins(AnimationsPlugin)
 		.add_plugins(LightPlugin)
 		.add_plugins(MapGenerationPlugin)

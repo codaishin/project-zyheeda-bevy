@@ -18,12 +18,11 @@ use bevy::{
 	render::color::Color,
 	ui::BackgroundColor,
 };
-use common::components::Player;
+use common::{components::Player, states::MouseContext};
 use skills::{
 	components::SlotKey,
 	resources::SlotMap,
 	skill::{Queued, Skill},
-	states::MouseContext,
 	traits::Iter,
 };
 
