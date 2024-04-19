@@ -1,8 +1,8 @@
-use crate::states::MouseContext;
 use bevy::ecs::{
 	schedule::{NextState, State},
 	system::{Res, ResMut},
 };
+use common::states::MouseContext;
 
 pub(crate) fn advance_just_triggered_mouse_context(
 	mouse_context: Res<State<MouseContext>>,

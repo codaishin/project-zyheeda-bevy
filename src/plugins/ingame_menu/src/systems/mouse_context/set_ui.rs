@@ -5,7 +5,7 @@ use bevy::{
 	},
 	ui::Interaction,
 };
-use skills::states::MouseContext;
+use common::states::MouseContext;
 
 pub fn set_ui_mouse_context(
 	current_state: Res<State<MouseContext>>,
