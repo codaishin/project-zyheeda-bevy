@@ -54,7 +54,9 @@ impl Plugin for BehaviorsPlugin {
 			.register_prefab::<Beam>()
 			.add_systems(
 				Update,
-				(trigger_move_input_event::<CamRay>, move_player_on_event).chain(),
+				(trigger_move_input_event::<CamRay>, move_player_on_event)
+					.chain()
+					.run_if(in_state(GameRunning::On)),
 			)
 			.add_systems(
 				Update,
