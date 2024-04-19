@@ -97,7 +97,7 @@ mod tests {
 	}
 
 	fn setup(superior: _Superior, inferior: _Inferior) -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<_Result>();
 		app.init_resource::<SlotMap>();
 		app.insert_resource(superior);

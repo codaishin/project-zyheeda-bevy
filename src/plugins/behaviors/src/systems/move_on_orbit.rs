@@ -53,7 +53,7 @@ mod tests {
 	}
 
 	fn setup_app() -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		let input = ButtonInput::<MouseButton>::default();
 
 		app.add_systems(Update, move_on_orbit::<_Orbit>);

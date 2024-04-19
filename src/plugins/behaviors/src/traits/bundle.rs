@@ -39,7 +39,7 @@ mod tests {
 
 	#[test]
 	fn removes_bundle() {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		let entity = app.world.spawn((_A, _B)).id();
 
 		app.add_systems(Update, call_remover::<(_A, _B)>);

@@ -65,7 +65,7 @@ mod tests {
 	}
 
 	fn setup() -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		app.add_systems(Update, delay::<_Actor, _Target, Real>);
 		app.init_resource::<Time<Real>>();
 

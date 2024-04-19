@@ -35,7 +35,7 @@ mod tests {
 	}
 
 	fn setup(cells: Vec<(Transform, _Cell)>) -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
 			(move || cells.clone()).pipe(spawn_procedural::<_Cell>),

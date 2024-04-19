@@ -51,7 +51,7 @@ mod tests {
 	}
 
 	fn setup(load_map: _LoadMap) -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(load_map);
 		app.add_systems(Update, begin_level_load::<_LoadMap, _Cell>);
 

@@ -41,7 +41,7 @@ mod tests {
 			}
 		}
 
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		let movement = Movement::<_T>::to(default()).remove_on_cleanup::<_RemoveMe>();
 		let movement = app.world.spawn((movement, _RemoveMe)).id();
 

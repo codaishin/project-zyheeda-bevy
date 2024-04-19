@@ -69,7 +69,7 @@ mod tests {
 	}
 
 	fn setup(cells: Vec<(Transform, _Cell)>) -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		let return_cells = move || cells.clone();
 
 		app.init_resource::<_LoadScene>();

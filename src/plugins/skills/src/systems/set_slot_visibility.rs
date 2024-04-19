@@ -52,7 +52,7 @@ mod tests {
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
 
 	fn setup() -> (App, Entity) {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		let skill_spawn = app.world.spawn_empty().id();
 		let main_hand = app.world.spawn_empty().id();
 		let off_hand = app.world.spawn_empty().id();

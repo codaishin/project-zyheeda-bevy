@@ -42,7 +42,7 @@ mod tests {
 	use common::test_tools::utils::SingleThreadedApp;
 
 	fn setup() -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		app.add_systems(Update, move_player_on_event);
 		app.add_event::<MoveInputEvent>();
 

@@ -195,7 +195,7 @@ mod tests {
 	}
 
 	fn setup() -> (App, Entity) {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		let mut time = Time::<Real>::default();
 		let agent = app.world.spawn(()).id();
 

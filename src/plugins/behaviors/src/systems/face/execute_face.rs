@@ -106,7 +106,7 @@ mod tests {
 	}
 
 	fn setup(cursor: _Cursor) -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		app.add_systems(Update, read_faces.pipe(execute_face::<_Cursor>));
 		app.insert_resource(cursor);
 		app.init_resource::<MouseHover>();

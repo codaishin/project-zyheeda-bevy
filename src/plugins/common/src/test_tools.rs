@@ -97,20 +97,16 @@ pub mod utils {
 	}
 
 	pub trait SingleThreadedApp {
-		fn new_single_threaded<const N: usize>(labels: [impl ScheduleLabel; N]) -> Self;
+		fn single_threaded(self, label: impl ScheduleLabel) -> Self;
 	}
 
 	impl SingleThreadedApp for App {
-		fn new_single_threaded<const N: usize>(labels: [impl ScheduleLabel; N]) -> Self {
-			let mut app = App::new();
+		fn single_threaded(mut self, label: impl ScheduleLabel) -> Self {
+			self.edit_schedule(label, |schedule| {
+				schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+			});
 
-			for label in labels {
-				app.edit_schedule(label, |schedule| {
-					schedule.set_executor_kind(ExecutorKind::SingleThreaded);
-				});
-			}
-
-			app
+			self
 		}
 	}
 }

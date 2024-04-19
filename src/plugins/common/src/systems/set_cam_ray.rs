@@ -47,7 +47,7 @@ mod tests {
 	}
 
 	fn setup(cam: _Camera) -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 
 		app.world
 			.spawn((cam, _Label, GlobalTransform::from_xyz(4., 3., 2.)));

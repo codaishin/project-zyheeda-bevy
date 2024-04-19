@@ -100,7 +100,7 @@ mod tests {
 	}
 
 	fn setup() -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		app.add_systems(Update, get_cell_transforms::<_Cell>.pipe(store_result));
 		app.init_resource::<Assets<Map<_Cell>>>();
 		app.init_resource::<_CellsResult>();

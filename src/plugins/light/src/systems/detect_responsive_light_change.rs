@@ -59,7 +59,7 @@ mod tests {
 	}
 
 	fn setup() -> App {
-		let mut app = App::new_single_threaded([Update]);
+		let mut app = App::new().single_threaded(Update);
 		app.add_systems(Update, detect_responsive_light_change::<_Collisions>);
 
 		app
