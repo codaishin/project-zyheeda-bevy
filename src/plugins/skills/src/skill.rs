@@ -190,17 +190,6 @@ impl AnimationSetup for ShootHandGun {
 	}
 }
 
-pub(crate) struct ShootHandGunDual;
-
-impl AnimationSetup for ShootHandGunDual {
-	fn animation() -> SkillAnimation {
-		SkillAnimation {
-			right: Animation::new(player_animation_path("Animation6"), PlayMode::Repeat),
-			left: Animation::new(player_animation_path("Animation7"), PlayMode::Repeat),
-		}
-	}
-}
-
 #[derive(PartialEq, Debug, Clone, Copy, Eq, Hash)]
 pub(crate) enum SkillState {
 	Aim,

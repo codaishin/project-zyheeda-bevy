@@ -64,6 +64,7 @@ pub(crate) struct Combos<TComboNode = ComboNode> {
 }
 
 impl<T> Combos<T> {
+	#[allow(dead_code)]
 	pub fn new(config: T) -> Self {
 		Self {
 			value: config,

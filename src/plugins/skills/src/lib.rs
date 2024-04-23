@@ -28,9 +28,10 @@ use common::{
 	resources::Models,
 	states::{GameRunning, MouseContext},
 	systems::log::log_many,
+	traits::try_insert_on::TryInsertOn,
 };
 use components::{
-	combos::{ComboNode, Combos},
+	combos::Combos,
 	inventory::Inventory,
 	queue::Queue,
 	slots::Slots,
@@ -40,9 +41,9 @@ use components::{
 	SlotKey,
 };
 use resources::{skill_templates::SkillTemplates, SkillIcons, SlotMap};
-use skill::{Cast, Queued, ShootHandGun, ShootHandGunDual, Skill, SwordStrike};
+use skill::{Cast, Queued, ShootHandGun, Skill, SwordStrike};
 use std::{
-	collections::{HashMap, HashSet, VecDeque},
+	collections::{HashMap, HashSet},
 	time::Duration,
 };
 use systems::{
@@ -150,27 +151,10 @@ fn setup_skill_templates(
 			is_usable_with: HashSet::from([ItemType::Pistol]),
 			..default()
 		},
-		Skill {
-			name: "Shoot Hand Gun Dual",
-			cast: Cast {
-				pre: Duration::from_millis(100),
-				active: Duration::ZERO,
-				after: Duration::from_millis(100),
-			},
-			animate: Some(ShootHandGunDual::animation()),
-			execution: Projectile::<Plasma>::execution(),
-			is_usable_with: HashSet::from([ItemType::Pistol]),
-			dual_wield: true,
-			..default()
-		},
 	]);
 	let skill_icons = SkillIcons(HashMap::from([
 		("Swing Sword", assert_server.load("icons/sword_down.png")),
 		("Shoot Hand Gun", assert_server.load("icons/pistol.png")),
-		(
-			"Shoot Hand Gun Dual",
-			assert_server.load("icons/pistol_dual.png"),
-		),
 	]));
 
 	commands.insert_resource(templates);
@@ -192,81 +176,70 @@ fn set_player_items(
 		return;
 	};
 
-	let pistol_a = Item {
-		name: "Pistol A",
-		model: Some("pistol"),
-		skill: skill_templates.get("Shoot Hand Gun").cloned(),
-		item_type: HashSet::from([ItemType::Pistol]),
-	};
-	let pistol_b = Item {
-		name: "Pistol B",
-		model: Some("pistol"),
-		skill: skill_templates.get("Shoot Hand Gun").cloned(),
-		item_type: HashSet::from([ItemType::Pistol]),
-	};
-	let pistol_c = Item {
-		name: "Pistol C",
-		model: Some("pistol"),
-		skill: skill_templates.get("Shoot Hand Gun").cloned(),
-		item_type: HashSet::from([ItemType::Pistol]),
-	};
-	let sword_a = Item {
-		name: "Sword A",
-		model: Some("sword"),
-		skill: skill_templates.get("Swing Sword").cloned(),
-		item_type: HashSet::from([ItemType::Sword]),
-	};
-	let sword_b = Item {
-		name: "Sword B",
-		model: Some("sword"),
-		skill: skill_templates.get("Swing Sword").cloned(),
-		item_type: HashSet::from([ItemType::Sword]),
+	let Some(loadout) = get_loadout(&skill_templates) else {
+		return;
 	};
 
-	// FIXME: Use a more sensible pattern to register predefined combos
-	let mut skill_combos = Combos::default();
-	let shoot_hand_gun = skill_templates.get("Shoot Hand Gun");
-	let shoot_hand_gun_dual = skill_templates.get("Shoot Hand Gun Dual");
-	if let (Some(shoot_hand_gun), Some(shoot_hand_gun_dual)) = (shoot_hand_gun, shoot_hand_gun_dual)
-	{
-		skill_combos = Combos::new(ComboNode::Tree(HashMap::from([
-			(
-				SlotKey::Hand(Side::Main),
-				(
-					shoot_hand_gun.clone(),
-					ComboNode::Circle(VecDeque::from([
-						(SlotKey::Hand(Side::Off), shoot_hand_gun_dual.clone()),
-						(SlotKey::Hand(Side::Main), shoot_hand_gun_dual.clone()),
-					])),
-				),
-			),
-			(
-				SlotKey::Hand(Side::Off),
-				(
-					shoot_hand_gun.clone(),
-					ComboNode::Circle(VecDeque::from([
-						(SlotKey::Hand(Side::Main), shoot_hand_gun_dual.clone()),
-						(SlotKey::Hand(Side::Off), shoot_hand_gun_dual.clone()),
-					])),
-				),
-			),
-		])));
-	}
+	let Some(inventory) = get_inventory(skill_templates) else {
+		return;
+	};
 
-	let mut player = commands.entity(player);
-	player.insert((
-		Inventory::new([Some(sword_a), Some(sword_b), Some(pistol_c)]),
-		Loadout::new(
-			[
-				(SlotKey::SkillSpawn, "projectile_spawn"),
-				(SlotKey::Hand(Side::Off), "hand_slot.L"),
-				(SlotKey::Hand(Side::Main), "hand_slot.R"),
-			],
-			[
-				(SlotKey::Hand(Side::Off), pistol_a.into()),
-				(SlotKey::Hand(Side::Main), pistol_b.into()),
-			],
+	commands.try_insert_on(player, (inventory, loadout));
+}
+
+fn get_loadout(skill_templates: &Res<'_, SkillTemplates>) -> Option<Loadout> {
+	let shoot_hand_gun = skill_templates.get("Shoot Hand Gun")?;
+	let slot_bones = [
+		(SlotKey::SkillSpawn, "projectile_spawn"),
+		(SlotKey::Hand(Side::Off), "hand_slot.L"),
+		(SlotKey::Hand(Side::Main), "hand_slot.R"),
+	];
+	let equipment = [
+		(
+			SlotKey::Hand(Side::Off),
+			Some(Item {
+				name: "Pistol A",
+				model: Some("pistol"),
+				skill: Some(shoot_hand_gun.clone()),
+				item_type: HashSet::from([ItemType::Pistol]),
+			}),
 		),
-		skill_combos,
-	));
+		(
+			SlotKey::Hand(Side::Main),
+			Some(Item {
+				name: "Pistol B",
+				model: Some("pistol"),
+				skill: Some(shoot_hand_gun.clone()),
+				item_type: HashSet::from([ItemType::Pistol]),
+			}),
+		),
+	];
+
+	Some(Loadout::new(slot_bones, equipment))
+}
+
+fn get_inventory(skill_templates: Res<'_, SkillTemplates>) -> Option<Inventory> {
+	let shoot_hand_gun = skill_templates.get("Shoot Hand Gun")?;
+	let swing_sword = skill_templates.get("Swing Sword")?;
+
+	Some(Inventory::new([
+		Some(Item {
+			name: "Sword A",
+			model: Some("sword"),
+			skill: Some(swing_sword.clone()),
+			item_type: HashSet::from([ItemType::Sword]),
+		}),
+		Some(Item {
+			name: "Sword B",
+			model: Some("sword"),
+			skill: Some(swing_sword.clone()),
+			item_type: HashSet::from([ItemType::Sword]),
+		}),
+		Some(Item {
+			name: "Pistol C",
+			model: Some("pistol"),
+			skill: Some(shoot_hand_gun.clone()),
+			item_type: HashSet::from([ItemType::Pistol]),
+		}),
+	]))
 }
