@@ -29,7 +29,6 @@ pub struct Skill<TData = ()> {
 	pub animate: Option<SkillAnimation>,
 	pub execution: SkillExecution,
 	pub is_usable_with: HashSet<ItemType>,
-	pub dual_wield: bool,
 }
 
 impl<TData: Default> Default for Skill<TData> {
@@ -41,7 +40,6 @@ impl<TData: Default> Default for Skill<TData> {
 			animate: Default::default(),
 			execution: Default::default(),
 			is_usable_with: Default::default(),
-			dual_wield: Default::default(),
 		}
 	}
 }
@@ -103,7 +101,6 @@ impl Skill {
 			animate: self.animate,
 			execution: self.execution,
 			is_usable_with: self.is_usable_with,
-			dual_wield: self.dual_wield,
 		}
 	}
 }
@@ -117,7 +114,6 @@ impl<TSrc> Skill<TSrc> {
 			animate: self.animate,
 			execution: self.execution,
 			is_usable_with: self.is_usable_with,
-			dual_wield: self.dual_wield,
 		}
 	}
 }
