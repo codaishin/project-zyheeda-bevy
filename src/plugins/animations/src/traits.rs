@@ -11,3 +11,21 @@ pub(crate) trait RepeatAnimation {
 pub(crate) trait ReplayAnimation {
 	fn replay(&mut self, animation: &Handle<AnimationClip>);
 }
+
+pub trait HighestPriorityAnimation<TAnimation> {
+	fn highest_priority_animation(&self) -> Option<&TAnimation>;
+}
+
+pub enum Priority {
+	High,
+	Middle,
+	Low,
+}
+
+pub trait InsertAnimation<TAnimation> {
+	fn insert(&mut self, animation: TAnimation, priority: Priority);
+}
+
+pub trait RemoveAnimation<TAnimation> {
+	fn remove(&mut self, animation: TAnimation, priority: Priority);
+}

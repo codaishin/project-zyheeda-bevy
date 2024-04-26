@@ -1,10 +1,10 @@
 pub mod animation;
 pub mod components;
+pub mod traits;
 
 mod animation_keys;
 mod resource;
 mod systems;
-mod traits;
 
 use animation_keys::PlayerIdle;
 use behaviors::components::{Movement, VelocityBased};
