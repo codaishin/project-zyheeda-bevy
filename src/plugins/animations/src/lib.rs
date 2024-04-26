@@ -1,5 +1,7 @@
-mod animation_keys;
+pub mod animation;
 pub mod components;
+
+mod animation_keys;
 mod resource;
 mod systems;
 mod traits;
