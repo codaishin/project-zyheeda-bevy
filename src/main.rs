@@ -1,4 +1,9 @@
-use animations::{components::Animator, AnimationsPlugin};
+use animations::{
+	animation::{Animation, PlayMode},
+	components::{animation_dispatch::AnimationDispatch, Animator},
+	traits::{InsertAnimation, Priority},
+	AnimationsPlugin,
+};
 use bars::{components::Bar, BarsPlugin};
 use behaviors::{
 	components::{CamOrbit, MovementConfig, MovementMode, VoidSphere},
@@ -14,7 +19,7 @@ use common::{
 	components::{ColliderRoot, GroundOffset, Health, MainCamera, Player},
 	states::GameRunning,
 	tools::UnitsPerSecond,
-	traits::clamp_zero_positive::ClampZeroPositive,
+	traits::{clamp_zero_positive::ClampZeroPositive, load_asset::Path},
 	CommonPlugin,
 };
 use ingame_menu::IngameMenuPlugin;
@@ -193,6 +198,15 @@ fn setup_simple_3d_scene(
 }
 
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
+	let mut animation_dispatch = AnimationDispatch::default();
+	animation_dispatch.insert(
+		Animation::new_unique(
+			Path::from(Player::MODEL_PATH.to_owned() + "#Animation2"),
+			PlayMode::Repeat,
+		),
+		Priority::Low,
+	);
+
 	commands
 		.spawn((
 			Name::from("Player"),
@@ -203,6 +217,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				..default()
 			},
 			Animator { ..default() },
+			animation_dispatch,
 			GroundOffset(Vec3::Y),
 			Player,
 			MovementConfig::Dynamic {
