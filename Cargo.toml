@@ -10,6 +10,7 @@ bevy = "0.13.0"
 bevy_rapier3d = "=0.25.0"
 tracing = "0.1.40"
 mockall = "=0.12.1"
+animations = { path = "src/plugins/animations" }
 bars = { path = "src/plugins/bars" }
 behaviors = { path = "src/plugins/behaviors" }
 common = { path = "src/plugins/common" }
@@ -41,6 +42,7 @@ bevy-inspector-egui = "=0.23.4"
 bevy.workspace = true
 bevy_rapier3d.workspace = true
 tracing.workspace = true
+animations.workspace = true
 bars.workspace = true
 behaviors.workspace = true
 common.workspace = true
@@ -49,7 +51,6 @@ light.workspace = true
 macros.workspace = true
 prefabs.workspace = true
 skills.workspace = true
-animations = { path = "src/plugins/animations" }
 ingame_menu = { path = "src/plugins/ingame_menu" }
 map_generation = { path = "src/plugins/map_generation" }
 
