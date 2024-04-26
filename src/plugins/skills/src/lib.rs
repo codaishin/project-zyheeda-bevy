@@ -1,10 +1,12 @@
-mod bundles;
 pub mod components;
 pub mod resources;
 pub mod skill;
-mod systems;
 pub mod traits;
 
+mod bundles;
+mod systems;
+
+use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use behaviors::components::{Plasma, Projectile};
 use bevy::{
 	app::{Plugin, PreStartup, PreUpdate, Update},
@@ -30,17 +32,15 @@ use common::{
 use components::{
 	combos::{ComboNode, Combos},
 	queue::Queue,
-	Handed,
 	Inventory,
 	InventoryKey,
 	Item,
 	ItemType,
-	SideUnset,
 	SlotKey,
 	Slots,
 };
 use resources::{skill_templates::SkillTemplates, SkillIcons, SlotMap};
-use skill::{Cast, PlayerSkills, Queued, Skill, SwordStrike};
+use skill::{Cast, Queued, ShootHandGun, ShootHandGunDual, Skill, SwordStrike};
 use std::{
 	collections::{HashMap, HashSet, VecDeque},
 	time::Duration,
@@ -61,7 +61,7 @@ use systems::{
 	update_active_skill::update_active_skill,
 	update_skill_combos::update_skill_combos,
 };
-use traits::GetExecution;
+use traits::{AnimationSetup, GetExecution};
 
 pub struct SkillsPlugin;
 
@@ -77,7 +77,7 @@ impl Plugin for SkillsPlugin {
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
 						.pipe(enqueue::<Slots, Skill, Queue, Skill<Queued>>),
 					update_skill_combos::<Combos, Queue>,
-					update_active_skill::<PlayerSkills<Side>, Queue, Virtual>,
+					update_active_skill::<Queue, Animation, AnimationDispatch, Virtual>,
 					set_slot_visibility,
 					apply_skill_behavior,
 					flush::<Queue>,
@@ -133,7 +133,7 @@ fn setup_skill_templates(
 				active: Duration::from_millis(500),
 				after: Duration::from_millis(200),
 			},
-			animate: Some(PlayerSkills::SwordStrike(SideUnset)),
+			animate: Some(SwordStrike::animation()),
 			execution: SwordStrike::execution(),
 			is_usable_with: HashSet::from([ItemType::Sword]),
 			..default()
@@ -145,7 +145,7 @@ fn setup_skill_templates(
 				active: Duration::ZERO,
 				after: Duration::from_millis(100),
 			},
-			animate: Some(PlayerSkills::Shoot(Handed::Single(SideUnset))),
+			animate: Some(ShootHandGun::animation()),
 			execution: Projectile::<Plasma>::execution(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
 			..default()
@@ -157,7 +157,7 @@ fn setup_skill_templates(
 				active: Duration::ZERO,
 				after: Duration::from_millis(100),
 			},
-			animate: Some(PlayerSkills::Shoot(Handed::Dual(SideUnset))),
+			animate: Some(ShootHandGunDual::animation()),
 			execution: Projectile::<Plasma>::execution(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
 			dual_wield: true,

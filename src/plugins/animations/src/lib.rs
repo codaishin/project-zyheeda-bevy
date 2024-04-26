@@ -1,55 +1,39 @@
-mod animation_keys;
+pub mod animation;
 pub mod components;
+pub mod traits;
+
+mod animation_keys;
 mod resource;
 mod systems;
-mod traits;
 
-use animation_keys::PlayerIdle;
-use behaviors::components::{Movement, VelocityBased};
+use animation::Animation;
 use bevy::{
 	animation::AnimationPlayer,
-	app::{App, Plugin, PostUpdate, PreStartup, PreUpdate, Update},
+	app::{App, Plugin, Update},
 	asset::AssetServer,
-	ecs::system::IntoSystem,
+	ecs::schedule::IntoSystemConfigs,
+	utils::Uuid,
 };
-use common::components::{Player, Side};
-use components::PlayerMovement;
-use skills::skill::PlayerSkills;
+use components::animation_dispatch::AnimationDispatch;
+use resource::AnimationClips;
 use systems::{
-	active_animation::active_animation,
-	idle_animation::idle_animation,
 	link_animator::link_animators_with_new_animation_players,
-	load_animations::load_animations,
-	set_movement_animation::set_movement_animation,
+	load_animation_clip::load_animation_clip,
+	play_animation_clip::play_animation_clip,
 };
 
 pub struct AnimationsPlugin;
 
 impl Plugin for AnimationsPlugin {
 	fn build(&self, app: &mut App) {
-		app.add_systems(
-			PreStartup,
-			(
-				load_animations::<PlayerMovement, AssetServer>,
-				load_animations::<PlayerSkills<Side>, AssetServer>,
-				load_animations::<PlayerIdle, AssetServer>,
-			),
-		)
-		.add_systems(PreUpdate, link_animators_with_new_animation_players)
-		.add_systems(
+		app.init_resource::<AnimationClips<Uuid>>().add_systems(
 			Update,
-			set_movement_animation::<Player, Movement<VelocityBased>, PlayerMovement>,
-		)
-		.add_systems(
-			PostUpdate,
-			start
-				.pipe(active_animation::<Player, PlayerSkills<Side>, AnimationPlayer>)
-				.pipe(active_animation::<Player, PlayerMovement, AnimationPlayer>)
-				.pipe(idle_animation::<Player, PlayerIdle, AnimationPlayer>),
+			(
+				link_animators_with_new_animation_players,
+				load_animation_clip::<Animation, AnimationDispatch, AssetServer>,
+				play_animation_clip::<Animation, AnimationDispatch, AnimationPlayer>,
+			)
+				.chain(),
 		);
 	}
-}
-
-fn start<T: Default>() -> T {
-	T::default()
 }

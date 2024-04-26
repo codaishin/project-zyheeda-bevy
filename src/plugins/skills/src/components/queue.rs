@@ -1,6 +1,6 @@
 use super::SlotKey;
 use crate::{
-	skill::{Activation, PlayerSkills, Queued, Skill, SkillState, StartBehaviorFn, StopBehaviorFn},
+	skill::{Activation, Queued, Skill, SkillState, StartBehaviorFn, StopBehaviorFn},
 	traits::{
 		Enqueue,
 		Execution,
@@ -13,11 +13,9 @@ use crate::{
 		IterMutWithKeys,
 	},
 };
+use animations::animation::Animation;
 use bevy::{ecs::component::Component, utils::default};
-use common::{
-	components::{Animate, Side},
-	traits::state_duration::StateDuration,
-};
+use common::{components::Side, traits::state_duration::StateDuration};
 use std::{collections::VecDeque, time::Duration};
 
 #[derive(PartialEq, Debug, Default, Clone)]
@@ -510,12 +508,10 @@ struct ActiveSkill<'a> {
 	skill: &'a mut Skill<Queued>,
 }
 
-impl GetActiveSkill<PlayerSkills<Side>, SkillState> for Queue {
+impl GetActiveSkill<Animation, SkillState> for Queue {
 	fn get_active(
 		&mut self,
-	) -> Option<
-		impl Execution + GetAnimation<PlayerSkills<Side>> + GetSlots + StateDuration<SkillState>,
-	> {
+	) -> Option<impl Execution + GetAnimation<Animation> + GetSlots + StateDuration<SkillState>> {
 		let skill = self.queue.front_mut()?;
 
 		if self.duration.is_none() {
@@ -562,19 +558,14 @@ impl<'a> Execution for ActiveSkill<'a> {
 	}
 }
 
-impl<'a> GetAnimation<PlayerSkills<Side>> for ActiveSkill<'a> {
-	fn animate(&self) -> Animate<PlayerSkills<Side>> {
-		let Some(animate) = self.skill.animate else {
-			return Animate::None;
-		};
-		match (animate, self.skill.data.slot_key) {
-			(PlayerSkills::Shoot(dual_or_single), SlotKey::Hand(side)) => {
-				Animate::Repeat(PlayerSkills::Shoot(dual_or_single.on(side)))
-			}
-			(PlayerSkills::SwordStrike(_), SlotKey::Hand(side)) => {
-				Animate::Replay(PlayerSkills::SwordStrike(side))
-			}
-			_ => Animate::None,
+impl<'a> GetAnimation<Animation> for ActiveSkill<'a> {
+	fn animate(&self) -> Option<Animation> {
+		let animate = self.skill.animate.as_ref()?;
+
+		match self.skill.data.slot_key {
+			SlotKey::Hand(Side::Main) => Some(animate.right.clone()),
+			SlotKey::Hand(Side::Off) => Some(animate.left.clone()),
+			SlotKey::SkillSpawn => None,
 		}
 	}
 }
@@ -597,8 +588,9 @@ impl<'a> GetSlots for ActiveSkill<'a> {
 mod test_queue_active_skill {
 	use super::*;
 	use crate::{
-		components::{Handed, SideUnset, SlotKey},
-		skill::{Cast, SkillExecution, Spawner, Target},
+		components::SlotKey,
+		skill::{Cast, ShootHandGun, SkillExecution, Spawner, Target},
+		traits::AnimationSetup,
 	};
 	use bevy::{ecs::system::EntityCommands, prelude::default, transform::components::Transform};
 	use common::components::Side;
@@ -895,7 +887,9 @@ mod test_queue_active_skill {
 
 	#[test]
 	fn get_shoot_animations() {
-		let actives_main = [
+		let animation = ShootHandGun::animation();
+
+		let actives = [
 			ActiveSkill {
 				duration: &mut Duration::default(),
 				skill: &mut Skill {
@@ -903,31 +897,7 @@ mod test_queue_active_skill {
 						slot_key: SlotKey::Hand(Side::Main),
 						..default()
 					},
-					animate: Some(PlayerSkills::Shoot(Handed::Single(SideUnset))),
-					..default()
-				},
-			},
-			ActiveSkill {
-				duration: &mut Duration::default(),
-				skill: &mut Skill {
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
-						..default()
-					},
-					animate: Some(PlayerSkills::Shoot(Handed::Dual(SideUnset))),
-					..default()
-				},
-			},
-		];
-		let actives_off = [
-			ActiveSkill {
-				duration: &mut Duration::default(),
-				skill: &mut Skill {
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Off),
-						..default()
-					},
-					animate: Some(PlayerSkills::Shoot(Handed::Single(SideUnset))),
+					animate: Some(animation.clone()),
 					..default()
 				},
 			},
@@ -938,62 +908,26 @@ mod test_queue_active_skill {
 						slot_key: SlotKey::Hand(Side::Off),
 						..default()
 					},
-					animate: Some(PlayerSkills::Shoot(Handed::Dual(SideUnset))),
+					animate: Some(animation.clone()),
+					..default()
+				},
+			},
+			ActiveSkill {
+				duration: &mut Duration::default(),
+				skill: &mut Skill {
+					data: Queued {
+						slot_key: SlotKey::SkillSpawn,
+						..default()
+					},
+					animate: Some(animation.clone()),
 					..default()
 				},
 			},
 		];
 
 		assert_eq!(
-			(
-				[
-					Animate::Repeat(PlayerSkills::Shoot(Handed::Single(Side::Main))),
-					Animate::Repeat(PlayerSkills::Shoot(Handed::Dual(Side::Main)))
-				],
-				[
-					Animate::Repeat(PlayerSkills::Shoot(Handed::Single(Side::Off))),
-					Animate::Repeat(PlayerSkills::Shoot(Handed::Dual(Side::Off)))
-				],
-			),
-			(
-				actives_main.map(|track| track.animate()),
-				actives_off.map(|track| track.animate())
-			)
-		)
-	}
-
-	#[test]
-	fn get_sword_strike_animations() {
-		let animate = PlayerSkills::SwordStrike(SideUnset);
-		let active_main = ActiveSkill {
-			duration: &mut Duration::default(),
-			skill: &mut Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
-				animate: Some(animate),
-				..default()
-			},
-		};
-		let active_off = ActiveSkill {
-			duration: &mut Duration::default(),
-			skill: &mut Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Off),
-					..default()
-				},
-				animate: Some(animate),
-				..default()
-			},
-		};
-
-		assert_eq!(
-			[
-				Animate::Replay(PlayerSkills::SwordStrike(Side::Main)),
-				Animate::Replay(PlayerSkills::SwordStrike(Side::Off))
-			],
-			[active_main.animate(), active_off.animate()]
+			[Some(animation.right), Some(animation.left), None],
+			actives.map(|s| s.animate()),
 		)
 	}
 

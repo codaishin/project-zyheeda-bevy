@@ -1,13 +1,18 @@
 use crate::{
-	components::{Handed, ItemType, SideUnset, SlotKey},
-	traits::Prime,
+	components::{ItemType, SlotKey},
+	traits::{AnimationSetup, Prime},
 };
+use animations::animation::{Animation, PlayMode};
 use bevy::{
 	ecs::system::EntityCommands,
 	math::{primitives::Direction3d, Ray3d, Vec3},
 	transform::components::{GlobalTransform, Transform},
 };
-use common::{components::Outdated, resources::ColliderInfo};
+use common::{
+	components::{Outdated, Player},
+	resources::ColliderInfo,
+	traits::load_asset::Path,
+};
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result},
@@ -15,11 +20,17 @@ use std::{
 };
 
 #[derive(PartialEq, Debug, Clone)]
+pub struct SkillAnimation {
+	pub(crate) left: Animation,
+	pub(crate) right: Animation,
+}
+
+#[derive(PartialEq, Debug, Clone)]
 pub struct Skill<TData = ()> {
 	pub name: &'static str,
 	pub data: TData,
 	pub cast: Cast,
-	pub animate: Option<PlayerSkills<SideUnset>>,
+	pub animate: Option<SkillAnimation>,
 	pub execution: SkillExecution,
 	pub is_usable_with: HashSet<ItemType>,
 	pub dual_wield: bool,
@@ -44,12 +55,6 @@ pub struct Cast {
 	pub pre: Duration,
 	pub active: Duration,
 	pub after: Duration,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PlayerSkills<TSide> {
-	Shoot(Handed<TSide>),
-	SwordStrike(TSide),
 }
 
 impl<TData> Display for Skill<TData> {
@@ -167,7 +172,42 @@ mod test_skill {
 	}
 }
 
+fn player_animation_path(animation_name: &str) -> Path {
+	Path::from(Player::MODEL_PATH.to_owned() + "#" + animation_name)
+}
+
 pub(crate) struct SwordStrike;
+
+impl AnimationSetup for SwordStrike {
+	fn animation() -> SkillAnimation {
+		SkillAnimation {
+			right: Animation::new_unique(player_animation_path("Animation8"), PlayMode::Replay),
+			left: Animation::new_unique(player_animation_path("Animation9"), PlayMode::Replay),
+		}
+	}
+}
+
+pub(crate) struct ShootHandGun;
+
+impl AnimationSetup for ShootHandGun {
+	fn animation() -> SkillAnimation {
+		SkillAnimation {
+			right: Animation::new_unique(player_animation_path("Animation4"), PlayMode::Repeat),
+			left: Animation::new_unique(player_animation_path("Animation5"), PlayMode::Repeat),
+		}
+	}
+}
+
+pub(crate) struct ShootHandGunDual;
+
+impl AnimationSetup for ShootHandGunDual {
+	fn animation() -> SkillAnimation {
+		SkillAnimation {
+			right: Animation::new_unique(player_animation_path("Animation6"), PlayMode::Repeat),
+			left: Animation::new_unique(player_animation_path("Animation7"), PlayMode::Repeat),
+		}
+	}
+}
 
 #[derive(PartialEq, Debug, Clone, Copy, Eq, Hash)]
 pub(crate) enum SkillState {
