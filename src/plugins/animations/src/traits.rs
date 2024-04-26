@@ -18,6 +18,7 @@ pub trait HighestPriorityAnimation<TAnimation> {
 	fn highest_priority_animation(&self) -> Option<&TAnimation>;
 }
 
+#[derive(Debug, PartialEq)]
 pub enum Priority {
 	High,
 	Middle,

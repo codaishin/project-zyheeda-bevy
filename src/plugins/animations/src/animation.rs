@@ -8,7 +8,7 @@ pub enum PlayMode {
 	Repeat,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Animation {
 	uuid: Uuid,
 	path: Path,

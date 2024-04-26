@@ -11,14 +11,10 @@ pub(crate) mod tuple_slot_key_item;
 use crate::{
 	components::{SlotKey, Slots},
 	resources::SlotMap,
-	skill::{Skill, SkillExecution, StartBehaviorFn, StopBehaviorFn},
+	skill::{Skill, SkillAnimation, SkillExecution, StartBehaviorFn, StopBehaviorFn},
 };
 use bevy::ecs::{component::Component, system::Query};
-use common::{
-	components::{Animate, Outdated},
-	resources::ColliderInfo,
-	traits::state_duration::StateUpdate,
-};
+use common::{components::Outdated, resources::ColliderInfo, traits::state_duration::StateUpdate};
 use std::hash::Hash;
 
 pub(crate) trait Enqueue<TItem> {
@@ -53,10 +49,10 @@ pub(crate) trait Prime {
 	fn prime(&mut self);
 }
 
-pub(crate) trait GetActiveSkill<TAnimationKey: Clone + Copy, TSkillState: Clone> {
+pub(crate) trait GetActiveSkill<TAnimation, TSkillState: Clone> {
 	fn get_active(
 		&mut self,
-	) -> Option<impl Execution + GetAnimation<TAnimationKey> + GetSlots + StateUpdate<TSkillState>>;
+	) -> Option<impl Execution + GetAnimation<TAnimation> + GetSlots + StateUpdate<TSkillState>>;
 	fn clear_active(&mut self);
 }
 
@@ -64,8 +60,8 @@ pub(crate) trait NextCombo {
 	fn next(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill>;
 }
 
-pub(crate) trait GetAnimation<TAnimationKey: Clone + Copy> {
-	fn animate(&self) -> Animate<TAnimationKey>;
+pub(crate) trait GetAnimation<TAnimation> {
+	fn animate(&self) -> Option<TAnimation>;
 }
 
 pub(crate) trait WithComponent<T: Component + Copy> {
@@ -93,6 +89,10 @@ pub trait InputState<TKey: Eq + Hash> {
 
 pub trait ShouldEnqueue {
 	fn should_enqueue(&self) -> bool;
+}
+
+pub(crate) trait AnimationSetup {
+	fn animation() -> SkillAnimation;
 }
 
 #[cfg(test)]
