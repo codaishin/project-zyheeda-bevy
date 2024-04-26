@@ -1,5 +1,5 @@
 use crate::{
-	components::{Handed, ItemType, SlotKey},
+	components::{ItemType, SlotKey},
 	traits::{AnimationSetup, Prime},
 };
 use animations::animation::{Animation, PlayMode};
@@ -55,12 +55,6 @@ pub struct Cast {
 	pub pre: Duration,
 	pub active: Duration,
 	pub after: Duration,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PlayerSkills<TSide> {
-	Shoot(Handed<TSide>),
-	SwordStrike(TSide),
 }
 
 impl<TData> Display for Skill<TData> {

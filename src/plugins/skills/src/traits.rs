@@ -1,7 +1,6 @@
 pub(crate) mod bevy_input;
 pub(crate) mod inventory;
 pub(crate) mod mouse_hover;
-pub(crate) mod player_skills;
 pub(crate) mod projectile;
 pub(crate) mod skill_state;
 pub(crate) mod state;

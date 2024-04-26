@@ -75,24 +75,6 @@ pub type Equipment = Collection<(SlotKey, Option<Item>)>;
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct InventoryKey(pub usize);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Handed<TSide> {
-	Single(TSide),
-	Dual(TSide),
-}
-
-impl Handed<SideUnset> {
-	pub fn on(self, side: Side) -> Handed<Side> {
-		match self {
-			Handed::Single(_) => Handed::Single(side),
-			Handed::Dual(_) => Handed::Dual(side),
-		}
-	}
-}
-
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
-pub struct SideUnset;
-
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Default)]
 pub enum SlotKey {
 	#[default]
