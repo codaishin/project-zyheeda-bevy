@@ -1,3 +1,4 @@
+use crate::traits::{AnimationId, AnimationPath};
 use bevy::utils::Uuid;
 use common::traits::load_asset::Path;
 
@@ -21,6 +22,18 @@ impl Animation {
 			path,
 			play_mode,
 		}
+	}
+}
+
+impl AnimationId for Animation {
+	fn animation_id(&self) -> Uuid {
+		self.uuid
+	}
+}
+
+impl AnimationPath for Animation {
+	fn animation_path(&self) -> Path {
+		self.path.clone()
 	}
 }
 
@@ -52,5 +65,19 @@ mod tests {
 		let animation = Animation::new_unique(Path::from("a/path"), PlayMode::Repeat);
 
 		assert_eq!(animation, animation);
+	}
+
+	#[test]
+	fn animation_id() {
+		let animation = Animation::new_unique(Path::from(""), PlayMode::Repeat);
+
+		assert_eq!(animation.uuid, animation.animation_id());
+	}
+
+	#[test]
+	fn animation_path() {
+		let animation = Animation::new_unique(Path::from("my/path"), PlayMode::Repeat);
+
+		assert_eq!(Path::from("my/path"), animation.animation_path());
 	}
 }

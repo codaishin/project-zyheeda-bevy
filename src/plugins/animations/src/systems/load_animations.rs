@@ -1,4 +1,4 @@
-use crate::resource::Animations;
+use crate::resource::AnimationClips;
 use bevy::{
 	animation::AnimationClip,
 	asset::Handle,
@@ -20,7 +20,7 @@ pub(crate) fn load_animations<
 	Path: From<TAnimationKey>,
 {
 	let animations = TAnimationKey::iterator().map(load_asset_from(source));
-	commands.insert_resource(Animations(HashMap::from_iter(animations)));
+	commands.insert_resource(AnimationClips(HashMap::from_iter(animations)));
 }
 
 fn load_asset_from<TAnimationKey: Copy, TLoadAnimation: LoadAsset<AnimationClip> + Resource>(
@@ -99,7 +99,7 @@ mod tests {
 		app.add_systems(Update, load_animations::<_Key, _LoadAsset>);
 		app.update();
 
-		assert!(app.world.get_resource::<Animations<_Key>>().is_some());
+		assert!(app.world.get_resource::<AnimationClips<_Key>>().is_some());
 	}
 
 	#[test]
@@ -127,7 +127,7 @@ mod tests {
 		app.add_systems(Update, load_animations::<_Key, _LoadAsset>);
 		app.update();
 
-		let animations = app.world.resource::<Animations<_Key>>();
+		let animations = app.world.resource::<AnimationClips<_Key>>();
 
 		assert_eq!(
 			HashMap::from([(_Key::A, handle_a), (_Key::B, handle_b)]),

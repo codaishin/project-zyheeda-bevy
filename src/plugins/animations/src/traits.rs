@@ -2,7 +2,8 @@ pub(crate) mod animation_player;
 pub(crate) mod player_idle;
 pub(crate) mod player_movement;
 
-use bevy::{animation::AnimationClip, asset::Handle};
+use bevy::{animation::AnimationClip, asset::Handle, utils::Uuid};
+use common::traits::load_asset::Path;
 
 pub(crate) trait RepeatAnimation {
 	fn repeat(&mut self, animation: &Handle<AnimationClip>);
@@ -28,4 +29,12 @@ pub trait InsertAnimation<TAnimation> {
 
 pub trait RemoveAnimation<TAnimation> {
 	fn remove(&mut self, animation: TAnimation, priority: Priority);
+}
+
+pub(crate) trait AnimationId {
+	fn animation_id(&self) -> Uuid;
+}
+
+pub(crate) trait AnimationPath {
+	fn animation_path(&self) -> Path;
 }

@@ -1,7 +1,7 @@
 use std::hash::Hash;
 
 use super::active_animation::PlayingAnimations;
-use crate::{components::Animator, resource::Animations, traits::RepeatAnimation};
+use crate::{components::Animator, resource::AnimationClips, traits::RepeatAnimation};
 use bevy::ecs::{
 	component::Component,
 	entity::Entity,
@@ -15,7 +15,7 @@ pub(crate) fn idle_animation<
 	TAnimationPlayer: Component + RepeatAnimation,
 >(
 	playing_animations: In<PlayingAnimations>,
-	animations: Res<Animations<TAnimationKey>>,
+	animations: Res<AnimationClips<TAnimationKey>>,
 	agents: Query<(Entity, &Animator), With<TAgent>>,
 	mut animation_players: Query<&mut TAnimationPlayer>,
 ) {
@@ -33,7 +33,7 @@ fn play_idle_animation<
 	TAnimationPlayer: Component + RepeatAnimation,
 >(
 	animation_players: &mut Query<&mut TAnimationPlayer>,
-	animations: &Res<Animations<TAnimationKey>>,
+	animations: &Res<AnimationClips<TAnimationKey>>,
 	animator: &Animator,
 	key: TAnimationKey,
 ) {
@@ -51,7 +51,7 @@ fn play_idle_animation<
 
 #[cfg(test)]
 mod tests {
-	use crate::{components::Animator, resource::Animations, traits::RepeatAnimation};
+	use crate::{components::Animator, resource::AnimationClips, traits::RepeatAnimation};
 
 	use super::*;
 	use bevy::{
@@ -114,7 +114,7 @@ mod tests {
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		app.insert_resource(Animations(HashMap::from([(_Key, handle.clone())])));
+		app.insert_resource(AnimationClips(HashMap::from([(_Key, handle.clone())])));
 
 		mock_animation_player
 			.mock
@@ -138,7 +138,7 @@ mod tests {
 	fn do_not_play_if_no_agent_attached() {
 		let mut app = setup();
 		let mut mock_animation_player = _AnimationPlayer::default();
-		app.insert_resource(Animations(HashMap::from([(_Key, Handle::default())])));
+		app.insert_resource(AnimationClips(HashMap::from([(_Key, Handle::default())])));
 
 		mock_animation_player
 			.mock
@@ -158,7 +158,7 @@ mod tests {
 	fn do_not_play_if_already_playing_another() {
 		let mut app = setup();
 		let mut mock_animation_player = _AnimationPlayer::default();
-		app.insert_resource(Animations(HashMap::from([(_Key, Handle::default())])));
+		app.insert_resource(AnimationClips(HashMap::from([(_Key, Handle::default())])));
 
 		mock_animation_player
 			.mock

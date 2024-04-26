@@ -1,6 +1,6 @@
 use crate::{
 	components::Animator,
-	resource::Animations,
+	resource::AnimationClips,
 	traits::{RepeatAnimation, ReplayAnimation},
 };
 use bevy::{
@@ -26,7 +26,7 @@ pub(crate) fn active_animation<
 >(
 	playing_animations: In<PlayingAnimations>,
 	mut commands: Commands,
-	animations: Res<Animations<TAnimationKey>>,
+	animations: Res<AnimationClips<TAnimationKey>>,
 	agents: Query<(Entity, &Animator, &Animate<TAnimationKey>), With<TAgent>>,
 	mut animation_players: Query<&mut TAnimationPlayer>,
 ) -> PlayingAnimations {
@@ -62,7 +62,7 @@ fn play_animation<
 	animation_players: &mut Query<&mut TAnimationPlayer>,
 	animator: &Animator,
 	animate: &Animate<TAnimationKey>,
-	animations: &Animations<TAnimationKey>,
+	animations: &AnimationClips<TAnimationKey>,
 ) {
 	let Some(animation_player) = get_animation_player(animator, animation_players) else {
 		return;
@@ -192,7 +192,7 @@ mod tests {
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		app.insert_resource(Animations(HashMap::from([
+		app.insert_resource(AnimationClips(HashMap::from([
 			(_Key::A, handle.clone()),
 			(_Key::B, Handle::default()),
 		])));
@@ -224,7 +224,7 @@ mod tests {
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		app.insert_resource(Animations(HashMap::from([
+		app.insert_resource(AnimationClips(HashMap::from([
 			(_Key::A, handle.clone()),
 			(_Key::B, Handle::default()),
 		])));
@@ -253,7 +253,7 @@ mod tests {
 	fn do_not_replay_animation_when_not_with_agent() {
 		let mut app = setup();
 		let mut mock_animation_player = _AnimationPlayer::default();
-		app.insert_resource(Animations(HashMap::from([
+		app.insert_resource(AnimationClips(HashMap::from([
 			(_Key::A, Handle::default()),
 			(_Key::B, Handle::default()),
 		])));
@@ -280,7 +280,7 @@ mod tests {
 	fn do_not_repeat_animation_when_not_with_agent() {
 		let mut app = setup();
 		let mut mock_animation_player = _AnimationPlayer::default();
-		app.insert_resource(Animations(HashMap::from([
+		app.insert_resource(AnimationClips(HashMap::from([
 			(_Key::A, Handle::default()),
 			(_Key::B, Handle::default()),
 		])));
@@ -310,7 +310,7 @@ mod tests {
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		app.insert_resource(Animations(HashMap::from([
+		app.insert_resource(AnimationClips(HashMap::from([
 			(_Key::A, handle.clone()),
 			(_Key::B, Handle::default()),
 		])));
@@ -341,7 +341,7 @@ mod tests {
 	fn return_playing_animations() {
 		let mut app = setup();
 		let mut mock_animation_player = _AnimationPlayer::default();
-		app.insert_resource(Animations(HashMap::from([
+		app.insert_resource(AnimationClips(HashMap::from([
 			(_Key::A, Handle::default()),
 			(_Key::B, Handle::default()),
 		])));
@@ -371,7 +371,7 @@ mod tests {
 	#[test]
 	fn return_incoming_playing_animations() {
 		let mut app = setup();
-		app.insert_resource(Animations(HashMap::from([
+		app.insert_resource(AnimationClips(HashMap::from([
 			(_Key::A, Handle::default()),
 			(_Key::B, Handle::default()),
 		])));
@@ -393,7 +393,7 @@ mod tests {
 	fn do_not_play_animation_when_contained_in_incoming_playing_animations() {
 		let mut app = setup();
 		let mut mock_animation_player = _AnimationPlayer::default();
-		app.insert_resource(Animations(HashMap::from([
+		app.insert_resource(AnimationClips(HashMap::from([
 			(_Key::A, Handle::default()),
 			(_Key::B, Handle::default()),
 		])));
@@ -435,7 +435,7 @@ mod tests {
 	fn do_not_return_playing_animations_when_animation_is_none() {
 		let mut app = setup();
 		let mut mock_animation_player = _AnimationPlayer::default();
-		app.insert_resource(Animations(HashMap::from([
+		app.insert_resource(AnimationClips(HashMap::from([
 			(_Key::A, Handle::default()),
 			(_Key::B, Handle::default()),
 		])));
