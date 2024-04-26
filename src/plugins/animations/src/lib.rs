@@ -11,9 +11,9 @@ use animation_keys::PlayerIdle;
 use behaviors::components::{Movement, VelocityBased};
 use bevy::{
 	animation::AnimationPlayer,
-	app::{App, Plugin, PostUpdate, PreStartup, PreUpdate, Update},
+	app::{App, Plugin, PostUpdate, PreStartup, Update},
 	asset::AssetServer,
-	ecs::system::IntoSystem,
+	ecs::{schedule::IntoSystemConfigs, system::IntoSystem},
 	utils::Uuid,
 };
 use common::components::{Player, Side};
@@ -26,6 +26,7 @@ use systems::{
 	link_animator::link_animators_with_new_animation_players,
 	load_animation_clip::load_animation_clip,
 	load_animations::load_animations,
+	play_animation_clip::play_animation_clip,
 	set_movement_animation::set_movement_animation,
 };
 
@@ -42,14 +43,18 @@ impl Plugin for AnimationsPlugin {
 					load_animations::<PlayerIdle, AssetServer>,
 				),
 			)
-			.add_systems(PreUpdate, link_animators_with_new_animation_players)
 			.add_systems(
 				Update,
 				set_movement_animation::<Player, Movement<VelocityBased>, PlayerMovement>,
 			)
 			.add_systems(
 				Update,
-				load_animation_clip::<Animation, AnimationDispatch, AssetServer>,
+				(
+					link_animators_with_new_animation_players,
+					load_animation_clip::<Animation, AnimationDispatch, AssetServer>,
+					play_animation_clip::<Animation, AnimationDispatch, AnimationPlayer>,
+				)
+					.chain(),
 			)
 			.add_systems(
 				PostUpdate,

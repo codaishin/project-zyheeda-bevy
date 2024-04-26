@@ -2,6 +2,7 @@ pub(crate) mod animation_player;
 pub(crate) mod player_idle;
 pub(crate) mod player_movement;
 
+use crate::animation::PlayMode;
 use bevy::{animation::AnimationClip, asset::Handle, utils::Uuid};
 use common::traits::load_asset::Path;
 
@@ -37,4 +38,8 @@ pub(crate) trait AnimationId {
 
 pub(crate) trait AnimationPath {
 	fn animation_path(&self) -> Path;
+}
+
+pub(crate) trait AnimationPlayMode {
+	fn animation_play_mode(&self) -> PlayMode;
 }

@@ -1,8 +1,8 @@
-use crate::traits::{AnimationId, AnimationPath};
+use crate::traits::{AnimationId, AnimationPath, AnimationPlayMode};
 use bevy::utils::Uuid;
 use common::traits::load_asset::Path;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PlayMode {
 	Replay,
 	Repeat,
@@ -34,6 +34,12 @@ impl AnimationId for Animation {
 impl AnimationPath for Animation {
 	fn animation_path(&self) -> Path {
 		self.path.clone()
+	}
+}
+
+impl AnimationPlayMode for Animation {
+	fn animation_play_mode(&self) -> PlayMode {
+		self.play_mode
 	}
 }
 
@@ -79,5 +85,12 @@ mod tests {
 		let animation = Animation::new_unique(Path::from("my/path"), PlayMode::Repeat);
 
 		assert_eq!(Path::from("my/path"), animation.animation_path());
+	}
+
+	#[test]
+	fn animation_play_mode() {
+		let animation = Animation::new_unique(Path::from(""), PlayMode::Repeat);
+
+		assert_eq!(PlayMode::Repeat, animation.animation_play_mode());
 	}
 }
