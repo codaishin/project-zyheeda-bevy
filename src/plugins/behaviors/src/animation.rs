@@ -4,9 +4,15 @@ use bevy::ecs::component::Component;
 use common::traits::get::Get;
 
 #[derive(Component)]
-pub(crate) struct MovementAnimations<TAnimation = Animation> {
+pub struct MovementAnimations<TAnimation = Animation> {
 	slow: TAnimation,
 	fast: TAnimation,
+}
+
+impl MovementAnimations {
+	pub fn new(fast: Animation, slow: Animation) -> Self {
+		Self { slow, fast }
+	}
 }
 
 impl<TAnimation> Get<MovementMode, TAnimation> for MovementAnimations<TAnimation> {

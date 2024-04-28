@@ -8,11 +8,7 @@ use bevy::{
 	math::{primitives::Direction3d, Ray3d, Vec3},
 	transform::components::{GlobalTransform, Transform},
 };
-use common::{
-	components::{Outdated, Player},
-	resources::ColliderInfo,
-	traits::load_asset::Path,
-};
+use common::{components::Outdated, resources::ColliderInfo, tools::player_animation_path};
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result},
@@ -170,10 +166,6 @@ mod test_skill {
 			skill.data.mode
 		);
 	}
-}
-
-fn player_animation_path(animation_name: &str) -> Path {
-	Path::from(Player::MODEL_PATH.to_owned() + "#" + animation_name)
 }
 
 pub(crate) struct SwordStrike;
