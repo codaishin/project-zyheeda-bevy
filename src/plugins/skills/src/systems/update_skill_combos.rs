@@ -1,5 +1,5 @@
 use crate::{
-	components::Slots,
+	components::slots::Slots,
 	skill::{Queued, Skill},
 	traits::{Flush, Iter, IterAddedMut, NextCombo},
 };
@@ -28,7 +28,7 @@ pub(crate) fn update_skill_combos<
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Slot, SlotKey, Slots},
+		components::{Slot, SlotKey},
 		skill::{Queued, Skill},
 	};
 	use bevy::{

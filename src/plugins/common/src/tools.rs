@@ -1,4 +1,7 @@
-use crate::traits::clamp_zero_positive::ClampZeroPositive;
+use crate::{
+	components::Player,
+	traits::{clamp_zero_positive::ClampZeroPositive, load_asset::Path},
+};
 use macros::ClampZeroPositive;
 
 ///Serves as a struct to implement static traits on
@@ -15,6 +18,10 @@ pub struct Intensity(f32);
 
 #[derive(Debug, PartialEq, Clone, ClampZeroPositive)]
 pub struct IntensityChangePerSecond(f32);
+
+pub fn player_animation_path(animation_name: &str) -> Path {
+	Path::from(Player::MODEL_PATH.to_owned() + "#" + animation_name)
+}
 
 #[cfg(test)]
 mod test_clamp_zero_positive_on_units_per_second {

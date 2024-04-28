@@ -12,7 +12,7 @@ use common::{
 	errors::{Error, Level},
 	traits::try_remove_from::TryRemoveFrom,
 };
-use skills::components::{SlotKey, Slots};
+use skills::components::{slots::Slots, SlotKey};
 
 type SlotsToSwap<'a> = (
 	Entity,

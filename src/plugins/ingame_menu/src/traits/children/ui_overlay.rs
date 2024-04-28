@@ -1,6 +1,6 @@
 use super::Children;
 use crate::{
-	components::{Label, Quickbar, QuickbarPanel, UIOverlay},
+	components::{quickbar_panel::QuickbarPanel, Label, Quickbar, UIOverlay},
 	tools::PanelState,
 	traits::colors::HasPanelColors,
 };

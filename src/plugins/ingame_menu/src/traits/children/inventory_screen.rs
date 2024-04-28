@@ -1,6 +1,6 @@
 use super::Children;
 use crate::{
-	components::{InventoryPanel, InventoryScreen, KeyedPanel},
+	components::{inventory_panel::InventoryPanel, InventoryScreen, KeyedPanel},
 	tools::PanelState,
 	traits::colors::HasPanelColors,
 };

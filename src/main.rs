@@ -6,6 +6,7 @@ use animations::{
 };
 use bars::{components::Bar, BarsPlugin};
 use behaviors::{
+	animation::MovementAnimations,
 	components::{CamOrbit, MovementConfig, MovementMode, VoidSphere},
 	traits::{Orbit, Vec2Radians},
 	BehaviorsPlugin,
@@ -18,7 +19,7 @@ use bevy_rapier3d::prelude::*;
 use common::{
 	components::{ColliderRoot, GroundOffset, Health, MainCamera, Player},
 	states::GameRunning,
-	tools::UnitsPerSecond,
+	tools::{player_animation_path, UnitsPerSecond},
 	traits::{clamp_zero_positive::ClampZeroPositive, load_asset::Path},
 	CommonPlugin,
 };
@@ -225,6 +226,10 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				slow_speed: UnitsPerSecond::new(0.75),
 				fast_speed: UnitsPerSecond::new(1.5),
 			},
+			MovementAnimations::new(
+				Animation::new_unique(player_animation_path("Animation3"), PlayMode::Repeat),
+				Animation::new_unique(player_animation_path("Animation1"), PlayMode::Repeat),
+			),
 			RigidBody::Dynamic,
 			GravityScale(0.),
 			LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y,

@@ -1,6 +1,5 @@
 pub(crate) mod animation_player;
 pub(crate) mod player_idle;
-pub(crate) mod player_movement;
 
 use crate::animation::PlayMode;
 use bevy::{animation::AnimationClip, asset::Handle, utils::Uuid};

@@ -1,10 +1,10 @@
-mod components;
+pub(crate) mod components;
 mod systems;
 mod tools;
 mod traits;
 
 use self::{
-	components::{InventoryPanel, InventoryScreen, QuickbarPanel, UIOverlay},
+	components::{InventoryScreen, UIOverlay},
 	systems::{
 		dad::{drag::drag, drop::drop},
 		despawn::despawn,
@@ -28,7 +28,8 @@ use common::{
 	states::{GameRunning, Off, On},
 	systems::log::log_many,
 };
-use skills::components::{queue::Queue, Inventory, InventoryKey, SlotKey, Slots};
+use components::{inventory_panel::InventoryPanel, quickbar_panel::QuickbarPanel};
+use skills::components::{inventory::Inventory, queue::Queue, slots::Slots, InventoryKey, SlotKey};
 use systems::items::swap::{
 	equipped_items::swap_equipped_items,
 	inventory_items::swap_inventory_items,

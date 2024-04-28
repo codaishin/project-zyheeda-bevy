@@ -1,8 +1,12 @@
+pub mod animation;
 pub mod components;
-mod events;
-mod systems;
 pub mod traits;
 
+mod events;
+mod systems;
+
+use animation::MovementAnimations;
+use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::{
 	app::{App, Plugin, Update},
 	ecs::{
@@ -39,6 +43,7 @@ use systems::{
 	idle::idle,
 	move_on_orbit::move_on_orbit,
 	movement::{
+		animate_movement::animate_movement,
 		execute_move_position_based::execute_move_position_based,
 		execute_move_velocity_based::execute_move_velocity_based,
 		move_player_on_event::move_player_on_event,
@@ -83,6 +88,25 @@ impl Plugin for BehaviorsPlugin {
 					get_faces.pipe(execute_face::<CamRay>),
 				)
 					.chain(),
+			)
+			.add_systems(
+				Update,
+				(
+					animate_movement::<
+						MovementConfig,
+						Movement<PositionBased>,
+						Animation,
+						MovementAnimations,
+						AnimationDispatch,
+					>,
+					animate_movement::<
+						MovementConfig,
+						Movement<VelocityBased>,
+						Animation,
+						MovementAnimations,
+						AnimationDispatch,
+					>,
+				),
 			)
 			.add_systems(Update, projectile_behavior::<Projectile<Plasma>>)
 			.add_systems(Update, (enemy, chase::<MovementConfig>, attack).chain())

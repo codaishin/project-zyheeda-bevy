@@ -31,13 +31,13 @@ use common::{
 };
 use components::{
 	combos::{ComboNode, Combos},
+	inventory::Inventory,
 	queue::Queue,
-	Inventory,
+	slots::Slots,
 	InventoryKey,
 	Item,
 	ItemType,
 	SlotKey,
-	Slots,
 };
 use resources::{skill_templates::SkillTemplates, SkillIcons, SlotMap};
 use skill::{Cast, Queued, ShootHandGun, ShootHandGunDual, Skill, SwordStrike};

@@ -1,14 +1,11 @@
-use crate::{
-	components::KeyedPanel,
-	tools::PanelState,
-	traits::{get::Get, set::Set},
-};
+use crate::{components::KeyedPanel, tools::PanelState, traits::set::Set};
 use bevy::{
 	ecs::{component::Component, system::Query},
 	hierarchy::Parent,
 	prelude::Entity,
 	text::Text,
 };
+use common::traits::get::Get;
 use skills::components::Item;
 
 pub fn panel_container_states<
@@ -23,7 +20,7 @@ pub fn panel_container_states<
 	let container = containers.single();
 
 	for (entity, keyed_panel, mut panel) in &mut panels {
-		let (state, label) = match container.get(keyed_panel.0) {
+		let (state, label) = match container.get(&keyed_panel.0) {
 			Some(item) => (PanelState::Filled, item.name),
 			None => (PanelState::Empty, "<Empty>"),
 		};
@@ -70,7 +67,7 @@ mod tests {
 
 	#[automock]
 	impl Get<usize, Option<Item>> for _Container {
-		fn get(&self, key: usize) -> Option<Item> {
+		fn get(&self, key: &usize) -> &Option<Item> {
 			self.mock.get(key)
 		}
 	}
@@ -131,10 +128,10 @@ mod tests {
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 
 		let mut container = _Container::new();
-		container.mock.expect_get().return_const(Item {
+		container.mock.expect_get().return_const(Some(Item {
 			name: "my item",
 			..default()
-		});
+		}));
 
 		let mut panel = _Panel::new();
 		panel
@@ -181,10 +178,10 @@ mod tests {
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 
 		let mut container = _Container::new();
-		container.mock.expect_get().return_const(Item {
+		container.mock.expect_get().return_const(Some(Item {
 			name: "my item",
 			..default()
-		});
+		}));
 
 		let mut panel = _Panel::new();
 		panel
@@ -215,10 +212,10 @@ mod tests {
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 
 		let mut container = _Container::new();
-		container.mock.expect_get().return_const(Item {
+		container.mock.expect_get().return_const(Some(Item {
 			name: "my item",
 			..default()
-		});
+		}));
 
 		let mut panel = _Panel::new();
 		panel.mock.expect_set().return_const(());

@@ -1,4 +1,4 @@
-use crate::components::{SlotKey, SlotVisibility, Slots};
+use crate::components::{slots::Slots, SlotKey, SlotVisibility};
 use bevy::{
 	ecs::{
 		entity::Entity,
@@ -43,7 +43,7 @@ fn set_visibilities(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Slot, SlotKey, SlotVisibility, Slots};
+	use crate::components::{Slot, SlotKey, SlotVisibility};
 	use bevy::{
 		app::{App, Update},
 		ecs::entity::Entity,

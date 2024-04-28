@@ -1,9 +1,29 @@
-use crate::traits::get::Get;
-use skills::components::{Item, SlotKey, Slots};
+use super::{Item, Slot, SlotKey};
+use bevy::ecs::component::Component;
+use common::traits::get::Get;
+use std::collections::HashMap;
+
+#[derive(Component, Clone, PartialEq, Debug)]
+pub struct Slots(pub HashMap<SlotKey, Slot>);
+
+impl Slots {
+	pub fn new() -> Self {
+		Self(HashMap::new())
+	}
+}
+
+impl Default for Slots {
+	fn default() -> Self {
+		Self::new()
+	}
+}
 
 impl Get<SlotKey, Option<Item>> for Slots {
-	fn get(&self, key: SlotKey) -> Option<Item> {
-		self.0.get(&key).and_then(|slot| slot.item.clone())
+	fn get(&self, key: &SlotKey) -> &Option<Item> {
+		let Some(slot) = self.0.get(key) else {
+			return &None;
+		};
+		&slot.item
 	}
 }
 
@@ -12,7 +32,6 @@ mod tests {
 	use super::*;
 	use bevy::{prelude::Entity, utils::default};
 	use common::components::Side;
-	use skills::components::Slot;
 
 	#[test]
 	fn get_off_hand() {
@@ -31,11 +50,11 @@ mod tests {
 		);
 
 		assert_eq!(
-			Some(Item {
+			&Some(Item {
 				name: "my item",
 				..default()
 			}),
-			slots.get(SlotKey::Hand(Side::Off))
+			slots.get(&SlotKey::Hand(Side::Off))
 		);
 	}
 
@@ -56,11 +75,11 @@ mod tests {
 		);
 
 		assert_eq!(
-			Some(Item {
+			&Some(Item {
 				name: "my item",
 				..default()
 			}),
-			slots.get(SlotKey::Hand(Side::Main))
+			slots.get(&SlotKey::Hand(Side::Main))
 		);
 	}
 
@@ -80,6 +99,6 @@ mod tests {
 			.into(),
 		);
 
-		assert_eq!(None, slots.get(SlotKey::Hand(Side::Off)));
+		assert_eq!(&None, slots.get(&SlotKey::Hand(Side::Off)));
 	}
 }

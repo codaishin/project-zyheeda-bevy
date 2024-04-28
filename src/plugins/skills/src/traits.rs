@@ -8,7 +8,7 @@ pub(crate) mod sword;
 pub(crate) mod tuple_slot_key_item;
 
 use crate::{
-	components::{SlotKey, Slots},
+	components::{slots::Slots, SlotKey},
 	resources::SlotMap,
 	skill::{Skill, SkillAnimation, SkillExecution, StartBehaviorFn, StopBehaviorFn},
 };
