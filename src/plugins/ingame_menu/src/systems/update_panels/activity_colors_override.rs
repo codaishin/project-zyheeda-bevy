@@ -1,9 +1,6 @@
 use crate::{
 	components::ColorOverride,
-	traits::{
-		colors::{HasActiveColor, HasPanelColors, HasQueuedColor},
-		get::Get,
-	},
+	traits::colors::{HasActiveColor, HasPanelColors, HasQueuedColor},
 };
 use bevy::{
 	ecs::{
@@ -18,7 +15,7 @@ use bevy::{
 	render::color::Color,
 	ui::BackgroundColor,
 };
-use common::{components::Player, states::MouseContext};
+use common::{components::Player, states::MouseContext, traits::get::GetStatic};
 use skills::{
 	components::SlotKey,
 	resources::SlotMap,
@@ -28,7 +25,7 @@ use skills::{
 
 pub fn panel_activity_colors_override<
 	TQueue: Component + Iter<Skill<Queued>>,
-	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + Get<(), SlotKey> + Component,
+	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetStatic<SlotKey> + Component,
 >(
 	mut commands: Commands,
 	mut buttons: Query<(Entity, &mut BackgroundColor, &TPanel)>,
@@ -49,7 +46,7 @@ pub fn panel_activity_colors_override<
 			continue;
 		};
 		update_color_override(
-			get_color::<TPanel>(player_slots, primed_slots, &panel.get(())),
+			get_color::<TPanel>(player_slots, primed_slots, panel.get()),
 			entity,
 			background_color,
 		);
@@ -126,9 +123,9 @@ mod tests {
 		};
 	}
 
-	impl Get<(), SlotKey> for _Panel {
-		fn get(&self, _: ()) -> SlotKey {
-			self.0
+	impl GetStatic<SlotKey> for _Panel {
+		fn get(&self) -> &SlotKey {
+			&self.0
 		}
 	}
 

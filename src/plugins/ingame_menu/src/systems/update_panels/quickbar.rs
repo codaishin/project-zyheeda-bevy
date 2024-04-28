@@ -1,4 +1,4 @@
-use crate::{components::QuickbarPanel, tools::PanelState};
+use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
 use bevy::{
 	asset::Handle,
 	ecs::{
@@ -12,7 +12,7 @@ use bevy::{
 };
 use common::{components::Player, traits::try_insert_on::TryInsertOn};
 use skills::{
-	components::{SlotKey, Slots},
+	components::{slots::Slots, SlotKey},
 	resources::SkillIcons,
 	skill::{Queued, Skill},
 	traits::Iter,

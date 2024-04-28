@@ -1,4 +1,3 @@
-use crate::traits::get::Get;
 use bevy::{
 	ecs::{
 		component::Component,
@@ -8,10 +7,10 @@ use bevy::{
 	input::keyboard::KeyCode,
 	ui::Interaction,
 };
-use common::states::MouseContext;
+use common::{states::MouseContext, traits::get::GetStatic};
 use skills::{components::SlotKey, resources::SlotMap};
 
-pub fn prime_mouse_context<TPanel: Get<(), SlotKey> + Component>(
+pub fn prime_mouse_context<TPanel: GetStatic<SlotKey> + Component>(
 	mut mouse_context: ResMut<NextState<MouseContext>>,
 	slot_map: Res<SlotMap<KeyCode>>,
 	buttons: Query<(&TPanel, &Interaction)>,
@@ -25,10 +24,10 @@ pub fn prime_mouse_context<TPanel: Get<(), SlotKey> + Component>(
 	mouse_context.set(MouseContext::Primed(*key_code));
 }
 
-fn get_key_code_from<'a, TPanel: Get<(), SlotKey>>(
+fn get_key_code_from<'a, TPanel: GetStatic<SlotKey>>(
 	slot_map: &'a SlotMap<KeyCode>,
 ) -> impl Fn((&TPanel, &Interaction)) -> Option<&'a KeyCode> {
-	|(panel, _): (&TPanel, &Interaction)| slot_map.keys.get(&panel.get(()))
+	|(panel, _): (&TPanel, &Interaction)| slot_map.keys.get(panel.get())
 }
 
 fn is_pressed<TPanel>((_, interaction): &(&TPanel, &Interaction)) -> bool {
@@ -49,9 +48,9 @@ mod test {
 	#[derive(Component)]
 	struct _Panel(pub SlotKey);
 
-	impl Get<(), SlotKey> for _Panel {
-		fn get(&self, _: ()) -> SlotKey {
-			self.0
+	impl GetStatic<SlotKey> for _Panel {
+		fn get(&self) -> &SlotKey {
+			&self.0
 		}
 	}
 

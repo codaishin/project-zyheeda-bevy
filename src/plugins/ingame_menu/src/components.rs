@@ -1,4 +1,6 @@
-use crate::tools::PanelState;
+pub(crate) mod inventory_panel;
+pub(crate) mod quickbar_panel;
+
 use bevy::ecs::component::Component;
 use skills::components::SlotKey;
 use std::marker::PhantomData;
@@ -8,9 +10,6 @@ pub struct Dad<T>(pub T);
 
 #[derive(Component, Debug, Clone, Copy)]
 pub struct KeyedPanel<TKey>(pub TKey);
-
-#[derive(Component, Debug, PartialEq)]
-pub struct InventoryPanel(pub PanelState);
 
 #[derive(Component)]
 pub struct InventoryScreen;
@@ -28,12 +27,6 @@ impl<T, TKey> Label<T, TKey> {
 			phantom_data: PhantomData,
 		}
 	}
-}
-
-#[derive(Component)]
-pub struct QuickbarPanel {
-	pub key: SlotKey,
-	pub state: PanelState,
 }
 
 #[derive(Component)]

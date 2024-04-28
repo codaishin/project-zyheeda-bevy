@@ -6,7 +6,7 @@ use common::{
 	components::{Collection, Swap},
 	traits::try_remove_from::TryRemoveFrom,
 };
-use skills::components::{Inventory, InventoryKey, Item};
+use skills::components::{inventory::Inventory, InventoryKey, Item};
 use std::cmp::max;
 
 type ItemsToSwap<'a> = (

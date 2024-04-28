@@ -1,19 +1,16 @@
-use crate::{
-	components::ColorOverride,
-	tools::PanelState,
-	traits::{colors::HasPanelColors, get::Get},
-};
+use crate::{components::ColorOverride, tools::PanelState, traits::colors::HasPanelColors};
 use bevy::{
 	ecs::{component::Component, query::Without, system::Query},
 	ui::{BackgroundColor, Interaction},
 };
+use common::traits::get::GetStatic;
 
-pub fn panel_colors<TPanel: Component + Get<(), PanelState> + HasPanelColors>(
+pub fn panel_colors<TPanel: Component + GetStatic<PanelState> + HasPanelColors>(
 	mut panels: Query<(&mut BackgroundColor, &Interaction, &TPanel), Without<ColorOverride>>,
 ) {
 	let colors = TPanel::PANEL_COLORS;
 	for (mut color, interaction, panel) in &mut panels {
-		*color = match (interaction, panel.get(())) {
+		*color = match (interaction, panel.get()) {
 			(Interaction::Pressed, ..) => colors.pressed.into(),
 			(Interaction::Hovered, ..) => colors.hovered.into(),
 			(.., PanelState::Empty) => colors.empty.into(),
@@ -35,18 +32,18 @@ mod tests {
 	#[derive(Component)]
 	struct _Empty;
 
-	impl Get<(), PanelState> for _Empty {
-		fn get(&self, _: ()) -> PanelState {
-			PanelState::Empty
+	impl GetStatic<PanelState> for _Empty {
+		fn get(&self) -> &PanelState {
+			&PanelState::Empty
 		}
 	}
 
 	#[derive(Component)]
 	struct _Filled;
 
-	impl Get<(), PanelState> for _Filled {
-		fn get(&self, _: ()) -> PanelState {
-			PanelState::Filled
+	impl GetStatic<PanelState> for _Filled {
+		fn get(&self) -> &PanelState {
+			&PanelState::Filled
 		}
 	}
 

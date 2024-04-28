@@ -1,5 +1,7 @@
 pub mod combos;
+pub mod inventory;
 pub mod queue;
+pub mod slots;
 
 use crate::skill::{Skill, SkillComboTree, StartBehaviorFn, StopBehaviorFn};
 use bevy::ecs::{component::Component, entity::Entity};
@@ -11,6 +13,8 @@ use std::{
 	collections::{HashMap, HashSet},
 	fmt::{Display, Formatter, Result},
 };
+
+use self::slots::Slots;
 
 #[derive(Component, Clone)]
 pub(crate) struct ComboTreeTemplate<TNext>(pub HashMap<SlotKey, SkillComboTree<TNext>>);
@@ -28,21 +32,6 @@ pub(crate) type BoneName = str;
 
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct SlotBones(pub HashMap<SlotKey, &'static BoneName>);
-
-#[derive(Component, Clone, PartialEq, Debug)]
-pub struct Slots(pub HashMap<SlotKey, Slot>);
-
-impl Slots {
-	pub fn new() -> Self {
-		Self(HashMap::new())
-	}
-}
-
-impl Default for Slots {
-	fn default() -> Self {
-		Self::new()
-	}
-}
 
 impl LookUp<SlotKey, Skill> for Slots {
 	fn get(&self, key: &SlotKey) -> Option<&Skill> {
@@ -69,7 +58,6 @@ impl Display for Item {
 	}
 }
 
-pub type Inventory = Collection<Option<Item>>;
 pub type Equipment = Collection<(SlotKey, Option<Item>)>;
 
 #[derive(Clone, Copy, PartialEq, Debug)]

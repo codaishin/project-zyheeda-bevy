@@ -1,4 +1,4 @@
-use crate::components::{Slot, SlotBones, SlotKey, Slots};
+use crate::components::{slots::Slots, Slot, SlotBones, SlotKey};
 use bevy::{
 	prelude::{BuildChildren, Children, Commands, Entity, HierarchyQueryExt, Name, Query},
 	render::view::Visibility,

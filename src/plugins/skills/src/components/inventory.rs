@@ -1,9 +1,14 @@
-use crate::traits::get::Get;
-use skills::components::{Inventory, InventoryKey, Item};
+use super::{InventoryKey, Item};
+use common::{components::Collection, traits::get::Get};
+
+pub type Inventory = Collection<Option<Item>>;
 
 impl Get<InventoryKey, Option<Item>> for Inventory {
-	fn get(&self, key: InventoryKey) -> Option<Item> {
-		self.0.get(key.0).and_then(|item| item.clone())
+	fn get(&self, key: &InventoryKey) -> &Option<Item> {
+		let Some(item) = self.0.get(key.0) else {
+			return &None;
+		};
+		item
 	}
 }
 
@@ -20,11 +25,11 @@ mod tests {
 		})]);
 
 		assert_eq!(
-			Some(Item {
+			&Some(Item {
 				name: "my item",
 				..default()
 			}),
-			inventory.get(InventoryKey(0))
+			inventory.get(&InventoryKey(0))
 		);
 	}
 
@@ -32,7 +37,7 @@ mod tests {
 	fn get_none_when_empty() {
 		let inventory = Inventory::new([]);
 
-		assert_eq!(None, inventory.get(InventoryKey(0)));
+		assert_eq!(&None, inventory.get(&InventoryKey(0)));
 	}
 
 	#[test]
@@ -47,11 +52,11 @@ mod tests {
 		]);
 
 		assert_eq!(
-			Some(Item {
+			&Some(Item {
 				name: "my item",
 				..default()
 			}),
-			inventory.get(InventoryKey(2))
+			inventory.get(&InventoryKey(2))
 		);
 	}
 }
