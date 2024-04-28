@@ -174,7 +174,6 @@ dependencies = [
 name = "animations"
 version = "0.1.0"
 dependencies = [
- "behaviors",
  "bevy",
  "bevy_rapier3d",
  "common",
@@ -341,6 +340,7 @@ checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 name = "behaviors"
 version = "0.1.0"
 dependencies = [
+ "animations",
  "bars",
  "bevy",
  "bevy_rapier3d",

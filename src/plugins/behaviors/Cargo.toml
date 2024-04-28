@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 bevy.workspace = true
 bevy_rapier3d.workspace = true
+animations.workspace = true
 tracing.workspace = true
 bars.workspace = true
 common.workspace = true
