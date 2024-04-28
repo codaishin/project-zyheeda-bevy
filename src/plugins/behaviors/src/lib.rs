@@ -1,7 +1,9 @@
 pub mod components;
+pub mod traits;
+
+mod animation;
 mod events;
 mod systems;
-pub mod traits;
 
 use bevy::{
 	app::{App, Plugin, Update},
