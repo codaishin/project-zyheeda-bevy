@@ -1,6 +1,12 @@
 use crate::{
 	animation::Animation,
-	traits::{HighestPriorityAnimation, InsertAnimation, Priority, RemoveAnimation},
+	traits::{
+		AnimationChainUpdate,
+		HighestPriorityAnimation,
+		InsertAnimation,
+		Priority,
+		RemoveAnimation,
+	},
 };
 use bevy::ecs::component::Component;
 
@@ -38,9 +44,15 @@ impl<TAnimation> HighestPriorityAnimation<TAnimation> for AnimationDispatch<TAni
 	}
 }
 
-impl<TAnimation> InsertAnimation<TAnimation> for AnimationDispatch<TAnimation> {
-	fn insert(&mut self, animation: TAnimation, priority: Priority) {
+impl<TAnimation: AnimationChainUpdate> InsertAnimation<TAnimation>
+	for AnimationDispatch<TAnimation>
+{
+	fn insert(&mut self, mut animation: TAnimation, priority: Priority) {
 		let slot = self.slot(priority);
+
+		if let Some(last) = slot {
+			animation.chain_update(last);
+		}
 
 		*slot = Some(animation);
 	}
@@ -61,17 +73,36 @@ impl<TAnimation: PartialEq> RemoveAnimation<TAnimation> for AnimationDispatch<TA
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use bevy::prelude::default;
 
-	#[derive(Debug, PartialEq)]
-	struct _Animation(&'static str);
+	#[derive(Debug, PartialEq, Clone)]
+	struct _Animation {
+		name: &'static str,
+		chain_update_calls: Vec<_Animation>,
+	}
+
+	impl _Animation {
+		fn new(name: &'static str) -> Self {
+			Self {
+				name,
+				chain_update_calls: default(),
+			}
+		}
+	}
+
+	impl AnimationChainUpdate for _Animation {
+		fn chain_update(&mut self, last: &Self) {
+			self.chain_update_calls.push(last.clone())
+		}
+	}
 
 	#[test]
 	fn insert_low_priority() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation("low"), Priority::Low);
+		dispatch.insert(_Animation::new("low"), Priority::Low);
 
 		assert_eq!(
-			Some(&_Animation("low")),
+			Some(&_Animation::new("low")),
 			dispatch.highest_priority_animation()
 		);
 	}
@@ -79,11 +110,11 @@ mod tests {
 	#[test]
 	fn insert_medium_priority() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation("middle"), Priority::Middle);
-		dispatch.insert(_Animation("low"), Priority::Low);
+		dispatch.insert(_Animation::new("middle"), Priority::Middle);
+		dispatch.insert(_Animation::new("low"), Priority::Low);
 
 		assert_eq!(
-			Some(&_Animation("middle")),
+			Some(&_Animation::new("middle")),
 			dispatch.highest_priority_animation()
 		);
 	}
@@ -91,11 +122,11 @@ mod tests {
 	#[test]
 	fn insert_high_priority() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation("high"), Priority::High);
-		dispatch.insert(_Animation("middle"), Priority::Middle);
+		dispatch.insert(_Animation::new("high"), Priority::High);
+		dispatch.insert(_Animation::new("middle"), Priority::Middle);
 
 		assert_eq!(
-			Some(&_Animation("high")),
+			Some(&_Animation::new("high")),
 			dispatch.highest_priority_animation()
 		);
 	}
@@ -103,8 +134,8 @@ mod tests {
 	#[test]
 	fn remove_low() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation("low"), Priority::Low);
-		dispatch.remove(_Animation("low"), Priority::Low);
+		dispatch.insert(_Animation::new("low"), Priority::Low);
+		dispatch.remove(_Animation::new("low"), Priority::Low);
 
 		assert_eq!(None, dispatch.highest_priority_animation());
 	}
@@ -112,11 +143,11 @@ mod tests {
 	#[test]
 	fn do_not_remove_low_when_animation_mismatch() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation("low"), Priority::Low);
-		dispatch.remove(_Animation("other"), Priority::Low);
+		dispatch.insert(_Animation::new("low"), Priority::Low);
+		dispatch.remove(_Animation::new("other"), Priority::Low);
 
 		assert_eq!(
-			Some(&_Animation("low")),
+			Some(&_Animation::new("low")),
 			dispatch.highest_priority_animation()
 		);
 	}
@@ -124,8 +155,8 @@ mod tests {
 	#[test]
 	fn remove_middle() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation("middle"), Priority::Middle);
-		dispatch.remove(_Animation("middle"), Priority::Middle);
+		dispatch.insert(_Animation::new("middle"), Priority::Middle);
+		dispatch.remove(_Animation::new("middle"), Priority::Middle);
 
 		assert_eq!(None, dispatch.highest_priority_animation());
 	}
@@ -133,11 +164,11 @@ mod tests {
 	#[test]
 	fn do_not_remove_middle_when_animation_mismatch() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation("middle"), Priority::Middle);
-		dispatch.remove(_Animation("other"), Priority::Middle);
+		dispatch.insert(_Animation::new("middle"), Priority::Middle);
+		dispatch.remove(_Animation::new("other"), Priority::Middle);
 
 		assert_eq!(
-			Some(&_Animation("middle")),
+			Some(&_Animation::new("middle")),
 			dispatch.highest_priority_animation()
 		);
 	}
@@ -145,8 +176,8 @@ mod tests {
 	#[test]
 	fn remove_high() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation("high"), Priority::High);
-		dispatch.remove(_Animation("high"), Priority::High);
+		dispatch.insert(_Animation::new("high"), Priority::High);
+		dispatch.remove(_Animation::new("high"), Priority::High);
 
 		assert_eq!(None, dispatch.highest_priority_animation());
 	}
@@ -154,12 +185,23 @@ mod tests {
 	#[test]
 	fn do_not_remove_high_when_animation_mismatch() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation("high"), Priority::High);
-		dispatch.remove(_Animation("other"), Priority::High);
+		dispatch.insert(_Animation::new("high"), Priority::High);
+		dispatch.remove(_Animation::new("other"), Priority::High);
 
 		assert_eq!(
-			Some(&_Animation("high")),
+			Some(&_Animation::new("high")),
 			dispatch.highest_priority_animation()
 		);
+	}
+
+	#[test]
+	fn call_chain_update() {
+		let mut dispatch = AnimationDispatch::default();
+		dispatch.insert(_Animation::new("last"), Priority::High);
+		dispatch.insert(_Animation::new("mock"), Priority::High);
+
+		let mock = dispatch.highest_priority_animation().unwrap();
+
+		assert_eq!(vec![_Animation::new("last")], mock.chain_update_calls);
 	}
 }
