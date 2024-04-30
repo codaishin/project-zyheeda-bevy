@@ -1,5 +1,5 @@
 use crate::{components::MovementMode, traits::MovementData};
-use animations::traits::{InsertAnimation, Priority, RemoveAnimation};
+use animations::traits::{InsertAnimation, MarkObsolete, Priority};
 use bevy::ecs::{
 	change_detection::DetectChanges,
 	component::Component,
@@ -23,10 +23,10 @@ pub(crate) fn animate_movement<
 	TMovement: Component,
 	TAnimation: Clone + Sync + Send + 'static,
 	TAnimations: Component + Get<MovementMode, TAnimation>,
-	TAnimationDispatch: Component + InsertAnimation<TAnimation> + RemoveAnimation<TAnimation>,
+	TAnimationDispatch: Component + InsertAnimation<TAnimation> + MarkObsolete<TAnimation>,
 >(
 	mut agents: Query<Components<TMovementConfig, TAnimations, TAnimationDispatch, TMovement>>,
-	mut agents_without_movement: Query<(&TAnimations, &mut TAnimationDispatch), Without<TMovement>>,
+	mut agents_without_movement: Query<&mut TAnimationDispatch, Without<TMovement>>,
 	mut removed_movements: RemovedComponents<TMovement>,
 ) {
 	for (config, animations, dispatch, movement) in &mut agents {
@@ -60,31 +60,16 @@ fn insert_animation<
 
 fn remove_animation<
 	TMovement: Component,
-	TAnimation: Clone,
-	TAnimations: Component + Get<MovementMode, TAnimation>,
-	TAnimationDispatch: Component + RemoveAnimation<TAnimation>,
+	TAnimation,
+	TAnimationDispatch: Component + MarkObsolete<TAnimation>,
 >(
 	entity: Entity,
-	agent_without_movement: &mut Query<(&TAnimations, &mut TAnimationDispatch), Without<TMovement>>,
+	agent_without_movement: &mut Query<&mut TAnimationDispatch, Without<TMovement>>,
 ) {
-	let Ok((animations, mut dispatch)) = agent_without_movement.get_mut(entity) else {
+	let Ok(mut dispatch) = agent_without_movement.get_mut(entity) else {
 		return;
 	};
-	remove(MovementMode::Fast, animations, &mut dispatch);
-	remove(MovementMode::Slow, animations, &mut dispatch);
-}
-
-fn remove<
-	TAnimation: Clone,
-	TAnimations: Get<MovementMode, TAnimation>,
-	TAnimationDispatch: RemoveAnimation<TAnimation>,
->(
-	mode: MovementMode,
-	animations: &TAnimations,
-	dispatch: &mut bevy::prelude::Mut<'_, TAnimationDispatch>,
-) {
-	let animation = animations.get(&mode);
-	dispatch.remove(animation.clone(), Priority::Middle);
+	dispatch.mark_obsolete(Priority::Middle);
 }
 
 #[cfg(test)]
@@ -137,9 +122,9 @@ mod tests {
 		}
 	}
 
-	impl RemoveAnimation<_Animation> for _AnimationDispatch {
-		fn remove(&mut self, animation: _Animation, priority: Priority) {
-			self.mock.remove(animation, priority)
+	impl MarkObsolete<_Animation> for _AnimationDispatch {
+		fn mark_obsolete(&mut self, priority: Priority) {
+			self.mock.mark_obsolete(priority)
 		}
 	}
 
@@ -148,8 +133,8 @@ mod tests {
 		impl InsertAnimation<_Animation> for _AnimationDispatch {
 			fn insert(&mut self, animation: _Animation, priority: Priority);
 		}
-		impl RemoveAnimation<_Animation> for _AnimationDispatch {
-			fn remove(&mut self, animation: _Animation, priority: Priority);
+		impl MarkObsolete<_Animation> for _AnimationDispatch {
+			fn mark_obsolete(&mut self, priority: Priority);
 		}
 	}
 
@@ -257,7 +242,7 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_fast_and_slow_when_movement_removed() {
+	fn remove_medium_priority_when_movement_removed() {
 		let mut app = setup();
 		let mut config = _Config::default();
 		let mut animations = _MovementAnimations::default();
@@ -281,15 +266,9 @@ mod tests {
 		dispatch.mock.expect_insert().return_const(());
 		dispatch
 			.mock
-			.expect_remove()
+			.expect_mark_obsolete()
 			.times(1)
-			.with(eq(_Animation("fast")), eq(Priority::Middle))
-			.return_const(());
-		dispatch
-			.mock
-			.expect_remove()
-			.times(1)
-			.with(eq(_Animation("slow")), eq(Priority::Middle))
+			.with(eq(Priority::Middle))
 			.return_const(());
 
 		let agent = app

@@ -28,8 +28,8 @@ pub trait InsertAnimation<TAnimation> {
 	fn insert(&mut self, animation: TAnimation, priority: Priority);
 }
 
-pub trait RemoveAnimation<TAnimation> {
-	fn remove(&mut self, animation: TAnimation, priority: Priority);
+pub trait MarkObsolete<TAnimation> {
+	fn mark_obsolete(&mut self, priority: Priority);
 }
 
 pub(crate) trait AnimationId {
