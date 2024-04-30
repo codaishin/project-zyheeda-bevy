@@ -3,9 +3,41 @@ use crate::{
 	traits::{clamp_zero_positive::ClampZeroPositive, load_asset::Path},
 };
 use macros::ClampZeroPositive;
+use std::{
+	fmt::Debug,
+	ops::{Deref, DerefMut},
+};
 
 ///Serves as a struct to implement static traits on
 pub struct Tools;
+
+#[derive(Debug, PartialEq)]
+pub struct This<'a, T: Debug + PartialEq>(pub &'a mut T);
+
+impl<'a, T: Debug + PartialEq> Deref for This<'a, T> {
+	type Target = T;
+
+	fn deref(&self) -> &Self::Target {
+		self.0
+	}
+}
+
+impl<'a, T: Debug + PartialEq> DerefMut for This<'a, T> {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		self.0
+	}
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Last<'a, T: Debug + PartialEq>(pub &'a T);
+
+impl<'a, T: Debug + PartialEq> Deref for Last<'a, T> {
+	type Target = T;
+
+	fn deref(&self) -> &Self::Target {
+		self.0
+	}
+}
 
 #[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Default, ClampZeroPositive)]
 pub struct UnitsPerSecond(f32);
