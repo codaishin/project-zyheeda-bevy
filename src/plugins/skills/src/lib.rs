@@ -62,7 +62,7 @@ use systems::{
 	update_active_skill::update_active_skill,
 	update_skill_combos::update_skill_combos,
 };
-use traits::{AnimationSetup, GetExecution};
+use traits::{GetExecution, GetSkillAnimation};
 
 pub struct SkillsPlugin;
 

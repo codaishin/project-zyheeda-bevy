@@ -1,6 +1,6 @@
 use crate::{
 	components::{ItemType, SlotKey},
-	traits::{AnimationSetup, Prime},
+	traits::{AnimationChainIf, GetAnimationSetup, Prime},
 };
 use animations::animation::{Animation, PlayMode};
 use bevy::{
@@ -8,7 +8,12 @@ use bevy::{
 	math::{primitives::Direction3d, Ray3d, Vec3},
 	transform::components::{GlobalTransform, Transform},
 };
-use common::{components::Outdated, resources::ColliderInfo, tools::player_animation_path};
+use common::{
+	components::Outdated,
+	resources::ColliderInfo,
+	tools::player_animation_path,
+	traits::load_asset::Path,
+};
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result},
@@ -166,23 +171,65 @@ mod test_skill {
 
 pub(crate) struct SwordStrike;
 
-impl AnimationSetup for SwordStrike {
-	fn animation() -> SkillAnimation {
+impl GetAnimationSetup for SwordStrike {
+	fn get_animation() -> SkillAnimation {
 		SkillAnimation {
 			right: Animation::new(player_animation_path("Animation8"), PlayMode::Replay),
 			left: Animation::new(player_animation_path("Animation9"), PlayMode::Replay),
 		}
 	}
+
+	fn get_chains() -> Vec<AnimationChainIf> {
+		vec![]
+	}
 }
 
 pub(crate) struct ShootHandGun;
 
-impl AnimationSetup for ShootHandGun {
-	fn animation() -> SkillAnimation {
+fn shoot_right() -> Path {
+	player_animation_path("Animation4")
+}
+fn shoot_right_dual() -> Path {
+	player_animation_path("Animation6")
+}
+fn shoot_left() -> Path {
+	player_animation_path("Animation5")
+}
+fn shoot_left_dual() -> Path {
+	player_animation_path("Animation7")
+}
+
+impl GetAnimationSetup for ShootHandGun {
+	fn get_animation() -> SkillAnimation {
 		SkillAnimation {
-			right: Animation::new(player_animation_path("Animation4"), PlayMode::Repeat),
-			left: Animation::new(player_animation_path("Animation5"), PlayMode::Repeat),
+			right: Animation::new(shoot_right(), PlayMode::Repeat),
+			left: Animation::new(shoot_left(), PlayMode::Repeat),
 		}
+	}
+
+	fn get_chains() -> Vec<AnimationChainIf> {
+		vec![
+			AnimationChainIf {
+				last: shoot_right,
+				this: shoot_left,
+				then: shoot_left_dual,
+			},
+			AnimationChainIf {
+				last: shoot_left,
+				this: shoot_right,
+				then: shoot_right_dual,
+			},
+			AnimationChainIf {
+				last: shoot_right_dual,
+				this: shoot_left,
+				then: shoot_left_dual,
+			},
+			AnimationChainIf {
+				last: shoot_left_dual,
+				this: shoot_right,
+				then: shoot_right_dual,
+			},
+		]
 	}
 }
 

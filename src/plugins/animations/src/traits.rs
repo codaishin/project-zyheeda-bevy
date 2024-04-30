@@ -44,6 +44,6 @@ pub(crate) trait AnimationPlayMode {
 	fn animation_play_mode(&self) -> PlayMode;
 }
 
-pub(crate) trait AnimationChainUpdate {
+pub trait AnimationChainUpdate {
 	fn chain_update(&mut self, last: &Self);
 }

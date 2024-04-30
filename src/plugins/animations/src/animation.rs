@@ -13,7 +13,7 @@ pub enum PlayMode {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Animation {
-	path: Path,
+	pub path: Path,
 	play_mode: PlayMode,
 	pub update_fn: Option<fn(This<Animation>, Last<Animation>)>,
 }

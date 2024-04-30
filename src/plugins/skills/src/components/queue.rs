@@ -582,7 +582,7 @@ mod test_queue_active_skill {
 	use crate::{
 		components::SlotKey,
 		skill::{Cast, ShootHandGun, SkillExecution, Spawner, Target},
-		traits::AnimationSetup,
+		traits::GetSkillAnimation,
 	};
 	use bevy::{ecs::system::EntityCommands, prelude::default, transform::components::Transform};
 	use common::components::Side;
