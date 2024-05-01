@@ -32,6 +32,10 @@ pub trait MarkObsolete<TAnimation> {
 	fn mark_obsolete(&mut self, priority: Priority);
 }
 
+pub(crate) trait FlushObsolete {
+	fn flush_obsolete(&mut self, priority: Priority);
+}
+
 pub(crate) trait AnimationPath {
 	fn animation_path(&self) -> &Path;
 }

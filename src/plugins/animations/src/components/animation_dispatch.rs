@@ -4,6 +4,7 @@ use crate::{
 	animation::Animation,
 	traits::{
 		AnimationChainUpdate,
+		FlushObsolete,
 		HighestPriorityAnimation,
 		InsertAnimation,
 		MarkObsolete,
@@ -12,10 +13,12 @@ use crate::{
 };
 use bevy::ecs::component::Component;
 
+struct FlushCount(usize);
+
 enum Entry<TAnimation> {
 	None,
 	Some(TAnimation),
-	Obsolete(TAnimation),
+	Obsolete((TAnimation, FlushCount)),
 }
 
 impl<TAnimation> Entry<TAnimation> {
@@ -64,7 +67,7 @@ impl<TAnimation: AnimationChainUpdate + Debug> InsertAnimation<TAnimation>
 	fn insert(&mut self, mut animation: TAnimation, priority: Priority) {
 		let slot = self.slot(priority);
 
-		if let Entry::Some(last) | Entry::Obsolete(last) = slot {
+		if let Entry::Some(last) | Entry::Obsolete((last, ..)) = slot {
 			animation.chain_update(last);
 		}
 
@@ -77,8 +80,20 @@ impl<TAnimation> MarkObsolete<TAnimation> for AnimationDispatch<TAnimation> {
 		let slot = self.slot(priority);
 
 		*slot = match slot.take() {
-			Entry::Some(animation) => Entry::Obsolete(animation),
+			Entry::Some(animation) => Entry::Obsolete((animation, FlushCount(0))),
 			_ => Entry::None,
+		}
+	}
+}
+
+impl<TAnimation> FlushObsolete for AnimationDispatch<TAnimation> {
+	fn flush_obsolete(&mut self, priority: Priority) {
+		let slot = self.slot(priority);
+
+		*slot = match slot.take() {
+			Entry::Obsolete((a, FlushCount(0))) => Entry::Obsolete((a, FlushCount(1))),
+			Entry::Obsolete((.., FlushCount(1))) => Entry::None,
+			e => e,
 		}
 	}
 }
@@ -221,5 +236,36 @@ mod tests {
 		let mock = dispatch.highest_priority_animation().unwrap();
 
 		assert_eq!(vec![] as Vec<_Animation>, mock.chain_update_calls);
+	}
+
+	#[test]
+	fn do_not_call_chain_update_on_marked_obsolete_after_flushed_twice() {
+		let uuid_last = Uuid::new_v4();
+		let uuid_mock = Uuid::new_v4();
+		let mut dispatch = AnimationDispatch::default();
+		dispatch.insert(_Animation::new(uuid_last), Priority::High);
+		dispatch.mark_obsolete(Priority::High);
+		dispatch.flush_obsolete(Priority::High);
+		dispatch.flush_obsolete(Priority::High);
+		dispatch.insert(_Animation::new(uuid_mock), Priority::High);
+
+		let mock = dispatch.highest_priority_animation().unwrap();
+
+		assert_eq!(vec![] as Vec<_Animation>, mock.chain_update_calls);
+	}
+
+	#[test]
+	fn call_chain_update_on_marked_obsolete_after_flushed_once() {
+		let uuid_last = Uuid::new_v4();
+		let uuid_mock = Uuid::new_v4();
+		let mut dispatch = AnimationDispatch::default();
+		dispatch.insert(_Animation::new(uuid_last), Priority::High);
+		dispatch.mark_obsolete(Priority::High);
+		dispatch.flush_obsolete(Priority::High);
+		dispatch.insert(_Animation::new(uuid_mock), Priority::High);
+
+		let mock = dispatch.highest_priority_animation().unwrap();
+
+		assert_eq!(vec![_Animation::new(uuid_last)], mock.chain_update_calls);
 	}
 }
