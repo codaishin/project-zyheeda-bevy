@@ -57,7 +57,6 @@ use systems::{
 		release::release_triggered_mouse_context,
 		trigger_primed::trigger_primed_mouse_context,
 	},
-	set_slot_visibility::set_slot_visibility,
 	slots::add_item_slots,
 	update_active_skill::update_active_skill,
 	update_skill_combos::update_skill_combos,
@@ -79,7 +78,6 @@ impl Plugin for SkillsPlugin {
 						.pipe(enqueue::<Slots, Skill, Queue, Skill<Queued>>),
 					update_skill_combos::<Combos, Queue>,
 					update_active_skill::<Queue, Animation, AnimationDispatch, Virtual>,
-					set_slot_visibility,
 					apply_skill_behavior,
 					flush::<Queue>,
 				)
