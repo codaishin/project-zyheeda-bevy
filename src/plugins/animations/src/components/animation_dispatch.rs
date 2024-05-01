@@ -101,20 +101,18 @@ impl<TAnimation> FlushObsolete for AnimationDispatch<TAnimation> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{prelude::default, utils::Uuid};
+	use bevy::prelude::default;
 
 	#[derive(Default, Debug, PartialEq, Clone)]
 	struct _Animation {
-		uuid: Uuid,
-		name: Option<&'static str>,
+		name: &'static str,
 		chain_update_calls: Vec<_Animation>,
 	}
 
 	impl _Animation {
-		fn new(uuid: Uuid) -> Self {
+		fn new(name: &'static str) -> Self {
 			Self {
-				uuid,
-				name: None,
+				name,
 				chain_update_calls: default(),
 			}
 		}
@@ -128,49 +126,43 @@ mod tests {
 
 	#[test]
 	fn insert_low_priority() {
-		let uuid = Uuid::new_v4();
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new(uuid), Priority::Low);
+		dispatch.insert(_Animation::new("low"), Priority::Low);
 
 		assert_eq!(
-			Some(&_Animation::new(uuid)),
+			Some(&_Animation::new("low")),
 			dispatch.highest_priority_animation()
 		);
 	}
 
 	#[test]
 	fn insert_medium_priority() {
-		let uuid_middle = Uuid::new_v4();
-		let uuid_low = Uuid::new_v4();
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new(uuid_middle), Priority::Middle);
-		dispatch.insert(_Animation::new(uuid_low), Priority::Low);
+		dispatch.insert(_Animation::new("middle"), Priority::Middle);
+		dispatch.insert(_Animation::new("low"), Priority::Low);
 
 		assert_eq!(
-			Some(&_Animation::new(uuid_middle)),
+			Some(&_Animation::new("middle")),
 			dispatch.highest_priority_animation()
 		);
 	}
 
 	#[test]
 	fn insert_high_priority() {
-		let uuid_high = Uuid::new_v4();
-		let uuid_middle = Uuid::new_v4();
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new(uuid_high), Priority::High);
-		dispatch.insert(_Animation::new(uuid_middle), Priority::Middle);
+		dispatch.insert(_Animation::new("high"), Priority::High);
+		dispatch.insert(_Animation::new("middle"), Priority::Middle);
 
 		assert_eq!(
-			Some(&_Animation::new(uuid_high)),
+			Some(&_Animation::new("high")),
 			dispatch.highest_priority_animation()
 		);
 	}
 
 	#[test]
 	fn mark_obsolete_low() {
-		let uuid = Uuid::new_v4();
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new(uuid), Priority::Low);
+		dispatch.insert(_Animation::new("low"), Priority::Low);
 		dispatch.mark_obsolete(Priority::Low);
 
 		assert_eq!(None, dispatch.highest_priority_animation());
@@ -178,9 +170,8 @@ mod tests {
 
 	#[test]
 	fn mark_obsolete_middle() {
-		let uuid = Uuid::new_v4();
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new(uuid), Priority::Middle);
+		dispatch.insert(_Animation::new("middle"), Priority::Middle);
 		dispatch.mark_obsolete(Priority::Middle);
 
 		assert_eq!(None, dispatch.highest_priority_animation());
@@ -188,9 +179,8 @@ mod tests {
 
 	#[test]
 	fn mark_obsolete_high() {
-		let uuid = Uuid::new_v4();
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new(uuid), Priority::High);
+		dispatch.insert(_Animation::new("high"), Priority::High);
 		dispatch.mark_obsolete(Priority::High);
 
 		assert_eq!(None, dispatch.highest_priority_animation());
@@ -198,40 +188,34 @@ mod tests {
 
 	#[test]
 	fn call_chain_update() {
-		let uuid_last = Uuid::new_v4();
-		let uuid_mock = Uuid::new_v4();
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new(uuid_last), Priority::High);
-		dispatch.insert(_Animation::new(uuid_mock), Priority::High);
+		dispatch.insert(_Animation::new("last"), Priority::High);
+		dispatch.insert(_Animation::new("mock"), Priority::High);
 
 		let mock = dispatch.highest_priority_animation().unwrap();
 
-		assert_eq!(vec![_Animation::new(uuid_last)], mock.chain_update_calls);
+		assert_eq!(vec![_Animation::new("last")], mock.chain_update_calls);
 	}
 
 	#[test]
 	fn call_chain_update_on_marked_obsolete() {
-		let uuid_last = Uuid::new_v4();
-		let uuid_mock = Uuid::new_v4();
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new(uuid_last), Priority::High);
+		dispatch.insert(_Animation::new("last"), Priority::High);
 		dispatch.mark_obsolete(Priority::High);
-		dispatch.insert(_Animation::new(uuid_mock), Priority::High);
+		dispatch.insert(_Animation::new("mock"), Priority::High);
 
 		let mock = dispatch.highest_priority_animation().unwrap();
 
-		assert_eq!(vec![_Animation::new(uuid_last)], mock.chain_update_calls);
+		assert_eq!(vec![_Animation::new("last")], mock.chain_update_calls);
 	}
 
 	#[test]
 	fn do_not_call_chain_update_on_marked_obsolete_2_times_ago() {
-		let uuid_last = Uuid::new_v4();
-		let uuid_mock = Uuid::new_v4();
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new(uuid_last), Priority::High);
+		dispatch.insert(_Animation::new("last"), Priority::High);
 		dispatch.mark_obsolete(Priority::High);
 		dispatch.mark_obsolete(Priority::High);
-		dispatch.insert(_Animation::new(uuid_mock), Priority::High);
+		dispatch.insert(_Animation::new("mock"), Priority::High);
 
 		let mock = dispatch.highest_priority_animation().unwrap();
 
@@ -240,14 +224,12 @@ mod tests {
 
 	#[test]
 	fn do_not_call_chain_update_on_marked_obsolete_after_flushed_twice() {
-		let uuid_last = Uuid::new_v4();
-		let uuid_mock = Uuid::new_v4();
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new(uuid_last), Priority::High);
+		dispatch.insert(_Animation::new("last"), Priority::High);
 		dispatch.mark_obsolete(Priority::High);
 		dispatch.flush_obsolete(Priority::High);
 		dispatch.flush_obsolete(Priority::High);
-		dispatch.insert(_Animation::new(uuid_mock), Priority::High);
+		dispatch.insert(_Animation::new("mock"), Priority::High);
 
 		let mock = dispatch.highest_priority_animation().unwrap();
 
@@ -256,16 +238,14 @@ mod tests {
 
 	#[test]
 	fn call_chain_update_on_marked_obsolete_after_flushed_once() {
-		let uuid_last = Uuid::new_v4();
-		let uuid_mock = Uuid::new_v4();
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new(uuid_last), Priority::High);
+		dispatch.insert(_Animation::new("last"), Priority::High);
 		dispatch.mark_obsolete(Priority::High);
 		dispatch.flush_obsolete(Priority::High);
-		dispatch.insert(_Animation::new(uuid_mock), Priority::High);
+		dispatch.insert(_Animation::new("mock"), Priority::High);
 
 		let mock = dispatch.highest_priority_animation().unwrap();
 
-		assert_eq!(vec![_Animation::new(uuid_last)], mock.chain_update_calls);
+		assert_eq!(vec![_Animation::new("last")], mock.chain_update_calls);
 	}
 }
