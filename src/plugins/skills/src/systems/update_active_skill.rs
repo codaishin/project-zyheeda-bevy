@@ -3,7 +3,7 @@ use crate::{
 	skill::SkillState,
 	traits::{Execution, GetActiveSkill, GetAnimation, GetSlots},
 };
-use animations::traits::{InsertAnimation, Priority, RemoveAnimation};
+use animations::traits::{InsertAnimation, MarkObsolete, Priority};
 use behaviors::components::{Face, OverrideFace};
 use bevy::{
 	ecs::{
@@ -25,7 +25,7 @@ enum State {
 pub(crate) fn update_active_skill<
 	TGetSkill: GetActiveSkill<TAnimation, SkillState> + Component,
 	TAnimation: Send + Sync + 'static,
-	TAnimationDispatch: Component + InsertAnimation<TAnimation> + RemoveAnimation<TAnimation>,
+	TAnimationDispatch: Component + InsertAnimation<TAnimation> + MarkObsolete<TAnimation>,
 	TTime: Send + Sync + Default + 'static,
 >(
 	time: Res<Time<TTime>>,
@@ -52,7 +52,7 @@ pub(crate) fn update_active_skill<
 fn advance_skill<
 	TGetSkill: GetActiveSkill<TAnimation, SkillState> + Sync + Send + 'static,
 	TAnimation: Send + Sync + 'static,
-	TAnimationDispatch: Component + InsertAnimation<TAnimation> + RemoveAnimation<TAnimation>,
+	TAnimationDispatch: Component + InsertAnimation<TAnimation> + MarkObsolete<TAnimation>,
 >(
 	agent: &mut EntityCommands,
 	dequeue: &mut TGetSkill,
@@ -83,7 +83,7 @@ fn advance_skill<
 		agent.try_insert(SlotVisibility::Hidden(skill.slots()));
 		agent.remove::<OverrideFace>();
 		insert_skill_execution_stop(agent, skill);
-		end_animation(skill, animation_dispatch);
+		animation_dispatch.mark_obsolete(Priority::High);
 		return State::Done;
 	}
 
@@ -98,16 +98,6 @@ fn begin_animation<TAnimation, TAnimationDispatch: InsertAnimation<TAnimation>>(
 		return;
 	};
 	dispatch.insert(animation, Priority::High);
-}
-
-fn end_animation<TAnimation, TAnimationDispatch: RemoveAnimation<TAnimation>>(
-	skill: &mut (impl Execution + GetAnimation<TAnimation> + GetSlots + StateUpdate<SkillState>),
-	dispatch: &mut TAnimationDispatch,
-) {
-	let Some(animation) = skill.animate() else {
-		return;
-	};
-	dispatch.remove(animation, Priority::High);
 }
 
 fn insert_skill_execution_start<TSkill: Execution>(agent: &mut EntityCommands, skill: &mut TSkill) {
@@ -159,7 +149,7 @@ mod tests {
 		Slot,
 	}
 
-	#[derive(Debug, PartialEq, Clone, Copy)]
+	#[derive(Default, Debug, PartialEq, Clone, Copy)]
 	struct _Animation(usize);
 
 	#[derive(Component, Default)]
@@ -229,9 +219,9 @@ mod tests {
 		}
 	}
 
-	impl RemoveAnimation<_Animation> for _AnimationDispatch {
-		fn remove(&mut self, animation: _Animation, priority: Priority) {
-			self.mock.remove(animation, priority)
+	impl MarkObsolete<_Animation> for _AnimationDispatch {
+		fn mark_obsolete(&mut self, priority: Priority) {
+			self.mock.mark_obsolete(priority)
 		}
 	}
 
@@ -240,8 +230,8 @@ mod tests {
 		impl InsertAnimation<_Animation> for _AnimationDispatch {
 			fn insert(&mut self, animation: _Animation, priority: Priority);
 		}
-		impl RemoveAnimation<_Animation> for _AnimationDispatch {
-			fn remove(&mut self, animation: _Animation, priority: Priority);
+		impl MarkObsolete<_Animation> for _AnimationDispatch {
+			fn mark_obsolete(&mut self, priority: Priority);
 		}
 	}
 
@@ -251,7 +241,7 @@ mod tests {
 		let mut dispatch = _AnimationDispatch::default();
 
 		dispatch.mock.expect_insert().return_const(());
-		dispatch.mock.expect_remove().return_const(());
+		dispatch.mock.expect_mark_obsolete().return_const(());
 		let agent = app.world.spawn(dispatch).id();
 
 		time.update();
@@ -291,7 +281,7 @@ mod tests {
 	fn insert_animation_on_state_first() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_remove().return_const(());
+		dispatch.mock.expect_mark_obsolete().return_const(());
 		dispatch
 			.mock
 			.expect_insert()
@@ -321,7 +311,7 @@ mod tests {
 	fn do_not_insert_animation_on_in_state_first() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_remove().return_const(());
+		dispatch.mock.expect_mark_obsolete().return_const(());
 		dispatch.mock.expect_insert().never().return_const(());
 
 		app.world.entity_mut(agent).insert((
@@ -480,9 +470,9 @@ mod tests {
 		dispatch.mock.expect_insert().return_const(());
 		dispatch
 			.mock
-			.expect_remove()
+			.expect_mark_obsolete()
 			.times(1)
-			.with(eq(_Animation(42)), eq(Priority::High))
+			.with(eq(Priority::High))
 			.return_const(());
 
 		app.world.entity_mut(agent).insert((
@@ -510,7 +500,11 @@ mod tests {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
 		dispatch.mock.expect_insert().return_const(());
-		dispatch.mock.expect_remove().never().return_const(());
+		dispatch
+			.mock
+			.expect_mark_obsolete()
+			.never()
+			.return_const(());
 
 		app.world.entity_mut(agent).insert((
 			_Dequeue {

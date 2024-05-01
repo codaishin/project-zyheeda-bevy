@@ -572,15 +572,7 @@ impl<'a> GetAnimation<Animation> for ActiveSkill<'a> {
 
 impl<'a> GetSlots for ActiveSkill<'a> {
 	fn slots(&self) -> Vec<SlotKey> {
-		match (self.skill.data.slot_key, self.skill.dual_wield) {
-			(SlotKey::Hand(Side::Main), true) => {
-				vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]
-			}
-			(SlotKey::Hand(Side::Off), true) => {
-				vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)]
-			}
-			(slot_key, ..) => vec![slot_key],
-		}
+		vec![self.skill.data.slot_key]
 	}
 }
 
@@ -590,7 +582,7 @@ mod test_queue_active_skill {
 	use crate::{
 		components::SlotKey,
 		skill::{Cast, ShootHandGun, SkillExecution, Spawner, Target},
-		traits::AnimationSetup,
+		traits::GetSkillAnimation,
 	};
 	use bevy::{ecs::system::EntityCommands, prelude::default, transform::components::Transform};
 	use common::components::Side;
@@ -964,46 +956,6 @@ mod test_queue_active_skill {
 	}
 
 	#[test]
-	fn get_dual_main_slots() {
-		let active = ActiveSkill {
-			duration: &mut Duration::default(),
-			skill: &mut Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
-				dual_wield: true,
-				..default()
-			},
-		};
-
-		assert_eq!(
-			vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
-			active.slots()
-		);
-	}
-
-	#[test]
-	fn get_dual_off_slots() {
-		let active = ActiveSkill {
-			duration: &mut Duration::default(),
-			skill: &mut Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Off),
-					..default()
-				},
-				dual_wield: true,
-				..default()
-			},
-		};
-
-		assert_eq!(
-			vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
-			active.slots()
-		);
-	}
-
-	#[test]
 	fn get_skill_spawn_slot() {
 		let active = ActiveSkill {
 			duration: &mut Duration::default(),
@@ -1012,7 +964,6 @@ mod test_queue_active_skill {
 					slot_key: SlotKey::SkillSpawn,
 					..default()
 				},
-				dual_wield: true,
 				..default()
 			},
 		};

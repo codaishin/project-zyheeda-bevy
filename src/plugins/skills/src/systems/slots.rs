@@ -1,9 +1,7 @@
 use crate::components::{slots::Slots, Slot, SlotBones, SlotKey};
 use bevy::{
 	prelude::{BuildChildren, Children, Commands, Entity, HierarchyQueryExt, Name, Query},
-	render::view::Visibility,
 	scene::SceneBundle,
-	utils::default,
 };
 use common::traits::try_remove_from::TryRemoveFrom;
 
@@ -65,12 +63,7 @@ fn find_bone(
 }
 
 fn new_slot_on(parent: Entity, commands: &mut Commands) -> Entity {
-	let slot = commands
-		.spawn(SceneBundle {
-			visibility: Visibility::Hidden,
-			..default()
-		})
-		.id();
+	let slot = commands.spawn(SceneBundle::default()).id();
 	commands.entity(parent).push_children(&[slot]);
 	slot
 }
@@ -132,10 +125,7 @@ mod tests {
 		let slot = *bone.get::<Children>().and_then(|c| c.first()).unwrap();
 		let slot = app.world.entity(slot);
 
-		assert_eq!(
-			(true, Some(&Visibility::Hidden)),
-			(slot.contains::<Handle<Scene>>(), slot.get::<Visibility>())
-		);
+		assert!(slot.contains::<Handle<Scene>>());
 	}
 
 	#[test]

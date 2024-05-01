@@ -3,29 +3,27 @@ use crate::{
 	components::Animator,
 	resource::AnimationClips,
 	traits::{
-		AnimationId,
+		AnimationPath,
 		AnimationPlayMode,
 		HighestPriorityAnimation,
 		RepeatAnimation,
 		ReplayAnimation,
 	},
 };
-use bevy::{
-	ecs::{
-		change_detection::DetectChanges,
-		component::Component,
-		system::{Query, Res},
-		world::Ref,
-	},
-	utils::Uuid,
+use bevy::ecs::{
+	change_detection::DetectChanges,
+	component::Component,
+	system::{Query, Res},
+	world::Ref,
 };
+use common::traits::load_asset::Path;
 
 pub(crate) fn play_animation_clip<
-	TAnimation: AnimationId + AnimationPlayMode + Sync + Send + 'static,
+	TAnimation: AnimationPath + AnimationPlayMode + Sync + Send + 'static,
 	TAnimationDispatch: Component + HighestPriorityAnimation<TAnimation>,
 	TAnimationPlayer: Component + RepeatAnimation + ReplayAnimation,
 >(
-	clips: Res<AnimationClips<Uuid>>,
+	clips: Res<AnimationClips<Path>>,
 	agents: Query<(Ref<TAnimationDispatch>, Ref<Animator>)>,
 	mut players: Query<&mut TAnimationPlayer>,
 ) {
@@ -35,14 +33,14 @@ pub(crate) fn play_animation_clip<
 }
 
 fn play_animation<
-	TAnimation: AnimationId + AnimationPlayMode + Sync + Send + 'static,
+	TAnimation: AnimationPath + AnimationPlayMode + Sync + Send + 'static,
 	TAnimationDispatch: Component + HighestPriorityAnimation<TAnimation>,
 	TAnimationPlayer: Component + RepeatAnimation + ReplayAnimation,
 >(
 	players: &mut Query<&mut TAnimationPlayer, ()>,
 	dispatch: Ref<TAnimationDispatch>,
 	animator: Ref<Animator>,
-	clips: &Res<AnimationClips<Uuid>>,
+	clips: &Res<AnimationClips<Path>>,
 ) {
 	if !dispatch.is_changed() && !animator.is_changed() {
 		return;
@@ -56,7 +54,7 @@ fn play_animation<
 	let Ok(mut player) = players.get_mut(player_id) else {
 		return;
 	};
-	let Some(clip) = clips.0.get(&animation.animation_id()) else {
+	let Some(clip) = clips.0.get(animation.animation_path()) else {
 		return;
 	};
 
@@ -74,16 +72,17 @@ mod tests {
 		animation::AnimationClip,
 		app::{App, Update},
 		asset::{AssetId, Handle},
+		utils::Uuid,
 	};
 	use common::test_tools::utils::SingleThreadedApp;
 	use mockall::{mock, predicate::eq};
 	use std::collections::HashMap;
 
-	struct _Animation(Uuid, PlayMode);
+	struct _Animation(Path, PlayMode);
 
-	impl AnimationId for _Animation {
-		fn animation_id(&self) -> Uuid {
-			self.0
+	impl AnimationPath for _Animation {
+		fn animation_path(&self) -> &Path {
+			&self.0
 		}
 	}
 
@@ -131,7 +130,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.init_resource::<AnimationClips<Uuid>>();
+		app.init_resource::<AnimationClips<Path>>();
 		app.add_systems(
 			Update,
 			play_animation_clip::<_Animation, _AnimationDispatch, _AnimationPlayer>,
@@ -145,13 +144,13 @@ mod tests {
 		let mut app = setup();
 		let mut player = _AnimationPlayer::default();
 
-		let uuid = Uuid::new_v4();
+		let path = Path::from("a/path");
 		let clip = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let dispatch = _AnimationDispatch(Some(_Animation(uuid, PlayMode::Repeat)));
+		let dispatch = _AnimationDispatch(Some(_Animation(path.clone(), PlayMode::Repeat)));
 
-		app.insert_resource(AnimationClips(HashMap::from([(uuid, clip.clone())])));
+		app.insert_resource(AnimationClips(HashMap::from([(path, clip.clone())])));
 
 		player.mock.expect_replay().return_const(());
 		player
@@ -176,13 +175,13 @@ mod tests {
 		let mut app = setup();
 		let mut player = _AnimationPlayer::default();
 
-		let uuid = Uuid::new_v4();
+		let path = Path::from("my/path");
 		let clip = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let dispatch = _AnimationDispatch(Some(_Animation(uuid, PlayMode::Replay)));
+		let dispatch = _AnimationDispatch(Some(_Animation(path.clone(), PlayMode::Replay)));
 
-		app.insert_resource(AnimationClips(HashMap::from([(uuid, clip.clone())])));
+		app.insert_resource(AnimationClips(HashMap::from([(path, clip.clone())])));
 
 		player.mock.expect_repeat().return_const(());
 		player
@@ -207,13 +206,13 @@ mod tests {
 		let mut app = setup();
 		let mut player = _AnimationPlayer::default();
 
-		let uuid_1 = Uuid::new_v4();
-		let uuid_2 = Uuid::new_v4();
-		let dispatch = _AnimationDispatch(Some(_Animation(uuid_1, PlayMode::Repeat)));
+		let path_1 = Path::from("path/1");
+		let path_2 = Path::from("path/2");
+		let dispatch = _AnimationDispatch(Some(_Animation(path_1.clone(), PlayMode::Repeat)));
 
 		app.insert_resource(AnimationClips(HashMap::from([
-			(uuid_1, Handle::default()),
-			(uuid_2, Handle::default()),
+			(path_1, Handle::default()),
+			(path_2.clone(), Handle::default()),
 		])));
 
 		player.mock.expect_replay().return_const(());
@@ -236,7 +235,7 @@ mod tests {
 			.entity_mut(agent)
 			.get_mut::<_AnimationDispatch>()
 			.unwrap()
-			.0 = Some(_Animation(uuid_2, PlayMode::Repeat));
+			.0 = Some(_Animation(path_2, PlayMode::Repeat));
 		app.update();
 	}
 
@@ -245,13 +244,13 @@ mod tests {
 		let mut app = setup();
 		let mut player = _AnimationPlayer::default();
 
-		let uuid_1 = Uuid::new_v4();
-		let uuid_2 = Uuid::new_v4();
-		let dispatch = _AnimationDispatch(Some(_Animation(uuid_1, PlayMode::Repeat)));
+		let path_1 = Path::from("path/a");
+		let path_2 = Path::from("path/b");
+		let dispatch = _AnimationDispatch(Some(_Animation(path_1.clone(), PlayMode::Repeat)));
 
 		app.insert_resource(AnimationClips(HashMap::from([
-			(uuid_1, Handle::default()),
-			(uuid_2, Handle::default()),
+			(path_1, Handle::default()),
+			(path_2, Handle::default()),
 		])));
 
 		player.mock.expect_replay().return_const(());

@@ -2,7 +2,7 @@ pub mod asset_server;
 
 use bevy::asset::{Asset, Handle};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Path(String);
 
 impl Path {

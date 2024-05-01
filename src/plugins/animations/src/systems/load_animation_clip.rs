@@ -1,6 +1,6 @@
 use crate::{
 	resource::AnimationClips,
-	traits::{AnimationId, AnimationPath, HighestPriorityAnimation},
+	traits::{AnimationPath, HighestPriorityAnimation},
 };
 use bevy::{
 	animation::AnimationClip,
@@ -9,25 +9,25 @@ use bevy::{
 		query::Changed,
 		system::{Query, Res, ResMut, Resource},
 	},
-	utils::Uuid,
 };
-use common::traits::load_asset::LoadAsset;
+use common::traits::load_asset::{LoadAsset, Path};
 use std::collections::hash_map::Entry;
 
 pub(crate) fn load_animation_clip<
-	TAnimation: AnimationId + AnimationPath + Sync + Send + 'static,
+	TAnimation: AnimationPath + Sync + Send + 'static,
 	TAnimationDispatch: Component + HighestPriorityAnimation<TAnimation>,
 	TServer: Resource + LoadAsset<AnimationClip>,
 >(
-	mut clips: ResMut<AnimationClips<Uuid>>,
+	mut clips: ResMut<AnimationClips<Path>>,
 	server: Res<TServer>,
 	dispatchers: Query<&TAnimationDispatch, Changed<TAnimationDispatch>>,
 ) {
 	for animation in dispatchers.iter().filter_map(has_animation) {
-		let Entry::Vacant(entry) = clips.0.entry(animation.animation_id()) else {
+		let path = animation.animation_path().clone();
+		let Entry::Vacant(entry) = clips.0.entry(path.clone()) else {
 			continue;
 		};
-		let clip = server.load_asset(animation.animation_path());
+		let clip = server.load_asset(path);
 		entry.insert(clip);
 	}
 }
@@ -44,22 +44,17 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		asset::{AssetId, Handle},
+		utils::Uuid,
 	};
 	use common::{test_tools::utils::SingleThreadedApp, traits::load_asset::Path};
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
 
-	struct _Animation(Uuid, &'static str);
-
-	impl AnimationId for _Animation {
-		fn animation_id(&self) -> Uuid {
-			self.0
-		}
-	}
+	struct _Animation(Path);
 
 	impl AnimationPath for _Animation {
-		fn animation_path(&self) -> Path {
-			Path::from(self.1)
+		fn animation_path(&self) -> &Path {
+			&self.0
 		}
 	}
 
@@ -86,7 +81,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.init_resource::<AnimationClips<Uuid>>();
+		app.init_resource::<AnimationClips<Path>>();
 		app.add_systems(
 			Update,
 			load_animation_clip::<_Animation, _AnimationDispatch, _LoadAnimation>,
@@ -100,8 +95,7 @@ mod tests {
 		let mut app = setup();
 		let mut server = _LoadAnimation::default();
 
-		let uuid = Uuid::new_v4();
-		let dispatch = _AnimationDispatch(Some(_Animation(uuid, "")));
+		let dispatch = _AnimationDispatch(Some(_Animation(Path::from("a/path"))));
 		let clip = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
@@ -112,9 +106,9 @@ mod tests {
 		app.world.spawn(dispatch);
 		app.update();
 
-		let clips = app.world.resource::<AnimationClips<Uuid>>();
+		let clips = app.world.resource::<AnimationClips<Path>>();
 
-		assert_eq!(Some(&clip), clips.0.get(&uuid));
+		assert_eq!(Some(&clip), clips.0.get(&Path::from("a/path")));
 	}
 
 	#[test]
@@ -122,7 +116,7 @@ mod tests {
 		let mut app = setup();
 		let mut server = _LoadAnimation::default();
 
-		let dispatch = _AnimationDispatch(Some(_Animation(Uuid::new_v4(), "top/secret/path")));
+		let dispatch = _AnimationDispatch(Some(_Animation(Path::from("top/secret/path"))));
 
 		server
 			.mock
@@ -141,7 +135,7 @@ mod tests {
 		let mut app = setup();
 		let mut server = _LoadAnimation::default();
 
-		let dispatch = _AnimationDispatch(Some(_Animation(Uuid::new_v4(), "path/one")));
+		let dispatch = _AnimationDispatch(Some(_Animation(Path::from("path/one"))));
 
 		server
 			.mock
@@ -158,7 +152,7 @@ mod tests {
 			.entity_mut(agent)
 			.get_mut::<_AnimationDispatch>()
 			.unwrap()
-			.0 = Some(_Animation(Uuid::new_v4(), "path/two"));
+			.0 = Some(_Animation(Path::from("path/two")));
 		app.update();
 	}
 
@@ -167,8 +161,8 @@ mod tests {
 		let mut app = setup();
 		let mut server = _LoadAnimation::default();
 
-		let uuid = Uuid::new_v4();
-		let dispatch = _AnimationDispatch(Some(_Animation(uuid, "")));
+		let path = Path::from("a/path");
+		let dispatch = _AnimationDispatch(Some(_Animation(path.clone())));
 
 		server
 			.mock
@@ -176,7 +170,7 @@ mod tests {
 			.never()
 			.return_const(Handle::default());
 		app.insert_resource(server);
-		app.insert_resource(AnimationClips(HashMap::from([(uuid, Handle::default())])));
+		app.insert_resource(AnimationClips(HashMap::from([(path, Handle::default())])));
 
 		app.world.spawn(dispatch);
 		app.update();
