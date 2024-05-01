@@ -1,3 +1,5 @@
+use std::{fmt::Debug, mem};
+
 use crate::{
 	animation::Animation,
 	traits::{
@@ -10,15 +12,27 @@ use crate::{
 };
 use bevy::ecs::component::Component;
 
+enum Entry<TAnimation> {
+	None,
+	Some(TAnimation),
+	Obsolete(TAnimation),
+}
+
+impl<TAnimation> Entry<TAnimation> {
+	fn take(&mut self) -> Entry<TAnimation> {
+		mem::replace(self, Entry::None)
+	}
+}
+
 #[derive(Component)]
 pub struct AnimationDispatch<TAnimation = Animation>(
-	Option<TAnimation>,
-	Option<TAnimation>,
-	Option<TAnimation>,
+	Entry<TAnimation>,
+	Entry<TAnimation>,
+	Entry<TAnimation>,
 );
 
 impl<TAnimation> AnimationDispatch<TAnimation> {
-	fn slot(&mut self, priority: Priority) -> &mut Option<TAnimation> {
+	fn slot(&mut self, priority: Priority) -> &mut Entry<TAnimation> {
 		match priority {
 			Priority::High => &mut self.0,
 			Priority::Middle => &mut self.1,
@@ -29,32 +43,32 @@ impl<TAnimation> AnimationDispatch<TAnimation> {
 
 impl<TAnimation> Default for AnimationDispatch<TAnimation> {
 	fn default() -> Self {
-		Self(None, None, None)
+		Self(Entry::None, Entry::None, Entry::None)
 	}
 }
 
 impl<TAnimation> HighestPriorityAnimation<TAnimation> for AnimationDispatch<TAnimation> {
 	fn highest_priority_animation(&self) -> Option<&TAnimation> {
 		match self {
-			AnimationDispatch(Some(animation), ..) => Some(animation),
-			AnimationDispatch(None, Some(animation), ..) => Some(animation),
-			AnimationDispatch(None, None, Some(animation)) => Some(animation),
+			AnimationDispatch(Entry::Some(animation), ..) => Some(animation),
+			AnimationDispatch(_, Entry::Some(animation), _) => Some(animation),
+			AnimationDispatch(.., Entry::Some(animation)) => Some(animation),
 			_ => None,
 		}
 	}
 }
 
-impl<TAnimation: AnimationChainUpdate> InsertAnimation<TAnimation>
+impl<TAnimation: AnimationChainUpdate + Debug> InsertAnimation<TAnimation>
 	for AnimationDispatch<TAnimation>
 {
 	fn insert(&mut self, mut animation: TAnimation, priority: Priority) {
 		let slot = self.slot(priority);
 
-		if let Some(last) = slot {
+		if let Entry::Some(last) | Entry::Obsolete(last) = slot {
 			animation.chain_update(last);
 		}
 
-		*slot = Some(animation);
+		*slot = Entry::Some(animation);
 	}
 }
 
@@ -62,7 +76,10 @@ impl<TAnimation> MarkObsolete<TAnimation> for AnimationDispatch<TAnimation> {
 	fn mark_obsolete(&mut self, priority: Priority) {
 		let slot = self.slot(priority);
 
-		*slot = None;
+		*slot = match slot.take() {
+			Entry::Some(animation) => Entry::Obsolete(animation),
+			_ => Entry::None,
+		}
 	}
 }
 
@@ -175,5 +192,34 @@ mod tests {
 		let mock = dispatch.highest_priority_animation().unwrap();
 
 		assert_eq!(vec![_Animation::new(uuid_last)], mock.chain_update_calls);
+	}
+
+	#[test]
+	fn call_chain_update_on_marked_obsolete() {
+		let uuid_last = Uuid::new_v4();
+		let uuid_mock = Uuid::new_v4();
+		let mut dispatch = AnimationDispatch::default();
+		dispatch.insert(_Animation::new(uuid_last), Priority::High);
+		dispatch.mark_obsolete(Priority::High);
+		dispatch.insert(_Animation::new(uuid_mock), Priority::High);
+
+		let mock = dispatch.highest_priority_animation().unwrap();
+
+		assert_eq!(vec![_Animation::new(uuid_last)], mock.chain_update_calls);
+	}
+
+	#[test]
+	fn do_not_call_chain_update_on_marked_obsolete_2_times_ago() {
+		let uuid_last = Uuid::new_v4();
+		let uuid_mock = Uuid::new_v4();
+		let mut dispatch = AnimationDispatch::default();
+		dispatch.insert(_Animation::new(uuid_last), Priority::High);
+		dispatch.mark_obsolete(Priority::High);
+		dispatch.mark_obsolete(Priority::High);
+		dispatch.insert(_Animation::new(uuid_mock), Priority::High);
+
+		let mock = dispatch.highest_priority_animation().unwrap();
+
+		assert_eq!(vec![] as Vec<_Animation>, mock.chain_update_calls);
 	}
 }
