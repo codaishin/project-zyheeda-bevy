@@ -201,7 +201,7 @@ fn setup_simple_3d_scene(
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	let mut animation_dispatch = AnimationDispatch::default();
 	animation_dispatch.insert(
-		Animation::new_unique(
+		Animation::new(
 			Path::from(Player::MODEL_PATH.to_owned() + "#Animation2"),
 			PlayMode::Repeat,
 		),
@@ -227,8 +227,8 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				fast_speed: UnitsPerSecond::new(1.5),
 			},
 			MovementAnimations::new(
-				Animation::new_unique(player_animation_path("Animation3"), PlayMode::Repeat),
-				Animation::new_unique(player_animation_path("Animation1"), PlayMode::Repeat),
+				Animation::new(player_animation_path("Animation3"), PlayMode::Repeat),
+				Animation::new(player_animation_path("Animation1"), PlayMode::Repeat),
 			),
 			RigidBody::Dynamic,
 			GravityScale(0.),

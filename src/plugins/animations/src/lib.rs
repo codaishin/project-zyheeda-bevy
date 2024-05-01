@@ -12,8 +12,8 @@ use bevy::{
 	app::{App, Plugin, Update},
 	asset::AssetServer,
 	ecs::schedule::IntoSystemConfigs,
-	utils::Uuid,
 };
+use common::traits::load_asset::Path;
 use components::animation_dispatch::AnimationDispatch;
 use resource::AnimationClips;
 use systems::{
@@ -26,7 +26,7 @@ pub struct AnimationsPlugin;
 
 impl Plugin for AnimationsPlugin {
 	fn build(&self, app: &mut App) {
-		app.init_resource::<AnimationClips<Uuid>>().add_systems(
+		app.init_resource::<AnimationClips<Path>>().add_systems(
 			Update,
 			(
 				link_animators_with_new_animation_players,

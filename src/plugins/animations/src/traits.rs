@@ -2,7 +2,7 @@ pub(crate) mod animation_player;
 pub(crate) mod player_idle;
 
 use crate::animation::PlayMode;
-use bevy::{animation::AnimationClip, asset::Handle, utils::Uuid};
+use bevy::{animation::AnimationClip, asset::Handle};
 use common::traits::load_asset::Path;
 
 pub(crate) trait RepeatAnimation {
@@ -32,12 +32,8 @@ pub trait MarkObsolete<TAnimation> {
 	fn mark_obsolete(&mut self, priority: Priority);
 }
 
-pub(crate) trait AnimationId {
-	fn animation_id(&self) -> Uuid;
-}
-
 pub(crate) trait AnimationPath {
-	fn animation_path(&self) -> Path;
+	fn animation_path(&self) -> &Path;
 }
 
 pub(crate) trait AnimationPlayMode {

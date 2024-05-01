@@ -173,8 +173,8 @@ pub(crate) struct SwordStrike;
 impl AnimationSetup for SwordStrike {
 	fn animation() -> SkillAnimation {
 		SkillAnimation {
-			right: Animation::new_unique(player_animation_path("Animation8"), PlayMode::Replay),
-			left: Animation::new_unique(player_animation_path("Animation9"), PlayMode::Replay),
+			right: Animation::new(player_animation_path("Animation8"), PlayMode::Replay),
+			left: Animation::new(player_animation_path("Animation9"), PlayMode::Replay),
 		}
 	}
 }
@@ -184,8 +184,8 @@ pub(crate) struct ShootHandGun;
 impl AnimationSetup for ShootHandGun {
 	fn animation() -> SkillAnimation {
 		SkillAnimation {
-			right: Animation::new_unique(player_animation_path("Animation4"), PlayMode::Repeat),
-			left: Animation::new_unique(player_animation_path("Animation5"), PlayMode::Repeat),
+			right: Animation::new(player_animation_path("Animation4"), PlayMode::Repeat),
+			left: Animation::new(player_animation_path("Animation5"), PlayMode::Repeat),
 		}
 	}
 }
@@ -195,8 +195,8 @@ pub(crate) struct ShootHandGunDual;
 impl AnimationSetup for ShootHandGunDual {
 	fn animation() -> SkillAnimation {
 		SkillAnimation {
-			right: Animation::new_unique(player_animation_path("Animation6"), PlayMode::Repeat),
-			left: Animation::new_unique(player_animation_path("Animation7"), PlayMode::Repeat),
+			right: Animation::new(player_animation_path("Animation6"), PlayMode::Repeat),
+			left: Animation::new(player_animation_path("Animation7"), PlayMode::Repeat),
 		}
 	}
 }
