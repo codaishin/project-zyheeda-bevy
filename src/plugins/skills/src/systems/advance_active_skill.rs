@@ -7,9 +7,11 @@ use animations::traits::{InsertAnimation, MarkObsolete, Priority};
 use behaviors::components::{Face, OverrideFace};
 use bevy::{
 	ecs::{
+		change_detection::DetectChanges,
 		component::Component,
 		entity::Entity,
 		system::{Commands, EntityCommands, Query, Res},
+		world::Mut,
 	},
 	time::Time,
 };
@@ -34,14 +36,13 @@ pub(crate) fn advance_active_skill<
 ) {
 	let delta = time.delta();
 
-	for (entity, mut dequeue, mut animation_dispatch) in &mut agents {
-		let Some(agent) = &mut commands.get_entity(entity) else {
+	for (entity, mut dequeue, animation_dispatch) in &mut agents {
+		let Some(agent) = commands.get_entity(entity) else {
 			continue;
 		};
-		let dequeue = dequeue.as_mut();
-		let dispatch = animation_dispatch.as_mut();
+		let dequeue = &mut dequeue;
 
-		if get_and_advance_skill(dequeue, agent, dispatch, delta) == Advancement::InProcess {
+		if get_and_advance(dequeue, agent, animation_dispatch, delta) == Advancement::InProcess {
 			continue;
 		}
 
@@ -49,28 +50,31 @@ pub(crate) fn advance_active_skill<
 	}
 }
 
-fn get_and_advance_skill<
+fn get_and_advance<
 	TAnimation: Send + Sync + 'static,
-	TGetSkill: GetActiveSkill<TAnimation, SkillState> + Sync + Send + 'static,
+	TGetSkill: Component + GetActiveSkill<TAnimation, SkillState> + Sync + Send + 'static,
 	TAnimationDispatch: InsertAnimation<TAnimation> + MarkObsolete<TAnimation>,
 >(
-	dequeue: &mut TGetSkill,
-	agent: &mut EntityCommands,
-	animation_dispatch: &mut TAnimationDispatch,
+	dequeue: &mut Mut<TGetSkill>,
+	agent: EntityCommands,
+	animation_dispatch: Mut<TAnimationDispatch>,
 	delta: Duration,
 ) -> Advancement {
-	match &mut dequeue.get_active() {
-		None => remove_skill_side_effects(agent, animation_dispatch),
-		Some(skill) => advance_skill(skill, agent, animation_dispatch, delta),
+	let changed = dequeue.is_changed();
+
+	match dequeue.get_active() {
+		Some(skill) => advance(skill, agent, animation_dispatch, delta),
+		None if changed => remove_side_effects(agent, animation_dispatch),
+		_ => Advancement::InProcess,
 	}
 }
 
-fn remove_skill_side_effects<
+fn remove_side_effects<
 	TAnimation: Send + Sync + 'static,
 	TAnimationDispatch: MarkObsolete<TAnimation>,
 >(
-	agent: &mut EntityCommands,
-	animation_dispatch: &mut TAnimationDispatch,
+	mut agent: EntityCommands,
+	mut animation_dispatch: Mut<TAnimationDispatch>,
 ) -> Advancement {
 	agent.remove::<OverrideFace>();
 	animation_dispatch.mark_obsolete(Priority::High);
@@ -78,15 +82,18 @@ fn remove_skill_side_effects<
 	Advancement::InProcess
 }
 
-fn advance_skill<
+fn advance<
 	TAnimation: Send + Sync + 'static,
 	TAnimationDispatch: InsertAnimation<TAnimation> + MarkObsolete<TAnimation>,
 >(
-	skill: &mut (impl Execution + GetAnimation<TAnimation> + GetSlots + StateUpdate<SkillState>),
-	agent: &mut EntityCommands,
-	animation_dispatch: &mut TAnimationDispatch,
+	mut skill: (impl Execution + GetAnimation<TAnimation> + GetSlots + StateUpdate<SkillState>),
+	mut agent: EntityCommands,
+	mut animation_dispatch: Mut<TAnimationDispatch>,
 	delta: Duration,
 ) -> Advancement {
+	let skill = &mut skill;
+	let agent = &mut agent;
+	let animation_dispatch = animation_dispatch.as_mut();
 	let states = skill.update_state(delta);
 
 	if states.contains(&StateMeta::First) {
@@ -529,6 +536,28 @@ mod tests {
 			dispatch,
 		));
 
+		app.update();
+	}
+
+	#[test]
+	fn remove_animation_when_no_active_skill_only_once() {
+		let (mut app, agent) = setup();
+		let mut dispatch = _AnimationDispatch::default();
+		dispatch.mock.expect_insert().return_const(());
+		dispatch
+			.mock
+			.expect_mark_obsolete()
+			.times(1)
+			.with(eq(Priority::High))
+			.return_const(());
+
+		app.world.entity_mut(agent).insert((
+			_Dequeue { active: None },
+			Transform::default(),
+			dispatch,
+		));
+
+		app.update();
 		app.update();
 	}
 
