@@ -17,12 +17,12 @@ use common::traits::state_duration::{StateMeta, StateUpdate};
 use std::time::Duration;
 
 #[derive(PartialEq)]
-enum State {
-	Done,
-	Busy,
+enum Advancement {
+	Finished,
+	InProcess,
 }
 
-pub(crate) fn update_active_skill<
+pub(crate) fn advance_active_skill<
 	TGetSkill: GetActiveSkill<TAnimation, SkillState> + Component,
 	TAnimation: Send + Sync + 'static,
 	TAnimationDispatch: Component + InsertAnimation<TAnimation> + MarkObsolete<TAnimation>,
@@ -41,7 +41,7 @@ pub(crate) fn update_active_skill<
 		let dequeue = dequeue.as_mut();
 		let animation_dispatch = animation_dispatch.as_mut();
 
-		if advance_skill(agent, dequeue, animation_dispatch, delta) == State::Busy {
+		if advance_skill(agent, dequeue, animation_dispatch, delta) == Advancement::InProcess {
 			continue;
 		}
 
@@ -58,9 +58,9 @@ fn advance_skill<
 	dequeue: &mut TGetSkill,
 	animation_dispatch: &mut TAnimationDispatch,
 	delta: Duration,
-) -> State {
+) -> Advancement {
 	let Some(skill) = &mut dequeue.get_active() else {
-		return State::Busy;
+		return Advancement::InProcess;
 	};
 
 	let states = skill.update_state(delta);
@@ -84,10 +84,10 @@ fn advance_skill<
 		agent.remove::<OverrideFace>();
 		insert_skill_execution_stop(agent, skill);
 		animation_dispatch.mark_obsolete(Priority::High);
-		return State::Done;
+		return Advancement::Finished;
 	}
 
-	State::Busy
+	Advancement::InProcess
 }
 
 fn begin_animation<TAnimation, TAnimationDispatch: InsertAnimation<TAnimation>>(
@@ -249,7 +249,7 @@ mod tests {
 		app.update();
 		app.add_systems(
 			Update,
-			update_active_skill::<_Dequeue, _Animation, _AnimationDispatch, Real>,
+			advance_active_skill::<_Dequeue, _Animation, _AnimationDispatch, Real>,
 		);
 
 		(app, agent)

@@ -47,6 +47,7 @@ use std::{
 	time::Duration,
 };
 use systems::{
+	advance_active_skill::advance_active_skill,
 	apply_skill_behavior::apply_skill_behavior,
 	enqueue::enqueue,
 	equip::equip_item,
@@ -58,7 +59,6 @@ use systems::{
 		trigger_primed::trigger_primed_mouse_context,
 	},
 	slots::add_item_slots,
-	update_active_skill::update_active_skill,
 	update_skill_combos::update_skill_combos,
 };
 use traits::{GetExecution, GetSkillAnimation};
@@ -77,7 +77,7 @@ impl Plugin for SkillsPlugin {
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
 						.pipe(enqueue::<Slots, Skill, Queue, Skill<Queued>>),
 					update_skill_combos::<Combos, Queue>,
-					update_active_skill::<Queue, Animation, AnimationDispatch, Virtual>,
+					advance_active_skill::<Queue, Animation, AnimationDispatch, Virtual>,
 					apply_skill_behavior,
 					flush::<Queue>,
 				)
