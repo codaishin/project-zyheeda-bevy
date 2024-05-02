@@ -28,7 +28,7 @@ pub trait InsertAnimation<TAnimation> {
 	fn insert(&mut self, animation: TAnimation, priority: Priority);
 }
 
-pub trait MarkObsolete<TAnimation> {
+pub trait MarkObsolete {
 	fn mark_obsolete(&mut self, priority: Priority);
 }
 

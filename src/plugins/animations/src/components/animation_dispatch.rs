@@ -75,7 +75,7 @@ impl<TAnimation: AnimationChainUpdate + Debug> InsertAnimation<TAnimation>
 	}
 }
 
-impl<TAnimation> MarkObsolete<TAnimation> for AnimationDispatch<TAnimation> {
+impl<TAnimation> MarkObsolete for AnimationDispatch<TAnimation> {
 	fn mark_obsolete(&mut self, priority: Priority) {
 		let slot = self.slot(priority);
 
