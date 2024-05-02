@@ -78,12 +78,6 @@ pub enum ItemType {
 }
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) enum SlotVisibility {
-	Inherited(Vec<SlotKey>),
-	Hidden(Vec<SlotKey>),
-}
-
-#[derive(Component, Debug, PartialEq)]
 pub(crate) enum SkillExecution {
 	Start(StartBehaviorFn),
 	Stop(StopBehaviorFn),

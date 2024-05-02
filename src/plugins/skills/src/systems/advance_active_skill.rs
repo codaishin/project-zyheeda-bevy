@@ -1,5 +1,5 @@
 use crate::{
-	components::{SkillExecution, SlotVisibility},
+	components::SkillExecution,
 	skill::SkillState,
 	traits::{Execution, GetActiveSkill, GetAnimation, GetSlots},
 };
@@ -95,7 +95,6 @@ fn advance<
 
 	if states.contains(&StateMeta::First) {
 		agent.try_insert(OverrideFace(Face::Cursor));
-		agent.try_insert(SlotVisibility::Inherited(skill.slots()));
 		begin_animation(skill, animation_dispatch);
 	}
 
@@ -108,7 +107,6 @@ fn advance<
 	}
 
 	if states.contains(&StateMeta::Leaving(SkillState::AfterCast)) {
-		agent.try_insert(SlotVisibility::Hidden(skill.slots()));
 		insert_skill_execution_stop(agent, skill);
 		return Advancement::Finished;
 	}
@@ -144,7 +142,7 @@ fn insert_skill_execution_stop<TSkill: Execution>(agent: &mut EntityCommands, sk
 mod tests {
 	use super::*;
 	use crate::{
-		components::{SkillExecution, SlotKey, SlotVisibility},
+		components::{SkillExecution, SlotKey},
 		skill::{Spawner, StartBehaviorFn, StopBehaviorFn, Target},
 		traits::{Execution, GetAnimation},
 	};
@@ -155,10 +153,7 @@ mod tests {
 		prelude::{App, Transform, Update},
 		time::{Real, Time},
 	};
-	use common::{
-		components::Side,
-		test_tools::utils::{SingleThreadedApp, TickTime},
-	};
+	use common::test_tools::utils::{SingleThreadedApp, TickTime};
 	use mockall::{mock, predicate::eq};
 	use std::{collections::HashSet, time::Duration};
 
@@ -364,129 +359,6 @@ mod tests {
 		));
 
 		app.update();
-	}
-
-	#[test]
-	fn set_slot_visible_on_first() {
-		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
-			_Dequeue {
-				active: Some(Box::new(|| {
-					let mut skill = mock_skill_without_default_setup_for([MockOption::Slot]);
-					skill
-						.expect_update_state()
-						.return_const(HashSet::<StateMeta<SkillState>>::from([StateMeta::First]));
-					skill
-						.expect_slots()
-						.return_const(vec![SlotKey::Hand(Side::Main)]);
-					skill
-				})),
-			},
-			Transform::default(),
-		));
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			Some(&SlotVisibility::Inherited(vec![SlotKey::Hand(Side::Main)])),
-			agent.get::<SlotVisibility>()
-		);
-	}
-
-	#[test]
-	fn set_multiple_slots_visible_on_first() {
-		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
-			_Dequeue {
-				active: Some(Box::new(|| {
-					let mut skill = mock_skill_without_default_setup_for([MockOption::Slot]);
-					skill
-						.expect_update_state()
-						.return_const(HashSet::<StateMeta<SkillState>>::from([StateMeta::First]));
-					skill
-						.expect_slots()
-						.return_const(vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]);
-					skill
-				})),
-			},
-			Transform::default(),
-		));
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			Some(&SlotVisibility::Inherited(vec![
-				SlotKey::Hand(Side::Main),
-				SlotKey::Hand(Side::Off)
-			])),
-			agent.get::<SlotVisibility>()
-		);
-	}
-
-	#[test]
-	fn hide_slot_when_done() {
-		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
-			_Dequeue {
-				active: Some(Box::new(|| {
-					let mut skill = mock_skill_without_default_setup_for([MockOption::Slot]);
-					skill.expect_update_state().return_const(
-						HashSet::<StateMeta<SkillState>>::from([StateMeta::Leaving(
-							SkillState::AfterCast,
-						)]),
-					);
-					skill
-						.expect_slots()
-						.return_const(vec![SlotKey::Hand(Side::Off)]);
-					skill
-				})),
-			},
-			Transform::default(),
-		));
-
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			Some(&SlotVisibility::Hidden(vec![SlotKey::Hand(Side::Off)])),
-			agent.get::<SlotVisibility>()
-		);
-	}
-
-	#[test]
-	fn hide_multiple_slots_when_done() {
-		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
-			_Dequeue {
-				active: Some(Box::new(|| {
-					let mut skill = mock_skill_without_default_setup_for([MockOption::Slot]);
-					skill.expect_update_state().return_const(
-						HashSet::<StateMeta<SkillState>>::from([StateMeta::Leaving(
-							SkillState::AfterCast,
-						)]),
-					);
-					skill
-						.expect_slots()
-						.return_const(vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]);
-					skill
-				})),
-			},
-			Transform::default(),
-		));
-		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			Some(&SlotVisibility::Hidden(vec![
-				SlotKey::Hand(Side::Main),
-				SlotKey::Hand(Side::Off)
-			])),
-			agent.get::<SlotVisibility>()
-		);
 	}
 
 	#[test]
