@@ -83,7 +83,6 @@ fn advance_skill<
 		agent.try_insert(SlotVisibility::Hidden(skill.slots()));
 		agent.remove::<OverrideFace>();
 		insert_skill_execution_stop(agent, skill);
-		animation_dispatch.mark_obsolete(Priority::High);
 		return Advancement::Finished;
 	}
 
@@ -461,75 +460,6 @@ mod tests {
 			])),
 			agent.get::<SlotVisibility>()
 		);
-	}
-
-	#[test]
-	fn remove_animation_when_leaving_after_cast() {
-		let (mut app, agent) = setup();
-		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_insert().return_const(());
-		dispatch
-			.mock
-			.expect_mark_obsolete()
-			.times(1)
-			.with(eq(Priority::High))
-			.return_const(());
-
-		app.world.entity_mut(agent).insert((
-			_Dequeue {
-				active: Some(Box::new(move || {
-					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
-					skill.expect_update_state().return_const(
-						HashSet::<StateMeta<SkillState>>::from([StateMeta::Leaving(
-							SkillState::AfterCast,
-						)]),
-					);
-					skill.expect_animate().return_const(_Animation(42));
-					skill
-				})),
-			},
-			Transform::default(),
-			dispatch,
-		));
-
-		app.update();
-	}
-
-	#[test]
-	fn do_not_remove_animation_when_not_leaving_after_cast() {
-		let (mut app, agent) = setup();
-		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_insert().return_const(());
-		dispatch
-			.mock
-			.expect_mark_obsolete()
-			.never()
-			.return_const(());
-
-		app.world.entity_mut(agent).insert((
-			_Dequeue {
-				active: Some(Box::new(move || {
-					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
-					skill.expect_update_state().return_const(
-						HashSet::<StateMeta<SkillState>>::from([
-							StateMeta::First,
-							StateMeta::In(SkillState::PreCast),
-							StateMeta::Leaving(SkillState::PreCast),
-							StateMeta::In(SkillState::Aim),
-							StateMeta::Leaving(SkillState::Aim),
-							StateMeta::In(SkillState::Active),
-							StateMeta::Leaving(SkillState::Active),
-						]),
-					);
-					skill.expect_animate().return_const(_Animation(42));
-					skill
-				})),
-			},
-			Transform::default(),
-			dispatch,
-		));
-
-		app.update();
 	}
 
 	#[test]
