@@ -59,12 +59,23 @@ fn get_and_advance_skill<
 	animation_dispatch: &mut TAnimationDispatch,
 	delta: Duration,
 ) -> Advancement {
-	let Some(skill) = &mut dequeue.get_active() else {
-		animation_dispatch.mark_obsolete(Priority::High);
-		return Advancement::InProcess;
-	};
+	match &mut dequeue.get_active() {
+		None => remove_skill_side_effects(agent, animation_dispatch),
+		Some(skill) => advance_skill(skill, agent, animation_dispatch, delta),
+	}
+}
 
-	advance_skill(skill, agent, animation_dispatch, delta)
+fn remove_skill_side_effects<
+	TAnimation: Send + Sync + 'static,
+	TAnimationDispatch: MarkObsolete<TAnimation>,
+>(
+	agent: &mut EntityCommands,
+	animation_dispatch: &mut TAnimationDispatch,
+) -> Advancement {
+	agent.remove::<OverrideFace>();
+	animation_dispatch.mark_obsolete(Priority::High);
+
+	Advancement::InProcess
 }
 
 fn advance_skill<
@@ -94,7 +105,6 @@ fn advance_skill<
 
 	if states.contains(&StateMeta::Leaving(SkillState::AfterCast)) {
 		agent.try_insert(SlotVisibility::Hidden(skill.slots()));
-		agent.remove::<OverrideFace>();
 		insert_skill_execution_stop(agent, skill);
 		return Advancement::Finished;
 	}
@@ -761,20 +771,10 @@ mod tests {
 	}
 
 	#[test]
-	fn no_facing_override_when_skill_ended() {
+	fn no_facing_override_when_no_skill() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
-			_Dequeue {
-				active: Some(Box::new(|| {
-					let mut skill = mock_skill_without_default_setup_for([]);
-					skill.expect_update_state().return_const(
-						HashSet::<StateMeta<SkillState>>::from([StateMeta::Leaving(
-							SkillState::AfterCast,
-						)]),
-					);
-					skill
-				})),
-			},
+			_Dequeue { active: None },
 			Transform::from_xyz(-1., -2., -3.),
 			OverrideFace(Face::Cursor),
 		));
