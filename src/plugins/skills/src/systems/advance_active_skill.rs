@@ -27,7 +27,7 @@ enum Advancement {
 pub(crate) fn advance_active_skill<
 	TGetSkill: GetActiveSkill<TAnimation, SkillState> + Component,
 	TAnimation: Send + Sync + 'static,
-	TAnimationDispatch: Component + InsertAnimation<TAnimation> + MarkObsolete<TAnimation>,
+	TAnimationDispatch: Component + InsertAnimation<TAnimation> + MarkObsolete,
 	TTime: Send + Sync + Default + 'static,
 >(
 	time: Res<Time<TTime>>,
@@ -53,7 +53,7 @@ pub(crate) fn advance_active_skill<
 fn get_and_advance<
 	TAnimation: Send + Sync + 'static,
 	TGetSkill: Component + GetActiveSkill<TAnimation, SkillState> + Sync + Send + 'static,
-	TAnimationDispatch: InsertAnimation<TAnimation> + MarkObsolete<TAnimation>,
+	TAnimationDispatch: InsertAnimation<TAnimation> + MarkObsolete,
 >(
 	dequeue: &mut Mut<TGetSkill>,
 	agent: EntityCommands,
@@ -69,10 +69,7 @@ fn get_and_advance<
 	}
 }
 
-fn remove_side_effects<
-	TAnimation: Send + Sync + 'static,
-	TAnimationDispatch: MarkObsolete<TAnimation>,
->(
+fn remove_side_effects<TAnimationDispatch: MarkObsolete>(
 	mut agent: EntityCommands,
 	mut animation_dispatch: Mut<TAnimationDispatch>,
 ) -> Advancement {
@@ -84,7 +81,7 @@ fn remove_side_effects<
 
 fn advance<
 	TAnimation: Send + Sync + 'static,
-	TAnimationDispatch: InsertAnimation<TAnimation> + MarkObsolete<TAnimation>,
+	TAnimationDispatch: InsertAnimation<TAnimation> + MarkObsolete,
 >(
 	mut skill: (impl Execution + GetAnimation<TAnimation> + GetSlots + StateUpdate<SkillState>),
 	mut agent: EntityCommands,
@@ -248,7 +245,7 @@ mod tests {
 		}
 	}
 
-	impl MarkObsolete<_Animation> for _AnimationDispatch {
+	impl MarkObsolete for _AnimationDispatch {
 		fn mark_obsolete(&mut self, priority: Priority) {
 			self.mock.mark_obsolete(priority)
 		}
@@ -259,7 +256,7 @@ mod tests {
 		impl InsertAnimation<_Animation> for _AnimationDispatch {
 			fn insert(&mut self, animation: _Animation, priority: Priority);
 		}
-		impl MarkObsolete<_Animation> for _AnimationDispatch {
+		impl MarkObsolete for _AnimationDispatch {
 			fn mark_obsolete(&mut self, priority: Priority);
 		}
 	}

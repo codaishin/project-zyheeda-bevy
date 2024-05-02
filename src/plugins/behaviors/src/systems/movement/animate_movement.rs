@@ -23,7 +23,7 @@ pub(crate) fn animate_movement<
 	TMovement: Component,
 	TAnimation: Clone + Sync + Send + 'static,
 	TAnimations: Component + Get<MovementMode, TAnimation>,
-	TAnimationDispatch: Component + InsertAnimation<TAnimation> + MarkObsolete<TAnimation>,
+	TAnimationDispatch: Component + InsertAnimation<TAnimation> + MarkObsolete,
 >(
 	mut agents: Query<Components<TMovementConfig, TAnimations, TAnimationDispatch, TMovement>>,
 	mut agents_without_movement: Query<&mut TAnimationDispatch, Without<TMovement>>,
@@ -58,11 +58,7 @@ fn insert_animation<
 	dispatch.insert(animation.clone(), Priority::Middle);
 }
 
-fn remove_animation<
-	TMovement: Component,
-	TAnimation,
-	TAnimationDispatch: Component + MarkObsolete<TAnimation>,
->(
+fn remove_animation<TMovement: Component, TAnimationDispatch: Component + MarkObsolete>(
 	entity: Entity,
 	agent_without_movement: &mut Query<&mut TAnimationDispatch, Without<TMovement>>,
 ) {
@@ -122,7 +118,7 @@ mod tests {
 		}
 	}
 
-	impl MarkObsolete<_Animation> for _AnimationDispatch {
+	impl MarkObsolete for _AnimationDispatch {
 		fn mark_obsolete(&mut self, priority: Priority) {
 			self.mock.mark_obsolete(priority)
 		}
@@ -133,7 +129,7 @@ mod tests {
 		impl InsertAnimation<_Animation> for _AnimationDispatch {
 			fn insert(&mut self, animation: _Animation, priority: Priority);
 		}
-		impl MarkObsolete<_Animation> for _AnimationDispatch {
+		impl MarkObsolete for _AnimationDispatch {
 			fn mark_obsolete(&mut self, priority: Priority);
 		}
 	}
