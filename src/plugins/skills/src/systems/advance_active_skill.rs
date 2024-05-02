@@ -39,9 +39,9 @@ pub(crate) fn advance_active_skill<
 			continue;
 		};
 		let dequeue = dequeue.as_mut();
-		let animation_dispatch = animation_dispatch.as_mut();
+		let dispatch = animation_dispatch.as_mut();
 
-		if advance_skill(agent, dequeue, animation_dispatch, delta) == Advancement::InProcess {
+		if get_and_advance_skill(dequeue, agent, dispatch, delta) == Advancement::InProcess {
 			continue;
 		}
 
@@ -49,20 +49,33 @@ pub(crate) fn advance_active_skill<
 	}
 }
 
-fn advance_skill<
-	TGetSkill: GetActiveSkill<TAnimation, SkillState> + Sync + Send + 'static,
+fn get_and_advance_skill<
 	TAnimation: Send + Sync + 'static,
-	TAnimationDispatch: Component + InsertAnimation<TAnimation> + MarkObsolete<TAnimation>,
+	TGetSkill: GetActiveSkill<TAnimation, SkillState> + Sync + Send + 'static,
+	TAnimationDispatch: InsertAnimation<TAnimation> + MarkObsolete<TAnimation>,
 >(
-	agent: &mut EntityCommands,
 	dequeue: &mut TGetSkill,
+	agent: &mut EntityCommands,
 	animation_dispatch: &mut TAnimationDispatch,
 	delta: Duration,
 ) -> Advancement {
 	let Some(skill) = &mut dequeue.get_active() else {
+		animation_dispatch.mark_obsolete(Priority::High);
 		return Advancement::InProcess;
 	};
 
+	advance_skill(skill, agent, animation_dispatch, delta)
+}
+
+fn advance_skill<
+	TAnimation: Send + Sync + 'static,
+	TAnimationDispatch: InsertAnimation<TAnimation> + MarkObsolete<TAnimation>,
+>(
+	skill: &mut (impl Execution + GetAnimation<TAnimation> + GetSlots + StateUpdate<SkillState>),
+	agent: &mut EntityCommands,
+	animation_dispatch: &mut TAnimationDispatch,
+	delta: Duration,
+) -> Advancement {
 	let states = skill.update_state(delta);
 
 	if states.contains(&StateMeta::First) {
@@ -460,6 +473,53 @@ mod tests {
 			])),
 			agent.get::<SlotVisibility>()
 		);
+	}
+
+	#[test]
+	fn remove_animation_when_no_active_skill() {
+		let (mut app, agent) = setup();
+		let mut dispatch = _AnimationDispatch::default();
+		dispatch.mock.expect_insert().return_const(());
+		dispatch
+			.mock
+			.expect_mark_obsolete()
+			.times(1)
+			.with(eq(Priority::High))
+			.return_const(());
+
+		app.world.entity_mut(agent).insert((
+			_Dequeue { active: None },
+			Transform::default(),
+			dispatch,
+		));
+
+		app.update();
+	}
+
+	#[test]
+	fn do_not_remove_animation_when_some_active_skill() {
+		let (mut app, agent) = setup();
+		let mut dispatch = _AnimationDispatch::default();
+		dispatch.mock.expect_insert().return_const(());
+		dispatch
+			.mock
+			.expect_mark_obsolete()
+			.never()
+			.return_const(());
+
+		app.world.entity_mut(agent).insert((
+			_Dequeue {
+				active: Some(Box::new(|| {
+					let mut skill = mock_skill_without_default_setup_for([]);
+					skill.expect_update_state().return_const(HashSet::default());
+					skill
+				})),
+			},
+			Transform::default(),
+			dispatch,
+		));
+
+		app.update();
 	}
 
 	#[test]
