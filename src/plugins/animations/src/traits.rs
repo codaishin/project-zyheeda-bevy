@@ -18,17 +18,17 @@ pub trait HighestPriorityAnimation<TAnimation> {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Priority {
+pub(crate) enum Priority {
 	High,
 	Middle,
 	Low,
 }
 
-pub trait InsertAnimation<TAnimation> {
+pub(crate) trait InsertAnimation<TAnimation> {
 	fn insert(&mut self, animation: TAnimation, priority: Priority);
 }
 
-pub trait MarkObsolete {
+pub(crate) trait MarkObsolete {
 	fn mark_obsolete(&mut self, priority: Priority);
 }
 

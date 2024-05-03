@@ -1,5 +1,5 @@
 use crate::{components::MovementMode, traits::MovementData};
-use animations::traits::{InsertAnimation, MarkObsolete, Priority};
+use animations::traits::{MovementLayer, StartAnimation, StopAnimation};
 use bevy::ecs::{
 	change_detection::DetectChanges,
 	component::Component,
@@ -23,7 +23,7 @@ pub(crate) fn animate_movement<
 	TMovement: Component,
 	TAnimation: Clone + Sync + Send + 'static,
 	TAnimations: Component + Get<MovementMode, TAnimation>,
-	TAnimationDispatch: Component + InsertAnimation<TAnimation> + MarkObsolete,
+	TAnimationDispatch: Component + StartAnimation<MovementLayer, TAnimation> + StopAnimation<MovementLayer>,
 >(
 	mut agents: Query<Components<TMovementConfig, TAnimations, TAnimationDispatch, TMovement>>,
 	mut agents_without_movement: Query<&mut TAnimationDispatch, Without<TMovement>>,
@@ -43,7 +43,7 @@ fn insert_animation<
 	TMovement,
 	TAnimation: Clone,
 	TAnimations: Get<MovementMode, TAnimation>,
-	TAnimationDispatch: InsertAnimation<TAnimation>,
+	TAnimationDispatch: StartAnimation<MovementLayer, TAnimation>,
 >(
 	config: Ref<TMovementConfig>,
 	animations: &TAnimations,
@@ -55,24 +55,26 @@ fn insert_animation<
 	}
 	let (.., mode) = config.get_movement_data();
 	let animation = animations.get(&mode);
-	dispatch.insert(animation.clone(), Priority::Middle);
+	dispatch.start_animation(animation.clone());
 }
 
-fn remove_animation<TMovement: Component, TAnimationDispatch: Component + MarkObsolete>(
+fn remove_animation<
+	TMovement: Component,
+	TAnimationDispatch: Component + StopAnimation<MovementLayer>,
+>(
 	entity: Entity,
 	agent_without_movement: &mut Query<&mut TAnimationDispatch, Without<TMovement>>,
 ) {
 	let Ok(mut dispatch) = agent_without_movement.get_mut(entity) else {
 		return;
 	};
-	dispatch.mark_obsolete(Priority::Middle);
+	dispatch.stop_animation();
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use crate::components::MovementMode;
-	use animations::traits::Priority;
 	use bevy::app::{App, Update};
 	use common::{test_tools::utils::SingleThreadedApp, tools::UnitsPerSecond};
 	use mockall::{automock, mock, predicate::eq};
@@ -112,25 +114,25 @@ mod tests {
 		mock: Mock_AnimationDispatch,
 	}
 
-	impl InsertAnimation<_Animation> for _AnimationDispatch {
-		fn insert(&mut self, animation: _Animation, priority: Priority) {
-			self.mock.insert(animation, priority)
+	impl StartAnimation<MovementLayer, _Animation> for _AnimationDispatch {
+		fn start_animation(&mut self, animation: _Animation) {
+			self.mock.start_animation(animation)
 		}
 	}
 
-	impl MarkObsolete for _AnimationDispatch {
-		fn mark_obsolete(&mut self, priority: Priority) {
-			self.mock.mark_obsolete(priority)
+	impl StopAnimation<MovementLayer> for _AnimationDispatch {
+		fn stop_animation(&mut self) {
+			self.mock.stop_animation()
 		}
 	}
 
 	mock! {
 		_AnimationDispatch {}
-		impl InsertAnimation<_Animation> for _AnimationDispatch {
-			fn insert(&mut self, animation: _Animation, priority: Priority);
+		impl StartAnimation<MovementLayer, _Animation> for _AnimationDispatch {
+			fn start_animation(&mut self, animation: _Animation);
 		}
-		impl MarkObsolete for _AnimationDispatch {
-			fn mark_obsolete(&mut self, priority: Priority);
+		impl StopAnimation<MovementLayer> for _AnimationDispatch {
+			fn stop_animation(&mut self);
 		}
 	}
 
@@ -174,9 +176,9 @@ mod tests {
 
 		dispatch
 			.mock
-			.expect_insert()
+			.expect_start_animation()
 			.times(1)
-			.with(eq(_Animation("fast")), eq(Priority::Middle))
+			.with(eq(_Animation("fast")))
 			.return_const(());
 
 		app.world
@@ -208,9 +210,9 @@ mod tests {
 
 		dispatch
 			.mock
-			.expect_insert()
+			.expect_start_animation()
 			.times(1)
-			.with(eq(_Animation("slow")), eq(Priority::Middle))
+			.with(eq(_Animation("slow")))
 			.return_const(());
 
 		app.world
@@ -231,7 +233,11 @@ mod tests {
 			.return_const((UnitsPerSecond::default(), MovementMode::default()));
 		animations.mock.expect_get().return_const(_Animation(""));
 
-		dispatch.mock.expect_insert().never().return_const(());
+		dispatch
+			.mock
+			.expect_start_animation()
+			.never()
+			.return_const(());
 
 		app.world.spawn((config, animations, dispatch));
 		app.update();
@@ -259,12 +265,11 @@ mod tests {
 			.with(eq(MovementMode::Slow))
 			.return_const(_Animation("slow"));
 
-		dispatch.mock.expect_insert().return_const(());
+		dispatch.mock.expect_start_animation().return_const(());
 		dispatch
 			.mock
-			.expect_mark_obsolete()
+			.expect_stop_animation()
 			.times(1)
-			.with(eq(Priority::Middle))
 			.return_const(());
 
 		let agent = app
@@ -295,9 +300,9 @@ mod tests {
 
 		dispatch
 			.mock
-			.expect_insert()
+			.expect_start_animation()
 			.times(1)
-			.with(eq(_Animation("my animation")), eq(Priority::Middle))
+			.with(eq(_Animation("my animation")))
 			.return_const(());
 
 		app.world
@@ -324,9 +329,9 @@ mod tests {
 
 		dispatch
 			.mock
-			.expect_insert()
+			.expect_start_animation()
 			.times(1)
-			.with(eq(_Animation("my animation")), eq(Priority::Middle))
+			.with(eq(_Animation("my animation")))
 			.return_const(());
 
 		let agent = app
@@ -361,9 +366,9 @@ mod tests {
 
 		dispatch
 			.mock
-			.expect_insert()
+			.expect_start_animation()
 			.times(2)
-			.with(eq(_Animation("my animation")), eq(Priority::Middle))
+			.with(eq(_Animation("my animation")))
 			.return_const(());
 
 		let agent = app
