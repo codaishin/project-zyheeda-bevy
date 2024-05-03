@@ -1,6 +1,6 @@
 use super::{SlotKey, Slots};
 use crate::{
-	skill::Skill,
+	skills::Skill,
 	traits::{Flush, NextCombo},
 };
 use bevy::{ecs::component::Component, prelude::default};

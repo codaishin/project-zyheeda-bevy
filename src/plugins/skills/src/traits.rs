@@ -4,13 +4,12 @@ pub(crate) mod mouse_hover;
 pub(crate) mod projectile;
 pub(crate) mod skill_state;
 pub(crate) mod state;
-pub(crate) mod sword;
 pub(crate) mod tuple_slot_key_item;
 
 use crate::{
 	components::{slots::Slots, SlotKey},
 	resources::SlotMap,
-	skill::{Skill, SkillAnimation, SkillExecution, StartBehaviorFn, StopBehaviorFn},
+	skills::{Skill, SkillAnimation, SkillExecution, StartBehaviorFn, StopBehaviorFn},
 };
 use animations::animation::Animation;
 use bevy::ecs::{component::Component, system::Query};
@@ -267,7 +266,7 @@ mod test_animation_chain_skill_animation {
 #[cfg(test)]
 pub(crate) mod test_tools {
 	use super::*;
-	use crate::skill::{Spawner, Target};
+	use crate::skills::{Spawner, Target};
 	use bevy::{ecs::system::Commands, prelude::Entity, transform::components::Transform};
 
 	pub fn run_lazy(

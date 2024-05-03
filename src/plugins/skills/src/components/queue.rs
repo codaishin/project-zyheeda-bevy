@@ -1,6 +1,6 @@
 use super::SlotKey;
 use crate::{
-	skill::{Activation, Queued, Skill, SkillState, StartBehaviorFn, StopBehaviorFn},
+	skills::{Activation, Queued, Skill, SkillState, StartBehaviorFn, StopBehaviorFn},
 	traits::{
 		Enqueue,
 		Execution,
@@ -581,11 +581,11 @@ mod test_queue_active_skill {
 	use super::*;
 	use crate::{
 		components::SlotKey,
-		skill::{Cast, ShootHandGun, SkillExecution, Spawner, Target},
-		traits::GetSkillAnimation,
+		skills::{Cast, SkillAnimation, SkillExecution, Spawner, Target},
 	};
+	use animations::animation::PlayMode;
 	use bevy::{ecs::system::EntityCommands, prelude::default, transform::components::Transform};
-	use common::components::Side;
+	use common::{components::Side, traits::load_asset::Path};
 
 	#[test]
 	fn get_phasing_times_waiting() {
@@ -878,8 +878,11 @@ mod test_queue_active_skill {
 	}
 
 	#[test]
-	fn get_shoot_animations() {
-		let animation = ShootHandGun::animation();
+	fn get_animations() {
+		let animation = SkillAnimation {
+			left: Animation::new(Path::from("path/left"), PlayMode::Repeat),
+			right: Animation::new(Path::from("path/right"), PlayMode::Replay),
+		};
 
 		let actives = [
 			ActiveSkill {

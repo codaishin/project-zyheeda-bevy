@@ -1,5 +1,5 @@
 use super::GetExecution;
-use crate::skill::{SkillExecution, Spawner, Target};
+use crate::skills::{SkillExecution, Spawner, Target};
 use behaviors::components::Projectile;
 use bevy::{ecs::system::EntityCommands, prelude::SpatialBundle, transform::components::Transform};
 

@@ -170,9 +170,8 @@ fn scene_handle_error(item: Option<&Item>, slot: Entity) -> Error {
 
 #[cfg(test)]
 mod tests {
-	use crate::skill::{Cast, Skill};
-
 	use super::*;
+	use crate::skills::{Cast, Skill};
 	use bevy::{
 		asset::AssetId,
 		ecs::system::{In, IntoSystem},
