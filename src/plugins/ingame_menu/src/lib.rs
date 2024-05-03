@@ -25,8 +25,10 @@ use self::{
 use bevy::prelude::*;
 use common::{
 	components::Player,
+	resources::Shared,
 	states::{GameRunning, Off, On},
 	systems::log::log_many,
+	traits::load_asset::Path,
 };
 use components::{inventory_panel::InventoryPanel, quickbar_panel::QuickbarPanel};
 use skills::components::{inventory::Inventory, queue::Queue, slots::Slots, InventoryKey, SlotKey};
@@ -34,12 +36,14 @@ use systems::items::swap::{
 	equipped_items::swap_equipped_items,
 	inventory_items::swap_inventory_items,
 };
+use tools::Icon;
 
 pub struct IngameMenuPlugin;
 
 impl Plugin for IngameMenuPlugin {
 	fn build(&self, app: &mut App) {
 		app.init_state::<MenuState>()
+			.init_resource::<Shared<Path, Icon>>()
 			.add_systems(Update, toggle_state::<MenuState, Inventory>)
 			.add_systems(
 				OnEnter(MenuState::Inventory),
@@ -73,7 +77,7 @@ impl Plugin for IngameMenuPlugin {
 			.add_systems(
 				Update,
 				(
-					quickbar::<Queue>,
+					quickbar::<Queue, AssetServer>,
 					update_label_text::<QuickbarPanel>,
 					panel_colors::<QuickbarPanel>,
 					panel_activity_colors_override::<Queue, QuickbarPanel>,

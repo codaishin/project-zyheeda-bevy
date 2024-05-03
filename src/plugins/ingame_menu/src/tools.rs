@@ -1,4 +1,4 @@
-use bevy::ecs::schedule::States;
+use bevy::{asset::Handle, ecs::schedule::States, render::texture::Image};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PanelState {
@@ -12,3 +12,6 @@ pub enum MenuState {
 	None,
 	Inventory,
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Icon(pub Handle<Image>);

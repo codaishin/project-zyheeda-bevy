@@ -10,7 +10,7 @@ use bevy::{
 	math::{primitives::Direction3d, Ray3d, Vec3},
 	transform::components::{GlobalTransform, Transform},
 };
-use common::{components::Outdated, resources::ColliderInfo};
+use common::{components::Outdated, resources::ColliderInfo, traits::load_asset::Path};
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result},
@@ -23,7 +23,7 @@ pub struct SkillAnimation {
 	pub(crate) right: Animation,
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Default, Clone)]
 pub struct Skill<TData = ()> {
 	pub name: &'static str,
 	pub data: TData,
@@ -31,19 +31,7 @@ pub struct Skill<TData = ()> {
 	pub animate: Option<SkillAnimation>,
 	pub execution: SkillExecution,
 	pub is_usable_with: HashSet<ItemType>,
-}
-
-impl<TData: Default> Default for Skill<TData> {
-	fn default() -> Self {
-		Self {
-			name: Default::default(),
-			data: Default::default(),
-			cast: Default::default(),
-			animate: Default::default(),
-			execution: Default::default(),
-			is_usable_with: Default::default(),
-		}
-	}
+	pub icon: Option<fn() -> Path>,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Default)]
@@ -103,6 +91,7 @@ impl Skill {
 			animate: self.animate,
 			execution: self.execution,
 			is_usable_with: self.is_usable_with,
+			icon: self.icon,
 		}
 	}
 }
@@ -116,6 +105,7 @@ impl<TSrc> Skill<TSrc> {
 			animate: self.animate,
 			execution: self.execution,
 			is_usable_with: self.is_usable_with,
+			icon: self.icon,
 		}
 	}
 }
