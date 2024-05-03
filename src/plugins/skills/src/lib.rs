@@ -41,7 +41,7 @@ use components::{
 	SlotKey,
 };
 use resources::{skill_templates::SkillTemplates, SkillIcons, SlotMap};
-use skills::{shoot_hand_gun::ShootHandGun, Cast, Queued, Skill, SwordStrike};
+use skills::{shoot_hand_gun::ShootHandGun, Cast, Queued, Skill};
 use std::{
 	collections::{HashMap, HashSet},
 	time::Duration,
@@ -124,32 +124,18 @@ fn setup_skill_templates(
 	mut commands: Commands,
 	assert_server: Res<AssetServer>,
 ) -> Vec<Result<(), Error>> {
-	let (templates, errors) = SkillTemplates::new(&[
-		Skill {
-			name: "Swing Sword",
-			cast: Cast {
-				pre: Duration::from_millis(0),
-				active: Duration::from_millis(500),
-				after: Duration::from_millis(200),
-			},
-			animate: Some(SwordStrike::animation()),
-			execution: SwordStrike::execution(),
-			is_usable_with: HashSet::from([ItemType::Sword]),
-			..default()
+	let (templates, errors) = SkillTemplates::new(&[Skill {
+		name: "Shoot Hand Gun",
+		cast: Cast {
+			pre: Duration::from_millis(100),
+			active: Duration::ZERO,
+			after: Duration::from_millis(100),
 		},
-		Skill {
-			name: "Shoot Hand Gun",
-			cast: Cast {
-				pre: Duration::from_millis(100),
-				active: Duration::ZERO,
-				after: Duration::from_millis(100),
-			},
-			animate: Some(ShootHandGun::animation()),
-			execution: Projectile::<Plasma>::execution(),
-			is_usable_with: HashSet::from([ItemType::Pistol]),
-			..default()
-		},
-	]);
+		animate: Some(ShootHandGun::animation()),
+		execution: Projectile::<Plasma>::execution(),
+		is_usable_with: HashSet::from([ItemType::Pistol]),
+		..default()
+	}]);
 	let skill_icons = SkillIcons(HashMap::from([
 		("Swing Sword", assert_server.load("icons/sword_down.png")),
 		("Shoot Hand Gun", assert_server.load("icons/pistol.png")),
@@ -218,26 +204,11 @@ fn get_loadout(skill_templates: &Res<'_, SkillTemplates>) -> Option<Loadout> {
 
 fn get_inventory(skill_templates: Res<'_, SkillTemplates>) -> Option<Inventory> {
 	let shoot_hand_gun = skill_templates.get("Shoot Hand Gun")?;
-	let swing_sword = skill_templates.get("Swing Sword")?;
 
-	Some(Inventory::new([
-		Some(Item {
-			name: "Sword A",
-			model: Some("sword"),
-			skill: Some(swing_sword.clone()),
-			item_type: HashSet::from([ItemType::Sword]),
-		}),
-		Some(Item {
-			name: "Sword B",
-			model: Some("sword"),
-			skill: Some(swing_sword.clone()),
-			item_type: HashSet::from([ItemType::Sword]),
-		}),
-		Some(Item {
-			name: "Pistol C",
-			model: Some("pistol"),
-			skill: Some(shoot_hand_gun.clone()),
-			item_type: HashSet::from([ItemType::Pistol]),
-		}),
-	]))
+	Some(Inventory::new([Some(Item {
+		name: "Pistol C",
+		model: Some("pistol"),
+		skill: Some(shoot_hand_gun.clone()),
+		item_type: HashSet::from([ItemType::Pistol]),
+	})]))
 }

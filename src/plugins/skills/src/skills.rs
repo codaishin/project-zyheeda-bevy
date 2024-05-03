@@ -2,15 +2,15 @@ pub mod shoot_hand_gun;
 
 use crate::{
 	components::{ItemType, SlotKey},
-	traits::{AnimationChainIf, GetAnimationSetup, Prime},
+	traits::Prime,
 };
-use animations::animation::{Animation, PlayMode};
+use animations::animation::Animation;
 use bevy::{
 	ecs::system::EntityCommands,
 	math::{primitives::Direction3d, Ray3d, Vec3},
 	transform::components::{GlobalTransform, Transform},
 };
-use common::{components::Outdated, resources::ColliderInfo, tools::player_animation_path};
+use common::{components::Outdated, resources::ColliderInfo};
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result},
@@ -163,21 +163,6 @@ mod test_skill {
 			Activation::ActiveAfter(Duration::from_millis(123)),
 			skill.data.mode
 		);
-	}
-}
-
-pub(crate) struct SwordStrike;
-
-impl GetAnimationSetup for SwordStrike {
-	fn get_animation() -> SkillAnimation {
-		SkillAnimation {
-			right: Animation::new(player_animation_path("Animation8"), PlayMode::Replay),
-			left: Animation::new(player_animation_path("Animation9"), PlayMode::Replay),
-		}
-	}
-
-	fn get_chains() -> Vec<AnimationChainIf> {
-		vec![]
 	}
 }
 

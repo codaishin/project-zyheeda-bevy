@@ -4,7 +4,6 @@ pub(crate) mod mouse_hover;
 pub(crate) mod projectile;
 pub(crate) mod skill_state;
 pub(crate) mod state;
-pub(crate) mod sword;
 pub(crate) mod tuple_slot_key_item;
 
 use crate::{
