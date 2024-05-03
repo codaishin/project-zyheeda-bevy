@@ -3,7 +3,7 @@ pub mod inventory;
 pub mod queue;
 pub mod slots;
 
-use crate::skill::{Skill, SkillComboTree, StartBehaviorFn, StopBehaviorFn};
+use crate::skills::{Skill, SkillComboTree, StartBehaviorFn, StopBehaviorFn};
 use bevy::ecs::{component::Component, entity::Entity};
 use common::{
 	components::{Collection, Side},

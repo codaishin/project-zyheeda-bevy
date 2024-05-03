@@ -1,6 +1,6 @@
 pub mod components;
 pub mod resources;
-pub mod skill;
+pub mod skills;
 pub mod traits;
 
 mod bundles;
@@ -41,7 +41,7 @@ use components::{
 	SlotKey,
 };
 use resources::{skill_templates::SkillTemplates, SkillIcons, SlotMap};
-use skill::{Cast, Queued, ShootHandGun, Skill, SwordStrike};
+use skills::{Cast, Queued, ShootHandGun, Skill, SwordStrike};
 use std::{
 	collections::{HashMap, HashSet},
 	time::Duration,

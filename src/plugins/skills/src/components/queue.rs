@@ -1,6 +1,6 @@
 use super::SlotKey;
 use crate::{
-	skill::{Activation, Queued, Skill, SkillState, StartBehaviorFn, StopBehaviorFn},
+	skills::{Activation, Queued, Skill, SkillState, StartBehaviorFn, StopBehaviorFn},
 	traits::{
 		Enqueue,
 		Execution,
@@ -581,7 +581,7 @@ mod test_queue_active_skill {
 	use super::*;
 	use crate::{
 		components::SlotKey,
-		skill::{Cast, ShootHandGun, SkillExecution, Spawner, Target},
+		skills::{Cast, ShootHandGun, SkillExecution, Spawner, Target},
 		traits::GetSkillAnimation,
 	};
 	use bevy::{ecs::system::EntityCommands, prelude::default, transform::components::Transform};

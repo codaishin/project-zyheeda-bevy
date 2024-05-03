@@ -1,4 +1,4 @@
-use crate::skill::SkillState;
+use crate::skills::SkillState;
 use common::traits::iteration::{Iter, IterKey};
 
 impl IterKey for SkillState {

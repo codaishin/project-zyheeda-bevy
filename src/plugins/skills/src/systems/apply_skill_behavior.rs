@@ -1,6 +1,6 @@
 use crate::{
 	components::{slots::Slots, SkillExecution, SlotKey},
-	skill::{SelectInfo, Spawner, StartBehaviorFn, Target},
+	skills::{SelectInfo, Spawner, StartBehaviorFn, Target},
 };
 use bevy::{
 	ecs::{
@@ -92,7 +92,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{SkillExecution, Slot, SlotKey},
-		skill::{Spawner, Target},
+		skills::{Spawner, Target},
 	};
 	use bevy::{
 		app::{App, Update},

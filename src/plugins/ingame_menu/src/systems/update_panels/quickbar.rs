@@ -14,7 +14,7 @@ use common::{components::Player, traits::try_insert_on::TryInsertOn};
 use skills::{
 	components::{slots::Slots, SlotKey},
 	resources::SkillIcons,
-	skill::{Queued, Skill},
+	skills::{Queued, Skill},
 	traits::Iter,
 };
 
@@ -84,7 +84,7 @@ mod tests {
 	use common::components::Side;
 	use skills::{
 		components::{Item, Slot},
-		skill::{Queued, Skill},
+		skills::{Queued, Skill},
 		traits::Iter,
 	};
 	use std::collections::HashMap;

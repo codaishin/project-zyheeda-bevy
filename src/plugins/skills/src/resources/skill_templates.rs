@@ -1,4 +1,4 @@
-use crate::skill::Skill;
+use crate::skills::Skill;
 use bevy::ecs::system::Resource;
 use common::errors::{Error, Level};
 use std::collections::{hash_map::Entry::Vacant, HashMap};

@@ -1,6 +1,6 @@
 use crate::{
 	components::slots::Slots,
-	skill::{Queued, Skill},
+	skills::{Queued, Skill},
 	traits::{Flush, Iter, IterAddedMut, NextCombo},
 };
 use bevy::ecs::{component::Component, system::Query};
@@ -29,7 +29,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{Slot, SlotKey},
-		skill::{Queued, Skill},
+		skills::{Queued, Skill},
 	};
 	use bevy::{
 		app::{App, Update},

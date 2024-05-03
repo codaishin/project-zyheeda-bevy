@@ -1,6 +1,6 @@
 use crate::{
 	components::SkillExecution,
-	skill::SkillState,
+	skills::SkillState,
 	traits::{Execution, GetActiveSkill, GetAnimation, GetSlots},
 };
 use animations::traits::{InsertAnimation, MarkObsolete, Priority};
@@ -143,7 +143,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{SkillExecution, SlotKey},
-		skill::{Spawner, StartBehaviorFn, StopBehaviorFn, Target},
+		skills::{Spawner, StartBehaviorFn, StopBehaviorFn, Target},
 		traits::{Execution, GetAnimation},
 	};
 	use animations::traits::Priority;

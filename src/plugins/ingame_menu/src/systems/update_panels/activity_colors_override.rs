@@ -19,7 +19,7 @@ use common::{components::Player, states::MouseContext, traits::get::GetStatic};
 use skills::{
 	components::SlotKey,
 	resources::SlotMap,
-	skill::{Queued, Skill},
+	skills::{Queued, Skill},
 	traits::Iter,
 };
 
@@ -100,7 +100,7 @@ mod tests {
 		utils::default,
 	};
 	use common::components::Side;
-	use skills::skill::Queued;
+	use skills::skills::Queued;
 
 	#[derive(Component)]
 	struct _Panel(pub SlotKey);
