@@ -1,7 +1,7 @@
 use animations::{
 	animation::{Animation, PlayMode},
 	components::{animation_dispatch::AnimationDispatch, Animator},
-	traits::{InsertAnimation, Priority},
+	traits::{IdleLayer, StartAnimation},
 	AnimationsPlugin,
 };
 use bars::{components::Bar, BarsPlugin};
@@ -198,15 +198,16 @@ fn setup_simple_3d_scene(
 	next_state.set(GameRunning::On);
 }
 
+fn animation_dispatch() -> impl Component + StartAnimation<IdleLayer, Animation> {
+	AnimationDispatch::default()
+}
+
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
-	let mut animation_dispatch = AnimationDispatch::default();
-	animation_dispatch.insert(
-		Animation::new(
-			Path::from(Player::MODEL_PATH.to_owned() + "#Animation2"),
-			PlayMode::Repeat,
-		),
-		Priority::Low,
-	);
+	let mut animation_dispatch = animation_dispatch();
+	animation_dispatch.start_animation(Animation::new(
+		Path::from(Player::MODEL_PATH.to_owned() + "#Animation2"),
+		PlayMode::Repeat,
+	));
 
 	commands
 		.spawn((

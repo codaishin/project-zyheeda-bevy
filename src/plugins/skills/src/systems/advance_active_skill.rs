@@ -3,7 +3,7 @@ use crate::{
 	skills::SkillState,
 	traits::{Execution, GetActiveSkill, GetAnimation, GetSlots},
 };
-use animations::traits::{InsertAnimation, MarkObsolete, Priority};
+use animations::traits::{SkillLayer, StartAnimation, StopAnimation};
 use behaviors::components::{Face, OverrideFace};
 use bevy::{
 	ecs::{
@@ -27,7 +27,7 @@ enum Advancement {
 pub(crate) fn advance_active_skill<
 	TGetSkill: GetActiveSkill<TAnimation, SkillState> + Component,
 	TAnimation: Send + Sync + 'static,
-	TAnimationDispatch: Component + InsertAnimation<TAnimation> + MarkObsolete,
+	TAnimationDispatch: Component + StartAnimation<SkillLayer, TAnimation> + StopAnimation<SkillLayer>,
 	TTime: Send + Sync + Default + 'static,
 >(
 	time: Res<Time<TTime>>,
@@ -53,7 +53,7 @@ pub(crate) fn advance_active_skill<
 fn get_and_advance<
 	TAnimation: Send + Sync + 'static,
 	TGetSkill: Component + GetActiveSkill<TAnimation, SkillState> + Sync + Send + 'static,
-	TAnimationDispatch: InsertAnimation<TAnimation> + MarkObsolete,
+	TAnimationDispatch: StartAnimation<SkillLayer, TAnimation> + StopAnimation<SkillLayer>,
 >(
 	dequeue: &mut Mut<TGetSkill>,
 	agent: EntityCommands,
@@ -69,19 +69,19 @@ fn get_and_advance<
 	}
 }
 
-fn remove_side_effects<TAnimationDispatch: MarkObsolete>(
+fn remove_side_effects<TAnimationDispatch: StopAnimation<SkillLayer>>(
 	mut agent: EntityCommands,
 	mut animation_dispatch: Mut<TAnimationDispatch>,
 ) -> Advancement {
 	agent.remove::<OverrideFace>();
-	animation_dispatch.mark_obsolete(Priority::High);
+	animation_dispatch.stop_animation();
 
 	Advancement::InProcess
 }
 
 fn advance<
 	TAnimation: Send + Sync + 'static,
-	TAnimationDispatch: InsertAnimation<TAnimation> + MarkObsolete,
+	TAnimationDispatch: StartAnimation<SkillLayer, TAnimation> + StopAnimation<SkillLayer>,
 >(
 	mut skill: (impl Execution + GetAnimation<TAnimation> + GetSlots + StateUpdate<SkillState>),
 	mut agent: EntityCommands,
@@ -114,14 +114,14 @@ fn advance<
 	Advancement::InProcess
 }
 
-fn begin_animation<TAnimation, TAnimationDispatch: InsertAnimation<TAnimation>>(
+fn begin_animation<TAnimation, TAnimationDispatch: StartAnimation<SkillLayer, TAnimation>>(
 	skill: &mut (impl Execution + GetAnimation<TAnimation> + GetSlots + StateUpdate<SkillState>),
 	dispatch: &mut TAnimationDispatch,
 ) {
 	let Some(animation) = skill.animate() else {
 		return;
 	};
-	dispatch.insert(animation, Priority::High);
+	dispatch.start_animation(animation);
 }
 
 fn insert_skill_execution_start<TSkill: Execution>(agent: &mut EntityCommands, skill: &mut TSkill) {
@@ -146,7 +146,6 @@ mod tests {
 		skills::{Spawner, StartBehaviorFn, StopBehaviorFn, Target},
 		traits::{Execution, GetAnimation},
 	};
-	use animations::traits::Priority;
 	use behaviors::components::{Face, OverrideFace};
 	use bevy::{
 		ecs::system::EntityCommands,
@@ -234,25 +233,25 @@ mod tests {
 		mock: Mock_AnimationDispatch,
 	}
 
-	impl InsertAnimation<_Animation> for _AnimationDispatch {
-		fn insert(&mut self, animation: _Animation, priority: Priority) {
-			self.mock.insert(animation, priority)
+	impl StartAnimation<SkillLayer, _Animation> for _AnimationDispatch {
+		fn start_animation(&mut self, animation: _Animation) {
+			self.mock.start_animation(animation)
 		}
 	}
 
-	impl MarkObsolete for _AnimationDispatch {
-		fn mark_obsolete(&mut self, priority: Priority) {
-			self.mock.mark_obsolete(priority)
+	impl StopAnimation<SkillLayer> for _AnimationDispatch {
+		fn stop_animation(&mut self) {
+			self.mock.stop_animation()
 		}
 	}
 
 	mock! {
 		_AnimationDispatch {}
-		impl InsertAnimation<_Animation> for _AnimationDispatch {
-			fn insert(&mut self, animation: _Animation, priority: Priority);
+		impl StartAnimation<SkillLayer, _Animation> for _AnimationDispatch {
+			fn start_animation(&mut self, animation: _Animation);
 		}
-		impl MarkObsolete for _AnimationDispatch {
-			fn mark_obsolete(&mut self, priority: Priority);
+		impl StopAnimation<SkillLayer> for _AnimationDispatch {
+			fn stop_animation(&mut self);
 		}
 	}
 
@@ -261,8 +260,8 @@ mod tests {
 		let mut time = Time::<Real>::default();
 		let mut dispatch = _AnimationDispatch::default();
 
-		dispatch.mock.expect_insert().return_const(());
-		dispatch.mock.expect_mark_obsolete().return_const(());
+		dispatch.mock.expect_start_animation().return_const(());
+		dispatch.mock.expect_stop_animation().return_const(());
 		let agent = app.world.spawn(dispatch).id();
 
 		time.update();
@@ -302,12 +301,12 @@ mod tests {
 	fn insert_animation_on_state_first() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_mark_obsolete().return_const(());
+		dispatch.mock.expect_stop_animation().return_const(());
 		dispatch
 			.mock
-			.expect_insert()
+			.expect_start_animation()
 			.times(1)
-			.with(eq(_Animation(42)), eq(Priority::High))
+			.with(eq(_Animation(42)))
 			.return_const(());
 
 		app.world.entity_mut(agent).insert((
@@ -332,8 +331,12 @@ mod tests {
 	fn do_not_insert_animation_on_in_state_first() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_mark_obsolete().return_const(());
-		dispatch.mock.expect_insert().never().return_const(());
+		dispatch.mock.expect_stop_animation().return_const(());
+		dispatch
+			.mock
+			.expect_start_animation()
+			.never()
+			.return_const(());
 
 		app.world.entity_mut(agent).insert((
 			_Dequeue {
@@ -365,12 +368,11 @@ mod tests {
 	fn remove_animation_when_no_active_skill() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_insert().return_const(());
+		dispatch.mock.expect_start_animation().return_const(());
 		dispatch
 			.mock
-			.expect_mark_obsolete()
+			.expect_stop_animation()
 			.times(1)
-			.with(eq(Priority::High))
 			.return_const(());
 
 		app.world.entity_mut(agent).insert((
@@ -386,10 +388,10 @@ mod tests {
 	fn do_not_remove_animation_when_some_active_skill() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_insert().return_const(());
+		dispatch.mock.expect_start_animation().return_const(());
 		dispatch
 			.mock
-			.expect_mark_obsolete()
+			.expect_stop_animation()
 			.never()
 			.return_const(());
 
@@ -412,12 +414,11 @@ mod tests {
 	fn remove_animation_when_no_active_skill_only_once() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_insert().return_const(());
+		dispatch.mock.expect_start_animation().return_const(());
 		dispatch
 			.mock
-			.expect_mark_obsolete()
+			.expect_stop_animation()
 			.times(1)
-			.with(eq(Priority::High))
 			.return_const(());
 
 		app.world.entity_mut(agent).insert((
