@@ -95,6 +95,10 @@ pub trait ShouldEnqueue {
 	fn should_enqueue(&self) -> bool;
 }
 
+pub trait SkillTemplate {
+	fn skill() -> Skill;
+}
+
 #[derive(Clone)]
 pub(crate) struct AnimationChainIf {
 	pub this: fn() -> Path,

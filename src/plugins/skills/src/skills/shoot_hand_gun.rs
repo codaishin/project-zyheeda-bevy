@@ -1,9 +1,15 @@
-use super::SkillAnimation;
-use crate::traits::{AnimationChainIf, GetAnimationSetup};
+use super::{Cast, Skill, SkillAnimation};
+use crate::{
+	components::ItemType,
+	traits::{AnimationChainIf, GetAnimationSetup, GetExecution, GetSkillAnimation, SkillTemplate},
+};
 use animations::animation::{Animation, PlayMode};
+use behaviors::components::Projectile;
+use bevy::utils::default;
 use common::{tools::player_animation_path, traits::load_asset::Path};
+use std::{collections::HashSet, marker::PhantomData, time::Duration};
 
-pub(crate) struct ShootHandGun;
+pub(crate) struct ShootHandGun<T>(PhantomData<T>);
 
 fn shoot_right() -> Path {
 	player_animation_path("Animation4")
@@ -18,7 +24,7 @@ fn shoot_left_dual() -> Path {
 	player_animation_path("Animation7")
 }
 
-impl GetAnimationSetup for ShootHandGun {
+impl<T> GetAnimationSetup for ShootHandGun<T> {
 	fn get_animation() -> SkillAnimation {
 		SkillAnimation {
 			right: Animation::new(shoot_right(), PlayMode::Repeat),
@@ -49,5 +55,23 @@ impl GetAnimationSetup for ShootHandGun {
 				then: shoot_right_dual,
 			},
 		]
+	}
+}
+
+impl<T: Sync + Send + 'static> SkillTemplate for ShootHandGun<T> {
+	fn skill() -> Skill {
+		Skill {
+			name: "Shoot Hand Gun",
+			cast: Cast {
+				pre: Duration::from_millis(100),
+				active: Duration::ZERO,
+				after: Duration::from_millis(100),
+			},
+			animate: Some(ShootHandGun::<T>::animation()),
+			execution: Projectile::<T>::execution(),
+			is_usable_with: HashSet::from([ItemType::Pistol]),
+			icon: Some(|| Path::from("icons/pistol.png")),
+			..default()
+		}
 	}
 }
