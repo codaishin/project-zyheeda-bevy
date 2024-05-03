@@ -1,7 +1,13 @@
-use super::SkillAnimation;
-use crate::traits::{AnimationChainIf, GetAnimationSetup};
+use super::{Cast, Skill, SkillAnimation};
+use crate::{
+	components::ItemType,
+	traits::{AnimationChainIf, GetAnimationSetup, GetExecution, GetSkillAnimation, SkillTemplate},
+};
 use animations::animation::{Animation, PlayMode};
+use behaviors::components::{Plasma, Projectile};
+use bevy::utils::default;
 use common::{tools::player_animation_path, traits::load_asset::Path};
+use std::{collections::HashSet, time::Duration};
 
 pub(crate) struct ShootHandGun;
 
@@ -49,5 +55,22 @@ impl GetAnimationSetup for ShootHandGun {
 				then: shoot_right_dual,
 			},
 		]
+	}
+}
+
+impl SkillTemplate for ShootHandGun {
+	fn skill() -> Skill {
+		Skill {
+			name: "Shoot Hand Gun",
+			cast: Cast {
+				pre: Duration::from_millis(100),
+				active: Duration::ZERO,
+				after: Duration::from_millis(100),
+			},
+			animate: Some(ShootHandGun::animation()),
+			execution: Projectile::<Plasma>::execution(),
+			is_usable_with: HashSet::from([ItemType::Pistol]),
+			..default()
+		}
 	}
 }

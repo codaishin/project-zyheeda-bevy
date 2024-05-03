@@ -1,5 +1,3 @@
-pub mod skill_templates;
-
 use crate::components::SlotKey;
 use bevy::{
 	asset::Handle,

@@ -7,7 +7,6 @@ mod bundles;
 mod systems;
 
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
-use behaviors::components::{Plasma, Projectile};
 use bevy::{
 	app::{Plugin, PreStartup, PreUpdate, Update},
 	asset::AssetServer,
@@ -18,13 +17,11 @@ use bevy::{
 		system::{Commands, IntoSystem, Query, Res},
 	},
 	input::{keyboard::KeyCode, ButtonInput},
-	prelude::default,
 	time::Virtual,
 };
 use bundles::Loadout;
 use common::{
 	components::{Player, Side, Swap},
-	errors::Error,
 	resources::Models,
 	states::{GameRunning, MouseContext},
 	systems::log::log_many,
@@ -40,12 +37,9 @@ use components::{
 	ItemType,
 	SlotKey,
 };
-use resources::{skill_templates::SkillTemplates, SkillIcons, SlotMap};
-use skills::{shoot_hand_gun::ShootHandGun, Cast, Queued, Skill};
-use std::{
-	collections::{HashMap, HashSet},
-	time::Duration,
-};
+use resources::{SkillIcons, SlotMap};
+use skills::{shoot_hand_gun::ShootHandGun, Queued, Skill};
+use std::collections::{HashMap, HashSet};
 use systems::{
 	advance_active_skill::advance_active_skill,
 	apply_skill_behavior::apply_skill_behavior,
@@ -61,13 +55,13 @@ use systems::{
 	slots::add_item_slots,
 	update_skill_combos::update_skill_combos,
 };
-use traits::{GetExecution, GetSkillAnimation};
+use traits::SkillTemplate;
 
 pub struct SkillsPlugin;
 
 impl Plugin for SkillsPlugin {
 	fn build(&self, app: &mut bevy::prelude::App) {
-		app.add_systems(PreStartup, setup_skill_templates.pipe(log_many))
+		app.add_systems(PreStartup, setup_skill_icons)
 			.add_systems(PreStartup, load_models)
 			.add_systems(PreStartup, setup_input)
 			.add_systems(PreUpdate, add_item_slots)
@@ -120,95 +114,58 @@ fn setup_input(mut commands: Commands) {
 	]));
 }
 
-fn setup_skill_templates(
-	mut commands: Commands,
-	assert_server: Res<AssetServer>,
-) -> Vec<Result<(), Error>> {
-	let (templates, errors) = SkillTemplates::new(&[Skill {
-		name: "Shoot Hand Gun",
-		cast: Cast {
-			pre: Duration::from_millis(100),
-			active: Duration::ZERO,
-			after: Duration::from_millis(100),
-		},
-		animate: Some(ShootHandGun::animation()),
-		execution: Projectile::<Plasma>::execution(),
-		is_usable_with: HashSet::from([ItemType::Pistol]),
-		..default()
-	}]);
+fn setup_skill_icons(mut commands: Commands, assert_server: Res<AssetServer>) {
 	let skill_icons = SkillIcons(HashMap::from([
 		("Swing Sword", assert_server.load("icons/sword_down.png")),
 		("Shoot Hand Gun", assert_server.load("icons/pistol.png")),
 	]));
 
-	commands.insert_resource(templates);
 	commands.insert_resource(skill_icons);
-
-	errors
-		.iter()
-		.cloned()
-		.map(Err)
-		.collect::<Vec<Result<(), Error>>>()
 }
 
-fn set_player_items(
-	mut commands: Commands,
-	skill_templates: Res<SkillTemplates>,
-	players: Query<Entity, Added<Player>>,
-) {
+fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>>) {
 	let Ok(player) = players.get_single() else {
 		return;
 	};
 
-	let Some(loadout) = get_loadout(&skill_templates) else {
-		return;
-	};
-
-	let Some(inventory) = get_inventory(skill_templates) else {
-		return;
-	};
-
-	commands.try_insert_on(player, (inventory, loadout));
+	commands.try_insert_on(player, (get_inventory(), get_loadout()));
 }
 
-fn get_loadout(skill_templates: &Res<'_, SkillTemplates>) -> Option<Loadout> {
-	let shoot_hand_gun = skill_templates.get("Shoot Hand Gun")?;
-	let slot_bones = [
-		(SlotKey::SkillSpawn, "projectile_spawn"),
-		(SlotKey::Hand(Side::Off), "hand_slot.L"),
-		(SlotKey::Hand(Side::Main), "hand_slot.R"),
-	];
-	let equipment = [
-		(
-			SlotKey::Hand(Side::Off),
-			Some(Item {
-				name: "Pistol A",
-				model: Some("pistol"),
-				skill: Some(shoot_hand_gun.clone()),
-				item_type: HashSet::from([ItemType::Pistol]),
-			}),
-		),
-		(
-			SlotKey::Hand(Side::Main),
-			Some(Item {
-				name: "Pistol B",
-				model: Some("pistol"),
-				skill: Some(shoot_hand_gun.clone()),
-				item_type: HashSet::from([ItemType::Pistol]),
-			}),
-		),
-	];
-
-	Some(Loadout::new(slot_bones, equipment))
+fn get_loadout() -> Loadout {
+	Loadout::new(
+		[
+			(SlotKey::SkillSpawn, "projectile_spawn"),
+			(SlotKey::Hand(Side::Off), "hand_slot.L"),
+			(SlotKey::Hand(Side::Main), "hand_slot.R"),
+		],
+		[
+			(
+				SlotKey::Hand(Side::Off),
+				Some(Item {
+					name: "Pistol A",
+					model: Some("pistol"),
+					skill: Some(ShootHandGun::skill()),
+					item_type: HashSet::from([ItemType::Pistol]),
+				}),
+			),
+			(
+				SlotKey::Hand(Side::Main),
+				Some(Item {
+					name: "Pistol B",
+					model: Some("pistol"),
+					skill: Some(ShootHandGun::skill()),
+					item_type: HashSet::from([ItemType::Pistol]),
+				}),
+			),
+		],
+	)
 }
 
-fn get_inventory(skill_templates: Res<'_, SkillTemplates>) -> Option<Inventory> {
-	let shoot_hand_gun = skill_templates.get("Shoot Hand Gun")?;
-
-	Some(Inventory::new([Some(Item {
+fn get_inventory() -> Inventory {
+	Inventory::new([Some(Item {
 		name: "Pistol C",
 		model: Some("pistol"),
-		skill: Some(shoot_hand_gun.clone()),
+		skill: Some(ShootHandGun::skill()),
 		item_type: HashSet::from([ItemType::Pistol]),
-	})]))
+	})])
 }
