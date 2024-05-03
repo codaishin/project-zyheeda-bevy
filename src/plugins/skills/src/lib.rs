@@ -41,7 +41,7 @@ use components::{
 	SlotKey,
 };
 use resources::{skill_templates::SkillTemplates, SkillIcons, SlotMap};
-use skills::{Cast, Queued, ShootHandGun, Skill, SwordStrike};
+use skills::{shoot_hand_gun::ShootHandGun, Cast, Queued, Skill, SwordStrike};
 use std::{
 	collections::{HashMap, HashSet},
 	time::Duration,
