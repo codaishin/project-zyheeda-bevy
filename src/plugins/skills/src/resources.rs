@@ -1,10 +1,5 @@
 use crate::components::SlotKey;
-use bevy::{
-	asset::Handle,
-	ecs::system::Resource,
-	input::keyboard::KeyCode,
-	render::texture::Image,
-};
+use bevy::{ecs::system::Resource, input::keyboard::KeyCode};
 use std::{collections::HashMap, hash::Hash};
 
 type UIInputDisplay = &'static str;
@@ -101,6 +96,3 @@ mod test_slot_map {
 		)
 	}
 }
-
-#[derive(Resource)]
-pub struct SkillIcons(pub HashMap<&'static str, Handle<Image>>);
