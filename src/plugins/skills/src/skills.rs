@@ -24,11 +24,19 @@ pub struct SkillAnimation {
 }
 
 #[derive(PartialEq, Debug, Default, Clone)]
+pub enum Animate<TAnimation> {
+	#[default]
+	Ignore,
+	None,
+	Some(TAnimation),
+}
+
+#[derive(PartialEq, Debug, Default, Clone)]
 pub struct Skill<TData = ()> {
 	pub name: &'static str,
 	pub data: TData,
 	pub cast: Cast,
-	pub animate: Option<SkillAnimation>,
+	pub animate: Animate<SkillAnimation>,
 	pub execution: SkillExecution,
 	pub is_usable_with: HashSet<ItemType>,
 	pub icon: Option<fn() -> Path>,

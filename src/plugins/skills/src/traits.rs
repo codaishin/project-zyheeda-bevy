@@ -9,7 +9,7 @@ pub(crate) mod tuple_slot_key_item;
 use crate::{
 	components::{slots::Slots, SlotKey},
 	resources::SlotMap,
-	skills::{Skill, SkillAnimation, SkillExecution, StartBehaviorFn, StopBehaviorFn},
+	skills::{Animate, Skill, SkillAnimation, SkillExecution, StartBehaviorFn, StopBehaviorFn},
 };
 use animations::animation::Animation;
 use bevy::ecs::{component::Component, system::Query};
@@ -65,7 +65,7 @@ pub(crate) trait NextCombo {
 }
 
 pub(crate) trait GetAnimation<TAnimation> {
-	fn animate(&self) -> Option<TAnimation>;
+	fn animate(&self) -> Animate<TAnimation>;
 }
 
 pub(crate) trait WithComponent<T: Component + Copy> {

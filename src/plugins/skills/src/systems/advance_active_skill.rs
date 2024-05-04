@@ -1,6 +1,6 @@
 use crate::{
 	components::SkillExecution,
-	skills::SkillState,
+	skills::{Animate, SkillState},
 	traits::{Execution, GetActiveSkill, GetAnimation, GetSlots},
 };
 use animations::traits::{SkillLayer, StartAnimation, StopAnimation};
@@ -95,7 +95,7 @@ fn advance<
 
 	if states.contains(&StateMeta::First) {
 		agent.try_insert(OverrideFace(Face::Cursor));
-		begin_animation(skill, animation_dispatch);
+		animate(skill, animation_dispatch);
 	}
 
 	if states.contains(&StateMeta::In(SkillState::Aim)) {
@@ -114,14 +114,18 @@ fn advance<
 	Advancement::InProcess
 }
 
-fn begin_animation<TAnimation, TAnimationDispatch: StartAnimation<SkillLayer, TAnimation>>(
+fn animate<
+	TAnimation,
+	TAnimationDispatch: StartAnimation<SkillLayer, TAnimation> + StopAnimation<SkillLayer>,
+>(
 	skill: &mut (impl Execution + GetAnimation<TAnimation> + GetSlots + StateUpdate<SkillState>),
 	dispatch: &mut TAnimationDispatch,
 ) {
-	let Some(animation) = skill.animate() else {
-		return;
-	};
-	dispatch.start_animation(animation);
+	match skill.animate() {
+		Animate::Some(animation) => dispatch.start_animation(animation),
+		Animate::None => dispatch.stop_animation(),
+		Animate::Ignore => {}
+	}
 }
 
 fn insert_skill_execution_start<TSkill: Execution>(agent: &mut EntityCommands, skill: &mut TSkill) {
@@ -189,7 +193,7 @@ mod tests {
 			mock.expect_get_stop().return_const(None);
 		}
 		if !no_setup.contains(&MockOption::Animate) {
-			mock.expect_animate().return_const(None);
+			mock.expect_animate().return_const(Animate::Ignore);
 		}
 		if !no_setup.contains(&MockOption::Slot) {
 			mock.expect_slots().return_const(vec![]);
@@ -221,7 +225,7 @@ mod tests {
 			fn get_stop<'a>(&self) -> Option<StopBehaviorFn> {}
 		}
 		impl GetAnimation<_Animation> for _Skill {
-			fn animate(&self) -> Option<_Animation> {}
+			fn animate(&self) -> Animate<_Animation> {}
 		}
 		impl GetSlots for _Skill {
 			fn slots(&self) -> Vec<SlotKey> {}
@@ -316,7 +320,9 @@ mod tests {
 					skill
 						.expect_update_state()
 						.return_const(HashSet::<StateMeta<SkillState>>::from([StateMeta::First]));
-					skill.expect_animate().return_const(_Animation(42));
+					skill
+						.expect_animate()
+						.return_const(Animate::Some(_Animation(42)));
 					skill
 				})),
 			},
@@ -328,7 +334,7 @@ mod tests {
 	}
 
 	#[test]
-	fn do_not_insert_animation_on_in_state_first() {
+	fn do_not_insert_animation_on_state_other_than_first() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
 		dispatch.mock.expect_stop_animation().return_const(());
@@ -353,7 +359,108 @@ mod tests {
 							StateMeta::In(SkillState::AfterCast),
 						]),
 					);
-					skill.expect_animate().return_const(_Animation(42));
+					skill
+						.expect_animate()
+						.return_const(Animate::Some(_Animation(42)));
+					skill
+				})),
+			},
+			Transform::default(),
+			dispatch,
+		));
+
+		app.update();
+	}
+
+	#[test]
+	fn stop_animation_on_state_first_when_animate_is_none() {
+		let (mut app, agent) = setup();
+		let mut dispatch = _AnimationDispatch::default();
+		dispatch.mock.expect_start_animation().return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation()
+			.times(1)
+			.return_const(());
+
+		app.world.entity_mut(agent).insert((
+			_Dequeue {
+				active: Some(Box::new(move || {
+					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
+					skill
+						.expect_update_state()
+						.return_const(HashSet::<StateMeta<SkillState>>::from([StateMeta::First]));
+					skill.expect_animate().return_const(Animate::None);
+					skill
+				})),
+			},
+			Transform::default(),
+			dispatch,
+		));
+
+		app.update();
+	}
+
+	#[test]
+	fn do_not_stop_animation_on_state_other_than_first_when_animate_is_none() {
+		let (mut app, agent) = setup();
+		let mut dispatch = _AnimationDispatch::default();
+		dispatch.mock.expect_start_animation().return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation()
+			.never()
+			.return_const(());
+
+		app.world.entity_mut(agent).insert((
+			_Dequeue {
+				active: Some(Box::new(move || {
+					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
+					skill.expect_update_state().return_const(
+						HashSet::<StateMeta<SkillState>>::from([
+							StateMeta::In(SkillState::PreCast),
+							StateMeta::Leaving(SkillState::PreCast),
+							StateMeta::In(SkillState::Aim),
+							StateMeta::Leaving(SkillState::Aim),
+							StateMeta::In(SkillState::Active),
+							StateMeta::Leaving(SkillState::Active),
+							StateMeta::In(SkillState::AfterCast),
+						]),
+					);
+					skill.expect_animate().return_const(Animate::None);
+					skill
+				})),
+			},
+			Transform::default(),
+			dispatch,
+		));
+
+		app.update();
+	}
+
+	#[test]
+	fn do_not_start_or_stop_animation_on_state_first_when_animate_is_ignore() {
+		let (mut app, agent) = setup();
+		let mut dispatch = _AnimationDispatch::default();
+		dispatch
+			.mock
+			.expect_start_animation()
+			.never()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation()
+			.never()
+			.return_const(());
+
+		app.world.entity_mut(agent).insert((
+			_Dequeue {
+				active: Some(Box::new(move || {
+					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
+					skill
+						.expect_update_state()
+						.return_const(HashSet::<StateMeta<SkillState>>::from([StateMeta::First]));
+					skill.expect_animate().return_const(Animate::Ignore);
 					skill
 				})),
 			},
