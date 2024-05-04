@@ -1,6 +1,6 @@
 use super::SlotKey;
 use crate::{
-	skills::{Activation, Queued, Skill, SkillState, StartBehaviorFn, StopBehaviorFn},
+	skills::{Activation, Animate, Queued, Skill, SkillState, StartBehaviorFn, StopBehaviorFn},
 	traits::{
 		Enqueue,
 		Execution,
@@ -559,13 +559,13 @@ impl<'a> Execution for ActiveSkill<'a> {
 }
 
 impl<'a> GetAnimation<Animation> for ActiveSkill<'a> {
-	fn animate(&self) -> Option<Animation> {
-		let animate = self.skill.animate.as_ref()?;
-
-		match self.skill.data.slot_key {
-			SlotKey::Hand(Side::Main) => Some(animate.right.clone()),
-			SlotKey::Hand(Side::Off) => Some(animate.left.clone()),
-			SlotKey::SkillSpawn => None,
+	fn animate(&self) -> Animate<Animation> {
+		match (&self.skill.animate, self.skill.data.slot_key) {
+			(Animate::None, ..) => Animate::None,
+			(Animate::Ignore, ..) => Animate::Ignore,
+			(Animate::Some(a), SlotKey::Hand(Side::Main)) => Animate::Some(a.right.clone()),
+			(Animate::Some(a), SlotKey::Hand(Side::Off)) => Animate::Some(a.left.clone()),
+			(Animate::Some(..), SlotKey::SkillSpawn) => Animate::None,
 		}
 	}
 }
@@ -581,7 +581,7 @@ mod test_queue_active_skill {
 	use super::*;
 	use crate::{
 		components::SlotKey,
-		skills::{Cast, SkillAnimation, SkillExecution, Spawner, Target},
+		skills::{Animate, Cast, SkillAnimation, SkillExecution, Spawner, Target},
 	};
 	use animations::animation::PlayMode;
 	use bevy::{ecs::system::EntityCommands, prelude::default, transform::components::Transform};
@@ -892,7 +892,7 @@ mod test_queue_active_skill {
 						slot_key: SlotKey::Hand(Side::Main),
 						..default()
 					},
-					animate: Some(animation.clone()),
+					animate: Animate::Some(animation.clone()),
 					..default()
 				},
 			},
@@ -903,7 +903,7 @@ mod test_queue_active_skill {
 						slot_key: SlotKey::Hand(Side::Off),
 						..default()
 					},
-					animate: Some(animation.clone()),
+					animate: Animate::Some(animation.clone()),
 					..default()
 				},
 			},
@@ -914,16 +914,54 @@ mod test_queue_active_skill {
 						slot_key: SlotKey::SkillSpawn,
 						..default()
 					},
-					animate: Some(animation.clone()),
+					animate: Animate::Some(animation.clone()),
 					..default()
 				},
 			},
 		];
 
 		assert_eq!(
-			[Some(animation.right), Some(animation.left), None],
+			[
+				Animate::Some(animation.right),
+				Animate::Some(animation.left),
+				Animate::None
+			],
 			actives.map(|s| s.animate()),
 		)
+	}
+
+	#[test]
+	fn get_ignore_animation() {
+		let active = ActiveSkill {
+			duration: &mut Duration::default(),
+			skill: &mut Skill {
+				data: Queued {
+					slot_key: SlotKey::Hand(Side::Main),
+					..default()
+				},
+				animate: Animate::Ignore,
+				..default()
+			},
+		};
+
+		assert_eq!(Animate::Ignore, active.animate())
+	}
+
+	#[test]
+	fn get_none_animation() {
+		let active = ActiveSkill {
+			duration: &mut Duration::default(),
+			skill: &mut Skill {
+				data: Queued {
+					slot_key: SlotKey::Hand(Side::Main),
+					..default()
+				},
+				animate: Animate::None,
+				..default()
+			},
+		};
+
+		assert_eq!(Animate::None, active.animate())
 	}
 
 	#[test]
