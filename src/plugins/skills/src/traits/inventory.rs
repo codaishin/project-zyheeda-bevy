@@ -1,4 +1,7 @@
-use crate::components::{inventory::Inventory, InventoryKey, Item, SlotKey};
+use crate::{
+	components::inventory::Inventory,
+	items::{InventoryKey, Item, SlotKey},
+};
 use common::{components::Swap, traits::accessor::Accessor};
 
 impl Accessor<Inventory, (SlotKey, Option<Item>), Item> for Swap<InventoryKey, SlotKey> {

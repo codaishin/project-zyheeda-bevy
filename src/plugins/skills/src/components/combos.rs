@@ -115,7 +115,10 @@ impl<T> Flush for Combos<T> {
 #[cfg(test)]
 mod test_combo_node {
 	use super::*;
-	use crate::components::{Item, ItemType, Slot};
+	use crate::{
+		components::{Item, Slot},
+		items::ItemType,
+	};
 	use bevy::ecs::entity::Entity;
 	use common::components::Side;
 	use std::collections::HashSet;

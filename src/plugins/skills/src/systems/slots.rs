@@ -1,4 +1,7 @@
-use crate::components::{slots::Slots, Slot, SlotBones, SlotKey};
+use crate::{
+	components::{slots::Slots, Slot, SlotBones},
+	items::SlotKey,
+};
 use bevy::{
 	prelude::{BuildChildren, Children, Commands, Entity, HierarchyQueryExt, Name, Query},
 	scene::SceneBundle,

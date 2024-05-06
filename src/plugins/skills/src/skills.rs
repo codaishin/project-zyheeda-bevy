@@ -1,7 +1,7 @@
 pub mod shoot_hand_gun;
 
 use crate::{
-	components::{ItemType, SlotKey},
+	items::{ItemType, SlotKey},
 	traits::Prime,
 };
 use animations::animation::Animation;

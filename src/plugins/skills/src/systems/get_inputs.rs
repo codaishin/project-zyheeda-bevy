@@ -1,4 +1,4 @@
-use crate::{components::SlotKey, resources::SlotMap, traits::InputState};
+use crate::{items::SlotKey, resources::SlotMap, traits::InputState};
 use bevy::{
 	ecs::system::{Res, Resource},
 	input::keyboard::KeyCode,
@@ -47,7 +47,7 @@ pub(crate) fn get_inputs<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::SlotKey, resources::SlotMap};
+	use crate::resources::SlotMap;
 	use bevy::{
 		app::{App, Update},
 		ecs::system::{In, IntoSystem, ResMut, Resource},

@@ -1,5 +1,5 @@
 use super::{InputState, ShouldEnqueue};
-use crate::{components::SlotKey, resources::SlotMap};
+use crate::{items::SlotKey, resources::SlotMap};
 use bevy::input::{keyboard::KeyCode, ButtonInput};
 use std::hash::Hash;
 

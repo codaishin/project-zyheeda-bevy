@@ -22,7 +22,8 @@ use common::{
 	},
 };
 use skills::{
-	components::{slots::Slots, SlotKey},
+	components::slots::Slots,
+	items::SlotKey,
 	skills::{Queued, Skill},
 	traits::Iter,
 };
@@ -97,17 +98,18 @@ mod tests {
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
 	use mockall::{automock, predicate::eq};
 	use skills::{
-		components::{Item, Slot},
+		components::Slot,
+		items::Item,
 		skills::{Queued, Skill},
 		traits::Iter,
 	};
 	use std::collections::HashMap;
 
-	trait WithIconPath {
+	trait _WithIconPath {
 		fn with_icon_path(path: fn() -> Path) -> Self;
 	}
 
-	impl WithIconPath for Item {
+	impl _WithIconPath for Item {
 		fn with_icon_path(path: fn() -> Path) -> Self {
 			Item {
 				skill: Some(Skill::with_icon_path(path)),
@@ -116,7 +118,7 @@ mod tests {
 		}
 	}
 
-	impl WithIconPath for Skill {
+	impl _WithIconPath for Skill {
 		fn with_icon_path(path: fn() -> Path) -> Self {
 			Skill {
 				icon: Some(path),

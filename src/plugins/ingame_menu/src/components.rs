@@ -2,7 +2,7 @@ pub(crate) mod inventory_panel;
 pub(crate) mod quickbar_panel;
 
 use bevy::ecs::component::Component;
-use skills::components::SlotKey;
+use skills::items::SlotKey;
 use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]

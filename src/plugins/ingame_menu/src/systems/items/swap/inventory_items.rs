@@ -6,7 +6,10 @@ use common::{
 	components::{Collection, Swap},
 	traits::try_remove_from::TryRemoveFrom,
 };
-use skills::components::{inventory::Inventory, InventoryKey, Item};
+use skills::{
+	components::inventory::Inventory,
+	items::{InventoryKey, Item},
+};
 use std::cmp::max;
 
 type ItemsToSwap<'a> = (
@@ -45,7 +48,6 @@ mod tests {
 		app::{App, Update},
 		prelude::default,
 	};
-	use skills::components::Item;
 
 	#[test]
 	fn swap_items() {

@@ -1,5 +1,6 @@
 use crate::{
-	components::{slots::Slots, SkillExecution, SlotKey},
+	components::{slots::Slots, SkillExecution},
+	items::SlotKey,
 	skills::{SelectInfo, Spawner, StartBehaviorFn, Target},
 };
 use bevy::{
@@ -91,7 +92,7 @@ fn get_spawner(slots: &Slots, transforms: &Query<&GlobalTransform>) -> Option<Sp
 mod tests {
 	use super::*;
 	use crate::{
-		components::{SkillExecution, Slot, SlotKey},
+		components::{SkillExecution, Slot},
 		skills::{Spawner, Target},
 	};
 	use bevy::{

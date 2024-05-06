@@ -1,6 +1,6 @@
 use super::{Animate, Cast, Skill, SkillAnimation};
 use crate::{
-	components::ItemType,
+	items::ItemType,
 	traits::{AnimationChainIf, GetAnimationSetup, GetExecution, GetSkillAnimation, SkillTemplate},
 };
 use animations::animation::{Animation, PlayMode};
