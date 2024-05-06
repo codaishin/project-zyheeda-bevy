@@ -3,21 +3,14 @@ pub mod inventory;
 pub mod queue;
 pub mod slots;
 
+use self::slots::Slots;
 use crate::{
 	items::{Item, SlotKey},
-	skills::{Skill, SkillComboTree, StartBehaviorFn, StopBehaviorFn},
+	skills::{Skill, StartBehaviorFn, StopBehaviorFn},
 };
 use bevy::ecs::{component::Component, entity::Entity};
 use common::{components::Collection, traits::look_up::LookUp};
 use std::collections::HashMap;
-
-use self::slots::Slots;
-
-#[derive(Component, Clone)]
-pub(crate) struct ComboTreeTemplate<TNext>(pub HashMap<SlotKey, SkillComboTree<TNext>>);
-
-#[derive(Component, PartialEq, Debug)]
-pub(crate) struct ComboTreeRunning<TNext>(pub HashMap<SlotKey, SkillComboTree<TNext>>);
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Slot {

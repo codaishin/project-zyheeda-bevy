@@ -7,7 +7,6 @@ use crate::{
 		Flush,
 		GetActiveSkill,
 		GetAnimation,
-		GetSlots,
 		Iter,
 		IterAddedMut,
 		IterMutWithKeys,
@@ -511,7 +510,7 @@ struct ActiveSkill<'a> {
 impl GetActiveSkill<Animation, SkillState> for Queue {
 	fn get_active(
 		&mut self,
-	) -> Option<impl Execution + GetAnimation<Animation> + GetSlots + StateDuration<SkillState>> {
+	) -> Option<impl Execution + GetAnimation<Animation> + StateDuration<SkillState>> {
 		let skill = self.queue.front_mut()?;
 
 		if self.duration.is_none() {
@@ -567,12 +566,6 @@ impl<'a> GetAnimation<Animation> for ActiveSkill<'a> {
 			(Animate::Some(a), SlotKey::Hand(Side::Off)) => Animate::Some(a.left.clone()),
 			(Animate::Some(..), SlotKey::SkillSpawn) => Animate::None,
 		}
-	}
-}
-
-impl<'a> GetSlots for ActiveSkill<'a> {
-	fn slots(&self) -> Vec<SlotKey> {
-		vec![self.skill.data.slot_key]
 	}
 }
 
@@ -962,53 +955,5 @@ mod test_queue_active_skill {
 		};
 
 		assert_eq!(Animate::None, active.animate())
-	}
-
-	#[test]
-	fn get_main_slot() {
-		let active = ActiveSkill {
-			duration: &mut Duration::default(),
-			skill: &mut Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Off),
-					..default()
-				},
-				..default()
-			},
-		};
-
-		assert_eq!(vec![SlotKey::Hand(Side::Off)], active.slots());
-	}
-
-	#[test]
-	fn get_off_slot() {
-		let active = ActiveSkill {
-			duration: &mut Duration::default(),
-			skill: &mut Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
-				..default()
-			},
-		};
-
-		assert_eq!(vec![SlotKey::Hand(Side::Main)], active.slots());
-	}
-
-	#[test]
-	fn get_skill_spawn_slot() {
-		let active = ActiveSkill {
-			duration: &mut Duration::default(),
-			skill: &mut Skill {
-				data: Queued {
-					slot_key: SlotKey::SkillSpawn,
-					..default()
-				},
-				..default()
-			},
-		};
-
-		assert_eq!(vec![SlotKey::SkillSpawn], active.slots());
 	}
 }

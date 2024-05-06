@@ -81,9 +81,6 @@ mod tests {
 	use common::components::Side;
 	use std::collections::HashMap;
 
-	#[derive(PartialEq, Debug)]
-	struct MockBehavior;
-
 	#[test]
 	fn add_slot_as_child_of_bone() {
 		let mut app = App::new();
