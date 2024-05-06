@@ -1,6 +1,6 @@
 use super::get_inputs::Input;
 use crate::{
-	components::SlotKey,
+	items::SlotKey,
 	traits::{Enqueue, IterMutWithKeys, Prime},
 };
 use bevy::ecs::{
@@ -84,7 +84,6 @@ fn get_queued_skill<'a, TQueue: IterMutWithKeys<SlotKey, TSkill>, TSkill: 'a>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::SlotKey;
 	use bevy::{
 		app::{App, Update},
 		ecs::system::{IntoSystem, Res, Resource},

@@ -12,7 +12,7 @@ use common::{
 	errors::{Error, Level},
 	traits::try_remove_from::TryRemoveFrom,
 };
-use skills::components::{slots::Slots, SlotKey};
+use skills::{components::slots::Slots, items::SlotKey};
 
 type SlotsToSwap<'a> = (
 	Entity,
@@ -108,7 +108,7 @@ mod tests {
 		components::Side,
 		systems::log::test_tools::{fake_log_error_lazy_many, FakeErrorLogMany},
 	};
-	use skills::components::{Item, Slot};
+	use skills::{components::Slot, items::Item};
 
 	#[test]
 	fn swap_items() {

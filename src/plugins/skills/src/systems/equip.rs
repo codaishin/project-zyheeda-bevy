@@ -1,4 +1,7 @@
-use crate::components::{slots::Slots, Item, Slot, SlotKey};
+use crate::{
+	components::{slots::Slots, Slot},
+	items::{Item, SlotKey},
+};
 use bevy::{
 	ecs::component::Component,
 	prelude::{Commands, Entity, Handle, Mut, Query, Res},

@@ -7,7 +7,8 @@ pub(crate) mod state;
 pub(crate) mod tuple_slot_key_item;
 
 use crate::{
-	components::{slots::Slots, SlotKey},
+	components::slots::Slots,
+	items::SlotKey,
 	resources::SlotMap,
 	skills::{Animate, Skill, SkillAnimation, SkillExecution, StartBehaviorFn, StopBehaviorFn},
 };

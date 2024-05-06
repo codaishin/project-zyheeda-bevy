@@ -31,7 +31,10 @@ use common::{
 	traits::load_asset::Path,
 };
 use components::{inventory_panel::InventoryPanel, quickbar_panel::QuickbarPanel};
-use skills::components::{inventory::Inventory, queue::Queue, slots::Slots, InventoryKey, SlotKey};
+use skills::{
+	components::{inventory::Inventory, queue::Queue, slots::Slots},
+	items::{InventoryKey, SlotKey},
+};
 use systems::items::swap::{
 	equipped_items::swap_equipped_items,
 	inventory_items::swap_inventory_items,

@@ -17,7 +17,7 @@ use bevy::{
 };
 use common::{components::Player, states::MouseContext, traits::get::GetStatic};
 use skills::{
-	components::SlotKey,
+	items::SlotKey,
 	resources::SlotMap,
 	skills::{Queued, Skill},
 	traits::Iter,

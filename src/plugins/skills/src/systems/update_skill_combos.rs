@@ -28,7 +28,8 @@ pub(crate) fn update_skill_combos<
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Slot, SlotKey},
+		components::Slot,
+		items::SlotKey,
 		skills::{Queued, Skill},
 	};
 	use bevy::{

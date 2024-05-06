@@ -1,4 +1,5 @@
 pub mod components;
+pub mod items;
 pub mod resources;
 pub mod skills;
 pub mod traits;
@@ -28,16 +29,8 @@ use common::{
 	systems::log::log_many,
 	traits::try_insert_on::TryInsertOn,
 };
-use components::{
-	combos::Combos,
-	inventory::Inventory,
-	queue::Queue,
-	slots::Slots,
-	InventoryKey,
-	Item,
-	ItemType,
-	SlotKey,
-};
+use components::{combos::Combos, inventory::Inventory, queue::Queue, slots::Slots};
+use items::{InventoryKey, Item, ItemType, SlotKey};
 use resources::SlotMap;
 use skills::{shoot_hand_gun::ShootHandGun, Queued, Skill};
 use std::collections::HashSet;

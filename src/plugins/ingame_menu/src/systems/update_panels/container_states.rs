@@ -6,7 +6,7 @@ use bevy::{
 	text::Text,
 };
 use common::traits::get::Get;
-use skills::components::Item;
+use skills::items::Item;
 
 pub fn panel_container_states<
 	TPanel: Component + Set<(), PanelState>,

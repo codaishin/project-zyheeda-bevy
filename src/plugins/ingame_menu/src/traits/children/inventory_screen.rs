@@ -19,7 +19,7 @@ use bevy::{
 	utils::default,
 };
 use common::components::Side;
-use skills::components::{InventoryKey, SlotKey};
+use skills::items::{InventoryKey, SlotKey};
 use std::usize;
 
 const EQUIPMENT_SLOTS: [(SlotKey, &str); 2] = [

@@ -146,7 +146,8 @@ fn insert_skill_execution_stop<TSkill: Execution>(agent: &mut EntityCommands, sk
 mod tests {
 	use super::*;
 	use crate::{
-		components::{SkillExecution, SlotKey},
+		components::SkillExecution,
+		items::SlotKey,
 		skills::{Spawner, StartBehaviorFn, StopBehaviorFn, Target},
 		traits::{Execution, GetAnimation},
 	};
