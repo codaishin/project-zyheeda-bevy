@@ -172,12 +172,6 @@ pub(crate) enum SkillState {
 	AfterCast,
 }
 
-#[derive(PartialEq, Debug, Clone)]
-pub(crate) struct SkillComboTree<TNext> {
-	pub skill: Skill,
-	pub next: TNext,
-}
-
 #[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct Spawner(pub GlobalTransform);
 

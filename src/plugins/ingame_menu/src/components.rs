@@ -2,7 +2,6 @@ pub(crate) mod inventory_panel;
 pub(crate) mod quickbar_panel;
 
 use bevy::ecs::component::Component;
-use skills::items::SlotKey;
 use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
@@ -28,9 +27,6 @@ impl<T, TKey> Label<T, TKey> {
 		}
 	}
 }
-
-#[derive(Component)]
-pub struct QuickbarPanelBackground(pub SlotKey);
 
 #[derive(Component)]
 pub struct Quickbar;

@@ -1,7 +1,7 @@
 use crate::{
 	components::SkillExecution,
 	skills::{Animate, SkillState},
-	traits::{Execution, GetActiveSkill, GetAnimation, GetSlots},
+	traits::{Execution, GetActiveSkill, GetAnimation},
 };
 use animations::traits::{SkillLayer, StartAnimation, StopAnimation};
 use behaviors::components::{Face, OverrideFace};
@@ -83,7 +83,7 @@ fn advance<
 	TAnimation: Send + Sync + 'static,
 	TAnimationDispatch: StartAnimation<SkillLayer, TAnimation> + StopAnimation<SkillLayer>,
 >(
-	mut skill: (impl Execution + GetAnimation<TAnimation> + GetSlots + StateUpdate<SkillState>),
+	mut skill: (impl Execution + GetAnimation<TAnimation> + StateUpdate<SkillState>),
 	mut agent: EntityCommands,
 	mut animation_dispatch: Mut<TAnimationDispatch>,
 	delta: Duration,
@@ -118,7 +118,7 @@ fn animate<
 	TAnimation,
 	TAnimationDispatch: StartAnimation<SkillLayer, TAnimation> + StopAnimation<SkillLayer>,
 >(
-	skill: &mut (impl Execution + GetAnimation<TAnimation> + GetSlots + StateUpdate<SkillState>),
+	skill: &mut (impl Execution + GetAnimation<TAnimation> + StateUpdate<SkillState>),
 	dispatch: &mut TAnimationDispatch,
 ) {
 	match skill.animate() {
@@ -147,7 +147,6 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::SkillExecution,
-		items::SlotKey,
 		skills::{Spawner, StartBehaviorFn, StopBehaviorFn, Target},
 		traits::{Execution, GetAnimation},
 	};
@@ -171,7 +170,6 @@ mod tests {
 	enum MockOption {
 		BehaviorExecution(BehaviorOption),
 		Animate,
-		Slot,
 	}
 
 	#[derive(Default, Debug, PartialEq, Clone, Copy)]
@@ -196,9 +194,6 @@ mod tests {
 		if !no_setup.contains(&MockOption::Animate) {
 			mock.expect_animate().return_const(Animate::Ignore);
 		}
-		if !no_setup.contains(&MockOption::Slot) {
-			mock.expect_slots().return_const(vec![]);
-		}
 
 		mock
 	}
@@ -210,8 +205,7 @@ mod tests {
 
 		fn get_active(
 			&mut self,
-		) -> Option<impl Execution + GetAnimation<_Animation> + GetSlots + StateUpdate<SkillState>>
-		{
+		) -> Option<impl Execution + GetAnimation<_Animation> + StateUpdate<SkillState>> {
 			self.active.as_mut().map(|f| f())
 		}
 	}
@@ -227,9 +221,6 @@ mod tests {
 		}
 		impl GetAnimation<_Animation> for _Skill {
 			fn animate(&self) -> Animate<_Animation> {}
-		}
-		impl GetSlots for _Skill {
-			fn slots(&self) -> Vec<SlotKey> {}
 		}
 	}
 

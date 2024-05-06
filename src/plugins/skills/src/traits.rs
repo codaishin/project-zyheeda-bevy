@@ -1,6 +1,5 @@
 pub(crate) mod bevy_input;
 pub(crate) mod inventory;
-pub(crate) mod mouse_hover;
 pub(crate) mod projectile;
 pub(crate) mod skill_state;
 pub(crate) mod state;
@@ -13,10 +12,7 @@ use crate::{
 	skills::{Animate, Skill, SkillAnimation, SkillExecution, StartBehaviorFn, StopBehaviorFn},
 };
 use animations::animation::Animation;
-use bevy::ecs::{component::Component, system::Query};
 use common::{
-	components::Outdated,
-	resources::ColliderInfo,
 	tools::{Last, This},
 	traits::{load_asset::Path, state_duration::StateUpdate},
 };
@@ -57,7 +53,7 @@ pub(crate) trait Prime {
 pub(crate) trait GetActiveSkill<TAnimation, TSkillState: Clone> {
 	fn get_active(
 		&mut self,
-	) -> Option<impl Execution + GetAnimation<TAnimation> + GetSlots + StateUpdate<TSkillState>>;
+	) -> Option<impl Execution + GetAnimation<TAnimation> + StateUpdate<TSkillState>>;
 	fn clear_active(&mut self);
 }
 
@@ -69,16 +65,8 @@ pub(crate) trait GetAnimation<TAnimation> {
 	fn animate(&self) -> Animate<TAnimation>;
 }
 
-pub(crate) trait WithComponent<T: Component + Copy> {
-	fn with_component(&self, query: &Query<&T>) -> Option<ColliderInfo<Outdated<T>>>;
-}
-
 pub trait GetExecution {
 	fn execution() -> SkillExecution;
-}
-
-pub(crate) trait GetSlots {
-	fn slots(&self) -> Vec<SlotKey>;
 }
 
 pub(crate) trait Execution {
