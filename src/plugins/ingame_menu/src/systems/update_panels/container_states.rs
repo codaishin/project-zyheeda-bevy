@@ -11,7 +11,7 @@ use skills::items::Item;
 pub fn panel_container_states<
 	TPanel: Component + Set<(), PanelState>,
 	TKey: Copy + Send + Sync + 'static,
-	TContainer: Component + Get<TKey, Option<Item>>,
+	TContainer: Component + Get<TKey, Item>,
 >(
 	containers: Query<&TContainer>,
 	mut texts: Query<(&Parent, &mut Text)>,
@@ -49,26 +49,22 @@ mod tests {
 		hierarchy::BuildWorldChildren,
 		prelude::default,
 		ui::node_bundles::TextBundle,
+		utils::HashMap,
 	};
 	use mockall::{automock, predicate::eq};
 
 	#[derive(Component)]
-	struct _Container {
-		mock: Mock_Container,
-	}
+	struct _Container(HashMap<usize, Item>);
 
 	impl _Container {
-		pub fn new() -> Self {
-			Self {
-				mock: Mock_Container::new(),
-			}
+		pub fn new<const N: usize>(items: [(usize, Item); N]) -> Self {
+			Self(HashMap::from(items))
 		}
 	}
 
-	#[automock]
-	impl Get<usize, Option<Item>> for _Container {
-		fn get(&self, key: &usize) -> &Option<Item> {
-			self.mock.get(key)
+	impl Get<usize, Item> for _Container {
+		fn get(&self, key: &usize) -> Option<&Item> {
+			self.0.get(key)
 		}
 	}
 
@@ -97,8 +93,7 @@ mod tests {
 		let mut app = App::new();
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 
-		let mut container = _Container::new();
-		container.mock.expect_get().return_const(None);
+		let container = _Container::new([]);
 
 		let mut panel = _Panel::new();
 		panel
@@ -127,11 +122,13 @@ mod tests {
 		let mut app = App::new();
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 
-		let mut container = _Container::new();
-		container.mock.expect_get().return_const(Some(Item {
-			name: "my item",
-			..default()
-		}));
+		let container = _Container::new([(
+			42,
+			Item {
+				name: "my item",
+				..default()
+			},
+		)]);
 
 		let mut panel = _Panel::new();
 		panel
@@ -160,8 +157,7 @@ mod tests {
 		let mut app = App::new();
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 
-		let mut container = _Container::new();
-		container.mock.expect_get().return_const(None);
+		let container = _Container::new([]);
 
 		let mut panel = _Panel::new();
 		panel.mock.expect_set().times(1).return_const(());
@@ -177,11 +173,13 @@ mod tests {
 		let mut app = App::new();
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 
-		let mut container = _Container::new();
-		container.mock.expect_get().return_const(Some(Item {
-			name: "my item",
-			..default()
-		}));
+		let container = _Container::new([(
+			42,
+			Item {
+				name: "my item",
+				..default()
+			},
+		)]);
 
 		let mut panel = _Panel::new();
 		panel
@@ -211,11 +209,13 @@ mod tests {
 		let mut app = App::new();
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 
-		let mut container = _Container::new();
-		container.mock.expect_get().return_const(Some(Item {
-			name: "my item",
-			..default()
-		}));
+		let container = _Container::new([(
+			42,
+			Item {
+				name: "my item",
+				..default()
+			},
+		)]);
 
 		let mut panel = _Panel::new();
 		panel.mock.expect_set().return_const(());

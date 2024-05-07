@@ -1,4 +1,4 @@
-use crate::{components::MovementMode, traits::MovementData};
+use crate::traits::{GetAnimation, MovementData};
 use animations::traits::{MovementLayer, StartAnimation, StopAnimation};
 use bevy::ecs::{
 	change_detection::DetectChanges,
@@ -9,7 +9,6 @@ use bevy::ecs::{
 	system::Query,
 	world::Ref,
 };
-use common::traits::get::Get;
 
 type Components<'a, TMovementConfig, TAnimations, TAnimationDispatch, TMovement> = (
 	Ref<'a, TMovementConfig>,
@@ -22,7 +21,7 @@ pub(crate) fn animate_movement<
 	TMovementConfig: Component + MovementData,
 	TMovement: Component,
 	TAnimation: Clone + Sync + Send + 'static,
-	TAnimations: Component + Get<MovementMode, TAnimation>,
+	TAnimations: Component + GetAnimation<TAnimation>,
 	TAnimationDispatch: Component + StartAnimation<MovementLayer, TAnimation> + StopAnimation<MovementLayer>,
 >(
 	mut agents: Query<Components<TMovementConfig, TAnimations, TAnimationDispatch, TMovement>>,
@@ -42,7 +41,7 @@ fn insert_animation<
 	TMovementConfig: MovementData,
 	TMovement,
 	TAnimation: Clone,
-	TAnimations: Get<MovementMode, TAnimation>,
+	TAnimations: GetAnimation<TAnimation>,
 	TAnimationDispatch: StartAnimation<MovementLayer, TAnimation>,
 >(
 	config: Ref<TMovementConfig>,
@@ -54,7 +53,7 @@ fn insert_animation<
 		return;
 	}
 	let (.., mode) = config.get_movement_data();
-	let animation = animations.get(&mode);
+	let animation = animations.animation(&mode);
 	dispatch.start_animation(animation.clone());
 }
 
@@ -103,9 +102,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl Get<MovementMode, _Animation> for _MovementAnimations {
-		fn get(&self, key: &MovementMode) -> &_Animation {
-			self.mock.get(key)
+	impl GetAnimation<_Animation> for _MovementAnimations {
+		fn animation(&self, key: &MovementMode) -> &_Animation {
+			self.mock.animation(key)
 		}
 	}
 
@@ -165,12 +164,12 @@ mod tests {
 			.return_const((UnitsPerSecond::default(), MovementMode::Fast));
 		animations
 			.mock
-			.expect_get()
+			.expect_animation()
 			.with(eq(MovementMode::Fast))
 			.return_const(_Animation("fast"));
 		animations
 			.mock
-			.expect_get()
+			.expect_animation()
 			.with(eq(MovementMode::Slow))
 			.return_const(_Animation("slow"));
 
@@ -199,12 +198,12 @@ mod tests {
 			.return_const((UnitsPerSecond::default(), MovementMode::Slow));
 		animations
 			.mock
-			.expect_get()
+			.expect_animation()
 			.with(eq(MovementMode::Fast))
 			.return_const(_Animation("fast"));
 		animations
 			.mock
-			.expect_get()
+			.expect_animation()
 			.with(eq(MovementMode::Slow))
 			.return_const(_Animation("slow"));
 
@@ -231,7 +230,10 @@ mod tests {
 			.mock
 			.expect_get_movement_data()
 			.return_const((UnitsPerSecond::default(), MovementMode::default()));
-		animations.mock.expect_get().return_const(_Animation(""));
+		animations
+			.mock
+			.expect_animation()
+			.return_const(_Animation(""));
 
 		dispatch
 			.mock
@@ -256,12 +258,12 @@ mod tests {
 			.return_const((UnitsPerSecond::default(), MovementMode::default()));
 		animations
 			.mock
-			.expect_get()
+			.expect_animation()
 			.with(eq(MovementMode::Fast))
 			.return_const(_Animation("fast"));
 		animations
 			.mock
-			.expect_get()
+			.expect_animation()
 			.with(eq(MovementMode::Slow))
 			.return_const(_Animation("slow"));
 
@@ -295,7 +297,7 @@ mod tests {
 			.return_const((UnitsPerSecond::default(), MovementMode::default()));
 		animations
 			.mock
-			.expect_get()
+			.expect_animation()
 			.return_const(_Animation("my animation"));
 
 		dispatch
@@ -324,7 +326,7 @@ mod tests {
 			.return_const((UnitsPerSecond::default(), MovementMode::default()));
 		animations
 			.mock
-			.expect_get()
+			.expect_animation()
 			.return_const(_Animation("my animation"));
 
 		dispatch
@@ -361,7 +363,7 @@ mod tests {
 			.return_const((UnitsPerSecond::default(), MovementMode::Fast));
 		animations
 			.mock
-			.expect_get()
+			.expect_animation()
 			.return_const(_Animation("my animation"));
 
 		dispatch

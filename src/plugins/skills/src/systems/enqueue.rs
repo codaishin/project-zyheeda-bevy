@@ -7,10 +7,10 @@ use bevy::ecs::{
 	component::Component,
 	system::{In, Query},
 };
-use common::traits::look_up::LookUp;
+use common::traits::get::Get;
 
 pub(crate) fn enqueue<
-	TSkillSource: LookUp<SlotKey, TSourceSkill> + Component,
+	TSkillSource: Get<SlotKey, TSourceSkill> + Component,
 	TSourceSkill: Clone,
 	TQueue: Enqueue<(TSourceSkill, SlotKey)> + IterMutWithKeys<SlotKey, TSkill> + Component,
 	TSkill: Prime,
@@ -26,7 +26,7 @@ pub(crate) fn enqueue<
 }
 
 fn enqueue_new_skills<
-	TSkillSource: LookUp<SlotKey, TSourceSkill>,
+	TSkillSource: Get<SlotKey, TSourceSkill>,
 	TSourceSkill: Clone,
 	TQueue: Enqueue<(TSourceSkill, SlotKey)>,
 >(
@@ -40,7 +40,7 @@ fn enqueue_new_skills<
 }
 
 fn enqueue_new_skill<
-	TSkillSource: LookUp<SlotKey, TSourceSkill>,
+	TSkillSource: Get<SlotKey, TSourceSkill>,
 	TSourceSkill: Clone,
 	TQueue: Enqueue<(TSourceSkill, SlotKey)>,
 >(
@@ -109,7 +109,7 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Skills(HashMap<SlotKey, _Skill>);
 
-	impl LookUp<SlotKey, _Skill> for _Skills {
+	impl Get<SlotKey, _Skill> for _Skills {
 		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a _Skill> {
 			self.0.get(key)
 		}

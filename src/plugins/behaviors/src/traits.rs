@@ -85,3 +85,7 @@ impl<T: SpawnAttack> ToArc for T {
 pub trait RemoveComponent<T: Bundle> {
 	fn get_remover() -> fn(&mut EntityCommands);
 }
+
+pub(crate) trait GetAnimation<TAnimation> {
+	fn animation<'s>(&'s self, key: &MovementMode) -> &'s TAnimation;
+}
