@@ -12,7 +12,10 @@ use common::{
 	errors::{Error, Level},
 	traits::try_remove_from::TryRemoveFrom,
 };
-use skills::{components::slots::Slots, items::SlotKey};
+use skills::{
+	components::{slots::Slots, Slot},
+	items::SlotKey,
+};
 
 type SlotsToSwap<'a> = (
 	Entity,
@@ -48,25 +51,49 @@ fn do_swap(
 		slots.0.get(&swap.1).cloned().ok_or(no_slot(swap.1)),
 	];
 
-	let [Ok(s0), Ok(s1)] = slot_results else {
+	let [Ok(slot0), Ok(slot1)] = slot_results else {
 		return slot_results.map(drop_ok);
 	};
 
 	let handle_results = [
-		handles.get(s0.entity).cloned().map_err(no_handle(swap.0)),
-		handles.get(s1.entity).cloned().map_err(no_handle(swap.1)),
+		get_handles(&slot0, handles).map_err(no_handle(swap.0)),
+		get_handles(&slot1, handles).map_err(no_handle(swap.1)),
 	];
 
-	let [Ok(h0), Ok(h1)] = handle_results else {
+	let [Ok((h0_hand, h0_forearm)), Ok((h1_hand, h1_forearm))] = handle_results else {
 		return handle_results.map(drop_ok);
 	};
 
-	_ = slots.0.get_mut(&swap.0).map(|s| s.item = s1.item);
-	_ = slots.0.get_mut(&swap.1).map(|s| s.item = s0.item);
-	_ = handles.get_mut(s0.entity).map(|mut h| *h = h1);
-	_ = handles.get_mut(s1.entity).map(|mut s| *s = h0);
+	if let Some(slot) = slots.0.get_mut(&swap.0) {
+		slot.item = slot1.item;
+	}
+	if let Some(slot) = slots.0.get_mut(&swap.1) {
+		slot.item = slot0.item;
+	}
+	if let Ok(mut handle) = handles.get_mut(slot0.mounts.hand) {
+		*handle = h1_hand;
+	}
+	if let Ok(mut handle) = handles.get_mut(slot0.mounts.forearm) {
+		*handle = h1_forearm;
+	}
+	if let Ok(mut handle) = handles.get_mut(slot1.mounts.hand) {
+		*handle = h0_hand;
+	}
+	if let Ok(mut handle) = handles.get_mut(slot1.mounts.forearm) {
+		*handle = h0_forearm;
+	}
 
 	[Ok(()), Ok(())]
+}
+
+fn get_handles(
+	slot: &Slot,
+	handles: &mut Query<&mut Handle<Scene>>,
+) -> Result<(Handle<Scene>, Handle<Scene>), QueryEntityError> {
+	Ok((
+		handles.get(slot.mounts.hand).cloned()?,
+		handles.get(slot.mounts.forearm).cloned()?,
+	))
 }
 
 fn drop_ok<V>(result: Result<V, Error>) -> Result<(), Error> {
@@ -108,19 +135,31 @@ mod tests {
 		components::Side,
 		systems::log::test_tools::{fake_log_error_lazy_many, FakeErrorLogMany},
 	};
-	use skills::{components::Slot, items::Item};
+	use skills::{
+		components::{Mounts, Slot},
+		items::{Item, Mount},
+	};
 
 	#[test]
 	fn swap_items() {
 		let mut app = App::new();
-		let slot_handle_left = Handle::<Scene>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
-		let slot_handle_right = Handle::<Scene>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
-		let slot_handle_left_id = app.world.spawn(slot_handle_left.clone()).id();
-		let slot_handle_right_id = app.world.spawn(slot_handle_right.clone()).id();
+		let slot_handles = [
+			Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}),
+			Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}),
+			Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}),
+			Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}),
+		];
+		let slot_handle_ids = slot_handles
+			.clone()
+			.map(|handle| app.world.spawn(handle.clone()).id());
 		let agent = app
 			.world
 			.spawn((
@@ -129,9 +168,13 @@ mod tests {
 						(
 							SlotKey::Hand(Side::Off),
 							Slot {
-								entity: slot_handle_left_id,
+								mounts: Mounts {
+									hand: slot_handle_ids[0],
+									forearm: slot_handle_ids[1],
+								},
 								item: Some(Item {
 									name: "left item",
+									mount: Mount::Forearm,
 									..default()
 								}),
 							},
@@ -139,9 +182,13 @@ mod tests {
 						(
 							SlotKey::Hand(Side::Main),
 							Slot {
-								entity: slot_handle_right_id,
+								mounts: Mounts {
+									hand: slot_handle_ids[2],
+									forearm: slot_handle_ids[3],
+								},
 								item: Some(Item {
 									name: "right item",
+									mount: Mount::Hand,
 									..default()
 								}),
 							},
@@ -156,16 +203,8 @@ mod tests {
 		app.add_systems(Update, swap_equipped_items.pipe(|_: In<_>| {}));
 		app.update();
 
-		let new_handles = (
-			app.world
-				.entity(slot_handle_left_id)
-				.get::<Handle<Scene>>()
-				.unwrap(),
-			app.world
-				.entity(slot_handle_right_id)
-				.get::<Handle<Scene>>()
-				.unwrap(),
-		);
+		let handles =
+			slot_handle_ids.map(|id| app.world.entity(id).get::<Handle<Scene>>().unwrap());
 		let slots = app.world.entity(agent).get::<Slots>().unwrap();
 		let new_items = (
 			slots.0.get(&SlotKey::Hand(Side::Off)).unwrap().item.clone(),
@@ -180,20 +219,27 @@ mod tests {
 
 		assert_eq!(
 			(
-				(&slot_handle_right, &slot_handle_left),
+				[
+					&slot_handles[2],
+					&slot_handles[3],
+					&slot_handles[0],
+					&slot_handles[1],
+				],
 				(
 					Some(Item {
 						name: "right item",
+						mount: Mount::Hand,
 						..default()
 					}),
 					Some(Item {
 						name: "left item",
+						mount: Mount::Forearm,
 						..default()
 					})
 				),
 				None
 			),
-			(new_handles, new_items, errors)
+			(handles, new_items, errors)
 		);
 	}
 
@@ -255,7 +301,10 @@ mod tests {
 						(
 							SlotKey::Hand(Side::Off),
 							Slot {
-								entity: Entity::from_raw(42),
+								mounts: Mounts {
+									hand: Entity::from_raw(100),
+									forearm: Entity::from_raw(200),
+								},
 								item: Some(Item {
 									name: "left item",
 									..default()
@@ -265,7 +314,10 @@ mod tests {
 						(
 							SlotKey::Hand(Side::Main),
 							Slot {
-								entity: Entity::from_raw(43),
+								mounts: Mounts {
+									hand: Entity::from_raw(101),
+									forearm: Entity::from_raw(202),
+								},
 								item: Some(Item {
 									name: "right item",
 									..default()

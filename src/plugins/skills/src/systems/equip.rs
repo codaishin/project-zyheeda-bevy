@@ -1,9 +1,9 @@
 use crate::{
 	components::{slots::Slots, Slot},
-	items::{Item, SlotKey},
+	items::{Item, Mount, SlotKey},
 };
 use bevy::{
-	ecs::component::Component,
+	ecs::{component::Component, query::QueryEntityError},
 	prelude::{Commands, Entity, Handle, Mut, Query, Res},
 	scene::Scene,
 };
@@ -81,32 +81,33 @@ fn equip_items<
 ) -> Vec<(TItemAccessor, Result<(), Error>)> {
 	let try_swap_items = |accessor: &TItemAccessor| {
 		let (slot_key, acc_item) = accessor.get_key_and_item(component);
-		match equip_and_return_old_item(slots, scene_handles, (slot_key, acc_item.as_ref()), models)
-		{
+		match equip_and_return_old(slots, scene_handles, (slot_key, acc_item.as_ref()), models) {
+			Ok(old_item) => (accessor.with_item(old_item, component), Ok(())),
 			Err(error) => (accessor.with_item(acc_item, component), Err(error)),
-			Ok(old) => (accessor.with_item(old, component), Ok(())),
 		}
 	};
 
 	equip.0.iter().map(try_swap_items).collect()
 }
 
-fn equip_and_return_old_item(
+fn equip_and_return_old(
 	slots: &mut Mut<Slots>,
 	scene_handles: &mut Query<&mut Handle<Scene>>,
 	(slot_key, item): (SlotKey, Option<&Item>),
 	models: &Res<Models>,
 ) -> Result<Option<Item>, Error> {
 	let slot = get_slot(item, slots, slot_key)?;
-	let mut slot_handle = get_slot_handle(item, slot.entity, scene_handles)?;
-	let model = get_model(item, models)?;
+	let item_model = get_model(item, models)?;
+	let (hand_model, forearm_model) = match item.map(|item| item.mount) {
+		Some(Mount::Hand) => (item_model, Handle::default()),
+		Some(Mount::Forearm) => (Handle::default(), item_model),
+		None => (Handle::default(), Handle::default()),
+	};
 
-	let mut item = item.cloned();
-	swap(&mut item, &mut slot.item);
-
-	*slot_handle = model.clone();
-
-	Ok(item)
+	match set_model(slot, scene_handles, hand_model, forearm_model) {
+		Ok(()) => swap_and_return_old(item, slot),
+		Err(error) => Err(scene_handle_error(item, error)),
+	}
 }
 
 fn get_slot<'a>(
@@ -117,17 +118,6 @@ fn get_slot<'a>(
 	match slots.0.get_mut(&slot_key) {
 		None => Err(slot_warning(item, slot_key)),
 		Some(slot) => Ok(slot),
-	}
-}
-
-fn get_slot_handle<'a>(
-	item: Option<&Item>,
-	slot: Entity,
-	scene_handles: &'a mut Query<&mut Handle<Scene>>,
-) -> Result<Mut<'a, Handle<Scene>>, Error> {
-	match scene_handles.get_mut(slot) {
-		Err(_) => Err(scene_handle_error(item, slot)),
-		Ok(slot_model) => Ok(slot_model),
 	}
 }
 
@@ -147,6 +137,27 @@ fn get_model(item: Option<&Item>, models: &Res<Models>) -> Result<Handle<Scene>,
 	Ok(model.clone())
 }
 
+fn set_model(
+	slot: &Slot,
+	scene_handles: &mut Query<&mut Handle<Scene>>,
+	model_hand: Handle<Scene>,
+	model_forearm: Handle<Scene>,
+) -> Result<(), QueryEntityError> {
+	let mut handle = scene_handles.get_mut(slot.mounts.hand)?;
+	*handle = model_hand;
+	let mut handle = scene_handles.get_mut(slot.mounts.forearm)?;
+	*handle = model_forearm;
+
+	Ok(())
+}
+
+fn swap_and_return_old(item: Option<&Item>, slot: &mut Slot) -> Result<Option<Item>, Error> {
+	let mut item = item.cloned();
+	swap(&mut item, &mut slot.item);
+
+	Ok(item)
+}
+
 fn slot_warning(item: Option<&Item>, slot: SlotKey) -> Error {
 	Error {
 		msg: format!(
@@ -164,9 +175,9 @@ fn model_error(item: &Item, model_key: &str) -> Error {
 	}
 }
 
-fn scene_handle_error(item: Option<&Item>, slot: Entity) -> Error {
+fn scene_handle_error(item: Option<&Item>, error: QueryEntityError) -> Error {
 	Error {
-		msg: format!("{:#?}: {:#?} has no Handle<Scene>, abandoning", item, slot),
+		msg: format!("{:#?}: {:#?} has no Handle<Scene>, abandoning", item, error),
 		lvl: Level::Error,
 	}
 }
@@ -174,7 +185,11 @@ fn scene_handle_error(item: Option<&Item>, slot: Entity) -> Error {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::skills::{Cast, Skill};
+	use crate::{
+		components::Mounts,
+		items::Mount,
+		skills::{Cast, Skill},
+	};
 	use bevy::{
 		asset::AssetId,
 		ecs::system::{In, IntoSystem},
@@ -224,7 +239,7 @@ mod tests {
 	}
 
 	#[test]
-	fn equip_when_marked_to_equip() {
+	fn equip_hand_when_marked_to_equip() {
 		let model = Handle::<Scene>::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
@@ -232,7 +247,13 @@ mod tests {
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
-		let slot = app
+		let hand = app
+			.world
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
+			.id();
+		let forearm = app
 			.world
 			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
 				uuid: Uuid::new_v4(),
@@ -246,7 +267,7 @@ mod tests {
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
-							entity: slot,
+							mounts: Mounts { hand, forearm },
 							item: None,
 						},
 					)]
@@ -261,6 +282,7 @@ mod tests {
 							..default()
 						}),
 						model: Some("model key"),
+						mount: Mount::Hand,
 						..default()
 					}),
 					..default()
@@ -274,7 +296,7 @@ mod tests {
 
 		app.update();
 
-		let slot_model = app.world.entity(slot).get::<Handle<Scene>>();
+		let slot_model = app.world.entity(hand).get::<Handle<Scene>>();
 		let slot_component = app
 			.world
 			.entity(agent)
@@ -288,7 +310,7 @@ mod tests {
 			(
 				Some(model),
 				&Slot {
-					entity: slot,
+					mounts: Mounts { hand, forearm },
 					item: Some(Item {
 						name: "Some Item",
 						skill: Some(Skill {
@@ -296,6 +318,96 @@ mod tests {
 							..default()
 						}),
 						model: Some("model key"),
+						mount: Mount::Hand,
+						..default()
+					}),
+				}
+			),
+			(slot_model.cloned(), slot_component)
+		);
+	}
+
+	#[test]
+	fn equip_forearm_when_marked_to_equip() {
+		let model = Handle::<Scene>::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		});
+		let models = Models([("model key", model.clone())].into());
+
+		let mut app = App::new();
+		app.world.insert_resource(models);
+		let hand = app
+			.world
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
+			.id();
+		let forearm = app
+			.world
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
+			.id();
+		let agent = app
+			.world
+			.spawn((
+				_Container { name: "my comp" },
+				Slots(
+					[(
+						SlotKey::Hand(Side::Main),
+						Slot {
+							mounts: Mounts { forearm, hand },
+							item: None,
+						},
+					)]
+					.into(),
+				),
+				Collection::new([_Source {
+					slot: SlotKey::Hand(Side::Main),
+					item: Some(Item {
+						name: "Some Item",
+						skill: Some(Skill {
+							name: "Some Skill",
+							..default()
+						}),
+						model: Some("model key"),
+						mount: Mount::Forearm,
+						..default()
+					}),
+					..default()
+				}]),
+			))
+			.id();
+		app.add_systems(
+			Update,
+			equip_item::<_Container, _Source>.pipe(fake_log_error_lazy_many(agent)),
+		);
+
+		app.update();
+
+		let slot_model = app.world.entity(forearm).get::<Handle<Scene>>();
+		let slot_component = app
+			.world
+			.entity(agent)
+			.get::<Slots>()
+			.unwrap()
+			.0
+			.get(&SlotKey::Hand(Side::Main))
+			.unwrap();
+
+		assert_eq!(
+			(
+				Some(model),
+				&Slot {
+					mounts: Mounts { forearm, hand },
+					item: Some(Item {
+						name: "Some Item",
+						skill: Some(Skill {
+							name: "Some Skill",
+							..default()
+						}),
+						model: Some("model key"),
+						mount: Mount::Forearm,
 						..default()
 					}),
 				}
@@ -313,7 +425,13 @@ mod tests {
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
-		let slot = app
+		let hand = app
+			.world
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
+			.id();
+		let forearm = app
 			.world
 			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
 				uuid: Uuid::new_v4(),
@@ -327,7 +445,7 @@ mod tests {
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
-							entity: slot,
+							mounts: Mounts { hand, forearm },
 							item: Some(Item {
 								name: "Some Item",
 								skill: Some(Skill {
@@ -355,7 +473,10 @@ mod tests {
 
 		app.update();
 
-		let slot_model = app.world.entity(slot).get::<Handle<Scene>>();
+		let slot_models = [
+			app.world.entity(hand).get::<Handle<Scene>>(),
+			app.world.entity(forearm).get::<Handle<Scene>>(),
+		];
 		let slot_component = app
 			.world
 			.entity(agent)
@@ -367,13 +488,13 @@ mod tests {
 
 		assert_eq!(
 			(
-				Some(Handle::default()),
+				[Some(&Handle::default()), Some(&Handle::default())],
 				&Slot {
-					entity: slot,
+					mounts: Mounts { hand, forearm },
 					item: None,
 				}
 			),
-			(slot_model.cloned(), slot_component)
+			(slot_models, slot_component)
 		);
 	}
 
@@ -384,7 +505,13 @@ mod tests {
 			uuid: Uuid::new_v4(),
 		});
 		let models = Models([("model key", model.clone())].into());
-		let slot = app
+		let hand = app
+			.world
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
+			.id();
+		let forearm = app
 			.world
 			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
 				uuid: Uuid::new_v4(),
@@ -416,7 +543,7 @@ mod tests {
 				[(
 					SlotKey::Hand(Side::Main),
 					Slot {
-						entity: slot,
+						mounts: Mounts { hand, forearm },
 						item: None,
 					},
 				)]
@@ -440,7 +567,13 @@ mod tests {
 			uuid: Uuid::new_v4(),
 		});
 		let models = Models([("model key", model.clone())].into());
-		let slot = app
+		let hand = app
+			.world
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
+			.id();
+		let forearm = app
 			.world
 			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
 				uuid: Uuid::new_v4(),
@@ -480,7 +613,7 @@ mod tests {
 				[(
 					SlotKey::Hand(Side::Main),
 					Slot {
-						entity: slot,
+						mounts: Mounts { hand, forearm },
 						item: Some(Item {
 							name: "Current Item",
 							..default()
@@ -509,7 +642,13 @@ mod tests {
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
-		let slot = app
+		let hand = app
+			.world
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
+			.id();
+		let forearm = app
 			.world
 			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
 				uuid: Uuid::new_v4(),
@@ -523,7 +662,7 @@ mod tests {
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
-							entity: slot,
+							mounts: Mounts { hand, forearm },
 							item: None,
 						},
 					)]
@@ -555,7 +694,7 @@ mod tests {
 
 		app.update();
 
-		let slot_model = app.world.entity(slot).get::<Handle<Scene>>();
+		let slot_model = app.world.entity(hand).get::<Handle<Scene>>();
 		let slot_component = app
 			.world
 			.entity(agent)
@@ -569,7 +708,7 @@ mod tests {
 			(
 				Some(Handle::default()),
 				&Slot {
-					entity: slot,
+					mounts: Mounts { hand, forearm },
 					item: Some(Item {
 						name: "Some Item",
 						skill: Some(Skill {
@@ -598,7 +737,13 @@ mod tests {
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
-		let slot = app
+		let hand = app
+			.world
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
+			.id();
+		let forearm = app
 			.world
 			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
 				uuid: Uuid::new_v4(),
@@ -612,7 +757,7 @@ mod tests {
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
-							entity: slot,
+							mounts: Mounts { hand, forearm },
 							item: None,
 						},
 					)]
@@ -646,7 +791,13 @@ mod tests {
 	fn set_default_scene_handle_when_no_model_key() {
 		let mut app = App::new();
 		app.world.insert_resource(Models([].into()));
-		let slot = app
+		let hand = app
+			.world
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
+			.id();
+		let forearm = app
 			.world
 			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
 				uuid: Uuid::new_v4(),
@@ -660,7 +811,7 @@ mod tests {
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
-							entity: slot,
+							mounts: Mounts { hand, forearm },
 							item: None,
 						},
 					)]
@@ -685,7 +836,7 @@ mod tests {
 
 		app.update();
 
-		let slot_model = app.world.entity(slot).get::<Handle<Scene>>();
+		let slot_model = app.world.entity(hand).get::<Handle<Scene>>();
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
@@ -703,7 +854,8 @@ mod tests {
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
-		let slot = app.world.spawn(()).id();
+		let hand = app.world.spawn(()).id();
+		let forearm = app.world.spawn(()).id();
 		let agent = app
 			.world
 			.spawn((
@@ -712,7 +864,7 @@ mod tests {
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
-							entity: slot,
+							mounts: Mounts { hand, forearm },
 							item: None,
 						},
 					)]
@@ -751,7 +903,13 @@ mod tests {
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
-		let slot = app
+		let hand = app
+			.world
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
+			.id();
+		let forearm = app
 			.world
 			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
 				uuid: Uuid::new_v4(),
@@ -765,7 +923,7 @@ mod tests {
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
-							entity: slot,
+							mounts: Mounts { hand, forearm },
 							item: None,
 						},
 					)]
@@ -804,7 +962,13 @@ mod tests {
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
-		let slot = app
+		let hand = app
+			.world
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
+			.id();
+		let forearm = app
 			.world
 			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
 				uuid: Uuid::new_v4(),
@@ -818,7 +982,7 @@ mod tests {
 					[(
 						SlotKey::Hand(Side::Off),
 						Slot {
-							entity: slot,
+							mounts: Mounts { hand, forearm },
 							item: None,
 						},
 					)]
@@ -869,7 +1033,13 @@ mod tests {
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
-		let slot = app
+		let hand = app
+			.world
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
+			.id();
+		let forearm = app
 			.world
 			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
 				uuid: Uuid::new_v4(),
@@ -885,7 +1055,7 @@ mod tests {
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
-							entity: slot,
+							mounts: Mounts { hand, forearm },
 							item: None,
 						},
 					)]
@@ -922,7 +1092,7 @@ mod tests {
 
 		app.update();
 
-		let slot_model = app.world.entity(slot).get::<Handle<Scene>>();
+		let slot_model = app.world.entity(hand).get::<Handle<Scene>>();
 		let agent = app.world.entity(agent);
 		let items = agent.get::<Collection<_Source>>();
 
@@ -1005,7 +1175,13 @@ mod tests {
 		};
 
 		let mut app = App::new();
-		let slot = app
+		let hand = app
+			.world
+			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			}))
+			.id();
+		let forearm = app
 			.world
 			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
 				uuid: Uuid::new_v4(),
@@ -1020,7 +1196,7 @@ mod tests {
 					[(
 						SlotKey::Hand(Side::Off),
 						Slot {
-							entity: slot,
+							mounts: Mounts { hand, forearm },
 							item: None,
 						},
 					)]
@@ -1066,7 +1242,8 @@ mod tests {
 
 		let mut app = App::new();
 		app.world.insert_resource(models);
-		let slot = app.world.spawn(()).id();
+		let hand = app.world.spawn(()).id();
+		let forearm = app.world.spawn(()).id();
 		let agent = app
 			.world
 			.spawn((
@@ -1075,7 +1252,7 @@ mod tests {
 					[(
 						SlotKey::Hand(Side::Off),
 						Slot {
-							entity: slot,
+							mounts: Mounts { hand, forearm },
 							item: None,
 						},
 					)]
@@ -1099,7 +1276,11 @@ mod tests {
 
 		assert_eq!(
 			Some(&FakeErrorLogMany(
-				[scene_handle_error(Some(&item), slot)].into()
+				[scene_handle_error(
+					Some(&item),
+					QueryEntityError::QueryDoesNotMatch(hand)
+				)]
+				.into()
 			)),
 			agent.get::<FakeErrorLogMany>()
 		);

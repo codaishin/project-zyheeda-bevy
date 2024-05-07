@@ -29,8 +29,8 @@ use common::{
 	systems::log::log_many,
 	traits::try_insert_on::TryInsertOn,
 };
-use components::{combos::Combos, inventory::Inventory, queue::Queue, slots::Slots};
-use items::{InventoryKey, Item, ItemType, SlotKey};
+use components::{combos::Combos, inventory::Inventory, queue::Queue, slots::Slots, Mounts};
+use items::{InventoryKey, Item, ItemType, Mount, SlotKey};
 use resources::SlotMap;
 use skills::{shoot_hand_gun::ShootHandGun, Queued, Skill};
 use std::collections::HashSet;
@@ -120,8 +120,20 @@ fn get_loadout() -> Loadout {
 	Loadout::new(
 		"projectile_spawn",
 		[
-			(SlotKey::Hand(Side::Off), "hand_slot.L"),
-			(SlotKey::Hand(Side::Main), "hand_slot.R"),
+			(
+				SlotKey::Hand(Side::Off),
+				Mounts {
+					hand: "hand_slot.L",
+					forearm: "lower_arm.L",
+				},
+			),
+			(
+				SlotKey::Hand(Side::Main),
+				Mounts {
+					hand: "hand_slot.R",
+					forearm: "lower_arm.R",
+				},
+			),
 		],
 		[
 			(
@@ -131,6 +143,7 @@ fn get_loadout() -> Loadout {
 					model: Some("pistol"),
 					skill: Some(ShootHandGun::<Plasma>::skill()),
 					item_type: HashSet::from([ItemType::Pistol]),
+					mount: Mount::Hand,
 				}),
 			),
 			(
@@ -140,6 +153,7 @@ fn get_loadout() -> Loadout {
 					model: Some("pistol"),
 					skill: Some(ShootHandGun::<Plasma>::skill()),
 					item_type: HashSet::from([ItemType::Pistol]),
+					mount: Mount::Hand,
 				}),
 			),
 		],
@@ -152,5 +166,6 @@ fn get_inventory() -> Inventory {
 		model: Some("pistol"),
 		skill: Some(ShootHandGun::<Plasma>::skill()),
 		item_type: HashSet::from([ItemType::Pistol]),
+		mount: Mount::Hand,
 	})])
 }
