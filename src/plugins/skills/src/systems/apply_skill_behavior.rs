@@ -1,6 +1,5 @@
 use crate::{
-	components::{slots::Slots, SkillExecution},
-	items::SlotKey,
+	components::{SkillExecution, SkillSpawn},
 	skills::{SelectInfo, Spawner, StartBehaviorFn, Target},
 };
 use bevy::{
@@ -20,10 +19,10 @@ pub(crate) fn apply_skill_behavior(
 	mut commands: Commands,
 	cam_ray: Res<CamRay>,
 	mouse_hover: Res<MouseHover>,
-	agents: Query<(Entity, &Transform, &SkillExecution, &Slots)>,
+	agents: Query<(Entity, &Transform, &SkillExecution, &SkillSpawn<Entity>)>,
 	transforms: Query<&GlobalTransform>,
 ) {
-	for (id, transform, execution, slots) in &agents {
+	for (id, transform, execution, skill_spawn) in &agents {
 		let Some(agent) = &mut commands.get_entity(id) else {
 			continue;
 		};
@@ -33,7 +32,7 @@ pub(crate) fn apply_skill_behavior(
 					agent,
 					&cam_ray,
 					&mouse_hover,
-					slots,
+					skill_spawn,
 					transform,
 					&transforms,
 					start_fn,
@@ -51,7 +50,7 @@ fn start_behavior(
 	agent: &mut EntityCommands,
 	cam_ray: &Res<CamRay>,
 	mouse_hover: &Res<MouseHover>,
-	slots: &Slots,
+	skill_spawn: &SkillSpawn<Entity>,
 	transform: &Transform,
 	transforms: &Query<&GlobalTransform, ()>,
 	start_fn: &StartBehaviorFn,
@@ -59,7 +58,7 @@ fn start_behavior(
 	let Some(ray) = cam_ray.0 else {
 		return;
 	};
-	let Some(spawner) = get_spawner(slots, transforms) else {
+	let Some(spawner) = get_spawner(skill_spawn, transforms) else {
 		return;
 	};
 	let target = get_target(ray, mouse_hover, transforms);
@@ -80,19 +79,22 @@ fn get_target(
 	}
 }
 
-fn get_spawner(slots: &Slots, transforms: &Query<&GlobalTransform>) -> Option<Spawner> {
-	slots
-		.0
-		.get(&SlotKey::SkillSpawn)
-		.and_then(|slot| transforms.get(slot.entity).ok())
-		.map(|transform| Spawner(*transform))
+fn get_spawner(
+	skill_spawn: &SkillSpawn<Entity>,
+	transforms: &Query<&GlobalTransform>,
+) -> Option<Spawner> {
+	let Ok(transform) = transforms.get(skill_spawn.0) else {
+		return None;
+	};
+
+	Some(Spawner(*transform))
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use crate::{
-		components::{SkillExecution, Slot},
+		components::SkillExecution,
 		skills::{Spawner, Target},
 	};
 	use bevy::{
@@ -173,16 +175,7 @@ mod tests {
 			.world
 			.spawn((
 				agent_transform,
-				Slots(
-					[(
-						SlotKey::SkillSpawn,
-						Slot {
-							entity: spawner,
-							item: None,
-						},
-					)]
-					.into(),
-				),
+				SkillSpawn(spawner),
 				SkillExecution::Start(Mock_Run::start),
 			))
 			.id();
@@ -225,11 +218,12 @@ mod tests {
 	#[test]
 	fn stop_behavior() {
 		let mut app = setup();
+
 		let agent = app
 			.world
 			.spawn((
 				Transform::default(),
-				Slots::default(),
+				SkillSpawn(Entity::from_raw(101)),
 				SkillExecution::Stop(Mock_Stop::stop),
 			))
 			.id();
@@ -252,11 +246,12 @@ mod tests {
 	#[test]
 	fn remove_skill_execution_component_on_start() {
 		let mut app = setup();
+
 		let agent = app
 			.world
 			.spawn((
 				Transform::default(),
-				Slots::default(),
+				SkillSpawn(Entity::from_raw(101)),
 				SkillExecution::Start(Mock_RemoveOnStart::start),
 			))
 			.id();
@@ -276,11 +271,12 @@ mod tests {
 	#[test]
 	fn remove_skill_execution_component_on_stop() {
 		let mut app = setup();
+
 		let agent = app
 			.world
 			.spawn((
 				Transform::default(),
-				Slots::default(),
+				SkillSpawn(Entity::from_raw(101)),
 				SkillExecution::Stop(Mock_RemoveOnStop::stop),
 			))
 			.id();

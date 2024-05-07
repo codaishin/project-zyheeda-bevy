@@ -23,6 +23,9 @@ pub(crate) type BoneName = str;
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct SlotBones(pub HashMap<SlotKey, &'static BoneName>);
 
+#[derive(Component, Debug, PartialEq)]
+pub(crate) struct SkillSpawn<T>(pub T);
+
 pub type Equipment = Collection<(SlotKey, Option<Item>)>;
 
 #[derive(Component, Debug, PartialEq)]
