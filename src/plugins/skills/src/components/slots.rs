@@ -37,8 +37,16 @@ impl Get<SlotKey, Skill> for Slots {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::components::Mounts;
 	use bevy::{prelude::Entity, utils::default};
 	use common::components::Side;
+
+	fn mounts() -> Mounts<Entity> {
+		Mounts {
+			hand: Entity::from_raw(100),
+			forearm: Entity::from_raw(200),
+		}
+	}
 
 	#[test]
 	fn get_off_hand() {
@@ -46,7 +54,7 @@ mod tests {
 			[(
 				SlotKey::Hand(Side::Off),
 				Slot {
-					entity: Entity::from_raw(42),
+					mounts: mounts(),
 					item: Some(Item {
 						name: "my item",
 						..default()
@@ -71,7 +79,7 @@ mod tests {
 			[(
 				SlotKey::Hand(Side::Main),
 				Slot {
-					entity: Entity::from_raw(42),
+					mounts: mounts(),
 					item: Some(Item {
 						name: "my item",
 						..default()
@@ -96,7 +104,7 @@ mod tests {
 			[(
 				SlotKey::Hand(Side::Main),
 				Slot {
-					entity: Entity::from_raw(42),
+					mounts: mounts(),
 					item: Some(Item {
 						name: "my item",
 						..default()

@@ -98,7 +98,7 @@ mod tests {
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
 	use mockall::{automock, predicate::eq};
 	use skills::{
-		components::Slot,
+		components::{Mounts, Slot},
 		items::Item,
 		skills::{Queued, Skill},
 		traits::Iter,
@@ -160,6 +160,13 @@ mod tests {
 		app
 	}
 
+	fn mounts() -> Mounts<Entity> {
+		Mounts {
+			hand: Entity::from_raw(100),
+			forearm: Entity::from_raw(200),
+		}
+	}
+
 	#[test]
 	fn add_item_skill_icon() {
 		let mut app = setup();
@@ -170,7 +177,7 @@ mod tests {
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
-				entity: Entity::from_raw(42),
+				mounts: mounts(),
 				item: Some(Item::with_icon_path(|| Path::from("item_skill/icon/path"))),
 			},
 		)]));
@@ -210,7 +217,7 @@ mod tests {
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
-				entity: Entity::from_raw(42),
+				mounts: mounts(),
 				item: Some(Item::with_icon_path(|| Path::from("item_skill/icon/path"))),
 			},
 		)]));
@@ -245,7 +252,7 @@ mod tests {
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
-				entity: Entity::from_raw(42),
+				mounts: mounts(),
 				item: Some(Item::with_icon_path(|| Path::from("skill_item/icon/path"))),
 			},
 		)]));
@@ -289,7 +296,7 @@ mod tests {
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
-				entity: Entity::from_raw(42),
+				mounts: mounts(),
 				item: Some(Item::with_icon_path(|| Path::from("item_skill/icon/path"))),
 			},
 		)]));
@@ -321,7 +328,7 @@ mod tests {
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
-				entity: Entity::from_raw(42),
+				mounts: mounts(),
 				item: Some(Item::with_icon_path(|| Path::from("icon/path"))),
 			},
 		)]));
@@ -366,7 +373,7 @@ mod tests {
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
-				entity: Entity::from_raw(42),
+				mounts: mounts(),
 				item: Some(Item::with_icon_path(|| Path::from("item_skill/icon/path"))),
 			},
 		)]));
@@ -405,7 +412,7 @@ mod tests {
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
-				entity: Entity::from_raw(42),
+				mounts: mounts(),
 				item: Some(Item::with_icon_path(|| Path::from("item_skill/icon/path"))),
 			},
 		)]));
@@ -447,7 +454,7 @@ mod tests {
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
-				entity: Entity::from_raw(42),
+				mounts: mounts(),
 				item: Some(Item::with_icon_path(|| Path::from("skill_item/icon/path"))),
 			},
 		)]));
@@ -500,7 +507,7 @@ mod tests {
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
-				entity: Entity::from_raw(42),
+				mounts: mounts(),
 				item: None,
 			},
 		)]));

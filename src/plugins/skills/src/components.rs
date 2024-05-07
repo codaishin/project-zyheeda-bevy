@@ -13,15 +13,21 @@ use common::components::Collection;
 use std::collections::HashMap;
 
 #[derive(PartialEq, Debug, Clone)]
+pub struct Mounts<T> {
+	pub hand: T,
+	pub forearm: T,
+}
+
+#[derive(PartialEq, Debug, Clone)]
 pub struct Slot {
-	pub entity: Entity,
+	pub mounts: Mounts<Entity>,
 	pub item: Option<Item>,
 }
 
 pub(crate) type BoneName = str;
 
 #[derive(Component, Clone, PartialEq, Debug)]
-pub struct SlotBones(pub HashMap<SlotKey, &'static BoneName>);
+pub struct SlotBones(pub HashMap<SlotKey, Mounts<&'static BoneName>>);
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct SkillSpawn<T>(pub T);

@@ -116,7 +116,7 @@ impl<T> Flush for Combos<T> {
 mod test_combo_node {
 	use super::*;
 	use crate::{
-		components::{Item, Slot},
+		components::{Item, Mounts, Slot},
 		items::ItemType,
 	};
 	use bevy::ecs::entity::Entity;
@@ -128,7 +128,10 @@ mod test_combo_node {
 			(
 				SlotKey::Hand(Side::Main),
 				Slot {
-					entity: Entity::from_raw(123),
+					mounts: Mounts {
+						hand: Entity::from_raw(123),
+						forearm: Entity::from_raw(456),
+					},
 					item: Some(Item {
 						item_type: HashSet::from([ItemType::Pistol]),
 						..default()
@@ -138,7 +141,10 @@ mod test_combo_node {
 			(
 				SlotKey::Hand(Side::Off),
 				Slot {
-					entity: Entity::from_raw(123),
+					mounts: Mounts {
+						hand: Entity::from_raw(123),
+						forearm: Entity::from_raw(456),
+					},
 					item: Some(Item {
 						item_type: HashSet::from([ItemType::Sword]),
 						..default()
@@ -480,7 +486,7 @@ mod test_combo_node {
 #[cfg(test)]
 mod test_combos {
 	use super::*;
-	use crate::components::Slot;
+	use crate::components::{Mounts, Slot};
 	use bevy::{ecs::entity::Entity, utils::default};
 	use common::components::Side;
 	use mockall::{mock, predicate::eq};
@@ -497,7 +503,10 @@ mod test_combos {
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
-				entity: Entity::from_raw(1234),
+				mounts: Mounts {
+					hand: Entity::from_raw(123),
+					forearm: Entity::from_raw(456),
+				},
 				item: None,
 			},
 		)]));
@@ -555,7 +564,10 @@ mod test_combos {
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
-				entity: Entity::from_raw(1234),
+				mounts: Mounts {
+					hand: Entity::from_raw(123),
+					forearm: Entity::from_raw(456),
+				},
 				item: None,
 			},
 		)]));

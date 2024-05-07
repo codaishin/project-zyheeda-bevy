@@ -6,12 +6,20 @@ use std::{
 	fmt::{Display, Formatter, Result},
 };
 
+#[derive(Debug, PartialEq, Clone, Copy, Default, Eq, Hash)]
+pub enum Mount {
+	#[default]
+	Hand,
+	Forearm,
+}
+
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Item {
 	pub name: &'static str,
 	pub model: Option<&'static str>,
 	pub skill: Option<Skill>,
 	pub item_type: HashSet<ItemType>,
+	pub mount: Mount,
 }
 
 impl Display for Item {

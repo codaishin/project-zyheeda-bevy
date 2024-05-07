@@ -28,7 +28,7 @@ pub(crate) fn update_skill_combos<
 mod tests {
 	use super::*;
 	use crate::{
-		components::Slot,
+		components::{Mounts, Slot},
 		items::SlotKey,
 		skills::{Queued, Skill},
 	};
@@ -94,6 +94,13 @@ mod tests {
 		}
 	}
 
+	fn mounts() -> Mounts<Entity> {
+		Mounts {
+			hand: Entity::from_raw(100),
+			forearm: Entity::from_raw(200),
+		}
+	}
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(Update, update_skill_combos::<_Combos, _Skills>);
@@ -107,7 +114,7 @@ mod tests {
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
-				entity: Entity::from_raw(567),
+				mounts: mounts(),
 				item: None,
 			},
 		)]));
@@ -156,7 +163,7 @@ mod tests {
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
-				entity: Entity::from_raw(567),
+				mounts: mounts(),
 				item: None,
 			},
 		)]));
@@ -236,7 +243,7 @@ mod tests {
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
-				entity: Entity::from_raw(567),
+				mounts: mounts(),
 				item: None,
 			},
 		)]));
@@ -254,7 +261,7 @@ mod tests {
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
-				entity: Entity::from_raw(567),
+				mounts: mounts(),
 				item: None,
 			},
 		)]));
