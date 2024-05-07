@@ -90,6 +90,15 @@ pub struct Queued {
 	pub mode: Activation,
 }
 
+impl Queued {
+	pub fn new(slot_key: SlotKey) -> Self {
+		Self {
+			slot_key,
+			mode: Activation::Waiting,
+		}
+	}
+}
+
 impl Skill {
 	pub fn with<TData: Clone>(self, data: TData) -> Skill<TData> {
 		Skill {

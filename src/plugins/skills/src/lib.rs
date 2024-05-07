@@ -46,6 +46,7 @@ use systems::{
 		release::release_triggered_mouse_context,
 		trigger_primed::trigger_primed_mouse_context,
 	},
+	skill_spawn::add_skill_spawn,
 	slots::add_item_slots,
 	update_skill_combos::update_skill_combos,
 };
@@ -57,7 +58,7 @@ impl Plugin for SkillsPlugin {
 	fn build(&self, app: &mut bevy::prelude::App) {
 		app.add_systems(PreStartup, load_models)
 			.add_systems(PreStartup, setup_input)
-			.add_systems(PreUpdate, add_item_slots)
+			.add_systems(PreUpdate, (add_item_slots, add_skill_spawn))
 			.add_systems(
 				Update,
 				(
@@ -117,8 +118,8 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 
 fn get_loadout() -> Loadout {
 	Loadout::new(
+		"projectile_spawn",
 		[
-			(SlotKey::SkillSpawn, "projectile_spawn"),
 			(SlotKey::Hand(Side::Off), "hand_slot.L"),
 			(SlotKey::Hand(Side::Main), "hand_slot.R"),
 		],

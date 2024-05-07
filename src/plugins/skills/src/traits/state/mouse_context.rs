@@ -41,45 +41,42 @@ mod tests {
 
 	#[test]
 	fn get_just_pressed() {
-		let input = State::new(MouseContext::JustTriggered(KeyCode::KeyA));
+		let input = State::new(MouseContext::JustTriggered(KeyCode::KeyC));
 		let slot_map = SlotMap::new([
-			(KeyCode::KeyA, SlotKey::SkillSpawn, ""),
 			(KeyCode::KeyC, SlotKey::Hand(Side::Main), ""),
 			(KeyCode::KeyD, SlotKey::Hand(Side::Off), ""),
 		]);
 
 		assert_eq!(
-			HashSet::from([SlotKey::SkillSpawn]),
+			HashSet::from([SlotKey::Hand(Side::Main)]),
 			HashSet::from_iter(input.just_pressed_slots(&slot_map)),
 		)
 	}
 
 	#[test]
 	fn get_pressed() {
-		let input = State::new(MouseContext::Triggered(KeyCode::KeyA));
+		let input = State::new(MouseContext::Triggered(KeyCode::KeyC));
 		let slot_map = SlotMap::new([
-			(KeyCode::KeyA, SlotKey::SkillSpawn, ""),
 			(KeyCode::KeyC, SlotKey::Hand(Side::Main), ""),
 			(KeyCode::KeyD, SlotKey::Hand(Side::Off), ""),
 		]);
 
 		assert_eq!(
-			HashSet::from([SlotKey::SkillSpawn]),
+			HashSet::from([SlotKey::Hand(Side::Main),]),
 			HashSet::from_iter(input.pressed_slots(&slot_map)),
 		)
 	}
 
 	#[test]
 	fn get_just_released() {
-		let input = State::new(MouseContext::JustReleased(KeyCode::KeyA));
+		let input = State::new(MouseContext::JustReleased(KeyCode::KeyC));
 		let slot_map = SlotMap::new([
-			(KeyCode::KeyA, SlotKey::SkillSpawn, ""),
 			(KeyCode::KeyC, SlotKey::Hand(Side::Main), ""),
 			(KeyCode::KeyD, SlotKey::Hand(Side::Off), ""),
 		]);
 
 		assert_eq!(
-			HashSet::from([SlotKey::SkillSpawn]),
+			HashSet::from([SlotKey::Hand(Side::Main)]),
 			HashSet::from_iter(input.just_released_slots(&slot_map)),
 		)
 	}

@@ -26,11 +26,15 @@ impl Display for Item {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct InventoryKey(pub usize);
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Default)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum SlotKey {
-	#[default]
-	SkillSpawn,
 	Hand(Side),
+}
+
+impl Default for SlotKey {
+	fn default() -> Self {
+		Self::Hand(Side::Main)
+	}
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]

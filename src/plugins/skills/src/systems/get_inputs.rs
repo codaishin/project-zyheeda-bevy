@@ -113,7 +113,11 @@ mod tests {
 
 	#[test]
 	fn get_superior_inputs() {
-		let slot_map = SlotMap::new([(KeyCode::KeyA, SlotKey::SkillSpawn, "")]);
+		let slot_map = SlotMap::new([(
+			KeyCode::KeyA,
+			SlotKey::Hand(Side::Main),
+			"some value so it is not default",
+		)]);
 		let mut sup = _Superior::default();
 		sup.mock
 			.expect_just_pressed_slots()
@@ -124,12 +128,12 @@ mod tests {
 			.expect_pressed_slots()
 			.times(1)
 			.with(eq(slot_map.clone()))
-			.return_const(vec![SlotKey::Hand(Side::Off)]);
+			.return_const(vec![SlotKey::Hand(Side::Main)]);
 		sup.mock
 			.expect_just_released_slots()
 			.times(1)
 			.with(eq(slot_map.clone()))
-			.return_const(vec![SlotKey::SkillSpawn]);
+			.return_const(vec![SlotKey::Hand(Side::Off)]);
 
 		let mut inf = _Inferior::default();
 		inf.mock.expect_just_pressed_slots().return_const(vec![]);
@@ -145,8 +149,8 @@ mod tests {
 		assert_eq!(
 			&_Result(Input {
 				just_pressed: vec![SlotKey::Hand(Side::Main)],
-				pressed: vec![SlotKey::Hand(Side::Off)],
-				just_released: vec![SlotKey::SkillSpawn],
+				pressed: vec![SlotKey::Hand(Side::Main)],
+				just_released: vec![SlotKey::Hand(Side::Off)],
 			}),
 			result
 		);
@@ -154,23 +158,27 @@ mod tests {
 
 	#[test]
 	fn get_inferior_inputs() {
-		let slot_map = SlotMap::new([(KeyCode::KeyA, SlotKey::SkillSpawn, "")]);
+		let slot_map = SlotMap::new([(
+			KeyCode::KeyA,
+			SlotKey::Hand(Side::Main),
+			"some value so it is not default",
+		)]);
 		let mut inf = _Inferior::default();
 		inf.mock
 			.expect_just_pressed_slots()
 			.times(1)
 			.with(eq(slot_map.clone()))
-			.return_const(vec![SlotKey::Hand(Side::Main)]);
+			.return_const(vec![SlotKey::Hand(Side::Off)]);
 		inf.mock
 			.expect_pressed_slots()
 			.times(1)
 			.with(eq(slot_map.clone()))
-			.return_const(vec![SlotKey::Hand(Side::Off)]);
+			.return_const(vec![SlotKey::Hand(Side::Main)]);
 		inf.mock
 			.expect_just_released_slots()
 			.times(1)
 			.with(eq(slot_map.clone()))
-			.return_const(vec![SlotKey::SkillSpawn]);
+			.return_const(vec![SlotKey::Hand(Side::Off)]);
 
 		let mut sup = _Superior::default();
 		sup.mock.expect_just_pressed_slots().return_const(vec![]);
@@ -185,9 +193,9 @@ mod tests {
 
 		assert_eq!(
 			&_Result(Input {
-				just_pressed: vec![SlotKey::Hand(Side::Main)],
-				pressed: vec![SlotKey::Hand(Side::Off)],
-				just_released: vec![SlotKey::SkillSpawn],
+				just_pressed: vec![SlotKey::Hand(Side::Off)],
+				pressed: vec![SlotKey::Hand(Side::Main)],
+				just_released: vec![SlotKey::Hand(Side::Off)],
 			}),
 			result
 		);

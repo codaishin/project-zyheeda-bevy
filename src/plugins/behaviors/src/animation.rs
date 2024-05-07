@@ -1,7 +1,6 @@
-use crate::components::MovementMode;
+use crate::{components::MovementMode, traits::GetAnimation};
 use animations::animation::Animation;
 use bevy::ecs::component::Component;
-use common::traits::get::Get;
 
 #[derive(Component)]
 pub struct MovementAnimations<TAnimation = Animation> {
@@ -15,8 +14,8 @@ impl MovementAnimations {
 	}
 }
 
-impl<TAnimation> Get<MovementMode, TAnimation> for MovementAnimations<TAnimation> {
-	fn get(&self, key: &MovementMode) -> &TAnimation {
+impl<TAnimation> GetAnimation<TAnimation> for MovementAnimations<TAnimation> {
+	fn animation(&self, key: &MovementMode) -> &TAnimation {
 		match key {
 			MovementMode::Fast => &self.fast,
 			MovementMode::Slow => &self.slow,
@@ -38,7 +37,10 @@ mod tests {
 			fast: _Animation("fast"),
 		};
 
-		assert_eq!(&_Animation("fast"), animation.get(&MovementMode::Fast));
+		assert_eq!(
+			&_Animation("fast"),
+			animation.animation(&MovementMode::Fast)
+		);
 	}
 
 	#[test]
@@ -48,6 +50,9 @@ mod tests {
 			fast: _Animation::default(),
 		};
 
-		assert_eq!(&_Animation("slow"), animation.get(&MovementMode::Slow));
+		assert_eq!(
+			&_Animation("slow"),
+			animation.animation(&MovementMode::Slow)
+		);
 	}
 }

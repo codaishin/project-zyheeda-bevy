@@ -1,3 +1,5 @@
+use crate::skills::Skill;
+
 use super::{Item, Slot, SlotKey};
 use bevy::ecs::component::Component;
 use common::traits::get::Get;
@@ -18,12 +20,17 @@ impl Default for Slots {
 	}
 }
 
-impl Get<SlotKey, Option<Item>> for Slots {
-	fn get(&self, key: &SlotKey) -> &Option<Item> {
-		let Some(slot) = self.0.get(key) else {
-			return &None;
-		};
-		&slot.item
+impl Get<SlotKey, Item> for Slots {
+	fn get(&self, key: &SlotKey) -> Option<&Item> {
+		let slot = self.0.get(key)?;
+		slot.item.as_ref()
+	}
+}
+
+impl Get<SlotKey, Skill> for Slots {
+	fn get(&self, key: &SlotKey) -> Option<&Skill> {
+		let item: &Item = self.get(key)?;
+		item.skill.as_ref()
 	}
 }
 
@@ -50,7 +57,7 @@ mod tests {
 		);
 
 		assert_eq!(
-			&Some(Item {
+			Some(&Item {
 				name: "my item",
 				..default()
 			}),
@@ -75,7 +82,7 @@ mod tests {
 		);
 
 		assert_eq!(
-			&Some(Item {
+			Some(&Item {
 				name: "my item",
 				..default()
 			}),
@@ -99,6 +106,6 @@ mod tests {
 			.into(),
 		);
 
-		assert_eq!(&None, slots.get(&SlotKey::Hand(Side::Off)));
+		assert_eq!(None::<&Item>, slots.get(&SlotKey::Hand(Side::Off)));
 	}
 }
