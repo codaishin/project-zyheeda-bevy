@@ -48,13 +48,12 @@ mod tests {
 		input.press(KeyCode::KeyD);
 		input.clear_just_pressed(KeyCode::KeyD);
 		let slot_map = SlotMap::new([
-			(KeyCode::KeyA, SlotKey::SkillSpawn, ""),
 			(KeyCode::KeyC, SlotKey::Hand(Side::Main), ""),
 			(KeyCode::KeyD, SlotKey::Hand(Side::Off), ""),
 		]);
 
 		assert_eq!(
-			HashSet::from([SlotKey::SkillSpawn, SlotKey::Hand(Side::Main)]),
+			HashSet::from([SlotKey::Hand(Side::Main)]),
 			HashSet::from_iter(input.just_pressed_slots(&slot_map)),
 		)
 	}
@@ -71,17 +70,12 @@ mod tests {
 		input.clear_just_pressed(KeyCode::KeyC);
 		input.clear_just_pressed(KeyCode::KeyD);
 		let slot_map = SlotMap::new([
-			(KeyCode::KeyA, SlotKey::SkillSpawn, ""),
 			(KeyCode::KeyC, SlotKey::Hand(Side::Main), ""),
 			(KeyCode::KeyD, SlotKey::Hand(Side::Off), ""),
 		]);
 
 		assert_eq!(
-			HashSet::from([
-				SlotKey::SkillSpawn,
-				SlotKey::Hand(Side::Main),
-				SlotKey::Hand(Side::Off),
-			]),
+			HashSet::from([SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off),]),
 			HashSet::from_iter(input.pressed_slots(&slot_map)),
 		)
 	}
@@ -100,13 +94,12 @@ mod tests {
 		input.clear_just_pressed(KeyCode::KeyC);
 		input.clear_just_pressed(KeyCode::KeyD);
 		let slot_map = SlotMap::new([
-			(KeyCode::KeyA, SlotKey::SkillSpawn, ""),
 			(KeyCode::KeyC, SlotKey::Hand(Side::Main), ""),
 			(KeyCode::KeyD, SlotKey::Hand(Side::Off), ""),
 		]);
 
 		assert_eq!(
-			HashSet::from([SlotKey::SkillSpawn, SlotKey::Hand(Side::Main),]),
+			HashSet::from([SlotKey::Hand(Side::Main),]),
 			HashSet::from_iter(input.just_released_slots(&slot_map)),
 		)
 	}

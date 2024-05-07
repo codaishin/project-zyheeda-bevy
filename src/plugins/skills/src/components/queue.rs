@@ -385,7 +385,7 @@ mod test_queue_collection {
 		let mut queue = Queue::new([Skill {
 			name: "a",
 			data: Queued {
-				slot_key: SlotKey::SkillSpawn,
+				slot_key: SlotKey::Hand(Side::Main),
 				..default()
 			},
 			..default()
@@ -435,7 +435,7 @@ mod test_queue_collection {
 		let mut queue = Queue::new([Skill {
 			name: "a",
 			data: Queued {
-				slot_key: SlotKey::SkillSpawn,
+				slot_key: SlotKey::Hand(Side::Main),
 				..default()
 			},
 			..default()
@@ -470,7 +470,7 @@ mod test_queue_collection {
 		let mut queue = Queue::new([Skill {
 			name: "a",
 			data: Queued {
-				slot_key: SlotKey::SkillSpawn,
+				slot_key: SlotKey::Hand(Side::Main),
 				..default()
 			},
 			..default()
@@ -564,7 +564,6 @@ impl<'a> GetAnimation<Animation> for ActiveSkill<'a> {
 			(Animate::Ignore, ..) => Animate::Ignore,
 			(Animate::Some(a), SlotKey::Hand(Side::Main)) => Animate::Some(a.right.clone()),
 			(Animate::Some(a), SlotKey::Hand(Side::Off)) => Animate::Some(a.left.clone()),
-			(Animate::Some(..), SlotKey::SkillSpawn) => Animate::None,
 		}
 	}
 }
@@ -900,24 +899,12 @@ mod test_queue_active_skill {
 					..default()
 				},
 			},
-			ActiveSkill {
-				duration: &mut Duration::default(),
-				skill: &mut Skill {
-					data: Queued {
-						slot_key: SlotKey::SkillSpawn,
-						..default()
-					},
-					animate: Animate::Some(animation.clone()),
-					..default()
-				},
-			},
 		];
 
 		assert_eq!(
 			[
 				Animate::Some(animation.right),
 				Animate::Some(animation.left),
-				Animate::None
 			],
 			actives.map(|s| s.animate()),
 		)
