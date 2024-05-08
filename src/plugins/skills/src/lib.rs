@@ -94,10 +94,7 @@ impl Plugin for SkillsPlugin {
 }
 
 fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
-	let models = Models::new(
-		[("pistol", "pistol.gltf", 0), ("sword", "sword.gltf", 0)],
-		&asset_server,
-	);
+	let models = Models::new([("pistol", "pistol.glb", 0)], &asset_server);
 	commands.insert_resource(models);
 }
 
