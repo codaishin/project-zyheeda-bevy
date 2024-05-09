@@ -48,6 +48,5 @@ impl Default for SlotKey {
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum ItemType {
 	Pistol,
-	Sword,
-	Legs,
+	Bracer,
 }
