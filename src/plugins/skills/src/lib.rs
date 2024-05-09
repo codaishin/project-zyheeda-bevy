@@ -94,7 +94,10 @@ impl Plugin for SkillsPlugin {
 }
 
 fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
-	let models = Models::new([("pistol", "pistol.glb", 0)], &asset_server);
+	let models = Models::new(
+		[("pistol", "pistol.glb", 0), ("bracer", "bracer.glb", 0)],
+		&asset_server,
+	);
 	commands.insert_resource(models);
 }
 
@@ -146,11 +149,11 @@ fn get_loadout() -> Loadout {
 			(
 				SlotKey::Hand(Side::Main),
 				Some(Item {
-					name: "Plasma Pistol B",
-					model: Some("pistol"),
-					skill: Some(ShootHandGun::<Plasma>::skill()),
-					item_type: HashSet::from([ItemType::Pistol]),
-					mount: Mount::Hand,
+					name: "Force Bracer",
+					model: Some("bracer"),
+					skill: None,
+					item_type: HashSet::from([ItemType::Bracer]),
+					mount: Mount::Forearm,
 				}),
 			),
 		],
@@ -159,7 +162,7 @@ fn get_loadout() -> Loadout {
 
 fn get_inventory() -> Inventory {
 	Inventory::new([Some(Item {
-		name: "Plasma Pistol C",
+		name: "Plasma Pistol B",
 		model: Some("pistol"),
 		skill: Some(ShootHandGun::<Plasma>::skill()),
 		item_type: HashSet::from([ItemType::Pistol]),

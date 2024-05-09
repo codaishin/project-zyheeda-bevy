@@ -146,7 +146,7 @@ mod test_combo_node {
 						forearm: Entity::from_raw(456),
 					},
 					item: Some(Item {
-						item_type: HashSet::from([ItemType::Sword]),
+						item_type: HashSet::from([ItemType::Bracer]),
 						..default()
 					}),
 				},
@@ -239,7 +239,7 @@ mod test_combo_node {
 			(
 				Skill {
 					name: "first",
-					is_usable_with: HashSet::from([ItemType::Sword]),
+					is_usable_with: HashSet::from([ItemType::Bracer]),
 					..default()
 				},
 				ComboNode::Tree(HashMap::from([(
@@ -382,7 +382,7 @@ mod test_combo_node {
 				SlotKey::Hand(Side::Main),
 				Skill {
 					name: "first",
-					is_usable_with: HashSet::from([ItemType::Sword]),
+					is_usable_with: HashSet::from([ItemType::Bracer]),
 					..default()
 				},
 			),
@@ -408,7 +408,7 @@ mod test_combo_node {
 				SlotKey::Hand(Side::Main),
 				Skill {
 					name: "first",
-					is_usable_with: HashSet::from([ItemType::Sword]),
+					is_usable_with: HashSet::from([ItemType::Bracer]),
 					..default()
 				},
 			),
