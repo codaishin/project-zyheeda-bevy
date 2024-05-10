@@ -9,9 +9,20 @@ use crate::{
 	components::slots::Slots,
 	items::SlotKey,
 	resources::SlotMap,
-	skills::{Animate, Skill, SkillAnimation, SkillExecution, StartBehaviorFn, StopBehaviorFn},
+	skills::{
+		Animate,
+		Skill,
+		SkillAnimation,
+		SkillCaster,
+		SkillExecution,
+		SkillSpawner,
+		StartBehaviorFn,
+		StopBehaviorFn,
+		Target,
+	},
 };
 use animations::animation::Animation;
+use bevy::ecs::{bundle::Bundle, system::EntityCommands};
 use common::{
 	tools::{Last, This},
 	traits::{load_asset::Path, state_duration::StateUpdate},
@@ -20,6 +31,31 @@ use std::hash::Hash;
 
 pub(crate) trait Enqueue<TItem> {
 	fn enqueue(&mut self, item: TItem);
+}
+
+pub(crate) trait NewSkillBundle {
+	fn new_bundle(caster: &SkillCaster, spawner: &SkillSpawner, target: &Target) -> impl Bundle;
+}
+
+pub(crate) trait RunSkillDetached {
+	fn run_detached(
+		agent: &mut EntityCommands,
+		caster: &SkillCaster,
+		spawner: &SkillSpawner,
+		target: &Target,
+	);
+}
+
+impl<T: NewSkillBundle> RunSkillDetached for T {
+	fn run_detached(
+		agent: &mut EntityCommands,
+		caster: &SkillCaster,
+		spawner: &SkillSpawner,
+		target: &Target,
+	) {
+		let mut commands = agent.commands();
+		commands.spawn(T::new_bundle(caster, spawner, target));
+	}
 }
 
 pub(crate) trait Flush {
@@ -276,24 +312,90 @@ mod test_animation_chain_skill_animation {
 }
 
 #[cfg(test)]
-pub(crate) mod test_tools {
+mod test_run_skill_detached {
 	use super::*;
-	use crate::skills::{SkillCaster, SkillSpawner, Target};
-	use bevy::{ecs::system::Commands, prelude::Entity};
+	use crate::skills::SelectInfo;
+	use bevy::{
+		app::{App, Update},
+		ecs::{
+			component::Component,
+			entity::Entity,
+			system::{Commands, Query},
+		},
+		math::{Ray3d, Vec3},
+		transform::components::{GlobalTransform, Transform},
+	};
+	use common::{
+		components::Outdated,
+		resources::ColliderInfo,
+		test_tools::utils::SingleThreadedApp,
+	};
 
-	pub fn run_lazy(
-		behavior: SkillExecution,
-		agent: Entity,
+	#[derive(Component, Debug, PartialEq)]
+	struct _Skill {
 		caster: SkillCaster,
 		spawner: SkillSpawner,
-		select_info: Target,
-	) -> impl FnMut(Commands) {
-		move |mut commands| {
-			let Some(run) = behavior.run_fn else {
-				return;
-			};
-			let mut agent = commands.entity(agent);
-			run(&mut agent, &caster, &spawner, &select_info);
+		target: Target,
+	}
+
+	impl NewSkillBundle for _Skill {
+		fn new_bundle(
+			caster: &SkillCaster,
+			spawner: &SkillSpawner,
+			target: &Target,
+		) -> impl Bundle {
+			_Skill {
+				caster: *caster,
+				spawner: *spawner,
+				target: target.clone(),
+			}
 		}
+	}
+
+	fn setup(caster: SkillCaster, spawner: SkillSpawner, target: Target) -> App {
+		let mut app = App::new().single_threaded(Update);
+		app.add_systems(
+			Update,
+			move |mut commands: Commands, query: Query<Entity>| {
+				for id in &query {
+					let mut agent = commands.entity(id);
+					_Skill::run_detached(&mut agent, &caster, &spawner, &target);
+				}
+			},
+		);
+
+		app
+	}
+
+	#[test]
+	fn spawn_not_on_agent() {
+		let entity = Entity::from_raw(42);
+		let caster = SkillCaster(Transform::from_xyz(1., 2., 3.));
+		let spawner = SkillSpawner(GlobalTransform::from_xyz(4., 5., 6.));
+		let target = SelectInfo {
+			ray: Ray3d::new(Vec3::ONE, Vec3::ONE),
+			collision_info: Some(ColliderInfo {
+				collider: Outdated {
+					entity,
+					component: GlobalTransform::from_xyz(7., 8., 9.),
+				},
+				root: None,
+			}),
+		};
+		let mut app = setup(caster, spawner, target.clone());
+		let agent = app.world.spawn_empty().id();
+
+		app.update();
+
+		let skill = app.world.iter_entities().find(|e| e.id() != agent);
+
+		assert_eq!(
+			Some(&_Skill {
+				caster,
+				spawner,
+				target,
+			}),
+			skill.and_then(|s| s.get::<_Skill>())
+		);
 	}
 }
