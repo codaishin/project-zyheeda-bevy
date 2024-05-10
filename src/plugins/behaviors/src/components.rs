@@ -58,6 +58,11 @@ impl<T> Projectile<T> {
 }
 
 #[derive(Component)]
+pub struct ForceShield {
+	pub direction: Direction3d,
+}
+
+#[derive(Component)]
 pub struct VoidSphere;
 
 impl VoidSphere {
