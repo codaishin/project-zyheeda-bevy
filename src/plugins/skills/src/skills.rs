@@ -189,7 +189,6 @@ pub struct SkillSpawner(pub GlobalTransform);
 pub struct SkillCaster(pub Transform);
 
 pub type Target = SelectInfo<Outdated<GlobalTransform>>;
-pub type TransformFN = fn(&mut Transform, &SkillSpawner, &Target);
 pub type StartBehaviorFn = fn(&mut EntityCommands, &SkillCaster, &SkillSpawner, &Target);
 pub type StopBehaviorFn = fn(&mut EntityCommands);
 
