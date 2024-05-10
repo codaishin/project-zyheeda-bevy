@@ -13,7 +13,11 @@ use crate::{
 	},
 };
 use animations::animation::Animation;
-use bevy::{ecs::component::Component, utils::default};
+use bevy::{
+	ecs::{component::Component, entity::Entity, system::Commands},
+	hierarchy::DespawnRecursiveExt,
+	utils::default,
+};
 use common::{components::Side, traits::state_duration::StateDuration};
 use std::{collections::VecDeque, time::Duration};
 
@@ -553,8 +557,19 @@ impl<'a> Execution for ActiveSkill<'a> {
 	}
 
 	fn get_stop(&self) -> Option<StopBehaviorFn> {
-		self.skill.execution.stop_fn
+		if !self.skill.execution.execution_stop_on_skill_stop {
+			return None;
+		}
+
+		Some(remove_entity_recursive)
 	}
+}
+
+fn remove_entity_recursive(commands: &mut Commands, entity: Entity) {
+	let Some(entity) = commands.get_entity(entity) else {
+		return;
+	};
+	entity.despawn_recursive();
 }
 
 impl<'a> GetAnimation<Animation> for ActiveSkill<'a> {
@@ -584,7 +599,11 @@ mod test_queue_active_skill {
 		},
 	};
 	use animations::animation::PlayMode;
-	use bevy::{ecs::system::EntityCommands, prelude::default};
+	use bevy::{
+		app::{App, Update},
+		hierarchy::BuildWorldChildren,
+		prelude::default,
+	};
 	use common::{components::Side, traits::load_asset::Path};
 
 	#[test]
@@ -835,7 +854,9 @@ mod test_queue_active_skill {
 
 	#[test]
 	fn test_start_behavior_fn() {
-		fn run(_: &mut EntityCommands, _: &SkillCaster, _: &SkillSpawner, _: &Target) {}
+		fn run(_: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> Entity {
+			Entity::from_raw(100)
+		}
 
 		let active = ActiveSkill {
 			skill: &mut Skill {
@@ -856,9 +877,7 @@ mod test_queue_active_skill {
 	}
 
 	#[test]
-	fn test_stop_behavior_fn() {
-		fn stop(_: &mut EntityCommands) {}
-
+	fn test_stop_behavior_fn_when_set_to_stoppable() {
 		let active = ActiveSkill {
 			skill: &mut Skill {
 				data: Queued {
@@ -866,7 +885,7 @@ mod test_queue_active_skill {
 					..default()
 				},
 				execution: SkillExecution {
-					stop_fn: Some(stop),
+					execution_stop_on_skill_stop: true,
 					..default()
 				},
 				..default()
@@ -874,7 +893,45 @@ mod test_queue_active_skill {
 			duration: &mut Duration::default(),
 		};
 
-		assert_eq!(Some(stop as usize), active.get_stop().map(|f| f as usize));
+		assert_eq!(
+			Some(remove_entity_recursive as usize),
+			active.get_stop().map(|f| f as usize)
+		);
+	}
+
+	#[test]
+	fn test_stop_behavior_fn_when_not_set_to_stoppable() {
+		let active = ActiveSkill {
+			skill: &mut Skill {
+				data: Queued {
+					slot_key: SlotKey::Hand(Side::Main),
+					..default()
+				},
+				execution: SkillExecution {
+					execution_stop_on_skill_stop: false,
+					..default()
+				},
+				..default()
+			},
+			duration: &mut Duration::default(),
+		};
+
+		assert_eq!(None, active.get_stop().map(|f| f as usize));
+	}
+
+	#[test]
+	fn test_stop_fn() {
+		let mut app = App::new();
+		let entity = app.world.spawn_empty().id();
+		app.world.spawn_empty().set_parent(entity);
+
+		app.add_systems(Update, move |mut commands: Commands| {
+			remove_entity_recursive(&mut commands, entity)
+		});
+
+		app.update();
+
+		assert!(app.world.entities().is_empty());
 	}
 
 	#[test]

@@ -1,7 +1,7 @@
 use super::{Animate, Cast, Skill, SkillExecution};
 use crate::{
 	items::ItemType,
-	traits::{GetExecution, RunSkillAttached, SkillTemplate, StopSkillAttached},
+	traits::{GetExecution, RunSkill, SkillTemplate},
 };
 use behaviors::components::ForceShield;
 use std::{collections::HashSet, time::Duration};
@@ -29,8 +29,8 @@ impl SkillTemplate for ForceShieldSkill {
 impl GetExecution for ForceShield {
 	fn execution() -> SkillExecution {
 		SkillExecution {
-			run_fn: Some(ForceShield::run_attached),
-			stop_fn: Some(ForceShield::stop_attached),
+			run_fn: Some(ForceShield::run_skill),
+			execution_stop_on_skill_stop: true,
 		}
 	}
 }

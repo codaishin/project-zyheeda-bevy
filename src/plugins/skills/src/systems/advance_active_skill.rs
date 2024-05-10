@@ -152,7 +152,6 @@ mod tests {
 	};
 	use behaviors::components::{Face, OverrideFace};
 	use bevy::{
-		ecs::system::EntityCommands,
 		prelude::{App, Transform, Update},
 		time::{Real, Time},
 	};
@@ -582,7 +581,14 @@ mod tests {
 
 	#[test]
 	fn run() {
-		fn start_behavior(_: &mut EntityCommands, _: &SkillCaster, _: &SkillSpawner, _: &Target) {}
+		fn start_behavior(
+			_: &mut Commands,
+			_: &SkillCaster,
+			_: &SkillSpawner,
+			_: &Target,
+		) -> Entity {
+			Entity::from_raw(101)
+		}
 
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert(_Dequeue {
@@ -637,7 +643,7 @@ mod tests {
 
 	#[test]
 	fn stop() {
-		fn stop_fn(_: &mut EntityCommands) {}
+		fn stop_fn(_: &mut Commands, _: Entity) {}
 
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((

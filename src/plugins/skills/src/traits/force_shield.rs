@@ -9,7 +9,7 @@ impl NewSkillBundle for ForceShield {
 	fn new_skill_bundle(caster: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> Self::Bundle {
 		(
 			ForceShield {
-				direction: caster.0.forward(),
+				direction: caster.1.forward(),
 			},
 			SpatialBundle::from_transform(Transform::from(spawner.0)),
 		)
@@ -22,6 +22,7 @@ mod tests {
 	use crate::{skills::SelectInfo, test_tools::assert_spacial_bundle};
 	use bevy::{
 		app::App,
+		ecs::entity::Entity,
 		math::{Ray3d, Vec3},
 		transform::components::{GlobalTransform, Transform},
 	};
@@ -38,7 +39,10 @@ mod tests {
 	fn spawn_with_forward_direction() {
 		let mut app = App::new();
 		let forward = Vec3::new(8., 9., 10.);
-		let caster = SkillCaster(Transform::default().looking_at(forward, Vec3::Y));
+		let caster = SkillCaster(
+			Entity::from_raw(42),
+			Transform::default().looking_at(forward, Vec3::Y),
+		);
 		let spawner = SkillSpawner(GlobalTransform::from_xyz(1., 2., 3.));
 
 		let force_shield = app
@@ -57,7 +61,7 @@ mod tests {
 	#[test]
 	fn spawn_with_special_bundle() {
 		let mut app = App::new();
-		let caster = SkillCaster::default();
+		let caster = SkillCaster(Entity::from_raw(42), Transform::default());
 		let spawner = SkillSpawner(GlobalTransform::from_xyz(1., 2., 3.));
 
 		let force_shield = app
@@ -72,7 +76,7 @@ mod tests {
 	#[test]
 	fn spawn_with_proper_location() {
 		let mut app = App::new();
-		let caster = SkillCaster::default();
+		let caster = SkillCaster(Entity::from_raw(42), Transform::default());
 		let spawner = SkillSpawner(GlobalTransform::from_xyz(1., 2., 3.));
 
 		let force_shield = app

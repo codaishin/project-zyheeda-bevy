@@ -7,7 +7,7 @@ use crate::{
 };
 use animations::animation::Animation;
 use bevy::{
-	ecs::system::EntityCommands,
+	ecs::{entity::Entity, system::Commands},
 	math::{primitives::Direction3d, Ray3d, Vec3},
 	transform::components::{GlobalTransform, Transform},
 };
@@ -185,15 +185,15 @@ pub(crate) enum SkillState {
 #[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct SkillSpawner(pub GlobalTransform);
 
-#[derive(Debug, PartialEq, Clone, Copy, Default)]
-pub struct SkillCaster(pub Transform);
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct SkillCaster(pub Entity, pub Transform);
 
 pub type Target = SelectInfo<Outdated<GlobalTransform>>;
-pub type StartBehaviorFn = fn(&mut EntityCommands, &SkillCaster, &SkillSpawner, &Target);
-pub type StopBehaviorFn = fn(&mut EntityCommands);
+pub type StartBehaviorFn = fn(&mut Commands, &SkillCaster, &SkillSpawner, &Target) -> Entity;
+pub type StopBehaviorFn = fn(&mut Commands, Entity);
 
 #[derive(PartialEq, Debug, Clone, Copy, Default)]
 pub struct SkillExecution {
 	pub run_fn: Option<StartBehaviorFn>,
-	pub stop_fn: Option<StopBehaviorFn>,
+	pub execution_stop_on_skill_stop: bool,
 }
