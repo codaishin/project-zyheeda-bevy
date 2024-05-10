@@ -278,14 +278,14 @@ mod test_animation_chain_skill_animation {
 #[cfg(test)]
 pub(crate) mod test_tools {
 	use super::*;
-	use crate::skills::{Spawner, Target};
-	use bevy::{ecs::system::Commands, prelude::Entity, transform::components::Transform};
+	use crate::skills::{SkillCaster, SkillSpawner, Target};
+	use bevy::{ecs::system::Commands, prelude::Entity};
 
 	pub fn run_lazy(
 		behavior: SkillExecution,
 		agent: Entity,
-		agent_transform: Transform,
-		spawner: Spawner,
+		caster: SkillCaster,
+		spawner: SkillSpawner,
 		select_info: Target,
 	) -> impl FnMut(Commands) {
 		move |mut commands| {
@@ -293,7 +293,7 @@ pub(crate) mod test_tools {
 				return;
 			};
 			let mut agent = commands.entity(agent);
-			run(&mut agent, &agent_transform, &spawner, &select_info);
+			run(&mut agent, &caster, &spawner, &select_info);
 		}
 	}
 }

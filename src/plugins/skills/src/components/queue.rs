@@ -573,10 +573,18 @@ mod test_queue_active_skill {
 	use super::*;
 	use crate::{
 		components::SlotKey,
-		skills::{Animate, Cast, SkillAnimation, SkillExecution, Spawner, Target},
+		skills::{
+			Animate,
+			Cast,
+			SkillAnimation,
+			SkillCaster,
+			SkillExecution,
+			SkillSpawner,
+			Target,
+		},
 	};
 	use animations::animation::PlayMode;
-	use bevy::{ecs::system::EntityCommands, prelude::default, transform::components::Transform};
+	use bevy::{ecs::system::EntityCommands, prelude::default};
 	use common::{components::Side, traits::load_asset::Path};
 
 	#[test]
@@ -827,7 +835,7 @@ mod test_queue_active_skill {
 
 	#[test]
 	fn test_start_behavior_fn() {
-		fn run(_: &mut EntityCommands, _: &Transform, _: &Spawner, _: &Target) {}
+		fn run(_: &mut EntityCommands, _: &SkillCaster, _: &SkillSpawner, _: &Target) {}
 
 		let active = ActiveSkill {
 			skill: &mut Skill {

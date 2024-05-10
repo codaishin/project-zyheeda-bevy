@@ -1,6 +1,6 @@
 use crate::{
 	components::{SkillExecution, SkillSpawn},
-	skills::{SelectInfo, Spawner, StartBehaviorFn, Target},
+	skills::{SelectInfo, SkillCaster, SkillSpawner, StartBehaviorFn, Target},
 };
 use bevy::{
 	ecs::{
@@ -51,7 +51,7 @@ fn start_behavior(
 	cam_ray: &Res<CamRay>,
 	mouse_hover: &Res<MouseHover>,
 	skill_spawn: &SkillSpawn<Entity>,
-	transform: &Transform,
+	skill_caster: &Transform,
 	transforms: &Query<&GlobalTransform, ()>,
 	start_fn: &StartBehaviorFn,
 ) {
@@ -62,7 +62,7 @@ fn start_behavior(
 		return;
 	};
 	let target = get_target(ray, mouse_hover, transforms);
-	start_fn(agent, transform, &spawner, &target);
+	start_fn(agent, &SkillCaster(*skill_caster), &spawner, &target);
 }
 
 fn get_target(
@@ -82,12 +82,12 @@ fn get_target(
 fn get_spawner(
 	skill_spawn: &SkillSpawn<Entity>,
 	transforms: &Query<&GlobalTransform>,
-) -> Option<Spawner> {
+) -> Option<SkillSpawner> {
 	let Ok(transform) = transforms.get(skill_spawn.0) else {
 		return None;
 	};
 
-	Some(Spawner(*transform))
+	Some(SkillSpawner(*transform))
 }
 
 #[cfg(test)]
@@ -95,7 +95,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::SkillExecution,
-		skills::{Spawner, Target},
+		skills::{SkillSpawner, Target},
 	};
 	use bevy::{
 		app::{App, Update},
@@ -122,8 +122,8 @@ mod tests {
 	trait StartFn {
 		fn start(
 			agent: &mut EntityCommands,
-			transform: &Transform,
-			spawner: &Spawner,
+			transform: &SkillCaster,
+			spawner: &SkillSpawner,
 			target: &Target,
 		);
 	}
@@ -138,7 +138,7 @@ mod tests {
 				$ident {}
 				impl StartFn for $ident {
 					#[allow(clippy::needless_lifetimes)]
-					fn start<'a>(agent: &mut EntityCommands<'a>, transform: &Transform, spawner: &Spawner, target: &Target) {}
+					fn start<'a>(agent: &mut EntityCommands<'a>, caster: &SkillCaster, spawner: &SkillSpawner, target: &Target) {}
 				}
 				impl StopFn for $ident {
 					#[allow(clippy::needless_lifetimes)]
@@ -170,11 +170,11 @@ mod tests {
 		let spawner_transform = GlobalTransform::from_xyz(100., 100., 100.);
 		let spawner = app.world.spawn(spawner_transform).id();
 
-		let agent_transform = Transform::from_xyz(42., 42., 42.);
+		let skill_caster = SkillCaster(Transform::from_xyz(42., 42., 42.));
 		let agent = app
 			.world
 			.spawn((
-				agent_transform,
+				skill_caster.0,
 				SkillSpawn(spawner),
 				SkillExecution::Start(Mock_Run::start),
 			))
@@ -188,8 +188,8 @@ mod tests {
 				assert_eq!(
 					(
 						agent,
-						&agent_transform,
-						&Spawner(spawner_transform),
+						&skill_caster,
+						&SkillSpawner(spawner_transform),
 						&Target {
 							ray: cam_ray,
 							collision_info: Some(ColliderInfo {

@@ -147,7 +147,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::SkillExecution,
-		skills::{Spawner, StartBehaviorFn, StopBehaviorFn, Target},
+		skills::{SkillCaster, SkillSpawner, StartBehaviorFn, StopBehaviorFn, Target},
 		traits::{Execution, GetAnimation},
 	};
 	use behaviors::components::{Face, OverrideFace};
@@ -582,7 +582,7 @@ mod tests {
 
 	#[test]
 	fn run() {
-		fn start_behavior(_: &mut EntityCommands, _: &Transform, _: &Spawner, _: &Target) {}
+		fn start_behavior(_: &mut EntityCommands, _: &SkillCaster, _: &SkillSpawner, _: &Target) {}
 
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert(_Dequeue {

@@ -183,11 +183,14 @@ pub(crate) enum SkillState {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Default)]
-pub struct Spawner(pub GlobalTransform);
+pub struct SkillSpawner(pub GlobalTransform);
+
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
+pub struct SkillCaster(pub Transform);
 
 pub type Target = SelectInfo<Outdated<GlobalTransform>>;
-pub type TransformFN = fn(&mut Transform, &Spawner, &Target);
-pub type StartBehaviorFn = fn(&mut EntityCommands, &Transform, &Spawner, &Target);
+pub type TransformFN = fn(&mut Transform, &SkillSpawner, &Target);
+pub type StartBehaviorFn = fn(&mut EntityCommands, &SkillCaster, &SkillSpawner, &Target);
 pub type StopBehaviorFn = fn(&mut EntityCommands);
 
 #[derive(PartialEq, Debug, Clone, Copy, Default)]

@@ -1,5 +1,5 @@
 use super::GetExecution;
-use crate::skills::{SkillExecution, Spawner, Target};
+use crate::skills::{SkillCaster, SkillExecution, SkillSpawner, Target};
 use behaviors::components::Projectile;
 use bevy::{ecs::system::EntityCommands, prelude::SpatialBundle, transform::components::Transform};
 
@@ -14,13 +14,13 @@ impl<T: Send + Sync + 'static> GetExecution for Projectile<T> {
 
 fn run_fn<T: Send + Sync + 'static>(
 	agent: &mut EntityCommands,
-	agent_transform: &Transform,
-	spawner: &Spawner,
+	caster: &SkillCaster,
+	spawner: &SkillSpawner,
 	_: &Target,
 ) {
 	let transform = Transform::from_translation(spawner.0.translation());
 	agent.commands().spawn((
-		Projectile::<T>::new(agent_transform.forward(), 10.),
+		Projectile::<T>::new(caster.0.forward(), 10.),
 		SpatialBundle::from_transform(transform),
 	));
 }
@@ -42,19 +42,14 @@ mod tests {
 	fn spawn_projectile_with_agent_forward() {
 		let mut app = App::new();
 		let lazy = Projectile::<()>::execution();
-		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let forward = Vec3::new(8., 9., 10.);
+		let caster = SkillCaster(Transform::default().looking_at(forward, Vec3::Y));
+		let spawner = SkillSpawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let agent = app.world.spawn(()).id();
 
 		app.add_systems(
 			Update,
-			run_lazy(
-				lazy,
-				agent,
-				Transform::default().looking_at(forward, Vec3::Y),
-				spawner,
-				Target::default(),
-			),
+			run_lazy(lazy, agent, caster, spawner, Target::default()),
 		);
 		app.update();
 
@@ -74,7 +69,8 @@ mod tests {
 	fn spawn_with_special_bundle() {
 		let mut app = App::new();
 		let lazy = Projectile::<()>::execution();
-		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
+		let caster = SkillCaster::default();
+		let spawner = SkillSpawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let select_info = Target {
 			ray: Ray3d {
 				origin: Vec3::ONE,
@@ -84,10 +80,7 @@ mod tests {
 		};
 		let agent = app.world.spawn(()).id();
 
-		app.add_systems(
-			Update,
-			run_lazy(lazy, agent, default(), spawner, select_info),
-		);
+		app.add_systems(Update, run_lazy(lazy, agent, caster, spawner, select_info));
 		app.update();
 
 		let projectile = app
@@ -112,7 +105,8 @@ mod tests {
 	fn spawn_with_proper_location() {
 		let mut app = App::new();
 		let lazy = Projectile::<()>::execution();
-		let spawner = Spawner(GlobalTransform::from_xyz(1., 2., 3.));
+		let caster = SkillCaster::default();
+		let spawner = SkillSpawner(GlobalTransform::from_xyz(1., 2., 3.));
 		let select_info = Target {
 			ray: Ray3d {
 				origin: Vec3::ONE,
@@ -122,10 +116,7 @@ mod tests {
 		};
 		let agent = app.world.spawn(()).id();
 
-		app.add_systems(
-			Update,
-			run_lazy(lazy, agent, default(), spawner, select_info),
-		);
+		app.add_systems(Update, run_lazy(lazy, agent, caster, spawner, select_info));
 		app.update();
 
 		let projectile_transform = app
