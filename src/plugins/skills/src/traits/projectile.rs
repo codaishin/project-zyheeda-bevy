@@ -6,7 +6,7 @@ use bevy::{prelude::SpatialBundle, transform::components::Transform};
 impl<T: Send + Sync + 'static> NewSkillBundle for Projectile<T> {
 	type Bundle = (Projectile<T>, SpatialBundle);
 
-	fn new_bundle(caster: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> Self::Bundle {
+	fn new_skill_bundle(caster: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> Self::Bundle {
 		(
 			Projectile::<T>::new(caster.0.forward(), 10.),
 			SpatialBundle::from_transform(Transform::from(spawner.0)),
@@ -50,7 +50,7 @@ mod tests {
 
 		let projectile = app
 			.world
-			.spawn(Projectile::<()>::new_bundle(&caster, &spawner, &target()))
+			.spawn(Projectile::<()>::new_skill_bundle(&caster, &spawner, &target()))
 			.id();
 		let projectile = app.world.entity(projectile).get::<Projectile<()>>();
 
@@ -69,7 +69,7 @@ mod tests {
 
 		let projectile = app
 			.world
-			.spawn(Projectile::<()>::new_bundle(&caster, &spawner, &target()))
+			.spawn(Projectile::<()>::new_skill_bundle(&caster, &spawner, &target()))
 			.id();
 		let projectile = app.world.entity(projectile);
 
@@ -84,7 +84,7 @@ mod tests {
 
 		let projectile = app
 			.world
-			.spawn(Projectile::<()>::new_bundle(&caster, &spawner, &target()))
+			.spawn(Projectile::<()>::new_skill_bundle(&caster, &spawner, &target()))
 			.id();
 		let projectile = app.world.entity(projectile).get::<Transform>();
 

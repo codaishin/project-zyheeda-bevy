@@ -36,7 +36,11 @@ pub(crate) trait Enqueue<TItem> {
 
 pub(crate) trait NewSkillBundle {
 	type Bundle;
-	fn new_bundle(caster: &SkillCaster, spawner: &SkillSpawner, target: &Target) -> Self::Bundle;
+	fn new_skill_bundle(
+		caster: &SkillCaster,
+		spawner: &SkillSpawner,
+		target: &Target,
+	) -> Self::Bundle;
 }
 
 pub(crate) trait RunSkillAttached {
@@ -55,7 +59,7 @@ impl<T: NewSkillBundle<Bundle = impl Bundle>> RunSkillAttached for T {
 		spawner: &SkillSpawner,
 		target: &Target,
 	) {
-		agent.insert(T::new_bundle(caster, spawner, target));
+		agent.insert(T::new_skill_bundle(caster, spawner, target));
 	}
 }
 
@@ -76,7 +80,7 @@ impl<T: NewSkillBundle<Bundle = impl Bundle>> RunSkillDetached for T {
 		target: &Target,
 	) {
 		let mut commands = agent.commands();
-		commands.spawn(T::new_bundle(caster, spawner, target));
+		commands.spawn(T::new_skill_bundle(caster, spawner, target));
 	}
 }
 
@@ -373,7 +377,7 @@ mod test_run_skill_detached {
 	impl NewSkillBundle for _Skill {
 		type Bundle = _Skill;
 
-		fn new_bundle(
+		fn new_skill_bundle(
 			caster: &SkillCaster,
 			spawner: &SkillSpawner,
 			target: &Target,
@@ -464,7 +468,7 @@ mod test_run_skill_attached {
 	impl NewSkillBundle for _Skill {
 		type Bundle = _Skill;
 
-		fn new_bundle(
+		fn new_skill_bundle(
 			caster: &SkillCaster,
 			spawner: &SkillSpawner,
 			target: &Target,
@@ -544,7 +548,7 @@ mod test_stop_skill_attached {
 	impl NewSkillBundle for _Skill {
 		type Bundle = _Skill;
 
-		fn new_bundle(_: &SkillCaster, _: &SkillSpawner, _: &Target) -> Self::Bundle {
+		fn new_skill_bundle(_: &SkillCaster, _: &SkillSpawner, _: &Target) -> Self::Bundle {
 			todo!()
 		}
 	}

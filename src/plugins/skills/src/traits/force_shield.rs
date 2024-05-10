@@ -6,7 +6,7 @@ use bevy::{self, prelude::SpatialBundle, transform::components::Transform};
 impl NewSkillBundle for ForceShield {
 	type Bundle = (ForceShield, SpatialBundle);
 
-	fn new_bundle(caster: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> Self::Bundle {
+	fn new_skill_bundle(caster: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> Self::Bundle {
 		(
 			ForceShield {
 				direction: caster.0.forward(),
@@ -43,7 +43,7 @@ mod tests {
 
 		let force_shield = app
 			.world
-			.spawn(ForceShield::new_bundle(&caster, &spawner, &target()))
+			.spawn(ForceShield::new_skill_bundle(&caster, &spawner, &target()))
 			.id();
 		let force_shield = app.world.entity(force_shield).get::<ForceShield>();
 
@@ -62,7 +62,7 @@ mod tests {
 
 		let force_shield = app
 			.world
-			.spawn(ForceShield::new_bundle(&caster, &spawner, &target()))
+			.spawn(ForceShield::new_skill_bundle(&caster, &spawner, &target()))
 			.id();
 		let force_shield = app.world.entity(force_shield);
 
@@ -77,7 +77,7 @@ mod tests {
 
 		let force_shield = app
 			.world
-			.spawn(ForceShield::new_bundle(&caster, &spawner, &target()))
+			.spawn(ForceShield::new_skill_bundle(&caster, &spawner, &target()))
 			.id();
 		let force_shield = app.world.entity(force_shield).get::<Transform>();
 
