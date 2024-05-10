@@ -1,4 +1,4 @@
-pub mod force_shield;
+pub mod force_shield_skill;
 pub mod shoot_hand_gun;
 
 use crate::{

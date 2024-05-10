@@ -1,4 +1,5 @@
 pub(crate) mod bevy_input;
+pub(crate) mod force_shield;
 pub(crate) mod inventory;
 pub(crate) mod projectile;
 pub(crate) mod skill_state;
@@ -34,7 +35,28 @@ pub(crate) trait Enqueue<TItem> {
 }
 
 pub(crate) trait NewSkillBundle {
-	fn new_bundle(caster: &SkillCaster, spawner: &SkillSpawner, target: &Target) -> impl Bundle;
+	type Bundle;
+	fn new_bundle(caster: &SkillCaster, spawner: &SkillSpawner, target: &Target) -> Self::Bundle;
+}
+
+pub(crate) trait RunSkillAttached {
+	fn run_attached(
+		agent: &mut EntityCommands,
+		caster: &SkillCaster,
+		spawner: &SkillSpawner,
+		target: &Target,
+	);
+}
+
+impl<T: NewSkillBundle<Bundle = impl Bundle>> RunSkillAttached for T {
+	fn run_attached(
+		agent: &mut EntityCommands,
+		caster: &SkillCaster,
+		spawner: &SkillSpawner,
+		target: &Target,
+	) {
+		agent.insert(T::new_bundle(caster, spawner, target));
+	}
 }
 
 pub(crate) trait RunSkillDetached {
@@ -46,7 +68,7 @@ pub(crate) trait RunSkillDetached {
 	);
 }
 
-impl<T: NewSkillBundle> RunSkillDetached for T {
+impl<T: NewSkillBundle<Bundle = impl Bundle>> RunSkillDetached for T {
 	fn run_detached(
 		agent: &mut EntityCommands,
 		caster: &SkillCaster,
@@ -55,6 +77,16 @@ impl<T: NewSkillBundle> RunSkillDetached for T {
 	) {
 		let mut commands = agent.commands();
 		commands.spawn(T::new_bundle(caster, spawner, target));
+	}
+}
+
+pub(crate) trait StopSkillAttached {
+	fn stop_attached(agent: &mut EntityCommands);
+}
+
+impl<T: NewSkillBundle<Bundle = TBundle>, TBundle: Bundle> StopSkillAttached for T {
+	fn stop_attached(agent: &mut EntityCommands) {
+		agent.remove::<TBundle>();
 	}
 }
 
@@ -339,11 +371,13 @@ mod test_run_skill_detached {
 	}
 
 	impl NewSkillBundle for _Skill {
+		type Bundle = _Skill;
+
 		fn new_bundle(
 			caster: &SkillCaster,
 			spawner: &SkillSpawner,
 			target: &Target,
-		) -> impl Bundle {
+		) -> Self::Bundle {
 			_Skill {
 				caster: *caster,
 				spawner: *spawner,
@@ -397,5 +431,148 @@ mod test_run_skill_detached {
 			}),
 			skill.and_then(|s| s.get::<_Skill>())
 		);
+	}
+}
+
+#[cfg(test)]
+mod test_run_skill_attached {
+	use super::*;
+	use crate::skills::SelectInfo;
+	use bevy::{
+		app::{App, Update},
+		ecs::{
+			component::Component,
+			entity::Entity,
+			system::{Commands, Query},
+		},
+		math::{Ray3d, Vec3},
+		transform::components::{GlobalTransform, Transform},
+	};
+	use common::{
+		components::Outdated,
+		resources::ColliderInfo,
+		test_tools::utils::SingleThreadedApp,
+	};
+
+	#[derive(Component, Debug, PartialEq)]
+	struct _Skill {
+		caster: SkillCaster,
+		spawner: SkillSpawner,
+		target: Target,
+	}
+
+	impl NewSkillBundle for _Skill {
+		type Bundle = _Skill;
+
+		fn new_bundle(
+			caster: &SkillCaster,
+			spawner: &SkillSpawner,
+			target: &Target,
+		) -> Self::Bundle {
+			_Skill {
+				caster: *caster,
+				spawner: *spawner,
+				target: target.clone(),
+			}
+		}
+	}
+
+	fn setup(caster: SkillCaster, spawner: SkillSpawner, target: Target) -> App {
+		let mut app = App::new().single_threaded(Update);
+		app.add_systems(
+			Update,
+			move |mut commands: Commands, query: Query<Entity>| {
+				for id in &query {
+					let mut agent = commands.entity(id);
+					_Skill::run_attached(&mut agent, &caster, &spawner, &target);
+				}
+			},
+		);
+
+		app
+	}
+
+	#[test]
+	fn spawn_on_agent() {
+		let entity = Entity::from_raw(42);
+		let caster = SkillCaster(Transform::from_xyz(1., 2., 3.));
+		let spawner = SkillSpawner(GlobalTransform::from_xyz(4., 5., 6.));
+		let target = SelectInfo {
+			ray: Ray3d::new(Vec3::ONE, Vec3::ONE),
+			collision_info: Some(ColliderInfo {
+				collider: Outdated {
+					entity,
+					component: GlobalTransform::from_xyz(7., 8., 9.),
+				},
+				root: None,
+			}),
+		};
+		let mut app = setup(caster, spawner, target.clone());
+		let agent = app.world.spawn_empty().id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&_Skill {
+				caster,
+				spawner,
+				target,
+			}),
+			agent.get::<_Skill>()
+		);
+	}
+}
+
+#[cfg(test)]
+mod test_stop_skill_attached {
+	use super::*;
+	use bevy::{
+		app::{App, Update},
+		ecs::{
+			component::Component,
+			entity::Entity,
+			system::{Commands, Query},
+		},
+	};
+	use common::test_tools::utils::SingleThreadedApp;
+
+	#[derive(Component, Debug, PartialEq)]
+	struct _Skill;
+
+	impl NewSkillBundle for _Skill {
+		type Bundle = _Skill;
+
+		fn new_bundle(_: &SkillCaster, _: &SkillSpawner, _: &Target) -> Self::Bundle {
+			todo!()
+		}
+	}
+
+	fn setup() -> App {
+		let mut app = App::new().single_threaded(Update);
+		app.add_systems(
+			Update,
+			move |mut commands: Commands, query: Query<Entity>| {
+				for id in &query {
+					let mut agent = commands.entity(id);
+					_Skill::stop_attached(&mut agent);
+				}
+			},
+		);
+
+		app
+	}
+
+	#[test]
+	fn remove_from_agent() {
+		let mut app = setup();
+		let agent = app.world.spawn(_Skill).id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(None, agent.get::<_Skill>());
 	}
 }

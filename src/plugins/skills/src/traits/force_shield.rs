@@ -1,10 +1,12 @@
 use super::NewSkillBundle;
 use crate::skills::{SkillCaster, SkillSpawner, Target};
 use behaviors::components::ForceShield;
-use bevy::{self, ecs::bundle::Bundle, prelude::SpatialBundle, transform::components::Transform};
+use bevy::{self, prelude::SpatialBundle, transform::components::Transform};
 
 impl NewSkillBundle for ForceShield {
-	fn new_bundle(caster: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> impl Bundle {
+	type Bundle = (ForceShield, SpatialBundle);
+
+	fn new_bundle(caster: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> Self::Bundle {
 		(
 			ForceShield {
 				direction: caster.0.forward(),

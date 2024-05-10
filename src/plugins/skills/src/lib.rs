@@ -34,7 +34,7 @@ use common::{
 use components::{combos::Combos, inventory::Inventory, queue::Queue, slots::Slots, Mounts};
 use items::{InventoryKey, Item, ItemType, Mount, SlotKey};
 use resources::SlotMap;
-use skills::{force_shield::ForceShieldSkill, shoot_hand_gun::ShootHandGun, Queued, Skill};
+use skills::{force_shield_skill::ForceShieldSkill, shoot_hand_gun::ShootHandGun, Queued, Skill};
 use std::collections::HashSet;
 use systems::{
 	advance_active_skill::advance_active_skill,

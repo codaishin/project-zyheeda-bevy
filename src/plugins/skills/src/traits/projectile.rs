@@ -1,10 +1,12 @@
 use super::{GetExecution, NewSkillBundle, RunSkillDetached};
 use crate::skills::{SkillCaster, SkillExecution, SkillSpawner, Target};
 use behaviors::components::Projectile;
-use bevy::{ecs::bundle::Bundle, prelude::SpatialBundle, transform::components::Transform};
+use bevy::{prelude::SpatialBundle, transform::components::Transform};
 
 impl<T: Send + Sync + 'static> NewSkillBundle for Projectile<T> {
-	fn new_bundle(caster: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> impl Bundle {
+	type Bundle = (Projectile<T>, SpatialBundle);
+
+	fn new_bundle(caster: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> Self::Bundle {
 		(
 			Projectile::<T>::new(caster.0.forward(), 10.),
 			SpatialBundle::from_transform(Transform::from(spawner.0)),
