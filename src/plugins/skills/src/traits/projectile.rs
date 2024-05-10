@@ -7,7 +7,7 @@ impl<T: Send + Sync + 'static> NewSkillBundle for Projectile<T> {
 	fn new_bundle(caster: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> impl Bundle {
 		(
 			Projectile::<T>::new(caster.0.forward(), 10.),
-			SpatialBundle::from_transform(Transform::from_translation(spawner.0.translation())),
+			SpatialBundle::from_transform(Transform::from(spawner.0)),
 		)
 	}
 }
@@ -24,11 +24,10 @@ impl<T: Send + Sync + 'static> GetExecution for Projectile<T> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::skills::SelectInfo;
+	use crate::{skills::SelectInfo, test_tools::assert_spacial_bundle};
 	use bevy::{
 		app::App,
 		math::{Ray3d, Vec3},
-		render::view::{InheritedVisibility, ViewVisibility, Visibility},
 		transform::components::GlobalTransform,
 	};
 	use common::assert_eq_approx;
@@ -72,16 +71,7 @@ mod tests {
 			.id();
 		let projectile = app.world.entity(projectile);
 
-		assert_eq!(
-			(true, true, true, true, true),
-			(
-				projectile.contains::<Visibility>(),
-				projectile.contains::<InheritedVisibility>(),
-				projectile.contains::<ViewVisibility>(),
-				projectile.contains::<Transform>(),
-				projectile.contains::<GlobalTransform>(),
-			)
-		)
+		assert_spacial_bundle!(projectile);
 	}
 
 	#[test]
