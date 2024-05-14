@@ -1,5 +1,5 @@
-use super::NewSkillBundle;
-use crate::skills::{SkillCaster, SkillSpawner, Target};
+use super::{GetExecution, NewSkillBundle, RunSkill};
+use crate::skills::{Run, SkillCaster, SkillExecution, SkillSpawner, Target};
 use behaviors::components::ForceShield;
 use bevy::{self, prelude::SpatialBundle, transform::components::Transform};
 
@@ -13,6 +13,15 @@ impl NewSkillBundle for ForceShield {
 			},
 			SpatialBundle::from_transform(Transform::from(spawner.0)),
 		)
+	}
+}
+
+impl GetExecution for ForceShield {
+	fn execution() -> SkillExecution {
+		SkillExecution {
+			run_fn: Run::OnAim(ForceShield::run_skill),
+			execution_stop_on_skill_stop: true,
+		}
 	}
 }
 

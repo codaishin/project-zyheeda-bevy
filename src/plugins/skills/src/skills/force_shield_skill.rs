@@ -1,7 +1,7 @@
-use super::{Animate, Run, Skill, SkillExecution};
+use super::{Animate, Skill};
 use crate::{
 	items::ItemType,
-	traits::{GetExecution, RunSkill, SkillTemplate},
+	traits::{GetExecution, SkillTemplate},
 };
 use behaviors::components::ForceShield;
 use std::{collections::HashSet, time::Duration};
@@ -18,15 +18,6 @@ impl SkillTemplate for ForceShieldSkill {
 			animate: Animate::None,
 			is_usable_with: HashSet::from([ItemType::Bracer]),
 			icon: None,
-		}
-	}
-}
-
-impl GetExecution for ForceShield {
-	fn execution() -> SkillExecution {
-		SkillExecution {
-			run_fn: Run::OnAim(ForceShield::run_skill),
-			execution_stop_on_skill_stop: true,
 		}
 	}
 }
