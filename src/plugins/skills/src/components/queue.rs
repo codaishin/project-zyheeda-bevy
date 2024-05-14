@@ -1,6 +1,6 @@
 use super::SlotKey;
 use crate::{
-	skills::{Activation, Animate, Queued, Skill, SkillState, StartBehaviorFn, StopBehaviorFn},
+	skills::{Activation, Animate, Queued, Run, Skill, SkillState, StopBehaviorFn},
 	traits::{
 		Enqueue,
 		Execution,
@@ -550,7 +550,7 @@ impl<'a> StateDuration<SkillState> for ActiveSkill<'a> {
 }
 
 impl<'a> Execution for ActiveSkill<'a> {
-	fn get_start(&self) -> Option<StartBehaviorFn> {
+	fn get_start(&self) -> Run {
 		self.skill.execution.run_fn
 	}
 
@@ -807,7 +807,7 @@ mod test_queue_active_skill {
 	}
 
 	#[test]
-	fn test_start_behavior_fn() {
+	fn test_start_behavior_fn_on_active() {
 		fn run(_: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> Entity {
 			Entity::from_raw(100)
 		}
@@ -819,7 +819,7 @@ mod test_queue_active_skill {
 					..default()
 				},
 				execution: SkillExecution {
-					run_fn: Some(run),
+					run_fn: Run::OnActive(run),
 					..default()
 				},
 				..default()
@@ -827,7 +827,31 @@ mod test_queue_active_skill {
 			duration: &mut Duration::default(),
 		};
 
-		assert_eq!(Some(run as usize), active.get_start().map(|f| f as usize));
+		assert_eq!(Run::OnActive(run), active.get_start());
+	}
+
+	#[test]
+	fn test_start_behavior_fn_on_aim() {
+		fn run(_: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> Entity {
+			Entity::from_raw(100)
+		}
+
+		let active = ActiveSkill {
+			skill: &mut Skill {
+				data: Queued {
+					slot_key: SlotKey::Hand(Side::Main),
+					..default()
+				},
+				execution: SkillExecution {
+					run_fn: Run::OnAim(run),
+					..default()
+				},
+				..default()
+			},
+			duration: &mut Duration::default(),
+		};
+
+		assert_eq!(Run::OnAim(run), active.get_start());
 	}
 
 	#[test]

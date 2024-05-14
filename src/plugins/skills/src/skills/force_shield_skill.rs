@@ -1,4 +1,4 @@
-use super::{Animate, Skill, SkillExecution};
+use super::{Animate, Run, Skill, SkillExecution};
 use crate::{
 	items::ItemType,
 	traits::{GetExecution, RunSkill, SkillTemplate},
@@ -25,7 +25,7 @@ impl SkillTemplate for ForceShieldSkill {
 impl GetExecution for ForceShield {
 	fn execution() -> SkillExecution {
 		SkillExecution {
-			run_fn: Some(ForceShield::run_skill),
+			run_fn: Run::OnAim(ForceShield::run_skill),
 			execution_stop_on_skill_stop: true,
 		}
 	}

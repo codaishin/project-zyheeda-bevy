@@ -1,6 +1,6 @@
 use crate::{
 	components::SkillExecution,
-	skills::{Animate, SkillState},
+	skills::{Animate, Run, SkillState, StartBehaviorFn},
 	traits::{Execution, GetActiveSkill, GetAnimation},
 };
 use animations::traits::{SkillLayer, StartAnimation, StopAnimation};
@@ -96,10 +96,11 @@ fn advance<
 	if states.contains(&StateMeta::Entering(SkillState::Aim)) {
 		agent.try_insert(OverrideFace(Face::Cursor));
 		animate(skill, animation_dispatch);
+		insert_skill_execution_start(agent, skill, start_on_aim);
 	}
 
 	if states.contains(&StateMeta::Entering(SkillState::Active)) {
-		insert_skill_execution_start(agent, skill);
+		insert_skill_execution_start(agent, skill, start_on_active);
 	}
 
 	if states.contains(&StateMeta::Done) {
@@ -124,8 +125,26 @@ fn animate<
 	}
 }
 
-fn insert_skill_execution_start<TSkill: Execution>(agent: &mut EntityCommands, skill: &mut TSkill) {
-	let Some(start_fn) = skill.get_start() else {
+fn start_on_aim<TSkill: Execution>(skill: &TSkill) -> Option<StartBehaviorFn> {
+	match skill.get_start() {
+		Run::OnAim(run) => Some(run),
+		_ => None,
+	}
+}
+
+fn start_on_active<TSkill: Execution>(skill: &TSkill) -> Option<StartBehaviorFn> {
+	match skill.get_start() {
+		Run::OnActive(run) => Some(run),
+		_ => None,
+	}
+}
+
+fn insert_skill_execution_start<TSkill: Execution>(
+	agent: &mut EntityCommands,
+	skill: &TSkill,
+	get_start_fn: fn(&TSkill) -> Option<StartBehaviorFn>,
+) {
+	let Some(start_fn) = get_start_fn(skill) else {
 		return;
 	};
 	agent.try_insert(SkillExecution::Start(start_fn));
@@ -143,7 +162,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::SkillExecution,
-		skills::{SkillCaster, SkillSpawner, StartBehaviorFn, StopBehaviorFn, Target},
+		skills::{SkillCaster, SkillSpawner, StopBehaviorFn, Target},
 		traits::{Execution, GetAnimation},
 	};
 	use behaviors::components::{Face, OverrideFace};
@@ -181,7 +200,7 @@ mod tests {
 		let mut mock = Mock_Skill::new();
 
 		if !no_setup.contains(&MockOption::BehaviorExecution(BehaviorOption::Run)) {
-			mock.expect_get_start().return_const(None);
+			mock.expect_get_start().return_const(Run::Never);
 		}
 		if !no_setup.contains(&MockOption::BehaviorExecution(BehaviorOption::Stop)) {
 			mock.expect_get_stop().return_const(None);
@@ -211,7 +230,7 @@ mod tests {
 			fn update_state(&mut self, delta: Duration) -> HashSet<StateMeta<SkillState>> {}
 		}
 		impl Execution for _Skill {
-			fn get_start<'a>(&self) -> Option<StartBehaviorFn> {}
+			fn get_start<'a>(&self) -> Run {}
 			fn get_stop<'a>(&self) -> Option<StopBehaviorFn> {}
 		}
 		impl GetAnimation<_Animation> for _Skill {
@@ -572,7 +591,7 @@ mod tests {
 	}
 
 	#[test]
-	fn run() {
+	fn run_on_active() {
 		fn start_behavior(
 			_: &mut Commands,
 			_: &SkillCaster,
@@ -594,7 +613,9 @@ mod tests {
 					.return_const(HashSet::<StateMeta<SkillState>>::from([
 						StateMeta::Entering(SkillState::Active),
 					]));
-				skill.expect_get_start().returning(|| Some(start_behavior));
+				skill
+					.expect_get_start()
+					.returning(|| Run::OnActive(start_behavior));
 				skill
 			})),
 		});
@@ -610,7 +631,47 @@ mod tests {
 	}
 
 	#[test]
-	fn do_run_when_not_activating_this_frame() {
+	fn run_on_aim() {
+		fn start_behavior(
+			_: &mut Commands,
+			_: &SkillCaster,
+			_: &SkillSpawner,
+			_: &Target,
+		) -> Entity {
+			Entity::from_raw(101)
+		}
+
+		let (mut app, agent) = setup();
+		app.world.entity_mut(agent).insert(_Dequeue {
+			active: Some(Box::new(|| {
+				let mut skill =
+					mock_skill_without_default_setup_for([MockOption::BehaviorExecution(
+						BehaviorOption::Run,
+					)]);
+				skill
+					.expect_update_state()
+					.return_const(HashSet::<StateMeta<SkillState>>::from([
+						StateMeta::Entering(SkillState::Aim),
+					]));
+				skill
+					.expect_get_start()
+					.returning(|| Run::OnAim(start_behavior));
+				skill
+			})),
+		});
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&SkillExecution::Start(start_behavior)),
+			agent.get::<SkillExecution>()
+		);
+	}
+
+	#[test]
+	fn do_not_run_when_not_activating_this_frame() {
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
 			_Dequeue {
@@ -623,7 +684,7 @@ mod tests {
 					skill.expect_update_state().return_const(
 						HashSet::<StateMeta<SkillState>>::from([StateMeta::In(SkillState::Active)]),
 					);
-					skill.expect_get_start().never().return_const(None);
+					skill.expect_get_start().never().return_const(Run::Never);
 					skill
 				})),
 			},

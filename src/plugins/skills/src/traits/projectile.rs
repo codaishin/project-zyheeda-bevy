@@ -1,5 +1,5 @@
 use super::{GetExecution, NewSkillBundle, RunSkill};
-use crate::skills::{SkillCaster, SkillExecution, SkillSpawner, Target};
+use crate::skills::{Run, SkillCaster, SkillExecution, SkillSpawner, Target};
 use behaviors::components::Projectile;
 use bevy::{prelude::SpatialBundle, transform::components::Transform};
 
@@ -17,7 +17,7 @@ impl<T: Send + Sync + 'static> NewSkillBundle for Projectile<T> {
 impl<T: Send + Sync + 'static> GetExecution for Projectile<T> {
 	fn execution() -> SkillExecution {
 		SkillExecution {
-			run_fn: Some(Projectile::<T>::run_skill),
+			run_fn: Run::OnActive(Projectile::<T>::run_skill),
 			execution_stop_on_skill_stop: false,
 		}
 	}

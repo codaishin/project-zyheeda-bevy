@@ -184,7 +184,15 @@ pub type StartBehaviorFn = fn(&mut Commands, &SkillCaster, &SkillSpawner, &Targe
 pub type StopBehaviorFn = fn(&mut Commands, Entity);
 
 #[derive(PartialEq, Debug, Clone, Copy, Default)]
+pub enum Run {
+	#[default]
+	Never,
+	OnAim(StartBehaviorFn),
+	OnActive(StartBehaviorFn),
+}
+
+#[derive(PartialEq, Debug, Clone, Copy, Default)]
 pub struct SkillExecution {
-	pub run_fn: Option<StartBehaviorFn>,
+	pub run_fn: Run,
 	pub execution_stop_on_skill_stop: bool,
 }

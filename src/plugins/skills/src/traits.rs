@@ -12,12 +12,12 @@ use crate::{
 	resources::SlotMap,
 	skills::{
 		Animate,
+		Run,
 		Skill,
 		SkillAnimation,
 		SkillCaster,
 		SkillExecution,
 		SkillSpawner,
-		StartBehaviorFn,
 		StopBehaviorFn,
 		Target,
 	},
@@ -113,7 +113,7 @@ pub trait GetExecution {
 }
 
 pub(crate) trait Execution {
-	fn get_start(&self) -> Option<StartBehaviorFn>;
+	fn get_start(&self) -> Run;
 	fn get_stop(&self) -> Option<StopBehaviorFn>;
 }
 
