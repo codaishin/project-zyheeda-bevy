@@ -1,4 +1,4 @@
-use super::{Animate, Cast, Skill, SkillAnimation};
+use super::{Animate, Skill, SkillAnimation};
 use crate::{
 	items::ItemType,
 	traits::{AnimationChainIf, GetAnimationSetup, GetExecution, GetSkillAnimation, SkillTemplate},
@@ -62,11 +62,7 @@ impl<T: Sync + Send + 'static> SkillTemplate for ShootHandGun<T> {
 	fn skill() -> Skill {
 		Skill {
 			name: "Shoot Hand Gun",
-			cast: Cast {
-				pre: Duration::from_millis(100),
-				active: Duration::ZERO,
-				after: Duration::from_millis(100),
-			},
+			active: Duration::from_millis(200),
 			animate: Animate::Some(ShootHandGun::<T>::animation()),
 			execution: Projectile::<T>::execution(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),

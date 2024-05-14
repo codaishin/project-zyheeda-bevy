@@ -535,11 +535,9 @@ impl GetActiveSkill<Animation, SkillState> for Queue {
 impl<'a> StateDuration<SkillState> for ActiveSkill<'a> {
 	fn get_state_duration(&self, key: SkillState) -> Duration {
 		match (key, &self.skill.data.mode) {
+			(SkillState::Aim, Activation::Primed | Activation::Waiting) => Duration::MAX,
 			(SkillState::Aim, Activation::ActiveAfter(duration)) => *duration,
-			(SkillState::Aim, _) => Duration::MAX,
-			(SkillState::PreCast, _) => self.skill.cast.pre,
-			(SkillState::Active, _) => self.skill.cast.active,
-			(SkillState::AfterCast, _) => self.skill.cast.after,
+			(SkillState::Active, _) => self.skill.active,
 		}
 	}
 
@@ -588,15 +586,7 @@ mod test_queue_active_skill {
 	use super::*;
 	use crate::{
 		components::SlotKey,
-		skills::{
-			Animate,
-			Cast,
-			SkillAnimation,
-			SkillCaster,
-			SkillExecution,
-			SkillSpawner,
-			Target,
-		},
+		skills::{Animate, SkillAnimation, SkillCaster, SkillExecution, SkillSpawner, Target},
 	};
 	use animations::animation::PlayMode;
 	use bevy::{
@@ -615,11 +605,7 @@ mod test_queue_active_skill {
 						slot_key: SlotKey::Hand(Side::Main),
 						mode: Activation::Waiting,
 					},
-					cast: Cast {
-						pre: Duration::from_millis(1),
-						active: Duration::from_millis(2),
-						after: Duration::from_millis(3),
-					},
+					active: Duration::from_millis(1),
 					..default()
 				},
 				Skill::default(),
@@ -630,19 +616,11 @@ mod test_queue_active_skill {
 		let manager = queue.get_active().unwrap();
 
 		assert_eq!(
+			[Duration::MAX, Duration::from_millis(1)],
 			[
-				(Duration::MAX, SkillState::Aim),
-				(Duration::from_millis(1), SkillState::PreCast),
-				(Duration::from_millis(2), SkillState::Active),
-				(Duration::from_millis(3), SkillState::AfterCast),
-			],
-			[
-				SkillState::Aim,
-				SkillState::PreCast,
-				SkillState::Active,
-				SkillState::AfterCast
+				manager.get_state_duration(SkillState::Aim),
+				manager.get_state_duration(SkillState::Active),
 			]
-			.map(|state| (manager.get_state_duration(state), state))
 		)
 	}
 
@@ -655,11 +633,7 @@ mod test_queue_active_skill {
 						slot_key: SlotKey::Hand(Side::Main),
 						mode: Activation::Primed,
 					},
-					cast: Cast {
-						pre: Duration::from_millis(1),
-						active: Duration::from_millis(2),
-						after: Duration::from_millis(3),
-					},
+					active: Duration::from_millis(1),
 					..default()
 				},
 				Skill::default(),
@@ -670,19 +644,11 @@ mod test_queue_active_skill {
 		let manager = queue.get_active().unwrap();
 
 		assert_eq!(
+			[Duration::MAX, Duration::from_millis(1)],
 			[
-				(Duration::MAX, SkillState::Aim),
-				(Duration::from_millis(1), SkillState::PreCast),
-				(Duration::from_millis(2), SkillState::Active),
-				(Duration::from_millis(3), SkillState::AfterCast),
-			],
-			[
-				SkillState::Aim,
-				SkillState::PreCast,
-				SkillState::Active,
-				SkillState::AfterCast
+				manager.get_state_duration(SkillState::Aim),
+				manager.get_state_duration(SkillState::Active),
 			]
-			.map(|state| (manager.get_state_duration(state), state))
 		)
 	}
 
@@ -695,11 +661,7 @@ mod test_queue_active_skill {
 						slot_key: SlotKey::Hand(Side::Main),
 						mode: Activation::ActiveAfter(Duration::from_millis(42)),
 					},
-					cast: Cast {
-						pre: Duration::from_millis(1),
-						active: Duration::from_millis(2),
-						after: Duration::from_millis(3),
-					},
+					active: Duration::from_millis(1),
 					..default()
 				},
 				Skill::default(),
@@ -710,19 +672,11 @@ mod test_queue_active_skill {
 		let manager = queue.get_active().unwrap();
 
 		assert_eq!(
+			[Duration::from_millis(42), Duration::from_millis(1)],
 			[
-				(Duration::from_millis(42), SkillState::Aim),
-				(Duration::from_millis(1), SkillState::PreCast),
-				(Duration::from_millis(2), SkillState::Active),
-				(Duration::from_millis(3), SkillState::AfterCast),
-			],
-			[
-				SkillState::Aim,
-				SkillState::PreCast,
-				SkillState::Active,
-				SkillState::AfterCast
+				manager.get_state_duration(SkillState::Aim),
+				manager.get_state_duration(SkillState::Active),
 			]
-			.map(|state| (manager.get_state_duration(state), state))
 		)
 	}
 

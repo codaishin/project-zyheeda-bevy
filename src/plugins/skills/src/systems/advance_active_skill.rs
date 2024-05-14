@@ -102,11 +102,11 @@ fn advance<
 		agent.try_insert(OverrideFace(Face::Cursor));
 	}
 
-	if states.contains(&StateMeta::Leaving(SkillState::PreCast)) {
+	if states.contains(&StateMeta::Leaving(SkillState::Aim)) {
 		insert_skill_execution_start(agent, skill);
 	}
 
-	if states.contains(&StateMeta::Leaving(SkillState::AfterCast)) {
+	if states.contains(&StateMeta::Leaving(SkillState::Active)) {
 		insert_skill_execution_stop(agent, skill);
 		return Advancement::Finished;
 	}
@@ -341,13 +341,10 @@ mod tests {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
 					skill.expect_update_state().return_const(
 						HashSet::<StateMeta<SkillState>>::from([
-							StateMeta::In(SkillState::PreCast),
-							StateMeta::Leaving(SkillState::PreCast),
 							StateMeta::In(SkillState::Aim),
 							StateMeta::Leaving(SkillState::Aim),
 							StateMeta::In(SkillState::Active),
 							StateMeta::Leaving(SkillState::Active),
-							StateMeta::In(SkillState::AfterCast),
 						]),
 					);
 					skill
@@ -409,13 +406,10 @@ mod tests {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
 					skill.expect_update_state().return_const(
 						HashSet::<StateMeta<SkillState>>::from([
-							StateMeta::In(SkillState::PreCast),
-							StateMeta::Leaving(SkillState::PreCast),
 							StateMeta::In(SkillState::Aim),
 							StateMeta::Leaving(SkillState::Aim),
 							StateMeta::In(SkillState::Active),
 							StateMeta::Leaving(SkillState::Active),
-							StateMeta::In(SkillState::AfterCast),
 						]),
 					);
 					skill.expect_animate().return_const(Animate::None);
@@ -538,7 +532,7 @@ mod tests {
 					let mut skill = mock_skill_without_default_setup_for([]);
 					skill.expect_update_state().return_const(
 						HashSet::<StateMeta<SkillState>>::from([StateMeta::Leaving(
-							SkillState::AfterCast,
+							SkillState::Active,
 						)]),
 					);
 					skill
@@ -562,9 +556,7 @@ mod tests {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
 					skill.expect_update_state().return_const(
-						HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
-							SkillState::AfterCast,
-						)]),
+						HashSet::<StateMeta<SkillState>>::from([StateMeta::In(SkillState::Active)]),
 					);
 					skill
 				})),
@@ -600,7 +592,7 @@ mod tests {
 				skill
 					.expect_update_state()
 					.return_const(HashSet::<StateMeta<SkillState>>::from([
-						StateMeta::Leaving(SkillState::PreCast),
+						StateMeta::Leaving(SkillState::Aim),
 					]));
 				skill.expect_get_start().returning(|| Some(start_behavior));
 				skill
@@ -655,7 +647,7 @@ mod tests {
 						)]);
 					skill.expect_update_state().return_const(
 						HashSet::<StateMeta<SkillState>>::from([StateMeta::Leaving(
-							SkillState::AfterCast,
+							SkillState::Active,
 						)]),
 					);
 					skill.expect_get_stop().returning(|| Some(stop_fn));

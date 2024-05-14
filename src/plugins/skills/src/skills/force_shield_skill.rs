@@ -1,4 +1,4 @@
-use super::{Animate, Cast, Skill, SkillExecution};
+use super::{Animate, Skill, SkillExecution};
 use crate::{
 	items::ItemType,
 	traits::{GetExecution, RunSkill, SkillTemplate},
@@ -13,11 +13,7 @@ impl SkillTemplate for ForceShieldSkill {
 		Skill {
 			name: "force shield",
 			data: (),
-			cast: Cast {
-				pre: Duration::from_millis(100),
-				active: Duration::ZERO,
-				after: Duration::from_millis(100),
-			},
+			active: Duration::from_millis(200),
 			execution: ForceShield::execution(),
 			animate: Animate::None,
 			is_usable_with: HashSet::from([ItemType::Bracer]),

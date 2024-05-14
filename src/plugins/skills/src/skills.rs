@@ -36,18 +36,11 @@ pub enum Animate<TAnimation> {
 pub struct Skill<TData = ()> {
 	pub name: &'static str,
 	pub data: TData,
-	pub cast: Cast,
+	pub active: Duration,
 	pub animate: Animate<SkillAnimation>,
 	pub execution: SkillExecution,
 	pub is_usable_with: HashSet<ItemType>,
 	pub icon: Option<fn() -> Path>,
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Default)]
-pub struct Cast {
-	pub pre: Duration,
-	pub active: Duration,
-	pub after: Duration,
 }
 
 impl<TData> Display for Skill<TData> {
@@ -105,7 +98,7 @@ impl Skill {
 		Skill {
 			data,
 			name: self.name,
-			cast: self.cast,
+			active: self.active,
 			animate: self.animate,
 			execution: self.execution,
 			is_usable_with: self.is_usable_with,
@@ -119,7 +112,7 @@ impl<TSrc> Skill<TSrc> {
 		Skill {
 			name: self.name,
 			data: map(self.data),
-			cast: self.cast,
+			active: self.active,
 			animate: self.animate,
 			execution: self.execution,
 			is_usable_with: self.is_usable_with,
@@ -177,9 +170,7 @@ mod test_skill {
 #[derive(PartialEq, Debug, Clone, Copy, Eq, Hash)]
 pub(crate) enum SkillState {
 	Aim,
-	PreCast,
 	Active,
-	AfterCast,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Default)]
