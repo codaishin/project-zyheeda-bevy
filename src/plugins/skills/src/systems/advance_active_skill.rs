@@ -162,7 +162,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::SkillExecution,
-		skills::{SkillCaster, SkillSpawner, StopBehaviorFn, Target},
+		skills::{OnSkillStop, SkillCaster, SkillSpawner, StopBehaviorFn, Target},
 		traits::{Execution, GetAnimation},
 	};
 	use behaviors::components::{Face, OverrideFace};
@@ -597,8 +597,8 @@ mod tests {
 			_: &SkillCaster,
 			_: &SkillSpawner,
 			_: &Target,
-		) -> Entity {
-			Entity::from_raw(101)
+		) -> OnSkillStop {
+			OnSkillStop::Ignore
 		}
 
 		let (mut app, agent) = setup();
@@ -637,8 +637,8 @@ mod tests {
 			_: &SkillCaster,
 			_: &SkillSpawner,
 			_: &Target,
-		) -> Entity {
-			Entity::from_raw(101)
+		) -> OnSkillStop {
+			OnSkillStop::Ignore
 		}
 
 		let (mut app, agent) = setup();

@@ -180,8 +180,14 @@ pub struct SkillSpawner(pub Entity, pub GlobalTransform);
 pub struct SkillCaster(pub Entity, pub Transform);
 
 pub type Target = SelectInfo<Outdated<GlobalTransform>>;
-pub type StartBehaviorFn = fn(&mut Commands, &SkillCaster, &SkillSpawner, &Target) -> Entity;
+pub type StartBehaviorFn = fn(&mut Commands, &SkillCaster, &SkillSpawner, &Target) -> OnSkillStop;
 pub type StopBehaviorFn = fn(&mut Commands, Entity);
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum OnSkillStop {
+	Ignore,
+	Stop(Entity),
+}
 
 #[derive(PartialEq, Debug, Clone, Copy, Default)]
 pub enum Run {

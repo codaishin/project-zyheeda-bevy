@@ -1,6 +1,14 @@
 use crate::{
 	components::{SkillExecution, SkillRunningOn, SkillSpawn},
-	skills::{SelectInfo, SkillCaster, SkillSpawner, StartBehaviorFn, StopBehaviorFn, Target},
+	skills::{
+		OnSkillStop,
+		SelectInfo,
+		SkillCaster,
+		SkillSpawner,
+		StartBehaviorFn,
+		StopBehaviorFn,
+		Target,
+	},
 };
 use bevy::{
 	ecs::{
@@ -60,12 +68,14 @@ fn start_behavior(
 	let Some(target) = target else {
 		return;
 	};
-	let skill_id = start_fn(
+	let OnSkillStop::Stop(skill_id) = start_fn(
 		commands,
 		&SkillCaster(id, *caster_transform),
 		&spawner,
 		&target,
-	);
+	) else {
+		return;
+	};
 	commands.try_insert_on(id, SkillRunningOn(skill_id));
 }
 
@@ -116,7 +126,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::SkillExecution,
-		skills::{SkillSpawner, Target},
+		skills::{OnSkillStop, SkillSpawner, Target},
 	};
 	use bevy::{
 		app::{App, Update},
@@ -145,7 +155,7 @@ mod tests {
 			transform: &SkillCaster,
 			spawner: &SkillSpawner,
 			target: &Target,
-		) -> Entity;
+		) -> OnSkillStop;
 	}
 
 	trait StopFn {
@@ -158,7 +168,7 @@ mod tests {
 				$ident {}
 				impl StartFn for $ident {
 					#[allow(clippy::needless_lifetimes)]
-					fn start<'a, 'b>(agent: &mut Commands<'a, 'b>, caster: &SkillCaster, spawner: &SkillSpawner, target: &Target) -> Entity {}
+					fn start<'a, 'b>(agent: &mut Commands<'a, 'b>, caster: &SkillCaster, spawner: &SkillSpawner, target: &Target) -> OnSkillStop {}
 				}
 				impl StopFn for $ident {
 					#[allow(clippy::needless_lifetimes)]
@@ -227,7 +237,7 @@ mod tests {
 				);
 				true
 			})
-			.return_const(Entity::from_raw(42));
+			.return_const(OnSkillStop::Stop(Entity::from_raw(42)));
 
 		app.update();
 
@@ -281,7 +291,9 @@ mod tests {
 			.id();
 
 		let start_ctx = Mock_RemoveOnStart::start_context();
-		start_ctx.expect().return_const(Entity::from_raw(42));
+		start_ctx
+			.expect()
+			.return_const(OnSkillStop::Stop(Entity::from_raw(42)));
 
 		app.update();
 

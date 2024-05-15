@@ -586,7 +586,15 @@ mod test_queue_active_skill {
 	use super::*;
 	use crate::{
 		components::SlotKey,
-		skills::{Animate, SkillAnimation, SkillCaster, SkillExecution, SkillSpawner, Target},
+		skills::{
+			Animate,
+			OnSkillStop,
+			SkillAnimation,
+			SkillCaster,
+			SkillExecution,
+			SkillSpawner,
+			Target,
+		},
 	};
 	use animations::animation::PlayMode;
 	use bevy::{
@@ -808,8 +816,8 @@ mod test_queue_active_skill {
 
 	#[test]
 	fn test_start_behavior_fn_on_active() {
-		fn run(_: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> Entity {
-			Entity::from_raw(100)
+		fn run(_: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> OnSkillStop {
+			OnSkillStop::Ignore
 		}
 
 		let active = ActiveSkill {
@@ -832,8 +840,8 @@ mod test_queue_active_skill {
 
 	#[test]
 	fn test_start_behavior_fn_on_aim() {
-		fn run(_: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> Entity {
-			Entity::from_raw(100)
+		fn run(_: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> OnSkillStop {
+			OnSkillStop::Ignore
 		}
 
 		let active = ActiveSkill {

@@ -1,10 +1,12 @@
-use super::{GetExecution, NewSkillBundle, RunSkill};
+use super::{GetExecution, RunSkill, SkillBundleConfig};
 use crate::skills::{Run, SkillCaster, SkillExecution, SkillSpawner, Target};
 use behaviors::components::ForceShield;
 use bevy::{self, prelude::SpatialBundle, transform::components::Transform};
 
-impl NewSkillBundle for ForceShield {
+impl SkillBundleConfig for ForceShield {
 	type Bundle = (ForceShield, SpatialBundle);
+
+	const STOPPABLE: bool = true;
 
 	fn new_skill_bundle(_: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> Self::Bundle {
 		(

@@ -12,6 +12,7 @@ use crate::{
 	resources::SlotMap,
 	skills::{
 		Animate,
+		OnSkillStop,
 		Run,
 		Skill,
 		SkillAnimation,
@@ -23,7 +24,7 @@ use crate::{
 	},
 };
 use animations::animation::Animation;
-use bevy::ecs::{bundle::Bundle, entity::Entity, system::Commands};
+use bevy::ecs::{bundle::Bundle, system::Commands};
 use common::{
 	tools::{Last, This},
 	traits::{load_asset::Path, state_duration::StateUpdate},
@@ -34,8 +35,9 @@ pub(crate) trait Enqueue<TItem> {
 	fn enqueue(&mut self, item: TItem);
 }
 
-pub(crate) trait NewSkillBundle {
+pub(crate) trait SkillBundleConfig {
 	type Bundle;
+	const STOPPABLE: bool;
 	fn new_skill_bundle(
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
@@ -49,19 +51,25 @@ pub(crate) trait RunSkill {
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
-	) -> Entity;
+	) -> OnSkillStop;
 }
 
-impl<T: NewSkillBundle<Bundle = impl Bundle>> RunSkill for T {
+impl<T: SkillBundleConfig<Bundle = impl Bundle>> RunSkill for T {
 	fn run_skill(
 		commands: &mut Commands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
-	) -> Entity {
-		commands
+	) -> OnSkillStop {
+		let entity = commands
 			.spawn(T::new_skill_bundle(caster, spawner, target))
-			.id()
+			.id();
+
+		if Self::STOPPABLE {
+			OnSkillStop::Stop(entity)
+		} else {
+			OnSkillStop::Ignore
+		}
 	}
 }
 
@@ -339,14 +347,16 @@ mod test_run_skill {
 	};
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _Skill {
+	struct _Skill<const STOPPABLE: bool> {
 		caster: SkillCaster,
 		spawner: SkillSpawner,
 		target: Target,
 	}
 
-	impl NewSkillBundle for _Skill {
-		type Bundle = _Skill;
+	impl<const STOPPABLE: bool> SkillBundleConfig for _Skill<STOPPABLE> {
+		type Bundle = _Skill<STOPPABLE>;
+
+		const STOPPABLE: bool = STOPPABLE;
 
 		fn new_skill_bundle(
 			caster: &SkillCaster,
@@ -362,15 +372,19 @@ mod test_run_skill {
 	}
 
 	#[derive(Resource)]
-	struct _Result(Entity);
+	struct _Result(OnSkillStop);
 
-	fn setup(caster: Transform, spawner: SkillSpawner, target: Target) -> App {
+	fn setup<const STOPPABLE: bool>(
+		caster: Transform,
+		spawner: SkillSpawner,
+		target: Target,
+	) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
 			move |mut commands: Commands, query: Query<Entity>| {
 				for id in &query {
-					let id = _Skill::run_skill(
+					let id = _Skill::<STOPPABLE>::run_skill(
 						&mut commands,
 						&SkillCaster(id, caster),
 						&spawner,
@@ -401,7 +415,7 @@ mod test_run_skill {
 				root: None,
 			}),
 		};
-		let mut app = setup(caster_transform, spawner, target.clone());
+		let mut app = setup::<true>(caster_transform, spawner, target.clone());
 		let agent = app.world.spawn_empty().id();
 
 		app.update();
@@ -414,7 +428,7 @@ mod test_run_skill {
 				spawner,
 				target,
 			}),
-			skill.get::<_Skill>()
+			skill.get::<_Skill<true>>()
 		);
 	}
 
@@ -435,7 +449,7 @@ mod test_run_skill {
 				root: None,
 			}),
 		};
-		let mut app = setup(caster, spawner, target.clone());
+		let mut app = setup::<true>(caster, spawner, target.clone());
 		app.world.spawn_empty();
 
 		app.update();
@@ -443,10 +457,37 @@ mod test_run_skill {
 		let skill = app
 			.world
 			.iter_entities()
-			.find(|e| e.contains::<_Skill>())
+			.find(|e| e.contains::<_Skill<true>>())
 			.unwrap();
 		let result = app.world.get_resource::<_Result>().unwrap();
 
-		assert_eq!(skill.id(), result.0);
+		assert_eq!(OnSkillStop::Stop(skill.id()), result.0);
+	}
+
+	#[test]
+	fn do_not_return_spawned_entity_when_stoppable_false() {
+		let caster = Transform::from_xyz(1., 2., 3.);
+		let spawner = SkillSpawner(
+			Entity::from_raw(1000),
+			GlobalTransform::from_xyz(4., 5., 6.),
+		);
+		let target = SelectInfo {
+			ray: Ray3d::new(Vec3::ONE, Vec3::ONE),
+			collision_info: Some(ColliderInfo {
+				collider: Outdated {
+					entity: Entity::from_raw(42),
+					component: GlobalTransform::from_xyz(7., 8., 9.),
+				},
+				root: None,
+			}),
+		};
+		let mut app = setup::<false>(caster, spawner, target.clone());
+		app.world.spawn_empty();
+
+		app.update();
+
+		let result = app.world.get_resource::<_Result>().unwrap();
+
+		assert_eq!(OnSkillStop::Ignore, result.0);
 	}
 }
