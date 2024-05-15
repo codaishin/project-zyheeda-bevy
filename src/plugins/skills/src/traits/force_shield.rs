@@ -44,7 +44,7 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_with_forward_direction() {
+	fn spawn_with_data() {
 		let mut app = App::new();
 		let forward = Vec3::new(8., 9., 10.);
 		let caster = SkillCaster(
@@ -61,7 +61,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&ForceShield {
-				location: Entity::from_raw(43)
+				location: Entity::from_raw(43),
 			}),
 			force_shield,
 		);

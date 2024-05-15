@@ -25,7 +25,7 @@ use bevy_rapier3d::{
 	geometry::Collider,
 };
 use common::{
-	bundles::ColliderBundle,
+	bundles::ColliderTransformBundle,
 	components::{ColliderRoot, GroundOffset, Health},
 	errors::Error,
 	tools::UnitsPerSecond,
@@ -150,7 +150,7 @@ impl Instantiate for VoidSphere {
 				VoidSpherePart::RingB(UnitsPerSecond::new(PI / 75.)),
 			));
 			parent.spawn((
-				ColliderBundle {
+				ColliderTransformBundle {
 					transform: TransformBundle::from_transform(transform),
 					collider: Collider::ball(VOID_SPHERE_OUTER_RADIUS),
 					..default()

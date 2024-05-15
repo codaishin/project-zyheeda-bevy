@@ -41,6 +41,7 @@ pub enum AssetKey {
 	VoidSphere(VoidPart),
 	Beam,
 	Light(LightType),
+	ForceShield,
 }
 
 pub trait Instantiate {

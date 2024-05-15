@@ -15,7 +15,7 @@ use bevy_rapier3d::{
 	geometry::{Collider, Sensor},
 };
 use common::{
-	bundles::ColliderBundle,
+	bundles::ColliderTransformBundle,
 	components::ColliderRoot,
 	errors::Error,
 	tools::UnitsPerSecond,
@@ -69,7 +69,10 @@ impl Instantiate for Projectile<Plasma> {
 				..default()
 			});
 			parent.spawn((
-				ColliderBundle::new_static_collider(transform, Collider::ball(PLASMA_RADIUS)),
+				ColliderTransformBundle::new_static_collider(
+					transform,
+					Collider::ball(PLASMA_RADIUS),
+				),
 				Sensor,
 				ColliderRoot(parent.parent_entity()),
 			));
