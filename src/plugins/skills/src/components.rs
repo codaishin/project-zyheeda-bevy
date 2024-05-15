@@ -6,7 +6,7 @@ pub mod slots;
 use self::slots::Slots;
 use crate::{
 	items::{Item, SlotKey},
-	skills::{StartBehaviorFn, StopBehaviorFn},
+	skills::StartBehaviorFn,
 };
 use bevy::ecs::{component::Component, entity::Entity};
 use common::components::Collection;
@@ -37,7 +37,7 @@ pub type Equipment = Collection<(SlotKey, Option<Item>)>;
 #[derive(Component, Debug, PartialEq)]
 pub(crate) enum SkillExecution {
 	Start(StartBehaviorFn),
-	Stop(StopBehaviorFn),
+	Stop,
 }
 
 #[derive(Component, Debug, PartialEq)]

@@ -38,7 +38,7 @@ pub struct Skill<TData = ()> {
 	pub data: TData,
 	pub active: Duration,
 	pub animate: Animate<SkillAnimation>,
-	pub execution: SkillExecution,
+	pub behavior: SkillBehavior,
 	pub is_usable_with: HashSet<ItemType>,
 	pub icon: Option<fn() -> Path>,
 }
@@ -100,7 +100,7 @@ impl Skill {
 			name: self.name,
 			active: self.active,
 			animate: self.animate,
-			execution: self.execution,
+			behavior: self.behavior,
 			is_usable_with: self.is_usable_with,
 			icon: self.icon,
 		}
@@ -114,7 +114,7 @@ impl<TSrc> Skill<TSrc> {
 			data: map(self.data),
 			active: self.active,
 			animate: self.animate,
-			execution: self.execution,
+			behavior: self.behavior,
 			is_usable_with: self.is_usable_with,
 			icon: self.icon,
 		}
@@ -180,19 +180,18 @@ pub struct SkillSpawner(pub Entity, pub GlobalTransform);
 pub struct SkillCaster(pub Entity, pub Transform);
 
 pub type Target = SelectInfo<Outdated<GlobalTransform>>;
-pub type StartBehaviorFn = fn(&mut Commands, &SkillCaster, &SkillSpawner, &Target) -> Entity;
-pub type StopBehaviorFn = fn(&mut Commands, Entity);
+pub type StartBehaviorFn = fn(&mut Commands, &SkillCaster, &SkillSpawner, &Target) -> OnSkillStop;
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum OnSkillStop {
+	Ignore,
+	Stop(Entity),
+}
 
 #[derive(PartialEq, Debug, Clone, Copy, Default)]
-pub enum Run {
+pub enum SkillBehavior {
 	#[default]
 	Never,
 	OnAim(StartBehaviorFn),
 	OnActive(StartBehaviorFn),
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Default)]
-pub struct SkillExecution {
-	pub run_fn: Run,
-	pub execution_stop_on_skill_stop: bool,
 }

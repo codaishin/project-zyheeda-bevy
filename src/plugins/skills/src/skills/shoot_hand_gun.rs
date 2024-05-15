@@ -1,7 +1,13 @@
 use super::{Animate, Skill, SkillAnimation};
 use crate::{
 	items::ItemType,
-	traits::{AnimationChainIf, GetAnimationSetup, GetExecution, GetSkillAnimation, SkillTemplate},
+	traits::{
+		AnimationChainIf,
+		GetAnimationSetup,
+		GetSkillAnimation,
+		GetStaticSkillBehavior,
+		SkillTemplate,
+	},
 };
 use animations::animation::{Animation, PlayMode};
 use behaviors::components::Projectile;
@@ -64,7 +70,7 @@ impl<T: Sync + Send + 'static> SkillTemplate for ShootHandGun<T> {
 			name: "Shoot Hand Gun",
 			active: Duration::from_millis(200),
 			animate: Animate::Some(ShootHandGun::<T>::animation()),
-			execution: Projectile::<T>::execution(),
+			behavior: Projectile::<T>::behavior(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
 			icon: Some(|| Path::from("icons/pistol.png")),
 			..default()
