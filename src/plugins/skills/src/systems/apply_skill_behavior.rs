@@ -1,20 +1,13 @@
 use crate::{
 	components::{SkillExecution, SkillRunningOn, SkillSpawn},
-	skills::{
-		OnSkillStop,
-		SelectInfo,
-		SkillCaster,
-		SkillSpawner,
-		StartBehaviorFn,
-		StopBehaviorFn,
-		Target,
-	},
+	skills::{OnSkillStop, SelectInfo, SkillCaster, SkillSpawner, StartBehaviorFn, Target},
 };
 use bevy::{
 	ecs::{
 		entity::Entity,
 		system::{Commands, Query, Res},
 	},
+	hierarchy::DespawnRecursiveExt,
 	transform::components::{GlobalTransform, Transform},
 };
 use common::{
@@ -45,8 +38,8 @@ pub(crate) fn apply_skill_behavior(
 				let target = get_target(&cam_ray, &mouse_hover, &transforms);
 				start_behavior(&mut commands, id, start_fn, transform, spawner, target);
 			}
-			(SkillExecution::Stop(stop_fn), Some(SkillRunningOn(skill_id))) => {
-				stop_behavior(&mut commands, id, stop_fn, skill_id);
+			(SkillExecution::Stop, Some(SkillRunningOn(skill_id))) => {
+				stop_behavior(&mut commands, id, skill_id);
 			}
 			_ => {}
 		}
@@ -79,13 +72,10 @@ fn start_behavior(
 	commands.try_insert_on(id, SkillRunningOn(skill_id));
 }
 
-fn stop_behavior(
-	commands: &mut Commands,
-	caster: Entity,
-	stop_fn: &StopBehaviorFn,
-	skill_id: &Entity,
-) {
-	stop_fn(commands, *skill_id);
+fn stop_behavior(commands: &mut Commands, caster: Entity, skill_id: &Entity) {
+	if let Some(skill) = commands.get_entity(*skill_id) {
+		skill.despawn_recursive();
+	}
 	commands.try_remove_from::<SkillRunningOn>(caster);
 }
 
@@ -130,6 +120,7 @@ mod tests {
 	};
 	use bevy::{
 		app::{App, Update},
+		hierarchy::BuildWorldChildren,
 		math::{Ray3d, Vec3},
 		transform::components::{GlobalTransform, Transform},
 	};
@@ -158,10 +149,6 @@ mod tests {
 		) -> OnSkillStop;
 	}
 
-	trait StopFn {
-		fn stop(agent: &mut Commands, id: Entity);
-	}
-
 	macro_rules! mock_fns {
 		($ident:ident) => {
 			mock! {
@@ -169,10 +156,6 @@ mod tests {
 				impl StartFn for $ident {
 					#[allow(clippy::needless_lifetimes)]
 					fn start<'a, 'b>(agent: &mut Commands<'a, 'b>, caster: &SkillCaster, spawner: &SkillSpawner, target: &Target) -> OnSkillStop {}
-				}
-				impl StopFn for $ident {
-					#[allow(clippy::needless_lifetimes)]
-					fn stop<'a, 'b>(agent: &mut Commands<'a, 'b>, id: Entity) {}
 				}
 			}
 		};
@@ -249,30 +232,29 @@ mod tests {
 		);
 	}
 
-	mock_fns!(_Stop);
-
 	#[test]
-	fn stop_behavior() {
+	fn stop_behavior_by_recursively_despawning_the_skill_entity() {
 		let mut app = setup();
+		let skill = app.world.spawn_empty().id();
+		let skill_child = app.world.spawn_empty().set_parent(skill).id();
 
 		app.world.spawn((
 			Transform::default(),
 			SkillSpawn(Entity::from_raw(101)),
-			SkillExecution::Stop(Mock_Stop::stop),
-			SkillRunningOn(Entity::from_raw(398)),
+			SkillExecution::Stop,
+			SkillRunningOn(skill),
 		));
 
-		let stop_ctx = Mock_Stop::stop_context();
-		stop_ctx
-			.expect()
-			.times(1)
-			.withf(move |_, id| {
-				assert_eq!(&Entity::from_raw(398), id);
-				true
-			})
-			.return_const(());
-
 		app.update();
+
+		let skill_or_skill_child: Vec<_> = app
+			.world
+			.iter_entities()
+			.filter(|e| e.id() == skill || e.id() == skill_child)
+			.map(|e| e.id())
+			.collect();
+
+		assert_eq!(vec![] as Vec<Entity>, skill_or_skill_child);
 	}
 
 	mock_fns!(_RemoveOnStart);
@@ -302,8 +284,6 @@ mod tests {
 		assert_eq!(None, agent.get::<SkillExecution>());
 	}
 
-	mock_fns!(_RemoveOnStop);
-
 	#[test]
 	fn remove_skill_execution_component_on_stop() {
 		let mut app = setup();
@@ -313,13 +293,10 @@ mod tests {
 			.spawn((
 				Transform::default(),
 				SkillSpawn(Entity::from_raw(101)),
-				SkillExecution::Stop(Mock_RemoveOnStop::stop),
+				SkillExecution::Stop,
 				SkillRunningOn(Entity::from_raw(2029)),
 			))
 			.id();
-
-		let stop_ctx = Mock_RemoveOnStop::stop_context();
-		stop_ctx.expect().return_const(());
 
 		app.update();
 
@@ -337,12 +314,9 @@ mod tests {
 			.spawn((
 				Transform::default(),
 				SkillSpawn(Entity::from_raw(101)),
-				SkillExecution::Stop(Mock_RemoveOnStop::stop),
+				SkillExecution::Stop,
 			))
 			.id();
-
-		let stop_ctx = Mock_RemoveOnStop::stop_context();
-		stop_ctx.expect().return_const(());
 
 		app.update();
 

@@ -1,5 +1,5 @@
-use super::{GetExecution, RunSkill, SkillBundleConfig};
-use crate::skills::{Run, SkillCaster, SkillExecution, SkillSpawner, Target};
+use super::{GetStaticSkillBehavior, RunSkill, SkillBundleConfig};
+use crate::skills::{SkillBehavior, SkillCaster, SkillSpawner, Target};
 use behaviors::components::Projectile;
 use bevy::{prelude::SpatialBundle, transform::components::Transform};
 
@@ -16,12 +16,9 @@ impl<T: Send + Sync + 'static> SkillBundleConfig for Projectile<T> {
 	}
 }
 
-impl<T: Send + Sync + 'static> GetExecution for Projectile<T> {
-	fn execution() -> SkillExecution {
-		SkillExecution {
-			run_fn: Run::OnActive(Projectile::<T>::run_skill),
-			execution_stop_on_skill_stop: false,
-		}
+impl<T: Send + Sync + 'static> GetStaticSkillBehavior for Projectile<T> {
+	fn behavior() -> SkillBehavior {
+		SkillBehavior::OnActive(Projectile::<T>::run_skill)
 	}
 }
 

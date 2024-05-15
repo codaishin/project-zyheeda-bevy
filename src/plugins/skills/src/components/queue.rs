@@ -1,23 +1,19 @@
 use super::SlotKey;
 use crate::{
-	skills::{Activation, Animate, Queued, Run, Skill, SkillState, StopBehaviorFn},
+	skills::{Activation, Animate, Queued, Skill, SkillBehavior, SkillState},
 	traits::{
 		Enqueue,
-		Execution,
 		Flush,
 		GetActiveSkill,
 		GetAnimation,
+		GetSkillBehavior,
 		Iter,
 		IterAddedMut,
 		IterMutWithKeys,
 	},
 };
 use animations::animation::Animation;
-use bevy::{
-	ecs::{component::Component, entity::Entity, system::Commands},
-	hierarchy::DespawnRecursiveExt,
-	utils::default,
-};
+use bevy::{ecs::component::Component, utils::default};
 use common::{components::Side, traits::state_duration::StateDuration};
 use std::{collections::VecDeque, time::Duration};
 
@@ -514,7 +510,7 @@ struct ActiveSkill<'a> {
 impl GetActiveSkill<Animation, SkillState> for Queue {
 	fn get_active(
 		&mut self,
-	) -> Option<impl Execution + GetAnimation<Animation> + StateDuration<SkillState>> {
+	) -> Option<impl GetSkillBehavior + GetAnimation<Animation> + StateDuration<SkillState>> {
 		let skill = self.queue.front_mut()?;
 
 		if self.duration.is_none() {
@@ -549,25 +545,10 @@ impl<'a> StateDuration<SkillState> for ActiveSkill<'a> {
 	}
 }
 
-impl<'a> Execution for ActiveSkill<'a> {
-	fn get_start(&self) -> Run {
-		self.skill.execution.run_fn
+impl<'a> GetSkillBehavior for ActiveSkill<'a> {
+	fn behavior(&self) -> SkillBehavior {
+		self.skill.behavior
 	}
-
-	fn get_stop(&self) -> Option<StopBehaviorFn> {
-		if !self.skill.execution.execution_stop_on_skill_stop {
-			return None;
-		}
-
-		Some(remove_entity_recursive)
-	}
-}
-
-fn remove_entity_recursive(commands: &mut Commands, entity: Entity) {
-	let Some(entity) = commands.get_entity(entity) else {
-		return;
-	};
-	entity.despawn_recursive();
 }
 
 impl<'a> GetAnimation<Animation> for ActiveSkill<'a> {
@@ -590,18 +571,14 @@ mod test_queue_active_skill {
 			Animate,
 			OnSkillStop,
 			SkillAnimation,
+			SkillBehavior,
 			SkillCaster,
-			SkillExecution,
 			SkillSpawner,
 			Target,
 		},
 	};
 	use animations::animation::PlayMode;
-	use bevy::{
-		app::{App, Update},
-		hierarchy::BuildWorldChildren,
-		prelude::default,
-	};
+	use bevy::{ecs::system::Commands, prelude::default};
 	use common::{components::Side, traits::load_asset::Path};
 
 	#[test]
@@ -826,16 +803,13 @@ mod test_queue_active_skill {
 					slot_key: SlotKey::Hand(Side::Main),
 					..default()
 				},
-				execution: SkillExecution {
-					run_fn: Run::OnActive(run),
-					..default()
-				},
+				behavior: SkillBehavior::OnActive(run),
 				..default()
 			},
 			duration: &mut Duration::default(),
 		};
 
-		assert_eq!(Run::OnActive(run), active.get_start());
+		assert_eq!(SkillBehavior::OnActive(run), active.behavior());
 	}
 
 	#[test]
@@ -850,74 +824,13 @@ mod test_queue_active_skill {
 					slot_key: SlotKey::Hand(Side::Main),
 					..default()
 				},
-				execution: SkillExecution {
-					run_fn: Run::OnAim(run),
-					..default()
-				},
+				behavior: SkillBehavior::OnAim(run),
 				..default()
 			},
 			duration: &mut Duration::default(),
 		};
 
-		assert_eq!(Run::OnAim(run), active.get_start());
-	}
-
-	#[test]
-	fn test_stop_behavior_fn_when_set_to_stoppable() {
-		let active = ActiveSkill {
-			skill: &mut Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
-				execution: SkillExecution {
-					execution_stop_on_skill_stop: true,
-					..default()
-				},
-				..default()
-			},
-			duration: &mut Duration::default(),
-		};
-
-		assert_eq!(
-			Some(remove_entity_recursive as usize),
-			active.get_stop().map(|f| f as usize)
-		);
-	}
-
-	#[test]
-	fn test_stop_behavior_fn_when_not_set_to_stoppable() {
-		let active = ActiveSkill {
-			skill: &mut Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
-				execution: SkillExecution {
-					execution_stop_on_skill_stop: false,
-					..default()
-				},
-				..default()
-			},
-			duration: &mut Duration::default(),
-		};
-
-		assert_eq!(None, active.get_stop().map(|f| f as usize));
-	}
-
-	#[test]
-	fn test_stop_fn() {
-		let mut app = App::new();
-		let entity = app.world.spawn_empty().id();
-		app.world.spawn_empty().set_parent(entity);
-
-		app.add_systems(Update, move |mut commands: Commands| {
-			remove_entity_recursive(&mut commands, entity)
-		});
-
-		app.update();
-
-		assert!(app.world.entities().is_empty());
+		assert_eq!(SkillBehavior::OnAim(run), active.behavior());
 	}
 
 	#[test]

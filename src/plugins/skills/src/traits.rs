@@ -13,13 +13,11 @@ use crate::{
 	skills::{
 		Animate,
 		OnSkillStop,
-		Run,
 		Skill,
 		SkillAnimation,
+		SkillBehavior,
 		SkillCaster,
-		SkillExecution,
 		SkillSpawner,
-		StopBehaviorFn,
 		Target,
 	},
 };
@@ -104,7 +102,7 @@ pub(crate) trait Prime {
 pub(crate) trait GetActiveSkill<TAnimation, TSkillState: Clone> {
 	fn get_active(
 		&mut self,
-	) -> Option<impl Execution + GetAnimation<TAnimation> + StateUpdate<TSkillState>>;
+	) -> Option<impl GetSkillBehavior + GetAnimation<TAnimation> + StateUpdate<TSkillState>>;
 	fn clear_active(&mut self);
 }
 
@@ -116,13 +114,12 @@ pub(crate) trait GetAnimation<TAnimation> {
 	fn animate(&self) -> Animate<TAnimation>;
 }
 
-pub trait GetExecution {
-	fn execution() -> SkillExecution;
+pub trait GetStaticSkillBehavior {
+	fn behavior() -> SkillBehavior;
 }
 
-pub(crate) trait Execution {
-	fn get_start(&self) -> Run;
-	fn get_stop(&self) -> Option<StopBehaviorFn>;
+pub(crate) trait GetSkillBehavior {
+	fn behavior(&self) -> SkillBehavior;
 }
 
 pub trait InputState<TKey: Eq + Hash> {

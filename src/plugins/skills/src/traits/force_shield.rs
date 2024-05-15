@@ -1,5 +1,5 @@
-use super::{GetExecution, RunSkill, SkillBundleConfig};
-use crate::skills::{Run, SkillCaster, SkillExecution, SkillSpawner, Target};
+use super::{GetStaticSkillBehavior, RunSkill, SkillBundleConfig};
+use crate::skills::{SkillBehavior, SkillCaster, SkillSpawner, Target};
 use behaviors::components::ForceShield;
 use bevy::{self, prelude::SpatialBundle, transform::components::Transform};
 
@@ -18,12 +18,9 @@ impl SkillBundleConfig for ForceShield {
 	}
 }
 
-impl GetExecution for ForceShield {
-	fn execution() -> SkillExecution {
-		SkillExecution {
-			run_fn: Run::OnAim(ForceShield::run_skill),
-			execution_stop_on_skill_stop: true,
-		}
+impl GetStaticSkillBehavior for ForceShield {
+	fn behavior() -> SkillBehavior {
+		SkillBehavior::OnAim(ForceShield::run_skill)
 	}
 }
 
