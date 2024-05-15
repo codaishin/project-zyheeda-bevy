@@ -39,3 +39,6 @@ pub(crate) enum SkillExecution {
 	Start(StartBehaviorFn),
 	Stop(StopBehaviorFn),
 }
+
+#[derive(Component, Debug, PartialEq)]
+pub(crate) struct SkillRunningOn(pub Entity);

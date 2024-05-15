@@ -10,7 +10,7 @@ use bevy::{
 };
 use bevy_rapier3d::geometry::Collider;
 use common::{
-	bundles::ColliderBundle,
+	bundles::ColliderTransformBundle,
 	components::{ColliderRoot, Dummy},
 	errors::Error,
 };
@@ -53,7 +53,7 @@ impl Instantiate for Dummy {
 				..default()
 			});
 			parent.spawn((
-				ColliderBundle::new_static_collider(transform, collider),
+				ColliderTransformBundle::new_static_collider(transform, collider),
 				ColliderRoot(parent.parent_entity()),
 			));
 		});

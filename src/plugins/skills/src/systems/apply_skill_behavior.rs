@@ -1,93 +1,114 @@
 use crate::{
-	components::{SkillExecution, SkillSpawn},
-	skills::{SelectInfo, Spawner, StartBehaviorFn, Target},
+	components::{SkillExecution, SkillRunningOn, SkillSpawn},
+	skills::{SelectInfo, SkillCaster, SkillSpawner, StartBehaviorFn, StopBehaviorFn, Target},
 };
 use bevy::{
 	ecs::{
 		entity::Entity,
-		system::{Commands, EntityCommands, Query, Res},
+		system::{Commands, Query, Res},
 	},
-	math::Ray3d,
 	transform::components::{GlobalTransform, Transform},
 };
 use common::{
 	components::Outdated,
 	resources::{CamRay, MouseHover},
+	traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
+
+type Components<'a> = (
+	Entity,
+	&'a Transform,
+	&'a SkillExecution,
+	&'a SkillSpawn<Entity>,
+	Option<&'a SkillRunningOn>,
+);
 
 pub(crate) fn apply_skill_behavior(
 	mut commands: Commands,
 	cam_ray: Res<CamRay>,
 	mouse_hover: Res<MouseHover>,
-	agents: Query<(Entity, &Transform, &SkillExecution, &SkillSpawn<Entity>)>,
-	transforms: Query<&GlobalTransform>,
+	agents: Query<Components>,
+	transforms: Query<(Entity, &GlobalTransform)>,
 ) {
-	for (id, transform, execution, skill_spawn) in &agents {
-		let Some(agent) = &mut commands.get_entity(id) else {
-			continue;
-		};
-		match execution {
-			SkillExecution::Start(start_fn) => {
-				start_behavior(
-					agent,
-					&cam_ray,
-					&mouse_hover,
-					skill_spawn,
-					transform,
-					&transforms,
-					start_fn,
-				);
+	for (id, transform, execution, skill_spawn, skill_running_on) in &agents {
+		match (execution, skill_running_on) {
+			(SkillExecution::Start(start_fn), ..) => {
+				let spawner = get_spawner(skill_spawn, &transforms);
+				let target = get_target(&cam_ray, &mouse_hover, &transforms);
+				start_behavior(&mut commands, id, start_fn, transform, spawner, target);
 			}
-			SkillExecution::Stop(stop_fn) => {
-				stop_fn(agent);
+			(SkillExecution::Stop(stop_fn), Some(SkillRunningOn(skill_id))) => {
+				stop_behavior(&mut commands, id, stop_fn, skill_id);
 			}
+			_ => {}
 		}
-		agent.remove::<SkillExecution>();
+		commands.try_remove_from::<SkillExecution>(id);
 	}
 }
 
 fn start_behavior(
-	agent: &mut EntityCommands,
-	cam_ray: &Res<CamRay>,
-	mouse_hover: &Res<MouseHover>,
-	skill_spawn: &SkillSpawn<Entity>,
-	transform: &Transform,
-	transforms: &Query<&GlobalTransform, ()>,
+	commands: &mut Commands,
+	id: Entity,
 	start_fn: &StartBehaviorFn,
+	caster_transform: &Transform,
+	spawner: Option<SkillSpawner>,
+	target: Option<Target>,
 ) {
-	let Some(ray) = cam_ray.0 else {
+	let Some(spawner) = spawner else {
 		return;
 	};
-	let Some(spawner) = get_spawner(skill_spawn, transforms) else {
+	let Some(target) = target else {
 		return;
 	};
-	let target = get_target(ray, mouse_hover, transforms);
-	start_fn(agent, transform, &spawner, &target);
+	let skill_id = start_fn(
+		commands,
+		&SkillCaster(id, *caster_transform),
+		&spawner,
+		&target,
+	);
+	commands.try_insert_on(id, SkillRunningOn(skill_id));
+}
+
+fn stop_behavior(
+	commands: &mut Commands,
+	caster: Entity,
+	stop_fn: &StopBehaviorFn,
+	skill_id: &Entity,
+) {
+	stop_fn(commands, *skill_id);
+	commands.try_remove_from::<SkillRunningOn>(caster);
 }
 
 fn get_target(
-	ray: Ray3d,
+	cam_ray: &Res<CamRay>,
 	mouse_hover: &Res<MouseHover>,
-	transforms: &Query<&GlobalTransform>,
-) -> SelectInfo<Outdated<GlobalTransform>> {
-	Target {
-		ray,
+	transforms: &Query<(Entity, &GlobalTransform)>,
+) -> Option<SelectInfo<Outdated<GlobalTransform>>> {
+	let get_transform = |entity| {
+		let Ok((_, transform)) = transforms.get(entity) else {
+			return None;
+		};
+		Some(*transform)
+	};
+
+	Some(Target {
+		ray: cam_ray.0?,
 		collision_info: mouse_hover
 			.0
 			.as_ref()
-			.and_then(|collider_info| collider_info.with_component(transforms)),
-	}
+			.and_then(|collider_info| collider_info.with_component(get_transform)),
+	})
 }
 
 fn get_spawner(
 	skill_spawn: &SkillSpawn<Entity>,
-	transforms: &Query<&GlobalTransform>,
-) -> Option<Spawner> {
-	let Ok(transform) = transforms.get(skill_spawn.0) else {
+	transforms: &Query<(Entity, &GlobalTransform)>,
+) -> Option<SkillSpawner> {
+	let Ok((entity, transform)) = transforms.get(skill_spawn.0) else {
 		return None;
 	};
 
-	Some(Spawner(*transform))
+	Some(SkillSpawner(entity, *transform))
 }
 
 #[cfg(test)]
@@ -95,11 +116,10 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::SkillExecution,
-		skills::{Spawner, Target},
+		skills::{SkillSpawner, Target},
 	};
 	use bevy::{
 		app::{App, Update},
-		ecs::system::EntityCommands,
 		math::{Ray3d, Vec3},
 		transform::components::{GlobalTransform, Transform},
 	};
@@ -121,15 +141,15 @@ mod tests {
 
 	trait StartFn {
 		fn start(
-			agent: &mut EntityCommands,
-			transform: &Transform,
-			spawner: &Spawner,
+			agent: &mut Commands,
+			transform: &SkillCaster,
+			spawner: &SkillSpawner,
 			target: &Target,
-		);
+		) -> Entity;
 	}
 
 	trait StopFn {
-		fn stop(agent: &mut EntityCommands);
+		fn stop(agent: &mut Commands, id: Entity);
 	}
 
 	macro_rules! mock_fns {
@@ -138,11 +158,11 @@ mod tests {
 				$ident {}
 				impl StartFn for $ident {
 					#[allow(clippy::needless_lifetimes)]
-					fn start<'a>(agent: &mut EntityCommands<'a>, transform: &Transform, spawner: &Spawner, target: &Target) {}
+					fn start<'a, 'b>(agent: &mut Commands<'a, 'b>, caster: &SkillCaster, spawner: &SkillSpawner, target: &Target) -> Entity {}
 				}
 				impl StopFn for $ident {
 					#[allow(clippy::needless_lifetimes)]
-					fn stop<'a>(agent: &mut EntityCommands<'a>) {}
+					fn stop<'a, 'b>(agent: &mut Commands<'a, 'b>, id: Entity) {}
 				}
 			}
 		};
@@ -168,14 +188,14 @@ mod tests {
 		app.world.resource_mut::<MouseHover>().0 = Some(collider_info);
 
 		let spawner_transform = GlobalTransform::from_xyz(100., 100., 100.);
-		let spawner = app.world.spawn(spawner_transform).id();
+		let spawner_entity = app.world.spawn(spawner_transform).id();
 
-		let agent_transform = Transform::from_xyz(42., 42., 42.);
-		let agent = app
+		let skill_caster_transform = Transform::from_xyz(42., 42., 42.);
+		let agent_entity = app
 			.world
 			.spawn((
-				agent_transform,
-				SkillSpawn(spawner),
+				skill_caster_transform,
+				SkillSpawn(spawner_entity),
 				SkillExecution::Start(Mock_Run::start),
 			))
 			.id();
@@ -184,12 +204,11 @@ mod tests {
 		start_ctx
 			.expect()
 			.times(1)
-			.withf(move |agent_cmds, transform, spawner, target| {
+			.withf(move |_, caster, spawner, target| {
 				assert_eq!(
 					(
-						agent,
-						&agent_transform,
-						&Spawner(spawner_transform),
+						&SkillCaster(agent_entity, skill_caster_transform),
+						&SkillSpawner(spawner_entity, spawner_transform),
 						&Target {
 							ray: cam_ray,
 							collision_info: Some(ColliderInfo {
@@ -204,13 +223,20 @@ mod tests {
 							})
 						}
 					),
-					(agent_cmds.id(), transform, spawner, target)
+					(caster, spawner, target)
 				);
 				true
 			})
-			.return_const(());
+			.return_const(Entity::from_raw(42));
 
 		app.update();
+
+		let agent = app.world.entity(agent_entity);
+
+		assert_eq!(
+			Some(&SkillRunningOn(Entity::from_raw(42))),
+			agent.get::<SkillRunningOn>()
+		);
 	}
 
 	mock_fns!(_Stop);
@@ -219,21 +245,19 @@ mod tests {
 	fn stop_behavior() {
 		let mut app = setup();
 
-		let agent = app
-			.world
-			.spawn((
-				Transform::default(),
-				SkillSpawn(Entity::from_raw(101)),
-				SkillExecution::Stop(Mock_Stop::stop),
-			))
-			.id();
+		app.world.spawn((
+			Transform::default(),
+			SkillSpawn(Entity::from_raw(101)),
+			SkillExecution::Stop(Mock_Stop::stop),
+			SkillRunningOn(Entity::from_raw(398)),
+		));
 
 		let stop_ctx = Mock_Stop::stop_context();
 		stop_ctx
 			.expect()
 			.times(1)
-			.withf(move |agent_cmds| {
-				assert_eq!(agent, agent_cmds.id());
+			.withf(move |_, id| {
+				assert_eq!(&Entity::from_raw(398), id);
 				true
 			})
 			.return_const(());
@@ -257,7 +281,7 @@ mod tests {
 			.id();
 
 		let start_ctx = Mock_RemoveOnStart::start_context();
-		start_ctx.expect().return_const(());
+		start_ctx.expect().return_const(Entity::from_raw(42));
 
 		app.update();
 
@@ -270,6 +294,30 @@ mod tests {
 
 	#[test]
 	fn remove_skill_execution_component_on_stop() {
+		let mut app = setup();
+
+		let agent = app
+			.world
+			.spawn((
+				Transform::default(),
+				SkillSpawn(Entity::from_raw(101)),
+				SkillExecution::Stop(Mock_RemoveOnStop::stop),
+				SkillRunningOn(Entity::from_raw(2029)),
+			))
+			.id();
+
+		let stop_ctx = Mock_RemoveOnStop::stop_context();
+		stop_ctx.expect().return_const(());
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(None, agent.get::<SkillRunningOn>());
+	}
+
+	#[test]
+	fn remove_skill_running_component_on_stop() {
 		let mut app = setup();
 
 		let agent = app

@@ -1,4 +1,5 @@
 pub(crate) mod bevy_input;
+pub(crate) mod force_shield;
 pub(crate) mod inventory;
 pub(crate) mod projectile;
 pub(crate) mod skill_state;
@@ -9,9 +10,20 @@ use crate::{
 	components::slots::Slots,
 	items::SlotKey,
 	resources::SlotMap,
-	skills::{Animate, Skill, SkillAnimation, SkillExecution, StartBehaviorFn, StopBehaviorFn},
+	skills::{
+		Animate,
+		Run,
+		Skill,
+		SkillAnimation,
+		SkillCaster,
+		SkillExecution,
+		SkillSpawner,
+		StopBehaviorFn,
+		Target,
+	},
 };
 use animations::animation::Animation;
+use bevy::ecs::{bundle::Bundle, entity::Entity, system::Commands};
 use common::{
 	tools::{Last, This},
 	traits::{load_asset::Path, state_duration::StateUpdate},
@@ -20,6 +32,37 @@ use std::hash::Hash;
 
 pub(crate) trait Enqueue<TItem> {
 	fn enqueue(&mut self, item: TItem);
+}
+
+pub(crate) trait NewSkillBundle {
+	type Bundle;
+	fn new_skill_bundle(
+		caster: &SkillCaster,
+		spawner: &SkillSpawner,
+		target: &Target,
+	) -> Self::Bundle;
+}
+
+pub(crate) trait RunSkill {
+	fn run_skill(
+		commands: &mut Commands,
+		caster: &SkillCaster,
+		spawner: &SkillSpawner,
+		target: &Target,
+	) -> Entity;
+}
+
+impl<T: NewSkillBundle<Bundle = impl Bundle>> RunSkill for T {
+	fn run_skill(
+		commands: &mut Commands,
+		caster: &SkillCaster,
+		spawner: &SkillSpawner,
+		target: &Target,
+	) -> Entity {
+		commands
+			.spawn(T::new_skill_bundle(caster, spawner, target))
+			.id()
+	}
 }
 
 pub(crate) trait Flush {
@@ -70,7 +113,7 @@ pub trait GetExecution {
 }
 
 pub(crate) trait Execution {
-	fn get_start(&self) -> Option<StartBehaviorFn>;
+	fn get_start(&self) -> Run;
 	fn get_stop(&self) -> Option<StopBehaviorFn>;
 }
 
@@ -276,24 +319,134 @@ mod test_animation_chain_skill_animation {
 }
 
 #[cfg(test)]
-pub(crate) mod test_tools {
+mod test_run_skill {
 	use super::*;
-	use crate::skills::{Spawner, Target};
-	use bevy::{ecs::system::Commands, prelude::Entity, transform::components::Transform};
+	use crate::skills::SelectInfo;
+	use bevy::{
+		app::{App, Update},
+		ecs::{
+			component::Component,
+			entity::Entity,
+			system::{Commands, Query, Resource},
+		},
+		math::{Ray3d, Vec3},
+		transform::components::{GlobalTransform, Transform},
+	};
+	use common::{
+		components::Outdated,
+		resources::ColliderInfo,
+		test_tools::utils::SingleThreadedApp,
+	};
 
-	pub fn run_lazy(
-		behavior: SkillExecution,
-		agent: Entity,
-		agent_transform: Transform,
-		spawner: Spawner,
-		select_info: Target,
-	) -> impl FnMut(Commands) {
-		move |mut commands| {
-			let Some(run) = behavior.run_fn else {
-				return;
-			};
-			let mut agent = commands.entity(agent);
-			run(&mut agent, &agent_transform, &spawner, &select_info);
+	#[derive(Component, Debug, PartialEq)]
+	struct _Skill {
+		caster: SkillCaster,
+		spawner: SkillSpawner,
+		target: Target,
+	}
+
+	impl NewSkillBundle for _Skill {
+		type Bundle = _Skill;
+
+		fn new_skill_bundle(
+			caster: &SkillCaster,
+			spawner: &SkillSpawner,
+			target: &Target,
+		) -> Self::Bundle {
+			_Skill {
+				caster: *caster,
+				spawner: *spawner,
+				target: target.clone(),
+			}
 		}
+	}
+
+	#[derive(Resource)]
+	struct _Result(Entity);
+
+	fn setup(caster: Transform, spawner: SkillSpawner, target: Target) -> App {
+		let mut app = App::new().single_threaded(Update);
+		app.add_systems(
+			Update,
+			move |mut commands: Commands, query: Query<Entity>| {
+				for id in &query {
+					let id = _Skill::run_skill(
+						&mut commands,
+						&SkillCaster(id, caster),
+						&spawner,
+						&target,
+					);
+					commands.insert_resource(_Result(id));
+				}
+			},
+		);
+
+		app
+	}
+
+	#[test]
+	fn spawn_not_on_agent() {
+		let caster_transform = Transform::from_xyz(1., 2., 3.);
+		let spawner = SkillSpawner(
+			Entity::from_raw(1000),
+			GlobalTransform::from_xyz(4., 5., 6.),
+		);
+		let target = SelectInfo {
+			ray: Ray3d::new(Vec3::ONE, Vec3::ONE),
+			collision_info: Some(ColliderInfo {
+				collider: Outdated {
+					entity: Entity::from_raw(42),
+					component: GlobalTransform::from_xyz(7., 8., 9.),
+				},
+				root: None,
+			}),
+		};
+		let mut app = setup(caster_transform, spawner, target.clone());
+		let agent = app.world.spawn_empty().id();
+
+		app.update();
+
+		let skill = app.world.iter_entities().find(|e| e.id() != agent).unwrap();
+
+		assert_eq!(
+			Some(&_Skill {
+				caster: SkillCaster(agent, caster_transform),
+				spawner,
+				target,
+			}),
+			skill.get::<_Skill>()
+		);
+	}
+
+	#[test]
+	fn returned_spawned_entity() {
+		let caster = Transform::from_xyz(1., 2., 3.);
+		let spawner = SkillSpawner(
+			Entity::from_raw(1000),
+			GlobalTransform::from_xyz(4., 5., 6.),
+		);
+		let target = SelectInfo {
+			ray: Ray3d::new(Vec3::ONE, Vec3::ONE),
+			collision_info: Some(ColliderInfo {
+				collider: Outdated {
+					entity: Entity::from_raw(42),
+					component: GlobalTransform::from_xyz(7., 8., 9.),
+				},
+				root: None,
+			}),
+		};
+		let mut app = setup(caster, spawner, target.clone());
+		app.world.spawn_empty();
+
+		app.update();
+
+		let skill = app
+			.world
+			.iter_entities()
+			.find(|e| e.contains::<_Skill>())
+			.unwrap();
+		let result = app.world.get_resource::<_Result>().unwrap();
+
+		assert_eq!(skill.id(), result.0);
 	}
 }

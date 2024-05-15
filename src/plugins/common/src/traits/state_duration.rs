@@ -9,9 +9,9 @@ use std::{
 
 #[derive(PartialEq, Debug, Clone, Eq, Hash)]
 pub enum StateMeta<TStateName: Clone> {
-	First,
+	Entering(TStateName),
 	In(TStateName),
-	Leaving(TStateName),
+	Done,
 }
 
 pub trait StateDuration<TStateKey> {
@@ -102,10 +102,6 @@ impl<
 		let before_update = _SafeDuration::from(*self.elapsed_mut());
 		let after_update = before_update + delta.into();
 
-		if before_update == _SafeDuration::ZERO {
-			states.insert(StateMeta::First);
-		}
-
 		for state_key in state_keys {
 			let state_begin = state_end;
 
@@ -113,6 +109,10 @@ impl<
 			for meta in current_state_metas(before_update, after_update, state_begin, state_end) {
 				states.insert(meta(state_key));
 			}
+		}
+
+		if after_update > state_end {
+			states.insert(StateMeta::Done);
 		}
 
 		*self.elapsed_mut() = after_update.into();
@@ -139,12 +139,12 @@ fn non_zero_duration_meta<TStateName: IterKey + Copy + Clone + Eq + Hash + 'stat
 	state_begin: _SafeDuration,
 	state_end: _SafeDuration,
 ) -> Vec<Box<dyn Fn(TStateName) -> StateMeta<TStateName>>> {
-	if after_update < state_begin {
+	if after_update <= state_begin {
 		vec![]
-	} else if after_update < state_end {
-		vec![Box::new(StateMeta::In)]
+	} else if before_update <= state_begin {
+		vec![Box::new(StateMeta::Entering), Box::new(StateMeta::In)]
 	} else if before_update < state_end {
-		vec![Box::new(StateMeta::In), Box::new(StateMeta::Leaving)]
+		vec![Box::new(StateMeta::In)]
 	} else {
 		vec![]
 	}
@@ -156,7 +156,7 @@ fn zero_duration_meta<TStateName: IterKey + Copy + Clone + Eq + Hash + 'static>(
 	current_state: _SafeDuration,
 ) -> Vec<Box<dyn Fn(TStateName) -> StateMeta<TStateName>>> {
 	if before_update <= current_state || after_update >= current_state {
-		vec![Box::new(StateMeta::In), Box::new(StateMeta::Leaving)]
+		vec![Box::new(StateMeta::Entering), Box::new(StateMeta::In)]
 	} else {
 		vec![]
 	}
@@ -231,7 +231,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			HashSet::from([StateMeta::First, StateMeta::In(_State::A),]),
+			HashSet::from([StateMeta::Entering(_State::A), StateMeta::In(_State::A)]),
 			agent.update_state(Duration::from_millis(9))
 		);
 	}
@@ -242,17 +242,16 @@ mod tests {
 			state_a: Duration::from_millis(10),
 			state_b: Duration::from_millis(20),
 			state_c: Duration::from_millis(30),
-			duration: Duration::ZERO,
+			duration: Duration::from_millis(1),
 		};
 
 		assert_eq!(
 			HashSet::from([
-				StateMeta::First,
 				StateMeta::In(_State::A),
-				StateMeta::Leaving(_State::A),
+				StateMeta::Entering(_State::B),
 				StateMeta::In(_State::B),
 			]),
-			agent.update_state(Duration::from_millis(11))
+			agent.update_state(Duration::from_millis(10))
 		);
 	}
 
@@ -272,21 +271,21 @@ mod tests {
 	}
 
 	#[test]
-	fn get_exit_b() {
+	fn get_enter_b() {
 		let mut agent = _Agent {
 			state_a: Duration::from_millis(10),
 			state_b: Duration::from_millis(20),
 			state_c: Duration::from_millis(30),
-			duration: Duration::from_millis(15),
+			duration: Duration::from_millis(5),
 		};
 
 		assert_eq!(
 			HashSet::from([
-				StateMeta::In(_State::B),
-				StateMeta::Leaving(_State::B),
-				StateMeta::In(_State::C)
+				StateMeta::In(_State::A),
+				StateMeta::Entering(_State::B),
+				StateMeta::In(_State::B)
 			]),
-			agent.update_state(Duration::from_millis(16))
+			agent.update_state(Duration::from_millis(10))
 		);
 	}
 
@@ -301,13 +300,13 @@ mod tests {
 
 		assert_eq!(
 			HashSet::from([
-				StateMeta::First,
+				StateMeta::Entering(_State::A),
 				StateMeta::In(_State::A),
-				StateMeta::Leaving(_State::A),
+				StateMeta::Entering(_State::B),
 				StateMeta::In(_State::B),
-				StateMeta::Leaving(_State::B),
+				StateMeta::Entering(_State::C),
 				StateMeta::In(_State::C),
-				StateMeta::Leaving(_State::C),
+				StateMeta::Done,
 			]),
 			agent.update_state(Duration::from_millis(10))
 		);
@@ -324,13 +323,13 @@ mod tests {
 
 		assert_eq!(
 			HashSet::from([
-				StateMeta::First,
+				StateMeta::Entering(_State::A),
 				StateMeta::In(_State::A),
-				StateMeta::Leaving(_State::A),
+				StateMeta::Entering(_State::B),
 				StateMeta::In(_State::B),
-				StateMeta::Leaving(_State::B),
+				StateMeta::Entering(_State::C),
 				StateMeta::In(_State::C),
-				StateMeta::Leaving(_State::C),
+				StateMeta::Done,
 			]),
 			agent.update_state(Duration::from_millis(10))
 		);
@@ -347,11 +346,11 @@ mod tests {
 
 		assert_eq!(
 			HashSet::from([
-				StateMeta::First,
+				StateMeta::Entering(_State::A),
 				StateMeta::In(_State::A),
-				StateMeta::Leaving(_State::A),
+				StateMeta::Entering(_State::B),
 				StateMeta::In(_State::B),
-				StateMeta::Leaving(_State::B),
+				StateMeta::Entering(_State::C),
 				StateMeta::In(_State::C),
 			]),
 			agent.update_state(Duration::from_secs(7))
@@ -368,7 +367,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			HashSet::from([StateMeta::First, StateMeta::In(_State::A),]),
+			HashSet::from([StateMeta::Entering(_State::A), StateMeta::In(_State::A)]),
 			agent.update_state(Duration::from_secs(1))
 		);
 	}
@@ -389,24 +388,18 @@ mod tests {
 			agent.update_state(Duration::from_secs(1)),
 			agent.update_state(Duration::from_secs(1)),
 			agent.update_state(Duration::from_secs(1)),
+			agent.update_state(Duration::from_secs(1)),
 		];
 
 		assert_eq!(
 			[
-				HashSet::from([StateMeta::First, StateMeta::In(_State::A),]),
-				HashSet::from([
-					StateMeta::In(_State::A),
-					StateMeta::Leaving(_State::A),
-					StateMeta::In(_State::B),
-				]),
-				HashSet::from([StateMeta::In(_State::B),]),
-				HashSet::from([
-					StateMeta::In(_State::B),
-					StateMeta::Leaving(_State::B),
-					StateMeta::In(_State::C),
-				]),
-				HashSet::from([StateMeta::In(_State::C),]),
-				HashSet::from([StateMeta::In(_State::C), StateMeta::Leaving(_State::C),])
+				HashSet::from([StateMeta::Entering(_State::A), StateMeta::In(_State::A)]),
+				HashSet::from([StateMeta::In(_State::A)]),
+				HashSet::from([StateMeta::Entering(_State::B), StateMeta::In(_State::B)]),
+				HashSet::from([StateMeta::In(_State::B)]),
+				HashSet::from([StateMeta::Entering(_State::C), StateMeta::In(_State::C)]),
+				HashSet::from([StateMeta::In(_State::C)]),
+				HashSet::from([StateMeta::Done]),
 			],
 			states
 		);

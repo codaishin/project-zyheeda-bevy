@@ -4,6 +4,8 @@ pub mod resources;
 pub mod skills;
 pub mod traits;
 
+pub(crate) mod test_tools;
+
 mod bundles;
 mod systems;
 
@@ -32,7 +34,7 @@ use common::{
 use components::{combos::Combos, inventory::Inventory, queue::Queue, slots::Slots, Mounts};
 use items::{InventoryKey, Item, ItemType, Mount, SlotKey};
 use resources::SlotMap;
-use skills::{shoot_hand_gun::ShootHandGun, Queued, Skill};
+use skills::{force_shield_skill::ForceShieldSkill, shoot_hand_gun::ShootHandGun, Queued, Skill};
 use std::collections::HashSet;
 use systems::{
 	advance_active_skill::advance_active_skill,
@@ -151,7 +153,7 @@ fn get_loadout() -> Loadout {
 				Some(Item {
 					name: "Force Bracer",
 					model: Some("bracer"),
-					skill: None,
+					skill: Some(ForceShieldSkill::skill()),
 					item_type: HashSet::from([ItemType::Bracer]),
 					mount: Mount::Forearm,
 				}),

@@ -1,6 +1,6 @@
 use super::SlotKey;
 use crate::{
-	skills::{Activation, Animate, Queued, Skill, SkillState, StartBehaviorFn, StopBehaviorFn},
+	skills::{Activation, Animate, Queued, Run, Skill, SkillState, StopBehaviorFn},
 	traits::{
 		Enqueue,
 		Execution,
@@ -13,7 +13,11 @@ use crate::{
 	},
 };
 use animations::animation::Animation;
-use bevy::{ecs::component::Component, utils::default};
+use bevy::{
+	ecs::{component::Component, entity::Entity, system::Commands},
+	hierarchy::DespawnRecursiveExt,
+	utils::default,
+};
 use common::{components::Side, traits::state_duration::StateDuration};
 use std::{collections::VecDeque, time::Duration};
 
@@ -531,11 +535,9 @@ impl GetActiveSkill<Animation, SkillState> for Queue {
 impl<'a> StateDuration<SkillState> for ActiveSkill<'a> {
 	fn get_state_duration(&self, key: SkillState) -> Duration {
 		match (key, &self.skill.data.mode) {
+			(SkillState::Aim, Activation::Primed | Activation::Waiting) => Duration::MAX,
 			(SkillState::Aim, Activation::ActiveAfter(duration)) => *duration,
-			(SkillState::Aim, _) => Duration::MAX,
-			(SkillState::PreCast, _) => self.skill.cast.pre,
-			(SkillState::Active, _) => self.skill.cast.active,
-			(SkillState::AfterCast, _) => self.skill.cast.after,
+			(SkillState::Active, _) => self.skill.active,
 		}
 	}
 
@@ -548,13 +550,24 @@ impl<'a> StateDuration<SkillState> for ActiveSkill<'a> {
 }
 
 impl<'a> Execution for ActiveSkill<'a> {
-	fn get_start(&self) -> Option<StartBehaviorFn> {
+	fn get_start(&self) -> Run {
 		self.skill.execution.run_fn
 	}
 
 	fn get_stop(&self) -> Option<StopBehaviorFn> {
-		self.skill.execution.stop_fn
+		if !self.skill.execution.execution_stop_on_skill_stop {
+			return None;
+		}
+
+		Some(remove_entity_recursive)
 	}
+}
+
+fn remove_entity_recursive(commands: &mut Commands, entity: Entity) {
+	let Some(entity) = commands.get_entity(entity) else {
+		return;
+	};
+	entity.despawn_recursive();
 }
 
 impl<'a> GetAnimation<Animation> for ActiveSkill<'a> {
@@ -573,10 +586,14 @@ mod test_queue_active_skill {
 	use super::*;
 	use crate::{
 		components::SlotKey,
-		skills::{Animate, Cast, SkillAnimation, SkillExecution, Spawner, Target},
+		skills::{Animate, SkillAnimation, SkillCaster, SkillExecution, SkillSpawner, Target},
 	};
 	use animations::animation::PlayMode;
-	use bevy::{ecs::system::EntityCommands, prelude::default, transform::components::Transform};
+	use bevy::{
+		app::{App, Update},
+		hierarchy::BuildWorldChildren,
+		prelude::default,
+	};
 	use common::{components::Side, traits::load_asset::Path};
 
 	#[test]
@@ -588,11 +605,7 @@ mod test_queue_active_skill {
 						slot_key: SlotKey::Hand(Side::Main),
 						mode: Activation::Waiting,
 					},
-					cast: Cast {
-						pre: Duration::from_millis(1),
-						active: Duration::from_millis(2),
-						after: Duration::from_millis(3),
-					},
+					active: Duration::from_millis(1),
 					..default()
 				},
 				Skill::default(),
@@ -603,19 +616,11 @@ mod test_queue_active_skill {
 		let manager = queue.get_active().unwrap();
 
 		assert_eq!(
+			[Duration::MAX, Duration::from_millis(1)],
 			[
-				(Duration::MAX, SkillState::Aim),
-				(Duration::from_millis(1), SkillState::PreCast),
-				(Duration::from_millis(2), SkillState::Active),
-				(Duration::from_millis(3), SkillState::AfterCast),
-			],
-			[
-				SkillState::Aim,
-				SkillState::PreCast,
-				SkillState::Active,
-				SkillState::AfterCast
+				manager.get_state_duration(SkillState::Aim),
+				manager.get_state_duration(SkillState::Active),
 			]
-			.map(|state| (manager.get_state_duration(state), state))
 		)
 	}
 
@@ -628,11 +633,7 @@ mod test_queue_active_skill {
 						slot_key: SlotKey::Hand(Side::Main),
 						mode: Activation::Primed,
 					},
-					cast: Cast {
-						pre: Duration::from_millis(1),
-						active: Duration::from_millis(2),
-						after: Duration::from_millis(3),
-					},
+					active: Duration::from_millis(1),
 					..default()
 				},
 				Skill::default(),
@@ -643,19 +644,11 @@ mod test_queue_active_skill {
 		let manager = queue.get_active().unwrap();
 
 		assert_eq!(
+			[Duration::MAX, Duration::from_millis(1)],
 			[
-				(Duration::MAX, SkillState::Aim),
-				(Duration::from_millis(1), SkillState::PreCast),
-				(Duration::from_millis(2), SkillState::Active),
-				(Duration::from_millis(3), SkillState::AfterCast),
-			],
-			[
-				SkillState::Aim,
-				SkillState::PreCast,
-				SkillState::Active,
-				SkillState::AfterCast
+				manager.get_state_duration(SkillState::Aim),
+				manager.get_state_duration(SkillState::Active),
 			]
-			.map(|state| (manager.get_state_duration(state), state))
 		)
 	}
 
@@ -668,11 +661,7 @@ mod test_queue_active_skill {
 						slot_key: SlotKey::Hand(Side::Main),
 						mode: Activation::ActiveAfter(Duration::from_millis(42)),
 					},
-					cast: Cast {
-						pre: Duration::from_millis(1),
-						active: Duration::from_millis(2),
-						after: Duration::from_millis(3),
-					},
+					active: Duration::from_millis(1),
 					..default()
 				},
 				Skill::default(),
@@ -683,19 +672,11 @@ mod test_queue_active_skill {
 		let manager = queue.get_active().unwrap();
 
 		assert_eq!(
+			[Duration::from_millis(42), Duration::from_millis(1)],
 			[
-				(Duration::from_millis(42), SkillState::Aim),
-				(Duration::from_millis(1), SkillState::PreCast),
-				(Duration::from_millis(2), SkillState::Active),
-				(Duration::from_millis(3), SkillState::AfterCast),
-			],
-			[
-				SkillState::Aim,
-				SkillState::PreCast,
-				SkillState::Active,
-				SkillState::AfterCast
+				manager.get_state_duration(SkillState::Aim),
+				manager.get_state_duration(SkillState::Active),
 			]
-			.map(|state| (manager.get_state_duration(state), state))
 		)
 	}
 
@@ -826,8 +807,10 @@ mod test_queue_active_skill {
 	}
 
 	#[test]
-	fn test_start_behavior_fn() {
-		fn run(_: &mut EntityCommands, _: &Transform, _: &Spawner, _: &Target) {}
+	fn test_start_behavior_fn_on_active() {
+		fn run(_: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> Entity {
+			Entity::from_raw(100)
+		}
 
 		let active = ActiveSkill {
 			skill: &mut Skill {
@@ -836,7 +819,7 @@ mod test_queue_active_skill {
 					..default()
 				},
 				execution: SkillExecution {
-					run_fn: Some(run),
+					run_fn: Run::OnActive(run),
 					..default()
 				},
 				..default()
@@ -844,12 +827,14 @@ mod test_queue_active_skill {
 			duration: &mut Duration::default(),
 		};
 
-		assert_eq!(Some(run as usize), active.get_start().map(|f| f as usize));
+		assert_eq!(Run::OnActive(run), active.get_start());
 	}
 
 	#[test]
-	fn test_stop_behavior_fn() {
-		fn stop(_: &mut EntityCommands) {}
+	fn test_start_behavior_fn_on_aim() {
+		fn run(_: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> Entity {
+			Entity::from_raw(100)
+		}
 
 		let active = ActiveSkill {
 			skill: &mut Skill {
@@ -858,7 +843,7 @@ mod test_queue_active_skill {
 					..default()
 				},
 				execution: SkillExecution {
-					stop_fn: Some(stop),
+					run_fn: Run::OnAim(run),
 					..default()
 				},
 				..default()
@@ -866,7 +851,65 @@ mod test_queue_active_skill {
 			duration: &mut Duration::default(),
 		};
 
-		assert_eq!(Some(stop as usize), active.get_stop().map(|f| f as usize));
+		assert_eq!(Run::OnAim(run), active.get_start());
+	}
+
+	#[test]
+	fn test_stop_behavior_fn_when_set_to_stoppable() {
+		let active = ActiveSkill {
+			skill: &mut Skill {
+				data: Queued {
+					slot_key: SlotKey::Hand(Side::Main),
+					..default()
+				},
+				execution: SkillExecution {
+					execution_stop_on_skill_stop: true,
+					..default()
+				},
+				..default()
+			},
+			duration: &mut Duration::default(),
+		};
+
+		assert_eq!(
+			Some(remove_entity_recursive as usize),
+			active.get_stop().map(|f| f as usize)
+		);
+	}
+
+	#[test]
+	fn test_stop_behavior_fn_when_not_set_to_stoppable() {
+		let active = ActiveSkill {
+			skill: &mut Skill {
+				data: Queued {
+					slot_key: SlotKey::Hand(Side::Main),
+					..default()
+				},
+				execution: SkillExecution {
+					execution_stop_on_skill_stop: false,
+					..default()
+				},
+				..default()
+			},
+			duration: &mut Duration::default(),
+		};
+
+		assert_eq!(None, active.get_stop().map(|f| f as usize));
+	}
+
+	#[test]
+	fn test_stop_fn() {
+		let mut app = App::new();
+		let entity = app.world.spawn_empty().id();
+		app.world.spawn_empty().set_parent(entity);
+
+		app.add_systems(Update, move |mut commands: Commands| {
+			remove_entity_recursive(&mut commands, entity)
+		});
+
+		app.update();
+
+		assert!(app.world.entities().is_empty());
 	}
 
 	#[test]

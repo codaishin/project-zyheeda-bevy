@@ -57,6 +57,11 @@ impl<T> Projectile<T> {
 	}
 }
 
+#[derive(Component, Debug, PartialEq)]
+pub struct ForceShield {
+	pub location: Entity,
+}
+
 #[derive(Component)]
 pub struct VoidSphere;
 

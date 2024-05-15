@@ -1,3 +1,4 @@
+pub mod force_shield_skill;
 pub mod shoot_hand_gun;
 
 use crate::{
@@ -6,7 +7,7 @@ use crate::{
 };
 use animations::animation::Animation;
 use bevy::{
-	ecs::system::EntityCommands,
+	ecs::{entity::Entity, system::Commands},
 	math::{primitives::Direction3d, Ray3d, Vec3},
 	transform::components::{GlobalTransform, Transform},
 };
@@ -35,18 +36,11 @@ pub enum Animate<TAnimation> {
 pub struct Skill<TData = ()> {
 	pub name: &'static str,
 	pub data: TData,
-	pub cast: Cast,
+	pub active: Duration,
 	pub animate: Animate<SkillAnimation>,
 	pub execution: SkillExecution,
 	pub is_usable_with: HashSet<ItemType>,
 	pub icon: Option<fn() -> Path>,
-}
-
-#[derive(PartialEq, Debug, Clone, Copy, Default)]
-pub struct Cast {
-	pub pre: Duration,
-	pub active: Duration,
-	pub after: Duration,
 }
 
 impl<TData> Display for Skill<TData> {
@@ -104,7 +98,7 @@ impl Skill {
 		Skill {
 			data,
 			name: self.name,
-			cast: self.cast,
+			active: self.active,
 			animate: self.animate,
 			execution: self.execution,
 			is_usable_with: self.is_usable_with,
@@ -118,7 +112,7 @@ impl<TSrc> Skill<TSrc> {
 		Skill {
 			name: self.name,
 			data: map(self.data),
-			cast: self.cast,
+			active: self.active,
 			animate: self.animate,
 			execution: self.execution,
 			is_usable_with: self.is_usable_with,
@@ -176,21 +170,29 @@ mod test_skill {
 #[derive(PartialEq, Debug, Clone, Copy, Eq, Hash)]
 pub(crate) enum SkillState {
 	Aim,
-	PreCast,
 	Active,
-	AfterCast,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Default)]
-pub struct Spawner(pub GlobalTransform);
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct SkillSpawner(pub Entity, pub GlobalTransform);
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct SkillCaster(pub Entity, pub Transform);
 
 pub type Target = SelectInfo<Outdated<GlobalTransform>>;
-pub type TransformFN = fn(&mut Transform, &Spawner, &Target);
-pub type StartBehaviorFn = fn(&mut EntityCommands, &Transform, &Spawner, &Target);
-pub type StopBehaviorFn = fn(&mut EntityCommands);
+pub type StartBehaviorFn = fn(&mut Commands, &SkillCaster, &SkillSpawner, &Target) -> Entity;
+pub type StopBehaviorFn = fn(&mut Commands, Entity);
+
+#[derive(PartialEq, Debug, Clone, Copy, Default)]
+pub enum Run {
+	#[default]
+	Never,
+	OnAim(StartBehaviorFn),
+	OnActive(StartBehaviorFn),
+}
 
 #[derive(PartialEq, Debug, Clone, Copy, Default)]
 pub struct SkillExecution {
-	pub run_fn: Option<StartBehaviorFn>,
-	pub stop_fn: Option<StopBehaviorFn>,
+	pub run_fn: Run,
+	pub execution_stop_on_skill_stop: bool,
 }

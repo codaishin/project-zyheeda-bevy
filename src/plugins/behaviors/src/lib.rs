@@ -24,6 +24,7 @@ use common::{
 use components::{
 	Beam,
 	CamOrbit,
+	ForceShield,
 	Movement,
 	MovementConfig,
 	Plasma,
@@ -40,6 +41,7 @@ use systems::{
 	enemy::enemy,
 	face::{execute_face::execute_face, get_faces::get_faces},
 	follow::follow,
+	force_shield::position_force_shield,
 	idle::idle,
 	move_on_orbit::move_on_orbit,
 	movement::{
@@ -62,6 +64,7 @@ impl Plugin for BehaviorsPlugin {
 			.register_prefab::<Projectile<Plasma>>()
 			.register_prefab::<VoidSphere>()
 			.register_prefab::<Beam>()
+			.register_prefab::<ForceShield>()
 			.add_systems(
 				Update,
 				(trigger_move_input_event::<CamRay>, move_player_on_event)
@@ -110,6 +113,7 @@ impl Plugin for BehaviorsPlugin {
 			)
 			.add_systems(Update, projectile_behavior::<Projectile<Plasma>>)
 			.add_systems(Update, (enemy, chase::<MovementConfig>, attack).chain())
-			.add_systems(Update, execute_beam);
+			.add_systems(Update, execute_beam)
+			.add_systems(Update, position_force_shield);
 	}
 }

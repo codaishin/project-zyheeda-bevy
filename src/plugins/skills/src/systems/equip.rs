@@ -185,11 +185,7 @@ fn scene_handle_error(item: Option<&Item>, error: QueryEntityError) -> Error {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::Mounts,
-		items::Mount,
-		skills::{Cast, Skill},
-	};
+	use crate::{components::Mounts, items::Mount, skills::Skill};
 	use bevy::{
 		asset::AssetId,
 		ecs::system::{In, IntoSystem},
@@ -673,11 +669,7 @@ mod tests {
 					item: Some(Item {
 						name: "Some Item",
 						skill: Some(Skill {
-							cast: Cast {
-								pre: Duration::from_millis(1),
-								active: Duration::from_millis(2),
-								after: Duration::from_millis(3),
-							},
+							active: Duration::from_millis(1),
 							..default()
 						}),
 						model: None,
@@ -712,11 +704,7 @@ mod tests {
 					item: Some(Item {
 						name: "Some Item",
 						skill: Some(Skill {
-							cast: Cast {
-								pre: Duration::from_millis(1),
-								active: Duration::from_millis(2),
-								after: Duration::from_millis(3),
-							},
+							active: Duration::from_millis(1),
 							..default()
 						}),
 						model: None,

@@ -2,6 +2,7 @@ pub(crate) mod beam;
 pub(crate) mod beam_config;
 pub(crate) mod bundle;
 pub(crate) mod cam_orbit;
+pub(crate) mod force_shield;
 pub(crate) mod movement;
 pub(crate) mod movement_config;
 pub(crate) mod projectile;
