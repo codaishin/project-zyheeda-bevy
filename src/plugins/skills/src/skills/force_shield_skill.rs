@@ -1,7 +1,7 @@
-use super::{Animate, Skill};
+use super::{shoot_hand_gun::ShootHandGun, Animate, Skill};
 use crate::{
 	items::ItemType,
-	traits::{GetExecution, SkillTemplate},
+	traits::{GetExecution, GetSkillAnimation, SkillTemplate},
 };
 use behaviors::components::ForceShield;
 use std::{collections::HashSet, time::Duration};
@@ -15,7 +15,8 @@ impl SkillTemplate for ForceShieldSkill {
 			data: (),
 			active: Duration::from_millis(200),
 			execution: ForceShield::execution(),
-			animate: Animate::None,
+			// FIXME: introduce cast animation for "magic" like skills
+			animate: Animate::Some(ShootHandGun::<()>::animation()),
 			is_usable_with: HashSet::from([ItemType::Bracer]),
 			icon: None,
 		}
