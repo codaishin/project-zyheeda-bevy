@@ -386,14 +386,16 @@ mod test_run_skill {
 
 	#[test]
 	fn spawn_not_on_agent() {
-		let entity = Entity::from_raw(42);
 		let caster_transform = Transform::from_xyz(1., 2., 3.);
-		let spawner = SkillSpawner(GlobalTransform::from_xyz(4., 5., 6.));
+		let spawner = SkillSpawner(
+			Entity::from_raw(1000),
+			GlobalTransform::from_xyz(4., 5., 6.),
+		);
 		let target = SelectInfo {
 			ray: Ray3d::new(Vec3::ONE, Vec3::ONE),
 			collision_info: Some(ColliderInfo {
 				collider: Outdated {
-					entity,
+					entity: Entity::from_raw(42),
 					component: GlobalTransform::from_xyz(7., 8., 9.),
 				},
 				root: None,
@@ -418,14 +420,16 @@ mod test_run_skill {
 
 	#[test]
 	fn returned_spawned_entity() {
-		let entity = Entity::from_raw(42);
 		let caster = Transform::from_xyz(1., 2., 3.);
-		let spawner = SkillSpawner(GlobalTransform::from_xyz(4., 5., 6.));
+		let spawner = SkillSpawner(
+			Entity::from_raw(1000),
+			GlobalTransform::from_xyz(4., 5., 6.),
+		);
 		let target = SelectInfo {
 			ray: Ray3d::new(Vec3::ONE, Vec3::ONE),
 			collision_info: Some(ColliderInfo {
 				collider: Outdated {
-					entity,
+					entity: Entity::from_raw(42),
 					component: GlobalTransform::from_xyz(7., 8., 9.),
 				},
 				root: None,

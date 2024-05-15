@@ -57,9 +57,9 @@ impl<T> Projectile<T> {
 	}
 }
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq)]
 pub struct ForceShield {
-	pub direction: Direction3d,
+	pub location: Entity,
 }
 
 #[derive(Component)]

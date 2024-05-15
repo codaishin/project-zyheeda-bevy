@@ -28,7 +28,7 @@ pub(crate) fn apply_skill_behavior(
 	cam_ray: Res<CamRay>,
 	mouse_hover: Res<MouseHover>,
 	agents: Query<Components>,
-	transforms: Query<&GlobalTransform>,
+	transforms: Query<(Entity, &GlobalTransform)>,
 ) {
 	for (id, transform, execution, skill_spawn, skill_running_on) in &agents {
 		match (execution, skill_running_on) {
@@ -82,26 +82,33 @@ fn stop_behavior(
 fn get_target(
 	cam_ray: &Res<CamRay>,
 	mouse_hover: &Res<MouseHover>,
-	transforms: &Query<&GlobalTransform>,
+	transforms: &Query<(Entity, &GlobalTransform)>,
 ) -> Option<SelectInfo<Outdated<GlobalTransform>>> {
+	let get_transform = |entity| {
+		let Ok((_, transform)) = transforms.get(entity) else {
+			return None;
+		};
+		Some(*transform)
+	};
+
 	Some(Target {
 		ray: cam_ray.0?,
 		collision_info: mouse_hover
 			.0
 			.as_ref()
-			.and_then(|collider_info| collider_info.with_component(transforms)),
+			.and_then(|collider_info| collider_info.with_component(get_transform)),
 	})
 }
 
 fn get_spawner(
 	skill_spawn: &SkillSpawn<Entity>,
-	transforms: &Query<&GlobalTransform>,
+	transforms: &Query<(Entity, &GlobalTransform)>,
 ) -> Option<SkillSpawner> {
-	let Ok(transform) = transforms.get(skill_spawn.0) else {
+	let Ok((entity, transform)) = transforms.get(skill_spawn.0) else {
 		return None;
 	};
 
-	Some(SkillSpawner(*transform))
+	Some(SkillSpawner(entity, *transform))
 }
 
 #[cfg(test)]
@@ -181,14 +188,14 @@ mod tests {
 		app.world.resource_mut::<MouseHover>().0 = Some(collider_info);
 
 		let spawner_transform = GlobalTransform::from_xyz(100., 100., 100.);
-		let spawner = app.world.spawn(spawner_transform).id();
+		let spawner_entity = app.world.spawn(spawner_transform).id();
 
 		let skill_caster_transform = Transform::from_xyz(42., 42., 42.);
-		let agent = app
+		let agent_entity = app
 			.world
 			.spawn((
 				skill_caster_transform,
-				SkillSpawn(spawner),
+				SkillSpawn(spawner_entity),
 				SkillExecution::Start(Mock_Run::start),
 			))
 			.id();
@@ -200,8 +207,8 @@ mod tests {
 			.withf(move |_, caster, spawner, target| {
 				assert_eq!(
 					(
-						&SkillCaster(agent, skill_caster_transform),
-						&SkillSpawner(spawner_transform),
+						&SkillCaster(agent_entity, skill_caster_transform),
+						&SkillSpawner(spawner_entity, spawner_transform),
 						&Target {
 							ray: cam_ray,
 							collision_info: Some(ColliderInfo {
@@ -224,7 +231,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world.entity(agent_entity);
 
 		assert_eq!(
 			Some(&SkillRunningOn(Entity::from_raw(42))),

@@ -173,8 +173,8 @@ pub(crate) enum SkillState {
 	Active,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Default)]
-pub struct SkillSpawner(pub GlobalTransform);
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct SkillSpawner(pub Entity, pub GlobalTransform);
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct SkillCaster(pub Entity, pub Transform);

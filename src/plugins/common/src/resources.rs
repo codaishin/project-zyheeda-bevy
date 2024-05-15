@@ -4,7 +4,7 @@ use bevy::{
 	ecs::{
 		component::Component,
 		entity::Entity,
-		system::{Query, Res, Resource},
+		system::{Res, Resource},
 	},
 	math::Ray3d,
 	scene::Scene,
@@ -26,10 +26,8 @@ pub struct ColliderInfo<T> {
 impl ColliderInfo<Entity> {
 	pub fn with_component<TComponent: Component + Clone>(
 		&self,
-		components: &Query<&TComponent>,
+		get_component: impl Fn(Entity) -> Option<TComponent>,
 	) -> Option<ColliderInfo<Outdated<TComponent>>> {
-		let get_component = |entity: Entity| components.get(entity).ok().cloned();
-
 		Some(ColliderInfo {
 			collider: Outdated {
 				component: get_component(self.collider)?,

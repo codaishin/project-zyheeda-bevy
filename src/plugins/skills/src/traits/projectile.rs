@@ -9,7 +9,7 @@ impl<T: Send + Sync + 'static> NewSkillBundle for Projectile<T> {
 	fn new_skill_bundle(caster: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> Self::Bundle {
 		(
 			Projectile::<T>::new(caster.1.forward(), 10.),
-			SpatialBundle::from_transform(Transform::from(spawner.0)),
+			SpatialBundle::from_transform(Transform::from(spawner.1)),
 		)
 	}
 }
@@ -50,7 +50,7 @@ mod tests {
 			Entity::from_raw(42),
 			Transform::default().looking_at(forward, Vec3::Y),
 		);
-		let spawner = SkillSpawner(GlobalTransform::from_xyz(1., 2., 3.));
+		let spawner = SkillSpawner(Entity::from_raw(43), GlobalTransform::from_xyz(1., 2., 3.));
 
 		let projectile = app
 			.world
@@ -73,7 +73,7 @@ mod tests {
 	fn spawn_with_special_bundle() {
 		let mut app = App::new();
 		let caster = SkillCaster(Entity::from_raw(42), Transform::default());
-		let spawner = SkillSpawner(GlobalTransform::from_xyz(1., 2., 3.));
+		let spawner = SkillSpawner(Entity::from_raw(43), GlobalTransform::from_xyz(1., 2., 3.));
 
 		let projectile = app
 			.world
@@ -92,7 +92,7 @@ mod tests {
 	fn spawn_with_proper_location() {
 		let mut app = App::new();
 		let caster = SkillCaster(Entity::from_raw(42), Transform::default());
-		let spawner = SkillSpawner(GlobalTransform::from_xyz(1., 2., 3.));
+		let spawner = SkillSpawner(Entity::from_raw(43), GlobalTransform::from_xyz(1., 2., 3.));
 
 		let projectile = app
 			.world

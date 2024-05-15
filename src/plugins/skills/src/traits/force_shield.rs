@@ -6,12 +6,12 @@ use bevy::{self, prelude::SpatialBundle, transform::components::Transform};
 impl NewSkillBundle for ForceShield {
 	type Bundle = (ForceShield, SpatialBundle);
 
-	fn new_skill_bundle(caster: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> Self::Bundle {
+	fn new_skill_bundle(_: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> Self::Bundle {
 		(
 			ForceShield {
-				direction: caster.1.forward(),
+				location: spawner.0,
 			},
-			SpatialBundle::from_transform(Transform::from(spawner.0)),
+			SpatialBundle::from_transform(Transform::from(spawner.1)),
 		)
 	}
 }
@@ -35,7 +35,6 @@ mod tests {
 		math::{Ray3d, Vec3},
 		transform::components::{GlobalTransform, Transform},
 	};
-	use common::assert_eq_approx;
 
 	fn target() -> Target {
 		SelectInfo {
@@ -52,7 +51,7 @@ mod tests {
 			Entity::from_raw(42),
 			Transform::default().looking_at(forward, Vec3::Y),
 		);
-		let spawner = SkillSpawner(GlobalTransform::from_xyz(1., 2., 3.));
+		let spawner = SkillSpawner(Entity::from_raw(43), GlobalTransform::from_xyz(1., 2., 3.));
 
 		let force_shield = app
 			.world
@@ -60,10 +59,11 @@ mod tests {
 			.id();
 		let force_shield = app.world.entity(force_shield).get::<ForceShield>();
 
-		assert_eq_approx!(
-			Some(forward.normalize()),
-			force_shield.map(|p| p.direction.into()),
-			0.0001
+		assert_eq!(
+			Some(&ForceShield {
+				location: Entity::from_raw(43)
+			}),
+			force_shield,
 		);
 	}
 
@@ -71,7 +71,7 @@ mod tests {
 	fn spawn_with_special_bundle() {
 		let mut app = App::new();
 		let caster = SkillCaster(Entity::from_raw(42), Transform::default());
-		let spawner = SkillSpawner(GlobalTransform::from_xyz(1., 2., 3.));
+		let spawner = SkillSpawner(Entity::from_raw(43), GlobalTransform::from_xyz(1., 2., 3.));
 
 		let force_shield = app
 			.world
@@ -86,7 +86,7 @@ mod tests {
 	fn spawn_with_proper_location() {
 		let mut app = App::new();
 		let caster = SkillCaster(Entity::from_raw(42), Transform::default());
-		let spawner = SkillSpawner(GlobalTransform::from_xyz(1., 2., 3.));
+		let spawner = SkillSpawner(Entity::from_raw(43), GlobalTransform::from_xyz(1., 2., 3.));
 
 		let force_shield = app
 			.world
