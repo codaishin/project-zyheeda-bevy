@@ -31,7 +31,14 @@ use common::{
 	systems::log::log_many,
 	traits::try_insert_on::TryInsertOn,
 };
-use components::{combos::Combos, inventory::Inventory, queue::Queue, slots::Slots, Mounts};
+use components::{
+	combos::Combos,
+	inventory::Inventory,
+	queue::Queue,
+	skill_executer::SkillExecuter,
+	slots::Slots,
+	Mounts,
+};
 use items::{InventoryKey, Item, ItemType, Mount, SlotKey};
 use resources::SlotMap;
 use skills::{force_shield_skill::ForceShieldSkill, shoot_hand_gun::ShootHandGun, Queued, Skill};
@@ -115,7 +122,10 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 		return;
 	};
 
-	commands.try_insert_on(player, (get_inventory(), get_loadout()));
+	commands.try_insert_on(
+		player,
+		(get_inventory(), get_loadout(), SkillExecuter::default()),
+	);
 }
 
 fn get_loadout() -> Loadout {
