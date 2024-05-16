@@ -1,7 +1,6 @@
 use crate::{
-	components::SkillExecution,
 	skills::{Animate, SkillBehavior, SkillState, StartBehaviorFn},
-	traits::{GetActiveSkill, GetAnimation, GetSkillBehavior},
+	traits::{Flush, GetActiveSkill, GetAnimation, GetSkillBehavior, Schedule},
 };
 use animations::traits::{SkillLayer, StartAnimation, StopAnimation};
 use behaviors::components::{Face, OverrideFace};
@@ -24,48 +23,42 @@ enum Advancement {
 	InProcess,
 }
 
+type Components<'a, TGetSkill, TAnimationDispatch, TSkillExecutor> = (
+	Entity,
+	&'a mut TGetSkill,
+	&'a mut TAnimationDispatch,
+	&'a mut TSkillExecutor,
+);
+
 pub(crate) fn advance_active_skill<
 	TGetSkill: GetActiveSkill<TAnimation, SkillState> + Component,
 	TAnimation: Send + Sync + 'static,
 	TAnimationDispatch: Component + StartAnimation<SkillLayer, TAnimation> + StopAnimation<SkillLayer>,
+	TSkillExecutor: Component + Schedule + Flush,
 	TTime: Send + Sync + Default + 'static,
 >(
 	time: Res<Time<TTime>>,
 	mut commands: Commands,
-	mut agents: Query<(Entity, &mut TGetSkill, &mut TAnimationDispatch)>,
+	mut agents: Query<Components<TGetSkill, TAnimationDispatch, TSkillExecutor>>,
 ) {
 	let delta = time.delta();
 
-	for (entity, mut dequeue, animation_dispatch) in &mut agents {
+	for (entity, mut dequeue, animation_dispatch, skill_executer) in &mut agents {
 		let Some(agent) = commands.get_entity(entity) else {
 			continue;
 		};
-		let dequeue = &mut dequeue;
+		let changed = dequeue.is_changed();
+		let advancement = match dequeue.get_active() {
+			Some(skill) => advance(skill, agent, animation_dispatch, skill_executer, delta),
+			None if changed => remove_side_effects(agent, animation_dispatch),
+			_ => Advancement::InProcess,
+		};
 
-		if get_and_advance(dequeue, agent, animation_dispatch, delta) == Advancement::InProcess {
+		if advancement == Advancement::InProcess {
 			continue;
 		}
 
 		dequeue.clear_active();
-	}
-}
-
-fn get_and_advance<
-	TAnimation: Send + Sync + 'static,
-	TGetSkill: Component + GetActiveSkill<TAnimation, SkillState> + Sync + Send + 'static,
-	TAnimationDispatch: StartAnimation<SkillLayer, TAnimation> + StopAnimation<SkillLayer>,
->(
-	dequeue: &mut Mut<TGetSkill>,
-	agent: EntityCommands,
-	animation_dispatch: Mut<TAnimationDispatch>,
-	delta: Duration,
-) -> Advancement {
-	let changed = dequeue.is_changed();
-
-	match dequeue.get_active() {
-		Some(skill) => advance(skill, agent, animation_dispatch, delta),
-		None if changed => remove_side_effects(agent, animation_dispatch),
-		_ => Advancement::InProcess,
 	}
 }
 
@@ -82,29 +75,32 @@ fn remove_side_effects<TAnimationDispatch: StopAnimation<SkillLayer>>(
 fn advance<
 	TAnimation: Send + Sync + 'static,
 	TAnimationDispatch: StartAnimation<SkillLayer, TAnimation> + StopAnimation<SkillLayer>,
+	TSkillExecutor: Component + Schedule + Flush,
 >(
 	mut skill: (impl GetSkillBehavior + GetAnimation<TAnimation> + StateUpdate<SkillState>),
 	mut agent: EntityCommands,
 	mut animation_dispatch: Mut<TAnimationDispatch>,
+	mut skill_executer: Mut<TSkillExecutor>,
 	delta: Duration,
 ) -> Advancement {
 	let skill = &mut skill;
 	let agent = &mut agent;
 	let animation_dispatch = animation_dispatch.as_mut();
+	let skill_executer = skill_executer.as_mut();
 	let states = skill.update_state(delta);
 
 	if states.contains(&StateMeta::Entering(SkillState::Aim)) {
 		agent.try_insert(OverrideFace(Face::Cursor));
 		animate(skill, animation_dispatch);
-		insert_skill_execution_start(agent, skill, start_on_aim);
+		schedule_start(skill_executer, skill, start_on_aim);
 	}
 
 	if states.contains(&StateMeta::Entering(SkillState::Active)) {
-		insert_skill_execution_start(agent, skill, start_on_active);
+		schedule_start(skill_executer, skill, start_on_active);
 	}
 
 	if states.contains(&StateMeta::Done) {
-		agent.try_insert(SkillExecution::Stop);
+		skill_executer.flush();
 		return Advancement::Finished;
 	}
 
@@ -139,23 +135,22 @@ fn start_on_active<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<StartBeha
 	}
 }
 
-fn insert_skill_execution_start<TSkill: GetSkillBehavior>(
-	agent: &mut EntityCommands,
+fn schedule_start<TSkillExecutor: Schedule, TSkill: GetSkillBehavior>(
+	executer: &mut TSkillExecutor,
 	skill: &TSkill,
 	get_start_fn: fn(&TSkill) -> Option<StartBehaviorFn>,
 ) {
 	let Some(start_fn) = get_start_fn(skill) else {
 		return;
 	};
-	agent.try_insert(SkillExecution::Start(start_fn));
+	executer.schedule(start_fn);
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use crate::{
-		components::SkillExecution,
-		skills::{OnSkillStop, SkillCaster, SkillSpawner, Target},
+		skills::OnSkillStop,
 		traits::{GetAnimation, GetSkillBehavior},
 	};
 	use behaviors::components::{Face, OverrideFace};
@@ -248,21 +243,53 @@ mod tests {
 		}
 	}
 
+	#[derive(Component, Default)]
+	struct _Executor {
+		mock: Mock_Executor,
+	}
+
+	impl Schedule for _Executor {
+		fn schedule(&mut self, start: StartBehaviorFn) {
+			self.mock.schedule(start)
+		}
+	}
+
+	impl Flush for _Executor {
+		fn flush(&mut self) {
+			self.mock.flush()
+		}
+	}
+
+	mock! {
+		_Executor {}
+		impl Schedule for _Executor {
+			fn schedule(&mut self, start: StartBehaviorFn);
+		}
+		impl Flush for _Executor {
+			fn flush(&mut self);
+		}
+	}
+
+	const START_BEHAVIOR: StartBehaviorFn = |_, _, _, _| OnSkillStop::Ignore;
+
 	fn setup() -> (App, Entity) {
 		let mut app = App::new().single_threaded(Update);
 		let mut time = Time::<Real>::default();
 		let mut dispatch = _AnimationDispatch::default();
+		let mut executer = _Executor::default();
 
 		dispatch.mock.expect_start_animation().return_const(());
 		dispatch.mock.expect_stop_animation().return_const(());
-		let agent = app.world.spawn(dispatch).id();
+		executer.mock.expect_schedule().return_const(());
+		executer.mock.expect_flush().return_const(());
+		let agent = app.world.spawn((dispatch, executer)).id();
 
 		time.update();
 		app.insert_resource(time);
 		app.update();
 		app.add_systems(
 			Update,
-			advance_active_skill::<_Dequeue, _Animation, _AnimationDispatch, Real>,
+			advance_active_skill::<_Dequeue, _Animation, _AnimationDispatch, _Executor, Real>,
 		);
 
 		(app, agent)
@@ -575,76 +602,74 @@ mod tests {
 
 	#[test]
 	fn run_on_active() {
-		fn start_behavior(
-			_: &mut Commands,
-			_: &SkillCaster,
-			_: &SkillSpawner,
-			_: &Target,
-		) -> OnSkillStop {
-			OnSkillStop::Ignore
-		}
+		let mut executor = _Executor::default();
+		executor.mock.expect_flush().return_const(());
+		executor
+			.mock
+			.expect_schedule()
+			.times(1)
+			.withf(|start| {
+				assert_eq!(start, &START_BEHAVIOR);
+				true
+			})
+			.return_const(());
 
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert(_Dequeue {
-			active: Some(Box::new(|| {
-				let mut skill = mock_skill_without_default_setup_for([MockOption::RunBehavior]);
-				skill
-					.expect_update_state()
-					.return_const(HashSet::<StateMeta<SkillState>>::from([
-						StateMeta::Entering(SkillState::Active),
-					]));
-				skill
-					.expect_behavior()
-					.returning(|| SkillBehavior::OnActive(start_behavior));
-				skill
-			})),
-		});
+		app.world.entity_mut(agent).insert((
+			executor,
+			_Dequeue {
+				active: Some(Box::new(|| {
+					let mut skill = mock_skill_without_default_setup_for([MockOption::RunBehavior]);
+					skill.expect_update_state().return_const(
+						HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
+							SkillState::Active,
+						)]),
+					);
+					skill
+						.expect_behavior()
+						.returning(|| SkillBehavior::OnActive(START_BEHAVIOR));
+					skill
+				})),
+			},
+		));
 
 		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			Some(&SkillExecution::Start(start_behavior)),
-			agent.get::<SkillExecution>()
-		);
 	}
 
 	#[test]
 	fn run_on_aim() {
-		fn start_behavior(
-			_: &mut Commands,
-			_: &SkillCaster,
-			_: &SkillSpawner,
-			_: &Target,
-		) -> OnSkillStop {
-			OnSkillStop::Ignore
-		}
+		let mut executor = _Executor::default();
+		executor.mock.expect_flush().return_const(());
+		executor
+			.mock
+			.expect_schedule()
+			.times(1)
+			.withf(|start| {
+				assert_eq!(start, &START_BEHAVIOR);
+				true
+			})
+			.return_const(());
 
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert(_Dequeue {
-			active: Some(Box::new(|| {
-				let mut skill = mock_skill_without_default_setup_for([MockOption::RunBehavior]);
-				skill
-					.expect_update_state()
-					.return_const(HashSet::<StateMeta<SkillState>>::from([
-						StateMeta::Entering(SkillState::Aim),
-					]));
-				skill
-					.expect_behavior()
-					.returning(|| SkillBehavior::OnAim(start_behavior));
-				skill
-			})),
-		});
+		app.world.entity_mut(agent).insert((
+			executor,
+			_Dequeue {
+				active: Some(Box::new(|| {
+					let mut skill = mock_skill_without_default_setup_for([MockOption::RunBehavior]);
+					skill.expect_update_state().return_const(
+						HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
+							SkillState::Aim,
+						)]),
+					);
+					skill
+						.expect_behavior()
+						.returning(|| SkillBehavior::OnAim(START_BEHAVIOR));
+					skill
+				})),
+			},
+		));
 
 		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(
-			Some(&SkillExecution::Start(start_behavior)),
-			agent.get::<SkillExecution>()
-		);
 	}
 
 	#[test]
@@ -672,9 +697,14 @@ mod tests {
 	}
 
 	#[test]
-	fn stop() {
+	fn flush() {
+		let mut executor = _Executor::default();
+		executor.mock.expect_schedule().return_const(());
+		executor.mock.expect_flush().times(1).return_const(());
+
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
+			executor,
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -688,16 +718,17 @@ mod tests {
 		));
 
 		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(Some(&SkillExecution::Stop), agent.get::<SkillExecution>());
 	}
 
 	#[test]
 	fn do_not_stop_when_not_done() {
+		let mut executor = _Executor::default();
+		executor.mock.expect_schedule().return_const(());
+		executor.mock.expect_flush().never().return_const(());
+
 		let (mut app, agent) = setup();
 		app.world.entity_mut(agent).insert((
+			executor,
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -712,10 +743,6 @@ mod tests {
 		));
 
 		app.update();
-
-		let agent = app.world.entity(agent);
-
-		assert_eq!(None, agent.get::<SkillExecution>());
 	}
 
 	#[test]

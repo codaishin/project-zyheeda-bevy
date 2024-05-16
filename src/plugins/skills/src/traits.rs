@@ -18,6 +18,7 @@ use crate::{
 		SkillBehavior,
 		SkillCaster,
 		SkillSpawner,
+		StartBehaviorFn,
 		Target,
 	},
 };
@@ -126,6 +127,20 @@ pub trait InputState<TKey: Eq + Hash> {
 	fn just_pressed_slots(&self, map: &SlotMap<TKey>) -> Vec<SlotKey>;
 	fn pressed_slots(&self, map: &SlotMap<TKey>) -> Vec<SlotKey>;
 	fn just_released_slots(&self, map: &SlotMap<TKey>) -> Vec<SlotKey>;
+}
+
+pub trait Schedule {
+	fn schedule(&mut self, start: StartBehaviorFn);
+}
+
+pub trait Execute {
+	fn execute(
+		&mut self,
+		commands: &mut Commands,
+		caster: &SkillCaster,
+		spawner: &SkillSpawner,
+		target: &Target,
+	);
 }
 
 pub trait ShouldEnqueue {

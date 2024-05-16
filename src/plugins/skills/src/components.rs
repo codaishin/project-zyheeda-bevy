@@ -3,11 +3,10 @@ pub mod inventory;
 pub mod queue;
 pub mod slots;
 
+pub(crate) mod skill_executer;
+
 use self::slots::Slots;
-use crate::{
-	items::{Item, SlotKey},
-	skills::StartBehaviorFn,
-};
+use crate::items::{Item, SlotKey};
 use bevy::ecs::{component::Component, entity::Entity};
 use common::components::Collection;
 use std::collections::HashMap;
@@ -33,12 +32,3 @@ pub struct SlotBones(pub HashMap<SlotKey, Mounts<&'static BoneName>>);
 pub(crate) struct SkillSpawn<T>(pub T);
 
 pub type Equipment = Collection<(SlotKey, Option<Item>)>;
-
-#[derive(Component, Debug, PartialEq)]
-pub(crate) enum SkillExecution {
-	Start(StartBehaviorFn),
-	Stop,
-}
-
-#[derive(Component, Debug, PartialEq)]
-pub(crate) struct SkillRunningOn(pub Entity);
