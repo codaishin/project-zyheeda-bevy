@@ -74,7 +74,13 @@ impl Plugin for SkillsPlugin {
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
 						.pipe(enqueue::<Slots, Skill, Queue, Skill<Queued>>),
 					update_skill_combos::<Combos, Queue>,
-					advance_active_skill::<Queue, Animation, AnimationDispatch, Virtual>,
+					advance_active_skill::<
+						Queue,
+						Animation,
+						AnimationDispatch,
+						SkillExecuter,
+						Virtual,
+					>,
 					apply_skill_behavior,
 					flush::<Queue>,
 				)
