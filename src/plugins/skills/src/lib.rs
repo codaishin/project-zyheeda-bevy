@@ -45,9 +45,9 @@ use skills::{force_shield_skill::ForceShieldSkill, shoot_hand_gun::ShootHandGun,
 use std::collections::HashSet;
 use systems::{
 	advance_active_skill::advance_active_skill,
-	apply_skill_behavior::apply_skill_behavior,
 	enqueue::enqueue,
 	equip::equip_item,
+	execute::execute,
 	flush::flush,
 	get_inputs::get_inputs,
 	mouse_context::{
@@ -81,7 +81,7 @@ impl Plugin for SkillsPlugin {
 						SkillExecuter,
 						Virtual,
 					>,
-					apply_skill_behavior,
+					execute::<SkillExecuter>,
 					flush::<Queue>,
 				)
 					.chain()
