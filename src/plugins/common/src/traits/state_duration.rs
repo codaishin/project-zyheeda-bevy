@@ -155,7 +155,7 @@ fn zero_duration_meta<TStateName: IterKey + Copy + Clone + Eq + Hash + 'static>(
 	after_update: _SafeDuration,
 	current_state: _SafeDuration,
 ) -> Vec<Box<dyn Fn(TStateName) -> StateMeta<TStateName>>> {
-	if before_update <= current_state || after_update >= current_state {
+	if before_update <= current_state && current_state <= after_update {
 		vec![Box::new(StateMeta::Entering), Box::new(StateMeta::In)]
 	} else {
 		vec![]
@@ -336,7 +336,7 @@ mod tests {
 	}
 
 	#[test]
-	fn get_single_state_with_all_zero_time() {
+	fn get_states_with_zero_duration_intermixed() {
 		let mut agent = _Agent {
 			state_a: Duration::from_secs(4),
 			state_b: Duration::ZERO,
@@ -354,6 +354,21 @@ mod tests {
 				StateMeta::In(_State::C),
 			]),
 			agent.update_state(Duration::from_secs(7))
+		);
+	}
+
+	#[test]
+	fn get_state_after_duration_of_a_zero_duration_state() {
+		let mut agent = _Agent {
+			state_a: Duration::from_secs(4),
+			state_b: Duration::ZERO,
+			state_c: Duration::from_secs(4),
+			duration: Duration::from_secs(5),
+		};
+
+		assert_eq!(
+			HashSet::from([StateMeta::In(_State::C),]),
+			agent.update_state(Duration::from_secs(1))
 		);
 	}
 
