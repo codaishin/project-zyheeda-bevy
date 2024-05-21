@@ -32,7 +32,7 @@ use common::{
 	traits::try_insert_on::TryInsertOn,
 };
 use components::{
-	combos::Combos,
+	combos::{ComboNode, Combos},
 	inventory::Inventory,
 	queue::Queue,
 	skill_executer::SkillExecuter,
@@ -41,8 +41,14 @@ use components::{
 };
 use items::{InventoryKey, Item, ItemType, Mount, SlotKey};
 use resources::SlotMap;
-use skills::{force_shield_skill::ForceShieldSkill, shoot_hand_gun::ShootHandGun, Queued, Skill};
-use std::collections::HashSet;
+use skills::{
+	force_shield_skill::ForceShieldSkill,
+	gravity_well_skill::GravityWellSkill,
+	shoot_hand_gun::ShootHandGun,
+	Queued,
+	Skill,
+};
+use std::collections::{HashMap, HashSet, VecDeque};
 use systems::{
 	advance_active_skill::advance_active_skill,
 	enqueue::enqueue,
@@ -130,7 +136,12 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 
 	commands.try_insert_on(
 		player,
-		(get_inventory(), get_loadout(), SkillExecuter::default()),
+		(
+			SkillExecuter::default(),
+			get_inventory(),
+			get_loadout(),
+			get_combos(),
+		),
 	);
 }
 
@@ -186,4 +197,29 @@ fn get_inventory() -> Inventory {
 		item_type: HashSet::from([ItemType::Pistol]),
 		mount: Mount::Hand,
 	})])
+}
+
+fn get_combos() -> Combos {
+	let left = (
+		SlotKey::Hand(Side::Off),
+		(
+			ForceShieldSkill::skill(),
+			ComboNode::Circle(VecDeque::from([
+				(SlotKey::Hand(Side::Off), GravityWellSkill::skill()),
+				(SlotKey::Hand(Side::Off), ForceShieldSkill::skill()),
+			])),
+		),
+	);
+	let right = (
+		SlotKey::Hand(Side::Main),
+		(
+			ForceShieldSkill::skill(),
+			ComboNode::Circle(VecDeque::from([
+				(SlotKey::Hand(Side::Main), GravityWellSkill::skill()),
+				(SlotKey::Hand(Side::Main), ForceShieldSkill::skill()),
+			])),
+		),
+	);
+
+	Combos::new(ComboNode::Tree(HashMap::from([left, right])))
 }

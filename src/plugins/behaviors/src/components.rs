@@ -64,6 +64,9 @@ pub struct ForceShield {
 	pub location: Entity,
 }
 
+#[derive(Component, Debug, PartialEq)]
+pub struct GravityWell;
+
 #[derive(Component)]
 pub struct VoidSphere;
 

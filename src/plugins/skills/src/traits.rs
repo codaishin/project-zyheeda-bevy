@@ -1,5 +1,6 @@
 pub(crate) mod bevy_input;
 pub(crate) mod force_shield;
+pub(crate) mod gravity_well;
 pub(crate) mod inventory;
 pub(crate) mod projectile;
 pub(crate) mod skill_state;
