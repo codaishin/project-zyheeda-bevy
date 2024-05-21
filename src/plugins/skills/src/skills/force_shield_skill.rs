@@ -4,6 +4,7 @@ use crate::{
 	traits::{GetSkillAnimation, GetStaticSkillBehavior, SkillTemplate},
 };
 use behaviors::components::ForceShield;
+use common::traits::load_asset::Path;
 use std::{collections::HashSet, time::Duration};
 
 pub(crate) struct ForceShieldSkill;
@@ -18,7 +19,7 @@ impl SkillTemplate for ForceShieldSkill {
 			// FIXME: introduce cast animation for "magic" like skills
 			animate: Animate::Some(ShootHandGun::<()>::animation()),
 			is_usable_with: HashSet::from([ItemType::Bracer]),
-			icon: None,
+			icon: Some(|| Path::from("icons/force_shield.png")),
 		}
 	}
 }
