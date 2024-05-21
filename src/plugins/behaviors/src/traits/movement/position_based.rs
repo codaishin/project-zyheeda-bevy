@@ -3,11 +3,13 @@ use crate::{
 	traits::{IsDone, MovementPositionBased, Units},
 };
 use bevy::prelude::*;
+use std::ops::Deref;
 
 impl MovementPositionBased for Movement<PositionBased> {
 	fn update(&mut self, agent: &mut Transform, distance: Units) -> IsDone {
 		let target = self.target;
 		let direction = target - agent.translation;
+		let distance = *distance.deref();
 
 		if distance > direction.length() {
 			agent.translation = target;
@@ -23,14 +25,17 @@ impl MovementPositionBased for Movement<PositionBased> {
 mod tests {
 	use super::*;
 	use bevy::prelude::{Transform, Vec3};
-	use common::test_tools::utils::assert_eq_approx;
+	use common::{
+		test_tools::utils::assert_eq_approx,
+		traits::clamp_zero_positive::ClampZeroPositive,
+	};
 
 	#[test]
 	fn move_to_target() {
 		let mut movement = Movement::<PositionBased>::to(Vec3::X);
 		let mut agent = Transform::from_translation(Vec3::ZERO);
 
-		movement.update(&mut agent, 1.);
+		movement.update(&mut agent, Units::new(1.));
 
 		assert_eq!(Vec3::X, agent.translation);
 	}
@@ -40,7 +45,7 @@ mod tests {
 		let mut movement = Movement::<PositionBased>::to(Vec3::new(2., 0., 0.));
 		let mut agent = Transform::from_translation(Vec3::ZERO);
 
-		movement.update(&mut agent, 0.5);
+		movement.update(&mut agent, Units::new(0.5));
 
 		assert_eq!(Vec3::X * 0.5, agent.translation);
 	}
@@ -50,7 +55,7 @@ mod tests {
 		let mut movement = Movement::<PositionBased>::to(Vec3::X);
 		let mut agent = Transform::from_translation(Vec3::ZERO);
 
-		movement.update(&mut agent, 100.);
+		movement.update(&mut agent, Units::new(100.));
 
 		assert_eq!(Vec3::X, agent.translation);
 	}
@@ -60,7 +65,7 @@ mod tests {
 		let mut movement = Movement::<PositionBased>::to(Vec3::ONE);
 		let mut agent = Transform::from_translation(Vec3::ZERO);
 
-		assert!(movement.update(&mut agent, 100.).is_done());
+		assert!(movement.update(&mut agent, Units::new(100.)).is_done());
 	}
 
 	#[test]
@@ -68,7 +73,7 @@ mod tests {
 		let mut movement = Movement::<PositionBased>::to(Vec3::ONE);
 		let mut agent = Transform::from_translation(Vec3::ZERO);
 
-		assert!(!movement.update(&mut agent, 0.1).is_done());
+		assert!(!movement.update(&mut agent, Units::new(0.1)).is_done());
 	}
 
 	#[test]
@@ -78,7 +83,7 @@ mod tests {
 
 		agent.look_at(Vec3::new(2., 1., 2.), Vec3::Y);
 
-		movement.update(&mut agent, 0.1);
+		movement.update(&mut agent, Units::new(0.1));
 
 		assert_eq_approx!(Vec3::new(2., 0., 2.).normalize(), agent.forward(), 0.00001);
 	}

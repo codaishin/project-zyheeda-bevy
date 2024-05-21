@@ -3,7 +3,8 @@ use crate::{
 	traits::{MovementData, MovementPositionBased},
 };
 use bevy::prelude::*;
-use common::traits::clamp_zero_positive::ClampZeroPositive;
+use common::{tools::Units, traits::clamp_zero_positive::ClampZeroPositive};
+use std::ops::Deref;
 
 type Components<'a, TConfig, TMovement> =
 	(Entity, &'a mut TMovement, &'a mut Transform, &'a TConfig);
@@ -20,9 +21,12 @@ pub(crate) fn execute_move_position_based<
 		.iter_mut()
 		.filter_map(|(entity, mut movement, mut transform, config)| {
 			let (speed, ..) = config.get_movement_data();
-			let distance = time.delta_seconds() * speed.value();
+			let distance = time.delta_seconds() * *speed.deref();
 
-			match movement.update(&mut transform, distance).is_done() {
+			match movement
+				.update(&mut transform, Units::new(distance))
+				.is_done()
+			{
 				true => Some(entity),
 				false => None,
 			}
@@ -37,9 +41,12 @@ mod test {
 	use super::*;
 	use crate::{
 		components::MovementMode,
-		traits::{IsDone, MovementData, Units},
+		traits::{IsDone, MovementData},
 	};
-	use common::tools::UnitsPerSecond;
+	use common::{
+		tools::{Units, UnitsPerSecond},
+		traits::clamp_zero_positive::ClampZeroPositive,
+	};
 	use mockall::{automock, predicate::eq};
 	use std::time::Duration;
 
@@ -114,7 +121,10 @@ mod test {
 		movement
 			.mock
 			.expect_update()
-			.with(eq(transform), eq(time_delta.as_secs_f32() * 11.))
+			.with(
+				eq(transform),
+				eq(Units::new(time_delta.as_secs_f32() * 11.)),
+			)
 			.times(1)
 			.return_const(false);
 

@@ -5,7 +5,8 @@ use bevy::ecs::{
 	system::{Commands, Query},
 };
 use bevy_rapier3d::geometry::{ActiveEvents, Collider, CollidingEntities, Sensor};
-use common::traits::{clamp_zero_positive::ClampZeroPositive, try_insert_on::TryInsertOn};
+use common::traits::try_insert_on::TryInsertOn;
+use std::ops::Deref;
 
 pub(crate) fn insert_responsive_light_collider(
 	new: Query<(Entity, &ResponsiveLight), Added<ResponsiveLight>>,
@@ -15,7 +16,7 @@ pub(crate) fn insert_responsive_light_collider(
 		commands.try_insert_on(
 			id,
 			(
-				Collider::ball(light.data.range.value()),
+				Collider::ball(*light.data.range.deref()),
 				Sensor,
 				ActiveEvents::COLLISION_EVENTS,
 				CollidingEntities::default(),
@@ -37,6 +38,7 @@ mod tests {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::{Intensity, IntensityChangePerSecond, Units},
+		traits::clamp_zero_positive::ClampZeroPositive,
 	};
 
 	fn setup() -> App {

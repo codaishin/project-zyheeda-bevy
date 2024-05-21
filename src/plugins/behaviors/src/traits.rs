@@ -17,10 +17,9 @@ use bevy::{
 	math::{primitives::Direction3d, Vec2, Vec3},
 	transform::components::Transform,
 };
-use common::tools::UnitsPerSecond;
+use common::tools::{Units, UnitsPerSecond};
 use std::sync::Arc;
 
-pub(crate) type Units = f32;
 pub type Vec2Radians = Vec2;
 
 #[derive(Debug, PartialEq, Default, Clone, Copy)]
