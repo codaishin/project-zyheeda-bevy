@@ -8,12 +8,8 @@ use bevy::{
 	render::view::Visibility,
 	time::Time,
 };
-use common::traits::{
-	clamp_zero_positive::ClampZeroPositive,
-	try_insert_on::TryInsertOn,
-	try_remove_from::TryRemoveFrom,
-};
-use std::time::Duration;
+use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
+use std::{ops::Deref, time::Duration};
 
 #[derive(PartialEq)]
 enum State {
@@ -68,8 +64,8 @@ fn increase(
 		commands.try_insert_on(light.model, light.data.light_on_material.clone());
 	}
 
-	let change = light.data.change.value() * delta.as_secs_f32();
-	let max = light.data.max.value();
+	let change = *light.data.change.deref() * delta.as_secs_f32();
+	let max = *light.data.max.deref();
 	if max - target_light.intensity > change {
 		target_light.intensity += change;
 		return State::Busy;
@@ -90,7 +86,7 @@ fn decrease(
 		return State::Busy;
 	};
 
-	let change = light.data.change.value() * delta.as_secs_f32();
+	let change = *light.data.change.deref() * delta.as_secs_f32();
 	if change < target_light.intensity {
 		target_light.intensity -= change;
 		return State::Busy;

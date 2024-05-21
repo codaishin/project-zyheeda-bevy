@@ -15,9 +15,13 @@ pub fn clamp_zero_positive_derive(input: TokenStream) -> TokenStream {
 					Self(value)
 				}
 			}
+		}
 
-			fn value(&self) -> f32 {
-				self.0
+		impl Deref for #ident {
+			type Target = f32;
+
+			fn deref(&self) -> &Self::Target {
+				&self.0
 			}
 		}
 	};

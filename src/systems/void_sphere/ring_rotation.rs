@@ -1,17 +1,17 @@
 use behaviors::components::VoidSpherePart;
 use bevy::{ecs::system::Query, transform::components::Transform};
-use common::traits::clamp_zero_positive::ClampZeroPositive;
+use std::ops::Deref;
 
 pub fn ring_rotation(mut agents: Query<(&mut Transform, &VoidSpherePart)>) {
 	for (mut transform, part) in &mut agents {
 		match part {
 			VoidSpherePart::RingA(value) => {
-				let value = value.value();
+				let value = *value.deref();
 				transform.rotate_local_x(value);
 				transform.rotate_local_y(value);
 			}
 			VoidSpherePart::RingB(value) => {
-				let value = value.value();
+				let value = *value.deref();
 				transform.rotate_local_x(value);
 				transform.rotate_local_y(value);
 				transform.rotate_local_z(value);
@@ -28,7 +28,7 @@ mod tests {
 		app::{App, Update},
 		transform::components::Transform,
 	};
-	use common::tools::UnitsPerSecond;
+	use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
 
 	#[test]
 	fn rotate_ring_a() {

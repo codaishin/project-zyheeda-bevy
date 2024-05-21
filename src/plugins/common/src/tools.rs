@@ -56,16 +56,19 @@ pub fn player_animation_path(animation_name: &str) -> Path {
 }
 
 #[cfg(test)]
-mod test_clamp_zero_positive_on_units_per_second {
+mod test_clamp_zero_positive {
 	use super::*;
+
+	#[derive(ClampZeroPositive)]
+	struct _Value(f32);
 
 	#[test]
 	fn set_value() {
-		assert_eq!(42., UnitsPerSecond::new(42.).value());
+		assert_eq!(&42., _Value::new(42.).deref());
 	}
 
 	#[test]
 	fn min_zero() {
-		assert_eq!(0., UnitsPerSecond::new(-42.).value());
+		assert_eq!(&0., _Value::new(-42.).deref());
 	}
 }
