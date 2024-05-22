@@ -4,6 +4,7 @@ pub(crate) mod enemy;
 pub(crate) mod face;
 pub(crate) mod follow;
 pub(crate) mod force_shield;
+pub(crate) mod ground_target;
 pub(crate) mod idle;
 pub(crate) mod move_on_orbit;
 pub(crate) mod movement;
