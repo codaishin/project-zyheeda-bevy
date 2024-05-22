@@ -1,10 +1,10 @@
 use crate::traits::{RemoveComponent, SpawnAttack};
 use bevy::{
 	ecs::{bundle::Bundle, component::Component, entity::Entity, system::EntityCommands},
-	math::{primitives::Direction3d, Vec3},
+	math::{primitives::Direction3d, Ray3d, Vec3},
 	render::color::Color,
 };
-use common::tools::UnitsPerSecond;
+use common::tools::{Units, UnitsPerSecond};
 use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
 
 #[derive(Component)]
@@ -27,6 +27,13 @@ pub struct OverrideFace(pub Face);
 
 #[derive(Component, Debug, PartialEq)]
 pub struct SetFace(pub Face);
+
+#[derive(Component, Debug, PartialEq)]
+pub struct GroundTarget {
+	pub caster: Entity,
+	pub target_ray: Ray3d,
+	pub max_range: Units,
+}
 
 pub struct Plasma;
 
