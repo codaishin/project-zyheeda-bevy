@@ -3,18 +3,21 @@ use bevy::{
 	ecs::{
 		bundle::Bundle,
 		entity::Entity,
-		query::Added,
 		system::{Commands, Query},
 	},
 	math::{primitives::Plane3d, Vec3},
 	transform::components::Transform,
 };
-use common::traits::{from_transform::FromTransform, try_insert_on::TryInsertOn};
+use common::traits::{
+	from_transform::FromTransform,
+	try_insert_on::TryInsertOn,
+	try_remove_from::TryRemoveFrom,
+};
 use std::ops::Deref;
 
 pub(crate) fn ground_target<TBundle: Bundle + FromTransform>(
 	mut commands: Commands,
-	ground_targets: Query<(Entity, &GroundTarget), Added<GroundTarget>>,
+	ground_targets: Query<(Entity, &GroundTarget)>,
 ) {
 	for (id, ground_target) in &ground_targets {
 		let mut target_translation = match intersect_ground_plane(ground_target) {
@@ -28,6 +31,7 @@ pub(crate) fn ground_target<TBundle: Bundle + FromTransform>(
 			.with_rotation(ground_target.caster.rotation);
 
 		commands.try_insert_on(id, TBundle::from_transform(transform));
+		commands.try_remove_from::<GroundTarget>(id);
 	}
 }
 
@@ -55,7 +59,7 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		ecs::component::Component,
-		math::{primitives::Direction3d, Ray3d, Vec3},
+		math::{Ray3d, Vec3},
 	};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
@@ -180,7 +184,7 @@ mod tests {
 	}
 
 	#[test]
-	fn only_set_transform_when_added() {
+	fn remove_ground_target() {
 		let mut app = setup();
 
 		let ground_target = app
@@ -194,20 +198,8 @@ mod tests {
 
 		app.update();
 
-		app.world
-			.entity_mut(ground_target)
-			.get_mut::<GroundTarget>()
-			.unwrap()
-			.target_ray
-			.direction = Direction3d::NEG_Y;
-
-		app.update();
-
 		let ground_target = app.world.entity(ground_target);
 
-		assert_eq!(
-			Some(&_TranslationBundle::from_xyz(3., 0., 0.)),
-			ground_target.get::<_TranslationBundle>(),
-		)
+		assert_eq!(None, ground_target.get::<GroundTarget>(),)
 	}
 }
