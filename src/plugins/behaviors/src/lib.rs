@@ -23,6 +23,7 @@ use common::{
 	states::{GameRunning, MouseContext},
 };
 use components::{
+	ground_target::GroundTarget,
 	Beam,
 	CamOrbit,
 	ForceShield,
@@ -43,7 +44,6 @@ use systems::{
 	face::{execute_face::execute_face, get_faces::get_faces},
 	follow::follow,
 	force_shield::position_force_shield,
-	ground_target::ground_target,
 	idle::idle,
 	move_on_orbit::move_on_orbit,
 	movement::{
@@ -54,6 +54,7 @@ use systems::{
 		trigger_event::trigger_move_input_event,
 	},
 	projectile::projectile_behavior,
+	replace::replace,
 	update_cool_downs::update_cool_downs,
 	update_life_times::update_lifetimes,
 };
@@ -117,6 +118,6 @@ impl Plugin for BehaviorsPlugin {
 			.add_systems(Update, (enemy, chase::<MovementConfig>, attack).chain())
 			.add_systems(Update, execute_beam)
 			.add_systems(Update, position_force_shield)
-			.add_systems(Update, ground_target::<TransformBundle>);
+			.add_systems(Update, replace::<GroundTarget, TransformBundle>);
 	}
 }
