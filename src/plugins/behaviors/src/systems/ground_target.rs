@@ -1,4 +1,4 @@
-use crate::components::GroundTarget;
+use crate::components::ground_target::GroundTarget;
 use bevy::{
 	ecs::{
 		bundle::Bundle,

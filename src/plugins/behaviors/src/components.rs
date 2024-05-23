@@ -1,11 +1,12 @@
+pub mod ground_target;
+
 use crate::traits::{RemoveComponent, SpawnAttack};
 use bevy::{
 	ecs::{bundle::Bundle, component::Component, entity::Entity, system::EntityCommands},
-	math::{primitives::Direction3d, Ray3d, Vec3},
+	math::{primitives::Direction3d, Vec3},
 	render::color::Color,
-	transform::components::Transform,
 };
-use common::tools::{Units, UnitsPerSecond};
+use common::tools::UnitsPerSecond;
 use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
 
 #[derive(Component)]
@@ -28,13 +29,6 @@ pub struct OverrideFace(pub Face);
 
 #[derive(Component, Debug, PartialEq)]
 pub struct SetFace(pub Face);
-
-#[derive(Component, Debug, PartialEq)]
-pub struct GroundTarget {
-	pub caster: Transform,
-	pub target_ray: Ray3d,
-	pub max_range: Units,
-}
 
 pub struct Plasma;
 
