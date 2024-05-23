@@ -15,6 +15,7 @@ use bevy::{
 	},
 	input::keyboard::KeyCode,
 	time::Virtual,
+	transform::TransformBundle,
 };
 use common::{
 	components::Player,
@@ -42,6 +43,7 @@ use systems::{
 	face::{execute_face::execute_face, get_faces::get_faces},
 	follow::follow,
 	force_shield::position_force_shield,
+	ground_target::ground_target,
 	idle::idle,
 	move_on_orbit::move_on_orbit,
 	movement::{
@@ -114,6 +116,7 @@ impl Plugin for BehaviorsPlugin {
 			.add_systems(Update, projectile_behavior::<Projectile<Plasma>>)
 			.add_systems(Update, (enemy, chase::<MovementConfig>, attack).chain())
 			.add_systems(Update, execute_beam)
-			.add_systems(Update, position_force_shield);
+			.add_systems(Update, position_force_shield)
+			.add_systems(Update, ground_target::<TransformBundle>);
 	}
 }
