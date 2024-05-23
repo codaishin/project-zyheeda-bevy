@@ -1,6 +1,7 @@
 pub mod accessor;
 pub mod cast_ray;
 pub mod clamp_zero_positive;
+pub mod from_translation;
 pub mod get;
 pub mod get_ray;
 pub mod get_state;
