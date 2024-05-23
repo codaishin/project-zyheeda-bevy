@@ -7,12 +7,12 @@ use bevy::{
 		system::{Commands, Query},
 	},
 	math::{primitives::Plane3d, Vec3},
-	transform::components::GlobalTransform,
+	transform::components::{GlobalTransform, Transform},
 };
-use common::traits::{from_translation::FromTranslation, try_insert_on::TryInsertOn};
+use common::traits::{from_transform::FromTransform, try_insert_on::TryInsertOn};
 use std::ops::Deref;
 
-pub(crate) fn ground_target<TBundle: Bundle + FromTranslation>(
+pub(crate) fn ground_target<TBundle: Bundle + FromTransform>(
 	mut commands: Commands,
 	ground_targets: Query<(Entity, &GroundTarget), Added<GroundTarget>>,
 	transforms: Query<&GlobalTransform>,
@@ -29,7 +29,10 @@ pub(crate) fn ground_target<TBundle: Bundle + FromTranslation>(
 
 		correct_for_max_range(&mut target_translation, caster_translation, ground_target);
 
-		commands.try_insert_on(id, TBundle::from_translation(target_translation));
+		commands.try_insert_on(
+			id,
+			TBundle::from_transform(Transform::from_translation(target_translation)),
+		);
 	}
 }
 
@@ -80,17 +83,17 @@ mod tests {
 	};
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _TranslationBundle(Vec3);
+	struct _TranslationBundle(Transform);
 
 	impl _TranslationBundle {
 		fn from_xyz(x: f32, y: f32, z: f32) -> Self {
-			Self(Vec3::new(x, y, z))
+			Self(Transform::from_xyz(x, y, z))
 		}
 	}
 
-	impl FromTranslation for _TranslationBundle {
-		fn from_translation(translation: Vec3) -> Self {
-			Self(translation)
+	impl FromTransform for _TranslationBundle {
+		fn from_transform(transform: Transform) -> Self {
+			Self(transform)
 		}
 	}
 
