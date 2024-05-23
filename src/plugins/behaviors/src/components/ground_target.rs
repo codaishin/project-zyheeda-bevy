@@ -5,7 +5,7 @@ use bevy::{
 };
 use common::tools::Units;
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Clone)]
 pub struct GroundTarget {
 	pub caster: Transform,
 	pub target_ray: Ray3d,
