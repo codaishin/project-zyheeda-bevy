@@ -6,7 +6,7 @@ use bevy::ecs::{
 	system::{Commands, Query},
 };
 use common::{
-	components::effected_by::EffectedBy,
+	components::{effected_by::EffectedBy, Immobilized},
 	traits::{
 		has_collisions::HasCollisions,
 		try_insert_on::TryInsertOn,
@@ -41,11 +41,11 @@ fn add_gravity_pull<TGravitySource: GetGravityPull>(
 	(center, source): (Entity, &TGravitySource),
 ) {
 	let pull = source.gravity_pull();
-	commands.try_insert_on(effected, Gravity { pull, center })
+	commands.try_insert_on(effected, (Gravity { pull, center }, Immobilized))
 }
 
 fn remove_gravity_pull(commands: &mut Commands, effected: Entity) {
-	commands.try_remove_from::<Gravity>(effected);
+	commands.try_remove_from::<(Gravity, Immobilized)>(effected);
 }
 
 #[cfg(test)]
@@ -57,7 +57,7 @@ mod tests {
 		utils::default,
 	};
 	use common::{
-		components::effected_by::EffectedBy,
+		components::{effected_by::EffectedBy, Immobilized},
 		test_tools::utils::SingleThreadedApp,
 		tools::UnitsPerSecond,
 		traits::clamp_zero_positive::ClampZeroPositive,
@@ -98,7 +98,7 @@ mod tests {
 	}
 
 	#[test]
-	fn add_gravity_component_when_colliding() {
+	fn add_gravity_components_when_colliding() {
 		let mut app = setup();
 		let source = app
 			.world
@@ -120,16 +120,19 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			Some(&Gravity {
-				pull: UnitsPerSecond::new(42.),
-				center: source,
-			}),
-			agent.get::<Gravity>(),
+			(
+				Some(&Gravity {
+					pull: UnitsPerSecond::new(42.),
+					center: source,
+				}),
+				Some(&Immobilized)
+			),
+			(agent.get::<Gravity>(), agent.get::<Immobilized>()),
 		)
 	}
 
 	#[test]
-	fn remove_gravity_component_when_not_colliding() {
+	fn remove_gravity_components_when_not_colliding() {
 		let mut app = setup();
 		let agent = app
 			.world
@@ -143,6 +146,7 @@ mod tests {
 					pull: UnitsPerSecond::new(42.),
 					center: Entity::from_raw(11),
 				},
+				Immobilized,
 			))
 			.id();
 
@@ -150,7 +154,10 @@ mod tests {
 
 		let agent = app.world.entity(agent);
 
-		assert_eq!(None, agent.get::<Gravity>(),)
+		assert_eq!(
+			(None, None),
+			(agent.get::<Gravity>(), agent.get::<Immobilized>())
+		);
 	}
 
 	#[test]
