@@ -2216,6 +2216,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "gravity"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_rapier3d",
+ "common",
+ "interactions",
+ "mockall",
+]
+
+[[package]]
 name = "grid"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3385,6 +3396,7 @@ dependencies = [
  "bevy-inspector-egui",
  "bevy_rapier3d",
  "common",
+ "gravity",
  "ingame_menu",
  "interactions",
  "light",

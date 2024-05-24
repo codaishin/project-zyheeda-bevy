@@ -1,10 +1,13 @@
 use crate::{
-	components::Immobilized,
 	systems::idle::SetToIdle,
 	traits::{MovementData, MovementPositionBased},
 };
 use bevy::prelude::*;
-use common::{tools::Units, traits::clamp_zero_positive::ClampZeroPositive};
+use common::{
+	components::Immobilized,
+	tools::Units,
+	traits::clamp_zero_positive::ClampZeroPositive,
+};
 use std::ops::Deref;
 
 type Components<'a, TConfig, TMovement> =
@@ -41,7 +44,7 @@ pub(crate) fn execute_move_position_based<
 mod test {
 	use super::*;
 	use crate::{
-		components::{Immobilized, MovementMode},
+		components::MovementMode,
 		traits::{IsDone, MovementData},
 	};
 	use common::{

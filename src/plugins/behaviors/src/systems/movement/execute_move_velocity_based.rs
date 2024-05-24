@@ -1,5 +1,4 @@
 use crate::{
-	components::Immobilized,
 	systems::idle::SetToIdle,
 	traits::{MovementData, MovementVelocityBased},
 };
@@ -12,6 +11,7 @@ use bevy::{
 	},
 	transform::components::GlobalTransform,
 };
+use common::components::Immobilized;
 
 pub(crate) fn execute_move_velocity_based<
 	TMovementConfig: Component + MovementData,

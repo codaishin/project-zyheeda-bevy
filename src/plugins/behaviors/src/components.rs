@@ -30,9 +30,6 @@ pub struct OverrideFace(pub Face);
 #[derive(Component, Debug, PartialEq)]
 pub struct SetFace(pub Face);
 
-#[derive(Component, Debug, PartialEq)]
-pub struct Immobilized;
-
 pub struct Plasma;
 
 #[derive(Component)]
