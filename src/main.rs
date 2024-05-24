@@ -23,6 +23,7 @@ use common::{
 	traits::{clamp_zero_positive::ClampZeroPositive, load_asset::Path},
 	CommonPlugin,
 };
+use gravity::GravityPlugin;
 use ingame_menu::IngameMenuPlugin;
 use interactions::InteractionsPlugin;
 use light::{components::ResponsiveLightTrigger, LightPlugin};
@@ -55,6 +56,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(InteractionsPlugin)
 		.add_plugins(BarsPlugin)
 		.add_plugins(SkillsPlugin)
+		.add_plugins(GravityPlugin)
 		.add_plugins(BehaviorsPlugin)
 		.add_plugins(AnimationsPlugin)
 		.add_plugins(LightPlugin)

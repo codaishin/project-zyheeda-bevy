@@ -14,6 +14,7 @@ animations = { path = "src/plugins/animations" }
 bars = { path = "src/plugins/bars" }
 behaviors = { path = "src/plugins/behaviors" }
 common = { path = "src/plugins/common" }
+gravity = { path = "src/plugins/gravity" }
 interactions = { path = "src/plugins/interactions" }
 light = { path = "src/plugins/light" }
 macros = { path = "src/plugins/macros" }
@@ -46,6 +47,7 @@ animations.workspace = true
 bars.workspace = true
 behaviors.workspace = true
 common.workspace = true
+gravity.workspace = true
 interactions.workspace = true
 light.workspace = true
 macros.workspace = true
