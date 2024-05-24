@@ -1,3 +1,5 @@
+pub mod effected_by;
+
 use bevy::{
 	ecs::{component::Component, entity::Entity},
 	math::Vec3,
