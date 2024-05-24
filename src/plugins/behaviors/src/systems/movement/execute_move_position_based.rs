@@ -1,4 +1,5 @@
 use crate::{
+	components::Immobilized,
 	systems::idle::SetToIdle,
 	traits::{MovementData, MovementPositionBased},
 };
@@ -15,7 +16,7 @@ pub(crate) fn execute_move_position_based<
 	TTime: Send + Sync + Default + 'static,
 >(
 	time: Res<Time<TTime>>,
-	mut agents: Query<Components<TMovementConfig, TMovement>>,
+	mut agents: Query<Components<TMovementConfig, TMovement>, Without<Immobilized>>,
 ) -> SetToIdle<TMovement> {
 	let done_entities = agents
 		.iter_mut()
@@ -40,10 +41,11 @@ pub(crate) fn execute_move_position_based<
 mod test {
 	use super::*;
 	use crate::{
-		components::MovementMode,
+		components::{Immobilized, MovementMode},
 		traits::{IsDone, MovementData},
 	};
 	use common::{
+		test_tools::utils::SingleThreadedApp,
 		tools::{Units, UnitsPerSecond},
 		traits::clamp_zero_positive::ClampZeroPositive,
 	};
@@ -90,7 +92,7 @@ mod test {
 	}
 
 	fn setup() -> App {
-		let mut app = App::new();
+		let mut app = App::new().single_threaded(Update);
 		let mut time = Time::<Real>::default();
 
 		time.update();
@@ -183,5 +185,22 @@ mod test {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(None, agent.get::<_Idle>());
+	}
+
+	#[test]
+	fn do_not_move_agent_when_immobilized() {
+		let mut app = setup();
+		let mut time = app.world.resource_mut::<Time<Real>>();
+
+		let last_update = time.last_update().unwrap();
+		let mut movement = _Movement::default();
+
+		movement.mock.expect_update().never().return_const(false);
+
+		time.update_with_instant(last_update + Duration::from_millis(30));
+		app.world
+			.spawn((ConfigFast, movement, Transform::default(), Immobilized));
+
+		app.update();
 	}
 }
