@@ -1,4 +1,7 @@
-use crate::traits::{GetAnimation, MovementData};
+use crate::{
+	components::Immobilized,
+	traits::{GetAnimation, MovementData},
+};
 use animations::traits::{MovementLayer, StartAnimation, StopAnimation};
 use bevy::ecs::{
 	change_detection::DetectChanges,
@@ -24,7 +27,10 @@ pub(crate) fn animate_movement<
 	TAnimations: Component + GetAnimation<TAnimation>,
 	TAnimationDispatch: Component + StartAnimation<MovementLayer, TAnimation> + StopAnimation<MovementLayer>,
 >(
-	mut agents: Query<Components<TMovementConfig, TAnimations, TAnimationDispatch, TMovement>>,
+	mut agents: Query<
+		Components<TMovementConfig, TAnimations, TAnimationDispatch, TMovement>,
+		Without<Immobilized>,
+	>,
 	mut agents_without_movement: Query<&mut TAnimationDispatch, Without<TMovement>>,
 	mut removed_movements: RemovedComponents<TMovement>,
 ) {
@@ -73,7 +79,7 @@ fn remove_animation<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::MovementMode;
+	use crate::components::{Immobilized, MovementMode};
 	use bevy::app::{App, Update};
 	use common::{test_tools::utils::SingleThreadedApp, tools::UnitsPerSecond};
 	use mockall::{automock, mock, predicate::eq};
@@ -386,6 +392,39 @@ mod tests {
 			.mock
 			.expect_get_movement_data()
 			.return_const((UnitsPerSecond::default(), MovementMode::Slow));
+		app.update();
+	}
+
+	#[test]
+	fn no_animate_when_immobilized() {
+		let mut app = setup();
+		let mut config = _Config::default();
+		let mut animations = _MovementAnimations::default();
+		let mut dispatch = _AnimationDispatch::default();
+
+		config
+			.mock
+			.expect_get_movement_data()
+			.never()
+			.return_const((UnitsPerSecond::default(), MovementMode::Fast));
+		animations
+			.mock
+			.expect_animation()
+			.never()
+			.return_const(_Animation(""));
+		dispatch
+			.mock
+			.expect_start_animation()
+			.never()
+			.return_const(());
+
+		app.world.spawn((
+			config,
+			animations,
+			dispatch,
+			_Movement::default(),
+			Immobilized,
+		));
 		app.update();
 	}
 }

@@ -1,4 +1,5 @@
 use crate::{
+	components::Immobilized,
 	systems::idle::SetToIdle,
 	traits::{MovementData, MovementVelocityBased},
 };
@@ -6,6 +7,7 @@ use bevy::{
 	ecs::{
 		component::Component,
 		entity::Entity,
+		query::Without,
 		system::{Commands, Query},
 	},
 	transform::components::GlobalTransform,
@@ -16,7 +18,7 @@ pub(crate) fn execute_move_velocity_based<
 	TMovement: Component + MovementVelocityBased,
 >(
 	mut commands: Commands,
-	agents: Query<(Entity, &GlobalTransform, &TMovementConfig, &TMovement)>,
+	agents: Query<(Entity, &GlobalTransform, &TMovementConfig, &TMovement), Without<Immobilized>>,
 ) -> SetToIdle<TMovement> {
 	let done_entities = agents
 		.iter()
@@ -132,6 +134,7 @@ mod tests {
 			agent.get::<_MoveParams>()
 		);
 	}
+
 	#[test]
 	fn apply_speed_slow() {
 		let mut app = setup();
@@ -192,5 +195,25 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(None, agent.get::<_Idle>());
+	}
+
+	#[test]
+	fn no_movement_when_immobilized() {
+		let mut app = setup();
+		let agent = app
+			.world
+			.spawn((
+				ConfigFast,
+				GlobalTransform::from_xyz(1., 2., 3.),
+				_Movement(false.into()),
+				Immobilized,
+			))
+			.id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(None, agent.get::<_MoveParams>());
 	}
 }
