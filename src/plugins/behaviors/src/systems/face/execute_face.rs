@@ -1,4 +1,4 @@
-use crate::components::{Face, Immobilized};
+use crate::components::Face;
 use bevy::{
 	ecs::{
 		entity::Entity,
@@ -8,7 +8,11 @@ use bevy::{
 	math::Vec3,
 	transform::components::Transform,
 };
-use common::{components::ColliderRoot, resources::MouseHover, traits::intersect_at::IntersectAt};
+use common::{
+	components::{ColliderRoot, Immobilized},
+	resources::MouseHover,
+	traits::intersect_at::IntersectAt,
+};
 
 pub(crate) fn execute_face<TCursor: IntersectAt + Resource>(
 	faces: In<Vec<(Entity, Face)>>,
@@ -82,14 +86,13 @@ fn get_root(entity: Entity, roots: &Query<&ColliderRoot>) -> Entity {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Immobilized;
 	use bevy::{
 		app::{App, Update},
 		ecs::{component::Component, system::IntoSystem},
 		math::Vec3,
 	};
 	use common::{
-		components::ColliderRoot,
+		components::{ColliderRoot, Immobilized},
 		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
 	};

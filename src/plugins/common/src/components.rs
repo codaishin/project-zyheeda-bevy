@@ -35,6 +35,9 @@ impl Player {
 }
 
 #[derive(Component, Debug, PartialEq)]
+pub struct Immobilized;
+
+#[derive(Component, Debug, PartialEq)]
 pub struct Idle;
 
 #[derive(Component)]
