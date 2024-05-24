@@ -1,7 +1,8 @@
-use crate::components::Face;
+use crate::components::{Face, Immobilized};
 use bevy::{
 	ecs::{
 		entity::Entity,
+		query::Without,
 		system::{In, Query, Res, Resource},
 	},
 	math::Vec3,
@@ -11,7 +12,7 @@ use common::{components::ColliderRoot, resources::MouseHover, traits::intersect_
 
 pub(crate) fn execute_face<TCursor: IntersectAt + Resource>(
 	faces: In<Vec<(Entity, Face)>>,
-	mut transforms: Query<&mut Transform>,
+	mut transforms: Query<&mut Transform, Without<Immobilized>>,
 	roots: Query<&ColliderRoot>,
 	cursor: Res<TCursor>,
 	hover: Res<MouseHover>,
@@ -24,7 +25,11 @@ pub(crate) fn execute_face<TCursor: IntersectAt + Resource>(
 	}
 }
 
-fn apply_facing(transforms: &mut Query<&mut Transform>, id: Entity, target: Vec3) {
+fn apply_facing(
+	transforms: &mut Query<&mut Transform, Without<Immobilized>>,
+	id: Entity,
+	target: Vec3,
+) {
 	let Ok(mut transform) = transforms.get_mut(id) else {
 		return;
 	};
@@ -32,7 +37,7 @@ fn apply_facing(transforms: &mut Query<&mut Transform>, id: Entity, target: Vec3
 }
 
 fn get_face_targets(
-	transforms: &Query<&mut Transform>,
+	transforms: &Query<&mut Transform, Without<Immobilized>>,
 	faces: Vec<(Entity, Face)>,
 	roots: Query<&ColliderRoot>,
 	cursor_target: Option<Vec3>,
@@ -51,7 +56,7 @@ fn get_face_targets(
 }
 
 fn get_target<TCursor: IntersectAt + Resource>(
-	transforms: &Query<&mut Transform>,
+	transforms: &Query<&mut Transform, Without<Immobilized>>,
 	cursor: &Res<TCursor>,
 	hover: &Res<MouseHover>,
 ) -> Option<Vec3> {
@@ -63,7 +68,10 @@ fn get_target<TCursor: IntersectAt + Resource>(
 	get_translation(entity, transforms)
 }
 
-fn get_translation(entity: Entity, transforms: &Query<&mut Transform>) -> Option<Vec3> {
+fn get_translation(
+	entity: Entity,
+	transforms: &Query<&mut Transform, Without<Immobilized>>,
+) -> Option<Vec3> {
 	transforms.get(entity).ok().map(|t| t.translation)
 }
 
@@ -74,6 +82,7 @@ fn get_root(entity: Entity, roots: &Query<&ColliderRoot>) -> Entity {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::components::Immobilized;
 	use bevy::{
 		app::{App, Update},
 		ecs::{component::Component, system::IntoSystem},
@@ -313,6 +322,33 @@ mod tests {
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
+			agent.get::<Transform>()
+		);
+	}
+
+	#[test]
+	fn do_not_face_cursor_when_immobilized() {
+		let mut cursor = _Cursor::default();
+		cursor
+			.mock
+			.expect_intersect_at()
+			.return_const(Vec3::new(1., 2., 3.));
+		let mut app = setup(cursor);
+		let agent = app
+			.world
+			.spawn((
+				Transform::from_xyz(4., 5., 6.),
+				_Face(Face::Cursor),
+				Immobilized,
+			))
+			.id();
+
+		app.update();
+
+		let agent = app.world.entity(agent);
+
+		assert_eq!(
+			Some(&Transform::from_xyz(4., 5., 6.)),
 			agent.get::<Transform>()
 		);
 	}
