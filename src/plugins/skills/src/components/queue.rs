@@ -508,6 +508,7 @@ struct ActiveSkill<'a> {
 }
 
 impl GetActiveSkill<Animation, SkillState> for Queue {
+	#[allow(refining_impl_trait)]
 	fn get_active(
 		&mut self,
 	) -> Option<impl GetSkillBehavior + GetAnimation<Animation> + StateDuration<SkillState>> {
