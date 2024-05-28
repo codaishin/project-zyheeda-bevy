@@ -10,18 +10,14 @@ use bevy::{
 use bevy_rapier3d::geometry::CollidingEntities;
 use systems::{
 	add_colliding_entities::add_colliding_entities,
-	apply_gravity::apply_gravity,
 	apply_gravity_effect::apply_gravity_effect,
-	detect_gravity_effected::detect_gravity_effected,
 };
 use traits::GetGravityPull;
 
 pub struct GravityPlugin;
 
 impl Plugin for GravityPlugin {
-	fn build(&self, app: &mut App) {
-		app.add_systems(Update, apply_gravity);
-	}
+	fn build(&self, _: &mut App) {}
 }
 
 pub trait AddGravityInteraction {
@@ -30,14 +26,10 @@ pub trait AddGravityInteraction {
 
 impl AddGravityInteraction for App {
 	fn register_gravity_source<TGravitySource: Component + GetGravityPull>(&mut self) {
-		self.add_systems(
-			Update,
-			(
-				detect_gravity_effected::<CollidingEntities, TGravitySource>,
-				add_colliding_entities::<TGravitySource>,
-				apply_gravity_effect::<CollidingEntities, TGravitySource>,
-			)
-				.chain(),
+		let gravity_systems = (
+			add_colliding_entities::<TGravitySource>,
+			apply_gravity_effect::<CollidingEntities, TGravitySource>,
 		);
+		self.add_systems(Update, gravity_systems.chain());
 	}
 }
