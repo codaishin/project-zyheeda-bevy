@@ -9,7 +9,7 @@ use bevy::{
 };
 use bevy_rapier3d::geometry::CollidingEntities;
 use systems::{
-	add_colliding_entities::add_colliding_entities,
+	add_collider_config_components::add_collider_config_components,
 	add_gravity_effect_collider::add_gravity_effect_collider,
 	apply_gravity_effect::apply_gravity_effect,
 };
@@ -34,7 +34,7 @@ impl AddGravityInteraction for App {
 	{
 		let gravity_systems = (
 			add_gravity_effect_collider::<TGravitySource>,
-			add_colliding_entities::<TGravitySource>,
+			add_collider_config_components::<TGravitySource>,
 			apply_gravity_effect::<CollidingEntities, TGravitySource>,
 		);
 		self.add_systems(Update, gravity_systems.chain());
