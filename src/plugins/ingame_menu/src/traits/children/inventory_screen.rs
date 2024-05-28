@@ -20,7 +20,6 @@ use bevy::{
 };
 use common::components::Side;
 use skills::items::{InventoryKey, SlotKey};
-use std::usize;
 
 const EQUIPMENT_SLOTS: [(SlotKey, &str); 2] = [
 	(SlotKey::Hand(Side::Off), "Off Hand"),
