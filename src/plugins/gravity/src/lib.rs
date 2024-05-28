@@ -8,7 +8,11 @@ use bevy::{
 	ecs::component::Component,
 };
 use bevy_rapier3d::geometry::CollidingEntities;
-use systems::{apply_gravity::apply_gravity, detect_gravity_effected::detect_gravity_effected};
+use systems::{
+	apply_gravity::apply_gravity,
+	apply_gravity_effect::apply_gravity_effect,
+	detect_gravity_effected::detect_gravity_effected,
+};
 use traits::GetGravityPull;
 
 pub struct GravityPlugin;
@@ -27,7 +31,10 @@ impl AddGravityInteraction for App {
 	fn register_gravity_source<TGravitySource: Component + GetGravityPull>(&mut self) {
 		self.add_systems(
 			Update,
-			detect_gravity_effected::<CollidingEntities, TGravitySource>,
+			(
+				detect_gravity_effected::<CollidingEntities, TGravitySource>,
+				apply_gravity_effect::<CollidingEntities, TGravitySource>,
+			),
 		);
 	}
 }
