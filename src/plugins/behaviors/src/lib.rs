@@ -70,6 +70,7 @@ impl Plugin for BehaviorsPlugin {
 			.register_prefab::<VoidSphere>()
 			.register_prefab::<Beam>()
 			.register_prefab::<ForceShield>()
+			.register_prefab::<GravityWell>()
 			.register_gravity_source::<GravityWell>()
 			.add_systems(
 				Update,
