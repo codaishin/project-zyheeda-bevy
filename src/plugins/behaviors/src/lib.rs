@@ -23,6 +23,7 @@ use common::{
 	states::{GameRunning, MouseContext},
 };
 use components::{
+	gravity_well::GravityWell,
 	ground_target::GroundTarget,
 	Beam,
 	CamOrbit,
@@ -36,6 +37,7 @@ use components::{
 	VoidSphere,
 };
 use events::MoveInputEvent;
+use gravity::AddGravityInteraction;
 use prefabs::traits::RegisterPrefab;
 use systems::{
 	attack::{attack, execute_beam::execute_beam},
@@ -68,6 +70,7 @@ impl Plugin for BehaviorsPlugin {
 			.register_prefab::<VoidSphere>()
 			.register_prefab::<Beam>()
 			.register_prefab::<ForceShield>()
+			.register_gravity_source::<GravityWell>()
 			.add_systems(
 				Update,
 				(trigger_move_input_event::<CamRay>, move_player_on_event)

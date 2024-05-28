@@ -1,6 +1,6 @@
 use super::{GetStaticSkillBehavior, RunSkill, SkillBundleConfig};
 use crate::skills::{SkillBehavior, SkillCaster, SkillSpawner, Target};
-use behaviors::components::{ground_target::GroundTarget, GravityWell};
+use behaviors::components::{gravity_well::GravityWell, ground_target::GroundTarget};
 use common::{tools::Units, traits::clamp_zero_positive::ClampZeroPositive};
 
 impl SkillBundleConfig for GravityWell {

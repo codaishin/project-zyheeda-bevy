@@ -1,3 +1,4 @@
+pub mod gravity_well;
 pub mod ground_target;
 
 use crate::traits::{RemoveComponent, SpawnAttack};
@@ -63,9 +64,6 @@ impl<T> Projectile<T> {
 pub struct ForceShield {
 	pub location: Entity,
 }
-
-#[derive(Component, Debug, PartialEq)]
-pub struct GravityWell;
 
 #[derive(Component)]
 pub struct VoidSphere;

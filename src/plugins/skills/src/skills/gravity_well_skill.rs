@@ -3,7 +3,7 @@ use crate::{
 	items::ItemType,
 	traits::{GetSkillAnimation, GetStaticSkillBehavior, SkillTemplate},
 };
-use behaviors::components::GravityWell;
+use behaviors::components::gravity_well::GravityWell;
 use common::traits::load_asset::Path;
 use std::{collections::HashSet, time::Duration};
 
