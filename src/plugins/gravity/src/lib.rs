@@ -5,10 +5,11 @@ pub(crate) mod systems;
 
 use bevy::{
 	app::{App, Plugin, Update},
-	ecs::component::Component,
+	ecs::{component::Component, schedule::IntoSystemConfigs},
 };
 use bevy_rapier3d::geometry::CollidingEntities;
 use systems::{
+	add_colliding_entities::add_colliding_entities,
 	apply_gravity::apply_gravity,
 	apply_gravity_effect::apply_gravity_effect,
 	detect_gravity_effected::detect_gravity_effected,
@@ -33,8 +34,10 @@ impl AddGravityInteraction for App {
 			Update,
 			(
 				detect_gravity_effected::<CollidingEntities, TGravitySource>,
+				add_colliding_entities::<TGravitySource>,
 				apply_gravity_effect::<CollidingEntities, TGravitySource>,
-			),
+			)
+				.chain(),
 		);
 	}
 }
