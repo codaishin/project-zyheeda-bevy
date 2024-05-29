@@ -1,14 +1,12 @@
 use super::{GetStaticSkillBehavior, RunSkill, SkillBundleConfig};
 use crate::skills::{SkillBehavior, SkillCaster, SkillSpawner, Target};
 use behaviors::components::Projectile;
-use bevy::{prelude::SpatialBundle, transform::components::Transform};
+use bevy::{ecs::bundle::Bundle, prelude::SpatialBundle, transform::components::Transform};
 
 impl<T: Send + Sync + 'static> SkillBundleConfig for Projectile<T> {
-	type Bundle = (Projectile<T>, SpatialBundle);
-
 	const STOPPABLE: bool = false;
 
-	fn new_skill_bundle(caster: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> Self::Bundle {
+	fn new_skill_bundle(caster: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> impl Bundle {
 		(
 			Projectile::<T>::new(caster.1.forward(), 10.),
 			SpatialBundle::from_transform(Transform::from(spawner.1)),
