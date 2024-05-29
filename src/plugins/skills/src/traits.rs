@@ -36,13 +36,13 @@ pub(crate) trait Enqueue<TItem> {
 }
 
 pub(crate) trait SkillBundleConfig {
-	type Bundle;
 	const STOPPABLE: bool;
+
 	fn new_skill_bundle(
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
-	) -> Self::Bundle;
+	) -> impl Bundle;
 }
 
 pub(crate) trait RunSkill {
@@ -54,7 +54,7 @@ pub(crate) trait RunSkill {
 	) -> OnSkillStop;
 }
 
-impl<T: SkillBundleConfig<Bundle = impl Bundle>> RunSkill for T {
+impl<T: SkillBundleConfig> RunSkill for T {
 	fn run_skill(
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -367,16 +367,14 @@ mod test_run_skill {
 	}
 
 	impl<const STOPPABLE: bool> SkillBundleConfig for _Skill<STOPPABLE> {
-		type Bundle = _Skill<STOPPABLE>;
-
 		const STOPPABLE: bool = STOPPABLE;
 
 		fn new_skill_bundle(
 			caster: &SkillCaster,
 			spawner: &SkillSpawner,
 			target: &Target,
-		) -> Self::Bundle {
-			_Skill {
+		) -> impl Bundle {
+			_Skill::<STOPPABLE> {
 				caster: *caster,
 				spawner: *spawner,
 				target: target.clone(),
