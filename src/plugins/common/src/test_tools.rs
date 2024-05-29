@@ -4,7 +4,10 @@ pub mod utils {
 		prelude::*,
 		time::Time,
 	};
-	use std::time::Duration;
+	use std::{
+		any::{Any, TypeId},
+		time::Duration,
+	};
 
 	pub trait ApproxEqual<TTolerance> {
 		fn approx_equal(&self, other: &Self, tolerance: &TTolerance) -> bool;
@@ -107,6 +110,23 @@ pub mod utils {
 			});
 
 			self
+		}
+	}
+
+	#[derive(Debug, PartialEq)]
+	pub struct DownCastError(TypeId);
+
+	pub trait TryCast {
+		fn try_cast<TTarget: 'static>(&self) -> Result<&TTarget, DownCastError>;
+	}
+
+	impl<TAny: 'static> TryCast for TAny {
+		/// Use only for unit/integration tests
+		fn try_cast<TTarget: 'static>(&self) -> Result<&TTarget, DownCastError> {
+			match (self as &dyn Any).downcast_ref::<TTarget>() {
+				Some(down_casted) => Ok(down_casted),
+				None => Err(DownCastError(self.type_id())),
+			}
 		}
 	}
 }
