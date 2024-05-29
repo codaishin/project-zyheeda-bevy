@@ -3,7 +3,7 @@ pub(crate) mod dummy;
 pub(crate) mod projectile;
 
 use bevy::{
-	asset::Handle,
+	asset::{Asset, Handle},
 	ecs::{component::Component, system::EntityCommands},
 	math::primitives::Sphere,
 	pbr::StandardMaterial,
@@ -11,47 +11,19 @@ use bevy::{
 };
 use common::errors::Error;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ProjectileType {
-	Plasma,
+pub trait AssetHandleFor<TAsset: Asset> {
+	fn handle<Key: 'static>(&mut self, asset: &dyn Fn() -> TAsset) -> Handle<TAsset>;
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub enum VoidPart {
-	Core,
-	Ring,
-}
+pub trait AssetHandles: AssetHandleFor<Mesh> + AssetHandleFor<StandardMaterial> {}
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub enum LightStatus {
-	On,
-	Off,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub enum LightType {
-	Floating,
-	Wall(LightStatus),
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub enum AssetKey {
-	Projectile(ProjectileType),
-	Dummy,
-	VoidSphere(VoidPart),
-	Beam,
-	Light(LightType),
-	ForceShield,
-	GravityWell,
+impl<TAssetHandles> AssetHandles for TAssetHandles where
+	TAssetHandles: AssetHandleFor<Mesh> + AssetHandleFor<StandardMaterial>
+{
 }
 
 pub trait Instantiate {
-	fn instantiate(
-		&self,
-		on: &mut EntityCommands,
-		get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
-		get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
-	) -> Result<(), Error>;
+	fn instantiate(&self, on: &mut EntityCommands, assets: impl AssetHandles) -> Result<(), Error>;
 }
 
 pub trait RegisterPrefab {

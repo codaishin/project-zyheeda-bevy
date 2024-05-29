@@ -1,6 +1,5 @@
 use crate::components::ForceShield;
 use bevy::{
-	asset::Handle,
 	ecs::system::EntityCommands,
 	hierarchy::BuildChildren,
 	math::{primitives::Cuboid, Vec3},
@@ -11,14 +10,13 @@ use bevy::{
 };
 use bevy_rapier3d::{dynamics::RigidBody, geometry::Collider};
 use common::{bundles::ColliderBundle, errors::Error};
-use prefabs::traits::{AssetKey, Instantiate};
+use prefabs::traits::{AssetHandles, Instantiate};
 
 impl Instantiate for ForceShield {
 	fn instantiate(
 		&self,
 		on: &mut EntityCommands,
-		mut get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
-		mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
+		mut assets: impl AssetHandles,
 	) -> Result<(), Error> {
 		let half_size = Vec3 {
 			x: 0.6,
@@ -27,16 +25,13 @@ impl Instantiate for ForceShield {
 		};
 		let base_color = Color::MIDNIGHT_BLUE;
 		let emissive = base_color * 100.;
-		let material = get_material_handle(
-			AssetKey::ForceShield,
-			StandardMaterial {
-				base_color,
-				emissive,
-				alpha_mode: AlphaMode::Add,
-				..default()
-			},
-		);
-		let mesh = get_mesh_handle(AssetKey::ForceShield, Mesh::from(Cuboid { half_size }));
+		let material = assets.handle::<ForceShield>(&|| StandardMaterial {
+			base_color,
+			emissive,
+			alpha_mode: AlphaMode::Add,
+			..default()
+		});
+		let mesh = assets.handle::<ForceShield>(&|| Mesh::from(Cuboid { half_size }));
 
 		on.insert((RigidBody::Fixed, TransformBundle::default()))
 			.with_children(|parent| {
