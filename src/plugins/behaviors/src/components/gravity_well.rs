@@ -1,6 +1,5 @@
 use super::LifeTime;
 use bevy::{
-	asset::Handle,
 	ecs::{component::Component, system::EntityCommands},
 	math::primitives::Sphere,
 	pbr::{AlphaMode, PbrBundle, StandardMaterial},
@@ -14,7 +13,7 @@ use common::{
 	traits::clamp_zero_positive::ClampZeroPositive,
 };
 use gravity::traits::{GetGravityEffectCollider, GetGravityPull};
-use prefabs::traits::{AssetKey, Instantiate};
+use prefabs::traits::{AssetHandles, Instantiate};
 use std::time::Duration;
 
 #[derive(Component, Debug, PartialEq)]
@@ -39,8 +38,7 @@ impl Instantiate for GravityWell {
 	fn instantiate(
 		&self,
 		on: &mut EntityCommands,
-		mut get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
-		mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
+		mut assets: impl AssetHandles,
 	) -> Result<(), Error> {
 		let base_color = Color::MIDNIGHT_BLUE;
 		let emissive = base_color * 100.;
@@ -48,19 +46,13 @@ impl Instantiate for GravityWell {
 		on.insert((
 			LifeTime(Duration::from_secs(5)),
 			PbrBundle {
-				mesh: get_mesh_handle(
-					AssetKey::GravityWell,
-					Mesh::from(Sphere::new(GravityWell::RADIUS)),
-				),
-				material: get_material_handle(
-					AssetKey::GravityWell,
-					StandardMaterial {
-						base_color,
-						emissive,
-						alpha_mode: AlphaMode::Add,
-						..default()
-					},
-				),
+				mesh: assets.handle::<GravityWell>(Mesh::from(Sphere::new(GravityWell::RADIUS))),
+				material: assets.handle::<GravityWell>(StandardMaterial {
+					base_color,
+					emissive,
+					alpha_mode: AlphaMode::Add,
+					..default()
+				}),
 				..default()
 			},
 		));

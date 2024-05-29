@@ -3,7 +3,7 @@ pub(crate) mod dummy;
 pub(crate) mod projectile;
 
 use bevy::{
-	asset::Handle,
+	asset::{Asset, Handle},
 	ecs::{component::Component, system::EntityCommands},
 	math::primitives::Sphere,
 	pbr::StandardMaterial,
@@ -45,13 +45,19 @@ pub enum AssetKey {
 	GravityWell,
 }
 
+pub trait AssetHandleFor<TAsset: Asset> {
+	fn handle<Key: 'static>(&mut self, asset: TAsset) -> Handle<TAsset>;
+}
+
+pub trait AssetHandles: AssetHandleFor<Mesh> + AssetHandleFor<StandardMaterial> {}
+
+impl<TAssetHandles> AssetHandles for TAssetHandles where
+	TAssetHandles: AssetHandleFor<Mesh> + AssetHandleFor<StandardMaterial>
+{
+}
+
 pub trait Instantiate {
-	fn instantiate(
-		&self,
-		on: &mut EntityCommands,
-		get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
-		get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
-	) -> Result<(), Error>;
+	fn instantiate(&self, on: &mut EntityCommands, assets: impl AssetHandles) -> Result<(), Error>;
 }
 
 pub trait RegisterPrefab {

@@ -1,4 +1,4 @@
-use crate::traits::{AssetKey, Instantiate};
+use crate::traits::{AssetHandleFor, Instantiate};
 use bevy::{
 	asset::{Assets, Handle},
 	ecs::{
@@ -14,13 +14,32 @@ use common::{
 	errors::{Error, Level},
 	resources::Shared,
 };
+use std::any::TypeId;
+
+impl<TMeshFn, TMaterialFn> AssetHandleFor<Mesh> for (TMeshFn, TMaterialFn)
+where
+	TMeshFn: FnMut(TypeId, Mesh) -> Handle<Mesh>,
+{
+	fn handle<TKey: 'static>(&mut self, mesh: Mesh) -> Handle<Mesh> {
+		(self.0)(TypeId::of::<TKey>(), mesh)
+	}
+}
+
+impl<TMeshFn, TMaterialFn> AssetHandleFor<StandardMaterial> for (TMeshFn, TMaterialFn)
+where
+	TMaterialFn: FnMut(TypeId, StandardMaterial) -> Handle<StandardMaterial>,
+{
+	fn handle<TKey: 'static>(&mut self, material: StandardMaterial) -> Handle<StandardMaterial> {
+		(self.1)(TypeId::of::<TKey>(), material)
+	}
+}
 
 pub fn instantiate<TAgent: Component + Instantiate>(
 	mut commands: Commands,
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut materials: ResMut<Assets<StandardMaterial>>,
-	mut shared_meshes: ResMut<Shared<AssetKey, Handle<Mesh>>>,
-	mut shared_materials: ResMut<Shared<AssetKey, Handle<StandardMaterial>>>,
+	mut shared_meshes: ResMut<Shared<TypeId, Handle<Mesh>>>,
+	mut shared_materials: ResMut<Shared<TypeId, Handle<StandardMaterial>>>,
 	agents: Query<(Entity, &TAgent), Added<TAgent>>,
 ) -> Vec<Result<(), Error>> {
 	let instantiate = |(entity, agent): (Entity, &TAgent)| {
@@ -32,8 +51,14 @@ pub fn instantiate<TAgent: Component + Instantiate>(
 		};
 		agent.instantiate(
 			&mut entity,
-			|key, mesh| shared_meshes.get_handle(key, || meshes.add(mesh.clone())),
-			|key, mat| shared_materials.get_handle(key, || materials.add(mat.clone())),
+			(
+				|type_id: TypeId, mesh: Mesh| {
+					shared_meshes.get_handle(type_id, || meshes.add(mesh.clone()))
+				},
+				|type_id: TypeId, material: StandardMaterial| {
+					shared_materials.get_handle(type_id, || materials.add(material.clone()))
+				},
+			),
 		)
 	};
 
@@ -43,6 +68,7 @@ pub fn instantiate<TAgent: Component + Instantiate>(
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::traits::AssetHandles;
 	use bevy::{
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},
@@ -64,18 +90,14 @@ mod tests {
 		fn instantiate(
 			&self,
 			on: &mut EntityCommands,
-			mut get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
-			mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
+			mut assets: impl AssetHandles,
 		) -> Result<(), Error> {
 			on.try_insert((
-				get_mesh_handle(AssetKey::Dummy, Mesh::from(Sphere { radius: 11. })),
-				get_material_handle(
-					AssetKey::Dummy,
-					StandardMaterial {
-						base_color: Color::BLUE,
-						..default()
-					},
-				),
+				assets.handle::<_Agent>(Mesh::from(Sphere { radius: 11. })),
+				assets.handle::<_Agent>(StandardMaterial {
+					base_color: Color::BLUE,
+					..default()
+				}),
 			));
 			Ok(())
 		}
@@ -85,12 +107,7 @@ mod tests {
 	struct _AgentWithChildren;
 
 	impl Instantiate for _AgentWithChildren {
-		fn instantiate(
-			&self,
-			on: &mut EntityCommands,
-			_: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
-			_: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
-		) -> Result<(), Error> {
+		fn instantiate(&self, on: &mut EntityCommands, _: impl AssetHandles) -> Result<(), Error> {
 			on.with_children(|parent| {
 				parent.spawn_empty();
 			});
@@ -102,12 +119,7 @@ mod tests {
 	struct _AgentWithInstantiationError;
 
 	impl Instantiate for _AgentWithInstantiationError {
-		fn instantiate(
-			&self,
-			_: &mut EntityCommands,
-			_: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
-			_: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
-		) -> Result<(), Error> {
+		fn instantiate(&self, _: &mut EntityCommands, _: impl AssetHandles) -> Result<(), Error> {
 			Err(Error {
 				msg: "AAA".to_owned(),
 				lvl: Level::Warning,
@@ -120,8 +132,8 @@ mod tests {
 		let logger = app.world.spawn_empty().id();
 		app.init_resource::<Assets<Mesh>>();
 		app.init_resource::<Assets<StandardMaterial>>();
-		app.init_resource::<Shared<AssetKey, Handle<Mesh>>>();
-		app.init_resource::<Shared<AssetKey, Handle<StandardMaterial>>>();
+		app.init_resource::<Shared<TypeId, Handle<Mesh>>>();
+		app.init_resource::<Shared<TypeId, Handle<StandardMaterial>>>();
 		app.add_systems(
 			Update,
 			instantiate::<TAgent>.pipe(fake_log_error_lazy_many(logger)),
@@ -184,8 +196,8 @@ mod tests {
 		let mesh = agent.get::<Handle<Mesh>>();
 		let shared_mesh = app
 			.world
-			.resource::<Shared<AssetKey, Handle<Mesh>>>()
-			.get(&AssetKey::Dummy);
+			.resource::<Shared<TypeId, Handle<Mesh>>>()
+			.get(&TypeId::of::<_Agent>());
 
 		assert_eq!(shared_mesh, mesh);
 	}
@@ -201,8 +213,8 @@ mod tests {
 		let mat = agent.get::<Handle<StandardMaterial>>();
 		let shared_mat = app
 			.world
-			.resource::<Shared<AssetKey, Handle<StandardMaterial>>>()
-			.get(&AssetKey::Dummy);
+			.resource::<Shared<TypeId, Handle<StandardMaterial>>>()
+			.get(&TypeId::of::<_Agent>());
 
 		assert_eq!(shared_mat, mat);
 	}

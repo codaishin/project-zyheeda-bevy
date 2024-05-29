@@ -11,7 +11,6 @@ use crate::components::{
 };
 use bars::components::Bar;
 use bevy::{
-	asset::Handle,
 	ecs::{bundle::Bundle, system::EntityCommands},
 	hierarchy::BuildChildren,
 	math::{primitives::Torus, Vec3},
@@ -32,7 +31,7 @@ use common::{
 	traits::clamp_zero_positive::ClampZeroPositive,
 };
 use gravity::components::Gravity;
-use prefabs::traits::{sphere, AssetKey, Instantiate, VoidPart};
+use prefabs::traits::{sphere, AssetHandles, Instantiate};
 use std::{f32::consts::PI, time::Duration};
 
 #[derive(Bundle)]
@@ -68,15 +67,16 @@ const VOID_SPHERE_TORUS_RADIUS: f32 = 0.35;
 const VOID_SPHERE_TORUS_RING_RADIUS: f32 = VOID_SPHERE_OUTER_RADIUS - VOID_SPHERE_TORUS_RADIUS;
 const VOID_SPHERE_GROUND_OFFSET: Vec3 = Vec3::new(0., 1.2, 0.);
 
+struct VoidSphereCore;
+
+struct VoidSphereRing;
+
 impl Instantiate for VoidSphere {
 	fn instantiate(
 		&self,
 		on: &mut EntityCommands,
-		mut get_mesh_handle: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
-		mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
+		mut assets: impl AssetHandles,
 	) -> Result<(), Error> {
-		let core = AssetKey::VoidSphere(VoidPart::Core);
-		let ring = AssetKey::VoidSphere(VoidPart::Ring);
 		let core_material = StandardMaterial {
 			base_color: Color::BLACK,
 			metallic: 1.,
@@ -126,8 +126,8 @@ impl Instantiate for VoidSphere {
 		on.with_children(|parent| {
 			parent.spawn(PbrVoidSphereBundle::new(
 				PbrBundle {
-					mesh: get_mesh_handle(core, core_mesh),
-					material: get_material_handle(core, core_material),
+					mesh: assets.handle::<VoidSphereCore>(core_mesh),
+					material: assets.handle::<VoidSphereCore>(core_material),
 					transform,
 					..default()
 				},
@@ -135,8 +135,8 @@ impl Instantiate for VoidSphere {
 			));
 			parent.spawn(PbrVoidSphereBundle::new(
 				PbrBundle {
-					mesh: get_mesh_handle(ring, ring_mesh.clone()),
-					material: get_material_handle(ring, ring_material.clone()),
+					mesh: assets.handle::<VoidSphereRing>(ring_mesh.clone()),
+					material: assets.handle::<VoidSphereRing>(ring_material.clone()),
 					transform,
 					..default()
 				},
@@ -144,8 +144,8 @@ impl Instantiate for VoidSphere {
 			));
 			parent.spawn(PbrVoidSphereBundle::new(
 				PbrBundle {
-					mesh: get_mesh_handle(ring, ring_mesh),
-					material: get_material_handle(ring, ring_material),
+					mesh: assets.handle::<VoidSphereRing>(ring_mesh),
+					material: assets.handle::<VoidSphereRing>(ring_material),
 					transform: transform_2nd_ring,
 					..default()
 				},

@@ -3,12 +3,11 @@ use crate::{
 	traits::ExtraComponentsDefinition,
 };
 use bevy::{
-	asset::Handle,
 	ecs::system::EntityCommands,
 	hierarchy::BuildChildren,
 	pbr::{PointLight, PointLightBundle, StandardMaterial},
 	prelude::default,
-	render::{color::Color, mesh::Mesh, view::Visibility},
+	render::{color::Color, view::Visibility},
 };
 use common::{
 	errors::Error,
@@ -16,7 +15,7 @@ use common::{
 	traits::{clamp_zero_positive::ClampZeroPositive, try_insert_on::TryInsertOn},
 };
 use light::components::{ResponsiveLight, ResponsiveLightData};
-use prefabs::traits::{AssetKey, Instantiate, LightStatus, LightType};
+use prefabs::traits::{AssetHandles, Instantiate};
 
 impl ExtraComponentsDefinition for Light<Wall> {
 	fn target_names() -> Vec<String> {
@@ -33,31 +32,28 @@ impl ExtraComponentsDefinition for Light<Wall> {
 	}
 }
 
+struct WallLightOn;
+
+struct WallLightOff;
+
 impl Instantiate for Light<Wall> {
 	fn instantiate(
 		&self,
 		on: &mut EntityCommands,
-		_: impl FnMut(AssetKey, Mesh) -> Handle<Mesh>,
-		mut get_material_handle: impl FnMut(AssetKey, StandardMaterial) -> Handle<StandardMaterial>,
+		mut assets: impl AssetHandles,
 	) -> Result<(), Error> {
 		let model = on.id();
 		let mut commands = on.commands();
 
-		let light_on_material = get_material_handle(
-			AssetKey::Light(LightType::Wall(LightStatus::On)),
-			StandardMaterial {
-				base_color: Color::WHITE,
-				emissive: Color::rgb_linear(14000.0, 14000.0, 14000.0),
-				..default()
-			},
-		);
-		let light_off_material = get_material_handle(
-			AssetKey::Light(LightType::Wall(LightStatus::Off)),
-			StandardMaterial {
-				base_color: Color::BLACK,
-				..default()
-			},
-		);
+		let light_on_material = assets.handle::<WallLightOn>(StandardMaterial {
+			base_color: Color::WHITE,
+			emissive: Color::rgb_linear(14000.0, 14000.0, 14000.0),
+			..default()
+		});
+		let light_off_material = assets.handle::<WallLightOff>(StandardMaterial {
+			base_color: Color::BLACK,
+			..default()
+		});
 
 		let light = commands
 			.spawn(PointLightBundle {
