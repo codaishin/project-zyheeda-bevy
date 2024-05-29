@@ -77,19 +77,21 @@ impl Instantiate for VoidSphere {
 		on: &mut EntityCommands,
 		mut assets: impl AssetHandles,
 	) -> Result<(), Error> {
-		let core_material = StandardMaterial {
+		let core_material = assets.handle::<VoidSphereCore>(&|| StandardMaterial {
 			base_color: Color::BLACK,
 			metallic: 1.,
 			..default()
-		};
-		let core_mesh = sphere(VOID_SPHERE_INNER_RADIUS);
-		let ring_material = StandardMaterial {
+		});
+		let core_mesh = assets.handle::<VoidSphereCore>(&|| sphere(VOID_SPHERE_INNER_RADIUS));
+		let ring_material = assets.handle::<VoidSphereRing>(&|| StandardMaterial {
 			emissive: Color::rgb_linear(23000.0, 23000.0, 23000.0),
 			..default()
-		};
-		let ring_mesh = Mesh::from(Torus {
-			major_radius: VOID_SPHERE_TORUS_RADIUS,
-			minor_radius: VOID_SPHERE_TORUS_RING_RADIUS,
+		});
+		let ring_mesh = assets.handle::<VoidSphereRing>(&|| {
+			Mesh::from(Torus {
+				major_radius: VOID_SPHERE_TORUS_RADIUS,
+				minor_radius: VOID_SPHERE_TORUS_RING_RADIUS,
+			})
 		});
 		let transform = Transform::from_translation(VOID_SPHERE_GROUND_OFFSET);
 		let mut transform_2nd_ring = transform;
@@ -126,8 +128,8 @@ impl Instantiate for VoidSphere {
 		on.with_children(|parent| {
 			parent.spawn(PbrVoidSphereBundle::new(
 				PbrBundle {
-					mesh: assets.handle::<VoidSphereCore>(core_mesh),
-					material: assets.handle::<VoidSphereCore>(core_material),
+					mesh: core_mesh,
+					material: core_material,
 					transform,
 					..default()
 				},
@@ -135,8 +137,8 @@ impl Instantiate for VoidSphere {
 			));
 			parent.spawn(PbrVoidSphereBundle::new(
 				PbrBundle {
-					mesh: assets.handle::<VoidSphereRing>(ring_mesh.clone()),
-					material: assets.handle::<VoidSphereRing>(ring_material.clone()),
+					mesh: ring_mesh.clone(),
+					material: ring_material.clone(),
 					transform,
 					..default()
 				},
@@ -144,8 +146,8 @@ impl Instantiate for VoidSphere {
 			));
 			parent.spawn(PbrVoidSphereBundle::new(
 				PbrBundle {
-					mesh: assets.handle::<VoidSphereRing>(ring_mesh),
-					material: assets.handle::<VoidSphereRing>(ring_material),
+					mesh: ring_mesh,
+					material: ring_material,
 					transform: transform_2nd_ring,
 					..default()
 				},

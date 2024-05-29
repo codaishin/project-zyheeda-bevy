@@ -18,18 +18,21 @@ use std::any::TypeId;
 
 impl<TMeshFn, TMaterialFn> AssetHandleFor<Mesh> for (TMeshFn, TMaterialFn)
 where
-	TMeshFn: FnMut(TypeId, Mesh) -> Handle<Mesh>,
+	TMeshFn: FnMut(TypeId, &dyn Fn() -> Mesh) -> Handle<Mesh>,
 {
-	fn handle<TKey: 'static>(&mut self, mesh: Mesh) -> Handle<Mesh> {
+	fn handle<TKey: 'static>(&mut self, mesh: &dyn Fn() -> Mesh) -> Handle<Mesh> {
 		(self.0)(TypeId::of::<TKey>(), mesh)
 	}
 }
 
 impl<TMeshFn, TMaterialFn> AssetHandleFor<StandardMaterial> for (TMeshFn, TMaterialFn)
 where
-	TMaterialFn: FnMut(TypeId, StandardMaterial) -> Handle<StandardMaterial>,
+	TMaterialFn: FnMut(TypeId, &dyn Fn() -> StandardMaterial) -> Handle<StandardMaterial>,
 {
-	fn handle<TKey: 'static>(&mut self, material: StandardMaterial) -> Handle<StandardMaterial> {
+	fn handle<TKey: 'static>(
+		&mut self,
+		material: &dyn Fn() -> StandardMaterial,
+	) -> Handle<StandardMaterial> {
 		(self.1)(TypeId::of::<TKey>(), material)
 	}
 }
@@ -52,11 +55,11 @@ pub fn instantiate<TAgent: Component + Instantiate>(
 		agent.instantiate(
 			&mut entity,
 			(
-				|type_id: TypeId, mesh: Mesh| {
-					shared_meshes.get_handle(type_id, || meshes.add(mesh.clone()))
+				|type_id: TypeId, mesh: &dyn Fn() -> Mesh| {
+					shared_meshes.get_handle(type_id, || meshes.add(mesh()))
 				},
-				|type_id: TypeId, material: StandardMaterial| {
-					shared_materials.get_handle(type_id, || materials.add(material.clone()))
+				|type_id: TypeId, material: &dyn Fn() -> StandardMaterial| {
+					shared_materials.get_handle(type_id, || materials.add(material()))
 				},
 			),
 		)
@@ -93,8 +96,8 @@ mod tests {
 			mut assets: impl AssetHandles,
 		) -> Result<(), Error> {
 			on.try_insert((
-				assets.handle::<_Agent>(Mesh::from(Sphere { radius: 11. })),
-				assets.handle::<_Agent>(StandardMaterial {
+				assets.handle::<_Agent>(&|| Mesh::from(Sphere { radius: 11. })),
+				assets.handle::<_Agent>(&|| StandardMaterial {
 					base_color: Color::BLUE,
 					..default()
 				}),

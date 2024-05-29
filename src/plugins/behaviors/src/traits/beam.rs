@@ -19,16 +19,18 @@ impl Instantiate for Beam {
 		on: &mut EntityCommands,
 		mut assets: impl AssetHandles,
 	) -> Result<(), Error> {
-		let mesh = Mesh::from(Cylinder {
-			radius: 0.01,
-			half_height: 0.5,
+		let mesh = assets.handle::<Beam>(&|| {
+			Mesh::from(Cylinder {
+				radius: 0.01,
+				half_height: 0.5,
+			})
 		});
-		let material = StandardMaterial {
+		let material = assets.handle::<Beam>(&|| StandardMaterial {
 			base_color: self.color,
 			emissive: self.emissive,
 			alpha_mode: AlphaMode::Add,
 			..default()
-		};
+		});
 
 		on.try_insert(
 			DealsDamage(self.damage)
@@ -38,8 +40,8 @@ impl Instantiate for Beam {
 		.with_children(|parent| {
 			parent.spawn((
 				PbrBundle {
-					material: assets.handle::<Beam>(material),
-					mesh: assets.handle::<Beam>(mesh),
+					material,
+					mesh,
 					transform: Transform::from_rotation(Quat::from_rotation_x(PI / 2.)),
 					..default()
 				},

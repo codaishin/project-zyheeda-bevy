@@ -43,11 +43,11 @@ impl Instantiate for Projectile<Plasma> {
 	) -> Result<(), Error> {
 		let transform = Transform::from_translation(Vec3::ZERO);
 		let color = Color::rgb_linear(0., 1., 1.);
-		let mesh = sphere(PLASMA_RADIUS);
-		let material = StandardMaterial {
+		let mesh = assets.handle::<Projectile<Plasma>>(&|| sphere(PLASMA_RADIUS));
+		let material = assets.handle::<Projectile<Plasma>>(&|| StandardMaterial {
 			emissive: color * 230000.0,
 			..default()
-		};
+		});
 
 		on.try_insert((
 			RigidBody::Fixed,
@@ -61,8 +61,8 @@ impl Instantiate for Projectile<Plasma> {
 		.with_children(|parent| {
 			parent.spawn(PbrBundle {
 				transform,
-				mesh: assets.handle::<Projectile<Plasma>>(mesh),
-				material: assets.handle::<Projectile<Plasma>>(material),
+				mesh,
+				material,
 				..default()
 			});
 			parent.spawn((

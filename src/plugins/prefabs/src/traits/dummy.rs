@@ -28,15 +28,17 @@ impl Instantiate for Dummy {
 		mut assets: impl AssetHandles,
 	) -> Result<(), Error> {
 		let transform = Transform::from_xyz(0., 1., 0.);
-		let mesh = Mesh::from(Cuboid::new(
-			DUMMY_DIMENSIONS.x,
-			DUMMY_DIMENSIONS.y,
-			DUMMY_DIMENSIONS.z,
-		));
-		let material = StandardMaterial {
+		let mesh = assets.handle::<Dummy>(&|| {
+			Mesh::from(Cuboid::new(
+				DUMMY_DIMENSIONS.x,
+				DUMMY_DIMENSIONS.y,
+				DUMMY_DIMENSIONS.z,
+			))
+		});
+		let material = assets.handle::<Dummy>(&|| StandardMaterial {
 			base_color: Color::GRAY,
 			..default()
-		};
+		});
 		let collider = Collider::cuboid(
 			DUMMY_DIMENSIONS.x / 2.,
 			DUMMY_DIMENSIONS.y / 2.,
@@ -46,8 +48,8 @@ impl Instantiate for Dummy {
 		on.with_children(|parent| {
 			parent.spawn(PbrBundle {
 				transform,
-				mesh: assets.handle::<Dummy>(mesh),
-				material: assets.handle::<Dummy>(material),
+				mesh,
+				material,
 				..default()
 			});
 			parent.spawn((

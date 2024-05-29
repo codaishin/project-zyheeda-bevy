@@ -25,13 +25,13 @@ impl Instantiate for ForceShield {
 		};
 		let base_color = Color::MIDNIGHT_BLUE;
 		let emissive = base_color * 100.;
-		let material = assets.handle::<ForceShield>(StandardMaterial {
+		let material = assets.handle::<ForceShield>(&|| StandardMaterial {
 			base_color,
 			emissive,
 			alpha_mode: AlphaMode::Add,
 			..default()
 		});
-		let mesh = assets.handle::<ForceShield>(Mesh::from(Cuboid { half_size }));
+		let mesh = assets.handle::<ForceShield>(&|| Mesh::from(Cuboid { half_size }));
 
 		on.insert((RigidBody::Fixed, TransformBundle::default()))
 			.with_children(|parent| {

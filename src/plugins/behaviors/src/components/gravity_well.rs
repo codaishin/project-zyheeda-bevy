@@ -46,8 +46,9 @@ impl Instantiate for GravityWell {
 		on.insert((
 			LifeTime(Duration::from_secs(5)),
 			PbrBundle {
-				mesh: assets.handle::<GravityWell>(Mesh::from(Sphere::new(GravityWell::RADIUS))),
-				material: assets.handle::<GravityWell>(StandardMaterial {
+				mesh: assets
+					.handle::<GravityWell>(&|| Mesh::from(Sphere::new(GravityWell::RADIUS))),
+				material: assets.handle::<GravityWell>(&|| StandardMaterial {
 					base_color,
 					emissive,
 					alpha_mode: AlphaMode::Add,

@@ -45,12 +45,12 @@ impl Instantiate for Light<Wall> {
 		let model = on.id();
 		let mut commands = on.commands();
 
-		let light_on_material = assets.handle::<WallLightOn>(StandardMaterial {
+		let light_on_material = assets.handle::<WallLightOn>(&|| StandardMaterial {
 			base_color: Color::WHITE,
 			emissive: Color::rgb_linear(14000.0, 14000.0, 14000.0),
 			..default()
 		});
-		let light_off_material = assets.handle::<WallLightOff>(StandardMaterial {
+		let light_off_material = assets.handle::<WallLightOff>(&|| StandardMaterial {
 			base_color: Color::BLACK,
 			..default()
 		});
