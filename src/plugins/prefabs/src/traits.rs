@@ -11,40 +11,6 @@ use bevy::{
 };
 use common::errors::Error;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ProjectileType {
-	Plasma,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub enum VoidPart {
-	Core,
-	Ring,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub enum LightStatus {
-	On,
-	Off,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub enum LightType {
-	Floating,
-	Wall(LightStatus),
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub enum AssetKey {
-	Projectile(ProjectileType),
-	Dummy,
-	VoidSphere(VoidPart),
-	Beam,
-	Light(LightType),
-	ForceShield,
-	GravityWell,
-}
-
 pub trait AssetHandleFor<TAsset: Asset> {
 	fn handle<Key: 'static>(&mut self, asset: TAsset) -> Handle<TAsset>;
 }
