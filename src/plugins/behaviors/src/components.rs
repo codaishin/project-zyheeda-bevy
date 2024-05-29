@@ -1,3 +1,4 @@
+pub mod gravity_well;
 pub mod ground_target;
 
 use crate::traits::{RemoveComponent, SpawnAttack};

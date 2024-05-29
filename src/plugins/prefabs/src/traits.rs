@@ -42,6 +42,7 @@ pub enum AssetKey {
 	Beam,
 	Light(LightType),
 	ForceShield,
+	GravityWell,
 }
 
 pub trait Instantiate {

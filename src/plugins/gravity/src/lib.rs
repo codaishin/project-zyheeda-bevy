@@ -22,13 +22,13 @@ impl Plugin for GravityPlugin {
 }
 
 pub trait AddGravityInteraction {
-	fn register_gravity_source<TGravitySource>(&mut self)
+	fn register_gravity_source<TGravitySource>(&mut self) -> &mut Self
 	where
 		TGravitySource: Component + GetGravityPull + GetGravityEffectCollider;
 }
 
 impl AddGravityInteraction for App {
-	fn register_gravity_source<TGravitySource>(&mut self)
+	fn register_gravity_source<TGravitySource>(&mut self) -> &mut Self
 	where
 		TGravitySource: Component + GetGravityPull + GetGravityEffectCollider,
 	{
@@ -38,5 +38,6 @@ impl AddGravityInteraction for App {
 			apply_gravity_effect::<CollidingEntities, TGravitySource>,
 		);
 		self.add_systems(Update, gravity_systems.chain());
+		self
 	}
 }
