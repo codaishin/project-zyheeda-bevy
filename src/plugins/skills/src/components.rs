@@ -3,6 +3,7 @@ pub mod inventory;
 pub mod queue;
 pub mod slots;
 
+pub(crate) mod combo_linger;
 pub(crate) mod skill_executer;
 
 use self::slots::Slots;

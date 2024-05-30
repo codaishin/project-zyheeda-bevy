@@ -29,7 +29,7 @@ use common::{
 	tools::{Last, This},
 	traits::{load_asset::Path, state_duration::StateUpdate},
 };
-use std::hash::Hash;
+use std::{hash::Hash, time::Duration};
 
 pub(crate) trait Enqueue<TItem> {
 	fn enqueue(&mut self, item: TItem);
@@ -106,6 +106,10 @@ pub(crate) trait GetActiveSkill<TAnimation, TSkillState: Clone> {
 		&mut self,
 	) -> Option<impl GetSkillBehavior + GetAnimation<TAnimation> + StateUpdate<TSkillState>>;
 	fn clear_active(&mut self);
+}
+
+pub(crate) trait IsLingering {
+	fn is_lingering(&mut self, delta: Duration) -> bool;
 }
 
 pub(crate) trait NextCombo {
