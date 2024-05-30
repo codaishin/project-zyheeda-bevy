@@ -1,18 +1,36 @@
+use std::time::Duration;
+
 use crate::{
 	components::slots::Slots,
 	skills::{Queued, Skill},
-	traits::{Flush, Iter, IterAddedMut, NextCombo},
+	traits::{Flush, IsLingering, Iter, IterAddedMut, NextCombo},
 };
-use bevy::ecs::{component::Component, system::Query};
+use bevy::{
+	ecs::{
+		component::Component,
+		system::{Query, Res},
+		world::Mut,
+	},
+	time::Time,
+};
 
 pub(crate) fn update_skill_combos<
 	TCombos: NextCombo + Flush + Component,
+	TComboLinger: IsLingering + Flush + Component,
 	TSkills: Iter<Skill<Queued>> + IterAddedMut<Skill<Queued>> + Component,
+	TTime: Default + Sync + Send + 'static,
 >(
-	mut agents: Query<(&mut TCombos, &mut TSkills, &Slots)>,
+	time: Res<Time<TTime>>,
+	mut agents: Query<(
+		&mut TCombos,
+		Option<&mut TComboLinger>,
+		&mut TSkills,
+		&Slots,
+	)>,
 ) {
-	for (mut combos, mut skills, slots) in &mut agents {
-		if skills.iter().next().is_none() {
+	let delta = time.delta();
+	for (mut combos, linger, mut skills, slots) in &mut agents {
+		if idle_and_not_lingering(linger, &mut skills, delta) {
 			combos.flush();
 		}
 		for skill in skills.iter_added_mut() {
@@ -24,6 +42,31 @@ pub(crate) fn update_skill_combos<
 	}
 }
 
+fn idle_and_not_lingering<TComboLinger: IsLingering + Flush, TSkills: Iter<Skill<Queued>>>(
+	linger: Option<Mut<TComboLinger>>,
+	skills: &mut Mut<TSkills>,
+	delta: Duration,
+) -> bool {
+	if skills_queued(skills) {
+		return false;
+	}
+
+	let Some(mut linger) = linger else {
+		return true;
+	};
+
+	if linger.is_lingering(delta) {
+		return false;
+	}
+
+	linger.flush();
+	true
+}
+
+fn skills_queued<TSkills: Iter<Skill<Queued>>>(skills: &mut Mut<TSkills>) -> bool {
+	skills.iter().next().is_some()
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -31,15 +74,47 @@ mod tests {
 		components::{Mounts, Slot},
 		items::SlotKey,
 		skills::{Queued, Skill},
+		traits::IsLingering,
 	};
 	use bevy::{
 		app::{App, Update},
 		ecs::{component::Component, entity::Entity},
+		time::{Real, Time},
 		utils::default,
 	};
-	use common::{components::Side, test_tools::utils::SingleThreadedApp};
+	use common::{
+		components::Side,
+		test_tools::utils::{SingleThreadedApp, TickTime},
+	};
 	use mockall::{mock, predicate::eq};
-	use std::collections::HashMap;
+	use std::{collections::HashMap, time::Duration};
+
+	#[derive(Component, Default)]
+	struct _Linger {
+		mock: Mock_Linger,
+	}
+
+	impl Flush for _Linger {
+		fn flush(&mut self) {
+			self.mock.flush()
+		}
+	}
+
+	impl IsLingering for _Linger {
+		fn is_lingering(&mut self, delta: Duration) -> bool {
+			self.mock.is_lingering(delta)
+		}
+	}
+
+	mock! {
+		_Linger {}
+		impl Flush for _Linger {
+			fn flush(&mut self);
+		}
+		impl IsLingering for _Linger {
+			fn is_lingering(&mut self, delta: Duration) -> bool;
+		}
+	}
 
 	#[derive(Component, Default)]
 	struct _Combos {
@@ -103,7 +178,12 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, update_skill_combos::<_Combos, _Skills>);
+		app.init_resource::<Time<Real>>();
+		app.tick_time(Duration::ZERO);
+		app.add_systems(
+			Update,
+			update_skill_combos::<_Combos, _Linger, _Skills, Real>,
+		);
 
 		app
 	}
@@ -238,7 +318,7 @@ mod tests {
 	}
 
 	#[test]
-	fn flush_when_empty() {
+	fn combo_flush_when_empty() {
 		let mut app = setup();
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
@@ -256,7 +336,7 @@ mod tests {
 	}
 
 	#[test]
-	fn no_flush_when_not_empty() {
+	fn no_combo_flush_when_not_empty() {
 		let mut app = setup();
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
@@ -273,6 +353,144 @@ mod tests {
 		};
 
 		app.world.spawn((combos, skills, slots));
+		app.update();
+	}
+
+	#[test]
+	fn no_combo_flush_when_empty_and_linger_is_lingering() {
+		let mut app = setup();
+		let slots = Slots(HashMap::from([(
+			SlotKey::Hand(Side::Off),
+			Slot {
+				mounts: mounts(),
+				item: None,
+			},
+		)]));
+		let mut combos = _Combos::default();
+		combos.mock.expect_flush().never().return_const(());
+		let mut linger = _Linger::default();
+		linger.mock.expect_is_lingering().return_const(true);
+		linger.mock.expect_flush().return_const(());
+		let skills = _Skills::default();
+
+		app.world.spawn((combos, linger, skills, slots));
+		app.update();
+	}
+
+	#[test]
+	fn combo_flush_when_empty_and_linger_is_not_lingering() {
+		let mut app = setup();
+		let slots = Slots(HashMap::from([(
+			SlotKey::Hand(Side::Off),
+			Slot {
+				mounts: mounts(),
+				item: None,
+			},
+		)]));
+		let mut combos = _Combos::default();
+		combos.mock.expect_flush().times(1).return_const(());
+		let mut linger = _Linger::default();
+		linger.mock.expect_is_lingering().return_const(false);
+		linger.mock.expect_flush().return_const(());
+		let skills = _Skills::default();
+
+		app.world.spawn((combos, linger, skills, slots));
+		app.update();
+	}
+
+	#[test]
+	fn linger_flush_when_empty_and_linger_is_not_lingering() {
+		let mut app = setup();
+		let slots = Slots(HashMap::from([(
+			SlotKey::Hand(Side::Off),
+			Slot {
+				mounts: mounts(),
+				item: None,
+			},
+		)]));
+		let mut combos = _Combos::default();
+		combos.mock.expect_flush().return_const(());
+		let mut linger = _Linger::default();
+		linger.mock.expect_is_lingering().return_const(false);
+		linger.mock.expect_flush().times(1).return_const(());
+		let skills = _Skills::default();
+
+		app.world.spawn((combos, linger, skills, slots));
+		app.update();
+	}
+
+	#[test]
+	fn no_linger_flush_when_empty_and_linger_is_lingering() {
+		let mut app = setup();
+		let slots = Slots(HashMap::from([(
+			SlotKey::Hand(Side::Off),
+			Slot {
+				mounts: mounts(),
+				item: None,
+			},
+		)]));
+		let mut combos = _Combos::default();
+		combos.mock.expect_flush().return_const(());
+		let mut linger = _Linger::default();
+		linger.mock.expect_is_lingering().return_const(true);
+		linger.mock.expect_flush().never().return_const(());
+		let skills = _Skills::default();
+
+		app.world.spawn((combos, linger, skills, slots));
+		app.update();
+	}
+
+	#[test]
+	fn do_not_test_for_linger_when_skill_queue_not_empty() {
+		let mut app = setup();
+		let slots = Slots(HashMap::from([(
+			SlotKey::Hand(Side::Off),
+			Slot {
+				mounts: mounts(),
+				item: None,
+			},
+		)]));
+		let mut combos = _Combos::default();
+		combos.mock.expect_flush().return_const(());
+		let mut linger = _Linger::default();
+		linger
+			.mock
+			.expect_is_lingering()
+			.never()
+			.return_const(false);
+		linger.mock.expect_flush().return_const(());
+		let skills = _Skills {
+			early: vec![Skill::default()],
+			..default()
+		};
+
+		app.world.spawn((combos, linger, skills, slots));
+		app.update();
+	}
+
+	#[test]
+	fn call_is_lingering_with_delta() {
+		let mut app = setup();
+		app.tick_time(Duration::from_secs(42));
+		let slots = Slots(HashMap::from([(
+			SlotKey::Hand(Side::Off),
+			Slot {
+				mounts: mounts(),
+				item: None,
+			},
+		)]));
+		let mut combos = _Combos::default();
+		combos.mock.expect_flush().return_const(());
+		let mut linger = _Linger::default();
+		linger
+			.mock
+			.expect_is_lingering()
+			.with(eq(Duration::from_secs(42)))
+			.return_const(false);
+		linger.mock.expect_flush().return_const(());
+		let skills = _Skills::default();
+
+		app.world.spawn((combos, linger, skills, slots));
 		app.update();
 	}
 }

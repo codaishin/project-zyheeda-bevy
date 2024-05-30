@@ -32,6 +32,7 @@ use common::{
 	traits::try_insert_on::TryInsertOn,
 };
 use components::{
+	combo_linger::ComboLinger,
 	combos::{ComboNode, Combos},
 	inventory::Inventory,
 	queue::Queue,
@@ -79,7 +80,7 @@ impl Plugin for SkillsPlugin {
 				(
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
 						.pipe(enqueue::<Slots, Skill, Queue, Skill<Queued>>),
-					update_skill_combos::<Combos, Queue>,
+					update_skill_combos::<Combos, ComboLinger, Queue, Virtual>,
 					advance_active_skill::<
 						Queue,
 						Animation,
