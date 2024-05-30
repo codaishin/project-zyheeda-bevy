@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::{
 	components::slots::Slots,
 	skills::{Queued, Skill},
@@ -9,10 +7,17 @@ use bevy::{
 	ecs::{
 		component::Component,
 		system::{Query, Res},
-		world::Mut,
 	},
 	time::Time,
 };
+use std::time::Duration;
+
+type Components<'a, TCombos, TComboLinger, TSkills> = (
+	&'a mut TCombos,
+	Option<&'a mut TComboLinger>,
+	&'a mut TSkills,
+	&'a Slots,
+);
 
 pub(crate) fn update_skill_combos<
 	TCombos: NextCombo + Flush + Component,
@@ -21,50 +26,71 @@ pub(crate) fn update_skill_combos<
 	TTime: Default + Sync + Send + 'static,
 >(
 	time: Res<Time<TTime>>,
-	mut agents: Query<(
-		&mut TCombos,
-		Option<&mut TComboLinger>,
-		&mut TSkills,
-		&Slots,
-	)>,
+	mut agents: Query<Components<TCombos, TComboLinger, TSkills>>,
 ) {
 	let delta = time.delta();
-	for (mut combos, linger, mut skills, slots) in &mut agents {
-		if idle_and_not_lingering(linger, &mut skills, delta) {
-			combos.flush();
-		}
+	for (mut combos, mut linger, mut skills, slots) in &mut agents {
+		let combos = combos.as_mut();
+		let linger = linger.as_deref_mut();
+		let skills = skills.as_mut();
+
 		for skill in skills.iter_added_mut() {
-			let Some(combo) = combos.next(&skill.data.slot_key, slots) else {
-				continue;
-			};
-			*skill = combo.with(skill.data.clone());
+			update_skill(combos, skill, slots);
+		}
+
+		for flushable in who_to_flush(combos, linger, skills, delta) {
+			flushable.flush();
 		}
 	}
 }
 
-fn idle_and_not_lingering<TComboLinger: IsLingering + Flush, TSkills: Iter<Skill<Queued>>>(
-	linger: Option<Mut<TComboLinger>>,
-	skills: &mut Mut<TSkills>,
+fn update_skill<TCombos: NextCombo>(
+	combos: &mut TCombos,
+	skill: &mut Skill<Queued>,
+	slots: &Slots,
+) {
+	let Some(combo) = combos.next(&skill.data.slot_key, slots) else {
+		return;
+	};
+	*skill = combo.with(skill.data.clone());
+}
+
+fn who_to_flush<
+	'a,
+	TCombos: Flush,
+	TComboLinger: IsLingering + Flush,
+	TSkills: Iter<Skill<Queued>>,
+>(
+	combos: &'a mut TCombos,
+	linger: Option<&'a mut TComboLinger>,
+	skills: &mut TSkills,
 	delta: Duration,
-) -> bool {
+) -> Vec<&'a mut dyn Flush> {
 	if skills_queued(skills) {
-		return false;
+		return one_or_empty(linger);
 	}
 
-	let Some(mut linger) = linger else {
-		return true;
+	let Some(linger) = linger else {
+		return vec![combos];
 	};
 
-	if linger.is_lingering(delta) {
-		return false;
+	if !linger.is_lingering(delta) {
+		return vec![combos, linger];
 	}
 
-	linger.flush();
-	true
+	vec![]
 }
 
-fn skills_queued<TSkills: Iter<Skill<Queued>>>(skills: &mut Mut<TSkills>) -> bool {
+fn skills_queued<TSkills: Iter<Skill<Queued>>>(skills: &mut TSkills) -> bool {
 	skills.iter().next().is_some()
+}
+
+fn one_or_empty<TFlush: Flush>(linger: Option<&mut TFlush>) -> Vec<&mut dyn Flush> {
+	linger.into_iter().map(as_dyn_flush).collect()
+}
+
+fn as_dyn_flush<TFlush: Flush>(value: &mut TFlush) -> &mut dyn Flush {
+	value
 }
 
 #[cfg(test)]
@@ -414,6 +440,30 @@ mod tests {
 		linger.mock.expect_is_lingering().return_const(false);
 		linger.mock.expect_flush().times(1).return_const(());
 		let skills = _Skills::default();
+
+		app.world.spawn((combos, linger, skills, slots));
+		app.update();
+	}
+
+	#[test]
+	fn linger_flush_when_not_empty() {
+		let mut app = setup();
+		let slots = Slots(HashMap::from([(
+			SlotKey::Hand(Side::Off),
+			Slot {
+				mounts: mounts(),
+				item: None,
+			},
+		)]));
+		let mut combos = _Combos::default();
+		combos.mock.expect_flush().return_const(());
+		let mut linger = _Linger::default();
+		linger.mock.expect_is_lingering().return_const(true);
+		linger.mock.expect_flush().times(1).return_const(());
+		let skills = _Skills {
+			early: vec![Skill::default()],
+			..default()
+		};
 
 		app.world.spawn((combos, linger, skills, slots));
 		app.update();
