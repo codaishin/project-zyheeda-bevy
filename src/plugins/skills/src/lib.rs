@@ -49,7 +49,10 @@ use skills::{
 	Queued,
 	Skill,
 };
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::{
+	collections::{HashMap, HashSet, VecDeque},
+	time::Duration,
+};
 use systems::{
 	advance_active_skill::advance_active_skill,
 	enqueue::enqueue,
@@ -139,6 +142,7 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 		player,
 		(
 			SkillExecuter::default(),
+			ComboLinger::new(Duration::from_secs(2)),
 			get_inventory(),
 			get_loadout(),
 			get_combos(),
