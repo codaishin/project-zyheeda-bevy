@@ -32,6 +32,7 @@ use common::{
 	traits::try_insert_on::TryInsertOn,
 };
 use components::{
+	combo_linger::ComboLinger,
 	combos::{ComboNode, Combos},
 	inventory::Inventory,
 	queue::Queue,
@@ -48,7 +49,10 @@ use skills::{
 	Queued,
 	Skill,
 };
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::{
+	collections::{HashMap, HashSet, VecDeque},
+	time::Duration,
+};
 use systems::{
 	advance_active_skill::advance_active_skill,
 	enqueue::enqueue,
@@ -79,7 +83,7 @@ impl Plugin for SkillsPlugin {
 				(
 					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
 						.pipe(enqueue::<Slots, Skill, Queue, Skill<Queued>>),
-					update_skill_combos::<Combos, Queue>,
+					update_skill_combos::<Combos, ComboLinger, Queue, Virtual>,
 					advance_active_skill::<
 						Queue,
 						Animation,
@@ -138,6 +142,7 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 		player,
 		(
 			SkillExecuter::default(),
+			ComboLinger::new(Duration::from_secs(2)),
 			get_inventory(),
 			get_loadout(),
 			get_combos(),
