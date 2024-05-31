@@ -32,7 +32,7 @@ use common::{
 	tools::{Last, This},
 	traits::{load_asset::Path, state_duration::StateUpdate},
 };
-use std::{hash::Hash, time::Duration};
+use std::hash::Hash;
 
 pub(crate) trait Enqueue<TItem> {
 	fn enqueue(&mut self, item: TItem);
@@ -111,8 +111,8 @@ pub(crate) trait GetActiveSkill<TAnimation, TSkillState: Clone> {
 	fn clear_active(&mut self);
 }
 
-pub(crate) trait IsLingering {
-	fn is_lingering(&mut self, delta: Duration) -> bool;
+pub trait IsLingering {
+	fn is_lingering(&self) -> bool;
 }
 
 pub trait PeekNext<TNext> {

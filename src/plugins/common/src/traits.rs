@@ -13,3 +13,4 @@ pub mod remove_conditionally;
 pub mod state_duration;
 pub mod try_insert_on;
 pub mod try_remove_from;
+pub mod update_cumulative;

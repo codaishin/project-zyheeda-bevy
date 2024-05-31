@@ -1,9 +1,10 @@
 use crate::traits::{Flush, IsLingering};
 use bevy::ecs::component::Component;
+use common::traits::update_cumulative::CumulativeUpdate;
 use std::time::Duration;
 
 #[derive(Component)]
-pub(crate) struct ComboLinger {
+pub struct ComboLinger {
 	max_duration: Duration,
 	duration: Duration,
 }
@@ -18,9 +19,14 @@ impl ComboLinger {
 }
 
 impl IsLingering for ComboLinger {
-	fn is_lingering(&mut self, delta: Duration) -> bool {
-		self.duration += delta;
+	fn is_lingering(&self) -> bool {
 		self.duration <= self.max_duration
+	}
+}
+
+impl CumulativeUpdate<Duration> for ComboLinger {
+	fn update_cumulative(&mut self, delta: Duration) {
+		self.duration += delta;
 	}
 }
 
@@ -35,34 +41,49 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn linger_when_delta_smaller_than_duration() {
-		let mut linger = ComboLinger::new(Duration::from_secs(3));
+	fn linger_when_not_updated() {
+		let linger = ComboLinger::new(Duration::from_secs(3));
 
-		assert!(linger.is_lingering(Duration::from_secs(1)));
+		assert!(linger.is_lingering());
 	}
 
 	#[test]
-	fn linger_when_delta_greater_than_duration() {
+	fn linger_when_updated_greater_than_duration() {
 		let mut linger = ComboLinger::new(Duration::from_secs(3));
 
-		assert!(!linger.is_lingering(Duration::from_secs(4)));
+		linger.update_cumulative(Duration::from_secs(4));
+
+		assert!(!linger.is_lingering());
 	}
 
 	#[test]
-	fn linger_when_delta_equal_to_duration() {
+	fn linger_when_updated_equal_to_duration() {
 		let mut linger = ComboLinger::new(Duration::from_secs(3));
 
-		assert!(linger.is_lingering(Duration::from_secs(3)));
+		linger.update_cumulative(Duration::from_secs(3));
+		assert!(linger.is_lingering());
 	}
 
 	#[test]
 	fn linger_step_by_step_progression() {
 		let mut linger = ComboLinger::new(Duration::from_secs(3));
 		let lingers = [
-			linger.is_lingering(Duration::from_secs(1)),
-			linger.is_lingering(Duration::from_secs(1)),
-			linger.is_lingering(Duration::from_secs(1)),
-			linger.is_lingering(Duration::from_secs(1)),
+			{
+				linger.update_cumulative(Duration::from_secs(1));
+				linger.is_lingering()
+			},
+			{
+				linger.update_cumulative(Duration::from_secs(1));
+				linger.is_lingering()
+			},
+			{
+				linger.update_cumulative(Duration::from_secs(1));
+				linger.is_lingering()
+			},
+			{
+				linger.update_cumulative(Duration::from_secs(1));
+				linger.is_lingering()
+			},
 		];
 
 		assert_eq!([true, true, true, false], lingers);
@@ -71,13 +92,21 @@ mod tests {
 	#[test]
 	fn flush_resets_measurement() {
 		let mut linger = ComboLinger::new(Duration::from_secs(1));
-		linger.is_lingering(Duration::from_secs(1));
-		linger.is_lingering(Duration::from_secs(1));
+		linger.update_cumulative(Duration::from_secs(1));
+		linger.is_lingering();
+		linger.update_cumulative(Duration::from_secs(1));
+		linger.is_lingering();
 		linger.flush();
 
 		let lingers = [
-			linger.is_lingering(Duration::from_secs(1)),
-			linger.is_lingering(Duration::from_secs(1)),
+			{
+				linger.update_cumulative(Duration::from_secs(1));
+				linger.is_lingering()
+			},
+			{
+				linger.update_cumulative(Duration::from_secs(1));
+				linger.is_lingering()
+			},
 		];
 
 		assert_eq!([true, false], lingers);
