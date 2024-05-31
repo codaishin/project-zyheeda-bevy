@@ -1,7 +1,7 @@
 use crate::{
 	components::slots::Slots,
 	skills::{Queued, Skill},
-	traits::{Flush, IsLingering, Iter, IterAddedMut, NextCombo},
+	traits::{AdvanceCombo, Flush, IsLingering, Iter, IterAddedMut},
 };
 use bevy::{
 	ecs::{
@@ -10,6 +10,7 @@ use bevy::{
 	},
 	time::Time,
 };
+use common::traits::update_cumulative::CumulativeUpdate;
 use std::time::Duration;
 
 type Components<'a, TCombos, TComboLinger, TSkills> = (
@@ -20,8 +21,8 @@ type Components<'a, TCombos, TComboLinger, TSkills> = (
 );
 
 pub(crate) fn update_skill_combos<
-	TCombos: NextCombo + Flush + Component,
-	TComboLinger: IsLingering + Flush + Component,
+	TCombos: AdvanceCombo + Flush + Component,
+	TComboLinger: IsLingering + CumulativeUpdate<Duration> + Flush + Component,
 	TSkills: Iter<Skill<Queued>> + IterAddedMut<Skill<Queued>> + Component,
 	TTime: Default + Sync + Send + 'static,
 >(
@@ -44,21 +45,21 @@ pub(crate) fn update_skill_combos<
 	}
 }
 
-fn update_skill<TCombos: NextCombo>(
+fn update_skill<TCombos: AdvanceCombo>(
 	combos: &mut TCombos,
 	skill: &mut Skill<Queued>,
 	slots: &Slots,
 ) {
-	let Some(combo) = combos.next(&skill.data.slot_key, slots) else {
+	let Some(combo_skill) = combos.advance(&skill.data.slot_key, slots) else {
 		return;
 	};
-	*skill = combo.with(skill.data.clone());
+	*skill = combo_skill.with(skill.data.clone());
 }
 
 fn who_to_flush<
 	'a,
 	TCombos: Flush,
-	TComboLinger: IsLingering + Flush,
+	TComboLinger: CumulativeUpdate<Duration> + IsLingering + Flush,
 	TSkills: Iter<Skill<Queued>>,
 >(
 	combos: &'a mut TCombos,
@@ -74,7 +75,8 @@ fn who_to_flush<
 		return vec![combos];
 	};
 
-	if !linger.is_lingering(delta) {
+	linger.update_cumulative(delta);
+	if !linger.is_lingering() {
 		return vec![combos, linger];
 	}
 
@@ -111,8 +113,9 @@ mod tests {
 	use common::{
 		components::Side,
 		test_tools::utils::{SingleThreadedApp, TickTime},
+		traits::update_cumulative::CumulativeUpdate as UpdateTrait,
 	};
-	use mockall::{mock, predicate::eq};
+	use mockall::{mock, predicate::eq, Sequence};
 	use std::{collections::HashMap, time::Duration};
 
 	#[derive(Component, Default)]
@@ -127,8 +130,14 @@ mod tests {
 	}
 
 	impl IsLingering for _Linger {
-		fn is_lingering(&mut self, delta: Duration) -> bool {
-			self.mock.is_lingering(delta)
+		fn is_lingering(&self) -> bool {
+			self.mock.is_lingering()
+		}
+	}
+
+	impl UpdateTrait<Duration> for _Linger {
+		fn update_cumulative(&mut self, value: Duration) {
+			self.mock.update_cumulative(value)
 		}
 	}
 
@@ -138,7 +147,10 @@ mod tests {
 			fn flush(&mut self);
 		}
 		impl IsLingering for _Linger {
-			fn is_lingering(&mut self, delta: Duration) -> bool;
+			fn is_lingering(& self) -> bool;
+		}
+		impl UpdateTrait<Duration> for _Linger {
+			fn update_cumulative(&mut self, value: Duration);
 		}
 	}
 
@@ -149,17 +161,17 @@ mod tests {
 
 	mock! {
 		_Combos {}
-		impl NextCombo for _Combos {
-			fn next(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill> {}
+		impl AdvanceCombo for _Combos {
+			fn advance(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill> {}
 		}
 		impl Flush for _Combos {
 			fn flush(&mut self) {}
 		}
 	}
 
-	impl NextCombo for _Combos {
-		fn next(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill> {
-			self.mock.next(trigger, slots)
+	impl AdvanceCombo for _Combos {
+		fn advance(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill> {
+			self.mock.advance(trigger, slots)
 		}
 	}
 
@@ -244,13 +256,13 @@ mod tests {
 		combos.mock.expect_flush().return_const(());
 		combos
 			.mock
-			.expect_next()
+			.expect_advance()
 			.times(1)
 			.with(eq(SlotKey::Hand(Side::Main)), eq(slots.clone()))
 			.return_const(Skill::default());
 		combos
 			.mock
-			.expect_next()
+			.expect_advance()
 			.times(1)
 			.with(eq(SlotKey::Hand(Side::Off)), eq(slots.clone()))
 			.return_const(Skill::default());
@@ -293,7 +305,7 @@ mod tests {
 		combos.mock.expect_flush().return_const(());
 		combos
 			.mock
-			.expect_next()
+			.expect_advance()
 			.with(eq(SlotKey::Hand(Side::Main)), eq(slots.clone()))
 			.return_const(Skill {
 				name: "replace a",
@@ -301,7 +313,7 @@ mod tests {
 			});
 		combos
 			.mock
-			.expect_next()
+			.expect_advance()
 			.with(eq(SlotKey::Hand(Side::Off)), eq(slots.clone()))
 			.return_const(Skill {
 				name: "replace a",
@@ -395,6 +407,7 @@ mod tests {
 		let mut combos = _Combos::default();
 		combos.mock.expect_flush().never().return_const(());
 		let mut linger = _Linger::default();
+		linger.mock.expect_update_cumulative().return_const(());
 		linger.mock.expect_is_lingering().return_const(true);
 		linger.mock.expect_flush().return_const(());
 		let skills = _Skills::default();
@@ -416,6 +429,7 @@ mod tests {
 		let mut combos = _Combos::default();
 		combos.mock.expect_flush().times(1).return_const(());
 		let mut linger = _Linger::default();
+		linger.mock.expect_update_cumulative().return_const(());
 		linger.mock.expect_is_lingering().return_const(false);
 		linger.mock.expect_flush().return_const(());
 		let skills = _Skills::default();
@@ -437,6 +451,7 @@ mod tests {
 		let mut combos = _Combos::default();
 		combos.mock.expect_flush().return_const(());
 		let mut linger = _Linger::default();
+		linger.mock.expect_update_cumulative().return_const(());
 		linger.mock.expect_is_lingering().return_const(false);
 		linger.mock.expect_flush().times(1).return_const(());
 		let skills = _Skills::default();
@@ -458,6 +473,7 @@ mod tests {
 		let mut combos = _Combos::default();
 		combos.mock.expect_flush().return_const(());
 		let mut linger = _Linger::default();
+		linger.mock.expect_update_cumulative().return_const(());
 		linger.mock.expect_is_lingering().return_const(true);
 		linger.mock.expect_flush().times(1).return_const(());
 		let skills = _Skills {
@@ -482,6 +498,7 @@ mod tests {
 		let mut combos = _Combos::default();
 		combos.mock.expect_flush().return_const(());
 		let mut linger = _Linger::default();
+		linger.mock.expect_update_cumulative().return_const(());
 		linger.mock.expect_is_lingering().return_const(true);
 		linger.mock.expect_flush().never().return_const(());
 		let skills = _Skills::default();
@@ -503,6 +520,7 @@ mod tests {
 		let mut combos = _Combos::default();
 		combos.mock.expect_flush().return_const(());
 		let mut linger = _Linger::default();
+		linger.mock.expect_update_cumulative().return_const(());
 		linger
 			.mock
 			.expect_is_lingering()
@@ -534,8 +552,43 @@ mod tests {
 		let mut linger = _Linger::default();
 		linger
 			.mock
-			.expect_is_lingering()
+			.expect_update_cumulative()
 			.with(eq(Duration::from_secs(42)))
+			.return_const(());
+		linger.mock.expect_is_lingering().return_const(false);
+		linger.mock.expect_flush().return_const(());
+		let skills = _Skills::default();
+
+		app.world.spawn((combos, linger, skills, slots));
+		app.update();
+	}
+
+	#[test]
+	fn call_update_and_is_lingering_in_sequence() {
+		let mut app = setup();
+		app.tick_time(Duration::from_secs(42));
+		let slots = Slots(HashMap::from([(
+			SlotKey::Hand(Side::Off),
+			Slot {
+				mounts: mounts(),
+				item: None,
+			},
+		)]));
+		let mut combos = _Combos::default();
+		combos.mock.expect_flush().return_const(());
+		let mut seq = Sequence::default();
+		let mut linger = _Linger::default();
+		linger
+			.mock
+			.expect_update_cumulative()
+			.times(1)
+			.in_sequence(&mut seq)
+			.return_const(());
+		linger
+			.mock
+			.expect_is_lingering()
+			.times(1)
+			.in_sequence(&mut seq)
 			.return_const(false);
 		linger.mock.expect_flush().return_const(());
 		let skills = _Skills::default();

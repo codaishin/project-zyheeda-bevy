@@ -32,7 +32,13 @@ use common::{
 };
 use components::{inventory_panel::InventoryPanel, quickbar_panel::QuickbarPanel};
 use skills::{
-	components::{inventory::Inventory, queue::Queue, slots::Slots},
+	components::{
+		combo_linger::ComboLinger,
+		combos::Combos,
+		inventory::Inventory,
+		queue::Queue,
+		slots::Slots,
+	},
 	items::{InventoryKey, SlotKey},
 };
 use systems::items::swap::{
@@ -80,7 +86,7 @@ impl Plugin for IngameMenuPlugin {
 			.add_systems(
 				Update,
 				(
-					quickbar::<Queue, AssetServer>,
+					quickbar::<Queue, Combos, ComboLinger, AssetServer>,
 					update_label_text::<QuickbarPanel>,
 					panel_colors::<QuickbarPanel>,
 					panel_activity_colors_override::<Queue, QuickbarPanel>,

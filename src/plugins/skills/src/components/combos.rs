@@ -1,7 +1,7 @@
 use super::{SlotKey, Slots};
 use crate::{
 	skills::Skill,
-	traits::{Flush, NextCombo},
+	traits::{PeekNext, SetNextCombo},
 };
 use bevy::{ecs::component::Component, prelude::default};
 use std::collections::{HashMap, VecDeque};
@@ -12,15 +12,8 @@ pub enum ComboNode {
 	Circle(VecDeque<(SlotKey, Skill)>),
 }
 
-trait _GetSkillAndNextCombo
-where
-	Self: Sized,
-{
-	fn next(&self, trigger: &SlotKey, slots: &Slots) -> Option<(Skill, Self)>;
-}
-
-impl _GetSkillAndNextCombo for ComboNode {
-	fn next(&self, trigger: &SlotKey, slots: &Slots) -> Option<(Skill, Self)> {
+impl PeekNext<(Skill, ComboNode)> for ComboNode {
+	fn peek_next(&self, trigger: &SlotKey, slots: &Slots) -> Option<(Skill, ComboNode)> {
 		match self {
 			ComboNode::Tree(tree) => tree
 				.get(trigger)
@@ -58,7 +51,7 @@ fn skill_is_usable(slots: &Slots, trigger: &SlotKey, skill: &Skill) -> bool {
 }
 
 #[derive(Component)]
-pub(crate) struct Combos<TComboNode = ComboNode> {
+pub struct Combos<TComboNode = ComboNode> {
 	value: TComboNode,
 	current: Option<TComboNode>,
 }
@@ -82,33 +75,20 @@ impl Default for Combos {
 	}
 }
 
-impl<TComboNode: _GetSkillAndNextCombo> NextCombo for Combos<TComboNode> {
-	fn next(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill> {
-		let Some((skill, next_combo)) = skill_and_next_combo(self, trigger, slots) else {
-			self.current = None;
-			return None;
-		};
-
-		self.current = Some(next_combo);
-		Some(skill)
+impl<TComboNode> SetNextCombo<Option<TComboNode>> for Combos<TComboNode> {
+	fn set_next_combo(&mut self, value: Option<TComboNode>) {
+		self.current = value;
 	}
 }
 
-fn skill_and_next_combo<TComboNode: _GetSkillAndNextCombo>(
-	combo: &mut Combos<TComboNode>,
-	trigger: &SlotKey,
-	slots: &Slots,
-) -> Option<(Skill, TComboNode)> {
-	combo
-		.current
-		.as_ref()
-		.and_then(|current| current.next(trigger, slots))
-		.or_else(|| combo.value.next(trigger, slots))
-}
-
-impl<T> Flush for Combos<T> {
-	fn flush(&mut self) {
-		self.current = None;
+impl<TComboNode: PeekNext<(Skill, TComboNode)>> PeekNext<(Skill, TComboNode)>
+	for Combos<TComboNode>
+{
+	fn peek_next(&self, trigger: &SlotKey, slots: &Slots) -> Option<(Skill, TComboNode)> {
+		self.current
+			.as_ref()
+			.and_then(|current| current.peek_next(trigger, slots))
+			.or_else(|| self.value.peek_next(trigger, slots))
 	}
 }
 
@@ -178,7 +158,7 @@ mod test_combo_node {
 			),
 		)]));
 
-		let next = node.next(&SlotKey::Hand(Side::Main), &slots);
+		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Main), &slots);
 
 		assert_eq!(
 			Some((
@@ -226,7 +206,7 @@ mod test_combo_node {
 			),
 		)]));
 
-		let next = node.next(&SlotKey::Hand(Side::Off), &slots);
+		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Off), &slots);
 
 		assert_eq!(None, next)
 	}
@@ -255,7 +235,7 @@ mod test_combo_node {
 			),
 		)]));
 
-		let next = node.next(&SlotKey::Hand(Side::Main), &slots);
+		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Main), &slots);
 
 		assert_eq!(None, next)
 	}
@@ -286,7 +266,7 @@ mod test_combo_node {
 			),
 		)]));
 
-		let next = node.next(&SlotKey::Hand(Side::Main), &slots);
+		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Main), &slots);
 
 		assert_eq!(None, next)
 	}
@@ -317,7 +297,7 @@ mod test_combo_node {
 			),
 		)]));
 
-		let next = node.next(&SlotKey::Hand(Side::Main), &slots);
+		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Main), &slots);
 
 		assert_eq!(None, next)
 	}
@@ -343,7 +323,7 @@ mod test_combo_node {
 			),
 		]));
 
-		let next = node.next(&SlotKey::Hand(Side::Main), &slots);
+		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Main), &slots);
 
 		assert_eq!(
 			Some((
@@ -395,7 +375,7 @@ mod test_combo_node {
 			),
 		]));
 
-		let next = node.next(&SlotKey::Hand(Side::Off), &slots);
+		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Off), &slots);
 
 		assert_eq!(None, next)
 	}
@@ -421,7 +401,7 @@ mod test_combo_node {
 			),
 		]));
 
-		let next = node.next(&SlotKey::Hand(Side::Main), &slots);
+		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Main), &slots);
 
 		assert_eq!(None, next)
 	}
@@ -449,7 +429,7 @@ mod test_combo_node {
 			),
 		]));
 
-		let next = node.next(&SlotKey::Hand(Side::Main), &slots);
+		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Main), &slots);
 
 		assert_eq!(None, next)
 	}
@@ -477,7 +457,7 @@ mod test_combo_node {
 			),
 		]));
 
-		let next = node.next(&SlotKey::Hand(Side::Main), &slots);
+		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Main), &slots);
 
 		assert_eq!(None, next)
 	}
@@ -493,8 +473,8 @@ mod test_combos {
 
 	mock! {
 		_Next {}
-		impl _GetSkillAndNextCombo for _Next {
-			fn next(&self, _trigger: &SlotKey, _slots: &Slots) -> Option<(Skill, Self)>;
+		impl PeekNext<(Skill, Self)> for _Next {
+			fn peek_next(&self, _trigger: &SlotKey, _slots: &Slots) -> Option<(Skill, Self)>;
 		}
 	}
 
@@ -513,20 +493,20 @@ mod test_combos {
 		let trigger = SlotKey::Hand(Side::Off);
 
 		let mut mock = Mock_Next::default();
-		mock.expect_next()
+		mock.expect_peek_next()
 			.times(1)
 			.with(eq(trigger), eq(slots.clone()))
 			.returning(|_, _| None);
 
-		let mut combos = Combos::new(mock);
+		let combos = Combos::new(mock);
 
-		combos.next(&trigger, &slots);
+		combos.peek_next(&trigger, &slots);
 	}
 
 	#[test]
 	fn return_skill() {
 		let mut mock = Mock_Next::default();
-		mock.expect_next().returning(|_, _| {
+		mock.expect_peek_next().returning(|_, _| {
 			Some((
 				Skill {
 					name: "my skill",
@@ -535,9 +515,11 @@ mod test_combos {
 				Mock_Next::default(),
 			))
 		});
-		let mut combos = Combos::new(mock);
+		let combos = Combos::new(mock);
 
-		let skill = combos.next(&default(), &default());
+		let skill = combos
+			.peek_next(&default(), &default())
+			.map(|(skill, _)| skill);
 
 		assert_eq!(
 			Some(Skill {
@@ -551,16 +533,25 @@ mod test_combos {
 	#[test]
 	fn return_none() {
 		let mut mock = Mock_Next::default();
-		mock.expect_next().returning(|_, _| None);
-		let mut combos = Combos::new(mock);
+		mock.expect_peek_next().returning(|_, _| None);
+		let combos = Combos::new(mock);
 
-		let skill = combos.next(&default(), &default());
+		let skill = combos.peek_next(&default(), &default());
 
-		assert_eq!(None, skill);
+		assert!(skill.is_none());
 	}
 
 	#[test]
-	fn use_subsequent_next_calls() {
+	fn return_next_node() {
+		#[derive(Debug, PartialEq)]
+		struct _Node(&'static str);
+
+		impl PeekNext<(Skill, _Node)> for _Node {
+			fn peek_next(&self, _: &SlotKey, _: &Slots) -> Option<(Skill, _Node)> {
+				Some((Skill::default(), _Node("next")))
+			}
+		}
+
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
@@ -571,60 +562,60 @@ mod test_combos {
 				item: None,
 			},
 		)]));
-		let slots_clone = slots.clone();
-		let trigger_a = SlotKey::Hand(Side::Off);
-		let trigger_b = SlotKey::Hand(Side::Main);
+		let trigger = SlotKey::Hand(Side::Off);
 
-		let mut subsequent = Mock_Next::default();
-		subsequent
-			.expect_next()
+		let combos = Combos::new(_Node("first"));
+
+		let next_combo = combos.peek_next(&trigger, &slots).map(|(_, node)| node);
+
+		assert_eq!(Some(_Node("next")), next_combo);
+	}
+
+	#[test]
+	fn use_combo_used_in_set_next_combo() {
+		let mut first = Mock_Next::default();
+		let mut next = Mock_Next::default();
+
+		first.expect_peek_next().never().returning(|_, _| None);
+		next.expect_peek_next()
 			.times(1)
-			.with(eq(trigger_b), eq(slots_clone.clone()))
-			.returning(|_, _| None);
+			.returning(|_, _| Some((Skill::default(), Mock_Next::default())));
 
-		let mut top = Mock_Next::default();
-		top.expect_next()
-			.with(eq(trigger_a), eq(slots.clone()))
-			.return_once(move |_, _| Some((Skill::default(), subsequent)));
-		top.expect_next()
-			.with(eq(trigger_b), eq(slots.clone()))
-			.returning(|_, _| None);
+		let mut combos = Combos::new(first);
 
-		let mut combos = Combos::new(top);
-
-		combos.next(&trigger_a, &slots);
-		combos.next(&trigger_b, &slots);
+		combos.set_next_combo(Some(next));
+		combos.peek_next(&default(), &default());
 	}
 
 	#[test]
-	fn reset_to_call_top_after_none_return() {
-		let mut top = Mock_Next::default();
-		top.expect_next().times(3).returning(move |_, _| {
-			let mut subsequent = Mock_Next::default();
-			subsequent.expect_next().returning(|_, _| None);
-			Some((Skill::default(), subsequent))
-		});
+	fn use_original_when_next_combo_returns_none() {
+		let mut first = Mock_Next::default();
+		let mut other = Mock_Next::default();
 
-		let mut combos = Combos::new(top);
+		first.expect_peek_next().times(1).returning(|_, _| None);
+		other.expect_peek_next().returning(|_, _| None);
 
-		combos.next(&default(), &default()); // 1st top call
-		combos.next(&default(), &default()); // new subsequent call, 2nd top call
-		combos.next(&default(), &default()); // 3rd top call
+		let mut combos = Combos::new(first);
+
+		combos.set_next_combo(Some(other));
+		combos.peek_next(&default(), &default());
 	}
 
 	#[test]
-	fn reset_to_call_top_after_flush() {
-		let mut top = Mock_Next::default();
-		top.expect_next().times(2).returning(move |_, _| {
-			let mut subsequent = Mock_Next::default();
-			subsequent.expect_next().never().returning(|_, _| None);
-			Some((Skill::default(), subsequent))
-		});
+	fn use_original_when_set_next_combo_with_none() {
+		let mut first = Mock_Next::default();
+		let mut other = Mock_Next::default();
 
-		let mut combos = Combos::new(top);
+		first.expect_peek_next().times(1).returning(|_, _| None);
+		other
+			.expect_peek_next()
+			.never()
+			.returning(|_, _| Some((Skill::default(), Mock_Next::default())));
 
-		combos.next(&default(), &default());
-		combos.flush();
-		combos.next(&default(), &default());
+		let mut combos = Combos::new(first);
+
+		combos.set_next_combo(Some(other));
+		combos.set_next_combo(None);
+		combos.peek_next(&default(), &default());
 	}
 }

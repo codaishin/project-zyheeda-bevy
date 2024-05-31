@@ -25,64 +25,100 @@ use skills::{
 	components::slots::Slots,
 	items::SlotKey,
 	skills::{Queued, Skill},
-	traits::Iter,
+	traits::{IsLingering, Iter, PeekNext},
 };
 
-pub fn quickbar<TQueue: Iter<Skill<Queued>> + Component, TServer: Resource + LoadAsset<Image>>(
+type PlayerComponents<'a, TQueue, TCombos, TComboLinger> = (
+	&'a Slots,
+	&'a TQueue,
+	Option<&'a TCombos>,
+	Option<&'a TComboLinger>,
+);
+
+type IconPath = Option<fn() -> Path>;
+
+pub fn quickbar<
+	TQueue: Component + Iter<Skill<Queued>>,
+	TCombos: Component + PeekNext<Skill>,
+	TComboLinger: Component + IsLingering,
+	TServer: Resource + LoadAsset<Image>,
+>(
 	mut commands: Commands,
 	mut icons: ResMut<Shared<Path, Icon>>,
-	mut server: ResMut<TServer>,
-	players: Query<(&Slots, &TQueue), With<Player>>,
+	server: ResMut<TServer>,
+	players: Query<PlayerComponents<TQueue, TCombos, TComboLinger>, With<Player>>,
 	mut panels: Query<(Entity, &mut QuickbarPanel)>,
 ) {
-	let Ok((slots, queue)) = players.get_single() else {
+	let Ok((slots, queue, combos, combo_linger)) = players.get_single() else {
 		return;
 	};
 	let icons = icons.as_mut();
-	let server = server.as_mut();
+	let server = server.as_ref();
+	let mut get_icon_image = |key: &SlotKey| {
+		icon_of_active_skill(key, queue)
+			.or_else(icon_of_lingering_combo(key, slots, combos, combo_linger))
+			.or_else(icon_of_slot_item(key, slots))
+			.and_then(load_image(icons, server))
+	};
 
 	for (id, mut panel) in &mut panels {
-		let (state, image) = get_state_and_image(&panel.key, slots, queue, icons, server);
+		let (state, image) = match get_icon_image(&panel.key) {
+			Some(image) => (PanelState::Filled, UiImage::new(image.0)),
+			None => (PanelState::Empty, UiImage::new(default())),
+		};
 
 		panel.state = state;
 		commands.try_insert_on(id, image);
 	}
 }
 
-fn get_state_and_image<TQueue: Iter<Skill<Queued>>, TServer: LoadAsset<Image>>(
+fn icon_of_active_skill<TQueue: Iter<Skill<Queued>>>(
 	slot_key: &SlotKey,
-	slots: &Slots,
 	queue: &TQueue,
-	icons: &mut Shared<Path, Icon>,
-	server: &mut TServer,
-) -> (PanelState, UiImage) {
-	match get_icon(slots, slot_key, queue, icons, server) {
-		Some(icon) => (PanelState::Filled, UiImage::new(icon.0)),
-		None => (PanelState::Empty, UiImage::new(default())),
+) -> Option<IconPath> {
+	queue
+		.iter()
+		.find(|s| &s.data.slot_key == slot_key)
+		.map(|s| s.icon)
+}
+
+fn icon_of_lingering_combo<'a, TCombos: PeekNext<Skill>, TComboLinger: IsLingering>(
+	slot_key: &'a SlotKey,
+	slots: &'a Slots,
+	combos: Option<&'a TCombos>,
+	combo_linger: Option<&'a TComboLinger>,
+) -> impl FnOnce() -> Option<IconPath> + 'a {
+	move || {
+		if !combo_linger?.is_lingering() {
+			return None;
+		}
+
+		combos?.peek_next(slot_key, slots).map(|s| s.icon)
 	}
 }
 
-fn get_icon<'a, TQueue: Iter<Skill<Queued>>, TServer: LoadAsset<Image>>(
-	slots: &Slots,
-	slot_key: &SlotKey,
-	queue: &TQueue,
-	icons: &'a mut Shared<Path, Icon>,
-	server: &'a mut TServer,
-) -> Option<Icon> {
-	let slot = slots.0.get(slot_key)?;
-	let path = match &queue.iter().find(|s| &s.data.slot_key == slot_key) {
-		Some(skill) => skill.icon,
-		None => {
-			slot.item
-				.as_ref()
-				.and_then(|item| item.skill.as_ref())?
-				.icon
-		}
-	};
-	let path = path?;
-	let load_icon = || Icon(server.load_asset(path()));
+fn icon_of_slot_item<'a>(
+	slot_key: &'a SlotKey,
+	slots: &'a Slots,
+) -> impl FnOnce() -> Option<IconPath> + 'a {
+	|| {
+		slots
+			.0
+			.get(slot_key)?
+			.item
+			.as_ref()
+			.map(|item| item.skill.as_ref()?.icon)
+	}
+}
 
-	Some(icons.get_handle(path(), load_icon))
+fn load_image<'a, TServer: Resource + LoadAsset<Image>>(
+	icons: &'a mut Shared<Path, Icon>,
+	server: &'a TServer,
+) -> impl FnOnce(IconPath) -> Option<Icon> + 'a {
+	|icon| {
+		let icon = icon?;
+		Some(icons.get_handle(icon(), || Icon(server.load_asset(icon()))))
+	}
 }
 
 #[cfg(test)]
@@ -101,7 +137,7 @@ mod tests {
 		components::{Mounts, Slot},
 		items::Item,
 		skills::{Queued, Skill},
-		traits::Iter,
+		traits::{IsLingering, Iter, PeekNext},
 	};
 	use std::collections::HashMap;
 
@@ -127,6 +163,15 @@ mod tests {
 		}
 	}
 
+	impl _WithIconPath for Skill<Queued> {
+		fn with_icon_path(path: fn() -> Path) -> Self {
+			Skill {
+				icon: Some(path),
+				..default()
+			}
+		}
+	}
+
 	#[derive(Component, Default)]
 	struct _Queue(Vec<Skill<Queued>>);
 
@@ -136,6 +181,27 @@ mod tests {
 			Skill<Queued>: 'a,
 		{
 			self.0.iter()
+		}
+	}
+
+	#[derive(Component, Default)]
+	struct _Combos {
+		mock: Mock_Combos,
+	}
+
+	#[automock]
+	impl PeekNext<Skill> for _Combos {
+		fn peek_next(&self, trigger: &SlotKey, slots: &Slots) -> Option<Skill> {
+			self.mock.peek_next(trigger, slots)
+		}
+	}
+
+	#[derive(Component)]
+	struct _ComboLingers(bool);
+
+	impl IsLingering for _ComboLingers {
+		fn is_lingering(&self) -> bool {
+			self.0
 		}
 	}
 
@@ -155,7 +221,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.init_resource::<Shared<Path, Icon>>();
-		app.add_systems(Update, quickbar::<_Queue, _Server>);
+		app.add_systems(Update, quickbar::<_Queue, _Combos, _ComboLingers, _Server>);
 
 		app
 	}
@@ -541,5 +607,172 @@ mod tests {
 				panel.get::<QuickbarPanel>().map(|panel| panel.state)
 			)
 		);
+	}
+
+	#[test]
+	fn add_combo_skill_icon_when_no_skill_active_and_lingering() {
+		let mut app = setup();
+		let mut server = _Server::default();
+		let mut combos = _Combos::default();
+		let slots = Slots(HashMap::from([(
+			SlotKey::Hand(Side::Main),
+			Slot {
+				mounts: mounts(),
+				item: Some(Item::with_icon_path(|| Path::from("item_skill/icon/path"))),
+			},
+		)]));
+
+		server
+			.mock
+			.expect_load_asset()
+			.with(eq(Path::from("combo_skill/icon/path")))
+			.return_const(Handle::default());
+		app.insert_resource(server);
+
+		combos
+			.mock
+			.expect_peek_next()
+			.return_const(Skill::with_icon_path(|| {
+				Path::from("combo_skill/icon/path")
+			}));
+		app.world.spawn((
+			Player,
+			slots,
+			_Queue::default(),
+			combos,
+			_ComboLingers(true),
+		));
+		app.world.spawn(QuickbarPanel {
+			key: SlotKey::Hand(Side::Main),
+			state: PanelState::Empty,
+		});
+
+		app.update();
+	}
+
+	#[test]
+	fn do_not_add_combo_skill_icon_when_no_skill_active_and_not_lingering() {
+		let mut app = setup();
+		let mut server = _Server::default();
+		let mut combos = _Combos::default();
+		let slots = Slots(HashMap::from([(
+			SlotKey::Hand(Side::Main),
+			Slot {
+				mounts: mounts(),
+				item: Some(Item::with_icon_path(|| Path::from("item_skill/icon/path"))),
+			},
+		)]));
+
+		server
+			.mock
+			.expect_load_asset()
+			.with(eq(Path::from("item_skill/icon/path")))
+			.return_const(Handle::default());
+		app.insert_resource(server);
+
+		combos
+			.mock
+			.expect_peek_next()
+			.return_const(Skill::with_icon_path(|| {
+				Path::from("combo_skill/icon/path")
+			}));
+		app.world.spawn((
+			Player,
+			slots,
+			_Queue::default(),
+			combos,
+			_ComboLingers(false),
+		));
+		app.world.spawn(QuickbarPanel {
+			key: SlotKey::Hand(Side::Main),
+			state: PanelState::Empty,
+		});
+
+		app.update();
+	}
+
+	#[test]
+	fn do_not_add_combo_skill_icon_when_skill_active() {
+		let mut app = setup();
+		let mut server = _Server::default();
+		let mut combos = _Combos::default();
+		let slots = Slots(HashMap::from([(
+			SlotKey::Hand(Side::Main),
+			Slot {
+				mounts: mounts(),
+				item: Some(Item::with_icon_path(|| Path::from("item_skill/icon/path"))),
+			},
+		)]));
+
+		server
+			.mock
+			.expect_load_asset()
+			.with(eq(Path::from("active_skill/icon/path")))
+			.return_const(Handle::default());
+		app.insert_resource(server);
+
+		combos
+			.mock
+			.expect_peek_next()
+			.return_const(Skill::with_icon_path(|| {
+				Path::from("combo_skill/icon/path")
+			}));
+		app.world.spawn((
+			Player,
+			slots,
+			_Queue(vec![Skill::with_icon_path(|| {
+				Path::from("active_skill/icon/path")
+			})]),
+			combos,
+			_ComboLingers(true),
+		));
+		app.world.spawn(QuickbarPanel {
+			key: SlotKey::Hand(Side::Main),
+			state: PanelState::Empty,
+		});
+
+		app.update();
+	}
+
+	#[test]
+	fn call_combo_peek_next_with_correct_args() {
+		let mut app = setup();
+		let mut server = _Server::default();
+		let mut combos = _Combos::default();
+		let slots = Slots(HashMap::from([(
+			SlotKey::Hand(Side::Main),
+			Slot {
+				mounts: mounts(),
+				item: Some(Item::with_icon_path(|| Path::from("item_skill/icon/path"))),
+			},
+		)]));
+
+		server
+			.mock
+			.expect_load_asset()
+			.return_const(Handle::default());
+		app.insert_resource(server);
+
+		combos
+			.mock
+			.expect_peek_next()
+			.times(1)
+			.with(eq(SlotKey::Hand(Side::Off)), eq(slots.clone()))
+			.return_const(Skill::with_icon_path(|| {
+				Path::from("combo_skill/icon/path")
+			}));
+		app.world.spawn((
+			Player,
+			slots,
+			_Queue::default(),
+			combos,
+			_ComboLingers(true),
+		));
+		app.world.spawn(QuickbarPanel {
+			key: SlotKey::Hand(Side::Off),
+			state: PanelState::Empty,
+		});
+
+		app.update();
 	}
 }
