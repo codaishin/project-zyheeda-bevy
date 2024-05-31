@@ -1,7 +1,7 @@
 use crate::{
 	components::slots::Slots,
 	skills::{Queued, Skill},
-	traits::{Flush, IsLingering, Iter, IterAddedMut, NextCombo},
+	traits::{AdvanceCombo, Flush, IsLingering, Iter, IterAddedMut},
 };
 use bevy::{
 	ecs::{
@@ -20,7 +20,7 @@ type Components<'a, TCombos, TComboLinger, TSkills> = (
 );
 
 pub(crate) fn update_skill_combos<
-	TCombos: NextCombo + Flush + Component,
+	TCombos: AdvanceCombo + Flush + Component,
 	TComboLinger: IsLingering + Flush + Component,
 	TSkills: Iter<Skill<Queued>> + IterAddedMut<Skill<Queued>> + Component,
 	TTime: Default + Sync + Send + 'static,
@@ -44,15 +44,15 @@ pub(crate) fn update_skill_combos<
 	}
 }
 
-fn update_skill<TCombos: NextCombo>(
+fn update_skill<TCombos: AdvanceCombo>(
 	combos: &mut TCombos,
 	skill: &mut Skill<Queued>,
 	slots: &Slots,
 ) {
-	let Some(combo) = combos.next(&skill.data.slot_key, slots) else {
+	let Some(combo_skill) = combos.advance(&skill.data.slot_key, slots) else {
 		return;
 	};
-	*skill = combo.with(skill.data.clone());
+	*skill = combo_skill.with(skill.data.clone());
 }
 
 fn who_to_flush<
@@ -149,17 +149,17 @@ mod tests {
 
 	mock! {
 		_Combos {}
-		impl NextCombo for _Combos {
-			fn next(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill> {}
+		impl AdvanceCombo for _Combos {
+			fn advance(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill> {}
 		}
 		impl Flush for _Combos {
 			fn flush(&mut self) {}
 		}
 	}
 
-	impl NextCombo for _Combos {
-		fn next(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill> {
-			self.mock.next(trigger, slots)
+	impl AdvanceCombo for _Combos {
+		fn advance(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill> {
+			self.mock.advance(trigger, slots)
 		}
 	}
 
@@ -244,13 +244,13 @@ mod tests {
 		combos.mock.expect_flush().return_const(());
 		combos
 			.mock
-			.expect_next()
+			.expect_advance()
 			.times(1)
 			.with(eq(SlotKey::Hand(Side::Main)), eq(slots.clone()))
 			.return_const(Skill::default());
 		combos
 			.mock
-			.expect_next()
+			.expect_advance()
 			.times(1)
 			.with(eq(SlotKey::Hand(Side::Off)), eq(slots.clone()))
 			.return_const(Skill::default());
@@ -293,7 +293,7 @@ mod tests {
 		combos.mock.expect_flush().return_const(());
 		combos
 			.mock
-			.expect_next()
+			.expect_advance()
 			.with(eq(SlotKey::Hand(Side::Main)), eq(slots.clone()))
 			.return_const(Skill {
 				name: "replace a",
@@ -301,7 +301,7 @@ mod tests {
 			});
 		combos
 			.mock
-			.expect_next()
+			.expect_advance()
 			.with(eq(SlotKey::Hand(Side::Off)), eq(slots.clone()))
 			.return_const(Skill {
 				name: "replace a",

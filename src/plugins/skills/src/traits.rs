@@ -1,4 +1,6 @@
+pub(crate) mod advance_combo;
 pub(crate) mod bevy_input;
+pub(crate) mod flush;
 pub(crate) mod force_shield;
 pub(crate) mod gravity_well;
 pub(crate) mod inventory;
@@ -112,8 +114,16 @@ pub(crate) trait IsLingering {
 	fn is_lingering(&mut self, delta: Duration) -> bool;
 }
 
-pub(crate) trait NextCombo {
-	fn next(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill>;
+pub trait PeekNext<TNext> {
+	fn peek_next(&self, trigger: &SlotKey, slots: &Slots) -> Option<TNext>;
+}
+
+pub(crate) trait AdvanceCombo {
+	fn advance(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill>;
+}
+
+pub(crate) trait SetNextCombo<TCombo> {
+	fn set_next_combo(&mut self, value: TCombo);
 }
 
 pub(crate) trait GetAnimation<TAnimation> {
