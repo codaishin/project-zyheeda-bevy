@@ -4,6 +4,7 @@ pub(crate) mod flush;
 pub(crate) mod force_shield;
 pub(crate) mod gravity_well;
 pub(crate) mod inventory;
+pub(crate) mod peek_next;
 pub(crate) mod projectile;
 pub(crate) mod skill_state;
 pub(crate) mod state;
