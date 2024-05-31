@@ -7,7 +7,7 @@ use bevy::{ecs::component::Component, prelude::default};
 use std::collections::{HashMap, VecDeque};
 
 #[derive(Clone, PartialEq, Debug)]
-pub(crate) enum ComboNode {
+pub enum ComboNode {
 	Tree(HashMap<SlotKey, (Skill, ComboNode)>),
 	Circle(VecDeque<(SlotKey, Skill)>),
 }
@@ -51,7 +51,7 @@ fn skill_is_usable(slots: &Slots, trigger: &SlotKey, skill: &Skill) -> bool {
 }
 
 #[derive(Component)]
-pub(crate) struct Combos<TComboNode = ComboNode> {
+pub struct Combos<TComboNode = ComboNode> {
 	value: TComboNode,
 	current: Option<TComboNode>,
 }
