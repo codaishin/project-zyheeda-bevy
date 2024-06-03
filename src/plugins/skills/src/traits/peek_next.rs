@@ -54,16 +54,16 @@ mod tests {
 	}
 
 	fn node() -> ComboNode {
-		ComboNode::Tree(HashMap::from([(
+		ComboNode::new([(
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
 					name: "some skill",
 					..default()
 				},
-				ComboNode::Tree(HashMap::default()),
+				ComboNode::default(),
 			),
-		)]))
+		)])
 	}
 
 	#[test]

@@ -3,37 +3,25 @@ use crate::{
 	skills::Skill,
 	traits::{PeekNext, SetNextCombo},
 };
-use bevy::{ecs::component::Component, prelude::default};
-use std::collections::{HashMap, VecDeque};
+use bevy::ecs::component::Component;
+use std::collections::HashMap;
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum ComboNode {
-	Tree(HashMap<SlotKey, (Skill, ComboNode)>),
-	Circle(VecDeque<(SlotKey, Skill)>),
+#[derive(Clone, PartialEq, Debug, Default)]
+pub struct ComboNode(HashMap<SlotKey, (Skill, ComboNode)>);
+
+impl ComboNode {
+	pub fn new<const N: usize>(combos: [(SlotKey, (Skill, ComboNode)); N]) -> Self {
+		Self(HashMap::from(combos))
+	}
 }
 
 impl PeekNext<(Skill, ComboNode)> for ComboNode {
 	fn peek_next(&self, trigger: &SlotKey, slots: &Slots) -> Option<(Skill, ComboNode)> {
-		match self {
-			ComboNode::Tree(tree) => tree
-				.get(trigger)
-				.filter(|(skill, ..)| skill_is_usable(slots, trigger, skill))
-				.cloned(),
-			ComboNode::Circle(circle) => circle
-				.front()
-				.filter(|(key, ..)| key == trigger)
-				.filter(|(.., skill)| skill_is_usable(slots, trigger, skill))
-				.map(|(.., s)| (s.clone(), rotated(circle))),
-		}
+		let tree = &self.0;
+		tree.get(trigger)
+			.filter(|(skill, ..)| skill_is_usable(slots, trigger, skill))
+			.cloned()
 	}
-}
-
-fn rotated(circle: &VecDeque<(SlotKey, Skill)>) -> ComboNode {
-	let mut circle = circle.clone();
-	if let Some(front) = circle.pop_front() {
-		circle.push_back(front)
-	}
-	ComboNode::Circle(circle)
 }
 
 fn skill_is_usable(slots: &Slots, trigger: &SlotKey, skill: &Skill) -> bool {
@@ -69,7 +57,7 @@ impl<T> Combos<T> {
 impl Default for Combos {
 	fn default() -> Self {
 		Self {
-			value: ComboNode::Tree(default()),
+			value: ComboNode::default(),
 			current: None,
 		}
 	}
@@ -99,7 +87,7 @@ mod test_combo_node {
 		components::{Item, Mounts, Slot},
 		items::ItemType,
 	};
-	use bevy::ecs::entity::Entity;
+	use bevy::{ecs::entity::Entity, prelude::default};
 	use common::components::Side;
 	use std::collections::HashSet;
 
@@ -137,7 +125,7 @@ mod test_combo_node {
 	#[test]
 	fn get_next_from_tree() {
 		let slots = slots_main_pistol_off_sword();
-		let node = ComboNode::Tree(HashMap::from([(
+		let node = ComboNode(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
@@ -145,14 +133,14 @@ mod test_combo_node {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-				ComboNode::Tree(HashMap::from([(
+				ComboNode(HashMap::from([(
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
 							name: "second",
 							..default()
 						},
-						ComboNode::Tree(default()),
+						ComboNode(default()),
 					),
 				)])),
 			),
@@ -167,14 +155,14 @@ mod test_combo_node {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-				ComboNode::Tree(HashMap::from([(
+				ComboNode(HashMap::from([(
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
 							name: "second",
 							..default()
 						},
-						ComboNode::Tree(default()),
+						ComboNode(default()),
 					),
 				)]))
 			)),
@@ -185,7 +173,7 @@ mod test_combo_node {
 	#[test]
 	fn get_none_from_tree_when_slot_on_slot_mismatch() {
 		let slots = slots_main_pistol_off_sword();
-		let node = ComboNode::Tree(HashMap::from([(
+		let node = ComboNode(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
@@ -193,14 +181,14 @@ mod test_combo_node {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-				ComboNode::Tree(HashMap::from([(
+				ComboNode(HashMap::from([(
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
 							name: "second",
 							..default()
 						},
-						ComboNode::Tree(default()),
+						ComboNode(default()),
 					),
 				)])),
 			),
@@ -214,7 +202,7 @@ mod test_combo_node {
 	#[test]
 	fn get_none_from_tree_when_slot_on_item_type_mismatch() {
 		let slots = slots_main_pistol_off_sword();
-		let node = ComboNode::Tree(HashMap::from([(
+		let node = ComboNode(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
@@ -222,14 +210,14 @@ mod test_combo_node {
 					is_usable_with: HashSet::from([ItemType::Bracer]),
 					..default()
 				},
-				ComboNode::Tree(HashMap::from([(
+				ComboNode(HashMap::from([(
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
 							name: "second",
 							..default()
 						},
-						ComboNode::Tree(default()),
+						ComboNode(default()),
 					),
 				)])),
 			),
@@ -245,7 +233,7 @@ mod test_combo_node {
 		let mut slots = slots_main_pistol_off_sword();
 		slots.0.get_mut(&SlotKey::Hand(Side::Main)).unwrap().item = None;
 
-		let node = ComboNode::Tree(HashMap::from([(
+		let node = ComboNode(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
@@ -253,14 +241,14 @@ mod test_combo_node {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-				ComboNode::Tree(HashMap::from([(
+				ComboNode(HashMap::from([(
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
 							name: "second",
 							..default()
 						},
-						ComboNode::Tree(default()),
+						ComboNode(default()),
 					),
 				)])),
 			),
@@ -276,7 +264,7 @@ mod test_combo_node {
 		let mut slots = slots_main_pistol_off_sword();
 		slots.0.remove(&SlotKey::Hand(Side::Main));
 
-		let node = ComboNode::Tree(HashMap::from([(
+		let node = ComboNode(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
@@ -284,178 +272,18 @@ mod test_combo_node {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-				ComboNode::Tree(HashMap::from([(
+				ComboNode(HashMap::from([(
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
 							name: "second",
 							..default()
 						},
-						ComboNode::Tree(default()),
+						ComboNode(default()),
 					),
 				)])),
 			),
 		)]));
-
-		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Main), &slots);
-
-		assert_eq!(None, next)
-	}
-
-	#[test]
-	fn get_next_from_circle() {
-		let slots = slots_main_pistol_off_sword();
-		let node = ComboNode::Circle(VecDeque::from([
-			(
-				SlotKey::Hand(Side::Main),
-				Skill {
-					name: "first",
-					is_usable_with: HashSet::from([ItemType::Pistol]),
-					..default()
-				},
-			),
-			(
-				SlotKey::Hand(Side::Main),
-				Skill {
-					name: "second",
-					..default()
-				},
-			),
-		]));
-
-		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Main), &slots);
-
-		assert_eq!(
-			Some((
-				Skill {
-					name: "first",
-					is_usable_with: HashSet::from([ItemType::Pistol]),
-					..default()
-				},
-				ComboNode::Circle(VecDeque::from([
-					(
-						SlotKey::Hand(Side::Main),
-						Skill {
-							name: "second",
-							..default()
-						},
-					),
-					(
-						SlotKey::Hand(Side::Main),
-						Skill {
-							name: "first",
-							is_usable_with: HashSet::from([ItemType::Pistol]),
-							..default()
-						},
-					),
-				]))
-			)),
-			next
-		)
-	}
-
-	#[test]
-	fn get_none_from_circle_when_slot_on_slot_mismatch() {
-		let slots = slots_main_pistol_off_sword();
-		let node = ComboNode::Circle(VecDeque::from([
-			(
-				SlotKey::Hand(Side::Main),
-				Skill {
-					name: "first",
-					is_usable_with: HashSet::from([ItemType::Bracer]),
-					..default()
-				},
-			),
-			(
-				SlotKey::Hand(Side::Main),
-				Skill {
-					name: "second",
-					..default()
-				},
-			),
-		]));
-
-		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Off), &slots);
-
-		assert_eq!(None, next)
-	}
-
-	#[test]
-	fn get_none_from_circle_when_slot_on_item_type_mismatch() {
-		let slots = slots_main_pistol_off_sword();
-		let node = ComboNode::Circle(VecDeque::from([
-			(
-				SlotKey::Hand(Side::Main),
-				Skill {
-					name: "first",
-					is_usable_with: HashSet::from([ItemType::Bracer]),
-					..default()
-				},
-			),
-			(
-				SlotKey::Hand(Side::Main),
-				Skill {
-					name: "second",
-					..default()
-				},
-			),
-		]));
-
-		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Main), &slots);
-
-		assert_eq!(None, next)
-	}
-
-	#[test]
-	fn get_none_from_circle_when_slot_item_none() {
-		let mut slots = slots_main_pistol_off_sword();
-		slots.0.get_mut(&SlotKey::Hand(Side::Main)).unwrap().item = None;
-
-		let node = ComboNode::Circle(VecDeque::from([
-			(
-				SlotKey::Hand(Side::Main),
-				Skill {
-					name: "first",
-					is_usable_with: HashSet::from([ItemType::Pistol]),
-					..default()
-				},
-			),
-			(
-				SlotKey::Hand(Side::Main),
-				Skill {
-					name: "second",
-					..default()
-				},
-			),
-		]));
-
-		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Main), &slots);
-
-		assert_eq!(None, next)
-	}
-
-	#[test]
-	fn get_none_from_circle_when_slot_none() {
-		let mut slots = slots_main_pistol_off_sword();
-		slots.0.remove(&SlotKey::Hand(Side::Main));
-
-		let node = ComboNode::Circle(VecDeque::from([
-			(
-				SlotKey::Hand(Side::Main),
-				Skill {
-					name: "first",
-					is_usable_with: HashSet::from([ItemType::Pistol]),
-					..default()
-				},
-			),
-			(
-				SlotKey::Hand(Side::Main),
-				Skill {
-					name: "second",
-					..default()
-				},
-			),
-		]));
 
 		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Main), &slots);
 
