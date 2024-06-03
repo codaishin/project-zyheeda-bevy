@@ -49,10 +49,7 @@ use skills::{
 	Queued,
 	Skill,
 };
-use std::{
-	collections::{HashMap, HashSet, VecDeque},
-	time::Duration,
-};
+use std::{collections::HashSet, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,
 	enqueue::enqueue,
@@ -205,26 +202,26 @@ fn get_inventory() -> Inventory {
 }
 
 fn get_combos() -> Combos {
-	let left = (
-		SlotKey::Hand(Side::Off),
+	Combos::new(ComboNode::new([
 		(
-			ForceShieldSkill::skill(),
-			ComboNode::Circle(VecDeque::from([
-				(SlotKey::Hand(Side::Off), GravityWellSkill::skill()),
-				(SlotKey::Hand(Side::Off), ForceShieldSkill::skill()),
-			])),
+			SlotKey::Hand(Side::Off),
+			(
+				ForceShieldSkill::skill(),
+				ComboNode::new([(
+					SlotKey::Hand(Side::Off),
+					(GravityWellSkill::skill(), ComboNode::default()),
+				)]),
+			),
 		),
-	);
-	let right = (
-		SlotKey::Hand(Side::Main),
 		(
-			ForceShieldSkill::skill(),
-			ComboNode::Circle(VecDeque::from([
-				(SlotKey::Hand(Side::Main), GravityWellSkill::skill()),
-				(SlotKey::Hand(Side::Main), ForceShieldSkill::skill()),
-			])),
+			SlotKey::Hand(Side::Main),
+			(
+				ForceShieldSkill::skill(),
+				ComboNode::new([(
+					SlotKey::Hand(Side::Main),
+					(GravityWellSkill::skill(), ComboNode::default()),
+				)]),
+			),
 		),
-	);
-
-	Combos::new(ComboNode::Tree(HashMap::from([left, right])))
+	]))
 }
