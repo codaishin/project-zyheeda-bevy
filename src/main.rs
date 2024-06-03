@@ -72,7 +72,6 @@ fn prepare_game(app: &mut App) {
 #[cfg(debug_assertions)]
 pub mod debug_utils {
 	use super::*;
-	use bevy::ecs::{archetype::Archetypes, component::Components, entity::Entities};
 	use bevy_inspector_egui::quick::WorldInspectorPlugin;
 	use interactions::events::RayCastEvent;
 	use std::ops::Not;
@@ -81,7 +80,6 @@ pub mod debug_utils {
 		app.insert_resource(ShowGizmos::No)
 			.add_plugins(WorldInspectorPlugin::new())
 			.add_plugins(RapierDebugRenderPlugin::default())
-			.add_systems(Update, debug)
 			.add_systems(Update, toggle_gizmos)
 			.add_systems(
 				Update,
@@ -105,38 +103,6 @@ pub mod debug_utils {
 
 		for ray_cast_event in ray_cast_events.read() {
 			println!("Received ray cast event: {:?}", ray_cast_event);
-		}
-	}
-
-	fn debug(
-		keyboard: Res<ButtonInput<KeyCode>>,
-		all_entities: Query<Entity>,
-		names: Query<&Name>,
-		entities: &Entities,
-		archetypes: &Archetypes,
-		components: &Components,
-	) {
-		if !keyboard.just_pressed(KeyCode::F12) {
-			return;
-		}
-		for entity in all_entities.iter() {
-			println!("Entity: {:?}", entity);
-			let name = names.get(entity);
-			println!(
-				"Entity (Name): {}",
-				name.map(|n| n.as_str()).unwrap_or("No Name")
-			);
-			let Some(entity_location) = entities.get(entity) else {
-				return;
-			};
-			let Some(archetype) = archetypes.get(entity_location.archetype_id) else {
-				return;
-			};
-			for component in archetype.components() {
-				if let Some(info) = components.get_info(component) {
-					println!("\tComponent: {}", info.name());
-				}
-			}
 		}
 	}
 
