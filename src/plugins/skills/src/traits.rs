@@ -80,12 +80,6 @@ pub(crate) trait Flush {
 	fn flush(&mut self);
 }
 
-pub trait Iter<TItem> {
-	fn iter<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a TItem>
-	where
-		TItem: 'a;
-}
-
 pub(crate) trait IterMutWithKeys<TKey, TItem> {
 	fn iter_mut_with_keys<'a>(
 		&'a mut self,

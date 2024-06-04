@@ -1,7 +1,7 @@
 use crate::{
 	components::slots::Slots,
 	skills::{Queued, Skill},
-	traits::{AdvanceCombo, Flush, IsLingering, Iter, IterAddedMut},
+	traits::{AdvanceCombo, Flush, IsLingering, IterAddedMut},
 };
 use bevy::{
 	ecs::{
@@ -10,7 +10,7 @@ use bevy::{
 	},
 	time::Time,
 };
-use common::traits::update_cumulative::CumulativeUpdate;
+use common::traits::{iterate::Iterate, update_cumulative::CumulativeUpdate};
 use std::time::Duration;
 
 type Components<'a, TCombos, TComboLinger, TSkills> = (
@@ -23,7 +23,7 @@ type Components<'a, TCombos, TComboLinger, TSkills> = (
 pub(crate) fn update_skill_combos<
 	TCombos: AdvanceCombo + Flush + Component,
 	TComboLinger: IsLingering + CumulativeUpdate<Duration> + Flush + Component,
-	TSkills: Iter<Skill<Queued>> + IterAddedMut<Skill<Queued>> + Component,
+	TSkills: Iterate<Skill<Queued>> + IterAddedMut<Skill<Queued>> + Component,
 	TTime: Default + Sync + Send + 'static,
 >(
 	time: Res<Time<TTime>>,
@@ -60,7 +60,7 @@ fn who_to_flush<
 	'a,
 	TCombos: Flush,
 	TComboLinger: CumulativeUpdate<Duration> + IsLingering + Flush,
-	TSkills: Iter<Skill<Queued>>,
+	TSkills: Iterate<Skill<Queued>>,
 >(
 	combos: &'a mut TCombos,
 	linger: Option<&'a mut TComboLinger>,
@@ -83,8 +83,8 @@ fn who_to_flush<
 	vec![]
 }
 
-fn skills_queued<TSkills: Iter<Skill<Queued>>>(skills: &mut TSkills) -> bool {
-	skills.iter().next().is_some()
+fn skills_queued<TSkills: Iterate<Skill<Queued>>>(skills: &mut TSkills) -> bool {
+	skills.iterate().next().is_some()
 }
 
 fn one_or_empty<TFlush: Flush>(linger: Option<&mut TFlush>) -> Vec<&mut dyn Flush> {
@@ -198,12 +198,12 @@ mod tests {
 		}
 	}
 
-	impl Iter<Skill<Queued>> for _Skills {
-		fn iter<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
+	impl Iterate<Skill<Queued>> for _Skills {
+		fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
 		where
 			Skill<Queued>: 'a,
 		{
-			self.early.iter().chain(self.recent.iter())
+			self.early.iterate().chain(self.recent.iterate())
 		}
 	}
 

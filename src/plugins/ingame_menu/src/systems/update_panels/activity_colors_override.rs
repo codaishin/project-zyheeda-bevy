@@ -15,16 +15,19 @@ use bevy::{
 	render::color::Color,
 	ui::BackgroundColor,
 };
-use common::{components::Player, states::MouseContext, traits::get::GetStatic};
+use common::{
+	components::Player,
+	states::MouseContext,
+	traits::{get::GetStatic, iterate::Iterate},
+};
 use skills::{
 	items::SlotKey,
 	resources::SlotMap,
 	skills::{Queued, Skill},
-	traits::Iter,
 };
 
 pub fn panel_activity_colors_override<
-	TQueue: Component + Iter<Skill<Queued>>,
+	TQueue: Component + Iterate<Skill<Queued>>,
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetStatic<SlotKey> + Component,
 >(
 	mut commands: Commands,
@@ -35,7 +38,7 @@ pub fn panel_activity_colors_override<
 ) {
 	let player_slots = &player
 		.get_single()
-		.map(|queue| queue.iter().map(|s| s.data.slot_key).collect::<Vec<_>>());
+		.map(|queue| queue.iterate().map(|s| s.data.slot_key).collect::<Vec<_>>());
 	let primed_slots = match mouse_context.get() {
 		MouseContext::Primed(key) => slot_map.slots.get(key),
 		_ => None,
@@ -62,7 +65,7 @@ fn get_color<TPanel: HasActiveColor + HasPanelColors + HasQueuedColor>(
 		return None;
 	};
 
-	let mut iter = player_slots.iter();
+	let mut iter = player_slots.iterate();
 
 	match (iter.next(), iter.collect::<Vec<_>>(), primed_slot) {
 		(Some(active), _, _) if active == panel_key => Some(TPanel::ACTIVE_COLOR),
@@ -134,12 +137,12 @@ mod tests {
 		queued: Vec<Skill<Queued>>,
 	}
 
-	impl Iter<Skill<Queued>> for _Queue {
-		fn iter<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
+	impl Iterate<Skill<Queued>> for _Queue {
+		fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
 		where
 			Skill<Queued>: 'a,
 		{
-			self.queued.iter()
+			self.queued.iterate()
 		}
 	}
 
