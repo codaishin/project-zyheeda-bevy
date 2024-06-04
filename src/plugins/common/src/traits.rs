@@ -5,6 +5,7 @@ pub mod get;
 pub mod get_ray;
 pub mod get_state;
 pub mod has_collisions;
+pub mod insert;
 pub mod intersect_at;
 pub mod iterate;
 pub mod iteration;
