@@ -4,6 +4,7 @@ use crate::{
 	traits::{PeekNext, SetNextCombo},
 };
 use bevy::ecs::component::Component;
+use common::traits::{get::GetMut, iterate::Iterate};
 use std::collections::HashMap;
 
 #[derive(Clone, PartialEq, Debug, Default)]
@@ -12,6 +13,21 @@ pub struct ComboNode(HashMap<SlotKey, (Skill, ComboNode)>);
 impl ComboNode {
 	pub fn new<const N: usize>(combos: [(SlotKey, (Skill, ComboNode)); N]) -> Self {
 		Self(HashMap::from(combos))
+	}
+}
+
+impl<TKey: Iterate<SlotKey>> GetMut<TKey, Skill> for ComboNode {
+	fn get_mut(&mut self, slot_key_path: &TKey) -> Option<&mut Skill> {
+		let mut value = None;
+		let mut combo_map = &mut self.0;
+
+		for key in slot_key_path.iterate() {
+			let (skill, node) = combo_map.get_mut(key)?;
+			value = Some(skill);
+			combo_map = &mut node.0;
+		}
+
+		value
 	}
 }
 
@@ -288,6 +304,94 @@ mod test_combo_node {
 		let next: Option<(Skill, ComboNode)> = node.peek_next(&SlotKey::Hand(Side::Main), &slots);
 
 		assert_eq!(None, next)
+	}
+
+	#[test]
+	fn get_top_skill() {
+		let mut combos = ComboNode::new([(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "some skill",
+					..default()
+				},
+				ComboNode::default(),
+			),
+		)]);
+
+		let skill = combos.get_mut(&[SlotKey::Hand(Side::Main)]).unwrap();
+		*skill = Skill {
+			name: "new skill",
+			..default()
+		};
+
+		assert_eq!(
+			ComboNode::new([(
+				SlotKey::Hand(Side::Main),
+				(
+					Skill {
+						name: "new skill",
+						..default()
+					},
+					ComboNode::default(),
+				),
+			)]),
+			combos
+		);
+	}
+
+	#[test]
+	fn get_child_skill() {
+		let mut combos = ComboNode::new([(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "some skill",
+					..default()
+				},
+				ComboNode::new([(
+					SlotKey::Hand(Side::Off),
+					(
+						Skill {
+							name: "some child skill",
+							..default()
+						},
+						ComboNode::default(),
+					),
+				)]),
+			),
+		)]);
+
+		let skill = combos
+			.get_mut(&[SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)])
+			.unwrap();
+		*skill = Skill {
+			name: "new skill",
+			..default()
+		};
+
+		assert_eq!(
+			ComboNode::new([(
+				SlotKey::Hand(Side::Main),
+				(
+					Skill {
+						name: "some skill",
+						..default()
+					},
+					ComboNode::new([(
+						SlotKey::Hand(Side::Off),
+						(
+							Skill {
+								name: "new skill",
+								..default()
+							},
+							ComboNode::default(),
+						),
+					)]),
+				),
+			)]),
+			combos
+		);
 	}
 }
 
