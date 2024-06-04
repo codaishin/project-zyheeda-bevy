@@ -15,12 +15,15 @@ use bevy::{
 	render::color::Color,
 	ui::BackgroundColor,
 };
-use common::{components::Player, states::MouseContext, traits::get::GetStatic};
+use common::{
+	components::Player,
+	states::MouseContext,
+	traits::{get::GetStatic, iter::Iter},
+};
 use skills::{
 	items::SlotKey,
 	resources::SlotMap,
 	skills::{Queued, Skill},
-	traits::Iter,
 };
 
 pub fn panel_activity_colors_override<

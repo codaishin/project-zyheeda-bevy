@@ -17,6 +17,7 @@ use common::{
 	components::Player,
 	resources::Shared,
 	traits::{
+		iter::Iter,
 		load_asset::{LoadAsset, Path},
 		try_insert_on::TryInsertOn,
 	},
@@ -25,7 +26,7 @@ use skills::{
 	components::slots::Slots,
 	items::SlotKey,
 	skills::{Queued, Skill},
-	traits::{IsLingering, Iter, PeekNext},
+	traits::{IsLingering, PeekNext},
 };
 
 type PlayerComponents<'a, TQueue, TCombos, TComboLinger> = (
@@ -137,7 +138,7 @@ mod tests {
 		components::{Mounts, Slot},
 		items::Item,
 		skills::{Queued, Skill},
-		traits::{IsLingering, Iter, PeekNext},
+		traits::{IsLingering, PeekNext},
 	};
 	use std::collections::HashMap;
 

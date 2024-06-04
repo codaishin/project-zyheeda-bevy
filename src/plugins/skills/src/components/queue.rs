@@ -7,14 +7,16 @@ use crate::{
 		GetActiveSkill,
 		GetAnimation,
 		GetSkillBehavior,
-		Iter,
 		IterAddedMut,
 		IterMutWithKeys,
 	},
 };
 use animations::animation::Animation;
 use bevy::{ecs::component::Component, utils::default};
-use common::{components::Side, traits::state_duration::StateDuration};
+use common::{
+	components::Side,
+	traits::{iter::Iter, state_duration::StateDuration},
+};
 use std::{collections::VecDeque, time::Duration};
 
 #[derive(PartialEq, Debug, Default, Clone)]

@@ -1,7 +1,7 @@
 use crate::{
 	components::slots::Slots,
 	skills::{Queued, Skill},
-	traits::{AdvanceCombo, Flush, IsLingering, Iter, IterAddedMut},
+	traits::{AdvanceCombo, Flush, IsLingering, IterAddedMut},
 };
 use bevy::{
 	ecs::{
@@ -10,7 +10,7 @@ use bevy::{
 	},
 	time::Time,
 };
-use common::traits::update_cumulative::CumulativeUpdate;
+use common::traits::{iter::Iter, update_cumulative::CumulativeUpdate};
 use std::time::Duration;
 
 type Components<'a, TCombos, TComboLinger, TSkills> = (
