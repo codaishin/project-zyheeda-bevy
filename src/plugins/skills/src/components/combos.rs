@@ -4,8 +4,8 @@ use crate::{
 	traits::{PeekNext, SetNextCombo},
 };
 use bevy::ecs::component::Component;
-use common::traits::{get::GetMut, iterate::Iterate};
-use std::collections::HashMap;
+use common::traits::{get::GetMut, insert::TryInsert, iterate::Iterate};
+use std::collections::{hash_map::Entry, HashMap};
 
 #[derive(Clone, PartialEq, Debug, Default)]
 pub struct ComboNode(HashMap<SlotKey, (Skill, ComboNode)>);
@@ -28,6 +28,39 @@ impl<TKey: Iterate<SlotKey>> GetMut<TKey, Skill> for ComboNode {
 		}
 
 		value
+	}
+}
+
+#[derive(Debug, PartialEq)]
+pub enum SlotKeyPathError {
+	IsEmpty,
+	IsInvalid,
+}
+
+impl<TKey: Iterate<SlotKey>> TryInsert<TKey, Skill> for ComboNode {
+	type Error = SlotKeyPathError;
+
+	fn try_insert(&mut self, slot_key_path: TKey, value: Skill) -> Result<(), Self::Error> {
+		let mut combo_map = &mut self.0;
+		let mut slot_key_path = slot_key_path.iterate();
+		let mut key = slot_key_path.next().ok_or(SlotKeyPathError::IsEmpty)?;
+
+		for slot_key in slot_key_path {
+			let (_, node) = combo_map.get_mut(key).ok_or(SlotKeyPathError::IsInvalid)?;
+			combo_map = &mut node.0;
+			key = slot_key;
+		}
+
+		match combo_map.entry(*key) {
+			Entry::Occupied(mut entry) => {
+				entry.get_mut().0 = value;
+			}
+			Entry::Vacant(entry) => {
+				entry.insert((value, ComboNode::default()));
+			}
+		};
+
+		Ok(())
 	}
 }
 
@@ -391,6 +424,175 @@ mod test_combo_node {
 				),
 			)]),
 			combos
+		);
+	}
+
+	#[test]
+	fn try_insert_top_skill() {
+		let mut combos = ComboNode::default();
+
+		let success = combos.try_insert(
+			[SlotKey::Hand(Side::Main)],
+			Skill {
+				name: "new skill",
+				..default()
+			},
+		);
+
+		assert_eq!(
+			(
+				ComboNode::new([(
+					SlotKey::Hand(Side::Main),
+					(
+						Skill {
+							name: "new skill",
+							..default()
+						},
+						ComboNode::default(),
+					),
+				)]),
+				Ok(())
+			),
+			(combos, success)
+		);
+	}
+
+	#[test]
+	fn try_insert_existing_skill_without_touching_child_skills() {
+		let mut combos = ComboNode::new([(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "some skill",
+					..default()
+				},
+				ComboNode::new([(
+					SlotKey::Hand(Side::Main),
+					(
+						Skill {
+							name: "child skill",
+							..default()
+						},
+						ComboNode::default(),
+					),
+				)]),
+			),
+		)]);
+
+		let success = combos.try_insert(
+			[SlotKey::Hand(Side::Main)],
+			Skill {
+				name: "new skill",
+				..default()
+			},
+		);
+
+		assert_eq!(
+			(
+				ComboNode::new([(
+					SlotKey::Hand(Side::Main),
+					(
+						Skill {
+							name: "new skill",
+							..default()
+						},
+						ComboNode::new([(
+							SlotKey::Hand(Side::Main),
+							(
+								Skill {
+									name: "child skill",
+									..default()
+								},
+								ComboNode::default(),
+							),
+						)]),
+					),
+				)]),
+				Ok(())
+			),
+			(combos, success)
+		);
+	}
+
+	#[test]
+	fn try_insert_child_skill() {
+		let mut combos = ComboNode::new([(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "some skill",
+					..default()
+				},
+				ComboNode::default(),
+			),
+		)]);
+
+		let success = combos.try_insert(
+			[SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
+			Skill {
+				name: "new skill",
+				..default()
+			},
+		);
+
+		assert_eq!(
+			(
+				ComboNode::new([(
+					SlotKey::Hand(Side::Main),
+					(
+						Skill {
+							name: "some skill",
+							..default()
+						},
+						ComboNode::new([(
+							SlotKey::Hand(Side::Off),
+							(
+								Skill {
+									name: "new skill",
+									..default()
+								},
+								ComboNode::default(),
+							),
+						)]),
+					),
+				)]),
+				Ok(())
+			),
+			(combos, success)
+		);
+	}
+
+	#[test]
+	fn error_when_provided_keys_empty() {
+		let mut combos = ComboNode::default();
+		let success = combos.try_insert(
+			[],
+			Skill {
+				name: "new skill",
+				..default()
+			},
+		);
+
+		assert_eq!(
+			(ComboNode::default(), Err(SlotKeyPathError::IsEmpty)),
+			(combos, success)
+		);
+	}
+
+	#[test]
+	fn error_when_provided_keys_can_not_be_followed() {
+		let mut combos = ComboNode::default();
+		let success = combos.try_insert(
+			[SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
+			Skill {
+				name: "new skill",
+				..default()
+			},
+		);
+
+		assert_eq!(
+			(ComboNode::default(), Err(SlotKeyPathError::IsInvalid)),
+			(combos, success)
 		);
 	}
 }
