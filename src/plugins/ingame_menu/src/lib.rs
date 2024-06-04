@@ -20,7 +20,6 @@ use self::{
 			update_label_text::update_label_text,
 		},
 	},
-	tools::MenuState,
 };
 use bevy::prelude::*;
 use common::{
@@ -45,7 +44,7 @@ use systems::items::swap::{
 	equipped_items::swap_equipped_items,
 	inventory_items::swap_inventory_items,
 };
-use tools::Icon;
+use tools::{menu_state::MenuState, Icon};
 
 pub struct IngameMenuPlugin;
 
