@@ -15,7 +15,7 @@ use animations::animation::Animation;
 use bevy::{ecs::component::Component, utils::default};
 use common::{
 	components::Side,
-	traits::{iter::Iter, state_duration::StateDuration},
+	traits::{iterate::Iterate, state_duration::StateDuration},
 };
 use std::{collections::VecDeque, time::Duration};
 
@@ -46,8 +46,8 @@ impl Queue {
 	}
 }
 
-impl Iter<Skill<Queued>> for Queue {
-	fn iter<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
+impl Iterate<Skill<Queued>> for Queue {
+	fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
 	where
 		Skill<Queued>: 'a,
 	{
@@ -289,7 +289,7 @@ mod test_queue_collection {
 					..default()
 				}
 			],
-			queue.iter().collect::<Vec<_>>()
+			queue.iterate().collect::<Vec<_>>()
 		)
 	}
 

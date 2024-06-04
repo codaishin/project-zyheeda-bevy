@@ -17,7 +17,7 @@ use common::{
 	components::Player,
 	resources::Shared,
 	traits::{
-		iter::Iter,
+		iterate::Iterate,
 		load_asset::{LoadAsset, Path},
 		try_insert_on::TryInsertOn,
 	},
@@ -39,7 +39,7 @@ type PlayerComponents<'a, TQueue, TCombos, TComboLinger> = (
 type IconPath = Option<fn() -> Path>;
 
 pub fn quickbar<
-	TQueue: Component + Iter<Skill<Queued>>,
+	TQueue: Component + Iterate<Skill<Queued>>,
 	TCombos: Component + PeekNext<Skill>,
 	TComboLinger: Component + IsLingering,
 	TServer: Resource + LoadAsset<Image>,
@@ -73,12 +73,12 @@ pub fn quickbar<
 	}
 }
 
-fn icon_of_active_skill<TQueue: Iter<Skill<Queued>>>(
+fn icon_of_active_skill<TQueue: Iterate<Skill<Queued>>>(
 	slot_key: &SlotKey,
 	queue: &TQueue,
 ) -> Option<IconPath> {
 	queue
-		.iter()
+		.iterate()
 		.find(|s| &s.data.slot_key == slot_key)
 		.map(|s| s.icon)
 }
@@ -176,12 +176,12 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Queue(Vec<Skill<Queued>>);
 
-	impl Iter<Skill<Queued>> for _Queue {
-		fn iter<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
+	impl Iterate<Skill<Queued>> for _Queue {
+		fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
 		where
 			Skill<Queued>: 'a,
 		{
-			self.0.iter()
+			self.0.iterate()
 		}
 	}
 
