@@ -10,7 +10,7 @@ use crate::{
 };
 use bevy::{ecs::component::Component, render::color::Color};
 use common::traits::get::GetStatic;
-use skills::items::SlotKey;
+use skills::items::slot_key::SlotKey;
 
 #[derive(Component)]
 pub struct QuickbarPanel {
@@ -52,7 +52,7 @@ impl HasQueuedColor for QuickbarPanel {
 mod tests {
 	use super::*;
 	use common::components::Side;
-	use skills::items::SlotKey;
+	use skills::items::slot_key::SlotKey;
 
 	#[test]
 	fn get_empty() {

@@ -12,7 +12,7 @@ pub(crate) mod tuple_slot_key_item;
 
 use crate::{
 	components::slots::Slots,
-	items::SlotKey,
+	items::slot_key::SlotKey,
 	resources::SlotMap,
 	skills::{
 		Animate,

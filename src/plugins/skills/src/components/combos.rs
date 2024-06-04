@@ -1,5 +1,6 @@
-use super::{SlotKey, Slots};
+use super::Slots;
 use crate::{
+	items::slot_key::SlotKey,
 	skills::Skill,
 	traits::{PeekNext, SetNextCombo},
 };

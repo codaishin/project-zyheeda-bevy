@@ -14,7 +14,7 @@ use common::{
 };
 use skills::{
 	components::{slots::Slots, Slot},
-	items::SlotKey,
+	items::slot_key::SlotKey,
 };
 
 type SlotsToSwap<'a> = (

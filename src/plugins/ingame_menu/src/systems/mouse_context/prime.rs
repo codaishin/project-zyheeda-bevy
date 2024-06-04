@@ -8,7 +8,7 @@ use bevy::{
 	ui::Interaction,
 };
 use common::{states::MouseContext, traits::get::GetStatic};
-use skills::{items::SlotKey, resources::SlotMap};
+use skills::{items::slot_key::SlotKey, resources::SlotMap};
 
 pub fn prime_mouse_context<TPanel: GetStatic<SlotKey> + Component>(
 	mut mouse_context: ResMut<NextState<MouseContext>>,

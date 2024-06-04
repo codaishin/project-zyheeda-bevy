@@ -7,7 +7,7 @@ pub mod slots;
 pub(crate) mod skill_executer;
 
 use self::slots::Slots;
-use crate::items::{Item, SlotKey};
+use crate::items::{slot_key::SlotKey, Item};
 use bevy::ecs::{component::Component, entity::Entity};
 use common::components::Collection;
 use std::collections::HashMap;

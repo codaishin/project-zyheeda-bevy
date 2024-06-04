@@ -100,7 +100,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{Mounts, Slot},
-		items::SlotKey,
+		items::slot_key::SlotKey,
 		skills::{Queued, Skill},
 		traits::IsLingering,
 	};

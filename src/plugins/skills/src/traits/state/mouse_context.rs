@@ -1,4 +1,4 @@
-use crate::{items::SlotKey, resources::SlotMap, traits::InputState};
+use crate::{items::slot_key::SlotKey, resources::SlotMap, traits::InputState};
 use bevy::{ecs::schedule::State, input::keyboard::KeyCode};
 use common::states::MouseContext;
 

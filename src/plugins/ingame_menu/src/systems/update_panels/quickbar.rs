@@ -24,7 +24,7 @@ use common::{
 };
 use skills::{
 	components::slots::Slots,
-	items::SlotKey,
+	items::slot_key::SlotKey,
 	skills::{Queued, Skill},
 	traits::{IsLingering, PeekNext},
 };

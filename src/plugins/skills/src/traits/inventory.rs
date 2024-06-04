@@ -1,6 +1,6 @@
 use crate::{
 	components::inventory::Inventory,
-	items::{InventoryKey, Item, SlotKey},
+	items::{slot_key::SlotKey, InventoryKey, Item},
 };
 use common::{components::Swap, traits::accessor::Accessor};
 

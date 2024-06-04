@@ -1,6 +1,5 @@
-use crate::skills::Skill;
-
-use super::{Item, Slot, SlotKey};
+use super::{Item, Slot};
+use crate::{items::slot_key::SlotKey, skills::Skill};
 use bevy::ecs::component::Component;
 use common::traits::get::Get;
 use std::collections::HashMap;

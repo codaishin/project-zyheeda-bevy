@@ -1,4 +1,4 @@
-use common::components::Side;
+pub mod slot_key;
 
 use crate::skills::Skill;
 use std::{
@@ -33,17 +33,6 @@ impl Display for Item {
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct InventoryKey(pub usize);
-
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
-pub enum SlotKey {
-	Hand(Side),
-}
-
-impl Default for SlotKey {
-	fn default() -> Self {
-		Self::Hand(Side::Main)
-	}
-}
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum ItemType {
