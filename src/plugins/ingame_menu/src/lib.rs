@@ -11,7 +11,6 @@ use self::{
 		mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 		set_state::set_state,
 		spawn::spawn,
-		toggle_state::toggle_state,
 		update_panels::{
 			activity_colors_override::panel_activity_colors_override,
 			colors::panel_colors,
@@ -40,9 +39,9 @@ use skills::{
 	},
 	items::{InventoryKey, SlotKey},
 };
-use systems::items::swap::{
-	equipped_items::swap_equipped_items,
-	inventory_items::swap_inventory_items,
+use systems::{
+	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
+	set_state_from_input::set_state_from_input,
 };
 use tools::{menu_state::MenuState, Icon};
 
@@ -52,7 +51,7 @@ impl Plugin for IngameMenuPlugin {
 	fn build(&self, app: &mut App) {
 		app.init_state::<MenuState>()
 			.init_resource::<Shared<Path, Icon>>()
-			.add_systems(Update, toggle_state::<MenuState, Inventory>)
+			.add_systems(Update, set_state_from_input::<MenuState>)
 			.add_systems(
 				OnEnter(MenuState::Inventory),
 				(spawn::<InventoryScreen>, set_state::<GameRunning, Off>),
