@@ -1,25 +1,8 @@
-pub(crate) mod components;
+mod components;
 mod systems;
 mod tools;
 mod traits;
 
-use self::{
-	components::{InventoryScreen, UIOverlay},
-	systems::{
-		dad::{drag::drag, drop::drop},
-		despawn::despawn,
-		mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
-		set_state::set_state,
-		spawn::spawn,
-		update_panels::{
-			activity_colors_override::panel_activity_colors_override,
-			colors::panel_colors,
-			container_states::panel_container_states,
-			quickbar::quickbar,
-			update_label_text::update_label_text,
-		},
-	},
-};
 use bevy::prelude::*;
 use common::{
 	components::Player,
@@ -28,7 +11,12 @@ use common::{
 	systems::log::log_many,
 	traits::load_asset::Path,
 };
-use components::{inventory_panel::InventoryPanel, quickbar_panel::QuickbarPanel};
+use components::{
+	inventory_panel::InventoryPanel,
+	quickbar_panel::QuickbarPanel,
+	InventoryScreen,
+	UIOverlay,
+};
 use skills::{
 	components::{
 		combo_linger::ComboLinger,
@@ -40,8 +28,20 @@ use skills::{
 	items::{InventoryKey, SlotKey},
 };
 use systems::{
+	dad::{drag::drag, drop::drop},
+	despawn::despawn,
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
+	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
+	set_state::set_state,
 	set_state_from_input::set_state_from_input,
+	spawn::spawn,
+	update_panels::{
+		activity_colors_override::panel_activity_colors_override,
+		colors::panel_colors,
+		container_states::panel_container_states,
+		quickbar::quickbar,
+		update_label_text::update_label_text,
+	},
 };
 use tools::{menu_state::MenuState, Icon};
 
