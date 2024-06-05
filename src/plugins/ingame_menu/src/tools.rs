@@ -1,16 +1,11 @@
-use bevy::{asset::Handle, ecs::schedule::States, render::texture::Image};
+pub(crate) mod menu_state;
+
+use bevy::{asset::Handle, render::texture::Image};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PanelState {
 	Empty,
 	Filled,
-}
-
-#[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
-pub enum MenuState {
-	#[default]
-	None,
-	Inventory,
 }
 
 #[derive(Clone, Debug, PartialEq)]
