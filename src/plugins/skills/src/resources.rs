@@ -1,4 +1,4 @@
-use crate::items::SlotKey;
+use crate::items::slot_key::SlotKey;
 use bevy::{ecs::system::Resource, input::keyboard::KeyCode};
 use std::{collections::HashMap, hash::Hash};
 

@@ -1,6 +1,6 @@
 use crate::{
 	components::{queue::Queue, slots::Slots, BoneName, Equipment, Mounts, SkillSpawn, SlotBones},
-	items::{Item, SlotKey},
+	items::{slot_key::SlotKey, Item},
 };
 use bevy::ecs::bundle::Bundle;
 use common::components::{Collection, Idle};

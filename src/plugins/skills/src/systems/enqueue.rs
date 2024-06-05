@@ -1,6 +1,6 @@
 use super::get_inputs::Input;
 use crate::{
-	items::SlotKey,
+	items::slot_key::SlotKey,
 	traits::{Enqueue, IterMutWithKeys, Prime},
 };
 use bevy::ecs::{

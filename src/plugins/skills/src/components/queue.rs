@@ -1,5 +1,5 @@
-use super::SlotKey;
 use crate::{
+	items::slot_key::SlotKey,
 	skills::{Activation, Animate, Queued, Skill, SkillBehavior, SkillState},
 	traits::{
 		Enqueue,
@@ -111,7 +111,6 @@ impl IterAddedMut<Skill<Queued>> for Queue {
 #[cfg(test)]
 mod test_queue_collection {
 	use super::*;
-	use crate::components::SlotKey;
 	use bevy::utils::default;
 	use common::components::Side;
 
@@ -568,17 +567,14 @@ impl<'a> GetAnimation<Animation> for ActiveSkill<'a> {
 #[cfg(test)]
 mod test_queue_active_skill {
 	use super::*;
-	use crate::{
-		components::SlotKey,
-		skills::{
-			Animate,
-			OnSkillStop,
-			SkillAnimation,
-			SkillBehavior,
-			SkillCaster,
-			SkillSpawner,
-			Target,
-		},
+	use crate::skills::{
+		Animate,
+		OnSkillStop,
+		SkillAnimation,
+		SkillBehavior,
+		SkillCaster,
+		SkillSpawner,
+		Target,
 	};
 	use animations::animation::PlayMode;
 	use bevy::{ecs::system::Commands, prelude::default};

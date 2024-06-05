@@ -3,7 +3,7 @@ pub mod gravity_well_skill;
 pub mod shoot_hand_gun;
 
 use crate::{
-	items::{ItemType, SlotKey},
+	items::{slot_key::SlotKey, ItemType},
 	traits::Prime,
 };
 use animations::animation::Animation;

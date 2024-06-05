@@ -1,4 +1,4 @@
-use crate::items::{Item, SlotKey};
+use crate::items::{slot_key::SlotKey, Item};
 use common::{components::Player, traits::accessor::Accessor};
 
 impl Accessor<Player, (SlotKey, Option<Item>), Item> for (SlotKey, Option<Item>) {

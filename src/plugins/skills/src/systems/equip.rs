@@ -1,6 +1,6 @@
 use crate::{
 	components::{slots::Slots, Slot},
-	items::{Item, Mount, SlotKey},
+	items::{slot_key::SlotKey, Item, Mount},
 };
 use bevy::{
 	ecs::{component::Component, query::QueryEntityError},

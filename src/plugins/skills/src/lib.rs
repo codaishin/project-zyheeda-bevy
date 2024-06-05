@@ -40,7 +40,7 @@ use components::{
 	slots::Slots,
 	Mounts,
 };
-use items::{InventoryKey, Item, ItemType, Mount, SlotKey};
+use items::{slot_key::SlotKey, InventoryKey, Item, ItemType, Mount};
 use resources::SlotMap;
 use skills::{
 	force_shield_skill::ForceShieldSkill,

@@ -19,7 +19,7 @@ use bevy::{
 	utils::default,
 };
 use common::components::Side;
-use skills::items::{InventoryKey, SlotKey};
+use skills::items::{slot_key::SlotKey, InventoryKey};
 
 const EQUIPMENT_SLOTS: [(SlotKey, &str); 2] = [
 	(SlotKey::Hand(Side::Off), "Off Hand"),

@@ -1,6 +1,6 @@
 use crate::{
 	components::{slots::Slots, BoneName, Mounts, Slot, SlotBones},
-	items::SlotKey,
+	items::slot_key::SlotKey,
 };
 use bevy::{
 	prelude::{BuildChildren, Children, Commands, Entity, HierarchyQueryExt, Name, Query},

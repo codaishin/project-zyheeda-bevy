@@ -21,7 +21,7 @@ use common::{
 	traits::{get::GetStatic, iterate::Iterate},
 };
 use skills::{
-	items::SlotKey,
+	items::slot_key::SlotKey,
 	resources::SlotMap,
 	skills::{Queued, Skill},
 };
