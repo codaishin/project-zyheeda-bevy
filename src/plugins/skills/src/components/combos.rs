@@ -4,7 +4,11 @@ use crate::{
 	traits::{PeekNext, SetNextCombo},
 };
 use bevy::ecs::component::Component;
-use common::traits::{get::GetMut, insert::TryInsert, iterate::Iterate};
+use common::traits::{
+	get::{Get, GetMut},
+	insert::TryInsert,
+	iterate::Iterate,
+};
 use std::collections::{hash_map::Entry, HashMap};
 
 #[derive(Clone, PartialEq, Debug, Default)]
@@ -13,6 +17,21 @@ pub struct ComboNode(HashMap<SlotKey, (Skill, ComboNode)>);
 impl ComboNode {
 	pub fn new<const N: usize>(combos: [(SlotKey, (Skill, ComboNode)); N]) -> Self {
 		Self(HashMap::from(combos))
+	}
+}
+
+impl<TKey: Iterate<SlotKey>> Get<TKey, Skill> for ComboNode {
+	fn get(&self, slot_key_path: &TKey) -> Option<&Skill> {
+		let mut value = None;
+		let mut combo_map = &self.0;
+
+		for key in slot_key_path.iterate() {
+			let (skill, node) = combo_map.get(key)?;
+			value = Some(skill);
+			combo_map = &node.0;
+		}
+
+		value
 	}
 }
 
@@ -172,7 +191,7 @@ mod test_combo_node {
 	}
 
 	#[test]
-	fn get_next_from_tree() {
+	fn peek_next_from_tree() {
 		let slots = slots_main_pistol_off_sword();
 		let node = ComboNode(HashMap::from([(
 			SlotKey::Hand(Side::Main),
@@ -220,7 +239,7 @@ mod test_combo_node {
 	}
 
 	#[test]
-	fn get_none_from_tree_when_slot_on_slot_mismatch() {
+	fn peek_none_from_tree_when_slot_on_slot_mismatch() {
 		let slots = slots_main_pistol_off_sword();
 		let node = ComboNode(HashMap::from([(
 			SlotKey::Hand(Side::Main),
@@ -249,7 +268,7 @@ mod test_combo_node {
 	}
 
 	#[test]
-	fn get_none_from_tree_when_slot_on_item_type_mismatch() {
+	fn peek_none_from_tree_when_slot_on_item_type_mismatch() {
 		let slots = slots_main_pistol_off_sword();
 		let node = ComboNode(HashMap::from([(
 			SlotKey::Hand(Side::Main),
@@ -278,7 +297,7 @@ mod test_combo_node {
 	}
 
 	#[test]
-	fn get_none_from_tree_when_slot_item_none() {
+	fn peek_none_from_tree_when_slot_item_none() {
 		let mut slots = slots_main_pistol_off_sword();
 		slots.0.get_mut(&SlotKey::Hand(Side::Main)).unwrap().item = None;
 
@@ -309,7 +328,7 @@ mod test_combo_node {
 	}
 
 	#[test]
-	fn get_none_from_tree_when_slot_none() {
+	fn peek_none_from_tree_when_slot_none() {
 		let mut slots = slots_main_pistol_off_sword();
 		slots.0.remove(&SlotKey::Hand(Side::Main));
 
@@ -341,6 +360,63 @@ mod test_combo_node {
 
 	#[test]
 	fn get_top_skill() {
+		let combos = ComboNode::new([(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "some skill",
+					..default()
+				},
+				ComboNode::default(),
+			),
+		)]);
+
+		let skill = combos.get(&[SlotKey::Hand(Side::Main)]);
+
+		assert_eq!(
+			Some(&Skill {
+				name: "some skill",
+				..default()
+			}),
+			skill
+		);
+	}
+
+	#[test]
+	fn get_child_skill() {
+		let combos = ComboNode::new([(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "some skill",
+					..default()
+				},
+				ComboNode::new([(
+					SlotKey::Hand(Side::Off),
+					(
+						Skill {
+							name: "some child skill",
+							..default()
+						},
+						ComboNode::default(),
+					),
+				)]),
+			),
+		)]);
+
+		let skill = combos.get(&[SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]);
+
+		assert_eq!(
+			Some(&Skill {
+				name: "some child skill",
+				..default()
+			}),
+			skill
+		);
+	}
+
+	#[test]
+	fn get_mut_top_skill() {
 		let mut combos = ComboNode::new([(
 			SlotKey::Hand(Side::Main),
 			(
@@ -374,7 +450,7 @@ mod test_combo_node {
 	}
 
 	#[test]
-	fn get_child_skill() {
+	fn get_mut_child_skill() {
 		let mut combos = ComboNode::new([(
 			SlotKey::Hand(Side::Main),
 			(
