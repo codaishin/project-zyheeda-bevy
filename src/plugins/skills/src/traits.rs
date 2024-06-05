@@ -12,6 +12,8 @@ pub(crate) mod skill_state;
 pub(crate) mod state;
 pub(crate) mod tuple_slot_key_item;
 
+pub mod get_combos;
+
 use crate::{
 	components::slots::Slots,
 	items::slot_key::SlotKey,
@@ -100,7 +102,7 @@ pub(crate) trait SetNextCombo<TCombo> {
 	fn set_next_combo(&mut self, value: TCombo);
 }
 
-type Combo<'a> = Vec<(&'a SlotKey, &'a Skill)>;
+type Combo<'a> = Vec<(SlotKey, &'a Skill)>;
 
 pub trait GetCombos {
 	fn combos(&self) -> Vec<Combo>;
