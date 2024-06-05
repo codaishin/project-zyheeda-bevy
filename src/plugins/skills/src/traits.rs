@@ -121,6 +121,12 @@ pub(crate) trait SetNextCombo<TCombo> {
 	fn set_next_combo(&mut self, value: TCombo);
 }
 
+type Combo<'a> = Vec<(&'a SlotKey, &'a Skill)>;
+
+pub trait GetCombos {
+	fn combos(&self) -> Vec<Combo>;
+}
+
 pub(crate) trait GetAnimation<TAnimation> {
 	fn animate(&self) -> Animate<TAnimation>;
 }
