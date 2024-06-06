@@ -74,7 +74,7 @@ fn ui_overlay_systems(app: &mut App) {
 			Update,
 			(
 				quickbar::<Queue, Combos, ComboLinger, AssetServer>,
-				update_label_text::<LanguageServer, QuickbarPanel>,
+				update_label_text::<KeyMap<SlotKey, KeyCode>, LanguageServer, QuickbarPanel>,
 				panel_colors::<QuickbarPanel>,
 				panel_activity_colors_override::<KeyMap<SlotKey, KeyCode>, Queue, QuickbarPanel>,
 			)
