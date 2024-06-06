@@ -22,3 +22,10 @@ where
 {
 	fn ui_text(value: &TValue) -> UIText;
 }
+
+pub trait GetUiTextFor<TValue> {
+	fn ui_text_for(&self, value: &TValue) -> UIText
+	where
+		Japanese: GetUiText<TValue>,
+		English: GetUiText<TValue>;
+}

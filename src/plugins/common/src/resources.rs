@@ -1,3 +1,5 @@
+pub mod language_server;
+
 use crate::components::Outdated;
 use bevy::{
 	asset::{AssetServer, Handle},
