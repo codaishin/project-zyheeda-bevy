@@ -4,6 +4,7 @@ pub mod clamp_zero_positive;
 pub mod get;
 pub mod get_ray;
 pub mod get_state;
+pub mod get_ui_text;
 pub mod has_collisions;
 pub mod insert;
 pub mod intersect_at;
