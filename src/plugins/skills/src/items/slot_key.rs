@@ -1,6 +1,9 @@
 use common::{
 	components::Side,
-	traits::iteration::{Iter, IterKey},
+	traits::{
+		get_ui_text::{English, GetUiText, Japanese, UIText},
+		iteration::{Iter, IterKey},
+	},
 };
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
@@ -23,6 +26,24 @@ impl IterKey for SlotKey {
 		match current.0? {
 			SlotKey::Hand(Side::Main) => Some(SlotKey::Hand(Side::Off)),
 			SlotKey::Hand(Side::Off) => None,
+		}
+	}
+}
+
+impl GetUiText<SlotKey> for English {
+	fn ui_text(value: &SlotKey) -> UIText {
+		match value {
+			SlotKey::Hand(Side::Main) => UIText::from("Main Hand"),
+			SlotKey::Hand(Side::Off) => UIText::from("Off Hand"),
+		}
+	}
+}
+
+impl GetUiText<SlotKey> for Japanese {
+	fn ui_text(value: &SlotKey) -> UIText {
+		match value {
+			SlotKey::Hand(Side::Main) => UIText::from("利き手"),
+			SlotKey::Hand(Side::Off) => UIText::from("利き手ではない手"),
 		}
 	}
 }
