@@ -1,3 +1,4 @@
+pub mod key_map;
 pub mod language_server;
 
 use crate::components::Outdated;
