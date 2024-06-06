@@ -1,27 +1,27 @@
 use super::{InputState, ShouldEnqueue};
-use crate::{items::slot_key::SlotKey, resources::SlotMap};
+use crate::items::slot_key::SlotKey;
 use bevy::input::{keyboard::KeyCode, ButtonInput};
+use common::traits::map_value::TryMapBackwards;
 use std::hash::Hash;
 
-impl<TKey: Eq + Hash + Copy + Send + Sync> InputState<TKey> for ButtonInput<TKey> {
-	fn just_pressed_slots(&self, map: &SlotMap<TKey>) -> Vec<SlotKey> {
+impl<TMap: TryMapBackwards<TKey, SlotKey>, TKey: Eq + Hash + Copy + Send + Sync>
+	InputState<TMap, TKey> for ButtonInput<TKey>
+{
+	fn just_pressed_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		self.get_just_pressed()
-			.filter_map(|k| map.slots.get(k))
-			.cloned()
+			.filter_map(|k| map.try_map_backwards(*k))
 			.collect()
 	}
 
-	fn pressed_slots(&self, map: &SlotMap<TKey>) -> Vec<SlotKey> {
+	fn pressed_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		self.get_pressed()
-			.filter_map(|k| map.slots.get(k))
-			.cloned()
+			.filter_map(|k| map.try_map_backwards(*k))
 			.collect()
 	}
 
-	fn just_released_slots(&self, map: &SlotMap<TKey>) -> Vec<SlotKey> {
+	fn just_released_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		self.get_just_released()
-			.filter_map(|k| map.slots.get(k))
-			.cloned()
+			.filter_map(|k| map.try_map_backwards(*k))
 			.collect()
 	}
 }
@@ -39,6 +39,18 @@ mod tests {
 	use common::components::Side;
 	use std::collections::HashSet;
 
+	struct _Map;
+
+	impl TryMapBackwards<KeyCode, SlotKey> for _Map {
+		fn try_map_backwards(&self, value: KeyCode) -> Option<SlotKey> {
+			match value {
+				KeyCode::KeyC => Some(SlotKey::Hand(Side::Main)),
+				KeyCode::KeyD => Some(SlotKey::Hand(Side::Off)),
+				_ => None,
+			}
+		}
+	}
+
 	#[test]
 	fn get_just_pressed() {
 		let mut input = ButtonInput::<KeyCode>::default();
@@ -47,14 +59,10 @@ mod tests {
 		input.press(KeyCode::KeyC);
 		input.press(KeyCode::KeyD);
 		input.clear_just_pressed(KeyCode::KeyD);
-		let slot_map = SlotMap::new([
-			(KeyCode::KeyC, SlotKey::Hand(Side::Main), ""),
-			(KeyCode::KeyD, SlotKey::Hand(Side::Off), ""),
-		]);
 
 		assert_eq!(
 			HashSet::from([SlotKey::Hand(Side::Main)]),
-			HashSet::from_iter(input.just_pressed_slots(&slot_map)),
+			HashSet::from_iter(input.just_pressed_slots(&_Map)),
 		)
 	}
 
@@ -69,16 +77,13 @@ mod tests {
 		input.clear_just_pressed(KeyCode::KeyB);
 		input.clear_just_pressed(KeyCode::KeyC);
 		input.clear_just_pressed(KeyCode::KeyD);
-		let slot_map = SlotMap::new([
-			(KeyCode::KeyC, SlotKey::Hand(Side::Main), ""),
-			(KeyCode::KeyD, SlotKey::Hand(Side::Off), ""),
-		]);
 
 		assert_eq!(
 			HashSet::from([SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off),]),
-			HashSet::from_iter(input.pressed_slots(&slot_map)),
+			HashSet::from_iter(input.pressed_slots(&_Map)),
 		)
 	}
+
 	#[test]
 	fn get_just_released() {
 		let mut input = ButtonInput::<KeyCode>::default();
@@ -93,14 +98,10 @@ mod tests {
 		input.clear_just_pressed(KeyCode::KeyB);
 		input.clear_just_pressed(KeyCode::KeyC);
 		input.clear_just_pressed(KeyCode::KeyD);
-		let slot_map = SlotMap::new([
-			(KeyCode::KeyC, SlotKey::Hand(Side::Main), ""),
-			(KeyCode::KeyD, SlotKey::Hand(Side::Off), ""),
-		]);
 
 		assert_eq!(
 			HashSet::from([SlotKey::Hand(Side::Main),]),
-			HashSet::from_iter(input.just_released_slots(&slot_map)),
+			HashSet::from_iter(input.just_released_slots(&_Map)),
 		)
 	}
 

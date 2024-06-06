@@ -17,7 +17,6 @@ pub mod get_combos;
 use crate::{
 	components::slots::Slots,
 	items::slot_key::SlotKey,
-	resources::SlotMap,
 	skills::{
 		Animate,
 		OnSkillStop,
@@ -31,7 +30,7 @@ use crate::{
 	},
 };
 use bevy::ecs::{bundle::Bundle, system::Commands};
-use common::traits::{load_asset::Path, state_duration::StateUpdate};
+use common::traits::{load_asset::Path, map_value::TryMapBackwards, state_duration::StateUpdate};
 use std::hash::Hash;
 
 pub(crate) trait Enqueue<TItem> {
@@ -120,10 +119,10 @@ pub(crate) trait GetSkillBehavior {
 	fn behavior(&self) -> SkillBehavior;
 }
 
-pub trait InputState<TKey: Eq + Hash> {
-	fn just_pressed_slots(&self, map: &SlotMap<TKey>) -> Vec<SlotKey>;
-	fn pressed_slots(&self, map: &SlotMap<TKey>) -> Vec<SlotKey>;
-	fn just_released_slots(&self, map: &SlotMap<TKey>) -> Vec<SlotKey>;
+pub trait InputState<TMap: TryMapBackwards<TKey, SlotKey>, TKey: Eq + Hash> {
+	fn just_pressed_slots(&self, map: &TMap) -> Vec<SlotKey>;
+	fn pressed_slots(&self, map: &TMap) -> Vec<SlotKey>;
+	fn just_released_slots(&self, map: &TMap) -> Vec<SlotKey>;
 }
 
 pub trait Schedule {

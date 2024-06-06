@@ -1,23 +1,25 @@
-use crate::{items::slot_key::SlotKey, resources::SlotMap, traits::InputState};
+use crate::{items::slot_key::SlotKey, traits::InputState};
 use bevy::{ecs::schedule::State, input::keyboard::KeyCode};
-use common::states::MouseContext;
+use common::{states::MouseContext, traits::map_value::TryMapBackwards};
 
-impl InputState<KeyCode> for State<MouseContext<KeyCode>> {
-	fn just_pressed_slots(&self, map: &SlotMap<KeyCode>) -> Vec<SlotKey> {
+impl<TMap: TryMapBackwards<KeyCode, SlotKey>> InputState<TMap, KeyCode>
+	for State<MouseContext<KeyCode>>
+{
+	fn just_pressed_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		let MouseContext::JustTriggered(key) = self.get() else {
 			return vec![];
 		};
 		get_slot_key(map, key)
 	}
 
-	fn pressed_slots(&self, map: &SlotMap<KeyCode>) -> Vec<SlotKey> {
+	fn pressed_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		let MouseContext::Triggered(key) = self.get() else {
 			return vec![];
 		};
 		get_slot_key(map, key)
 	}
 
-	fn just_released_slots(&self, map: &SlotMap<KeyCode>) -> Vec<SlotKey> {
+	fn just_released_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		let MouseContext::JustReleased(key) = self.get() else {
 			return vec![];
 		};
@@ -25,11 +27,14 @@ impl InputState<KeyCode> for State<MouseContext<KeyCode>> {
 	}
 }
 
-fn get_slot_key(map: &SlotMap<KeyCode>, key: &KeyCode) -> Vec<SlotKey> {
-	let Some(slot_key) = map.slots.get(key) else {
+fn get_slot_key<TMap: TryMapBackwards<KeyCode, SlotKey>>(
+	map: &TMap,
+	key: &KeyCode,
+) -> Vec<SlotKey> {
+	let Some(slot_key) = map.try_map_backwards(*key) else {
 		return vec![];
 	};
-	vec![*slot_key]
+	vec![slot_key]
 }
 
 #[cfg(test)]
@@ -39,45 +44,45 @@ mod tests {
 	use common::components::Side;
 	use std::collections::HashSet;
 
+	struct _Map;
+
+	impl TryMapBackwards<KeyCode, SlotKey> for _Map {
+		fn try_map_backwards(&self, value: KeyCode) -> Option<SlotKey> {
+			match value {
+				KeyCode::KeyC => Some(SlotKey::Hand(Side::Main)),
+				KeyCode::KeyD => Some(SlotKey::Hand(Side::Main)),
+				_ => None,
+			}
+		}
+	}
+
 	#[test]
 	fn get_just_pressed() {
 		let input = State::new(MouseContext::JustTriggered(KeyCode::KeyC));
-		let slot_map = SlotMap::new([
-			(KeyCode::KeyC, SlotKey::Hand(Side::Main), ""),
-			(KeyCode::KeyD, SlotKey::Hand(Side::Off), ""),
-		]);
 
 		assert_eq!(
 			HashSet::from([SlotKey::Hand(Side::Main)]),
-			HashSet::from_iter(input.just_pressed_slots(&slot_map)),
+			HashSet::from_iter(input.just_pressed_slots(&_Map)),
 		)
 	}
 
 	#[test]
 	fn get_pressed() {
 		let input = State::new(MouseContext::Triggered(KeyCode::KeyC));
-		let slot_map = SlotMap::new([
-			(KeyCode::KeyC, SlotKey::Hand(Side::Main), ""),
-			(KeyCode::KeyD, SlotKey::Hand(Side::Off), ""),
-		]);
 
 		assert_eq!(
 			HashSet::from([SlotKey::Hand(Side::Main),]),
-			HashSet::from_iter(input.pressed_slots(&slot_map)),
+			HashSet::from_iter(input.pressed_slots(&_Map)),
 		)
 	}
 
 	#[test]
 	fn get_just_released() {
 		let input = State::new(MouseContext::JustReleased(KeyCode::KeyC));
-		let slot_map = SlotMap::new([
-			(KeyCode::KeyC, SlotKey::Hand(Side::Main), ""),
-			(KeyCode::KeyD, SlotKey::Hand(Side::Off), ""),
-		]);
 
 		assert_eq!(
 			HashSet::from([SlotKey::Hand(Side::Main)]),
-			HashSet::from_iter(input.just_released_slots(&slot_map)),
+			HashSet::from_iter(input.just_released_slots(&_Map)),
 		)
 	}
 }

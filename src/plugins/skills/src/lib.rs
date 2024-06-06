@@ -1,6 +1,5 @@
 pub mod components;
 pub mod items;
-pub mod resources;
 pub mod skills;
 pub mod traits;
 
@@ -26,7 +25,7 @@ use bevy::{
 use bundles::Loadout;
 use common::{
 	components::{Player, Side, Swap},
-	resources::Models,
+	resources::{key_map::KeyMap, Models},
 	states::{GameRunning, MouseContext},
 	systems::log::log_many,
 	traits::try_insert_on::TryInsertOn,
@@ -41,7 +40,6 @@ use components::{
 	Mounts,
 };
 use items::{slot_key::SlotKey, InventoryKey, Item, ItemType, Mount};
-use resources::SlotMap;
 use skills::{
 	force_shield_skill::ForceShieldSkill,
 	gravity_well_skill::GravityWellSkill,
@@ -72,13 +70,17 @@ pub struct SkillsPlugin;
 
 impl Plugin for SkillsPlugin {
 	fn build(&self, app: &mut bevy::prelude::App) {
-		app.add_systems(PreStartup, load_models)
-			.add_systems(PreStartup, setup_input)
+		app.init_resource::<KeyMap<SlotKey, KeyCode>>()
+			.add_systems(PreStartup, load_models)
 			.add_systems(PreUpdate, (add_item_slots, add_skill_spawn))
 			.add_systems(
 				Update,
 				(
-					get_inputs::<ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
+					get_inputs::<
+						KeyMap<SlotKey, KeyCode>,
+						ButtonInput<KeyCode>,
+						State<MouseContext<KeyCode>>,
+					>
 						.pipe(enqueue::<Slots, Skill, Queue, Skill<Queued>>),
 					update_skill_combos::<Combos, ComboLinger, Queue, Virtual>,
 					advance_active_skill::<
@@ -121,13 +123,6 @@ fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
 		&asset_server,
 	);
 	commands.insert_resource(models);
-}
-
-fn setup_input(mut commands: Commands) {
-	commands.insert_resource(SlotMap::new([
-		(KeyCode::KeyE, SlotKey::Hand(Side::Main), "E"),
-		(KeyCode::KeyQ, SlotKey::Hand(Side::Off), "Q"),
-	]));
 }
 
 fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>>) {

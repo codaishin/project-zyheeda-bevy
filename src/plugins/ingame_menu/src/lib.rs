@@ -6,7 +6,7 @@ mod traits;
 use bevy::prelude::*;
 use common::{
 	components::Player,
-	resources::Shared,
+	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
 	states::{GameRunning, Off, On},
 	systems::log::log_many,
 	traits::load_asset::Path,
@@ -74,15 +74,18 @@ fn ui_overlay_systems(app: &mut App) {
 			Update,
 			(
 				quickbar::<Queue, Combos, ComboLinger, AssetServer>,
-				update_label_text::<QuickbarPanel>,
+				update_label_text::<KeyMap<SlotKey, KeyCode>, LanguageServer, QuickbarPanel>,
 				panel_colors::<QuickbarPanel>,
-				panel_activity_colors_override::<Queue, QuickbarPanel>,
+				panel_activity_colors_override::<KeyMap<SlotKey, KeyCode>, Queue, QuickbarPanel>,
 			)
 				.run_if(in_state(MenuState::None)),
 		)
 		.add_systems(
 			Update,
-			(set_ui_mouse_context, prime_mouse_context::<QuickbarPanel>),
+			(
+				set_ui_mouse_context,
+				prime_mouse_context::<KeyMap<SlotKey, KeyCode>, QuickbarPanel>,
+			),
 		);
 }
 
