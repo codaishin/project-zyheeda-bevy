@@ -24,8 +24,5 @@ where
 }
 
 pub trait GetUiTextFor<TValue> {
-	fn ui_text_for(&self, value: &TValue) -> UIText
-	where
-		Japanese: GetUiText<TValue>,
-		English: GetUiText<TValue>;
+	fn ui_text_for(&self, value: &TValue) -> UIText;
 }

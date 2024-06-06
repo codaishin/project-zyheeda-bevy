@@ -55,10 +55,7 @@ fn set_first_section(text: &mut Mut<Text>, value: &str) {
 mod tests {
 	use super::*;
 	use bevy::app::{App, Update};
-	use common::{
-		components::Side,
-		traits::get_ui_text::{English, GetUiText, Japanese},
-	};
+	use common::components::Side;
 
 	struct _T;
 
@@ -66,11 +63,7 @@ mod tests {
 	struct _LanguageServer(SlotKey, &'static str);
 
 	impl GetUiTextFor<SlotKey> for _LanguageServer {
-		fn ui_text_for(&self, value: &SlotKey) -> UIText
-		where
-			Japanese: GetUiText<SlotKey>,
-			English: GetUiText<SlotKey>,
-		{
+		fn ui_text_for(&self, value: &SlotKey) -> UIText {
 			if value != &self.0 {
 				return UIText::Unmapped;
 			}

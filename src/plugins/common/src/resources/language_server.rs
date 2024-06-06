@@ -8,12 +8,12 @@ pub enum LanguageServer {
 	JP,
 }
 
-impl<TKey> GetUiTextFor<TKey> for LanguageServer {
-	fn ui_text_for(&self, value: &TKey) -> UIText
-	where
-		Japanese: GetUiText<TKey>,
-		English: GetUiText<TKey>,
-	{
+impl<TKey> GetUiTextFor<TKey> for LanguageServer
+where
+	Japanese: GetUiText<TKey>,
+	English: GetUiText<TKey>,
+{
+	fn ui_text_for(&self, value: &TKey) -> UIText {
 		match self {
 			LanguageServer::EN => English::ui_text(value),
 			LanguageServer::JP => Japanese::ui_text(value),
