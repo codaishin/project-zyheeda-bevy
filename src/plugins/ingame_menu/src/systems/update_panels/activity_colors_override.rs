@@ -8,7 +8,7 @@ use bevy::{
 		entity::Entity,
 		query::{QuerySingleError, With},
 		schedule::State,
-		system::{Commands, EntityCommands, Query, Res},
+		system::{Commands, EntityCommands, Query, Res, Resource},
 		world::Mut,
 	},
 	input::keyboard::KeyCode,
@@ -18,29 +18,29 @@ use bevy::{
 use common::{
 	components::Player,
 	states::MouseContext,
-	traits::{get::GetStatic, iterate::Iterate},
+	traits::{get::GetStatic, iterate::Iterate, map_value::TryMapBackwards},
 };
 use skills::{
 	items::slot_key::SlotKey,
-	resources::SlotMap,
 	skills::{Queued, Skill},
 };
 
 pub fn panel_activity_colors_override<
+	TMap: Resource + TryMapBackwards<KeyCode, SlotKey>,
 	TQueue: Component + Iterate<Skill<Queued>>,
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetStatic<SlotKey> + Component,
 >(
 	mut commands: Commands,
 	mut buttons: Query<(Entity, &mut BackgroundColor, &TPanel)>,
 	player: Query<&TQueue, With<Player>>,
-	slot_map: Res<SlotMap<KeyCode>>,
+	key_map: Res<TMap>,
 	mouse_context: Res<State<MouseContext>>,
 ) {
 	let player_slots = &player
 		.get_single()
 		.map(|queue| queue.iterate().map(|s| s.data.slot_key).collect::<Vec<_>>());
 	let primed_slots = match mouse_context.get() {
-		MouseContext::Primed(key) => slot_map.slots.get(key),
+		MouseContext::Primed(key) => key_map.try_map_backwards(*key),
 		_ => None,
 	};
 
@@ -58,7 +58,7 @@ pub fn panel_activity_colors_override<
 
 fn get_color<TPanel: HasActiveColor + HasPanelColors + HasQueuedColor>(
 	player_slots: &Result<Vec<SlotKey>, QuerySingleError>,
-	primed_slot: Option<&SlotKey>,
+	primed_slot: Option<SlotKey>,
 	panel_key: &SlotKey,
 ) -> Option<Color> {
 	let Ok(player_slots) = player_slots else {
@@ -70,7 +70,7 @@ fn get_color<TPanel: HasActiveColor + HasPanelColors + HasQueuedColor>(
 	match (iter.next(), iter.collect::<Vec<_>>(), primed_slot) {
 		(Some(active), _, _) if active == panel_key => Some(TPanel::ACTIVE_COLOR),
 		(_, queued, _) if queued.contains(&panel_key) => Some(TPanel::QUEUED_COLOR),
-		(_, _, Some(primed)) if primed == panel_key => Some(TPanel::PANEL_COLORS.pressed),
+		(_, _, Some(primed)) if &primed == panel_key => Some(TPanel::PANEL_COLORS.pressed),
 		_ => None,
 	}
 }
@@ -146,15 +146,30 @@ mod tests {
 		}
 	}
 
-	fn setup<TBundle: Bundle, const N: usize>(
-		bundle: TBundle,
-		slot_map: [(KeyCode, SlotKey, &'static str); N],
-	) -> (App, Entity) {
+	#[derive(Resource)]
+	enum _Map {
+		None,
+		Map(KeyCode, SlotKey),
+	}
+
+	impl TryMapBackwards<KeyCode, SlotKey> for _Map {
+		fn try_map_backwards(&self, value: KeyCode) -> Option<SlotKey> {
+			match self {
+				_Map::Map(key, slot) if key == &value => Some(*slot),
+				_ => None,
+			}
+		}
+	}
+
+	fn setup<TBundle: Bundle>(bundle: TBundle, key_map: _Map) -> (App, Entity) {
 		let mut app = App::new();
 
-		app.add_systems(Update, panel_activity_colors_override::<_Queue, _Panel>);
+		app.add_systems(
+			Update,
+			panel_activity_colors_override::<_Map, _Queue, _Panel>,
+		);
 		app.init_state::<MouseContext>();
-		app.insert_resource(SlotMap::<KeyCode>::new(slot_map));
+		app.insert_resource(key_map);
 		let panel = app.world.spawn(bundle).id();
 
 		(app, panel)
@@ -166,7 +181,7 @@ mod tests {
 			BackgroundColor::from(Color::NONE),
 			_Panel(SlotKey::Hand(Side::Main)),
 		);
-		let (mut app, panel) = setup(bundle, []);
+		let (mut app, panel) = setup(bundle, _Map::None);
 
 		app.world.spawn((
 			Player,
@@ -199,7 +214,7 @@ mod tests {
 			_Panel(SlotKey::Hand(Side::Main)),
 			ColorOverride,
 		);
-		let (mut app, panel) = setup(bundle, []);
+		let (mut app, panel) = setup(bundle, _Map::None);
 
 		app.world.spawn((
 			Player,
@@ -232,7 +247,7 @@ mod tests {
 			_Panel(SlotKey::Hand(Side::Main)),
 			ColorOverride,
 		);
-		let (mut app, panel) = setup(bundle, []);
+		let (mut app, panel) = setup(bundle, _Map::None);
 
 		app.world.spawn((Player, _Queue { queued: vec![] }));
 
@@ -253,7 +268,7 @@ mod tests {
 			BackgroundColor::from(Color::NONE),
 			_Panel(SlotKey::Hand(Side::Main)),
 		);
-		let (mut app, panel) = setup(bundle, [(KeyCode::KeyQ, SlotKey::Hand(Side::Main), "")]);
+		let (mut app, panel) = setup(bundle, _Map::Map(KeyCode::KeyQ, SlotKey::Hand(Side::Main)));
 
 		app.world.spawn((Player, _Queue { queued: vec![] }));
 
@@ -279,7 +294,7 @@ mod tests {
 			BackgroundColor::from(Color::NONE),
 			_Panel(SlotKey::Hand(Side::Main)),
 		);
-		let (mut app, panel) = setup(bundle, []);
+		let (mut app, panel) = setup(bundle, _Map::None);
 
 		app.world.spawn((
 			Player,

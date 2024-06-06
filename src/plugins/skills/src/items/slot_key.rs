@@ -1,3 +1,4 @@
+use bevy::input::keyboard::KeyCode;
 use common::{
 	components::Side,
 	traits::{
@@ -26,6 +27,15 @@ impl IterKey for SlotKey {
 		match current.0? {
 			SlotKey::Hand(Side::Main) => Some(SlotKey::Hand(Side::Off)),
 			SlotKey::Hand(Side::Off) => None,
+		}
+	}
+}
+
+impl From<SlotKey> for KeyCode {
+	fn from(value: SlotKey) -> Self {
+		match value {
+			SlotKey::Hand(Side::Main) => KeyCode::KeyE,
+			SlotKey::Hand(Side::Off) => KeyCode::KeyQ,
 		}
 	}
 }

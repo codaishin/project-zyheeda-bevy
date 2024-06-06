@@ -1,8 +1,9 @@
-use crate::{items::slot_key::SlotKey, resources::SlotMap, traits::InputState};
+use crate::{items::slot_key::SlotKey, traits::InputState};
 use bevy::{
 	ecs::system::{Res, Resource},
 	input::keyboard::KeyCode,
 };
+use common::traits::map_value::TryMapBackwards;
 
 #[derive(Default, Debug, PartialEq, Clone)]
 pub(crate) struct Input {
@@ -12,27 +13,28 @@ pub(crate) struct Input {
 }
 
 pub(crate) fn get_inputs<
-	TSuperiorInput: Resource + InputState<KeyCode>,
-	TInferiorInput: Resource + InputState<KeyCode>,
+	TMap: Resource + TryMapBackwards<KeyCode, SlotKey>,
+	TSuperiorInput: Resource + InputState<TMap, KeyCode>,
+	TInferiorInput: Resource + InputState<TMap, KeyCode>,
 >(
-	slot_map: Res<SlotMap>,
+	key_map: Res<TMap>,
 	superior: Res<TSuperiorInput>,
 	inferior: Res<TInferiorInput>,
 ) -> Input {
-	let mut just_pressed = superior.just_pressed_slots(&slot_map);
-	let mut pressed = superior.pressed_slots(&slot_map);
-	let mut just_released = superior.just_released_slots(&slot_map);
+	let mut just_pressed = superior.just_pressed_slots(&key_map);
+	let mut pressed = superior.pressed_slots(&key_map);
+	let mut just_released = superior.just_released_slots(&key_map);
 
-	pressed.extend(inferior.pressed_slots(&slot_map));
+	pressed.extend(inferior.pressed_slots(&key_map));
 	just_pressed.extend(
 		inferior
-			.just_pressed_slots(&slot_map)
+			.just_pressed_slots(&key_map)
 			.iter()
 			.filter(|key| !pressed.contains(key)),
 	);
 	just_released.extend(
 		inferior
-			.just_released_slots(&slot_map)
+			.just_released_slots(&key_map)
 			.iter()
 			.filter(|key| !pressed.contains(key)),
 	);
@@ -47,15 +49,29 @@ pub(crate) fn get_inputs<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::resources::SlotMap;
 	use bevy::{
 		app::{App, Update},
 		ecs::system::{In, IntoSystem, ResMut, Resource},
 		input::keyboard::KeyCode,
-		utils::default,
+		utils::{default, Uuid},
 	};
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
 	use mockall::{automock, predicate::eq};
+
+	#[derive(Resource, Clone, Debug, PartialEq)]
+	struct _Map(Uuid);
+
+	impl Default for _Map {
+		fn default() -> Self {
+			Self(Uuid::new_v4())
+		}
+	}
+
+	impl TryMapBackwards<KeyCode, SlotKey> for _Map {
+		fn try_map_backwards(&self, _: KeyCode) -> Option<SlotKey> {
+			None
+		}
+	}
 
 	#[derive(Resource, Debug, PartialEq, Default)]
 	struct _Result(Input);
@@ -66,14 +82,14 @@ mod tests {
 	}
 
 	#[automock]
-	impl InputState<KeyCode> for _Superior {
-		fn just_pressed_slots(&self, map: &SlotMap<KeyCode>) -> Vec<SlotKey> {
+	impl InputState<_Map, KeyCode> for _Superior {
+		fn just_pressed_slots(&self, map: &_Map) -> Vec<SlotKey> {
 			self.mock.just_pressed_slots(map)
 		}
-		fn pressed_slots(&self, map: &SlotMap<KeyCode>) -> Vec<SlotKey> {
+		fn pressed_slots(&self, map: &_Map) -> Vec<SlotKey> {
 			self.mock.pressed_slots(map)
 		}
-		fn just_released_slots(&self, map: &SlotMap<KeyCode>) -> Vec<SlotKey> {
+		fn just_released_slots(&self, map: &_Map) -> Vec<SlotKey> {
 			self.mock.just_released_slots(map)
 		}
 	}
@@ -84,27 +100,27 @@ mod tests {
 	}
 
 	#[automock]
-	impl InputState<KeyCode> for _Inferior {
-		fn just_pressed_slots(&self, map: &SlotMap<KeyCode>) -> Vec<SlotKey> {
+	impl InputState<_Map, KeyCode> for _Inferior {
+		fn just_pressed_slots(&self, map: &_Map) -> Vec<SlotKey> {
 			self.mock.just_pressed_slots(map)
 		}
-		fn pressed_slots(&self, map: &SlotMap<KeyCode>) -> Vec<SlotKey> {
+		fn pressed_slots(&self, map: &_Map) -> Vec<SlotKey> {
 			self.mock.pressed_slots(map)
 		}
-		fn just_released_slots(&self, map: &SlotMap<KeyCode>) -> Vec<SlotKey> {
+		fn just_released_slots(&self, map: &_Map) -> Vec<SlotKey> {
 			self.mock.just_released_slots(map)
 		}
 	}
 
-	fn setup(superior: _Superior, inferior: _Inferior) -> App {
+	fn setup(superior: _Superior, inferior: _Inferior, map: _Map) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<_Result>();
-		app.init_resource::<SlotMap>();
+		app.insert_resource(map);
 		app.insert_resource(superior);
 		app.insert_resource(inferior);
 		app.add_systems(
 			Update,
-			get_inputs::<_Superior, _Inferior>
+			get_inputs::<_Map, _Superior, _Inferior>
 				.pipe(|input: In<Input>, mut result: ResMut<_Result>| result.0 = input.0),
 		);
 
@@ -113,26 +129,22 @@ mod tests {
 
 	#[test]
 	fn get_superior_inputs() {
-		let slot_map = SlotMap::new([(
-			KeyCode::KeyA,
-			SlotKey::Hand(Side::Main),
-			"some value so it is not default",
-		)]);
+		let key_map = _Map::default();
 		let mut sup = _Superior::default();
 		sup.mock
 			.expect_just_pressed_slots()
 			.times(1)
-			.with(eq(slot_map.clone()))
+			.with(eq(key_map.clone()))
 			.return_const(vec![SlotKey::Hand(Side::Main)]);
 		sup.mock
 			.expect_pressed_slots()
 			.times(1)
-			.with(eq(slot_map.clone()))
+			.with(eq(key_map.clone()))
 			.return_const(vec![SlotKey::Hand(Side::Main)]);
 		sup.mock
 			.expect_just_released_slots()
 			.times(1)
-			.with(eq(slot_map.clone()))
+			.with(eq(key_map.clone()))
 			.return_const(vec![SlotKey::Hand(Side::Off)]);
 
 		let mut inf = _Inferior::default();
@@ -140,8 +152,7 @@ mod tests {
 		inf.mock.expect_pressed_slots().return_const(vec![]);
 		inf.mock.expect_just_released_slots().return_const(vec![]);
 
-		let mut app = setup(sup, inf);
-		app.insert_resource(slot_map);
+		let mut app = setup(sup, inf, key_map);
 		app.update();
 
 		let result = app.world.resource::<_Result>();
@@ -158,26 +169,22 @@ mod tests {
 
 	#[test]
 	fn get_inferior_inputs() {
-		let slot_map = SlotMap::new([(
-			KeyCode::KeyA,
-			SlotKey::Hand(Side::Main),
-			"some value so it is not default",
-		)]);
+		let key_map = _Map::default();
 		let mut inf = _Inferior::default();
 		inf.mock
 			.expect_just_pressed_slots()
 			.times(1)
-			.with(eq(slot_map.clone()))
+			.with(eq(key_map.clone()))
 			.return_const(vec![SlotKey::Hand(Side::Off)]);
 		inf.mock
 			.expect_pressed_slots()
 			.times(1)
-			.with(eq(slot_map.clone()))
+			.with(eq(key_map.clone()))
 			.return_const(vec![SlotKey::Hand(Side::Main)]);
 		inf.mock
 			.expect_just_released_slots()
 			.times(1)
-			.with(eq(slot_map.clone()))
+			.with(eq(key_map.clone()))
 			.return_const(vec![SlotKey::Hand(Side::Off)]);
 
 		let mut sup = _Superior::default();
@@ -185,8 +192,7 @@ mod tests {
 		sup.mock.expect_pressed_slots().return_const(vec![]);
 		sup.mock.expect_just_released_slots().return_const(vec![]);
 
-		let mut app = setup(sup, inf);
-		app.insert_resource(slot_map);
+		let mut app = setup(sup, inf, key_map);
 		app.update();
 
 		let result = app.world.resource::<_Result>();
@@ -217,7 +223,7 @@ mod tests {
 		inf.mock.expect_pressed_slots().return_const(vec![]);
 		inf.mock.expect_just_released_slots().return_const(vec![]);
 
-		let mut app = setup(sup, inf);
+		let mut app = setup(sup, inf, default());
 		app.update();
 
 		let result = app.world.resource::<_Result>();
@@ -247,7 +253,7 @@ mod tests {
 			.expect_just_released_slots()
 			.return_const(vec![SlotKey::Hand(Side::Main)]);
 
-		let mut app = setup(sup, inf);
+		let mut app = setup(sup, inf, default());
 		app.update();
 
 		let result = app.world.resource::<_Result>();

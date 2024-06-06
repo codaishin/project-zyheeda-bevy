@@ -1,16 +1,23 @@
 use crate::components::Label;
 use bevy::{
-	ecs::{query::Added, system::Query, world::Mut},
-	input::keyboard::KeyCode,
+	ecs::{
+		query::Added,
+		system::{Query, Resource},
+		world::Mut,
+	},
 	prelude::{default, Res},
 	text::{Text, TextSection},
 };
-use skills::{items::slot_key::SlotKey, resources::SlotMap};
+use common::traits::get_ui_text::{GetUiTextFor, UIText};
+use skills::items::slot_key::SlotKey;
 
 type Labels<'a, T> = (&'a Label<T, SlotKey>, &'a mut Text);
 
-pub fn update_label_text<T: Sync + Send + 'static>(
-	map: Res<SlotMap<KeyCode>>,
+pub fn update_label_text<
+	TLanguageServer: Resource + GetUiTextFor<SlotKey>,
+	T: Sync + Send + 'static,
+>(
+	map: Res<TLanguageServer>,
 	mut labels: Query<Labels<T>, Added<Label<T, SlotKey>>>,
 ) {
 	for (label, text) in &mut labels {
@@ -18,15 +25,19 @@ pub fn update_label_text<T: Sync + Send + 'static>(
 	}
 }
 
-fn update_text<T>(map: &Res<SlotMap<KeyCode>>, label: &Label<T, SlotKey>, mut text: Mut<Text>) {
-	let Some(value) = map.ui_input_display.get(&label.key) else {
+fn update_text<TLanguageServer: Resource + GetUiTextFor<SlotKey>, T>(
+	map: &Res<TLanguageServer>,
+	label: &Label<T, SlotKey>,
+	mut text: Mut<Text>,
+) {
+	let UIText::String(value) = map.ui_text_for(&label.key) else {
 		return;
 	};
 	let update = match text.sections.is_empty() {
 		true => add_first_section,
 		false => set_first_section,
 	};
-	update(&mut text, value);
+	update(&mut text, &value);
 }
 
 fn add_first_section(text: &mut Mut<Text>, value: &str) {
@@ -44,19 +55,34 @@ fn set_first_section(text: &mut Mut<Text>, value: &str) {
 mod tests {
 	use super::*;
 	use bevy::app::{App, Update};
-	use common::components::Side;
+	use common::{
+		components::Side,
+		traits::get_ui_text::{English, GetUiText, Japanese},
+	};
 
 	struct _T;
+
+	#[derive(Resource)]
+	struct _LanguageServer(SlotKey, &'static str);
+
+	impl GetUiTextFor<SlotKey> for _LanguageServer {
+		fn ui_text_for(&self, value: &SlotKey) -> UIText
+		where
+			Japanese: GetUiText<SlotKey>,
+			English: GetUiText<SlotKey>,
+		{
+			if value != &self.0 {
+				return UIText::Unmapped;
+			}
+			UIText::from(self.1)
+		}
+	}
 
 	#[test]
 	fn add_section_to_text() {
 		let mut app = App::new();
 
-		app.insert_resource(SlotMap::new([(
-			KeyCode::KeyQ,
-			SlotKey::Hand(Side::Main),
-			"IIIIII",
-		)]));
+		app.insert_resource(_LanguageServer(SlotKey::Hand(Side::Main), "IIIIII"));
 		let id = app
 			.world
 			.spawn((
@@ -65,7 +91,7 @@ mod tests {
 			))
 			.id();
 
-		app.add_systems(Update, update_label_text::<_T>);
+		app.add_systems(Update, update_label_text::<_LanguageServer, _T>);
 		app.update();
 
 		let text = app.world.entity(id).get::<Text>().unwrap();
@@ -80,11 +106,7 @@ mod tests {
 	fn override_first_section() {
 		let mut app = App::new();
 
-		app.insert_resource(SlotMap::new([(
-			KeyCode::KeyQ,
-			SlotKey::Hand(Side::Main),
-			"IIIIII",
-		)]));
+		app.insert_resource(_LanguageServer(SlotKey::Hand(Side::Main), "IIIIII"));
 		let id = app
 			.world
 			.spawn((
@@ -93,7 +115,7 @@ mod tests {
 			))
 			.id();
 
-		app.add_systems(Update, update_label_text::<_T>);
+		app.add_systems(Update, update_label_text::<_LanguageServer, _T>);
 		app.update();
 
 		let text = app.world.entity(id).get::<Text>().unwrap();

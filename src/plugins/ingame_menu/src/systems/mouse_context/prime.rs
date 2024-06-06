@@ -2,32 +2,39 @@ use bevy::{
 	ecs::{
 		component::Component,
 		schedule::NextState,
-		system::{Query, Res, ResMut},
+		system::{Query, Res, ResMut, Resource},
 	},
 	input::keyboard::KeyCode,
 	ui::Interaction,
 };
-use common::{states::MouseContext, traits::get::GetStatic};
-use skills::{items::slot_key::SlotKey, resources::SlotMap};
+use common::{
+	states::MouseContext,
+	traits::{get::GetStatic, map_value::MapForward},
+};
+use skills::items::slot_key::SlotKey;
 
-pub fn prime_mouse_context<TPanel: GetStatic<SlotKey> + Component>(
+pub fn prime_mouse_context<
+	TMap: Resource + MapForward<SlotKey, KeyCode>,
+	TPanel: GetStatic<SlotKey> + Component,
+>(
 	mut mouse_context: ResMut<NextState<MouseContext>>,
-	slot_map: Res<SlotMap<KeyCode>>,
+	key_map: Res<TMap>,
 	buttons: Query<(&TPanel, &Interaction)>,
 ) {
-	let get_key_code = get_key_code_from(&slot_map);
-	let key_code = buttons.iter().filter(is_pressed).find_map(get_key_code);
+	let get_key_code = get_key_code_from(key_map.as_ref());
+	let key_code = buttons.iter().find(is_pressed).map(get_key_code);
 
 	let Some(key_code) = key_code else {
 		return;
 	};
-	mouse_context.set(MouseContext::Primed(*key_code));
+
+	mouse_context.set(MouseContext::Primed(key_code));
 }
 
-fn get_key_code_from<'a, TPanel: GetStatic<SlotKey>>(
-	slot_map: &'a SlotMap<KeyCode>,
-) -> impl Fn((&TPanel, &Interaction)) -> Option<&'a KeyCode> {
-	|(panel, _): (&TPanel, &Interaction)| slot_map.keys.get(panel.get())
+fn get_key_code_from<TMap: MapForward<SlotKey, KeyCode>, TPanel: GetStatic<SlotKey>>(
+	key_map: &'_ TMap,
+) -> impl Fn((&TPanel, &Interaction)) -> KeyCode + '_ {
+	|(panel, _): (&TPanel, &Interaction)| key_map.map_forward(*panel.get())
 }
 
 fn is_pressed<TPanel>((_, interaction): &(&TPanel, &Interaction)) -> bool {
@@ -54,23 +61,31 @@ mod test {
 		}
 	}
 
+	#[derive(Resource)]
+	struct _Map(SlotKey, KeyCode);
+
+	impl MapForward<SlotKey, KeyCode> for _Map {
+		fn map_forward(&self, value: SlotKey) -> KeyCode {
+			if value == self.0 {
+				return self.1;
+			}
+			KeyCode::Abort
+		}
+	}
+
 	#[test]
 	fn prime() {
 		let mut app = App::new();
 
 		app.init_state::<MouseContext>();
-		app.insert_resource(SlotMap::new([(
-			KeyCode::KeyZ,
-			SlotKey::Hand(Side::Main),
-			"",
-		)]));
+		app.insert_resource(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyZ));
 		app.world
 			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::Pressed));
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
 
-		app.add_systems(Update, prime_mouse_context::<_Panel>);
+		app.add_systems(Update, prime_mouse_context::<_Map, _Panel>);
 		app.update();
 		app.update();
 
@@ -87,18 +102,14 @@ mod test {
 		let mut app = App::new();
 
 		app.init_state::<MouseContext>();
-		app.insert_resource(SlotMap::new([(
-			KeyCode::KeyZ,
-			SlotKey::Hand(Side::Main),
-			"",
-		)]));
+		app.insert_resource(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyZ));
 		app.world
 			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::None));
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
 
-		app.add_systems(Update, prime_mouse_context::<_Panel>);
+		app.add_systems(Update, prime_mouse_context::<_Map, _Panel>);
 		app.update();
 		app.update();
 
@@ -115,18 +126,14 @@ mod test {
 		let mut app = App::new();
 
 		app.init_state::<MouseContext>();
-		app.insert_resource(SlotMap::new([(
-			KeyCode::KeyT,
-			SlotKey::Hand(Side::Main),
-			"",
-		)]));
+		app.insert_resource(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyT));
 		app.world
 			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::Pressed));
 		app.world
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
 
-		app.add_systems(Update, prime_mouse_context::<_Panel>);
+		app.add_systems(Update, prime_mouse_context::<_Map, _Panel>);
 		app.update();
 		app.update();
 
