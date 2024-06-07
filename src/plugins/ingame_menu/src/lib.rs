@@ -43,7 +43,7 @@ use systems::{
 		update_label_text::update_label_text,
 	},
 };
-use tools::{menu_state::MenuState, Icon};
+use tools::menu_state::MenuState;
 
 pub struct IngameMenuPlugin;
 
@@ -58,7 +58,7 @@ impl Plugin for IngameMenuPlugin {
 
 fn resources(app: &mut App) {
 	app.init_state::<MenuState>()
-		.init_resource::<Shared<Path, Icon>>();
+		.init_resource::<Shared<Path, Handle<Image>>>();
 }
 
 fn state_control_systems(app: &mut App) {
@@ -73,7 +73,7 @@ fn ui_overlay_systems(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				quickbar::<Queue, Combos, ComboLinger, AssetServer>,
+				quickbar::<Queue, Combos, ComboLinger, AssetServer, Shared<Path, Handle<Image>>>,
 				update_label_text::<KeyMap<SlotKey, KeyCode>, LanguageServer, QuickbarPanel>,
 				panel_colors::<QuickbarPanel>,
 				panel_activity_colors_override::<KeyMap<SlotKey, KeyCode>, Queue, QuickbarPanel>,
