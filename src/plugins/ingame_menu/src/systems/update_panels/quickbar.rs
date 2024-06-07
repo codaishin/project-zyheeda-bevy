@@ -17,6 +17,7 @@ use common::{
 	components::Player,
 	resources::Shared,
 	traits::{
+		cache::Cache,
 		iterate::Iterate,
 		load_asset::{LoadAsset, Path},
 		try_insert_on::TryInsertOn,
@@ -118,7 +119,7 @@ fn load_image<'a, TServer: Resource + LoadAsset<Image>>(
 ) -> impl FnOnce(IconPath) -> Option<Icon> + 'a {
 	|icon| {
 		let icon = icon?;
-		Some(icons.get_handle(icon(), || Icon(server.load_asset(icon()))))
+		Some(icons.cached(icon(), || Icon(server.load_asset(icon()))))
 	}
 }
 
@@ -331,7 +332,7 @@ mod tests {
 			.return_const(Handle::default());
 		app.insert_resource(server);
 
-		shared.get_handle(Path::from("skill_item/icon/path"), || Icon(handle.clone()));
+		shared.cached(Path::from("skill_item/icon/path"), || Icon(handle.clone()));
 		app.insert_resource(shared);
 
 		app.world.spawn((Player, slots, _Queue::default()));
@@ -540,7 +541,7 @@ mod tests {
 			.return_const(Handle::default());
 		app.insert_resource(server);
 
-		shared.get_handle(Path::from("queued_skill/icon/path"), || {
+		shared.cached(Path::from("queued_skill/icon/path"), || {
 			Icon(handle.clone())
 		});
 		app.insert_resource(shared);

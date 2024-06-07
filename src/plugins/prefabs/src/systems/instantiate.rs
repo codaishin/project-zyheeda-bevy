@@ -13,6 +13,7 @@ use bevy::{
 use common::{
 	errors::{Error, Level},
 	resources::Shared,
+	traits::cache::Cache,
 };
 use std::any::TypeId;
 
@@ -56,10 +57,10 @@ pub fn instantiate<TAgent: Component + Instantiate>(
 			&mut entity,
 			(
 				|type_id: TypeId, mesh: &dyn Fn() -> Mesh| {
-					shared_meshes.get_handle(type_id, || meshes.add(mesh()))
+					shared_meshes.cached(type_id, || meshes.add(mesh()))
 				},
 				|type_id: TypeId, material: &dyn Fn() -> StandardMaterial| {
-					shared_materials.get_handle(type_id, || materials.add(material()))
+					shared_materials.cached(type_id, || materials.add(material()))
 				},
 			),
 		)
