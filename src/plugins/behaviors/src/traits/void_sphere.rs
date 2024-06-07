@@ -77,17 +77,17 @@ impl Instantiate for VoidSphere {
 		on: &mut EntityCommands,
 		mut assets: impl AssetHandles,
 	) -> Result<(), Error> {
-		let core_material = assets.handle::<VoidSphereCore>(&|| StandardMaterial {
+		let core_material = assets.handle::<VoidSphereCore>(&mut || StandardMaterial {
 			base_color: Color::BLACK,
 			metallic: 1.,
 			..default()
 		});
-		let core_mesh = assets.handle::<VoidSphereCore>(&|| sphere(VOID_SPHERE_INNER_RADIUS));
-		let ring_material = assets.handle::<VoidSphereRing>(&|| StandardMaterial {
+		let core_mesh = assets.handle::<VoidSphereCore>(&mut || sphere(VOID_SPHERE_INNER_RADIUS));
+		let ring_material = assets.handle::<VoidSphereRing>(&mut || StandardMaterial {
 			emissive: Color::rgb_linear(23000.0, 23000.0, 23000.0),
 			..default()
 		});
-		let ring_mesh = assets.handle::<VoidSphereRing>(&|| {
+		let ring_mesh = assets.handle::<VoidSphereRing>(&mut || {
 			Mesh::from(Torus {
 				major_radius: VOID_SPHERE_TORUS_RADIUS,
 				minor_radius: VOID_SPHERE_TORUS_RING_RADIUS,

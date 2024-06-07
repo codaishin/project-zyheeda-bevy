@@ -43,8 +43,8 @@ impl Instantiate for Projectile<Plasma> {
 	) -> Result<(), Error> {
 		let transform = Transform::from_translation(Vec3::ZERO);
 		let color = Color::rgb_linear(0., 1., 1.);
-		let mesh = assets.handle::<Projectile<Plasma>>(&|| sphere(PLASMA_RADIUS));
-		let material = assets.handle::<Projectile<Plasma>>(&|| StandardMaterial {
+		let mesh = assets.handle::<Projectile<Plasma>>(&mut || sphere(PLASMA_RADIUS));
+		let material = assets.handle::<Projectile<Plasma>>(&mut || StandardMaterial {
 			emissive: color * 230000.0,
 			..default()
 		});

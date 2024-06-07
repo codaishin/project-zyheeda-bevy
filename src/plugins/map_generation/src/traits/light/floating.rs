@@ -17,8 +17,8 @@ impl Instantiate for Light<Floating> {
 		mut assets: impl AssetHandles,
 	) -> Result<(), Error> {
 		let radius = 0.1;
-		let mesh = assets.handle::<Light<Floating>>(&|| sphere(radius));
-		let material = assets.handle::<Light<Floating>>(&|| StandardMaterial {
+		let mesh = assets.handle::<Light<Floating>>(&mut || sphere(radius));
+		let material = assets.handle::<Light<Floating>>(&mut || StandardMaterial {
 			base_color: Color::WHITE,
 			emissive: Color::rgb_linear(23000.0, 23000.0, 23000.0),
 			..default()
