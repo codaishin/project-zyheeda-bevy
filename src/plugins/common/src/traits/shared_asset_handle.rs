@@ -1,3 +1,5 @@
+pub mod load_asset;
+
 use bevy::asset::{Asset, Handle};
 
 pub trait SharedAssetHandle<TCache, TKey, TAsset: Asset> {
