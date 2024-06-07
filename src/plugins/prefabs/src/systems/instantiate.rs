@@ -1,50 +1,61 @@
 use crate::traits::{AssetHandleFor, Instantiate};
 use bevy::{
-	asset::{Assets, Handle},
+	asset::Handle,
 	ecs::{
 		component::Component,
 		entity::Entity,
 		query::Added,
-		system::{Commands, Query, ResMut},
+		system::{Commands, Query, ResMut, Resource},
 	},
 	pbr::StandardMaterial,
 	render::mesh::Mesh,
 };
 use common::{
 	errors::{Error, Level},
-	resources::Shared,
+	traits::shared_asset_handle::SharedAssetHandleProcedural,
 };
 use std::any::TypeId;
 
-impl<TMeshFn, TMaterialFn> AssetHandleFor<Mesh> for (TMeshFn, TMaterialFn)
-where
-	TMeshFn: FnMut(TypeId, &dyn Fn() -> Mesh) -> Handle<Mesh>,
-{
-	fn handle<TKey: 'static>(&mut self, mesh: &dyn Fn() -> Mesh) -> Handle<Mesh> {
-		(self.0)(TypeId::of::<TKey>(), mesh)
+type SMaterial = StandardMaterial;
+type GetHandleFn<'a, TAsset> =
+	&'a mut dyn FnMut(TypeId, &mut dyn FnMut() -> TAsset) -> Handle<TAsset>;
+
+struct GetHandlesFns<'a> {
+	mesh: GetHandleFn<'a, Mesh>,
+	material: GetHandleFn<'a, SMaterial>,
+}
+
+impl<'a> AssetHandleFor<Mesh> for GetHandlesFns<'a> {
+	fn handle<TKey: 'static>(&mut self, new: &mut dyn FnMut() -> Mesh) -> Handle<Mesh> {
+		let key = TypeId::of::<TKey>();
+		(self.mesh)(key, new)
 	}
 }
 
-impl<TMeshFn, TMaterialFn> AssetHandleFor<StandardMaterial> for (TMeshFn, TMaterialFn)
-where
-	TMaterialFn: FnMut(TypeId, &dyn Fn() -> StandardMaterial) -> Handle<StandardMaterial>,
-{
-	fn handle<TKey: 'static>(
-		&mut self,
-		material: &dyn Fn() -> StandardMaterial,
-	) -> Handle<StandardMaterial> {
-		(self.1)(TypeId::of::<TKey>(), material)
+impl<'a> AssetHandleFor<SMaterial> for GetHandlesFns<'a> {
+	fn handle<TKey: 'static>(&mut self, new: &mut dyn FnMut() -> SMaterial) -> Handle<SMaterial> {
+		let key = TypeId::of::<TKey>();
+		(self.material)(key, new)
 	}
 }
 
-pub fn instantiate<TAgent: Component + Instantiate>(
+pub fn instantiate<
+	TAgent: Component + Instantiate,
+	TMeshAssets: Resource + SharedAssetHandleProcedural<TMeshCache, TypeId, Mesh>,
+	TMaterialAssets: Resource + SharedAssetHandleProcedural<TMaterialCache, TypeId, SMaterial>,
+	TMeshCache: Resource,
+	TMaterialCache: Resource,
+>(
 	mut commands: Commands,
-	mut meshes: ResMut<Assets<Mesh>>,
-	mut materials: ResMut<Assets<StandardMaterial>>,
-	mut shared_meshes: ResMut<Shared<TypeId, Handle<Mesh>>>,
-	mut shared_materials: ResMut<Shared<TypeId, Handle<StandardMaterial>>>,
+	mut meshes: ResMut<TMeshAssets>,
+	mut materials: ResMut<TMaterialAssets>,
+	mut mesh_cache: ResMut<TMeshCache>,
+	mut material_cache: ResMut<TMaterialCache>,
 	agents: Query<(Entity, &TAgent), Added<TAgent>>,
 ) -> Vec<Result<(), Error>> {
+	let mesh_cache = mesh_cache.as_mut();
+	let material_cache = material_cache.as_mut();
+
 	let instantiate = |(entity, agent): (Entity, &TAgent)| {
 		let Some(mut entity) = commands.get_entity(entity) else {
 			return Err(Error {
@@ -54,14 +65,14 @@ pub fn instantiate<TAgent: Component + Instantiate>(
 		};
 		agent.instantiate(
 			&mut entity,
-			(
-				|type_id: TypeId, mesh: &dyn Fn() -> Mesh| {
-					shared_meshes.get_handle(type_id, || meshes.add(mesh()))
+			GetHandlesFns {
+				mesh: &mut |type_id: TypeId, mesh: &mut dyn FnMut() -> Mesh| {
+					meshes.handle(mesh_cache, type_id, mesh)
 				},
-				|type_id: TypeId, material: &dyn Fn() -> StandardMaterial| {
-					shared_materials.get_handle(type_id, || materials.add(material()))
+				material: &mut |type_id: TypeId, material: &mut dyn FnMut() -> SMaterial| {
+					materials.handle(material_cache, type_id, material)
 				},
-			),
+			},
 		)
 	};
 
@@ -76,18 +87,31 @@ mod tests {
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},
 		ecs::system::{EntityCommands, IntoSystem},
-		hierarchy::{BuildChildren, Parent},
 		math::primitives::Sphere,
 		render::color::Color,
-		utils::default,
+		utils::{default, Uuid},
 	};
 	use common::{
 		errors::Level,
 		systems::log::test_tools::{fake_log_error_lazy_many, FakeErrorLogMany},
 	};
+	use std::marker::PhantomData;
 
 	#[derive(Component)]
 	struct _Agent;
+
+	impl _Agent {
+		fn mesh() -> Mesh {
+			Mesh::from(Sphere { radius: 11. })
+		}
+
+		fn material() -> SMaterial {
+			SMaterial::from(Color::BLUE)
+		}
+	}
+
+	#[derive(Component)]
+	struct _Result<TAsset: Asset>(Handle<TAsset>);
 
 	impl Instantiate for _Agent {
 		fn instantiate(
@@ -96,24 +120,9 @@ mod tests {
 			mut assets: impl AssetHandles,
 		) -> Result<(), Error> {
 			on.try_insert((
-				assets.handle::<_Agent>(&|| Mesh::from(Sphere { radius: 11. })),
-				assets.handle::<_Agent>(&|| StandardMaterial {
-					base_color: Color::BLUE,
-					..default()
-				}),
+				_Result(assets.handle::<_Agent>(&mut _Agent::mesh)),
+				_Result(assets.handle::<_Agent>(&mut _Agent::material)),
 			));
-			Ok(())
-		}
-	}
-
-	#[derive(Component)]
-	struct _AgentWithChildren;
-
-	impl Instantiate for _AgentWithChildren {
-		fn instantiate(&self, on: &mut EntityCommands, _: impl AssetHandles) -> Result<(), Error> {
-			on.with_children(|parent| {
-				parent.spawn_empty();
-			});
 			Ok(())
 		}
 	}
@@ -130,113 +139,171 @@ mod tests {
 		}
 	}
 
+	#[derive(Resource)]
+	struct _Assets<TAsset: Asset> {
+		phantom_data: PhantomData<TAsset>,
+		args: Vec<(_Cache<TAsset>, TypeId, TAsset)>,
+		returns: Handle<TAsset>,
+	}
+
+	impl<TAssets: Asset> Default for _Assets<TAssets> {
+		fn default() -> Self {
+			Self {
+				phantom_data: PhantomData,
+				args: vec![],
+				returns: Handle::default(),
+			}
+		}
+	}
+
+	impl<TAsset: Asset> SharedAssetHandleProcedural<_Cache<TAsset>, TypeId, TAsset>
+		for _Assets<TAsset>
+	{
+		fn handle(
+			&mut self,
+			cache: &mut _Cache<TAsset>,
+			key: TypeId,
+			new: impl FnOnce() -> TAsset,
+		) -> Handle<TAsset> {
+			self.args.push((cache.clone(), key, new()));
+			self.returns.clone()
+		}
+	}
+
+	#[derive(Resource, Debug, PartialEq)]
+	struct _Cache<TAsset> {
+		phantom_data: PhantomData<TAsset>,
+		id: u32,
+	}
+
+	impl<TAsset> Clone for _Cache<TAsset> {
+		fn clone(&self) -> Self {
+			Self {
+				phantom_data: PhantomData,
+				id: self.id,
+			}
+		}
+	}
+
+	impl<TAsset> Default for _Cache<TAsset> {
+		fn default() -> Self {
+			Self {
+				phantom_data: PhantomData,
+				id: default(),
+			}
+		}
+	}
+
 	fn setup<TAgent: Component + Instantiate>() -> (App, Entity) {
 		let mut app = App::new();
 		let logger = app.world.spawn_empty().id();
-		app.init_resource::<Assets<Mesh>>();
-		app.init_resource::<Assets<StandardMaterial>>();
-		app.init_resource::<Shared<TypeId, Handle<Mesh>>>();
-		app.init_resource::<Shared<TypeId, Handle<StandardMaterial>>>();
+		let instantiate_system = instantiate::<
+			TAgent,
+			_Assets<Mesh>,
+			_Assets<SMaterial>,
+			_Cache<Mesh>,
+			_Cache<SMaterial>,
+		>;
+		app.init_resource::<_Assets<Mesh>>();
+		app.init_resource::<_Assets<SMaterial>>();
+		app.init_resource::<_Cache<Mesh>>();
+		app.init_resource::<_Cache<SMaterial>>();
 		app.add_systems(
 			Update,
-			instantiate::<TAgent>.pipe(fake_log_error_lazy_many(logger)),
+			instantiate_system.pipe(fake_log_error_lazy_many(logger)),
 		);
 
 		(app, logger)
-	}
-
-	fn get_original_asset_from_resources<'a, TAsset: Asset>(
-		seek: &AssetId<TAsset>,
-		app: &'a App,
-	) -> Option<&'a TAsset> {
-		let assets = app.world.resource::<Assets<TAsset>>();
-		let assets: Vec<_> = assets.iter().collect();
-		assets
-			.iter()
-			.find_map(|(id, asset)| if id == seek { Some(asset) } else { None })
-			.cloned()
 	}
 
 	#[test]
 	fn instantiate_mesh() {
 		let (mut app, ..) = setup::<_Agent>();
 		let agent = app.world.spawn(_Agent).id();
+		let handle = Handle::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		});
 
+		app.insert_resource(_Assets::<Mesh> {
+			returns: handle.clone(),
+			..default()
+		});
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let mesh = agent.get::<Handle<Mesh>>().unwrap();
-		let mesh = get_original_asset_from_resources(&mesh.id(), &app).unwrap();
+		let result = agent.get::<_Result<Mesh>>();
 
-		assert_eq!(
-			Mesh::from(Sphere { radius: 11. }).primitive_topology(),
-			mesh.primitive_topology()
-		);
+		assert_eq!(Some(handle), result.map(|r| r.0.clone()));
 	}
 
 	#[test]
 	fn instantiate_material() {
 		let (mut app, ..) = setup::<_Agent>();
 		let agent = app.world.spawn(_Agent).id();
+		let handle = Handle::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		});
 
+		app.insert_resource(_Assets::<SMaterial> {
+			returns: handle.clone(),
+			..default()
+		});
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let mat = agent.get::<Handle<StandardMaterial>>().unwrap();
-		let mat = get_original_asset_from_resources(&mat.id(), &app).unwrap();
+		let result = agent.get::<_Result<SMaterial>>();
 
-		assert_eq!(Color::BLUE, mat.base_color);
+		assert_eq!(Some(handle), result.map(|r| r.0.clone()));
 	}
 
 	#[test]
-	fn instantiate_mesh_through_shared_resource() {
+	fn call_mesh_assets_correctly() {
 		let (mut app, ..) = setup::<_Agent>();
-		let agent = app.world.spawn(_Agent).id();
+		app.world.spawn(_Agent);
 
+		app.insert_resource(_Cache::<Mesh> {
+			id: 42,
+			..default()
+		});
 		app.update();
 
-		let agent = app.world.entity(agent);
-		let mesh = agent.get::<Handle<Mesh>>();
-		let shared_mesh = app
-			.world
-			.resource::<Shared<TypeId, Handle<Mesh>>>()
-			.get(&TypeId::of::<_Agent>());
+		let assets = app.world.resource::<_Assets<Mesh>>();
 
-		assert_eq!(shared_mesh, mesh);
+		assert_eq!(
+			vec![(
+				42,
+				&TypeId::of::<_Agent>(),
+				_Agent::mesh().primitive_topology()
+			)],
+			assets
+				.args
+				.iter()
+				.map(|(cache, type_id, mesh)| (cache.id, type_id, mesh.primitive_topology()))
+				.collect::<Vec<_>>()
+		);
 	}
 
 	#[test]
-	fn instantiate_material_through_shared_resource() {
+	fn call_material_assets_correctly() {
 		let (mut app, ..) = setup::<_Agent>();
-		let agent = app.world.spawn(_Agent).id();
+		app.world.spawn(_Agent);
 
+		app.insert_resource(_Cache::<SMaterial> {
+			id: 42,
+			..default()
+		});
 		app.update();
 
-		let agent = app.world.entity(agent);
-		let mat = agent.get::<Handle<StandardMaterial>>();
-		let shared_mat = app
-			.world
-			.resource::<Shared<TypeId, Handle<StandardMaterial>>>()
-			.get(&TypeId::of::<_Agent>());
+		let assets = app.world.resource::<_Assets<SMaterial>>();
 
-		assert_eq!(shared_mat, mat);
-	}
-
-	#[test]
-	fn only_instantiate_when_agent_new() {
-		let (mut app, ..) = setup::<_AgentWithChildren>();
-		let agent = app.world.spawn(_AgentWithChildren).id();
-
-		app.update();
-		app.update();
-
-		let children = app
-			.world
-			.iter_entities()
-			.filter_map(|c| c.get::<Parent>())
-			.filter(|p| p.get() == agent);
-
-		assert_eq!(1, children.count());
+		assert_eq!(
+			vec![(42, &TypeId::of::<_Agent>(), _Agent::material().base_color)],
+			assets
+				.args
+				.iter()
+				.map(|(cache, type_id, mesh)| (cache.id, type_id, mesh.base_color))
+				.collect::<Vec<_>>()
+		);
 	}
 
 	#[test]

@@ -28,14 +28,14 @@ impl Instantiate for Dummy {
 		mut assets: impl AssetHandles,
 	) -> Result<(), Error> {
 		let transform = Transform::from_xyz(0., 1., 0.);
-		let mesh = assets.handle::<Dummy>(&|| {
+		let mesh = assets.handle::<Dummy>(&mut || {
 			Mesh::from(Cuboid::new(
 				DUMMY_DIMENSIONS.x,
 				DUMMY_DIMENSIONS.y,
 				DUMMY_DIMENSIONS.z,
 			))
 		});
-		let material = assets.handle::<Dummy>(&|| StandardMaterial {
+		let material = assets.handle::<Dummy>(&mut || StandardMaterial {
 			base_color: Color::GRAY,
 			..default()
 		});

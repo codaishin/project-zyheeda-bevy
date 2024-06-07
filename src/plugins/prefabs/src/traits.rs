@@ -12,7 +12,7 @@ use bevy::{
 use common::errors::Error;
 
 pub trait AssetHandleFor<TAsset: Asset> {
-	fn handle<Key: 'static>(&mut self, asset: &dyn Fn() -> TAsset) -> Handle<TAsset>;
+	fn handle<Key: 'static>(&mut self, asset: &mut dyn FnMut() -> TAsset) -> Handle<TAsset>;
 }
 
 pub trait AssetHandles: AssetHandleFor<Mesh> + AssetHandleFor<StandardMaterial> {}

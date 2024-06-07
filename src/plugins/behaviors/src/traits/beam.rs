@@ -19,13 +19,13 @@ impl Instantiate for Beam {
 		on: &mut EntityCommands,
 		mut assets: impl AssetHandles,
 	) -> Result<(), Error> {
-		let mesh = assets.handle::<Beam>(&|| {
+		let mesh = assets.handle::<Beam>(&mut || {
 			Mesh::from(Cylinder {
 				radius: 0.01,
 				half_height: 0.5,
 			})
 		});
-		let material = assets.handle::<Beam>(&|| StandardMaterial {
+		let material = assets.handle::<Beam>(&mut || StandardMaterial {
 			base_color: self.color,
 			emissive: self.emissive,
 			alpha_mode: AlphaMode::Add,

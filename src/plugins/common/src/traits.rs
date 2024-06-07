@@ -1,4 +1,6 @@
 pub mod accessor;
+pub mod add_asset;
+pub mod cache;
 pub mod cast_ray;
 pub mod clamp_zero_positive;
 pub mod get;
@@ -14,6 +16,7 @@ pub mod load_asset;
 pub mod map_value;
 pub mod ownership_relation;
 pub mod remove_conditionally;
+pub mod shared_asset_handle;
 pub mod state_duration;
 pub mod try_insert_on;
 pub mod try_remove_from;
