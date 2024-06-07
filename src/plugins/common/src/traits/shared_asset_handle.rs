@@ -1,3 +1,4 @@
+pub mod add_asset;
 pub mod load_asset;
 
 use bevy::asset::{Asset, Handle};
