@@ -7,7 +7,10 @@ where
 	T: GetOrCreateAsset<TypeId, TAsset>,
 	TAsset: Asset,
 {
-	fn get_or_create<Key: 'static>(&mut self, create: impl FnOnce() -> TAsset) -> Handle<TAsset> {
+	fn get_or_create_for<Key: 'static>(
+		&mut self,
+		create: impl FnMut() -> TAsset,
+	) -> Handle<TAsset> {
 		self.get_or_create(TypeId::of::<Key>(), create)
 	}
 }
@@ -58,7 +61,7 @@ mod tests {
 
 		assert_eq!(
 			handle,
-			cached.get_or_create::<u32>(StandardMaterial::default),
+			cached.get_or_create_for::<u32>(StandardMaterial::default),
 		)
 	}
 
@@ -66,7 +69,7 @@ mod tests {
 	fn call_get_or_create_with_proper_args() {
 		let mut cached = _GetOrCreateAsset::default();
 
-		as_get_or_create_type_asset(&mut cached).get_or_create::<u32>(|| StandardMaterial {
+		as_get_or_create_type_asset(&mut cached).get_or_create_for::<u32>(|| StandardMaterial {
 			base_color: Color::GREEN,
 			..default()
 		});

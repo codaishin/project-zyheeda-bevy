@@ -9,7 +9,7 @@ use bevy::{
 };
 
 pub trait Cache<TKey, TValue> {
-	fn cached(&mut self, key: TKey, new: impl FnOnce() -> TValue) -> TValue;
+	fn cached(&mut self, key: TKey, new: impl FnMut() -> TValue) -> TValue;
 }
 
 pub trait GetOrLoadAsset<TAsset: Asset> {
@@ -17,11 +17,12 @@ pub trait GetOrLoadAsset<TAsset: Asset> {
 }
 
 pub trait GetOrCreateAsset<TKey, TAsset: Asset> {
-	fn get_or_create(&mut self, key: TKey, create: impl FnOnce() -> TAsset) -> Handle<TAsset>;
+	fn get_or_create(&mut self, key: TKey, create: impl FnMut() -> TAsset) -> Handle<TAsset>;
 }
 
 pub trait GetOrCreateTypeAsset<TAsset: Asset> {
-	fn get_or_create<Key: 'static>(&mut self, create: impl FnOnce() -> TAsset) -> Handle<TAsset>;
+	fn get_or_create_for<Key: 'static>(&mut self, create: impl FnMut() -> TAsset)
+		-> Handle<TAsset>;
 }
 
 pub trait GetOrLoadAssetFactory<TAssets, TAsset: Asset, TStorage>

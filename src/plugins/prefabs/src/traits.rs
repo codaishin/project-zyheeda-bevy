@@ -3,27 +3,30 @@ pub(crate) mod dummy;
 pub(crate) mod projectile;
 
 use bevy::{
-	asset::{Asset, Handle},
 	ecs::{component::Component, system::EntityCommands},
 	math::primitives::Sphere,
 	pbr::StandardMaterial,
 	render::mesh::Mesh,
 };
-use common::errors::Error;
+use common::{errors::Error, traits::cache::GetOrCreateAsset};
+use std::any::TypeId;
 
-pub trait AssetHandleFor<TAsset: Asset> {
-	fn handle<Key: 'static>(&mut self, asset: &mut dyn FnMut() -> TAsset) -> Handle<TAsset>;
+pub trait GetOrCreateAssets:
+	GetOrCreateAsset<TypeId, Mesh> + GetOrCreateAsset<TypeId, StandardMaterial>
+{
 }
 
-pub trait AssetHandles: AssetHandleFor<Mesh> + AssetHandleFor<StandardMaterial> {}
-
-impl<TAssetHandles> AssetHandles for TAssetHandles where
-	TAssetHandles: AssetHandleFor<Mesh> + AssetHandleFor<StandardMaterial>
+impl<TAssetHandles> GetOrCreateAssets for TAssetHandles where
+	TAssetHandles: GetOrCreateAsset<TypeId, Mesh> + GetOrCreateAsset<TypeId, StandardMaterial>
 {
 }
 
 pub trait Instantiate {
-	fn instantiate(&self, on: &mut EntityCommands, assets: impl AssetHandles) -> Result<(), Error>;
+	fn instantiate(
+		&self,
+		on: &mut EntityCommands,
+		assets: impl GetOrCreateAssets,
+	) -> Result<(), Error>;
 }
 
 pub trait RegisterPrefab {

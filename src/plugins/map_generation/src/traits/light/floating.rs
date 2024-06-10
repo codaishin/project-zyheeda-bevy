@@ -7,18 +7,18 @@ use bevy::{
 	transform::components::Transform,
 	utils::default,
 };
-use common::errors::Error;
-use prefabs::traits::{sphere, AssetHandles, Instantiate};
+use common::{errors::Error, traits::cache::GetOrCreateTypeAsset};
+use prefabs::traits::{sphere, GetOrCreateAssets, Instantiate};
 
 impl Instantiate for Light<Floating> {
 	fn instantiate(
 		&self,
 		on: &mut EntityCommands,
-		mut assets: impl AssetHandles,
+		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		let radius = 0.1;
-		let mesh = assets.handle::<Light<Floating>>(&mut || sphere(radius));
-		let material = assets.handle::<Light<Floating>>(&mut || StandardMaterial {
+		let mesh = assets.get_or_create_for::<Light<Floating>>(|| sphere(radius));
+		let material = assets.get_or_create_for::<Light<Floating>>(|| StandardMaterial {
 			base_color: Color::WHITE,
 			emissive: Color::rgb_linear(23000.0, 23000.0, 23000.0),
 			..default()

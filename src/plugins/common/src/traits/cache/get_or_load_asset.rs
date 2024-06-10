@@ -33,7 +33,7 @@ where
 {
 	fn get_or_load(&mut self, key: Path) -> Handle<TAsset> {
 		let (assets, cache) = self;
-		cache.cached(key.clone(), || assets.load_asset(key))
+		cache.cached(key.clone(), || assets.load_asset(key.clone()))
 	}
 }
 

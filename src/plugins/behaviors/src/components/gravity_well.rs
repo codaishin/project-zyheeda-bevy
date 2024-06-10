@@ -10,10 +10,10 @@ use bevy_rapier3d::geometry::Collider;
 use common::{
 	errors::Error,
 	tools::UnitsPerSecond,
-	traits::clamp_zero_positive::ClampZeroPositive,
+	traits::{cache::GetOrCreateTypeAsset, clamp_zero_positive::ClampZeroPositive},
 };
 use gravity::traits::{GetGravityEffectCollider, GetGravityPull};
-use prefabs::traits::{AssetHandles, Instantiate};
+use prefabs::traits::{GetOrCreateAssets, Instantiate};
 use std::time::Duration;
 
 #[derive(Component, Debug, PartialEq)]
@@ -38,7 +38,7 @@ impl Instantiate for GravityWell {
 	fn instantiate(
 		&self,
 		on: &mut EntityCommands,
-		mut assets: impl AssetHandles,
+		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		let base_color = Color::MIDNIGHT_BLUE;
 		let emissive = base_color * 100.;
@@ -46,9 +46,10 @@ impl Instantiate for GravityWell {
 		on.insert((
 			LifeTime(Duration::from_secs(5)),
 			PbrBundle {
-				mesh: assets
-					.handle::<GravityWell>(&mut || Mesh::from(Sphere::new(GravityWell::RADIUS))),
-				material: assets.handle::<GravityWell>(&mut || StandardMaterial {
+				mesh: assets.get_or_create_for::<GravityWell>(|| {
+					Mesh::from(Sphere::new(GravityWell::RADIUS))
+				}),
+				material: assets.get_or_create_for::<GravityWell>(|| StandardMaterial {
 					base_color,
 					emissive,
 					alpha_mode: AlphaMode::Add,

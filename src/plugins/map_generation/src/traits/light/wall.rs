@@ -12,10 +12,14 @@ use bevy::{
 use common::{
 	errors::Error,
 	tools::{Intensity, IntensityChangePerSecond, Units},
-	traits::{clamp_zero_positive::ClampZeroPositive, try_insert_on::TryInsertOn},
+	traits::{
+		cache::GetOrCreateTypeAsset,
+		clamp_zero_positive::ClampZeroPositive,
+		try_insert_on::TryInsertOn,
+	},
 };
 use light::components::{ResponsiveLight, ResponsiveLightData};
-use prefabs::traits::{AssetHandles, Instantiate};
+use prefabs::traits::{GetOrCreateAssets, Instantiate};
 
 impl ExtraComponentsDefinition for Light<Wall> {
 	fn target_names() -> Vec<String> {
@@ -40,17 +44,17 @@ impl Instantiate for Light<Wall> {
 	fn instantiate(
 		&self,
 		on: &mut EntityCommands,
-		mut assets: impl AssetHandles,
+		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		let model = on.id();
 		let mut commands = on.commands();
 
-		let light_on_material = assets.handle::<WallLightOn>(&mut || StandardMaterial {
+		let light_on_material = assets.get_or_create_for::<WallLightOn>(|| StandardMaterial {
 			base_color: Color::WHITE,
 			emissive: Color::rgb_linear(14000.0, 14000.0, 14000.0),
 			..default()
 		});
-		let light_off_material = assets.handle::<WallLightOff>(&mut || StandardMaterial {
+		let light_off_material = assets.get_or_create_for::<WallLightOff>(|| StandardMaterial {
 			base_color: Color::BLACK,
 			..default()
 		});

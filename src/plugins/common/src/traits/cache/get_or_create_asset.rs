@@ -29,7 +29,7 @@ where
 	TAsset: Asset,
 	TCache: Resource + Cache<TKey, Handle<TAsset>>,
 {
-	fn get_or_create(&mut self, key: TKey, create: impl FnOnce() -> TAsset) -> Handle<TAsset> {
+	fn get_or_create(&mut self, key: TKey, mut create: impl FnMut() -> TAsset) -> Handle<TAsset> {
 		let (assets, cache) = self;
 		cache.cached(key, || assets.add_asset(create()))
 	}

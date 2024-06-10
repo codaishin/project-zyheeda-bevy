@@ -1,4 +1,4 @@
-use crate::traits::{AssetHandleFor, Instantiate};
+use crate::traits::Instantiate;
 use bevy::{
 	asset::Handle,
 	ecs::{
@@ -25,17 +25,15 @@ struct GetHandlesFns<'a> {
 	material: GetHandleFn<'a, SMat>,
 }
 
-impl<'a> AssetHandleFor<Mesh> for GetHandlesFns<'a> {
-	fn handle<TKey: 'static>(&mut self, new: &mut dyn FnMut() -> Mesh) -> Handle<Mesh> {
-		let key = TypeId::of::<TKey>();
-		(self.mesh)(key, new)
+impl<'a> GetOrCreateAsset<TypeId, Mesh> for GetHandlesFns<'a> {
+	fn get_or_create(&mut self, key: TypeId, mut create: impl FnMut() -> Mesh) -> Handle<Mesh> {
+		(self.mesh)(key, &mut create)
 	}
 }
 
-impl<'a> AssetHandleFor<SMat> for GetHandlesFns<'a> {
-	fn handle<TKey: 'static>(&mut self, new: &mut dyn FnMut() -> SMat) -> Handle<SMat> {
-		let key = TypeId::of::<TKey>();
-		(self.material)(key, new)
+impl<'a> GetOrCreateAsset<TypeId, SMat> for GetHandlesFns<'a> {
+	fn get_or_create(&mut self, key: TypeId, mut create: impl FnMut() -> SMat) -> Handle<SMat> {
+		(self.material)(key, &mut create)
 	}
 }
 
@@ -86,7 +84,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::AssetHandles;
+	use crate::traits::GetOrCreateAssets;
 	use bevy::{
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},
@@ -99,6 +97,7 @@ mod tests {
 	use common::{
 		errors::Level,
 		systems::log::test_tools::{fake_log_error_lazy_many, FakeErrorLogMany},
+		traits::cache::GetOrCreateTypeAsset,
 	};
 	use std::marker::PhantomData;
 
@@ -122,11 +121,11 @@ mod tests {
 		fn instantiate(
 			&self,
 			on: &mut EntityCommands,
-			mut assets: impl AssetHandles,
+			mut assets: impl GetOrCreateAssets,
 		) -> Result<(), Error> {
 			on.try_insert((
-				_Result(assets.handle::<_Agent>(&mut _Agent::mesh)),
-				_Result(assets.handle::<_Agent>(&mut _Agent::material)),
+				_Result(assets.get_or_create_for::<_Agent>(_Agent::mesh)),
+				_Result(assets.get_or_create_for::<_Agent>(_Agent::material)),
 			));
 			Ok(())
 		}
@@ -136,7 +135,11 @@ mod tests {
 	struct _AgentWithInstantiationError;
 
 	impl Instantiate for _AgentWithInstantiationError {
-		fn instantiate(&self, _: &mut EntityCommands, _: impl AssetHandles) -> Result<(), Error> {
+		fn instantiate(
+			&self,
+			_: &mut EntityCommands,
+			_: impl GetOrCreateAssets,
+		) -> Result<(), Error> {
 			Err(Error {
 				msg: "AAA".to_owned(),
 				lvl: Level::Warning,
