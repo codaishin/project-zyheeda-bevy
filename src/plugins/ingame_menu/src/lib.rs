@@ -9,7 +9,8 @@ use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
 	states::{GameRunning, Off, On},
 	systems::log::log_many,
-	traits::load_asset::Path,
+	tools::Factory,
+	traits::{cache::get_or_load_asset::LoadAssetCache, load_asset::Path},
 };
 use components::{
 	inventory_panel::InventoryPanel,
@@ -73,7 +74,14 @@ fn ui_overlay_systems(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				quickbar::<Queue, Combos, ComboLinger, AssetServer, Shared<Path, Handle<Image>>>,
+				quickbar::<
+					Queue,
+					Combos,
+					ComboLinger,
+					AssetServer,
+					Shared<Path, Handle<Image>>,
+					Factory<LoadAssetCache>,
+				>,
 				update_label_text::<KeyMap<SlotKey, KeyCode>, LanguageServer, QuickbarPanel>,
 				panel_colors::<QuickbarPanel>,
 				panel_activity_colors_override::<KeyMap<SlotKey, KeyCode>, Queue, QuickbarPanel>,

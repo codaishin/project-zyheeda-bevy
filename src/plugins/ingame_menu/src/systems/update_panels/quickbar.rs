@@ -16,9 +16,9 @@ use bevy::{
 use common::{
 	components::Player,
 	traits::{
+		cache::{GetOrLoadAsset, GetOrLoadAssetFactory},
 		iterate::Iterate,
 		load_asset::Path,
-		shared_asset_handle::SharedAssetHandle,
 		try_insert_on::TryInsertOn,
 	},
 };
@@ -38,29 +38,29 @@ type PlayerComponents<'a, TQueue, TCombos, TComboLinger> = (
 
 type IconPath = Option<fn() -> Path>;
 
-pub fn quickbar<
+pub fn quickbar<TQueue, TCombos, TComboLinger, TAssets, TStorage, TFactory>(
+	mut commands: Commands,
+	assets: ResMut<TAssets>,
+	storage: ResMut<TStorage>,
+	players: Query<PlayerComponents<TQueue, TCombos, TComboLinger>, With<Player>>,
+	mut panels: Query<(Entity, &mut QuickbarPanel)>,
+) where
 	TQueue: Component + Iterate<Skill<Queued>>,
 	TCombos: Component + PeekNext<Skill>,
 	TComboLinger: Component + IsLingering,
-	TAssets: Resource + SharedAssetHandle<TCache, Path, Image>,
-	TCache: Resource,
->(
-	mut commands: Commands,
-	mut assets: ResMut<TAssets>,
-	mut cache: ResMut<TCache>,
-	players: Query<PlayerComponents<TQueue, TCombos, TComboLinger>, With<Player>>,
-	mut panels: Query<(Entity, &mut QuickbarPanel)>,
-) {
+	TAssets: Resource,
+	TStorage: Resource,
+	TFactory: GetOrLoadAssetFactory<TAssets, Image, TStorage>,
+{
 	let Ok((slots, queue, combos, combo_linger)) = players.get_single() else {
 		return;
 	};
-	let assets = assets.as_mut();
-	let cache = cache.as_mut();
+	let cache = &mut TFactory::create_from(assets, storage);
 	let mut get_icon_image = |key: &SlotKey| {
 		icon_of_active_skill(key, queue)
 			.or_else(icon_of_lingering_combo(key, slots, combos, combo_linger))
 			.or_else(icon_of_slot_item(key, slots))
-			.and_then(load_image(assets, cache))
+			.and_then(load_image(cache))
 	};
 
 	for (id, mut panel) in &mut panels {
@@ -113,11 +113,10 @@ fn icon_of_slot_item<'a>(
 	}
 }
 
-fn load_image<'a, TAssets: Resource + SharedAssetHandle<TCache, Path, Image>, TCache>(
-	assets: &'a mut TAssets,
-	cache: &'a mut TCache,
-) -> impl FnOnce(IconPath) -> Option<Icon> + 'a {
-	|icon| Some(Icon(assets.handle(cache, icon?())))
+fn load_image(
+	cache: &mut impl GetOrLoadAsset<Image>,
+) -> impl FnOnce(IconPath) -> Option<Icon> + '_ {
+	|icon| Some(Icon(cache.get_or_load(icon?())))
 }
 
 #[cfg(test)]
@@ -131,7 +130,7 @@ mod tests {
 		utils::{default, Uuid},
 	};
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
-	use mockall::{automock, predicate::eq};
+	use mockall::{automock, mock, predicate::eq};
 	use skills::{
 		components::{Mounts, Slot},
 		items::Item,
@@ -204,28 +203,30 @@ mod tests {
 		}
 	}
 
-	#[derive(Resource, Default, Debug, PartialEq, Clone, Copy)]
-	struct _Cache(u32);
+	#[derive(Resource, Default)]
+	struct _Storage;
 
 	#[derive(Resource, Default)]
-	struct _Assets {
-		mock: Mock_Assets,
-	}
+	struct _Assets;
 
-	#[automock]
-	impl SharedAssetHandle<_Cache, Path, Image> for _Assets {
-		fn handle(&mut self, cache: &mut _Cache, key: Path) -> Handle<Image> {
-			self.mock.handle(cache, key)
+	mock! {
+		_Cache {}
+		impl GetOrLoadAsset<Image> for _Cache {
+			fn get_or_load(&mut self, key: Path) -> Handle<Image>;
 		}
 	}
 
-	fn setup() -> App {
+	fn setup<TFactory>() -> App
+	where
+		for<'a> TFactory: GetOrLoadAssetFactory<_Assets, Image, _Storage> + 'static,
+	{
 		let mut app = App::new().single_threaded(Update);
 
-		app.init_resource::<_Cache>();
+		app.init_resource::<_Assets>();
+		app.init_resource::<_Storage>();
 		app.add_systems(
 			Update,
-			quickbar::<_Queue, _Combos, _ComboLingers, _Assets, _Cache>,
+			quickbar::<_Queue, _Combos, _ComboLingers, _Assets, _Storage, TFactory>,
 		);
 
 		app
@@ -240,11 +241,21 @@ mod tests {
 
 	#[test]
 	fn add_icon_image() {
-		let mut app = setup();
-		let mut assets = _Assets::default();
-		let handle = Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
+		const HANDLE: Handle<Image> = Handle::Weak(AssetId::Uuid {
+			uuid: Uuid::from_u128(0xe5db01e4_9a32_43d1_b048_d690d646adde),
 		});
+
+		struct _Factory;
+
+		impl GetOrLoadAssetFactory<_Assets, Image, _Storage> for _Factory {
+			fn create_from(_: ResMut<_Assets>, _: ResMut<_Storage>) -> impl GetOrLoadAsset<Image> {
+				let mut cache = Mock_Cache::default();
+				cache.expect_get_or_load().return_const(HANDLE);
+				cache
+			}
+		}
+
+		let mut app = setup::<_Factory>();
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
@@ -252,9 +263,6 @@ mod tests {
 				item: Some(Item::with_icon_path(|| Path::from("item_skill/icon/path"))),
 			},
 		)]));
-
-		assets.mock.expect_handle().return_const(handle.clone());
-		app.insert_resource(assets);
 
 		app.world.spawn((Player, slots, _Queue::default()));
 		let panel = app
@@ -270,7 +278,7 @@ mod tests {
 		let panel = app.world.entity(panel);
 
 		assert_eq!(
-			(Some(handle), Some(PanelState::Filled)),
+			(Some(HANDLE), Some(PanelState::Filled)),
 			(
 				panel.get::<UiImage>().map(|image| image.texture.clone()),
 				panel.get::<QuickbarPanel>().map(|panel| panel.state)
@@ -280,8 +288,17 @@ mod tests {
 
 	#[test]
 	fn set_empty_when_no_skill_found() {
-		let mut app = setup();
-		let mut assets = _Assets::default();
+		struct _Factory;
+
+		impl GetOrLoadAssetFactory<_Assets, Image, _Storage> for _Factory {
+			fn create_from(_: ResMut<_Assets>, _: ResMut<_Storage>) -> impl GetOrLoadAsset<Image> {
+				let mut cache = Mock_Cache::default();
+				cache.expect_get_or_load().return_const(Handle::default());
+				cache
+			}
+		}
+
+		let mut app = setup::<_Factory>();
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
@@ -289,13 +306,6 @@ mod tests {
 				item: None,
 			},
 		)]));
-
-		assets
-			.mock
-			.expect_handle()
-			.never()
-			.return_const(Handle::default());
-		app.insert_resource(assets);
 
 		app.world.spawn((Player, slots, _Queue::default()));
 		let panel = app
@@ -321,9 +331,21 @@ mod tests {
 
 	#[test]
 	fn add_combo_skill_icon_when_no_skill_active_and_lingering() {
-		let mut app = setup();
-		let mut assets = _Assets::default();
+		struct _Factory;
+
+		impl GetOrLoadAssetFactory<_Assets, Image, _Storage> for _Factory {
+			fn create_from(_: ResMut<_Assets>, _: ResMut<_Storage>) -> impl GetOrLoadAsset<Image> {
+				let mut cache = Mock_Cache::default();
+				cache
+					.expect_get_or_load()
+					.with(eq(Path::from("combo_skill/icon/path")))
+					.return_const(Handle::default());
+				cache
+			}
+		}
+
 		let mut combos = _Combos::default();
+		let mut app = setup::<_Factory>();
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
@@ -331,15 +353,6 @@ mod tests {
 				item: Some(Item::with_icon_path(|| Path::from("item_skill/icon/path"))),
 			},
 		)]));
-		let cache = _Cache(42);
-
-		assets
-			.mock
-			.expect_handle()
-			.with(eq(cache), eq(Path::from("combo_skill/icon/path")))
-			.return_const(Handle::default());
-		app.insert_resource(cache);
-		app.insert_resource(assets);
 
 		combos
 			.mock
@@ -363,9 +376,21 @@ mod tests {
 	}
 
 	#[test]
-	fn do_not_add_combo_skill_icon_when_no_skill_active_and_not_lingering() {
-		let mut app = setup();
-		let mut assets = _Assets::default();
+	fn add_item_skill_icon_when_no_skill_active_and_not_lingering() {
+		struct _Factory;
+
+		impl GetOrLoadAssetFactory<_Assets, Image, _Storage> for _Factory {
+			fn create_from(_: ResMut<_Assets>, _: ResMut<_Storage>) -> impl GetOrLoadAsset<Image> {
+				let mut cache = Mock_Cache::default();
+				cache
+					.expect_get_or_load()
+					.with(eq(Path::from("item_skill/icon/path")))
+					.return_const(Handle::default());
+				cache
+			}
+		}
+
+		let mut app = setup::<_Factory>();
 		let mut combos = _Combos::default();
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
@@ -374,15 +399,6 @@ mod tests {
 				item: Some(Item::with_icon_path(|| Path::from("item_skill/icon/path"))),
 			},
 		)]));
-		let cache = _Cache(42);
-
-		assets
-			.mock
-			.expect_handle()
-			.with(eq(cache), eq(Path::from("item_skill/icon/path")))
-			.return_const(Handle::default());
-		app.insert_resource(cache);
-		app.insert_resource(assets);
 
 		combos
 			.mock
@@ -406,9 +422,21 @@ mod tests {
 	}
 
 	#[test]
-	fn do_not_add_combo_skill_icon_when_skill_active() {
-		let mut app = setup();
-		let mut assets = _Assets::default();
+	fn add_active_skill_icon_when_skill_active() {
+		struct _Factory;
+
+		impl GetOrLoadAssetFactory<_Assets, Image, _Storage> for _Factory {
+			fn create_from(_: ResMut<_Assets>, _: ResMut<_Storage>) -> impl GetOrLoadAsset<Image> {
+				let mut cache = Mock_Cache::default();
+				cache
+					.expect_get_or_load()
+					.with(eq(Path::from("active_skill/icon/path")))
+					.return_const(Handle::default());
+				cache
+			}
+		}
+
+		let mut app = setup::<_Factory>();
 		let mut combos = _Combos::default();
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
@@ -417,15 +445,6 @@ mod tests {
 				item: Some(Item::with_icon_path(|| Path::from("item_skill/icon/path"))),
 			},
 		)]));
-		let cache = _Cache(42);
-
-		assets
-			.mock
-			.expect_handle()
-			.with(eq(cache), eq(Path::from("active_skill/icon/path")))
-			.return_const(Handle::default());
-		app.insert_resource(cache);
-		app.insert_resource(assets);
 
 		combos
 			.mock
@@ -452,8 +471,17 @@ mod tests {
 
 	#[test]
 	fn call_combo_peek_next_with_correct_args() {
-		let mut app = setup();
-		let mut assets = _Assets::default();
+		struct _Factory;
+
+		impl GetOrLoadAssetFactory<_Assets, Image, _Storage> for _Factory {
+			fn create_from(_: ResMut<_Assets>, _: ResMut<_Storage>) -> impl GetOrLoadAsset<Image> {
+				let mut cache = Mock_Cache::default();
+				cache.expect_get_or_load().return_const(Handle::default());
+				cache
+			}
+		}
+
+		let mut app = setup::<_Factory>();
 		let mut combos = _Combos::default();
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
@@ -462,9 +490,6 @@ mod tests {
 				item: Some(Item::with_icon_path(|| Path::from("item_skill/icon/path"))),
 			},
 		)]));
-
-		assets.mock.expect_handle().return_const(Handle::default());
-		app.insert_resource(assets);
 
 		combos
 			.mock
