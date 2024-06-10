@@ -14,6 +14,9 @@
 	"rust-analyzer.rustfmt.extraArgs": [
 		"+nightly"
 	],
+	"[github-actions-workflow]": {
+		"editor.insertSpaces": true,
+	},
 	"cSpell.words": [
 		"automock",
 		"beamer",
