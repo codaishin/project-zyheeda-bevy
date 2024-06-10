@@ -60,7 +60,7 @@ mod test_caching_of_pre_made_assets {
 	}
 
 	impl LoadAsset<Image> for _LoadAsset {
-		fn load_asset(&self, path: Path) -> Handle<Image> {
+		fn load_asset(&mut self, path: Path) -> Handle<Image> {
 			self.args.borrow_mut().push(path);
 			self.returns.clone()
 		}

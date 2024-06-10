@@ -1,5 +1,5 @@
 use bevy::{
-	ecs::system::{Commands, In, Res, Resource},
+	ecs::system::{Commands, In, ResMut, Resource},
 	scene::{Scene, SceneBundle},
 	transform::components::Transform,
 	utils::default,
@@ -9,7 +9,7 @@ use common::traits::load_asset::{LoadAsset, Path};
 pub(crate) fn spawn_scene<TCell: Clone, TAsset: LoadAsset<Scene> + Resource>(
 	cells: In<Vec<(Transform, TCell)>>,
 	mut commands: Commands,
-	load_asset: Res<TAsset>,
+	mut load_asset: ResMut<TAsset>,
 ) where
 	Path: TryFrom<TCell>,
 {
@@ -63,7 +63,7 @@ mod tests {
 
 	#[automock]
 	impl LoadAsset<Scene> for _LoadScene {
-		fn load_asset(&self, path: Path) -> Handle<Scene> {
+		fn load_asset(&mut self, path: Path) -> Handle<Scene> {
 			self.mock.load_asset(path)
 		}
 	}

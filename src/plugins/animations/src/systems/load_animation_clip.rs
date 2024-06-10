@@ -7,7 +7,7 @@ use bevy::{
 	ecs::{
 		component::Component,
 		query::Changed,
-		system::{Query, Res, ResMut, Resource},
+		system::{Query, ResMut, Resource},
 	},
 };
 use common::traits::load_asset::{LoadAsset, Path};
@@ -19,7 +19,7 @@ pub(crate) fn load_animation_clip<
 	TServer: Resource + LoadAsset<AnimationClip>,
 >(
 	mut clips: ResMut<AnimationClips<Path>>,
-	server: Res<TServer>,
+	mut server: ResMut<TServer>,
 	dispatchers: Query<&TAnimationDispatch, Changed<TAnimationDispatch>>,
 ) {
 	for animation in dispatchers.iter().filter_map(has_animation) {
@@ -74,7 +74,7 @@ mod tests {
 
 	#[automock]
 	impl LoadAsset<AnimationClip> for _LoadAnimation {
-		fn load_asset(&self, path: Path) -> Handle<AnimationClip> {
+		fn load_asset(&mut self, path: Path) -> Handle<AnimationClip> {
 			self.mock.load_asset(path)
 		}
 	}

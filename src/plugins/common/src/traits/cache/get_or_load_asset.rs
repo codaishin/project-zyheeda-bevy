@@ -2,10 +2,10 @@ use super::{Cache, GetOrLoadAsset};
 use crate::traits::load_asset::{LoadAsset, Path};
 use bevy::{
 	asset::{Asset, Handle},
-	prelude::{Res, ResMut, Resource},
+	prelude::{ResMut, Resource},
 };
 
-impl<TAssets, TAsset, TCache> GetOrLoadAsset<TAsset> for (Res<'_, TAssets>, ResMut<'_, TCache>)
+impl<TAssets, TAsset, TCache> GetOrLoadAsset<TAsset> for (ResMut<'_, TAssets>, ResMut<'_, TCache>)
 where
 	TAssets: Resource + LoadAsset<TAsset>,
 	TAsset: Asset,
@@ -28,7 +28,6 @@ mod tests {
 		render::texture::Image,
 		utils::Uuid,
 	};
-	use std::{cell::RefCell, sync::Mutex};
 
 	#[derive(Default, Resource)]
 	struct _Cache {
@@ -45,17 +44,13 @@ mod tests {
 
 	#[derive(Default, Resource)]
 	struct _Assets {
-		args: Mutex<RefCell<Vec<Path>>>,
+		args: Vec<Path>,
 		returns: Handle<Image>,
 	}
 
 	impl LoadAsset<Image> for _Assets {
-		fn load_asset(&self, path: Path) -> Handle<Image> {
-			let Ok(args) = self.args.lock() else {
-				panic!("Can't acquire args lock in _Assets");
-			};
-
-			args.borrow_mut().push(path);
+		fn load_asset(&mut self, path: Path) -> Handle<Image> {
+			self.args.push(path);
 			self.returns.clone()
 		}
 	}
@@ -70,11 +65,11 @@ mod tests {
 
 	fn run_system(
 		app: &mut App,
-		mut callback: impl FnMut(Res<_Assets>, ResMut<_Cache>) + Send + Sync + 'static,
+		mut callback: impl FnMut(ResMut<_Assets>, ResMut<_Cache>) + Send + Sync + 'static,
 	) {
 		app.add_systems(
 			Update,
-			move |assets: Res<_Assets>, cache: ResMut<_Cache>| {
+			move |assets: ResMut<_Assets>, cache: ResMut<_Cache>| {
 				callback(assets, cache);
 			},
 		);
@@ -128,7 +123,6 @@ mod tests {
 		});
 
 		let assets = app.world.resource::<_Assets>();
-		let args = assets.args.lock().unwrap();
-		assert_eq!(vec![Path::from("proper path")], *args.borrow());
+		assert_eq!(vec![Path::from("proper path")], assets.args);
 	}
 }
