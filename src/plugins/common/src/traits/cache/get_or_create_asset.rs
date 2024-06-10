@@ -1,9 +1,26 @@
-use super::{Cache, GetOrCreateAsset};
-use crate::traits::add_asset::AddAsset;
+use super::{Cache, GetOrCreateAsset, GetOrCreateAssetFactory};
+use crate::{tools::Factory, traits::add_asset::AddAsset};
 use bevy::{
 	asset::{Asset, Handle},
 	prelude::{ResMut, Resource},
 };
+
+pub struct CreateAssetCache;
+
+impl<TAssets, TAsset, TCache, TKey> GetOrCreateAssetFactory<TAssets, TAsset, TCache, TKey>
+	for Factory<CreateAssetCache>
+where
+	TAssets: Resource + AddAsset<TAsset>,
+	TAsset: Asset,
+	TCache: Resource + Cache<TKey, Handle<TAsset>>,
+{
+	fn create_from(
+		assets: ResMut<TAssets>,
+		storage: ResMut<TCache>,
+	) -> impl GetOrCreateAsset<TKey, TAsset> {
+		(assets, storage)
+	}
+}
 
 impl<TAssets, TAsset, TCache, TKey> GetOrCreateAsset<TKey, TAsset>
 	for (ResMut<'_, TAssets>, ResMut<'_, TCache>)
@@ -20,9 +37,8 @@ where
 
 #[cfg(test)]
 mod tests {
-	use crate::test_tools::utils::SingleThreadedApp;
-
 	use super::*;
+	use crate::test_tools::utils::SingleThreadedApp;
 	use bevy::{
 		app::{App, Update},
 		asset::AssetId,

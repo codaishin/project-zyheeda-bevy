@@ -1,9 +1,29 @@
-use super::{Cache, GetOrLoadAsset};
-use crate::traits::load_asset::{LoadAsset, Path};
+use super::{Cache, GetOrLoadAsset, GetOrLoadAssetFactory};
+use crate::{
+	tools::Factory,
+	traits::load_asset::{LoadAsset, Path},
+};
 use bevy::{
 	asset::{Asset, Handle},
 	prelude::{ResMut, Resource},
 };
+
+pub struct LoadAssetCache;
+
+impl<TAssets, TAsset, TCache> GetOrLoadAssetFactory<TAssets, TAsset, TCache>
+	for Factory<LoadAssetCache>
+where
+	TAssets: Resource + LoadAsset<TAsset>,
+	TAsset: Asset,
+	TCache: Resource + Cache<Path, Handle<TAsset>>,
+{
+	fn create_from(
+		assets: ResMut<TAssets>,
+		storage: ResMut<TCache>,
+	) -> impl GetOrLoadAsset<TAsset> {
+		(assets, storage)
+	}
+}
 
 impl<TAssets, TAsset, TCache> GetOrLoadAsset<TAsset> for (ResMut<'_, TAssets>, ResMut<'_, TCache>)
 where
