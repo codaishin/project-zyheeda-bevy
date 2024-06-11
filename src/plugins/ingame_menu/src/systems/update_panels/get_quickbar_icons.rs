@@ -7,33 +7,33 @@ use common::{
 use skills::{
 	components::slots::Slots,
 	skills::{Queued, Skill},
-	traits::{IsLingering, PeekNext},
+	traits::{IsTimedOut, PeekNext},
 };
 
-type PlayerComponents<'a, TQueue, TCombos, TComboLinger> = (
+type PlayerComponents<'a, TQueue, TCombos, TComboTimeout> = (
 	&'a Slots,
 	&'a TQueue,
 	Option<&'a TCombos>,
-	Option<&'a TComboLinger>,
+	Option<&'a TComboTimeout>,
 );
 
-pub(crate) fn get_quickbar_icons<TQueue, TCombos, TComboLinger>(
-	players: Query<PlayerComponents<TQueue, TCombos, TComboLinger>, With<Player>>,
+pub(crate) fn get_quickbar_icons<TQueue, TCombos, TComboTimeout>(
+	players: Query<PlayerComponents<TQueue, TCombos, TComboTimeout>, With<Player>>,
 	panels: Query<(Entity, &mut QuickbarPanel)>,
 ) -> Vec<(Entity, Option<Path>)>
 where
 	TQueue: Component + Iterate<Skill<Queued>>,
 	TCombos: Component + PeekNext<Skill>,
-	TComboLinger: Component + IsLingering,
+	TComboTimeout: Component + IsTimedOut,
 {
-	let Ok((slots, queue, combos, combo_linger)) = players.get_single() else {
+	let Ok((slots, queue, combos, combo_timeout)) = players.get_single() else {
 		return vec![];
 	};
 	let get_icon_path = |(entity, panel): (Entity, &QuickbarPanel)| {
 		let active_skill = queue.iterate().next();
 		let icon_path_lazy = match (active_skill, combos) {
 			(Some(active_skill), _) if active_skill.data.slot_key == panel.key => active_skill.icon,
-			(_, Some(combos)) if ongoing(combo_linger) => combo_skill_icon(combos, panel, slots),
+			(_, Some(combos)) if ongoing(combo_timeout) => combo_skill_icon(combos, panel, slots),
 			_ => item_skill_icon(slots, panel),
 		};
 		let icon_path = icon_path_lazy.map(|lazy| lazy());
@@ -44,11 +44,11 @@ where
 	panels.iter().map(get_icon_path).collect()
 }
 
-fn ongoing<TComboLinger: IsLingering>(combo_linger: Option<&TComboLinger>) -> bool {
-	let Some(combo_linger) = combo_linger else {
+fn ongoing<TComboTimeout: IsTimedOut>(combo_timeout: Option<&TComboTimeout>) -> bool {
+	let Some(combo_timeout) = combo_timeout else {
 		return false;
 	};
-	combo_linger.is_lingering()
+	!combo_timeout.is_timed_out()
 }
 
 fn combo_skill_icon<TCombos: PeekNext<Skill>>(
@@ -115,10 +115,10 @@ mod tests {
 	}
 
 	#[derive(Component)]
-	struct _ComboLingers(bool);
+	struct _ComboTimeout(bool);
 
-	impl IsLingering for _ComboLingers {
-		fn is_lingering(&self) -> bool {
+	impl IsTimedOut for _ComboTimeout {
+		fn is_timed_out(&self) -> bool {
 			self.0
 		}
 	}
@@ -135,7 +135,7 @@ mod tests {
 		app.init_resource::<_Result>();
 		app.add_systems(
 			Update,
-			get_quickbar_icons::<_Queue, _Combos, _ComboLingers>.pipe(store_result),
+			get_quickbar_icons::<_Queue, _Combos, _ComboTimeout>.pipe(store_result),
 		);
 
 		app
@@ -149,7 +149,7 @@ mod tests {
 	}
 
 	#[test]
-	fn return_combo_skill_icon_when_no_skill_active_and_lingering() {
+	fn return_combo_skill_icon_when_no_skill_active_and_combo_not_timed_out() {
 		let mut app = setup();
 		let mut combos = _Combos::default();
 
@@ -175,7 +175,7 @@ mod tests {
 			slots,
 			_Queue::default(),
 			combos,
-			_ComboLingers(true),
+			_ComboTimeout(false),
 		));
 		let panel = app
 			.world
@@ -195,7 +195,7 @@ mod tests {
 	}
 
 	#[test]
-	fn return_item_skill_icon_when_no_skill_active_and_not_lingering() {
+	fn return_item_skill_icon_when_no_skill_active_and_combo_timed_out() {
 		let mut app = setup();
 		let mut combos = _Combos::default();
 
@@ -221,7 +221,7 @@ mod tests {
 			slots,
 			_Queue::default(),
 			combos,
-			_ComboLingers(false),
+			_ComboTimeout(true),
 		));
 		let panel = app
 			.world
@@ -274,7 +274,7 @@ mod tests {
 				..default()
 			}]),
 			combos,
-			_ComboLingers(false),
+			_ComboTimeout(true),
 		));
 		let panel = app
 			.world
@@ -327,7 +327,7 @@ mod tests {
 				..default()
 			}]),
 			combos,
-			_ComboLingers(false),
+			_ComboTimeout(true),
 		));
 		let panel = app
 			.world

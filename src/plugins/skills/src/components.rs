@@ -1,5 +1,5 @@
-pub mod combo_linger;
 pub mod combos;
+pub mod combos_time_out;
 pub mod inventory;
 pub mod queue;
 pub mod slots;

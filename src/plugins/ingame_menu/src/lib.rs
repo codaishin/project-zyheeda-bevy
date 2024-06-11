@@ -20,8 +20,8 @@ use components::{
 };
 use skills::{
 	components::{
-		combo_linger::ComboLinger,
 		combos::Combos,
+		combos_time_out::CombosTimeOut,
 		inventory::Inventory,
 		queue::Queue,
 		slots::Slots,
@@ -75,7 +75,7 @@ fn ui_overlay_systems(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				get_quickbar_icons::<Queue, Combos, ComboLinger>.pipe(
+				get_quickbar_icons::<Queue, Combos, CombosTimeOut>.pipe(
 					set_quickbar_icons::<
 						AssetServer,
 						Shared<Path, Handle<Image>>,
