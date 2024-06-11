@@ -40,7 +40,8 @@ use systems::{
 		activity_colors_override::panel_activity_colors_override,
 		colors::panel_colors,
 		container_states::panel_container_states,
-		quickbar::quickbar,
+		get_quickbar_icons::get_quickbar_icons,
+		set_quickbar_icons::set_quickbar_icons,
 		update_label_text::update_label_text,
 	},
 };
@@ -74,14 +75,13 @@ fn ui_overlay_systems(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				quickbar::<
-					Queue,
-					Combos,
-					ComboLinger,
-					AssetServer,
-					Shared<Path, Handle<Image>>,
-					Factory<LoadAssetCache>,
-				>,
+				get_quickbar_icons::<Queue, Combos, ComboLinger>.pipe(
+					set_quickbar_icons::<
+						AssetServer,
+						Shared<Path, Handle<Image>>,
+						Factory<LoadAssetCache>,
+					>,
+				),
 				update_label_text::<KeyMap<SlotKey, KeyCode>, LanguageServer, QuickbarPanel>,
 				panel_colors::<QuickbarPanel>,
 				panel_activity_colors_override::<KeyMap<SlotKey, KeyCode>, Queue, QuickbarPanel>,
