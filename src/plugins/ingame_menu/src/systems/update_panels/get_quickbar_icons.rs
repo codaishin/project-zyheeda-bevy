@@ -10,6 +10,8 @@ use skills::{
 	traits::{IsTimedOut, PeekNext},
 };
 
+type IconPath = Option<fn() -> Path>;
+
 type PlayerComponents<'a, TQueue, TCombos, TComboTimeout> = (
 	&'a Slots,
 	&'a TQueue,
@@ -30,43 +32,56 @@ where
 		return vec![];
 	};
 	let get_icon_path = |(entity, panel): (Entity, &QuickbarPanel)| {
-		let active_skill = queue.iterate().next();
-		let icon_path_lazy = match (active_skill, combos) {
-			(Some(active_skill), _) if active_skill.data.slot_key == panel.key => active_skill.icon,
-			(_, Some(combos)) if ongoing(combo_timeout) => combo_skill_icon(combos, panel, slots),
-			_ => item_skill_icon(slots, panel),
-		};
-		let icon_path = icon_path_lazy.map(|lazy| lazy());
+		let icon = if_active_skill_icon(panel, queue)
+			.or_else(if_combo_skill_icon(panel, slots, combos, combo_timeout))
+			.or_else(if_item_skill_icon(panel, slots));
+		let icon = icon.flatten().map(|resolve_path| resolve_path());
 
-		(entity, icon_path)
+		(entity, icon)
 	};
 
 	panels.iter().map(get_icon_path).collect()
 }
 
-fn ongoing<TComboTimeout: IsTimedOut>(combo_timeout: Option<&TComboTimeout>) -> bool {
-	let Some(combo_timeout) = combo_timeout else {
-		return false;
-	};
-	!combo_timeout.is_timed_out()
-}
-
-fn combo_skill_icon<TCombos: PeekNext<Skill>>(
-	combos: &TCombos,
+fn if_active_skill_icon<TQueue: Iterate<Skill<Queued>>>(
 	panel: &QuickbarPanel,
-	slots: &Slots,
-) -> Option<fn() -> Path> {
-	let skill = combos.peek_next(&panel.key, slots)?;
+	queue: &TQueue,
+) -> Option<IconPath> {
+	let active_skill = queue.iterate().next()?;
 
-	skill.icon
+	if active_skill.data.slot_key != panel.key {
+		return None;
+	}
+
+	Some(active_skill.icon)
 }
 
-fn item_skill_icon(slots: &Slots, panel: &QuickbarPanel) -> Option<fn() -> Path> {
-	let slot = slots.0.get(&panel.key)?;
-	let item = slot.item.as_ref()?;
-	let skill = item.skill.as_ref()?;
+fn if_combo_skill_icon<'a, TCombos: PeekNext<Skill>, TComboTimeout: IsTimedOut>(
+	panel: &'a QuickbarPanel,
+	slots: &'a Slots,
+	combos: Option<&'a TCombos>,
+	timed_out: Option<&'a TComboTimeout>,
+) -> impl FnOnce() -> Option<IconPath> + 'a {
+	move || {
+		if timed_out?.is_timed_out() {
+			return None;
+		}
+		let next_combo = combos?.peek_next(&panel.key, slots)?;
+		Some(next_combo.icon)
+	}
+}
 
-	skill.icon
+fn if_item_skill_icon<'a>(
+	panel: &'a QuickbarPanel,
+	slots: &'a Slots,
+) -> impl FnOnce() -> Option<IconPath> + 'a {
+	|| {
+		let slot = slots.0.get(&panel.key)?;
+		let item = slot.item.as_ref()?;
+		let skill = item.skill.as_ref()?;
+
+		Some(skill.icon)
+	}
 }
 
 #[cfg(test)]
@@ -82,7 +97,7 @@ mod tests {
 		components::{Player, Side},
 		test_tools::utils::SingleThreadedApp,
 	};
-	use mockall::automock;
+	use mockall::{automock, predicate::eq};
 	use skills::{
 		components::{slots::Slots, Mounts, Slot},
 		items::{slot_key::SlotKey, Item},
@@ -195,6 +210,45 @@ mod tests {
 	}
 
 	#[test]
+	fn peek_combo_with_correct_arguments() {
+		let mut app = setup();
+		let mut combos = _Combos::default();
+
+		let slots = Slots(HashMap::from([(
+			SlotKey::Hand(Side::Main),
+			Slot {
+				mounts: arbitrary_mounts(),
+				item: Some(Item {
+					skill: Some(Skill {
+						icon: Some(|| Path::from("item_skill/icon/path")),
+						..default()
+					}),
+					..default()
+				}),
+			},
+		)]));
+		combos
+			.mock
+			.expect_peek_next()
+			.times(1)
+			.with(eq(SlotKey::Hand(Side::Off)), eq(slots.clone()))
+			.return_const(None);
+		app.world.spawn((
+			Player,
+			slots,
+			_Queue::default(),
+			combos,
+			_ComboTimeout(false),
+		));
+		app.world.spawn(QuickbarPanel {
+			key: SlotKey::Hand(Side::Off),
+			state: PanelState::Empty,
+		});
+
+		app.update();
+	}
+
+	#[test]
 	fn return_item_skill_icon_when_no_skill_active_and_combo_timed_out() {
 		let mut app = setup();
 		let mut combos = _Combos::default();
@@ -222,6 +276,49 @@ mod tests {
 			_Queue::default(),
 			combos,
 			_ComboTimeout(true),
+		));
+		let panel = app
+			.world
+			.spawn(QuickbarPanel {
+				key: SlotKey::Hand(Side::Main),
+				state: PanelState::Empty,
+			})
+			.id();
+
+		app.update();
+
+		let result = app.world.resource::<_Result>();
+		assert_eq!(
+			vec![(panel, Some(Path::from("item_skill/icon/path")))],
+			result.0
+		);
+	}
+
+	#[test]
+	fn return_item_skill_icon_when_no_skill_active_and_combo_empty_but_not_timed_out() {
+		let mut app = setup();
+		let mut combos = _Combos::default();
+
+		let slots = Slots(HashMap::from([(
+			SlotKey::Hand(Side::Main),
+			Slot {
+				mounts: arbitrary_mounts(),
+				item: Some(Item {
+					skill: Some(Skill {
+						icon: Some(|| Path::from("item_skill/icon/path")),
+						..default()
+					}),
+					..default()
+				}),
+			},
+		)]));
+		combos.mock.expect_peek_next().return_const(None);
+		app.world.spawn((
+			Player,
+			slots,
+			_Queue::default(),
+			combos,
+			_ComboTimeout(false),
 		));
 		let panel = app
 			.world
@@ -363,18 +460,7 @@ mod tests {
 				}),
 			},
 		)]));
-		app.world.spawn((
-			Player,
-			slots,
-			_Queue(vec![Skill {
-				icon: Some(|| Path::from("active_skill/icon/path")),
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Off),
-					mode: Activation::Waiting,
-				},
-				..default()
-			}]),
-		));
+		app.world.spawn((Player, slots, _Queue::default()));
 		let panel = app
 			.world
 			.spawn(QuickbarPanel {
