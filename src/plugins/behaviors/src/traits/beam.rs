@@ -8,24 +8,24 @@ use bevy::{
 	transform::components::Transform,
 	utils::default,
 };
-use common::errors::Error;
+use common::{errors::Error, traits::cache::GetOrCreateTypeAsset};
 use interactions::components::{DealsDamage, InitDelay, Repeat};
-use prefabs::traits::{AssetHandles, Instantiate};
+use prefabs::traits::{GetOrCreateAssets, Instantiate};
 use std::{f32::consts::PI, time::Duration};
 
 impl Instantiate for Beam {
 	fn instantiate(
 		&self,
 		on: &mut EntityCommands,
-		mut assets: impl AssetHandles,
+		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
-		let mesh = assets.handle::<Beam>(&mut || {
+		let mesh = assets.get_or_create_for::<Beam>(|| {
 			Mesh::from(Cylinder {
 				radius: 0.01,
 				half_height: 0.5,
 			})
 		});
-		let material = assets.handle::<Beam>(&mut || StandardMaterial {
+		let material = assets.get_or_create_for::<Beam>(|| StandardMaterial {
 			base_color: self.color,
 			emissive: self.emissive,
 			alpha_mode: AlphaMode::Add,

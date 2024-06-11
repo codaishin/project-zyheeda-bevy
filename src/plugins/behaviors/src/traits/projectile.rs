@@ -18,10 +18,10 @@ use common::{
 	components::ColliderRoot,
 	errors::Error,
 	tools::UnitsPerSecond,
-	traits::clamp_zero_positive::ClampZeroPositive,
+	traits::{cache::GetOrCreateTypeAsset, clamp_zero_positive::ClampZeroPositive},
 };
 use interactions::components::{DealsDamage, Fragile};
-use prefabs::traits::{sphere, AssetHandles, Instantiate};
+use prefabs::traits::{sphere, GetOrCreateAssets, Instantiate};
 
 impl<T> ProjectileBehavior for Projectile<T> {
 	fn direction(&self) -> Direction3d {
@@ -39,12 +39,12 @@ impl Instantiate for Projectile<Plasma> {
 	fn instantiate(
 		&self,
 		on: &mut bevy::ecs::system::EntityCommands,
-		mut assets: impl AssetHandles,
+		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		let transform = Transform::from_translation(Vec3::ZERO);
 		let color = Color::rgb_linear(0., 1., 1.);
-		let mesh = assets.handle::<Projectile<Plasma>>(&mut || sphere(PLASMA_RADIUS));
-		let material = assets.handle::<Projectile<Plasma>>(&mut || StandardMaterial {
+		let mesh = assets.get_or_create_for::<Projectile<Plasma>>(|| sphere(PLASMA_RADIUS));
+		let material = assets.get_or_create_for::<Projectile<Plasma>>(|| StandardMaterial {
 			emissive: color * 230000.0,
 			..default()
 		});

@@ -28,10 +28,10 @@ use common::{
 	components::{effected_by::EffectedBy, ColliderRoot, GroundOffset, Health},
 	errors::Error,
 	tools::UnitsPerSecond,
-	traits::clamp_zero_positive::ClampZeroPositive,
+	traits::{cache::GetOrCreateTypeAsset, clamp_zero_positive::ClampZeroPositive},
 };
 use gravity::components::Gravity;
-use prefabs::traits::{sphere, AssetHandles, Instantiate};
+use prefabs::traits::{sphere, GetOrCreateAssets, Instantiate};
 use std::{f32::consts::PI, time::Duration};
 
 #[derive(Bundle)]
@@ -75,19 +75,20 @@ impl Instantiate for VoidSphere {
 	fn instantiate(
 		&self,
 		on: &mut EntityCommands,
-		mut assets: impl AssetHandles,
+		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
-		let core_material = assets.handle::<VoidSphereCore>(&mut || StandardMaterial {
+		let core_material = assets.get_or_create_for::<VoidSphereCore>(|| StandardMaterial {
 			base_color: Color::BLACK,
 			metallic: 1.,
 			..default()
 		});
-		let core_mesh = assets.handle::<VoidSphereCore>(&mut || sphere(VOID_SPHERE_INNER_RADIUS));
-		let ring_material = assets.handle::<VoidSphereRing>(&mut || StandardMaterial {
+		let core_mesh =
+			assets.get_or_create_for::<VoidSphereCore>(|| sphere(VOID_SPHERE_INNER_RADIUS));
+		let ring_material = assets.get_or_create_for::<VoidSphereRing>(|| StandardMaterial {
 			emissive: Color::rgb_linear(23000.0, 23000.0, 23000.0),
 			..default()
 		});
-		let ring_mesh = assets.handle::<VoidSphereRing>(&mut || {
+		let ring_mesh = assets.get_or_create_for::<VoidSphereRing>(|| {
 			Mesh::from(Torus {
 				major_radius: VOID_SPHERE_TORUS_RADIUS,
 				minor_radius: VOID_SPHERE_TORUS_RING_RADIUS,

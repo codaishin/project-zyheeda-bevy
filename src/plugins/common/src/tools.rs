@@ -5,11 +5,14 @@ use crate::{
 use macros::ClampZeroPositive;
 use std::{
 	fmt::Debug,
+	marker::PhantomData,
 	ops::{Deref, DerefMut},
 };
 
 ///Serves as a struct to implement static traits on
 pub struct Tools;
+
+pub struct Factory<T>(PhantomData<T>);
 
 #[derive(Debug, PartialEq)]
 pub struct This<'a, T: Debug + PartialEq>(pub &'a mut T);

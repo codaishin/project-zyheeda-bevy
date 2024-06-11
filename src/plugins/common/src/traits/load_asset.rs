@@ -24,5 +24,5 @@ impl<'a> From<&'a str> for Path {
 }
 
 pub trait LoadAsset<TAsset: Asset> {
-	fn load_asset(&self, path: Path) -> Handle<TAsset>;
+	fn load_asset(&mut self, path: Path) -> Handle<TAsset>;
 }

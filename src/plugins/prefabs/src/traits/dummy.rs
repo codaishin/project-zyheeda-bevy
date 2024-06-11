@@ -1,4 +1,4 @@
-use super::{AssetHandles, Instantiate};
+use super::{GetOrCreateAssets, Instantiate};
 use bevy::{
 	ecs::system::EntityCommands,
 	hierarchy::BuildChildren,
@@ -13,6 +13,7 @@ use common::{
 	bundles::ColliderTransformBundle,
 	components::{ColliderRoot, Dummy},
 	errors::Error,
+	traits::cache::GetOrCreateTypeAsset,
 };
 
 const DUMMY_DIMENSIONS: Vec3 = Vec3 {
@@ -25,17 +26,17 @@ impl Instantiate for Dummy {
 	fn instantiate(
 		&self,
 		on: &mut EntityCommands,
-		mut assets: impl AssetHandles,
+		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		let transform = Transform::from_xyz(0., 1., 0.);
-		let mesh = assets.handle::<Dummy>(&mut || {
+		let mesh = assets.get_or_create_for::<Dummy>(|| {
 			Mesh::from(Cuboid::new(
 				DUMMY_DIMENSIONS.x,
 				DUMMY_DIMENSIONS.y,
 				DUMMY_DIMENSIONS.z,
 			))
 		});
-		let material = assets.handle::<Dummy>(&mut || StandardMaterial {
+		let material = assets.get_or_create_for::<Dummy>(|| StandardMaterial {
 			base_color: Color::GRAY,
 			..default()
 		});

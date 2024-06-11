@@ -1,5 +1,3 @@
-use std::any::TypeId;
-
 use super::{Instantiate, RegisterPrefab};
 use crate::systems::instantiate::instantiate;
 use bevy::{
@@ -9,7 +7,13 @@ use bevy::{
 	pbr::StandardMaterial,
 	render::mesh::Mesh,
 };
-use common::{resources::Shared, systems::log::log_many};
+use common::{
+	resources::Shared,
+	systems::log::log_many,
+	tools::Factory,
+	traits::cache::get_or_create_asset::CreateAssetCache,
+};
+use std::any::TypeId;
 
 impl RegisterPrefab for App {
 	fn register_prefab<TPrefab: Instantiate + Component>(&mut self) -> &mut Self {
@@ -19,6 +23,7 @@ impl RegisterPrefab for App {
 			Assets<StandardMaterial>,
 			Shared<TypeId, Handle<Mesh>>,
 			Shared<TypeId, Handle<StandardMaterial>>,
+			Factory<CreateAssetCache>,
 		>;
 		self.add_systems(PreUpdate, instantiate_system.pipe(log_many))
 	}
