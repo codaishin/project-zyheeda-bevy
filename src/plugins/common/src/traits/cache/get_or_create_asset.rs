@@ -1,4 +1,4 @@
-use super::{Cache, GetOrCreateAsset, GetOrCreateAssetFactory};
+use super::{GetOrCreateAsset, GetOrCreateAssetFactory, Storage};
 use crate::{tools::Factory, traits::add_asset::AddAsset};
 use bevy::{
 	asset::{Asset, Handle},
@@ -7,31 +7,31 @@ use bevy::{
 
 pub struct CreateAssetCache;
 
-impl<TAssets, TAsset, TCache, TKey> GetOrCreateAssetFactory<TAssets, TAsset, TCache, TKey>
+impl<TAssets, TAsset, TStorage, TKey> GetOrCreateAssetFactory<TAssets, TAsset, TStorage, TKey>
 	for Factory<CreateAssetCache>
 where
 	TAssets: Resource + AddAsset<TAsset>,
 	TAsset: Asset,
-	TCache: Resource + Cache<TKey, Handle<TAsset>>,
+	TStorage: Resource + Storage<TKey, Handle<TAsset>>,
 {
 	fn create_from(
 		assets: ResMut<TAssets>,
-		storage: ResMut<TCache>,
+		storage: ResMut<TStorage>,
 	) -> impl GetOrCreateAsset<TKey, TAsset> {
 		(assets, storage)
 	}
 }
 
-impl<TAssets, TAsset, TCache, TKey> GetOrCreateAsset<TKey, TAsset>
-	for (ResMut<'_, TAssets>, ResMut<'_, TCache>)
+impl<TAssets, TAsset, TStorage, TKey> GetOrCreateAsset<TKey, TAsset>
+	for (ResMut<'_, TAssets>, ResMut<'_, TStorage>)
 where
 	TAssets: Resource + AddAsset<TAsset>,
 	TAsset: Asset,
-	TCache: Resource + Cache<TKey, Handle<TAsset>>,
+	TStorage: Resource + Storage<TKey, Handle<TAsset>>,
 {
 	fn get_or_create(&mut self, key: TKey, mut create: impl FnMut() -> TAsset) -> Handle<TAsset> {
 		let (assets, cache) = self;
-		cache.cached(key, || assets.add_asset(create()))
+		cache.get_or_create(key, || assets.add_asset(create()))
 	}
 }
 
@@ -47,13 +47,13 @@ mod tests {
 	};
 
 	#[derive(Default, Resource)]
-	struct _Cache {
+	struct _Storage {
 		args: Vec<(u32, Handle<StandardMaterial>)>,
 		returns: Handle<StandardMaterial>,
 	}
 
-	impl Cache<u32, Handle<StandardMaterial>> for _Cache {
-		fn cached(
+	impl Storage<u32, Handle<StandardMaterial>> for _Storage {
+		fn get_or_create(
 			&mut self,
 			key: u32,
 			new: impl FnOnce() -> Handle<StandardMaterial>,
@@ -64,12 +64,12 @@ mod tests {
 	}
 
 	#[derive(Default, Resource)]
-	struct _Assets {
+	struct _AddAsset {
 		args: Vec<StandardMaterial>,
 		returns: Handle<StandardMaterial>,
 	}
 
-	impl AddAsset<StandardMaterial> for _Assets {
+	impl AddAsset<StandardMaterial> for _AddAsset {
 		fn add_asset(&mut self, asset: StandardMaterial) -> Handle<StandardMaterial> {
 			self.args.push(asset);
 			self.returns.clone()
@@ -78,60 +78,60 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.init_resource::<_Assets>();
-		app.init_resource::<_Cache>();
+		app.init_resource::<_AddAsset>();
+		app.init_resource::<_Storage>();
 
 		app
 	}
 
 	fn run_system(
 		app: &mut App,
-		mut callback: impl FnMut(ResMut<_Assets>, ResMut<_Cache>) + Send + Sync + 'static,
+		mut callback: impl FnMut(ResMut<_AddAsset>, ResMut<_Storage>) + Send + Sync + 'static,
 	) {
 		app.add_systems(
 			Update,
-			move |assets: ResMut<_Assets>, cache: ResMut<_Cache>| {
-				callback(assets, cache);
+			move |add_asset: ResMut<_AddAsset>, storage: ResMut<_Storage>| {
+				callback(add_asset, storage);
 			},
 		);
 		app.update();
 	}
 
 	#[test]
-	fn return_cached_asset() {
-		let cached_asset = Handle::Weak(AssetId::Uuid {
+	fn return_stored_asset() {
+		let stored_asset = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
 		let mut app = setup();
 
-		app.world.insert_resource(_Cache {
-			returns: cached_asset.clone(),
+		app.world.insert_resource(_Storage {
+			returns: stored_asset.clone(),
 			..default()
 		});
 
-		run_system(&mut app, move |assets, cache| {
-			let handle = (assets, cache).get_or_create(0, StandardMaterial::default);
-			assert_eq!(cached_asset, handle);
+		run_system(&mut app, move |add_asset, storage| {
+			let handle = (add_asset, storage).get_or_create(0, StandardMaterial::default);
+			assert_eq!(stored_asset, handle);
 		});
 	}
 
 	#[test]
-	fn call_cached_with_proper_args() {
+	fn call_storage_with_proper_args() {
 		let asset_handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
 		let mut app = setup();
 
-		app.insert_resource(_Assets {
+		app.insert_resource(_AddAsset {
 			returns: asset_handle.clone(),
 			..default()
 		});
 
-		run_system(&mut app, |assets, cache| {
-			(assets, cache).get_or_create(42, StandardMaterial::default);
+		run_system(&mut app, |add_asset, storage| {
+			(add_asset, storage).get_or_create(42, StandardMaterial::default);
 		});
 
-		let cache = app.world.resource::<_Cache>();
-		assert_eq!(vec![(42, asset_handle)], cache.args);
+		let storage = app.world.resource::<_Storage>();
+		assert_eq!(vec![(42, asset_handle)], storage.args);
 	}
 }

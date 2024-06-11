@@ -8,21 +8,20 @@ use bevy::{
 	prelude::{ResMut, Resource},
 };
 
-pub trait Cache<TKey, TValue> {
-	fn cached(&mut self, key: TKey, new: impl FnMut() -> TValue) -> TValue;
+pub trait Storage<TKey, T> {
+	fn get_or_create(&mut self, key: TKey, create: impl FnMut() -> T) -> T;
 }
 
-pub trait GetOrLoadAsset<TAsset: Asset> {
-	fn get_or_load(&mut self, key: Path) -> Handle<TAsset>;
+pub trait GetOrLoadAsset<T: Asset> {
+	fn get_or_load(&mut self, key: Path) -> Handle<T>;
 }
 
-pub trait GetOrCreateAsset<TKey, TAsset: Asset> {
-	fn get_or_create(&mut self, key: TKey, create: impl FnMut() -> TAsset) -> Handle<TAsset>;
+pub trait GetOrCreateAsset<TKey, T: Asset> {
+	fn get_or_create(&mut self, key: TKey, create: impl FnMut() -> T) -> Handle<T>;
 }
 
-pub trait GetOrCreateTypeAsset<TAsset: Asset> {
-	fn get_or_create_for<Key: 'static>(&mut self, create: impl FnMut() -> TAsset)
-		-> Handle<TAsset>;
+pub trait GetOrCreateTypeAsset<T: Asset> {
+	fn get_or_create_for<Key: 'static>(&mut self, create: impl FnMut() -> T) -> Handle<T>;
 }
 
 pub trait GetOrLoadAssetFactory<TAssets, TAsset: Asset, TStorage>

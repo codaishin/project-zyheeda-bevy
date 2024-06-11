@@ -1,4 +1,4 @@
-use super::{Cache, GetOrLoadAsset, GetOrLoadAssetFactory};
+use super::{GetOrLoadAsset, GetOrLoadAssetFactory, Storage};
 use crate::{
 	tools::Factory,
 	traits::load_asset::{LoadAsset, Path},
@@ -10,30 +10,31 @@ use bevy::{
 
 pub struct LoadAssetCache;
 
-impl<TAssets, TAsset, TCache> GetOrLoadAssetFactory<TAssets, TAsset, TCache>
+impl<TAssets, TAsset, TStorage> GetOrLoadAssetFactory<TAssets, TAsset, TStorage>
 	for Factory<LoadAssetCache>
 where
 	TAssets: Resource + LoadAsset<TAsset>,
 	TAsset: Asset,
-	TCache: Resource + Cache<Path, Handle<TAsset>>,
+	TStorage: Resource + Storage<Path, Handle<TAsset>>,
 {
 	fn create_from(
 		assets: ResMut<TAssets>,
-		storage: ResMut<TCache>,
+		storage: ResMut<TStorage>,
 	) -> impl GetOrLoadAsset<TAsset> {
 		(assets, storage)
 	}
 }
 
-impl<TAssets, TAsset, TCache> GetOrLoadAsset<TAsset> for (ResMut<'_, TAssets>, ResMut<'_, TCache>)
+impl<TAssets, TAsset, TStorage> GetOrLoadAsset<TAsset>
+	for (ResMut<'_, TAssets>, ResMut<'_, TStorage>)
 where
 	TAssets: Resource + LoadAsset<TAsset>,
 	TAsset: Asset,
-	TCache: Resource + Cache<Path, Handle<TAsset>>,
+	TStorage: Resource + Storage<Path, Handle<TAsset>>,
 {
 	fn get_or_load(&mut self, key: Path) -> Handle<TAsset> {
 		let (assets, cache) = self;
-		cache.cached(key.clone(), || assets.load_asset(key.clone()))
+		cache.get_or_create(key.clone(), || assets.load_asset(key.clone()))
 	}
 }
 
@@ -50,25 +51,29 @@ mod tests {
 	};
 
 	#[derive(Default, Resource)]
-	struct _Cache {
+	struct _Storage {
 		args: Vec<(Path, Handle<Image>)>,
 		returns: Handle<Image>,
 	}
 
-	impl Cache<Path, Handle<Image>> for _Cache {
-		fn cached(&mut self, key: Path, new: impl FnOnce() -> Handle<Image>) -> Handle<Image> {
+	impl Storage<Path, Handle<Image>> for _Storage {
+		fn get_or_create(
+			&mut self,
+			key: Path,
+			new: impl FnOnce() -> Handle<Image>,
+		) -> Handle<Image> {
 			self.args.push((key, new()));
 			self.returns.clone()
 		}
 	}
 
 	#[derive(Default, Resource)]
-	struct _Assets {
+	struct _LoadAsset {
 		args: Vec<Path>,
 		returns: Handle<Image>,
 	}
 
-	impl LoadAsset<Image> for _Assets {
+	impl LoadAsset<Image> for _LoadAsset {
 		fn load_asset(&mut self, path: Path) -> Handle<Image> {
 			self.args.push(path);
 			self.returns.clone()
@@ -77,72 +82,72 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.init_resource::<_Assets>();
-		app.init_resource::<_Cache>();
+		app.init_resource::<_LoadAsset>();
+		app.init_resource::<_Storage>();
 
 		app
 	}
 
 	fn run_system(
 		app: &mut App,
-		mut callback: impl FnMut(ResMut<_Assets>, ResMut<_Cache>) + Send + Sync + 'static,
+		mut callback: impl FnMut(ResMut<_LoadAsset>, ResMut<_Storage>) + Send + Sync + 'static,
 	) {
 		app.add_systems(
 			Update,
-			move |assets: ResMut<_Assets>, cache: ResMut<_Cache>| {
-				callback(assets, cache);
+			move |load_asset: ResMut<_LoadAsset>, storage: ResMut<_Storage>| {
+				callback(load_asset, storage);
 			},
 		);
 		app.update();
 	}
 
 	#[test]
-	fn return_cached_asset() {
-		let cached_asset = Handle::Weak(AssetId::Uuid {
+	fn return_stored_asset() {
+		let stored_asset = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
 		let mut app = setup();
 
-		app.insert_resource(_Cache {
-			returns: cached_asset.clone(),
+		app.insert_resource(_Storage {
+			returns: stored_asset.clone(),
 			..default()
 		});
 
-		run_system(&mut app, move |assets, cache| {
-			let handle = (assets, cache).get_or_load(Path::from(""));
-			assert_eq!(cached_asset, handle);
+		run_system(&mut app, move |load_asset, storage| {
+			let handle = (load_asset, storage).get_or_load(Path::from(""));
+			assert_eq!(stored_asset, handle);
 		})
 	}
 
 	#[test]
-	fn call_cached_with_proper_args() {
+	fn call_storage_with_proper_args() {
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
 		let mut app = setup();
 
-		app.insert_resource(_Assets {
+		app.insert_resource(_LoadAsset {
 			returns: handle.clone(),
 			..default()
 		});
 
-		run_system(&mut app, |assets, cache| {
-			(assets, cache).get_or_load(Path::from("proper path"));
+		run_system(&mut app, |load_asset, storage| {
+			(load_asset, storage).get_or_load(Path::from("proper path"));
 		});
 
-		let cache = app.world.resource::<_Cache>();
-		assert_eq!(vec![(Path::from("proper path"), handle)], cache.args);
+		let storage = app.world.resource::<_Storage>();
+		assert_eq!(vec![(Path::from("proper path"), handle)], storage.args);
 	}
 
 	#[test]
 	fn call_load_asset_with_proper_path() {
 		let mut app = setup();
 
-		run_system(&mut app, |assets, cache| {
-			(assets, cache).get_or_load(Path::from("proper path"));
+		run_system(&mut app, |load_asset, storage| {
+			(load_asset, storage).get_or_load(Path::from("proper path"));
 		});
 
-		let assets = app.world.resource::<_Assets>();
-		assert_eq!(vec![Path::from("proper path")], assets.args);
+		let load_asset = app.world.resource::<_LoadAsset>();
+		assert_eq!(vec![Path::from("proper path")], load_asset.args);
 	}
 }
