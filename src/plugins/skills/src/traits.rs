@@ -85,8 +85,8 @@ pub(crate) trait GetActiveSkill<TAnimation, TSkillState: Clone> {
 	fn clear_active(&mut self);
 }
 
-pub trait IsLingering {
-	fn is_lingering(&self) -> bool;
+pub trait IsTimedOut {
+	fn is_timed_out(&self) -> bool;
 }
 
 pub trait PeekNext<TNext> {

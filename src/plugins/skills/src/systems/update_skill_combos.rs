@@ -1,7 +1,7 @@
 use crate::{
 	components::slots::Slots,
 	skills::{Queued, Skill},
-	traits::{AdvanceCombo, Flush, IsLingering, IterAddedMut},
+	traits::{AdvanceCombo, Flush, IsTimedOut, IterAddedMut},
 };
 use bevy::{
 	ecs::{
@@ -13,33 +13,33 @@ use bevy::{
 use common::traits::{iterate::Iterate, update_cumulative::CumulativeUpdate};
 use std::time::Duration;
 
-type Components<'a, TCombos, TComboLinger, TSkills> = (
+type Components<'a, TCombos, TComboTimeout, TSkills> = (
 	&'a mut TCombos,
-	Option<&'a mut TComboLinger>,
+	Option<&'a mut TComboTimeout>,
 	&'a mut TSkills,
 	&'a Slots,
 );
 
 pub(crate) fn update_skill_combos<
 	TCombos: AdvanceCombo + Flush + Component,
-	TComboLinger: IsLingering + CumulativeUpdate<Duration> + Flush + Component,
+	TComboTimeout: IsTimedOut + CumulativeUpdate<Duration> + Flush + Component,
 	TSkills: Iterate<Skill<Queued>> + IterAddedMut<Skill<Queued>> + Component,
 	TTime: Default + Sync + Send + 'static,
 >(
 	time: Res<Time<TTime>>,
-	mut agents: Query<Components<TCombos, TComboLinger, TSkills>>,
+	mut agents: Query<Components<TCombos, TComboTimeout, TSkills>>,
 ) {
 	let delta = time.delta();
-	for (mut combos, mut linger, mut skills, slots) in &mut agents {
+	for (mut combos, mut timeout, mut skills, slots) in &mut agents {
 		let combos = combos.as_mut();
-		let linger = linger.as_deref_mut();
+		let timeout = timeout.as_deref_mut();
 		let skills = skills.as_mut();
 
 		for skill in skills.iter_added_mut() {
 			update_skill(combos, skill, slots);
 		}
 
-		for flushable in who_to_flush(combos, linger, skills, delta) {
+		for flushable in who_to_flush(combos, timeout, skills, delta) {
 			flushable.flush();
 		}
 	}
@@ -59,25 +59,25 @@ fn update_skill<TCombos: AdvanceCombo>(
 fn who_to_flush<
 	'a,
 	TCombos: Flush,
-	TComboLinger: CumulativeUpdate<Duration> + IsLingering + Flush,
+	TComboTimeout: CumulativeUpdate<Duration> + IsTimedOut + Flush,
 	TSkills: Iterate<Skill<Queued>>,
 >(
 	combos: &'a mut TCombos,
-	linger: Option<&'a mut TComboLinger>,
+	timeout: Option<&'a mut TComboTimeout>,
 	skills: &mut TSkills,
 	delta: Duration,
 ) -> Vec<&'a mut dyn Flush> {
 	if skills_queued(skills) {
-		return one_or_empty(linger);
+		return one_or_empty(timeout);
 	}
 
-	let Some(linger) = linger else {
+	let Some(timeout) = timeout else {
 		return vec![combos];
 	};
 
-	linger.update_cumulative(delta);
-	if !linger.is_lingering() {
-		return vec![combos, linger];
+	timeout.update_cumulative(delta);
+	if timeout.is_timed_out() {
+		return vec![combos, timeout];
 	}
 
 	vec![]
@@ -87,8 +87,8 @@ fn skills_queued<TSkills: Iterate<Skill<Queued>>>(skills: &mut TSkills) -> bool 
 	skills.iterate().next().is_some()
 }
 
-fn one_or_empty<TFlush: Flush>(linger: Option<&mut TFlush>) -> Vec<&mut dyn Flush> {
-	linger.into_iter().map(as_dyn_flush).collect()
+fn one_or_empty<TFlush: Flush>(flush: Option<&mut TFlush>) -> Vec<&mut dyn Flush> {
+	flush.into_iter().map(as_dyn_flush).collect()
 }
 
 fn as_dyn_flush<TFlush: Flush>(value: &mut TFlush) -> &mut dyn Flush {
@@ -102,7 +102,7 @@ mod tests {
 		components::{Mounts, Slot},
 		items::slot_key::SlotKey,
 		skills::{Queued, Skill},
-		traits::IsLingering,
+		traits::IsTimedOut,
 	};
 	use bevy::{
 		app::{App, Update},
@@ -119,37 +119,37 @@ mod tests {
 	use std::{collections::HashMap, time::Duration};
 
 	#[derive(Component, Default)]
-	struct _Linger {
-		mock: Mock_Linger,
+	struct _Timeout {
+		mock: Mock_Timeout,
 	}
 
-	impl Flush for _Linger {
+	impl Flush for _Timeout {
 		fn flush(&mut self) {
 			self.mock.flush()
 		}
 	}
 
-	impl IsLingering for _Linger {
-		fn is_lingering(&self) -> bool {
-			self.mock.is_lingering()
+	impl IsTimedOut for _Timeout {
+		fn is_timed_out(&self) -> bool {
+			self.mock.is_timed_out()
 		}
 	}
 
-	impl UpdateTrait<Duration> for _Linger {
+	impl UpdateTrait<Duration> for _Timeout {
 		fn update_cumulative(&mut self, value: Duration) {
 			self.mock.update_cumulative(value)
 		}
 	}
 
 	mock! {
-		_Linger {}
-		impl Flush for _Linger {
+		_Timeout {}
+		impl Flush for _Timeout {
 			fn flush(&mut self);
 		}
-		impl IsLingering for _Linger {
-			fn is_lingering(& self) -> bool;
+		impl IsTimedOut for _Timeout {
+			fn is_timed_out(& self) -> bool;
 		}
-		impl UpdateTrait<Duration> for _Linger {
+		impl UpdateTrait<Duration> for _Timeout {
 			fn update_cumulative(&mut self, value: Duration);
 		}
 	}
@@ -220,7 +220,7 @@ mod tests {
 		app.tick_time(Duration::ZERO);
 		app.add_systems(
 			Update,
-			update_skill_combos::<_Combos, _Linger, _Skills, Real>,
+			update_skill_combos::<_Combos, _Timeout, _Skills, Real>,
 		);
 
 		app
@@ -395,7 +395,7 @@ mod tests {
 	}
 
 	#[test]
-	fn no_combo_flush_when_empty_and_linger_is_lingering() {
+	fn no_combo_flush_when_empty_and_not_timed_out() {
 		let mut app = setup();
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
@@ -406,18 +406,18 @@ mod tests {
 		)]));
 		let mut combos = _Combos::default();
 		combos.mock.expect_flush().never().return_const(());
-		let mut linger = _Linger::default();
-		linger.mock.expect_update_cumulative().return_const(());
-		linger.mock.expect_is_lingering().return_const(true);
-		linger.mock.expect_flush().return_const(());
+		let mut timeout = _Timeout::default();
+		timeout.mock.expect_update_cumulative().return_const(());
+		timeout.mock.expect_is_timed_out().return_const(false);
+		timeout.mock.expect_flush().return_const(());
 		let skills = _Skills::default();
 
-		app.world.spawn((combos, linger, skills, slots));
+		app.world.spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
 	#[test]
-	fn combo_flush_when_empty_and_linger_is_not_lingering() {
+	fn combo_flush_when_empty_and_timed_out() {
 		let mut app = setup();
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
@@ -428,18 +428,18 @@ mod tests {
 		)]));
 		let mut combos = _Combos::default();
 		combos.mock.expect_flush().times(1).return_const(());
-		let mut linger = _Linger::default();
-		linger.mock.expect_update_cumulative().return_const(());
-		linger.mock.expect_is_lingering().return_const(false);
-		linger.mock.expect_flush().return_const(());
+		let mut timeout = _Timeout::default();
+		timeout.mock.expect_update_cumulative().return_const(());
+		timeout.mock.expect_is_timed_out().return_const(true);
+		timeout.mock.expect_flush().return_const(());
 		let skills = _Skills::default();
 
-		app.world.spawn((combos, linger, skills, slots));
+		app.world.spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
 	#[test]
-	fn linger_flush_when_empty_and_linger_is_not_lingering() {
+	fn timeout_flush_when_empty_and_is_timed_out() {
 		let mut app = setup();
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
@@ -450,18 +450,18 @@ mod tests {
 		)]));
 		let mut combos = _Combos::default();
 		combos.mock.expect_flush().return_const(());
-		let mut linger = _Linger::default();
-		linger.mock.expect_update_cumulative().return_const(());
-		linger.mock.expect_is_lingering().return_const(false);
-		linger.mock.expect_flush().times(1).return_const(());
+		let mut timeout = _Timeout::default();
+		timeout.mock.expect_update_cumulative().return_const(());
+		timeout.mock.expect_is_timed_out().return_const(true);
+		timeout.mock.expect_flush().times(1).return_const(());
 		let skills = _Skills::default();
 
-		app.world.spawn((combos, linger, skills, slots));
+		app.world.spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
 	#[test]
-	fn linger_flush_when_not_empty() {
+	fn timeout_flush_when_not_empty() {
 		let mut app = setup();
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
@@ -472,21 +472,21 @@ mod tests {
 		)]));
 		let mut combos = _Combos::default();
 		combos.mock.expect_flush().return_const(());
-		let mut linger = _Linger::default();
-		linger.mock.expect_update_cumulative().return_const(());
-		linger.mock.expect_is_lingering().return_const(true);
-		linger.mock.expect_flush().times(1).return_const(());
+		let mut timeout = _Timeout::default();
+		timeout.mock.expect_update_cumulative().return_const(());
+		timeout.mock.expect_is_timed_out().return_const(false);
+		timeout.mock.expect_flush().times(1).return_const(());
 		let skills = _Skills {
 			early: vec![Skill::default()],
 			..default()
 		};
 
-		app.world.spawn((combos, linger, skills, slots));
+		app.world.spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
 	#[test]
-	fn no_linger_flush_when_empty_and_linger_is_lingering() {
+	fn no_timeout_flush_when_empty_and_is_not_timed_out() {
 		let mut app = setup();
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
@@ -497,18 +497,18 @@ mod tests {
 		)]));
 		let mut combos = _Combos::default();
 		combos.mock.expect_flush().return_const(());
-		let mut linger = _Linger::default();
-		linger.mock.expect_update_cumulative().return_const(());
-		linger.mock.expect_is_lingering().return_const(true);
-		linger.mock.expect_flush().never().return_const(());
+		let mut timeout = _Timeout::default();
+		timeout.mock.expect_update_cumulative().return_const(());
+		timeout.mock.expect_is_timed_out().return_const(false);
+		timeout.mock.expect_flush().never().return_const(());
 		let skills = _Skills::default();
 
-		app.world.spawn((combos, linger, skills, slots));
+		app.world.spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
 	#[test]
-	fn do_not_test_for_linger_when_skill_queue_not_empty() {
+	fn do_not_test_for_timeout_when_skill_queue_not_empty() {
 		let mut app = setup();
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
@@ -519,25 +519,25 @@ mod tests {
 		)]));
 		let mut combos = _Combos::default();
 		combos.mock.expect_flush().return_const(());
-		let mut linger = _Linger::default();
-		linger.mock.expect_update_cumulative().return_const(());
-		linger
+		let mut timeout = _Timeout::default();
+		timeout.mock.expect_update_cumulative().return_const(());
+		timeout
 			.mock
-			.expect_is_lingering()
+			.expect_is_timed_out()
 			.never()
 			.return_const(false);
-		linger.mock.expect_flush().return_const(());
+		timeout.mock.expect_flush().return_const(());
 		let skills = _Skills {
 			early: vec![Skill::default()],
 			..default()
 		};
 
-		app.world.spawn((combos, linger, skills, slots));
+		app.world.spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
 	#[test]
-	fn call_is_lingering_with_delta() {
+	fn call_is_timeout_with_delta() {
 		let mut app = setup();
 		app.tick_time(Duration::from_secs(42));
 		let slots = Slots(HashMap::from([(
@@ -549,22 +549,22 @@ mod tests {
 		)]));
 		let mut combos = _Combos::default();
 		combos.mock.expect_flush().return_const(());
-		let mut linger = _Linger::default();
-		linger
+		let mut timeout = _Timeout::default();
+		timeout
 			.mock
 			.expect_update_cumulative()
 			.with(eq(Duration::from_secs(42)))
 			.return_const(());
-		linger.mock.expect_is_lingering().return_const(false);
-		linger.mock.expect_flush().return_const(());
+		timeout.mock.expect_is_timed_out().return_const(false);
+		timeout.mock.expect_flush().return_const(());
 		let skills = _Skills::default();
 
-		app.world.spawn((combos, linger, skills, slots));
+		app.world.spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
 	#[test]
-	fn call_update_and_is_lingering_in_sequence() {
+	fn call_update_and_timeout_in_sequence() {
 		let mut app = setup();
 		app.tick_time(Duration::from_secs(42));
 		let slots = Slots(HashMap::from([(
@@ -577,23 +577,23 @@ mod tests {
 		let mut combos = _Combos::default();
 		combos.mock.expect_flush().return_const(());
 		let mut seq = Sequence::default();
-		let mut linger = _Linger::default();
-		linger
+		let mut timeout = _Timeout::default();
+		timeout
 			.mock
 			.expect_update_cumulative()
 			.times(1)
 			.in_sequence(&mut seq)
 			.return_const(());
-		linger
+		timeout
 			.mock
-			.expect_is_lingering()
+			.expect_is_timed_out()
 			.times(1)
 			.in_sequence(&mut seq)
 			.return_const(false);
-		linger.mock.expect_flush().return_const(());
+		timeout.mock.expect_flush().return_const(());
 		let skills = _Skills::default();
 
-		app.world.spawn((combos, linger, skills, slots));
+		app.world.spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 }

@@ -31,8 +31,8 @@ use common::{
 	traits::try_insert_on::TryInsertOn,
 };
 use components::{
-	combo_linger::ComboLinger,
 	combos::{ComboNode, Combos},
+	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
 	queue::Queue,
 	skill_executer::SkillExecuter,
@@ -82,7 +82,7 @@ impl Plugin for SkillsPlugin {
 						State<MouseContext<KeyCode>>,
 					>
 						.pipe(enqueue::<Slots, Skill, Queue, Skill<Queued>>),
-					update_skill_combos::<Combos, ComboLinger, Queue, Virtual>,
+					update_skill_combos::<Combos, CombosTimeOut, Queue, Virtual>,
 					advance_active_skill::<
 						Queue,
 						Animation,
@@ -134,7 +134,7 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 		player,
 		(
 			SkillExecuter::default(),
-			ComboLinger::new(Duration::from_secs(2)),
+			CombosTimeOut::after(Duration::from_secs(2)),
 			get_inventory(),
 			get_loadout(),
 			get_combos(),
