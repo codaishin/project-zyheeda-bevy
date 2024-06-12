@@ -26,7 +26,7 @@ use skills::{
 		queue::Queue,
 		slots::Slots,
 	},
-	items::{slot_key::SlotKey, InventoryKey},
+	items::{inventory_key::InventoryKey, slot_key::SlotKey},
 };
 use systems::{
 	dad::{drag::drag, drop::drop},

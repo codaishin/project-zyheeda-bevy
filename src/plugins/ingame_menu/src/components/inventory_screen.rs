@@ -1,3 +1,4 @@
+use super::{inventory_panel::InventoryPanel, KeyedPanel};
 use crate::{
 	tools::PanelState,
 	traits::{
@@ -22,10 +23,8 @@ use bevy::{
 	},
 	utils::default,
 };
-use common::components::Side;
-use skills::items::{slot_key::SlotKey, InventoryKey};
-
-use super::{inventory_panel::InventoryPanel, KeyedPanel};
+use common::traits::iteration::{IterFinite, IterInfinite};
+use skills::items::{inventory_key::InventoryKey, slot_key::SlotKey};
 
 #[derive(Component)]
 pub struct InventoryScreen;

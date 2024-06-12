@@ -39,7 +39,7 @@ use components::{
 	slots::Slots,
 	Mounts,
 };
-use items::{slot_key::SlotKey, InventoryKey, Item, ItemType, Mount};
+use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount};
 use skills::{
 	force_shield_skill::ForceShieldSkill,
 	gravity_well_skill::GravityWellSkill,

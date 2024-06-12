@@ -1,3 +1,4 @@
+pub mod inventory_key;
 pub mod slot_key;
 
 use crate::skills::Skill;
@@ -30,9 +31,6 @@ impl Display for Item {
 		}
 	}
 }
-
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub struct InventoryKey(pub usize);
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum ItemType {
