@@ -1,11 +1,16 @@
-use super::Children;
+use super::{inventory_panel::InventoryPanel, KeyedPanel};
 use crate::{
-	components::{inventory_panel::InventoryPanel, InventoryScreen, KeyedPanel},
 	tools::PanelState,
-	traits::colors::HasPanelColors,
+	traits::{
+		children::Children,
+		colors::{HasBackgroundColor, HasPanelColors},
+		spawn::Spawn,
+	},
 };
 use bevy::{
 	hierarchy::{BuildChildren, ChildBuilder},
+	prelude::Component,
+	render::color::Color,
 	text::TextStyle,
 	ui::{
 		node_bundles::{ButtonBundle, NodeBundle, TextBundle},
@@ -18,13 +23,33 @@ use bevy::{
 	},
 	utils::default,
 };
-use common::components::Side;
-use skills::items::{slot_key::SlotKey, InventoryKey};
+use common::traits::{
+	get_ui_text::{English, GetUiText, UIText},
+	iteration::{IterFinite, IterInfinite},
+};
+use skills::items::{inventory_key::InventoryKey, slot_key::SlotKey};
 
-const EQUIPMENT_SLOTS: [(SlotKey, &str); 2] = [
-	(SlotKey::Hand(Side::Off), "Off Hand"),
-	(SlotKey::Hand(Side::Main), "Main Hand"),
-];
+#[derive(Component)]
+pub struct InventoryScreen;
+
+impl Spawn for InventoryScreen {
+	fn spawn() -> (Style, Self) {
+		(
+			Style {
+				width: Val::Vw(100.0),
+				height: Val::Vh(100.0),
+				align_items: AlignItems::Center,
+				justify_content: JustifyContent::Center,
+				..default()
+			},
+			InventoryScreen,
+		)
+	}
+}
+
+impl HasBackgroundColor for InventoryScreen {
+	const BACKGROUND_COLOR: Option<Color> = Some(Color::rgba(0.5, 0.5, 0.5, 0.5));
+}
 
 impl Children for InventoryScreen {
 	fn children(parent: &mut ChildBuilder) {
@@ -44,6 +69,7 @@ impl Children for InventoryScreen {
 
 fn add_inventory() -> impl Fn(&mut ChildBuilder) {
 	move |parent| {
+		let mut keys = InventoryKey::iterator_infinite();
 		parent
 			.spawn(NodeBundle {
 				style: Style {
@@ -56,14 +82,9 @@ fn add_inventory() -> impl Fn(&mut ChildBuilder) {
 			})
 			.with_children(|parent| {
 				add_title(parent, "Inventory");
-				add(parent, None, 5, 5, 0, InventoryKey);
+				add_grid(parent, UIText::Unmapped, 5, 5, || keys.next_infinite());
 			});
 	}
-}
-
-fn slot_key_from_index(index: usize) -> SlotKey {
-	let (key, _) = EQUIPMENT_SLOTS[index];
-	key
 }
 
 fn add_equipment() -> impl Fn(&mut ChildBuilder) {
@@ -80,8 +101,8 @@ fn add_equipment() -> impl Fn(&mut ChildBuilder) {
 			})
 			.with_children(|parent| {
 				add_title(parent, "Equipment");
-				for (index, (_, name)) in EQUIPMENT_SLOTS.iter().enumerate() {
-					add(parent, Some(name), 1, 1, index, slot_key_from_index);
+				for key in SlotKey::iterator() {
+					add_grid(parent, English::ui_text(&key), 1, 1, || key);
 				}
 			});
 	}
@@ -109,16 +130,14 @@ fn add_title(parent: &mut ChildBuilder, title: &str) {
 		});
 }
 
-fn add<TKey: Sync + Send + 'static>(
+fn add_grid<TKey: Sync + Send + 'static>(
 	parent: &mut ChildBuilder,
-	label: Option<&str>,
-	x: u32,
-	y: u32,
-	start_index: usize,
-	parse_key: fn(usize) -> TKey,
+	grid_label: UIText,
+	element_count_x: u32,
+	element_count_y: u32,
+	mut element_key: impl FnMut() -> TKey,
 ) {
-	let mut index = start_index;
-	for _ in 0..y {
+	for _ in 0..element_count_y {
 		parent
 			.spawn(NodeBundle {
 				style: Style {
@@ -129,7 +148,7 @@ fn add<TKey: Sync + Send + 'static>(
 				..default()
 			})
 			.with_children(|parent| {
-				if let Some(label) = label {
+				if let UIText::String(label) = grid_label.clone() {
 					parent.spawn(TextBundle::from_section(
 						label,
 						TextStyle {
@@ -139,11 +158,10 @@ fn add<TKey: Sync + Send + 'static>(
 						},
 					));
 				}
-				for _ in 0..x {
-					let key = parse_key(index);
+				for _ in 0..element_count_x {
 					parent
 						.spawn((
-							KeyedPanel(key),
+							KeyedPanel(element_key()),
 							InventoryPanel::from(PanelState::Empty),
 							get_panel_button(),
 						))
@@ -157,14 +175,13 @@ fn add<TKey: Sync + Send + 'static>(
 								},
 							));
 						});
-					index += 1;
 				}
 			});
 	}
 }
 
 fn get_panel_button() -> ButtonBundle {
-	let slot_style = Style {
+	let style = Style {
 		width: Val::Px(65.0),
 		height: Val::Px(65.0),
 		margin: UiRect::all(Val::Px(2.0)),
@@ -172,8 +189,5 @@ fn get_panel_button() -> ButtonBundle {
 		align_items: AlignItems::Center,
 		..default()
 	};
-	ButtonBundle {
-		style: slot_style.clone(),
-		..default()
-	}
+	ButtonBundle { style, ..default() }
 }

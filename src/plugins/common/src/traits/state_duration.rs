@@ -1,4 +1,4 @@
-use crate::traits::iteration::IterKey;
+use crate::traits::iteration::IterFinite;
 use std::{
 	cmp::Ordering,
 	collections::HashSet,
@@ -92,7 +92,7 @@ impl Sub for _SafeDuration {
 
 impl<
 		TStateDuration: StateDuration<TStateKey>,
-		TStateKey: IterKey + Copy + Clone + Eq + Hash + 'static,
+		TStateKey: IterFinite + Copy + Clone + Eq + Hash + 'static,
 	> StateUpdate<TStateKey> for TStateDuration
 {
 	fn update_state(&mut self, delta: Duration) -> HashSet<StateMeta<TStateKey>> {
@@ -121,7 +121,7 @@ impl<
 	}
 }
 
-fn current_state_metas<TStateName: IterKey + Copy + Clone + Eq + Hash + 'static>(
+fn current_state_metas<TStateName: IterFinite + Copy + Clone + Eq + Hash + 'static>(
 	before_update: _SafeDuration,
 	after_update: _SafeDuration,
 	state_begin: _SafeDuration,
@@ -133,7 +133,7 @@ fn current_state_metas<TStateName: IterKey + Copy + Clone + Eq + Hash + 'static>
 	}
 }
 
-fn non_zero_duration_meta<TStateName: IterKey + Copy + Clone + Eq + Hash + 'static>(
+fn non_zero_duration_meta<TStateName: IterFinite + Copy + Clone + Eq + Hash + 'static>(
 	before_update: _SafeDuration,
 	after_update: _SafeDuration,
 	state_begin: _SafeDuration,
@@ -150,7 +150,7 @@ fn non_zero_duration_meta<TStateName: IterKey + Copy + Clone + Eq + Hash + 'stat
 	}
 }
 
-fn zero_duration_meta<TStateName: IterKey + Copy + Clone + Eq + Hash + 'static>(
+fn zero_duration_meta<TStateName: IterFinite + Copy + Clone + Eq + Hash + 'static>(
 	before_update: _SafeDuration,
 	after_update: _SafeDuration,
 	current_state: _SafeDuration,
@@ -182,7 +182,7 @@ mod tests {
 		pub duration: Duration,
 	}
 
-	impl IterKey for _State {
+	impl IterFinite for _State {
 		fn iterator() -> Iter<Self> {
 			Iter(Some(_State::A))
 		}

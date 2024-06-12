@@ -14,9 +14,9 @@ use common::{
 };
 use components::{
 	inventory_panel::InventoryPanel,
+	inventory_screen::InventoryScreen,
 	quickbar_panel::QuickbarPanel,
-	InventoryScreen,
-	UIOverlay,
+	ui_overlay::UIOverlay,
 };
 use skills::{
 	components::{
@@ -26,7 +26,7 @@ use skills::{
 		queue::Queue,
 		slots::Slots,
 	},
-	items::{slot_key::SlotKey, InventoryKey},
+	items::{inventory_key::InventoryKey, slot_key::SlotKey},
 };
 use systems::{
 	dad::{drag::drag, drop::drop},

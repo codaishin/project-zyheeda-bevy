@@ -8,7 +8,7 @@ use common::{
 };
 use skills::{
 	components::inventory::Inventory,
-	items::{InventoryKey, Item},
+	items::{inventory_key::InventoryKey, Item},
 };
 use std::cmp::max;
 

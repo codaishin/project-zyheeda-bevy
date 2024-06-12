@@ -4,7 +4,7 @@ pub struct English;
 
 pub struct Japanese;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum UIText {
 	String(String),
 	Unmapped,

@@ -1,6 +1,6 @@
 use super::{Combo, GetCombos};
 use crate::{items::slot_key::SlotKey, skills::Skill};
-use common::traits::{get::Get, iteration::IterKey};
+use common::traits::{get::Get, iteration::IterFinite};
 
 impl<T: Get<Vec<SlotKey>, Skill>> GetCombos for T {
 	fn combos(&self) -> Vec<Combo> {

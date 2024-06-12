@@ -1,5 +1,5 @@
 use bevy::{ecs::schedule::States, input::keyboard::KeyCode};
-use common::traits::iteration::{Iter, IterKey};
+use common::traits::iteration::{Iter, IterFinite};
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
 pub enum MenuState {
@@ -8,7 +8,7 @@ pub enum MenuState {
 	Inventory,
 }
 
-impl IterKey for MenuState {
+impl IterFinite for MenuState {
 	fn iterator() -> Iter<Self> {
 		Iter(Some(MenuState::None))
 	}

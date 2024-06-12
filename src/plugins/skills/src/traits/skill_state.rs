@@ -1,7 +1,7 @@
 use crate::skills::SkillState;
-use common::traits::iteration::{Iter, IterKey};
+use common::traits::iteration::{Iter, IterFinite};
 
-impl IterKey for SkillState {
+impl IterFinite for SkillState {
 	fn iterator() -> Iter<Self> {
 		Iter(Some(SkillState::Aim))
 	}

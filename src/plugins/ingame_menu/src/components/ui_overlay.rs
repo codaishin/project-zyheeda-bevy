@@ -1,15 +1,20 @@
-use super::Children;
 use crate::{
-	components::{quickbar_panel::QuickbarPanel, Label, Quickbar, UIOverlay},
 	tools::PanelState,
-	traits::colors::HasPanelColors,
+	traits::{
+		children::Children,
+		colors::{HasBackgroundColor, HasPanelColors},
+		spawn::Spawn,
+	},
 };
 use bevy::{
 	hierarchy::{BuildChildren, ChildBuilder},
+	prelude::Component,
+	render::color::Color,
 	text::TextStyle,
 	ui::{
 		node_bundles::{ButtonBundle, NodeBundle, TextBundle},
 		AlignItems,
+		FlexDirection,
 		JustifyContent,
 		Style,
 		UiRect,
@@ -19,6 +24,29 @@ use bevy::{
 };
 use common::components::Side;
 use skills::items::slot_key::SlotKey;
+
+use super::{quickbar_panel::QuickbarPanel, Label, Quickbar};
+
+#[derive(Component)]
+pub struct UIOverlay;
+
+impl Spawn for UIOverlay {
+	fn spawn() -> (Style, Self) {
+		(
+			Style {
+				width: Val::Percent(100.0),
+				height: Val::Percent(100.0),
+				flex_direction: FlexDirection::ColumnReverse,
+				..default()
+			},
+			Self,
+		)
+	}
+}
+
+impl HasBackgroundColor for UIOverlay {
+	const BACKGROUND_COLOR: Option<Color> = None;
+}
 
 impl Children for UIOverlay {
 	fn children(parent: &mut ChildBuilder) {

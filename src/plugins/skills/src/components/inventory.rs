@@ -1,5 +1,5 @@
 use super::Item;
-use crate::items::InventoryKey;
+use crate::items::inventory_key::InventoryKey;
 use common::{components::Collection, traits::get::Get};
 
 pub type Inventory = Collection<Option<Item>>;

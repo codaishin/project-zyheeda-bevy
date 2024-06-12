@@ -2,12 +2,12 @@ use crate::animation_keys::PlayerIdle;
 use common::{
 	components::Player,
 	traits::{
-		iteration::{Iter, IterKey},
+		iteration::{Iter, IterFinite},
 		load_asset::Path,
 	},
 };
 
-impl IterKey for PlayerIdle {
+impl IterFinite for PlayerIdle {
 	fn iterator() -> Iter<Self> {
 		Iter(Some(Self))
 	}
