@@ -3,7 +3,7 @@ use common::{
 	components::Side,
 	traits::{
 		get_ui_text::{English, GetUiText, Japanese, UIText},
-		iteration::{Iter, IterKey},
+		iteration::{Iter, IterFinite},
 	},
 };
 
@@ -18,7 +18,7 @@ impl Default for SlotKey {
 	}
 }
 
-impl IterKey for SlotKey {
+impl IterFinite for SlotKey {
 	fn iterator() -> Iter<Self> {
 		Iter(Some(SlotKey::Hand(Side::Main)))
 	}

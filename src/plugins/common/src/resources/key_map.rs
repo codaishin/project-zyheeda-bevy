@@ -1,5 +1,5 @@
 use crate::traits::{
-	iteration::IterKey,
+	iteration::IterFinite,
 	map_value::{MapForward, TryMapBackwards},
 };
 use bevy::ecs::system::Resource;
@@ -9,7 +9,7 @@ use std::marker::PhantomData;
 #[derive(Resource)]
 pub struct KeyMap<TKey, TValue>
 where
-	TKey: IterKey + Copy,
+	TKey: IterFinite + Copy,
 	TValue: From<TKey> + PartialEq,
 {
 	phantom_data: PhantomData<(TKey, TValue)>,
@@ -17,7 +17,7 @@ where
 
 impl<TKey, TValue> Default for KeyMap<TKey, TValue>
 where
-	TKey: IterKey + Copy,
+	TKey: IterFinite + Copy,
 	TValue: From<TKey> + PartialEq,
 {
 	fn default() -> Self {
@@ -29,7 +29,7 @@ where
 
 impl<TKey, TValue> MapForward<TKey, TValue> for KeyMap<TKey, TValue>
 where
-	TKey: IterKey + Copy,
+	TKey: IterFinite + Copy,
 	TValue: From<TKey> + PartialEq,
 {
 	fn map_forward(&self, value: TKey) -> TValue {
@@ -39,7 +39,7 @@ where
 
 impl<TKey, TValue> TryMapBackwards<TValue, TKey> for KeyMap<TKey, TValue>
 where
-	TKey: IterKey + Copy,
+	TKey: IterFinite + Copy,
 	TValue: From<TKey> + PartialEq,
 {
 	fn try_map_backwards(&self, value: TValue) -> Option<TKey> {
@@ -50,7 +50,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::iteration::{Iter, IterKey};
+	use crate::traits::iteration::{Iter, IterFinite};
 
 	#[derive(Debug, PartialEq, Clone, Copy)]
 	enum _From {
@@ -70,7 +70,7 @@ mod tests {
 		}
 	}
 
-	impl IterKey for _From {
+	impl IterFinite for _From {
 		fn iterator() -> Iter<Self> {
 			Iter(Some(_From::Small))
 		}

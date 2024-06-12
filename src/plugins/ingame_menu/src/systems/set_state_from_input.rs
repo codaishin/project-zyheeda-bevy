@@ -5,9 +5,9 @@ use bevy::{
 	},
 	input::{keyboard::KeyCode, ButtonInput},
 };
-use common::traits::iteration::IterKey;
+use common::traits::iteration::IterFinite;
 
-pub(crate) fn set_state_from_input<TState: States + Default + IterKey + Copy>(
+pub(crate) fn set_state_from_input<TState: States + Default + IterFinite + Copy>(
 	keys: Res<ButtonInput<KeyCode>>,
 	current_state: Res<State<TState>>,
 	mut next_state: ResMut<NextState<TState>>,
@@ -22,7 +22,7 @@ pub(crate) fn set_state_from_input<TState: States + Default + IterKey + Copy>(
 	next_state.set(new_state);
 }
 
-fn get_new_state<TState: States + Default + IterKey + Copy>(
+fn get_new_state<TState: States + Default + IterFinite + Copy>(
 	keys: &Res<ButtonInput<KeyCode>>,
 	current_state: &TState,
 	state: TState,
@@ -58,7 +58,7 @@ mod tests {
 		B,
 	}
 
-	impl IterKey for _State {
+	impl IterFinite for _State {
 		fn iterator() -> Iter<Self> {
 			Iter(Some(_State::Default))
 		}
