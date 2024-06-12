@@ -16,6 +16,7 @@ use common::{
 	traits::{cache::get_or_load_asset::LoadAssetCache, load_asset::Path},
 };
 use components::{
+	combo_overview::ComboOverview,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
 	quickbar_panel::QuickbarPanel,
@@ -78,6 +79,7 @@ impl Plugin for IngameMenuPlugin {
 		resources(app);
 		state_control_systems(app);
 		ui_overlay_systems(app);
+		combo_overview_systems(app);
 		inventory_screen_systems(app);
 
 		#[cfg(debug_assertions)]
@@ -121,6 +123,10 @@ fn ui_overlay_systems(app: &mut App) {
 				prime_mouse_context::<KeyMap<SlotKey, KeyCode>, QuickbarPanel>,
 			),
 		);
+}
+
+fn combo_overview_systems(app: &mut App) {
+	app.add_ui::<ComboOverview>(MenuState::ComboOverview);
 }
 
 fn inventory_screen_systems(app: &mut App) {

@@ -1,3 +1,4 @@
+pub(crate) mod combo_overview;
 pub(crate) mod inventory_panel;
 pub(crate) mod inventory_screen;
 pub(crate) mod quickbar_panel;
@@ -32,3 +33,6 @@ pub struct Quickbar;
 
 #[derive(Component)]
 pub struct ColorOverride;
+
+#[derive(Component)]
+pub(crate) struct ComboList;

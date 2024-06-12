@@ -6,6 +6,7 @@ pub enum MenuState {
 	#[default]
 	None,
 	Inventory,
+	ComboOverview,
 }
 
 impl IterFinite for MenuState {
@@ -16,7 +17,8 @@ impl IterFinite for MenuState {
 	fn next(current: &Iter<Self>) -> Option<Self> {
 		match current.0? {
 			MenuState::None => Some(MenuState::Inventory),
-			MenuState::Inventory => None,
+			MenuState::Inventory => Some(MenuState::ComboOverview),
+			MenuState::ComboOverview => None,
 		}
 	}
 }
@@ -31,6 +33,7 @@ impl TryFrom<MenuState> for KeyCode {
 		match value {
 			MenuState::None => Err(NoKeySet),
 			MenuState::Inventory => Ok(KeyCode::KeyI),
+			MenuState::ComboOverview => Ok(KeyCode::KeyK),
 		}
 	}
 }
@@ -42,7 +45,11 @@ mod tests {
 	#[test]
 	fn get_all_states() {
 		assert_eq!(
-			vec![MenuState::None, MenuState::Inventory],
+			vec![
+				MenuState::None,
+				MenuState::Inventory,
+				MenuState::ComboOverview
+			],
 			MenuState::iterator().collect::<Vec<_>>(),
 		)
 	}
@@ -50,7 +57,7 @@ mod tests {
 	#[test]
 	fn get_key_codes() {
 		assert_eq!(
-			vec![Err(NoKeySet), Ok(KeyCode::KeyI)],
+			vec![Err(NoKeySet), Ok(KeyCode::KeyI), Ok(KeyCode::KeyK)],
 			MenuState::iterator()
 				.map(KeyCode::try_from)
 				.collect::<Vec<_>>()
