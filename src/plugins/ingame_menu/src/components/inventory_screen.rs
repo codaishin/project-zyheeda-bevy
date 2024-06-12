@@ -1,11 +1,15 @@
-use super::Children;
 use crate::{
-	components::{inventory_panel::InventoryPanel, InventoryScreen, KeyedPanel},
 	tools::PanelState,
-	traits::colors::HasPanelColors,
+	traits::{
+		children::Children,
+		colors::{HasBackgroundColor, HasPanelColors},
+		spawn::Spawn,
+	},
 };
 use bevy::{
 	hierarchy::{BuildChildren, ChildBuilder},
+	prelude::Component,
+	render::color::Color,
 	text::TextStyle,
 	ui::{
 		node_bundles::{ButtonBundle, NodeBundle, TextBundle},
@@ -20,6 +24,30 @@ use bevy::{
 };
 use common::components::Side;
 use skills::items::{slot_key::SlotKey, InventoryKey};
+
+use super::{inventory_panel::InventoryPanel, KeyedPanel};
+
+#[derive(Component)]
+pub struct InventoryScreen;
+
+impl Spawn for InventoryScreen {
+	fn spawn() -> (Style, Self) {
+		(
+			Style {
+				width: Val::Vw(100.0),
+				height: Val::Vh(100.0),
+				align_items: AlignItems::Center,
+				justify_content: JustifyContent::Center,
+				..default()
+			},
+			InventoryScreen,
+		)
+	}
+}
+
+impl HasBackgroundColor for InventoryScreen {
+	const BACKGROUND_COLOR: Option<Color> = Some(Color::rgba(0.5, 0.5, 0.5, 0.5));
+}
 
 const EQUIPMENT_SLOTS: [(SlotKey, &str); 2] = [
 	(SlotKey::Hand(Side::Off), "Off Hand"),
@@ -164,7 +192,7 @@ fn add<TKey: Sync + Send + 'static>(
 }
 
 fn get_panel_button() -> ButtonBundle {
-	let slot_style = Style {
+	let style = Style {
 		width: Val::Px(65.0),
 		height: Val::Px(65.0),
 		margin: UiRect::all(Val::Px(2.0)),
@@ -172,8 +200,5 @@ fn get_panel_button() -> ButtonBundle {
 		align_items: AlignItems::Center,
 		..default()
 	};
-	ButtonBundle {
-		style: slot_style.clone(),
-		..default()
-	}
+	ButtonBundle { style, ..default() }
 }

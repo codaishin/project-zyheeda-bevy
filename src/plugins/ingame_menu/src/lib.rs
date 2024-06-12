@@ -14,8 +14,8 @@ use common::{
 };
 use components::{
 	inventory_panel::InventoryPanel,
+	inventory_screen::InventoryScreen,
 	quickbar_panel::QuickbarPanel,
-	InventoryScreen,
 	UIOverlay,
 };
 use skills::{

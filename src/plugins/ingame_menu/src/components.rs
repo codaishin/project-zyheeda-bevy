@@ -1,4 +1,5 @@
 pub(crate) mod inventory_panel;
+pub(crate) mod inventory_screen;
 pub(crate) mod quickbar_panel;
 
 use bevy::ecs::component::Component;
@@ -9,9 +10,6 @@ pub struct Dad<T>(pub T);
 
 #[derive(Component, Debug, Clone, Copy)]
 pub struct KeyedPanel<TKey>(pub TKey);
-
-#[derive(Component)]
-pub struct InventoryScreen;
 
 #[derive(Component)]
 pub struct Label<T, TKey> {
