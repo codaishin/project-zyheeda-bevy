@@ -1,5 +1,3 @@
-pub mod ui_overlay_colors;
-
 use bevy::render::color::Color;
 
 pub struct PanelColors {

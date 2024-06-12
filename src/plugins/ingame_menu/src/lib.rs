@@ -16,7 +16,7 @@ use components::{
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
 	quickbar_panel::QuickbarPanel,
-	UIOverlay,
+	ui_overlay::UIOverlay,
 };
 use skills::{
 	components::{

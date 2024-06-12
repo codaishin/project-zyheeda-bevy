@@ -1,6 +1,7 @@
 pub(crate) mod inventory_panel;
 pub(crate) mod inventory_screen;
 pub(crate) mod quickbar_panel;
+pub(crate) mod ui_overlay;
 
 use bevy::ecs::component::Component;
 use std::marker::PhantomData;
@@ -28,9 +29,6 @@ impl<T, TKey> Label<T, TKey> {
 
 #[derive(Component)]
 pub struct Quickbar;
-
-#[derive(Component)]
-pub struct UIOverlay;
 
 #[derive(Component)]
 pub struct ColorOverride;
