@@ -1,5 +1,4 @@
-use super::get_combos::CombosDescriptor;
-use crate::traits::SkillDescriptor;
+use crate::traits::{CombosDescriptor, SkillDescriptor};
 use bevy::{
 	asset::Handle,
 	prelude::{In, ResMut, Resource},

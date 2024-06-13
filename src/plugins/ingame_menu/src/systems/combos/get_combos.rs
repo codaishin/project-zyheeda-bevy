@@ -1,4 +1,4 @@
-use crate::traits::SkillDescriptor;
+use crate::traits::{CombosDescriptor, SkillDescriptor};
 use bevy::prelude::{Component, Query, With};
 use common::{components::Player, traits::load_asset::Path};
 use skills::{
@@ -6,8 +6,6 @@ use skills::{
 	skills::Skill,
 	traits::{Combo, GetCombos},
 };
-
-pub(crate) type CombosDescriptor<TKey, TIcon> = Vec<Vec<SkillDescriptor<TKey, TIcon>>>;
 
 pub(crate) fn get_combos<TKey: From<SlotKey> + Clone, TCombos: Component + GetCombos>(
 	players: Query<&TCombos, With<Player>>,
