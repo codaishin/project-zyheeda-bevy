@@ -3,7 +3,7 @@ use crate::{
 	traits::{
 		children::Children,
 		colors::{HasBackgroundColor, HasPanelColors},
-		spawn::Spawn,
+		get_style::GetStyle,
 	},
 };
 use bevy::{
@@ -27,20 +27,17 @@ use skills::items::slot_key::SlotKey;
 
 use super::{quickbar_panel::QuickbarPanel, Label, Quickbar};
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct UIOverlay;
 
-impl Spawn for UIOverlay {
-	fn spawn() -> (Style, Self) {
-		(
-			Style {
-				width: Val::Percent(100.0),
-				height: Val::Percent(100.0),
-				flex_direction: FlexDirection::ColumnReverse,
-				..default()
-			},
-			Self,
-		)
+impl GetStyle for UIOverlay {
+	fn style(&self) -> Style {
+		Style {
+			width: Val::Percent(100.0),
+			height: Val::Percent(100.0),
+			flex_direction: FlexDirection::ColumnReverse,
+			..default()
+		}
 	}
 }
 
@@ -49,7 +46,7 @@ impl HasBackgroundColor for UIOverlay {
 }
 
 impl Children for UIOverlay {
-	fn children(parent: &mut ChildBuilder) {
+	fn children(&self, parent: &mut ChildBuilder) {
 		add_quickbar(parent);
 	}
 }

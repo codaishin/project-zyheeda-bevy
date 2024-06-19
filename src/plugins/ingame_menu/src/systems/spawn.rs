@@ -1,26 +1,23 @@
-use crate::traits::{children::Children, colors::HasBackgroundColor, spawn::Spawn};
+use crate::traits::{colors::HasBackgroundColor, get_style::GetStyle};
 use bevy::{
 	ecs::{component::Component, system::Commands},
-	hierarchy::BuildChildren,
 	render::color::Color,
 	ui::node_bundles::NodeBundle,
 	utils::default,
 };
 
-pub fn spawn<TComponent: Spawn + Children + Component + HasBackgroundColor>(
+pub fn spawn<TComponent: Default + GetStyle + Component + HasBackgroundColor>(
 	mut commands: Commands,
 ) {
-	let (style, component) = TComponent::spawn();
-	commands
-		.spawn((
-			NodeBundle {
-				style,
-				background_color: TComponent::BACKGROUND_COLOR.unwrap_or(Color::NONE).into(),
-				..default()
-			},
-			component,
-		))
-		.with_children(|parent| TComponent::children(parent));
+	let component = TComponent::default();
+	commands.spawn((
+		NodeBundle {
+			style: component.style(),
+			background_color: TComponent::BACKGROUND_COLOR.unwrap_or(Color::NONE).into(),
+			..default()
+		},
+		component,
+	));
 }
 
 #[cfg(test)]
@@ -28,33 +25,23 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		hierarchy::{ChildBuilder, Parent},
 		prelude::default,
 		render::color::Color,
 		ui::{BackgroundColor, Style, Val},
 	};
 
-	#[derive(Component)]
+	#[derive(Component, Default)]
 	struct _Component;
 
 	#[derive(Component)]
 	struct _Child;
 
-	impl Spawn for _Component {
-		fn spawn() -> (Style, Self) {
-			(
-				Style {
-					width: Val::Px(42.),
-					..default()
-				},
-				Self,
-			)
-		}
-	}
-
-	impl Children for _Component {
-		fn children(parent: &mut ChildBuilder) {
-			parent.spawn(_Child);
+	impl GetStyle for _Component {
+		fn style(&self) -> Style {
+			Style {
+				width: Val::Px(42.),
+				..default()
+			}
 		}
 	}
 
@@ -62,17 +49,13 @@ mod tests {
 		const BACKGROUND_COLOR: Option<Color> = Some(Color::rgb(0.1, 0.2, 0.3));
 	}
 
-	#[derive(Component)]
+	#[derive(Component, Default)]
 	struct _ComponentWithoutBackgroundColor;
 
-	impl Spawn for _ComponentWithoutBackgroundColor {
-		fn spawn() -> (Style, Self) {
-			(Style::default(), Self)
+	impl GetStyle for _ComponentWithoutBackgroundColor {
+		fn style(&self) -> Style {
+			Style::default()
 		}
-	}
-
-	impl Children for _ComponentWithoutBackgroundColor {
-		fn children(_parent: &mut ChildBuilder) {}
 	}
 
 	impl HasBackgroundColor for _ComponentWithoutBackgroundColor {
@@ -126,27 +109,5 @@ mod tests {
 				.get::<BackgroundColor>()
 				.map(|background_color| background_color.0))
 		)
-	}
-
-	#[test]
-	fn spawn_children() {
-		let mut app = App::new();
-
-		app.add_systems(Update, spawn::<_Component>);
-		app.update();
-
-		let entity_with_component = app
-			.world
-			.iter_entities()
-			.find(|e| e.contains::<_Component>())
-			.unwrap()
-			.id();
-		let child_parent = app
-			.world
-			.iter_entities()
-			.find(|e| e.contains::<_Child>())
-			.and_then(|e| e.get::<Parent>());
-
-		assert_eq!(Some(entity_with_component), child_parent.map(|p| p.get()))
 	}
 }
