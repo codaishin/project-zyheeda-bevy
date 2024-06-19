@@ -3,6 +3,9 @@ mod systems;
 mod tools;
 mod traits;
 
+#[cfg(debug_assertions)]
+mod debug;
+
 use bevy::prelude::*;
 use common::{
 	components::Player,
@@ -76,6 +79,9 @@ impl Plugin for IngameMenuPlugin {
 		state_control_systems(app);
 		ui_overlay_systems(app);
 		inventory_screen_systems(app);
+
+		#[cfg(debug_assertions)]
+		debug::setup_run_time_display(app);
 	}
 }
 
