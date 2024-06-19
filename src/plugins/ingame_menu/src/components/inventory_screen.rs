@@ -49,7 +49,7 @@ impl HasBackgroundColor for InventoryScreen {
 }
 
 impl Children for InventoryScreen {
-	fn children(&mut self, parent: &mut ChildBuilder) {
+	fn children(&self, parent: &mut ChildBuilder) {
 		parent
 			.spawn(NodeBundle {
 				style: Style {

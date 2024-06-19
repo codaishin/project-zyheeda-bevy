@@ -46,7 +46,7 @@ impl HasBackgroundColor for UIOverlay {
 }
 
 impl Children for UIOverlay {
-	fn children(&mut self, parent: &mut ChildBuilder) {
+	fn children(&self, parent: &mut ChildBuilder) {
 		add_quickbar(parent);
 	}
 }

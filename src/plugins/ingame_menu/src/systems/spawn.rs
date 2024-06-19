@@ -10,7 +10,7 @@ use bevy::{
 pub fn spawn<TComponent: Default + GetStyle + Children + Component + HasBackgroundColor>(
 	mut commands: Commands,
 ) {
-	let mut component = TComponent::default();
+	let component = TComponent::default();
 	commands
 		.spawn(NodeBundle {
 			style: component.style(),
@@ -48,7 +48,7 @@ mod tests {
 	}
 
 	impl Children for _Component {
-		fn children(&mut self, parent: &mut ChildBuilder) {
+		fn children(&self, parent: &mut ChildBuilder) {
 			parent.spawn(_Child);
 		}
 	}
@@ -67,7 +67,7 @@ mod tests {
 	}
 
 	impl Children for _ComponentWithoutBackgroundColor {
-		fn children(&mut self, _: &mut ChildBuilder) {}
+		fn children(&self, _: &mut ChildBuilder) {}
 	}
 
 	impl HasBackgroundColor for _ComponentWithoutBackgroundColor {
