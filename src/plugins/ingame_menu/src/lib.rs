@@ -36,6 +36,7 @@ use systems::{
 	set_state::set_state,
 	set_state_from_input::set_state_from_input,
 	spawn::spawn,
+	update_children::update_children,
 	update_panels::{
 		activity_colors_override::panel_activity_colors_override,
 		colors::panel_colors,
@@ -46,6 +47,26 @@ use systems::{
 	},
 };
 use tools::menu_state::MenuState;
+use traits::{children::Children, colors::HasBackgroundColor, get_style::GetStyle};
+
+trait AddUI {
+	fn add_ui<TComponent>(&mut self, on_state: MenuState) -> &mut Self
+	where
+		TComponent: Component + Default + GetStyle + Children + HasBackgroundColor;
+}
+
+impl AddUI for App {
+	fn add_ui<TComponent>(&mut self, on_state: MenuState) -> &mut Self
+	where
+		TComponent: Component + Default + GetStyle + Children + HasBackgroundColor,
+	{
+		let spawn_component = (spawn::<TComponent>, update_children::<TComponent>).chain();
+
+		self.add_systems(OnEnter(on_state), spawn_component)
+			.add_systems(OnExit(on_state), despawn::<TComponent>)
+			.add_systems(Update, update_children::<TComponent>)
+	}
+}
 
 pub struct IngameMenuPlugin;
 
@@ -70,8 +91,7 @@ fn state_control_systems(app: &mut App) {
 }
 
 fn ui_overlay_systems(app: &mut App) {
-	app.add_systems(OnEnter(MenuState::None), spawn::<UIOverlay>)
-		.add_systems(OnExit(MenuState::None), despawn::<UIOverlay>)
+	app.add_ui::<UIOverlay>(MenuState::None)
 		.add_systems(
 			Update,
 			(
@@ -98,8 +118,7 @@ fn ui_overlay_systems(app: &mut App) {
 }
 
 fn inventory_screen_systems(app: &mut App) {
-	app.add_systems(OnEnter(MenuState::Inventory), spawn::<InventoryScreen>)
-		.add_systems(OnExit(MenuState::Inventory), despawn::<InventoryScreen>)
+	app.add_ui::<InventoryScreen>(MenuState::Inventory)
 		.add_systems(
 			Update,
 			(

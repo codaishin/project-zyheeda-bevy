@@ -1,24 +1,23 @@
-use crate::traits::{children::Children, colors::HasBackgroundColor, get_style::GetStyle};
+use crate::traits::{colors::HasBackgroundColor, get_style::GetStyle};
 use bevy::{
 	ecs::{component::Component, system::Commands},
-	hierarchy::BuildChildren,
 	render::color::Color,
 	ui::node_bundles::NodeBundle,
 	utils::default,
 };
 
-pub fn spawn<TComponent: Default + GetStyle + Children + Component + HasBackgroundColor>(
+pub fn spawn<TComponent: Default + GetStyle + Component + HasBackgroundColor>(
 	mut commands: Commands,
 ) {
 	let component = TComponent::default();
-	commands
-		.spawn(NodeBundle {
+	commands.spawn((
+		NodeBundle {
 			style: component.style(),
 			background_color: TComponent::BACKGROUND_COLOR.unwrap_or(Color::NONE).into(),
 			..default()
-		})
-		.with_children(|parent| component.children(parent))
-		.insert(component);
+		},
+		component,
+	));
 }
 
 #[cfg(test)]
@@ -26,7 +25,6 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		hierarchy::{ChildBuilder, Parent},
 		prelude::default,
 		render::color::Color,
 		ui::{BackgroundColor, Style, Val},
@@ -47,12 +45,6 @@ mod tests {
 		}
 	}
 
-	impl Children for _Component {
-		fn children(&self, parent: &mut ChildBuilder) {
-			parent.spawn(_Child);
-		}
-	}
-
 	impl HasBackgroundColor for _Component {
 		const BACKGROUND_COLOR: Option<Color> = Some(Color::rgb(0.1, 0.2, 0.3));
 	}
@@ -64,10 +56,6 @@ mod tests {
 		fn style(&self) -> Style {
 			Style::default()
 		}
-	}
-
-	impl Children for _ComponentWithoutBackgroundColor {
-		fn children(&self, _: &mut ChildBuilder) {}
 	}
 
 	impl HasBackgroundColor for _ComponentWithoutBackgroundColor {
@@ -121,27 +109,5 @@ mod tests {
 				.get::<BackgroundColor>()
 				.map(|background_color| background_color.0))
 		)
-	}
-
-	#[test]
-	fn spawn_children() {
-		let mut app = App::new();
-
-		app.add_systems(Update, spawn::<_Component>);
-		app.update();
-
-		let entity_with_component = app
-			.world
-			.iter_entities()
-			.find(|e| e.contains::<_Component>())
-			.unwrap()
-			.id();
-		let child_parent = app
-			.world
-			.iter_entities()
-			.find(|e| e.contains::<_Child>())
-			.and_then(|e| e.get::<Parent>());
-
-		assert_eq!(Some(entity_with_component), child_parent.map(|p| p.get()))
 	}
 }
