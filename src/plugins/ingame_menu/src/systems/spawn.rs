@@ -1,4 +1,4 @@
-use crate::traits::{children::Children, colors::HasBackgroundColor, spawn::Spawn};
+use crate::traits::{children::Children, colors::HasBackgroundColor, get_style::GetStyle};
 use bevy::{
 	ecs::{component::Component, system::Commands},
 	hierarchy::BuildChildren,
@@ -7,20 +7,18 @@ use bevy::{
 	utils::default,
 };
 
-pub fn spawn<TComponent: Spawn + Children + Component + HasBackgroundColor>(
+pub fn spawn<TComponent: Default + GetStyle + Children + Component + HasBackgroundColor>(
 	mut commands: Commands,
 ) {
-	let (style, component) = TComponent::spawn();
+	let mut component = TComponent::default();
 	commands
-		.spawn((
-			NodeBundle {
-				style,
-				background_color: TComponent::BACKGROUND_COLOR.unwrap_or(Color::NONE).into(),
-				..default()
-			},
-			component,
-		))
-		.with_children(|parent| TComponent::children(parent));
+		.spawn(NodeBundle {
+			style: component.style(),
+			background_color: TComponent::BACKGROUND_COLOR.unwrap_or(Color::NONE).into(),
+			..default()
+		})
+		.with_children(|parent| component.children(parent))
+		.insert(component);
 }
 
 #[cfg(test)]
@@ -34,26 +32,23 @@ mod tests {
 		ui::{BackgroundColor, Style, Val},
 	};
 
-	#[derive(Component)]
+	#[derive(Component, Default)]
 	struct _Component;
 
 	#[derive(Component)]
 	struct _Child;
 
-	impl Spawn for _Component {
-		fn spawn() -> (Style, Self) {
-			(
-				Style {
-					width: Val::Px(42.),
-					..default()
-				},
-				Self,
-			)
+	impl GetStyle for _Component {
+		fn style(&self) -> Style {
+			Style {
+				width: Val::Px(42.),
+				..default()
+			}
 		}
 	}
 
 	impl Children for _Component {
-		fn children(parent: &mut ChildBuilder) {
+		fn children(&mut self, parent: &mut ChildBuilder) {
 			parent.spawn(_Child);
 		}
 	}
@@ -62,17 +57,17 @@ mod tests {
 		const BACKGROUND_COLOR: Option<Color> = Some(Color::rgb(0.1, 0.2, 0.3));
 	}
 
-	#[derive(Component)]
+	#[derive(Component, Default)]
 	struct _ComponentWithoutBackgroundColor;
 
-	impl Spawn for _ComponentWithoutBackgroundColor {
-		fn spawn() -> (Style, Self) {
-			(Style::default(), Self)
+	impl GetStyle for _ComponentWithoutBackgroundColor {
+		fn style(&self) -> Style {
+			Style::default()
 		}
 	}
 
 	impl Children for _ComponentWithoutBackgroundColor {
-		fn children(_parent: &mut ChildBuilder) {}
+		fn children(&mut self, _: &mut ChildBuilder) {}
 	}
 
 	impl HasBackgroundColor for _ComponentWithoutBackgroundColor {

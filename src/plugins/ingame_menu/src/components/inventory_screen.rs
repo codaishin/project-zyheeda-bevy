@@ -4,7 +4,7 @@ use crate::{
 	traits::{
 		children::Children,
 		colors::{HasBackgroundColor, HasPanelColors},
-		spawn::Spawn,
+		get_style::GetStyle,
 	},
 };
 use bevy::{
@@ -29,21 +29,18 @@ use common::traits::{
 };
 use skills::items::{inventory_key::InventoryKey, slot_key::SlotKey};
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct InventoryScreen;
 
-impl Spawn for InventoryScreen {
-	fn spawn() -> (Style, Self) {
-		(
-			Style {
-				width: Val::Vw(100.0),
-				height: Val::Vh(100.0),
-				align_items: AlignItems::Center,
-				justify_content: JustifyContent::Center,
-				..default()
-			},
-			InventoryScreen,
-		)
+impl GetStyle for InventoryScreen {
+	fn style(&self) -> Style {
+		Style {
+			width: Val::Vw(100.0),
+			height: Val::Vh(100.0),
+			align_items: AlignItems::Center,
+			justify_content: JustifyContent::Center,
+			..default()
+		}
 	}
 }
 
@@ -52,7 +49,7 @@ impl HasBackgroundColor for InventoryScreen {
 }
 
 impl Children for InventoryScreen {
-	fn children(parent: &mut ChildBuilder) {
+	fn children(&mut self, parent: &mut ChildBuilder) {
 		parent
 			.spawn(NodeBundle {
 				style: Style {
