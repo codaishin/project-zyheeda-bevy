@@ -33,6 +33,11 @@ use skills::{
 	items::{inventory_key::InventoryKey, slot_key::SlotKey},
 };
 use systems::{
+	combos::{
+		get_combos::get_combos,
+		load_combo_icon_image::load_combo_icon_image,
+		update_combos::update_combos,
+	},
 	dad::{drag::drag, drop::drop},
 	despawn::despawn,
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
@@ -126,7 +131,23 @@ fn ui_overlay_systems(app: &mut App) {
 }
 
 fn combo_overview_systems(app: &mut App) {
-	app.add_ui::<ComboOverview>(MenuState::ComboOverview);
+	let get_combos = get_combos::<KeyCode, Combos>;
+	let load_combo_icon_image = load_combo_icon_image::<
+		KeyCode,
+		AssetServer,
+		Shared<Path, Handle<Image>>,
+		Factory<LoadAssetCache>,
+	>;
+	let update_combo_overview = update_combos::<KeyCode, ComboOverview>;
+
+	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
+		.add_systems(
+			Update,
+			get_combos
+				.pipe(load_combo_icon_image)
+				.pipe(update_combo_overview)
+				.run_if(in_state(MenuState::ComboOverview)),
+		);
 }
 
 fn inventory_screen_systems(app: &mut App) {
