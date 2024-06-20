@@ -16,6 +16,7 @@ use common::{
 	traits::{cache::get_or_load_asset::LoadAssetCache, load_asset::Path},
 };
 use components::{
+	combo_overview::ComboOverview,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
 	quickbar_panel::QuickbarPanel,
@@ -32,6 +33,11 @@ use skills::{
 	items::{inventory_key::InventoryKey, slot_key::SlotKey},
 };
 use systems::{
+	combos::{
+		get_combos::get_combos,
+		load_combo_icon_image::load_combo_icon_image,
+		update_combos::update_combos,
+	},
 	dad::{drag::drag, drop::drop},
 	despawn::despawn,
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
@@ -78,6 +84,7 @@ impl Plugin for IngameMenuPlugin {
 		resources(app);
 		state_control_systems(app);
 		ui_overlay_systems(app);
+		combo_overview_systems(app);
 		inventory_screen_systems(app);
 
 		#[cfg(debug_assertions)]
@@ -120,6 +127,26 @@ fn ui_overlay_systems(app: &mut App) {
 				set_ui_mouse_context,
 				prime_mouse_context::<KeyMap<SlotKey, KeyCode>, QuickbarPanel>,
 			),
+		);
+}
+
+fn combo_overview_systems(app: &mut App) {
+	let get_combos = get_combos::<KeyCode, Combos>;
+	let load_combo_icon_image = load_combo_icon_image::<
+		KeyCode,
+		AssetServer,
+		Shared<Path, Handle<Image>>,
+		Factory<LoadAssetCache>,
+	>;
+	let update_combo_overview = update_combos::<KeyCode, ComboOverview>;
+
+	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
+		.add_systems(
+			Update,
+			get_combos
+				.pipe(load_combo_icon_image)
+				.pipe(update_combo_overview)
+				.run_if(in_state(MenuState::ComboOverview)),
 		);
 }
 
