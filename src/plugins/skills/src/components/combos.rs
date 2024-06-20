@@ -2,7 +2,7 @@ use super::Slots;
 use crate::{
 	items::slot_key::SlotKey,
 	skills::Skill,
-	traits::{PeekNext, SetNextCombo},
+	traits::{Combo, GetCombos, PeekNext, SetNextCombo},
 };
 use bevy::ecs::component::Component;
 use common::traits::{
@@ -146,6 +146,12 @@ impl<TComboNode: PeekNext<(Skill, TComboNode)>> PeekNext<(Skill, TComboNode)>
 			.as_ref()
 			.and_then(|current| current.peek_next(trigger, slots))
 			.or_else(|| self.value.peek_next(trigger, slots))
+	}
+}
+
+impl<TNode: GetCombos> GetCombos for Combos<TNode> {
+	fn combos(&self) -> Vec<Combo> {
+		self.value.combos()
 	}
 }
 
@@ -828,5 +834,25 @@ mod test_combos {
 		combos.set_next_combo(Some(other));
 		combos.set_next_combo(None);
 		combos.peek_next(&default(), &default());
+	}
+
+	struct _ComboNode<'a>(Vec<Combo<'a>>);
+
+	impl<'a> GetCombos for _ComboNode<'a> {
+		fn combos(&self) -> Vec<Combo> {
+			self.0.clone()
+		}
+	}
+
+	#[test]
+	fn get_combos_from_config() {
+		let skill = Skill {
+			name: "my skill",
+			..default()
+		};
+		let combos_vec = vec![vec![(SlotKey::Hand(Side::Off), &skill)]];
+		let combos = Combos::new(_ComboNode(combos_vec.clone()));
+
+		assert_eq!(combos_vec, combos.combos())
 	}
 }
