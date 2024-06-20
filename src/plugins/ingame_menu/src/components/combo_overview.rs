@@ -3,6 +3,7 @@ use crate::traits::{
 	colors::{HasBackgroundColor, DEFAULT_PANEL_COLORS},
 	get_style::GetStyle,
 	CombosDescriptor,
+	SkillDescriptor,
 	UpdateCombos,
 };
 use bevy::{
@@ -13,16 +14,17 @@ use bevy::{
 	text::TextStyle,
 	ui::{
 		node_bundles::{NodeBundle, TextBundle},
-		AlignItems,
 		FlexDirection,
 		JustifyContent,
+		PositionType,
 		Style,
+		UiImage,
+		UiRect,
 		Val,
 	},
 	utils::default,
 };
-
-use super::ComboList;
+use common::traits::get_ui_text::{English, GetUiText, UIText};
 
 #[derive(Component, Default)]
 pub(crate) struct ComboOverview(CombosDescriptor<KeyCode, Handle<Image>>);
@@ -36,10 +38,12 @@ impl UpdateCombos<KeyCode> for ComboOverview {
 impl GetStyle for ComboOverview {
 	fn style(&self) -> Style {
 		Style {
-			width: Val::Vw(100.0),
-			height: Val::Vh(100.0),
-			align_items: AlignItems::Center,
-			justify_content: JustifyContent::Center,
+			position_type: PositionType::Absolute,
+			top: Val::Px(30.0),
+			left: Val::Px(30.0),
+			right: Val::Px(30.0),
+			bottom: Val::Px(30.0),
+			flex_direction: FlexDirection::Column,
 			..default()
 		}
 	}
@@ -51,19 +55,8 @@ impl HasBackgroundColor for ComboOverview {
 
 impl Children for ComboOverview {
 	fn children(&self, parent: &mut ChildBuilder) {
-		parent
-			.spawn(NodeBundle {
-				style: Style {
-					flex_direction: FlexDirection::Row,
-					align_items: AlignItems::Start,
-					..default()
-				},
-				..default()
-			})
-			.with_children(|parent| {
-				add_title(parent, "Combo");
-				add_combo_list(parent);
-			});
+		add_title(parent, "Combos");
+		add_combo_list(parent, self);
 	}
 }
 
@@ -71,8 +64,7 @@ fn add_title(parent: &mut ChildBuilder, title: &str) {
 	parent
 		.spawn(NodeBundle {
 			style: Style {
-				flex_direction: FlexDirection::Row,
-				align_items: AlignItems::Center,
+				margin: UiRect::all(Val::Px(10.)),
 				..default()
 			},
 			..default()
@@ -89,8 +81,96 @@ fn add_title(parent: &mut ChildBuilder, title: &str) {
 		});
 }
 
-fn add_combo_list(parent: &mut ChildBuilder) {
-	parent.spawn(ComboList);
+fn add_combo_list(parent: &mut ChildBuilder, combo_overview: &ComboOverview) {
+	parent
+		.spawn(NodeBundle {
+			style: Style {
+				flex_direction: FlexDirection::Column,
+				..default()
+			},
+			..default()
+		})
+		.with_children(|parent| {
+			for combo in &combo_overview.0 {
+				add_combo(parent, combo);
+			}
+		});
+}
+
+fn add_combo(parent: &mut ChildBuilder, combo: &Vec<SkillDescriptor<KeyCode, Handle<Image>>>) {
+	parent
+		.spawn(NodeBundle {
+			style: Style {
+				flex_direction: FlexDirection::Row,
+				margin: UiRect::top(Val::Px(10.0)),
+				..default()
+			},
+			..default()
+		})
+		.with_children(|parent| {
+			for skill in combo {
+				add_skill(parent, skill);
+			}
+		});
+}
+
+fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<Image>>) {
+	let skill_key = match English::ui_text(&skill.key) {
+		UIText::String(v) => v,
+		_ => String::from("?"),
+	};
+	parent
+		.spawn(NodeBundle {
+			style: Style {
+				margin: UiRect::all(Val::Px(5.0)),
+				..default()
+			},
+			background_color: DEFAULT_PANEL_COLORS.empty.into(),
+			..default()
+		})
+		.with_children(|parent| {
+			parent
+				.spawn((
+					NodeBundle {
+						style: Style {
+							width: Val::Px(65.0),
+							height: Val::Px(65.0),
+							..default()
+						},
+						background_color: DEFAULT_PANEL_COLORS.text.into(),
+						..default()
+					},
+					UiImage::new(skill.icon.clone().unwrap_or_default()),
+				))
+				.with_children(|parent| {
+					parent
+						.spawn(NodeBundle {
+							style: Style {
+								position_type: PositionType::Absolute,
+								width: Val::Px(50.0),
+								height: Val::Px(25.0),
+								top: Val::Px(-8.0),
+								right: Val::Px(-8.0),
+								border: UiRect::all(Val::Px(2.0)),
+								justify_content: JustifyContent::Center,
+								..default()
+							},
+							background_color: DEFAULT_PANEL_COLORS.empty.into(),
+							border_color: DEFAULT_PANEL_COLORS.text.into(),
+							..default()
+						})
+						.with_children(|parent| {
+							parent.spawn(TextBundle::from_section(
+								skill_key,
+								TextStyle {
+									font_size: 20.,
+									color: DEFAULT_PANEL_COLORS.text,
+									..default()
+								},
+							));
+						});
+				});
+		});
 }
 
 #[cfg(test)]

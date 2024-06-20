@@ -33,6 +33,3 @@ pub struct Quickbar;
 
 #[derive(Component)]
 pub struct ColorOverride;
-
-#[derive(Component)]
-pub(crate) struct ComboList;
