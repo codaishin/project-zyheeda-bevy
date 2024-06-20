@@ -2,11 +2,14 @@ use crate::traits::{
 	children::Children,
 	colors::{HasBackgroundColor, DEFAULT_PANEL_COLORS},
 	get_style::GetStyle,
+	CombosDescriptor,
+	UpdateCombos,
 };
 use bevy::{
+	asset::Handle,
 	hierarchy::{BuildChildren, ChildBuilder},
-	prelude::Component,
-	render::color::Color,
+	prelude::{Component, KeyCode},
+	render::{color::Color, texture::Image},
 	text::TextStyle,
 	ui::{
 		node_bundles::{NodeBundle, TextBundle},
@@ -22,7 +25,13 @@ use bevy::{
 use super::ComboList;
 
 #[derive(Component, Default)]
-pub(crate) struct ComboOverview;
+pub(crate) struct ComboOverview(CombosDescriptor<KeyCode, Handle<Image>>);
+
+impl UpdateCombos<KeyCode> for ComboOverview {
+	fn update_combos(&mut self, combos: CombosDescriptor<KeyCode, Handle<Image>>) {
+		self.0 = combos
+	}
+}
 
 impl GetStyle for ComboOverview {
 	fn style(&self) -> Style {
@@ -82,4 +91,26 @@ fn add_title(parent: &mut ChildBuilder, title: &str) {
 
 fn add_combo_list(parent: &mut ChildBuilder) {
 	parent.spawn(ComboList);
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::traits::SkillDescriptor;
+	use bevy::{asset::AssetId, utils::Uuid};
+
+	#[test]
+	fn update_combos() {
+		let combos = vec![vec![SkillDescriptor {
+			name: "my skill",
+			key: KeyCode::ArrowLeft,
+			icon: Some(Handle::Weak(AssetId::Uuid {
+				uuid: Uuid::new_v4(),
+			})),
+		}]];
+		let mut combo_overview = ComboOverview::default();
+		combo_overview.update_combos(combos.clone());
+
+		assert_eq!(combos, combo_overview.0)
+	}
 }
