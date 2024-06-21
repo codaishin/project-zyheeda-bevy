@@ -13,7 +13,7 @@ use bevy::{
 	render::{color::Color, texture::Image},
 	text::TextStyle,
 	ui::{
-		node_bundles::{NodeBundle, TextBundle},
+		node_bundles::{ButtonBundle, NodeBundle, TextBundle},
 		FlexDirection,
 		JustifyContent,
 		PositionType,
@@ -25,6 +25,8 @@ use bevy::{
 	utils::default,
 };
 use common::traits::get_ui_text::{English, GetUiText, UIText};
+
+use super::tooltip::Tooltip;
 
 #[derive(Component, Default)]
 pub(crate) struct ComboOverview(CombosDescriptor<KeyCode, Handle<Image>>);
@@ -131,16 +133,17 @@ fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<
 		.with_children(|parent| {
 			parent
 				.spawn((
-					NodeBundle {
+					ButtonBundle {
 						style: Style {
 							width: Val::Px(65.0),
 							height: Val::Px(65.0),
 							..default()
 						},
 						background_color: DEFAULT_PANEL_COLORS.text.into(),
+						image: UiImage::new(skill.icon.clone().unwrap_or_default()),
 						..default()
 					},
-					UiImage::new(skill.icon.clone().unwrap_or_default()),
+					Tooltip(skill.clone()),
 				))
 				.with_children(|parent| {
 					parent

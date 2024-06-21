@@ -20,6 +20,7 @@ use components::{
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
 	quickbar_panel::QuickbarPanel,
+	tooltip::Tooltip,
 	ui_overlay::UIOverlay,
 };
 use skills::{
@@ -46,6 +47,7 @@ use systems::{
 	set_state::set_state,
 	set_state_from_input::set_state_from_input,
 	spawn::spawn,
+	tooltip::tooltip,
 	update_children::update_children,
 	update_panels::{
 		activity_colors_override::panel_activity_colors_override,
@@ -57,7 +59,12 @@ use systems::{
 	},
 };
 use tools::menu_state::MenuState;
-use traits::{children::Children, colors::HasBackgroundColor, get_style::GetStyle};
+use traits::{
+	children::Children,
+	colors::HasBackgroundColor,
+	get_style::GetStyle,
+	SkillDescriptor,
+};
 
 trait AddUI {
 	fn add_ui<TComponent>(&mut self, on_state: MenuState) -> &mut Self
@@ -75,6 +82,23 @@ impl AddUI for App {
 		self.add_systems(OnEnter(on_state), spawn_component)
 			.add_systems(OnExit(on_state), despawn::<TComponent>)
 			.add_systems(Update, update_children::<TComponent>)
+	}
+}
+
+trait AddTooltip {
+	fn add_tooltip<T>(&mut self) -> &mut Self
+	where
+		T: Sync + Send + 'static,
+		Tooltip<T>: Children + GetStyle + HasBackgroundColor;
+}
+
+impl AddTooltip for App {
+	fn add_tooltip<T>(&mut self) -> &mut Self
+	where
+		T: Sync + Send + 'static,
+		Tooltip<T>: Children + GetStyle + HasBackgroundColor,
+	{
+		self.add_systems(Update, tooltip::<T, Window>)
 	}
 }
 
@@ -143,6 +167,7 @@ fn combo_overview_systems(app: &mut App) {
 	let update_combo_overview = update_combos::<KeyCode, ComboOverview>;
 
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
+		.add_tooltip::<SkillDescriptor<KeyCode, Handle<Image>>>()
 		.add_systems(
 			Update,
 			added_combo_overview
