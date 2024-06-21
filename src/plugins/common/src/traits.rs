@@ -14,6 +14,7 @@ pub mod iterate;
 pub mod iteration;
 pub mod load_asset;
 pub mod map_value;
+pub mod mouse_position;
 pub mod ownership_relation;
 pub mod remove_conditionally;
 pub mod state_duration;
