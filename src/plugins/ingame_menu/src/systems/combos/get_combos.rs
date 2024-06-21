@@ -1,6 +1,6 @@
 use crate::traits::{CombosDescriptor, SkillDescriptor};
-use bevy::prelude::{Component, Query, With};
-use common::{components::Player, traits::load_asset::Path};
+use bevy::prelude::{Changed as ChangedComponent, Component, Query, With};
+use common::{components::Player, tools::changed::Changed, traits::load_asset::Path};
 use skills::{
 	items::slot_key::SlotKey,
 	skills::Skill,
@@ -8,13 +8,13 @@ use skills::{
 };
 
 pub(crate) fn get_combos<TKey: From<SlotKey> + Clone, TCombos: Component + GetCombos>(
-	players: Query<&TCombos, With<Player>>,
-) -> CombosDescriptor<TKey, Path> {
+	players: Query<&TCombos, (With<Player>, ChangedComponent<TCombos>)>,
+) -> Changed<CombosDescriptor<TKey, Path>> {
 	let Ok(combos) = players.get_single() else {
-		return vec![];
+		return Changed::None;
 	};
 
-	combos.combos().iter().map(combo_descriptor).collect()
+	Changed::Value(combos.combos().iter().map(combo_descriptor).collect())
 }
 
 fn combo_descriptor<TKey: From<SlotKey> + Clone>(
@@ -77,14 +77,14 @@ mod tests {
 	}
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(Vec<Vec<SkillDescriptor<_Key, Path>>>);
+	struct _Result(Changed<CombosDescriptor<_Key, Path>>);
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
 			get_combos::<_Key, _Combos>.pipe(
-				|combos: In<Vec<Vec<SkillDescriptor<_Key, Path>>>>, mut commands: Commands| {
+				|combos: In<Changed<CombosDescriptor<_Key, Path>>>, mut commands: Commands| {
 					commands.insert_resource(_Result(combos.0))
 				},
 			),
@@ -143,7 +143,7 @@ mod tests {
 		let result = app.world.resource::<_Result>();
 
 		assert_eq!(
-			&_Result(vec![
+			&_Result(Changed::Value(vec![
 				vec![
 					SkillDescriptor {
 						name: "a1",
@@ -168,15 +168,15 @@ mod tests {
 						icon: Some(Path::from("b/2")),
 					}
 				]
-			]),
+			])),
 			result,
 		)
 	}
 
 	#[test]
-	fn return_empty_when_player_component_missing() {
+	fn return_unchanged_when_player_component_missing() {
 		let mut app = setup();
-		app.world.spawn((_Combos(vec![
+		app.world.spawn(_Combos(vec![
 			vec![
 				(
 					SlotKey::Hand(Side::Main),
@@ -213,12 +213,65 @@ mod tests {
 					},
 				),
 			],
-		]),));
+		]));
 
 		app.update();
 
 		let result = app.world.resource::<_Result>();
 
-		assert_eq!(&_Result(vec![]), result)
+		assert_eq!(&_Result(Changed::None), result)
+	}
+
+	#[test]
+	fn return_unchanged_when_combo_unchanged() {
+		let mut app = setup();
+		app.world.spawn((
+			Player,
+			_Combos(vec![
+				vec![
+					(
+						SlotKey::Hand(Side::Main),
+						Skill {
+							name: "a1",
+							icon: Some(|| Path::from("a/1")),
+							..default()
+						},
+					),
+					(
+						SlotKey::Hand(Side::Off),
+						Skill {
+							name: "a2",
+							icon: Some(|| Path::from("a/2")),
+							..default()
+						},
+					),
+				],
+				vec![
+					(
+						SlotKey::Hand(Side::Off),
+						Skill {
+							name: "b1",
+							icon: Some(|| Path::from("b/1")),
+							..default()
+						},
+					),
+					(
+						SlotKey::Hand(Side::Main),
+						Skill {
+							name: "b2",
+							icon: Some(|| Path::from("b/2")),
+							..default()
+						},
+					),
+				],
+			]),
+		));
+
+		app.update();
+		app.update();
+
+		let result = app.world.resource::<_Result>();
+
+		assert_eq!(&_Result(Changed::None), result)
 	}
 }

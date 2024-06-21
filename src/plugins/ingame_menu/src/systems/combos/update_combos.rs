@@ -4,15 +4,20 @@ use bevy::{
 	prelude::{Component, In, Query},
 	render::texture::Image,
 };
+use common::tools::changed::Changed;
 
 pub(crate) fn update_combos<TKey, TComboOverview: Component + UpdateCombos<TKey>>(
-	combos: In<CombosDescriptor<TKey, Handle<Image>>>,
+	combos: In<Changed<CombosDescriptor<TKey, Handle<Image>>>>,
 	mut combo_overviews: Query<&mut TComboOverview>,
 ) {
+	let Changed::Value(combos) = combos.0 else {
+		return;
+	};
 	let Ok(mut combo_overview) = combo_overviews.get_single_mut() else {
 		return;
 	};
-	combo_overview.update_combos(combos.0);
+
+	combo_overview.update_combos(combos);
 }
 
 #[cfg(test)]
@@ -41,9 +46,9 @@ mod tests {
 	}
 
 	#[derive(Resource)]
-	struct _Combos(CombosDescriptor<KeyCode, Handle<Image>>);
+	struct _Combos(Changed<CombosDescriptor<KeyCode, Handle<Image>>>);
 
-	fn setup(combos: CombosDescriptor<KeyCode, Handle<Image>>) -> App {
+	fn setup(combos: Changed<CombosDescriptor<KeyCode, Handle<Image>>>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
@@ -90,13 +95,28 @@ mod tests {
 			],
 		];
 
-		let mut app = setup(combos.clone());
+		let mut app = setup(Changed::Value(combos.clone()));
 		let mut combos_overview = _ComboOverview::default();
 		combos_overview
 			.mock
 			.expect_update_combos()
 			.times(1)
 			.with(eq(combos))
+			.return_const(());
+
+		app.world.spawn(combos_overview);
+
+		app.update();
+	}
+
+	#[test]
+	fn do_nothing_if_combos_unchanged() {
+		let mut app = setup(Changed::None);
+		let mut combos_overview = _ComboOverview::default();
+		combos_overview
+			.mock
+			.expect_update_combos()
+			.never()
 			.return_const(());
 
 		app.world.spawn(combos_overview);
