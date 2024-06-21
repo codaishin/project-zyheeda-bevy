@@ -4,9 +4,12 @@ use bevy::{
 	prelude::{In, ResMut, Resource},
 	render::texture::Image,
 };
-use common::traits::{
-	cache::{GetOrLoadAsset, GetOrLoadAssetFactory},
-	load_asset::Path,
+use common::{
+	tools::changed::Changed,
+	traits::{
+		cache::{GetOrLoadAsset, GetOrLoadAssetFactory},
+		load_asset::Path,
+	},
 };
 
 pub(crate) fn load_combo_icon_image<
@@ -15,14 +18,17 @@ pub(crate) fn load_combo_icon_image<
 	TStorage: Resource,
 	TFactory: GetOrLoadAssetFactory<TAssets, Image, TStorage>,
 >(
-	combos: In<CombosDescriptor<TKey, Path>>,
+	combos: In<Changed<CombosDescriptor<TKey, Path>>>,
 	assets: ResMut<TAssets>,
 	storage: ResMut<TStorage>,
-) -> CombosDescriptor<TKey, Handle<Image>> {
+) -> Changed<CombosDescriptor<TKey, Handle<Image>>> {
+	let Changed::Value(combos) = combos.0 else {
+		return Changed::None;
+	};
+
 	let mut cache = TFactory::create_from(assets, storage);
 
-	combos
-		.0
+	let combos = combos
 		.iter()
 		.map(|c| {
 			c.iter()
@@ -33,7 +39,9 @@ pub(crate) fn load_combo_icon_image<
 				})
 				.collect()
 		})
-		.collect()
+		.collect();
+
+	Changed::Value(combos)
 }
 
 #[cfg(test)]
@@ -68,10 +76,10 @@ mod tests {
 	}
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(CombosDescriptor<KeyCode, Handle<Image>>);
+	struct _Result(Changed<CombosDescriptor<KeyCode, Handle<Image>>>);
 
 	fn setup<TFactory: GetOrLoadAssetFactory<_Assets, Image, _Storage> + 'static>(
-		combos: CombosDescriptor<KeyCode, Path>,
+		combos: Changed<CombosDescriptor<KeyCode, Path>>,
 	) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<_Assets>();
@@ -81,7 +89,7 @@ mod tests {
 			(move || combos.clone())
 				.pipe(load_combo_icon_image::<KeyCode, _Assets, _Storage, TFactory>)
 				.pipe(
-					|combos: In<CombosDescriptor<KeyCode, Handle<Image>>>,
+					|combos: In<Changed<CombosDescriptor<KeyCode, Handle<Image>>>>,
 					 mut commands: Commands| commands.insert_resource(_Result(combos.0)),
 				),
 		);
@@ -130,7 +138,7 @@ mod tests {
 			}
 		}
 
-		let mut app = setup::<_Factory>(vec![
+		let mut app = setup::<_Factory>(Changed::Value(vec![
 			vec![
 				SkillDescriptor {
 					name: "a1",
@@ -155,14 +163,14 @@ mod tests {
 					icon: Some(Path::from("b/2")),
 				},
 			],
-		]);
+		]));
 
 		app.update();
 
 		let result = app.world.resource::<_Result>();
 
 		assert_eq!(
-			&_Result(vec![
+			&_Result(Changed::Value(vec![
 				vec![
 					SkillDescriptor {
 						name: "a1",
@@ -187,8 +195,33 @@ mod tests {
 						icon: Some(HANDLE_B_2),
 					}
 				]
-			]),
+			])),
 			result
 		)
+	}
+
+	#[test]
+	fn map_unchanged() {
+		struct _Factory;
+
+		impl GetOrLoadAssetFactory<_Assets, Image, _Storage> for _Factory {
+			fn create_from(_: ResMut<_Assets>, _: ResMut<_Storage>) -> impl GetOrLoadAsset<Image> {
+				let mut cache = Mock_Cache::default();
+				cache
+					.expect_get_or_load()
+					.never()
+					.return_const(Handle::default());
+
+				cache
+			}
+		}
+
+		let mut app = setup::<_Factory>(Changed::None);
+
+		app.update();
+
+		let result = app.world.resource::<_Result>();
+
+		assert_eq!(&_Result(Changed::None), result)
 	}
 }

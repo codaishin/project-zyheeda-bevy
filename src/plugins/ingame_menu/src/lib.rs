@@ -33,6 +33,7 @@ use skills::{
 	items::{inventory_key::InventoryKey, slot_key::SlotKey},
 };
 use systems::{
+	added::added,
 	combos::{
 		get_combos::get_combos,
 		load_combo_icon_image::load_combo_icon_image,
@@ -131,6 +132,7 @@ fn ui_overlay_systems(app: &mut App) {
 }
 
 fn combo_overview_systems(app: &mut App) {
+	let added_combo_overview = added::<ComboOverview>;
 	let get_combos = get_combos::<KeyCode, Combos>;
 	let load_combo_icon_image = load_combo_icon_image::<
 		KeyCode,
@@ -143,7 +145,8 @@ fn combo_overview_systems(app: &mut App) {
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
 		.add_systems(
 			Update,
-			get_combos
+			added_combo_overview
+				.pipe(get_combos)
 				.pipe(load_combo_icon_image)
 				.pipe(update_combo_overview)
 				.run_if(in_state(MenuState::ComboOverview)),
