@@ -1,5 +1,8 @@
 use crate::traits::{CombosDescriptor, SkillDescriptor};
-use bevy::prelude::{Changed as ChangedComponent, Component, Query, With};
+use bevy::{
+	ecs::{system::In, world::Ref},
+	prelude::{Component, DetectChanges, Query, With},
+};
 use common::{components::Player, tools::changed::Changed, traits::load_asset::Path};
 use skills::{
 	items::slot_key::SlotKey,
@@ -8,11 +11,15 @@ use skills::{
 };
 
 pub(crate) fn get_combos<TKey: From<SlotKey> + Clone, TCombos: Component + GetCombos>(
-	players: Query<&TCombos, (With<Player>, ChangedComponent<TCombos>)>,
+	changed_override: In<bool>,
+	players: Query<Ref<TCombos>, With<Player>>,
 ) -> Changed<CombosDescriptor<TKey, Path>> {
 	let Ok(combos) = players.get_single() else {
 		return Changed::None;
 	};
+	if !combos.is_changed() && !changed_override.0 {
+		return Changed::None;
+	}
 
 	Changed::Value(combos.combos().iter().map(combo_descriptor).collect())
 }
@@ -79,15 +86,17 @@ mod tests {
 	#[derive(Resource, Debug, PartialEq)]
 	struct _Result(Changed<CombosDescriptor<_Key, Path>>);
 
-	fn setup() -> App {
+	fn setup(changed_override: bool) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			get_combos::<_Key, _Combos>.pipe(
-				|combos: In<Changed<CombosDescriptor<_Key, Path>>>, mut commands: Commands| {
-					commands.insert_resource(_Result(combos.0))
-				},
-			),
+			(move || changed_override)
+				.pipe(get_combos::<_Key, _Combos>)
+				.pipe(
+					|combos: In<Changed<CombosDescriptor<_Key, Path>>>, mut commands: Commands| {
+						commands.insert_resource(_Result(combos.0))
+					},
+				),
 		);
 
 		app
@@ -95,7 +104,7 @@ mod tests {
 
 	#[test]
 	fn return_skill_descriptor_arrays() {
-		let mut app = setup();
+		let mut app = setup(false);
 		app.world.spawn((
 			Player,
 			_Combos(vec![
@@ -175,7 +184,7 @@ mod tests {
 
 	#[test]
 	fn return_unchanged_when_player_component_missing() {
-		let mut app = setup();
+		let mut app = setup(false);
 		app.world.spawn(_Combos(vec![
 			vec![
 				(
@@ -224,7 +233,7 @@ mod tests {
 
 	#[test]
 	fn return_unchanged_when_combo_unchanged() {
-		let mut app = setup();
+		let mut app = setup(false);
 		app.world.spawn((
 			Player,
 			_Combos(vec![
@@ -273,5 +282,86 @@ mod tests {
 		let result = app.world.resource::<_Result>();
 
 		assert_eq!(&_Result(Changed::None), result)
+	}
+
+	#[test]
+	fn return_changed_when_combo_unchanged_but_changed_override_true() {
+		let mut app = setup(true);
+		app.world.spawn((
+			Player,
+			_Combos(vec![
+				vec![
+					(
+						SlotKey::Hand(Side::Main),
+						Skill {
+							name: "a1",
+							icon: Some(|| Path::from("a/1")),
+							..default()
+						},
+					),
+					(
+						SlotKey::Hand(Side::Off),
+						Skill {
+							name: "a2",
+							icon: Some(|| Path::from("a/2")),
+							..default()
+						},
+					),
+				],
+				vec![
+					(
+						SlotKey::Hand(Side::Off),
+						Skill {
+							name: "b1",
+							icon: Some(|| Path::from("b/1")),
+							..default()
+						},
+					),
+					(
+						SlotKey::Hand(Side::Main),
+						Skill {
+							name: "b2",
+							icon: Some(|| Path::from("b/2")),
+							..default()
+						},
+					),
+				],
+			]),
+		));
+
+		app.update();
+		app.update();
+
+		let result = app.world.resource::<_Result>();
+
+		assert_eq!(
+			&_Result(Changed::Value(vec![
+				vec![
+					SkillDescriptor {
+						name: "a1",
+						key: _Key::Main,
+						icon: Some(Path::from("a/1")),
+					},
+					SkillDescriptor {
+						name: "a2",
+						key: _Key::Off,
+						icon: Some(Path::from("a/2")),
+					}
+				],
+				vec![
+					SkillDescriptor {
+						name: "b1",
+						key: _Key::Off,
+						icon: Some(Path::from("b/1")),
+					},
+					SkillDescriptor {
+						name: "b2",
+						key: _Key::Main,
+						icon: Some(Path::from("b/2")),
+					}
+				]
+			])),
+			result,
+		);
 	}
 }
