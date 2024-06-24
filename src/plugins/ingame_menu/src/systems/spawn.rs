@@ -1,9 +1,7 @@
-use crate::traits::{colors::HasBackgroundColor, get_node::GetNode};
+use crate::traits::get_node::GetNode;
 use bevy::ecs::{component::Component, system::Commands};
 
-pub fn spawn<TComponent: Default + GetNode + Component + HasBackgroundColor>(
-	mut commands: Commands,
-) {
+pub fn spawn<TComponent: Default + GetNode + Component>(mut commands: Commands) {
 	let component = TComponent::default();
 	commands.spawn((component.node(), component));
 }
@@ -15,8 +13,7 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		prelude::default,
-		render::color::Color,
-		ui::{node_bundles::NodeBundle, BackgroundColor, Style, Val},
+		ui::{node_bundles::NodeBundle, Style, Val},
 	};
 
 	#[derive(Component, Default)]
@@ -35,26 +32,6 @@ mod tests {
 				..default()
 			}
 		}
-	}
-
-	impl HasBackgroundColor for _Component {
-		const BACKGROUND_COLOR: Option<Color> = Some(Color::rgb(0.1, 0.2, 0.3));
-	}
-
-	#[derive(Component, Default)]
-	struct _ComponentWithoutBackgroundColor;
-
-	impl GetNode for _ComponentWithoutBackgroundColor {
-		fn node(&self) -> NodeBundle {
-			NodeBundle {
-				style: Style::default(),
-				..default()
-			}
-		}
-	}
-
-	impl HasBackgroundColor for _ComponentWithoutBackgroundColor {
-		const BACKGROUND_COLOR: Option<Color> = None;
 	}
 
 	#[test]
@@ -77,26 +54,6 @@ mod tests {
 				..default()
 			}),
 			entity_with_component.get::<Style>()
-		)
-	}
-
-	#[test]
-	fn spawn_bundle_without_background_color() {
-		let mut app = App::new();
-
-		app.add_systems(Update, spawn::<_ComponentWithoutBackgroundColor>);
-		app.update();
-
-		let entity_with_component = app
-			.world
-			.iter_entities()
-			.find(|e| e.contains::<_ComponentWithoutBackgroundColor>());
-
-		assert_eq!(
-			Some(Color::NONE),
-			entity_with_component.and_then(|entity| entity
-				.get::<BackgroundColor>()
-				.map(|background_color| background_color.0))
 		)
 	}
 }

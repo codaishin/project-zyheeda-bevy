@@ -59,18 +59,18 @@ use systems::{
 	},
 };
 use tools::menu_state::MenuState;
-use traits::{children::Children, colors::HasBackgroundColor, get_node::GetNode, SkillDescriptor};
+use traits::{children::Children, get_node::GetNode, SkillDescriptor};
 
 trait AddUI {
 	fn add_ui<TComponent>(&mut self, on_state: MenuState) -> &mut Self
 	where
-		TComponent: Component + Default + GetNode + Children + HasBackgroundColor;
+		TComponent: Component + Default + GetNode + Children;
 }
 
 impl AddUI for App {
 	fn add_ui<TComponent>(&mut self, on_state: MenuState) -> &mut Self
 	where
-		TComponent: Component + Default + GetNode + Children + HasBackgroundColor,
+		TComponent: Component + Default + GetNode + Children,
 	{
 		let spawn_component = (spawn::<TComponent>, update_children::<TComponent>).chain();
 
@@ -84,14 +84,14 @@ trait AddTooltip {
 	fn add_tooltip<T>(&mut self) -> &mut Self
 	where
 		T: Sync + Send + 'static,
-		Tooltip<T>: Children + GetNode + HasBackgroundColor;
+		Tooltip<T>: Children + GetNode;
 }
 
 impl AddTooltip for App {
 	fn add_tooltip<T>(&mut self) -> &mut Self
 	where
 		T: Sync + Send + 'static,
-		Tooltip<T>: Children + GetNode + HasBackgroundColor,
+		Tooltip<T>: Children + GetNode,
 	{
 		self.add_systems(Update, tooltip::<T, Window>)
 	}

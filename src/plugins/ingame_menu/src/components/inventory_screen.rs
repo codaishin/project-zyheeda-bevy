@@ -1,11 +1,7 @@
 use super::{inventory_panel::InventoryPanel, KeyedPanel};
 use crate::{
 	tools::PanelState,
-	traits::{
-		children::Children,
-		colors::{HasBackgroundColor, HasPanelColors},
-		get_node::GetNode,
-	},
+	traits::{children::Children, colors::HasPanelColors, get_node::GetNode},
 };
 use bevy::{
 	hierarchy::{BuildChildren, ChildBuilder},
@@ -46,10 +42,6 @@ impl GetNode for InventoryScreen {
 			..default()
 		}
 	}
-}
-
-impl HasBackgroundColor for InventoryScreen {
-	const BACKGROUND_COLOR: Option<Color> = Some(Color::rgba(0.5, 0.5, 0.5, 0.5));
 }
 
 impl Children for InventoryScreen {

@@ -1,16 +1,11 @@
 use super::{quickbar_panel::QuickbarPanel, Label, Quickbar};
 use crate::{
 	tools::PanelState,
-	traits::{
-		children::Children,
-		colors::{HasBackgroundColor, HasPanelColors},
-		get_node::GetNode,
-	},
+	traits::{children::Children, colors::HasPanelColors, get_node::GetNode},
 };
 use bevy::{
 	hierarchy::{BuildChildren, ChildBuilder},
 	prelude::Component,
-	render::color::Color,
 	text::TextStyle,
 	ui::{
 		node_bundles::{ButtonBundle, NodeBundle, TextBundle},
@@ -41,10 +36,6 @@ impl GetNode for UIOverlay {
 			..default()
 		}
 	}
-}
-
-impl HasBackgroundColor for UIOverlay {
-	const BACKGROUND_COLOR: Option<Color> = None;
 }
 
 impl Children for UIOverlay {

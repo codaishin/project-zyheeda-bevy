@@ -1,7 +1,7 @@
 #[cfg(debug_assertions)]
 use crate::{
 	tools::menu_state::MenuState,
-	traits::{children::Children, colors::HasBackgroundColor, get_node::GetNode},
+	traits::{children::Children, get_node::GetNode},
 	AddUI,
 };
 use bevy::{
@@ -58,10 +58,6 @@ impl Children for StateTime {
 			},
 		));
 	}
-}
-
-impl HasBackgroundColor for StateTime {
-	const BACKGROUND_COLOR: Option<Color> = Some(Color::BLACK);
 }
 
 fn update_state_time(

@@ -7,7 +7,7 @@ use bevy::{
 	asset::Handle,
 	hierarchy::ChildBuilder,
 	prelude::KeyCode,
-	render::{color::Color, texture::Image},
+	render::texture::Image,
 	text::TextStyle,
 	ui::{
 		node_bundles::{NodeBundle, TextBundle},
@@ -18,7 +18,7 @@ use bevy::{
 	utils::default,
 };
 use children::Children;
-use colors::{HasBackgroundColor, DEFAULT_PANEL_COLORS};
+use colors::DEFAULT_PANEL_COLORS;
 use get_node::GetNode;
 
 use crate::components::tooltip::Tooltip;
@@ -61,8 +61,4 @@ impl<T: Clone> Children for Tooltip<SkillDescriptor<KeyCode, T>> {
 			},
 		));
 	}
-}
-
-impl<T: Clone> HasBackgroundColor for Tooltip<SkillDescriptor<KeyCode, T>> {
-	const BACKGROUND_COLOR: Option<Color> = Some(DEFAULT_PANEL_COLORS.text);
 }

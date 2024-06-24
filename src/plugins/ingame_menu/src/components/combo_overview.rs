@@ -1,7 +1,7 @@
 use super::tooltip::Tooltip;
 use crate::traits::{
 	children::Children,
-	colors::{HasBackgroundColor, DEFAULT_PANEL_COLORS},
+	colors::DEFAULT_PANEL_COLORS,
 	get_node::GetNode,
 	CombosDescriptor,
 	SkillDescriptor,
@@ -52,10 +52,6 @@ impl GetNode for ComboOverview {
 			..default()
 		}
 	}
-}
-
-impl HasBackgroundColor for ComboOverview {
-	const BACKGROUND_COLOR: Option<Color> = Some(Color::rgba(0.5, 0.5, 0.5, 0.5));
 }
 
 impl Children for ComboOverview {
