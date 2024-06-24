@@ -9,12 +9,12 @@ pub fn spawn<TComponent: Default + GetNode + Component>(mut commands: Commands) 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::tools::test_tools::assert_bundle;
 	use bevy::{
 		app::{App, Update},
 		prelude::default,
 		ui::{node_bundles::NodeBundle, Style, Val},
 	};
+	use common::assert_bundle;
 
 	#[derive(Component, Default)]
 	struct _Component;

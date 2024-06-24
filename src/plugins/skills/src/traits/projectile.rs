@@ -23,14 +23,14 @@ impl<T: Send + Sync + 'static> GetStaticSkillBehavior for Projectile<T> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{skills::SelectInfo, test_tools::assert_spacial_bundle};
+	use crate::skills::SelectInfo;
 	use bevy::{
 		app::App,
 		ecs::entity::Entity,
 		math::{Ray3d, Vec3},
 		transform::components::GlobalTransform,
 	};
-	use common::assert_eq_approx;
+	use common::{assert_bundle, assert_eq_approx};
 
 	fn target() -> Target {
 		SelectInfo {
@@ -82,7 +82,7 @@ mod tests {
 			.id();
 		let projectile = app.world.entity(projectile);
 
-		assert_spacial_bundle!(projectile);
+		assert_bundle!(SpatialBundle, &app, projectile);
 	}
 
 	#[test]

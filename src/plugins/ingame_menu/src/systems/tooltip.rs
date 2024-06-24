@@ -123,10 +123,7 @@ impl TooltipUI {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		tools::test_tools::assert_bundle,
-		traits::instantiate_content_on::InstantiateContentOn,
-	};
+	use crate::traits::instantiate_content_on::InstantiateContentOn;
 	use bevy::{
 		app::{App, Update},
 		hierarchy::{ChildBuilder, Children, Parent},
@@ -134,7 +131,7 @@ mod tests {
 		ui::{Style, Val},
 		utils::default,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{assert_bundle, test_tools::utils::SingleThreadedApp};
 	use std::ops::Deref;
 
 	#[derive(Component)]

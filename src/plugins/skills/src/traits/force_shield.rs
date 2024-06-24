@@ -25,13 +25,14 @@ impl GetStaticSkillBehavior for ForceShield {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{skills::SelectInfo, test_tools::assert_spacial_bundle};
+	use crate::skills::SelectInfo;
 	use bevy::{
 		app::App,
 		ecs::entity::Entity,
 		math::{Ray3d, Vec3},
 		transform::components::{GlobalTransform, Transform},
 	};
+	use common::assert_bundle;
 
 	fn target() -> Target {
 		SelectInfo {
@@ -76,7 +77,7 @@ mod tests {
 			.id();
 		let force_shield = app.world.entity(force_shield);
 
-		assert_spacial_bundle!(force_shield);
+		assert_bundle!(SpatialBundle, &app, force_shield);
 	}
 
 	#[test]
