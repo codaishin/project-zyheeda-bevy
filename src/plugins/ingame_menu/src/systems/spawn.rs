@@ -9,7 +9,7 @@ pub fn spawn<TComponent: Default + GetNode + Component>(mut commands: Commands) 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::tools::assert_node_bundle;
+	use crate::tools::test_tools::assert_bundle;
 	use bevy::{
 		app::{App, Update},
 		prelude::default,
@@ -41,19 +41,23 @@ mod tests {
 		app.add_systems(Update, spawn::<_Component>);
 		app.update();
 
-		let entity_with_component = app
+		let entity = app
 			.world
 			.iter_entities()
 			.find(|e| e.contains::<_Component>())
 			.expect("no _Component spawned");
 
-		assert_node_bundle!(entity_with_component);
-		assert_eq!(
-			Some(&Style {
-				width: Val::Px(42.),
-				..default()
-			}),
-			entity_with_component.get::<Style>()
-		)
+		assert_bundle!(
+			NodeBundle,
+			&app,
+			entity,
+			With::assert(|style| assert_eq!(
+				&Style {
+					width: Val::Px(42.),
+					..default()
+				},
+				style
+			))
+		);
 	}
 }

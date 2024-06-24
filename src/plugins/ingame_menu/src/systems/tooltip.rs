@@ -123,7 +123,10 @@ impl TooltipUI {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{tools::assert_node_bundle, traits::instantiate_content_on::InstantiateContentOn};
+	use crate::{
+		tools::test_tools::assert_bundle,
+		traits::instantiate_content_on::InstantiateContentOn,
+	};
 	use bevy::{
 		app::{App, Update},
 		hierarchy::{ChildBuilder, Children, Parent},
@@ -215,7 +218,7 @@ mod tests {
 
 		let entity = get_latest_container!(app);
 
-		assert_node_bundle!(entity);
+		assert_bundle!(NodeBundle, &app, entity);
 	}
 
 	#[test]
@@ -282,7 +285,7 @@ mod tests {
 		let container = get_latest_container!(app);
 		let tooltip = get_first_child!(app, container);
 
-		assert_node_bundle!(tooltip);
+		assert_bundle!(NodeBundle, &app, tooltip);
 	}
 
 	#[test]
@@ -308,11 +311,18 @@ mod tests {
 		let container = get_latest_container!(app);
 		let tooltip = get_first_child!(app, container);
 
-		assert_node_bundle!(tooltip);
-		assert_eq!(
-			Some(Val::Percent(42.)),
-			tooltip.get::<Style>().map(|s| s.left)
-		)
+		assert_bundle!(
+			NodeBundle,
+			&app,
+			tooltip,
+			With::assert(|style| assert_eq!(
+				&Style {
+					left: Val::Percent(42.),
+					..default()
+				},
+				style
+			))
+		);
 	}
 
 	#[test]
