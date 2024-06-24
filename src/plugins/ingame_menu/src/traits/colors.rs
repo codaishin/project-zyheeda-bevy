@@ -8,10 +8,6 @@ pub struct PanelColors {
 	pub text: Color,
 }
 
-pub trait HasBackgroundColor {
-	const BACKGROUND_COLOR: Option<Color>;
-}
-
 pub const DEFAULT_PANEL_COLORS: PanelColors = PanelColors {
 	pressed: Color::rgb(0.35, 0.75, 0.35),
 	hovered: Color::rgb(0.25, 0.25, 0.25),

@@ -3,8 +3,6 @@ pub mod items;
 pub mod skills;
 pub mod traits;
 
-pub(crate) mod test_tools;
-
 mod bundles;
 mod systems;
 

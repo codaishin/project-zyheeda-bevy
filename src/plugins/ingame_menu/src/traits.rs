@@ -1,22 +1,26 @@
-pub mod children;
 pub mod colors;
-pub mod get_style;
+pub mod get_node;
+pub mod instantiate_content_on;
 pub mod set;
 
+use crate::components::tooltip::Tooltip;
 use bevy::{
 	asset::Handle,
 	hierarchy::ChildBuilder,
 	prelude::KeyCode,
-	render::{color::Color, texture::Image},
+	render::texture::Image,
 	text::TextStyle,
-	ui::{node_bundles::TextBundle, Style, UiRect, Val},
+	ui::{
+		node_bundles::{NodeBundle, TextBundle},
+		Style,
+		UiRect,
+		Val,
+	},
 	utils::default,
 };
-use children::Children;
-use colors::{HasBackgroundColor, DEFAULT_PANEL_COLORS};
-use get_style::GetStyle;
-
-use crate::components::tooltip::Tooltip;
+use colors::DEFAULT_PANEL_COLORS;
+use get_node::GetNode;
+use instantiate_content_on::InstantiateContentOn;
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct SkillDescriptor<TKey, TIcon: Clone> {
@@ -31,18 +35,22 @@ pub(crate) trait UpdateCombos<TKey> {
 	fn update_combos(&mut self, combos: CombosDescriptor<TKey, Handle<Image>>);
 }
 
-impl<T: Clone> GetStyle for Tooltip<SkillDescriptor<KeyCode, T>> {
-	fn style(&self) -> Style {
-		Style {
-			top: Val::Px(-25.0),
-			padding: UiRect::all(Val::Px(5.0)),
+impl<T: Clone> GetNode for Tooltip<SkillDescriptor<KeyCode, T>> {
+	fn node(&self) -> NodeBundle {
+		NodeBundle {
+			style: Style {
+				top: Val::Px(-25.0),
+				padding: UiRect::all(Val::Px(5.0)),
+				..default()
+			},
+			background_color: DEFAULT_PANEL_COLORS.text.into(),
 			..default()
 		}
 	}
 }
 
-impl<T: Clone> Children for Tooltip<SkillDescriptor<KeyCode, T>> {
-	fn children(&self, parent: &mut ChildBuilder) {
+impl<T: Clone> InstantiateContentOn for Tooltip<SkillDescriptor<KeyCode, T>> {
+	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		parent.spawn(TextBundle::from_section(
 			self.0.name,
 			TextStyle {
@@ -52,8 +60,4 @@ impl<T: Clone> Children for Tooltip<SkillDescriptor<KeyCode, T>> {
 			},
 		));
 	}
-}
-
-impl<T: Clone> HasBackgroundColor for Tooltip<SkillDescriptor<KeyCode, T>> {
-	const BACKGROUND_COLOR: Option<Color> = Some(DEFAULT_PANEL_COLORS.text);
 }

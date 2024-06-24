@@ -1,6 +1,6 @@
 use crate::{
 	components::tooltip::Tooltip,
-	traits::{children::Children, colors::HasBackgroundColor, get_style::GetStyle},
+	traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn},
 };
 use bevy::{
 	hierarchy::{BuildChildren, DespawnRecursiveExt},
@@ -19,7 +19,7 @@ pub(crate) fn tooltip<T, TWindow>(
 	removed_tooltips: RemovedComponents<Tooltip<T>>,
 ) where
 	T: Sync + Send + 'static,
-	Tooltip<T>: Children + GetStyle + HasBackgroundColor,
+	Tooltip<T>: InstantiateContentOn + GetNode,
 	TWindow: Component + MousePosition,
 {
 	let Ok(window) = windows.get_single() else {
@@ -92,9 +92,9 @@ impl TooltipUI {
 	fn spawn<T>(commands: &mut Commands, entity: Entity, tooltip: &Tooltip<T>, position: Vec2)
 	where
 		T: Sync + Send + 'static,
-		Tooltip<T>: Children + GetStyle + HasBackgroundColor,
+		Tooltip<T>: InstantiateContentOn + GetNode,
 	{
-		let ui_container = (
+		let container_node = (
 			TooltipUI { tooltip: entity },
 			NodeBundle {
 				style: Style {
@@ -106,33 +106,32 @@ impl TooltipUI {
 				..default()
 			},
 		);
-		let ui_content = NodeBundle {
-			style: tooltip.style(),
-			background_color: Tooltip::<T>::BACKGROUND_COLOR.unwrap_or_default().into(),
-			..default()
-		};
+		let tooltip_node = tooltip.node();
 
-		commands.spawn(ui_container).with_children(|ui_container| {
-			ui_container.spawn(ui_content).with_children(|ui_content| {
-				tooltip.children(ui_content);
+		commands
+			.spawn(container_node)
+			.with_children(|container_node| {
+				container_node
+					.spawn(tooltip_node)
+					.with_children(|tooltip_node| {
+						tooltip.instantiate_content_on(tooltip_node);
+					});
 			});
-		});
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{tools::assert_node_bundle, traits::children::Children as ChildrenTrait};
+	use crate::traits::instantiate_content_on::InstantiateContentOn;
 	use bevy::{
 		app::{App, Update},
 		hierarchy::{ChildBuilder, Children, Parent},
 		math::Vec2,
-		render::color::Color,
-		ui::{BackgroundColor, Style, Val},
+		ui::{Style, Val},
 		utils::default,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{assert_bundle, test_tools::utils::SingleThreadedApp};
 	use std::ops::Deref;
 
 	#[derive(Component)]
@@ -147,29 +146,21 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Content(&'static str);
 
-	struct _T<const HAS_BACKGROUND_COLOR: bool> {
+	struct _T {
 		content: &'static str,
-		style: Style,
+		node: NodeBundle,
 	}
 
-	impl<const HAS_BACKGROUND_COLOR: bool> GetStyle for Tooltip<_T<HAS_BACKGROUND_COLOR>> {
-		fn style(&self) -> Style {
-			self.0.style.clone()
+	impl GetNode for Tooltip<_T> {
+		fn node(&self) -> NodeBundle {
+			self.0.node.clone()
 		}
 	}
 
-	impl<const HAS_BACKGROUND_COLOR: bool> ChildrenTrait for Tooltip<_T<HAS_BACKGROUND_COLOR>> {
-		fn children(&self, parent: &mut ChildBuilder) {
+	impl InstantiateContentOn for Tooltip<_T> {
+		fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 			parent.spawn(_Content(self.0.content));
 		}
-	}
-
-	impl HasBackgroundColor for Tooltip<_T<true>> {
-		const BACKGROUND_COLOR: Option<Color> = Some(Color::CRIMSON);
-	}
-
-	impl HasBackgroundColor for Tooltip<_T<false>> {
-		const BACKGROUND_COLOR: Option<Color> = None;
 	}
 
 	macro_rules! try_get_latest_container {
@@ -178,8 +169,7 @@ mod tests {
 				.iter_entities()
 				.filter(|e| {
 					!e.contains::<Parent>()
-						&& !e.contains::<Tooltip<_T<true>>>()
-						&& !e.contains::<Tooltip<_T<false>>>()
+						&& !e.contains::<Tooltip<_T>>()
 						&& !e.contains::<_Window>()
 				})
 				.last()
@@ -202,25 +192,21 @@ mod tests {
 		}};
 	}
 
-	fn setup<const HAS_BACKGROUND_COLOR: bool>() -> App {
+	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		if HAS_BACKGROUND_COLOR {
-			app.add_systems(Update, tooltip::<_T<true>, _Window>);
-		} else {
-			app.add_systems(Update, tooltip::<_T<false>, _Window>);
-		}
+		app.add_systems(Update, tooltip::<_T, _Window>);
 
 		app
 	}
 
 	#[test]
 	fn spawn_container_node_bundle() {
-		let mut app = setup::<true>();
+		let mut app = setup();
 		app.world.spawn(_Window(Some(default())));
 		app.world.spawn((
-			Tooltip(_T::<true> {
+			Tooltip(_T {
 				content: "my content",
-				style: Style::default(),
+				node: NodeBundle::default(),
 			}),
 			Interaction::Hovered,
 		));
@@ -229,17 +215,17 @@ mod tests {
 
 		let entity = get_latest_container!(app);
 
-		assert_node_bundle!(entity);
+		assert_bundle!(NodeBundle, &app, entity);
 	}
 
 	#[test]
 	fn spawn_container_on_mouse_position() {
-		let mut app = setup::<true>();
+		let mut app = setup();
 		app.world.spawn(_Window(Some(Vec2 { x: 4., y: 2. })));
 		app.world.spawn((
-			Tooltip(_T::<true> {
+			Tooltip(_T {
 				content: "my content",
-				style: Style::default(),
+				node: NodeBundle::default(),
 			}),
 			Interaction::Hovered,
 		));
@@ -256,12 +242,12 @@ mod tests {
 
 	#[test]
 	fn spawn_container_with_global_z_index_1() {
-		let mut app = setup::<true>();
+		let mut app = setup();
 		app.world.spawn(_Window(Some(Vec2 { x: 4., y: 2. })));
 		app.world.spawn((
-			Tooltip(_T::<true> {
+			Tooltip(_T {
 				content: "my content",
-				style: Style::default(),
+				node: NodeBundle::default(),
 			}),
 			Interaction::Hovered,
 		));
@@ -281,12 +267,12 @@ mod tests {
 
 	#[test]
 	fn spawn_tooltip_node_bundle() {
-		let mut app = setup::<true>();
+		let mut app = setup();
 		app.world.spawn(_Window(Some(default())));
 		app.world.spawn((
-			Tooltip(_T::<true> {
+			Tooltip(_T {
 				content: "my content",
-				style: Style::default(),
+				node: NodeBundle::default(),
 			}),
 			Interaction::Hovered,
 		));
@@ -296,64 +282,21 @@ mod tests {
 		let container = get_latest_container!(app);
 		let tooltip = get_first_child!(app, container);
 
-		assert_node_bundle!(tooltip);
+		assert_bundle!(NodeBundle, &app, tooltip);
 	}
 
 	#[test]
-	fn spawn_tooltip_with_background_color() {
-		let mut app = setup::<true>();
+	fn spawn_tooltip_with_tooltip_node() {
+		let mut app = setup();
 		app.world.spawn(_Window(Some(default())));
 		app.world.spawn((
-			Tooltip(_T::<true> {
+			Tooltip(_T {
 				content: "my content",
-				style: Style::default(),
-			}),
-			Interaction::Hovered,
-		));
-
-		app.update();
-
-		let container = get_latest_container!(app);
-		let tooltip = get_first_child!(app, container);
-
-		assert_eq!(
-			Some(Color::CRIMSON),
-			tooltip.get::<BackgroundColor>().map(|c| c.0)
-		)
-	}
-
-	#[test]
-	fn spawn_tooltip_with_default_background_color_when_set_to_none() {
-		let mut app = setup::<false>();
-		app.world.spawn(_Window(Some(default())));
-		app.world.spawn((
-			Tooltip(_T::<false> {
-				content: "my content",
-				style: Style::default(),
-			}),
-			Interaction::Hovered,
-		));
-
-		app.update();
-
-		let container = get_latest_container!(app);
-		let tooltip = get_first_child!(app, container);
-
-		assert_eq!(
-			Some(default()),
-			tooltip.get::<BackgroundColor>().map(|c| c.0)
-		)
-	}
-
-	#[test]
-	fn spawn_tooltip_with_tooltip_style() {
-		let mut app = setup::<true>();
-		app.world.spawn(_Window(Some(default())));
-		app.world.spawn((
-			Tooltip(_T::<true> {
-				content: "my content",
-				style: Style {
-					left: Val::Percent(42.),
+				node: NodeBundle {
+					style: Style {
+						left: Val::Percent(42.),
+						..default()
+					},
 					..default()
 				},
 			}),
@@ -365,20 +308,28 @@ mod tests {
 		let container = get_latest_container!(app);
 		let tooltip = get_first_child!(app, container);
 
-		assert_eq!(
-			Some(Val::Percent(42.)),
-			tooltip.get::<Style>().map(|s| s.left)
-		)
+		assert_bundle!(
+			NodeBundle,
+			&app,
+			tooltip,
+			With::assert(|style| assert_eq!(
+				&Style {
+					left: Val::Percent(42.),
+					..default()
+				},
+				style
+			))
+		);
 	}
 
 	#[test]
 	fn spawn_tooltip_with_tooltip_children() {
-		let mut app = setup::<true>();
+		let mut app = setup();
 		app.world.spawn(_Window(Some(default())));
 		app.world.spawn((
-			Tooltip(_T::<true> {
+			Tooltip(_T {
 				content: "my content",
-				style: Style::default(),
+				node: NodeBundle::default(),
 			}),
 			Interaction::Hovered,
 		));
@@ -394,12 +345,12 @@ mod tests {
 
 	#[test]
 	fn do_not_spawn_when_not_hovering() {
-		let mut app = setup::<true>();
+		let mut app = setup();
 		app.world.spawn(_Window(Some(default())));
 		app.world.spawn((
-			Tooltip(_T::<true> {
+			Tooltip(_T {
 				content: "my content",
-				style: Style::default(),
+				node: NodeBundle::default(),
 			}),
 			Interaction::None,
 		));
@@ -413,12 +364,12 @@ mod tests {
 
 	#[test]
 	fn only_spawn_one_container() {
-		let mut app = setup::<true>();
+		let mut app = setup();
 		app.world.spawn(_Window(Some(default())));
 		app.world.spawn((
-			Tooltip(_T::<true> {
+			Tooltip(_T {
 				content: "my content",
-				style: Style::default(),
+				node: NodeBundle::default(),
 			}),
 			Interaction::Hovered,
 		));
@@ -436,12 +387,12 @@ mod tests {
 
 	#[test]
 	fn update_container_position() {
-		let mut app = setup::<true>();
+		let mut app = setup();
 		let window = app.world.spawn(_Window(Some(default()))).id();
 		app.world.spawn((
-			Tooltip(_T::<true> {
+			Tooltip(_T {
 				content: "my content",
-				style: Style::default(),
+				node: NodeBundle::default(),
 			}),
 			Interaction::Hovered,
 		));
@@ -462,14 +413,14 @@ mod tests {
 
 	#[test]
 	fn despawn_container_when_interaction_none() {
-		let mut app = setup::<true>();
+		let mut app = setup();
 		app.world.spawn(_Window(Some(default())));
 		let tooltip = app
 			.world
 			.spawn((
-				Tooltip(_T::<true> {
+				Tooltip(_T {
 					content: "my content",
-					style: Style::default(),
+					node: NodeBundle::default(),
 				}),
 				Interaction::Hovered,
 			))
@@ -490,14 +441,14 @@ mod tests {
 
 	#[test]
 	fn despawn_container_when_interaction_pressed() {
-		let mut app = setup::<true>();
+		let mut app = setup();
 		app.world.spawn(_Window(Some(default())));
 		let tooltip = app
 			.world
 			.spawn((
-				Tooltip(_T::<true> {
+				Tooltip(_T {
 					content: "my content",
-					style: Style::default(),
+					node: NodeBundle::default(),
 				}),
 				Interaction::Hovered,
 			))
@@ -518,14 +469,14 @@ mod tests {
 
 	#[test]
 	fn spawn_container_again_after_despawn() {
-		let mut app = setup::<true>();
+		let mut app = setup();
 		app.world.spawn(_Window(Some(default())));
 		let tooltip = app
 			.world
 			.spawn((
-				Tooltip(_T::<true> {
+				Tooltip(_T {
 					content: "my content",
-					style: Style::default(),
+					node: NodeBundle::default(),
 				}),
 				Interaction::Hovered,
 			))
@@ -552,26 +503,26 @@ mod tests {
 
 	#[test]
 	fn spawn_tooltip_with_tooltip_children_when_multiple_tooltips_present() {
-		let mut app = setup::<true>();
+		let mut app = setup();
 		app.world.spawn(_Window(Some(default())));
 		app.world.spawn((
-			Tooltip(_T::<true> {
+			Tooltip(_T {
 				content: "my content not hovered",
-				style: Style::default(),
+				node: NodeBundle::default(),
 			}),
 			Interaction::None,
 		));
 		app.world.spawn((
-			Tooltip(_T::<true> {
+			Tooltip(_T {
 				content: "my content hovered",
-				style: Style::default(),
+				node: NodeBundle::default(),
 			}),
 			Interaction::Hovered,
 		));
 		app.world.spawn((
-			Tooltip(_T::<true> {
+			Tooltip(_T {
 				content: "my content not hovered",
-				style: Style::default(),
+				node: NodeBundle::default(),
 			}),
 			Interaction::None,
 		));
@@ -590,14 +541,14 @@ mod tests {
 
 	#[test]
 	fn remove_container_when_tooltip_removed() {
-		let mut app = setup::<true>();
+		let mut app = setup();
 		app.world.spawn(_Window(Some(default())));
 		let tooltip = app
 			.world
 			.spawn((
-				Tooltip(_T::<true> {
+				Tooltip(_T {
 					content: "my content",
-					style: Style::default(),
+					node: NodeBundle::default(),
 				}),
 				Interaction::Hovered,
 			))

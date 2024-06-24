@@ -1,23 +1,9 @@
-use crate::traits::{colors::HasBackgroundColor, get_style::GetStyle};
-use bevy::{
-	ecs::{component::Component, system::Commands},
-	render::color::Color,
-	ui::node_bundles::NodeBundle,
-	utils::default,
-};
+use crate::traits::get_node::GetNode;
+use bevy::ecs::{component::Component, system::Commands};
 
-pub fn spawn<TComponent: Default + GetStyle + Component + HasBackgroundColor>(
-	mut commands: Commands,
-) {
+pub fn spawn<TComponent: Default + GetNode + Component>(mut commands: Commands) {
 	let component = TComponent::default();
-	commands.spawn((
-		NodeBundle {
-			style: component.style(),
-			background_color: TComponent::BACKGROUND_COLOR.unwrap_or(Color::NONE).into(),
-			..default()
-		},
-		component,
-	));
+	commands.spawn((component.node(), component));
 }
 
 #[cfg(test)]
@@ -26,9 +12,9 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		prelude::default,
-		render::color::Color,
-		ui::{BackgroundColor, Style, Val},
+		ui::{node_bundles::NodeBundle, Style, Val},
 	};
+	use common::assert_bundle;
 
 	#[derive(Component, Default)]
 	struct _Component;
@@ -36,30 +22,16 @@ mod tests {
 	#[derive(Component)]
 	struct _Child;
 
-	impl GetStyle for _Component {
-		fn style(&self) -> Style {
-			Style {
-				width: Val::Px(42.),
+	impl GetNode for _Component {
+		fn node(&self) -> NodeBundle {
+			NodeBundle {
+				style: Style {
+					width: Val::Px(42.),
+					..default()
+				},
 				..default()
 			}
 		}
-	}
-
-	impl HasBackgroundColor for _Component {
-		const BACKGROUND_COLOR: Option<Color> = Some(Color::rgb(0.1, 0.2, 0.3));
-	}
-
-	#[derive(Component, Default)]
-	struct _ComponentWithoutBackgroundColor;
-
-	impl GetStyle for _ComponentWithoutBackgroundColor {
-		fn style(&self) -> Style {
-			Style::default()
-		}
-	}
-
-	impl HasBackgroundColor for _ComponentWithoutBackgroundColor {
-		const BACKGROUND_COLOR: Option<Color> = None;
 	}
 
 	#[test]
@@ -69,45 +41,23 @@ mod tests {
 		app.add_systems(Update, spawn::<_Component>);
 		app.update();
 
-		let entity_with_component = app
+		let entity = app
 			.world
 			.iter_entities()
-			.find(|e| e.contains::<_Component>());
+			.find(|e| e.contains::<_Component>())
+			.expect("no _Component spawned");
 
-		assert_eq!(
-			(
-				Some(&Style {
+		assert_bundle!(
+			NodeBundle,
+			&app,
+			entity,
+			With::assert(|style| assert_eq!(
+				&Style {
 					width: Val::Px(42.),
 					..default()
-				}),
-				Some(_Component::BACKGROUND_COLOR.unwrap())
-			),
-			(
-				entity_with_component.and_then(|entity| entity.get::<Style>()),
-				entity_with_component.and_then(|entity| entity
-					.get::<BackgroundColor>()
-					.map(|background_color| background_color.0))
-			)
-		)
-	}
-
-	#[test]
-	fn spawn_bundle_without_background_color() {
-		let mut app = App::new();
-
-		app.add_systems(Update, spawn::<_ComponentWithoutBackgroundColor>);
-		app.update();
-
-		let entity_with_component = app
-			.world
-			.iter_entities()
-			.find(|e| e.contains::<_ComponentWithoutBackgroundColor>());
-
-		assert_eq!(
-			Some(Color::NONE),
-			entity_with_component.and_then(|entity| entity
-				.get::<BackgroundColor>()
-				.map(|background_color| background_color.0))
-		)
+				},
+				style
+			))
+		);
 	}
 }

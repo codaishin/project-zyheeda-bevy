@@ -2,9 +2,9 @@ use super::{inventory_panel::InventoryPanel, KeyedPanel};
 use crate::{
 	tools::PanelState,
 	traits::{
-		children::Children,
-		colors::{HasBackgroundColor, HasPanelColors},
-		get_style::GetStyle,
+		colors::HasPanelColors,
+		get_node::GetNode,
+		instantiate_content_on::InstantiateContentOn,
 	},
 };
 use bevy::{
@@ -32,24 +32,24 @@ use skills::items::{inventory_key::InventoryKey, slot_key::SlotKey};
 #[derive(Component, Default)]
 pub struct InventoryScreen;
 
-impl GetStyle for InventoryScreen {
-	fn style(&self) -> Style {
-		Style {
-			width: Val::Vw(100.0),
-			height: Val::Vh(100.0),
-			align_items: AlignItems::Center,
-			justify_content: JustifyContent::Center,
+impl GetNode for InventoryScreen {
+	fn node(&self) -> NodeBundle {
+		NodeBundle {
+			style: Style {
+				width: Val::Vw(100.0),
+				height: Val::Vh(100.0),
+				align_items: AlignItems::Center,
+				justify_content: JustifyContent::Center,
+				..default()
+			},
+			background_color: Color::rgba(0.5, 0.5, 0.5, 0.5).into(),
 			..default()
 		}
 	}
 }
 
-impl HasBackgroundColor for InventoryScreen {
-	const BACKGROUND_COLOR: Option<Color> = Some(Color::rgba(0.5, 0.5, 0.5, 0.5));
-}
-
-impl Children for InventoryScreen {
-	fn children(&self, parent: &mut ChildBuilder) {
+impl InstantiateContentOn for InventoryScreen {
+	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		parent
 			.spawn(NodeBundle {
 				style: Style {

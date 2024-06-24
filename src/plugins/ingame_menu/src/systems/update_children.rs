@@ -1,10 +1,10 @@
-use crate::traits::children::Children;
+use crate::traits::instantiate_content_on::InstantiateContentOn;
 use bevy::{
 	hierarchy::{BuildChildren, DespawnRecursiveExt},
 	prelude::{Changed, Commands, Component, Entity, Query},
 };
 
-pub(crate) fn update_children<TComponent: Children + Component>(
+pub(crate) fn update_children<TComponent: InstantiateContentOn + Component>(
 	mut commands: Commands,
 	components: Query<(Entity, &TComponent), Changed<TComponent>>,
 ) {
@@ -13,7 +13,7 @@ pub(crate) fn update_children<TComponent: Children + Component>(
 			continue;
 		};
 		entity.despawn_descendants();
-		entity.with_children(|parent| component.children(parent));
+		entity.with_children(|parent| component.instantiate_content_on(parent));
 	}
 }
 
@@ -32,8 +32,8 @@ mod tests {
 	#[derive(Component)]
 	struct _Component(&'static str);
 
-	impl Children for _Component {
-		fn children(&self, parent: &mut ChildBuilder) {
+	impl InstantiateContentOn for _Component {
+		fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 			parent.spawn(_Child("A"));
 			parent.spawn(_Child("B"));
 			parent.spawn(_Child("C"));
