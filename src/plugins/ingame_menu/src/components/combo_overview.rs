@@ -1,7 +1,8 @@
+use super::tooltip::Tooltip;
 use crate::traits::{
 	children::Children,
 	colors::{HasBackgroundColor, DEFAULT_PANEL_COLORS},
-	get_style::GetStyle,
+	get_node::GetNode,
 	CombosDescriptor,
 	SkillDescriptor,
 	UpdateCombos,
@@ -26,8 +27,6 @@ use bevy::{
 };
 use common::traits::get_ui_text::{English, GetUiText, UIText};
 
-use super::tooltip::Tooltip;
-
 #[derive(Component, Default)]
 pub(crate) struct ComboOverview(CombosDescriptor<KeyCode, Handle<Image>>);
 
@@ -37,15 +36,19 @@ impl UpdateCombos<KeyCode> for ComboOverview {
 	}
 }
 
-impl GetStyle for ComboOverview {
-	fn style(&self) -> Style {
-		Style {
-			position_type: PositionType::Absolute,
-			top: Val::Px(30.0),
-			left: Val::Px(30.0),
-			right: Val::Px(30.0),
-			bottom: Val::Px(30.0),
-			flex_direction: FlexDirection::Column,
+impl GetNode for ComboOverview {
+	fn node(&self) -> NodeBundle {
+		NodeBundle {
+			style: Style {
+				position_type: PositionType::Absolute,
+				top: Val::Px(30.0),
+				left: Val::Px(30.0),
+				right: Val::Px(30.0),
+				bottom: Val::Px(30.0),
+				flex_direction: FlexDirection::Column,
+				..default()
+			},
+			background_color: Color::rgba(0.5, 0.5, 0.5, 0.5).into(),
 			..default()
 		}
 	}

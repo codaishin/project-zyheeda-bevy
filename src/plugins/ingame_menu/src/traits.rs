@@ -1,6 +1,6 @@
 pub mod children;
 pub mod colors;
-pub mod get_style;
+pub mod get_node;
 pub mod set;
 
 use bevy::{
@@ -9,12 +9,17 @@ use bevy::{
 	prelude::KeyCode,
 	render::{color::Color, texture::Image},
 	text::TextStyle,
-	ui::{node_bundles::TextBundle, Style, UiRect, Val},
+	ui::{
+		node_bundles::{NodeBundle, TextBundle},
+		Style,
+		UiRect,
+		Val,
+	},
 	utils::default,
 };
 use children::Children;
 use colors::{HasBackgroundColor, DEFAULT_PANEL_COLORS};
-use get_style::GetStyle;
+use get_node::GetNode;
 
 use crate::components::tooltip::Tooltip;
 
@@ -31,11 +36,15 @@ pub(crate) trait UpdateCombos<TKey> {
 	fn update_combos(&mut self, combos: CombosDescriptor<TKey, Handle<Image>>);
 }
 
-impl<T: Clone> GetStyle for Tooltip<SkillDescriptor<KeyCode, T>> {
-	fn style(&self) -> Style {
-		Style {
-			top: Val::Px(-25.0),
-			padding: UiRect::all(Val::Px(5.0)),
+impl<T: Clone> GetNode for Tooltip<SkillDescriptor<KeyCode, T>> {
+	fn node(&self) -> NodeBundle {
+		NodeBundle {
+			style: Style {
+				top: Val::Px(-25.0),
+				padding: UiRect::all(Val::Px(5.0)),
+				..default()
+			},
+			background_color: DEFAULT_PANEL_COLORS.text.into(),
 			..default()
 		}
 	}

@@ -4,7 +4,7 @@ use crate::{
 	traits::{
 		children::Children,
 		colors::{HasBackgroundColor, HasPanelColors},
-		get_style::GetStyle,
+		get_node::GetNode,
 	},
 };
 use bevy::{
@@ -32,13 +32,17 @@ use skills::items::{inventory_key::InventoryKey, slot_key::SlotKey};
 #[derive(Component, Default)]
 pub struct InventoryScreen;
 
-impl GetStyle for InventoryScreen {
-	fn style(&self) -> Style {
-		Style {
-			width: Val::Vw(100.0),
-			height: Val::Vh(100.0),
-			align_items: AlignItems::Center,
-			justify_content: JustifyContent::Center,
+impl GetNode for InventoryScreen {
+	fn node(&self) -> NodeBundle {
+		NodeBundle {
+			style: Style {
+				width: Val::Vw(100.0),
+				height: Val::Vh(100.0),
+				align_items: AlignItems::Center,
+				justify_content: JustifyContent::Center,
+				..default()
+			},
+			background_color: Color::rgba(0.5, 0.5, 0.5, 0.5).into(),
 			..default()
 		}
 	}

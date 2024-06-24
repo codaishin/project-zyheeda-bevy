@@ -1,7 +1,7 @@
 #[cfg(debug_assertions)]
 use crate::{
 	tools::menu_state::MenuState,
-	traits::{children::Children, colors::HasBackgroundColor, get_style::GetStyle},
+	traits::{children::Children, colors::HasBackgroundColor, get_node::GetNode},
 	AddUI,
 };
 use bevy::{
@@ -12,7 +12,13 @@ use bevy::{
 	render::color::Color,
 	text::TextStyle,
 	time::{Real, Time},
-	ui::{node_bundles::TextBundle, PositionType, Style, UiRect, Val},
+	ui::{
+		node_bundles::{NodeBundle, TextBundle},
+		PositionType,
+		Style,
+		UiRect,
+		Val,
+	},
 	utils::default,
 };
 use common::traits::iteration::IterFinite;
@@ -21,13 +27,17 @@ use std::time::Duration;
 #[derive(Component, Default)]
 struct StateTime(Duration, Option<MenuState>);
 
-impl GetStyle for StateTime {
-	fn style(&self) -> Style {
-		Style {
-			position_type: PositionType::Absolute,
-			right: Val::Px(10.),
-			bottom: Val::Px(10.),
-			border: UiRect::all(Val::Px(2.)),
+impl GetNode for StateTime {
+	fn node(&self) -> NodeBundle {
+		NodeBundle {
+			style: Style {
+				position_type: PositionType::Absolute,
+				right: Val::Px(10.),
+				bottom: Val::Px(10.),
+				border: UiRect::all(Val::Px(2.)),
+				..default()
+			},
+			background_color: Color::BLACK.into(),
 			..default()
 		}
 	}

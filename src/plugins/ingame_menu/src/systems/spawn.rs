@@ -1,33 +1,22 @@
-use crate::traits::{colors::HasBackgroundColor, get_style::GetStyle};
-use bevy::{
-	ecs::{component::Component, system::Commands},
-	render::color::Color,
-	ui::node_bundles::NodeBundle,
-	utils::default,
-};
+use crate::traits::{colors::HasBackgroundColor, get_node::GetNode};
+use bevy::ecs::{component::Component, system::Commands};
 
-pub fn spawn<TComponent: Default + GetStyle + Component + HasBackgroundColor>(
+pub fn spawn<TComponent: Default + GetNode + Component + HasBackgroundColor>(
 	mut commands: Commands,
 ) {
 	let component = TComponent::default();
-	commands.spawn((
-		NodeBundle {
-			style: component.style(),
-			background_color: TComponent::BACKGROUND_COLOR.unwrap_or(Color::NONE).into(),
-			..default()
-		},
-		component,
-	));
+	commands.spawn((component.node(), component));
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::tools::assert_node_bundle;
 	use bevy::{
 		app::{App, Update},
 		prelude::default,
 		render::color::Color,
-		ui::{BackgroundColor, Style, Val},
+		ui::{node_bundles::NodeBundle, BackgroundColor, Style, Val},
 	};
 
 	#[derive(Component, Default)]
@@ -36,10 +25,13 @@ mod tests {
 	#[derive(Component)]
 	struct _Child;
 
-	impl GetStyle for _Component {
-		fn style(&self) -> Style {
-			Style {
-				width: Val::Px(42.),
+	impl GetNode for _Component {
+		fn node(&self) -> NodeBundle {
+			NodeBundle {
+				style: Style {
+					width: Val::Px(42.),
+					..default()
+				},
 				..default()
 			}
 		}
@@ -52,9 +44,12 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _ComponentWithoutBackgroundColor;
 
-	impl GetStyle for _ComponentWithoutBackgroundColor {
-		fn style(&self) -> Style {
-			Style::default()
+	impl GetNode for _ComponentWithoutBackgroundColor {
+		fn node(&self) -> NodeBundle {
+			NodeBundle {
+				style: Style::default(),
+				..default()
+			}
 		}
 	}
 
@@ -72,22 +67,16 @@ mod tests {
 		let entity_with_component = app
 			.world
 			.iter_entities()
-			.find(|e| e.contains::<_Component>());
+			.find(|e| e.contains::<_Component>())
+			.expect("no _Component spawned");
 
+		assert_node_bundle!(entity_with_component);
 		assert_eq!(
-			(
-				Some(&Style {
-					width: Val::Px(42.),
-					..default()
-				}),
-				Some(_Component::BACKGROUND_COLOR.unwrap())
-			),
-			(
-				entity_with_component.and_then(|entity| entity.get::<Style>()),
-				entity_with_component.and_then(|entity| entity
-					.get::<BackgroundColor>()
-					.map(|background_color| background_color.0))
-			)
+			Some(&Style {
+				width: Val::Px(42.),
+				..default()
+			}),
+			entity_with_component.get::<Style>()
 		)
 	}
 

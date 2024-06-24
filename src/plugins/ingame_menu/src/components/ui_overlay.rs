@@ -1,9 +1,10 @@
+use super::{quickbar_panel::QuickbarPanel, Label, Quickbar};
 use crate::{
 	tools::PanelState,
 	traits::{
 		children::Children,
 		colors::{HasBackgroundColor, HasPanelColors},
-		get_style::GetStyle,
+		get_node::GetNode,
 	},
 };
 use bevy::{
@@ -25,17 +26,18 @@ use bevy::{
 use common::components::Side;
 use skills::items::slot_key::SlotKey;
 
-use super::{quickbar_panel::QuickbarPanel, Label, Quickbar};
-
 #[derive(Component, Default)]
 pub struct UIOverlay;
 
-impl GetStyle for UIOverlay {
-	fn style(&self) -> Style {
-		Style {
-			width: Val::Percent(100.0),
-			height: Val::Percent(100.0),
-			flex_direction: FlexDirection::ColumnReverse,
+impl GetNode for UIOverlay {
+	fn node(&self) -> NodeBundle {
+		NodeBundle {
+			style: Style {
+				width: Val::Percent(100.0),
+				height: Val::Percent(100.0),
+				flex_direction: FlexDirection::ColumnReverse,
+				..default()
+			},
 			..default()
 		}
 	}
