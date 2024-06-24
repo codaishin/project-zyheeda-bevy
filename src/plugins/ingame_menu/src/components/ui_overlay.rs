@@ -1,7 +1,11 @@
 use super::{quickbar_panel::QuickbarPanel, Label, Quickbar};
 use crate::{
 	tools::PanelState,
-	traits::{children::Children, colors::HasPanelColors, get_node::GetNode},
+	traits::{
+		colors::HasPanelColors,
+		get_node::GetNode,
+		instantiate_content_on::InstantiateContentOn,
+	},
 };
 use bevy::{
 	hierarchy::{BuildChildren, ChildBuilder},
@@ -38,8 +42,8 @@ impl GetNode for UIOverlay {
 	}
 }
 
-impl Children for UIOverlay {
-	fn children(&self, parent: &mut ChildBuilder) {
+impl InstantiateContentOn for UIOverlay {
+	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		add_quickbar(parent);
 	}
 }

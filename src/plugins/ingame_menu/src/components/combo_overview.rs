@@ -1,8 +1,8 @@
 use super::tooltip::Tooltip;
 use crate::traits::{
-	children::Children,
 	colors::DEFAULT_PANEL_COLORS,
 	get_node::GetNode,
+	instantiate_content_on::InstantiateContentOn,
 	CombosDescriptor,
 	SkillDescriptor,
 	UpdateCombos,
@@ -54,8 +54,8 @@ impl GetNode for ComboOverview {
 	}
 }
 
-impl Children for ComboOverview {
-	fn children(&self, parent: &mut ChildBuilder) {
+impl InstantiateContentOn for ComboOverview {
+	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		add_title(parent, "Combos");
 		add_combo_list(parent, self);
 	}

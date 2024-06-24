@@ -1,8 +1,9 @@
-pub mod children;
 pub mod colors;
 pub mod get_node;
+pub mod instantiate_content_on;
 pub mod set;
 
+use crate::components::tooltip::Tooltip;
 use bevy::{
 	asset::Handle,
 	hierarchy::ChildBuilder,
@@ -17,11 +18,9 @@ use bevy::{
 	},
 	utils::default,
 };
-use children::Children;
 use colors::DEFAULT_PANEL_COLORS;
 use get_node::GetNode;
-
-use crate::components::tooltip::Tooltip;
+use instantiate_content_on::InstantiateContentOn;
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct SkillDescriptor<TKey, TIcon: Clone> {
@@ -50,8 +49,8 @@ impl<T: Clone> GetNode for Tooltip<SkillDescriptor<KeyCode, T>> {
 	}
 }
 
-impl<T: Clone> Children for Tooltip<SkillDescriptor<KeyCode, T>> {
-	fn children(&self, parent: &mut ChildBuilder) {
+impl<T: Clone> InstantiateContentOn for Tooltip<SkillDescriptor<KeyCode, T>> {
+	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		parent.spawn(TextBundle::from_section(
 			self.0.name,
 			TextStyle {

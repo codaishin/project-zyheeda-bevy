@@ -1,7 +1,7 @@
 #[cfg(debug_assertions)]
 use crate::{
 	tools::menu_state::MenuState,
-	traits::{children::Children, get_node::GetNode},
+	traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn},
 	AddUI,
 };
 use bevy::{
@@ -43,8 +43,8 @@ impl GetNode for StateTime {
 	}
 }
 
-impl Children for StateTime {
-	fn children(&self, parent: &mut ChildBuilder) {
+impl InstantiateContentOn for StateTime {
+	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		let state = self.1.map(|s| format!("{s:?}")).unwrap_or("???".into());
 		parent.spawn(TextBundle::from_section(
 			format!(

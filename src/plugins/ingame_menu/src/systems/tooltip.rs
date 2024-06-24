@@ -1,6 +1,6 @@
 use crate::{
 	components::tooltip::Tooltip,
-	traits::{children::Children, get_node::GetNode},
+	traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn},
 };
 use bevy::{
 	hierarchy::{BuildChildren, DespawnRecursiveExt},
@@ -19,7 +19,7 @@ pub(crate) fn tooltip<T, TWindow>(
 	removed_tooltips: RemovedComponents<Tooltip<T>>,
 ) where
 	T: Sync + Send + 'static,
-	Tooltip<T>: Children + GetNode,
+	Tooltip<T>: InstantiateContentOn + GetNode,
 	TWindow: Component + MousePosition,
 {
 	let Ok(window) = windows.get_single() else {
@@ -92,9 +92,9 @@ impl TooltipUI {
 	fn spawn<T>(commands: &mut Commands, entity: Entity, tooltip: &Tooltip<T>, position: Vec2)
 	where
 		T: Sync + Send + 'static,
-		Tooltip<T>: Children + GetNode,
+		Tooltip<T>: InstantiateContentOn + GetNode,
 	{
-		let ui_container = (
+		let container_node = (
 			TooltipUI { tooltip: entity },
 			NodeBundle {
 				style: Style {
@@ -106,20 +106,24 @@ impl TooltipUI {
 				..default()
 			},
 		);
-		let ui_content = tooltip.node();
+		let tooltip_node = tooltip.node();
 
-		commands.spawn(ui_container).with_children(|ui_container| {
-			ui_container.spawn(ui_content).with_children(|ui_content| {
-				tooltip.children(ui_content);
+		commands
+			.spawn(container_node)
+			.with_children(|container_node| {
+				container_node
+					.spawn(tooltip_node)
+					.with_children(|tooltip_node| {
+						tooltip.instantiate_content_on(tooltip_node);
+					});
 			});
-		});
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{tools::assert_node_bundle, traits::children::Children as ChildrenTrait};
+	use crate::{tools::assert_node_bundle, traits::instantiate_content_on::InstantiateContentOn};
 	use bevy::{
 		app::{App, Update},
 		hierarchy::{ChildBuilder, Children, Parent},
@@ -153,8 +157,8 @@ mod tests {
 		}
 	}
 
-	impl ChildrenTrait for Tooltip<_T> {
-		fn children(&self, parent: &mut ChildBuilder) {
+	impl InstantiateContentOn for Tooltip<_T> {
+		fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 			parent.spawn(_Content(self.0.content));
 		}
 	}

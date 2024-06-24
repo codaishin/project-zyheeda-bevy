@@ -1,7 +1,11 @@
 use super::{inventory_panel::InventoryPanel, KeyedPanel};
 use crate::{
 	tools::PanelState,
-	traits::{children::Children, colors::HasPanelColors, get_node::GetNode},
+	traits::{
+		colors::HasPanelColors,
+		get_node::GetNode,
+		instantiate_content_on::InstantiateContentOn,
+	},
 };
 use bevy::{
 	hierarchy::{BuildChildren, ChildBuilder},
@@ -44,8 +48,8 @@ impl GetNode for InventoryScreen {
 	}
 }
 
-impl Children for InventoryScreen {
-	fn children(&self, parent: &mut ChildBuilder) {
+impl InstantiateContentOn for InventoryScreen {
+	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		parent
 			.spawn(NodeBundle {
 				style: Style {
