@@ -20,7 +20,7 @@ use components::{
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
 	quickbar_panel::QuickbarPanel,
-	tooltip::Tooltip,
+	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
 	ui_overlay::UIOverlay,
 };
 use skills::{
@@ -93,7 +93,7 @@ impl AddTooltip for App {
 		T: Sync + Send + 'static,
 		Tooltip<T>: InstantiateContentOn + GetNode,
 	{
-		self.add_systems(Update, tooltip::<T, Window>)
+		self.add_systems(Update, tooltip::<T, TooltipUI, TooltipUIControl, Window>)
 	}
 }
 
@@ -114,7 +114,8 @@ impl Plugin for IngameMenuPlugin {
 
 fn resources(app: &mut App) {
 	app.init_state::<MenuState>()
-		.init_resource::<Shared<Path, Handle<Image>>>();
+		.init_resource::<Shared<Path, Handle<Image>>>()
+		.init_resource::<TooltipUIControl>();
 }
 
 fn state_control_systems(app: &mut App) {

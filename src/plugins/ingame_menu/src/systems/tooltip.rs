@@ -1,25 +1,39 @@
 use crate::{
 	components::tooltip::Tooltip,
-	traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn},
+	traits::{
+		get_node::GetNode,
+		instantiate_content_on::InstantiateContentOn,
+		tooltip_ui_control::{
+			DespawnAllTooltips,
+			DespawnOutdatedTooltips,
+			SpawnTooltips,
+			UpdateTooltipPosition,
+		},
+	},
 };
 use bevy::{
-	hierarchy::{BuildChildren, DespawnRecursiveExt},
-	math::Vec2,
-	prelude::{Changed, Commands, Component, Entity, Query, RemovedComponents},
-	ui::{node_bundles::NodeBundle, Interaction, Style, Val, ZIndex},
-	utils::default,
+	ecs::system::Res,
+	prelude::{Changed, Commands, Component, Entity, Query, RemovedComponents, Resource},
+	ui::{Interaction, Style},
 };
 use common::traits::mouse_position::MousePosition;
 
-pub(crate) fn tooltip<T, TWindow>(
+pub(crate) fn tooltip<T, TUI, TUIControl, TWindow>(
 	mut commands: Commands,
+	ui_control: Res<TUIControl>,
 	windows: Query<&TWindow>,
-	new_tooltip_interactions: Query<(Entity, &Tooltip<T>, &Interaction), Changed<Interaction>>,
-	mut tooltip_uis: Query<(Entity, &TooltipUI, &mut Style)>,
+	changed_tooltip_interactions: Query<(Entity, &Tooltip<T>, &Interaction), Changed<Interaction>>,
+	mut tooltip_uis: Query<(Entity, &TUI, &mut Style)>,
 	removed_tooltips: RemovedComponents<Tooltip<T>>,
 ) where
 	T: Sync + Send + 'static,
 	Tooltip<T>: InstantiateContentOn + GetNode,
+	TUI: Component,
+	TUIControl: Resource
+		+ DespawnAllTooltips<TUI>
+		+ DespawnOutdatedTooltips<TUI, T>
+		+ UpdateTooltipPosition<TUI>
+		+ SpawnTooltips<T>,
 	TWindow: Component + MousePosition,
 {
 	let Ok(window) = windows.get_single() else {
@@ -29,18 +43,18 @@ pub(crate) fn tooltip<T, TWindow>(
 		return;
 	};
 
-	if !new_tooltip_interactions.is_empty() {
-		TooltipUI::despawn_all(&tooltip_uis, &mut commands);
+	if !changed_tooltip_interactions.is_empty() {
+		ui_control.despawn_all(&tooltip_uis, &mut commands);
 	} else {
-		TooltipUI::update_position(&mut tooltip_uis, position);
+		ui_control.update_position(&mut tooltip_uis, position);
 	}
 
 	if !removed_tooltips.is_empty() {
-		TooltipUI::despawn_outdated(&tooltip_uis, &mut commands, removed_tooltips);
+		ui_control.despawn_outdated(&tooltip_uis, &mut commands, removed_tooltips);
 	}
 
-	for (entity, tooltip, _) in new_tooltip_interactions.iter().filter(is_hovering) {
-		TooltipUI::spawn(&mut commands, entity, tooltip, position);
+	for (entity, tooltip, _) in changed_tooltip_interactions.iter().filter(is_hovering) {
+		ui_control.spawn(&mut commands, entity, tooltip, position);
 	}
 }
 
@@ -50,89 +64,19 @@ fn is_hovering<T: Sync + Send + 'static>(
 	interaction == &&Interaction::Hovered
 }
 
-#[derive(Component)]
-pub struct TooltipUI {
-	tooltip: Entity,
-}
-
-impl TooltipUI {
-	fn despawn_all(uis: &Query<(Entity, &TooltipUI, &mut Style)>, commands: &mut Commands) {
-		for (entity, ..) in uis {
-			let Some(entity) = commands.get_entity(entity) else {
-				continue;
-			};
-			entity.despawn_recursive();
-		}
-	}
-
-	fn despawn_outdated<T: Sync + Send + 'static>(
-		uis: &Query<(Entity, &TooltipUI, &mut Style)>,
-		commands: &mut Commands,
-		mut outdated_tooltips: RemovedComponents<Tooltip<T>>,
-	) {
-		let outdated_tooltips = outdated_tooltips.read().collect::<Vec<_>>();
-		let is_outdated =
-			|(_, ui, _): &(Entity, &TooltipUI, &Style)| outdated_tooltips.contains(&ui.tooltip);
-
-		for (entity, ..) in uis.iter().filter(is_outdated) {
-			let Some(entity) = commands.get_entity(entity) else {
-				continue;
-			};
-			entity.despawn_recursive();
-		}
-	}
-
-	fn update_position(uis: &mut Query<(Entity, &TooltipUI, &mut Style)>, position: Vec2) {
-		for (.., mut style) in uis {
-			style.left = Val::Px(position.x);
-			style.top = Val::Px(position.y);
-		}
-	}
-
-	fn spawn<T>(commands: &mut Commands, entity: Entity, tooltip: &Tooltip<T>, position: Vec2)
-	where
-		T: Sync + Send + 'static,
-		Tooltip<T>: InstantiateContentOn + GetNode,
-	{
-		let container_node = (
-			TooltipUI { tooltip: entity },
-			NodeBundle {
-				style: Style {
-					left: Val::Px(position.x),
-					top: Val::Px(position.y),
-					..default()
-				},
-				z_index: ZIndex::Global(1),
-				..default()
-			},
-		);
-		let tooltip_node = tooltip.node();
-
-		commands
-			.spawn(container_node)
-			.with_children(|container_node| {
-				container_node
-					.spawn(tooltip_node)
-					.with_children(|tooltip_node| {
-						tooltip.instantiate_content_on(tooltip_node);
-					});
-			});
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use crate::traits::instantiate_content_on::InstantiateContentOn;
 	use bevy::{
 		app::{App, Update},
-		hierarchy::{ChildBuilder, Children, Parent},
+		hierarchy::ChildBuilder,
 		math::Vec2,
-		ui::{Style, Val},
-		utils::default,
+		prelude::{default, Resource},
+		ui::{node_bundles::NodeBundle, Style},
 	};
-	use common::{assert_bundle, test_tools::utils::SingleThreadedApp};
-	use std::ops::Deref;
+	use common::test_tools::utils::SingleThreadedApp;
+	use mockall::mock;
 
 	#[derive(Component)]
 	struct _Window(Option<Vec2>);
@@ -146,413 +90,338 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Content(&'static str);
 
+	#[derive(Clone, Copy)]
 	struct _T {
 		content: &'static str,
-		node: NodeBundle,
 	}
 
 	impl GetNode for Tooltip<_T> {
 		fn node(&self) -> NodeBundle {
-			self.0.node.clone()
+			todo!();
 		}
 	}
 
 	impl InstantiateContentOn for Tooltip<_T> {
-		fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
-			parent.spawn(_Content(self.0.content));
+		fn instantiate_content_on(&self, _: &mut ChildBuilder) {
+			todo!();
 		}
 	}
 
-	macro_rules! try_get_latest_container {
-		($app:expr) => {
-			$app.world
-				.iter_entities()
-				.filter(|e| {
-					!e.contains::<Parent>()
-						&& !e.contains::<Tooltip<_T>>()
-						&& !e.contains::<_Window>()
-				})
-				.last()
-		};
+	#[derive(Component)]
+	struct _UI;
+
+	#[derive(Resource, Default)]
+	struct _UIControl {
+		mock: Mock_UIControl,
 	}
 
-	macro_rules! get_latest_container {
-		($app:expr) => {
-			try_get_latest_container!($app).expect("no additional top level component spawned")
-		};
+	impl DespawnAllTooltips<_UI> for _UIControl {
+		fn despawn_all(&self, uis: &Query<(Entity, &_UI, &mut Style)>, commands: &mut Commands)
+		where
+			_UI: Component + Sized,
+		{
+			self.mock.despawn_all(uis, commands)
+		}
 	}
 
-	macro_rules! get_first_child {
-		($app:expr, $parent:expr) => {{
-			let child = $parent
-				.get::<Children>()
-				.and_then(|c| c.deref().first())
-				.unwrap_or_else(|| panic!("{:?} does not have a child ", $parent.id()));
-			$app.world.entity(*child)
-		}};
+	impl DespawnOutdatedTooltips<_UI, _T> for _UIControl {
+		fn despawn_outdated(
+			&self,
+			uis: &Query<(Entity, &_UI, &mut Style)>,
+			commands: &mut Commands,
+			outdated_tooltips: RemovedComponents<Tooltip<_T>>,
+		) where
+			_UI: Component + Sized,
+		{
+			self.mock.despawn_outdated(uis, commands, outdated_tooltips)
+		}
 	}
 
-	fn setup() -> App {
+	impl UpdateTooltipPosition<_UI> for _UIControl {
+		fn update_position(&self, uis: &mut Query<(Entity, &_UI, &mut Style)>, position: Vec2)
+		where
+			_UI: Component + Sized,
+		{
+			self.mock.update_position(uis, position)
+		}
+	}
+
+	impl SpawnTooltips<_T> for _UIControl {
+		fn spawn(
+			&self,
+			commands: &mut Commands,
+			tooltip_entity: Entity,
+			tooltip: &Tooltip<_T>,
+			position: Vec2,
+		) where
+			Tooltip<_T>: InstantiateContentOn + GetNode,
+		{
+			self.mock.spawn(commands, tooltip_entity, tooltip, position)
+		}
+	}
+
+	mock! {
+		_UIControl {}
+		impl DespawnAllTooltips<_UI> for _UIControl {
+			fn despawn_all<'a, 'b, 'c, 'd, 'e, 'f>(
+				&self,
+				uis: &Query<'a, 'b, (Entity, &'c _UI, &'d  mut Style)>,
+				commands: & mut Commands<'e, 'f>
+			) where
+				Self: Component + Sized;
+		}
+		impl DespawnOutdatedTooltips<_UI, _T> for _UIControl {
+			fn despawn_outdated<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h>(
+				&self,
+				uis: &Query<'a, 'b, (Entity, &'c  _UI, &'d  mut Style)>,
+				commands: &mut Commands<'e, 'f>,
+				outdated_tooltips: RemovedComponents<'g, 'h, Tooltip<_T>>,
+			) where
+				Self: Component + Sized;
+		}
+		impl UpdateTooltipPosition<_UI> for _UIControl {
+			fn update_position<'a, 'b, 'c, 'd>(
+				&self,
+				uis: &mut Query<'a, 'b, (Entity, &'c _UI, &'d mut Style)>,
+				position: Vec2
+			) where
+				Self: Component + Sized;
+		}
+		impl SpawnTooltips<_T> for _UIControl {
+			fn spawn<'a, 'b>(
+				&self,
+				commands: &mut Commands<'a, 'b>,
+				entity: Entity,
+				tooltip: &Tooltip<_T>,
+				position: Vec2
+			) where
+				Tooltip<_T>: InstantiateContentOn + GetNode;
+		}
+	}
+
+	fn setup(ui_control: _UIControl) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, tooltip::<_T, _Window>);
+		app.insert_resource(ui_control);
+		app.add_systems(Update, tooltip::<_T, _UI, _UIControl, _Window>);
 
 		app
 	}
 
 	#[test]
-	fn spawn_container_node_bundle() {
-		let mut app = setup();
-		app.world.spawn(_Window(Some(default())));
-		app.world.spawn((
-			Tooltip(_T {
-				content: "my content",
-				node: NodeBundle::default(),
-			}),
-			Interaction::Hovered,
-		));
+	fn call_spawn() {
+		#[derive(Resource, Debug, PartialEq)]
+		struct _Spawn {
+			entity: Entity,
+			tooltip: &'static str,
+			position: Vec2,
+		}
 
-		app.update();
+		let mut ui_control = _UIControl::default();
+		ui_control.mock.expect_despawn_all().return_const(());
+		ui_control.mock.expect_despawn_outdated().return_const(());
+		ui_control.mock.expect_update_position().return_const(());
+		ui_control
+			.mock
+			.expect_spawn()
+			.returning(|commands, entity, tooltip, position| {
+				commands.insert_resource(_Spawn {
+					entity,
+					tooltip: tooltip.0.content,
+					position,
+				});
+			});
 
-		let entity = get_latest_container!(app);
-
-		assert_bundle!(NodeBundle, &app, entity);
-	}
-
-	#[test]
-	fn spawn_container_on_mouse_position() {
-		let mut app = setup();
-		app.world.spawn(_Window(Some(Vec2 { x: 4., y: 2. })));
-		app.world.spawn((
-			Tooltip(_T {
-				content: "my content",
-				node: NodeBundle::default(),
-			}),
-			Interaction::Hovered,
-		));
-
-		app.update();
-
-		let entity = get_latest_container!(app);
-
-		assert_eq!(
-			Some((Val::Px(4.), Val::Px(2.))),
-			entity.get::<Style>().map(|s| (s.left, s.top))
-		)
-	}
-
-	#[test]
-	fn spawn_container_with_global_z_index_1() {
-		let mut app = setup();
-		app.world.spawn(_Window(Some(Vec2 { x: 4., y: 2. })));
-		app.world.spawn((
-			Tooltip(_T {
-				content: "my content",
-				node: NodeBundle::default(),
-			}),
-			Interaction::Hovered,
-		));
-
-		app.update();
-
-		let entity = get_latest_container!(app);
-
-		assert_eq!(
-			Some(1),
-			entity.get::<ZIndex>().map(|i| match i {
-				ZIndex::Global(i) => *i,
-				_ => -1,
-			})
-		)
-	}
-
-	#[test]
-	fn spawn_tooltip_node_bundle() {
-		let mut app = setup();
-		app.world.spawn(_Window(Some(default())));
-		app.world.spawn((
-			Tooltip(_T {
-				content: "my content",
-				node: NodeBundle::default(),
-			}),
-			Interaction::Hovered,
-		));
-
-		app.update();
-
-		let container = get_latest_container!(app);
-		let tooltip = get_first_child!(app, container);
-
-		assert_bundle!(NodeBundle, &app, tooltip);
-	}
-
-	#[test]
-	fn spawn_tooltip_with_tooltip_node() {
-		let mut app = setup();
-		app.world.spawn(_Window(Some(default())));
-		app.world.spawn((
-			Tooltip(_T {
-				content: "my content",
-				node: NodeBundle {
-					style: Style {
-						left: Val::Percent(42.),
-						..default()
-					},
-					..default()
-				},
-			}),
-			Interaction::Hovered,
-		));
-
-		app.update();
-
-		let container = get_latest_container!(app);
-		let tooltip = get_first_child!(app, container);
-
-		assert_bundle!(
-			NodeBundle,
-			&app,
-			tooltip,
-			With::assert(|style| assert_eq!(
-				&Style {
-					left: Val::Percent(42.),
-					..default()
-				},
-				style
+		let mut app = setup(ui_control);
+		app.world.spawn(_Window(Some(Vec2 { x: 33., y: 66. })));
+		let tooltip_id = app
+			.world
+			.spawn((
+				Tooltip(_T {
+					content: "My Content",
+				}),
+				Interaction::Hovered,
 			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Spawn {
+				entity: tooltip_id,
+				tooltip: "My Content",
+				position: Vec2 { x: 33., y: 66. }
+			}),
+			app.world.get_resource::<_Spawn>()
 		);
 	}
 
 	#[test]
-	fn spawn_tooltip_with_tooltip_children() {
-		let mut app = setup();
+	fn do_not_call_spawn_when_not_hovering() {
+		let mut ui_control = _UIControl::default();
+		ui_control.mock.expect_despawn_all().return_const(());
+		ui_control.mock.expect_despawn_outdated().return_const(());
+		ui_control.mock.expect_update_position().return_const(());
+		ui_control.mock.expect_spawn().never().return_const(());
+
+		let mut app = setup(ui_control);
 		app.world.spawn(_Window(Some(default())));
-		app.world.spawn((
-			Tooltip(_T {
-				content: "my content",
-				node: NodeBundle::default(),
-			}),
-			Interaction::Hovered,
-		));
+		app.world
+			.spawn((Tooltip(_T { content: "" }), Interaction::None));
 
 		app.update();
-
-		let container = get_latest_container!(app);
-		let tooltip = get_first_child!(app, container);
-		let content = get_first_child!(app, tooltip);
-
-		assert_eq!(Some(&_Content("my content")), content.get::<_Content>())
 	}
 
 	#[test]
-	fn do_not_spawn_when_not_hovering() {
-		let mut app = setup();
+	fn call_spawn_only_once() {
+		let mut ui_control = _UIControl::default();
+		ui_control.mock.expect_despawn_all().return_const(());
+		ui_control.mock.expect_despawn_outdated().return_const(());
+		ui_control.mock.expect_update_position().return_const(());
+		ui_control.mock.expect_spawn().times(1).return_const(());
+
+		let mut app = setup(ui_control);
 		app.world.spawn(_Window(Some(default())));
-		app.world.spawn((
-			Tooltip(_T {
-				content: "my content",
-				node: NodeBundle::default(),
-			}),
-			Interaction::None,
-		));
+		app.world
+			.spawn((Tooltip(_T { content: "" }), Interaction::Hovered));
 
 		app.update();
-
-		let container = try_get_latest_container!(app);
-
-		assert!(container.is_none());
+		app.update();
 	}
 
 	#[test]
-	fn only_spawn_one_container() {
-		let mut app = setup();
-		app.world.spawn(_Window(Some(default())));
-		app.world.spawn((
-			Tooltip(_T {
-				content: "my content",
-				node: NodeBundle::default(),
-			}),
-			Interaction::Hovered,
-		));
+	fn call_spawn_again_when_interaction_changed_to_hovered() {
+		let mut ui_control = _UIControl::default();
+		ui_control.mock.expect_despawn_all().return_const(());
+		ui_control.mock.expect_despawn_outdated().return_const(());
+		ui_control.mock.expect_update_position().return_const(());
+		ui_control.mock.expect_spawn().times(1).return_const(());
 
-		app.update();
-
-		let fist = get_latest_container!(app).id();
-
-		app.update();
-
-		let latest = get_latest_container!(app).id();
-
-		assert_eq!(fist, latest);
-	}
-
-	#[test]
-	fn update_container_position() {
-		let mut app = setup();
-		let window = app.world.spawn(_Window(Some(default()))).id();
-		app.world.spawn((
-			Tooltip(_T {
-				content: "my content",
-				node: NodeBundle::default(),
-			}),
-			Interaction::Hovered,
-		));
-
-		app.update();
-
-		app.world.entity_mut(window).get_mut::<_Window>().unwrap().0 = Some(Vec2 { x: 4., y: 2. });
-
-		app.update();
-
-		let container = get_latest_container!(app);
-
-		assert_eq!(
-			Some((Val::Px(4.), Val::Px(2.))),
-			container.get::<Style>().map(|s| (s.left, s.top))
-		)
-	}
-
-	#[test]
-	fn despawn_container_when_interaction_none() {
-		let mut app = setup();
+		let mut app = setup(ui_control);
 		app.world.spawn(_Window(Some(default())));
 		let tooltip = app
 			.world
-			.spawn((
-				Tooltip(_T {
-					content: "my content",
-					node: NodeBundle::default(),
-				}),
-				Interaction::Hovered,
-			))
+			.spawn((Tooltip(_T { content: "" }), Interaction::None))
 			.id();
 
 		app.update();
 
-		let mut tooltip_entity = app.world.entity_mut(tooltip);
-		let mut interaction = tooltip_entity.get_mut::<Interaction>().unwrap();
-		*interaction = Interaction::None;
-
-		app.update();
-
-		let container = try_get_latest_container!(app);
-
-		assert!(container.is_none());
-	}
-
-	#[test]
-	fn despawn_container_when_interaction_pressed() {
-		let mut app = setup();
-		app.world.spawn(_Window(Some(default())));
-		let tooltip = app
-			.world
-			.spawn((
-				Tooltip(_T {
-					content: "my content",
-					node: NodeBundle::default(),
-				}),
-				Interaction::Hovered,
-			))
-			.id();
-
-		app.update();
-
-		let mut tooltip_entity = app.world.entity_mut(tooltip);
-		let mut interaction = tooltip_entity.get_mut::<Interaction>().unwrap();
-		*interaction = Interaction::Pressed;
-
-		app.update();
-
-		let container = try_get_latest_container!(app);
-
-		assert!(container.is_none());
-	}
-
-	#[test]
-	fn spawn_container_again_after_despawn() {
-		let mut app = setup();
-		app.world.spawn(_Window(Some(default())));
-		let tooltip = app
-			.world
-			.spawn((
-				Tooltip(_T {
-					content: "my content",
-					node: NodeBundle::default(),
-				}),
-				Interaction::Hovered,
-			))
-			.id();
-
-		app.update();
-
-		let mut tooltip_entity = app.world.entity_mut(tooltip);
-		let mut interaction = tooltip_entity.get_mut::<Interaction>().unwrap();
-		*interaction = Interaction::None;
-
-		app.update();
-
-		let mut tooltip_entity = app.world.entity_mut(tooltip);
-		let mut interaction = tooltip_entity.get_mut::<Interaction>().unwrap();
+		let mut tooltip = app.world.entity_mut(tooltip);
+		let mut interaction = tooltip.get_mut::<Interaction>().unwrap();
 		*interaction = Interaction::Hovered;
 
 		app.update();
-
-		let container = try_get_latest_container!(app);
-
-		assert!(container.is_some());
 	}
 
 	#[test]
-	fn spawn_tooltip_with_tooltip_children_when_multiple_tooltips_present() {
-		let mut app = setup();
+	fn call_update_position() {
+		let mut ui_control = _UIControl::default();
+		ui_control.mock.expect_despawn_all().return_const(());
+		ui_control.mock.expect_despawn_outdated().return_const(());
+		ui_control.mock.expect_spawn().return_const(());
+		ui_control
+			.mock
+			.expect_update_position()
+			.withf(|_, position| {
+				assert_eq!(Vec2 { x: 33., y: 66. }, *position);
+				true
+			})
+			.return_const(());
+
+		let mut app = setup(ui_control);
+		app.world.spawn(_Window(Some(Vec2 { x: 33., y: 66. })));
+
+		app.update();
+	}
+
+	#[test]
+	fn do_not_call_update_position_when_tooltips_changed() {
+		let mut ui_control = _UIControl::default();
+		ui_control.mock.expect_despawn_all().return_const(());
+		ui_control.mock.expect_despawn_outdated().return_const(());
+		ui_control.mock.expect_spawn().return_const(());
+		ui_control
+			.mock
+			.expect_update_position()
+			.never()
+			.return_const(());
+
+		let mut app = setup(ui_control);
 		app.world.spawn(_Window(Some(default())));
-		app.world.spawn((
-			Tooltip(_T {
-				content: "my content not hovered",
-				node: NodeBundle::default(),
-			}),
-			Interaction::None,
-		));
-		app.world.spawn((
-			Tooltip(_T {
-				content: "my content hovered",
-				node: NodeBundle::default(),
-			}),
-			Interaction::Hovered,
-		));
-		app.world.spawn((
-			Tooltip(_T {
-				content: "my content not hovered",
-				node: NodeBundle::default(),
-			}),
-			Interaction::None,
-		));
+		app.world
+			.spawn((Tooltip(_T { content: "" }), Interaction::Hovered));
+
+		app.update();
+	}
+
+	#[test]
+	fn call_despawn_all_when_tooltips_changed() {
+		#[derive(Resource)]
+		struct _DespawnAll;
+
+		let mut ui_control = _UIControl::default();
+		ui_control.mock.expect_despawn_outdated().return_const(());
+		ui_control.mock.expect_spawn().return_const(());
+		ui_control.mock.expect_update_position().return_const(());
+		ui_control
+			.mock
+			.expect_despawn_all()
+			.returning(|_, commands| commands.insert_resource(_DespawnAll));
+
+		let mut app = setup(ui_control);
+
+		app.world.spawn(_Window(Some(default())));
+		app.world
+			.spawn((Tooltip(_T { content: "" }), Interaction::Hovered));
 
 		app.update();
 
-		let container = get_latest_container!(app);
-		let tooltip = get_first_child!(app, container);
-		let content = get_first_child!(app, tooltip);
-
-		assert_eq!(
-			Some(&_Content("my content hovered")),
-			content.get::<_Content>()
-		)
+		assert!(app.world.get_resource::<_DespawnAll>().is_some());
 	}
 
 	#[test]
-	fn remove_container_when_tooltip_removed() {
-		let mut app = setup();
+	fn do_not_call_despawn_all_when_tooltips_did_not_changed() {
+		let mut ui_control = _UIControl::default();
+		ui_control.mock.expect_despawn_outdated().return_const(());
+		ui_control.mock.expect_spawn().return_const(());
+		ui_control.mock.expect_update_position().return_const(());
+		ui_control
+			.mock
+			.expect_despawn_all()
+			.never()
+			.return_const(());
+
+		let mut app = setup(ui_control);
+
+		app.world.spawn(_Window(Some(default())));
+
+		app.update();
+	}
+
+	#[test]
+	fn call_despawn_outdated_when_tooltips_removed() {
+		#[derive(Resource, Debug, PartialEq)]
+		struct _DespawnOutdated(Vec<Entity>);
+
+		let mut ui_control = _UIControl::default();
+		ui_control.mock.expect_spawn().return_const(());
+		ui_control.mock.expect_update_position().return_const(());
+		ui_control.mock.expect_despawn_all().return_const(());
+
+		let mut app = setup(ui_control);
+
 		app.world.spawn(_Window(Some(default())));
 		let tooltip = app
 			.world
-			.spawn((
-				Tooltip(_T {
-					content: "my content",
-					node: NodeBundle::default(),
-				}),
-				Interaction::Hovered,
-			))
+			.spawn((Tooltip(_T { content: "" }), Interaction::Hovered))
 			.id();
+
+		app.world
+			.resource_mut::<_UIControl>()
+			.mock
+			.expect_despawn_outdated()
+			.returning(|_, commands, mut removed_tooltips| {
+				commands.insert_resource(_DespawnOutdated(removed_tooltips.read().collect()));
+			});
 
 		app.update();
 
@@ -560,8 +429,30 @@ mod tests {
 
 		app.update();
 
-		let container = try_get_latest_container!(app);
+		assert_eq!(
+			Some(&_DespawnOutdated(vec![tooltip])),
+			app.world.get_resource::<_DespawnOutdated>()
+		);
+	}
 
-		assert!(container.is_none());
+	#[test]
+	fn do_not_call_despawn_outdated_when_no_tooltip_removed() {
+		let mut ui_control = _UIControl::default();
+		ui_control.mock.expect_spawn().return_const(());
+		ui_control.mock.expect_update_position().return_const(());
+		ui_control.mock.expect_despawn_all().return_const(());
+		ui_control
+			.mock
+			.expect_despawn_outdated()
+			.never()
+			.return_const(());
+
+		let mut app = setup(ui_control);
+
+		app.world.spawn(_Window(Some(default())));
+		app.world
+			.spawn((Tooltip(_T { content: "" }), Interaction::Hovered));
+
+		app.update();
 	}
 }

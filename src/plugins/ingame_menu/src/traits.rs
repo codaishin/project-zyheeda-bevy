@@ -2,6 +2,7 @@ pub mod colors;
 pub mod get_node;
 pub mod instantiate_content_on;
 pub mod set;
+pub mod tooltip_ui_control;
 
 use crate::components::tooltip::Tooltip;
 use bevy::{
