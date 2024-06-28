@@ -12,6 +12,7 @@ use bevy::{
 	hierarchy::{BuildChildren, DespawnRecursiveExt},
 	math::Vec2,
 	prelude::{Commands, Component, Entity, Query, RemovedComponents, Resource},
+	render::view::Visibility,
 	ui::{node_bundles::NodeBundle, Style, Val},
 	utils::default,
 };
@@ -86,10 +87,12 @@ impl<T> SpawnTooltips<T> for TooltipUIControl {
 					top: Val::Px(position.y),
 					..default()
 				},
+				visibility: Visibility::Hidden,
 				..default()
 			},
 		);
-		let tooltip_node = tooltip.node();
+		let mut tooltip_node = tooltip.node();
+		tooltip_node.visibility = Visibility::Inherited;
 
 		commands
 			.spawn(container_node)
@@ -162,6 +165,7 @@ mod tests {
 
 	struct _T {
 		color: Color,
+		visibility: Visibility,
 		content: &'static str,
 	}
 
@@ -169,6 +173,7 @@ mod tests {
 		fn node(&self) -> NodeBundle {
 			NodeBundle {
 				background_color: self.0.color.into(),
+				visibility: self.0.visibility,
 				..default()
 			}
 		}
@@ -368,10 +373,11 @@ mod tests {
 
 	#[test]
 	fn spawn_tooltip() {
-		let mut app = setup_spawn(default());
+		let mut app = setup_spawn(Vec2 { x: 11., y: 101. });
 		app.world.spawn(Tooltip(_T {
 			color: Color::GOLD,
 			content: "",
+			visibility: Visibility::Visible,
 		}));
 
 		app.update();
@@ -386,7 +392,16 @@ mod tests {
 			NodeBundle,
 			&app,
 			tooltip_ui,
-			With::assert(|color: &BackgroundColor| assert_eq!(Color::NONE, color.0))
+			With::assert(|color: &BackgroundColor| assert_eq!(Color::NONE, color.0)),
+			With::assert(|style: &Style| assert_eq!(
+				&Style {
+					left: Val::Px(11.),
+					top: Val::Px(101.),
+					..default()
+				},
+				style
+			)),
+			With::assert(|visibility: &Visibility| assert_eq!(&Visibility::Hidden, visibility))
 		);
 	}
 
@@ -396,6 +411,7 @@ mod tests {
 		app.world.spawn(Tooltip(_T {
 			color: Color::GOLD,
 			content: "",
+			visibility: Visibility::Visible,
 		}));
 
 		app.update();
@@ -413,7 +429,8 @@ mod tests {
 			NodeBundle,
 			&app,
 			tooltip_ui_child,
-			With::assert(|color: &BackgroundColor| assert_eq!(Color::GOLD, color.0))
+			With::assert(|color: &BackgroundColor| assert_eq!(Color::GOLD, color.0)),
+			With::assert(|visibility: &Visibility| assert_eq!(&Visibility::Inherited, visibility))
 		);
 	}
 
@@ -423,6 +440,7 @@ mod tests {
 		app.world.spawn(Tooltip(_T {
 			color: Color::GOLD,
 			content: "My Content",
+			visibility: Visibility::Visible,
 		}));
 
 		app.update();
@@ -451,6 +469,7 @@ mod tests {
 			.spawn(Tooltip(_T {
 				color: Color::GOLD,
 				content: "",
+				visibility: Visibility::Visible,
 			}))
 			.id();
 
