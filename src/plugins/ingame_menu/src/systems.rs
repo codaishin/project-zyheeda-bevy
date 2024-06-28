@@ -8,5 +8,6 @@ pub(crate) mod set_state;
 pub(crate) mod set_state_from_input;
 pub(crate) mod spawn;
 pub(crate) mod tooltip;
+pub(crate) mod tooltip_visibility;
 pub(crate) mod update_children;
 pub(crate) mod update_panels;

@@ -21,15 +21,15 @@ use std::time::Duration;
 #[derive(Component)]
 pub(crate) struct Tooltip<T>(pub T);
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq)]
 pub(crate) struct TooltipUI {
-	source: Entity,
+	pub(crate) source: Entity,
 	pub(crate) delay: Duration,
 }
 
 #[derive(Resource, Default)]
 pub(crate) struct TooltipUIControl {
-	tooltip_delay: Duration,
+	pub(crate) tooltip_delay: Duration,
 }
 
 impl DespawnAllTooltips<TooltipUI> for TooltipUIControl {

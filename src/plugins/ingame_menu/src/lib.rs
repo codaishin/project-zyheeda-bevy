@@ -6,6 +6,8 @@ mod traits;
 #[cfg(debug_assertions)]
 mod debug;
 
+use std::time::Duration;
+
 use bevy::prelude::*;
 use common::{
 	components::Player,
@@ -48,6 +50,7 @@ use systems::{
 	set_state_from_input::set_state_from_input,
 	spawn::spawn,
 	tooltip::tooltip,
+	tooltip_visibility::tooltip_visibility,
 	update_children::update_children,
 	update_panels::{
 		activity_colors_override::panel_activity_colors_override,
@@ -106,6 +109,7 @@ impl Plugin for IngameMenuPlugin {
 		ui_overlay_systems(app);
 		combo_overview_systems(app);
 		inventory_screen_systems(app);
+		tooltip_systems(app);
 
 		#[cfg(debug_assertions)]
 		debug::setup_run_time_display(app);
@@ -115,7 +119,9 @@ impl Plugin for IngameMenuPlugin {
 fn resources(app: &mut App) {
 	app.init_state::<MenuState>()
 		.init_resource::<Shared<Path, Handle<Image>>>()
-		.init_resource::<TooltipUIControl>();
+		.insert_resource(TooltipUIControl {
+			tooltip_delay: Duration::from_millis(500),
+		});
 }
 
 fn state_control_systems(app: &mut App) {
@@ -195,4 +201,8 @@ fn inventory_screen_systems(app: &mut App) {
 			Update,
 			(swap_equipped_items.pipe(log_many), swap_inventory_items),
 		);
+}
+
+fn tooltip_systems(app: &mut App) {
+	app.add_systems(Update, tooltip_visibility::<Real>);
 }
