@@ -16,6 +16,7 @@ use bevy::{
 	ui::{node_bundles::NodeBundle, Style, Val},
 	utils::default,
 };
+use std::time::Duration;
 
 #[derive(Component)]
 pub(crate) struct Tooltip<T>(pub T);
@@ -23,10 +24,13 @@ pub(crate) struct Tooltip<T>(pub T);
 #[derive(Component)]
 pub(crate) struct TooltipUI {
 	source: Entity,
+	pub(crate) delay: Duration,
 }
 
 #[derive(Resource, Default)]
-pub(crate) struct TooltipUIControl;
+pub(crate) struct TooltipUIControl {
+	tooltip_delay: Duration,
+}
 
 impl DespawnAllTooltips<TooltipUI> for TooltipUIControl {
 	fn despawn_all(&self, uis: &Query<(Entity, &TooltipUI, &mut Style)>, commands: &mut Commands) {
@@ -80,6 +84,7 @@ impl<T> SpawnTooltips<T> for TooltipUIControl {
 		let container_node = (
 			TooltipUI {
 				source: tooltip_entity,
+				delay: self.tooltip_delay,
 			},
 			NodeBundle {
 				style: Style {
@@ -130,7 +135,7 @@ mod tests {
 		app.add_systems(
 			Update,
 			|uis: Query<(Entity, &TooltipUI, &mut Style)>, mut commands: Commands| {
-				TooltipUIControl.despawn_all(&uis, &mut commands);
+				TooltipUIControl::default().despawn_all(&uis, &mut commands);
 			},
 		);
 
@@ -144,7 +149,11 @@ mod tests {
 			|uis: Query<(Entity, &TooltipUI, &mut Style)>,
 			 mut commands: Commands,
 			 outdated_tooltips: RemovedComponents<Tooltip<&'static str>>| {
-				TooltipUIControl.despawn_outdated(&uis, &mut commands, outdated_tooltips);
+				TooltipUIControl::default().despawn_outdated(
+					&uis,
+					&mut commands,
+					outdated_tooltips,
+				);
 			},
 		);
 
@@ -156,7 +165,7 @@ mod tests {
 		app.add_systems(
 			Update,
 			move |mut uis: Query<(Entity, &TooltipUI, &mut Style)>| {
-				TooltipUIControl.update_position(&mut uis, position);
+				TooltipUIControl::default().update_position(&mut uis, position);
 			},
 		);
 
@@ -185,13 +194,18 @@ mod tests {
 		}
 	}
 
-	fn setup_spawn(position: Vec2) -> App {
+	fn setup_spawn(position: Vec2, tooltip_delay: Duration) -> App {
 		let mut app = setup();
 		app.add_systems(
 			Update,
 			move |mut commands: Commands, tooltips: Query<(Entity, &Tooltip<_T>)>| {
 				for (entity, tooltip) in &tooltips {
-					TooltipUIControl.spawn(&mut commands, entity, tooltip, position);
+					TooltipUIControl { tooltip_delay }.spawn(
+						&mut commands,
+						entity,
+						tooltip,
+						position,
+					);
 				}
 			},
 		);
@@ -206,12 +220,14 @@ mod tests {
 			(
 				TooltipUI {
 					source: Entity::from_raw(100),
+					delay: default(),
 				},
 				Style::default(),
 			),
 			(
 				TooltipUI {
 					source: Entity::from_raw(200),
+					delay: default(),
 				},
 				Style::default(),
 			),
@@ -234,6 +250,7 @@ mod tests {
 			.spawn((
 				TooltipUI {
 					source: Entity::from_raw(100),
+					delay: default(),
 				},
 				Style::default(),
 			))
@@ -256,8 +273,13 @@ mod tests {
 			app.world.spawn(Tooltip("2")).id(),
 		];
 		for entity in tooltips {
-			app.world
-				.spawn((TooltipUI { source: entity }, Style::default()));
+			app.world.spawn((
+				TooltipUI {
+					source: entity,
+					delay: default(),
+				},
+				Style::default(),
+			));
 		}
 
 		app.update();
@@ -285,7 +307,13 @@ mod tests {
 		];
 		for entity in tooltips {
 			app.world
-				.spawn((TooltipUI { source: entity }, Style::default()))
+				.spawn((
+					TooltipUI {
+						source: entity,
+						delay: default(),
+					},
+					Style::default(),
+				))
 				.with_children(|parent| {
 					parent.spawn(_Child(""));
 				});
@@ -312,8 +340,13 @@ mod tests {
 			app.world.spawn(Tooltip("2")).id(),
 		];
 		for entity in tooltips {
-			app.world
-				.spawn((TooltipUI { source: entity }, Style::default()));
+			app.world.spawn((
+				TooltipUI {
+					source: entity,
+					delay: default(),
+				},
+				Style::default(),
+			));
 		}
 
 		app.update();
@@ -335,12 +368,14 @@ mod tests {
 				(
 					TooltipUI {
 						source: Entity::from_raw(100),
+						delay: default(),
 					},
 					Style::default(),
 				),
 				(
 					TooltipUI {
 						source: Entity::from_raw(200),
+						delay: default(),
 					},
 					Style::default(),
 				),
@@ -373,7 +408,7 @@ mod tests {
 
 	#[test]
 	fn spawn_tooltip() {
-		let mut app = setup_spawn(Vec2 { x: 11., y: 101. });
+		let mut app = setup_spawn(Vec2 { x: 11., y: 101. }, default());
 		app.world.spawn(Tooltip(_T {
 			color: Color::GOLD,
 			content: "",
@@ -407,7 +442,7 @@ mod tests {
 
 	#[test]
 	fn spawn_node_bundle_of_tooltip_on_child() {
-		let mut app = setup_spawn(default());
+		let mut app = setup_spawn(default(), default());
 		app.world.spawn(Tooltip(_T {
 			color: Color::GOLD,
 			content: "",
@@ -436,7 +471,7 @@ mod tests {
 
 	#[test]
 	fn spawn_content_of_tooltip_on_child() {
-		let mut app = setup_spawn(default());
+		let mut app = setup_spawn(default(), default());
 		app.world.spawn(Tooltip(_T {
 			color: Color::GOLD,
 			content: "My Content",
@@ -463,7 +498,7 @@ mod tests {
 
 	#[test]
 	fn spawn_tooltip_ui_with_source_reference() {
-		let mut app = setup_spawn(default());
+		let mut app = setup_spawn(default(), default());
 		let tooltip = app
 			.world
 			.spawn(Tooltip(_T {
@@ -482,5 +517,25 @@ mod tests {
 			.expect("no tooltip spawned");
 
 		assert_eq!(tooltip, tooltip_ui.source);
+	}
+
+	#[test]
+	fn spawn_tooltip_ui_with_delay() {
+		let mut app = setup_spawn(default(), Duration::from_secs(4000));
+		app.world.spawn(Tooltip(_T {
+			color: Color::GOLD,
+			content: "",
+			visibility: Visibility::Visible,
+		}));
+
+		app.update();
+
+		let tooltip_ui = app
+			.world
+			.iter_entities()
+			.find_map(|e| e.get::<TooltipUI>())
+			.expect("no tooltip spawned");
+
+		assert_eq!(Duration::from_secs(4000), tooltip_ui.delay);
 	}
 }
