@@ -4,6 +4,7 @@ use crate::{
 	components::Player,
 	traits::{clamp_zero_positive::ClampZeroPositive, load_asset::Path},
 };
+use bevy::prelude::Entity;
 use macros::ClampZeroPositive;
 use std::{
 	fmt::Debug,
@@ -62,6 +63,19 @@ pub fn player_animation_path(animation_name: &str) -> Path {
 
 #[derive(Default)]
 pub struct Index(pub u16);
+
+#[derive(Default, Clone, Debug, PartialEq)]
+pub enum Focus {
+	#[default]
+	Unchanged,
+	New(Vec<Entity>),
+}
+
+impl From<Vec<Entity>> for Focus {
+	fn from(entities: Vec<Entity>) -> Self {
+		Focus::New(entities)
+	}
+}
 
 #[cfg(test)]
 mod test_clamp_zero_positive {

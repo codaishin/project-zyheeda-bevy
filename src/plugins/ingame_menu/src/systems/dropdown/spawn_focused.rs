@@ -1,18 +1,26 @@
 use crate::{components::dropdown::Dropdown, tools::Layout};
 use bevy::{
 	hierarchy::{BuildChildren, ChildBuilder, Parent},
-	prelude::{Commands, Entity, In, Query},
+	prelude::{Commands, Component, Entity, In, Query},
 	ui::{node_bundles::NodeBundle, Display, RepeatedGridTrack, Style},
 	utils::default,
 };
+use common::tools::Focus;
 
-pub(crate) fn dropdown_spawn(
-	newly_active: In<Vec<Entity>>,
+#[derive(Component)]
+pub(crate) struct DropdownUI;
+
+pub(crate) fn dropdown_spawn_focused(
+	focus: In<Focus>,
 	mut commands: Commands,
 	dropdowns: Query<(Entity, &Parent, &Dropdown)>,
-) {
+) -> Focus {
+	let Focus::New(new_focus) = focus.0 else {
+		return Focus::Unchanged;
+	};
+
 	for (entity, container, dropdown) in &dropdowns {
-		if !newly_active.0.contains(&entity) {
+		if !new_focus.contains(&entity) {
 			continue;
 		}
 		let Some(mut container) = commands.get_entity(container.get()) else {
@@ -21,14 +29,19 @@ pub(crate) fn dropdown_spawn(
 
 		container.with_children(|container_node| spawn_dropdown(container_node, dropdown));
 	}
+
+	Focus::New(new_focus)
 }
 
 fn spawn_dropdown(container_node: &mut ChildBuilder, dropdown: &Dropdown) {
 	container_node
-		.spawn(NodeBundle {
-			style: get_style(dropdown),
-			..default()
-		})
+		.spawn((
+			DropdownUI,
+			NodeBundle {
+				style: get_style(dropdown),
+				..default()
+			},
+		))
 		.with_children(|dropdown_node| spawn_items(dropdown_node, dropdown));
 }
 
@@ -83,14 +96,21 @@ mod tests {
 	}
 
 	#[derive(Resource, Default)]
-	struct _NewlyActive(Vec<Entity>);
+	struct _In(Focus);
+
+	#[derive(Resource, Debug, PartialEq)]
+	struct _Result(Focus);
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.init_resource::<_NewlyActive>();
+		app.init_resource::<_In>();
 		app.add_systems(
 			Update,
-			(|newly_active: Res<_NewlyActive>| newly_active.0.clone()).pipe(dropdown_spawn),
+			(|focus: Res<_In>| focus.0.clone())
+				.pipe(dropdown_spawn_focused)
+				.pipe(|focus: In<Focus>, mut commands: Commands| {
+					commands.insert_resource(_Result(focus.0))
+				}),
 		);
 
 		app
@@ -132,7 +152,7 @@ mod tests {
 		let mut app = setup();
 
 		let (container, dropdown) = spawn_dropdown!(app, Dropdown::default());
-		app.world.resource_mut::<_NewlyActive>().0.push(dropdown);
+		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -143,11 +163,25 @@ mod tests {
 	}
 
 	#[test]
-	fn do_not_spawn_dropdown_node_when_not_newly_active() {
+	fn spawn_dropdown_node_with_dropdown_ui_marker() {
 		let mut app = setup();
 
 		let (container, dropdown) = spawn_dropdown!(app, Dropdown::default());
-		app.world.resource_mut::<_NewlyActive>().0 = vec![];
+		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
+
+		app.update();
+
+		let dropdown_node = last_child_of!(app, container);
+
+		assert!(dropdown_node.contains::<DropdownUI>());
+	}
+
+	#[test]
+	fn do_not_spawn_dropdown_node_when_not_new_active() {
+		let mut app = setup();
+
+		let (container, dropdown) = spawn_dropdown!(app, Dropdown::default());
+		app.world.insert_resource(_In(Focus::New(vec![])));
 
 		app.update();
 
@@ -176,7 +210,7 @@ mod tests {
 				..default()
 			}
 		);
-		app.world.resource_mut::<_NewlyActive>().0.push(dropdown);
+		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -216,7 +250,7 @@ mod tests {
 				..default()
 			}
 		);
-		app.world.resource_mut::<_NewlyActive>().0.push(dropdown);
+		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -258,8 +292,7 @@ mod tests {
 				layout: Layout::MaxColumn(Index(2)),
 			}
 		);
-
-		app.world.resource_mut::<_NewlyActive>().0.push(dropdown);
+		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -296,7 +329,7 @@ mod tests {
 				layout: Layout::MaxColumn(Index(1)),
 			}
 		);
-		app.world.resource_mut::<_NewlyActive>().0.push(dropdown);
+		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -333,7 +366,7 @@ mod tests {
 				layout: Layout::MaxRow(Index(2)),
 			}
 		);
-		app.world.resource_mut::<_NewlyActive>().0.push(dropdown);
+		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -370,7 +403,7 @@ mod tests {
 				layout: Layout::MaxRow(Index(1)),
 			}
 		);
-		app.world.resource_mut::<_NewlyActive>().0.push(dropdown);
+		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -389,5 +422,35 @@ mod tests {
 				style
 			))
 		);
+	}
+
+	#[test]
+	fn return_new_focus() {
+		let mut app = setup();
+		let focus = Focus::New(vec![
+			Entity::from_raw(42),
+			Entity::from_raw(11),
+			Entity::from_raw(69),
+		]);
+
+		spawn_dropdown!(app, Dropdown::default());
+		app.world.insert_resource(_In(focus.clone()));
+
+		app.update();
+
+		assert_eq!(&_Result(focus), app.world.resource::<_Result>());
+	}
+
+	#[test]
+	fn return_unchanged_focus() {
+		let mut app = setup();
+		let focus = Focus::Unchanged;
+
+		spawn_dropdown!(app, Dropdown::default());
+		app.world.insert_resource(_In(focus.clone()));
+
+		app.update();
+
+		assert_eq!(&_Result(focus), app.world.resource::<_Result>());
 	}
 }
