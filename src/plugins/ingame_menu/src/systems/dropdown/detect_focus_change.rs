@@ -4,20 +4,22 @@ use bevy::{
 	prelude::{Entity, MouseButton, Query, Res},
 	ui::Interaction,
 };
+use common::tools::Focus;
 
-pub(crate) fn dropdown_newly_active(
+pub(crate) fn dropdown_detect_focus_change(
 	dropdowns: Query<(Entity, &Dropdown, &Interaction)>,
 	mouse: Res<ButtonInput<MouseButton>>,
-) -> Vec<Entity> {
+) -> Focus {
 	if !mouse.just_pressed(MouseButton::Left) {
-		return vec![];
+		return Focus::Unchanged;
 	}
 
 	dropdowns
 		.iter()
 		.filter(|(.., interaction)| interaction == &&Interaction::Pressed)
 		.map(|(entity, ..)| entity)
-		.collect()
+		.collect::<Vec<_>>()
+		.into()
 }
 
 #[cfg(test)]
@@ -31,14 +33,14 @@ mod tests {
 	use common::test_tools::utils::SingleThreadedApp;
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(Vec<Entity>);
+	struct _Result(Focus);
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<ButtonInput<MouseButton>>();
 		app.add_systems(
 			Update,
-			dropdown_newly_active.pipe(|entities: In<Vec<Entity>>, mut commands: Commands| {
+			dropdown_detect_focus_change.pipe(|entities: In<Focus>, mut commands: Commands| {
 				commands.insert_resource(_Result(entities.0));
 			}),
 		);
@@ -60,11 +62,14 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(&_Result(vec![pressed]), app.world.resource::<_Result>());
+		assert_eq!(
+			&_Result(vec![pressed].into()),
+			app.world.resource::<_Result>(),
+		);
 	}
 
 	#[test]
-	fn return_empty_if_mouse_left_not_just_pressed() {
+	fn return_unchanged_if_mouse_left_not_just_pressed() {
 		let mut app = setup();
 		let mut mouse = app.world.resource_mut::<ButtonInput<MouseButton>>();
 		mouse.press(MouseButton::Left);
@@ -74,7 +79,7 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(&_Result(vec![]), app.world.resource::<_Result>());
+		assert_eq!(&_Result(Focus::Unchanged), app.world.resource::<_Result>());
 	}
 
 	#[test]
@@ -88,6 +93,6 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(&_Result(vec![]), app.world.resource::<_Result>());
+		assert_eq!(&_Result(vec![].into()), app.world.resource::<_Result>());
 	}
 }
