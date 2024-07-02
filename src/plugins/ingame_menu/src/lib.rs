@@ -43,7 +43,7 @@ use systems::{
 	},
 	dad::{drag::drag, drop::drop},
 	despawn::despawn,
-	dropdown::dropdown,
+	dropdown::{newly_active::dropdown_newly_active, spawn::dropdown_spawn},
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	set_state::set_state,
@@ -209,5 +209,5 @@ fn tooltip_systems(app: &mut App) {
 }
 
 fn dropdown_systems(app: &mut App) {
-	app.add_systems(Update, dropdown);
+	app.add_systems(Update, dropdown_newly_active.pipe(dropdown_spawn));
 }
