@@ -60,6 +60,9 @@ pub fn player_animation_path(animation_name: &str) -> Path {
 	Path::from(Player::MODEL_PATH.to_owned() + "#" + animation_name)
 }
 
+#[derive(Default)]
+pub struct Index(pub u16);
+
 #[cfg(test)]
 mod test_clamp_zero_positive {
 	use super::*;
