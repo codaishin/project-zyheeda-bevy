@@ -118,6 +118,7 @@ impl Plugin for IngameMenuPlugin {
 
 		#[cfg(debug_assertions)]
 		debug::setup_run_time_display(app);
+		debug::setup_dropdown_test(app);
 	}
 }
 
