@@ -12,7 +12,7 @@ use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
 	states::{GameRunning, Off, On},
 	systems::log::log_many,
-	tools::Factory,
+	tools::{Factory, Focus},
 	traits::{cache::get_or_load_asset::LoadAssetCache, load_asset::Path},
 };
 use components::{
@@ -118,6 +118,7 @@ impl Plugin for IngameMenuPlugin {
 
 		#[cfg(debug_assertions)]
 		debug::setup_run_time_display(app);
+		debug::setup_dropdown_test(app);
 	}
 }
 
@@ -217,6 +218,6 @@ fn dropdown_systems(app: &mut App) {
 		Update,
 		dropdown_detect_focus_change
 			.pipe(dropdown_spawn_focused)
-			.pipe(dropdown_despawn_unfocused),
+			.pipe(|_: In<Focus>| {}), // .pipe(dropdown_despawn_unfocused),
 	);
 }

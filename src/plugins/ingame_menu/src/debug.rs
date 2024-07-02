@@ -1,3 +1,4 @@
+use crate::{components::dropdown::Dropdown, tools::Layout};
 #[cfg(debug_assertions)]
 use crate::{
 	tools::menu_state::MenuState,
@@ -7,13 +8,19 @@ use crate::{
 use bevy::{
 	app::{App, Update},
 	ecs::system::Res,
-	hierarchy::ChildBuilder,
+	hierarchy::{BuildWorldChildren, ChildBuilder},
 	prelude::{Component, Query, State},
 	render::color::Color,
 	text::TextStyle,
 	time::{Real, Time},
 	ui::{
-		node_bundles::{NodeBundle, TextBundle},
+		node_bundles::{ButtonBundle, NodeBundle, TextBundle},
+		AlignContent,
+		AlignItems,
+		BorderColor,
+		FlexDirection,
+		JustifyContent,
+		JustifyItems,
 		PositionType,
 		Style,
 		UiRect,
@@ -77,4 +84,77 @@ pub fn setup_run_time_display(app: &mut App) {
 		app.add_ui::<StateTime>(state);
 	}
 	app.add_systems(Update, update_state_time);
+}
+
+struct Item(&'static str);
+
+impl Item {
+	fn node_style() -> Style {
+		Style {
+			width: Val::Px(60.),
+			height: Val::Px(60.),
+			border: UiRect::all(Val::Px(3.)),
+			justify_content: JustifyContent::Center,
+			align_items: AlignItems::Center,
+			..default()
+		}
+	}
+
+	fn text_style() -> TextStyle {
+		TextStyle {
+			font_size: 30.,
+			color: Color::BLACK,
+			..default()
+		}
+	}
+}
+
+impl GetNode for Item {
+	fn node(&self) -> NodeBundle {
+		NodeBundle {
+			style: Item::node_style(),
+			..default()
+		}
+	}
+}
+
+impl InstantiateContentOn for Item {
+	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
+		parent.spawn(TextBundle::from_section(self.0, Item::text_style()));
+	}
+}
+
+pub fn setup_dropdown_test(app: &mut App) {
+	app.world
+		.spawn(NodeBundle {
+			style: Style {
+				position_type: PositionType::Absolute,
+				top: Val::Px(20.),
+				right: Val::Px(20.),
+				..default()
+			},
+			background_color: Color::SEA_GREEN.into(),
+			..default()
+		})
+		.with_children(|container| {
+			container
+				.spawn((
+					ButtonBundle {
+						style: Item::node_style(),
+						border_color: Color::GOLD.into(),
+						..default()
+					},
+					Dropdown {
+						layout: Layout::single_row(),
+						items: vec![
+							Box::new(Item("1")),
+							Box::new(Item("2")),
+							Box::new(Item("3")),
+						],
+					},
+				))
+				.with_children(|button| {
+					button.spawn(TextBundle::from_section("AAA", Item::text_style()));
+				});
+		});
 }
