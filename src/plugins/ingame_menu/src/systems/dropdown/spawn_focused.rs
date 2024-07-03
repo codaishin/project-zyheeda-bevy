@@ -1,8 +1,8 @@
 use crate::{components::dropdown::Dropdown, tools::Layout};
 use bevy::{
-	hierarchy::{BuildChildren, ChildBuilder, Parent},
+	hierarchy::{BuildChildren, ChildBuilder},
 	prelude::{Commands, Component, Entity, In, Query},
-	ui::{node_bundles::NodeBundle, Display, RepeatedGridTrack, Style},
+	ui::{node_bundles::NodeBundle, Display, RepeatedGridTrack, Style, ZIndex},
 	utils::default,
 };
 use common::tools::Focus;
@@ -15,34 +15,40 @@ pub(crate) struct DropdownUI {
 pub(crate) fn dropdown_spawn_focused(
 	focus: In<Focus>,
 	mut commands: Commands,
-	dropdowns: Query<(Entity, &Parent, &Dropdown)>,
+	dropdowns: Query<(Entity, &Dropdown)>,
 ) {
 	let Focus::New(new_focus) = focus.0 else {
 		return;
 	};
 
-	for (entity, container, dropdown) in &dropdowns {
-		if !new_focus.contains(&entity) {
+	for (source, dropdown) in &dropdowns {
+		if !new_focus.contains(&source) {
 			continue;
 		}
-		let Some(mut container) = commands.get_entity(container.get()) else {
+		let Some(mut entity) = commands.get_entity(source) else {
 			continue;
 		};
 
-		container.with_children(|container_node| spawn_dropdown(container_node, entity, dropdown));
+		entity.with_children(|entity_node| {
+			entity_node
+				.spawn((
+					DropdownUI { source },
+					NodeBundle {
+						style: dropdown.style.clone(),
+						z_index: ZIndex::Global(1),
+						..default()
+					},
+				))
+				.with_children(|container_node| {
+					container_node
+						.spawn(NodeBundle {
+							style: get_style(dropdown),
+							..default()
+						})
+						.with_children(|dropdown_node| spawn_items(dropdown_node, dropdown));
+				});
+		});
 	}
-}
-
-fn spawn_dropdown(container_node: &mut ChildBuilder, source: Entity, dropdown: &Dropdown) {
-	container_node
-		.spawn((
-			DropdownUI { source },
-			NodeBundle {
-				style: get_style(dropdown),
-				..default()
-			},
-		))
-		.with_children(|dropdown_node| spawn_items(dropdown_node, dropdown));
 }
 
 fn get_style(dropdown: &Dropdown) -> Style {
@@ -92,7 +98,7 @@ mod tests {
 	};
 	use bevy::{
 		app::{App, Update},
-		hierarchy::{BuildWorldChildren, ChildBuilder, Parent},
+		hierarchy::{ChildBuilder, Parent},
 		prelude::{Component, IntoSystem, Res, Resource},
 		ui::{node_bundles::NodeBundle, Display, RepeatedGridTrack, Style, Val},
 		utils::default,
@@ -124,15 +130,6 @@ mod tests {
 		app
 	}
 
-	macro_rules! spawn_dropdown {
-		($app:expr, $dropdown:expr) => {{
-			let container = $app.world.spawn_empty().id();
-			let dropdown = $app.world.spawn($dropdown).set_parent(container).id();
-
-			(container, dropdown)
-		}};
-	}
-
 	macro_rules! try_last_child_of {
 		($app:expr, $entity:expr) => {
 			$app.world
@@ -156,53 +153,116 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_dropdown_node_as_next_child_of_container() {
+	fn spawn_dropdown_ui_as_child_of_self() {
 		let mut app = setup();
 
-		let (container, dropdown) = spawn_dropdown!(app, Dropdown::default());
+		let dropdown = app.world.spawn(Dropdown::default()).id();
 		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
-		let dropdown_node = last_child_of!(app, container);
+		let dropdown_ui = last_child_of!(app, dropdown);
 
-		assert_ne!(dropdown, dropdown_node.id());
-		assert_bundle!(NodeBundle, &app, dropdown_node);
+		assert_bundle!(NodeBundle, &app, dropdown_ui);
 	}
 
 	#[test]
-	fn spawn_dropdown_node_with_dropdown_ui_marker() {
+	fn spawn_dropdown_ui_with_dropdown_ui_marker() {
 		let mut app = setup();
 
-		let (container, dropdown) = spawn_dropdown!(app, Dropdown::default());
+		let dropdown = app.world.spawn(Dropdown::default()).id();
 		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
-		let dropdown_node = last_child_of!(app, container);
+		let dropdown_ui = last_child_of!(app, dropdown);
 
 		assert_eq!(
 			Some(&DropdownUI { source: dropdown }),
-			dropdown_node.get::<DropdownUI>()
+			dropdown_ui.get::<DropdownUI>()
 		);
 	}
 
 	#[test]
-	fn do_not_spawn_dropdown_node_when_not_new_active() {
+	fn spawn_dropdown_ui_with_dropdown_style() {
 		let mut app = setup();
 
-		let (container, dropdown) = spawn_dropdown!(app, Dropdown::default());
+		let dropdown = app
+			.world
+			.spawn(Dropdown {
+				style: Style {
+					top: Val::Px(404.),
+					..default()
+				},
+				..default()
+			})
+			.id();
+		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
+
+		app.update();
+
+		let dropdown_ui = last_child_of!(app, dropdown);
+
+		assert_eq!(
+			Some(&Style {
+				top: Val::Px(404.),
+				..default()
+			}),
+			dropdown_ui.get::<Style>(),
+		);
+	}
+
+	#[test]
+	fn spawn_dropdown_ui_with_global_z_index_1() {
+		let mut app = setup();
+
+		let dropdown = app.world.spawn(Dropdown::default()).id();
+		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
+
+		app.update();
+
+		let dropdown_ui = last_child_of!(app, dropdown);
+
+		assert_eq!(
+			Some(1),
+			dropdown_ui.get::<ZIndex>().map(|index| match index {
+				ZIndex::Global(index) => *index,
+				_ => -1,
+			}),
+		);
+	}
+
+	#[test]
+	fn do_not_spawn_dropdown_ui_when_not_new_active() {
+		let mut app = setup();
+
+		let dropdown = app.world.spawn(Dropdown::default()).id();
 		app.world.insert_resource(_In(Focus::New(vec![])));
 
 		app.update();
 
-		let last_child = last_child_of!(app, container).id();
+		let last_child = try_last_child_of!(app, dropdown);
 
-		assert_eq!(dropdown, last_child);
+		assert!(last_child.is_none());
 	}
 
 	#[test]
-	fn spawn_dropdown_item_node() {
+	fn spawn_dropdown_ui_content_with_node_bundle() {
+		let mut app = setup();
+
+		let dropdown = app.world.spawn(Dropdown::default()).id();
+		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
+
+		app.update();
+
+		let dropdown_ui = last_child_of!(app, dropdown).id();
+		let dropdown_ui_content = last_child_of!(app, dropdown_ui);
+
+		assert_bundle!(NodeBundle, &app, dropdown_ui_content);
+	}
+
+	#[test]
+	fn spawn_dropdown_item_node_with_node_bundle() {
 		let mut app = setup();
 		let mut item = Box::new(Mock_Item::default());
 		item.expect_node().return_const(NodeBundle {
@@ -214,19 +274,20 @@ mod tests {
 		});
 		item.expect_instantiate_content_on().return_const(());
 
-		let (container, dropdown) = spawn_dropdown!(
-			app,
-			Dropdown {
+		let dropdown = app
+			.world
+			.spawn(Dropdown {
 				items: vec![item],
 				..default()
-			}
-		);
+			})
+			.id();
 		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
-		let dropdown_node = last_child_of!(app, container);
-		let item_node = last_child_of!(app, dropdown_node.id());
+		let dropdown_ui = last_child_of!(app, dropdown).id();
+		let dropdown_ui_content = last_child_of!(app, dropdown_ui).id();
+		let item_node = last_child_of!(app, dropdown_ui_content);
 
 		assert_bundle!(
 			NodeBundle,
@@ -254,20 +315,21 @@ mod tests {
 			item_node.spawn(_Content("My Content"));
 		});
 
-		let (container, dropdown) = spawn_dropdown!(
-			app,
-			Dropdown {
+		let dropdown = app
+			.world
+			.spawn(Dropdown {
 				items: vec![item],
 				..default()
-			}
-		);
+			})
+			.id();
 		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
-		let dropdown_node = last_child_of!(app, container);
-		let item_node = last_child_of!(app, dropdown_node.id());
-		let item_content = last_child_of!(app, item_node.id());
+		let dropdown_ui = last_child_of!(app, dropdown).id();
+		let dropdown_ui_content = last_child_of!(app, dropdown_ui).id();
+		let item_node = last_child_of!(app, dropdown_ui_content).id();
+		let item_content = last_child_of!(app, item_node);
 
 		assert_eq!(
 			Some(&_Content("My Content")),
@@ -291,9 +353,9 @@ mod tests {
 	fn set_grid_for_column_limited_size_3() {
 		let mut app = setup();
 
-		let (container, dropdown) = spawn_dropdown!(
-			app,
-			Dropdown {
+		let dropdown = app
+			.world
+			.spawn(Dropdown {
 				items: vec![
 					Box::new(_Item),
 					Box::new(_Item),
@@ -302,27 +364,25 @@ mod tests {
 					Box::new(_Item),
 				],
 				layout: Layout::LastColumn(Index(2)),
-			}
-		);
+				..default()
+			})
+			.id();
+
 		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
-		let dropdown_node = last_child_of!(app, container);
+		let dropdown_ui = last_child_of!(app, dropdown).id();
+		let dropdown_ui_content = last_child_of!(app, dropdown_ui);
 
-		assert_bundle!(
-			NodeBundle,
-			&app,
-			dropdown_node,
-			With::assert(|style: &Style| assert_eq!(
-				&Style {
-					display: Display::Grid,
-					grid_template_columns: RepeatedGridTrack::auto(3),
-					grid_template_rows: RepeatedGridTrack::auto(2),
-					..default()
-				},
-				style
-			))
+		assert_eq!(
+			Some(&Style {
+				display: Display::Grid,
+				grid_template_columns: RepeatedGridTrack::auto(3),
+				grid_template_rows: RepeatedGridTrack::auto(2),
+				..default()
+			}),
+			dropdown_ui_content.get::<Style>()
 		);
 	}
 
@@ -330,9 +390,9 @@ mod tests {
 	fn set_grid_for_column_limited_size_2() {
 		let mut app = setup();
 
-		let (container, dropdown) = spawn_dropdown!(
-			app,
-			Dropdown {
+		let dropdown = app
+			.world
+			.spawn(Dropdown {
 				items: vec![
 					Box::new(_Item),
 					Box::new(_Item),
@@ -341,27 +401,25 @@ mod tests {
 					Box::new(_Item),
 				],
 				layout: Layout::LastColumn(Index(1)),
-			}
-		);
+				..default()
+			})
+			.id();
+
 		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
-		let dropdown_node = last_child_of!(app, container);
+		let dropdown_ui = last_child_of!(app, dropdown).id();
+		let dropdown_ui_content = last_child_of!(app, dropdown_ui);
 
-		assert_bundle!(
-			NodeBundle,
-			&app,
-			dropdown_node,
-			With::assert(|style: &Style| assert_eq!(
-				&Style {
-					display: Display::Grid,
-					grid_template_columns: RepeatedGridTrack::auto(2),
-					grid_template_rows: RepeatedGridTrack::auto(3),
-					..default()
-				},
-				style
-			))
+		assert_eq!(
+			Some(&Style {
+				display: Display::Grid,
+				grid_template_columns: RepeatedGridTrack::auto(2),
+				grid_template_rows: RepeatedGridTrack::auto(3),
+				..default()
+			}),
+			dropdown_ui_content.get::<Style>()
 		);
 	}
 
@@ -369,9 +427,9 @@ mod tests {
 	fn set_grid_for_row_limited_size_3() {
 		let mut app = setup();
 
-		let (container, dropdown) = spawn_dropdown!(
-			app,
-			Dropdown {
+		let dropdown = app
+			.world
+			.spawn(Dropdown {
 				items: vec![
 					Box::new(_Item),
 					Box::new(_Item),
@@ -380,27 +438,25 @@ mod tests {
 					Box::new(_Item),
 				],
 				layout: Layout::LastRow(Index(2)),
-			}
-		);
+				..default()
+			})
+			.id();
+
 		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
-		let dropdown_node = last_child_of!(app, container);
+		let dropdown_ui = last_child_of!(app, dropdown).id();
+		let dropdown_ui_content = last_child_of!(app, dropdown_ui);
 
-		assert_bundle!(
-			NodeBundle,
-			&app,
-			dropdown_node,
-			With::assert(|style: &Style| assert_eq!(
-				&Style {
-					display: Display::Grid,
-					grid_template_columns: RepeatedGridTrack::auto(2),
-					grid_template_rows: RepeatedGridTrack::auto(3),
-					..default()
-				},
-				style
-			))
+		assert_eq!(
+			Some(&Style {
+				display: Display::Grid,
+				grid_template_columns: RepeatedGridTrack::auto(2),
+				grid_template_rows: RepeatedGridTrack::auto(3),
+				..default()
+			}),
+			dropdown_ui_content.get::<Style>()
 		);
 	}
 
@@ -408,9 +464,9 @@ mod tests {
 	fn set_grid_for_row_limited_size_2() {
 		let mut app = setup();
 
-		let (container, dropdown) = spawn_dropdown!(
-			app,
-			Dropdown {
+		let dropdown = app
+			.world
+			.spawn(Dropdown {
 				items: vec![
 					Box::new(_Item),
 					Box::new(_Item),
@@ -419,27 +475,25 @@ mod tests {
 					Box::new(_Item),
 				],
 				layout: Layout::LastRow(Index(1)),
-			}
-		);
+				..default()
+			})
+			.id();
+
 		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
-		let dropdown_node = last_child_of!(app, container);
+		let dropdown_ui = last_child_of!(app, dropdown).id();
+		let dropdown_ui_content = last_child_of!(app, dropdown_ui);
 
-		assert_bundle!(
-			NodeBundle,
-			&app,
-			dropdown_node,
-			With::assert(|style: &Style| assert_eq!(
-				&Style {
-					display: Display::Grid,
-					grid_template_columns: RepeatedGridTrack::auto(3),
-					grid_template_rows: RepeatedGridTrack::auto(2),
-					..default()
-				},
-				style
-			))
+		assert_eq!(
+			Some(&Style {
+				display: Display::Grid,
+				grid_template_columns: RepeatedGridTrack::auto(3),
+				grid_template_rows: RepeatedGridTrack::auto(2),
+				..default()
+			}),
+			dropdown_ui_content.get::<Style>()
 		);
 	}
 }

@@ -174,6 +174,15 @@ pub fn setup_dropdown_test(app: &mut App) {
 		]
 	}
 
+	fn get_style() -> Style {
+		Style {
+			position_type: PositionType::Absolute,
+			top: Val::Percent(0.),
+			right: Val::Percent(100.),
+			..default()
+		}
+	}
+
 	app.add_systems(Update, (replace_button_text, update_button_text));
 	app.world
 		.spawn(NodeBundle {
@@ -181,7 +190,7 @@ pub fn setup_dropdown_test(app: &mut App) {
 				position_type: PositionType::Absolute,
 				top: Val::Px(20.),
 				right: Val::Px(20.),
-				flex_direction: FlexDirection::RowReverse,
+				flex_direction: FlexDirection::Column,
 				..default()
 			},
 			..default()
@@ -193,6 +202,7 @@ pub fn setup_dropdown_test(app: &mut App) {
 				Button::bundle(),
 				Dropdown {
 					layout: Layout::single_row(),
+					style: get_style(),
 					items: get_items(button.id()),
 				},
 			));
@@ -202,6 +212,7 @@ pub fn setup_dropdown_test(app: &mut App) {
 				Button::bundle(),
 				Dropdown {
 					layout: Layout::single_column(),
+					style: get_style(),
 					items: get_items(button.id()),
 				},
 			));
@@ -211,6 +222,7 @@ pub fn setup_dropdown_test(app: &mut App) {
 				Button::bundle(),
 				Dropdown {
 					layout: Layout::LastColumn(Index(1)),
+					style: get_style(),
 					items: get_items(button.id()),
 				},
 			));
