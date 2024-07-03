@@ -210,7 +210,7 @@ pub fn setup_dropdown_test(app: &mut App) {
 				Button { text: "" },
 				Button::bundle(),
 				Dropdown {
-					layout: Layout::MaxColumn(Index(1)),
+					layout: Layout::LastColumn(Index(1)),
 					items: get_items(button.id()),
 				},
 			));

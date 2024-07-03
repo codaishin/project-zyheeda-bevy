@@ -9,19 +9,19 @@ pub enum PanelState {
 }
 
 pub enum Layout {
-	MaxColumn(Index),
-	MaxRow(Index),
+	LastColumn(Index<u16>),
+	LastRow(Index<u16>),
 }
 
 impl Layout {
 	pub(crate) const DEFAULT: Layout = Layout::single_column();
 
 	pub const fn single_column() -> Self {
-		Self::MaxColumn(Index(1))
+		Self::LastColumn(Index(0))
 	}
 
 	pub const fn single_row() -> Self {
-		Self::MaxRow(Index(1))
+		Self::LastRow(Index(0))
 	}
 }
 

@@ -7,7 +7,7 @@ use crate::{
 use bevy::prelude::Entity;
 use macros::ClampZeroPositive;
 use std::{
-	fmt::Debug,
+	fmt::{Debug, Formatter, Result},
 	marker::PhantomData,
 	ops::{Deref, DerefMut},
 };
@@ -62,7 +62,13 @@ pub fn player_animation_path(animation_name: &str) -> Path {
 }
 
 #[derive(Default)]
-pub struct Index(pub u16);
+pub struct Index<T>(pub T);
+
+impl<T: Debug> Debug for Index<T> {
+	fn fmt(&self, formatter: &mut Formatter) -> Result {
+		formatter.debug_tuple("Index").field(&self.0).finish()
+	}
+}
 
 #[derive(Default, Clone, Debug, PartialEq)]
 pub enum Focus {

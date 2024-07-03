@@ -47,17 +47,32 @@ fn spawn_dropdown(container_node: &mut ChildBuilder, source: Entity, dropdown: &
 
 fn get_style(dropdown: &Dropdown) -> Style {
 	match &dropdown.layout {
-		Layout::MaxColumn(max_index) => Style {
-			display: Display::Grid,
-			grid_template_columns: RepeatedGridTrack::auto(max_index.0 + 1),
-			..default()
-		},
-		Layout::MaxRow(max_index) => Style {
-			display: Display::Grid,
-			grid_template_rows: RepeatedGridTrack::auto(max_index.0 + 1),
-			..default()
-		},
+		Layout::LastColumn(max_index) => {
+			let (limit, auto) = repetitions(dropdown.items.len(), max_index.0);
+			Style {
+				display: Display::Grid,
+				grid_template_columns: RepeatedGridTrack::auto(limit),
+				grid_template_rows: RepeatedGridTrack::auto(auto),
+				..default()
+			}
+		}
+		Layout::LastRow(max_index) => {
+			let (limit, auto) = repetitions(dropdown.items.len(), max_index.0);
+			Style {
+				display: Display::Grid,
+				grid_template_columns: RepeatedGridTrack::auto(auto),
+				grid_template_rows: RepeatedGridTrack::auto(limit),
+				..default()
+			}
+		}
 	}
+}
+
+fn repetitions(count: usize, max_index: u16) -> (u16, u16) {
+	let count = count + 1;
+	let limit = max_index + 1;
+
+	(limit, count as u16 / limit)
 }
 
 fn spawn_items(dropdown_node: &mut ChildBuilder, dropdown: &Dropdown) {
@@ -284,8 +299,9 @@ mod tests {
 					Box::new(_Item),
 					Box::new(_Item),
 					Box::new(_Item),
+					Box::new(_Item),
 				],
-				layout: Layout::MaxColumn(Index(2)),
+				layout: Layout::LastColumn(Index(2)),
 			}
 		);
 		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
@@ -302,6 +318,7 @@ mod tests {
 				&Style {
 					display: Display::Grid,
 					grid_template_columns: RepeatedGridTrack::auto(3),
+					grid_template_rows: RepeatedGridTrack::auto(2),
 					..default()
 				},
 				style
@@ -321,8 +338,9 @@ mod tests {
 					Box::new(_Item),
 					Box::new(_Item),
 					Box::new(_Item),
+					Box::new(_Item),
 				],
-				layout: Layout::MaxColumn(Index(1)),
+				layout: Layout::LastColumn(Index(1)),
 			}
 		);
 		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
@@ -339,6 +357,7 @@ mod tests {
 				&Style {
 					display: Display::Grid,
 					grid_template_columns: RepeatedGridTrack::auto(2),
+					grid_template_rows: RepeatedGridTrack::auto(3),
 					..default()
 				},
 				style
@@ -358,8 +377,9 @@ mod tests {
 					Box::new(_Item),
 					Box::new(_Item),
 					Box::new(_Item),
+					Box::new(_Item),
 				],
-				layout: Layout::MaxRow(Index(2)),
+				layout: Layout::LastRow(Index(2)),
 			}
 		);
 		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
@@ -375,6 +395,7 @@ mod tests {
 			With::assert(|style: &Style| assert_eq!(
 				&Style {
 					display: Display::Grid,
+					grid_template_columns: RepeatedGridTrack::auto(2),
 					grid_template_rows: RepeatedGridTrack::auto(3),
 					..default()
 				},
@@ -395,8 +416,9 @@ mod tests {
 					Box::new(_Item),
 					Box::new(_Item),
 					Box::new(_Item),
+					Box::new(_Item),
 				],
-				layout: Layout::MaxRow(Index(1)),
+				layout: Layout::LastRow(Index(1)),
 			}
 		);
 		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
@@ -412,6 +434,7 @@ mod tests {
 			With::assert(|style: &Style| assert_eq!(
 				&Style {
 					display: Display::Grid,
+					grid_template_columns: RepeatedGridTrack::auto(3),
 					grid_template_rows: RepeatedGridTrack::auto(2),
 					..default()
 				},
