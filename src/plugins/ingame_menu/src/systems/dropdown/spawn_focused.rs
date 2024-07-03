@@ -7,8 +7,10 @@ use bevy::{
 };
 use common::tools::Focus;
 
-#[derive(Component)]
-pub(crate) struct DropdownUI;
+#[derive(Component, Debug, PartialEq)]
+pub(crate) struct DropdownUI {
+	pub(crate) source: Entity,
+}
 
 pub(crate) fn dropdown_spawn_focused(
 	focus: In<Focus>,
@@ -27,14 +29,14 @@ pub(crate) fn dropdown_spawn_focused(
 			continue;
 		};
 
-		container.with_children(|container_node| spawn_dropdown(container_node, dropdown));
+		container.with_children(|container_node| spawn_dropdown(container_node, entity, dropdown));
 	}
 }
 
-fn spawn_dropdown(container_node: &mut ChildBuilder, dropdown: &Dropdown) {
+fn spawn_dropdown(container_node: &mut ChildBuilder, source: Entity, dropdown: &Dropdown) {
 	container_node
 		.spawn((
-			DropdownUI,
+			DropdownUI { source },
 			NodeBundle {
 				style: get_style(dropdown),
 				..default()
@@ -164,7 +166,10 @@ mod tests {
 
 		let dropdown_node = last_child_of!(app, container);
 
-		assert!(dropdown_node.contains::<DropdownUI>());
+		assert_eq!(
+			Some(&DropdownUI { source: dropdown }),
+			dropdown_node.get::<DropdownUI>()
+		);
 	}
 
 	#[test]
