@@ -6,8 +6,6 @@ mod traits;
 #[cfg(debug_assertions)]
 mod debug;
 
-use std::time::Duration;
-
 use bevy::prelude::*;
 use common::{
 	components::Player,
@@ -35,6 +33,7 @@ use skills::{
 	},
 	items::{inventory_key::InventoryKey, slot_key::SlotKey},
 };
+use std::time::Duration;
 use systems::{
 	added::added,
 	combos::{
@@ -44,6 +43,11 @@ use systems::{
 	},
 	dad::{drag::drag, drop::drop},
 	despawn::despawn,
+	dropdown::{
+		despawn_all::dropdown_despawn_all,
+		detect_focus_change::dropdown_detect_focus_change,
+		spawn_focused::dropdown_spawn_focused,
+	},
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	set_state::set_state,
@@ -110,9 +114,11 @@ impl Plugin for IngameMenuPlugin {
 		combo_overview_systems(app);
 		inventory_screen_systems(app);
 		tooltip_systems(app);
+		dropdown_systems(app);
 
 		#[cfg(debug_assertions)]
 		debug::setup_run_time_display(app);
+		debug::setup_dropdown_test(app);
 	}
 }
 
@@ -205,4 +211,13 @@ fn inventory_screen_systems(app: &mut App) {
 
 fn tooltip_systems(app: &mut App) {
 	app.add_systems(Update, tooltip_visibility::<Real>);
+}
+
+fn dropdown_systems(app: &mut App) {
+	app.add_systems(
+		Update,
+		dropdown_detect_focus_change
+			.pipe(dropdown_despawn_all)
+			.pipe(dropdown_spawn_focused),
+	);
 }

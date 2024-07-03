@@ -221,12 +221,12 @@ pub mod utils {
 		($bundle:ty, $app:expr, $entity:expr, $assert:expr) => {{
 			assert_bundle!($bundle,$app,  $entity);
 
-			struct With<TComponent: Component, TAssert: Fn(&TComponent)>(
+			struct With<TComponent: bevy::ecs::component::Component, TAssert: Fn(&TComponent)>(
 				TAssert,
 				std::marker::PhantomData<TComponent>
 			);
 
-			impl <TComponent: Component, TAssert: Fn(&TComponent)> With<TComponent, TAssert> {
+			impl <TComponent: bevy::ecs::component::Component, TAssert: Fn(&TComponent)> With<TComponent, TAssert> {
 				fn assert(assert_fn: TAssert) -> Self {
 					Self(assert_fn, std::marker::PhantomData)
 				}

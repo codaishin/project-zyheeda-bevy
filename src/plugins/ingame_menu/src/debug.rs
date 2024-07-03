@@ -1,3 +1,4 @@
+use crate::{components::dropdown::Dropdown, tools::Layout, traits::UI};
 #[cfg(debug_assertions)]
 use crate::{
 	tools::menu_state::MenuState,
@@ -7,13 +8,17 @@ use crate::{
 use bevy::{
 	app::{App, Update},
 	ecs::system::Res,
-	hierarchy::ChildBuilder,
-	prelude::{Component, Query, State},
+	hierarchy::{BuildChildren, BuildWorldChildren, ChildBuilder, DespawnRecursiveExt},
+	prelude::{Changed, Commands, Component, Entity, Query, State},
 	render::color::Color,
 	text::TextStyle,
 	time::{Real, Time},
 	ui::{
-		node_bundles::{NodeBundle, TextBundle},
+		node_bundles::{ButtonBundle, NodeBundle, TextBundle},
+		AlignItems,
+		FlexDirection,
+		Interaction,
+		JustifyContent,
 		PositionType,
 		Style,
 		UiRect,
@@ -21,7 +26,7 @@ use bevy::{
 	},
 	utils::default,
 };
-use common::traits::iteration::IterFinite;
+use common::{tools::Index, traits::iteration::IterFinite};
 use std::time::Duration;
 
 #[derive(Component, Default)]
@@ -77,4 +82,149 @@ pub fn setup_run_time_display(app: &mut App) {
 		app.add_ui::<StateTime>(state);
 	}
 	app.add_systems(Update, update_state_time);
+}
+
+#[derive(Component)]
+struct Button {
+	text: &'static str,
+}
+
+impl Button {
+	fn bundle() -> ButtonBundle {
+		ButtonBundle {
+			style: Style {
+				width: Val::Px(60.),
+				height: Val::Px(60.),
+				border: UiRect::all(Val::Px(3.)),
+				justify_content: JustifyContent::Center,
+				align_items: AlignItems::Center,
+				..default()
+			},
+			border_color: Color::GOLD.into(),
+			..default()
+		}
+	}
+
+	fn text_style() -> TextStyle {
+		TextStyle {
+			font_size: 30.,
+			color: Color::BLACK,
+			..default()
+		}
+	}
+}
+
+#[derive(Component, Clone)]
+struct ButtonOption {
+	target: Entity,
+	text: &'static str,
+}
+
+impl GetNode for ButtonOption {
+	fn node(&self) -> NodeBundle {
+		NodeBundle::default()
+	}
+}
+
+impl InstantiateContentOn for ButtonOption {
+	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
+		let option = (Button::bundle(), self.clone());
+		parent.spawn(option).with_children(|button| {
+			button.spawn(TextBundle::from_section(self.text, Button::text_style()));
+		});
+	}
+}
+
+fn update_button_text(mut commands: Commands, buttons: Query<(Entity, &Button), Changed<Button>>) {
+	for (entity, button) in &buttons {
+		let Some(mut entity) = commands.get_entity(entity) else {
+			continue;
+		};
+		entity.despawn_descendants();
+		entity.with_children(|parent| {
+			parent.spawn(TextBundle::from_section(button.text, Button::text_style()));
+		});
+	}
+}
+
+fn replace_button_text(
+	mut buttons: Query<&mut Button>,
+	options: Query<(&ButtonOption, &Interaction), Changed<Interaction>>,
+) {
+	for (options, interaction) in &options {
+		if interaction != &Interaction::Pressed {
+			continue;
+		}
+		let Ok(mut button) = buttons.get_mut(options.target) else {
+			continue;
+		};
+
+		button.text = options.text;
+	}
+}
+
+pub fn setup_dropdown_test(app: &mut App) {
+	fn get_items(target: Entity) -> Vec<Box<dyn UI + Send + Sync>> {
+		vec![
+			Box::new(ButtonOption { text: "1", target }),
+			Box::new(ButtonOption { text: "2", target }),
+			Box::new(ButtonOption { text: "3", target }),
+			Box::new(ButtonOption { text: "4", target }),
+			Box::new(ButtonOption { text: "5", target }),
+		]
+	}
+
+	fn get_style() -> Style {
+		Style {
+			position_type: PositionType::Absolute,
+			top: Val::Percent(0.),
+			right: Val::Percent(100.),
+			..default()
+		}
+	}
+
+	app.add_systems(Update, (replace_button_text, update_button_text));
+	app.world
+		.spawn(NodeBundle {
+			style: Style {
+				position_type: PositionType::Absolute,
+				top: Val::Px(20.),
+				right: Val::Px(20.),
+				flex_direction: FlexDirection::Column,
+				..default()
+			},
+			..default()
+		})
+		.with_children(|container| {
+			let mut button = container.spawn_empty();
+			button.insert((
+				Button { text: "" },
+				Button::bundle(),
+				Dropdown {
+					layout: Layout::single_row(),
+					style: get_style(),
+					items: get_items(button.id()),
+				},
+			));
+			let mut button = container.spawn_empty();
+			button.insert((
+				Button { text: "" },
+				Button::bundle(),
+				Dropdown {
+					layout: Layout::single_column(),
+					style: get_style(),
+					items: get_items(button.id()),
+				},
+			));
+			let mut button = container.spawn_empty();
+			button.insert((
+				Button { text: "" },
+				Button::bundle(),
+				Dropdown {
+					layout: Layout::LastColumn(Index(1)),
+					style: get_style(),
+					items: get_items(button.id()),
+				},
+			));
+		});
 }

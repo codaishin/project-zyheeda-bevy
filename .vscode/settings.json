@@ -25,6 +25,7 @@
 		"consts",
 		"Deque",
 		"despawn",
+		"despawned",
 		"despawning",
 		"gltf",
 		"Icosphere",

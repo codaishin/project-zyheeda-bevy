@@ -4,9 +4,10 @@ use crate::{
 	components::Player,
 	traits::{clamp_zero_positive::ClampZeroPositive, load_asset::Path},
 };
+use bevy::prelude::Entity;
 use macros::ClampZeroPositive;
 use std::{
-	fmt::Debug,
+	fmt::{Debug, Formatter, Result},
 	marker::PhantomData,
 	ops::{Deref, DerefMut},
 };
@@ -58,6 +59,28 @@ pub struct IntensityChangePerSecond(f32);
 
 pub fn player_animation_path(animation_name: &str) -> Path {
 	Path::from(Player::MODEL_PATH.to_owned() + "#" + animation_name)
+}
+
+#[derive(Default)]
+pub struct Index<T>(pub T);
+
+impl<T: Debug> Debug for Index<T> {
+	fn fmt(&self, formatter: &mut Formatter) -> Result {
+		formatter.debug_tuple("Index").field(&self.0).finish()
+	}
+}
+
+#[derive(Default, Clone, Debug, PartialEq)]
+pub enum Focus {
+	#[default]
+	Unchanged,
+	New(Vec<Entity>),
+}
+
+impl From<Vec<Entity>> for Focus {
+	fn from(entities: Vec<Entity>) -> Self {
+		Focus::New(entities)
+	}
 }
 
 #[cfg(test)]
