@@ -117,8 +117,10 @@ impl Plugin for IngameMenuPlugin {
 		dropdown_systems(app);
 
 		#[cfg(debug_assertions)]
-		debug::setup_run_time_display(app);
-		debug::setup_dropdown_test(app);
+		{
+			debug::setup_run_time_display(app);
+			debug::setup_dropdown_test(app);
+		}
 	}
 }
 

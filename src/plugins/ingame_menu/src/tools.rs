@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+// FIXME: remove when `Layout::LastRow(..)` and `Layout::SINGLE_ROW` is used
+
 use common::tools::Index;
 
 pub(crate) mod menu_state;
@@ -14,19 +17,12 @@ pub enum Layout {
 }
 
 impl Layout {
-	pub(crate) const DEFAULT: Layout = Layout::single_column();
-
-	pub const fn single_column() -> Self {
-		Self::LastColumn(Index(0))
-	}
-
-	pub const fn single_row() -> Self {
-		Self::LastRow(Index(0))
-	}
+	pub const SINGLE_COLUMN: Layout = Layout::LastColumn(Index(0));
+	pub const SINGLE_ROW: Layout = Layout::LastRow(Index(0));
 }
 
 impl Default for Layout {
 	fn default() -> Self {
-		Self::DEFAULT
+		Self::SINGLE_COLUMN
 	}
 }
