@@ -11,7 +11,6 @@ use crate::{
 };
 use animations::animation::{Animation, PlayMode};
 use behaviors::components::Projectile;
-use bevy::utils::default;
 use common::{tools::player_animation_path, traits::load_asset::Path};
 use std::{collections::HashSet, marker::PhantomData, time::Duration};
 
@@ -73,7 +72,6 @@ impl<T: Sync + Send + 'static> SkillTemplate for ShootHandGun<T> {
 			behavior: Projectile::<T>::behavior(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
 			icon: Some(|| Path::from("icons/pistol.png")),
-			..default()
 		}
 	}
 }

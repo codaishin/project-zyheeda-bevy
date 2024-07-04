@@ -6,7 +6,7 @@ use common::{
 };
 use skills::{
 	components::slots::Slots,
-	skills::{Queued, Skill},
+	skills::{QueuedSkill, Skill},
 	traits::{IsTimedOut, PeekNext},
 };
 
@@ -24,7 +24,7 @@ pub(crate) fn get_quickbar_icons<TQueue, TCombos, TComboTimeout>(
 	panels: Query<(Entity, &mut QuickbarPanel)>,
 ) -> Vec<(Entity, Option<Path>)>
 where
-	TQueue: Component + Iterate<Skill<Queued>>,
+	TQueue: Component + Iterate<QueuedSkill>,
 	TCombos: Component + PeekNext<Skill>,
 	TComboTimeout: Component + IsTimedOut,
 {
@@ -43,17 +43,17 @@ where
 	panels.iter().map(get_icon_path).collect()
 }
 
-fn if_active_skill_icon<TQueue: Iterate<Skill<Queued>>>(
+fn if_active_skill_icon<TQueue: Iterate<QueuedSkill>>(
 	panel: &QuickbarPanel,
 	queue: &TQueue,
 ) -> Option<IconPath> {
 	let active_skill = queue.iterate().next()?;
 
-	if active_skill.data.slot_key != panel.key {
+	if active_skill.slot_key != panel.key {
 		return None;
 	}
 
-	Some(active_skill.icon)
+	Some(active_skill.skill.icon)
 }
 
 fn if_combo_skill_icon<'a, TCombos: PeekNext<Skill>, TComboTimeout: IsTimedOut>(
@@ -106,12 +106,12 @@ mod tests {
 	use std::collections::HashMap;
 
 	#[derive(Component, Default)]
-	struct _Queue(Vec<Skill<Queued>>);
+	struct _Queue(Vec<QueuedSkill>);
 
-	impl Iterate<Skill<Queued>> for _Queue {
-		fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
+	impl Iterate<QueuedSkill> for _Queue {
+		fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a QueuedSkill>
 		where
-			Skill<Queued>: 'a,
+			QueuedSkill: 'a,
 		{
 			self.0.iter()
 		}
@@ -362,13 +362,13 @@ mod tests {
 		app.world.spawn((
 			Player,
 			slots,
-			_Queue(vec![Skill {
-				icon: Some(|| Path::from("active_skill/icon/path")),
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Off),
-					mode: Activation::Waiting,
+			_Queue(vec![QueuedSkill {
+				skill: Skill {
+					icon: Some(|| Path::from("active_skill/icon/path")),
+					..default()
 				},
-				..default()
+				slot_key: SlotKey::Hand(Side::Off),
+				mode: Activation::Waiting,
 			}]),
 			combos,
 			_ComboTimeout(true),
@@ -415,13 +415,13 @@ mod tests {
 		app.world.spawn((
 			Player,
 			slots,
-			_Queue(vec![Skill {
-				icon: Some(|| Path::from("active_skill/icon/path")),
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Off),
-					mode: Activation::Waiting,
+			_Queue(vec![QueuedSkill {
+				skill: Skill {
+					icon: Some(|| Path::from("active_skill/icon/path")),
+					..default()
 				},
-				..default()
+				slot_key: SlotKey::Hand(Side::Off),
+				mode: Activation::Waiting,
 			}]),
 			combos,
 			_ComboTimeout(true),

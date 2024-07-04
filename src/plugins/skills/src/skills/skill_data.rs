@@ -27,5 +27,5 @@ struct SkillData {
 	animate: Animate,
 	behavior: Behavior,
 	is_usable_with: HashSet<ItemType>,
-	icon: Path,
+	icon: Option<Path>,
 }

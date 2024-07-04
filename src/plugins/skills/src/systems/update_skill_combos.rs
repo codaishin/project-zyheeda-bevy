@@ -1,6 +1,6 @@
 use crate::{
 	components::slots::Slots,
-	skills::{Queued, Skill},
+	skills::QueuedSkill,
 	traits::{AdvanceCombo, Flush, IsTimedOut, IterAddedMut},
 };
 use bevy::{
@@ -23,7 +23,7 @@ type Components<'a, TCombos, TComboTimeout, TSkills> = (
 pub(crate) fn update_skill_combos<
 	TCombos: AdvanceCombo + Flush + Component,
 	TComboTimeout: IsTimedOut + CumulativeUpdate<Duration> + Flush + Component,
-	TSkills: Iterate<Skill<Queued>> + IterAddedMut<Skill<Queued>> + Component,
+	TSkills: Iterate<QueuedSkill> + IterAddedMut<QueuedSkill> + Component,
 	TTime: Default + Sync + Send + 'static,
 >(
 	time: Res<Time<TTime>>,
@@ -47,20 +47,24 @@ pub(crate) fn update_skill_combos<
 
 fn update_skill<TCombos: AdvanceCombo>(
 	combos: &mut TCombos,
-	skill: &mut Skill<Queued>,
+	skill: &mut QueuedSkill,
 	slots: &Slots,
 ) {
-	let Some(combo_skill) = combos.advance(&skill.data.slot_key, slots) else {
+	let Some(combo_skill) = combos.advance(&skill.slot_key, slots) else {
 		return;
 	};
-	*skill = combo_skill.with(skill.data.clone());
+	*skill = QueuedSkill {
+		skill: combo_skill,
+		slot_key: skill.slot_key,
+		mode: skill.mode.clone(),
+	};
 }
 
 fn who_to_flush<
 	'a,
 	TCombos: Flush,
 	TComboTimeout: CumulativeUpdate<Duration> + IsTimedOut + Flush,
-	TSkills: Iterate<Skill<Queued>>,
+	TSkills: Iterate<QueuedSkill>,
 >(
 	combos: &'a mut TCombos,
 	timeout: Option<&'a mut TComboTimeout>,
@@ -83,7 +87,7 @@ fn who_to_flush<
 	vec![]
 }
 
-fn skills_queued<TSkills: Iterate<Skill<Queued>>>(skills: &mut TSkills) -> bool {
+fn skills_queued<TSkills: Iterate<QueuedSkill>>(skills: &mut TSkills) -> bool {
 	skills.iterate().next().is_some()
 }
 
@@ -101,7 +105,7 @@ mod tests {
 	use crate::{
 		components::{Mounts, Slot},
 		items::slot_key::SlotKey,
-		skills::{Queued, Skill},
+		skills::{QueuedSkill, Skill},
 		traits::IsTimedOut,
 	};
 	use bevy::{
@@ -183,25 +187,23 @@ mod tests {
 
 	#[derive(Component, Default, PartialEq, Debug)]
 	struct _Skills {
-		early: Vec<Skill<Queued>>,
-		recent: Vec<Skill<Queued>>,
+		early: Vec<QueuedSkill>,
+		recent: Vec<QueuedSkill>,
 	}
 
-	impl IterAddedMut<Skill<Queued>> for _Skills {
-		fn iter_added_mut<'a>(
-			&'a mut self,
-		) -> impl DoubleEndedIterator<Item = &'a mut Skill<Queued>>
+	impl IterAddedMut<QueuedSkill> for _Skills {
+		fn iter_added_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut QueuedSkill>
 		where
-			Skill<Queued>: 'a,
+			QueuedSkill: 'a,
 		{
 			self.recent.iter_mut()
 		}
 	}
 
-	impl Iterate<Skill<Queued>> for _Skills {
-		fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
+	impl Iterate<QueuedSkill> for _Skills {
+		fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a QueuedSkill>
 		where
-			Skill<Queued>: 'a,
+			QueuedSkill: 'a,
 		{
 			self.early.iterate().chain(self.recent.iterate())
 		}
@@ -236,20 +238,20 @@ mod tests {
 				item: None,
 			},
 		)]));
-		let skill_a = Skill {
-			name: "skill a",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Main),
+		let skill_a = QueuedSkill {
+			skill: Skill {
+				name: "skill a",
 				..default()
 			},
+			slot_key: SlotKey::Hand(Side::Main),
 			..default()
 		};
-		let skill_b = Skill {
-			name: "skill b",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Off),
+		let skill_b = QueuedSkill {
+			skill: Skill {
+				name: "skill b",
 				..default()
 			},
+			slot_key: SlotKey::Hand(Side::Off),
 			..default()
 		};
 		let mut combos = _Combos::default();
@@ -285,20 +287,20 @@ mod tests {
 				item: None,
 			},
 		)]));
-		let skill_a = Skill {
-			name: "skill a",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Main),
+		let skill_a = QueuedSkill {
+			skill: Skill {
+				name: "skill a",
 				..default()
 			},
+			slot_key: SlotKey::Hand(Side::Main),
 			..default()
 		};
-		let skill_b = Skill {
-			name: "skill b",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Off),
+		let skill_b = QueuedSkill {
+			skill: Skill {
+				name: "skill b",
 				..default()
 			},
+			slot_key: SlotKey::Hand(Side::Off),
 			..default()
 		};
 		let mut combos = _Combos::default();
@@ -316,7 +318,7 @@ mod tests {
 			.expect_advance()
 			.with(eq(SlotKey::Hand(Side::Off)), eq(slots.clone()))
 			.return_const(Skill {
-				name: "replace a",
+				name: "replace b",
 				..default()
 			});
 		let skills = _Skills {
@@ -332,22 +334,22 @@ mod tests {
 		assert_eq!(
 			Some(&_Skills {
 				recent: vec![
-					Skill {
-						name: "replace a",
-						data: Queued {
-							slot_key: SlotKey::Hand(Side::Main),
+					QueuedSkill {
+						skill: Skill {
+							name: "replace a",
 							..default()
 						},
+						slot_key: SlotKey::Hand(Side::Main),
 						..default()
 					},
-					Skill {
-						name: "replace a",
-						data: Queued {
-							slot_key: SlotKey::Hand(Side::Off),
+					QueuedSkill {
+						skill: Skill {
+							name: "replace b",
 							..default()
 						},
+						slot_key: SlotKey::Hand(Side::Off),
 						..default()
-					}
+					},
 				],
 				..default()
 			}),
@@ -386,7 +388,7 @@ mod tests {
 		let mut combos = _Combos::default();
 		combos.mock.expect_flush().never().return_const(());
 		let skills = _Skills {
-			early: vec![Skill::default()],
+			early: vec![QueuedSkill::default()],
 			..default()
 		};
 
@@ -477,7 +479,7 @@ mod tests {
 		timeout.mock.expect_is_timed_out().return_const(false);
 		timeout.mock.expect_flush().times(1).return_const(());
 		let skills = _Skills {
-			early: vec![Skill::default()],
+			early: vec![QueuedSkill::default()],
 			..default()
 		};
 
@@ -528,7 +530,7 @@ mod tests {
 			.return_const(false);
 		timeout.mock.expect_flush().return_const(());
 		let skills = _Skills {
-			early: vec![Skill::default()],
+			early: vec![QueuedSkill::default()],
 			..default()
 		};
 

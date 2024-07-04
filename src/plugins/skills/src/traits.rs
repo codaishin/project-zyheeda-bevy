@@ -56,14 +56,16 @@ pub(crate) trait RunSkill {
 	) -> OnSkillStop;
 }
 
+pub(crate) trait Matches<T> {
+	fn matches(&self, value: &T) -> bool;
+}
+
 pub(crate) trait Flush {
 	fn flush(&mut self);
 }
 
-pub(crate) trait IterMutWithKeys<TKey, TItem> {
-	fn iter_mut_with_keys<'a>(
-		&'a mut self,
-	) -> impl DoubleEndedIterator<Item = (TKey, &'a mut TItem)>
+pub(crate) trait IterMut<TItem> {
+	fn iter_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut TItem>
 	where
 		TItem: 'a;
 }

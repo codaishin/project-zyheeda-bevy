@@ -13,7 +13,6 @@ impl SkillTemplate for ForceShieldSkill {
 	fn skill() -> super::Skill {
 		Skill {
 			name: "force shield",
-			data: (),
 			active: Duration::from_millis(200),
 			behavior: ForceShield::behavior(),
 			// FIXME: introduce cast animation for "magic" like skills

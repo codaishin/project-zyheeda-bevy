@@ -13,7 +13,6 @@ impl SkillTemplate for GravityWellSkill {
 	fn skill() -> super::Skill {
 		Skill {
 			name: "gravity well",
-			data: (),
 			active: Duration::from_millis(200),
 			behavior: GravityWell::behavior(),
 			// FIXME: introduce cast animation for "magic" like skills

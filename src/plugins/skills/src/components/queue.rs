@@ -1,6 +1,6 @@
 use crate::{
 	items::slot_key::SlotKey,
-	skills::{Activation, Animate, Queued, Skill, SkillBehavior, SkillState},
+	skills::{Activation, Animate, QueuedSkill, Skill, SkillBehavior, SkillState},
 	traits::{
 		Enqueue,
 		Flush,
@@ -8,7 +8,7 @@ use crate::{
 		GetAnimation,
 		GetSkillBehavior,
 		IterAddedMut,
-		IterMutWithKeys,
+		IterMut,
 	},
 };
 use animations::animation::Animation;
@@ -30,14 +30,14 @@ enum State {
 
 #[derive(Component, PartialEq, Debug, Default)]
 pub struct Queue {
-	queue: VecDeque<Skill<Queued>>,
+	queue: VecDeque<QueuedSkill>,
 	duration: Option<Duration>,
 	state: State,
 }
 
 #[cfg(test)]
 impl Queue {
-	pub fn new<const N: usize>(items: [Skill<Queued>; N]) -> Self {
+	pub fn new<const N: usize>(items: [QueuedSkill; N]) -> Self {
 		Self {
 			queue: VecDeque::from(items),
 			duration: None,
@@ -46,10 +46,10 @@ impl Queue {
 	}
 }
 
-impl Iterate<Skill<Queued>> for Queue {
-	fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
+impl Iterate<QueuedSkill> for Queue {
+	fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a QueuedSkill>
 	where
-		Skill<Queued>: 'a,
+		QueuedSkill: 'a,
 	{
 		self.queue.iter()
 	}
@@ -64,10 +64,11 @@ impl Enqueue<(Skill, SlotKey)> for Queue {
 
 		let (skill, slot_key) = item;
 
-		self.queue.push_back(skill.with(Queued {
+		self.queue.push_back(QueuedSkill {
+			skill,
 			slot_key,
 			..default()
-		}));
+		});
 	}
 }
 
@@ -83,21 +84,19 @@ impl Flush for Queue {
 	}
 }
 
-impl IterMutWithKeys<SlotKey, Skill<Queued>> for Queue {
-	fn iter_mut_with_keys<'a>(
-		&'a mut self,
-	) -> impl DoubleEndedIterator<Item = (SlotKey, &'a mut Skill<Queued>)>
+impl IterMut<QueuedSkill> for Queue {
+	fn iter_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut QueuedSkill>
 	where
-		Skill<Queued>: 'a,
+		QueuedSkill: 'a,
 	{
-		self.queue.iter_mut().map(|s| (s.data.slot_key, s))
+		self.queue.iter_mut()
 	}
 }
 
-impl IterAddedMut<Skill<Queued>> for Queue {
-	fn iter_added_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut Skill<Queued>>
+impl IterAddedMut<QueuedSkill> for Queue {
+	fn iter_added_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut QueuedSkill>
 	where
-		Skill<Queued>: 'a,
+		QueuedSkill: 'a,
 	{
 		let unchanged_len = match self.state {
 			State::Flushed => self.queue.len(),
@@ -126,12 +125,12 @@ mod test_queue_collection {
 		));
 
 		assert_eq!(
-			VecDeque::from([Skill {
-				name: "my skill",
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
+			VecDeque::from([QueuedSkill {
+				skill: Skill {
+					name: "my skill",
 					..default()
 				},
+				slot_key: SlotKey::Hand(Side::Main),
 				..default()
 			}]),
 			queue.queue
@@ -158,18 +157,18 @@ mod test_queue_collection {
 
 		assert_eq!(
 			VecDeque::from([
-				Skill {
-					name: "skill a",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Off),
+				QueuedSkill {
+					slot_key: SlotKey::Hand(Side::Off),
+					skill: Skill {
+						name: "skill a",
 						..default()
 					},
 					..default()
 				},
-				Skill {
-					name: "skill b",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
+				QueuedSkill {
+					slot_key: SlotKey::Hand(Side::Main),
+					skill: Skill {
+						name: "skill b",
 						..default()
 					},
 					..default()
@@ -181,10 +180,10 @@ mod test_queue_collection {
 
 	#[test]
 	fn flush_with_one_skill() {
-		let mut queue = Queue::new([Skill {
-			name: "my skill",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Main),
+		let mut queue = Queue::new([QueuedSkill {
+			slot_key: SlotKey::Hand(Side::Main),
+			skill: Skill {
+				name: "my skill",
 				..default()
 			},
 			..default()
@@ -198,18 +197,18 @@ mod test_queue_collection {
 	#[test]
 	fn flush_with_two_skill() {
 		let mut queue = Queue::new([
-			Skill {
-				name: "skill a",
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Off),
+			QueuedSkill {
+				slot_key: SlotKey::Hand(Side::Off),
+				skill: Skill {
+					name: "skill a",
 					..default()
 				},
 				..default()
 			},
-			Skill {
-				name: "skill b",
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
+			QueuedSkill {
+				slot_key: SlotKey::Hand(Side::Main),
+				skill: Skill {
+					name: "skill b",
 					..default()
 				},
 				..default()
@@ -234,14 +233,14 @@ mod test_queue_collection {
 
 		assert_eq!(
 			(
-				Queue::new([Skill {
-					name: "skill b",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
+				Queue::new([QueuedSkill {
+					slot_key: SlotKey::Hand(Side::Main),
+					skill: Skill {
+						name: "skill b",
 						..default()
 					},
 					..default()
-				},]),
+				}]),
 				Queue::new([])
 			),
 			(queue_after_1_flush, queue_after_2_flushes)
@@ -251,18 +250,18 @@ mod test_queue_collection {
 	#[test]
 	fn iter() {
 		let queue = Queue::new([
-			Skill {
-				name: "skill a",
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Off),
+			QueuedSkill {
+				slot_key: SlotKey::Hand(Side::Off),
+				skill: Skill {
+					name: "skill a",
 					..default()
 				},
 				..default()
 			},
-			Skill {
-				name: "skill b",
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
+			QueuedSkill {
+				slot_key: SlotKey::Hand(Side::Main),
+				skill: Skill {
+					name: "skill b",
 					..default()
 				},
 				..default()
@@ -271,22 +270,22 @@ mod test_queue_collection {
 
 		assert_eq!(
 			vec![
-				&Skill {
-					name: "skill a",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Off),
+				&QueuedSkill {
+					slot_key: SlotKey::Hand(Side::Off),
+					skill: Skill {
+						name: "skill a",
 						..default()
 					},
 					..default()
 				},
-				&Skill {
-					name: "skill b",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
+				&QueuedSkill {
+					slot_key: SlotKey::Hand(Side::Main),
+					skill: Skill {
+						name: "skill b",
 						..default()
 					},
 					..default()
-				}
+				},
 			],
 			queue.iterate().collect::<Vec<_>>()
 		)
@@ -312,30 +311,24 @@ mod test_queue_collection {
 
 		assert_eq!(
 			vec![
-				(
-					SlotKey::Hand(Side::Off),
-					&mut Skill {
+				&mut QueuedSkill {
+					slot_key: SlotKey::Hand(Side::Off),
+					skill: Skill {
 						name: "skill a",
-						data: Queued {
-							slot_key: SlotKey::Hand(Side::Off),
-							..default()
-						},
 						..default()
-					}
-				),
-				(
-					SlotKey::Hand(Side::Main),
-					&mut Skill {
+					},
+					..default()
+				},
+				&mut QueuedSkill {
+					slot_key: SlotKey::Hand(Side::Main),
+					skill: Skill {
 						name: "skill b",
-						data: Queued {
-							slot_key: SlotKey::Hand(Side::Main),
-							..default()
-						},
 						..default()
-					}
-				)
+					},
+					..default()
+				},
 			],
-			queue.iter_mut_with_keys().collect::<Vec<_>>()
+			queue.iter_mut().collect::<Vec<_>>()
 		)
 	}
 
@@ -360,22 +353,22 @@ mod test_queue_collection {
 
 		assert_eq!(
 			vec![
-				&mut Skill {
-					name: "a",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
+				&mut QueuedSkill {
+					slot_key: SlotKey::Hand(Side::Main),
+					skill: Skill {
+						name: "a",
 						..default()
 					},
 					..default()
 				},
-				&mut Skill {
-					name: "b",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Off),
+				&mut QueuedSkill {
+					slot_key: SlotKey::Hand(Side::Off),
+					skill: Skill {
+						name: "b",
 						..default()
 					},
 					..default()
-				}
+				},
 			],
 			queue.iter_added_mut().collect::<Vec<_>>()
 		)
@@ -383,10 +376,10 @@ mod test_queue_collection {
 
 	#[test]
 	fn iter_recent_mut_only_new() {
-		let mut queue = Queue::new([Skill {
-			name: "a",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Main),
+		let mut queue = Queue::new([QueuedSkill {
+			slot_key: SlotKey::Hand(Side::Main),
+			skill: Skill {
+				name: "a",
 				..default()
 			},
 			..default()
@@ -410,22 +403,22 @@ mod test_queue_collection {
 
 		assert_eq!(
 			vec![
-				&mut Skill {
-					name: "b",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
+				&mut QueuedSkill {
+					slot_key: SlotKey::Hand(Side::Main),
+					skill: Skill {
+						name: "b",
 						..default()
 					},
 					..default()
 				},
-				&mut Skill {
-					name: "c",
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Off),
+				&mut QueuedSkill {
+					slot_key: SlotKey::Hand(Side::Off),
+					skill: Skill {
+						name: "c",
 						..default()
 					},
 					..default()
-				}
+				},
 			],
 			queue.iter_added_mut().collect::<Vec<_>>()
 		)
@@ -433,10 +426,10 @@ mod test_queue_collection {
 
 	#[test]
 	fn iter_recent_mut_empty_after_flush() {
-		let mut queue = Queue::new([Skill {
-			name: "a",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Main),
+		let mut queue = Queue::new([QueuedSkill {
+			slot_key: SlotKey::Hand(Side::Main),
+			skill: Skill {
+				name: "a",
 				..default()
 			},
 			..default()
@@ -461,17 +454,17 @@ mod test_queue_collection {
 		queue.flush();
 
 		assert_eq!(
-			vec![] as Vec<&mut Skill<Queued>>,
+			vec![] as Vec<&mut QueuedSkill>,
 			queue.iter_added_mut().collect::<Vec<_>>()
 		)
 	}
 
 	#[test]
 	fn iter_recent_mut_empty_after_flush_with_active_duration() {
-		let mut queue = Queue::new([Skill {
-			name: "a",
-			data: Queued {
-				slot_key: SlotKey::Hand(Side::Main),
+		let mut queue = Queue::new([QueuedSkill {
+			slot_key: SlotKey::Hand(Side::Main),
+			skill: Skill {
+				name: "a",
 				..default()
 			},
 			..default()
@@ -497,15 +490,17 @@ mod test_queue_collection {
 		queue.flush();
 
 		assert_eq!(
-			vec![] as Vec<&mut Skill<Queued>>,
+			vec![] as Vec<&mut QueuedSkill>,
 			queue.iter_added_mut().collect::<Vec<_>>()
 		)
 	}
 }
 
 struct ActiveSkill<'a> {
+	skill: &'a Skill,
+	slot_key: &'a SlotKey,
+	mode: &'a mut Activation,
 	duration: &'a mut Duration,
-	skill: &'a mut Skill<Queued>,
 }
 
 impl GetActiveSkill<Animation, SkillState> for Queue {
@@ -520,8 +515,10 @@ impl GetActiveSkill<Animation, SkillState> for Queue {
 		}
 
 		Some(ActiveSkill {
+			skill: &skill.skill,
+			slot_key: &skill.slot_key,
+			mode: &mut skill.mode,
 			duration: self.duration.as_mut()?,
-			skill,
 		})
 	}
 
@@ -532,7 +529,7 @@ impl GetActiveSkill<Animation, SkillState> for Queue {
 
 impl<'a> StateDuration<SkillState> for ActiveSkill<'a> {
 	fn get_state_duration(&self, key: SkillState) -> Duration {
-		match (key, &self.skill.data.mode) {
+		match (key, &self.mode) {
 			(SkillState::Aim, Activation::Primed | Activation::Waiting) => Duration::MAX,
 			(SkillState::Aim, Activation::ActiveAfter(duration)) => *duration,
 			(SkillState::Active, _) => self.skill.active,
@@ -540,8 +537,8 @@ impl<'a> StateDuration<SkillState> for ActiveSkill<'a> {
 	}
 
 	fn elapsed_mut(&mut self) -> &mut Duration {
-		if let Activation::Primed = self.skill.data.mode {
-			self.skill.data.mode = Activation::ActiveAfter(*self.duration)
+		if let Activation::Primed = self.mode {
+			*self.mode = Activation::ActiveAfter(*self.duration)
 		}
 		self.duration
 	}
@@ -555,7 +552,7 @@ impl<'a> GetSkillBehavior for ActiveSkill<'a> {
 
 impl<'a> GetAnimation<Animation> for ActiveSkill<'a> {
 	fn animate(&self) -> Animate<Animation> {
-		match (&self.skill.animate, self.skill.data.slot_key) {
+		match (&self.skill.animate, self.slot_key) {
 			(Animate::None, ..) => Animate::None,
 			(Animate::Ignore, ..) => Animate::Ignore,
 			(Animate::Some(a), SlotKey::Hand(Side::Main)) => Animate::Some(a.right.clone()),
@@ -584,15 +581,15 @@ mod test_queue_active_skill {
 	fn get_phasing_times_waiting() {
 		let mut queue = Queue {
 			queue: VecDeque::from([
-				Skill {
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
-						mode: Activation::Waiting,
+				QueuedSkill {
+					skill: Skill {
+						active: Duration::from_millis(1),
+						..default()
 					},
-					active: Duration::from_millis(1),
-					..default()
+					slot_key: SlotKey::Hand(Side::Main),
+					mode: Activation::Waiting,
 				},
-				Skill::default(),
+				QueuedSkill::default(),
 			]),
 			..default()
 		};
@@ -612,15 +609,15 @@ mod test_queue_active_skill {
 	fn get_phasing_times_primed() {
 		let mut queue = Queue {
 			queue: VecDeque::from([
-				Skill {
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
-						mode: Activation::Primed,
+				QueuedSkill {
+					skill: Skill {
+						active: Duration::from_millis(1),
+						..default()
 					},
-					active: Duration::from_millis(1),
-					..default()
+					slot_key: SlotKey::Hand(Side::Main),
+					mode: Activation::Primed,
 				},
-				Skill::default(),
+				QueuedSkill::default(),
 			]),
 			..default()
 		};
@@ -640,15 +637,15 @@ mod test_queue_active_skill {
 	fn get_phasing_times_active() {
 		let mut queue = Queue {
 			queue: VecDeque::from([
-				Skill {
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
-						mode: Activation::ActiveAfter(Duration::from_millis(42)),
+				QueuedSkill {
+					skill: Skill {
+						active: Duration::from_millis(1),
+						..default()
 					},
-					active: Duration::from_millis(1),
-					..default()
+					slot_key: SlotKey::Hand(Side::Main),
+					mode: Activation::ActiveAfter(Duration::from_millis(42)),
 				},
-				Skill::default(),
+				QueuedSkill::default(),
 			]),
 			..default()
 		};
@@ -668,11 +665,8 @@ mod test_queue_active_skill {
 	fn get_duration() {
 		let mut queue = Queue {
 			duration: Some(Duration::from_secs(11)),
-			queue: VecDeque::from([Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
+			queue: VecDeque::from([QueuedSkill {
+				slot_key: SlotKey::Hand(Side::Main),
 				..default()
 			}]),
 			..default()
@@ -687,11 +681,9 @@ mod test_queue_active_skill {
 	fn if_first_skill_primed_set_active_with_current_duration() {
 		let mut queue = Queue {
 			duration: Some(Duration::from_secs(11)),
-			queue: VecDeque::from([Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					mode: Activation::Primed,
-				},
+			queue: VecDeque::from([QueuedSkill {
+				slot_key: SlotKey::Hand(Side::Main),
+				mode: Activation::Primed,
 				..default()
 			}]),
 			..default()
@@ -704,7 +696,7 @@ mod test_queue_active_skill {
 
 		assert_eq!(
 			Activation::ActiveAfter(Duration::from_secs(11)),
-			queue.queue.front().unwrap().data.mode
+			queue.queue.front().unwrap().mode
 		)
 	}
 
@@ -712,11 +704,8 @@ mod test_queue_active_skill {
 	fn clear_duration_when_calling_clear() {
 		let mut queue = Queue {
 			duration: Some(Duration::from_secs(11)),
-			queue: VecDeque::from([Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
+			queue: VecDeque::from([QueuedSkill {
+				slot_key: SlotKey::Hand(Side::Main),
 				..default()
 			}]),
 			..default()
@@ -731,11 +720,8 @@ mod test_queue_active_skill {
 	fn do_not_pop_front_on_flush_when_duration_set() {
 		let mut queue = Queue {
 			duration: Some(Duration::from_secs(11)),
-			queue: VecDeque::from([Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
+			queue: VecDeque::from([QueuedSkill {
+				slot_key: SlotKey::Hand(Side::Main),
 				..default()
 			}]),
 			..default()
@@ -744,11 +730,8 @@ mod test_queue_active_skill {
 		queue.flush();
 
 		assert_eq!(
-			VecDeque::from([Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
+			VecDeque::from([QueuedSkill {
+				slot_key: SlotKey::Hand(Side::Main),
 				..default()
 			}]),
 			queue.queue
@@ -759,11 +742,8 @@ mod test_queue_active_skill {
 	fn set_default_duration_when_getting_manager() {
 		let mut queue = Queue {
 			duration: None,
-			queue: VecDeque::from([Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
+			queue: VecDeque::from([QueuedSkill {
+				slot_key: SlotKey::Hand(Side::Main),
 				..default()
 			}]),
 			..default()
@@ -797,14 +777,12 @@ mod test_queue_active_skill {
 		}
 
 		let active = ActiveSkill {
-			skill: &mut Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
+			skill: &Skill {
 				behavior: SkillBehavior::OnActive(run),
 				..default()
 			},
+			slot_key: &SlotKey::Hand(Side::Main),
+			mode: &mut Activation::default(),
 			duration: &mut Duration::default(),
 		};
 
@@ -819,13 +797,11 @@ mod test_queue_active_skill {
 
 		let active = ActiveSkill {
 			skill: &mut Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
 				behavior: SkillBehavior::OnAim(run),
 				..default()
 			},
+			slot_key: &SlotKey::Hand(Side::Main),
+			mode: &mut Activation::default(),
 			duration: &mut Duration::default(),
 		};
 
@@ -841,26 +817,22 @@ mod test_queue_active_skill {
 
 		let actives = [
 			ActiveSkill {
-				duration: &mut Duration::default(),
-				skill: &mut Skill {
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
-						..default()
-					},
+				skill: &Skill {
 					animate: Animate::Some(animation.clone()),
 					..default()
 				},
+				slot_key: &SlotKey::Hand(Side::Main),
+				mode: &mut Activation::default(),
+				duration: &mut Duration::default(),
 			},
 			ActiveSkill {
-				duration: &mut Duration::default(),
-				skill: &mut Skill {
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Off),
-						..default()
-					},
+				skill: &Skill {
 					animate: Animate::Some(animation.clone()),
 					..default()
 				},
+				slot_key: &SlotKey::Hand(Side::Off),
+				mode: &mut Activation::default(),
+				duration: &mut Duration::default(),
 			},
 		];
 
@@ -876,15 +848,13 @@ mod test_queue_active_skill {
 	#[test]
 	fn get_ignore_animation() {
 		let active = ActiveSkill {
-			duration: &mut Duration::default(),
 			skill: &mut Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
 				animate: Animate::Ignore,
 				..default()
 			},
+			slot_key: &SlotKey::Hand(Side::Main),
+			mode: &mut Activation::default(),
+			duration: &mut Duration::default(),
 		};
 
 		assert_eq!(Animate::Ignore, active.animate())
@@ -893,15 +863,13 @@ mod test_queue_active_skill {
 	#[test]
 	fn get_none_animation() {
 		let active = ActiveSkill {
-			duration: &mut Duration::default(),
-			skill: &mut Skill {
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Main),
-					..default()
-				},
+			skill: &Skill {
 				animate: Animate::None,
 				..default()
 			},
+			slot_key: &SlotKey::Hand(Side::Main),
+			mode: &mut Activation::default(),
+			duration: &mut Duration::default(),
 		};
 
 		assert_eq!(Animate::None, active.animate())

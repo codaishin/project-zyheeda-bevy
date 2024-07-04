@@ -42,7 +42,7 @@ use skills::{
 	force_shield_skill::ForceShieldSkill,
 	gravity_well_skill::GravityWellSkill,
 	shoot_hand_gun::ShootHandGun,
-	Queued,
+	QueuedSkill,
 	Skill,
 };
 use std::{collections::HashSet, time::Duration};
@@ -79,7 +79,7 @@ impl Plugin for SkillsPlugin {
 						ButtonInput<KeyCode>,
 						State<MouseContext<KeyCode>>,
 					>
-						.pipe(enqueue::<Slots, Skill, Queue, Skill<Queued>>),
+						.pipe(enqueue::<Slots, Skill, Queue, QueuedSkill>),
 					update_skill_combos::<Combos, CombosTimeOut, Queue, Virtual>,
 					advance_active_skill::<
 						Queue,
