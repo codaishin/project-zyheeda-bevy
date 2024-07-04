@@ -201,7 +201,7 @@ pub fn setup_dropdown_test(app: &mut App) {
 				Button { text: "" },
 				Button::bundle(),
 				Dropdown {
-					layout: Layout::single_row(),
+					layout: Layout::SINGLE_ROW,
 					style: get_style(),
 					items: get_items(button.id()),
 				},
@@ -211,7 +211,7 @@ pub fn setup_dropdown_test(app: &mut App) {
 				Button { text: "" },
 				Button::bundle(),
 				Dropdown {
-					layout: Layout::single_column(),
+					layout: Layout::SINGLE_COLUMN,
 					style: get_style(),
 					items: get_items(button.id()),
 				},
