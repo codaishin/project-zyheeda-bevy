@@ -1,8 +1,9 @@
 pub mod asset_server;
 
 use bevy::asset::{Asset, Handle};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub struct Path(String);
 
 impl Path {

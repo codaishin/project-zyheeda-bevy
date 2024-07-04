@@ -1,6 +1,7 @@
 pub mod force_shield_skill;
 pub mod gravity_well_skill;
 pub mod shoot_hand_gun;
+pub mod skill_data;
 
 use crate::{
 	items::{slot_key::SlotKey, ItemType},

@@ -2,6 +2,7 @@ pub mod inventory_key;
 pub mod slot_key;
 
 use crate::skills::Skill;
+use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result},
@@ -32,7 +33,7 @@ impl Display for Item {
 	}
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum ItemType {
 	Pistol,
 	Bracer,
