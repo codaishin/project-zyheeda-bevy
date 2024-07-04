@@ -7,9 +7,12 @@ edition = "2021"
 
 [workspace.dependencies]
 bevy = "0.13.0"
+bevy-inspector-egui = "=0.23.4"
 bevy_rapier3d = "=0.25.0"
-tracing = "0.1.40"
 mockall = "=0.12.1"
+serde = "1.0.203"
+serde_json = "1.0.120"
+tracing = "0.1.40"
 animations = { path = "src/plugins/animations" }
 bars = { path = "src/plugins/bars" }
 behaviors = { path = "src/plugins/behaviors" }
@@ -39,9 +42,11 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-bevy-inspector-egui = "=0.23.4"
 bevy.workspace = true
+bevy-inspector-egui.workspace = true
 bevy_rapier3d.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 tracing.workspace = true
 animations.workspace = true
 bars.workspace = true
