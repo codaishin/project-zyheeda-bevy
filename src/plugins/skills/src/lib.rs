@@ -4,13 +4,14 @@ pub mod skills;
 pub mod traits;
 
 mod bundles;
+mod skill_loader;
 mod systems;
 
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use behaviors::components::Plasma;
 use bevy::{
 	app::{Plugin, PreStartup, PreUpdate, Update},
-	asset::AssetServer,
+	asset::{AssetApp, AssetServer},
 	ecs::{
 		entity::Entity,
 		query::Added,
@@ -38,6 +39,7 @@ use components::{
 	Mounts,
 };
 use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount};
+use skill_loader::SkillLoader;
 use skills::{
 	force_shield_skill::ForceShieldSkill,
 	gravity_well_skill::GravityWellSkill,
@@ -69,6 +71,8 @@ pub struct SkillsPlugin;
 impl Plugin for SkillsPlugin {
 	fn build(&self, app: &mut bevy::prelude::App) {
 		app.init_resource::<KeyMap<SlotKey, KeyCode>>()
+			.init_asset::<Skill>()
+			.register_asset_loader(SkillLoader::<Skill>::default())
 			.add_systems(PreStartup, load_models)
 			.add_systems(PreUpdate, (add_item_slots, add_skill_spawn))
 			.add_systems(

@@ -3833,6 +3833,7 @@ dependencies = [
  "common",
  "mockall",
  "serde",
+ "serde_json",
  "tracing",
 ]
 

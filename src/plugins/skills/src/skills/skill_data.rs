@@ -12,7 +12,7 @@ use skill_behavior_data::SkillBehaviorData;
 use std::{collections::HashSet, time::Duration};
 
 #[derive(Serialize, Deserialize, Debug)]
-struct SkillData {
+pub(crate) struct SkillData {
 	name: String,
 	active: Duration,
 	animate: AnimateData,

@@ -7,6 +7,7 @@ edition.workspace = true
 bevy.workspace = true
 bevy_rapier3d.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 animations.workspace = true
 behaviors.workspace = true
 tracing.workspace = true
