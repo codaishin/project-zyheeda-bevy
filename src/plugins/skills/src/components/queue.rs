@@ -118,7 +118,7 @@ mod test_queue_collection {
 		let mut queue = Queue::new([]);
 		queue.enqueue((
 			Skill {
-				name: "my skill",
+				name: "my skill".to_owned(),
 				..default()
 			},
 			SlotKey::Hand(Side::Main),
@@ -127,7 +127,7 @@ mod test_queue_collection {
 		assert_eq!(
 			VecDeque::from([QueuedSkill {
 				skill: Skill {
-					name: "my skill",
+					name: "my skill".to_owned(),
 					..default()
 				},
 				slot_key: SlotKey::Hand(Side::Main),
@@ -142,14 +142,14 @@ mod test_queue_collection {
 		let mut queue = Queue::new([]);
 		queue.enqueue((
 			Skill {
-				name: "skill a",
+				name: "skill a".to_owned(),
 				..default()
 			},
 			SlotKey::Hand(Side::Off),
 		));
 		queue.enqueue((
 			Skill {
-				name: "skill b",
+				name: "skill b".to_owned(),
 				..default()
 			},
 			SlotKey::Hand(Side::Main),
@@ -160,7 +160,7 @@ mod test_queue_collection {
 				QueuedSkill {
 					slot_key: SlotKey::Hand(Side::Off),
 					skill: Skill {
-						name: "skill a",
+						name: "skill a".to_owned(),
 						..default()
 					},
 					..default()
@@ -168,7 +168,7 @@ mod test_queue_collection {
 				QueuedSkill {
 					slot_key: SlotKey::Hand(Side::Main),
 					skill: Skill {
-						name: "skill b",
+						name: "skill b".to_owned(),
 						..default()
 					},
 					..default()
@@ -183,7 +183,7 @@ mod test_queue_collection {
 		let mut queue = Queue::new([QueuedSkill {
 			slot_key: SlotKey::Hand(Side::Main),
 			skill: Skill {
-				name: "my skill",
+				name: "my skill".to_owned(),
 				..default()
 			},
 			..default()
@@ -200,7 +200,7 @@ mod test_queue_collection {
 			QueuedSkill {
 				slot_key: SlotKey::Hand(Side::Off),
 				skill: Skill {
-					name: "skill a",
+					name: "skill a".to_owned(),
 					..default()
 				},
 				..default()
@@ -208,7 +208,7 @@ mod test_queue_collection {
 			QueuedSkill {
 				slot_key: SlotKey::Hand(Side::Main),
 				skill: Skill {
-					name: "skill b",
+					name: "skill b".to_owned(),
 					..default()
 				},
 				..default()
@@ -236,7 +236,7 @@ mod test_queue_collection {
 				Queue::new([QueuedSkill {
 					slot_key: SlotKey::Hand(Side::Main),
 					skill: Skill {
-						name: "skill b",
+						name: "skill b".to_owned(),
 						..default()
 					},
 					..default()
@@ -253,7 +253,7 @@ mod test_queue_collection {
 			QueuedSkill {
 				slot_key: SlotKey::Hand(Side::Off),
 				skill: Skill {
-					name: "skill a",
+					name: "skill a".to_owned(),
 					..default()
 				},
 				..default()
@@ -261,7 +261,7 @@ mod test_queue_collection {
 			QueuedSkill {
 				slot_key: SlotKey::Hand(Side::Main),
 				skill: Skill {
-					name: "skill b",
+					name: "skill b".to_owned(),
 					..default()
 				},
 				..default()
@@ -273,7 +273,7 @@ mod test_queue_collection {
 				&QueuedSkill {
 					slot_key: SlotKey::Hand(Side::Off),
 					skill: Skill {
-						name: "skill a",
+						name: "skill a".to_owned(),
 						..default()
 					},
 					..default()
@@ -281,7 +281,7 @@ mod test_queue_collection {
 				&QueuedSkill {
 					slot_key: SlotKey::Hand(Side::Main),
 					skill: Skill {
-						name: "skill b",
+						name: "skill b".to_owned(),
 						..default()
 					},
 					..default()
@@ -296,14 +296,14 @@ mod test_queue_collection {
 		let mut queue = Queue::new([]);
 		queue.enqueue((
 			Skill {
-				name: "skill a",
+				name: "skill a".to_owned(),
 				..default()
 			},
 			SlotKey::Hand(Side::Off),
 		));
 		queue.enqueue((
 			Skill {
-				name: "skill b",
+				name: "skill b".to_owned(),
 				..default()
 			},
 			SlotKey::Hand(Side::Main),
@@ -314,7 +314,7 @@ mod test_queue_collection {
 				&mut QueuedSkill {
 					slot_key: SlotKey::Hand(Side::Off),
 					skill: Skill {
-						name: "skill a",
+						name: "skill a".to_owned(),
 						..default()
 					},
 					..default()
@@ -322,7 +322,7 @@ mod test_queue_collection {
 				&mut QueuedSkill {
 					slot_key: SlotKey::Hand(Side::Main),
 					skill: Skill {
-						name: "skill b",
+						name: "skill b".to_owned(),
 						..default()
 					},
 					..default()
@@ -337,7 +337,7 @@ mod test_queue_collection {
 		let mut queue = Queue::new([]);
 		queue.enqueue((
 			Skill {
-				name: "a",
+				name: "a".to_owned(),
 
 				..default()
 			},
@@ -345,7 +345,7 @@ mod test_queue_collection {
 		));
 		queue.enqueue((
 			Skill {
-				name: "b",
+				name: "b".to_owned(),
 				..default()
 			},
 			SlotKey::Hand(Side::Off),
@@ -356,7 +356,7 @@ mod test_queue_collection {
 				&mut QueuedSkill {
 					slot_key: SlotKey::Hand(Side::Main),
 					skill: Skill {
-						name: "a",
+						name: "a".to_owned(),
 						..default()
 					},
 					..default()
@@ -364,7 +364,7 @@ mod test_queue_collection {
 				&mut QueuedSkill {
 					slot_key: SlotKey::Hand(Side::Off),
 					skill: Skill {
-						name: "b",
+						name: "b".to_owned(),
 						..default()
 					},
 					..default()
@@ -379,14 +379,14 @@ mod test_queue_collection {
 		let mut queue = Queue::new([QueuedSkill {
 			slot_key: SlotKey::Hand(Side::Main),
 			skill: Skill {
-				name: "a",
+				name: "a".to_owned(),
 				..default()
 			},
 			..default()
 		}]);
 		queue.enqueue((
 			Skill {
-				name: "b",
+				name: "b".to_owned(),
 
 				..default()
 			},
@@ -394,7 +394,7 @@ mod test_queue_collection {
 		));
 		queue.enqueue((
 			Skill {
-				name: "c",
+				name: "c".to_owned(),
 
 				..default()
 			},
@@ -406,7 +406,7 @@ mod test_queue_collection {
 				&mut QueuedSkill {
 					slot_key: SlotKey::Hand(Side::Main),
 					skill: Skill {
-						name: "b",
+						name: "b".to_owned(),
 						..default()
 					},
 					..default()
@@ -414,7 +414,7 @@ mod test_queue_collection {
 				&mut QueuedSkill {
 					slot_key: SlotKey::Hand(Side::Off),
 					skill: Skill {
-						name: "c",
+						name: "c".to_owned(),
 						..default()
 					},
 					..default()
@@ -429,14 +429,14 @@ mod test_queue_collection {
 		let mut queue = Queue::new([QueuedSkill {
 			slot_key: SlotKey::Hand(Side::Main),
 			skill: Skill {
-				name: "a",
+				name: "a".to_owned(),
 				..default()
 			},
 			..default()
 		}]);
 		queue.enqueue((
 			Skill {
-				name: "b",
+				name: "b".to_owned(),
 
 				..default()
 			},
@@ -444,7 +444,7 @@ mod test_queue_collection {
 		));
 		queue.enqueue((
 			Skill {
-				name: "c",
+				name: "c".to_owned(),
 
 				..default()
 			},
@@ -464,14 +464,14 @@ mod test_queue_collection {
 		let mut queue = Queue::new([QueuedSkill {
 			slot_key: SlotKey::Hand(Side::Main),
 			skill: Skill {
-				name: "a",
+				name: "a".to_owned(),
 				..default()
 			},
 			..default()
 		}]);
 		queue.enqueue((
 			Skill {
-				name: "b",
+				name: "b".to_owned(),
 
 				..default()
 			},
@@ -479,7 +479,7 @@ mod test_queue_collection {
 		));
 		queue.enqueue((
 			Skill {
-				name: "c",
+				name: "c".to_owned(),
 
 				..default()
 			},

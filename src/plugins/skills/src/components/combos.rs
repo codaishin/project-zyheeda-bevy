@@ -204,7 +204,7 @@ mod test_combo_node {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "first",
+					name: "first".to_owned(),
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
@@ -212,7 +212,7 @@ mod test_combo_node {
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
-							name: "second",
+							name: "second".to_owned(),
 							..default()
 						},
 						ComboNode(default()),
@@ -226,7 +226,7 @@ mod test_combo_node {
 		assert_eq!(
 			Some((
 				Skill {
-					name: "first",
+					name: "first".to_owned(),
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
@@ -234,7 +234,7 @@ mod test_combo_node {
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
-							name: "second",
+							name: "second".to_owned(),
 							..default()
 						},
 						ComboNode(default()),
@@ -252,7 +252,7 @@ mod test_combo_node {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "first",
+					name: "first".to_owned(),
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
@@ -260,7 +260,7 @@ mod test_combo_node {
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
-							name: "second",
+							name: "second".to_owned(),
 							..default()
 						},
 						ComboNode(default()),
@@ -281,7 +281,7 @@ mod test_combo_node {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "first",
+					name: "first".to_owned(),
 					is_usable_with: HashSet::from([ItemType::Bracer]),
 					..default()
 				},
@@ -289,7 +289,7 @@ mod test_combo_node {
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
-							name: "second",
+							name: "second".to_owned(),
 							..default()
 						},
 						ComboNode(default()),
@@ -312,7 +312,7 @@ mod test_combo_node {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "first",
+					name: "first".to_owned(),
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
@@ -320,7 +320,7 @@ mod test_combo_node {
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
-							name: "second",
+							name: "second".to_owned(),
 							..default()
 						},
 						ComboNode(default()),
@@ -343,7 +343,7 @@ mod test_combo_node {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "first",
+					name: "first".to_owned(),
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
@@ -351,7 +351,7 @@ mod test_combo_node {
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
-							name: "second",
+							name: "second".to_owned(),
 							..default()
 						},
 						ComboNode(default()),
@@ -371,7 +371,7 @@ mod test_combo_node {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "some skill",
+					name: "some skill".to_owned(),
 					..default()
 				},
 				ComboNode::default(),
@@ -382,7 +382,7 @@ mod test_combo_node {
 
 		assert_eq!(
 			Some(&Skill {
-				name: "some skill",
+				name: "some skill".to_owned(),
 				..default()
 			}),
 			skill
@@ -395,14 +395,14 @@ mod test_combo_node {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "some skill",
+					name: "some skill".to_owned(),
 					..default()
 				},
 				ComboNode::new([(
 					SlotKey::Hand(Side::Off),
 					(
 						Skill {
-							name: "some child skill",
+							name: "some child skill".to_owned(),
 							..default()
 						},
 						ComboNode::default(),
@@ -415,7 +415,7 @@ mod test_combo_node {
 
 		assert_eq!(
 			Some(&Skill {
-				name: "some child skill",
+				name: "some child skill".to_owned(),
 				..default()
 			}),
 			skill
@@ -428,7 +428,7 @@ mod test_combo_node {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "some skill",
+					name: "some skill".to_owned(),
 					..default()
 				},
 				ComboNode::default(),
@@ -437,7 +437,7 @@ mod test_combo_node {
 
 		let skill = combos.get_mut(&[SlotKey::Hand(Side::Main)]).unwrap();
 		*skill = Skill {
-			name: "new skill",
+			name: "new skill".to_owned(),
 			..default()
 		};
 
@@ -446,7 +446,7 @@ mod test_combo_node {
 				SlotKey::Hand(Side::Main),
 				(
 					Skill {
-						name: "new skill",
+						name: "new skill".to_owned(),
 						..default()
 					},
 					ComboNode::default(),
@@ -462,14 +462,14 @@ mod test_combo_node {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "some skill",
+					name: "some skill".to_owned(),
 					..default()
 				},
 				ComboNode::new([(
 					SlotKey::Hand(Side::Off),
 					(
 						Skill {
-							name: "some child skill",
+							name: "some child skill".to_owned(),
 							..default()
 						},
 						ComboNode::default(),
@@ -482,7 +482,7 @@ mod test_combo_node {
 			.get_mut(&[SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)])
 			.unwrap();
 		*skill = Skill {
-			name: "new skill",
+			name: "new skill".to_owned(),
 			..default()
 		};
 
@@ -491,14 +491,14 @@ mod test_combo_node {
 				SlotKey::Hand(Side::Main),
 				(
 					Skill {
-						name: "some skill",
+						name: "some skill".to_owned(),
 						..default()
 					},
 					ComboNode::new([(
 						SlotKey::Hand(Side::Off),
 						(
 							Skill {
-								name: "new skill",
+								name: "new skill".to_owned(),
 								..default()
 							},
 							ComboNode::default(),
@@ -517,7 +517,7 @@ mod test_combo_node {
 		let success = combos.try_insert(
 			[SlotKey::Hand(Side::Main)],
 			Skill {
-				name: "new skill",
+				name: "new skill".to_owned(),
 				..default()
 			},
 		);
@@ -528,7 +528,7 @@ mod test_combo_node {
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
-							name: "new skill",
+							name: "new skill".to_owned(),
 							..default()
 						},
 						ComboNode::default(),
@@ -546,14 +546,14 @@ mod test_combo_node {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "some skill",
+					name: "some skill".to_owned(),
 					..default()
 				},
 				ComboNode::new([(
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
-							name: "child skill",
+							name: "child skill".to_owned(),
 							..default()
 						},
 						ComboNode::default(),
@@ -565,7 +565,7 @@ mod test_combo_node {
 		let success = combos.try_insert(
 			[SlotKey::Hand(Side::Main)],
 			Skill {
-				name: "new skill",
+				name: "new skill".to_owned(),
 				..default()
 			},
 		);
@@ -576,14 +576,14 @@ mod test_combo_node {
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
-							name: "new skill",
+							name: "new skill".to_owned(),
 							..default()
 						},
 						ComboNode::new([(
 							SlotKey::Hand(Side::Main),
 							(
 								Skill {
-									name: "child skill",
+									name: "child skill".to_owned(),
 									..default()
 								},
 								ComboNode::default(),
@@ -603,7 +603,7 @@ mod test_combo_node {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "some skill",
+					name: "some skill".to_owned(),
 					..default()
 				},
 				ComboNode::default(),
@@ -613,7 +613,7 @@ mod test_combo_node {
 		let success = combos.try_insert(
 			[SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
 			Skill {
-				name: "new skill",
+				name: "new skill".to_owned(),
 				..default()
 			},
 		);
@@ -624,14 +624,14 @@ mod test_combo_node {
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
-							name: "some skill",
+							name: "some skill".to_owned(),
 							..default()
 						},
 						ComboNode::new([(
 							SlotKey::Hand(Side::Off),
 							(
 								Skill {
-									name: "new skill",
+									name: "new skill".to_owned(),
 									..default()
 								},
 								ComboNode::default(),
@@ -651,7 +651,7 @@ mod test_combo_node {
 		let success = combos.try_insert(
 			[],
 			Skill {
-				name: "new skill",
+				name: "new skill".to_owned(),
 				..default()
 			},
 		);
@@ -668,7 +668,7 @@ mod test_combo_node {
 		let success = combos.try_insert(
 			[SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
 			Skill {
-				name: "new skill",
+				name: "new skill".to_owned(),
 				..default()
 			},
 		);
@@ -726,7 +726,7 @@ mod test_combos {
 		mock.expect_peek_next().returning(|_, _| {
 			Some((
 				Skill {
-					name: "my skill",
+					name: "my skill".to_owned(),
 					..default()
 				},
 				Mock_Next::default(),
@@ -740,7 +740,7 @@ mod test_combos {
 
 		assert_eq!(
 			Some(Skill {
-				name: "my skill",
+				name: "my skill".to_owned(),
 				..default()
 			}),
 			skill
@@ -847,7 +847,7 @@ mod test_combos {
 	#[test]
 	fn get_combos_from_config() {
 		let skill = Skill {
-			name: "my skill",
+			name: "my skill".to_owned(),
 			..default()
 		};
 		let combos_vec = vec![vec![(SlotKey::Hand(Side::Off), &skill)]];

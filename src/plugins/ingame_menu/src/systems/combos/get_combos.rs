@@ -34,9 +34,9 @@ fn skill_descriptor<TKey: From<SlotKey> + Clone>(
 	(key, skill): &(SlotKey, &Skill),
 ) -> SkillDescriptor<TKey, Path> {
 	SkillDescriptor {
-		name: skill.name,
+		name: skill.name.clone(),
 		key: TKey::from(*key),
-		icon: skill.icon.map(|icon| icon()),
+		icon: skill.icon.clone(),
 	}
 }
 
@@ -112,16 +112,16 @@ mod tests {
 					(
 						SlotKey::Hand(Side::Main),
 						Skill {
-							name: "a1",
-							icon: Some(|| Path::from("a/1")),
+							name: "a1".to_owned(),
+							icon: Some(Path::from("a/1")),
 							..default()
 						},
 					),
 					(
 						SlotKey::Hand(Side::Off),
 						Skill {
-							name: "a2",
-							icon: Some(|| Path::from("a/2")),
+							name: "a2".to_owned(),
+							icon: Some(Path::from("a/2")),
 							..default()
 						},
 					),
@@ -130,16 +130,16 @@ mod tests {
 					(
 						SlotKey::Hand(Side::Off),
 						Skill {
-							name: "b1",
-							icon: Some(|| Path::from("b/1")),
+							name: "b1".to_owned(),
+							icon: Some(Path::from("b/1")),
 							..default()
 						},
 					),
 					(
 						SlotKey::Hand(Side::Main),
 						Skill {
-							name: "b2",
-							icon: Some(|| Path::from("b/2")),
+							name: "b2".to_owned(),
+							icon: Some(Path::from("b/2")),
 							..default()
 						},
 					),
@@ -155,24 +155,24 @@ mod tests {
 			&_Result(Changed::Value(vec![
 				vec![
 					SkillDescriptor {
-						name: "a1",
+						name: "a1".to_owned(),
 						key: _Key::Main,
 						icon: Some(Path::from("a/1")),
 					},
 					SkillDescriptor {
-						name: "a2",
+						name: "a2".to_owned(),
 						key: _Key::Off,
 						icon: Some(Path::from("a/2")),
 					}
 				],
 				vec![
 					SkillDescriptor {
-						name: "b1",
+						name: "b1".to_owned(),
 						key: _Key::Off,
 						icon: Some(Path::from("b/1")),
 					},
 					SkillDescriptor {
-						name: "b2",
+						name: "b2".to_owned(),
 						key: _Key::Main,
 						icon: Some(Path::from("b/2")),
 					}
@@ -190,16 +190,16 @@ mod tests {
 				(
 					SlotKey::Hand(Side::Main),
 					Skill {
-						name: "a1",
-						icon: Some(|| Path::from("a/1")),
+						name: "a1".to_owned(),
+						icon: Some(Path::from("a/1")),
 						..default()
 					},
 				),
 				(
 					SlotKey::Hand(Side::Off),
 					Skill {
-						name: "a2",
-						icon: Some(|| Path::from("a/2")),
+						name: "a2".to_owned(),
+						icon: Some(Path::from("a/2")),
 						..default()
 					},
 				),
@@ -208,16 +208,16 @@ mod tests {
 				(
 					SlotKey::Hand(Side::Off),
 					Skill {
-						name: "b1",
-						icon: Some(|| Path::from("b/1")),
+						name: "b1".to_owned(),
+						icon: Some(Path::from("b/1")),
 						..default()
 					},
 				),
 				(
 					SlotKey::Hand(Side::Main),
 					Skill {
-						name: "b2",
-						icon: Some(|| Path::from("b/2")),
+						name: "b2".to_owned(),
+						icon: Some(Path::from("b/2")),
 						..default()
 					},
 				),
@@ -241,16 +241,16 @@ mod tests {
 					(
 						SlotKey::Hand(Side::Main),
 						Skill {
-							name: "a1",
-							icon: Some(|| Path::from("a/1")),
+							name: "a1".to_owned(),
+							icon: Some(Path::from("a/1")),
 							..default()
 						},
 					),
 					(
 						SlotKey::Hand(Side::Off),
 						Skill {
-							name: "a2",
-							icon: Some(|| Path::from("a/2")),
+							name: "a2".to_owned(),
+							icon: Some(Path::from("a/2")),
 							..default()
 						},
 					),
@@ -259,16 +259,16 @@ mod tests {
 					(
 						SlotKey::Hand(Side::Off),
 						Skill {
-							name: "b1",
-							icon: Some(|| Path::from("b/1")),
+							name: "b1".to_owned(),
+							icon: Some(Path::from("b/1")),
 							..default()
 						},
 					),
 					(
 						SlotKey::Hand(Side::Main),
 						Skill {
-							name: "b2",
-							icon: Some(|| Path::from("b/2")),
+							name: "b2".to_owned(),
+							icon: Some(Path::from("b/2")),
 							..default()
 						},
 					),
@@ -294,16 +294,16 @@ mod tests {
 					(
 						SlotKey::Hand(Side::Main),
 						Skill {
-							name: "a1",
-							icon: Some(|| Path::from("a/1")),
+							name: "a1".to_owned(),
+							icon: Some(Path::from("a/1")),
 							..default()
 						},
 					),
 					(
 						SlotKey::Hand(Side::Off),
 						Skill {
-							name: "a2",
-							icon: Some(|| Path::from("a/2")),
+							name: "a2".to_owned(),
+							icon: Some(Path::from("a/2")),
 							..default()
 						},
 					),
@@ -312,16 +312,16 @@ mod tests {
 					(
 						SlotKey::Hand(Side::Off),
 						Skill {
-							name: "b1",
-							icon: Some(|| Path::from("b/1")),
+							name: "b1".to_owned(),
+							icon: Some(Path::from("b/1")),
 							..default()
 						},
 					),
 					(
 						SlotKey::Hand(Side::Main),
 						Skill {
-							name: "b2",
-							icon: Some(|| Path::from("b/2")),
+							name: "b2".to_owned(),
+							icon: Some(Path::from("b/2")),
 							..default()
 						},
 					),
@@ -338,24 +338,24 @@ mod tests {
 			&_Result(Changed::Value(vec![
 				vec![
 					SkillDescriptor {
-						name: "a1",
+						name: "a1".to_owned(),
 						key: _Key::Main,
 						icon: Some(Path::from("a/1")),
 					},
 					SkillDescriptor {
-						name: "a2",
+						name: "a2".to_owned(),
 						key: _Key::Off,
 						icon: Some(Path::from("a/2")),
 					}
 				],
 				vec![
 					SkillDescriptor {
-						name: "b1",
+						name: "b1".to_owned(),
 						key: _Key::Off,
 						icon: Some(Path::from("b/1")),
 					},
 					SkillDescriptor {
-						name: "b2",
+						name: "b2".to_owned(),
 						key: _Key::Main,
 						icon: Some(Path::from("b/2")),
 					}

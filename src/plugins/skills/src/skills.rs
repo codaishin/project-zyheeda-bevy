@@ -38,17 +38,17 @@ pub enum Animate<TAnimation> {
 
 #[derive(PartialEq, Debug, Default, Clone, TypePath, Asset)]
 pub struct Skill {
-	pub name: &'static str,
+	pub name: String,
 	pub active: Duration,
 	pub animate: Animate<SkillAnimation>,
 	pub behavior: SkillBehavior,
 	pub is_usable_with: HashSet<ItemType>,
-	pub icon: Option<fn() -> Path>,
+	pub icon: Option<Path>,
 }
 
 impl Display for Skill {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-		match self.name {
+		match self.name.as_str() {
 			"" => write!(f, "Skill(<no name>)"),
 			name => write!(f, "Skill({})", name),
 		}

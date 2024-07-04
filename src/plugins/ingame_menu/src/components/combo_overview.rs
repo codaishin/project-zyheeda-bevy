@@ -184,7 +184,7 @@ mod tests {
 	#[test]
 	fn update_combos() {
 		let combos = vec![vec![SkillDescriptor {
-			name: "my skill",
+			name: "my skill".to_owned(),
 			key: KeyCode::ArrowLeft,
 			icon: Some(Handle::Weak(AssetId::Uuid {
 				uuid: Uuid::new_v4(),

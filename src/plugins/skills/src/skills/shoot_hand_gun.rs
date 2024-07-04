@@ -14,7 +14,7 @@ use behaviors::components::Projectile;
 use common::{tools::player_animation_path, traits::load_asset::Path};
 use std::{collections::HashSet, marker::PhantomData, time::Duration};
 
-pub(crate) struct ShootHandGun<T>(PhantomData<T>);
+pub(crate) struct ShootHandGun<T = ()>(PhantomData<T>);
 
 fn shoot_right() -> Path {
 	player_animation_path("Animation4")
@@ -29,7 +29,7 @@ fn shoot_left_dual() -> Path {
 	player_animation_path("Animation7")
 }
 
-impl<T> GetAnimationSetup for ShootHandGun<T> {
+impl GetAnimationSetup for ShootHandGun {
 	fn get_animation() -> SkillAnimation {
 		SkillAnimation {
 			right: Animation::new(shoot_right(), PlayMode::Repeat),
@@ -66,12 +66,12 @@ impl<T> GetAnimationSetup for ShootHandGun<T> {
 impl<T: Sync + Send + 'static> SkillTemplate for ShootHandGun<T> {
 	fn skill() -> Skill {
 		Skill {
-			name: "Shoot Hand Gun",
+			name: "Shoot Hand Gun".to_owned(),
 			active: Duration::from_millis(200),
-			animate: Animate::Some(ShootHandGun::<T>::animation()),
+			animate: Animate::Some(ShootHandGun::animation()),
 			behavior: Projectile::<T>::behavior(),
 			is_usable_with: HashSet::from([ItemType::Pistol]),
-			icon: Some(|| Path::from("icons/pistol.png")),
+			icon: Some(Path::from("icons/pistol.png")),
 		}
 	}
 }

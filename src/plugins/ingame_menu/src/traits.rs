@@ -25,7 +25,7 @@ use instantiate_content_on::InstantiateContentOn;
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct SkillDescriptor<TKey, TIcon: Clone> {
-	pub name: &'static str,
+	pub name: String,
 	pub key: TKey,
 	pub icon: Option<TIcon>,
 }
@@ -53,7 +53,7 @@ impl<T: Clone> GetNode for Tooltip<SkillDescriptor<KeyCode, T>> {
 impl<T: Clone> InstantiateContentOn for Tooltip<SkillDescriptor<KeyCode, T>> {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		parent.spawn(TextBundle::from_section(
-			self.0.name,
+			self.0.name.clone(),
 			TextStyle {
 				font_size: 20.0,
 				color: DEFAULT_PANEL_COLORS.filled,

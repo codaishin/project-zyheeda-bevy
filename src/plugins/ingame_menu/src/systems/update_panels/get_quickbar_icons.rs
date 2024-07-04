@@ -10,8 +10,6 @@ use skills::{
 	traits::{IsTimedOut, PeekNext},
 };
 
-type IconPath = Option<fn() -> Path>;
-
 type PlayerComponents<'a, TQueue, TCombos, TComboTimeout> = (
 	&'a Slots,
 	&'a TQueue,
@@ -35,7 +33,6 @@ where
 		let icon = if_active_skill_icon(panel, queue)
 			.or_else(if_combo_skill_icon(panel, slots, combos, combo_timeout))
 			.or_else(if_item_skill_icon(panel, slots));
-		let icon = icon.flatten().map(|resolve_path| resolve_path());
 
 		(entity, icon)
 	};
@@ -46,14 +43,14 @@ where
 fn if_active_skill_icon<TQueue: Iterate<QueuedSkill>>(
 	panel: &QuickbarPanel,
 	queue: &TQueue,
-) -> Option<IconPath> {
+) -> Option<Path> {
 	let active_skill = queue.iterate().next()?;
 
 	if active_skill.slot_key != panel.key {
 		return None;
 	}
 
-	Some(active_skill.skill.icon)
+	active_skill.skill.icon.clone()
 }
 
 fn if_combo_skill_icon<'a, TCombos: PeekNext<Skill>, TComboTimeout: IsTimedOut>(
@@ -61,26 +58,26 @@ fn if_combo_skill_icon<'a, TCombos: PeekNext<Skill>, TComboTimeout: IsTimedOut>(
 	slots: &'a Slots,
 	combos: Option<&'a TCombos>,
 	timed_out: Option<&'a TComboTimeout>,
-) -> impl FnOnce() -> Option<IconPath> + 'a {
+) -> impl FnOnce() -> Option<Path> + 'a {
 	move || {
 		if timed_out?.is_timed_out() {
 			return None;
 		}
 		let next_combo = combos?.peek_next(&panel.key, slots)?;
-		Some(next_combo.icon)
+		next_combo.icon
 	}
 }
 
 fn if_item_skill_icon<'a>(
 	panel: &'a QuickbarPanel,
 	slots: &'a Slots,
-) -> impl FnOnce() -> Option<IconPath> + 'a {
+) -> impl FnOnce() -> Option<Path> + 'a {
 	|| {
 		let slot = slots.0.get(&panel.key)?;
 		let item = slot.item.as_ref()?;
 		let skill = item.skill.as_ref()?;
 
-		Some(skill.icon)
+		skill.icon.clone()
 	}
 }
 
@@ -174,7 +171,7 @@ mod tests {
 				mounts: arbitrary_mounts(),
 				item: Some(Item {
 					skill: Some(Skill {
-						icon: Some(|| Path::from("item_skill/icon/path")),
+						icon: Some(Path::from("item_skill/icon/path")),
 						..default()
 					}),
 					..default()
@@ -182,7 +179,7 @@ mod tests {
 			},
 		)]));
 		combos.mock.expect_peek_next().return_const(Skill {
-			icon: Some(|| Path::from("combo_skill/icon/path")),
+			icon: Some(Path::from("combo_skill/icon/path")),
 			..default()
 		});
 		app.world.spawn((
@@ -220,7 +217,7 @@ mod tests {
 				mounts: arbitrary_mounts(),
 				item: Some(Item {
 					skill: Some(Skill {
-						icon: Some(|| Path::from("item_skill/icon/path")),
+						icon: Some(Path::from("item_skill/icon/path")),
 						..default()
 					}),
 					..default()
@@ -259,7 +256,7 @@ mod tests {
 				mounts: arbitrary_mounts(),
 				item: Some(Item {
 					skill: Some(Skill {
-						icon: Some(|| Path::from("item_skill/icon/path")),
+						icon: Some(Path::from("item_skill/icon/path")),
 						..default()
 					}),
 					..default()
@@ -267,7 +264,7 @@ mod tests {
 			},
 		)]));
 		combos.mock.expect_peek_next().return_const(Skill {
-			icon: Some(|| Path::from("combo_skill/icon/path")),
+			icon: Some(Path::from("combo_skill/icon/path")),
 			..default()
 		});
 		app.world.spawn((
@@ -305,7 +302,7 @@ mod tests {
 				mounts: arbitrary_mounts(),
 				item: Some(Item {
 					skill: Some(Skill {
-						icon: Some(|| Path::from("item_skill/icon/path")),
+						icon: Some(Path::from("item_skill/icon/path")),
 						..default()
 					}),
 					..default()
@@ -348,7 +345,7 @@ mod tests {
 				mounts: arbitrary_mounts(),
 				item: Some(Item {
 					skill: Some(Skill {
-						icon: Some(|| Path::from("item_skill/icon/path")),
+						icon: Some(Path::from("item_skill/icon/path")),
 						..default()
 					}),
 					..default()
@@ -356,7 +353,7 @@ mod tests {
 			},
 		)]));
 		combos.mock.expect_peek_next().return_const(Skill {
-			icon: Some(|| Path::from("combo_skill/icon/path")),
+			icon: Some(Path::from("combo_skill/icon/path")),
 			..default()
 		});
 		app.world.spawn((
@@ -364,7 +361,7 @@ mod tests {
 			slots,
 			_Queue(vec![QueuedSkill {
 				skill: Skill {
-					icon: Some(|| Path::from("active_skill/icon/path")),
+					icon: Some(Path::from("active_skill/icon/path")),
 					..default()
 				},
 				slot_key: SlotKey::Hand(Side::Off),
@@ -401,7 +398,7 @@ mod tests {
 				mounts: arbitrary_mounts(),
 				item: Some(Item {
 					skill: Some(Skill {
-						icon: Some(|| Path::from("item_skill/icon/path")),
+						icon: Some(Path::from("item_skill/icon/path")),
 						..default()
 					}),
 					..default()
@@ -409,7 +406,7 @@ mod tests {
 			},
 		)]));
 		combos.mock.expect_peek_next().return_const(Skill {
-			icon: Some(|| Path::from("combo_skill/icon/path")),
+			icon: Some(Path::from("combo_skill/icon/path")),
 			..default()
 		});
 		app.world.spawn((
@@ -417,7 +414,7 @@ mod tests {
 			slots,
 			_Queue(vec![QueuedSkill {
 				skill: Skill {
-					icon: Some(|| Path::from("active_skill/icon/path")),
+					icon: Some(Path::from("active_skill/icon/path")),
 					..default()
 				},
 				slot_key: SlotKey::Hand(Side::Off),
@@ -453,7 +450,7 @@ mod tests {
 				mounts: arbitrary_mounts(),
 				item: Some(Item {
 					skill: Some(Skill {
-						icon: Some(|| Path::from("item_skill/icon/path")),
+						icon: Some(Path::from("item_skill/icon/path")),
 						..default()
 					}),
 					..default()

@@ -240,7 +240,7 @@ mod tests {
 		)]));
 		let skill_a = QueuedSkill {
 			skill: Skill {
-				name: "skill a",
+				name: "skill a".to_owned(),
 				..default()
 			},
 			slot_key: SlotKey::Hand(Side::Main),
@@ -248,7 +248,7 @@ mod tests {
 		};
 		let skill_b = QueuedSkill {
 			skill: Skill {
-				name: "skill b",
+				name: "skill b".to_owned(),
 				..default()
 			},
 			slot_key: SlotKey::Hand(Side::Off),
@@ -289,7 +289,7 @@ mod tests {
 		)]));
 		let skill_a = QueuedSkill {
 			skill: Skill {
-				name: "skill a",
+				name: "skill a".to_owned(),
 				..default()
 			},
 			slot_key: SlotKey::Hand(Side::Main),
@@ -297,7 +297,7 @@ mod tests {
 		};
 		let skill_b = QueuedSkill {
 			skill: Skill {
-				name: "skill b",
+				name: "skill b".to_owned(),
 				..default()
 			},
 			slot_key: SlotKey::Hand(Side::Off),
@@ -310,7 +310,7 @@ mod tests {
 			.expect_advance()
 			.with(eq(SlotKey::Hand(Side::Main)), eq(slots.clone()))
 			.return_const(Skill {
-				name: "replace a",
+				name: "replace a".to_owned(),
 				..default()
 			});
 		combos
@@ -318,7 +318,7 @@ mod tests {
 			.expect_advance()
 			.with(eq(SlotKey::Hand(Side::Off)), eq(slots.clone()))
 			.return_const(Skill {
-				name: "replace b",
+				name: "replace b".to_owned(),
 				..default()
 			});
 		let skills = _Skills {
@@ -336,7 +336,7 @@ mod tests {
 				recent: vec![
 					QueuedSkill {
 						skill: Skill {
-							name: "replace a",
+							name: "replace a".to_owned(),
 							..default()
 						},
 						slot_key: SlotKey::Hand(Side::Main),
@@ -344,7 +344,7 @@ mod tests {
 					},
 					QueuedSkill {
 						skill: Skill {
-							name: "replace b",
+							name: "replace b".to_owned(),
 							..default()
 						},
 						slot_key: SlotKey::Hand(Side::Off),

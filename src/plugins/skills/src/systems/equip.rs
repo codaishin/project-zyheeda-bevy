@@ -274,7 +274,7 @@ mod tests {
 					item: Some(Item {
 						name: "Some Item",
 						skill: Some(Skill {
-							name: "Some Skill",
+							name: "Some Skill".to_owned(),
 							..default()
 						}),
 						model: Some("model key"),
@@ -310,7 +310,7 @@ mod tests {
 					item: Some(Item {
 						name: "Some Item",
 						skill: Some(Skill {
-							name: "Some Skill",
+							name: "Some Skill".to_owned(),
 							..default()
 						}),
 						model: Some("model key"),
@@ -363,7 +363,7 @@ mod tests {
 					item: Some(Item {
 						name: "Some Item",
 						skill: Some(Skill {
-							name: "Some Skill",
+							name: "Some Skill".to_owned(),
 							..default()
 						}),
 						model: Some("model key"),
@@ -399,7 +399,7 @@ mod tests {
 					item: Some(Item {
 						name: "Some Item",
 						skill: Some(Skill {
-							name: "Some Skill",
+							name: "Some Skill".to_owned(),
 							..default()
 						}),
 						model: Some("model key"),
@@ -445,7 +445,7 @@ mod tests {
 							item: Some(Item {
 								name: "Some Item",
 								skill: Some(Skill {
-									name: "Some Skill",
+									name: "Some Skill".to_owned(),
 									..default()
 								}),
 								model: Some("model key"),
@@ -1111,7 +1111,7 @@ mod tests {
 		let item = Item {
 			name: "Some Item",
 			skill: Some(Skill {
-				name: "Some Skill",
+				name: "Some Skill".to_owned(),
 				..default()
 			}),
 			model: Some("model key"),
@@ -1155,7 +1155,7 @@ mod tests {
 		let item = Item {
 			name: "Some Item",
 			skill: Some(Skill {
-				name: "Some Skill",
+				name: "Some Skill".to_owned(),
 				..default()
 			}),
 			model: Some("model key"),
@@ -1221,7 +1221,7 @@ mod tests {
 		let item = Item {
 			name: "Some Item",
 			skill: Some(Skill {
-				name: "Some Skill",
+				name: "Some Skill".to_owned(),
 				..default()
 			}),
 			model: Some("model key"),

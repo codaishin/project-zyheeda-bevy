@@ -33,7 +33,7 @@ pub(crate) fn load_combo_icon_image<
 		.map(|c| {
 			c.iter()
 				.map(|s| SkillDescriptor {
-					name: s.name,
+					name: s.name.clone(),
 					key: s.key.clone(),
 					icon: s.icon.clone().map(|icon| cache.get_or_load(icon)),
 				})
@@ -141,24 +141,24 @@ mod tests {
 		let mut app = setup::<_Factory>(Changed::Value(vec![
 			vec![
 				SkillDescriptor {
-					name: "a1",
+					name: "a1".to_owned(),
 					key: KeyCode::KeyA,
 					icon: Some(Path::from("a/1")),
 				},
 				SkillDescriptor {
-					name: "a2",
+					name: "a2".to_owned(),
 					key: KeyCode::KeyB,
 					icon: Some(Path::from("a/2")),
 				},
 			],
 			vec![
 				SkillDescriptor {
-					name: "b1",
+					name: "b1".to_owned(),
 					key: KeyCode::KeyC,
 					icon: Some(Path::from("b/1")),
 				},
 				SkillDescriptor {
-					name: "b2",
+					name: "b2".to_owned(),
 					key: KeyCode::KeyD,
 					icon: Some(Path::from("b/2")),
 				},
@@ -173,24 +173,24 @@ mod tests {
 			&_Result(Changed::Value(vec![
 				vec![
 					SkillDescriptor {
-						name: "a1",
+						name: "a1".to_owned(),
 						key: KeyCode::KeyA,
 						icon: Some(HANDLE_A_1),
 					},
 					SkillDescriptor {
-						name: "a2",
+						name: "a2".to_owned(),
 						key: KeyCode::KeyB,
 						icon: Some(HANDLE_A_2),
 					}
 				],
 				vec![
 					SkillDescriptor {
-						name: "b1",
+						name: "b1".to_owned(),
 						key: KeyCode::KeyC,
 						icon: Some(HANDLE_B_1),
 					},
 					SkillDescriptor {
-						name: "b2",
+						name: "b2".to_owned(),
 						key: KeyCode::KeyD,
 						icon: Some(HANDLE_B_2),
 					}

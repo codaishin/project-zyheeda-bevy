@@ -12,13 +12,13 @@ pub(crate) struct GravityWellSkill;
 impl SkillTemplate for GravityWellSkill {
 	fn skill() -> super::Skill {
 		Skill {
-			name: "gravity well",
+			name: "gravity well".to_owned(),
 			active: Duration::from_millis(200),
 			behavior: GravityWell::behavior(),
 			// FIXME: introduce cast animation for "magic" like skills
 			animate: Animate::Some(ShootHandGun::<()>::animation()),
 			is_usable_with: HashSet::from([ItemType::Bracer]),
-			icon: Some(|| Path::from("icons/gravity_well.png")),
+			icon: Some(Path::from("icons/gravity_well.png")),
 		}
 	}
 }
