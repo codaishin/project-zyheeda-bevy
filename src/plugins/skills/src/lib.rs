@@ -1,5 +1,6 @@
 pub mod components;
 pub mod items;
+pub mod resources;
 pub mod skills;
 pub mod traits;
 
@@ -10,7 +11,7 @@ mod systems;
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::{
 	app::{Plugin, PreStartup, PreUpdate, Update},
-	asset::{AssetApp, AssetServer},
+	asset::{AssetApp, AssetServer, LoadedFolder},
 	ecs::{
 		entity::Entity,
 		query::Added,
@@ -61,6 +62,7 @@ use systems::{
 	},
 	skill_spawn::add_skill_spawn,
 	slots::add_item_slots,
+	update_item_slot_skills::update_item_slot_skills,
 	update_skill_combos::update_skill_combos,
 };
 use traits::SkillTemplate;
@@ -74,7 +76,14 @@ impl Plugin for SkillsPlugin {
 			.register_asset_loader(SkillLoader::<Skill>::default())
 			.add_systems(PreStartup, load_skills::<AssetServer>)
 			.add_systems(PreStartup, load_models)
-			.add_systems(PreUpdate, (add_item_slots, add_skill_spawn))
+			.add_systems(
+				PreUpdate,
+				(
+					add_item_slots,
+					add_skill_spawn,
+					update_item_slot_skills::<LoadedFolder>,
+				),
+			)
 			.add_systems(
 				Update,
 				(

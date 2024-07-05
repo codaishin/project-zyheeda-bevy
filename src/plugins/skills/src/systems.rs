@@ -8,4 +8,5 @@ pub(crate) mod load_skills;
 pub(crate) mod mouse_context;
 pub(crate) mod skill_spawn;
 pub(crate) mod slots;
+pub(crate) mod update_item_slot_skills;
 pub(crate) mod update_skill_combos;

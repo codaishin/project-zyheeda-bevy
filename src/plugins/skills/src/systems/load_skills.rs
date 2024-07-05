@@ -1,12 +1,9 @@
+use crate::resources::SkillFolder;
 use bevy::{
-	asset::{Handle, LoadedFolder},
 	ecs::system::Res,
 	prelude::{Commands, Resource},
 };
 use common::traits::{load_asset::Path, load_folder_assets::LoadFolderAssets};
-
-#[derive(Resource, Default, Debug, PartialEq)]
-pub(crate) struct SkillFolder(Handle<LoadedFolder>);
 
 pub(crate) fn load_skills<TAssetServer: LoadFolderAssets + Resource>(
 	mut commands: Commands,
