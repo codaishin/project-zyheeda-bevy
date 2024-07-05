@@ -4,6 +4,7 @@ pub mod cache;
 pub mod cast_ray;
 pub mod clamp_zero_positive;
 pub mod get;
+pub mod get_handle_from_path;
 pub mod get_ray;
 pub mod get_state;
 pub mod get_ui_text;
