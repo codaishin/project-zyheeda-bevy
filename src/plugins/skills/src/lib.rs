@@ -8,7 +8,6 @@ mod skill_loader;
 mod systems;
 
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
-use behaviors::components::Plasma;
 use bevy::{
 	app::{Plugin, PreStartup, PreUpdate, Update},
 	asset::{AssetApp, AssetServer},
@@ -38,12 +37,11 @@ use components::{
 	slots::Slots,
 	Mounts,
 };
-use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount};
+use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount, SkillHandle};
 use skill_loader::SkillLoader;
 use skills::{
 	force_shield_skill::ForceShieldSkill,
 	gravity_well_skill::GravityWellSkill,
-	shoot_hand_gun::ShootHandGun,
 	QueuedSkill,
 	Skill,
 };
@@ -171,7 +169,7 @@ fn get_loadout() -> Loadout {
 				Some(Item {
 					name: "Plasma Pistol A",
 					model: Some("pistol"),
-					skill: Some(ShootHandGun::<Plasma>::skill()),
+					skill: SkillHandle::Path("skills/shoot_hand_gun.skill".into()),
 					item_type: HashSet::from([ItemType::Pistol]),
 					mount: Mount::Hand,
 				}),
@@ -181,7 +179,7 @@ fn get_loadout() -> Loadout {
 				Some(Item {
 					name: "Force Bracer",
 					model: Some("bracer"),
-					skill: Some(ForceShieldSkill::skill()),
+					skill: SkillHandle::Path("skills/force_shield.skill".into()),
 					item_type: HashSet::from([ItemType::Bracer]),
 					mount: Mount::Forearm,
 				}),
@@ -194,7 +192,7 @@ fn get_inventory() -> Inventory {
 	Inventory::new([Some(Item {
 		name: "Plasma Pistol B",
 		model: Some("pistol"),
-		skill: Some(ShootHandGun::<Plasma>::skill()),
+		skill: SkillHandle::Path("skills/shoot_hand_gun.skill".into()),
 		item_type: HashSet::from([ItemType::Pistol]),
 		mount: Mount::Hand,
 	})])

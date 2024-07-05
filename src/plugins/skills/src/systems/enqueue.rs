@@ -3,58 +3,67 @@ use crate::{
 	items::slot_key::SlotKey,
 	traits::{Enqueue, IterMut, Matches, Prime},
 };
-use bevy::ecs::{
-	component::Component,
-	system::{In, Query},
+use bevy::{
+	asset::{Asset, Assets, Handle},
+	ecs::{
+		component::Component,
+		system::{In, Query, Res},
+	},
 };
 use common::traits::get::Get;
 
 pub(crate) fn enqueue<
-	TSkillSource: Get<SlotKey, TSourceSkill> + Component,
-	TSourceSkill: Clone,
-	TQueue: Enqueue<(TSourceSkill, SlotKey)> + IterMut<TSkill> + Component,
-	TSkill: Prime + Matches<SlotKey>,
+	TSlots: Get<SlotKey, Handle<TSkill>> + Component,
+	TSkill: Asset + Clone,
+	TQueue: Enqueue<(TSkill, SlotKey)> + IterMut<TQueuedSkill> + Component,
+	TQueuedSkill: Prime + Matches<SlotKey>,
 >(
 	input: In<Input>,
-	mut agents: Query<(&TSkillSource, &mut TQueue)>,
+	mut agents: Query<(&TSlots, &mut TQueue)>,
+	skills: Res<Assets<TSkill>>,
 ) {
-	for (skills, mut queue) in &mut agents {
+	for (slots, mut queue) in &mut agents {
 		let queue = queue.as_mut();
-		enqueue_new_skills(&input, queue, skills);
+		enqueue_new_skills(&input, queue, slots, &skills);
 		prime_skills(&input, queue);
 	}
 }
 
 fn enqueue_new_skills<
-	TSkillSource: Get<SlotKey, TSourceSkill>,
-	TSourceSkill: Clone,
-	TQueue: Enqueue<(TSourceSkill, SlotKey)>,
+	TSlots: Get<SlotKey, Handle<TSkill>>,
+	TSkill: Asset + Clone,
+	TQueue: Enqueue<(TSkill, SlotKey)>,
 >(
 	input: &In<Input>,
 	queue: &mut TQueue,
-	skills: &TSkillSource,
+	slots: &TSlots,
+	skills: &Assets<TSkill>,
 ) {
 	for key in input.just_pressed.iter() {
-		enqueue_new_skill(key, skills, queue);
+		enqueue_new_skill(key, queue, slots, skills);
 	}
 }
 
 fn enqueue_new_skill<
-	TSkillSource: Get<SlotKey, TSourceSkill>,
-	TSourceSkill: Clone,
-	TQueue: Enqueue<(TSourceSkill, SlotKey)>,
+	TSlots: Get<SlotKey, Handle<TSkill>>,
+	TSkill: Asset + Clone,
+	TQueue: Enqueue<(TSkill, SlotKey)>,
 >(
 	key: &SlotKey,
-	skills: &TSkillSource,
 	queue: &mut TQueue,
+	slots: &TSlots,
+	skills: &Assets<TSkill>,
 ) {
-	let Some(skill) = skills.get(key).cloned() else {
+	let Some(skill) = slots.get(key).cloned() else {
+		return;
+	};
+	let Some(skill) = skills.get(skill).cloned() else {
 		return;
 	};
 	queue.enqueue((skill, *key));
 }
 
-fn prime_skills<TQueue: IterMut<TSkill>, TSkill: Prime + Matches<SlotKey>>(
+fn prime_skills<TQueue: IterMut<TQueuedSkill>, TQueuedSkill: Prime + Matches<SlotKey>>(
 	input: &In<Input>,
 	queue: &mut TQueue,
 ) {
@@ -63,7 +72,7 @@ fn prime_skills<TQueue: IterMut<TSkill>, TSkill: Prime + Matches<SlotKey>>(
 	}
 }
 
-fn prime_skill<TQueue: IterMut<TSkill>, TSkill: Prime + Matches<SlotKey>>(
+fn prime_skill<TQueue: IterMut<TQueuedSkill>, TQueuedSkill: Prime + Matches<SlotKey>>(
 	key: &SlotKey,
 	queue: &mut TQueue,
 ) {
@@ -72,10 +81,10 @@ fn prime_skill<TQueue: IterMut<TSkill>, TSkill: Prime + Matches<SlotKey>>(
 	}
 }
 
-fn get_queued_skill<'a, TQueue: IterMut<TSkill>, TSkill: 'a + Matches<SlotKey>>(
+fn get_queued_skill<'a, TQueue: IterMut<TQueuedSkill>, TQueuedSkill: 'a + Matches<SlotKey>>(
 	key: &'a SlotKey,
 	queue: &'a mut TQueue,
-) -> impl Iterator<Item = &'a mut TSkill> {
+) -> impl Iterator<Item = &'a mut TQueuedSkill> {
 	queue.iter_mut().filter(move |skill| skill.matches(key))
 }
 
@@ -84,8 +93,10 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
+		asset::Handle,
 		ecs::system::{IntoSystem, Res, Resource},
-		utils::default,
+		prelude::default,
+		reflect::TypePath,
 	};
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
 	use mockall::{automock, mock, predicate::eq};
@@ -94,8 +105,8 @@ mod tests {
 	#[derive(Resource, Default)]
 	struct _Input(Input);
 
-	#[derive(Clone, Debug, PartialEq)]
-	struct _Skill(u32);
+	#[derive(Debug, PartialEq, TypePath, Asset, Clone)]
+	struct _Skill(&'static str);
 
 	mock! {
 		_SkillQueued {}
@@ -108,10 +119,10 @@ mod tests {
 	}
 
 	#[derive(Component, Default)]
-	struct _Skills(HashMap<SlotKey, _Skill>);
+	struct _Skills(HashMap<SlotKey, Handle<_Skill>>);
 
-	impl Get<SlotKey, _Skill> for _Skills {
-		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a _Skill> {
+	impl Get<SlotKey, Handle<_Skill>> for _Skills {
+		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Handle<_Skill>> {
 			self.0.get(key)
 		}
 	}
@@ -138,9 +149,13 @@ mod tests {
 		}
 	}
 
+	struct _SkillLoader;
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<_Input>();
+		app.init_resource::<Assets<_Skill>>();
+
 		app.add_systems(
 			Update,
 			(move |input: Res<_Input>| input.0.clone())
@@ -154,14 +169,19 @@ mod tests {
 	fn enqueue_skill_from_skills() {
 		let mut app = setup();
 
-		let skills = _Skills(HashMap::from([(SlotKey::Hand(Side::Main), _Skill(121))]));
+		let skill = app
+			.world
+			.resource_mut::<Assets<_Skill>>()
+			.add(_Skill("my skill"));
+
+		let skills = _Skills(HashMap::from([(SlotKey::Hand(Side::Main), skill)]));
 		let mut enqueue = _Enqueue::default();
 
 		enqueue
 			.mock
 			.expect_enqueue()
 			.times(1)
-			.with(eq((_Skill(121), SlotKey::Hand(Side::Main))))
+			.with(eq((_Skill("my skill"), SlotKey::Hand(Side::Main))))
 			.return_const(());
 
 		app.world.spawn((skills, enqueue));

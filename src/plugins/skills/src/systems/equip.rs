@@ -185,7 +185,7 @@ fn scene_handle_error(item: Option<&Item>, error: QueryEntityError) -> Error {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::Mounts, items::Mount, skills::Skill};
+	use crate::{components::Mounts, items::Mount};
 	use bevy::{
 		asset::AssetId,
 		ecs::system::{In, IntoSystem},
@@ -198,7 +198,6 @@ mod tests {
 		systems::log::test_tools::{fake_log_error_lazy_many, FakeErrorLogMany},
 	};
 	use mockall::{automock, predicate::eq};
-	use std::time::Duration;
 
 	#[derive(Default, PartialEq, Debug)]
 	enum _Type {
@@ -273,10 +272,6 @@ mod tests {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: Some(Skill {
-							name: "Some Skill".to_owned(),
-							..default()
-						}),
 						model: Some("model key"),
 						mount: Mount::Hand,
 						..default()
@@ -309,10 +304,6 @@ mod tests {
 					mounts: Mounts { hand, forearm },
 					item: Some(Item {
 						name: "Some Item",
-						skill: Some(Skill {
-							name: "Some Skill".to_owned(),
-							..default()
-						}),
 						model: Some("model key"),
 						mount: Mount::Hand,
 						..default()
@@ -362,10 +353,6 @@ mod tests {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: Some(Skill {
-							name: "Some Skill".to_owned(),
-							..default()
-						}),
 						model: Some("model key"),
 						mount: Mount::Forearm,
 						..default()
@@ -398,10 +385,6 @@ mod tests {
 					mounts: Mounts { forearm, hand },
 					item: Some(Item {
 						name: "Some Item",
-						skill: Some(Skill {
-							name: "Some Skill".to_owned(),
-							..default()
-						}),
 						model: Some("model key"),
 						mount: Mount::Forearm,
 						..default()
@@ -444,10 +427,6 @@ mod tests {
 							mounts: Mounts { hand, forearm },
 							item: Some(Item {
 								name: "Some Item",
-								skill: Some(Skill {
-									name: "Some Skill".to_owned(),
-									..default()
-								}),
 								model: Some("model key"),
 								..default()
 							}),
@@ -668,10 +647,6 @@ mod tests {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: Some(Skill {
-							active: Duration::from_millis(1),
-							..default()
-						}),
 						model: None,
 						..default()
 					}),
@@ -703,10 +678,6 @@ mod tests {
 					mounts: Mounts { hand, forearm },
 					item: Some(Item {
 						name: "Some Item",
-						skill: Some(Skill {
-							active: Duration::from_millis(1),
-							..default()
-						}),
 						model: None,
 						..default()
 					}),
@@ -755,7 +726,6 @@ mod tests {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: None,
 						model: Some("model key"),
 						..default()
 					}),
@@ -809,7 +779,6 @@ mod tests {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: None,
 						model: None,
 						..default()
 					}),
@@ -862,7 +831,6 @@ mod tests {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: None,
 						model: Some("model key"),
 						..default()
 					}),
@@ -921,7 +889,6 @@ mod tests {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: None,
 						model: Some("model key"),
 						..default()
 					}),
@@ -980,7 +947,6 @@ mod tests {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: None,
 						model: Some("model key"),
 						..default()
 					}),
@@ -1002,7 +968,6 @@ mod tests {
 				slot: SlotKey::Hand(Side::Main),
 				item: Some(Item {
 					name: "Some Item",
-					skill: None,
 					model: Some("model key"),
 					..default()
 				}),
@@ -1054,7 +1019,6 @@ mod tests {
 						slot: SlotKey::Hand(Side::Main),
 						item: Some(Item {
 							name: "Some Item",
-							skill: None,
 							model: Some("model key"),
 							..default()
 						}),
@@ -1064,7 +1028,6 @@ mod tests {
 						slot: SlotKey::Hand(Side::Off),
 						item: Some(Item {
 							name: "Some Item",
-							skill: None,
 							model: Some("model key"),
 							..default()
 						}),
@@ -1091,7 +1054,6 @@ mod tests {
 					slot: SlotKey::Hand(Side::Off),
 					item: Some(Item {
 						name: "Some Item",
-						skill: None,
 						model: Some("model key"),
 						..default()
 					}),
@@ -1110,10 +1072,6 @@ mod tests {
 		let models = Models([("model key", model.clone())].into());
 		let item = Item {
 			name: "Some Item",
-			skill: Some(Skill {
-				name: "Some Skill".to_owned(),
-				..default()
-			}),
 			model: Some("model key"),
 			..default()
 		};
@@ -1154,10 +1112,6 @@ mod tests {
 		let models = Models([].into());
 		let item = Item {
 			name: "Some Item",
-			skill: Some(Skill {
-				name: "Some Skill".to_owned(),
-				..default()
-			}),
 			model: Some("model key"),
 			..default()
 		};
@@ -1220,10 +1174,6 @@ mod tests {
 		let models = Models([("model key", model.clone())].into());
 		let item = Item {
 			name: "Some Item",
-			skill: Some(Skill {
-				name: "Some Skill".to_owned(),
-				..default()
-			}),
 			model: Some("model key"),
 			..default()
 		};

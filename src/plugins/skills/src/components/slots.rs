@@ -1,6 +1,9 @@
 use super::{Item, Slot};
-use crate::{items::slot_key::SlotKey, skills::Skill};
-use bevy::ecs::component::Component;
+use crate::{
+	items::{slot_key::SlotKey, SkillHandle},
+	skills::Skill,
+};
+use bevy::{asset::Handle, ecs::component::Component};
 use common::traits::get::Get;
 use std::collections::HashMap;
 
@@ -26,10 +29,14 @@ impl Get<SlotKey, Item> for Slots {
 	}
 }
 
-impl Get<SlotKey, Skill> for Slots {
-	fn get(&self, key: &SlotKey) -> Option<&Skill> {
+impl Get<SlotKey, Handle<Skill>> for Slots {
+	fn get(&self, key: &SlotKey) -> Option<&Handle<Skill>> {
 		let item: &Item = self.get(key)?;
-		item.skill.as_ref()
+
+		match &item.skill {
+			SkillHandle::Handle(handle) => Some(handle),
+			_ => None,
+		}
 	}
 }
 
@@ -37,8 +44,12 @@ impl Get<SlotKey, Skill> for Slots {
 mod tests {
 	use super::*;
 	use crate::components::Mounts;
-	use bevy::{prelude::Entity, utils::default};
-	use common::components::Side;
+	use bevy::{
+		asset::AssetId,
+		prelude::Entity,
+		utils::{default, Uuid},
+	};
+	use common::{components::Side, traits::load_asset::Path};
 
 	fn mounts() -> Mounts<Entity> {
 		Mounts {
@@ -114,5 +125,51 @@ mod tests {
 		);
 
 		assert_eq!(None::<&Item>, slots.get(&SlotKey::Hand(Side::Off)));
+	}
+
+	#[test]
+	fn get_skill_handle() {
+		let handle = Handle::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		});
+		let slots = Slots(
+			[(
+				SlotKey::Hand(Side::Main),
+				Slot {
+					mounts: mounts(),
+					item: Some(Item {
+						name: "my item",
+						skill: SkillHandle::Handle(handle.clone()),
+						..default()
+					}),
+				},
+			)]
+			.into(),
+		);
+
+		assert_eq!(Some(&handle), slots.get(&SlotKey::Hand(Side::Main)));
+	}
+
+	#[test]
+	fn get_skill_handle_none_when_not_skill_handle_stored() {
+		let slots = Slots(
+			[(
+				SlotKey::Hand(Side::Main),
+				Slot {
+					mounts: mounts(),
+					item: Some(Item {
+						name: "my item",
+						skill: SkillHandle::Path(Path::from("some/skill/path")),
+						..default()
+					}),
+				},
+			)]
+			.into(),
+		);
+
+		assert_eq!(
+			None::<&Handle<Skill>>,
+			slots.get(&SlotKey::Hand(Side::Main))
+		);
 	}
 }
