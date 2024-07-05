@@ -55,6 +55,7 @@ use systems::{
 	execute::execute,
 	flush::flush,
 	get_inputs::get_inputs,
+	load_skills::load_skills,
 	mouse_context::{
 		advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
 		release::release_triggered_mouse_context,
@@ -73,6 +74,7 @@ impl Plugin for SkillsPlugin {
 		app.init_resource::<KeyMap<SlotKey, KeyCode>>()
 			.init_asset::<Skill>()
 			.register_asset_loader(SkillLoader::<Skill>::default())
+			.add_systems(PreStartup, load_skills::<AssetServer>)
 			.add_systems(PreStartup, load_models)
 			.add_systems(PreUpdate, (add_item_slots, add_skill_spawn))
 			.add_systems(

@@ -1,0 +1,15 @@
+{
+	"name": "Gravity Well",
+	"active": {
+		"secs": 0,
+		"nanos": 200000000
+	},
+	"animate": {
+		"Some": "ShootHandGun"
+	},
+	"behavior": "GravityWell",
+	"is_usable_with": [
+		"Bracer"
+	],
+	"icon": "icons/gravity_well.png"
+}

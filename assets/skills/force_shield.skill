@@ -1,0 +1,15 @@
+{
+	"name": "Force Shield",
+	"active": {
+		"secs": 0,
+		"nanos": 200000000
+	},
+	"animate": {
+		"Some": "ShootHandGun"
+	},
+	"behavior": "ForceShield",
+	"is_usable_with": [
+		"Bracer"
+	],
+	"icon": "icons/force_shield.png"
+}
