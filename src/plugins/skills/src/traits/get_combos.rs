@@ -60,7 +60,7 @@ fn complete_combos<'a>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::combos::ComboNode;
+	use crate::components::combo_node::ComboNode;
 	use bevy::utils::default;
 	use common::components::Side;
 

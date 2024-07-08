@@ -30,7 +30,8 @@ use common::{
 	traits::{load_asset::Path, try_insert_on::TryInsertOn},
 };
 use components::{
-	combos::{ComboNode, Combos},
+	combo_node::ComboNode,
+	combos::Combos,
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
 	queue::Queue,

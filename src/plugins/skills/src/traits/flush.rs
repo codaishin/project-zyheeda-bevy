@@ -1,5 +1,5 @@
 use super::{Flush, SetNextCombo};
-use crate::components::combos::ComboNode;
+use crate::components::combo_node::ComboNode;
 
 impl<T: SetNextCombo<Option<ComboNode>>> Flush for T {
 	fn flush(&mut self) {
