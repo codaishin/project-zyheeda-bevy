@@ -1,18 +1,8 @@
-use super::{Animate, Skill, SkillAnimation};
-use crate::{
-	items::ItemType,
-	traits::{
-		AnimationChainIf,
-		GetAnimationSetup,
-		GetSkillAnimation,
-		GetStaticSkillBehavior,
-		SkillTemplate,
-	},
-};
+use super::SkillAnimation;
+use crate::traits::{AnimationChainIf, GetAnimationSetup};
 use animations::animation::{Animation, PlayMode};
-use behaviors::components::Projectile;
 use common::{tools::player_animation_path, traits::load_asset::Path};
-use std::{collections::HashSet, marker::PhantomData, time::Duration};
+use std::marker::PhantomData;
 
 pub(crate) struct ShootHandGun<T = ()>(PhantomData<T>);
 
@@ -60,18 +50,5 @@ impl GetAnimationSetup for ShootHandGun {
 				then: shoot_right_dual,
 			},
 		]
-	}
-}
-
-impl<T: Sync + Send + 'static> SkillTemplate for ShootHandGun<T> {
-	fn skill() -> Skill {
-		Skill {
-			name: "Shoot Hand Gun".to_owned(),
-			active: Duration::from_millis(200),
-			animate: Animate::Some(ShootHandGun::animation()),
-			behavior: Projectile::<T>::behavior(),
-			is_usable_with: HashSet::from([ItemType::Pistol]),
-			icon: Some(Path::from("icons/pistol.png")),
-		}
 	}
 }

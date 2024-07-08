@@ -4,7 +4,7 @@ use crate::{
 	skills::Skill,
 	traits::{Combo, GetCombos, PeekNext, SetNextCombo},
 };
-use bevy::ecs::component::Component;
+use bevy::{ecs::component::Component, prelude::default};
 use common::traits::{
 	get::{Get, GetMut},
 	insert::TryInsert,
@@ -12,12 +12,18 @@ use common::traits::{
 };
 use std::collections::{hash_map::Entry, HashMap};
 
-#[derive(Clone, PartialEq, Debug, Default)]
-pub struct ComboNode(HashMap<SlotKey, (Skill, ComboNode)>);
+#[derive(Component, Clone, PartialEq, Debug)]
+pub struct ComboNode<TSkill = Skill>(HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>);
 
-impl ComboNode {
-	pub fn new<const N: usize>(combos: [(SlotKey, (Skill, ComboNode)); N]) -> Self {
+impl<TSkill> ComboNode<TSkill> {
+	pub fn new<const N: usize>(combos: [(SlotKey, (TSkill, ComboNode<TSkill>)); N]) -> Self {
 		Self(HashMap::from(combos))
+	}
+}
+
+impl<TSkill> Default for ComboNode<TSkill> {
+	fn default() -> Self {
+		Self(default())
 	}
 }
 

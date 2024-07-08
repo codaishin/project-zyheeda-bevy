@@ -27,7 +27,7 @@ use common::{
 	resources::{key_map::KeyMap, Models},
 	states::{GameRunning, MouseContext},
 	systems::log::log_many,
-	traits::try_insert_on::TryInsertOn,
+	traits::{load_asset::Path, try_insert_on::TryInsertOn},
 };
 use components::{
 	combos::{ComboNode, Combos},
@@ -40,12 +40,7 @@ use components::{
 };
 use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount, SkillHandle};
 use skill_loader::SkillLoader;
-use skills::{
-	force_shield_skill::ForceShieldSkill,
-	gravity_well_skill::GravityWellSkill,
-	QueuedSkill,
-	Skill,
-};
+use skills::{QueuedSkill, Skill};
 use std::{collections::HashSet, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,
@@ -65,7 +60,6 @@ use systems::{
 	update_item_slot_skills::update_item_slot_skills,
 	update_skill_combos::update_skill_combos,
 };
-use traits::SkillTemplate;
 
 pub struct SkillsPlugin;
 
@@ -207,27 +201,33 @@ fn get_inventory() -> Inventory {
 	})])
 }
 
-fn get_combos() -> Combos {
-	Combos::new(ComboNode::new([
+fn get_combos() -> ComboNode<Path> {
+	ComboNode::new([
 		(
 			SlotKey::Hand(Side::Off),
 			(
-				ForceShieldSkill::skill(),
+				Path::from("skills/force_shield.skill"),
 				ComboNode::new([(
 					SlotKey::Hand(Side::Off),
-					(GravityWellSkill::skill(), ComboNode::default()),
+					(
+						Path::from("skills/gravity_well.skill"),
+						ComboNode::default(),
+					),
 				)]),
 			),
 		),
 		(
 			SlotKey::Hand(Side::Main),
 			(
-				ForceShieldSkill::skill(),
+				Path::from("skills/force_shield.skill"),
 				ComboNode::new([(
 					SlotKey::Hand(Side::Main),
-					(GravityWellSkill::skill(), ComboNode::default()),
+					(
+						Path::from("skills/gravity_well.skill"),
+						ComboNode::default(),
+					),
 				)]),
 			),
 		),
-	]))
+	])
 }
