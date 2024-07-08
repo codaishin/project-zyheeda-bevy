@@ -1,14 +1,11 @@
 use super::{Item, Slot};
-use crate::{
-	items::{slot_key::SlotKey, SkillHandle},
-	skills::Skill,
-};
-use bevy::{asset::Handle, ecs::component::Component};
+use crate::{items::slot_key::SlotKey, skills::Skill, traits::TryMap};
+use bevy::ecs::component::Component;
 use common::traits::get::Get;
 use std::collections::HashMap;
 
 #[derive(Component, Clone, PartialEq, Debug)]
-pub struct Slots(pub HashMap<SlotKey, Slot>);
+pub struct Slots<TSkill = Skill>(pub HashMap<SlotKey, Slot<TSkill>>);
 
 impl Slots {
 	pub fn new() -> Self {
@@ -22,34 +19,59 @@ impl Default for Slots {
 	}
 }
 
-impl Get<SlotKey, Item> for Slots {
-	fn get(&self, key: &SlotKey) -> Option<&Item> {
+impl<TSkill> Get<SlotKey, Item<TSkill>> for Slots<TSkill> {
+	fn get(&self, key: &SlotKey) -> Option<&Item<TSkill>> {
 		let slot = self.0.get(key)?;
 		slot.item.as_ref()
 	}
 }
 
-impl Get<SlotKey, Handle<Skill>> for Slots {
-	fn get(&self, key: &SlotKey) -> Option<&Handle<Skill>> {
+impl Get<SlotKey, Skill> for Slots {
+	fn get(&self, key: &SlotKey) -> Option<&Skill> {
 		let item: &Item = self.get(key)?;
 
-		match &item.skill {
-			SkillHandle::Handle(handle) => Some(handle),
-			_ => None,
-		}
+		item.skill.as_ref()
+	}
+}
+
+impl<TIn, TOut> TryMap<TIn, TOut, Slots<TOut>> for Slots<TIn> {
+	fn try_map(&self, map_fn: impl FnMut(&TIn) -> Option<TOut>) -> Slots<TOut> {
+		let slots = self.0.iter().map(new_mapped_slot(map_fn)).collect();
+
+		Slots(slots)
+	}
+}
+
+fn new_mapped_slot<TIn, TOut>(
+	mut map_fn: impl FnMut(&TIn) -> Option<TOut>,
+) -> impl FnMut((&SlotKey, &Slot<TIn>)) -> (SlotKey, Slot<TOut>) {
+	move |(key, slot)| {
+		(
+			*key,
+			Slot {
+				mounts: slot.mounts.clone(),
+				item: slot.item.as_ref().map(|item| Item {
+					name: item.name,
+					skill: item.skill.as_ref().and_then(&mut map_fn),
+					model: item.model,
+					mount: item.mount,
+					item_type: item.item_type.clone(),
+				}),
+			},
+		)
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Mounts;
-	use bevy::{
-		asset::AssetId,
-		prelude::Entity,
-		utils::{default, Uuid},
+	use crate::{
+		components::Mounts,
+		items::{ItemType, Mount},
 	};
-	use common::{components::Side, traits::load_asset::Path};
+	use bevy::{prelude::Entity, utils::default};
+	use common::components::Side;
+	use std::collections::HashSet;
 
 	fn mounts() -> Mounts<Entity> {
 		Mounts {
@@ -63,7 +85,7 @@ mod tests {
 		let slots = Slots(
 			[(
 				SlotKey::Hand(Side::Off),
-				Slot {
+				Slot::<()> {
 					mounts: mounts(),
 					item: Some(Item {
 						name: "my item",
@@ -88,7 +110,7 @@ mod tests {
 		let slots = Slots(
 			[(
 				SlotKey::Hand(Side::Main),
-				Slot {
+				Slot::<()> {
 					mounts: mounts(),
 					item: Some(Item {
 						name: "my item",
@@ -128,10 +150,7 @@ mod tests {
 	}
 
 	#[test]
-	fn get_skill_handle() {
-		let handle = Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
+	fn get_skill() {
 		let slots = Slots(
 			[(
 				SlotKey::Hand(Side::Main),
@@ -139,27 +158,10 @@ mod tests {
 					mounts: mounts(),
 					item: Some(Item {
 						name: "my item",
-						skill: SkillHandle::Handle(handle.clone()),
-						..default()
-					}),
-				},
-			)]
-			.into(),
-		);
-
-		assert_eq!(Some(&handle), slots.get(&SlotKey::Hand(Side::Main)));
-	}
-
-	#[test]
-	fn get_skill_handle_none_when_not_skill_handle_stored() {
-		let slots = Slots(
-			[(
-				SlotKey::Hand(Side::Main),
-				Slot {
-					mounts: mounts(),
-					item: Some(Item {
-						name: "my item",
-						skill: SkillHandle::Path(Path::from("some/skill/path")),
+						skill: Some(Skill {
+							name: "my skill".to_owned(),
+							..default()
+						}),
 						..default()
 					}),
 				},
@@ -168,8 +170,207 @@ mod tests {
 		);
 
 		assert_eq!(
-			None::<&Handle<Skill>>,
+			Some(&Skill {
+				name: "my skill".to_owned(),
+				..default()
+			}),
 			slots.get(&SlotKey::Hand(Side::Main))
 		);
+	}
+
+	#[test]
+	fn try_map_item_skill() {
+		#[derive(Debug, PartialEq)]
+		struct _Mapped(String);
+
+		let slots = Slots(
+			[(
+				SlotKey::Hand(Side::Main),
+				Slot {
+					mounts: mounts(),
+					item: Some(Item {
+						skill: Some("my/skill/path"),
+						..default()
+					}),
+				},
+			)]
+			.into(),
+		);
+
+		let got = slots.try_map(|value| Some(_Mapped(value.to_string())));
+		let expected = Slots(
+			[(
+				SlotKey::Hand(Side::Main),
+				Slot {
+					mounts: mounts(),
+					item: Some(Item {
+						skill: Some(_Mapped("my/skill/path".to_owned())),
+						..default()
+					}),
+				},
+			)]
+			.into(),
+		);
+
+		assert_eq!(expected, got)
+	}
+
+	#[test]
+	fn try_map_item_completely() {
+		#[derive(Debug, PartialEq)]
+		struct _Mapped(String);
+
+		let slots = Slots(
+			[(
+				SlotKey::Hand(Side::Main),
+				Slot {
+					mounts: mounts(),
+					item: Some(Item {
+						name: "my item",
+						skill: Some("my/skill/path"),
+						model: Some("model"),
+						item_type: HashSet::from([ItemType::Pistol]),
+						mount: Mount::Hand,
+					}),
+				},
+			)]
+			.into(),
+		);
+
+		let got = slots.try_map(|value| Some(_Mapped(value.to_string())));
+		let expected = Slots(
+			[(
+				SlotKey::Hand(Side::Main),
+				Slot {
+					mounts: mounts(),
+					item: Some(Item {
+						name: "my item",
+						skill: Some(_Mapped("my/skill/path".to_owned())),
+						model: Some("model"),
+						item_type: HashSet::from([ItemType::Pistol]),
+						mount: Mount::Hand,
+					}),
+				},
+			)]
+			.into(),
+		);
+
+		assert_eq!(expected, got)
+	}
+
+	#[test]
+	fn try_map_items_without_skill() {
+		#[derive(Debug, PartialEq)]
+		struct _Mapped(String);
+
+		let slots = Slots(
+			[
+				(
+					SlotKey::Hand(Side::Main),
+					Slot {
+						mounts: mounts(),
+						item: Some(Item {
+							skill: Some("my/skill/path"),
+							..default()
+						}),
+					},
+				),
+				(
+					SlotKey::Hand(Side::Main),
+					Slot {
+						mounts: mounts(),
+						item: Some(Item {
+							skill: None,
+							..default()
+						}),
+					},
+				),
+			]
+			.into(),
+		);
+
+		let got = slots.try_map(|value| Some(_Mapped(value.to_string())));
+		let expected = Slots(
+			[
+				(
+					SlotKey::Hand(Side::Main),
+					Slot {
+						mounts: mounts(),
+						item: Some(Item {
+							skill: Some(_Mapped("my/skill/path".to_owned())),
+							..default()
+						}),
+					},
+				),
+				(
+					SlotKey::Hand(Side::Main),
+					Slot {
+						mounts: mounts(),
+						item: Some(Item {
+							skill: None,
+							..default()
+						}),
+					},
+				),
+			]
+			.into(),
+		);
+
+		assert_eq!(expected, got)
+	}
+
+	#[test]
+	fn try_map_slots_without_items() {
+		#[derive(Debug, PartialEq)]
+		struct _Mapped(String);
+
+		let slots = Slots(
+			[
+				(
+					SlotKey::Hand(Side::Main),
+					Slot {
+						mounts: mounts(),
+						item: Some(Item {
+							skill: Some("my/skill/path"),
+							..default()
+						}),
+					},
+				),
+				(
+					SlotKey::Hand(Side::Main),
+					Slot {
+						mounts: mounts(),
+						item: None,
+					},
+				),
+			]
+			.into(),
+		);
+
+		let got = slots.try_map(|value| Some(_Mapped(value.to_string())));
+		let expected = Slots(
+			[
+				(
+					SlotKey::Hand(Side::Main),
+					Slot {
+						mounts: mounts(),
+						item: Some(Item {
+							skill: Some(_Mapped("my/skill/path".to_owned())),
+							..default()
+						}),
+					},
+				),
+				(
+					SlotKey::Hand(Side::Main),
+					Slot {
+						mounts: mounts(),
+						item: None,
+					},
+				),
+			]
+			.into(),
+		);
+
+		assert_eq!(expected, got)
 	}
 }

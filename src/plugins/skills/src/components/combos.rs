@@ -6,19 +6,24 @@ use crate::{
 };
 use bevy::ecs::component::Component;
 
-#[derive(Component)]
+#[derive(Component, PartialEq, Debug)]
 pub struct Combos<TComboNode = ComboNode> {
 	value: TComboNode,
 	current: Option<TComboNode>,
 }
 
 impl<T> Combos<T> {
-	#[allow(dead_code)]
 	pub fn new(config: T) -> Self {
 		Self {
 			value: config,
 			current: None,
 		}
+	}
+}
+
+impl<T> From<ComboNode<T>> for Combos<ComboNode<T>> {
+	fn from(value: ComboNode<T>) -> Self {
+		Combos::new(value)
 	}
 }
 

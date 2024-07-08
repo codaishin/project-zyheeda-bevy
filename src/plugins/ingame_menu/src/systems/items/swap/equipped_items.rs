@@ -15,11 +15,12 @@ use common::{
 use skills::{
 	components::{slots::Slots, Slot},
 	items::slot_key::SlotKey,
+	skills::Skill,
 };
 
 type SlotsToSwap<'a> = (
 	Entity,
-	&'a mut Slots,
+	&'a mut Slots<Handle<Skill>>,
 	&'a Collection<Swap<SlotKey, SlotKey>>,
 );
 
@@ -43,7 +44,7 @@ pub fn swap_equipped_items(
 
 fn do_swap(
 	swap: &Swap<SlotKey, SlotKey>,
-	slots: &mut Mut<Slots>,
+	slots: &mut Mut<Slots<Handle<Skill>>>,
 	handles: &mut Query<&mut Handle<Scene>>,
 ) -> [Result<(), Error>; 2] {
 	let slot_results = [
@@ -87,7 +88,7 @@ fn do_swap(
 }
 
 fn get_handles(
-	slot: &Slot,
+	slot: &Slot<Handle<Skill>>,
 	handles: &mut Query<&mut Handle<Scene>>,
 ) -> Result<(Handle<Scene>, Handle<Scene>), QueryEntityError> {
 	Ok((
@@ -138,6 +139,7 @@ mod tests {
 	use skills::{
 		components::{Mounts, Slot},
 		items::{Item, Mount},
+		skills::Skill,
 	};
 
 	#[test]
@@ -167,7 +169,7 @@ mod tests {
 					[
 						(
 							SlotKey::Hand(Side::Off),
-							Slot {
+							Slot::<Handle<Skill>> {
 								mounts: Mounts {
 									hand: slot_handle_ids[0],
 									forearm: slot_handle_ids[1],
@@ -205,7 +207,11 @@ mod tests {
 
 		let handles =
 			slot_handle_ids.map(|id| app.world.entity(id).get::<Handle<Scene>>().unwrap());
-		let slots = app.world.entity(agent).get::<Slots>().unwrap();
+		let slots = app
+			.world
+			.entity(agent)
+			.get::<Slots<Handle<Skill>>>()
+			.unwrap();
 		let new_items = (
 			slots.0.get(&SlotKey::Hand(Side::Off)).unwrap().item.clone(),
 			slots
@@ -249,7 +255,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Slots([].into()),
+				Slots::<Handle<Skill>>([].into()),
 				Collection::<Swap<SlotKey, SlotKey>>([].into()),
 			))
 			.id();
@@ -268,7 +274,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Slots([].into()),
+				Slots::<Handle<Skill>>([].into()),
 				Collection([Swap(SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main))].into()),
 			))
 			.id();
@@ -300,7 +306,7 @@ mod tests {
 					[
 						(
 							SlotKey::Hand(Side::Off),
-							Slot {
+							Slot::<Handle<Skill>> {
 								mounts: Mounts {
 									hand: Entity::from_raw(100),
 									forearm: Entity::from_raw(200),

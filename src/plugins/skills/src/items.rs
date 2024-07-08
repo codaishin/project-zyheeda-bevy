@@ -1,8 +1,7 @@
 pub mod inventory_key;
 pub mod slot_key;
 
-use bevy::asset::Handle;
-use common::traits::load_asset::Path;
+use bevy::prelude::default;
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashSet,
@@ -18,26 +17,30 @@ pub enum Mount {
 	Forearm,
 }
 
-#[derive(Default, Debug, PartialEq, Clone)]
-pub enum SkillHandle {
-	#[default]
-	None,
-	Path(Path),
-	Handle(Handle<Skill>),
-}
-
-#[derive(Debug, PartialEq, Clone, Default)]
-pub struct Item {
+#[derive(Debug, PartialEq, Clone)]
+pub struct Item<TSkill = Skill> {
 	pub name: &'static str,
 	pub model: Option<&'static str>,
-	pub skill: SkillHandle,
+	pub skill: Option<TSkill>,
 	pub item_type: HashSet<ItemType>,
 	pub mount: Mount,
 }
 
-impl Display for Item {
+impl<TSkill> Default for Item<TSkill> {
+	fn default() -> Self {
+		Self {
+			name: default(),
+			model: default(),
+			skill: default(),
+			item_type: default(),
+			mount: default(),
+		}
+	}
+}
+
+impl<TSkill> Display for Item<TSkill> {
 	fn fmt(&self, f: &mut Formatter) -> Result {
-		write!(f, "Item({}) with Skill({:?})", self.name, self.skill)
+		write!(f, "Item({})", self.name)
 	}
 }
 

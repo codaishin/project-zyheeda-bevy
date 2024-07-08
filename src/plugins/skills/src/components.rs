@@ -8,7 +8,10 @@ pub mod slots;
 pub(crate) mod skill_executer;
 
 use self::slots::Slots;
-use crate::items::{slot_key::SlotKey, Item};
+use crate::{
+	items::{slot_key::SlotKey, Item},
+	skills::Skill,
+};
 use bevy::ecs::{component::Component, entity::Entity};
 use common::components::Collection;
 use std::collections::HashMap;
@@ -20,9 +23,9 @@ pub struct Mounts<T> {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub struct Slot {
+pub struct Slot<TSkill = Skill> {
 	pub mounts: Mounts<Entity>,
-	pub item: Option<Item>,
+	pub item: Option<Item<TSkill>>,
 }
 
 pub(crate) type BoneName = str;
@@ -33,4 +36,4 @@ pub struct SlotBones(pub HashMap<SlotKey, Mounts<&'static BoneName>>);
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct SkillSpawn<T>(pub T);
 
-pub type Equipment = Collection<(SlotKey, Option<Item>)>;
+pub type Equipment<TSkill> = Collection<(SlotKey, Option<Item<TSkill>>)>;

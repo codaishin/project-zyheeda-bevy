@@ -32,6 +32,7 @@ use skills::{
 		slots::Slots,
 	},
 	items::{inventory_key::InventoryKey, slot_key::SlotKey},
+	skills::Skill,
 };
 use std::time::Duration;
 use systems::{
@@ -194,8 +195,8 @@ fn inventory_screen_systems(app: &mut App) {
 			Update,
 			(
 				panel_colors::<InventoryPanel>,
-				panel_container_states::<InventoryPanel, InventoryKey, Inventory>,
-				panel_container_states::<InventoryPanel, SlotKey, Slots>,
+				panel_container_states::<InventoryPanel, InventoryKey, Inventory<Handle<Skill>>>,
+				panel_container_states::<InventoryPanel, SlotKey, Slots<Handle<Skill>>>,
 				drag::<Player, InventoryKey>,
 				drag::<Player, SlotKey>,
 				drop::<Player, InventoryKey, InventoryKey>,

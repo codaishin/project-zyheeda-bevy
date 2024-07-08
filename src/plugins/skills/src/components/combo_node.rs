@@ -1,3 +1,9 @@
+use super::slots::Slots;
+use crate::{
+	items::slot_key::SlotKey,
+	skills::Skill,
+	traits::{PeekNext, TryMap},
+};
 use bevy::{ecs::component::Component, prelude::default};
 use common::traits::{
 	get::{Get, GetMut},
@@ -5,10 +11,6 @@ use common::traits::{
 	iterate::Iterate,
 };
 use std::collections::{hash_map::Entry, HashMap};
-
-use crate::{items::slot_key::SlotKey, skills::Skill, traits::PeekNext};
-
-use super::slots::Slots;
 
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct ComboNode<TSkill = Skill>(HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>);
@@ -109,6 +111,24 @@ fn skill_is_usable(slots: &Slots, trigger: &SlotKey, skill: &Skill) -> bool {
 		.intersection(&item.item_type)
 		.next()
 		.is_some()
+}
+
+fn try_map<TIn, TOut>(
+	node: &ComboNode<TIn>,
+	map_fn: &mut impl FnMut(&TIn) -> Option<TOut>,
+) -> ComboNode<TOut> {
+	let combos = node
+		.0
+		.iter()
+		.filter_map(|(key, (skill, next))| Some((*key, (map_fn(skill)?, try_map(next, map_fn)))));
+
+	ComboNode(HashMap::from_iter(combos))
+}
+
+impl<TIn, TOut, TResult: From<ComboNode<TOut>>> TryMap<TIn, TOut, TResult> for ComboNode<TIn> {
+	fn try_map(&self, mut map_fn: impl FnMut(&TIn) -> Option<TOut>) -> TResult {
+		TResult::from(try_map(self, &mut map_fn))
+	}
 }
 
 #[cfg(test)]
@@ -632,6 +652,68 @@ mod tests {
 		assert_eq!(
 			(ComboNode::default(), Err(SlotKeyPathError::IsInvalid)),
 			(combos, success)
+		);
+	}
+
+	struct _In(&'static str);
+
+	#[derive(Debug, PartialEq)]
+	struct _Out(&'static str);
+
+	#[derive(Debug, PartialEq)]
+	struct _Result(ComboNode<_Out>);
+
+	impl From<ComboNode<_Out>> for _Result {
+		fn from(value: ComboNode<_Out>) -> Self {
+			_Result(value)
+		}
+	}
+
+	#[test]
+	fn try_map_skills() {
+		let node = ComboNode::new([(
+			SlotKey::Hand(Side::Off),
+			(_In("my skill"), ComboNode::new([])),
+		)]);
+
+		let combos = node.try_map(&mut |value: &_In| Some(_Out(value.0)));
+
+		assert_eq!(
+			_Result(ComboNode::new([(
+				SlotKey::Hand(Side::Off),
+				(_Out("my skill"), ComboNode::new([])),
+			)])),
+			combos
+		);
+	}
+
+	#[test]
+	fn try_map_child_nodes() {
+		let node = ComboNode::new([(
+			SlotKey::Hand(Side::Off),
+			(
+				_In("my skill"),
+				ComboNode::new([(
+					SlotKey::Hand(Side::Main),
+					(_In("my child skill"), ComboNode::new([])),
+				)]),
+			),
+		)]);
+
+		let combos = node.try_map(&mut |value: &_In| Some(_Out(value.0)));
+
+		assert_eq!(
+			_Result(ComboNode::new([(
+				SlotKey::Hand(Side::Off),
+				(
+					_Out("my skill"),
+					ComboNode::new([(
+						SlotKey::Hand(Side::Main),
+						(_Out("my child skill"), ComboNode::new([])),
+					)])
+				),
+			)])),
+			combos
 		);
 	}
 }

@@ -231,7 +231,7 @@ mod tests {
 	#[test]
 	fn call_next_with_new_skills() {
 		let mut app = setup();
-		let slots = Slots(HashMap::from([(
+		let slots: Slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
 				mounts: mounts(),
@@ -280,7 +280,7 @@ mod tests {
 	#[test]
 	fn update_skill_with_combo_skills() {
 		let mut app = setup();
-		let slots = Slots(HashMap::from([(
+		let slots: Slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
 				mounts: mounts(),
@@ -360,7 +360,7 @@ mod tests {
 	#[test]
 	fn combo_flush_when_empty() {
 		let mut app = setup();
-		let slots = Slots(HashMap::from([(
+		let slots: Slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
 				mounts: mounts(),
@@ -378,7 +378,7 @@ mod tests {
 	#[test]
 	fn no_combo_flush_when_not_empty() {
 		let mut app = setup();
-		let slots = Slots(HashMap::from([(
+		let slots: Slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
 				mounts: mounts(),
@@ -399,7 +399,7 @@ mod tests {
 	#[test]
 	fn no_combo_flush_when_empty_and_not_timed_out() {
 		let mut app = setup();
-		let slots = Slots(HashMap::from([(
+		let slots: Slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
 				mounts: mounts(),
@@ -421,7 +421,7 @@ mod tests {
 	#[test]
 	fn combo_flush_when_empty_and_timed_out() {
 		let mut app = setup();
-		let slots = Slots(HashMap::from([(
+		let slots: Slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
 				mounts: mounts(),
@@ -443,7 +443,7 @@ mod tests {
 	#[test]
 	fn timeout_flush_when_empty_and_is_timed_out() {
 		let mut app = setup();
-		let slots = Slots(HashMap::from([(
+		let slots: Slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
 				mounts: mounts(),
@@ -465,7 +465,7 @@ mod tests {
 	#[test]
 	fn timeout_flush_when_not_empty() {
 		let mut app = setup();
-		let slots = Slots(HashMap::from([(
+		let slots: Slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
 				mounts: mounts(),
@@ -490,7 +490,7 @@ mod tests {
 	#[test]
 	fn no_timeout_flush_when_empty_and_is_not_timed_out() {
 		let mut app = setup();
-		let slots = Slots(HashMap::from([(
+		let slots: Slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
 				mounts: mounts(),
@@ -512,7 +512,7 @@ mod tests {
 	#[test]
 	fn do_not_test_for_timeout_when_skill_queue_not_empty() {
 		let mut app = setup();
-		let slots = Slots(HashMap::from([(
+		let slots: Slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
 				mounts: mounts(),
@@ -542,7 +542,7 @@ mod tests {
 	fn call_is_timeout_with_delta() {
 		let mut app = setup();
 		app.tick_time(Duration::from_secs(42));
-		let slots = Slots(HashMap::from([(
+		let slots: Slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
 				mounts: mounts(),
@@ -569,7 +569,7 @@ mod tests {
 	fn call_update_and_timeout_in_sequence() {
 		let mut app = setup();
 		app.tick_time(Duration::from_secs(42));
-		let slots = Slots(HashMap::from([(
+		let slots: Slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
 				mounts: mounts(),

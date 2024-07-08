@@ -11,7 +11,7 @@ mod systems;
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::{
 	app::{Plugin, PreStartup, PreUpdate, Update},
-	asset::{AssetApp, AssetServer, LoadedFolder},
+	asset::{AssetApp, AssetServer, Handle, LoadedFolder},
 	ecs::{
 		entity::Entity,
 		query::Added,
@@ -39,7 +39,7 @@ use components::{
 	slots::Slots,
 	Mounts,
 };
-use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount, SkillHandle};
+use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount};
 use skill_loader::SkillLoader;
 use skills::{QueuedSkill, Skill};
 use std::{collections::HashSet, time::Duration};
@@ -56,9 +56,10 @@ use systems::{
 		release::release_triggered_mouse_context,
 		trigger_primed::trigger_primed_mouse_context,
 	},
+	skill_handle_to_skill::skill_handle_to_skill,
+	skill_path_to_handle::skill_path_to_handle,
 	skill_spawn::add_skill_spawn,
 	slots::add_item_slots,
-	update_item_slot_skills::update_item_slot_skills,
 	update_skill_combos::update_skill_combos,
 };
 
@@ -71,13 +72,29 @@ impl Plugin for SkillsPlugin {
 			.register_asset_loader(SkillLoader::<Skill>::default())
 			.add_systems(PreStartup, load_skills::<AssetServer>)
 			.add_systems(PreStartup, load_models)
+			.add_systems(PreUpdate, (add_item_slots, add_skill_spawn))
+			.add_systems(
+				PreUpdate,
+				skill_path_to_handle::<Inventory<Path>, Inventory<Handle<Skill>>, LoadedFolder>
+					.pipe(log_many),
+			)
 			.add_systems(
 				PreUpdate,
 				(
-					add_item_slots,
-					add_skill_spawn,
-					update_item_slot_skills::<LoadedFolder>,
-				),
+					skill_path_to_handle::<Slots<Path>, Slots<Handle<Skill>>, LoadedFolder>
+						.pipe(log_many),
+					skill_handle_to_skill::<Slots<Handle<Skill>>, Slots>.pipe(log_many),
+				)
+					.chain(),
+			)
+			.add_systems(
+				PreUpdate,
+				(
+					skill_path_to_handle::<ComboNode<Path>, ComboNode<Handle<Skill>>, LoadedFolder>
+						.pipe(log_many),
+					skill_handle_to_skill::<ComboNode<Handle<Skill>>, Combos>.pipe(log_many),
+				)
+					.chain(),
 			)
 			.add_systems(
 				Update,
@@ -87,7 +104,7 @@ impl Plugin for SkillsPlugin {
 						ButtonInput<KeyCode>,
 						State<MouseContext<KeyCode>>,
 					>
-						.pipe(enqueue::<Slots, Skill, Queue, QueuedSkill>),
+						.pipe(enqueue::<Slots, Queue, QueuedSkill>),
 					update_skill_combos::<Combos, CombosTimeOut, Queue, Virtual>,
 					advance_active_skill::<
 						Queue,
@@ -115,9 +132,11 @@ impl Plugin for SkillsPlugin {
 			.add_systems(
 				Update,
 				(
-					equip_item::<Player, (SlotKey, Option<Item>)>.pipe(log_many),
-					equip_item::<Inventory, Swap<InventoryKey, SlotKey>>.pipe(log_many),
-					equip_item::<Inventory, Swap<SlotKey, InventoryKey>>.pipe(log_many),
+					equip_item::<Player, (SlotKey, Option<Item<Handle<Skill>>>)>.pipe(log_many),
+					equip_item::<Inventory<Handle<Skill>>, Swap<InventoryKey, SlotKey>>
+						.pipe(log_many),
+					equip_item::<Inventory<Handle<Skill>>, Swap<SlotKey, InventoryKey>>
+						.pipe(log_many),
 				),
 			);
 	}
@@ -148,7 +167,7 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 	);
 }
 
-fn get_loadout() -> Loadout {
+fn get_loadout() -> Loadout<Path> {
 	Loadout::new(
 		"projectile_spawn",
 		[
@@ -173,7 +192,7 @@ fn get_loadout() -> Loadout {
 				Some(Item {
 					name: "Plasma Pistol A",
 					model: Some("pistol"),
-					skill: SkillHandle::Path("skills/shoot_hand_gun.skill".into()),
+					skill: Some(Path::from("skills/shoot_hand_gun.skill")),
 					item_type: HashSet::from([ItemType::Pistol]),
 					mount: Mount::Hand,
 				}),
@@ -183,7 +202,7 @@ fn get_loadout() -> Loadout {
 				Some(Item {
 					name: "Force Bracer",
 					model: Some("bracer"),
-					skill: SkillHandle::Path("skills/force_shield.skill".into()),
+					skill: Some(Path::from("skills/force_shield.skill")),
 					item_type: HashSet::from([ItemType::Bracer]),
 					mount: Mount::Forearm,
 				}),
@@ -192,11 +211,11 @@ fn get_loadout() -> Loadout {
 	)
 }
 
-fn get_inventory() -> Inventory {
+fn get_inventory() -> Inventory<Path> {
 	Inventory::new([Some(Item {
 		name: "Plasma Pistol B",
 		model: Some("pistol"),
-		skill: SkillHandle::Path("skills/shoot_hand_gun.skill".into()),
+		skill: Some(Path::from("skills/shoot_hand_gun.skill")),
 		item_type: HashSet::from([ItemType::Pistol]),
 		mount: Mount::Hand,
 	})])
