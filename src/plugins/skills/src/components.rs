@@ -13,7 +13,7 @@ use crate::{
 	skills::Skill,
 };
 use bevy::ecs::{component::Component, entity::Entity};
-use common::components::Collection;
+use common::{components::Collection, traits::load_asset::Path};
 use std::collections::HashMap;
 
 #[derive(PartialEq, Debug, Clone)]
@@ -31,7 +31,7 @@ pub struct Slot<TSkill = Skill> {
 pub(crate) type BoneName = str;
 
 #[derive(Component, Clone, PartialEq, Debug)]
-pub struct SlotBones(pub HashMap<SlotKey, Mounts<&'static BoneName>>);
+pub struct SlotsDefinition(pub HashMap<SlotKey, (Mounts<&'static BoneName>, Option<Item<Path>>)>);
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct SkillSpawn<T>(pub T);

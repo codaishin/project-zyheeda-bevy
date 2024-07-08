@@ -39,6 +39,8 @@
 		"mockall",
 		"nanos",
 		"quickbar",
+		"struct",
+		"structs",
 		"tonemapping",
 		"withf",
 		"zyheeda"

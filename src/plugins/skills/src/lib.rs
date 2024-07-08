@@ -59,7 +59,7 @@ use systems::{
 	skill_handle_to_skill::skill_handle_to_skill,
 	skill_path_to_handle::skill_path_to_handle,
 	skill_spawn::add_skill_spawn,
-	slots::add_item_slots,
+	slots::init_slots,
 	update_skill_combos::update_skill_combos,
 };
 
@@ -72,7 +72,7 @@ impl Plugin for SkillsPlugin {
 			.register_asset_loader(SkillLoader::<Skill>::default())
 			.add_systems(PreStartup, load_skills::<AssetServer>)
 			.add_systems(PreStartup, load_models)
-			.add_systems(PreUpdate, (add_item_slots, add_skill_spawn))
+			.add_systems(PreUpdate, (init_slots, add_skill_spawn))
 			.add_systems(
 				PreUpdate,
 				skill_path_to_handle::<Inventory<Path>, Inventory<Handle<Skill>>, LoadedFolder>
@@ -132,7 +132,6 @@ impl Plugin for SkillsPlugin {
 			.add_systems(
 				Update,
 				(
-					equip_item::<Player, (SlotKey, Option<Item<Handle<Skill>>>)>.pipe(log_many),
 					equip_item::<Inventory<Handle<Skill>>, Swap<InventoryKey, SlotKey>>
 						.pipe(log_many),
 					equip_item::<Inventory<Handle<Skill>>, Swap<SlotKey, InventoryKey>>
@@ -167,45 +166,41 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 	);
 }
 
-fn get_loadout() -> Loadout<Path> {
+fn get_loadout() -> Loadout {
 	Loadout::new(
 		"projectile_spawn",
 		[
 			(
 				SlotKey::Hand(Side::Off),
-				Mounts {
-					hand: "hand_slot.L",
-					forearm: "lower_arm.L",
-				},
+				(
+					Mounts {
+						hand: "hand_slot.L",
+						forearm: "lower_arm.L",
+					},
+					Some(Item {
+						name: "Plasma Pistol A",
+						model: Some("pistol"),
+						skill: Some(Path::from("skills/shoot_hand_gun.skill")),
+						item_type: HashSet::from([ItemType::Pistol]),
+						mount: Mount::Hand,
+					}),
+				),
 			),
 			(
 				SlotKey::Hand(Side::Main),
-				Mounts {
-					hand: "hand_slot.R",
-					forearm: "lower_arm.R",
-				},
-			),
-		],
-		[
-			(
-				SlotKey::Hand(Side::Off),
-				Some(Item {
-					name: "Plasma Pistol A",
-					model: Some("pistol"),
-					skill: Some(Path::from("skills/shoot_hand_gun.skill")),
-					item_type: HashSet::from([ItemType::Pistol]),
-					mount: Mount::Hand,
-				}),
-			),
-			(
-				SlotKey::Hand(Side::Main),
-				Some(Item {
-					name: "Force Bracer",
-					model: Some("bracer"),
-					skill: Some(Path::from("skills/force_shield.skill")),
-					item_type: HashSet::from([ItemType::Bracer]),
-					mount: Mount::Forearm,
-				}),
+				(
+					Mounts {
+						hand: "hand_slot.R",
+						forearm: "lower_arm.R",
+					},
+					Some(Item {
+						name: "Force Bracer",
+						model: Some("bracer"),
+						skill: Some(Path::from("skills/force_shield.skill")),
+						item_type: HashSet::from([ItemType::Bracer]),
+						mount: Mount::Forearm,
+					}),
+				),
 			),
 		],
 	)

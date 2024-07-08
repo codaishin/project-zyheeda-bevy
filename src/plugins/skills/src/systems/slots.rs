@@ -1,46 +1,73 @@
 use crate::{
-	components::{slots::Slots, BoneName, Mounts, Slot, SlotBones},
-	items::slot_key::SlotKey,
+	components::{slots::Slots, BoneName, Mounts, Slot, SlotsDefinition},
+	items::{slot_key::SlotKey, Item},
 };
 use bevy::{
 	prelude::{BuildChildren, Children, Commands, Entity, HierarchyQueryExt, Name, Query},
 	scene::SceneBundle,
 };
-use common::traits::try_remove_from::TryRemoveFrom;
+use common::traits::{load_asset::Path, try_remove_from::TryRemoveFrom};
+use std::collections::HashMap;
 
-pub(crate) fn add_item_slots(
+type SlotContent = (Mounts<&'static BoneName>, Option<Item<Path>>);
+type SlotDefinition = (SlotKey, SlotContent);
+
+struct FailedToAdd(SlotDefinition);
+struct Remaining(HashMap<SlotKey, SlotContent>);
+
+pub(crate) fn init_slots(
 	mut commands: Commands,
-	mut agent: Query<(Entity, &mut Slots, &mut SlotBones)>,
+	mut agent: Query<(Entity, &mut Slots<Path>, &mut SlotsDefinition)>,
 	children: Query<&Children>,
 	bones: Query<&Name>,
 ) {
-	for (agent, mut slots, mut slot_infos) in &mut agent {
-		let add_slot = |slot_info: (SlotKey, Mounts<&'static BoneName>)| {
-			let (key, mounts) = slot_info;
-			match find_bones(agent, &mounts, &children, &bones) {
-				Some((hand, forearm)) => {
-					slots.0.insert(
-						key,
-						Slot {
-							mounts: new_handles_on(hand, forearm, &mut commands),
-							item: None,
-						},
-					);
-					None
-				}
-				None => Some((key, mounts)),
-			}
+	for (agent, mut slots, mut slot_definition) in &mut agent {
+		let try_add_slot = |(key, (mounts, item))| {
+			let Some((hand, forearm)) = find_bones(agent, &mounts, &children, &bones) else {
+				return Err(FailedToAdd((key, (mounts, item))));
+			};
+
+			slots.0.insert(
+				key,
+				Slot {
+					mounts: new_handles_on(hand, forearm, &mut commands),
+					item,
+				},
+			);
+
+			Ok(())
 		};
 
-		slot_infos.0 = slot_infos
+		let remaining = try_to_init_slots(&slot_definition, try_add_slot);
+
+		if remaining.0.is_empty() {
+			commands.try_remove_from::<SlotsDefinition>(agent);
+		} else {
+			slot_definition.0 = remaining.0;
+		}
+	}
+}
+
+fn try_to_init_slots(
+	slot_definition: &bevy::prelude::Mut<SlotsDefinition>,
+	try_add_slot: impl FnMut(SlotDefinition) -> Result<(), FailedToAdd>,
+) -> Remaining {
+	Remaining(
+		slot_definition
 			.0
 			.clone()
 			.into_iter()
-			.filter_map(add_slot)
-			.collect();
-		if slot_infos.0.is_empty() {
-			commands.try_remove_from::<SlotBones>(agent);
-		}
+			.map(try_add_slot)
+			.filter_map(not_added)
+			.collect(),
+	)
+}
+
+fn not_added(result: Result<(), FailedToAdd>) -> Option<SlotDefinition> {
+	if let Err(FailedToAdd(info)) = result {
+		Some(info)
+	} else {
+		None
 	}
 }
 
@@ -88,10 +115,13 @@ fn new_handles_on(hand: Entity, forearm: Entity, commands: &mut Commands) -> Mou
 
 #[cfg(test)]
 mod tests {
+	use crate::items::slot_key::SlotKey;
+
 	use super::*;
 	use bevy::{
 		prelude::{App, BuildWorldChildren, Handle, Name, Quat, Transform, Update, Vec3},
 		scene::Scene,
+		utils::default,
 	};
 	use common::components::Side;
 	use std::collections::HashMap;
@@ -109,20 +139,23 @@ mod tests {
 			.id();
 		app.world
 			.spawn((
-				Slots::new(),
-				SlotBones(
+				Slots::<Path>::new(),
+				SlotsDefinition(
 					[(
 						SlotKey::Hand(Side::Off),
-						Mounts {
-							hand: "hand bone",
-							forearm: "forearm bone",
-						},
+						(
+							Mounts {
+								hand: "hand bone",
+								forearm: "forearm bone",
+							},
+							None,
+						),
 					)]
 					.into(),
 				),
 			))
 			.push_children(&[hand_bone, forearm_bone]);
-		app.add_systems(Update, add_item_slots);
+		app.add_systems(Update, init_slots);
 
 		app.update();
 
@@ -150,20 +183,23 @@ mod tests {
 			.id();
 		app.world
 			.spawn((
-				Slots::new(),
-				SlotBones(
+				Slots::<Path>::new(),
+				SlotsDefinition(
 					[(
 						SlotKey::Hand(Side::Off),
-						Mounts {
-							hand: "hand bone",
-							forearm: "forearm bone",
-						},
+						(
+							Mounts {
+								hand: "hand bone",
+								forearm: "forearm bone",
+							},
+							None,
+						),
 					)]
 					.into(),
 				),
 			))
 			.push_children(&[hand_bone, forearm_bone]);
-		app.add_systems(Update, add_item_slots);
+		app.add_systems(Update, init_slots);
 
 		app.update();
 
@@ -203,20 +239,23 @@ mod tests {
 			.id();
 		app.world
 			.spawn((
-				Slots::new(),
-				SlotBones(
+				Slots::<Path>::new(),
+				SlotsDefinition(
 					[(
 						SlotKey::Hand(Side::Off),
-						Mounts {
-							hand: "hand bone",
-							forearm: "forearm bone",
-						},
+						(
+							Mounts {
+								hand: "hand bone",
+								forearm: "forearm bone",
+							},
+							None,
+						),
 					)]
 					.into(),
 				),
 			))
 			.push_children(&[hand_bone, forearm_bone]);
-		app.add_systems(Update, add_item_slots);
+		app.add_systems(Update, init_slots);
 
 		app.update();
 
@@ -253,21 +292,24 @@ mod tests {
 		let root = app
 			.world
 			.spawn((
-				Slots::new(),
-				SlotBones(
+				Slots::<Path>::new(),
+				SlotsDefinition(
 					[(
 						SlotKey::Hand(Side::Off),
-						Mounts {
-							hand: "hand bone",
-							forearm: "forearm bone",
-						},
+						(
+							Mounts {
+								hand: "hand bone",
+								forearm: "forearm bone",
+							},
+							None,
+						),
 					)]
 					.into(),
 				),
 			))
 			.push_children(&[hand_bone, forearm_bone])
 			.id();
-		app.add_systems(Update, add_item_slots);
+		app.add_systems(Update, init_slots);
 
 		app.update();
 
@@ -278,7 +320,7 @@ mod tests {
 			.get::<Children>()
 			.and_then(|c| c.first())
 			.unwrap();
-		let slots = app.world.entity(root).get::<Slots>().unwrap();
+		let slots = app.world.entity(root).get::<Slots<Path>>().unwrap();
 
 		assert_eq!(
 			HashMap::from([(
@@ -309,27 +351,30 @@ mod tests {
 		let root = app
 			.world
 			.spawn((
-				Slots::new(),
-				SlotBones(
+				Slots::<Path>::new(),
+				SlotsDefinition(
 					[(
 						SlotKey::Hand(Side::Off),
-						Mounts {
-							hand: "hand bone",
-							forearm: "forearm bone",
-						},
+						(
+							Mounts {
+								hand: "hand bone",
+								forearm: "forearm bone",
+							},
+							None,
+						),
 					)]
 					.into(),
 				),
 			))
 			.push_children(&bones)
 			.id();
-		app.add_systems(Update, add_item_slots);
+		app.add_systems(Update, init_slots);
 
 		app.update();
 
 		let root = app.world.entity(root);
 
-		assert!(!root.contains::<SlotBones>());
+		assert!(!root.contains::<SlotsDefinition>());
 	}
 
 	#[test]
@@ -346,22 +391,28 @@ mod tests {
 		let root = app
 			.world
 			.spawn((
-				Slots::new(),
-				SlotBones(
+				Slots::<Path>::new(),
+				SlotsDefinition(
 					[
 						(
 							SlotKey::Hand(Side::Off),
-							Mounts {
-								hand: "hand bone",
-								forearm: "forearm bone",
-							},
+							(
+								Mounts {
+									hand: "hand bone",
+									forearm: "forearm bone",
+								},
+								None,
+							),
 						),
 						(
 							SlotKey::Hand(Side::Off),
-							Mounts {
-								hand: "hand bone2",
-								forearm: "forearm bone2",
-							},
+							(
+								Mounts {
+									hand: "hand bone2",
+									forearm: "forearm bone2",
+								},
+								None,
+							),
 						),
 					]
 					.into(),
@@ -369,20 +420,23 @@ mod tests {
 			))
 			.push_children(&bones)
 			.id();
-		app.add_systems(Update, add_item_slots);
+		app.add_systems(Update, init_slots);
 
 		app.update();
 
-		let slot_infos = app.world.entity(root).get::<SlotBones>();
+		let slot_infos = app.world.entity(root).get::<SlotsDefinition>();
 
 		assert_eq!(
-			Some(&SlotBones(
+			Some(&SlotsDefinition(
 				[(
 					SlotKey::Hand(Side::Off),
-					Mounts {
-						hand: "hand bone2",
-						forearm: "forearm bone2",
-					},
+					(
+						Mounts {
+							hand: "hand bone2",
+							forearm: "forearm bone2",
+						},
+						None
+					)
 				),]
 				.into()
 			)),
@@ -407,22 +461,28 @@ mod tests {
 		let root = app
 			.world
 			.spawn((
-				Slots::new(),
-				SlotBones(
+				Slots::<Path>::new(),
+				SlotsDefinition(
 					[
 						(
 							SlotKey::Hand(Side::Off),
-							Mounts {
-								hand: "hand bone",
-								forearm: "forearm bone",
-							},
+							(
+								Mounts {
+									hand: "hand bone",
+									forearm: "forearm bone",
+								},
+								None,
+							),
 						),
 						(
 							SlotKey::Hand(Side::Off),
-							Mounts {
-								hand: "hand bone2",
-								forearm: "forearm bone2",
-							},
+							(
+								Mounts {
+									hand: "hand bone2",
+									forearm: "forearm bone2",
+								},
+								None,
+							),
 						),
 					]
 					.into(),
@@ -430,24 +490,92 @@ mod tests {
 			))
 			.push_children(&bones)
 			.id();
-		app.add_systems(Update, add_item_slots);
+		app.add_systems(Update, init_slots);
 
 		app.update();
 
-		let slot_infos = app.world.entity(root).get::<SlotBones>();
+		let slot_infos = app.world.entity(root).get::<SlotsDefinition>();
 
 		assert_eq!(
-			Some(&SlotBones(
+			Some(&SlotsDefinition(
 				[(
 					SlotKey::Hand(Side::Off),
-					Mounts {
-						hand: "hand bone2",
-						forearm: "forearm bone2",
-					},
+					(
+						Mounts {
+							hand: "hand bone2",
+							forearm: "forearm bone2",
+						},
+						None
+					)
 				),]
 				.into()
 			)),
 			slot_infos
+		);
+	}
+
+	#[test]
+	fn assign_item() {
+		let mut app = App::new();
+		let hand_bone = app
+			.world
+			.spawn((Name::new("hand bone"), Transform::from_xyz(0., 0., 0.)))
+			.id();
+		let forearm_bone = app
+			.world
+			.spawn((Name::new("forearm bone"), Transform::from_xyz(0., 0., 0.)))
+			.id();
+		let root = app
+			.world
+			.spawn((
+				Slots::<Path>::new(),
+				SlotsDefinition(
+					[(
+						SlotKey::Hand(Side::Off),
+						(
+							Mounts {
+								hand: "hand bone",
+								forearm: "forearm bone",
+							},
+							Some(Item {
+								name: "my item",
+								..default()
+							}),
+						),
+					)]
+					.into(),
+				),
+			))
+			.push_children(&[hand_bone, forearm_bone])
+			.id();
+		app.add_systems(Update, init_slots);
+
+		app.update();
+
+		let hand_bone = app.world.entity(hand_bone);
+		let hand_slot = *hand_bone.get::<Children>().and_then(|c| c.first()).unwrap();
+		let forearm_bone = app.world.entity(forearm_bone);
+		let forearm_slot = *forearm_bone
+			.get::<Children>()
+			.and_then(|c| c.first())
+			.unwrap();
+		let slots = app.world.entity(root).get::<Slots<Path>>().unwrap();
+
+		assert_eq!(
+			HashMap::from([(
+				SlotKey::Hand(Side::Off),
+				Slot {
+					mounts: Mounts {
+						hand: hand_slot,
+						forearm: forearm_slot
+					},
+					item: Some(Item {
+						name: "my item",
+						..default()
+					}),
+				}
+			)]),
+			slots.0
 		);
 	}
 }

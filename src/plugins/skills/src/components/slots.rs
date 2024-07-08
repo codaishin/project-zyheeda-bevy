@@ -7,13 +7,13 @@ use std::collections::HashMap;
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct Slots<TSkill = Skill>(pub HashMap<SlotKey, Slot<TSkill>>);
 
-impl Slots {
+impl<T> Slots<T> {
 	pub fn new() -> Self {
 		Self(HashMap::new())
 	}
 }
 
-impl Default for Slots {
+impl<T> Default for Slots<T> {
 	fn default() -> Self {
 		Self::new()
 	}
