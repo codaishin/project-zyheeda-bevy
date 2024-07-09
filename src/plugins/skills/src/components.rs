@@ -12,7 +12,10 @@ use crate::{
 	items::{slot_key::SlotKey, Item},
 	skills::Skill,
 };
-use bevy::ecs::{component::Component, entity::Entity};
+use bevy::{
+	ecs::{component::Component, entity::Entity},
+	utils::default,
+};
 use common::{components::Collection, traits::load_asset::Path};
 use std::collections::HashMap;
 
@@ -29,9 +32,23 @@ pub struct Slot<TSkill = Skill> {
 }
 
 pub(crate) type BoneName = str;
+pub(crate) type SlotContent = (Mounts<&'static BoneName>, Option<Item<Path>>);
+pub(crate) type SlotDefinition = (SlotKey, SlotContent);
 
 #[derive(Component, Clone, PartialEq, Debug)]
-pub struct SlotsDefinition(pub HashMap<SlotKey, (Mounts<&'static BoneName>, Option<Item<Path>>)>);
+pub(crate) struct SlotsDefinition {
+	pub(crate) definitions: HashMap<SlotKey, (Mounts<&'static BoneName>, Option<Item<Path>>)>,
+	pub(crate) slot_buffer: Slots<Path>,
+}
+
+impl SlotsDefinition {
+	pub(crate) fn new<const N: usize>(definitions: [SlotDefinition; N]) -> Self {
+		Self {
+			definitions: definitions.into(),
+			slot_buffer: default(),
+		}
+	}
+}
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct SkillSpawn<T>(pub T);

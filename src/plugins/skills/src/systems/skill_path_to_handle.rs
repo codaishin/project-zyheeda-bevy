@@ -2,7 +2,7 @@ use crate::{resources::SkillFolder, skills::Skill, traits::TryMap};
 use bevy::{
 	asset::{Asset, AssetEvent, AssetId, Assets, Handle},
 	ecs::{system::Res, world::Ref},
-	prelude::{Commands, Component, DetectChanges, Entity, EventReader, Query},
+	prelude::{Commands, Component, Entity, EventReader, Local, Query},
 };
 use common::{
 	errors::{Error, Level},
@@ -10,6 +10,7 @@ use common::{
 		get_handle_from_path::GetHandelFromPath,
 		load_asset::Path,
 		try_insert_on::TryInsertOn,
+		try_remove_from::TryRemoveFrom,
 	},
 };
 
@@ -19,29 +20,35 @@ pub(crate) fn skill_path_to_handle<
 	TFolder: GetHandelFromPath<Skill> + Asset,
 >(
 	mut commands: Commands,
-	mut events: EventReader<AssetEvent<TFolder>>,
+	mut folder_events: EventReader<AssetEvent<TFolder>>,
 	skill_folder: Res<SkillFolder<TFolder>>,
 	loaded_folders: Res<Assets<TFolder>>,
 	sources: Query<(Entity, Ref<TSource>)>,
+	mut folder_added: Local<bool>,
 ) -> Vec<Result<(), Error>> {
 	let folder_id = AssetId::from(skill_folder.0.clone());
 	let Some(folder) = loaded_folders.get(folder_id) else {
 		return vec![Err(no_skill_folder_error())];
 	};
-	let force_update = events.read().any(added_or_changed(folder_id));
+
 	let mut errors = vec![];
 
-	for (entity, source) in sources.iter().filter(is_changed_or(force_update)) {
+	if !*folder_added && !folder_events.read().any(added(folder_id)) {
+		return errors;
+	}
+
+	*folder_added = true;
+
+	for (entity, source) in &sources {
 		commands.try_insert_on(entity, source.try_map(get_handle(folder, &mut errors)));
+		commands.try_remove_from::<TSource>(entity);
 	}
 
 	errors
 }
 
-fn added_or_changed<TFolder: Asset>(
-	id: AssetId<TFolder>,
-) -> impl FnMut(&AssetEvent<TFolder>) -> bool {
-	move |event| event.is_modified(id) || event.is_added(id)
+fn added<TFolder: Asset>(id: AssetId<TFolder>) -> impl FnMut(&AssetEvent<TFolder>) -> bool {
+	move |event| event.is_added(id)
 }
 
 fn get_handle<'a, TFolder: GetHandelFromPath<Skill>>(
@@ -55,10 +62,6 @@ fn get_handle<'a, TFolder: GetHandelFromPath<Skill>>(
 		}
 		handle
 	}
-}
-
-fn is_changed_or<TSource>(force_update: bool) -> impl FnMut(&(Entity, Ref<TSource>)) -> bool {
-	move |(_, source)| source.is_changed() || force_update
 }
 
 fn no_skill_folder_error() -> Error {
@@ -148,7 +151,8 @@ mod tests {
 			.times(1)
 			.with(eq(Path::from("my/skill/path")))
 			.return_const(None);
-		set_folder(&mut app, folder);
+		let id = set_folder(&mut app, folder);
+		app.world.send_event(AssetEvent::Added { id });
 
 		app.world.spawn(_Source(vec![Path::from("my/skill/path")]));
 
@@ -173,7 +177,8 @@ mod tests {
 			.mock
 			.expect_handle_from_path()
 			.return_const(Handle::default());
-		set_folder(&mut app, folder);
+		let id = set_folder(&mut app, folder);
+		app.world.send_event(AssetEvent::Added { id });
 
 		let source = app.world.spawn(_Source(vec![Path::from("my/path")])).id();
 
@@ -185,73 +190,82 @@ mod tests {
 	}
 
 	#[test]
-	fn update_only_when_source_changed() {
+	fn do_not_update_when_no_added_event_present() {
 		let mut app = setup();
 
 		let mut folder = _Folder::default();
 		folder
 			.mock
 			.expect_handle_from_path()
-			.times(2)
+			.never()
 			.return_const(None);
 		set_folder(&mut app, folder);
 
-		let slots = app
+		app.world.spawn(_Source(vec![Path::from("my/skill/path")]));
+
+		app.update();
+	}
+
+	#[test]
+	fn get_handle_from_item_skill_path_after_added_event_already_fired() {
+		let mut app = setup();
+
+		let mut folder = _Folder::default();
+		folder
+			.mock
+			.expect_handle_from_path()
+			.times(1)
+			.with(eq(Path::from("my/skill/path")))
+			.return_const(None);
+		let id = set_folder(&mut app, folder);
+		app.world.send_event(AssetEvent::Added { id });
+
+		app.update();
+
+		app.world.spawn(_Source(vec![Path::from("my/skill/path")]));
+
+		app.update();
+	}
+
+	#[test]
+	fn remove_source() {
+		let mut app = setup();
+
+		let mut folder = _Folder::default();
+		folder.mock.expect_handle_from_path().return_const(None);
+		let id = set_folder(&mut app, folder);
+		app.world.send_event(AssetEvent::Added { id });
+
+		let source = app
 			.world
 			.spawn(_Source(vec![Path::from("my/skill/path")]))
 			.id();
 
 		app.update();
-		app.update();
 
-		let mut slots = app.world.entity_mut(slots);
-		slots.insert(_Source(vec![Path::from("my/other/skill/path")]));
+		let source = app.world.entity(source);
 
-		app.update();
+		assert!(!source.contains::<_Source>());
 	}
 
 	#[test]
-	fn also_update_when_skill_folder_modified() {
+	fn do_not_remove_source_when_no_added_event_present() {
 		let mut app = setup();
 
 		let mut folder = _Folder::default();
-		folder
-			.mock
-			.expect_handle_from_path()
-			.times(2)
-			.return_const(None);
-		let folder = set_folder(&mut app, folder);
+		folder.mock.expect_handle_from_path().return_const(None);
+		set_folder(&mut app, folder);
 
-		app.world.spawn(_Source(vec![Path::from("my/skill/path")]));
-
-		app.update();
-		app.update();
-
-		app.world.send_event(AssetEvent::Modified { id: folder });
+		let source = app
+			.world
+			.spawn(_Source(vec![Path::from("my/skill/path")]))
+			.id();
 
 		app.update();
-	}
 
-	#[test]
-	fn also_update_when_skill_folder_added() {
-		let mut app = setup();
+		let source = app.world.entity(source);
 
-		let mut folder = _Folder::default();
-		folder
-			.mock
-			.expect_handle_from_path()
-			.times(2)
-			.return_const(None);
-		let folder = set_folder(&mut app, folder);
-
-		app.world.spawn(_Source(vec![Path::from("my/skill/path")]));
-
-		app.update();
-		app.update();
-
-		app.world.send_event(AssetEvent::Added { id: folder });
-
-		app.update();
+		assert!(source.contains::<_Source>());
 	}
 
 	#[test]
@@ -281,7 +295,8 @@ mod tests {
 
 		let mut folder = _Folder::default();
 		folder.mock.expect_handle_from_path().return_const(None);
-		set_folder(&mut app, folder);
+		let id = set_folder(&mut app, folder);
+		app.world.send_event(AssetEvent::Added { id });
 
 		app.world.spawn(_Source(vec![Path::from("my/path")]));
 
