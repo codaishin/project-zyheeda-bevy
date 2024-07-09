@@ -1,15 +1,16 @@
-pub mod force_shield_skill;
-pub mod gravity_well_skill;
 pub mod shoot_hand_gun;
+pub mod skill_data;
 
 use crate::{
 	items::{slot_key::SlotKey, ItemType},
-	traits::Prime,
+	traits::{Matches, Prime},
 };
 use animations::animation::Animation;
 use bevy::{
+	asset::Asset,
 	ecs::{entity::Entity, system::Commands},
 	math::{primitives::Direction3d, Ray3d, Vec3},
+	reflect::TypePath,
 	transform::components::{GlobalTransform, Transform},
 };
 use common::{components::Outdated, resources::ColliderInfo, traits::load_asset::Path};
@@ -33,20 +34,19 @@ pub enum Animate<TAnimation> {
 	Some(TAnimation),
 }
 
-#[derive(PartialEq, Debug, Default, Clone)]
-pub struct Skill<TData = ()> {
-	pub name: &'static str,
-	pub data: TData,
+#[derive(PartialEq, Debug, Default, Clone, TypePath, Asset)]
+pub struct Skill {
+	pub name: String,
 	pub active: Duration,
 	pub animate: Animate<SkillAnimation>,
 	pub behavior: SkillBehavior,
 	pub is_usable_with: HashSet<ItemType>,
-	pub icon: Option<fn() -> Path>,
+	pub icon: Option<Path>,
 }
 
-impl<TData> Display for Skill<TData> {
+impl Display for Skill {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-		match self.name {
+		match self.name.as_str() {
 			"" => write!(f, "Skill(<no name>)"),
 			name => write!(f, "Skill({})", name),
 		}
@@ -80,90 +80,56 @@ pub enum Activation {
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
-pub struct Queued {
+pub struct QueuedSkill {
+	pub skill: Skill,
 	pub slot_key: SlotKey,
 	pub mode: Activation,
 }
 
-impl Queued {
-	pub fn new(slot_key: SlotKey) -> Self {
-		Self {
-			slot_key,
-			mode: Activation::Waiting,
-		}
-	}
-}
-
-impl Skill {
-	pub fn with<TData: Clone>(self, data: TData) -> Skill<TData> {
-		Skill {
-			data,
-			name: self.name,
-			active: self.active,
-			animate: self.animate,
-			behavior: self.behavior,
-			is_usable_with: self.is_usable_with,
-			icon: self.icon,
-		}
-	}
-}
-
-impl<TSrc> Skill<TSrc> {
-	pub fn map_data<TDst>(self, map: fn(TSrc) -> TDst) -> Skill<TDst> {
-		Skill {
-			name: self.name,
-			data: map(self.data),
-			active: self.active,
-			animate: self.animate,
-			behavior: self.behavior,
-			is_usable_with: self.is_usable_with,
-			icon: self.icon,
-		}
-	}
-}
-
-impl Prime for Skill<Queued> {
+impl Prime for QueuedSkill {
 	fn prime(&mut self) {
-		if self.data.mode != Activation::Waiting {
+		if self.mode != Activation::Waiting {
 			return;
 		}
-		self.data.mode = Activation::Primed;
+		self.mode = Activation::Primed;
+	}
+}
+
+impl Matches<SlotKey> for QueuedSkill {
+	fn matches(&self, slot_key: &SlotKey) -> bool {
+		&self.slot_key == slot_key
 	}
 }
 
 #[cfg(test)]
-mod test_skill {
+mod test_queued {
 	use super::*;
 	use bevy::utils::default;
 
 	#[test]
 	fn prime_skill() {
-		let mut skill = Skill {
-			data: Queued {
-				mode: Activation::Waiting,
-				..default()
-			},
+		let mut queued = QueuedSkill {
+			skill: Skill::default(),
+			mode: Activation::Waiting,
 			..default()
 		};
-		skill.prime();
+		queued.prime();
 
-		assert_eq!(Activation::Primed, skill.data.mode);
+		assert_eq!(Activation::Primed, queued.mode);
 	}
 
 	#[test]
 	fn do_not_prime_active() {
-		let mut skill = Skill {
-			data: Queued {
-				mode: Activation::ActiveAfter(Duration::from_millis(123)),
-				..default()
-			},
+		let mut queued = QueuedSkill {
+			skill: Skill::default(),
+			mode: Activation::ActiveAfter(Duration::from_millis(123)),
 			..default()
 		};
-		skill.prime();
+		queued.prime();
 
 		assert_eq!(
 			Activation::ActiveAfter(Duration::from_millis(123)),
-			skill.data.mode
+			queued.mode
 		);
 	}
 }

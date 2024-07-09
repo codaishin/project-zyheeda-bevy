@@ -1,8 +1,9 @@
 pub mod asset_server;
 
-use bevy::asset::{Asset, Handle};
+use bevy::asset::{Asset, AssetPath, Handle};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub struct Path(String);
 
 impl Path {
@@ -20,6 +21,12 @@ impl From<String> for Path {
 impl<'a> From<&'a str> for Path {
 	fn from(value: &'a str) -> Self {
 		Self(value.to_owned())
+	}
+}
+
+impl<'a> From<Path> for AssetPath<'a> {
+	fn from(value: Path) -> Self {
+		AssetPath::from(value.0)
 	}
 }
 

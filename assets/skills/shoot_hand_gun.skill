@@ -1,0 +1,17 @@
+{
+	"name": "Shoot Hand Gun",
+	"active": {
+		"secs": 0,
+		"nanos": 200000000
+	},
+	"animate": {
+		"Some": "ShootHandGun"
+	},
+	"behavior": {
+		"Projectile": "Plasma"
+	},
+	"is_usable_with": [
+		"Pistol"
+	],
+	"icon": "icons/pistol.png"
+}

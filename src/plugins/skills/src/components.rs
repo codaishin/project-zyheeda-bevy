@@ -1,3 +1,4 @@
+pub mod combo_node;
 pub mod combos;
 pub mod combos_time_out;
 pub mod inventory;
@@ -7,9 +8,15 @@ pub mod slots;
 pub(crate) mod skill_executer;
 
 use self::slots::Slots;
-use crate::items::{slot_key::SlotKey, Item};
-use bevy::ecs::{component::Component, entity::Entity};
-use common::components::Collection;
+use crate::{
+	items::{slot_key::SlotKey, Item},
+	skills::Skill,
+};
+use bevy::{
+	ecs::{component::Component, entity::Entity},
+	utils::default,
+};
+use common::{components::Collection, traits::load_asset::Path};
 use std::collections::HashMap;
 
 #[derive(PartialEq, Debug, Clone)]
@@ -19,17 +26,31 @@ pub struct Mounts<T> {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub struct Slot {
+pub struct Slot<TSkill = Skill> {
 	pub mounts: Mounts<Entity>,
-	pub item: Option<Item>,
+	pub item: Option<Item<TSkill>>,
 }
 
 pub(crate) type BoneName = str;
+pub(crate) type SlotContent = (Mounts<&'static BoneName>, Option<Item<Path>>);
+pub(crate) type SlotDefinition = (SlotKey, SlotContent);
 
 #[derive(Component, Clone, PartialEq, Debug)]
-pub struct SlotBones(pub HashMap<SlotKey, Mounts<&'static BoneName>>);
+pub(crate) struct SlotsDefinition {
+	pub(crate) definitions: HashMap<SlotKey, (Mounts<&'static BoneName>, Option<Item<Path>>)>,
+	pub(crate) slot_buffer: Slots<Path>,
+}
+
+impl SlotsDefinition {
+	pub(crate) fn new<const N: usize>(definitions: [SlotDefinition; N]) -> Self {
+		Self {
+			definitions: definitions.into(),
+			slot_buffer: default(),
+		}
+	}
+}
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct SkillSpawn<T>(pub T);
 
-pub type Equipment = Collection<(SlotKey, Option<Item>)>;
+pub type Equipment<TSkill> = Collection<(SlotKey, Option<Item<TSkill>>)>;

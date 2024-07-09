@@ -6,11 +6,9 @@ use common::{
 };
 use skills::{
 	components::slots::Slots,
-	skills::{Queued, Skill},
+	skills::{QueuedSkill, Skill},
 	traits::{IsTimedOut, PeekNext},
 };
-
-type IconPath = Option<fn() -> Path>;
 
 type PlayerComponents<'a, TQueue, TCombos, TComboTimeout> = (
 	&'a Slots,
@@ -24,7 +22,7 @@ pub(crate) fn get_quickbar_icons<TQueue, TCombos, TComboTimeout>(
 	panels: Query<(Entity, &mut QuickbarPanel)>,
 ) -> Vec<(Entity, Option<Path>)>
 where
-	TQueue: Component + Iterate<Skill<Queued>>,
+	TQueue: Component + Iterate<QueuedSkill>,
 	TCombos: Component + PeekNext<Skill>,
 	TComboTimeout: Component + IsTimedOut,
 {
@@ -35,7 +33,6 @@ where
 		let icon = if_active_skill_icon(panel, queue)
 			.or_else(if_combo_skill_icon(panel, slots, combos, combo_timeout))
 			.or_else(if_item_skill_icon(panel, slots));
-		let icon = icon.flatten().map(|resolve_path| resolve_path());
 
 		(entity, icon)
 	};
@@ -43,17 +40,17 @@ where
 	panels.iter().map(get_icon_path).collect()
 }
 
-fn if_active_skill_icon<TQueue: Iterate<Skill<Queued>>>(
+fn if_active_skill_icon<TQueue: Iterate<QueuedSkill>>(
 	panel: &QuickbarPanel,
 	queue: &TQueue,
-) -> Option<IconPath> {
+) -> Option<Path> {
 	let active_skill = queue.iterate().next()?;
 
-	if active_skill.data.slot_key != panel.key {
+	if active_skill.slot_key != panel.key {
 		return None;
 	}
 
-	Some(active_skill.icon)
+	active_skill.skill.icon.clone()
 }
 
 fn if_combo_skill_icon<'a, TCombos: PeekNext<Skill>, TComboTimeout: IsTimedOut>(
@@ -61,26 +58,27 @@ fn if_combo_skill_icon<'a, TCombos: PeekNext<Skill>, TComboTimeout: IsTimedOut>(
 	slots: &'a Slots,
 	combos: Option<&'a TCombos>,
 	timed_out: Option<&'a TComboTimeout>,
-) -> impl FnOnce() -> Option<IconPath> + 'a {
+) -> impl FnOnce() -> Option<Path> + 'a {
 	move || {
 		if timed_out?.is_timed_out() {
 			return None;
 		}
 		let next_combo = combos?.peek_next(&panel.key, slots)?;
-		Some(next_combo.icon)
+		next_combo.icon
 	}
 }
 
 fn if_item_skill_icon<'a>(
 	panel: &'a QuickbarPanel,
 	slots: &'a Slots,
-) -> impl FnOnce() -> Option<IconPath> + 'a {
+) -> impl FnOnce() -> Option<Path> + 'a {
 	|| {
 		let slot = slots.0.get(&panel.key)?;
 		let item = slot.item.as_ref()?;
+
 		let skill = item.skill.as_ref()?;
 
-		Some(skill.icon)
+		skill.icon.clone()
 	}
 }
 
@@ -106,12 +104,12 @@ mod tests {
 	use std::collections::HashMap;
 
 	#[derive(Component, Default)]
-	struct _Queue(Vec<Skill<Queued>>);
+	struct _Queue(Vec<QueuedSkill>);
 
-	impl Iterate<Skill<Queued>> for _Queue {
-		fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
+	impl Iterate<QueuedSkill> for _Queue {
+		fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a QueuedSkill>
 		where
-			Skill<Queued>: 'a,
+			QueuedSkill: 'a,
 		{
 			self.0.iter()
 		}
@@ -167,22 +165,23 @@ mod tests {
 	fn return_combo_skill_icon_when_no_skill_active_and_combo_not_timed_out() {
 		let mut app = setup();
 		let mut combos = _Combos::default();
+		let skill = Skill {
+			icon: Some(Path::from("item_skill/icon/path")),
+			..default()
+		};
 
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
 				mounts: arbitrary_mounts(),
 				item: Some(Item {
-					skill: Some(Skill {
-						icon: Some(|| Path::from("item_skill/icon/path")),
-						..default()
-					}),
+					skill: Some(skill),
 					..default()
 				}),
 			},
 		)]));
 		combos.mock.expect_peek_next().return_const(Skill {
-			icon: Some(|| Path::from("combo_skill/icon/path")),
+			icon: Some(Path::from("combo_skill/icon/path")),
 			..default()
 		});
 		app.world.spawn((
@@ -213,16 +212,17 @@ mod tests {
 	fn peek_combo_with_correct_arguments() {
 		let mut app = setup();
 		let mut combos = _Combos::default();
+		let skill = Skill {
+			icon: Some(Path::from("item_skill/icon/path")),
+			..default()
+		};
 
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
 				mounts: arbitrary_mounts(),
 				item: Some(Item {
-					skill: Some(Skill {
-						icon: Some(|| Path::from("item_skill/icon/path")),
-						..default()
-					}),
+					skill: Some(skill),
 					..default()
 				}),
 			},
@@ -252,22 +252,23 @@ mod tests {
 	fn return_item_skill_icon_when_no_skill_active_and_combo_timed_out() {
 		let mut app = setup();
 		let mut combos = _Combos::default();
+		let skill = Skill {
+			icon: Some(Path::from("item_skill/icon/path")),
+			..default()
+		};
 
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
 				mounts: arbitrary_mounts(),
 				item: Some(Item {
-					skill: Some(Skill {
-						icon: Some(|| Path::from("item_skill/icon/path")),
-						..default()
-					}),
+					skill: Some(skill),
 					..default()
 				}),
 			},
 		)]));
 		combos.mock.expect_peek_next().return_const(Skill {
-			icon: Some(|| Path::from("combo_skill/icon/path")),
+			icon: Some(Path::from("combo_skill/icon/path")),
 			..default()
 		});
 		app.world.spawn((
@@ -298,16 +299,17 @@ mod tests {
 	fn return_item_skill_icon_when_no_skill_active_and_combo_empty_but_not_timed_out() {
 		let mut app = setup();
 		let mut combos = _Combos::default();
+		let skill = Skill {
+			icon: Some(Path::from("item_skill/icon/path")),
+			..default()
+		};
 
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
 				mounts: arbitrary_mounts(),
 				item: Some(Item {
-					skill: Some(Skill {
-						icon: Some(|| Path::from("item_skill/icon/path")),
-						..default()
-					}),
+					skill: Some(skill),
 					..default()
 				}),
 			},
@@ -341,34 +343,35 @@ mod tests {
 	fn return_active_skill_icon_when_skill_active() {
 		let mut app = setup();
 		let mut combos = _Combos::default();
+		let skill = Skill {
+			icon: Some(Path::from("item_skill/icon/path")),
+			..default()
+		};
 
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
 				mounts: arbitrary_mounts(),
 				item: Some(Item {
-					skill: Some(Skill {
-						icon: Some(|| Path::from("item_skill/icon/path")),
-						..default()
-					}),
+					skill: Some(skill),
 					..default()
 				}),
 			},
 		)]));
 		combos.mock.expect_peek_next().return_const(Skill {
-			icon: Some(|| Path::from("combo_skill/icon/path")),
+			icon: Some(Path::from("combo_skill/icon/path")),
 			..default()
 		});
 		app.world.spawn((
 			Player,
 			slots,
-			_Queue(vec![Skill {
-				icon: Some(|| Path::from("active_skill/icon/path")),
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Off),
-					mode: Activation::Waiting,
+			_Queue(vec![QueuedSkill {
+				skill: Skill {
+					icon: Some(Path::from("active_skill/icon/path")),
+					..default()
 				},
-				..default()
+				slot_key: SlotKey::Hand(Side::Off),
+				mode: Activation::Waiting,
 			}]),
 			combos,
 			_ComboTimeout(true),
@@ -394,34 +397,35 @@ mod tests {
 	fn return_item_skill_icon_when_skill_active_for_other_slot() {
 		let mut app = setup();
 		let mut combos = _Combos::default();
+		let skill = Skill {
+			icon: Some(Path::from("item_skill/icon/path")),
+			..default()
+		};
 
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
 				mounts: arbitrary_mounts(),
 				item: Some(Item {
-					skill: Some(Skill {
-						icon: Some(|| Path::from("item_skill/icon/path")),
-						..default()
-					}),
+					skill: Some(skill),
 					..default()
 				}),
 			},
 		)]));
 		combos.mock.expect_peek_next().return_const(Skill {
-			icon: Some(|| Path::from("combo_skill/icon/path")),
+			icon: Some(Path::from("combo_skill/icon/path")),
 			..default()
 		});
 		app.world.spawn((
 			Player,
 			slots,
-			_Queue(vec![Skill {
-				icon: Some(|| Path::from("active_skill/icon/path")),
-				data: Queued {
-					slot_key: SlotKey::Hand(Side::Off),
-					mode: Activation::Waiting,
+			_Queue(vec![QueuedSkill {
+				skill: Skill {
+					icon: Some(Path::from("active_skill/icon/path")),
+					..default()
 				},
-				..default()
+				slot_key: SlotKey::Hand(Side::Off),
+				mode: Activation::Waiting,
 			}]),
 			combos,
 			_ComboTimeout(true),
@@ -446,16 +450,17 @@ mod tests {
 	#[test]
 	fn return_item_skill_icon_when_no_skill_active_and_no_combo_components_present() {
 		let mut app = setup();
+		let skill = Skill {
+			icon: Some(Path::from("item_skill/icon/path")),
+			..default()
+		};
 
 		let slots = Slots(HashMap::from([(
 			SlotKey::Hand(Side::Main),
 			Slot {
 				mounts: arbitrary_mounts(),
 				item: Some(Item {
-					skill: Some(Skill {
-						icon: Some(|| Path::from("item_skill/icon/path")),
-						..default()
-					}),
+					skill: Some(skill),
 					..default()
 				}),
 			},

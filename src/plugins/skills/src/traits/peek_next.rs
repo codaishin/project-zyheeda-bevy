@@ -1,6 +1,6 @@
 use super::PeekNext;
 use crate::{
-	components::{combos::ComboNode, slots::Slots},
+	components::{combo_node::ComboNode, slots::Slots},
 	items::slot_key::SlotKey,
 	skills::Skill,
 };
@@ -58,7 +58,7 @@ mod tests {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "some skill",
+					name: "some skill".to_owned(),
 					..default()
 				},
 				ComboNode::default(),
@@ -71,7 +71,7 @@ mod tests {
 		let mut combos = Mock_Combos::default();
 		combos.expect_peek_next().return_const((
 			Skill {
-				name: "my skill",
+				name: "my skill".to_owned(),
 				..default()
 			},
 			node(),
@@ -79,7 +79,7 @@ mod tests {
 
 		assert_eq!(
 			Some(Skill {
-				name: "my skill",
+				name: "my skill".to_owned(),
 				..default()
 			}),
 			combos.peek_next(&SlotKey::Hand(Side::Main), &slots())

@@ -1,7 +1,8 @@
 use super::get_inputs::Input;
 use crate::{
 	items::slot_key::SlotKey,
-	traits::{Enqueue, IterMutWithKeys, Prime},
+	skills::Skill,
+	traits::{Enqueue, IterMut, Matches, Prime},
 };
 use bevy::ecs::{
 	component::Component,
@@ -10,51 +11,42 @@ use bevy::ecs::{
 use common::traits::get::Get;
 
 pub(crate) fn enqueue<
-	TSkillSource: Get<SlotKey, TSourceSkill> + Component,
-	TSourceSkill: Clone,
-	TQueue: Enqueue<(TSourceSkill, SlotKey)> + IterMutWithKeys<SlotKey, TSkill> + Component,
-	TSkill: Prime,
+	TSlots: Get<SlotKey, Skill> + Component,
+	TQueue: Enqueue<(Skill, SlotKey)> + IterMut<TQueuedSkill> + Component,
+	TQueuedSkill: Prime + Matches<SlotKey>,
 >(
 	input: In<Input>,
-	mut agents: Query<(&TSkillSource, &mut TQueue)>,
+	mut agents: Query<(&TSlots, &mut TQueue)>,
 ) {
-	for (skills, mut queue) in &mut agents {
+	for (slots, mut queue) in &mut agents {
 		let queue = queue.as_mut();
-		enqueue_new_skills(&input, queue, skills);
+		enqueue_new_skills(&input, queue, slots);
 		prime_skills(&input, queue);
 	}
 }
 
-fn enqueue_new_skills<
-	TSkillSource: Get<SlotKey, TSourceSkill>,
-	TSourceSkill: Clone,
-	TQueue: Enqueue<(TSourceSkill, SlotKey)>,
->(
+fn enqueue_new_skills<TSlots: Get<SlotKey, Skill>, TQueue: Enqueue<(Skill, SlotKey)>>(
 	input: &In<Input>,
 	queue: &mut TQueue,
-	skills: &TSkillSource,
+	slots: &TSlots,
 ) {
 	for key in input.just_pressed.iter() {
-		enqueue_new_skill(key, skills, queue);
+		enqueue_new_skill(key, queue, slots);
 	}
 }
 
-fn enqueue_new_skill<
-	TSkillSource: Get<SlotKey, TSourceSkill>,
-	TSourceSkill: Clone,
-	TQueue: Enqueue<(TSourceSkill, SlotKey)>,
->(
+fn enqueue_new_skill<TSlots: Get<SlotKey, Skill>, TQueue: Enqueue<(Skill, SlotKey)>>(
 	key: &SlotKey,
-	skills: &TSkillSource,
 	queue: &mut TQueue,
+	slots: &TSlots,
 ) {
-	let Some(skill) = skills.get(key).cloned() else {
+	let Some(skill) = slots.get(key).cloned() else {
 		return;
 	};
 	queue.enqueue((skill, *key));
 }
 
-fn prime_skills<TQueue: IterMutWithKeys<SlotKey, TSkill>, TSkill: Prime>(
+fn prime_skills<TQueue: IterMut<TQueuedSkill>, TQueuedSkill: Prime + Matches<SlotKey>>(
 	input: &In<Input>,
 	queue: &mut TQueue,
 ) {
@@ -63,22 +55,20 @@ fn prime_skills<TQueue: IterMutWithKeys<SlotKey, TSkill>, TSkill: Prime>(
 	}
 }
 
-fn prime_skill<TQueue: IterMutWithKeys<SlotKey, TSkill>, TSkill: Prime>(
+fn prime_skill<TQueue: IterMut<TQueuedSkill>, TQueuedSkill: Prime + Matches<SlotKey>>(
 	key: &SlotKey,
 	queue: &mut TQueue,
 ) {
-	for (.., skill) in get_queued_skill(key, queue) {
+	for skill in get_queued_skill(key, queue) {
 		skill.prime();
 	}
 }
 
-fn get_queued_skill<'a, TQueue: IterMutWithKeys<SlotKey, TSkill>, TSkill: 'a>(
+fn get_queued_skill<'a, TQueue: IterMut<TQueuedSkill>, TQueuedSkill: 'a + Matches<SlotKey>>(
 	key: &'a SlotKey,
 	queue: &'a mut TQueue,
-) -> impl Iterator<Item = (SlotKey, &'a mut TSkill)> {
-	queue
-		.iter_mut_with_keys()
-		.filter(move |(queued_key, ..)| queued_key == key)
+) -> impl Iterator<Item = &'a mut TQueuedSkill> {
+	queue.iter_mut().filter(move |skill| skill.matches(key))
 }
 
 #[cfg(test)]
@@ -87,7 +77,7 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		ecs::system::{IntoSystem, Res, Resource},
-		utils::default,
+		prelude::default,
 	};
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
 	use mockall::{automock, mock, predicate::eq};
@@ -96,21 +86,21 @@ mod tests {
 	#[derive(Resource, Default)]
 	struct _Input(Input);
 
-	#[derive(Clone, Debug, PartialEq)]
-	struct _Skill(u32);
-
 	mock! {
 		_SkillQueued {}
 		impl Prime for _SkillQueued {
 			fn prime(&mut self) {}
 		}
+		impl Matches<SlotKey> for _SkillQueued {
+			fn matches(&self, slot_key: &SlotKey) -> bool;
+		}
 	}
 
 	#[derive(Component, Default)]
-	struct _Skills(HashMap<SlotKey, _Skill>);
+	struct _Skills(HashMap<SlotKey, Skill>);
 
-	impl Get<SlotKey, _Skill> for _Skills {
-		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a _Skill> {
+	impl Get<SlotKey, Skill> for _Skills {
+		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Skill> {
 			self.0.get(key)
 		}
 	}
@@ -118,34 +108,35 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Enqueue {
 		mock: Mock_Enqueue,
-		queued: Vec<(SlotKey, Mock_SkillQueued)>,
+		queued: Vec<Mock_SkillQueued>,
 	}
 
 	#[automock]
-	impl Enqueue<(_Skill, SlotKey)> for _Enqueue {
-		fn enqueue(&mut self, item: (_Skill, SlotKey)) {
+	impl Enqueue<(Skill, SlotKey)> for _Enqueue {
+		fn enqueue(&mut self, item: (Skill, SlotKey)) {
 			self.mock.enqueue(item)
 		}
 	}
 
-	impl IterMutWithKeys<SlotKey, Mock_SkillQueued> for _Enqueue {
-		fn iter_mut_with_keys<'a>(
-			&'a mut self,
-		) -> impl DoubleEndedIterator<Item = (SlotKey, &'a mut Mock_SkillQueued)>
+	impl IterMut<Mock_SkillQueued> for _Enqueue {
+		fn iter_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut Mock_SkillQueued>
 		where
 			Mock_SkillQueued: 'a,
 		{
-			self.queued.iter_mut().map(|(k, s)| (*k, s))
+			self.queued.iter_mut()
 		}
 	}
+
+	struct _SkillLoader;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<_Input>();
+
 		app.add_systems(
 			Update,
 			(move |input: Res<_Input>| input.0.clone())
-				.pipe(enqueue::<_Skills, _Skill, _Enqueue, Mock_SkillQueued>),
+				.pipe(enqueue::<_Skills, _Enqueue, Mock_SkillQueued>),
 		);
 
 		app
@@ -155,14 +146,26 @@ mod tests {
 	fn enqueue_skill_from_skills() {
 		let mut app = setup();
 
-		let skills = _Skills(HashMap::from([(SlotKey::Hand(Side::Main), _Skill(121))]));
+		let skills = _Skills(HashMap::from([(
+			SlotKey::Hand(Side::Main),
+			Skill {
+				name: "my skill".to_owned(),
+				..default()
+			},
+		)]));
 		let mut enqueue = _Enqueue::default();
 
 		enqueue
 			.mock
 			.expect_enqueue()
 			.times(1)
-			.with(eq((_Skill(121), SlotKey::Hand(Side::Main))))
+			.with(eq((
+				Skill {
+					name: "my skill".to_owned(),
+					..default()
+				},
+				SlotKey::Hand(Side::Main),
+			)))
 			.return_const(());
 
 		app.world.spawn((skills, enqueue));
@@ -176,11 +179,12 @@ mod tests {
 		let mut app = setup();
 		let mut skill = Mock_SkillQueued::default();
 		skill.expect_prime().times(1).return_const(());
+		skill.expect_matches().return_const(true);
 
 		app.world.spawn((
 			_Skills::default(),
 			_Enqueue {
-				queued: vec![(SlotKey::Hand(Side::Main), skill)],
+				queued: vec![skill],
 				..default()
 			},
 		));
@@ -195,17 +199,24 @@ mod tests {
 
 		let mut skill = Mock_SkillQueued::default();
 		skill.expect_prime().return_const(());
+		skill
+			.expect_matches()
+			.times(1)
+			.with(eq(SlotKey::Hand(Side::Main)))
+			.return_const(true);
 
 		let mut mismatched_skill = Mock_SkillQueued::default();
 		mismatched_skill.expect_prime().never().return_const(());
+		mismatched_skill
+			.expect_matches()
+			.times(1)
+			.with(eq(SlotKey::Hand(Side::Main)))
+			.return_const(false);
 
 		app.world.spawn((
 			_Skills::default(),
 			_Enqueue {
-				queued: vec![
-					(SlotKey::Hand(Side::Main), skill),
-					(SlotKey::Hand(Side::Off), mismatched_skill),
-				],
+				queued: vec![skill, mismatched_skill],
 				..default()
 			},
 		));
@@ -220,17 +231,16 @@ mod tests {
 
 		let mut skill_a = Mock_SkillQueued::default();
 		skill_a.expect_prime().times(1).return_const(());
+		skill_a.expect_matches().return_const(true);
 
 		let mut skill_b = Mock_SkillQueued::default();
 		skill_b.expect_prime().times(1).return_const(());
+		skill_b.expect_matches().return_const(true);
 
 		app.world.spawn((
 			_Skills::default(),
 			_Enqueue {
-				queued: vec![
-					(SlotKey::Hand(Side::Main), skill_a),
-					(SlotKey::Hand(Side::Main), skill_b),
-				],
+				queued: vec![skill_a, skill_b],
 				..default()
 			},
 		));

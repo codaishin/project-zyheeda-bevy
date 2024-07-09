@@ -1,12 +1,18 @@
-use crate::items::{slot_key::SlotKey, Item};
+use crate::{
+	items::{slot_key::SlotKey, Item},
+	skills::Skill,
+};
+use bevy::asset::Handle;
 use common::{components::Player, traits::accessor::Accessor};
 
-impl Accessor<Player, (SlotKey, Option<Item>), Item> for (SlotKey, Option<Item>) {
-	fn get_key_and_item(&self, _: &Player) -> (SlotKey, Option<Item>) {
+impl Accessor<Player, (SlotKey, Option<Item<Handle<Skill>>>), Item<Handle<Skill>>>
+	for (SlotKey, Option<Item<Handle<Skill>>>)
+{
+	fn get_key_and_item(&self, _: &Player) -> (SlotKey, Option<Item<Handle<Skill>>>) {
 		self.clone()
 	}
 
-	fn with_item(&self, item: Option<Item>, _: &mut Player) -> Self {
+	fn with_item(&self, item: Option<Item<Handle<Skill>>>, _: &mut Player) -> Self {
 		let (slot_key, ..) = *self;
 		(slot_key, item)
 	}

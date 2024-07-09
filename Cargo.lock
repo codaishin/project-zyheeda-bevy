@@ -1469,6 +1469,7 @@ dependencies = [
  "bevy_rapier3d",
  "macros",
  "mockall",
+ "serde",
  "tracing",
 ]
 
@@ -3520,6 +3521,8 @@ dependencies = [
  "map_generation",
  "mockall",
  "prefabs",
+ "serde",
+ "serde_json",
  "skills",
  "tracing",
 ]
@@ -3776,9 +3779,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.117"
+version = "1.0.120"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "455182ea6142b14f93f4bc5320a2b31c1f266b66a4a5c858b013302a5d8cbfc3"
+checksum = "4e0d21c9a8cae1235ad58a00c11cb40d4b1e5c784f1ef2c537876ed6ffd8b7c5"
 dependencies = [
  "itoa",
  "ryu",
@@ -3829,6 +3832,8 @@ dependencies = [
  "bevy_rapier3d",
  "common",
  "mockall",
+ "serde",
+ "serde_json",
  "tracing",
 ]
 

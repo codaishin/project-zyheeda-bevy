@@ -1,6 +1,7 @@
 use crate::{
 	components::{slots::Slots, Slot},
 	items::{slot_key::SlotKey, Item, Mount},
+	skills::Skill,
 };
 use bevy::{
 	ecs::{component::Component, query::QueryEntityError},
@@ -15,38 +16,43 @@ use common::{
 };
 use std::mem::swap;
 
+type Components<'a, TItemAccessor, TContainer> = (
+	Entity,
+	&'a mut Slots<Handle<Skill>>,
+	&'a mut Collection<TItemAccessor>,
+	&'a mut TContainer,
+);
+
 pub fn equip_item<
 	TContainer: Component,
-	TItemAccessor: Accessor<TContainer, (SlotKey, Option<Item>), Item> + Send + Sync + 'static,
+	TItemAccessor: Accessor<TContainer, (SlotKey, Option<Item<Handle<Skill>>>), Item<Handle<Skill>>>
+		+ Send
+		+ Sync
+		+ 'static,
 >(
 	mut commands: Commands,
 	models: Res<Models>,
-	mut agent: Query<(
-		Entity,
-		&mut Slots,
-		&mut Collection<TItemAccessor>,
-		&mut TContainer,
-	)>,
+	mut agent: Query<Components<TItemAccessor, TContainer>>,
 	mut scene_handles: Query<&mut Handle<Scene>>,
 ) -> Vec<Result<(), Error>> {
-	let mut results = Vec::new();
+	let mut results = vec![];
 
-	for (agent, mut slots, mut equip, mut component) in &mut agent {
-		let accessors_and_results = equip_items::<TContainer, TItemAccessor>(
+	for (agent, mut slots, mut accessors, mut container) in &mut agent {
+		let accessors_and_results = equip_items::<TItemAccessor, TContainer>(
 			&mut slots,
 			&mut scene_handles,
-			&mut component,
-			&equip,
+			&mut container,
+			&accessors,
 			&models,
 		);
-		let mut retry: Vec<TItemAccessor> = vec![];
+		let mut retry = vec![];
 
 		push_retries_and_results(accessors_and_results, &mut retry, &mut results);
 
 		if retry.is_empty() {
 			commands.try_remove_from::<Collection<TItemAccessor>>(agent);
 		} else {
-			equip.0 = retry;
+			accessors.0 = retry;
 		}
 	}
 
@@ -70,32 +76,32 @@ fn push_retries_and_results<TItemAccessor>(
 }
 
 fn equip_items<
+	TItemAccessor: Accessor<TContainer, (SlotKey, Option<Item<Handle<Skill>>>), Item<Handle<Skill>>>,
 	TContainer: Component,
-	TItemAccessor: Accessor<TContainer, (SlotKey, Option<Item>), Item>,
 >(
-	slots: &mut Mut<Slots>,
+	slots: &mut Mut<Slots<Handle<Skill>>>,
 	scene_handles: &mut Query<&mut Handle<Scene>>,
-	component: &mut TContainer,
-	equip: &Collection<TItemAccessor>,
+	container: &mut TContainer,
+	accessors: &Collection<TItemAccessor>,
 	models: &Res<Models>,
 ) -> Vec<(TItemAccessor, Result<(), Error>)> {
 	let try_swap_items = |accessor: &TItemAccessor| {
-		let (slot_key, acc_item) = accessor.get_key_and_item(component);
+		let (slot_key, acc_item) = accessor.get_key_and_item(container);
 		match equip_and_return_old(slots, scene_handles, (slot_key, acc_item.as_ref()), models) {
-			Ok(old_item) => (accessor.with_item(old_item, component), Ok(())),
-			Err(error) => (accessor.with_item(acc_item, component), Err(error)),
+			Ok(old_item) => (accessor.with_item(old_item, container), Ok(())),
+			Err(error) => (accessor.with_item(acc_item, container), Err(error)),
 		}
 	};
 
-	equip.0.iter().map(try_swap_items).collect()
+	accessors.0.iter().map(try_swap_items).collect()
 }
 
 fn equip_and_return_old(
-	slots: &mut Mut<Slots>,
+	slots: &mut Mut<Slots<Handle<Skill>>>,
 	scene_handles: &mut Query<&mut Handle<Scene>>,
-	(slot_key, item): (SlotKey, Option<&Item>),
+	(slot_key, item): (SlotKey, Option<&Item<Handle<Skill>>>),
 	models: &Res<Models>,
-) -> Result<Option<Item>, Error> {
+) -> Result<Option<Item<Handle<Skill>>>, Error> {
 	let slot = get_slot(item, slots, slot_key)?;
 	let item_model = get_model(item, models)?;
 	let (hand_model, forearm_model) = match item.map(|item| item.mount) {
@@ -111,17 +117,20 @@ fn equip_and_return_old(
 }
 
 fn get_slot<'a>(
-	item: Option<&Item>,
-	slots: &'a mut Mut<'_, Slots>,
+	item: Option<&Item<Handle<Skill>>>,
+	slots: &'a mut Mut<'_, Slots<Handle<Skill>>>,
 	slot_key: SlotKey,
-) -> Result<&'a mut Slot, Error> {
+) -> Result<&'a mut Slot<Handle<Skill>>, Error> {
 	match slots.0.get_mut(&slot_key) {
 		None => Err(slot_warning(item, slot_key)),
 		Some(slot) => Ok(slot),
 	}
 }
 
-fn get_model(item: Option<&Item>, models: &Res<Models>) -> Result<Handle<Scene>, Error> {
+fn get_model(
+	item: Option<&Item<Handle<Skill>>>,
+	models: &Res<Models>,
+) -> Result<Handle<Scene>, Error> {
 	let Some(item) = item else {
 		return Ok(Handle::default());
 	};
@@ -138,7 +147,7 @@ fn get_model(item: Option<&Item>, models: &Res<Models>) -> Result<Handle<Scene>,
 }
 
 fn set_model(
-	slot: &Slot,
+	slot: &Slot<Handle<Skill>>,
 	scene_handles: &mut Query<&mut Handle<Scene>>,
 	model_hand: Handle<Scene>,
 	model_forearm: Handle<Scene>,
@@ -151,31 +160,34 @@ fn set_model(
 	Ok(())
 }
 
-fn swap_and_return_old(item: Option<&Item>, slot: &mut Slot) -> Result<Option<Item>, Error> {
+fn swap_and_return_old(
+	item: Option<&Item<Handle<Skill>>>,
+	slot: &mut Slot<Handle<Skill>>,
+) -> Result<Option<Item<Handle<Skill>>>, Error> {
 	let mut item = item.cloned();
 	swap(&mut item, &mut slot.item);
 
 	Ok(item)
 }
 
-fn slot_warning(item: Option<&Item>, slot: SlotKey) -> Error {
+fn slot_warning(item: Option<&Item<Handle<Skill>>>, slot: SlotKey) -> Error {
 	Error {
 		msg: format!(
-			"{:#?}: slot {:#?} not found, retrying next update",
+			"{:#?}: slot::<Handle<Skill>> {:#?} not found, retrying next update",
 			item, slot
 		),
 		lvl: Level::Warning,
 	}
 }
 
-fn model_error(item: &Item, model_key: &str) -> Error {
+fn model_error(item: &Item<Handle<Skill>>, model_key: &str) -> Error {
 	Error {
 		msg: format!("{}: no model found for {}, abandoning", item, model_key),
 		lvl: Level::Error,
 	}
 }
 
-fn scene_handle_error(item: Option<&Item>, error: QueryEntityError) -> Error {
+fn scene_handle_error(item: Option<&Item<Handle<Skill>>>, error: QueryEntityError) -> Error {
 	Error {
 		msg: format!("{:#?}: {:#?} has no Handle<Scene>, abandoning", item, error),
 		lvl: Level::Error,
@@ -198,7 +210,6 @@ mod tests {
 		systems::log::test_tools::{fake_log_error_lazy_many, FakeErrorLogMany},
 	};
 	use mockall::{automock, predicate::eq};
-	use std::time::Duration;
 
 	#[derive(Default, PartialEq, Debug)]
 	enum _Type {
@@ -208,10 +219,10 @@ mod tests {
 	}
 
 	#[derive(Default, PartialEq, Debug)]
-	struct _Source {
+	struct _Accessor {
 		r#type: _Type,
 		slot: SlotKey,
-		item: Option<Item>,
+		item: Option<Item<Handle<Skill>>>,
 	}
 
 	#[derive(Component, PartialEq, Clone, Copy, Debug)]
@@ -220,12 +231,21 @@ mod tests {
 	}
 
 	#[automock]
-	impl Accessor<_Container, (SlotKey, Option<Item>), Item> for _Source {
-		fn get_key_and_item(&self, _component: &_Container) -> (SlotKey, Option<Item>) {
+	impl Accessor<_Container, (SlotKey, Option<Item<Handle<Skill>>>), Item<Handle<Skill>>>
+		for _Accessor
+	{
+		fn get_key_and_item(
+			&self,
+			_component: &_Container,
+		) -> (SlotKey, Option<Item<Handle<Skill>>>) {
 			(self.slot, self.item.clone())
 		}
 
-		fn with_item(&self, item: Option<Item>, _component: &mut _Container) -> Self {
+		fn with_item(
+			&self,
+			item: Option<Item<Handle<Skill>>>,
+			_component: &mut _Container,
+		) -> Self {
 			Self {
 				slot: self.slot,
 				item,
@@ -259,7 +279,7 @@ mod tests {
 			.world
 			.spawn((
 				_Container { name: "my comp" },
-				Slots(
+				Slots::<Handle<Skill>>(
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
@@ -269,14 +289,10 @@ mod tests {
 					)]
 					.into(),
 				),
-				Collection::new([_Source {
+				Collection::new([_Accessor {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: Some(Skill {
-							name: "Some Skill",
-							..default()
-						}),
 						model: Some("model key"),
 						mount: Mount::Hand,
 						..default()
@@ -287,7 +303,7 @@ mod tests {
 			.id();
 		app.add_systems(
 			Update,
-			equip_item::<_Container, _Source>.pipe(fake_log_error_lazy_many(agent)),
+			equip_item::<_Container, _Accessor>.pipe(fake_log_error_lazy_many(agent)),
 		);
 
 		app.update();
@@ -296,11 +312,11 @@ mod tests {
 		let slot_component = app
 			.world
 			.entity(agent)
-			.get::<Slots>()
-			.unwrap()
+			.get::<Slots<Handle<Skill>>>()
+			.expect("no slots")
 			.0
 			.get(&SlotKey::Hand(Side::Main))
-			.unwrap();
+			.expect("nothing in hand");
 
 		assert_eq!(
 			(
@@ -309,10 +325,6 @@ mod tests {
 					mounts: Mounts { hand, forearm },
 					item: Some(Item {
 						name: "Some Item",
-						skill: Some(Skill {
-							name: "Some Skill",
-							..default()
-						}),
 						model: Some("model key"),
 						mount: Mount::Hand,
 						..default()
@@ -348,7 +360,7 @@ mod tests {
 			.world
 			.spawn((
 				_Container { name: "my comp" },
-				Slots(
+				Slots::<Handle<Skill>>(
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
@@ -358,14 +370,10 @@ mod tests {
 					)]
 					.into(),
 				),
-				Collection::new([_Source {
+				Collection::new([_Accessor {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: Some(Skill {
-							name: "Some Skill",
-							..default()
-						}),
 						model: Some("model key"),
 						mount: Mount::Forearm,
 						..default()
@@ -376,7 +384,7 @@ mod tests {
 			.id();
 		app.add_systems(
 			Update,
-			equip_item::<_Container, _Source>.pipe(fake_log_error_lazy_many(agent)),
+			equip_item::<_Container, _Accessor>.pipe(fake_log_error_lazy_many(agent)),
 		);
 
 		app.update();
@@ -385,7 +393,7 @@ mod tests {
 		let slot_component = app
 			.world
 			.entity(agent)
-			.get::<Slots>()
+			.get::<Slots<Handle<Skill>>>()
 			.unwrap()
 			.0
 			.get(&SlotKey::Hand(Side::Main))
@@ -398,10 +406,6 @@ mod tests {
 					mounts: Mounts { forearm, hand },
 					item: Some(Item {
 						name: "Some Item",
-						skill: Some(Skill {
-							name: "Some Skill",
-							..default()
-						}),
 						model: Some("model key"),
 						mount: Mount::Forearm,
 						..default()
@@ -437,17 +441,13 @@ mod tests {
 			.world
 			.spawn((
 				_Container { name: "my comp" },
-				Slots(
+				Slots::<Handle<Skill>>(
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
 							mounts: Mounts { hand, forearm },
 							item: Some(Item {
 								name: "Some Item",
-								skill: Some(Skill {
-									name: "Some Skill",
-									..default()
-								}),
 								model: Some("model key"),
 								..default()
 							}),
@@ -455,7 +455,7 @@ mod tests {
 					)]
 					.into(),
 				),
-				Collection::new([_Source {
+				Collection::new([_Accessor {
 					slot: SlotKey::Hand(Side::Main),
 					item: None,
 					..default()
@@ -464,7 +464,7 @@ mod tests {
 			.id();
 		app.add_systems(
 			Update,
-			equip_item::<_Container, _Source>.pipe(fake_log_error_lazy_many(agent)),
+			equip_item::<_Container, _Accessor>.pipe(fake_log_error_lazy_many(agent)),
 		);
 
 		app.update();
@@ -476,7 +476,7 @@ mod tests {
 		let slot_component = app
 			.world
 			.entity(agent)
-			.get::<Slots>()
+			.get::<Slots<Handle<Skill>>>()
 			.unwrap()
 			.0
 			.get(&SlotKey::Hand(Side::Main))
@@ -513,11 +513,11 @@ mod tests {
 				uuid: Uuid::new_v4(),
 			}))
 			.id();
-		let mut mock_source = Mock_Source::new();
+		let mut mock_accessor = Mock_Accessor::new();
 		let component = _Container { name: "my comp" };
 		let agent = app.world.spawn(component).id();
 
-		mock_source
+		mock_accessor
 			.expect_get_key_and_item()
 			.times(1)
 			.with(eq(component))
@@ -528,14 +528,14 @@ mod tests {
 					..default()
 				}),
 			));
-		mock_source
+		mock_accessor
 			.expect_with_item()
 			.times(1)
 			.with(eq(None), eq(component))
-			.returning(|_, _| Mock_Source::new());
+			.returning(|_, _| Mock_Accessor::new());
 		app.world.insert_resource(models);
 		app.world.entity_mut(agent).insert((
-			Slots(
+			Slots::<Handle<Skill>>(
 				[(
 					SlotKey::Hand(Side::Main),
 					Slot {
@@ -545,12 +545,12 @@ mod tests {
 				)]
 				.into(),
 			),
-			Collection::new([mock_source]),
+			Collection::new([mock_accessor]),
 		));
 
 		app.add_systems(
 			Update,
-			equip_item::<_Container, Mock_Source>.pipe(|_: In<_>| {}),
+			equip_item::<_Container, Mock_Accessor>.pipe(|_: In<_>| {}),
 		);
 
 		app.update();
@@ -575,13 +575,13 @@ mod tests {
 				uuid: Uuid::new_v4(),
 			}))
 			.id();
-		let mut mock_source = Mock_Source::new();
+		let mut mock_accessor = Mock_Accessor::new();
 		let component = _Container {
 			name: "my component",
 		};
 		let agent = app.world.spawn(component).id();
 
-		mock_source
+		mock_accessor
 			.expect_get_key_and_item()
 			.times(1)
 			.with(eq(component))
@@ -592,7 +592,7 @@ mod tests {
 					..default()
 				}),
 			));
-		mock_source
+		mock_accessor
 			.expect_with_item()
 			.times(1)
 			.with(
@@ -602,10 +602,10 @@ mod tests {
 				})),
 				eq(component),
 			)
-			.returning(|_, _| Mock_Source::new());
+			.returning(|_, _| Mock_Accessor::new());
 		app.world.insert_resource(models);
 		app.world.entity_mut(agent).insert((
-			Slots(
+			Slots::<Handle<Skill>>(
 				[(
 					SlotKey::Hand(Side::Main),
 					Slot {
@@ -618,12 +618,12 @@ mod tests {
 				)]
 				.into(),
 			),
-			Collection::new([mock_source]),
+			Collection::new([mock_accessor]),
 		));
 
 		app.add_systems(
 			Update,
-			equip_item::<_Container, Mock_Source>.pipe(|_: In<_>| {}),
+			equip_item::<_Container, Mock_Accessor>.pipe(|_: In<_>| {}),
 		);
 
 		app.update();
@@ -654,7 +654,7 @@ mod tests {
 			.world
 			.spawn((
 				_Container { name: "my comp" },
-				Slots(
+				Slots::<Handle<Skill>>(
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
@@ -664,14 +664,10 @@ mod tests {
 					)]
 					.into(),
 				),
-				Collection::new([_Source {
+				Collection::new([_Accessor {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: Some(Skill {
-							active: Duration::from_millis(1),
-							..default()
-						}),
 						model: None,
 						..default()
 					}),
@@ -681,7 +677,7 @@ mod tests {
 			.id();
 		app.add_systems(
 			Update,
-			equip_item::<_Container, _Source>.pipe(fake_log_error_lazy_many(agent)),
+			equip_item::<_Container, _Accessor>.pipe(fake_log_error_lazy_many(agent)),
 		);
 
 		app.update();
@@ -690,7 +686,7 @@ mod tests {
 		let slot_component = app
 			.world
 			.entity(agent)
-			.get::<Slots>()
+			.get::<Slots<Handle<Skill>>>()
 			.unwrap()
 			.0
 			.get(&SlotKey::Hand(Side::Main))
@@ -703,10 +699,6 @@ mod tests {
 					mounts: Mounts { hand, forearm },
 					item: Some(Item {
 						name: "Some Item",
-						skill: Some(Skill {
-							active: Duration::from_millis(1),
-							..default()
-						}),
 						model: None,
 						..default()
 					}),
@@ -741,7 +733,7 @@ mod tests {
 			.world
 			.spawn((
 				_Container { name: "my comp" },
-				Slots(
+				Slots::<Handle<Skill>>(
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
@@ -751,11 +743,10 @@ mod tests {
 					)]
 					.into(),
 				),
-				Collection::new([_Source {
+				Collection::new([_Accessor {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: None,
 						model: Some("model key"),
 						..default()
 					}),
@@ -765,14 +756,14 @@ mod tests {
 			.id();
 		app.add_systems(
 			Update,
-			equip_item::<_Container, _Source>.pipe(fake_log_error_lazy_many(agent)),
+			equip_item::<_Container, _Accessor>.pipe(fake_log_error_lazy_many(agent)),
 		);
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Collection<_Source>>());
+		assert!(!agent.contains::<Collection<_Accessor>>());
 	}
 
 	#[test]
@@ -795,7 +786,7 @@ mod tests {
 			.world
 			.spawn((
 				_Container { name: "my comp" },
-				Slots(
+				Slots::<Handle<Skill>>(
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
@@ -805,11 +796,10 @@ mod tests {
 					)]
 					.into(),
 				),
-				Collection::new([_Source {
+				Collection::new([_Accessor {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: None,
 						model: None,
 						..default()
 					}),
@@ -819,7 +809,7 @@ mod tests {
 			.id();
 		app.add_systems(
 			Update,
-			equip_item::<_Container, _Source>.pipe(fake_log_error_lazy_many(agent)),
+			equip_item::<_Container, _Accessor>.pipe(fake_log_error_lazy_many(agent)),
 		);
 
 		app.update();
@@ -829,7 +819,10 @@ mod tests {
 
 		assert_eq!(
 			(Some(Handle::<Scene>::default()), false),
-			(slot_model.cloned(), agent.contains::<Collection<_Source>>())
+			(
+				slot_model.cloned(),
+				agent.contains::<Collection<_Accessor>>()
+			)
 		);
 	}
 
@@ -848,7 +841,7 @@ mod tests {
 			.world
 			.spawn((
 				_Container { name: "my comp" },
-				Slots(
+				Slots::<Handle<Skill>>(
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
@@ -858,11 +851,10 @@ mod tests {
 					)]
 					.into(),
 				),
-				Collection::new([_Source {
+				Collection::new([_Accessor {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: None,
 						model: Some("model key"),
 						..default()
 					}),
@@ -872,14 +864,14 @@ mod tests {
 			.id();
 		app.add_systems(
 			Update,
-			equip_item::<_Container, _Source>.pipe(fake_log_error_lazy_many(agent)),
+			equip_item::<_Container, _Accessor>.pipe(fake_log_error_lazy_many(agent)),
 		);
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Collection<_Source>>());
+		assert!(!agent.contains::<Collection<_Accessor>>());
 	}
 
 	#[test]
@@ -907,7 +899,7 @@ mod tests {
 			.world
 			.spawn((
 				_Container { name: "my comp" },
-				Slots(
+				Slots::<Handle<Skill>>(
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
@@ -917,11 +909,10 @@ mod tests {
 					)]
 					.into(),
 				),
-				Collection::new([_Source {
+				Collection::new([_Accessor {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: None,
 						model: Some("model key"),
 						..default()
 					}),
@@ -931,14 +922,14 @@ mod tests {
 			.id();
 		app.add_systems(
 			Update,
-			equip_item::<_Container, _Source>.pipe(fake_log_error_lazy_many(agent)),
+			equip_item::<_Container, _Accessor>.pipe(fake_log_error_lazy_many(agent)),
 		);
 
 		app.update();
 
 		let agent = app.world.entity(agent);
 
-		assert!(!agent.contains::<Collection<_Source>>());
+		assert!(!agent.contains::<Collection<_Accessor>>());
 	}
 
 	#[test]
@@ -966,7 +957,7 @@ mod tests {
 			.world
 			.spawn((
 				_Container { name: "my comp" },
-				Slots(
+				Slots::<Handle<Skill>>(
 					[(
 						SlotKey::Hand(Side::Off),
 						Slot {
@@ -976,11 +967,10 @@ mod tests {
 					)]
 					.into(),
 				),
-				Collection::new([_Source {
+				Collection::new([_Accessor {
 					slot: SlotKey::Hand(Side::Main),
 					item: Some(Item {
 						name: "Some Item",
-						skill: None,
 						model: Some("model key"),
 						..default()
 					}),
@@ -990,7 +980,7 @@ mod tests {
 			.id();
 		app.add_systems(
 			Update,
-			equip_item::<_Container, _Source>.pipe(fake_log_error_lazy_many(agent)),
+			equip_item::<_Container, _Accessor>.pipe(fake_log_error_lazy_many(agent)),
 		);
 
 		app.update();
@@ -998,17 +988,16 @@ mod tests {
 		let agent = app.world.entity(agent);
 
 		assert_eq!(
-			Some(&Collection::new([_Source {
+			Some(&Collection::new([_Accessor {
 				slot: SlotKey::Hand(Side::Main),
 				item: Some(Item {
 					name: "Some Item",
-					skill: None,
 					model: Some("model key"),
 					..default()
 				}),
 				r#type: _Type::Updated,
 			}])),
-			agent.get::<Collection<_Source>>()
+			agent.get::<Collection<_Accessor>>()
 		);
 	}
 
@@ -1039,7 +1028,7 @@ mod tests {
 				_Container {
 					name: "my component",
 				},
-				Slots(
+				Slots::<Handle<Skill>>(
 					[(
 						SlotKey::Hand(Side::Main),
 						Slot {
@@ -1050,21 +1039,19 @@ mod tests {
 					.into(),
 				),
 				Collection::new([
-					_Source {
+					_Accessor {
 						slot: SlotKey::Hand(Side::Main),
 						item: Some(Item {
 							name: "Some Item",
-							skill: None,
 							model: Some("model key"),
 							..default()
 						}),
 						..default()
 					},
-					_Source {
+					_Accessor {
 						slot: SlotKey::Hand(Side::Off),
 						item: Some(Item {
 							name: "Some Item",
-							skill: None,
 							model: Some("model key"),
 							..default()
 						}),
@@ -1075,23 +1062,22 @@ mod tests {
 			.id();
 		app.add_systems(
 			Update,
-			equip_item::<_Container, _Source>.pipe(fake_log_error_lazy_many(agent)),
+			equip_item::<_Container, _Accessor>.pipe(fake_log_error_lazy_many(agent)),
 		);
 
 		app.update();
 
 		let slot_model = app.world.entity(hand).get::<Handle<Scene>>();
 		let agent = app.world.entity(agent);
-		let items = agent.get::<Collection<_Source>>();
+		let items = agent.get::<Collection<_Accessor>>();
 
 		assert_eq!(
 			(
 				Some(model),
-				Some(&Collection::new([_Source {
+				Some(&Collection::new([_Accessor {
 					slot: SlotKey::Hand(Side::Off),
 					item: Some(Item {
 						name: "Some Item",
-						skill: None,
 						model: Some("model key"),
 						..default()
 					}),
@@ -1110,10 +1096,6 @@ mod tests {
 		let models = Models([("model key", model.clone())].into());
 		let item = Item {
 			name: "Some Item",
-			skill: Some(Skill {
-				name: "Some Skill",
-				..default()
-			}),
 			model: Some("model key"),
 			..default()
 		};
@@ -1124,8 +1106,8 @@ mod tests {
 			.world
 			.spawn((
 				_Container { name: "my comp" },
-				Slots([].into()),
-				Collection::new([_Source {
+				Slots::<Handle<Skill>>([].into()),
+				Collection::new([_Accessor {
 					slot: SlotKey::Hand(Side::Off),
 					item: Some(item.clone()),
 					..default()
@@ -1135,7 +1117,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			equip_item::<_Container, _Source>.pipe(fake_log_error_lazy_many(agent)),
+			equip_item::<_Container, _Accessor>.pipe(fake_log_error_lazy_many(agent)),
 		);
 		app.update();
 
@@ -1154,10 +1136,6 @@ mod tests {
 		let models = Models([].into());
 		let item = Item {
 			name: "Some Item",
-			skill: Some(Skill {
-				name: "Some Skill",
-				..default()
-			}),
 			model: Some("model key"),
 			..default()
 		};
@@ -1180,7 +1158,7 @@ mod tests {
 			.world
 			.spawn((
 				_Container { name: "my comp" },
-				Slots(
+				Slots::<Handle<Skill>>(
 					[(
 						SlotKey::Hand(Side::Off),
 						Slot {
@@ -1190,7 +1168,7 @@ mod tests {
 					)]
 					.into(),
 				),
-				Collection::new([_Source {
+				Collection::new([_Accessor {
 					slot: SlotKey::Hand(Side::Off),
 					item: Some(item.clone()),
 					..default()
@@ -1200,7 +1178,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			equip_item::<_Container, _Source>.pipe(fake_log_error_lazy_many(agent)),
+			equip_item::<_Container, _Accessor>.pipe(fake_log_error_lazy_many(agent)),
 		);
 		app.update();
 
@@ -1220,10 +1198,6 @@ mod tests {
 		let models = Models([("model key", model.clone())].into());
 		let item = Item {
 			name: "Some Item",
-			skill: Some(Skill {
-				name: "Some Skill",
-				..default()
-			}),
 			model: Some("model key"),
 			..default()
 		};
@@ -1236,7 +1210,7 @@ mod tests {
 			.world
 			.spawn((
 				_Container { name: "my comp" },
-				Slots(
+				Slots::<Handle<Skill>>(
 					[(
 						SlotKey::Hand(Side::Off),
 						Slot {
@@ -1246,7 +1220,7 @@ mod tests {
 					)]
 					.into(),
 				),
-				Collection::new([_Source {
+				Collection::new([_Accessor {
 					slot: SlotKey::Hand(Side::Off),
 					item: Some(item.clone()),
 					..default()
@@ -1256,7 +1230,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			equip_item::<_Container, _Source>.pipe(fake_log_error_lazy_many(agent)),
+			equip_item::<_Container, _Accessor>.pipe(fake_log_error_lazy_many(agent)),
 		);
 		app.update();
 

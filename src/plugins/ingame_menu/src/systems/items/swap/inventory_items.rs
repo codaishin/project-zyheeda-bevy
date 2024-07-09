@@ -1,4 +1,5 @@
 use bevy::{
+	asset::Handle,
 	ecs::system::{Commands, Query},
 	prelude::{Entity, Mut},
 };
@@ -9,12 +10,13 @@ use common::{
 use skills::{
 	components::inventory::Inventory,
 	items::{inventory_key::InventoryKey, Item},
+	skills::Skill,
 };
 use std::cmp::max;
 
 type ItemsToSwap<'a> = (
 	Entity,
-	&'a mut Inventory,
+	&'a mut Inventory<Handle<Skill>>,
 	&'a Collection<Swap<InventoryKey, InventoryKey>>,
 );
 
@@ -28,12 +30,15 @@ pub fn swap_inventory_items(mut commands: Commands, mut items_to_swap: Query<Ite
 	}
 }
 
-fn do_swap(inventory: &mut Mut<Collection<Option<Item>>>, swap: &Swap<InventoryKey, InventoryKey>) {
+fn do_swap(
+	inventory: &mut Mut<Collection<Option<Item<Handle<Skill>>>>>,
+	swap: &Swap<InventoryKey, InventoryKey>,
+) {
 	fill_to(&mut inventory.0, max(swap.0 .0, swap.1 .0));
 	inventory.0.swap(swap.0 .0, swap.1 .0);
 }
 
-fn fill_to(inventory: &mut Vec<Option<Item>>, index: usize) {
+fn fill_to(inventory: &mut Vec<Option<Item<Handle<Skill>>>>, index: usize) {
 	if index < inventory.len() {
 		return;
 	}
@@ -55,7 +60,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Inventory::new([
+				Inventory::<Handle<Skill>>::new([
 					Some(Item {
 						name: "item a",
 						..default()
@@ -74,7 +79,7 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let inventory = agent.get::<Inventory>().unwrap();
+		let inventory = agent.get::<Inventory<Handle<Skill>>>().unwrap();
 
 		assert_eq!(
 			vec![
@@ -98,7 +103,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Inventory::new([Some(Item {
+				Inventory::<Handle<Skill>>::new([Some(Item {
 					name: "item",
 					..default()
 				})]),
@@ -110,7 +115,7 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let inventory = agent.get::<Inventory>().unwrap();
+		let inventory = agent.get::<Inventory<Handle<Skill>>>().unwrap();
 
 		assert_eq!(
 			vec![
@@ -131,7 +136,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Inventory::new([Some(Item {
+				Inventory::<Handle<Skill>>::new([Some(Item {
 					name: "item",
 					..default()
 				})]),
@@ -143,7 +148,7 @@ mod tests {
 		app.update();
 
 		let agent = app.world.entity(agent);
-		let inventory = agent.get::<Inventory>().unwrap();
+		let inventory = agent.get::<Inventory<Handle<Skill>>>().unwrap();
 
 		assert_eq!(
 			vec![
@@ -163,7 +168,7 @@ mod tests {
 		let agent = app
 			.world
 			.spawn((
-				Inventory::new([]),
+				Inventory::<Handle<Skill>>::new([]),
 				Collection::<Swap<InventoryKey, InventoryKey>>::new([]),
 			))
 			.id();

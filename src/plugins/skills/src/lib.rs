@@ -1,16 +1,17 @@
 pub mod components;
 pub mod items;
+pub mod resources;
 pub mod skills;
 pub mod traits;
 
 mod bundles;
+mod skill_loader;
 mod systems;
 
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
-use behaviors::components::Plasma;
 use bevy::{
 	app::{Plugin, PreStartup, PreUpdate, Update},
-	asset::AssetServer,
+	asset::{AssetApp, AssetServer, Handle, LoadedFolder},
 	ecs::{
 		entity::Entity,
 		query::Added,
@@ -26,10 +27,11 @@ use common::{
 	resources::{key_map::KeyMap, Models},
 	states::{GameRunning, MouseContext},
 	systems::log::log_many,
-	traits::try_insert_on::TryInsertOn,
+	traits::{load_asset::Path, try_insert_on::TryInsertOn},
 };
 use components::{
-	combos::{ComboNode, Combos},
+	combo_node::ComboNode,
+	combos::Combos,
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
 	queue::Queue,
@@ -38,13 +40,8 @@ use components::{
 	Mounts,
 };
 use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount};
-use skills::{
-	force_shield_skill::ForceShieldSkill,
-	gravity_well_skill::GravityWellSkill,
-	shoot_hand_gun::ShootHandGun,
-	Queued,
-	Skill,
-};
+use skill_loader::SkillLoader;
+use skills::{QueuedSkill, Skill};
 use std::{collections::HashSet, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,
@@ -53,24 +50,52 @@ use systems::{
 	execute::execute,
 	flush::flush,
 	get_inputs::get_inputs,
+	load_skills::load_skills,
 	mouse_context::{
 		advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
 		release::release_triggered_mouse_context,
 		trigger_primed::trigger_primed_mouse_context,
 	},
+	skill_handle_to_skill::skill_handle_to_skill,
+	skill_path_to_handle::skill_path_to_handle,
 	skill_spawn::add_skill_spawn,
-	slots::add_item_slots,
+	slots::init_slots,
 	update_skill_combos::update_skill_combos,
 };
-use traits::SkillTemplate;
 
 pub struct SkillsPlugin;
 
 impl Plugin for SkillsPlugin {
 	fn build(&self, app: &mut bevy::prelude::App) {
 		app.init_resource::<KeyMap<SlotKey, KeyCode>>()
+			.init_asset::<Skill>()
+			.register_asset_loader(SkillLoader::<Skill>::default())
+			.add_systems(PreStartup, load_skills::<AssetServer>)
 			.add_systems(PreStartup, load_models)
-			.add_systems(PreUpdate, (add_item_slots, add_skill_spawn))
+			.add_systems(PreUpdate, (init_slots, add_skill_spawn))
+			.add_systems(
+				PreUpdate,
+				skill_path_to_handle::<Inventory<Path>, Inventory<Handle<Skill>>, LoadedFolder>
+					.pipe(log_many),
+			)
+			.add_systems(
+				PreUpdate,
+				(
+					skill_path_to_handle::<Slots<Path>, Slots<Handle<Skill>>, LoadedFolder>
+						.pipe(log_many),
+					skill_handle_to_skill::<Slots<Handle<Skill>>, Slots>.pipe(log_many),
+				)
+					.chain(),
+			)
+			.add_systems(
+				PreUpdate,
+				(
+					skill_path_to_handle::<ComboNode<Path>, ComboNode<Handle<Skill>>, LoadedFolder>
+						.pipe(log_many),
+					skill_handle_to_skill::<ComboNode<Handle<Skill>>, Combos>.pipe(log_many),
+				)
+					.chain(),
+			)
 			.add_systems(
 				Update,
 				(
@@ -79,7 +104,7 @@ impl Plugin for SkillsPlugin {
 						ButtonInput<KeyCode>,
 						State<MouseContext<KeyCode>>,
 					>
-						.pipe(enqueue::<Slots, Skill, Queue, Skill<Queued>>),
+						.pipe(enqueue::<Slots, Queue, QueuedSkill>),
 					update_skill_combos::<Combos, CombosTimeOut, Queue, Virtual>,
 					advance_active_skill::<
 						Queue,
@@ -107,9 +132,10 @@ impl Plugin for SkillsPlugin {
 			.add_systems(
 				Update,
 				(
-					equip_item::<Player, (SlotKey, Option<Item>)>.pipe(log_many),
-					equip_item::<Inventory, Swap<InventoryKey, SlotKey>>.pipe(log_many),
-					equip_item::<Inventory, Swap<SlotKey, InventoryKey>>.pipe(log_many),
+					equip_item::<Inventory<Handle<Skill>>, Swap<InventoryKey, SlotKey>>
+						.pipe(log_many),
+					equip_item::<Inventory<Handle<Skill>>, Swap<SlotKey, InventoryKey>>
+						.pipe(log_many),
 				),
 			);
 	}
@@ -146,75 +172,77 @@ fn get_loadout() -> Loadout {
 		[
 			(
 				SlotKey::Hand(Side::Off),
-				Mounts {
-					hand: "hand_slot.L",
-					forearm: "lower_arm.L",
-				},
+				(
+					Mounts {
+						hand: "hand_slot.L",
+						forearm: "lower_arm.L",
+					},
+					Some(Item {
+						name: "Plasma Pistol A",
+						model: Some("pistol"),
+						skill: Some(Path::from("skills/shoot_hand_gun.skill")),
+						item_type: HashSet::from([ItemType::Pistol]),
+						mount: Mount::Hand,
+					}),
+				),
 			),
 			(
 				SlotKey::Hand(Side::Main),
-				Mounts {
-					hand: "hand_slot.R",
-					forearm: "lower_arm.R",
-				},
-			),
-		],
-		[
-			(
-				SlotKey::Hand(Side::Off),
-				Some(Item {
-					name: "Plasma Pistol A",
-					model: Some("pistol"),
-					skill: Some(ShootHandGun::<Plasma>::skill()),
-					item_type: HashSet::from([ItemType::Pistol]),
-					mount: Mount::Hand,
-				}),
-			),
-			(
-				SlotKey::Hand(Side::Main),
-				Some(Item {
-					name: "Force Bracer",
-					model: Some("bracer"),
-					skill: Some(ForceShieldSkill::skill()),
-					item_type: HashSet::from([ItemType::Bracer]),
-					mount: Mount::Forearm,
-				}),
+				(
+					Mounts {
+						hand: "hand_slot.R",
+						forearm: "lower_arm.R",
+					},
+					Some(Item {
+						name: "Force Bracer",
+						model: Some("bracer"),
+						skill: Some(Path::from("skills/force_shield.skill")),
+						item_type: HashSet::from([ItemType::Bracer]),
+						mount: Mount::Forearm,
+					}),
+				),
 			),
 		],
 	)
 }
 
-fn get_inventory() -> Inventory {
+fn get_inventory() -> Inventory<Path> {
 	Inventory::new([Some(Item {
 		name: "Plasma Pistol B",
 		model: Some("pistol"),
-		skill: Some(ShootHandGun::<Plasma>::skill()),
+		skill: Some(Path::from("skills/shoot_hand_gun.skill")),
 		item_type: HashSet::from([ItemType::Pistol]),
 		mount: Mount::Hand,
 	})])
 }
 
-fn get_combos() -> Combos {
-	Combos::new(ComboNode::new([
+fn get_combos() -> ComboNode<Path> {
+	ComboNode::new([
 		(
 			SlotKey::Hand(Side::Off),
 			(
-				ForceShieldSkill::skill(),
+				Path::from("skills/force_shield.skill"),
 				ComboNode::new([(
 					SlotKey::Hand(Side::Off),
-					(GravityWellSkill::skill(), ComboNode::default()),
+					(
+						Path::from("skills/gravity_well.skill"),
+						ComboNode::default(),
+					),
 				)]),
 			),
 		),
 		(
 			SlotKey::Hand(Side::Main),
 			(
-				ForceShieldSkill::skill(),
+				Path::from("skills/force_shield.skill"),
 				ComboNode::new([(
 					SlotKey::Hand(Side::Main),
-					(GravityWellSkill::skill(), ComboNode::default()),
+					(
+						Path::from("skills/gravity_well.skill"),
+						ComboNode::default(),
+					),
 				)]),
 			),
 		),
-	]))
+	])
 }

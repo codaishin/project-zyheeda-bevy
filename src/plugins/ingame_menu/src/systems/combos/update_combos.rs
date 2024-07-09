@@ -63,14 +63,14 @@ mod tests {
 		let combos = vec![
 			vec![
 				SkillDescriptor {
-					name: "a1",
+					name: "a1".to_owned(),
 					key: KeyCode::KeyA,
 					icon: Some(Handle::Weak(AssetId::Uuid {
 						uuid: Uuid::new_v4(),
 					})),
 				},
 				SkillDescriptor {
-					name: "a2",
+					name: "a2".to_owned(),
 					key: KeyCode::KeyB,
 					icon: Some(Handle::Weak(AssetId::Uuid {
 						uuid: Uuid::new_v4(),
@@ -79,14 +79,14 @@ mod tests {
 			],
 			vec![
 				SkillDescriptor {
-					name: "b1",
+					name: "b1".to_owned(),
 					key: KeyCode::KeyC,
 					icon: Some(Handle::Weak(AssetId::Uuid {
 						uuid: Uuid::new_v4(),
 					})),
 				},
 				SkillDescriptor {
-					name: "b2",
+					name: "b2".to_owned(),
 					key: KeyCode::KeyD,
 					icon: Some(Handle::Weak(AssetId::Uuid {
 						uuid: Uuid::new_v4(),

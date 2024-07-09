@@ -20,14 +20,11 @@ use common::{
 	states::MouseContext,
 	traits::{get::GetStatic, iterate::Iterate, map_value::TryMapBackwards},
 };
-use skills::{
-	items::slot_key::SlotKey,
-	skills::{Queued, Skill},
-};
+use skills::{items::slot_key::SlotKey, skills::QueuedSkill};
 
 pub fn panel_activity_colors_override<
 	TMap: Resource + TryMapBackwards<KeyCode, SlotKey>,
-	TQueue: Component + Iterate<Skill<Queued>>,
+	TQueue: Component + Iterate<QueuedSkill>,
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetStatic<SlotKey> + Component,
 >(
 	mut commands: Commands,
@@ -38,7 +35,7 @@ pub fn panel_activity_colors_override<
 ) {
 	let player_slots = &player
 		.get_single()
-		.map(|queue| queue.iterate().map(|s| s.data.slot_key).collect::<Vec<_>>());
+		.map(|queue| queue.iterate().map(|s| s.slot_key).collect::<Vec<_>>());
 	let primed_slots = match mouse_context.get() {
 		MouseContext::Primed(key) => key_map.try_map_backwards(*key),
 		_ => None,
@@ -103,7 +100,7 @@ mod tests {
 		utils::default,
 	};
 	use common::components::Side;
-	use skills::skills::Queued;
+	use skills::skills::QueuedSkill;
 
 	#[derive(Component)]
 	struct _Panel(pub SlotKey);
@@ -134,13 +131,13 @@ mod tests {
 
 	#[derive(Component, Default)]
 	struct _Queue {
-		queued: Vec<Skill<Queued>>,
+		queued: Vec<QueuedSkill>,
 	}
 
-	impl Iterate<Skill<Queued>> for _Queue {
-		fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a Skill<Queued>>
+	impl Iterate<QueuedSkill> for _Queue {
+		fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a QueuedSkill>
 		where
-			Skill<Queued>: 'a,
+			QueuedSkill: 'a,
 		{
 			self.queued.iterate()
 		}
@@ -186,11 +183,8 @@ mod tests {
 		app.world.spawn((
 			Player,
 			_Queue {
-				queued: vec![Skill {
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Main),
-						..default()
-					},
+				queued: vec![QueuedSkill {
+					slot_key: SlotKey::Hand(Side::Main),
 					..default()
 				}],
 			},
@@ -219,11 +213,8 @@ mod tests {
 		app.world.spawn((
 			Player,
 			_Queue {
-				queued: vec![Skill {
-					data: Queued {
-						slot_key: SlotKey::Hand(Side::Off),
-						..default()
-					},
+				queued: vec![QueuedSkill {
+					slot_key: SlotKey::Hand(Side::Off),
 					..default()
 				}],
 			},
@@ -300,18 +291,12 @@ mod tests {
 			Player,
 			_Queue {
 				queued: vec![
-					Skill {
-						data: Queued {
-							slot_key: SlotKey::Hand(Side::Off),
-							..default()
-						},
+					QueuedSkill {
+						slot_key: SlotKey::Hand(Side::Off),
 						..default()
 					},
-					Skill {
-						data: Queued {
-							slot_key: SlotKey::Hand(Side::Main),
-							..default()
-						},
+					QueuedSkill {
+						slot_key: SlotKey::Hand(Side::Main),
 						..default()
 					},
 				],

@@ -17,6 +17,9 @@
 	"[github-actions-workflow]": {
 		"editor.insertSpaces": true,
 	},
+	"files.associations": {
+		"*.skill": "json",
+	},
 	"cSpell.words": [
 		"automock",
 		"beamer",
@@ -34,7 +37,10 @@
 		"Mapface",
 		"metas",
 		"mockall",
+		"nanos",
 		"quickbar",
+		"struct",
+		"structs",
 		"tonemapping",
 		"withf",
 		"zyheeda"

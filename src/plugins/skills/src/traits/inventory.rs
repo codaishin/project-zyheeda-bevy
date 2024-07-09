@@ -1,11 +1,18 @@
 use crate::{
 	components::inventory::Inventory,
 	items::{inventory_key::InventoryKey, slot_key::SlotKey, Item},
+	skills::Skill,
 };
+use bevy::asset::Handle;
 use common::{components::Swap, traits::accessor::Accessor};
 
-impl Accessor<Inventory, (SlotKey, Option<Item>), Item> for Swap<InventoryKey, SlotKey> {
-	fn get_key_and_item(&self, inventory: &Inventory) -> (SlotKey, Option<Item>) {
+impl Accessor<Inventory<Handle<Skill>>, (SlotKey, Option<Item<Handle<Skill>>>), Item<Handle<Skill>>>
+	for Swap<InventoryKey, SlotKey>
+{
+	fn get_key_and_item(
+		&self,
+		inventory: &Inventory<Handle<Skill>>,
+	) -> (SlotKey, Option<Item<Handle<Skill>>>) {
 		let inventory = &inventory.0;
 		let Swap(inventory_key, slot_key) = *self;
 
@@ -15,7 +22,11 @@ impl Accessor<Inventory, (SlotKey, Option<Item>), Item> for Swap<InventoryKey, S
 		(slot_key, inventory[inventory_key.0].clone())
 	}
 
-	fn with_item(&self, item: Option<Item>, inventory: &mut Inventory) -> Self {
+	fn with_item(
+		&self,
+		item: Option<Item<Handle<Skill>>>,
+		inventory: &mut Inventory<Handle<Skill>>,
+	) -> Self {
 		let inventory = &mut inventory.0;
 		let Swap(inventory_key, slot_key) = self;
 
@@ -27,18 +38,27 @@ impl Accessor<Inventory, (SlotKey, Option<Item>), Item> for Swap<InventoryKey, S
 	}
 }
 
-impl Accessor<Inventory, (SlotKey, Option<Item>), Item> for Swap<SlotKey, InventoryKey> {
-	fn get_key_and_item(&self, inventory: &Inventory) -> (SlotKey, Option<Item>) {
+impl Accessor<Inventory<Handle<Skill>>, (SlotKey, Option<Item<Handle<Skill>>>), Item<Handle<Skill>>>
+	for Swap<SlotKey, InventoryKey>
+{
+	fn get_key_and_item(
+		&self,
+		inventory: &Inventory<Handle<Skill>>,
+	) -> (SlotKey, Option<Item<Handle<Skill>>>) {
 		Swap(self.1, self.0).get_key_and_item(inventory)
 	}
 
-	fn with_item(&self, item: Option<Item>, inventory: &mut Inventory) -> Self {
+	fn with_item(
+		&self,
+		item: Option<Item<Handle<Skill>>>,
+		inventory: &mut Inventory<Handle<Skill>>,
+	) -> Self {
 		let Swap(inventory_key, slot_key) = Swap(self.1, self.0).with_item(item, inventory);
 		Self(slot_key, inventory_key)
 	}
 }
 
-fn fill_inventory(inventory_key: &InventoryKey, inventory: &mut Vec<Option<Item>>) {
+fn fill_inventory(inventory_key: &InventoryKey, inventory: &mut Vec<Option<Item<Handle<Skill>>>>) {
 	let fill_len = inventory_key.0 - inventory.len() + 1;
 	inventory.extend(vec![None; fill_len]);
 }

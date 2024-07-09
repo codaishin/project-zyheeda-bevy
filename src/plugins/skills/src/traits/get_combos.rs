@@ -60,7 +60,7 @@ fn complete_combos<'a>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::combos::ComboNode;
+	use crate::components::combo_node::ComboNode;
 	use bevy::utils::default;
 	use common::components::Side;
 
@@ -70,7 +70,7 @@ mod tests {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "some skill",
+					name: "some skill".to_owned(),
 					..default()
 				},
 				ComboNode::default(),
@@ -81,7 +81,7 @@ mod tests {
 			vec![vec![(
 				SlotKey::Hand(Side::Main),
 				&Skill {
-					name: "some skill",
+					name: "some skill".to_owned(),
 					..default()
 				}
 			)]],
@@ -96,7 +96,7 @@ mod tests {
 				SlotKey::Hand(Side::Main),
 				(
 					Skill {
-						name: "some right skill",
+						name: "some right skill".to_owned(),
 						..default()
 					},
 					ComboNode::default(),
@@ -106,7 +106,7 @@ mod tests {
 				SlotKey::Hand(Side::Off),
 				(
 					Skill {
-						name: "some left skill",
+						name: "some left skill".to_owned(),
 						..default()
 					},
 					ComboNode::default(),
@@ -119,14 +119,14 @@ mod tests {
 				vec![(
 					SlotKey::Hand(Side::Main),
 					&Skill {
-						name: "some right skill",
+						name: "some right skill".to_owned(),
 						..default()
 					}
 				)],
 				vec![(
 					SlotKey::Hand(Side::Off),
 					&Skill {
-						name: "some left skill",
+						name: "some left skill".to_owned(),
 						..default()
 					}
 				)]
@@ -141,14 +141,14 @@ mod tests {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "some skill",
+					name: "some skill".to_owned(),
 					..default()
 				},
 				ComboNode::new([(
 					SlotKey::Hand(Side::Off),
 					(
 						Skill {
-							name: "some child skill",
+							name: "some child skill".to_owned(),
 							..default()
 						},
 						ComboNode::default(),
@@ -162,14 +162,14 @@ mod tests {
 				(
 					SlotKey::Hand(Side::Main),
 					&Skill {
-						name: "some skill",
+						name: "some skill".to_owned(),
 						..default()
 					}
 				),
 				(
 					SlotKey::Hand(Side::Off),
 					&Skill {
-						name: "some child skill",
+						name: "some child skill".to_owned(),
 						..default()
 					}
 				)
@@ -184,7 +184,7 @@ mod tests {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "some skill",
+					name: "some skill".to_owned(),
 					..default()
 				},
 				ComboNode::new([
@@ -192,7 +192,7 @@ mod tests {
 						SlotKey::Hand(Side::Main),
 						(
 							Skill {
-								name: "some right child skill",
+								name: "some right child skill".to_owned(),
 								..default()
 							},
 							ComboNode::default(),
@@ -202,7 +202,7 @@ mod tests {
 						SlotKey::Hand(Side::Off),
 						(
 							Skill {
-								name: "some left child skill",
+								name: "some left child skill".to_owned(),
 								..default()
 							},
 							ComboNode::default(),
@@ -218,14 +218,14 @@ mod tests {
 					(
 						SlotKey::Hand(Side::Main),
 						&Skill {
-							name: "some skill",
+							name: "some skill".to_owned(),
 							..default()
 						}
 					),
 					(
 						SlotKey::Hand(Side::Main),
 						&Skill {
-							name: "some right child skill",
+							name: "some right child skill".to_owned(),
 							..default()
 						}
 					)
@@ -234,14 +234,14 @@ mod tests {
 					(
 						SlotKey::Hand(Side::Main),
 						&Skill {
-							name: "some skill",
+							name: "some skill".to_owned(),
 							..default()
 						}
 					),
 					(
 						SlotKey::Hand(Side::Off),
 						&Skill {
-							name: "some left child skill",
+							name: "some left child skill".to_owned(),
 							..default()
 						}
 					)
@@ -257,14 +257,14 @@ mod tests {
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
-					name: "some skill",
+					name: "some skill".to_owned(),
 					..default()
 				},
 				ComboNode::new([(
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
-							name: "some child skill",
+							name: "some child skill".to_owned(),
 							..default()
 						},
 						ComboNode::new([
@@ -272,7 +272,7 @@ mod tests {
 								SlotKey::Hand(Side::Main),
 								(
 									Skill {
-										name: "some right child skill",
+										name: "some right child skill".to_owned(),
 										..default()
 									},
 									ComboNode::default(),
@@ -282,7 +282,7 @@ mod tests {
 								SlotKey::Hand(Side::Off),
 								(
 									Skill {
-										name: "some left child skill",
+										name: "some left child skill".to_owned(),
 										..default()
 									},
 									ComboNode::default(),
@@ -300,21 +300,21 @@ mod tests {
 					(
 						SlotKey::Hand(Side::Main),
 						&Skill {
-							name: "some skill",
+							name: "some skill".to_owned(),
 							..default()
 						}
 					),
 					(
 						SlotKey::Hand(Side::Main),
 						&Skill {
-							name: "some child skill",
+							name: "some child skill".to_owned(),
 							..default()
 						}
 					),
 					(
 						SlotKey::Hand(Side::Main),
 						&Skill {
-							name: "some right child skill",
+							name: "some right child skill".to_owned(),
 							..default()
 						}
 					)
@@ -323,21 +323,21 @@ mod tests {
 					(
 						SlotKey::Hand(Side::Main),
 						&Skill {
-							name: "some skill",
+							name: "some skill".to_owned(),
 							..default()
 						}
 					),
 					(
 						SlotKey::Hand(Side::Main),
 						&Skill {
-							name: "some child skill",
+							name: "some child skill".to_owned(),
 							..default()
 						}
 					),
 					(
 						SlotKey::Hand(Side::Off),
 						&Skill {
-							name: "some left child skill",
+							name: "some left child skill".to_owned(),
 							..default()
 						}
 					)

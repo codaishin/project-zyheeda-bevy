@@ -56,14 +56,16 @@ pub(crate) trait RunSkill {
 	) -> OnSkillStop;
 }
 
+pub(crate) trait Matches<T> {
+	fn matches(&self, value: &T) -> bool;
+}
+
 pub(crate) trait Flush {
 	fn flush(&mut self);
 }
 
-pub(crate) trait IterMutWithKeys<TKey, TItem> {
-	fn iter_mut_with_keys<'a>(
-		&'a mut self,
-	) -> impl DoubleEndedIterator<Item = (TKey, &'a mut TItem)>
+pub(crate) trait IterMut<TItem> {
+	fn iter_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut TItem>
 	where
 		TItem: 'a;
 }
@@ -87,6 +89,10 @@ pub(crate) trait GetActiveSkill<TAnimation, TSkillState: Clone> {
 
 pub trait IsTimedOut {
 	fn is_timed_out(&self) -> bool;
+}
+
+pub trait TryMap<TIn, TOut, TResult> {
+	fn try_map(&self, map_fn: impl FnMut(&TIn) -> Option<TOut>) -> TResult;
 }
 
 pub trait PeekNext<TNext> {
@@ -141,10 +147,6 @@ pub trait Execute {
 
 pub trait ShouldEnqueue {
 	fn should_enqueue(&self) -> bool;
-}
-
-pub trait SkillTemplate {
-	fn skill() -> Skill;
 }
 
 #[derive(Clone)]
