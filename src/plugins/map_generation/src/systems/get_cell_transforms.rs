@@ -199,7 +199,7 @@ mod tests {
 	#[test]
 	fn add_scene_handle_with_transform_direction() {
 		let mut app = setup();
-		let direction = Dir3::new(Vec3::new(1., 2., 3.)).unwrap();
+		let direction = Dir3::new(Vec3::new(2., 3., 5.)).unwrap();
 		let map_handle = add_map(&mut app, vec![vec![_Cell(direction)]]);
 		app.world_mut()
 			.insert_resource(LoadLevelCommand(map_handle));
