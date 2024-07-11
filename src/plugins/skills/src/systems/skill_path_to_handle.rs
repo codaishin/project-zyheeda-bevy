@@ -27,17 +27,17 @@ pub(crate) fn skill_path_to_handle<
 	mut folder_added: Local<bool>,
 ) -> Vec<Result<(), Error>> {
 	let folder_id = skill_folder.0.id();
+	*folder_added = *folder_added || folder_events.read().any(added(folder_id));
+
+	if !*folder_added {
+		return vec![];
+	}
+
 	let Some(folder) = loaded_folders.get(folder_id) else {
 		return vec![Err(no_skill_folder_error())];
 	};
 
 	let mut errors = vec![];
-
-	if !*folder_added && !folder_events.read().any(added(folder_id)) {
-		return errors;
-	}
-
-	*folder_added = true;
 
 	for (entity, source) in &sources {
 		commands.try_insert_on(entity, source.try_map(get_handle(folder, &mut errors)));
@@ -281,16 +281,15 @@ mod tests {
 	fn log_error_when_no_folder() {
 		let mut app = setup();
 
+		let folder = Handle::<_Folder>::default();
+		let id = folder.id();
+		app.world_mut().insert_resource(SkillFolder(folder));
+		app.world_mut().send_event(AssetEvent::Added { id });
+
 		app.world_mut()
 			.spawn(_Source(vec![Path::from("my/skill/path")]));
 
 		app.update();
-		app.update();
-
-		app.world_mut()
-			.resource_mut::<Assets<_Folder>>()
-			.add(_Folder::default());
-
 		app.update();
 
 		assert_eq!(
