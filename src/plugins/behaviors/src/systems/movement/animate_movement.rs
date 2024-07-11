@@ -23,7 +23,7 @@ pub(crate) fn animate_movement<
 	TMovement: Component,
 	TAnimation: Clone + Sync + Send + 'static,
 	TAnimations: Component + GetAnimation<TAnimation>,
-	TAnimationDispatch: Component + StartAnimation<MovementLayer, TAnimation> + StopAnimation<MovementLayer>,
+	TAnimationDispatch: Component + StartAnimation<TAnimation> + StopAnimation,
 >(
 	mut agents: Query<
 		Components<TMovementConfig, TAnimations, TAnimationDispatch, TMovement>,
@@ -46,7 +46,7 @@ fn insert_animation<
 	TMovement,
 	TAnimation: Clone,
 	TAnimations: GetAnimation<TAnimation>,
-	TAnimationDispatch: StartAnimation<MovementLayer, TAnimation>,
+	TAnimationDispatch: StartAnimation<TAnimation>,
 >(
 	config: Ref<TMovementConfig>,
 	animations: &TAnimations,
@@ -58,26 +58,24 @@ fn insert_animation<
 	}
 	let (.., mode) = config.get_movement_data();
 	let animation = animations.animation(&mode);
-	dispatch.start_animation(animation.clone());
+	dispatch.start_animation(MovementLayer, animation.clone());
 }
 
-fn remove_animation<
-	TMovement: Component,
-	TAnimationDispatch: Component + StopAnimation<MovementLayer>,
->(
+fn remove_animation<TMovement: Component, TAnimationDispatch: Component + StopAnimation>(
 	entity: Entity,
 	agent_without_movement: &mut Query<&mut TAnimationDispatch, Without<TMovement>>,
 ) {
 	let Ok(mut dispatch) = agent_without_movement.get_mut(entity) else {
 		return;
 	};
-	dispatch.stop_animation();
+	dispatch.stop_animation(MovementLayer);
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use crate::components::MovementMode;
+	use animations::traits::Priority;
 	use bevy::app::{App, Update};
 	use common::{test_tools::utils::SingleThreadedApp, tools::UnitsPerSecond};
 	use mockall::{automock, mock, predicate::eq};
@@ -117,25 +115,37 @@ mod tests {
 		mock: Mock_AnimationDispatch,
 	}
 
-	impl StartAnimation<MovementLayer, _Animation> for _AnimationDispatch {
-		fn start_animation(&mut self, animation: _Animation) {
-			self.mock.start_animation(animation)
+	impl StartAnimation<_Animation> for _AnimationDispatch {
+		fn start_animation<TLayer>(&mut self, layer: TLayer, animation: _Animation)
+		where
+			TLayer: 'static,
+			Priority: From<TLayer>,
+		{
+			self.mock.start_animation(layer, animation)
 		}
 	}
 
-	impl StopAnimation<MovementLayer> for _AnimationDispatch {
-		fn stop_animation(&mut self) {
-			self.mock.stop_animation()
+	impl StopAnimation for _AnimationDispatch {
+		fn stop_animation<TLayer>(&mut self, layer: TLayer)
+		where
+			TLayer: 'static,
+			Priority: From<TLayer>,
+		{
+			self.mock.stop_animation(layer)
 		}
 	}
 
 	mock! {
 		_AnimationDispatch {}
-		impl StartAnimation<MovementLayer, _Animation> for _AnimationDispatch {
-			fn start_animation(&mut self, animation: _Animation);
+		impl StartAnimation<_Animation> for _AnimationDispatch {
+			fn start_animation<TLayer>(&mut self, layer: TLayer, animation: _Animation) where
+				TLayer: 'static,
+				Priority: From<TLayer>;
 		}
-		impl StopAnimation<MovementLayer> for _AnimationDispatch {
-			fn stop_animation(&mut self);
+		impl StopAnimation for _AnimationDispatch {
+			fn stop_animation<TLayer>(&mut self, layer: TLayer)	where
+				TLayer: 'static,
+				Priority: From<TLayer>;
 		}
 	}
 
@@ -181,7 +191,7 @@ mod tests {
 			.mock
 			.expect_start_animation()
 			.times(1)
-			.with(eq(_Animation("fast")))
+			.with(eq(MovementLayer), eq(_Animation("fast")))
 			.return_const(());
 
 		app.world_mut()
@@ -215,7 +225,7 @@ mod tests {
 			.mock
 			.expect_start_animation()
 			.times(1)
-			.with(eq(_Animation("slow")))
+			.with(eq(MovementLayer), eq(_Animation("slow")))
 			.return_const(());
 
 		app.world_mut()
@@ -241,7 +251,7 @@ mod tests {
 
 		dispatch
 			.mock
-			.expect_start_animation()
+			.expect_start_animation::<MovementLayer>()
 			.never()
 			.return_const(());
 
@@ -271,10 +281,13 @@ mod tests {
 			.with(eq(MovementMode::Slow))
 			.return_const(_Animation("slow"));
 
-		dispatch.mock.expect_start_animation().return_const(());
 		dispatch
 			.mock
-			.expect_stop_animation()
+			.expect_start_animation::<MovementLayer>()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation::<MovementLayer>()
 			.times(1)
 			.return_const(());
 
@@ -308,7 +321,7 @@ mod tests {
 			.mock
 			.expect_start_animation()
 			.times(1)
-			.with(eq(_Animation("my animation")))
+			.with(eq(MovementLayer), eq(_Animation("my animation")))
 			.return_const(());
 
 		app.world_mut()
@@ -337,7 +350,7 @@ mod tests {
 			.mock
 			.expect_start_animation()
 			.times(1)
-			.with(eq(_Animation("my animation")))
+			.with(eq(MovementLayer), eq(_Animation("my animation")))
 			.return_const(());
 
 		let agent = app
@@ -374,7 +387,7 @@ mod tests {
 			.mock
 			.expect_start_animation()
 			.times(2)
-			.with(eq(_Animation("my animation")))
+			.with(eq(MovementLayer), eq(_Animation("my animation")))
 			.return_const(());
 
 		let agent = app
@@ -412,7 +425,7 @@ mod tests {
 			.return_const(_Animation(""));
 		dispatch
 			.mock
-			.expect_start_animation()
+			.expect_start_animation::<MovementLayer>()
 			.never()
 			.return_const(());
 

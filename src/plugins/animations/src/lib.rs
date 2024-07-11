@@ -9,34 +9,58 @@ mod systems;
 use animation::Animation;
 use bevy::{
 	animation::AnimationPlayer,
-	app::{App, Plugin, PostUpdate, Update},
+	app::{App, Plugin, PostUpdate, Startup, Update},
 	asset::AssetServer,
-	ecs::schedule::IntoSystemConfigs,
+	prelude::{
+		AnimationGraph,
+		AnimationNodeIndex,
+		AnimationTransitions,
+		Component,
+		IntoSystemConfigs,
+		Res,
+	},
 };
-use common::traits::load_asset::Path;
+use common::components::Player;
 use components::animation_dispatch::AnimationDispatch;
-use resource::AnimationClips;
+use resource::AnimationData;
 use systems::{
 	flush::flush,
-	link_animator::link_animators_with_new_animation_players,
-	load_animation_clip::load_animation_clip,
+	init_animation_clips::init_animation_clips,
+	init_animation_components::init_animation_components,
 	play_animation_clip::play_animation_clip,
 };
+use traits::{GetAnimationDispatch, GetAnimationPaths, RegisterAnimations};
 
 pub struct AnimationsPlugin;
 
-impl Plugin for AnimationsPlugin {
-	fn build(&self, app: &mut App) {
-		app.init_resource::<AnimationClips<Path>>()
+impl RegisterAnimations for App {
+	fn register_animations<TAgent>(&mut self) -> &mut Self
+	where
+		TAgent: Component + GetAnimationPaths + GetAnimationDispatch,
+	{
+		let init_animations_clips =
+			init_animation_clips::<TAgent, AnimationGraph, AnimationNodeIndex, AssetServer>;
+		let init_animation_components = init_animation_components::<TAgent>;
+		let play_animation_clip = play_animation_clip::<
+			TAgent,
+			Animation,
+			AnimationDispatch,
+			AnimationNodeIndex,
+			AnimationPlayer,
+			AnimationTransitions,
+		>;
+
+		self.add_systems(Startup, init_animations_clips)
 			.add_systems(
 				Update,
-				(
-					link_animators_with_new_animation_players,
-					load_animation_clip::<Animation, AnimationDispatch, AssetServer>,
-					play_animation_clip::<Animation, AnimationDispatch, AnimationPlayer>,
-				)
-					.chain(),
+				(init_animation_components, play_animation_clip).chain(),
 			)
+	}
+}
+
+impl Plugin for AnimationsPlugin {
+	fn build(&self, app: &mut App) {
+		app.register_animations::<Player>()
 			.add_systems(PostUpdate, flush::<AnimationDispatch>);
 	}
 }

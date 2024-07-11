@@ -1,7 +1,5 @@
 use animations::{
 	animation::{Animation, PlayMode},
-	components::{animation_dispatch::AnimationDispatch, Animator},
-	traits::{IdleLayer, StartAnimation},
 	AnimationsPlugin,
 };
 use bars::{components::Bar, BarsPlugin};
@@ -20,7 +18,7 @@ use common::{
 	components::{ColliderRoot, GroundOffset, Health, MainCamera, Player},
 	states::GameRunning,
 	tools::{player_animation_path, UnitsPerSecond},
-	traits::{clamp_zero_positive::ClampZeroPositive, load_asset::Path},
+	traits::clamp_zero_positive::ClampZeroPositive,
 	CommonPlugin,
 };
 use gravity::GravityPlugin;
@@ -168,17 +166,7 @@ fn setup_simple_3d_scene(
 	next_state.set(GameRunning::On);
 }
 
-fn animation_dispatch() -> impl Component + StartAnimation<IdleLayer, Animation> {
-	AnimationDispatch::default()
-}
-
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
-	let mut animation_dispatch = animation_dispatch();
-	animation_dispatch.start_animation(Animation::new(
-		Path::from(Player::MODEL_PATH.to_owned() + "#Animation2"),
-		PlayMode::Repeat,
-	));
-
 	commands
 		.spawn((
 			Name::from("Player"),
@@ -188,8 +176,6 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				scene: asset_server.load(Player::MODEL_PATH.to_owned() + "#Scene0"),
 				..default()
 			},
-			Animator { ..default() },
-			animation_dispatch,
 			GroundOffset(Vec3::Y),
 			Player,
 			MovementConfig::Dynamic {

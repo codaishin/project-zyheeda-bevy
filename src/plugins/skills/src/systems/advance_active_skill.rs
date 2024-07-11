@@ -33,7 +33,7 @@ type Components<'a, TGetSkill, TAnimationDispatch, TSkillExecutor> = (
 pub(crate) fn advance_active_skill<
 	TGetSkill: GetActiveSkill<TAnimation, SkillState> + Component,
 	TAnimation: Send + Sync + 'static,
-	TAnimationDispatch: Component + StartAnimation<SkillLayer, TAnimation> + StopAnimation<SkillLayer>,
+	TAnimationDispatch: Component + StartAnimation<TAnimation> + StopAnimation,
 	TSkillExecutor: Component + Schedule + Flush,
 	TTime: Send + Sync + Default + 'static,
 >(
@@ -62,19 +62,19 @@ pub(crate) fn advance_active_skill<
 	}
 }
 
-fn remove_side_effects<TAnimationDispatch: StopAnimation<SkillLayer>>(
+fn remove_side_effects<TAnimationDispatch: StopAnimation>(
 	mut agent: EntityCommands,
 	mut animation_dispatch: Mut<TAnimationDispatch>,
 ) -> Advancement {
 	agent.remove::<OverrideFace>();
-	animation_dispatch.stop_animation();
+	animation_dispatch.stop_animation(SkillLayer);
 
 	Advancement::InProcess
 }
 
 fn advance<
 	TAnimation: Send + Sync + 'static,
-	TAnimationDispatch: StartAnimation<SkillLayer, TAnimation> + StopAnimation<SkillLayer>,
+	TAnimationDispatch: StartAnimation<TAnimation> + StopAnimation,
 	TSkillExecutor: Component + Schedule + Flush,
 >(
 	mut skill: (impl GetSkillBehavior + GetAnimation<TAnimation> + StateUpdate<SkillState>),
@@ -107,16 +107,13 @@ fn advance<
 	Advancement::InProcess
 }
 
-fn animate<
-	TAnimation,
-	TAnimationDispatch: StartAnimation<SkillLayer, TAnimation> + StopAnimation<SkillLayer>,
->(
+fn animate<TAnimation, TAnimationDispatch: StartAnimation<TAnimation> + StopAnimation>(
 	skill: &mut (impl GetSkillBehavior + GetAnimation<TAnimation> + StateUpdate<SkillState>),
 	dispatch: &mut TAnimationDispatch,
 ) {
 	match skill.animate() {
-		Animate::Some(animation) => dispatch.start_animation(animation),
-		Animate::None => dispatch.stop_animation(),
+		Animate::Some(animation) => dispatch.start_animation(SkillLayer, animation),
+		Animate::None => dispatch.stop_animation(SkillLayer),
 		Animate::Ignore => {}
 	}
 }
@@ -153,6 +150,7 @@ mod tests {
 		skills::OnSkillStop,
 		traits::{GetAnimation, GetSkillBehavior},
 	};
+	use animations::traits::Priority;
 	use behaviors::components::{Face, OverrideFace};
 	use bevy::{
 		prelude::{App, Transform, Update},
@@ -221,25 +219,38 @@ mod tests {
 		mock: Mock_AnimationDispatch,
 	}
 
-	impl StartAnimation<SkillLayer, _Animation> for _AnimationDispatch {
-		fn start_animation(&mut self, animation: _Animation) {
-			self.mock.start_animation(animation)
+	impl StartAnimation<_Animation> for _AnimationDispatch {
+		fn start_animation<TLayer>(&mut self, layer: TLayer, animation: _Animation)
+		where
+			TLayer: 'static,
+			Priority: From<TLayer>,
+		{
+			self.mock.start_animation(layer, animation)
 		}
 	}
 
-	impl StopAnimation<SkillLayer> for _AnimationDispatch {
-		fn stop_animation(&mut self) {
-			self.mock.stop_animation()
+	impl StopAnimation for _AnimationDispatch {
+		fn stop_animation<TLayer>(&mut self, layer: TLayer)
+		where
+			TLayer: 'static,
+			Priority: From<TLayer>,
+		{
+			self.mock.stop_animation(layer)
 		}
 	}
 
 	mock! {
 		_AnimationDispatch {}
-		impl StartAnimation<SkillLayer, _Animation> for _AnimationDispatch {
-			fn start_animation(&mut self, animation: _Animation);
+		impl StartAnimation<_Animation> for _AnimationDispatch {
+			fn start_animation<TLayer>(&mut self, layer: TLayer, animation: _Animation)
+			where
+				TLayer: 'static,
+				Priority: From<TLayer>;
 		}
-		impl StopAnimation<SkillLayer> for _AnimationDispatch {
-			fn stop_animation(&mut self);
+		impl StopAnimation for _AnimationDispatch {
+			fn stop_animation<TLayer>(&mut self, layer: TLayer) where
+				TLayer: 'static,
+				Priority: From<TLayer>;
 		}
 	}
 
@@ -278,8 +289,14 @@ mod tests {
 		let mut dispatch = _AnimationDispatch::default();
 		let mut executer = _Executor::default();
 
-		dispatch.mock.expect_start_animation().return_const(());
-		dispatch.mock.expect_stop_animation().return_const(());
+		dispatch
+			.mock
+			.expect_start_animation::<SkillLayer>()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation::<SkillLayer>()
+			.return_const(());
 		executer.mock.expect_schedule().return_const(());
 		executer.mock.expect_flush().return_const(());
 		let agent = app.world_mut().spawn((dispatch, executer)).id();
@@ -321,12 +338,15 @@ mod tests {
 	fn insert_animation_when_aim_begins() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_stop_animation().return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation::<SkillLayer>()
+			.return_const(());
 		dispatch
 			.mock
 			.expect_start_animation()
 			.times(1)
-			.with(eq(_Animation(42)))
+			.with(eq(SkillLayer), eq(_Animation(42)))
 			.return_const(());
 
 		app.world_mut().entity_mut(agent).insert((
@@ -355,10 +375,13 @@ mod tests {
 	fn do_not_insert_animation_when_not_beginning_to_aim() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_stop_animation().return_const(());
 		dispatch
 			.mock
-			.expect_start_animation()
+			.expect_stop_animation::<SkillLayer>()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_start_animation::<SkillLayer>()
 			.never()
 			.return_const(());
 
@@ -391,10 +414,13 @@ mod tests {
 	fn stop_animation_on_when_beginning_to_aim_and_animate_is_none() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_start_animation().return_const(());
 		dispatch
 			.mock
-			.expect_stop_animation()
+			.expect_start_animation::<SkillLayer>()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation::<SkillLayer>()
 			.times(1)
 			.return_const(());
 
@@ -422,10 +448,13 @@ mod tests {
 	fn do_not_stop_animation_when_not_beginning_to_aim_and_animate_is_none() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_start_animation().return_const(());
 		dispatch
 			.mock
-			.expect_stop_animation()
+			.expect_start_animation::<SkillLayer>()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation::<SkillLayer>()
 			.never()
 			.return_const(());
 
@@ -458,12 +487,12 @@ mod tests {
 		let mut dispatch = _AnimationDispatch::default();
 		dispatch
 			.mock
-			.expect_start_animation()
+			.expect_start_animation::<SkillLayer>()
 			.never()
 			.return_const(());
 		dispatch
 			.mock
-			.expect_stop_animation()
+			.expect_stop_animation::<SkillLayer>()
 			.never()
 			.return_const(());
 
@@ -491,10 +520,13 @@ mod tests {
 	fn remove_animation_when_no_active_skill() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_start_animation().return_const(());
 		dispatch
 			.mock
-			.expect_stop_animation()
+			.expect_start_animation::<SkillLayer>()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation::<SkillLayer>()
 			.times(1)
 			.return_const(());
 
@@ -511,10 +543,13 @@ mod tests {
 	fn do_not_remove_animation_when_some_active_skill() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_start_animation().return_const(());
 		dispatch
 			.mock
-			.expect_stop_animation()
+			.expect_start_animation::<SkillLayer>()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation::<SkillLayer>()
 			.never()
 			.return_const(());
 
@@ -537,10 +572,13 @@ mod tests {
 	fn remove_animation_only_once_when_no_active_skill() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_start_animation().return_const(());
 		dispatch
 			.mock
-			.expect_stop_animation()
+			.expect_start_animation::<SkillLayer>()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation::<SkillLayer>()
 			.times(1)
 			.return_const(());
 
