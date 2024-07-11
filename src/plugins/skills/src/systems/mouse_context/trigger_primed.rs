@@ -25,23 +25,31 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
-		state::app::AppExtStates,
+		state::app::{AppExtStates, StatesPlugin},
 	};
+
+	fn setup() -> App {
+		let mut app = App::new();
+
+		app.add_plugins(StatesPlugin);
+		app.init_state::<MouseContext>();
+		app.init_resource::<ButtonInput<MouseButton>>();
+		app.add_systems(Update, trigger_primed_mouse_context);
+
+		app
+	}
 
 	#[test]
 	fn trigger() {
-		let mut app = App::new();
-		let mut mouse_input = ButtonInput::<MouseButton>::default();
+		let mut app = setup();
 
-		mouse_input.press(MouseButton::Left);
-		app.insert_resource(mouse_input);
-		app.init_state::<MouseContext>();
 		app.world_mut()
-			.get_resource_mut::<NextState<MouseContext>>()
-			.unwrap()
+			.resource_mut::<ButtonInput<MouseButton>>()
+			.press(MouseButton::Left);
+		app.world_mut()
+			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Primed(KeyCode::KeyU));
 
-		app.add_systems(Update, trigger_primed_mouse_context);
 		app.update();
 		app.update();
 
@@ -56,23 +64,15 @@ mod tests {
 
 	#[test]
 	fn do_not_trigger_when_mouse_left_not_just_pressed() {
-		let mut app = App::new();
-		let mut mouse_input = ButtonInput::<MouseButton>::default();
+		let mut app = setup();
 
-		mouse_input.press(MouseButton::Left);
-		app.insert_resource(mouse_input);
-		app.init_state::<MouseContext>();
+		let mut mouse_buttons = app.world_mut().resource_mut::<ButtonInput<MouseButton>>();
+		mouse_buttons.press(MouseButton::Left);
+		mouse_buttons.clear_just_pressed(MouseButton::Left);
 		app.world_mut()
-			.get_resource_mut::<NextState<MouseContext>>()
-			.unwrap()
+			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Primed(KeyCode::KeyU));
 
-		app.update();
-		app.world_mut()
-			.get_resource_mut::<ButtonInput<MouseButton>>()
-			.unwrap()
-			.clear_just_pressed(MouseButton::Left);
-		app.add_systems(Update, trigger_primed_mouse_context);
 		app.update();
 		app.update();
 
@@ -87,18 +87,15 @@ mod tests {
 
 	#[test]
 	fn do_not_trigger_when_no_mouse_context_key() {
-		let mut app = App::new();
-		let mut mouse_input = ButtonInput::<MouseButton>::default();
+		let mut app = setup();
 
-		mouse_input.press(MouseButton::Left);
-		app.insert_resource(mouse_input);
-		app.init_state::<MouseContext>();
 		app.world_mut()
-			.get_resource_mut::<NextState<MouseContext>>()
-			.unwrap()
+			.resource_mut::<ButtonInput<MouseButton>>()
+			.press(MouseButton::Left);
+		app.world_mut()
+			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::UI);
 
-		app.add_systems(Update, trigger_primed_mouse_context);
 		app.update();
 		app.update();
 
@@ -113,18 +110,15 @@ mod tests {
 
 	#[test]
 	fn trigger_other_key() {
-		let mut app = App::new();
-		let mut mouse_input = ButtonInput::<MouseButton>::default();
+		let mut app = setup();
 
-		mouse_input.press(MouseButton::Left);
-		app.insert_resource(mouse_input);
-		app.init_state::<MouseContext>();
 		app.world_mut()
-			.get_resource_mut::<NextState<MouseContext>>()
-			.unwrap()
+			.resource_mut::<ButtonInput<MouseButton>>()
+			.press(MouseButton::Left);
+		app.world_mut()
+			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Primed(KeyCode::KeyO));
 
-		app.add_systems(Update, trigger_primed_mouse_context);
 		app.update();
 		app.update();
 

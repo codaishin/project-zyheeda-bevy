@@ -30,20 +30,28 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		input::keyboard::KeyCode,
-		state::app::AppExtStates,
+		state::app::{AppExtStates, StatesPlugin},
 	};
+
+	fn setup() -> App {
+		let mut app = App::new();
+
+		app.add_plugins(StatesPlugin);
+		app.init_state::<MouseContext>();
+		app.add_systems(Update, advance_just_triggered_mouse_context);
+		app.add_systems(Update, advance_just_released_mouse_context);
+
+		app
+	}
 
 	#[test]
 	fn advance_to_triggered() {
-		let mut app = App::new();
+		let mut app = setup();
 
-		app.init_state::<MouseContext>();
 		app.world_mut()
-			.get_resource_mut::<NextState<MouseContext>>()
-			.unwrap()
+			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::JustTriggered(KeyCode::KeyB));
 
-		app.add_systems(Update, advance_just_triggered_mouse_context);
 		app.update();
 		app.update();
 
@@ -58,15 +66,12 @@ mod tests {
 
 	#[test]
 	fn do_not_advance_to_triggered_when_no_key_pressed() {
-		let mut app = App::new();
+		let mut app = setup();
 
-		app.init_state::<MouseContext>();
 		app.world_mut()
-			.get_resource_mut::<NextState<MouseContext>>()
-			.unwrap()
+			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Primed(KeyCode::KeyB));
 
-		app.add_systems(Update, advance_just_triggered_mouse_context);
 		app.update();
 		app.update();
 
@@ -81,15 +86,12 @@ mod tests {
 
 	#[test]
 	fn advance_to_default() {
-		let mut app = App::new();
+		let mut app = setup();
 
-		app.init_state::<MouseContext>();
 		app.world_mut()
-			.get_resource_mut::<NextState<MouseContext>>()
-			.unwrap()
+			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::JustReleased(KeyCode::KeyB));
 
-		app.add_systems(Update, advance_just_released_mouse_context);
 		app.update();
 		app.update();
 
@@ -104,15 +106,12 @@ mod tests {
 
 	#[test]
 	fn do_not_advance_to_default_when_no_key_released() {
-		let mut app = App::new();
+		let mut app = setup();
 
-		app.init_state::<MouseContext>();
 		app.world_mut()
-			.get_resource_mut::<NextState<MouseContext>>()
-			.unwrap()
+			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Primed(KeyCode::KeyB));
 
-		app.add_systems(Update, advance_just_released_mouse_context);
 		app.update();
 		app.update();
 
