@@ -273,7 +273,7 @@ mod tests {
 			..default()
 		};
 
-		app.world.spawn((combos, skills, slots));
+		app.world_mut().spawn((combos, skills, slots));
 		app.update();
 	}
 
@@ -326,10 +326,10 @@ mod tests {
 			..default()
 		};
 
-		let agent = app.world.spawn((combos, skills, slots)).id();
+		let agent = app.world_mut().spawn((combos, skills, slots)).id();
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&_Skills {
@@ -371,7 +371,7 @@ mod tests {
 		combos.mock.expect_flush().times(1).return_const(());
 		let skills = _Skills::default();
 
-		app.world.spawn((combos, skills, slots));
+		app.world_mut().spawn((combos, skills, slots));
 		app.update();
 	}
 
@@ -392,7 +392,7 @@ mod tests {
 			..default()
 		};
 
-		app.world.spawn((combos, skills, slots));
+		app.world_mut().spawn((combos, skills, slots));
 		app.update();
 	}
 
@@ -414,7 +414,7 @@ mod tests {
 		timeout.mock.expect_flush().return_const(());
 		let skills = _Skills::default();
 
-		app.world.spawn((combos, timeout, skills, slots));
+		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
@@ -436,7 +436,7 @@ mod tests {
 		timeout.mock.expect_flush().return_const(());
 		let skills = _Skills::default();
 
-		app.world.spawn((combos, timeout, skills, slots));
+		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
@@ -458,7 +458,7 @@ mod tests {
 		timeout.mock.expect_flush().times(1).return_const(());
 		let skills = _Skills::default();
 
-		app.world.spawn((combos, timeout, skills, slots));
+		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
@@ -483,7 +483,7 @@ mod tests {
 			..default()
 		};
 
-		app.world.spawn((combos, timeout, skills, slots));
+		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
@@ -505,7 +505,7 @@ mod tests {
 		timeout.mock.expect_flush().never().return_const(());
 		let skills = _Skills::default();
 
-		app.world.spawn((combos, timeout, skills, slots));
+		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
@@ -534,7 +534,7 @@ mod tests {
 			..default()
 		};
 
-		app.world.spawn((combos, timeout, skills, slots));
+		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
@@ -561,7 +561,7 @@ mod tests {
 		timeout.mock.expect_flush().return_const(());
 		let skills = _Skills::default();
 
-		app.world.spawn((combos, timeout, skills, slots));
+		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
@@ -595,7 +595,7 @@ mod tests {
 		timeout.mock.expect_flush().return_const(());
 		let skills = _Skills::default();
 
-		app.world.spawn((combos, timeout, skills, slots));
+		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 }

@@ -7,6 +7,7 @@ edition.workspace = true
 bevy.workspace = true
 bevy_rapier3d.workspace = true
 tracing.workspace = true
+uuid.workspace = true
 common.workspace = true
 skills.workspace = true
 

@@ -189,7 +189,7 @@ mod tests {
 
 		let mut app = App::new().single_threaded(Update);
 		let executer = app
-			.world
+			.world_mut()
 			.spawn(SkillExecuter::Start(Mock_Stoppable::run))
 			.id();
 		app.add_systems(
@@ -202,7 +202,7 @@ mod tests {
 
 		app.update();
 
-		let executer = app.world.entity(executer).get::<SkillExecuter>().unwrap();
+		let executer = app.world().entity(executer).get::<SkillExecuter>().unwrap();
 
 		assert_eq!(
 			&SkillExecuter::StartedStoppable(Entity::from_raw(998877)),
@@ -219,7 +219,7 @@ mod tests {
 
 		let mut app = App::new().single_threaded(Update);
 		let executer = app
-			.world
+			.world_mut()
 			.spawn(SkillExecuter::Start(Mock_NonStoppable::run))
 			.id();
 
@@ -233,7 +233,7 @@ mod tests {
 
 		app.update();
 
-		let executer = app.world.entity(executer).get::<SkillExecuter>().unwrap();
+		let executer = app.world().entity(executer).get::<SkillExecuter>().unwrap();
 
 		assert_eq!(&SkillExecuter::Idle, executer);
 	}
@@ -259,8 +259,8 @@ mod tests {
 	#[test]
 	fn despawn_skill_entity_recursively_on_execute_stop() {
 		let mut app = App::new().single_threaded(Update);
-		let skill = app.world.spawn_empty().id();
-		app.world.spawn_empty().set_parent(skill);
+		let skill = app.world_mut().spawn_empty().id();
+		app.world_mut().spawn_empty().set_parent(skill);
 		let mut executer = SkillExecuter::Stop(skill);
 
 		app.add_systems(Update, move |mut commands: Commands| {
@@ -268,14 +268,14 @@ mod tests {
 		});
 		app.update();
 
-		assert_eq!(0, app.world.iter_entities().count());
+		assert_eq!(0, app.world().iter_entities().count());
 	}
 
 	#[test]
 	fn set_to_idle_on_stop_execution() {
 		let mut app = App::new().single_threaded(Update);
 		let executer = app
-			.world
+			.world_mut()
 			.spawn(SkillExecuter::Stop(Entity::from_raw(42)))
 			.id();
 
@@ -288,7 +288,7 @@ mod tests {
 		);
 		app.update();
 
-		let executer = app.world.entity(executer).get::<SkillExecuter>().unwrap();
+		let executer = app.world().entity(executer).get::<SkillExecuter>().unwrap();
 
 		assert_eq!(&SkillExecuter::Idle, executer);
 	}

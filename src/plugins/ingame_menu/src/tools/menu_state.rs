@@ -1,4 +1,4 @@
-use bevy::{ecs::schedule::States, input::keyboard::KeyCode};
+use bevy::{input::keyboard::KeyCode, state::state::States};
 use common::traits::iteration::{Iter, IterFinite};
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]

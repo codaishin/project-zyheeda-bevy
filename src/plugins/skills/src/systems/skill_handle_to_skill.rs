@@ -66,13 +66,14 @@ mod tests {
 		app::{App, Update},
 		asset::{AssetEvent, AssetId},
 		prelude::IntoSystem,
-		utils::{default, Uuid},
+		utils::default,
 	};
 	use common::{
 		systems::log::test_tools::{fake_log_error_many_recourse, FakeErrorLogManyResource},
 		test_tools::utils::SingleThreadedApp,
 	};
 	use mockall::automock;
+	use uuid::Uuid;
 
 	#[automock]
 	trait _Counter {
@@ -129,24 +130,24 @@ mod tests {
 		let mut app = setup();
 
 		let skills = vec![
-			app.world.resource_mut::<Assets<Skill>>().add(Skill {
+			app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
 				name: "my skill a".to_owned(),
 				..default()
 			}),
-			app.world.resource_mut::<Assets<Skill>>().add(Skill {
+			app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
 				name: "my skill b".to_owned(),
 				..default()
 			}),
-			app.world.resource_mut::<Assets<Skill>>().add(Skill {
+			app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
 				name: "my skill c".to_owned(),
 				..default()
 			}),
 		];
-		let source = app.world.spawn(_Source::new(skills.clone())).id();
+		let source = app.world_mut().spawn(_Source::new(skills.clone())).id();
 
 		app.update();
 
-		let source = app.world.entity(source);
+		let source = app.world().entity(source);
 
 		assert_eq!(
 			Some(&_Result(vec![
@@ -171,17 +172,17 @@ mod tests {
 	fn map_only_when_source_changed() {
 		let mut app = setup();
 
-		let skills = vec![app.world.resource_mut::<Assets<Skill>>().add(Skill {
+		let skills = vec![app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
 			name: "my skill a".to_owned(),
 			..default()
 		})];
-		let other_skills = vec![app.world.resource_mut::<Assets<Skill>>().add(Skill {
+		let other_skills = vec![app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
 			name: "my other skill a".to_owned(),
 			..default()
 		})];
 
 		let source = app
-			.world
+			.world_mut()
 			.spawn(_Source {
 				handles: skills,
 				try_map_call_counter: Some(expect_try_map_called_times(2)),
@@ -191,7 +192,7 @@ mod tests {
 		app.update();
 		app.update();
 
-		app.world
+		app.world_mut()
 			.entity_mut(source)
 			.get_mut::<_Source>()
 			.unwrap()
@@ -204,12 +205,12 @@ mod tests {
 	fn map_also_when_skills_added() {
 		let mut app = setup();
 
-		let skill = app.world.resource_mut::<Assets<Skill>>().add(Skill {
+		let skill = app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
 			name: "my skill a".to_owned(),
 			..default()
 		});
 
-		app.world.spawn(_Source {
+		app.world_mut().spawn(_Source {
 			handles: vec![skill.clone()],
 			try_map_call_counter: Some(expect_try_map_called_times(2)),
 		});
@@ -217,8 +218,8 @@ mod tests {
 		app.update();
 		app.update();
 
-		app.world
-			.send_event(AssetEvent::<Skill>::Added { id: skill.into() });
+		app.world_mut()
+			.send_event(AssetEvent::<Skill>::Added { id: skill.id() });
 
 		app.update();
 	}
@@ -227,12 +228,12 @@ mod tests {
 	fn map_also_when_skills_modified() {
 		let mut app = setup();
 
-		let skill = app.world.resource_mut::<Assets<Skill>>().add(Skill {
+		let skill = app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
 			name: "my skill a".to_owned(),
 			..default()
 		});
 
-		app.world.spawn(_Source {
+		app.world_mut().spawn(_Source {
 			handles: vec![skill.clone()],
 			try_map_call_counter: Some(expect_try_map_called_times(2)),
 		});
@@ -240,8 +241,8 @@ mod tests {
 		app.update();
 		app.update();
 
-		app.world
-			.send_event(AssetEvent::<Skill>::Modified { id: skill.into() });
+		app.world_mut()
+			.send_event(AssetEvent::<Skill>::Modified { id: skill.id() });
 
 		app.update();
 	}
@@ -253,11 +254,11 @@ mod tests {
 			uuid: Uuid::new_v4(),
 		});
 
-		app.world.spawn(_Source::new(vec![handle.clone()]));
+		app.world_mut().spawn(_Source::new(vec![handle.clone()]));
 
 		app.update();
 
-		let errors = app.world.get_resource::<FakeErrorLogManyResource>();
+		let errors = app.world().get_resource::<FakeErrorLogManyResource>();
 
 		assert_eq!(
 			Some(&FakeErrorLogManyResource(vec![no_skill_for(&handle)])),

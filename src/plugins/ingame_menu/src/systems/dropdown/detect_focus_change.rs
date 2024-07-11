@@ -51,12 +51,12 @@ mod tests {
 	#[test]
 	fn return_pressed() {
 		let mut app = setup();
-		app.world
+		app.world_mut()
 			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Left);
 
 		let pressed = app
-			.world
+			.world_mut()
 			.spawn((Dropdown::default(), Interaction::Pressed))
 			.id();
 
@@ -64,35 +64,40 @@ mod tests {
 
 		assert_eq!(
 			&_Result(vec![pressed].into()),
-			app.world.resource::<_Result>(),
+			app.world().resource::<_Result>(),
 		);
 	}
 
 	#[test]
 	fn return_unchanged_if_mouse_left_not_just_pressed() {
 		let mut app = setup();
-		let mut mouse = app.world.resource_mut::<ButtonInput<MouseButton>>();
+		let mut mouse = app.world_mut().resource_mut::<ButtonInput<MouseButton>>();
 		mouse.press(MouseButton::Left);
 		mouse.clear_just_pressed(MouseButton::Left);
 
-		app.world.spawn((Dropdown::default(), Interaction::Pressed));
+		app.world_mut()
+			.spawn((Dropdown::default(), Interaction::Pressed));
 
 		app.update();
 
-		assert_eq!(&_Result(Focus::Unchanged), app.world.resource::<_Result>());
+		assert_eq!(
+			&_Result(Focus::Unchanged),
+			app.world().resource::<_Result>()
+		);
 	}
 
 	#[test]
 	fn return_empty_if_not_interaction_pressed() {
 		let mut app = setup();
-		app.world
+		app.world_mut()
 			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Left);
 
-		app.world.spawn((Dropdown::default(), Interaction::None));
+		app.world_mut()
+			.spawn((Dropdown::default(), Interaction::None));
 
 		app.update();
 
-		assert_eq!(&_Result(vec![].into()), app.world.resource::<_Result>());
+		assert_eq!(&_Result(vec![].into()), app.world().resource::<_Result>());
 	}
 }

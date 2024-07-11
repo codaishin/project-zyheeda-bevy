@@ -43,8 +43,9 @@ mod tests {
 		app::{App, Update},
 		asset::AssetId,
 		pbr::StandardMaterial,
-		utils::{default, Uuid},
+		utils::default,
 	};
+	use uuid::Uuid;
 
 	#[derive(Default, Resource)]
 	struct _Storage {
@@ -104,7 +105,7 @@ mod tests {
 		});
 		let mut app = setup();
 
-		app.world.insert_resource(_Storage {
+		app.world_mut().insert_resource(_Storage {
 			returns: stored_asset.clone(),
 			..default()
 		});
@@ -131,7 +132,7 @@ mod tests {
 			(add_asset, storage).get_or_create(42, StandardMaterial::default);
 		});
 
-		let storage = app.world.resource::<_Storage>();
+		let storage = app.world().resource::<_Storage>();
 		assert_eq!(vec![(42, asset_handle)], storage.args);
 	}
 }

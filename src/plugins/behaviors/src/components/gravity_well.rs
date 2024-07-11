@@ -1,9 +1,10 @@
 use super::LifeTime;
 use bevy::{
+	color::LinearRgba,
 	ecs::{component::Component, system::EntityCommands},
 	math::primitives::Sphere,
-	pbr::{AlphaMode, PbrBundle, StandardMaterial},
-	render::{color::Color, mesh::Mesh},
+	pbr::{PbrBundle, StandardMaterial},
+	render::{alpha::AlphaMode, mesh::Mesh},
 	utils::default,
 };
 use bevy_rapier3d::geometry::Collider;
@@ -40,7 +41,7 @@ impl Instantiate for GravityWell {
 		on: &mut EntityCommands,
 		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
-		let base_color = Color::MIDNIGHT_BLUE;
+		let base_color = LinearRgba::new(0.1, 0.1, 0.44, 1.);
 		let emissive = base_color * 100.;
 
 		on.insert((
@@ -50,7 +51,7 @@ impl Instantiate for GravityWell {
 					Mesh::from(Sphere::new(GravityWell::RADIUS))
 				}),
 				material: assets.get_or_create_for::<GravityWell>(|| StandardMaterial {
-					base_color,
+					base_color: base_color.into(),
 					emissive,
 					alpha_mode: AlphaMode::Add,
 					..default()

@@ -36,15 +36,18 @@ mod tests {
 	#[test]
 	fn copy_location_translation() {
 		let mut app = setup();
-		let location = app.world.spawn(GlobalTransform::from_xyz(4., 11., 9.)).id();
+		let location = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
+			.id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((ForceShield { location }, Transform::default()))
 			.id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 11., 9.)),
@@ -56,19 +59,19 @@ mod tests {
 	fn copy_location_rotation() {
 		let mut app = setup();
 		let location = app
-			.world
+			.world_mut()
 			.spawn(GlobalTransform::from(
 				Transform::default().looking_at(Vec3::new(0., 0., 1.), Vec3::Y),
 			))
 			.id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((ForceShield { location }, Transform::default()))
 			.id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Transform::default().looking_at(Vec3::new(0., 0., 1.), Vec3::Y)),
@@ -80,19 +83,19 @@ mod tests {
 	fn set_scale_to_one() {
 		let mut app = setup();
 		let location = app
-			.world
+			.world_mut()
 			.spawn(GlobalTransform::from(
 				Transform::default().with_scale(Vec3::new(3., 4., 5.)),
 			))
 			.id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((ForceShield { location }, Transform::default()))
 			.id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Transform::default().with_scale(Vec3::ONE)),

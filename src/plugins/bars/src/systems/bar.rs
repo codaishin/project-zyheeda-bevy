@@ -117,10 +117,10 @@ mod tests {
 					.mock
 					.expect_get_screen_position()
 					.return_const(Vec2::default());
-				app.world.spawn((camera, GlobalTransform::default()));
+				app.world_mut().spawn((camera, GlobalTransform::default()));
 			}
 			Some(camera) => {
-				app.world.spawn(camera);
+				app.world_mut().spawn(camera);
 			}
 		}
 
@@ -131,7 +131,7 @@ mod tests {
 	fn add_new_bar_values_when_new() {
 		let mut app = setup(None);
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				GlobalTransform::default(),
 				Bar::new(Vec3::default(), 0.),
@@ -141,7 +141,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert!(agent.contains::<BarValues<_Source>>());
 	}
@@ -160,7 +160,7 @@ mod tests {
 
 		let mut app = setup(Some((camera, camera_transform)));
 
-		app.world.spawn((
+		app.world_mut().spawn((
 			GlobalTransform::from_xyz(5., 3., 9.),
 			Bar::new(offset, 0.),
 			_Source::default(),
@@ -180,7 +180,7 @@ mod tests {
 		let mut app = setup(Some((camera, GlobalTransform::default())));
 
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				GlobalTransform::default(),
 				Bar::default(),
@@ -190,7 +190,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(Some(Vec2::new(42., 24.))),
@@ -203,7 +203,7 @@ mod tests {
 		let mut app = setup(None);
 
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				GlobalTransform::default(),
 				Bar::default(),
@@ -213,7 +213,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some((1., 2.)),
@@ -237,7 +237,7 @@ mod tests {
 
 		let mut app = setup(Some((camera, camera_transform)));
 
-		app.world.spawn((
+		app.world_mut().spawn((
 			GlobalTransform::from_xyz(5., 3., 9.),
 			Bar::new(offset, 0.),
 			_Source::default(),
@@ -259,7 +259,7 @@ mod tests {
 		let mut app = setup(Some((camera, GlobalTransform::default())));
 
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				GlobalTransform::default(),
 				Bar::default(),
@@ -270,7 +270,7 @@ mod tests {
 		app.update();
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(Some(Vec2::new(22., 33.))),
@@ -283,7 +283,7 @@ mod tests {
 		let mut app = setup(None);
 
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				GlobalTransform::default(),
 				Bar::default(),
@@ -293,14 +293,14 @@ mod tests {
 
 		app.update();
 
-		let mut agent_mut = app.world.entity_mut(agent);
+		let mut agent_mut = app.world_mut().entity_mut(agent);
 		let mut display = agent_mut.get_mut::<_Source>().unwrap();
 		display.current = 10;
 		display.max = 33;
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some((10., 33.)),

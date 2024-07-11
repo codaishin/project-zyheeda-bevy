@@ -49,11 +49,11 @@ mod tests {
 	fn add_target() {
 		let mut app = setup();
 
-		let agent = app.world.spawn(_Source(42)).id();
+		let agent = app.world_mut().spawn(_Source(42)).id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&_Target(42)), agent.get::<_Target>(),)
 	}
@@ -62,11 +62,11 @@ mod tests {
 	fn remove_source() {
 		let mut app = setup();
 
-		let agent = app.world.spawn(_Source(default())).id();
+		let agent = app.world_mut().spawn(_Source(default())).id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<_Source>(),)
 	}

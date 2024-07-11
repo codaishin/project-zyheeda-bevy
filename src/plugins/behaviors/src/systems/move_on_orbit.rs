@@ -80,11 +80,11 @@ mod tests {
 			.times(1)
 			.return_const(());
 
-		app.world.spawn((orbit, agent));
-		app.world
+		app.world_mut().spawn((orbit, agent));
+		app.world_mut()
 			.resource_mut::<Events<MouseMotion>>()
 			.send(MouseMotion { delta: angels });
-		app.world
+		app.world_mut()
 			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Right);
 
@@ -105,8 +105,8 @@ mod tests {
 			.times(0)
 			.return_const(());
 
-		app.world.spawn((orbit, agent));
-		app.world
+		app.world_mut().spawn((orbit, agent));
+		app.world_mut()
 			.resource_mut::<Events<MouseMotion>>()
 			.send(MouseMotion { delta: angels });
 
@@ -128,11 +128,11 @@ mod tests {
 			.times(1)
 			.return_const(());
 
-		app.world.spawn((orbit, agent));
+		app.world_mut().spawn((orbit, agent));
 
 		app.update();
 
-		app.world
+		app.world_mut()
 			.resource_mut::<Events<MouseMotion>>()
 			.send(MouseMotion {
 				delta: discard_angles,
@@ -140,10 +140,10 @@ mod tests {
 
 		app.update();
 
-		app.world
+		app.world_mut()
 			.resource_mut::<Events<MouseMotion>>()
 			.send(MouseMotion { delta: angels });
-		app.world
+		app.world_mut()
 			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Right);
 

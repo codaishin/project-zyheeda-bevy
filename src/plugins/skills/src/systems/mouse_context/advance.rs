@@ -1,6 +1,6 @@
-use bevy::ecs::{
-	schedule::{NextState, State},
-	system::{Res, ResMut},
+use bevy::{
+	ecs::system::{Res, ResMut},
+	state::state::{NextState, State},
 };
 use common::states::MouseContext;
 
@@ -29,8 +29,8 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		ecs::schedule::{NextState, State},
 		input::keyboard::KeyCode,
+		state::app::AppExtStates,
 	};
 
 	#[test]
@@ -38,7 +38,7 @@ mod tests {
 		let mut app = App::new();
 
 		app.init_state::<MouseContext>();
-		app.world
+		app.world_mut()
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
 			.set(MouseContext::JustTriggered(KeyCode::KeyB));
@@ -48,7 +48,7 @@ mod tests {
 		app.update();
 
 		let mouse_context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.unwrap()
 			.get();
@@ -61,7 +61,7 @@ mod tests {
 		let mut app = App::new();
 
 		app.init_state::<MouseContext>();
-		app.world
+		app.world_mut()
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
 			.set(MouseContext::Primed(KeyCode::KeyB));
@@ -71,7 +71,7 @@ mod tests {
 		app.update();
 
 		let mouse_context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.unwrap()
 			.get();
@@ -84,7 +84,7 @@ mod tests {
 		let mut app = App::new();
 
 		app.init_state::<MouseContext>();
-		app.world
+		app.world_mut()
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
 			.set(MouseContext::JustReleased(KeyCode::KeyB));
@@ -94,7 +94,7 @@ mod tests {
 		app.update();
 
 		let mouse_context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.unwrap()
 			.get();
@@ -107,7 +107,7 @@ mod tests {
 		let mut app = App::new();
 
 		app.init_state::<MouseContext>();
-		app.world
+		app.world_mut()
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
 			.set(MouseContext::Primed(KeyCode::KeyB));
@@ -117,7 +117,7 @@ mod tests {
 		app.update();
 
 		let mouse_context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.unwrap()
 			.get();

@@ -8,9 +8,9 @@ use crate::{
 	},
 };
 use bevy::{
+	color::Color,
 	hierarchy::{BuildChildren, ChildBuilder},
 	prelude::Component,
-	render::color::Color,
 	text::TextStyle,
 	ui::{
 		node_bundles::{ButtonBundle, NodeBundle, TextBundle},
@@ -42,7 +42,7 @@ impl GetNode for InventoryScreen {
 				justify_content: JustifyContent::Center,
 				..default()
 			},
-			background_color: Color::rgba(0.5, 0.5, 0.5, 0.5).into(),
+			background_color: Color::srgba(0.5, 0.5, 0.5, 0.5).into(),
 			..default()
 		}
 	}

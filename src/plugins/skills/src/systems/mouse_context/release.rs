@@ -1,9 +1,7 @@
 use bevy::{
-	ecs::{
-		schedule::{NextState, State},
-		system::{Res, ResMut},
-	},
+	ecs::system::{Res, ResMut},
 	input::{mouse::MouseButton, ButtonInput},
+	state::state::{NextState, State},
 };
 use common::states::MouseContext;
 
@@ -25,8 +23,8 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		ecs::schedule::{NextState, State},
 		input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
+		state::app::AppExtStates,
 	};
 
 	#[test]
@@ -40,7 +38,7 @@ mod tests {
 
 		app.insert_resource(mouse_input);
 		app.init_state::<MouseContext>();
-		app.world
+		app.world_mut()
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
 			.set(MouseContext::Triggered(KeyCode::KeyU));
@@ -50,7 +48,7 @@ mod tests {
 		app.update();
 
 		let context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.unwrap()
 			.get();
@@ -69,7 +67,7 @@ mod tests {
 
 		app.insert_resource(mouse_input);
 		app.init_state::<MouseContext>();
-		app.world
+		app.world_mut()
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
 			.set(MouseContext::JustTriggered(KeyCode::KeyU));
@@ -79,7 +77,7 @@ mod tests {
 		app.update();
 
 		let context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.unwrap()
 			.get();
@@ -100,7 +98,7 @@ mod tests {
 
 		app.insert_resource(mouse_input);
 		app.init_state::<MouseContext>();
-		app.world
+		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Triggered(KeyCode::KeyU));
 
@@ -109,7 +107,7 @@ mod tests {
 		app.update();
 
 		let context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.unwrap()
 			.get();

@@ -282,7 +282,7 @@ mod tests {
 		dispatch.mock.expect_stop_animation().return_const(());
 		executer.mock.expect_schedule().return_const(());
 		executer.mock.expect_flush().return_const(());
-		let agent = app.world.spawn((dispatch, executer)).id();
+		let agent = app.world_mut().spawn((dispatch, executer)).id();
 
 		time.update();
 		app.insert_resource(time);
@@ -298,7 +298,7 @@ mod tests {
 	#[test]
 	fn call_update_with_delta() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -329,7 +329,7 @@ mod tests {
 			.with(eq(_Animation(42)))
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
@@ -362,7 +362,7 @@ mod tests {
 			.never()
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
@@ -398,7 +398,7 @@ mod tests {
 			.times(1)
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
@@ -429,7 +429,7 @@ mod tests {
 			.never()
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
@@ -467,7 +467,7 @@ mod tests {
 			.never()
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
@@ -498,7 +498,7 @@ mod tests {
 			.times(1)
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue { active: None },
 			Transform::default(),
 			dispatch,
@@ -518,7 +518,7 @@ mod tests {
 			.never()
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -544,7 +544,7 @@ mod tests {
 			.times(1)
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue { active: None },
 			Transform::default(),
 			dispatch,
@@ -557,7 +557,7 @@ mod tests {
 	#[test]
 	fn clear_queue_of_active() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -572,7 +572,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert!(agent.get::<_Dequeue>().unwrap().active.is_none());
 	}
@@ -580,7 +580,7 @@ mod tests {
 	#[test]
 	fn do_not_remove_skill_when_not_done() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -595,7 +595,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert!(agent.get::<_Dequeue>().unwrap().active.is_some());
 	}
@@ -615,7 +615,7 @@ mod tests {
 			.return_const(());
 
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			executor,
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -651,7 +651,7 @@ mod tests {
 			.return_const(());
 
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			executor,
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -675,7 +675,7 @@ mod tests {
 	#[test]
 	fn do_not_run_when_not_activating_this_frame() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::RunBehavior]);
@@ -703,7 +703,7 @@ mod tests {
 		executor.mock.expect_flush().times(1).return_const(());
 
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			executor,
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -727,7 +727,7 @@ mod tests {
 		executor.mock.expect_flush().never().return_const(());
 
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			executor,
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -748,7 +748,7 @@ mod tests {
 	#[test]
 	fn apply_facing() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -765,7 +765,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&OverrideFace(Face::Cursor)),
@@ -776,7 +776,7 @@ mod tests {
 	#[test]
 	fn do_not_apply_facing_when_not_beginning_to_aim() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -791,7 +791,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<OverrideFace>());
 	}
@@ -799,7 +799,7 @@ mod tests {
 	#[test]
 	fn apply_facing_override_when_beginning_to_aim() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -816,7 +816,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&OverrideFace(Face::Cursor)),
@@ -827,7 +827,7 @@ mod tests {
 	#[test]
 	fn no_facing_override_when_no_skill() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue { active: None },
 			Transform::from_xyz(-1., -2., -3.),
 			OverrideFace(Face::Cursor),
@@ -835,7 +835,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<OverrideFace>());
 	}

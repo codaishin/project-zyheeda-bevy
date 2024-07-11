@@ -35,11 +35,11 @@ mod test {
 	#[test]
 	fn return_true_when_added() {
 		let mut app = setup();
-		app.world.spawn(_Component);
+		app.world_mut().spawn(_Component);
 
 		app.update();
 
-		assert_eq!(&_Result(true), app.world.resource::<_Result>())
+		assert_eq!(&_Result(true), app.world().resource::<_Result>())
 	}
 
 	#[test]
@@ -48,17 +48,17 @@ mod test {
 
 		app.update();
 
-		assert_eq!(&_Result(false), app.world.resource::<_Result>())
+		assert_eq!(&_Result(false), app.world().resource::<_Result>())
 	}
 
 	#[test]
 	fn return_false_when_not_empty_but_none_added() {
 		let mut app = setup();
-		app.world.spawn(_Component);
+		app.world_mut().spawn(_Component);
 
 		app.update();
 		app.update();
 
-		assert_eq!(&_Result(false), app.world.resource::<_Result>())
+		assert_eq!(&_Result(false), app.world().resource::<_Result>())
 	}
 }

@@ -57,7 +57,7 @@ mod tests {
 	}
 
 	fn move_input_events(app: &App) -> Vec<MoveInputEvent> {
-		let events = app.world.resource::<Events<MoveInputEvent>>();
+		let events = app.world().resource::<Events<MoveInputEvent>>();
 		let mut reader = events.get_reader();
 
 		reader.read(events).cloned().collect()
@@ -70,7 +70,7 @@ mod tests {
 			.expect_intersect_at()
 			.return_const(Vec3::new(1., 2., 3.));
 		let mut app = setup(ray);
-		app.world
+		app.world_mut()
 			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Left);
 
@@ -87,7 +87,7 @@ mod tests {
 		let mut ray = _Ray::default();
 		ray.mock.expect_intersect_at().return_const(Vec3::default());
 		let mut app = setup(ray);
-		app.world
+		app.world_mut()
 			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Middle);
 
@@ -101,7 +101,7 @@ mod tests {
 		let mut ray = _Ray::default();
 		ray.mock.expect_intersect_at().return_const(None);
 		let mut app = setup(ray);
-		app.world
+		app.world_mut()
 			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Left);
 
@@ -119,7 +119,7 @@ mod tests {
 			.times(1)
 			.return_const(None);
 		let mut app = setup(ray);
-		app.world
+		app.world_mut()
 			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Left);
 

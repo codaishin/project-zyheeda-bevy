@@ -76,6 +76,8 @@ pub mod debug_utils {
 	use interactions::events::RayCastEvent;
 	use std::ops::Not;
 
+	const FORWARD_GIZMO_COLOR: Color = Color::srgb(0., 0., 1.);
+
 	pub fn prepare_debug(app: &mut App) {
 		app.insert_resource(ShowGizmos::No)
 			.add_plugins(WorldInspectorPlugin::new())
@@ -83,7 +85,7 @@ pub mod debug_utils {
 			.add_systems(Update, toggle_gizmos)
 			.add_systems(
 				Update,
-				forward_gizmo(&["projectile_spawn", "Player"], &Color::BLUE),
+				forward_gizmo(&["projectile_spawn", "Player"], &FORWARD_GIZMO_COLOR),
 			)
 			.add_systems(Update, display_events);
 	}

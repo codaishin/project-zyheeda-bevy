@@ -1,19 +1,20 @@
 use crate::traits::ActOn;
 use bevy::{
 	ecs::{component::Component, entity::Entity},
-	math::{primitives::Direction3d, Vec3},
+	math::{Dir3, Vec3},
+	utils::default,
 };
 use bevy_rapier3d::{
 	geometry::CollisionGroups,
 	pipeline::{QueryFilter, QueryFilterFlags},
 };
 use common::traits::cast_ray::TimeOfImpact;
-use std::{collections::HashSet, marker::PhantomData, time::Duration};
+use std::{marker::PhantomData, time::Duration};
 
 #[derive(Component, Debug, PartialEq, Clone)]
 pub struct RayCaster {
 	pub origin: Vec3,
-	pub direction: Direction3d,
+	pub direction: Dir3,
 	pub max_toi: TimeOfImpact,
 	pub solid: bool,
 	pub filter: RayFilter,
@@ -23,7 +24,7 @@ impl Default for RayCaster {
 	fn default() -> Self {
 		Self {
 			origin: Default::default(),
-			direction: Direction3d::NEG_Z,
+			direction: Dir3::NEG_Z,
 			max_toi: Default::default(),
 			solid: Default::default(),
 			filter: Default::default(),
@@ -32,14 +33,11 @@ impl Default for RayCaster {
 }
 
 #[derive(Default, Debug, PartialEq, Clone)]
-pub struct RayFilter(HashSet<FilterOptions>);
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub enum FilterOptions {
-	Flags(QueryFilterFlags),
-	Groups(CollisionGroups),
-	ExcludeCollider(Entity),
-	ExcludeRigidBody(Entity),
+pub struct RayFilter {
+	flags: Option<QueryFilterFlags>,
+	groups: Option<CollisionGroups>,
+	exclude_collider: Option<Entity>,
+	exclude_rigid_body: Option<Entity>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -53,39 +51,34 @@ impl<'a> TryFrom<QueryFilter<'a>> for RayFilter {
 			return Err(CannotParsePredicate);
 		}
 
-		let mut f = HashSet::new();
+		let mut filter = RayFilter::default();
 
 		if !query_filter.flags.is_empty() {
-			f.insert(FilterOptions::Flags(query_filter.flags));
+			filter.flags = Some(query_filter.flags);
 		}
 		if let Some(groups) = query_filter.groups {
-			f.insert(FilterOptions::Groups(groups));
+			filter.groups = Some(groups);
 		}
 		if let Some(entity) = query_filter.exclude_collider {
-			f.insert(FilterOptions::ExcludeCollider(entity));
+			filter.exclude_collider = Some(entity);
 		}
 		if let Some(entity) = query_filter.exclude_rigid_body {
-			f.insert(FilterOptions::ExcludeRigidBody(entity));
+			filter.exclude_rigid_body = Some(entity);
 		}
 
-		Ok(RayFilter(f))
+		Ok(filter)
 	}
 }
 
 impl<'a> From<RayFilter> for QueryFilter<'a> {
 	fn from(ray_filter: RayFilter) -> Self {
-		let mut f = QueryFilter::new();
-
-		for option in ray_filter.0 {
-			match option {
-				FilterOptions::Flags(flags) => f.flags = flags,
-				FilterOptions::Groups(groups) => f.groups = Some(groups),
-				FilterOptions::ExcludeCollider(entity) => f.exclude_collider = Some(entity),
-				FilterOptions::ExcludeRigidBody(entity) => f.exclude_rigid_body = Some(entity),
-			}
+		Self {
+			groups: ray_filter.groups,
+			exclude_collider: ray_filter.exclude_collider,
+			exclude_rigid_body: ray_filter.exclude_rigid_body,
+			flags: ray_filter.flags.unwrap_or_default(),
+			..default()
 		}
-
-		f
 	}
 }
 
@@ -156,15 +149,15 @@ mod tests_ray_filter_from_query_filter {
 
 	#[test]
 	fn set_all_flags() {
-		let ray_filter = RayFilter(HashSet::from([
-			FilterOptions::Flags(QueryFilterFlags::EXCLUDE_FIXED),
-			FilterOptions::Groups(CollisionGroups {
+		let ray_filter = RayFilter {
+			flags: Some(QueryFilterFlags::EXCLUDE_FIXED),
+			groups: Some(CollisionGroups {
 				memberships: Group::all(),
 				filters: Group::empty(),
 			}),
-			FilterOptions::ExcludeCollider(Entity::from_raw(42)),
-			FilterOptions::ExcludeRigidBody(Entity::from_raw(24)),
-		]));
+			exclude_collider: Some(Entity::from_raw(42)),
+			exclude_rigid_body: Some(Entity::from_raw(24)),
+		};
 		let query_filter: QueryFilter = ray_filter.into();
 
 		assert_eq!(
@@ -176,12 +169,14 @@ mod tests_ray_filter_from_query_filter {
 				}),
 				Some(Entity::from_raw(42)),
 				Some(Entity::from_raw(24)),
+				true,
 			),
 			(
 				query_filter.flags,
 				query_filter.groups,
 				query_filter.exclude_collider,
-				query_filter.exclude_rigid_body
+				query_filter.exclude_rigid_body,
+				query_filter.predicate.is_none(),
 			)
 		)
 	}
@@ -194,26 +189,28 @@ mod test_ray_filter_from_query_filter {
 
 	#[test]
 	fn set_all_flags_except_dynamic_filter() {
-		let mut query_filter = QueryFilter::new();
-		query_filter.flags = QueryFilterFlags::EXCLUDE_FIXED;
-		query_filter.groups = Some(CollisionGroups {
-			memberships: Group::all(),
-			filters: Group::empty(),
-		});
-		query_filter.exclude_collider = Some(Entity::from_raw(42));
-		query_filter.exclude_rigid_body = Some(Entity::from_raw(24));
+		let query_filter = QueryFilter {
+			flags: QueryFilterFlags::EXCLUDE_FIXED,
+			groups: Some(CollisionGroups {
+				memberships: Group::all(),
+				filters: Group::empty(),
+			}),
+			exclude_collider: Some(Entity::from_raw(42)),
+			exclude_rigid_body: Some(Entity::from_raw(24)),
+			..default()
+		};
 		let ray_filter = RayFilter::try_from(query_filter);
 
 		assert_eq!(
-			Ok(RayFilter(HashSet::from([
-				FilterOptions::Flags(QueryFilterFlags::EXCLUDE_FIXED),
-				FilterOptions::Groups(CollisionGroups {
+			Ok(RayFilter {
+				flags: Some(QueryFilterFlags::EXCLUDE_FIXED),
+				groups: Some(CollisionGroups {
 					memberships: Group::all(),
 					filters: Group::empty(),
 				}),
-				FilterOptions::ExcludeCollider(Entity::from_raw(42)),
-				FilterOptions::ExcludeRigidBody(Entity::from_raw(24)),
-			]))),
+				exclude_collider: Some(Entity::from_raw(42)),
+				exclude_rigid_body: Some(Entity::from_raw(24)),
+			}),
 			ray_filter
 		);
 	}

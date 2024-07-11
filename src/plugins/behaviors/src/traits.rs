@@ -14,7 +14,7 @@ use bevy::{
 		bundle::Bundle,
 		system::{Commands, EntityCommands},
 	},
-	math::{primitives::Direction3d, Vec2, Vec3},
+	math::{Dir3, Vec2, Vec3},
 	transform::components::Transform,
 };
 use common::tools::{Units, UnitsPerSecond};
@@ -38,7 +38,7 @@ impl From<bool> for IsDone {
 }
 
 pub(crate) trait ProjectileBehavior {
-	fn direction(&self) -> Direction3d;
+	fn direction(&self) -> Dir3;
 	fn range(&self) -> f32;
 }
 

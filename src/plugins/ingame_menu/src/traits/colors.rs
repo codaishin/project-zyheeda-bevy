@@ -1,4 +1,4 @@
-use bevy::render::color::Color;
+use bevy::color::Color;
 
 pub struct PanelColors {
 	pub pressed: Color,
@@ -9,11 +9,11 @@ pub struct PanelColors {
 }
 
 pub const DEFAULT_PANEL_COLORS: PanelColors = PanelColors {
-	pressed: Color::rgb(0.35, 0.75, 0.35),
-	hovered: Color::rgb(0.25, 0.25, 0.25),
-	filled: Color::rgb(0.15, 0.15, 0.15),
-	empty: Color::rgb(0.35, 0.35, 0.35),
-	text: Color::rgb(0.9, 0.9, 0.9),
+	pressed: Color::srgb(0.35, 0.75, 0.35),
+	hovered: Color::srgb(0.25, 0.25, 0.25),
+	filled: Color::srgb(0.15, 0.15, 0.15),
+	empty: Color::srgb(0.35, 0.35, 0.35),
+	text: Color::srgb(0.9, 0.9, 0.9),
 };
 
 pub trait HasPanelColors {

@@ -78,12 +78,12 @@ mod tests {
 	#[test]
 	fn add_idle() {
 		let mut app = setup();
-		let agent = app.world.spawn(_Cleanup).id();
+		let agent = app.world_mut().spawn(_Cleanup).id();
 		app.insert_resource(_DoIdle(vec![agent]));
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&Idle), agent.get::<Idle>());
 	}
@@ -91,12 +91,12 @@ mod tests {
 	#[test]
 	fn do_not_add_idle_when_no_cleanup_present() {
 		let mut app = setup();
-		let agent = app.world.spawn_empty().id();
+		let agent = app.world_mut().spawn_empty().id();
 		app.insert_resource(_DoIdle(vec![agent]));
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<Idle>());
 	}
@@ -104,12 +104,12 @@ mod tests {
 	#[test]
 	fn call_cleanup() {
 		let mut app = setup();
-		let agent = app.world.spawn(_Cleanup).id();
+		let agent = app.world_mut().spawn(_Cleanup).id();
 		app.insert_resource(_DoIdle(vec![agent]));
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&_Cleaned), agent.get::<_Cleaned>());
 	}
@@ -117,12 +117,12 @@ mod tests {
 	#[test]
 	fn remove_cleanup_component() {
 		let mut app = setup();
-		let agent = app.world.spawn(_Cleanup).id();
+		let agent = app.world_mut().spawn(_Cleanup).id();
 		app.insert_resource(_DoIdle(vec![agent]));
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<_Cleanup>());
 	}

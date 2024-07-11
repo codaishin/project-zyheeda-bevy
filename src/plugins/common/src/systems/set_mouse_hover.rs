@@ -95,8 +95,8 @@ mod tests {
 	#[test]
 	fn add_target_collider() {
 		let mut app = setup(test_ray());
-		let collider = app.world.spawn_empty().id();
-		let mut cast_ray = app.world.resource_mut::<_CastRay>();
+		let collider = app.world_mut().spawn_empty().id();
+		let mut cast_ray = app.world_mut().resource_mut::<_CastRay>();
 		cast_ray
 			.mock
 			.expect_cast_ray()
@@ -104,7 +104,7 @@ mod tests {
 
 		app.update();
 
-		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
+		let mouse_hover = app.world().get_resource::<MouseHover<Entity>>();
 
 		assert_eq!(
 			Some(collider),
@@ -117,9 +117,9 @@ mod tests {
 	#[test]
 	fn add_target_root() {
 		let mut app = setup(test_ray());
-		let root = app.world.spawn_empty().id();
-		let collider = app.world.spawn(ColliderRoot(root)).id();
-		let mut cast_ray = app.world.resource_mut::<_CastRay>();
+		let root = app.world_mut().spawn_empty().id();
+		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
+		let mut cast_ray = app.world_mut().resource_mut::<_CastRay>();
 		cast_ray
 			.mock
 			.expect_cast_ray()
@@ -127,7 +127,7 @@ mod tests {
 
 		app.update();
 
-		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
+		let mouse_hover = app.world().get_resource::<MouseHover<Entity>>();
 
 		assert_eq!(
 			Some(Some(root)),
@@ -138,12 +138,12 @@ mod tests {
 	#[test]
 	fn set_mouse_hover_none_when_no_collision() {
 		let mut app = setup(test_ray());
-		let mut cast_ray = app.world.resource_mut::<_CastRay>();
+		let mut cast_ray = app.world_mut().resource_mut::<_CastRay>();
 		cast_ray.mock.expect_cast_ray().return_const(None);
 
 		app.update();
 
-		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
+		let mouse_hover = app.world().get_resource::<MouseHover<Entity>>();
 
 		assert_eq!(Some(&MouseHover(None)), mouse_hover);
 	}
@@ -151,8 +151,8 @@ mod tests {
 	#[test]
 	fn set_mouse_hover_none_when_no_ray() {
 		let mut app = setup(None);
-		let collider = app.world.spawn_empty().id();
-		let mut cast_ray = app.world.resource_mut::<_CastRay>();
+		let collider = app.world_mut().spawn_empty().id();
+		let mut cast_ray = app.world_mut().resource_mut::<_CastRay>();
 		cast_ray
 			.mock
 			.expect_cast_ray()
@@ -160,7 +160,7 @@ mod tests {
 
 		app.update();
 
-		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
+		let mouse_hover = app.world().get_resource::<MouseHover<Entity>>();
 
 		assert_eq!(Some(&MouseHover(None)), mouse_hover);
 	}
@@ -168,9 +168,9 @@ mod tests {
 	#[test]
 	fn set_mouse_hover_none_when_collider_root_marked_as_no_target() {
 		let mut app = setup(test_ray());
-		let root = app.world.spawn(NoTarget).id();
-		let collider = app.world.spawn(ColliderRoot(root)).id();
-		let mut cast_ray = app.world.resource_mut::<_CastRay>();
+		let root = app.world_mut().spawn(NoTarget).id();
+		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
+		let mut cast_ray = app.world_mut().resource_mut::<_CastRay>();
 		cast_ray
 			.mock
 			.expect_cast_ray()
@@ -178,7 +178,7 @@ mod tests {
 
 		app.update();
 
-		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
+		let mouse_hover = app.world().get_resource::<MouseHover<Entity>>();
 
 		assert_eq!(Some(&MouseHover::default()), mouse_hover);
 	}
@@ -186,8 +186,8 @@ mod tests {
 	#[test]
 	fn set_mouse_hover_none_when_collider_marked_as_no_target() {
 		let mut app = setup(test_ray());
-		let collider = app.world.spawn(NoTarget).id();
-		let mut cast_ray = app.world.resource_mut::<_CastRay>();
+		let collider = app.world_mut().spawn(NoTarget).id();
+		let mut cast_ray = app.world_mut().resource_mut::<_CastRay>();
 		cast_ray
 			.mock
 			.expect_cast_ray()
@@ -195,7 +195,7 @@ mod tests {
 
 		app.update();
 
-		let mouse_hover = app.world.get_resource::<MouseHover<Entity>>();
+		let mouse_hover = app.world().get_resource::<MouseHover<Entity>>();
 
 		assert_eq!(Some(&MouseHover::default()), mouse_hover);
 	}
@@ -203,7 +203,7 @@ mod tests {
 	#[test]
 	fn call_cast_ray_with_parameters() {
 		let mut app = setup(test_ray());
-		let mut cast_ray = app.world.resource_mut::<_CastRay>();
+		let mut cast_ray = app.world_mut().resource_mut::<_CastRay>();
 
 		cast_ray
 			.mock

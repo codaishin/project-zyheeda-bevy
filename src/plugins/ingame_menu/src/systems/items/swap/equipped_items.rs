@@ -127,10 +127,9 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		asset::AssetId,
+		asset::{Asset, AssetId},
 		ecs::system::In,
 		prelude::{default, Entity, IntoSystem},
-		utils::Uuid,
 	};
 	use common::{
 		components::Side,
@@ -141,29 +140,28 @@ mod tests {
 		items::{Item, Mount},
 		skills::Skill,
 	};
+	use uuid::Uuid;
+
+	fn new_handle<T: Asset>() -> Handle<T> {
+		Handle::<T>::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		})
+	}
 
 	#[test]
 	fn swap_items() {
 		let mut app = App::new();
 		let slot_handles = [
-			Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}),
-			Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}),
-			Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}),
-			Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}),
+			new_handle::<Scene>(),
+			new_handle::<Scene>(),
+			new_handle::<Scene>(),
+			new_handle::<Scene>(),
 		];
 		let slot_handle_ids = slot_handles
 			.clone()
-			.map(|handle| app.world.spawn(handle.clone()).id());
+			.map(|handle| app.world_mut().spawn(handle.clone()).id());
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Slots(
 					[
@@ -206,9 +204,9 @@ mod tests {
 		app.update();
 
 		let handles =
-			slot_handle_ids.map(|id| app.world.entity(id).get::<Handle<Scene>>().unwrap());
+			slot_handle_ids.map(|id| app.world().entity(id).get::<Handle<Scene>>().unwrap());
 		let slots = app
-			.world
+			.world()
 			.entity(agent)
 			.get::<Slots<Handle<Skill>>>()
 			.unwrap();
@@ -221,7 +219,7 @@ mod tests {
 				.item
 				.clone(),
 		);
-		let errors = app.world.entity(agent).get::<FakeErrorLogMany>();
+		let errors = app.world().entity(agent).get::<FakeErrorLogMany>();
 
 		assert_eq!(
 			(
@@ -253,7 +251,7 @@ mod tests {
 	fn remove_collection() {
 		let mut app = App::new();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Slots::<Handle<Skill>>([].into()),
 				Collection::<Swap<SlotKey, SlotKey>>([].into()),
@@ -263,7 +261,7 @@ mod tests {
 		app.add_systems(Update, swap_equipped_items.pipe(|_: In<_>| {}));
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert!(!agent.contains::<Collection<Swap<SlotKey, SlotKey>>>());
 	}
@@ -272,7 +270,7 @@ mod tests {
 	fn log_slot_errors() {
 		let mut app = App::new();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Slots::<Handle<Skill>>([].into()),
 				Collection([Swap(SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main))].into()),
@@ -285,7 +283,7 @@ mod tests {
 		);
 		app.update();
 
-		let errors = app.world.entity(agent).get::<FakeErrorLogMany>().unwrap();
+		let errors = app.world().entity(agent).get::<FakeErrorLogMany>().unwrap();
 
 		assert_eq!(
 			vec![
@@ -300,7 +298,7 @@ mod tests {
 	fn log_handle_errors() {
 		let mut app = App::new();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Slots(
 					[
@@ -343,7 +341,7 @@ mod tests {
 		);
 		app.update();
 
-		let errors = app.world.entity(agent).get::<FakeErrorLogMany>().unwrap();
+		let errors = app.world().entity(agent).get::<FakeErrorLogMany>().unwrap();
 
 		assert_eq!(
 			vec![

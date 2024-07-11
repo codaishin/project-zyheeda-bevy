@@ -9,13 +9,11 @@ use animation::MovementAnimations;
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::{
 	app::{App, Plugin, Update},
-	ecs::{
-		schedule::{common_conditions::in_state, IntoSystemConfigs},
-		system::IntoSystem,
-	},
+	ecs::{schedule::IntoSystemConfigs, system::IntoSystem},
 	input::keyboard::KeyCode,
+	state::condition::in_state,
 	time::Virtual,
-	transform::TransformBundle,
+	transform::bundles::TransformBundle,
 };
 use common::{
 	components::Player,

@@ -132,7 +132,7 @@ mod tests {
 
 	macro_rules! try_last_child_of {
 		($app:expr, $entity:expr) => {
-			$app.world
+			$app.world()
 				.iter_entities()
 				.filter_map(|e| {
 					if e.get::<Parent>()?.get() == $entity {
@@ -156,8 +156,9 @@ mod tests {
 	fn spawn_dropdown_ui_as_child_of_self() {
 		let mut app = setup();
 
-		let dropdown = app.world.spawn(Dropdown::default()).id();
-		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
+		let dropdown = app.world_mut().spawn(Dropdown::default()).id();
+		app.world_mut()
+			.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -170,8 +171,9 @@ mod tests {
 	fn spawn_dropdown_ui_with_dropdown_ui_marker() {
 		let mut app = setup();
 
-		let dropdown = app.world.spawn(Dropdown::default()).id();
-		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
+		let dropdown = app.world_mut().spawn(Dropdown::default()).id();
+		app.world_mut()
+			.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -188,7 +190,7 @@ mod tests {
 		let mut app = setup();
 
 		let dropdown = app
-			.world
+			.world_mut()
 			.spawn(Dropdown {
 				style: Style {
 					top: Val::Px(404.),
@@ -197,7 +199,8 @@ mod tests {
 				..default()
 			})
 			.id();
-		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
+		app.world_mut()
+			.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -216,8 +219,9 @@ mod tests {
 	fn spawn_dropdown_ui_with_global_z_index_1() {
 		let mut app = setup();
 
-		let dropdown = app.world.spawn(Dropdown::default()).id();
-		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
+		let dropdown = app.world_mut().spawn(Dropdown::default()).id();
+		app.world_mut()
+			.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -236,8 +240,8 @@ mod tests {
 	fn do_not_spawn_dropdown_ui_when_not_new_active() {
 		let mut app = setup();
 
-		let dropdown = app.world.spawn(Dropdown::default()).id();
-		app.world.insert_resource(_In(Focus::New(vec![])));
+		let dropdown = app.world_mut().spawn(Dropdown::default()).id();
+		app.world_mut().insert_resource(_In(Focus::New(vec![])));
 
 		app.update();
 
@@ -250,8 +254,9 @@ mod tests {
 	fn spawn_dropdown_ui_content_with_node_bundle() {
 		let mut app = setup();
 
-		let dropdown = app.world.spawn(Dropdown::default()).id();
-		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
+		let dropdown = app.world_mut().spawn(Dropdown::default()).id();
+		app.world_mut()
+			.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -275,13 +280,14 @@ mod tests {
 		item.expect_instantiate_content_on().return_const(());
 
 		let dropdown = app
-			.world
+			.world_mut()
 			.spawn(Dropdown {
 				items: vec![item],
 				..default()
 			})
 			.id();
-		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
+		app.world_mut()
+			.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -316,13 +322,14 @@ mod tests {
 		});
 
 		let dropdown = app
-			.world
+			.world_mut()
 			.spawn(Dropdown {
 				items: vec![item],
 				..default()
 			})
 			.id();
-		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
+		app.world_mut()
+			.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -354,7 +361,7 @@ mod tests {
 		let mut app = setup();
 
 		let dropdown = app
-			.world
+			.world_mut()
 			.spawn(Dropdown {
 				items: vec![
 					Box::new(_Item),
@@ -368,7 +375,8 @@ mod tests {
 			})
 			.id();
 
-		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
+		app.world_mut()
+			.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -391,7 +399,7 @@ mod tests {
 		let mut app = setup();
 
 		let dropdown = app
-			.world
+			.world_mut()
 			.spawn(Dropdown {
 				items: vec![
 					Box::new(_Item),
@@ -405,7 +413,8 @@ mod tests {
 			})
 			.id();
 
-		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
+		app.world_mut()
+			.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -428,7 +437,7 @@ mod tests {
 		let mut app = setup();
 
 		let dropdown = app
-			.world
+			.world_mut()
 			.spawn(Dropdown {
 				items: vec![
 					Box::new(_Item),
@@ -442,7 +451,8 @@ mod tests {
 			})
 			.id();
 
-		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
+		app.world_mut()
+			.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 
@@ -465,7 +475,7 @@ mod tests {
 		let mut app = setup();
 
 		let dropdown = app
-			.world
+			.world_mut()
 			.spawn(Dropdown {
 				items: vec![
 					Box::new(_Item),
@@ -479,7 +489,8 @@ mod tests {
 			})
 			.id();
 
-		app.world.insert_resource(_In(Focus::New(vec![dropdown])));
+		app.world_mut()
+			.insert_resource(_In(Focus::New(vec![dropdown])));
 
 		app.update();
 

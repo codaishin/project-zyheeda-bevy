@@ -1,6 +1,6 @@
 use bevy::{
 	ecs::{entity::Entity, event::Event},
-	math::{primitives::Direction3d, Ray3d, Vec3},
+	math::{Dir3, Ray3d, Vec3},
 };
 use common::traits::cast_ray::TimeOfImpact;
 
@@ -23,7 +23,7 @@ impl Default for RayCastTarget {
 			entity: None,
 			ray: Ray3d {
 				origin: Vec3::ZERO,
-				direction: Direction3d::NEG_Z,
+				direction: Dir3::NEG_Z,
 			},
 			toi: TimeOfImpact::default(),
 		}

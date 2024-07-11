@@ -1,9 +1,7 @@
 use bevy::{
-	ecs::{
-		schedule::{NextState, State},
-		system::{Res, ResMut},
-	},
+	ecs::system::{Res, ResMut},
 	input::{mouse::MouseButton, ButtonInput},
+	state::state::{NextState, State},
 };
 use common::states::MouseContext;
 
@@ -26,8 +24,8 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		ecs::schedule::NextState,
 		input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
+		state::app::AppExtStates,
 	};
 
 	#[test]
@@ -38,7 +36,7 @@ mod tests {
 		mouse_input.press(MouseButton::Left);
 		app.insert_resource(mouse_input);
 		app.init_state::<MouseContext>();
-		app.world
+		app.world_mut()
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
 			.set(MouseContext::Primed(KeyCode::KeyU));
@@ -48,7 +46,7 @@ mod tests {
 		app.update();
 
 		let context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.unwrap()
 			.get();
@@ -64,13 +62,13 @@ mod tests {
 		mouse_input.press(MouseButton::Left);
 		app.insert_resource(mouse_input);
 		app.init_state::<MouseContext>();
-		app.world
+		app.world_mut()
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
 			.set(MouseContext::Primed(KeyCode::KeyU));
 
 		app.update();
-		app.world
+		app.world_mut()
 			.get_resource_mut::<ButtonInput<MouseButton>>()
 			.unwrap()
 			.clear_just_pressed(MouseButton::Left);
@@ -79,7 +77,7 @@ mod tests {
 		app.update();
 
 		let context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.unwrap()
 			.get();
@@ -95,7 +93,7 @@ mod tests {
 		mouse_input.press(MouseButton::Left);
 		app.insert_resource(mouse_input);
 		app.init_state::<MouseContext>();
-		app.world
+		app.world_mut()
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
 			.set(MouseContext::UI);
@@ -105,7 +103,7 @@ mod tests {
 		app.update();
 
 		let context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.unwrap()
 			.get();
@@ -121,7 +119,7 @@ mod tests {
 		mouse_input.press(MouseButton::Left);
 		app.insert_resource(mouse_input);
 		app.init_state::<MouseContext>();
-		app.world
+		app.world_mut()
 			.get_resource_mut::<NextState<MouseContext>>()
 			.unwrap()
 			.set(MouseContext::Primed(KeyCode::KeyO));
@@ -131,7 +129,7 @@ mod tests {
 		app.update();
 
 		let context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.unwrap()
 			.get();

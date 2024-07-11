@@ -37,10 +37,10 @@ mod tests {
 		app::{App, Update},
 		asset::{AssetId, Handle},
 		ecs::system::IntoSystem,
-		utils::Uuid,
 	};
 	use common::{test_tools::utils::SingleThreadedApp, traits::load_asset::Path};
 	use mockall::{automock, predicate::eq};
+	use uuid::Uuid;
 
 	#[derive(Clone)]
 	struct _Cell(Option<Path>);
@@ -90,7 +90,7 @@ mod tests {
 			Transform::from_xyz(1., 2., 3.),
 			_Cell(Some(Path::from("A"))),
 		)]);
-		app.world
+		app.world_mut()
 			.resource_mut::<_LoadScene>()
 			.mock
 			.expect_load_asset()
@@ -101,7 +101,7 @@ mod tests {
 		app.update();
 
 		let spawned = app
-			.world
+			.world()
 			.iter_entities()
 			.find_map(|e| Some((e.get::<Handle<Scene>>()?, e.get::<Transform>()?)));
 

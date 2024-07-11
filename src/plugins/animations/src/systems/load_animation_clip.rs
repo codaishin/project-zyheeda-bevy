@@ -44,11 +44,11 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		asset::{AssetId, Handle},
-		utils::Uuid,
 	};
 	use common::{test_tools::utils::SingleThreadedApp, traits::load_asset::Path};
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
+	use uuid::Uuid;
 
 	struct _Animation(Path);
 
@@ -103,10 +103,10 @@ mod tests {
 		server.mock.expect_load_asset().return_const(clip.clone());
 		app.insert_resource(server);
 
-		app.world.spawn(dispatch);
+		app.world_mut().spawn(dispatch);
 		app.update();
 
-		let clips = app.world.resource::<AnimationClips<Path>>();
+		let clips = app.world().resource::<AnimationClips<Path>>();
 
 		assert_eq!(Some(&clip), clips.0.get(&Path::from("a/path")));
 	}
@@ -126,7 +126,7 @@ mod tests {
 			.return_const(Handle::default());
 		app.insert_resource(server);
 
-		app.world.spawn(dispatch);
+		app.world_mut().spawn(dispatch);
 		app.update();
 	}
 
@@ -144,11 +144,11 @@ mod tests {
 			.return_const(Handle::default());
 		app.insert_resource(server);
 
-		let agent = app.world.spawn(dispatch).id();
+		let agent = app.world_mut().spawn(dispatch).id();
 		app.update();
 		app.update();
 
-		app.world
+		app.world_mut()
 			.entity_mut(agent)
 			.get_mut::<_AnimationDispatch>()
 			.unwrap()
@@ -172,7 +172,7 @@ mod tests {
 		app.insert_resource(server);
 		app.insert_resource(AnimationClips(HashMap::from([(path, Handle::default())])));
 
-		app.world.spawn(dispatch);
+		app.world_mut().spawn(dispatch);
 		app.update();
 	}
 }

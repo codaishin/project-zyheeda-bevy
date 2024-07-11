@@ -1,4 +1,4 @@
-use bevy::{asset::Asset, math::primitives::Direction3d, reflect::TypePath};
+use bevy::{asset::Asset, math::Dir3, reflect::TypePath};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum Shape {
@@ -12,7 +12,7 @@ pub(crate) enum Shape {
 
 #[derive(Debug, PartialEq, Clone, Copy, TypePath)]
 pub(crate) enum MapCell {
-	Corridor(Direction3d, Shape),
+	Corridor(Dir3, Shape),
 	Empty,
 }
 

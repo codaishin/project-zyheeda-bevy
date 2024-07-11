@@ -1,10 +1,11 @@
 use super::{GetOrCreateAssets, Instantiate};
 use bevy::{
+	color::Color,
 	ecs::system::EntityCommands,
 	hierarchy::BuildChildren,
 	math::{primitives::Cuboid, Vec3},
 	pbr::{PbrBundle, StandardMaterial},
-	render::{color::Color, mesh::Mesh},
+	render::mesh::Mesh,
 	transform::components::Transform,
 	utils::default,
 };
@@ -37,7 +38,7 @@ impl Instantiate for Dummy {
 			))
 		});
 		let material = assets.get_or_create_for::<Dummy>(|| StandardMaterial {
-			base_color: Color::GRAY,
+			base_color: Color::srgb(0.5, 0.5, 0.5),
 			..default()
 		});
 		let collider = Collider::cuboid(

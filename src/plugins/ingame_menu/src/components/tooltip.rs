@@ -116,8 +116,8 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
+		color::Color,
 		hierarchy::{BuildWorldChildren, ChildBuilder, Children, Parent},
-		render::color::Color,
 		ui::{node_bundles::NodeBundle, BackgroundColor, Val},
 		utils::default,
 	};
@@ -216,7 +216,7 @@ mod tests {
 	#[test]
 	fn despawn_all() {
 		let mut app = setup_despawn_all();
-		app.world.spawn_batch([
+		app.world_mut().spawn_batch([
 			(
 				TooltipUI {
 					source: Entity::from_raw(100),
@@ -236,7 +236,7 @@ mod tests {
 		app.update();
 
 		let tooltip_uis = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(|e| e.contains::<TooltipUI>());
 
@@ -246,7 +246,7 @@ mod tests {
 	#[test]
 	fn despawn_all_recursively() {
 		let mut app = setup_despawn_all();
-		app.world
+		app.world_mut()
 			.spawn((
 				TooltipUI {
 					source: Entity::from_raw(100),
@@ -260,7 +260,10 @@ mod tests {
 
 		app.update();
 
-		let children = app.world.iter_entities().filter(|e| e.contains::<_Child>());
+		let children = app
+			.world()
+			.iter_entities()
+			.filter(|e| e.contains::<_Child>());
 
 		assert_eq!(0, children.count());
 	}
@@ -269,11 +272,11 @@ mod tests {
 	fn despawn_outdated() {
 		let mut app = setup_despawn_outdated();
 		let tooltips = [
-			app.world.spawn(Tooltip("1")).id(),
-			app.world.spawn(Tooltip("2")).id(),
+			app.world_mut().spawn(Tooltip("1")).id(),
+			app.world_mut().spawn(Tooltip("2")).id(),
 		];
 		for entity in tooltips {
-			app.world.spawn((
+			app.world_mut().spawn((
 				TooltipUI {
 					source: entity,
 					delay: default(),
@@ -285,13 +288,13 @@ mod tests {
 		app.update();
 
 		for tooltip in tooltips {
-			app.world.entity_mut(tooltip).despawn();
+			app.world_mut().entity_mut(tooltip).despawn();
 		}
 
 		app.update();
 
 		let tooltip_uis = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(|e| e.contains::<TooltipUI>());
 
@@ -302,11 +305,11 @@ mod tests {
 	fn despawn_outdated_recursively() {
 		let mut app = setup_despawn_outdated();
 		let tooltips = [
-			app.world.spawn(Tooltip("1")).id(),
-			app.world.spawn(Tooltip("2")).id(),
+			app.world_mut().spawn(Tooltip("1")).id(),
+			app.world_mut().spawn(Tooltip("2")).id(),
 		];
 		for entity in tooltips {
-			app.world
+			app.world_mut()
 				.spawn((
 					TooltipUI {
 						source: entity,
@@ -322,12 +325,15 @@ mod tests {
 		app.update();
 
 		for tooltip in tooltips {
-			app.world.entity_mut(tooltip).despawn();
+			app.world_mut().entity_mut(tooltip).despawn();
 		}
 
 		app.update();
 
-		let children = app.world.iter_entities().filter(|e| e.contains::<_Child>());
+		let children = app
+			.world()
+			.iter_entities()
+			.filter(|e| e.contains::<_Child>());
 
 		assert_eq!(0, children.count());
 	}
@@ -336,11 +342,11 @@ mod tests {
 	fn do_not_despawn_when_not_outdated() {
 		let mut app = setup_despawn_outdated();
 		let tooltips = [
-			app.world.spawn(Tooltip("1")).id(),
-			app.world.spawn(Tooltip("2")).id(),
+			app.world_mut().spawn(Tooltip("1")).id(),
+			app.world_mut().spawn(Tooltip("2")).id(),
 		];
 		for entity in tooltips {
-			app.world.spawn((
+			app.world_mut().spawn((
 				TooltipUI {
 					source: entity,
 					delay: default(),
@@ -352,7 +358,7 @@ mod tests {
 		app.update();
 
 		let tooltip_uis = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(|e| e.contains::<TooltipUI>());
 
@@ -363,7 +369,7 @@ mod tests {
 	fn update_position() {
 		let mut app = setup_update_position(Vec2 { x: 42., y: 11. });
 		let uis = app
-			.world
+			.world_mut()
 			.spawn_batch([
 				(
 					TooltipUI {
@@ -386,7 +392,7 @@ mod tests {
 
 		let tooltip_styles = uis
 			.iter()
-			.map(|entity| app.world.entity(*entity).get::<Style>())
+			.map(|entity| app.world().entity(*entity).get::<Style>())
 			.collect::<Vec<_>>();
 
 		assert_eq!(
@@ -409,8 +415,8 @@ mod tests {
 	#[test]
 	fn spawn_tooltip() {
 		let mut app = setup_spawn(Vec2 { x: 11., y: 101. }, default());
-		app.world.spawn(Tooltip(_T {
-			color: Color::GOLD,
+		app.world_mut().spawn(Tooltip(_T {
+			color: Color::srgb(1., 0.5, 0.),
 			content: "",
 			visibility: Visibility::Visible,
 		}));
@@ -418,7 +424,7 @@ mod tests {
 		app.update();
 
 		let tooltip_ui = app
-			.world
+			.world()
 			.iter_entities()
 			.find(|e| e.contains::<TooltipUI>())
 			.expect("no tooltip spawned");
@@ -443,8 +449,8 @@ mod tests {
 	#[test]
 	fn spawn_node_bundle_of_tooltip_on_child() {
 		let mut app = setup_spawn(default(), default());
-		app.world.spawn(Tooltip(_T {
-			color: Color::GOLD,
+		app.world_mut().spawn(Tooltip(_T {
+			color: Color::srgb(1., 0.5, 0.),
 			content: "",
 			visibility: Visibility::Visible,
 		}));
@@ -452,19 +458,19 @@ mod tests {
 		app.update();
 
 		let tooltip_ui_child = app
-			.world
+			.world()
 			.iter_entities()
 			.find(|e| e.contains::<TooltipUI>())
 			.and_then(|t| t.get::<Children>())
 			.and_then(|c| c.first())
 			.expect("no tooltip child found");
-		let tooltip_ui_child = app.world.entity(*tooltip_ui_child);
+		let tooltip_ui_child = app.world().entity(*tooltip_ui_child);
 
 		assert_bundle!(
 			NodeBundle,
 			&app,
 			tooltip_ui_child,
-			With::assert(|color: &BackgroundColor| assert_eq!(Color::GOLD, color.0)),
+			With::assert(|color: &BackgroundColor| assert_eq!(Color::srgb(1., 0.5, 0.), color.0)),
 			With::assert(|visibility: &Visibility| assert_eq!(&Visibility::Inherited, visibility))
 		);
 	}
@@ -472,8 +478,8 @@ mod tests {
 	#[test]
 	fn spawn_content_of_tooltip_on_child() {
 		let mut app = setup_spawn(default(), default());
-		app.world.spawn(Tooltip(_T {
-			color: Color::GOLD,
+		app.world_mut().spawn(Tooltip(_T {
+			color: Color::srgb(1., 0.5, 0.),
 			content: "My Content",
 			visibility: Visibility::Visible,
 		}));
@@ -481,14 +487,14 @@ mod tests {
 		app.update();
 
 		let tooltip_ui_child = app
-			.world
+			.world()
 			.iter_entities()
 			.find(|e| e.contains::<TooltipUI>())
 			.and_then(|t| t.get::<Children>())
 			.and_then(|c| c.first())
 			.expect("no tooltip child found");
 		let content = app
-			.world
+			.world()
 			.iter_entities()
 			.find(|e| e.get::<Parent>().map(|p| p.get()) == Some(*tooltip_ui_child))
 			.expect("not matching child found");
@@ -500,9 +506,9 @@ mod tests {
 	fn spawn_tooltip_ui_with_source_reference() {
 		let mut app = setup_spawn(default(), default());
 		let tooltip = app
-			.world
+			.world_mut()
 			.spawn(Tooltip(_T {
-				color: Color::GOLD,
+				color: Color::srgb(1., 0.5, 0.),
 				content: "",
 				visibility: Visibility::Visible,
 			}))
@@ -511,7 +517,7 @@ mod tests {
 		app.update();
 
 		let tooltip_ui = app
-			.world
+			.world()
 			.iter_entities()
 			.find_map(|e| e.get::<TooltipUI>())
 			.expect("no tooltip spawned");
@@ -522,8 +528,8 @@ mod tests {
 	#[test]
 	fn spawn_tooltip_ui_with_delay() {
 		let mut app = setup_spawn(default(), Duration::from_secs(4000));
-		app.world.spawn(Tooltip(_T {
-			color: Color::GOLD,
+		app.world_mut().spawn(Tooltip(_T {
+			color: Color::srgb(1., 0.5, 0.),
 			content: "",
 			visibility: Visibility::Visible,
 		}));
@@ -531,7 +537,7 @@ mod tests {
 		app.update();
 
 		let tooltip_ui = app
-			.world
+			.world()
 			.iter_entities()
 			.find_map(|e| e.get::<TooltipUI>())
 			.expect("no tooltip spawned");

@@ -110,11 +110,15 @@ mod test {
 			}),
 		};
 		let mut app = setup::<true>(caster_transform, spawner, target.clone());
-		let agent = app.world.spawn_empty().id();
+		let agent = app.world_mut().spawn_empty().id();
 
 		app.update();
 
-		let skill = app.world.iter_entities().find(|e| e.id() != agent).unwrap();
+		let skill = app
+			.world()
+			.iter_entities()
+			.find(|e| e.id() != agent)
+			.unwrap();
 
 		assert_eq!(
 			Some(&_Skill {
@@ -144,16 +148,16 @@ mod test {
 			}),
 		};
 		let mut app = setup::<true>(caster, spawner, target.clone());
-		app.world.spawn_empty();
+		app.world_mut().spawn_empty();
 
 		app.update();
 
 		let skill = app
-			.world
+			.world()
 			.iter_entities()
 			.find(|e| e.contains::<_Skill<true>>())
 			.unwrap();
-		let result = app.world.get_resource::<_Result>().unwrap();
+		let result = app.world().get_resource::<_Result>().unwrap();
 
 		assert_eq!(OnSkillStop::Stop(skill.id()), result.0);
 	}
@@ -176,11 +180,11 @@ mod test {
 			}),
 		};
 		let mut app = setup::<false>(caster, spawner, target.clone());
-		app.world.spawn_empty();
+		app.world_mut().spawn_empty();
 
 		app.update();
 
-		let result = app.world.get_resource::<_Result>().unwrap();
+		let result = app.world().get_resource::<_Result>().unwrap();
 
 		assert_eq!(OnSkillStop::Ignore, result.0);
 	}

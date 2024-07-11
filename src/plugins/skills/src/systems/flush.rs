@@ -39,7 +39,7 @@ mod tests {
 		let mut queue = _Dequeue::default();
 		queue.mock.expect_flush().times(1).return_const(());
 
-		app.world.spawn(queue);
+		app.world_mut().spawn(queue);
 
 		app.update();
 	}

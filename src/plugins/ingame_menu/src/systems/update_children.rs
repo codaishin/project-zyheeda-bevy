@@ -50,12 +50,12 @@ mod tests {
 	#[test]
 	fn render_children() {
 		let mut app = setup();
-		let parent = app.world.spawn(_Component("My Component")).id();
+		let parent = app.world_mut().spawn(_Component("My Component")).id();
 
 		app.update();
 
 		let children = app
-			.world
+			.world()
 			.iter_entities()
 			.filter_map(|e| Some((e.get::<Parent>()?.get(), e.get::<_Child>()?)));
 
@@ -72,7 +72,7 @@ mod tests {
 	#[test]
 	fn remove_previous_children() {
 		let mut app = setup();
-		app.world
+		app.world_mut()
 			.spawn(_Component("My Component"))
 			.with_children(|parent| {
 				parent.spawn(_Child("Previous A"));
@@ -81,7 +81,10 @@ mod tests {
 
 		app.update();
 
-		let children = app.world.iter_entities().filter_map(|e| e.get::<_Child>());
+		let children = app
+			.world()
+			.iter_entities()
+			.filter_map(|e| e.get::<_Child>());
 
 		assert_eq!(
 			vec![&_Child("A"), &_Child("B"), &_Child("C"),],
@@ -92,7 +95,7 @@ mod tests {
 	#[test]
 	fn remove_previous_children_recursively() {
 		let mut app = setup();
-		app.world
+		app.world_mut()
 			.spawn(_Component("My Component"))
 			.with_children(|parent| {
 				parent.spawn(_Child("Previous A")).with_children(|parent| {
@@ -102,7 +105,10 @@ mod tests {
 
 		app.update();
 
-		let children = app.world.iter_entities().filter_map(|e| e.get::<_Child>());
+		let children = app
+			.world()
+			.iter_entities()
+			.filter_map(|e| e.get::<_Child>());
 
 		assert_eq!(
 			vec![&_Child("A"), &_Child("B"), &_Child("C"),],
@@ -113,17 +119,20 @@ mod tests {
 	#[test]
 	fn only_work_when_added() {
 		let mut app = setup();
-		let parent = app.world.spawn(_Component("My Component")).id();
+		let parent = app.world_mut().spawn(_Component("My Component")).id();
 
 		app.update();
 
-		app.world.entity_mut(parent).with_children(|parent| {
+		app.world_mut().entity_mut(parent).with_children(|parent| {
 			parent.spawn(_Child("Do not remove"));
 		});
 
 		app.update();
 
-		let children = app.world.iter_entities().filter_map(|e| e.get::<_Child>());
+		let children = app
+			.world()
+			.iter_entities()
+			.filter_map(|e| e.get::<_Child>());
 
 		assert_eq!(
 			vec![
@@ -139,11 +148,11 @@ mod tests {
 	#[test]
 	fn work_when_changed() {
 		let mut app = setup();
-		let parent = app.world.spawn(_Component("My Component")).id();
+		let parent = app.world_mut().spawn(_Component("My Component")).id();
 
 		app.update();
 
-		let mut parent = app.world.entity_mut(parent);
+		let mut parent = app.world_mut().entity_mut(parent);
 		parent.get_mut::<_Component>().unwrap().0 = "My changed Component";
 		parent.with_children(|parent| {
 			parent.spawn(_Child("Do remove"));
@@ -151,7 +160,10 @@ mod tests {
 
 		app.update();
 
-		let children = app.world.iter_entities().filter_map(|e| e.get::<_Child>());
+		let children = app
+			.world()
+			.iter_entities()
+			.filter_map(|e| e.get::<_Child>());
 
 		assert_eq!(
 			vec![&_Child("A"), &_Child("B"), &_Child("C"),],

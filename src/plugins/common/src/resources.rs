@@ -114,7 +114,8 @@ impl<TKey: Eq + Hash, T: Clone> Storage<TKey, T> for Shared<TKey, T> {
 #[cfg(test)]
 mod test_shared_asset {
 	use super::*;
-	use bevy::{asset::AssetId, render::mesh::Mesh, utils::Uuid};
+	use bevy::{asset::AssetId, render::mesh::Mesh};
+	use uuid::Uuid;
 
 	#[test]
 	fn get_new() {

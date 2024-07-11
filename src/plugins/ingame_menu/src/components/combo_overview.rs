@@ -9,9 +9,10 @@ use crate::traits::{
 };
 use bevy::{
 	asset::Handle,
+	color::Color,
 	hierarchy::{BuildChildren, ChildBuilder},
 	prelude::{Component, KeyCode},
-	render::{color::Color, texture::Image},
+	render::texture::Image,
 	text::TextStyle,
 	ui::{
 		node_bundles::{ButtonBundle, NodeBundle, TextBundle},
@@ -48,7 +49,7 @@ impl GetNode for ComboOverview {
 				flex_direction: FlexDirection::Column,
 				..default()
 			},
-			background_color: Color::rgba(0.5, 0.5, 0.5, 0.5).into(),
+			background_color: Color::srgba(0.5, 0.5, 0.5, 0.5).into(),
 			..default()
 		}
 	}
@@ -138,7 +139,7 @@ fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<
 							height: Val::Px(65.0),
 							..default()
 						},
-						background_color: DEFAULT_PANEL_COLORS.text.into(),
+						background_color: DEFAULT_PANEL_COLORS.filled.into(),
 						image: UiImage::new(skill.icon.clone().unwrap_or_default()),
 						..default()
 					},
@@ -157,7 +158,7 @@ fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<
 								justify_content: JustifyContent::Center,
 								..default()
 							},
-							background_color: DEFAULT_PANEL_COLORS.empty.into(),
+							background_color: DEFAULT_PANEL_COLORS.filled.into(),
 							border_color: DEFAULT_PANEL_COLORS.text.into(),
 							..default()
 						})
@@ -179,7 +180,8 @@ fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<
 mod tests {
 	use super::*;
 	use crate::traits::SkillDescriptor;
-	use bevy::{asset::AssetId, utils::Uuid};
+	use bevy::asset::AssetId;
+	use uuid::Uuid;
 
 	#[test]
 	fn update_combos() {

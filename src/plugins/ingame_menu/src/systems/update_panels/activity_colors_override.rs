@@ -3,16 +3,16 @@ use crate::{
 	traits::colors::{HasActiveColor, HasPanelColors, HasQueuedColor},
 };
 use bevy::{
+	color::Color,
 	ecs::{
 		component::Component,
 		entity::Entity,
 		query::{QuerySingleError, With},
-		schedule::State,
 		system::{Commands, EntityCommands, Query, Res, Resource},
 		world::Mut,
 	},
 	input::keyboard::KeyCode,
-	render::color::Color,
+	state::state::State,
 	ui::BackgroundColor,
 };
 use common::{
@@ -94,9 +94,10 @@ mod tests {
 	use crate::traits::colors::PanelColors;
 	use bevy::{
 		app::{App, Update},
-		ecs::{bundle::Bundle, schedule::NextState},
+		color::Color,
+		ecs::bundle::Bundle,
 		input::keyboard::KeyCode,
-		render::color::Color,
+		state::{app::AppExtStates, state::NextState},
 		utils::default,
 	};
 	use common::components::Side;
@@ -106,16 +107,16 @@ mod tests {
 	struct _Panel(pub SlotKey);
 
 	impl HasActiveColor for _Panel {
-		const ACTIVE_COLOR: Color = Color::BEIGE;
+		const ACTIVE_COLOR: Color = Color::srgb(0.1, 0.2, 0.3);
 	}
 
 	impl HasQueuedColor for _Panel {
-		const QUEUED_COLOR: Color = Color::ANTIQUE_WHITE;
+		const QUEUED_COLOR: Color = Color::srgb(0.3, 0.2, 0.1);
 	}
 
 	impl HasPanelColors for _Panel {
 		const PANEL_COLORS: PanelColors = PanelColors {
-			pressed: Color::DARK_GREEN,
+			pressed: Color::srgb(0.1, 1., 0.1),
 			hovered: Color::NONE,
 			empty: Color::NONE,
 			filled: Color::NONE,
@@ -167,7 +168,7 @@ mod tests {
 		);
 		app.init_state::<MouseContext>();
 		app.insert_resource(key_map);
-		let panel = app.world.spawn(bundle).id();
+		let panel = app.world_mut().spawn(bundle).id();
 
 		(app, panel)
 	}
@@ -180,7 +181,7 @@ mod tests {
 		);
 		let (mut app, panel) = setup(bundle, _Map::None);
 
-		app.world.spawn((
+		app.world_mut().spawn((
 			Player,
 			_Queue {
 				queued: vec![QueuedSkill {
@@ -192,7 +193,7 @@ mod tests {
 
 		app.update();
 
-		let panel = app.world.entity(panel);
+		let panel = app.world().entity(panel);
 		let color = panel.get::<BackgroundColor>().unwrap();
 
 		assert_eq!(
@@ -210,7 +211,7 @@ mod tests {
 		);
 		let (mut app, panel) = setup(bundle, _Map::None);
 
-		app.world.spawn((
+		app.world_mut().spawn((
 			Player,
 			_Queue {
 				queued: vec![QueuedSkill {
@@ -222,7 +223,7 @@ mod tests {
 
 		app.update();
 
-		let panel = app.world.entity(panel);
+		let panel = app.world().entity(panel);
 		let color = panel.get::<BackgroundColor>().unwrap();
 
 		assert_eq!(
@@ -240,11 +241,11 @@ mod tests {
 		);
 		let (mut app, panel) = setup(bundle, _Map::None);
 
-		app.world.spawn((Player, _Queue { queued: vec![] }));
+		app.world_mut().spawn((Player, _Queue { queued: vec![] }));
 
 		app.update();
 
-		let panel = app.world.entity(panel);
+		let panel = app.world().entity(panel);
 		let color = panel.get::<BackgroundColor>().unwrap();
 
 		assert_eq!(
@@ -261,16 +262,16 @@ mod tests {
 		);
 		let (mut app, panel) = setup(bundle, _Map::Map(KeyCode::KeyQ, SlotKey::Hand(Side::Main)));
 
-		app.world.spawn((Player, _Queue { queued: vec![] }));
+		app.world_mut().spawn((Player, _Queue { queued: vec![] }));
 
-		app.world
+		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Primed(KeyCode::KeyQ));
 
 		app.update();
 		app.update();
 
-		let panel = app.world.entity(panel);
+		let panel = app.world().entity(panel);
 		let color = panel.get::<BackgroundColor>().unwrap();
 
 		assert_eq!(
@@ -287,7 +288,7 @@ mod tests {
 		);
 		let (mut app, panel) = setup(bundle, _Map::None);
 
-		app.world.spawn((
+		app.world_mut().spawn((
 			Player,
 			_Queue {
 				queued: vec![
@@ -305,7 +306,7 @@ mod tests {
 
 		app.update();
 
-		let panel = app.world.entity(panel);
+		let panel = app.world().entity(panel);
 		let color = panel.get::<BackgroundColor>().unwrap();
 
 		assert_eq!(

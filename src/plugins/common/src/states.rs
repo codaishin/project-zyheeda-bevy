@@ -1,5 +1,5 @@
 use crate::traits::get_state::GetState;
-use bevy::{ecs::schedule::States, input::keyboard::KeyCode};
+use bevy::{input::keyboard::KeyCode, prelude::States};
 use std::{fmt::Debug, hash::Hash};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Default, States)]

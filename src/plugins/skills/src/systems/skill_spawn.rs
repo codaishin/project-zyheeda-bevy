@@ -42,12 +42,12 @@ mod tests {
 	#[test]
 	fn set_entity() {
 		let mut app = setup();
-		let spawn = app.world.spawn(Name::from("spawner")).id();
-		let agent = app.world.spawn(SkillSpawn("spawner")).id();
+		let spawn = app.world_mut().spawn(Name::from("spawner")).id();
+		let agent = app.world_mut().spawn(SkillSpawn("spawner")).id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&SkillSpawn(spawn)), agent.get::<SkillSpawn<Entity>>());
 	}
@@ -55,17 +55,17 @@ mod tests {
 	#[test]
 	fn set_entity_only_once() {
 		let mut app = setup();
-		let spawn = app.world.spawn(Name::from("spawner")).id();
-		let agent = app.world.spawn(SkillSpawn("spawner")).id();
+		let spawn = app.world_mut().spawn(Name::from("spawner")).id();
+		let agent = app.world_mut().spawn(SkillSpawn("spawner")).id();
 
 		app.update();
 
-		app.world.entity_mut(spawn).despawn();
-		app.world.spawn(Name::from("spawner"));
+		app.world_mut().entity_mut(spawn).despawn();
+		app.world_mut().spawn(Name::from("spawner"));
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&SkillSpawn(spawn)), agent.get::<SkillSpawn<Entity>>());
 	}

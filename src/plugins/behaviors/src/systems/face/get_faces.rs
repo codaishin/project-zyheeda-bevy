@@ -51,11 +51,11 @@ mod tests {
 	fn get_faces_from_set_face() {
 		let mut app = setup();
 		let face = Face::Translation(Vec3::new(1., 2., 3.));
-		let agent = app.world.spawn(SetFace(face)).id();
+		let agent = app.world_mut().spawn(SetFace(face)).id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&_Face(face)), agent.get::<_Face>());
 	}
@@ -64,11 +64,11 @@ mod tests {
 	fn get_faces_from_override_face() {
 		let mut app = setup();
 		let face = Face::Translation(Vec3::new(1., 2., 3.));
-		let agent = app.world.spawn(OverrideFace(face)).id();
+		let agent = app.world_mut().spawn(OverrideFace(face)).id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&_Face(face)), agent.get::<_Face>());
 	}
@@ -78,13 +78,13 @@ mod tests {
 		let mut app = setup();
 		let face = Face::Translation(Vec3::new(1., 2., 3.));
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((SetFace(Face::Cursor), OverrideFace(face)))
 			.id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&_Face(face)), agent.get::<_Face>());
 	}

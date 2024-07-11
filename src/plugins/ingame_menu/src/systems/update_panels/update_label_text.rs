@@ -104,7 +104,7 @@ mod tests {
 		app.insert_resource(map);
 		app.insert_resource(_LanguageServer(KeyCode::ArrowUp, "IIIIII"));
 		let id = app
-			.world
+			.world_mut()
 			.spawn((
 				Label::<_T, SlotKey>::new(SlotKey::Hand(Side::Main)),
 				Text::default(),
@@ -114,7 +114,7 @@ mod tests {
 		app.add_systems(Update, update_label_text::<_Map, _LanguageServer, _T>);
 		app.update();
 
-		let text = app.world.entity(id).get::<Text>().unwrap();
+		let text = app.world().entity(id).get::<Text>().unwrap();
 
 		assert_eq!(
 			Some("IIIIII".to_owned()),
@@ -131,7 +131,7 @@ mod tests {
 		app.insert_resource(map);
 		app.insert_resource(_LanguageServer(KeyCode::ArrowUp, "IIIIII"));
 		let id = app
-			.world
+			.world_mut()
 			.spawn((
 				Label::<_T, SlotKey>::new(SlotKey::Hand(Side::Main)),
 				Text::from_section("OVERRIDE THIS", default()),
@@ -141,7 +141,7 @@ mod tests {
 		app.add_systems(Update, update_label_text::<_Map, _LanguageServer, _T>);
 		app.update();
 
-		let text = app.world.entity(id).get::<Text>().unwrap();
+		let text = app.world().entity(id).get::<Text>().unwrap();
 
 		assert_eq!(
 			Some("IIIIII".to_owned()),
@@ -161,7 +161,7 @@ mod tests {
 
 		app.insert_resource(map);
 		app.insert_resource(_LanguageServer(KeyCode::ArrowUp, "IIIIII"));
-		app.world.spawn((
+		app.world_mut().spawn((
 			Label::<_T, SlotKey>::new(SlotKey::Hand(Side::Off)),
 			Text::from_section("OVERRIDE THIS", default()),
 		));

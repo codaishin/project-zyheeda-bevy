@@ -1,7 +1,8 @@
 use bevy::{
 	ecs::component::Component,
-	math::{primitives::Plane3d, Ray3d, Vec3},
-	transform::{components::Transform, TransformBundle},
+	math::{Ray3d, Vec3},
+	prelude::InfinitePlane3d,
+	transform::{bundles::TransformBundle, components::Transform},
 };
 use common::tools::Units;
 
@@ -15,7 +16,7 @@ pub struct GroundTarget {
 impl GroundTarget {
 	fn intersect_ground_plane(self: &GroundTarget) -> Option<f32> {
 		self.target_ray
-			.intersect_plane(Vec3::ZERO, Plane3d::new(Vec3::Y))
+			.intersect_plane(Vec3::ZERO, InfinitePlane3d::new(Vec3::Y))
 	}
 
 	fn correct_for_max_range(self: &GroundTarget, target_translation: &mut Vec3) {

@@ -5,8 +5,8 @@ use crate::{
 };
 use bevy::{
 	ecs::system::Commands,
-	math::primitives::Direction3d,
-	transform::{components::Transform, TransformBundle},
+	math::Dir3,
+	transform::{bundles::TransformBundle, components::Transform},
 };
 use common::traits::load_asset::Path;
 
@@ -16,9 +16,9 @@ impl SourcePath for LightCell {
 	}
 }
 
-impl From<LightCell> for Direction3d {
-	fn from(_: LightCell) -> Direction3d {
-		Direction3d::NEG_Z
+impl From<LightCell> for Dir3 {
+	fn from(_: LightCell) -> Dir3 {
+		Dir3::NEG_Z
 	}
 }
 

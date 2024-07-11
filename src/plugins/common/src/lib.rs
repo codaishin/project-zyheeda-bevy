@@ -12,6 +12,7 @@ use bevy::{
 	app::{App, First, Plugin},
 	ecs::schedule::IntoSystemConfigs,
 	render::camera::Camera,
+	state::app::AppExtStates,
 };
 use bevy_rapier3d::plugin::RapierContext;
 use components::MainCamera;

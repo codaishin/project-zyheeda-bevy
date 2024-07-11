@@ -84,11 +84,11 @@ mod tests {
 	fn chase_player() {
 		let mut app = setup();
 		let player = app
-			.world
+			.world_mut()
 			.spawn((GlobalTransform::from_xyz(1., 0., 0.), Player))
 			.id();
 		let enemy = app
-			.world
+			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(2., 0., 1.),
 				Attack(player),
@@ -102,7 +102,7 @@ mod tests {
 
 		app.update();
 
-		let enemy = app.world.entity(enemy);
+		let enemy = app.world().entity(enemy);
 
 		assert_eq!(
 			(Some(&Chase(player)), None),
@@ -114,11 +114,11 @@ mod tests {
 	fn attack_player() {
 		let mut app = setup();
 		let player = app
-			.world
+			.world_mut()
 			.spawn((GlobalTransform::from_xyz(1., 0., 0.), Player))
 			.id();
 		let enemy = app
-			.world
+			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 0.5),
 				Chase(player),
@@ -132,7 +132,7 @@ mod tests {
 
 		app.update();
 
-		let enemy = app.world.entity(enemy);
+		let enemy = app.world().entity(enemy);
 
 		assert_eq!(
 			(None, Some(&Attack(player))),
@@ -144,11 +144,11 @@ mod tests {
 	fn do_nothing_when_out_of_aggro_range_of_player() {
 		let mut app = setup();
 		let player = app
-			.world
+			.world_mut()
 			.spawn((GlobalTransform::from_xyz(1., 0., 0.), Player))
 			.id();
 		let enemy = app
-			.world
+			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(3., 0., 3.),
 				Chase(player),
@@ -163,7 +163,7 @@ mod tests {
 
 		app.update();
 
-		let enemy = app.world.entity(enemy);
+		let enemy = app.world().entity(enemy);
 
 		assert_eq!((None, None), (enemy.get::<Chase>(), enemy.get::<Attack>()));
 	}
@@ -171,9 +171,12 @@ mod tests {
 	#[test]
 	fn chase_entity() {
 		let mut app = setup();
-		let foe = app.world.spawn(GlobalTransform::from_xyz(1., 0., 0.)).id();
+		let foe = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(1., 0., 0.))
+			.id();
 		let enemy = app
-			.world
+			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(2., 0., 1.),
 				Attack(foe),
@@ -187,7 +190,7 @@ mod tests {
 
 		app.update();
 
-		let enemy = app.world.entity(enemy);
+		let enemy = app.world().entity(enemy);
 
 		assert_eq!(
 			(Some(&Chase(foe)), None),
@@ -198,9 +201,12 @@ mod tests {
 	#[test]
 	fn attack_entity() {
 		let mut app = setup();
-		let foe = app.world.spawn(GlobalTransform::from_xyz(1., 0., 0.)).id();
+		let foe = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(1., 0., 0.))
+			.id();
 		let enemy = app
-			.world
+			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 0.5),
 				Chase(foe),
@@ -214,7 +220,7 @@ mod tests {
 
 		app.update();
 
-		let enemy = app.world.entity(enemy);
+		let enemy = app.world().entity(enemy);
 
 		assert_eq!(
 			(None, Some(&Attack(foe))),
@@ -225,9 +231,12 @@ mod tests {
 	#[test]
 	fn do_nothing_when_out_of_aggro_range_of_entity() {
 		let mut app = setup();
-		let foe = app.world.spawn(GlobalTransform::from_xyz(1., 0., 0.)).id();
+		let foe = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(1., 0., 0.))
+			.id();
 		let enemy = app
-			.world
+			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(3., 0., 3.),
 				Chase(foe),
@@ -242,7 +251,7 @@ mod tests {
 
 		app.update();
 
-		let enemy = app.world.entity(enemy);
+		let enemy = app.world().entity(enemy);
 
 		assert_eq!((None, None), (enemy.get::<Chase>(), enemy.get::<Attack>()));
 	}

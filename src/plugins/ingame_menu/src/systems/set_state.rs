@@ -1,10 +1,10 @@
-use bevy::ecs::{
-	schedule::{NextState, States},
-	system::ResMut,
+use bevy::{
+	ecs::system::ResMut,
+	state::state::{FreelyMutableState, NextState, States},
 };
 use common::traits::get_state::GetState;
 
-pub fn set_state<TState: States + GetState<TOption>, TOption>(
+pub fn set_state<TState: States + FreelyMutableState + GetState<TOption>, TOption>(
 	mut next_state: ResMut<NextState<TState>>,
 ) {
 	next_state.set(TState::get_state());
@@ -16,6 +16,7 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		prelude::State,
+		state::app::AppExtStates,
 	};
 
 	#[derive(Default, States, Debug, Hash, Eq, PartialEq, Clone)]
@@ -42,7 +43,7 @@ mod tests {
 		app.update();
 		app.update();
 
-		let state = app.world.get_resource::<State<_State>>().unwrap();
+		let state = app.world().get_resource::<State<_State>>().unwrap();
 
 		assert_eq!(&_State::A, state.get());
 	}

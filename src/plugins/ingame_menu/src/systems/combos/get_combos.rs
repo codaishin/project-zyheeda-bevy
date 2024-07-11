@@ -105,7 +105,7 @@ mod tests {
 	#[test]
 	fn return_skill_descriptor_arrays() {
 		let mut app = setup(false);
-		app.world.spawn((
+		app.world_mut().spawn((
 			Player,
 			_Combos(vec![
 				vec![
@@ -149,7 +149,7 @@ mod tests {
 
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 
 		assert_eq!(
 			&_Result(Changed::Value(vec![
@@ -185,7 +185,7 @@ mod tests {
 	#[test]
 	fn return_unchanged_when_player_component_missing() {
 		let mut app = setup(false);
-		app.world.spawn(_Combos(vec![
+		app.world_mut().spawn(_Combos(vec![
 			vec![
 				(
 					SlotKey::Hand(Side::Main),
@@ -226,7 +226,7 @@ mod tests {
 
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 
 		assert_eq!(&_Result(Changed::None), result)
 	}
@@ -234,7 +234,7 @@ mod tests {
 	#[test]
 	fn return_unchanged_when_combo_unchanged() {
 		let mut app = setup(false);
-		app.world.spawn((
+		app.world_mut().spawn((
 			Player,
 			_Combos(vec![
 				vec![
@@ -279,7 +279,7 @@ mod tests {
 		app.update();
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 
 		assert_eq!(&_Result(Changed::None), result)
 	}
@@ -287,7 +287,7 @@ mod tests {
 	#[test]
 	fn return_changed_when_combo_unchanged_but_changed_override_true() {
 		let mut app = setup(true);
-		app.world.spawn((
+		app.world_mut().spawn((
 			Player,
 			_Combos(vec![
 				vec![
@@ -332,7 +332,7 @@ mod tests {
 		app.update();
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 
 		assert_eq!(
 			&_Result(Changed::Value(vec![

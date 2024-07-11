@@ -40,9 +40,9 @@ mod tests {
 	#[test]
 	fn link_animator_with_animation_player() {
 		let mut app = App::new();
-		let animator = app.world.spawn(Animator { ..default() }).id();
-		let animation_player = app.world.spawn(AnimationPlayer::default()).id();
-		app.world
+		let animator = app.world_mut().spawn(Animator { ..default() }).id();
+		let animation_player = app.world_mut().spawn(AnimationPlayer::default()).id();
+		app.world_mut()
 			.entity_mut(animator)
 			.push_children(&[animation_player]);
 		app.update();
@@ -50,7 +50,7 @@ mod tests {
 		app.add_systems(Update, link_animators_with_new_animation_players);
 		app.update();
 
-		let animator = app.world.entity(animator).get::<Animator>().unwrap();
+		let animator = app.world().entity(animator).get::<Animator>().unwrap();
 
 		assert_eq!(Some(animation_player), animator.animation_player_id);
 	}
@@ -58,14 +58,14 @@ mod tests {
 	#[test]
 	fn do_not_link_animator_with_animation_player_when_not_child_parent_relationship() {
 		let mut app = App::new();
-		let animator = app.world.spawn(Animator { ..default() }).id();
-		app.world.spawn(AnimationPlayer::default());
+		let animator = app.world_mut().spawn(Animator { ..default() }).id();
+		app.world_mut().spawn(AnimationPlayer::default());
 		app.update();
 
 		app.add_systems(Update, link_animators_with_new_animation_players);
 		app.update();
 
-		let animator = app.world.entity(animator).get::<Animator>().unwrap();
+		let animator = app.world().entity(animator).get::<Animator>().unwrap();
 
 		assert!(animator.animation_player_id.is_none());
 	}
@@ -74,17 +74,17 @@ mod tests {
 	fn link_multiple_animators_with_animation_players() {
 		let mut app = App::new();
 		let animators = [
-			app.world.spawn(Animator { ..default() }).id(),
-			app.world.spawn(Animator { ..default() }).id(),
-			app.world.spawn(Animator { ..default() }).id(),
+			app.world_mut().spawn(Animator { ..default() }).id(),
+			app.world_mut().spawn(Animator { ..default() }).id(),
+			app.world_mut().spawn(Animator { ..default() }).id(),
 		];
 		let animation_players = [
-			app.world.spawn(AnimationPlayer::default()).id(),
-			app.world.spawn(AnimationPlayer::default()).id(),
-			app.world.spawn(AnimationPlayer::default()).id(),
+			app.world_mut().spawn(AnimationPlayer::default()).id(),
+			app.world_mut().spawn(AnimationPlayer::default()).id(),
+			app.world_mut().spawn(AnimationPlayer::default()).id(),
 		];
 		for i in 0..3 {
-			app.world
+			app.world_mut()
 				.entity_mut(animators[i])
 				.push_children(&[animation_players[i]]);
 		}
@@ -95,7 +95,7 @@ mod tests {
 
 		let animation_players = animation_players.map(Some);
 		let animators = animators.map(|a| {
-			app.world
+			app.world()
 				.entity(a)
 				.get::<Animator>()
 				.unwrap()

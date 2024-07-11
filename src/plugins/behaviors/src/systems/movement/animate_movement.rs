@@ -184,7 +184,7 @@ mod tests {
 			.with(eq(_Animation("fast")))
 			.return_const(());
 
-		app.world
+		app.world_mut()
 			.spawn((config, animations, dispatch, _Movement::default()));
 		app.update();
 	}
@@ -218,7 +218,7 @@ mod tests {
 			.with(eq(_Animation("slow")))
 			.return_const(());
 
-		app.world
+		app.world_mut()
 			.spawn((config, animations, dispatch, _Movement::default()));
 		app.update();
 	}
@@ -245,7 +245,7 @@ mod tests {
 			.never()
 			.return_const(());
 
-		app.world.spawn((config, animations, dispatch));
+		app.world_mut().spawn((config, animations, dispatch));
 		app.update();
 	}
 
@@ -279,12 +279,12 @@ mod tests {
 			.return_const(());
 
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((config, animations, dispatch, _Movement::default()))
 			.id();
 		app.update();
 
-		app.world.entity_mut(agent).remove::<_Movement>();
+		app.world_mut().entity_mut(agent).remove::<_Movement>();
 		app.update();
 	}
 
@@ -311,7 +311,7 @@ mod tests {
 			.with(eq(_Animation("my animation")))
 			.return_const(());
 
-		app.world
+		app.world_mut()
 			.spawn((config, animations, dispatch, _Movement::default()));
 		app.update();
 		app.update();
@@ -341,12 +341,12 @@ mod tests {
 			.return_const(());
 
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((config, animations, dispatch, _Movement::default()))
 			.id();
 		app.update();
 
-		app.world
+		app.world_mut()
 			.entity_mut(agent)
 			.get_mut::<_Movement>()
 			.unwrap()
@@ -378,12 +378,12 @@ mod tests {
 			.return_const(());
 
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((config, animations, dispatch, _Movement::default()))
 			.id();
 		app.update();
 
-		app.world
+		app.world_mut()
 			.entity_mut(agent)
 			.get_mut::<_Config>()
 			.unwrap()
@@ -416,7 +416,7 @@ mod tests {
 			.never()
 			.return_const(());
 
-		app.world.spawn((
+		app.world_mut().spawn((
 			config,
 			animations,
 			dispatch,

@@ -88,11 +88,10 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},
+		color::Color,
 		ecs::system::{EntityCommands, IntoSystem},
 		math::primitives::Sphere,
 		prelude::default,
-		render::color::Color,
-		utils::Uuid,
 	};
 	use common::{
 		errors::Level,
@@ -100,6 +99,7 @@ mod tests {
 		traits::cache::GetOrCreateTypeAsset,
 	};
 	use std::marker::PhantomData;
+	use uuid::Uuid;
 
 	#[derive(Component)]
 	struct _Agent;
@@ -110,7 +110,7 @@ mod tests {
 		}
 
 		fn material() -> SMat {
-			SMat::from(Color::BLUE)
+			SMat::from(Color::srgb(0., 0., 1.))
 		}
 	}
 
@@ -202,7 +202,7 @@ mod tests {
 			+ 'static,
 	{
 		let mut app = App::new();
-		let logger = app.world.spawn_empty().id();
+		let logger = app.world_mut().spawn_empty().id();
 		let instantiate_system = instantiate::<
 			TAgent,
 			_Assets<Mesh>,
@@ -223,11 +223,15 @@ mod tests {
 		(app, logger)
 	}
 
+	const fn new_handle<T: Asset>(raw_uuid: u128) -> Handle<T> {
+		Handle::Weak(AssetId::Uuid {
+			uuid: Uuid::from_u128(raw_uuid),
+		})
+	}
+
 	#[test]
 	fn instantiate_mesh() {
-		static HANDLE: Handle<Mesh> = Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::from_u128(0xe1cdbce7_19f4_4b10_8bf6_80e5ca26f266),
-		});
+		static HANDLE: Handle<Mesh> = new_handle(0xe1cdbce7_19f4_4b10_8bf6_80e5ca26f266);
 
 		struct _Factory;
 
@@ -253,11 +257,11 @@ mod tests {
 		}
 
 		let (mut app, ..) = setup::<_Agent, _Factory>();
-		let agent = app.world.spawn(_Agent).id();
+		let agent = app.world_mut().spawn(_Agent).id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 		let result = agent.get::<_Result<Mesh>>();
 
 		assert_eq!(Some(HANDLE.clone()), result.map(|r| r.0.clone()));
@@ -265,9 +269,7 @@ mod tests {
 
 	#[test]
 	fn instantiate_material() {
-		static HANDLE: Handle<SMat> = Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::from_u128(0xe1cdbce7_19f4_4b10_8bf6_80e5ca26f266),
-		});
+		static HANDLE: Handle<SMat> = new_handle(0xe1cdbce7_19f4_4b10_8bf6_80e5ca26f266);
 
 		struct _Factory;
 
@@ -293,11 +295,11 @@ mod tests {
 		}
 
 		let (mut app, ..) = setup::<_Agent, _Factory>();
-		let agent = app.world.spawn(_Agent).id();
+		let agent = app.world_mut().spawn(_Agent).id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 		let result = agent.get::<_Result<SMat>>();
 
 		assert_eq!(Some(HANDLE.clone()), result.map(|r| r.0.clone()));
@@ -329,7 +331,7 @@ mod tests {
 		}
 
 		let (mut app, ..) = setup::<_Agent, _Factory>();
-		app.world.spawn(_Agent);
+		app.world_mut().spawn(_Agent);
 		app.update();
 
 		fn assert(cache: &_Cache<Mesh>) {
@@ -370,7 +372,7 @@ mod tests {
 		}
 
 		let (mut app, ..) = setup::<_Agent, _Factory>();
-		app.world.spawn(_Agent);
+		app.world_mut().spawn(_Agent);
 
 		app.update();
 
@@ -409,11 +411,15 @@ mod tests {
 		}
 
 		let (mut app, logger) = setup::<_AgentWithInstantiationError, _Factory>();
-		app.world.spawn(_AgentWithInstantiationError);
+		app.world_mut().spawn(_AgentWithInstantiationError);
 
 		app.update();
 
-		let log = app.world.entity(logger).get::<FakeErrorLogMany>().unwrap();
+		let log = app
+			.world()
+			.entity(logger)
+			.get::<FakeErrorLogMany>()
+			.unwrap();
 
 		assert_eq!(
 			vec![Error {

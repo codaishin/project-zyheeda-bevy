@@ -1,9 +1,10 @@
 use crate::components::{Floating, Light};
 use bevy::{
+	color::Color,
 	ecs::system::EntityCommands,
 	hierarchy::BuildChildren,
 	pbr::{NotShadowCaster, PbrBundle, PointLight, PointLightBundle, StandardMaterial},
-	render::{color::Color, view::VisibilityBundle},
+	render::view::VisibilityBundle,
 	transform::components::Transform,
 	utils::default,
 };
@@ -20,7 +21,7 @@ impl Instantiate for Light<Floating> {
 		let mesh = assets.get_or_create_for::<Light<Floating>>(|| sphere(radius));
 		let material = assets.get_or_create_for::<Light<Floating>>(|| StandardMaterial {
 			base_color: Color::WHITE,
-			emissive: Color::rgb_linear(23000.0, 23000.0, 23000.0),
+			emissive: Color::srgb(23000.0, 23000.0, 23000.0).into(),
 			..default()
 		});
 		let transform = Transform::from_xyz(0., 1.8, 0.);

@@ -50,40 +50,40 @@ mod tests {
 	#[test]
 	fn remove_when_owner_not_found() {
 		let mut app = setup();
-		let owner_without_owner_component = app.world.spawn_empty().id();
+		let owner_without_owner_component = app.world_mut().spawn_empty().id();
 		let owned = app
-			.world
+			.world_mut()
 			.spawn(OwnedBy::<_Owner>::with(owner_without_owner_component))
 			.id();
 
 		app.update();
 
-		assert!(app.world.get_entity(owned).is_none());
+		assert!(app.world().get_entity(owned).is_none());
 	}
 
 	#[test]
 	fn remove_recursive_when_owner_not_found() {
 		let mut app = setup();
-		let owner_without_owner_component = app.world.spawn_empty().id();
+		let owner_without_owner_component = app.world_mut().spawn_empty().id();
 		let owned = app
-			.world
+			.world_mut()
 			.spawn(OwnedBy::<_Owner>::with(owner_without_owner_component))
 			.id();
-		let child = app.world.spawn_empty().set_parent(owned).id();
+		let child = app.world_mut().spawn_empty().set_parent(owned).id();
 
 		app.update();
 
-		assert!(app.world.get_entity(child).is_none());
+		assert!(app.world().get_entity(child).is_none());
 	}
 
 	#[test]
 	fn do_not_remove_when_owner_found() {
 		let mut app = setup();
-		let owner = app.world.spawn(_Owner).id();
-		let owned = app.world.spawn(OwnedBy::<_Owner>::with(owner)).id();
+		let owner = app.world_mut().spawn(_Owner).id();
+		let owned = app.world_mut().spawn(OwnedBy::<_Owner>::with(owner)).id();
 
 		app.update();
 
-		assert!(app.world.get_entity(owned).is_some());
+		assert!(app.world().get_entity(owned).is_some());
 	}
 }

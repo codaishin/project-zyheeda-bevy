@@ -42,7 +42,7 @@ mod tests {
 		app.update();
 
 		let entity = app
-			.world
+			.world()
 			.iter_entities()
 			.find(|e| e.contains::<_Component>())
 			.expect("no _Component spawned");

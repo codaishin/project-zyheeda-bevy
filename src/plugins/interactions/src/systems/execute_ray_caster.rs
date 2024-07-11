@@ -49,7 +49,7 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		ecs::{entity::Entity, event::Events},
-		math::{primitives::Direction3d, Vec3},
+		math::{Dir3, Vec3},
 		utils::default,
 	};
 	use common::{test_tools::utils::SingleThreadedApp, traits::cast_ray::TimeOfImpact};
@@ -73,7 +73,7 @@ mod tests {
 		let mut cast_ray = _CastRay::default();
 		let ray_caster = RayCaster {
 			origin: Vec3::ZERO,
-			direction: Direction3d::NEG_Y,
+			direction: Dir3::NEG_Y,
 			max_toi: TimeOfImpact(42.),
 			solid: true,
 			filter: default(),
@@ -88,7 +88,7 @@ mod tests {
 		app.insert_resource(cast_ray);
 		app.add_event::<RayCastEvent>();
 		app.add_systems(Update, execute_ray_caster::<_CastRay>);
-		app.world.spawn(ray_caster);
+		app.world_mut().spawn(ray_caster);
 		app.update();
 	}
 
@@ -105,16 +105,16 @@ mod tests {
 		app.add_event::<RayCastEvent>();
 		app.add_systems(Update, execute_ray_caster::<_CastRay>);
 		let ray_caster = app
-			.world
+			.world_mut()
 			.spawn(RayCaster {
 				origin: Vec3::ONE,
-				direction: Direction3d::Y,
+				direction: Dir3::Y,
 				..default()
 			})
 			.id();
 		app.update();
 
-		let events = app.world.resource::<Events<RayCastEvent>>();
+		let events = app.world().resource::<Events<RayCastEvent>>();
 		let mut reader = events.get_reader();
 		let events = reader.read(events).collect::<Vec<_>>();
 
@@ -125,7 +125,7 @@ mod tests {
 					entity: Some(Entity::from_raw(42)),
 					ray: Ray3d {
 						origin: Vec3::ONE,
-						direction: Direction3d::Y
+						direction: Dir3::Y
 					},
 					toi: TimeOfImpact(42.)
 				}
@@ -144,17 +144,17 @@ mod tests {
 		app.add_event::<RayCastEvent>();
 		app.add_systems(Update, execute_ray_caster::<_CastRay>);
 		let ray_caster = app
-			.world
+			.world_mut()
 			.spawn(RayCaster {
 				max_toi: TimeOfImpact(420.),
 				origin: Vec3::ONE,
-				direction: Direction3d::Y,
+				direction: Dir3::Y,
 				..default()
 			})
 			.id();
 		app.update();
 
-		let events = app.world.resource::<Events<RayCastEvent>>();
+		let events = app.world().resource::<Events<RayCastEvent>>();
 		let mut reader = events.get_reader();
 		let events = reader.read(events).collect::<Vec<_>>();
 
@@ -165,7 +165,7 @@ mod tests {
 					entity: None,
 					ray: Ray3d {
 						origin: Vec3::ONE,
-						direction: Direction3d::Y
+						direction: Dir3::Y
 					},
 					toi: TimeOfImpact(420.)
 				}
@@ -180,7 +180,7 @@ mod tests {
 		let mut cast_ray = _CastRay::default();
 		let ray_caster = RayCaster {
 			origin: Vec3::ZERO,
-			direction: Direction3d::NEG_Y,
+			direction: Dir3::NEG_Y,
 			max_toi: TimeOfImpact(42.),
 			solid: true,
 			filter: default(),
@@ -190,7 +190,7 @@ mod tests {
 		app.insert_resource(cast_ray);
 		app.add_event::<RayCastEvent>();
 		app.add_systems(Update, execute_ray_caster::<_CastRay>);
-		app.world.spawn(ray_caster);
+		app.world_mut().spawn(ray_caster);
 		app.update();
 		app.update();
 	}
@@ -201,7 +201,7 @@ mod tests {
 		let mut cast_ray = _CastRay::default();
 		let ray_caster = RayCaster {
 			origin: Vec3::ZERO,
-			direction: Direction3d::NEG_Y,
+			direction: Dir3::NEG_Y,
 			max_toi: TimeOfImpact(42.),
 			solid: true,
 			filter: default(),
@@ -211,11 +211,11 @@ mod tests {
 		app.insert_resource(cast_ray);
 		app.add_event::<RayCastEvent>();
 		app.add_systems(Update, execute_ray_caster::<_CastRay>);
-		let ray_caster = app.world.spawn(ray_caster).id();
+		let ray_caster = app.world_mut().spawn(ray_caster).id();
 
 		app.update();
 
-		let ray_caster = app.world.entity(ray_caster);
+		let ray_caster = app.world().entity(ray_caster);
 
 		assert!(!ray_caster.contains::<RayCaster>());
 	}

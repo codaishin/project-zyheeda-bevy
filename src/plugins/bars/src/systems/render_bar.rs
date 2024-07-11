@@ -102,10 +102,10 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
+		color::Color,
 		ecs::world::EntityRef,
 		hierarchy::Parent,
 		math::Vec2,
-		render::color::Color,
 		ui::{BackgroundColor, Node},
 	};
 
@@ -117,7 +117,7 @@ mod tests {
 		}
 
 		fn foreground_color() -> Color {
-			Color::GOLD
+			Color::srgb(0.8, 0.7, 0.23)
 		}
 	}
 
@@ -139,23 +139,27 @@ mod tests {
 			..default()
 		};
 		let bar_values = BarValues::<_Display>::new(0., 0.);
-		let bar = app.world.spawn((bar, bar_values)).id();
+		let bar = app.world_mut().spawn((bar, bar_values)).id();
 
 		app.update();
 
 		let (background, ..) = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(no_parent)
 			.find_map(|e| Some((e.id(), e.get::<Node>()?)))
 			.unwrap();
 		let (foreground, ..) = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(with_parent)
 			.find_map(|e| Some((e.id(), e.get::<Node>()?)))
 			.unwrap();
-		let bar = app.world.entity(bar).get::<BarValues<_Display>>().unwrap();
+		let bar = app
+			.world()
+			.entity(bar)
+			.get::<BarValues<_Display>>()
+			.unwrap();
 
 		assert_eq!(
 			Some(UI {
@@ -176,17 +180,17 @@ mod tests {
 			..default()
 		};
 		let bar_values = BarValues::<_Display>::new(0., 0.);
-		let bar = app.world.spawn((bar, bar_values)).id();
+		let bar = app.world_mut().spawn((bar, bar_values)).id();
 
 		app.update();
 
 		let (background, ..) = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(no_parent)
 			.find_map(|e| Some((e.id(), e.get::<Node>()?)))
 			.unwrap();
-		let background = app.world.entity(background);
+		let background = app.world().entity(background);
 
 		assert_eq!(
 			Some(&OwnedBy::<Bar>::with(bar)),
@@ -205,12 +209,12 @@ mod tests {
 			..default()
 		};
 		let bar_values = BarValues::<_Display>::new(0., 0.);
-		app.world.spawn((bar, bar_values));
+		app.world_mut().spawn((bar, bar_values));
 
 		app.update();
 
 		let style = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(no_parent)
 			.find_map(|e| e.get::<Style>())
@@ -233,12 +237,12 @@ mod tests {
 			..default()
 		};
 		let bar_values = BarValues::<_Display>::new(0., 0.);
-		app.world.spawn((bar, bar_values));
+		app.world_mut().spawn((bar, bar_values));
 
 		app.update();
 
 		let style = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(no_parent)
 			.find_map(|e| e.get::<Style>())
@@ -264,12 +268,12 @@ mod tests {
 			..default()
 		};
 		let bar_values = BarValues::<_Display>::new(0., 0.);
-		app.world.spawn((bar, bar_values));
+		app.world_mut().spawn((bar, bar_values));
 
 		app.update();
 
 		let style = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(no_parent)
 			.find_map(|e| e.get::<Style>())
@@ -296,12 +300,12 @@ mod tests {
 			..default()
 		};
 		let bar_values = BarValues::<_Display>::new(0., 0.);
-		app.world.spawn((bar, bar_values));
+		app.world_mut().spawn((bar, bar_values));
 
 		app.update();
 
 		let style = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(no_parent)
 			.find_map(|e| e.get::<Style>())
@@ -327,12 +331,12 @@ mod tests {
 			..default()
 		};
 		let bar_values = BarValues::<_Display>::new(0., 0.);
-		app.world.spawn((bar, bar_values));
+		app.world_mut().spawn((bar, bar_values));
 
 		app.update();
 
 		let color = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(no_parent)
 			.find_map(|e| e.get::<BackgroundColor>())
@@ -351,12 +355,12 @@ mod tests {
 			..default()
 		};
 		let bar_values = BarValues::<_Display>::new(0., 0.);
-		app.world.spawn((bar, bar_values));
+		app.world_mut().spawn((bar, bar_values));
 
 		app.update();
 
 		let color = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(with_parent)
 			.find_map(|e| e.get::<BackgroundColor>())
@@ -375,12 +379,12 @@ mod tests {
 			..default()
 		};
 		let bar_values = BarValues::<_Display>::new(10., 50.);
-		app.world.spawn((bar, bar_values));
+		app.world_mut().spawn((bar, bar_values));
 
 		app.update();
 
 		let style = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(with_parent)
 			.find_map(|e| e.get::<Style>())
@@ -400,18 +404,18 @@ mod tests {
 			..default()
 		};
 		let bar_values = BarValues::<_Display>::new(0., 0.);
-		let bar = app.world.spawn((bar, bar_values)).id();
+		let bar = app.world_mut().spawn((bar, bar_values)).id();
 
 		app.update();
 
-		let mut bar = app.world.entity_mut(bar);
+		let mut bar = app.world_mut().entity_mut(bar);
 		let mut bar = bar.get_mut::<Bar>().unwrap();
 		bar.position = Some(Vec2::new(100., 200.));
 
 		app.update();
 
 		let styles = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(no_parent)
 			.filter_map(|e| e.get::<Style>())
@@ -439,18 +443,18 @@ mod tests {
 			..default()
 		};
 		let bar_values = BarValues::<_Display>::new(0., 0.);
-		let bar = app.world.spawn((bar, bar_values)).id();
+		let bar = app.world_mut().spawn((bar, bar_values)).id();
 
 		app.update();
 
-		let mut bar = app.world.entity_mut(bar);
+		let mut bar = app.world_mut().entity_mut(bar);
 		let mut bar = bar.get_mut::<Bar>().unwrap();
 		bar.position = Some(Vec2::new(100., 200.));
 
 		app.update();
 
 		let styles = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(no_parent)
 			.filter_map(|e| e.get::<Style>())
@@ -477,11 +481,11 @@ mod tests {
 			..default()
 		};
 		let bar_values = BarValues::<_Display>::new(0., 0.);
-		let bar = app.world.spawn((bar, bar_values)).id();
+		let bar = app.world_mut().spawn((bar, bar_values)).id();
 
 		app.update();
 
-		let mut bar = app.world.entity_mut(bar);
+		let mut bar = app.world_mut().entity_mut(bar);
 		let mut bar_values = bar.get_mut::<BarValues<_Display>>().unwrap();
 		bar_values.max = 200.;
 		bar_values.current = 120.;
@@ -489,7 +493,7 @@ mod tests {
 		app.update();
 
 		let style = app
-			.world
+			.world()
 			.iter_entities()
 			.filter(with_parent)
 			.find_map(|e| e.get::<Style>())

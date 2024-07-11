@@ -42,7 +42,7 @@ mod tests {
 	fn set_to_visible_after_delay() {
 		let mut app = setup();
 		let tooltip_ui = app
-			.world
+			.world_mut()
 			.spawn((
 				TooltipUI {
 					source: Entity::from_raw(42),
@@ -55,7 +55,7 @@ mod tests {
 		app.tick_time(Duration::from_millis(100));
 		app.update();
 
-		let tooltip_ui = app.world.entity(tooltip_ui);
+		let tooltip_ui = app.world().entity(tooltip_ui);
 
 		assert_eq!(Some(&Visibility::Visible), tooltip_ui.get::<Visibility>());
 	}
@@ -64,7 +64,7 @@ mod tests {
 	fn do_not_set_to_visible_before_delay() {
 		let mut app = setup();
 		let tooltip_ui = app
-			.world
+			.world_mut()
 			.spawn((
 				TooltipUI {
 					source: Entity::from_raw(42),
@@ -77,7 +77,7 @@ mod tests {
 		app.tick_time(Duration::from_millis(9));
 		app.update();
 
-		let tooltip_ui = app.world.entity(tooltip_ui);
+		let tooltip_ui = app.world().entity(tooltip_ui);
 
 		assert_eq!(Some(&Visibility::Hidden), tooltip_ui.get::<Visibility>());
 	}
@@ -86,7 +86,7 @@ mod tests {
 	fn set_to_visible_after_delay_reached_in_successive_updates() {
 		let mut app = setup();
 		let tooltip_ui = app
-			.world
+			.world_mut()
 			.spawn((
 				TooltipUI {
 					source: Entity::from_raw(42),
@@ -102,7 +102,7 @@ mod tests {
 		app.tick_time(Duration::from_millis(500));
 		app.update();
 
-		let tooltip_ui = app.world.entity(tooltip_ui);
+		let tooltip_ui = app.world().entity(tooltip_ui);
 
 		assert_eq!(Some(&Visibility::Visible), tooltip_ui.get::<Visibility>());
 	}
@@ -111,7 +111,7 @@ mod tests {
 	fn set_delay_to_zero_when_delta_exceeds_delay() {
 		let mut app = setup();
 		let tooltip_ui = app
-			.world
+			.world_mut()
 			.spawn((
 				TooltipUI {
 					source: Entity::from_raw(42),
@@ -124,7 +124,7 @@ mod tests {
 		app.tick_time(Duration::from_millis(11));
 		app.update();
 
-		let tooltip_ui = app.world.entity(tooltip_ui);
+		let tooltip_ui = app.world().entity(tooltip_ui);
 
 		assert_eq!(
 			Some(&TooltipUI {

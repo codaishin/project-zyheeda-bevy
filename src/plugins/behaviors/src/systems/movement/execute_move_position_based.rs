@@ -115,7 +115,7 @@ mod test {
 	#[test]
 	fn move_agent_once() {
 		let mut app = setup();
-		let mut time = app.world.resource_mut::<Time<Real>>();
+		let mut time = app.world_mut().resource_mut::<Time<Real>>();
 
 		let last_update = time.last_update().unwrap();
 		let transform = Transform::from_xyz(1., 2., 3.);
@@ -134,7 +134,7 @@ mod test {
 			.return_const(false);
 
 		time.update_with_instant(last_update + time_delta);
-		app.world.spawn((config, movement, transform));
+		app.world_mut().spawn((config, movement, transform));
 
 		app.update();
 	}
@@ -148,7 +148,7 @@ mod test {
 
 		movement.mock.expect_update().times(2).return_const(false);
 
-		app.world.spawn((config, movement, transform));
+		app.world_mut().spawn((config, movement, transform));
 
 		app.update();
 		app.update();
@@ -163,11 +163,11 @@ mod test {
 
 		movement.mock.expect_update().return_const(true);
 
-		let agent = app.world.spawn((config, movement, transform)).id();
+		let agent = app.world_mut().spawn((config, movement, transform)).id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&_Idle), agent.get::<_Idle>());
 	}
@@ -181,11 +181,11 @@ mod test {
 
 		movement.mock.expect_update().return_const(false);
 
-		let agent = app.world.spawn((config, movement, transform)).id();
+		let agent = app.world_mut().spawn((config, movement, transform)).id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<_Idle>());
 	}
@@ -193,7 +193,7 @@ mod test {
 	#[test]
 	fn do_not_move_agent_when_immobilized() {
 		let mut app = setup();
-		let mut time = app.world.resource_mut::<Time<Real>>();
+		let mut time = app.world_mut().resource_mut::<Time<Real>>();
 
 		let last_update = time.last_update().unwrap();
 		let mut movement = _Movement::default();
@@ -201,7 +201,7 @@ mod test {
 		movement.mock.expect_update().never().return_const(false);
 
 		time.update_with_instant(last_update + Duration::from_millis(30));
-		app.world
+		app.world_mut()
 			.spawn((ConfigFast, movement, Transform::default(), Immobilized));
 
 		app.update();

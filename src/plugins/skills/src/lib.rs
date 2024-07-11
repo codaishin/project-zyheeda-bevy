@@ -15,10 +15,11 @@ use bevy::{
 	ecs::{
 		entity::Entity,
 		query::Added,
-		schedule::{common_conditions::in_state, IntoSystemConfigs, State},
+		schedule::IntoSystemConfigs,
 		system::{Commands, IntoSystem, Query, Res},
 	},
 	input::{keyboard::KeyCode, ButtonInput},
+	state::{condition::in_state, state::State},
 	time::Virtual,
 };
 use bundles::Loadout;

@@ -25,10 +25,10 @@ mod tests {
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},
 		reflect::TypePath,
-		utils::Uuid,
 	};
 	use common::{test_tools::utils::SingleThreadedApp, traits::load_asset::Path};
 	use mockall::{automock, predicate::eq};
+	use uuid::Uuid;
 
 	#[derive(TypePath, Asset, Debug, PartialEq)]
 	struct _Cell;
@@ -75,7 +75,7 @@ mod tests {
 
 		app.update();
 
-		let level_command = app.world.get_resource::<LoadLevelCommand<_Cell>>();
+		let level_command = app.world().get_resource::<LoadLevelCommand<_Cell>>();
 
 		assert_eq!(Some(&LoadLevelCommand(handle)), level_command);
 	}

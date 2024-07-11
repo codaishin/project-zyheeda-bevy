@@ -63,7 +63,7 @@ mod tests {
 			.with(eq(Priority::Low))
 			.return_const(());
 
-		app.world.spawn(dispatch);
+		app.world_mut().spawn(dispatch);
 		app.update();
 	}
 }

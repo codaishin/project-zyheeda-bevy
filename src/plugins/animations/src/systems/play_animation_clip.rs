@@ -72,11 +72,11 @@ mod tests {
 		animation::AnimationClip,
 		app::{App, Update},
 		asset::{AssetId, Handle},
-		utils::Uuid,
 	};
 	use common::test_tools::utils::SingleThreadedApp;
 	use mockall::{mock, predicate::eq};
 	use std::collections::HashMap;
+	use uuid::Uuid;
 
 	struct _Animation(Path, PlayMode);
 
@@ -159,9 +159,9 @@ mod tests {
 			.times(1)
 			.with(eq(clip))
 			.return_const(());
-		let player = app.world.spawn(player).id();
+		let player = app.world_mut().spawn(player).id();
 
-		app.world.spawn((
+		app.world_mut().spawn((
 			dispatch,
 			Animator {
 				animation_player_id: Some(player),
@@ -190,9 +190,9 @@ mod tests {
 			.times(1)
 			.with(eq(clip))
 			.return_const(());
-		let player = app.world.spawn(player).id();
+		let player = app.world_mut().spawn(player).id();
 
-		app.world.spawn((
+		app.world_mut().spawn((
 			dispatch,
 			Animator {
 				animation_player_id: Some(player),
@@ -217,10 +217,10 @@ mod tests {
 
 		player.mock.expect_replay().return_const(());
 		player.mock.expect_repeat().times(2).return_const(());
-		let player = app.world.spawn(player).id();
+		let player = app.world_mut().spawn(player).id();
 
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				dispatch,
 				Animator {
@@ -231,7 +231,7 @@ mod tests {
 		app.update();
 		app.update();
 
-		app.world
+		app.world_mut()
 			.entity_mut(agent)
 			.get_mut::<_AnimationDispatch>()
 			.unwrap()
@@ -255,10 +255,10 @@ mod tests {
 
 		player.mock.expect_replay().return_const(());
 		player.mock.expect_repeat().times(1).return_const(());
-		let player = app.world.spawn(player).id();
+		let player = app.world_mut().spawn(player).id();
 
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				dispatch,
 				Animator {
@@ -268,7 +268,7 @@ mod tests {
 			.id();
 		app.update();
 
-		app.world
+		app.world_mut()
 			.entity_mut(agent)
 			.get_mut::<Animator>()
 			.unwrap()

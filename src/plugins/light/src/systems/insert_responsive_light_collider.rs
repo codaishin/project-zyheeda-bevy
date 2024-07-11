@@ -32,7 +32,6 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},
-		utils::Uuid,
 	};
 	use bevy_rapier3d::geometry::ActiveEvents;
 	use common::{
@@ -40,6 +39,7 @@ mod tests {
 		tools::{Intensity, IntensityChangePerSecond, Units},
 		traits::clamp_zero_positive::ClampZeroPositive,
 	};
+	use uuid::Uuid;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -58,7 +58,7 @@ mod tests {
 	fn add_sensor_collider() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(ResponsiveLight {
 				model: Entity::from_raw(1),
 				light: Entity::from_raw(2),
@@ -74,7 +74,7 @@ mod tests {
 
 		app.update();
 
-		let light = app.world.entity(light);
+		let light = app.world().entity(light);
 
 		assert_eq!(
 			(
@@ -96,7 +96,7 @@ mod tests {
 	fn add_only_when_new() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(ResponsiveLight {
 				model: Entity::from_raw(1),
 				light: Entity::from_raw(2),
@@ -112,13 +112,13 @@ mod tests {
 
 		app.update();
 
-		app.world
+		app.world_mut()
 			.entity_mut(light)
 			.remove::<(Sensor, Collider, ActiveEvents, CollidingEntities)>();
 
 		app.update();
 
-		let light = app.world.entity(light);
+		let light = app.world().entity(light);
 
 		assert_eq!(
 			(false, false, None, None),

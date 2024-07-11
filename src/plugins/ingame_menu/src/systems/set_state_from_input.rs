@@ -1,13 +1,13 @@
 use bevy::{
-	ecs::{
-		schedule::{NextState, State, States},
-		system::{Res, ResMut},
-	},
+	ecs::system::{Res, ResMut},
 	input::{keyboard::KeyCode, ButtonInput},
+	state::state::{FreelyMutableState, NextState, State, States},
 };
 use common::traits::iteration::IterFinite;
 
-pub(crate) fn set_state_from_input<TState: States + Default + IterFinite + Copy>(
+pub(crate) fn set_state_from_input<
+	TState: States + FreelyMutableState + Default + IterFinite + Copy,
+>(
 	keys: Res<ButtonInput<KeyCode>>,
 	current_state: Res<State<TState>>,
 	mut next_state: ResMut<NextState<TState>>,
@@ -47,7 +47,10 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::app::{App, Update};
+	use bevy::{
+		app::{App, Update},
+		state::app::AppExtStates,
+	};
 	use common::{test_tools::utils::SingleThreadedApp, traits::iteration::Iter};
 
 	#[derive(Debug, PartialEq, States, Default, Hash, Eq, Clone, Copy)]
@@ -97,7 +100,7 @@ mod tests {
 	fn set_a_on_just_pressed() {
 		let mut app = setup();
 		let mut input = app
-			.world
+			.world_mut()
 			.get_resource_mut::<ButtonInput<KeyCode>>()
 			.unwrap();
 		input.press(KeyCode::KeyA);
@@ -105,7 +108,7 @@ mod tests {
 		app.update();
 		app.update();
 
-		let state = app.world.get_resource::<State<_State>>().unwrap();
+		let state = app.world().get_resource::<State<_State>>().unwrap();
 		assert_eq!(&_State::A, state.get());
 	}
 
@@ -113,7 +116,7 @@ mod tests {
 	fn do_not_set_when_not_just_pressed() {
 		let mut app = setup();
 		let mut input = app
-			.world
+			.world_mut()
 			.get_resource_mut::<ButtonInput<KeyCode>>()
 			.unwrap();
 		input.press(KeyCode::KeyA);
@@ -122,7 +125,7 @@ mod tests {
 		app.update();
 		app.update();
 
-		let state = app.world.get_resource::<State<_State>>().unwrap();
+		let state = app.world().get_resource::<State<_State>>().unwrap();
 		assert_eq!(&_State::Default, state.get());
 	}
 
@@ -130,7 +133,7 @@ mod tests {
 	fn set_back_to_default_if_already_a() {
 		let mut app = setup();
 		let mut input = app
-			.world
+			.world_mut()
 			.get_resource_mut::<ButtonInput<KeyCode>>()
 			.unwrap();
 		input.press(KeyCode::KeyA);
@@ -139,7 +142,7 @@ mod tests {
 		app.update();
 		app.update();
 
-		let state = app.world.get_resource::<State<_State>>().unwrap();
+		let state = app.world().get_resource::<State<_State>>().unwrap();
 		assert_eq!(&_State::Default, state.get());
 	}
 }

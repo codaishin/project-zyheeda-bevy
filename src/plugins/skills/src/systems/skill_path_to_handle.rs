@@ -26,7 +26,7 @@ pub(crate) fn skill_path_to_handle<
 	sources: Query<(Entity, Ref<TSource>)>,
 	mut folder_added: Local<bool>,
 ) -> Vec<Result<(), Error>> {
-	let folder_id = AssetId::from(skill_folder.0.clone());
+	let folder_id = skill_folder.0.id();
 	let Some(folder) = loaded_folders.get(folder_id) else {
 		return vec![Err(no_skill_folder_error())];
 	};
@@ -86,7 +86,6 @@ mod tests {
 		asset::{AssetId, Handle},
 		prelude::IntoSystem,
 		reflect::TypePath,
-		utils::Uuid,
 	};
 	use common::{
 		systems::log::test_tools::{fake_log_error_many_recourse, FakeErrorLogManyResource},
@@ -94,6 +93,7 @@ mod tests {
 		traits::load_asset::Path,
 	};
 	use mockall::{automock, predicate::eq};
+	use uuid::Uuid;
 
 	#[derive(Default, TypePath, Asset)]
 	struct _Folder {
@@ -134,10 +134,13 @@ mod tests {
 	}
 
 	fn set_folder(app: &mut App, folder: _Folder) -> AssetId<_Folder> {
-		let folder = app.world.resource_mut::<Assets<_Folder>>().add(folder);
-		app.world.insert_resource(SkillFolder(folder.clone()));
+		let folder = app
+			.world_mut()
+			.resource_mut::<Assets<_Folder>>()
+			.add(folder);
+		app.world_mut().insert_resource(SkillFolder(folder.clone()));
 
-		folder.into()
+		folder.id()
 	}
 
 	#[test]
@@ -152,9 +155,10 @@ mod tests {
 			.with(eq(Path::from("my/skill/path")))
 			.return_const(None);
 		let id = set_folder(&mut app, folder);
-		app.world.send_event(AssetEvent::Added { id });
+		app.world_mut().send_event(AssetEvent::Added { id });
 
-		app.world.spawn(_Source(vec![Path::from("my/skill/path")]));
+		app.world_mut()
+			.spawn(_Source(vec![Path::from("my/skill/path")]));
 
 		app.update();
 	}
@@ -178,13 +182,16 @@ mod tests {
 			.expect_handle_from_path()
 			.return_const(Handle::default());
 		let id = set_folder(&mut app, folder);
-		app.world.send_event(AssetEvent::Added { id });
+		app.world_mut().send_event(AssetEvent::Added { id });
 
-		let source = app.world.spawn(_Source(vec![Path::from("my/path")])).id();
+		let source = app
+			.world_mut()
+			.spawn(_Source(vec![Path::from("my/path")]))
+			.id();
 
 		app.update();
 
-		let source = app.world.entity(source);
+		let source = app.world().entity(source);
 
 		assert_eq!(Some(&_Result(vec![handle])), source.get::<_Result>());
 	}
@@ -201,7 +208,8 @@ mod tests {
 			.return_const(None);
 		set_folder(&mut app, folder);
 
-		app.world.spawn(_Source(vec![Path::from("my/skill/path")]));
+		app.world_mut()
+			.spawn(_Source(vec![Path::from("my/skill/path")]));
 
 		app.update();
 	}
@@ -218,11 +226,12 @@ mod tests {
 			.with(eq(Path::from("my/skill/path")))
 			.return_const(None);
 		let id = set_folder(&mut app, folder);
-		app.world.send_event(AssetEvent::Added { id });
+		app.world_mut().send_event(AssetEvent::Added { id });
 
 		app.update();
 
-		app.world.spawn(_Source(vec![Path::from("my/skill/path")]));
+		app.world_mut()
+			.spawn(_Source(vec![Path::from("my/skill/path")]));
 
 		app.update();
 	}
@@ -234,16 +243,16 @@ mod tests {
 		let mut folder = _Folder::default();
 		folder.mock.expect_handle_from_path().return_const(None);
 		let id = set_folder(&mut app, folder);
-		app.world.send_event(AssetEvent::Added { id });
+		app.world_mut().send_event(AssetEvent::Added { id });
 
 		let source = app
-			.world
+			.world_mut()
 			.spawn(_Source(vec![Path::from("my/skill/path")]))
 			.id();
 
 		app.update();
 
-		let source = app.world.entity(source);
+		let source = app.world().entity(source);
 
 		assert!(!source.contains::<_Source>());
 	}
@@ -257,13 +266,13 @@ mod tests {
 		set_folder(&mut app, folder);
 
 		let source = app
-			.world
+			.world_mut()
 			.spawn(_Source(vec![Path::from("my/skill/path")]))
 			.id();
 
 		app.update();
 
-		let source = app.world.entity(source);
+		let source = app.world().entity(source);
 
 		assert!(source.contains::<_Source>());
 	}
@@ -272,12 +281,13 @@ mod tests {
 	fn log_error_when_no_folder() {
 		let mut app = setup();
 
-		app.world.spawn(_Source(vec![Path::from("my/skill/path")]));
+		app.world_mut()
+			.spawn(_Source(vec![Path::from("my/skill/path")]));
 
 		app.update();
 		app.update();
 
-		app.world
+		app.world_mut()
 			.resource_mut::<Assets<_Folder>>()
 			.add(_Folder::default());
 
@@ -285,7 +295,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&FakeErrorLogManyResource(vec![no_skill_folder_error()])),
-			app.world.get_resource::<FakeErrorLogManyResource>()
+			app.world().get_resource::<FakeErrorLogManyResource>()
 		);
 	}
 
@@ -296,9 +306,9 @@ mod tests {
 		let mut folder = _Folder::default();
 		folder.mock.expect_handle_from_path().return_const(None);
 		let id = set_folder(&mut app, folder);
-		app.world.send_event(AssetEvent::Added { id });
+		app.world_mut().send_event(AssetEvent::Added { id });
 
-		app.world.spawn(_Source(vec![Path::from("my/path")]));
+		app.world_mut().spawn(_Source(vec![Path::from("my/path")]));
 
 		app.update();
 
@@ -306,7 +316,7 @@ mod tests {
 			Some(&FakeErrorLogManyResource(vec![no_matching_handle_error(
 				&Path::from("my/path")
 			)])),
-			app.world.get_resource::<FakeErrorLogManyResource>()
+			app.world().get_resource::<FakeErrorLogManyResource>()
 		);
 	}
 }

@@ -44,17 +44,17 @@ mod tests {
 		app::{App, Update},
 		ecs::component::Component,
 		hierarchy::BuildWorldChildren,
-		math::{primitives::Direction3d, Vec3},
+		math::{Dir3, Vec3},
 	};
 
 	#[derive(Component)]
 	struct _Projectile {
-		pub direction: Direction3d,
+		pub direction: Dir3,
 		pub range: f32,
 	}
 
 	impl ProjectileBehavior for _Projectile {
-		fn direction(&self) -> Direction3d {
+		fn direction(&self) -> Dir3 {
 			self.direction
 		}
 		fn range(&self) -> f32 {
@@ -74,7 +74,7 @@ mod tests {
 		let mut app = setup();
 
 		let projectile = app
-			.world
+			.world_mut()
 			.spawn((
 				_Projectile {
 					direction: Vec3::new(1., 2., 3.).try_into().unwrap(),
@@ -86,7 +86,7 @@ mod tests {
 
 		app.update();
 
-		let projectile = app.world.entity(projectile);
+		let projectile = app.world().entity(projectile);
 
 		assert_eq!(
 			Some(&Movement::<PositionBased>::to(
@@ -101,7 +101,7 @@ mod tests {
 		let mut app = setup();
 
 		let projectile = app
-			.world
+			.world_mut()
 			.spawn((
 				_Projectile {
 					direction: Vec3::new(1., 2., 3.).try_into().unwrap(),
@@ -113,7 +113,7 @@ mod tests {
 
 		app.update();
 
-		let projectile = app.world.entity(projectile);
+		let projectile = app.world().entity(projectile);
 
 		assert_eq!(
 			Some(&Movement::<PositionBased>::to(
@@ -131,7 +131,7 @@ mod tests {
 		let mut app = setup();
 
 		let projectile = app
-			.world
+			.world_mut()
 			.spawn((
 				_Projectile {
 					direction: Vec3::new(1., 2., 3.).try_into().unwrap(),
@@ -146,13 +146,13 @@ mod tests {
 
 		app.update();
 
-		app.world.entity_mut(projectile).insert(Idle);
+		app.world_mut().entity_mut(projectile).insert(Idle);
 
 		app.update();
 
 		assert_eq!(
 			0,
-			app.world
+			app.world()
 				.iter_entities()
 				.filter(|entity| entity.contains::<_Child>()
 					|| entity.contains::<Movement<PositionBased>>())
@@ -167,12 +167,12 @@ mod tests {
 
 		let mut app = setup();
 
-		app.world.spawn((_Decoy, Idle));
+		app.world_mut().spawn((_Decoy, Idle));
 		app.update();
 
 		assert_eq!(
 			1,
-			app.world
+			app.world()
 				.iter_entities()
 				.filter(|entity| entity.contains::<_Decoy>())
 				.count()

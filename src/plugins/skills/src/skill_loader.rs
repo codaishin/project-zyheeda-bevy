@@ -1,8 +1,5 @@
 use crate::skills::skill_data::SkillData;
-use bevy::{
-	asset::{io::Reader, Asset, AssetLoader, AsyncReadExt, LoadContext},
-	utils::BoxedFuture,
-};
+use bevy::asset::{io::Reader, Asset, AssetLoader, AsyncReadExt, LoadContext};
 use serde_json::error::Error as SerdeJsonError;
 use std::{
 	error::Error,
@@ -52,26 +49,24 @@ impl<TAsset: Asset + From<SkillData>> AssetLoader for SkillLoader<TAsset> {
 		&["skill"]
 	}
 
-	fn load<'a>(
+	async fn load<'a>(
 		&'a self,
-		reader: &'a mut Reader,
+		reader: &'a mut Reader<'_>,
 		_settings: &'a Self::Settings,
-		_load_context: &'a mut LoadContext,
-	) -> BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
-		Box::pin(async {
-			let mut bytes = Vec::new();
-			let result = reader
-				.read_to_end(&mut bytes)
-				.await
-				.map(|_| from_utf8(&bytes));
+		_load_context: &'a mut LoadContext<'_>,
+	) -> Result<Self::Asset, Self::Error> {
+		let mut bytes = Vec::new();
+		let result = reader
+			.read_to_end(&mut bytes)
+			.await
+			.map(|_| from_utf8(&bytes));
 
-			match result {
-				Err(io_error) => Err(SkillLoadError::IO(io_error)),
-				Ok(Err(utf8_error)) => Err(SkillLoadError::ParseChars(utf8_error)),
-				Ok(Ok(str)) => serde_json::from_str(str)
-					.map(TAsset::from)
-					.map_err(SkillLoadError::ParseSkill),
-			}
-		})
+		match result {
+			Err(io_error) => Err(SkillLoadError::IO(io_error)),
+			Ok(Err(utf8_error)) => Err(SkillLoadError::ParseChars(utf8_error)),
+			Ok(Ok(str)) => serde_json::from_str(str)
+				.map(TAsset::from)
+				.map_err(SkillLoadError::ParseSkill),
+		}
 	}
 }

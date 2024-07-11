@@ -3,9 +3,9 @@ pub mod ground_target;
 
 use crate::traits::{RemoveComponent, SpawnAttack};
 use bevy::{
+	color::{Color, LinearRgba},
 	ecs::{bundle::Bundle, component::Component, entity::Entity, system::EntityCommands},
-	math::{primitives::Direction3d, Vec3},
-	render::color::Color,
+	math::{Dir3, Vec3},
 };
 use common::tools::UnitsPerSecond;
 use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
@@ -35,7 +35,7 @@ pub struct Plasma;
 
 #[derive(Component)]
 pub struct Projectile<T> {
-	pub direction: Direction3d,
+	pub direction: Dir3,
 	pub range: f32,
 	phantom_data: PhantomData<T>,
 }
@@ -43,7 +43,7 @@ pub struct Projectile<T> {
 impl<T> Default for Projectile<T> {
 	fn default() -> Self {
 		Self {
-			direction: Direction3d::NEG_Z,
+			direction: Dir3::NEG_Z,
 			range: Default::default(),
 			phantom_data: Default::default(),
 		}
@@ -51,7 +51,7 @@ impl<T> Default for Projectile<T> {
 }
 
 impl<T> Projectile<T> {
-	pub fn new(direction: Direction3d, range: f32) -> Self {
+	pub fn new(direction: Dir3, range: f32) -> Self {
 		Self {
 			direction,
 			range,
@@ -172,7 +172,7 @@ pub(crate) struct LifeTime(pub Duration);
 pub struct BeamConfig {
 	pub damage: i16,
 	pub color: Color,
-	pub emissive: Color,
+	pub emissive: LinearRgba,
 	pub lifetime: Duration,
 	pub range: f32,
 }
@@ -189,5 +189,5 @@ pub(crate) struct Beam {
 	pub from: Vec3,
 	pub to: Vec3,
 	pub color: Color,
-	pub emissive: Color,
+	pub emissive: LinearRgba,
 }

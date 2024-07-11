@@ -2,7 +2,7 @@ use crate::{
 	components::BarValues,
 	traits::{UIBarColors, UIBarUpdate},
 };
-use bevy::render::color::Color;
+use bevy::color::Color;
 use common::components::Health;
 
 impl UIBarUpdate<Health> for BarValues<Health> {
@@ -14,10 +14,10 @@ impl UIBarUpdate<Health> for BarValues<Health> {
 
 impl UIBarColors for BarValues<Health> {
 	fn background_color() -> Color {
-		Color::GRAY
+		Color::srgb(0.5, 0.5, 0.5)
 	}
 
 	fn foreground_color() -> Color {
-		Color::ORANGE_RED
+		Color::srgb(1., 0.27, 0.)
 	}
 }

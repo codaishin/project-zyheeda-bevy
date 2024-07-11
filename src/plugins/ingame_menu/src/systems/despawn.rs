@@ -33,12 +33,12 @@ mod tests {
 	fn despawn_entity() {
 		let mut app = App::new();
 
-		let entity = app.world.spawn(_Component).id();
+		let entity = app.world_mut().spawn(_Component).id();
 
 		app.add_systems(Update, despawn::<_Component>);
 		app.update();
 
-		let entity = app.world.get_entity(entity);
+		let entity = app.world().get_entity(entity);
 
 		assert!(entity.is_none());
 	}
@@ -47,14 +47,14 @@ mod tests {
 	fn despawn_entity_children() {
 		let mut app = App::new();
 
-		let entity = app.world.spawn(_Component).id();
-		let child = app.world.spawn(()).id();
-		app.world.entity_mut(entity).push_children(&[child]);
+		let entity = app.world_mut().spawn(_Component).id();
+		let child = app.world_mut().spawn(()).id();
+		app.world_mut().entity_mut(entity).push_children(&[child]);
 
 		app.add_systems(Update, despawn::<_Component>);
 		app.update();
 
-		let child = app.world.get_entity(child);
+		let child = app.world().get_entity(child);
 
 		assert!(child.is_none());
 	}

@@ -46,14 +46,14 @@ mod tests {
 	fn reduce_by_delta() {
 		let mut app = setup();
 		let cool_down = app
-			.world
+			.world_mut()
 			.spawn(OnCoolDown(Duration::from_millis(1000)))
 			.id();
 
 		app.tick_time(Duration::from_millis(42));
 		app.update();
 
-		let cool_down = app.world.entity(cool_down);
+		let cool_down = app.world().entity(cool_down);
 
 		assert_eq!(
 			Some(&OnCoolDown(Duration::from_millis(958))),
@@ -64,12 +64,15 @@ mod tests {
 	#[test]
 	fn remove_if_remaining_cool_down_is_zero() {
 		let mut app = setup();
-		let cool_down = app.world.spawn(OnCoolDown(Duration::from_millis(42))).id();
+		let cool_down = app
+			.world_mut()
+			.spawn(OnCoolDown(Duration::from_millis(42)))
+			.id();
 
 		app.tick_time(Duration::from_millis(42));
 		app.update();
 
-		let cool_down = app.world.entity(cool_down);
+		let cool_down = app.world().entity(cool_down);
 
 		assert_eq!(None, cool_down.get::<OnCoolDown>());
 	}
@@ -77,12 +80,15 @@ mod tests {
 	#[test]
 	fn remove_if_remaining_cool_down_is_negative() {
 		let mut app = setup();
-		let cool_down = app.world.spawn(OnCoolDown(Duration::from_millis(10))).id();
+		let cool_down = app
+			.world_mut()
+			.spawn(OnCoolDown(Duration::from_millis(10)))
+			.id();
 
 		app.tick_time(Duration::from_millis(42));
 		app.update();
 
-		let cool_down = app.world.entity(cool_down);
+		let cool_down = app.world().entity(cool_down);
 
 		assert_eq!(None, cool_down.get::<OnCoolDown>());
 	}

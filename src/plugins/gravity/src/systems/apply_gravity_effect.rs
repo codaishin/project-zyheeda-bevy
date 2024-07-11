@@ -123,13 +123,13 @@ mod tests {
 	fn pull_colliding_entities_via_velocity() {
 		let mut app = setup();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Transform::from_xyz(10., 0., 0.),
 				EffectedBy::<Gravity>::default(),
 			))
 			.id();
-		app.world.spawn((
+		app.world_mut().spawn((
 			Transform::from_xyz(10., 0., 5.),
 			_Pull(UnitsPerSecond::new(1.)),
 			_Collisions(vec![agent]),
@@ -137,7 +137,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Velocity::linear(Vec3::new(0., 0., 1.))),
@@ -149,13 +149,13 @@ mod tests {
 	fn pull_colliding_entities_scaled_by_pull() {
 		let mut app = setup();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Transform::from_xyz(10., 0., 0.),
 				EffectedBy::<Gravity>::default(),
 			))
 			.id();
-		app.world.spawn((
+		app.world_mut().spawn((
 			Transform::from_xyz(10., 0., 5.),
 			_Pull(UnitsPerSecond::new(4.)),
 			_Collisions(vec![agent]),
@@ -163,7 +163,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Velocity::linear(Vec3::new(0., 0., 4.))),
@@ -175,14 +175,14 @@ mod tests {
 	fn pull_colliding_entities_collider_root() {
 		let mut app = setup();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Transform::from_xyz(10., 0., 0.),
 				EffectedBy::<Gravity>::default(),
 			))
 			.id();
-		let root = app.world.spawn(ColliderRoot(agent)).id();
-		app.world.spawn((
+		let root = app.world_mut().spawn(ColliderRoot(agent)).id();
+		app.world_mut().spawn((
 			Transform::from_xyz(10., 0., 5.),
 			_Pull(UnitsPerSecond::new(1.)),
 			_Collisions(vec![root]),
@@ -190,7 +190,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Velocity::linear(Vec3::new(0., 0., 1.))),
@@ -202,13 +202,13 @@ mod tests {
 	fn do_not_pull_colliding_entities_when_within_sensitivity_range() {
 		let mut app = setup();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Transform::from_xyz(0., 0., SENSITIVITY - f32::EPSILON),
 				EffectedBy::<Gravity>::default(),
 			))
 			.id();
-		app.world.spawn((
+		app.world_mut().spawn((
 			Transform::from_xyz(0., 0., 0.),
 			_Pull(UnitsPerSecond::new(1.)),
 			_Collisions(vec![agent]),
@@ -216,7 +216,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&Velocity::default()), agent.get::<Velocity>(),)
 	}
@@ -225,13 +225,13 @@ mod tests {
 	fn do_not_pull_colliding_entities_when_within_sensitivity_range_scaled_by_pull() {
 		let mut app = setup();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Transform::from_xyz(0., 0., (SENSITIVITY - f32::EPSILON) * 2.),
 				EffectedBy::<Gravity>::default(),
 			))
 			.id();
-		app.world.spawn((
+		app.world_mut().spawn((
 			Transform::from_xyz(0., 0., 0.),
 			_Pull(UnitsPerSecond::new(2.)),
 			_Collisions(vec![agent]),
@@ -239,7 +239,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&Velocity::default()), agent.get::<Velocity>(),)
 	}
@@ -248,13 +248,13 @@ mod tests {
 	fn immobilize_colliding_entities() {
 		let mut app = setup();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Transform::from_xyz(10., 0., 0.),
 				EffectedBy::<Gravity>::default(),
 			))
 			.id();
-		app.world.spawn((
+		app.world_mut().spawn((
 			Transform::from_xyz(10., 0., 5.),
 			_Pull(UnitsPerSecond::new(1.)),
 			_Collisions(vec![agent]),
@@ -262,7 +262,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&Immobilized), agent.get::<Immobilized>(),)
 	}
@@ -270,8 +270,11 @@ mod tests {
 	#[test]
 	fn do_not_effect_when_not_effected_by_gravity() {
 		let mut app = setup();
-		let agent = app.world.spawn((Transform::from_xyz(10., 0., 0.),)).id();
-		app.world.spawn((
+		let agent = app
+			.world_mut()
+			.spawn((Transform::from_xyz(10., 0., 0.),))
+			.id();
+		app.world_mut().spawn((
 			Transform::from_xyz(10., 0., 5.),
 			_Pull(UnitsPerSecond::new(1.)),
 			_Collisions(vec![agent]),
@@ -279,7 +282,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			(None, None),

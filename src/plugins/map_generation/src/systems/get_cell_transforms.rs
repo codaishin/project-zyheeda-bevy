@@ -2,7 +2,7 @@ use crate::{components::LoadLevelCommand, map::Map, traits::CellDistance};
 use bevy::{
 	asset::Assets,
 	ecs::system::{Commands, Res},
-	math::{primitives::Direction3d, Vec3},
+	math::{Dir3, Vec3},
 	reflect::TypePath,
 	transform::components::Transform,
 };
@@ -13,7 +13,7 @@ pub(crate) fn get_cell_transforms<TCell: CellDistance + TypePath + Sync + Send +
 	load_level_cmd: Option<Res<LoadLevelCommand<TCell>>>,
 ) -> Vec<(Transform, TCell)>
 where
-	Direction3d: From<TCell>,
+	Dir3: From<TCell>,
 {
 	let Some(cells) = get_map_cells(load_level_cmd, maps) else {
 		return vec![];
@@ -51,9 +51,9 @@ fn get_map_cells<TCell: TypePath + Sync + Send + Clone>(
 
 fn transform<TCell: Clone>(cell: &TCell, position: Vec3) -> Transform
 where
-	Direction3d: From<TCell>,
+	Dir3: From<TCell>,
 {
-	let direction = Vec3::from(Direction3d::from(cell.clone()));
+	let direction = Vec3::from(Dir3::from(cell.clone()));
 
 	Transform::from_translation(position).looking_to(direction, Vec3::Y)
 }
@@ -75,14 +75,14 @@ mod tests {
 		ecs::system::{In, IntoSystem, Resource},
 		reflect::TypePath,
 		transform::components::Transform,
-		utils::Uuid,
 	};
 	use common::test_tools::utils::SingleThreadedApp;
+	use uuid::Uuid;
 
 	#[derive(Clone, Debug, PartialEq, TypePath)]
-	struct _Cell(Direction3d);
+	struct _Cell(Dir3);
 
-	impl From<_Cell> for Direction3d {
+	impl From<_Cell> for Dir3 {
 		fn from(value: _Cell) -> Self {
 			value.0
 		}
@@ -116,21 +116,22 @@ mod tests {
 
 	fn add_map(app: &mut App, cells: Vec<Vec<_Cell>>) -> Handle<Map<_Cell>> {
 		let handle = new_handle::<Map<_Cell>>();
-		app.world
+		app.world_mut()
 			.resource_mut::<Assets<Map<_Cell>>>()
-			.insert(handle.clone(), Map(cells));
+			.insert(&handle.clone(), Map(cells));
 		handle
 	}
 
 	#[test]
 	fn remove_level_load_command() {
 		let mut app = setup();
-		let map_handle = add_map(&mut app, vec![vec![_Cell(Direction3d::NEG_Z)]]);
-		app.world.insert_resource(LoadLevelCommand(map_handle));
+		let map_handle = add_map(&mut app, vec![vec![_Cell(Dir3::NEG_Z)]]);
+		app.world_mut()
+			.insert_resource(LoadLevelCommand(map_handle));
 
 		app.update();
 
-		let cmd = app.world.get_resource::<LoadLevelCommand<Map<_Cell>>>();
+		let cmd = app.world().get_resource::<LoadLevelCommand<Map<_Cell>>>();
 
 		assert_eq!(None, cmd);
 	}
@@ -138,15 +139,16 @@ mod tests {
 	#[test]
 	fn pass_transform() {
 		let mut app = setup();
-		let map_handle = add_map(&mut app, vec![vec![_Cell(Direction3d::NEG_Z)]]);
-		app.world.insert_resource(LoadLevelCommand(map_handle));
+		let map_handle = add_map(&mut app, vec![vec![_Cell(Dir3::NEG_Z)]]);
+		app.world_mut()
+			.insert_resource(LoadLevelCommand(map_handle));
 
 		app.update();
 
-		let result = app.world.resource::<_CellsResult>();
+		let result = app.world().resource::<_CellsResult>();
 
 		assert_eq!(
-			vec![(Transform::from_xyz(0., 0., 0.), _Cell(Direction3d::NEG_Z))],
+			vec![(Transform::from_xyz(0., 0., 0.), _Cell(Dir3::NEG_Z))],
 			result.0
 		);
 	}
@@ -154,20 +156,18 @@ mod tests {
 	#[test]
 	fn add_scene_handle_with_transform_with_distance_on_x() {
 		let mut app = setup();
-		let map_handle = add_map(
-			&mut app,
-			vec![vec![_Cell(Direction3d::NEG_Z), _Cell(Direction3d::NEG_Z)]],
-		);
-		app.world.insert_resource(LoadLevelCommand(map_handle));
+		let map_handle = add_map(&mut app, vec![vec![_Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z)]]);
+		app.world_mut()
+			.insert_resource(LoadLevelCommand(map_handle));
 
 		app.update();
 
-		let result = app.world.resource::<_CellsResult>();
+		let result = app.world().resource::<_CellsResult>();
 
 		assert_eq!(
 			vec![
-				(Transform::from_xyz(2., 0., 0.), _Cell(Direction3d::NEG_Z)),
-				(Transform::from_xyz(-2., 0., 0.), _Cell(Direction3d::NEG_Z))
+				(Transform::from_xyz(2., 0., 0.), _Cell(Dir3::NEG_Z)),
+				(Transform::from_xyz(-2., 0., 0.), _Cell(Dir3::NEG_Z))
 			],
 			result.0
 		);
@@ -178,21 +178,19 @@ mod tests {
 		let mut app = setup();
 		let map_handle = add_map(
 			&mut app,
-			vec![
-				vec![_Cell(Direction3d::NEG_Z)],
-				vec![_Cell(Direction3d::NEG_Z)],
-			],
+			vec![vec![_Cell(Dir3::NEG_Z)], vec![_Cell(Dir3::NEG_Z)]],
 		);
-		app.world.insert_resource(LoadLevelCommand(map_handle));
+		app.world_mut()
+			.insert_resource(LoadLevelCommand(map_handle));
 
 		app.update();
 
-		let result = app.world.resource::<_CellsResult>();
+		let result = app.world().resource::<_CellsResult>();
 
 		assert_eq!(
 			vec![
-				(Transform::from_xyz(0., 0., 2.), _Cell(Direction3d::NEG_Z)),
-				(Transform::from_xyz(0., 0., -2.), _Cell(Direction3d::NEG_Z))
+				(Transform::from_xyz(0., 0., 2.), _Cell(Dir3::NEG_Z)),
+				(Transform::from_xyz(0., 0., -2.), _Cell(Dir3::NEG_Z))
 			],
 			result.0
 		);
@@ -201,17 +199,18 @@ mod tests {
 	#[test]
 	fn add_scene_handle_with_transform_direction() {
 		let mut app = setup();
-		let direction = Direction3d::new(Vec3::new(1., 2., 3.)).unwrap();
+		let direction = Dir3::new(Vec3::new(1., 2., 3.)).unwrap();
 		let map_handle = add_map(&mut app, vec![vec![_Cell(direction)]]);
-		app.world.insert_resource(LoadLevelCommand(map_handle));
+		app.world_mut()
+			.insert_resource(LoadLevelCommand(map_handle));
 
 		app.update();
 
-		let result = app.world.resource::<_CellsResult>();
+		let result = app.world().resource::<_CellsResult>();
 
 		assert_eq!(
 			vec![(
-				Transform::from_xyz(0., 0., 0.).looking_to(direction.into(), Vec3::Y),
+				Transform::from_xyz(0., 0., 0.).looking_to(direction, Vec3::Y),
 				_Cell(direction)
 			),],
 			result.0
@@ -224,40 +223,29 @@ mod tests {
 		let map_handle = add_map(
 			&mut app,
 			vec![
-				vec![
-					_Cell(Direction3d::NEG_Z),
-					_Cell(Direction3d::NEG_Z),
-					_Cell(Direction3d::NEG_Z),
-				],
-				vec![
-					_Cell(Direction3d::NEG_Z),
-					_Cell(Direction3d::NEG_Z),
-					_Cell(Direction3d::NEG_Z),
-				],
-				vec![
-					_Cell(Direction3d::NEG_Z),
-					_Cell(Direction3d::NEG_Z),
-					_Cell(Direction3d::NEG_Z),
-				],
+				vec![_Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z)],
+				vec![_Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z)],
+				vec![_Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z)],
 			],
 		);
-		app.world.insert_resource(LoadLevelCommand(map_handle));
+		app.world_mut()
+			.insert_resource(LoadLevelCommand(map_handle));
 
 		app.update();
 
-		let result = app.world.resource::<_CellsResult>();
+		let result = app.world().resource::<_CellsResult>();
 
 		assert_eq!(
 			vec![
-				(Transform::from_xyz(4., 0., 4.), _Cell(Direction3d::NEG_Z)),
-				(Transform::from_xyz(0., 0., 4.), _Cell(Direction3d::NEG_Z)),
-				(Transform::from_xyz(-4., 0., 4.), _Cell(Direction3d::NEG_Z)),
-				(Transform::from_xyz(4., 0., 0.), _Cell(Direction3d::NEG_Z)),
-				(Transform::from_xyz(0., 0., 0.), _Cell(Direction3d::NEG_Z)),
-				(Transform::from_xyz(-4., 0., 0.), _Cell(Direction3d::NEG_Z)),
-				(Transform::from_xyz(4., 0., -4.), _Cell(Direction3d::NEG_Z)),
-				(Transform::from_xyz(0., 0., -4.), _Cell(Direction3d::NEG_Z)),
-				(Transform::from_xyz(-4., 0., -4.), _Cell(Direction3d::NEG_Z)),
+				(Transform::from_xyz(4., 0., 4.), _Cell(Dir3::NEG_Z)),
+				(Transform::from_xyz(0., 0., 4.), _Cell(Dir3::NEG_Z)),
+				(Transform::from_xyz(-4., 0., 4.), _Cell(Dir3::NEG_Z)),
+				(Transform::from_xyz(4., 0., 0.), _Cell(Dir3::NEG_Z)),
+				(Transform::from_xyz(0., 0., 0.), _Cell(Dir3::NEG_Z)),
+				(Transform::from_xyz(-4., 0., 0.), _Cell(Dir3::NEG_Z)),
+				(Transform::from_xyz(4., 0., -4.), _Cell(Dir3::NEG_Z)),
+				(Transform::from_xyz(0., 0., -4.), _Cell(Dir3::NEG_Z)),
+				(Transform::from_xyz(-4., 0., -4.), _Cell(Dir3::NEG_Z)),
 			],
 			result.0
 		);
@@ -269,29 +257,26 @@ mod tests {
 		let map_handle = add_map(
 			&mut app,
 			vec![
-				vec![_Cell(Direction3d::NEG_Z), _Cell(Direction3d::NEG_Z)],
-				vec![
-					_Cell(Direction3d::NEG_Z),
-					_Cell(Direction3d::NEG_Z),
-					_Cell(Direction3d::NEG_Z),
-				],
-				vec![_Cell(Direction3d::NEG_Z)],
+				vec![_Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z)],
+				vec![_Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z)],
+				vec![_Cell(Dir3::NEG_Z)],
 			],
 		);
-		app.world.insert_resource(LoadLevelCommand(map_handle));
+		app.world_mut()
+			.insert_resource(LoadLevelCommand(map_handle));
 
 		app.update();
 
-		let result = app.world.resource::<_CellsResult>();
+		let result = app.world().resource::<_CellsResult>();
 
 		assert_eq!(
 			vec![
-				(Transform::from_xyz(4., 0., 4.), _Cell(Direction3d::NEG_Z)),
-				(Transform::from_xyz(0., 0., 4.), _Cell(Direction3d::NEG_Z)),
-				(Transform::from_xyz(4., 0., 0.), _Cell(Direction3d::NEG_Z)),
-				(Transform::from_xyz(0., 0., 0.), _Cell(Direction3d::NEG_Z)),
-				(Transform::from_xyz(-4., 0., 0.), _Cell(Direction3d::NEG_Z)),
-				(Transform::from_xyz(4., 0., -4.), _Cell(Direction3d::NEG_Z)),
+				(Transform::from_xyz(4., 0., 4.), _Cell(Dir3::NEG_Z)),
+				(Transform::from_xyz(0., 0., 4.), _Cell(Dir3::NEG_Z)),
+				(Transform::from_xyz(4., 0., 0.), _Cell(Dir3::NEG_Z)),
+				(Transform::from_xyz(0., 0., 0.), _Cell(Dir3::NEG_Z)),
+				(Transform::from_xyz(-4., 0., 0.), _Cell(Dir3::NEG_Z)),
+				(Transform::from_xyz(4., 0., -4.), _Cell(Dir3::NEG_Z)),
 			],
 			result.0
 		);

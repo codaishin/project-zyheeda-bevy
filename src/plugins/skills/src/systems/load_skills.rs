@@ -20,10 +20,10 @@ mod tests {
 		app::{App, Update},
 		asset::{AssetId, Handle, LoadedFolder},
 		prelude::Resource,
-		utils::Uuid,
 	};
 	use common::{test_tools::utils::SingleThreadedApp, traits::load_asset::Path};
 	use mockall::{automock, predicate::eq};
+	use uuid::Uuid;
 
 	#[derive(Resource, Default)]
 	struct _Server {
@@ -61,7 +61,7 @@ mod tests {
 
 		app.update();
 
-		let skill_folder = app.world.resource::<SkillFolder>();
+		let skill_folder = app.world().resource::<SkillFolder>();
 
 		assert_eq!(&SkillFolder(handle), skill_folder);
 	}

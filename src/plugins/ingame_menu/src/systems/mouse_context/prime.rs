@@ -1,10 +1,10 @@
 use bevy::{
 	ecs::{
 		component::Component,
-		schedule::NextState,
 		system::{Query, Res, ResMut, Resource},
 	},
 	input::keyboard::KeyCode,
+	state::state::NextState,
 	ui::Interaction,
 };
 use common::{
@@ -46,8 +46,8 @@ mod test {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		ecs::schedule::{NextState, State},
 		input::keyboard::KeyCode,
+		state::{app::AppExtStates, state::State},
 		ui::Interaction,
 	};
 	use common::components::Side;
@@ -79,9 +79,9 @@ mod test {
 
 		app.init_state::<MouseContext>();
 		app.insert_resource(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyZ));
-		app.world
+		app.world_mut()
 			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::Pressed));
-		app.world
+		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
 
@@ -90,7 +90,7 @@ mod test {
 		app.update();
 
 		let mouse_context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.map(|s| s.get());
 
@@ -103,9 +103,9 @@ mod test {
 
 		app.init_state::<MouseContext>();
 		app.insert_resource(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyZ));
-		app.world
+		app.world_mut()
 			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::None));
-		app.world
+		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
 
@@ -114,7 +114,7 @@ mod test {
 		app.update();
 
 		let mouse_context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.map(|s| s.get());
 
@@ -127,9 +127,9 @@ mod test {
 
 		app.init_state::<MouseContext>();
 		app.insert_resource(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyT));
-		app.world
+		app.world_mut()
 			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::Pressed));
-		app.world
+		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
 
@@ -138,7 +138,7 @@ mod test {
 		app.update();
 
 		let mouse_context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.map(|s| s.get());
 

@@ -62,7 +62,7 @@ mod tests {
 		let mut app = App::new();
 		app.add_systems(Update, chase::<_MovementConfig>);
 		let foe = app
-			.world
+			.world_mut()
 			.spawn(GlobalTransform::from_translation(foe_position))
 			.id();
 
@@ -74,13 +74,13 @@ mod tests {
 		let foe_position = Vec3::new(1., 2., 3.);
 		let (mut app, foe) = setup(foe_position);
 		let chaser = app
-			.world
+			.world_mut()
 			.spawn((GlobalTransform::default(), Chase(foe), _MovementConfig(42.)))
 			.id();
 
 		app.update();
 
-		let chaser = app.world.entity(chaser);
+		let chaser = app.world().entity(chaser);
 
 		assert_eq!(
 			Some(&Velocity::linear(foe_position.normalize() * 42.)),
@@ -94,7 +94,7 @@ mod tests {
 		let (mut app, foe) = setup(foe_position);
 		let position = Vec3::new(4., 5., 6.);
 		let chaser = app
-			.world
+			.world_mut()
 			.spawn((
 				GlobalTransform::from_translation(position),
 				Chase(foe),
@@ -104,7 +104,7 @@ mod tests {
 
 		app.update();
 
-		let chaser = app.world.entity(chaser);
+		let chaser = app.world().entity(chaser);
 
 		assert_eq!(
 			Some(&Velocity::linear(
@@ -119,17 +119,17 @@ mod tests {
 		let foe_position = Vec3::new(1., 2., 3.);
 		let (mut app, foe) = setup(foe_position);
 		let chaser = app
-			.world
+			.world_mut()
 			.spawn((GlobalTransform::default(), Chase(foe), _MovementConfig(42.)))
 			.id();
 
 		app.update();
 
-		app.world.entity_mut(chaser).remove::<Chase>();
+		app.world_mut().entity_mut(chaser).remove::<Chase>();
 
 		app.update();
 
-		let chaser = app.world.entity(chaser);
+		let chaser = app.world().entity(chaser);
 
 		assert_eq!(Some(&Velocity::zero()), chaser.get::<Velocity>());
 	}
