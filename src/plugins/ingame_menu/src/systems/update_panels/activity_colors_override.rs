@@ -97,7 +97,10 @@ mod tests {
 		color::Color,
 		ecs::bundle::Bundle,
 		input::keyboard::KeyCode,
-		state::{app::AppExtStates, state::NextState},
+		state::{
+			app::{AppExtStates, StatesPlugin},
+			state::NextState,
+		},
 		utils::default,
 	};
 	use common::components::Side;
@@ -166,6 +169,7 @@ mod tests {
 			Update,
 			panel_activity_colors_override::<_Map, _Queue, _Panel>,
 		);
+		app.add_plugins(StatesPlugin);
 		app.init_state::<MouseContext>();
 		app.insert_resource(key_map);
 		let panel = app.world_mut().spawn(bundle).id();

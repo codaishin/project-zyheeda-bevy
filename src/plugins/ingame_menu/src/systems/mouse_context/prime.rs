@@ -47,7 +47,10 @@ mod test {
 	use bevy::{
 		app::{App, Update},
 		input::keyboard::KeyCode,
-		state::{app::AppExtStates, state::State},
+		state::{
+			app::{AppExtStates, StatesPlugin},
+			state::State,
+		},
 		ui::Interaction,
 	};
 	use common::components::Side;
@@ -73,19 +76,27 @@ mod test {
 		}
 	}
 
-	#[test]
-	fn prime() {
+	fn setup(map: _Map) -> App {
 		let mut app = App::new();
 
+		app.add_plugins(StatesPlugin);
 		app.init_state::<MouseContext>();
-		app.insert_resource(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyZ));
+		app.insert_resource(map);
+		app.add_systems(Update, prime_mouse_context::<_Map, _Panel>);
+
+		app
+	}
+
+	#[test]
+	fn prime() {
+		let mut app = setup(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyZ));
+
 		app.world_mut()
 			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::Pressed));
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
 
-		app.add_systems(Update, prime_mouse_context::<_Map, _Panel>);
 		app.update();
 		app.update();
 
@@ -99,17 +110,14 @@ mod test {
 
 	#[test]
 	fn do_not_prime_when_not_pressed() {
-		let mut app = App::new();
+		let mut app = setup(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyZ));
 
-		app.init_state::<MouseContext>();
-		app.insert_resource(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyZ));
 		app.world_mut()
 			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::None));
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
 
-		app.add_systems(Update, prime_mouse_context::<_Map, _Panel>);
 		app.update();
 		app.update();
 
@@ -123,17 +131,14 @@ mod test {
 
 	#[test]
 	fn prime_with_different_key() {
-		let mut app = App::new();
+		let mut app = setup(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyT));
 
-		app.init_state::<MouseContext>();
-		app.insert_resource(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyT));
 		app.world_mut()
 			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::Pressed));
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
 
-		app.add_systems(Update, prime_mouse_context::<_Map, _Panel>);
 		app.update();
 		app.update();
 

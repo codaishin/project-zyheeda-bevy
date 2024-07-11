@@ -16,7 +16,7 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		prelude::State,
-		state::app::AppExtStates,
+		state::app::{AppExtStates, StatesPlugin},
 	};
 
 	#[derive(Default, States, Debug, Hash, Eq, PartialEq, Clone)]
@@ -38,6 +38,7 @@ mod tests {
 	fn toggle_on() {
 		let mut app = App::new();
 
+		app.add_plugins(StatesPlugin);
 		app.init_state::<_State>();
 		app.add_systems(Update, set_state::<_State, _A>);
 		app.update();

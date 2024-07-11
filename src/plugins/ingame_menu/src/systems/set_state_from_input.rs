@@ -49,7 +49,7 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		state::app::AppExtStates,
+		state::app::{AppExtStates, StatesPlugin},
 	};
 	use common::{test_tools::utils::SingleThreadedApp, traits::iteration::Iter};
 
@@ -89,6 +89,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
+		app.add_plugins(StatesPlugin);
 		app.init_state::<_State>();
 		app.init_resource::<ButtonInput<KeyCode>>();
 		app.add_systems(Update, set_state_from_input::<_State>);
