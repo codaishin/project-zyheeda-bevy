@@ -52,7 +52,7 @@ impl Instantiate for Light<Wall> {
 
 		let light_on_material = assets.get_or_create_for::<WallLightOn>(|| StandardMaterial {
 			base_color: Color::WHITE,
-			emissive: Color::linear_rgb(14000.0, 14000.0, 14000.0).into(),
+			emissive: Color::linear_rgb(140.0, 140.0, 140.0).into(),
 			..default()
 		});
 		let light_off_material = assets.get_or_create_for::<WallLightOff>(|| StandardMaterial {

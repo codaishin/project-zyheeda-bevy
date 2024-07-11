@@ -1,6 +1,6 @@
 use super::LifeTime;
 use bevy::{
-	color::LinearRgba,
+	color::Color,
 	ecs::{component::Component, system::EntityCommands},
 	math::primitives::Sphere,
 	pbr::{PbrBundle, StandardMaterial},
@@ -41,8 +41,8 @@ impl Instantiate for GravityWell {
 		on: &mut EntityCommands,
 		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
-		let base_color = LinearRgba::new(0.1, 0.1, 0.44, 1.);
-		let emissive = base_color * 100.;
+		let base_color = Color::srgb(0.1, 0.1, 0.44);
+		let emissive = base_color.to_linear() * 100.;
 
 		on.insert((
 			LifeTime(Duration::from_secs(5)),
@@ -51,7 +51,7 @@ impl Instantiate for GravityWell {
 					Mesh::from(Sphere::new(GravityWell::RADIUS))
 				}),
 				material: assets.get_or_create_for::<GravityWell>(|| StandardMaterial {
-					base_color: base_color.into(),
+					base_color,
 					emissive,
 					alpha_mode: AlphaMode::Add,
 					..default()

@@ -86,7 +86,7 @@ impl Instantiate for VoidSphere {
 		let core_mesh =
 			assets.get_or_create_for::<VoidSphereCore>(|| sphere(VOID_SPHERE_INNER_RADIUS));
 		let ring_material = assets.get_or_create_for::<VoidSphereRing>(|| StandardMaterial {
-			emissive: Color::linear_rgb(23000.0, 23000.0, 23000.0).into(),
+			emissive: LinearRgba::new(23.0, 23.0, 23.0, 1.),
 			..default()
 		});
 		let ring_mesh = assets.get_or_create_for::<VoidSphereRing>(|| {
@@ -114,7 +114,7 @@ impl Instantiate for VoidSphere {
 				spawn: BeamConfig {
 					damage: 1,
 					color: Color::BLACK,
-					emissive: LinearRgba::new(23000.0, 23000.0, 23000.0, 1.),
+					emissive: LinearRgba::new(23.0, 23.0, 23.0, 1.),
 					lifetime: Duration::from_secs(1),
 					range: VoidSphere::ATTACK_RANGE,
 				}

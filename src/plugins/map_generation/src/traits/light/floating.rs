@@ -21,7 +21,7 @@ impl Instantiate for Light<Floating> {
 		let mesh = assets.get_or_create_for::<Light<Floating>>(|| sphere(radius));
 		let material = assets.get_or_create_for::<Light<Floating>>(|| StandardMaterial {
 			base_color: Color::WHITE,
-			emissive: Color::srgb(23000.0, 23000.0, 23000.0).into(),
+			emissive: Color::linear_rgb(230.0, 230.0, 230.0).into(),
 			..default()
 		});
 		let transform = Transform::from_xyz(0., 1.8, 0.);

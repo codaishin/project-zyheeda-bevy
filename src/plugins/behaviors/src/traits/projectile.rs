@@ -2,7 +2,7 @@ use super::ProjectileBehavior;
 use crate::components::{MovementConfig, MovementMode, Plasma, Projectile};
 use bevy::{
 	self,
-	color::LinearRgba,
+	color::Color,
 	hierarchy::BuildChildren,
 	math::{Dir3, Vec3},
 	pbr::{PbrBundle, PointLight, PointLightBundle, StandardMaterial},
@@ -42,10 +42,10 @@ impl Instantiate for Projectile<Plasma> {
 		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		let transform = Transform::from_translation(Vec3::ZERO);
-		let color = LinearRgba::new(0., 1., 1., 1.);
+		let color = Color::srgb(0., 1., 1.);
 		let mesh = assets.get_or_create_for::<Projectile<Plasma>>(|| sphere(PLASMA_RADIUS));
 		let material = assets.get_or_create_for::<Projectile<Plasma>>(|| StandardMaterial {
-			emissive: color * 230000.0,
+			emissive: color.to_linear() * 2300.0,
 			..default()
 		});
 
@@ -75,7 +75,7 @@ impl Instantiate for Projectile<Plasma> {
 			));
 			parent.spawn(PointLightBundle {
 				point_light: PointLight {
-					color: color.into(),
+					color,
 					intensity: 8000.,
 					shadows_enabled: true,
 					..default()

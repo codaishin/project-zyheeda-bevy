@@ -1,6 +1,6 @@
 use crate::components::ForceShield;
 use bevy::{
-	color::LinearRgba,
+	color::Color,
 	ecs::system::EntityCommands,
 	hierarchy::BuildChildren,
 	math::{primitives::Cuboid, Vec3},
@@ -24,10 +24,10 @@ impl Instantiate for ForceShield {
 			y: 0.6,
 			z: 0.01,
 		};
-		let base_color = LinearRgba::new(0.1, 0.1, 0.44, 1.);
-		let emissive = base_color * 100.;
+		let base_color = Color::srgb(0.1, 0.1, 0.44);
+		let emissive = base_color.to_linear() * 100.;
 		let material = assets.get_or_create_for::<ForceShield>(|| StandardMaterial {
-			base_color: base_color.into(),
+			base_color,
 			emissive,
 			alpha_mode: AlphaMode::Add,
 			..default()
