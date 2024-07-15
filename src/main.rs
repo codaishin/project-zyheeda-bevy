@@ -34,7 +34,7 @@ use project_zyheeda::systems::{
 use skills::SkillsPlugin;
 use std::f32::consts::PI;
 
-fn main() {
+fn main() -> AppExit {
 	let app = &mut App::new();
 
 	prepare_game(app);
@@ -42,7 +42,7 @@ fn main() {
 	#[cfg(debug_assertions)]
 	debug_utils::prepare_debug(app);
 
-	app.run();
+	app.run()
 }
 
 fn prepare_game(app: &mut App) {
