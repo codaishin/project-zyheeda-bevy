@@ -44,11 +44,11 @@ mod tests {
 	fn add_components_to_source() {
 		let mut app = setup();
 
-		let source = app.world.spawn(_Source).id();
+		let source = app.world_mut().spawn(_Source).id();
 
 		app.update();
 
-		let source = app.world.entity(source);
+		let source = app.world().entity(source);
 
 		assert_eq!(
 			(true, true, Some(&ActiveEvents::COLLISION_EVENTS)),
@@ -64,11 +64,11 @@ mod tests {
 	fn do_not_add_components_to_non_sources() {
 		let mut app = setup();
 
-		let source = app.world.spawn_empty().id();
+		let source = app.world_mut().spawn_empty().id();
 
 		app.update();
 
-		let source = app.world.entity(source);
+		let source = app.world().entity(source);
 
 		assert_eq!(
 			(false, false, None),
@@ -84,17 +84,19 @@ mod tests {
 	fn add_components_only_when_first_adding_source() {
 		let mut app = setup();
 
-		let source = app.world.spawn(_Source).id();
+		let source = app.world_mut().spawn(_Source).id();
 
 		app.update();
 
-		app.world.entity_mut(source).remove::<CollidingEntities>();
-		app.world.entity_mut(source).remove::<Sensor>();
-		app.world.entity_mut(source).remove::<ActiveEvents>();
+		app.world_mut()
+			.entity_mut(source)
+			.remove::<CollidingEntities>();
+		app.world_mut().entity_mut(source).remove::<Sensor>();
+		app.world_mut().entity_mut(source).remove::<ActiveEvents>();
 
 		app.update();
 
-		let source = app.world.entity(source);
+		let source = app.world().entity(source);
 
 		assert_eq!(
 			(false, false, None),

@@ -58,7 +58,7 @@ mod tests {
 	fn swap_items() {
 		let mut app = App::new();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Inventory::<Handle<Skill>>::new([
 					Some(Item {
@@ -78,7 +78,7 @@ mod tests {
 		app.add_systems(Update, swap_inventory_items);
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 		let inventory = agent.get::<Inventory<Handle<Skill>>>().unwrap();
 
 		assert_eq!(
@@ -101,7 +101,7 @@ mod tests {
 	fn swap_items_out_or_range() {
 		let mut app = App::new();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Inventory::<Handle<Skill>>::new([Some(Item {
 					name: "item",
@@ -114,7 +114,7 @@ mod tests {
 		app.add_systems(Update, swap_inventory_items);
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 		let inventory = agent.get::<Inventory<Handle<Skill>>>().unwrap();
 
 		assert_eq!(
@@ -134,7 +134,7 @@ mod tests {
 	fn swap_items_index_and_len_are_same() {
 		let mut app = App::new();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Inventory::<Handle<Skill>>::new([Some(Item {
 					name: "item",
@@ -147,7 +147,7 @@ mod tests {
 		app.add_systems(Update, swap_inventory_items);
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 		let inventory = agent.get::<Inventory<Handle<Skill>>>().unwrap();
 
 		assert_eq!(
@@ -166,7 +166,7 @@ mod tests {
 	fn remove_swap_collection() {
 		let mut app = App::new();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Inventory::<Handle<Skill>>::new([]),
 				Collection::<Swap<InventoryKey, InventoryKey>>::new([]),
@@ -176,7 +176,7 @@ mod tests {
 		app.add_systems(Update, swap_inventory_items);
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert!(!agent.contains::<Collection<Swap<InventoryKey, InventoryKey>>>());
 	}

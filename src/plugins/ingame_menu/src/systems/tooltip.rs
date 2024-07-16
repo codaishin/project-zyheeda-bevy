@@ -232,9 +232,10 @@ mod tests {
 			});
 
 		let mut app = setup(ui_control);
-		app.world.spawn(_Window(Some(Vec2 { x: 33., y: 66. })));
+		app.world_mut()
+			.spawn(_Window(Some(Vec2 { x: 33., y: 66. })));
 		let tooltip_id = app
-			.world
+			.world_mut()
 			.spawn((
 				Tooltip(_T {
 					content: "My Content",
@@ -251,7 +252,7 @@ mod tests {
 				tooltip: "My Content",
 				position: Vec2 { x: 33., y: 66. }
 			}),
-			app.world.get_resource::<_Spawn>()
+			app.world().get_resource::<_Spawn>()
 		);
 	}
 
@@ -264,8 +265,8 @@ mod tests {
 		ui_control.mock.expect_spawn().never().return_const(());
 
 		let mut app = setup(ui_control);
-		app.world.spawn(_Window(Some(default())));
-		app.world
+		app.world_mut().spawn(_Window(Some(default())));
+		app.world_mut()
 			.spawn((Tooltip(_T { content: "" }), Interaction::None));
 
 		app.update();
@@ -280,8 +281,8 @@ mod tests {
 		ui_control.mock.expect_spawn().times(1).return_const(());
 
 		let mut app = setup(ui_control);
-		app.world.spawn(_Window(Some(default())));
-		app.world
+		app.world_mut().spawn(_Window(Some(default())));
+		app.world_mut()
 			.spawn((Tooltip(_T { content: "" }), Interaction::Hovered));
 
 		app.update();
@@ -297,15 +298,15 @@ mod tests {
 		ui_control.mock.expect_spawn().times(1).return_const(());
 
 		let mut app = setup(ui_control);
-		app.world.spawn(_Window(Some(default())));
+		app.world_mut().spawn(_Window(Some(default())));
 		let tooltip = app
-			.world
+			.world_mut()
 			.spawn((Tooltip(_T { content: "" }), Interaction::None))
 			.id();
 
 		app.update();
 
-		let mut tooltip = app.world.entity_mut(tooltip);
+		let mut tooltip = app.world_mut().entity_mut(tooltip);
 		let mut interaction = tooltip.get_mut::<Interaction>().unwrap();
 		*interaction = Interaction::Hovered;
 
@@ -328,7 +329,8 @@ mod tests {
 			.return_const(());
 
 		let mut app = setup(ui_control);
-		app.world.spawn(_Window(Some(Vec2 { x: 33., y: 66. })));
+		app.world_mut()
+			.spawn(_Window(Some(Vec2 { x: 33., y: 66. })));
 
 		app.update();
 	}
@@ -346,8 +348,8 @@ mod tests {
 			.return_const(());
 
 		let mut app = setup(ui_control);
-		app.world.spawn(_Window(Some(default())));
-		app.world
+		app.world_mut().spawn(_Window(Some(default())));
+		app.world_mut()
 			.spawn((Tooltip(_T { content: "" }), Interaction::Hovered));
 
 		app.update();
@@ -369,13 +371,13 @@ mod tests {
 
 		let mut app = setup(ui_control);
 
-		app.world.spawn(_Window(Some(default())));
-		app.world
+		app.world_mut().spawn(_Window(Some(default())));
+		app.world_mut()
 			.spawn((Tooltip(_T { content: "" }), Interaction::Hovered));
 
 		app.update();
 
-		assert!(app.world.get_resource::<_DespawnAll>().is_some());
+		assert!(app.world().get_resource::<_DespawnAll>().is_some());
 	}
 
 	#[test]
@@ -392,7 +394,7 @@ mod tests {
 
 		let mut app = setup(ui_control);
 
-		app.world.spawn(_Window(Some(default())));
+		app.world_mut().spawn(_Window(Some(default())));
 
 		app.update();
 	}
@@ -409,13 +411,13 @@ mod tests {
 
 		let mut app = setup(ui_control);
 
-		app.world.spawn(_Window(Some(default())));
+		app.world_mut().spawn(_Window(Some(default())));
 		let tooltip = app
-			.world
+			.world_mut()
 			.spawn((Tooltip(_T { content: "" }), Interaction::Hovered))
 			.id();
 
-		app.world
+		app.world_mut()
 			.resource_mut::<_UIControl>()
 			.mock
 			.expect_despawn_outdated()
@@ -425,13 +427,13 @@ mod tests {
 
 		app.update();
 
-		app.world.entity_mut(tooltip).despawn();
+		app.world_mut().entity_mut(tooltip).despawn();
 
 		app.update();
 
 		assert_eq!(
 			Some(&_DespawnOutdated(vec![tooltip])),
-			app.world.get_resource::<_DespawnOutdated>()
+			app.world().get_resource::<_DespawnOutdated>()
 		);
 	}
 
@@ -449,8 +451,8 @@ mod tests {
 
 		let mut app = setup(ui_control);
 
-		app.world.spawn(_Window(Some(default())));
-		app.world
+		app.world_mut().spawn(_Window(Some(default())));
+		app.world_mut()
 			.spawn((Tooltip(_T { content: "" }), Interaction::Hovered));
 
 		app.update();

@@ -1,278 +1,292 @@
 use crate::{
 	animation::PlayMode,
 	components::Animator,
-	resource::AnimationClips,
 	traits::{
 		AnimationPath,
 		AnimationPlayMode,
 		HighestPriorityAnimation,
+		IsPlaying,
 		RepeatAnimation,
 		ReplayAnimation,
 	},
+	Res,
 };
-use bevy::ecs::{
-	change_detection::DetectChanges,
-	component::Component,
-	system::{Query, Res},
-	world::Ref,
-};
-use common::traits::load_asset::Path;
+use bevy::prelude::{Changed, Component, Query, With};
+use common::{resources::Shared, traits::load_asset::Path};
 
-pub(crate) fn play_animation_clip<
-	TAnimation: AnimationPath + AnimationPlayMode + Sync + Send + 'static,
-	TAnimationDispatch: Component + HighestPriorityAnimation<TAnimation>,
-	TAnimationPlayer: Component + RepeatAnimation + ReplayAnimation,
->(
-	clips: Res<AnimationClips<Path>>,
-	agents: Query<(Ref<TAnimationDispatch>, Ref<Animator>)>,
-	mut players: Query<&mut TAnimationPlayer>,
-) {
-	for (dispatch, animator) in &agents {
-		play_animation(&mut players, dispatch, animator, &clips);
+type AgentQuery<'a, 'b, 'c, 'd, TAgent, TDispatch> =
+	Query<'a, 'b, (&'c Animator, &'d TDispatch), (With<TAgent>, Changed<TDispatch>)>;
+
+pub(crate) fn play_animation_clip<TAgent, TAnimation, TDispatch, TIndex, TPlayer, TTransitions>(
+	agents: AgentQuery<TAgent, TDispatch>,
+	mut players: Query<(&mut TPlayer, &mut TTransitions)>,
+	animations: Res<Shared<Path, TIndex>>,
+) where
+	TAgent: Component,
+	TAnimation: AnimationPlayMode + AnimationPath,
+	TDispatch: Component + HighestPriorityAnimation<TAnimation>,
+	TIndex: Clone + Sync + Send + 'static,
+	TPlayer: Component,
+	TTransitions: Component,
+	for<'a> (&'a mut TPlayer, &'a mut TTransitions):
+		ReplayAnimation<TIndex> + RepeatAnimation<TIndex> + IsPlaying<TIndex>,
+{
+	for (animator, dispatch) in &agents {
+		let Some(animation) = dispatch.highest_priority_animation() else {
+			continue;
+		};
+		let Some(index) = animations.get(animation.animation_path()) else {
+			continue;
+		};
+		let Ok((mut player, mut transition)) = players.get_mut(animator.animation_player) else {
+			continue;
+		};
+		let mut player = (player.as_mut(), transition.as_mut());
+
+		if player.is_playing(index.clone()) {
+			continue;
+		}
+
+		match animation.animation_play_mode() {
+			PlayMode::Replay => player.replay(index.clone()),
+			PlayMode::Repeat => player.repeat(index.clone()),
+		}
 	}
-}
-
-fn play_animation<
-	TAnimation: AnimationPath + AnimationPlayMode + Sync + Send + 'static,
-	TAnimationDispatch: Component + HighestPriorityAnimation<TAnimation>,
-	TAnimationPlayer: Component + RepeatAnimation + ReplayAnimation,
->(
-	players: &mut Query<&mut TAnimationPlayer, ()>,
-	dispatch: Ref<TAnimationDispatch>,
-	animator: Ref<Animator>,
-	clips: &Res<AnimationClips<Path>>,
-) {
-	if !dispatch.is_changed() && !animator.is_changed() {
-		return;
-	}
-	let Some(animation) = dispatch.highest_priority_animation() else {
-		return;
-	};
-	let Some(player_id) = animator.animation_player_id else {
-		return;
-	};
-	let Ok(mut player) = players.get_mut(player_id) else {
-		return;
-	};
-	let Some(clip) = clips.0.get(animation.animation_path()) else {
-		return;
-	};
-
-	match animation.animation_play_mode() {
-		PlayMode::Repeat => player.repeat(clip),
-		PlayMode::Replay => player.replay(clip),
-	};
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::animation::PlayMode;
+	use crate::{animation::PlayMode, components::Animator};
 	use bevy::{
-		animation::AnimationClip,
 		app::{App, Update},
-		asset::{AssetId, Handle},
-		utils::Uuid,
+		prelude::Component,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{
+		resources::Shared,
+		test_tools::utils::SingleThreadedApp,
+		traits::load_asset::Path,
+	};
 	use mockall::{mock, predicate::eq};
-	use std::collections::HashMap;
 
-	struct _Animation(Path, PlayMode);
+	#[derive(Component)]
+	struct _Agent;
 
-	impl AnimationPath for _Animation {
-		fn animation_path(&self) -> &Path {
-			&self.0
-		}
+	#[derive(Component)]
+	struct _Animation {
+		play_mode: PlayMode,
+		path: Path,
 	}
 
 	impl AnimationPlayMode for _Animation {
 		fn animation_play_mode(&self) -> PlayMode {
-			self.1
+			self.play_mode
 		}
 	}
 
-	#[derive(Component)]
-	struct _AnimationDispatch(Option<_Animation>);
+	impl AnimationPath for _Animation {
+		fn animation_path(&self) -> &Path {
+			&self.path
+		}
+	}
 
-	impl HighestPriorityAnimation<_Animation> for _AnimationDispatch {
+	#[derive(Component, Default)]
+	struct _Dispatch(Option<_Animation>);
+
+	impl HighestPriorityAnimation<_Animation> for _Dispatch {
 		fn highest_priority_animation(&self) -> Option<&_Animation> {
 			self.0.as_ref()
 		}
 	}
 
+	#[derive(Component, Clone, Debug, PartialEq)]
+	struct _Index(&'static str);
+
+	#[derive(Component, Debug, PartialEq)]
+	struct _Player;
+
 	#[derive(Component, Default)]
-	struct _AnimationPlayer {
-		mock: Mock_AnimationPlayer,
-	}
-
-	impl ReplayAnimation for _AnimationPlayer {
-		fn replay(&mut self, animation: &Handle<AnimationClip>) {
-			self.mock.replay(animation)
-		}
-	}
-
-	impl RepeatAnimation for _AnimationPlayer {
-		fn repeat(&mut self, animation: &Handle<AnimationClip>) {
-			self.mock.repeat(animation)
-		}
+	struct _Transitions {
+		mock: Mock_Transitions,
 	}
 
 	mock! {
-		_AnimationPlayer {}
-		impl ReplayAnimation for _AnimationPlayer {
-			fn replay(&mut self, animation: &Handle<AnimationClip>);
+		_Transitions {}
+		impl IsPlaying<_Index> for _Transitions{
+			fn is_playing(&self, index: _Index) -> bool;
 		}
-		impl RepeatAnimation for _AnimationPlayer {
-			fn repeat(&mut self, animation: &Handle<AnimationClip>);
+		impl ReplayAnimation<_Index> for _Transitions {
+			fn replay(&mut self, index: _Index);
+		}
+		impl RepeatAnimation<_Index> for _Transitions {
+			fn repeat(&mut self, index: _Index);
 		}
 	}
 
-	fn setup() -> App {
+	impl<'a> IsPlaying<_Index> for (&'a mut _Player, &'a mut _Transitions) {
+		fn is_playing(&self, index: _Index) -> bool {
+			self.1.mock.is_playing(index)
+		}
+	}
+
+	impl<'a> ReplayAnimation<_Index> for (&'a mut _Player, &'a mut _Transitions) {
+		fn replay(&mut self, index: _Index) {
+			self.1.mock.replay(index)
+		}
+	}
+
+	impl<'a> RepeatAnimation<_Index> for (&'a mut _Player, &'a mut _Transitions) {
+		fn repeat(&mut self, index: _Index) {
+			self.1.mock.repeat(index)
+		}
+	}
+
+	fn setup<const N: usize>(animations: [(Path, _Index); N]) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.init_resource::<AnimationClips<Path>>();
+		app.insert_resource(Shared::new(animations));
 		app.add_systems(
 			Update,
-			play_animation_clip::<_Animation, _AnimationDispatch, _AnimationPlayer>,
+			play_animation_clip::<_Agent, _Animation, _Dispatch, _Index, _Player, _Transitions>,
 		);
 
 		app
 	}
 
 	#[test]
-	fn repeat_animation() {
-		let mut app = setup();
-		let mut player = _AnimationPlayer::default();
-
-		let path = Path::from("a/path");
-		let clip = Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
-		let dispatch = _AnimationDispatch(Some(_Animation(path.clone(), PlayMode::Repeat)));
-
-		app.insert_resource(AnimationClips(HashMap::from([(path, clip.clone())])));
-
-		player.mock.expect_replay().return_const(());
-		player
-			.mock
-			.expect_repeat()
-			.times(1)
-			.with(eq(clip))
-			.return_const(());
-		let player = app.world.spawn(player).id();
-
-		app.world.spawn((
-			dispatch,
-			Animator {
-				animation_player_id: Some(player),
-			},
-		));
-		app.update();
-	}
-
-	#[test]
-	fn replay_animation() {
-		let mut app = setup();
-		let mut player = _AnimationPlayer::default();
-
-		let path = Path::from("my/path");
-		let clip = Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
-		let dispatch = _AnimationDispatch(Some(_Animation(path.clone(), PlayMode::Replay)));
-
-		app.insert_resource(AnimationClips(HashMap::from([(path, clip.clone())])));
-
-		player.mock.expect_repeat().return_const(());
-		player
+	fn replay_clip() {
+		let mut app = setup([(Path::from("my/path"), _Index("my/path"))]);
+		let mut transitions = _Transitions::default();
+		transitions.mock.expect_is_playing().return_const(false);
+		transitions.mock.expect_repeat().never().return_const(());
+		transitions
 			.mock
 			.expect_replay()
 			.times(1)
-			.with(eq(clip))
+			.with(eq(_Index("my/path")))
 			.return_const(());
-		let player = app.world.spawn(player).id();
 
-		app.world.spawn((
-			dispatch,
-			Animator {
-				animation_player_id: Some(player),
-			},
+		let animation_player = app.world_mut().spawn((_Player, transitions)).id();
+		app.world_mut().spawn((
+			_Agent,
+			Animator { animation_player },
+			_Dispatch(Some(_Animation {
+				play_mode: PlayMode::Replay,
+				path: Path::from("my/path"),
+			})),
 		));
+
 		app.update();
 	}
 
 	#[test]
-	fn only_repeat_when_dispatch_changed() {
-		let mut app = setup();
-		let mut player = _AnimationPlayer::default();
+	fn repeat_clip() {
+		let mut app = setup([(Path::from("my/path"), _Index("my/path"))]);
+		let mut transitions = _Transitions::default();
+		transitions.mock.expect_is_playing().return_const(false);
+		transitions.mock.expect_replay().never().return_const(());
+		transitions
+			.mock
+			.expect_repeat()
+			.times(1)
+			.with(eq(_Index("my/path")))
+			.return_const(());
 
-		let path_1 = Path::from("path/1");
-		let path_2 = Path::from("path/2");
-		let dispatch = _AnimationDispatch(Some(_Animation(path_1.clone(), PlayMode::Repeat)));
+		let animation_player = app.world_mut().spawn((_Player, transitions)).id();
+		app.world_mut().spawn((
+			_Agent,
+			Animator { animation_player },
+			_Dispatch(Some(_Animation {
+				play_mode: PlayMode::Repeat,
+				path: Path::from("my/path"),
+			})),
+		));
 
-		app.insert_resource(AnimationClips(HashMap::from([
-			(path_1, Handle::default()),
-			(path_2.clone(), Handle::default()),
-		])));
-
-		player.mock.expect_replay().return_const(());
-		player.mock.expect_repeat().times(2).return_const(());
-		let player = app.world.spawn(player).id();
-
-		let agent = app
-			.world
-			.spawn((
-				dispatch,
-				Animator {
-					animation_player_id: Some(player),
-				},
-			))
-			.id();
-		app.update();
-		app.update();
-
-		app.world
-			.entity_mut(agent)
-			.get_mut::<_AnimationDispatch>()
-			.unwrap()
-			.0 = Some(_Animation(path_2, PlayMode::Repeat));
 		app.update();
 	}
 
 	#[test]
-	fn also_repeat_when_animator_changed() {
-		let mut app = setup();
-		let mut player = _AnimationPlayer::default();
+	fn do_not_play_when_already_playing() {
+		let mut app = setup([(Path::from("my/path"), _Index("my/path"))]);
+		let mut transitions = _Transitions::default();
+		transitions
+			.mock
+			.expect_is_playing()
+			.with(eq(_Index("my/path")))
+			.return_const(true);
+		transitions.mock.expect_is_playing().return_const(false);
+		transitions.mock.expect_replay().never().return_const(());
+		transitions.mock.expect_repeat().never().return_const(());
 
-		let path_1 = Path::from("path/a");
-		let path_2 = Path::from("path/b");
-		let dispatch = _AnimationDispatch(Some(_Animation(path_1.clone(), PlayMode::Repeat)));
+		let animation_player = app.world_mut().spawn((_Player, transitions)).id();
+		app.world_mut().spawn((
+			_Agent,
+			Animator { animation_player },
+			_Dispatch(Some(_Animation {
+				play_mode: PlayMode::Repeat,
+				path: Path::from("my/path"),
+			})),
+		));
 
-		app.insert_resource(AnimationClips(HashMap::from([
-			(path_1, Handle::default()),
-			(path_2, Handle::default()),
-		])));
+		app.update();
+	}
 
-		player.mock.expect_replay().return_const(());
-		player.mock.expect_repeat().times(1).return_const(());
-		let player = app.world.spawn(player).id();
+	#[test]
+	fn only_play_when_dispatch_changed() {
+		let mut app = setup([(Path::from("my/path"), _Index("my/path"))]);
+		let mut transitions = _Transitions::default();
+		transitions.mock.expect_is_playing().return_const(false);
+		transitions.mock.expect_replay().times(1).return_const(());
+		transitions.mock.expect_repeat().times(1).return_const(());
 
+		let animation_player = app.world_mut().spawn((_Player, transitions)).id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
-				dispatch,
-				Animator {
-					animation_player_id: None,
-				},
+				_Agent,
+				Animator { animation_player },
+				_Dispatch(Some(_Animation {
+					play_mode: PlayMode::Replay,
+					path: Path::from("my/path"),
+				})),
 			))
 			.id();
+
+		app.update();
 		app.update();
 
-		app.world
+		app.world_mut()
 			.entity_mut(agent)
-			.get_mut::<Animator>()
+			.get_mut::<_Dispatch>()
 			.unwrap()
-			.animation_player_id = Some(player);
+			.0 = Some(_Animation {
+			play_mode: PlayMode::Repeat,
+			path: Path::from("my/path"),
+		});
+
+		app.update();
+	}
+
+	#[test]
+	fn do_nothing_when_agent_component_missing() {
+		let mut app = setup([(Path::from("my/path"), _Index("my/path"))]);
+		let mut transitions = _Transitions::default();
+		transitions
+			.mock
+			.expect_is_playing()
+			.never()
+			.return_const(false);
+		transitions.mock.expect_replay().never().return_const(());
+		transitions.mock.expect_repeat().never().return_const(());
+
+		let animation_player = app.world_mut().spawn((_Player, transitions)).id();
+		app.world_mut().spawn((
+			Animator { animation_player },
+			_Dispatch(Some(_Animation {
+				play_mode: PlayMode::Repeat,
+				path: Path::from("my/path"),
+			})),
+		));
+
 		app.update();
 	}
 }

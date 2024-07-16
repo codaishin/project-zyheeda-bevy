@@ -1,10 +1,10 @@
 use bevy::{
 	ecs::{
 		component::Component,
-		schedule::NextState,
 		system::{Query, Res, ResMut, Resource},
 	},
 	input::keyboard::KeyCode,
+	state::state::NextState,
 	ui::Interaction,
 };
 use common::{
@@ -46,8 +46,11 @@ mod test {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		ecs::schedule::{NextState, State},
 		input::keyboard::KeyCode,
+		state::{
+			app::{AppExtStates, StatesPlugin},
+			state::State,
+		},
 		ui::Interaction,
 	};
 	use common::components::Side;
@@ -73,24 +76,32 @@ mod test {
 		}
 	}
 
-	#[test]
-	fn prime() {
+	fn setup(map: _Map) -> App {
 		let mut app = App::new();
 
+		app.add_plugins(StatesPlugin);
 		app.init_state::<MouseContext>();
-		app.insert_resource(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyZ));
-		app.world
+		app.insert_resource(map);
+		app.add_systems(Update, prime_mouse_context::<_Map, _Panel>);
+
+		app
+	}
+
+	#[test]
+	fn prime() {
+		let mut app = setup(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyZ));
+
+		app.world_mut()
 			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::Pressed));
-		app.world
+		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
 
-		app.add_systems(Update, prime_mouse_context::<_Map, _Panel>);
 		app.update();
 		app.update();
 
 		let mouse_context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.map(|s| s.get());
 
@@ -99,22 +110,19 @@ mod test {
 
 	#[test]
 	fn do_not_prime_when_not_pressed() {
-		let mut app = App::new();
+		let mut app = setup(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyZ));
 
-		app.init_state::<MouseContext>();
-		app.insert_resource(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyZ));
-		app.world
+		app.world_mut()
 			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::None));
-		app.world
+		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
 
-		app.add_systems(Update, prime_mouse_context::<_Map, _Panel>);
 		app.update();
 		app.update();
 
 		let mouse_context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.map(|s| s.get());
 
@@ -123,22 +131,19 @@ mod test {
 
 	#[test]
 	fn prime_with_different_key() {
-		let mut app = App::new();
+		let mut app = setup(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyT));
 
-		app.init_state::<MouseContext>();
-		app.insert_resource(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyT));
-		app.world
+		app.world_mut()
 			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::Pressed));
-		app.world
+		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
 
-		app.add_systems(Update, prime_mouse_context::<_Map, _Panel>);
 		app.update();
 		app.update();
 
 		let mouse_context = app
-			.world
+			.world()
 			.get_resource::<State<MouseContext>>()
 			.map(|s| s.get());
 

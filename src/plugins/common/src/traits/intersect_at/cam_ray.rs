@@ -1,11 +1,11 @@
 use super::IntersectAt;
 use crate::resources::CamRay;
-use bevy::math::{primitives::Plane3d, Vec3};
+use bevy::{math::Vec3, prelude::InfinitePlane3d};
 
 impl IntersectAt for CamRay {
 	fn intersect_at(&self, height: f32) -> Option<Vec3> {
 		let ray = self.0?;
-		let toi = ray.intersect_plane(Vec3::new(0., height, 0.), Plane3d::new(Vec3::Y))?;
+		let toi = ray.intersect_plane(Vec3::new(0., height, 0.), InfinitePlane3d::new(Vec3::Y))?;
 
 		Some(ray.origin + ray.direction * toi)
 	}

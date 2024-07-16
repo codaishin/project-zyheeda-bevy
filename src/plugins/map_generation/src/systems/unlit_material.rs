@@ -43,20 +43,20 @@ mod tests {
 	fn set_material_unlit() {
 		let mut app = setup();
 		let material = app
-			.world
+			.world_mut()
 			.resource_mut::<Assets<StandardMaterial>>()
 			.add(StandardMaterial {
 				unlit: false,
 				..default()
 			});
-		app.world.spawn((material.clone(), Unlit));
+		app.world_mut().spawn((material.clone(), Unlit));
 
 		app.update();
 
 		let material = app
-			.world
+			.world()
 			.resource::<Assets<StandardMaterial>>()
-			.get(material);
+			.get(&material);
 
 		assert_eq!(Some(true), material.map(|m| m.unlit));
 	}
@@ -65,28 +65,28 @@ mod tests {
 	fn do_not_set_material_unlit_when_not_new() {
 		let mut app = setup();
 		let material = app
-			.world
+			.world_mut()
 			.resource_mut::<Assets<StandardMaterial>>()
 			.add(StandardMaterial {
 				unlit: false,
 				..default()
 			});
-		app.world.spawn((material.clone(), Unlit));
+		app.world_mut().spawn((material.clone(), Unlit));
 
 		app.update();
 
-		app.world
+		app.world_mut()
 			.resource_mut::<Assets<StandardMaterial>>()
-			.get_mut(material.clone())
+			.get_mut(&material)
 			.unwrap()
 			.unlit = false;
 
 		app.update();
 
 		let material = app
-			.world
+			.world()
 			.resource::<Assets<StandardMaterial>>()
-			.get(material);
+			.get(&material);
 
 		assert_eq!(Some(false), material.map(|m| m.unlit));
 	}

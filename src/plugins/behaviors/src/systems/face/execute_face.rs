@@ -137,13 +137,13 @@ mod tests {
 			.return_const(Vec3::new(1., 2., 3.));
 		let mut app = setup(cursor);
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor)))
 			.id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(1., 2., 3.), Vec3::Y)),
@@ -159,11 +159,11 @@ mod tests {
 			.expect_intersect_at()
 			.return_const(Vec3::new(1., 2., 3.));
 		let mut app = setup(cursor);
-		let agent = app.world.spawn(Transform::from_xyz(4., 5., 6.)).id();
+		let agent = app.world_mut().spawn(Transform::from_xyz(4., 5., 6.)).id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.)),
@@ -181,7 +181,7 @@ mod tests {
 			.times(1)
 			.return_const(None);
 		let mut app = setup(cursor);
-		app.world.spawn(Transform::from_xyz(4., 5., 6.));
+		app.world_mut().spawn(Transform::from_xyz(4., 5., 6.));
 
 		app.update();
 	}
@@ -196,12 +196,15 @@ mod tests {
 		let mut app = setup(cursor);
 
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor)))
 			.id();
 
-		let root = app.world.spawn(Transform::from_xyz(10., 11., 12.)).id();
-		let collider = app.world.spawn(ColliderRoot(root)).id();
+		let root = app
+			.world_mut()
+			.spawn(Transform::from_xyz(10., 11., 12.))
+			.id();
+		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
 		app.insert_resource(MouseHover(Some(ColliderInfo {
 			collider,
 			root: Some(root),
@@ -209,7 +212,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
@@ -227,11 +230,14 @@ mod tests {
 		let mut app = setup(cursor);
 
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor)))
 			.id();
 
-		let collider = app.world.spawn(Transform::from_xyz(10., 11., 12.)).id();
+		let collider = app
+			.world_mut()
+			.spawn(Transform::from_xyz(10., 11., 12.))
+			.id();
 		app.insert_resource(MouseHover(Some(ColliderInfo {
 			collider,
 			root: None,
@@ -239,7 +245,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
@@ -256,10 +262,13 @@ mod tests {
 			.return_const(Vec3::new(1., 2., 3.));
 		let mut app = setup(cursor);
 
-		let root = app.world.spawn(Transform::from_xyz(10., 11., 12.)).id();
-		let collider = app.world.spawn(ColliderRoot(root)).id();
+		let root = app
+			.world_mut()
+			.spawn(Transform::from_xyz(10., 11., 12.))
+			.id();
+		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Transform::from_xyz(4., 5., 6.),
 				_Face(Face::Entity(collider)),
@@ -268,7 +277,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
@@ -285,9 +294,12 @@ mod tests {
 			.return_const(Vec3::new(1., 2., 3.));
 		let mut app = setup(cursor);
 
-		let collider = app.world.spawn(Transform::from_xyz(10., 11., 12.)).id();
+		let collider = app
+			.world_mut()
+			.spawn(Transform::from_xyz(10., 11., 12.))
+			.id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Transform::from_xyz(4., 5., 6.),
 				_Face(Face::Entity(collider)),
@@ -296,7 +308,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
@@ -314,7 +326,7 @@ mod tests {
 		let mut app = setup(cursor);
 
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Transform::from_xyz(4., 5., 6.),
 				_Face(Face::Translation(Vec3::new(10., 11., 12.))),
@@ -323,7 +335,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
@@ -340,7 +352,7 @@ mod tests {
 			.return_const(Vec3::new(1., 2., 3.));
 		let mut app = setup(cursor);
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Transform::from_xyz(4., 5., 6.),
 				_Face(Face::Cursor),
@@ -350,7 +362,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.)),
@@ -368,12 +380,12 @@ mod tests {
 		let mut app = setup(cursor);
 
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor)))
 			.id();
 
 		let collider = app
-			.world
+			.world_mut()
 			.spawn((Transform::from_xyz(10., 11., 12.), Immobilized))
 			.id();
 		app.insert_resource(MouseHover(Some(ColliderInfo {
@@ -383,7 +395,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),

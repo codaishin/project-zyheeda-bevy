@@ -50,7 +50,7 @@ mod tests {
 		app.update();
 
 		let spawned = app
-			.world
+			.world()
 			.iter_entities()
 			.find_map(|e| Some((e.get::<_Spawned>()?, e.get::<Transform>()?)));
 

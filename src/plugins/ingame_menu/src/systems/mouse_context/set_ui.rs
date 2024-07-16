@@ -1,8 +1,6 @@
 use bevy::{
-	ecs::{
-		schedule::{NextState, State},
-		system::{Query, Res, ResMut},
-	},
+	ecs::system::{Query, Res, ResMut},
+	state::state::{NextState, State},
 	ui::Interaction,
 };
 use common::states::MouseContext;
@@ -34,7 +32,7 @@ fn primed_or_triggered(context: &MouseContext) -> bool {
 }
 
 fn next_already_set(next_state: &ResMut<NextState<MouseContext>>) -> bool {
-	matches!(&next_state.0, Some(next_state) if next_state != &MouseContext::Default)
+	matches!(next_state.as_ref() , NextState::Pending(next_state) if next_state != &MouseContext::Default)
 }
 
 fn is_none(interaction: &Interaction) -> bool {
@@ -46,19 +44,43 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		ecs::schedule::{IntoSystemConfigs, State},
+		ecs::schedule::IntoSystemConfigs,
 		input::keyboard::KeyCode,
+		state::app::{AppExtStates, StatesPlugin},
 		ui::Interaction,
 	};
 
-	#[test]
-	fn set_context_ui_when_some_interaction_hovered() {
+	fn setup() -> App {
 		let mut app = App::new();
 
-		app.add_systems(Update, set_ui_mouse_context);
+		app.add_plugins(StatesPlugin);
 		app.init_state::<MouseContext>();
-		app.world.spawn(Interaction::Hovered);
-		app.world
+		app.add_systems(Update, set_ui_mouse_context);
+
+		app
+	}
+
+	fn setup_with_next_mouse_context(mouse_context: MouseContext) -> App {
+		let mut app = App::new();
+
+		app.add_plugins(StatesPlugin);
+		app.init_state::<MouseContext>();
+
+		let set_next = move |mut next: ResMut<NextState<MouseContext>>| {
+			next.set(mouse_context.clone());
+		};
+
+		app.add_systems(Update, (set_next, set_ui_mouse_context).chain());
+
+		app
+	}
+
+	#[test]
+	fn set_context_ui_when_some_interaction_hovered() {
+		let mut app = setup();
+
+		app.world_mut().spawn(Interaction::Hovered);
+		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
 
@@ -67,7 +89,7 @@ mod tests {
 
 		assert_eq!(
 			&MouseContext::UI,
-			app.world
+			app.world()
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
 				.get()
@@ -76,12 +98,10 @@ mod tests {
 
 	#[test]
 	fn set_context_ui_when_some_interaction_pressed() {
-		let mut app = App::new();
+		let mut app = setup();
 
-		app.add_systems(Update, set_ui_mouse_context);
-		app.init_state::<MouseContext>();
-		app.world.spawn(Interaction::Pressed);
-		app.world
+		app.world_mut().spawn(Interaction::Pressed);
+		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
 
@@ -90,7 +110,7 @@ mod tests {
 
 		assert_eq!(
 			&MouseContext::UI,
-			app.world
+			app.world()
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
 				.get()
@@ -99,12 +119,10 @@ mod tests {
 
 	#[test]
 	fn set_context_default_when_no_interaction() {
-		let mut app = App::new();
+		let mut app = setup();
 
-		app.add_systems(Update, set_ui_mouse_context);
-		app.init_state::<MouseContext>();
-		app.world.spawn(Interaction::None);
-		app.world
+		app.world_mut().spawn(Interaction::None);
+		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::UI);
 
@@ -113,7 +131,7 @@ mod tests {
 
 		assert_eq!(
 			&MouseContext::Default,
-			app.world
+			app.world()
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
 				.get()
@@ -122,12 +140,10 @@ mod tests {
 
 	#[test]
 	fn ignore_when_mouse_context_is_mouse_context_primed() {
-		let mut app = App::new();
+		let mut app = setup();
 
-		app.add_systems(Update, set_ui_mouse_context);
-		app.init_state::<MouseContext>();
-		app.world.spawn(Interaction::None);
-		app.world
+		app.world_mut().spawn(Interaction::None);
+		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Primed(KeyCode::KeyA));
 
@@ -136,7 +152,7 @@ mod tests {
 
 		assert_eq!(
 			&MouseContext::Primed(KeyCode::KeyA),
-			app.world
+			app.world()
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
 				.get()
@@ -145,12 +161,10 @@ mod tests {
 
 	#[test]
 	fn ignore_when_mouse_context_is_mouse_context_just_triggered() {
-		let mut app = App::new();
+		let mut app = setup();
 
-		app.add_systems(Update, set_ui_mouse_context);
-		app.init_state::<MouseContext>();
-		app.world.spawn(Interaction::None);
-		app.world
+		app.world_mut().spawn(Interaction::None);
+		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::JustTriggered(KeyCode::KeyA));
 
@@ -159,7 +173,7 @@ mod tests {
 
 		assert_eq!(
 			&MouseContext::JustTriggered(KeyCode::KeyA),
-			app.world
+			app.world()
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
 				.get()
@@ -168,12 +182,10 @@ mod tests {
 
 	#[test]
 	fn ignore_when_mouse_context_is_mouse_context_triggered() {
-		let mut app = App::new();
+		let mut app = setup();
 
-		app.add_systems(Update, set_ui_mouse_context);
-		app.init_state::<MouseContext>();
-		app.world.spawn(Interaction::None);
-		app.world
+		app.world_mut().spawn(Interaction::None);
+		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Triggered(KeyCode::KeyA));
 
@@ -182,7 +194,7 @@ mod tests {
 
 		assert_eq!(
 			&MouseContext::Triggered(KeyCode::KeyA),
-			app.world
+			app.world()
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
 				.get()
@@ -191,22 +203,16 @@ mod tests {
 
 	#[test]
 	fn ignore_when_next_state_is_already_set() {
-		let mut app = App::new();
+		let mut app = setup_with_next_mouse_context(MouseContext::Primed(KeyCode::KeyA));
 
-		fn set_next(mut next: ResMut<NextState<MouseContext>>) {
-			next.set(MouseContext::Primed(KeyCode::KeyA));
-		}
-
-		app.add_systems(Update, (set_next, set_ui_mouse_context).chain());
-		app.init_state::<MouseContext>();
-		app.world.spawn(Interaction::Hovered);
+		app.world_mut().spawn(Interaction::Hovered);
 
 		app.update();
 		app.update();
 
 		assert_eq!(
 			&MouseContext::Primed(KeyCode::KeyA),
-			app.world
+			app.world()
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
 				.get()
@@ -215,22 +221,16 @@ mod tests {
 
 	#[test]
 	fn wet_when_next_state_is_set_to_default() {
-		let mut app = App::new();
+		let mut app = setup_with_next_mouse_context(MouseContext::Default);
 
-		fn set_next(mut next: ResMut<NextState<MouseContext>>) {
-			next.set(MouseContext::Default);
-		}
-
-		app.add_systems(Update, (set_next, set_ui_mouse_context).chain());
-		app.init_state::<MouseContext>();
-		app.world.spawn(Interaction::Hovered);
+		app.world_mut().spawn(Interaction::Hovered);
 
 		app.update();
 		app.update();
 
 		assert_eq!(
 			&MouseContext::UI,
-			app.world
+			app.world()
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
 				.get()

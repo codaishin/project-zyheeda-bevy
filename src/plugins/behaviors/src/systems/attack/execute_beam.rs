@@ -6,11 +6,11 @@ use bevy::{
 		system::{Commands, Query},
 	},
 	hierarchy::DespawnRecursiveExt,
-	math::{primitives::Direction3d, Ray3d, Vec3},
+	math::{Dir3, Ray3d, Vec3},
 	prelude::SpatialBundle,
 	transform::{
+		bundles::TransformBundle,
 		components::{GlobalTransform, Transform},
-		TransformBundle,
 	},
 };
 use bevy_rapier3d::pipeline::{QueryFilter, QueryFilterFlags};
@@ -70,7 +70,7 @@ fn ray_cast(
 	};
 	let origin = translation(source_transform, source_offset);
 	let target = translation(target_transform, target_offset);
-	let Ok(direction) = Direction3d::new(target - origin) else {
+	let Ok(direction) = Dir3::new(target - origin) else {
 		return;
 	};
 	beam.try_insert(RayCaster {
@@ -153,15 +153,13 @@ mod tests {
 	use crate::components::{Beam, BeamConfig, LifeTime};
 	use bevy::{
 		app::{App, Update},
+		color::{Color, LinearRgba},
 		ecs::entity::Entity,
 		hierarchy::BuildWorldChildren,
 		math::Vec3,
 		prelude::default,
-		render::{
-			color::Color,
-			view::{InheritedVisibility, ViewVisibility, Visibility},
-		},
-		transform::{components::Transform, TransformBundle},
+		render::view::{InheritedVisibility, ViewVisibility, Visibility},
+		transform::{bundles::TransformBundle, components::Transform},
 	};
 	use bevy_rapier3d::pipeline::QueryFilter;
 	use common::{
@@ -186,10 +184,16 @@ mod tests {
 	#[test]
 	fn insert_ray_caster() {
 		let mut app = setup();
-		let source = app.world.spawn(GlobalTransform::from_xyz(1., 0., 0.)).id();
-		let target = app.world.spawn(GlobalTransform::from_xyz(1., 0., 4.)).id();
+		let source = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(1., 0., 0.))
+			.id();
+		let target = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(1., 0., 4.))
+			.id();
 		let beam = app
-			.world
+			.world_mut()
 			.spawn((
 				BeamConfig {
 					range: 100.,
@@ -201,12 +205,12 @@ mod tests {
 
 		app.update();
 
-		let ray_caster = app.world.entity(beam).get::<RayCaster>();
+		let ray_caster = app.world().entity(beam).get::<RayCaster>();
 
 		assert_eq!(
 			Some(&RayCaster {
 				origin: Vec3::new(1., 0., 0.),
-				direction: Direction3d::Z,
+				direction: Dir3::Z,
 				max_toi: TimeOfImpact(100.),
 				solid: true,
 				filter: QueryFilter::from(QueryFilterFlags::EXCLUDE_SENSORS)
@@ -221,16 +225,19 @@ mod tests {
 	#[test]
 	fn insert_ray_caster_with_ground_offset_for_target() {
 		let mut app = setup();
-		let source = app.world.spawn(GlobalTransform::from_xyz(1., 0., 0.)).id();
+		let source = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(1., 0., 0.))
+			.id();
 		let target = app
-			.world
+			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 4.),
 				GroundOffset(Vec3::new(0., 1., 0.)),
 			))
 			.id();
 		let beam = app
-			.world
+			.world_mut()
 			.spawn((
 				BeamConfig {
 					range: 100.,
@@ -242,7 +249,7 @@ mod tests {
 
 		app.update();
 
-		let ray_caster = app.world.entity(beam).get::<RayCaster>();
+		let ray_caster = app.world().entity(beam).get::<RayCaster>();
 
 		assert_eq!(
 			Some(&RayCaster {
@@ -263,15 +270,18 @@ mod tests {
 	fn insert_ray_caster_with_ground_offset_for_source() {
 		let mut app = setup();
 		let source = app
-			.world
+			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 0.),
 				GroundOffset(Vec3::new(0., 1., 0.)),
 			))
 			.id();
-		let target = app.world.spawn(GlobalTransform::from_xyz(1., 0., 4.)).id();
+		let target = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(1., 0., 4.))
+			.id();
 		let beam = app
-			.world
+			.world_mut()
 			.spawn((
 				BeamConfig {
 					range: 100.,
@@ -283,7 +293,7 @@ mod tests {
 
 		app.update();
 
-		let ray_caster = app.world.entity(beam).get::<RayCaster>();
+		let ray_caster = app.world().entity(beam).get::<RayCaster>();
 
 		assert_eq!(
 			Some(&RayCaster {
@@ -303,13 +313,13 @@ mod tests {
 	#[test]
 	fn spawn_beam_from_hit() {
 		let mut app = setup();
-		let source = app.world.spawn(GlobalTransform::default()).id();
+		let source = app.world_mut().spawn(GlobalTransform::default()).id();
 		let beam = app
-			.world
+			.world_mut()
 			.spawn((
 				BeamConfig {
-					color: Color::CYAN,
-					emissive: Color::ORANGE,
+					color: Color::srgb(0.1, 0.2, 0.3),
+					emissive: LinearRgba::new(1., 0.9, 0.8, 0.7),
 					lifetime: Duration::from_millis(100),
 					damage: 42,
 					..default()
@@ -320,12 +330,12 @@ mod tests {
 				},
 			))
 			.id();
-		app.world.send_event(RayCastEvent {
+		app.world_mut().send_event(RayCastEvent {
 			source: beam,
 			target: RayCastTarget {
 				ray: Ray3d {
 					origin: Vec3::Z,
-					direction: Direction3d::Y,
+					direction: Dir3::Y,
 				},
 				toi: TimeOfImpact(10.),
 				..default()
@@ -334,7 +344,7 @@ mod tests {
 
 		app.update();
 
-		let beam = app.world.entity(beam);
+		let beam = app.world().entity(beam);
 
 		assert_eq!(
 			(
@@ -342,8 +352,8 @@ mod tests {
 					from: Vec3::Z,
 					to: Vec3::new(0., 10., 1.),
 					damage: 42,
-					color: Color::CYAN,
-					emissive: Color::ORANGE
+					color: Color::srgb(0.1, 0.2, 0.3),
+					emissive: LinearRgba::new(1., 0.9, 0.8, 0.7)
 				}),
 				Some(&LifeTime(Duration::from_millis(100))),
 			),
@@ -354,9 +364,9 @@ mod tests {
 	#[test]
 	fn set_spatial_bundle() {
 		let mut app = setup();
-		let source = app.world.spawn(GlobalTransform::default()).id();
+		let source = app.world_mut().spawn(GlobalTransform::default()).id();
 		let beam = app
-			.world
+			.world_mut()
 			.spawn((
 				BeamConfig::default(),
 				BeamCommand {
@@ -365,12 +375,12 @@ mod tests {
 				},
 			))
 			.id();
-		app.world.send_event(RayCastEvent {
+		app.world_mut().send_event(RayCastEvent {
 			source: beam,
 			target: RayCastTarget {
 				ray: Ray3d {
 					origin: Vec3::new(0., 1., 0.),
-					direction: Direction3d::X,
+					direction: Dir3::X,
 				},
 				toi: TimeOfImpact(10.),
 				..default()
@@ -380,7 +390,7 @@ mod tests {
 		app.update();
 
 		let bundle = app
-			.world
+			.world()
 			.get_entity(beam)
 			.and_then(|e| {
 				Some(SpatialBundle {
@@ -419,9 +429,9 @@ mod tests {
 	#[test]
 	fn update_beam() {
 		let mut app = setup();
-		let source = app.world.spawn(GlobalTransform::default()).id();
+		let source = app.world_mut().spawn(GlobalTransform::default()).id();
 		let beam = app
-			.world
+			.world_mut()
 			.spawn((
 				BeamConfig::default(),
 				BeamCommand {
@@ -430,12 +440,12 @@ mod tests {
 				},
 			))
 			.id();
-		app.world.send_event(RayCastEvent {
+		app.world_mut().send_event(RayCastEvent {
 			source: beam,
 			target: RayCastTarget {
 				ray: Ray3d {
 					origin: Vec3::new(0., 1., 0.),
-					direction: Direction3d::X,
+					direction: Dir3::X,
 				},
 				toi: TimeOfImpact(10.),
 				..default()
@@ -447,7 +457,7 @@ mod tests {
 		app.update();
 
 		let bundle = app
-			.world
+			.world()
 			.get_entity(beam)
 			.and_then(|e| {
 				Some(TransformBundle {
@@ -471,9 +481,9 @@ mod tests {
 	#[test]
 	fn remove_beam_when_source_not_removed() {
 		let mut app = setup();
-		let source = app.world.spawn(GlobalTransform::default()).id();
+		let source = app.world_mut().spawn(GlobalTransform::default()).id();
 		let beam = app
-			.world
+			.world_mut()
 			.spawn((
 				BeamConfig::default(),
 				BeamCommand {
@@ -482,13 +492,13 @@ mod tests {
 				},
 			))
 			.id();
-		let child = app.world.spawn_empty().set_parent(beam).id();
-		app.world.send_event(RayCastEvent {
+		let child = app.world_mut().spawn_empty().set_parent(beam).id();
+		app.world_mut().send_event(RayCastEvent {
 			source: beam,
 			target: RayCastTarget {
 				ray: Ray3d {
 					origin: Vec3::new(0., 1., 0.),
-					direction: Direction3d::X,
+					direction: Dir3::X,
 				},
 				toi: TimeOfImpact(10.),
 				..default()
@@ -497,12 +507,12 @@ mod tests {
 
 		app.update();
 
-		app.world.entity_mut(source).despawn();
+		app.world_mut().entity_mut(source).despawn();
 
 		app.update();
 
-		let beam = app.world.get_entity(beam);
-		let child = app.world.get_entity(child);
+		let beam = app.world().get_entity(beam);
+		let child = app.world().get_entity(child);
 
 		assert_eq!((true, true), (beam.is_none(), child.is_none()));
 	}

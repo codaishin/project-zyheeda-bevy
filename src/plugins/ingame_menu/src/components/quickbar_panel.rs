@@ -8,7 +8,7 @@ use crate::{
 		DEFAULT_PANEL_COLORS,
 	},
 };
-use bevy::{ecs::component::Component, render::color::Color};
+use bevy::{color::Color, ecs::component::Component};
 use common::traits::get::GetStatic;
 use skills::items::slot_key::SlotKey;
 
@@ -32,7 +32,7 @@ impl GetStatic<SlotKey> for QuickbarPanel {
 
 impl HasPanelColors for QuickbarPanel {
 	const PANEL_COLORS: PanelColors = PanelColors {
-		pressed: Color::ORANGE_RED,
+		pressed: Color::srgb(1., 0.27, 0.1),
 		hovered: DEFAULT_PANEL_COLORS.filled,
 		empty: DEFAULT_PANEL_COLORS.empty,
 		filled: DEFAULT_PANEL_COLORS.filled,
@@ -41,11 +41,11 @@ impl HasPanelColors for QuickbarPanel {
 }
 
 impl HasActiveColor for QuickbarPanel {
-	const ACTIVE_COLOR: Color = Color::GREEN;
+	const ACTIVE_COLOR: Color = Color::srgb(0., 1., 0.);
 }
 
 impl HasQueuedColor for QuickbarPanel {
-	const QUEUED_COLOR: Color = Color::YELLOW_GREEN;
+	const QUEUED_COLOR: Color = Color::srgb(0., 1., 1.);
 }
 
 #[cfg(test)]

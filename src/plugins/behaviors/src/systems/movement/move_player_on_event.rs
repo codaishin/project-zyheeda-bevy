@@ -52,12 +52,13 @@ mod tests {
 	#[test]
 	fn trigger_movement() {
 		let mut app = setup();
-		let player = app.world.spawn(Player).id();
-		app.world.send_event(MoveInputEvent(Vec3::new(1., 2., 3.)));
+		let player = app.world_mut().spawn(Player).id();
+		app.world_mut()
+			.send_event(MoveInputEvent(Vec3::new(1., 2., 3.)));
 
 		app.update();
 
-		let player = app.world.entity(player);
+		let player = app.world().entity(player);
 
 		assert_eq!(
 			(

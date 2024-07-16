@@ -168,9 +168,9 @@ mod tests {
 			)))
 			.return_const(());
 
-		app.world.spawn((skills, enqueue));
+		app.world_mut().spawn((skills, enqueue));
 
-		app.world.resource_mut::<_Input>().0.just_pressed = vec![SlotKey::Hand(Side::Main)];
+		app.world_mut().resource_mut::<_Input>().0.just_pressed = vec![SlotKey::Hand(Side::Main)];
 		app.update();
 	}
 
@@ -181,7 +181,7 @@ mod tests {
 		skill.expect_prime().times(1).return_const(());
 		skill.expect_matches().return_const(true);
 
-		app.world.spawn((
+		app.world_mut().spawn((
 			_Skills::default(),
 			_Enqueue {
 				queued: vec![skill],
@@ -189,7 +189,7 @@ mod tests {
 			},
 		));
 
-		app.world.resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
+		app.world_mut().resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
 		app.update();
 	}
 
@@ -213,7 +213,7 @@ mod tests {
 			.with(eq(SlotKey::Hand(Side::Main)))
 			.return_const(false);
 
-		app.world.spawn((
+		app.world_mut().spawn((
 			_Skills::default(),
 			_Enqueue {
 				queued: vec![skill, mismatched_skill],
@@ -221,7 +221,7 @@ mod tests {
 			},
 		));
 
-		app.world.resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
+		app.world_mut().resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
 		app.update();
 	}
 
@@ -237,7 +237,7 @@ mod tests {
 		skill_b.expect_prime().times(1).return_const(());
 		skill_b.expect_matches().return_const(true);
 
-		app.world.spawn((
+		app.world_mut().spawn((
 			_Skills::default(),
 			_Enqueue {
 				queued: vec![skill_a, skill_b],
@@ -245,7 +245,7 @@ mod tests {
 			},
 		));
 
-		app.world.resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
+		app.world_mut().resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
 		app.update();
 	}
 }

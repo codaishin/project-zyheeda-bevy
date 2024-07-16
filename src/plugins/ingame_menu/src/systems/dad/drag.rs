@@ -40,12 +40,13 @@ mod tests {
 	fn drag_panel_on_pressed() {
 		let mut app = App::new();
 
-		let agent = app.world.spawn(_Agent).id();
-		app.world.spawn((Interaction::Pressed, KeyedPanel(42_u32)));
+		let agent = app.world_mut().spawn(_Agent).id();
+		app.world_mut()
+			.spawn((Interaction::Pressed, KeyedPanel(42_u32)));
 		app.add_systems(Update, drag::<_Agent, u32>);
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 		let dad = agent.get::<Dad<u32>>();
 
 		assert_eq!(Some(&Dad(42)), dad);
@@ -55,13 +56,15 @@ mod tests {
 	fn drag_panel_on_pressed_when_multiple_panels_exist() {
 		let mut app = App::new();
 
-		let agent = app.world.spawn(_Agent).id();
-		app.world.spawn((Interaction::Pressed, KeyedPanel(42_u32)));
-		app.world.spawn((Interaction::None, KeyedPanel(0_u32)));
+		let agent = app.world_mut().spawn(_Agent).id();
+		app.world_mut()
+			.spawn((Interaction::Pressed, KeyedPanel(42_u32)));
+		app.world_mut()
+			.spawn((Interaction::None, KeyedPanel(0_u32)));
 		app.add_systems(Update, drag::<_Agent, u32>);
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 		let dad = agent.get::<Dad<u32>>();
 
 		assert_eq!(Some(&Dad(42)), dad);
@@ -71,12 +74,13 @@ mod tests {
 	fn no_drag_when_not_pressed() {
 		let mut app = App::new();
 
-		let agent = app.world.spawn(_Agent).id();
-		app.world.spawn((Interaction::Hovered, KeyedPanel(42_u32)));
+		let agent = app.world_mut().spawn(_Agent).id();
+		app.world_mut()
+			.spawn((Interaction::Hovered, KeyedPanel(42_u32)));
 		app.add_systems(Update, drag::<_Agent, u32>);
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 		let dad = agent.get::<Dad<u32>>();
 
 		assert_eq!(None, dad);

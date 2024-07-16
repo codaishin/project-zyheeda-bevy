@@ -26,12 +26,12 @@ mod tests {
 	use crate::traits::SkillDescriptor;
 	use bevy::{
 		app::{App, Update},
-		asset::{AssetId, Handle},
+		asset::{Asset, AssetId, Handle},
 		prelude::{IntoSystem, KeyCode, Resource},
-		utils::Uuid,
 	};
 	use common::test_tools::utils::SingleThreadedApp;
 	use mockall::{automock, predicate::eq};
+	use uuid::Uuid;
 
 	#[derive(Component, Default, Debug)]
 	struct _ComboOverview {
@@ -58,6 +58,12 @@ mod tests {
 		app
 	}
 
+	fn new_handle<T: Asset>() -> Handle<T> {
+		Handle::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		})
+	}
+
 	#[test]
 	fn insert_combos_in_combo_list() {
 		let combos = vec![
@@ -65,32 +71,24 @@ mod tests {
 				SkillDescriptor {
 					name: "a1".to_owned(),
 					key: KeyCode::KeyA,
-					icon: Some(Handle::Weak(AssetId::Uuid {
-						uuid: Uuid::new_v4(),
-					})),
+					icon: Some(new_handle()),
 				},
 				SkillDescriptor {
 					name: "a2".to_owned(),
 					key: KeyCode::KeyB,
-					icon: Some(Handle::Weak(AssetId::Uuid {
-						uuid: Uuid::new_v4(),
-					})),
+					icon: Some(new_handle()),
 				},
 			],
 			vec![
 				SkillDescriptor {
 					name: "b1".to_owned(),
 					key: KeyCode::KeyC,
-					icon: Some(Handle::Weak(AssetId::Uuid {
-						uuid: Uuid::new_v4(),
-					})),
+					icon: Some(new_handle()),
 				},
 				SkillDescriptor {
 					name: "b2".to_owned(),
 					key: KeyCode::KeyD,
-					icon: Some(Handle::Weak(AssetId::Uuid {
-						uuid: Uuid::new_v4(),
-					})),
+					icon: Some(new_handle()),
 				},
 			],
 		];
@@ -104,7 +102,7 @@ mod tests {
 			.with(eq(combos))
 			.return_const(());
 
-		app.world.spawn(combos_overview);
+		app.world_mut().spawn(combos_overview);
 
 		app.update();
 	}
@@ -119,7 +117,7 @@ mod tests {
 			.never()
 			.return_const(());
 
-		app.world.spawn(combos_overview);
+		app.world_mut().spawn(combos_overview);
 
 		app.update();
 	}

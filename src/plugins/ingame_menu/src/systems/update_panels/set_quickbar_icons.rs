@@ -49,11 +49,11 @@ mod tests {
 		ecs::system::Res,
 		prelude::{IntoSystem, ResMut},
 		ui::UiImage,
-		utils::Uuid,
 	};
 	use common::{test_tools::utils::SingleThreadedApp, traits::cache::GetOrLoadAsset};
 	use mockall::{mock, predicate::eq};
 	use skills::items::slot_key::SlotKey;
+	use uuid::Uuid;
 
 	#[derive(Resource, Default)]
 	struct _Assets;
@@ -109,7 +109,7 @@ mod tests {
 
 		let mut app = setup::<_Factory>();
 		let panel = app
-			.world
+			.world_mut()
 			.spawn(QuickbarPanel {
 				state: PanelState::Empty,
 				key: arbitrary_key(),
@@ -119,7 +119,7 @@ mod tests {
 
 		app.update();
 
-		let panel = app.world.entity(panel);
+		let panel = app.world().entity(panel);
 
 		assert_eq!(
 			(Some(HANDLE), Some(PanelState::Filled)),
@@ -148,7 +148,7 @@ mod tests {
 
 		let mut app = setup::<_Factory>();
 		let panel = app
-			.world
+			.world_mut()
 			.spawn(QuickbarPanel {
 				state: PanelState::Empty,
 				key: arbitrary_key(),
@@ -177,7 +177,7 @@ mod tests {
 
 		let mut app = setup::<_Factory>();
 		let panel = app
-			.world
+			.world_mut()
 			.spawn(QuickbarPanel {
 				state: PanelState::Filled,
 				key: arbitrary_key(),
@@ -187,7 +187,7 @@ mod tests {
 
 		app.update();
 
-		let panel = app.world.entity(panel);
+		let panel = app.world().entity(panel);
 
 		assert_eq!(
 			(Some(Handle::default()), Some(PanelState::Empty)),

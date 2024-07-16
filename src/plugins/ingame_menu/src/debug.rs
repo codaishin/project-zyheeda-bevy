@@ -7,10 +7,10 @@ use crate::{
 };
 use bevy::{
 	app::{App, Update},
+	color::Color,
 	ecs::system::Res,
 	hierarchy::{BuildChildren, BuildWorldChildren, ChildBuilder, DespawnRecursiveExt},
 	prelude::{Changed, Commands, Component, Entity, Query, State},
-	render::color::Color,
 	text::TextStyle,
 	time::{Real, Time},
 	ui::{
@@ -100,7 +100,8 @@ impl Button {
 				align_items: AlignItems::Center,
 				..default()
 			},
-			border_color: Color::GOLD.into(),
+			border_color: Color::srgb(0.8, 0.7, 0.23).into(),
+			background_color: Color::WHITE.into(),
 			..default()
 		}
 	}
@@ -184,7 +185,7 @@ pub fn setup_dropdown_test(app: &mut App) {
 	}
 
 	app.add_systems(Update, (replace_button_text, update_button_text));
-	app.world
+	app.world_mut()
 		.spawn(NodeBundle {
 			style: Style {
 				position_type: PositionType::Absolute,

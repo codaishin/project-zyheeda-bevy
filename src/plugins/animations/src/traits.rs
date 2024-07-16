@@ -1,16 +1,15 @@
-pub(crate) mod animation_player;
+pub(crate) mod asset_server;
+pub(crate) mod player;
 pub(crate) mod player_idle;
+pub(crate) mod tuple_animation_player_transitions;
 
-use crate::animation::PlayMode;
-use bevy::{animation::AnimationClip, asset::Handle};
+use crate::{animation::PlayMode, components::animation_dispatch::AnimationDispatch};
+use bevy::prelude::Component;
 use common::traits::load_asset::Path;
+use std::collections::HashMap;
 
-pub(crate) trait RepeatAnimation {
-	fn repeat(&mut self, animation: &Handle<AnimationClip>);
-}
-
-pub(crate) trait ReplayAnimation {
-	fn replay(&mut self, animation: &Handle<AnimationClip>);
+pub(crate) trait LoadAnimationAssets<TGraph, TIndex> {
+	fn load_animation_assets(&self, paths: &[Path]) -> (TGraph, HashMap<Path, TIndex>);
 }
 
 pub trait HighestPriorityAnimation<TAnimation> {
@@ -18,7 +17,7 @@ pub trait HighestPriorityAnimation<TAnimation> {
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) enum Priority {
+pub enum Priority {
 	High,
 	Middle,
 	Low,
@@ -36,63 +35,102 @@ pub(crate) trait FlushObsolete {
 	fn flush_obsolete(&mut self, priority: Priority);
 }
 
+pub(crate) trait AnimationPlayMode {
+	fn animation_play_mode(&self) -> PlayMode;
+}
+
 pub(crate) trait AnimationPath {
 	fn animation_path(&self) -> &Path;
 }
 
-pub(crate) trait AnimationPlayMode {
-	fn animation_play_mode(&self) -> PlayMode;
+pub(crate) trait IsPlaying<TIndex> {
+	fn is_playing(&self, index: TIndex) -> bool;
+}
+
+pub(crate) trait ReplayAnimation<TIndex> {
+	fn replay(&mut self, index: TIndex);
+}
+
+pub(crate) trait RepeatAnimation<TIndex> {
+	fn repeat(&mut self, index: TIndex);
 }
 
 pub trait AnimationChainUpdate {
 	fn chain_update(&mut self, last: &Self);
 }
 
+pub trait GetAnimationPaths {
+	fn animation_paths() -> Vec<Path>;
+}
+
+pub trait GetAnimationDispatch {
+	fn animation_dispatch() -> AnimationDispatch;
+}
+
+pub trait RegisterAnimations {
+	fn register_animations<TAgent: Component + GetAnimationPaths + GetAnimationDispatch>(
+		&mut self,
+	) -> &mut Self;
+}
+
+#[derive(Debug, PartialEq)]
 pub struct SkillLayer;
+
+#[derive(Debug, PartialEq)]
 pub struct MovementLayer;
+
+#[derive(Debug, PartialEq)]
 pub struct IdleLayer;
 
-pub trait StartAnimation<TLayer, TAnimation> {
-	fn start_animation(&mut self, animation: TAnimation);
-}
-
-impl<T: InsertAnimation<TAnimation>, TAnimation> StartAnimation<SkillLayer, TAnimation> for T {
-	fn start_animation(&mut self, animation: TAnimation) {
-		self.insert(animation, Priority::High);
+impl From<SkillLayer> for Priority {
+	fn from(_: SkillLayer) -> Self {
+		Priority::High
 	}
 }
 
-impl<T: InsertAnimation<TAnimation>, TAnimation> StartAnimation<MovementLayer, TAnimation> for T {
-	fn start_animation(&mut self, animation: TAnimation) {
-		self.insert(animation, Priority::Middle);
+impl From<MovementLayer> for Priority {
+	fn from(_: MovementLayer) -> Self {
+		Priority::Middle
 	}
 }
 
-impl<T: InsertAnimation<TAnimation>, TAnimation> StartAnimation<IdleLayer, TAnimation> for T {
-	fn start_animation(&mut self, animation: TAnimation) {
-		self.insert(animation, Priority::Low);
+impl From<IdleLayer> for Priority {
+	fn from(_: IdleLayer) -> Self {
+		Priority::Low
 	}
 }
 
-pub trait StopAnimation<TLayer> {
-	fn stop_animation(&mut self);
+pub trait StartAnimation<TAnimation> {
+	fn start_animation<TLayer>(&mut self, layer: TLayer, animation: TAnimation)
+	where
+		TLayer: 'static,
+		Priority: From<TLayer>;
 }
 
-impl<T: MarkObsolete> StopAnimation<SkillLayer> for T {
-	fn stop_animation(&mut self) {
-		self.mark_obsolete(Priority::High);
+impl<T: InsertAnimation<TAnimation>, TAnimation> StartAnimation<TAnimation> for T {
+	fn start_animation<TLayer>(&mut self, layer: TLayer, animation: TAnimation)
+	where
+		TLayer: 'static,
+		Priority: From<TLayer>,
+	{
+		self.insert(animation, Priority::from(layer));
 	}
 }
 
-impl<T: MarkObsolete> StopAnimation<MovementLayer> for T {
-	fn stop_animation(&mut self) {
-		self.mark_obsolete(Priority::Middle);
-	}
+pub trait StopAnimation {
+	fn stop_animation<TLayer>(&mut self, layer: TLayer)
+	where
+		TLayer: 'static,
+		Priority: From<TLayer>;
 }
 
-impl<T: MarkObsolete> StopAnimation<IdleLayer> for T {
-	fn stop_animation(&mut self) {
-		self.mark_obsolete(Priority::Low);
+impl<T: MarkObsolete> StopAnimation for T {
+	fn stop_animation<TLayer>(&mut self, layer: TLayer)
+	where
+		TLayer: 'static,
+		Priority: From<TLayer>,
+	{
+		self.mark_obsolete(Priority::from(layer));
 	}
 }
 
@@ -123,10 +161,7 @@ mod tests {
 			.with(eq(_Animation("my animation")), eq(Priority::High))
 			.return_const(());
 
-		StartAnimation::<SkillLayer, _Animation>::start_animation(
-			dispatch,
-			_Animation("my animation"),
-		);
+		dispatch.start_animation(SkillLayer, _Animation("my animation"));
 	}
 
 	#[test]
@@ -138,10 +173,7 @@ mod tests {
 			.with(eq(_Animation("my animation")), eq(Priority::Middle))
 			.return_const(());
 
-		StartAnimation::<MovementLayer, _Animation>::start_animation(
-			dispatch,
-			_Animation("my animation"),
-		);
+		dispatch.start_animation(MovementLayer, _Animation("my animation"));
 	}
 
 	#[test]
@@ -153,10 +185,7 @@ mod tests {
 			.with(eq(_Animation("my animation")), eq(Priority::Low))
 			.return_const(());
 
-		StartAnimation::<IdleLayer, _Animation>::start_animation(
-			dispatch,
-			_Animation("my animation"),
-		);
+		dispatch.start_animation(IdleLayer, _Animation("my animation"));
 	}
 
 	#[test]
@@ -168,7 +197,7 @@ mod tests {
 			.with(eq(Priority::High))
 			.return_const(());
 
-		StopAnimation::<SkillLayer>::stop_animation(dispatch);
+		dispatch.stop_animation(SkillLayer);
 	}
 
 	#[test]
@@ -180,7 +209,7 @@ mod tests {
 			.with(eq(Priority::Middle))
 			.return_const(());
 
-		StopAnimation::<MovementLayer>::stop_animation(dispatch);
+		dispatch.stop_animation(MovementLayer);
 	}
 
 	#[test]
@@ -192,6 +221,6 @@ mod tests {
 			.with(eq(Priority::Low))
 			.return_const(());
 
-		StopAnimation::<IdleLayer>::stop_animation(dispatch);
+		dispatch.stop_animation(IdleLayer);
 	}
 }

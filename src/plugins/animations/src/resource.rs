@@ -1,11 +1,20 @@
-use bevy::{animation::AnimationClip, asset::Handle, ecs::system::Resource, utils::default};
-use std::collections::HashMap;
+use bevy::{
+	asset::{Asset, Handle},
+	prelude::{AnimationGraph, Resource},
+};
+use std::marker::PhantomData;
 
 #[derive(Resource)]
-pub struct AnimationClips<T>(pub HashMap<T, Handle<AnimationClip>>);
+pub(crate) struct AnimationData<TAgent, TAnimationGraph: Asset = AnimationGraph> {
+	agent: PhantomData<TAgent>,
+	pub(crate) graph: Handle<TAnimationGraph>,
+}
 
-impl<T> Default for AnimationClips<T> {
-	fn default() -> Self {
-		Self(default())
+impl<TAgent, TAnimationGraph: Asset> AnimationData<TAgent, TAnimationGraph> {
+	pub(crate) fn new(handle: Handle<TAnimationGraph>) -> Self {
+		Self {
+			agent: PhantomData,
+			graph: handle,
+		}
 	}
 }

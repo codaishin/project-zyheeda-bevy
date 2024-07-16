@@ -37,7 +37,7 @@ mod tests {
 	fn add_destroy_when_health_zero() {
 		let mut app = setup();
 		let health = app
-			.world
+			.world_mut()
 			.spawn(Health {
 				current: 0,
 				max: 100,
@@ -46,7 +46,7 @@ mod tests {
 
 		app.update();
 
-		let health = app.world.entity(health);
+		let health = app.world().entity(health);
 
 		assert!(health.contains::<Destroy>());
 	}
@@ -55,7 +55,7 @@ mod tests {
 	fn don_not_add_destroy_when_health_above_zero() {
 		let mut app = setup();
 		let health = app
-			.world
+			.world_mut()
 			.spawn(Health {
 				current: 1,
 				max: 100,
@@ -64,7 +64,7 @@ mod tests {
 
 		app.update();
 
-		let health = app.world.entity(health);
+		let health = app.world().entity(health);
 
 		assert!(!health.contains::<Destroy>());
 	}
@@ -73,7 +73,7 @@ mod tests {
 	fn add_destroy_when_health_zero_below_zero() {
 		let mut app = setup();
 		let health = app
-			.world
+			.world_mut()
 			.spawn(Health {
 				current: -1,
 				max: 100,
@@ -82,7 +82,7 @@ mod tests {
 
 		app.update();
 
-		let health = app.world.entity(health);
+		let health = app.world().entity(health);
 
 		assert!(health.contains::<Destroy>());
 	}

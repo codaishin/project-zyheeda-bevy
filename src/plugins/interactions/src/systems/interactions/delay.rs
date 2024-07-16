@@ -76,7 +76,7 @@ mod tests {
 	fn update_repeater_timer() {
 		let mut app = setup();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn(_Actor.after(Duration::from_millis(42)))
 			.id();
 
@@ -84,7 +84,7 @@ mod tests {
 		app.update();
 
 		let repeater = app
-			.world
+			.world()
 			.entity(agent)
 			.get::<Delay<_Actor, _Target>>()
 			.unwrap();
@@ -96,14 +96,14 @@ mod tests {
 	fn insert_actor_after_pause() {
 		let mut app = setup();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn(_Actor.after(Duration::from_millis(42)))
 			.id();
 
 		app.tick_time(Duration::from_millis(42));
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&_Actor), agent.get::<_Actor>());
 	}
@@ -112,14 +112,14 @@ mod tests {
 	fn no_insert_when_pause_time_not_passed() {
 		let mut app = setup();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn(_Actor.after(Duration::from_millis(42)))
 			.id();
 
 		app.tick_time(Duration::from_millis(41));
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<_Actor>());
 	}
@@ -128,14 +128,14 @@ mod tests {
 	fn insert_actor_after_pause_exceeded() {
 		let mut app = setup();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn(_Actor.after(Duration::from_millis(42)))
 			.id();
 
 		app.tick_time(Duration::from_millis(43));
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&_Actor), agent.get::<_Actor>());
 	}
@@ -144,14 +144,14 @@ mod tests {
 	fn remove_delay_when_repeat_not_set() {
 		let mut app = setup();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn(_Actor.after(Duration::from_millis(42)))
 			.id();
 
 		app.tick_time(Duration::from_millis(42));
 		app.update();
 
-		let repeater = app.world.entity(agent).get::<Delay<_Actor, _Target>>();
+		let repeater = app.world().entity(agent).get::<Delay<_Actor, _Target>>();
 
 		assert_eq!(None, repeater);
 	}
@@ -160,7 +160,7 @@ mod tests {
 	fn reset_repeater_timer() {
 		let mut app = setup();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn(_Actor.after(Duration::from_millis(42)).repeat())
 			.id();
 
@@ -171,7 +171,7 @@ mod tests {
 		app.update();
 
 		let repeater = app
-			.world
+			.world()
 			.entity(agent)
 			.get::<Delay<_Actor, _Target>>()
 			.unwrap();

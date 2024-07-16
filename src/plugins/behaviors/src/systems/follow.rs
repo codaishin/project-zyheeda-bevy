@@ -58,9 +58,9 @@ mod tests {
 			.times(1)
 			.return_const(());
 
-		app.world
+		app.world_mut()
 			.spawn((_Target, Transform::from_translation(target)));
-		app.world.spawn((mover, follow_transform));
+		app.world_mut().spawn((mover, follow_transform));
 		app.add_systems(Update, follow::<_Target, _Mover>);
 
 		app.update();

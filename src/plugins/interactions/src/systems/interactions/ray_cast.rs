@@ -99,11 +99,11 @@ mod tests {
 			.with(eq(target))
 			.return_const(());
 
-		let actor = app.world.spawn(actor).id();
-		let target = app.world.spawn(target).id();
-		let coll_target = app.world.spawn(ColliderRoot(target)).id();
+		let actor = app.world_mut().spawn(actor).id();
+		let target = app.world_mut().spawn(target).id();
+		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
-		app.world.send_event(RayCastEvent {
+		app.world_mut().send_event(RayCastEvent {
 			source: actor,
 			target: RayCastTarget {
 				entity: Some(coll_target),
@@ -122,11 +122,11 @@ mod tests {
 		let target = _Target;
 		actor.mock.expect_act_on().return_const(());
 
-		let actor = app.world.spawn(actor).id();
-		let target = app.world.spawn(target).id();
-		let coll_target = app.world.spawn(ColliderRoot(target)).id();
+		let actor = app.world_mut().spawn(actor).id();
+		let target = app.world_mut().spawn(target).id();
+		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
-		app.world.send_event(RayCastEvent {
+		app.world_mut().send_event(RayCastEvent {
 			source: actor,
 			target: RayCastTarget {
 				entity: Some(coll_target),
@@ -137,7 +137,7 @@ mod tests {
 
 		app.update();
 
-		let actor = app.world.entity(actor);
+		let actor = app.world().entity(actor);
 
 		assert!(!actor.contains::<_Actor>());
 	}

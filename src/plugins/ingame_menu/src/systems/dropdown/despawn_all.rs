@@ -75,16 +75,16 @@ mod tests {
 	#[test]
 	fn despawn_dropdown_ui() {
 		let mut app = setup();
-		app.world.spawn(DropdownUI {
+		app.world_mut().spawn(DropdownUI {
 			source: Entity::from_raw(42),
 		});
 
-		app.world.insert_resource(_In(Focus::New(vec![])));
+		app.world_mut().insert_resource(_In(Focus::New(vec![])));
 
 		app.update();
 
 		let dropdown_uis = app
-			.world
+			.world()
 			.iter_entities()
 			.find(|e| e.contains::<DropdownUI>());
 
@@ -97,16 +97,16 @@ mod tests {
 		struct _Other;
 
 		let mut app = setup();
-		app.world.spawn(DropdownUI {
+		app.world_mut().spawn(DropdownUI {
 			source: Entity::from_raw(42),
 		});
-		app.world.spawn(_Other);
+		app.world_mut().spawn(_Other);
 
-		app.world.insert_resource(_In(Focus::New(vec![])));
+		app.world_mut().insert_resource(_In(Focus::New(vec![])));
 
 		app.update();
 
-		let other = app.world.iter_entities().find(|e| e.contains::<_Other>());
+		let other = app.world().iter_entities().find(|e| e.contains::<_Other>());
 
 		assert!(other.is_some());
 	}
@@ -117,7 +117,7 @@ mod tests {
 		struct _Child;
 
 		let mut app = setup();
-		app.world
+		app.world_mut()
 			.spawn(DropdownUI {
 				source: Entity::from_raw(42),
 			})
@@ -125,11 +125,11 @@ mod tests {
 				dropdown_ui.spawn(_Child);
 			});
 
-		app.world.insert_resource(_In(Focus::New(vec![])));
+		app.world_mut().insert_resource(_In(Focus::New(vec![])));
 
 		app.update();
 
-		let children = app.world.iter_entities().find(|e| e.contains::<_Child>());
+		let children = app.world().iter_entities().find(|e| e.contains::<_Child>());
 
 		assert!(children.is_none());
 	}
@@ -137,16 +137,16 @@ mod tests {
 	#[test]
 	fn do_nothing_when_focus_unchanged() {
 		let mut app = setup();
-		app.world.spawn(DropdownUI {
+		app.world_mut().spawn(DropdownUI {
 			source: Entity::from_raw(42),
 		});
 
-		app.world.insert_resource(_In(Focus::Unchanged));
+		app.world_mut().insert_resource(_In(Focus::Unchanged));
 
 		app.update();
 
 		let dropdown_uis = app
-			.world
+			.world()
 			.iter_entities()
 			.find(|e| e.contains::<DropdownUI>());
 
@@ -162,11 +162,11 @@ mod tests {
 			Entity::from_raw(69),
 		]);
 
-		app.world.insert_resource(_In(focus.clone()));
+		app.world_mut().insert_resource(_In(focus.clone()));
 
 		app.update();
 
-		assert_eq!(&_Result(focus), app.world.resource::<_Result>());
+		assert_eq!(&_Result(focus), app.world().resource::<_Result>());
 	}
 
 	#[test]
@@ -174,11 +174,11 @@ mod tests {
 		let mut app = setup();
 		let focus = Focus::Unchanged;
 
-		app.world.insert_resource(_In(focus.clone()));
+		app.world_mut().insert_resource(_In(focus.clone()));
 
 		app.update();
 
-		assert_eq!(&_Result(focus), app.world.resource::<_Result>());
+		assert_eq!(&_Result(focus), app.world().resource::<_Result>());
 	}
 
 	#[test]
@@ -186,9 +186,9 @@ mod tests {
 		let mut app = setup();
 		let source = Entity::from_raw(101);
 
-		app.world.spawn(DropdownUI { source });
+		app.world_mut().spawn(DropdownUI { source });
 
-		app.world.insert_resource(_In(Focus::New(vec![
+		app.world_mut().insert_resource(_In(Focus::New(vec![
 			Entity::from_raw(42),
 			source,
 			Entity::from_raw(69),
@@ -203,7 +203,7 @@ mod tests {
 				Entity::from_raw(69),
 				Entity::from_raw(77),
 			])),
-			app.world.resource::<_Result>()
+			app.world().resource::<_Result>()
 		);
 	}
 }

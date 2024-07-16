@@ -66,12 +66,12 @@ mod tests {
 	fn destroy_on_collision() {
 		let mut app = setup();
 
-		let fragile = app.world.spawn(Fragile).id();
-		let collider = app.world.spawn(ColliderRoot(fragile)).id();
+		let fragile = app.world_mut().spawn(Fragile).id();
+		let collider = app.world_mut().spawn(ColliderRoot(fragile)).id();
 
 		app.update();
 
-		app.world.send_event(CollisionEvent::Started(
+		app.world_mut().send_event(CollisionEvent::Started(
 			collider,
 			Entity::from_raw(42),
 			CollisionEventFlags::empty(),
@@ -79,7 +79,7 @@ mod tests {
 
 		app.update();
 
-		let fragile = app.world.entity(fragile);
+		let fragile = app.world().entity(fragile);
 
 		assert_eq!(Some(&Destroy::Immediately), fragile.get::<Destroy>());
 	}
@@ -88,13 +88,13 @@ mod tests {
 	fn do_not_destroy_on_collision_when_the_other_is_sensor() {
 		let mut app = setup();
 
-		let other = app.world.spawn(Sensor).id();
-		let fragile = app.world.spawn(Fragile).id();
-		let collider = app.world.spawn(ColliderRoot(fragile)).id();
+		let other = app.world_mut().spawn(Sensor).id();
+		let fragile = app.world_mut().spawn(Fragile).id();
+		let collider = app.world_mut().spawn(ColliderRoot(fragile)).id();
 
 		app.update();
 
-		app.world.send_event(CollisionEvent::Started(
+		app.world_mut().send_event(CollisionEvent::Started(
 			collider,
 			other,
 			CollisionEventFlags::empty(),
@@ -102,7 +102,7 @@ mod tests {
 
 		app.update();
 
-		let fragile = app.world.entity(fragile);
+		let fragile = app.world().entity(fragile);
 
 		assert_eq!(None, fragile.get::<Destroy>());
 	}
@@ -111,12 +111,12 @@ mod tests {
 	fn destroy_on_collision_reversed() {
 		let mut app = setup();
 
-		let fragile = app.world.spawn(Fragile).id();
-		let collider = app.world.spawn(ColliderRoot(fragile)).id();
+		let fragile = app.world_mut().spawn(Fragile).id();
+		let collider = app.world_mut().spawn(ColliderRoot(fragile)).id();
 
 		app.update();
 
-		app.world.send_event(CollisionEvent::Started(
+		app.world_mut().send_event(CollisionEvent::Started(
 			Entity::from_raw(42),
 			collider,
 			CollisionEventFlags::empty(),
@@ -124,7 +124,7 @@ mod tests {
 
 		app.update();
 
-		let fragile = app.world.entity(fragile);
+		let fragile = app.world().entity(fragile);
 
 		assert_eq!(Some(&Destroy::Immediately), fragile.get::<Destroy>());
 	}
@@ -133,13 +133,13 @@ mod tests {
 	fn do_not_destroy_on_collision_when_the_other_is_sensor_reversed() {
 		let mut app = setup();
 
-		let other = app.world.spawn(Sensor).id();
-		let fragile = app.world.spawn(Fragile).id();
-		let collider = app.world.spawn(ColliderRoot(fragile)).id();
+		let other = app.world_mut().spawn(Sensor).id();
+		let fragile = app.world_mut().spawn(Fragile).id();
+		let collider = app.world_mut().spawn(ColliderRoot(fragile)).id();
 
 		app.update();
 
-		app.world.send_event(CollisionEvent::Started(
+		app.world_mut().send_event(CollisionEvent::Started(
 			other,
 			collider,
 			CollisionEventFlags::empty(),
@@ -147,7 +147,7 @@ mod tests {
 
 		app.update();
 
-		let fragile = app.world.entity(fragile);
+		let fragile = app.world().entity(fragile);
 
 		assert_eq!(None, fragile.get::<Destroy>());
 	}

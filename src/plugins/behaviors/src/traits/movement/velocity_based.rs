@@ -73,7 +73,7 @@ mod tests {
 		let target = Vec3::new(10., 0., 7.);
 		let speed = UnitsPerSecond::new(11.);
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Movement::<VelocityBased>::to(target),
 				_Params((position, speed)),
@@ -82,7 +82,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 		let direction = (target - position).normalize() * *speed.deref();
 
 		assert_eq!(Some(&Velocity::linear(direction)), agent.get::<Velocity>());
@@ -95,7 +95,7 @@ mod tests {
 		let target = Vec3::new(10., 0., 7.);
 		let speed = UnitsPerSecond::new(11.);
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Movement::<VelocityBased>::to(target),
 				_Params((position, speed)),
@@ -104,7 +104,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&_Result(false.into())), agent.get::<_Result>());
 	}
@@ -116,7 +116,7 @@ mod tests {
 		let target = Vec3::new(10., 0., 7.);
 		let speed = UnitsPerSecond::new(11.);
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Movement::<VelocityBased>::to(target),
 				_Params((position, speed)),
@@ -126,7 +126,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&Velocity::default()), agent.get::<Velocity>());
 	}
@@ -138,7 +138,7 @@ mod tests {
 		let target = Vec3::new(10., 0., 7.);
 		let speed = UnitsPerSecond::new(11.);
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Movement::<VelocityBased>::to(target),
 				_Params((position, speed)),
@@ -147,7 +147,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&_Result(true.into())), agent.get::<_Result>());
 	}
@@ -159,7 +159,7 @@ mod tests {
 		let target = position + Vec3::X * SENSITIVITY * 10.;
 		let speed = UnitsPerSecond::new(11.);
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				Movement::<VelocityBased>::to(target),
 				_Params((position, speed)),
@@ -169,7 +169,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			(Some(&Velocity::default()), Some(&_Result(true.into()))),

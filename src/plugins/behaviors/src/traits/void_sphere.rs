@@ -11,12 +11,13 @@ use crate::components::{
 };
 use bars::components::Bar;
 use bevy::{
+	color::{Color, LinearRgba},
 	ecs::{bundle::Bundle, system::EntityCommands},
 	hierarchy::BuildChildren,
-	math::{primitives::Torus, Vec3},
+	math::{primitives::Torus, Dir3, Vec3},
 	pbr::{NotShadowCaster, PbrBundle, StandardMaterial},
-	render::{color::Color, mesh::Mesh},
-	transform::{components::Transform, TransformBundle},
+	render::mesh::Mesh,
+	transform::{bundles::TransformBundle, components::Transform},
 	utils::default,
 };
 use bevy_rapier3d::{
@@ -85,7 +86,7 @@ impl Instantiate for VoidSphere {
 		let core_mesh =
 			assets.get_or_create_for::<VoidSphereCore>(|| sphere(VOID_SPHERE_INNER_RADIUS));
 		let ring_material = assets.get_or_create_for::<VoidSphereRing>(|| StandardMaterial {
-			emissive: Color::rgb_linear(23000.0, 23000.0, 23000.0),
+			emissive: LinearRgba::new(23.0, 23.0, 23.0, 1.),
 			..default()
 		});
 		let ring_mesh = assets.get_or_create_for::<VoidSphereRing>(|| {
@@ -96,7 +97,7 @@ impl Instantiate for VoidSphere {
 		});
 		let transform = Transform::from_translation(VOID_SPHERE_GROUND_OFFSET);
 		let mut transform_2nd_ring = transform;
-		transform_2nd_ring.rotate_axis(Vec3::Z, PI / 2.);
+		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
 
 		on.try_insert((
 			EffectedBy::<Gravity>::default(),
@@ -113,7 +114,7 @@ impl Instantiate for VoidSphere {
 				spawn: BeamConfig {
 					damage: 1,
 					color: Color::BLACK,
-					emissive: Color::rgb_linear(23000.0, 23000.0, 23000.0),
+					emissive: LinearRgba::new(23.0, 23.0, 23.0, 1.),
 					lifetime: Duration::from_secs(1),
 					range: VoidSphere::ATTACK_RANGE,
 				}

@@ -50,15 +50,15 @@ mod tests {
 	use crate::traits::SkillDescriptor;
 	use bevy::{
 		app::{App, Update},
-		asset::{AssetId, Handle},
+		asset::{Asset, AssetId, Handle},
 		prelude::{Commands, IntoSystem, KeyCode, ResMut},
-		utils::Uuid,
 	};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		traits::{cache::GetOrLoadAsset, load_asset::Path},
 	};
 	use mockall::{mock, predicate::eq};
+	use uuid::Uuid;
 
 	#[derive(Resource, Default)]
 	struct _Storage;
@@ -97,22 +97,20 @@ mod tests {
 		app
 	}
 
+	const fn new_handle<T: Asset>(raw_uuid: u128) -> Handle<T> {
+		Handle::Weak(AssetId::Uuid {
+			uuid: Uuid::from_u128(raw_uuid),
+		})
+	}
+
 	#[test]
 	fn load_icon() {
 		struct _Factory;
 
-		const HANDLE_A_1: Handle<Image> = Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::from_u128(0x5aa1803b_9027_4d84_99ab_6e2bc1420ba8),
-		});
-		const HANDLE_A_2: Handle<Image> = Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::from_u128(0x231707c1_bb0b_4e74_ab1e_c8de763a3190),
-		});
-		const HANDLE_B_1: Handle<Image> = Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::from_u128(0x5273f365_f464_434e_b4eb_5aca2b44a3ef),
-		});
-		const HANDLE_B_2: Handle<Image> = Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::from_u128(0x3ba8bc23_6c98_4730_bb60_9fdb71b853f1),
-		});
+		const HANDLE_A_1: Handle<Image> = new_handle(0x5aa1803b_9027_4d84_99ab_6e2bc1420ba8);
+		const HANDLE_A_2: Handle<Image> = new_handle(0x231707c1_bb0b_4e74_ab1e_c8de763a3190);
+		const HANDLE_B_1: Handle<Image> = new_handle(0x5273f365_f464_434e_b4eb_5aca2b44a3ef);
+		const HANDLE_B_2: Handle<Image> = new_handle(0x3ba8bc23_6c98_4730_bb60_9fdb71b853f1);
 
 		impl GetOrLoadAssetFactory<_Assets, Image, _Storage> for _Factory {
 			fn create_from(_: ResMut<_Assets>, _: ResMut<_Storage>) -> impl GetOrLoadAsset<Image> {
@@ -167,7 +165,7 @@ mod tests {
 
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 
 		assert_eq!(
 			&_Result(Changed::Value(vec![
@@ -220,7 +218,7 @@ mod tests {
 
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 
 		assert_eq!(&_Result(Changed::None), result)
 	}

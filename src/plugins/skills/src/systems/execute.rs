@@ -116,14 +116,14 @@ mod tests {
 
 	fn set_target(app: &mut App) -> Target {
 		let cam_ray = Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(4., 5., 6.));
-		app.world.resource_mut::<CamRay>().0 = Some(cam_ray);
+		app.world_mut().resource_mut::<CamRay>().0 = Some(cam_ray);
 
 		let collider_transform = GlobalTransform::from_xyz(10., 10., 10.);
-		let collider = app.world.spawn(collider_transform).id();
+		let collider = app.world_mut().spawn(collider_transform).id();
 		let root_transform = GlobalTransform::from_xyz(11., 11., 11.);
-		let root = app.world.spawn(root_transform).id();
+		let root = app.world_mut().spawn(root_transform).id();
 
-		app.world.resource_mut::<MouseHover>().0 = Some(ColliderInfo {
+		app.world_mut().resource_mut::<MouseHover>().0 = Some(ColliderInfo {
 			collider,
 			root: Some(root),
 		});
@@ -145,14 +145,17 @@ mod tests {
 
 	fn set_spawner(app: &mut App) -> SkillSpawner {
 		let transform = GlobalTransform::from_xyz(100., 100., 100.);
-		let entity = app.world.spawn(transform).id();
+		let entity = app.world_mut().spawn(transform).id();
 
 		SkillSpawner(entity, transform)
 	}
 
 	fn set_caster(app: &mut App, spawner: &SkillSpawner) -> SkillCaster {
 		let transform = Transform::from_xyz(42., 42., 42.);
-		let entity = app.world.spawn((transform, SkillSpawn(spawner.0))).id();
+		let entity = app
+			.world_mut()
+			.spawn((transform, SkillSpawn(spawner.0)))
+			.id();
 
 		SkillCaster(entity, transform)
 	}
@@ -187,7 +190,7 @@ mod tests {
 			})
 			.return_const(());
 
-		app.world.entity_mut(caster.0).insert(executer);
+		app.world_mut().entity_mut(caster.0).insert(executer);
 
 		app.update();
 	}
@@ -202,7 +205,7 @@ mod tests {
 		let mut executer = _Executor::default();
 		executer.mock.expect_execute().times(1).return_const(());
 
-		app.world.entity_mut(caster.0).insert(executer);
+		app.world_mut().entity_mut(caster.0).insert(executer);
 
 		app.update();
 		app.update();
@@ -218,11 +221,11 @@ mod tests {
 		let mut executer = _Executor::default();
 		executer.mock.expect_execute().times(2).return_const(());
 
-		app.world.entity_mut(caster.0).insert(executer);
+		app.world_mut().entity_mut(caster.0).insert(executer);
 
 		app.update();
 
-		let mut caster = app.world.entity_mut(caster.0);
+		let mut caster = app.world_mut().entity_mut(caster.0);
 		let mut executer = caster.get_mut::<_Executor>().unwrap();
 		executer.change();
 

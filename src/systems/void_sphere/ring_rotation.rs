@@ -37,12 +37,12 @@ mod tests {
 
 		let mut transform = Transform::default();
 		let ring = app
-			.world
+			.world_mut()
 			.spawn((transform, VoidSpherePart::RingA(UnitsPerSecond::new(1.))))
 			.id();
 		app.update();
 
-		let ring_transform = app.world.entity(ring).get::<Transform>().unwrap();
+		let ring_transform = app.world().entity(ring).get::<Transform>().unwrap();
 
 		transform.rotate_local_x(1.);
 		transform.rotate_local_y(1.);
@@ -57,12 +57,12 @@ mod tests {
 
 		let mut transform = Transform::default();
 		let ring = app
-			.world
+			.world_mut()
 			.spawn((transform, VoidSpherePart::RingB(UnitsPerSecond::new(1.))))
 			.id();
 		app.update();
 
-		let ring_transform = app.world.entity(ring).get::<Transform>().unwrap();
+		let ring_transform = app.world().entity(ring).get::<Transform>().unwrap();
 
 		transform.rotate_local_x(1.);
 		transform.rotate_local_y(1.);

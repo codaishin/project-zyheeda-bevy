@@ -41,13 +41,13 @@ mod tests {
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},
 		ecs::entity::Entity,
-		utils::Uuid,
 	};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::{Intensity, IntensityChangePerSecond, Units},
 		traits::clamp_zero_positive::ClampZeroPositive,
 	};
+	use uuid::Uuid;
 
 	#[derive(Component)]
 	struct _Collisions(Vec<Entity>);
@@ -75,9 +75,9 @@ mod tests {
 	fn apply_on() {
 		let mut app = setup();
 		let light_on_material = new_handle();
-		let trigger = app.world.spawn(ResponsiveLightTrigger).id();
-		let model = app.world.spawn_empty().id();
-		let light = app.world.spawn_empty().id();
+		let trigger = app.world_mut().spawn(ResponsiveLightTrigger).id();
+		let model = app.world_mut().spawn_empty().id();
+		let light = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -91,7 +91,7 @@ mod tests {
 		};
 
 		let entity = app
-			.world
+			.world_mut()
 			.spawn((responsive.clone(), _Collisions(vec![trigger])))
 			.id();
 
@@ -99,7 +99,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&ChangeLight::Increase(responsive)),
-			app.world.entity(entity).get::<ChangeLight>(),
+			app.world().entity(entity).get::<ChangeLight>(),
 		)
 	}
 
@@ -107,8 +107,8 @@ mod tests {
 	fn apply_off() {
 		let mut app = setup();
 		let light_off_material = new_handle();
-		let model = app.world.spawn_empty().id();
-		let light = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
+		let light = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -122,7 +122,7 @@ mod tests {
 		};
 
 		let entity = app
-			.world
+			.world_mut()
 			.spawn((responsive.clone(), _Collisions(vec![])))
 			.id();
 
@@ -130,7 +130,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&ChangeLight::Decrease(responsive)),
-			app.world.entity(entity).get::<ChangeLight>(),
+			app.world().entity(entity).get::<ChangeLight>(),
 		)
 	}
 }

@@ -104,17 +104,17 @@ mod tests {
 			.with(eq(()), eq(PanelState::Empty))
 			.return_const(());
 
-		app.world.spawn(container);
-		let panel = app.world.spawn((KeyedPanel(42_usize), panel)).id();
+		app.world_mut().spawn(container);
+		let panel = app.world_mut().spawn((KeyedPanel(42_usize), panel)).id();
 		let text = app
-			.world
+			.world_mut()
 			.spawn(TextBundle::from_section("", default()))
 			.set_parent(panel)
 			.id();
 
 		app.update();
 
-		let text = app.world.entity(text).get::<Text>().unwrap();
+		let text = app.world().entity(text).get::<Text>().unwrap();
 		assert_eq!("<Empty>", text.sections[0].value);
 	}
 
@@ -139,17 +139,17 @@ mod tests {
 			.with(eq(()), eq(PanelState::Filled))
 			.return_const(());
 
-		app.world.spawn(container);
-		let panel = app.world.spawn((KeyedPanel(42_usize), panel)).id();
+		app.world_mut().spawn(container);
+		let panel = app.world_mut().spawn((KeyedPanel(42_usize), panel)).id();
 		let text = app
-			.world
+			.world_mut()
 			.spawn(TextBundle::from_section("", default()))
 			.set_parent(panel)
 			.id();
 
 		app.update();
 
-		let text = app.world.entity(text).get::<Text>().unwrap();
+		let text = app.world().entity(text).get::<Text>().unwrap();
 		assert_eq!("my item", text.sections[0].value);
 	}
 
@@ -163,8 +163,8 @@ mod tests {
 		let mut panel = _Panel::new();
 		panel.mock.expect_set().times(1).return_const(());
 
-		app.world.spawn(container);
-		app.world.spawn((KeyedPanel(42_usize), panel));
+		app.world_mut().spawn(container);
+		app.world_mut().spawn((KeyedPanel(42_usize), panel));
 
 		app.update();
 	}
@@ -190,18 +190,18 @@ mod tests {
 			.with(eq(()), eq(PanelState::Filled))
 			.return_const(());
 
-		app.world.spawn(container);
-		let panel = app.world.spawn((KeyedPanel(42_usize), panel)).id();
-		app.world.spawn(()).set_parent(panel);
+		app.world_mut().spawn(container);
+		let panel = app.world_mut().spawn((KeyedPanel(42_usize), panel)).id();
+		app.world_mut().spawn(()).set_parent(panel);
 		let text = app
-			.world
+			.world_mut()
 			.spawn(TextBundle::from_section("", default()))
 			.set_parent(panel)
 			.id();
 
 		app.update();
 
-		let text = app.world.entity(text).get::<Text>().unwrap();
+		let text = app.world().entity(text).get::<Text>().unwrap();
 		assert_eq!("my item", text.sections[0].value);
 	}
 
@@ -221,14 +221,18 @@ mod tests {
 		let mut panel = _Panel::new();
 		panel.mock.expect_set().return_const(());
 
-		app.world.spawn(container);
-		let panel = app.world.spawn((KeyedPanel(42_usize), panel)).id();
-		app.world.spawn(()).set_parent(panel);
-		let text = app.world.spawn(Text::default()).set_parent(panel).id();
+		app.world_mut().spawn(container);
+		let panel = app.world_mut().spawn((KeyedPanel(42_usize), panel)).id();
+		app.world_mut().spawn(()).set_parent(panel);
+		let text = app
+			.world_mut()
+			.spawn(Text::default())
+			.set_parent(panel)
+			.id();
 
 		app.update();
 
-		let text = app.world.entity(text).get::<Text>().unwrap();
+		let text = app.world().entity(text).get::<Text>().unwrap();
 		assert_eq!("my item", text.sections[0].value);
 	}
 }

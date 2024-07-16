@@ -46,12 +46,15 @@ mod tests {
 	#[test]
 	fn decrease_lifetime_by_delta() {
 		let mut app = setup();
-		let lifetime = app.world.spawn(LifeTime(Duration::from_secs(100))).id();
+		let lifetime = app
+			.world_mut()
+			.spawn(LifeTime(Duration::from_secs(100)))
+			.id();
 
 		app.tick_time(Duration::from_secs(10));
 		app.update();
 
-		let lifetime = app.world.entity(lifetime).get::<LifeTime>();
+		let lifetime = app.world().entity(lifetime).get::<LifeTime>();
 
 		assert_eq!(Some(&LifeTime(Duration::from_secs(90))), lifetime);
 	}
@@ -59,12 +62,15 @@ mod tests {
 	#[test]
 	fn mark_despawn_when_lifetime_zero() {
 		let mut app = setup();
-		let lifetime = app.world.spawn(LifeTime(Duration::from_secs(100))).id();
+		let lifetime = app
+			.world_mut()
+			.spawn(LifeTime(Duration::from_secs(100)))
+			.id();
 
 		app.tick_time(Duration::from_secs(100));
 		app.update();
 
-		let lifetime = app.world.entity(lifetime);
+		let lifetime = app.world().entity(lifetime);
 
 		assert_eq!(Some(&Destroy::DELAYED), lifetime.get::<Destroy>());
 	}
@@ -72,12 +78,15 @@ mod tests {
 	#[test]
 	fn mark_despawn_when_lifetime_below_zero() {
 		let mut app = setup();
-		let lifetime = app.world.spawn(LifeTime(Duration::from_secs(100))).id();
+		let lifetime = app
+			.world_mut()
+			.spawn(LifeTime(Duration::from_secs(100)))
+			.id();
 
 		app.tick_time(Duration::from_secs(101));
 		app.update();
 
-		let lifetime = app.world.entity(lifetime);
+		let lifetime = app.world().entity(lifetime);
 
 		assert_eq!(Some(&Destroy::DELAYED), lifetime.get::<Destroy>());
 	}
@@ -86,7 +95,7 @@ mod tests {
 	fn do_not_add_despawn_when_already_present() {
 		let mut app = setup();
 		let lifetime = app
-			.world
+			.world_mut()
 			.spawn((
 				LifeTime(Duration::from_secs(100)),
 				Destroy::AfterFrames(100),
@@ -96,7 +105,7 @@ mod tests {
 		app.tick_time(Duration::from_secs(100));
 		app.update();
 
-		let lifetime = app.world.entity(lifetime);
+		let lifetime = app.world().entity(lifetime);
 
 		assert_eq!(Some(&Destroy::AfterFrames(100)), lifetime.get::<Destroy>());
 	}

@@ -45,11 +45,11 @@ mod tests {
 		let mut app = setup();
 
 		let collider = Collider::ball(0.42);
-		let source = app.world.spawn(_Source(collider)).id();
+		let source = app.world_mut().spawn(_Source(collider)).id();
 
 		app.update();
 
-		let source = app.world.entity(source);
+		let source = app.world().entity(source);
 
 		assert_eq!(
 			Some(0.42),
@@ -65,15 +65,15 @@ mod tests {
 		let mut app = setup();
 
 		let collider = Collider::ball(0.42);
-		let source = app.world.spawn(_Source(collider)).id();
+		let source = app.world_mut().spawn(_Source(collider)).id();
 
 		app.update();
 
-		app.world.entity_mut(source).remove::<Collider>();
+		app.world_mut().entity_mut(source).remove::<Collider>();
 
 		app.update();
 
-		let source = app.world.entity(source);
+		let source = app.world().entity(source);
 
 		assert_eq!(
 			None,

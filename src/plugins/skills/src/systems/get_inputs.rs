@@ -53,10 +53,11 @@ mod tests {
 		app::{App, Update},
 		ecs::system::{In, IntoSystem, ResMut, Resource},
 		input::keyboard::KeyCode,
-		utils::{default, Uuid},
+		utils::default,
 	};
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
 	use mockall::{automock, predicate::eq};
+	use uuid::Uuid;
 
 	#[derive(Resource, Clone, Debug, PartialEq)]
 	struct _Map(Uuid);
@@ -155,7 +156,7 @@ mod tests {
 		let mut app = setup(sup, inf, key_map);
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 
 		assert_eq!(
 			&_Result(Input {
@@ -195,7 +196,7 @@ mod tests {
 		let mut app = setup(sup, inf, key_map);
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 
 		assert_eq!(
 			&_Result(Input {
@@ -226,7 +227,7 @@ mod tests {
 		let mut app = setup(sup, inf, default());
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 
 		assert_eq!(
 			&_Result(Input {
@@ -256,7 +257,7 @@ mod tests {
 		let mut app = setup(sup, inf, default());
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 
 		assert_eq!(
 			&_Result(Input {

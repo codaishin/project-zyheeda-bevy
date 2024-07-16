@@ -52,10 +52,10 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(43), GlobalTransform::from_xyz(1., 2., 3.));
 
 		let force_shield = app
-			.world
+			.world_mut()
 			.spawn(ForceShield::new_skill_bundle(&caster, &spawner, &target()))
 			.id();
-		let force_shield = app.world.entity(force_shield).get::<ForceShield>();
+		let force_shield = app.world().entity(force_shield).get::<ForceShield>();
 
 		assert_eq!(
 			Some(&ForceShield {
@@ -72,10 +72,10 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(43), GlobalTransform::from_xyz(1., 2., 3.));
 
 		let force_shield = app
-			.world
+			.world_mut()
 			.spawn(ForceShield::new_skill_bundle(&caster, &spawner, &target()))
 			.id();
-		let force_shield = app.world.entity(force_shield);
+		let force_shield = app.world().entity(force_shield);
 
 		assert_bundle!(SpatialBundle, &app, force_shield);
 	}
@@ -87,10 +87,10 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(43), GlobalTransform::from_xyz(1., 2., 3.));
 
 		let force_shield = app
-			.world
+			.world_mut()
 			.spawn(ForceShield::new_skill_bundle(&caster, &spawner, &target()))
 			.id();
-		let force_shield = app.world.entity(force_shield).get::<Transform>();
+		let force_shield = app.world().entity(force_shield).get::<Transform>();
 
 		assert_eq!(
 			Some(Vec3::new(1., 2., 3.)),

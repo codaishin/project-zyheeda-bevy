@@ -65,12 +65,12 @@ mod tests {
 	}
 
 	fn press_and_release_mouse_left(app: &mut App) {
-		app.world
+		app.world_mut()
 			.get_resource_mut::<ButtonInput<MouseButton>>()
 			.unwrap()
 			.press(MouseButton::Left);
 		app.update();
-		app.world
+		app.world_mut()
 			.get_resource_mut::<ButtonInput<MouseButton>>()
 			.unwrap()
 			.release(MouseButton::Left);
@@ -79,13 +79,14 @@ mod tests {
 	#[test]
 	fn add_result_component() {
 		let mut app = setup::<usize, f32>();
-		let agent = app.world.spawn((_Agent, Dad(42_usize))).id();
+		let agent = app.world_mut().spawn((_Agent, Dad(42_usize))).id();
 
 		press_and_release_mouse_left(&mut app);
-		app.world.spawn((Interaction::Hovered, KeyedPanel(11_f32)));
+		app.world_mut()
+			.spawn((Interaction::Hovered, KeyedPanel(11_f32)));
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Collection::new([Swap(42_usize, 11_f32)])),
@@ -96,14 +97,16 @@ mod tests {
 	#[test]
 	fn add_result_component_when_multiple_panels_exist() {
 		let mut app = setup::<usize, f32>();
-		let agent = app.world.spawn((_Agent, Dad(42_usize))).id();
+		let agent = app.world_mut().spawn((_Agent, Dad(42_usize))).id();
 
 		press_and_release_mouse_left(&mut app);
-		app.world.spawn((Interaction::Hovered, KeyedPanel(11_f32)));
-		app.world.spawn((Interaction::None, KeyedPanel(0_f32)));
+		app.world_mut()
+			.spawn((Interaction::Hovered, KeyedPanel(11_f32)));
+		app.world_mut()
+			.spawn((Interaction::None, KeyedPanel(0_f32)));
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Collection::new([Swap(42_usize, 11_f32)])),
@@ -114,24 +117,27 @@ mod tests {
 	#[test]
 	fn no_panic_when_agent_has_no_dad() {
 		let mut app = setup::<usize, f32>();
-		app.world.spawn(_Agent);
+		app.world_mut().spawn(_Agent);
 
 		press_and_release_mouse_left(&mut app);
-		app.world.spawn((Interaction::Hovered, KeyedPanel(11_f32)));
-		app.world.spawn((Interaction::None, KeyedPanel(0_f32)));
+		app.world_mut()
+			.spawn((Interaction::Hovered, KeyedPanel(11_f32)));
+		app.world_mut()
+			.spawn((Interaction::None, KeyedPanel(0_f32)));
 		app.update();
 	}
 
 	#[test]
 	fn no_result_when_interaction_not_hover() {
 		let mut app = setup::<usize, f32>();
-		let agent = app.world.spawn((_Agent, Dad(42_usize))).id();
+		let agent = app.world_mut().spawn((_Agent, Dad(42_usize))).id();
 
 		press_and_release_mouse_left(&mut app);
-		app.world.spawn((Interaction::Pressed, KeyedPanel(11_f32)));
+		app.world_mut()
+			.spawn((Interaction::Pressed, KeyedPanel(11_f32)));
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<Collection<Swap<usize, f32>>>());
 	}
@@ -139,12 +145,13 @@ mod tests {
 	#[test]
 	fn no_result_when_not_mouse_left_release() {
 		let mut app = setup::<usize, f32>();
-		let agent = app.world.spawn((_Agent, Dad(42_usize))).id();
+		let agent = app.world_mut().spawn((_Agent, Dad(42_usize))).id();
 
-		app.world.spawn((Interaction::Hovered, KeyedPanel(11_f32)));
+		app.world_mut()
+			.spawn((Interaction::Hovered, KeyedPanel(11_f32)));
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<Collection<Swap<usize, f32>>>());
 	}
@@ -152,13 +159,14 @@ mod tests {
 	#[test]
 	fn remove_dad() {
 		let mut app = setup::<usize, f32>();
-		let agent = app.world.spawn((_Agent, Dad(42_usize))).id();
+		let agent = app.world_mut().spawn((_Agent, Dad(42_usize))).id();
 
 		press_and_release_mouse_left(&mut app);
-		app.world.spawn((Interaction::Hovered, KeyedPanel(11_f32)));
+		app.world_mut()
+			.spawn((Interaction::Hovered, KeyedPanel(11_f32)));
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert!(!agent.contains::<Dad<usize>>());
 	}

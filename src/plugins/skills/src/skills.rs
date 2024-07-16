@@ -9,7 +9,7 @@ use animations::animation::Animation;
 use bevy::{
 	asset::Asset,
 	ecs::{entity::Entity, system::Commands},
-	math::{primitives::Direction3d, Ray3d, Vec3},
+	math::{Dir3, Ray3d, Vec3},
 	reflect::TypePath,
 	transform::components::{GlobalTransform, Transform},
 };
@@ -64,7 +64,7 @@ impl<T> Default for SelectInfo<T> {
 		Self {
 			ray: Ray3d {
 				origin: Vec3::ZERO,
-				direction: Direction3d::NEG_Z,
+				direction: Dir3::NEG_Z,
 			},
 			collision_info: None,
 		}

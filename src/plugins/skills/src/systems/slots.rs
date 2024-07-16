@@ -131,14 +131,14 @@ mod tests {
 	fn add_slot_as_child_of_bone() {
 		let mut app = App::new();
 		let hand_bone = app
-			.world
+			.world_mut()
 			.spawn((Name::new("hand bone"), Transform::from_xyz(0., 0., 0.)))
 			.id();
 		let forearm_bone = app
-			.world
+			.world_mut()
 			.spawn((Name::new("forearm bone"), Transform::from_xyz(0., 0., 0.)))
 			.id();
-		app.world
+		app.world_mut()
 			.spawn(SlotsDefinition::new([(
 				SlotKey::Hand(Side::Off),
 				(
@@ -154,9 +154,9 @@ mod tests {
 
 		app.update();
 
-		let hand_bone = app.world.entity(hand_bone);
+		let hand_bone = app.world().entity(hand_bone);
 		let hand_bone_children_count = hand_bone.get::<Children>().map(|c| c.iter().len());
-		let forearm_bone = app.world.entity(forearm_bone);
+		let forearm_bone = app.world().entity(forearm_bone);
 		let forearm_bone_children_count = forearm_bone.get::<Children>().map(|c| c.iter().len());
 
 		assert_eq!(
@@ -169,14 +169,14 @@ mod tests {
 	fn bone_child_has_scene() {
 		let mut app = App::new();
 		let hand_bone = app
-			.world
+			.world_mut()
 			.spawn((Name::new("hand bone"), Transform::from_xyz(0., 0., 0.)))
 			.id();
 		let forearm_bone = app
-			.world
+			.world_mut()
 			.spawn((Name::new("forearm bone"), Transform::from_xyz(0., 0., 0.)))
 			.id();
-		app.world
+		app.world_mut()
 			.spawn(SlotsDefinition::new([(
 				SlotKey::Hand(Side::Off),
 				(
@@ -192,15 +192,15 @@ mod tests {
 
 		app.update();
 
-		let hand_bone = app.world.entity(hand_bone);
+		let hand_bone = app.world().entity(hand_bone);
 		let hand_slot = *hand_bone.get::<Children>().and_then(|c| c.first()).unwrap();
-		let hand_slot = app.world.entity(hand_slot);
-		let forearm_bone = app.world.entity(forearm_bone);
+		let hand_slot = app.world().entity(hand_slot);
+		let forearm_bone = app.world().entity(forearm_bone);
 		let forearm_slot = *forearm_bone
 			.get::<Children>()
 			.and_then(|c| c.first())
 			.unwrap();
-		let forearm_slot = app.world.entity(forearm_slot);
+		let forearm_slot = app.world().entity(forearm_slot);
 
 		assert_eq!(
 			(true, true),
@@ -216,17 +216,17 @@ mod tests {
 		let mut app = App::new();
 		let rotation = Quat::from_axis_angle(Vec3::ONE, 1.);
 		let hand_bone = app
-			.world
+			.world_mut()
 			.spawn((Name::new("hand bone"), Transform::from_rotation(rotation)))
 			.id();
 		let forearm_bone = app
-			.world
+			.world_mut()
 			.spawn((
 				Name::new("forearm bone"),
 				Transform::from_rotation(rotation),
 			))
 			.id();
-		app.world
+		app.world_mut()
 			.spawn(SlotsDefinition::new([(
 				SlotKey::Hand(Side::Off),
 				(
@@ -242,15 +242,15 @@ mod tests {
 
 		app.update();
 
-		let hand_bone = app.world.entity(hand_bone);
+		let hand_bone = app.world().entity(hand_bone);
 		let hand_slot = *hand_bone.get::<Children>().and_then(|c| c.first()).unwrap();
-		let hand_slot_transform = app.world.entity(hand_slot).get::<Transform>().unwrap();
-		let forearm_bone = app.world.entity(forearm_bone);
+		let hand_slot_transform = app.world().entity(hand_slot).get::<Transform>().unwrap();
+		let forearm_bone = app.world().entity(forearm_bone);
 		let forearm_slot = *forearm_bone
 			.get::<Children>()
 			.and_then(|c| c.first())
 			.unwrap();
-		let forearm_slot_transform = app.world.entity(forearm_slot).get::<Transform>().unwrap();
+		let forearm_slot_transform = app.world().entity(forearm_slot).get::<Transform>().unwrap();
 
 		assert_eq!(
 			(Quat::IDENTITY, Quat::IDENTITY),
@@ -265,15 +265,15 @@ mod tests {
 	fn bone_child_has_slot_with_correct_key_and_entity() {
 		let mut app = App::new();
 		let hand_bone = app
-			.world
+			.world_mut()
 			.spawn((Name::new("hand bone"), Transform::from_xyz(0., 0., 0.)))
 			.id();
 		let forearm_bone = app
-			.world
+			.world_mut()
 			.spawn((Name::new("forearm bone"), Transform::from_xyz(0., 0., 0.)))
 			.id();
 		let root = app
-			.world
+			.world_mut()
 			.spawn(SlotsDefinition::new([(
 				SlotKey::Hand(Side::Off),
 				(
@@ -290,14 +290,14 @@ mod tests {
 
 		app.update();
 
-		let hand_bone = app.world.entity(hand_bone);
+		let hand_bone = app.world().entity(hand_bone);
 		let hand_slot = *hand_bone.get::<Children>().and_then(|c| c.first()).unwrap();
-		let forearm_bone = app.world.entity(forearm_bone);
+		let forearm_bone = app.world().entity(forearm_bone);
 		let forearm_slot = *forearm_bone
 			.get::<Children>()
 			.and_then(|c| c.first())
 			.unwrap();
-		let slots = app.world.entity(root).get::<Slots<Path>>().unwrap();
+		let slots = app.world().entity(root).get::<Slots<Path>>().unwrap();
 
 		assert_eq!(
 			HashMap::from([(
@@ -318,15 +318,15 @@ mod tests {
 	fn root_has_slot_infos_removed() {
 		let mut app = App::new();
 		let bones = [
-			app.world
+			app.world_mut()
 				.spawn((Name::new("hand bone"), Transform::from_xyz(0., 0., 0.)))
 				.id(),
-			app.world
+			app.world_mut()
 				.spawn((Name::new("forearm bone"), Transform::from_xyz(0., 0., 0.)))
 				.id(),
 		];
 		let root = app
-			.world
+			.world_mut()
 			.spawn(SlotsDefinition::new([(
 				SlotKey::Hand(Side::Off),
 				(
@@ -343,7 +343,7 @@ mod tests {
 
 		app.update();
 
-		let root = app.world.entity(root);
+		let root = app.world().entity(root);
 
 		assert!(!root.contains::<SlotsDefinition>());
 	}
@@ -352,15 +352,15 @@ mod tests {
 	fn do_not_remove_mismatched_slot_bones() {
 		let mut app = App::new();
 		let bones = [
-			app.world
+			app.world_mut()
 				.spawn((Name::new("hand bone"), Transform::from_xyz(0., 0., 0.)))
 				.id(),
-			app.world
+			app.world_mut()
 				.spawn((Name::new("forearm bone"), Transform::from_xyz(0., 0., 0.)))
 				.id(),
 		];
 		let root = app
-			.world
+			.world_mut()
 			.spawn(SlotsDefinition::new([
 				(
 					SlotKey::Hand(Side::Off),
@@ -389,7 +389,7 @@ mod tests {
 
 		app.update();
 
-		let slot_infos = app.world.entity(root).get::<SlotsDefinition>();
+		let slot_infos = app.world().entity(root).get::<SlotsDefinition>();
 
 		assert_eq!(
 			Some(
@@ -413,18 +413,18 @@ mod tests {
 	fn do_not_remove_partly_mismatched_slot_bones() {
 		let mut app = App::new();
 		let bones = [
-			app.world
+			app.world_mut()
 				.spawn((Name::new("hand bone"), Transform::from_xyz(0., 0., 0.)))
 				.id(),
-			app.world
+			app.world_mut()
 				.spawn((Name::new("forearm bone"), Transform::from_xyz(0., 0., 0.)))
 				.id(),
-			app.world
+			app.world_mut()
 				.spawn((Name::new("hand bone2"), Transform::from_xyz(0., 0., 0.)))
 				.id(),
 		];
 		let root = app
-			.world
+			.world_mut()
 			.spawn(SlotsDefinition::new([
 				(
 					SlotKey::Hand(Side::Off),
@@ -453,7 +453,7 @@ mod tests {
 
 		app.update();
 
-		let slot_infos = app.world.entity(root).get::<SlotsDefinition>();
+		let slot_infos = app.world().entity(root).get::<SlotsDefinition>();
 
 		assert_eq!(
 			Some(
@@ -477,15 +477,15 @@ mod tests {
 	fn assign_item() {
 		let mut app = App::new();
 		let hand_bone = app
-			.world
+			.world_mut()
 			.spawn((Name::new("hand bone"), Transform::from_xyz(0., 0., 0.)))
 			.id();
 		let forearm_bone = app
-			.world
+			.world_mut()
 			.spawn((Name::new("forearm bone"), Transform::from_xyz(0., 0., 0.)))
 			.id();
 		let root = app
-			.world
+			.world_mut()
 			.spawn(SlotsDefinition::new([(
 				SlotKey::Hand(Side::Off),
 				(
@@ -505,14 +505,14 @@ mod tests {
 
 		app.update();
 
-		let hand_bone = app.world.entity(hand_bone);
+		let hand_bone = app.world().entity(hand_bone);
 		let hand_slot = *hand_bone.get::<Children>().and_then(|c| c.first()).unwrap();
-		let forearm_bone = app.world.entity(forearm_bone);
+		let forearm_bone = app.world().entity(forearm_bone);
 		let forearm_slot = *forearm_bone
 			.get::<Children>()
 			.and_then(|c| c.first())
 			.unwrap();
-		let slots = app.world.entity(root).get::<Slots<Path>>().unwrap();
+		let slots = app.world().entity(root).get::<Slots<Path>>().unwrap();
 
 		assert_eq!(
 			HashMap::from([(

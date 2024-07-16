@@ -1,8 +1,9 @@
 pub mod health;
 
 use bevy::{
+	color::Color,
 	math::{Vec2, Vec3},
-	render::{camera::Camera, color::Color},
+	render::camera::Camera,
 	transform::components::GlobalTransform,
 };
 

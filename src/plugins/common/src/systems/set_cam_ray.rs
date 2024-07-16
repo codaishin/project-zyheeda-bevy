@@ -26,7 +26,7 @@ mod tests {
 	use crate::test_tools::utils::SingleThreadedApp;
 	use bevy::{
 		app::{App, Update},
-		math::{primitives::Direction3d, Ray3d, Vec3},
+		math::{Dir3, Ray3d, Vec3},
 		utils::default,
 	};
 	use mockall::automock;
@@ -49,9 +49,9 @@ mod tests {
 	fn setup(cam: _Camera) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.world
+		app.world_mut()
 			.spawn((cam, _Label, GlobalTransform::from_xyz(4., 3., 2.)));
-		app.world.spawn(Window {
+		app.world_mut().spawn(Window {
 			title: "Window".to_owned(),
 			..default()
 		});
@@ -71,7 +71,7 @@ mod tests {
 
 		app.update();
 
-		let cam_ray = app.world.resource::<CamRay>();
+		let cam_ray = app.world().resource::<CamRay>();
 
 		assert_eq!(
 			Some(Ray3d {
@@ -90,7 +90,7 @@ mod tests {
 
 		app.update();
 
-		let cam_ray = app.world.resource::<CamRay>();
+		let cam_ray = app.world().resource::<CamRay>();
 
 		assert!(cam_ray.0.is_none());
 	}
@@ -119,10 +119,10 @@ mod tests {
 		let mut cam = _Camera::default();
 		cam.mock.expect_get_ray().return_const(Ray3d {
 			origin: Vec3::ZERO,
-			direction: Direction3d::NEG_Z,
+			direction: Dir3::NEG_Z,
 		});
 		let mut app = setup(cam);
-		app.world
+		app.world_mut()
 			.spawn((_Camera::default(), GlobalTransform::default()));
 
 		app.update();

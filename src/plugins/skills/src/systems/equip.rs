@@ -199,17 +199,18 @@ mod tests {
 	use super::*;
 	use crate::{components::Mounts, items::Mount, skills::Skill};
 	use bevy::{
-		asset::AssetId,
+		asset::{Asset, AssetId},
 		ecs::system::{In, IntoSystem},
 		prelude::{App, Handle, Update},
 		scene::Scene,
-		utils::{default, Uuid},
+		utils::default,
 	};
 	use common::{
 		components::Side,
 		systems::log::test_tools::{fake_log_error_lazy_many, FakeErrorLogMany},
 	};
 	use mockall::{automock, predicate::eq};
+	use uuid::Uuid;
 
 	#[derive(Default, PartialEq, Debug)]
 	enum _Type {
@@ -254,29 +255,23 @@ mod tests {
 		}
 	}
 
+	fn new_handle<T: Asset>() -> Handle<T> {
+		Handle::<T>::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		})
+	}
+
 	#[test]
 	fn equip_hand_when_marked_to_equip() {
-		let model = Handle::<Scene>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
+		let model = new_handle();
 		let models = Models([("model key", model.clone())].into());
 
 		let mut app = App::new();
-		app.world.insert_resource(models);
-		let hand = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
-		let forearm = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
+		app.world_mut().insert_resource(models);
+		let hand = app.world_mut().spawn(new_handle::<Scene>()).id();
+		let forearm = app.world_mut().spawn(new_handle::<Scene>()).id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				_Container { name: "my comp" },
 				Slots::<Handle<Skill>>(
@@ -308,9 +303,9 @@ mod tests {
 
 		app.update();
 
-		let slot_model = app.world.entity(hand).get::<Handle<Scene>>();
+		let slot_model = app.world().entity(hand).get::<Handle<Scene>>();
 		let slot_component = app
-			.world
+			.world()
 			.entity(agent)
 			.get::<Slots<Handle<Skill>>>()
 			.expect("no slots")
@@ -337,27 +332,15 @@ mod tests {
 
 	#[test]
 	fn equip_forearm_when_marked_to_equip() {
-		let model = Handle::<Scene>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
+		let model = new_handle();
 		let models = Models([("model key", model.clone())].into());
 
 		let mut app = App::new();
-		app.world.insert_resource(models);
-		let hand = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
-		let forearm = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
+		app.world_mut().insert_resource(models);
+		let hand = app.world_mut().spawn(new_handle::<Scene>()).id();
+		let forearm = app.world_mut().spawn(new_handle::<Scene>()).id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				_Container { name: "my comp" },
 				Slots::<Handle<Skill>>(
@@ -389,9 +372,9 @@ mod tests {
 
 		app.update();
 
-		let slot_model = app.world.entity(forearm).get::<Handle<Scene>>();
+		let slot_model = app.world().entity(forearm).get::<Handle<Scene>>();
 		let slot_component = app
-			.world
+			.world()
 			.entity(agent)
 			.get::<Slots<Handle<Skill>>>()
 			.unwrap()
@@ -418,27 +401,15 @@ mod tests {
 
 	#[test]
 	fn equip_none_when_marked_to_equip() {
-		let model = Handle::<Scene>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
+		let model = new_handle();
 		let models = Models([("model key", model.clone())].into());
 
 		let mut app = App::new();
-		app.world.insert_resource(models);
-		let hand = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
-		let forearm = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
+		app.world_mut().insert_resource(models);
+		let hand = app.world_mut().spawn(new_handle::<Scene>()).id();
+		let forearm = app.world_mut().spawn(new_handle::<Scene>()).id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				_Container { name: "my comp" },
 				Slots::<Handle<Skill>>(
@@ -470,11 +441,11 @@ mod tests {
 		app.update();
 
 		let slot_models = [
-			app.world.entity(hand).get::<Handle<Scene>>(),
-			app.world.entity(forearm).get::<Handle<Scene>>(),
+			app.world().entity(hand).get::<Handle<Scene>>(),
+			app.world().entity(forearm).get::<Handle<Scene>>(),
 		];
 		let slot_component = app
-			.world
+			.world()
 			.entity(agent)
 			.get::<Slots<Handle<Skill>>>()
 			.unwrap()
@@ -497,25 +468,13 @@ mod tests {
 	#[test]
 	fn call_source_with_item_none_if_current_slot_item_is_none() {
 		let mut app = App::new();
-		let model = Handle::<Scene>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
+		let model = new_handle();
 		let models = Models([("model key", model.clone())].into());
-		let hand = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
-		let forearm = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
+		let hand = app.world_mut().spawn(new_handle::<Scene>()).id();
+		let forearm = app.world_mut().spawn(new_handle::<Scene>()).id();
 		let mut mock_accessor = Mock_Accessor::new();
 		let component = _Container { name: "my comp" };
-		let agent = app.world.spawn(component).id();
+		let agent = app.world_mut().spawn(component).id();
 
 		mock_accessor
 			.expect_get_key_and_item()
@@ -533,8 +492,8 @@ mod tests {
 			.times(1)
 			.with(eq(None), eq(component))
 			.returning(|_, _| Mock_Accessor::new());
-		app.world.insert_resource(models);
-		app.world.entity_mut(agent).insert((
+		app.world_mut().insert_resource(models);
+		app.world_mut().entity_mut(agent).insert((
 			Slots::<Handle<Skill>>(
 				[(
 					SlotKey::Hand(Side::Main),
@@ -559,27 +518,15 @@ mod tests {
 	#[test]
 	fn call_source_with_current_slot_item() {
 		let mut app = App::new();
-		let model = Handle::<Scene>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
+		let model = new_handle();
 		let models = Models([("model key", model.clone())].into());
-		let hand = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
-		let forearm = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
+		let hand = app.world_mut().spawn(new_handle::<Scene>()).id();
+		let forearm = app.world_mut().spawn(new_handle::<Scene>()).id();
 		let mut mock_accessor = Mock_Accessor::new();
 		let component = _Container {
 			name: "my component",
 		};
-		let agent = app.world.spawn(component).id();
+		let agent = app.world_mut().spawn(component).id();
 
 		mock_accessor
 			.expect_get_key_and_item()
@@ -603,8 +550,8 @@ mod tests {
 				eq(component),
 			)
 			.returning(|_, _| Mock_Accessor::new());
-		app.world.insert_resource(models);
-		app.world.entity_mut(agent).insert((
+		app.world_mut().insert_resource(models);
+		app.world_mut().entity_mut(agent).insert((
 			Slots::<Handle<Skill>>(
 				[(
 					SlotKey::Hand(Side::Main),
@@ -631,27 +578,15 @@ mod tests {
 
 	#[test]
 	fn equip_when_marked_to_equip_but_no_model_key_set() {
-		let model = Handle::<Scene>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
+		let model = new_handle();
 		let models = Models([("model key", model.clone())].into());
 
 		let mut app = App::new();
-		app.world.insert_resource(models);
-		let hand = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
-		let forearm = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
+		app.world_mut().insert_resource(models);
+		let hand = app.world_mut().spawn(new_handle::<Scene>()).id();
+		let forearm = app.world_mut().spawn(new_handle::<Scene>()).id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				_Container { name: "my comp" },
 				Slots::<Handle<Skill>>(
@@ -682,9 +617,9 @@ mod tests {
 
 		app.update();
 
-		let slot_model = app.world.entity(hand).get::<Handle<Scene>>();
+		let slot_model = app.world().entity(hand).get::<Handle<Scene>>();
 		let slot_component = app
-			.world
+			.world()
 			.entity(agent)
 			.get::<Slots<Handle<Skill>>>()
 			.unwrap()
@@ -710,27 +645,15 @@ mod tests {
 
 	#[test]
 	fn remove_equip_component() {
-		let model = Handle::<Scene>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
+		let model = new_handle();
 		let models = Models([("model key", model.clone())].into());
 
 		let mut app = App::new();
-		app.world.insert_resource(models);
-		let hand = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
-		let forearm = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
+		app.world_mut().insert_resource(models);
+		let hand = app.world_mut().spawn(new_handle::<Scene>()).id();
+		let forearm = app.world_mut().spawn(new_handle::<Scene>()).id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				_Container { name: "my comp" },
 				Slots::<Handle<Skill>>(
@@ -761,7 +684,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert!(!agent.contains::<Collection<_Accessor>>());
 	}
@@ -769,21 +692,11 @@ mod tests {
 	#[test]
 	fn set_default_scene_handle_when_no_model_key() {
 		let mut app = App::new();
-		app.world.insert_resource(Models([].into()));
-		let hand = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
-		let forearm = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
+		app.world_mut().insert_resource(Models([].into()));
+		let hand = app.world_mut().spawn(new_handle::<Scene>()).id();
+		let forearm = app.world_mut().spawn(new_handle::<Scene>()).id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				_Container { name: "my comp" },
 				Slots::<Handle<Skill>>(
@@ -814,8 +727,8 @@ mod tests {
 
 		app.update();
 
-		let slot_model = app.world.entity(hand).get::<Handle<Scene>>();
-		let agent = app.world.entity(agent);
+		let slot_model = app.world().entity(hand).get::<Handle<Scene>>();
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			(Some(Handle::<Scene>::default()), false),
@@ -828,17 +741,15 @@ mod tests {
 
 	#[test]
 	fn remove_equip_component_when_no_slot_scene_handle() {
-		let model = Handle::<Scene>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
+		let model = new_handle();
 		let models = Models([("model key", model.clone())].into());
 
 		let mut app = App::new();
-		app.world.insert_resource(models);
-		let hand = app.world.spawn(()).id();
-		let forearm = app.world.spawn(()).id();
+		app.world_mut().insert_resource(models);
+		let hand = app.world_mut().spawn(()).id();
+		let forearm = app.world_mut().spawn(()).id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				_Container { name: "my comp" },
 				Slots::<Handle<Skill>>(
@@ -869,34 +780,22 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert!(!agent.contains::<Collection<_Accessor>>());
 	}
 
 	#[test]
 	fn remove_equip_component_when_no_matching_model() {
-		let model = Handle::<Scene>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
+		let model = new_handle();
 		let models = Models([("model key", model.clone())].into());
 
 		let mut app = App::new();
-		app.world.insert_resource(models);
-		let hand = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
-		let forearm = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
+		app.world_mut().insert_resource(models);
+		let hand = app.world_mut().spawn(new_handle::<Scene>()).id();
+		let forearm = app.world_mut().spawn(new_handle::<Scene>()).id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				_Container { name: "my comp" },
 				Slots::<Handle<Skill>>(
@@ -927,34 +826,22 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert!(!agent.contains::<Collection<_Accessor>>());
 	}
 
 	#[test]
 	fn do_not_remove_equip_component_when_no_matching_slot() {
-		let model = Handle::<Scene>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
+		let model = new_handle();
 		let models = Models([("model key", model.clone())].into());
 
 		let mut app = App::new();
-		app.world.insert_resource(models);
-		let hand = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
-		let forearm = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
+		app.world_mut().insert_resource(models);
+		let hand = app.world_mut().spawn(new_handle::<Scene>()).id();
+		let forearm = app.world_mut().spawn(new_handle::<Scene>()).id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				_Container { name: "my comp" },
 				Slots::<Handle<Skill>>(
@@ -985,7 +872,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&Collection::new([_Accessor {
@@ -1003,27 +890,15 @@ mod tests {
 
 	#[test]
 	fn evaluate_equip_per_item() {
-		let model = Handle::<Scene>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
+		let model = new_handle();
 		let models = Models([("model key", model.clone())].into());
 
 		let mut app = App::new();
-		app.world.insert_resource(models);
-		let hand = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
-		let forearm = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
+		app.world_mut().insert_resource(models);
+		let hand = app.world_mut().spawn(new_handle::<Scene>()).id();
+		let forearm = app.world_mut().spawn(new_handle::<Scene>()).id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				_Container {
 					name: "my component",
@@ -1067,8 +942,8 @@ mod tests {
 
 		app.update();
 
-		let slot_model = app.world.entity(hand).get::<Handle<Scene>>();
-		let agent = app.world.entity(agent);
+		let slot_model = app.world().entity(hand).get::<Handle<Scene>>();
+		let agent = app.world().entity(agent);
 		let items = agent.get::<Collection<_Accessor>>();
 
 		assert_eq!(
@@ -1090,9 +965,7 @@ mod tests {
 
 	#[test]
 	fn return_slot_warning() {
-		let model = Handle::<Scene>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
+		let model = new_handle();
 		let models = Models([("model key", model.clone())].into());
 		let item = Item {
 			name: "Some Item",
@@ -1101,9 +974,9 @@ mod tests {
 		};
 
 		let mut app = App::new();
-		app.world.insert_resource(models);
+		app.world_mut().insert_resource(models);
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				_Container { name: "my comp" },
 				Slots::<Handle<Skill>>([].into()),
@@ -1121,7 +994,7 @@ mod tests {
 		);
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&FakeErrorLogMany(
@@ -1141,21 +1014,11 @@ mod tests {
 		};
 
 		let mut app = App::new();
-		let hand = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
-		let forearm = app
-			.world
-			.spawn(Handle::<Scene>::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}))
-			.id();
-		app.world.insert_resource(models);
+		let hand = app.world_mut().spawn(new_handle::<Scene>()).id();
+		let forearm = app.world_mut().spawn(new_handle::<Scene>()).id();
+		app.world_mut().insert_resource(models);
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				_Container { name: "my comp" },
 				Slots::<Handle<Skill>>(
@@ -1182,7 +1045,7 @@ mod tests {
 		);
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&FakeErrorLogMany([model_error(&item, "model key")].into())),
@@ -1192,9 +1055,7 @@ mod tests {
 
 	#[test]
 	fn return_scene_handle_error() {
-		let model = Handle::<Scene>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
+		let model = new_handle();
 		let models = Models([("model key", model.clone())].into());
 		let item = Item {
 			name: "Some Item",
@@ -1203,11 +1064,11 @@ mod tests {
 		};
 
 		let mut app = App::new();
-		app.world.insert_resource(models);
-		let hand = app.world.spawn(()).id();
-		let forearm = app.world.spawn(()).id();
+		app.world_mut().insert_resource(models);
+		let hand = app.world_mut().spawn(()).id();
+		let forearm = app.world_mut().spawn(()).id();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				_Container { name: "my comp" },
 				Slots::<Handle<Skill>>(
@@ -1234,7 +1095,7 @@ mod tests {
 		);
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&FakeErrorLogMany(

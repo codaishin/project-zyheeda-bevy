@@ -3,8 +3,8 @@ use bevy::{
 	ecs::system::EntityCommands,
 	hierarchy::BuildChildren,
 	math::{primitives::Cylinder, Quat},
-	pbr::{AlphaMode, NotShadowCaster, PbrBundle, StandardMaterial},
-	render::mesh::Mesh,
+	pbr::{NotShadowCaster, PbrBundle, StandardMaterial},
+	render::{alpha::AlphaMode, mesh::Mesh},
 	transform::components::Transform,
 	utils::default,
 };

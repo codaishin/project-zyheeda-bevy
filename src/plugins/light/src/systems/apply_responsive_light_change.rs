@@ -109,7 +109,7 @@ mod tests {
 		pbr::StandardMaterial,
 		render::view::Visibility,
 		time::{Real, Time},
-		utils::{default, Uuid},
+		utils::default,
 	};
 	use common::{
 		test_tools::utils::{SingleThreadedApp, TickTime},
@@ -117,6 +117,7 @@ mod tests {
 		traits::clamp_zero_positive::ClampZeroPositive,
 	};
 	use std::time::Duration;
+	use uuid::Uuid;
 
 	fn new_handle<T: Asset>() -> Handle<T> {
 		Handle::Weak(AssetId::Uuid {
@@ -136,13 +137,13 @@ mod tests {
 	fn increase_light_intensity() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 42.,
 				..default()
 			})
 			.id();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -154,12 +155,12 @@ mod tests {
 				change: IntensityChangePerSecond::new(11.),
 			},
 		};
-		app.world.spawn(ChangeLight::Increase(responsive));
+		app.world_mut().spawn(ChangeLight::Increase(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let light = app.world.entity(light).get::<PointLight>().unwrap();
+		let light = app.world().entity(light).get::<PointLight>().unwrap();
 
 		assert_eq!(53., light.intensity);
 	}
@@ -168,13 +169,13 @@ mod tests {
 	fn increase_light_intensity_scaled_by_delta() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 42.,
 				..default()
 			})
 			.id();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -186,12 +187,12 @@ mod tests {
 				change: IntensityChangePerSecond::new(11.),
 			},
 		};
-		app.world.spawn(ChangeLight::Increase(responsive));
+		app.world_mut().spawn(ChangeLight::Increase(responsive));
 
 		app.tick_time(Duration::from_millis(100));
 		app.update();
 
-		let light = app.world.entity(light).get::<PointLight>().unwrap();
+		let light = app.world().entity(light).get::<PointLight>().unwrap();
 
 		assert_eq!(43.1, light.intensity);
 	}
@@ -200,13 +201,13 @@ mod tests {
 	fn increase_light_intensity_clamped_at_max() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 42.,
 				..default()
 			})
 			.id();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -218,12 +219,12 @@ mod tests {
 				change: IntensityChangePerSecond::new(200.),
 			},
 		};
-		app.world.spawn(ChangeLight::Increase(responsive));
+		app.world_mut().spawn(ChangeLight::Increase(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let light = app.world.entity(light).get::<PointLight>().unwrap();
+		let light = app.world().entity(light).get::<PointLight>().unwrap();
 
 		assert_eq!(100., light.intensity);
 	}
@@ -232,13 +233,13 @@ mod tests {
 	fn insert_light_visibility_on_increase() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 0.,
 				..default()
 			})
 			.id();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -250,12 +251,12 @@ mod tests {
 				change: IntensityChangePerSecond::new(11.),
 			},
 		};
-		app.world.spawn(ChangeLight::Increase(responsive));
+		app.world_mut().spawn(ChangeLight::Increase(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let light = app.world.entity(light);
+		let light = app.world().entity(light);
 
 		assert_eq!(Some(&Visibility::Visible), light.get::<Visibility>());
 	}
@@ -264,13 +265,13 @@ mod tests {
 	fn do_not_insert_light_visibility_on_increase_when_intensity_not_zero() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 1.,
 				..default()
 			})
 			.id();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -282,12 +283,12 @@ mod tests {
 				change: IntensityChangePerSecond::new(11.),
 			},
 		};
-		app.world.spawn(ChangeLight::Increase(responsive));
+		app.world_mut().spawn(ChangeLight::Increase(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let light = app.world.entity(light);
+		let light = app.world().entity(light);
 
 		assert_eq!(None, light.get::<Visibility>());
 	}
@@ -296,14 +297,14 @@ mod tests {
 	fn set_light_on_material_when_increasing() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 0.,
 				..default()
 			})
 			.id();
 		let light_on_material = new_handle();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -315,12 +316,12 @@ mod tests {
 				change: IntensityChangePerSecond::new(11.),
 			},
 		};
-		app.world.spawn(ChangeLight::Increase(responsive));
+		app.world_mut().spawn(ChangeLight::Increase(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let model = app.world.entity(model);
+		let model = app.world().entity(model);
 
 		assert_eq!(
 			Some(&light_on_material),
@@ -332,13 +333,13 @@ mod tests {
 	fn do_not_set_light_on_material_when_intensity_not_zero() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 1.,
 				..default()
 			})
 			.id();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -350,12 +351,12 @@ mod tests {
 				change: IntensityChangePerSecond::new(11.),
 			},
 		};
-		app.world.spawn(ChangeLight::Increase(responsive));
+		app.world_mut().spawn(ChangeLight::Increase(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let model = app.world.entity(model);
+		let model = app.world().entity(model);
 
 		assert_eq!(None, model.get::<Handle<StandardMaterial>>());
 	}
@@ -364,13 +365,13 @@ mod tests {
 	fn remove_change_light_when_reached_max() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 42.,
 				..default()
 			})
 			.id();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -382,12 +383,15 @@ mod tests {
 				change: IntensityChangePerSecond::new(58.),
 			},
 		};
-		let responsive = app.world.spawn(ChangeLight::Increase(responsive)).id();
+		let responsive = app
+			.world_mut()
+			.spawn(ChangeLight::Increase(responsive))
+			.id();
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let responsive = app.world.entity(responsive);
+		let responsive = app.world().entity(responsive);
 
 		assert_eq!(None, responsive.get::<ChangeLight>());
 	}
@@ -396,13 +400,13 @@ mod tests {
 	fn do_not_remove_change_light_when_not_reached_max() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 42.,
 				..default()
 			})
 			.id();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -415,14 +419,14 @@ mod tests {
 			},
 		};
 		let responsive_entity = app
-			.world
+			.world_mut()
 			.spawn(ChangeLight::Increase(responsive.clone()))
 			.id();
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let responsive_entity = app.world.entity(responsive_entity);
+		let responsive_entity = app.world().entity(responsive_entity);
 
 		assert_eq!(
 			Some(&ChangeLight::Increase(responsive)),
@@ -434,13 +438,13 @@ mod tests {
 	fn decrease_light_intensity() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 42.,
 				..default()
 			})
 			.id();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -452,12 +456,12 @@ mod tests {
 				change: IntensityChangePerSecond::new(11.),
 			},
 		};
-		app.world.spawn(ChangeLight::Decrease(responsive));
+		app.world_mut().spawn(ChangeLight::Decrease(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let light = app.world.entity(light).get::<PointLight>().unwrap();
+		let light = app.world().entity(light).get::<PointLight>().unwrap();
 
 		assert_eq!(31., light.intensity);
 	}
@@ -466,13 +470,13 @@ mod tests {
 	fn decrease_light_intensity_by_delta() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 42.,
 				..default()
 			})
 			.id();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -484,12 +488,12 @@ mod tests {
 				change: IntensityChangePerSecond::new(11.),
 			},
 		};
-		app.world.spawn(ChangeLight::Decrease(responsive));
+		app.world_mut().spawn(ChangeLight::Decrease(responsive));
 
 		app.tick_time(Duration::from_millis(100));
 		app.update();
 
-		let light = app.world.entity(light).get::<PointLight>().unwrap();
+		let light = app.world().entity(light).get::<PointLight>().unwrap();
 
 		assert_eq!(40.9, light.intensity);
 	}
@@ -498,14 +502,14 @@ mod tests {
 	fn set_light_off_material_when_decreasing_to_zero() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 42.,
 				..default()
 			})
 			.id();
 		let light_off_material = new_handle();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -517,12 +521,12 @@ mod tests {
 				change: IntensityChangePerSecond::new(42.),
 			},
 		};
-		app.world.spawn(ChangeLight::Decrease(responsive));
+		app.world_mut().spawn(ChangeLight::Decrease(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let model = app.world.entity(model);
+		let model = app.world().entity(model);
 
 		assert_eq!(
 			Some(&light_off_material),
@@ -534,14 +538,14 @@ mod tests {
 	fn do_not_set_light_off_material_when_decreasing_above_zero() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 42.,
 				..default()
 			})
 			.id();
 		let light_off_material = new_handle();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -553,12 +557,12 @@ mod tests {
 				change: IntensityChangePerSecond::new(41.),
 			},
 		};
-		app.world.spawn(ChangeLight::Decrease(responsive));
+		app.world_mut().spawn(ChangeLight::Decrease(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let model = app.world.entity(model);
+		let model = app.world().entity(model);
 
 		assert_eq!(None, model.get::<Handle<StandardMaterial>>());
 	}
@@ -567,14 +571,14 @@ mod tests {
 	fn set_light_off_material_when_decreasing_to_below_zero() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 42.,
 				..default()
 			})
 			.id();
 		let light_off_material = new_handle();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -586,12 +590,12 @@ mod tests {
 				change: IntensityChangePerSecond::new(43.),
 			},
 		};
-		app.world.spawn(ChangeLight::Decrease(responsive));
+		app.world_mut().spawn(ChangeLight::Decrease(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let model = app.world.entity(model);
+		let model = app.world().entity(model);
 
 		assert_eq!(
 			Some(&light_off_material),
@@ -603,13 +607,13 @@ mod tests {
 	fn decrease_light_intensity_clamped_at_zero() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 42.,
 				..default()
 			})
 			.id();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -621,12 +625,12 @@ mod tests {
 				change: IntensityChangePerSecond::new(43.),
 			},
 		};
-		app.world.spawn(ChangeLight::Decrease(responsive));
+		app.world_mut().spawn(ChangeLight::Decrease(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let light = app.world.entity(light).get::<PointLight>().unwrap();
+		let light = app.world().entity(light).get::<PointLight>().unwrap();
 
 		assert_eq!(0., light.intensity);
 	}
@@ -635,13 +639,13 @@ mod tests {
 	fn remove_change_light_when_reached_zero() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 42.,
 				..default()
 			})
 			.id();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -653,12 +657,15 @@ mod tests {
 				change: IntensityChangePerSecond::new(42.),
 			},
 		};
-		let responsive = app.world.spawn(ChangeLight::Decrease(responsive)).id();
+		let responsive = app
+			.world_mut()
+			.spawn(ChangeLight::Decrease(responsive))
+			.id();
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let responsive = app.world.entity(responsive);
+		let responsive = app.world().entity(responsive);
 
 		assert_eq!(None, responsive.get::<ChangeLight>());
 	}
@@ -667,13 +674,13 @@ mod tests {
 	fn do_not_remove_change_light_when_not_reached_zero() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 42.,
 				..default()
 			})
 			.id();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -686,14 +693,14 @@ mod tests {
 			},
 		};
 		let responsive_entity = app
-			.world
+			.world_mut()
 			.spawn(ChangeLight::Decrease(responsive.clone()))
 			.id();
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let responsive_entity = app.world.entity(responsive_entity);
+		let responsive_entity = app.world().entity(responsive_entity);
 
 		assert_eq!(
 			Some(&ChangeLight::Decrease(responsive)),
@@ -705,13 +712,13 @@ mod tests {
 	fn insert_light_hidden_when_reaching_zero() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 42.,
 				..default()
 			})
 			.id();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -723,12 +730,12 @@ mod tests {
 				change: IntensityChangePerSecond::new(42.),
 			},
 		};
-		app.world.spawn(ChangeLight::Decrease(responsive));
+		app.world_mut().spawn(ChangeLight::Decrease(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let light = app.world.entity(light);
+		let light = app.world().entity(light);
 
 		assert_eq!(Some(&Visibility::Hidden), light.get::<Visibility>());
 	}
@@ -737,13 +744,13 @@ mod tests {
 	fn do_not_insert_light_hidden_when_not_reaching_zero() {
 		let mut app = setup();
 		let light = app
-			.world
+			.world_mut()
 			.spawn(PointLight {
 				intensity: 42.,
 				..default()
 			})
 			.id();
-		let model = app.world.spawn_empty().id();
+		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
@@ -755,12 +762,12 @@ mod tests {
 				change: IntensityChangePerSecond::new(41.),
 			},
 		};
-		app.world.spawn(ChangeLight::Decrease(responsive));
+		app.world_mut().spawn(ChangeLight::Decrease(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
 
-		let light = app.world.entity(light);
+		let light = app.world().entity(light);
 
 		assert_eq!(None, light.get::<Visibility>());
 	}

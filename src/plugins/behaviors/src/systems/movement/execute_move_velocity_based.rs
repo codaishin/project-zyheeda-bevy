@@ -118,13 +118,13 @@ mod tests {
 		let config = ConfigFast;
 		let movement = _Movement(false.into());
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((config, GlobalTransform::from(transform), movement))
 			.id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&_MoveParams((
@@ -142,13 +142,13 @@ mod tests {
 		let config = ConfigSlow;
 		let movement = _Movement(false.into());
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((config, GlobalTransform::from(transform), movement))
 			.id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&_MoveParams((
@@ -167,13 +167,13 @@ mod tests {
 		let movement = _Movement(true.into());
 
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((config, GlobalTransform::from(transform), movement))
 			.id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&_Idle), agent.get::<_Idle>());
 	}
@@ -186,13 +186,13 @@ mod tests {
 		let movement = _Movement(false.into());
 
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((config, GlobalTransform::from(transform), movement))
 			.id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<_Idle>());
 	}
@@ -201,7 +201,7 @@ mod tests {
 	fn no_movement_when_immobilized() {
 		let mut app = setup();
 		let agent = app
-			.world
+			.world_mut()
 			.spawn((
 				ConfigFast,
 				GlobalTransform::from_xyz(1., 2., 3.),
@@ -212,7 +212,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<_MoveParams>());
 	}

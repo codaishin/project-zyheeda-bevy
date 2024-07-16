@@ -184,7 +184,7 @@ mod tests {
 			icon: Some(Path::from("combo_skill/icon/path")),
 			..default()
 		});
-		app.world.spawn((
+		app.world_mut().spawn((
 			Player,
 			slots,
 			_Queue::default(),
@@ -192,7 +192,7 @@ mod tests {
 			_ComboTimeout(false),
 		));
 		let panel = app
-			.world
+			.world_mut()
 			.spawn(QuickbarPanel {
 				key: SlotKey::Hand(Side::Main),
 				state: PanelState::Empty,
@@ -201,7 +201,7 @@ mod tests {
 
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 		assert_eq!(
 			vec![(panel, Some(Path::from("combo_skill/icon/path")))],
 			result.0
@@ -233,14 +233,14 @@ mod tests {
 			.times(1)
 			.with(eq(SlotKey::Hand(Side::Off)), eq(slots.clone()))
 			.return_const(None);
-		app.world.spawn((
+		app.world_mut().spawn((
 			Player,
 			slots,
 			_Queue::default(),
 			combos,
 			_ComboTimeout(false),
 		));
-		app.world.spawn(QuickbarPanel {
+		app.world_mut().spawn(QuickbarPanel {
 			key: SlotKey::Hand(Side::Off),
 			state: PanelState::Empty,
 		});
@@ -271,7 +271,7 @@ mod tests {
 			icon: Some(Path::from("combo_skill/icon/path")),
 			..default()
 		});
-		app.world.spawn((
+		app.world_mut().spawn((
 			Player,
 			slots,
 			_Queue::default(),
@@ -279,7 +279,7 @@ mod tests {
 			_ComboTimeout(true),
 		));
 		let panel = app
-			.world
+			.world_mut()
 			.spawn(QuickbarPanel {
 				key: SlotKey::Hand(Side::Main),
 				state: PanelState::Empty,
@@ -288,7 +288,7 @@ mod tests {
 
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 		assert_eq!(
 			vec![(panel, Some(Path::from("item_skill/icon/path")))],
 			result.0
@@ -315,7 +315,7 @@ mod tests {
 			},
 		)]));
 		combos.mock.expect_peek_next().return_const(None);
-		app.world.spawn((
+		app.world_mut().spawn((
 			Player,
 			slots,
 			_Queue::default(),
@@ -323,7 +323,7 @@ mod tests {
 			_ComboTimeout(false),
 		));
 		let panel = app
-			.world
+			.world_mut()
 			.spawn(QuickbarPanel {
 				key: SlotKey::Hand(Side::Main),
 				state: PanelState::Empty,
@@ -332,7 +332,7 @@ mod tests {
 
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 		assert_eq!(
 			vec![(panel, Some(Path::from("item_skill/icon/path")))],
 			result.0
@@ -362,7 +362,7 @@ mod tests {
 			icon: Some(Path::from("combo_skill/icon/path")),
 			..default()
 		});
-		app.world.spawn((
+		app.world_mut().spawn((
 			Player,
 			slots,
 			_Queue(vec![QueuedSkill {
@@ -377,7 +377,7 @@ mod tests {
 			_ComboTimeout(true),
 		));
 		let panel = app
-			.world
+			.world_mut()
 			.spawn(QuickbarPanel {
 				key: SlotKey::Hand(Side::Off),
 				state: PanelState::Empty,
@@ -386,7 +386,7 @@ mod tests {
 
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 		assert_eq!(
 			vec![(panel, Some(Path::from("active_skill/icon/path")))],
 			result.0
@@ -416,7 +416,7 @@ mod tests {
 			icon: Some(Path::from("combo_skill/icon/path")),
 			..default()
 		});
-		app.world.spawn((
+		app.world_mut().spawn((
 			Player,
 			slots,
 			_Queue(vec![QueuedSkill {
@@ -431,7 +431,7 @@ mod tests {
 			_ComboTimeout(true),
 		));
 		let panel = app
-			.world
+			.world_mut()
 			.spawn(QuickbarPanel {
 				key: SlotKey::Hand(Side::Main),
 				state: PanelState::Empty,
@@ -440,7 +440,7 @@ mod tests {
 
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 		assert_eq!(
 			vec![(panel, Some(Path::from("item_skill/icon/path")))],
 			result.0
@@ -465,9 +465,9 @@ mod tests {
 				}),
 			},
 		)]));
-		app.world.spawn((Player, slots, _Queue::default()));
+		app.world_mut().spawn((Player, slots, _Queue::default()));
 		let panel = app
-			.world
+			.world_mut()
 			.spawn(QuickbarPanel {
 				key: SlotKey::Hand(Side::Main),
 				state: PanelState::Empty,
@@ -476,7 +476,7 @@ mod tests {
 
 		app.update();
 
-		let result = app.world.resource::<_Result>();
+		let result = app.world().resource::<_Result>();
 		assert_eq!(
 			vec![(panel, Some(Path::from("item_skill/icon/path")))],
 			result.0

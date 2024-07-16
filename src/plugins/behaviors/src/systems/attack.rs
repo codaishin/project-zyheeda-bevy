@@ -82,7 +82,7 @@ mod tests {
 	fn use_spawn_function() {
 		let mut app = setup();
 		let attacker = app
-			.world
+			.world_mut()
 			.spawn((
 				Attack(Entity::from_raw(11)),
 				AttackConfig {
@@ -95,7 +95,7 @@ mod tests {
 		app.update();
 
 		let fake_attack = app
-			.world
+			.world()
 			.iter_entities()
 			.find_map(|e| e.get::<_FakeAttack>());
 
@@ -112,7 +112,7 @@ mod tests {
 	fn insert_cool_down() {
 		let mut app = setup();
 		let attacker = app
-			.world
+			.world_mut()
 			.spawn((
 				Attack(Entity::from_raw(11)),
 				AttackConfig {
@@ -124,7 +124,7 @@ mod tests {
 
 		app.update();
 
-		let attacker = app.world.entity(attacker);
+		let attacker = app.world().entity(attacker);
 
 		assert_eq!(
 			Some(&OnCoolDown(Duration::from_secs(42))),
@@ -136,7 +136,7 @@ mod tests {
 	fn do_nothing_when_cool_down_present() {
 		let mut app = setup();
 		let attacker = app
-			.world
+			.world_mut()
 			.spawn((
 				Attack(Entity::from_raw(11)),
 				OnCoolDown(Duration::from_millis(100)),
@@ -150,10 +150,10 @@ mod tests {
 		app.update();
 
 		let fake_attack = app
-			.world
+			.world()
 			.iter_entities()
 			.find_map(|e| e.get::<_FakeAttack>());
-		let attacker = app.world.entity(attacker);
+		let attacker = app.world().entity(attacker);
 
 		assert_eq!(
 			(None, Some(&OnCoolDown(Duration::from_millis(100)))),
@@ -165,7 +165,7 @@ mod tests {
 	fn use_despawn_function_when_attack_removed() {
 		let mut app = setup();
 		let attacker = app
-			.world
+			.world_mut()
 			.spawn((
 				Attack(Entity::from_raw(11)),
 				AttackConfig {
@@ -177,12 +177,12 @@ mod tests {
 
 		app.update();
 
-		app.world.entity_mut(attacker).remove::<Attack>();
+		app.world_mut().entity_mut(attacker).remove::<Attack>();
 
 		app.update();
 
 		let fake_attack = app
-			.world
+			.world()
 			.iter_entities()
 			.find_map(|e| e.get::<_FakeAttack>());
 
@@ -193,7 +193,7 @@ mod tests {
 	fn remove_despawn_component_when_attack_removed() {
 		let mut app = setup();
 		let attacker = app
-			.world
+			.world_mut()
 			.spawn((
 				Attack(Entity::from_raw(11)),
 				AttackConfig {
@@ -205,11 +205,11 @@ mod tests {
 
 		app.update();
 
-		app.world.entity_mut(attacker).remove::<Attack>();
+		app.world_mut().entity_mut(attacker).remove::<Attack>();
 
 		app.update();
 
-		let despawners = app.world.iter_entities().find_map(|e| e.get::<Despawn>());
+		let despawners = app.world().iter_entities().find_map(|e| e.get::<Despawn>());
 
 		assert!(despawners.is_none());
 	}

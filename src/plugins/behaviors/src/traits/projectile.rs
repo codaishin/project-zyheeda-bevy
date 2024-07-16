@@ -2,10 +2,10 @@ use super::ProjectileBehavior;
 use crate::components::{MovementConfig, MovementMode, Plasma, Projectile};
 use bevy::{
 	self,
+	color::Color,
 	hierarchy::BuildChildren,
-	math::{primitives::Direction3d, Vec3},
+	math::{Dir3, Vec3},
 	pbr::{PbrBundle, PointLight, PointLightBundle, StandardMaterial},
-	render::color::Color,
 	transform::components::Transform,
 	utils::default,
 };
@@ -24,7 +24,7 @@ use interactions::components::{DealsDamage, Fragile};
 use prefabs::traits::{sphere, GetOrCreateAssets, Instantiate};
 
 impl<T> ProjectileBehavior for Projectile<T> {
-	fn direction(&self) -> Direction3d {
+	fn direction(&self) -> Dir3 {
 		self.direction
 	}
 
@@ -42,10 +42,10 @@ impl Instantiate for Projectile<Plasma> {
 		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		let transform = Transform::from_translation(Vec3::ZERO);
-		let color = Color::rgb_linear(0., 1., 1.);
+		let color = Color::srgb(0., 1., 1.);
 		let mesh = assets.get_or_create_for::<Projectile<Plasma>>(|| sphere(PLASMA_RADIUS));
 		let material = assets.get_or_create_for::<Projectile<Plasma>>(|| StandardMaterial {
-			emissive: color * 230000.0,
+			emissive: color.to_linear() * 2300.0,
 			..default()
 		});
 

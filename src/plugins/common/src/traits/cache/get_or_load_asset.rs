@@ -47,8 +47,8 @@ mod tests {
 		asset::AssetId,
 		prelude::default,
 		render::texture::Image,
-		utils::Uuid,
 	};
+	use uuid::Uuid;
 
 	#[derive(Default, Resource)]
 	struct _Storage {
@@ -135,7 +135,7 @@ mod tests {
 			(load_asset, storage).get_or_load(Path::from("proper path"));
 		});
 
-		let storage = app.world.resource::<_Storage>();
+		let storage = app.world().resource::<_Storage>();
 		assert_eq!(vec![(Path::from("proper path"), handle)], storage.args);
 	}
 
@@ -147,7 +147,7 @@ mod tests {
 			(load_asset, storage).get_or_load(Path::from("proper path"));
 		});
 
-		let load_asset = app.world.resource::<_LoadAsset>();
+		let load_asset = app.world().resource::<_LoadAsset>();
 		assert_eq!(vec![Path::from("proper path")], load_asset.args);
 	}
 }

@@ -28,15 +28,15 @@ impl Animation {
 	}
 }
 
-impl AnimationPath for Animation {
-	fn animation_path(&self) -> &Path {
-		&self.path
-	}
-}
-
 impl AnimationPlayMode for Animation {
 	fn animation_play_mode(&self) -> PlayMode {
 		self.play_mode
+	}
+}
+
+impl AnimationPath for Animation {
+	fn animation_path(&self) -> &Path {
+		&self.path
 	}
 }
 
@@ -65,13 +65,6 @@ mod tests {
 			(path, PlayMode::Repeat),
 			(animation.path, animation.play_mode)
 		)
-	}
-
-	#[test]
-	fn animation_path() {
-		let animation = Animation::new(Path::from("my/path"), PlayMode::Repeat);
-
-		assert_eq!(&Path::from("my/path"), animation.animation_path());
 	}
 
 	#[test]

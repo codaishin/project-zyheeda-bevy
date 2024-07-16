@@ -1,7 +1,5 @@
 use animations::{
 	animation::{Animation, PlayMode},
-	components::{animation_dispatch::AnimationDispatch, Animator},
-	traits::{IdleLayer, StartAnimation},
 	AnimationsPlugin,
 };
 use bars::{components::Bar, BarsPlugin};
@@ -20,7 +18,7 @@ use common::{
 	components::{ColliderRoot, GroundOffset, Health, MainCamera, Player},
 	states::GameRunning,
 	tools::{player_animation_path, UnitsPerSecond},
-	traits::{clamp_zero_positive::ClampZeroPositive, load_asset::Path},
+	traits::clamp_zero_positive::ClampZeroPositive,
 	CommonPlugin,
 };
 use gravity::GravityPlugin;
@@ -36,7 +34,7 @@ use project_zyheeda::systems::{
 use skills::SkillsPlugin;
 use std::f32::consts::PI;
 
-fn main() {
+fn main() -> AppExit {
 	let app = &mut App::new();
 
 	prepare_game(app);
@@ -44,7 +42,7 @@ fn main() {
 	#[cfg(debug_assertions)]
 	debug_utils::prepare_debug(app);
 
-	app.run();
+	app.run()
 }
 
 fn prepare_game(app: &mut App) {
@@ -76,6 +74,8 @@ pub mod debug_utils {
 	use interactions::events::RayCastEvent;
 	use std::ops::Not;
 
+	const FORWARD_GIZMO_COLOR: Color = Color::srgb(0., 0., 1.);
+
 	pub fn prepare_debug(app: &mut App) {
 		app.insert_resource(ShowGizmos::No)
 			.add_plugins(WorldInspectorPlugin::new())
@@ -83,7 +83,7 @@ pub mod debug_utils {
 			.add_systems(Update, toggle_gizmos)
 			.add_systems(
 				Update,
-				forward_gizmo(&["projectile_spawn", "Player"], &Color::BLUE),
+				forward_gizmo(&["projectile_spawn", "Player"], &FORWARD_GIZMO_COLOR),
 			)
 			.add_systems(Update, display_events);
 	}
@@ -166,17 +166,7 @@ fn setup_simple_3d_scene(
 	next_state.set(GameRunning::On);
 }
 
-fn animation_dispatch() -> impl Component + StartAnimation<IdleLayer, Animation> {
-	AnimationDispatch::default()
-}
-
 fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
-	let mut animation_dispatch = animation_dispatch();
-	animation_dispatch.start_animation(Animation::new(
-		Path::from(Player::MODEL_PATH.to_owned() + "#Animation2"),
-		PlayMode::Repeat,
-	));
-
 	commands
 		.spawn((
 			Name::from("Player"),
@@ -186,8 +176,6 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				scene: asset_server.load(Player::MODEL_PATH.to_owned() + "#Scene0"),
 				..default()
 			},
-			Animator { ..default() },
-			animation_dispatch,
 			GroundOffset(Vec3::Y),
 			Player,
 			MovementConfig::Dynamic {

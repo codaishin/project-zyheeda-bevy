@@ -33,7 +33,7 @@ type Components<'a, TGetSkill, TAnimationDispatch, TSkillExecutor> = (
 pub(crate) fn advance_active_skill<
 	TGetSkill: GetActiveSkill<TAnimation, SkillState> + Component,
 	TAnimation: Send + Sync + 'static,
-	TAnimationDispatch: Component + StartAnimation<SkillLayer, TAnimation> + StopAnimation<SkillLayer>,
+	TAnimationDispatch: Component + StartAnimation<TAnimation> + StopAnimation,
 	TSkillExecutor: Component + Schedule + Flush,
 	TTime: Send + Sync + Default + 'static,
 >(
@@ -62,19 +62,19 @@ pub(crate) fn advance_active_skill<
 	}
 }
 
-fn remove_side_effects<TAnimationDispatch: StopAnimation<SkillLayer>>(
+fn remove_side_effects<TAnimationDispatch: StopAnimation>(
 	mut agent: EntityCommands,
 	mut animation_dispatch: Mut<TAnimationDispatch>,
 ) -> Advancement {
 	agent.remove::<OverrideFace>();
-	animation_dispatch.stop_animation();
+	animation_dispatch.stop_animation(SkillLayer);
 
 	Advancement::InProcess
 }
 
 fn advance<
 	TAnimation: Send + Sync + 'static,
-	TAnimationDispatch: StartAnimation<SkillLayer, TAnimation> + StopAnimation<SkillLayer>,
+	TAnimationDispatch: StartAnimation<TAnimation> + StopAnimation,
 	TSkillExecutor: Component + Schedule + Flush,
 >(
 	mut skill: (impl GetSkillBehavior + GetAnimation<TAnimation> + StateUpdate<SkillState>),
@@ -107,16 +107,13 @@ fn advance<
 	Advancement::InProcess
 }
 
-fn animate<
-	TAnimation,
-	TAnimationDispatch: StartAnimation<SkillLayer, TAnimation> + StopAnimation<SkillLayer>,
->(
+fn animate<TAnimation, TAnimationDispatch: StartAnimation<TAnimation> + StopAnimation>(
 	skill: &mut (impl GetSkillBehavior + GetAnimation<TAnimation> + StateUpdate<SkillState>),
 	dispatch: &mut TAnimationDispatch,
 ) {
 	match skill.animate() {
-		Animate::Some(animation) => dispatch.start_animation(animation),
-		Animate::None => dispatch.stop_animation(),
+		Animate::Some(animation) => dispatch.start_animation(SkillLayer, animation),
+		Animate::None => dispatch.stop_animation(SkillLayer),
 		Animate::Ignore => {}
 	}
 }
@@ -153,6 +150,7 @@ mod tests {
 		skills::OnSkillStop,
 		traits::{GetAnimation, GetSkillBehavior},
 	};
+	use animations::traits::Priority;
 	use behaviors::components::{Face, OverrideFace};
 	use bevy::{
 		prelude::{App, Transform, Update},
@@ -221,25 +219,38 @@ mod tests {
 		mock: Mock_AnimationDispatch,
 	}
 
-	impl StartAnimation<SkillLayer, _Animation> for _AnimationDispatch {
-		fn start_animation(&mut self, animation: _Animation) {
-			self.mock.start_animation(animation)
+	impl StartAnimation<_Animation> for _AnimationDispatch {
+		fn start_animation<TLayer>(&mut self, layer: TLayer, animation: _Animation)
+		where
+			TLayer: 'static,
+			Priority: From<TLayer>,
+		{
+			self.mock.start_animation(layer, animation)
 		}
 	}
 
-	impl StopAnimation<SkillLayer> for _AnimationDispatch {
-		fn stop_animation(&mut self) {
-			self.mock.stop_animation()
+	impl StopAnimation for _AnimationDispatch {
+		fn stop_animation<TLayer>(&mut self, layer: TLayer)
+		where
+			TLayer: 'static,
+			Priority: From<TLayer>,
+		{
+			self.mock.stop_animation(layer)
 		}
 	}
 
 	mock! {
 		_AnimationDispatch {}
-		impl StartAnimation<SkillLayer, _Animation> for _AnimationDispatch {
-			fn start_animation(&mut self, animation: _Animation);
+		impl StartAnimation<_Animation> for _AnimationDispatch {
+			fn start_animation<TLayer>(&mut self, layer: TLayer, animation: _Animation)
+			where
+				TLayer: 'static,
+				Priority: From<TLayer>;
 		}
-		impl StopAnimation<SkillLayer> for _AnimationDispatch {
-			fn stop_animation(&mut self);
+		impl StopAnimation for _AnimationDispatch {
+			fn stop_animation<TLayer>(&mut self, layer: TLayer) where
+				TLayer: 'static,
+				Priority: From<TLayer>;
 		}
 	}
 
@@ -278,11 +289,17 @@ mod tests {
 		let mut dispatch = _AnimationDispatch::default();
 		let mut executer = _Executor::default();
 
-		dispatch.mock.expect_start_animation().return_const(());
-		dispatch.mock.expect_stop_animation().return_const(());
+		dispatch
+			.mock
+			.expect_start_animation::<SkillLayer>()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation::<SkillLayer>()
+			.return_const(());
 		executer.mock.expect_schedule().return_const(());
 		executer.mock.expect_flush().return_const(());
-		let agent = app.world.spawn((dispatch, executer)).id();
+		let agent = app.world_mut().spawn((dispatch, executer)).id();
 
 		time.update();
 		app.insert_resource(time);
@@ -298,7 +315,7 @@ mod tests {
 	#[test]
 	fn call_update_with_delta() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -321,15 +338,18 @@ mod tests {
 	fn insert_animation_when_aim_begins() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_stop_animation().return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation::<SkillLayer>()
+			.return_const(());
 		dispatch
 			.mock
 			.expect_start_animation()
 			.times(1)
-			.with(eq(_Animation(42)))
+			.with(eq(SkillLayer), eq(_Animation(42)))
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
@@ -355,14 +375,17 @@ mod tests {
 	fn do_not_insert_animation_when_not_beginning_to_aim() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_stop_animation().return_const(());
 		dispatch
 			.mock
-			.expect_start_animation()
+			.expect_stop_animation::<SkillLayer>()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_start_animation::<SkillLayer>()
 			.never()
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
@@ -391,14 +414,17 @@ mod tests {
 	fn stop_animation_on_when_beginning_to_aim_and_animate_is_none() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_start_animation().return_const(());
 		dispatch
 			.mock
-			.expect_stop_animation()
+			.expect_start_animation::<SkillLayer>()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation::<SkillLayer>()
 			.times(1)
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
@@ -422,14 +448,17 @@ mod tests {
 	fn do_not_stop_animation_when_not_beginning_to_aim_and_animate_is_none() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_start_animation().return_const(());
 		dispatch
 			.mock
-			.expect_stop_animation()
+			.expect_start_animation::<SkillLayer>()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation::<SkillLayer>()
 			.never()
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
@@ -458,16 +487,16 @@ mod tests {
 		let mut dispatch = _AnimationDispatch::default();
 		dispatch
 			.mock
-			.expect_start_animation()
+			.expect_start_animation::<SkillLayer>()
 			.never()
 			.return_const(());
 		dispatch
 			.mock
-			.expect_stop_animation()
+			.expect_stop_animation::<SkillLayer>()
 			.never()
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::Animate]);
@@ -491,14 +520,17 @@ mod tests {
 	fn remove_animation_when_no_active_skill() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_start_animation().return_const(());
 		dispatch
 			.mock
-			.expect_stop_animation()
+			.expect_start_animation::<SkillLayer>()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation::<SkillLayer>()
 			.times(1)
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue { active: None },
 			Transform::default(),
 			dispatch,
@@ -511,14 +543,17 @@ mod tests {
 	fn do_not_remove_animation_when_some_active_skill() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_start_animation().return_const(());
 		dispatch
 			.mock
-			.expect_stop_animation()
+			.expect_start_animation::<SkillLayer>()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation::<SkillLayer>()
 			.never()
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -537,14 +572,17 @@ mod tests {
 	fn remove_animation_only_once_when_no_active_skill() {
 		let (mut app, agent) = setup();
 		let mut dispatch = _AnimationDispatch::default();
-		dispatch.mock.expect_start_animation().return_const(());
 		dispatch
 			.mock
-			.expect_stop_animation()
+			.expect_start_animation::<SkillLayer>()
+			.return_const(());
+		dispatch
+			.mock
+			.expect_stop_animation::<SkillLayer>()
 			.times(1)
 			.return_const(());
 
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue { active: None },
 			Transform::default(),
 			dispatch,
@@ -557,7 +595,7 @@ mod tests {
 	#[test]
 	fn clear_queue_of_active() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -572,7 +610,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert!(agent.get::<_Dequeue>().unwrap().active.is_none());
 	}
@@ -580,7 +618,7 @@ mod tests {
 	#[test]
 	fn do_not_remove_skill_when_not_done() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -595,7 +633,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert!(agent.get::<_Dequeue>().unwrap().active.is_some());
 	}
@@ -615,7 +653,7 @@ mod tests {
 			.return_const(());
 
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			executor,
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -651,7 +689,7 @@ mod tests {
 			.return_const(());
 
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			executor,
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -675,7 +713,7 @@ mod tests {
 	#[test]
 	fn do_not_run_when_not_activating_this_frame() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::RunBehavior]);
@@ -703,7 +741,7 @@ mod tests {
 		executor.mock.expect_flush().times(1).return_const(());
 
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			executor,
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -727,7 +765,7 @@ mod tests {
 		executor.mock.expect_flush().never().return_const(());
 
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			executor,
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -748,7 +786,7 @@ mod tests {
 	#[test]
 	fn apply_facing() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -765,7 +803,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&OverrideFace(Face::Cursor)),
@@ -776,7 +814,7 @@ mod tests {
 	#[test]
 	fn do_not_apply_facing_when_not_beginning_to_aim() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -791,7 +829,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<OverrideFace>());
 	}
@@ -799,7 +837,7 @@ mod tests {
 	#[test]
 	fn apply_facing_override_when_beginning_to_aim() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -816,7 +854,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(
 			Some(&OverrideFace(Face::Cursor)),
@@ -827,7 +865,7 @@ mod tests {
 	#[test]
 	fn no_facing_override_when_no_skill() {
 		let (mut app, agent) = setup();
-		app.world.entity_mut(agent).insert((
+		app.world_mut().entity_mut(agent).insert((
 			_Dequeue { active: None },
 			Transform::from_xyz(-1., -2., -3.),
 			OverrideFace(Face::Cursor),
@@ -835,7 +873,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<OverrideFace>());
 	}

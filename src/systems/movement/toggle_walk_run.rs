@@ -39,17 +39,17 @@ mod tests {
 			slow_speed: default(),
 		};
 
-		let player = app.world.spawn((Player, config)).id();
+		let player = app.world_mut().spawn((Player, config)).id();
 		app.add_systems(Update, player_toggle_walk_run);
 		app.insert_resource(keys);
-		app.world
+		app.world_mut()
 			.resource_mut::<ButtonInput<KeyCode>>()
 			.press(KeyCode::NumpadSubtract);
 
 		app.update();
 
 		let current = app
-			.world
+			.world()
 			.entity(player)
 			.get::<MovementConfig>()
 			.and_then(|m| match m {
@@ -69,17 +69,17 @@ mod tests {
 			slow_speed: default(),
 		};
 
-		let player = app.world.spawn((Player, config)).id();
+		let player = app.world_mut().spawn((Player, config)).id();
 		app.add_systems(Update, player_toggle_walk_run);
 		app.insert_resource(keys);
-		app.world
+		app.world_mut()
 			.resource_mut::<ButtonInput<KeyCode>>()
 			.press(KeyCode::NumpadSubtract);
 
 		app.update();
 
 		let current = app
-			.world
+			.world()
 			.entity(player)
 			.get::<MovementConfig>()
 			.and_then(|m| match m {
@@ -99,14 +99,14 @@ mod tests {
 			slow_speed: default(),
 		};
 
-		let player = app.world.spawn((Player, config)).id();
+		let player = app.world_mut().spawn((Player, config)).id();
 		app.add_systems(Update, player_toggle_walk_run);
 		app.insert_resource(keys);
 
 		app.update();
 
 		let current = app
-			.world
+			.world()
 			.entity(player)
 			.get::<MovementConfig>()
 			.and_then(|m| match m {

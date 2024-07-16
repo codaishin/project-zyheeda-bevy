@@ -1,11 +1,12 @@
 use crate::components::ForceShield;
 use bevy::{
+	color::Color,
 	ecs::system::EntityCommands,
 	hierarchy::BuildChildren,
 	math::{primitives::Cuboid, Vec3},
-	pbr::{AlphaMode, PbrBundle, StandardMaterial},
-	render::{color::Color, mesh::Mesh},
-	transform::TransformBundle,
+	pbr::{PbrBundle, StandardMaterial},
+	render::{alpha::AlphaMode, mesh::Mesh},
+	transform::bundles::TransformBundle,
 	utils::default,
 };
 use bevy_rapier3d::{dynamics::RigidBody, geometry::Collider};
@@ -23,8 +24,8 @@ impl Instantiate for ForceShield {
 			y: 0.6,
 			z: 0.01,
 		};
-		let base_color = Color::MIDNIGHT_BLUE;
-		let emissive = base_color * 100.;
+		let base_color = Color::srgb(0.1, 0.1, 0.44);
+		let emissive = base_color.to_linear() * 100.;
 		let material = assets.get_or_create_for::<ForceShield>(|| StandardMaterial {
 			base_color,
 			emissive,

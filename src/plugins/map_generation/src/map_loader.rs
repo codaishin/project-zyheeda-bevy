@@ -1,7 +1,4 @@
-use bevy::{
-	asset::{io::Reader, Asset, AssetLoader, AsyncReadExt, LoadContext},
-	utils::BoxedFuture,
-};
+use bevy::asset::{io::Reader, Asset, AssetLoader, AsyncReadExt, LoadContext};
 use std::{
 	error::Error,
 	fmt::{Display, Formatter, Result as FmtResult},
@@ -44,24 +41,22 @@ impl<TAsset: From<String> + Asset> AssetLoader for TextLoader<TAsset> {
 	type Settings = ();
 	type Error = TextLoaderError;
 
-	fn load<'a>(
+	async fn load<'a>(
 		&'a self,
-		reader: &'a mut Reader,
+		reader: &'a mut Reader<'_>,
 		_settings: &'a Self::Settings,
-		_load_context: &'a mut LoadContext,
-	) -> BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
-		Box::pin(async {
-			let mut bytes = Vec::new();
-			let result = reader
-				.read_to_end(&mut bytes)
-				.await
-				.map(|_| from_utf8(&bytes));
+		_load_context: &'a mut LoadContext<'_>,
+	) -> Result<Self::Asset, Self::Error> {
+		let mut bytes = Vec::new();
+		let result = reader
+			.read_to_end(&mut bytes)
+			.await
+			.map(|_| from_utf8(&bytes));
 
-			match result {
-				Err(error) => Err(TextLoaderError::IO(error)),
-				Ok(Err(error)) => Err(TextLoaderError::Parse(error)),
-				Ok(Ok(str)) => Ok(TAsset::from(str.to_string())),
-			}
-		})
+		match result {
+			Err(error) => Err(TextLoaderError::IO(error)),
+			Ok(Err(error)) => Err(TextLoaderError::Parse(error)),
+			Ok(Ok(str)) => Ok(TAsset::from(str.to_string())),
+		}
 	}
 }

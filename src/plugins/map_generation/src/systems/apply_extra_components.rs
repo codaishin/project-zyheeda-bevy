@@ -65,11 +65,11 @@ mod tests {
 	#[test]
 	fn add_component_when_name_matches() {
 		let mut app = setup::<_Definition>();
-		let agent = app.world.spawn(Name::new("AAA")).id();
+		let agent = app.world_mut().spawn(Name::new("AAA")).id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&_Component), agent.get::<_Component>());
 	}
@@ -77,11 +77,11 @@ mod tests {
 	#[test]
 	fn ignore_when_name_not_matching() {
 		let mut app = setup::<_Definition>();
-		let agent = app.world.spawn(Name::new("CCC")).id();
+		let agent = app.world_mut().spawn(Name::new("CCC")).id();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<_Component>());
 	}
@@ -89,15 +89,15 @@ mod tests {
 	#[test]
 	fn do_only_operate_once() {
 		let mut app = setup::<_Definition>();
-		let agent = app.world.spawn(Name::new("AAA")).id();
+		let agent = app.world_mut().spawn(Name::new("AAA")).id();
 
 		app.update();
 
-		app.world.entity_mut(agent).remove::<_Component>();
+		app.world_mut().entity_mut(agent).remove::<_Component>();
 
 		app.update();
 
-		let agent = app.world.entity(agent);
+		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<_Component>());
 	}
@@ -119,8 +119,8 @@ mod tests {
 	#[test]
 	fn do_not_call_target_names_multiple_times() {
 		let mut app = setup::<Mock_Definition2>();
-		app.world.spawn(Name::new("AAA"));
-		app.world.spawn(Name::new("AAA"));
+		app.world_mut().spawn(Name::new("AAA"));
+		app.world_mut().spawn(Name::new("AAA"));
 
 		let target_names = Mock_Definition2::target_names_context();
 		target_names.expect().times(1).return_const(vec![]);

@@ -50,14 +50,14 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(43), GlobalTransform::from_xyz(1., 2., 3.));
 
 		let projectile = app
-			.world
+			.world_mut()
 			.spawn(Projectile::<()>::new_skill_bundle(
 				&caster,
 				&spawner,
 				&target(),
 			))
 			.id();
-		let projectile = app.world.entity(projectile).get::<Projectile<()>>();
+		let projectile = app.world().entity(projectile).get::<Projectile<()>>();
 
 		assert_eq_approx!(
 			Some(forward.normalize()),
@@ -73,14 +73,14 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(43), GlobalTransform::from_xyz(1., 2., 3.));
 
 		let projectile = app
-			.world
+			.world_mut()
 			.spawn(Projectile::<()>::new_skill_bundle(
 				&caster,
 				&spawner,
 				&target(),
 			))
 			.id();
-		let projectile = app.world.entity(projectile);
+		let projectile = app.world().entity(projectile);
 
 		assert_bundle!(SpatialBundle, &app, projectile);
 	}
@@ -92,14 +92,14 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(43), GlobalTransform::from_xyz(1., 2., 3.));
 
 		let projectile = app
-			.world
+			.world_mut()
 			.spawn(Projectile::<()>::new_skill_bundle(
 				&caster,
 				&spawner,
 				&target(),
 			))
 			.id();
-		let projectile = app.world.entity(projectile).get::<Transform>();
+		let projectile = app.world().entity(projectile).get::<Transform>();
 
 		assert_eq!(
 			Some(Vec3::new(1., 2., 3.)),

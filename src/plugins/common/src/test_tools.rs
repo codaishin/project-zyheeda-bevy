@@ -76,7 +76,7 @@ pub mod utils {
 
 	impl GetImmediateChildren for Entity {
 		fn get_immediate_children(entity: &Entity, app: &App) -> Vec<Self> {
-			match app.world.entity(*entity).get::<Children>() {
+			match app.world().entity(*entity).get::<Children>() {
 				None => vec![],
 				Some(children) => children.iter().cloned().collect(),
 			}
@@ -94,7 +94,7 @@ pub mod utils {
 		fn get_immediate_children<'a>(entity: &Entity, app: &'a App) -> Vec<&'a Self> {
 			Entity::get_immediate_children(entity, app)
 				.iter()
-				.filter_map(|entity| app.world.entity(*entity).get::<TComponent>())
+				.filter_map(|entity| app.world().entity(*entity).get::<TComponent>())
 				.collect()
 		}
 	}
@@ -105,7 +105,7 @@ pub mod utils {
 
 	impl TickTime for App {
 		fn tick_time(&mut self, delta: Duration) {
-			let mut time = self.world.resource_mut::<Time<Real>>();
+			let mut time = self.world_mut().resource_mut::<Time<Real>>();
 			if time.last_update().is_none() {
 				time.update();
 			}
@@ -155,7 +155,7 @@ pub mod utils {
 		fn name_and_id(app: &App) -> (ComponentName, Option<ComponentId>) {
 			(
 				type_name::<TComponent>(),
-				app.world.component_id::<TComponent>(),
+				app.world().component_id::<TComponent>(),
 			)
 		}
 	}

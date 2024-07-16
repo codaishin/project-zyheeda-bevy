@@ -40,12 +40,12 @@ mod tests {
 	#[test]
 	fn removes_bundle() {
 		let mut app = App::new().single_threaded(Update);
-		let entity = app.world.spawn((_A, _B)).id();
+		let entity = app.world_mut().spawn((_A, _B)).id();
 
 		app.add_systems(Update, call_remover::<(_A, _B)>);
 		app.update();
 
-		let entity = app.world.entity(entity);
+		let entity = app.world().entity(entity);
 
 		assert_eq!((None, None), (entity.get::<_A>(), entity.get::<_B>()));
 	}

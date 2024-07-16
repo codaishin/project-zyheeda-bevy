@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 bevy.workspace = true
 bevy_rapier3d.workspace = true
+uuid.workspace = true
 common.workspace = true
 
 [dev-dependencies]

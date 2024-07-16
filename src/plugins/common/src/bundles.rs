@@ -1,6 +1,6 @@
 use bevy::{
 	prelude::Bundle,
-	transform::{components::Transform, TransformBundle},
+	transform::{bundles::TransformBundle, components::Transform},
 };
 use bevy_rapier3d::{
 	geometry::{ActiveEvents, Collider},

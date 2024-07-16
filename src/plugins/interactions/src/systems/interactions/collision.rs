@@ -106,12 +106,12 @@ mod tests {
 			.with(eq(target))
 			.return_const(());
 
-		let actor = app.world.spawn(actor).id();
-		let target = app.world.spawn(target).id();
-		let coll_actor = app.world.spawn(ColliderRoot(actor)).id();
-		let coll_target = app.world.spawn(ColliderRoot(target)).id();
+		let actor = app.world_mut().spawn(actor).id();
+		let target = app.world_mut().spawn(target).id();
+		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
+		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
-		app.world.send_event(CollisionEvent::Started(
+		app.world_mut().send_event(CollisionEvent::Started(
 			coll_actor,
 			coll_target,
 			CollisionEventFlags::empty(),
@@ -132,12 +132,12 @@ mod tests {
 			.with(eq(target))
 			.return_const(());
 
-		let actor = app.world.spawn(actor).id();
-		let target = app.world.spawn(target).id();
-		let coll_actor = app.world.spawn(ColliderRoot(actor)).id();
-		let coll_target = app.world.spawn(ColliderRoot(target)).id();
+		let actor = app.world_mut().spawn(actor).id();
+		let target = app.world_mut().spawn(target).id();
+		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
+		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
-		app.world.send_event(CollisionEvent::Started(
+		app.world_mut().send_event(CollisionEvent::Started(
 			coll_target,
 			coll_actor,
 			CollisionEventFlags::empty(),
@@ -153,12 +153,12 @@ mod tests {
 		let target = _Target;
 		actor.mock.expect_act_on().return_const(());
 
-		let actor = app.world.spawn(actor).id();
-		let target = app.world.spawn(target).id();
-		let coll_actor = app.world.spawn(ColliderRoot(actor)).id();
-		let coll_target = app.world.spawn(ColliderRoot(target)).id();
+		let actor = app.world_mut().spawn(actor).id();
+		let target = app.world_mut().spawn(target).id();
+		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
+		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
-		app.world.send_event(CollisionEvent::Started(
+		app.world_mut().send_event(CollisionEvent::Started(
 			coll_actor,
 			coll_target,
 			CollisionEventFlags::empty(),
@@ -166,7 +166,7 @@ mod tests {
 
 		app.update();
 
-		let actor = app.world.entity(actor);
+		let actor = app.world().entity(actor);
 
 		assert!(!actor.contains::<_Actor>());
 	}
@@ -178,12 +178,12 @@ mod tests {
 		let target = _Target;
 		actor.mock.expect_act_on().return_const(());
 
-		let actor = app.world.spawn(actor).id();
-		let target = app.world.spawn(target).id();
-		let coll_actor = app.world.spawn(ColliderRoot(actor)).id();
-		let coll_target = app.world.spawn(ColliderRoot(target)).id();
+		let actor = app.world_mut().spawn(actor).id();
+		let target = app.world_mut().spawn(target).id();
+		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
+		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
-		app.world.send_event(CollisionEvent::Started(
+		app.world_mut().send_event(CollisionEvent::Started(
 			coll_target,
 			coll_actor,
 			CollisionEventFlags::empty(),
@@ -191,7 +191,7 @@ mod tests {
 
 		app.update();
 
-		let actor = app.world.entity(actor);
+		let actor = app.world().entity(actor);
 
 		assert!(!actor.contains::<_Actor>());
 	}

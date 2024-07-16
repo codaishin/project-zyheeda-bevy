@@ -8,6 +8,7 @@ bevy.workspace = true
 bevy_rapier3d.workspace = true
 serde.workspace = true
 tracing.workspace = true
+uuid.workspace = true
 macros.workspace = true
 
 [dev-dependencies]

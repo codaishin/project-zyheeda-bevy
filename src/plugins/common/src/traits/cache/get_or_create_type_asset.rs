@@ -18,12 +18,8 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		asset::AssetId,
-		pbr::StandardMaterial,
-		render::color::Color,
-		utils::{default, Uuid},
-	};
+	use bevy::{asset::AssetId, color::Color, pbr::StandardMaterial, utils::default};
+	use uuid::Uuid;
 
 	#[derive(Default)]
 	struct _GetOrCreateAsset {
@@ -70,12 +66,12 @@ mod tests {
 		let mut cached = _GetOrCreateAsset::default();
 
 		as_get_or_create_type_asset(&mut cached).get_or_create_for::<u32>(|| StandardMaterial {
-			base_color: Color::GREEN,
+			base_color: Color::srgb(0., 1., 0.),
 			..default()
 		});
 
 		assert_eq!(
-			vec![(TypeId::of::<u32>(), Color::GREEN)],
+			vec![(TypeId::of::<u32>(), Color::srgb(0., 1., 0.))],
 			cached
 				.args
 				.into_iter()
