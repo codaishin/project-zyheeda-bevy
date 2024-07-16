@@ -4,7 +4,87 @@ use crate::{
 	skills::Skill,
 };
 use bevy::asset::Handle;
-use common::{components::Swap, traits::accessor::Accessor};
+use common::{
+	components::{Collection, Swap},
+	traits::{
+		accessor::Accessor,
+		swap_command::{SwapCommands, SwapError, SwapIn, SwapResult, SwappedOut},
+	},
+};
+
+trait Keys {
+	fn keys(&self) -> (InventoryKey, SlotKey);
+}
+
+impl Keys for Swap<InventoryKey, SlotKey> {
+	fn keys(&self) -> (InventoryKey, SlotKey) {
+		(self.0, self.1)
+	}
+}
+
+impl Keys for Swap<SlotKey, InventoryKey> {
+	fn keys(&self) -> (InventoryKey, SlotKey) {
+		(self.1, self.0)
+	}
+}
+
+struct RetryFailed<T>(T);
+
+impl<'a, TSkill, TSwap> SwapCommands<SlotKey, Item<TSkill>>
+	for (&'a mut Inventory<TSkill>, &'a mut Collection<TSwap>)
+where
+	TSkill: Clone,
+	TSwap: Keys + Clone,
+{
+	fn try_swap(
+		&mut self,
+		swap_fn: impl FnMut(SlotKey, SwapIn<Item<TSkill>>) -> SwapResult<Item<TSkill>>,
+	) {
+		let (Collection(items), Collection(swaps)) = self;
+
+		*swaps = swaps
+			.iter()
+			.filter_map(apply_swaps(items, swap_fn))
+			.map(retry_failed)
+			.collect();
+	}
+
+	fn is_empty(&self) -> bool {
+		let (.., Collection(swaps)) = self;
+		swaps.is_empty()
+	}
+}
+
+fn apply_swaps<'a, TSkill: Clone, TSwap: Keys + Clone>(
+	items: &'a mut Vec<Option<Item<TSkill>>>,
+	mut swap_fn: impl FnMut(SlotKey, SwapIn<Item<TSkill>>) -> SwapResult<Item<TSkill>> + 'a,
+) -> impl FnMut(&TSwap) -> Option<RetryFailed<TSwap>> + 'a {
+	move |swap| {
+		let (InventoryKey(item_key), slot_key) = swap.keys();
+		let item = items.get(item_key).cloned().flatten();
+		match swap_fn(slot_key, SwapIn(item)) {
+			Ok(SwappedOut(item)) => insert(items, item_key, item),
+			Err(SwapError::Disregard) => None,
+			Err(SwapError::TryAgain) => Some(RetryFailed(swap.clone())),
+		}
+	}
+}
+
+fn retry_failed<TSwap>(RetryFailed(swap): RetryFailed<TSwap>) -> TSwap {
+	swap
+}
+
+fn insert<TSkill: Clone, TSwap>(
+	inventory: &mut Vec<Option<Item<TSkill>>>,
+	inventory_key: usize,
+	item: Option<Item<TSkill>>,
+) -> Option<TSwap> {
+	if inventory.len() <= inventory_key {
+		fill(inventory, inventory_key);
+	}
+	inventory[inventory_key] = item;
+	None
+}
 
 impl Accessor<Inventory<Handle<Skill>>, (SlotKey, Option<Item<Handle<Skill>>>), Item<Handle<Skill>>>
 	for Swap<InventoryKey, SlotKey>
@@ -31,7 +111,7 @@ impl Accessor<Inventory<Handle<Skill>>, (SlotKey, Option<Item<Handle<Skill>>>), 
 		let Swap(inventory_key, slot_key) = self;
 
 		if inventory_key.0 >= inventory.len() {
-			fill_inventory(inventory_key, inventory);
+			fill(inventory, inventory_key.0);
 		}
 		inventory[inventory_key.0] = item;
 		Self(*inventory_key, *slot_key)
@@ -58,9 +138,177 @@ impl Accessor<Inventory<Handle<Skill>>, (SlotKey, Option<Item<Handle<Skill>>>), 
 	}
 }
 
-fn fill_inventory(inventory_key: &InventoryKey, inventory: &mut Vec<Option<Item<Handle<Skill>>>>) {
-	let fill_len = inventory_key.0 - inventory.len() + 1;
+fn fill<T: Clone>(inventory: &mut Vec<Option<Item<T>>>, inventory_key: usize) {
+	let fill_len = inventory_key - inventory.len() + 1;
 	inventory.extend(vec![None; fill_len]);
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use bevy::utils::default;
+	use common::{components::Side, traits::swap_command::SwapError};
+
+	#[test]
+	fn swap_inventory_slot_keys() {
+		let swap = Swap(InventoryKey(42), SlotKey::Hand(Side::Main));
+
+		assert_eq!((InventoryKey(42), SlotKey::Hand(Side::Main)), swap.keys());
+	}
+
+	#[test]
+	fn swap_slot_inventory_keys() {
+		let swap = Swap(SlotKey::Hand(Side::Main), InventoryKey(42));
+
+		assert_eq!((InventoryKey(42), SlotKey::Hand(Side::Main)), swap.keys());
+	}
+
+	#[derive(Clone, Debug, PartialEq)]
+	struct _Swap(InventoryKey, SlotKey);
+
+	impl Keys for _Swap {
+		fn keys(&self) -> (InventoryKey, SlotKey) {
+			(self.0, self.1)
+		}
+	}
+
+	#[test]
+	fn set_swapped_out_item_in_inventory() {
+		let mut inventory = Inventory::<()>::new([Some(Item {
+			name: "swap in",
+			..default()
+		})]);
+		let mut swaps = Collection::new([_Swap(InventoryKey(0), SlotKey::Hand(Side::Off))]);
+
+		(&mut inventory, &mut swaps).try_swap(|_, _| {
+			Ok(SwappedOut(Some(Item {
+				name: "swapped out",
+				..default()
+			})))
+		});
+
+		assert_eq!(
+			Inventory::<()>::new([Some(Item {
+				name: "swapped out",
+				..default()
+			})]),
+			inventory
+		);
+	}
+
+	#[test]
+	fn pass_swap_in_values_to_callback() {
+		let mut inventory = Inventory::<()>::new([Some(Item {
+			name: "swap in",
+			..default()
+		})]);
+		let mut swaps = Collection::new([_Swap(InventoryKey(0), SlotKey::Hand(Side::Off))]);
+
+		(&mut inventory, &mut swaps).try_swap(|slot_key, item| {
+			assert_eq!(
+				(
+					SlotKey::Hand(Side::Off),
+					SwapIn(Some(Item {
+						name: "swap in",
+						..default()
+					}))
+				),
+				(slot_key, item)
+			);
+			Ok(SwappedOut(Some(Item::default())))
+		});
+	}
+
+	#[test]
+	fn handle_inventory_index_out_of_range() {
+		let mut inventory = Inventory::<()>::new([Some(Item {
+			name: "unaffected",
+			..default()
+		})]);
+		let mut swaps = Collection::new([_Swap(InventoryKey(3), SlotKey::Hand(Side::Off))]);
+
+		(&mut inventory, &mut swaps).try_swap(|_, _| {
+			Ok(SwappedOut(Some(Item {
+				name: "swapped out",
+				..default()
+			})))
+		});
+
+		assert_eq!(
+			Inventory::<()>::new([
+				Some(Item {
+					name: "unaffected",
+					..default()
+				}),
+				None,
+				None,
+				Some(Item {
+					name: "swapped out",
+					..default()
+				})
+			]),
+			inventory
+		);
+	}
+
+	#[test]
+	fn clear_swaps() {
+		let mut inventory = Inventory::<()>::new([Some(Item {
+			name: "unaffected",
+			..default()
+		})]);
+		let mut swaps = Collection::new([_Swap(InventoryKey(0), SlotKey::Hand(Side::Off))]);
+
+		(&mut inventory, &mut swaps).try_swap(|_, _| Ok(SwappedOut(Some(Item::default()))));
+
+		assert_eq!(Collection::new([]), swaps);
+	}
+
+	#[test]
+	fn retain_swap_try_again_errors() {
+		let mut inventory = Inventory::<()>::new([
+			Some(Item {
+				name: "disregard error",
+				..default()
+			}),
+			Some(Item {
+				name: "try again error",
+				..default()
+			}),
+		]);
+		let mut swaps = Collection::new([
+			_Swap(InventoryKey(0), SlotKey::default()),
+			_Swap(InventoryKey(1), SlotKey::default()),
+			_Swap(InventoryKey(2), SlotKey::default()),
+		]);
+
+		(&mut inventory, &mut swaps).try_swap(|_, SwapIn(item)| match item {
+			Some(item) if item.name == "disregard error" => Err(SwapError::Disregard),
+			Some(item) if item.name == "try again error" => Err(SwapError::TryAgain),
+			_ => Ok(SwappedOut(default())),
+		});
+
+		assert_eq!(
+			Collection::new([_Swap(InventoryKey(1), SlotKey::Hand(Side::Main))]),
+			swaps
+		);
+	}
+
+	#[test]
+	fn swaps_not_empty() {
+		let mut inventory = Inventory::<()>::new([]);
+		let mut swaps = Collection::new([_Swap(InventoryKey(0), SlotKey::Hand(Side::Off))]);
+
+		assert!(!(&mut inventory, &mut swaps).is_empty());
+	}
+
+	#[test]
+	fn swaps_empty() {
+		let mut inventory = Inventory::<()>::new([]);
+		let mut swaps = Collection::<_Swap>::new([]);
+
+		assert!((&mut inventory, &mut swaps).is_empty());
+	}
 }
 
 #[cfg(test)]
