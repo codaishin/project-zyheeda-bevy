@@ -3,12 +3,13 @@ pub trait SwapCommand<TSource, TKey, TValue> {
 	fn insert(&self, item: Option<TValue>, container: &mut TSource) -> Self;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct SwappedOut<T>(pub Option<T>);
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct SwapIn<T>(pub Option<T>);
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum SwapError {
 	TryAgain,
 	Disregard,

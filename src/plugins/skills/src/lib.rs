@@ -24,7 +24,7 @@ use bevy::{
 };
 use bundles::Loadout;
 use common::{
-	components::{Player, Side, Swap},
+	components::{Collection, Player, Side, Swap},
 	resources::{key_map::KeyMap, Models},
 	states::{GameRunning, MouseContext},
 	systems::log::log_many,
@@ -133,9 +133,9 @@ impl Plugin for SkillsPlugin {
 			.add_systems(
 				Update,
 				(
-					equip_item::<Inventory<Handle<Skill>>, Swap<InventoryKey, SlotKey>>
+					equip_item::<Inventory<Handle<Skill>>, Collection<Swap<InventoryKey, SlotKey>>>
 						.pipe(log_many),
-					equip_item::<Inventory<Handle<Skill>>, Swap<SlotKey, InventoryKey>>
+					equip_item::<Inventory<Handle<Skill>>, Collection<Swap<SlotKey, InventoryKey>>>
 						.pipe(log_many),
 				),
 			);
