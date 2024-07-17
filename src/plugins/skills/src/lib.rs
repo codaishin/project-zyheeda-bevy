@@ -133,9 +133,17 @@ impl Plugin for SkillsPlugin {
 			.add_systems(
 				Update,
 				(
-					equip_item::<Inventory<Handle<Skill>>, Collection<Swap<InventoryKey, SlotKey>>>
+					equip_item::<
+						Inventory<Handle<Skill>>,
+						InventoryKey,
+						Collection<Swap<InventoryKey, SlotKey>>,
+					>
 						.pipe(log_many),
-					equip_item::<Inventory<Handle<Skill>>, Collection<Swap<SlotKey, InventoryKey>>>
+					equip_item::<
+						Inventory<Handle<Skill>>,
+						InventoryKey,
+						Collection<Swap<SlotKey, InventoryKey>>,
+					>
 						.pipe(log_many),
 				),
 			);

@@ -1,8 +1,3 @@
-pub trait SwapCommand<TSource, TKey, TValue> {
-	fn get(&self, from: &TSource) -> (TKey, Option<TValue>);
-	fn insert(&self, item: Option<TValue>, container: &mut TSource) -> Self;
-}
-
 #[derive(Debug, PartialEq, Clone)]
 pub struct SwappedOut<T>(pub Option<T>);
 

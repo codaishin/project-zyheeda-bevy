@@ -2,6 +2,7 @@ use crate::{
 	components::{slots::Slots, Slot},
 	items::{slot_key::SlotKey, Item, Mount},
 	skills::Skill,
+	traits::swap_commands::SwapController,
 };
 use bevy::{
 	ecs::component::Component,
@@ -26,7 +27,7 @@ type Components<'a, TContainer, TSwaps> = (
 	&'a mut TSwaps,
 );
 
-pub fn equip_item<TContainer, TSwaps>(
+pub fn equip_item<TContainer, TInnerKey, TSwaps>(
 	mut commands: Commands,
 	mut agent: Query<Components<TContainer, TSwaps>>,
 	models: Res<Models>,
@@ -34,7 +35,8 @@ pub fn equip_item<TContainer, TSwaps>(
 where
 	TContainer: Component,
 	TSwaps: Component,
-	for<'a> (&'a mut TContainer, &'a mut TSwaps): SwapCommands<SlotKey, Item<Handle<Skill>>>,
+	for<'a> SwapController<'a, TInnerKey, SlotKey, TContainer, TSwaps>:
+		SwapCommands<SlotKey, Item<Handle<Skill>>>,
 {
 	let mut results = vec![];
 	let commands = &mut commands;
@@ -42,7 +44,7 @@ where
 
 	for (agent, mut slots, mut container, mut swaps) in &mut agent {
 		let slots = slots.as_mut();
-		let mut swap_commands = (container.as_mut(), swaps.as_mut());
+		let mut swap_commands = SwapController::new(container.as_mut(), swaps.as_mut());
 
 		swap_commands.try_swap(|slot_key, SwapIn(item)| {
 			match try_equip(commands, slots, slot_key, item, models) {
@@ -160,7 +162,7 @@ mod tests {
 	use uuid::Uuid;
 
 	#[derive(Component, Default, PartialEq, Debug)]
-	struct _Swap {
+	struct _Swaps {
 		is_empty: bool,
 	}
 
@@ -173,12 +175,12 @@ mod tests {
 
 	type SkillItem = Item<Handle<Skill>>;
 
-	impl SwapCommands<SlotKey, SkillItem> for (&mut _Container, &mut _Swap) {
+	impl<'a> SwapCommands<SlotKey, SkillItem> for SwapController<'a, (), SlotKey, _Container, _Swaps> {
 		fn try_swap(
 			&mut self,
 			mut swap_fn: impl FnMut(SlotKey, SwapIn<SkillItem>) -> SwapResult<SkillItem>,
 		) {
-			let (container, _) = self;
+			let SwapController { container, .. } = self;
 			for (slot_key, swap_in) in container.swap_ins.clone() {
 				match swap_fn(slot_key, swap_in.clone()) {
 					Ok(swap_out) => {
@@ -192,8 +194,8 @@ mod tests {
 		}
 
 		fn is_empty(&self) -> bool {
-			let (_, swap) = self;
-			swap.is_empty
+			let SwapController { swaps, .. } = self;
+			swaps.is_empty
 		}
 	}
 
@@ -208,7 +210,7 @@ mod tests {
 		app.insert_resource(models);
 		app.add_systems(
 			Update,
-			equip_item::<_Container, _Swap>.pipe(fake_log_error_many_recourse),
+			equip_item::<_Container, (), _Swaps>.pipe(fake_log_error_many_recourse),
 		);
 
 		app
@@ -241,7 +243,7 @@ mod tests {
 				)]),
 				..default()
 			},
-			_Swap { is_empty: false },
+			_Swaps { is_empty: false },
 		));
 
 		app.update();
@@ -282,7 +284,7 @@ mod tests {
 				)]),
 				..default()
 			},
-			_Swap { is_empty: false },
+			_Swaps { is_empty: false },
 		));
 
 		app.update();
@@ -322,7 +324,7 @@ mod tests {
 					)]),
 					..default()
 				},
-				_Swap { is_empty: false },
+				_Swaps { is_empty: false },
 			))
 			.id();
 
@@ -368,7 +370,7 @@ mod tests {
 					swap_ins: HashMap::from([(SlotKey::Hand(Side::Main), SwapIn(None))]),
 					..default()
 				},
-				_Swap { is_empty: false },
+				_Swaps { is_empty: false },
 			))
 			.id();
 
@@ -409,7 +411,7 @@ mod tests {
 					swap_ins: HashMap::from([(SlotKey::Hand(Side::Off), SwapIn(None))]),
 					..default()
 				},
-				_Swap { is_empty: false },
+				_Swaps { is_empty: false },
 			))
 			.id();
 
@@ -442,7 +444,7 @@ mod tests {
 				swap_ins: HashMap::from([(SlotKey::Hand(Side::Off), SwapIn(None))]),
 				..default()
 			},
-			_Swap { is_empty: false },
+			_Swaps { is_empty: false },
 		));
 
 		app.update();
@@ -483,7 +485,7 @@ mod tests {
 					)]),
 					..default()
 				},
-				_Swap { is_empty: false },
+				_Swaps { is_empty: false },
 			))
 			.id();
 
@@ -523,7 +525,7 @@ mod tests {
 				)]),
 				..default()
 			},
-			_Swap { is_empty: false },
+			_Swaps { is_empty: false },
 		));
 
 		app.update();
@@ -549,7 +551,7 @@ mod tests {
 			.spawn((
 				Slots::<Handle<Skill>>::default(),
 				_Container::default(),
-				_Swap { is_empty: true },
+				_Swaps { is_empty: true },
 			))
 			.id();
 
@@ -557,7 +559,7 @@ mod tests {
 
 		let agent = app.world().entity(agent);
 
-		assert_eq!(None, agent.get::<_Swap>());
+		assert_eq!(None, agent.get::<_Swaps>());
 	}
 
 	#[test]
@@ -569,7 +571,7 @@ mod tests {
 			.spawn((
 				Slots::<Handle<Skill>>::default(),
 				_Container::default(),
-				_Swap { is_empty: false },
+				_Swaps { is_empty: false },
 			))
 			.id();
 
@@ -577,6 +579,6 @@ mod tests {
 
 		let agent = app.world().entity(agent);
 
-		assert_eq!(Some(&_Swap { is_empty: false }), agent.get::<_Swap>());
+		assert_eq!(Some(&_Swaps { is_empty: false }), agent.get::<_Swaps>());
 	}
 }
