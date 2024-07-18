@@ -53,4 +53,7 @@ impl SlotsDefinition {
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct SkillSpawn<T>(pub T);
 
-pub type Equipment<TSkill> = Collection<(SlotKey, Option<Item<TSkill>>)>;
+#[derive(Debug, PartialEq)]
+pub(crate) struct LoadModel(pub SlotKey);
+
+pub(crate) type LoadModelsCommand = Collection<LoadModel>;

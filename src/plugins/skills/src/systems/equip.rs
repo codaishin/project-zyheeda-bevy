@@ -1,17 +1,15 @@
 use crate::{
-	components::{slots::Slots, Slot},
-	items::{slot_key::SlotKey, Item, Mount},
+	components::{slots::Slots, LoadModel, LoadModelsCommand, Slot},
+	items::{slot_key::SlotKey, Item},
 	skills::Skill,
 	traits::swap_commands::SwapController,
 };
 use bevy::{
 	ecs::component::Component,
-	prelude::{Commands, Entity, Handle, Query, Res},
-	scene::Scene,
+	prelude::{Commands, Entity, Handle, Query},
 };
 use common::{
 	errors::{Error, Level},
-	resources::Models,
 	traits::{
 		swap_command::{SwapCommands, SwapError, SwapIn, SwappedOut},
 		try_insert_on::TryInsertOn,
@@ -30,7 +28,6 @@ type Components<'a, TContainer, TSwaps> = (
 pub fn equip_item<TContainer, TInnerKey, TSwaps>(
 	mut commands: Commands,
 	mut agent: Query<Components<TContainer, TSwaps>>,
-	models: Res<Models>,
 ) -> Vec<Result<(), Error>>
 where
 	TContainer: Component,
@@ -40,48 +37,40 @@ where
 {
 	let mut results = vec![];
 	let commands = &mut commands;
-	let models = &models;
 
 	for (agent, mut slots, mut container, mut swaps) in &mut agent {
 		let slots = slots.as_mut();
-		let mut swap_commands = SwapController::new(container.as_mut(), swaps.as_mut());
+		let mut swap_controller = SwapController::new(container.as_mut(), swaps.as_mut());
+		let mut load_models_command = LoadModelsCommand::new([]);
 
-		swap_commands.try_swap(|slot_key, SwapIn(item)| {
-			match try_equip(commands, slots, slot_key, item, models) {
-				Ok(swapped_out) => Ok(swapped_out),
+		swap_controller.try_swap(
+			|slot_key, SwapIn(item)| match try_swap(slots, slot_key, item) {
+				Ok(swapped_out) => {
+					load_models_command.0.push(LoadModel(slot_key));
+					Ok(swapped_out)
+				}
 				Err((swap_error, log_error)) => {
 					results.push(Err(log_error));
 					Err(swap_error)
 				}
-			}
-		});
+			},
+		);
 
-		if swap_commands.is_empty() {
+		if swap_controller.is_empty() {
 			commands.try_remove_from::<TSwaps>(agent);
 		}
+		commands.try_insert_on(agent, load_models_command);
 	}
 
 	results
 }
 
-fn try_equip(
-	commands: &mut Commands,
+fn try_swap(
 	slots: &mut Slots<Handle<Skill>>,
 	slot_key: SlotKey,
 	item: Option<Item<Handle<Skill>>>,
-	models: &Res<Models>,
 ) -> Result<SwappedOut<Item<Handle<Skill>>>, (SwapError, Error)> {
 	let slot = get_slot(slots, slot_key)?;
-	let item_model = get_model(&item, models)?;
-
-	let (hand_model, forearm_model) = match item.as_ref().map(|item| item.mount) {
-		Some(Mount::Hand) => (item_model, Handle::default()),
-		Some(Mount::Forearm) => (Handle::default(), item_model),
-		None => (Handle::default(), Handle::default()),
-	};
-
-	commands.try_insert_on(slot.mounts.hand, hand_model);
-	commands.try_insert_on(slot.mounts.forearm, forearm_model);
 
 	Ok(swap_item(item, slot))
 }
@@ -94,25 +83,6 @@ fn get_slot(
 		Some(slot) => Ok(slot),
 		None => Err((SwapError::TryAgain, slot_warning(slot_key))),
 	}
-}
-
-fn get_model(
-	item: &Option<Item<Handle<Skill>>>,
-	models: &Res<Models>,
-) -> Result<Handle<Scene>, (SwapError, Error)> {
-	let Some(item) = item else {
-		return Ok(Handle::default());
-	};
-
-	let Some(model_key) = item.model else {
-		return Ok(Handle::default());
-	};
-
-	let Some(model) = models.0.get(model_key) else {
-		return Err((SwapError::Disregard, model_error(item)));
-	};
-
-	Ok(model.clone())
 }
 
 fn swap_item(
@@ -131,25 +101,13 @@ fn slot_warning(slot: SlotKey) -> Error {
 	}
 }
 
-fn model_error(item: &Item<Handle<Skill>>) -> Error {
-	Error {
-		msg: format!(
-			"Item({}): no model '{:?}' seems to exist, abandoning",
-			item.name, item.model
-		),
-		lvl: Level::Error,
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::Mounts, items::Mount, skills::Skill};
+	use crate::{components::Mounts, skills::Skill};
 	use bevy::{
-		asset::{Asset, AssetId},
 		ecs::system::IntoSystem,
 		prelude::{App, Handle, Update},
-		scene::Scene,
 		utils::default,
 	};
 	use common::{
@@ -159,7 +117,6 @@ mod tests {
 		traits::swap_command::{SwapError, SwapIn, SwapResult, SwappedOut},
 	};
 	use std::collections::HashMap;
-	use uuid::Uuid;
 
 	#[derive(Component, Default, PartialEq, Debug)]
 	struct _Swaps {
@@ -199,15 +156,8 @@ mod tests {
 		}
 	}
 
-	fn new_handle<T: Asset>() -> Handle<T> {
-		Handle::<T>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		})
-	}
-
-	fn setup(models: Models) -> App {
+	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.insert_resource(models);
 		app.add_systems(
 			Update,
 			equip_item::<_Container, (), _Swaps>.pipe(fake_log_error_many_recourse),
@@ -217,100 +167,60 @@ mod tests {
 	}
 
 	#[test]
-	fn set_hand_model_handle() {
-		let model = new_handle();
-		let models = Models([("model key", model.clone())].into());
-		let mut app = setup(models);
-
-		let hand = app.world_mut().spawn_empty().id();
-		let forearm = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn((
-			Slots::<Handle<Skill>>::new([(
-				SlotKey::Hand(Side::Main),
-				Slot {
-					item: None,
-					mounts: Mounts { hand, forearm },
-				},
-			)]),
-			_Container {
-				swap_ins: HashMap::from([(
-					SlotKey::Hand(Side::Main),
-					SwapIn(Some(Item {
-						model: Some("model key"),
-						mount: Mount::Hand,
-						..default()
-					})),
-				)]),
-				..default()
-			},
-			_Swaps { is_empty: false },
-		));
-
-		app.update();
-
-		let forearm = app.world().entity(forearm);
-		let hand = app.world().entity(hand);
-
-		assert_eq!(
-			(Some(&model), Some(&default()),),
-			(hand.get::<Handle<Scene>>(), forearm.get::<Handle<Scene>>())
-		);
-	}
-
-	#[test]
-	fn set_forearm_model_handle() {
-		let model = new_handle();
-		let models = Models([("model key", model.clone())].into());
-		let mut app = setup(models);
-
-		let hand = app.world_mut().spawn_empty().id();
-		let forearm = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn((
-			Slots::<Handle<Skill>>::new([(
-				SlotKey::Hand(Side::Main),
-				Slot {
-					item: None,
-					mounts: Mounts { hand, forearm },
-				},
-			)]),
-			_Container {
-				swap_ins: HashMap::from([(
-					SlotKey::Hand(Side::Main),
-					SwapIn(Some(Item {
-						model: Some("model key"),
-						mount: Mount::Forearm,
-						..default()
-					})),
-				)]),
-				..default()
-			},
-			_Swaps { is_empty: false },
-		));
-
-		app.update();
-
-		let forearm = app.world().entity(forearm);
-		let hand = app.world().entity(hand);
-
-		assert_eq!(
-			(Some(&default()), Some(&model)),
-			(hand.get::<Handle<Scene>>(), forearm.get::<Handle<Scene>>())
-		);
-	}
-
-	#[test]
-	fn set_swap_in_item() {
-		let mut app = setup(default());
-
-		let hand = app.world_mut().spawn_empty().id();
-		let forearm = app.world_mut().spawn_empty().id();
+	fn set_load_models_command() {
+		let mut app = setup();
 		let agent = app
 			.world_mut()
 			.spawn((
 				Slots::<Handle<Skill>>::new([(
 					SlotKey::Hand(Side::Main),
 					Slot {
-						mounts: Mounts { hand, forearm },
+						item: None,
+						mounts: Mounts {
+							hand: Entity::from_raw(42),
+							forearm: Entity::from_raw(24),
+						},
+					},
+				)]),
+				_Container {
+					swap_ins: HashMap::from([(
+						SlotKey::Hand(Side::Main),
+						SwapIn(Some(Item {
+							name: "my item",
+							..default()
+						})),
+					)]),
+					..default()
+				},
+				_Swaps { is_empty: false },
+			))
+			.id();
+
+		app.update();
+
+		let agent = app.world().entity(agent);
+
+		assert_eq!(
+			Some(&LoadModelsCommand::new([LoadModel(SlotKey::Hand(
+				Side::Main
+			))])),
+			agent.get::<LoadModelsCommand>()
+		);
+	}
+
+	#[test]
+	fn set_swap_in_item() {
+		let mut app = setup();
+		let agent = app
+			.world_mut()
+			.spawn((
+				Slots::<Handle<Skill>>::new([(
+					SlotKey::Hand(Side::Main),
+					Slot {
+						mounts: Mounts {
+							hand: Entity::from_raw(42),
+							forearm: Entity::from_raw(24),
+						},
 						item: None,
 					},
 				)]),
@@ -336,7 +246,10 @@ mod tests {
 			Some(&Slots::<Handle<Skill>>::new([(
 				SlotKey::Hand(Side::Main),
 				Slot {
-					mounts: Mounts { hand, forearm },
+					mounts: Mounts {
+						hand: Entity::from_raw(42),
+						forearm: Entity::from_raw(24),
+					},
 					item: Some(Item {
 						name: "swap in",
 						..default()
@@ -349,17 +262,17 @@ mod tests {
 
 	#[test]
 	fn set_swap_out_item() {
-		let mut app = setup(default());
-
-		let hand = app.world_mut().spawn_empty().id();
-		let forearm = app.world_mut().spawn_empty().id();
+		let mut app = setup();
 		let agent = app
 			.world_mut()
 			.spawn((
 				Slots::<Handle<Skill>>::new([(
 					SlotKey::Hand(Side::Main),
 					Slot {
-						mounts: Mounts { hand, forearm },
+						mounts: Mounts {
+							hand: Entity::from_raw(42),
+							forearm: Entity::from_raw(24),
+						},
 						item: Some(Item {
 							name: "swap out",
 							..default()
@@ -393,10 +306,7 @@ mod tests {
 
 	#[test]
 	fn try_again_error_when_slot_not_found() {
-		let mut app = setup(default());
-
-		let hand = app.world_mut().spawn_empty().id();
-		let forearm = app.world_mut().spawn_empty().id();
+		let mut app = setup();
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -404,7 +314,10 @@ mod tests {
 					SlotKey::Hand(Side::Main),
 					Slot {
 						item: None,
-						mounts: Mounts { hand, forearm },
+						mounts: Mounts {
+							hand: Entity::from_raw(42),
+							forearm: Entity::from_raw(24),
+						},
 					},
 				)]),
 				_Container {
@@ -428,16 +341,16 @@ mod tests {
 
 	#[test]
 	fn return_error_when_slot_not_found() {
-		let mut app = setup(default());
-
-		let hand = app.world_mut().spawn_empty().id();
-		let forearm = app.world_mut().spawn_empty().id();
+		let mut app = setup();
 		app.world_mut().spawn((
 			Slots::<Handle<Skill>>::new([(
 				SlotKey::Hand(Side::Main),
 				Slot {
 					item: None,
-					mounts: Mounts { hand, forearm },
+					mounts: Mounts {
+						hand: Entity::from_raw(42),
+						forearm: Entity::from_raw(24),
+					},
 				},
 			)]),
 			_Container {
@@ -460,91 +373,8 @@ mod tests {
 	}
 
 	#[test]
-	fn disregard_error_when_model_not_found() {
-		let mut app = setup(default());
-
-		let hand = app.world_mut().spawn_empty().id();
-		let forearm = app.world_mut().spawn_empty().id();
-		let agent = app
-			.world_mut()
-			.spawn((
-				Slots::<Handle<Skill>>::new([(
-					SlotKey::Hand(Side::Main),
-					Slot {
-						item: None,
-						mounts: Mounts { hand, forearm },
-					},
-				)]),
-				_Container {
-					swap_ins: HashMap::from([(
-						SlotKey::Hand(Side::Main),
-						SwapIn(Some(Item {
-							model: Some("this model does not exist"),
-							..default()
-						})),
-					)]),
-					..default()
-				},
-				_Swaps { is_empty: false },
-			))
-			.id();
-
-		app.update();
-
-		let agent = app.world().entity(agent);
-		let container = agent.get::<_Container>().unwrap();
-
-		assert_eq!(
-			HashMap::from([(SlotKey::Hand(Side::Main), SwapError::Disregard)]),
-			container.errors
-		);
-	}
-
-	#[test]
-	fn return_error_when_model_not_found() {
-		let mut app = setup(default());
-
-		let hand = app.world_mut().spawn_empty().id();
-		let forearm = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn((
-			Slots::<Handle<Skill>>::new([(
-				SlotKey::Hand(Side::Main),
-				Slot {
-					item: None,
-					mounts: Mounts { hand, forearm },
-				},
-			)]),
-			_Container {
-				swap_ins: HashMap::from([(
-					SlotKey::Hand(Side::Main),
-					SwapIn(Some(Item {
-						name: "item with faulty model",
-						model: Some("this model does not exist"),
-						..default()
-					})),
-				)]),
-				..default()
-			},
-			_Swaps { is_empty: false },
-		));
-
-		app.update();
-
-		let error_log = app.world().get_resource::<FakeErrorLogManyResource>();
-
-		assert_eq!(
-			Some(&FakeErrorLogManyResource(vec![model_error(&Item {
-				name: "item with faulty model",
-				model: Some("this model does not exist"),
-				..default()
-			})])),
-			error_log
-		);
-	}
-
-	#[test]
 	fn remove_swap_component_when_empty() {
-		let mut app = setup(default());
+		let mut app = setup();
 
 		let agent = app
 			.world_mut()
@@ -564,7 +394,7 @@ mod tests {
 
 	#[test]
 	fn do_not_remove_swap_component_when_not_empty() {
-		let mut app = setup(default());
+		let mut app = setup();
 
 		let agent = app
 			.world_mut()

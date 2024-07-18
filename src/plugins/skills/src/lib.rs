@@ -52,6 +52,7 @@ use systems::{
 	flush::flush,
 	get_inputs::get_inputs,
 	load_skills::load_skills,
+	load_slot_models::load_slot_models,
 	mouse_context::{
 		advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
 		release::release_triggered_mouse_context,
@@ -84,7 +85,7 @@ impl Plugin for SkillsPlugin {
 				(
 					skill_path_to_handle::<Slots<Path>, Slots<Handle<Skill>>, LoadedFolder>
 						.pipe(log_many),
-					skill_handle_to_skill::<Slots<Handle<Skill>>, Slots>.pipe(log_many),
+					skill_handle_to_skill::<Slots<Handle<Skill>>, Slots<Skill>>.pipe(log_many),
 				)
 					.chain(),
 			)
@@ -145,6 +146,7 @@ impl Plugin for SkillsPlugin {
 						Collection<Swap<SlotKey, InventoryKey>>,
 					>
 						.pipe(log_many),
+					load_slot_models.pipe(log_many),
 				),
 			);
 	}
