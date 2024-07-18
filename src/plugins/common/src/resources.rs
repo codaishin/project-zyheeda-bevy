@@ -59,7 +59,7 @@ impl<T> Default for MouseHover<T> {
 #[derive(Resource, Default)]
 pub struct CamRay(pub Option<Ray3d>);
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct Models(pub HashMap<&'static str, Handle<Scene>>);
 
 pub type File = str;

@@ -8,14 +8,14 @@ use std::collections::HashMap;
 pub struct Slots<TSkill = Skill>(pub HashMap<SlotKey, Slot<TSkill>>);
 
 impl<T> Slots<T> {
-	pub fn new() -> Self {
-		Self(HashMap::new())
+	pub fn new<const N: usize>(slots: [(SlotKey, Slot<T>); N]) -> Self {
+		Self(HashMap::from(slots))
 	}
 }
 
 impl<T> Default for Slots<T> {
 	fn default() -> Self {
-		Self::new()
+		Self::new([])
 	}
 }
 

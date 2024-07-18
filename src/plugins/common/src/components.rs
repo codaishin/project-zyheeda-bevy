@@ -6,7 +6,7 @@ use bevy::{
 };
 use std::marker::PhantomData;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Swap<T1, T2>(pub T1, pub T2);
 
 #[derive(Component, Debug, PartialEq)]

@@ -1,7 +1,10 @@
 use super::Item;
 use crate::{items::inventory_key::InventoryKey, skills::Skill, traits::TryMap};
 use bevy::asset::Handle;
-use common::{components::Collection, traits::get::Get};
+use common::{
+	components::Collection,
+	traits::get::{Get, GetMut},
+};
 
 pub type Inventory<TSkill> = Collection<Option<Item<TSkill>>>;
 
@@ -9,6 +12,25 @@ impl Get<InventoryKey, Item<Handle<Skill>>> for Inventory<Handle<Skill>> {
 	fn get(&self, key: &InventoryKey) -> Option<&Item<Handle<Skill>>> {
 		let item = self.0.get(key.0)?;
 		item.as_ref()
+	}
+}
+
+impl<T> GetMut<InventoryKey, Option<Item<T>>> for Inventory<T> {
+	fn get_mut(&mut self, InventoryKey(index): &InventoryKey) -> Option<&mut Option<Item<T>>> {
+		let items = &mut self.0;
+
+		if index >= &items.len() {
+			fill(items, *index);
+		}
+
+		items.get_mut(*index)
+	}
+}
+
+fn fill<T>(inventory: &mut Vec<Option<Item<T>>>, inventory_key: usize) {
+	let fill_len = inventory_key - inventory.len() + 1;
+	for _ in 0..fill_len {
+		inventory.push(None);
 	}
 }
 
@@ -170,6 +192,50 @@ mod tests {
 					..default()
 				}),
 				None
+			]),
+			inventory
+		);
+	}
+
+	#[test]
+	fn get_item_mut() {
+		let mut inventory = Inventory::<()>::new([Some(Item {
+			name: "my item",
+			..default()
+		})]);
+
+		let item = inventory.get_mut(&InventoryKey(0));
+		assert_eq!(
+			Some(&mut Some(Item {
+				name: "my item",
+				..default()
+			})),
+			item
+		);
+	}
+
+	#[test]
+	fn get_item_mut_exceeding_range() {
+		let mut inventory = Inventory::<()>::new([Some(Item {
+			name: "my item",
+			..default()
+		})]);
+
+		*inventory.get_mut(&InventoryKey(1)).expect("no item found") = Some(Item {
+			name: "my other item",
+			..default()
+		});
+
+		assert_eq!(
+			Inventory::<()>::new([
+				Some(Item {
+					name: "my item",
+					..default()
+				}),
+				Some(Item {
+					name: "my other item",
+					..default()
+				})
 			]),
 			inventory
 		);

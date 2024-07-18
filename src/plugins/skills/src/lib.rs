@@ -24,7 +24,7 @@ use bevy::{
 };
 use bundles::Loadout;
 use common::{
-	components::{Player, Side, Swap},
+	components::{Collection, Player, Side, Swap},
 	resources::{key_map::KeyMap, Models},
 	states::{GameRunning, MouseContext},
 	systems::log::log_many,
@@ -51,6 +51,10 @@ use systems::{
 	execute::execute,
 	flush::flush,
 	get_inputs::get_inputs,
+	load_models::{
+		apply_load_models_commands::apply_load_models_commands,
+		load_models_commands_for_new_slots::load_models_commands_for_new_slots,
+	},
 	load_skills::load_skills,
 	mouse_context::{
 		advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
@@ -73,7 +77,14 @@ impl Plugin for SkillsPlugin {
 			.register_asset_loader(SkillLoader::<Skill>::default())
 			.add_systems(PreStartup, load_skills::<AssetServer>)
 			.add_systems(PreStartup, load_models)
-			.add_systems(PreUpdate, (init_slots, add_skill_spawn))
+			.add_systems(
+				PreUpdate,
+				(
+					init_slots,
+					add_skill_spawn,
+					load_models_commands_for_new_slots,
+				),
+			)
 			.add_systems(
 				PreUpdate,
 				skill_path_to_handle::<Inventory<Path>, Inventory<Handle<Skill>>, LoadedFolder>
@@ -84,7 +95,7 @@ impl Plugin for SkillsPlugin {
 				(
 					skill_path_to_handle::<Slots<Path>, Slots<Handle<Skill>>, LoadedFolder>
 						.pipe(log_many),
-					skill_handle_to_skill::<Slots<Handle<Skill>>, Slots>.pipe(log_many),
+					skill_handle_to_skill::<Slots<Handle<Skill>>, Slots<Skill>>.pipe(log_many),
 				)
 					.chain(),
 			)
@@ -133,10 +144,19 @@ impl Plugin for SkillsPlugin {
 			.add_systems(
 				Update,
 				(
-					equip_item::<Inventory<Handle<Skill>>, Swap<InventoryKey, SlotKey>>
+					equip_item::<
+						Inventory<Handle<Skill>>,
+						InventoryKey,
+						Collection<Swap<InventoryKey, SlotKey>>,
+					>
 						.pipe(log_many),
-					equip_item::<Inventory<Handle<Skill>>, Swap<SlotKey, InventoryKey>>
+					equip_item::<
+						Inventory<Handle<Skill>>,
+						InventoryKey,
+						Collection<Swap<SlotKey, InventoryKey>>,
+					>
 						.pipe(log_many),
+					apply_load_models_commands.pipe(log_many),
 				),
 			);
 	}

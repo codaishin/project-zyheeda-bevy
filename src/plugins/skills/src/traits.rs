@@ -4,13 +4,12 @@ pub(crate) mod flush;
 pub(crate) mod force_shield;
 pub(crate) mod get_skill_animation;
 pub(crate) mod gravity_well;
-pub(crate) mod inventory;
 pub(crate) mod peek_next;
 pub(crate) mod projectile;
 pub(crate) mod run_skill;
 pub(crate) mod skill_state;
 pub(crate) mod state;
-pub(crate) mod tuple_slot_key_item;
+pub(crate) mod swap_commands;
 
 pub mod get_combos;
 
