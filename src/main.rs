@@ -13,6 +13,7 @@ use bevy::{
 	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
 	prelude::*,
 };
+use bevy_framepace::FramepacePlugin;
 use bevy_rapier3d::prelude::*;
 use common::{
 	components::{ColliderRoot, GroundOffset, Health, MainCamera, Player},
@@ -47,6 +48,7 @@ fn main() -> AppExit {
 
 fn prepare_game(app: &mut App) {
 	app.add_plugins(DefaultPlugins)
+		.add_plugins(FramepacePlugin)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
 		.add_plugins(PrefabsPlugin)
