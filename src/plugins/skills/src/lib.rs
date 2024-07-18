@@ -51,8 +51,11 @@ use systems::{
 	execute::execute,
 	flush::flush,
 	get_inputs::get_inputs,
+	load_models::{
+		apply_load_models_commands::apply_load_models_commands,
+		load_models_commands_for_new_slots::load_models_commands_for_new_slots,
+	},
 	load_skills::load_skills,
-	load_slot_models::load_slot_models,
 	mouse_context::{
 		advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
 		release::release_triggered_mouse_context,
@@ -74,7 +77,14 @@ impl Plugin for SkillsPlugin {
 			.register_asset_loader(SkillLoader::<Skill>::default())
 			.add_systems(PreStartup, load_skills::<AssetServer>)
 			.add_systems(PreStartup, load_models)
-			.add_systems(PreUpdate, (init_slots, add_skill_spawn))
+			.add_systems(
+				PreUpdate,
+				(
+					init_slots,
+					add_skill_spawn,
+					load_models_commands_for_new_slots,
+				),
+			)
 			.add_systems(
 				PreUpdate,
 				skill_path_to_handle::<Inventory<Path>, Inventory<Handle<Skill>>, LoadedFolder>
@@ -146,7 +156,7 @@ impl Plugin for SkillsPlugin {
 						Collection<Swap<SlotKey, InventoryKey>>,
 					>
 						.pipe(log_many),
-					load_slot_models.pipe(log_many),
+					apply_load_models_commands.pipe(log_many),
 				),
 			);
 	}

@@ -14,7 +14,7 @@ use common::{
 	traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
 
-pub(crate) fn load_slot_models(
+pub(crate) fn apply_load_models_commands(
 	mut commands: Commands,
 	models: Res<Models>,
 	agents: Query<(Entity, &Slots<Handle<Skill>>, &LoadModelsCommand)>,
@@ -27,7 +27,7 @@ pub(crate) fn load_slot_models(
 				.iter()
 				.filter_map(collect_model_data(agent, slots, &models))
 		})
-		.map(|load_data| load_data.insert(&mut commands))
+		.map(|model_data| model_data.insert(&mut commands))
 		.collect()
 }
 
@@ -136,7 +136,10 @@ mod tests {
 	fn setup(models: Models) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(models);
-		app.add_systems(Update, load_slot_models.pipe(fake_log_error_many_recourse));
+		app.add_systems(
+			Update,
+			apply_load_models_commands.pipe(fake_log_error_many_recourse),
+		);
 
 		app
 	}
