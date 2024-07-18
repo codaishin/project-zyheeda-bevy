@@ -2,6 +2,7 @@ use animations::AnimationsPlugin;
 use bars::BarsPlugin;
 use behaviors::BehaviorsPlugin;
 use bevy::prelude::*;
+use bevy_framepace::FramepacePlugin;
 use bevy_rapier3d::prelude::*;
 use children_assets_dispatch::ChildrenAssetsDispatchPlugin;
 use common::CommonPlugin;
@@ -70,6 +71,7 @@ fn prepare_game(app: &mut App) {
 	let menu_plugin = MenuPlugin::depends_on(&loading_plugin);
 
 	app.add_plugins(DefaultPlugins)
+		.add_plugins(FramepacePlugin)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
 		.add_plugins(life_cycles_plugin)

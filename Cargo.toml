@@ -8,6 +8,7 @@ edition = "2021"
 [workspace.dependencies]
 # external
 bevy = "0.14.2"
+bevy_framepace = "0.17.1"
 bevy-inspector-egui = "0.27.0"
 bevy_rapier3d = "0.27.0"
 mockall = "=0.13.1"
@@ -58,6 +59,7 @@ edition.workspace = true
 [dependencies]
 # external
 bevy.workspace = true
+bevy_framepace.workspace = true
 bevy-inspector-egui.workspace = true
 bevy_rapier3d.workspace = true
 serde.workspace = true
