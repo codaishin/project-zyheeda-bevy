@@ -12,8 +12,7 @@ use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
 	states::{GameRunning, Off, On},
 	systems::log::log_many,
-	tools::Factory,
-	traits::{cache::get_or_load_asset::LoadAssetCache, load_asset::Path},
+	traits::load_asset::Path,
 };
 use components::{
 	combo_overview::ComboOverview,
@@ -37,11 +36,7 @@ use skills::{
 use std::time::Duration;
 use systems::{
 	added::added,
-	combos::{
-		get_combos::get_combos,
-		load_combo_icon_image::load_combo_icon_image,
-		update_combos::update_combos,
-	},
+	combos::{get_combos::get_combos, update_combos::update_combos},
 	dad::{drag::drag, drop::drop},
 	despawn::despawn,
 	dropdown::{
@@ -144,13 +139,7 @@ fn ui_overlay_systems(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				get_quickbar_icons::<Queue, Combos, CombosTimeOut>.pipe(
-					set_quickbar_icons::<
-						AssetServer,
-						Shared<Path, Handle<Image>>,
-						Factory<LoadAssetCache>,
-					>,
-				),
+				get_quickbar_icons::<Queue, Combos, CombosTimeOut>.pipe(set_quickbar_icons),
 				update_label_text::<KeyMap<SlotKey, KeyCode>, LanguageServer, QuickbarPanel>,
 				panel_colors::<QuickbarPanel>,
 				panel_activity_colors_override::<KeyMap<SlotKey, KeyCode>, Queue, QuickbarPanel>,
@@ -169,12 +158,6 @@ fn ui_overlay_systems(app: &mut App) {
 fn combo_overview_systems(app: &mut App) {
 	let added_combo_overview = added::<ComboOverview>;
 	let get_combos = get_combos::<KeyCode, Combos>;
-	let load_combo_icon_image = load_combo_icon_image::<
-		KeyCode,
-		AssetServer,
-		Shared<Path, Handle<Image>>,
-		Factory<LoadAssetCache>,
-	>;
 	let update_combo_overview = update_combos::<KeyCode, ComboOverview>;
 
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
@@ -183,7 +166,6 @@ fn combo_overview_systems(app: &mut App) {
 			Update,
 			added_combo_overview
 				.pipe(get_combos)
-				.pipe(load_combo_icon_image)
 				.pipe(update_combo_overview)
 				.run_if(in_state(MenuState::ComboOverview)),
 		);

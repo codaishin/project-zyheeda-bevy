@@ -1,5 +1,6 @@
 use crate::skills::skill_data::SkillData;
 use bevy::asset::{io::Reader, Asset, AssetLoader, AsyncReadExt, LoadContext};
+use common::traits::load_from::LoadFrom;
 use serde_json::error::Error as SerdeJsonError;
 use std::{
 	error::Error,
@@ -40,7 +41,7 @@ impl Display for SkillLoadError {
 
 impl Error for SkillLoadError {}
 
-impl<TAsset: Asset + From<SkillData>> AssetLoader for SkillLoader<TAsset> {
+impl<TAsset: Asset + LoadFrom<SkillData>> AssetLoader for SkillLoader<TAsset> {
 	type Asset = TAsset;
 	type Settings = ();
 	type Error = SkillLoadError;
@@ -53,7 +54,7 @@ impl<TAsset: Asset + From<SkillData>> AssetLoader for SkillLoader<TAsset> {
 		&'a self,
 		reader: &'a mut Reader<'_>,
 		_settings: &'a Self::Settings,
-		_load_context: &'a mut LoadContext<'_>,
+		load_context: &'a mut LoadContext<'_>,
 	) -> Result<Self::Asset, Self::Error> {
 		let mut bytes = Vec::new();
 		let result = reader
@@ -65,7 +66,7 @@ impl<TAsset: Asset + From<SkillData>> AssetLoader for SkillLoader<TAsset> {
 			Err(io_error) => Err(SkillLoadError::IO(io_error)),
 			Ok(Err(utf8_error)) => Err(SkillLoadError::ParseChars(utf8_error)),
 			Ok(Ok(str)) => serde_json::from_str(str)
-				.map(TAsset::from)
+				.map(|data| TAsset::load_from(data, load_context))
 				.map_err(SkillLoadError::ParseSkill),
 		}
 	}

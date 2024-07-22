@@ -6,7 +6,10 @@ pub(crate) mod skill_behavior_data;
 use super::Skill;
 use crate::items::ItemType;
 use animate_data::AnimateData;
-use common::traits::load_asset::Path;
+use common::traits::{
+	load_asset::{LoadAsset, Path},
+	load_from::LoadFrom,
+};
 use serde::{Deserialize, Serialize};
 use skill_behavior_data::SkillBehaviorData;
 use std::{collections::HashSet, time::Duration};
@@ -21,15 +24,18 @@ pub(crate) struct SkillData {
 	icon: Option<Path>,
 }
 
-impl From<SkillData> for Skill {
-	fn from(value: SkillData) -> Self {
+impl LoadFrom<SkillData> for Skill {
+	fn load_from<TLoadAsset: LoadAsset>(
+		skill_data: SkillData,
+		asset_server: &mut TLoadAsset,
+	) -> Self {
 		Self {
-			name: value.name,
-			active: value.active,
-			animate: value.animate.into(),
-			behavior: value.behavior.into(),
-			is_usable_with: value.is_usable_with,
-			icon: value.icon,
+			name: skill_data.name,
+			active: skill_data.active,
+			animate: skill_data.animate.into(),
+			behavior: skill_data.behavior.into(),
+			is_usable_with: skill_data.is_usable_with,
+			icon: skill_data.icon.map(|icon| asset_server.load_asset(icon)),
 		}
 	}
 }

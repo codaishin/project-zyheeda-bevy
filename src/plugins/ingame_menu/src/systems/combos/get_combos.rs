@@ -1,9 +1,10 @@
 use crate::traits::{CombosDescriptor, SkillDescriptor};
 use bevy::{
+	asset::Handle,
 	ecs::{system::In, world::Ref},
-	prelude::{Component, DetectChanges, Query, With},
+	prelude::{Component, DetectChanges, Image, Query, With},
 };
-use common::{components::Player, tools::changed::Changed, traits::load_asset::Path};
+use common::{components::Player, tools::changed::Changed};
 use skills::{
 	items::slot_key::SlotKey,
 	skills::Skill,
@@ -13,7 +14,7 @@ use skills::{
 pub(crate) fn get_combos<TKey: From<SlotKey> + Clone, TCombos: Component + GetCombos>(
 	changed_override: In<bool>,
 	players: Query<Ref<TCombos>, With<Player>>,
-) -> Changed<CombosDescriptor<TKey, Path>> {
+) -> Changed<CombosDescriptor<TKey, Handle<Image>>> {
 	let Ok(combos) = players.get_single() else {
 		return Changed::None;
 	};
@@ -26,13 +27,13 @@ pub(crate) fn get_combos<TKey: From<SlotKey> + Clone, TCombos: Component + GetCo
 
 fn combo_descriptor<TKey: From<SlotKey> + Clone>(
 	combo: &Combo,
-) -> Vec<SkillDescriptor<TKey, Path>> {
+) -> Vec<SkillDescriptor<TKey, Handle<Image>>> {
 	combo.iter().map(skill_descriptor).collect::<Vec<_>>()
 }
 
 fn skill_descriptor<TKey: From<SlotKey> + Clone>(
 	(key, skill): &(SlotKey, &Skill),
-) -> SkillDescriptor<TKey, Path> {
+) -> SkillDescriptor<TKey, Handle<Image>> {
 	SkillDescriptor {
 		name: skill.name.clone(),
 		key: TKey::from(*key),
@@ -46,15 +47,16 @@ mod tests {
 	use crate::traits::SkillDescriptor;
 	use bevy::{
 		app::{App, Update},
+		asset::{Asset, AssetId},
 		prelude::{Commands, In, IntoSystem, Resource},
 		utils::default,
 	};
 	use common::{
 		components::{Player, Side},
 		test_tools::utils::SingleThreadedApp,
-		traits::load_asset::Path,
 	};
 	use skills::{skills::Skill, traits::Combo};
+	use uuid::Uuid;
 
 	#[derive(Debug, PartialEq, Clone)]
 	enum _Key {
@@ -84,7 +86,7 @@ mod tests {
 	}
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(Changed<CombosDescriptor<_Key, Path>>);
+	struct _Result(Changed<CombosDescriptor<_Key, Handle<Image>>>);
 
 	fn setup(changed_override: bool) -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -93,13 +95,30 @@ mod tests {
 			(move || changed_override)
 				.pipe(get_combos::<_Key, _Combos>)
 				.pipe(
-					|combos: In<Changed<CombosDescriptor<_Key, Path>>>, mut commands: Commands| {
-						commands.insert_resource(_Result(combos.0))
-					},
+					|combos: In<Changed<CombosDescriptor<_Key, Handle<Image>>>>,
+					 mut commands: Commands| { commands.insert_resource(_Result(combos.0)) },
 				),
 		);
 
 		app
+	}
+
+	fn get_handle<T: Asset>(name: &str) -> Handle<T> {
+		match name {
+			"a/1" => Handle::Weak(AssetId::Uuid {
+				uuid: Uuid::from_u128(0x17afa6e0_f072_47ad_b604_9a29111a59fe),
+			}),
+			"a/2" => Handle::Weak(AssetId::Uuid {
+				uuid: Uuid::from_u128(0x4f16f9ad_c998_4082_bebd_53864cb51e51),
+			}),
+			"b/1" => Handle::Weak(AssetId::Uuid {
+				uuid: Uuid::from_u128(0x60fbff89_cb91_406a_bd78_5124b1bfbbc2),
+			}),
+			"b/2" => Handle::Weak(AssetId::Uuid {
+				uuid: Uuid::from_u128(0xe8c2c4f5_0a4a_4fd0_99eb_a8098ec0b42b),
+			}),
+			_ => Handle::default(),
+		}
 	}
 
 	#[test]
@@ -113,7 +132,7 @@ mod tests {
 						SlotKey::Hand(Side::Main),
 						Skill {
 							name: "a1".to_owned(),
-							icon: Some(Path::from("a/1")),
+							icon: Some(get_handle("a/1")),
 							..default()
 						},
 					),
@@ -121,7 +140,7 @@ mod tests {
 						SlotKey::Hand(Side::Off),
 						Skill {
 							name: "a2".to_owned(),
-							icon: Some(Path::from("a/2")),
+							icon: Some(get_handle("a/2")),
 							..default()
 						},
 					),
@@ -131,7 +150,7 @@ mod tests {
 						SlotKey::Hand(Side::Off),
 						Skill {
 							name: "b1".to_owned(),
-							icon: Some(Path::from("b/1")),
+							icon: Some(get_handle("b/1")),
 							..default()
 						},
 					),
@@ -139,7 +158,7 @@ mod tests {
 						SlotKey::Hand(Side::Main),
 						Skill {
 							name: "b2".to_owned(),
-							icon: Some(Path::from("b/2")),
+							icon: Some(get_handle("b/2")),
 							..default()
 						},
 					),
@@ -157,24 +176,24 @@ mod tests {
 					SkillDescriptor {
 						name: "a1".to_owned(),
 						key: _Key::Main,
-						icon: Some(Path::from("a/1")),
+						icon: Some(get_handle("a/1")),
 					},
 					SkillDescriptor {
 						name: "a2".to_owned(),
 						key: _Key::Off,
-						icon: Some(Path::from("a/2")),
+						icon: Some(get_handle("a/2")),
 					}
 				],
 				vec![
 					SkillDescriptor {
 						name: "b1".to_owned(),
 						key: _Key::Off,
-						icon: Some(Path::from("b/1")),
+						icon: Some(get_handle("b/1")),
 					},
 					SkillDescriptor {
 						name: "b2".to_owned(),
 						key: _Key::Main,
-						icon: Some(Path::from("b/2")),
+						icon: Some(get_handle("b/2")),
 					}
 				]
 			])),
@@ -191,7 +210,7 @@ mod tests {
 					SlotKey::Hand(Side::Main),
 					Skill {
 						name: "a1".to_owned(),
-						icon: Some(Path::from("a/1")),
+						icon: Some(get_handle("a/1")),
 						..default()
 					},
 				),
@@ -199,7 +218,7 @@ mod tests {
 					SlotKey::Hand(Side::Off),
 					Skill {
 						name: "a2".to_owned(),
-						icon: Some(Path::from("a/2")),
+						icon: Some(get_handle("a/2")),
 						..default()
 					},
 				),
@@ -209,7 +228,7 @@ mod tests {
 					SlotKey::Hand(Side::Off),
 					Skill {
 						name: "b1".to_owned(),
-						icon: Some(Path::from("b/1")),
+						icon: Some(get_handle("b/1")),
 						..default()
 					},
 				),
@@ -217,7 +236,7 @@ mod tests {
 					SlotKey::Hand(Side::Main),
 					Skill {
 						name: "b2".to_owned(),
-						icon: Some(Path::from("b/2")),
+						icon: Some(get_handle("b/2")),
 						..default()
 					},
 				),
@@ -242,7 +261,7 @@ mod tests {
 						SlotKey::Hand(Side::Main),
 						Skill {
 							name: "a1".to_owned(),
-							icon: Some(Path::from("a/1")),
+							icon: Some(get_handle("a/1")),
 							..default()
 						},
 					),
@@ -250,7 +269,7 @@ mod tests {
 						SlotKey::Hand(Side::Off),
 						Skill {
 							name: "a2".to_owned(),
-							icon: Some(Path::from("a/2")),
+							icon: Some(get_handle("a/2")),
 							..default()
 						},
 					),
@@ -260,7 +279,7 @@ mod tests {
 						SlotKey::Hand(Side::Off),
 						Skill {
 							name: "b1".to_owned(),
-							icon: Some(Path::from("b/1")),
+							icon: Some(get_handle("b/1")),
 							..default()
 						},
 					),
@@ -268,7 +287,7 @@ mod tests {
 						SlotKey::Hand(Side::Main),
 						Skill {
 							name: "b2".to_owned(),
-							icon: Some(Path::from("b/2")),
+							icon: Some(get_handle("b/2")),
 							..default()
 						},
 					),
@@ -295,7 +314,7 @@ mod tests {
 						SlotKey::Hand(Side::Main),
 						Skill {
 							name: "a1".to_owned(),
-							icon: Some(Path::from("a/1")),
+							icon: Some(get_handle("a/1")),
 							..default()
 						},
 					),
@@ -303,7 +322,7 @@ mod tests {
 						SlotKey::Hand(Side::Off),
 						Skill {
 							name: "a2".to_owned(),
-							icon: Some(Path::from("a/2")),
+							icon: Some(get_handle("a/2")),
 							..default()
 						},
 					),
@@ -313,7 +332,7 @@ mod tests {
 						SlotKey::Hand(Side::Off),
 						Skill {
 							name: "b1".to_owned(),
-							icon: Some(Path::from("b/1")),
+							icon: Some(get_handle("b/1")),
 							..default()
 						},
 					),
@@ -321,7 +340,7 @@ mod tests {
 						SlotKey::Hand(Side::Main),
 						Skill {
 							name: "b2".to_owned(),
-							icon: Some(Path::from("b/2")),
+							icon: Some(get_handle("b/2")),
 							..default()
 						},
 					),
@@ -340,24 +359,24 @@ mod tests {
 					SkillDescriptor {
 						name: "a1".to_owned(),
 						key: _Key::Main,
-						icon: Some(Path::from("a/1")),
+						icon: Some(get_handle("a/1")),
 					},
 					SkillDescriptor {
 						name: "a2".to_owned(),
 						key: _Key::Off,
-						icon: Some(Path::from("a/2")),
+						icon: Some(get_handle("a/2")),
 					}
 				],
 				vec![
 					SkillDescriptor {
 						name: "b1".to_owned(),
 						key: _Key::Off,
-						icon: Some(Path::from("b/1")),
+						icon: Some(get_handle("b/1")),
 					},
 					SkillDescriptor {
 						name: "b2".to_owned(),
 						key: _Key::Main,
-						icon: Some(Path::from("b/2")),
+						icon: Some(get_handle("b/2")),
 					}
 				]
 			])),
