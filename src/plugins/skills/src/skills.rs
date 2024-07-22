@@ -7,13 +7,14 @@ use crate::{
 };
 use animations::animation::Animation;
 use bevy::{
-	asset::Asset,
+	asset::{Asset, Handle},
 	ecs::{entity::Entity, system::Commands},
 	math::{Dir3, Ray3d, Vec3},
+	prelude::Image,
 	reflect::TypePath,
 	transform::components::{GlobalTransform, Transform},
 };
-use common::{components::Outdated, resources::ColliderInfo, traits::load_asset::Path};
+use common::{components::Outdated, resources::ColliderInfo};
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result},
@@ -41,7 +42,7 @@ pub struct Skill {
 	pub animate: Animate<SkillAnimation>,
 	pub behavior: SkillBehavior,
 	pub is_usable_with: HashSet<ItemType>,
-	pub icon: Option<Path>,
+	pub icon: Option<Handle<Image>>,
 }
 
 impl Display for Skill {

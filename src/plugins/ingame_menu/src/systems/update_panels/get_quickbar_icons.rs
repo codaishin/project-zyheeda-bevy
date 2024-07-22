@@ -1,9 +1,9 @@
 use crate::components::quickbar_panel::QuickbarPanel;
-use bevy::prelude::{Component, Entity, Query, With};
-use common::{
-	components::Player,
-	traits::{iterate::Iterate, load_asset::Path},
+use bevy::{
+	asset::Handle,
+	prelude::{Component, Entity, Image, Query, With},
 };
+use common::{components::Player, traits::iterate::Iterate};
 use skills::{
 	components::slots::Slots,
 	skills::{QueuedSkill, Skill},
@@ -20,7 +20,7 @@ type PlayerComponents<'a, TQueue, TCombos, TComboTimeout> = (
 pub(crate) fn get_quickbar_icons<TQueue, TCombos, TComboTimeout>(
 	players: Query<PlayerComponents<TQueue, TCombos, TComboTimeout>, With<Player>>,
 	panels: Query<(Entity, &mut QuickbarPanel)>,
-) -> Vec<(Entity, Option<Path>)>
+) -> Vec<(Entity, Option<Handle<Image>>)>
 where
 	TQueue: Component + Iterate<QueuedSkill>,
 	TCombos: Component + PeekNext<Skill>,
@@ -43,7 +43,7 @@ where
 fn if_active_skill_icon<TQueue: Iterate<QueuedSkill>>(
 	panel: &QuickbarPanel,
 	queue: &TQueue,
-) -> Option<Path> {
+) -> Option<Handle<Image>> {
 	let active_skill = queue.iterate().next()?;
 
 	if active_skill.slot_key != panel.key {
@@ -58,7 +58,7 @@ fn if_combo_skill_icon<'a, TCombos: PeekNext<Skill>, TComboTimeout: IsTimedOut>(
 	slots: &'a Slots,
 	combos: Option<&'a TCombos>,
 	timed_out: Option<&'a TComboTimeout>,
-) -> impl FnOnce() -> Option<Path> + 'a {
+) -> impl FnOnce() -> Option<Handle<Image>> + 'a {
 	move || {
 		if timed_out?.is_timed_out() {
 			return None;
@@ -71,7 +71,7 @@ fn if_combo_skill_icon<'a, TCombos: PeekNext<Skill>, TComboTimeout: IsTimedOut>(
 fn if_item_skill_icon<'a>(
 	panel: &'a QuickbarPanel,
 	slots: &'a Slots,
-) -> impl FnOnce() -> Option<Path> + 'a {
+) -> impl FnOnce() -> Option<Handle<Image>> + 'a {
 	|| {
 		let slot = slots.0.get(&panel.key)?;
 		let item = slot.item.as_ref()?;
@@ -88,6 +88,7 @@ mod tests {
 	use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
 	use bevy::{
 		app::{App, Update},
+		asset::{Asset, AssetId},
 		ecs::system::In,
 		prelude::{default, Commands, IntoSystem, Resource},
 	};
@@ -102,6 +103,7 @@ mod tests {
 		skills::Activation,
 	};
 	use std::collections::HashMap;
+	use uuid::Uuid;
 
 	#[derive(Component, Default)]
 	struct _Queue(Vec<QueuedSkill>);
@@ -137,9 +139,9 @@ mod tests {
 	}
 
 	#[derive(Resource, Default)]
-	struct _Result(Vec<(Entity, Option<Path>)>);
+	struct _Result(Vec<(Entity, Option<Handle<Image>>)>);
 
-	fn store_result(result: In<Vec<(Entity, Option<Path>)>>, mut commands: Commands) {
+	fn store_result(result: In<Vec<(Entity, Option<Handle<Image>>)>>, mut commands: Commands) {
 		commands.insert_resource(_Result(result.0));
 	}
 
@@ -161,12 +163,27 @@ mod tests {
 		}
 	}
 
+	fn get_handle<TAsset: Asset>(name: &str) -> Handle<TAsset> {
+		match name {
+			"item skill" => Handle::Weak(AssetId::Uuid {
+				uuid: Uuid::from_u128(0x5e65c0ee_c118_4fa7_a888_6a988f139c1e),
+			}),
+			"combo skill" => Handle::Weak(AssetId::Uuid {
+				uuid: Uuid::from_u128(0x7647d77f_2826_4baf_b5b9_195524f1c975),
+			}),
+			"active skill" => Handle::Weak(AssetId::Uuid {
+				uuid: Uuid::from_u128(0x70bf5ce3_df23_40aa_80c9_51b2c5baa23c),
+			}),
+			_ => Handle::default(),
+		}
+	}
+
 	#[test]
 	fn return_combo_skill_icon_when_no_skill_active_and_combo_not_timed_out() {
 		let mut app = setup();
 		let mut combos = _Combos::default();
 		let skill = Skill {
-			icon: Some(Path::from("item_skill/icon/path")),
+			icon: Some(get_handle("item skill")),
 			..default()
 		};
 
@@ -181,7 +198,7 @@ mod tests {
 			},
 		)]));
 		combos.mock.expect_peek_next().return_const(Skill {
-			icon: Some(Path::from("combo_skill/icon/path")),
+			icon: Some(get_handle("combo skill")),
 			..default()
 		});
 		app.world_mut().spawn((
@@ -202,10 +219,7 @@ mod tests {
 		app.update();
 
 		let result = app.world().resource::<_Result>();
-		assert_eq!(
-			vec![(panel, Some(Path::from("combo_skill/icon/path")))],
-			result.0
-		);
+		assert_eq!(vec![(panel, Some(get_handle("combo skill")))], result.0);
 	}
 
 	#[test]
@@ -213,7 +227,7 @@ mod tests {
 		let mut app = setup();
 		let mut combos = _Combos::default();
 		let skill = Skill {
-			icon: Some(Path::from("item_skill/icon/path")),
+			icon: Some(get_handle("item skill")),
 			..default()
 		};
 
@@ -253,7 +267,7 @@ mod tests {
 		let mut app = setup();
 		let mut combos = _Combos::default();
 		let skill = Skill {
-			icon: Some(Path::from("item_skill/icon/path")),
+			icon: Some(get_handle("item skill")),
 			..default()
 		};
 
@@ -268,7 +282,7 @@ mod tests {
 			},
 		)]));
 		combos.mock.expect_peek_next().return_const(Skill {
-			icon: Some(Path::from("combo_skill/icon/path")),
+			icon: Some(get_handle("combo skill")),
 			..default()
 		});
 		app.world_mut().spawn((
@@ -289,10 +303,7 @@ mod tests {
 		app.update();
 
 		let result = app.world().resource::<_Result>();
-		assert_eq!(
-			vec![(panel, Some(Path::from("item_skill/icon/path")))],
-			result.0
-		);
+		assert_eq!(vec![(panel, Some(get_handle("item skill")))], result.0);
 	}
 
 	#[test]
@@ -300,7 +311,7 @@ mod tests {
 		let mut app = setup();
 		let mut combos = _Combos::default();
 		let skill = Skill {
-			icon: Some(Path::from("item_skill/icon/path")),
+			icon: Some(get_handle("item skill")),
 			..default()
 		};
 
@@ -333,10 +344,7 @@ mod tests {
 		app.update();
 
 		let result = app.world().resource::<_Result>();
-		assert_eq!(
-			vec![(panel, Some(Path::from("item_skill/icon/path")))],
-			result.0
-		);
+		assert_eq!(vec![(panel, Some(get_handle("item skill")))], result.0);
 	}
 
 	#[test]
@@ -344,7 +352,7 @@ mod tests {
 		let mut app = setup();
 		let mut combos = _Combos::default();
 		let skill = Skill {
-			icon: Some(Path::from("item_skill/icon/path")),
+			icon: Some(get_handle("item skill")),
 			..default()
 		};
 
@@ -359,7 +367,7 @@ mod tests {
 			},
 		)]));
 		combos.mock.expect_peek_next().return_const(Skill {
-			icon: Some(Path::from("combo_skill/icon/path")),
+			icon: Some(get_handle("combo skill")),
 			..default()
 		});
 		app.world_mut().spawn((
@@ -367,7 +375,7 @@ mod tests {
 			slots,
 			_Queue(vec![QueuedSkill {
 				skill: Skill {
-					icon: Some(Path::from("active_skill/icon/path")),
+					icon: Some(get_handle("active skill")),
 					..default()
 				},
 				slot_key: SlotKey::Hand(Side::Off),
@@ -387,10 +395,7 @@ mod tests {
 		app.update();
 
 		let result = app.world().resource::<_Result>();
-		assert_eq!(
-			vec![(panel, Some(Path::from("active_skill/icon/path")))],
-			result.0
-		);
+		assert_eq!(vec![(panel, Some(get_handle("active skill")))], result.0);
 	}
 
 	#[test]
@@ -398,7 +403,7 @@ mod tests {
 		let mut app = setup();
 		let mut combos = _Combos::default();
 		let skill = Skill {
-			icon: Some(Path::from("item_skill/icon/path")),
+			icon: Some(get_handle("item skill")),
 			..default()
 		};
 
@@ -413,7 +418,7 @@ mod tests {
 			},
 		)]));
 		combos.mock.expect_peek_next().return_const(Skill {
-			icon: Some(Path::from("combo_skill/icon/path")),
+			icon: Some(get_handle("combo skill")),
 			..default()
 		});
 		app.world_mut().spawn((
@@ -421,7 +426,7 @@ mod tests {
 			slots,
 			_Queue(vec![QueuedSkill {
 				skill: Skill {
-					icon: Some(Path::from("active_skill/icon/path")),
+					icon: Some(get_handle("active skill")),
 					..default()
 				},
 				slot_key: SlotKey::Hand(Side::Off),
@@ -441,17 +446,14 @@ mod tests {
 		app.update();
 
 		let result = app.world().resource::<_Result>();
-		assert_eq!(
-			vec![(panel, Some(Path::from("item_skill/icon/path")))],
-			result.0
-		);
+		assert_eq!(vec![(panel, Some(get_handle("item skill")))], result.0);
 	}
 
 	#[test]
 	fn return_item_skill_icon_when_no_skill_active_and_no_combo_components_present() {
 		let mut app = setup();
 		let skill = Skill {
-			icon: Some(Path::from("item_skill/icon/path")),
+			icon: Some(get_handle("item skill")),
 			..default()
 		};
 
@@ -477,9 +479,6 @@ mod tests {
 		app.update();
 
 		let result = app.world().resource::<_Result>();
-		assert_eq!(
-			vec![(panel, Some(Path::from("item_skill/icon/path")))],
-			result.0
-		);
+		assert_eq!(vec![(panel, Some(get_handle("item skill")))], result.0);
 	}
 }
