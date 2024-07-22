@@ -1,4 +1,5 @@
 pub mod asset_server;
+pub mod load_context;
 
 use bevy::asset::{Asset, AssetPath, Handle};
 use serde::{Deserialize, Serialize};
