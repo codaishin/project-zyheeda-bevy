@@ -30,6 +30,6 @@ impl<'a> From<Path> for AssetPath<'a> {
 	}
 }
 
-pub trait LoadAsset<TAsset: Asset> {
-	fn load_asset(&mut self, path: Path) -> Handle<TAsset>;
+pub trait LoadAsset {
+	fn load_asset<TAsset: Asset>(&mut self, path: Path) -> Handle<TAsset>;
 }

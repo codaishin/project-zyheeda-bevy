@@ -1,12 +1,12 @@
 use bevy::{
 	ecs::system::{Commands, In, ResMut, Resource},
-	scene::{Scene, SceneBundle},
+	scene::SceneBundle,
 	transform::components::Transform,
 	utils::default,
 };
 use common::traits::load_asset::{LoadAsset, Path};
 
-pub(crate) fn spawn_scene<TCell: Clone, TAsset: LoadAsset<Scene> + Resource>(
+pub(crate) fn spawn_scene<TCell: Clone, TAsset: LoadAsset + Resource>(
 	cells: In<Vec<(Transform, TCell)>>,
 	mut commands: Commands,
 	mut load_asset: ResMut<TAsset>,
@@ -35,8 +35,9 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		asset::{AssetId, Handle},
+		asset::{Asset, AssetId, Handle},
 		ecs::system::IntoSystem,
+		scene::Scene,
 	};
 	use common::{test_tools::utils::SingleThreadedApp, traits::load_asset::Path};
 	use mockall::{automock, predicate::eq};
@@ -62,8 +63,8 @@ mod tests {
 	}
 
 	#[automock]
-	impl LoadAsset<Scene> for _LoadScene {
-		fn load_asset(&mut self, path: Path) -> Handle<Scene> {
+	impl LoadAsset for _LoadScene {
+		fn load_asset<TAsset: Asset>(&mut self, path: Path) -> Handle<TAsset> {
 			self.mock.load_asset(path)
 		}
 	}

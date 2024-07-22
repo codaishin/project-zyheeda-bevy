@@ -7,20 +7,20 @@ use bevy::{
 use common::traits::load_asset::LoadAsset;
 
 pub(crate) fn begin_level_load<
-	TLoadMap: LoadAsset<Map<TCell>> + Resource,
+	TLoadMap: LoadAsset + Resource,
 	TCell: SourcePath + TypePath + Sync + Send,
 >(
 	mut commands: Commands,
 	mut map_loader: ResMut<TLoadMap>,
 ) {
-	let map = map_loader.load_asset(TCell::source_path());
+	let map = map_loader.load_asset::<Map<TCell>>(TCell::source_path());
 	commands.insert_resource(LoadLevelCommand(map));
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::LoadLevelCommand, map::Map};
+	use crate::components::LoadLevelCommand;
 	use bevy::{
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},
@@ -45,8 +45,8 @@ mod tests {
 	}
 
 	#[automock]
-	impl LoadAsset<Map<_Cell>> for _LoadMap {
-		fn load_asset(&mut self, path: Path) -> Handle<Map<_Cell>> {
+	impl LoadAsset for _LoadMap {
+		fn load_asset<TAsset: Asset>(&mut self, path: Path) -> Handle<TAsset> {
 			self.mock.load_asset(path)
 		}
 	}
