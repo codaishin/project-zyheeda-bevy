@@ -1,4 +1,4 @@
-use super::tooltip::Tooltip;
+use super::{tooltip::Tooltip, SkillSelectDropdownCommand};
 use crate::traits::{
 	colors::DEFAULT_PANEL_COLORS,
 	get_node::GetNode,
@@ -184,6 +184,7 @@ fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<
 				.spawn((
 					ComboOverview::skill_button_bundle(skill_icon),
 					Tooltip(skill.clone()),
+					SkillSelectDropdownCommand(skill.key),
 				))
 				.with_children(|parent| {
 					parent

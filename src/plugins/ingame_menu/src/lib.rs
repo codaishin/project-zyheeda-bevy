@@ -43,6 +43,7 @@ use systems::{
 	dropdown::{
 		despawn_all::dropdown_despawn_all,
 		detect_focus_change::dropdown_detect_focus_change,
+		skill_select_dropdown::skill_select_dropdown,
 		spawn_focused::dropdown_spawn_focused,
 	},
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
@@ -199,6 +200,10 @@ fn combo_overview_systems(app: &mut App) {
 				.pipe(update_combos::<KeyCode, ComboOverview>)
 				.run_if(either(added::<ComboOverview>).or(changed::<Player, Combos>))
 				.run_if(in_state(MenuState::ComboOverview)),
+		)
+		.add_systems(
+			Update,
+			skill_select_dropdown::<KeyCode, SlotKey, KeyMap<SlotKey, KeyCode>, Slots<Handle<Skill>>>,
 		);
 }
 

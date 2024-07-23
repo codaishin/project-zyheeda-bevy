@@ -2,7 +2,7 @@ pub(crate) mod skill_select;
 
 use bevy::prelude::Component;
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq)]
 pub(crate) struct Dropdown<TItem> {
 	pub(crate) items: Vec<TItem>,
 }

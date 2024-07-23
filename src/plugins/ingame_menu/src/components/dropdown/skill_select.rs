@@ -10,12 +10,13 @@ use crate::{
 	},
 };
 use bevy::{
-	asset::Handle,
-	prelude::{default, ChildBuilder, Image, NodeBundle},
+	prelude::{default, ChildBuilder, NodeBundle},
 	ui::{PositionType, Style, Val},
 };
+use skills::skills::Skill;
 
-pub(crate) struct SkillSelect(pub(crate) Handle<Image>);
+#[derive(Debug, PartialEq)]
+pub(crate) struct SkillSelect(pub(crate) Skill);
 
 impl GetNode for SkillSelect {
 	fn node(&self) -> NodeBundle {
@@ -25,7 +26,9 @@ impl GetNode for SkillSelect {
 
 impl InstantiateContentOn for SkillSelect {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
-		parent.spawn(ComboOverview::skill_button_bundle(self.0.clone()));
+		parent.spawn(ComboOverview::skill_button_bundle(
+			self.0.icon.clone().unwrap_or_default(),
+		));
 	}
 }
 
