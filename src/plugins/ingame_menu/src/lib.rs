@@ -62,7 +62,12 @@ use systems::{
 	},
 };
 use tools::menu_state::MenuState;
-use traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn, SkillDescriptor};
+use traits::{
+	get_node::GetNode,
+	instantiate_content_on::InstantiateContentOn,
+	SkillDescriptor,
+	UI,
+};
 
 trait AddUI {
 	fn add_ui<TComponent>(&mut self, on_state: MenuState) -> &mut Self
@@ -100,6 +105,26 @@ impl AddTooltip for App {
 	}
 }
 
+trait AddDropdown {
+	fn add_dropdown<TItem>(&mut self) -> &mut Self
+	where
+		TItem: UI + Sync + Send + 'static;
+}
+
+impl AddDropdown for App {
+	fn add_dropdown<TItem>(&mut self) -> &mut Self
+	where
+		TItem: UI + Sync + Send + 'static,
+	{
+		self.add_systems(
+			Update,
+			dropdown_detect_focus_change::<TItem>
+				.pipe(dropdown_despawn_all)
+				.pipe(dropdown_spawn_focused::<TItem>),
+		)
+	}
+}
+
 pub struct IngameMenuPlugin;
 
 impl Plugin for IngameMenuPlugin {
@@ -110,7 +135,6 @@ impl Plugin for IngameMenuPlugin {
 		combo_overview_systems(app);
 		inventory_screen_systems(app);
 		tooltip_systems(app);
-		dropdown_systems(app);
 
 		#[cfg(debug_assertions)]
 		{
@@ -196,13 +220,4 @@ fn inventory_screen_systems(app: &mut App) {
 
 fn tooltip_systems(app: &mut App) {
 	app.add_systems(Update, tooltip_visibility::<Real>);
-}
-
-fn dropdown_systems(app: &mut App) {
-	app.add_systems(
-		Update,
-		dropdown_detect_focus_change
-			.pipe(dropdown_despawn_all)
-			.pipe(dropdown_spawn_focused),
-	);
 }

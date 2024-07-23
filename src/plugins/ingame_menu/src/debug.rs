@@ -1,4 +1,4 @@
-use crate::{components::dropdown::Dropdown, tools::Layout, traits::UI};
+use crate::{components::dropdown::Dropdown, tools::Layout, AddDropdown};
 #[cfg(debug_assertions)]
 use crate::{
 	tools::menu_state::MenuState,
@@ -165,13 +165,13 @@ fn replace_button_text(
 }
 
 pub fn setup_dropdown_test(app: &mut App) {
-	fn get_items(target: Entity) -> Vec<Box<dyn UI + Send + Sync>> {
+	fn get_items(target: Entity) -> Vec<ButtonOption> {
 		vec![
-			Box::new(ButtonOption { text: "1", target }),
-			Box::new(ButtonOption { text: "2", target }),
-			Box::new(ButtonOption { text: "3", target }),
-			Box::new(ButtonOption { text: "4", target }),
-			Box::new(ButtonOption { text: "5", target }),
+			ButtonOption { text: "1", target },
+			ButtonOption { text: "2", target },
+			ButtonOption { text: "3", target },
+			ButtonOption { text: "4", target },
+			ButtonOption { text: "5", target },
 		]
 	}
 
@@ -184,6 +184,7 @@ pub fn setup_dropdown_test(app: &mut App) {
 		}
 	}
 
+	app.add_dropdown::<ButtonOption>();
 	app.add_systems(Update, (replace_button_text, update_button_text));
 	app.world_mut()
 		.spawn(NodeBundle {
