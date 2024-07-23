@@ -16,7 +16,7 @@ use common::{
 };
 use components::{
 	combo_overview::ComboOverview,
-	dropdown::Dropdown,
+	dropdown::{skill_select::SkillSelect, Dropdown},
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
 	quickbar_panel::QuickbarPanel,
@@ -144,6 +144,7 @@ impl Plugin for IngameMenuPlugin {
 		state_control_systems(app);
 		ui_overlay_systems(app);
 		combo_overview_systems(app);
+		dropdown_systems(app);
 		inventory_screen_systems(app);
 
 		#[cfg(debug_assertions)]
@@ -222,4 +223,8 @@ fn inventory_screen_systems(app: &mut App) {
 			Update,
 			(swap_equipped_items.pipe(log_many), swap_inventory_items),
 		);
+}
+
+fn dropdown_systems(app: &mut App) {
+	app.add_dropdown::<SkillSelect>();
 }

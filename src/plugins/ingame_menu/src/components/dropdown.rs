@@ -1,3 +1,5 @@
+pub(crate) mod skill_select;
+
 use bevy::prelude::Component;
 
 #[derive(Component)]
