@@ -1,4 +1,8 @@
-use crate::{components::dropdown::Dropdown, tools::Layout};
+use crate::{
+	components::dropdown::Dropdown,
+	tools::Layout,
+	traits::{GetLayout, RootStyle, UI},
+};
 use bevy::{
 	hierarchy::{BuildChildren, ChildBuilder},
 	prelude::{Commands, Component, Entity, In, Query},
@@ -6,17 +10,46 @@ use bevy::{
 	utils::default,
 };
 use common::tools::Focus;
+use std::{fmt::Debug, marker::PhantomData};
 
-#[derive(Component, Debug, PartialEq)]
-pub(crate) struct DropdownUI {
+#[derive(Component)]
+pub(crate) struct DropdownUI<TItem> {
+	phantom_data: PhantomData<TItem>,
 	pub(crate) source: Entity,
 }
 
-pub(crate) fn dropdown_spawn_focused(
+impl<TItem> DropdownUI<TItem> {
+	pub(crate) fn new(source: Entity) -> Self {
+		Self {
+			source,
+			phantom_data: PhantomData,
+		}
+	}
+}
+
+impl<TItem> Debug for DropdownUI<TItem> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("DropdownUI")
+			.field("phantom_data", &self.phantom_data)
+			.field("source", &self.source)
+			.finish()
+	}
+}
+
+impl<TItem> PartialEq for DropdownUI<TItem> {
+	fn eq(&self, other: &Self) -> bool {
+		self.source == other.source
+	}
+}
+
+pub(crate) fn dropdown_spawn_focused<TItem>(
 	focus: In<Focus>,
 	mut commands: Commands,
-	dropdowns: Query<(Entity, &Dropdown)>,
-) {
+	dropdowns: Query<(Entity, &Dropdown<TItem>)>,
+) where
+	TItem: UI + Sync + Send + 'static,
+	Dropdown<TItem>: RootStyle + GetLayout,
+{
 	let Focus::New(new_focus) = focus.0 else {
 		return;
 	};
@@ -32,9 +65,9 @@ pub(crate) fn dropdown_spawn_focused(
 		entity.with_children(|entity_node| {
 			entity_node
 				.spawn((
-					DropdownUI { source },
+					DropdownUI::<TItem>::new(source),
 					NodeBundle {
-						style: dropdown.style.clone(),
+						style: dropdown.root_style(),
 						z_index: ZIndex::Global(1),
 						..default()
 					},
@@ -51,8 +84,11 @@ pub(crate) fn dropdown_spawn_focused(
 	}
 }
 
-fn get_style(dropdown: &Dropdown) -> Style {
-	match &dropdown.layout {
+fn get_style<TItem>(dropdown: &Dropdown<TItem>) -> Style
+where
+	Dropdown<TItem>: GetLayout,
+{
+	match &dropdown.layout() {
 		Layout::LastColumn(max_index) => {
 			let (limit, auto) = repetitions(dropdown.items.len(), max_index.0);
 			Style {
@@ -81,7 +117,7 @@ fn repetitions(count: usize, max_index: u16) -> (u16, u16) {
 	(limit, count as u16 / limit)
 }
 
-fn spawn_items(dropdown_node: &mut ChildBuilder, dropdown: &Dropdown) {
+fn spawn_items<TItem: UI>(dropdown_node: &mut ChildBuilder, dropdown: &Dropdown<TItem>) {
 	for item in &dropdown.items {
 		dropdown_node
 			.spawn(item.node())
@@ -106,6 +142,76 @@ mod tests {
 	use common::{assert_bundle, test_tools::utils::SingleThreadedApp, tools::Index};
 	use mockall::mock;
 
+	macro_rules! impl_item {
+		($item:ident) => {
+			struct $item;
+
+			impl GetNode for $item {
+				fn node(&self) -> NodeBundle {
+					NodeBundle::default()
+				}
+			}
+
+			impl InstantiateContentOn for $item {
+				fn instantiate_content_on(&self, _: &mut ChildBuilder) {}
+			}
+		};
+	}
+
+	macro_rules! impl_dropdown {
+		($item:ident) => {
+			impl_item! {$item}
+
+			impl RootStyle for Dropdown<$item> {
+				fn root_style(&self) -> Style {
+					Style::default()
+				}
+			}
+
+			impl GetLayout for Dropdown<$item> {
+				fn layout(&self) -> Layout {
+					Layout::default()
+				}
+			}
+		};
+	}
+
+	macro_rules! impl_dropdown_with_layout {
+		($item:ident, $layout:expr) => {
+			impl_item! {$item}
+
+			impl RootStyle for Dropdown<$item> {
+				fn root_style(&self) -> Style {
+					Style::default()
+				}
+			}
+
+			impl GetLayout for Dropdown<$item> {
+				fn layout(&self) -> Layout {
+					$layout
+				}
+			}
+		};
+	}
+
+	macro_rules! impl_dropdown_with_style {
+		($item:ident, $style:expr) => {
+			impl_item! {$item}
+
+			impl RootStyle for Dropdown<$item> {
+				fn root_style(&self) -> Style {
+					$style
+				}
+			}
+
+			impl GetLayout for Dropdown<$item> {
+				fn layout(&self) -> Layout {
+					Layout::default()
+				}
+			}
+		};
+	}
+
 	mock! {
 		_Item {}
 		impl GetNode for _Item {
@@ -116,15 +222,31 @@ mod tests {
 		}
 	}
 
+	impl RootStyle for Dropdown<Mock_Item> {
+		fn root_style(&self) -> Style {
+			Style::default()
+		}
+	}
+
+	impl GetLayout for Dropdown<Mock_Item> {
+		fn layout(&self) -> Layout {
+			Layout::SINGLE_COLUMN
+		}
+	}
+
 	#[derive(Resource, Default)]
 	struct _In(Focus);
 
-	fn setup() -> App {
+	fn setup<TItem>() -> App
+	where
+		TItem: UI + Send + Sync + 'static,
+		Dropdown<TItem>: RootStyle + GetLayout,
+	{
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<_In>();
 		app.add_systems(
 			Update,
-			(|focus: Res<_In>| focus.0.clone()).pipe(dropdown_spawn_focused),
+			(|focus: Res<_In>| focus.0.clone()).pipe(dropdown_spawn_focused::<TItem>),
 		);
 
 		app
@@ -154,9 +276,11 @@ mod tests {
 
 	#[test]
 	fn spawn_dropdown_ui_as_child_of_self() {
-		let mut app = setup();
+		impl_dropdown!(_Item);
 
-		let dropdown = app.world_mut().spawn(Dropdown::default()).id();
+		let mut app = setup::<_Item>();
+
+		let dropdown = app.world_mut().spawn(Dropdown::<_Item>::default()).id();
 		app.world_mut()
 			.insert_resource(_In(Focus::New(vec![dropdown])));
 
@@ -169,9 +293,11 @@ mod tests {
 
 	#[test]
 	fn spawn_dropdown_ui_with_dropdown_ui_marker() {
-		let mut app = setup();
+		impl_dropdown!(_Item);
 
-		let dropdown = app.world_mut().spawn(Dropdown::default()).id();
+		let mut app = setup::<_Item>();
+
+		let dropdown = app.world_mut().spawn(Dropdown::<_Item>::default()).id();
 		app.world_mut()
 			.insert_resource(_In(Focus::New(vec![dropdown])));
 
@@ -180,25 +306,24 @@ mod tests {
 		let dropdown_ui = last_child_of!(app, dropdown);
 
 		assert_eq!(
-			Some(&DropdownUI { source: dropdown }),
-			dropdown_ui.get::<DropdownUI>()
+			Some(&DropdownUI::<_Item>::new(dropdown)),
+			dropdown_ui.get::<DropdownUI<_Item>>()
 		);
 	}
 
 	#[test]
 	fn spawn_dropdown_ui_with_dropdown_style() {
-		let mut app = setup();
-
-		let dropdown = app
-			.world_mut()
-			.spawn(Dropdown {
-				style: Style {
-					top: Val::Px(404.),
-					..default()
-				},
+		impl_dropdown_with_style!(
+			_Item,
+			Style {
+				top: Val::Px(404.),
 				..default()
-			})
-			.id();
+			}
+		);
+
+		let mut app = setup::<_Item>();
+
+		let dropdown = app.world_mut().spawn(Dropdown::<_Item>::default()).id();
 		app.world_mut()
 			.insert_resource(_In(Focus::New(vec![dropdown])));
 
@@ -217,9 +342,11 @@ mod tests {
 
 	#[test]
 	fn spawn_dropdown_ui_with_global_z_index_1() {
-		let mut app = setup();
+		impl_dropdown!(_Item);
 
-		let dropdown = app.world_mut().spawn(Dropdown::default()).id();
+		let mut app = setup::<_Item>();
+
+		let dropdown = app.world_mut().spawn(Dropdown::<_Item>::default()).id();
 		app.world_mut()
 			.insert_resource(_In(Focus::New(vec![dropdown])));
 
@@ -238,9 +365,11 @@ mod tests {
 
 	#[test]
 	fn do_not_spawn_dropdown_ui_when_not_new_active() {
-		let mut app = setup();
+		impl_dropdown!(_Item);
 
-		let dropdown = app.world_mut().spawn(Dropdown::default()).id();
+		let mut app = setup::<_Item>();
+
+		let dropdown = app.world_mut().spawn(Dropdown::<_Item>::default()).id();
 		app.world_mut().insert_resource(_In(Focus::New(vec![])));
 
 		app.update();
@@ -252,9 +381,11 @@ mod tests {
 
 	#[test]
 	fn spawn_dropdown_ui_content_with_node_bundle() {
-		let mut app = setup();
+		impl_dropdown!(_Item);
 
-		let dropdown = app.world_mut().spawn(Dropdown::default()).id();
+		let mut app = setup::<_Item>();
+
+		let dropdown = app.world_mut().spawn(Dropdown::<_Item>::default()).id();
 		app.world_mut()
 			.insert_resource(_In(Focus::New(vec![dropdown])));
 
@@ -268,8 +399,8 @@ mod tests {
 
 	#[test]
 	fn spawn_dropdown_item_node_with_node_bundle() {
-		let mut app = setup();
-		let mut item = Box::new(Mock_Item::default());
+		let mut app = setup::<Mock_Item>();
+		let mut item = Mock_Item::default();
 		item.expect_node().return_const(NodeBundle {
 			style: Style {
 				top: Val::Px(42.),
@@ -279,13 +410,7 @@ mod tests {
 		});
 		item.expect_instantiate_content_on().return_const(());
 
-		let dropdown = app
-			.world_mut()
-			.spawn(Dropdown {
-				items: vec![item],
-				..default()
-			})
-			.id();
+		let dropdown = app.world_mut().spawn(Dropdown { items: vec![item] }).id();
 		app.world_mut()
 			.insert_resource(_In(Focus::New(vec![dropdown])));
 
@@ -314,20 +439,14 @@ mod tests {
 		#[derive(Component, Debug, PartialEq)]
 		struct _Content(&'static str);
 
-		let mut app = setup();
-		let mut item = Box::new(Mock_Item::default());
+		let mut app = setup::<Mock_Item>();
+		let mut item = Mock_Item::default();
 		item.expect_node().return_const(NodeBundle::default());
 		item.expect_instantiate_content_on().returning(|item_node| {
 			item_node.spawn(_Content("My Content"));
 		});
 
-		let dropdown = app
-			.world_mut()
-			.spawn(Dropdown {
-				items: vec![item],
-				..default()
-			})
-			.id();
+		let dropdown = app.world_mut().spawn(Dropdown { items: vec![item] }).id();
 		app.world_mut()
 			.insert_resource(_In(Focus::New(vec![dropdown])));
 
@@ -344,34 +463,16 @@ mod tests {
 		);
 	}
 
-	struct _Item;
-
-	impl GetNode for _Item {
-		fn node(&self) -> NodeBundle {
-			NodeBundle::default()
-		}
-	}
-
-	impl InstantiateContentOn for _Item {
-		fn instantiate_content_on(&self, _: &mut ChildBuilder) {}
-	}
-
 	#[test]
 	fn set_grid_for_column_limited_size_3() {
-		let mut app = setup();
+		impl_dropdown_with_layout!(_Item, Layout::LastColumn(Index(2)));
+
+		let mut app = setup::<_Item>();
 
 		let dropdown = app
 			.world_mut()
 			.spawn(Dropdown {
-				items: vec![
-					Box::new(_Item),
-					Box::new(_Item),
-					Box::new(_Item),
-					Box::new(_Item),
-					Box::new(_Item),
-				],
-				layout: Layout::LastColumn(Index(2)),
-				..default()
+				items: vec![_Item, _Item, _Item, _Item, _Item],
 			})
 			.id();
 
@@ -396,20 +497,14 @@ mod tests {
 
 	#[test]
 	fn set_grid_for_column_limited_size_2() {
-		let mut app = setup();
+		impl_dropdown_with_layout!(_Item, Layout::LastColumn(Index(1)));
+
+		let mut app = setup::<_Item>();
 
 		let dropdown = app
 			.world_mut()
 			.spawn(Dropdown {
-				items: vec![
-					Box::new(_Item),
-					Box::new(_Item),
-					Box::new(_Item),
-					Box::new(_Item),
-					Box::new(_Item),
-				],
-				layout: Layout::LastColumn(Index(1)),
-				..default()
+				items: vec![_Item, _Item, _Item, _Item, _Item],
 			})
 			.id();
 
@@ -434,20 +529,14 @@ mod tests {
 
 	#[test]
 	fn set_grid_for_row_limited_size_3() {
-		let mut app = setup();
+		impl_dropdown_with_layout!(_Item, Layout::LastRow(Index(2)));
+
+		let mut app = setup::<_Item>();
 
 		let dropdown = app
 			.world_mut()
 			.spawn(Dropdown {
-				items: vec![
-					Box::new(_Item),
-					Box::new(_Item),
-					Box::new(_Item),
-					Box::new(_Item),
-					Box::new(_Item),
-				],
-				layout: Layout::LastRow(Index(2)),
-				..default()
+				items: vec![_Item, _Item, _Item, _Item, _Item],
 			})
 			.id();
 
@@ -472,20 +561,14 @@ mod tests {
 
 	#[test]
 	fn set_grid_for_row_limited_size_2() {
-		let mut app = setup();
+		impl_dropdown_with_layout!(_Item, Layout::LastRow(Index(1)));
+
+		let mut app = setup::<_Item>();
 
 		let dropdown = app
 			.world_mut()
 			.spawn(Dropdown {
-				items: vec![
-					Box::new(_Item),
-					Box::new(_Item),
-					Box::new(_Item),
-					Box::new(_Item),
-					Box::new(_Item),
-				],
-				layout: Layout::LastRow(Index(1)),
-				..default()
+				items: vec![_Item, _Item, _Item, _Item, _Item],
 			})
 			.id();
 

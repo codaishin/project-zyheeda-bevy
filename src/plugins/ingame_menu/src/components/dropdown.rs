@@ -1,9 +1,14 @@
-use crate::{tools::Layout, traits::UI};
-use bevy::{prelude::Component, ui::Style};
+use bevy::prelude::Component;
 
-#[derive(Component, Default)]
-pub(crate) struct Dropdown {
-	pub(crate) layout: Layout,
-	pub(crate) style: Style,
-	pub(crate) items: Vec<Box<dyn UI + Sync + Send>>,
+#[derive(Component)]
+pub(crate) struct Dropdown<TItem> {
+	pub(crate) items: Vec<TItem>,
+}
+
+impl<TItem> Default for Dropdown<TItem> {
+	fn default() -> Self {
+		Self {
+			items: Default::default(),
+		}
+	}
 }

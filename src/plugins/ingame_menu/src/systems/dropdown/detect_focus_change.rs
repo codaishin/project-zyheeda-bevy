@@ -6,8 +6,8 @@ use bevy::{
 };
 use common::tools::Focus;
 
-pub(crate) fn dropdown_detect_focus_change(
-	dropdowns: Query<(Entity, &Dropdown, &Interaction)>,
+pub(crate) fn dropdown_detect_focus_change<TItem: Sync + Send + 'static>(
+	dropdowns: Query<(Entity, &Dropdown<TItem>, &Interaction)>,
 	mouse: Res<ButtonInput<MouseButton>>,
 ) -> Focus {
 	if !mouse.just_pressed(MouseButton::Left) {
@@ -40,9 +40,11 @@ mod tests {
 		app.init_resource::<ButtonInput<MouseButton>>();
 		app.add_systems(
 			Update,
-			dropdown_detect_focus_change.pipe(|entities: In<Focus>, mut commands: Commands| {
-				commands.insert_resource(_Result(entities.0));
-			}),
+			dropdown_detect_focus_change::<()>.pipe(
+				|entities: In<Focus>, mut commands: Commands| {
+					commands.insert_resource(_Result(entities.0));
+				},
+			),
 		);
 
 		app
@@ -57,7 +59,7 @@ mod tests {
 
 		let pressed = app
 			.world_mut()
-			.spawn((Dropdown::default(), Interaction::Pressed))
+			.spawn((Dropdown::<()>::default(), Interaction::Pressed))
 			.id();
 
 		app.update();
@@ -76,7 +78,7 @@ mod tests {
 		mouse.clear_just_pressed(MouseButton::Left);
 
 		app.world_mut()
-			.spawn((Dropdown::default(), Interaction::Pressed));
+			.spawn((Dropdown::<()>::default(), Interaction::Pressed));
 
 		app.update();
 
@@ -94,7 +96,7 @@ mod tests {
 			.press(MouseButton::Left);
 
 		app.world_mut()
-			.spawn((Dropdown::default(), Interaction::None));
+			.spawn((Dropdown::<()>::default(), Interaction::None));
 
 		app.update();
 
