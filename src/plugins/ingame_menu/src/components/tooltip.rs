@@ -16,15 +16,26 @@ use bevy::{
 	ui::{node_bundles::NodeBundle, Style, Val},
 	utils::default,
 };
-use std::time::Duration;
+use std::{marker::PhantomData, time::Duration};
 
 #[derive(Component)]
 pub(crate) struct Tooltip<T>(pub T);
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct TooltipUI {
+pub(crate) struct TooltipUI<T> {
+	phantom_data: PhantomData<T>,
 	pub(crate) source: Entity,
 	pub(crate) delay: Duration,
+}
+
+impl<T> TooltipUI<T> {
+	pub(crate) fn new(source: Entity, delay: Duration) -> Self {
+		Self {
+			source,
+			delay,
+			phantom_data: PhantomData,
+		}
+	}
 }
 
 #[derive(Resource, Default)]
@@ -32,8 +43,12 @@ pub(crate) struct TooltipUIControl {
 	pub(crate) tooltip_delay: Duration,
 }
 
-impl DespawnAllTooltips<TooltipUI> for TooltipUIControl {
-	fn despawn_all(&self, uis: &Query<(Entity, &TooltipUI, &mut Style)>, commands: &mut Commands) {
+impl<T: Sync + Send + 'static> DespawnAllTooltips<TooltipUI<T>> for TooltipUIControl {
+	fn despawn_all(
+		&self,
+		uis: &Query<(Entity, &TooltipUI<T>, &mut Style)>,
+		commands: &mut Commands,
+	) {
 		for (entity, ..) in uis {
 			let Some(entity) = commands.get_entity(entity) else {
 				continue;
@@ -43,15 +58,16 @@ impl DespawnAllTooltips<TooltipUI> for TooltipUIControl {
 	}
 }
 
-impl<T: Send + Sync + 'static> DespawnOutdatedTooltips<TooltipUI, T> for TooltipUIControl {
+impl<T: Send + Sync + 'static> DespawnOutdatedTooltips<TooltipUI<T>, T> for TooltipUIControl {
 	fn despawn_outdated(
 		&self,
-		uis: &Query<(Entity, &TooltipUI, &mut Style)>,
+		uis: &Query<(Entity, &TooltipUI<T>, &mut Style)>,
 		commands: &mut Commands,
 		mut outdated_tooltips: RemovedComponents<Tooltip<T>>,
 	) {
 		let outdated = outdated_tooltips.read().collect::<Vec<_>>();
-		let is_outdated = |(_, ui, _): &(Entity, &TooltipUI, &Style)| outdated.contains(&ui.source);
+		let is_outdated =
+			|(_, ui, _): &(Entity, &TooltipUI<T>, &Style)| outdated.contains(&ui.source);
 
 		for (entity, ..) in uis.iter().filter(is_outdated) {
 			let Some(entity) = commands.get_entity(entity) else {
@@ -62,8 +78,12 @@ impl<T: Send + Sync + 'static> DespawnOutdatedTooltips<TooltipUI, T> for Tooltip
 	}
 }
 
-impl UpdateTooltipPosition<TooltipUI> for TooltipUIControl {
-	fn update_position(&self, uis: &mut Query<(Entity, &TooltipUI, &mut Style)>, position: Vec2) {
+impl<T: Sync + Send + 'static> UpdateTooltipPosition<TooltipUI<T>> for TooltipUIControl {
+	fn update_position(
+		&self,
+		uis: &mut Query<(Entity, &TooltipUI<T>, &mut Style)>,
+		position: Vec2,
+	) {
 		for (.., mut style) in uis.iter_mut() {
 			style.left = Val::Px(position.x);
 			style.top = Val::Px(position.y);
@@ -71,7 +91,7 @@ impl UpdateTooltipPosition<TooltipUI> for TooltipUIControl {
 	}
 }
 
-impl<T> SpawnTooltips<T> for TooltipUIControl {
+impl<T: Sync + Send + 'static> SpawnTooltips<T> for TooltipUIControl {
 	fn spawn(
 		&self,
 		commands: &mut Commands,
@@ -82,10 +102,7 @@ impl<T> SpawnTooltips<T> for TooltipUIControl {
 		Tooltip<T>: InstantiateContentOn + GetNode,
 	{
 		let container_node = (
-			TooltipUI {
-				source: tooltip_entity,
-				delay: self.tooltip_delay,
-			},
+			TooltipUI::<T>::new(tooltip_entity, self.tooltip_delay),
 			NodeBundle {
 				style: Style {
 					left: Val::Px(position.x),
@@ -126,15 +143,15 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Child(&'static str);
 
-	fn setup() -> App {
+	fn new_app() -> App {
 		App::new().single_threaded(Update)
 	}
 
-	fn setup_despawn_all() -> App {
-		let mut app = setup();
+	fn setup_despawn_all<T: Sync + Send + 'static>() -> App {
+		let mut app = new_app();
 		app.add_systems(
 			Update,
-			|uis: Query<(Entity, &TooltipUI, &mut Style)>, mut commands: Commands| {
+			|uis: Query<(Entity, &TooltipUI<T>, &mut Style)>, mut commands: Commands| {
 				TooltipUIControl::default().despawn_all(&uis, &mut commands);
 			},
 		);
@@ -142,13 +159,13 @@ mod tests {
 		app
 	}
 
-	fn setup_despawn_outdated() -> App {
-		let mut app = setup();
+	fn setup_despawn_outdated<T: Sync + Send + 'static>() -> App {
+		let mut app = new_app();
 		app.add_systems(
 			Update,
-			|uis: Query<(Entity, &TooltipUI, &mut Style)>,
+			|uis: Query<(Entity, &TooltipUI<T>, &mut Style)>,
 			 mut commands: Commands,
-			 outdated_tooltips: RemovedComponents<Tooltip<&'static str>>| {
+			 outdated_tooltips: RemovedComponents<Tooltip<T>>| {
 				TooltipUIControl::default().despawn_outdated(
 					&uis,
 					&mut commands,
@@ -160,11 +177,11 @@ mod tests {
 		app
 	}
 
-	fn setup_update_position(position: Vec2) -> App {
-		let mut app = setup();
+	fn setup_update_position<T: Sync + Send + 'static>(position: Vec2) -> App {
+		let mut app = new_app();
 		app.add_systems(
 			Update,
-			move |mut uis: Query<(Entity, &TooltipUI, &mut Style)>| {
+			move |mut uis: Query<(Entity, &TooltipUI<T>, &mut Style)>| {
 				TooltipUIControl::default().update_position(&mut uis, position);
 			},
 		);
@@ -195,7 +212,7 @@ mod tests {
 	}
 
 	fn setup_spawn(position: Vec2, tooltip_delay: Duration) -> App {
-		let mut app = setup();
+		let mut app = new_app();
 		app.add_systems(
 			Update,
 			move |mut commands: Commands, tooltips: Query<(Entity, &Tooltip<_T>)>| {
@@ -215,20 +232,14 @@ mod tests {
 
 	#[test]
 	fn despawn_all() {
-		let mut app = setup_despawn_all();
+		let mut app = setup_despawn_all::<()>();
 		app.world_mut().spawn_batch([
 			(
-				TooltipUI {
-					source: Entity::from_raw(100),
-					delay: default(),
-				},
+				TooltipUI::<()>::new(Entity::from_raw(100), default()),
 				Style::default(),
 			),
 			(
-				TooltipUI {
-					source: Entity::from_raw(200),
-					delay: default(),
-				},
+				TooltipUI::<()>::new(Entity::from_raw(200), default()),
 				Style::default(),
 			),
 		]);
@@ -238,20 +249,17 @@ mod tests {
 		let tooltip_uis = app
 			.world()
 			.iter_entities()
-			.filter(|e| e.contains::<TooltipUI>());
+			.filter(|e| e.contains::<TooltipUI<()>>());
 
 		assert_eq!(0, tooltip_uis.count());
 	}
 
 	#[test]
 	fn despawn_all_recursively() {
-		let mut app = setup_despawn_all();
+		let mut app = setup_despawn_all::<()>();
 		app.world_mut()
 			.spawn((
-				TooltipUI {
-					source: Entity::from_raw(100),
-					delay: default(),
-				},
+				TooltipUI::<()>::new(Entity::from_raw(100), default()),
 				Style::default(),
 			))
 			.with_children(|parent| {
@@ -270,17 +278,14 @@ mod tests {
 
 	#[test]
 	fn despawn_outdated() {
-		let mut app = setup_despawn_outdated();
+		let mut app = setup_despawn_outdated::<&'static str>();
 		let tooltips = [
 			app.world_mut().spawn(Tooltip("1")).id(),
 			app.world_mut().spawn(Tooltip("2")).id(),
 		];
 		for entity in tooltips {
 			app.world_mut().spawn((
-				TooltipUI {
-					source: entity,
-					delay: default(),
-				},
+				TooltipUI::<&'static str>::new(entity, default()),
 				Style::default(),
 			));
 		}
@@ -296,14 +301,14 @@ mod tests {
 		let tooltip_uis = app
 			.world()
 			.iter_entities()
-			.filter(|e| e.contains::<TooltipUI>());
+			.filter(|e| e.contains::<TooltipUI<&'static str>>());
 
 		assert_eq!(0, tooltip_uis.count());
 	}
 
 	#[test]
 	fn despawn_outdated_recursively() {
-		let mut app = setup_despawn_outdated();
+		let mut app = setup_despawn_outdated::<&'static str>();
 		let tooltips = [
 			app.world_mut().spawn(Tooltip("1")).id(),
 			app.world_mut().spawn(Tooltip("2")).id(),
@@ -311,10 +316,7 @@ mod tests {
 		for entity in tooltips {
 			app.world_mut()
 				.spawn((
-					TooltipUI {
-						source: entity,
-						delay: default(),
-					},
+					TooltipUI::<&'static str>::new(entity, default()),
 					Style::default(),
 				))
 				.with_children(|parent| {
@@ -340,17 +342,14 @@ mod tests {
 
 	#[test]
 	fn do_not_despawn_when_not_outdated() {
-		let mut app = setup_despawn_outdated();
+		let mut app = setup_despawn_outdated::<&'static str>();
 		let tooltips = [
 			app.world_mut().spawn(Tooltip("1")).id(),
 			app.world_mut().spawn(Tooltip("2")).id(),
 		];
 		for entity in tooltips {
 			app.world_mut().spawn((
-				TooltipUI {
-					source: entity,
-					delay: default(),
-				},
+				TooltipUI::<&'static str>::new(entity, default()),
 				Style::default(),
 			));
 		}
@@ -360,29 +359,23 @@ mod tests {
 		let tooltip_uis = app
 			.world()
 			.iter_entities()
-			.filter(|e| e.contains::<TooltipUI>());
+			.filter(|e| e.contains::<TooltipUI<&'static str>>());
 
 		assert_eq!(2, tooltip_uis.count());
 	}
 
 	#[test]
 	fn update_position() {
-		let mut app = setup_update_position(Vec2 { x: 42., y: 11. });
+		let mut app = setup_update_position::<&'static str>(Vec2 { x: 42., y: 11. });
 		let uis = app
 			.world_mut()
 			.spawn_batch([
 				(
-					TooltipUI {
-						source: Entity::from_raw(100),
-						delay: default(),
-					},
+					TooltipUI::<&'static str>::new(Entity::from_raw(100), default()),
 					Style::default(),
 				),
 				(
-					TooltipUI {
-						source: Entity::from_raw(200),
-						delay: default(),
-					},
+					TooltipUI::<&'static str>::new(Entity::from_raw(200), default()),
 					Style::default(),
 				),
 			])
@@ -426,7 +419,7 @@ mod tests {
 		let tooltip_ui = app
 			.world()
 			.iter_entities()
-			.find(|e| e.contains::<TooltipUI>())
+			.find(|e| e.contains::<TooltipUI<_T>>())
 			.expect("no tooltip spawned");
 
 		assert_bundle!(
@@ -460,7 +453,7 @@ mod tests {
 		let tooltip_ui_child = app
 			.world()
 			.iter_entities()
-			.find(|e| e.contains::<TooltipUI>())
+			.find(|e| e.contains::<TooltipUI<_T>>())
 			.and_then(|t| t.get::<Children>())
 			.and_then(|c| c.first())
 			.expect("no tooltip child found");
@@ -489,7 +482,7 @@ mod tests {
 		let tooltip_ui_child = app
 			.world()
 			.iter_entities()
-			.find(|e| e.contains::<TooltipUI>())
+			.find(|e| e.contains::<TooltipUI<_T>>())
 			.and_then(|t| t.get::<Children>())
 			.and_then(|c| c.first())
 			.expect("no tooltip child found");
@@ -519,7 +512,7 @@ mod tests {
 		let tooltip_ui = app
 			.world()
 			.iter_entities()
-			.find_map(|e| e.get::<TooltipUI>())
+			.find_map(|e| e.get::<TooltipUI<_T>>())
 			.expect("no tooltip spawned");
 
 		assert_eq!(tooltip, tooltip_ui.source);
@@ -539,7 +532,7 @@ mod tests {
 		let tooltip_ui = app
 			.world()
 			.iter_entities()
-			.find_map(|e| e.get::<TooltipUI>())
+			.find_map(|e| e.get::<TooltipUI<_T>>())
 			.expect("no tooltip spawned");
 
 		assert_eq!(Duration::from_secs(4000), tooltip_ui.delay);
