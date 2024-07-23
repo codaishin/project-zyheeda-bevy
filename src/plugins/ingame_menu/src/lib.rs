@@ -16,7 +16,7 @@ use common::{
 };
 use components::{
 	combo_overview::ComboOverview,
-	dropdown::{skill_select::SkillSelect, Dropdown},
+	dropdown::Dropdown,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
 	quickbar_panel::QuickbarPanel,
@@ -63,13 +63,12 @@ use systems::{
 		update_label_text::update_label_text,
 	},
 };
-use tools::menu_state::MenuState;
+use tools::{menu_state::MenuState, SkillDescriptor, SkillSelect};
 use traits::{
 	get_node::GetNode,
 	instantiate_content_on::InstantiateContentOn,
 	GetLayout,
 	RootStyle,
-	SkillDescriptor,
 	UI,
 };
 
@@ -231,5 +230,6 @@ fn inventory_screen_systems(app: &mut App) {
 }
 
 fn dropdown_systems(app: &mut App) {
-	app.add_dropdown::<SkillSelect>();
+	app.add_dropdown::<SkillSelect>()
+		.add_tooltip::<SkillSelect>();
 }

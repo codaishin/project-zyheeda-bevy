@@ -1,11 +1,13 @@
 use super::{tooltip::Tooltip, SkillSelectDropdownCommand};
-use crate::traits::{
-	colors::DEFAULT_PANEL_COLORS,
-	get_node::GetNode,
-	instantiate_content_on::InstantiateContentOn,
-	CombosDescriptor,
-	SkillDescriptor,
-	UpdateCombos,
+use crate::{
+	tools::SkillDescriptor,
+	traits::{
+		colors::DEFAULT_PANEL_COLORS,
+		get_node::GetNode,
+		instantiate_content_on::InstantiateContentOn,
+		CombosDescriptor,
+		UpdateCombos,
+	},
 };
 use bevy::{
 	asset::Handle,
@@ -199,7 +201,6 @@ fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::SkillDescriptor;
 	use bevy::asset::AssetId;
 	use uuid::Uuid;
 

@@ -1,7 +1,7 @@
 use super::Dropdown;
 use crate::{
-	components::combo_overview::ComboOverview,
-	tools::Layout,
+	components::{combo_overview::ComboOverview, tooltip::Tooltip},
+	tools::{Layout, SkillSelect},
 	traits::{
 		get_node::GetNode,
 		instantiate_content_on::InstantiateContentOn,
@@ -13,10 +13,6 @@ use bevy::{
 	prelude::{default, ChildBuilder, NodeBundle},
 	ui::{PositionType, Style, Val},
 };
-use skills::skills::Skill;
-
-#[derive(Debug, PartialEq)]
-pub(crate) struct SkillSelect(pub(crate) Skill);
 
 impl GetNode for SkillSelect {
 	fn node(&self) -> NodeBundle {
@@ -26,8 +22,9 @@ impl GetNode for SkillSelect {
 
 impl InstantiateContentOn for SkillSelect {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
-		parent.spawn(ComboOverview::skill_button_bundle(
-			self.0.icon.clone().unwrap_or_default(),
+		parent.spawn((
+			ComboOverview::skill_button_bundle(self.0.icon.clone().unwrap_or_default()),
+			Tooltip(self.clone()),
 		));
 	}
 }

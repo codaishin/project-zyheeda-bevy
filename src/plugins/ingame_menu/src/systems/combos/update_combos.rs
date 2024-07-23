@@ -20,8 +20,9 @@ pub(crate) fn update_combos<TKey, TComboOverview: Component + UpdateCombos<TKey>
 
 #[cfg(test)]
 mod tests {
+	use crate::tools::SkillDescriptor;
+
 	use super::*;
-	use crate::traits::SkillDescriptor;
 	use bevy::{
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},

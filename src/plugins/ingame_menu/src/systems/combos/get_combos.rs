@@ -1,4 +1,4 @@
-use crate::traits::{CombosDescriptor, SkillDescriptor};
+use crate::{tools::SkillDescriptor, traits::CombosDescriptor};
 use bevy::{
 	asset::Handle,
 	ecs::world::Ref,
@@ -40,7 +40,6 @@ fn skill_descriptor<TKey: From<SlotKey> + Clone>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::SkillDescriptor;
 	use bevy::{
 		app::{App, Update},
 		asset::{Asset, AssetId},
