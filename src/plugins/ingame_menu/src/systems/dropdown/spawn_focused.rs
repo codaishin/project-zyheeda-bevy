@@ -1,4 +1,8 @@
-use crate::{components::dropdown::Dropdown, tools::Layout, traits::UI};
+use crate::{
+	components::dropdown::Dropdown,
+	tools::Layout,
+	traits::{RootStyle, UI},
+};
 use bevy::{
 	hierarchy::{BuildChildren, ChildBuilder},
 	prelude::{Commands, Component, Entity, In, Query},
@@ -12,11 +16,14 @@ pub(crate) struct DropdownUI {
 	pub(crate) source: Entity,
 }
 
-pub(crate) fn dropdown_spawn_focused<TItem: UI + Sync + Send + 'static>(
+pub(crate) fn dropdown_spawn_focused<TItem>(
 	focus: In<Focus>,
 	mut commands: Commands,
 	dropdowns: Query<(Entity, &Dropdown<TItem>)>,
-) {
+) where
+	TItem: UI + Sync + Send + 'static,
+	Dropdown<TItem>: RootStyle,
+{
 	let Focus::New(new_focus) = focus.0 else {
 		return;
 	};
@@ -34,7 +41,7 @@ pub(crate) fn dropdown_spawn_focused<TItem: UI + Sync + Send + 'static>(
 				.spawn((
 					DropdownUI { source },
 					NodeBundle {
-						style: dropdown.style.clone(),
+						style: dropdown.root_style(),
 						z_index: ZIndex::Global(1),
 						..default()
 					},
@@ -106,6 +113,7 @@ mod tests {
 	use common::{assert_bundle, test_tools::utils::SingleThreadedApp, tools::Index};
 	use mockall::mock;
 
+	#[derive(Default)]
 	struct _Item;
 
 	impl GetNode for _Item {
@@ -118,6 +126,15 @@ mod tests {
 		fn instantiate_content_on(&self, _: &mut ChildBuilder) {}
 	}
 
+	impl RootStyle for Dropdown<_Item> {
+		fn root_style(&self) -> Style {
+			Style {
+				top: Val::Px(404.),
+				..default()
+			}
+		}
+	}
+
 	mock! {
 		_Item {}
 		impl GetNode for _Item {
@@ -128,10 +145,20 @@ mod tests {
 		}
 	}
 
+	impl RootStyle for Dropdown<Mock_Item> {
+		fn root_style(&self) -> Style {
+			Style::default()
+		}
+	}
+
 	#[derive(Resource, Default)]
 	struct _In(Focus);
 
-	fn setup<TItem: UI + Send + Sync + 'static>() -> App {
+	fn setup<TItem>() -> App
+	where
+		TItem: UI + Send + Sync + 'static,
+		Dropdown<TItem>: RootStyle,
+	{
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<_In>();
 		app.add_systems(
@@ -201,16 +228,7 @@ mod tests {
 	fn spawn_dropdown_ui_with_dropdown_style() {
 		let mut app = setup::<_Item>();
 
-		let dropdown = app
-			.world_mut()
-			.spawn(Dropdown::<_Item> {
-				style: Style {
-					top: Val::Px(404.),
-					..default()
-				},
-				..default()
-			})
-			.id();
+		let dropdown = app.world_mut().spawn(Dropdown::<_Item>::default()).id();
 		app.world_mut()
 			.insert_resource(_In(Focus::New(vec![dropdown])));
 
@@ -365,7 +383,6 @@ mod tests {
 			.spawn(Dropdown {
 				items: vec![_Item, _Item, _Item, _Item, _Item],
 				layout: Layout::LastColumn(Index(2)),
-				..default()
 			})
 			.id();
 
@@ -397,7 +414,6 @@ mod tests {
 			.spawn(Dropdown {
 				items: vec![_Item, _Item, _Item, _Item, _Item],
 				layout: Layout::LastColumn(Index(1)),
-				..default()
 			})
 			.id();
 
@@ -429,7 +445,6 @@ mod tests {
 			.spawn(Dropdown {
 				items: vec![_Item, _Item, _Item, _Item, _Item],
 				layout: Layout::LastRow(Index(2)),
-				..default()
 			})
 			.id();
 
@@ -461,7 +476,6 @@ mod tests {
 			.spawn(Dropdown {
 				items: vec![_Item, _Item, _Item, _Item, _Item],
 				layout: Layout::LastRow(Index(1)),
-				..default()
 			})
 			.id();
 

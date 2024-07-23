@@ -16,6 +16,7 @@ use common::{
 };
 use components::{
 	combo_overview::ComboOverview,
+	dropdown::Dropdown,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
 	quickbar_panel::QuickbarPanel,
@@ -65,6 +66,7 @@ use tools::menu_state::MenuState;
 use traits::{
 	get_node::GetNode,
 	instantiate_content_on::InstantiateContentOn,
+	RootStyle,
 	SkillDescriptor,
 	UI,
 };
@@ -108,13 +110,15 @@ impl AddTooltip for App {
 trait AddDropdown {
 	fn add_dropdown<TItem>(&mut self) -> &mut Self
 	where
-		TItem: UI + Sync + Send + 'static;
+		TItem: UI + Sync + Send + 'static,
+		Dropdown<TItem>: RootStyle;
 }
 
 impl AddDropdown for App {
 	fn add_dropdown<TItem>(&mut self) -> &mut Self
 	where
 		TItem: UI + Sync + Send + 'static,
+		Dropdown<TItem>: RootStyle,
 	{
 		self.add_systems(
 			Update,

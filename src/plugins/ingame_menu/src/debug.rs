@@ -1,4 +1,4 @@
-use crate::{components::dropdown::Dropdown, tools::Layout, AddDropdown};
+use crate::{components::dropdown::Dropdown, tools::Layout, traits::RootStyle, AddDropdown};
 #[cfg(debug_assertions)]
 use crate::{
 	tools::menu_state::MenuState,
@@ -136,6 +136,17 @@ impl InstantiateContentOn for ButtonOption {
 	}
 }
 
+impl RootStyle for Dropdown<ButtonOption> {
+	fn root_style(&self) -> Style {
+		Style {
+			position_type: PositionType::Absolute,
+			top: Val::Percent(0.),
+			right: Val::Percent(100.),
+			..default()
+		}
+	}
+}
+
 fn update_button_text(mut commands: Commands, buttons: Query<(Entity, &Button), Changed<Button>>) {
 	for (entity, button) in &buttons {
 		let Some(mut entity) = commands.get_entity(entity) else {
@@ -175,15 +186,6 @@ pub fn setup_dropdown_test(app: &mut App) {
 		]
 	}
 
-	fn get_style() -> Style {
-		Style {
-			position_type: PositionType::Absolute,
-			top: Val::Percent(0.),
-			right: Val::Percent(100.),
-			..default()
-		}
-	}
-
 	app.add_dropdown::<ButtonOption>();
 	app.add_systems(Update, (replace_button_text, update_button_text));
 	app.world_mut()
@@ -204,7 +206,6 @@ pub fn setup_dropdown_test(app: &mut App) {
 				Button::bundle(),
 				Dropdown {
 					layout: Layout::SINGLE_ROW,
-					style: get_style(),
 					items: get_items(button.id()),
 				},
 			));
@@ -214,7 +215,6 @@ pub fn setup_dropdown_test(app: &mut App) {
 				Button::bundle(),
 				Dropdown {
 					layout: Layout::SINGLE_COLUMN,
-					style: get_style(),
 					items: get_items(button.id()),
 				},
 			));
@@ -224,7 +224,6 @@ pub fn setup_dropdown_test(app: &mut App) {
 				Button::bundle(),
 				Dropdown {
 					layout: Layout::LastColumn(Index(1)),
-					style: get_style(),
 					items: get_items(button.id()),
 				},
 			));
