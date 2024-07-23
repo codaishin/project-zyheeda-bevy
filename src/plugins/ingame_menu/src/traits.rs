@@ -4,7 +4,7 @@ pub mod instantiate_content_on;
 pub mod set;
 pub mod tooltip_ui_control;
 
-use crate::components::tooltip::Tooltip;
+use crate::{components::tooltip::Tooltip, tools::Layout};
 use bevy::{
 	asset::Handle,
 	hierarchy::ChildBuilder,
@@ -69,4 +69,8 @@ impl<T: GetNode + InstantiateContentOn> UI for T {}
 
 pub(crate) trait RootStyle {
 	fn root_style(&self) -> Style;
+}
+
+pub(crate) trait GetLayout {
+	fn layout(&self) -> Layout;
 }

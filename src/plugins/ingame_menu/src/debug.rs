@@ -1,4 +1,9 @@
-use crate::{components::dropdown::Dropdown, tools::Layout, traits::RootStyle, AddDropdown};
+use crate::{
+	components::dropdown::Dropdown,
+	tools::Layout,
+	traits::{GetLayout, RootStyle},
+	AddDropdown,
+};
 #[cfg(debug_assertions)]
 use crate::{
 	tools::menu_state::MenuState,
@@ -27,7 +32,7 @@ use bevy::{
 	utils::default,
 };
 use common::{tools::Index, traits::iteration::IterFinite};
-use std::time::Duration;
+use std::{marker::PhantomData, time::Duration};
 
 #[derive(Component, Default)]
 struct StateTime(Duration, Option<MenuState>);
@@ -115,19 +120,44 @@ impl Button {
 	}
 }
 
-#[derive(Component, Clone)]
-struct ButtonOption {
-	target: Entity,
+struct SingleRow;
+struct SingleColumn;
+struct TwoColumns;
+
+#[derive(Component)]
+struct ButtonOption<TLayout: Sync + Send + 'static> {
+	phantom_data: PhantomData<TLayout>,
 	text: &'static str,
+	target: Entity,
 }
 
-impl GetNode for ButtonOption {
+impl<TLayout: Sync + Send + 'static> Clone for ButtonOption<TLayout> {
+	fn clone(&self) -> Self {
+		Self {
+			phantom_data: self.phantom_data,
+			text: self.text,
+			target: self.target,
+		}
+	}
+}
+
+impl<TLayout: Sync + Send + 'static> ButtonOption<TLayout> {
+	fn new(text: &'static str, target: Entity) -> Self {
+		Self {
+			phantom_data: PhantomData,
+			text,
+			target,
+		}
+	}
+}
+
+impl<TLayout: Sync + Send + 'static> GetNode for ButtonOption<TLayout> {
 	fn node(&self) -> NodeBundle {
 		NodeBundle::default()
 	}
 }
 
-impl InstantiateContentOn for ButtonOption {
+impl<TLayout: Sync + Send + 'static> InstantiateContentOn for ButtonOption<TLayout> {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		let option = (Button::bundle(), self.clone());
 		parent.spawn(option).with_children(|button| {
@@ -136,7 +166,7 @@ impl InstantiateContentOn for ButtonOption {
 	}
 }
 
-impl RootStyle for Dropdown<ButtonOption> {
+impl<TLayout: Sync + Send + 'static> RootStyle for Dropdown<ButtonOption<TLayout>> {
 	fn root_style(&self) -> Style {
 		Style {
 			position_type: PositionType::Absolute,
@@ -144,6 +174,24 @@ impl RootStyle for Dropdown<ButtonOption> {
 			right: Val::Percent(100.),
 			..default()
 		}
+	}
+}
+
+impl GetLayout for Dropdown<ButtonOption<SingleRow>> {
+	fn layout(&self) -> Layout {
+		Layout::SINGLE_ROW
+	}
+}
+
+impl GetLayout for Dropdown<ButtonOption<SingleColumn>> {
+	fn layout(&self) -> Layout {
+		Layout::SINGLE_COLUMN
+	}
+}
+
+impl GetLayout for Dropdown<ButtonOption<TwoColumns>> {
+	fn layout(&self) -> Layout {
+		Layout::LastColumn(Index(1))
 	}
 }
 
@@ -159,9 +207,9 @@ fn update_button_text(mut commands: Commands, buttons: Query<(Entity, &Button), 
 	}
 }
 
-fn replace_button_text(
+fn replace_button_text<TLayout: Sync + Send + 'static>(
 	mut buttons: Query<&mut Button>,
-	options: Query<(&ButtonOption, &Interaction), Changed<Interaction>>,
+	options: Query<(&ButtonOption<TLayout>, &Interaction), Changed<Interaction>>,
 ) {
 	for (options, interaction) in &options {
 		if interaction != &Interaction::Pressed {
@@ -176,19 +224,29 @@ fn replace_button_text(
 }
 
 pub fn setup_dropdown_test(app: &mut App) {
-	fn get_items(target: Entity) -> Vec<ButtonOption> {
+	fn get_items<TLayout: Sync + Send + 'static>(target: Entity) -> Vec<ButtonOption<TLayout>> {
 		vec![
-			ButtonOption { text: "1", target },
-			ButtonOption { text: "2", target },
-			ButtonOption { text: "3", target },
-			ButtonOption { text: "4", target },
-			ButtonOption { text: "5", target },
+			ButtonOption::new("1", target),
+			ButtonOption::new("2", target),
+			ButtonOption::new("3", target),
+			ButtonOption::new("4", target),
+			ButtonOption::new("5", target),
 		]
 	}
 
-	app.add_dropdown::<ButtonOption>();
-	app.add_systems(Update, (replace_button_text, update_button_text));
-	app.world_mut()
+	app.add_dropdown::<ButtonOption<SingleRow>>()
+		.add_dropdown::<ButtonOption<SingleColumn>>()
+		.add_dropdown::<ButtonOption<TwoColumns>>()
+		.add_systems(
+			Update,
+			(
+				replace_button_text::<SingleRow>,
+				replace_button_text::<SingleColumn>,
+				replace_button_text::<TwoColumns>,
+				update_button_text,
+			),
+		)
+		.world_mut()
 		.spawn(NodeBundle {
 			style: Style {
 				position_type: PositionType::Absolute,
@@ -205,8 +263,7 @@ pub fn setup_dropdown_test(app: &mut App) {
 				Button { text: "" },
 				Button::bundle(),
 				Dropdown {
-					layout: Layout::SINGLE_ROW,
-					items: get_items(button.id()),
+					items: get_items::<SingleRow>(button.id()),
 				},
 			));
 			let mut button = container.spawn_empty();
@@ -214,8 +271,7 @@ pub fn setup_dropdown_test(app: &mut App) {
 				Button { text: "" },
 				Button::bundle(),
 				Dropdown {
-					layout: Layout::SINGLE_COLUMN,
-					items: get_items(button.id()),
+					items: get_items::<SingleColumn>(button.id()),
 				},
 			));
 			let mut button = container.spawn_empty();
@@ -223,8 +279,7 @@ pub fn setup_dropdown_test(app: &mut App) {
 				Button { text: "" },
 				Button::bundle(),
 				Dropdown {
-					layout: Layout::LastColumn(Index(1)),
-					items: get_items(button.id()),
+					items: get_items::<TwoColumns>(button.id()),
 				},
 			));
 		});

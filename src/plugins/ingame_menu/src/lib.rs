@@ -66,6 +66,7 @@ use tools::menu_state::MenuState;
 use traits::{
 	get_node::GetNode,
 	instantiate_content_on::InstantiateContentOn,
+	GetLayout,
 	RootStyle,
 	SkillDescriptor,
 	UI,
@@ -111,14 +112,14 @@ trait AddDropdown {
 	fn add_dropdown<TItem>(&mut self) -> &mut Self
 	where
 		TItem: UI + Sync + Send + 'static,
-		Dropdown<TItem>: RootStyle;
+		Dropdown<TItem>: RootStyle + GetLayout;
 }
 
 impl AddDropdown for App {
 	fn add_dropdown<TItem>(&mut self) -> &mut Self
 	where
 		TItem: UI + Sync + Send + 'static,
-		Dropdown<TItem>: RootStyle,
+		Dropdown<TItem>: RootStyle + GetLayout,
 	{
 		self.add_systems(
 			Update,
