@@ -35,3 +35,6 @@ pub struct Quickbar;
 
 #[derive(Component)]
 pub struct ColorOverride;
+
+#[derive(Component, Debug, PartialEq)]
+pub struct SkillSelectDropdownCommand<TKey>(pub TKey);
