@@ -104,7 +104,13 @@ impl AddTooltip for App {
 		T: Sync + Send + 'static,
 		Tooltip<T>: InstantiateContentOn + GetNode,
 	{
-		self.add_systems(Update, tooltip::<T, TooltipUI, TooltipUIControl, Window>)
+		self.add_systems(
+			Update,
+			(
+				tooltip::<T, TooltipUI<T>, TooltipUIControl, Window>,
+				tooltip_visibility::<Real, T>,
+			),
+		)
 	}
 }
 
@@ -139,7 +145,6 @@ impl Plugin for IngameMenuPlugin {
 		ui_overlay_systems(app);
 		combo_overview_systems(app);
 		inventory_screen_systems(app);
-		tooltip_systems(app);
 
 		#[cfg(debug_assertions)]
 		{
@@ -221,8 +226,4 @@ fn inventory_screen_systems(app: &mut App) {
 			Update,
 			(swap_equipped_items.pipe(log_many), swap_inventory_items),
 		);
-}
-
-fn tooltip_systems(app: &mut App) {
-	app.add_systems(Update, tooltip_visibility::<Real>);
 }

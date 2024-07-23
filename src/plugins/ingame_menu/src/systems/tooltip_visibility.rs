@@ -2,8 +2,11 @@ use crate::components::tooltip::TooltipUI;
 use bevy::{ecs::system::Res, prelude::Query, render::view::Visibility, time::Time};
 use std::time::Duration;
 
-pub(crate) fn tooltip_visibility<TTime: Send + Sync + 'static + Default>(
-	mut uis: Query<(&mut TooltipUI, &mut Visibility)>,
+pub(crate) fn tooltip_visibility<
+	TTime: Send + Sync + 'static + Default,
+	T: Send + Sync + 'static,
+>(
+	mut uis: Query<(&mut TooltipUI<T>, &mut Visibility)>,
 	time: Res<Time<TTime>>,
 ) {
 	let delta = time.delta();
@@ -33,7 +36,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<Time<Real>>();
 		app.tick_time(Duration::ZERO);
-		app.add_systems(Update, tooltip_visibility::<Real>);
+		app.add_systems(Update, tooltip_visibility::<Real, ()>);
 
 		app
 	}
@@ -44,10 +47,7 @@ mod tests {
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
-				TooltipUI {
-					source: Entity::from_raw(42),
-					delay: Duration::from_millis(100),
-				},
+				TooltipUI::<()>::new(Entity::from_raw(42), Duration::from_millis(100)),
 				Visibility::Hidden,
 			))
 			.id();
@@ -66,10 +66,7 @@ mod tests {
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
-				TooltipUI {
-					source: Entity::from_raw(42),
-					delay: Duration::from_millis(10),
-				},
+				TooltipUI::<()>::new(Entity::from_raw(42), Duration::from_millis(10)),
 				Visibility::Hidden,
 			))
 			.id();
@@ -88,10 +85,7 @@ mod tests {
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
-				TooltipUI {
-					source: Entity::from_raw(42),
-					delay: Duration::from_millis(1000),
-				},
+				TooltipUI::<()>::new(Entity::from_raw(42), Duration::from_millis(1000)),
 				Visibility::Hidden,
 			))
 			.id();
@@ -113,10 +107,7 @@ mod tests {
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
-				TooltipUI {
-					source: Entity::from_raw(42),
-					delay: Duration::from_millis(10),
-				},
+				TooltipUI::<()>::new(Entity::from_raw(42), Duration::from_millis(10)),
 				Visibility::Hidden,
 			))
 			.id();
@@ -127,11 +118,8 @@ mod tests {
 		let tooltip_ui = app.world().entity(tooltip_ui);
 
 		assert_eq!(
-			Some(&TooltipUI {
-				source: Entity::from_raw(42),
-				delay: Duration::ZERO,
-			}),
-			tooltip_ui.get::<TooltipUI>()
+			Some(&TooltipUI::<()>::new(Entity::from_raw(42), Duration::ZERO)),
+			tooltip_ui.get::<TooltipUI<()>>()
 		);
 	}
 }
