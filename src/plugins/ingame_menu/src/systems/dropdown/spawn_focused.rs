@@ -10,10 +10,36 @@ use bevy::{
 	utils::default,
 };
 use common::tools::Focus;
+use std::{fmt::Debug, marker::PhantomData};
 
-#[derive(Component, Debug, PartialEq)]
-pub(crate) struct DropdownUI {
+#[derive(Component)]
+pub(crate) struct DropdownUI<TItem> {
+	phantom_data: PhantomData<TItem>,
 	pub(crate) source: Entity,
+}
+
+impl<TItem> DropdownUI<TItem> {
+	pub(crate) fn new(source: Entity) -> Self {
+		Self {
+			source,
+			phantom_data: PhantomData,
+		}
+	}
+}
+
+impl<TItem> Debug for DropdownUI<TItem> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("DropdownUI")
+			.field("phantom_data", &self.phantom_data)
+			.field("source", &self.source)
+			.finish()
+	}
+}
+
+impl<TItem> PartialEq for DropdownUI<TItem> {
+	fn eq(&self, other: &Self) -> bool {
+		self.source == other.source
+	}
 }
 
 pub(crate) fn dropdown_spawn_focused<TItem>(
@@ -39,7 +65,7 @@ pub(crate) fn dropdown_spawn_focused<TItem>(
 		entity.with_children(|entity_node| {
 			entity_node
 				.spawn((
-					DropdownUI { source },
+					DropdownUI::<TItem>::new(source),
 					NodeBundle {
 						style: dropdown.root_style(),
 						z_index: ZIndex::Global(1),
@@ -280,8 +306,8 @@ mod tests {
 		let dropdown_ui = last_child_of!(app, dropdown);
 
 		assert_eq!(
-			Some(&DropdownUI { source: dropdown }),
-			dropdown_ui.get::<DropdownUI>()
+			Some(&DropdownUI::<_Item>::new(dropdown)),
+			dropdown_ui.get::<DropdownUI<_Item>>()
 		);
 	}
 

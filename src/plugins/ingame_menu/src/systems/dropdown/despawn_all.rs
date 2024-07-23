@@ -5,10 +5,10 @@ use bevy::{
 };
 use common::tools::Focus;
 
-pub(crate) fn dropdown_despawn_all(
+pub(crate) fn dropdown_despawn_all<TItem: Sync + Send + 'static>(
 	focus: In<Focus>,
 	commands: Commands,
-	dropdown_uis: Query<(Entity, &DropdownUI)>,
+	dropdown_uis: Query<(Entity, &DropdownUI<TItem>)>,
 ) -> Focus {
 	match focus.0 {
 		Focus::New(new_focus) => despawn_and_unfocus_uis(new_focus, commands, dropdown_uis),
@@ -16,10 +16,10 @@ pub(crate) fn dropdown_despawn_all(
 	}
 }
 
-fn despawn_and_unfocus_uis(
+fn despawn_and_unfocus_uis<TItem: Sync + Send + 'static>(
 	mut new_focus: Vec<Entity>,
 	mut commands: Commands,
-	dropdown_uis: Query<(Entity, &DropdownUI)>,
+	dropdown_uis: Query<(Entity, &DropdownUI<TItem>)>,
 ) -> Focus {
 	for (entity, dropdown_ui) in &dropdown_uis {
 		despawn_entity(&mut commands, entity);
@@ -51,6 +51,8 @@ mod tests {
 	};
 	use common::test_tools::utils::SingleThreadedApp;
 
+	struct _Item;
+
 	#[derive(Resource, Default)]
 	struct _In(pub Focus);
 
@@ -63,7 +65,7 @@ mod tests {
 		app.add_systems(
 			Update,
 			(|new_active: Res<_In>| new_active.0.clone())
-				.pipe(dropdown_despawn_all)
+				.pipe(dropdown_despawn_all::<_Item>)
 				.pipe(|focus: In<Focus>, mut commands: Commands| {
 					commands.insert_resource(_Result(focus.0))
 				}),
@@ -75,9 +77,8 @@ mod tests {
 	#[test]
 	fn despawn_dropdown_ui() {
 		let mut app = setup();
-		app.world_mut().spawn(DropdownUI {
-			source: Entity::from_raw(42),
-		});
+		app.world_mut()
+			.spawn(DropdownUI::<_Item>::new(Entity::from_raw(42)));
 
 		app.world_mut().insert_resource(_In(Focus::New(vec![])));
 
@@ -86,7 +87,7 @@ mod tests {
 		let dropdown_uis = app
 			.world()
 			.iter_entities()
-			.find(|e| e.contains::<DropdownUI>());
+			.find(|e| e.contains::<DropdownUI<_Item>>());
 
 		assert!(dropdown_uis.is_none());
 	}
@@ -97,9 +98,8 @@ mod tests {
 		struct _Other;
 
 		let mut app = setup();
-		app.world_mut().spawn(DropdownUI {
-			source: Entity::from_raw(42),
-		});
+		app.world_mut()
+			.spawn(DropdownUI::<_Item>::new(Entity::from_raw(42)));
 		app.world_mut().spawn(_Other);
 
 		app.world_mut().insert_resource(_In(Focus::New(vec![])));
@@ -118,9 +118,7 @@ mod tests {
 
 		let mut app = setup();
 		app.world_mut()
-			.spawn(DropdownUI {
-				source: Entity::from_raw(42),
-			})
+			.spawn(DropdownUI::<_Item>::new(Entity::from_raw(42)))
 			.with_children(|dropdown_ui| {
 				dropdown_ui.spawn(_Child);
 			});
@@ -137,9 +135,8 @@ mod tests {
 	#[test]
 	fn do_nothing_when_focus_unchanged() {
 		let mut app = setup();
-		app.world_mut().spawn(DropdownUI {
-			source: Entity::from_raw(42),
-		});
+		app.world_mut()
+			.spawn(DropdownUI::<_Item>::new(Entity::from_raw(42)));
 
 		app.world_mut().insert_resource(_In(Focus::Unchanged));
 
@@ -148,7 +145,7 @@ mod tests {
 		let dropdown_uis = app
 			.world()
 			.iter_entities()
-			.find(|e| e.contains::<DropdownUI>());
+			.find(|e| e.contains::<DropdownUI<_Item>>());
 
 		assert!(dropdown_uis.is_some());
 	}
@@ -186,8 +183,7 @@ mod tests {
 		let mut app = setup();
 		let source = Entity::from_raw(101);
 
-		app.world_mut().spawn(DropdownUI { source });
-
+		app.world_mut().spawn(DropdownUI::<_Item>::new(source));
 		app.world_mut().insert_resource(_In(Focus::New(vec![
 			Entity::from_raw(42),
 			source,

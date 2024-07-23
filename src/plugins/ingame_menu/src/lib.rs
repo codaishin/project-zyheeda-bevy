@@ -124,7 +124,7 @@ impl AddDropdown for App {
 		self.add_systems(
 			Update,
 			dropdown_detect_focus_change::<TItem>
-				.pipe(dropdown_despawn_all)
+				.pipe(dropdown_despawn_all::<TItem>)
 				.pipe(dropdown_spawn_focused::<TItem>),
 		)
 	}
