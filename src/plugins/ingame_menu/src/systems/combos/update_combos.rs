@@ -1,4 +1,4 @@
-use crate::components::dropdown::skill_select::SkillSelect;
+use crate::components::skill_select::SkillSelect;
 use bevy::{
 	prelude::{Component, Query, With},
 	ui::Interaction,

@@ -16,10 +16,11 @@ use common::{
 };
 use components::{
 	combo_overview::ComboOverview,
-	dropdown::{skill_select::SkillSelect, Dropdown},
+	dropdown::Dropdown,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
 	quickbar_panel::QuickbarPanel,
+	skill_select::SkillSelect,
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
 	ui_overlay::UIOverlay,
 };

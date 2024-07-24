@@ -1,5 +1,6 @@
 use crate::components::{
-	dropdown::{skill_select::SkillSelect, Dropdown},
+	dropdown::Dropdown,
+	skill_select::SkillSelect,
 	SkillSelectDropdownCommand,
 };
 use bevy::{
