@@ -38,7 +38,7 @@ pub(crate) fn skill_name(name: &str) -> TextBundle {
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct SkillDescriptor<TKey, TIcon: Clone> {
 	pub name: String,
-	pub key: TKey,
+	pub key_path: Vec<TKey>,
 	pub icon: Option<TIcon>,
 }
 

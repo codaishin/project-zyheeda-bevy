@@ -69,24 +69,24 @@ mod tests {
 			vec![
 				SkillDescriptor {
 					name: "a1".to_owned(),
-					key: KeyCode::KeyA,
+					key_path: vec![KeyCode::KeyA],
 					icon: Some(new_handle()),
 				},
 				SkillDescriptor {
 					name: "a2".to_owned(),
-					key: KeyCode::KeyB,
+					key_path: vec![KeyCode::KeyB],
 					icon: Some(new_handle()),
 				},
 			],
 			vec![
 				SkillDescriptor {
 					name: "b1".to_owned(),
-					key: KeyCode::KeyC,
+					key_path: vec![KeyCode::KeyC],
 					icon: Some(new_handle()),
 				},
 				SkillDescriptor {
 					name: "b2".to_owned(),
-					key: KeyCode::KeyD,
+					key_path: vec![KeyCode::KeyD],
 					icon: Some(new_handle()),
 				},
 			],

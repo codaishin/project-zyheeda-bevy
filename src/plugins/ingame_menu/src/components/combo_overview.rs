@@ -173,9 +173,9 @@ fn add_combo(parent: &mut ChildBuilder, combo: &Vec<SkillDescriptor<KeyCode, Han
 }
 
 fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<Image>>) {
-	let skill_key = match English::ui_text(&skill.key) {
-		UIText::String(key) => key,
-		UIText::Unmapped => String::from("?"),
+	let skill_key = match skill.key_path.last().map(English::ui_text) {
+		Some(UIText::String(key)) => key,
+		None | Some(UIText::Unmapped) => String::from("?"),
 	};
 	let skill_icon = skill.icon.clone().unwrap_or_default();
 
@@ -186,7 +186,9 @@ fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<
 				.spawn((
 					ComboOverview::skill_button_bundle(skill_icon),
 					Tooltip(skill.clone()),
-					SkillSelectDropdownCommand(skill.key),
+					SkillSelectDropdownCommand {
+						key_path: skill.key_path.clone(),
+					},
 				))
 				.with_children(|parent| {
 					parent
@@ -208,7 +210,7 @@ mod tests {
 	fn update_combos() {
 		let combos = vec![vec![SkillDescriptor {
 			name: "my skill".to_owned(),
-			key: KeyCode::ArrowLeft,
+			key_path: vec![KeyCode::ArrowLeft],
 			icon: Some(Handle::Weak(AssetId::Uuid {
 				uuid: Uuid::new_v4(),
 			})),

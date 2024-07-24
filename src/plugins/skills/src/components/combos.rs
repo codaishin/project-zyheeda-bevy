@@ -246,7 +246,10 @@ mod tests {
 			name: "my skill".to_owned(),
 			..default()
 		};
-		let combos_vec = vec![vec![(SlotKey::Hand(Side::Off), &skill)]];
+		let combos_vec = vec![vec![(
+			vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+			&skill,
+		)]];
 		let combos = Combos::new(_ComboNode(combos_vec.clone()));
 
 		assert_eq!(combos_vec, combos.combos())

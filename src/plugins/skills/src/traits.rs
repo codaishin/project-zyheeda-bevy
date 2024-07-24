@@ -106,7 +106,7 @@ pub(crate) trait SetNextCombo<TCombo> {
 	fn set_next_combo(&mut self, value: TCombo);
 }
 
-pub type Combo<'a> = Vec<(SlotKey, &'a Skill)>;
+pub type Combo<'a> = Vec<(Vec<SlotKey>, &'a Skill)>;
 
 pub trait GetCombos {
 	fn combos(&self) -> Vec<Combo>;

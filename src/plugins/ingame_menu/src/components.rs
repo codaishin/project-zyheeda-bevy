@@ -37,4 +37,6 @@ pub struct Quickbar;
 pub struct ColorOverride;
 
 #[derive(Component, Debug, PartialEq)]
-pub struct SkillSelectDropdownCommand<TKey>(pub TKey);
+pub(crate) struct SkillSelectDropdownCommand<TKey> {
+	pub(crate) key_path: Vec<TKey>,
+}
