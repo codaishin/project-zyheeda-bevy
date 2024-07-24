@@ -150,7 +150,6 @@ impl Plugin for IngameMenuPlugin {
 		state_control_systems(app);
 		ui_overlay_systems(app);
 		combo_overview_systems(app);
-		dropdown_systems(app);
 		inventory_screen_systems(app);
 
 		#[cfg(debug_assertions)]
@@ -198,6 +197,8 @@ fn ui_overlay_systems(app: &mut App) {
 
 fn combo_overview_systems(app: &mut App) {
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
+		.add_dropdown::<SkillSelect>()
+		.add_tooltip::<SkillSelect>()
 		.add_tooltip::<SkillDescriptor<KeyCode, Handle<Image>>>()
 		.add_systems(
 			Update,
@@ -237,9 +238,4 @@ fn inventory_screen_systems(app: &mut App) {
 			Update,
 			(swap_equipped_items.pipe(log_many), swap_inventory_items),
 		);
-}
-
-fn dropdown_systems(app: &mut App) {
-	app.add_dropdown::<SkillSelect>()
-		.add_tooltip::<SkillSelect>();
 }
