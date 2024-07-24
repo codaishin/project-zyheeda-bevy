@@ -1,10 +1,10 @@
 use crate::traits::{CombosDescriptor, SkillDescriptor};
 use bevy::{
 	asset::Handle,
-	ecs::{system::In, world::Ref},
-	prelude::{Component, DetectChanges, Image, Query, With},
+	ecs::world::Ref,
+	prelude::{Component, Image, Query, With},
 };
-use common::{components::Player, tools::changed::Changed};
+use common::components::Player;
 use skills::{
 	items::slot_key::SlotKey,
 	skills::Skill,
@@ -12,17 +12,13 @@ use skills::{
 };
 
 pub(crate) fn get_combos<TKey: From<SlotKey> + Clone, TCombos: Component + GetCombos>(
-	changed_override: In<bool>,
 	players: Query<Ref<TCombos>, With<Player>>,
-) -> Changed<CombosDescriptor<TKey, Handle<Image>>> {
+) -> CombosDescriptor<TKey, Handle<Image>> {
 	let Ok(combos) = players.get_single() else {
-		return Changed::None;
+		return vec![];
 	};
-	if !combos.is_changed() && !changed_override.0 {
-		return Changed::None;
-	}
 
-	Changed::Value(combos.combos().iter().map(combo_descriptor).collect())
+	combos.combos().iter().map(combo_descriptor).collect()
 }
 
 fn combo_descriptor<TKey: From<SlotKey> + Clone>(
@@ -86,18 +82,17 @@ mod tests {
 	}
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(Changed<CombosDescriptor<_Key, Handle<Image>>>);
+	struct _Result(CombosDescriptor<_Key, Handle<Image>>);
 
-	fn setup(changed_override: bool) -> App {
+	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			(move || changed_override)
-				.pipe(get_combos::<_Key, _Combos>)
-				.pipe(
-					|combos: In<Changed<CombosDescriptor<_Key, Handle<Image>>>>,
-					 mut commands: Commands| { commands.insert_resource(_Result(combos.0)) },
-				),
+			get_combos::<_Key, _Combos>.pipe(
+				|combos: In<CombosDescriptor<_Key, Handle<Image>>>, mut commands: Commands| {
+					commands.insert_resource(_Result(combos.0))
+				},
+			),
 		);
 
 		app
@@ -123,7 +118,7 @@ mod tests {
 
 	#[test]
 	fn return_skill_descriptor_arrays() {
-		let mut app = setup(false);
+		let mut app = setup();
 		app.world_mut().spawn((
 			Player,
 			_Combos(vec![
@@ -171,7 +166,7 @@ mod tests {
 		let result = app.world().resource::<_Result>();
 
 		assert_eq!(
-			&_Result(Changed::Value(vec![
+			&_Result(vec![
 				vec![
 					SkillDescriptor {
 						name: "a1".to_owned(),
@@ -196,14 +191,14 @@ mod tests {
 						icon: Some(get_handle("b/2")),
 					}
 				]
-			])),
+			]),
 			result,
 		)
 	}
 
 	#[test]
 	fn return_unchanged_when_player_component_missing() {
-		let mut app = setup(false);
+		let mut app = setup();
 		app.world_mut().spawn(_Combos(vec![
 			vec![
 				(
@@ -247,140 +242,6 @@ mod tests {
 
 		let result = app.world().resource::<_Result>();
 
-		assert_eq!(&_Result(Changed::None), result)
-	}
-
-	#[test]
-	fn return_unchanged_when_combo_unchanged() {
-		let mut app = setup(false);
-		app.world_mut().spawn((
-			Player,
-			_Combos(vec![
-				vec![
-					(
-						SlotKey::Hand(Side::Main),
-						Skill {
-							name: "a1".to_owned(),
-							icon: Some(get_handle("a/1")),
-							..default()
-						},
-					),
-					(
-						SlotKey::Hand(Side::Off),
-						Skill {
-							name: "a2".to_owned(),
-							icon: Some(get_handle("a/2")),
-							..default()
-						},
-					),
-				],
-				vec![
-					(
-						SlotKey::Hand(Side::Off),
-						Skill {
-							name: "b1".to_owned(),
-							icon: Some(get_handle("b/1")),
-							..default()
-						},
-					),
-					(
-						SlotKey::Hand(Side::Main),
-						Skill {
-							name: "b2".to_owned(),
-							icon: Some(get_handle("b/2")),
-							..default()
-						},
-					),
-				],
-			]),
-		));
-
-		app.update();
-		app.update();
-
-		let result = app.world().resource::<_Result>();
-
-		assert_eq!(&_Result(Changed::None), result)
-	}
-
-	#[test]
-	fn return_changed_when_combo_unchanged_but_changed_override_true() {
-		let mut app = setup(true);
-		app.world_mut().spawn((
-			Player,
-			_Combos(vec![
-				vec![
-					(
-						SlotKey::Hand(Side::Main),
-						Skill {
-							name: "a1".to_owned(),
-							icon: Some(get_handle("a/1")),
-							..default()
-						},
-					),
-					(
-						SlotKey::Hand(Side::Off),
-						Skill {
-							name: "a2".to_owned(),
-							icon: Some(get_handle("a/2")),
-							..default()
-						},
-					),
-				],
-				vec![
-					(
-						SlotKey::Hand(Side::Off),
-						Skill {
-							name: "b1".to_owned(),
-							icon: Some(get_handle("b/1")),
-							..default()
-						},
-					),
-					(
-						SlotKey::Hand(Side::Main),
-						Skill {
-							name: "b2".to_owned(),
-							icon: Some(get_handle("b/2")),
-							..default()
-						},
-					),
-				],
-			]),
-		));
-
-		app.update();
-		app.update();
-
-		let result = app.world().resource::<_Result>();
-
-		assert_eq!(
-			&_Result(Changed::Value(vec![
-				vec![
-					SkillDescriptor {
-						name: "a1".to_owned(),
-						key: _Key::Main,
-						icon: Some(get_handle("a/1")),
-					},
-					SkillDescriptor {
-						name: "a2".to_owned(),
-						key: _Key::Off,
-						icon: Some(get_handle("a/2")),
-					}
-				],
-				vec![
-					SkillDescriptor {
-						name: "b1".to_owned(),
-						key: _Key::Off,
-						icon: Some(get_handle("b/1")),
-					},
-					SkillDescriptor {
-						name: "b2".to_owned(),
-						key: _Key::Main,
-						icon: Some(get_handle("b/2")),
-					}
-				]
-			])),
-			result,
-		);
+		assert_eq!(&_Result(vec![]), result)
 	}
 }

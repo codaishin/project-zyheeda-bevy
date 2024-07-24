@@ -36,8 +36,8 @@ use skills::{
 };
 use std::time::Duration;
 use systems::{
-	added::added,
 	combos::{get_combos::get_combos, update_combos::update_combos},
+	conditions::{added::added, changed::changed, either::either},
 	dad::{drag::drag, drop::drop},
 	despawn::despawn,
 	dropdown::{
@@ -190,17 +190,13 @@ fn ui_overlay_systems(app: &mut App) {
 }
 
 fn combo_overview_systems(app: &mut App) {
-	let added_combo_overview = added::<ComboOverview>;
-	let get_combos = get_combos::<KeyCode, Combos>;
-	let update_combo_overview = update_combos::<KeyCode, ComboOverview>;
-
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
 		.add_tooltip::<SkillDescriptor<KeyCode, Handle<Image>>>()
 		.add_systems(
 			Update,
-			added_combo_overview
-				.pipe(get_combos)
-				.pipe(update_combo_overview)
+			get_combos::<KeyCode, Combos>
+				.pipe(update_combos::<KeyCode, ComboOverview>)
+				.run_if(either(added::<ComboOverview>).or(changed::<Player, Combos>))
 				.run_if(in_state(MenuState::ComboOverview)),
 		);
 }
