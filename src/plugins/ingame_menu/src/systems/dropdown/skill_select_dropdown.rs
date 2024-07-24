@@ -1,6 +1,6 @@
-use crate::{
-	components::{dropdown::Dropdown, SkillSelectDropdownCommand},
-	tools::SkillSelect,
+use crate::components::{
+	dropdown::{skill_select::SkillSelect, Dropdown},
+	SkillSelectDropdownCommand,
 };
 use bevy::{
 	asset::{Assets, Handle},

@@ -9,7 +9,6 @@ use bevy::{
 	ui::{Style, UiRect, Val, ZIndex},
 };
 use common::tools::Index;
-use skills::{items::slot_key::SlotKey, skills::Skill};
 
 pub(crate) fn skill_node() -> NodeBundle {
 	NodeBundle {
@@ -40,12 +39,6 @@ pub(crate) struct SkillDescriptor<TKey, TIcon: Clone> {
 	pub name: String,
 	pub key_path: Vec<TKey>,
 	pub icon: Option<TIcon>,
-}
-
-#[derive(Debug, Default, PartialEq, Clone)]
-pub(crate) struct SkillSelect<TEquipmentKey = SlotKey> {
-	pub(crate) skill: Skill,
-	pub(crate) key_path: Vec<TEquipmentKey>,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
