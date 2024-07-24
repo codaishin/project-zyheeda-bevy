@@ -19,7 +19,7 @@ use skills::{items::Item, skills::Skill};
 
 pub(crate) fn skill_select_dropdown<
 	TDropdownKey: Clone + Sync + Send + 'static,
-	TEquipmentKey: Sync + Send + 'static,
+	TEquipmentKey: Clone + Sync + Send + 'static,
 	TMap: TryMapBackwards<TDropdownKey, TEquipmentKey> + Resource,
 	TEquipment: Get<TEquipmentKey, Item<Handle<Skill>>> + Component,
 >(
@@ -43,7 +43,7 @@ pub(crate) fn skill_select_dropdown<
 
 fn compatible_skills<
 	TDropdownKey: Clone + Sync + Send + 'static,
-	TEquipmentKey: Sync + Send + 'static,
+	TEquipmentKey: Clone + Sync + Send + 'static,
 	TMap: TryMapBackwards<TDropdownKey, TEquipmentKey> + Resource,
 	TEquipment: Get<TEquipmentKey, Item<Handle<Skill>>>,
 >(
@@ -51,9 +51,15 @@ fn compatible_skills<
 	slots: &TEquipment,
 	skills: &Res<Assets<Skill>>,
 	key_map: &TMap,
-) -> Option<Vec<SkillSelect>> {
-	let key = key_map.try_map_backwards(command.0.clone())?;
-	let item = slots.get(&key)?;
+) -> Option<Vec<SkillSelect<TEquipmentKey>>> {
+	let key_path = command
+		.key_path
+		.iter()
+		.cloned()
+		.filter_map(|key| key_map.try_map_backwards(key))
+		.collect::<Vec<_>>();
+	let key = key_path.last()?;
+	let item = slots.get(key)?;
 	let skills = skills
 		.iter()
 		.filter(|(_, skill)| {
@@ -63,7 +69,10 @@ fn compatible_skills<
 				.next()
 				.is_some()
 		})
-		.map(|(_, skill)| SkillSelect(skill.clone()))
+		.map(|(_, skill)| SkillSelect {
+			skill: skill.clone(),
+			key_path: key_path.clone(),
+		})
 		.collect::<Vec<_>>();
 
 	Some(skills)
@@ -89,7 +98,7 @@ mod tests {
 		Ok,
 	}
 
-	#[derive(PartialEq, Eq, Hash)]
+	#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 	struct _EquipmentKey;
 
 	#[derive(Component)]
@@ -166,7 +175,9 @@ mod tests {
 		));
 		let dropdown = app
 			.world_mut()
-			.spawn(SkillSelectDropdownCommand(_DropdownKey::Ok))
+			.spawn(SkillSelectDropdownCommand {
+				key_path: vec![_DropdownKey::Ok],
+			})
 			.id();
 
 		app.update();
@@ -176,21 +187,27 @@ mod tests {
 		assert_eq!(
 			Some(&Dropdown {
 				items: vec![
-					SkillSelect(Skill {
-						name: "skill a".to_owned(),
-						is_usable_with: HashSet::from([ItemType::Pistol]),
-						icon: Some(image_a.clone()),
-						..default()
-					}),
-					SkillSelect(Skill {
-						name: "skill b".to_owned(),
-						is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
-						icon: Some(image_b.clone()),
-						..default()
-					})
+					SkillSelect {
+						skill: Skill {
+							name: "skill a".to_owned(),
+							is_usable_with: HashSet::from([ItemType::Pistol]),
+							icon: Some(image_a.clone()),
+							..default()
+						},
+						key_path: vec![_EquipmentKey],
+					},
+					SkillSelect {
+						skill: Skill {
+							name: "skill b".to_owned(),
+							is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
+							icon: Some(image_b.clone()),
+							..default()
+						},
+						key_path: vec![_EquipmentKey],
+					}
 				]
 			}),
-			dropdown.get::<Dropdown<SkillSelect>>()
+			dropdown.get::<Dropdown<SkillSelect<_EquipmentKey>>>()
 		)
 	}
 
@@ -229,14 +246,16 @@ mod tests {
 		));
 		let dropdown = app
 			.world_mut()
-			.spawn(SkillSelectDropdownCommand(_DropdownKey::Ok))
+			.spawn(SkillSelectDropdownCommand {
+				key_path: vec![_DropdownKey::Ok],
+			})
 			.id();
 
 		app.update();
 
 		let dropdown = app.world().entity(dropdown);
 
-		assert_eq!(None, dropdown.get::<Dropdown<SkillSelect>>());
+		assert_eq!(None, dropdown.get::<Dropdown<SkillSelect<_EquipmentKey>>>());
 	}
 
 	#[test]
@@ -255,7 +274,9 @@ mod tests {
 		));
 		let dropdown = app
 			.world_mut()
-			.spawn(SkillSelectDropdownCommand(_DropdownKey::Ok))
+			.spawn(SkillSelectDropdownCommand {
+				key_path: vec![_DropdownKey::Ok],
+			})
 			.id();
 
 		app.update();
@@ -284,7 +305,9 @@ mod tests {
 		));
 		let dropdown = app
 			.world_mut()
-			.spawn(SkillSelectDropdownCommand(_DropdownKey::None))
+			.spawn(SkillSelectDropdownCommand {
+				key_path: vec![_DropdownKey::None],
+			})
 			.id();
 
 		app.update();
@@ -305,7 +328,9 @@ mod tests {
 			.spawn((Player, _Equipment(HashMap::from([]))));
 		let dropdown = app
 			.world_mut()
-			.spawn(SkillSelectDropdownCommand(_DropdownKey::Ok))
+			.spawn(SkillSelectDropdownCommand {
+				key_path: vec![_DropdownKey::Ok],
+			})
 			.id();
 
 		app.update();

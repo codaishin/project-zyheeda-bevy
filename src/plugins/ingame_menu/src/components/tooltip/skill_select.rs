@@ -13,6 +13,6 @@ impl GetNode for Tooltip<SkillSelect> {
 
 impl InstantiateContentOn for Tooltip<SkillSelect> {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
-		parent.spawn(skill_name(&self.0 .0.name));
+		parent.spawn(skill_name(&self.0.skill.name));
 	}
 }

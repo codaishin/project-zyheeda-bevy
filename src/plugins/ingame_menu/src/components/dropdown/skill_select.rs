@@ -23,7 +23,7 @@ impl GetNode for SkillSelect {
 impl InstantiateContentOn for SkillSelect {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		parent.spawn((
-			ComboOverview::skill_button_bundle(self.0.icon.clone().unwrap_or_default()),
+			ComboOverview::skill_button_bundle(self.skill.icon.clone().unwrap_or_default()),
 			Tooltip(self.clone()),
 		));
 	}
