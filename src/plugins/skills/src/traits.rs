@@ -112,6 +112,10 @@ pub trait GetCombos {
 	fn combos(&self) -> Vec<Combo>;
 }
 
+pub trait UpdateConfig<TKey> {
+	fn update_config(&mut self, key: &TKey, skill: Skill);
+}
+
 pub(crate) trait GetAnimation<TAnimation> {
 	fn animate(&self) -> Animate<TAnimation>;
 }

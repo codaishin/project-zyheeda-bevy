@@ -2,9 +2,10 @@ use super::{combo_node::ComboNode, Slots};
 use crate::{
 	items::slot_key::SlotKey,
 	skills::Skill,
-	traits::{Combo, GetCombos, PeekNext, SetNextCombo},
+	traits::{Combo, GetCombos, PeekNext, SetNextCombo, UpdateConfig},
 };
 use bevy::ecs::component::Component;
+use common::traits::{get::GetMut, iterate::Iterate};
 
 #[derive(Component, PartialEq, Debug)]
 pub struct Combos<TComboNode = ComboNode> {
@@ -59,15 +60,29 @@ impl<TNode: GetCombos> GetCombos for Combos<TNode> {
 	}
 }
 
+impl<TNode, TKey> UpdateConfig<TKey> for Combos<TNode>
+where
+	TNode: GetMut<TKey, Skill>,
+	TKey: Iterate<SlotKey>,
+{
+	fn update_config(&mut self, key: &TKey, skill: Skill) {
+		self.current = None;
+
+		let Some(node_skill) = self.value.get_mut(key) else {
+			return;
+		};
+		*node_skill = skill
+	}
+}
+
 #[cfg(test)]
 mod tests {
-	use std::collections::HashMap;
-
 	use super::*;
 	use crate::components::{Mounts, Slot};
 	use bevy::{ecs::entity::Entity, utils::default};
 	use common::components::Side;
-	use mockall::{mock, predicate::eq};
+	use mockall::{automock, mock, predicate::eq};
+	use std::{collections::HashMap, marker::PhantomData};
 
 	mock! {
 		_Next {}
@@ -235,5 +250,85 @@ mod tests {
 		let combos = Combos::new(_ComboNode(combos_vec.clone()));
 
 		assert_eq!(combos_vec, combos.combos())
+	}
+
+	#[derive(Default)]
+	struct _Node<TKey>(PhantomData<TKey>);
+
+	#[automock]
+	impl<TKey> GetMut<TKey, Skill> for _Node<TKey> {
+		fn get_mut<'a>(&'a mut self, _key: &TKey) -> Option<&'a mut Skill> {
+			None
+		}
+	}
+
+	#[test]
+	fn update_config_get_node_skill_through_correct_args() {
+		let mut get_mut = Mock_Node::<Vec<SlotKey>>::default();
+		get_mut
+			.expect_get_mut()
+			.times(1)
+			.with(eq(vec![
+				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Main),
+			]))
+			.return_once(|_| None);
+		let mut combos = Combos::new(get_mut);
+
+		combos.update_config(
+			&vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+			Skill::default(),
+		);
+	}
+
+	macro_rules! make_static {
+		($value:expr) => {
+			static mut VALUES: Vec<Skill> = vec![];
+			unsafe { VALUES.push($value) }
+
+			fn get_static_skill() -> Option<&'static mut Skill> {
+				unsafe { VALUES.get_mut(0) }
+			}
+		};
+	}
+
+	#[test]
+	fn update_config_set_node_skill() {
+		make_static!(Skill {
+			name: "my skill".to_owned(),
+			..default()
+		});
+
+		let mut get_mut = Mock_Node::<Vec<SlotKey>>::default();
+		get_mut.expect_get_mut().return_once(|_| get_static_skill());
+		let mut combos = Combos::new(get_mut);
+
+		combos.update_config(
+			&vec![],
+			Skill {
+				name: "my other skill".to_owned(),
+				..default()
+			},
+		);
+
+		assert_eq!(
+			Some(&mut Skill {
+				name: "my other skill".to_owned(),
+				..default()
+			}),
+			get_static_skill()
+		);
+	}
+
+	#[test]
+	fn update_config_reset_current_combos() {
+		let mut combos = Combos {
+			value: _Node::<Vec<SlotKey>>::default(),
+			current: Some(_Node::<Vec<SlotKey>>::default()),
+		};
+
+		combos.update_config(&vec![], Skill::default());
+
+		assert!(combos.current.is_none());
 	}
 }
