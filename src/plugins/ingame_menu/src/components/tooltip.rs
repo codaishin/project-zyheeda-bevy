@@ -1,3 +1,6 @@
+pub(crate) mod skill_descriptor;
+pub(crate) mod skill_select;
+
 use crate::traits::{
 	get_node::GetNode,
 	instantiate_content_on::InstantiateContentOn,

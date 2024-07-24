@@ -1,106 +1,131 @@
-use crate::traits::{CombosDescriptor, UpdateCombos};
+use crate::components::skill_select::SkillSelect;
 use bevy::{
-	asset::Handle,
-	prelude::{Component, In, Query},
-	render::texture::Image,
+	prelude::{Component, Query, With},
+	ui::Interaction,
 };
+use skills::{items::slot_key::SlotKey, traits::UpdateConfig};
 
-pub(crate) fn update_combos<TKey, TComboOverview: Component + UpdateCombos<TKey>>(
-	combos: In<CombosDescriptor<TKey, Handle<Image>>>,
-	mut combo_overviews: Query<&mut TComboOverview>,
+pub(crate) fn update_combos<TAgent: Component, TCombos: Component + UpdateConfig<Vec<SlotKey>>>(
+	mut agents: Query<&mut TCombos, With<TAgent>>,
+	skill_selects: Query<(&SkillSelect, &Interaction)>,
 ) {
-	let combos = combos.0;
-
-	let Ok(mut combo_overview) = combo_overviews.get_single_mut() else {
+	let Ok(mut combos) = agents.get_single_mut() else {
 		return;
 	};
 
-	combo_overview.update_combos(combos);
+	for (SkillSelect { skill, key_path }, ..) in skill_selects.iter().filter(pressed) {
+		combos.update_config(key_path, skill.clone());
+	}
+}
+
+fn pressed((.., interaction): &(&SkillSelect, &Interaction)) -> bool {
+	interaction == &&Interaction::Pressed
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::SkillDescriptor;
 	use bevy::{
 		app::{App, Update},
-		asset::{Asset, AssetId, Handle},
-		prelude::{IntoSystem, KeyCode, Resource},
+		utils::default,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{components::Side, test_tools::utils::SingleThreadedApp};
 	use mockall::{automock, predicate::eq};
-	use uuid::Uuid;
+	use skills::skills::Skill;
 
-	#[derive(Component, Default, Debug)]
-	struct _ComboOverview {
-		mock: Mock_ComboOverview,
+	#[derive(Component)]
+	struct _Agent;
+
+	#[derive(Component, Default)]
+	struct _Combos {
+		mock: Mock_Combos,
 	}
 
 	#[automock]
-	impl UpdateCombos<KeyCode> for _ComboOverview {
-		fn update_combos(&mut self, combos: CombosDescriptor<KeyCode, Handle<Image>>) {
-			self.mock.update_combos(combos)
+	impl UpdateConfig<Vec<SlotKey>> for _Combos {
+		fn update_config(&mut self, key: &Vec<SlotKey>, skill: Skill) {
+			self.mock.update_config(key, skill)
 		}
 	}
 
-	#[derive(Resource)]
-	struct _Combos(CombosDescriptor<KeyCode, Handle<Image>>);
-
-	fn setup(combos: CombosDescriptor<KeyCode, Handle<Image>>) -> App {
+	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(
-			Update,
-			(move || combos.clone()).pipe(update_combos::<KeyCode, _ComboOverview>),
-		);
+		app.add_systems(Update, update_combos::<_Agent, _Combos>);
 
 		app
 	}
 
-	fn new_handle<T: Asset>() -> Handle<T> {
-		Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		})
+	#[test]
+	fn update_skill() {
+		let mut app = setup();
+		let mut combos = _Combos::default();
+		combos
+			.mock
+			.expect_update_config()
+			.times(1)
+			.with(
+				eq(vec![SlotKey::Hand(Side::Off)]),
+				eq(Skill {
+					name: "my skill".to_owned(),
+					..default()
+				}),
+			)
+			.return_const(());
+
+		app.world_mut().spawn((_Agent, combos));
+		app.world_mut().spawn((
+			SkillSelect {
+				skill: Skill {
+					name: "my skill".to_owned(),
+					..default()
+				},
+				key_path: vec![SlotKey::Hand(Side::Off)],
+			},
+			Interaction::Pressed,
+		));
+
+		app.update();
 	}
 
 	#[test]
-	fn insert_combos_in_combo_list() {
-		let combos = vec![
-			vec![
-				SkillDescriptor {
-					name: "a1".to_owned(),
-					key: KeyCode::KeyA,
-					icon: Some(new_handle()),
-				},
-				SkillDescriptor {
-					name: "a2".to_owned(),
-					key: KeyCode::KeyB,
-					icon: Some(new_handle()),
-				},
-			],
-			vec![
-				SkillDescriptor {
-					name: "b1".to_owned(),
-					key: KeyCode::KeyC,
-					icon: Some(new_handle()),
-				},
-				SkillDescriptor {
-					name: "b2".to_owned(),
-					key: KeyCode::KeyD,
-					icon: Some(new_handle()),
-				},
-			],
-		];
+	fn do_not_update_skill_when_interaction_not_pressed() {
+		let mut app = setup();
+		let mut combos = _Combos::default();
+		combos.mock.expect_update_config().never().return_const(());
 
-		let mut app = setup(combos.clone());
-		let mut combos_overview = _ComboOverview::default();
-		combos_overview
-			.mock
-			.expect_update_combos()
-			.times(1)
-			.with(eq(combos))
-			.return_const(());
+		app.world_mut().spawn((_Agent, combos));
+		app.world_mut().spawn((
+			SkillSelect {
+				skill: Skill::default(),
+				key_path: vec![SlotKey::Hand(Side::Off)],
+			},
+			Interaction::Hovered,
+		));
+		app.world_mut().spawn((
+			SkillSelect {
+				skill: Skill::default(),
+				key_path: vec![SlotKey::Hand(Side::Off)],
+			},
+			Interaction::None,
+		));
 
-		app.world_mut().spawn(combos_overview);
+		app.update();
+	}
+
+	#[test]
+	fn do_not_update_skill_no_agent_present() {
+		let mut app = setup();
+		let mut combos = _Combos::default();
+		combos.mock.expect_update_config().never().return_const(());
+
+		app.world_mut().spawn(combos);
+		app.world_mut().spawn((
+			SkillSelect {
+				skill: Skill::default(),
+				key_path: vec![SlotKey::Hand(Side::Off)],
+			},
+			Interaction::Pressed,
+		));
 
 		app.update();
 	}

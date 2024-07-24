@@ -1,17 +1,19 @@
-use super::tooltip::Tooltip;
-use crate::traits::{
-	colors::DEFAULT_PANEL_COLORS,
-	get_node::GetNode,
-	instantiate_content_on::InstantiateContentOn,
-	CombosDescriptor,
-	SkillDescriptor,
-	UpdateCombos,
+use super::{tooltip::Tooltip, SkillSelectDropdownCommand};
+use crate::{
+	tools::SkillDescriptor,
+	traits::{
+		colors::DEFAULT_PANEL_COLORS,
+		get_node::GetNode,
+		instantiate_content_on::InstantiateContentOn,
+		CombosDescriptor,
+		UpdateCombos,
+	},
 };
 use bevy::{
 	asset::Handle,
 	color::Color,
 	hierarchy::{BuildChildren, ChildBuilder},
-	prelude::{Component, KeyCode},
+	prelude::{Bundle, Component, KeyCode},
 	render::texture::Image,
 	text::TextStyle,
 	ui::{
@@ -30,6 +32,60 @@ use common::traits::get_ui_text::{English, GetUiText, UIText};
 
 #[derive(Component, Default)]
 pub(crate) struct ComboOverview(CombosDescriptor<KeyCode, Handle<Image>>);
+
+impl ComboOverview {
+	pub fn skill_container_bundle() -> impl Bundle {
+		NodeBundle {
+			style: Style {
+				margin: UiRect::all(Val::Px(5.0)),
+				..default()
+			},
+			..default()
+		}
+	}
+
+	pub fn skill_button_bundle(icon: Handle<Image>) -> impl Bundle {
+		ButtonBundle {
+			style: Style {
+				width: Val::Px(65.0),
+				height: Val::Px(65.0),
+				..default()
+			},
+			background_color: DEFAULT_PANEL_COLORS.filled.into(),
+			image: UiImage::new(icon),
+			..default()
+		}
+	}
+
+	pub fn skill_key_button_bundle() -> impl Bundle {
+		NodeBundle {
+			style: Style {
+				position_type: PositionType::Absolute,
+				width: Val::Px(50.0),
+				height: Val::Px(25.0),
+				top: Val::Px(-8.0),
+				right: Val::Px(-8.0),
+				border: UiRect::all(Val::Px(2.0)),
+				justify_content: JustifyContent::Center,
+				..default()
+			},
+			background_color: DEFAULT_PANEL_COLORS.filled.into(),
+			border_color: DEFAULT_PANEL_COLORS.text.into(),
+			..default()
+		}
+	}
+
+	pub fn skill_key_text(key: &str) -> impl Bundle {
+		TextBundle::from_section(
+			key,
+			TextStyle {
+				font_size: 20.,
+				color: DEFAULT_PANEL_COLORS.text,
+				..default()
+			},
+		)
+	}
+}
 
 impl UpdateCombos<KeyCode> for ComboOverview {
 	fn update_combos(&mut self, combos: CombosDescriptor<KeyCode, Handle<Image>>) {
@@ -117,60 +173,28 @@ fn add_combo(parent: &mut ChildBuilder, combo: &Vec<SkillDescriptor<KeyCode, Han
 }
 
 fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<Image>>) {
-	let skill_key = match English::ui_text(&skill.key) {
-		UIText::String(v) => v,
-		_ => String::from("?"),
+	let skill_key = match skill.key_path.last().map(English::ui_text) {
+		Some(UIText::String(key)) => key,
+		None | Some(UIText::Unmapped) => String::from("?"),
 	};
+	let skill_icon = skill.icon.clone().unwrap_or_default();
+
 	parent
-		.spawn(NodeBundle {
-			style: Style {
-				margin: UiRect::all(Val::Px(5.0)),
-				..default()
-			},
-			background_color: DEFAULT_PANEL_COLORS.empty.into(),
-			..default()
-		})
+		.spawn(ComboOverview::skill_container_bundle())
 		.with_children(|parent| {
 			parent
 				.spawn((
-					ButtonBundle {
-						style: Style {
-							width: Val::Px(65.0),
-							height: Val::Px(65.0),
-							..default()
-						},
-						background_color: DEFAULT_PANEL_COLORS.filled.into(),
-						image: UiImage::new(skill.icon.clone().unwrap_or_default()),
-						..default()
-					},
+					ComboOverview::skill_button_bundle(skill_icon),
 					Tooltip(skill.clone()),
+					SkillSelectDropdownCommand {
+						key_path: skill.key_path.clone(),
+					},
 				))
 				.with_children(|parent| {
 					parent
-						.spawn(NodeBundle {
-							style: Style {
-								position_type: PositionType::Absolute,
-								width: Val::Px(50.0),
-								height: Val::Px(25.0),
-								top: Val::Px(-8.0),
-								right: Val::Px(-8.0),
-								border: UiRect::all(Val::Px(2.0)),
-								justify_content: JustifyContent::Center,
-								..default()
-							},
-							background_color: DEFAULT_PANEL_COLORS.filled.into(),
-							border_color: DEFAULT_PANEL_COLORS.text.into(),
-							..default()
-						})
+						.spawn(ComboOverview::skill_key_button_bundle())
 						.with_children(|parent| {
-							parent.spawn(TextBundle::from_section(
-								skill_key,
-								TextStyle {
-									font_size: 20.,
-									color: DEFAULT_PANEL_COLORS.text,
-									..default()
-								},
-							));
+							parent.spawn(ComboOverview::skill_key_text(&skill_key));
 						});
 				});
 		});
@@ -179,7 +203,6 @@ fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::SkillDescriptor;
 	use bevy::asset::AssetId;
 	use uuid::Uuid;
 
@@ -187,7 +210,7 @@ mod tests {
 	fn update_combos() {
 		let combos = vec![vec![SkillDescriptor {
 			name: "my skill".to_owned(),
-			key: KeyCode::ArrowLeft,
+			key_path: vec![KeyCode::ArrowLeft],
 			icon: Some(Handle::Weak(AssetId::Uuid {
 				uuid: Uuid::new_v4(),
 			})),

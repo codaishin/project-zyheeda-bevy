@@ -20,6 +20,7 @@ use components::{
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
 	quickbar_panel::QuickbarPanel,
+	skill_select::SkillSelect,
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
 	ui_overlay::UIOverlay,
 };
@@ -36,13 +37,18 @@ use skills::{
 };
 use std::time::Duration;
 use systems::{
-	combos::{get_combos::get_combos, update_combos::update_combos},
+	combos::{
+		get_combos::get_combos,
+		update_combos::update_combos,
+		update_combos_view::update_combos_view,
+	},
 	conditions::{added::added, changed::changed, either::either},
 	dad::{drag::drag, drop::drop},
 	despawn::despawn,
 	dropdown::{
 		despawn_all::dropdown_despawn_all,
 		detect_focus_change::dropdown_detect_focus_change,
+		skill_select_dropdown::skill_select_dropdown,
 		spawn_focused::dropdown_spawn_focused,
 	},
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
@@ -62,15 +68,16 @@ use systems::{
 		update_label_text::update_label_text,
 	},
 };
-use tools::menu_state::MenuState;
+use tools::{menu_state::MenuState, SkillDescriptor};
 use traits::{
 	get_node::GetNode,
 	instantiate_content_on::InstantiateContentOn,
 	GetLayout,
 	RootStyle,
-	SkillDescriptor,
 	UI,
 };
+
+type SlotKeyMap = KeyMap<SlotKey, KeyCode>;
 
 trait AddUI {
 	fn add_ui<TComponent>(&mut self, on_state: MenuState) -> &mut Self
@@ -174,9 +181,9 @@ fn ui_overlay_systems(app: &mut App) {
 			Update,
 			(
 				get_quickbar_icons::<Queue, Combos, CombosTimeOut>.pipe(set_quickbar_icons),
-				update_label_text::<KeyMap<SlotKey, KeyCode>, LanguageServer, QuickbarPanel>,
+				update_label_text::<SlotKeyMap, LanguageServer, QuickbarPanel>,
 				panel_colors::<QuickbarPanel>,
-				panel_activity_colors_override::<KeyMap<SlotKey, KeyCode>, Queue, QuickbarPanel>,
+				panel_activity_colors_override::<SlotKeyMap, Queue, QuickbarPanel>,
 			)
 				.run_if(in_state(MenuState::None)),
 		)
@@ -184,19 +191,29 @@ fn ui_overlay_systems(app: &mut App) {
 			Update,
 			(
 				set_ui_mouse_context,
-				prime_mouse_context::<KeyMap<SlotKey, KeyCode>, QuickbarPanel>,
+				prime_mouse_context::<SlotKeyMap, QuickbarPanel>,
 			),
 		);
 }
 
 fn combo_overview_systems(app: &mut App) {
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
+		.add_dropdown::<SkillSelect>()
+		.add_tooltip::<SkillSelect>()
 		.add_tooltip::<SkillDescriptor<KeyCode, Handle<Image>>>()
 		.add_systems(
 			Update,
 			get_combos::<KeyCode, Combos>
-				.pipe(update_combos::<KeyCode, ComboOverview>)
+				.pipe(update_combos_view::<KeyCode, ComboOverview>)
 				.run_if(either(added::<ComboOverview>).or(changed::<Player, Combos>))
+				.run_if(in_state(MenuState::ComboOverview)),
+		)
+		.add_systems(
+			Update,
+			(
+				skill_select_dropdown::<KeyCode, SlotKey, SlotKeyMap, Slots<Handle<Skill>>>,
+				update_combos::<Player, Combos>,
+			)
 				.run_if(in_state(MenuState::ComboOverview)),
 		);
 }

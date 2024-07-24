@@ -1,4 +1,4 @@
-use crate::traits::{CombosDescriptor, SkillDescriptor};
+use crate::{tools::SkillDescriptor, traits::CombosDescriptor};
 use bevy::{
 	asset::Handle,
 	ecs::world::Ref,
@@ -28,11 +28,11 @@ fn combo_descriptor<TKey: From<SlotKey> + Clone>(
 }
 
 fn skill_descriptor<TKey: From<SlotKey> + Clone>(
-	(key, skill): &(SlotKey, &Skill),
+	(key_path, skill): &(Vec<SlotKey>, &Skill),
 ) -> SkillDescriptor<TKey, Handle<Image>> {
 	SkillDescriptor {
 		name: skill.name.clone(),
-		key: TKey::from(*key),
+		key_path: key_path.iter().cloned().map(TKey::from).collect(),
 		icon: skill.icon.clone(),
 	}
 }
@@ -40,7 +40,6 @@ fn skill_descriptor<TKey: From<SlotKey> + Clone>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::SkillDescriptor;
 	use bevy::{
 		app::{App, Update},
 		asset::{Asset, AssetId},
@@ -70,13 +69,18 @@ mod tests {
 	}
 
 	#[derive(Component, Default)]
-	struct _Combos(Vec<Vec<(SlotKey, Skill)>>);
+	struct _Combos(Vec<Vec<(Vec<SlotKey>, Skill)>>);
 
 	impl GetCombos for _Combos {
 		fn combos(&self) -> Vec<Combo> {
 			self.0
 				.iter()
-				.map(|combo| combo.iter().map(|(key, skill)| (*key, skill)).collect())
+				.map(|combo| {
+					combo
+						.iter()
+						.map(|(key_path, skill)| (key_path.clone(), skill))
+						.collect()
+				})
 				.collect()
 		}
 	}
@@ -124,7 +128,7 @@ mod tests {
 			_Combos(vec![
 				vec![
 					(
-						SlotKey::Hand(Side::Main),
+						vec![SlotKey::Hand(Side::Main)],
 						Skill {
 							name: "a1".to_owned(),
 							icon: Some(get_handle("a/1")),
@@ -132,7 +136,7 @@ mod tests {
 						},
 					),
 					(
-						SlotKey::Hand(Side::Off),
+						vec![SlotKey::Hand(Side::Off)],
 						Skill {
 							name: "a2".to_owned(),
 							icon: Some(get_handle("a/2")),
@@ -142,7 +146,7 @@ mod tests {
 				],
 				vec![
 					(
-						SlotKey::Hand(Side::Off),
+						vec![SlotKey::Hand(Side::Off)],
 						Skill {
 							name: "b1".to_owned(),
 							icon: Some(get_handle("b/1")),
@@ -150,7 +154,7 @@ mod tests {
 						},
 					),
 					(
-						SlotKey::Hand(Side::Main),
+						vec![SlotKey::Hand(Side::Main)],
 						Skill {
 							name: "b2".to_owned(),
 							icon: Some(get_handle("b/2")),
@@ -170,24 +174,24 @@ mod tests {
 				vec![
 					SkillDescriptor {
 						name: "a1".to_owned(),
-						key: _Key::Main,
+						key_path: vec![_Key::Main],
 						icon: Some(get_handle("a/1")),
 					},
 					SkillDescriptor {
 						name: "a2".to_owned(),
-						key: _Key::Off,
+						key_path: vec![_Key::Off],
 						icon: Some(get_handle("a/2")),
 					}
 				],
 				vec![
 					SkillDescriptor {
 						name: "b1".to_owned(),
-						key: _Key::Off,
+						key_path: vec![_Key::Off],
 						icon: Some(get_handle("b/1")),
 					},
 					SkillDescriptor {
 						name: "b2".to_owned(),
-						key: _Key::Main,
+						key_path: vec![_Key::Main],
 						icon: Some(get_handle("b/2")),
 					}
 				]
@@ -202,7 +206,7 @@ mod tests {
 		app.world_mut().spawn(_Combos(vec![
 			vec![
 				(
-					SlotKey::Hand(Side::Main),
+					vec![SlotKey::Hand(Side::Main)],
 					Skill {
 						name: "a1".to_owned(),
 						icon: Some(get_handle("a/1")),
@@ -210,7 +214,7 @@ mod tests {
 					},
 				),
 				(
-					SlotKey::Hand(Side::Off),
+					vec![SlotKey::Hand(Side::Off)],
 					Skill {
 						name: "a2".to_owned(),
 						icon: Some(get_handle("a/2")),
@@ -220,7 +224,7 @@ mod tests {
 			],
 			vec![
 				(
-					SlotKey::Hand(Side::Off),
+					vec![SlotKey::Hand(Side::Off)],
 					Skill {
 						name: "b1".to_owned(),
 						icon: Some(get_handle("b/1")),
@@ -228,7 +232,7 @@ mod tests {
 					},
 				),
 				(
-					SlotKey::Hand(Side::Main),
+					vec![SlotKey::Hand(Side::Main)],
 					Skill {
 						name: "b2".to_owned(),
 						icon: Some(get_handle("b/2")),

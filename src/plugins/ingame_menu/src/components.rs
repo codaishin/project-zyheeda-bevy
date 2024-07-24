@@ -3,6 +3,7 @@ pub(crate) mod dropdown;
 pub(crate) mod inventory_panel;
 pub(crate) mod inventory_screen;
 pub(crate) mod quickbar_panel;
+pub(crate) mod skill_select;
 pub(crate) mod tooltip;
 pub(crate) mod ui_overlay;
 
@@ -35,3 +36,8 @@ pub struct Quickbar;
 
 #[derive(Component)]
 pub struct ColorOverride;
+
+#[derive(Component, Debug, PartialEq)]
+pub(crate) struct SkillSelectDropdownCommand<TKey> {
+	pub(crate) key_path: Vec<TKey>,
+}

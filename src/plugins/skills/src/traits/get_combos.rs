@@ -8,52 +8,52 @@ impl<T: Get<Vec<SlotKey>, Skill>> GetCombos for T {
 	}
 }
 
-fn combos(combo_source: &impl Get<Vec<SlotKey>, Skill>, slot_keys: Vec<SlotKey>) -> Vec<Combo> {
+fn combos(combo_source: &impl Get<Vec<SlotKey>, Skill>, key_path: Vec<SlotKey>) -> Vec<Combo> {
 	SlotKey::iterator()
-		.filter_map(get_combos_step(combo_source, slot_keys))
+		.filter_map(get_combo_step(combo_source, key_path))
 		.flat_map(append_followup_combo_steps(combo_source))
 		.collect()
 }
 
-fn get_combos_step<'a>(
+fn get_combo_step<'a>(
 	combo_source: &'a impl Get<Vec<SlotKey>, Skill>,
-	slot_keys: Vec<SlotKey>,
-) -> impl FnMut(SlotKey) -> Option<((SlotKey, &'a Skill), Vec<SlotKey>)> {
+	key_path: Vec<SlotKey>,
+) -> impl FnMut(SlotKey) -> Option<(Vec<SlotKey>, &'a Skill)> {
 	move |slot_key| {
-		let slot_keys = push_cloned(&slot_keys, slot_key);
-		let skill = combo_source.get(&slot_keys)?;
-		Some(((slot_key, skill), slot_keys))
+		let key_path = append_key(key_path.clone(), slot_key);
+		let skill = combo_source.get(&key_path)?;
+		Some((key_path, skill))
 	}
 }
 
 fn append_followup_combo_steps<'a>(
 	combo_source: &'a impl Get<Vec<SlotKey>, Skill>,
-) -> impl FnMut(((SlotKey, &'a Skill), Vec<SlotKey>)) -> Vec<Combo<'a>> + 'a {
-	|(combo_step, slot_keys)| {
-		let followups = combos(combo_source, slot_keys);
-		complete_combos(combo_step, followups)
+) -> impl FnMut((Vec<SlotKey>, &'a Skill)) -> Vec<Combo<'a>> + 'a {
+	|combo_step| {
+		let combo_step_key_path = combo_step.0.clone();
+		let followup_combo_steps = combos(combo_source, combo_step_key_path);
+		append_followups(combo_step, followup_combo_steps)
 	}
 }
 
-fn push_cloned(src: &[SlotKey], value: SlotKey) -> Vec<SlotKey> {
-	let mut src = src.to_vec();
-	src.push(value);
-	src
+fn append_key(mut key_path: Vec<SlotKey>, key: SlotKey) -> Vec<SlotKey> {
+	key_path.push(key);
+	key_path
 }
 
-fn complete_combos<'a>(
-	combo_step: (SlotKey, &'a Skill),
-	possible_followup: Vec<Combo<'a>>,
+fn append_followups<'a>(
+	combo_step: (Vec<SlotKey>, &'a Skill),
+	followups: Vec<Combo<'a>>,
 ) -> Vec<Combo<'a>> {
-	let root_steps = vec![combo_step];
+	let combo_steps = vec![combo_step];
 
-	if possible_followup.is_empty() {
-		return vec![root_steps];
+	if followups.is_empty() {
+		return vec![combo_steps];
 	}
 
-	possible_followup
+	followups
 		.into_iter()
-		.map(|remaining_steps| root_steps.iter().cloned().chain(remaining_steps).collect())
+		.map(|followup_steps| combo_steps.iter().cloned().chain(followup_steps).collect())
 		.collect()
 }
 
@@ -79,7 +79,7 @@ mod tests {
 
 		assert_eq!(
 			vec![vec![(
-				SlotKey::Hand(Side::Main),
+				vec![SlotKey::Hand(Side::Main)],
 				&Skill {
 					name: "some skill".to_owned(),
 					..default()
@@ -117,14 +117,14 @@ mod tests {
 		assert_eq!(
 			vec![
 				vec![(
-					SlotKey::Hand(Side::Main),
+					vec![SlotKey::Hand(Side::Main)],
 					&Skill {
 						name: "some right skill".to_owned(),
 						..default()
 					}
 				)],
 				vec![(
-					SlotKey::Hand(Side::Off),
+					vec![SlotKey::Hand(Side::Off)],
 					&Skill {
 						name: "some left skill".to_owned(),
 						..default()
@@ -160,14 +160,14 @@ mod tests {
 		assert_eq!(
 			vec![vec![
 				(
-					SlotKey::Hand(Side::Main),
+					vec![SlotKey::Hand(Side::Main)],
 					&Skill {
 						name: "some skill".to_owned(),
 						..default()
 					}
 				),
 				(
-					SlotKey::Hand(Side::Off),
+					vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
 					&Skill {
 						name: "some child skill".to_owned(),
 						..default()
@@ -216,14 +216,14 @@ mod tests {
 			vec![
 				vec![
 					(
-						SlotKey::Hand(Side::Main),
+						vec![SlotKey::Hand(Side::Main)],
 						&Skill {
 							name: "some skill".to_owned(),
 							..default()
 						}
 					),
 					(
-						SlotKey::Hand(Side::Main),
+						vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
 						&Skill {
 							name: "some right child skill".to_owned(),
 							..default()
@@ -232,14 +232,14 @@ mod tests {
 				],
 				vec![
 					(
-						SlotKey::Hand(Side::Main),
+						vec![SlotKey::Hand(Side::Main)],
 						&Skill {
 							name: "some skill".to_owned(),
 							..default()
 						}
 					),
 					(
-						SlotKey::Hand(Side::Off),
+						vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
 						&Skill {
 							name: "some left child skill".to_owned(),
 							..default()
@@ -298,21 +298,25 @@ mod tests {
 			vec![
 				vec![
 					(
-						SlotKey::Hand(Side::Main),
+						vec![SlotKey::Hand(Side::Main)],
 						&Skill {
 							name: "some skill".to_owned(),
 							..default()
 						}
 					),
 					(
-						SlotKey::Hand(Side::Main),
+						vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
 						&Skill {
 							name: "some child skill".to_owned(),
 							..default()
 						}
 					),
 					(
-						SlotKey::Hand(Side::Main),
+						vec![
+							SlotKey::Hand(Side::Main),
+							SlotKey::Hand(Side::Main),
+							SlotKey::Hand(Side::Main),
+						],
 						&Skill {
 							name: "some right child skill".to_owned(),
 							..default()
@@ -321,21 +325,25 @@ mod tests {
 				],
 				vec![
 					(
-						SlotKey::Hand(Side::Main),
+						vec![SlotKey::Hand(Side::Main)],
 						&Skill {
 							name: "some skill".to_owned(),
 							..default()
 						}
 					),
 					(
-						SlotKey::Hand(Side::Main),
+						vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
 						&Skill {
 							name: "some child skill".to_owned(),
 							..default()
 						}
 					),
 					(
-						SlotKey::Hand(Side::Off),
+						vec![
+							SlotKey::Hand(Side::Main),
+							SlotKey::Hand(Side::Main),
+							SlotKey::Hand(Side::Off),
+						],
 						&Skill {
 							name: "some left child skill".to_owned(),
 							..default()
