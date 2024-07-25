@@ -1,5 +1,8 @@
 use super::NodeEntry;
-use crate::traits::Insert;
+use crate::{
+	items::slot_key::SlotKey,
+	traits::{Insert, ReKey},
+};
 use bevy::prelude::default;
 use std::collections::hash_map::Entry;
 
@@ -26,6 +29,27 @@ fn update_entry<TSkill>(entry: &mut NodeEntry<TSkill>, value: TSkill) {
 
 fn clear_entry<TSkill>(entry: &mut NodeEntry<TSkill>) {
 	entry.tree.remove(&entry.key);
+}
+
+impl<'a, TSkill> ReKey<SlotKey> for NodeEntry<'a, TSkill> {
+	fn re_key(&mut self, other_key: SlotKey) {
+		if self.key == other_key {
+			return;
+		}
+
+		let self_node = self.tree.remove(&self.key);
+		let other_node = self.tree.remove(&other_key);
+
+		if let Some(self_node) = self_node {
+			self.tree.insert(other_key, self_node);
+		};
+
+		if let Some(other_node) = other_node {
+			self.tree.insert(self.key, other_node);
+		}
+
+		self.key = other_key;
+	}
 }
 
 #[cfg(test)]
@@ -146,6 +170,111 @@ mod tests {
 
 		assert_eq!(
 			HashMap::from([(SlotKey::Hand(Side::Off), (Skill::default(), default()))]),
+			tree
+		);
+	}
+
+	#[test]
+	fn rekey_skill_to_other_key() {
+		let mut tree = HashMap::from([(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "my skill".to_owned(),
+					..default()
+				},
+				default(),
+			),
+		)]);
+		let mut entry = NodeEntry {
+			key: SlotKey::Hand(Side::Main),
+			tree: &mut tree,
+		};
+
+		entry.re_key(SlotKey::Hand(Side::Off));
+
+		assert_eq!(
+			HashMap::from([(
+				SlotKey::Hand(Side::Off),
+				(
+					Skill {
+						name: "my skill".to_owned(),
+						..default()
+					},
+					default()
+				)
+			)]),
+			tree
+		);
+	}
+
+	#[test]
+	fn rekey_sets_self_key_to_new_key() {
+		let mut tree = HashMap::from([]);
+		let mut entry = NodeEntry::<Skill> {
+			key: SlotKey::Hand(Side::Main),
+			tree: &mut tree,
+		};
+
+		entry.re_key(SlotKey::Hand(Side::Off));
+
+		assert_eq!(SlotKey::Hand(Side::Off), entry.key);
+	}
+
+	#[test]
+	fn rekey_swaps_skills_if_target_key_is_used_in_tree() {
+		let mut tree = HashMap::from([
+			(
+				SlotKey::Hand(Side::Main),
+				(
+					Skill {
+						name: "my skill".to_owned(),
+						..default()
+					},
+					default(),
+				),
+			),
+			(
+				SlotKey::Hand(Side::Off),
+				(
+					Skill {
+						name: "my other skill".to_owned(),
+						..default()
+					},
+					default(),
+				),
+			),
+		]);
+		let mut entry = NodeEntry {
+			key: SlotKey::Hand(Side::Main),
+			tree: &mut tree,
+		};
+
+		entry.re_key(SlotKey::Hand(Side::Off));
+
+		assert_eq!(
+			HashMap::from([
+				(
+					SlotKey::Hand(Side::Off),
+					(
+						Skill {
+							name: "my skill".to_owned(),
+							..default()
+						},
+						default()
+					)
+				),
+				(
+					SlotKey::Hand(Side::Main),
+					(
+						Skill {
+							name: "my other skill".to_owned(),
+							..default()
+						},
+						default(),
+					)
+				),
+			]),
 			tree
 		);
 	}

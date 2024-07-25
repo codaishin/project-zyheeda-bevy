@@ -120,6 +120,10 @@ pub trait Insert<T> {
 	fn insert(&mut self, value: T);
 }
 
+pub trait ReKey<TKey> {
+	fn re_key(&mut self, key: TKey);
+}
+
 pub trait UpdateConfig<TKey> {
 	fn update_config(&mut self, key: &TKey, skill: Skill);
 }
