@@ -14,7 +14,7 @@ pub(crate) fn update_combos<TAgent: Component, TCombos: Component + UpdateConfig
 	};
 
 	for (SkillSelect { skill, key_path }, ..) in skill_selects.iter().filter(pressed) {
-		combos.update_config(key_path, skill.clone());
+		combos.update_config(key_path, Some(skill.clone()));
 	}
 }
 
@@ -43,7 +43,7 @@ mod tests {
 
 	#[automock]
 	impl UpdateConfig<Vec<SlotKey>> for _Combos {
-		fn update_config(&mut self, key: &Vec<SlotKey>, skill: Skill) {
+		fn update_config(&mut self, key: &Vec<SlotKey>, skill: Option<Skill>) {
 			self.mock.update_config(key, skill)
 		}
 	}
@@ -65,10 +65,10 @@ mod tests {
 			.times(1)
 			.with(
 				eq(vec![SlotKey::Hand(Side::Off)]),
-				eq(Skill {
+				eq(Some(Skill {
 					name: "my skill".to_owned(),
 					..default()
-				}),
+				})),
 			)
 			.return_const(());
 

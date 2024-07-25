@@ -65,8 +65,12 @@ where
 	TNode: GetMut<TKey, Skill>,
 	TKey: Iterate<SlotKey>,
 {
-	fn update_config(&mut self, key: &TKey, skill: Skill) {
+	fn update_config(&mut self, key: &TKey, skill: Option<Skill>) {
 		self.current = None;
+
+		let Some(skill) = skill else {
+			return;
+		};
 
 		let Some(node_skill) = self.value.get_mut(key) else {
 			return;
@@ -280,7 +284,7 @@ mod tests {
 
 		combos.update_config(
 			&vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
-			Skill::default(),
+			Some(Skill::default()),
 		);
 	}
 
@@ -308,10 +312,10 @@ mod tests {
 
 		combos.update_config(
 			&vec![],
-			Skill {
+			Some(Skill {
 				name: "my other skill".to_owned(),
 				..default()
-			},
+			}),
 		);
 
 		assert_eq!(
@@ -330,7 +334,7 @@ mod tests {
 			current: Some(_Node::<Vec<SlotKey>>::default()),
 		};
 
-		combos.update_config(&vec![], Skill::default());
+		combos.update_config(&vec![], Some(Skill::default()));
 
 		assert!(combos.current.is_none());
 	}

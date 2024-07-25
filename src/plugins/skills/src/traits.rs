@@ -125,7 +125,7 @@ pub trait ReKey<TKey> {
 }
 
 pub trait UpdateConfig<TKey> {
-	fn update_config(&mut self, key: &TKey, skill: Skill);
+	fn update_config(&mut self, key: &TKey, skill: Option<Skill>);
 }
 
 pub(crate) trait GetAnimation<TAnimation> {
