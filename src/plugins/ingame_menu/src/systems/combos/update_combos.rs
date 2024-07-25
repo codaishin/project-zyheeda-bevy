@@ -3,12 +3,15 @@ use bevy::{
 	prelude::{Component, Query, With},
 	ui::Interaction,
 };
-use skills::{items::slot_key::SlotKey, traits::UpdateConfig};
+use skills::{items::slot_key::SlotKey, skills::Skill, traits::UpdateConfig};
 
-pub(crate) fn update_combos<TAgent: Component, TCombos: Component + UpdateConfig<Vec<SlotKey>>>(
+pub(crate) fn update_combos<TAgent, TCombos>(
 	mut agents: Query<&mut TCombos, With<TAgent>>,
 	skill_selects: Query<(&SkillSelect, &Interaction)>,
-) {
+) where
+	TAgent: Component,
+	TCombos: Component + UpdateConfig<Vec<SlotKey>, Option<Skill>>,
+{
 	let Ok(mut combos) = agents.get_single_mut() else {
 		return;
 	};
@@ -42,7 +45,7 @@ mod tests {
 	}
 
 	#[automock]
-	impl UpdateConfig<Vec<SlotKey>> for _Combos {
+	impl UpdateConfig<Vec<SlotKey>, Option<Skill>> for _Combos {
 		fn update_config(&mut self, key: &Vec<SlotKey>, skill: Option<Skill>) {
 			self.mock.update_config(key, skill)
 		}

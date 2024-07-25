@@ -2,7 +2,7 @@ use super::{combo_node::ComboNode, Slots};
 use crate::{
 	items::slot_key::SlotKey,
 	skills::Skill,
-	traits::{Combo, GetCombos, GetEntryMut, Insert, PeekNext, SetNextCombo, UpdateConfig},
+	traits::{Combo, GetCombos, GetEntryMut, Insert, PeekNext, ReKey, SetNextCombo, UpdateConfig},
 };
 use bevy::ecs::component::Component;
 use common::traits::iterate::Iterate;
@@ -60,19 +60,35 @@ impl<TNode: GetCombos> GetCombos for Combos<TNode> {
 	}
 }
 
-impl<TNode, TKey> UpdateConfig<TKey> for Combos<TNode>
+impl<TNode, TKey> UpdateConfig<TKey, Option<Skill>> for Combos<TNode>
 where
 	for<'a> TNode: GetEntryMut<'a, TKey, TEntry: Insert<Option<Skill>>>,
 	TKey: Iterate<SlotKey>,
 {
-	fn update_config(&mut self, key: &TKey, skill: Option<Skill>) {
+	fn update_config(&mut self, key_path: &TKey, skill: Option<Skill>) {
 		self.current = None;
 
-		let Some(mut entry) = self.value.entry_mut(key) else {
+		let Some(mut entry) = self.value.entry_mut(key_path) else {
 			return;
 		};
 
 		entry.insert(skill);
+	}
+}
+
+impl<TNode, TKey> UpdateConfig<TKey, SlotKey> for Combos<TNode>
+where
+	for<'a> TNode: GetEntryMut<'a, TKey, TEntry: ReKey<SlotKey>>,
+	TKey: Iterate<SlotKey>,
+{
+	fn update_config(&mut self, key_path: &TKey, key: SlotKey) {
+		self.current = None;
+
+		let Some(mut entry) = self.value.entry_mut(key_path) else {
+			return;
+		};
+
+		entry.re_key(key);
 	}
 }
 
@@ -267,6 +283,9 @@ mod tests {
 		impl Insert<Option<Skill>> for _Entry {
 			fn insert(&mut self, value: Option<Skill>);
 		}
+		impl ReKey<SlotKey> for _Entry {
+			fn re_key(&mut self, key: SlotKey);
+		}
 	}
 
 	#[derive(Default)]
@@ -277,6 +296,12 @@ mod tests {
 	impl<'a> Insert<Option<Skill>> for &'a mut _Entry {
 		fn insert(&mut self, value: Option<Skill>) {
 			self.mock.insert(value)
+		}
+	}
+
+	impl<'a> ReKey<SlotKey> for &'a mut _Entry {
+		fn re_key(&mut self, key: SlotKey) {
+			self.mock.re_key(key)
 		}
 	}
 
@@ -381,6 +406,78 @@ mod tests {
 				..default()
 			}),
 		);
+
+		assert!(combos.current.is_none());
+	}
+
+	#[test]
+	fn update_config_re_key_use_correct_arguments() {
+		let mut entry = _Entry::default();
+		entry.mock.expect_re_key().return_const(());
+
+		let mut combos = Combos::new(_Node {
+			entry: Some(entry),
+			..default()
+		});
+
+		combos.update_config(
+			&vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
+			SlotKey::Hand(Side::Off),
+		);
+
+		assert_eq!(
+			vec![vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]],
+			combos.value.call_args
+		)
+	}
+
+	#[test]
+	fn update_config_re_key_call_entry_re_key() {
+		let mut entry = _Entry::default();
+		entry
+			.mock
+			.expect_re_key()
+			.times(1)
+			.with(eq(SlotKey::Hand(Side::Off)))
+			.return_const(());
+
+		let mut combos = Combos::new(_Node {
+			entry: Some(entry),
+			..default()
+		});
+
+		combos.update_config(&vec![SlotKey::Hand(Side::Main)], SlotKey::Hand(Side::Off));
+	}
+
+	#[test]
+	fn update_config_re_key_clear_current() {
+		let mut entry = _Entry::default();
+		entry.mock.expect_re_key().return_const(());
+
+		let mut combos = Combos {
+			value: _Node {
+				entry: Some(entry),
+				..default()
+			},
+			current: Some(_Node::default()),
+		};
+
+		combos.update_config(&vec![SlotKey::Hand(Side::Main)], SlotKey::Hand(Side::Off));
+
+		assert!(combos.current.is_none());
+	}
+
+	#[test]
+	fn update_config_re_key_clear_current_if_entry_is_none() {
+		let mut combos = Combos {
+			value: _Node {
+				entry: None,
+				..default()
+			},
+			current: Some(_Node::default()),
+		};
+
+		combos.update_config(&vec![SlotKey::Hand(Side::Main)], SlotKey::Hand(Side::Off));
 
 		assert!(combos.current.is_none());
 	}
