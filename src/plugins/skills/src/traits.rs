@@ -112,8 +112,21 @@ pub trait GetCombos {
 	fn combos(&self) -> Vec<Combo>;
 }
 
-pub trait UpdateConfig<TKey> {
-	fn update_config(&mut self, key: &TKey, skill: Skill);
+pub trait GetEntryMut<'a, TKey> {
+	type TEntry;
+	fn entry_mut(&'a mut self, key: &TKey) -> Option<Self::TEntry>;
+}
+
+pub trait Insert<T> {
+	fn insert(&mut self, value: T);
+}
+
+pub trait ReKey<TKey> {
+	fn re_key(&mut self, key: TKey);
+}
+
+pub trait UpdateConfig<TKey, TValue> {
+	fn update_config(&mut self, key: &TKey, value: TValue);
 }
 
 pub(crate) trait GetAnimation<TAnimation> {
