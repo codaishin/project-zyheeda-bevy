@@ -2,7 +2,7 @@ use super::slots::Slots;
 use crate::{
 	items::slot_key::SlotKey,
 	skills::Skill,
-	traits::{PeekNext, TryMap},
+	traits::{GetEntryMut, PeekNext, TryMap},
 };
 use bevy::{ecs::component::Component, prelude::default};
 use common::traits::{
@@ -54,6 +54,30 @@ impl<TKey: Iterate<SlotKey>> GetMut<TKey, Skill> for ComboNode {
 		}
 
 		value
+	}
+}
+
+#[derive(Debug, PartialEq)]
+pub struct NodeEntry<'a, TSkill> {
+	key: SlotKey,
+	tree: &'a mut HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
+}
+
+impl<'a, TKey: Iterate<SlotKey>, TSkill> GetEntryMut<'a, TKey, NodeEntry<'a, TSkill>>
+	for ComboNode<TSkill>
+{
+	fn entry_mut(&'a mut self, slot_key_path: &TKey) -> Option<NodeEntry<'a, TSkill>> {
+		let mut slot_key_path = slot_key_path.iterate();
+		let mut key = *slot_key_path.next()?;
+		let mut tree = &mut self.0;
+
+		for next_key in slot_key_path {
+			let (_, node) = tree.get_mut(&key)?;
+			key = *next_key;
+			tree = &mut node.0;
+		}
+
+		Some(NodeEntry { key, tree })
 	}
 }
 
@@ -715,5 +739,132 @@ mod tests {
 			)])),
 			combos
 		);
+	}
+
+	#[test]
+	fn get_a_top_entry() {
+		let conf = [(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "my skill".to_owned(),
+					..default()
+				},
+				default(),
+			),
+		)];
+		let mut root = ComboNode::new(conf.clone());
+		let entry = root.entry_mut(&[SlotKey::Hand(Side::Main)]);
+
+		assert_eq!(
+			Some(NodeEntry {
+				key: SlotKey::Hand(Side::Main),
+				tree: &mut HashMap::from(conf),
+			}),
+			entry,
+		)
+	}
+
+	#[test]
+	fn get_a_child_entry() {
+		let child_conf = [(
+			SlotKey::Hand(Side::Off),
+			(
+				Skill {
+					name: "my child skill".to_owned(),
+					..default()
+				},
+				default(),
+			),
+		)];
+		let conf = [(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "my skill".to_owned(),
+					..default()
+				},
+				ComboNode::new(child_conf.clone()),
+			),
+		)];
+		let mut root = ComboNode::new(conf);
+		let entry = root.entry_mut(&[SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]);
+
+		assert_eq!(
+			Some(NodeEntry {
+				key: SlotKey::Hand(Side::Off),
+				tree: &mut HashMap::from(child_conf),
+			}),
+			entry,
+		)
+	}
+
+	#[test]
+	fn get_none_when_nothing_found_with_key_path() {
+		let conf = [(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "my skill".to_owned(),
+					..default()
+				},
+				ComboNode::new([(
+					SlotKey::Hand(Side::Off),
+					(
+						Skill {
+							name: "my child skill".to_owned(),
+							..default()
+						},
+						default(),
+					),
+				)]),
+			),
+		)];
+		let mut root = ComboNode::new(conf);
+		let entry = root.entry_mut(&[
+			SlotKey::Hand(Side::Main),
+			SlotKey::Hand(Side::Off),
+			SlotKey::Hand(Side::Main),
+			SlotKey::Hand(Side::Off),
+		]);
+
+		assert_eq!(None, entry)
+	}
+
+	#[test]
+	fn get_a_usable_entry_when_only_last_in_key_path_not_found() {
+		let conf = [(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "my skill".to_owned(),
+					..default()
+				},
+				ComboNode::new([(
+					SlotKey::Hand(Side::Off),
+					(
+						Skill {
+							name: "my child skill".to_owned(),
+							..default()
+						},
+						default(),
+					),
+				)]),
+			),
+		)];
+		let mut root = ComboNode::new(conf);
+		let entry = root.entry_mut(&[
+			SlotKey::Hand(Side::Main),
+			SlotKey::Hand(Side::Off),
+			SlotKey::Hand(Side::Main),
+		]);
+
+		assert_eq!(
+			Some(NodeEntry {
+				key: SlotKey::Hand(Side::Main),
+				tree: &mut HashMap::default(),
+			}),
+			entry,
+		)
 	}
 }

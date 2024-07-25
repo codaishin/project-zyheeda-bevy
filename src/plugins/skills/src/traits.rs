@@ -112,6 +112,10 @@ pub trait GetCombos {
 	fn combos(&self) -> Vec<Combo>;
 }
 
+pub trait GetEntryMut<'a, TKey, TEntry> {
+	fn entry_mut(&'a mut self, key: &TKey) -> Option<TEntry>;
+}
+
 pub trait UpdateConfig<TKey> {
 	fn update_config(&mut self, key: &TKey, skill: Skill);
 }
