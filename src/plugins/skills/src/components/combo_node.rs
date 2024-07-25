@@ -65,10 +65,14 @@ pub struct NodeEntry<'a, TSkill> {
 	tree: &'a mut HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
 }
 
-impl<'a, TKey: Iterate<SlotKey>, TSkill> GetEntryMut<'a, TKey, NodeEntry<'a, TSkill>>
-	for ComboNode<TSkill>
+impl<'a, TKey, TSkill> GetEntryMut<'a, TKey> for ComboNode<TSkill>
+where
+	TKey: Iterate<SlotKey>,
+	TSkill: 'a,
 {
-	fn entry_mut(&'a mut self, slot_key_path: &TKey) -> Option<NodeEntry<'a, TSkill>> {
+	type TEntry = NodeEntry<'a, TSkill>;
+
+	fn entry_mut(&'a mut self, slot_key_path: &TKey) -> Option<Self::TEntry> {
 		let mut slot_key_path = slot_key_path.iterate();
 		let mut key = *slot_key_path.next()?;
 		let mut tree = &mut self.0;
