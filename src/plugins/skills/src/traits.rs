@@ -116,6 +116,10 @@ pub trait GetEntryMut<'a, TKey, TEntry> {
 	fn entry_mut(&'a mut self, key: &TKey) -> Option<TEntry>;
 }
 
+pub trait Insert<T> {
+	fn insert(&mut self, value: T);
+}
+
 pub trait UpdateConfig<TKey> {
 	fn update_config(&mut self, key: &TKey, skill: Skill);
 }

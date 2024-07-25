@@ -1,3 +1,5 @@
+pub mod node_entry;
+
 use super::slots::Slots;
 use crate::{
 	items::slot_key::SlotKey,
