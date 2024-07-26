@@ -21,7 +21,7 @@ impl InstantiateContentOn for SkillSelect {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		parent.spawn((
 			self.clone(),
-			ComboOverview::skill_button_bundle(self.skill.icon.clone().unwrap_or_default()),
+			ComboOverview::skill_button_bundle(Some(self.skill.icon.clone().unwrap_or_default())),
 			Tooltip(self.clone()),
 		));
 	}

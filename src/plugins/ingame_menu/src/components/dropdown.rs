@@ -1,3 +1,4 @@
+pub(crate) mod key_select;
 pub(crate) mod skill_select;
 
 use bevy::prelude::Component;
