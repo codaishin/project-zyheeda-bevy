@@ -42,6 +42,7 @@ use systems::{
 		get_combos::get_combos,
 		update_combos::update_combos,
 		update_combos_view::update_combos_view,
+		update_combos_view_key_labels::update_combos_view_key_labels,
 	},
 	conditions::{added::added, changed::changed, either::either},
 	dad::{drag::drag, drop::drop},
@@ -216,6 +217,7 @@ fn combo_overview_systems(app: &mut App) {
 			(
 				skill_select_dropdown::<KeyCode, SlotKey, SlotKeyMap, Slots<Handle<Skill>>>,
 				empty_skill_key_select_dropdown::<KeyCode, SlotKey, SlotKeyMap>,
+				update_combos_view_key_labels::<LanguageServer>,
 				update_combos::<Player, Combos>,
 			)
 				.run_if(in_state(MenuState::ComboOverview)),

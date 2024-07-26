@@ -4,9 +4,10 @@ use common::traits::get_ui_text::{English, GetUiText, UIText};
 
 use super::combo_overview::ComboOverview;
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Clone)]
 pub(crate) struct KeySelect<TKey = KeyCode> {
-	pub(crate) target: Entity,
+	pub(crate) skill_button: Entity,
+	pub(crate) key_button: Entity,
 	pub(crate) key_path: Vec<TKey>,
 }
 
@@ -24,7 +25,7 @@ impl InstantiateContentOn for KeySelect {
 		};
 
 		parent
-			.spawn(ComboOverview::skill_key_button_bundle())
+			.spawn((self.clone(), ComboOverview::skill_key_button_bundle()))
 			.with_children(|parent| {
 				parent.spawn(ComboOverview::skill_key_text(&key));
 			});

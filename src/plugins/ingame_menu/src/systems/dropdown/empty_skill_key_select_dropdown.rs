@@ -25,7 +25,8 @@ pub(crate) fn empty_skill_key_select_dropdown<
 		let items = TEquipmentKey::iterator()
 			.map(|key| key_map.map_forward(key))
 			.map(|key| KeySelect {
-				target: command.target,
+				skill_button: command.target,
+				key_button: entity,
 				key_path: [command.key_path.clone(), vec![key]].concat(),
 			})
 			.collect();
@@ -116,7 +117,8 @@ mod tests {
 			Some(&Dropdown {
 				items: vec![
 					KeySelect {
-						target: Entity::from_raw(42),
+						skill_button: Entity::from_raw(42),
+						key_button: dropdown.id(),
 						key_path: vec![
 							_DropdownKey::A,
 							_DropdownKey::B,
@@ -125,7 +127,8 @@ mod tests {
 						]
 					},
 					KeySelect {
-						target: Entity::from_raw(42),
+						skill_button: Entity::from_raw(42),
+						key_button: dropdown.id(),
 						key_path: vec![
 							_DropdownKey::A,
 							_DropdownKey::B,
