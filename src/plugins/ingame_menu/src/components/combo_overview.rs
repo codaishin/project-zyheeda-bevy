@@ -1,4 +1,4 @@
-use super::{tooltip::Tooltip, SkillSelectDropdownCommand};
+use super::{tooltip::Tooltip, EmptySkillKeySelectDropdownCommand, SkillSelectDropdownCommand};
 use crate::{
 	tools::SkillDescriptor,
 	traits::{
@@ -56,16 +56,25 @@ impl ComboOverview {
 			..default()
 		}
 	}
-
-	pub fn skill_key_button_bundle() -> impl Bundle {
+	pub fn skill_key_button_offset_container() -> impl Bundle {
 		NodeBundle {
 			style: Style {
 				position_type: PositionType::Absolute,
-				width: Val::Px(50.0),
-				height: Val::Px(25.0),
 				top: Val::Px(-8.0),
 				right: Val::Px(-8.0),
+				..default()
+			},
+			..default()
+		}
+	}
+
+	pub fn skill_key_button_bundle() -> impl Bundle {
+		ButtonBundle {
+			style: Style {
+				width: Val::Px(50.0),
+				height: Val::Px(25.0),
 				border: UiRect::all(Val::Px(2.0)),
+				margin: UiRect::all(Val::Px(-2.0)),
 				justify_content: JustifyContent::Center,
 				..default()
 			},
@@ -169,10 +178,10 @@ fn add_combo(parent: &mut ChildBuilder, combo: &Vec<SkillDescriptor<KeyCode, Han
 			for skill in combo {
 				add_skill(parent, skill);
 			}
-			let Some(_) = combo.last() else {
+			let Some(skill) = combo.last() else {
 				return;
 			};
-			add_empty_skill(parent);
+			add_empty_skill(parent, skill.key_path.clone());
 		});
 }
 
@@ -196,15 +205,19 @@ fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<
 				))
 				.with_children(|parent| {
 					parent
-						.spawn(ComboOverview::skill_key_button_bundle())
+						.spawn(ComboOverview::skill_key_button_offset_container())
 						.with_children(|parent| {
-							parent.spawn(ComboOverview::skill_key_text(&skill_key));
+							parent
+								.spawn(ComboOverview::skill_key_button_bundle())
+								.with_children(|parent| {
+									parent.spawn(ComboOverview::skill_key_text(&skill_key));
+								});
 						});
 				});
 		});
 }
 
-fn add_empty_skill(parent: &mut ChildBuilder) {
+fn add_empty_skill(parent: &mut ChildBuilder, key_path: Vec<KeyCode>) {
 	parent
 		.spawn(ComboOverview::skill_container_bundle())
 		.with_children(|parent| {
@@ -212,9 +225,19 @@ fn add_empty_skill(parent: &mut ChildBuilder) {
 				.spawn(ComboOverview::skill_button_bundle(None))
 				.with_children(|parent| {
 					parent
-						.spawn(ComboOverview::skill_key_button_bundle())
+						.spawn(ComboOverview::skill_key_button_offset_container())
 						.with_children(|parent| {
-							parent.spawn(ComboOverview::skill_key_text("+"));
+							parent
+								.spawn((
+									ComboOverview::skill_key_button_bundle(),
+									EmptySkillKeySelectDropdownCommand {
+										target: parent.parent_entity(),
+										key_path,
+									},
+								))
+								.with_children(|parent| {
+									parent.spawn(ComboOverview::skill_key_text("+"));
+								});
 						});
 				});
 		});

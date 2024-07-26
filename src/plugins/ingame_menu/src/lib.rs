@@ -19,6 +19,7 @@ use components::{
 	dropdown::Dropdown,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
+	key_select::KeySelect,
 	quickbar_panel::QuickbarPanel,
 	skill_select::SkillSelect,
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
@@ -48,6 +49,7 @@ use systems::{
 	dropdown::{
 		despawn_all::dropdown_despawn_all,
 		detect_focus_change::dropdown_detect_focus_change,
+		empty_skill_key_select_dropdown::empty_skill_key_select_dropdown,
 		skill_select_dropdown::skill_select_dropdown,
 		spawn_focused::dropdown_spawn_focused,
 	},
@@ -199,6 +201,7 @@ fn ui_overlay_systems(app: &mut App) {
 fn combo_overview_systems(app: &mut App) {
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
 		.add_dropdown::<SkillSelect>()
+		.add_dropdown::<KeySelect>()
 		.add_tooltip::<SkillSelect>()
 		.add_tooltip::<SkillDescriptor<KeyCode, Handle<Image>>>()
 		.add_systems(
@@ -212,6 +215,7 @@ fn combo_overview_systems(app: &mut App) {
 			Update,
 			(
 				skill_select_dropdown::<KeyCode, SlotKey, SlotKeyMap, Slots<Handle<Skill>>>,
+				empty_skill_key_select_dropdown::<KeyCode, SlotKey, SlotKeyMap>,
 				update_combos::<Player, Combos>,
 			)
 				.run_if(in_state(MenuState::ComboOverview)),
