@@ -44,7 +44,7 @@ impl ComboOverview {
 		}
 	}
 
-	pub fn skill_button_bundle(icon: Handle<Image>) -> impl Bundle {
+	pub fn skill_button_bundle(icon: Option<Handle<Image>>) -> impl Bundle {
 		ButtonBundle {
 			style: Style {
 				width: Val::Px(65.0),
@@ -52,7 +52,7 @@ impl ComboOverview {
 				..default()
 			},
 			background_color: DEFAULT_PANEL_COLORS.filled.into(),
-			image: UiImage::new(icon),
+			image: icon.map(UiImage::new).unwrap_or_default(),
 			..default()
 		}
 	}
@@ -169,6 +169,10 @@ fn add_combo(parent: &mut ChildBuilder, combo: &Vec<SkillDescriptor<KeyCode, Han
 			for skill in combo {
 				add_skill(parent, skill);
 			}
+			let Some(_) = combo.last() else {
+				return;
+			};
+			add_empty_skill(parent);
 		});
 }
 
@@ -184,7 +188,7 @@ fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<
 		.with_children(|parent| {
 			parent
 				.spawn((
-					ComboOverview::skill_button_bundle(skill_icon),
+					ComboOverview::skill_button_bundle(Some(skill_icon)),
 					Tooltip(skill.clone()),
 					SkillSelectDropdownCommand {
 						key_path: skill.key_path.clone(),
@@ -195,6 +199,22 @@ fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<
 						.spawn(ComboOverview::skill_key_button_bundle())
 						.with_children(|parent| {
 							parent.spawn(ComboOverview::skill_key_text(&skill_key));
+						});
+				});
+		});
+}
+
+fn add_empty_skill(parent: &mut ChildBuilder) {
+	parent
+		.spawn(ComboOverview::skill_container_bundle())
+		.with_children(|parent| {
+			parent
+				.spawn(ComboOverview::skill_button_bundle(None))
+				.with_children(|parent| {
+					parent
+						.spawn(ComboOverview::skill_key_button_bundle())
+						.with_children(|parent| {
+							parent.spawn(ComboOverview::skill_key_text("+"));
 						});
 				});
 		});
