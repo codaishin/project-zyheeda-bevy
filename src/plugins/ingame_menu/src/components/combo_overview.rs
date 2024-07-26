@@ -18,6 +18,7 @@ use bevy::{
 	text::TextStyle,
 	ui::{
 		node_bundles::{ButtonBundle, NodeBundle, TextBundle},
+		AlignItems,
 		FlexDirection,
 		JustifyContent,
 		PositionType,
@@ -49,6 +50,8 @@ impl ComboOverview {
 			style: Style {
 				width: Val::Px(65.0),
 				height: Val::Px(65.0),
+				justify_content: JustifyContent::Center,
+				align_items: AlignItems::Center,
 				..default()
 			},
 			background_color: DEFAULT_PANEL_COLORS.filled.into(),
@@ -89,6 +92,17 @@ impl ComboOverview {
 			key,
 			TextStyle {
 				font_size: 20.,
+				color: DEFAULT_PANEL_COLORS.text,
+				..default()
+			},
+		)
+	}
+
+	pub fn new_skill_text(key: &str) -> impl Bundle {
+		TextBundle::from_section(
+			key,
+			TextStyle {
+				font_size: 50.,
 				color: DEFAULT_PANEL_COLORS.text,
 				..default()
 			},
@@ -224,16 +238,16 @@ fn add_empty_skill(parent: &mut ChildBuilder, key_path: Vec<KeyCode>) {
 			parent
 				.spawn(ComboOverview::skill_button_bundle(None))
 				.with_children(|parent| {
+					let target = parent.parent_entity();
+
+					parent.spawn(ComboOverview::new_skill_text(""));
 					parent
 						.spawn(ComboOverview::skill_key_button_offset_container())
 						.with_children(|parent| {
 							parent
 								.spawn((
 									ComboOverview::skill_key_button_bundle(),
-									EmptySkillKeySelectDropdownCommand {
-										target: parent.parent_entity(),
-										key_path,
-									},
+									EmptySkillKeySelectDropdownCommand { target, key_path },
 								))
 								.with_children(|parent| {
 									parent.spawn(ComboOverview::skill_key_text("+"));
