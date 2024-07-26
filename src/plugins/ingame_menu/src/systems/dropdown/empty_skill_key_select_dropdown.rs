@@ -1,15 +1,14 @@
+use crate::components::{
+	dropdown::Dropdown,
+	key_select::KeySelect,
+	EmptySkillKeySelectDropdownCommand,
+};
 use bevy::prelude::{Commands, Entity, Query, Res, Resource};
 use common::traits::{
 	iteration::IterFinite,
 	map_value::MapForward,
 	try_insert_on::TryInsertOn,
 	try_remove_from::TryRemoveFrom,
-};
-
-use crate::components::{
-	dropdown::Dropdown,
-	key_select::KeySelect,
-	EmptySkillKeySelectDropdownCommand,
 };
 
 pub(crate) fn empty_skill_key_select_dropdown<

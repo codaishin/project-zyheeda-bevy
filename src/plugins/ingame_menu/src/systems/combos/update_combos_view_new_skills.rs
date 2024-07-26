@@ -50,9 +50,8 @@ fn get_text<'a>(
 
 #[cfg(test)]
 mod tests {
-	use crate::components::SkillSelectDropdownCommand;
-
 	use super::*;
+	use crate::components::SkillSelectDropdownCommand;
 	use bevy::{
 		app::{App, Update},
 		prelude::{BuildWorldChildren, Entity, KeyCode, TextBundle},

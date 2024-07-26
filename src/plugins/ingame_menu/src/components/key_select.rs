@@ -1,8 +1,7 @@
+use super::combo_overview::ComboOverview;
 use crate::traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn};
 use bevy::prelude::{BuildChildren, ChildBuilder, Component, Entity, KeyCode, NodeBundle};
 use common::traits::get_ui_text::{English, GetUiText, UIText};
-
-use super::combo_overview::ComboOverview;
 
 #[derive(Component, Debug, PartialEq, Clone)]
 pub(crate) struct KeySelect<TKey = KeyCode> {
