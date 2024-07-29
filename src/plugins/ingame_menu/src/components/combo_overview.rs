@@ -242,7 +242,7 @@ fn add_combo_list(parent: &mut ChildBuilder, combo_overview: &ComboOverview) {
 		});
 }
 
-fn add_combo(parent: &mut ChildBuilder, combo: &Vec<SkillDescriptor<KeyCode>>) {
+fn add_combo(parent: &mut ChildBuilder, combo: &[SkillDescriptor<KeyCode>]) {
 	parent
 		.spawn(NodeBundle {
 			style: Style {
@@ -253,21 +253,26 @@ fn add_combo(parent: &mut ChildBuilder, combo: &Vec<SkillDescriptor<KeyCode>>) {
 			..default()
 		})
 		.with_children(|parent| {
-			for skill in combo {
-				add_skill(parent, skill);
+			let last = combo.len() - 1;
+
+			for skill in &combo[..last] {
+				add_skill(parent, skill, &[with_key_button]);
 			}
-			let Some(skill) = combo.last() else {
+
+			let Some(last_skill) = combo.last() else {
 				return;
 			};
-			add_empty_skill(parent, skill.key_path.clone());
+
+			add_skill(parent, last_skill, &[with_key_button, with_delete_button]);
+			add_empty_skill(parent, last_skill.key_path.clone());
 		});
 }
 
-fn add_skill(parent: &mut ChildBuilder, descriptor: &SkillDescriptor<KeyCode>) {
-	let skill_key = match descriptor.key_path.last().map(English::ui_text) {
-		Some(UIText::String(key)) => key,
-		None | Some(UIText::Unmapped) => String::from("?"),
-	};
+fn add_skill(
+	parent: &mut ChildBuilder,
+	descriptor: &SkillDescriptor<KeyCode>,
+	additional_buttons: &[fn(&SkillDescriptor<KeyCode>, &mut ChildBuilder)],
+) {
 	let skill_icon = descriptor.skill.icon.clone();
 
 	parent
@@ -281,29 +286,43 @@ fn add_skill(parent: &mut ChildBuilder, descriptor: &SkillDescriptor<KeyCode>) {
 					},
 				))
 				.with_children(|parent| {
-					parent
-						.spawn(ComboOverview::skill_key_button_offset_container())
-						.with_children(|parent| {
-							parent
-								.spawn(ComboOverview::skill_key_button_bundle())
-								.with_children(|parent| {
-									parent.spawn(ComboOverview::skill_key_text(&skill_key));
-								});
-						});
-					parent
-						.spawn(ComboOverview::delete_button_offset_container())
-						.with_children(|parent| {
-							parent
-								.spawn((
-									ComboOverview::delete_button_bundle(),
-									DeleteSkill {
-										key_path: descriptor.key_path.clone(),
-									},
-								))
-								.with_children(|parent| {
-									parent.spawn(ComboOverview::delete_button_text("X"));
-								});
-						});
+					for additional_button in additional_buttons {
+						additional_button(descriptor, parent);
+					}
+				});
+		});
+}
+
+fn with_key_button(descriptor: &SkillDescriptor<KeyCode>, parent: &mut ChildBuilder) {
+	let skill_key = match descriptor.key_path.last().map(English::ui_text) {
+		Some(UIText::String(key)) => key,
+		None | Some(UIText::Unmapped) => String::from("?"),
+	};
+
+	parent
+		.spawn(ComboOverview::skill_key_button_offset_container())
+		.with_children(|parent| {
+			parent
+				.spawn(ComboOverview::skill_key_button_bundle())
+				.with_children(|parent| {
+					parent.spawn(ComboOverview::skill_key_text(&skill_key));
+				});
+		});
+}
+
+fn with_delete_button(descriptor: &SkillDescriptor<KeyCode>, parent: &mut ChildBuilder) {
+	parent
+		.spawn(ComboOverview::delete_button_offset_container())
+		.with_children(|parent| {
+			parent
+				.spawn((
+					ComboOverview::delete_button_bundle(),
+					DeleteSkill {
+						key_path: descriptor.key_path.clone(),
+					},
+				))
+				.with_children(|parent| {
+					parent.spawn(ComboOverview::delete_button_text("X"));
 				});
 		});
 }
