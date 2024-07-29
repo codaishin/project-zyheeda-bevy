@@ -205,7 +205,7 @@ fn combo_overview_systems(app: &mut App) {
 		.add_dropdown::<SkillSelect>()
 		.add_dropdown::<KeySelect>()
 		.add_tooltip::<SkillSelect>()
-		.add_tooltip::<SkillDescriptor<KeyCode, Handle<Image>>>()
+		.add_tooltip::<SkillDescriptor<KeyCode>>()
 		.add_systems(
 			Update,
 			get_combos::<KeyCode, Combos>

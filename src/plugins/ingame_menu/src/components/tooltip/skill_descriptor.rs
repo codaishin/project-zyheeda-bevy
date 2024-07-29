@@ -5,14 +5,14 @@ use crate::{
 };
 use bevy::prelude::{ChildBuilder, KeyCode, NodeBundle};
 
-impl<T: Clone> GetNode for Tooltip<SkillDescriptor<KeyCode, T>> {
+impl GetNode for Tooltip<SkillDescriptor<KeyCode>> {
 	fn node(&self) -> NodeBundle {
 		skill_node()
 	}
 }
 
-impl<T: Clone> InstantiateContentOn for Tooltip<SkillDescriptor<KeyCode, T>> {
+impl InstantiateContentOn for Tooltip<SkillDescriptor<KeyCode>> {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
-		parent.spawn(skill_name(&self.0.name));
+		parent.spawn(skill_name(&self.0.skill.name));
 	}
 }

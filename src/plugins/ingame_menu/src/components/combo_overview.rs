@@ -32,7 +32,7 @@ use bevy::{
 use common::traits::get_ui_text::{English, GetUiText, UIText};
 
 #[derive(Component, Default)]
-pub(crate) struct ComboOverview(CombosDescriptor<KeyCode, Handle<Image>>);
+pub(crate) struct ComboOverview(CombosDescriptor<KeyCode>);
 
 impl ComboOverview {
 	pub fn skill_container_bundle() -> impl Bundle {
@@ -111,7 +111,7 @@ impl ComboOverview {
 }
 
 impl UpdateCombos<KeyCode> for ComboOverview {
-	fn update_combos(&mut self, combos: CombosDescriptor<KeyCode, Handle<Image>>) {
+	fn update_combos(&mut self, combos: CombosDescriptor<KeyCode>) {
 		self.0 = combos
 	}
 }
@@ -178,7 +178,7 @@ fn add_combo_list(parent: &mut ChildBuilder, combo_overview: &ComboOverview) {
 		});
 }
 
-fn add_combo(parent: &mut ChildBuilder, combo: &Vec<SkillDescriptor<KeyCode, Handle<Image>>>) {
+fn add_combo(parent: &mut ChildBuilder, combo: &Vec<SkillDescriptor<KeyCode>>) {
 	parent
 		.spawn(NodeBundle {
 			style: Style {
@@ -199,12 +199,13 @@ fn add_combo(parent: &mut ChildBuilder, combo: &Vec<SkillDescriptor<KeyCode, Han
 		});
 }
 
-fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<Image>>) {
-	let skill_key = match skill.key_path.last().map(English::ui_text) {
+fn add_skill(parent: &mut ChildBuilder, descriptor: &SkillDescriptor<KeyCode>) {
+	let skill_key = match descriptor.key_path.last().map(English::ui_text) {
 		Some(UIText::String(key)) => key,
 		None | Some(UIText::Unmapped) => String::from("?"),
 	};
-	let skill_icon = skill.icon.clone().unwrap_or_default();
+	let skill_icon = descriptor.skill.icon.clone().unwrap_or_default();
+	let skill = descriptor.skill.clone();
 
 	parent
 		.spawn(ComboOverview::skill_container_bundle())
@@ -212,9 +213,9 @@ fn add_skill(parent: &mut ChildBuilder, skill: &SkillDescriptor<KeyCode, Handle<
 			parent
 				.spawn((
 					ComboOverview::skill_button_bundle(Some(skill_icon)),
-					Tooltip(skill.clone()),
+					Tooltip(skill),
 					SkillSelectDropdownCommand {
-						key_path: skill.key_path.clone(),
+						key_path: descriptor.key_path.clone(),
 					},
 				))
 				.with_children(|parent| {
@@ -261,16 +262,20 @@ fn add_empty_skill(parent: &mut ChildBuilder, key_path: Vec<KeyCode>) {
 mod tests {
 	use super::*;
 	use bevy::asset::AssetId;
+	use skills::skills::Skill;
 	use uuid::Uuid;
 
 	#[test]
 	fn update_combos() {
 		let combos = vec![vec![SkillDescriptor {
-			name: "my skill".to_owned(),
 			key_path: vec![KeyCode::ArrowLeft],
-			icon: Some(Handle::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			})),
+			skill: Skill {
+				name: "my skill".to_owned(),
+				icon: Some(Handle::Weak(AssetId::Uuid {
+					uuid: Uuid::new_v4(),
+				})),
+				..default()
+			},
 		}]];
 		let mut combo_overview = ComboOverview::default();
 		combo_overview.update_combos(combos.clone());
