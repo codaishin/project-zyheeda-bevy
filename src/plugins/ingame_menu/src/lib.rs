@@ -72,7 +72,7 @@ use systems::{
 		update_label_text::update_label_text,
 	},
 };
-use tools::{menu_state::MenuState, SkillDescriptor};
+use tools::menu_state::MenuState;
 use traits::{
 	get_node::GetNode,
 	instantiate_content_on::InstantiateContentOn,
@@ -204,8 +204,7 @@ fn combo_overview_systems(app: &mut App) {
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
 		.add_dropdown::<SkillSelect>()
 		.add_dropdown::<KeySelect>()
-		.add_tooltip::<SkillSelect>()
-		.add_tooltip::<SkillDescriptor<KeyCode>>()
+		.add_tooltip::<Skill>()
 		.add_systems(
 			Update,
 			get_combos::<KeyCode, Combos>

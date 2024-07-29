@@ -22,7 +22,7 @@ impl InstantiateContentOn for SkillSelect {
 		parent.spawn((
 			self.clone(),
 			ComboOverview::skill_button_bundle(Some(self.skill.icon.clone().unwrap_or_default())),
-			Tooltip(self.clone()),
+			Tooltip::new(self.skill.clone()),
 		));
 	}
 }

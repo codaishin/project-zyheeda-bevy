@@ -213,7 +213,7 @@ fn add_skill(parent: &mut ChildBuilder, descriptor: &SkillDescriptor<KeyCode>) {
 			parent
 				.spawn((
 					ComboOverview::skill_button_bundle(Some(skill_icon)),
-					Tooltip(skill),
+					Tooltip::new(skill),
 					SkillSelectDropdownCommand {
 						key_path: descriptor.key_path.clone(),
 					},
