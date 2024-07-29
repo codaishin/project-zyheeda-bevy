@@ -5,7 +5,7 @@ pub mod set;
 pub mod tooltip_ui_control;
 
 use crate::{components::skill_descriptor::SkillDescriptor, tools::Layout};
-use bevy::ui::Style;
+use bevy::{ecs::system::EntityCommands, ui::Style};
 use get_node::GetNode;
 use instantiate_content_on::InstantiateContentOn;
 
@@ -25,4 +25,8 @@ pub(crate) trait RootStyle {
 
 pub(crate) trait GetLayout {
 	fn layout(&self) -> Layout;
+}
+
+pub(crate) trait InsertContentOn {
+	fn insert_content_on(entity: &mut EntityCommands);
 }

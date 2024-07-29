@@ -2,6 +2,7 @@ mod components;
 mod systems;
 mod tools;
 mod traits;
+mod visualization;
 
 #[cfg(debug_assertions)]
 mod debug;
@@ -44,6 +45,7 @@ use systems::{
 		update_combos_view::update_combos_view,
 		update_combos_view_key_labels::update_combos_view_key_labels,
 		update_combos_view_new_skills::update_combos_view_new_skills,
+		visualize_invalid_skill::visualize_invalid_skill,
 	},
 	conditions::{added::added, changed::changed, either::either},
 	dad::{drag::drag, drop::drop},
@@ -80,6 +82,7 @@ use traits::{
 	RootStyle,
 	UI,
 };
+use visualization::unusable::Unusable;
 
 type SlotKeyMap = KeyMap<SlotKey, KeyCode>;
 
@@ -215,6 +218,7 @@ fn combo_overview_systems(app: &mut App) {
 		.add_systems(
 			Update,
 			(
+				visualize_invalid_skill::<Player, Slots, KeyCode, SlotKeyMap, Unusable>,
 				skill_select_dropdown::<KeyCode, SlotKey, SlotKeyMap, Slots<Handle<Skill>>>,
 				empty_skill_key_select_dropdown::<KeyCode, SlotKey, SlotKeyMap>,
 				update_combos_view_key_labels::<LanguageServer>,
