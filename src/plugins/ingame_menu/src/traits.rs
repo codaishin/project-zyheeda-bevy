@@ -4,15 +4,15 @@ pub mod instantiate_content_on;
 pub mod set;
 pub mod tooltip_ui_control;
 
-use crate::tools::{Layout, SkillDescriptor};
-use bevy::{asset::Handle, render::texture::Image, ui::Style};
+use crate::{components::skill_descriptor::SkillDescriptor, tools::Layout};
+use bevy::{ecs::system::EntityCommands, ui::Style};
 use get_node::GetNode;
 use instantiate_content_on::InstantiateContentOn;
 
-pub(crate) type CombosDescriptor<TKey, TIcon> = Vec<Vec<SkillDescriptor<TKey, TIcon>>>;
+pub(crate) type CombosDescriptor<TKey> = Vec<Vec<SkillDescriptor<TKey>>>;
 
 pub(crate) trait UpdateCombos<TKey> {
-	fn update_combos(&mut self, combos: CombosDescriptor<TKey, Handle<Image>>);
+	fn update_combos(&mut self, combos: CombosDescriptor<TKey>);
 }
 
 pub(crate) trait UI: GetNode + InstantiateContentOn {}
@@ -25,4 +25,8 @@ pub(crate) trait RootStyle {
 
 pub(crate) trait GetLayout {
 	fn layout(&self) -> Layout;
+}
+
+pub(crate) trait InsertContentOn {
+	fn insert_content_on(entity: &mut EntityCommands);
 }

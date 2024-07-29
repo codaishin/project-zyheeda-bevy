@@ -3,6 +3,7 @@ pub(crate) mod conditions;
 pub(crate) mod dad;
 pub(crate) mod despawn;
 pub(crate) mod dropdown;
+pub(crate) mod image_color;
 pub(crate) mod items;
 pub(crate) mod mouse_context;
 pub(crate) mod set_state;

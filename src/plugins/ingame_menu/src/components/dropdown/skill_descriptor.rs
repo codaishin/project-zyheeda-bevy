@@ -1,6 +1,6 @@
 use super::Dropdown;
 use crate::{
-	components::skill_select::SkillSelect,
+	components::skill_descriptor::SkillDescriptor,
 	tools::Layout,
 	traits::{GetLayout, RootStyle},
 };
@@ -9,7 +9,7 @@ use bevy::{
 	ui::{PositionType, Style, Val},
 };
 
-impl RootStyle for Dropdown<SkillSelect> {
+impl RootStyle for Dropdown<SkillDescriptor> {
 	fn root_style(&self) -> Style {
 		Style {
 			position_type: PositionType::Absolute,
@@ -20,7 +20,7 @@ impl RootStyle for Dropdown<SkillSelect> {
 	}
 }
 
-impl GetLayout for Dropdown<SkillSelect> {
+impl GetLayout for Dropdown<SkillDescriptor> {
 	fn layout(&self) -> Layout {
 		Layout::SINGLE_COLUMN
 	}

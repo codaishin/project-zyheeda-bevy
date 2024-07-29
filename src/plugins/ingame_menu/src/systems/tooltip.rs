@@ -90,7 +90,7 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Content(&'static str);
 
-	#[derive(Clone, Copy)]
+	#[derive(Debug, PartialEq, Clone, Copy)]
 	struct _T {
 		content: &'static str,
 	}
@@ -212,7 +212,7 @@ mod tests {
 		#[derive(Resource, Debug, PartialEq)]
 		struct _Spawn {
 			entity: Entity,
-			tooltip: &'static str,
+			tooltip: Tooltip<_T>,
 			position: Vec2,
 		}
 
@@ -226,7 +226,7 @@ mod tests {
 			.returning(|commands, entity, tooltip, position| {
 				commands.insert_resource(_Spawn {
 					entity,
-					tooltip: tooltip.0.content,
+					tooltip: tooltip.clone(),
 					position,
 				});
 			});
@@ -237,7 +237,7 @@ mod tests {
 		let tooltip_id = app
 			.world_mut()
 			.spawn((
-				Tooltip(_T {
+				Tooltip::new(_T {
 					content: "My Content",
 				}),
 				Interaction::Hovered,
@@ -249,7 +249,9 @@ mod tests {
 		assert_eq!(
 			Some(&_Spawn {
 				entity: tooltip_id,
-				tooltip: "My Content",
+				tooltip: Tooltip::new(_T {
+					content: "My Content",
+				}),
 				position: Vec2 { x: 33., y: 66. }
 			}),
 			app.world().get_resource::<_Spawn>()
@@ -267,7 +269,7 @@ mod tests {
 		let mut app = setup(ui_control);
 		app.world_mut().spawn(_Window(Some(default())));
 		app.world_mut()
-			.spawn((Tooltip(_T { content: "" }), Interaction::None));
+			.spawn((Tooltip::new(_T { content: "" }), Interaction::None));
 
 		app.update();
 	}
@@ -283,7 +285,7 @@ mod tests {
 		let mut app = setup(ui_control);
 		app.world_mut().spawn(_Window(Some(default())));
 		app.world_mut()
-			.spawn((Tooltip(_T { content: "" }), Interaction::Hovered));
+			.spawn((Tooltip::new(_T { content: "" }), Interaction::Hovered));
 
 		app.update();
 		app.update();
@@ -301,7 +303,7 @@ mod tests {
 		app.world_mut().spawn(_Window(Some(default())));
 		let tooltip = app
 			.world_mut()
-			.spawn((Tooltip(_T { content: "" }), Interaction::None))
+			.spawn((Tooltip::new(_T { content: "" }), Interaction::None))
 			.id();
 
 		app.update();
@@ -350,7 +352,7 @@ mod tests {
 		let mut app = setup(ui_control);
 		app.world_mut().spawn(_Window(Some(default())));
 		app.world_mut()
-			.spawn((Tooltip(_T { content: "" }), Interaction::Hovered));
+			.spawn((Tooltip::new(_T { content: "" }), Interaction::Hovered));
 
 		app.update();
 	}
@@ -373,7 +375,7 @@ mod tests {
 
 		app.world_mut().spawn(_Window(Some(default())));
 		app.world_mut()
-			.spawn((Tooltip(_T { content: "" }), Interaction::Hovered));
+			.spawn((Tooltip::new(_T { content: "" }), Interaction::Hovered));
 
 		app.update();
 
@@ -414,7 +416,7 @@ mod tests {
 		app.world_mut().spawn(_Window(Some(default())));
 		let tooltip = app
 			.world_mut()
-			.spawn((Tooltip(_T { content: "" }), Interaction::Hovered))
+			.spawn((Tooltip::new(_T { content: "" }), Interaction::Hovered))
 			.id();
 
 		app.world_mut()
@@ -453,7 +455,7 @@ mod tests {
 
 		app.world_mut().spawn(_Window(Some(default())));
 		app.world_mut()
-			.spawn((Tooltip(_T { content: "" }), Interaction::Hovered));
+			.spawn((Tooltip::new(_T { content: "" }), Interaction::Hovered));
 
 		app.update();
 	}

@@ -1,12 +1,8 @@
 use crate::traits::{CombosDescriptor, UpdateCombos};
-use bevy::{
-	asset::Handle,
-	prelude::{Component, In, Query},
-	render::texture::Image,
-};
+use bevy::prelude::{Component, In, Query};
 
 pub(crate) fn update_combos_view<TKey, TComboOverview: Component + UpdateCombos<TKey>>(
-	combos: In<CombosDescriptor<TKey, Handle<Image>>>,
+	combos: In<CombosDescriptor<TKey>>,
 	mut combo_overviews: Query<&mut TComboOverview>,
 ) {
 	let combos = combos.0;
@@ -20,17 +16,15 @@ pub(crate) fn update_combos_view<TKey, TComboOverview: Component + UpdateCombos<
 
 #[cfg(test)]
 mod tests {
-	use crate::tools::SkillDescriptor;
-
 	use super::*;
+	use crate::components::skill_descriptor::SkillDescriptor;
 	use bevy::{
 		app::{App, Update},
-		asset::{Asset, AssetId, Handle},
-		prelude::{IntoSystem, KeyCode, Resource},
+		prelude::{default, IntoSystem, KeyCode, Resource},
 	};
 	use common::test_tools::utils::SingleThreadedApp;
 	use mockall::{automock, predicate::eq};
-	use uuid::Uuid;
+	use skills::skills::Skill;
 
 	#[derive(Component, Default, Debug)]
 	struct _ComboOverview {
@@ -39,15 +33,15 @@ mod tests {
 
 	#[automock]
 	impl UpdateCombos<KeyCode> for _ComboOverview {
-		fn update_combos(&mut self, combos: CombosDescriptor<KeyCode, Handle<Image>>) {
+		fn update_combos(&mut self, combos: CombosDescriptor<KeyCode>) {
 			self.mock.update_combos(combos)
 		}
 	}
 
 	#[derive(Resource)]
-	struct _Combos(CombosDescriptor<KeyCode, Handle<Image>>);
+	struct _Combos(CombosDescriptor<KeyCode>);
 
-	fn setup(combos: CombosDescriptor<KeyCode, Handle<Image>>) -> App {
+	fn setup(combos: CombosDescriptor<KeyCode>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
@@ -57,37 +51,39 @@ mod tests {
 		app
 	}
 
-	fn new_handle<T: Asset>() -> Handle<T> {
-		Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		})
-	}
-
 	#[test]
 	fn insert_combos_in_combo_list() {
 		let combos = vec![
 			vec![
 				SkillDescriptor {
-					name: "a1".to_owned(),
 					key_path: vec![KeyCode::KeyA],
-					icon: Some(new_handle()),
+					skill: Skill {
+						name: "a1".to_owned(),
+						..default()
+					},
 				},
 				SkillDescriptor {
-					name: "a2".to_owned(),
-					key_path: vec![KeyCode::KeyB],
-					icon: Some(new_handle()),
+					key_path: vec![KeyCode::KeyA],
+					skill: Skill {
+						name: "a2".to_owned(),
+						..default()
+					},
 				},
 			],
 			vec![
 				SkillDescriptor {
-					name: "b1".to_owned(),
-					key_path: vec![KeyCode::KeyC],
-					icon: Some(new_handle()),
+					key_path: vec![KeyCode::KeyA],
+					skill: Skill {
+						name: "b1".to_owned(),
+						..default()
+					},
 				},
 				SkillDescriptor {
-					name: "b2".to_owned(),
-					key_path: vec![KeyCode::KeyD],
-					icon: Some(new_handle()),
+					key_path: vec![KeyCode::KeyA],
+					skill: Skill {
+						name: "b2".to_owned(),
+						..default()
+					},
 				},
 			],
 		];

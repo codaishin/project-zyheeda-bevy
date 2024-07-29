@@ -1,5 +1,4 @@
-pub(crate) mod skill_descriptor;
-pub(crate) mod skill_select;
+pub(crate) mod skill;
 
 use crate::traits::{
 	get_node::GetNode,
@@ -21,8 +20,17 @@ use bevy::{
 };
 use std::{marker::PhantomData, time::Duration};
 
-#[derive(Component)]
-pub(crate) struct Tooltip<T>(pub T);
+#[derive(Component, Debug, PartialEq, Clone)]
+pub(crate) struct Tooltip<T>(T);
+
+impl<T> Tooltip<T>
+where
+	Tooltip<T>: GetNode + InstantiateContentOn,
+{
+	pub(crate) fn new(value: T) -> Self {
+		Tooltip(value)
+	}
+}
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct TooltipUI<T> {

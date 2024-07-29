@@ -2,6 +2,7 @@ mod components;
 mod systems;
 mod tools;
 mod traits;
+mod visualization;
 
 #[cfg(debug_assertions)]
 mod debug;
@@ -21,7 +22,7 @@ use components::{
 	inventory_screen::InventoryScreen,
 	key_select::KeySelect,
 	quickbar_panel::QuickbarPanel,
-	skill_select::SkillSelect,
+	skill_descriptor::SkillDescriptor,
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
 	ui_overlay::UIOverlay,
 };
@@ -44,6 +45,7 @@ use systems::{
 		update_combos_view::update_combos_view,
 		update_combos_view_key_labels::update_combos_view_key_labels,
 		update_combos_view_new_skills::update_combos_view_new_skills,
+		visualize_invalid_skill::visualize_invalid_skill,
 	},
 	conditions::{added::added, changed::changed, either::either},
 	dad::{drag::drag, drop::drop},
@@ -55,6 +57,7 @@ use systems::{
 		skill_select_dropdown::skill_select_dropdown,
 		spawn_focused::dropdown_spawn_focused,
 	},
+	image_color::image_color,
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	set_state::set_state,
@@ -72,7 +75,7 @@ use systems::{
 		update_label_text::update_label_text,
 	},
 };
-use tools::{menu_state::MenuState, SkillDescriptor};
+use tools::menu_state::MenuState;
 use traits::{
 	get_node::GetNode,
 	instantiate_content_on::InstantiateContentOn,
@@ -80,6 +83,7 @@ use traits::{
 	RootStyle,
 	UI,
 };
+use visualization::unusable::Unusable;
 
 type SlotKeyMap = KeyMap<SlotKey, KeyCode>;
 
@@ -156,6 +160,7 @@ impl Plugin for IngameMenuPlugin {
 		ui_overlay_systems(app);
 		combo_overview_systems(app);
 		inventory_screen_systems(app);
+		general_systems(app);
 
 		#[cfg(debug_assertions)]
 		{
@@ -202,10 +207,9 @@ fn ui_overlay_systems(app: &mut App) {
 
 fn combo_overview_systems(app: &mut App) {
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
-		.add_dropdown::<SkillSelect>()
+		.add_dropdown::<SkillDescriptor>()
 		.add_dropdown::<KeySelect>()
-		.add_tooltip::<SkillSelect>()
-		.add_tooltip::<SkillDescriptor<KeyCode, Handle<Image>>>()
+		.add_tooltip::<Skill>()
 		.add_systems(
 			Update,
 			get_combos::<KeyCode, Combos>
@@ -216,6 +220,7 @@ fn combo_overview_systems(app: &mut App) {
 		.add_systems(
 			Update,
 			(
+				visualize_invalid_skill::<Player, Slots, KeyCode, SlotKeyMap, Unusable>,
 				skill_select_dropdown::<KeyCode, SlotKey, SlotKeyMap, Slots<Handle<Skill>>>,
 				empty_skill_key_select_dropdown::<KeyCode, SlotKey, SlotKeyMap>,
 				update_combos_view_key_labels::<LanguageServer>,
@@ -247,4 +252,8 @@ fn inventory_screen_systems(app: &mut App) {
 			Update,
 			(swap_equipped_items.pipe(log_many), swap_inventory_items),
 		);
+}
+
+fn general_systems(app: &mut App) {
+	app.add_systems(Update, image_color);
 }

@@ -4,11 +4,11 @@ pub(crate) mod inventory_panel;
 pub(crate) mod inventory_screen;
 pub(crate) mod key_select;
 pub(crate) mod quickbar_panel;
-pub(crate) mod skill_select;
+pub(crate) mod skill_descriptor;
 pub(crate) mod tooltip;
 pub(crate) mod ui_overlay;
 
-use bevy::{ecs::component::Component, prelude::Entity};
+use bevy::{color::Color, ecs::component::Component, prelude::Entity};
 use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
@@ -48,3 +48,6 @@ pub(crate) struct EmptySkillKeySelectDropdownCommand<TKey> {
 	pub(crate) target: Entity,
 	pub(crate) key_path: Vec<TKey>,
 }
+
+#[derive(Component, Debug, PartialEq)]
+pub(crate) struct ImageColorCommand(pub(crate) Color);

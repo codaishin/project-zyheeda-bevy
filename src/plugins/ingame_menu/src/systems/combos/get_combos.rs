@@ -1,8 +1,7 @@
-use crate::{tools::SkillDescriptor, traits::CombosDescriptor};
+use crate::{components::skill_descriptor::SkillDescriptor, traits::CombosDescriptor};
 use bevy::{
-	asset::Handle,
 	ecs::world::Ref,
-	prelude::{Component, Image, Query, With},
+	prelude::{Component, Query, With},
 };
 use common::components::Player;
 use skills::{
@@ -13,7 +12,7 @@ use skills::{
 
 pub(crate) fn get_combos<TKey: From<SlotKey> + Clone, TCombos: Component + GetCombos>(
 	players: Query<Ref<TCombos>, With<Player>>,
-) -> CombosDescriptor<TKey, Handle<Image>> {
+) -> CombosDescriptor<TKey> {
 	let Ok(combos) = players.get_single() else {
 		return vec![];
 	};
@@ -21,19 +20,20 @@ pub(crate) fn get_combos<TKey: From<SlotKey> + Clone, TCombos: Component + GetCo
 	combos.combos().iter().map(combo_descriptor).collect()
 }
 
-fn combo_descriptor<TKey: From<SlotKey> + Clone>(
-	combo: &Combo,
-) -> Vec<SkillDescriptor<TKey, Handle<Image>>> {
-	combo.iter().map(skill_descriptor).collect::<Vec<_>>()
+fn combo_descriptor<TKey: From<SlotKey> + Clone>(combo: &Combo) -> Vec<SkillDescriptor<TKey>> {
+	combo
+		.iter()
+		.cloned()
+		.map(skill_descriptor)
+		.collect::<Vec<_>>()
 }
 
 fn skill_descriptor<TKey: From<SlotKey> + Clone>(
-	(key_path, skill): &(Vec<SlotKey>, &Skill),
-) -> SkillDescriptor<TKey, Handle<Image>> {
+	(key_path, skill): (Vec<SlotKey>, &Skill),
+) -> SkillDescriptor<TKey> {
 	SkillDescriptor {
-		name: skill.name.clone(),
+		skill: skill.clone(),
 		key_path: key_path.iter().cloned().map(TKey::from).collect(),
-		icon: skill.icon.clone(),
 	}
 }
 
@@ -42,7 +42,6 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		asset::{Asset, AssetId},
 		prelude::{Commands, In, IntoSystem, Resource},
 		utils::default,
 	};
@@ -51,7 +50,6 @@ mod tests {
 		test_tools::utils::SingleThreadedApp,
 	};
 	use skills::{skills::Skill, traits::Combo};
-	use uuid::Uuid;
 
 	#[derive(Debug, PartialEq, Clone)]
 	enum _Key {
@@ -86,38 +84,20 @@ mod tests {
 	}
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(CombosDescriptor<_Key, Handle<Image>>);
+	struct _Result(CombosDescriptor<_Key>);
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
 			get_combos::<_Key, _Combos>.pipe(
-				|combos: In<CombosDescriptor<_Key, Handle<Image>>>, mut commands: Commands| {
+				|combos: In<CombosDescriptor<_Key>>, mut commands: Commands| {
 					commands.insert_resource(_Result(combos.0))
 				},
 			),
 		);
 
 		app
-	}
-
-	fn get_handle<T: Asset>(name: &str) -> Handle<T> {
-		match name {
-			"a/1" => Handle::Weak(AssetId::Uuid {
-				uuid: Uuid::from_u128(0x17afa6e0_f072_47ad_b604_9a29111a59fe),
-			}),
-			"a/2" => Handle::Weak(AssetId::Uuid {
-				uuid: Uuid::from_u128(0x4f16f9ad_c998_4082_bebd_53864cb51e51),
-			}),
-			"b/1" => Handle::Weak(AssetId::Uuid {
-				uuid: Uuid::from_u128(0x60fbff89_cb91_406a_bd78_5124b1bfbbc2),
-			}),
-			"b/2" => Handle::Weak(AssetId::Uuid {
-				uuid: Uuid::from_u128(0xe8c2c4f5_0a4a_4fd0_99eb_a8098ec0b42b),
-			}),
-			_ => Handle::default(),
-		}
 	}
 
 	#[test]
@@ -131,7 +111,6 @@ mod tests {
 						vec![SlotKey::Hand(Side::Main)],
 						Skill {
 							name: "a1".to_owned(),
-							icon: Some(get_handle("a/1")),
 							..default()
 						},
 					),
@@ -139,7 +118,6 @@ mod tests {
 						vec![SlotKey::Hand(Side::Off)],
 						Skill {
 							name: "a2".to_owned(),
-							icon: Some(get_handle("a/2")),
 							..default()
 						},
 					),
@@ -149,7 +127,6 @@ mod tests {
 						vec![SlotKey::Hand(Side::Off)],
 						Skill {
 							name: "b1".to_owned(),
-							icon: Some(get_handle("b/1")),
 							..default()
 						},
 					),
@@ -157,7 +134,6 @@ mod tests {
 						vec![SlotKey::Hand(Side::Main)],
 						Skill {
 							name: "b2".to_owned(),
-							icon: Some(get_handle("b/2")),
 							..default()
 						},
 					),
@@ -173,26 +149,34 @@ mod tests {
 			&_Result(vec![
 				vec![
 					SkillDescriptor {
-						name: "a1".to_owned(),
 						key_path: vec![_Key::Main],
-						icon: Some(get_handle("a/1")),
+						skill: Skill {
+							name: "a1".to_owned(),
+							..default()
+						},
 					},
 					SkillDescriptor {
-						name: "a2".to_owned(),
 						key_path: vec![_Key::Off],
-						icon: Some(get_handle("a/2")),
+						skill: Skill {
+							name: "a2".to_owned(),
+							..default()
+						}
 					}
 				],
 				vec![
 					SkillDescriptor {
-						name: "b1".to_owned(),
 						key_path: vec![_Key::Off],
-						icon: Some(get_handle("b/1")),
+						skill: Skill {
+							name: "b1".to_owned(),
+							..default()
+						}
 					},
 					SkillDescriptor {
-						name: "b2".to_owned(),
 						key_path: vec![_Key::Main],
-						icon: Some(get_handle("b/2")),
+						skill: Skill {
+							name: "b2".to_owned(),
+							..default()
+						}
 					}
 				]
 			]),
@@ -209,7 +193,6 @@ mod tests {
 					vec![SlotKey::Hand(Side::Main)],
 					Skill {
 						name: "a1".to_owned(),
-						icon: Some(get_handle("a/1")),
 						..default()
 					},
 				),
@@ -217,7 +200,6 @@ mod tests {
 					vec![SlotKey::Hand(Side::Off)],
 					Skill {
 						name: "a2".to_owned(),
-						icon: Some(get_handle("a/2")),
 						..default()
 					},
 				),
@@ -227,7 +209,6 @@ mod tests {
 					vec![SlotKey::Hand(Side::Off)],
 					Skill {
 						name: "b1".to_owned(),
-						icon: Some(get_handle("b/1")),
 						..default()
 					},
 				),
@@ -235,7 +216,6 @@ mod tests {
 					vec![SlotKey::Hand(Side::Main)],
 					Skill {
 						name: "b2".to_owned(),
-						icon: Some(get_handle("b/2")),
 						..default()
 					},
 				),
