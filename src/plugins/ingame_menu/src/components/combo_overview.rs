@@ -95,11 +95,39 @@ impl ComboOverview {
 		}
 	}
 
+	pub(crate) fn delete_button_offset_container() -> impl Bundle {
+		NodeBundle {
+			style: Style {
+				position_type: PositionType::Absolute,
+				bottom: Val::Px(-4.0),
+				right: Val::Px(-4.0),
+				..default()
+			},
+			..default()
+		}
+	}
+
 	pub(crate) fn skill_key_button_bundle() -> impl Bundle {
 		ButtonBundle {
 			style: Style {
 				width: Val::Px(50.0),
 				height: Val::Px(25.0),
+				border: UiRect::all(Val::Px(2.0)),
+				margin: UiRect::all(Val::Px(-2.0)),
+				justify_content: JustifyContent::Center,
+				..default()
+			},
+			background_color: DEFAULT_PANEL_COLORS.filled.into(),
+			border_color: DEFAULT_PANEL_COLORS.text.into(),
+			..default()
+		}
+	}
+
+	pub(crate) fn delete_button_bundle() -> impl Bundle {
+		ButtonBundle {
+			style: Style {
+				width: Val::Px(20.0),
+				height: Val::Px(20.0),
 				border: UiRect::all(Val::Px(2.0)),
 				margin: UiRect::all(Val::Px(-2.0)),
 				justify_content: JustifyContent::Center,
@@ -127,6 +155,17 @@ impl ComboOverview {
 			key,
 			TextStyle {
 				font_size: 50.,
+				color: DEFAULT_PANEL_COLORS.text,
+				..default()
+			},
+		)
+	}
+
+	pub(crate) fn delete_button_text(key: &str) -> impl Bundle {
+		TextBundle::from_section(
+			key,
+			TextStyle {
+				font_size: 15.,
 				color: DEFAULT_PANEL_COLORS.text,
 				..default()
 			},
@@ -248,6 +287,15 @@ fn add_skill(parent: &mut ChildBuilder, descriptor: &SkillDescriptor<KeyCode>) {
 								.spawn(ComboOverview::skill_key_button_bundle())
 								.with_children(|parent| {
 									parent.spawn(ComboOverview::skill_key_text(&skill_key));
+								});
+						});
+					parent
+						.spawn(ComboOverview::delete_button_offset_container())
+						.with_children(|parent| {
+							parent
+								.spawn(ComboOverview::delete_button_bundle())
+								.with_children(|parent| {
+									parent.spawn(ComboOverview::delete_button_text("X"));
 								});
 						});
 				});
