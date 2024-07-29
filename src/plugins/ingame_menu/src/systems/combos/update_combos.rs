@@ -1,4 +1,4 @@
-use crate::components::skill_select::SkillSelect;
+use crate::components::skill_descriptor::SkillDescriptor;
 use bevy::{
 	prelude::{Component, Query, With},
 	ui::Interaction,
@@ -7,7 +7,7 @@ use skills::{items::slot_key::SlotKey, skills::Skill, traits::UpdateConfig};
 
 pub(crate) fn update_combos<TAgent, TCombos>(
 	mut agents: Query<&mut TCombos, With<TAgent>>,
-	skill_selects: Query<(&SkillSelect, &Interaction)>,
+	skill_selects: Query<(&SkillDescriptor, &Interaction)>,
 ) where
 	TAgent: Component,
 	TCombos: Component + UpdateConfig<Vec<SlotKey>, Option<Skill>>,
@@ -16,12 +16,12 @@ pub(crate) fn update_combos<TAgent, TCombos>(
 		return;
 	};
 
-	for (SkillSelect { skill, key_path }, ..) in skill_selects.iter().filter(pressed) {
+	for (SkillDescriptor { skill, key_path }, ..) in skill_selects.iter().filter(pressed) {
 		combos.update_config(key_path, Some(skill.clone()));
 	}
 }
 
-fn pressed((.., interaction): &(&SkillSelect, &Interaction)) -> bool {
+fn pressed((.., interaction): &(&SkillDescriptor, &Interaction)) -> bool {
 	interaction == &&Interaction::Pressed
 }
 
@@ -77,7 +77,7 @@ mod tests {
 
 		app.world_mut().spawn((_Agent, combos));
 		app.world_mut().spawn((
-			SkillSelect {
+			SkillDescriptor {
 				skill: Skill {
 					name: "my skill".to_owned(),
 					..default()
@@ -98,14 +98,14 @@ mod tests {
 
 		app.world_mut().spawn((_Agent, combos));
 		app.world_mut().spawn((
-			SkillSelect {
+			SkillDescriptor {
 				skill: Skill::default(),
 				key_path: vec![SlotKey::Hand(Side::Off)],
 			},
 			Interaction::Hovered,
 		));
 		app.world_mut().spawn((
-			SkillSelect {
+			SkillDescriptor {
 				skill: Skill::default(),
 				key_path: vec![SlotKey::Hand(Side::Off)],
 			},
@@ -123,7 +123,7 @@ mod tests {
 
 		app.world_mut().spawn(combos);
 		app.world_mut().spawn((
-			SkillSelect {
+			SkillDescriptor {
 				skill: Skill::default(),
 				key_path: vec![SlotKey::Hand(Side::Off)],
 			},

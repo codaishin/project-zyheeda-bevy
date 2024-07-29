@@ -1,4 +1,4 @@
-use crate::{tools::SkillDescriptor, traits::CombosDescriptor};
+use crate::{components::skill_descriptor::SkillDescriptor, traits::CombosDescriptor};
 use bevy::{
 	ecs::world::Ref,
 	prelude::{Component, Query, With},

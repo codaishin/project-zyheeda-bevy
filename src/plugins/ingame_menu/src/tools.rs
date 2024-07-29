@@ -3,13 +3,6 @@
 pub(crate) mod menu_state;
 
 use common::tools::Index;
-use skills::skills::Skill;
-
-#[derive(Debug, PartialEq, Clone)]
-pub(crate) struct SkillDescriptor<TKey> {
-	pub(crate) key_path: Vec<TKey>,
-	pub(crate) skill: Skill,
-}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PanelState {

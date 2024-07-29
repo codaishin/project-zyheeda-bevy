@@ -21,7 +21,7 @@ use components::{
 	inventory_screen::InventoryScreen,
 	key_select::KeySelect,
 	quickbar_panel::QuickbarPanel,
-	skill_select::SkillSelect,
+	skill_descriptor::SkillDescriptor,
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
 	ui_overlay::UIOverlay,
 };
@@ -202,7 +202,7 @@ fn ui_overlay_systems(app: &mut App) {
 
 fn combo_overview_systems(app: &mut App) {
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
-		.add_dropdown::<SkillSelect>()
+		.add_dropdown::<SkillDescriptor>()
 		.add_dropdown::<KeySelect>()
 		.add_tooltip::<Skill>()
 		.add_systems(

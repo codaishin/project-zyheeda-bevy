@@ -4,7 +4,7 @@ pub mod instantiate_content_on;
 pub mod set;
 pub mod tooltip_ui_control;
 
-use crate::tools::{Layout, SkillDescriptor};
+use crate::{components::skill_descriptor::SkillDescriptor, tools::Layout};
 use bevy::ui::Style;
 use get_node::GetNode;
 use instantiate_content_on::InstantiateContentOn;

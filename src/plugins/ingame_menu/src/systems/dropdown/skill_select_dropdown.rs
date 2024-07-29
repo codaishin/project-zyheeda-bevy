@@ -1,6 +1,6 @@
 use crate::components::{
 	dropdown::Dropdown,
-	skill_select::SkillSelect,
+	skill_descriptor::SkillDescriptor,
 	SkillSelectDropdownCommand,
 };
 use bevy::{
@@ -52,7 +52,7 @@ fn compatible_skills<
 	slots: &TEquipment,
 	skills: &Res<Assets<Skill>>,
 	key_map: &TMap,
-) -> Option<Vec<SkillSelect<TEquipmentKey>>> {
+) -> Option<Vec<SkillDescriptor<TEquipmentKey>>> {
 	let key_path = command
 		.key_path
 		.iter()
@@ -70,7 +70,7 @@ fn compatible_skills<
 				.next()
 				.is_some()
 		})
-		.map(|(_, skill)| SkillSelect {
+		.map(|(_, skill)| SkillDescriptor {
 			skill: skill.clone(),
 			key_path: key_path.clone(),
 		})
@@ -188,7 +188,7 @@ mod tests {
 		assert_eq!(
 			Some(&Dropdown {
 				items: vec![
-					SkillSelect {
+					SkillDescriptor {
 						skill: Skill {
 							name: "skill a".to_owned(),
 							is_usable_with: HashSet::from([ItemType::Pistol]),
@@ -197,7 +197,7 @@ mod tests {
 						},
 						key_path: vec![_EquipmentKey],
 					},
-					SkillSelect {
+					SkillDescriptor {
 						skill: Skill {
 							name: "skill b".to_owned(),
 							is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
@@ -208,7 +208,7 @@ mod tests {
 					}
 				]
 			}),
-			dropdown.get::<Dropdown<SkillSelect<_EquipmentKey>>>()
+			dropdown.get::<Dropdown<SkillDescriptor<_EquipmentKey>>>()
 		)
 	}
 
@@ -256,7 +256,10 @@ mod tests {
 
 		let dropdown = app.world().entity(dropdown);
 
-		assert_eq!(None, dropdown.get::<Dropdown<SkillSelect<_EquipmentKey>>>());
+		assert_eq!(
+			None,
+			dropdown.get::<Dropdown<SkillDescriptor<_EquipmentKey>>>()
+		);
 	}
 
 	#[test]
