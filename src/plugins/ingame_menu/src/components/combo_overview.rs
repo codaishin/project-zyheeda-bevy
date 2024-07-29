@@ -1,6 +1,7 @@
 use super::{
 	skill_descriptor::SkillDescriptor,
 	tooltip::Tooltip,
+	DeleteSkill,
 	EmptySkillKeySelectDropdownCommand,
 	SkillSelectDropdownCommand,
 };
@@ -293,7 +294,12 @@ fn add_skill(parent: &mut ChildBuilder, descriptor: &SkillDescriptor<KeyCode>) {
 						.spawn(ComboOverview::delete_button_offset_container())
 						.with_children(|parent| {
 							parent
-								.spawn(ComboOverview::delete_button_bundle())
+								.spawn((
+									ComboOverview::delete_button_bundle(),
+									DeleteSkill {
+										key_path: descriptor.key_path.clone(),
+									},
+								))
 								.with_children(|parent| {
 									parent.spawn(ComboOverview::delete_button_text("X"));
 								});

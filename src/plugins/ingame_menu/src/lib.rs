@@ -43,6 +43,7 @@ use systems::{
 		get_combos::get_combos,
 		update_combos::update_combos,
 		update_combos_view::update_combos_view,
+		update_combos_view_delete_skill::update_combos_view_delete_skill,
 		update_combos_view_key_labels::update_combos_view_key_labels,
 		update_combos_view_new_skills::update_combos_view_new_skills,
 		visualize_invalid_skill::visualize_invalid_skill,
@@ -225,6 +226,7 @@ fn combo_overview_systems(app: &mut App) {
 				empty_skill_key_select_dropdown::<KeyCode, SlotKey, SlotKeyMap>,
 				update_combos_view_key_labels::<LanguageServer>,
 				update_combos_view_new_skills,
+				update_combos_view_delete_skill::<Player, Combos, KeyCode, SlotKeyMap>,
 				update_combos::<Player, Combos>,
 			)
 				.run_if(in_state(MenuState::ComboOverview)),
