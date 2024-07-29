@@ -50,4 +50,9 @@ pub(crate) struct EmptySkillKeySelectDropdownCommand<TKey> {
 }
 
 #[derive(Component, Debug, PartialEq)]
+pub(crate) struct DeleteSkill<TKey> {
+	pub(crate) key_path: Vec<TKey>,
+}
+
+#[derive(Component, Debug, PartialEq)]
 pub(crate) struct ImageColorCommand(pub(crate) Color);
