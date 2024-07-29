@@ -57,6 +57,7 @@ use systems::{
 		skill_select_dropdown::skill_select_dropdown,
 		spawn_focused::dropdown_spawn_focused,
 	},
+	image_color::image_color,
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	set_state::set_state,
@@ -159,6 +160,7 @@ impl Plugin for IngameMenuPlugin {
 		ui_overlay_systems(app);
 		combo_overview_systems(app);
 		inventory_screen_systems(app);
+		general_systems(app);
 
 		#[cfg(debug_assertions)]
 		{
@@ -250,4 +252,8 @@ fn inventory_screen_systems(app: &mut App) {
 			Update,
 			(swap_equipped_items.pipe(log_many), swap_inventory_items),
 		);
+}
+
+fn general_systems(app: &mut App) {
+	app.add_systems(Update, image_color);
 }
