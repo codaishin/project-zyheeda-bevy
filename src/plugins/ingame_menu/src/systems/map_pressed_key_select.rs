@@ -1,11 +1,11 @@
-use crate::components::key_select::{KeySelect, ReKey};
+use crate::components::key_select::{KeySelect, ReKeySkill};
 use bevy::{
 	prelude::{Query, Res, Resource},
 	ui::Interaction,
 };
 use common::traits::map_value::TryMapBackwards;
 
-type KeySelectReKey<TEquipmentKey> = KeySelect<ReKey<TEquipmentKey>, TEquipmentKey>;
+type KeySelectReKey<TEquipmentKey> = KeySelect<ReKeySkill<TEquipmentKey>, TEquipmentKey>;
 
 pub(crate) fn map_pressed_key_select<TVisualKey, TEquipmentKey, TMap>(
 	key_selects: Query<(&KeySelectReKey<TVisualKey>, &Interaction)>,
@@ -25,7 +25,7 @@ where
 
 	match key_path.len() == pressed.key_path.len() {
 		true => Some(KeySelectReKey {
-			extra: ReKey { to },
+			extra: ReKeySkill { to },
 			key_path,
 			key_button: pressed.key_button,
 		}),
@@ -96,7 +96,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			KeySelect {
-				extra: ReKey { to: _VisualKey::B },
+				extra: ReKeySkill { to: _VisualKey::B },
 				key_button: Entity::from_raw(101),
 				key_path: vec![_VisualKey::A, _VisualKey::B, _VisualKey::A],
 			},
@@ -109,7 +109,7 @@ mod tests {
 
 		assert_eq!(
 			&_Result(Some(KeySelect {
-				extra: ReKey {
+				extra: ReKeySkill {
 					to: _EquipmentKey::B
 				},
 				key_button: Entity::from_raw(101),
@@ -124,7 +124,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			KeySelect {
-				extra: ReKey {
+				extra: ReKeySkill {
 					to: _VisualKey::Unmapped,
 				},
 				key_button: Entity::from_raw(101),
@@ -145,7 +145,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			KeySelect {
-				extra: ReKey { to: _VisualKey::A },
+				extra: ReKeySkill { to: _VisualKey::A },
 				key_button: Entity::from_raw(101),
 				key_path: vec![_VisualKey::A, _VisualKey::Unmapped, _VisualKey::A],
 			},
@@ -164,7 +164,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			KeySelect {
-				extra: ReKey { to: _VisualKey::A },
+				extra: ReKeySkill { to: _VisualKey::A },
 				key_button: Entity::from_raw(101),
 				key_path: vec![_VisualKey::A, _VisualKey::B, _VisualKey::A],
 			},
@@ -183,7 +183,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			KeySelect {
-				extra: ReKey { to: _VisualKey::A },
+				extra: ReKeySkill { to: _VisualKey::A },
 				key_button: Entity::from_raw(101),
 				key_path: vec![_VisualKey::A, _VisualKey::B, _VisualKey::A],
 			},

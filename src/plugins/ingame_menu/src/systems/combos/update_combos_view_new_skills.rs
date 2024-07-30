@@ -1,5 +1,5 @@
 use crate::components::{
-	key_select::{EmptySkillButton, KeySelect},
+	key_select::{EmptySkill, KeySelect},
 	SkillSelectDropdownInsertCommand,
 };
 use bevy::{
@@ -11,7 +11,7 @@ use common::traits::try_insert_on::TryInsertOn;
 
 pub(crate) fn update_combos_view_new_skills(
 	mut commands: Commands,
-	key_selects: Query<(&KeySelect<EmptySkillButton>, &Interaction)>,
+	key_selects: Query<(&KeySelect<EmptySkill>, &Interaction)>,
 	mut texts: Query<(&mut Text, &Parent)>,
 ) {
 	for (key_select, ..) in key_selects.iter().filter(pressed) {
@@ -20,13 +20,13 @@ pub(crate) fn update_combos_view_new_skills(
 	}
 }
 
-fn pressed((.., interaction): &(&KeySelect<EmptySkillButton>, &Interaction)) -> bool {
+fn pressed((.., interaction): &(&KeySelect<EmptySkill>, &Interaction)) -> bool {
 	interaction == &&Interaction::Pressed
 }
 
-fn insert_skill_dropdown(commands: &mut Commands, key_select: &KeySelect<EmptySkillButton>) {
+fn insert_skill_dropdown(commands: &mut Commands, key_select: &KeySelect<EmptySkill>) {
 	commands.try_insert_on(
-		key_select.extra.entity,
+		key_select.extra.button_entity,
 		SkillSelectDropdownInsertCommand {
 			key_path: key_select.key_path.clone(),
 		},
@@ -35,7 +35,7 @@ fn insert_skill_dropdown(commands: &mut Commands, key_select: &KeySelect<EmptySk
 
 fn set_skill_label(
 	texts: &mut Query<(&mut Text, &Parent)>,
-	key_select: &KeySelect<EmptySkillButton>,
+	key_select: &KeySelect<EmptySkill>,
 ) -> Option<()> {
 	let (mut text, ..) = get_text(texts, key_select)?;
 	let section = text.sections.get_mut(0)?;
@@ -47,11 +47,11 @@ fn set_skill_label(
 
 fn get_text<'a>(
 	texts: &'a mut Query<(&mut Text, &Parent)>,
-	key_select: &'a KeySelect<EmptySkillButton>,
+	key_select: &'a KeySelect<EmptySkill>,
 ) -> Option<(Mut<'a, Text>, &'a Parent)> {
 	texts
 		.iter_mut()
-		.find(|(_, parent)| parent.get() == key_select.extra.entity)
+		.find(|(_, parent)| parent.get() == key_select.extra.button_entity)
 }
 
 #[cfg(test)]
@@ -80,8 +80,8 @@ mod tests {
 		app.world_mut().spawn((
 			Interaction::Pressed,
 			KeySelect {
-				extra: EmptySkillButton {
-					entity: skill_button,
+				extra: EmptySkill {
+					button_entity: skill_button,
 				},
 				key_button: Entity::from_raw(101),
 				key_path: vec![KeyCode::KeyA, KeyCode::KeyB],
@@ -115,8 +115,8 @@ mod tests {
 		app.world_mut().spawn((
 			Interaction::None,
 			KeySelect {
-				extra: EmptySkillButton {
-					entity: skill_button,
+				extra: EmptySkill {
+					button_entity: skill_button,
 				},
 				key_button: Entity::from_raw(101),
 				key_path: vec![KeyCode::KeyA, KeyCode::KeyB],
@@ -145,8 +145,8 @@ mod tests {
 		app.world_mut().spawn((
 			Interaction::Pressed,
 			KeySelect {
-				extra: EmptySkillButton {
-					entity: skill_button,
+				extra: EmptySkill {
+					button_entity: skill_button,
 				},
 				key_button: Entity::from_raw(101),
 				key_path: vec![KeyCode::KeyA, KeyCode::KeyB],

@@ -1,9 +1,9 @@
-use crate::components::key_select::{KeySelect, ReKey};
+use crate::components::key_select::{KeySelect, ReKeySkill};
 use bevy::prelude::{Component, In, Query, With};
 use skills::{items::slot_key::SlotKey, traits::UpdateConfig};
 
 pub(crate) fn update_combo_keys<TAgent, TCombos>(
-	key_select: In<Option<KeySelect<ReKey<SlotKey>, SlotKey>>>,
+	key_select: In<Option<KeySelect<ReKeySkill<SlotKey>, SlotKey>>>,
 	mut agents: Query<&mut TCombos, With<TAgent>>,
 ) where
 	TAgent: Component,
@@ -44,7 +44,7 @@ mod test {
 		}
 	}
 
-	fn setup(key_select: Option<KeySelect<ReKey<SlotKey>, SlotKey>>) -> App {
+	fn setup(key_select: Option<KeySelect<ReKeySkill<SlotKey>, SlotKey>>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
@@ -68,7 +68,7 @@ mod test {
 			.return_const(());
 
 		let mut app = setup(Some(KeySelect {
-			extra: ReKey {
+			extra: ReKeySkill {
 				to: SlotKey::Hand(Side::Main),
 			},
 			key_button: Entity::from_raw(444),
@@ -88,7 +88,7 @@ mod test {
 		combos.mock.expect_update_config().never().return_const(());
 
 		let mut app = setup(Some(KeySelect {
-			extra: ReKey {
+			extra: ReKeySkill {
 				to: SlotKey::Hand(Side::Main),
 			},
 			key_button: Entity::from_raw(444),

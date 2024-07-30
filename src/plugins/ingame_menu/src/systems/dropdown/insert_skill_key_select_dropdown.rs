@@ -1,6 +1,6 @@
 use crate::components::{
 	dropdown::Dropdown,
-	key_select::{KeySelect, ReKey},
+	key_select::{KeySelect, ReKeySkill},
 	KeySelectDropdownInsertCommand,
 	PreSelected,
 };
@@ -30,7 +30,7 @@ pub(crate) fn insert_skill_key_select_dropdown<TDropdownKey, TEquipmentKey, TMap
 			.map(|key| key_map.map_forward(key))
 			.filter(|key| key != &pre_selected.key)
 			.map(|key| KeySelect {
-				extra: ReKey { to: key },
+				extra: ReKeySkill { to: key },
 				key_button: entity,
 				key_path: command.key_path.clone(),
 			})
@@ -45,7 +45,7 @@ mod tests {
 	use super::*;
 	use crate::components::{
 		dropdown::Dropdown,
-		key_select::{KeySelect, ReKey},
+		key_select::{KeySelect, ReKeySkill},
 	};
 	use bevy::app::{App, Update};
 	use common::{test_tools::utils::SingleThreadedApp, traits::iteration::Iter};
@@ -120,14 +120,14 @@ mod tests {
 			Some(&Dropdown {
 				items: vec![
 					KeySelect {
-						extra: ReKey {
+						extra: ReKeySkill {
 							to: _DropdownKey::A
 						},
 						key_button: dropdown.id(),
 						key_path: vec![_DropdownKey::A, _DropdownKey::B, _DropdownKey::C,]
 					},
 					KeySelect {
-						extra: ReKey {
+						extra: ReKeySkill {
 							to: _DropdownKey::B
 						},
 						key_button: dropdown.id(),
@@ -135,7 +135,7 @@ mod tests {
 					}
 				]
 			}),
-			dropdown.get::<Dropdown<KeySelect<ReKey<_DropdownKey>, _DropdownKey>>>(),
+			dropdown.get::<Dropdown<KeySelect<ReKeySkill<_DropdownKey>, _DropdownKey>>>(),
 		)
 	}
 
@@ -159,14 +159,14 @@ mod tests {
 		assert_eq!(
 			Some(&Dropdown {
 				items: vec![KeySelect {
-					extra: ReKey {
+					extra: ReKeySkill {
 						to: _DropdownKey::A
 					},
 					key_button: dropdown.id(),
 					key_path: vec![_DropdownKey::A, _DropdownKey::B, _DropdownKey::C,]
 				}]
 			}),
-			dropdown.get::<Dropdown<KeySelect<ReKey<_DropdownKey>, _DropdownKey>>>(),
+			dropdown.get::<Dropdown<KeySelect<ReKeySkill<_DropdownKey>, _DropdownKey>>>(),
 		)
 	}
 

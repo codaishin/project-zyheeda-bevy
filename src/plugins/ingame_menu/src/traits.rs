@@ -30,3 +30,7 @@ pub(crate) trait GetLayout {
 pub(crate) trait InsertContentOn {
 	fn insert_content_on(entity: &mut EntityCommands);
 }
+
+pub(crate) trait GetKey<TKey> {
+	fn get_key<'a>(&'a self, key_path: &'a [TKey]) -> Option<&'a TKey>;
+}

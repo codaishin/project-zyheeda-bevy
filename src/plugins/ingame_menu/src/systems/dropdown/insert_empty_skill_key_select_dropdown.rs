@@ -1,6 +1,6 @@
 use crate::components::{
 	dropdown::Dropdown,
-	key_select::{EmptySkillButton, KeySelect},
+	key_select::{EmptySkill, KeySelect},
 	KeySelectDropdownInsertCommand,
 };
 use bevy::prelude::{Commands, Entity, Query, Res, Resource};
@@ -11,7 +11,7 @@ use common::traits::{
 	try_remove_from::TryRemoveFrom,
 };
 
-type InsertCommand<TDropdownKey> = KeySelectDropdownInsertCommand<EmptySkillButton, TDropdownKey>;
+type InsertCommand<TDropdownKey> = KeySelectDropdownInsertCommand<EmptySkill, TDropdownKey>;
 
 pub(crate) fn insert_empty_skill_key_select_dropdown<TDropdownKey, TEquipmentKey, TMap>(
 	mut commands: Commands,
@@ -102,8 +102,8 @@ mod tests {
 			.world_mut()
 			.spawn(InsertCommand {
 				key_path: vec![_DropdownKey::A, _DropdownKey::B, _DropdownKey::C],
-				extra: EmptySkillButton {
-					entity: Entity::from_raw(42),
+				extra: EmptySkill {
+					button_entity: Entity::from_raw(42),
 				},
 			})
 			.id();
@@ -116,8 +116,8 @@ mod tests {
 			Some(&Dropdown {
 				items: vec![
 					KeySelect {
-						extra: EmptySkillButton {
-							entity: Entity::from_raw(42)
+						extra: EmptySkill {
+							button_entity: Entity::from_raw(42)
 						},
 						key_button: dropdown.id(),
 						key_path: vec![
@@ -128,8 +128,8 @@ mod tests {
 						]
 					},
 					KeySelect {
-						extra: EmptySkillButton {
-							entity: Entity::from_raw(42)
+						extra: EmptySkill {
+							button_entity: Entity::from_raw(42)
 						},
 						key_button: dropdown.id(),
 						key_path: vec![
@@ -141,7 +141,7 @@ mod tests {
 					}
 				]
 			}),
-			dropdown.get::<Dropdown<KeySelect<EmptySkillButton, _DropdownKey>>>(),
+			dropdown.get::<Dropdown<KeySelect<EmptySkill, _DropdownKey>>>(),
 		)
 	}
 
@@ -152,8 +152,8 @@ mod tests {
 			.world_mut()
 			.spawn(InsertCommand {
 				key_path: vec![_DropdownKey::A],
-				extra: EmptySkillButton {
-					entity: Entity::from_raw(42),
+				extra: EmptySkill {
+					button_entity: Entity::from_raw(42),
 				},
 			})
 			.id();

@@ -1,5 +1,5 @@
 use super::{
-	key_select::EmptySkillButton,
+	key_select::EmptySkill,
 	skill_descriptor::SkillDescriptor,
 	tooltip::Tooltip,
 	DeleteSkill,
@@ -355,8 +355,8 @@ fn add_empty_skill(parent: &mut ChildBuilder, key_path: Vec<KeyCode>) {
 								.spawn((
 									ComboOverview::skill_key_button_bundle(),
 									KeySelectDropdownInsertCommand {
-										extra: EmptySkillButton {
-											entity: empty_skill_button,
+										extra: EmptySkill {
+											button_entity: empty_skill_button,
 										},
 										key_path,
 									},
