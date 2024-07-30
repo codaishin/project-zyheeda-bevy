@@ -41,7 +41,8 @@ use std::time::Duration;
 use systems::{
 	combos::{
 		get_combos::get_combos,
-		update_combos::update_combos,
+		update_combo_keys::update_combo_keys,
+		update_combo_skills::update_combo_skills,
 		update_combos_view::update_combos_view,
 		update_combos_view_delete_skill::update_combos_view_delete_skill,
 		update_combos_view_key_labels::update_combos_view_key_labels,
@@ -231,9 +232,9 @@ fn combo_overview_systems(app: &mut App) {
 				update_combos_view_key_labels::<LanguageServer, EmptySkillButton>,
 				update_combos_view_new_skills,
 				update_combos_view_delete_skill::<Player, Combos, KeyCode, SlotKeyMap>,
-				update_combos::<Player, Combos>,
+				update_combo_skills::<Player, Combos>,
 				map_pressed_key_select::<KeyCode, SlotKey, SlotKeyMap>
-					.pipe(|_: In<Option<KeySelect<ReKey<SlotKey>, SlotKey>>>| {}),
+					.pipe(update_combo_keys::<Player, Combos>),
 			)
 				.run_if(in_state(MenuState::ComboOverview)),
 		);

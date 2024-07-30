@@ -5,7 +5,7 @@ use bevy::{
 };
 use skills::{items::slot_key::SlotKey, skills::Skill, traits::UpdateConfig};
 
-pub(crate) fn update_combos<TAgent, TCombos>(
+pub(crate) fn update_combo_skills<TAgent, TCombos>(
 	mut agents: Query<&mut TCombos, With<TAgent>>,
 	skill_selects: Query<(&SkillDescriptor, &Interaction)>,
 ) where
@@ -53,7 +53,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, update_combos::<_Agent, _Combos>);
+		app.add_systems(Update, update_combo_skills::<_Agent, _Combos>);
 
 		app
 	}
