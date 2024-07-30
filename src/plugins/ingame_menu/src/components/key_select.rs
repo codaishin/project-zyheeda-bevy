@@ -8,6 +8,11 @@ pub(crate) struct EmptySkillButton {
 	pub(crate) entity: Entity,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub(crate) struct ReKey<TKey = KeyCode> {
+	pub(crate) to: TKey,
+}
+
 #[derive(Component, Debug, PartialEq, Clone)]
 pub(crate) struct KeySelect<TExtra, TKey = KeyCode> {
 	pub(crate) extra: TExtra,

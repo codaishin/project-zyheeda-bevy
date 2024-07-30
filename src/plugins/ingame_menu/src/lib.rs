@@ -20,7 +20,7 @@ use components::{
 	dropdown::Dropdown,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
-	key_select::{EmptySkillButton, KeySelect},
+	key_select::{EmptySkillButton, KeySelect, ReKey},
 	quickbar_panel::QuickbarPanel,
 	skill_descriptor::SkillDescriptor,
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
@@ -55,6 +55,7 @@ use systems::{
 		despawn_all::dropdown_despawn_all,
 		detect_focus_change::dropdown_detect_focus_change,
 		insert_empty_skill_key_select_dropdown::insert_empty_skill_key_select_dropdown,
+		insert_skill_key_select_dropdown::insert_skill_key_select_dropdown,
 		insert_skill_select_dropdown::insert_skill_select_dropdown,
 		spawn_focused::dropdown_spawn_focused,
 	},
@@ -210,6 +211,7 @@ fn combo_overview_systems(app: &mut App) {
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
 		.add_dropdown::<SkillDescriptor>()
 		.add_dropdown::<KeySelect<EmptySkillButton>>()
+		.add_dropdown::<KeySelect<ReKey>>()
 		.add_tooltip::<Skill>()
 		.add_systems(
 			Update,
@@ -223,6 +225,7 @@ fn combo_overview_systems(app: &mut App) {
 			(
 				visualize_invalid_skill::<Player, Slots, KeyCode, SlotKeyMap, Unusable>,
 				insert_skill_select_dropdown::<KeyCode, SlotKey, SlotKeyMap, Slots<Handle<Skill>>>,
+				insert_skill_key_select_dropdown::<KeyCode, SlotKey, SlotKeyMap>,
 				insert_empty_skill_key_select_dropdown::<KeyCode, SlotKey, SlotKeyMap>,
 				update_combos_view_key_labels::<LanguageServer, EmptySkillButton>,
 				update_combos_view_new_skills,

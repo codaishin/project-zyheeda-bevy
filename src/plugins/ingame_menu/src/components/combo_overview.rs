@@ -4,6 +4,7 @@ use super::{
 	tooltip::Tooltip,
 	DeleteSkill,
 	KeySelectDropdownInsertCommand,
+	PreSelected,
 	SkillSelectDropdownInsertCommand,
 };
 use crate::traits::{
@@ -295,18 +296,27 @@ fn add_skill(
 }
 
 fn with_key_button(descriptor: &SkillDescriptor<KeyCode>, parent: &mut ChildBuilder) {
-	let skill_key = match descriptor.key_path.last().map(English::ui_text) {
-		Some(UIText::String(key)) => key,
-		None | Some(UIText::Unmapped) => String::from("?"),
+	let Some(skill_key) = descriptor.key_path.last() else {
+		return;
+	};
+	let skill_key_text = match English::ui_text(skill_key) {
+		UIText::String(key) => key,
+		UIText::Unmapped => String::from("?"),
 	};
 
 	parent
 		.spawn(ComboOverview::skill_key_button_offset_container())
 		.with_children(|parent| {
 			parent
-				.spawn(ComboOverview::skill_key_button_bundle())
+				.spawn((
+					ComboOverview::skill_key_button_bundle(),
+					KeySelectDropdownInsertCommand {
+						extra: PreSelected { key: *skill_key },
+						key_path: descriptor.key_path.clone(),
+					},
+				))
 				.with_children(|parent| {
-					parent.spawn(ComboOverview::skill_key_text(&skill_key));
+					parent.spawn(ComboOverview::skill_key_text(&skill_key_text));
 				});
 		});
 }
