@@ -61,6 +61,7 @@ use systems::{
 	},
 	image_color::image_color,
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
+	map_pressed_key_select::map_pressed_key_select,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	set_state::set_state,
 	set_state_from_input::set_state_from_input,
@@ -231,6 +232,8 @@ fn combo_overview_systems(app: &mut App) {
 				update_combos_view_new_skills,
 				update_combos_view_delete_skill::<Player, Combos, KeyCode, SlotKeyMap>,
 				update_combos::<Player, Combos>,
+				map_pressed_key_select::<KeyCode, SlotKey, SlotKeyMap>
+					.pipe(|_: In<Option<KeySelect<ReKey<SlotKey>, SlotKey>>>| {}),
 			)
 				.run_if(in_state(MenuState::ComboOverview)),
 		);
