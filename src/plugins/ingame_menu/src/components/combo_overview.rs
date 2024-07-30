@@ -1,9 +1,10 @@
 use super::{
+	key_select::EmptySkillButton,
 	skill_descriptor::SkillDescriptor,
 	tooltip::Tooltip,
 	DeleteSkill,
-	EmptySkillKeySelectDropdownCommand,
-	SkillSelectDropdownCommand,
+	KeySelectDropdownInsertCommand,
+	SkillSelectDropdownInsertCommand,
 };
 use crate::traits::{
 	colors::DEFAULT_PANEL_COLORS,
@@ -281,7 +282,7 @@ fn add_skill(
 			parent
 				.spawn((
 					ComboOverview::skill_button_bundle(skill_icon).with(descriptor),
-					SkillSelectDropdownCommand {
+					SkillSelectDropdownInsertCommand {
 						key_path: descriptor.key_path.clone(),
 					},
 				))
@@ -334,7 +335,7 @@ fn add_empty_skill(parent: &mut ChildBuilder, key_path: Vec<KeyCode>) {
 			parent
 				.spawn(ComboOverview::skill_button_bundle(None))
 				.with_children(|parent| {
-					let target = parent.parent_entity();
+					let empty_skill_button = parent.parent_entity();
 
 					parent.spawn(ComboOverview::new_skill_text(""));
 					parent
@@ -343,7 +344,12 @@ fn add_empty_skill(parent: &mut ChildBuilder, key_path: Vec<KeyCode>) {
 							parent
 								.spawn((
 									ComboOverview::skill_key_button_bundle(),
-									EmptySkillKeySelectDropdownCommand { target, key_path },
+									KeySelectDropdownInsertCommand {
+										extra: EmptySkillButton {
+											entity: empty_skill_button,
+										},
+										key_path,
+									},
 								))
 								.with_children(|parent| {
 									parent.spawn(ComboOverview::skill_key_text("+"));

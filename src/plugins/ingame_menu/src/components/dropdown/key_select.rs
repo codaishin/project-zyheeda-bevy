@@ -9,7 +9,7 @@ use bevy::{
 	ui::{PositionType, Style, Val},
 };
 
-impl RootStyle for Dropdown<KeySelect> {
+impl<TExtra> RootStyle for Dropdown<KeySelect<TExtra>> {
 	fn root_style(&self) -> Style {
 		Style {
 			position_type: PositionType::Absolute,
@@ -20,7 +20,7 @@ impl RootStyle for Dropdown<KeySelect> {
 	}
 }
 
-impl GetLayout for Dropdown<KeySelect> {
+impl<TExtra> GetLayout for Dropdown<KeySelect<TExtra>> {
 	fn layout(&self) -> Layout {
 		Layout::SINGLE_COLUMN
 	}

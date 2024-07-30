@@ -6,23 +6,26 @@ use bevy::{
 };
 use common::traits::get_ui_text::GetUiTextFor;
 
-pub(crate) fn update_combos_view_key_labels<TLanguageServer: GetUiTextFor<KeyCode> + Resource>(
-	key_selects: Query<(&KeySelect, &Interaction)>,
+pub(crate) fn update_combos_view_key_labels<TLanguageServer, TExtra>(
+	key_selects: Query<(&KeySelect<TExtra>, &Interaction)>,
 	language_server: Res<TLanguageServer>,
 	mut texts: Query<(&mut Text, &Parent)>,
-) {
+) where
+	TLanguageServer: GetUiTextFor<KeyCode> + Resource,
+	TExtra: Clone + Sync + Send + 'static,
+{
 	for (key_select, ..) in key_selects.iter().filter(pressed) {
 		set_key_label(&mut texts, key_select, &language_server);
 	}
 }
 
-fn pressed((.., interaction): &(&KeySelect, &Interaction)) -> bool {
+fn pressed<TExtra>((.., interaction): &(&KeySelect<TExtra>, &Interaction)) -> bool {
 	interaction == &&Interaction::Pressed
 }
 
-fn set_key_label<TLanguageServer: GetUiTextFor<KeyCode> + Resource>(
+fn set_key_label<TLanguageServer: GetUiTextFor<KeyCode> + Resource, TExtra>(
 	texts: &mut Query<(&mut Text, &Parent)>,
-	key_select: &KeySelect,
+	key_select: &KeySelect<TExtra>,
 	language_server: &Res<TLanguageServer>,
 ) -> Option<()> {
 	let (mut text, ..) = get_text(texts, key_select)?;
@@ -35,9 +38,9 @@ fn set_key_label<TLanguageServer: GetUiTextFor<KeyCode> + Resource>(
 	Some(())
 }
 
-fn get_text<'a>(
+fn get_text<'a, TExtra>(
 	texts: &'a mut Query<(&mut Text, &Parent)>,
-	key_select: &'a KeySelect,
+	key_select: &'a KeySelect<TExtra>,
 ) -> Option<(Mut<'a, Text>, &'a Parent)> {
 	texts
 		.iter_mut()
@@ -49,7 +52,7 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		prelude::{BuildWorldChildren, Entity, KeyCode, Resource, TextBundle},
+		prelude::{BuildWorldChildren, KeyCode, Resource, TextBundle},
 		text::Text,
 		utils::default,
 	};
@@ -71,7 +74,7 @@ mod tests {
 	fn setup(language_server: _LanguageServer) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(language_server);
-		app.add_systems(Update, update_combos_view_key_labels::<_LanguageServer>);
+		app.add_systems(Update, update_combos_view_key_labels::<_LanguageServer, ()>);
 
 		app
 	}
@@ -94,7 +97,7 @@ mod tests {
 		app.world_mut().spawn((
 			Interaction::Pressed,
 			KeySelect {
-				skill_button: Entity::from_raw(101),
+				extra: (),
 				key_button,
 				key_path: vec![KeyCode::KeyB],
 			},
@@ -125,7 +128,7 @@ mod tests {
 		app.world_mut().spawn((
 			Interaction::Pressed,
 			KeySelect {
-				skill_button: Entity::from_raw(101),
+				extra: (),
 				key_button,
 				key_path: vec![KeyCode::KeyZ, KeyCode::KeyQ, KeyCode::KeyA, KeyCode::KeyE],
 			},
@@ -153,7 +156,7 @@ mod tests {
 		app.world_mut().spawn((
 			Interaction::Hovered,
 			KeySelect {
-				skill_button: Entity::from_raw(101),
+				extra: (),
 				key_button,
 				key_path: vec![KeyCode::KeyB],
 			},
@@ -161,7 +164,7 @@ mod tests {
 		app.world_mut().spawn((
 			Interaction::None,
 			KeySelect {
-				skill_button: Entity::from_raw(101),
+				extra: (),
 				key_button,
 				key_path: vec![KeyCode::KeyB],
 			},

@@ -1,7 +1,7 @@
 use crate::components::{
 	dropdown::Dropdown,
 	skill_descriptor::SkillDescriptor,
-	SkillSelectDropdownCommand,
+	SkillSelectDropdownInsertCommand,
 };
 use bevy::{
 	asset::{Assets, Handle},
@@ -18,14 +18,14 @@ use common::{
 };
 use skills::{items::Item, skills::Skill};
 
-pub(crate) fn skill_select_dropdown<
+pub(crate) fn insert_skill_select_dropdown<
 	TDropdownKey: Clone + Sync + Send + 'static,
 	TEquipmentKey: Clone + Sync + Send + 'static,
 	TMap: TryMapBackwards<TDropdownKey, TEquipmentKey> + Resource,
 	TEquipment: Get<TEquipmentKey, Item<Handle<Skill>>> + Component,
 >(
 	mut commands: Commands,
-	dropdown_commands: Query<(Entity, &SkillSelectDropdownCommand<TDropdownKey>)>,
+	dropdown_commands: Query<(Entity, &SkillSelectDropdownInsertCommand<TDropdownKey>)>,
 	slots: Query<&TEquipment, With<Player>>,
 	skills: Res<Assets<Skill>>,
 	key_map: Res<TMap>,
@@ -38,7 +38,7 @@ pub(crate) fn skill_select_dropdown<
 		if let Some(items) = compatible_skills(command, slots, &skills, key_map.as_ref()) {
 			commands.try_insert_on(entity, Dropdown { items });
 		}
-		commands.try_remove_from::<SkillSelectDropdownCommand<TDropdownKey>>(entity);
+		commands.try_remove_from::<SkillSelectDropdownInsertCommand<TDropdownKey>>(entity);
 	}
 }
 
@@ -48,7 +48,7 @@ fn compatible_skills<
 	TMap: TryMapBackwards<TDropdownKey, TEquipmentKey> + Resource,
 	TEquipment: Get<TEquipmentKey, Item<Handle<Skill>>>,
 >(
-	command: &SkillSelectDropdownCommand<TDropdownKey>,
+	command: &SkillSelectDropdownInsertCommand<TDropdownKey>,
 	slots: &TEquipment,
 	skills: &Res<Assets<Skill>>,
 	key_map: &TMap,
@@ -132,7 +132,7 @@ mod tests {
 		app.insert_resource(skill_assets);
 		app.add_systems(
 			Update,
-			skill_select_dropdown::<_DropdownKey, _EquipmentKey, _Map, _Equipment>,
+			insert_skill_select_dropdown::<_DropdownKey, _EquipmentKey, _Map, _Equipment>,
 		);
 
 		app
@@ -176,7 +176,7 @@ mod tests {
 		));
 		let dropdown = app
 			.world_mut()
-			.spawn(SkillSelectDropdownCommand {
+			.spawn(SkillSelectDropdownInsertCommand {
 				key_path: vec![_DropdownKey::Ok],
 			})
 			.id();
@@ -247,7 +247,7 @@ mod tests {
 		));
 		let dropdown = app
 			.world_mut()
-			.spawn(SkillSelectDropdownCommand {
+			.spawn(SkillSelectDropdownInsertCommand {
 				key_path: vec![_DropdownKey::Ok],
 			})
 			.id();
@@ -278,7 +278,7 @@ mod tests {
 		));
 		let dropdown = app
 			.world_mut()
-			.spawn(SkillSelectDropdownCommand {
+			.spawn(SkillSelectDropdownInsertCommand {
 				key_path: vec![_DropdownKey::Ok],
 			})
 			.id();
@@ -289,7 +289,7 @@ mod tests {
 
 		assert_eq!(
 			None,
-			dropdown.get::<SkillSelectDropdownCommand<_DropdownKey>>()
+			dropdown.get::<SkillSelectDropdownInsertCommand<_DropdownKey>>()
 		)
 	}
 
@@ -309,7 +309,7 @@ mod tests {
 		));
 		let dropdown = app
 			.world_mut()
-			.spawn(SkillSelectDropdownCommand {
+			.spawn(SkillSelectDropdownInsertCommand {
 				key_path: vec![_DropdownKey::None],
 			})
 			.id();
@@ -320,7 +320,7 @@ mod tests {
 
 		assert_eq!(
 			None,
-			dropdown.get::<SkillSelectDropdownCommand<_DropdownKey>>()
+			dropdown.get::<SkillSelectDropdownInsertCommand<_DropdownKey>>()
 		)
 	}
 
@@ -332,7 +332,7 @@ mod tests {
 			.spawn((Player, _Equipment(HashMap::from([]))));
 		let dropdown = app
 			.world_mut()
-			.spawn(SkillSelectDropdownCommand {
+			.spawn(SkillSelectDropdownInsertCommand {
 				key_path: vec![_DropdownKey::Ok],
 			})
 			.id();
@@ -343,7 +343,7 @@ mod tests {
 
 		assert_eq!(
 			None,
-			dropdown.get::<SkillSelectDropdownCommand<_DropdownKey>>()
+			dropdown.get::<SkillSelectDropdownInsertCommand<_DropdownKey>>()
 		)
 	}
 }

@@ -1,7 +1,7 @@
 use crate::components::{
 	dropdown::Dropdown,
-	key_select::KeySelect,
-	EmptySkillKeySelectDropdownCommand,
+	key_select::{EmptySkillButton, KeySelect},
+	KeySelectDropdownInsertCommand,
 };
 use bevy::prelude::{Commands, Entity, Query, Res, Resource};
 use common::traits::{
@@ -11,37 +11,35 @@ use common::traits::{
 	try_remove_from::TryRemoveFrom,
 };
 
-pub(crate) fn empty_skill_key_select_dropdown<
+type InsertCommand<TDropdownKey> = KeySelectDropdownInsertCommand<EmptySkillButton, TDropdownKey>;
+
+pub(crate) fn insert_empty_skill_key_select_dropdown<TDropdownKey, TEquipmentKey, TMap>(
+	mut commands: Commands,
+	insert_commands: Query<(Entity, &InsertCommand<TDropdownKey>)>,
+	key_map: Res<TMap>,
+) where
 	TDropdownKey: Copy + Sync + Send + 'static,
 	TEquipmentKey: Copy + IterFinite,
 	TMap: MapForward<TEquipmentKey, TDropdownKey> + Resource,
->(
-	mut commands: Commands,
-	dropdown_commands: Query<(Entity, &EmptySkillKeySelectDropdownCommand<TDropdownKey>)>,
-	key_map: Res<TMap>,
-) {
-	for (entity, command) in &dropdown_commands {
+{
+	for (entity, command) in &insert_commands {
 		let items = TEquipmentKey::iterator()
 			.map(|key| key_map.map_forward(key))
 			.map(|key| KeySelect {
-				skill_button: command.target,
+				extra: command.extra.clone(),
 				key_button: entity,
 				key_path: [command.key_path.clone(), vec![key]].concat(),
 			})
 			.collect();
 		commands.try_insert_on(entity, Dropdown { items });
-		commands.try_remove_from::<EmptySkillKeySelectDropdownCommand<TDropdownKey>>(entity);
+		commands.try_remove_from::<InsertCommand<TDropdownKey>>(entity);
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{
-		dropdown::Dropdown,
-		key_select::KeySelect,
-		EmptySkillKeySelectDropdownCommand,
-	};
+	use crate::components::{dropdown::Dropdown, key_select::KeySelect};
 	use bevy::{
 		app::{App, Update},
 		prelude::Entity,
@@ -91,20 +89,22 @@ mod tests {
 		app.init_resource::<_Map>();
 		app.add_systems(
 			Update,
-			empty_skill_key_select_dropdown::<_DropdownKey, _EquipmentKey, _Map>,
+			insert_empty_skill_key_select_dropdown::<_DropdownKey, _EquipmentKey, _Map>,
 		);
 
 		app
 	}
 
 	#[test]
-	fn add_dropdown_with_for_each_equipment_key_mapped_to_dropdown_key() {
+	fn add_dropdown_for_each_equipment_key_mapped_to_dropdown_key() {
 		let mut app = setup();
 		let dropdown = app
 			.world_mut()
-			.spawn(EmptySkillKeySelectDropdownCommand {
+			.spawn(InsertCommand {
 				key_path: vec![_DropdownKey::A, _DropdownKey::B, _DropdownKey::C],
-				target: Entity::from_raw(42),
+				extra: EmptySkillButton {
+					entity: Entity::from_raw(42),
+				},
 			})
 			.id();
 
@@ -116,7 +116,9 @@ mod tests {
 			Some(&Dropdown {
 				items: vec![
 					KeySelect {
-						skill_button: Entity::from_raw(42),
+						extra: EmptySkillButton {
+							entity: Entity::from_raw(42)
+						},
 						key_button: dropdown.id(),
 						key_path: vec![
 							_DropdownKey::A,
@@ -126,7 +128,9 @@ mod tests {
 						]
 					},
 					KeySelect {
-						skill_button: Entity::from_raw(42),
+						extra: EmptySkillButton {
+							entity: Entity::from_raw(42)
+						},
 						key_button: dropdown.id(),
 						key_path: vec![
 							_DropdownKey::A,
@@ -137,18 +141,20 @@ mod tests {
 					}
 				]
 			}),
-			dropdown.get::<Dropdown<KeySelect<_DropdownKey>>>(),
+			dropdown.get::<Dropdown<KeySelect<EmptySkillButton, _DropdownKey>>>(),
 		)
 	}
 
 	#[test]
-	fn remove_dropdown_command() {
+	fn remove_dropdown_insert_command() {
 		let mut app = setup();
 		let dropdown = app
 			.world_mut()
-			.spawn(EmptySkillKeySelectDropdownCommand {
+			.spawn(InsertCommand {
 				key_path: vec![_DropdownKey::A],
-				target: Entity::from_raw(42),
+				extra: EmptySkillButton {
+					entity: Entity::from_raw(42),
+				},
 			})
 			.id();
 
@@ -156,9 +162,6 @@ mod tests {
 
 		let dropdown = app.world().entity(dropdown);
 
-		assert_eq!(
-			None,
-			dropdown.get::<EmptySkillKeySelectDropdownCommand<_DropdownKey>>(),
-		)
+		assert_eq!(None, dropdown.get::<InsertCommand<_DropdownKey>>(),)
 	}
 }
