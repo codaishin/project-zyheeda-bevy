@@ -8,7 +8,7 @@ pub(crate) mod skill_descriptor;
 pub(crate) mod tooltip;
 pub(crate) mod ui_overlay;
 
-use bevy::{color::Color, ecs::component::Component, prelude::Entity};
+use bevy::{color::Color, ecs::component::Component};
 use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
@@ -39,13 +39,18 @@ pub struct Quickbar;
 pub struct ColorOverride;
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct SkillSelectDropdownCommand<TKey> {
+pub(crate) struct SkillSelectDropdownInsertCommand<TKey> {
 	pub(crate) key_path: Vec<TKey>,
 }
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct EmptySkillKeySelectDropdownCommand<TKey> {
-	pub(crate) target: Entity,
+pub(crate) struct PreSelected<TKey> {
+	pub(crate) key: TKey,
+}
+
+#[derive(Component, Debug, PartialEq)]
+pub(crate) struct KeySelectDropdownInsertCommand<TExtra, TKey> {
+	pub(crate) extra: TExtra,
 	pub(crate) key_path: Vec<TKey>,
 }
 

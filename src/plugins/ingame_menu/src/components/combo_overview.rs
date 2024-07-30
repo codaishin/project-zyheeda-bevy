@@ -1,9 +1,11 @@
 use super::{
+	key_select::EmptySkill,
 	skill_descriptor::SkillDescriptor,
 	tooltip::Tooltip,
 	DeleteSkill,
-	EmptySkillKeySelectDropdownCommand,
-	SkillSelectDropdownCommand,
+	KeySelectDropdownInsertCommand,
+	PreSelected,
+	SkillSelectDropdownInsertCommand,
 };
 use crate::traits::{
 	colors::DEFAULT_PANEL_COLORS,
@@ -281,7 +283,7 @@ fn add_skill(
 			parent
 				.spawn((
 					ComboOverview::skill_button_bundle(skill_icon).with(descriptor),
-					SkillSelectDropdownCommand {
+					SkillSelectDropdownInsertCommand {
 						key_path: descriptor.key_path.clone(),
 					},
 				))
@@ -294,18 +296,27 @@ fn add_skill(
 }
 
 fn with_key_button(descriptor: &SkillDescriptor<KeyCode>, parent: &mut ChildBuilder) {
-	let skill_key = match descriptor.key_path.last().map(English::ui_text) {
-		Some(UIText::String(key)) => key,
-		None | Some(UIText::Unmapped) => String::from("?"),
+	let Some(skill_key) = descriptor.key_path.last() else {
+		return;
+	};
+	let skill_key_text = match English::ui_text(skill_key) {
+		UIText::String(key) => key,
+		UIText::Unmapped => String::from("?"),
 	};
 
 	parent
 		.spawn(ComboOverview::skill_key_button_offset_container())
 		.with_children(|parent| {
 			parent
-				.spawn(ComboOverview::skill_key_button_bundle())
+				.spawn((
+					ComboOverview::skill_key_button_bundle(),
+					KeySelectDropdownInsertCommand {
+						extra: PreSelected { key: *skill_key },
+						key_path: descriptor.key_path.clone(),
+					},
+				))
 				.with_children(|parent| {
-					parent.spawn(ComboOverview::skill_key_text(&skill_key));
+					parent.spawn(ComboOverview::skill_key_text(&skill_key_text));
 				});
 		});
 }
@@ -334,7 +345,7 @@ fn add_empty_skill(parent: &mut ChildBuilder, key_path: Vec<KeyCode>) {
 			parent
 				.spawn(ComboOverview::skill_button_bundle(None))
 				.with_children(|parent| {
-					let target = parent.parent_entity();
+					let empty_skill_button = parent.parent_entity();
 
 					parent.spawn(ComboOverview::new_skill_text(""));
 					parent
@@ -343,7 +354,12 @@ fn add_empty_skill(parent: &mut ChildBuilder, key_path: Vec<KeyCode>) {
 							parent
 								.spawn((
 									ComboOverview::skill_key_button_bundle(),
-									EmptySkillKeySelectDropdownCommand { target, key_path },
+									KeySelectDropdownInsertCommand {
+										extra: EmptySkill {
+											button_entity: empty_skill_button,
+										},
+										key_path,
+									},
 								))
 								.with_children(|parent| {
 									parent.spawn(ComboOverview::skill_key_text("+"));

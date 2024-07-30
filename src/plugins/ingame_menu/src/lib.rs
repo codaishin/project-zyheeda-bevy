@@ -20,7 +20,7 @@ use components::{
 	dropdown::Dropdown,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
-	key_select::KeySelect,
+	key_select::{EmptySkill, KeySelect, ReKeySkill},
 	quickbar_panel::QuickbarPanel,
 	skill_descriptor::SkillDescriptor,
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
@@ -41,7 +41,8 @@ use std::time::Duration;
 use systems::{
 	combos::{
 		get_combos::get_combos,
-		update_combos::update_combos,
+		update_combo_keys::update_combo_keys,
+		update_combo_skills::update_combo_skills,
 		update_combos_view::update_combos_view,
 		update_combos_view_delete_skill::update_combos_view_delete_skill,
 		update_combos_view_key_labels::update_combos_view_key_labels,
@@ -54,12 +55,14 @@ use systems::{
 	dropdown::{
 		despawn_all::dropdown_despawn_all,
 		detect_focus_change::dropdown_detect_focus_change,
-		empty_skill_key_select_dropdown::empty_skill_key_select_dropdown,
-		skill_select_dropdown::skill_select_dropdown,
+		insert_empty_skill_key_select_dropdown::insert_empty_skill_key_select_dropdown,
+		insert_skill_key_select_dropdown::insert_skill_key_select_dropdown,
+		insert_skill_select_dropdown::insert_skill_select_dropdown,
 		spawn_focused::dropdown_spawn_focused,
 	},
 	image_color::image_color,
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
+	map_pressed_key_select::map_pressed_key_select,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	set_state::set_state,
 	set_state_from_input::set_state_from_input,
@@ -209,7 +212,8 @@ fn ui_overlay_systems(app: &mut App) {
 fn combo_overview_systems(app: &mut App) {
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
 		.add_dropdown::<SkillDescriptor>()
-		.add_dropdown::<KeySelect>()
+		.add_dropdown::<KeySelect<EmptySkill>>()
+		.add_dropdown::<KeySelect<ReKeySkill>>()
 		.add_tooltip::<Skill>()
 		.add_systems(
 			Update,
@@ -222,12 +226,15 @@ fn combo_overview_systems(app: &mut App) {
 			Update,
 			(
 				visualize_invalid_skill::<Player, Slots, KeyCode, SlotKeyMap, Unusable>,
-				skill_select_dropdown::<KeyCode, SlotKey, SlotKeyMap, Slots<Handle<Skill>>>,
-				empty_skill_key_select_dropdown::<KeyCode, SlotKey, SlotKeyMap>,
-				update_combos_view_key_labels::<LanguageServer>,
+				insert_skill_select_dropdown::<KeyCode, SlotKey, SlotKeyMap, Slots<Handle<Skill>>>,
+				insert_skill_key_select_dropdown::<KeyCode, SlotKey, SlotKeyMap>,
+				insert_empty_skill_key_select_dropdown::<KeyCode, SlotKey, SlotKeyMap>,
+				update_combos_view_key_labels::<LanguageServer, EmptySkill>,
 				update_combos_view_new_skills,
 				update_combos_view_delete_skill::<Player, Combos, KeyCode, SlotKeyMap>,
-				update_combos::<Player, Combos>,
+				update_combo_skills::<Player, Combos>,
+				map_pressed_key_select::<KeyCode, SlotKey, SlotKeyMap>
+					.pipe(update_combo_keys::<Player, Combos>),
 			)
 				.run_if(in_state(MenuState::ComboOverview)),
 		);

@@ -1,10 +1,10 @@
-use super::NodeEntry;
+use super::{ComboNode, NodeEntry};
 use crate::{
 	items::slot_key::SlotKey,
 	traits::{Insert, ReKey},
 };
 use bevy::prelude::default;
-use std::collections::hash_map::Entry;
+use std::collections::{hash_map::Entry, HashMap};
 
 impl<'a, TSkill> Insert<Option<TSkill>> for NodeEntry<'a, TSkill> {
 	fn insert(&mut self, value: Option<TSkill>) {
@@ -32,23 +32,49 @@ fn clear_entry<TSkill>(entry: &mut NodeEntry<TSkill>) {
 }
 
 impl<'a, TSkill> ReKey<SlotKey> for NodeEntry<'a, TSkill> {
-	fn re_key(&mut self, other_key: SlotKey) {
-		if self.key == other_key {
+	fn re_key(&mut self, new_key: SlotKey) {
+		if self.key == new_key {
 			return;
 		}
 
-		let self_node = self.tree.remove(&self.key);
-		let other_node = self.tree.remove(&other_key);
+		move_combo(self.tree, self.key, new_key);
 
-		if let Some(self_node) = self_node {
-			self.tree.insert(other_key, self_node);
-		};
+		self.key = new_key;
+	}
+}
 
-		if let Some(other_node) = other_node {
-			self.tree.insert(self.key, other_node);
-		}
+fn move_combo<TSkill>(
+	tree: &mut HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
+	src_key: SlotKey,
+	dst_key: SlotKey,
+) {
+	let Some((skill, ComboNode(mut children))) = tree.remove(&src_key) else {
+		return;
+	};
 
-		self.key = other_key;
+	move_and_merge_branch(&dst_key, tree, &mut children);
+	tree.insert(dst_key, (skill, ComboNode(children)));
+}
+
+fn move_and_merge_branch<TSkill>(
+	dst_key: &SlotKey,
+	src: &mut HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
+	dst: &mut HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
+) {
+	let mut src = src
+		.remove(dst_key)
+		.map(|(_, ComboNode(src))| src)
+		.unwrap_or_default();
+	move_and_merge_branches_with_same_key(&mut src, dst);
+	dst.extend(src);
+}
+
+fn move_and_merge_branches_with_same_key<TSkill>(
+	src: &mut HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
+	dst: &mut HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
+) {
+	for (key, (_, ComboNode(dst))) in dst.iter_mut() {
+		move_and_merge_branch(key, src, dst)
 	}
 }
 
@@ -175,6 +201,19 @@ mod tests {
 	}
 
 	#[test]
+	fn rekey_sets_self_key_to_new_key() {
+		let mut tree = HashMap::from([]);
+		let mut entry = NodeEntry::<Skill> {
+			key: SlotKey::Hand(Side::Main),
+			tree: &mut tree,
+		};
+
+		entry.re_key(SlotKey::Hand(Side::Off));
+
+		assert_eq!(SlotKey::Hand(Side::Off), entry.key);
+	}
+
+	#[test]
 	fn rekey_skill_to_other_key() {
 		let mut tree = HashMap::from([(
 			SlotKey::Hand(Side::Main),
@@ -209,39 +248,44 @@ mod tests {
 	}
 
 	#[test]
-	fn rekey_sets_self_key_to_new_key() {
-		let mut tree = HashMap::from([]);
-		let mut entry = NodeEntry::<Skill> {
-			key: SlotKey::Hand(Side::Main),
-			tree: &mut tree,
-		};
-
-		entry.re_key(SlotKey::Hand(Side::Off));
-
-		assert_eq!(SlotKey::Hand(Side::Off), entry.key);
-	}
-
-	#[test]
-	fn rekey_swaps_skills_if_target_key_is_used_in_tree() {
+	fn rekey_skill_merge_with_tree_on_other_key() {
 		let mut tree = HashMap::from([
 			(
 				SlotKey::Hand(Side::Main),
 				(
 					Skill {
-						name: "my skill".to_owned(),
+						name: "my main -> off skill".to_owned(),
 						..default()
 					},
-					default(),
+					ComboNode::new([(
+						SlotKey::Hand(Side::Off),
+						(
+							Skill {
+								name: "my child off skill".to_owned(),
+								..default()
+							},
+							default(),
+						),
+					)]),
 				),
 			),
 			(
 				SlotKey::Hand(Side::Off),
 				(
 					Skill {
-						name: "my other skill".to_owned(),
+						name: "my off skill".to_owned(),
 						..default()
 					},
-					default(),
+					ComboNode::new([(
+						SlotKey::Hand(Side::Main),
+						(
+							Skill {
+								name: "my child main skill".to_owned(),
+								..default()
+							},
+							default(),
+						),
+					)]),
 				),
 			),
 		]);
@@ -253,28 +297,149 @@ mod tests {
 		entry.re_key(SlotKey::Hand(Side::Off));
 
 		assert_eq!(
-			HashMap::from([
+			HashMap::from([(
+				SlotKey::Hand(Side::Off),
 				(
-					SlotKey::Hand(Side::Off),
-					(
-						Skill {
-							name: "my skill".to_owned(),
-							..default()
-						},
-						default()
-					)
-				),
+					Skill {
+						name: "my main -> off skill".to_owned(),
+						..default()
+					},
+					ComboNode::new([
+						(
+							SlotKey::Hand(Side::Off),
+							(
+								Skill {
+									name: "my child off skill".to_owned(),
+									..default()
+								},
+								default(),
+							),
+						),
+						(
+							SlotKey::Hand(Side::Main),
+							(
+								Skill {
+									name: "my child main skill".to_owned(),
+									..default()
+								},
+								default(),
+							),
+						)
+					]),
+				)
+			)]),
+			tree
+		);
+	}
+
+	#[test]
+	fn rekey_skill_merge_with_tree_on_other_key_deeply() {
+		let mut tree = HashMap::from([
+			(
+				SlotKey::Hand(Side::Main),
 				(
-					SlotKey::Hand(Side::Main),
-					(
-						Skill {
-							name: "my other skill".to_owned(),
-							..default()
-						},
-						default(),
-					)
+					Skill {
+						name: "my main -> off skill".to_owned(),
+						..default()
+					},
+					ComboNode::new([(
+						SlotKey::Hand(Side::Off),
+						(
+							Skill {
+								name: "my child off skill".to_owned(),
+								..default()
+							},
+							ComboNode::new([(
+								SlotKey::Hand(Side::Off),
+								(
+									Skill {
+										name: "my child child off skill".to_owned(),
+										..default()
+									},
+									default(),
+								),
+							)]),
+						),
+					)]),
 				),
-			]),
+			),
+			(
+				SlotKey::Hand(Side::Off),
+				(
+					Skill {
+						name: "my off skill".to_owned(),
+						..default()
+					},
+					ComboNode::new([(
+						SlotKey::Hand(Side::Off),
+						(
+							Skill {
+								name: "my child off skill".to_owned(),
+								..default()
+							},
+							ComboNode::new([(
+								SlotKey::Hand(Side::Main),
+								(
+									Skill {
+										name: "my child child main skill".to_owned(),
+										..default()
+									},
+									default(),
+								),
+							)]),
+						),
+					)]),
+				),
+			),
+		]);
+		let mut entry = NodeEntry {
+			key: SlotKey::Hand(Side::Main),
+			tree: &mut tree,
+		};
+
+		entry.re_key(SlotKey::Hand(Side::Off));
+
+		assert_eq!(
+			HashMap::from([(
+				SlotKey::Hand(Side::Off),
+				(
+					Skill {
+						name: "my main -> off skill".to_owned(),
+						..default()
+					},
+					ComboNode::new([(
+						SlotKey::Hand(Side::Off),
+						(
+							Skill {
+								name: "my child off skill".to_owned(),
+								..default()
+							},
+							ComboNode::new([
+								(
+									SlotKey::Hand(Side::Off),
+									(
+										Skill {
+											name: "my child child off skill".to_owned(),
+											..default()
+										},
+										default(),
+									),
+								),
+								(
+									SlotKey::Hand(Side::Main),
+									(
+										Skill {
+											name: "my child child main skill".to_owned(),
+											..default()
+										},
+										default(),
+									),
+								)
+							]),
+						),
+					)]),
+				)
+			)]),
 			tree
 		);
 	}

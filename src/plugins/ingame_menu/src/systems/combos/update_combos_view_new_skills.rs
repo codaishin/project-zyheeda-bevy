@@ -1,4 +1,7 @@
-use crate::components::{key_select::KeySelect, SkillSelectDropdownCommand};
+use crate::components::{
+	key_select::{EmptySkill, KeySelect},
+	SkillSelectDropdownInsertCommand,
+};
 use bevy::{
 	prelude::{Commands, Mut, Parent, Query},
 	text::Text,
@@ -8,7 +11,7 @@ use common::traits::try_insert_on::TryInsertOn;
 
 pub(crate) fn update_combos_view_new_skills(
 	mut commands: Commands,
-	key_selects: Query<(&KeySelect, &Interaction)>,
+	key_selects: Query<(&KeySelect<EmptySkill>, &Interaction)>,
 	mut texts: Query<(&mut Text, &Parent)>,
 ) {
 	for (key_select, ..) in key_selects.iter().filter(pressed) {
@@ -17,20 +20,23 @@ pub(crate) fn update_combos_view_new_skills(
 	}
 }
 
-fn pressed((.., interaction): &(&KeySelect, &Interaction)) -> bool {
+fn pressed((.., interaction): &(&KeySelect<EmptySkill>, &Interaction)) -> bool {
 	interaction == &&Interaction::Pressed
 }
 
-fn insert_skill_dropdown(commands: &mut Commands, key_select: &KeySelect) {
+fn insert_skill_dropdown(commands: &mut Commands, key_select: &KeySelect<EmptySkill>) {
 	commands.try_insert_on(
-		key_select.skill_button,
-		SkillSelectDropdownCommand {
+		key_select.extra.button_entity,
+		SkillSelectDropdownInsertCommand {
 			key_path: key_select.key_path.clone(),
 		},
 	);
 }
 
-fn set_skill_label(texts: &mut Query<(&mut Text, &Parent)>, key_select: &KeySelect) -> Option<()> {
+fn set_skill_label(
+	texts: &mut Query<(&mut Text, &Parent)>,
+	key_select: &KeySelect<EmptySkill>,
+) -> Option<()> {
 	let (mut text, ..) = get_text(texts, key_select)?;
 	let section = text.sections.get_mut(0)?;
 
@@ -41,17 +47,17 @@ fn set_skill_label(texts: &mut Query<(&mut Text, &Parent)>, key_select: &KeySele
 
 fn get_text<'a>(
 	texts: &'a mut Query<(&mut Text, &Parent)>,
-	key_select: &'a KeySelect,
+	key_select: &'a KeySelect<EmptySkill>,
 ) -> Option<(Mut<'a, Text>, &'a Parent)> {
 	texts
 		.iter_mut()
-		.find(|(_, parent)| parent.get() == key_select.skill_button)
+		.find(|(_, parent)| parent.get() == key_select.extra.button_entity)
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::SkillSelectDropdownCommand;
+	use crate::components::SkillSelectDropdownInsertCommand;
 	use bevy::{
 		app::{App, Update},
 		prelude::{BuildWorldChildren, Entity, KeyCode, TextBundle},
@@ -74,7 +80,9 @@ mod tests {
 		app.world_mut().spawn((
 			Interaction::Pressed,
 			KeySelect {
-				skill_button,
+				extra: EmptySkill {
+					button_entity: skill_button,
+				},
 				key_button: Entity::from_raw(101),
 				key_path: vec![KeyCode::KeyA, KeyCode::KeyB],
 			},
@@ -85,10 +93,10 @@ mod tests {
 		let skill_button = app.world().entity(skill_button);
 
 		assert_eq!(
-			Some(&SkillSelectDropdownCommand {
+			Some(&SkillSelectDropdownInsertCommand {
 				key_path: vec![KeyCode::KeyA, KeyCode::KeyB]
 			}),
-			skill_button.get::<SkillSelectDropdownCommand<KeyCode>>(),
+			skill_button.get::<SkillSelectDropdownInsertCommand<KeyCode>>(),
 		)
 	}
 
@@ -99,7 +107,7 @@ mod tests {
 		app.world_mut().spawn((
 			Interaction::Hovered,
 			KeySelect {
-				skill_button,
+				extra: skill_button,
 				key_button: Entity::from_raw(101),
 				key_path: vec![KeyCode::KeyA, KeyCode::KeyB],
 			},
@@ -107,7 +115,9 @@ mod tests {
 		app.world_mut().spawn((
 			Interaction::None,
 			KeySelect {
-				skill_button,
+				extra: EmptySkill {
+					button_entity: skill_button,
+				},
 				key_button: Entity::from_raw(101),
 				key_path: vec![KeyCode::KeyA, KeyCode::KeyB],
 			},
@@ -119,7 +129,7 @@ mod tests {
 
 		assert_eq!(
 			None,
-			skill_button.get::<SkillSelectDropdownCommand<KeyCode>>(),
+			skill_button.get::<SkillSelectDropdownInsertCommand<KeyCode>>(),
 		)
 	}
 
@@ -135,7 +145,9 @@ mod tests {
 		app.world_mut().spawn((
 			Interaction::Pressed,
 			KeySelect {
-				skill_button,
+				extra: EmptySkill {
+					button_entity: skill_button,
+				},
 				key_button: Entity::from_raw(101),
 				key_path: vec![KeyCode::KeyA, KeyCode::KeyB],
 			},
