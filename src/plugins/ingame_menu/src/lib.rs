@@ -1,4 +1,5 @@
 mod components;
+mod events;
 mod systems;
 mod tools;
 mod traits;
@@ -26,6 +27,7 @@ use components::{
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
 	ui_overlay::UIOverlay,
 };
+use events::DropdownEvent;
 use skills::{
 	components::{
 		combos::Combos,
@@ -55,6 +57,7 @@ use systems::{
 	dropdown::{
 		despawn_all::dropdown_despawn_all,
 		detect_focus_change::dropdown_detect_focus_change,
+		events::dropdown_events,
 		insert_empty_skill_key_select_dropdown::insert_empty_skill_key_select_dropdown,
 		insert_skill_key_select_dropdown::insert_skill_key_select_dropdown,
 		insert_skill_select_dropdown::insert_skill_select_dropdown,
@@ -148,9 +151,12 @@ impl AddDropdown for App {
 	{
 		self.add_systems(
 			Update,
-			dropdown_detect_focus_change::<TItem>
-				.pipe(dropdown_despawn_all::<TItem>)
-				.pipe(dropdown_spawn_focused::<TItem>),
+			(
+				dropdown_events::<TItem>,
+				dropdown_detect_focus_change::<TItem>
+					.pipe(dropdown_despawn_all::<TItem>)
+					.pipe(dropdown_spawn_focused::<TItem>),
+			),
 		)
 	}
 }
@@ -160,6 +166,7 @@ pub struct IngameMenuPlugin;
 impl Plugin for IngameMenuPlugin {
 	fn build(&self, app: &mut App) {
 		resources(app);
+		events(app);
 		state_control_systems(app);
 		ui_overlay_systems(app);
 		combo_overview_systems(app);
@@ -180,6 +187,10 @@ fn resources(app: &mut App) {
 		.insert_resource(TooltipUIControl {
 			tooltip_delay: Duration::from_millis(500),
 		});
+}
+
+fn events(app: &mut App) {
+	app.add_event::<DropdownEvent>();
 }
 
 fn state_control_systems(app: &mut App) {

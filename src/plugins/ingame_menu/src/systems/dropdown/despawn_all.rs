@@ -1,4 +1,4 @@
-use super::spawn_focused::DropdownUI;
+use crate::components::dropdown::DropdownUI;
 use bevy::{
 	hierarchy::DespawnRecursiveExt,
 	prelude::{Commands, Entity, In, Query},
@@ -43,7 +43,6 @@ fn unfocus(new_focus: &mut Vec<Entity>, despawned: &Entity) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::systems::dropdown::spawn_focused::DropdownUI;
 	use bevy::{
 		app::{App, Update},
 		hierarchy::BuildWorldChildren,

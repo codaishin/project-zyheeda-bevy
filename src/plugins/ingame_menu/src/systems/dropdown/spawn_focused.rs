@@ -1,46 +1,15 @@
 use crate::{
-	components::dropdown::Dropdown,
+	components::dropdown::{Dropdown, DropdownUI},
 	tools::Layout,
 	traits::{GetLayout, RootStyle, UI},
 };
 use bevy::{
 	hierarchy::{BuildChildren, ChildBuilder},
-	prelude::{Commands, Component, Entity, In, Query},
+	prelude::{Commands, Entity, In, Query},
 	ui::{node_bundles::NodeBundle, Display, RepeatedGridTrack, Style, ZIndex},
 	utils::default,
 };
 use common::tools::Focus;
-use std::{fmt::Debug, marker::PhantomData};
-
-#[derive(Component)]
-pub(crate) struct DropdownUI<TItem> {
-	phantom_data: PhantomData<TItem>,
-	pub(crate) source: Entity,
-}
-
-impl<TItem> DropdownUI<TItem> {
-	pub(crate) fn new(source: Entity) -> Self {
-		Self {
-			source,
-			phantom_data: PhantomData,
-		}
-	}
-}
-
-impl<TItem> Debug for DropdownUI<TItem> {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("DropdownUI")
-			.field("phantom_data", &self.phantom_data)
-			.field("source", &self.source)
-			.finish()
-	}
-}
-
-impl<TItem> PartialEq for DropdownUI<TItem> {
-	fn eq(&self, other: &Self) -> bool {
-		self.source == other.source
-	}
-}
 
 pub(crate) fn dropdown_spawn_focused<TItem>(
 	focus: In<Focus>,
@@ -144,6 +113,7 @@ mod tests {
 
 	macro_rules! impl_item {
 		($item:ident) => {
+			#[derive(Debug, PartialEq)]
 			struct $item;
 
 			impl GetNode for $item {
