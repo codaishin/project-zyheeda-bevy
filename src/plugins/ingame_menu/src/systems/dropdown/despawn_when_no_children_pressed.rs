@@ -2,26 +2,37 @@ use crate::components::dropdown::DropdownUI;
 use bevy::{
 	hierarchy::DespawnRecursiveExt,
 	prelude::{Commands, Entity, In, Query},
+	ui::Interaction,
 };
 use common::tools::Focus;
 
-pub(crate) fn dropdown_despawn_all<TItem: Sync + Send + 'static>(
+pub(crate) fn dropdown_despawn_when_no_children_pressed<TItem: Sync + Send + 'static>(
 	focus: In<Focus>,
 	commands: Commands,
-	dropdown_uis: Query<(Entity, &DropdownUI<TItem>)>,
+	dropdowns: Query<(Entity, &DropdownUI<TItem>)>,
+	interactions: Query<&Interaction>,
 ) -> Focus {
 	match focus.0 {
-		Focus::New(new_focus) => despawn_and_unfocus_uis(new_focus, commands, dropdown_uis),
+		Focus::New(new_focus) => despawn_and_unfocus(dropdowns, interactions, commands, new_focus),
 		Focus::Unchanged => Focus::Unchanged,
 	}
 }
 
-fn despawn_and_unfocus_uis<TItem: Sync + Send + 'static>(
-	mut new_focus: Vec<Entity>,
-	mut commands: Commands,
+fn despawn_and_unfocus<TItem: Sync + Send + 'static>(
 	dropdown_uis: Query<(Entity, &DropdownUI<TItem>)>,
+	interactions: Query<&Interaction>,
+	mut commands: Commands,
+	mut new_focus: Vec<Entity>,
 ) -> Focus {
-	for (entity, dropdown_ui) in &dropdown_uis {
+	let has_no_pressed_child_dropdown = |(_, dropdown_ui): &(Entity, &DropdownUI<TItem>)| {
+		!dropdown_ui
+			.child_dropdowns
+			.iter()
+			.filter_map(|entity| interactions.get(*entity).ok())
+			.any(|interaction| interaction == &Interaction::Pressed)
+	};
+
+	for (entity, dropdown_ui) in dropdown_uis.iter().filter(has_no_pressed_child_dropdown) {
 		despawn_entity(&mut commands, entity);
 		unfocus(&mut new_focus, &dropdown_ui.source);
 	}
@@ -50,6 +61,7 @@ mod tests {
 	};
 	use common::test_tools::utils::SingleThreadedApp;
 
+	#[derive(Debug, PartialEq)]
 	struct _Item;
 
 	#[derive(Resource, Default)]
@@ -64,7 +76,7 @@ mod tests {
 		app.add_systems(
 			Update,
 			(|new_active: Res<_In>| new_active.0.clone())
-				.pipe(dropdown_despawn_all::<_Item>)
+				.pipe(dropdown_despawn_when_no_children_pressed::<_Item>)
 				.pipe(|focus: In<Focus>, mut commands: Commands| {
 					commands.insert_resource(_Result(focus.0))
 				}),
@@ -199,6 +211,29 @@ mod tests {
 				Entity::from_raw(77),
 			])),
 			app.world().resource::<_Result>()
+		);
+	}
+
+	#[test]
+	fn do_not_despawn_dropdown_ui_when_children_pressed() {
+		let mut app = setup();
+
+		let source = Entity::from_raw(42);
+		let child = app.world_mut().spawn(Interaction::Pressed).id();
+		let dropdown = app
+			.world_mut()
+			.spawn(DropdownUI::<_Item>::new(source).with_child_dropdowns([child]))
+			.id();
+
+		app.world_mut().insert_resource(_In(Focus::New(vec![])));
+
+		app.update();
+
+		let dropdown = app.world().entity(dropdown);
+
+		assert_eq!(
+			Some(&DropdownUI::<_Item>::new(source).with_child_dropdowns([child])),
+			dropdown.get::<DropdownUI<_Item>>()
 		);
 	}
 }

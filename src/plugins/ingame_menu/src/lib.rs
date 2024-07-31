@@ -55,7 +55,7 @@ use systems::{
 	dad::{drag::drag, drop::drop},
 	despawn::despawn,
 	dropdown::{
-		despawn_all::dropdown_despawn_all,
+		despawn_when_no_children_pressed::dropdown_despawn_when_no_children_pressed,
 		detect_focus_change::dropdown_detect_focus_change,
 		events::dropdown_events,
 		insert_empty_skill_key_select_dropdown::insert_empty_skill_key_select_dropdown,
@@ -156,7 +156,7 @@ impl AddDropdown for App {
 				dropdown_events::<TItem>,
 				dropdown_track_child_dropdowns::<TItem>,
 				dropdown_detect_focus_change::<TItem>
-					.pipe(dropdown_despawn_all::<TItem>)
+					.pipe(dropdown_despawn_when_no_children_pressed::<TItem>)
 					.pipe(dropdown_spawn_focused::<TItem>),
 			),
 		)

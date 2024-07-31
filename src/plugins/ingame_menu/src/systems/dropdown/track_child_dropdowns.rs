@@ -38,8 +38,6 @@ fn remove_child<TItem: Send + Sync + 'static>(
 
 #[cfg(test)]
 mod tests {
-	use std::collections::HashSet;
-
 	use super::*;
 	use bevy::{
 		app::{App, Update},
@@ -49,19 +47,6 @@ mod tests {
 
 	#[derive(Debug, PartialEq)]
 	struct _Item;
-
-	trait WithChildDropdowns {
-		fn with_child_dropdowns<const N: usize>(self, child_dropdowns: [Entity; N]) -> Self;
-	}
-
-	impl WithChildDropdowns for DropdownUI<_Item> {
-		fn with_child_dropdowns<const N: usize>(self, child_dropdowns: [Entity; N]) -> Self {
-			let mut result = DropdownUI::new(self.source);
-			result.child_dropdowns = HashSet::from(child_dropdowns);
-
-			result
-		}
-	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

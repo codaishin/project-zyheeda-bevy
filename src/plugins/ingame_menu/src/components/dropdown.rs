@@ -32,4 +32,13 @@ impl<TItem> DropdownUI<TItem> {
 			phantom_data: PhantomData,
 		}
 	}
+
+	#[cfg(test)]
+	pub(crate) fn with_child_dropdowns<const N: usize>(self, child_dropdowns: [Entity; N]) -> Self {
+		Self {
+			source: self.source,
+			child_dropdowns: HashSet::from(child_dropdowns),
+			phantom_data: PhantomData,
+		}
+	}
 }
