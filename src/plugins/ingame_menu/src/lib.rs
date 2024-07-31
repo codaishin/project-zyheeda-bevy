@@ -62,6 +62,7 @@ use systems::{
 		insert_skill_key_select_dropdown::insert_skill_key_select_dropdown,
 		insert_skill_select_dropdown::insert_skill_select_dropdown,
 		spawn_focused::dropdown_spawn_focused,
+		track_child_dropdowns::dropdown_track_child_dropdowns,
 	},
 	image_color::image_color,
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
@@ -153,6 +154,7 @@ impl AddDropdown for App {
 			Update,
 			(
 				dropdown_events::<TItem>,
+				dropdown_track_child_dropdowns::<TItem>,
 				dropdown_detect_focus_change::<TItem>
 					.pipe(dropdown_despawn_all::<TItem>)
 					.pipe(dropdown_spawn_focused::<TItem>),

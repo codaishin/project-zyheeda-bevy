@@ -5,3 +5,4 @@ pub(crate) mod insert_empty_skill_key_select_dropdown;
 pub(crate) mod insert_skill_key_select_dropdown;
 pub(crate) mod insert_skill_select_dropdown;
 pub(crate) mod spawn_focused;
+pub(crate) mod track_child_dropdowns;
