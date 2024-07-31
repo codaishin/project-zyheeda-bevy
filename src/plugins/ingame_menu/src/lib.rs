@@ -41,6 +41,7 @@ use skills::{
 };
 use std::time::Duration;
 use systems::{
+	adjust_global_z_index::adjust_global_z_index,
 	combos::{
 		get_combos::get_combos,
 		update_combo_keys::update_combo_keys,
@@ -277,5 +278,6 @@ fn inventory_screen_systems(app: &mut App) {
 }
 
 fn general_systems(app: &mut App) {
-	app.add_systems(Update, image_color);
+	app.add_systems(Update, image_color)
+		.add_systems(Update, adjust_global_z_index);
 }

@@ -1,12 +1,15 @@
 use crate::{
-	components::dropdown::{Dropdown, DropdownUI},
+	components::{
+		dropdown::{Dropdown, DropdownUI},
+		GlobalZIndexTop,
+	},
 	tools::Layout,
 	traits::{GetLayout, RootStyle, UI},
 };
 use bevy::{
 	hierarchy::{BuildChildren, ChildBuilder},
 	prelude::{Commands, Entity, In, Query},
-	ui::{node_bundles::NodeBundle, Display, RepeatedGridTrack, Style, ZIndex},
+	ui::{node_bundles::NodeBundle, Display, RepeatedGridTrack, Style},
 	utils::default,
 };
 use common::tools::Focus;
@@ -34,10 +37,10 @@ pub(crate) fn dropdown_spawn_focused<TItem>(
 		entity.with_children(|entity_node| {
 			entity_node
 				.spawn((
+					GlobalZIndexTop,
 					DropdownUI::<TItem>::new(source),
 					NodeBundle {
 						style: dropdown.root_style(),
-						z_index: ZIndex::Global(1),
 						..default()
 					},
 				))
@@ -98,6 +101,7 @@ fn spawn_items<TItem: UI>(dropdown_node: &mut ChildBuilder, dropdown: &Dropdown<
 mod tests {
 	use super::*;
 	use crate::{
+		components::GlobalZIndexTop,
 		tools::Layout,
 		traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn},
 	};
@@ -307,29 +311,6 @@ mod tests {
 				..default()
 			}),
 			dropdown_ui.get::<Style>(),
-		);
-	}
-
-	#[test]
-	fn spawn_dropdown_ui_with_global_z_index_1() {
-		impl_dropdown!(_Item);
-
-		let mut app = setup::<_Item>();
-
-		let dropdown = app.world_mut().spawn(Dropdown::<_Item>::default()).id();
-		app.world_mut()
-			.insert_resource(_In(Focus::New(vec![dropdown])));
-
-		app.update();
-
-		let dropdown_ui = last_child_of!(app, dropdown);
-
-		assert_eq!(
-			Some(1),
-			dropdown_ui.get::<ZIndex>().map(|index| match index {
-				ZIndex::Global(index) => *index,
-				_ => -1,
-			}),
 		);
 	}
 
@@ -559,5 +540,22 @@ mod tests {
 			}),
 			dropdown_ui_content.get::<Style>()
 		);
+	}
+
+	#[test]
+	fn spawn_dropdown_ui_with_global_z_index_top() {
+		impl_dropdown!(_Item);
+
+		let mut app = setup::<_Item>();
+
+		let dropdown = app.world_mut().spawn(Dropdown::<_Item>::default()).id();
+		app.world_mut()
+			.insert_resource(_In(Focus::New(vec![dropdown])));
+
+		app.update();
+
+		let dropdown_ui = last_child_of!(app, dropdown);
+
+		assert_eq!(Some(&GlobalZIndexTop), dropdown_ui.get::<GlobalZIndexTop>());
 	}
 }
