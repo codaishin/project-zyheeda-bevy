@@ -61,3 +61,6 @@ pub(crate) struct DeleteSkill<TKey> {
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct ImageColorCommand(pub(crate) Color);
+
+#[derive(Component, Debug, PartialEq)]
+pub(crate) struct GlobalZIndexTop;

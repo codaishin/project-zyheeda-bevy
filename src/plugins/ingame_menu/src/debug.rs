@@ -123,35 +123,42 @@ impl Button {
 struct SingleRow;
 struct SingleColumn;
 struct TwoColumns;
+struct WithSubDropdown<TLayout>(PhantomData<TLayout>);
+
+impl<TLayout> Default for WithSubDropdown<TLayout> {
+	fn default() -> Self {
+		Self(PhantomData)
+	}
+}
 
 #[derive(Component)]
-struct ButtonOption<TLayout: Sync + Send + 'static> {
+struct ButtonOption<TLayout: Sync + Send + 'static, TValue = &'static str> {
 	phantom_data: PhantomData<TLayout>,
-	text: &'static str,
+	value: TValue,
 	target: Entity,
 }
 
-impl<TLayout: Sync + Send + 'static> Clone for ButtonOption<TLayout> {
+impl<TLayout: Sync + Send + 'static, TValue: Clone> Clone for ButtonOption<TLayout, TValue> {
 	fn clone(&self) -> Self {
 		Self {
 			phantom_data: self.phantom_data,
-			text: self.text,
+			value: self.value.clone(),
 			target: self.target,
 		}
 	}
 }
 
-impl<TLayout: Sync + Send + 'static> ButtonOption<TLayout> {
-	fn new(text: &'static str, target: Entity) -> Self {
+impl<TLayout: Sync + Send + 'static, TValue> ButtonOption<TLayout, TValue> {
+	fn new(value: TValue, target: Entity) -> Self {
 		Self {
 			phantom_data: PhantomData,
-			text,
+			value,
 			target,
 		}
 	}
 }
 
-impl<TLayout: Sync + Send + 'static> GetNode for ButtonOption<TLayout> {
+impl<TLayout: Sync + Send + 'static, TValue> GetNode for ButtonOption<TLayout, TValue> {
 	fn node(&self) -> NodeBundle {
 		NodeBundle::default()
 	}
@@ -161,12 +168,28 @@ impl<TLayout: Sync + Send + 'static> InstantiateContentOn for ButtonOption<TLayo
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		let option = (Button::bundle(), self.clone());
 		parent.spawn(option).with_children(|button| {
-			button.spawn(TextBundle::from_section(self.text, Button::text_style()));
+			button.spawn(TextBundle::from_section(self.value, Button::text_style()));
 		});
 	}
 }
 
-impl<TLayout: Sync + Send + 'static> RootStyle for Dropdown<ButtonOption<TLayout>> {
+impl<TLayout: Sync + Send + 'static, TSubLayout: Sync + Send + 'static> InstantiateContentOn
+	for ButtonOption<TLayout, WithSubDropdown<TSubLayout>>
+{
+	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
+		let option = (
+			Button::bundle(),
+			Dropdown {
+				items: get_button_options_numbered::<TSubLayout>(self.target),
+			},
+		);
+		parent.spawn(option).with_children(|button| {
+			button.spawn(TextBundle::from_section("subs", Button::text_style()));
+		});
+	}
+}
+
+impl<TLayout: Sync + Send + 'static, TValue> RootStyle for Dropdown<ButtonOption<TLayout, TValue>> {
 	fn root_style(&self) -> Style {
 		Style {
 			position_type: PositionType::Absolute,
@@ -177,19 +200,19 @@ impl<TLayout: Sync + Send + 'static> RootStyle for Dropdown<ButtonOption<TLayout
 	}
 }
 
-impl GetLayout for Dropdown<ButtonOption<SingleRow>> {
+impl<TValue> GetLayout for Dropdown<ButtonOption<SingleRow, TValue>> {
 	fn layout(&self) -> Layout {
 		Layout::SINGLE_ROW
 	}
 }
 
-impl GetLayout for Dropdown<ButtonOption<SingleColumn>> {
+impl<TValue> GetLayout for Dropdown<ButtonOption<SingleColumn, TValue>> {
 	fn layout(&self) -> Layout {
 		Layout::SINGLE_COLUMN
 	}
 }
 
-impl GetLayout for Dropdown<ButtonOption<TwoColumns>> {
+impl<TValue> GetLayout for Dropdown<ButtonOption<TwoColumns, TValue>> {
 	fn layout(&self) -> Layout {
 		Layout::LastColumn(Index(1))
 	}
@@ -219,24 +242,39 @@ fn replace_button_text<TLayout: Sync + Send + 'static>(
 			continue;
 		};
 
-		button.text = options.text;
+		button.text = options.value;
 	}
 }
 
-pub fn setup_dropdown_test(app: &mut App) {
-	fn get_items<TLayout: Sync + Send + 'static>(target: Entity) -> Vec<ButtonOption<TLayout>> {
-		vec![
-			ButtonOption::new("1", target),
-			ButtonOption::new("2", target),
-			ButtonOption::new("3", target),
-			ButtonOption::new("4", target),
-			ButtonOption::new("5", target),
-		]
-	}
+fn get_button_options_numbered<TLayout: Sync + Send + 'static>(
+	target: Entity,
+) -> Vec<ButtonOption<TLayout>> {
+	vec![
+		ButtonOption::new("1", target),
+		ButtonOption::new("2", target),
+		ButtonOption::new("3", target),
+		ButtonOption::new("4", target),
+		ButtonOption::new("5", target),
+	]
+}
 
+fn get_button_options<TLayout: Sync + Send + 'static, TExtra: Sync + Send + 'static + Default>(
+	target: Entity,
+) -> Vec<ButtonOption<TLayout, TExtra>> {
+	vec![
+		ButtonOption::new(TExtra::default(), target),
+		ButtonOption::new(TExtra::default(), target),
+		ButtonOption::new(TExtra::default(), target),
+		ButtonOption::new(TExtra::default(), target),
+		ButtonOption::new(TExtra::default(), target),
+	]
+}
+
+pub fn setup_dropdown_test(app: &mut App) {
 	app.add_dropdown::<ButtonOption<SingleRow>>()
 		.add_dropdown::<ButtonOption<SingleColumn>>()
 		.add_dropdown::<ButtonOption<TwoColumns>>()
+		.add_dropdown::<ButtonOption<SingleRow, WithSubDropdown<SingleColumn>>>()
 		.add_systems(
 			Update,
 			(
@@ -263,7 +301,7 @@ pub fn setup_dropdown_test(app: &mut App) {
 				Button { text: "" },
 				Button::bundle(),
 				Dropdown {
-					items: get_items::<SingleRow>(button.id()),
+					items: get_button_options_numbered::<SingleRow>(button.id()),
 				},
 			));
 			let mut button = container.spawn_empty();
@@ -271,7 +309,7 @@ pub fn setup_dropdown_test(app: &mut App) {
 				Button { text: "" },
 				Button::bundle(),
 				Dropdown {
-					items: get_items::<SingleColumn>(button.id()),
+					items: get_button_options_numbered::<SingleColumn>(button.id()),
 				},
 			));
 			let mut button = container.spawn_empty();
@@ -279,7 +317,17 @@ pub fn setup_dropdown_test(app: &mut App) {
 				Button { text: "" },
 				Button::bundle(),
 				Dropdown {
-					items: get_items::<TwoColumns>(button.id()),
+					items: get_button_options_numbered::<TwoColumns>(button.id()),
+				},
+			));
+			let mut button = container.spawn_empty();
+			button.insert((
+				Button { text: "" },
+				Button::bundle(),
+				Dropdown {
+					items: get_button_options::<SingleRow, WithSubDropdown<SingleColumn>>(
+						button.id(),
+					),
 				},
 			));
 		});

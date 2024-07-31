@@ -1,4 +1,5 @@
 mod components;
+mod events;
 mod systems;
 mod tools;
 mod traits;
@@ -26,6 +27,7 @@ use components::{
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
 	ui_overlay::UIOverlay,
 };
+use events::DropdownEvent;
 use skills::{
 	components::{
 		combos::Combos,
@@ -39,6 +41,7 @@ use skills::{
 };
 use std::time::Duration;
 use systems::{
+	adjust_global_z_index::adjust_global_z_index,
 	combos::{
 		get_combos::get_combos,
 		update_combo_keys::update_combo_keys,
@@ -53,12 +56,14 @@ use systems::{
 	dad::{drag::drag, drop::drop},
 	despawn::despawn,
 	dropdown::{
-		despawn_all::dropdown_despawn_all,
+		despawn_when_no_children_pressed::dropdown_despawn_when_no_children_pressed,
 		detect_focus_change::dropdown_detect_focus_change,
+		events::dropdown_events,
 		insert_empty_skill_key_select_dropdown::insert_empty_skill_key_select_dropdown,
 		insert_skill_key_select_dropdown::insert_skill_key_select_dropdown,
 		insert_skill_select_dropdown::insert_skill_select_dropdown,
 		spawn_focused::dropdown_spawn_focused,
+		track_child_dropdowns::dropdown_track_child_dropdowns,
 	},
 	image_color::image_color,
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
@@ -148,9 +153,13 @@ impl AddDropdown for App {
 	{
 		self.add_systems(
 			Update,
-			dropdown_detect_focus_change::<TItem>
-				.pipe(dropdown_despawn_all::<TItem>)
-				.pipe(dropdown_spawn_focused::<TItem>),
+			(
+				dropdown_events::<TItem>,
+				dropdown_track_child_dropdowns::<TItem>,
+				dropdown_detect_focus_change::<TItem>
+					.pipe(dropdown_despawn_when_no_children_pressed::<TItem>)
+					.pipe(dropdown_spawn_focused::<TItem>),
+			),
 		)
 	}
 }
@@ -160,6 +169,7 @@ pub struct IngameMenuPlugin;
 impl Plugin for IngameMenuPlugin {
 	fn build(&self, app: &mut App) {
 		resources(app);
+		events(app);
 		state_control_systems(app);
 		ui_overlay_systems(app);
 		combo_overview_systems(app);
@@ -180,6 +190,10 @@ fn resources(app: &mut App) {
 		.insert_resource(TooltipUIControl {
 			tooltip_delay: Duration::from_millis(500),
 		});
+}
+
+fn events(app: &mut App) {
+	app.add_event::<DropdownEvent>();
 }
 
 fn state_control_systems(app: &mut App) {
@@ -264,5 +278,6 @@ fn inventory_screen_systems(app: &mut App) {
 }
 
 fn general_systems(app: &mut App) {
-	app.add_systems(Update, image_color);
+	app.add_systems(Update, image_color)
+		.add_systems(Update, adjust_global_z_index);
 }

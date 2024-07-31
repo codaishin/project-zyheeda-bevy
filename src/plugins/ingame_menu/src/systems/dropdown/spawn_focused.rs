@@ -1,46 +1,18 @@
 use crate::{
-	components::dropdown::Dropdown,
+	components::{
+		dropdown::{Dropdown, DropdownUI},
+		GlobalZIndexTop,
+	},
 	tools::Layout,
 	traits::{GetLayout, RootStyle, UI},
 };
 use bevy::{
 	hierarchy::{BuildChildren, ChildBuilder},
-	prelude::{Commands, Component, Entity, In, Query},
-	ui::{node_bundles::NodeBundle, Display, RepeatedGridTrack, Style, ZIndex},
+	prelude::{Commands, Entity, In, Query},
+	ui::{node_bundles::NodeBundle, Display, RepeatedGridTrack, Style},
 	utils::default,
 };
 use common::tools::Focus;
-use std::{fmt::Debug, marker::PhantomData};
-
-#[derive(Component)]
-pub(crate) struct DropdownUI<TItem> {
-	phantom_data: PhantomData<TItem>,
-	pub(crate) source: Entity,
-}
-
-impl<TItem> DropdownUI<TItem> {
-	pub(crate) fn new(source: Entity) -> Self {
-		Self {
-			source,
-			phantom_data: PhantomData,
-		}
-	}
-}
-
-impl<TItem> Debug for DropdownUI<TItem> {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("DropdownUI")
-			.field("phantom_data", &self.phantom_data)
-			.field("source", &self.source)
-			.finish()
-	}
-}
-
-impl<TItem> PartialEq for DropdownUI<TItem> {
-	fn eq(&self, other: &Self) -> bool {
-		self.source == other.source
-	}
-}
 
 pub(crate) fn dropdown_spawn_focused<TItem>(
 	focus: In<Focus>,
@@ -65,10 +37,10 @@ pub(crate) fn dropdown_spawn_focused<TItem>(
 		entity.with_children(|entity_node| {
 			entity_node
 				.spawn((
+					GlobalZIndexTop,
 					DropdownUI::<TItem>::new(source),
 					NodeBundle {
 						style: dropdown.root_style(),
-						z_index: ZIndex::Global(1),
 						..default()
 					},
 				))
@@ -129,6 +101,7 @@ fn spawn_items<TItem: UI>(dropdown_node: &mut ChildBuilder, dropdown: &Dropdown<
 mod tests {
 	use super::*;
 	use crate::{
+		components::GlobalZIndexTop,
 		tools::Layout,
 		traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn},
 	};
@@ -144,6 +117,7 @@ mod tests {
 
 	macro_rules! impl_item {
 		($item:ident) => {
+			#[derive(Debug, PartialEq)]
 			struct $item;
 
 			impl GetNode for $item {
@@ -337,29 +311,6 @@ mod tests {
 				..default()
 			}),
 			dropdown_ui.get::<Style>(),
-		);
-	}
-
-	#[test]
-	fn spawn_dropdown_ui_with_global_z_index_1() {
-		impl_dropdown!(_Item);
-
-		let mut app = setup::<_Item>();
-
-		let dropdown = app.world_mut().spawn(Dropdown::<_Item>::default()).id();
-		app.world_mut()
-			.insert_resource(_In(Focus::New(vec![dropdown])));
-
-		app.update();
-
-		let dropdown_ui = last_child_of!(app, dropdown);
-
-		assert_eq!(
-			Some(1),
-			dropdown_ui.get::<ZIndex>().map(|index| match index {
-				ZIndex::Global(index) => *index,
-				_ => -1,
-			}),
 		);
 	}
 
@@ -589,5 +540,22 @@ mod tests {
 			}),
 			dropdown_ui_content.get::<Style>()
 		);
+	}
+
+	#[test]
+	fn spawn_dropdown_ui_with_global_z_index_top() {
+		impl_dropdown!(_Item);
+
+		let mut app = setup::<_Item>();
+
+		let dropdown = app.world_mut().spawn(Dropdown::<_Item>::default()).id();
+		app.world_mut()
+			.insert_resource(_In(Focus::New(vec![dropdown])));
+
+		app.update();
+
+		let dropdown_ui = last_child_of!(app, dropdown);
+
+		assert_eq!(Some(&GlobalZIndexTop), dropdown_ui.get::<GlobalZIndexTop>());
 	}
 }
