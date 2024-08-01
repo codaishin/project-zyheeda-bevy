@@ -54,7 +54,7 @@ impl ComboOverview {
 	pub(crate) fn skill_container_bundle() -> impl Bundle {
 		NodeBundle {
 			style: Style {
-				margin: UiRect::all(Val::Px(5.0)),
+				margin: UiRect::all(Val::Px(10.0)),
 				..default()
 			},
 			..default()
@@ -94,8 +94,7 @@ impl ComboOverview {
 		NodeBundle {
 			style: Style {
 				position_type: PositionType::Absolute,
-				bottom: Val::Px(-4.0),
-				right: Val::Px(-4.0),
+				left: Val::Px(-8.0),
 				..default()
 			},
 			..default()
@@ -122,10 +121,11 @@ impl ComboOverview {
 		ButtonBundle {
 			style: Style {
 				width: Val::Px(20.0),
-				height: Val::Px(20.0),
+				height: Val::Px(30.0),
 				border: UiRect::all(Val::Px(2.0)),
 				margin: UiRect::all(Val::Px(-2.0)),
 				justify_content: JustifyContent::Center,
+				align_items: AlignItems::Center,
 				..default()
 			},
 			background_color: DEFAULT_PANEL_COLORS.filled.into(),
@@ -165,7 +165,7 @@ impl ComboOverview {
 		TextBundle::from_section(
 			key,
 			TextStyle {
-				font_size: 15.,
+				font_size: 20.,
 				color: DEFAULT_PANEL_COLORS.text,
 				..default()
 			},
@@ -327,7 +327,7 @@ fn with_delete_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
 					},
 				))
 				.with_children(|parent| {
-					parent.spawn(ComboOverview::delete_button_text("X"));
+					parent.spawn(ComboOverview::delete_button_text("<"));
 				});
 		});
 }
