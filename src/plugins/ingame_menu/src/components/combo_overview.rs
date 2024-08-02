@@ -77,12 +77,14 @@ impl ComboOverview {
 		}
 	}
 
+	const MODIFY_BUTTON_OFFSET: f32 = -12.0;
+
 	pub(crate) fn skill_key_button_offset_container() -> impl Bundle {
 		NodeBundle {
 			style: Style {
 				position_type: PositionType::Absolute,
-				top: Val::Px(-8.0),
-				right: Val::Px(-8.0),
+				top: Val::Px(Self::MODIFY_BUTTON_OFFSET),
+				right: Val::Px(Self::MODIFY_BUTTON_OFFSET),
 				..default()
 			},
 			..default()
@@ -93,7 +95,18 @@ impl ComboOverview {
 		NodeBundle {
 			style: Style {
 				position_type: PositionType::Absolute,
-				left: Val::Px(-8.0),
+				left: Val::Px(Self::MODIFY_BUTTON_OFFSET),
+				..default()
+			},
+			..default()
+		}
+	}
+
+	pub(crate) fn append_button_offset_container() -> impl Bundle {
+		NodeBundle {
+			style: Style {
+				position_type: PositionType::Absolute,
+				right: Val::Px(Self::MODIFY_BUTTON_OFFSET),
 				..default()
 			},
 			..default()
@@ -116,7 +129,7 @@ impl ComboOverview {
 		}
 	}
 
-	pub(crate) fn delete_button_bundle() -> impl Bundle {
+	pub(crate) fn modify_button_bundle() -> impl Bundle {
 		ButtonBundle {
 			style: Style {
 				width: Val::Px(20.0),
@@ -144,7 +157,7 @@ impl ComboOverview {
 		)
 	}
 
-	pub(crate) fn delete_button_text(key: &str) -> impl Bundle {
+	pub(crate) fn modify_button_text(key: &str) -> impl Bundle {
 		TextBundle::from_section(
 			key,
 			TextStyle {
@@ -245,7 +258,11 @@ fn add_combo(parent: &mut ChildBuilder, combo: &[SkillDescriptor]) {
 				return;
 			};
 
-			add_skill(parent, last_skill, &[with_key_button, with_delete_button]);
+			add_skill(
+				parent,
+				last_skill,
+				&[with_key_button, with_append_button, with_delete_button],
+			);
 		});
 }
 
@@ -297,19 +314,31 @@ fn with_key_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
 		});
 }
 
+fn with_append_button(_: &SkillDescriptor, parent: &mut ChildBuilder) {
+	parent
+		.spawn(ComboOverview::append_button_offset_container())
+		.with_children(|parent| {
+			parent
+				.spawn(ComboOverview::modify_button_bundle())
+				.with_children(|parent| {
+					parent.spawn(ComboOverview::modify_button_text(">"));
+				});
+		});
+}
+
 fn with_delete_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
 	parent
 		.spawn(ComboOverview::delete_button_offset_container())
 		.with_children(|parent| {
 			parent
 				.spawn((
-					ComboOverview::delete_button_bundle(),
+					ComboOverview::modify_button_bundle(),
 					DeleteSkill {
 						key_path: descriptor.key_path.clone(),
 					},
 				))
 				.with_children(|parent| {
-					parent.spawn(ComboOverview::delete_button_text("<"));
+					parent.spawn(ComboOverview::modify_button_text("<"));
 				});
 		});
 }
