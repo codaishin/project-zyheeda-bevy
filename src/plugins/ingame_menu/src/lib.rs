@@ -21,11 +21,13 @@ use components::{
 	dropdown::Dropdown,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
-	key_select::{KeySelect, ReKeySkill},
+	key_select::{AppendSkill, KeySelect, ReKeySkill},
 	quickbar_panel::QuickbarPanel,
 	skill_descriptor::SkillDescriptor,
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
 	ui_overlay::UIOverlay,
+	AppendSkillCommand,
+	ReKeyCommand,
 };
 use events::DropdownEvent;
 use skills::{
@@ -57,7 +59,7 @@ use systems::{
 		despawn_when_no_children_pressed::dropdown_despawn_when_no_children_pressed,
 		detect_focus_change::dropdown_detect_focus_change,
 		events::dropdown_events,
-		insert_skill_key_select_dropdown::insert_skill_key_select_dropdown,
+		insert_key_select_dropdown::insert_key_select_dropdown,
 		insert_skill_select_dropdown::insert_skill_select_dropdown,
 		spawn_focused::dropdown_spawn_focused,
 		track_child_dropdowns::dropdown_track_child_dropdowns,
@@ -225,6 +227,7 @@ fn combo_overview_systems(app: &mut App) {
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
 		.add_dropdown::<SkillDescriptor>()
 		.add_dropdown::<KeySelect<ReKeySkill>>()
+		.add_dropdown::<KeySelect<AppendSkill>>()
 		.add_tooltip::<Skill>()
 		.add_systems(
 			Update,
@@ -238,7 +241,8 @@ fn combo_overview_systems(app: &mut App) {
 			(
 				visualize_invalid_skill::<Player, Slots, Unusable>,
 				insert_skill_select_dropdown::<Slots<Handle<Skill>>>,
-				insert_skill_key_select_dropdown::<SlotKey>,
+				insert_key_select_dropdown::<Player, Combos, AppendSkillCommand>,
+				insert_key_select_dropdown::<Player, Combos, ReKeyCommand>,
 				update_combos_view_delete_skill::<Player, Combos>,
 				update_combo_skills::<Player, Combos>,
 				map_pressed_key_select.pipe(update_combo_keys::<Player, Combos>),

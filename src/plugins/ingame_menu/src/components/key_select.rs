@@ -1,6 +1,6 @@
 use super::combo_overview::ComboOverview;
 use crate::traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn, GetKey};
-use bevy::prelude::{BuildChildren, ChildBuilder, Component, Entity, NodeBundle};
+use bevy::prelude::{BuildChildren, ChildBuilder, Component, NodeBundle};
 use skills::items::slot_key::SlotKey;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -14,10 +14,20 @@ impl GetKey<SlotKey> for ReKeySkill {
 	}
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub(crate) struct AppendSkill<TKey = SlotKey> {
+	pub(crate) on: TKey,
+}
+
+impl<TKey> GetKey<TKey> for AppendSkill<TKey> {
+	fn get_key<'a>(&'a self, _: &'a [TKey]) -> Option<&'a TKey> {
+		Some(&self.on)
+	}
+}
+
 #[derive(Component, Debug, PartialEq, Clone)]
 pub(crate) struct KeySelect<TExtra, TKey = SlotKey> {
 	pub(crate) extra: TExtra,
-	pub(crate) key_button: Entity,
 	pub(crate) key_path: Vec<TKey>,
 }
 

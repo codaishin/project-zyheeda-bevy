@@ -45,10 +45,13 @@ pub(crate) struct SkillSelectDropdownInsertCommand {
 	pub(crate) key_path: Vec<SlotKey>,
 }
 
-#[derive(Component, Debug, PartialEq)]
-pub(crate) struct PreSelected<TKey = SlotKey> {
-	pub(crate) key: TKey,
+#[derive(Debug, PartialEq)]
+pub(crate) struct ReKeyCommand<TKey = SlotKey> {
+	pub(crate) ignore: TKey,
 }
+
+#[derive(Debug, PartialEq)]
+pub(crate) struct AppendSkillCommand;
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct KeySelectDropdownInsertCommand<TExtra, TKey = SlotKey> {

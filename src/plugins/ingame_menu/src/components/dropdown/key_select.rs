@@ -1,6 +1,6 @@
 use super::Dropdown;
 use crate::{
-	components::key_select::KeySelect,
+	components::key_select::{AppendSkill, KeySelect, ReKeySkill},
 	tools::Layout,
 	traits::{GetLayout, RootStyle},
 };
@@ -9,12 +9,23 @@ use bevy::{
 	ui::{PositionType, Style, Val},
 };
 
-impl<TExtra> RootStyle for Dropdown<KeySelect<TExtra>> {
+impl RootStyle for Dropdown<KeySelect<ReKeySkill>> {
 	fn root_style(&self) -> Style {
 		Style {
 			position_type: PositionType::Absolute,
 			top: Val::Percent(100.),
 			right: Val::Percent(0.),
+			..default()
+		}
+	}
+}
+
+impl RootStyle for Dropdown<KeySelect<AppendSkill>> {
+	fn root_style(&self) -> Style {
+		Style {
+			position_type: PositionType::Absolute,
+			top: Val::Percent(0.),
+			left: Val::Percent(100.),
 			..default()
 		}
 	}

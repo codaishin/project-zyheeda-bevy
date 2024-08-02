@@ -2,9 +2,10 @@ use super::{
 	key_code_text_insert_command::KeyCodeTextInsertCommandBundle,
 	skill_descriptor::SkillDescriptor,
 	tooltip::Tooltip,
+	AppendSkillCommand,
 	DeleteSkill,
 	KeySelectDropdownInsertCommand,
-	PreSelected,
+	ReKeyCommand,
 	SkillSelectDropdownInsertCommand,
 };
 use crate::traits::{
@@ -121,6 +122,7 @@ impl ComboOverview {
 				border: UiRect::all(Val::Px(2.0)),
 				margin: UiRect::all(Val::Px(-2.0)),
 				justify_content: JustifyContent::Center,
+				align_items: AlignItems::Center,
 				..default()
 			},
 			background_color: DEFAULT_PANEL_COLORS.filled.into(),
@@ -133,7 +135,7 @@ impl ComboOverview {
 		ButtonBundle {
 			style: Style {
 				width: Val::Px(20.0),
-				height: Val::Px(30.0),
+				height: Val::Px(25.0),
 				border: UiRect::all(Val::Px(2.0)),
 				margin: UiRect::all(Val::Px(-2.0)),
 				justify_content: JustifyContent::Center,
@@ -150,7 +152,7 @@ impl ComboOverview {
 		KeyCodeTextInsertCommandBundle::new(
 			key,
 			TextStyle {
-				font_size: 20.,
+				font_size: 15.,
 				color: DEFAULT_PANEL_COLORS.text,
 				..default()
 			},
@@ -161,7 +163,7 @@ impl ComboOverview {
 		TextBundle::from_section(
 			key,
 			TextStyle {
-				font_size: 20.,
+				font_size: 15.,
 				color: DEFAULT_PANEL_COLORS.text,
 				..default()
 			},
@@ -304,7 +306,7 @@ fn with_key_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
 				.spawn((
 					ComboOverview::skill_key_button_bundle(),
 					KeySelectDropdownInsertCommand {
-						extra: PreSelected { key: *skill_key },
+						extra: ReKeyCommand { ignore: *skill_key },
 						key_path: descriptor.key_path.clone(),
 					},
 				))
@@ -314,12 +316,18 @@ fn with_key_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
 		});
 }
 
-fn with_append_button(_: &SkillDescriptor, parent: &mut ChildBuilder) {
+fn with_append_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
 	parent
 		.spawn(ComboOverview::append_button_offset_container())
 		.with_children(|parent| {
 			parent
-				.spawn(ComboOverview::modify_button_bundle())
+				.spawn((
+					ComboOverview::modify_button_bundle(),
+					KeySelectDropdownInsertCommand {
+						extra: AppendSkillCommand,
+						key_path: descriptor.key_path.clone(),
+					},
+				))
 				.with_children(|parent| {
 					parent.spawn(ComboOverview::modify_button_text(">"));
 				});
