@@ -10,18 +10,18 @@ enum Iter<'a, TSkill: 'a> {
 }
 
 impl<'a, TSkill> Iterator for Iter<'a, TSkill> {
-	type Item = &'a SlotKey;
+	type Item = SlotKey;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		match self {
 			Iter::None => None,
-			Iter::Some(keys) => keys.next(),
+			Iter::Some(keys) => keys.next().cloned(),
 		}
 	}
 }
 
 impl<'a, TSkill> FollowupKeys for NodeEntry<'a, TSkill> {
-	type TItem = &'a SlotKey;
+	type TItem = SlotKey;
 
 	fn followup_keys(&self) -> impl Iterator<Item = Self::TItem> {
 		let Some((_, ComboNode(followup_tree))) = self.tree.get(&self.key) else {
@@ -50,7 +50,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			vec![] as Vec<&SlotKey>,
+			vec![] as Vec<SlotKey>,
 			entry.followup_keys().collect::<Vec<_>>()
 		);
 	}
@@ -72,7 +72,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			HashSet::from([&SlotKey::Hand(Side::Main), &SlotKey::Hand(Side::Off)]),
+			HashSet::from([SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]),
 			entry.followup_keys().collect::<HashSet<_>>()
 		);
 	}
@@ -85,7 +85,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			vec![] as Vec<&SlotKey>,
+			vec![] as Vec<SlotKey>,
 			entry.followup_keys().collect::<Vec<_>>()
 		);
 	}
