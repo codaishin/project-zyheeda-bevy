@@ -42,7 +42,6 @@ use skills::{
 use std::time::Duration;
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
-	collect_all_keys::collect_all_keys,
 	combos::{
 		get_combos::get_combos,
 		update_combo_keys::update_combo_keys,
@@ -190,8 +189,7 @@ fn resources(app: &mut App) {
 		.init_resource::<Shared<Path, Handle<Image>>>()
 		.insert_resource(TooltipUIControl {
 			tooltip_delay: Duration::from_millis(500),
-		})
-		.add_systems(PreUpdate, collect_all_keys::<SlotKey, KeyCode, SlotKeyMap>);
+		});
 }
 
 fn events(app: &mut App) {
