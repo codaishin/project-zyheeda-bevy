@@ -1,4 +1,5 @@
 pub(crate) mod adjust_global_z_index;
+pub(crate) mod collect_all_keys;
 pub(crate) mod combos;
 pub(crate) mod conditions;
 pub(crate) mod dad;
