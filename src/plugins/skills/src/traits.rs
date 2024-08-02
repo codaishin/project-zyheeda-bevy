@@ -112,9 +112,19 @@ pub trait GetCombos {
 	fn combos(&self) -> Vec<Combo>;
 }
 
+pub trait GetEntry<'a, TKey> {
+	type TEntry;
+	fn entry(&'a self, key: &TKey) -> Option<Self::TEntry>;
+}
+
 pub trait GetEntryMut<'a, TKey> {
 	type TEntry;
 	fn entry_mut(&'a mut self, key: &TKey) -> Option<Self::TEntry>;
+}
+
+pub trait FollowupKeys {
+	type TItem;
+	fn followup_keys(&self) -> impl Iterator<Item = Self::TItem>;
 }
 
 pub trait Insert<T> {

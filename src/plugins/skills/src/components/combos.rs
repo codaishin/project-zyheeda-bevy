@@ -2,7 +2,17 @@ use super::{combo_node::ComboNode, Slots};
 use crate::{
 	items::slot_key::SlotKey,
 	skills::Skill,
-	traits::{Combo, GetCombos, GetEntryMut, Insert, PeekNext, ReKey, SetNextCombo, UpdateConfig},
+	traits::{
+		Combo,
+		GetCombos,
+		GetEntry,
+		GetEntryMut,
+		Insert,
+		PeekNext,
+		ReKey,
+		SetNextCombo,
+		UpdateConfig,
+	},
 };
 use bevy::ecs::component::Component;
 use common::traits::iterate::Iterate;
@@ -92,6 +102,14 @@ where
 	}
 }
 
+impl<'a, TNode: GetEntry<'a, TKey>, TKey: Iterate<SlotKey>> GetEntry<'a, TKey> for Combos<TNode> {
+	type TEntry = TNode::TEntry;
+
+	fn entry(&'a self, key: &TKey) -> Option<Self::TEntry> {
+		self.value.entry(key)
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -99,7 +117,7 @@ mod tests {
 	use bevy::{ecs::entity::Entity, utils::default};
 	use common::components::Side;
 	use mockall::{mock, predicate::eq};
-	use std::collections::HashMap;
+	use std::{cell::RefCell, collections::HashMap};
 
 	mock! {
 		_Next {}
@@ -274,8 +292,26 @@ mod tests {
 
 	#[derive(Default)]
 	struct _Node {
-		call_args: Vec<Vec<SlotKey>>,
+		call_args: RefCell<Vec<Vec<SlotKey>>>,
 		entry: Option<_Entry>,
+	}
+
+	impl<'a> GetEntryMut<'a, Vec<SlotKey>> for _Node {
+		type TEntry = &'a mut _Entry;
+
+		fn entry_mut(&'a mut self, key: &Vec<SlotKey>) -> Option<Self::TEntry> {
+			self.call_args.get_mut().push(key.clone());
+			self.entry.as_mut()
+		}
+	}
+
+	impl<'a> GetEntry<'a, Vec<SlotKey>> for _Node {
+		type TEntry = &'a _Entry;
+
+		fn entry(&'a self, key: &Vec<SlotKey>) -> Option<Self::TEntry> {
+			self.call_args.borrow_mut().push(key.clone());
+			self.entry.as_ref()
+		}
 	}
 
 	mock! {
@@ -305,15 +341,6 @@ mod tests {
 		}
 	}
 
-	impl<'a> GetEntryMut<'a, Vec<SlotKey>> for _Node {
-		type TEntry = &'a mut _Entry;
-
-		fn entry_mut(&'a mut self, key: &Vec<SlotKey>) -> Option<Self::TEntry> {
-			self.call_args.push(key.clone());
-			self.entry.as_mut()
-		}
-	}
-
 	#[test]
 	fn update_config_skill_use_correct_arguments() {
 		let mut entry = _Entry::default();
@@ -334,7 +361,7 @@ mod tests {
 
 		assert_eq!(
 			vec![vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]],
-			combos.value.call_args
+			combos.value.call_args.into_inner()
 		)
 	}
 
@@ -427,7 +454,7 @@ mod tests {
 
 		assert_eq!(
 			vec![vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]],
-			combos.value.call_args
+			combos.value.call_args.into_inner()
 		)
 	}
 
@@ -480,5 +507,26 @@ mod tests {
 		combos.update_config(&vec![SlotKey::Hand(Side::Main)], SlotKey::Hand(Side::Off));
 
 		assert!(combos.current.is_none());
+	}
+
+	#[test]
+	fn get_entry() {
+		let combo = Combos {
+			value: _Node {
+				entry: Some(_Entry::default()),
+				..default()
+			},
+			current: None,
+		};
+
+		let entry = combo.entry(&vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]);
+
+		assert_eq!(
+			(
+				true,
+				vec![vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]]
+			),
+			(entry.is_some(), combo.value.call_args.into_inner())
+		)
 	}
 }
