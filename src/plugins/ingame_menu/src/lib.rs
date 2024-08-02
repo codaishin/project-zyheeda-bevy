@@ -243,8 +243,8 @@ fn combo_overview_systems(app: &mut App) {
 			(
 				visualize_invalid_skill::<Player, Slots, KeyCode, SlotKeyMap, Unusable>,
 				insert_skill_select_dropdown::<KeyCode, SlotKey, SlotKeyMap, Slots<Handle<Skill>>>,
-				insert_skill_key_select_dropdown::<KeyCode, SlotKey, SlotKeyMap>,
-				insert_empty_skill_key_select_dropdown::<KeyCode, SlotKey, SlotKeyMap>,
+				insert_skill_key_select_dropdown,
+				insert_empty_skill_key_select_dropdown,
 				update_combos_view_key_labels::<LanguageServer, EmptySkill>,
 				update_combos_view_new_skills,
 				update_combos_view_delete_skill::<Player, Combos, KeyCode, SlotKeyMap>,
