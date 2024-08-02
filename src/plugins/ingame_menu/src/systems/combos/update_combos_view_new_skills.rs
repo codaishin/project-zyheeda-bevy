@@ -60,11 +60,12 @@ mod tests {
 	use crate::components::SkillSelectDropdownInsertCommand;
 	use bevy::{
 		app::{App, Update},
-		prelude::{BuildWorldChildren, Entity, KeyCode, TextBundle},
+		prelude::{BuildWorldChildren, Entity, TextBundle},
 		text::Text,
 		utils::default,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{components::Side, test_tools::utils::SingleThreadedApp};
+	use skills::items::slot_key::SlotKey;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -84,7 +85,7 @@ mod tests {
 					button_entity: skill_button,
 				},
 				key_button: Entity::from_raw(101),
-				key_path: vec![KeyCode::KeyA, KeyCode::KeyB],
+				key_path: vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
 			},
 		));
 
@@ -94,9 +95,9 @@ mod tests {
 
 		assert_eq!(
 			Some(&SkillSelectDropdownInsertCommand {
-				key_path: vec![KeyCode::KeyA, KeyCode::KeyB]
+				key_path: vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]
 			}),
-			skill_button.get::<SkillSelectDropdownInsertCommand<KeyCode>>(),
+			skill_button.get::<SkillSelectDropdownInsertCommand>(),
 		)
 	}
 
@@ -109,7 +110,7 @@ mod tests {
 			KeySelect {
 				extra: skill_button,
 				key_button: Entity::from_raw(101),
-				key_path: vec![KeyCode::KeyA, KeyCode::KeyB],
+				key_path: vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
 			},
 		));
 		app.world_mut().spawn((
@@ -119,7 +120,7 @@ mod tests {
 					button_entity: skill_button,
 				},
 				key_button: Entity::from_raw(101),
-				key_path: vec![KeyCode::KeyA, KeyCode::KeyB],
+				key_path: vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
 			},
 		));
 
@@ -127,10 +128,7 @@ mod tests {
 
 		let skill_button = app.world().entity(skill_button);
 
-		assert_eq!(
-			None,
-			skill_button.get::<SkillSelectDropdownInsertCommand<KeyCode>>(),
-		)
+		assert_eq!(None, skill_button.get::<SkillSelectDropdownInsertCommand>(),)
 	}
 
 	#[test]
@@ -149,7 +147,7 @@ mod tests {
 					button_entity: skill_button,
 				},
 				key_button: Entity::from_raw(101),
-				key_path: vec![KeyCode::KeyA, KeyCode::KeyB],
+				key_path: vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
 			},
 		));
 

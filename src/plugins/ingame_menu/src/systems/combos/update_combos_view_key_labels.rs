@@ -1,17 +1,18 @@
 use crate::components::key_select::KeySelect;
 use bevy::{
-	prelude::{KeyCode, Mut, Parent, Query, Res, Resource},
+	prelude::{Mut, Parent, Query, Res, Resource},
 	text::Text,
 	ui::Interaction,
 };
 use common::traits::get_ui_text::GetUiTextFor;
+use skills::items::slot_key::SlotKey;
 
 pub(crate) fn update_combos_view_key_labels<TLanguageServer, TExtra>(
 	key_selects: Query<(&KeySelect<TExtra>, &Interaction)>,
 	language_server: Res<TLanguageServer>,
 	mut texts: Query<(&mut Text, &Parent)>,
 ) where
-	TLanguageServer: GetUiTextFor<KeyCode> + Resource,
+	TLanguageServer: GetUiTextFor<SlotKey> + Resource,
 	TExtra: Clone + Sync + Send + 'static,
 {
 	for (key_select, ..) in key_selects.iter().filter(pressed) {
@@ -23,15 +24,15 @@ fn pressed<TExtra>((.., interaction): &(&KeySelect<TExtra>, &Interaction)) -> bo
 	interaction == &&Interaction::Pressed
 }
 
-fn set_key_label<TLanguageServer: GetUiTextFor<KeyCode> + Resource, TExtra>(
+fn set_key_label<TLanguageServer: GetUiTextFor<SlotKey> + Resource, TExtra>(
 	texts: &mut Query<(&mut Text, &Parent)>,
 	key_select: &KeySelect<TExtra>,
 	language_server: &Res<TLanguageServer>,
 ) -> Option<()> {
 	let (mut text, ..) = get_text(texts, key_select)?;
 	let section = text.sections.get_mut(0)?;
-	let key_code = key_select.key_path.last()?;
-	let key_text = language_server.ui_text_for(key_code).ok()?;
+	let slot_key = key_select.key_path.last()?;
+	let key_text = language_server.ui_text_for(slot_key).ok()?;
 
 	section.value = key_text;
 
@@ -56,7 +57,11 @@ mod tests {
 		text::Text,
 		utils::default,
 	};
-	use common::{test_tools::utils::SingleThreadedApp, traits::get_ui_text::UIText};
+	use common::{
+		components::Side,
+		test_tools::utils::SingleThreadedApp,
+		traits::get_ui_text::UIText,
+	};
 	use mockall::{automock, predicate::eq};
 
 	#[derive(Resource, Default)]
@@ -65,8 +70,8 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetUiTextFor<KeyCode> for _LanguageServer {
-		fn ui_text_for(&self, value: &KeyCode) -> UIText {
+	impl GetUiTextFor<SlotKey> for _LanguageServer {
+		fn ui_text_for(&self, value: &SlotKey) -> UIText {
 			self.mock.ui_text_for(value)
 		}
 	}
@@ -99,7 +104,7 @@ mod tests {
 			KeySelect {
 				extra: (),
 				key_button,
-				key_path: vec![KeyCode::KeyB],
+				key_path: vec![SlotKey::Hand(Side::Main)],
 			},
 		));
 
@@ -117,7 +122,7 @@ mod tests {
 			.mock
 			.expect_ui_text_for()
 			.times(1)
-			.with(eq(KeyCode::KeyE))
+			.with(eq(SlotKey::Hand(Side::Main)))
 			.return_const(UIText::Unmapped);
 
 		let mut app = setup(language_server);
@@ -130,7 +135,7 @@ mod tests {
 			KeySelect {
 				extra: (),
 				key_button,
-				key_path: vec![KeyCode::KeyZ, KeyCode::KeyQ, KeyCode::KeyA, KeyCode::KeyE],
+				key_path: vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
 			},
 		));
 

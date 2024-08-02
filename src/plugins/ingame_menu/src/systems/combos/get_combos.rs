@@ -10,9 +10,9 @@ use skills::{
 	traits::{Combo, GetCombos},
 };
 
-pub(crate) fn get_combos<TKey: From<SlotKey> + Clone, TCombos: Component + GetCombos>(
+pub(crate) fn get_combos<TCombos: Component + GetCombos>(
 	players: Query<Ref<TCombos>, With<Player>>,
-) -> CombosDescriptor<TKey> {
+) -> CombosDescriptor {
 	let Ok(combos) = players.get_single() else {
 		return vec![];
 	};
@@ -20,7 +20,7 @@ pub(crate) fn get_combos<TKey: From<SlotKey> + Clone, TCombos: Component + GetCo
 	combos.combos().iter().map(combo_descriptor).collect()
 }
 
-fn combo_descriptor<TKey: From<SlotKey> + Clone>(combo: &Combo) -> Vec<SkillDescriptor<TKey>> {
+fn combo_descriptor(combo: &Combo) -> Vec<SkillDescriptor> {
 	combo
 		.iter()
 		.cloned()
@@ -28,13 +28,8 @@ fn combo_descriptor<TKey: From<SlotKey> + Clone>(combo: &Combo) -> Vec<SkillDesc
 		.collect::<Vec<_>>()
 }
 
-fn skill_descriptor<TKey: From<SlotKey> + Clone>(
-	(key_path, skill): (Vec<SlotKey>, &Skill),
-) -> SkillDescriptor<TKey> {
-	SkillDescriptor {
-		skill: skill.clone(),
-		key_path: key_path.iter().cloned().map(TKey::from).collect(),
-	}
+fn skill_descriptor((key_path, skill): (Vec<SlotKey>, &Skill)) -> SkillDescriptor {
+	SkillDescriptor::new_dropdown_item(skill.clone(), key_path.clone())
 }
 
 #[cfg(test)]
@@ -84,17 +79,15 @@ mod tests {
 	}
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(CombosDescriptor<_Key>);
+	struct _Result(CombosDescriptor);
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			get_combos::<_Key, _Combos>.pipe(
-				|combos: In<CombosDescriptor<_Key>>, mut commands: Commands| {
-					commands.insert_resource(_Result(combos.0))
-				},
-			),
+			get_combos::<_Combos>.pipe(|combos: In<CombosDescriptor>, mut commands: Commands| {
+				commands.insert_resource(_Result(combos.0))
+			}),
 		);
 
 		app
@@ -148,36 +141,36 @@ mod tests {
 		assert_eq!(
 			&_Result(vec![
 				vec![
-					SkillDescriptor {
-						key_path: vec![_Key::Main],
-						skill: Skill {
+					SkillDescriptor::new_dropdown_item(
+						Skill {
 							name: "a1".to_owned(),
 							..default()
 						},
-					},
-					SkillDescriptor {
-						key_path: vec![_Key::Off],
-						skill: Skill {
+						vec![SlotKey::Hand(Side::Main)],
+					),
+					SkillDescriptor::new_dropdown_item(
+						Skill {
 							name: "a2".to_owned(),
 							..default()
-						}
-					}
+						},
+						vec![SlotKey::Hand(Side::Off)],
+					)
 				],
 				vec![
-					SkillDescriptor {
-						key_path: vec![_Key::Off],
-						skill: Skill {
+					SkillDescriptor::new_dropdown_item(
+						Skill {
 							name: "b1".to_owned(),
 							..default()
-						}
-					},
-					SkillDescriptor {
-						key_path: vec![_Key::Main],
-						skill: Skill {
+						},
+						vec![SlotKey::Hand(Side::Off)],
+					),
+					SkillDescriptor::new_dropdown_item(
+						Skill {
 							name: "b2".to_owned(),
 							..default()
-						}
-					}
+						},
+						vec![SlotKey::Hand(Side::Main)],
+					)
 				]
 			]),
 			result,

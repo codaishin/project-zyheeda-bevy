@@ -18,7 +18,7 @@ use bevy::{
 	asset::Handle,
 	color::Color,
 	hierarchy::{BuildChildren, ChildBuilder},
-	prelude::{Bundle, Component, KeyCode},
+	prelude::{Bundle, Component},
 	render::texture::Image,
 	text::TextStyle,
 	ui::{
@@ -35,26 +35,18 @@ use bevy::{
 	utils::default,
 };
 use common::traits::get_ui_text::{English, GetUiText, UIText};
+use skills::items::slot_key::SlotKey;
 
 #[derive(Component, Default)]
-pub(crate) struct ComboOverview(CombosDescriptor<KeyCode>);
+pub(crate) struct ComboOverview(CombosDescriptor);
 
 pub(crate) trait SkillButtonBundle {
-	fn with<TKey>(self, descriptor: &SkillDescriptor<TKey>) -> impl Bundle
-	where
-		TKey: Clone + Sync + Send + 'static;
+	fn with<T: Clone + Sync + Send + 'static>(self, descriptor: SkillDescriptor<T>) -> impl Bundle;
 }
 
 impl SkillButtonBundle for ButtonBundle {
-	fn with<TKey>(self, descriptor: &SkillDescriptor<TKey>) -> impl Bundle
-	where
-		TKey: Clone + Sync + Send + 'static,
-	{
-		(
-			self,
-			descriptor.clone(),
-			Tooltip::new(descriptor.skill.clone()),
-		)
+	fn with<T: Clone + Sync + Send + 'static>(self, descriptor: SkillDescriptor<T>) -> impl Bundle {
+		(self, Tooltip::new(descriptor.skill.clone()), descriptor)
 	}
 }
 
@@ -176,8 +168,8 @@ impl ComboOverview {
 	}
 }
 
-impl UpdateCombos<KeyCode> for ComboOverview {
-	fn update_combos(&mut self, combos: CombosDescriptor<KeyCode>) {
+impl UpdateCombos for ComboOverview {
+	fn update_combos(&mut self, combos: CombosDescriptor) {
 		self.0 = combos
 	}
 }
@@ -244,7 +236,7 @@ fn add_combo_list(parent: &mut ChildBuilder, combo_overview: &ComboOverview) {
 		});
 }
 
-fn add_combo(parent: &mut ChildBuilder, combo: &[SkillDescriptor<KeyCode>]) {
+fn add_combo(parent: &mut ChildBuilder, combo: &[SkillDescriptor]) {
 	parent
 		.spawn(NodeBundle {
 			style: Style {
@@ -272,8 +264,8 @@ fn add_combo(parent: &mut ChildBuilder, combo: &[SkillDescriptor<KeyCode>]) {
 
 fn add_skill(
 	parent: &mut ChildBuilder,
-	descriptor: &SkillDescriptor<KeyCode>,
-	additional_buttons: &[fn(&SkillDescriptor<KeyCode>, &mut ChildBuilder)],
+	descriptor: &SkillDescriptor,
+	additional_buttons: &[fn(&SkillDescriptor, &mut ChildBuilder)],
 ) {
 	let skill_icon = descriptor.skill.icon.clone();
 
@@ -282,7 +274,8 @@ fn add_skill(
 		.with_children(|parent| {
 			parent
 				.spawn((
-					ComboOverview::skill_button_bundle(skill_icon).with(descriptor),
+					ComboOverview::skill_button_bundle(skill_icon)
+						.with(descriptor.to_dropdown_trigger()),
 					SkillSelectDropdownInsertCommand {
 						key_path: descriptor.key_path.clone(),
 					},
@@ -295,7 +288,7 @@ fn add_skill(
 		});
 }
 
-fn with_key_button(descriptor: &SkillDescriptor<KeyCode>, parent: &mut ChildBuilder) {
+fn with_key_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
 	let Some(skill_key) = descriptor.key_path.last() else {
 		return;
 	};
@@ -321,7 +314,7 @@ fn with_key_button(descriptor: &SkillDescriptor<KeyCode>, parent: &mut ChildBuil
 		});
 }
 
-fn with_delete_button(descriptor: &SkillDescriptor<KeyCode>, parent: &mut ChildBuilder) {
+fn with_delete_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
 	parent
 		.spawn(ComboOverview::delete_button_offset_container())
 		.with_children(|parent| {
@@ -338,7 +331,7 @@ fn with_delete_button(descriptor: &SkillDescriptor<KeyCode>, parent: &mut ChildB
 		});
 }
 
-fn add_empty_skill(parent: &mut ChildBuilder, key_path: Vec<KeyCode>) {
+fn add_empty_skill(parent: &mut ChildBuilder, key_path: Vec<SlotKey>) {
 	parent
 		.spawn(ComboOverview::skill_container_bundle())
 		.with_children(|parent| {
@@ -373,21 +366,22 @@ fn add_empty_skill(parent: &mut ChildBuilder, key_path: Vec<KeyCode>) {
 mod tests {
 	use super::*;
 	use bevy::asset::AssetId;
+	use common::components::Side;
 	use skills::skills::Skill;
 	use uuid::Uuid;
 
 	#[test]
 	fn update_combos() {
-		let combos = vec![vec![SkillDescriptor {
-			key_path: vec![KeyCode::ArrowLeft],
-			skill: Skill {
+		let combos = vec![vec![SkillDescriptor::new_dropdown_item(
+			Skill {
 				name: "my skill".to_owned(),
 				icon: Some(Handle::Weak(AssetId::Uuid {
 					uuid: Uuid::new_v4(),
 				})),
 				..default()
 			},
-		}]];
+			vec![SlotKey::Hand(Side::Main)],
+		)]];
 		let mut combo_overview = ComboOverview::default();
 		combo_overview.update_combos(combos.clone());
 

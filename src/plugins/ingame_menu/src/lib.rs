@@ -233,24 +233,23 @@ fn combo_overview_systems(app: &mut App) {
 		.add_tooltip::<Skill>()
 		.add_systems(
 			Update,
-			get_combos::<KeyCode, Combos>
-				.pipe(update_combos_view::<KeyCode, ComboOverview>)
+			get_combos::<Combos>
+				.pipe(update_combos_view::<ComboOverview>)
 				.run_if(either(added::<ComboOverview>).or(changed::<Player, Combos>))
 				.run_if(in_state(MenuState::ComboOverview)),
 		)
 		.add_systems(
 			Update,
 			(
-				visualize_invalid_skill::<Player, Slots, KeyCode, SlotKeyMap, Unusable>,
-				insert_skill_select_dropdown::<KeyCode, SlotKey, SlotKeyMap, Slots<Handle<Skill>>>,
-				insert_skill_key_select_dropdown,
-				insert_empty_skill_key_select_dropdown,
+				visualize_invalid_skill::<Player, Slots, Unusable>,
+				insert_skill_select_dropdown::<Slots<Handle<Skill>>>,
+				insert_skill_key_select_dropdown::<SlotKey>,
+				insert_empty_skill_key_select_dropdown::<SlotKey>,
 				update_combos_view_key_labels::<LanguageServer, EmptySkill>,
 				update_combos_view_new_skills,
-				update_combos_view_delete_skill::<Player, Combos, KeyCode, SlotKeyMap>,
+				update_combos_view_delete_skill::<Player, Combos>,
 				update_combo_skills::<Player, Combos>,
-				map_pressed_key_select::<KeyCode, SlotKey, SlotKeyMap>
-					.pipe(update_combo_keys::<Player, Combos>),
+				map_pressed_key_select.pipe(update_combo_keys::<Player, Combos>),
 			)
 				.run_if(in_state(MenuState::ComboOverview)),
 		);

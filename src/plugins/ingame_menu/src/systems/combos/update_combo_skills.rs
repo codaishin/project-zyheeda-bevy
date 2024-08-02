@@ -16,8 +16,11 @@ pub(crate) fn update_combo_skills<TAgent, TCombos>(
 		return;
 	};
 
-	for (SkillDescriptor { skill, key_path }, ..) in skill_selects.iter().filter(pressed) {
-		combos.update_config(key_path, Some(skill.clone()));
+	for (skill_descriptor, ..) in skill_selects.iter().filter(pressed) {
+		combos.update_config(
+			&skill_descriptor.key_path,
+			Some(skill_descriptor.skill.clone()),
+		);
 	}
 }
 
@@ -90,13 +93,13 @@ mod tests {
 			}),
 		));
 		app.world_mut().spawn((
-			SkillDescriptor {
-				skill: Skill {
+			SkillDescriptor::new_dropdown_item(
+				Skill {
 					name: "my skill".to_owned(),
 					..default()
 				},
-				key_path: vec![SlotKey::Hand(Side::Off)],
-			},
+				vec![SlotKey::Hand(Side::Off)],
+			),
 			Interaction::Pressed,
 		));
 
@@ -108,17 +111,11 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((_Agent, _Combos::default()));
 		app.world_mut().spawn((
-			SkillDescriptor {
-				skill: Skill::default(),
-				key_path: vec![SlotKey::Hand(Side::Off)],
-			},
+			SkillDescriptor::new_dropdown_item(Skill::default(), vec![SlotKey::Hand(Side::Off)]),
 			Interaction::Hovered,
 		));
 		app.world_mut().spawn((
-			SkillDescriptor {
-				skill: Skill::default(),
-				key_path: vec![SlotKey::Hand(Side::Off)],
-			},
+			SkillDescriptor::new_dropdown_item(Skill::default(), vec![SlotKey::Hand(Side::Off)]),
 			Interaction::None,
 		));
 
@@ -130,10 +127,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn(_Combos::default());
 		app.world_mut().spawn((
-			SkillDescriptor {
-				skill: Skill::default(),
-				key_path: vec![SlotKey::Hand(Side::Off)],
-			},
+			SkillDescriptor::new_dropdown_item(Skill::default(), vec![SlotKey::Hand(Side::Off)]),
 			Interaction::Pressed,
 		));
 
