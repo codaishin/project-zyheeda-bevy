@@ -1,6 +1,5 @@
 use super::{
 	key_code_text_insert_command::KeyCodeTextInsertCommandBundle,
-	key_select::EmptySkill,
 	skill_descriptor::SkillDescriptor,
 	tooltip::Tooltip,
 	DeleteSkill,
@@ -134,27 +133,11 @@ impl ComboOverview {
 		}
 	}
 
-	fn skill_key_text_style() -> TextStyle {
-		TextStyle {
-			font_size: 20.,
-			color: DEFAULT_PANEL_COLORS.text,
-			..default()
-		}
-	}
-
-	pub(crate) fn skill_key_text(text: &str) -> impl Bundle {
-		TextBundle::from_section(text, Self::skill_key_text_style())
-	}
-
-	pub(crate) fn skill_key_text_insert_command(key: SlotKey) -> impl Bundle {
-		KeyCodeTextInsertCommandBundle::new(key, Self::skill_key_text_style())
-	}
-
-	pub(crate) fn new_skill_text(key: &str) -> impl Bundle {
-		TextBundle::from_section(
+	pub(crate) fn skill_key_text(key: SlotKey) -> impl Bundle {
+		KeyCodeTextInsertCommandBundle::new(
 			key,
 			TextStyle {
-				font_size: 50.,
+				font_size: 20.,
 				color: DEFAULT_PANEL_COLORS.text,
 				..default()
 			},
@@ -263,7 +246,6 @@ fn add_combo(parent: &mut ChildBuilder, combo: &[SkillDescriptor]) {
 			};
 
 			add_skill(parent, last_skill, &[with_key_button, with_delete_button]);
-			add_empty_skill(parent, last_skill.key_path.clone());
 		});
 }
 
@@ -310,7 +292,7 @@ fn with_key_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
 					},
 				))
 				.with_children(|parent| {
-					parent.spawn(ComboOverview::skill_key_text_insert_command(*skill_key));
+					parent.spawn(ComboOverview::skill_key_text(*skill_key));
 				});
 		});
 }
@@ -328,37 +310,6 @@ fn with_delete_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
 				))
 				.with_children(|parent| {
 					parent.spawn(ComboOverview::delete_button_text("<"));
-				});
-		});
-}
-
-fn add_empty_skill(parent: &mut ChildBuilder, key_path: Vec<SlotKey>) {
-	parent
-		.spawn(ComboOverview::skill_container_bundle())
-		.with_children(|parent| {
-			parent
-				.spawn(ComboOverview::skill_button_bundle(None))
-				.with_children(|parent| {
-					let empty_skill_button = parent.parent_entity();
-
-					parent.spawn(ComboOverview::new_skill_text(""));
-					parent
-						.spawn(ComboOverview::skill_key_button_offset_container())
-						.with_children(|parent| {
-							parent
-								.spawn((
-									ComboOverview::skill_key_button_bundle(),
-									KeySelectDropdownInsertCommand {
-										extra: EmptySkill {
-											button_entity: empty_skill_button,
-										},
-										key_path,
-									},
-								))
-								.with_children(|parent| {
-									parent.spawn(ComboOverview::skill_key_text("+"));
-								});
-						});
 				});
 		});
 }

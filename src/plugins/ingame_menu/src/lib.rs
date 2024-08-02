@@ -21,7 +21,7 @@ use components::{
 	dropdown::Dropdown,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
-	key_select::{EmptySkill, KeySelect, ReKeySkill},
+	key_select::{KeySelect, ReKeySkill},
 	quickbar_panel::QuickbarPanel,
 	skill_descriptor::SkillDescriptor,
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
@@ -48,8 +48,6 @@ use systems::{
 		update_combo_skills::update_combo_skills,
 		update_combos_view::update_combos_view,
 		update_combos_view_delete_skill::update_combos_view_delete_skill,
-		update_combos_view_key_labels::update_combos_view_key_labels,
-		update_combos_view_new_skills::update_combos_view_new_skills,
 		visualize_invalid_skill::visualize_invalid_skill,
 	},
 	conditions::{added::added, changed::changed, either::either},
@@ -59,7 +57,6 @@ use systems::{
 		despawn_when_no_children_pressed::dropdown_despawn_when_no_children_pressed,
 		detect_focus_change::dropdown_detect_focus_change,
 		events::dropdown_events,
-		insert_empty_skill_key_select_dropdown::insert_empty_skill_key_select_dropdown,
 		insert_skill_key_select_dropdown::insert_skill_key_select_dropdown,
 		insert_skill_select_dropdown::insert_skill_select_dropdown,
 		spawn_focused::dropdown_spawn_focused,
@@ -227,7 +224,6 @@ fn ui_overlay_systems(app: &mut App) {
 fn combo_overview_systems(app: &mut App) {
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
 		.add_dropdown::<SkillDescriptor>()
-		.add_dropdown::<KeySelect<EmptySkill>>()
 		.add_dropdown::<KeySelect<ReKeySkill>>()
 		.add_tooltip::<Skill>()
 		.add_systems(
@@ -243,15 +239,6 @@ fn combo_overview_systems(app: &mut App) {
 				visualize_invalid_skill::<Player, Slots, Unusable>,
 				insert_skill_select_dropdown::<Slots<Handle<Skill>>>,
 				insert_skill_key_select_dropdown::<SlotKey>,
-				insert_empty_skill_key_select_dropdown::<SlotKey>,
-				update_combos_view_key_labels::<
-					SlotKey,
-					KeyCode,
-					SlotKeyMap,
-					LanguageServer,
-					EmptySkill,
-				>,
-				update_combos_view_new_skills,
 				update_combos_view_delete_skill::<Player, Combos>,
 				update_combo_skills::<Player, Combos>,
 				map_pressed_key_select.pipe(update_combo_keys::<Player, Combos>),

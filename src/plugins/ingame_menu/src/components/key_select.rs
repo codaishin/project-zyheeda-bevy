@@ -4,17 +4,6 @@ use bevy::prelude::{BuildChildren, ChildBuilder, Component, Entity, NodeBundle};
 use skills::items::slot_key::SlotKey;
 
 #[derive(Debug, PartialEq, Clone)]
-pub(crate) struct EmptySkill {
-	pub(crate) button_entity: Entity,
-}
-
-impl GetKey<SlotKey> for EmptySkill {
-	fn get_key<'a>(&'a self, key_path: &'a [SlotKey]) -> Option<&'a SlotKey> {
-		key_path.last()
-	}
-}
-
-#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct ReKeySkill<TKey = SlotKey> {
 	pub(crate) to: TKey,
 }
@@ -50,7 +39,7 @@ where
 		parent
 			.spawn((self.clone(), ComboOverview::skill_key_button_bundle()))
 			.with_children(|parent| {
-				parent.spawn(ComboOverview::skill_key_text_insert_command(*key));
+				parent.spawn(ComboOverview::skill_key_text(*key));
 			});
 	}
 }
