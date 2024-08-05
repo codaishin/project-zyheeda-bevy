@@ -1,7 +1,6 @@
 use super::combo_overview::ComboOverview;
 use crate::traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn, GetKey};
 use bevy::prelude::{BuildChildren, ChildBuilder, Component, Entity, NodeBundle};
-use common::traits::get_ui_text::{English, GetUiText, UIText};
 use skills::items::slot_key::SlotKey;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -44,15 +43,14 @@ where
 	TExtra: Clone + Sync + Send + 'static + GetKey<SlotKey>,
 {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
-		let key = match self.extra.get_key(&self.key_path).map(English::ui_text) {
-			Some(UIText::String(key)) => key,
-			_ => "?".to_owned(),
+		let Some(key) = self.extra.get_key(&self.key_path) else {
+			return;
 		};
 
 		parent
 			.spawn((self.clone(), ComboOverview::skill_key_button_bundle()))
 			.with_children(|parent| {
-				parent.spawn(ComboOverview::skill_key_text(&key));
+				parent.spawn(ComboOverview::skill_key_text_insert_command(*key));
 			});
 	}
 }

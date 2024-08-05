@@ -1,4 +1,5 @@
 use super::{
+	key_code_text_insert_command::KeyCodeTextInsertCommandBundle,
 	key_select::EmptySkill,
 	skill_descriptor::SkillDescriptor,
 	tooltip::Tooltip,
@@ -34,7 +35,6 @@ use bevy::{
 	},
 	utils::default,
 };
-use common::traits::get_ui_text::{English, GetUiText, UIText};
 use skills::items::slot_key::SlotKey;
 
 #[derive(Component, Default)]
@@ -134,15 +134,20 @@ impl ComboOverview {
 		}
 	}
 
-	pub(crate) fn skill_key_text(key: &str) -> impl Bundle {
-		TextBundle::from_section(
-			key,
-			TextStyle {
-				font_size: 20.,
-				color: DEFAULT_PANEL_COLORS.text,
-				..default()
-			},
-		)
+	fn skill_key_text_style() -> TextStyle {
+		TextStyle {
+			font_size: 20.,
+			color: DEFAULT_PANEL_COLORS.text,
+			..default()
+		}
+	}
+
+	pub(crate) fn skill_key_text(text: &str) -> impl Bundle {
+		TextBundle::from_section(text, Self::skill_key_text_style())
+	}
+
+	pub(crate) fn skill_key_text_insert_command(key: SlotKey) -> impl Bundle {
+		KeyCodeTextInsertCommandBundle::new(key, Self::skill_key_text_style())
 	}
 
 	pub(crate) fn new_skill_text(key: &str) -> impl Bundle {
@@ -292,10 +297,6 @@ fn with_key_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
 	let Some(skill_key) = descriptor.key_path.last() else {
 		return;
 	};
-	let skill_key_text = match English::ui_text(skill_key) {
-		UIText::String(key) => key,
-		UIText::Unmapped => String::from("?"),
-	};
 
 	parent
 		.spawn(ComboOverview::skill_key_button_offset_container())
@@ -309,7 +310,7 @@ fn with_key_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
 					},
 				))
 				.with_children(|parent| {
-					parent.spawn(ComboOverview::skill_key_text(&skill_key_text));
+					parent.spawn(ComboOverview::skill_key_text_insert_command(*skill_key));
 				});
 		});
 }
