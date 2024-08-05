@@ -66,6 +66,7 @@ use systems::{
 		track_child_dropdowns::dropdown_track_child_dropdowns,
 	},
 	image_color::image_color,
+	insert_key_code_text::insert_key_code_text,
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
 	map_pressed_key_select::map_pressed_key_select,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
@@ -278,5 +279,9 @@ fn inventory_screen_systems(app: &mut App) {
 
 fn general_systems(app: &mut App) {
 	app.add_systems(Update, image_color)
-		.add_systems(Update, adjust_global_z_index);
+		.add_systems(Update, adjust_global_z_index)
+		.add_systems(
+			Update,
+			insert_key_code_text::<SlotKey, SlotKeyMap, LanguageServer>,
+		);
 }
