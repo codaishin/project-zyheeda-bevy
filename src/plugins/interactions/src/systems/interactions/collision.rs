@@ -69,9 +69,11 @@ mod tests {
 	use super::*;
 	use bevy::app::{App, Update};
 	use bevy_rapier3d::{pipeline::CollisionEvent, rapier::geometry::CollisionEventFlags};
+	use common::traits::nested_mock::NestedMock;
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	pub struct _Actor {
 		mock: Mock_Actor,
 	}
@@ -97,17 +99,16 @@ mod tests {
 	#[test]
 	fn act_on_target() {
 		let mut app = setup();
-		let mut actor = _Actor::default();
-		let target = _Target;
-		actor
-			.mock
-			.expect_act_on()
-			.times(1)
-			.with(eq(target))
-			.return_const(());
-
-		let actor = app.world_mut().spawn(actor).id();
-		let target = app.world_mut().spawn(target).id();
+		let actor = app
+			.world_mut()
+			.spawn(_Actor::new_mock(|mock| {
+				mock.expect_act_on()
+					.times(1)
+					.with(eq(_Target))
+					.return_const(());
+			}))
+			.id();
+		let target = app.world_mut().spawn(_Target).id();
 		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
 		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
@@ -116,24 +117,22 @@ mod tests {
 			coll_target,
 			CollisionEventFlags::empty(),
 		));
-
 		app.update();
 	}
 
 	#[test]
 	fn act_on_target_reversed() {
 		let mut app = setup();
-		let mut actor = _Actor::default();
-		let target = _Target;
-		actor
-			.mock
-			.expect_act_on()
-			.times(1)
-			.with(eq(target))
-			.return_const(());
-
-		let actor = app.world_mut().spawn(actor).id();
-		let target = app.world_mut().spawn(target).id();
+		let actor = app
+			.world_mut()
+			.spawn(_Actor::new_mock(|mock| {
+				mock.expect_act_on()
+					.times(1)
+					.with(eq(_Target))
+					.return_const(());
+			}))
+			.id();
+		let target = app.world_mut().spawn(_Target).id();
 		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
 		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
@@ -142,19 +141,19 @@ mod tests {
 			coll_actor,
 			CollisionEventFlags::empty(),
 		));
-
 		app.update();
 	}
 
 	#[test]
 	fn remove_actor() {
 		let mut app = setup();
-		let mut actor = _Actor::default();
-		let target = _Target;
-		actor.mock.expect_act_on().return_const(());
-
-		let actor = app.world_mut().spawn(actor).id();
-		let target = app.world_mut().spawn(target).id();
+		let actor = app
+			.world_mut()
+			.spawn(_Actor::new_mock(|mock| {
+				mock.expect_act_on().return_const(());
+			}))
+			.id();
+		let target = app.world_mut().spawn(_Target).id();
 		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
 		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
@@ -163,7 +162,6 @@ mod tests {
 			coll_target,
 			CollisionEventFlags::empty(),
 		));
-
 		app.update();
 
 		let actor = app.world().entity(actor);
@@ -174,12 +172,13 @@ mod tests {
 	#[test]
 	fn remove_actor_reversed() {
 		let mut app = setup();
-		let mut actor = _Actor::default();
-		let target = _Target;
-		actor.mock.expect_act_on().return_const(());
-
-		let actor = app.world_mut().spawn(actor).id();
-		let target = app.world_mut().spawn(target).id();
+		let actor = app
+			.world_mut()
+			.spawn(_Actor::new_mock(|mock| {
+				mock.expect_act_on().return_const(());
+			}))
+			.id();
+		let target = app.world_mut().spawn(_Target).id();
 		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
 		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
@@ -188,7 +187,6 @@ mod tests {
 			coll_actor,
 			CollisionEventFlags::empty(),
 		));
-
 		app.update();
 
 		let actor = app.world().entity(actor);

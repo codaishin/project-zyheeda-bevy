@@ -17,10 +17,11 @@ mod tests {
 	use super::*;
 	use crate::traits::Priority;
 	use bevy::app::{App, Update};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMock};
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	struct _Dispatch {
 		mock: Mock_Dispatch,
 	}
@@ -42,28 +43,21 @@ mod tests {
 	#[test]
 	fn call_flush() {
 		let mut app = setup();
-		let mut dispatch = _Dispatch::default();
+		app.world_mut().spawn(_Dispatch::new_mock(|mock| {
+			mock.expect_flush_obsolete()
+				.times(1)
+				.with(eq(Priority::High))
+				.return_const(());
+			mock.expect_flush_obsolete()
+				.times(1)
+				.with(eq(Priority::Middle))
+				.return_const(());
+			mock.expect_flush_obsolete()
+				.times(1)
+				.with(eq(Priority::Low))
+				.return_const(());
+		}));
 
-		dispatch
-			.mock
-			.expect_flush_obsolete()
-			.times(1)
-			.with(eq(Priority::High))
-			.return_const(());
-		dispatch
-			.mock
-			.expect_flush_obsolete()
-			.times(1)
-			.with(eq(Priority::Middle))
-			.return_const(());
-		dispatch
-			.mock
-			.expect_flush_obsolete()
-			.times(1)
-			.with(eq(Priority::Low))
-			.return_const(());
-
-		app.world_mut().spawn(dispatch);
 		app.update();
 	}
 }

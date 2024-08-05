@@ -19,7 +19,7 @@ pub mod load_from;
 pub mod map_value;
 pub mod mock;
 pub mod mouse_position;
-pub mod new_mock;
+pub mod nested_mock;
 pub mod ownership_relation;
 pub mod remove_conditionally;
 pub mod state_duration;

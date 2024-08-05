@@ -31,10 +31,14 @@ mod tests {
 		ecs::event::Events,
 		math::Vec3,
 	};
-	use common::{test_tools::utils::SingleThreadedApp, traits::intersect_at::IntersectAt};
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		traits::{intersect_at::IntersectAt, nested_mock::NestedMock},
+	};
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Resource, Default)]
+	#[derive(Resource, NestedMock)]
 	struct _Ray {
 		mock: Mock_Ray,
 	}
@@ -65,11 +69,10 @@ mod tests {
 
 	#[test]
 	fn trigger_immediately_on_left_mouse_press() {
-		let mut ray = _Ray::default();
-		ray.mock
-			.expect_intersect_at()
-			.return_const(Vec3::new(1., 2., 3.));
-		let mut app = setup(ray);
+		let mut app = setup(_Ray::new_mock(|mock| {
+			mock.expect_intersect_at()
+				.return_const(Vec3::new(1., 2., 3.));
+		}));
 		app.world_mut()
 			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Left);
@@ -84,9 +87,9 @@ mod tests {
 
 	#[test]
 	fn no_event_when_other_mouse_button_pressed() {
-		let mut ray = _Ray::default();
-		ray.mock.expect_intersect_at().return_const(Vec3::default());
-		let mut app = setup(ray);
+		let mut app = setup(_Ray::new_mock(|mock| {
+			mock.expect_intersect_at().return_const(Vec3::default());
+		}));
 		app.world_mut()
 			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Middle);
@@ -98,9 +101,9 @@ mod tests {
 
 	#[test]
 	fn no_event_when_no_intersection() {
-		let mut ray = _Ray::default();
-		ray.mock.expect_intersect_at().return_const(None);
-		let mut app = setup(ray);
+		let mut app = setup(_Ray::new_mock(|mock| {
+			mock.expect_intersect_at().return_const(None);
+		}));
 		app.world_mut()
 			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Left);
@@ -112,13 +115,12 @@ mod tests {
 
 	#[test]
 	fn call_intersect_with_height_zero() {
-		let mut ray = _Ray::default();
-		ray.mock
-			.expect_intersect_at()
-			.with(eq(0.))
-			.times(1)
-			.return_const(None);
-		let mut app = setup(ray);
+		let mut app = setup(_Ray::new_mock(|mock| {
+			mock.expect_intersect_at()
+				.with(eq(0.))
+				.times(1)
+				.return_const(None);
+		}));
 		app.world_mut()
 			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Left);

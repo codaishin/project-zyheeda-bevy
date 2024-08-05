@@ -26,15 +26,28 @@ mod test {
 		app::{App, Update},
 		prelude::{Entity, IntoSystem},
 	};
-	use common::{components::Side, test_tools::utils::SingleThreadedApp};
+	use common::{
+		components::Side,
+		test_tools::utils::SingleThreadedApp,
+		traits::nested_mock::NestedMock,
+	};
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 
 	#[derive(Component)]
 	struct _Agent;
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	struct _Combos {
 		mock: Mock_Combos,
+	}
+
+	impl Default for _Combos {
+		fn default() -> Self {
+			Self::new_mock(|mock| {
+				mock.expect_update_config().never().return_const(());
+			})
+		}
 	}
 
 	#[automock]
@@ -56,17 +69,6 @@ mod test {
 
 	#[test]
 	fn call_update_config() {
-		let mut combos = _Combos::default();
-		combos
-			.mock
-			.expect_update_config()
-			.times(1)
-			.with(
-				eq(vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]),
-				eq(SlotKey::Hand(Side::Main)),
-			)
-			.return_const(());
-
 		let mut app = setup(Some(KeySelect {
 			extra: ReKeySkill {
 				to: SlotKey::Hand(Side::Main),
@@ -75,7 +77,18 @@ mod test {
 			key_path: vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
 		}));
 
-		app.world_mut().spawn((_Agent, combos));
+		app.world_mut().spawn((
+			_Agent,
+			_Combos::new_mock(|mock| {
+				mock.expect_update_config()
+					.times(1)
+					.with(
+						eq(vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]),
+						eq(SlotKey::Hand(Side::Main)),
+					)
+					.return_const(());
+			}),
+		));
 		app.update();
 	}
 
@@ -84,9 +97,6 @@ mod test {
 		#[derive(Component)]
 		struct _NonAgent;
 
-		let mut combos = _Combos::default();
-		combos.mock.expect_update_config().never().return_const(());
-
 		let mut app = setup(Some(KeySelect {
 			extra: ReKeySkill {
 				to: SlotKey::Hand(Side::Main),
@@ -95,7 +105,7 @@ mod test {
 			key_path: vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
 		}));
 
-		app.world_mut().spawn((_NonAgent, combos));
+		app.world_mut().spawn((_NonAgent, _Combos::default()));
 		app.update();
 	}
 }

@@ -62,9 +62,11 @@ mod tests {
 		ecs::entity::Entity,
 		math::{Ray3d, Vec3},
 	};
+	use common::traits::nested_mock::NestedMock;
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Resource, Default)]
+	#[derive(Resource, NestedMock)]
 	struct _CastRay {
 		pub mock: Mock_CastRay,
 	}
@@ -79,7 +81,6 @@ mod tests {
 	fn setup(ray: Option<Ray3d>) -> App {
 		let mut app = App::new();
 
-		app.init_resource::<_CastRay>();
 		app.insert_resource(CamRay(ray));
 		app.add_systems(Update, set_mouse_hover::<_CastRay>);
 		app
@@ -96,11 +97,10 @@ mod tests {
 	fn add_target_collider() {
 		let mut app = setup(test_ray());
 		let collider = app.world_mut().spawn_empty().id();
-		let mut cast_ray = app.world_mut().resource_mut::<_CastRay>();
-		cast_ray
-			.mock
-			.expect_cast_ray()
-			.return_const((collider, TimeOfImpact(0.)));
+		app.insert_resource(_CastRay::new_mock(|mock| {
+			mock.expect_cast_ray()
+				.return_const((collider, TimeOfImpact(0.)));
+		}));
 
 		app.update();
 
@@ -119,11 +119,10 @@ mod tests {
 		let mut app = setup(test_ray());
 		let root = app.world_mut().spawn_empty().id();
 		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
-		let mut cast_ray = app.world_mut().resource_mut::<_CastRay>();
-		cast_ray
-			.mock
-			.expect_cast_ray()
-			.return_const((collider, TimeOfImpact(0.)));
+		app.insert_resource(_CastRay::new_mock(|mock| {
+			mock.expect_cast_ray()
+				.return_const((collider, TimeOfImpact(0.)));
+		}));
 
 		app.update();
 
@@ -138,8 +137,9 @@ mod tests {
 	#[test]
 	fn set_mouse_hover_none_when_no_collision() {
 		let mut app = setup(test_ray());
-		let mut cast_ray = app.world_mut().resource_mut::<_CastRay>();
-		cast_ray.mock.expect_cast_ray().return_const(None);
+		app.insert_resource(_CastRay::new_mock(|mock| {
+			mock.expect_cast_ray().return_const(None);
+		}));
 
 		app.update();
 
@@ -152,11 +152,10 @@ mod tests {
 	fn set_mouse_hover_none_when_no_ray() {
 		let mut app = setup(None);
 		let collider = app.world_mut().spawn_empty().id();
-		let mut cast_ray = app.world_mut().resource_mut::<_CastRay>();
-		cast_ray
-			.mock
-			.expect_cast_ray()
-			.return_const((collider, TimeOfImpact(0.)));
+		app.insert_resource(_CastRay::new_mock(|mock| {
+			mock.expect_cast_ray()
+				.return_const((collider, TimeOfImpact(0.)));
+		}));
 
 		app.update();
 
@@ -170,11 +169,10 @@ mod tests {
 		let mut app = setup(test_ray());
 		let root = app.world_mut().spawn(NoTarget).id();
 		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
-		let mut cast_ray = app.world_mut().resource_mut::<_CastRay>();
-		cast_ray
-			.mock
-			.expect_cast_ray()
-			.return_const((collider, TimeOfImpact(0.)));
+		app.insert_resource(_CastRay::new_mock(|mock| {
+			mock.expect_cast_ray()
+				.return_const((collider, TimeOfImpact(0.)));
+		}));
 
 		app.update();
 
@@ -187,11 +185,10 @@ mod tests {
 	fn set_mouse_hover_none_when_collider_marked_as_no_target() {
 		let mut app = setup(test_ray());
 		let collider = app.world_mut().spawn(NoTarget).id();
-		let mut cast_ray = app.world_mut().resource_mut::<_CastRay>();
-		cast_ray
-			.mock
-			.expect_cast_ray()
-			.return_const((collider, TimeOfImpact(0.)));
+		app.insert_resource(_CastRay::new_mock(|mock| {
+			mock.expect_cast_ray()
+				.return_const((collider, TimeOfImpact(0.)));
+		}));
 
 		app.update();
 
@@ -203,14 +200,12 @@ mod tests {
 	#[test]
 	fn call_cast_ray_with_parameters() {
 		let mut app = setup(test_ray());
-		let mut cast_ray = app.world_mut().resource_mut::<_CastRay>();
-
-		cast_ray
-			.mock
-			.expect_cast_ray()
-			.times(1)
-			.with(eq(test_ray().unwrap()))
-			.return_const(None);
+		app.insert_resource(_CastRay::new_mock(|mock| {
+			mock.expect_cast_ray()
+				.times(1)
+				.with(eq(test_ray().unwrap()))
+				.return_const(None);
+		}));
 
 		app.update();
 	}
@@ -218,9 +213,9 @@ mod tests {
 	#[test]
 	fn no_panic_when_cam_ray_missing() {
 		let mut app = App::new();
-		let mut cast_ray = _CastRay::default();
-		cast_ray.mock.expect_cast_ray().return_const(None);
-		app.insert_resource(cast_ray);
+		app.insert_resource(_CastRay::new_mock(|mock| {
+			mock.expect_cast_ray().return_const(None);
+		}));
 		app.add_systems(Update, set_mouse_hover::<_CastRay>);
 
 		app.update();

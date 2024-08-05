@@ -65,8 +65,9 @@ mod tests {
 	use common::{
 		resources::Shared,
 		test_tools::utils::SingleThreadedApp,
-		traits::load_asset::Path,
+		traits::{load_asset::Path, nested_mock::NestedMock},
 	};
+	use macros::NestedMock;
 	use mockall::{mock, predicate::eq};
 
 	#[derive(Component)]
@@ -105,7 +106,7 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Player;
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	struct _Transitions {
 		mock: Mock_Transitions,
 	}
@@ -155,17 +156,20 @@ mod tests {
 	#[test]
 	fn replay_clip() {
 		let mut app = setup([(Path::from("my/path"), _Index("my/path"))]);
-		let mut transitions = _Transitions::default();
-		transitions.mock.expect_is_playing().return_const(false);
-		transitions.mock.expect_repeat().never().return_const(());
-		transitions
-			.mock
-			.expect_replay()
-			.times(1)
-			.with(eq(_Index("my/path")))
-			.return_const(());
-
-		let animation_player = app.world_mut().spawn((_Player, transitions)).id();
+		let animation_player = app
+			.world_mut()
+			.spawn((
+				_Player,
+				_Transitions::new_mock(|mock| {
+					mock.expect_is_playing().return_const(false);
+					mock.expect_repeat().never().return_const(());
+					mock.expect_replay()
+						.times(1)
+						.with(eq(_Index("my/path")))
+						.return_const(());
+				}),
+			))
+			.id();
 		app.world_mut().spawn((
 			_Agent,
 			Animator { animation_player },
@@ -181,17 +185,20 @@ mod tests {
 	#[test]
 	fn repeat_clip() {
 		let mut app = setup([(Path::from("my/path"), _Index("my/path"))]);
-		let mut transitions = _Transitions::default();
-		transitions.mock.expect_is_playing().return_const(false);
-		transitions.mock.expect_replay().never().return_const(());
-		transitions
-			.mock
-			.expect_repeat()
-			.times(1)
-			.with(eq(_Index("my/path")))
-			.return_const(());
-
-		let animation_player = app.world_mut().spawn((_Player, transitions)).id();
+		let animation_player = app
+			.world_mut()
+			.spawn((
+				_Player,
+				_Transitions::new_mock(|mock| {
+					mock.expect_is_playing().return_const(false);
+					mock.expect_replay().never().return_const(());
+					mock.expect_repeat()
+						.times(1)
+						.with(eq(_Index("my/path")))
+						.return_const(());
+				}),
+			))
+			.id();
 		app.world_mut().spawn((
 			_Agent,
 			Animator { animation_player },
@@ -207,17 +214,20 @@ mod tests {
 	#[test]
 	fn do_not_play_when_already_playing() {
 		let mut app = setup([(Path::from("my/path"), _Index("my/path"))]);
-		let mut transitions = _Transitions::default();
-		transitions
-			.mock
-			.expect_is_playing()
-			.with(eq(_Index("my/path")))
-			.return_const(true);
-		transitions.mock.expect_is_playing().return_const(false);
-		transitions.mock.expect_replay().never().return_const(());
-		transitions.mock.expect_repeat().never().return_const(());
-
-		let animation_player = app.world_mut().spawn((_Player, transitions)).id();
+		let animation_player = app
+			.world_mut()
+			.spawn((
+				_Player,
+				_Transitions::new_mock(|mock| {
+					mock.expect_is_playing()
+						.with(eq(_Index("my/path")))
+						.return_const(true);
+					mock.expect_is_playing().return_const(false);
+					mock.expect_replay().never().return_const(());
+					mock.expect_repeat().never().return_const(());
+				}),
+			))
+			.id();
 		app.world_mut().spawn((
 			_Agent,
 			Animator { animation_player },
@@ -233,12 +243,17 @@ mod tests {
 	#[test]
 	fn only_play_when_dispatch_changed() {
 		let mut app = setup([(Path::from("my/path"), _Index("my/path"))]);
-		let mut transitions = _Transitions::default();
-		transitions.mock.expect_is_playing().return_const(false);
-		transitions.mock.expect_replay().times(1).return_const(());
-		transitions.mock.expect_repeat().times(1).return_const(());
-
-		let animation_player = app.world_mut().spawn((_Player, transitions)).id();
+		let animation_player = app
+			.world_mut()
+			.spawn((
+				_Player,
+				_Transitions::new_mock(|mock| {
+					mock.expect_is_playing().return_const(false);
+					mock.expect_replay().times(1).return_const(());
+					mock.expect_repeat().times(1).return_const(());
+				}),
+			))
+			.id();
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -269,16 +284,17 @@ mod tests {
 	#[test]
 	fn do_nothing_when_agent_component_missing() {
 		let mut app = setup([(Path::from("my/path"), _Index("my/path"))]);
-		let mut transitions = _Transitions::default();
-		transitions
-			.mock
-			.expect_is_playing()
-			.never()
-			.return_const(false);
-		transitions.mock.expect_replay().never().return_const(());
-		transitions.mock.expect_repeat().never().return_const(());
-
-		let animation_player = app.world_mut().spawn((_Player, transitions)).id();
+		let animation_player = app
+			.world_mut()
+			.spawn((
+				_Player,
+				_Transitions::new_mock(|mock| {
+					mock.expect_is_playing().never().return_const(false);
+					mock.expect_replay().never().return_const(());
+					mock.expect_repeat().never().return_const(());
+				}),
+			))
+			.id();
 		app.world_mut().spawn((
 			Animator { animation_player },
 			_Dispatch(Some(_Animation {

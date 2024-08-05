@@ -52,6 +52,8 @@ mod tests {
 		ui::node_bundles::TextBundle,
 		utils::HashMap,
 	};
+	use common::traits::nested_mock::NestedMock;
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 
 	#[derive(Component)]
@@ -69,17 +71,9 @@ mod tests {
 		}
 	}
 
-	#[derive(Component)]
+	#[derive(Component, NestedMock)]
 	struct _Panel {
 		mock: Mock_Panel,
-	}
-
-	impl _Panel {
-		pub fn new() -> Self {
-			Self {
-				mock: Mock_Panel::new(),
-			}
-		}
 	}
 
 	#[automock]
@@ -93,19 +87,19 @@ mod tests {
 	fn set_empty() {
 		let mut app = App::new();
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
-
-		let container = _Container::new([]);
-
-		let mut panel = _Panel::new();
-		panel
-			.mock
-			.expect_set()
-			.times(1)
-			.with(eq(()), eq(PanelState::Empty))
-			.return_const(());
-
-		app.world_mut().spawn(container);
-		let panel = app.world_mut().spawn((KeyedPanel(42_usize), panel)).id();
+		app.world_mut().spawn(_Container::new([]));
+		let panel = app
+			.world_mut()
+			.spawn((
+				KeyedPanel(42_usize),
+				_Panel::new_mock(|mock| {
+					mock.expect_set()
+						.times(1)
+						.with(eq(()), eq(PanelState::Empty))
+						.return_const(());
+				}),
+			))
+			.id();
 		let text = app
 			.world_mut()
 			.spawn(TextBundle::from_section("", default()))
@@ -122,25 +116,25 @@ mod tests {
 	fn set_filled() {
 		let mut app = App::new();
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
-
-		let container = _Container::new([(
+		app.world_mut().spawn(_Container::new([(
 			42,
 			Item {
 				name: "my item",
 				..default()
 			},
-		)]);
-
-		let mut panel = _Panel::new();
-		panel
-			.mock
-			.expect_set()
-			.times(1)
-			.with(eq(()), eq(PanelState::Filled))
-			.return_const(());
-
-		app.world_mut().spawn(container);
-		let panel = app.world_mut().spawn((KeyedPanel(42_usize), panel)).id();
+		)]));
+		let panel = app
+			.world_mut()
+			.spawn((
+				KeyedPanel(42_usize),
+				_Panel::new_mock(|mock| {
+					mock.expect_set()
+						.times(1)
+						.with(eq(()), eq(PanelState::Filled))
+						.return_const(());
+				}),
+			))
+			.id();
 		let text = app
 			.world_mut()
 			.spawn(TextBundle::from_section("", default()))
@@ -157,14 +151,13 @@ mod tests {
 	fn still_set_state_when_no_children() {
 		let mut app = App::new();
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
-
-		let container = _Container::new([]);
-
-		let mut panel = _Panel::new();
-		panel.mock.expect_set().times(1).return_const(());
-
-		app.world_mut().spawn(container);
-		app.world_mut().spawn((KeyedPanel(42_usize), panel));
+		app.world_mut().spawn(_Container::new([]));
+		app.world_mut().spawn((
+			KeyedPanel(42_usize),
+			_Panel::new_mock(|mock| {
+				mock.expect_set().times(1).return_const(());
+			}),
+		));
 
 		app.update();
 	}
@@ -173,25 +166,25 @@ mod tests {
 	fn set_when_text_not_first_child() {
 		let mut app = App::new();
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
-
-		let container = _Container::new([(
+		app.world_mut().spawn(_Container::new([(
 			42,
 			Item {
 				name: "my item",
 				..default()
 			},
-		)]);
-
-		let mut panel = _Panel::new();
-		panel
-			.mock
-			.expect_set()
-			.times(1)
-			.with(eq(()), eq(PanelState::Filled))
-			.return_const(());
-
-		app.world_mut().spawn(container);
-		let panel = app.world_mut().spawn((KeyedPanel(42_usize), panel)).id();
+		)]));
+		let panel = app
+			.world_mut()
+			.spawn((
+				KeyedPanel(42_usize),
+				_Panel::new_mock(|mock| {
+					mock.expect_set()
+						.times(1)
+						.with(eq(()), eq(PanelState::Filled))
+						.return_const(());
+				}),
+			))
+			.id();
 		app.world_mut().spawn(()).set_parent(panel);
 		let text = app
 			.world_mut()
@@ -209,20 +202,22 @@ mod tests {
 	fn add_section_when_text_has_no_sections() {
 		let mut app = App::new();
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
-
-		let container = _Container::new([(
+		app.world_mut().spawn(_Container::new([(
 			42,
 			Item {
 				name: "my item",
 				..default()
 			},
-		)]);
-
-		let mut panel = _Panel::new();
-		panel.mock.expect_set().return_const(());
-
-		app.world_mut().spawn(container);
-		let panel = app.world_mut().spawn((KeyedPanel(42_usize), panel)).id();
+		)]));
+		let panel = app
+			.world_mut()
+			.spawn((
+				KeyedPanel(42_usize),
+				_Panel::new_mock(|mock| {
+					mock.expect_set().return_const(());
+				}),
+			))
+			.id();
 		app.world_mut().spawn(()).set_parent(panel);
 		let text = app
 			.world_mut()

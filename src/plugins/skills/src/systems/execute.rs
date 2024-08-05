@@ -74,6 +74,8 @@ fn get_spawner(
 
 #[cfg(test)]
 mod tests {
+	use std::ops::DerefMut;
+
 	use super::*;
 	use crate::skills::{SkillCaster, SkillSpawner, Target};
 	use bevy::{
@@ -85,19 +87,14 @@ mod tests {
 		components::Outdated,
 		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
+		traits::nested_mock::NestedMock,
 	};
+	use macros::NestedMock;
 	use mockall::automock;
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	struct _Executor {
-		value: usize,
 		mock: Mock_Executor,
-	}
-
-	impl _Executor {
-		fn change(&mut self) {
-			self.value += 1;
-		}
 	}
 
 	#[automock]
@@ -171,28 +168,46 @@ mod tests {
 
 	#[test]
 	fn execute_skill() {
+		#[derive(Component, Debug, PartialEq)]
+		struct _Execution {
+			caster: SkillCaster,
+			spawner: SkillSpawner,
+			target: Target,
+		}
+
 		let mut app = setup();
 		let target = set_target(&mut app);
 		let spawner = set_spawner(&mut app);
 		let caster = set_caster(&mut app, &spawner);
-
-		let mut executer = _Executor::default();
-		executer
-			.mock
-			.expect_execute()
-			.times(1)
-			.withf(move |_, caster_a, spawner_a, target_a| {
-				assert_eq!(
-					(&caster, &spawner, &target),
-					(caster_a, spawner_a, target_a)
-				);
-				true
-			})
-			.return_const(());
-
-		app.world_mut().entity_mut(caster.0).insert(executer);
+		app.world_mut()
+			.entity_mut(caster.0)
+			.insert(_Executor::new_mock(move |mock| {
+				mock.expect_execute()
+					.times(1)
+					.returning(|commands, caster, spawner, target| {
+						commands.spawn(_Execution {
+							caster: *caster,
+							spawner: *spawner,
+							target: target.clone(),
+						});
+					});
+			}));
 
 		app.update();
+
+		let execution = app
+			.world()
+			.iter_entities()
+			.find_map(|e| e.get::<_Execution>());
+
+		assert_eq!(
+			Some(&_Execution {
+				caster,
+				spawner,
+				target,
+			}),
+			execution
+		);
 	}
 
 	#[test]
@@ -201,33 +216,35 @@ mod tests {
 		_ = set_target(&mut app);
 		let spawner = set_spawner(&mut app);
 		let caster = set_caster(&mut app, &spawner);
-
-		let mut executer = _Executor::default();
-		executer.mock.expect_execute().times(1).return_const(());
-
-		app.world_mut().entity_mut(caster.0).insert(executer);
+		app.world_mut()
+			.entity_mut(caster.0)
+			.insert(_Executor::new_mock(|mock| {
+				mock.expect_execute().times(1).return_const(());
+			}));
 
 		app.update();
 		app.update();
 	}
 
 	#[test]
-	fn execute_again_after_change() {
+	fn execute_again_after_mutable_deref() {
 		let mut app = setup();
 		_ = set_target(&mut app);
 		let spawner = set_spawner(&mut app);
 		let caster = set_caster(&mut app, &spawner);
-
-		let mut executer = _Executor::default();
-		executer.mock.expect_execute().times(2).return_const(());
-
-		app.world_mut().entity_mut(caster.0).insert(executer);
+		app.world_mut()
+			.entity_mut(caster.0)
+			.insert(_Executor::new_mock(|mock| {
+				mock.expect_execute().times(2).return_const(());
+			}));
 
 		app.update();
 
-		let mut caster = app.world_mut().entity_mut(caster.0);
-		let mut executer = caster.get_mut::<_Executor>().unwrap();
-		executer.change();
+		app.world_mut()
+			.entity_mut(caster.0)
+			.get_mut::<_Executor>()
+			.unwrap()
+			.deref_mut();
 
 		app.update();
 	}

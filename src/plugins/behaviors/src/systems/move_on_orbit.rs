@@ -24,20 +24,13 @@ mod tests {
 	use super::*;
 	use crate::traits::{Orbit, Vec2Radians};
 	use bevy::{ecs::event::Events, input::mouse::MouseMotion};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMock};
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Component)]
+	#[derive(Component, NestedMock)]
 	struct _Orbit {
 		mock: Mock_Orbit,
-	}
-
-	impl _Orbit {
-		pub fn new() -> Self {
-			Self {
-				mock: Mock_Orbit::new(),
-			}
-		}
 	}
 
 	#[automock]
@@ -61,21 +54,23 @@ mod tests {
 	#[test]
 	fn move_camera_on_move_event() {
 		let mut app = setup_app();
-		let mut orbit = _Orbit::new();
-		let agent = Transform::from_translation(Vec3::ZERO);
-		let angels = Vec2::new(3., 4.);
-
-		orbit
-			.mock
-			.expect_orbit()
-			.with(eq(agent), eq(angels))
-			.times(1)
-			.return_const(());
-
-		app.world_mut().spawn((orbit, agent));
+		app.world_mut().spawn((
+			_Orbit::new_mock(|mock| {
+				mock.expect_orbit()
+					.with(
+						eq(Transform::from_translation(Vec3::ZERO)),
+						eq(Vec2::new(3., 4.)),
+					)
+					.times(1)
+					.return_const(());
+			}),
+			Transform::from_translation(Vec3::ZERO),
+		));
 		app.world_mut()
 			.resource_mut::<Events<MouseMotion>>()
-			.send(MouseMotion { delta: angels });
+			.send(MouseMotion {
+				delta: Vec2::new(3., 4.),
+			});
 		app.world_mut()
 			.resource_mut::<ButtonInput<MouseButton>>()
 			.press(MouseButton::Right);
@@ -86,21 +81,23 @@ mod tests {
 	#[test]
 	fn do_not_move_camera_when_not_right_mouse_button_pressed() {
 		let mut app = setup_app();
-		let mut orbit = _Orbit::new();
-		let agent = Transform::from_translation(Vec3::ZERO);
-		let angels = Vec2::new(3., 4.);
-
-		orbit
-			.mock
-			.expect_orbit()
-			.with(eq(agent), eq(angels))
-			.times(0)
-			.return_const(());
-
-		app.world_mut().spawn((orbit, agent));
+		app.world_mut().spawn((
+			_Orbit::new_mock(|mock| {
+				mock.expect_orbit()
+					.with(
+						eq(Transform::from_translation(Vec3::ZERO)),
+						eq(Vec2::new(3., 4.)),
+					)
+					.times(0)
+					.return_const(());
+			}),
+			Transform::from_translation(Vec3::ZERO),
+		));
 		app.world_mut()
 			.resource_mut::<Events<MouseMotion>>()
-			.send(MouseMotion { delta: angels });
+			.send(MouseMotion {
+				delta: Vec2::new(3., 4.),
+			});
 
 		app.update();
 	}

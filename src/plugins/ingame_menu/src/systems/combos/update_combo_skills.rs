@@ -32,16 +32,29 @@ mod tests {
 		app::{App, Update},
 		utils::default,
 	};
-	use common::{components::Side, test_tools::utils::SingleThreadedApp};
+	use common::{
+		components::Side,
+		test_tools::utils::SingleThreadedApp,
+		traits::nested_mock::NestedMock,
+	};
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 	use skills::skills::Skill;
 
 	#[derive(Component)]
 	struct _Agent;
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	struct _Combos {
 		mock: Mock_Combos,
+	}
+
+	impl Default for _Combos {
+		fn default() -> Self {
+			Self::new_mock(|mock| {
+				mock.expect_update_config().return_const(());
+			})
+		}
 	}
 
 	#[automock]
@@ -61,21 +74,21 @@ mod tests {
 	#[test]
 	fn update_skill() {
 		let mut app = setup();
-		let mut combos = _Combos::default();
-		combos
-			.mock
-			.expect_update_config()
-			.times(1)
-			.with(
-				eq(vec![SlotKey::Hand(Side::Off)]),
-				eq(Some(Skill {
-					name: "my skill".to_owned(),
-					..default()
-				})),
-			)
-			.return_const(());
-
-		app.world_mut().spawn((_Agent, combos));
+		app.world_mut().spawn((
+			_Agent,
+			_Combos::new_mock(|mock| {
+				mock.expect_update_config()
+					.times(1)
+					.with(
+						eq(vec![SlotKey::Hand(Side::Off)]),
+						eq(Some(Skill {
+							name: "my skill".to_owned(),
+							..default()
+						})),
+					)
+					.return_const(());
+			}),
+		));
 		app.world_mut().spawn((
 			SkillDescriptor {
 				skill: Skill {
@@ -93,10 +106,7 @@ mod tests {
 	#[test]
 	fn do_not_update_skill_when_interaction_not_pressed() {
 		let mut app = setup();
-		let mut combos = _Combos::default();
-		combos.mock.expect_update_config().never().return_const(());
-
-		app.world_mut().spawn((_Agent, combos));
+		app.world_mut().spawn((_Agent, _Combos::default()));
 		app.world_mut().spawn((
 			SkillDescriptor {
 				skill: Skill::default(),
@@ -118,10 +128,7 @@ mod tests {
 	#[test]
 	fn do_not_update_skill_no_agent_present() {
 		let mut app = setup();
-		let mut combos = _Combos::default();
-		combos.mock.expect_update_config().never().return_const(());
-
-		app.world_mut().spawn(combos);
+		app.world_mut().spawn(_Combos::default());
 		app.world_mut().spawn((
 			SkillDescriptor {
 				skill: Skill::default(),

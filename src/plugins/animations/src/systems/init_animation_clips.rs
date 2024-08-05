@@ -39,12 +39,13 @@ mod tests {
 	use common::{
 		resources::Shared,
 		test_tools::utils::SingleThreadedApp,
-		traits::load_asset::Path,
+		traits::{load_asset::Path, nested_mock::NestedMock},
 	};
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
 
-	#[derive(Resource, Default)]
+	#[derive(Resource, NestedMock)]
 	struct _Server {
 		mock: Mock_Server,
 	}
@@ -86,21 +87,17 @@ mod tests {
 				vec![Path::from("path/a"), Path::from("path/b")]
 			}
 		}
-
-		let mut server = _Server::default();
-		server
-			.mock
-			.expect_load_animation_assets()
-			.with(eq(vec![Path::from("path/a"), Path::from("path/b")]))
-			.return_const((
-				_AnimationGraph,
-				HashMap::from([
-					(Path::from("path/a"), _AnimationIndex("path/a")),
-					(Path::from("path/a"), _AnimationIndex("path/b")),
-				]),
-			));
-
-		let mut app = setup::<_Agent>(server);
+		let mut app = setup::<_Agent>(_Server::new_mock(|mock| {
+			mock.expect_load_animation_assets()
+				.with(eq(vec![Path::from("path/a"), Path::from("path/b")]))
+				.return_const((
+					_AnimationGraph,
+					HashMap::from([
+						(Path::from("path/a"), _AnimationIndex("path/a")),
+						(Path::from("path/a"), _AnimationIndex("path/b")),
+					]),
+				));
+		}));
 
 		app.update();
 
@@ -126,13 +123,10 @@ mod tests {
 			}
 		}
 
-		let mut server = _Server::default();
-		server
-			.mock
-			.expect_load_animation_assets()
-			.return_const((_AnimationGraph, HashMap::default()));
-
-		let mut app = setup::<_Agent>(server);
+		let mut app = setup::<_Agent>(_Server::new_mock(|mock| {
+			mock.expect_load_animation_assets()
+				.return_const((_AnimationGraph, HashMap::default()));
+		}));
 
 		app.update();
 

@@ -19,22 +19,16 @@ pub(crate) fn follow<TTarget: Component, TMover: MoveTogether + Component>(
 mod tests {
 	use super::*;
 	use bevy::prelude::{App, Component, Transform, Update, Vec3};
+	use common::traits::nested_mock::NestedMock;
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 
 	#[derive(Component)]
 	struct _Target;
 
-	#[derive(Component)]
+	#[derive(Component, NestedMock)]
 	struct _Mover {
 		pub mock: Mock_Mover,
-	}
-
-	impl _Mover {
-		fn new() -> Self {
-			Self {
-				mock: Mock_Mover::new(),
-			}
-		}
 	}
 
 	#[automock]
@@ -47,21 +41,21 @@ mod tests {
 	#[test]
 	fn do_follow() {
 		let mut app = App::new();
-		let target = Vec3::new(1., 2., 3.);
-		let follow_transform = Transform::from_xyz(10., 10., 10.);
-		let mut mover = _Mover::new();
-
-		mover
-			.mock
-			.expect_move_together_with()
-			.with(eq(follow_transform), eq(target))
-			.times(1)
-			.return_const(());
-
-		app.world_mut()
-			.spawn((_Target, Transform::from_translation(target)));
-		app.world_mut().spawn((mover, follow_transform));
 		app.add_systems(Update, follow::<_Target, _Mover>);
+		app.world_mut()
+			.spawn((_Target, Transform::from_translation(Vec3::new(1., 2., 3.))));
+		app.world_mut().spawn((
+			_Mover::new_mock(|mock| {
+				mock.expect_move_together_with()
+					.with(
+						eq(Transform::from_xyz(10., 10., 10.)),
+						eq(Vec3::new(1., 2., 3.)),
+					)
+					.times(1)
+					.return_const(());
+			}),
+			Transform::from_xyz(10., 10., 10.),
+		));
 
 		app.update();
 	}

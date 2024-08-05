@@ -73,10 +73,12 @@ mod tests {
 		app::{App, Update},
 		math::{Vec2, Vec3},
 	};
+	use common::traits::nested_mock::NestedMock;
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 	use std::collections::VecDeque;
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	pub struct _Camera {
 		pub mock: Mock_Camera,
 	}
@@ -112,12 +114,13 @@ mod tests {
 
 		match camera {
 			None => {
-				let mut camera = _Camera::default();
-				camera
-					.mock
-					.expect_get_screen_position()
-					.return_const(Vec2::default());
-				app.world_mut().spawn((camera, GlobalTransform::default()));
+				app.world_mut().spawn((
+					_Camera::new_mock(|mock| {
+						mock.expect_get_screen_position()
+							.return_const(Vec2::default());
+					}),
+					GlobalTransform::default(),
+				));
 			}
 			Some(camera) => {
 				app.world_mut().spawn(camera);
@@ -150,15 +153,15 @@ mod tests {
 	fn set_position_with_camera_transform_and_agent_position_plus_ui_bar_offset() {
 		let camera_transform = GlobalTransform::from_xyz(4., 5., 6.);
 		let offset = Vec3::new(1., 2., 3.);
-		let mut camera = _Camera::default();
-		camera
-			.mock
-			.expect_get_screen_position()
-			.times(1)
-			.with(eq(camera_transform), eq(Vec3::new(5., 3., 9.) + offset))
-			.return_const(Vec2::default());
-
-		let mut app = setup(Some((camera, camera_transform)));
+		let mut app = setup(Some((
+			_Camera::new_mock(|mock| {
+				mock.expect_get_screen_position()
+					.times(1)
+					.with(eq(camera_transform), eq(Vec3::new(5., 3., 9.) + offset))
+					.return_const(Vec2::default());
+			}),
+			camera_transform,
+		)));
 
 		app.world_mut().spawn((
 			GlobalTransform::from_xyz(5., 3., 9.),
@@ -171,13 +174,13 @@ mod tests {
 
 	#[test]
 	fn set_bar_position() {
-		let mut camera = _Camera::default();
-		camera
-			.mock
-			.expect_get_screen_position()
-			.return_const(Vec2::new(42., 24.));
-
-		let mut app = setup(Some((camera, GlobalTransform::default())));
+		let mut app = setup(Some((
+			_Camera::new_mock(|mock| {
+				mock.expect_get_screen_position()
+					.return_const(Vec2::new(42., 24.));
+			}),
+			GlobalTransform::default(),
+		)));
 
 		let agent = app
 			.world_mut()
@@ -227,15 +230,15 @@ mod tests {
 	fn set_position_with_camera_transform_and_agent_position_plus_ui_bar_offset_on_update() {
 		let camera_transform = GlobalTransform::from_xyz(4., 5., 6.);
 		let offset = Vec3::new(11., 12., 13.);
-		let mut camera = _Camera::default();
-		camera
-			.mock
-			.expect_get_screen_position()
-			.times(2)
-			.with(eq(camera_transform), eq(Vec3::new(5., 3., 9.) + offset))
-			.return_const(Vec2::default());
-
-		let mut app = setup(Some((camera, camera_transform)));
+		let mut app = setup(Some((
+			_Camera::new_mock(|mock| {
+				mock.expect_get_screen_position()
+					.times(2)
+					.with(eq(camera_transform), eq(Vec3::new(5., 3., 9.) + offset))
+					.return_const(Vec2::default());
+			}),
+			camera_transform,
+		)));
 
 		app.world_mut().spawn((
 			GlobalTransform::from_xyz(5., 3., 9.),
@@ -249,14 +252,16 @@ mod tests {
 
 	#[test]
 	fn update_bar_position() {
-		let mut screen_positions = VecDeque::from([Vec2::new(11., 22.), Vec2::new(22., 33.)]);
-		let mut camera = _Camera::default();
-		camera
-			.mock
-			.expect_get_screen_position()
-			.returning(move |_, _| screen_positions.pop_front());
+		let mut app = setup(Some((
+			_Camera::new_mock(|mock| {
+				let mut screen_positions =
+					VecDeque::from([Vec2::new(11., 22.), Vec2::new(22., 33.)]);
 
-		let mut app = setup(Some((camera, GlobalTransform::default())));
+				mock.expect_get_screen_position()
+					.returning(move |_, _| screen_positions.pop_front());
+			}),
+			GlobalTransform::default(),
+		)));
 
 		let agent = app
 			.world_mut()

@@ -97,10 +97,12 @@ mod tests {
 		components::{ColliderRoot, Immobilized},
 		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
+		traits::nested_mock::NestedMock,
 	};
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Resource, Default)]
+	#[derive(Resource, NestedMock)]
 	struct _Cursor {
 		mock: Mock_Cursor,
 	}
@@ -130,12 +132,10 @@ mod tests {
 
 	#[test]
 	fn do_face_cursor() {
-		let mut cursor = _Cursor::default();
-		cursor
-			.mock
-			.expect_intersect_at()
-			.return_const(Vec3::new(1., 2., 3.));
-		let mut app = setup(cursor);
+		let mut app = setup(_Cursor::new_mock(|mock| {
+			mock.expect_intersect_at()
+				.return_const(Vec3::new(1., 2., 3.));
+		}));
 		let agent = app
 			.world_mut()
 			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor)))
@@ -153,12 +153,10 @@ mod tests {
 
 	#[test]
 	fn do_not_face_cursor_if_face_cursor_component_missing() {
-		let mut cursor = _Cursor::default();
-		cursor
-			.mock
-			.expect_intersect_at()
-			.return_const(Vec3::new(1., 2., 3.));
-		let mut app = setup(cursor);
+		let mut app = setup(_Cursor::new_mock(|mock| {
+			mock.expect_intersect_at()
+				.return_const(Vec3::new(1., 2., 3.));
+		}));
 		let agent = app.world_mut().spawn(Transform::from_xyz(4., 5., 6.)).id();
 
 		app.update();
@@ -173,14 +171,12 @@ mod tests {
 
 	#[test]
 	fn use_zero_elevation_intersection() {
-		let mut cursor = _Cursor::default();
-		cursor
-			.mock
-			.expect_intersect_at()
-			.with(eq(0.))
-			.times(1)
-			.return_const(None);
-		let mut app = setup(cursor);
+		let mut app = setup(_Cursor::new_mock(|mock| {
+			mock.expect_intersect_at()
+				.with(eq(0.))
+				.times(1)
+				.return_const(None);
+		}));
 		app.world_mut().spawn(Transform::from_xyz(4., 5., 6.));
 
 		app.update();
@@ -188,18 +184,14 @@ mod tests {
 
 	#[test]
 	fn face_hovering_collider_root() {
-		let mut cursor = _Cursor::default();
-		cursor
-			.mock
-			.expect_intersect_at()
-			.return_const(Vec3::new(1., 2., 3.));
-		let mut app = setup(cursor);
-
+		let mut app = setup(_Cursor::new_mock(|mock| {
+			mock.expect_intersect_at()
+				.return_const(Vec3::new(1., 2., 3.));
+		}));
 		let agent = app
 			.world_mut()
 			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor)))
 			.id();
-
 		let root = app
 			.world_mut()
 			.spawn(Transform::from_xyz(10., 11., 12.))
@@ -222,18 +214,14 @@ mod tests {
 
 	#[test]
 	fn face_hovering_collider() {
-		let mut cursor = _Cursor::default();
-		cursor
-			.mock
-			.expect_intersect_at()
-			.return_const(Vec3::new(1., 2., 3.));
-		let mut app = setup(cursor);
-
+		let mut app = setup(_Cursor::new_mock(|mock| {
+			mock.expect_intersect_at()
+				.return_const(Vec3::new(1., 2., 3.));
+		}));
 		let agent = app
 			.world_mut()
 			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor)))
 			.id();
-
 		let collider = app
 			.world_mut()
 			.spawn(Transform::from_xyz(10., 11., 12.))
@@ -255,13 +243,10 @@ mod tests {
 
 	#[test]
 	fn face_hovering_entity_with_collider_root() {
-		let mut cursor = _Cursor::default();
-		cursor
-			.mock
-			.expect_intersect_at()
-			.return_const(Vec3::new(1., 2., 3.));
-		let mut app = setup(cursor);
-
+		let mut app = setup(_Cursor::new_mock(|mock| {
+			mock.expect_intersect_at()
+				.return_const(Vec3::new(1., 2., 3.));
+		}));
 		let root = app
 			.world_mut()
 			.spawn(Transform::from_xyz(10., 11., 12.))
@@ -287,13 +272,10 @@ mod tests {
 
 	#[test]
 	fn face_hovering_entity_with_no_collider_root() {
-		let mut cursor = _Cursor::default();
-		cursor
-			.mock
-			.expect_intersect_at()
-			.return_const(Vec3::new(1., 2., 3.));
-		let mut app = setup(cursor);
-
+		let mut app = setup(_Cursor::new_mock(|mock| {
+			mock.expect_intersect_at()
+				.return_const(Vec3::new(1., 2., 3.));
+		}));
 		let collider = app
 			.world_mut()
 			.spawn(Transform::from_xyz(10., 11., 12.))
@@ -318,13 +300,10 @@ mod tests {
 
 	#[test]
 	fn face_translation() {
-		let mut cursor = _Cursor::default();
-		cursor
-			.mock
-			.expect_intersect_at()
-			.return_const(Vec3::new(1., 2., 3.));
-		let mut app = setup(cursor);
-
+		let mut app = setup(_Cursor::new_mock(|mock| {
+			mock.expect_intersect_at()
+				.return_const(Vec3::new(1., 2., 3.));
+		}));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -345,12 +324,10 @@ mod tests {
 
 	#[test]
 	fn do_not_face_cursor_when_agent_immobilized() {
-		let mut cursor = _Cursor::default();
-		cursor
-			.mock
-			.expect_intersect_at()
-			.return_const(Vec3::new(1., 2., 3.));
-		let mut app = setup(cursor);
+		let mut app = setup(_Cursor::new_mock(|mock| {
+			mock.expect_intersect_at()
+				.return_const(Vec3::new(1., 2., 3.));
+		}));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -372,18 +349,14 @@ mod tests {
 
 	#[test]
 	fn face_hovering_collider_when_collided_immobilized() {
-		let mut cursor = _Cursor::default();
-		cursor
-			.mock
-			.expect_intersect_at()
-			.return_const(Vec3::new(1., 2., 3.));
-		let mut app = setup(cursor);
-
+		let mut app = setup(_Cursor::new_mock(|mock| {
+			mock.expect_intersect_at()
+				.return_const(Vec3::new(1., 2., 3.));
+		}));
 		let agent = app
 			.world_mut()
 			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor)))
 			.id();
-
 		let collider = app
 			.world_mut()
 			.spawn((Transform::from_xyz(10., 11., 12.), Immobilized))

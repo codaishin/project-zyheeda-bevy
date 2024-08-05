@@ -13,3 +13,4 @@ prefabs.workspace = true
 
 [dev-dependencies]
 mockall.workspace = true
+macros.workspace = true

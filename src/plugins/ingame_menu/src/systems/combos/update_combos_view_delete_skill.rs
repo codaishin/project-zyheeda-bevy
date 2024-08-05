@@ -55,16 +55,29 @@ mod tests {
 		app::{App, Update},
 		prelude::Component,
 	};
-	use common::{components::Side, test_tools::utils::SingleThreadedApp};
+	use common::{
+		components::Side,
+		test_tools::utils::SingleThreadedApp,
+		traits::nested_mock::NestedMock,
+	};
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 	use skills::{skills::Skill, traits::UpdateConfig};
 
 	#[derive(Component)]
 	struct _Agent;
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	struct _Combos {
 		mock: Mock_Combos,
+	}
+
+	impl Default for _Combos {
+		fn default() -> Self {
+			Self::new_mock(|mock| {
+				mock.expect_update_config().return_const(());
+			})
+		}
 	}
 
 	#[automock]
@@ -108,24 +121,24 @@ mod tests {
 	#[test]
 	fn call_update_config_with_none() {
 		let mut app = setup();
-		let mut combos = _Combos::default();
-		combos
-			.mock
-			.expect_update_config()
-			.times(1)
-			.with(
-				eq(vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)]),
-				eq(None),
-			)
-			.return_const(());
-
 		app.world_mut().spawn((
 			DeleteSkill {
 				key_path: vec![_Key::Left, _Key::Right],
 			},
 			Interaction::Pressed,
 		));
-		app.world_mut().spawn((_Agent, combos));
+		app.world_mut().spawn((
+			_Agent,
+			_Combos::new_mock(|mock| {
+				mock.expect_update_config()
+					.times(1)
+					.with(
+						eq(vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)]),
+						eq(None),
+					)
+					.return_const(());
+			}),
+		));
 
 		app.update();
 	}
@@ -133,16 +146,13 @@ mod tests {
 	#[test]
 	fn do_nothing_if_not_all_keys_mappable() {
 		let mut app = setup();
-		let mut combos = _Combos::default();
-		combos.mock.expect_update_config().never().return_const(());
-
 		app.world_mut().spawn((
 			DeleteSkill {
 				key_path: vec![_Key::Left, _Key::Right, _Key::Unmapped],
 			},
 			Interaction::Pressed,
 		));
-		app.world_mut().spawn((_Agent, combos));
+		app.world_mut().spawn((_Agent, _Combos::default()));
 
 		app.update();
 	}
@@ -150,9 +160,6 @@ mod tests {
 	#[test]
 	fn do_nothing_if_not_pressed() {
 		let mut app = setup();
-		let mut combos = _Combos::default();
-		combos.mock.expect_update_config().never().return_const(());
-
 		app.world_mut().spawn((
 			DeleteSkill {
 				key_path: vec![_Key::Left, _Key::Right],
@@ -165,7 +172,7 @@ mod tests {
 			},
 			Interaction::None,
 		));
-		app.world_mut().spawn((_Agent, combos));
+		app.world_mut().spawn((_Agent, _Combos::default()));
 
 		app.update();
 	}
@@ -176,16 +183,13 @@ mod tests {
 		struct _NoAgent;
 
 		let mut app = setup();
-		let mut combos = _Combos::default();
-		combos.mock.expect_update_config().never().return_const(());
-
 		app.world_mut().spawn((
 			DeleteSkill {
 				key_path: vec![_Key::Left, _Key::Right],
 			},
 			Interaction::Pressed,
 		));
-		app.world_mut().spawn((_NoAgent, combos));
+		app.world_mut().spawn((_NoAgent, _Combos::default()));
 
 		app.update();
 	}

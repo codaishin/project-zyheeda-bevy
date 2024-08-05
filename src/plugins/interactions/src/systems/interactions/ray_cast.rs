@@ -61,10 +61,11 @@ mod tests {
 		app::{App, Update},
 		math::{Ray3d, Vec3},
 	};
-	use common::traits::cast_ray::TimeOfImpact;
+	use common::traits::{cast_ray::TimeOfImpact, nested_mock::NestedMock};
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	pub struct _Actor {
 		mock: Mock_Actor,
 	}
@@ -90,17 +91,16 @@ mod tests {
 	#[test]
 	fn act_on_target() {
 		let mut app = setup();
-		let mut actor = _Actor::default();
-		let target = _Target;
-		actor
-			.mock
-			.expect_act_on()
-			.times(1)
-			.with(eq(target))
-			.return_const(());
-
-		let actor = app.world_mut().spawn(actor).id();
-		let target = app.world_mut().spawn(target).id();
+		let actor = app
+			.world_mut()
+			.spawn(_Actor::new_mock(|mock| {
+				mock.expect_act_on()
+					.times(1)
+					.with(eq(_Target))
+					.return_const(());
+			}))
+			.id();
+		let target = app.world_mut().spawn(_Target).id();
 		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
 		app.world_mut().send_event(RayCastEvent {
@@ -111,19 +111,19 @@ mod tests {
 				toi: TimeOfImpact::default(),
 			},
 		});
-
 		app.update();
 	}
 
 	#[test]
 	fn remove_actor() {
 		let mut app = setup();
-		let mut actor = _Actor::default();
-		let target = _Target;
-		actor.mock.expect_act_on().return_const(());
-
-		let actor = app.world_mut().spawn(actor).id();
-		let target = app.world_mut().spawn(target).id();
+		let actor = app
+			.world_mut()
+			.spawn(_Actor::new_mock(|mock| {
+				mock.expect_act_on().return_const(());
+			}))
+			.id();
+		let target = app.world_mut().spawn(_Target).id();
 		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
 		app.world_mut().send_event(RayCastEvent {
@@ -134,7 +134,6 @@ mod tests {
 				toi: TimeOfImpact::default(),
 			},
 		});
-
 		app.update();
 
 		let actor = app.world().entity(actor);
