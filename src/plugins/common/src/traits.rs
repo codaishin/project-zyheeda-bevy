@@ -17,6 +17,7 @@ pub mod load_asset;
 pub mod load_folder_assets;
 pub mod load_from;
 pub mod map_value;
+pub mod mock;
 pub mod mouse_position;
 pub mod new_mock;
 pub mod ownership_relation;
