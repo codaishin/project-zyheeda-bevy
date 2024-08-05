@@ -7,12 +7,15 @@ pub mod utils {
 		},
 		prelude::{Component, *},
 		render::view::{InheritedVisibility, ViewVisibility, Visibility},
+		text::TextLayoutInfo,
 		time::Time,
 		transform::components::{GlobalTransform, Transform},
 		ui::{
 			node_bundles::NodeBundle,
+			widget::TextFlags,
 			BackgroundColor,
 			BorderColor,
+			ContentSize,
 			FocusPolicy,
 			Node,
 			Style,
@@ -194,6 +197,27 @@ pub mod utils {
 		}
 	}
 
+	impl BundleIds for TextBundle {
+		fn bundle_ids(app: &App) -> Vec<(ComponentName, Option<ComponentId>)> {
+			vec![
+				Node::name_and_id(app),
+				Style::name_and_id(app),
+				Text::name_and_id(app),
+				TextLayoutInfo::name_and_id(app),
+				TextFlags::name_and_id(app),
+				ContentSize::name_and_id(app),
+				FocusPolicy::name_and_id(app),
+				Transform::name_and_id(app),
+				GlobalTransform::name_and_id(app),
+				Visibility::name_and_id(app),
+				InheritedVisibility::name_and_id(app),
+				ViewVisibility::name_and_id(app),
+				ZIndex::name_and_id(app),
+				BackgroundColor::name_and_id(app),
+			]
+		}
+	}
+
 	pub fn get_ids<T: BundleIds>(app: &App) -> Vec<(ComponentName, Option<ComponentId>)> {
 		T::bundle_ids(app)
 	}
@@ -219,7 +243,7 @@ pub mod utils {
 		};
 
 		($bundle:ty, $app:expr, $entity:expr, $assert:expr) => {{
-			assert_bundle!($bundle,$app,  $entity);
+			assert_bundle!($bundle, $app, $entity);
 
 			struct With<TComponent: bevy::ecs::component::Component, TAssert: Fn(&TComponent)>(
 				TAssert,
