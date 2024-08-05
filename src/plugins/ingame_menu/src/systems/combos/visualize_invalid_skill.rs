@@ -1,22 +1,25 @@
-use crate::{components::skill_descriptor::SkillDescriptor, traits::InsertContentOn};
+use crate::{
+	components::skill_descriptor::{DropdownTrigger, SkillDescriptor},
+	traits::InsertContentOn,
+};
 use bevy::{
 	ecs::system::EntityCommands,
-	prelude::{Added, Commands, Component, Entity, Query, Res, Resource, With},
+	prelude::{Added, Commands, Component, Entity, Query, With},
 };
-use common::traits::{get::Get, map_value::TryMapBackwards};
+use common::traits::get::Get;
 use skills::items::{slot_key::SlotKey, Item, ItemType};
 use std::collections::HashSet;
 
 pub(crate) fn visualize_invalid_skill<
 	TAgent: Component,
 	TSlots: Component + Get<SlotKey, Item>,
-	TKey: Copy + Send + Sync + 'static,
-	TMap: Resource + TryMapBackwards<TKey, SlotKey>,
 	TVisualization: InsertContentOn,
 >(
 	mut commands: Commands,
-	map: Res<TMap>,
-	descriptors: Query<(Entity, &SkillDescriptor<TKey>), Added<SkillDescriptor<TKey>>>,
+	descriptors: Query<
+		(Entity, &SkillDescriptor<DropdownTrigger>),
+		Added<SkillDescriptor<DropdownTrigger>>,
+	>,
 	agents: Query<&TSlots, With<TAgent>>,
 ) {
 	let Ok(agent) = agents.get_single() else {
@@ -24,29 +27,19 @@ pub(crate) fn visualize_invalid_skill<
 	};
 
 	let visualize = TVisualization::insert_content_on;
-	let map = map.as_ref();
 
 	for descriptor in &descriptors {
-		visualize_unusable(&mut commands, map, descriptor, agent, visualize);
+		visualize_unusable(&mut commands, descriptor, agent, visualize);
 	}
 }
 
-fn visualize_unusable<
-	TSlots: Get<SlotKey, Item>,
-	TKey: Copy,
-	TMap: TryMapBackwards<TKey, SlotKey>,
->(
+fn visualize_unusable<TSlots: Get<SlotKey, Item>>(
 	commands: &mut Commands,
-	map: &TMap,
-	(entity, descriptor): (Entity, &SkillDescriptor<TKey>),
+	(entity, descriptor): (Entity, &SkillDescriptor<DropdownTrigger>),
 	agent: &TSlots,
 	visualize: fn(&mut EntityCommands),
 ) -> Option<()> {
-	let item = descriptor
-		.key_path
-		.last()
-		.and_then(|key| map.try_map_backwards(*key))
-		.and_then(|key| agent.get(&key))?;
+	let item = descriptor.key_path.last().and_then(|key| agent.get(key))?;
 
 	if are_overlapping(&item.item_type, &descriptor.skill.is_usable_with) {
 		return None;
@@ -79,24 +72,6 @@ mod tests {
 	#[derive(Component)]
 	struct _Agent;
 
-	#[derive(Clone, Copy)]
-	enum _Key {
-		Left,
-		Right,
-	}
-
-	#[derive(Resource)]
-	struct _Map;
-
-	impl TryMapBackwards<_Key, SlotKey> for _Map {
-		fn try_map_backwards(&self, value: _Key) -> Option<SlotKey> {
-			match value {
-				_Key::Right => Some(SlotKey::Hand(Side::Main)),
-				_Key::Left => Some(SlotKey::Hand(Side::Off)),
-			}
-		}
-	}
-
 	#[derive(Component)]
 	struct _Slots(HashMap<SlotKey, Item>);
 
@@ -123,10 +98,9 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.insert_resource(_Map);
 		app.add_systems(
 			Update,
-			visualize_invalid_skill::<_Agent, _Slots, _Key, _Map, _Visualization>,
+			visualize_invalid_skill::<_Agent, _Slots, _Visualization>,
 		);
 
 		app
@@ -147,13 +121,13 @@ mod tests {
 		));
 		let skill = app
 			.world_mut()
-			.spawn(SkillDescriptor {
-				key_path: vec![_Key::Left, _Key::Right],
-				skill: Skill {
+			.spawn(SkillDescriptor::new_dropdown_trigger(
+				Skill {
 					is_usable_with: HashSet::from([ItemType::Bracer]),
 					..default()
 				},
-			})
+				vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+			))
 			.id();
 
 		app.update();
@@ -178,13 +152,13 @@ mod tests {
 		));
 		let skill = app
 			.world_mut()
-			.spawn(SkillDescriptor {
-				key_path: vec![_Key::Left, _Key::Right],
-				skill: Skill {
+			.spawn(SkillDescriptor::new_dropdown_trigger(
+				Skill {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-			})
+				vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+			))
 			.id();
 
 		app.update();
@@ -206,13 +180,13 @@ mod tests {
 		)]),));
 		let skill = app
 			.world_mut()
-			.spawn(SkillDescriptor {
-				key_path: vec![_Key::Left, _Key::Right],
-				skill: Skill {
+			.spawn(SkillDescriptor::new_dropdown_trigger(
+				Skill {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-			})
+				vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+			))
 			.id();
 
 		app.update();
@@ -237,13 +211,13 @@ mod tests {
 		));
 		let skill = app
 			.world_mut()
-			.spawn(SkillDescriptor {
-				key_path: vec![_Key::Left, _Key::Right],
-				skill: Skill {
+			.spawn(SkillDescriptor::new_dropdown_trigger(
+				Skill {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-			})
+				vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+			))
 			.id();
 
 		app.update();

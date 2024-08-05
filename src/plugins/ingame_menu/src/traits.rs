@@ -9,10 +9,10 @@ use bevy::{ecs::system::EntityCommands, ui::Style};
 use get_node::GetNode;
 use instantiate_content_on::InstantiateContentOn;
 
-pub(crate) type CombosDescriptor<TKey> = Vec<Vec<SkillDescriptor<TKey>>>;
+pub(crate) type CombosDescriptor = Vec<Vec<SkillDescriptor>>;
 
-pub(crate) trait UpdateCombos<TKey> {
-	fn update_combos(&mut self, combos: CombosDescriptor<TKey>);
+pub(crate) trait UpdateCombos {
+	fn update_combos(&mut self, combos: CombosDescriptor);
 }
 
 pub(crate) trait UI: GetNode + InstantiateContentOn {}

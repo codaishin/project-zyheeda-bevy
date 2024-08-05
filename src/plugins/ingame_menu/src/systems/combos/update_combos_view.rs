@@ -1,8 +1,8 @@
 use crate::traits::{CombosDescriptor, UpdateCombos};
 use bevy::prelude::{Component, In, Query};
 
-pub(crate) fn update_combos_view<TKey, TComboOverview: Component + UpdateCombos<TKey>>(
-	combos: In<CombosDescriptor<TKey>>,
+pub(crate) fn update_combos_view<TComboOverview: Component + UpdateCombos>(
+	combos: In<CombosDescriptor>,
 	mut combo_overviews: Query<&mut TComboOverview>,
 ) {
 	let combos = combos.0;
@@ -20,12 +20,16 @@ mod tests {
 	use crate::components::skill_descriptor::SkillDescriptor;
 	use bevy::{
 		app::{App, Update},
-		prelude::{default, IntoSystem, KeyCode, Resource},
+		prelude::{default, IntoSystem, Resource},
 	};
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMock};
+	use common::{
+		components::Side,
+		test_tools::utils::SingleThreadedApp,
+		traits::nested_mock::NestedMock,
+	};
 	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
-	use skills::skills::Skill;
+	use skills::{items::slot_key::SlotKey, skills::Skill};
 
 	#[derive(Component, NestedMock, Debug)]
 	struct _ComboOverview {
@@ -33,58 +37,58 @@ mod tests {
 	}
 
 	#[automock]
-	impl UpdateCombos<KeyCode> for _ComboOverview {
-		fn update_combos(&mut self, combos: CombosDescriptor<KeyCode>) {
+	impl UpdateCombos for _ComboOverview {
+		fn update_combos(&mut self, combos: CombosDescriptor) {
 			self.mock.update_combos(combos)
 		}
 	}
 
 	#[derive(Resource)]
-	struct _Combos(CombosDescriptor<KeyCode>);
+	struct _Combos(CombosDescriptor);
 
-	fn setup(combos: CombosDescriptor<KeyCode>) -> App {
+	fn setup(combos: CombosDescriptor) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			(move || combos.clone()).pipe(update_combos_view::<KeyCode, _ComboOverview>),
+			(move || combos.clone()).pipe(update_combos_view::<_ComboOverview>),
 		);
 
 		app
 	}
 
-	fn combos() -> CombosDescriptor<KeyCode> {
+	fn combos() -> CombosDescriptor {
 		vec![
 			vec![
-				SkillDescriptor {
-					key_path: vec![KeyCode::KeyA],
-					skill: Skill {
+				SkillDescriptor::new_dropdown_item(
+					Skill {
 						name: "a1".to_owned(),
 						..default()
 					},
-				},
-				SkillDescriptor {
-					key_path: vec![KeyCode::KeyA],
-					skill: Skill {
+					vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
+				),
+				SkillDescriptor::new_dropdown_item(
+					Skill {
 						name: "a2".to_owned(),
 						..default()
 					},
-				},
+					vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
+				),
 			],
 			vec![
-				SkillDescriptor {
-					key_path: vec![KeyCode::KeyA],
-					skill: Skill {
+				SkillDescriptor::new_dropdown_item(
+					Skill {
 						name: "b1".to_owned(),
 						..default()
 					},
-				},
-				SkillDescriptor {
-					key_path: vec![KeyCode::KeyA],
-					skill: Skill {
+					vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+				),
+				SkillDescriptor::new_dropdown_item(
+					Skill {
 						name: "b2".to_owned(),
 						..default()
 					},
-				},
+					vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Off)],
+				),
 			],
 		]
 	}

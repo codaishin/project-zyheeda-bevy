@@ -42,7 +42,6 @@ use skills::{
 use std::time::Duration;
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
-	collect_all_keys::collect_all_keys,
 	combos::{
 		get_combos::get_combos,
 		update_combo_keys::update_combo_keys,
@@ -67,6 +66,7 @@ use systems::{
 		track_child_dropdowns::dropdown_track_child_dropdowns,
 	},
 	image_color::image_color,
+	insert_key_code_text::insert_key_code_text,
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
 	map_pressed_key_select::map_pressed_key_select,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
@@ -190,8 +190,7 @@ fn resources(app: &mut App) {
 		.init_resource::<Shared<Path, Handle<Image>>>()
 		.insert_resource(TooltipUIControl {
 			tooltip_delay: Duration::from_millis(500),
-		})
-		.add_systems(PreUpdate, collect_all_keys::<SlotKey, KeyCode, SlotKeyMap>);
+		});
 }
 
 fn events(app: &mut App) {
@@ -233,24 +232,29 @@ fn combo_overview_systems(app: &mut App) {
 		.add_tooltip::<Skill>()
 		.add_systems(
 			Update,
-			get_combos::<KeyCode, Combos>
-				.pipe(update_combos_view::<KeyCode, ComboOverview>)
+			get_combos::<Combos>
+				.pipe(update_combos_view::<ComboOverview>)
 				.run_if(either(added::<ComboOverview>).or(changed::<Player, Combos>))
 				.run_if(in_state(MenuState::ComboOverview)),
 		)
 		.add_systems(
 			Update,
 			(
-				visualize_invalid_skill::<Player, Slots, KeyCode, SlotKeyMap, Unusable>,
-				insert_skill_select_dropdown::<KeyCode, SlotKey, SlotKeyMap, Slots<Handle<Skill>>>,
-				insert_skill_key_select_dropdown,
-				insert_empty_skill_key_select_dropdown,
-				update_combos_view_key_labels::<LanguageServer, EmptySkill>,
+				visualize_invalid_skill::<Player, Slots, Unusable>,
+				insert_skill_select_dropdown::<Slots<Handle<Skill>>>,
+				insert_skill_key_select_dropdown::<SlotKey>,
+				insert_empty_skill_key_select_dropdown::<SlotKey>,
+				update_combos_view_key_labels::<
+					SlotKey,
+					KeyCode,
+					SlotKeyMap,
+					LanguageServer,
+					EmptySkill,
+				>,
 				update_combos_view_new_skills,
-				update_combos_view_delete_skill::<Player, Combos, KeyCode, SlotKeyMap>,
+				update_combos_view_delete_skill::<Player, Combos>,
 				update_combo_skills::<Player, Combos>,
-				map_pressed_key_select::<KeyCode, SlotKey, SlotKeyMap>
-					.pipe(update_combo_keys::<Player, Combos>),
+				map_pressed_key_select.pipe(update_combo_keys::<Player, Combos>),
 			)
 				.run_if(in_state(MenuState::ComboOverview)),
 		);
@@ -281,5 +285,9 @@ fn inventory_screen_systems(app: &mut App) {
 
 fn general_systems(app: &mut App) {
 	app.add_systems(Update, image_color)
-		.add_systems(Update, adjust_global_z_index);
+		.add_systems(Update, adjust_global_z_index)
+		.add_systems(
+			Update,
+			insert_key_code_text::<SlotKey, SlotKeyMap, LanguageServer>,
+		);
 }

@@ -1,33 +1,33 @@
-use crate::{
-	components::{
-		dropdown::Dropdown,
-		key_select::{EmptySkill, KeySelect},
-		KeySelectDropdownInsertCommand,
-	},
-	systems::collect_all_keys::AllKeys,
+use crate::components::{
+	dropdown::Dropdown,
+	key_select::{EmptySkill, KeySelect},
+	KeySelectDropdownInsertCommand,
 };
-use bevy::prelude::{Commands, Entity, KeyCode, Query, Res};
-use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
+use bevy::prelude::{Commands, Entity, Query};
+use common::traits::{
+	iteration::IterFinite,
+	try_insert_on::TryInsertOn,
+	try_remove_from::TryRemoveFrom,
+};
 
-type InsertCommand = KeySelectDropdownInsertCommand<EmptySkill, KeyCode>;
+type InsertCommand<TKey> = KeySelectDropdownInsertCommand<EmptySkill, TKey>;
 
-pub(crate) fn insert_empty_skill_key_select_dropdown(
+pub(crate) fn insert_empty_skill_key_select_dropdown<
+	TKey: IterFinite + Copy + Sync + Send + 'static,
+>(
 	mut commands: Commands,
-	insert_commands: Query<(Entity, &InsertCommand)>,
-	all_keys: Res<AllKeys<KeyCode>>,
+	insert_commands: Query<(Entity, &InsertCommand<TKey>)>,
 ) {
 	for (entity, command) in &insert_commands {
-		let items = all_keys
-			.keys()
-			.iter()
+		let items = TKey::iterator()
 			.map(|key| KeySelect {
 				extra: command.extra.clone(),
 				key_button: entity,
-				key_path: [command.key_path.clone(), vec![*key]].concat(),
+				key_path: [command.key_path.clone(), vec![key]].concat(),
 			})
 			.collect();
 		commands.try_insert_on(entity, Dropdown { items });
-		commands.try_remove_from::<InsertCommand>(entity);
+		commands.try_remove_from::<InsertCommand<TKey>>(entity);
 	}
 }
 
@@ -39,16 +39,32 @@ mod tests {
 		app::{App, Update},
 		prelude::Entity,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{test_tools::utils::SingleThreadedApp, traits::iteration::Iter};
+
+	#[derive(Debug, PartialEq, Clone, Copy)]
+	enum _Key {
+		A,
+		B,
+		C,
+	}
+
+	impl IterFinite for _Key {
+		fn iterator() -> Iter<Self> {
+			Iter(Some(_Key::A))
+		}
+
+		fn next(current: &Iter<Self>) -> Option<Self> {
+			match current.0? {
+				_Key::A => Some(_Key::B),
+				_Key::B => Some(_Key::C),
+				_Key::C => None,
+			}
+		}
+	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.insert_resource(AllKeys::new(vec![
-			KeyCode::KeyA,
-			KeyCode::KeyB,
-			KeyCode::KeyC,
-		]));
-		app.add_systems(Update, insert_empty_skill_key_select_dropdown);
+		app.add_systems(Update, insert_empty_skill_key_select_dropdown::<_Key>);
 
 		app
 	}
@@ -59,7 +75,7 @@ mod tests {
 		let dropdown = app
 			.world_mut()
 			.spawn(InsertCommand {
-				key_path: vec![KeyCode::KeyA, KeyCode::KeyB, KeyCode::KeyC],
+				key_path: vec![_Key::A, _Key::B, _Key::C],
 				extra: EmptySkill {
 					button_entity: Entity::from_raw(42),
 				},
@@ -78,25 +94,25 @@ mod tests {
 							button_entity: Entity::from_raw(42)
 						},
 						key_button: dropdown.id(),
-						key_path: vec![KeyCode::KeyA, KeyCode::KeyB, KeyCode::KeyC, KeyCode::KeyA]
+						key_path: vec![_Key::A, _Key::B, _Key::C, _Key::A]
 					},
 					KeySelect {
 						extra: EmptySkill {
 							button_entity: Entity::from_raw(42)
 						},
 						key_button: dropdown.id(),
-						key_path: vec![KeyCode::KeyA, KeyCode::KeyB, KeyCode::KeyC, KeyCode::KeyB]
+						key_path: vec![_Key::A, _Key::B, _Key::C, _Key::B]
 					},
 					KeySelect {
 						extra: EmptySkill {
 							button_entity: Entity::from_raw(42)
 						},
 						key_button: dropdown.id(),
-						key_path: vec![KeyCode::KeyA, KeyCode::KeyB, KeyCode::KeyC, KeyCode::KeyC]
+						key_path: vec![_Key::A, _Key::B, _Key::C, _Key::C]
 					}
 				]
 			}),
-			dropdown.get::<Dropdown<KeySelect<EmptySkill, KeyCode>>>(),
+			dropdown.get::<Dropdown<KeySelect<EmptySkill, _Key>>>(),
 		)
 	}
 
@@ -106,7 +122,7 @@ mod tests {
 		let dropdown = app
 			.world_mut()
 			.spawn(InsertCommand {
-				key_path: vec![KeyCode::KeyA],
+				key_path: vec![_Key::A],
 				extra: EmptySkill {
 					button_entity: Entity::from_raw(42),
 				},
@@ -117,6 +133,6 @@ mod tests {
 
 		let dropdown = app.world().entity(dropdown);
 
-		assert_eq!(None, dropdown.get::<InsertCommand>(),)
+		assert_eq!(None, dropdown.get::<InsertCommand<_Key>>(),)
 	}
 }
