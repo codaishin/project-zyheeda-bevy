@@ -13,3 +13,5 @@ macros.workspace = true
 
 [dev-dependencies]
 mockall.workspace = true
+macros.workspace = true
+common.workspace = true

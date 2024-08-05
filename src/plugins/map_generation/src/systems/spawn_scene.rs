@@ -39,7 +39,11 @@ mod tests {
 		ecs::system::IntoSystem,
 		scene::Scene,
 	};
-	use common::{test_tools::utils::SingleThreadedApp, traits::load_asset::Path};
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		traits::{load_asset::Path, nested_mock::NestedMock},
+	};
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 	use uuid::Uuid;
 
@@ -57,7 +61,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Resource, Default)]
+	#[derive(Resource, NestedMock)]
 	struct _LoadScene {
 		mock: Mock_LoadScene,
 	}
@@ -69,11 +73,11 @@ mod tests {
 		}
 	}
 
-	fn setup(cells: Vec<(Transform, _Cell)>) -> App {
+	fn setup(cells: Vec<(Transform, _Cell)>, load_scene: _LoadScene) -> App {
 		let mut app = App::new().single_threaded(Update);
 		let return_cells = move || cells.clone();
 
-		app.init_resource::<_LoadScene>();
+		app.insert_resource(load_scene);
 		app.add_systems(
 			Update,
 			(return_cells).pipe(spawn_scene::<_Cell, _LoadScene>),
@@ -87,17 +91,18 @@ mod tests {
 		let scene = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let mut app = setup(vec![(
-			Transform::from_xyz(1., 2., 3.),
-			_Cell(Some(Path::from("A"))),
-		)]);
-		app.world_mut()
-			.resource_mut::<_LoadScene>()
-			.mock
-			.expect_load_asset()
-			.times(1)
-			.with(eq(Path::from("A")))
-			.return_const(scene.clone());
+		let mut app = setup(
+			vec![(
+				Transform::from_xyz(1., 2., 3.),
+				_Cell(Some(Path::from("A"))),
+			)],
+			_LoadScene::new_mock(|mock| {
+				mock.expect_load_asset()
+					.times(1)
+					.with(eq(Path::from("A")))
+					.return_const(scene.clone());
+			}),
+		);
 
 		app.update();
 

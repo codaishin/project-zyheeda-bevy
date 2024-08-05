@@ -50,8 +50,9 @@ mod test {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::{Units, UnitsPerSecond},
-		traits::clamp_zero_positive::ClampZeroPositive,
+		traits::{clamp_zero_positive::ClampZeroPositive, nested_mock::NestedMock},
 	};
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 	use std::time::Duration;
 
@@ -61,7 +62,7 @@ mod test {
 	#[derive(Component)]
 	struct ConfigSlow;
 
-	#[derive(Component, Default, Debug)]
+	#[derive(Component, NestedMock, Debug)]
 	struct _Movement {
 		pub mock: Mock_Movement,
 	}
@@ -121,17 +122,15 @@ mod test {
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let config = ConfigFast;
 		let time_delta = Duration::from_millis(30);
-		let mut movement = _Movement::default();
-
-		movement
-			.mock
-			.expect_update()
-			.with(
-				eq(transform),
-				eq(Units::new(time_delta.as_secs_f32() * 11.)),
-			)
-			.times(1)
-			.return_const(false);
+		let movement = _Movement::new_mock(|mock| {
+			mock.expect_update()
+				.with(
+					eq(transform),
+					eq(Units::new(time_delta.as_secs_f32() * 11.)),
+				)
+				.times(1)
+				.return_const(false);
+		});
 
 		time.update_with_instant(last_update + time_delta);
 		app.world_mut().spawn((config, movement, transform));
@@ -144,9 +143,9 @@ mod test {
 		let mut app = setup();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let config = ConfigFast;
-		let mut movement = _Movement::default();
-
-		movement.mock.expect_update().times(2).return_const(false);
+		let movement = _Movement::new_mock(|mock| {
+			mock.expect_update().times(2).return_const(false);
+		});
 
 		app.world_mut().spawn((config, movement, transform));
 
@@ -159,9 +158,9 @@ mod test {
 		let mut app = setup();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let config = ConfigFast;
-		let mut movement = _Movement::default();
-
-		movement.mock.expect_update().return_const(true);
+		let movement = _Movement::new_mock(|mock| {
+			mock.expect_update().return_const(true);
+		});
 
 		let agent = app.world_mut().spawn((config, movement, transform)).id();
 
@@ -177,9 +176,9 @@ mod test {
 		let mut app = setup();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let config = ConfigFast;
-		let mut movement = _Movement::default();
-
-		movement.mock.expect_update().return_const(false);
+		let movement = _Movement::new_mock(|mock| {
+			mock.expect_update().return_const(false);
+		});
 
 		let agent = app.world_mut().spawn((config, movement, transform)).id();
 
@@ -196,9 +195,9 @@ mod test {
 		let mut time = app.world_mut().resource_mut::<Time<Real>>();
 
 		let last_update = time.last_update().unwrap();
-		let mut movement = _Movement::default();
-
-		movement.mock.expect_update().never().return_const(false);
+		let movement = _Movement::new_mock(|mock| {
+			mock.expect_update().never().return_const(false);
+		});
 
 		time.update_with_instant(last_update + Duration::from_millis(30));
 		app.world_mut()

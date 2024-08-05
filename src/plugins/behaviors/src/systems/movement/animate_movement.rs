@@ -73,16 +73,35 @@ fn remove_animation<TMovement: Component, TAnimationDispatch: Component + StopAn
 
 #[cfg(test)]
 mod tests {
+	use std::ops::DerefMut;
+
 	use super::*;
 	use crate::components::MovementMode;
 	use animations::traits::Priority;
-	use bevy::app::{App, Update};
-	use common::{test_tools::utils::SingleThreadedApp, tools::UnitsPerSecond};
+	use bevy::{
+		app::{App, Update},
+		utils::default,
+	};
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		tools::UnitsPerSecond,
+		traits::nested_mock::NestedMock,
+	};
+	use macros::NestedMock;
 	use mockall::{automock, mock, predicate::eq};
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	struct _Config {
 		mock: Mock_Config,
+	}
+
+	impl Default for _Config {
+		fn default() -> Self {
+			Self::new_mock(|mock| {
+				mock.expect_get_movement_data()
+					.return_const((default(), default()));
+			})
+		}
 	}
 
 	#[automock]
@@ -92,15 +111,23 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, Default)]
-	struct _Movement(&'static str);
+	#[derive(Component)]
+	struct _Movement;
 
 	#[derive(Debug, PartialEq, Clone)]
-	struct _Animation(&'static str);
+	struct _Animation;
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	struct _MovementAnimations {
 		mock: Mock_MovementAnimations,
+	}
+
+	impl Default for _MovementAnimations {
+		fn default() -> Self {
+			Self::new_mock(|mock| {
+				mock.expect_animation().return_const(_Animation);
+			})
+		}
 	}
 
 	#[automock]
@@ -110,7 +137,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	struct _AnimationDispatch {
 		mock: Mock_AnimationDispatch,
 	}
@@ -168,231 +195,161 @@ mod tests {
 	#[test]
 	fn animate_fast() {
 		let mut app = setup();
-		let mut config = _Config::default();
-		let mut animations = _MovementAnimations::default();
-		let mut dispatch = _AnimationDispatch::default();
+		app.world_mut().spawn((
+			_Config::new_mock(|mock| {
+				mock.expect_get_movement_data()
+					.return_const((UnitsPerSecond::default(), MovementMode::Fast));
+			}),
+			_MovementAnimations::new_mock(|mock| {
+				mock.expect_animation()
+					.times(1)
+					.with(eq(MovementMode::Fast))
+					.return_const(_Animation);
+			}),
+			_AnimationDispatch::new_mock(|mock| {
+				mock.expect_start_animation()
+					.times(1)
+					.with(eq(MovementLayer), eq(_Animation))
+					.return_const(());
+			}),
+			_Movement,
+		));
 
-		config
-			.mock
-			.expect_get_movement_data()
-			.return_const((UnitsPerSecond::default(), MovementMode::Fast));
-		animations
-			.mock
-			.expect_animation()
-			.with(eq(MovementMode::Fast))
-			.return_const(_Animation("fast"));
-		animations
-			.mock
-			.expect_animation()
-			.with(eq(MovementMode::Slow))
-			.return_const(_Animation("slow"));
-
-		dispatch
-			.mock
-			.expect_start_animation()
-			.times(1)
-			.with(eq(MovementLayer), eq(_Animation("fast")))
-			.return_const(());
-
-		app.world_mut()
-			.spawn((config, animations, dispatch, _Movement::default()));
 		app.update();
 	}
 
 	#[test]
 	fn animate_slow() {
 		let mut app = setup();
-		let mut config = _Config::default();
-		let mut animations = _MovementAnimations::default();
-		let mut dispatch = _AnimationDispatch::default();
+		app.world_mut().spawn((
+			_Config::new_mock(|mock| {
+				mock.expect_get_movement_data()
+					.return_const((UnitsPerSecond::default(), MovementMode::Slow));
+			}),
+			_MovementAnimations::new_mock(|mock| {
+				mock.expect_animation()
+					.times(1)
+					.with(eq(MovementMode::Slow))
+					.return_const(_Animation);
+			}),
+			_AnimationDispatch::new_mock(|mock| {
+				mock.expect_start_animation()
+					.times(1)
+					.with(eq(MovementLayer), eq(_Animation))
+					.return_const(());
+			}),
+			_Movement,
+		));
 
-		config
-			.mock
-			.expect_get_movement_data()
-			.return_const((UnitsPerSecond::default(), MovementMode::Slow));
-		animations
-			.mock
-			.expect_animation()
-			.with(eq(MovementMode::Fast))
-			.return_const(_Animation("fast"));
-		animations
-			.mock
-			.expect_animation()
-			.with(eq(MovementMode::Slow))
-			.return_const(_Animation("slow"));
-
-		dispatch
-			.mock
-			.expect_start_animation()
-			.times(1)
-			.with(eq(MovementLayer), eq(_Animation("slow")))
-			.return_const(());
-
-		app.world_mut()
-			.spawn((config, animations, dispatch, _Movement::default()));
 		app.update();
 	}
 
 	#[test]
 	fn do_not_animate_when_no_movement_component() {
 		let mut app = setup();
-		let mut config = _Config::default();
-		let mut animations = _MovementAnimations::default();
-		let mut dispatch = _AnimationDispatch::default();
+		app.world_mut().spawn((
+			_Config::default(),
+			_MovementAnimations::default(),
+			_AnimationDispatch::new_mock(|mock| {
+				mock.expect_start_animation::<MovementLayer>()
+					.never()
+					.return_const(());
+			}),
+		));
 
-		config
-			.mock
-			.expect_get_movement_data()
-			.return_const((UnitsPerSecond::default(), MovementMode::default()));
-		animations
-			.mock
-			.expect_animation()
-			.return_const(_Animation(""));
-
-		dispatch
-			.mock
-			.expect_start_animation::<MovementLayer>()
-			.never()
-			.return_const(());
-
-		app.world_mut().spawn((config, animations, dispatch));
 		app.update();
 	}
 
 	#[test]
 	fn remove_medium_priority_when_movement_removed() {
 		let mut app = setup();
-		let mut config = _Config::default();
-		let mut animations = _MovementAnimations::default();
-		let mut dispatch = _AnimationDispatch::default();
-
-		config
-			.mock
-			.expect_get_movement_data()
-			.return_const((UnitsPerSecond::default(), MovementMode::default()));
-		animations
-			.mock
-			.expect_animation()
-			.with(eq(MovementMode::Fast))
-			.return_const(_Animation("fast"));
-		animations
-			.mock
-			.expect_animation()
-			.with(eq(MovementMode::Slow))
-			.return_const(_Animation("slow"));
-
-		dispatch
-			.mock
-			.expect_start_animation::<MovementLayer>()
-			.return_const(());
-		dispatch
-			.mock
-			.expect_stop_animation::<MovementLayer>()
-			.times(1)
-			.return_const(());
-
 		let agent = app
 			.world_mut()
-			.spawn((config, animations, dispatch, _Movement::default()))
+			.spawn((
+				_Config::default(),
+				_MovementAnimations::default(),
+				_AnimationDispatch::new_mock(|mock| {
+					mock.expect_start_animation::<MovementLayer>()
+						.return_const(());
+					mock.expect_stop_animation::<MovementLayer>()
+						.times(1)
+						.return_const(());
+				}),
+				_Movement,
+			))
 			.id();
+
 		app.update();
 
 		app.world_mut().entity_mut(agent).remove::<_Movement>();
+
 		app.update();
 	}
 
 	#[test]
 	fn animate_only_when_movement_added() {
 		let mut app = setup();
-		let mut config = _Config::default();
-		let mut animations = _MovementAnimations::default();
-		let mut dispatch = _AnimationDispatch::default();
+		app.world_mut().spawn((
+			_Config::default(),
+			_MovementAnimations::default(),
+			_AnimationDispatch::new_mock(|mock| {
+				mock.expect_start_animation()
+					.times(1)
+					.with(eq(MovementLayer), eq(_Animation))
+					.return_const(());
+			}),
+			_Movement,
+		));
 
-		config
-			.mock
-			.expect_get_movement_data()
-			.return_const((UnitsPerSecond::default(), MovementMode::default()));
-		animations
-			.mock
-			.expect_animation()
-			.return_const(_Animation("my animation"));
-
-		dispatch
-			.mock
-			.expect_start_animation()
-			.times(1)
-			.with(eq(MovementLayer), eq(_Animation("my animation")))
-			.return_const(());
-
-		app.world_mut()
-			.spawn((config, animations, dispatch, _Movement::default()));
 		app.update();
 		app.update();
 	}
 
 	#[test]
-	fn animate_only_when_movement_added_and_ignore_changed() {
+	fn animate_only_when_movement_added_and_not_mutable_dereferenced() {
 		let mut app = setup();
-		let mut config = _Config::default();
-		let mut animations = _MovementAnimations::default();
-		let mut dispatch = _AnimationDispatch::default();
-
-		config
-			.mock
-			.expect_get_movement_data()
-			.return_const((UnitsPerSecond::default(), MovementMode::default()));
-		animations
-			.mock
-			.expect_animation()
-			.return_const(_Animation("my animation"));
-
-		dispatch
-			.mock
-			.expect_start_animation()
-			.times(1)
-			.with(eq(MovementLayer), eq(_Animation("my animation")))
-			.return_const(());
-
 		let agent = app
 			.world_mut()
-			.spawn((config, animations, dispatch, _Movement::default()))
+			.spawn((
+				_Config::default(),
+				_MovementAnimations::default(),
+				_AnimationDispatch::new_mock(|mock| {
+					mock.expect_start_animation()
+						.times(1)
+						.with(eq(MovementLayer), eq(_Animation))
+						.return_const(());
+				}),
+				_Movement,
+			))
 			.id();
+
 		app.update();
 
 		app.world_mut()
 			.entity_mut(agent)
 			.get_mut::<_Movement>()
 			.unwrap()
-			.0 = "CHANGED";
+			.deref_mut();
+
 		app.update();
 	}
 
 	#[test]
-	fn animate_again_when_config_changed() {
+	fn animate_again_when_config_mutably_dereferenced() {
 		let mut app = setup();
-		let mut config = _Config::default();
-		let mut animations = _MovementAnimations::default();
-		let mut dispatch = _AnimationDispatch::default();
-
-		config
-			.mock
-			.expect_get_movement_data()
-			.return_const((UnitsPerSecond::default(), MovementMode::Fast));
-		animations
-			.mock
-			.expect_animation()
-			.return_const(_Animation("my animation"));
-
-		dispatch
-			.mock
-			.expect_start_animation()
-			.times(2)
-			.with(eq(MovementLayer), eq(_Animation("my animation")))
-			.return_const(());
-
 		let agent = app
 			.world_mut()
-			.spawn((config, animations, dispatch, _Movement::default()))
+			.spawn((
+				_Config::default(),
+				_MovementAnimations::default(),
+				_AnimationDispatch::new_mock(|mock| {
+					mock.expect_start_animation()
+						.times(2)
+						.with(eq(MovementLayer), eq(_Animation))
+						.return_const(());
+				}),
+				_Movement,
+			))
 			.id();
 		app.update();
 
@@ -400,40 +357,23 @@ mod tests {
 			.entity_mut(agent)
 			.get_mut::<_Config>()
 			.unwrap()
-			.mock
-			.expect_get_movement_data()
-			.return_const((UnitsPerSecond::default(), MovementMode::Slow));
+			.deref_mut();
+
 		app.update();
 	}
 
 	#[test]
 	fn no_animate_when_immobilized() {
 		let mut app = setup();
-		let mut config = _Config::default();
-		let mut animations = _MovementAnimations::default();
-		let mut dispatch = _AnimationDispatch::default();
-
-		config
-			.mock
-			.expect_get_movement_data()
-			.never()
-			.return_const((UnitsPerSecond::default(), MovementMode::Fast));
-		animations
-			.mock
-			.expect_animation()
-			.never()
-			.return_const(_Animation(""));
-		dispatch
-			.mock
-			.expect_start_animation::<MovementLayer>()
-			.never()
-			.return_const(());
-
 		app.world_mut().spawn((
-			config,
-			animations,
-			dispatch,
-			_Movement::default(),
+			_Config::default(),
+			_MovementAnimations::default(),
+			_AnimationDispatch::new_mock(|mock| {
+				mock.expect_start_animation::<MovementLayer>()
+					.never()
+					.return_const(());
+			}),
+			_Movement,
 			Immobilized,
 		));
 		app.update();

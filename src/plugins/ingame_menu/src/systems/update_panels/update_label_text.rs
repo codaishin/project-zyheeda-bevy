@@ -66,12 +66,13 @@ fn set_first_section(text: &mut Mut<Text>, value: &str) {
 mod tests {
 	use super::*;
 	use bevy::app::{App, Update};
-	use common::components::Side;
+	use common::{components::Side, traits::nested_mock::NestedMock};
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 
 	struct _T;
 
-	#[derive(Resource, Default)]
+	#[derive(Resource, NestedMock)]
 	struct _Map {
 		mock: Mock_Map,
 	}
@@ -98,10 +99,9 @@ mod tests {
 	#[test]
 	fn add_section_to_text() {
 		let mut app = App::new();
-		let mut map = _Map::default();
-		map.mock.expect_map_forward().return_const(KeyCode::ArrowUp);
-
-		app.insert_resource(map);
+		app.insert_resource(_Map::new_mock(|mock| {
+			mock.expect_map_forward().return_const(KeyCode::ArrowUp);
+		}));
 		app.insert_resource(_LanguageServer(KeyCode::ArrowUp, "IIIIII"));
 		let id = app
 			.world_mut()
@@ -125,10 +125,9 @@ mod tests {
 	#[test]
 	fn override_first_section() {
 		let mut app = App::new();
-		let mut map = _Map::default();
-		map.mock.expect_map_forward().return_const(KeyCode::ArrowUp);
-
-		app.insert_resource(map);
+		app.insert_resource(_Map::new_mock(|mock| {
+			mock.expect_map_forward().return_const(KeyCode::ArrowUp);
+		}));
 		app.insert_resource(_LanguageServer(KeyCode::ArrowUp, "IIIIII"));
 		let id = app
 			.world_mut()
@@ -152,14 +151,12 @@ mod tests {
 	#[test]
 	fn map_slot_key_properly() {
 		let mut app = App::new();
-		let mut map = _Map::default();
-		map.mock
-			.expect_map_forward()
-			.times(1)
-			.with(eq(SlotKey::Hand(Side::Off)))
-			.return_const(KeyCode::ArrowUp);
-
-		app.insert_resource(map);
+		app.insert_resource(_Map::new_mock(|mock| {
+			mock.expect_map_forward()
+				.times(1)
+				.with(eq(SlotKey::Hand(Side::Off)))
+				.return_const(KeyCode::ArrowUp);
+		}));
 		app.insert_resource(_LanguageServer(KeyCode::ArrowUp, "IIIIII"));
 		app.world_mut().spawn((
 			Label::<_T, SlotKey>::new(SlotKey::Hand(Side::Off)),

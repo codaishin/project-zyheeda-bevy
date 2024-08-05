@@ -75,7 +75,8 @@ mod tests {
 		prelude::{default, Resource},
 		ui::{node_bundles::NodeBundle, Style},
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMock};
+	use macros::NestedMock;
 	use mockall::mock;
 
 	#[derive(Component)]
@@ -110,7 +111,7 @@ mod tests {
 	#[derive(Component)]
 	struct _UI;
 
-	#[derive(Resource, Default)]
+	#[derive(Resource, NestedMock)]
 	struct _UIControl {
 		mock: Mock_UIControl,
 	}
@@ -216,22 +217,19 @@ mod tests {
 			position: Vec2,
 		}
 
-		let mut ui_control = _UIControl::default();
-		ui_control.mock.expect_despawn_all().return_const(());
-		ui_control.mock.expect_despawn_outdated().return_const(());
-		ui_control.mock.expect_update_position().return_const(());
-		ui_control
-			.mock
-			.expect_spawn()
-			.returning(|commands, entity, tooltip, position| {
-				commands.insert_resource(_Spawn {
-					entity,
-					tooltip: tooltip.clone(),
-					position,
+		let mut app = setup(_UIControl::new_mock(|mock| {
+			mock.expect_despawn_all().return_const(());
+			mock.expect_despawn_outdated().return_const(());
+			mock.expect_update_position().return_const(());
+			mock.expect_spawn()
+				.returning(|commands, entity, tooltip, position| {
+					commands.insert_resource(_Spawn {
+						entity,
+						tooltip: tooltip.clone(),
+						position,
+					});
 				});
-			});
-
-		let mut app = setup(ui_control);
+		}));
 		app.world_mut()
 			.spawn(_Window(Some(Vec2 { x: 33., y: 66. })));
 		let tooltip_id = app
@@ -260,13 +258,12 @@ mod tests {
 
 	#[test]
 	fn do_not_call_spawn_when_not_hovering() {
-		let mut ui_control = _UIControl::default();
-		ui_control.mock.expect_despawn_all().return_const(());
-		ui_control.mock.expect_despawn_outdated().return_const(());
-		ui_control.mock.expect_update_position().return_const(());
-		ui_control.mock.expect_spawn().never().return_const(());
-
-		let mut app = setup(ui_control);
+		let mut app = setup(_UIControl::new_mock(|mock| {
+			mock.expect_despawn_all().return_const(());
+			mock.expect_despawn_outdated().return_const(());
+			mock.expect_update_position().return_const(());
+			mock.expect_spawn().never().return_const(());
+		}));
 		app.world_mut().spawn(_Window(Some(default())));
 		app.world_mut()
 			.spawn((Tooltip::new(_T { content: "" }), Interaction::None));
@@ -276,13 +273,12 @@ mod tests {
 
 	#[test]
 	fn call_spawn_only_once() {
-		let mut ui_control = _UIControl::default();
-		ui_control.mock.expect_despawn_all().return_const(());
-		ui_control.mock.expect_despawn_outdated().return_const(());
-		ui_control.mock.expect_update_position().return_const(());
-		ui_control.mock.expect_spawn().times(1).return_const(());
-
-		let mut app = setup(ui_control);
+		let mut app = setup(_UIControl::new_mock(|mock| {
+			mock.expect_despawn_all().return_const(());
+			mock.expect_despawn_outdated().return_const(());
+			mock.expect_update_position().return_const(());
+			mock.expect_spawn().times(1).return_const(());
+		}));
 		app.world_mut().spawn(_Window(Some(default())));
 		app.world_mut()
 			.spawn((Tooltip::new(_T { content: "" }), Interaction::Hovered));
@@ -293,13 +289,12 @@ mod tests {
 
 	#[test]
 	fn call_spawn_again_when_interaction_changed_to_hovered() {
-		let mut ui_control = _UIControl::default();
-		ui_control.mock.expect_despawn_all().return_const(());
-		ui_control.mock.expect_despawn_outdated().return_const(());
-		ui_control.mock.expect_update_position().return_const(());
-		ui_control.mock.expect_spawn().times(1).return_const(());
-
-		let mut app = setup(ui_control);
+		let mut app = setup(_UIControl::new_mock(|mock| {
+			mock.expect_despawn_all().return_const(());
+			mock.expect_despawn_outdated().return_const(());
+			mock.expect_update_position().return_const(());
+			mock.expect_spawn().times(1).return_const(());
+		}));
 		app.world_mut().spawn(_Window(Some(default())));
 		let tooltip = app
 			.world_mut()
@@ -317,20 +312,17 @@ mod tests {
 
 	#[test]
 	fn call_update_position() {
-		let mut ui_control = _UIControl::default();
-		ui_control.mock.expect_despawn_all().return_const(());
-		ui_control.mock.expect_despawn_outdated().return_const(());
-		ui_control.mock.expect_spawn().return_const(());
-		ui_control
-			.mock
-			.expect_update_position()
-			.withf(|_, position| {
-				assert_eq!(Vec2 { x: 33., y: 66. }, *position);
-				true
-			})
-			.return_const(());
-
-		let mut app = setup(ui_control);
+		let mut app = setup(_UIControl::new_mock(|mock| {
+			mock.expect_despawn_all().return_const(());
+			mock.expect_despawn_outdated().return_const(());
+			mock.expect_spawn().return_const(());
+			mock.expect_update_position()
+				.withf(|_, position| {
+					assert_eq!(Vec2 { x: 33., y: 66. }, *position);
+					true
+				})
+				.return_const(());
+		}));
 		app.world_mut()
 			.spawn(_Window(Some(Vec2 { x: 33., y: 66. })));
 
@@ -339,17 +331,12 @@ mod tests {
 
 	#[test]
 	fn do_not_call_update_position_when_tooltips_changed() {
-		let mut ui_control = _UIControl::default();
-		ui_control.mock.expect_despawn_all().return_const(());
-		ui_control.mock.expect_despawn_outdated().return_const(());
-		ui_control.mock.expect_spawn().return_const(());
-		ui_control
-			.mock
-			.expect_update_position()
-			.never()
-			.return_const(());
-
-		let mut app = setup(ui_control);
+		let mut app = setup(_UIControl::new_mock(|mock| {
+			mock.expect_despawn_all().return_const(());
+			mock.expect_despawn_outdated().return_const(());
+			mock.expect_spawn().return_const(());
+			mock.expect_update_position().never().return_const(());
+		}));
 		app.world_mut().spawn(_Window(Some(default())));
 		app.world_mut()
 			.spawn((Tooltip::new(_T { content: "" }), Interaction::Hovered));
@@ -362,16 +349,13 @@ mod tests {
 		#[derive(Resource)]
 		struct _DespawnAll;
 
-		let mut ui_control = _UIControl::default();
-		ui_control.mock.expect_despawn_outdated().return_const(());
-		ui_control.mock.expect_spawn().return_const(());
-		ui_control.mock.expect_update_position().return_const(());
-		ui_control
-			.mock
-			.expect_despawn_all()
-			.returning(|_, commands| commands.insert_resource(_DespawnAll));
-
-		let mut app = setup(ui_control);
+		let mut app = setup(_UIControl::new_mock(|mock| {
+			mock.expect_despawn_outdated().return_const(());
+			mock.expect_spawn().return_const(());
+			mock.expect_update_position().return_const(());
+			mock.expect_despawn_all()
+				.returning(|_, commands| commands.insert_resource(_DespawnAll));
+		}));
 
 		app.world_mut().spawn(_Window(Some(default())));
 		app.world_mut()
@@ -384,17 +368,12 @@ mod tests {
 
 	#[test]
 	fn do_not_call_despawn_all_when_tooltips_did_not_changed() {
-		let mut ui_control = _UIControl::default();
-		ui_control.mock.expect_despawn_outdated().return_const(());
-		ui_control.mock.expect_spawn().return_const(());
-		ui_control.mock.expect_update_position().return_const(());
-		ui_control
-			.mock
-			.expect_despawn_all()
-			.never()
-			.return_const(());
-
-		let mut app = setup(ui_control);
+		let mut app = setup(_UIControl::new_mock(|mock| {
+			mock.expect_despawn_outdated().return_const(());
+			mock.expect_spawn().return_const(());
+			mock.expect_update_position().return_const(());
+			mock.expect_despawn_all().never().return_const(());
+		}));
 
 		app.world_mut().spawn(_Window(Some(default())));
 
@@ -406,12 +385,11 @@ mod tests {
 		#[derive(Resource, Debug, PartialEq)]
 		struct _DespawnOutdated(Vec<Entity>);
 
-		let mut ui_control = _UIControl::default();
-		ui_control.mock.expect_spawn().return_const(());
-		ui_control.mock.expect_update_position().return_const(());
-		ui_control.mock.expect_despawn_all().return_const(());
-
-		let mut app = setup(ui_control);
+		let mut app = setup(_UIControl::new_mock(|mock| {
+			mock.expect_spawn().return_const(());
+			mock.expect_update_position().return_const(());
+			mock.expect_despawn_all().return_const(());
+		}));
 
 		app.world_mut().spawn(_Window(Some(default())));
 		let tooltip = app
@@ -441,17 +419,12 @@ mod tests {
 
 	#[test]
 	fn do_not_call_despawn_outdated_when_no_tooltip_removed() {
-		let mut ui_control = _UIControl::default();
-		ui_control.mock.expect_spawn().return_const(());
-		ui_control.mock.expect_update_position().return_const(());
-		ui_control.mock.expect_despawn_all().return_const(());
-		ui_control
-			.mock
-			.expect_despawn_outdated()
-			.never()
-			.return_const(());
-
-		let mut app = setup(ui_control);
+		let mut app = setup(_UIControl::new_mock(|mock| {
+			mock.expect_spawn().return_const(());
+			mock.expect_update_position().return_const(());
+			mock.expect_despawn_all().return_const(());
+			mock.expect_despawn_outdated().never().return_const(());
+		}));
 
 		app.world_mut().spawn(_Window(Some(default())));
 		app.world_mut()

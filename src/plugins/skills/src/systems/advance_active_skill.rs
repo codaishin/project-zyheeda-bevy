@@ -156,7 +156,11 @@ mod tests {
 		prelude::{App, Transform, Update},
 		time::{Real, Time},
 	};
-	use common::test_tools::utils::{SingleThreadedApp, TickTime};
+	use common::{
+		test_tools::utils::{SingleThreadedApp, TickTime},
+		traits::nested_mock::NestedMock,
+	};
+	use macros::NestedMock;
 	use mockall::{mock, predicate::eq};
 	use std::{collections::HashSet, time::Duration};
 
@@ -214,7 +218,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	struct _AnimationDispatch {
 		mock: Mock_AnimationDispatch,
 	}
@@ -254,7 +258,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	struct _Executor {
 		mock: Mock_Executor,
 	}
@@ -285,24 +289,22 @@ mod tests {
 
 	fn setup() -> (App, Entity) {
 		let mut app = App::new().single_threaded(Update);
-		let mut time = Time::<Real>::default();
-		let mut dispatch = _AnimationDispatch::default();
-		let mut executer = _Executor::default();
+		let agent = app
+			.world_mut()
+			.spawn((
+				_AnimationDispatch::new_mock(|mock| {
+					mock.expect_start_animation::<SkillLayer>().return_const(());
+					mock.expect_stop_animation::<SkillLayer>().return_const(());
+				}),
+				_Executor::new_mock(|mock| {
+					mock.expect_schedule().return_const(());
+					mock.expect_flush().return_const(());
+				}),
+			))
+			.id();
 
-		dispatch
-			.mock
-			.expect_start_animation::<SkillLayer>()
-			.return_const(());
-		dispatch
-			.mock
-			.expect_stop_animation::<SkillLayer>()
-			.return_const(());
-		executer.mock.expect_schedule().return_const(());
-		executer.mock.expect_flush().return_const(());
-		let agent = app.world_mut().spawn((dispatch, executer)).id();
-
-		time.update();
-		app.insert_resource(time);
+		app.init_resource::<Time<Real>>();
+		app.tick_time(Duration::ZERO);
 		app.update();
 		app.add_systems(
 			Update,
@@ -337,18 +339,6 @@ mod tests {
 	#[test]
 	fn insert_animation_when_aim_begins() {
 		let (mut app, agent) = setup();
-		let mut dispatch = _AnimationDispatch::default();
-		dispatch
-			.mock
-			.expect_stop_animation::<SkillLayer>()
-			.return_const(());
-		dispatch
-			.mock
-			.expect_start_animation()
-			.times(1)
-			.with(eq(SkillLayer), eq(_Animation(42)))
-			.return_const(());
-
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
@@ -365,7 +355,13 @@ mod tests {
 				})),
 			},
 			Transform::default(),
-			dispatch,
+			_AnimationDispatch::new_mock(|mock| {
+				mock.expect_stop_animation::<SkillLayer>().return_const(());
+				mock.expect_start_animation()
+					.times(1)
+					.with(eq(SkillLayer), eq(_Animation(42)))
+					.return_const(());
+			}),
 		));
 
 		app.update();
@@ -374,17 +370,6 @@ mod tests {
 	#[test]
 	fn do_not_insert_animation_when_not_beginning_to_aim() {
 		let (mut app, agent) = setup();
-		let mut dispatch = _AnimationDispatch::default();
-		dispatch
-			.mock
-			.expect_stop_animation::<SkillLayer>()
-			.return_const(());
-		dispatch
-			.mock
-			.expect_start_animation::<SkillLayer>()
-			.never()
-			.return_const(());
-
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
@@ -404,7 +389,12 @@ mod tests {
 				})),
 			},
 			Transform::default(),
-			dispatch,
+			_AnimationDispatch::new_mock(|mock| {
+				mock.expect_stop_animation::<SkillLayer>().return_const(());
+				mock.expect_start_animation::<SkillLayer>()
+					.never()
+					.return_const(());
+			}),
 		));
 
 		app.update();
@@ -413,17 +403,6 @@ mod tests {
 	#[test]
 	fn stop_animation_on_when_beginning_to_aim_and_animate_is_none() {
 		let (mut app, agent) = setup();
-		let mut dispatch = _AnimationDispatch::default();
-		dispatch
-			.mock
-			.expect_start_animation::<SkillLayer>()
-			.return_const(());
-		dispatch
-			.mock
-			.expect_stop_animation::<SkillLayer>()
-			.times(1)
-			.return_const(());
-
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
@@ -438,7 +417,12 @@ mod tests {
 				})),
 			},
 			Transform::default(),
-			dispatch,
+			_AnimationDispatch::new_mock(|mock| {
+				mock.expect_start_animation::<SkillLayer>().return_const(());
+				mock.expect_stop_animation::<SkillLayer>()
+					.times(1)
+					.return_const(());
+			}),
 		));
 
 		app.update();
@@ -447,17 +431,6 @@ mod tests {
 	#[test]
 	fn do_not_stop_animation_when_not_beginning_to_aim_and_animate_is_none() {
 		let (mut app, agent) = setup();
-		let mut dispatch = _AnimationDispatch::default();
-		dispatch
-			.mock
-			.expect_start_animation::<SkillLayer>()
-			.return_const(());
-		dispatch
-			.mock
-			.expect_stop_animation::<SkillLayer>()
-			.never()
-			.return_const(());
-
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
@@ -475,7 +448,12 @@ mod tests {
 				})),
 			},
 			Transform::default(),
-			dispatch,
+			_AnimationDispatch::new_mock(|mock| {
+				mock.expect_start_animation::<SkillLayer>().return_const(());
+				mock.expect_stop_animation::<SkillLayer>()
+					.never()
+					.return_const(());
+			}),
 		));
 
 		app.update();
@@ -484,18 +462,6 @@ mod tests {
 	#[test]
 	fn do_not_start_or_stop_animation_when_beginning_to_aim_and_animate_is_ignore() {
 		let (mut app, agent) = setup();
-		let mut dispatch = _AnimationDispatch::default();
-		dispatch
-			.mock
-			.expect_start_animation::<SkillLayer>()
-			.never()
-			.return_const(());
-		dispatch
-			.mock
-			.expect_stop_animation::<SkillLayer>()
-			.never()
-			.return_const(());
-
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
@@ -510,7 +476,14 @@ mod tests {
 				})),
 			},
 			Transform::default(),
-			dispatch,
+			_AnimationDispatch::new_mock(|mock| {
+				mock.expect_start_animation::<SkillLayer>()
+					.never()
+					.return_const(());
+				mock.expect_stop_animation::<SkillLayer>()
+					.never()
+					.return_const(());
+			}),
 		));
 
 		app.update();
@@ -519,21 +492,15 @@ mod tests {
 	#[test]
 	fn remove_animation_when_no_active_skill() {
 		let (mut app, agent) = setup();
-		let mut dispatch = _AnimationDispatch::default();
-		dispatch
-			.mock
-			.expect_start_animation::<SkillLayer>()
-			.return_const(());
-		dispatch
-			.mock
-			.expect_stop_animation::<SkillLayer>()
-			.times(1)
-			.return_const(());
-
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue { active: None },
 			Transform::default(),
-			dispatch,
+			_AnimationDispatch::new_mock(|mock| {
+				mock.expect_start_animation::<SkillLayer>().return_const(());
+				mock.expect_stop_animation::<SkillLayer>()
+					.times(1)
+					.return_const(());
+			}),
 		));
 
 		app.update();
@@ -542,17 +509,6 @@ mod tests {
 	#[test]
 	fn do_not_remove_animation_when_some_active_skill() {
 		let (mut app, agent) = setup();
-		let mut dispatch = _AnimationDispatch::default();
-		dispatch
-			.mock
-			.expect_start_animation::<SkillLayer>()
-			.return_const(());
-		dispatch
-			.mock
-			.expect_stop_animation::<SkillLayer>()
-			.never()
-			.return_const(());
-
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -562,7 +518,12 @@ mod tests {
 				})),
 			},
 			Transform::default(),
-			dispatch,
+			_AnimationDispatch::new_mock(|mock| {
+				mock.expect_start_animation::<SkillLayer>().return_const(());
+				mock.expect_stop_animation::<SkillLayer>()
+					.never()
+					.return_const(());
+			}),
 		));
 
 		app.update();
@@ -571,21 +532,15 @@ mod tests {
 	#[test]
 	fn remove_animation_only_once_when_no_active_skill() {
 		let (mut app, agent) = setup();
-		let mut dispatch = _AnimationDispatch::default();
-		dispatch
-			.mock
-			.expect_start_animation::<SkillLayer>()
-			.return_const(());
-		dispatch
-			.mock
-			.expect_stop_animation::<SkillLayer>()
-			.times(1)
-			.return_const(());
-
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue { active: None },
 			Transform::default(),
-			dispatch,
+			_AnimationDispatch::new_mock(|mock| {
+				mock.expect_start_animation::<SkillLayer>().return_const(());
+				mock.expect_stop_animation::<SkillLayer>()
+					.times(1)
+					.return_const(());
+			}),
 		));
 
 		app.update();
@@ -640,21 +595,18 @@ mod tests {
 
 	#[test]
 	fn run_on_active() {
-		let mut executor = _Executor::default();
-		executor.mock.expect_flush().return_const(());
-		executor
-			.mock
-			.expect_schedule()
-			.times(1)
-			.withf(|start| {
-				assert_eq!(start, &START_BEHAVIOR);
-				true
-			})
-			.return_const(());
-
 		let (mut app, agent) = setup();
 		app.world_mut().entity_mut(agent).insert((
-			executor,
+			_Executor::new_mock(|mock| {
+				mock.expect_flush().return_const(());
+				mock.expect_schedule()
+					.times(1)
+					.withf(|start| {
+						assert_eq!(start, &START_BEHAVIOR);
+						true
+					})
+					.return_const(());
+			}),
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::RunBehavior]);
@@ -676,21 +628,18 @@ mod tests {
 
 	#[test]
 	fn run_on_aim() {
-		let mut executor = _Executor::default();
-		executor.mock.expect_flush().return_const(());
-		executor
-			.mock
-			.expect_schedule()
-			.times(1)
-			.withf(|start| {
-				assert_eq!(start, &START_BEHAVIOR);
-				true
-			})
-			.return_const(());
-
 		let (mut app, agent) = setup();
 		app.world_mut().entity_mut(agent).insert((
-			executor,
+			_Executor::new_mock(|mock| {
+				mock.expect_flush().return_const(());
+				mock.expect_schedule()
+					.times(1)
+					.withf(|start| {
+						assert_eq!(start, &START_BEHAVIOR);
+						true
+					})
+					.return_const(());
+			}),
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([MockOption::RunBehavior]);
@@ -736,13 +685,12 @@ mod tests {
 
 	#[test]
 	fn flush() {
-		let mut executor = _Executor::default();
-		executor.mock.expect_schedule().return_const(());
-		executor.mock.expect_flush().times(1).return_const(());
-
 		let (mut app, agent) = setup();
 		app.world_mut().entity_mut(agent).insert((
-			executor,
+			_Executor::new_mock(|mock| {
+				mock.expect_schedule().return_const(());
+				mock.expect_flush().times(1).return_const(());
+			}),
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);
@@ -760,13 +708,12 @@ mod tests {
 
 	#[test]
 	fn do_not_stop_when_not_done() {
-		let mut executor = _Executor::default();
-		executor.mock.expect_schedule().return_const(());
-		executor.mock.expect_flush().never().return_const(());
-
 		let (mut app, agent) = setup();
 		app.world_mut().entity_mut(agent).insert((
-			executor,
+			_Executor::new_mock(|mock| {
+				mock.expect_schedule().return_const(());
+				mock.expect_flush().never().return_const(());
+			}),
 			_Dequeue {
 				active: Some(Box::new(|| {
 					let mut skill = mock_skill_without_default_setup_for([]);

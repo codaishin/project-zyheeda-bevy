@@ -45,9 +45,12 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		asset::AssetId,
+		ecs::system::RunSystemOnce,
 		prelude::default,
 		render::texture::Image,
 	};
+	use common::traits::nested_mock::NestedMock;
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 	use uuid::Uuid;
 
@@ -68,7 +71,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Default, Resource)]
+	#[derive(Resource, NestedMock)]
 	struct _LoadAsset {
 		mock: Mock_LoadAsset,
 	}
@@ -88,37 +91,32 @@ mod tests {
 		app
 	}
 
-	fn run_system(
+	fn run_in_system(
 		app: &mut App,
 		mut callback: impl FnMut(ResMut<_LoadAsset>, ResMut<_Storage>) + Send + Sync + 'static,
 	) {
-		app.add_systems(
-			Update,
+		app.world_mut().run_system_once(
 			move |load_asset: ResMut<_LoadAsset>, storage: ResMut<_Storage>| {
 				callback(load_asset, storage);
 			},
 		);
-		app.update();
 	}
 
 	#[test]
 	fn return_stored_asset() {
+		let mut app = setup(_LoadAsset::new_mock(|mock| {
+			mock.expect_load_asset::<Image>()
+				.return_const(Handle::default());
+		}));
 		let stored_asset = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let mut load_asset = _LoadAsset::default();
-		load_asset
-			.mock
-			.expect_load_asset::<Image>()
-			.return_const(Handle::default());
-		let mut app = setup(load_asset);
-
 		app.insert_resource(_Storage {
 			returns: stored_asset.clone(),
 			..default()
 		});
 
-		run_system(&mut app, move |load_asset, storage| {
+		run_in_system(&mut app, move |load_asset, storage| {
 			let handle = (load_asset, storage).get_or_load(Path::from(""));
 			assert_eq!(stored_asset, handle);
 		})
@@ -129,14 +127,11 @@ mod tests {
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let mut load_asset = _LoadAsset::default();
-		load_asset
-			.mock
-			.expect_load_asset()
-			.return_const(handle.clone());
-		let mut app = setup(load_asset);
+		let mut app = setup(_LoadAsset::new_mock(|mock| {
+			mock.expect_load_asset().return_const(handle.clone());
+		}));
 
-		run_system(&mut app, |load_asset, storage| {
+		run_in_system(&mut app, |load_asset, storage| {
 			(load_asset, storage).get_or_load(Path::from("proper path"));
 		});
 
@@ -146,15 +141,13 @@ mod tests {
 
 	#[test]
 	fn call_load_asset_with_proper_path() {
-		let mut load_asset = _LoadAsset::default();
-		load_asset
-			.mock
-			.expect_load_asset::<Image>()
-			.with(eq(Path::from("proper path")))
-			.return_const(Handle::default());
-		let mut app = setup(load_asset);
+		let mut app = setup(_LoadAsset::new_mock(|mock| {
+			mock.expect_load_asset::<Image>()
+				.with(eq(Path::from("proper path")))
+				.return_const(Handle::default());
+		}));
 
-		run_system(&mut app, |load_asset, storage| {
+		run_in_system(&mut app, |load_asset, storage| {
 			(load_asset, storage).get_or_load(Path::from("proper path"));
 		});
 	}

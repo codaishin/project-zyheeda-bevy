@@ -29,9 +29,11 @@ mod tests {
 		math::{Dir3, Ray3d, Vec3},
 		utils::default,
 	};
+	use common::traits::nested_mock::NestedMock;
+	use macros::NestedMock;
 	use mockall::automock;
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	struct _Camera {
 		mock: Mock_Camera,
 	}
@@ -62,12 +64,12 @@ mod tests {
 
 	#[test]
 	fn add_ray() {
-		let mut cam = _Camera::default();
-		cam.mock.expect_get_ray().return_const(Ray3d {
-			origin: Vec3::new(1., 2., 3.),
-			direction: Vec3::new(4., 5., 6.).try_into().unwrap(),
-		});
-		let mut app = setup(cam);
+		let mut app = setup(_Camera::new_mock(|mock| {
+			mock.expect_get_ray().return_const(Ray3d {
+				origin: Vec3::new(1., 2., 3.),
+				direction: Vec3::new(4., 5., 6.).try_into().unwrap(),
+			});
+		}));
 
 		app.update();
 
@@ -84,9 +86,9 @@ mod tests {
 
 	#[test]
 	fn add_none_ray() {
-		let mut cam = _Camera::default();
-		cam.mock.expect_get_ray().return_const(None);
-		let mut app = setup(cam);
+		let mut app = setup(_Camera::new_mock(|mock| {
+			mock.expect_get_ray().return_const(None);
+		}));
 
 		app.update();
 
@@ -97,33 +99,31 @@ mod tests {
 
 	#[test]
 	fn call_get_ray_with_proper_components() {
-		let mut cam = _Camera::default();
-		cam.mock
-			.expect_get_ray()
-			.withf(|cam_transform, window| {
-				{
-					*cam_transform == GlobalTransform::from_xyz(4., 3., 2.)
-						&& window.title == "Window"
-				}
-			})
-			.times(1)
-			.return_const(None);
-
-		let mut app = setup(cam);
+		let mut app = setup(_Camera::new_mock(|mock| {
+			mock.expect_get_ray()
+				.withf(|cam_transform, window| {
+					{
+						*cam_transform == GlobalTransform::from_xyz(4., 3., 2.)
+							&& window.title == "Window"
+					}
+				})
+				.times(1)
+				.return_const(None);
+		}));
 
 		app.update();
 	}
 
 	#[test]
 	fn no_panic_when_not_labeled_camera_present() {
-		let mut cam = _Camera::default();
-		cam.mock.expect_get_ray().return_const(Ray3d {
-			origin: Vec3::ZERO,
-			direction: Dir3::NEG_Z,
-		});
-		let mut app = setup(cam);
+		let mut app = setup(_Camera::new_mock(|mock| {
+			mock.expect_get_ray().return_const(Ray3d {
+				origin: Vec3::ZERO,
+				direction: Dir3::NEG_Z,
+			});
+		}));
 		app.world_mut()
-			.spawn((_Camera::default(), GlobalTransform::default()));
+			.spawn((_Camera::new_mock(|_| {}), GlobalTransform::default()));
 
 		app.update();
 	}

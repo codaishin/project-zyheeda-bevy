@@ -11,10 +11,11 @@ pub(crate) fn flush<TFlush: Flush + Component>(mut agents: Query<&mut TFlush>) {
 mod tests {
 	use super::*;
 	use bevy::prelude::{App, Update};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMock};
+	use macros::NestedMock;
 	use mockall::automock;
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	struct _Dequeue {
 		mock: Mock_Dequeue,
 	}
@@ -36,10 +37,9 @@ mod tests {
 	#[test]
 	fn call_flush() {
 		let mut app = setup();
-		let mut queue = _Dequeue::default();
-		queue.mock.expect_flush().times(1).return_const(());
-
-		app.world_mut().spawn(queue);
+		app.world_mut().spawn(_Dequeue::new_mock(|mock| {
+			mock.expect_flush().times(1).return_const(());
+		}));
 
 		app.update();
 	}

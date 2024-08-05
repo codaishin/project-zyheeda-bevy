@@ -117,12 +117,13 @@ mod tests {
 	use common::{
 		components::Side,
 		test_tools::utils::{SingleThreadedApp, TickTime},
-		traits::update_cumulative::CumulativeUpdate as UpdateTrait,
+		traits::{nested_mock::NestedMock, update_cumulative::CumulativeUpdate as UpdateTrait},
 	};
+	use macros::NestedMock;
 	use mockall::{mock, predicate::eq, Sequence};
 	use std::{collections::HashMap, time::Duration};
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	struct _Timeout {
 		mock: Mock_Timeout,
 	}
@@ -158,7 +159,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, Default)]
+	#[derive(Component, NestedMock)]
 	struct _Combos {
 		mock: Mock_Combos,
 	}
@@ -228,105 +229,104 @@ mod tests {
 		app
 	}
 
-	#[test]
-	fn call_next_with_new_skills() {
-		let mut app = setup();
-		let slots: Slots = Slots(HashMap::from([(
+	fn slots() -> Slots {
+		Slots(HashMap::from([(
 			SlotKey::Hand(Side::Off),
 			Slot {
 				mounts: mounts(),
 				item: None,
 			},
-		)]));
-		let skill_a = QueuedSkill {
-			skill: Skill {
-				name: "skill a".to_owned(),
-				..default()
-			},
-			slot_key: SlotKey::Hand(Side::Main),
-			..default()
-		};
-		let skill_b = QueuedSkill {
-			skill: Skill {
-				name: "skill b".to_owned(),
-				..default()
-			},
-			slot_key: SlotKey::Hand(Side::Off),
-			..default()
-		};
-		let mut combos = _Combos::default();
-		combos.mock.expect_flush().return_const(());
-		combos
-			.mock
-			.expect_advance()
-			.times(1)
-			.with(eq(SlotKey::Hand(Side::Main)), eq(slots.clone()))
-			.return_const(Skill::default());
-		combos
-			.mock
-			.expect_advance()
-			.times(1)
-			.with(eq(SlotKey::Hand(Side::Off)), eq(slots.clone()))
-			.return_const(Skill::default());
-		let skills = _Skills {
-			recent: vec![skill_a, skill_b],
-			..default()
-		};
+		)]))
+	}
 
-		app.world_mut().spawn((combos, skills, slots));
+	#[test]
+	fn call_next_with_new_skills() {
+		let mut app = setup();
+		app.world_mut().spawn((
+			_Combos::new_mock(|mock| {
+				mock.expect_flush().return_const(());
+				mock.expect_advance()
+					.times(1)
+					.with(eq(SlotKey::Hand(Side::Main)), eq(slots()))
+					.return_const(Skill::default());
+				mock.expect_advance()
+					.times(1)
+					.with(eq(SlotKey::Hand(Side::Off)), eq(slots()))
+					.return_const(Skill::default());
+			}),
+			_Skills {
+				recent: vec![
+					QueuedSkill {
+						skill: Skill {
+							name: "skill a".to_owned(),
+							..default()
+						},
+						slot_key: SlotKey::Hand(Side::Main),
+						..default()
+					},
+					QueuedSkill {
+						skill: Skill {
+							name: "skill b".to_owned(),
+							..default()
+						},
+						slot_key: SlotKey::Hand(Side::Off),
+						..default()
+					},
+				],
+				..default()
+			},
+			slots(),
+		));
+
 		app.update();
 	}
 
 	#[test]
 	fn update_skill_with_combo_skills() {
 		let mut app = setup();
-		let slots: Slots = Slots(HashMap::from([(
-			SlotKey::Hand(Side::Off),
-			Slot {
-				mounts: mounts(),
-				item: None,
-			},
-		)]));
-		let skill_a = QueuedSkill {
-			skill: Skill {
-				name: "skill a".to_owned(),
-				..default()
-			},
-			slot_key: SlotKey::Hand(Side::Main),
-			..default()
-		};
-		let skill_b = QueuedSkill {
-			skill: Skill {
-				name: "skill b".to_owned(),
-				..default()
-			},
-			slot_key: SlotKey::Hand(Side::Off),
-			..default()
-		};
-		let mut combos = _Combos::default();
-		combos.mock.expect_flush().return_const(());
-		combos
-			.mock
-			.expect_advance()
-			.with(eq(SlotKey::Hand(Side::Main)), eq(slots.clone()))
-			.return_const(Skill {
-				name: "replace a".to_owned(),
-				..default()
-			});
-		combos
-			.mock
-			.expect_advance()
-			.with(eq(SlotKey::Hand(Side::Off)), eq(slots.clone()))
-			.return_const(Skill {
-				name: "replace b".to_owned(),
-				..default()
-			});
-		let skills = _Skills {
-			recent: vec![skill_a, skill_b],
-			..default()
-		};
+		let agent = app
+			.world_mut()
+			.spawn((
+				_Combos::new_mock(|mock| {
+					mock.expect_flush().return_const(());
+					mock.expect_advance()
+						.with(eq(SlotKey::Hand(Side::Main)), eq(slots()))
+						.return_const(Skill {
+							name: "replace a".to_owned(),
+							..default()
+						});
+					mock.expect_advance()
+						.with(eq(SlotKey::Hand(Side::Off)), eq(slots()))
+						.return_const(Skill {
+							name: "replace b".to_owned(),
+							..default()
+						});
+				}),
+				_Skills {
+					recent: vec![
+						QueuedSkill {
+							skill: Skill {
+								name: "skill a".to_owned(),
+								..default()
+							},
+							slot_key: SlotKey::Hand(Side::Main),
+							..default()
+						},
+						QueuedSkill {
+							skill: Skill {
+								name: "skill b".to_owned(),
+								..default()
+							},
+							slot_key: SlotKey::Hand(Side::Off),
+							..default()
+						},
+					],
+					..default()
+				},
+				slots(),
+			))
+			.id();
 
-		let agent = app.world_mut().spawn((combos, skills, slots)).id();
 		app.update();
 
 		let agent = app.world().entity(agent);
@@ -360,181 +360,151 @@ mod tests {
 	#[test]
 	fn combo_flush_when_empty() {
 		let mut app = setup();
-		let slots: Slots = Slots(HashMap::from([(
-			SlotKey::Hand(Side::Off),
-			Slot {
-				mounts: mounts(),
-				item: None,
-			},
-		)]));
-		let mut combos = _Combos::default();
-		combos.mock.expect_flush().times(1).return_const(());
-		let skills = _Skills::default();
+		app.world_mut().spawn((
+			_Combos::new_mock(|mock| {
+				mock.expect_flush().times(1).return_const(());
+			}),
+			_Skills::default(),
+			slots(),
+		));
 
-		app.world_mut().spawn((combos, skills, slots));
 		app.update();
 	}
 
 	#[test]
 	fn no_combo_flush_when_not_empty() {
 		let mut app = setup();
-		let slots: Slots = Slots(HashMap::from([(
-			SlotKey::Hand(Side::Off),
-			Slot {
-				mounts: mounts(),
-				item: None,
+		app.world_mut().spawn((
+			_Combos::new_mock(|mock| {
+				mock.expect_flush().never().return_const(());
+			}),
+			_Skills {
+				early: vec![QueuedSkill::default()],
+				..default()
 			},
-		)]));
-		let mut combos = _Combos::default();
-		combos.mock.expect_flush().never().return_const(());
-		let skills = _Skills {
-			early: vec![QueuedSkill::default()],
-			..default()
-		};
+			slots(),
+		));
 
-		app.world_mut().spawn((combos, skills, slots));
 		app.update();
 	}
 
 	#[test]
 	fn no_combo_flush_when_empty_and_not_timed_out() {
 		let mut app = setup();
-		let slots: Slots = Slots(HashMap::from([(
-			SlotKey::Hand(Side::Off),
-			Slot {
-				mounts: mounts(),
-				item: None,
-			},
-		)]));
-		let mut combos = _Combos::default();
-		combos.mock.expect_flush().never().return_const(());
-		let mut timeout = _Timeout::default();
-		timeout.mock.expect_update_cumulative().return_const(());
-		timeout.mock.expect_is_timed_out().return_const(false);
-		timeout.mock.expect_flush().return_const(());
-		let skills = _Skills::default();
+		app.world_mut().spawn((
+			_Timeout::new_mock(|mock| {
+				mock.expect_update_cumulative().return_const(());
+				mock.expect_is_timed_out().return_const(false);
+				mock.expect_flush().return_const(());
+			}),
+			_Combos::new_mock(|mock| {
+				mock.expect_flush().never().return_const(());
+			}),
+			_Skills::default(),
+			slots(),
+		));
 
-		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
 	#[test]
 	fn combo_flush_when_empty_and_timed_out() {
 		let mut app = setup();
-		let slots: Slots = Slots(HashMap::from([(
-			SlotKey::Hand(Side::Off),
-			Slot {
-				mounts: mounts(),
-				item: None,
-			},
-		)]));
-		let mut combos = _Combos::default();
-		combos.mock.expect_flush().times(1).return_const(());
-		let mut timeout = _Timeout::default();
-		timeout.mock.expect_update_cumulative().return_const(());
-		timeout.mock.expect_is_timed_out().return_const(true);
-		timeout.mock.expect_flush().return_const(());
-		let skills = _Skills::default();
+		app.world_mut().spawn((
+			_Combos::new_mock(|mock| {
+				mock.expect_flush().times(1).return_const(());
+			}),
+			_Timeout::new_mock(|mock| {
+				mock.expect_update_cumulative().return_const(());
+				mock.expect_is_timed_out().return_const(true);
+				mock.expect_flush().return_const(());
+			}),
+			_Skills::default(),
+			slots(),
+		));
 
-		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
 	#[test]
 	fn timeout_flush_when_empty_and_is_timed_out() {
 		let mut app = setup();
-		let slots: Slots = Slots(HashMap::from([(
-			SlotKey::Hand(Side::Off),
-			Slot {
-				mounts: mounts(),
-				item: None,
-			},
-		)]));
-		let mut combos = _Combos::default();
-		combos.mock.expect_flush().return_const(());
-		let mut timeout = _Timeout::default();
-		timeout.mock.expect_update_cumulative().return_const(());
-		timeout.mock.expect_is_timed_out().return_const(true);
-		timeout.mock.expect_flush().times(1).return_const(());
-		let skills = _Skills::default();
+		app.world_mut().spawn((
+			_Combos::new_mock(|mock| {
+				mock.expect_flush().return_const(());
+			}),
+			_Timeout::new_mock(|mock| {
+				mock.expect_update_cumulative().return_const(());
+				mock.expect_is_timed_out().return_const(true);
+				mock.expect_flush().times(1).return_const(());
+			}),
+			_Skills::default(),
+			slots(),
+		));
 
-		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
 	#[test]
 	fn timeout_flush_when_not_empty() {
 		let mut app = setup();
-		let slots: Slots = Slots(HashMap::from([(
-			SlotKey::Hand(Side::Off),
-			Slot {
-				mounts: mounts(),
-				item: None,
+		app.world_mut().spawn((
+			_Combos::new_mock(|mock| {
+				mock.expect_flush().return_const(());
+			}),
+			_Timeout::new_mock(|mock| {
+				mock.expect_update_cumulative().return_const(());
+				mock.expect_is_timed_out().return_const(false);
+				mock.expect_flush().times(1).return_const(());
+			}),
+			_Skills {
+				early: vec![QueuedSkill::default()],
+				..default()
 			},
-		)]));
-		let mut combos = _Combos::default();
-		combos.mock.expect_flush().return_const(());
-		let mut timeout = _Timeout::default();
-		timeout.mock.expect_update_cumulative().return_const(());
-		timeout.mock.expect_is_timed_out().return_const(false);
-		timeout.mock.expect_flush().times(1).return_const(());
-		let skills = _Skills {
-			early: vec![QueuedSkill::default()],
-			..default()
-		};
+			slots(),
+		));
 
-		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
 	#[test]
 	fn no_timeout_flush_when_empty_and_is_not_timed_out() {
 		let mut app = setup();
-		let slots: Slots = Slots(HashMap::from([(
-			SlotKey::Hand(Side::Off),
-			Slot {
-				mounts: mounts(),
-				item: None,
-			},
-		)]));
-		let mut combos = _Combos::default();
-		combos.mock.expect_flush().return_const(());
-		let mut timeout = _Timeout::default();
-		timeout.mock.expect_update_cumulative().return_const(());
-		timeout.mock.expect_is_timed_out().return_const(false);
-		timeout.mock.expect_flush().never().return_const(());
-		let skills = _Skills::default();
+		app.world_mut().spawn((
+			_Combos::new_mock(|mock| {
+				mock.expect_flush().return_const(());
+			}),
+			_Timeout::new_mock(|mock| {
+				mock.expect_update_cumulative().return_const(());
+				mock.expect_is_timed_out().return_const(false);
+				mock.expect_flush().never().return_const(());
+			}),
+			_Skills::default(),
+			slots(),
+		));
 
-		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
 	#[test]
 	fn do_not_test_for_timeout_when_skill_queue_not_empty() {
 		let mut app = setup();
-		let slots: Slots = Slots(HashMap::from([(
-			SlotKey::Hand(Side::Off),
-			Slot {
-				mounts: mounts(),
-				item: None,
+		app.world_mut().spawn((
+			_Combos::new_mock(|mock| {
+				mock.expect_flush().return_const(());
+			}),
+			_Timeout::new_mock(|mock| {
+				mock.expect_update_cumulative().return_const(());
+				mock.expect_is_timed_out().never().return_const(false);
+				mock.expect_flush().return_const(());
+			}),
+			_Skills {
+				early: vec![QueuedSkill::default()],
+				..default()
 			},
-		)]));
-		let mut combos = _Combos::default();
-		combos.mock.expect_flush().return_const(());
-		let mut timeout = _Timeout::default();
-		timeout.mock.expect_update_cumulative().return_const(());
-		timeout
-			.mock
-			.expect_is_timed_out()
-			.never()
-			.return_const(false);
-		timeout.mock.expect_flush().return_const(());
-		let skills = _Skills {
-			early: vec![QueuedSkill::default()],
-			..default()
-		};
+			slots(),
+		));
 
-		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
@@ -542,60 +512,48 @@ mod tests {
 	fn call_is_timeout_with_delta() {
 		let mut app = setup();
 		app.tick_time(Duration::from_secs(42));
-		let slots: Slots = Slots(HashMap::from([(
-			SlotKey::Hand(Side::Off),
-			Slot {
-				mounts: mounts(),
-				item: None,
-			},
-		)]));
-		let mut combos = _Combos::default();
-		combos.mock.expect_flush().return_const(());
-		let mut timeout = _Timeout::default();
-		timeout
-			.mock
-			.expect_update_cumulative()
-			.with(eq(Duration::from_secs(42)))
-			.return_const(());
-		timeout.mock.expect_is_timed_out().return_const(false);
-		timeout.mock.expect_flush().return_const(());
-		let skills = _Skills::default();
+		app.world_mut().spawn((
+			_Combos::new_mock(|mock| {
+				mock.expect_flush().return_const(());
+			}),
+			_Timeout::new_mock(|mock| {
+				mock.expect_update_cumulative()
+					.with(eq(Duration::from_secs(42)))
+					.return_const(());
+				mock.expect_is_timed_out().return_const(false);
+				mock.expect_flush().return_const(());
+			}),
+			_Skills::default(),
+			slots(),
+		));
 
-		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 
 	#[test]
 	fn call_update_and_timeout_in_sequence() {
 		let mut app = setup();
+		app.world_mut().spawn((
+			_Combos::new_mock(|mock| {
+				mock.expect_flush().return_const(());
+			}),
+			_Timeout::new_mock(|mock| {
+				let mut seq = Sequence::default();
+				mock.expect_update_cumulative()
+					.times(1)
+					.in_sequence(&mut seq)
+					.return_const(());
+				mock.expect_is_timed_out()
+					.times(1)
+					.in_sequence(&mut seq)
+					.return_const(false);
+				mock.expect_flush().return_const(());
+			}),
+			_Skills::default(),
+			slots(),
+		));
 		app.tick_time(Duration::from_secs(42));
-		let slots: Slots = Slots(HashMap::from([(
-			SlotKey::Hand(Side::Off),
-			Slot {
-				mounts: mounts(),
-				item: None,
-			},
-		)]));
-		let mut combos = _Combos::default();
-		combos.mock.expect_flush().return_const(());
-		let mut seq = Sequence::default();
-		let mut timeout = _Timeout::default();
-		timeout
-			.mock
-			.expect_update_cumulative()
-			.times(1)
-			.in_sequence(&mut seq)
-			.return_const(());
-		timeout
-			.mock
-			.expect_is_timed_out()
-			.times(1)
-			.in_sequence(&mut seq)
-			.return_const(false);
-		timeout.mock.expect_flush().return_const(());
-		let skills = _Skills::default();
 
-		app.world_mut().spawn((combos, timeout, skills, slots));
 		app.update();
 	}
 }

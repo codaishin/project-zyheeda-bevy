@@ -22,11 +22,12 @@ mod tests {
 		app::{App, Update},
 		prelude::{default, IntoSystem, KeyCode, Resource},
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMock};
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 	use skills::skills::Skill;
 
-	#[derive(Component, Default, Debug)]
+	#[derive(Component, NestedMock, Debug)]
 	struct _ComboOverview {
 		mock: Mock_ComboOverview,
 	}
@@ -51,9 +52,8 @@ mod tests {
 		app
 	}
 
-	#[test]
-	fn insert_combos_in_combo_list() {
-		let combos = vec![
+	fn combos() -> CombosDescriptor<KeyCode> {
+		vec![
 			vec![
 				SkillDescriptor {
 					key_path: vec![KeyCode::KeyA],
@@ -86,18 +86,18 @@ mod tests {
 					},
 				},
 			],
-		];
+		]
+	}
 
-		let mut app = setup(combos.clone());
-		let mut combos_overview = _ComboOverview::default();
-		combos_overview
-			.mock
-			.expect_update_combos()
-			.times(1)
-			.with(eq(combos))
-			.return_const(());
-
-		app.world_mut().spawn(combos_overview);
+	#[test]
+	fn insert_combos_in_combo_list() {
+		let mut app = setup(combos());
+		app.world_mut().spawn(_ComboOverview::new_mock(|mock| {
+			mock.expect_update_combos()
+				.times(1)
+				.with(eq(combos()))
+				.return_const(());
+		}));
 
 		app.update();
 	}

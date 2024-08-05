@@ -26,7 +26,11 @@ mod tests {
 		asset::{Asset, AssetId, Handle},
 		reflect::TypePath,
 	};
-	use common::{test_tools::utils::SingleThreadedApp, traits::load_asset::Path};
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		traits::{load_asset::Path, nested_mock::NestedMock},
+	};
+	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 	use uuid::Uuid;
 
@@ -39,7 +43,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Resource, Default)]
+	#[derive(Resource, NestedMock)]
 	struct _LoadMap {
 		mock: Mock_LoadMap,
 	}
@@ -64,14 +68,12 @@ mod tests {
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let mut load_map = _LoadMap::default();
-		load_map
-			.mock
-			.expect_load_asset()
-			.times(1)
-			.with(eq(Path::from("aaa/bbb/ccc.file_format")))
-			.return_const(handle.clone());
-		let mut app = setup(load_map);
+		let mut app = setup(_LoadMap::new_mock(|mock| {
+			mock.expect_load_asset()
+				.times(1)
+				.with(eq(Path::from("aaa/bbb/ccc.file_format")))
+				.return_const(handle.clone());
+		}));
 
 		app.update();
 

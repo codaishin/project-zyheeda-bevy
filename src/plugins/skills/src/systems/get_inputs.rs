@@ -55,18 +55,16 @@ mod tests {
 		input::keyboard::KeyCode,
 		utils::default,
 	};
-	use common::{components::Side, test_tools::utils::SingleThreadedApp};
-	use mockall::{automock, predicate::eq};
-	use uuid::Uuid;
+	use common::{
+		components::Side,
+		test_tools::utils::SingleThreadedApp,
+		traits::nested_mock::NestedMock,
+	};
+	use macros::NestedMock;
+	use mockall::automock;
 
 	#[derive(Resource, Clone, Debug, PartialEq)]
-	struct _Map(Uuid);
-
-	impl Default for _Map {
-		fn default() -> Self {
-			Self(Uuid::new_v4())
-		}
-	}
+	struct _Map;
 
 	impl TryMapBackwards<KeyCode, SlotKey> for _Map {
 		fn try_map_backwards(&self, _: KeyCode) -> Option<SlotKey> {
@@ -77,7 +75,7 @@ mod tests {
 	#[derive(Resource, Debug, PartialEq, Default)]
 	struct _Result(Input);
 
-	#[derive(Resource, Default)]
+	#[derive(Resource, NestedMock)]
 	struct _Superior {
 		mock: Mock_Superior,
 	}
@@ -95,7 +93,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Resource, Default)]
+	#[derive(Resource, NestedMock)]
 	struct _Inferior {
 		mock: Mock_Inferior,
 	}
@@ -130,30 +128,26 @@ mod tests {
 
 	#[test]
 	fn get_superior_inputs() {
-		let key_map = _Map::default();
-		let mut sup = _Superior::default();
-		sup.mock
-			.expect_just_pressed_slots()
-			.times(1)
-			.with(eq(key_map.clone()))
-			.return_const(vec![SlotKey::Hand(Side::Main)]);
-		sup.mock
-			.expect_pressed_slots()
-			.times(1)
-			.with(eq(key_map.clone()))
-			.return_const(vec![SlotKey::Hand(Side::Main)]);
-		sup.mock
-			.expect_just_released_slots()
-			.times(1)
-			.with(eq(key_map.clone()))
-			.return_const(vec![SlotKey::Hand(Side::Off)]);
+		let mut app = setup(
+			_Superior::new_mock(|mock| {
+				mock.expect_just_pressed_slots()
+					.times(1)
+					.return_const(vec![SlotKey::Hand(Side::Main)]);
+				mock.expect_pressed_slots()
+					.times(1)
+					.return_const(vec![SlotKey::Hand(Side::Main)]);
+				mock.expect_just_released_slots()
+					.times(1)
+					.return_const(vec![SlotKey::Hand(Side::Off)]);
+			}),
+			_Inferior::new_mock(|mock| {
+				mock.expect_just_pressed_slots().return_const(vec![]);
+				mock.expect_pressed_slots().return_const(vec![]);
+				mock.expect_just_released_slots().return_const(vec![]);
+			}),
+			_Map,
+		);
 
-		let mut inf = _Inferior::default();
-		inf.mock.expect_just_pressed_slots().return_const(vec![]);
-		inf.mock.expect_pressed_slots().return_const(vec![]);
-		inf.mock.expect_just_released_slots().return_const(vec![]);
-
-		let mut app = setup(sup, inf, key_map);
 		app.update();
 
 		let result = app.world().resource::<_Result>();
@@ -170,30 +164,26 @@ mod tests {
 
 	#[test]
 	fn get_inferior_inputs() {
-		let key_map = _Map::default();
-		let mut inf = _Inferior::default();
-		inf.mock
-			.expect_just_pressed_slots()
-			.times(1)
-			.with(eq(key_map.clone()))
-			.return_const(vec![SlotKey::Hand(Side::Off)]);
-		inf.mock
-			.expect_pressed_slots()
-			.times(1)
-			.with(eq(key_map.clone()))
-			.return_const(vec![SlotKey::Hand(Side::Main)]);
-		inf.mock
-			.expect_just_released_slots()
-			.times(1)
-			.with(eq(key_map.clone()))
-			.return_const(vec![SlotKey::Hand(Side::Off)]);
+		let mut app = setup(
+			_Superior::new_mock(|mock| {
+				mock.expect_just_pressed_slots().return_const(vec![]);
+				mock.expect_pressed_slots().return_const(vec![]);
+				mock.expect_just_released_slots().return_const(vec![]);
+			}),
+			_Inferior::new_mock(|mock| {
+				mock.expect_just_pressed_slots()
+					.times(1)
+					.return_const(vec![SlotKey::Hand(Side::Off)]);
+				mock.expect_pressed_slots()
+					.times(1)
+					.return_const(vec![SlotKey::Hand(Side::Main)]);
+				mock.expect_just_released_slots()
+					.times(1)
+					.return_const(vec![SlotKey::Hand(Side::Off)]);
+			}),
+			_Map,
+		);
 
-		let mut sup = _Superior::default();
-		sup.mock.expect_just_pressed_slots().return_const(vec![]);
-		sup.mock.expect_pressed_slots().return_const(vec![]);
-		sup.mock.expect_just_released_slots().return_const(vec![]);
-
-		let mut app = setup(sup, inf, key_map);
 		app.update();
 
 		let result = app.world().resource::<_Result>();
@@ -210,21 +200,22 @@ mod tests {
 
 	#[test]
 	fn ignore_inferior_just_pressed_if_superior_pressed() {
-		let mut sup = _Superior::default();
-		sup.mock.expect_just_pressed_slots().return_const(vec![]);
-		sup.mock
-			.expect_pressed_slots()
-			.return_const(vec![SlotKey::Hand(Side::Main)]);
-		sup.mock.expect_just_released_slots().return_const(vec![]);
+		let mut app = setup(
+			_Superior::new_mock(|mock| {
+				mock.expect_just_pressed_slots().return_const(vec![]);
+				mock.expect_pressed_slots()
+					.return_const(vec![SlotKey::Hand(Side::Main)]);
+				mock.expect_just_released_slots().return_const(vec![]);
+			}),
+			_Inferior::new_mock(|mock| {
+				mock.expect_just_pressed_slots()
+					.return_const(vec![SlotKey::Hand(Side::Main)]);
+				mock.expect_pressed_slots().return_const(vec![]);
+				mock.expect_just_released_slots().return_const(vec![]);
+			}),
+			_Map,
+		);
 
-		let mut inf = _Inferior::default();
-		inf.mock
-			.expect_just_pressed_slots()
-			.return_const(vec![SlotKey::Hand(Side::Main)]);
-		inf.mock.expect_pressed_slots().return_const(vec![]);
-		inf.mock.expect_just_released_slots().return_const(vec![]);
-
-		let mut app = setup(sup, inf, default());
 		app.update();
 
 		let result = app.world().resource::<_Result>();
@@ -240,21 +231,21 @@ mod tests {
 
 	#[test]
 	fn ignore_inferior_just_released_if_superior_pressed() {
-		let mut sup = _Superior::default();
-		sup.mock.expect_just_pressed_slots().return_const(vec![]);
-		sup.mock
-			.expect_pressed_slots()
-			.return_const(vec![SlotKey::Hand(Side::Main)]);
-		sup.mock.expect_just_released_slots().return_const(vec![]);
-
-		let mut inf = _Inferior::default();
-		inf.mock.expect_just_pressed_slots().return_const(vec![]);
-		inf.mock.expect_pressed_slots().return_const(vec![]);
-		inf.mock
-			.expect_just_released_slots()
-			.return_const(vec![SlotKey::Hand(Side::Main)]);
-
-		let mut app = setup(sup, inf, default());
+		let mut app = setup(
+			_Superior::new_mock(|mock| {
+				mock.expect_just_pressed_slots().return_const(vec![]);
+				mock.expect_pressed_slots()
+					.return_const(vec![SlotKey::Hand(Side::Main)]);
+				mock.expect_just_released_slots().return_const(vec![]);
+			}),
+			_Inferior::new_mock(|mock| {
+				mock.expect_just_pressed_slots().return_const(vec![]);
+				mock.expect_pressed_slots().return_const(vec![]);
+				mock.expect_just_released_slots()
+					.return_const(vec![SlotKey::Hand(Side::Main)]);
+			}),
+			_Map,
+		);
 		app.update();
 
 		let result = app.world().resource::<_Result>();
