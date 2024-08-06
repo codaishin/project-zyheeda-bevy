@@ -1,5 +1,6 @@
 pub(crate) mod skill;
 
+use super::GlobalZIndexTop;
 use crate::traits::{
 	get_node::GetNode,
 	instantiate_content_on::InstantiateContentOn,
@@ -29,6 +30,10 @@ where
 {
 	pub(crate) fn new(value: T) -> Self {
 		Tooltip(value)
+	}
+
+	pub(crate) fn value(&self) -> &T {
+		&self.0
 	}
 }
 
@@ -131,7 +136,7 @@ impl<T: Sync + Send + 'static> SpawnTooltips<T> for TooltipUIControl {
 			.spawn(container_node)
 			.with_children(|container_node| {
 				container_node
-					.spawn(tooltip_node)
+					.spawn((tooltip_node, GlobalZIndexTop))
 					.with_children(|tooltip_node| {
 						tooltip.instantiate_content_on(tooltip_node);
 					});
@@ -476,6 +481,32 @@ mod tests {
 			tooltip_ui_child,
 			With::assert(|color: &BackgroundColor| assert_eq!(Color::srgb(1., 0.5, 0.), color.0)),
 			With::assert(|visibility: &Visibility| assert_eq!(&Visibility::Inherited, visibility))
+		);
+	}
+
+	#[test]
+	fn spawn_tooltip_global_z_index_top_on_child() {
+		let mut app = setup_spawn(Vec2 { x: 11., y: 101. }, default());
+		app.world_mut().spawn(Tooltip(_T {
+			color: Color::srgb(1., 0.5, 0.),
+			content: "",
+			visibility: Visibility::Visible,
+		}));
+
+		app.update();
+
+		let tooltip_ui_child = app
+			.world()
+			.iter_entities()
+			.find(|e| e.contains::<TooltipUI<_T>>())
+			.and_then(|t| t.get::<Children>())
+			.and_then(|c| c.first())
+			.expect("no tooltip child found");
+		let tooltip_ui_child = app.world().entity(*tooltip_ui_child);
+
+		assert_eq!(
+			Some(&GlobalZIndexTop),
+			tooltip_ui_child.get::<GlobalZIndexTop>()
 		);
 	}
 

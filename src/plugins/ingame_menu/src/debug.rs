@@ -1,8 +1,9 @@
 use crate::{
-	components::dropdown::Dropdown,
+	components::{dropdown::Dropdown, tooltip::Tooltip},
 	tools::Layout,
 	traits::{GetLayout, RootStyle},
 	AddDropdown,
+	AddTooltip,
 };
 #[cfg(debug_assertions)]
 use crate::{
@@ -120,6 +121,31 @@ impl Button {
 	}
 }
 
+struct ButtonTooltip(String);
+
+impl GetNode for Tooltip<ButtonTooltip> {
+	fn node(&self) -> NodeBundle {
+		NodeBundle {
+			style: Style {
+				top: Val::Px(-25.0),
+				padding: UiRect::all(Val::Px(5.0)),
+				..default()
+			},
+			background_color: Color::WHITE.into(),
+			..default()
+		}
+	}
+}
+
+impl InstantiateContentOn for Tooltip<ButtonTooltip> {
+	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
+		parent.spawn(TextBundle::from_section(
+			&self.value().0,
+			Button::text_style(),
+		));
+	}
+}
+
 struct SingleRow;
 struct SingleColumn;
 struct TwoColumns;
@@ -166,7 +192,11 @@ impl<TLayout: Sync + Send + 'static, TValue> GetNode for ButtonOption<TLayout, T
 
 impl<TLayout: Sync + Send + 'static> InstantiateContentOn for ButtonOption<TLayout> {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
-		let option = (Button::bundle(), self.clone());
+		let option = (
+			Button::bundle(),
+			self.clone(),
+			Tooltip::new(ButtonTooltip(format!("Button: {}", self.value))),
+		);
 		parent.spawn(option).with_children(|button| {
 			button.spawn(TextBundle::from_section(self.value, Button::text_style()));
 		});
@@ -182,6 +212,7 @@ impl<TLayout: Sync + Send + 'static, TSubLayout: Sync + Send + 'static> Instanti
 			Dropdown {
 				items: get_button_options_numbered::<TSubLayout>(self.target),
 			},
+			Tooltip::new(ButtonTooltip("Button: subs".to_owned())),
 		);
 		parent.spawn(option).with_children(|button| {
 			button.spawn(TextBundle::from_section("subs", Button::text_style()));
@@ -271,7 +302,8 @@ fn get_button_options<TLayout: Sync + Send + 'static, TExtra: Sync + Send + 'sta
 }
 
 pub fn setup_dropdown_test(app: &mut App) {
-	app.add_dropdown::<ButtonOption<SingleRow>>()
+	app.add_tooltip::<ButtonTooltip>()
+		.add_dropdown::<ButtonOption<SingleRow>>()
 		.add_dropdown::<ButtonOption<SingleColumn>>()
 		.add_dropdown::<ButtonOption<TwoColumns>>()
 		.add_dropdown::<ButtonOption<SingleRow, WithSubDropdown<SingleColumn>>>()

@@ -7,7 +7,7 @@ use crate::traits::{
 use bevy::{
 	prelude::{default, ChildBuilder, NodeBundle, TextBundle},
 	text::TextStyle,
-	ui::{Style, UiRect, Val, ZIndex},
+	ui::{Style, UiRect, Val},
 };
 use skills::skills::Skill;
 
@@ -20,7 +20,6 @@ impl GetNode for Tooltip<Skill> {
 				..default()
 			},
 			background_color: DEFAULT_PANEL_COLORS.text.into(),
-			z_index: ZIndex::Global(1),
 			..default()
 		}
 	}
