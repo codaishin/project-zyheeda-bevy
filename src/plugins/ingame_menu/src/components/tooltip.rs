@@ -32,6 +32,7 @@ where
 		Tooltip(value)
 	}
 
+	#[cfg(debug_assertions)]
 	pub(crate) fn value(&self) -> &T {
 		&self.0
 	}
