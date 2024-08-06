@@ -14,7 +14,7 @@ impl RootStyle for Dropdown<KeySelect<ReKeySkill>> {
 		Style {
 			position_type: PositionType::Absolute,
 			top: Val::Percent(100.),
-			right: Val::Percent(0.),
+			left: Val::Percent(0.),
 			..default()
 		}
 	}

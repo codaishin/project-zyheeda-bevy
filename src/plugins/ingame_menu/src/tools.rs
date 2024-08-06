@@ -2,6 +2,7 @@
 
 pub(crate) mod menu_state;
 
+use bevy::ui::Val;
 use common::tools::Index;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -24,4 +25,17 @@ impl Default for Layout {
 	fn default() -> Self {
 		Self::SINGLE_COLUMN
 	}
+}
+
+pub(crate) struct Pixel(pub f32);
+
+impl From<Pixel> for Val {
+	fn from(value: Pixel) -> Self {
+		Val::Px(value.0)
+	}
+}
+
+pub(crate) struct Dimensions<T> {
+	pub width: T,
+	pub height: T,
 }

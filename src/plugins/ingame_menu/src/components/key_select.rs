@@ -1,6 +1,6 @@
 use super::{
 	combo_overview::ComboOverview,
-	skill_descriptor::Vertical,
+	skill_descriptor::Horizontal,
 	SkillSelectDropdownInsertCommand,
 };
 use crate::traits::{
@@ -9,7 +9,11 @@ use crate::traits::{
 	GetBundle,
 	GetKey,
 };
-use bevy::prelude::{BuildChildren, ChildBuilder, Component, NodeBundle};
+use bevy::{
+	prelude::{BuildChildren, ChildBuilder, Component, NodeBundle},
+	ui::{Style, Val},
+	utils::default,
+};
 use skills::items::slot_key::SlotKey;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -42,7 +46,16 @@ pub(crate) struct KeySelect<TExtra, TKey = SlotKey> {
 
 impl<TExtra> GetNode for KeySelect<TExtra> {
 	fn node(&self) -> NodeBundle {
-		NodeBundle::default()
+		let key_button_dimensions = ComboOverview::KEY_BUTTON_DIMENSIONS;
+
+		NodeBundle {
+			style: Style {
+				width: Val::from(key_button_dimensions.width),
+				height: Val::from(key_button_dimensions.height),
+				..default()
+			},
+			..default()
+		}
 	}
 }
 
@@ -73,12 +86,10 @@ impl GetBundle for KeySelect<ReKeySkill> {
 }
 
 impl<TKey: Copy + Sync + Send + 'static> GetBundle for KeySelect<AppendSkill<TKey>, TKey> {
-	type TBundle = SkillSelectDropdownInsertCommand<TKey, Vertical>;
+	type TBundle = SkillSelectDropdownInsertCommand<TKey, Horizontal>;
 
 	fn bundle(&self) -> Self::TBundle {
-		SkillSelectDropdownInsertCommand::<TKey, Vertical>::new(
-			[self.key_path.clone(), vec![self.extra.on]].concat(),
-		)
+		SkillSelectDropdownInsertCommand::new([self.key_path.clone(), vec![self.extra.on]].concat())
 	}
 }
 
@@ -101,7 +112,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			SkillSelectDropdownInsertCommand::<_Key, Vertical>::new(vec![
+			SkillSelectDropdownInsertCommand::<_Key, Horizontal>::new(vec![
 				_Key::A,
 				_Key::B,
 				_Key::C

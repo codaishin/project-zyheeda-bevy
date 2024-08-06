@@ -1,6 +1,6 @@
 use super::{
 	key_code_text_insert_command::KeyCodeTextInsertCommandBundle,
-	skill_descriptor::{DropdownTrigger, Horizontal, SkillDescriptor},
+	skill_descriptor::{DropdownTrigger, SkillDescriptor, Vertical},
 	tooltip::Tooltip,
 	AppendSkillCommand,
 	DeleteSkill,
@@ -8,12 +8,15 @@ use super::{
 	ReKeyCommand,
 	SkillSelectDropdownInsertCommand,
 };
-use crate::traits::{
-	colors::DEFAULT_PANEL_COLORS,
-	get_node::GetNode,
-	instantiate_content_on::InstantiateContentOn,
-	CombosDescriptor,
-	UpdateCombos,
+use crate::{
+	tools::{Dimensions, Pixel},
+	traits::{
+		colors::DEFAULT_PANEL_COLORS,
+		get_node::GetNode,
+		instantiate_content_on::InstantiateContentOn,
+		CombosDescriptor,
+		UpdateCombos,
+	},
 };
 use bevy::{
 	asset::Handle,
@@ -61,9 +64,7 @@ impl ComboOverview {
 		}
 	}
 
-	pub(crate) fn skill_button_bundle(
-		icon: Option<Handle<Image>>,
-	) -> impl SkillButtonBundle + Bundle {
+	pub(crate) fn skill_button_bundle(icon: Handle<Image>) -> impl SkillButtonBundle + Bundle {
 		ButtonBundle {
 			style: Style {
 				width: Val::Px(65.0),
@@ -73,19 +74,24 @@ impl ComboOverview {
 				..default()
 			},
 			background_color: DEFAULT_PANEL_COLORS.filled.into(),
-			image: icon.map(UiImage::new).unwrap_or_default(),
+			image: UiImage::new(icon),
 			..default()
 		}
 	}
 
-	const MODIFY_BUTTON_OFFSET: f32 = -12.0;
+	pub const MODIFY_BUTTON_OFFSET: Pixel = Pixel(-12.0);
+	pub const KEY_BUTTON_BORDER_SIZE: Pixel = Pixel(2.0);
+	pub const KEY_BUTTON_DIMENSIONS: Dimensions<Pixel> = Dimensions {
+		width: Pixel(50.0),
+		height: Pixel(25.0),
+	};
 
 	pub(crate) fn skill_key_button_offset_container() -> impl Bundle {
 		NodeBundle {
 			style: Style {
 				position_type: PositionType::Absolute,
-				top: Val::Px(Self::MODIFY_BUTTON_OFFSET),
-				right: Val::Px(Self::MODIFY_BUTTON_OFFSET),
+				top: Val::from(Self::MODIFY_BUTTON_OFFSET),
+				right: Val::from(Self::MODIFY_BUTTON_OFFSET),
 				..default()
 			},
 			..default()
@@ -96,7 +102,7 @@ impl ComboOverview {
 		NodeBundle {
 			style: Style {
 				position_type: PositionType::Absolute,
-				left: Val::Px(Self::MODIFY_BUTTON_OFFSET),
+				left: Val::from(Self::MODIFY_BUTTON_OFFSET),
 				..default()
 			},
 			..default()
@@ -107,7 +113,7 @@ impl ComboOverview {
 		NodeBundle {
 			style: Style {
 				position_type: PositionType::Absolute,
-				right: Val::Px(Self::MODIFY_BUTTON_OFFSET),
+				right: Val::from(Self::MODIFY_BUTTON_OFFSET),
 				..default()
 			},
 			..default()
@@ -119,8 +125,8 @@ impl ComboOverview {
 			style: Style {
 				width: Val::Px(50.0),
 				height: Val::Px(25.0),
-				border: UiRect::all(Val::Px(2.0)),
-				margin: UiRect::all(Val::Px(-2.0)),
+				border: UiRect::all(Val::from(Self::KEY_BUTTON_BORDER_SIZE)),
+				margin: UiRect::all(-Val::from(Self::KEY_BUTTON_BORDER_SIZE)),
 				justify_content: JustifyContent::Center,
 				align_items: AlignItems::Center,
 				..default()
@@ -136,8 +142,8 @@ impl ComboOverview {
 			style: Style {
 				width: Val::Px(20.0),
 				height: Val::Px(25.0),
-				border: UiRect::all(Val::Px(2.0)),
-				margin: UiRect::all(Val::Px(-2.0)),
+				border: UiRect::all(Val::from(Self::KEY_BUTTON_BORDER_SIZE)),
+				margin: UiRect::all(-Val::from(Self::KEY_BUTTON_BORDER_SIZE)),
 				justify_content: JustifyContent::Center,
 				align_items: AlignItems::Center,
 				..default()
@@ -273,7 +279,7 @@ fn add_skill(
 	descriptor: &SkillDescriptor<DropdownTrigger>,
 	additional_buttons: &[fn(&SkillDescriptor<DropdownTrigger>, &mut ChildBuilder)],
 ) {
-	let skill_icon = descriptor.skill.icon.clone();
+	let skill_icon = descriptor.skill.icon.clone().unwrap_or_default();
 
 	parent
 		.spawn(ComboOverview::skill_container_bundle())
@@ -281,7 +287,7 @@ fn add_skill(
 			parent
 				.spawn((
 					ComboOverview::skill_button_bundle(skill_icon).with(descriptor.clone()),
-					SkillSelectDropdownInsertCommand::<SlotKey, Horizontal>::new(
+					SkillSelectDropdownInsertCommand::<SlotKey, Vertical>::new(
 						descriptor.key_path.clone(),
 					),
 				))

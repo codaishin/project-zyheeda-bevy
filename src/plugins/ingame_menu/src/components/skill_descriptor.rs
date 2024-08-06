@@ -51,7 +51,7 @@ impl<T> GetNode for SkillDescriptor<T> {
 
 impl<T: Clone + Sync + Send + 'static> InstantiateContentOn for SkillDescriptor<T> {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
-		let icon = Some(self.skill.icon.clone().unwrap_or_default());
+		let icon = self.skill.icon.clone().unwrap_or_default();
 		parent.spawn(ComboOverview::skill_button_bundle(icon).with(self.clone()));
 	}
 }
