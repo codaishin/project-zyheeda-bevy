@@ -30,6 +30,10 @@ where
 	pub(crate) fn new(value: T) -> Self {
 		Tooltip(value)
 	}
+
+	pub(crate) fn value(&self) -> &T {
+		&self.0
+	}
 }
 
 #[derive(Component, Debug, PartialEq)]
