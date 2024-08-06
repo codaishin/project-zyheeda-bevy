@@ -1,5 +1,14 @@
-use super::combo_overview::ComboOverview;
-use crate::traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn, GetKey};
+use super::{
+	combo_overview::ComboOverview,
+	skill_descriptor::Vertical,
+	SkillSelectDropdownInsertCommand,
+};
+use crate::traits::{
+	get_node::GetNode,
+	instantiate_content_on::InstantiateContentOn,
+	GetBundle,
+	GetKey,
+};
 use bevy::prelude::{BuildChildren, ChildBuilder, Component, NodeBundle};
 use skills::items::slot_key::SlotKey;
 
@@ -39,7 +48,8 @@ impl<TExtra> GetNode for KeySelect<TExtra> {
 
 impl<TExtra> InstantiateContentOn for KeySelect<TExtra>
 where
-	TExtra: Clone + Sync + Send + 'static + GetKey<SlotKey>,
+	TExtra: GetKey<SlotKey>,
+	KeySelect<TExtra>: GetBundle,
 {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		let Some(key) = self.extra.get_key(&self.key_path) else {
@@ -47,9 +57,56 @@ where
 		};
 
 		parent
-			.spawn((self.clone(), ComboOverview::skill_key_button_bundle()))
+			.spawn((self.bundle(), ComboOverview::skill_key_button_bundle()))
 			.with_children(|parent| {
 				parent.spawn(ComboOverview::skill_key_text(*key));
 			});
+	}
+}
+
+impl GetBundle for KeySelect<ReKeySkill> {
+	type TBundle = KeySelect<ReKeySkill>;
+
+	fn bundle(&self) -> Self::TBundle {
+		self.clone()
+	}
+}
+
+impl<TKey: Copy + Sync + Send + 'static> GetBundle for KeySelect<AppendSkill<TKey>, TKey> {
+	type TBundle = SkillSelectDropdownInsertCommand<TKey, Vertical>;
+
+	fn bundle(&self) -> Self::TBundle {
+		SkillSelectDropdownInsertCommand::<TKey, Vertical>::new(
+			[self.key_path.clone(), vec![self.extra.on]].concat(),
+		)
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn key_select_append_skill_get_bundle() {
+		#[derive(Debug, PartialEq, Clone, Copy)]
+		enum _Key {
+			A,
+			B,
+			C,
+		}
+
+		let select = KeySelect {
+			extra: AppendSkill { on: _Key::C },
+			key_path: vec![_Key::A, _Key::B],
+		};
+
+		assert_eq!(
+			SkillSelectDropdownInsertCommand::<_Key, Vertical>::new(vec![
+				_Key::A,
+				_Key::B,
+				_Key::C
+			]),
+			select.bundle()
+		)
 	}
 }

@@ -6,12 +6,15 @@ pub mod set;
 
 pub(crate) mod tooltip_ui_control;
 
-use crate::{components::skill_descriptor::SkillDescriptor, tools::Layout};
+use crate::{
+	components::skill_descriptor::{DropdownTrigger, SkillDescriptor},
+	tools::Layout,
+};
 use bevy::{ecs::system::EntityCommands, prelude::Bundle, ui::Style};
 use get_node::GetNode;
 use instantiate_content_on::InstantiateContentOn;
 
-pub(crate) type CombosDescriptor = Vec<Vec<SkillDescriptor>>;
+pub(crate) type CombosDescriptor = Vec<Vec<SkillDescriptor<DropdownTrigger>>>;
 
 pub(crate) trait UpdateCombos {
 	fn update_combos(&mut self, combos: CombosDescriptor);

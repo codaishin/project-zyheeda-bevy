@@ -1,4 +1,7 @@
-use crate::{components::skill_descriptor::SkillDescriptor, traits::CombosDescriptor};
+use crate::{
+	components::skill_descriptor::{DropdownTrigger, SkillDescriptor},
+	traits::CombosDescriptor,
+};
 use bevy::{
 	ecs::world::Ref,
 	prelude::{Component, Query, With},
@@ -20,7 +23,7 @@ pub(crate) fn get_combos<TCombos: Component + GetCombos>(
 	combos.combos().iter().map(combo_descriptor).collect()
 }
 
-fn combo_descriptor(combo: &Combo) -> Vec<SkillDescriptor> {
+fn combo_descriptor(combo: &Combo) -> Vec<SkillDescriptor<DropdownTrigger>> {
 	combo
 		.iter()
 		.cloned()
@@ -28,8 +31,8 @@ fn combo_descriptor(combo: &Combo) -> Vec<SkillDescriptor> {
 		.collect::<Vec<_>>()
 }
 
-fn skill_descriptor((key_path, skill): (Vec<SlotKey>, &Skill)) -> SkillDescriptor {
-	SkillDescriptor::new_dropdown_item(skill.clone(), key_path.clone())
+fn skill_descriptor((key_path, skill): (Vec<SlotKey>, &Skill)) -> SkillDescriptor<DropdownTrigger> {
+	SkillDescriptor::<DropdownTrigger>::new(skill.clone(), key_path.clone())
 }
 
 #[cfg(test)]
@@ -141,14 +144,14 @@ mod tests {
 		assert_eq!(
 			&_Result(vec![
 				vec![
-					SkillDescriptor::new_dropdown_item(
+					SkillDescriptor::<DropdownTrigger>::new(
 						Skill {
 							name: "a1".to_owned(),
 							..default()
 						},
 						vec![SlotKey::Hand(Side::Main)],
 					),
-					SkillDescriptor::new_dropdown_item(
+					SkillDescriptor::<DropdownTrigger>::new(
 						Skill {
 							name: "a2".to_owned(),
 							..default()
@@ -157,14 +160,14 @@ mod tests {
 					)
 				],
 				vec![
-					SkillDescriptor::new_dropdown_item(
+					SkillDescriptor::<DropdownTrigger>::new(
 						Skill {
 							name: "b1".to_owned(),
 							..default()
 						},
 						vec![SlotKey::Hand(Side::Off)],
 					),
-					SkillDescriptor::new_dropdown_item(
+					SkillDescriptor::<DropdownTrigger>::new(
 						Skill {
 							name: "b2".to_owned(),
 							..default()

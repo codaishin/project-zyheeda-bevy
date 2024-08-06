@@ -8,41 +8,37 @@ use std::marker::PhantomData;
 pub(crate) struct DropdownTrigger;
 
 #[derive(Debug, Default, PartialEq, Clone)]
-pub(crate) struct DropdownItem;
+pub(crate) struct Vertical;
+
+#[derive(Debug, Default, PartialEq, Clone)]
+pub(crate) struct Horizontal;
+
+#[derive(Debug, Default, PartialEq, Clone)]
+pub(crate) struct DropdownItem<TLayout>(PhantomData<TLayout>);
 
 #[derive(Component, Debug, Default, PartialEq, Clone)]
-pub(crate) struct SkillDescriptor<T = DropdownItem> {
+pub(crate) struct SkillDescriptor<T> {
 	phantom_data: PhantomData<T>,
 	pub(crate) skill: Skill,
 	pub(crate) key_path: Vec<SlotKey>,
 }
 
-impl SkillDescriptor {
-	pub(crate) fn new_dropdown_item(skill: Skill, key_path: Vec<SlotKey>) -> Self {
+impl SkillDescriptor<DropdownTrigger> {
+	pub(crate) fn new(skill: Skill, key_path: Vec<SlotKey>) -> SkillDescriptor<DropdownTrigger> {
+		SkillDescriptor {
+			phantom_data: PhantomData,
+			skill,
+			key_path,
+		}
+	}
+}
+
+impl<TLayout> SkillDescriptor<DropdownItem<TLayout>> {
+	pub(crate) fn new(skill: Skill, key_path: Vec<SlotKey>) -> Self {
 		Self {
 			phantom_data: PhantomData,
 			skill,
 			key_path,
-		}
-	}
-
-	#[cfg(test)]
-	pub(crate) fn new_dropdown_trigger(
-		skill: Skill,
-		key_path: Vec<SlotKey>,
-	) -> SkillDescriptor<DropdownTrigger> {
-		SkillDescriptor {
-			phantom_data: PhantomData,
-			skill,
-			key_path,
-		}
-	}
-
-	pub(crate) fn to_dropdown_trigger(&self) -> SkillDescriptor<DropdownTrigger> {
-		SkillDescriptor {
-			phantom_data: PhantomData,
-			skill: self.skill.clone(),
-			key_path: self.key_path.clone(),
 		}
 	}
 }
@@ -53,7 +49,7 @@ impl<T> GetNode for SkillDescriptor<T> {
 	}
 }
 
-impl InstantiateContentOn for SkillDescriptor {
+impl<T: Clone + Sync + Send + 'static> InstantiateContentOn for SkillDescriptor<T> {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		let icon = Some(self.skill.icon.clone().unwrap_or_default());
 		parent.spawn(ComboOverview::skill_button_bundle(icon).with(self.clone()));

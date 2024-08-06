@@ -1,6 +1,6 @@
 use super::{
 	key_code_text_insert_command::KeyCodeTextInsertCommandBundle,
-	skill_descriptor::SkillDescriptor,
+	skill_descriptor::{DropdownTrigger, Horizontal, SkillDescriptor},
 	tooltip::Tooltip,
 	AppendSkillCommand,
 	DeleteSkill,
@@ -239,7 +239,7 @@ fn add_combo_list(parent: &mut ChildBuilder, combo_overview: &ComboOverview) {
 		});
 }
 
-fn add_combo(parent: &mut ChildBuilder, combo: &[SkillDescriptor]) {
+fn add_combo(parent: &mut ChildBuilder, combo: &[SkillDescriptor<DropdownTrigger>]) {
 	parent
 		.spawn(NodeBundle {
 			style: Style {
@@ -270,8 +270,8 @@ fn add_combo(parent: &mut ChildBuilder, combo: &[SkillDescriptor]) {
 
 fn add_skill(
 	parent: &mut ChildBuilder,
-	descriptor: &SkillDescriptor,
-	additional_buttons: &[fn(&SkillDescriptor, &mut ChildBuilder)],
+	descriptor: &SkillDescriptor<DropdownTrigger>,
+	additional_buttons: &[fn(&SkillDescriptor<DropdownTrigger>, &mut ChildBuilder)],
 ) {
 	let skill_icon = descriptor.skill.icon.clone();
 
@@ -280,11 +280,10 @@ fn add_skill(
 		.with_children(|parent| {
 			parent
 				.spawn((
-					ComboOverview::skill_button_bundle(skill_icon)
-						.with(descriptor.to_dropdown_trigger()),
-					SkillSelectDropdownInsertCommand {
-						key_path: descriptor.key_path.clone(),
-					},
+					ComboOverview::skill_button_bundle(skill_icon).with(descriptor.clone()),
+					SkillSelectDropdownInsertCommand::<SlotKey, Horizontal>::new(
+						descriptor.key_path.clone(),
+					),
 				))
 				.with_children(|parent| {
 					for additional_button in additional_buttons {
@@ -294,7 +293,7 @@ fn add_skill(
 		});
 }
 
-fn with_key_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
+fn with_key_button(descriptor: &SkillDescriptor<DropdownTrigger>, parent: &mut ChildBuilder) {
 	let Some(skill_key) = descriptor.key_path.last() else {
 		return;
 	};
@@ -316,7 +315,7 @@ fn with_key_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
 		});
 }
 
-fn with_append_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
+fn with_append_button(descriptor: &SkillDescriptor<DropdownTrigger>, parent: &mut ChildBuilder) {
 	parent
 		.spawn(ComboOverview::append_button_offset_container())
 		.with_children(|parent| {
@@ -334,7 +333,7 @@ fn with_append_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
 		});
 }
 
-fn with_delete_button(descriptor: &SkillDescriptor, parent: &mut ChildBuilder) {
+fn with_delete_button(descriptor: &SkillDescriptor<DropdownTrigger>, parent: &mut ChildBuilder) {
 	parent
 		.spawn(ComboOverview::delete_button_offset_container())
 		.with_children(|parent| {
@@ -361,7 +360,7 @@ mod tests {
 
 	#[test]
 	fn update_combos() {
-		let combos = vec![vec![SkillDescriptor::new_dropdown_item(
+		let combos = vec![vec![SkillDescriptor::<DropdownTrigger>::new(
 			Skill {
 				name: "my skill".to_owned(),
 				icon: Some(Handle::Weak(AssetId::Uuid {
