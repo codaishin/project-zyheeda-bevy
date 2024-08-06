@@ -121,7 +121,7 @@ mod tests {
 		));
 		let skill = app
 			.world_mut()
-			.spawn(SkillDescriptor::new_dropdown_trigger(
+			.spawn(SkillDescriptor::<DropdownTrigger>::new(
 				Skill {
 					is_usable_with: HashSet::from([ItemType::Bracer]),
 					..default()
@@ -152,7 +152,7 @@ mod tests {
 		));
 		let skill = app
 			.world_mut()
-			.spawn(SkillDescriptor::new_dropdown_trigger(
+			.spawn(SkillDescriptor::<DropdownTrigger>::new(
 				Skill {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
@@ -180,7 +180,7 @@ mod tests {
 		)]),));
 		let skill = app
 			.world_mut()
-			.spawn(SkillDescriptor::new_dropdown_trigger(
+			.spawn(SkillDescriptor::<DropdownTrigger>::new(
 				Skill {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
@@ -211,7 +211,7 @@ mod tests {
 		));
 		let skill = app
 			.world_mut()
-			.spawn(SkillDescriptor::new_dropdown_trigger(
+			.spawn(SkillDescriptor::<DropdownTrigger>::new(
 				Skill {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()

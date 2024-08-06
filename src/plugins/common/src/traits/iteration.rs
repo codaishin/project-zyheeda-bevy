@@ -1,6 +1,6 @@
 pub struct Iter<TValue>(pub Option<TValue>);
 
-pub trait IterFinite
+pub trait IterFinite: Copy
 where
 	Self: Sized,
 {
@@ -8,7 +8,7 @@ where
 	fn next(current: &Iter<Self>) -> Option<Self>;
 }
 
-impl<TIterKey: IterFinite + Copy> Iterator for Iter<TIterKey> {
+impl<TIterKey: IterFinite> Iterator for Iter<TIterKey> {
 	type Item = TIterKey;
 
 	fn next(&mut self) -> Option<Self::Item> {
@@ -21,7 +21,7 @@ impl<TIterKey: IterFinite + Copy> Iterator for Iter<TIterKey> {
 
 pub struct Infinite<TValue>(pub TValue);
 
-impl<TValue: IterInfinite + Copy> Infinite<TValue> {
+impl<TValue: IterInfinite> Infinite<TValue> {
 	pub fn next_infinite(&mut self) -> TValue {
 		let current = self.0;
 		self.0 = TValue::next_infinite(self);
@@ -30,7 +30,7 @@ impl<TValue: IterInfinite + Copy> Infinite<TValue> {
 	}
 }
 
-pub trait IterInfinite
+pub trait IterInfinite: Copy
 where
 	Self: Sized,
 {

@@ -17,7 +17,7 @@ pub(crate) fn update_combos_view<TComboOverview: Component + UpdateCombos>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::skill_descriptor::SkillDescriptor;
+	use crate::components::skill_descriptor::{DropdownTrigger, SkillDescriptor};
 	use bevy::{
 		app::{App, Update},
 		prelude::{default, IntoSystem, Resource},
@@ -59,14 +59,14 @@ mod tests {
 	fn combos() -> CombosDescriptor {
 		vec![
 			vec![
-				SkillDescriptor::new_dropdown_item(
+				SkillDescriptor::<DropdownTrigger>::new(
 					Skill {
 						name: "a1".to_owned(),
 						..default()
 					},
 					vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
 				),
-				SkillDescriptor::new_dropdown_item(
+				SkillDescriptor::<DropdownTrigger>::new(
 					Skill {
 						name: "a2".to_owned(),
 						..default()
@@ -75,14 +75,14 @@ mod tests {
 				),
 			],
 			vec![
-				SkillDescriptor::new_dropdown_item(
+				SkillDescriptor::<DropdownTrigger>::new(
 					Skill {
 						name: "b1".to_owned(),
 						..default()
 					},
 					vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
 				),
-				SkillDescriptor::new_dropdown_item(
+				SkillDescriptor::<DropdownTrigger>::new(
 					Skill {
 						name: "b2".to_owned(),
 						..default()

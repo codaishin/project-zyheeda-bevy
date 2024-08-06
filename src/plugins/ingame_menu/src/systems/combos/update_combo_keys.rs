@@ -24,7 +24,7 @@ mod test {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		prelude::{Entity, IntoSystem},
+		prelude::IntoSystem,
 	};
 	use common::{
 		components::Side,
@@ -73,7 +73,6 @@ mod test {
 			extra: ReKeySkill {
 				to: SlotKey::Hand(Side::Main),
 			},
-			key_button: Entity::from_raw(444),
 			key_path: vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
 		}));
 
@@ -101,7 +100,6 @@ mod test {
 			extra: ReKeySkill {
 				to: SlotKey::Hand(Side::Main),
 			},
-			key_button: Entity::from_raw(444),
 			key_path: vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
 		}));
 

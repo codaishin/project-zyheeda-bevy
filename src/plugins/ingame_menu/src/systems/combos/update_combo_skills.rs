@@ -1,14 +1,15 @@
-use crate::components::skill_descriptor::SkillDescriptor;
+use crate::components::skill_descriptor::{DropdownItem, SkillDescriptor};
 use bevy::{
 	prelude::{Component, Query, With},
 	ui::Interaction,
 };
 use skills::{items::slot_key::SlotKey, skills::Skill, traits::UpdateConfig};
 
-pub(crate) fn update_combo_skills<TAgent, TCombos>(
+pub(crate) fn update_combo_skills<TAgent, TCombos, TLayout>(
 	mut agents: Query<&mut TCombos, With<TAgent>>,
-	skill_selects: Query<(&SkillDescriptor, &Interaction)>,
+	skill_selects: Query<(&SkillDescriptor<DropdownItem<TLayout>>, &Interaction)>,
 ) where
+	TLayout: Sync + Send + 'static,
 	TAgent: Component,
 	TCombos: Component + UpdateConfig<Vec<SlotKey>, Option<Skill>>,
 {
@@ -24,7 +25,7 @@ pub(crate) fn update_combo_skills<TAgent, TCombos>(
 	}
 }
 
-fn pressed((.., interaction): &(&SkillDescriptor, &Interaction)) -> bool {
+fn pressed<T>((.., interaction): &(&T, &Interaction)) -> bool {
 	interaction == &&Interaction::Pressed
 }
 
@@ -43,6 +44,8 @@ mod tests {
 	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
 	use skills::skills::Skill;
+
+	struct _Layout;
 
 	#[derive(Component)]
 	struct _Agent;
@@ -69,7 +72,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, update_combo_skills::<_Agent, _Combos>);
+		app.add_systems(Update, update_combo_skills::<_Agent, _Combos, _Layout>);
 
 		app
 	}
@@ -93,7 +96,7 @@ mod tests {
 			}),
 		));
 		app.world_mut().spawn((
-			SkillDescriptor::new_dropdown_item(
+			SkillDescriptor::<DropdownItem<_Layout>>::new(
 				Skill {
 					name: "my skill".to_owned(),
 					..default()
@@ -111,11 +114,17 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((_Agent, _Combos::default()));
 		app.world_mut().spawn((
-			SkillDescriptor::new_dropdown_item(Skill::default(), vec![SlotKey::Hand(Side::Off)]),
+			SkillDescriptor::<DropdownItem<_Layout>>::new(
+				Skill::default(),
+				vec![SlotKey::Hand(Side::Off)],
+			),
 			Interaction::Hovered,
 		));
 		app.world_mut().spawn((
-			SkillDescriptor::new_dropdown_item(Skill::default(), vec![SlotKey::Hand(Side::Off)]),
+			SkillDescriptor::<DropdownItem<_Layout>>::new(
+				Skill::default(),
+				vec![SlotKey::Hand(Side::Off)],
+			),
 			Interaction::None,
 		));
 
@@ -127,7 +136,10 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn(_Combos::default());
 		app.world_mut().spawn((
-			SkillDescriptor::new_dropdown_item(Skill::default(), vec![SlotKey::Hand(Side::Off)]),
+			SkillDescriptor::<DropdownItem<_Layout>>::new(
+				Skill::default(),
+				vec![SlotKey::Hand(Side::Off)],
+			),
 			Interaction::Pressed,
 		));
 

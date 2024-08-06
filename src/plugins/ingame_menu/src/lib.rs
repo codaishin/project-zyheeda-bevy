@@ -21,11 +21,13 @@ use components::{
 	dropdown::Dropdown,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
-	key_select::{EmptySkill, KeySelect, ReKeySkill},
+	key_select::{AppendSkill, KeySelect, ReKeySkill},
 	quickbar_panel::QuickbarPanel,
-	skill_descriptor::SkillDescriptor,
+	skill_descriptor::{DropdownItem, Horizontal, SkillDescriptor, Vertical},
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
 	ui_overlay::UIOverlay,
+	AppendSkillCommand,
+	ReKeyCommand,
 };
 use events::DropdownEvent;
 use skills::{
@@ -48,8 +50,6 @@ use systems::{
 		update_combo_skills::update_combo_skills,
 		update_combos_view::update_combos_view,
 		update_combos_view_delete_skill::update_combos_view_delete_skill,
-		update_combos_view_key_labels::update_combos_view_key_labels,
-		update_combos_view_new_skills::update_combos_view_new_skills,
 		visualize_invalid_skill::visualize_invalid_skill,
 	},
 	conditions::{added::added, changed::changed, either::either},
@@ -59,8 +59,7 @@ use systems::{
 		despawn_when_no_children_pressed::dropdown_despawn_when_no_children_pressed,
 		detect_focus_change::dropdown_detect_focus_change,
 		events::dropdown_events,
-		insert_empty_skill_key_select_dropdown::insert_empty_skill_key_select_dropdown,
-		insert_skill_key_select_dropdown::insert_skill_key_select_dropdown,
+		insert_key_select_dropdown::insert_key_select_dropdown,
 		insert_skill_select_dropdown::insert_skill_select_dropdown,
 		spawn_focused::dropdown_spawn_focused,
 		track_child_dropdowns::dropdown_track_child_dropdowns,
@@ -226,9 +225,10 @@ fn ui_overlay_systems(app: &mut App) {
 
 fn combo_overview_systems(app: &mut App) {
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
-		.add_dropdown::<SkillDescriptor>()
-		.add_dropdown::<KeySelect<EmptySkill>>()
+		.add_dropdown::<SkillDescriptor<DropdownItem<Vertical>>>()
+		.add_dropdown::<SkillDescriptor<DropdownItem<Horizontal>>>()
 		.add_dropdown::<KeySelect<ReKeySkill>>()
+		.add_dropdown::<KeySelect<AppendSkill>>()
 		.add_tooltip::<Skill>()
 		.add_systems(
 			Update,
@@ -241,19 +241,13 @@ fn combo_overview_systems(app: &mut App) {
 			Update,
 			(
 				visualize_invalid_skill::<Player, Slots, Unusable>,
-				insert_skill_select_dropdown::<Slots<Handle<Skill>>>,
-				insert_skill_key_select_dropdown::<SlotKey>,
-				insert_empty_skill_key_select_dropdown::<SlotKey>,
-				update_combos_view_key_labels::<
-					SlotKey,
-					KeyCode,
-					SlotKeyMap,
-					LanguageServer,
-					EmptySkill,
-				>,
-				update_combos_view_new_skills,
+				insert_skill_select_dropdown::<Slots<Handle<Skill>>, Vertical>,
+				insert_skill_select_dropdown::<Slots<Handle<Skill>>, Horizontal>,
+				insert_key_select_dropdown::<Player, Combos, AppendSkillCommand>,
+				insert_key_select_dropdown::<Player, Combos, ReKeyCommand>,
 				update_combos_view_delete_skill::<Player, Combos>,
-				update_combo_skills::<Player, Combos>,
+				update_combo_skills::<Player, Combos, Vertical>,
+				update_combo_skills::<Player, Combos, Horizontal>,
 				map_pressed_key_select.pipe(update_combo_keys::<Player, Combos>),
 			)
 				.run_if(in_state(MenuState::ComboOverview)),

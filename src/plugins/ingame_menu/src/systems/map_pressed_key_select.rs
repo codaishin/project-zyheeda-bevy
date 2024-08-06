@@ -13,7 +13,6 @@ pub(crate) fn map_pressed_key_select(
 			to: pressed.extra.to,
 		},
 		key_path: pressed.key_path.clone(),
-		key_button: pressed.key_button,
 	})
 }
 
@@ -26,7 +25,7 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		prelude::{Commands, Entity, In, IntoSystem, Resource},
+		prelude::{Commands, In, IntoSystem, Resource},
 		ui::Interaction,
 	};
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
@@ -57,7 +56,6 @@ mod tests {
 				extra: ReKeySkill {
 					to: SlotKey::Hand(Side::Off),
 				},
-				key_button: Entity::from_raw(101),
 				key_path: vec![
 					SlotKey::Hand(Side::Main),
 					SlotKey::Hand(Side::Off),
@@ -76,7 +74,7 @@ mod tests {
 				extra: ReKeySkill {
 					to: SlotKey::Hand(Side::Off)
 				},
-				key_button: Entity::from_raw(101),
+
 				key_path: vec![
 					SlotKey::Hand(Side::Main),
 					SlotKey::Hand(Side::Off),
@@ -95,7 +93,6 @@ mod tests {
 				extra: ReKeySkill {
 					to: SlotKey::Hand(Side::Main),
 				},
-				key_button: Entity::from_raw(101),
 				key_path: vec![
 					SlotKey::Hand(Side::Main),
 					SlotKey::Hand(Side::Off),
@@ -120,7 +117,6 @@ mod tests {
 				extra: ReKeySkill {
 					to: SlotKey::Hand(Side::Main),
 				},
-				key_button: Entity::from_raw(101),
 				key_path: vec![
 					SlotKey::Hand(Side::Main),
 					SlotKey::Hand(Side::Off),

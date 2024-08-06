@@ -1,6 +1,9 @@
 use super::Dropdown;
 use crate::{
-	components::key_select::KeySelect,
+	components::{
+		combo_overview::ComboOverview,
+		key_select::{AppendSkill, KeySelect, ReKeySkill},
+	},
 	tools::Layout,
 	traits::{GetLayout, RootStyle},
 };
@@ -9,12 +12,23 @@ use bevy::{
 	ui::{PositionType, Style, Val},
 };
 
-impl<TExtra> RootStyle for Dropdown<KeySelect<TExtra>> {
+impl RootStyle for Dropdown<KeySelect<ReKeySkill>> {
 	fn root_style(&self) -> Style {
 		Style {
 			position_type: PositionType::Absolute,
-			top: Val::Percent(100.),
-			right: Val::Percent(0.),
+			top: Val::from(ComboOverview::KEY_BUTTON_DIMENSIONS.nested_height()),
+			left: Val::from(ComboOverview::KEY_BUTTON_DIMENSIONS.nested_minimum()),
+			..default()
+		}
+	}
+}
+
+impl RootStyle for Dropdown<KeySelect<AppendSkill>> {
+	fn root_style(&self) -> Style {
+		Style {
+			position_type: PositionType::Absolute,
+			top: Val::from(ComboOverview::MODIFY_BUTTON_DIMENSIONS.nested_minimum()),
+			left: Val::from(ComboOverview::MODIFY_BUTTON_DIMENSIONS.nested_width()),
 			..default()
 		}
 	}
