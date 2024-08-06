@@ -1,8 +1,6 @@
-#![allow(dead_code)] // FIXME: remove when `Layout::LastRow(..)` and `Layout::SINGLE_ROW` is used
-
 pub(crate) mod menu_state;
 
-use bevy::ui::Val;
+use bevy::ui::{UiRect, Val};
 use common::tools::Index;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -27,6 +25,7 @@ impl Default for Layout {
 	}
 }
 
+#[derive(Default)]
 pub(crate) struct Pixel(pub f32);
 
 impl From<Pixel> for Val {
@@ -35,7 +34,29 @@ impl From<Pixel> for Val {
 	}
 }
 
-pub(crate) struct Dimensions<T> {
-	pub width: T,
-	pub height: T,
+impl From<Pixel> for UiRect {
+	fn from(value: Pixel) -> Self {
+		UiRect::all(Val::from(value))
+	}
+}
+
+#[derive(Default)]
+pub(crate) struct Dimensions {
+	pub(crate) width: Pixel,
+	pub(crate) height: Pixel,
+	pub(crate) border: Pixel,
+}
+
+impl Dimensions {
+	pub(crate) fn nested_height(&self) -> Pixel {
+		Pixel(self.height.0 - self.border.0)
+	}
+
+	pub(crate) fn nested_width(&self) -> Pixel {
+		Pixel(self.width.0 - self.border.0)
+	}
+
+	pub(crate) fn nested_minimum(&self) -> Pixel {
+		Pixel(-self.border.0)
+	}
 }

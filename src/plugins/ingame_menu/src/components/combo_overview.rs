@@ -54,6 +54,23 @@ impl SkillButtonBundle for ButtonBundle {
 }
 
 impl ComboOverview {
+	pub const MODIFY_BUTTON_OFFSET: Pixel = Pixel(-12.0);
+	pub const SKILL_BUTTON_DIMENSIONS: Dimensions = Dimensions {
+		width: Pixel(65.0),
+		height: Pixel(65.0),
+		border: Pixel(0.0),
+	};
+	pub const KEY_BUTTON_DIMENSIONS: Dimensions = Dimensions {
+		width: Pixel(50.0),
+		height: Pixel(25.0),
+		border: Pixel(2.0),
+	};
+	pub const MODIFY_BUTTON_DIMENSIONS: Dimensions = Dimensions {
+		width: Pixel(20.0),
+		height: Pixel(25.0),
+		border: Pixel(2.0),
+	};
+
 	pub(crate) fn skill_container_bundle() -> impl Bundle {
 		NodeBundle {
 			style: Style {
@@ -67,8 +84,9 @@ impl ComboOverview {
 	pub(crate) fn skill_button_bundle(icon: Handle<Image>) -> impl SkillButtonBundle + Bundle {
 		ButtonBundle {
 			style: Style {
-				width: Val::Px(65.0),
-				height: Val::Px(65.0),
+				width: Val::from(Self::SKILL_BUTTON_DIMENSIONS.width),
+				height: Val::from(Self::SKILL_BUTTON_DIMENSIONS.height),
+				border: UiRect::from(Self::SKILL_BUTTON_DIMENSIONS.border),
 				justify_content: JustifyContent::Center,
 				align_items: AlignItems::Center,
 				..default()
@@ -78,13 +96,6 @@ impl ComboOverview {
 			..default()
 		}
 	}
-
-	pub const MODIFY_BUTTON_OFFSET: Pixel = Pixel(-12.0);
-	pub const KEY_BUTTON_BORDER_SIZE: Pixel = Pixel(2.0);
-	pub const KEY_BUTTON_DIMENSIONS: Dimensions<Pixel> = Dimensions {
-		width: Pixel(50.0),
-		height: Pixel(25.0),
-	};
 
 	pub(crate) fn skill_key_button_offset_container() -> impl Bundle {
 		NodeBundle {
@@ -123,10 +134,9 @@ impl ComboOverview {
 	pub(crate) fn skill_key_button_bundle() -> impl Bundle {
 		ButtonBundle {
 			style: Style {
-				width: Val::Px(50.0),
-				height: Val::Px(25.0),
-				border: UiRect::all(Val::from(Self::KEY_BUTTON_BORDER_SIZE)),
-				margin: UiRect::all(-Val::from(Self::KEY_BUTTON_BORDER_SIZE)),
+				width: Val::from(Self::KEY_BUTTON_DIMENSIONS.width),
+				height: Val::from(Self::KEY_BUTTON_DIMENSIONS.height),
+				border: UiRect::from(Self::KEY_BUTTON_DIMENSIONS.border),
 				justify_content: JustifyContent::Center,
 				align_items: AlignItems::Center,
 				..default()
@@ -140,10 +150,9 @@ impl ComboOverview {
 	pub(crate) fn modify_button_bundle() -> impl Bundle {
 		ButtonBundle {
 			style: Style {
-				width: Val::Px(20.0),
-				height: Val::Px(25.0),
-				border: UiRect::all(Val::from(Self::KEY_BUTTON_BORDER_SIZE)),
-				margin: UiRect::all(-Val::from(Self::KEY_BUTTON_BORDER_SIZE)),
+				width: Val::from(Self::MODIFY_BUTTON_DIMENSIONS.width),
+				height: Val::from(Self::MODIFY_BUTTON_DIMENSIONS.height),
+				border: UiRect::from(Self::MODIFY_BUTTON_DIMENSIONS.border),
 				justify_content: JustifyContent::Center,
 				align_items: AlignItems::Center,
 				..default()

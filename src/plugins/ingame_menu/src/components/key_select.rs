@@ -9,11 +9,7 @@ use crate::traits::{
 	GetBundle,
 	GetKey,
 };
-use bevy::{
-	prelude::{BuildChildren, ChildBuilder, Component, NodeBundle},
-	ui::{Style, Val},
-	utils::default,
-};
+use bevy::prelude::{BuildChildren, ChildBuilder, Component, NodeBundle};
 use skills::items::slot_key::SlotKey;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -46,16 +42,7 @@ pub(crate) struct KeySelect<TExtra, TKey = SlotKey> {
 
 impl<TExtra> GetNode for KeySelect<TExtra> {
 	fn node(&self) -> NodeBundle {
-		let key_button_dimensions = ComboOverview::KEY_BUTTON_DIMENSIONS;
-
-		NodeBundle {
-			style: Style {
-				width: Val::from(key_button_dimensions.width),
-				height: Val::from(key_button_dimensions.height),
-				..default()
-			},
-			..default()
-		}
+		NodeBundle::default()
 	}
 }
 

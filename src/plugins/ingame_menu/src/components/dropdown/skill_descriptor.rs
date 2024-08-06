@@ -9,15 +9,15 @@ use crate::{
 };
 use bevy::{
 	prelude::default,
-	ui::{PositionType, Style, UiRect, Val},
+	ui::{PositionType, Style, Val},
 };
 
 impl RootStyle for Dropdown<SkillDescriptor<DropdownItem<Vertical>>> {
 	fn root_style(&self) -> Style {
 		Style {
 			position_type: PositionType::Absolute,
-			top: Val::Percent(100.),
-			left: Val::Percent(0.),
+			top: Val::from(ComboOverview::SKILL_BUTTON_DIMENSIONS.nested_height()),
+			left: Val::from(ComboOverview::SKILL_BUTTON_DIMENSIONS.nested_minimum()),
 			..default()
 		}
 	}
@@ -33,9 +33,8 @@ impl RootStyle for Dropdown<SkillDescriptor<DropdownItem<Horizontal>>> {
 	fn root_style(&self) -> Style {
 		Style {
 			position_type: PositionType::Absolute,
-			top: Val::Percent(0.),
-			left: Val::Percent(100.),
-			margin: UiRect::all(-Val::from(ComboOverview::KEY_BUTTON_BORDER_SIZE)),
+			top: Val::from(ComboOverview::KEY_BUTTON_DIMENSIONS.nested_minimum()),
+			left: Val::from(ComboOverview::KEY_BUTTON_DIMENSIONS.nested_width()),
 			..default()
 		}
 	}
