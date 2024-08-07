@@ -4,7 +4,7 @@ use crate::{
 	traits::{Insert, ReKey},
 };
 use bevy::prelude::default;
-use std::collections::{hash_map::Entry, HashMap};
+use common::tools::ordered_hash_map::{Entry, OrderedHashMap};
 
 impl<'a, TSkill> Insert<Option<TSkill>> for NodeEntryMut<'a, TSkill> {
 	fn insert(&mut self, value: Option<TSkill>) {
@@ -44,7 +44,7 @@ impl<'a, TSkill> ReKey<SlotKey> for NodeEntryMut<'a, TSkill> {
 }
 
 fn move_combo<TSkill>(
-	tree: &mut HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
+	tree: &mut OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
 	src_key: SlotKey,
 	dst_key: SlotKey,
 ) {
@@ -58,8 +58,8 @@ fn move_combo<TSkill>(
 
 fn move_and_merge_branch<TSkill>(
 	dst_key: &SlotKey,
-	src: &mut HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
-	dst: &mut HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
+	src: &mut OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
+	dst: &mut OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
 ) {
 	let mut src = src
 		.remove(dst_key)
@@ -70,11 +70,15 @@ fn move_and_merge_branch<TSkill>(
 }
 
 fn move_and_merge_branches_with_same_key<TSkill>(
-	src: &mut HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
-	dst: &mut HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
+	src: &mut OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
+	dst: &mut OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
 ) {
-	for (key, (_, ComboNode(dst))) in dst.iter_mut() {
-		move_and_merge_branch(key, src, dst)
+	let keys = dst.keys().cloned().collect::<Vec<_>>();
+	for key in keys {
+		let Some((_, ComboNode(dst))) = dst.get_mut(&key) else {
+			continue;
+		};
+		move_and_merge_branch(&key, src, dst)
 	}
 }
 
@@ -84,11 +88,10 @@ mod tests {
 	use crate::{components::combo_node::ComboNode, items::slot_key::SlotKey, skills::Skill};
 	use bevy::prelude::default;
 	use common::components::Side;
-	use std::collections::HashMap;
 
 	#[test]
 	fn insert_skill() {
-		let mut tree = HashMap::from([]);
+		let mut tree = OrderedHashMap::from([]);
 		let mut entry = NodeEntryMut {
 			key: SlotKey::Hand(Side::Main),
 			tree: &mut tree,
@@ -100,7 +103,7 @@ mod tests {
 		}));
 
 		assert_eq!(
-			HashMap::from([(
+			OrderedHashMap::from([(
 				SlotKey::Hand(Side::Main),
 				(
 					Skill {
@@ -116,7 +119,7 @@ mod tests {
 
 	#[test]
 	fn insert_skill_without_changing_sub_tree() {
-		let mut tree = HashMap::from([(
+		let mut tree = OrderedHashMap::from([(
 			SlotKey::Hand(Side::Main),
 			(
 				Skill::default(),
@@ -143,7 +146,7 @@ mod tests {
 		}));
 
 		assert_eq!(
-			HashMap::from([(
+			OrderedHashMap::from([(
 				SlotKey::Hand(Side::Main),
 				(
 					Skill {
@@ -168,7 +171,7 @@ mod tests {
 
 	#[test]
 	fn insert_none_clears_corresponding_tree_entry() {
-		let mut tree = HashMap::from([
+		let mut tree = OrderedHashMap::from([
 			(
 				SlotKey::Hand(Side::Main),
 				(
@@ -195,14 +198,14 @@ mod tests {
 		entry.insert(None);
 
 		assert_eq!(
-			HashMap::from([(SlotKey::Hand(Side::Off), (Skill::default(), default()))]),
+			OrderedHashMap::from([(SlotKey::Hand(Side::Off), (Skill::default(), default()))]),
 			tree
 		);
 	}
 
 	#[test]
 	fn rekey_sets_self_key_to_new_key() {
-		let mut tree = HashMap::from([]);
+		let mut tree = OrderedHashMap::from([]);
 		let mut entry = NodeEntryMut::<Skill> {
 			key: SlotKey::Hand(Side::Main),
 			tree: &mut tree,
@@ -215,7 +218,7 @@ mod tests {
 
 	#[test]
 	fn rekey_skill_to_other_key() {
-		let mut tree = HashMap::from([(
+		let mut tree = OrderedHashMap::from([(
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
@@ -233,7 +236,7 @@ mod tests {
 		entry.re_key(SlotKey::Hand(Side::Off));
 
 		assert_eq!(
-			HashMap::from([(
+			OrderedHashMap::from([(
 				SlotKey::Hand(Side::Off),
 				(
 					Skill {
@@ -249,7 +252,7 @@ mod tests {
 
 	#[test]
 	fn rekey_skill_merge_with_tree_on_other_key() {
-		let mut tree = HashMap::from([
+		let mut tree = OrderedHashMap::from([
 			(
 				SlotKey::Hand(Side::Main),
 				(
@@ -297,7 +300,7 @@ mod tests {
 		entry.re_key(SlotKey::Hand(Side::Off));
 
 		assert_eq!(
-			HashMap::from([(
+			OrderedHashMap::from([(
 				SlotKey::Hand(Side::Off),
 				(
 					Skill {
@@ -334,7 +337,7 @@ mod tests {
 
 	#[test]
 	fn rekey_skill_merge_with_tree_on_other_key_deeply() {
-		let mut tree = HashMap::from([
+		let mut tree = OrderedHashMap::from([
 			(
 				SlotKey::Hand(Side::Main),
 				(
@@ -400,7 +403,7 @@ mod tests {
 		entry.re_key(SlotKey::Hand(Side::Off));
 
 		assert_eq!(
-			HashMap::from([(
+			OrderedHashMap::from([(
 				SlotKey::Hand(Side::Off),
 				(
 					Skill {
