@@ -7,26 +7,28 @@ use crate::{
 	skills::Skill,
 	traits::{GetEntry, GetEntryMut, PeekNext, TryMap},
 };
-use bevy::{ecs::component::Component, prelude::default};
-use common::traits::{
-	get::{Get, GetMut},
-	insert::TryInsert,
-	iterate::Iterate,
+use bevy::ecs::component::Component;
+use common::{
+	tools::ordered_hash_map::{Entry, OrderedHashMap},
+	traits::{
+		get::{Get, GetMut},
+		insert::TryInsert,
+		iterate::Iterate,
+	},
 };
-use std::collections::{hash_map::Entry, HashMap};
 
 #[derive(Component, Clone, PartialEq, Debug)]
-pub struct ComboNode<TSkill = Skill>(HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>);
+pub struct ComboNode<TSkill = Skill>(OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>);
 
 impl<TSkill> ComboNode<TSkill> {
 	pub fn new<const N: usize>(combos: [(SlotKey, (TSkill, ComboNode<TSkill>)); N]) -> Self {
-		Self(HashMap::from(combos))
+		Self(OrderedHashMap::from(combos))
 	}
 }
 
 impl<TSkill> Default for ComboNode<TSkill> {
 	fn default() -> Self {
-		Self(default())
+		Self(OrderedHashMap::from([]))
 	}
 }
 
@@ -63,13 +65,13 @@ impl<TKey: Iterate<SlotKey>> GetMut<TKey, Skill> for ComboNode {
 #[derive(Debug, PartialEq)]
 pub struct NodeEntryMut<'a, TSkill> {
 	key: SlotKey,
-	tree: &'a mut HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
+	tree: &'a mut OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct NodeEntry<'a, TSkill> {
 	key: SlotKey,
-	tree: &'a HashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
+	tree: &'a OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
 }
 
 impl<'a, TKey, TSkill> GetEntryMut<'a, TKey> for ComboNode<TSkill>
@@ -181,7 +183,7 @@ fn try_map<TIn, TOut>(
 		.iter()
 		.filter_map(|(key, (skill, next))| Some((*key, (map_fn(skill)?, try_map(next, map_fn)))));
 
-	ComboNode(HashMap::from_iter(combos))
+	ComboNode(OrderedHashMap::from_iter(combos))
 }
 
 impl<TIn, TOut, TResult: From<ComboNode<TOut>>> TryMap<TIn, TOut, TResult> for ComboNode<TIn> {
@@ -199,7 +201,7 @@ mod tests {
 	};
 	use bevy::{ecs::entity::Entity, prelude::default};
 	use common::components::Side;
-	use std::collections::HashSet;
+	use std::collections::{HashMap, HashSet};
 
 	fn slots_main_pistol_off_sword() -> Slots {
 		Slots(HashMap::from([
@@ -235,7 +237,7 @@ mod tests {
 	#[test]
 	fn peek_next_from_tree() {
 		let slots = slots_main_pistol_off_sword();
-		let node = ComboNode(HashMap::from([(
+		let node = ComboNode(OrderedHashMap::from([(
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
@@ -243,7 +245,7 @@ mod tests {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-				ComboNode(HashMap::from([(
+				ComboNode(OrderedHashMap::from([(
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
@@ -265,7 +267,7 @@ mod tests {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-				ComboNode(HashMap::from([(
+				ComboNode(OrderedHashMap::from([(
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
@@ -283,7 +285,7 @@ mod tests {
 	#[test]
 	fn peek_none_from_tree_when_slot_on_slot_mismatch() {
 		let slots = slots_main_pistol_off_sword();
-		let node = ComboNode(HashMap::from([(
+		let node = ComboNode(OrderedHashMap::from([(
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
@@ -291,7 +293,7 @@ mod tests {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-				ComboNode(HashMap::from([(
+				ComboNode(OrderedHashMap::from([(
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
@@ -312,7 +314,7 @@ mod tests {
 	#[test]
 	fn peek_none_from_tree_when_slot_on_item_type_mismatch() {
 		let slots = slots_main_pistol_off_sword();
-		let node = ComboNode(HashMap::from([(
+		let node = ComboNode(OrderedHashMap::from([(
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
@@ -320,7 +322,7 @@ mod tests {
 					is_usable_with: HashSet::from([ItemType::Bracer]),
 					..default()
 				},
-				ComboNode(HashMap::from([(
+				ComboNode(OrderedHashMap::from([(
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
@@ -343,7 +345,7 @@ mod tests {
 		let mut slots = slots_main_pistol_off_sword();
 		slots.0.get_mut(&SlotKey::Hand(Side::Main)).unwrap().item = None;
 
-		let node = ComboNode(HashMap::from([(
+		let node = ComboNode(OrderedHashMap::from([(
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
@@ -351,7 +353,7 @@ mod tests {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-				ComboNode(HashMap::from([(
+				ComboNode(OrderedHashMap::from([(
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
@@ -374,7 +376,7 @@ mod tests {
 		let mut slots = slots_main_pistol_off_sword();
 		slots.0.remove(&SlotKey::Hand(Side::Main));
 
-		let node = ComboNode(HashMap::from([(
+		let node = ComboNode(OrderedHashMap::from([(
 			SlotKey::Hand(Side::Main),
 			(
 				Skill {
@@ -382,7 +384,7 @@ mod tests {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-				ComboNode(HashMap::from([(
+				ComboNode(OrderedHashMap::from([(
 					SlotKey::Hand(Side::Main),
 					(
 						Skill {
@@ -794,7 +796,7 @@ mod tests {
 		assert_eq!(
 			Some(NodeEntryMut {
 				key: SlotKey::Hand(Side::Main),
-				tree: &mut HashMap::from(conf),
+				tree: &mut OrderedHashMap::from(conf),
 			}),
 			entry,
 		)
@@ -828,7 +830,7 @@ mod tests {
 		assert_eq!(
 			Some(NodeEntryMut {
 				key: SlotKey::Hand(Side::Off),
-				tree: &mut HashMap::from(child_conf),
+				tree: &mut OrderedHashMap::from(child_conf),
 			}),
 			entry,
 		)
@@ -897,7 +899,7 @@ mod tests {
 		assert_eq!(
 			Some(NodeEntryMut {
 				key: SlotKey::Hand(Side::Main),
-				tree: &mut HashMap::default(),
+				tree: &mut OrderedHashMap::default(),
 			}),
 			entry,
 		)
@@ -921,7 +923,7 @@ mod tests {
 		assert_eq!(
 			Some(NodeEntry {
 				key: SlotKey::Hand(Side::Main),
-				tree: &HashMap::from(conf),
+				tree: &OrderedHashMap::from(conf),
 			}),
 			entry,
 		)
@@ -955,7 +957,7 @@ mod tests {
 		assert_eq!(
 			Some(NodeEntry {
 				key: SlotKey::Hand(Side::Off),
-				tree: &HashMap::from(child_conf),
+				tree: &OrderedHashMap::from(child_conf),
 			}),
 			entry,
 		)
@@ -1024,7 +1026,7 @@ mod tests {
 		assert_eq!(
 			Some(NodeEntry {
 				key: SlotKey::Hand(Side::Main),
-				tree: &HashMap::default(),
+				tree: &OrderedHashMap::default(),
 			}),
 			entry,
 		)

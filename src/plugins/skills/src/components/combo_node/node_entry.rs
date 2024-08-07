@@ -1,15 +1,14 @@
 use super::{ComboNode, NodeEntry};
 use crate::{items::slot_key::SlotKey, traits::FollowupKeys};
-use std::collections::hash_map::Keys;
 
 #[derive(Default)]
-enum Iter<'a, TSkill: 'a> {
+enum Iter<'a, T: Iterator<Item = &'a SlotKey>> {
 	#[default]
 	None,
-	Some(Keys<'a, SlotKey, TSkill>),
+	Some(T),
 }
 
-impl<'a, TSkill> Iterator for Iter<'a, TSkill> {
+impl<'a, T: Iterator<Item = &'a SlotKey>> Iterator for Iter<'a, T> {
 	type Item = SlotKey;
 
 	fn next(&mut self) -> Option<Self::Item> {
@@ -37,8 +36,8 @@ mod tests {
 	use super::*;
 	use crate::components::combo_node::ComboNode;
 	use bevy::prelude::default;
-	use common::components::Side;
-	use std::collections::{HashMap, HashSet};
+	use common::{components::Side, tools::ordered_hash_map::OrderedHashMap};
+	use std::collections::HashSet;
 
 	struct _Skill;
 
@@ -46,7 +45,7 @@ mod tests {
 	fn no_followup_keys_when_no_skill_follows() {
 		let entry = NodeEntry::<_Skill> {
 			key: SlotKey::Hand(Side::Main),
-			tree: &HashMap::from([(SlotKey::Hand(Side::Main), (_Skill, default()))]),
+			tree: &OrderedHashMap::from([(SlotKey::Hand(Side::Main), (_Skill, default()))]),
 		};
 
 		assert_eq!(
@@ -59,7 +58,7 @@ mod tests {
 	fn iterate_followup_keys() {
 		let entry = NodeEntry::<_Skill> {
 			key: SlotKey::Hand(Side::Main),
-			tree: &HashMap::from([(
+			tree: &OrderedHashMap::from([(
 				SlotKey::Hand(Side::Main),
 				(
 					_Skill,
@@ -81,7 +80,7 @@ mod tests {
 	fn no_followup_keys_when_entry_empty() {
 		let entry = NodeEntry::<_Skill> {
 			key: SlotKey::Hand(Side::Main),
-			tree: &HashMap::from([]),
+			tree: &OrderedHashMap::from([]),
 		};
 
 		assert_eq!(
