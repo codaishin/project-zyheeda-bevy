@@ -10,20 +10,20 @@ use common::components::Player;
 use skills::{
 	items::slot_key::SlotKey,
 	skills::Skill,
-	traits::{Combo, GetCombos},
+	traits::{Combo, GetCombosOrdered},
 };
 
-pub(crate) fn get_combos<TCombos: Component + GetCombos>(
+pub(crate) fn get_combos<TCombos: Component + GetCombosOrdered>(
 	players: Query<Ref<TCombos>, With<Player>>,
 ) -> CombosDescriptor {
 	let Ok(combos) = players.get_single() else {
 		return vec![];
 	};
 
-	combos.combos().iter().map(combo_descriptor).collect()
+	combos.combos_ordered().map(combo_descriptor).collect()
 }
 
-fn combo_descriptor(combo: &Combo) -> Vec<SkillDescriptor<DropdownTrigger>> {
+fn combo_descriptor(combo: Combo) -> Vec<SkillDescriptor<DropdownTrigger>> {
 	combo
 		.iter()
 		.cloned()
@@ -67,17 +67,14 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Combos(Vec<Vec<(Vec<SlotKey>, Skill)>>);
 
-	impl GetCombos for _Combos {
-		fn combos(&self) -> Vec<Combo> {
-			self.0
-				.iter()
-				.map(|combo| {
-					combo
-						.iter()
-						.map(|(key_path, skill)| (key_path.clone(), skill))
-						.collect()
-				})
-				.collect()
+	impl GetCombosOrdered for _Combos {
+		fn combos_ordered(&self) -> impl Iterator<Item = Combo> {
+			self.0.iter().map(|combo| {
+				combo
+					.iter()
+					.map(|(key_path, skill)| (key_path.clone(), skill))
+					.collect()
+			})
 		}
 	}
 

@@ -5,7 +5,7 @@ use super::slots::Slots;
 use crate::{
 	items::slot_key::SlotKey,
 	skills::Skill,
-	traits::{GetEntry, GetEntryMut, PeekNext, TryMap},
+	traits::{Combo, GetCombosOrdered, GetEntry, GetEntryMut, PeekNext, TryMap},
 };
 use bevy::ecs::component::Component;
 use common::{
@@ -190,6 +190,53 @@ impl<TIn, TOut, TResult: From<ComboNode<TOut>>> TryMap<TIn, TOut, TResult> for C
 	fn try_map(&self, mut map_fn: impl FnMut(&TIn) -> Option<TOut>) -> TResult {
 		TResult::from(try_map(self, &mut map_fn))
 	}
+}
+
+impl GetCombosOrdered for ComboNode {
+	fn combos_ordered(&self) -> impl Iterator<Item = Combo> {
+		combos(self, vec![])
+	}
+}
+
+fn combos(combo_node: &ComboNode, key_path: Vec<SlotKey>) -> impl Iterator<Item = Combo> {
+	combo_node
+		.0
+		.iter()
+		.map(build_path(key_path))
+		.flat_map(append_followup_combo_steps)
+}
+
+fn build_path<'a>(
+	key_path: Vec<SlotKey>,
+) -> impl FnMut((&SlotKey, &'a (Skill, ComboNode))) -> (Vec<SlotKey>, &'a Skill, &'a ComboNode) {
+	move |(slot_key, (skill, child_node))| {
+		let key_path = [key_path.clone(), vec![*slot_key]].concat();
+		(key_path, skill, child_node)
+	}
+}
+
+fn append_followup_combo_steps<'a>(
+	(key_path, skill, child_node): (Vec<SlotKey>, &'a Skill, &'a ComboNode),
+) -> Vec<Combo<'a>> {
+	let combo_step_key_path = key_path.clone();
+	let followup_combo_steps = combos(child_node, combo_step_key_path).collect();
+	append_followups((key_path, skill), followup_combo_steps)
+}
+
+fn append_followups<'a>(
+	combo_step: (Vec<SlotKey>, &'a Skill),
+	followups: Vec<Combo<'a>>,
+) -> Vec<Combo<'a>> {
+	let combo_steps = vec![combo_step];
+
+	if followups.is_empty() {
+		return vec![combo_steps];
+	}
+
+	followups
+		.into_iter()
+		.map(|followup_steps| combo_steps.iter().cloned().chain(followup_steps).collect())
+		.collect()
 }
 
 #[cfg(test)]
@@ -1029,6 +1076,401 @@ mod tests {
 				tree: &OrderedHashMap::default(),
 			}),
 			entry,
+		)
+	}
+
+	#[test]
+	fn get_single_single_combo_with_single_skill() {
+		let combos = ComboNode::new([(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "some skill".to_owned(),
+					..default()
+				},
+				ComboNode::default(),
+			),
+		)]);
+
+		assert_eq!(
+			vec![vec![(
+				vec![SlotKey::Hand(Side::Main)],
+				&Skill {
+					name: "some skill".to_owned(),
+					..default()
+				}
+			)]],
+			combos.combos_ordered().collect::<Vec<_>>()
+		)
+	}
+
+	#[test]
+	fn get_multiple_combos_with_single_skill() {
+		let combos = ComboNode::new([
+			(
+				SlotKey::Hand(Side::Main),
+				(
+					Skill {
+						name: "some right skill".to_owned(),
+						..default()
+					},
+					ComboNode::default(),
+				),
+			),
+			(
+				SlotKey::Hand(Side::Off),
+				(
+					Skill {
+						name: "some left skill".to_owned(),
+						..default()
+					},
+					ComboNode::default(),
+				),
+			),
+		]);
+
+		assert_eq!(
+			vec![
+				vec![(
+					vec![SlotKey::Hand(Side::Main)],
+					&Skill {
+						name: "some right skill".to_owned(),
+						..default()
+					}
+				)],
+				vec![(
+					vec![SlotKey::Hand(Side::Off)],
+					&Skill {
+						name: "some left skill".to_owned(),
+						..default()
+					}
+				)]
+			],
+			combos.combos_ordered().collect::<Vec<_>>()
+		)
+	}
+
+	#[test]
+	fn get_single_combo_with_multiple_skills() {
+		let combos = ComboNode::new([(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "some skill".to_owned(),
+					..default()
+				},
+				ComboNode::new([(
+					SlotKey::Hand(Side::Off),
+					(
+						Skill {
+							name: "some child skill".to_owned(),
+							..default()
+						},
+						ComboNode::default(),
+					),
+				)]),
+			),
+		)]);
+
+		assert_eq!(
+			vec![vec![
+				(
+					vec![SlotKey::Hand(Side::Main)],
+					&Skill {
+						name: "some skill".to_owned(),
+						..default()
+					}
+				),
+				(
+					vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
+					&Skill {
+						name: "some child skill".to_owned(),
+						..default()
+					}
+				)
+			]],
+			combos.combos_ordered().collect::<Vec<_>>()
+		)
+	}
+
+	#[test]
+	fn get_multiple_combos_with_multiple_child_skills() {
+		let combos = ComboNode::new([(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "some skill".to_owned(),
+					..default()
+				},
+				ComboNode::new([
+					(
+						SlotKey::Hand(Side::Main),
+						(
+							Skill {
+								name: "some right child skill".to_owned(),
+								..default()
+							},
+							ComboNode::default(),
+						),
+					),
+					(
+						SlotKey::Hand(Side::Off),
+						(
+							Skill {
+								name: "some left child skill".to_owned(),
+								..default()
+							},
+							ComboNode::default(),
+						),
+					),
+				]),
+			),
+		)]);
+
+		assert_eq!(
+			vec![
+				vec![
+					(
+						vec![SlotKey::Hand(Side::Main)],
+						&Skill {
+							name: "some skill".to_owned(),
+							..default()
+						}
+					),
+					(
+						vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
+						&Skill {
+							name: "some right child skill".to_owned(),
+							..default()
+						}
+					)
+				],
+				vec![
+					(
+						vec![SlotKey::Hand(Side::Main)],
+						&Skill {
+							name: "some skill".to_owned(),
+							..default()
+						}
+					),
+					(
+						vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
+						&Skill {
+							name: "some left child skill".to_owned(),
+							..default()
+						}
+					)
+				]
+			],
+			combos.combos_ordered().collect::<Vec<_>>()
+		)
+	}
+
+	#[test]
+	fn get_multiple_combo_with_multiple_deep_child_skills() {
+		let combos = ComboNode::new([(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "some skill".to_owned(),
+					..default()
+				},
+				ComboNode::new([(
+					SlotKey::Hand(Side::Main),
+					(
+						Skill {
+							name: "some child skill".to_owned(),
+							..default()
+						},
+						ComboNode::new([
+							(
+								SlotKey::Hand(Side::Main),
+								(
+									Skill {
+										name: "some right child skill".to_owned(),
+										..default()
+									},
+									ComboNode::default(),
+								),
+							),
+							(
+								SlotKey::Hand(Side::Off),
+								(
+									Skill {
+										name: "some left child skill".to_owned(),
+										..default()
+									},
+									ComboNode::default(),
+								),
+							),
+						]),
+					),
+				)]),
+			),
+		)]);
+
+		assert_eq!(
+			vec![
+				vec![
+					(
+						vec![SlotKey::Hand(Side::Main)],
+						&Skill {
+							name: "some skill".to_owned(),
+							..default()
+						}
+					),
+					(
+						vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
+						&Skill {
+							name: "some child skill".to_owned(),
+							..default()
+						}
+					),
+					(
+						vec![
+							SlotKey::Hand(Side::Main),
+							SlotKey::Hand(Side::Main),
+							SlotKey::Hand(Side::Main),
+						],
+						&Skill {
+							name: "some right child skill".to_owned(),
+							..default()
+						}
+					)
+				],
+				vec![
+					(
+						vec![SlotKey::Hand(Side::Main)],
+						&Skill {
+							name: "some skill".to_owned(),
+							..default()
+						}
+					),
+					(
+						vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
+						&Skill {
+							name: "some child skill".to_owned(),
+							..default()
+						}
+					),
+					(
+						vec![
+							SlotKey::Hand(Side::Main),
+							SlotKey::Hand(Side::Main),
+							SlotKey::Hand(Side::Off),
+						],
+						&Skill {
+							name: "some left child skill".to_owned(),
+							..default()
+						}
+					)
+				]
+			],
+			combos.combos_ordered().collect::<Vec<_>>()
+		)
+	}
+
+	#[test]
+	fn get_multiple_combo_with_multiple_deep_child_skills_with_insertion_order_maintained() {
+		let combos = ComboNode::new([(
+			SlotKey::Hand(Side::Main),
+			(
+				Skill {
+					name: "some skill".to_owned(),
+					..default()
+				},
+				ComboNode::new([(
+					SlotKey::Hand(Side::Main),
+					(
+						Skill {
+							name: "some child skill".to_owned(),
+							..default()
+						},
+						ComboNode::new([
+							(
+								SlotKey::Hand(Side::Off),
+								(
+									Skill {
+										name: "some left child skill".to_owned(),
+										..default()
+									},
+									ComboNode::default(),
+								),
+							),
+							(
+								SlotKey::Hand(Side::Main),
+								(
+									Skill {
+										name: "some right child skill".to_owned(),
+										..default()
+									},
+									ComboNode::default(),
+								),
+							),
+						]),
+					),
+				)]),
+			),
+		)]);
+
+		assert_eq!(
+			vec![
+				vec![
+					(
+						vec![SlotKey::Hand(Side::Main)],
+						&Skill {
+							name: "some skill".to_owned(),
+							..default()
+						}
+					),
+					(
+						vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
+						&Skill {
+							name: "some child skill".to_owned(),
+							..default()
+						}
+					),
+					(
+						vec![
+							SlotKey::Hand(Side::Main),
+							SlotKey::Hand(Side::Main),
+							SlotKey::Hand(Side::Off),
+						],
+						&Skill {
+							name: "some left child skill".to_owned(),
+							..default()
+						}
+					)
+				],
+				vec![
+					(
+						vec![SlotKey::Hand(Side::Main)],
+						&Skill {
+							name: "some skill".to_owned(),
+							..default()
+						}
+					),
+					(
+						vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
+						&Skill {
+							name: "some child skill".to_owned(),
+							..default()
+						}
+					),
+					(
+						vec![
+							SlotKey::Hand(Side::Main),
+							SlotKey::Hand(Side::Main),
+							SlotKey::Hand(Side::Main),
+						],
+						&Skill {
+							name: "some right child skill".to_owned(),
+							..default()
+						}
+					)
+				]
+			],
+			combos.combos_ordered().collect::<Vec<_>>()
 		)
 	}
 }
