@@ -73,12 +73,8 @@ fn move_and_merge_branches_with_same_key<TSkill>(
 	src: &mut OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
 	dst: &mut OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
 ) {
-	let keys = dst.keys().cloned().collect::<Vec<_>>();
-	for key in keys {
-		let Some((_, ComboNode(dst))) = dst.get_mut(&key) else {
-			continue;
-		};
-		move_and_merge_branch(&key, src, dst)
+	for (key, (_, dst)) in dst.iter_mut() {
+		move_and_merge_branch(key, src, &mut dst.0)
 	}
 }
 
