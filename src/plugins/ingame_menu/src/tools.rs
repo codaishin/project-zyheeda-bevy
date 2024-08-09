@@ -82,15 +82,23 @@ pub(crate) struct Dimensions {
 }
 
 impl Dimensions {
-	pub(crate) fn nested_height(&self) -> Pixel {
+	pub(crate) fn height_inner(&self) -> Pixel {
 		Pixel(self.height.0 - self.border.0)
 	}
 
-	pub(crate) fn nested_width(&self) -> Pixel {
+	pub(crate) fn height_outer(&self) -> Pixel {
+		Pixel(self.height.0 + self.border.0)
+	}
+
+	pub(crate) fn width_inner(&self) -> Pixel {
 		Pixel(self.width.0 - self.border.0)
 	}
 
-	pub(crate) fn nested_minimum(&self) -> Pixel {
+	pub(crate) fn width_outer(&self) -> Pixel {
+		Pixel(self.width.0 + self.border.0)
+	}
+
+	pub(crate) fn minimum_inner(&self) -> Pixel {
 		Pixel(-self.border.0)
 	}
 }
