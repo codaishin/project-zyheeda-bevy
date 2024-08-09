@@ -1,6 +1,6 @@
 use super::{
 	key_code_text_insert_command::KeyCodeTextInsertCommandBundle,
-	skill_descriptor::{DropdownTrigger, SkillDescriptor, Vertical},
+	skill_button::{DropdownTrigger, SkillButton, Vertical},
 	tooltip::Tooltip,
 	AppendSkillCommand,
 	DeleteSkill,
@@ -12,10 +12,10 @@ use crate::{
 	tools::{Dimensions, Pixel},
 	traits::{
 		colors::DEFAULT_PANEL_COLORS,
+		combo_tree_layout::{ComboTreeElement, ComboTreeLayout},
 		get_node::GetNode,
 		instantiate_content_on::InstantiateContentOn,
-		CombosDescriptor,
-		UpdateCombos,
+		UpdateCombosView,
 	},
 };
 use bevy::{
@@ -38,17 +38,17 @@ use bevy::{
 	},
 	utils::default,
 };
-use skills::items::slot_key::SlotKey;
+use skills::{items::slot_key::SlotKey, skills::Skill};
 
 #[derive(Component, Default)]
-pub(crate) struct ComboOverview(CombosDescriptor);
+pub(crate) struct ComboOverview(ComboTreeLayout);
 
 pub(crate) trait SkillButtonBundle {
-	fn with<T: Clone + Sync + Send + 'static>(self, descriptor: SkillDescriptor<T>) -> impl Bundle;
+	fn with<T: Clone + Sync + Send + 'static>(self, descriptor: SkillButton<T>) -> impl Bundle;
 }
 
 impl SkillButtonBundle for ButtonBundle {
-	fn with<T: Clone + Sync + Send + 'static>(self, descriptor: SkillDescriptor<T>) -> impl Bundle {
+	fn with<T: Clone + Sync + Send + 'static>(self, descriptor: SkillButton<T>) -> impl Bundle {
 		(self, Tooltip::new(descriptor.skill.clone()), descriptor)
 	}
 }
@@ -81,19 +81,26 @@ impl ComboOverview {
 		}
 	}
 
-	pub(crate) fn skill_button_bundle(icon: Handle<Image>) -> impl SkillButtonBundle + Bundle {
-		ButtonBundle {
-			style: Style {
-				width: Val::from(Self::SKILL_BUTTON_DIMENSIONS.width),
-				height: Val::from(Self::SKILL_BUTTON_DIMENSIONS.height),
-				border: UiRect::from(Self::SKILL_BUTTON_DIMENSIONS.border),
-				justify_content: JustifyContent::Center,
-				align_items: AlignItems::Center,
+	pub(crate) fn skill_button_bundle(
+		icon: Option<Handle<Image>>,
+	) -> impl SkillButtonBundle + Bundle {
+		let style = Style {
+			width: Val::from(Self::SKILL_BUTTON_DIMENSIONS.width),
+			height: Val::from(Self::SKILL_BUTTON_DIMENSIONS.height),
+			border: UiRect::from(Self::SKILL_BUTTON_DIMENSIONS.border),
+			justify_content: JustifyContent::Center,
+			align_items: AlignItems::Center,
+			..default()
+		};
+
+		match icon {
+			None => ButtonBundle { style, ..default() },
+			Some(icon) => ButtonBundle {
+				style,
+				background_color: DEFAULT_PANEL_COLORS.filled.into(),
+				image: UiImage::new(icon),
 				..default()
 			},
-			background_color: DEFAULT_PANEL_COLORS.filled.into(),
-			image: UiImage::new(icon),
-			..default()
 		}
 	}
 
@@ -186,8 +193,8 @@ impl ComboOverview {
 	}
 }
 
-impl UpdateCombos for ComboOverview {
-	fn update_combos(&mut self, combos: CombosDescriptor) {
+impl UpdateCombosView for ComboOverview {
+	fn update_combos_view(&mut self, combos: ComboTreeLayout) {
 		self.0 = combos
 	}
 }
@@ -254,7 +261,7 @@ fn add_combo_list(parent: &mut ChildBuilder, combo_overview: &ComboOverview) {
 		});
 }
 
-fn add_combo(parent: &mut ChildBuilder, combo: &[SkillDescriptor<DropdownTrigger>]) {
+fn add_combo(parent: &mut ChildBuilder, combo: &[ComboTreeElement]) {
 	parent
 		.spawn(NodeBundle {
 			style: Style {
@@ -265,51 +272,62 @@ fn add_combo(parent: &mut ChildBuilder, combo: &[SkillDescriptor<DropdownTrigger
 			..default()
 		})
 		.with_children(|parent| {
-			let last = combo.len() - 1;
-
-			for skill in &combo[..last] {
-				add_skill(parent, skill, &[with_key_button]);
+			for element in combo {
+				match element {
+					ComboTreeElement::Node { key_path, skill } => {
+						add_skill(parent, key_path, skill, &[with_key_button]);
+					}
+					ComboTreeElement::Leaf { key_path, skill } => {
+						add_skill(
+							parent,
+							key_path,
+							skill,
+							&[with_key_button, with_append_button, with_delete_button],
+						);
+					}
+					_ => {
+						add_empty(parent);
+					}
+				}
 			}
+		});
+}
 
-			let Some(last_skill) = combo.last() else {
-				return;
-			};
-
-			add_skill(
-				parent,
-				last_skill,
-				&[with_key_button, with_append_button, with_delete_button],
-			);
+fn add_empty(parent: &mut ChildBuilder) {
+	parent
+		.spawn(ComboOverview::skill_container_bundle())
+		.with_children(|parent| {
+			parent.spawn(ComboOverview::skill_button_bundle(None));
 		});
 }
 
 fn add_skill(
 	parent: &mut ChildBuilder,
-	descriptor: &SkillDescriptor<DropdownTrigger>,
-	additional_buttons: &[fn(&SkillDescriptor<DropdownTrigger>, &mut ChildBuilder)],
+	key_path: &[SlotKey],
+	skill: &Skill,
+	additional_buttons: &[fn(&[SlotKey], &Skill, &mut ChildBuilder)],
 ) {
-	let skill_icon = descriptor.skill.icon.clone().unwrap_or_default();
-
 	parent
 		.spawn(ComboOverview::skill_container_bundle())
 		.with_children(|parent| {
+			let icon = skill.icon.clone();
+			let button = SkillButton::<DropdownTrigger>::new(skill.clone(), key_path.to_vec());
+
 			parent
 				.spawn((
-					ComboOverview::skill_button_bundle(skill_icon).with(descriptor.clone()),
-					SkillSelectDropdownInsertCommand::<SlotKey, Vertical>::new(
-						descriptor.key_path.clone(),
-					),
+					ComboOverview::skill_button_bundle(icon).with(button),
+					SkillSelectDropdownInsertCommand::<SlotKey, Vertical>::new(key_path.to_vec()),
 				))
 				.with_children(|parent| {
 					for additional_button in additional_buttons {
-						additional_button(descriptor, parent);
+						additional_button(key_path, skill, parent);
 					}
 				});
 		});
 }
 
-fn with_key_button(descriptor: &SkillDescriptor<DropdownTrigger>, parent: &mut ChildBuilder) {
-	let Some(skill_key) = descriptor.key_path.last() else {
+fn with_key_button(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder) {
+	let Some(skill_key) = key_path.last() else {
 		return;
 	};
 
@@ -321,7 +339,7 @@ fn with_key_button(descriptor: &SkillDescriptor<DropdownTrigger>, parent: &mut C
 					ComboOverview::skill_key_button_bundle(),
 					KeySelectDropdownInsertCommand {
 						extra: ReKeyCommand { ignore: *skill_key },
-						key_path: descriptor.key_path.clone(),
+						key_path: key_path.to_vec(),
 					},
 				))
 				.with_children(|parent| {
@@ -330,7 +348,7 @@ fn with_key_button(descriptor: &SkillDescriptor<DropdownTrigger>, parent: &mut C
 		});
 }
 
-fn with_append_button(descriptor: &SkillDescriptor<DropdownTrigger>, parent: &mut ChildBuilder) {
+fn with_append_button(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder) {
 	parent
 		.spawn(ComboOverview::append_button_offset_container())
 		.with_children(|parent| {
@@ -339,7 +357,7 @@ fn with_append_button(descriptor: &SkillDescriptor<DropdownTrigger>, parent: &mu
 					ComboOverview::modify_button_bundle(),
 					KeySelectDropdownInsertCommand {
 						extra: AppendSkillCommand,
-						key_path: descriptor.key_path.clone(),
+						key_path: key_path.to_vec(),
 					},
 				))
 				.with_children(|parent| {
@@ -348,7 +366,7 @@ fn with_append_button(descriptor: &SkillDescriptor<DropdownTrigger>, parent: &mu
 		});
 }
 
-fn with_delete_button(descriptor: &SkillDescriptor<DropdownTrigger>, parent: &mut ChildBuilder) {
+fn with_delete_button(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder) {
 	parent
 		.spawn(ComboOverview::delete_button_offset_container())
 		.with_children(|parent| {
@@ -356,7 +374,7 @@ fn with_delete_button(descriptor: &SkillDescriptor<DropdownTrigger>, parent: &mu
 				.spawn((
 					ComboOverview::modify_button_bundle(),
 					DeleteSkill {
-						key_path: descriptor.key_path.clone(),
+						key_path: key_path.to_vec(),
 					},
 				))
 				.with_children(|parent| {
@@ -367,6 +385,8 @@ fn with_delete_button(descriptor: &SkillDescriptor<DropdownTrigger>, parent: &mu
 
 #[cfg(test)]
 mod tests {
+	use crate::traits::combo_tree_layout::ComboTreeElement;
+
 	use super::*;
 	use bevy::asset::AssetId;
 	use common::components::Side;
@@ -375,18 +395,18 @@ mod tests {
 
 	#[test]
 	fn update_combos() {
-		let combos = vec![vec![SkillDescriptor::<DropdownTrigger>::new(
-			Skill {
+		let combos = vec![vec![ComboTreeElement::Leaf {
+			skill: Skill {
 				name: "my skill".to_owned(),
 				icon: Some(Handle::Weak(AssetId::Uuid {
 					uuid: Uuid::new_v4(),
 				})),
 				..default()
 			},
-			vec![SlotKey::Hand(Side::Main)],
-		)]];
+			key_path: vec![SlotKey::Hand(Side::Main)],
+		}]];
 		let mut combo_overview = ComboOverview::default();
-		combo_overview.update_combos(combos.clone());
+		combo_overview.update_combos_view(combos.clone());
 
 		assert_eq!(combos, combo_overview.0)
 	}

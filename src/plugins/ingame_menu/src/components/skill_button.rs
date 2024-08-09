@@ -17,15 +17,15 @@ pub(crate) struct Horizontal;
 pub(crate) struct DropdownItem<TLayout>(PhantomData<TLayout>);
 
 #[derive(Component, Debug, Default, PartialEq, Clone)]
-pub(crate) struct SkillDescriptor<T> {
+pub(crate) struct SkillButton<T> {
 	phantom_data: PhantomData<T>,
 	pub(crate) skill: Skill,
 	pub(crate) key_path: Vec<SlotKey>,
 }
 
-impl SkillDescriptor<DropdownTrigger> {
-	pub(crate) fn new(skill: Skill, key_path: Vec<SlotKey>) -> SkillDescriptor<DropdownTrigger> {
-		SkillDescriptor {
+impl SkillButton<DropdownTrigger> {
+	pub(crate) fn new(skill: Skill, key_path: Vec<SlotKey>) -> SkillButton<DropdownTrigger> {
+		SkillButton {
 			phantom_data: PhantomData,
 			skill,
 			key_path,
@@ -33,7 +33,7 @@ impl SkillDescriptor<DropdownTrigger> {
 	}
 }
 
-impl<TLayout> SkillDescriptor<DropdownItem<TLayout>> {
+impl<TLayout> SkillButton<DropdownItem<TLayout>> {
 	pub(crate) fn new(skill: Skill, key_path: Vec<SlotKey>) -> Self {
 		Self {
 			phantom_data: PhantomData,
@@ -43,15 +43,15 @@ impl<TLayout> SkillDescriptor<DropdownItem<TLayout>> {
 	}
 }
 
-impl<T> GetNode for SkillDescriptor<T> {
+impl<T> GetNode for SkillButton<T> {
 	fn node(&self) -> NodeBundle {
 		NodeBundle::default()
 	}
 }
 
-impl<T: Clone + Sync + Send + 'static> InstantiateContentOn for SkillDescriptor<T> {
+impl<T: Clone + Sync + Send + 'static> InstantiateContentOn for SkillButton<T> {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
-		let icon = self.skill.icon.clone().unwrap_or_default();
+		let icon = self.skill.icon.clone();
 		parent.spawn(ComboOverview::skill_button_bundle(icon).with(self.clone()));
 	}
 }

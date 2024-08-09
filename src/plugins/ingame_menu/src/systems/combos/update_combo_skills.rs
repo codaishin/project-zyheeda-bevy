@@ -1,4 +1,4 @@
-use crate::components::skill_descriptor::{DropdownItem, SkillDescriptor};
+use crate::components::skill_button::{DropdownItem, SkillButton};
 use bevy::{
 	prelude::{Component, Query, With},
 	ui::Interaction,
@@ -7,7 +7,7 @@ use skills::{items::slot_key::SlotKey, skills::Skill, traits::UpdateConfig};
 
 pub(crate) fn update_combo_skills<TAgent, TCombos, TLayout>(
 	mut agents: Query<&mut TCombos, With<TAgent>>,
-	skill_selects: Query<(&SkillDescriptor<DropdownItem<TLayout>>, &Interaction)>,
+	skill_selects: Query<(&SkillButton<DropdownItem<TLayout>>, &Interaction)>,
 ) where
 	TLayout: Sync + Send + 'static,
 	TAgent: Component,
@@ -96,7 +96,7 @@ mod tests {
 			}),
 		));
 		app.world_mut().spawn((
-			SkillDescriptor::<DropdownItem<_Layout>>::new(
+			SkillButton::<DropdownItem<_Layout>>::new(
 				Skill {
 					name: "my skill".to_owned(),
 					..default()
@@ -114,14 +114,14 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((_Agent, _Combos::default()));
 		app.world_mut().spawn((
-			SkillDescriptor::<DropdownItem<_Layout>>::new(
+			SkillButton::<DropdownItem<_Layout>>::new(
 				Skill::default(),
 				vec![SlotKey::Hand(Side::Off)],
 			),
 			Interaction::Hovered,
 		));
 		app.world_mut().spawn((
-			SkillDescriptor::<DropdownItem<_Layout>>::new(
+			SkillButton::<DropdownItem<_Layout>>::new(
 				Skill::default(),
 				vec![SlotKey::Hand(Side::Off)],
 			),
@@ -136,7 +136,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn(_Combos::default());
 		app.world_mut().spawn((
-			SkillDescriptor::<DropdownItem<_Layout>>::new(
+			SkillButton::<DropdownItem<_Layout>>::new(
 				Skill::default(),
 				vec![SlotKey::Hand(Side::Off)],
 			),

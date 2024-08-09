@@ -2,7 +2,7 @@ use super::Dropdown;
 use crate::{
 	components::{
 		combo_overview::ComboOverview,
-		skill_descriptor::{DropdownItem, Horizontal, SkillDescriptor, Vertical},
+		skill_button::{DropdownItem, Horizontal, SkillButton, Vertical},
 	},
 	tools::Layout,
 	traits::{GetLayout, RootStyle},
@@ -12,7 +12,7 @@ use bevy::{
 	ui::{PositionType, Style, Val},
 };
 
-impl RootStyle for Dropdown<SkillDescriptor<DropdownItem<Vertical>>> {
+impl RootStyle for Dropdown<SkillButton<DropdownItem<Vertical>>> {
 	fn root_style(&self) -> Style {
 		Style {
 			position_type: PositionType::Absolute,
@@ -23,13 +23,13 @@ impl RootStyle for Dropdown<SkillDescriptor<DropdownItem<Vertical>>> {
 	}
 }
 
-impl GetLayout for Dropdown<SkillDescriptor<DropdownItem<Vertical>>> {
+impl GetLayout for Dropdown<SkillButton<DropdownItem<Vertical>>> {
 	fn layout(&self) -> Layout {
 		Layout::SINGLE_COLUMN
 	}
 }
 
-impl RootStyle for Dropdown<SkillDescriptor<DropdownItem<Horizontal>>> {
+impl RootStyle for Dropdown<SkillButton<DropdownItem<Horizontal>>> {
 	fn root_style(&self) -> Style {
 		Style {
 			position_type: PositionType::Absolute,
@@ -40,7 +40,7 @@ impl RootStyle for Dropdown<SkillDescriptor<DropdownItem<Horizontal>>> {
 	}
 }
 
-impl GetLayout for Dropdown<SkillDescriptor<DropdownItem<Horizontal>>> {
+impl GetLayout for Dropdown<SkillButton<DropdownItem<Horizontal>>> {
 	fn layout(&self) -> Layout {
 		Layout::SINGLE_ROW
 	}

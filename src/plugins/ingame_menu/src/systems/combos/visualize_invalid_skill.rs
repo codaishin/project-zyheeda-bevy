@@ -1,5 +1,5 @@
 use crate::{
-	components::skill_descriptor::{DropdownTrigger, SkillDescriptor},
+	components::skill_button::{DropdownTrigger, SkillButton},
 	traits::InsertContentOn,
 };
 use bevy::{
@@ -17,8 +17,8 @@ pub(crate) fn visualize_invalid_skill<
 >(
 	mut commands: Commands,
 	descriptors: Query<
-		(Entity, &SkillDescriptor<DropdownTrigger>),
-		Added<SkillDescriptor<DropdownTrigger>>,
+		(Entity, &SkillButton<DropdownTrigger>),
+		Added<SkillButton<DropdownTrigger>>,
 	>,
 	agents: Query<&TSlots, With<TAgent>>,
 ) {
@@ -35,7 +35,7 @@ pub(crate) fn visualize_invalid_skill<
 
 fn visualize_unusable<TSlots: Get<SlotKey, Item>>(
 	commands: &mut Commands,
-	(entity, descriptor): (Entity, &SkillDescriptor<DropdownTrigger>),
+	(entity, descriptor): (Entity, &SkillButton<DropdownTrigger>),
 	agent: &TSlots,
 	visualize: fn(&mut EntityCommands),
 ) -> Option<()> {
@@ -121,7 +121,7 @@ mod tests {
 		));
 		let skill = app
 			.world_mut()
-			.spawn(SkillDescriptor::<DropdownTrigger>::new(
+			.spawn(SkillButton::<DropdownTrigger>::new(
 				Skill {
 					is_usable_with: HashSet::from([ItemType::Bracer]),
 					..default()
@@ -152,7 +152,7 @@ mod tests {
 		));
 		let skill = app
 			.world_mut()
-			.spawn(SkillDescriptor::<DropdownTrigger>::new(
+			.spawn(SkillButton::<DropdownTrigger>::new(
 				Skill {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
@@ -180,7 +180,7 @@ mod tests {
 		)]),));
 		let skill = app
 			.world_mut()
-			.spawn(SkillDescriptor::<DropdownTrigger>::new(
+			.spawn(SkillButton::<DropdownTrigger>::new(
 				Skill {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
@@ -211,7 +211,7 @@ mod tests {
 		));
 		let skill = app
 			.world_mut()
-			.spawn(SkillDescriptor::<DropdownTrigger>::new(
+			.spawn(SkillButton::<DropdownTrigger>::new(
 				Skill {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()

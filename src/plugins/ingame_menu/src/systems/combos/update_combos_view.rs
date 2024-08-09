@@ -1,35 +1,36 @@
-use crate::traits::{CombosDescriptor, UpdateCombos};
-use bevy::prelude::{Component, In, Query};
+use crate::traits::{combo_tree_layout::GetComboTreeLayout, UpdateCombosView};
+use bevy::prelude::{Component, Query, With};
 
-pub(crate) fn update_combos_view<TComboOverview: Component + UpdateCombos>(
-	combos: In<CombosDescriptor>,
+pub(crate) fn update_combos_view<TAgent, TCombos, TComboOverview>(
+	agents: Query<&TCombos, With<TAgent>>,
 	mut combo_overviews: Query<&mut TComboOverview>,
-) {
-	let combos = combos.0;
+) where
+	TAgent: Component,
+	TCombos: Component + GetComboTreeLayout,
+	TComboOverview: Component + UpdateCombosView,
+{
+	let Ok(combos) = agents.get_single() else {
+		return;
+	};
 
 	let Ok(mut combo_overview) = combo_overviews.get_single_mut() else {
 		return;
 	};
 
-	combo_overview.update_combos(combos);
+	combo_overview.update_combos_view(combos.combo_tree_layout());
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::skill_descriptor::{DropdownTrigger, SkillDescriptor};
-	use bevy::{
-		app::{App, Update},
-		prelude::{default, IntoSystem, Resource},
-	};
-	use common::{
-		components::Side,
-		test_tools::utils::SingleThreadedApp,
-		traits::nested_mock::NestedMock,
-	};
+	use crate::traits::combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol};
+	use bevy::app::{App, Update};
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMock};
 	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
-	use skills::{items::slot_key::SlotKey, skills::Skill};
+
+	#[derive(Component)]
+	struct _Agent;
 
 	#[derive(Component, NestedMock, Debug)]
 	struct _ComboOverview {
@@ -37,70 +38,63 @@ mod tests {
 	}
 
 	#[automock]
-	impl UpdateCombos for _ComboOverview {
-		fn update_combos(&mut self, combos: CombosDescriptor) {
-			self.mock.update_combos(combos)
+	impl UpdateCombosView for _ComboOverview {
+		fn update_combos_view(&mut self, combos: ComboTreeLayout) {
+			self.mock.update_combos_view(combos)
 		}
 	}
 
-	#[derive(Resource)]
-	struct _Combos(CombosDescriptor);
+	#[derive(Component)]
+	struct _Combos(ComboTreeLayout);
 
-	fn setup(combos: CombosDescriptor) -> App {
+	impl GetComboTreeLayout for _Combos {
+		fn combo_tree_layout(&self) -> ComboTreeLayout {
+			self.0.clone()
+		}
+	}
+
+	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			(move || combos.clone()).pipe(update_combos_view::<_ComboOverview>),
+			update_combos_view::<_Agent, _Combos, _ComboOverview>,
 		);
 
 		app
 	}
 
-	fn combos() -> CombosDescriptor {
-		vec![
-			vec![
-				SkillDescriptor::<DropdownTrigger>::new(
-					Skill {
-						name: "a1".to_owned(),
-						..default()
-					},
-					vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Main)],
-				),
-				SkillDescriptor::<DropdownTrigger>::new(
-					Skill {
-						name: "a2".to_owned(),
-						..default()
-					},
-					vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
-				),
-			],
-			vec![
-				SkillDescriptor::<DropdownTrigger>::new(
-					Skill {
-						name: "b1".to_owned(),
-						..default()
-					},
-					vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
-				),
-				SkillDescriptor::<DropdownTrigger>::new(
-					Skill {
-						name: "b2".to_owned(),
-						..default()
-					},
-					vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Off)],
-				),
-			],
-		]
+	#[test]
+	fn update_combos() {
+		let mut app = setup();
+		app.world_mut().spawn((
+			_Agent,
+			_Combos(vec![vec![
+				ComboTreeElement::Symbol(Symbol::Root),
+				ComboTreeElement::Symbol(Symbol::Line),
+			]]),
+		));
+		app.world_mut().spawn(_ComboOverview::new_mock(|mock| {
+			mock.expect_update_combos_view()
+				.times(1)
+				.with(eq(vec![vec![
+					ComboTreeElement::Symbol(Symbol::Root),
+					ComboTreeElement::Symbol(Symbol::Line),
+				]]))
+				.return_const(());
+		}));
+
+		app.update();
 	}
 
 	#[test]
-	fn insert_combos_in_combo_list() {
-		let mut app = setup(combos());
+	fn do_nothing_if_agent_missing() {
+		let mut app = setup();
+		app.world_mut().spawn(_Combos(vec![vec![
+			ComboTreeElement::Symbol(Symbol::Root),
+			ComboTreeElement::Symbol(Symbol::Line),
+		]]));
 		app.world_mut().spawn(_ComboOverview::new_mock(|mock| {
-			mock.expect_update_combos()
-				.times(1)
-				.with(eq(combos()))
-				.return_const(());
+			mock.expect_update_combos_view().never().return_const(());
 		}));
 
 		app.update();
