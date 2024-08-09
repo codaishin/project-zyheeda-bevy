@@ -23,7 +23,7 @@ use components::{
 	inventory_screen::InventoryScreen,
 	key_select::{AppendSkill, KeySelect, ReKeySkill},
 	quickbar_panel::QuickbarPanel,
-	skill_descriptor::{DropdownItem, Horizontal, SkillDescriptor, Vertical},
+	skill_button::{DropdownItem, Horizontal, SkillButton, Vertical},
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
 	ui_overlay::UIOverlay,
 	AppendSkillCommand,
@@ -45,7 +45,6 @@ use std::time::Duration;
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
 	combos::{
-		get_combos::get_combos,
 		update_combo_keys::update_combo_keys,
 		update_combo_skills::update_combo_skills,
 		update_combos_view::update_combos_view,
@@ -225,15 +224,14 @@ fn ui_overlay_systems(app: &mut App) {
 
 fn combo_overview_systems(app: &mut App) {
 	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
-		.add_dropdown::<SkillDescriptor<DropdownItem<Vertical>>>()
-		.add_dropdown::<SkillDescriptor<DropdownItem<Horizontal>>>()
+		.add_dropdown::<SkillButton<DropdownItem<Vertical>>>()
+		.add_dropdown::<SkillButton<DropdownItem<Horizontal>>>()
 		.add_dropdown::<KeySelect<ReKeySkill>>()
 		.add_dropdown::<KeySelect<AppendSkill>>()
 		.add_tooltip::<Skill>()
 		.add_systems(
 			Update,
-			get_combos::<Combos>
-				.pipe(update_combos_view::<ComboOverview>)
+			update_combos_view::<Player, Combos, ComboOverview>
 				.run_if(either(added::<ComboOverview>).or(changed::<Player, Combos>))
 				.run_if(in_state(MenuState::ComboOverview)),
 		)

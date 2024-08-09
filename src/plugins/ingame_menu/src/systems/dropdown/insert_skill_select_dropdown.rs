@@ -1,6 +1,6 @@
 use crate::components::{
 	dropdown::Dropdown,
-	skill_descriptor::{DropdownItem, SkillDescriptor},
+	skill_button::{DropdownItem, SkillButton},
 	SkillSelectDropdownInsertCommand,
 };
 use bevy::{
@@ -44,7 +44,7 @@ fn compatible_skills<
 	command: &SkillSelectDropdownInsertCommand<SlotKey, TLayout>,
 	slots: &TEquipment,
 	skills: &Res<Assets<Skill>>,
-) -> Option<Vec<SkillDescriptor<DropdownItem<TLayout>>>> {
+) -> Option<Vec<SkillButton<DropdownItem<TLayout>>>> {
 	let key = command.key_path.last()?;
 	let item = slots.get(key)?;
 	let skills = skills
@@ -57,7 +57,7 @@ fn compatible_skills<
 				.is_some()
 		})
 		.map(|(_, skill)| {
-			SkillDescriptor::<DropdownItem<TLayout>>::new(skill.clone(), command.key_path.clone())
+			SkillButton::<DropdownItem<TLayout>>::new(skill.clone(), command.key_path.clone())
 		})
 		.collect::<Vec<_>>();
 
@@ -160,7 +160,7 @@ mod tests {
 		assert_eq!(
 			Some(&Dropdown {
 				items: vec![
-					SkillDescriptor::<DropdownItem<_Layout>>::new(
+					SkillButton::<DropdownItem<_Layout>>::new(
 						Skill {
 							name: "skill a".to_owned(),
 							is_usable_with: HashSet::from([ItemType::Pistol]),
@@ -169,7 +169,7 @@ mod tests {
 						},
 						vec![SlotKey::Hand(Side::Main)],
 					),
-					SkillDescriptor::<DropdownItem<_Layout>>::new(
+					SkillButton::<DropdownItem<_Layout>>::new(
 						Skill {
 							name: "skill b".to_owned(),
 							is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
@@ -180,7 +180,7 @@ mod tests {
 					)
 				]
 			}),
-			dropdown.get::<Dropdown<SkillDescriptor<DropdownItem<_Layout>>>>()
+			dropdown.get::<Dropdown<SkillButton<DropdownItem<_Layout>>>>()
 		)
 	}
 
@@ -230,7 +230,7 @@ mod tests {
 
 		assert_eq!(
 			None,
-			dropdown.get::<Dropdown<SkillDescriptor<DropdownItem<_Layout>>>>()
+			dropdown.get::<Dropdown<SkillButton<DropdownItem<_Layout>>>>()
 		);
 	}
 

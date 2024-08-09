@@ -11,8 +11,6 @@ pub(crate) mod skill_state;
 pub(crate) mod state;
 pub(crate) mod swap_commands;
 
-pub mod get_combos;
-
 use crate::{
 	components::slots::Slots,
 	items::slot_key::SlotKey,
@@ -108,8 +106,8 @@ pub(crate) trait SetNextCombo<TCombo> {
 
 pub type Combo<'a> = Vec<(Vec<SlotKey>, &'a Skill)>;
 
-pub trait GetCombos {
-	fn combos(&self) -> Vec<Combo>;
+pub trait GetCombosOrdered {
+	fn combos_ordered(&self) -> impl Iterator<Item = Combo>;
 }
 
 pub trait GetEntry<'a, TKey> {

@@ -1,23 +1,19 @@
-pub mod colors;
-pub mod get_bundle;
-pub mod get_node;
-pub mod instantiate_content_on;
-pub mod set;
-
+pub(crate) mod colors;
+pub(crate) mod combo_tree_layout;
+pub(crate) mod get_bundle;
+pub(crate) mod get_node;
+pub(crate) mod instantiate_content_on;
+pub(crate) mod set;
 pub(crate) mod tooltip_ui_control;
 
-use crate::{
-	components::skill_descriptor::{DropdownTrigger, SkillDescriptor},
-	tools::Layout,
-};
+use crate::tools::Layout;
 use bevy::{ecs::system::EntityCommands, prelude::Bundle, ui::Style};
+use combo_tree_layout::ComboTreeLayout;
 use get_node::GetNode;
 use instantiate_content_on::InstantiateContentOn;
 
-pub(crate) type CombosDescriptor = Vec<Vec<SkillDescriptor<DropdownTrigger>>>;
-
-pub(crate) trait UpdateCombos {
-	fn update_combos(&mut self, combos: CombosDescriptor);
+pub(crate) trait UpdateCombosView {
+	fn update_combos_view(&mut self, combos: ComboTreeLayout);
 }
 
 pub(crate) trait UI: GetNode + InstantiateContentOn {}

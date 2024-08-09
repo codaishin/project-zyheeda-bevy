@@ -16,8 +16,8 @@ impl RootStyle for Dropdown<KeySelect<ReKeySkill>> {
 	fn root_style(&self) -> Style {
 		Style {
 			position_type: PositionType::Absolute,
-			top: Val::from(ComboOverview::KEY_BUTTON_DIMENSIONS.nested_height()),
-			left: Val::from(ComboOverview::KEY_BUTTON_DIMENSIONS.nested_minimum()),
+			top: Val::from(ComboOverview::KEY_BUTTON_DIMENSIONS.height_inner()),
+			left: Val::from(ComboOverview::KEY_BUTTON_DIMENSIONS.minimum_inner()),
 			..default()
 		}
 	}
@@ -27,8 +27,8 @@ impl RootStyle for Dropdown<KeySelect<AppendSkill>> {
 	fn root_style(&self) -> Style {
 		Style {
 			position_type: PositionType::Absolute,
-			top: Val::from(ComboOverview::MODIFY_BUTTON_DIMENSIONS.nested_minimum()),
-			left: Val::from(ComboOverview::MODIFY_BUTTON_DIMENSIONS.nested_width()),
+			top: Val::from(ComboOverview::MODIFY_BUTTON_DIMENSIONS.minimum_inner()),
+			left: Val::from(ComboOverview::MODIFY_BUTTON_DIMENSIONS.width_inner()),
 			..default()
 		}
 	}

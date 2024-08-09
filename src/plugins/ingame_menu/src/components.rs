@@ -5,12 +5,12 @@ pub(crate) mod inventory_screen;
 pub(crate) mod key_code_text_insert_command;
 pub(crate) mod key_select;
 pub(crate) mod quickbar_panel;
-pub(crate) mod skill_descriptor;
+pub(crate) mod skill_button;
 pub(crate) mod tooltip;
 pub(crate) mod ui_overlay;
 
 use bevy::{color::Color, ecs::component::Component};
-use skill_descriptor::Horizontal;
+use skill_button::Horizontal;
 use skills::items::slot_key::SlotKey;
 use std::marker::PhantomData;
 

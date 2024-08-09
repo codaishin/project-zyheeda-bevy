@@ -4,7 +4,7 @@ use crate::{
 	skills::Skill,
 	traits::{
 		Combo,
-		GetCombos,
+		GetCombosOrdered,
 		GetEntry,
 		GetEntryMut,
 		Insert,
@@ -64,9 +64,9 @@ impl<TComboNode: PeekNext<(Skill, TComboNode)>> PeekNext<(Skill, TComboNode)>
 	}
 }
 
-impl<TNode: GetCombos> GetCombos for Combos<TNode> {
-	fn combos(&self) -> Vec<Combo> {
-		self.value.combos()
+impl<TNode: GetCombosOrdered> GetCombosOrdered for Combos<TNode> {
+	fn combos_ordered(&self) -> impl Iterator<Item = Combo> {
+		self.value.combos_ordered()
 	}
 }
 
@@ -270,9 +270,9 @@ mod tests {
 
 	struct _ComboNode<'a>(Vec<Combo<'a>>);
 
-	impl<'a> GetCombos for _ComboNode<'a> {
-		fn combos(&self) -> Vec<Combo> {
-			self.0.clone()
+	impl<'a> GetCombosOrdered for _ComboNode<'a> {
+		fn combos_ordered(&self) -> impl Iterator<Item = Combo> {
+			self.0.iter().cloned()
 		}
 	}
 
@@ -288,7 +288,7 @@ mod tests {
 		)]];
 		let combos = Combos::new(_ComboNode(combos_vec.clone()));
 
-		assert_eq!(combos_vec, combos.combos())
+		assert_eq!(combos_vec, combos.combos_ordered().collect::<Vec<_>>())
 	}
 
 	#[derive(Default)]
