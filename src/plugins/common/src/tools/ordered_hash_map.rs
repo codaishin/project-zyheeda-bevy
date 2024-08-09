@@ -62,6 +62,13 @@ where
 			.filter_map(|key| Some((key, self.map.get(key)?)))
 	}
 
+	pub fn iter_mut(&mut self) -> impl Iterator<Item = (&TKey, &mut TValue)> {
+		IterMut {
+			map: &mut self.map,
+			order: self.order.iter(),
+		}
+	}
+
 	pub fn keys(&self) -> impl Iterator<Item = &TKey> {
 		self.order.iter()
 	}
@@ -110,6 +117,36 @@ where
 		}
 
 		map
+	}
+}
+
+pub struct IterMut<'a, TKey, TValue, TKeys>
+where
+	TKey: 'a + Eq + Hash,
+	TKeys: Iterator<Item = &'a TKey>,
+{
+	map: &'a mut HashMap<TKey, TValue>,
+	order: TKeys,
+}
+
+impl<'a, TKey, TValue, TKeys> Iterator for IterMut<'a, TKey, TValue, TKeys>
+where
+	TKey: Eq + Hash,
+	TKeys: Iterator<Item = &'a TKey>,
+{
+	type Item = (&'a TKey, &'a mut TValue);
+
+	fn next(&mut self) -> Option<Self::Item> {
+		let key = self.order.next()?;
+		let value = self.map.get_mut(key)?;
+
+		// SAFETY: I believe this would work without `unsafe`,
+		// if the method had a generic lifetime like
+		// `fn next<'a>(&'a mut self) -> Option<Self::Item<'a>>`.
+		// However, as it stands the borrow checker doesn't seem
+		// to be able to reason about that. But `self` outlives both
+		// the `order` and the `map` field, so `unsafe` should be safe ;) here
+		Some((key, unsafe { &mut *(value as *mut TValue) }))
 	}
 }
 
@@ -441,5 +478,30 @@ mod tests {
 			expected,
 			OrderedHashMap::from_iter([("first", 0), ("second", 1)].into_iter())
 		)
+	}
+
+	#[test]
+	fn iter_mut() {
+		repeat!(100, {
+			let mut map =
+				OrderedHashMap::from([("first", "0".to_owned()), ("second", "1".to_owned())]);
+			let mut order = vec![];
+
+			for (key, value) in map.iter_mut() {
+				*value = format!("{}: {}", key, *value);
+				order.push(*key);
+			}
+
+			assert_eq!(
+				(
+					vec!["first", "second"],
+					OrderedHashMap::from_iter([
+						("first", "first: 0".to_owned()),
+						("second", "second: 1".to_owned())
+					])
+				),
+				(order, map),
+			)
+		})
 	}
 }
