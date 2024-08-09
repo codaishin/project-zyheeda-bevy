@@ -243,26 +243,50 @@ fn get_combos() -> ComboNode<Path> {
 			SlotKey::Hand(Side::Off),
 			(
 				Path::from("skills/force_shield.skill"),
-				ComboNode::new([(
-					SlotKey::Hand(Side::Off),
+				ComboNode::new([
 					(
-						Path::from("skills/gravity_well.skill"),
-						ComboNode::default(),
+						SlotKey::Hand(Side::Off),
+						(
+							Path::from("skills/gravity_well.skill"),
+							ComboNode::new([
+								(
+									SlotKey::Hand(Side::Off),
+									(
+										Path::from("skills/gravity_well.skill"),
+										ComboNode::default(),
+									),
+								),
+								(
+									SlotKey::Hand(Side::Main),
+									(
+										Path::from("skills/gravity_well.skill"),
+										ComboNode::default(),
+									),
+								),
+							]),
+						),
 					),
-				)]),
+					(
+						SlotKey::Hand(Side::Main),
+						(
+							Path::from("skills/gravity_well.skill"),
+							ComboNode::new([(
+								SlotKey::Hand(Side::Main),
+								(
+									Path::from("skills/gravity_well.skill"),
+									ComboNode::default(),
+								),
+							)]),
+						),
+					),
+				]),
 			),
 		),
 		(
 			SlotKey::Hand(Side::Main),
 			(
-				Path::from("skills/force_shield.skill"),
-				ComboNode::new([(
-					SlotKey::Hand(Side::Main),
-					(
-						Path::from("skills/gravity_well.skill"),
-						ComboNode::default(),
-					),
-				)]),
+				Path::from("skills/gravity_well.skill"),
+				ComboNode::default(),
 			),
 		),
 	])
