@@ -52,6 +52,6 @@ impl<T> GetNode for SkillButton<T> {
 impl<T: Clone + Sync + Send + 'static> InstantiateContentOn for SkillButton<T> {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		let icon = self.skill.icon.clone();
-		parent.spawn(ComboOverview::skill_button_bundle(icon).with(self.clone()));
+		parent.spawn(ComboOverview::skill_button_bundle(icon).with_button(self.clone()));
 	}
 }
