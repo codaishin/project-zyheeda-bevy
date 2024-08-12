@@ -5,9 +5,11 @@ use crate::{
 		colors::HasPanelColors,
 		get_node::GetNode,
 		instantiate_content_on::InstantiateContentOn,
+		LoadUi,
 	},
 };
 use bevy::{
+	asset::AssetServer,
 	color::Color,
 	hierarchy::{BuildChildren, ChildBuilder},
 	prelude::Component,
@@ -29,8 +31,14 @@ use common::traits::{
 };
 use skills::items::{inventory_key::InventoryKey, slot_key::SlotKey};
 
-#[derive(Component, Default)]
+#[derive(Component)]
 pub struct InventoryScreen;
+
+impl LoadUi<AssetServer> for InventoryScreen {
+	fn load_ui(_: &mut AssetServer) -> Self {
+		InventoryScreen
+	}
+}
 
 impl GetNode for InventoryScreen {
 	fn node(&self) -> NodeBundle {

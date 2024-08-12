@@ -1,5 +1,5 @@
 use crate::{components::KeySelectDropdownInsertCommand, traits::GetBundle};
-use bevy::prelude::{Commands, Component, Entity, Query, With};
+use bevy::prelude::{Commands, Component, DespawnRecursiveExt, Entity, Query, With};
 use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
 
 type InsertCommand<TExtra> = KeySelectDropdownInsertCommand<TExtra>;
@@ -19,15 +19,31 @@ pub(crate) fn insert_key_select_dropdown<TAgent, TCombos, TExtra>(
 	};
 
 	for (entity, insert_command) in &insert_commands {
-		commands.try_insert_on(entity, (insert_command, combos).bundle());
+		let Some(bundle) = (insert_command, combos).bundle() else {
+			despawn(&mut commands, entity);
+			continue;
+		};
+
+		commands.try_insert_on(entity, bundle);
 		commands.try_remove_from::<InsertCommand<TExtra>>(entity);
 	}
+}
+
+fn despawn(commands: &mut Commands, entity: Entity) {
+	let Some(entity) = commands.get_entity(entity) else {
+		return;
+	};
+
+	entity.despawn_recursive();
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::app::{App, Update};
+	use bevy::{
+		app::{App, Update},
+		prelude::BuildWorldChildren,
+	};
 	use common::test_tools::utils::SingleThreadedApp;
 
 	#[derive(Component)]
@@ -37,16 +53,17 @@ mod tests {
 	struct _Combos;
 
 	#[derive(Debug, PartialEq)]
-	struct _Extra;
+	struct _Extra(Option<_Bundle>);
 
-	#[derive(Component, Debug, PartialEq)]
+	#[derive(Component, Debug, PartialEq, Clone)]
 	struct _Bundle;
 
 	impl<'a> GetBundle for (&'a InsertCommand<_Extra>, &'a _Combos) {
 		type TBundle = _Bundle;
 
-		fn bundle(&self) -> Self::TBundle {
-			_Bundle
+		fn bundle(&self) -> Option<Self::TBundle> {
+			let (cmd, ..) = self;
+			cmd.extra.0.clone()
 		}
 	}
 
@@ -66,7 +83,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(InsertCommand {
-				extra: _Extra,
+				extra: _Extra(Some(_Bundle)),
 				key_path: vec![],
 			})
 			.id();
@@ -85,7 +102,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(InsertCommand {
-				extra: _Extra,
+				extra: _Extra(Some(_Bundle)),
 				key_path: vec![],
 			})
 			.id();
@@ -104,7 +121,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(InsertCommand {
-				extra: _Extra,
+				extra: _Extra(Some(_Bundle)),
 				key_path: vec![],
 			})
 			.id();
@@ -115,5 +132,44 @@ mod tests {
 		let entity = app.world().entity(entity);
 
 		assert_eq!(None, entity.get::<InsertCommand<_Extra>>())
+	}
+
+	#[test]
+	fn despawn_entity_if_bundle_is_none() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn(InsertCommand {
+				extra: _Extra(None),
+				key_path: vec![],
+			})
+			.id();
+		app.world_mut().spawn((_Agent, _Combos));
+
+		app.update();
+
+		let entity = app.world().get_entity(entity).map(|e| e.id());
+
+		assert_eq!(None, entity);
+	}
+
+	#[test]
+	fn despawn_entity_recursively_if_bundle_is_none() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn(InsertCommand {
+				extra: _Extra(None),
+				key_path: vec![],
+			})
+			.id();
+		let child = app.world_mut().spawn_empty().set_parent(entity).id();
+		app.world_mut().spawn((_Agent, _Combos));
+
+		app.update();
+
+		let child = app.world().get_entity(child).map(|e| e.id());
+
+		assert_eq!(None, child);
 	}
 }

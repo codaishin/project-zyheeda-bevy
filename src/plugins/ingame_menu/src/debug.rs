@@ -1,7 +1,7 @@
 use crate::{
 	components::{dropdown::Dropdown, tooltip::Tooltip},
 	tools::Layout,
-	traits::{GetLayout, RootStyle},
+	traits::{GetLayout, LoadUi, RootStyle},
 	AddDropdown,
 	AddTooltip,
 };
@@ -13,6 +13,7 @@ use crate::{
 };
 use bevy::{
 	app::{App, Update},
+	asset::AssetServer,
 	color::Color,
 	ecs::system::Res,
 	hierarchy::{BuildChildren, BuildWorldChildren, ChildBuilder, DespawnRecursiveExt},
@@ -37,6 +38,12 @@ use std::{marker::PhantomData, time::Duration};
 
 #[derive(Component, Default)]
 struct StateTime(Duration, Option<MenuState>);
+
+impl LoadUi<AssetServer> for StateTime {
+	fn load_ui(_: &mut AssetServer) -> Self {
+		StateTime::default()
+	}
+}
 
 impl GetNode for StateTime {
 	fn node(&self) -> NodeBundle {

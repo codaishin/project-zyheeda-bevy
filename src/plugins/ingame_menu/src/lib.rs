@@ -27,7 +27,6 @@ use components::{
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
 	ui_overlay::UIOverlay,
 	AppendSkillCommand,
-	ReKeyCommand,
 };
 use events::DropdownEvent;
 use skills::{
@@ -88,6 +87,7 @@ use traits::{
 	get_node::GetNode,
 	instantiate_content_on::InstantiateContentOn,
 	GetLayout,
+	LoadUi,
 	RootStyle,
 	UI,
 };
@@ -98,15 +98,19 @@ type SlotKeyMap = KeyMap<SlotKey, KeyCode>;
 trait AddUI {
 	fn add_ui<TComponent>(&mut self, on_state: MenuState) -> &mut Self
 	where
-		TComponent: Component + Default + GetNode + InstantiateContentOn;
+		TComponent: Component + LoadUi<AssetServer> + GetNode + InstantiateContentOn;
 }
 
 impl AddUI for App {
 	fn add_ui<TComponent>(&mut self, on_state: MenuState) -> &mut Self
 	where
-		TComponent: Component + Default + GetNode + InstantiateContentOn,
+		TComponent: Component + LoadUi<AssetServer> + GetNode + InstantiateContentOn,
 	{
-		let spawn_component = (spawn::<TComponent>, update_children::<TComponent>).chain();
+		let spawn_component = (
+			spawn::<TComponent, AssetServer>,
+			update_children::<TComponent>,
+		)
+			.chain();
 
 		self.add_systems(OnEnter(on_state), spawn_component)
 			.add_systems(OnExit(on_state), despawn::<TComponent>)
@@ -242,7 +246,6 @@ fn combo_overview_systems(app: &mut App) {
 				insert_skill_select_dropdown::<Slots<Handle<Skill>>, Vertical>,
 				insert_skill_select_dropdown::<Slots<Handle<Skill>>, Horizontal>,
 				insert_key_select_dropdown::<Player, Combos, AppendSkillCommand>,
-				insert_key_select_dropdown::<Player, Combos, ReKeyCommand>,
 				update_combos_view_delete_skill::<Player, Combos>,
 				update_combo_skills::<Player, Combos, Vertical>,
 				update_combo_skills::<Player, Combos, Horizontal>,

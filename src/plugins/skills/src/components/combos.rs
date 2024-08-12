@@ -5,11 +5,12 @@ use crate::{
 	traits::{
 		Combo,
 		GetCombosOrdered,
-		GetEntry,
-		GetEntryMut,
+		GetNode,
+		GetNodeMut,
 		Insert,
 		PeekNext,
 		ReKey,
+		RootKeys,
 		SetNextCombo,
 		UpdateConfig,
 	},
@@ -72,13 +73,13 @@ impl<TNode: GetCombosOrdered> GetCombosOrdered for Combos<TNode> {
 
 impl<TNode, TKey> UpdateConfig<TKey, Option<Skill>> for Combos<TNode>
 where
-	for<'a> TNode: GetEntryMut<'a, TKey, TEntry: Insert<Option<Skill>>>,
+	for<'a> TNode: GetNodeMut<'a, TKey, TNode: Insert<Option<Skill>>>,
 	TKey: Iterate<SlotKey>,
 {
 	fn update_config(&mut self, key_path: &TKey, skill: Option<Skill>) {
 		self.current = None;
 
-		let Some(mut entry) = self.value.entry_mut(key_path) else {
+		let Some(mut entry) = self.value.node_mut(key_path) else {
 			return;
 		};
 
@@ -88,13 +89,13 @@ where
 
 impl<TNode, TKey> UpdateConfig<TKey, SlotKey> for Combos<TNode>
 where
-	for<'a> TNode: GetEntryMut<'a, TKey, TEntry: ReKey<SlotKey>>,
+	for<'a> TNode: GetNodeMut<'a, TKey, TNode: ReKey<SlotKey>>,
 	TKey: Iterate<SlotKey>,
 {
 	fn update_config(&mut self, key_path: &TKey, key: SlotKey) {
 		self.current = None;
 
-		let Some(mut entry) = self.value.entry_mut(key_path) else {
+		let Some(mut entry) = self.value.node_mut(key_path) else {
 			return;
 		};
 
@@ -102,11 +103,19 @@ where
 	}
 }
 
-impl<'a, TNode: GetEntry<'a, TKey>, TKey: Iterate<SlotKey>> GetEntry<'a, TKey> for Combos<TNode> {
-	type TEntry = TNode::TEntry;
+impl<'a, TNode: GetNode<'a, TKey>, TKey: Iterate<SlotKey>> GetNode<'a, TKey> for Combos<TNode> {
+	type TNode = TNode::TNode;
 
-	fn entry(&'a self, key: &TKey) -> Option<Self::TEntry> {
-		self.value.entry(key)
+	fn node(&'a self, key: &TKey) -> Option<Self::TNode> {
+		self.value.node(key)
+	}
+}
+
+impl<TNode: RootKeys> RootKeys for Combos<TNode> {
+	type TItem = TNode::TItem;
+
+	fn root_keys(&self) -> impl Iterator<Item = Self::TItem> {
+		self.value.root_keys()
 	}
 }
 
@@ -297,19 +306,19 @@ mod tests {
 		entry: Option<_Entry>,
 	}
 
-	impl<'a> GetEntryMut<'a, Vec<SlotKey>> for _Node {
-		type TEntry = &'a mut _Entry;
+	impl<'a> GetNodeMut<'a, Vec<SlotKey>> for _Node {
+		type TNode = &'a mut _Entry;
 
-		fn entry_mut(&'a mut self, key: &Vec<SlotKey>) -> Option<Self::TEntry> {
+		fn node_mut(&'a mut self, key: &Vec<SlotKey>) -> Option<Self::TNode> {
 			self.call_args.get_mut().push(key.clone());
 			self.entry.as_mut()
 		}
 	}
 
-	impl<'a> GetEntry<'a, Vec<SlotKey>> for _Node {
-		type TEntry = &'a _Entry;
+	impl<'a> GetNode<'a, Vec<SlotKey>> for _Node {
+		type TNode = &'a _Entry;
 
-		fn entry(&'a self, key: &Vec<SlotKey>) -> Option<Self::TEntry> {
+		fn node(&'a self, key: &Vec<SlotKey>) -> Option<Self::TNode> {
 			self.call_args.borrow_mut().push(key.clone());
 			self.entry.as_ref()
 		}
@@ -501,7 +510,7 @@ mod tests {
 	}
 
 	#[test]
-	fn get_entry() {
+	fn get_node() {
 		let combo = Combos {
 			value: _Node {
 				entry: Some(_Entry::new_mock(|mock| {
@@ -512,7 +521,7 @@ mod tests {
 			current: None,
 		};
 
-		let entry = combo.entry(&vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]);
+		let entry = combo.node(&vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]);
 
 		assert_eq!(
 			(
@@ -521,5 +530,25 @@ mod tests {
 			),
 			(entry.is_some(), combo.value.call_args.into_inner())
 		)
+	}
+
+	#[test]
+	fn get_root_keys() {
+		#[derive(Debug, PartialEq)]
+		struct _Key;
+
+		struct _Node;
+
+		impl RootKeys for _Node {
+			type TItem = _Key;
+
+			fn root_keys(&self) -> impl Iterator<Item = Self::TItem> {
+				vec![_Key].into_iter()
+			}
+		}
+
+		let combos = Combos::new(_Node);
+
+		assert_eq!(vec![_Key], combos.root_keys().collect::<Vec<_>>());
 	}
 }

@@ -5,9 +5,11 @@ use crate::{
 		colors::HasPanelColors,
 		get_node::GetNode,
 		instantiate_content_on::InstantiateContentOn,
+		LoadUi,
 	},
 };
 use bevy::{
+	asset::AssetServer,
 	hierarchy::{BuildChildren, ChildBuilder},
 	prelude::Component,
 	text::TextStyle,
@@ -25,8 +27,14 @@ use bevy::{
 use common::components::Side;
 use skills::items::slot_key::SlotKey;
 
-#[derive(Component, Default)]
+#[derive(Component)]
 pub struct UIOverlay;
+
+impl LoadUi<AssetServer> for UIOverlay {
+	fn load_ui(_: &mut AssetServer) -> Self {
+		UIOverlay
+	}
+}
 
 impl GetNode for UIOverlay {
 	fn node(&self) -> NodeBundle {

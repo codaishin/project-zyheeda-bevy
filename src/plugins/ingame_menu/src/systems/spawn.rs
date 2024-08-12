@@ -1,8 +1,15 @@
-use crate::traits::get_node::GetNode;
-use bevy::ecs::{component::Component, system::Commands};
+use crate::traits::{get_node::GetNode, LoadUi};
+use bevy::{
+	ecs::{component::Component, system::Commands},
+	prelude::{ResMut, Resource},
+};
+use common::traits::load_asset::LoadAsset;
 
-pub fn spawn<TComponent: Default + GetNode + Component>(mut commands: Commands) {
-	let component = TComponent::default();
+pub fn spawn<TComponent: LoadUi<TServer> + GetNode + Component, TServer: Resource + LoadAsset>(
+	mut commands: Commands,
+	mut images: ResMut<TServer>,
+) {
+	let component = TComponent::load_ui(images.as_mut());
 	commands.spawn((component.node(), component));
 }
 
@@ -11,13 +18,29 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
+		asset::{Asset, Handle},
 		prelude::default,
 		ui::{node_bundles::NodeBundle, Style, Val},
 	};
-	use common::assert_bundle;
+	use common::{assert_bundle, traits::load_asset::Path};
 
-	#[derive(Component, Default)]
+	#[derive(Component, Resource, Default)]
+	struct _Server;
+
+	impl LoadAsset for _Server {
+		fn load_asset<TAsset: Asset>(&mut self, _: Path) -> Handle<TAsset> {
+			Handle::default()
+		}
+	}
+
+	#[derive(Component)]
 	struct _Component;
+
+	impl LoadUi<_Server> for _Component {
+		fn load_ui(_: &mut _Server) -> Self {
+			_Component
+		}
+	}
 
 	#[derive(Component)]
 	struct _Child;
@@ -38,7 +61,8 @@ mod tests {
 	fn spawn_bundle() {
 		let mut app = App::new();
 
-		app.add_systems(Update, spawn::<_Component>);
+		app.init_resource::<_Server>();
+		app.add_systems(Update, spawn::<_Component, _Server>);
 		app.update();
 
 		let entity = app

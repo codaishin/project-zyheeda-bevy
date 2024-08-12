@@ -5,7 +5,7 @@ use super::slots::Slots;
 use crate::{
 	items::slot_key::SlotKey,
 	skills::Skill,
-	traits::{Combo, GetCombosOrdered, GetEntry, GetEntryMut, PeekNext, TryMap},
+	traits::{Combo, GetCombosOrdered, GetNode, GetNodeMut, PeekNext, RootKeys, TryMap},
 };
 use bevy::ecs::component::Component;
 use common::{
@@ -74,14 +74,14 @@ pub struct NodeEntry<'a, TSkill> {
 	tree: &'a OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
 }
 
-impl<'a, TKey, TSkill> GetEntryMut<'a, TKey> for ComboNode<TSkill>
+impl<'a, TKey, TSkill> GetNodeMut<'a, TKey> for ComboNode<TSkill>
 where
 	TKey: Iterate<SlotKey>,
 	TSkill: 'a,
 {
-	type TEntry = NodeEntryMut<'a, TSkill>;
+	type TNode = NodeEntryMut<'a, TSkill>;
 
-	fn entry_mut(&'a mut self, slot_key_path: &TKey) -> Option<Self::TEntry> {
+	fn node_mut(&'a mut self, slot_key_path: &TKey) -> Option<Self::TNode> {
 		let mut slot_key_path = slot_key_path.iterate();
 		let mut key = *slot_key_path.next()?;
 		let mut tree = &mut self.0;
@@ -96,14 +96,14 @@ where
 	}
 }
 
-impl<'a, TKey, TSkill> GetEntry<'a, TKey> for ComboNode<TSkill>
+impl<'a, TKey, TSkill> GetNode<'a, TKey> for ComboNode<TSkill>
 where
 	TKey: Iterate<SlotKey>,
 	TSkill: 'a,
 {
-	type TEntry = NodeEntry<'a, TSkill>;
+	type TNode = NodeEntry<'a, TSkill>;
 
-	fn entry(&'a self, slot_key_path: &TKey) -> Option<Self::TEntry> {
+	fn node(&'a self, slot_key_path: &TKey) -> Option<Self::TNode> {
 		let mut slot_key_path = slot_key_path.iterate();
 		let mut key = *slot_key_path.next()?;
 		let mut tree = &self.0;
@@ -115,6 +115,14 @@ where
 		}
 
 		Some(NodeEntry { key, tree })
+	}
+}
+
+impl RootKeys for ComboNode {
+	type TItem = SlotKey;
+
+	fn root_keys(&self) -> impl Iterator<Item = Self::TItem> {
+		self.0.keys().cloned()
 	}
 }
 
@@ -838,7 +846,7 @@ mod tests {
 			),
 		)];
 		let mut root = ComboNode::new(conf.clone());
-		let entry = root.entry_mut(&[SlotKey::Hand(Side::Main)]);
+		let entry = root.node_mut(&[SlotKey::Hand(Side::Main)]);
 
 		assert_eq!(
 			Some(NodeEntryMut {
@@ -872,7 +880,7 @@ mod tests {
 			),
 		)];
 		let mut root = ComboNode::new(conf);
-		let entry = root.entry_mut(&[SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]);
+		let entry = root.node_mut(&[SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]);
 
 		assert_eq!(
 			Some(NodeEntryMut {
@@ -905,7 +913,7 @@ mod tests {
 			),
 		)];
 		let mut root = ComboNode::new(conf);
-		let entry = root.entry_mut(&[
+		let entry = root.node_mut(&[
 			SlotKey::Hand(Side::Main),
 			SlotKey::Hand(Side::Off),
 			SlotKey::Hand(Side::Main),
@@ -937,7 +945,7 @@ mod tests {
 			),
 		)];
 		let mut root = ComboNode::new(conf);
-		let entry = root.entry_mut(&[
+		let entry = root.node_mut(&[
 			SlotKey::Hand(Side::Main),
 			SlotKey::Hand(Side::Off),
 			SlotKey::Hand(Side::Main),
@@ -965,7 +973,7 @@ mod tests {
 			),
 		)];
 		let root = ComboNode::new(conf.clone());
-		let entry = root.entry(&[SlotKey::Hand(Side::Main)]);
+		let entry = root.node(&[SlotKey::Hand(Side::Main)]);
 
 		assert_eq!(
 			Some(NodeEntry {
@@ -999,7 +1007,7 @@ mod tests {
 			),
 		)];
 		let root = ComboNode::new(conf);
-		let entry = root.entry(&[SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]);
+		let entry = root.node(&[SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]);
 
 		assert_eq!(
 			Some(NodeEntry {
@@ -1032,7 +1040,7 @@ mod tests {
 			),
 		)];
 		let root = ComboNode::new(conf);
-		let entry = root.entry(&[
+		let entry = root.node(&[
 			SlotKey::Hand(Side::Main),
 			SlotKey::Hand(Side::Off),
 			SlotKey::Hand(Side::Main),
@@ -1064,7 +1072,7 @@ mod tests {
 			),
 		)];
 		let root = ComboNode::new(conf);
-		let entry = root.entry(&[
+		let entry = root.node(&[
 			SlotKey::Hand(Side::Main),
 			SlotKey::Hand(Side::Off),
 			SlotKey::Hand(Side::Main),
@@ -1077,6 +1085,29 @@ mod tests {
 			}),
 			entry,
 		)
+	}
+
+	#[test]
+	fn get_root_keys() {
+		let combos = ComboNode::new([(
+			SlotKey::Hand(Side::Main),
+			(Skill::default(), ComboNode::default()),
+		)]);
+
+		assert_eq!(
+			vec![SlotKey::Hand(Side::Main)],
+			combos.root_keys().collect::<Vec<_>>()
+		);
+	}
+
+	#[test]
+	fn get_root_keys_empty() {
+		let combos = ComboNode::new([]);
+
+		assert_eq!(
+			vec![] as Vec<SlotKey>,
+			combos.root_keys().collect::<Vec<_>>()
+		);
 	}
 
 	#[test]

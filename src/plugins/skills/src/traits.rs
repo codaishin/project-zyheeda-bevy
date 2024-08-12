@@ -110,14 +110,19 @@ pub trait GetCombosOrdered {
 	fn combos_ordered(&self) -> impl Iterator<Item = Combo>;
 }
 
-pub trait GetEntry<'a, TKey> {
-	type TEntry;
-	fn entry(&'a self, key: &TKey) -> Option<Self::TEntry>;
+pub trait GetNode<'a, TKey> {
+	type TNode;
+	fn node(&'a self, key: &TKey) -> Option<Self::TNode>;
 }
 
-pub trait GetEntryMut<'a, TKey> {
-	type TEntry;
-	fn entry_mut(&'a mut self, key: &TKey) -> Option<Self::TEntry>;
+pub trait GetNodeMut<'a, TKey> {
+	type TNode;
+	fn node_mut(&'a mut self, key: &TKey) -> Option<Self::TNode>;
+}
+
+pub trait RootKeys {
+	type TItem;
+	fn root_keys(&self) -> impl Iterator<Item = Self::TItem>;
 }
 
 pub trait FollowupKeys {

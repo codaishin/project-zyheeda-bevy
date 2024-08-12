@@ -5,7 +5,6 @@ use super::{
 	AppendSkillCommand,
 	DeleteSkill,
 	KeySelectDropdownInsertCommand,
-	ReKeyCommand,
 	SkillSelectDropdownInsertCommand,
 };
 use crate::{
@@ -15,6 +14,7 @@ use crate::{
 		combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol},
 		get_node::GetNode,
 		instantiate_content_on::InstantiateContentOn,
+		LoadUi,
 		UpdateCombosView,
 	},
 };
@@ -39,23 +39,53 @@ use bevy::{
 	},
 	utils::default,
 };
+use common::traits::load_asset::{LoadAsset, Path};
 use skills::{items::slot_key::SlotKey, skills::Skill};
 
-#[derive(Component, Default)]
-pub(crate) struct ComboOverview(ComboTreeLayout);
+#[derive(Component, Default, Debug, PartialEq)]
+pub(crate) struct ComboOverview {
+	new_skill_icon: Handle<Image>,
+	layout: ComboTreeLayout,
+}
+
+impl<TAssetServer> LoadUi<TAssetServer> for ComboOverview
+where
+	TAssetServer: LoadAsset,
+{
+	fn load_ui(images: &mut TAssetServer) -> Self {
+		ComboOverview {
+			new_skill_icon: images.load_asset(Path::from("icons/empty.png")),
+			..default()
+		}
+	}
+}
 
 pub(crate) trait SkillButtonBundle {
-	fn with<T: Clone + Sync + Send + 'static>(self, descriptor: SkillButton<T>) -> impl Bundle;
+	fn with_button<T: Clone + Sync + Send + 'static>(
+		self,
+		descriptor: SkillButton<T>,
+	) -> impl Bundle;
+
+	fn with_background_color(self, color: Color) -> impl Bundle;
 }
 
 impl SkillButtonBundle for ButtonBundle {
-	fn with<T: Clone + Sync + Send + 'static>(self, descriptor: SkillButton<T>) -> impl Bundle {
+	fn with_button<T: Clone + Sync + Send + 'static>(
+		self,
+		descriptor: SkillButton<T>,
+	) -> impl Bundle {
 		(self, Tooltip::new(descriptor.skill.clone()), descriptor)
+	}
+
+	fn with_background_color(mut self, color: Color) -> impl Bundle {
+		self.background_color = color.into();
+		self
 	}
 }
 
 impl ComboOverview {
-	pub const SKILL_ICON_MARGIN: Pixel = Pixel(10.);
+	pub const BUTTON_FONT_SIZE: f32 = 15.;
+	pub const SKILL_ICON_MARGIN: Pixel = Pixel(15.);
 	pub const MODIFY_BUTTON_OFFSET: Pixel = Pixel(-12.0);
 	pub const SYMBOL_WIDTH: Pixel = Pixel(5.);
 	pub const SKILL_BUTTON_DIMENSIONS: Dimensions = Dimensions {
@@ -69,7 +99,7 @@ impl ComboOverview {
 		border: Pixel(2.0),
 	};
 	pub const MODIFY_BUTTON_DIMENSIONS: Dimensions = Dimensions {
-		width: Pixel(20.0),
+		width: Pixel(25.0),
 		height: Pixel(25.0),
 		border: Pixel(2.0),
 	};
@@ -112,7 +142,7 @@ impl ComboOverview {
 			style: Style {
 				position_type: PositionType::Absolute,
 				top: Val::from(Self::MODIFY_BUTTON_OFFSET),
-				right: Val::from(Self::MODIFY_BUTTON_OFFSET),
+				left: Val::from(Self::MODIFY_BUTTON_OFFSET),
 				..default()
 			},
 			..default()
@@ -154,7 +184,8 @@ impl ComboOverview {
 		NodeBundle {
 			style: Style {
 				position_type: PositionType::Absolute,
-				left: Val::from(Self::MODIFY_BUTTON_OFFSET),
+				top: Val::from(Self::MODIFY_BUTTON_OFFSET),
+				right: Val::from(Self::MODIFY_BUTTON_OFFSET),
 				..default()
 			},
 			..default()
@@ -165,6 +196,7 @@ impl ComboOverview {
 		NodeBundle {
 			style: Style {
 				position_type: PositionType::Absolute,
+				bottom: Val::from(Self::MODIFY_BUTTON_OFFSET),
 				right: Val::from(Self::MODIFY_BUTTON_OFFSET),
 				..default()
 			},
@@ -174,6 +206,22 @@ impl ComboOverview {
 
 	pub(crate) fn skill_key_button_bundle() -> impl Bundle {
 		ButtonBundle {
+			style: Style {
+				width: Val::from(Self::KEY_BUTTON_DIMENSIONS.width),
+				height: Val::from(Self::KEY_BUTTON_DIMENSIONS.height),
+				border: UiRect::from(Self::KEY_BUTTON_DIMENSIONS.border),
+				justify_content: JustifyContent::Center,
+				align_items: AlignItems::Center,
+				..default()
+			},
+			background_color: DEFAULT_PANEL_COLORS.filled.into(),
+			border_color: DEFAULT_PANEL_COLORS.text.into(),
+			..default()
+		}
+	}
+
+	pub(crate) fn skill_key_bundle() -> impl Bundle {
+		NodeBundle {
 			style: Style {
 				width: Val::from(Self::KEY_BUTTON_DIMENSIONS.width),
 				height: Val::from(Self::KEY_BUTTON_DIMENSIONS.height),
@@ -262,7 +310,7 @@ impl ComboOverview {
 		KeyCodeTextInsertCommandBundle::new(
 			key,
 			TextStyle {
-				font_size: 15.,
+				font_size: Self::BUTTON_FONT_SIZE,
 				color: DEFAULT_PANEL_COLORS.text,
 				..default()
 			},
@@ -273,7 +321,7 @@ impl ComboOverview {
 		TextBundle::from_section(
 			key,
 			TextStyle {
-				font_size: 15.,
+				font_size: Self::BUTTON_FONT_SIZE,
 				color: DEFAULT_PANEL_COLORS.text,
 				..default()
 			},
@@ -283,7 +331,7 @@ impl ComboOverview {
 
 impl UpdateCombosView for ComboOverview {
 	fn update_combos_view(&mut self, combos: ComboTreeLayout) {
-		self.0 = combos
+		self.layout = combos
 	}
 }
 
@@ -308,7 +356,11 @@ impl GetNode for ComboOverview {
 impl InstantiateContentOn for ComboOverview {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		add_title(parent, "Combos");
-		add_combo_list(parent, self);
+		if self.layout.is_empty() {
+			add_empty_combo(parent, &self.new_skill_icon);
+		} else {
+			add_combo_list(parent, self);
+		}
 	}
 }
 
@@ -333,6 +385,56 @@ fn add_title(parent: &mut ChildBuilder, title: &str) {
 		});
 }
 
+fn add_empty_combo(parent: &mut ChildBuilder, icon: &Handle<Image>) {
+	parent
+		.spawn(NodeBundle {
+			style: Style {
+				flex_direction: FlexDirection::Column,
+				..default()
+			},
+			..default()
+		})
+		.with_children(|parent| {
+			parent
+				.spawn(NodeBundle {
+					style: Style {
+						flex_direction: FlexDirection::Row,
+						margin: UiRect::top(Val::from(ComboOverview::SKILL_ICON_MARGIN)),
+						..default()
+					},
+					..default()
+				})
+				.with_children(|parent| {
+					add_combo_starter(parent, icon, &[add_append_button], &[]);
+				});
+		});
+}
+
+fn add_combo_starter(
+	parent: &mut ChildBuilder,
+	icon: &Handle<Image>,
+	add_fronts: &[fn(&[SlotKey], &mut ChildBuilder)],
+	add_backs: &[fn(&mut ChildBuilder)],
+) {
+	parent
+		.spawn(ComboOverview::skill_container_bundle())
+		.with_children(|parent| {
+			for add_back in add_backs {
+				add_back(parent);
+			}
+			parent
+				.spawn(
+					ComboOverview::skill_button_bundle(Some(icon.clone()))
+						.with_background_color(DEFAULT_PANEL_COLORS.empty),
+				)
+				.with_children(|parent| {
+					for add_front in add_fronts {
+						add_front(&[], parent);
+					}
+				});
+		});
+}
+
 fn add_combo_list(parent: &mut ChildBuilder, combo_overview: &ComboOverview) {
 	parent
 		.spawn(NodeBundle {
@@ -344,14 +446,19 @@ fn add_combo_list(parent: &mut ChildBuilder, combo_overview: &ComboOverview) {
 		})
 		.with_children(|parent| {
 			let mut z_index = 0;
-			for combo in &combo_overview.0 {
-				add_combo(parent, combo, z_index);
+			for combo in &combo_overview.layout {
+				add_combo(parent, combo, z_index, &combo_overview.new_skill_icon);
 				z_index -= 1;
 			}
 		});
 }
 
-fn add_combo(parent: &mut ChildBuilder, combo: &[ComboTreeElement], local_z: i32) {
+fn add_combo(
+	parent: &mut ChildBuilder,
+	combo: &[ComboTreeElement],
+	local_z: i32,
+	new_skill_icon: &Handle<Image>,
+) {
 	parent
 		.spawn(NodeBundle {
 			style: Style {
@@ -370,7 +477,7 @@ fn add_combo(parent: &mut ChildBuilder, combo: &[ComboTreeElement], local_z: i32
 							parent,
 							key_path,
 							skill,
-							&[add_key_button],
+							&[add_key, add_append_button, add_delete_button],
 							&[add_horizontal_background_line],
 						);
 					}
@@ -379,7 +486,7 @@ fn add_combo(parent: &mut ChildBuilder, combo: &[ComboTreeElement], local_z: i32
 							parent,
 							key_path,
 							skill,
-							&[add_key_button, add_append_button, add_delete_button],
+							&[add_key, add_append_button, add_delete_button],
 							&[],
 						);
 					}
@@ -387,7 +494,12 @@ fn add_combo(parent: &mut ChildBuilder, combo: &[ComboTreeElement], local_z: i32
 						add_empty(parent, &[]);
 					}
 					ComboTreeElement::Symbol(Symbol::Root) => {
-						add_empty(parent, &[add_horizontal_background_line]);
+						add_combo_starter(
+							parent,
+							new_skill_icon,
+							&[add_append_button],
+							&[add_horizontal_background_line],
+						);
 					}
 					ComboTreeElement::Symbol(Symbol::Line) => {
 						add_empty(parent, &[add_vertical_background_line]);
@@ -415,7 +527,7 @@ fn add_skill(
 	parent: &mut ChildBuilder,
 	key_path: &[SlotKey],
 	skill: &Skill,
-	add_fronts: &[fn(&[SlotKey], &Skill, &mut ChildBuilder)],
+	add_fronts: &[fn(&[SlotKey], &mut ChildBuilder)],
 	add_backs: &[fn(&mut ChildBuilder)],
 ) {
 	parent
@@ -429,12 +541,12 @@ fn add_skill(
 			}
 			parent
 				.spawn((
-					ComboOverview::skill_button_bundle(icon).with(button),
+					ComboOverview::skill_button_bundle(icon).with_button(button),
 					SkillSelectDropdownInsertCommand::<SlotKey, Vertical>::new(key_path.to_vec()),
 				))
 				.with_children(|parent| {
 					for add_front in add_fronts {
-						add_front(key_path, skill, parent);
+						add_front(key_path, parent);
 					}
 				});
 		});
@@ -464,7 +576,7 @@ fn add_background_corner(parent: &mut ChildBuilder) {
 		});
 }
 
-fn add_key_button(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder) {
+fn add_key(key_path: &[SlotKey], parent: &mut ChildBuilder) {
 	let Some(skill_key) = key_path.last() else {
 		return;
 	};
@@ -473,20 +585,14 @@ fn add_key_button(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder) {
 		.spawn(ComboOverview::skill_key_button_offset_container())
 		.with_children(|parent| {
 			parent
-				.spawn((
-					ComboOverview::skill_key_button_bundle(),
-					KeySelectDropdownInsertCommand {
-						extra: ReKeyCommand { ignore: *skill_key },
-						key_path: key_path.to_vec(),
-					},
-				))
+				.spawn(ComboOverview::skill_key_bundle())
 				.with_children(|parent| {
 					parent.spawn(ComboOverview::skill_key_text(*skill_key));
 				});
 		});
 }
 
-fn add_append_button(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder) {
+fn add_append_button(key_path: &[SlotKey], parent: &mut ChildBuilder) {
 	parent
 		.spawn(ComboOverview::append_button_offset_container())
 		.with_children(|parent| {
@@ -499,12 +605,12 @@ fn add_append_button(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder)
 					},
 				))
 				.with_children(|parent| {
-					parent.spawn(ComboOverview::modify_button_text(">"));
+					parent.spawn(ComboOverview::modify_button_text("+"));
 				});
 		});
 }
 
-fn add_delete_button(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder) {
+fn add_delete_button(key_path: &[SlotKey], parent: &mut ChildBuilder) {
 	parent
 		.spawn(ComboOverview::delete_button_offset_container())
 		.with_children(|parent| {
@@ -516,7 +622,7 @@ fn add_delete_button(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder)
 					},
 				))
 				.with_children(|parent| {
-					parent.spawn(ComboOverview::modify_button_text("<"));
+					parent.spawn(ComboOverview::modify_button_text("x"));
 				});
 		});
 }
@@ -525,8 +631,9 @@ fn add_delete_button(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder)
 mod tests {
 	use super::*;
 	use crate::traits::combo_tree_layout::ComboTreeElement;
-	use bevy::asset::AssetId;
-	use common::components::Side;
+	use bevy::asset::{Asset, AssetId};
+	use common::{components::Side, simple_init, traits::mock::Mock};
+	use mockall::{mock, predicate::eq};
 	use skills::skills::Skill;
 	use uuid::Uuid;
 
@@ -545,6 +652,45 @@ mod tests {
 		let mut combo_overview = ComboOverview::default();
 		combo_overview.update_combos_view(combos.clone());
 
-		assert_eq!(combos, combo_overview.0)
+		assert_eq!(combos, combo_overview.layout)
+	}
+
+	mock! {
+		_Server {}
+		impl LoadAsset for _Server {
+			fn load_asset<TAsset: Asset>(&mut self, path: Path) -> Handle<TAsset>;
+		}
+	}
+
+	simple_init!(Mock_Server);
+
+	#[test]
+	fn load_ui_with_asset_handle() {
+		let handle = Handle::<Image>::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		});
+		let mut server = Mock_Server::new_mock(|mock| {
+			mock.expect_load_asset().return_const(handle.clone());
+		});
+		let combos = ComboOverview::load_ui(&mut server);
+
+		assert_eq!(
+			ComboOverview {
+				new_skill_icon: handle,
+				..default()
+			},
+			combos
+		);
+	}
+
+	#[test]
+	fn load_ui_with_asset_of_correct_path() {
+		let mut server = Mock_Server::new_mock(|mock| {
+			mock.expect_load_asset::<Image>()
+				.times(1)
+				.with(eq(Path::from("icons/empty.png")))
+				.return_const(Handle::default());
+		});
+		_ = ComboOverview::load_ui(&mut server);
 	}
 }
