@@ -27,7 +27,6 @@ use components::{
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
 	ui_overlay::UIOverlay,
 	AppendSkillCommand,
-	ReKeyCommand,
 };
 use events::DropdownEvent;
 use skills::{
@@ -242,7 +241,6 @@ fn combo_overview_systems(app: &mut App) {
 				insert_skill_select_dropdown::<Slots<Handle<Skill>>, Vertical>,
 				insert_skill_select_dropdown::<Slots<Handle<Skill>>, Horizontal>,
 				insert_key_select_dropdown::<Player, Combos, AppendSkillCommand>,
-				insert_key_select_dropdown::<Player, Combos, ReKeyCommand>,
 				update_combos_view_delete_skill::<Player, Combos>,
 				update_combo_skills::<Player, Combos, Vertical>,
 				update_combo_skills::<Player, Combos, Horizontal>,

@@ -57,11 +57,6 @@ impl<TKey, TLayout> SkillSelectDropdownInsertCommand<TKey, TLayout> {
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct ReKeyCommand<TKey = SlotKey> {
-	pub(crate) ignore: TKey,
-}
-
-#[derive(Debug, PartialEq)]
 pub(crate) struct AppendSkillCommand;
 
 #[derive(Component, Debug, PartialEq)]

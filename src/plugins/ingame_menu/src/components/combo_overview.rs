@@ -5,7 +5,6 @@ use super::{
 	AppendSkillCommand,
 	DeleteSkill,
 	KeySelectDropdownInsertCommand,
-	ReKeyCommand,
 	SkillSelectDropdownInsertCommand,
 };
 use crate::{
@@ -176,6 +175,22 @@ impl ComboOverview {
 
 	pub(crate) fn skill_key_button_bundle() -> impl Bundle {
 		ButtonBundle {
+			style: Style {
+				width: Val::from(Self::KEY_BUTTON_DIMENSIONS.width),
+				height: Val::from(Self::KEY_BUTTON_DIMENSIONS.height),
+				border: UiRect::from(Self::KEY_BUTTON_DIMENSIONS.border),
+				justify_content: JustifyContent::Center,
+				align_items: AlignItems::Center,
+				..default()
+			},
+			background_color: DEFAULT_PANEL_COLORS.filled.into(),
+			border_color: DEFAULT_PANEL_COLORS.text.into(),
+			..default()
+		}
+	}
+
+	pub(crate) fn skill_key_bundle() -> impl Bundle {
+		NodeBundle {
 			style: Style {
 				width: Val::from(Self::KEY_BUTTON_DIMENSIONS.width),
 				height: Val::from(Self::KEY_BUTTON_DIMENSIONS.height),
@@ -372,7 +387,7 @@ fn add_combo(parent: &mut ChildBuilder, combo: &[ComboTreeElement], local_z: i32
 							parent,
 							key_path,
 							skill,
-							&[add_key_button, add_append_button, add_delete_button],
+							&[add_key, add_append_button, add_delete_button],
 							&[add_horizontal_background_line],
 						);
 					}
@@ -381,7 +396,7 @@ fn add_combo(parent: &mut ChildBuilder, combo: &[ComboTreeElement], local_z: i32
 							parent,
 							key_path,
 							skill,
-							&[add_key_button, add_append_button, add_delete_button],
+							&[add_key, add_append_button, add_delete_button],
 							&[],
 						);
 					}
@@ -466,7 +481,7 @@ fn add_background_corner(parent: &mut ChildBuilder) {
 		});
 }
 
-fn add_key_button(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder) {
+fn add_key(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder) {
 	let Some(skill_key) = key_path.last() else {
 		return;
 	};
@@ -475,13 +490,7 @@ fn add_key_button(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder) {
 		.spawn(ComboOverview::skill_key_button_offset_container())
 		.with_children(|parent| {
 			parent
-				.spawn((
-					ComboOverview::skill_key_button_bundle(),
-					KeySelectDropdownInsertCommand {
-						extra: ReKeyCommand { ignore: *skill_key },
-						key_path: key_path.to_vec(),
-					},
-				))
+				.spawn(ComboOverview::skill_key_bundle())
 				.with_children(|parent| {
 					parent.spawn(ComboOverview::skill_key_text(*skill_key));
 				});
