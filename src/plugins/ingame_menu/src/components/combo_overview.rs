@@ -55,7 +55,7 @@ impl SkillButtonBundle for ButtonBundle {
 
 impl ComboOverview {
 	pub const BUTTON_FONT_SIZE: f32 = 15.;
-	pub const SKILL_ICON_MARGIN: Pixel = Pixel(10.);
+	pub const SKILL_ICON_MARGIN: Pixel = Pixel(15.);
 	pub const MODIFY_BUTTON_OFFSET: Pixel = Pixel(-12.0);
 	pub const SYMBOL_WIDTH: Pixel = Pixel(5.);
 	pub const SKILL_BUTTON_DIMENSIONS: Dimensions = Dimensions {
@@ -112,7 +112,7 @@ impl ComboOverview {
 			style: Style {
 				position_type: PositionType::Absolute,
 				top: Val::from(Self::MODIFY_BUTTON_OFFSET),
-				right: Val::from(Self::MODIFY_BUTTON_OFFSET),
+				left: Val::from(Self::MODIFY_BUTTON_OFFSET),
 				..default()
 			},
 			..default()
@@ -154,7 +154,8 @@ impl ComboOverview {
 		NodeBundle {
 			style: Style {
 				position_type: PositionType::Absolute,
-				left: Val::from(Self::MODIFY_BUTTON_OFFSET),
+				top: Val::from(Self::MODIFY_BUTTON_OFFSET),
+				right: Val::from(Self::MODIFY_BUTTON_OFFSET),
 				..default()
 			},
 			..default()
@@ -165,8 +166,8 @@ impl ComboOverview {
 		NodeBundle {
 			style: Style {
 				position_type: PositionType::Absolute,
-				right: Val::from(Self::MODIFY_BUTTON_OFFSET),
 				bottom: Val::from(Self::MODIFY_BUTTON_OFFSET),
+				right: Val::from(Self::MODIFY_BUTTON_OFFSET),
 				..default()
 			},
 			..default()
