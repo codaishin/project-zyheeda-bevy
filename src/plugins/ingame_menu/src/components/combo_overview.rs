@@ -14,6 +14,7 @@ use crate::{
 		combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol},
 		get_node::GetNode,
 		instantiate_content_on::InstantiateContentOn,
+		LoadUi,
 		UpdateCombosView,
 	},
 };
@@ -38,10 +39,26 @@ use bevy::{
 	},
 	utils::default,
 };
+use common::traits::load_asset::{LoadAsset, Path};
 use skills::{items::slot_key::SlotKey, skills::Skill};
 
-#[derive(Component, Default)]
-pub(crate) struct ComboOverview(ComboTreeLayout);
+#[derive(Component, Default, Debug, PartialEq)]
+pub(crate) struct ComboOverview {
+	new_skill_icon: Handle<Image>,
+	layout: ComboTreeLayout,
+}
+
+impl<TAssetServer> LoadUi<TAssetServer> for ComboOverview
+where
+	TAssetServer: LoadAsset,
+{
+	fn load_ui(images: &mut TAssetServer) -> Self {
+		ComboOverview {
+			new_skill_icon: images.load_asset(Path::from("icons/empty.png")),
+			..default()
+		}
+	}
+}
 
 pub(crate) trait SkillButtonBundle {
 	fn with<T: Clone + Sync + Send + 'static>(self, descriptor: SkillButton<T>) -> impl Bundle;
@@ -301,7 +318,7 @@ impl ComboOverview {
 
 impl UpdateCombosView for ComboOverview {
 	fn update_combos_view(&mut self, combos: ComboTreeLayout) {
-		self.0 = combos
+		self.layout = combos
 	}
 }
 
@@ -362,7 +379,7 @@ fn add_combo_list(parent: &mut ChildBuilder, combo_overview: &ComboOverview) {
 		})
 		.with_children(|parent| {
 			let mut z_index = 0;
-			for combo in &combo_overview.0 {
+			for combo in &combo_overview.layout {
 				add_combo(parent, combo, z_index);
 				z_index -= 1;
 			}
@@ -537,8 +554,9 @@ fn add_delete_button(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder)
 mod tests {
 	use super::*;
 	use crate::traits::combo_tree_layout::ComboTreeElement;
-	use bevy::asset::AssetId;
-	use common::components::Side;
+	use bevy::asset::{Asset, AssetId};
+	use common::{components::Side, simple_init, traits::mock::Mock};
+	use mockall::{mock, predicate::eq};
 	use skills::skills::Skill;
 	use uuid::Uuid;
 
@@ -557,6 +575,45 @@ mod tests {
 		let mut combo_overview = ComboOverview::default();
 		combo_overview.update_combos_view(combos.clone());
 
-		assert_eq!(combos, combo_overview.0)
+		assert_eq!(combos, combo_overview.layout)
+	}
+
+	mock! {
+		_Server {}
+		impl LoadAsset for _Server {
+			fn load_asset<TAsset: Asset>(&mut self, path: Path) -> Handle<TAsset>;
+		}
+	}
+
+	simple_init!(Mock_Server);
+
+	#[test]
+	fn load_ui_with_asset_handle() {
+		let handle = Handle::<Image>::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		});
+		let mut server = Mock_Server::new_mock(|mock| {
+			mock.expect_load_asset().return_const(handle.clone());
+		});
+		let combos = ComboOverview::load_ui(&mut server);
+
+		assert_eq!(
+			ComboOverview {
+				new_skill_icon: handle,
+				..default()
+			},
+			combos
+		);
+	}
+
+	#[test]
+	fn load_ui_with_asset_of_correct_path() {
+		let mut server = Mock_Server::new_mock(|mock| {
+			mock.expect_load_asset::<Image>()
+				.times(1)
+				.with(eq(Path::from("icons/empty.png")))
+				.return_const(Handle::default());
+		});
+		_ = ComboOverview::load_ui(&mut server);
 	}
 }
