@@ -55,6 +55,7 @@ impl SkillButtonBundle for ButtonBundle {
 }
 
 impl ComboOverview {
+	pub const BUTTON_FONT_SIZE: f32 = 15.;
 	pub const SKILL_ICON_MARGIN: Pixel = Pixel(10.);
 	pub const MODIFY_BUTTON_OFFSET: Pixel = Pixel(-12.0);
 	pub const SYMBOL_WIDTH: Pixel = Pixel(5.);
@@ -69,7 +70,7 @@ impl ComboOverview {
 		border: Pixel(2.0),
 	};
 	pub const MODIFY_BUTTON_DIMENSIONS: Dimensions = Dimensions {
-		width: Pixel(20.0),
+		width: Pixel(25.0),
 		height: Pixel(25.0),
 		border: Pixel(2.0),
 	};
@@ -166,6 +167,7 @@ impl ComboOverview {
 			style: Style {
 				position_type: PositionType::Absolute,
 				right: Val::from(Self::MODIFY_BUTTON_OFFSET),
+				bottom: Val::from(Self::MODIFY_BUTTON_OFFSET),
 				..default()
 			},
 			..default()
@@ -262,7 +264,7 @@ impl ComboOverview {
 		KeyCodeTextInsertCommandBundle::new(
 			key,
 			TextStyle {
-				font_size: 15.,
+				font_size: Self::BUTTON_FONT_SIZE,
 				color: DEFAULT_PANEL_COLORS.text,
 				..default()
 			},
@@ -273,7 +275,7 @@ impl ComboOverview {
 		TextBundle::from_section(
 			key,
 			TextStyle {
-				font_size: 15.,
+				font_size: Self::BUTTON_FONT_SIZE,
 				color: DEFAULT_PANEL_COLORS.text,
 				..default()
 			},
@@ -370,7 +372,7 @@ fn add_combo(parent: &mut ChildBuilder, combo: &[ComboTreeElement], local_z: i32
 							parent,
 							key_path,
 							skill,
-							&[add_key_button],
+							&[add_key_button, add_append_button, add_delete_button],
 							&[add_horizontal_background_line],
 						);
 					}
@@ -499,7 +501,7 @@ fn add_append_button(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder)
 					},
 				))
 				.with_children(|parent| {
-					parent.spawn(ComboOverview::modify_button_text(">"));
+					parent.spawn(ComboOverview::modify_button_text("+"));
 				});
 		});
 }
@@ -516,7 +518,7 @@ fn add_delete_button(key_path: &[SlotKey], _: &Skill, parent: &mut ChildBuilder)
 					},
 				))
 				.with_children(|parent| {
-					parent.spawn(ComboOverview::modify_button_text("<"));
+					parent.spawn(ComboOverview::modify_button_text("x"));
 				});
 		});
 }
