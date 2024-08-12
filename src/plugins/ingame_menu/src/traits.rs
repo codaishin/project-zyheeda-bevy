@@ -41,5 +41,5 @@ where
 	Self::TBundle: Bundle,
 {
 	type TBundle;
-	fn bundle(&self) -> Self::TBundle;
+	fn bundle(&self) -> Option<Self::TBundle>;
 }

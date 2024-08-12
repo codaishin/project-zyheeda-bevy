@@ -52,12 +52,15 @@ where
 	KeySelect<TExtra>: GetBundle,
 {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
+		let Some(bundle) = self.bundle() else {
+			return;
+		};
 		let Some(key) = self.extra.get_key(&self.key_path) else {
 			return;
 		};
 
 		parent
-			.spawn((self.bundle(), ComboOverview::skill_key_button_bundle()))
+			.spawn((bundle, ComboOverview::skill_key_button_bundle()))
 			.with_children(|parent| {
 				parent.spawn(ComboOverview::skill_key_text(*key));
 			});
@@ -67,16 +70,18 @@ where
 impl GetBundle for KeySelect<ReKeySkill> {
 	type TBundle = KeySelect<ReKeySkill>;
 
-	fn bundle(&self) -> Self::TBundle {
-		self.clone()
+	fn bundle(&self) -> Option<Self::TBundle> {
+		Some(self.clone())
 	}
 }
 
 impl<TKey: Copy + Sync + Send + 'static> GetBundle for KeySelect<AppendSkill<TKey>, TKey> {
 	type TBundle = SkillSelectDropdownInsertCommand<TKey, Horizontal>;
 
-	fn bundle(&self) -> Self::TBundle {
-		SkillSelectDropdownInsertCommand::new([self.key_path.clone(), vec![self.extra.on]].concat())
+	fn bundle(&self) -> Option<Self::TBundle> {
+		Some(SkillSelectDropdownInsertCommand::new(
+			[self.key_path.clone(), vec![self.extra.on]].concat(),
+		))
 	}
 }
 
@@ -99,11 +104,9 @@ mod tests {
 		};
 
 		assert_eq!(
-			SkillSelectDropdownInsertCommand::<_Key, Horizontal>::new(vec![
-				_Key::A,
-				_Key::B,
-				_Key::C
-			]),
+			Some(SkillSelectDropdownInsertCommand::<_Key, Horizontal>::new(
+				vec![_Key::A, _Key::B, _Key::C]
+			)),
 			select.bundle()
 		)
 	}
