@@ -42,12 +42,12 @@ where
 			let last = drain_as_leaf(&mut combo);
 			let mut layout = Vec::new();
 
-			adjust_connections(&mut layouts, &mut layout, &first, LayoutIndex(0));
+			adjust_connections(&mut layouts, &mut layout, &first);
 			layout.push(first);
 
-			for (i, (key_path, skill)) in combo.into_iter().enumerate() {
+			for (key_path, skill) in combo.into_iter() {
 				let element = layout_element(key_path, skill, &mut encountered);
-				adjust_connections(&mut layouts, &mut layout, &element, LayoutIndex(i + 1));
+				adjust_connections(&mut layouts, &mut layout, &element);
 				layout.push(element);
 			}
 
@@ -85,37 +85,21 @@ fn get_first_symbol(mut has_root: HasRoot) -> impl FnMut() -> Symbol {
 	}
 }
 
-struct LayoutIndex(usize);
-
-impl LayoutIndex {
-	fn current(&self) -> usize {
-		self.0
-	}
-
-	fn preceding(&self) -> Option<usize> {
-		self.0.checked_sub(1)
-	}
-}
-
 fn adjust_connections(
 	layouts: &mut [Vec<ComboTreeElement>],
 	current_layout: &mut [ComboTreeElement],
 	element: &ComboTreeElement,
-	index: LayoutIndex,
 ) {
 	if element != &ComboTreeElement::Symbol(Symbol::Corner) {
 		return;
 	}
 
-	if let Some(preceding) = current_layout.last_mut() {
+	if let Some((preceding_index, preceding)) = current_layout.iter_mut().enumerate().last() {
 		*preceding = ComboTreeElement::Symbol(Symbol::Empty);
+		replace_symbols_at(layouts, preceding_index, Symbol::Line, Symbol::Empty);
 	};
 
-	if let Some(index) = index.preceding() {
-		replace_in_previous(layouts, index, Symbol::Line, Symbol::Empty);
-	}
-
-	replace_in_previous(layouts, index.current(), Symbol::Empty, Symbol::Line);
+	replace_symbols_at(layouts, current_layout.len(), Symbol::Empty, Symbol::Line);
 }
 
 fn layout_element(
@@ -135,7 +119,7 @@ fn layout_element(
 	}
 }
 
-fn replace_in_previous(
+fn replace_symbols_at(
 	layouts: &mut [Vec<ComboTreeElement>],
 	index: usize,
 	old: Symbol,
@@ -143,8 +127,9 @@ fn replace_in_previous(
 ) {
 	let elements = layouts
 		.iter_mut()
+		.rev()
 		.filter_map(|layout| layout.get_mut(index))
-		.filter(|element| element == &&ComboTreeElement::Symbol(old));
+		.take_while(|element| element == &&ComboTreeElement::Symbol(old));
 
 	for element in elements {
 		*element = ComboTreeElement::Symbol(new);
@@ -730,6 +715,79 @@ mod tests {
 						skill: Skill::default()
 					},
 				]
+			],
+			combos.combo_tree_layout()
+		);
+	}
+
+	#[test]
+	/// **layout** *root (◯), node (n), leaf (l)*:
+	/// ```
+	/// ◯ n l
+	/// │ └ l
+	/// └ n l
+	///   └ l
+	/// ```
+	fn layout_combos_with_no_broken_lines() {
+		let combos = _Combos(vec![
+			vec![
+				(vec![SlotKey::Hand(Side::Off)], Skill::default()),
+				(vec![SlotKey::Hand(Side::Off)], Skill::default()),
+			],
+			vec![
+				(vec![SlotKey::Hand(Side::Off)], Skill::default()),
+				(vec![SlotKey::Hand(Side::Main)], Skill::default()),
+			],
+			vec![
+				(vec![SlotKey::Hand(Side::Main)], Skill::default()),
+				(vec![SlotKey::Hand(Side::Main)], Skill::default()),
+			],
+			vec![
+				(vec![SlotKey::Hand(Side::Main)], Skill::default()),
+				(vec![SlotKey::Hand(Side::Off)], Skill::default()),
+			],
+		]);
+
+		assert_eq!(
+			vec![
+				vec![
+					ComboTreeElement::Symbol(Symbol::Root),
+					ComboTreeElement::Node {
+						key_path: vec![SlotKey::Hand(Side::Off)],
+						skill: Skill::default()
+					},
+					ComboTreeElement::Leaf {
+						key_path: vec![SlotKey::Hand(Side::Off)],
+						skill: Skill::default()
+					},
+				],
+				vec![
+					ComboTreeElement::Symbol(Symbol::Line),
+					ComboTreeElement::Symbol(Symbol::Corner),
+					ComboTreeElement::Leaf {
+						key_path: vec![SlotKey::Hand(Side::Main)],
+						skill: Skill::default()
+					},
+				],
+				vec![
+					ComboTreeElement::Symbol(Symbol::Corner),
+					ComboTreeElement::Node {
+						key_path: vec![SlotKey::Hand(Side::Main)],
+						skill: Skill::default()
+					},
+					ComboTreeElement::Leaf {
+						key_path: vec![SlotKey::Hand(Side::Main)],
+						skill: Skill::default()
+					},
+				],
+				vec![
+					ComboTreeElement::Symbol(Symbol::Empty),
+					ComboTreeElement::Symbol(Symbol::Corner),
+					ComboTreeElement::Leaf {
+						key_path: vec![SlotKey::Hand(Side::Off)],
+						skill: Skill::default()
+					},
+				],
 			],
 			combos.combo_tree_layout()
 		);
