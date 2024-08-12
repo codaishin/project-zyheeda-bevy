@@ -119,6 +119,10 @@ pub trait GetNodeMut<'a, TKey> {
 	type TNode;
 	fn node_mut(&'a mut self, key: &TKey) -> Option<Self::TNode>;
 }
+
+pub trait RootKeys {
+	type TItem;
+	fn root_keys(&self) -> impl Iterator<Item = Self::TItem>;
 }
 
 pub trait FollowupKeys {

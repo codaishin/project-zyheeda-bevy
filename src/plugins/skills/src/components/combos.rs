@@ -10,6 +10,7 @@ use crate::{
 		Insert,
 		PeekNext,
 		ReKey,
+		RootKeys,
 		SetNextCombo,
 		UpdateConfig,
 	},
@@ -107,6 +108,14 @@ impl<'a, TNode: GetNode<'a, TKey>, TKey: Iterate<SlotKey>> GetNode<'a, TKey> for
 
 	fn node(&'a self, key: &TKey) -> Option<Self::TNode> {
 		self.value.node(key)
+	}
+}
+
+impl<TNode: RootKeys> RootKeys for Combos<TNode> {
+	type TItem = TNode::TItem;
+
+	fn root_keys(&self) -> impl Iterator<Item = Self::TItem> {
+		self.value.root_keys()
 	}
 }
 
@@ -521,5 +530,25 @@ mod tests {
 			),
 			(entry.is_some(), combo.value.call_args.into_inner())
 		)
+	}
+
+	#[test]
+	fn get_root_keys() {
+		#[derive(Debug, PartialEq)]
+		struct _Key;
+
+		struct _Node;
+
+		impl RootKeys for _Node {
+			type TItem = _Key;
+
+			fn root_keys(&self) -> impl Iterator<Item = Self::TItem> {
+				vec![_Key].into_iter()
+			}
+		}
+
+		let combos = Combos::new(_Node);
+
+		assert_eq!(vec![_Key], combos.root_keys().collect::<Vec<_>>());
 	}
 }

@@ -5,7 +5,7 @@ use super::slots::Slots;
 use crate::{
 	items::slot_key::SlotKey,
 	skills::Skill,
-	traits::{Combo, GetCombosOrdered, GetNode, GetNodeMut, PeekNext, TryMap},
+	traits::{Combo, GetCombosOrdered, GetNode, GetNodeMut, PeekNext, RootKeys, TryMap},
 };
 use bevy::ecs::component::Component;
 use common::{
@@ -115,6 +115,14 @@ where
 		}
 
 		Some(NodeEntry { key, tree })
+	}
+}
+
+impl RootKeys for ComboNode {
+	type TItem = SlotKey;
+
+	fn root_keys(&self) -> impl Iterator<Item = Self::TItem> {
+		self.0.keys().cloned()
 	}
 }
 
@@ -1077,6 +1085,29 @@ mod tests {
 			}),
 			entry,
 		)
+	}
+
+	#[test]
+	fn get_root_keys() {
+		let combos = ComboNode::new([(
+			SlotKey::Hand(Side::Main),
+			(Skill::default(), ComboNode::default()),
+		)]);
+
+		assert_eq!(
+			vec![SlotKey::Hand(Side::Main)],
+			combos.root_keys().collect::<Vec<_>>()
+		);
+	}
+
+	#[test]
+	fn get_root_keys_empty() {
+		let combos = ComboNode::new([]);
+
+		assert_eq!(
+			vec![] as Vec<SlotKey>,
+			combos.root_keys().collect::<Vec<_>>()
+		);
 	}
 
 	#[test]
