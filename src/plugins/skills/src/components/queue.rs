@@ -564,13 +564,12 @@ impl<'a> GetAnimation<Animation> for ActiveSkill<'a> {
 #[cfg(test)]
 mod test_queue_active_skill {
 	use super::*;
-	use crate::skills::{
-		Animate,
-		OnSkillStop,
-		SkillAnimation,
-		SkillBehavior,
-		SkillBehaviors,
-		SkillSpawnAndExecute,
+	use crate::{
+		behaviors::{
+			spawn_behavior::{OnSkillStop, SpawnBehavior},
+			Behavior,
+		},
+		skills::{Animate, SkillAnimation, SkillBehavior, SkillBehaviors},
 	};
 	use animations::animation::PlayMode;
 	use bevy::prelude::default;
@@ -772,10 +771,9 @@ mod test_queue_active_skill {
 	#[test]
 	fn test_start_behavior_fn_on_active() {
 		let behaviors = SkillBehaviors {
-			contact: SkillSpawnAndExecute {
-				spawn: |commands, _, _, _| (commands.spawn_empty(), OnSkillStop::Ignore),
-				..default()
-			},
+			contact: Behavior::new().with_spawn(SpawnBehavior::Fn(|commands, _, _, _| {
+				(commands.spawn_empty(), OnSkillStop::Ignore)
+			})),
 			..default()
 		};
 
@@ -795,10 +793,9 @@ mod test_queue_active_skill {
 	#[test]
 	fn test_start_behavior_fn_on_aim() {
 		let behaviors = SkillBehaviors {
-			contact: SkillSpawnAndExecute {
-				spawn: |commands, _, _, _| (commands.spawn_empty(), OnSkillStop::Ignore),
-				..default()
-			},
+			contact: Behavior::new().with_spawn(SpawnBehavior::Fn(|commands, _, _, _| {
+				(commands.spawn_empty(), OnSkillStop::Ignore)
+			})),
 			..default()
 		};
 

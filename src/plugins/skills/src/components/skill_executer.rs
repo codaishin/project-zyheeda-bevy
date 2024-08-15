@@ -1,12 +1,6 @@
 use crate::{
-	skills::{
-		OnSkillStop,
-		SkillBehaviors,
-		SkillCaster,
-		SkillSpawnAndExecute,
-		SkillSpawner,
-		Target,
-	},
+	behaviors::{spawn_behavior::OnSkillStop, Behavior, SkillCaster, SkillSpawner, Target},
+	skills::SkillBehaviors,
 	traits::{Execute, Flush, Schedule},
 };
 use bevy::{
@@ -86,18 +80,14 @@ fn stop_on_skill_stop(skill: &OnSkillStop) -> Option<Entity> {
 }
 
 fn spawn_and_execute(
-	skill: &SkillSpawnAndExecute,
+	behavior: &Behavior,
 	commands: &mut Commands,
 	caster: &SkillCaster,
 	spawner: &SkillSpawner,
 	target: &Target,
 ) -> OnSkillStop {
-	let spawn_fn = skill.spawn;
-	let (mut entity, on_skill_stop) = spawn_fn(commands, caster, spawner, target);
-
-	for execute_fn in &skill.execute {
-		execute_fn(&mut entity, caster, spawner, target);
-	}
+	let (mut entity, on_skill_stop) = behavior.spawn(commands, caster, spawner, target);
+	behavior.start(&mut entity, caster, spawner, target);
 
 	on_skill_stop
 }
@@ -114,7 +104,10 @@ fn stop(skills: &[Entity], commands: &mut Commands) -> SkillExecuter {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::skills::{OnSkillStop, SkillSpawnAndExecute};
+	use crate::behaviors::{
+		spawn_behavior::{OnSkillStop, SpawnBehavior},
+		start_behavior::StartBehavior,
+	};
 	use bevy::{
 		app::{App, Update},
 		ecs::system::{EntityCommands, Query, RunSystemOnce},
@@ -189,10 +182,9 @@ mod tests {
 	#[test]
 	fn set_self_to_start_skill() {
 		let skill = SkillBehaviors {
-			contact: SkillSpawnAndExecute {
-				spawn: |c, _, _, _| (c.spawn_empty(), OnSkillStop::Ignore),
-				..default()
-			},
+			contact: Behavior::new().with_spawn(SpawnBehavior::Fn(|c, _, _, _| {
+				(c.spawn_empty(), OnSkillStop::Ignore)
+			})),
 			..default()
 		};
 
@@ -205,8 +197,8 @@ mod tests {
 	#[test]
 	fn spawn_skill_contact_entity() {
 		let (mut app, ..) = setup(SkillExecuter::Start(SkillBehaviors {
-			contact: SkillSpawnAndExecute {
-				spawn: |cmd, caster, spawner, target| {
+			contact: Behavior::new().with_spawn(SpawnBehavior::Fn(
+				|cmd, caster, spawner, target| {
 					(
 						cmd.spawn(_SpawnArgs {
 							caster: *caster,
@@ -216,8 +208,7 @@ mod tests {
 						OnSkillStop::Ignore,
 					)
 				},
-				..default()
-			},
+			)),
 			..default()
 		}));
 
@@ -250,10 +241,10 @@ mod tests {
 			});
 		}
 		let (mut app, ..) = setup(SkillExecuter::Start(SkillBehaviors {
-			contact: SkillSpawnAndExecute {
-				execute: vec![behavior, behavior],
-				..default()
-			},
+			contact: Behavior::new().with_execute(vec![
+				StartBehavior::Fn(behavior),
+				StartBehavior::Fn(behavior),
+			]),
 			..default()
 		}));
 
@@ -294,10 +285,10 @@ mod tests {
 			});
 		}
 		let (mut app, ..) = setup(SkillExecuter::Start(SkillBehaviors {
-			projection: SkillSpawnAndExecute {
-				execute: vec![behavior, behavior],
-				..default()
-			},
+			projection: Behavior::new().with_execute(vec![
+				StartBehavior::Fn(behavior),
+				StartBehavior::Fn(behavior),
+			]),
 			..default()
 		}));
 
@@ -329,8 +320,8 @@ mod tests {
 	#[test]
 	fn spawn_skill_projection_entity() {
 		let (mut app, ..) = setup(SkillExecuter::Start(SkillBehaviors {
-			projection: SkillSpawnAndExecute {
-				spawn: |cmd, caster, spawner, target| {
+			projection: Behavior::new().with_spawn(SpawnBehavior::Fn(
+				|cmd, caster, spawner, target| {
 					(
 						cmd.spawn(_SpawnArgs {
 							caster: *caster,
@@ -340,8 +331,7 @@ mod tests {
 						OnSkillStop::Ignore,
 					)
 				},
-				..default()
-			},
+			)),
 			..default()
 		}));
 
@@ -365,15 +355,12 @@ mod tests {
 	#[test]
 	fn set_to_started_contact_as_stoppable() {
 		let (mut app, executer) = setup(SkillExecuter::Start(SkillBehaviors {
-			contact: SkillSpawnAndExecute {
-				spawn: |cmd, _, _, _| {
-					(
-						cmd.spawn_empty(),
-						OnSkillStop::Stop(Entity::from_raw(998877)),
-					)
-				},
-				..default()
-			},
+			contact: Behavior::new().with_spawn(SpawnBehavior::Fn(|cmd, _, _, _| {
+				(
+					cmd.spawn_empty(),
+					OnSkillStop::Stop(Entity::from_raw(998877)),
+				)
+			})),
 			..default()
 		}));
 
@@ -390,15 +377,12 @@ mod tests {
 	#[test]
 	fn set_to_started_projection_as_stoppable() {
 		let (mut app, executer) = setup(SkillExecuter::Start(SkillBehaviors {
-			projection: SkillSpawnAndExecute {
-				spawn: |cmd, _, _, _| {
-					(
-						cmd.spawn_empty(),
-						OnSkillStop::Stop(Entity::from_raw(998877)),
-					)
-				},
-				..default()
-			},
+			projection: Behavior::new().with_spawn(SpawnBehavior::Fn(|cmd, _, _, _| {
+				(
+					cmd.spawn_empty(),
+					OnSkillStop::Stop(Entity::from_raw(998877)),
+				)
+			})),
 			..default()
 		}));
 
@@ -415,24 +399,18 @@ mod tests {
 	#[test]
 	fn set_to_started_projection_and_contact_as_stoppable() {
 		let (mut app, executer) = setup(SkillExecuter::Start(SkillBehaviors {
-			contact: SkillSpawnAndExecute {
-				spawn: |cmd, _, _, _| {
-					(
-						cmd.spawn_empty(),
-						OnSkillStop::Stop(Entity::from_raw(998877)),
-					)
-				},
-				..default()
-			},
-			projection: SkillSpawnAndExecute {
-				spawn: |cmd, _, _, _| {
-					(
-						cmd.spawn_empty(),
-						OnSkillStop::Stop(Entity::from_raw(112233)),
-					)
-				},
-				..default()
-			},
+			contact: Behavior::new().with_spawn(SpawnBehavior::Fn(|cmd, _, _, _| {
+				(
+					cmd.spawn_empty(),
+					OnSkillStop::Stop(Entity::from_raw(998877)),
+				)
+			})),
+			projection: Behavior::new().with_spawn(SpawnBehavior::Fn(|cmd, _, _, _| {
+				(
+					cmd.spawn_empty(),
+					OnSkillStop::Stop(Entity::from_raw(112233)),
+				)
+			})),
 		}));
 
 		app.world_mut().run_system_once(execute);

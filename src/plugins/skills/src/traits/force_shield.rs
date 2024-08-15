@@ -1,11 +1,7 @@
 use super::{GetStaticSkillBehavior, SkillBundleConfig, SpawnSkill};
-use crate::skills::{
-	SkillBehavior,
-	SkillBehaviors,
-	SkillCaster,
-	SkillSpawnAndExecute,
-	SkillSpawner,
-	Target,
+use crate::{
+	behaviors::{spawn_behavior::SpawnBehavior, Behavior, SkillCaster, SkillSpawner, Target},
+	skills::{SkillBehavior, SkillBehaviors},
 };
 use behaviors::components::ForceShield;
 use bevy::{
@@ -31,10 +27,7 @@ impl SkillBundleConfig for ForceShield {
 impl GetStaticSkillBehavior for ForceShield {
 	fn behavior() -> SkillBehavior {
 		SkillBehavior::OnAim(SkillBehaviors {
-			contact: SkillSpawnAndExecute {
-				spawn: ForceShield::spawn_skill,
-				..default()
-			},
+			contact: Behavior::new().with_spawn(SpawnBehavior::Fn(ForceShield::spawn_skill)),
 			..default()
 		})
 	}

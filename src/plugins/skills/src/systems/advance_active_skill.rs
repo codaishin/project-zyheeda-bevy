@@ -147,7 +147,10 @@ fn schedule_start<TSkillExecutor: Schedule, TSkill: GetSkillBehavior>(
 mod tests {
 	use super::*;
 	use crate::{
-		skills::{OnSkillStop, SkillSpawnAndExecute},
+		behaviors::{
+			spawn_behavior::{OnSkillStop, SpawnBehavior},
+			Behavior,
+		},
 		traits::{GetAnimation, GetSkillBehavior},
 	};
 	use animations::traits::Priority;
@@ -289,10 +292,9 @@ mod tests {
 
 	fn skill_behaviors() -> SkillBehaviors {
 		SkillBehaviors {
-			contact: SkillSpawnAndExecute {
-				spawn: |commands, _, _, _| (commands.spawn_empty(), OnSkillStop::Ignore),
-				..default()
-			},
+			contact: Behavior::new().with_spawn(SpawnBehavior::Fn(|commands, _, _, _| {
+				(commands.spawn_empty(), OnSkillStop::Ignore)
+			})),
 			..default()
 		}
 	}

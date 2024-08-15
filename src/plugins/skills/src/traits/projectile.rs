@@ -1,11 +1,7 @@
 use super::{GetStaticSkillBehavior, SkillBundleConfig, SpawnSkill};
-use crate::skills::{
-	SkillBehavior,
-	SkillBehaviors,
-	SkillCaster,
-	SkillSpawnAndExecute,
-	SkillSpawner,
-	Target,
+use crate::{
+	behaviors::{spawn_behavior::SpawnBehavior, Behavior, SkillCaster, SkillSpawner, Target},
+	skills::{SkillBehavior, SkillBehaviors},
 };
 use behaviors::components::Projectile;
 use bevy::{
@@ -29,10 +25,7 @@ impl<T: Send + Sync + 'static> SkillBundleConfig for Projectile<T> {
 impl<T: Send + Sync + 'static> GetStaticSkillBehavior for Projectile<T> {
 	fn behavior() -> SkillBehavior {
 		SkillBehavior::OnActive(SkillBehaviors {
-			contact: SkillSpawnAndExecute {
-				spawn: Projectile::<T>::spawn_skill,
-				..default()
-			},
+			contact: Behavior::new().with_spawn(SpawnBehavior::Fn(Projectile::<T>::spawn_skill)),
 			..default()
 		})
 	}

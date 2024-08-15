@@ -12,19 +12,10 @@ pub(crate) mod state;
 pub(crate) mod swap_commands;
 
 use crate::{
+	behaviors::{spawn_behavior::OnSkillStop, SkillCaster, SkillSpawner, Target},
 	components::slots::Slots,
 	items::slot_key::SlotKey,
-	skills::{
-		Animate,
-		OnSkillStop,
-		Skill,
-		SkillAnimation,
-		SkillBehavior,
-		SkillBehaviors,
-		SkillCaster,
-		SkillSpawner,
-		Target,
-	},
+	skills::{Animate, Skill, SkillAnimation, SkillBehavior, SkillBehaviors},
 };
 use bevy::ecs::{
 	bundle::Bundle,

@@ -2,11 +2,12 @@ pub mod components;
 pub mod items;
 pub mod resources;
 pub mod skills;
+pub mod systems;
 pub mod traits;
 
+mod behaviors;
 mod bundles;
 mod skill_loader;
-mod systems;
 
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::{

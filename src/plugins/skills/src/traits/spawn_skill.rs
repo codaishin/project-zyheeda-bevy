@@ -1,5 +1,5 @@
 use super::{SkillBundleConfig, SpawnSkill};
-use crate::skills::{OnSkillStop, SkillCaster, SkillSpawner, Target};
+use crate::behaviors::{spawn_behavior::OnSkillStop, SkillCaster, SkillSpawner, Target};
 use bevy::ecs::system::{Commands, EntityCommands};
 
 impl<T: SkillBundleConfig> SpawnSkill for T {

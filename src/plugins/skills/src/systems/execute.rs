@@ -1,6 +1,6 @@
 use crate::{
+	behaviors::{SkillCaster, SkillSpawner, Target},
 	components::SkillSpawn,
-	skills::{SkillCaster, SkillSpawner, Target},
 	traits::Execute,
 };
 use bevy::{
@@ -74,10 +74,7 @@ fn get_spawner(
 
 #[cfg(test)]
 mod tests {
-	use std::ops::DerefMut;
-
 	use super::*;
-	use crate::skills::{SkillCaster, SkillSpawner, Target};
 	use bevy::{
 		app::{App, Update},
 		math::{Ray3d, Vec3},
@@ -91,6 +88,7 @@ mod tests {
 	};
 	use macros::NestedMock;
 	use mockall::automock;
+	use std::ops::DerefMut;
 
 	#[derive(Component, NestedMock)]
 	struct _Executor {
