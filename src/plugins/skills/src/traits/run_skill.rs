@@ -34,7 +34,7 @@ mod test {
 			system::{Commands, Query, Resource},
 		},
 		math::{Ray3d, Vec3},
-		transform::components::{GlobalTransform, Transform},
+		transform::components::GlobalTransform,
 	};
 	use common::{
 		components::Outdated,
@@ -69,7 +69,7 @@ mod test {
 	struct _Result(OnSkillStop);
 
 	fn setup<const STOPPABLE: bool>(
-		caster: Transform,
+		caster: GlobalTransform,
 		spawner: SkillSpawner,
 		target: Target,
 	) -> App {
@@ -94,7 +94,7 @@ mod test {
 
 	#[test]
 	fn spawn_not_on_agent() {
-		let caster_transform = Transform::from_xyz(1., 2., 3.);
+		let caster_transform = GlobalTransform::from_xyz(1., 2., 3.);
 		let spawner = SkillSpawner(
 			Entity::from_raw(1000),
 			GlobalTransform::from_xyz(4., 5., 6.),
@@ -132,7 +132,7 @@ mod test {
 
 	#[test]
 	fn returned_spawned_entity() {
-		let caster = Transform::from_xyz(1., 2., 3.);
+		let caster = GlobalTransform::from_xyz(1., 2., 3.);
 		let spawner = SkillSpawner(
 			Entity::from_raw(1000),
 			GlobalTransform::from_xyz(4., 5., 6.),
@@ -164,7 +164,7 @@ mod test {
 
 	#[test]
 	fn do_not_return_spawned_entity_when_stoppable_false() {
-		let caster = Transform::from_xyz(1., 2., 3.);
+		let caster = GlobalTransform::from_xyz(1., 2., 3.);
 		let spawner = SkillSpawner(
 			Entity::from_raw(1000),
 			GlobalTransform::from_xyz(4., 5., 6.),

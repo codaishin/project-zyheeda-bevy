@@ -1,7 +1,7 @@
 use super::{GetStaticSkillBehavior, RunSkill, SkillBundleConfig};
 use crate::skills::{SkillBehavior, SkillCaster, SkillSpawner, Target};
 use behaviors::components::{gravity_well::GravityWell, ground_target::GroundTarget};
-use bevy::ecs::bundle::Bundle;
+use bevy::{ecs::bundle::Bundle, prelude::Transform};
 use common::{tools::Units, traits::clamp_zero_positive::ClampZeroPositive};
 
 impl SkillBundleConfig for GravityWell {
@@ -11,7 +11,7 @@ impl SkillBundleConfig for GravityWell {
 		(
 			GravityWell,
 			GroundTarget {
-				caster: caster.1,
+				caster: Transform::from(caster.1),
 				target_ray: target.ray,
 				max_range: Units::new(10.),
 			},
@@ -47,7 +47,7 @@ mod tests {
 				},
 			)),
 			GravityWell::new_skill_bundle(
-				&SkillCaster(Entity::from_raw(0), Transform::from_xyz(1., 2., 3.)),
+				&SkillCaster(Entity::from_raw(0), GlobalTransform::from_xyz(1., 2., 3.)),
 				&SkillSpawner(Entity::from_raw(0), GlobalTransform::from_xyz(4., 5., 6.)),
 				&Target {
 					ray: Ray3d::new(Vec3::new(11., 12., 14.), Vec3::new(4., 2., 0.)),

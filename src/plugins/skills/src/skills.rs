@@ -12,7 +12,7 @@ use bevy::{
 	math::{Dir3, Ray3d, Vec3},
 	prelude::Image,
 	reflect::TypePath,
-	transform::components::{GlobalTransform, Transform},
+	transform::components::GlobalTransform,
 };
 use common::{components::Outdated, resources::ColliderInfo};
 use std::{
@@ -145,7 +145,7 @@ pub(crate) enum SkillState {
 pub struct SkillSpawner(pub Entity, pub GlobalTransform);
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct SkillCaster(pub Entity, pub Transform);
+pub struct SkillCaster(pub Entity, pub GlobalTransform);
 
 pub type Target = SelectInfo<Outdated<GlobalTransform>>;
 pub type StartBehaviorFn = fn(&mut Commands, &SkillCaster, &SkillSpawner, &Target) -> OnSkillStop;

@@ -47,7 +47,7 @@ mod tests {
 		let forward = Vec3::new(8., 9., 10.);
 		let caster = SkillCaster(
 			Entity::from_raw(42),
-			Transform::default().looking_at(forward, Vec3::Y),
+			GlobalTransform::from(Transform::default().looking_at(forward, Vec3::Y)),
 		);
 		let spawner = SkillSpawner(Entity::from_raw(43), GlobalTransform::from_xyz(1., 2., 3.));
 
@@ -68,7 +68,7 @@ mod tests {
 	#[test]
 	fn spawn_with_special_bundle() {
 		let mut app = App::new();
-		let caster = SkillCaster(Entity::from_raw(42), Transform::default());
+		let caster = SkillCaster(Entity::from_raw(42), GlobalTransform::default());
 		let spawner = SkillSpawner(Entity::from_raw(43), GlobalTransform::from_xyz(1., 2., 3.));
 
 		let force_shield = app
@@ -83,7 +83,7 @@ mod tests {
 	#[test]
 	fn spawn_with_proper_location() {
 		let mut app = App::new();
-		let caster = SkillCaster(Entity::from_raw(42), Transform::default());
+		let caster = SkillCaster(Entity::from_raw(42), GlobalTransform::default());
 		let spawner = SkillSpawner(Entity::from_raw(43), GlobalTransform::from_xyz(1., 2., 3.));
 
 		let force_shield = app

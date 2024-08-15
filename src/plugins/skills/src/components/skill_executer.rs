@@ -86,7 +86,7 @@ mod tests {
 		ecs::system::Query,
 		hierarchy::BuildWorldChildren,
 		math::{Ray3d, Vec3},
-		transform::components::{GlobalTransform, Transform},
+		transform::components::GlobalTransform,
 	};
 	use common::{
 		components::Outdated,
@@ -122,7 +122,10 @@ mod tests {
 	}
 
 	fn caster() -> SkillCaster {
-		SkillCaster(Entity::from_raw(99), Transform::from_xyz(42., 42., 42.))
+		SkillCaster(
+			Entity::from_raw(99),
+			GlobalTransform::from_xyz(42., 42., 42.),
+		)
 	}
 
 	fn spawner() -> SkillSpawner {
