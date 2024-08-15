@@ -21,7 +21,7 @@ use std::{
 	hash::Hash,
 };
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct ColliderInfo<T> {
 	pub collider: T,
 	pub root: Option<T>,

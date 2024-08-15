@@ -1,5 +1,5 @@
 use crate::{
-	skills::{OnSkillStop, SkillCaster, SkillSpawner, StartBehaviorFn, Target},
+	skills::{OnSkillStop, SkillBehaviors, SkillCaster, SkillSpawner, Target},
 	traits::{Execute, Flush, Schedule},
 };
 use bevy::{
@@ -7,17 +7,17 @@ use bevy::{
 	hierarchy::DespawnRecursiveExt,
 };
 
-#[derive(Component, Debug, PartialEq, Default, Clone, Copy)]
+#[derive(Component, Debug, PartialEq, Default, Clone)]
 pub(crate) enum SkillExecuter {
 	#[default]
 	Idle,
-	Start(StartBehaviorFn),
-	StartedStoppable(Entity),
-	Stop(Entity),
+	Start(SkillBehaviors),
+	StartedStoppable(Vec<Entity>),
+	Stop(Vec<Entity>),
 }
 
 impl Schedule for SkillExecuter {
-	fn schedule(&mut self, start: StartBehaviorFn) {
+	fn schedule(&mut self, start: SkillBehaviors) {
 		*self = SkillExecuter::Start(start);
 	}
 }
@@ -26,7 +26,7 @@ impl Flush for SkillExecuter {
 	fn flush(&mut self) {
 		match self {
 			SkillExecuter::StartedStoppable(entity) => {
-				*self = SkillExecuter::Stop(*entity);
+				*self = SkillExecuter::Stop(entity.clone());
 			}
 			SkillExecuter::Start(_) => {
 				*self = SkillExecuter::Idle;
@@ -45,11 +45,11 @@ impl Execute for SkillExecuter {
 		target: &Target,
 	) {
 		match self {
-			SkillExecuter::Start(start) => {
-				*self = execute_start(start, commands, caster, spawner, target);
+			SkillExecuter::Start(skill) => {
+				*self = execute_start(skill, commands, caster, spawner, target);
 			}
-			SkillExecuter::Stop(entity) => {
-				*self = execute_stop(entity, commands);
+			SkillExecuter::Stop(skills) => {
+				*self = execute_stop(skills, commands);
 			}
 			_ => {}
 		}
@@ -57,85 +57,75 @@ impl Execute for SkillExecuter {
 }
 
 fn execute_start(
-	start: &mut StartBehaviorFn,
+	start: &mut SkillBehaviors,
 	commands: &mut Commands,
 	caster: &SkillCaster,
 	spawner: &SkillSpawner,
 	target: &Target,
 ) -> SkillExecuter {
-	if let OnSkillStop::Stop(entity) = start(commands, caster, spawner, target) {
-		SkillExecuter::StartedStoppable(entity)
-	} else {
-		SkillExecuter::Idle
+	let mut stoppable_skills = vec![];
+
+	let (_, on_skill_stop) = (start.contact.spawn)(commands, caster, spawner, target);
+	if let OnSkillStop::Stop(skill) = on_skill_stop {
+		stoppable_skills.push(skill);
 	}
+	let (_, on_skill_stop) = (start.projection.spawn)(commands, caster, spawner, target);
+	if let OnSkillStop::Stop(skill) = on_skill_stop {
+		stoppable_skills.push(skill);
+	}
+
+	SkillExecuter::StartedStoppable(stoppable_skills)
 }
 
-fn execute_stop(entity: &Entity, commands: &mut Commands) -> SkillExecuter {
-	if let Some(entity) = commands.get_entity(*entity) {
-		entity.despawn_recursive();
-	};
+fn execute_stop(skills: &[Entity], commands: &mut Commands) -> SkillExecuter {
+	for skill in skills {
+		if let Some(entity) = commands.get_entity(*skill) {
+			entity.despawn_recursive();
+		};
+	}
 	SkillExecuter::Idle
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::skills::OnSkillStop;
+	use crate::skills::{OnSkillStop, SkillSpawnAndExecute};
 	use bevy::{
 		app::{App, Update},
-		ecs::system::Query,
+		ecs::system::{Query, RunSystemOnce},
 		hierarchy::BuildWorldChildren,
 		math::{Ray3d, Vec3},
 		transform::components::GlobalTransform,
+		utils::default,
 	};
 	use common::{
 		components::Outdated,
 		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
 	};
-	use mockall::mock;
 
-	trait _Run {
-		fn run(
-			commands: &mut Commands,
-			caster: &SkillCaster,
-			spawner: &SkillSpawner,
-			target: &Target,
-		) -> OnSkillStop;
+	#[derive(Component, Debug, PartialEq)]
+	struct _SpawnArgs {
+		caster: SkillCaster,
+		spawner: SkillSpawner,
+		target: Target,
 	}
 
-	macro_rules! mock_run_fn {
-		($ident:ident) => {
-			mock! {
-				$ident {}
-				impl _Run for $ident {
-					#[allow(clippy::needless_lifetimes)]
-					fn run<'a, 'b, 'c>(
-						commands: &'a mut Commands<'b, 'c>,
-						caster: &SkillCaster,
-						spawner: &SkillSpawner,
-						target: &Target,
-					) -> OnSkillStop;
-				}
-			}
-		};
-	}
-
-	fn caster() -> SkillCaster {
+	fn get_caster() -> SkillCaster {
 		SkillCaster(
 			Entity::from_raw(99),
 			GlobalTransform::from_xyz(42., 42., 42.),
 		)
 	}
 
-	fn spawner() -> SkillSpawner {
+	fn get_spawner() -> SkillSpawner {
 		SkillSpawner(
 			Entity::from_raw(111),
 			GlobalTransform::from_xyz(100., 100., 100.),
 		)
 	}
 
-	fn target() -> Target {
+	fn get_target() -> Target {
 		Target {
 			ray: Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(4., 5., 6.)),
 			collision_info: Some(ColliderInfo {
@@ -151,99 +141,194 @@ mod tests {
 		}
 	}
 
+	fn setup(executer: SkillExecuter) -> (App, Entity) {
+		let mut app = App::new().single_threaded(Update);
+		let executer = app.world_mut().spawn(executer).id();
+
+		(app, executer)
+	}
+
+	fn execute(mut cmd: Commands, mut executers: Query<&mut SkillExecuter>) {
+		let mut executer = executers.single_mut();
+		executer.execute(&mut cmd, &get_caster(), &get_spawner(), &get_target())
+	}
+
 	#[test]
-	fn schedule() {
-		let run_fn: StartBehaviorFn = |_, _, _, _| OnSkillStop::Ignore;
+	fn set_self_to_start_skill() {
+		let skill = SkillBehaviors {
+			contact: SkillSpawnAndExecute {
+				spawn: |c, _, _, _| (c.spawn_empty(), OnSkillStop::Ignore),
+				..default()
+			},
+			..default()
+		};
 
 		let mut executer = SkillExecuter::default();
-		executer.schedule(run_fn);
+		executer.schedule(skill.clone());
 
-		assert_eq!(SkillExecuter::Start(run_fn), executer);
+		assert_eq!(SkillExecuter::Start(skill), executer);
 	}
 
-	mock_run_fn!(_ExecuteArgs);
-
 	#[test]
-	fn execute_args() {
-		let ctx = Mock_ExecuteArgs::run_context();
-		ctx.expect()
-			.times(1)
-			.withf(move |_, c, s, t| {
-				assert_eq!((&caster(), &spawner(), &target()), (c, s, t));
-				true
-			})
-			.return_const(OnSkillStop::Ignore);
-
-		let mut executer = SkillExecuter::Start(Mock_ExecuteArgs::run);
-		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, move |mut commands: Commands| {
-			executer.execute(&mut commands, &caster(), &spawner(), &target())
-		});
-		app.update();
-	}
-
-	mock_run_fn!(_Stoppable);
-
-	#[test]
-	fn set_to_started_on_execute_stoppable() {
-		let ctx = Mock_Stoppable::run_context();
-		ctx.expect()
-			.return_const(OnSkillStop::Stop(Entity::from_raw(998877)));
-
-		let mut app = App::new().single_threaded(Update);
-		let executer = app
-			.world_mut()
-			.spawn(SkillExecuter::Start(Mock_Stoppable::run))
-			.id();
-		app.add_systems(
-			Update,
-			move |mut commands: Commands, mut executers: Query<&mut SkillExecuter>| {
-				let mut executer = executers.single_mut();
-				executer.execute(&mut commands, &caster(), &spawner(), &target())
+	fn spawn_skill_contact_entity() {
+		let (mut app, ..) = setup(SkillExecuter::Start(SkillBehaviors {
+			contact: SkillSpawnAndExecute {
+				spawn: |cmd, caster, spawner, target| {
+					(
+						cmd.spawn(_SpawnArgs {
+							caster: *caster,
+							spawner: *spawner,
+							target: *target,
+						}),
+						OnSkillStop::Ignore,
+					)
+				},
+				..default()
 			},
-		);
+			..default()
+		}));
 
-		app.update();
+		app.world_mut().run_system_once(execute);
+
+		let spawn_args = app
+			.world()
+			.iter_entities()
+			.find_map(|e| e.get::<_SpawnArgs>());
+
+		assert_eq!(
+			Some(&_SpawnArgs {
+				caster: get_caster(),
+				spawner: get_spawner(),
+				target: get_target()
+			}),
+			spawn_args
+		)
+	}
+	#[test]
+	fn spawn_skill_projection_entity() {
+		let (mut app, ..) = setup(SkillExecuter::Start(SkillBehaviors {
+			projection: SkillSpawnAndExecute {
+				spawn: |cmd, caster, spawner, target| {
+					(
+						cmd.spawn(_SpawnArgs {
+							caster: *caster,
+							spawner: *spawner,
+							target: *target,
+						}),
+						OnSkillStop::Ignore,
+					)
+				},
+				..default()
+			},
+			..default()
+		}));
+
+		app.world_mut().run_system_once(execute);
+
+		let spawn_args = app
+			.world()
+			.iter_entities()
+			.find_map(|e| e.get::<_SpawnArgs>());
+
+		assert_eq!(
+			Some(&_SpawnArgs {
+				caster: get_caster(),
+				spawner: get_spawner(),
+				target: get_target()
+			}),
+			spawn_args
+		)
+	}
+
+	#[test]
+	fn set_to_started_contact_as_stoppable() {
+		let (mut app, executer) = setup(SkillExecuter::Start(SkillBehaviors {
+			contact: SkillSpawnAndExecute {
+				spawn: |cmd, _, _, _| {
+					(
+						cmd.spawn_empty(),
+						OnSkillStop::Stop(Entity::from_raw(998877)),
+					)
+				},
+				..default()
+			},
+			..default()
+		}));
+
+		app.world_mut().run_system_once(execute);
 
 		let executer = app.world().entity(executer).get::<SkillExecuter>().unwrap();
 
 		assert_eq!(
-			&SkillExecuter::StartedStoppable(Entity::from_raw(998877)),
+			&SkillExecuter::StartedStoppable(vec![Entity::from_raw(998877)]),
 			executer
 		);
 	}
 
-	mock_run_fn!(_NonStoppable);
-
 	#[test]
-	fn set_to_idle_on_execute_non_stoppable() {
-		let ctx = Mock_NonStoppable::run_context();
-		ctx.expect().return_const(OnSkillStop::Ignore);
-
-		let mut app = App::new().single_threaded(Update);
-		let executer = app
-			.world_mut()
-			.spawn(SkillExecuter::Start(Mock_NonStoppable::run))
-			.id();
-
-		app.add_systems(
-			Update,
-			|mut commands: Commands, mut executers: Query<&mut SkillExecuter>| {
-				let mut executer = executers.single_mut();
-				executer.execute(&mut commands, &caster(), &spawner(), &target())
+	fn set_to_started_projection_as_stoppable() {
+		let (mut app, executer) = setup(SkillExecuter::Start(SkillBehaviors {
+			projection: SkillSpawnAndExecute {
+				spawn: |cmd, _, _, _| {
+					(
+						cmd.spawn_empty(),
+						OnSkillStop::Stop(Entity::from_raw(998877)),
+					)
+				},
+				..default()
 			},
-		);
+			..default()
+		}));
 
-		app.update();
+		app.world_mut().run_system_once(execute);
 
 		let executer = app.world().entity(executer).get::<SkillExecuter>().unwrap();
 
-		assert_eq!(&SkillExecuter::Idle, executer);
+		assert_eq!(
+			&SkillExecuter::StartedStoppable(vec![Entity::from_raw(998877)]),
+			executer
+		);
+	}
+
+	#[test]
+	fn set_to_started_projection_and_contact_as_stoppable() {
+		let (mut app, executer) = setup(SkillExecuter::Start(SkillBehaviors {
+			contact: SkillSpawnAndExecute {
+				spawn: |cmd, _, _, _| {
+					(
+						cmd.spawn_empty(),
+						OnSkillStop::Stop(Entity::from_raw(998877)),
+					)
+				},
+				..default()
+			},
+			projection: SkillSpawnAndExecute {
+				spawn: |cmd, _, _, _| {
+					(
+						cmd.spawn_empty(),
+						OnSkillStop::Stop(Entity::from_raw(112233)),
+					)
+				},
+				..default()
+			},
+		}));
+
+		app.world_mut().run_system_once(execute);
+
+		let executer = app.world().entity(executer).get::<SkillExecuter>().unwrap();
+
+		assert_eq!(
+			&SkillExecuter::StartedStoppable(vec![
+				Entity::from_raw(998877),
+				Entity::from_raw(112233)
+			]),
+			executer
+		);
 	}
 
 	#[test]
 	fn set_to_idle_on_flush_when_set_to_start() {
-		let mut executer = SkillExecuter::Start(|_, _, _, _| OnSkillStop::Ignore);
+		let mut executer = SkillExecuter::Start(default());
 
 		executer.flush();
 
@@ -252,47 +337,64 @@ mod tests {
 
 	#[test]
 	fn set_to_stop_on_flush_when_set_to_started() {
-		let mut executer = SkillExecuter::StartedStoppable(Entity::from_raw(556677));
+		let mut executer = SkillExecuter::StartedStoppable(vec![
+			Entity::from_raw(1),
+			Entity::from_raw(2),
+			Entity::from_raw(3),
+		]);
 
 		executer.flush();
 
-		assert_eq!(SkillExecuter::Stop(Entity::from_raw(556677)), executer);
+		assert_eq!(
+			SkillExecuter::Stop(vec![
+				Entity::from_raw(1),
+				Entity::from_raw(2),
+				Entity::from_raw(3)
+			]),
+			executer
+		);
 	}
 
 	#[test]
 	fn despawn_skill_entity_recursively_on_execute_stop() {
-		let mut app = App::new().single_threaded(Update);
-		let skill = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn_empty().set_parent(skill);
-		let mut executer = SkillExecuter::Stop(skill);
+		#[derive(Component)]
+		struct _Child;
 
-		app.add_systems(Update, move |mut commands: Commands| {
-			executer.execute(&mut commands, &caster(), &spawner(), &target());
-		});
-		app.update();
+		#[derive(Component)]
+		struct _Parent;
 
-		assert_eq!(0, app.world().iter_entities().count());
+		let (mut app, executer) = setup(SkillExecuter::Idle);
+		let skill = app
+			.world_mut()
+			.spawn(_Parent)
+			.with_children(|skill| {
+				skill.spawn(_Child);
+			})
+			.id();
+		let mut executer = app.world_mut().entity_mut(executer);
+		let mut executer = executer.get_mut::<SkillExecuter>().unwrap();
+		*executer = SkillExecuter::Stop(vec![skill]);
+
+		app.world_mut().run_system_once(execute);
+
+		assert_eq!(
+			0,
+			app.world()
+				.iter_entities()
+				.filter(|e| e.contains::<_Parent>() || e.contains::<_Child>())
+				.count()
+		);
 	}
 
 	#[test]
 	fn set_to_idle_on_stop_execution() {
-		let mut app = App::new().single_threaded(Update);
-		let executer = app
-			.world_mut()
-			.spawn(SkillExecuter::Stop(Entity::from_raw(42)))
-			.id();
+		let (mut app, executer) = setup(SkillExecuter::Stop(vec![]));
 
-		app.add_systems(
-			Update,
-			|mut commands: Commands, mut executers: Query<&mut SkillExecuter>| {
-				let mut executer = executers.single_mut();
-				executer.execute(&mut commands, &caster(), &spawner(), &target());
-			},
+		app.world_mut().run_system_once(execute);
+
+		assert_eq!(
+			Some(&SkillExecuter::Idle),
+			app.world().entity(executer).get::<SkillExecuter>()
 		);
-		app.update();
-
-		let executer = app.world().entity(executer).get::<SkillExecuter>().unwrap();
-
-		assert_eq!(&SkillExecuter::Idle, executer);
 	}
 }

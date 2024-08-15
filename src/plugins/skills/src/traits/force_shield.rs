@@ -1,7 +1,19 @@
-use super::{GetStaticSkillBehavior, RunSkill, SkillBundleConfig};
-use crate::skills::{SkillBehavior, SkillCaster, SkillSpawner, Target};
+use super::{GetStaticSkillBehavior, SkillBundleConfig, SpawnSkill};
+use crate::skills::{
+	SkillBehavior,
+	SkillBehaviors,
+	SkillCaster,
+	SkillSpawnAndExecute,
+	SkillSpawner,
+	Target,
+};
 use behaviors::components::ForceShield;
-use bevy::{self, ecs::bundle::Bundle, prelude::SpatialBundle, transform::components::Transform};
+use bevy::{
+	self,
+	ecs::bundle::Bundle,
+	prelude::{default, SpatialBundle},
+	transform::components::Transform,
+};
 
 impl SkillBundleConfig for ForceShield {
 	const STOPPABLE: bool = true;
@@ -18,7 +30,13 @@ impl SkillBundleConfig for ForceShield {
 
 impl GetStaticSkillBehavior for ForceShield {
 	fn behavior() -> SkillBehavior {
-		SkillBehavior::OnAim(ForceShield::run_skill)
+		SkillBehavior::OnAim(SkillBehaviors {
+			contact: SkillSpawnAndExecute {
+				spawn: ForceShield::spawn_skill,
+				..default()
+			},
+			..default()
+		})
 	}
 }
 

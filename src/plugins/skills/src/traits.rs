@@ -6,8 +6,8 @@ pub(crate) mod get_skill_animation;
 pub(crate) mod gravity_well;
 pub(crate) mod peek_next;
 pub(crate) mod projectile;
-pub(crate) mod run_skill;
 pub(crate) mod skill_state;
+pub(crate) mod spawn_skill;
 pub(crate) mod state;
 pub(crate) mod swap_commands;
 
@@ -20,13 +20,16 @@ use crate::{
 		Skill,
 		SkillAnimation,
 		SkillBehavior,
+		SkillBehaviors,
 		SkillCaster,
 		SkillSpawner,
-		StartBehaviorFn,
 		Target,
 	},
 };
-use bevy::ecs::{bundle::Bundle, system::Commands};
+use bevy::ecs::{
+	bundle::Bundle,
+	system::{Commands, EntityCommands},
+};
 use common::traits::{load_asset::Path, map_value::TryMapBackwards, state_duration::StateUpdate};
 use std::hash::Hash;
 
@@ -44,13 +47,13 @@ pub(crate) trait SkillBundleConfig {
 	) -> impl Bundle;
 }
 
-pub(crate) trait RunSkill {
-	fn run_skill(
-		commands: &mut Commands,
+pub(crate) trait SpawnSkill {
+	fn spawn_skill<'a>(
+		commands: &'a mut Commands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
-	) -> OnSkillStop;
+	) -> (EntityCommands<'a>, OnSkillStop);
 }
 
 pub(crate) trait Matches<T> {
@@ -161,7 +164,7 @@ pub trait InputState<TMap: TryMapBackwards<TKey, SlotKey>, TKey: Eq + Hash> {
 }
 
 pub trait Schedule {
-	fn schedule(&mut self, start: StartBehaviorFn);
+	fn schedule(&mut self, behaviors: SkillBehaviors);
 }
 
 pub trait Execute {

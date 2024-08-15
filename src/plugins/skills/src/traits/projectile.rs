@@ -1,7 +1,19 @@
-use super::{GetStaticSkillBehavior, RunSkill, SkillBundleConfig};
-use crate::skills::{SkillBehavior, SkillCaster, SkillSpawner, Target};
+use super::{GetStaticSkillBehavior, SkillBundleConfig, SpawnSkill};
+use crate::skills::{
+	SkillBehavior,
+	SkillBehaviors,
+	SkillCaster,
+	SkillSpawnAndExecute,
+	SkillSpawner,
+	Target,
+};
 use behaviors::components::Projectile;
-use bevy::{ecs::bundle::Bundle, prelude::SpatialBundle, transform::components::Transform};
+use bevy::{
+	ecs::bundle::Bundle,
+	prelude::SpatialBundle,
+	transform::components::Transform,
+	utils::default,
+};
 
 impl<T: Send + Sync + 'static> SkillBundleConfig for Projectile<T> {
 	const STOPPABLE: bool = false;
@@ -16,7 +28,13 @@ impl<T: Send + Sync + 'static> SkillBundleConfig for Projectile<T> {
 
 impl<T: Send + Sync + 'static> GetStaticSkillBehavior for Projectile<T> {
 	fn behavior() -> SkillBehavior {
-		SkillBehavior::OnActive(Projectile::<T>::run_skill)
+		SkillBehavior::OnActive(SkillBehaviors {
+			contact: SkillSpawnAndExecute {
+				spawn: Projectile::<T>::spawn_skill,
+				..default()
+			},
+			..default()
+		})
 	}
 }
 

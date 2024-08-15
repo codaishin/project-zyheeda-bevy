@@ -1,7 +1,14 @@
-use super::{GetStaticSkillBehavior, RunSkill, SkillBundleConfig};
-use crate::skills::{SkillBehavior, SkillCaster, SkillSpawner, Target};
+use super::{GetStaticSkillBehavior, SkillBundleConfig, SpawnSkill};
+use crate::skills::{
+	SkillBehavior,
+	SkillBehaviors,
+	SkillCaster,
+	SkillSpawnAndExecute,
+	SkillSpawner,
+	Target,
+};
 use behaviors::components::{gravity_well::GravityWell, ground_target::GroundTarget};
-use bevy::{ecs::bundle::Bundle, prelude::Transform};
+use bevy::{ecs::bundle::Bundle, prelude::Transform, utils::default};
 use common::{tools::Units, traits::clamp_zero_positive::ClampZeroPositive};
 
 impl SkillBundleConfig for GravityWell {
@@ -21,7 +28,13 @@ impl SkillBundleConfig for GravityWell {
 
 impl GetStaticSkillBehavior for GravityWell {
 	fn behavior() -> SkillBehavior {
-		SkillBehavior::OnActive(GravityWell::run_skill)
+		SkillBehavior::OnActive(SkillBehaviors {
+			projection: SkillSpawnAndExecute {
+				spawn: GravityWell::spawn_skill,
+				..default()
+			},
+			..default()
+		})
 	}
 }
 

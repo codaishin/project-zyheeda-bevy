@@ -1,22 +1,21 @@
-use super::{RunSkill, SkillBundleConfig};
+use super::{SkillBundleConfig, SpawnSkill};
 use crate::skills::{OnSkillStop, SkillCaster, SkillSpawner, Target};
-use bevy::ecs::system::Commands;
+use bevy::ecs::system::{Commands, EntityCommands};
 
-impl<T: SkillBundleConfig> RunSkill for T {
-	fn run_skill(
-		commands: &mut Commands,
+impl<T: SkillBundleConfig> SpawnSkill for T {
+	fn spawn_skill<'a>(
+		commands: &'a mut Commands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
-	) -> OnSkillStop {
-		let entity = commands
-			.spawn(T::new_skill_bundle(caster, spawner, target))
-			.id();
+	) -> (EntityCommands<'a>, OnSkillStop) {
+		let entity = commands.spawn(T::new_skill_bundle(caster, spawner, target));
 
 		if Self::STOPPABLE {
-			OnSkillStop::Stop(entity)
+			let id = entity.id();
+			(entity, OnSkillStop::Stop(id))
 		} else {
-			OnSkillStop::Ignore
+			(entity, OnSkillStop::Ignore)
 		}
 	}
 }
@@ -60,31 +59,28 @@ mod test {
 			_Skill::<STOPPABLE> {
 				caster: *caster,
 				spawner: *spawner,
-				target: target.clone(),
+				target: *target,
 			}
 		}
 	}
 
-	#[derive(Resource)]
-	struct _Result(OnSkillStop);
+	#[derive(Resource, Debug, PartialEq)]
+	struct _Result(Entity, OnSkillStop);
 
-	fn setup<const STOPPABLE: bool>(
-		caster: GlobalTransform,
-		spawner: SkillSpawner,
-		target: Target,
-	) -> App {
+	fn setup<const STOPPABLE: bool>(spawner: SkillSpawner, target: Target) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			move |mut commands: Commands, query: Query<Entity>| {
-				for id in &query {
-					let id = _Skill::<STOPPABLE>::run_skill(
+			move |mut commands: Commands, casters: Query<(Entity, &GlobalTransform)>| {
+				for (caster, transform) in &casters {
+					let (entity, on_skill_stop) = _Skill::<STOPPABLE>::spawn_skill(
 						&mut commands,
-						&SkillCaster(id, caster),
+						&SkillCaster(caster, *transform),
 						&spawner,
 						&target,
 					);
-					commands.insert_resource(_Result(id));
+					let entity_id = entity.id();
+					commands.insert_resource(_Result(entity_id, on_skill_stop));
 				}
 			},
 		);
@@ -109,20 +105,20 @@ mod test {
 				root: None,
 			}),
 		};
-		let mut app = setup::<true>(caster_transform, spawner, target.clone());
-		let agent = app.world_mut().spawn_empty().id();
+		let mut app = setup::<true>(spawner, target);
+		let caster = app.world_mut().spawn(caster_transform).id();
 
 		app.update();
 
 		let skill = app
 			.world()
 			.iter_entities()
-			.find(|e| e.id() != agent)
+			.find(|e| e.id() != caster)
 			.unwrap();
 
 		assert_eq!(
 			Some(&_Skill {
-				caster: SkillCaster(agent, caster_transform),
+				caster: SkillCaster(caster, caster_transform),
 				spawner,
 				target,
 			}),
@@ -132,7 +128,7 @@ mod test {
 
 	#[test]
 	fn returned_spawned_entity() {
-		let caster = GlobalTransform::from_xyz(1., 2., 3.);
+		let caster_transform = GlobalTransform::from_xyz(1., 2., 3.);
 		let spawner = SkillSpawner(
 			Entity::from_raw(1000),
 			GlobalTransform::from_xyz(4., 5., 6.),
@@ -147,8 +143,8 @@ mod test {
 				root: None,
 			}),
 		};
-		let mut app = setup::<true>(caster, spawner, target.clone());
-		app.world_mut().spawn_empty();
+		let mut app = setup::<true>(spawner, target);
+		app.world_mut().spawn(caster_transform);
 
 		app.update();
 
@@ -159,12 +155,12 @@ mod test {
 			.unwrap();
 		let result = app.world().get_resource::<_Result>().unwrap();
 
-		assert_eq!(OnSkillStop::Stop(skill.id()), result.0);
+		assert_eq!(&_Result(skill.id(), OnSkillStop::Stop(skill.id())), result);
 	}
 
 	#[test]
 	fn do_not_return_spawned_entity_when_stoppable_false() {
-		let caster = GlobalTransform::from_xyz(1., 2., 3.);
+		let caster_transform = GlobalTransform::from_xyz(1., 2., 3.);
 		let spawner = SkillSpawner(
 			Entity::from_raw(1000),
 			GlobalTransform::from_xyz(4., 5., 6.),
@@ -179,13 +175,18 @@ mod test {
 				root: None,
 			}),
 		};
-		let mut app = setup::<false>(caster, spawner, target.clone());
-		app.world_mut().spawn_empty();
+		let mut app = setup::<false>(spawner, target);
+		app.world_mut().spawn(caster_transform);
 
 		app.update();
 
+		let skill = app
+			.world()
+			.iter_entities()
+			.find(|e| e.contains::<_Skill<false>>())
+			.unwrap();
 		let result = app.world().get_resource::<_Result>().unwrap();
 
-		assert_eq!(OnSkillStop::Ignore, result.0);
+		assert_eq!(&_Result(skill.id(), OnSkillStop::Ignore), result);
 	}
 }

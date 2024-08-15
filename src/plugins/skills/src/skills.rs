@@ -8,11 +8,15 @@ use crate::{
 use animations::animation::Animation;
 use bevy::{
 	asset::{Asset, Handle},
-	ecs::{entity::Entity, system::Commands},
+	ecs::{
+		entity::Entity,
+		system::{Commands, EntityCommands},
+	},
 	math::{Dir3, Ray3d, Vec3},
 	prelude::Image,
 	reflect::TypePath,
 	transform::components::GlobalTransform,
+	utils::default,
 };
 use common::{components::Outdated, resources::ColliderInfo};
 use std::{
@@ -54,7 +58,7 @@ impl Display for Skill {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct SelectInfo<T> {
 	pub ray: Ray3d,
 	pub collision_info: Option<ColliderInfo<T>>,
@@ -148,7 +152,13 @@ pub struct SkillSpawner(pub Entity, pub GlobalTransform);
 pub struct SkillCaster(pub Entity, pub GlobalTransform);
 
 pub type Target = SelectInfo<Outdated<GlobalTransform>>;
-pub type StartBehaviorFn = fn(&mut Commands, &SkillCaster, &SkillSpawner, &Target) -> OnSkillStop;
+pub type StartBehaviorFn = fn(&mut EntityCommands, &SkillCaster, &SkillSpawner, &Target);
+pub type SpawnBehaviorFn = for<'a> fn(
+	&'a mut Commands,
+	&SkillCaster,
+	&SkillSpawner,
+	&Target,
+) -> (EntityCommands<'a>, OnSkillStop);
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum OnSkillStop {
@@ -156,10 +166,35 @@ pub enum OnSkillStop {
 	Stop(Entity),
 }
 
-#[derive(PartialEq, Debug, Clone, Copy, Default)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum SkillBehavior {
-	#[default]
-	Never,
-	OnAim(StartBehaviorFn),
-	OnActive(StartBehaviorFn),
+	OnActive(SkillBehaviors),
+	OnAim(SkillBehaviors),
+}
+
+impl Default for SkillBehavior {
+	fn default() -> Self {
+		Self::OnActive(default())
+	}
+}
+
+#[derive(PartialEq, Debug, Clone, Default)]
+pub struct SkillBehaviors {
+	pub contact: SkillSpawnAndExecute,
+	pub projection: SkillSpawnAndExecute,
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct SkillSpawnAndExecute {
+	pub spawn: SpawnBehaviorFn,
+	pub behaviors: Vec<StartBehaviorFn>,
+}
+
+impl Default for SkillSpawnAndExecute {
+	fn default() -> Self {
+		Self {
+			spawn: |commands, _, _, _| (commands.spawn_empty(), OnSkillStop::Ignore),
+			behaviors: Default::default(),
+		}
+	}
 }

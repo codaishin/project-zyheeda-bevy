@@ -188,7 +188,7 @@ mod tests {
 						commands.spawn(_Execution {
 							caster: *caster,
 							spawner: *spawner,
-							target: target.clone(),
+							target: *target,
 						});
 					});
 			}));

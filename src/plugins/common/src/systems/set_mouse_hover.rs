@@ -108,9 +108,7 @@ mod tests {
 
 		assert_eq!(
 			Some(collider),
-			mouse_hover
-				.and_then(|mh| mh.0.clone())
-				.map(|ci| ci.collider)
+			mouse_hover.and_then(|mh| mh.0).map(|ci| ci.collider)
 		);
 	}
 
@@ -130,7 +128,7 @@ mod tests {
 
 		assert_eq!(
 			Some(Some(root)),
-			mouse_hover.and_then(|mh| mh.0.clone()).map(|ci| ci.root)
+			mouse_hover.and_then(|mh| mh.0).map(|ci| ci.root)
 		);
 	}
 
