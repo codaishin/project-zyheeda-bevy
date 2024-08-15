@@ -187,14 +187,14 @@ pub struct SkillBehaviors {
 #[derive(PartialEq, Debug, Clone)]
 pub struct SkillSpawnAndExecute {
 	pub spawn: SpawnBehaviorFn,
-	pub behaviors: Vec<StartBehaviorFn>,
+	pub execute: Vec<StartBehaviorFn>,
 }
 
 impl Default for SkillSpawnAndExecute {
 	fn default() -> Self {
 		Self {
 			spawn: |commands, _, _, _| (commands.spawn_empty(), OnSkillStop::Ignore),
-			behaviors: Default::default(),
+			execute: Default::default(),
 		}
 	}
 }

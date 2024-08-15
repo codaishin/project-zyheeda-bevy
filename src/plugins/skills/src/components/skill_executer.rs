@@ -1,5 +1,12 @@
 use crate::{
-	skills::{OnSkillStop, SkillBehaviors, SkillCaster, SkillSpawner, Target},
+	skills::{
+		OnSkillStop,
+		SkillBehaviors,
+		SkillCaster,
+		SkillSpawnAndExecute,
+		SkillSpawner,
+		Target,
+	},
 	traits::{Execute, Flush, Schedule},
 };
 use bevy::{
@@ -46,38 +53,56 @@ impl Execute for SkillExecuter {
 	) {
 		match self {
 			SkillExecuter::Start(skill) => {
-				*self = execute_start(skill, commands, caster, spawner, target);
+				*self = execute(skill, commands, caster, spawner, target);
 			}
 			SkillExecuter::Stop(skills) => {
-				*self = execute_stop(skills, commands);
+				*self = stop(skills, commands);
 			}
 			_ => {}
 		}
 	}
 }
 
-fn execute_start(
-	start: &mut SkillBehaviors,
+fn execute(
+	skill: &mut SkillBehaviors,
 	commands: &mut Commands,
 	caster: &SkillCaster,
 	spawner: &SkillSpawner,
 	target: &Target,
 ) -> SkillExecuter {
-	let mut stoppable_skills = vec![];
+	let skills = [
+		spawn_and_execute(&skill.contact, commands, caster, spawner, target),
+		spawn_and_execute(&skill.projection, commands, caster, spawner, target),
+	];
 
-	let (_, on_skill_stop) = (start.contact.spawn)(commands, caster, spawner, target);
-	if let OnSkillStop::Stop(skill) = on_skill_stop {
-		stoppable_skills.push(skill);
-	}
-	let (_, on_skill_stop) = (start.projection.spawn)(commands, caster, spawner, target);
-	if let OnSkillStop::Stop(skill) = on_skill_stop {
-		stoppable_skills.push(skill);
-	}
-
-	SkillExecuter::StartedStoppable(stoppable_skills)
+	SkillExecuter::StartedStoppable(skills.iter().filter_map(stop_on_skill_stop).collect())
 }
 
-fn execute_stop(skills: &[Entity], commands: &mut Commands) -> SkillExecuter {
+fn stop_on_skill_stop(skill: &OnSkillStop) -> Option<Entity> {
+	match skill {
+		OnSkillStop::Stop(entity) => Some(*entity),
+		OnSkillStop::Ignore => None,
+	}
+}
+
+fn spawn_and_execute(
+	skill: &SkillSpawnAndExecute,
+	commands: &mut Commands,
+	caster: &SkillCaster,
+	spawner: &SkillSpawner,
+	target: &Target,
+) -> OnSkillStop {
+	let spawn_fn = skill.spawn;
+	let (mut entity, on_skill_stop) = spawn_fn(commands, caster, spawner, target);
+
+	for execute_fn in &skill.execute {
+		execute_fn(&mut entity, caster, spawner, target);
+	}
+
+	on_skill_stop
+}
+
+fn stop(skills: &[Entity], commands: &mut Commands) -> SkillExecuter {
 	for skill in skills {
 		if let Some(entity) = commands.get_entity(*skill) {
 			entity.despawn_recursive();
@@ -92,9 +117,10 @@ mod tests {
 	use crate::skills::{OnSkillStop, SkillSpawnAndExecute};
 	use bevy::{
 		app::{App, Update},
-		ecs::system::{Query, RunSystemOnce},
+		ecs::system::{EntityCommands, Query, RunSystemOnce},
 		hierarchy::BuildWorldChildren,
 		math::{Ray3d, Vec3},
+		prelude::BuildChildren,
 		transform::components::GlobalTransform,
 		utils::default,
 	};
@@ -106,6 +132,13 @@ mod tests {
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _SpawnArgs {
+		caster: SkillCaster,
+		spawner: SkillSpawner,
+		target: Target,
+	}
+
+	#[derive(Component, Debug, PartialEq)]
+	struct _BehaviorArgs {
 		caster: SkillCaster,
 		spawner: SkillSpawner,
 		target: Target,
@@ -204,6 +237,95 @@ mod tests {
 			spawn_args
 		)
 	}
+
+	#[test]
+	fn apply_contact_behavior() {
+		fn behavior(e: &mut EntityCommands, c: &SkillCaster, s: &SkillSpawner, t: &Target) {
+			e.with_children(|parent| {
+				parent.spawn(_BehaviorArgs {
+					caster: *c,
+					spawner: *s,
+					target: *t,
+				});
+			});
+		}
+		let (mut app, ..) = setup(SkillExecuter::Start(SkillBehaviors {
+			contact: SkillSpawnAndExecute {
+				execute: vec![behavior, behavior],
+				..default()
+			},
+			..default()
+		}));
+
+		app.world_mut().run_system_once(execute);
+
+		let spawn_args = app
+			.world()
+			.iter_entities()
+			.filter_map(|e| e.get::<_BehaviorArgs>())
+			.collect::<Vec<_>>();
+
+		assert_eq!(
+			vec![
+				&_BehaviorArgs {
+					caster: get_caster(),
+					spawner: get_spawner(),
+					target: get_target()
+				},
+				&_BehaviorArgs {
+					caster: get_caster(),
+					spawner: get_spawner(),
+					target: get_target()
+				}
+			],
+			spawn_args
+		);
+	}
+
+	#[test]
+	fn apply_projection_behavior() {
+		fn behavior(e: &mut EntityCommands, c: &SkillCaster, s: &SkillSpawner, t: &Target) {
+			e.with_children(|parent| {
+				parent.spawn(_BehaviorArgs {
+					caster: *c,
+					spawner: *s,
+					target: *t,
+				});
+			});
+		}
+		let (mut app, ..) = setup(SkillExecuter::Start(SkillBehaviors {
+			projection: SkillSpawnAndExecute {
+				execute: vec![behavior, behavior],
+				..default()
+			},
+			..default()
+		}));
+
+		app.world_mut().run_system_once(execute);
+
+		let spawn_args = app
+			.world()
+			.iter_entities()
+			.filter_map(|e| e.get::<_BehaviorArgs>())
+			.collect::<Vec<_>>();
+
+		assert_eq!(
+			vec![
+				&_BehaviorArgs {
+					caster: get_caster(),
+					spawner: get_spawner(),
+					target: get_target()
+				},
+				&_BehaviorArgs {
+					caster: get_caster(),
+					spawner: get_spawner(),
+					target: get_target()
+				}
+			],
+			spawn_args
+		);
+	}
+
 	#[test]
 	fn spawn_skill_projection_entity() {
 		let (mut app, ..) = setup(SkillExecuter::Start(SkillBehaviors {
