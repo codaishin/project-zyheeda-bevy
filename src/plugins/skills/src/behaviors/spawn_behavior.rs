@@ -1,5 +1,6 @@
 pub mod spawn_ground_target;
 pub mod spawn_projectile;
+pub mod spawn_shield;
 
 use super::{SkillCaster, SkillSpawner, Target};
 use bevy::{
@@ -8,6 +9,7 @@ use bevy::{
 };
 use spawn_ground_target::SpawnGroundTarget;
 use spawn_projectile::SpawnProjectile;
+use spawn_shield::SpawnShield;
 
 pub type SpawnBehaviorFn = for<'a> fn(
 	&'a mut Commands,
@@ -27,6 +29,7 @@ pub enum SpawnBehavior {
 	Fn(SpawnBehaviorFn),
 	GroundTarget(SpawnGroundTarget),
 	Projectile(SpawnProjectile),
+	Shield(SpawnShield),
 }
 
 impl SpawnBehavior {
@@ -41,6 +44,7 @@ impl SpawnBehavior {
 			Self::Fn(func) => func(commands, caster, spawn, target),
 			Self::GroundTarget(gt) => gt.apply(commands, caster, spawn, target),
 			Self::Projectile(pr) => pr.apply(commands, caster, spawn, target),
+			Self::Shield(sh) => sh.apply(commands, caster, spawn, target),
 		}
 	}
 }
