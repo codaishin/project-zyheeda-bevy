@@ -1,6 +1,6 @@
 use bevy::{
 	ecs::component::Component,
-	math::{Ray3d, Vec3},
+	math::{Dir3, Ray3d, Vec3},
 	prelude::InfinitePlane3d,
 	transform::{bundles::TransformBundle, components::Transform},
 };
@@ -14,6 +14,11 @@ pub struct GroundTarget {
 }
 
 impl GroundTarget {
+	pub const DEFAULT_TARGET_RAY: Ray3d = Ray3d {
+		origin: Vec3::Y,
+		direction: Dir3::NEG_Y,
+	};
+
 	fn intersect_ground_plane(self: &GroundTarget) -> Option<f32> {
 		self.target_ray
 			.intersect_plane(Vec3::ZERO, InfinitePlane3d::new(Vec3::Y))
@@ -29,6 +34,16 @@ impl GroundTarget {
 		}
 
 		*target_translation = caster_translation + target_direction.normalize() * max_range;
+	}
+}
+
+impl Default for GroundTarget {
+	fn default() -> Self {
+		Self {
+			caster: Default::default(),
+			target_ray: Self::DEFAULT_TARGET_RAY,
+			max_range: Default::default(),
+		}
 	}
 }
 

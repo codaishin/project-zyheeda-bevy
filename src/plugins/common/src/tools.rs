@@ -6,6 +6,7 @@ use crate::{
 };
 use bevy::prelude::Entity;
 use macros::ClampZeroPositive;
+use serde::{Deserialize, Serialize};
 use std::{
 	fmt::{Debug, Formatter, Result},
 	marker::PhantomData,
@@ -45,10 +46,10 @@ impl<'a, T: Debug + PartialEq> Deref for Last<'a, T> {
 	}
 }
 
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Default, ClampZeroPositive)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive)]
 pub struct UnitsPerSecond(f32);
 
-#[derive(Debug, PartialEq, Clone, ClampZeroPositive)]
+#[derive(Debug, PartialEq, Clone, Copy, ClampZeroPositive, Serialize, Deserialize)]
 pub struct Units(f32);
 
 #[derive(Debug, PartialEq, Clone, ClampZeroPositive)]

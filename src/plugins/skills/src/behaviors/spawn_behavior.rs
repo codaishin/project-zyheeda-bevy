@@ -1,8 +1,11 @@
+pub mod spawn_ground_target;
+
 use super::{SkillCaster, SkillSpawner, Target};
 use bevy::{
 	ecs::system::EntityCommands,
 	prelude::{Commands, Entity},
 };
+use spawn_ground_target::SpawnGroundTarget;
 
 pub type SpawnBehaviorFn = for<'a> fn(
 	&'a mut Commands,
@@ -20,6 +23,7 @@ pub enum OnSkillStop {
 #[derive(PartialEq, Debug, Clone)]
 pub enum SpawnBehavior {
 	Fn(SpawnBehaviorFn),
+	GroundTarget(SpawnGroundTarget),
 }
 
 impl SpawnBehavior {
@@ -31,7 +35,8 @@ impl SpawnBehavior {
 		target: &Target,
 	) -> (EntityCommands<'a>, OnSkillStop) {
 		match self {
-			SpawnBehavior::Fn(func) => func(commands, caster, spawn, target),
+			Self::Fn(func) => func(commands, caster, spawn, target),
+			Self::GroundTarget(gt) => gt.apply(commands, caster, spawn, target),
 		}
 	}
 }
