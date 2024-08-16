@@ -8,7 +8,21 @@
 		"Some": "ShootHandGun"
 	},
 	"behavior": {
-		"Projectile": "Plasma"
+		"OnActive": {
+			"contact": {
+				"spawn": {
+					"Projectile": {
+						"stoppable": false,
+						"projectile_type": "Plasma"
+					}
+				},
+				"start": []
+			},
+			"projection": {
+				"spawn": "Placeholder",
+				"start": []
+			}
+		}
 	},
 	"is_usable_with": [
 		"Pistol"

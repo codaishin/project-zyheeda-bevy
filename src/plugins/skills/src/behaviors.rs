@@ -97,10 +97,10 @@ impl Behavior {
 		}
 	}
 
-	pub fn with_execute(self, execute: Vec<StartBehavior>) -> Self {
+	pub fn with_start(self, start: Vec<StartBehavior>) -> Self {
 		Self {
 			spawn: self.spawn,
-			start: execute,
+			start,
 		}
 	}
 

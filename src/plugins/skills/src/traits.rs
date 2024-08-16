@@ -1,50 +1,24 @@
 pub(crate) mod advance_combo;
 pub(crate) mod bevy_input;
 pub(crate) mod flush;
-pub(crate) mod force_shield;
 pub(crate) mod get_skill_animation;
-pub(crate) mod gravity_well;
 pub(crate) mod peek_next;
-pub(crate) mod projectile;
 pub(crate) mod skill_state;
-pub(crate) mod spawn_skill;
 pub(crate) mod state;
 pub(crate) mod swap_commands;
 
 use crate::{
-	behaviors::{spawn_behavior::OnSkillStop, SkillCaster, SkillSpawner, Target},
+	behaviors::{SkillCaster, SkillSpawner, Target},
 	components::slots::Slots,
 	items::slot_key::SlotKey,
 	skills::{Animate, Skill, SkillAnimation, SkillBehavior, SkillBehaviors},
 };
-use bevy::ecs::{
-	bundle::Bundle,
-	system::{Commands, EntityCommands},
-};
+use bevy::ecs::system::Commands;
 use common::traits::{load_asset::Path, map_value::TryMapBackwards, state_duration::StateUpdate};
 use std::hash::Hash;
 
 pub(crate) trait Enqueue<TItem> {
 	fn enqueue(&mut self, item: TItem);
-}
-
-pub(crate) trait SkillBundleConfig {
-	const STOPPABLE: bool;
-
-	fn new_skill_bundle(
-		caster: &SkillCaster,
-		spawner: &SkillSpawner,
-		target: &Target,
-	) -> impl Bundle;
-}
-
-pub(crate) trait SpawnSkill {
-	fn spawn_skill<'a>(
-		commands: &'a mut Commands,
-		caster: &SkillCaster,
-		spawner: &SkillSpawner,
-		target: &Target,
-	) -> (EntityCommands<'a>, OnSkillStop);
 }
 
 pub(crate) trait Matches<T> {

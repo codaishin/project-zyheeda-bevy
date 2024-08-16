@@ -7,7 +7,23 @@
 	"animate": {
 		"Some": "ShootHandGun"
 	},
-	"behavior": "ForceShield",
+	"behavior": {
+		"OnAim": {
+			"contact": {
+				"spawn": {
+					"Shield": {
+						"stoppable": true,
+						"shield_type": "Force"
+					}
+				},
+				"start": []
+			},
+			"projection": {
+				"spawn": "Placeholder",
+				"start": []
+			}
+		}
+	},
 	"is_usable_with": [
 		"Bracer"
 	],

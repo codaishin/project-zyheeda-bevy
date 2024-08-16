@@ -241,7 +241,7 @@ mod tests {
 			});
 		}
 		let (mut app, ..) = setup(SkillExecuter::Start(SkillBehaviors {
-			contact: Behavior::new().with_execute(vec![
+			contact: Behavior::new().with_start(vec![
 				StartBehavior::Fn(behavior),
 				StartBehavior::Fn(behavior),
 			]),
@@ -285,7 +285,7 @@ mod tests {
 			});
 		}
 		let (mut app, ..) = setup(SkillExecuter::Start(SkillBehaviors {
-			projection: Behavior::new().with_execute(vec![
+			projection: Behavior::new().with_start(vec![
 				StartBehavior::Fn(behavior),
 				StartBehavior::Fn(behavior),
 			]),

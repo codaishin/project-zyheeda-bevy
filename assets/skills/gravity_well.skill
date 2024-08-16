@@ -7,7 +7,27 @@
 	"animate": {
 		"Some": "ShootHandGun"
 	},
-	"behavior": "GravityWell",
+	"behavior": {
+		"OnActive": {
+			"contact": {
+				"spawn": "Placeholder",
+				"start": []
+			},
+			"projection": {
+				"spawn": {
+					"GroundTarget": {
+						"stoppable": false,
+						"max_range": 10
+					}
+				},
+				"start": [
+					{
+						"Gravity": null
+					}
+				]
+			}
+		}
+	},
 	"is_usable_with": [
 		"Bracer"
 	],
