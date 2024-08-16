@@ -7,7 +7,7 @@ use bevy::{
 	ecs::{bundle::Bundle, component::Component, entity::Entity, system::EntityCommands},
 	math::{Dir3, Vec3},
 };
-use common::tools::UnitsPerSecond;
+use common::{test_tools::utils::ApproxEqual, tools::UnitsPerSecond};
 use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
 
 #[derive(Component)]
@@ -31,9 +31,10 @@ pub struct OverrideFace(pub Face);
 #[derive(Component, Debug, PartialEq)]
 pub struct SetFace(pub Face);
 
+#[derive(Debug, PartialEq)]
 pub struct Plasma;
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq)]
 pub struct Projectile<T> {
 	pub direction: Dir3,
 	pub range: f32,
@@ -47,6 +48,15 @@ impl<T> Default for Projectile<T> {
 			range: Default::default(),
 			phantom_data: Default::default(),
 		}
+	}
+}
+
+impl<T> ApproxEqual<f32> for Projectile<T> {
+	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+		self.direction
+			.as_vec3()
+			.approx_equal(&other.direction.as_vec3(), tolerance)
+			&& self.range == other.range
 	}
 }
 
