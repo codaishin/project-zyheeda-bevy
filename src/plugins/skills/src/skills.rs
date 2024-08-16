@@ -2,19 +2,19 @@ pub mod shoot_hand_gun;
 pub mod skill_data;
 
 use crate::{
+	behaviors::Behavior,
 	items::{slot_key::SlotKey, ItemType},
 	traits::{Matches, Prime},
 };
 use animations::animation::Animation;
 use bevy::{
 	asset::{Asset, Handle},
-	ecs::{entity::Entity, system::Commands},
 	math::{Dir3, Ray3d, Vec3},
 	prelude::Image,
 	reflect::TypePath,
-	transform::components::{GlobalTransform, Transform},
+	utils::default,
 };
-use common::{components::Outdated, resources::ColliderInfo};
+use common::resources::ColliderInfo;
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result},
@@ -54,7 +54,7 @@ impl Display for Skill {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct SelectInfo<T> {
 	pub ray: Ray3d,
 	pub collision_info: Option<ColliderInfo<T>>,
@@ -141,25 +141,20 @@ pub(crate) enum SkillState {
 	Active,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct SkillSpawner(pub Entity, pub GlobalTransform);
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct SkillCaster(pub Entity, pub Transform);
-
-pub type Target = SelectInfo<Outdated<GlobalTransform>>;
-pub type StartBehaviorFn = fn(&mut Commands, &SkillCaster, &SkillSpawner, &Target) -> OnSkillStop;
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum OnSkillStop {
-	Ignore,
-	Stop(Entity),
+#[derive(PartialEq, Debug, Clone)]
+pub enum SkillBehavior {
+	OnActive(SkillBehaviors),
+	OnAim(SkillBehaviors),
 }
 
-#[derive(PartialEq, Debug, Clone, Copy, Default)]
-pub enum SkillBehavior {
-	#[default]
-	Never,
-	OnAim(StartBehaviorFn),
-	OnActive(StartBehaviorFn),
+impl Default for SkillBehavior {
+	fn default() -> Self {
+		Self::OnActive(default())
+	}
+}
+
+#[derive(PartialEq, Debug, Clone, Default)]
+pub struct SkillBehaviors {
+	pub contact: Behavior,
+	pub projection: Behavior,
 }

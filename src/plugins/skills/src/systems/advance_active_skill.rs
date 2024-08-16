@@ -1,5 +1,5 @@
 use crate::{
-	skills::{Animate, SkillBehavior, SkillState, StartBehaviorFn},
+	skills::{Animate, SkillBehavior, SkillBehaviors, SkillState},
 	traits::{Flush, GetActiveSkill, GetAnimation, GetSkillBehavior, Schedule},
 };
 use animations::traits::{SkillLayer, StartAnimation, StopAnimation};
@@ -118,14 +118,14 @@ fn animate<TAnimation, TAnimationDispatch: StartAnimation<TAnimation> + StopAnim
 	}
 }
 
-fn start_on_aim<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<StartBehaviorFn> {
+fn start_on_aim<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<SkillBehaviors> {
 	match skill.behavior() {
 		SkillBehavior::OnAim(run) => Some(run),
 		_ => None,
 	}
 }
 
-fn start_on_active<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<StartBehaviorFn> {
+fn start_on_active<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<SkillBehaviors> {
 	match skill.behavior() {
 		SkillBehavior::OnActive(run) => Some(run),
 		_ => None,
@@ -135,7 +135,7 @@ fn start_on_active<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<StartBeha
 fn schedule_start<TSkillExecutor: Schedule, TSkill: GetSkillBehavior>(
 	executer: &mut TSkillExecutor,
 	skill: &TSkill,
-	get_start_fn: fn(&TSkill) -> Option<StartBehaviorFn>,
+	get_start_fn: fn(&TSkill) -> Option<SkillBehaviors>,
 ) {
 	let Some(start_fn) = get_start_fn(skill) else {
 		return;
@@ -147,7 +147,10 @@ fn schedule_start<TSkillExecutor: Schedule, TSkill: GetSkillBehavior>(
 mod tests {
 	use super::*;
 	use crate::{
-		skills::OnSkillStop,
+		behaviors::{
+			spawn_behavior::{OnSkillStop, SpawnBehavior},
+			Behavior,
+		},
 		traits::{GetAnimation, GetSkillBehavior},
 	};
 	use animations::traits::Priority;
@@ -155,6 +158,7 @@ mod tests {
 	use bevy::{
 		prelude::{App, Transform, Update},
 		time::{Real, Time},
+		utils::default,
 	};
 	use common::{
 		test_tools::utils::{SingleThreadedApp, TickTime},
@@ -184,7 +188,8 @@ mod tests {
 		let mut mock = Mock_Skill::new();
 
 		if !no_setup.contains(&MockOption::RunBehavior) {
-			mock.expect_behavior().return_const(SkillBehavior::Never);
+			mock.expect_behavior()
+				.return_const(SkillBehavior::default());
 		}
 		if !no_setup.contains(&MockOption::Animate) {
 			mock.expect_animate().return_const(Animate::Ignore);
@@ -264,7 +269,7 @@ mod tests {
 	}
 
 	impl Schedule for _Executor {
-		fn schedule(&mut self, start: StartBehaviorFn) {
+		fn schedule(&mut self, start: SkillBehaviors) {
 			self.mock.schedule(start)
 		}
 	}
@@ -278,14 +283,21 @@ mod tests {
 	mock! {
 		_Executor {}
 		impl Schedule for _Executor {
-			fn schedule(&mut self, start: StartBehaviorFn);
+			fn schedule(&mut self, start: SkillBehaviors);
 		}
 		impl Flush for _Executor {
 			fn flush(&mut self);
 		}
 	}
 
-	const START_BEHAVIOR: StartBehaviorFn = |_, _, _, _| OnSkillStop::Ignore;
+	fn skill_behaviors() -> SkillBehaviors {
+		SkillBehaviors {
+			contact: Behavior::new().with_spawn(SpawnBehavior::Fn(|commands, _, _, _| {
+				(commands.spawn_empty(), OnSkillStop::Ignore)
+			})),
+			..default()
+		}
+	}
 
 	fn setup() -> (App, Entity) {
 		let mut app = App::new().single_threaded(Update);
@@ -602,7 +614,7 @@ mod tests {
 				mock.expect_schedule()
 					.times(1)
 					.withf(|start| {
-						assert_eq!(start, &START_BEHAVIOR);
+						assert_eq!(start, &skill_behaviors());
 						true
 					})
 					.return_const(());
@@ -617,7 +629,7 @@ mod tests {
 					);
 					skill
 						.expect_behavior()
-						.returning(|| SkillBehavior::OnActive(START_BEHAVIOR));
+						.returning(|| SkillBehavior::OnActive(skill_behaviors()));
 					skill
 				})),
 			},
@@ -635,7 +647,7 @@ mod tests {
 				mock.expect_schedule()
 					.times(1)
 					.withf(|start| {
-						assert_eq!(start, &START_BEHAVIOR);
+						assert_eq!(start, &skill_behaviors());
 						true
 					})
 					.return_const(());
@@ -650,7 +662,7 @@ mod tests {
 					);
 					skill
 						.expect_behavior()
-						.returning(|| SkillBehavior::OnAim(START_BEHAVIOR));
+						.returning(|| SkillBehavior::OnAim(skill_behaviors()));
 					skill
 				})),
 			},
@@ -673,7 +685,7 @@ mod tests {
 					skill
 						.expect_behavior()
 						.never()
-						.return_const(SkillBehavior::Never);
+						.return_const(SkillBehavior::default());
 					skill
 				})),
 			},

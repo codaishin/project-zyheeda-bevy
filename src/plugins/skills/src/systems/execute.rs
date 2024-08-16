@@ -1,6 +1,6 @@
 use crate::{
+	behaviors::{SkillCaster, SkillSpawner, Target},
 	components::SkillSpawn,
-	skills::{SkillCaster, SkillSpawner, Target},
 	traits::Execute,
 };
 use bevy::{
@@ -10,14 +10,14 @@ use bevy::{
 		query::Changed,
 		system::{Commands, Query, Res},
 	},
-	transform::components::{GlobalTransform, Transform},
+	transform::components::GlobalTransform,
 };
 use common::resources::{CamRay, MouseHover};
 
 type Components<'a, TSkillExecutor> = (
 	Entity,
 	&'a mut TSkillExecutor,
-	&'a Transform,
+	&'a GlobalTransform,
 	&'a SkillSpawn<Entity>,
 );
 
@@ -74,10 +74,7 @@ fn get_spawner(
 
 #[cfg(test)]
 mod tests {
-	use std::ops::DerefMut;
-
 	use super::*;
-	use crate::skills::{SkillCaster, SkillSpawner, Target};
 	use bevy::{
 		app::{App, Update},
 		math::{Ray3d, Vec3},
@@ -91,6 +88,7 @@ mod tests {
 	};
 	use macros::NestedMock;
 	use mockall::automock;
+	use std::ops::DerefMut;
 
 	#[derive(Component, NestedMock)]
 	struct _Executor {
@@ -148,7 +146,7 @@ mod tests {
 	}
 
 	fn set_caster(app: &mut App, spawner: &SkillSpawner) -> SkillCaster {
-		let transform = Transform::from_xyz(42., 42., 42.);
+		let transform = GlobalTransform::from_xyz(42., 42., 42.);
 		let entity = app
 			.world_mut()
 			.spawn((transform, SkillSpawn(spawner.0)))
@@ -188,7 +186,7 @@ mod tests {
 						commands.spawn(_Execution {
 							caster: *caster,
 							spawner: *spawner,
-							target: target.clone(),
+							target: *target,
 						});
 					});
 			}));

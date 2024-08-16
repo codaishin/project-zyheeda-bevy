@@ -1,5 +1,4 @@
 pub(crate) mod animate_data;
-pub(crate) mod projectile_type;
 pub(crate) mod skill_animation_data;
 pub(crate) mod skill_behavior_data;
 

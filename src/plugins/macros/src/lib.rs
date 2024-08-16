@@ -17,6 +17,12 @@ pub fn clamp_zero_positive_derive(input: TokenStream) -> TokenStream {
 			}
 		}
 
+		impl Default for #ident {
+			fn default() -> Self {
+				Self(0.)
+			}
+		}
+
 		impl Deref for #ident {
 			type Target = f32;
 

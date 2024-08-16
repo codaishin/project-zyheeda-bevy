@@ -546,7 +546,7 @@ impl<'a> StateDuration<SkillState> for ActiveSkill<'a> {
 
 impl<'a> GetSkillBehavior for ActiveSkill<'a> {
 	fn behavior(&self) -> SkillBehavior {
-		self.skill.behavior
+		self.skill.behavior.clone()
 	}
 }
 
@@ -564,17 +564,15 @@ impl<'a> GetAnimation<Animation> for ActiveSkill<'a> {
 #[cfg(test)]
 mod test_queue_active_skill {
 	use super::*;
-	use crate::skills::{
-		Animate,
-		OnSkillStop,
-		SkillAnimation,
-		SkillBehavior,
-		SkillCaster,
-		SkillSpawner,
-		Target,
+	use crate::{
+		behaviors::{
+			spawn_behavior::{OnSkillStop, SpawnBehavior},
+			Behavior,
+		},
+		skills::{Animate, SkillAnimation, SkillBehavior, SkillBehaviors},
 	};
 	use animations::animation::PlayMode;
-	use bevy::{ecs::system::Commands, prelude::default};
+	use bevy::prelude::default;
 	use common::{components::Side, traits::load_asset::Path};
 
 	#[test]
@@ -772,13 +770,16 @@ mod test_queue_active_skill {
 
 	#[test]
 	fn test_start_behavior_fn_on_active() {
-		fn run(_: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> OnSkillStop {
-			OnSkillStop::Ignore
-		}
+		let behaviors = SkillBehaviors {
+			contact: Behavior::new().with_spawn(SpawnBehavior::Fn(|commands, _, _, _| {
+				(commands.spawn_empty(), OnSkillStop::Ignore)
+			})),
+			..default()
+		};
 
 		let active = ActiveSkill {
 			skill: &Skill {
-				behavior: SkillBehavior::OnActive(run),
+				behavior: SkillBehavior::OnActive(behaviors.clone()),
 				..default()
 			},
 			slot_key: &SlotKey::Hand(Side::Main),
@@ -786,18 +787,21 @@ mod test_queue_active_skill {
 			duration: &mut Duration::default(),
 		};
 
-		assert_eq!(SkillBehavior::OnActive(run), active.behavior());
+		assert_eq!(SkillBehavior::OnActive(behaviors), active.behavior());
 	}
 
 	#[test]
 	fn test_start_behavior_fn_on_aim() {
-		fn run(_: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> OnSkillStop {
-			OnSkillStop::Ignore
-		}
+		let behaviors = SkillBehaviors {
+			contact: Behavior::new().with_spawn(SpawnBehavior::Fn(|commands, _, _, _| {
+				(commands.spawn_empty(), OnSkillStop::Ignore)
+			})),
+			..default()
+		};
 
 		let active = ActiveSkill {
 			skill: &mut Skill {
-				behavior: SkillBehavior::OnAim(run),
+				behavior: SkillBehavior::OnAim(behaviors.clone()),
 				..default()
 			},
 			slot_key: &SlotKey::Hand(Side::Main),
@@ -805,7 +809,7 @@ mod test_queue_active_skill {
 			duration: &mut Duration::default(),
 		};
 
-		assert_eq!(SkillBehavior::OnAim(run), active.behavior());
+		assert_eq!(SkillBehavior::OnAim(behaviors), active.behavior());
 	}
 
 	#[test]
