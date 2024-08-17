@@ -1,6 +1,6 @@
 use super::OnSkillStop;
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
-use behaviors::components::{Plasma, Projectile};
+use behaviors::components::projectile::{Plasma, Projectile};
 use bevy::{
 	ecs::system::EntityCommands,
 	prelude::{Commands, SpatialBundle, Transform},
@@ -50,7 +50,6 @@ impl SpawnProjectile {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use behaviors::components::{Plasma, Projectile};
 	use bevy::{
 		app::{App, Update},
 		ecs::system::RunSystemOnce,

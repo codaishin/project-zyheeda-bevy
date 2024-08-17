@@ -1,27 +1,69 @@
-use super::ProjectileBehavior;
-use crate::components::{MovementConfig, MovementMode, Plasma, Projectile};
+use super::{MovementConfig, MovementMode};
+use crate::traits::ProjectileBehavior;
 use bevy::{
 	self,
 	color::Color,
+	ecs::system::EntityCommands,
 	hierarchy::BuildChildren,
 	math::{Dir3, Vec3},
 	pbr::{PbrBundle, PointLight, PointLightBundle, StandardMaterial},
-	transform::components::Transform,
+	prelude::{Component, Transform},
 	utils::default,
 };
 use bevy_rapier3d::{
-	dynamics::RigidBody,
 	geometry::{Collider, Sensor},
+	prelude::RigidBody,
 };
 use common::{
 	bundles::ColliderTransformBundle,
 	components::ColliderRoot,
 	errors::Error,
+	test_tools::utils::ApproxEqual,
 	tools::UnitsPerSecond,
 	traits::{cache::GetOrCreateTypeAsset, clamp_zero_positive::ClampZeroPositive},
 };
 use interactions::components::{DealsDamage, Fragile};
 use prefabs::traits::{sphere, GetOrCreateAssets, Instantiate};
+use std::marker::PhantomData;
+
+#[derive(Debug, PartialEq)]
+pub struct Plasma;
+
+#[derive(Component, Debug, PartialEq)]
+pub struct Projectile<T> {
+	pub direction: Dir3,
+	pub range: f32,
+	phantom_data: PhantomData<T>,
+}
+
+impl<T> Default for Projectile<T> {
+	fn default() -> Self {
+		Self {
+			direction: Dir3::NEG_Z,
+			range: Default::default(),
+			phantom_data: Default::default(),
+		}
+	}
+}
+
+impl<T> ApproxEqual<f32> for Projectile<T> {
+	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+		self.direction
+			.as_vec3()
+			.approx_equal(&other.direction.as_vec3(), tolerance)
+			&& self.range == other.range
+	}
+}
+
+impl<T> Projectile<T> {
+	pub fn new(direction: Dir3, range: f32) -> Self {
+		Self {
+			direction,
+			range,
+			phantom_data: PhantomData,
+		}
+	}
+}
 
 impl<T> ProjectileBehavior for Projectile<T> {
 	fn direction(&self) -> Dir3 {
@@ -38,7 +80,7 @@ const PLASMA_RADIUS: f32 = 0.05;
 impl Instantiate for Projectile<Plasma> {
 	fn instantiate(
 		&self,
-		on: &mut bevy::ecs::system::EntityCommands,
+		on: &mut EntityCommands,
 		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		let transform = Transform::from_translation(Vec3::ZERO);

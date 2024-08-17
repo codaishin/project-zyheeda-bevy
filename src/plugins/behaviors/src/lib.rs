@@ -23,14 +23,13 @@ use common::{
 use components::{
 	gravity_well::GravityWell,
 	ground_target::GroundTarget,
+	projectile::{Plasma, Projectile},
 	Beam,
 	CamOrbit,
 	ForceShield,
 	Movement,
 	MovementConfig,
-	Plasma,
 	PositionBased,
-	Projectile,
 	VelocityBased,
 	VoidSphere,
 };
