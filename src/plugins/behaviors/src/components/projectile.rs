@@ -17,7 +17,7 @@ use common::{
 	tools::UnitsPerSecond,
 	traits::clamp_zero_positive::ClampZeroPositive,
 };
-use interactions::components::{DealsDamage, Fragile};
+use interactions::components::Fragile;
 use prefabs::traits::{GetOrCreateAssets, Instantiate};
 use sub_type::SubType;
 
@@ -66,7 +66,6 @@ impl Instantiate for Projectile {
 	) -> Result<(), Error> {
 		on.try_insert((
 			RigidBody::Fixed,
-			DealsDamage(1),
 			Fragile,
 			MovementConfig::Constant {
 				mode: MovementMode::Fast,

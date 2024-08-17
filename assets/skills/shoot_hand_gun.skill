@@ -16,7 +16,13 @@
 						"sub_type": "Plasma"
 					}
 				},
-				"start": []
+				"start": [
+					{
+						"Damage": {
+							"amount": 1
+						}
+					}
+				]
 			},
 			"projection": {
 				"spawn": "Placeholder",

@@ -95,7 +95,7 @@ impl Destroy {
 #[derive(Component)]
 pub struct Fragile;
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Debug, PartialEq)]
 pub struct DealsDamage(pub i16);
 
 #[derive(Component, Debug, PartialEq)]

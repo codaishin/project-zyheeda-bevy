@@ -3986,6 +3986,7 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
+ "interactions",
  "macros",
  "mockall",
  "serde",
