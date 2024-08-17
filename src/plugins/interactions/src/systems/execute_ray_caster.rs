@@ -20,7 +20,7 @@ pub(crate) fn execute_ray_caster<TCastRay: CastRay<RayCaster> + Resource>(
 	mut ray_cast_events: EventWriter<RayCastEvent>,
 ) {
 	for (source, ray_caster) in &ray_casters {
-		let hit = cast_ray.cast_ray(ray_caster.clone());
+		let hit = cast_ray.cast_ray(ray_caster);
 		let ray = Ray3d {
 			origin: ray_caster.origin,
 			direction: ray_caster.direction,
@@ -66,7 +66,7 @@ mod tests {
 
 	#[automock]
 	impl CastRay<RayCaster> for _CastRay {
-		fn cast_ray(&self, ray: RayCaster) -> Option<(Entity, TimeOfImpact)> {
+		fn cast_ray(&self, ray: &RayCaster) -> Option<(Entity, TimeOfImpact)> {
 			self.mock.cast_ray(ray)
 		}
 	}

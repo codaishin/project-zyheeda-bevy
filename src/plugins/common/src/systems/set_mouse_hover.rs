@@ -46,7 +46,7 @@ fn ray_cast<TCastRay: CastRay<Ray3d> + Resource>(
 	cam_ray: Option<Res<CamRay>>,
 	ray_caster: Res<TCastRay>,
 ) -> Option<(Entity, TimeOfImpact)> {
-	ray_caster.cast_ray(cam_ray?.0?)
+	ray_caster.cast_ray(&cam_ray?.0?)
 }
 
 fn get_root(entity: Entity, roots: Query<&ColliderRoot>) -> Option<Entity> {
@@ -73,7 +73,7 @@ mod tests {
 
 	#[automock]
 	impl CastRay<Ray3d> for _CastRay {
-		fn cast_ray(&self, ray: Ray3d) -> Option<(Entity, TimeOfImpact)> {
+		fn cast_ray(&self, ray: &Ray3d) -> Option<(Entity, TimeOfImpact)> {
 			self.mock.cast_ray(ray)
 		}
 	}
