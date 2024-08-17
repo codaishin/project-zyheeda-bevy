@@ -8,11 +8,12 @@ bevy.workspace = true
 bevy_rapier3d.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+tracing.workspace = true
 uuid.workspace = true
 animations.workspace = true
 behaviors.workspace = true
-tracing.workspace = true
 common.workspace = true
+interactions.workspace = true
 
 [dev-dependencies]
 mockall.workspace = true

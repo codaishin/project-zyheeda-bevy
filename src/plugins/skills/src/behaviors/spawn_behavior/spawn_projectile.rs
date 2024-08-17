@@ -1,6 +1,6 @@
 use super::OnSkillStop;
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
-use behaviors::components::{Plasma, Projectile};
+use behaviors::components::projectile::{sub_type::SubType, Projectile};
 use bevy::{
 	ecs::system::EntityCommands,
 	prelude::{Commands, SpatialBundle, Transform},
@@ -10,12 +10,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct SpawnProjectile {
 	stoppable: bool,
-	projectile_type: ProjectileType,
-}
-
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub enum ProjectileType {
-	Plasma,
+	sub_type: SubType,
 }
 
 impl SpawnProjectile {
@@ -29,12 +24,12 @@ impl SpawnProjectile {
 		let SkillCaster(.., caster) = caster;
 		let SkillSpawner(.., spawner) = spawner;
 
-		let projectile = match self.projectile_type {
-			ProjectileType::Plasma => Projectile::<Plasma>::new(caster.forward(), 10.),
-		};
-
 		let entity = commands.spawn((
-			projectile,
+			Projectile {
+				direction: caster.forward(),
+				range: 10.,
+				sub_type: self.sub_type,
+			},
 			SpatialBundle::from_transform(Transform::from(*spawner)),
 		));
 
@@ -50,7 +45,6 @@ impl SpawnProjectile {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use behaviors::components::{Plasma, Projectile};
 	use bevy::{
 		app::{App, Update},
 		ecs::system::RunSystemOnce,
@@ -83,7 +77,7 @@ mod tests {
 		let (entity, ..) = app.world_mut().run_system_once(projectile(
 			SpawnProjectile {
 				stoppable: true,
-				projectile_type: ProjectileType::Plasma,
+				sub_type: SubType::Plasma,
 			},
 			SkillCaster::from(Entity::from_raw(42)),
 			SkillSpawner::from(Entity::from_raw(43)).with_transform(spawner_transform),
@@ -107,20 +101,24 @@ mod tests {
 		let (entity, ..) = app.world_mut().run_system_once(projectile(
 			SpawnProjectile {
 				stoppable: true,
-				projectile_type: ProjectileType::Plasma,
+				sub_type: SubType::Plasma,
 			},
 			SkillCaster::from(Entity::from_raw(42)).with_transform(caster_transform),
 			SkillSpawner::from(Entity::from_raw(43)),
 			Target::default(),
 		));
 
-		let projectile = app
-			.world()
-			.entity(entity)
-			.get::<Projectile<Plasma>>()
-			.unwrap();
+		let projectile = app.world().entity(entity).get::<Projectile>().unwrap();
 
-		assert_eq_approx!(Projectile::new(caster_forward, 10.), projectile, 0.001);
+		assert_eq_approx!(
+			Projectile {
+				direction: caster_forward,
+				range: 10.,
+				sub_type: SubType::Plasma
+			},
+			projectile,
+			0.001
+		);
 	}
 
 	#[test]
@@ -130,7 +128,7 @@ mod tests {
 		let (entity, on_skill_stop) = app.world_mut().run_system_once(projectile(
 			SpawnProjectile {
 				stoppable: true,
-				projectile_type: ProjectileType::Plasma,
+				sub_type: SubType::Plasma,
 			},
 			SkillCaster::from(Entity::from_raw(42)),
 			SkillSpawner::from(Entity::from_raw(43)),
@@ -147,7 +145,7 @@ mod tests {
 		let (.., on_skill_stop) = app.world_mut().run_system_once(projectile(
 			SpawnProjectile {
 				stoppable: false,
-				projectile_type: ProjectileType::Plasma,
+				sub_type: SubType::Plasma,
 			},
 			SkillCaster::from(Entity::from_raw(42)),
 			SkillSpawner::from(Entity::from_raw(43)),

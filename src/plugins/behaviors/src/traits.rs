@@ -5,7 +5,6 @@ pub(crate) mod cam_orbit;
 pub(crate) mod force_shield;
 pub(crate) mod movement;
 pub(crate) mod movement_config;
-pub(crate) mod projectile;
 pub(crate) mod void_sphere;
 
 use crate::components::{Attacker, MovementMode, Target};

@@ -1,13 +1,14 @@
 pub mod gravity_well;
 pub mod ground_target;
+pub mod projectile;
 
 use crate::traits::{RemoveComponent, SpawnAttack};
 use bevy::{
 	color::{Color, LinearRgba},
 	ecs::{bundle::Bundle, component::Component, entity::Entity, system::EntityCommands},
-	math::{Dir3, Vec3},
+	math::Vec3,
 };
-use common::{test_tools::utils::ApproxEqual, tools::UnitsPerSecond};
+use common::tools::UnitsPerSecond;
 use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
 
 #[derive(Component)]
@@ -30,45 +31,6 @@ pub struct OverrideFace(pub Face);
 
 #[derive(Component, Debug, PartialEq)]
 pub struct SetFace(pub Face);
-
-#[derive(Debug, PartialEq)]
-pub struct Plasma;
-
-#[derive(Component, Debug, PartialEq)]
-pub struct Projectile<T> {
-	pub direction: Dir3,
-	pub range: f32,
-	phantom_data: PhantomData<T>,
-}
-
-impl<T> Default for Projectile<T> {
-	fn default() -> Self {
-		Self {
-			direction: Dir3::NEG_Z,
-			range: Default::default(),
-			phantom_data: Default::default(),
-		}
-	}
-}
-
-impl<T> ApproxEqual<f32> for Projectile<T> {
-	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
-		self.direction
-			.as_vec3()
-			.approx_equal(&other.direction.as_vec3(), tolerance)
-			&& self.range == other.range
-	}
-}
-
-impl<T> Projectile<T> {
-	pub fn new(direction: Dir3, range: f32) -> Self {
-		Self {
-			direction,
-			range,
-			phantom_data: PhantomData,
-		}
-	}
-}
 
 #[derive(Component, Debug, PartialEq)]
 pub struct ForceShield {
