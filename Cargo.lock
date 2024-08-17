@@ -358,6 +358,7 @@ dependencies = [
  "macros",
  "mockall",
  "prefabs",
+ "serde",
  "tracing",
 ]
 

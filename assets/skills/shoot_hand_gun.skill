@@ -13,7 +13,7 @@
 				"spawn": {
 					"Projectile": {
 						"stoppable": false,
-						"projectile_type": "Plasma"
+						"sub_type": "Plasma"
 					}
 				},
 				"start": []

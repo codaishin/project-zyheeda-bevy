@@ -23,7 +23,7 @@ use common::{
 use components::{
 	gravity_well::GravityWell,
 	ground_target::GroundTarget,
-	projectile::{Plasma, Projectile},
+	projectile::Projectile,
 	Beam,
 	CamOrbit,
 	ForceShield,
@@ -63,7 +63,7 @@ pub struct BehaviorsPlugin;
 impl Plugin for BehaviorsPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_event::<MoveInputEvent>()
-			.register_prefab::<Projectile<Plasma>>()
+			.register_prefab::<Projectile>()
 			.register_prefab::<VoidSphere>()
 			.register_prefab::<Beam>()
 			.register_prefab::<ForceShield>()
@@ -115,7 +115,7 @@ impl Plugin for BehaviorsPlugin {
 					>,
 				),
 			)
-			.add_systems(Update, projectile_behavior::<Projectile<Plasma>>)
+			.add_systems(Update, projectile_behavior::<Projectile>)
 			.add_systems(Update, (enemy, chase::<MovementConfig>, attack).chain())
 			.add_systems(Update, execute_beam)
 			.add_systems(Update, position_force_shield)
