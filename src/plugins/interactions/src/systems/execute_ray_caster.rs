@@ -1,6 +1,6 @@
 use crate::{
 	components::RayCaster,
-	events::{RayCastEvent, RayCastTarget},
+	events::{RayCastEvent, RayCastInfo},
 };
 use bevy::{
 	ecs::{
@@ -11,33 +11,24 @@ use bevy::{
 	},
 	math::Ray3d,
 };
-use common::traits::{cast_ray::CastRay, try_remove_from::TryRemoveFrom};
+use common::traits::{cast_ray::CastRayContinuously, try_remove_from::TryRemoveFrom};
 
-pub(crate) fn execute_ray_caster<TCastRay: CastRay<RayCaster> + Resource>(
+pub(crate) fn execute_ray_caster<TCastRay: CastRayContinuously<RayCaster> + Resource>(
 	mut commands: Commands,
 	ray_casters: Query<(Entity, &RayCaster), Added<RayCaster>>,
 	cast_ray: Res<TCastRay>,
 	mut ray_cast_events: EventWriter<RayCastEvent>,
 ) {
 	for (source, ray_caster) in &ray_casters {
-		let hit = cast_ray.cast_ray(ray_caster);
-		let ray = Ray3d {
-			origin: ray_caster.origin,
-			direction: ray_caster.direction,
-		};
-		let target = match hit {
-			None => RayCastTarget {
-				entity: None,
-				ray,
-				toi: ray_caster.max_toi,
+		let info = RayCastInfo {
+			hits: cast_ray.cast_ray_continuously(ray_caster),
+			ray: Ray3d {
+				origin: ray_caster.origin,
+				direction: ray_caster.direction,
 			},
-			Some((target, toi)) => RayCastTarget {
-				entity: Some(target),
-				ray,
-				toi,
-			},
+			max_toi: ray_caster.max_toi,
 		};
-		ray_cast_events.send(RayCastEvent { source, target });
+		ray_cast_events.send(RayCastEvent { source, info });
 		commands.try_remove_from::<RayCaster>(source);
 	}
 }
@@ -45,13 +36,14 @@ pub(crate) fn execute_ray_caster<TCastRay: CastRay<RayCaster> + Resource>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::events::{RayCastEvent, RayCastTarget};
+	use crate::events::{RayCastEvent, RayCastInfo};
 	use bevy::{
 		app::{App, Update},
 		ecs::{entity::Entity, event::Events},
 		math::{Dir3, Vec3},
 		utils::default,
 	};
+	use bevy_rapier3d::math::Real;
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		traits::{cast_ray::TimeOfImpact, nested_mock::NestedMock},
@@ -65,9 +57,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl CastRay<RayCaster> for _CastRay {
-		fn cast_ray(&self, ray: &RayCaster) -> Option<(Entity, TimeOfImpact)> {
-			self.mock.cast_ray(ray)
+	impl CastRayContinuously<RayCaster> for _CastRay {
+		fn cast_ray_continuously(&self, ray: &RayCaster) -> Vec<(Entity, TimeOfImpact)> {
+			self.mock.cast_ray_continuously(ray)
 		}
 	}
 
@@ -75,7 +67,7 @@ mod tests {
 	fn cast_ray() {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(_CastRay::new_mock(|mock| {
-			mock.expect_cast_ray()
+			mock.expect_cast_ray_continuously()
 				.times(1)
 				.with(eq(RayCaster {
 					origin: Vec3::ZERO,
@@ -84,7 +76,7 @@ mod tests {
 					solid: true,
 					filter: default(),
 				}))
-				.return_const(None);
+				.return_const(vec![]);
 		}));
 		app.add_event::<RayCastEvent>();
 		app.add_systems(Update, execute_ray_caster::<_CastRay>);
@@ -103,8 +95,8 @@ mod tests {
 	fn add_cast_ray_event_with_target() {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(_CastRay::new_mock(|mock| {
-			mock.expect_cast_ray()
-				.return_const((Entity::from_raw(42), TimeOfImpact(42.)));
+			mock.expect_cast_ray_continuously()
+				.return_const(vec![(Entity::from_raw(42), TimeOfImpact(42.))]);
 		}));
 		app.add_event::<RayCastEvent>();
 		app.add_systems(Update, execute_ray_caster::<_CastRay>);
@@ -113,6 +105,7 @@ mod tests {
 			.spawn(RayCaster {
 				origin: Vec3::ONE,
 				direction: Dir3::Y,
+				max_toi: TimeOfImpact(Real::INFINITY),
 				..default()
 			})
 			.id();
@@ -126,13 +119,13 @@ mod tests {
 		assert_eq!(
 			vec![&RayCastEvent {
 				source: ray_caster,
-				target: RayCastTarget {
-					entity: Some(Entity::from_raw(42)),
+				info: RayCastInfo {
+					hits: vec![(Entity::from_raw(42), TimeOfImpact(42.))],
 					ray: Ray3d {
 						origin: Vec3::ONE,
 						direction: Dir3::Y
 					},
-					toi: TimeOfImpact(42.)
+					max_toi: TimeOfImpact(Real::INFINITY)
 				}
 			}],
 			events
@@ -143,7 +136,7 @@ mod tests {
 	fn add_cast_ray_event_without_target() {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(_CastRay::new_mock(|mock| {
-			mock.expect_cast_ray().return_const(None);
+			mock.expect_cast_ray_continuously().return_const(vec![]);
 		}));
 		app.add_event::<RayCastEvent>();
 		app.add_systems(Update, execute_ray_caster::<_CastRay>);
@@ -166,13 +159,13 @@ mod tests {
 		assert_eq!(
 			vec![&RayCastEvent {
 				source: ray_caster,
-				target: RayCastTarget {
-					entity: None,
+				info: RayCastInfo {
+					hits: vec![],
 					ray: Ray3d {
 						origin: Vec3::ONE,
 						direction: Dir3::Y
 					},
-					toi: TimeOfImpact(420.)
+					max_toi: TimeOfImpact(420.)
 				}
 			}],
 			events
@@ -183,7 +176,9 @@ mod tests {
 	fn cast_ray_only_once() {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(_CastRay::new_mock(|mock| {
-			mock.expect_cast_ray().times(1).return_const(None);
+			mock.expect_cast_ray_continuously()
+				.times(1)
+				.return_const(vec![]);
 		}));
 		app.add_event::<RayCastEvent>();
 		app.add_systems(Update, execute_ray_caster::<_CastRay>);
@@ -203,7 +198,7 @@ mod tests {
 	fn remove_ray_caster() {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(_CastRay::new_mock(|mock| {
-			mock.expect_cast_ray().return_const(None);
+			mock.expect_cast_ray_continuously().return_const(vec![]);
 		}));
 		app.add_event::<RayCastEvent>();
 		app.add_systems(Update, execute_ray_caster::<_CastRay>);

@@ -101,7 +101,7 @@ fn spawn_beam(
 		return;
 	};
 
-	let (from, to) = get_beam_range(event.target.ray, event.target.toi);
+	let (from, to) = get_beam_range(event.info.ray, event.info.max_toi);
 	let transform = get_beam_transform(from, to, event);
 	beam.try_insert((
 		SpatialBundle::from_transform(transform),
@@ -128,7 +128,7 @@ fn update_beam(
 		return;
 	};
 
-	let (from, to) = get_beam_range(event.target.ray, event.target.toi);
+	let (from, to) = get_beam_range(event.info.ray, event.info.max_toi);
 	let transform = get_beam_transform(from, to, event);
 	beam.try_insert(TransformBundle::from(transform));
 }
@@ -143,7 +143,7 @@ fn get_beam_range(ray: Ray3d, toi: TimeOfImpact) -> (Vec3, Vec3) {
 
 fn get_beam_transform(from: Vec3, to: Vec3, event: &RayCastEvent) -> Transform {
 	let mut transform = Transform::from_translation((from + to) / 2.).looking_at(to, Vec3::Y);
-	transform.scale.z = event.target.toi.0;
+	transform.scale.z = event.info.max_toi.0;
 	transform
 }
 
@@ -169,7 +169,7 @@ mod tests {
 	};
 	use interactions::{
 		components::RayCaster,
-		events::{RayCastEvent, RayCastTarget},
+		events::{RayCastEvent, RayCastInfo},
 	};
 	use std::time::Duration;
 
@@ -332,12 +332,12 @@ mod tests {
 			.id();
 		app.world_mut().send_event(RayCastEvent {
 			source: beam,
-			target: RayCastTarget {
+			info: RayCastInfo {
 				ray: Ray3d {
 					origin: Vec3::Z,
 					direction: Dir3::Y,
 				},
-				toi: TimeOfImpact(10.),
+				max_toi: TimeOfImpact(10.),
 				..default()
 			},
 		});
@@ -377,12 +377,12 @@ mod tests {
 			.id();
 		app.world_mut().send_event(RayCastEvent {
 			source: beam,
-			target: RayCastTarget {
+			info: RayCastInfo {
 				ray: Ray3d {
 					origin: Vec3::new(0., 1., 0.),
 					direction: Dir3::X,
 				},
-				toi: TimeOfImpact(10.),
+				max_toi: TimeOfImpact(10.),
 				..default()
 			},
 		});
@@ -442,12 +442,12 @@ mod tests {
 			.id();
 		app.world_mut().send_event(RayCastEvent {
 			source: beam,
-			target: RayCastTarget {
+			info: RayCastInfo {
 				ray: Ray3d {
 					origin: Vec3::new(0., 1., 0.),
 					direction: Dir3::X,
 				},
-				toi: TimeOfImpact(10.),
+				max_toi: TimeOfImpact(10.),
 				..default()
 			},
 		});
@@ -495,12 +495,12 @@ mod tests {
 		let child = app.world_mut().spawn_empty().set_parent(beam).id();
 		app.world_mut().send_event(RayCastEvent {
 			source: beam,
-			target: RayCastTarget {
+			info: RayCastInfo {
 				ray: Ray3d {
 					origin: Vec3::new(0., 1., 0.),
 					direction: Dir3::X,
 				},
-				toi: TimeOfImpact(10.),
+				max_toi: TimeOfImpact(10.),
 				..default()
 			},
 		});

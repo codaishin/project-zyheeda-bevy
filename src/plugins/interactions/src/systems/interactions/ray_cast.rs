@@ -17,9 +17,10 @@ pub(crate) fn ray_cast_interaction<TActor: ActOn<TTarget> + Component, TTarget: 
 ) {
 	let target_root_entity = |event: &RayCastEvent| {
 		event
-			.target
-			.entity
-			.and_then(|entity| Some((event.source, roots.get(entity).ok()?.0)))
+			.info
+			.hits
+			.first()
+			.and_then(|(entity, ..)| Some((event.source, roots.get(*entity).ok()?.0)))
 	};
 
 	for (source, target) in ray_casts.read().filter_map(target_root_entity) {
@@ -56,7 +57,7 @@ fn get_actor_and_target<'a, TActor: Component, TTarget: Component>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::events::RayCastTarget;
+	use crate::events::RayCastInfo;
 	use bevy::{
 		app::{App, Update},
 		math::{Ray3d, Vec3},
@@ -105,10 +106,10 @@ mod tests {
 
 		app.world_mut().send_event(RayCastEvent {
 			source: actor,
-			target: RayCastTarget {
-				entity: Some(coll_target),
+			info: RayCastInfo {
+				hits: vec![(coll_target, TimeOfImpact(42.))],
 				ray: Ray3d::new(Vec3::ZERO, Vec3::NEG_Z),
-				toi: TimeOfImpact::default(),
+				max_toi: TimeOfImpact::default(),
 			},
 		});
 		app.update();
@@ -128,10 +129,10 @@ mod tests {
 
 		app.world_mut().send_event(RayCastEvent {
 			source: actor,
-			target: RayCastTarget {
-				entity: Some(coll_target),
+			info: RayCastInfo {
+				hits: vec![(coll_target, TimeOfImpact(42.))],
 				ray: Ray3d::new(Vec3::ZERO, Vec3::NEG_Z),
-				toi: TimeOfImpact::default(),
+				max_toi: TimeOfImpact::default(),
 			},
 		});
 		app.update();
