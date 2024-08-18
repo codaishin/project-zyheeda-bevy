@@ -9,7 +9,8 @@ use bevy::{
 	asset::AssetServer,
 	ecs::system::IntoSystem,
 };
-use components::{Floating, Light, Wall, WallBack};
+use common::components::Wall;
+use components::{Floating, Light, WallBack};
 use map::{LightCell, MapCell};
 use prefabs::traits::RegisterPrefab;
 use systems::{

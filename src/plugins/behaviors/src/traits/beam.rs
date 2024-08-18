@@ -8,8 +8,12 @@ use bevy::{
 	transform::components::Transform,
 	utils::default,
 };
-use common::{errors::Error, traits::cache::GetOrCreateTypeAsset};
-use interactions::components::{DealsDamage, InitDelay, Repeat};
+use common::{
+	components::{PhysicalEntity, Wall},
+	errors::Error,
+	traits::cache::GetOrCreateTypeAsset,
+};
+use interactions::components::{BlockedBy, DealsDamage, InitDelay, Repeat};
 use prefabs::traits::{GetOrCreateAssets, Instantiate};
 use std::{f32::consts::PI, time::Duration};
 
@@ -32,11 +36,13 @@ impl Instantiate for Beam {
 			..default()
 		});
 
-		on.try_insert(
+		on.try_insert((
+			BlockedBy::component::<PhysicalEntity>(),
+			BlockedBy::component::<Wall>(),
 			DealsDamage(self.damage)
 				.after(Duration::from_millis(100))
 				.repeat(),
-		)
+		))
 		.with_children(|parent| {
 			parent.spawn((
 				PbrBundle {

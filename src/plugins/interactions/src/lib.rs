@@ -4,7 +4,7 @@ mod systems;
 mod traits;
 
 use bevy::{
-	app::{App, Plugin, PostUpdate, PreUpdate, Update},
+	app::{App, Last, Plugin, PostUpdate, PreUpdate, Update},
 	ecs::{component::Component, schedule::IntoSystemConfigs},
 	time::Virtual,
 };
@@ -20,6 +20,7 @@ use systems::{
 		collision::collision_interaction,
 		collision_start_event_to_interaction_event::collision_start_event_to_interaction_event,
 		delay::delay,
+		ray_blocked_by::ray_blocked_by,
 	},
 	ray_cast::{
 		execute_ray_caster::execute_ray_caster,
@@ -61,5 +62,15 @@ impl AddInteraction for App {
 			)
 				.chain(),
 		)
+	}
+}
+
+pub trait RegisterBlocker {
+	fn register_blocker<TComponent: Component>(&mut self) -> &mut Self;
+}
+
+impl RegisterBlocker for App {
+	fn register_blocker<TComponent: Component>(&mut self) -> &mut Self {
+		self.add_systems(Last, ray_blocked_by::<TComponent>)
 	}
 }

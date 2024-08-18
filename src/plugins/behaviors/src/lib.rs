@@ -16,7 +16,7 @@ use bevy::{
 	transform::bundles::TransformBundle,
 };
 use common::{
-	components::Player,
+	components::{PhysicalEntity, Player, Wall},
 	resources::CamRay,
 	states::{GameRunning, MouseContext},
 };
@@ -35,6 +35,7 @@ use components::{
 };
 use events::MoveInputEvent;
 use gravity::AddGravityInteraction;
+use interactions::RegisterBlocker;
 use prefabs::traits::RegisterPrefab;
 use systems::{
 	attack::{attack, execute_beam::execute_beam},
@@ -69,6 +70,8 @@ impl Plugin for BehaviorsPlugin {
 			.register_prefab::<ForceShield>()
 			.register_prefab::<GravityWell>()
 			.register_gravity_source::<GravityWell>()
+			.register_blocker::<PhysicalEntity>()
+			.register_blocker::<Wall>()
 			.add_systems(
 				Update,
 				(trigger_move_input_event::<CamRay>, move_player_on_event)

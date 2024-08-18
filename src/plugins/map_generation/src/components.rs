@@ -7,9 +7,6 @@ use bevy::{
 	reflect::TypePath,
 };
 
-#[derive(Clone)]
-pub(crate) struct Wall;
-
 pub(crate) struct WallBack;
 
 pub(crate) struct Corridor;

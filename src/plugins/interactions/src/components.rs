@@ -95,6 +95,15 @@ impl Destroy {
 #[derive(Component)]
 pub struct Fragile;
 
+#[derive(Component)]
+pub struct BlockedBy<TComponent>(PhantomData<TComponent>);
+
+impl BlockedBy<()> {
+	pub fn component<TComponent>() -> BlockedBy<TComponent> {
+		BlockedBy(PhantomData)
+	}
+}
+
 #[derive(Component, Clone, Debug, PartialEq)]
 pub struct DealsDamage(pub i16);
 

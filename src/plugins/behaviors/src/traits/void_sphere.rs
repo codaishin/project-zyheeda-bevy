@@ -26,7 +26,7 @@ use bevy_rapier3d::{
 };
 use common::{
 	bundles::ColliderTransformBundle,
-	components::{effected_by::EffectedBy, ColliderRoot, GroundOffset, Health},
+	components::{effected_by::EffectedBy, ColliderRoot, GroundOffset, Health, PhysicalEntity},
 	errors::Error,
 	tools::UnitsPerSecond,
 	traits::{cache::GetOrCreateTypeAsset, clamp_zero_positive::ClampZeroPositive},
@@ -100,6 +100,7 @@ impl Instantiate for VoidSphere {
 		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
 
 		on.try_insert((
+			PhysicalEntity,
 			EffectedBy::<Gravity>::default(),
 			GroundOffset(VOID_SPHERE_GROUND_OFFSET),
 			RigidBody::Dynamic,
