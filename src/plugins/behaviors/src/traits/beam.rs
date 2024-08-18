@@ -1,9 +1,9 @@
 use crate::components::Beam;
 use bevy::{
 	ecs::system::EntityCommands,
-	hierarchy::BuildChildren,
 	math::{primitives::Cylinder, Quat},
 	pbr::{NotShadowCaster, PbrBundle, StandardMaterial},
+	prelude::ChildBuilder,
 	render::{alpha::AlphaMode, mesh::Mesh},
 	transform::components::Transform,
 	utils::default,
@@ -14,7 +14,10 @@ use common::{
 	traits::cache::GetOrCreateTypeAsset,
 };
 use interactions::components::{BlockedBy, DealsDamage, InitDelay, Repeat};
-use prefabs::traits::{GetOrCreateAssets, Instantiate};
+use prefabs::{
+	components::WithChildren,
+	traits::{GetOrCreateAssets, Instantiate},
+};
 use std::{f32::consts::PI, time::Duration};
 
 impl Instantiate for Beam {
@@ -35,6 +38,17 @@ impl Instantiate for Beam {
 			alpha_mode: AlphaMode::Add,
 			..default()
 		});
+		let render = move |parent: &mut ChildBuilder| {
+			parent.spawn((
+				PbrBundle {
+					material: material.clone(),
+					mesh: mesh.clone(),
+					transform: Transform::from_rotation(Quat::from_rotation_x(PI / 2.)),
+					..default()
+				},
+				NotShadowCaster,
+			));
+		};
 
 		on.try_insert((
 			BlockedBy::component::<PhysicalEntity>(),
@@ -42,18 +56,8 @@ impl Instantiate for Beam {
 			DealsDamage(self.damage)
 				.after(Duration::from_millis(100))
 				.repeat(),
-		))
-		.with_children(|parent| {
-			parent.spawn((
-				PbrBundle {
-					material,
-					mesh,
-					transform: Transform::from_rotation(Quat::from_rotation_x(PI / 2.)),
-					..default()
-				},
-				NotShadowCaster,
-			));
-		});
+			WithChildren::delayed(render),
+		));
 
 		Ok(())
 	}

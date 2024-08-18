@@ -1,7 +1,7 @@
 use super::{Instantiate, RegisterPrefab};
-use crate::systems::instantiate::instantiate;
+use crate::{systems::instantiate::instantiate, PrefabsPlugin};
 use bevy::{
-	app::{App, PreUpdate},
+	app::App,
 	asset::{Assets, Handle},
 	ecs::{component::Component, system::IntoSystem},
 	pbr::StandardMaterial,
@@ -25,6 +25,9 @@ impl RegisterPrefab for App {
 			Shared<TypeId, Handle<StandardMaterial>>,
 			Factory<CreateAssetCache>,
 		>;
-		self.add_systems(PreUpdate, instantiate_system.pipe(log_many))
+		self.add_systems(
+			PrefabsPlugin::INSTANTIATION_FRAME,
+			instantiate_system.pipe(log_many),
+		)
 	}
 }
