@@ -1,6 +1,6 @@
 pub mod sub_type;
 
-use super::{MovementConfig, MovementMode};
+use super::{Force, MovementConfig, MovementMode};
 use crate::traits::ProjectileBehavior;
 use bevy::{
 	self,
@@ -67,7 +67,10 @@ impl Instantiate for Projectile {
 	) -> Result<(), Error> {
 		on.try_insert((
 			RigidBody::Fixed,
-			Is::fragile().blocked_by::<PhysicalEntity>().and::<Wall>(),
+			Is::fragile()
+				.blocked_by::<PhysicalEntity>()
+				.and::<Wall>()
+				.and::<Force>(),
 			MovementConfig::Constant {
 				mode: MovementMode::Fast,
 				speed: UnitsPerSecond::new(15.),

@@ -1,4 +1,5 @@
 use crate::behaviors::start_behavior::{
+	force::StartForce,
 	start_deal_damage::StartDealingDamage,
 	start_gravity::StartGravity,
 	StartBehavior,
@@ -9,6 +10,7 @@ use serde::{Deserialize, Serialize};
 pub(crate) enum StartBehaviorData {
 	Gravity(StartGravity),
 	Damage(StartDealingDamage),
+	Force(StartForce),
 }
 
 impl From<StartBehaviorData> for StartBehavior {
@@ -16,6 +18,7 @@ impl From<StartBehaviorData> for StartBehavior {
 		match value {
 			StartBehaviorData::Gravity(v) => Self::Gravity(v),
 			StartBehaviorData::Damage(v) => Self::Damage(v),
+			StartBehaviorData::Force(v) => Self::Force(v),
 		}
 	}
 }

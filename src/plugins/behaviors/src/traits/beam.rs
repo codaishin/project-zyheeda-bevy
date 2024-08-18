@@ -1,4 +1,4 @@
-use crate::components::Beam;
+use crate::components::{Beam, Force};
 use bevy::{
 	ecs::system::EntityCommands,
 	math::{primitives::Cylinder, Quat},
@@ -51,7 +51,10 @@ impl Instantiate for Beam {
 		};
 
 		on.try_insert((
-			Is::beam().blocked_by::<PhysicalEntity>().and::<Wall>(),
+			Is::beam()
+				.blocked_by::<PhysicalEntity>()
+				.and::<Wall>()
+				.and::<Force>(),
 			DealsDamage(self.damage)
 				.after(Duration::from_millis(100))
 				.repeat(),

@@ -16,7 +16,7 @@ impl StartDealingDamage {
 		_: &SkillSpawner,
 		_: &Target,
 	) {
-		entity.insert(DealsDamage(self.amount));
+		entity.try_insert(DealsDamage(self.amount));
 	}
 }
 

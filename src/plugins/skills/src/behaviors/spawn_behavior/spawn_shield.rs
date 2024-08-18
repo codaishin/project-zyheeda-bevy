@@ -1,6 +1,6 @@
 use super::OnSkillStop;
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
-use behaviors::components::ForceShield;
+use behaviors::components::shield::Shield;
 use bevy::{
 	ecs::system::EntityCommands,
 	prelude::{Commands, SpatialBundle, Transform},
@@ -10,12 +10,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct SpawnShield {
 	stoppable: bool,
-	shield_type: ShieldType,
-}
-
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub enum ShieldType {
-	Force,
 }
 
 impl SpawnShield {
@@ -28,9 +22,7 @@ impl SpawnShield {
 	) -> (EntityCommands<'a>, OnSkillStop) {
 		let SkillSpawner(entity, transform) = spawner;
 
-		let shield = match self.shield_type {
-			ShieldType::Force => ForceShield { location: *entity },
-		};
+		let shield = Shield { location: *entity };
 
 		let entity = commands.spawn((
 			shield,
@@ -49,7 +41,6 @@ impl SpawnShield {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use behaviors::components::ForceShield;
 	use bevy::{
 		app::{App, Update},
 		ecs::system::RunSystemOnce,
@@ -79,10 +70,7 @@ mod tests {
 		let spawner_transform = Transform::from_xyz(1., 2., 3.);
 
 		let (entity, ..) = app.world_mut().run_system_once(shield(
-			SpawnShield {
-				stoppable: true,
-				shield_type: ShieldType::Force,
-			},
+			SpawnShield { stoppable: true },
 			SkillCaster::from(Entity::from_raw(42)),
 			SkillSpawner::from(Entity::from_raw(43)).with_transform(spawner_transform),
 			Target::default(),
@@ -97,24 +85,21 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_force_shield() {
+	fn spawn_shield() {
 		let mut app = setup();
 		let spawner_entity = Entity::from_raw(43);
 
 		let (entity, ..) = app.world_mut().run_system_once(shield(
-			SpawnShield {
-				stoppable: true,
-				shield_type: ShieldType::Force,
-			},
+			SpawnShield { stoppable: true },
 			SkillCaster::from(Entity::from_raw(42)),
 			SkillSpawner::from(spawner_entity),
 			Target::default(),
 		));
 		assert_eq!(
-			Some(&ForceShield {
+			Some(&Shield {
 				location: spawner_entity
 			}),
-			app.world().entity(entity).get::<ForceShield>()
+			app.world().entity(entity).get::<Shield>()
 		);
 	}
 
@@ -123,10 +108,7 @@ mod tests {
 		let mut app = setup();
 
 		let (entity, on_skill_stop) = app.world_mut().run_system_once(shield(
-			SpawnShield {
-				stoppable: true,
-				shield_type: ShieldType::Force,
-			},
+			SpawnShield { stoppable: true },
 			SkillCaster::from(Entity::from_raw(42)),
 			SkillSpawner::from(Entity::from_raw(43)),
 			Target::default(),
@@ -140,10 +122,7 @@ mod tests {
 		let mut app = setup();
 
 		let (.., on_skill_stop) = app.world_mut().run_system_once(shield(
-			SpawnShield {
-				stoppable: false,
-				shield_type: ShieldType::Force,
-			},
+			SpawnShield { stoppable: false },
 			SkillCaster::from(Entity::from_raw(42)),
 			SkillSpawner::from(Entity::from_raw(43)),
 			Target::default(),
