@@ -1,9 +1,15 @@
-use crate::components::{BlockedBy, RayCastResult};
+use crate::components::{
+	is::{Beam, Is},
+	BlockedBy,
+	RayCastResult,
+};
 use bevy::prelude::{Component, Entity, Mut, Query, With};
 use common::{components::ColliderRoot, traits::cast_ray::TimeOfImpact};
 
-pub(crate) fn ray_blocked_by<TBlocker: Component>(
-	mut ray_casts: Query<Mut<RayCastResult>, With<BlockedBy<TBlocker>>>,
+type IsBlockAbleBeam<TBlocker> = (With<Is<Beam>>, With<BlockedBy<TBlocker>>);
+
+pub(crate) fn beam_blocked_by<TBlocker: Component>(
+	mut ray_casts: Query<Mut<RayCastResult>, IsBlockAbleBeam<TBlocker>>,
 	blockers: Query<(), With<TBlocker>>,
 	roots: Query<&ColliderRoot>,
 ) {
@@ -32,7 +38,7 @@ pub(crate) fn ray_blocked_by<TBlocker: Component>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::BlockedBy, events::RayCastInfo};
+	use crate::{components::is::Is, events::RayCastInfo};
 	use bevy::{
 		app::{App, Update},
 		prelude::default,
@@ -48,7 +54,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, ray_blocked_by::<_Blocker>);
+		app.add_systems(Update, beam_blocked_by::<_Blocker>);
 
 		app
 	}
@@ -62,7 +68,7 @@ mod tests {
 		let ray_cast = app
 			.world_mut()
 			.spawn((
-				BlockedBy::component::<_Blocker>(),
+				Is::beam().blocked_by::<_Blocker>(),
 				RayCastResult {
 					info: RayCastInfo {
 						hits: vec![
@@ -103,7 +109,7 @@ mod tests {
 		let ray_cast = app
 			.world_mut()
 			.spawn((
-				BlockedBy::component::<_Blocker>(),
+				Is::beam().blocked_by::<_Blocker>(),
 				RayCastResult {
 					info: RayCastInfo {
 						hits: vec![
@@ -143,7 +149,7 @@ mod tests {
 		let ray_casts = [
 			app.world_mut()
 				.spawn((
-					BlockedBy::component::<_Blocker>(),
+					Is::beam().blocked_by::<_Blocker>(),
 					RayCastResult {
 						info: RayCastInfo {
 							hits: vec![
@@ -159,7 +165,7 @@ mod tests {
 				.id(),
 			app.world_mut()
 				.spawn((
-					BlockedBy::component::<_Blocker>(),
+					Is::beam().blocked_by::<_Blocker>(),
 					RayCastResult {
 						info: RayCastInfo {
 							hits: vec![

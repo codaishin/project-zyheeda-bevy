@@ -1,7 +1,10 @@
+pub mod is;
+
 use crate::{events::RayCastInfo, traits::ActOn};
 use bevy::{
 	ecs::{component::Component, entity::Entity},
 	math::{Dir3, Vec3},
+	prelude::Bundle,
 	utils::default,
 };
 use bevy_rapier3d::{
@@ -93,15 +96,10 @@ impl Destroy {
 }
 
 #[derive(Component)]
-pub struct Fragile;
+pub struct BlockedBy<TBlocker>(PhantomData<TBlocker>);
 
-#[derive(Component)]
-pub struct BlockedBy<TComponent>(PhantomData<TComponent>);
-
-impl BlockedBy<()> {
-	pub fn component<TComponent>() -> BlockedBy<TComponent> {
-		BlockedBy(PhantomData)
-	}
+pub trait ConcatBlockers {
+	fn and<TBlockedBy: Component>(self) -> impl ConcatBlockers + Bundle;
 }
 
 #[derive(Component, Clone, Debug, PartialEq)]

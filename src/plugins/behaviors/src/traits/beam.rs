@@ -13,7 +13,7 @@ use common::{
 	errors::Error,
 	traits::cache::GetOrCreateTypeAsset,
 };
-use interactions::components::{BlockedBy, DealsDamage, InitDelay, Repeat};
+use interactions::components::{is::Is, ConcatBlockers, DealsDamage, InitDelay, Repeat};
 use prefabs::{
 	components::WithChildren,
 	traits::{GetOrCreateAssets, Instantiate},
@@ -51,8 +51,7 @@ impl Instantiate for Beam {
 		};
 
 		on.try_insert((
-			BlockedBy::component::<PhysicalEntity>(),
-			BlockedBy::component::<Wall>(),
+			Is::beam().blocked_by::<PhysicalEntity>().and::<Wall>(),
 			DealsDamage(self.damage)
 				.after(Duration::from_millis(100))
 				.repeat(),
