@@ -5,10 +5,24 @@ use bevy::{
 };
 use common::traits::cast_ray::TimeOfImpact;
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct Ray(pub Ray3d, pub TimeOfImpact);
+
 #[derive(Event, Debug, PartialEq, Clone)]
-pub struct RayCastEvent {
-	pub source: Entity,
-	pub info: RayCastInfo,
+pub struct InteractionEvent<TOther = Entity>(pub Entity, pub TOther);
+
+impl InteractionEvent<()> {
+	pub fn of(entity: Entity) -> Self {
+		Self(entity, ())
+	}
+
+	pub fn with(self, other: Entity) -> InteractionEvent {
+		InteractionEvent(self.0, other)
+	}
+
+	pub fn ray(self, ray: Ray3d, toi: TimeOfImpact) -> InteractionEvent<Ray> {
+		InteractionEvent(self.0, Ray(ray, toi))
+	}
 }
 
 #[derive(Debug, PartialEq, Clone)]

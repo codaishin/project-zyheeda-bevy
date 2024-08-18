@@ -4,23 +4,26 @@ mod systems;
 mod traits;
 
 use bevy::{
-	app::{App, Plugin, PostUpdate, Update},
+	app::{App, Plugin, PostUpdate, PreUpdate, Update},
 	ecs::{component::Component, schedule::IntoSystemConfigs},
 	time::Virtual,
 };
 use bevy_rapier3d::plugin::RapierContext;
 use common::components::Health;
 use components::DealsDamage;
-use events::RayCastEvent;
+use events::{InteractionEvent, Ray};
 use systems::{
 	destroy::destroy,
 	destroy_dead::set_dead_to_be_destroyed,
 	destroy_fragile::destroy_fragile,
-	execute_ray_caster::execute_ray_caster,
 	interactions::{
 		collision::collision_interaction,
+		collision_start_event_to_interaction_event::collision_start_event_to_interaction_event,
 		delay::delay,
-		ray_cast::ray_cast_interaction,
+	},
+	ray_cast::{
+		execute_ray_caster::execute_ray_caster,
+		ray_cast_result_to_events::ray_cast_result_to_interaction_events,
 	},
 };
 use traits::ActOn;
@@ -29,11 +32,14 @@ pub struct InteractionsPlugin;
 
 impl Plugin for InteractionsPlugin {
 	fn build(&self, app: &mut App) {
-		app.add_event::<RayCastEvent>()
+		app.add_event::<InteractionEvent>()
+			.add_event::<InteractionEvent<Ray>>()
 			.add_interaction::<DealsDamage, Health>()
-			.add_systems(Update, execute_ray_caster::<RapierContext>)
+			.add_systems(PreUpdate, ray_cast_result_to_interaction_events)
+			.add_systems(PreUpdate, collision_start_event_to_interaction_event)
 			.add_systems(Update, set_dead_to_be_destroyed)
-			.add_systems(PostUpdate, (destroy_fragile, destroy).chain());
+			.add_systems(PostUpdate, (destroy_fragile, destroy).chain())
+			.add_systems(PostUpdate, execute_ray_caster::<RapierContext>);
 	}
 }
 
@@ -51,7 +57,6 @@ impl AddInteraction for App {
 			Update,
 			(
 				collision_interaction::<TActor, TTarget>,
-				ray_cast_interaction::<TActor, TTarget>,
 				delay::<TActor, TTarget, Virtual>,
 			)
 				.chain(),

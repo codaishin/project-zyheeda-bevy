@@ -6,7 +6,7 @@ use bevy::{
 		system::{Commands, Query},
 	},
 	hierarchy::DespawnRecursiveExt,
-	math::{Dir3, Ray3d, Vec3},
+	math::{Dir3, Vec3},
 	prelude::SpatialBundle,
 	transform::{
 		bundles::TransformBundle,
@@ -17,12 +17,12 @@ use bevy_rapier3d::pipeline::{QueryFilter, QueryFilterFlags};
 use common::{components::GroundOffset, traits::cast_ray::TimeOfImpact};
 use interactions::{
 	components::{RayCaster, RayFilter},
-	events::RayCastEvent,
+	events::{InteractionEvent, Ray},
 };
 
 pub(crate) fn execute_beam(
 	mut commands: Commands,
-	mut ray_cast_events: EventReader<RayCastEvent>,
+	mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
 	beam_commands: Query<(Entity, &BeamConfig, &BeamCommand, Option<&Beam>)>,
 	transforms: Query<(&GlobalTransform, Option<&GroundOffset>)>,
 ) {
@@ -92,17 +92,17 @@ fn get_filter(source: Entity) -> Option<RayFilter> {
 fn spawn_beam(
 	commands: &mut Commands,
 	beam_commands: &Query<(Entity, &BeamConfig, &BeamCommand, Option<&Beam>)>,
-	event: &RayCastEvent,
+	InteractionEvent(source, ray): &InteractionEvent<Ray>,
 ) {
-	let Ok((id, cfg, _, None)) = beam_commands.get(event.source) else {
+	let Ok((id, cfg, _, None)) = beam_commands.get(*source) else {
 		return;
 	};
 	let Some(mut beam) = commands.get_entity(id) else {
 		return;
 	};
 
-	let (from, to) = get_beam_range(event.info.ray, event.info.max_toi);
-	let transform = get_beam_transform(from, to, event);
+	let (from, to) = get_beam_range(ray);
+	let transform = get_beam_transform(from, to, ray);
 	beam.try_insert((
 		SpatialBundle::from_transform(transform),
 		Beam {
@@ -119,17 +119,17 @@ fn spawn_beam(
 fn update_beam(
 	commands: &mut Commands,
 	agents: &Query<(Entity, &BeamConfig, &BeamCommand, Option<&Beam>)>,
-	event: &RayCastEvent,
+	InteractionEvent(source, ray): &InteractionEvent<Ray>,
 ) {
-	let Ok((id, _, _, Some(_))) = agents.get(event.source) else {
+	let Ok((id, _, _, Some(_))) = agents.get(*source) else {
 		return;
 	};
 	let Some(mut beam) = commands.get_entity(id) else {
 		return;
 	};
 
-	let (from, to) = get_beam_range(event.info.ray, event.info.max_toi);
-	let transform = get_beam_transform(from, to, event);
+	let (from, to) = get_beam_range(ray);
+	let transform = get_beam_transform(from, to, ray);
 	beam.try_insert(TransformBundle::from(transform));
 }
 
@@ -137,13 +137,13 @@ fn translation(transform: &GlobalTransform, offset: Option<&GroundOffset>) -> Ve
 	transform.translation() + offset.map_or(Vec3::ZERO, |offset| offset.0)
 }
 
-fn get_beam_range(ray: Ray3d, toi: TimeOfImpact) -> (Vec3, Vec3) {
-	(ray.origin, ray.origin + ray.direction * toi.0)
+fn get_beam_range(Ray(ray, TimeOfImpact(toi)): &Ray) -> (Vec3, Vec3) {
+	(ray.origin, ray.origin + *ray.direction * *toi)
 }
 
-fn get_beam_transform(from: Vec3, to: Vec3, event: &RayCastEvent) -> Transform {
+fn get_beam_transform(from: Vec3, to: Vec3, Ray(.., TimeOfImpact(toi)): &Ray) -> Transform {
 	let mut transform = Transform::from_translation((from + to) / 2.).looking_at(to, Vec3::Y);
-	transform.scale.z = event.info.max_toi.0;
+	transform.scale.z = *toi;
 	transform
 }
 
@@ -156,7 +156,7 @@ mod tests {
 		color::{Color, LinearRgba},
 		ecs::entity::Entity,
 		hierarchy::BuildWorldChildren,
-		math::Vec3,
+		math::{Ray3d, Vec3},
 		prelude::default,
 		render::view::{InheritedVisibility, ViewVisibility, Visibility},
 		transform::{bundles::TransformBundle, components::Transform},
@@ -167,16 +167,13 @@ mod tests {
 		test_tools::utils::SingleThreadedApp,
 		traits::cast_ray::TimeOfImpact,
 	};
-	use interactions::{
-		components::RayCaster,
-		events::{RayCastEvent, RayCastInfo},
-	};
+	use interactions::components::RayCaster;
 	use std::time::Duration;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(Update, execute_beam);
-		app.add_event::<RayCastEvent>();
+		app.add_event::<InteractionEvent<Ray>>();
 
 		app
 	}
@@ -311,7 +308,7 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_beam_from_hit() {
+	fn spawn_beam_from_interaction() {
 		let mut app = setup();
 		let source = app.world_mut().spawn(GlobalTransform::default()).id();
 		let beam = app
@@ -330,17 +327,13 @@ mod tests {
 				},
 			))
 			.id();
-		app.world_mut().send_event(RayCastEvent {
-			source: beam,
-			info: RayCastInfo {
-				ray: Ray3d {
-					origin: Vec3::Z,
-					direction: Dir3::Y,
-				},
-				max_toi: TimeOfImpact(10.),
-				..default()
+		app.world_mut().send_event(InteractionEvent::of(beam).ray(
+			Ray3d {
+				origin: Vec3::Z,
+				direction: Dir3::Y,
 			},
-		});
+			TimeOfImpact(10.),
+		));
 
 		app.update();
 
@@ -375,17 +368,13 @@ mod tests {
 				},
 			))
 			.id();
-		app.world_mut().send_event(RayCastEvent {
-			source: beam,
-			info: RayCastInfo {
-				ray: Ray3d {
-					origin: Vec3::new(0., 1., 0.),
-					direction: Dir3::X,
-				},
-				max_toi: TimeOfImpact(10.),
-				..default()
+		app.world_mut().send_event(InteractionEvent::of(beam).ray(
+			Ray3d {
+				origin: Vec3::new(0., 1., 0.),
+				direction: Dir3::X,
 			},
-		});
+			TimeOfImpact(10.),
+		));
 
 		app.update();
 
@@ -440,17 +429,13 @@ mod tests {
 				},
 			))
 			.id();
-		app.world_mut().send_event(RayCastEvent {
-			source: beam,
-			info: RayCastInfo {
-				ray: Ray3d {
-					origin: Vec3::new(0., 1., 0.),
-					direction: Dir3::X,
-				},
-				max_toi: TimeOfImpact(10.),
-				..default()
+		app.world_mut().send_event(InteractionEvent::of(beam).ray(
+			Ray3d {
+				origin: Vec3::new(0., 1., 0.),
+				direction: Dir3::X,
 			},
-		});
+			TimeOfImpact(10.),
+		));
 
 		app.update();
 
@@ -493,17 +478,13 @@ mod tests {
 			))
 			.id();
 		let child = app.world_mut().spawn_empty().set_parent(beam).id();
-		app.world_mut().send_event(RayCastEvent {
-			source: beam,
-			info: RayCastInfo {
-				ray: Ray3d {
-					origin: Vec3::new(0., 1., 0.),
-					direction: Dir3::X,
-				},
-				max_toi: TimeOfImpact(10.),
-				..default()
+		app.world_mut().send_event(InteractionEvent::of(beam).ray(
+			Ray3d {
+				origin: Vec3::new(0., 1., 0.),
+				direction: Dir3::X,
 			},
-		});
+			TimeOfImpact(10.),
+		));
 
 		app.update();
 

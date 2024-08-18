@@ -71,7 +71,7 @@ fn prepare_game(app: &mut App) {
 pub mod debug_utils {
 	use super::*;
 	use bevy_inspector_egui::quick::WorldInspectorPlugin;
-	use interactions::events::RayCastEvent;
+	use interactions::events::{InteractionEvent, Ray};
 	use std::ops::Not;
 
 	const FORWARD_GIZMO_COLOR: Color = Color::srgb(0., 0., 1.);
@@ -91,7 +91,7 @@ pub mod debug_utils {
 	fn display_events(
 		mut collision_events: EventReader<CollisionEvent>,
 		mut contact_force_events: EventReader<ContactForceEvent>,
-		mut ray_cast_events: EventReader<RayCastEvent>,
+		mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
 	) {
 		for collision_event in collision_events.read() {
 			println!("Received collision event: {:?}", collision_event);
