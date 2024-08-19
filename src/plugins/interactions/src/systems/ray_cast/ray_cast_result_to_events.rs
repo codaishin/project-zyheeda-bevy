@@ -3,22 +3,35 @@ use crate::{
 	events::{InteractionEvent, Ray},
 };
 use bevy::prelude::{Commands, Entity, EventWriter, Query};
-use common::traits::try_remove_from::TryRemoveFrom;
+use common::{components::ColliderRoot, traits::try_remove_from::TryRemoveFrom};
 
 pub(crate) fn ray_cast_result_to_interaction_events(
 	mut commands: Commands,
 	results: Query<(Entity, &RayCastResult)>,
 	mut interactions: EventWriter<InteractionEvent>,
 	mut terminal_interactions: EventWriter<InteractionEvent<Ray>>,
+	roots: Query<&ColliderRoot>,
 ) {
-	for (entity, RayCastResult { info }) in &results {
-		terminal_interactions.send(InteractionEvent::of(entity).ray(info.ray, info.max_toi));
+	let roots = &roots;
 
+	for (entity, RayCastResult { info }) in &results {
+		terminal_interactions
+			.send(InteractionEvent::of(ColliderRoot(entity)).ray(info.ray, info.max_toi));
+
+		let root_entity = get_root(entity, roots);
 		for (hit, ..) in &info.hits {
-			interactions.send(InteractionEvent::of(entity).with(*hit));
+			let root_hit = get_root(*hit, roots);
+			interactions.send(InteractionEvent::of(root_entity).with(root_hit));
 		}
 
 		commands.try_remove_from::<RayCastResult>(entity);
+	}
+}
+
+fn get_root(entity: Entity, roots: &Query<&ColliderRoot>) -> ColliderRoot {
+	match roots.get(entity) {
+		Ok(root) => *root,
+		Err(_) => ColliderRoot(entity),
 	}
 }
 
@@ -67,8 +80,52 @@ mod tests {
 
 		assert_eq!(
 			vec![
-				&InteractionEvent::of(ray_cast).with(Entity::from_raw(42)),
-				&InteractionEvent::of(ray_cast).with(Entity::from_raw(11)),
+				&InteractionEvent::of(ColliderRoot(ray_cast))
+					.with(ColliderRoot(Entity::from_raw(42))),
+				&InteractionEvent::of(ColliderRoot(ray_cast))
+					.with(ColliderRoot(Entity::from_raw(11))),
+			],
+			events.collect::<Vec<_>>()
+		);
+	}
+
+	#[test]
+	fn send_event_for_each_target_collision_using_collider_root_reference() {
+		let mut app = setup();
+
+		let collider_a = app
+			.world_mut()
+			.spawn(ColliderRoot(Entity::from_raw(42)))
+			.id();
+		let collider_b = app
+			.world_mut()
+			.spawn(ColliderRoot(Entity::from_raw(11)))
+			.id();
+		let ray_cast = app
+			.world_mut()
+			.spawn(RayCastResult {
+				info: RayCastInfo {
+					hits: vec![
+						(collider_a, TimeOfImpact(42.)),
+						(collider_b, TimeOfImpact(11.)),
+					],
+					..default()
+				},
+			})
+			.id();
+
+		app.update();
+
+		let events = app.world().resource::<Events<InteractionEvent>>();
+		let mut reader = events.get_reader();
+		let events = reader.read(events);
+
+		assert_eq!(
+			vec![
+				&InteractionEvent::of(ColliderRoot(ray_cast))
+					.with(ColliderRoot(Entity::from_raw(42))),
+				&InteractionEvent::of(ColliderRoot(ray_cast))
+					.with(ColliderRoot(Entity::from_raw(11))),
 			],
 			events.collect::<Vec<_>>()
 		);
@@ -103,7 +160,7 @@ mod tests {
 		let events = reader.read(events);
 
 		assert_eq!(
-			vec![&InteractionEvent::of(ray_cast).ray(ray, TimeOfImpact(999.))],
+			vec![&InteractionEvent::of(ColliderRoot(ray_cast)).ray(ray, TimeOfImpact(999.))],
 			events.collect::<Vec<_>>()
 		);
 	}
@@ -134,7 +191,7 @@ mod tests {
 		let events = reader.read(events);
 
 		assert_eq!(
-			vec![&InteractionEvent::of(ray_cast).ray(ray, TimeOfImpact(567.))],
+			vec![&InteractionEvent::of(ColliderRoot(ray_cast)).ray(ray, TimeOfImpact(567.))],
 			events.collect::<Vec<_>>()
 		);
 	}

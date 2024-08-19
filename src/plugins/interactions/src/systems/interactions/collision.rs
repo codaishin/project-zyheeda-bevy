@@ -15,20 +15,13 @@ pub(crate) fn collision_interaction<TActor: ActOn<TTarget> + Component, TTarget:
 	mut collisions: EventReader<InteractionEvent>,
 	mut actors: Query<&mut TActor>,
 	mut targets: Query<&mut TTarget>,
-	roots: Query<&ColliderRoot>,
 ) {
-	let root_or_entities = |InteractionEvent(a, b): &InteractionEvent| get_roots(*a, *b, &roots);
+	let root_or_entities =
+		|InteractionEvent(ColliderRoot(a), ColliderRoot(b)): &InteractionEvent| (*a, *b);
 
 	for (a, b) in collisions.read().map(root_or_entities) {
 		handle_collision_interaction(a, b, &mut actors, &mut targets, &mut commands);
 	}
-}
-
-fn get_roots(a: Entity, b: Entity, roots: &Query<&ColliderRoot>) -> (Entity, Entity) {
-	(
-		roots.get(a).map(|ColliderRoot(r)| *r).unwrap_or(a),
-		roots.get(b).map(|ColliderRoot(r)| *r).unwrap_or(b),
-	)
 }
 
 fn handle_collision_interaction<TActor: ActOn<TTarget> + Component, TTarget: Component>(
@@ -104,11 +97,9 @@ mod tests {
 			}))
 			.id();
 		let target = app.world_mut().spawn(_Target).id();
-		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
-		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
 		app.world_mut()
-			.send_event(InteractionEvent::of(coll_actor).with(coll_target));
+			.send_event(InteractionEvent::of(ColliderRoot(actor)).with(ColliderRoot(target)));
 		app.update();
 	}
 
@@ -125,11 +116,9 @@ mod tests {
 			}))
 			.id();
 		let target = app.world_mut().spawn(_Target).id();
-		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
-		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
 		app.world_mut()
-			.send_event(InteractionEvent::of(coll_actor).with(coll_target));
+			.send_event(InteractionEvent::of(ColliderRoot(actor)).with(ColliderRoot(target)));
 		app.update();
 	}
 
@@ -143,11 +132,9 @@ mod tests {
 			}))
 			.id();
 		let target = app.world_mut().spawn(_Target).id();
-		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
-		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
 		app.world_mut()
-			.send_event(InteractionEvent::of(coll_actor).with(coll_target));
+			.send_event(InteractionEvent::of(ColliderRoot(actor)).with(ColliderRoot(target)));
 		app.update();
 
 		let actor = app.world().entity(actor);
@@ -165,34 +152,13 @@ mod tests {
 			}))
 			.id();
 		let target = app.world_mut().spawn(_Target).id();
-		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
-		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
 		app.world_mut()
-			.send_event(InteractionEvent::of(coll_actor).with(coll_target));
+			.send_event(InteractionEvent::of(ColliderRoot(actor)).with(ColliderRoot(target)));
 		app.update();
 
 		let actor = app.world().entity(actor);
 
 		assert!(!actor.contains::<_Actor>());
-	}
-
-	#[test]
-	fn act_on_target_without_collider_roots() {
-		let mut app = setup();
-		let actor = app
-			.world_mut()
-			.spawn(_Actor::new_mock(|mock| {
-				mock.expect_act_on()
-					.times(1)
-					.with(eq(_Target))
-					.return_const(());
-			}))
-			.id();
-		let target = app.world_mut().spawn(_Target).id();
-
-		app.world_mut()
-			.send_event(InteractionEvent::of(actor).with(target));
-		app.update();
 	}
 }

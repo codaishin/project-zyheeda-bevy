@@ -21,13 +21,12 @@ pub(crate) fn fragile_blocked_by<TBlocker: Component>(
 	mut collision_events: EventReader<InteractionEvent>,
 	fragiles: Query<Entity, With<Is<Fragile>>>,
 	blockers: Query<(), With<TBlocker>>,
-	roots: Query<&ColliderRoot>,
 ) {
-	for InteractionEvent(a, b) in collision_events.read() {
-		if let Some(entity) = fragile_blocked_entity(a, b, &roots, &fragiles, &blockers) {
+	for InteractionEvent(ColliderRoot(a), ColliderRoot(b)) in collision_events.read() {
+		if let Some(entity) = fragile_blocked_entity(a, b, &fragiles, &blockers) {
 			commands.try_insert_on(entity, Destroy::Immediately);
 		}
-		if let Some(entity) = fragile_blocked_entity(b, a, &roots, &fragiles, &blockers) {
+		if let Some(entity) = fragile_blocked_entity(b, a, &fragiles, &blockers) {
 			commands.try_insert_on(entity, Destroy::Immediately);
 		}
 	}
@@ -36,23 +35,13 @@ pub(crate) fn fragile_blocked_by<TBlocker: Component>(
 fn fragile_blocked_entity<TBlocker: Component>(
 	fragile: &Entity,
 	blocker: &Entity,
-	roots: &Query<&ColliderRoot>,
 	fragiles: &Query<Entity, With<Is<Fragile>>>,
 	blockers: &Query<(), With<TBlocker>>,
 ) -> Option<Entity> {
-	let fragile = roots
-		.get(*fragile)
-		.map(|ColliderRoot(r)| *r)
-		.unwrap_or(*fragile);
-	let blocker = roots
-		.get(*blocker)
-		.map(|ColliderRoot(r)| *r)
-		.unwrap_or(*blocker);
-
-	if blockers.get(blocker).is_err() {
+	if blockers.get(*blocker).is_err() {
 		return None;
 	}
-	fragiles.get(fragile).ok()
+	fragiles.get(*fragile).ok()
 }
 
 #[cfg(test)]
@@ -84,14 +73,14 @@ mod tests {
 			.world_mut()
 			.spawn(Is::fragile().blocked_by::<_Blocker>())
 			.id();
-		let fragile_collider = app.world_mut().spawn(ColliderRoot(fragile)).id();
 		let blocker = app.world_mut().spawn(_Blocker).id();
-		let blocker_collider = app.world_mut().spawn(ColliderRoot(blocker)).id();
 
 		app.update();
 
-		app.world_mut()
-			.send_event(InteractionEvent(fragile_collider, blocker_collider));
+		app.world_mut().send_event(InteractionEvent(
+			ColliderRoot(fragile),
+			ColliderRoot(blocker),
+		));
 
 		app.update();
 
@@ -108,14 +97,14 @@ mod tests {
 			.world_mut()
 			.spawn(Is::fragile().blocked_by::<_Blocker>())
 			.id();
-		let fragile_collider = app.world_mut().spawn(ColliderRoot(fragile)).id();
 		let blocker = app.world_mut().spawn_empty().id();
-		let blocker_collider = app.world_mut().spawn(ColliderRoot(blocker)).id();
 
 		app.update();
 
-		app.world_mut()
-			.send_event(InteractionEvent(fragile_collider, blocker_collider));
+		app.world_mut().send_event(InteractionEvent(
+			ColliderRoot(fragile),
+			ColliderRoot(blocker),
+		));
 
 		app.update();
 
@@ -129,14 +118,14 @@ mod tests {
 		let mut app = setup();
 
 		let fragile = app.world_mut().spawn(Is::fragile()).id();
-		let fragile_collider = app.world_mut().spawn(ColliderRoot(fragile)).id();
 		let blocker = app.world_mut().spawn_empty().id();
-		let blocker_collider = app.world_mut().spawn(ColliderRoot(blocker)).id();
 
 		app.update();
 
-		app.world_mut()
-			.send_event(InteractionEvent(fragile_collider, blocker_collider));
+		app.world_mut().send_event(InteractionEvent(
+			ColliderRoot(fragile),
+			ColliderRoot(blocker),
+		));
 
 		app.update();
 
@@ -153,14 +142,14 @@ mod tests {
 			.world_mut()
 			.spawn(Is::fragile().blocked_by::<_Blocker>())
 			.id();
-		let fragile_collider = app.world_mut().spawn(ColliderRoot(fragile)).id();
 		let blocker = app.world_mut().spawn(_Blocker).id();
-		let blocker_collider = app.world_mut().spawn(ColliderRoot(blocker)).id();
 
 		app.update();
 
-		app.world_mut()
-			.send_event(InteractionEvent(blocker_collider, fragile_collider));
+		app.world_mut().send_event(InteractionEvent(
+			ColliderRoot(blocker),
+			ColliderRoot(fragile),
+		));
 
 		app.update();
 
@@ -177,14 +166,14 @@ mod tests {
 			.world_mut()
 			.spawn(Is::fragile().blocked_by::<_Blocker>())
 			.id();
-		let fragile_collider = app.world_mut().spawn(ColliderRoot(fragile)).id();
 		let blocker = app.world_mut().spawn_empty().id();
-		let blocker_collider = app.world_mut().spawn(ColliderRoot(blocker)).id();
 
 		app.update();
 
-		app.world_mut()
-			.send_event(InteractionEvent(blocker_collider, fragile_collider));
+		app.world_mut().send_event(InteractionEvent(
+			ColliderRoot(blocker),
+			ColliderRoot(fragile),
+		));
 
 		app.update();
 
@@ -198,41 +187,19 @@ mod tests {
 		let mut app = setup();
 
 		let fragile = app.world_mut().spawn(Is::fragile()).id();
-		let fragile_collider = app.world_mut().spawn(ColliderRoot(fragile)).id();
 		let blocker = app.world_mut().spawn_empty().id();
-		let blocker_collider = app.world_mut().spawn(ColliderRoot(blocker)).id();
 
 		app.update();
 
-		app.world_mut()
-			.send_event(InteractionEvent(blocker_collider, fragile_collider));
+		app.world_mut().send_event(InteractionEvent(
+			ColliderRoot(blocker),
+			ColliderRoot(fragile),
+		));
 
 		app.update();
 
 		let fragile = app.world().entity(fragile);
 
 		assert_eq!(None, fragile.get::<Destroy>());
-	}
-
-	#[test]
-	fn destroy_on_collision_without_collider_root() {
-		let mut app = setup();
-
-		let fragile = app
-			.world_mut()
-			.spawn(Is::fragile().blocked_by::<_Blocker>())
-			.id();
-		let blocker = app.world_mut().spawn(_Blocker).id();
-
-		app.update();
-
-		app.world_mut()
-			.send_event(InteractionEvent(fragile, blocker));
-
-		app.update();
-
-		let fragile = app.world().entity(fragile);
-
-		assert_eq!(Some(&Destroy::Immediately), fragile.get::<Destroy>());
 	}
 }

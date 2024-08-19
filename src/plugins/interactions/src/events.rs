@@ -3,20 +3,20 @@ use bevy::{
 	math::{Dir3, Ray3d, Vec3},
 	utils::default,
 };
-use common::traits::cast_ray::TimeOfImpact;
+use common::{components::ColliderRoot, traits::cast_ray::TimeOfImpact};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Ray(pub Ray3d, pub TimeOfImpact);
 
 #[derive(Event, Debug, PartialEq, Clone)]
-pub struct InteractionEvent<TOther = Entity>(pub Entity, pub TOther);
+pub struct InteractionEvent<TOther = ColliderRoot>(pub ColliderRoot, pub TOther);
 
 impl InteractionEvent<()> {
-	pub fn of(entity: Entity) -> Self {
+	pub fn of(entity: ColliderRoot) -> Self {
 		Self(entity, ())
 	}
 
-	pub fn with(self, other: Entity) -> InteractionEvent {
+	pub fn with(self, other: ColliderRoot) -> InteractionEvent {
 		InteractionEvent(self.0, other)
 	}
 
