@@ -1,5 +1,5 @@
 use super::{Instantiate, RegisterPrefab};
-use crate::{systems::instantiate::instantiate, PrefabsPlugin};
+use crate::systems::instantiate::instantiate;
 use bevy::{
 	app::App,
 	asset::{Assets, Handle},
@@ -8,6 +8,7 @@ use bevy::{
 	render::mesh::Mesh,
 };
 use common::{
+	labels::Labels,
 	resources::Shared,
 	systems::log::log_many,
 	tools::Factory,
@@ -25,9 +26,6 @@ impl RegisterPrefab for App {
 			Shared<TypeId, Handle<StandardMaterial>>,
 			Factory<CreateAssetCache>,
 		>;
-		self.add_systems(
-			PrefabsPlugin::INSTANTIATION_FRAME,
-			instantiate_system.pipe(log_many),
-		)
+		self.add_systems(Labels::INSTANTIATION, instantiate_system.pipe(log_many))
 	}
 }

@@ -6,24 +6,20 @@ pub mod traits;
 use std::any::TypeId;
 
 use bevy::{
-	app::{App, Plugin, PreUpdate},
+	app::{App, Plugin},
 	asset::Handle,
 	pbr::StandardMaterial,
 	render::mesh::Mesh,
 };
-use common::resources::Shared;
+use common::{labels::Labels, resources::Shared};
 use systems::instantiate_children::instantiate_children;
 
 pub struct PrefabsPlugin;
-
-impl PrefabsPlugin {
-	const INSTANTIATION_FRAME: PreUpdate = PreUpdate;
-}
 
 impl Plugin for PrefabsPlugin {
 	fn build(&self, app: &mut App) {
 		app.init_resource::<Shared<TypeId, Handle<Mesh>>>()
 			.init_resource::<Shared<TypeId, Handle<StandardMaterial>>>()
-			.add_systems(Self::INSTANTIATION_FRAME, instantiate_children);
+			.add_systems(Labels::INSTANTIATION, instantiate_children);
 	}
 }

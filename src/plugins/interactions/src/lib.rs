@@ -4,12 +4,12 @@ mod systems;
 mod traits;
 
 use bevy::{
-	app::{App, Plugin, PostUpdate, Update},
+	app::{App, Plugin},
 	ecs::{component::Component, schedule::IntoSystemConfigs},
 	time::Virtual,
 };
 use bevy_rapier3d::plugin::RapierContext;
-use common::components::Health;
+use common::{components::Health, labels::Labels};
 use components::DealsDamage;
 use events::{InteractionEvent, Ray};
 use systems::{
@@ -36,11 +36,14 @@ impl Plugin for InteractionsPlugin {
 		app.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()
 			.add_interaction::<DealsDamage, Health>()
-			.add_systems(Update, ray_cast_result_to_interaction_events)
-			.add_systems(Update, collision_start_event_to_interaction_event)
-			.add_systems(Update, set_dead_to_be_destroyed)
-			.add_systems(PostUpdate, destroy)
-			.add_systems(PostUpdate, execute_ray_caster::<RapierContext>);
+			.add_systems(Labels::PROCESSING, set_dead_to_be_destroyed)
+			.add_systems(Labels::PROPAGATION, ray_cast_result_to_interaction_events)
+			.add_systems(
+				Labels::PROPAGATION,
+				collision_start_event_to_interaction_event,
+			)
+			.add_systems(Labels::PROPAGATION, destroy)
+			.add_systems(Labels::PROPAGATION, execute_ray_caster::<RapierContext>);
 	}
 }
 
@@ -55,7 +58,7 @@ impl AddInteraction for App {
 		&mut self,
 	) -> &mut Self {
 		self.add_systems(
-			Update,
+			Labels::PROCESSING,
 			(
 				collision_interaction::<TActor, TTarget>,
 				delay::<TActor, TTarget, Virtual>,
@@ -72,7 +75,7 @@ pub trait RegisterBlocker {
 impl RegisterBlocker for App {
 	fn register_blocker<TComponent: Component>(&mut self) -> &mut Self {
 		self.add_systems(
-			Update,
+			Labels::PROCESSING,
 			(
 				beam_blocked_by::<TComponent>,
 				fragile_blocked_by::<TComponent>,
