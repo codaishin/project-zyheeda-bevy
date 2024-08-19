@@ -10,19 +10,19 @@ use bevy::{
 	math::Ray3d,
 };
 use common::traits::{
-	cast_ray::CastRayContinuously,
+	cast_ray::CastRayContinuouslySorted,
 	try_insert_on::TryInsertOn,
 	try_remove_from::TryRemoveFrom,
 };
 
-pub(crate) fn execute_ray_caster<TCastRay: CastRayContinuously<RayCaster> + Resource>(
+pub(crate) fn execute_ray_caster<TCastRay: CastRayContinuouslySorted<RayCaster> + Resource>(
 	mut commands: Commands,
 	ray_casters: Query<(Entity, &RayCaster)>,
 	cast_ray: Res<TCastRay>,
 ) {
 	for (source, ray_caster) in &ray_casters {
 		let info = RayCastInfo {
-			hits: cast_ray.cast_ray_continuously(ray_caster),
+			hits: cast_ray.cast_ray_continuously_sorted(ray_caster),
 			ray: Ray3d {
 				origin: ray_caster.origin,
 				direction: ray_caster.direction,
@@ -58,9 +58,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl CastRayContinuously<RayCaster> for _CastRay {
-		fn cast_ray_continuously(&self, ray: &RayCaster) -> Vec<(Entity, TimeOfImpact)> {
-			self.mock.cast_ray_continuously(ray)
+	impl CastRayContinuouslySorted<RayCaster> for _CastRay {
+		fn cast_ray_continuously_sorted(&self, ray: &RayCaster) -> Vec<(Entity, TimeOfImpact)> {
+			self.mock.cast_ray_continuously_sorted(ray)
 		}
 	}
 
@@ -75,7 +75,7 @@ mod tests {
 	#[test]
 	fn cast_ray() {
 		let mut app = setup(_CastRay::new_mock(|mock| {
-			mock.expect_cast_ray_continuously()
+			mock.expect_cast_ray_continuously_sorted()
 				.times(1)
 				.with(eq(RayCaster {
 					origin: Vec3::ZERO,
@@ -101,10 +101,11 @@ mod tests {
 	#[test]
 	fn add_cast_ray_result_with_targets() {
 		let mut app = setup(_CastRay::new_mock(|mock| {
-			mock.expect_cast_ray_continuously().return_const(vec![
-				(Entity::from_raw(42), TimeOfImpact(42.)),
-				(Entity::from_raw(420), TimeOfImpact(420.)),
-			]);
+			mock.expect_cast_ray_continuously_sorted()
+				.return_const(vec![
+					(Entity::from_raw(42), TimeOfImpact(42.)),
+					(Entity::from_raw(420), TimeOfImpact(420.)),
+				]);
 		}));
 		let ray_caster = app
 			.world_mut()
@@ -142,7 +143,7 @@ mod tests {
 	fn cast_ray_only_once() {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(_CastRay::new_mock(|mock| {
-			mock.expect_cast_ray_continuously()
+			mock.expect_cast_ray_continuously_sorted()
 				.times(1)
 				.return_const(vec![]);
 		}));
@@ -163,7 +164,8 @@ mod tests {
 	fn remove_ray_caster() {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(_CastRay::new_mock(|mock| {
-			mock.expect_cast_ray_continuously().return_const(vec![]);
+			mock.expect_cast_ray_continuously_sorted()
+				.return_const(vec![]);
 		}));
 		app.add_systems(Update, execute_ray_caster::<_CastRay>);
 		let ray_caster = app

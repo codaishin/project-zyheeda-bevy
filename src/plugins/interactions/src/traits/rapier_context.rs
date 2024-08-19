@@ -17,28 +17,18 @@ impl CastRay<RayCaster> for RapierContext {
 }
 
 impl CastRayContinuously<RayCaster> for RapierContext {
-	fn cast_ray_continuously(&self, ray: &RayCaster) -> Vec<(Entity, TimeOfImpact)> {
-		let mut results = Vec::new();
-
+	fn cast_ray_continuously<F: FnMut(Entity, RayIntersection) -> bool>(
+		&self,
+		ray: &RayCaster,
+		callback: F,
+	) {
 		self.intersections_with_ray(
 			ray.origin,
 			ray.direction.into(),
 			ray.max_toi.0,
 			ray.solid,
 			QueryFilter::from(ray.filter.clone()),
-			|entity, RayIntersection { time_of_impact, .. }| {
-				results.push((entity, TimeOfImpact(time_of_impact)));
-				true
-			},
+			callback,
 		);
-
-		results.sort_by(|(_, toi_a), (_, toi_b)| {
-			// FIXME: needs a more stable solution
-			toi_a.partial_cmp(toi_b).unwrap_or_else(|| {
-				panic!("tried to sort non comparable {:?} vs {:?}", toi_a, toi_b)
-			})
-		});
-
-		results
 	}
 }
