@@ -13,7 +13,10 @@ use common::{
 	errors::Error,
 	traits::cache::GetOrCreateTypeAsset,
 };
-use interactions::components::{is::Is, ConcatBlockers, DealsDamage, InitDelay, Repeat};
+use interactions::{
+	components::{is::Is, DealsDamage, InitDelay, Repeat},
+	traits::ConcatBlockers,
+};
 use prefabs::{
 	components::WithChildren,
 	traits::{GetOrCreateAssets, Instantiate},

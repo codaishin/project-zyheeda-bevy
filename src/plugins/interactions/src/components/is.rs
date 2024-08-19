@@ -1,8 +1,7 @@
-use std::marker::PhantomData;
-
+use super::BlockedBy;
+use crate::traits::ConcatBlockers;
 use bevy::prelude::{Bundle, Component};
-
-use super::{BlockedBy, ConcatBlockers};
+use std::marker::PhantomData;
 
 pub(crate) struct Beam;
 
@@ -25,8 +24,8 @@ impl<TIs> Is<TIs>
 where
 	Is<TIs>: Component,
 {
-	pub fn blocked_by<TBlockedBy: Component>(self) -> impl ConcatBlockers + Bundle {
-		(self, BlockedBy::<TBlockedBy>(PhantomData))
+	pub fn blocked_by<TBlocker: Component>(self) -> impl ConcatBlockers + Bundle {
+		(self, BlockedBy::<TBlocker>(PhantomData))
 	}
 }
 
@@ -34,8 +33,8 @@ impl<TIs, TRest: Bundle> ConcatBlockers for (Is<TIs>, TRest)
 where
 	Is<TIs>: Component,
 {
-	fn and<TBlockedBy: Component>(self) -> impl ConcatBlockers + Bundle {
+	fn and<TBlocker: Component>(self) -> impl ConcatBlockers + Bundle {
 		let (is, blocker) = self;
-		(is, (blocker, BlockedBy::<TBlockedBy>(PhantomData)))
+		(is, (blocker, BlockedBy::<TBlocker>(PhantomData)))
 	}
 }

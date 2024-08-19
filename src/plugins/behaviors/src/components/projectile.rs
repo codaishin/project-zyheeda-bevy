@@ -18,7 +18,7 @@ use common::{
 	tools::UnitsPerSecond,
 	traits::clamp_zero_positive::ClampZeroPositive,
 };
-use interactions::components::{is::Is, ConcatBlockers};
+use interactions::{components::is::Is, traits::ConcatBlockers};
 use prefabs::traits::{GetOrCreateAssets, Instantiate};
 use sub_type::SubType;
 
