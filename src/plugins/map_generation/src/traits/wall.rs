@@ -1,8 +1,8 @@
 use super::ExtraComponentsDefinition;
-use crate::components::{Unlit, Wall, WallBack};
+use crate::components::{Unlit, WallBack};
 use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::geometry::Collider;
-use common::components::NoTarget;
+use common::components::{NoTarget, Wall};
 
 impl ExtraComponentsDefinition for Wall {
 	fn target_names() -> Vec<String> {
@@ -15,7 +15,7 @@ impl ExtraComponentsDefinition for Wall {
 	}
 
 	fn insert_bundle(entity: &mut EntityCommands) {
-		entity.try_insert((Collider::cuboid(1., 1., 0.05), NoTarget));
+		entity.try_insert((Self, Collider::cuboid(1., 1., 0.05), NoTarget));
 	}
 }
 

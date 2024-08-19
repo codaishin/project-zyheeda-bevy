@@ -16,7 +16,7 @@ use bevy::{
 	transform::bundles::TransformBundle,
 };
 use common::{
-	components::Player,
+	components::{PhysicalEntity, Player, Wall},
 	resources::CamRay,
 	states::{GameRunning, MouseContext},
 };
@@ -24,9 +24,10 @@ use components::{
 	gravity_well::GravityWell,
 	ground_target::GroundTarget,
 	projectile::Projectile,
+	shield::Shield,
 	Beam,
 	CamOrbit,
-	ForceShield,
+	Force,
 	Movement,
 	MovementConfig,
 	PositionBased,
@@ -35,6 +36,7 @@ use components::{
 };
 use events::MoveInputEvent;
 use gravity::AddGravityInteraction;
+use interactions::RegisterBlocker;
 use prefabs::traits::RegisterPrefab;
 use systems::{
 	attack::{attack, execute_beam::execute_beam},
@@ -42,7 +44,6 @@ use systems::{
 	enemy::enemy,
 	face::{execute_face::execute_face, get_faces::get_faces},
 	follow::follow,
-	force_shield::position_force_shield,
 	idle::idle,
 	move_on_orbit::move_on_orbit,
 	movement::{
@@ -54,6 +55,7 @@ use systems::{
 	},
 	projectile::projectile_behavior,
 	replace::replace,
+	shield::position_force_shield,
 	update_cool_downs::update_cool_downs,
 	update_life_times::update_lifetimes,
 };
@@ -66,9 +68,12 @@ impl Plugin for BehaviorsPlugin {
 			.register_prefab::<Projectile>()
 			.register_prefab::<VoidSphere>()
 			.register_prefab::<Beam>()
-			.register_prefab::<ForceShield>()
+			.register_prefab::<Shield>()
 			.register_prefab::<GravityWell>()
 			.register_gravity_source::<GravityWell>()
+			.register_blocker::<PhysicalEntity>()
+			.register_blocker::<Wall>()
+			.register_blocker::<Force>()
 			.add_systems(
 				Update,
 				(trigger_move_input_event::<CamRay>, move_player_on_event)

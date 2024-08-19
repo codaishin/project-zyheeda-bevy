@@ -15,7 +15,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{ColliderRoot, GroundOffset, Health, MainCamera, Player},
+	components::{ColliderRoot, GroundOffset, Health, MainCamera, PhysicalEntity, Player},
 	states::GameRunning,
 	tools::{player_animation_path, UnitsPerSecond},
 	traits::clamp_zero_positive::ClampZeroPositive,
@@ -71,7 +71,7 @@ fn prepare_game(app: &mut App) {
 pub mod debug_utils {
 	use super::*;
 	use bevy_inspector_egui::quick::WorldInspectorPlugin;
-	use interactions::events::RayCastEvent;
+	use interactions::events::{InteractionEvent, Ray};
 	use std::ops::Not;
 
 	const FORWARD_GIZMO_COLOR: Color = Color::srgb(0., 0., 1.);
@@ -91,7 +91,7 @@ pub mod debug_utils {
 	fn display_events(
 		mut collision_events: EventReader<CollisionEvent>,
 		mut contact_force_events: EventReader<ContactForceEvent>,
-		mut ray_cast_events: EventReader<RayCastEvent>,
+		mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
 	) {
 		for collision_event in collision_events.read() {
 			println!("Received collision event: {:?}", collision_event);
@@ -178,6 +178,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			},
 			GroundOffset(Vec3::Y),
 			Player,
+			PhysicalEntity,
 			MovementConfig::Dynamic {
 				current_mode: MovementMode::Fast,
 				slow_speed: UnitsPerSecond::new(0.75),

@@ -58,7 +58,7 @@ impl Health {
 	}
 }
 
-#[derive(Component, PartialEq, Debug)]
+#[derive(Component, PartialEq, Debug, Clone, Copy)]
 pub struct ColliderRoot(pub Entity);
 
 #[derive(Component, PartialEq, Debug, Clone, Copy, Default)]
@@ -95,3 +95,9 @@ pub struct MainCamera;
 
 #[derive(Component, Debug, PartialEq, Clone)]
 pub struct NoTarget;
+
+#[derive(Component, Debug, PartialEq, Clone, Copy)]
+pub struct Wall;
+
+#[derive(Component, Debug, PartialEq, Clone, Copy)]
+pub struct PhysicalEntity;

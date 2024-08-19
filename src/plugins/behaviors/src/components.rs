@@ -1,6 +1,7 @@
 pub mod gravity_well;
 pub mod ground_target;
 pub mod projectile;
+pub mod shield;
 
 use crate::traits::{RemoveComponent, SpawnAttack};
 use bevy::{
@@ -31,11 +32,6 @@ pub struct OverrideFace(pub Face);
 
 #[derive(Component, Debug, PartialEq)]
 pub struct SetFace(pub Face);
-
-#[derive(Component, Debug, PartialEq)]
-pub struct ForceShield {
-	pub location: Entity,
-}
 
 #[derive(Component)]
 pub struct VoidSphere;
@@ -163,3 +159,6 @@ pub(crate) struct Beam {
 	pub color: Color,
 	pub emissive: LinearRgba,
 }
+
+#[derive(Component, Default, Debug, PartialEq)]
+pub struct Force;

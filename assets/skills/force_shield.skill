@@ -12,11 +12,14 @@
 			"contact": {
 				"spawn": {
 					"Shield": {
-						"stoppable": true,
-						"shield_type": "Force"
+						"stoppable": true
 					}
 				},
-				"start": []
+				"start": [
+					{
+						"Force": null
+					}
+				]
 			},
 			"projection": {
 				"spawn": "Placeholder",

@@ -1,7 +1,4 @@
-use crate::{
-	components::{Light, Wall},
-	traits::ExtraComponentsDefinition,
-};
+use crate::{components::Light, traits::ExtraComponentsDefinition};
 use bevy::{
 	color::Color,
 	ecs::system::EntityCommands,
@@ -11,6 +8,7 @@ use bevy::{
 	render::view::Visibility,
 };
 use common::{
+	components::Wall,
 	errors::Error,
 	tools::{Intensity, IntensityChangePerSecond, Units},
 	traits::{

@@ -1,6 +1,6 @@
 pub mod sub_type;
 
-use super::{MovementConfig, MovementMode};
+use super::{Force, MovementConfig, MovementMode};
 use crate::traits::ProjectileBehavior;
 use bevy::{
 	self,
@@ -12,12 +12,13 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::RigidBody;
 use common::{
+	components::{PhysicalEntity, Wall},
 	errors::Error,
 	test_tools::utils::ApproxEqual,
 	tools::UnitsPerSecond,
 	traits::clamp_zero_positive::ClampZeroPositive,
 };
-use interactions::components::Fragile;
+use interactions::{components::is::Is, traits::ConcatBlockers};
 use prefabs::traits::{GetOrCreateAssets, Instantiate};
 use sub_type::SubType;
 
@@ -66,7 +67,10 @@ impl Instantiate for Projectile {
 	) -> Result<(), Error> {
 		on.try_insert((
 			RigidBody::Fixed,
-			Fragile,
+			Is::fragile()
+				.blocked_by::<PhysicalEntity>()
+				.and::<Wall>()
+				.and::<Force>(),
 			MovementConfig::Constant {
 				mode: MovementMode::Fast,
 				speed: UnitsPerSecond::new(15.),

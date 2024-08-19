@@ -1,4 +1,4 @@
-use crate::traits::ActOn;
+use crate::{events::InteractionEvent, traits::ActOn};
 use bevy::{
 	ecs::{
 		component::Component,
@@ -8,31 +8,20 @@ use bevy::{
 	},
 	prelude::Mut,
 };
-use bevy_rapier3d::pipeline::CollisionEvent;
 use common::{components::ColliderRoot, traits::try_remove_from::TryRemoveFrom};
 
 pub(crate) fn collision_interaction<TActor: ActOn<TTarget> + Component, TTarget: Component>(
 	mut commands: Commands,
-	mut collisions: EventReader<CollisionEvent>,
+	mut collisions: EventReader<InteractionEvent>,
 	mut actors: Query<&mut TActor>,
 	mut targets: Query<&mut TTarget>,
-	roots: Query<&ColliderRoot>,
 ) {
-	let root_entities = |event: &CollisionEvent| match event {
-		CollisionEvent::Started(a, b, _) => get_roots(*a, *b, &roots),
-		_ => None,
-	};
+	let root_or_entities =
+		|InteractionEvent(ColliderRoot(a), ColliderRoot(b)): &InteractionEvent| (*a, *b);
 
-	for (a, b) in collisions.read().filter_map(root_entities) {
+	for (a, b) in collisions.read().map(root_or_entities) {
 		handle_collision_interaction(a, b, &mut actors, &mut targets, &mut commands);
 	}
-}
-
-fn get_roots(a: Entity, b: Entity, roots: &Query<&ColliderRoot>) -> Option<(Entity, Entity)> {
-	let root_a = roots.get(a).ok()?;
-	let root_b = roots.get(b).ok()?;
-
-	Some((root_a.0, root_b.0))
 }
 
 fn handle_collision_interaction<TActor: ActOn<TTarget> + Component, TTarget: Component>(
@@ -68,7 +57,6 @@ fn get_actor_and_target<'a, TActor: Component, TTarget: Component>(
 mod tests {
 	use super::*;
 	use bevy::app::{App, Update};
-	use bevy_rapier3d::{pipeline::CollisionEvent, rapier::geometry::CollisionEventFlags};
 	use common::traits::nested_mock::NestedMock;
 	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
@@ -90,7 +78,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new();
-		app.add_event::<CollisionEvent>();
+		app.add_event::<InteractionEvent>();
 		app.add_systems(Update, collision_interaction::<_Actor, _Target>);
 
 		app
@@ -109,14 +97,9 @@ mod tests {
 			}))
 			.id();
 		let target = app.world_mut().spawn(_Target).id();
-		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
-		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
-		app.world_mut().send_event(CollisionEvent::Started(
-			coll_actor,
-			coll_target,
-			CollisionEventFlags::empty(),
-		));
+		app.world_mut()
+			.send_event(InteractionEvent::of(ColliderRoot(actor)).with(ColliderRoot(target)));
 		app.update();
 	}
 
@@ -133,14 +116,9 @@ mod tests {
 			}))
 			.id();
 		let target = app.world_mut().spawn(_Target).id();
-		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
-		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
-		app.world_mut().send_event(CollisionEvent::Started(
-			coll_target,
-			coll_actor,
-			CollisionEventFlags::empty(),
-		));
+		app.world_mut()
+			.send_event(InteractionEvent::of(ColliderRoot(actor)).with(ColliderRoot(target)));
 		app.update();
 	}
 
@@ -154,14 +132,9 @@ mod tests {
 			}))
 			.id();
 		let target = app.world_mut().spawn(_Target).id();
-		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
-		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
-		app.world_mut().send_event(CollisionEvent::Started(
-			coll_actor,
-			coll_target,
-			CollisionEventFlags::empty(),
-		));
+		app.world_mut()
+			.send_event(InteractionEvent::of(ColliderRoot(actor)).with(ColliderRoot(target)));
 		app.update();
 
 		let actor = app.world().entity(actor);
@@ -179,14 +152,9 @@ mod tests {
 			}))
 			.id();
 		let target = app.world_mut().spawn(_Target).id();
-		let coll_actor = app.world_mut().spawn(ColliderRoot(actor)).id();
-		let coll_target = app.world_mut().spawn(ColliderRoot(target)).id();
 
-		app.world_mut().send_event(CollisionEvent::Started(
-			coll_target,
-			coll_actor,
-			CollisionEventFlags::empty(),
-		));
+		app.world_mut()
+			.send_event(InteractionEvent::of(ColliderRoot(actor)).with(ColliderRoot(target)));
 		app.update();
 
 		let actor = app.world().entity(actor);

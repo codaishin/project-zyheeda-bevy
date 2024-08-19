@@ -1,6 +1,7 @@
 pub mod bundles;
 pub mod components;
 pub mod errors;
+pub mod labels;
 pub mod resources;
 pub mod states;
 pub mod systems;
