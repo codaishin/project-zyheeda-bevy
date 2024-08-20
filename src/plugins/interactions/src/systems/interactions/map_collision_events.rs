@@ -1,14 +1,16 @@
-use crate::traits::FromCollisionEvent;
-use bevy::prelude::{Event, EventReader, EventWriter, Query};
+use crate::traits::{FromCollisionEvent, Track, TrackState};
+use bevy::prelude::{Event, EventReader, EventWriter, Query, ResMut, Resource};
 use bevy_rapier3d::prelude::CollisionEvent;
 use common::components::ColliderRoot;
 
-pub(crate) fn collision_event_to<TEvent>(
+pub(crate) fn map_collision_events<TEvent, TEventTracker>(
 	mut collisions: EventReader<CollisionEvent>,
 	mut interactions: EventWriter<TEvent>,
 	roots: Query<&ColliderRoot>,
+	mut track: ResMut<TEventTracker>,
 ) where
 	TEvent: Event + FromCollisionEvent,
+	TEventTracker: Resource + Track<TEvent>,
 {
 	let get_root = |entity| match roots.get(entity) {
 		Ok(root) => *root,
@@ -16,13 +18,17 @@ pub(crate) fn collision_event_to<TEvent>(
 	};
 
 	for collision in collisions.read() {
-		interactions.send(TEvent::from_collision(collision, get_root));
+		let event = TEvent::from_collision(collision, get_root);
+		if track.update(&event) == TrackState::Changed {
+			interactions.send(event);
+		}
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::traits::TrackState;
 	use bevy::{
 		app::{App, Update},
 		prelude::{Entity, Events},
@@ -30,12 +36,29 @@ mod tests {
 	use bevy_rapier3d::rapier::prelude::CollisionEventFlags;
 	use common::test_tools::utils::SingleThreadedApp;
 
-	fn setup<TEvent: Event + FromCollisionEvent>() -> App {
+	#[derive(Resource, Default)]
+	struct _Tracker<const STATE_CHANGED: bool>;
+
+	impl<TEvent, const STATE_CHANGED: bool> Track<TEvent> for _Tracker<STATE_CHANGED> {
+		fn update(&mut self, _: &TEvent) -> TrackState {
+			if STATE_CHANGED {
+				TrackState::Changed
+			} else {
+				TrackState::Unchanged
+			}
+		}
+	}
+
+	fn setup<TEvent: Event + FromCollisionEvent, const STATE_CHANGED: bool>() -> App {
 		let mut app = App::new().single_threaded(Update);
 
+		app.init_resource::<_Tracker<STATE_CHANGED>>();
 		app.add_event::<CollisionEvent>();
 		app.add_event::<TEvent>();
-		app.add_systems(Update, collision_event_to::<TEvent>);
+		app.add_systems(
+			Update,
+			map_collision_events::<TEvent, _Tracker<STATE_CHANGED>>,
+		);
 
 		app
 	}
@@ -54,7 +77,7 @@ mod tests {
 			}
 		}
 
-		let mut app = setup::<_Event>();
+		let mut app = setup::<_Event, true>();
 
 		app.world_mut().send_event(CollisionEvent::Started(
 			Entity::from_raw(42),
@@ -94,7 +117,7 @@ mod tests {
 			}
 		}
 
-		let mut app = setup::<_Event>();
+		let mut app = setup::<_Event, true>();
 
 		let a = app.world_mut().spawn_empty().id();
 		let collider_a = app.world_mut().spawn(ColliderRoot(a)).id();
@@ -117,5 +140,41 @@ mod tests {
 			vec![&_Event(ColliderRoot(a), ColliderRoot(b))],
 			events.collect::<Vec<_>>()
 		)
+	}
+
+	#[test]
+	fn do_not_send_event_when_tracker_state_unchanged() {
+		#[derive(Event, Debug, PartialEq)]
+		struct _Event;
+
+		impl FromCollisionEvent for _Event {
+			fn from_collision<F>(_: &CollisionEvent, _: F) -> Self
+			where
+				F: Fn(Entity) -> ColliderRoot,
+			{
+				_Event
+			}
+		}
+
+		let mut app = setup::<_Event, false>();
+
+		app.world_mut().send_event(CollisionEvent::Started(
+			Entity::from_raw(42),
+			Entity::from_raw(90),
+			CollisionEventFlags::empty(),
+		));
+		app.world_mut().send_event(CollisionEvent::Stopped(
+			Entity::from_raw(9),
+			Entity::from_raw(55),
+			CollisionEventFlags::empty(),
+		));
+
+		app.update();
+
+		let events = app.world().resource::<Events<_Event>>();
+		let mut reader = events.get_reader();
+		let events = reader.read(events);
+
+		assert_eq!(vec![] as Vec<&_Event>, events.collect::<Vec<_>>())
 	}
 }

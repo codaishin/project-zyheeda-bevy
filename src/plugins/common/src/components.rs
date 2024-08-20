@@ -58,7 +58,7 @@ impl Health {
 	}
 }
 
-#[derive(Component, PartialEq, Eq, Hash, Debug, Clone, Copy)]
+#[derive(Component, PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord)]
 pub struct ColliderRoot(pub Entity);
 
 #[derive(Component, PartialEq, Debug, Clone, Copy, Default)]

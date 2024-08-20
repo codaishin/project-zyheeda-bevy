@@ -5,7 +5,7 @@ use crate::{
 use bevy::prelude::{Commands, Entity, EventWriter, Query};
 use common::{components::ColliderRoot, traits::try_remove_from::TryRemoveFrom};
 
-pub(crate) fn ray_cast_result_to_interaction_events(
+pub(crate) fn map_ray_cast_result_to_interaction_changes(
 	mut commands: Commands,
 	results: Query<(Entity, &RayCastResult)>,
 	mut interactions: EventWriter<InteractionEvent>,
@@ -51,7 +51,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.add_event::<InteractionEvent>();
 		app.add_event::<InteractionEvent<Ray>>();
-		app.add_systems(Update, ray_cast_result_to_interaction_events);
+		app.add_systems(Update, map_ray_cast_result_to_interaction_changes);
 
 		app
 	}

@@ -18,3 +18,13 @@ pub trait FromCollisionEvent {
 	where
 		F: Fn(Entity) -> ColliderRoot;
 }
+
+#[derive(Debug, PartialEq)]
+pub(crate) enum TrackState {
+	Changed,
+	Unchanged,
+}
+
+pub(crate) trait Track<TEvent> {
+	fn update(&mut self, event: &TEvent) -> TrackState;
+}

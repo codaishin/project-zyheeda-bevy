@@ -2,6 +2,7 @@ pub mod components;
 pub mod events;
 pub mod traits;
 
+mod resources;
 mod systems;
 
 use bevy::{
@@ -13,20 +14,20 @@ use bevy_rapier3d::plugin::RapierContext;
 use common::{components::Health, labels::Labels};
 use components::DealsDamage;
 use events::{InteractionEvent, Ray};
+use resources::InteractionsTracker;
 use systems::{
 	destroy::destroy,
 	destroy_dead::set_dead_to_be_destroyed,
 	interactions::{
 		beam_blocked_by::beam_blocked_by,
 		collision::collision_interaction,
-		collision_event_to::collision_event_to,
 		delay::delay,
 		fragile_blocked_by::fragile_blocked_by,
-		track_interactions::track_interactions,
+		map_collision_events::map_collision_events,
 	},
 	ray_cast::{
 		execute_ray_caster::execute_ray_caster,
-		ray_cast_result_to_events::ray_cast_result_to_interaction_events,
+		map_ray_cast_results_to_interaction_event::map_ray_cast_result_to_interaction_changes,
 	},
 };
 use traits::ActOn;
@@ -37,16 +38,16 @@ impl Plugin for InteractionsPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()
+			.init_resource::<TrackInteractionDuplicates>()
 			.add_interaction::<DealsDamage, Health>()
 			.add_systems(Labels::PROCESSING, set_dead_to_be_destroyed)
 			.add_systems(
 				Labels::PROPAGATION,
-				(
-					ray_cast_result_to_interaction_events,
-					collision_event_to::<InteractionEvent>,
-					track_interactions,
-				)
-					.chain(),
+				map_ray_cast_result_to_interaction_changes,
+			)
+			.add_systems(
+				Labels::PROPAGATION,
+				map_collision_events::<InteractionEvent, InteractionsTracker>,
 			)
 			.add_systems(Labels::PROPAGATION, destroy)
 			.add_systems(Labels::PROPAGATION, execute_ray_caster::<RapierContext>);
