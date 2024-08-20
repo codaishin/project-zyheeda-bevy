@@ -10,8 +10,12 @@ use bevy_rapier3d::{
 	geometry::CollisionGroups,
 	pipeline::{QueryFilter, QueryFilterFlags},
 };
-use common::traits::cast_ray::TimeOfImpact;
-use std::{marker::PhantomData, time::Duration};
+use common::{components::ColliderRoot, traits::cast_ray::TimeOfImpact};
+use std::{
+	collections::{hash_map::Entry, HashMap},
+	marker::PhantomData,
+	time::Duration,
+};
 
 #[derive(Component, Debug, PartialEq, Clone)]
 pub struct RayCaster {
@@ -146,6 +150,47 @@ impl<TActor: Clone + ActOn<TTarget>, TTarget> Repeat for Delay<TActor, TTarget> 
 			timer: self.timer,
 			phantom_data: self.phantom_data,
 		}
+	}
+}
+
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
+pub(crate) struct SubCollisions(usize);
+
+pub(crate) enum RemainingSubCollisions {
+	Some(SubCollisions),
+	None,
+}
+
+impl SubCollisions {
+	pub(crate) fn one() -> Self {
+		SubCollisions(1)
+	}
+
+	pub(crate) fn increment(&mut self) -> &mut Self {
+		self.0 += 1;
+		self
+	}
+
+	pub(crate) fn try_decrement(self) -> RemainingSubCollisions {
+		if self.0 > 1 {
+			RemainingSubCollisions::Some(SubCollisions(self.0 - 1))
+		} else {
+			RemainingSubCollisions::None
+		}
+	}
+}
+
+#[derive(Component, Debug, PartialEq, Default)]
+pub struct InteractingEntities(HashMap<ColliderRoot, SubCollisions>);
+
+impl InteractingEntities {
+	#[cfg(test)]
+	pub(crate) fn new<const N: usize>(entries: [(ColliderRoot, SubCollisions); N]) -> Self {
+		Self(HashMap::from(entries))
+	}
+
+	pub(crate) fn entry(&mut self, key: ColliderRoot) -> Entry<ColliderRoot, SubCollisions> {
+		self.0.entry(key)
 	}
 }
 

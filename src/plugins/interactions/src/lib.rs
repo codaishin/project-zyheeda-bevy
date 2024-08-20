@@ -22,6 +22,7 @@ use systems::{
 		collision_event_to::collision_event_to,
 		delay::delay,
 		fragile_blocked_by::fragile_blocked_by,
+		track_interactions::track_interactions,
 	},
 	ray_cast::{
 		execute_ray_caster::execute_ray_caster,
@@ -38,8 +39,15 @@ impl Plugin for InteractionsPlugin {
 			.add_event::<InteractionEvent<Ray>>()
 			.add_interaction::<DealsDamage, Health>()
 			.add_systems(Labels::PROCESSING, set_dead_to_be_destroyed)
-			.add_systems(Labels::PROPAGATION, ray_cast_result_to_interaction_events)
-			.add_systems(Labels::PROPAGATION, collision_event_to::<InteractionEvent>)
+			.add_systems(
+				Labels::PROPAGATION,
+				(
+					ray_cast_result_to_interaction_events,
+					collision_event_to::<InteractionEvent>,
+					track_interactions,
+				)
+					.chain(),
+			)
 			.add_systems(Labels::PROPAGATION, destroy)
 			.add_systems(Labels::PROPAGATION, execute_ray_caster::<RapierContext>);
 	}
