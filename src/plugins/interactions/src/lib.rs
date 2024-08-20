@@ -19,7 +19,7 @@ use systems::{
 	interactions::{
 		beam_blocked_by::beam_blocked_by,
 		collision::collision_interaction,
-		collision_start_event_to_interaction_event::collision_start_event_to_interaction_event,
+		collision_event_to::collision_event_to,
 		delay::delay,
 		fragile_blocked_by::fragile_blocked_by,
 	},
@@ -39,10 +39,7 @@ impl Plugin for InteractionsPlugin {
 			.add_interaction::<DealsDamage, Health>()
 			.add_systems(Labels::PROCESSING, set_dead_to_be_destroyed)
 			.add_systems(Labels::PROPAGATION, ray_cast_result_to_interaction_events)
-			.add_systems(
-				Labels::PROPAGATION,
-				collision_start_event_to_interaction_event,
-			)
+			.add_systems(Labels::PROPAGATION, collision_event_to::<InteractionEvent>)
 			.add_systems(Labels::PROPAGATION, destroy)
 			.add_systems(Labels::PROPAGATION, execute_ray_caster::<RapierContext>);
 	}

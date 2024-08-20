@@ -1,8 +1,10 @@
+use crate::traits::FromCollisionEvent;
 use bevy::{
 	ecs::{entity::Entity, event::Event},
 	math::{Dir3, Ray3d, Vec3},
 	utils::default,
 };
+use bevy_rapier3d::prelude::CollisionEvent;
 use common::{components::ColliderRoot, traits::cast_ray::TimeOfImpact};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -31,6 +33,22 @@ impl InteractionEvent<()> {
 	}
 }
 
+impl FromCollisionEvent for InteractionEvent {
+	fn from_collision<F>(event: &CollisionEvent, get_root: F) -> Self
+	where
+		F: Fn(Entity) -> ColliderRoot,
+	{
+		match event {
+			CollisionEvent::Started(a, b, ..) => {
+				InteractionEvent::of(get_root(*a)).collision(Collision::Started(get_root(*b)))
+			}
+			CollisionEvent::Stopped(a, b, ..) => {
+				InteractionEvent::of(get_root(*a)).collision(Collision::Ended(get_root(*b)))
+			}
+		}
+	}
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct RayCastInfo {
 	pub hits: Vec<(Entity, TimeOfImpact)>,
@@ -48,5 +66,75 @@ impl Default for RayCastInfo {
 			},
 			max_toi: default(),
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use bevy_rapier3d::rapier::prelude::CollisionEventFlags;
+
+	#[test]
+	fn interaction_event_from_collision_mapped_with_get_root_fn() {
+		const ROOT: ColliderRoot = ColliderRoot(Entity::from_raw(66));
+
+		fn get_root(_: Entity) -> ColliderRoot {
+			ROOT
+		}
+
+		let collisions = [
+			CollisionEvent::Started(
+				Entity::from_raw(42),
+				Entity::from_raw(11),
+				CollisionEventFlags::empty(),
+			),
+			CollisionEvent::Stopped(
+				Entity::from_raw(42),
+				Entity::from_raw(11),
+				CollisionEventFlags::empty(),
+			),
+		];
+
+		let interactions = collisions.map(|c| InteractionEvent::from_collision(&c, get_root));
+
+		assert_eq!(
+			[
+				InteractionEvent::of(ROOT).collision(Collision::Started(ROOT)),
+				InteractionEvent::of(ROOT).collision(Collision::Ended(ROOT))
+			],
+			interactions
+		);
+	}
+
+	#[test]
+	fn interaction_event_from_collision_mapped_with_correct_entities() {
+		fn get_root(entity: Entity) -> ColliderRoot {
+			ColliderRoot(entity)
+		}
+
+		let collisions = [
+			CollisionEvent::Started(
+				Entity::from_raw(1),
+				Entity::from_raw(2),
+				CollisionEventFlags::empty(),
+			),
+			CollisionEvent::Stopped(
+				Entity::from_raw(3),
+				Entity::from_raw(4),
+				CollisionEventFlags::empty(),
+			),
+		];
+
+		let interactions = collisions.map(|c| InteractionEvent::from_collision(&c, get_root));
+
+		assert_eq!(
+			[
+				InteractionEvent::of(ColliderRoot(Entity::from_raw(1)))
+					.collision(Collision::Started(ColliderRoot(Entity::from_raw(2)))),
+				InteractionEvent::of(ColliderRoot(Entity::from_raw(3)))
+					.collision(Collision::Ended(ColliderRoot(Entity::from_raw(4))))
+			],
+			interactions
+		);
 	}
 }
