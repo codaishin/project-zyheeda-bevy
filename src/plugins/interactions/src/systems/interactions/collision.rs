@@ -1,4 +1,7 @@
-use crate::{events::InteractionEvent, traits::ActOn};
+use crate::{
+	events::{Collision, InteractionEvent},
+	traits::ActOn,
+};
 use bevy::{
 	ecs::{
 		component::Component,
@@ -12,15 +15,21 @@ use common::{components::ColliderRoot, traits::try_remove_from::TryRemoveFrom};
 
 pub(crate) fn collision_interaction<TActor: ActOn<TTarget> + Component, TTarget: Component>(
 	mut commands: Commands,
-	mut collisions: EventReader<InteractionEvent>,
+	mut interaction_events: EventReader<InteractionEvent>,
 	mut actors: Query<&mut TActor>,
 	mut targets: Query<&mut TTarget>,
 ) {
-	let root_or_entities =
-		|InteractionEvent(ColliderRoot(a), ColliderRoot(b)): &InteractionEvent| (*a, *b);
-
-	for (a, b) in collisions.read().map(root_or_entities) {
+	for (a, b) in interaction_events.read().filter_map(collision_stated) {
 		handle_collision_interaction(a, b, &mut actors, &mut targets, &mut commands);
+	}
+}
+
+fn collision_stated(
+	InteractionEvent(ColliderRoot(a), collision): &InteractionEvent,
+) -> Option<(Entity, Entity)> {
+	match collision {
+		Collision::Started(ColliderRoot(b)) => Some((*a, *b)),
+		Collision::Ended(_) => None,
 	}
 }
 
@@ -98,8 +107,10 @@ mod tests {
 			.id();
 		let target = app.world_mut().spawn(_Target).id();
 
-		app.world_mut()
-			.send_event(InteractionEvent::of(ColliderRoot(actor)).with(ColliderRoot(target)));
+		app.world_mut().send_event(
+			InteractionEvent::of(ColliderRoot(actor))
+				.collision(Collision::Started(ColliderRoot(target))),
+		);
 		app.update();
 	}
 
@@ -117,8 +128,10 @@ mod tests {
 			.id();
 		let target = app.world_mut().spawn(_Target).id();
 
-		app.world_mut()
-			.send_event(InteractionEvent::of(ColliderRoot(actor)).with(ColliderRoot(target)));
+		app.world_mut().send_event(
+			InteractionEvent::of(ColliderRoot(actor))
+				.collision(Collision::Started(ColliderRoot(target))),
+		);
 		app.update();
 	}
 
@@ -133,8 +146,10 @@ mod tests {
 			.id();
 		let target = app.world_mut().spawn(_Target).id();
 
-		app.world_mut()
-			.send_event(InteractionEvent::of(ColliderRoot(actor)).with(ColliderRoot(target)));
+		app.world_mut().send_event(
+			InteractionEvent::of(ColliderRoot(actor))
+				.collision(Collision::Started(ColliderRoot(target))),
+		);
 		app.update();
 
 		let actor = app.world().entity(actor);
@@ -153,8 +168,10 @@ mod tests {
 			.id();
 		let target = app.world_mut().spawn(_Target).id();
 
-		app.world_mut()
-			.send_event(InteractionEvent::of(ColliderRoot(actor)).with(ColliderRoot(target)));
+		app.world_mut().send_event(
+			InteractionEvent::of(ColliderRoot(actor))
+				.collision(Collision::Started(ColliderRoot(target))),
+		);
 		app.update();
 
 		let actor = app.world().entity(actor);

@@ -3,7 +3,7 @@ use crate::{
 		is::{Fragile, Is},
 		Destroy,
 	},
-	events::InteractionEvent,
+	events::{Collision, InteractionEvent},
 };
 use bevy::{
 	ecs::{
@@ -18,17 +18,26 @@ use common::{components::ColliderRoot, traits::try_insert_on::TryInsertOn};
 
 pub(crate) fn fragile_blocked_by<TBlocker: Component>(
 	mut commands: Commands,
-	mut collision_events: EventReader<InteractionEvent>,
+	mut interaction_event: EventReader<InteractionEvent>,
 	fragiles: Query<Entity, With<Is<Fragile>>>,
 	blockers: Query<(), With<TBlocker>>,
 ) {
-	for InteractionEvent(ColliderRoot(a), ColliderRoot(b)) in collision_events.read() {
+	for (a, b) in interaction_event.read().filter_map(collision_started) {
 		if let Some(entity) = fragile_blocked_entity(a, b, &fragiles, &blockers) {
 			commands.try_insert_on(entity, Destroy::Immediately);
 		}
 		if let Some(entity) = fragile_blocked_entity(b, a, &fragiles, &blockers) {
 			commands.try_insert_on(entity, Destroy::Immediately);
 		}
+	}
+}
+
+fn collision_started(
+	InteractionEvent(ColliderRoot(a), collision): &InteractionEvent,
+) -> Option<(&Entity, &Entity)> {
+	match collision {
+		Collision::Started(ColliderRoot(b)) => Some((a, b)),
+		Collision::Ended(_) => None,
 	}
 }
 
@@ -77,10 +86,10 @@ mod tests {
 
 		app.update();
 
-		app.world_mut().send_event(InteractionEvent(
-			ColliderRoot(fragile),
-			ColliderRoot(blocker),
-		));
+		app.world_mut().send_event(
+			InteractionEvent::of(ColliderRoot(fragile))
+				.collision(Collision::Started(ColliderRoot(blocker))),
+		);
 
 		app.update();
 
@@ -146,10 +155,10 @@ mod tests {
 
 		app.update();
 
-		app.world_mut().send_event(InteractionEvent(
-			ColliderRoot(blocker),
-			ColliderRoot(fragile),
-		));
+		app.world_mut().send_event(
+			InteractionEvent::of(ColliderRoot(blocker))
+				.collision(Collision::Started(ColliderRoot(fragile))),
+		);
 
 		app.update();
 

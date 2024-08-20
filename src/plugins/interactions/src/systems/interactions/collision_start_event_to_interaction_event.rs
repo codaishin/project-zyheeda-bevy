@@ -1,4 +1,4 @@
-use crate::events::InteractionEvent;
+use crate::events::{Collision, InteractionEvent};
 use bevy::prelude::{Entity, EventReader, EventWriter, Query};
 use bevy_rapier3d::prelude::CollisionEvent;
 use common::components::ColliderRoot;
@@ -16,7 +16,7 @@ pub(crate) fn collision_start_event_to_interaction_event(
 		};
 		let a = get_root(*a, roots);
 		let b = get_root(*b, roots);
-		interactions.send(InteractionEvent::of(a).with(b));
+		interactions.send(InteractionEvent::of(a).collision(Collision::Started(b)));
 	}
 }
 
@@ -70,7 +70,7 @@ mod tests {
 
 		assert_eq!(
 			vec![&InteractionEvent::of(ColliderRoot(Entity::from_raw(42)))
-				.with(ColliderRoot(Entity::from_raw(90)))],
+				.collision(Collision::Started(ColliderRoot(Entity::from_raw(90))))],
 			events.collect::<Vec<_>>()
 		)
 	}
@@ -102,7 +102,7 @@ mod tests {
 		let events = reader.read(events);
 
 		assert_eq!(
-			vec![&InteractionEvent::of(ColliderRoot(a)).with(ColliderRoot(b))],
+			vec![&InteractionEvent::of(ColliderRoot(a)).collision(Collision::Started(ColliderRoot(b)))],
 			events.collect::<Vec<_>>()
 		)
 	}

@@ -1,6 +1,6 @@
 use crate::{
 	components::RayCastResult,
-	events::{InteractionEvent, Ray},
+	events::{Collision, InteractionEvent, Ray},
 };
 use bevy::prelude::{Commands, Entity, EventWriter, Query};
 use common::{components::ColliderRoot, traits::try_remove_from::TryRemoveFrom};
@@ -21,7 +21,8 @@ pub(crate) fn ray_cast_result_to_interaction_events(
 		let root_entity = get_root(entity, roots);
 		for (hit, ..) in &info.hits {
 			let root_hit = get_root(*hit, roots);
-			interactions.send(InteractionEvent::of(root_entity).with(root_hit));
+			interactions
+				.send(InteractionEvent::of(root_entity).collision(Collision::Started(root_hit)));
 		}
 
 		commands.try_remove_from::<RayCastResult>(entity);
@@ -81,9 +82,9 @@ mod tests {
 		assert_eq!(
 			vec![
 				&InteractionEvent::of(ColliderRoot(ray_cast))
-					.with(ColliderRoot(Entity::from_raw(42))),
+					.collision(Collision::Started(ColliderRoot(Entity::from_raw(42)))),
 				&InteractionEvent::of(ColliderRoot(ray_cast))
-					.with(ColliderRoot(Entity::from_raw(11))),
+					.collision(Collision::Started(ColliderRoot(Entity::from_raw(11)))),
 			],
 			events.collect::<Vec<_>>()
 		);
@@ -123,9 +124,9 @@ mod tests {
 		assert_eq!(
 			vec![
 				&InteractionEvent::of(ColliderRoot(ray_cast))
-					.with(ColliderRoot(Entity::from_raw(42))),
+					.collision(Collision::Started(ColliderRoot(Entity::from_raw(42)))),
 				&InteractionEvent::of(ColliderRoot(ray_cast))
-					.with(ColliderRoot(Entity::from_raw(11))),
+					.collision(Collision::Started(ColliderRoot(Entity::from_raw(11)))),
 			],
 			events.collect::<Vec<_>>()
 		);
