@@ -14,7 +14,7 @@ use bevy_rapier3d::plugin::RapierContext;
 use common::{components::Health, labels::Labels};
 use components::DealsDamage;
 use events::{InteractionEvent, Ray};
-use resources::InteractionsTracker;
+use resources::track_interaction_duplicates::TrackInteractionDuplicates;
 use systems::{
 	destroy::destroy,
 	destroy_dead::set_dead_to_be_destroyed,
@@ -47,7 +47,7 @@ impl Plugin for InteractionsPlugin {
 			)
 			.add_systems(
 				Labels::PROPAGATION,
-				map_collision_events::<InteractionEvent, InteractionsTracker>,
+				map_collision_events::<InteractionEvent, TrackInteractionDuplicates>,
 			)
 			.add_systems(Labels::PROPAGATION, destroy)
 			.add_systems(Labels::PROPAGATION, execute_ray_caster::<RapierContext>);

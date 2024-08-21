@@ -1,6 +1,11 @@
-use bevy::prelude::{Bundle, Component, Entity};
+use bevy::{
+	ecs::system::EntityCommand,
+	prelude::{Bundle, Component, Entity},
+};
 use bevy_rapier3d::prelude::CollisionEvent;
 use common::components::ColliderRoot;
+
+use crate::events::InteractionEvent;
 
 pub(crate) mod damage_health;
 pub(crate) mod rapier_context;
@@ -26,5 +31,10 @@ pub(crate) enum TrackState {
 }
 
 pub(crate) trait Track<TEvent> {
-	fn update(&mut self, event: &TEvent) -> TrackState;
+	fn track(&mut self, event: &TEvent) -> TrackState;
+}
+
+pub(crate) trait Flush {
+	type TResult;
+	fn flush(&mut self) -> Self::TResult;
 }

@@ -19,7 +19,7 @@ pub(crate) fn map_collision_events<TEvent, TEventTracker>(
 
 	for collision in collisions.read() {
 		let event = TEvent::from_collision(collision, get_root);
-		if track.update(&event) == TrackState::Changed {
+		if track.track(&event) == TrackState::Changed {
 			interactions.send(event);
 		}
 	}
@@ -40,7 +40,7 @@ mod tests {
 	struct _Tracker<const STATE_CHANGED: bool>;
 
 	impl<TEvent, const STATE_CHANGED: bool> Track<TEvent> for _Tracker<STATE_CHANGED> {
-		fn update(&mut self, _: &TEvent) -> TrackState {
+		fn track(&mut self, _: &TEvent) -> TrackState {
 			if STATE_CHANGED {
 				TrackState::Changed
 			} else {
