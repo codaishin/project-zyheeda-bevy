@@ -27,6 +27,7 @@ use systems::{
 		delay::delay,
 		fragile_blocked_by::fragile_blocked_by,
 		map_collision_events::map_collision_events,
+		send_flushed_interactions::send_flushed_interactions,
 	},
 	ray_cast::{
 		execute_ray_caster::execute_ray_caster,
@@ -42,11 +43,16 @@ impl Plugin for InteractionsPlugin {
 		app.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()
 			.init_resource::<TrackInteractionDuplicates>()
+			.init_resource::<TrackRayInteractions>()
 			.add_interaction::<DealsDamage, Health>()
 			.add_systems(Labels::PROCESSING, set_dead_to_be_destroyed)
 			.add_systems(
 				Labels::PROPAGATION,
-				map_ray_cast_result_to_interaction_changes::<TrackRayInteractions>,
+				(
+					map_ray_cast_result_to_interaction_changes::<TrackRayInteractions>,
+					send_flushed_interactions::<TrackRayInteractions>,
+				)
+					.chain(),
 			)
 			.add_systems(
 				Labels::PROPAGATION,
