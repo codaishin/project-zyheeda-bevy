@@ -1,17 +1,21 @@
 use crate::{
 	components::RayCastResult,
 	events::{Collision, InteractionEvent, Ray},
+	traits::{Track, TrackState},
 };
-use bevy::prelude::{Commands, Entity, EventWriter, Query};
+use bevy::prelude::{Commands, Entity, EventWriter, Query, ResMut, Resource};
 use common::{components::ColliderRoot, traits::try_remove_from::TryRemoveFrom};
 
-pub(crate) fn map_ray_cast_result_to_interaction_changes(
+pub(crate) fn map_ray_cast_result_to_interaction_changes<TTracker>(
 	mut commands: Commands,
 	results: Query<(Entity, &RayCastResult)>,
 	mut interactions: EventWriter<InteractionEvent>,
 	mut terminal_interactions: EventWriter<InteractionEvent<Ray>>,
 	roots: Query<&ColliderRoot>,
-) {
+	mut tracker: ResMut<TTracker>,
+) where
+	TTracker: Resource + Track<InteractionEvent>,
+{
 	let roots = &roots;
 
 	for (entity, RayCastResult { info }) in &results {
@@ -21,8 +25,13 @@ pub(crate) fn map_ray_cast_result_to_interaction_changes(
 		let root_entity = get_root(entity, roots);
 		for (hit, ..) in &info.hits {
 			let root_hit = get_root(*hit, roots);
-			interactions
-				.send(InteractionEvent::of(root_entity).collision(Collision::Started(root_hit)));
+			let event = InteractionEvent::of(root_entity).collision(Collision::Started(root_hit));
+
+			if tracker.track(&event) == TrackState::Unchanged {
+				continue;
+			}
+
+			interactions.send(event);
 		}
 
 		commands.try_remove_from::<RayCastResult>(entity);
@@ -39,26 +48,52 @@ fn get_root(entity: Entity, roots: &Query<&ColliderRoot>) -> ColliderRoot {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::events::{Ray, RayCastInfo};
+	use crate::{
+		events::{Ray, RayCastInfo},
+		traits::TrackState,
+	};
 	use bevy::{
 		app::{App, Update},
 		math::{Dir3, Ray3d, Vec3},
 		prelude::{default, Entity, Events},
 	};
-	use common::{test_tools::utils::SingleThreadedApp, traits::cast_ray::TimeOfImpact};
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		traits::{cast_ray::TimeOfImpact, nested_mock::NestedMock},
+	};
+	use macros::NestedMock;
+	use mockall::{automock, predicate::eq};
 
-	fn setup() -> App {
+	#[derive(Resource, NestedMock)]
+	struct _Tracker {
+		mock: Mock_Tracker,
+	}
+
+	#[automock]
+	impl Track<InteractionEvent> for _Tracker {
+		fn track(&mut self, event: &InteractionEvent) -> crate::traits::TrackState {
+			self.mock.track(event)
+		}
+	}
+
+	fn setup(tracker: _Tracker) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_event::<InteractionEvent>();
 		app.add_event::<InteractionEvent<Ray>>();
-		app.add_systems(Update, map_ray_cast_result_to_interaction_changes);
+		app.insert_resource(tracker);
+		app.add_systems(
+			Update,
+			map_ray_cast_result_to_interaction_changes::<_Tracker>,
+		);
 
 		app
 	}
 
 	#[test]
 	fn send_event_for_each_target_collision() {
-		let mut app = setup();
+		let mut app = setup(_Tracker::new_mock(|mock| {
+			mock.expect_track().return_const(TrackState::Changed);
+		}));
 
 		let ray_cast = app
 			.world_mut()
@@ -92,7 +127,9 @@ mod tests {
 
 	#[test]
 	fn send_event_for_each_target_collision_using_collider_root_reference() {
-		let mut app = setup();
+		let mut app = setup(_Tracker::new_mock(|mock| {
+			mock.expect_track().return_const(TrackState::Changed);
+		}));
 
 		let collider_a = app
 			.world_mut()
@@ -134,7 +171,9 @@ mod tests {
 
 	#[test]
 	fn send_ray_event_when_some_hits() {
-		let mut app = setup();
+		let mut app = setup(_Tracker::new_mock(|mock| {
+			mock.expect_track().return_const(TrackState::Changed);
+		}));
 
 		let ray = Ray3d {
 			origin: Vec3::Z,
@@ -168,7 +207,9 @@ mod tests {
 
 	#[test]
 	fn send_ray_event_when_no_hits() {
-		let mut app = setup();
+		let mut app = setup(_Tracker::new_mock(|mock| {
+			mock.expect_track().return_const(TrackState::Changed);
+		}));
 
 		let ray = Ray3d {
 			origin: Vec3::Z,
@@ -199,7 +240,9 @@ mod tests {
 
 	#[test]
 	fn remove_ray_cast_result() {
-		let mut app = setup();
+		let mut app = setup(_Tracker::new_mock(|mock| {
+			mock.expect_track().return_const(TrackState::Changed);
+		}));
 
 		let ray_cast = app
 			.world_mut()
@@ -219,5 +262,74 @@ mod tests {
 		let ray_cast = app.world().entity(ray_cast);
 
 		assert_eq!(None, ray_cast.get::<RayCastResult>());
+	}
+
+	#[test]
+	fn do_sent_interaction_collision_event_when_tracker_unchanged() {
+		let mut app = setup(_Tracker::new_mock(|mock| {
+			mock.expect_track().return_const(TrackState::Unchanged);
+		}));
+
+		app.world_mut().spawn(RayCastResult {
+			info: RayCastInfo {
+				hits: vec![
+					(Entity::from_raw(42), TimeOfImpact(42.)),
+					(Entity::from_raw(11), TimeOfImpact(11.)),
+				],
+				..default()
+			},
+		});
+
+		app.update();
+
+		let events = app.world().resource::<Events<InteractionEvent>>();
+		let mut reader = events.get_reader();
+		let events = reader.read(events);
+
+		assert_eq!(vec![] as Vec<&InteractionEvent>, events.collect::<Vec<_>>());
+	}
+
+	#[test]
+	fn call_track_with_proper_interaction() {
+		let mut app = setup(_Tracker::new_mock(|_| {}));
+
+		let ray_cast = app
+			.world_mut()
+			.spawn(RayCastResult {
+				info: RayCastInfo {
+					hits: vec![
+						(Entity::from_raw(42), TimeOfImpact(42.)),
+						(Entity::from_raw(11), TimeOfImpact(11.)),
+					],
+					..default()
+				},
+			})
+			.id();
+
+		app.insert_resource(_Tracker::new_mock(|mock| {
+			mock.expect_track()
+				.times(1)
+				.with(eq(InteractionEvent::of(ColliderRoot(ray_cast)).collision(
+					Collision::Started(ColliderRoot(Entity::from_raw(42))),
+				)))
+				.return_const(TrackState::Changed);
+			mock.expect_track()
+				.times(1)
+				.with(eq(InteractionEvent::of(ColliderRoot(ray_cast)).collision(
+					Collision::Started(ColliderRoot(Entity::from_raw(11))),
+				)))
+				.return_const(TrackState::Unchanged);
+		}));
+		app.update();
+
+		let events = app.world().resource::<Events<InteractionEvent>>();
+		let mut reader = events.get_reader();
+		let events = reader.read(events);
+
+		assert_eq!(
+			vec![&InteractionEvent::of(ColliderRoot(ray_cast))
+				.collision(Collision::Started(ColliderRoot(Entity::from_raw(42))))],
+			events.collect::<Vec<_>>()
+		);
 	}
 }

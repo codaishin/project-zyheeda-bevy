@@ -1,11 +1,6 @@
-use bevy::{
-	ecs::system::EntityCommand,
-	prelude::{Bundle, Component, Entity},
-};
+use bevy::prelude::{Bundle, Component, Entity};
 use bevy_rapier3d::prelude::CollisionEvent;
 use common::components::ColliderRoot;
-
-use crate::events::InteractionEvent;
 
 pub(crate) mod damage_health;
 pub(crate) mod rapier_context;
@@ -24,7 +19,7 @@ pub trait FromCollisionEvent {
 		F: Fn(Entity) -> ColliderRoot;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) enum TrackState {
 	Changed,
 	Unchanged,
