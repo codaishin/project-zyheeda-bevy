@@ -26,6 +26,7 @@ use systems::{
 		collision::collision_interaction,
 		delay::delay,
 		fragile_blocked_by::fragile_blocked_by,
+		interacting_entities::interacting_entities,
 		map_collision_events::map_collision_events,
 		send_flushed_interactions::send_flushed_interactions,
 	},
@@ -49,14 +50,12 @@ impl Plugin for InteractionsPlugin {
 			.add_systems(
 				Labels::PROPAGATION,
 				(
+					map_collision_events::<InteractionEvent, TrackInteractionDuplicates>,
 					map_ray_cast_result_to_interaction_changes::<TrackRayInteractions>,
 					send_flushed_interactions::<TrackRayInteractions>,
+					interacting_entities,
 				)
 					.chain(),
-			)
-			.add_systems(
-				Labels::PROPAGATION,
-				map_collision_events::<InteractionEvent, TrackInteractionDuplicates>,
 			)
 			.add_systems(Labels::PROPAGATION, destroy)
 			.add_systems(Labels::PROPAGATION, execute_ray_caster::<RapierContext>);

@@ -1,3 +1,4 @@
+pub mod interacting_entities;
 pub mod is;
 
 use crate::{events::RayCastInfo, traits::ActOn};
