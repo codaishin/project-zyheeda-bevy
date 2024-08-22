@@ -95,9 +95,3 @@ pub struct MainCamera;
 
 #[derive(Component, Debug, PartialEq, Clone)]
 pub struct NoTarget;
-
-#[derive(Component, Debug, PartialEq, Clone, Copy)]
-pub struct Wall;
-
-#[derive(Component, Debug, PartialEq, Clone, Copy)]
-pub struct PhysicalEntity;

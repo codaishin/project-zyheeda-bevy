@@ -12,7 +12,7 @@ use bevy::{
 };
 use bevy_rapier3d::plugin::RapierContext;
 use common::{components::Health, labels::Labels};
-use components::DealsDamage;
+use components::{blocker::BlockerInsertCommand, DealsDamage};
 use events::{InteractionEvent, Ray};
 use resources::{
 	track_interaction_duplicates::TrackInteractionDuplicates,
@@ -22,15 +22,15 @@ use systems::{
 	destroy::destroy,
 	destroy_dead::set_dead_to_be_destroyed,
 	interactions::{
-		beam_blocked_by::beam_blocked_by,
+		apply_fragile_blocks::apply_fragile_blocks,
 		collision::collision_interaction,
 		delay::delay,
-		fragile_blocked_by::fragile_blocked_by,
 		interacting_entities::interacting_entities,
 		map_collision_events::map_collision_events,
 		send_flushed_interactions::send_flushed_interactions,
 	},
 	ray_cast::{
+		apply_interruptable_blocks::apply_interruptable_ray_blocks,
 		execute_ray_caster::execute_ray_caster,
 		map_ray_cast_results_to_interaction_event::map_ray_cast_result_to_interaction_changes,
 	},
@@ -47,6 +47,9 @@ impl Plugin for InteractionsPlugin {
 			.init_resource::<TrackRayInteractions>()
 			.add_interaction::<DealsDamage, Health>()
 			.add_systems(Labels::PROCESSING, set_dead_to_be_destroyed)
+			.add_systems(Labels::PROCESSING, BlockerInsertCommand::system)
+			.add_systems(Labels::PROCESSING, apply_interruptable_ray_blocks)
+			.add_systems(Labels::PROCESSING, apply_fragile_blocks)
 			.add_systems(
 				Labels::PROPAGATION,
 				(
@@ -79,22 +82,6 @@ impl AddInteraction for App {
 				delay::<TActor, TTarget, Virtual>,
 			)
 				.chain(),
-		)
-	}
-}
-
-pub trait RegisterBlocker {
-	fn register_blocker<TComponent: Component>(&mut self) -> &mut Self;
-}
-
-impl RegisterBlocker for App {
-	fn register_blocker<TComponent: Component>(&mut self) -> &mut Self {
-		self.add_systems(
-			Labels::PROCESSING,
-			(
-				beam_blocked_by::<TComponent>,
-				fragile_blocked_by::<TComponent>,
-			),
 		)
 	}
 }

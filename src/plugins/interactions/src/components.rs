@@ -1,3 +1,4 @@
+pub mod blocker;
 pub mod interacting_entities;
 pub mod is;
 
@@ -94,9 +95,6 @@ pub enum Destroy {
 impl Destroy {
 	pub const DELAYED: Destroy = Destroy::AfterFrames(2);
 }
-
-#[derive(Component)]
-pub struct BlockedBy<TBlocker>(PhantomData<TBlocker>);
 
 #[derive(Component, Clone, Debug, PartialEq)]
 pub struct DealsDamage(pub i16);
