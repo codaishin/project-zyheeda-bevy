@@ -7,6 +7,8 @@ use bevy::{
 	reflect::TypePath,
 };
 
+pub(crate) struct Wall;
+
 pub(crate) struct WallBack;
 
 pub(crate) struct Corridor;

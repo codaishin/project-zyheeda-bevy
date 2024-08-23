@@ -159,6 +159,3 @@ pub(crate) struct Beam {
 	pub color: Color,
 	pub emissive: LinearRgba,
 }
-
-#[derive(Component, Default, Debug, PartialEq)]
-pub struct Force;

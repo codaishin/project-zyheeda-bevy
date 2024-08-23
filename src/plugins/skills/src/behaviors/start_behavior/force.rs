@@ -1,6 +1,6 @@
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
-use behaviors::components::Force;
 use bevy::ecs::system::EntityCommands;
+use interactions::components::blocker::Blocker;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -14,20 +14,20 @@ impl StartForce {
 		_: &SkillSpawner,
 		_: &Target,
 	) {
-		entity.try_insert(Force);
+		entity.try_insert(Blocker::insert([Blocker::Force]));
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use behaviors::components::Force;
 	use bevy::{
 		app::{App, Update},
 		ecs::system::RunSystemOnce,
 		prelude::{Commands, Entity},
 	};
 	use common::test_tools::utils::SingleThreadedApp;
+	use interactions::components::blocker::BlockerInsertCommand;
 
 	fn force(mut commands: Commands) -> Entity {
 		let mut entity = commands.spawn_empty();
@@ -50,6 +50,9 @@ mod tests {
 
 		let entity = app.world_mut().run_system_once(force);
 
-		assert_eq!(Some(&Force), app.world().entity(entity).get::<Force>());
+		assert_eq!(
+			Some(&Blocker::insert([Blocker::Force])),
+			app.world().entity(entity).get::<BlockerInsertCommand>()
+		);
 	}
 }

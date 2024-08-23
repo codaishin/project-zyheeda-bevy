@@ -2,30 +2,39 @@ pub mod components;
 pub mod events;
 pub mod traits;
 
+mod resources;
 mod systems;
 
 use bevy::{
 	app::{App, Plugin},
 	ecs::{component::Component, schedule::IntoSystemConfigs},
+	prelude::IntoSystem,
 	time::Virtual,
 };
 use bevy_rapier3d::plugin::RapierContext;
 use common::{components::Health, labels::Labels};
-use components::DealsDamage;
+use components::{blocker::BlockerInsertCommand, DealsDamage};
 use events::{InteractionEvent, Ray};
+use resources::{
+	track_interaction_duplicates::TrackInteractionDuplicates,
+	track_ray_interactions::TrackRayInteractions,
+};
 use systems::{
 	destroy::destroy,
 	destroy_dead::set_dead_to_be_destroyed,
 	interactions::{
-		beam_blocked_by::beam_blocked_by,
-		collision::collision_interaction,
-		collision_start_event_to_interaction_event::collision_start_event_to_interaction_event,
+		act_on_interaction::act_on_interaction,
+		add_interacting_entities::add_interacting_entities,
+		apply_fragile_blocks::apply_fragile_blocks,
 		delay::delay,
-		fragile_blocked_by::fragile_blocked_by,
+		map_collision_events::map_collision_events_to,
+		update_interacting_entities::update_interacting_entities,
 	},
 	ray_cast::{
+		apply_interruptable_blocks::apply_interruptable_ray_blocks,
 		execute_ray_caster::execute_ray_caster,
-		ray_cast_result_to_events::ray_cast_result_to_interaction_events,
+		map_ray_cast_results_to_interaction_event::map_ray_cast_result_to_interaction_events,
+		send_interaction_events::send_interaction_events,
 	},
 };
 use traits::ActOn;
@@ -36,15 +45,25 @@ impl Plugin for InteractionsPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()
+			.init_resource::<TrackInteractionDuplicates>()
+			.init_resource::<TrackRayInteractions>()
 			.add_interaction::<DealsDamage, Health>()
 			.add_systems(Labels::PROCESSING, set_dead_to_be_destroyed)
-			.add_systems(Labels::PROPAGATION, ray_cast_result_to_interaction_events)
+			.add_systems(Labels::PROCESSING, BlockerInsertCommand::system)
+			.add_systems(Labels::PROCESSING, apply_fragile_blocks)
 			.add_systems(
-				Labels::PROPAGATION,
-				collision_start_event_to_interaction_event,
+				Labels::PROCESSING,
+				(
+					map_collision_events_to::<InteractionEvent, TrackInteractionDuplicates>,
+					execute_ray_caster::<RapierContext>
+						.pipe(apply_interruptable_ray_blocks)
+						.pipe(map_ray_cast_result_to_interaction_events)
+						.pipe(send_interaction_events::<TrackRayInteractions>),
+				)
+					.chain(),
 			)
-			.add_systems(Labels::PROPAGATION, destroy)
-			.add_systems(Labels::PROPAGATION, execute_ray_caster::<RapierContext>);
+			.add_systems(Labels::PROPAGATION, update_interacting_entities)
+			.add_systems(Labels::PROPAGATION, destroy);
 	}
 }
 
@@ -61,26 +80,11 @@ impl AddInteraction for App {
 		self.add_systems(
 			Labels::PROCESSING,
 			(
-				collision_interaction::<TActor, TTarget>,
+				add_interacting_entities::<TActor>,
+				act_on_interaction::<TActor, TTarget>,
 				delay::<TActor, TTarget, Virtual>,
 			)
 				.chain(),
-		)
-	}
-}
-
-pub trait RegisterBlocker {
-	fn register_blocker<TComponent: Component>(&mut self) -> &mut Self;
-}
-
-impl RegisterBlocker for App {
-	fn register_blocker<TComponent: Component>(&mut self) -> &mut Self {
-		self.add_systems(
-			Labels::PROCESSING,
-			(
-				beam_blocked_by::<TComponent>,
-				fragile_blocked_by::<TComponent>,
-			),
 		)
 	}
 }

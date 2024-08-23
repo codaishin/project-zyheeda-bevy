@@ -8,6 +8,7 @@ bevy.workspace = true
 bevy_rapier3d.workspace = true
 uuid.workspace = true
 common.workspace = true
+interactions.workspace = true
 light.workspace = true
 prefabs.workspace = true
 

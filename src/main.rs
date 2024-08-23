@@ -15,7 +15,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{ColliderRoot, GroundOffset, Health, MainCamera, PhysicalEntity, Player},
+	components::{ColliderRoot, GroundOffset, Health, MainCamera, Player},
 	states::GameRunning,
 	tools::{player_animation_path, UnitsPerSecond},
 	traits::clamp_zero_positive::ClampZeroPositive,
@@ -23,7 +23,7 @@ use common::{
 };
 use gravity::GravityPlugin;
 use ingame_menu::IngameMenuPlugin;
-use interactions::InteractionsPlugin;
+use interactions::{components::blocker::Blocker, InteractionsPlugin};
 use light::{components::ResponsiveLightTrigger, LightPlugin};
 use map_generation::MapGenerationPlugin;
 use prefabs::PrefabsPlugin;
@@ -178,7 +178,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			},
 			GroundOffset(Vec3::Y),
 			Player,
-			PhysicalEntity,
+			Blocker::insert([Blocker::Physical]),
 			MovementConfig::Dynamic {
 				current_mode: MovementMode::Fast,
 				slow_speed: UnitsPerSecond::new(0.75),
