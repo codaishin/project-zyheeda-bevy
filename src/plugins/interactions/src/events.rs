@@ -10,13 +10,13 @@ use common::{components::ColliderRoot, traits::cast_ray::TimeOfImpact};
 #[derive(Debug, PartialEq, Clone)]
 pub struct Ray(pub Ray3d, pub TimeOfImpact);
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Collision {
 	Started(ColliderRoot),
 	Ended(ColliderRoot),
 }
 
-#[derive(Event, Debug, PartialEq, Clone)]
+#[derive(Event, Debug, PartialEq, Clone, Copy)]
 pub struct InteractionEvent<TOther = Collision>(pub ColliderRoot, pub TOther);
 
 impl InteractionEvent<()> {

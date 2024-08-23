@@ -2,7 +2,7 @@ pub mod blocker;
 pub mod interacting_entities;
 pub mod is;
 
-use crate::{events::RayCastInfo, traits::ActOn};
+use crate::traits::ActOn;
 use bevy::{
 	ecs::{component::Component, entity::Entity},
 	math::{Dir3, Vec3},
@@ -98,11 +98,6 @@ impl Destroy {
 
 #[derive(Component, Clone, Debug, PartialEq)]
 pub struct DealsDamage(pub i16);
-
-#[derive(Component, Clone, Debug, PartialEq)]
-pub(crate) struct RayCastResult {
-	pub(crate) info: RayCastInfo,
-}
 
 #[derive(Component, Debug, PartialEq)]
 pub struct Delay<TActor: ActOn<TTarget> + Clone, TTarget> {

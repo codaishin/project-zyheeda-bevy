@@ -1,22 +1,27 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
+use super::execute_ray_caster::RayCastResult;
 use crate::components::{
 	blocker::{Blocker, Blockers},
 	is::{InterruptableRay, Is},
-	RayCastResult,
 };
-use bevy::prelude::{Entity, Mut, Query};
+use bevy::prelude::{Entity, In, Query};
 use common::{components::ColliderRoot, traits::cast_ray::TimeOfImpact};
 
 pub(crate) fn apply_interruptable_ray_blocks(
-	mut ray_casts: Query<(Mut<RayCastResult>, &Is<InterruptableRay>)>,
+	In(mut ray_casts): In<HashMap<Entity, RayCastResult>>,
+	mut interruptable_rays: Query<(Entity, &Is<InterruptableRay>)>,
 	blockers: Query<&Blockers>,
 	roots: Query<&ColliderRoot>,
-) {
+) -> HashMap<Entity, RayCastResult> {
 	let roots = &roots;
 	let blockers = &blockers;
 
-	for (mut ray_cast, Is(interruptable)) in &mut ray_casts {
+	for (entity, Is(interruptable)) in &mut interruptable_rays {
+		let Some(ray_cast) = ray_casts.get_mut(&entity) else {
+			continue;
+		};
+
 		let mut interrupt = None;
 		let no_or_first_interruption = |(hit, toi): &(Entity, TimeOfImpact)| {
 			if interrupt.is_some() {
@@ -44,6 +49,8 @@ pub(crate) fn apply_interruptable_ray_blocks(
 		};
 		info.max_toi = toi;
 	}
+
+	ray_casts
 }
 
 fn is_interrupted(interruptable: &InterruptableRay, hit: Option<&Blockers>) -> bool {
@@ -65,21 +72,11 @@ mod tests {
 		components::{blocker::Blocker, is::Is},
 		events::RayCastInfo,
 	};
-	use bevy::{
-		app::{App, Update},
-		prelude::default,
-	};
-	use common::{
-		components::ColliderRoot,
-		test_tools::utils::SingleThreadedApp,
-		traits::cast_ray::TimeOfImpact,
-	};
+	use bevy::{app::App, ecs::system::RunSystemOnce, prelude::default};
+	use common::{components::ColliderRoot, traits::cast_ray::TimeOfImpact};
 
 	fn setup() -> App {
-		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, apply_interruptable_ray_blocks);
-
-		app
+		App::new()
 	}
 
 	#[test]
@@ -91,37 +88,43 @@ mod tests {
 			.spawn(Blockers::new([Blocker::Physical]))
 			.id();
 		let far = app.world_mut().spawn_empty().id();
-		let ray_cast = app
+		let interruptable = app
 			.world_mut()
-			.spawn((
-				Is::<InterruptableRay>::interacting_with([Blocker::Physical]),
-				RayCastResult {
-					info: RayCastInfo {
-						hits: vec![
-							(close, TimeOfImpact(1.)),
-							(blocker, TimeOfImpact(2.)),
-							(far, TimeOfImpact(3.)),
-						],
-						max_toi: TimeOfImpact(99.),
-						..default()
-					},
-				},
-			))
+			.spawn(Is::<InterruptableRay>::interacting_with([
+				Blocker::Physical,
+			]))
 			.id();
-
-		app.update();
-
-		let ray_cast = app.world().entity(ray_cast);
-
-		assert_eq!(
-			Some(&RayCastResult {
+		let ray_casts = HashMap::from([(
+			interruptable,
+			RayCastResult {
 				info: RayCastInfo {
-					hits: vec![(close, TimeOfImpact(1.)), (blocker, TimeOfImpact(2.))],
-					max_toi: TimeOfImpact(2.),
+					hits: vec![
+						(close, TimeOfImpact(1.)),
+						(blocker, TimeOfImpact(2.)),
+						(far, TimeOfImpact(3.)),
+					],
+					max_toi: TimeOfImpact(99.),
 					..default()
 				},
-			}),
-			ray_cast.get::<RayCastResult>()
+			},
+		)]);
+
+		let ray_casts = app
+			.world_mut()
+			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks);
+
+		assert_eq!(
+			HashMap::from([(
+				interruptable,
+				RayCastResult {
+					info: RayCastInfo {
+						hits: vec![(close, TimeOfImpact(1.)), (blocker, TimeOfImpact(2.))],
+						max_toi: TimeOfImpact(2.),
+						..default()
+					},
+				}
+			)]),
+			ray_casts
 		)
 	}
 
@@ -135,107 +138,43 @@ mod tests {
 			.id();
 		let blocker = app.world_mut().spawn(ColliderRoot(root)).id();
 		let far = app.world_mut().spawn_empty().id();
-		let ray_cast = app
+		let interruptable = app
 			.world_mut()
-			.spawn((
-				Is::<InterruptableRay>::interacting_with([Blocker::Physical]),
-				RayCastResult {
-					info: RayCastInfo {
-						hits: vec![
-							(close, TimeOfImpact(1.)),
-							(blocker, TimeOfImpact(2.)),
-							(far, TimeOfImpact(3.)),
-						],
-						max_toi: TimeOfImpact(99.),
-						..default()
-					},
-				},
-			))
+			.spawn(Is::<InterruptableRay>::interacting_with([
+				Blocker::Physical,
+			]))
 			.id();
-
-		app.update();
-
-		let ray_cast = app.world().entity(ray_cast);
-
-		assert_eq!(
-			Some(&RayCastResult {
+		let ray_casts = HashMap::from([(
+			interruptable,
+			RayCastResult {
 				info: RayCastInfo {
-					hits: vec![(close, TimeOfImpact(1.)), (blocker, TimeOfImpact(2.))],
-					max_toi: TimeOfImpact(2.),
+					hits: vec![
+						(close, TimeOfImpact(1.)),
+						(blocker, TimeOfImpact(2.)),
+						(far, TimeOfImpact(3.)),
+					],
+					max_toi: TimeOfImpact(99.),
 					..default()
 				},
-			}),
-			ray_cast.get::<RayCastResult>()
-		)
-	}
+			},
+		)]);
 
-	#[test]
-	fn remove_blocked_hits_from_ray_cast_result_for_multiple_iterations() {
-		let mut app = setup();
-		let close = app.world_mut().spawn_empty().id();
-		let blocker = app
+		let ray_casts = app
 			.world_mut()
-			.spawn(Blockers::new([Blocker::Physical]))
-			.id();
-		let far = app.world_mut().spawn_empty().id();
-		let ray_casts = [
-			app.world_mut()
-				.spawn((
-					Is::<InterruptableRay>::interacting_with([Blocker::Physical]),
-					RayCastResult {
-						info: RayCastInfo {
-							hits: vec![
-								(close, TimeOfImpact(1.)),
-								(blocker, TimeOfImpact(2.)),
-								(far, TimeOfImpact(3.)),
-							],
-							max_toi: TimeOfImpact(99.),
-							..default()
-						},
-					},
-				))
-				.id(),
-			app.world_mut()
-				.spawn((
-					Is::<InterruptableRay>::interacting_with([Blocker::Physical]),
-					RayCastResult {
-						info: RayCastInfo {
-							hits: vec![
-								(close, TimeOfImpact(4.)),
-								(blocker, TimeOfImpact(7.)),
-								(far, TimeOfImpact(9.)),
-							],
-							max_toi: TimeOfImpact(99.),
-							..default()
-						},
-					},
-				))
-				.id(),
-		];
-
-		app.update();
-		app.update();
-
-		let ray_casts = ray_casts.map(|entity| app.world().entity(entity));
+			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks);
 
 		assert_eq!(
-			[
-				Some(&RayCastResult {
+			HashMap::from([(
+				interruptable,
+				RayCastResult {
 					info: RayCastInfo {
 						hits: vec![(close, TimeOfImpact(1.)), (blocker, TimeOfImpact(2.))],
 						max_toi: TimeOfImpact(2.),
 						..default()
 					},
-				}),
-				Some(&RayCastResult {
-					info: RayCastInfo {
-						hits: vec![(close, TimeOfImpact(4.)), (blocker, TimeOfImpact(7.))],
-						max_toi: TimeOfImpact(7.),
-						..default()
-					},
-				}),
-			],
-			ray_casts.map(|e| e.get::<RayCastResult>())
+				}
+			)]),
+			ray_casts
 		)
 	}
 
@@ -250,10 +189,32 @@ mod tests {
 			.spawn(Blockers::new([Blocker::Physical]))
 			.id();
 		let far = app.world_mut().spawn_empty().id();
-		let ray_cast = app
+		let interruptable = app
 			.world_mut()
-			.spawn((
-				Is::<InterruptableRay>::interacting_with(no_blockers),
+			.spawn(Is::<InterruptableRay>::interacting_with(no_blockers))
+			.id();
+		let ray_casts = HashMap::from([(
+			interruptable,
+			RayCastResult {
+				info: RayCastInfo {
+					hits: vec![
+						(close, TimeOfImpact(1.)),
+						(blocker, TimeOfImpact(2.)),
+						(far, TimeOfImpact(3.)),
+					],
+					max_toi: TimeOfImpact(99.),
+					..default()
+				},
+			},
+		)]);
+
+		let ray_casts = app
+			.world_mut()
+			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks);
+
+		assert_eq!(
+			HashMap::from([(
+				interruptable,
 				RayCastResult {
 					info: RayCastInfo {
 						hits: vec![
@@ -264,27 +225,9 @@ mod tests {
 						max_toi: TimeOfImpact(99.),
 						..default()
 					},
-				},
-			))
-			.id();
-
-		app.update();
-
-		let ray_cast = app.world().entity(ray_cast);
-
-		assert_eq!(
-			Some(&RayCastResult {
-				info: RayCastInfo {
-					hits: vec![
-						(close, TimeOfImpact(1.)),
-						(blocker, TimeOfImpact(2.)),
-						(far, TimeOfImpact(3.)),
-					],
-					max_toi: TimeOfImpact(99.),
-					..default()
-				},
-			}),
-			ray_cast.get::<RayCastResult>()
+				}
+			)]),
+			ray_casts
 		)
 	}
 
@@ -297,10 +240,32 @@ mod tests {
 			.spawn(Blockers::new([Blocker::Physical]))
 			.id();
 		let far = app.world_mut().spawn_empty().id();
-		let ray_cast = app
+		let interruptable = app
 			.world_mut()
-			.spawn((
-				Is::<InterruptableRay>::interacting_with([Blocker::Force]),
+			.spawn(Is::<InterruptableRay>::interacting_with([Blocker::Force]))
+			.id();
+		let ray_casts = HashMap::from([(
+			interruptable,
+			RayCastResult {
+				info: RayCastInfo {
+					hits: vec![
+						(close, TimeOfImpact(1.)),
+						(blocker, TimeOfImpact(2.)),
+						(far, TimeOfImpact(3.)),
+					],
+					max_toi: TimeOfImpact(99.),
+					..default()
+				},
+			},
+		)]);
+
+		let ray_casts = app
+			.world_mut()
+			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks);
+
+		assert_eq!(
+			HashMap::from([(
+				interruptable,
 				RayCastResult {
 					info: RayCastInfo {
 						hits: vec![
@@ -311,27 +276,9 @@ mod tests {
 						max_toi: TimeOfImpact(99.),
 						..default()
 					},
-				},
-			))
-			.id();
-
-		app.update();
-
-		let ray_cast = app.world().entity(ray_cast);
-
-		assert_eq!(
-			Some(&RayCastResult {
-				info: RayCastInfo {
-					hits: vec![
-						(close, TimeOfImpact(1.)),
-						(blocker, TimeOfImpact(2.)),
-						(far, TimeOfImpact(3.)),
-					],
-					max_toi: TimeOfImpact(99.),
-					..default()
-				},
-			}),
-			ray_cast.get::<RayCastResult>()
+				}
+			)]),
+			ray_casts
 		)
 	}
 }

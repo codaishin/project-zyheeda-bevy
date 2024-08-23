@@ -4,7 +4,7 @@ use crate::{
 };
 use bevy::prelude::{EventReader, Query};
 
-pub(crate) fn interacting_entities(
+pub(crate) fn update_interacting_entities(
 	mut events: EventReader<InteractionEvent>,
 	mut agents: Query<&mut InteractingEntities>,
 ) {
@@ -44,7 +44,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_event::<InteractionEvent>();
-		app.add_systems(Update, interacting_entities);
+		app.add_systems(Update, update_interacting_entities);
 
 		app
 	}

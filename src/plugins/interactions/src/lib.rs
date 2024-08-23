@@ -8,6 +8,7 @@ mod systems;
 use bevy::{
 	app::{App, Plugin},
 	ecs::{component::Component, schedule::IntoSystemConfigs},
+	prelude::IntoSystem,
 	time::Virtual,
 };
 use bevy_rapier3d::plugin::RapierContext;
@@ -25,14 +26,14 @@ use systems::{
 		apply_fragile_blocks::apply_fragile_blocks,
 		collision::collision_interaction,
 		delay::delay,
-		interacting_entities::interacting_entities,
-		map_collision_events::map_collision_events,
-		send_flushed_interactions::send_flushed_interactions,
+		map_collision_events::map_collision_events_to,
+		update_interacting_entities::update_interacting_entities,
 	},
 	ray_cast::{
 		apply_interruptable_blocks::apply_interruptable_ray_blocks,
 		execute_ray_caster::execute_ray_caster,
-		map_ray_cast_results_to_interaction_event::map_ray_cast_result_to_interaction_changes,
+		map_ray_cast_results_to_interaction_event::map_ray_cast_result_to_interaction_events,
+		send_interaction_events::send_interaction_events,
 	},
 };
 use traits::ActOn;
@@ -48,20 +49,20 @@ impl Plugin for InteractionsPlugin {
 			.add_interaction::<DealsDamage, Health>()
 			.add_systems(Labels::PROCESSING, set_dead_to_be_destroyed)
 			.add_systems(Labels::PROCESSING, BlockerInsertCommand::system)
-			.add_systems(Labels::PROCESSING, apply_interruptable_ray_blocks)
 			.add_systems(Labels::PROCESSING, apply_fragile_blocks)
 			.add_systems(
-				Labels::PROPAGATION,
+				Labels::PROCESSING,
 				(
-					map_collision_events::<InteractionEvent, TrackInteractionDuplicates>,
-					map_ray_cast_result_to_interaction_changes::<TrackRayInteractions>,
-					send_flushed_interactions::<TrackRayInteractions>,
-					interacting_entities,
+					map_collision_events_to::<InteractionEvent, TrackInteractionDuplicates>,
+					execute_ray_caster::<RapierContext>
+						.pipe(apply_interruptable_ray_blocks)
+						.pipe(map_ray_cast_result_to_interaction_events)
+						.pipe(send_interaction_events::<TrackRayInteractions>),
 				)
 					.chain(),
 			)
-			.add_systems(Labels::PROPAGATION, destroy)
-			.add_systems(Labels::PROPAGATION, execute_ray_caster::<RapierContext>);
+			.add_systems(Labels::PROPAGATION, update_interacting_entities)
+			.add_systems(Labels::PROPAGATION, destroy);
 	}
 }
 

@@ -3,7 +3,7 @@ use bevy::prelude::{Event, EventReader, EventWriter, Query, ResMut, Resource};
 use bevy_rapier3d::prelude::CollisionEvent;
 use common::components::ColliderRoot;
 
-pub(crate) fn map_collision_events<TEvent, TEventTracker>(
+pub(crate) fn map_collision_events_to<TEvent, TEventTracker>(
 	mut collisions: EventReader<CollisionEvent>,
 	mut interactions: EventWriter<TEvent>,
 	roots: Query<&ColliderRoot>,
@@ -57,7 +57,7 @@ mod tests {
 		app.add_event::<TEvent>();
 		app.add_systems(
 			Update,
-			map_collision_events::<TEvent, _Tracker<STATE_CHANGED>>,
+			map_collision_events_to::<TEvent, _Tracker<STATE_CHANGED>>,
 		);
 
 		app
