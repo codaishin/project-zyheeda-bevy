@@ -23,8 +23,9 @@ use systems::{
 	destroy::destroy,
 	destroy_dead::set_dead_to_be_destroyed,
 	interactions::{
+		act_on_interaction::act_on_interaction,
+		add_interacting_entities::add_interacting_entities,
 		apply_fragile_blocks::apply_fragile_blocks,
-		collision::collision_interaction,
 		delay::delay,
 		map_collision_events::map_collision_events_to,
 		update_interacting_entities::update_interacting_entities,
@@ -79,7 +80,8 @@ impl AddInteraction for App {
 		self.add_systems(
 			Labels::PROCESSING,
 			(
-				collision_interaction::<TActor, TTarget>,
+				add_interacting_entities::<TActor>,
+				act_on_interaction::<TActor, TTarget>,
 				delay::<TActor, TTarget, Virtual>,
 			)
 				.chain(),

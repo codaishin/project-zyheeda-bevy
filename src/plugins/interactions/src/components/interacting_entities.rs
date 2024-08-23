@@ -22,6 +22,10 @@ impl InteractingEntities {
 	pub fn contains(&self, entity: &Entity) -> bool {
 		self.0.contains(&ColliderRoot(*entity))
 	}
+
+	pub fn iter(&self) -> impl Iterator<Item = &Entity> {
+		self.0.iter().map(|ColliderRoot(r)| r)
+	}
 }
 
 #[cfg(test)]
