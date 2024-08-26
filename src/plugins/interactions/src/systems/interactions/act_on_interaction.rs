@@ -1,4 +1,7 @@
-use crate::{components::interacting_entities::InteractingEntities, traits::ActOn};
+use crate::{
+	components::interacting_entities::InteractingEntities,
+	traits::{ActOn, ActionType},
+};
 use bevy::ecs::{
 	component::Component,
 	entity::Entity,
@@ -17,8 +20,9 @@ pub(crate) fn act_on_interaction<TActor: ActOn<TTarget> + Component, TTarget: Co
 				continue;
 			};
 
-			actor.act_on(&mut target);
-			commands.try_remove_from::<TActor>(entity);
+			if actor.act_on(&mut target) == ActionType::Once {
+				commands.try_remove_from::<TActor>(entity);
+			}
 		}
 	}
 }
@@ -111,5 +115,42 @@ mod tests {
 		let actor = app.world().entity(actor);
 
 		assert!(actor.contains::<_Actor>());
+	}
+
+	#[test]
+	fn do_not_remove_actor_when_action_type_not_once() {
+		let mut app = setup();
+		let target = app.world_mut().spawn(_Target).id();
+		let actor_always = app
+			.world_mut()
+			.spawn((
+				InteractingEntities::new([ColliderRoot(target)]),
+				_Actor::new_mock(|mock| {
+					mock.expect_act_on().return_const(ActionType::Always);
+				}),
+			))
+			.id();
+		let actor_once_per_target = app
+			.world_mut()
+			.spawn((
+				InteractingEntities::new([ColliderRoot(target)]),
+				_Actor::new_mock(|mock| {
+					mock.expect_act_on().return_const(ActionType::OncePerTarget);
+				}),
+			))
+			.id();
+
+		app.update();
+
+		let actor_always = app.world().entity(actor_always);
+		let actor_once_per_target = app.world().entity(actor_once_per_target);
+
+		assert_eq!(
+			(true, true),
+			(
+				actor_always.contains::<_Actor>(),
+				actor_once_per_target.contains::<_Actor>()
+			)
+		);
 	}
 }
