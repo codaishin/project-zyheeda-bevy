@@ -106,7 +106,7 @@ impl Instantiate for VoidSphere {
 			GroundOffset(VOID_SPHERE_GROUND_OFFSET),
 			RigidBody::Dynamic,
 			GravityScale(0.),
-			Health::new(5),
+			Health::new(5.),
 			Bar::default(),
 			MovementConfig::Constant {
 				mode: MovementMode::Slow,
@@ -114,7 +114,7 @@ impl Instantiate for VoidSphere {
 			},
 			AttackConfig {
 				spawn: BeamConfig {
-					damage: 1,
+					damage: 10.,
 					color: Color::BLACK,
 					emissive: LinearRgba::new(23.0, 23.0, 23.0, 1.),
 					lifetime: Duration::from_secs(1),

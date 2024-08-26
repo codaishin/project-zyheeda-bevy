@@ -13,14 +13,12 @@ use interactions::components::{
 	blocker::Blocker,
 	deals_damage::DealsDamage,
 	is::{InterruptableRay, Is},
-	InitDelay,
-	Repeat,
 };
 use prefabs::{
 	components::WithChildren,
 	traits::{GetOrCreateAssets, Instantiate},
 };
-use std::{f32::consts::PI, time::Duration};
+use std::f32::consts::PI;
 
 impl Instantiate for Beam {
 	fn instantiate(
@@ -54,9 +52,7 @@ impl Instantiate for Beam {
 
 		on.try_insert((
 			Is::<InterruptableRay>::interacting_with([Blocker::Physical, Blocker::Force]),
-			DealsDamage::once(self.damage)
-				.after(Duration::from_millis(100))
-				.repeat(),
+			DealsDamage::once_per_second(self.damage),
 			WithChildren::delayed(render),
 		));
 

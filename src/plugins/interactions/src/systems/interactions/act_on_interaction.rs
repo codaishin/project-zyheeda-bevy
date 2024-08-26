@@ -2,12 +2,16 @@ use crate::{
 	components::{acted_on_targets::ActedOnTargets, interacting_entities::InteractingEntities},
 	traits::{ActOn, ActionType},
 };
-use bevy::ecs::{
-	component::Component,
-	entity::Entity,
-	system::{Commands, Query},
+use bevy::{
+	ecs::{
+		component::Component,
+		entity::Entity,
+		system::{Commands, Query},
+	},
+	prelude::In,
 };
 use common::traits::try_remove_from::TryRemoveFrom;
+use std::time::Duration;
 
 type Components<'a, TActor> = (
 	Entity,
@@ -17,6 +21,7 @@ type Components<'a, TActor> = (
 );
 
 pub(crate) fn act_on_interaction<TActor: ActOn<TTarget> + Component, TTarget: Component>(
+	In(delta): In<Duration>,
 	mut commands: Commands,
 	mut actors: Query<Components<TActor>>,
 	mut targets: Query<(Entity, &mut TTarget)>,
@@ -27,7 +32,7 @@ pub(crate) fn act_on_interaction<TActor: ActOn<TTarget> + Component, TTarget: Co
 				continue;
 			};
 
-			match actor.act_on(&mut target) {
+			match actor.act_on(&mut target, delta) {
 				ActionType::Once => {
 					commands.try_remove_from::<TActor>(entity);
 				}
@@ -44,7 +49,7 @@ pub(crate) fn act_on_interaction<TActor: ActOn<TTarget> + Component, TTarget: Co
 mod tests {
 	use super::*;
 	use crate::traits::ActionType;
-	use bevy::app::{App, Update};
+	use bevy::{app::App, ecs::system::RunSystemOnce};
 	use common::{components::ColliderRoot, traits::nested_mock::NestedMock};
 	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
@@ -59,16 +64,13 @@ mod tests {
 
 	#[automock]
 	impl ActOn<_Target> for _Actor {
-		fn act_on(&mut self, target: &mut _Target) -> ActionType {
-			self.mock.act_on(target)
+		fn act_on(&mut self, target: &mut _Target, delta: Duration) -> ActionType {
+			self.mock.act_on(target, delta)
 		}
 	}
 
 	fn setup() -> App {
-		let mut app = App::new();
-		app.add_systems(Update, act_on_interaction::<_Actor, _Target>);
-
-		app
+		App::new()
 	}
 
 	#[test]
@@ -81,12 +83,15 @@ mod tests {
 			_Actor::new_mock(|mock| {
 				mock.expect_act_on()
 					.times(1)
-					.with(eq(_Target))
+					.with(eq(_Target), eq(Duration::from_millis(42)))
 					.return_const(ActionType::Once);
 			}),
 		));
 
-		app.update();
+		app.world_mut().run_system_once_with(
+			Duration::from_millis(42),
+			act_on_interaction::<_Actor, _Target>,
+		);
 	}
 
 	#[test]
@@ -104,7 +109,8 @@ mod tests {
 			))
 			.id();
 
-		app.update();
+		app.world_mut()
+			.run_system_once_with(Duration::ZERO, act_on_interaction::<_Actor, _Target>);
 
 		let actor = app.world().entity(actor);
 
@@ -126,7 +132,8 @@ mod tests {
 			))
 			.id();
 
-		app.update();
+		app.world_mut()
+			.run_system_once_with(Duration::ZERO, act_on_interaction::<_Actor, _Target>);
 
 		let actor = app.world().entity(actor);
 
@@ -158,7 +165,8 @@ mod tests {
 			))
 			.id();
 
-		app.update();
+		app.world_mut()
+			.run_system_once_with(Duration::ZERO, act_on_interaction::<_Actor, _Target>);
 
 		let actor_always = app.world().entity(actor_always);
 		let actor_once_per_target = app.world().entity(actor_once_per_target);
@@ -187,7 +195,8 @@ mod tests {
 			))
 			.id();
 
-		app.update();
+		app.world_mut()
+			.run_system_once_with(Duration::ZERO, act_on_interaction::<_Actor, _Target>);
 
 		let actor = app.world().entity(actor);
 

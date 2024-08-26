@@ -12,7 +12,7 @@ pub(crate) fn set_dead_to_be_destroyed(mut commands: Commands, agents: Query<(En
 }
 
 fn dead((id, health): (Entity, &Health)) -> Option<Entity> {
-	if health.current <= 0 {
+	if health.current <= 0. {
 		Some(id)
 	} else {
 		None
@@ -39,8 +39,8 @@ mod tests {
 		let health = app
 			.world_mut()
 			.spawn(Health {
-				current: 0,
-				max: 100,
+				current: 0.,
+				max: 100.,
 			})
 			.id();
 
@@ -57,8 +57,8 @@ mod tests {
 		let health = app
 			.world_mut()
 			.spawn(Health {
-				current: 1,
-				max: 100,
+				current: 1.,
+				max: 100.,
 			})
 			.id();
 
@@ -75,8 +75,8 @@ mod tests {
 		let health = app
 			.world_mut()
 			.spawn(Health {
-				current: -1,
-				max: 100,
+				current: -1.,
+				max: 100.,
 			})
 			.id();
 

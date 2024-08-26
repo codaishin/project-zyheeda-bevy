@@ -90,7 +90,7 @@ impl AddInteraction for App {
 			(
 				add_component_to::<TActor, InteractingEntities>,
 				add_component_to::<TActor, ActedOnTargets<TActor>>,
-				act_on_interaction::<TActor, TTarget>,
+				delta.pipe(act_on_interaction::<TActor, TTarget>),
 				untrack_non_interacting_targets::<TActor>,
 				delta.pipe(delay::<TActor, TTarget>),
 			)

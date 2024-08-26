@@ -170,7 +170,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 	commands
 		.spawn((
 			Name::from("Player"),
-			Health::new(100),
+			Health::new(100.),
 			Bar::default(),
 			SceneBundle {
 				scene: asset_server.load(Player::MODEL_PATH.to_owned() + "#Scene0"),

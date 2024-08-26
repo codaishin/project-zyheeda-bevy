@@ -4,8 +4,10 @@ use interactions::components::deals_damage::DealsDamage;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct StartDealingDamage {
-	once: i16,
+pub enum StartDealingDamage {
+	SingleTarget(f32),
+	Piercing(f32),
+	OverTime(f32),
 }
 
 impl StartDealingDamage {
@@ -16,7 +18,11 @@ impl StartDealingDamage {
 		_: &SkillSpawner,
 		_: &Target,
 	) {
-		entity.try_insert(DealsDamage::once(self.once));
+		entity.try_insert(match *self {
+			Self::SingleTarget(dmg) => DealsDamage::once(dmg),
+			Self::Piercing(dmg) => DealsDamage::once_per_target(dmg),
+			Self::OverTime(dmg) => DealsDamage::once_per_second(dmg),
+		});
 	}
 }
 
@@ -48,16 +54,44 @@ mod tests {
 	}
 
 	#[test]
-	fn insert_deals_damage() {
+	fn insert_single_target_damage() {
 		let mut app = setup();
 
-		let start_dealing_damage = StartDealingDamage { once: 42 };
+		let start_dealing_damage = StartDealingDamage::SingleTarget(42.);
 		let entity = app
 			.world_mut()
 			.run_system_once(damage(start_dealing_damage));
 
 		assert_eq!(
-			Some(&DealsDamage::once(42)),
+			Some(&DealsDamage::once(42.)),
+			app.world().entity(entity).get::<DealsDamage>()
+		);
+	}
+	#[test]
+	fn insert_piercing_damage() {
+		let mut app = setup();
+
+		let start_dealing_damage = StartDealingDamage::Piercing(42.);
+		let entity = app
+			.world_mut()
+			.run_system_once(damage(start_dealing_damage));
+
+		assert_eq!(
+			Some(&DealsDamage::once_per_target(42.)),
+			app.world().entity(entity).get::<DealsDamage>()
+		);
+	}
+	#[test]
+	fn insert_over_time_damage() {
+		let mut app = setup();
+
+		let start_dealing_damage = StartDealingDamage::OverTime(42.);
+		let entity = app
+			.world_mut()
+			.run_system_once(damage(start_dealing_damage));
+
+		assert_eq!(
+			Some(&DealsDamage::once_per_second(42.)),
 			app.world().entity(entity).get::<DealsDamage>()
 		);
 	}
