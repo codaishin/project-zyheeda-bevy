@@ -54,7 +54,7 @@ impl Instantiate for Beam {
 
 		on.try_insert((
 			Is::<InterruptableRay>::interacting_with([Blocker::Physical, Blocker::Force]),
-			DealsDamage(self.damage)
+			DealsDamage::once(self.damage)
 				.after(Duration::from_millis(100))
 				.repeat(),
 			WithChildren::delayed(render),

@@ -4,7 +4,13 @@ use bevy::prelude::Component;
 use common::components::Health;
 
 #[derive(Component, Clone, Debug, PartialEq)]
-pub struct DealsDamage(pub i16);
+pub struct DealsDamage(i16, ActionType);
+
+impl DealsDamage {
+	pub fn once(amount: i16) -> Self {
+		DealsDamage(amount, ActionType::Once)
+	}
+}
 
 impl ActOn<Health> for DealsDamage {
 	fn act_on(&mut self, health: &mut Health) -> ActionType {
@@ -20,7 +26,7 @@ mod tests {
 
 	#[test]
 	fn deal_damage() {
-		let mut damage = DealsDamage(42);
+		let mut damage = DealsDamage::once(42);
 		let mut health = Health::new(100);
 
 		damage.act_on(&mut health);
@@ -36,7 +42,7 @@ mod tests {
 
 	#[test]
 	fn action_type_once() {
-		let mut damage = DealsDamage(42);
+		let mut damage = DealsDamage::once(42);
 		let mut health = Health::new(100);
 
 		let action_type = damage.act_on(&mut health);

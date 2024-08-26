@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct StartDealingDamage {
-	amount: i16,
+	once: i16,
 }
 
 impl StartDealingDamage {
@@ -16,7 +16,7 @@ impl StartDealingDamage {
 		_: &SkillSpawner,
 		_: &Target,
 	) {
-		entity.try_insert(DealsDamage(self.amount));
+		entity.try_insert(DealsDamage::once(self.once));
 	}
 }
 
@@ -51,13 +51,13 @@ mod tests {
 	fn insert_deals_damage() {
 		let mut app = setup();
 
-		let start_dealing_damage = StartDealingDamage { amount: 42 };
+		let start_dealing_damage = StartDealingDamage { once: 42 };
 		let entity = app
 			.world_mut()
 			.run_system_once(damage(start_dealing_damage));
 
 		assert_eq!(
-			Some(&DealsDamage(42)),
+			Some(&DealsDamage::once(42)),
 			app.world().entity(entity).get::<DealsDamage>()
 		);
 	}
