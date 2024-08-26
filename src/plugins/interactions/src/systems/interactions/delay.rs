@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::{components::Delay, traits::ActOn};
 use bevy::{
 	ecs::{
@@ -11,6 +9,7 @@ use bevy::{
 	prelude::In,
 };
 use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
+use std::time::Duration;
 
 pub(crate) fn delay<TActor: ActOn<TTarget> + Clone + Component, TTarget: Send + Sync + 'static>(
 	In(delta): In<Duration>,

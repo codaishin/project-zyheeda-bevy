@@ -1,32 +1,33 @@
-use crate::components::interacting_entities::InteractingEntities;
 use bevy::prelude::{Added, Commands, Component, Entity, Query};
 use common::traits::try_insert_on::TryInsertOn;
 
-pub(crate) fn add_interacting_entities<TAgent: Component>(
+pub(crate) fn add_component_to<TAgent: Component, TComponent: Component + Default>(
 	mut commands: Commands,
-	agents: Query<(Entity, Option<&InteractingEntities>), Added<TAgent>>,
+	agents: Query<(Entity, Option<&TComponent>), Added<TAgent>>,
 ) {
 	for (entity, interactions) in &agents {
 		if interactions.is_some() {
 			continue;
 		}
-		commands.try_insert_on(entity, InteractingEntities::default());
+		commands.try_insert_on(entity, TComponent::default());
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::interacting_entities::InteractingEntities;
 	use bevy::app::{App, Update};
-	use common::{components::ColliderRoot, test_tools::utils::SingleThreadedApp};
+	use common::test_tools::utils::SingleThreadedApp;
 
 	#[derive(Component)]
 	struct _Agent;
 
+	#[derive(Component, Debug, PartialEq, Default)]
+	struct _Component(&'static str);
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, add_interacting_entities::<_Agent>);
+		app.add_systems(Update, add_component_to::<_Agent, _Component>);
 
 		app
 	}
@@ -39,8 +40,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&InteractingEntities::default()),
-			app.world().entity(agent).get::<InteractingEntities>()
+			Some(&_Component("")),
+			app.world().entity(agent).get::<_Component>()
 		)
 	}
 
@@ -51,7 +52,7 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(agent).get::<InteractingEntities>())
+		assert_eq!(None, app.world().entity(agent).get::<_Component>())
 	}
 
 	#[test]
@@ -59,19 +60,14 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
-			.spawn((
-				_Agent,
-				InteractingEntities::new([ColliderRoot(Entity::from_raw(100))]),
-			))
+			.spawn((_Agent, _Component("already present")))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&InteractingEntities::new([ColliderRoot(Entity::from_raw(
-				100
-			))])),
-			app.world().entity(agent).get::<InteractingEntities>()
+			Some(&_Component("already present")),
+			app.world().entity(agent).get::<_Component>()
 		)
 	}
 
@@ -81,11 +77,9 @@ mod tests {
 		let agent = app.world_mut().spawn(_Agent).id();
 
 		app.update();
-		app.world_mut()
-			.entity_mut(agent)
-			.remove::<InteractingEntities>();
+		app.world_mut().entity_mut(agent).remove::<_Component>();
 		app.update();
 
-		assert_eq!(None, app.world().entity(agent).get::<InteractingEntities>())
+		assert_eq!(None, app.world().entity(agent).get::<_Component>())
 	}
 }

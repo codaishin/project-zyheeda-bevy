@@ -12,7 +12,12 @@ use bevy::{
 };
 use bevy_rapier3d::plugin::RapierContext;
 use common::{components::Health, labels::Labels};
-use components::{blocker::BlockerInsertCommand, deals_damage::DealsDamage};
+use components::{
+	acted_on_targets::ActedOnTargets,
+	blocker::BlockerInsertCommand,
+	deals_damage::DealsDamage,
+	interacting_entities::InteractingEntities,
+};
 use events::{InteractionEvent, Ray};
 use resources::{
 	track_interaction_duplicates::TrackInteractionDuplicates,
@@ -23,7 +28,7 @@ use systems::{
 	destroy_dead::set_dead_to_be_destroyed,
 	interactions::{
 		act_on_interaction::act_on_interaction,
-		add_interacting_entities::add_interacting_entities,
+		add_component::add_component_to,
 		apply_fragile_blocks::apply_fragile_blocks,
 		delay::delay,
 		map_collision_events::map_collision_events_to,
@@ -82,7 +87,8 @@ impl AddInteraction for App {
 		self.add_systems(
 			label,
 			(
-				add_interacting_entities::<TActor>,
+				add_component_to::<TActor, InteractingEntities>,
+				add_component_to::<TActor, ActedOnTargets<TActor>>,
 				act_on_interaction::<TActor, TTarget>,
 				delta.pipe(delay::<TActor, TTarget>),
 			)
