@@ -1,4 +1,7 @@
-use crate::{components::Delay, traits::ActOn};
+use crate::{
+	components::{acted_on_targets::ActedOnTargets, Delay},
+	traits::ActOn,
+};
 use bevy::{
 	ecs::{
 		component::Component,
@@ -16,11 +19,11 @@ pub(crate) fn delay<TActor: ActOn<TTarget> + Clone + Component, TTarget: Send + 
 	mut commands: Commands,
 	mut delays: Query<(Entity, &mut Delay<TActor, TTarget>)>,
 ) {
-	for (id, mut delay) in &mut delays {
+	for (entity, mut delay) in &mut delays {
 		if delta < delay.timer {
 			delay.timer -= delta;
 		} else {
-			trigger(delay, &mut commands, id);
+			trigger(delay, &mut commands, entity);
 		}
 	}
 }
@@ -28,13 +31,16 @@ pub(crate) fn delay<TActor: ActOn<TTarget> + Clone + Component, TTarget: Send + 
 fn trigger<TActor: ActOn<TTarget> + Clone + Component, TTarget: Send + Sync + 'static>(
 	mut delay: Mut<Delay<TActor, TTarget>>,
 	commands: &mut Commands,
-	id: Entity,
+	entity: Entity,
 ) {
-	commands.try_insert_on(id, delay.actor.clone());
+	commands.try_insert_on(
+		entity,
+		(delay.actor.clone(), ActedOnTargets::<TActor>::default()),
+	);
 	if delay.repeat {
 		delay.timer = delay.after;
 	} else {
-		commands.try_remove_from::<Delay<TActor, TTarget>>(id);
+		commands.try_remove_from::<Delay<TActor, TTarget>>(entity);
 	}
 }
 
@@ -98,6 +104,28 @@ mod tests {
 		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&_Actor), agent.get::<_Actor>());
+	}
+
+	#[test]
+	fn insert_empty_acted_on_targets_after_pause() {
+		let mut app = setup();
+		let agent = app
+			.world_mut()
+			.spawn((
+				ActedOnTargets::<_Actor>::new([Entity::from_raw(100)]),
+				_Actor.after(Duration::from_millis(42)),
+			))
+			.id();
+
+		app.world_mut()
+			.run_system_once_with(Duration::from_millis(42), delay::<_Actor, _Target>);
+
+		let agent = app.world().entity(agent);
+
+		assert_eq!(
+			Some(&ActedOnTargets::<_Actor>::default()),
+			agent.get::<ActedOnTargets<_Actor>>()
+		);
 	}
 
 	#[test]
