@@ -35,6 +35,12 @@ impl Label<FixedUpdate> {
 	}
 }
 
+impl Label<FixedPostUpdate> {
+	pub fn delta(&self) -> fn(Res<Time<Fixed>>) -> Duration {
+		delta::<Fixed>
+	}
+}
+
 fn delta<TTime: Default + Sync + Send + 'static>(time: Res<Time<TTime>>) -> Duration {
 	time.delta()
 }

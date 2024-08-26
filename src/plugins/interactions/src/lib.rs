@@ -82,8 +82,8 @@ impl AddInteraction for App {
 	fn add_interaction<TActor: ActOn<TTarget> + Clone + Component, TTarget: Component>(
 		&mut self,
 	) -> &mut Self {
-		let label = Labels::PROCESSING.label();
-		let delta = Labels::PROCESSING.delta();
+		let label = Labels::PROPAGATION.label();
+		let delta = Labels::PROPAGATION.delta();
 
 		self.add_systems(
 			label,
