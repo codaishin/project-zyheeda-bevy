@@ -11,8 +11,8 @@ use bevy::{
 use common::{errors::Error, traits::cache::GetOrCreateTypeAsset};
 use interactions::components::{
 	blocker::Blocker,
+	deals_damage::DealsDamage,
 	is::{InterruptableRay, Is},
-	DealsDamage,
 	InitDelay,
 	Repeat,
 };

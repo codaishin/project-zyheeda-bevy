@@ -26,6 +26,7 @@ pub(crate) fn act_on_interaction<TActor: ActOn<TTarget> + Component, TTarget: Co
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::traits::ActionType;
 	use bevy::app::{App, Update};
 	use common::{components::ColliderRoot, traits::nested_mock::NestedMock};
 	use macros::NestedMock;
@@ -41,7 +42,7 @@ mod tests {
 
 	#[automock]
 	impl ActOn<_Target> for _Actor {
-		fn act_on(&mut self, target: &mut _Target) {
+		fn act_on(&mut self, target: &mut _Target) -> ActionType {
 			self.mock.act_on(target)
 		}
 	}
@@ -63,7 +64,7 @@ mod tests {
 				mock.expect_act_on()
 					.times(1)
 					.with(eq(_Target))
-					.return_const(());
+					.return_const(ActionType::Once);
 			}),
 		));
 
@@ -79,7 +80,7 @@ mod tests {
 			.spawn((
 				InteractingEntities::new([ColliderRoot(target)]),
 				_Actor::new_mock(|mock| {
-					mock.expect_act_on().return_const(());
+					mock.expect_act_on().return_const(ActionType::Once);
 				}),
 			))
 			.id();
@@ -100,7 +101,7 @@ mod tests {
 			.spawn((
 				InteractingEntities::new([ColliderRoot(target)]),
 				_Actor::new_mock(|mock| {
-					mock.expect_act_on().return_const(());
+					mock.expect_act_on().return_const(ActionType::Once);
 				}),
 			))
 			.id();

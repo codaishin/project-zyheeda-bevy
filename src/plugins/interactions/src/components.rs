@@ -1,4 +1,5 @@
 pub mod blocker;
+pub mod deals_damage;
 pub mod interacting_entities;
 pub mod is;
 
@@ -95,9 +96,6 @@ pub enum Destroy {
 impl Destroy {
 	pub const DELAYED: Destroy = Destroy::AfterFrames(2);
 }
-
-#[derive(Component, Clone, Debug, PartialEq)]
-pub struct DealsDamage(pub i16);
 
 #[derive(Component, Debug, PartialEq)]
 pub struct Delay<TActor: ActOn<TTarget> + Clone, TTarget> {

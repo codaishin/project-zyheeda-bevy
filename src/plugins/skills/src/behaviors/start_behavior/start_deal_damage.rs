@@ -1,6 +1,6 @@
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
 use bevy::ecs::system::EntityCommands;
-use interactions::components::DealsDamage;
+use interactions::components::deals_damage::DealsDamage;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -29,7 +29,6 @@ mod tests {
 		prelude::{Commands, Entity},
 	};
 	use common::test_tools::utils::SingleThreadedApp;
-	use interactions::components::DealsDamage;
 
 	fn damage(damage: StartDealingDamage) -> impl Fn(Commands) -> Entity {
 		move |mut commands| {

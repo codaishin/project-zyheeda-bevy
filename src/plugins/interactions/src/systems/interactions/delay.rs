@@ -42,7 +42,10 @@ fn trigger<TActor: ActOn<TTarget> + Clone + Component, TTarget: Send + Sync + 's
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{InitDelay, Repeat};
+	use crate::{
+		components::{InitDelay, Repeat},
+		traits::ActionType,
+	};
 	use bevy::{app::App, ecs::system::RunSystemOnce};
 	use std::time::Duration;
 
@@ -53,7 +56,9 @@ mod tests {
 	struct _Target;
 
 	impl ActOn<_Target> for _Actor {
-		fn act_on(&mut self, _: &mut _Target) {}
+		fn act_on(&mut self, _: &mut _Target) -> ActionType {
+			ActionType::Always
+		}
 	}
 
 	fn setup() -> App {

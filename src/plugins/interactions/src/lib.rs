@@ -12,7 +12,7 @@ use bevy::{
 };
 use bevy_rapier3d::plugin::RapierContext;
 use common::{components::Health, labels::Labels};
-use components::{blocker::BlockerInsertCommand, DealsDamage};
+use components::{blocker::BlockerInsertCommand, deals_damage::DealsDamage};
 use events::{InteractionEvent, Ray};
 use resources::{
 	track_interaction_duplicates::TrackInteractionDuplicates,
