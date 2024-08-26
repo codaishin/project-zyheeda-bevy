@@ -1,9 +1,40 @@
-use bevy::app::{PostUpdate, PreUpdate, Update};
+use bevy::{
+	app::{FixedPostUpdate, FixedPreUpdate, FixedUpdate},
+	ecs::schedule::ScheduleLabel,
+	prelude::Res,
+	time::{Fixed, Time},
+};
+use std::time::Duration;
+
+macro_rules! label {
+	($name:ident, $label:ident) => {
+		pub const $name: Label<$label> = Label($label);
+	};
+}
 
 pub struct Labels;
 
 impl Labels {
-	pub const INSTANTIATION: PreUpdate = PreUpdate;
-	pub const PROCESSING: Update = Update;
-	pub const PROPAGATION: PostUpdate = PostUpdate;
+	label!(INSTANTIATION, FixedPreUpdate);
+	label!(PROCESSING, FixedUpdate);
+	label!(PROPAGATION, FixedPostUpdate);
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct Label<T>(T);
+
+impl<T: ScheduleLabel> Label<T> {
+	pub fn label(self) -> impl ScheduleLabel {
+		self.0
+	}
+}
+
+impl Label<FixedUpdate> {
+	pub fn delta(&self) -> fn(Res<Time<Fixed>>) -> Duration {
+		delta::<Fixed>
+	}
+}
+
+fn delta<TTime: Default + Sync + Send + 'static>(time: Res<Time<TTime>>) -> Duration {
+	time.delta()
 }

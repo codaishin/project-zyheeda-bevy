@@ -9,7 +9,6 @@ use bevy::{
 	app::{App, Plugin},
 	ecs::{component::Component, schedule::IntoSystemConfigs},
 	prelude::IntoSystem,
-	time::Virtual,
 };
 use bevy_rapier3d::plugin::RapierContext;
 use common::{components::Health, labels::Labels};
@@ -48,11 +47,11 @@ impl Plugin for InteractionsPlugin {
 			.init_resource::<TrackInteractionDuplicates>()
 			.init_resource::<TrackRayInteractions>()
 			.add_interaction::<DealsDamage, Health>()
-			.add_systems(Labels::PROCESSING, set_dead_to_be_destroyed)
-			.add_systems(Labels::PROCESSING, BlockerInsertCommand::system)
-			.add_systems(Labels::PROCESSING, apply_fragile_blocks)
+			.add_systems(Labels::PROCESSING.label(), set_dead_to_be_destroyed)
+			.add_systems(Labels::PROCESSING.label(), BlockerInsertCommand::system)
+			.add_systems(Labels::PROCESSING.label(), apply_fragile_blocks)
 			.add_systems(
-				Labels::PROCESSING,
+				Labels::PROCESSING.label(),
 				(
 					map_collision_events_to::<InteractionEvent, TrackInteractionDuplicates>,
 					execute_ray_caster::<RapierContext>
@@ -62,8 +61,8 @@ impl Plugin for InteractionsPlugin {
 				)
 					.chain(),
 			)
-			.add_systems(Labels::PROPAGATION, update_interacting_entities)
-			.add_systems(Labels::PROPAGATION, destroy);
+			.add_systems(Labels::PROPAGATION.label(), update_interacting_entities)
+			.add_systems(Labels::PROPAGATION.label(), destroy);
 	}
 }
 
@@ -77,12 +76,15 @@ impl AddInteraction for App {
 	fn add_interaction<TActor: ActOn<TTarget> + Clone + Component, TTarget: Component>(
 		&mut self,
 	) -> &mut Self {
+		let label = Labels::PROCESSING.label();
+		let delta = Labels::PROCESSING.delta();
+
 		self.add_systems(
-			Labels::PROCESSING,
+			label,
 			(
 				add_interacting_entities::<TActor>,
 				act_on_interaction::<TActor, TTarget>,
-				delay::<TActor, TTarget, Virtual>,
+				delta.pipe(delay::<TActor, TTarget>),
 			)
 				.chain(),
 		)

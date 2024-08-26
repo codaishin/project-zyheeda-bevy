@@ -1,26 +1,22 @@
+use std::time::Duration;
+
 use crate::{components::Delay, traits::ActOn};
 use bevy::{
 	ecs::{
 		component::Component,
 		entity::Entity,
-		system::{Commands, Query, Res},
+		system::{Commands, Query},
 		world::Mut,
 	},
-	time::Time,
+	prelude::In,
 };
 use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
 
-pub(crate) fn delay<
-	TActor: ActOn<TTarget> + Clone + Component,
-	TTarget: Send + Sync + 'static,
-	TTime: Default + Send + Sync + 'static,
->(
+pub(crate) fn delay<TActor: ActOn<TTarget> + Clone + Component, TTarget: Send + Sync + 'static>(
+	In(delta): In<Duration>,
 	mut commands: Commands,
-	time: Res<Time<TTime>>,
 	mut delays: Query<(Entity, &mut Delay<TActor, TTarget>)>,
 ) {
-	let delta = time.delta();
-
 	for (id, mut delay) in &mut delays {
 		if delta < delay.timer {
 			delay.timer -= delta;
@@ -47,11 +43,7 @@ fn trigger<TActor: ActOn<TTarget> + Clone + Component, TTarget: Send + Sync + 's
 mod tests {
 	use super::*;
 	use crate::components::{InitDelay, Repeat};
-	use bevy::{
-		app::{App, Update},
-		time::Real,
-	};
-	use common::test_tools::utils::{SingleThreadedApp, TickTime};
+	use bevy::{app::App, ecs::system::RunSystemOnce};
 	use std::time::Duration;
 
 	#[derive(Component, Debug, PartialEq, Clone)]
@@ -65,11 +57,7 @@ mod tests {
 	}
 
 	fn setup() -> App {
-		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, delay::<_Actor, _Target, Real>);
-		app.init_resource::<Time<Real>>();
-
-		app
+		App::new()
 	}
 
 	#[test]
@@ -80,8 +68,8 @@ mod tests {
 			.spawn(_Actor.after(Duration::from_millis(42)))
 			.id();
 
-		app.tick_time(Duration::from_millis(10));
-		app.update();
+		app.world_mut()
+			.run_system_once_with(Duration::from_millis(10), delay::<_Actor, _Target>);
 
 		let repeater = app
 			.world()
@@ -100,8 +88,8 @@ mod tests {
 			.spawn(_Actor.after(Duration::from_millis(42)))
 			.id();
 
-		app.tick_time(Duration::from_millis(42));
-		app.update();
+		app.world_mut()
+			.run_system_once_with(Duration::from_millis(42), delay::<_Actor, _Target>);
 
 		let agent = app.world().entity(agent);
 
@@ -116,8 +104,8 @@ mod tests {
 			.spawn(_Actor.after(Duration::from_millis(42)))
 			.id();
 
-		app.tick_time(Duration::from_millis(41));
-		app.update();
+		app.world_mut()
+			.run_system_once_with(Duration::from_millis(41), delay::<_Actor, _Target>);
 
 		let agent = app.world().entity(agent);
 
@@ -132,8 +120,8 @@ mod tests {
 			.spawn(_Actor.after(Duration::from_millis(42)))
 			.id();
 
-		app.tick_time(Duration::from_millis(43));
-		app.update();
+		app.world_mut()
+			.run_system_once_with(Duration::from_millis(43), delay::<_Actor, _Target>);
 
 		let agent = app.world().entity(agent);
 
@@ -148,8 +136,8 @@ mod tests {
 			.spawn(_Actor.after(Duration::from_millis(42)))
 			.id();
 
-		app.tick_time(Duration::from_millis(42));
-		app.update();
+		app.world_mut()
+			.run_system_once_with(Duration::from_millis(42), delay::<_Actor, _Target>);
 
 		let repeater = app.world().entity(agent).get::<Delay<_Actor, _Target>>();
 
@@ -164,11 +152,11 @@ mod tests {
 			.spawn(_Actor.after(Duration::from_millis(42)).repeat())
 			.id();
 
-		app.tick_time(Duration::from_millis(21));
-		app.update();
+		app.world_mut()
+			.run_system_once_with(Duration::from_millis(21), delay::<_Actor, _Target>);
 
-		app.tick_time(Duration::from_millis(21));
-		app.update();
+		app.world_mut()
+			.run_system_once_with(Duration::from_millis(21), delay::<_Actor, _Target>);
 
 		let repeater = app
 			.world()
