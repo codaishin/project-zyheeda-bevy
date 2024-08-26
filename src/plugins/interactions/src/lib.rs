@@ -32,6 +32,7 @@ use systems::{
 		apply_fragile_blocks::apply_fragile_blocks,
 		delay::delay,
 		map_collision_events::map_collision_events_to,
+		untrack_non_interacting_targets::untrack_non_interacting_targets,
 		update_interacting_entities::update_interacting_entities,
 	},
 	ray_cast::{
@@ -90,6 +91,7 @@ impl AddInteraction for App {
 				add_component_to::<TActor, InteractingEntities>,
 				add_component_to::<TActor, ActedOnTargets<TActor>>,
 				act_on_interaction::<TActor, TTarget>,
+				untrack_non_interacting_targets::<TActor>,
 				delta.pipe(delay::<TActor, TTarget>),
 			)
 				.chain(),
