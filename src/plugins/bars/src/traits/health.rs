@@ -7,8 +7,8 @@ use common::components::Health;
 
 impl UIBarUpdate<Health> for BarValues<Health> {
 	fn update(&mut self, value: &Health) {
-		self.current = value.current as f32;
-		self.max = value.max as f32;
+		self.current = value.current;
+		self.max = value.max;
 	}
 }
 

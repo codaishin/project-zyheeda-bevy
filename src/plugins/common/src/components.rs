@@ -45,12 +45,12 @@ pub struct Dummy;
 
 #[derive(Component, Debug, PartialEq)]
 pub struct Health {
-	pub current: i16,
-	pub max: i16,
+	pub current: f32,
+	pub max: f32,
 }
 
 impl Health {
-	pub fn new(value: i16) -> Self {
+	pub fn new(value: f32) -> Self {
 		Self {
 			current: value,
 			max: value,

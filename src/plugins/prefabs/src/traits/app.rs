@@ -26,6 +26,9 @@ impl RegisterPrefab for App {
 			Shared<TypeId, Handle<StandardMaterial>>,
 			Factory<CreateAssetCache>,
 		>;
-		self.add_systems(Labels::INSTANTIATION, instantiate_system.pipe(log_many))
+		self.add_systems(
+			Labels::INSTANTIATION.label(),
+			instantiate_system.pipe(log_many),
+		)
 	}
 }

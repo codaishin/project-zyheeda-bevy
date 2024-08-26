@@ -138,7 +138,7 @@ pub(crate) struct LifeTime(pub Duration);
 
 #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
 pub struct BeamConfig {
-	pub damage: i16,
+	pub damage: f32,
 	pub color: Color,
 	pub emissive: LinearRgba,
 	pub lifetime: Duration,
@@ -153,7 +153,7 @@ pub struct BeamCommand {
 
 #[derive(Component, Default, Debug, PartialEq)]
 pub(crate) struct Beam {
-	pub damage: i16,
+	pub damage: f32,
 	pub from: Vec3,
 	pub to: Vec3,
 	pub color: Color,

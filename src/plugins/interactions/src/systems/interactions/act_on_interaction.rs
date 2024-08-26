@@ -1,24 +1,46 @@
-use crate::{components::interacting_entities::InteractingEntities, traits::ActOn};
-use bevy::ecs::{
-	component::Component,
-	entity::Entity,
-	system::{Commands, Query},
+use crate::{
+	components::{acted_on_targets::ActedOnTargets, interacting_entities::InteractingEntities},
+	traits::{ActOn, ActionType},
+};
+use bevy::{
+	ecs::{
+		component::Component,
+		entity::Entity,
+		system::{Commands, Query},
+	},
+	prelude::In,
 };
 use common::traits::try_remove_from::TryRemoveFrom;
+use std::time::Duration;
+
+type Components<'a, TActor> = (
+	Entity,
+	&'a mut TActor,
+	&'a mut ActedOnTargets<TActor>,
+	&'a InteractingEntities,
+);
 
 pub(crate) fn act_on_interaction<TActor: ActOn<TTarget> + Component, TTarget: Component>(
+	In(delta): In<Duration>,
 	mut commands: Commands,
-	mut actors: Query<(Entity, &mut TActor, &InteractingEntities)>,
-	mut targets: Query<&mut TTarget>,
+	mut actors: Query<Components<TActor>>,
+	mut targets: Query<(Entity, &mut TTarget)>,
 ) {
-	for (entity, mut actor, interactions) in &mut actors {
+	for (entity, mut actor, mut acted_on, interactions) in &mut actors {
 		for target in interactions.iter() {
-			let Ok(mut target) = targets.get_mut(*target) else {
+			let Ok((target_entity, mut target)) = targets.get_mut(*target) else {
 				continue;
 			};
 
-			actor.act_on(&mut target);
-			commands.try_remove_from::<TActor>(entity);
+			match actor.act_on(&mut target, delta) {
+				ActionType::Once => {
+					commands.try_remove_from::<TActor>(entity);
+				}
+				ActionType::OncePerTarget => {
+					acted_on.entities.insert(target_entity);
+				}
+				ActionType::Always => {}
+			}
 		}
 	}
 }
@@ -26,7 +48,8 @@ pub(crate) fn act_on_interaction<TActor: ActOn<TTarget> + Component, TTarget: Co
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::app::{App, Update};
+	use crate::traits::ActionType;
+	use bevy::{app::App, ecs::system::RunSystemOnce};
 	use common::{components::ColliderRoot, traits::nested_mock::NestedMock};
 	use macros::NestedMock;
 	use mockall::{automock, predicate::eq};
@@ -41,16 +64,13 @@ mod tests {
 
 	#[automock]
 	impl ActOn<_Target> for _Actor {
-		fn act_on(&mut self, target: &mut _Target) {
-			self.mock.act_on(target)
+		fn act_on(&mut self, target: &mut _Target, delta: Duration) -> ActionType {
+			self.mock.act_on(target, delta)
 		}
 	}
 
 	fn setup() -> App {
-		let mut app = App::new();
-		app.add_systems(Update, act_on_interaction::<_Actor, _Target>);
-
-		app
+		App::new()
 	}
 
 	#[test]
@@ -58,16 +78,20 @@ mod tests {
 		let mut app = setup();
 		let target = app.world_mut().spawn(_Target).id();
 		app.world_mut().spawn((
+			ActedOnTargets::<_Actor>::default(),
 			InteractingEntities::new([ColliderRoot(target)]),
 			_Actor::new_mock(|mock| {
 				mock.expect_act_on()
 					.times(1)
-					.with(eq(_Target))
-					.return_const(());
+					.with(eq(_Target), eq(Duration::from_millis(42)))
+					.return_const(ActionType::Once);
 			}),
 		));
 
-		app.update();
+		app.world_mut().run_system_once_with(
+			Duration::from_millis(42),
+			act_on_interaction::<_Actor, _Target>,
+		);
 	}
 
 	#[test]
@@ -77,14 +101,16 @@ mod tests {
 		let actor = app
 			.world_mut()
 			.spawn((
+				ActedOnTargets::<_Actor>::default(),
 				InteractingEntities::new([ColliderRoot(target)]),
 				_Actor::new_mock(|mock| {
-					mock.expect_act_on().return_const(());
+					mock.expect_act_on().return_const(ActionType::Once);
 				}),
 			))
 			.id();
 
-		app.update();
+		app.world_mut()
+			.run_system_once_with(Duration::ZERO, act_on_interaction::<_Actor, _Target>);
 
 		let actor = app.world().entity(actor);
 
@@ -98,17 +124,85 @@ mod tests {
 		let actor = app
 			.world_mut()
 			.spawn((
+				ActedOnTargets::<_Actor>::default(),
 				InteractingEntities::new([ColliderRoot(target)]),
 				_Actor::new_mock(|mock| {
-					mock.expect_act_on().return_const(());
+					mock.expect_act_on().return_const(ActionType::Once);
 				}),
 			))
 			.id();
 
-		app.update();
+		app.world_mut()
+			.run_system_once_with(Duration::ZERO, act_on_interaction::<_Actor, _Target>);
 
 		let actor = app.world().entity(actor);
 
 		assert!(actor.contains::<_Actor>());
+	}
+
+	#[test]
+	fn do_not_remove_actor_when_action_type_not_once() {
+		let mut app = setup();
+		let target = app.world_mut().spawn(_Target).id();
+		let actor_always = app
+			.world_mut()
+			.spawn((
+				ActedOnTargets::<_Actor>::default(),
+				InteractingEntities::new([ColliderRoot(target)]),
+				_Actor::new_mock(|mock| {
+					mock.expect_act_on().return_const(ActionType::Always);
+				}),
+			))
+			.id();
+		let actor_once_per_target = app
+			.world_mut()
+			.spawn((
+				ActedOnTargets::<_Actor>::default(),
+				InteractingEntities::new([ColliderRoot(target)]),
+				_Actor::new_mock(|mock| {
+					mock.expect_act_on().return_const(ActionType::OncePerTarget);
+				}),
+			))
+			.id();
+
+		app.world_mut()
+			.run_system_once_with(Duration::ZERO, act_on_interaction::<_Actor, _Target>);
+
+		let actor_always = app.world().entity(actor_always);
+		let actor_once_per_target = app.world().entity(actor_once_per_target);
+
+		assert_eq!(
+			(true, true),
+			(
+				actor_always.contains::<_Actor>(),
+				actor_once_per_target.contains::<_Actor>()
+			)
+		);
+	}
+
+	#[test]
+	fn add_to_acted_on_when_action_type_is_once_per_target() {
+		let mut app = setup();
+		let target = app.world_mut().spawn(_Target).id();
+		let actor = app
+			.world_mut()
+			.spawn((
+				ActedOnTargets::<_Actor>::default(),
+				InteractingEntities::new([ColliderRoot(target)]),
+				_Actor::new_mock(|mock| {
+					mock.expect_act_on().return_const(ActionType::OncePerTarget);
+				}),
+			))
+			.id();
+
+		app.world_mut()
+			.run_system_once_with(Duration::ZERO, act_on_interaction::<_Actor, _Target>);
+
+		let actor = app.world().entity(actor);
+
+		assert_eq!(
+			Some(&ActedOnTargets::new([target])),
+			actor.get::<ActedOnTargets<_Actor>>()
+		);
 	}
 }

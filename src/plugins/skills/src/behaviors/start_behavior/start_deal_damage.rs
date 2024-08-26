@@ -1,11 +1,13 @@
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
 use bevy::ecs::system::EntityCommands;
-use interactions::components::DealsDamage;
+use interactions::components::deals_damage::DealsDamage;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct StartDealingDamage {
-	amount: i16,
+pub enum StartDealingDamage {
+	SingleTarget(f32),
+	Piercing(f32),
+	OverTime(f32),
 }
 
 impl StartDealingDamage {
@@ -16,7 +18,11 @@ impl StartDealingDamage {
 		_: &SkillSpawner,
 		_: &Target,
 	) {
-		entity.try_insert(DealsDamage(self.amount));
+		entity.try_insert(match *self {
+			Self::SingleTarget(dmg) => DealsDamage::once(dmg),
+			Self::Piercing(dmg) => DealsDamage::once_per_target(dmg),
+			Self::OverTime(dmg) => DealsDamage::once_per_second(dmg),
+		});
 	}
 }
 
@@ -29,7 +35,6 @@ mod tests {
 		prelude::{Commands, Entity},
 	};
 	use common::test_tools::utils::SingleThreadedApp;
-	use interactions::components::DealsDamage;
 
 	fn damage(damage: StartDealingDamage) -> impl Fn(Commands) -> Entity {
 		move |mut commands| {
@@ -49,16 +54,44 @@ mod tests {
 	}
 
 	#[test]
-	fn insert_deals_damage() {
+	fn insert_single_target_damage() {
 		let mut app = setup();
 
-		let start_dealing_damage = StartDealingDamage { amount: 42 };
+		let start_dealing_damage = StartDealingDamage::SingleTarget(42.);
 		let entity = app
 			.world_mut()
 			.run_system_once(damage(start_dealing_damage));
 
 		assert_eq!(
-			Some(&DealsDamage(42)),
+			Some(&DealsDamage::once(42.)),
+			app.world().entity(entity).get::<DealsDamage>()
+		);
+	}
+	#[test]
+	fn insert_piercing_damage() {
+		let mut app = setup();
+
+		let start_dealing_damage = StartDealingDamage::Piercing(42.);
+		let entity = app
+			.world_mut()
+			.run_system_once(damage(start_dealing_damage));
+
+		assert_eq!(
+			Some(&DealsDamage::once_per_target(42.)),
+			app.world().entity(entity).get::<DealsDamage>()
+		);
+	}
+	#[test]
+	fn insert_over_time_damage() {
+		let mut app = setup();
+
+		let start_dealing_damage = StartDealingDamage::OverTime(42.);
+		let entity = app
+			.world_mut()
+			.run_system_once(damage(start_dealing_damage));
+
+		assert_eq!(
+			Some(&DealsDamage::once_per_second(42.)),
 			app.world().entity(entity).get::<DealsDamage>()
 		);
 	}

@@ -321,7 +321,7 @@ mod tests {
 					color: Color::srgb(0.1, 0.2, 0.3),
 					emissive: LinearRgba::new(1., 0.9, 0.8, 0.7),
 					lifetime: Duration::from_millis(100),
-					damage: 42,
+					damage: 42.,
 					..default()
 				},
 				BeamCommand {
@@ -348,7 +348,7 @@ mod tests {
 				Some(&Beam {
 					from: Vec3::Z,
 					to: Vec3::new(0., 10., 1.),
-					damage: 42,
+					damage: 42.,
 					color: Color::srgb(0.1, 0.2, 0.3),
 					emissive: LinearRgba::new(1., 0.9, 0.8, 0.7)
 				}),

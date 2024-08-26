@@ -19,7 +19,7 @@
 				"start": [
 					{
 						"Damage": {
-							"amount": 1
+							"SingleTarget": 1
 						}
 					}
 				]
