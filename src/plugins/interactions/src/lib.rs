@@ -51,19 +51,26 @@ pub struct InteractionsPlugin;
 
 impl Plugin for InteractionsPlugin {
 	fn build(&self, app: &mut App) {
+		let processing_label = Labels::PROCESSING.label();
+		let processing_delta = Labels::PROCESSING.delta();
+		let propagation_label = Labels::PROPAGATION.label();
+
 		app.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()
 			.init_resource::<TrackInteractionDuplicates>()
 			.init_resource::<TrackRayInteractions>()
 			.add_interaction::<DealsDamage, Health>()
 			.add_interaction::<Gravity, EffectedByGravity>()
-			.add_systems(Labels::PROCESSING.label(), set_dead_to_be_destroyed)
-			.add_systems(Labels::PROCESSING.label(), BlockerInsertCommand::system)
-			.add_systems(Labels::PROCESSING.label(), Gravity::set_transform)
-			.add_systems(Labels::PROCESSING.label(), apply_fragile_blocks)
-			.add_systems(Labels::PROCESSING.label(), gravity_pull)
+			.add_systems(processing_label.clone(), set_dead_to_be_destroyed)
+			.add_systems(processing_label.clone(), BlockerInsertCommand::system)
+			.add_systems(processing_label.clone(), Gravity::set_transform)
+			.add_systems(processing_label.clone(), apply_fragile_blocks)
 			.add_systems(
-				Labels::PROCESSING.label(),
+				processing_label.clone(),
+				processing_delta.pipe(gravity_pull),
+			)
+			.add_systems(
+				processing_label.clone(),
 				(
 					map_collision_events_to::<InteractionEvent, TrackInteractionDuplicates>,
 					execute_ray_caster::<RapierContext>
@@ -73,8 +80,8 @@ impl Plugin for InteractionsPlugin {
 				)
 					.chain(),
 			)
-			.add_systems(Labels::PROPAGATION.label(), update_interacting_entities)
-			.add_systems(Labels::PROPAGATION.label(), destroy);
+			.add_systems(propagation_label.clone(), update_interacting_entities)
+			.add_systems(propagation_label.clone(), destroy);
 	}
 }
 
