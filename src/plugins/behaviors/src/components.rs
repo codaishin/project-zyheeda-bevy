@@ -1,5 +1,5 @@
 pub mod gravity_well;
-pub mod ground_target;
+pub mod ground_targeted_aoe;
 pub mod projectile;
 pub mod shield;
 

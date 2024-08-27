@@ -1,6 +1,6 @@
 use super::OnSkillStop;
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
-use behaviors::components::ground_target::GroundTarget;
+use behaviors::components::ground_targeted_aoe::GroundTargetedAoe;
 use bevy::{
 	ecs::system::EntityCommands,
 	prelude::{Commands, Transform},
@@ -9,12 +9,13 @@ use common::tools::Units;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct SpawnGroundTarget {
+pub struct SpawnGroundTargetedAoe {
 	pub max_range: Units,
+	pub radius: Units,
 	pub stoppable: bool,
 }
 
-impl SpawnGroundTarget {
+impl SpawnGroundTargetedAoe {
 	pub fn apply<'a>(
 		&self,
 		commands: &'a mut Commands,
@@ -25,10 +26,11 @@ impl SpawnGroundTarget {
 		let SkillCaster(.., caster_transform) = caster;
 		let Target { ray, .. } = target;
 
-		let entity = commands.spawn(GroundTarget {
+		let entity = commands.spawn(GroundTargetedAoe {
 			caster: Transform::from(*caster_transform),
 			target_ray: *ray,
 			max_range: self.max_range,
+			radius: self.radius,
 		});
 
 		if self.stoppable {
@@ -43,7 +45,7 @@ impl SpawnGroundTarget {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use behaviors::components::ground_target::GroundTarget;
+	use behaviors::components::ground_targeted_aoe::GroundTargetedAoe;
 	use bevy::{
 		app::{App, Update},
 		ecs::system::RunSystemOnce,
@@ -57,7 +59,7 @@ mod tests {
 	};
 
 	fn ground_target(
-		gt: SpawnGroundTarget,
+		gt: SpawnGroundTargetedAoe,
 		caster: SkillCaster,
 		spawn: SkillSpawner,
 		target: Target,
@@ -79,8 +81,9 @@ mod tests {
 		let target_ray = Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(4., 5., 6.));
 
 		let (entity, ..) = app.world_mut().run_system_once(ground_target(
-			SpawnGroundTarget {
+			SpawnGroundTargetedAoe {
 				max_range: Units::new(20.),
+				radius: Units::new(8.),
 				..default()
 			},
 			SkillCaster::from(Entity::from_raw(42)).with_transform(caster_transform),
@@ -89,12 +92,13 @@ mod tests {
 		));
 
 		assert_eq!(
-			Some(&GroundTarget {
+			Some(&GroundTargetedAoe {
 				caster: caster_transform,
 				target_ray,
-				max_range: Units::new(20.)
+				max_range: Units::new(20.),
+				radius: Units::new(8.),
 			}),
-			app.world().entity(entity).get::<GroundTarget>()
+			app.world().entity(entity).get::<GroundTargetedAoe>()
 		)
 	}
 
@@ -103,13 +107,13 @@ mod tests {
 		let mut app = setup();
 
 		let (entity, on_skill_stop) = app.world_mut().run_system_once(ground_target(
-			SpawnGroundTarget {
+			SpawnGroundTargetedAoe {
 				stoppable: true,
 				..default()
 			},
 			SkillCaster::from(Entity::from_raw(42)),
 			SkillSpawner::from(Entity::from_raw(43)),
-			Target::from(GroundTarget::DEFAULT_TARGET_RAY),
+			Target::from(GroundTargetedAoe::DEFAULT_TARGET_RAY),
 		));
 
 		assert_eq!(OnSkillStop::Stop(entity), on_skill_stop);
@@ -120,13 +124,13 @@ mod tests {
 		let mut app = setup();
 
 		let (.., on_skill_stop) = app.world_mut().run_system_once(ground_target(
-			SpawnGroundTarget {
+			SpawnGroundTargetedAoe {
 				stoppable: false,
 				..default()
 			},
 			SkillCaster::from(Entity::from_raw(42)),
 			SkillSpawner::from(Entity::from_raw(43)),
-			Target::from(GroundTarget::DEFAULT_TARGET_RAY),
+			Target::from(GroundTargetedAoe::DEFAULT_TARGET_RAY),
 		));
 
 		assert_eq!(OnSkillStop::Ignore, on_skill_stop);

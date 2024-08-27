@@ -15,9 +15,10 @@
 			},
 			"projection": {
 				"spawn": {
-					"GroundTarget": {
+					"GroundTargetedAoe": {
 						"stoppable": false,
-						"max_range": 10
+						"max_range": 10,
+						"radius": 2
 					}
 				},
 				"start": [

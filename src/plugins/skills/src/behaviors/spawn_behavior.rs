@@ -7,7 +7,7 @@ use bevy::{
 	ecs::system::EntityCommands,
 	prelude::{Commands, Entity},
 };
-use spawn_ground_target::SpawnGroundTarget;
+use spawn_ground_target::SpawnGroundTargetedAoe;
 use spawn_projectile::SpawnProjectile;
 use spawn_shield::SpawnShield;
 
@@ -27,7 +27,7 @@ pub enum OnSkillStop {
 #[derive(PartialEq, Debug, Clone)]
 pub enum SpawnBehavior {
 	Fn(SpawnBehaviorFn),
-	GroundTarget(SpawnGroundTarget),
+	GroundTargetedAoe(SpawnGroundTargetedAoe),
 	Projectile(SpawnProjectile),
 	Shield(SpawnShield),
 }
@@ -42,7 +42,7 @@ impl SpawnBehavior {
 	) -> (EntityCommands<'a>, OnSkillStop) {
 		match self {
 			Self::Fn(func) => func(commands, caster, spawn, target),
-			Self::GroundTarget(gt) => gt.apply(commands, caster, spawn, target),
+			Self::GroundTargetedAoe(gt) => gt.apply(commands, caster, spawn, target),
 			Self::Projectile(pr) => pr.apply(commands, caster, spawn, target),
 			Self::Shield(sh) => sh.apply(commands, caster, spawn, target),
 		}
