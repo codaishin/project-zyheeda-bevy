@@ -26,13 +26,12 @@ use bevy_rapier3d::{
 };
 use common::{
 	bundles::ColliderTransformBundle,
-	components::{effected_by::EffectedBy, ColliderRoot, GroundOffset, Health},
+	components::{ColliderRoot, GroundOffset, Health},
 	errors::Error,
 	tools::UnitsPerSecond,
 	traits::{cache::GetOrCreateTypeAsset, clamp_zero_positive::ClampZeroPositive},
 };
-use gravity::components::Gravity;
-use interactions::components::blocker::Blocker;
+use interactions::components::{blocker::Blocker, effected_by::EffectedBy};
 use prefabs::traits::{sphere, GetOrCreateAssets, Instantiate};
 use std::{f32::consts::PI, time::Duration};
 
@@ -102,7 +101,7 @@ impl Instantiate for VoidSphere {
 
 		on.try_insert((
 			Blocker::insert([Blocker::Physical]),
-			EffectedBy::<Gravity>::default(),
+			EffectedBy::gravity(),
 			GroundOffset(VOID_SPHERE_GROUND_OFFSET),
 			RigidBody::Dynamic,
 			GravityScale(0.),

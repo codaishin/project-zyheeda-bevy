@@ -6,15 +6,16 @@ use bevy::{
 		removal_detection::RemovedComponents,
 		system::{Commands, Query},
 	},
+	prelude::Without,
 	transform::components::GlobalTransform,
 };
 use bevy_rapier3d::dynamics::Velocity;
-use common::traits::try_insert_on::TryInsertOn;
+use common::{components::Immobilized, traits::try_insert_on::TryInsertOn};
 use std::ops::Deref;
 
 pub(crate) fn chase<TMovementConfig: Component + MovementData>(
 	mut commands: Commands,
-	chasers: Query<(Entity, &GlobalTransform, &TMovementConfig, &Chase)>,
+	chasers: Query<(Entity, &GlobalTransform, &TMovementConfig, &Chase), Without<Immobilized>>,
 	mut removed_chasers: RemovedComponents<Chase>,
 	transforms: Query<&GlobalTransform>,
 ) {
@@ -132,5 +133,26 @@ mod tests {
 		let chaser = app.world().entity(chaser);
 
 		assert_eq!(Some(&Velocity::zero()), chaser.get::<Velocity>());
+	}
+
+	#[test]
+	fn no_velocity_to_follow_player_when_immobilized() {
+		let foe_position = Vec3::new(1., 2., 3.);
+		let (mut app, foe) = setup(foe_position);
+		let chaser = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::default(),
+				Chase(foe),
+				_MovementConfig(42.),
+				Immobilized,
+			))
+			.id();
+
+		app.update();
+
+		let chaser = app.world().entity(chaser);
+
+		assert_eq!(None, chaser.get::<Velocity>());
 	}
 }

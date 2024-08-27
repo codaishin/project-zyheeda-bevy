@@ -13,7 +13,6 @@ use bevy::{
 	input::keyboard::KeyCode,
 	state::condition::in_state,
 	time::Virtual,
-	transform::bundles::TransformBundle,
 };
 use common::{
 	components::Player,
@@ -21,8 +20,7 @@ use common::{
 	states::{GameRunning, MouseContext},
 };
 use components::{
-	gravity_well::GravityWell,
-	ground_target::GroundTarget,
+	ground_targeted_aoe::GroundTargetedAoe,
 	projectile::Projectile,
 	shield::Shield,
 	Beam,
@@ -34,7 +32,6 @@ use components::{
 	VoidSphere,
 };
 use events::MoveInputEvent;
-use gravity::AddGravityInteraction;
 use prefabs::traits::RegisterPrefab;
 use systems::{
 	attack::{attack, execute_beam::execute_beam},
@@ -52,7 +49,6 @@ use systems::{
 		trigger_event::trigger_move_input_event,
 	},
 	projectile::projectile_behavior,
-	replace::replace,
 	shield::position_force_shield,
 	update_cool_downs::update_cool_downs,
 	update_life_times::update_lifetimes,
@@ -67,8 +63,7 @@ impl Plugin for BehaviorsPlugin {
 			.register_prefab::<VoidSphere>()
 			.register_prefab::<Beam>()
 			.register_prefab::<Shield>()
-			.register_prefab::<GravityWell>()
-			.register_gravity_source::<GravityWell>()
+			.register_prefab::<GroundTargetedAoe>()
 			.add_systems(
 				Update,
 				(trigger_move_input_event::<CamRay>, move_player_on_event)
@@ -118,7 +113,6 @@ impl Plugin for BehaviorsPlugin {
 			.add_systems(Update, projectile_behavior::<Projectile>)
 			.add_systems(Update, (enemy, chase::<MovementConfig>, attack).chain())
 			.add_systems(Update, execute_beam)
-			.add_systems(Update, position_force_shield)
-			.add_systems(Update, replace::<GroundTarget, TransformBundle>);
+			.add_systems(Update, position_force_shield);
 	}
 }

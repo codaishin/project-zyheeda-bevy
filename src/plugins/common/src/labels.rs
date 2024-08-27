@@ -23,8 +23,8 @@ impl Labels {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Label<T>(T);
 
-impl<T: ScheduleLabel> Label<T> {
-	pub fn label(self) -> impl ScheduleLabel {
+impl<T: ScheduleLabel + Clone> Label<T> {
+	pub fn label(self) -> impl ScheduleLabel + Clone {
 		self.0
 	}
 }
