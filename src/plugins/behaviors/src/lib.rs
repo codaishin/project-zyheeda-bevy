@@ -34,7 +34,6 @@ use components::{
 	VoidSphere,
 };
 use events::MoveInputEvent;
-use gravity::AddGravityInteraction;
 use prefabs::traits::RegisterPrefab;
 use systems::{
 	attack::{attack, execute_beam::execute_beam},
@@ -68,7 +67,6 @@ impl Plugin for BehaviorsPlugin {
 			.register_prefab::<Beam>()
 			.register_prefab::<Shield>()
 			.register_prefab::<GravityWell>()
-			.register_gravity_source::<GravityWell>()
 			.add_systems(
 				Update,
 				(trigger_move_input_event::<CamRay>, move_player_on_event)
