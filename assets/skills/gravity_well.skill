@@ -16,14 +16,21 @@
 			"projection": {
 				"spawn": {
 					"GroundTargetedAoe": {
-						"stoppable": false,
+						"lifetime": {
+							"UntilOutlived": {
+								"secs": 5,
+								"nanos": 0
+							}
+						},
 						"max_range": 10,
 						"radius": 2
 					}
 				},
 				"start": [
 					{
-						"Gravity": null
+						"Gravity": {
+							"strength": 2
+						}
 					}
 				]
 			}

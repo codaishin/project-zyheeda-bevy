@@ -1,10 +1,13 @@
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
-use behaviors::components::gravity_well::GravityWell;
 use bevy::ecs::system::EntityCommands;
+use common::tools::UnitsPerSecond;
+use interactions::components::gravity::Gravity;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct StartGravity;
+pub struct StartGravity {
+	strength: UnitsPerSecond,
+}
 
 impl StartGravity {
 	pub fn apply(
@@ -14,24 +17,26 @@ impl StartGravity {
 		_: &SkillSpawner,
 		_: &Target,
 	) {
-		entity.try_insert(GravityWell);
+		entity.try_insert(Gravity::pull(self.strength));
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use behaviors::components::gravity_well::GravityWell;
 	use bevy::{
 		app::{App, Update},
 		ecs::system::RunSystemOnce,
-		prelude::{Commands, Entity},
+		prelude::{Commands, Entity, In},
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		traits::clamp_zero_positive::ClampZeroPositive,
+	};
 
-	fn gravity(mut commands: Commands) -> Entity {
+	fn gravity(In(pull): In<UnitsPerSecond>, mut commands: Commands) -> Entity {
 		let mut entity = commands.spawn_empty();
-		StartGravity.apply(
+		StartGravity { strength: pull }.apply(
 			&mut entity,
 			&SkillCaster::from(Entity::from_raw(42)),
 			&SkillSpawner::from(Entity::from_raw(43)),
@@ -48,11 +53,13 @@ mod tests {
 	fn spawn_gravity_well() {
 		let mut app = setup();
 
-		let entity = app.world_mut().run_system_once(gravity);
+		let entity = app
+			.world_mut()
+			.run_system_once_with(UnitsPerSecond::new(83.), gravity);
 
 		assert_eq!(
-			Some(&GravityWell),
-			app.world().entity(entity).get::<GravityWell>()
+			Some(&Gravity::pull(UnitsPerSecond::new(83.))),
+			app.world().entity(entity).get::<Gravity<()>>()
 		);
 	}
 }

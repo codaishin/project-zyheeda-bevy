@@ -1,18 +1,26 @@
 use super::OnSkillStop;
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
-use behaviors::components::ground_targeted_aoe::GroundTargetedAoe;
+use behaviors::components::{ground_targeted_aoe::GroundTargetedAoe, LifeTime};
 use bevy::{
 	ecs::system::EntityCommands,
 	prelude::{Commands, Transform},
 };
 use common::tools::Units;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
+
+#[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub enum LifeTimeData {
+	#[default]
+	UntilStopped,
+	UntilOutlived(Duration),
+}
 
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct SpawnGroundTargetedAoe {
+	pub lifetime: LifeTimeData,
 	pub max_range: Units,
 	pub radius: Units,
-	pub stoppable: bool,
 }
 
 impl SpawnGroundTargetedAoe {
@@ -26,18 +34,22 @@ impl SpawnGroundTargetedAoe {
 		let SkillCaster(.., caster_transform) = caster;
 		let Target { ray, .. } = target;
 
-		let entity = commands.spawn(GroundTargetedAoe {
+		let mut entity = commands.spawn(GroundTargetedAoe {
 			caster: Transform::from(*caster_transform),
 			target_ray: *ray,
 			max_range: self.max_range,
 			radius: self.radius,
 		});
 
-		if self.stoppable {
-			let id = entity.id();
-			(entity, OnSkillStop::Stop(id))
-		} else {
-			(entity, OnSkillStop::Ignore)
+		match self.lifetime {
+			LifeTimeData::UntilStopped => {
+				let id = entity.id();
+				(entity, OnSkillStop::Stop(id))
+			}
+			LifeTimeData::UntilOutlived(duration) => {
+				entity.insert(LifeTime(duration));
+				(entity, OnSkillStop::Ignore)
+			}
 		}
 	}
 }
@@ -45,7 +57,7 @@ impl SpawnGroundTargetedAoe {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use behaviors::components::ground_targeted_aoe::GroundTargetedAoe;
+	use behaviors::components::{ground_targeted_aoe::GroundTargetedAoe, LifeTime};
 	use bevy::{
 		app::{App, Update},
 		ecs::system::RunSystemOnce,
@@ -108,7 +120,7 @@ mod tests {
 
 		let (entity, on_skill_stop) = app.world_mut().run_system_once(ground_target(
 			SpawnGroundTargetedAoe {
-				stoppable: true,
+				lifetime: LifeTimeData::UntilStopped,
 				..default()
 			},
 			SkillCaster::from(Entity::from_raw(42)),
@@ -123,9 +135,9 @@ mod tests {
 	fn spawn_as_non_stoppable() {
 		let mut app = setup();
 
-		let (.., on_skill_stop) = app.world_mut().run_system_once(ground_target(
+		let (entity, on_skill_stop) = app.world_mut().run_system_once(ground_target(
 			SpawnGroundTargetedAoe {
-				stoppable: false,
+				lifetime: LifeTimeData::UntilOutlived(Duration::from_micros(33)),
 				..default()
 			},
 			SkillCaster::from(Entity::from_raw(42)),
@@ -133,6 +145,12 @@ mod tests {
 			Target::from(GroundTargetedAoe::DEFAULT_TARGET_RAY),
 		));
 
-		assert_eq!(OnSkillStop::Ignore, on_skill_stop);
+		assert_eq!(
+			(
+				OnSkillStop::Ignore,
+				Some(&LifeTime(Duration::from_micros(33)))
+			),
+			(on_skill_stop, app.world().entity(entity).get::<LifeTime>())
+		);
 	}
 }

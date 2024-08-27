@@ -46,7 +46,7 @@ impl<'a, T: Debug + PartialEq> Deref for Last<'a, T> {
 	}
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive, Serialize, Deserialize)]
 pub struct UnitsPerSecond(f32);
 
 #[derive(Debug, PartialEq, Clone, Copy, ClampZeroPositive, Serialize, Deserialize)]

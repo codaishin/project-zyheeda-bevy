@@ -1,4 +1,3 @@
-pub mod gravity_well;
 pub mod ground_targeted_aoe;
 pub mod projectile;
 pub mod shield;
@@ -134,7 +133,7 @@ pub struct Enemy {
 }
 
 #[derive(Component, Debug, PartialEq, Default)]
-pub(crate) struct LifeTime(pub Duration);
+pub struct LifeTime(pub Duration);
 
 #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
 pub struct BeamConfig {

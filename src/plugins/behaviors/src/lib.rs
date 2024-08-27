@@ -20,7 +20,6 @@ use common::{
 	states::{GameRunning, MouseContext},
 };
 use components::{
-	gravity_well::GravityWell,
 	ground_targeted_aoe::GroundTargetedAoe,
 	projectile::Projectile,
 	shield::Shield,
@@ -64,7 +63,6 @@ impl Plugin for BehaviorsPlugin {
 			.register_prefab::<VoidSphere>()
 			.register_prefab::<Beam>()
 			.register_prefab::<Shield>()
-			.register_prefab::<GravityWell>()
 			.register_prefab::<GroundTargetedAoe>()
 			.add_systems(
 				Update,
