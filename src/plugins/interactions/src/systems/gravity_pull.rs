@@ -1,13 +1,21 @@
 use crate::components::effected_by_gravity::EffectedByGravity;
 use bevy::prelude::{Bundle, Commands, Entity, Query, Transform};
 use bevy_rapier3d::prelude::Velocity;
-use common::{components::Immobilized, traits::try_insert_on::TryInsertOn};
+use common::{
+	components::Immobilized,
+	traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
+};
 
 pub(crate) fn gravity_pull(
 	mut commands: Commands,
 	mut agents: Query<(Entity, &Transform, &mut EffectedByGravity)>,
 ) {
 	for (entity, transform, mut effected_by_gravity) in &mut agents {
+		if effected_by_gravity.pulls.is_empty() {
+			commands.try_remove_from::<Immobilized>(entity);
+			continue;
+		}
+
 		let position = transform.translation;
 		let velocity = effected_by_gravity
 			.pulls
@@ -35,9 +43,8 @@ impl ForcedMovement {
 
 #[cfg(test)]
 mod tests {
-	use crate::components::effected_by_gravity::Pull;
-
 	use super::*;
+	use crate::components::effected_by_gravity::Pull;
 	use bevy::{
 		app::{App, Update},
 		math::Vec3,
@@ -170,5 +177,23 @@ mod tests {
 			Some(&EffectedByGravity { pulls: vec![] }),
 			agent.get::<EffectedByGravity>()
 		)
+	}
+
+	#[test]
+	fn remove_immobilized_if_pulls_empty() {
+		let mut app = setup();
+		let agent = app
+			.world_mut()
+			.spawn((
+				Transform::from_xyz(1., 0., 0.),
+				Immobilized,
+				EffectedByGravity { pulls: vec![] },
+			))
+			.id();
+
+		app.update();
+
+		let agent = app.world().entity(agent);
+		assert_eq!(None, agent.get::<Immobilized>())
 	}
 }
