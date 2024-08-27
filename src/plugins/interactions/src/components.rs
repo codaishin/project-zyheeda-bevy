@@ -3,6 +3,7 @@ pub mod blocker;
 pub mod deals_damage;
 pub mod effected_by;
 pub mod effected_by_gravity;
+pub mod gravity;
 pub mod interacting_entities;
 pub mod is;
 

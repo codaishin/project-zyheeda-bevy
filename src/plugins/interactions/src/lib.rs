@@ -16,6 +16,8 @@ use components::{
 	acted_on_targets::ActedOnTargets,
 	blocker::BlockerInsertCommand,
 	deals_damage::DealsDamage,
+	effected_by_gravity::EffectedByGravity,
+	gravity::Gravity,
 	interacting_entities::InteractingEntities,
 };
 use events::{InteractionEvent, Ray};
@@ -54,8 +56,10 @@ impl Plugin for InteractionsPlugin {
 			.init_resource::<TrackInteractionDuplicates>()
 			.init_resource::<TrackRayInteractions>()
 			.add_interaction::<DealsDamage, Health>()
+			.add_interaction::<Gravity, EffectedByGravity>()
 			.add_systems(Labels::PROCESSING.label(), set_dead_to_be_destroyed)
 			.add_systems(Labels::PROCESSING.label(), BlockerInsertCommand::system)
+			.add_systems(Labels::PROCESSING.label(), Gravity::set_transform)
 			.add_systems(Labels::PROCESSING.label(), apply_fragile_blocks)
 			.add_systems(Labels::PROCESSING.label(), gravity_pull)
 			.add_systems(
