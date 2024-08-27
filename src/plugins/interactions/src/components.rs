@@ -1,6 +1,7 @@
 pub mod acted_on_targets;
 pub mod blocker;
 pub mod deals_damage;
+pub mod effected_by;
 pub mod effected_by_gravity;
 pub mod interacting_entities;
 pub mod is;

@@ -31,7 +31,7 @@ use common::{
 	tools::UnitsPerSecond,
 	traits::{cache::GetOrCreateTypeAsset, clamp_zero_positive::ClampZeroPositive},
 };
-use interactions::components::blocker::Blocker;
+use interactions::components::{blocker::Blocker, effected_by::EffectedBy};
 use prefabs::traits::{sphere, GetOrCreateAssets, Instantiate};
 use std::{f32::consts::PI, time::Duration};
 
@@ -101,6 +101,7 @@ impl Instantiate for VoidSphere {
 
 		on.try_insert((
 			Blocker::insert([Blocker::Physical]),
+			EffectedBy::gravity(),
 			GroundOffset(VOID_SPHERE_GROUND_OFFSET),
 			RigidBody::Dynamic,
 			GravityScale(0.),
