@@ -26,6 +26,7 @@ use resources::{
 use systems::{
 	destroy::destroy,
 	destroy_dead::set_dead_to_be_destroyed,
+	gravity_pull::gravity_pull,
 	interactions::{
 		act_on_interaction::act_on_interaction,
 		add_component::add_component_to,
@@ -56,6 +57,7 @@ impl Plugin for InteractionsPlugin {
 			.add_systems(Labels::PROCESSING.label(), set_dead_to_be_destroyed)
 			.add_systems(Labels::PROCESSING.label(), BlockerInsertCommand::system)
 			.add_systems(Labels::PROCESSING.label(), apply_fragile_blocks)
+			.add_systems(Labels::PROCESSING.label(), gravity_pull)
 			.add_systems(
 				Labels::PROCESSING.label(),
 				(
