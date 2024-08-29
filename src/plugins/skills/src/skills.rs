@@ -7,6 +7,7 @@ use crate::{
 	traits::{Matches, Prime},
 };
 use animations::animation::Animation;
+use behaviors::components::{Contact, Projection};
 use bevy::{
 	asset::{Asset, Handle},
 	math::{Dir3, Ray3d, Vec3},
@@ -155,6 +156,6 @@ impl Default for SkillBehavior {
 
 #[derive(PartialEq, Debug, Clone, Default)]
 pub struct SkillBehaviors {
-	pub contact: Behavior,
-	pub projection: Behavior,
+	pub contact: Behavior<Contact>,
+	pub projection: Behavior<Projection>,
 }

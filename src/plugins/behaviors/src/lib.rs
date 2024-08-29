@@ -25,9 +25,11 @@ use components::{
 	shield::Shield,
 	Beam,
 	CamOrbit,
+	Contact,
 	Movement,
 	MovementConfig,
 	PositionBased,
+	Projection,
 	VelocityBased,
 	VoidSphere,
 };
@@ -63,7 +65,8 @@ impl Plugin for BehaviorsPlugin {
 			.register_prefab::<VoidSphere>()
 			.register_prefab::<Beam>()
 			.register_prefab::<Shield>()
-			.register_prefab::<GroundTargetedAoe>()
+			.register_prefab::<GroundTargetedAoe<Projection>>()
+			.register_prefab::<GroundTargetedAoe<Contact>>()
 			.add_systems(
 				Update,
 				(trigger_move_input_event::<CamRay>, move_player_on_event)

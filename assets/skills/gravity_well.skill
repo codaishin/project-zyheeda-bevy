@@ -10,7 +10,18 @@
 	"behavior": {
 		"OnActive": {
 			"contact": {
-				"spawn": "Placeholder",
+				"spawn": {
+					"GroundTargetedAoe": {
+						"lifetime": {
+							"UntilOutlived": {
+								"secs": 5,
+								"nanos": 0
+							}
+						},
+						"max_range": 10,
+						"radius": 2
+					}
+				},
 				"start": []
 			},
 			"projection": {

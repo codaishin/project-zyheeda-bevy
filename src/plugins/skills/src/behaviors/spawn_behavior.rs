@@ -25,14 +25,14 @@ pub enum OnSkillStop {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub enum SpawnBehavior {
+pub enum SpawnBehavior<T: Sync + Send + 'static> {
 	Fn(SpawnBehaviorFn),
-	GroundTargetedAoe(SpawnGroundTargetedAoe),
+	GroundTargetedAoe(SpawnGroundTargetedAoe<T>),
 	Projectile(SpawnProjectile),
 	Shield(SpawnShield),
 }
 
-impl SpawnBehavior {
+impl<T: Default + Sync + Send + 'static> SpawnBehavior<T> {
 	pub fn apply<'a>(
 		&self,
 		commands: &'a mut Commands,

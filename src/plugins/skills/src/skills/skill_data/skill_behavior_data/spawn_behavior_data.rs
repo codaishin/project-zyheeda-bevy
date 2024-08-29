@@ -8,15 +8,15 @@ use crate::behaviors::spawn_behavior::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) enum SpawnBehaviorData {
+pub(crate) enum SpawnBehaviorData<T: Sync + Send + 'static> {
 	Placeholder, // Fixme: this is temporary, until we establish proper modularization of all skills
-	GroundTargetedAoe(SpawnGroundTargetedAoe),
+	GroundTargetedAoe(SpawnGroundTargetedAoe<T>),
 	Projectile(SpawnProjectile),
 	Shield(SpawnShield),
 }
 
-impl From<SpawnBehaviorData> for SpawnBehavior {
-	fn from(value: SpawnBehaviorData) -> Self {
+impl<T: Sync + Send + 'static> From<SpawnBehaviorData<T>> for SpawnBehavior<T> {
+	fn from(value: SpawnBehaviorData<T>) -> Self {
 		match value {
 			SpawnBehaviorData::Placeholder => Self::Fn(|c, _, _, _| {
 				let entity = c.spawn_empty();

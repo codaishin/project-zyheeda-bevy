@@ -79,8 +79,8 @@ fn stop_on_skill_stop(skill: &OnSkillStop) -> Option<Entity> {
 	}
 }
 
-fn spawn_and_execute(
-	behavior: &Behavior,
+fn spawn_and_execute<T: Default + Sync + Send + 'static>(
+	behavior: &Behavior<T>,
 	commands: &mut Commands,
 	caster: &SkillCaster,
 	spawner: &SkillSpawner,

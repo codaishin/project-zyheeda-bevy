@@ -5,18 +5,19 @@ use crate::{
 	behaviors::{spawn_behavior::SpawnBehavior, start_behavior::StartBehavior, Behavior},
 	skills::{SkillBehavior, SkillBehaviors},
 };
+use behaviors::components::{Contact, Projection};
 use serde::{Deserialize, Serialize};
 use spawn_behavior_data::SpawnBehaviorData;
 use start_behavior_data::StartBehaviorData;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct BehaviorData {
-	spawn: SpawnBehaviorData,
+pub(crate) struct BehaviorData<T: Sync + Send + 'static> {
+	spawn: SpawnBehaviorData<T>,
 	start: Vec<StartBehaviorData>,
 }
 
-impl From<BehaviorData> for Behavior {
-	fn from(value: BehaviorData) -> Self {
+impl<T: Default + Sync + Send + 'static> From<BehaviorData<T>> for Behavior<T> {
+	fn from(value: BehaviorData<T>) -> Self {
 		Self::new()
 			.with_spawn(SpawnBehavior::from(value.spawn))
 			.with_start(value.start.into_iter().map(StartBehavior::from).collect())
@@ -25,8 +26,8 @@ impl From<BehaviorData> for Behavior {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct SkillBehaviorsData {
-	contact: BehaviorData,
-	projection: BehaviorData,
+	contact: BehaviorData<Contact>,
+	projection: BehaviorData<Projection>,
 }
 
 impl From<SkillBehaviorsData> for SkillBehaviors {
