@@ -69,12 +69,12 @@ impl Target {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub struct Behavior {
-	spawn: SpawnBehavior,
+pub struct Behavior<T: Sync + Send + 'static> {
+	spawn: SpawnBehavior<T>,
 	start: Vec<StartBehavior>,
 }
 
-impl Default for Behavior {
+impl<T: Sync + Send + 'static> Default for Behavior<T> {
 	fn default() -> Self {
 		Self {
 			spawn: SpawnBehavior::Fn(|commands, _, _, _| {
@@ -85,12 +85,12 @@ impl Default for Behavior {
 	}
 }
 
-impl Behavior {
+impl<T: Default + Sync + Send + 'static> Behavior<T> {
 	pub fn new() -> Self {
 		Self::default()
 	}
 
-	pub fn with_spawn(self, spawn: SpawnBehavior) -> Self {
+	pub fn with_spawn(self, spawn: SpawnBehavior<T>) -> Self {
 		Self {
 			spawn,
 			start: self.start,

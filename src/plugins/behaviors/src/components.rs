@@ -9,7 +9,14 @@ use bevy::{
 	math::Vec3,
 };
 use common::tools::UnitsPerSecond;
+use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
+
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq, Clone)]
+pub struct Projection;
+
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq, Clone)]
+pub struct Contact;
 
 #[derive(Component)]
 pub struct CamOrbit {

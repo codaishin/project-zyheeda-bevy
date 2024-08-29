@@ -1,13 +1,16 @@
 use super::OnSkillStop;
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
-use behaviors::components::{ground_targeted_aoe::GroundTargetedAoe, LifeTime};
+use behaviors::components::{
+	ground_targeted_aoe::{Args, GroundTargetedAoe},
+	LifeTime,
+};
 use bevy::{
 	ecs::system::EntityCommands,
 	prelude::{Commands, Transform},
 };
 use common::tools::Units;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::{marker::PhantomData, time::Duration};
 
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum LifeTimeData {
@@ -17,13 +20,18 @@ pub enum LifeTimeData {
 }
 
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct SpawnGroundTargetedAoe {
+pub struct SpawnGroundTargetedAoe<T> {
+	#[serde(skip)]
+	phantom_data: PhantomData<T>,
 	pub lifetime: LifeTimeData,
 	pub max_range: Units,
 	pub radius: Units,
 }
 
-impl SpawnGroundTargetedAoe {
+impl<T> SpawnGroundTargetedAoe<T>
+where
+	T: Default + Sync + Send + 'static,
+{
 	pub fn apply<'a>(
 		&self,
 		commands: &'a mut Commands,
@@ -34,12 +42,12 @@ impl SpawnGroundTargetedAoe {
 		let SkillCaster(.., caster_transform) = caster;
 		let Target { ray, .. } = target;
 
-		let mut entity = commands.spawn(GroundTargetedAoe {
+		let mut entity = commands.spawn(GroundTargetedAoe::<T>::new(Args {
 			caster: Transform::from(*caster_transform),
 			target_ray: *ray,
 			max_range: self.max_range,
 			radius: self.radius,
-		});
+		}));
 
 		match self.lifetime {
 			LifeTimeData::UntilStopped => {
@@ -70,8 +78,11 @@ mod tests {
 		traits::clamp_zero_positive::ClampZeroPositive,
 	};
 
+	#[derive(Default, Debug, PartialEq)]
+	struct _T;
+
 	fn ground_target(
-		gt: SpawnGroundTargetedAoe,
+		gt: SpawnGroundTargetedAoe<_T>,
 		caster: SkillCaster,
 		spawn: SkillSpawner,
 		target: Target,
@@ -93,7 +104,7 @@ mod tests {
 		let target_ray = Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(4., 5., 6.));
 
 		let (entity, ..) = app.world_mut().run_system_once(ground_target(
-			SpawnGroundTargetedAoe {
+			SpawnGroundTargetedAoe::<_T> {
 				max_range: Units::new(20.),
 				radius: Units::new(8.),
 				..default()
@@ -104,13 +115,13 @@ mod tests {
 		));
 
 		assert_eq!(
-			Some(&GroundTargetedAoe {
+			Some(&GroundTargetedAoe::<_T>::new(Args {
 				caster: caster_transform,
 				target_ray,
 				max_range: Units::new(20.),
 				radius: Units::new(8.),
-			}),
-			app.world().entity(entity).get::<GroundTargetedAoe>()
+			})),
+			app.world().entity(entity).get::<GroundTargetedAoe<_T>>()
 		)
 	}
 
@@ -119,7 +130,7 @@ mod tests {
 		let mut app = setup();
 
 		let (entity, on_skill_stop) = app.world_mut().run_system_once(ground_target(
-			SpawnGroundTargetedAoe {
+			SpawnGroundTargetedAoe::<_T> {
 				lifetime: LifeTimeData::UntilStopped,
 				..default()
 			},
@@ -136,7 +147,7 @@ mod tests {
 		let mut app = setup();
 
 		let (entity, on_skill_stop) = app.world_mut().run_system_once(ground_target(
-			SpawnGroundTargetedAoe {
+			SpawnGroundTargetedAoe::<_T> {
 				lifetime: LifeTimeData::UntilOutlived(Duration::from_micros(33)),
 				..default()
 			},
