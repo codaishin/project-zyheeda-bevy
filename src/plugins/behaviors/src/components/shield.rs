@@ -9,7 +9,7 @@ use bevy::{
 	transform::bundles::TransformBundle,
 	utils::default,
 };
-use bevy_rapier3d::{dynamics::RigidBody, geometry::Collider};
+use bevy_rapier3d::{dynamics::RigidBody, geometry::Collider, prelude::Sensor};
 use common::{components::ColliderRoot, errors::Error, traits::cache::GetOrCreateTypeAsset};
 use prefabs::traits::{GetOrCreateAssets, Instantiate};
 
@@ -48,6 +48,7 @@ impl Instantiate for Shield {
 						..default()
 					},
 					Collider::cuboid(half_size.x, half_size.y, half_size.z),
+					Sensor,
 					ColliderRoot(parent.parent_entity()),
 				));
 			});
