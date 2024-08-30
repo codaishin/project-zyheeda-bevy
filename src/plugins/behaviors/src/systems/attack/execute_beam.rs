@@ -13,7 +13,7 @@ use bevy::{
 		components::{GlobalTransform, Transform},
 	},
 };
-use bevy_rapier3d::pipeline::{QueryFilter, QueryFilterFlags};
+use bevy_rapier3d::pipeline::QueryFilter;
 use common::{
 	components::{ColliderRoot, GroundOffset},
 	traits::cast_ray::TimeOfImpact,
@@ -86,7 +86,7 @@ fn ray_cast(
 }
 
 fn get_filter(source: Entity) -> Option<RayFilter> {
-	QueryFilter::from(QueryFilterFlags::EXCLUDE_SENSORS)
+	QueryFilter::default()
 		.exclude_rigid_body(source)
 		.try_into()
 		.ok()
@@ -213,7 +213,7 @@ mod tests {
 				direction: Dir3::Z,
 				max_toi: TimeOfImpact(100.),
 				solid: true,
-				filter: QueryFilter::from(QueryFilterFlags::EXCLUDE_SENSORS)
+				filter: QueryFilter::default()
 					.exclude_rigid_body(source)
 					.try_into()
 					.unwrap(),
@@ -257,7 +257,7 @@ mod tests {
 				direction: Vec3::new(0., 1., 4.).normalize().try_into().unwrap(),
 				max_toi: TimeOfImpact(100.),
 				solid: true,
-				filter: QueryFilter::from(QueryFilterFlags::EXCLUDE_SENSORS)
+				filter: QueryFilter::default()
 					.exclude_rigid_body(source)
 					.try_into()
 					.unwrap(),
@@ -301,7 +301,7 @@ mod tests {
 				direction: Vec3::new(0., -1., 4.).normalize().try_into().unwrap(),
 				max_toi: TimeOfImpact(100.),
 				solid: true,
-				filter: QueryFilter::from(QueryFilterFlags::EXCLUDE_SENSORS)
+				filter: QueryFilter::default()
 					.exclude_rigid_body(source)
 					.try_into()
 					.unwrap(),
