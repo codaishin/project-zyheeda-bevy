@@ -2,30 +2,25 @@ use crate::behaviors::spawn_behavior::{
 	spawn_ground_target::SpawnGroundTargetedAoe,
 	spawn_projectile::SpawnProjectile,
 	spawn_shield::SpawnShield,
-	OnSkillStop,
-	SpawnBehavior,
+	SkillShape,
 };
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) enum SpawnBehaviorData<T: Sync + Send + 'static> {
+pub(crate) enum SkillShapeData {
 	Placeholder, // Fixme: this is temporary, until we establish proper modularization of all skills
-	GroundTargetedAoe(SpawnGroundTargetedAoe<T>),
+	GroundTargetedAoe(SpawnGroundTargetedAoe),
 	Projectile(SpawnProjectile),
 	Shield(SpawnShield),
 }
 
-impl<T: Sync + Send + 'static> From<SpawnBehaviorData<T>> for SpawnBehavior<T> {
-	fn from(value: SpawnBehaviorData<T>) -> Self {
+impl From<SkillShapeData> for SkillShape {
+	fn from(value: SkillShapeData) -> Self {
 		match value {
-			SpawnBehaviorData::Placeholder => Self::Fn(|c, _, _, _| {
-				let entity = c.spawn_empty();
-				let id = entity.id();
-				(entity, OnSkillStop::Stop(id))
-			}),
-			SpawnBehaviorData::GroundTargetedAoe(v) => Self::GroundTargetedAoe(v),
-			SpawnBehaviorData::Projectile(v) => Self::Projectile(v),
-			SpawnBehaviorData::Shield(v) => Self::Shield(v),
+			SkillShapeData::Placeholder => Self::default(),
+			SkillShapeData::GroundTargetedAoe(v) => Self::GroundTargetedAoe(v),
+			SkillShapeData::Projectile(v) => Self::Projectile(v),
+			SkillShapeData::Shield(v) => Self::Shield(v),
 		}
 	}
 }

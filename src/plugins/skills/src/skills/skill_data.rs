@@ -10,7 +10,7 @@ use common::traits::{
 	load_from::LoadFrom,
 };
 use serde::{Deserialize, Serialize};
-use skill_behavior_data::SkillBehaviorData;
+use skill_behavior_data::RunSkillBehaviorData;
 use std::{collections::HashSet, time::Duration};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -18,7 +18,7 @@ pub(crate) struct SkillData {
 	name: String,
 	active: Duration,
 	animate: AnimateData,
-	behavior: SkillBehaviorData,
+	behavior: RunSkillBehaviorData,
 	is_usable_with: HashSet<ItemType>,
 	icon: Option<Path>,
 }

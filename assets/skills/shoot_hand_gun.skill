@@ -9,25 +9,20 @@
 	},
 	"behavior": {
 		"OnActive": {
-			"contact": {
-				"spawn": {
-					"Projectile": {
-						"stoppable": false,
-						"sub_type": "Plasma"
-					}
-				},
-				"start": [
-					{
-						"Damage": {
-							"SingleTarget": 1
-						}
-					}
-				]
+			"shape": {
+				"Projectile": {
+					"stoppable": false,
+					"sub_type": "Plasma"
+				}
 			},
-			"projection": {
-				"spawn": "Placeholder",
-				"start": []
-			}
+			"contact": [
+				{
+					"Damage": {
+						"SingleTarget": 1
+					}
+				}
+			],
+			"projection": []
 		}
 	},
 	"is_usable_with": [

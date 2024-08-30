@@ -1,10 +1,7 @@
 use super::OnSkillStop;
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
 use behaviors::components::shield::Shield;
-use bevy::{
-	ecs::system::EntityCommands,
-	prelude::{Commands, SpatialBundle, Transform},
-};
+use bevy::prelude::{BuildChildren, Commands, Entity, SpatialBundle, Transform};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -13,27 +10,27 @@ pub struct SpawnShield {
 }
 
 impl SpawnShield {
-	pub fn apply<'a>(
+	pub fn apply(
 		&self,
-		commands: &'a mut Commands,
+		commands: &mut Commands,
 		_: &SkillCaster,
 		spawner: &SkillSpawner,
 		_: &Target,
-	) -> (EntityCommands<'a>, OnSkillStop) {
+	) -> (Entity, Entity, OnSkillStop) {
 		let SkillSpawner(entity, transform) = spawner;
 
-		let shield = Shield { location: *entity };
-
-		let entity = commands.spawn((
-			shield,
-			SpatialBundle::from_transform(Transform::from(*transform)),
-		));
+		let contact = commands
+			.spawn((
+				Shield { location: *entity },
+				SpatialBundle::from_transform(Transform::from(*transform)),
+			))
+			.id();
+		let projection = commands.spawn_empty().set_parent(contact).id();
 
 		if self.stoppable {
-			let id = entity.id();
-			(entity, OnSkillStop::Stop(id))
+			(contact, projection, OnSkillStop::Stop(contact))
 		} else {
-			(entity, OnSkillStop::Ignore)
+			(contact, projection, OnSkillStop::Ignore)
 		}
 	}
 }
@@ -42,26 +39,23 @@ impl SpawnShield {
 mod tests {
 	use super::*;
 	use bevy::{
-		app::{App, Update},
+		app::App,
 		ecs::system::RunSystemOnce,
 		prelude::{Entity, SpatialBundle, Transform},
 	};
-	use common::{assert_bundle, test_tools::utils::SingleThreadedApp};
+	use common::assert_bundle;
 
 	fn shield(
 		sh: SpawnShield,
 		caster: SkillCaster,
 		spawn: SkillSpawner,
 		target: Target,
-	) -> impl Fn(Commands) -> (Entity, OnSkillStop) {
-		move |mut commands| {
-			let (entity, on_skill_stop) = sh.apply(&mut commands, &caster, &spawn, &target);
-			(entity.id(), on_skill_stop)
-		}
+	) -> impl Fn(Commands) -> (Entity, Entity, OnSkillStop) {
+		move |mut commands| sh.apply(&mut commands, &caster, &spawn, &target)
 	}
 
 	fn setup() -> App {
-		App::new().single_threaded(Update)
+		App::new()
 	}
 
 	#[test]
@@ -107,7 +101,7 @@ mod tests {
 	fn spawn_stoppable() {
 		let mut app = setup();
 
-		let (entity, on_skill_stop) = app.world_mut().run_system_once(shield(
+		let (entity, projection, on_skill_stop) = app.world_mut().run_system_once(shield(
 			SpawnShield { stoppable: true },
 			SkillCaster::from(Entity::from_raw(42)),
 			SkillSpawner::from(Entity::from_raw(43)),

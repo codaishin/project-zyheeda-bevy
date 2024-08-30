@@ -2,15 +2,14 @@ use super::OnSkillStop;
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
 use behaviors::components::{
 	ground_targeted_aoe::{Args, GroundTargetedAoe},
+	Contact,
 	LifeTime,
+	Projection,
 };
-use bevy::{
-	ecs::system::EntityCommands,
-	prelude::{Commands, Transform},
-};
-use common::tools::Units;
+use bevy::prelude::{BuildChildren, Commands, Entity, Transform};
+use common::{tools::Units, traits::try_insert_on::TryInsertOn};
 use serde::{Deserialize, Serialize};
-use std::{marker::PhantomData, time::Duration};
+use std::time::Duration;
 
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum LifeTimeData {
@@ -20,43 +19,46 @@ pub enum LifeTimeData {
 }
 
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct SpawnGroundTargetedAoe<T> {
-	#[serde(skip)]
-	phantom_data: PhantomData<T>,
+pub struct SpawnGroundTargetedAoe {
 	pub lifetime: LifeTimeData,
 	pub max_range: Units,
 	pub radius: Units,
 }
 
-impl<T> SpawnGroundTargetedAoe<T>
-where
-	T: Default + Sync + Send + 'static,
-{
-	pub fn apply<'a>(
+impl SpawnGroundTargetedAoe {
+	pub fn apply(
 		&self,
-		commands: &'a mut Commands,
+		commands: &mut Commands,
 		caster: &SkillCaster,
 		_: &SkillSpawner,
 		target: &Target,
-	) -> (EntityCommands<'a>, OnSkillStop) {
+	) -> (Entity, Entity, OnSkillStop) {
 		let SkillCaster(.., caster_transform) = caster;
 		let Target { ray, .. } = target;
 
-		let mut entity = commands.spawn(GroundTargetedAoe::<T>::new(Args {
-			caster: Transform::from(*caster_transform),
-			target_ray: *ray,
-			max_range: self.max_range,
-			radius: self.radius,
-		}));
+		let contact = commands
+			.spawn(GroundTargetedAoe::<Contact>::new(Args {
+				caster: Transform::from(*caster_transform),
+				target_ray: *ray,
+				max_range: self.max_range,
+				radius: self.radius,
+			}))
+			.id();
+		let projection = commands
+			.spawn(GroundTargetedAoe::<Projection>::new(Args {
+				caster: Transform::from(*caster_transform),
+				target_ray: *ray,
+				max_range: self.max_range,
+				radius: self.radius,
+			}))
+			.set_parent(contact)
+			.id();
 
 		match self.lifetime {
-			LifeTimeData::UntilStopped => {
-				let id = entity.id();
-				(entity, OnSkillStop::Stop(id))
-			}
+			LifeTimeData::UntilStopped => (contact, projection, OnSkillStop::Stop(contact)),
 			LifeTimeData::UntilOutlived(duration) => {
-				entity.insert(LifeTime(duration));
-				(entity, OnSkillStop::Ignore)
+				commands.try_insert_on(contact, LifeTime(duration));
+				(contact, projection, OnSkillStop::Ignore)
 			}
 		}
 	}
@@ -78,19 +80,13 @@ mod tests {
 		traits::clamp_zero_positive::ClampZeroPositive,
 	};
 
-	#[derive(Default, Debug, PartialEq)]
-	struct _T;
-
 	fn ground_target(
-		gt: SpawnGroundTargetedAoe<_T>,
+		gt: SpawnGroundTargetedAoe,
 		caster: SkillCaster,
 		spawn: SkillSpawner,
 		target: Target,
-	) -> impl Fn(Commands) -> (Entity, OnSkillStop) {
-		move |mut commands| {
-			let (entity, on_skill_stop) = gt.apply(&mut commands, &caster, &spawn, &target);
-			(entity.id(), on_skill_stop)
-		}
+	) -> impl Fn(Commands) -> (Entity, Entity, OnSkillStop) {
+		move |mut commands| gt.apply(&mut commands, &caster, &spawn, &target)
 	}
 
 	fn setup() -> App {
@@ -103,8 +99,8 @@ mod tests {
 		let caster_transform = Transform::from_xyz(1., 2., 3.);
 		let target_ray = Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(4., 5., 6.));
 
-		let (entity, ..) = app.world_mut().run_system_once(ground_target(
-			SpawnGroundTargetedAoe::<_T> {
+		let (contact, ..) = app.world_mut().run_system_once(ground_target(
+			SpawnGroundTargetedAoe {
 				max_range: Units::new(20.),
 				radius: Units::new(8.),
 				..default()
@@ -115,13 +111,15 @@ mod tests {
 		));
 
 		assert_eq!(
-			Some(&GroundTargetedAoe::<_T>::new(Args {
+			Some(&GroundTargetedAoe::<Contact>::new(Args {
 				caster: caster_transform,
 				target_ray,
 				max_range: Units::new(20.),
 				radius: Units::new(8.),
 			})),
-			app.world().entity(entity).get::<GroundTargetedAoe<_T>>()
+			app.world()
+				.entity(contact)
+				.get::<GroundTargetedAoe<Contact>>()
 		)
 	}
 
@@ -129,8 +127,8 @@ mod tests {
 	fn spawn_as_stoppable() {
 		let mut app = setup();
 
-		let (entity, on_skill_stop) = app.world_mut().run_system_once(ground_target(
-			SpawnGroundTargetedAoe::<_T> {
+		let (contact, projection, on_skill_stop) = app.world_mut().run_system_once(ground_target(
+			SpawnGroundTargetedAoe {
 				lifetime: LifeTimeData::UntilStopped,
 				..default()
 			},
@@ -139,15 +137,15 @@ mod tests {
 			Target::from(GroundTargetedAoe::DEFAULT_TARGET_RAY),
 		));
 
-		assert_eq!(OnSkillStop::Stop(entity), on_skill_stop);
+		assert_eq!(OnSkillStop::Stop(contact), on_skill_stop);
 	}
 
 	#[test]
 	fn spawn_as_non_stoppable() {
 		let mut app = setup();
 
-		let (entity, on_skill_stop) = app.world_mut().run_system_once(ground_target(
-			SpawnGroundTargetedAoe::<_T> {
+		let (contact, projection, on_skill_stop) = app.world_mut().run_system_once(ground_target(
+			SpawnGroundTargetedAoe {
 				lifetime: LifeTimeData::UntilOutlived(Duration::from_micros(33)),
 				..default()
 			},
@@ -161,7 +159,7 @@ mod tests {
 				OnSkillStop::Ignore,
 				Some(&LifeTime(Duration::from_micros(33)))
 			),
-			(on_skill_stop, app.world().entity(entity).get::<LifeTime>())
+			(on_skill_stop, app.world().entity(contact).get::<LifeTime>())
 		);
 	}
 }

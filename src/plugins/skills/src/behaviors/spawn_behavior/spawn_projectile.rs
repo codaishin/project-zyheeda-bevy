@@ -1,10 +1,7 @@
 use super::OnSkillStop;
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
 use behaviors::components::projectile::{sub_type::SubType, Projectile};
-use bevy::{
-	ecs::system::EntityCommands,
-	prelude::{Commands, SpatialBundle, Transform},
-};
+use bevy::prelude::{BuildChildren, Commands, Entity, SpatialBundle, Transform};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -20,24 +17,26 @@ impl SpawnProjectile {
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		_: &Target,
-	) -> (EntityCommands<'a>, OnSkillStop) {
+	) -> (Entity, Entity, OnSkillStop) {
 		let SkillCaster(.., caster) = caster;
 		let SkillSpawner(.., spawner) = spawner;
 
-		let entity = commands.spawn((
-			Projectile {
-				direction: caster.forward(),
-				range: 10.,
-				sub_type: self.sub_type,
-			},
-			SpatialBundle::from_transform(Transform::from(*spawner)),
-		));
+		let contact = commands
+			.spawn((
+				Projectile {
+					direction: caster.forward(),
+					range: 10.,
+					sub_type: self.sub_type,
+				},
+				SpatialBundle::from_transform(Transform::from(*spawner)),
+			))
+			.id();
+		let projection = commands.spawn_empty().set_parent(contact).id();
 
 		if self.stoppable {
-			let id = entity.id();
-			(entity, OnSkillStop::Stop(id))
+			(contact, projection, OnSkillStop::Stop(contact))
 		} else {
-			(entity, OnSkillStop::Ignore)
+			(contact, projection, OnSkillStop::Ignore)
 		}
 	}
 }
@@ -58,11 +57,8 @@ mod tests {
 		caster: SkillCaster,
 		spawn: SkillSpawner,
 		target: Target,
-	) -> impl Fn(Commands) -> (Entity, OnSkillStop) {
-		move |mut commands| {
-			let (entity, on_skill_stop) = pr.apply(&mut commands, &caster, &spawn, &target);
-			(entity.id(), on_skill_stop)
-		}
+	) -> impl Fn(Commands) -> (Entity, Entity, OnSkillStop) {
+		move |mut commands| pr.apply(&mut commands, &caster, &spawn, &target)
 	}
 
 	fn setup() -> App {
@@ -125,7 +121,7 @@ mod tests {
 	fn spawn_stoppable() {
 		let mut app = setup();
 
-		let (entity, on_skill_stop) = app.world_mut().run_system_once(projectile(
+		let (entity, projection, on_skill_stop) = app.world_mut().run_system_once(projectile(
 			SpawnProjectile {
 				stoppable: true,
 				sub_type: SubType::Plasma,

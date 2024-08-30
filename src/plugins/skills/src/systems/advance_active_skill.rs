@@ -1,5 +1,6 @@
 use crate::{
-	skills::{Animate, SkillBehavior, SkillBehaviors, SkillState},
+	behaviors::SkillBehaviorConfig,
+	skills::{Animate, RunSkillBehavior, SkillState},
 	traits::{Flush, GetActiveSkill, GetAnimation, GetSkillBehavior, Schedule},
 };
 use animations::traits::{SkillLayer, StartAnimation, StopAnimation};
@@ -92,11 +93,11 @@ fn advance<
 	if states.contains(&StateMeta::Entering(SkillState::Aim)) {
 		agent.try_insert(OverrideFace(Face::Cursor));
 		animate(skill, animation_dispatch);
-		schedule_start(skill_executer, skill, start_on_aim);
+		schedule_start(skill_executer, skill, run_on_aim);
 	}
 
 	if states.contains(&StateMeta::Entering(SkillState::Active)) {
-		schedule_start(skill_executer, skill, start_on_active);
+		schedule_start(skill_executer, skill, run_on_active);
 	}
 
 	if states.contains(&StateMeta::Done) {
@@ -118,16 +119,16 @@ fn animate<TAnimation, TAnimationDispatch: StartAnimation<TAnimation> + StopAnim
 	}
 }
 
-fn start_on_aim<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<SkillBehaviors> {
+fn run_on_aim<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<SkillBehaviorConfig> {
 	match skill.behavior() {
-		SkillBehavior::OnAim(run) => Some(run),
+		RunSkillBehavior::OnAim(run) => Some(run),
 		_ => None,
 	}
 }
 
-fn start_on_active<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<SkillBehaviors> {
+fn run_on_active<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<SkillBehaviorConfig> {
 	match skill.behavior() {
-		SkillBehavior::OnActive(run) => Some(run),
+		RunSkillBehavior::OnActive(run) => Some(run),
 		_ => None,
 	}
 }
@@ -135,7 +136,7 @@ fn start_on_active<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<SkillBeha
 fn schedule_start<TSkillExecutor: Schedule, TSkill: GetSkillBehavior>(
 	executer: &mut TSkillExecutor,
 	skill: &TSkill,
-	get_start_fn: fn(&TSkill) -> Option<SkillBehaviors>,
+	get_start_fn: fn(&TSkill) -> Option<SkillBehaviorConfig>,
 ) {
 	let Some(start_fn) = get_start_fn(skill) else {
 		return;
@@ -148,8 +149,8 @@ mod tests {
 	use super::*;
 	use crate::{
 		behaviors::{
-			spawn_behavior::{OnSkillStop, SpawnBehavior},
-			Behavior,
+			spawn_behavior::{OnSkillStop, SkillShape},
+			SkillBehaviorConfig,
 		},
 		traits::{GetAnimation, GetSkillBehavior},
 	};
@@ -158,7 +159,6 @@ mod tests {
 	use bevy::{
 		prelude::{App, Transform, Update},
 		time::{Real, Time},
-		utils::default,
 	};
 	use common::{
 		test_tools::utils::{SingleThreadedApp, TickTime},
@@ -189,7 +189,7 @@ mod tests {
 
 		if !no_setup.contains(&MockOption::RunBehavior) {
 			mock.expect_behavior()
-				.return_const(SkillBehavior::default());
+				.return_const(RunSkillBehavior::default());
 		}
 		if !no_setup.contains(&MockOption::Animate) {
 			mock.expect_animate().return_const(Animate::Ignore);
@@ -216,7 +216,7 @@ mod tests {
 			fn update_state(&mut self, delta: Duration) -> HashSet<StateMeta<SkillState>> {}
 		}
 		impl GetSkillBehavior for _Skill {
-			fn behavior<'a>(&self) -> SkillBehavior {}
+			fn behavior<'a>(&self) -> RunSkillBehavior {}
 		}
 		impl GetAnimation<_Animation> for _Skill {
 			fn animate(&self) -> Animate<_Animation> {}
@@ -269,7 +269,7 @@ mod tests {
 	}
 
 	impl Schedule for _Executor {
-		fn schedule(&mut self, start: SkillBehaviors) {
+		fn schedule(&mut self, start: SkillBehaviorConfig) {
 			self.mock.schedule(start)
 		}
 	}
@@ -283,20 +283,21 @@ mod tests {
 	mock! {
 		_Executor {}
 		impl Schedule for _Executor {
-			fn schedule(&mut self, start: SkillBehaviors);
+			fn schedule(&mut self, start: SkillBehaviorConfig);
 		}
 		impl Flush for _Executor {
 			fn flush(&mut self);
 		}
 	}
 
-	fn skill_behaviors() -> SkillBehaviors {
-		SkillBehaviors {
-			contact: Behavior::new().with_spawn(SpawnBehavior::Fn(|commands, _, _, _| {
-				(commands.spawn_empty(), OnSkillStop::Ignore)
-			})),
-			..default()
-		}
+	fn skill_behaviors() -> SkillBehaviorConfig {
+		SkillBehaviorConfig::new().with_shape(SkillShape::Fn(|commands, _, _, _| {
+			(
+				commands.spawn_empty().id(),
+				commands.spawn_empty().id(),
+				OnSkillStop::Ignore,
+			)
+		}))
 	}
 
 	fn setup() -> (App, Entity) {
@@ -629,7 +630,7 @@ mod tests {
 					);
 					skill
 						.expect_behavior()
-						.returning(|| SkillBehavior::OnActive(skill_behaviors()));
+						.returning(|| RunSkillBehavior::OnActive(skill_behaviors()));
 					skill
 				})),
 			},
@@ -662,7 +663,7 @@ mod tests {
 					);
 					skill
 						.expect_behavior()
-						.returning(|| SkillBehavior::OnAim(skill_behaviors()));
+						.returning(|| RunSkillBehavior::OnAim(skill_behaviors()));
 					skill
 				})),
 			},
@@ -685,7 +686,7 @@ mod tests {
 					skill
 						.expect_behavior()
 						.never()
-						.return_const(SkillBehavior::default());
+						.return_const(RunSkillBehavior::default());
 					skill
 				})),
 			},

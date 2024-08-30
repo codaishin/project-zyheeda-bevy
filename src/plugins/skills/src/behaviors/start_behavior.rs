@@ -11,14 +11,14 @@ use start_gravity::StartGravity;
 pub type StartBehaviorFn = fn(&mut EntityCommands, &SkillCaster, &SkillSpawner, &Target);
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum StartBehavior {
+pub enum SkillBehavior {
 	Fn(StartBehaviorFn),
 	Gravity(StartGravity),
 	Damage(StartDealingDamage),
 	Force(StartForce),
 }
 
-impl StartBehavior {
+impl SkillBehavior {
 	pub fn apply(
 		&self,
 		entity: &mut EntityCommands,
@@ -27,10 +27,10 @@ impl StartBehavior {
 		target: &Target,
 	) {
 		match self {
-			StartBehavior::Fn(func) => func(entity, caster, spawn, target),
-			StartBehavior::Gravity(gr) => gr.apply(entity, caster, spawn, target),
-			StartBehavior::Damage(dm) => dm.apply(entity, caster, spawn, target),
-			StartBehavior::Force(fc) => fc.apply(entity, caster, spawn, target),
+			SkillBehavior::Fn(func) => func(entity, caster, spawn, target),
+			SkillBehavior::Gravity(gr) => gr.apply(entity, caster, spawn, target),
+			SkillBehavior::Damage(dm) => dm.apply(entity, caster, spawn, target),
+			SkillBehavior::Force(fc) => fc.apply(entity, caster, spawn, target),
 		}
 	}
 }

@@ -2,54 +2,43 @@ pub(crate) mod spawn_behavior_data;
 pub(crate) mod start_behavior_data;
 
 use crate::{
-	behaviors::{spawn_behavior::SpawnBehavior, start_behavior::StartBehavior, Behavior},
-	skills::{SkillBehavior, SkillBehaviors},
+	behaviors::{spawn_behavior::SkillShape, start_behavior::SkillBehavior, SkillBehaviorConfig},
+	skills::RunSkillBehavior,
 };
-use behaviors::components::{Contact, Projection};
 use serde::{Deserialize, Serialize};
-use spawn_behavior_data::SpawnBehaviorData;
-use start_behavior_data::StartBehaviorData;
+use spawn_behavior_data::SkillShapeData;
+use start_behavior_data::SkillBehaviorData;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct BehaviorData<T: Sync + Send + 'static> {
-	spawn: SpawnBehaviorData<T>,
-	start: Vec<StartBehaviorData>,
+pub(crate) struct SkillBehaviorConfigData {
+	shape: SkillShapeData,
+	contact: Vec<SkillBehaviorData>,
+	projection: Vec<SkillBehaviorData>,
 }
 
-impl<T: Default + Sync + Send + 'static> From<BehaviorData<T>> for Behavior<T> {
-	fn from(value: BehaviorData<T>) -> Self {
+impl From<SkillBehaviorConfigData> for SkillBehaviorConfig {
+	fn from(value: SkillBehaviorConfigData) -> Self {
+		let shape = SkillShape::from(value.shape);
+		let contact = value.contact.into_iter().map(SkillBehavior::from);
+		let projection = value.projection.into_iter().map(SkillBehavior::from);
 		Self::new()
-			.with_spawn(SpawnBehavior::from(value.spawn))
-			.with_start(value.start.into_iter().map(StartBehavior::from).collect())
+			.with_shape(shape)
+			.with_contact_behaviors(contact.collect())
+			.with_projection_behaviors(projection.collect())
 	}
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct SkillBehaviorsData {
-	contact: BehaviorData<Contact>,
-	projection: BehaviorData<Projection>,
+pub(crate) enum RunSkillBehaviorData {
+	OnActive(SkillBehaviorConfigData),
+	OnAim(SkillBehaviorConfigData),
 }
 
-impl From<SkillBehaviorsData> for SkillBehaviors {
-	fn from(value: SkillBehaviorsData) -> Self {
-		Self {
-			contact: Behavior::from(value.contact),
-			projection: Behavior::from(value.projection),
-		}
-	}
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub(crate) enum SkillBehaviorData {
-	OnActive(SkillBehaviorsData),
-	OnAim(SkillBehaviorsData),
-}
-
-impl From<SkillBehaviorData> for SkillBehavior {
-	fn from(value: SkillBehaviorData) -> Self {
+impl From<RunSkillBehaviorData> for RunSkillBehavior {
+	fn from(value: RunSkillBehaviorData) -> Self {
 		match value {
-			SkillBehaviorData::OnActive(v) => Self::OnActive(SkillBehaviors::from(v)),
-			SkillBehaviorData::OnAim(v) => Self::OnAim(SkillBehaviors::from(v)),
+			RunSkillBehaviorData::OnActive(v) => Self::OnActive(SkillBehaviorConfig::from(v)),
+			RunSkillBehaviorData::OnAim(v) => Self::OnAim(SkillBehaviorConfig::from(v)),
 		}
 	}
 }
