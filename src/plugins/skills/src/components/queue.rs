@@ -566,10 +566,11 @@ mod test_queue_active_skill {
 	use super::*;
 	use crate::{
 		behaviors::{
-			spawn_behavior::{OnSkillStop, SkillShape},
+			build_skill_shape::{BuildSkillShape, OnSkillStop},
 			SkillBehaviorConfig,
 		},
 		skills::{Animate, RunSkillBehavior, SkillAnimation},
+		traits::skill_builder::SkillShape,
 	};
 	use animations::animation::PlayMode;
 	use bevy::prelude::default;
@@ -771,12 +772,10 @@ mod test_queue_active_skill {
 	#[test]
 	fn test_start_behavior_fn_on_active() {
 		let behaviors =
-			SkillBehaviorConfig::new().with_shape(SkillShape::Fn(|commands, _, _, _| {
-				(
-					commands.spawn_empty().id(),
-					commands.spawn_empty().id(),
-					OnSkillStop::Ignore,
-				)
+			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|commands, _, _, _| SkillShape {
+				contact: commands.spawn_empty().id(),
+				projection: commands.spawn_empty().id(),
+				on_skill_stop: OnSkillStop::Ignore,
 			}));
 
 		let active = ActiveSkill {
@@ -795,12 +794,10 @@ mod test_queue_active_skill {
 	#[test]
 	fn test_start_behavior_fn_on_aim() {
 		let behaviors =
-			SkillBehaviorConfig::new().with_shape(SkillShape::Fn(|commands, _, _, _| {
-				(
-					commands.spawn_empty().id(),
-					commands.spawn_empty().id(),
-					OnSkillStop::Ignore,
-				)
+			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|commands, _, _, _| SkillShape {
+				contact: commands.spawn_empty().id(),
+				projection: commands.spawn_empty().id(),
+				on_skill_stop: OnSkillStop::Ignore,
 			}));
 
 		let active = ActiveSkill {

@@ -1,6 +1,6 @@
 use crate::{
 	behaviors::{
-		spawn_behavior::OnSkillStop,
+		build_skill_shape::OnSkillStop,
 		SkillBehaviorConfig,
 		SkillCaster,
 		SkillSpawner,
@@ -82,18 +82,17 @@ fn spawn_and_execute(
 	spawner: &SkillSpawner,
 	target: &Target,
 ) -> OnSkillStop {
-	let (contact, projection, on_skill_stop) =
-		behavior.spawn_shape(commands, caster, spawner, target);
+	let shape = behavior.spawn_shape(commands, caster, spawner, target);
 
-	if let Some(mut contact) = commands.get_entity(contact) {
+	if let Some(mut contact) = commands.get_entity(shape.contact) {
 		behavior.start_contact_behavior(&mut contact, caster, spawner, target);
 	};
 
-	if let Some(mut projection) = commands.get_entity(projection) {
+	if let Some(mut projection) = commands.get_entity(shape.projection) {
 		behavior.start_projection_behavior(&mut projection, caster, spawner, target);
 	};
 
-	on_skill_stop
+	shape.on_skill_stop
 }
 
 fn stop(skill: &Entity, commands: &mut Commands) -> SkillExecuter {
@@ -106,9 +105,12 @@ fn stop(skill: &Entity, commands: &mut Commands) -> SkillExecuter {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::behaviors::{
-		spawn_behavior::{OnSkillStop, SkillShape},
-		start_behavior::SkillBehavior,
+	use crate::{
+		behaviors::{
+			build_skill_shape::{BuildSkillShape, OnSkillStop},
+			start_behavior::SkillBehavior,
+		},
+		traits::skill_builder::SkillShape,
 	};
 	use bevy::{
 		app::{App, Update},
@@ -116,7 +118,6 @@ mod tests {
 		hierarchy::BuildWorldChildren,
 		math::{Ray3d, Vec3},
 		transform::components::GlobalTransform,
-		utils::default,
 	};
 	use common::{
 		components::Outdated,
@@ -182,12 +183,10 @@ mod tests {
 
 	#[test]
 	fn set_self_to_start_skill() {
-		let skill = SkillBehaviorConfig::new().with_shape(SkillShape::Fn(|c, _, _, _| {
-			(
-				c.spawn_empty().id(),
-				c.spawn_empty().id(),
-				OnSkillStop::Ignore,
-			)
+		let skill = SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|c, _, _, _| SkillShape {
+			contact: c.spawn_empty().id(),
+			projection: c.spawn_empty().id(),
+			on_skill_stop: OnSkillStop::Ignore,
 		}));
 
 		let mut executer = SkillExecuter::default();
@@ -198,18 +197,17 @@ mod tests {
 
 	#[test]
 	fn spawn_skill_contact_entity() {
-		let (mut app, ..) = setup(SkillExecuter::Start(SkillBehaviorConfig::new().with_shape(
-			SkillShape::Fn(|cmd, caster, spawner, target| {
-				(
-					cmd.spawn(_SpawnArgs {
+		let (mut app, ..) = setup(SkillExecuter::Start(SkillBehaviorConfig::from_shape(
+			BuildSkillShape::Fn(|cmd, caster, spawner, target| SkillShape {
+				contact: cmd
+					.spawn(_SpawnArgs {
 						caster: *caster,
 						spawner: *spawner,
 						target: *target,
 					})
 					.id(),
-					cmd.spawn_empty().id(),
-					OnSkillStop::Ignore,
-				)
+				projection: cmd.spawn_empty().id(),
+				on_skill_stop: OnSkillStop::Ignore,
 			}),
 		)));
 
@@ -243,22 +241,16 @@ mod tests {
 			});
 		}
 
-		fn shape(
-			cmd: &mut Commands,
-			_: &SkillCaster,
-			_: &SkillSpawner,
-			_: &Target,
-		) -> (Entity, Entity, OnSkillStop) {
-			(
-				cmd.spawn(_Contact).id(),
-				cmd.spawn_empty().id(),
-				OnSkillStop::Ignore,
-			)
+		fn shape(cmd: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> SkillShape {
+			SkillShape {
+				contact: cmd.spawn(_Contact).id(),
+				projection: cmd.spawn_empty().id(),
+				on_skill_stop: OnSkillStop::Ignore,
+			}
 		}
 
 		let (mut app, ..) = setup(SkillExecuter::Start(
-			SkillBehaviorConfig::new()
-				.with_shape(SkillShape::Fn(shape))
+			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
 				.with_contact_behaviors(vec![SkillBehavior::Fn(behavior)]),
 		));
 
@@ -283,18 +275,17 @@ mod tests {
 
 	#[test]
 	fn spawn_skill_projection_entity() {
-		let (mut app, ..) = setup(SkillExecuter::Start(SkillBehaviorConfig::new().with_shape(
-			SkillShape::Fn(|cmd, caster, spawner, target| {
-				(
-					cmd.spawn(_SpawnArgs {
+		let (mut app, ..) = setup(SkillExecuter::Start(SkillBehaviorConfig::from_shape(
+			BuildSkillShape::Fn(|cmd, caster, spawner, target| SkillShape {
+				contact: cmd
+					.spawn(_SpawnArgs {
 						caster: *caster,
 						spawner: *spawner,
 						target: *target,
 					})
 					.id(),
-					cmd.spawn_empty().id(),
-					OnSkillStop::Ignore,
-				)
+				projection: cmd.spawn_empty().id(),
+				on_skill_stop: OnSkillStop::Ignore,
 			}),
 		)));
 
@@ -328,22 +319,16 @@ mod tests {
 			});
 		}
 
-		fn shape(
-			cmd: &mut Commands,
-			_: &SkillCaster,
-			_: &SkillSpawner,
-			_: &Target,
-		) -> (Entity, Entity, OnSkillStop) {
-			(
-				cmd.spawn_empty().id(),
-				cmd.spawn(_Projection).id(),
-				OnSkillStop::Ignore,
-			)
+		fn shape(cmd: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> SkillShape {
+			SkillShape {
+				contact: cmd.spawn_empty().id(),
+				projection: cmd.spawn(_Projection).id(),
+				on_skill_stop: OnSkillStop::Ignore,
+			}
 		}
 
 		let (mut app, ..) = setup(SkillExecuter::Start(
-			SkillBehaviorConfig::new()
-				.with_shape(SkillShape::Fn(shape))
+			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
 				.with_projection_behaviors(vec![SkillBehavior::Fn(behavior)]),
 		));
 
@@ -368,15 +353,13 @@ mod tests {
 
 	#[test]
 	fn set_to_started_contact_as_stoppable() {
-		let (mut app, executer) = setup(SkillExecuter::Start(
-			SkillBehaviorConfig::new().with_shape(SkillShape::Fn(|cmd, _, _, _| {
-				(
-					cmd.spawn_empty().id(),
-					cmd.spawn_empty().id(),
-					OnSkillStop::Stop(Entity::from_raw(998877)),
-				)
-			})),
-		));
+		let (mut app, executer) = setup(SkillExecuter::Start(SkillBehaviorConfig::from_shape(
+			BuildSkillShape::Fn(|cmd, _, _, _| SkillShape {
+				contact: cmd.spawn_empty().id(),
+				projection: cmd.spawn_empty().id(),
+				on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
+			}),
+		)));
 
 		app.world_mut().run_system_once(execute);
 
@@ -390,15 +373,13 @@ mod tests {
 
 	#[test]
 	fn set_to_started_projection_as_stoppable() {
-		let (mut app, executer) = setup(SkillExecuter::Start(
-			SkillBehaviorConfig::new().with_shape(SkillShape::Fn(|cmd, _, _, _| {
-				(
-					cmd.spawn_empty().id(),
-					cmd.spawn_empty().id(),
-					OnSkillStop::Stop(Entity::from_raw(998877)),
-				)
-			})),
-		));
+		let (mut app, executer) = setup(SkillExecuter::Start(SkillBehaviorConfig::from_shape(
+			BuildSkillShape::Fn(|cmd, _, _, _| SkillShape {
+				contact: cmd.spawn_empty().id(),
+				projection: cmd.spawn_empty().id(),
+				on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
+			}),
+		)));
 
 		app.world_mut().run_system_once(execute);
 
@@ -412,7 +393,8 @@ mod tests {
 
 	#[test]
 	fn set_to_idle_on_flush_when_set_to_start() {
-		let mut executer = SkillExecuter::Start(default());
+		let mut executer =
+			SkillExecuter::Start(SkillBehaviorConfig::from_shape(BuildSkillShape::NO_SHAPE));
 
 		executer.flush();
 

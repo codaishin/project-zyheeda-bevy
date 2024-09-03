@@ -2,7 +2,7 @@ pub mod shoot_hand_gun;
 pub mod skill_data;
 
 use crate::{
-	behaviors::SkillBehaviorConfig,
+	behaviors::{build_skill_shape::BuildSkillShape, SkillBehaviorConfig},
 	items::{slot_key::SlotKey, ItemType},
 	traits::{Matches, Prime},
 };
@@ -12,7 +12,6 @@ use bevy::{
 	math::{Dir3, Ray3d, Vec3},
 	prelude::Image,
 	reflect::TypePath,
-	utils::default,
 };
 use common::resources::ColliderInfo;
 use std::{
@@ -149,6 +148,6 @@ pub enum RunSkillBehavior {
 
 impl Default for RunSkillBehavior {
 	fn default() -> Self {
-		Self::OnActive(default())
+		Self::OnActive(SkillBehaviorConfig::from_shape(BuildSkillShape::NO_SHAPE))
 	}
 }

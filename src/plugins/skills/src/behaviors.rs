@@ -1,14 +1,14 @@
-pub mod spawn_behavior;
+pub mod build_skill_shape;
 pub mod start_behavior;
 
-use crate::skills::SelectInfo;
+use crate::{skills::SelectInfo, traits::skill_builder::SkillShape};
 use bevy::{
 	ecs::system::EntityCommands,
 	math::Ray3d,
 	prelude::{default, Commands, Entity, GlobalTransform},
 };
+use build_skill_shape::BuildSkillShape;
 use common::{components::Outdated, resources::ColliderInfo};
-use spawn_behavior::{OnSkillStop, SkillShape};
 use start_behavior::SkillBehavior;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -68,27 +68,23 @@ impl Target {
 	}
 }
 
-#[derive(Default, PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct SkillBehaviorConfig {
-	shape: SkillShape,
+	shape: BuildSkillShape,
 	contact: Vec<SkillBehavior>,
 	projection: Vec<SkillBehavior>,
 }
 
 impl SkillBehaviorConfig {
-	pub fn new() -> Self {
-		Self::default()
-	}
-
-	pub fn with_shape(self, shape: SkillShape) -> Self {
+	pub(crate) fn from_shape(shape: BuildSkillShape) -> Self {
 		Self {
 			shape,
-			contact: self.contact,
-			projection: self.projection,
+			contact: vec![],
+			projection: vec![],
 		}
 	}
 
-	pub fn with_contact_behaviors(self, contact: Vec<SkillBehavior>) -> Self {
+	pub(crate) fn with_contact_behaviors(self, contact: Vec<SkillBehavior>) -> Self {
 		Self {
 			shape: self.shape,
 			contact,
@@ -96,7 +92,7 @@ impl SkillBehaviorConfig {
 		}
 	}
 
-	pub fn with_projection_behaviors(self, projection: Vec<SkillBehavior>) -> Self {
+	pub(crate) fn with_projection_behaviors(self, projection: Vec<SkillBehavior>) -> Self {
 		Self {
 			shape: self.shape,
 			contact: self.contact,
@@ -104,17 +100,17 @@ impl SkillBehaviorConfig {
 		}
 	}
 
-	pub fn spawn_shape(
+	pub(crate) fn spawn_shape(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
-	) -> (Entity, Entity, OnSkillStop) {
-		self.shape.apply(commands, caster, spawner, target)
+	) -> SkillShape {
+		self.shape.build(commands, caster, spawner, target)
 	}
 
-	pub fn start_contact_behavior(
+	pub(crate) fn start_contact_behavior(
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
@@ -126,7 +122,7 @@ impl SkillBehaviorConfig {
 		}
 	}
 
-	pub fn start_projection_behavior(
+	pub(crate) fn start_projection_behavior(
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,

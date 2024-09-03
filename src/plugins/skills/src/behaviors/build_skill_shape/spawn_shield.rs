@@ -1,0 +1,34 @@
+use super::spawn_ground_target::LifeTimeData;
+use crate::{
+	behaviors::{SkillCaster, SkillSpawner, Target},
+	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
+};
+use behaviors::components::shield::Shield;
+use bevy::prelude::{Bundle, SpatialBundle, Transform};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub struct SpawnShield;
+
+impl BuildContact for SpawnShield {
+	fn build_contact(&self, _: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> impl Bundle {
+		let SkillSpawner(entity, transform) = spawner;
+
+		(
+			Shield { location: *entity },
+			SpatialBundle::from_transform(Transform::from(*transform)),
+		)
+	}
+}
+
+impl BuildProjection for SpawnShield {
+	fn build_projection(&self, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> impl Bundle {
+		// FIXME: actually build something
+	}
+}
+
+impl SkillLifetime for SpawnShield {
+	fn lifetime(&self) -> LifeTimeData {
+		LifeTimeData::UntilStopped
+	}
+}

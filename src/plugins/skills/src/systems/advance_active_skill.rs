@@ -149,10 +149,10 @@ mod tests {
 	use super::*;
 	use crate::{
 		behaviors::{
-			spawn_behavior::{OnSkillStop, SkillShape},
+			build_skill_shape::{BuildSkillShape, OnSkillStop},
 			SkillBehaviorConfig,
 		},
-		traits::{GetAnimation, GetSkillBehavior},
+		traits::{skill_builder::SkillShape, GetAnimation, GetSkillBehavior},
 	};
 	use animations::traits::Priority;
 	use behaviors::components::{Face, OverrideFace};
@@ -291,12 +291,10 @@ mod tests {
 	}
 
 	fn skill_behaviors() -> SkillBehaviorConfig {
-		SkillBehaviorConfig::new().with_shape(SkillShape::Fn(|commands, _, _, _| {
-			(
-				commands.spawn_empty().id(),
-				commands.spawn_empty().id(),
-				OnSkillStop::Ignore,
-			)
+		SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|commands, _, _, _| SkillShape {
+			contact: commands.spawn_empty().id(),
+			projection: commands.spawn_empty().id(),
+			on_skill_stop: OnSkillStop::Ignore,
 		}))
 	}
 

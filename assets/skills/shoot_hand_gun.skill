@@ -11,7 +11,6 @@
 		"OnActive": {
 			"shape": {
 				"Projectile": {
-					"stoppable": false,
 					"sub_type": "Plasma"
 				}
 			},

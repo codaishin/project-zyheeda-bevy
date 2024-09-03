@@ -1,12 +1,16 @@
-pub(crate) mod spawn_behavior_data;
+pub(crate) mod shape_data;
 pub(crate) mod start_behavior_data;
 
 use crate::{
-	behaviors::{spawn_behavior::SkillShape, start_behavior::SkillBehavior, SkillBehaviorConfig},
+	behaviors::{
+		build_skill_shape::BuildSkillShape,
+		start_behavior::SkillBehavior,
+		SkillBehaviorConfig,
+	},
 	skills::RunSkillBehavior,
 };
 use serde::{Deserialize, Serialize};
-use spawn_behavior_data::SkillShapeData;
+use shape_data::SkillShapeData;
 use start_behavior_data::SkillBehaviorData;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -18,11 +22,10 @@ pub(crate) struct SkillBehaviorConfigData {
 
 impl From<SkillBehaviorConfigData> for SkillBehaviorConfig {
 	fn from(value: SkillBehaviorConfigData) -> Self {
-		let shape = SkillShape::from(value.shape);
+		let shape = BuildSkillShape::from(value.shape);
 		let contact = value.contact.into_iter().map(SkillBehavior::from);
 		let projection = value.projection.into_iter().map(SkillBehavior::from);
-		Self::new()
-			.with_shape(shape)
+		Self::from_shape(shape)
 			.with_contact_behaviors(contact.collect())
 			.with_projection_behaviors(projection.collect())
 	}

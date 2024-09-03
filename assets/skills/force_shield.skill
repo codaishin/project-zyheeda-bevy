@@ -10,9 +10,7 @@
 	"behavior": {
 		"OnAim": {
 			"shape": {
-				"Shield": {
-					"stoppable": true
-				}
+				"Shield": null
 			},
 			"contact": [
 				{
