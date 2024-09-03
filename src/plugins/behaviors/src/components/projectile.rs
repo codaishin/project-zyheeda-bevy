@@ -25,13 +25,18 @@ use prefabs::traits::{GetOrCreateAssets, Instantiate};
 use sub_type::SubType;
 
 #[derive(Component, Debug, PartialEq)]
-pub struct Projectile {
+pub struct ProjectileContact {
 	pub direction: Dir3,
 	pub range: f32,
 	pub sub_type: SubType,
 }
 
-impl Default for Projectile {
+#[derive(Component, Debug, PartialEq)]
+pub struct ProjectileProjection {
+	pub sub_type: SubType,
+}
+
+impl Default for ProjectileContact {
 	fn default() -> Self {
 		Self {
 			direction: Dir3::NEG_Z,
@@ -41,7 +46,7 @@ impl Default for Projectile {
 	}
 }
 
-impl ApproxEqual<f32> for Projectile {
+impl ApproxEqual<f32> for ProjectileContact {
 	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
 		self.direction
 			.as_vec3()
@@ -51,7 +56,7 @@ impl ApproxEqual<f32> for Projectile {
 	}
 }
 
-impl ProjectileBehavior for Projectile {
+impl ProjectileBehavior for ProjectileContact {
 	fn direction(&self) -> Dir3 {
 		self.direction
 	}
@@ -61,7 +66,7 @@ impl ProjectileBehavior for Projectile {
 	}
 }
 
-impl Instantiate for Projectile {
+impl Instantiate for ProjectileContact {
 	fn instantiate(
 		&self,
 		on: &mut EntityCommands,
@@ -75,7 +80,15 @@ impl Instantiate for Projectile {
 				speed: UnitsPerSecond::new(15.),
 			},
 		))
-		.with_children(|parent| self.sub_type.spawn(parent, &mut assets));
+		.with_children(|parent| self.sub_type.spawn_contact(parent, &mut assets));
+
+		Ok(())
+	}
+}
+
+impl Instantiate for ProjectileProjection {
+	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
+		on.with_children(|parent| self.sub_type.spawn_projection(parent));
 
 		Ok(())
 	}

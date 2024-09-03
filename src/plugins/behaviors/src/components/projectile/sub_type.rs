@@ -5,7 +5,7 @@ use bevy::prelude::ChildBuilder;
 use plasma_projectile::PlasmaProjectile;
 use prefabs::traits::GetOrCreateAssets;
 use serde::{Deserialize, Serialize};
-use traits::Spawn;
+use traits::ProjectileSubtype;
 
 #[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
 pub enum SubType {
@@ -13,10 +13,20 @@ pub enum SubType {
 	Plasma,
 }
 
+macro_rules! match_impl {
+	($sub_type:expr) => {
+		match $sub_type {
+			SubType::Plasma => PlasmaProjectile,
+		}
+	};
+}
+
 impl SubType {
-	pub fn spawn(&self, parent: &mut ChildBuilder, assets: &mut impl GetOrCreateAssets) {
-		match self {
-			SubType::Plasma => PlasmaProjectile::spawn(parent, assets),
-		};
+	pub fn spawn_contact(&self, parent: &mut ChildBuilder, assets: &mut impl GetOrCreateAssets) {
+		match_impl!(self).spawn_contact(parent, assets);
+	}
+
+	pub fn spawn_projection(&self, parent: &mut ChildBuilder) {
+		match_impl!(self).spawn_projection(parent)
 	}
 }

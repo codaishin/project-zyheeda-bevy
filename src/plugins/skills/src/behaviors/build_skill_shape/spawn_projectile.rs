@@ -3,7 +3,11 @@ use crate::{
 	behaviors::{SkillCaster, SkillSpawner, Target},
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
-use behaviors::components::projectile::{sub_type::SubType, Projectile};
+use behaviors::components::projectile::{
+	sub_type::SubType,
+	ProjectileContact,
+	ProjectileProjection,
+};
 use bevy::prelude::{Bundle, SpatialBundle, Transform};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -24,7 +28,7 @@ impl BuildContact for SpawnProjectile {
 		let SkillSpawner(.., spawner) = spawner;
 
 		(
-			Projectile {
+			ProjectileContact {
 				direction: caster.forward(),
 				range: 10.,
 				sub_type: self.sub_type,
@@ -36,7 +40,9 @@ impl BuildContact for SpawnProjectile {
 
 impl BuildProjection for SpawnProjectile {
 	fn build_projection(&self, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> impl Bundle {
-		// FIXME: actually build something
+		ProjectileProjection {
+			sub_type: self.sub_type,
+		}
 	}
 }
 
