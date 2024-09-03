@@ -1,12 +1,15 @@
 use super::OnSkillStop;
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
 use behaviors::components::{
-	ground_targeted_aoe::{Args, GroundTargetedAoe},
+	ground_targeted_aoe::GroundTargetedAoe,
 	Contact,
 	LifeTime,
 	Projection,
 };
-use bevy::prelude::{BuildChildren, Commands, Entity, Transform};
+use bevy::{
+	prelude::{BuildChildren, Commands, Entity, Transform},
+	utils::default,
+};
 use common::{tools::Units, traits::try_insert_on::TryInsertOn};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -37,20 +40,22 @@ impl SpawnGroundTargetedAoe {
 		let Target { ray, .. } = target;
 
 		let contact = commands
-			.spawn(GroundTargetedAoe::<Contact>::new(Args {
+			.spawn(GroundTargetedAoe::<Contact> {
 				caster: Transform::from(*caster_transform),
 				target_ray: *ray,
 				max_range: self.max_range,
 				radius: self.radius,
-			}))
+				..default()
+			})
 			.id();
 		let projection = commands
-			.spawn(GroundTargetedAoe::<Projection>::new(Args {
+			.spawn(GroundTargetedAoe::<Projection> {
 				caster: Transform::from(*caster_transform),
 				target_ray: *ray,
 				max_range: self.max_range,
 				radius: self.radius,
-			}))
+				..default()
+			})
 			.set_parent(contact)
 			.id();
 
@@ -111,12 +116,13 @@ mod tests {
 		));
 
 		assert_eq!(
-			Some(&GroundTargetedAoe::<Contact>::new(Args {
+			Some(&GroundTargetedAoe::<Contact> {
 				caster: caster_transform,
 				target_ray,
 				max_range: Units::new(20.),
 				radius: Units::new(8.),
-			})),
+				..default()
+			}),
 			app.world()
 				.entity(contact)
 				.get::<GroundTargetedAoe<Contact>>()

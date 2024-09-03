@@ -1,7 +1,7 @@
 use crate::components::effected_by_gravity::{EffectedByGravity, Pull};
 use bevy::{
 	math::Vec3,
-	prelude::{Bundle, Commands, Entity, In, Query, Transform},
+	prelude::{Bundle, Commands, Entity, GlobalTransform, In, Query, Transform},
 };
 use bevy_rapier3d::prelude::Velocity;
 use common::{
@@ -14,7 +14,10 @@ pub(crate) fn gravity_pull(
 	In(delta): In<Duration>,
 	mut commands: Commands,
 	mut agents: Query<(Entity, &Transform, &mut EffectedByGravity)>,
+	transforms: Query<&GlobalTransform>,
 ) {
+	let get_transform = |pull: &Pull| Some(transforms.get(pull.towards).ok()?.translation());
+
 	for (entity, transform, mut effected_by_gravity) in &mut agents {
 		if effected_by_gravity.pulls.is_empty() {
 			commands.try_remove_from::<Immobilized>(entity);
@@ -25,7 +28,7 @@ pub(crate) fn gravity_pull(
 		let velocity = effected_by_gravity
 			.pulls
 			.drain(..)
-			.map(get_pull_vector(position, delta))
+			.filter_map(get_pull_vector(position, delta, &get_transform))
 			.reduce(|a, b| a + b)
 			.map(Velocity::linear);
 
@@ -37,14 +40,19 @@ pub(crate) fn gravity_pull(
 	}
 }
 
-fn get_pull_vector(position: Vec3, delta: Duration) -> impl Fn(Pull) -> Vec3 {
+fn get_pull_vector(
+	position: Vec3,
+	delta: Duration,
+	get_transform: &impl Fn(&Pull) -> Option<Vec3>,
+) -> impl Fn(Pull) -> Option<Vec3> + '_ {
 	move |pull| {
-		let direction = pull.towards - position;
+		let direction = get_transform(&pull)? - position;
 		let pull_strength = *pull.strength;
+
 		if would_overshoot(direction, pull_strength, delta) {
-			direction
+			Some(direction)
 		} else {
-			direction.normalize() * pull_strength
+			Some(direction.normalize() * pull_strength)
 		}
 	}
 }
@@ -76,6 +84,12 @@ mod tests {
 	#[test]
 	fn add_forced_movement_for_single_pull() {
 		let mut app = setup();
+		let towards = app
+			.world_mut()
+			.spawn(GlobalTransform::from(Transform::from_translation(
+				Vec3::new(0., 0., 3.),
+			)))
+			.id();
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -83,7 +97,7 @@ mod tests {
 				EffectedByGravity {
 					pulls: vec![Pull {
 						strength: UnitsPerSecond::new(2.),
-						towards: Vec3::new(0., 0., 3.),
+						towards,
 					}],
 				},
 			))
@@ -105,6 +119,18 @@ mod tests {
 	#[test]
 	fn add_forced_movement_for_multiple_pulls() {
 		let mut app = setup();
+		let towards_a = app
+			.world_mut()
+			.spawn(GlobalTransform::from(Transform::from_translation(
+				Vec3::new(0., 0., 3.),
+			)))
+			.id();
+		let towards_b = app
+			.world_mut()
+			.spawn(GlobalTransform::from(Transform::from_translation(
+				Vec3::new(-2., 0., 0.),
+			)))
+			.id();
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -113,11 +139,11 @@ mod tests {
 					pulls: vec![
 						Pull {
 							strength: UnitsPerSecond::new(2.),
-							towards: Vec3::new(0., 0., 3.),
+							towards: towards_a,
 						},
 						Pull {
 							strength: UnitsPerSecond::new(3.),
-							towards: Vec3::new(-2., 0., 0.),
+							towards: towards_b,
 						},
 					],
 				},
@@ -164,6 +190,18 @@ mod tests {
 	#[test]
 	fn empty_pulls_array() {
 		let mut app = setup();
+		let towards_a = app
+			.world_mut()
+			.spawn(GlobalTransform::from(Transform::from_translation(
+				Vec3::new(0., 0., 3.),
+			)))
+			.id();
+		let towards_b = app
+			.world_mut()
+			.spawn(GlobalTransform::from(Transform::from_translation(
+				Vec3::new(-2., 0., 0.),
+			)))
+			.id();
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -172,11 +210,11 @@ mod tests {
 					pulls: vec![
 						Pull {
 							strength: UnitsPerSecond::new(2.),
-							towards: Vec3::new(0., 0., 3.),
+							towards: towards_a,
 						},
 						Pull {
 							strength: UnitsPerSecond::new(3.),
-							towards: Vec3::new(-2., 0., 0.),
+							towards: towards_b,
 						},
 					],
 				},
@@ -215,6 +253,12 @@ mod tests {
 	#[test]
 	fn use_direction_length_when_pull_times_delta_exceed_direction_length() {
 		let mut app = setup();
+		let towards = app
+			.world_mut()
+			.spawn(GlobalTransform::from(Transform::from_translation(
+				Vec3::new(0., 0., 4.),
+			)))
+			.id();
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -222,7 +266,7 @@ mod tests {
 				EffectedByGravity {
 					pulls: vec![Pull {
 						strength: UnitsPerSecond::new(10.),
-						towards: Vec3::new(0., 0., 4.),
+						towards,
 					}],
 				},
 			))
@@ -244,6 +288,12 @@ mod tests {
 	#[test]
 	fn use_pull_strength_when_pull_times_delta_do_not_exceed_direction_length() {
 		let mut app = setup();
+		let towards = app
+			.world_mut()
+			.spawn(GlobalTransform::from(Transform::from_translation(
+				Vec3::new(0., 0., 4.),
+			)))
+			.id();
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -251,7 +301,7 @@ mod tests {
 				EffectedByGravity {
 					pulls: vec![Pull {
 						strength: UnitsPerSecond::new(10.),
-						towards: Vec3::new(0., 0., 4.),
+						towards,
 					}],
 				},
 			))

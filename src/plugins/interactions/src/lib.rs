@@ -30,7 +30,7 @@ use systems::{
 	destroy_dead::set_dead_to_be_destroyed,
 	gravity_pull::gravity_pull,
 	interactions::{
-		act_on_interaction::act_on_interaction,
+		act_interaction::act_interaction,
 		add_component::add_component_to,
 		apply_fragile_blocks::apply_fragile_blocks,
 		delay::delay,
@@ -63,7 +63,6 @@ impl Plugin for InteractionsPlugin {
 			.add_interaction::<Gravity, EffectedByGravity>()
 			.add_systems(processing_label.clone(), set_dead_to_be_destroyed)
 			.add_systems(processing_label.clone(), BlockerInsertCommand::system)
-			.add_systems(processing_label.clone(), Gravity::set_transform)
 			.add_systems(processing_label.clone(), apply_fragile_blocks)
 			.add_systems(
 				processing_label.clone(),
@@ -103,7 +102,7 @@ impl AddInteraction for App {
 			(
 				add_component_to::<TActor, InteractingEntities>,
 				add_component_to::<TActor, ActedOnTargets<TActor>>,
-				delta.pipe(act_on_interaction::<TActor, TTarget>),
+				delta.pipe(act_interaction::<TActor, TTarget>),
 				untrack_non_interacting_targets::<TActor>,
 				delta.pipe(delay::<TActor, TTarget>),
 			)

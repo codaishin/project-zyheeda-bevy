@@ -29,7 +29,7 @@ use prefabs::traits::{GetOrCreateAssets, Instantiate};
 
 #[derive(Component, Debug, PartialEq, Clone)]
 pub struct GroundTargetedAoe<T> {
-	phantom_data: PhantomData<T>,
+	pub phantom_data: PhantomData<T>,
 	pub caster: Transform,
 	pub target_ray: Ray3d,
 	pub max_range: Units,
@@ -51,23 +51,6 @@ pub struct Args {
 }
 
 impl<T> GroundTargetedAoe<T> {
-	pub fn new(
-		Args {
-			caster,
-			target_ray,
-			max_range,
-			radius,
-		}: Args,
-	) -> Self {
-		GroundTargetedAoe {
-			phantom_data: PhantomData,
-			caster,
-			target_ray,
-			max_range,
-			radius,
-		}
-	}
-
 	fn intersect_ground_plane(self: &GroundTargetedAoe<T>) -> Option<f32> {
 		self.target_ray
 			.intersect_plane(Vec3::ZERO, InfinitePlane3d::new(Vec3::Y))
@@ -90,10 +73,10 @@ trait ColliderComponents {
 	fn collider_components(&self) -> Result<impl Bundle, Error>;
 }
 
-impl<T> Default for GroundTargetedAoe<T> {
+impl<T: Default> Default for GroundTargetedAoe<T> {
 	fn default() -> Self {
 		Self {
-			phantom_data: PhantomData,
+			phantom_data: default(),
 			caster: default(),
 			target_ray: GroundTargetedAoe::DEFAULT_TARGET_RAY,
 			max_range: default(),
@@ -102,12 +85,7 @@ impl<T> Default for GroundTargetedAoe<T> {
 	}
 }
 
-impl<T> Instantiate for GroundTargetedAoe<T>
-where
-	T: Sync + Send + 'static,
-	for<'a> Transform: From<&'a GroundTargetedAoe<T>>,
-	GroundTargetedAoe<T>: ColliderComponents,
-{
+impl Instantiate for GroundTargetedAoe<Contact> {
 	fn instantiate(
 		&self,
 		on: &mut EntityCommands,
@@ -118,10 +96,10 @@ where
 		let collider = self.collider_components()?;
 
 		on.try_insert(PbrBundle {
-			mesh: assets.get_or_create_for::<GroundTargetedAoe<T>>(|| {
+			mesh: assets.get_or_create_for::<GroundTargetedAoe<Contact>>(|| {
 				Mesh::from(Sphere::new(*self.radius))
 			}),
-			material: assets.get_or_create_for::<GroundTargetedAoe<T>>(|| StandardMaterial {
+			material: assets.get_or_create_for::<GroundTargetedAoe<Contact>>(|| StandardMaterial {
 				base_color,
 				emissive,
 				alpha_mode: AlphaMode::Add,
@@ -133,6 +111,16 @@ where
 		.with_children(|parent| {
 			parent.spawn((ColliderRoot(parent.parent_entity()), collider));
 		});
+
+		Ok(())
+	}
+}
+
+impl Instantiate for GroundTargetedAoe<Projection> {
+	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
+		let collider = self.collider_components()?;
+
+		on.try_insert(collider);
 
 		Ok(())
 	}
@@ -165,10 +153,9 @@ impl ColliderComponents for GroundTargetedAoe<Projection> {
 impl ColliderComponents for GroundTargetedAoe<Contact> {
 	fn collider_components(&self) -> Result<impl Bundle, Error> {
 		let transform = Transform::default().with_rotation(Quat::from_axis_angle(Vec3::X, PI / 2.));
-		let annulus = Annulus::new(*self.radius - 0.1, *self.radius + 0.1);
-		let torus = Extrusion::new(annulus, 2.);
-		let collider =
-			Collider::from_bevy_mesh(&Mesh::from(torus), &ComputedColliderShape::TriMesh);
+		let ring = Annulus::new(*self.radius - 0.1, *self.radius + 0.1);
+		let torus = Mesh::from(Extrusion::new(ring, 2.));
+		let collider = Collider::from_bevy_mesh(&torus, &ComputedColliderShape::TriMesh);
 
 		let Some(collider) = collider else {
 			return Err(Error {
@@ -192,6 +179,7 @@ mod tests {
 	use bevy::math::{Ray3d, Vec3};
 	use common::{tools::Units, traits::clamp_zero_positive::ClampZeroPositive};
 
+	#[derive(Default)]
 	struct _T;
 
 	#[test]

@@ -14,7 +14,7 @@ pub enum ActionType {
 }
 
 pub trait ActOn<TTarget> {
-	fn act_on(&mut self, target: &mut TTarget, delta: Duration) -> ActionType;
+	fn act(&mut self, self_entity: Entity, target: &mut TTarget, delta: Duration) -> ActionType;
 }
 
 pub trait FromCollisionEvent {
