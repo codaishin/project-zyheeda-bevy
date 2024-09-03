@@ -61,7 +61,7 @@ mod tests {
 	struct _Target;
 
 	impl ActOn<_Target> for _Actor {
-		fn act_on(&mut self, _: &mut _Target, _: Duration) -> ActionType {
+		fn act(&mut self, _: Entity, _: &mut _Target, _: Duration) -> ActionType {
 			ActionType::Always
 		}
 	}

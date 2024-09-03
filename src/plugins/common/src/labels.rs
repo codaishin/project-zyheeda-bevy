@@ -1,5 +1,5 @@
 use bevy::{
-	app::{FixedPostUpdate, FixedPreUpdate, FixedUpdate},
+	app::{FixedPostUpdate, FixedPreUpdate, FixedUpdate, Last},
 	ecs::schedule::ScheduleLabel,
 	prelude::Res,
 	time::{Fixed, Time},
@@ -18,6 +18,7 @@ impl Labels {
 	label!(INSTANTIATION, FixedPreUpdate);
 	label!(PROCESSING, FixedUpdate);
 	label!(PROPAGATION, FixedPostUpdate);
+	label!(LAST, Last);
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]

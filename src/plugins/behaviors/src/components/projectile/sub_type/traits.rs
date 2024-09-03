@@ -19,12 +19,13 @@ pub(super) trait ProjectileTypeParameters {
 	fn emissive() -> (Color, Intensity);
 }
 
-pub(super) trait Spawn {
-	fn spawn(parent: &mut ChildBuilder, assets: &mut impl GetOrCreateAssets);
+pub(super) trait ProjectileSubtype {
+	fn spawn_contact(self, parent: &mut ChildBuilder, assets: &mut impl GetOrCreateAssets);
+	fn spawn_projection(self, parent: &mut ChildBuilder);
 }
 
-impl<T: ProjectileTypeParameters + 'static> Spawn for T {
-	fn spawn(parent: &mut ChildBuilder, assets: &mut impl GetOrCreateAssets) {
+impl<T: ProjectileTypeParameters + 'static> ProjectileSubtype for T {
+	fn spawn_contact(self, parent: &mut ChildBuilder, assets: &mut impl GetOrCreateAssets) {
 		let transform = Transform::from_translation(Vec3::ZERO);
 		let radius = *T::radius();
 		let (emissive_color, emissive_intensity) = T::emissive();
@@ -56,5 +57,13 @@ impl<T: ProjectileTypeParameters + 'static> Spawn for T {
 			},
 			..default()
 		});
+	}
+
+	fn spawn_projection(self, parent: &mut ChildBuilder) {
+		parent.spawn((
+			ColliderTransformBundle::new_static_collider(default(), Collider::ball(*T::radius())),
+			Sensor,
+			ColliderRoot(parent.parent_entity()),
+		));
 	}
 }

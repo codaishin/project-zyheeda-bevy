@@ -1,4 +1,4 @@
-use bevy::{math::Vec3, prelude::Component};
+use bevy::prelude::{Component, Entity};
 use common::tools::UnitsPerSecond;
 
 #[derive(Component, Debug, PartialEq, Clone)]
@@ -9,5 +9,5 @@ pub struct EffectedByGravity {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Pull {
 	pub(crate) strength: UnitsPerSecond,
-	pub(crate) towards: Vec3,
+	pub(crate) towards: Entity,
 }

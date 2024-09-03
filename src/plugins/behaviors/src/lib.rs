@@ -20,16 +20,14 @@ use common::{
 	states::{GameRunning, MouseContext},
 };
 use components::{
-	ground_targeted_aoe::GroundTargetedAoe,
-	projectile::Projectile,
-	shield::Shield,
+	ground_targeted_aoe::{GroundTargetedAoeContact, GroundTargetedAoeProjection},
+	projectile::{ProjectileContact, ProjectileProjection},
+	shield::{ShieldContact, ShieldProjection},
 	Beam,
 	CamOrbit,
-	Contact,
 	Movement,
 	MovementConfig,
 	PositionBased,
-	Projection,
 	VelocityBased,
 	VoidSphere,
 };
@@ -61,12 +59,14 @@ pub struct BehaviorsPlugin;
 impl Plugin for BehaviorsPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_event::<MoveInputEvent>()
-			.register_prefab::<Projectile>()
 			.register_prefab::<VoidSphere>()
 			.register_prefab::<Beam>()
-			.register_prefab::<Shield>()
-			.register_prefab::<GroundTargetedAoe<Projection>>()
-			.register_prefab::<GroundTargetedAoe<Contact>>()
+			.register_prefab::<ProjectileContact>()
+			.register_prefab::<ProjectileProjection>()
+			.register_prefab::<ShieldContact>()
+			.register_prefab::<ShieldProjection>()
+			.register_prefab::<GroundTargetedAoeContact>()
+			.register_prefab::<GroundTargetedAoeProjection>()
 			.add_systems(
 				Update,
 				(trigger_move_input_event::<CamRay>, move_player_on_event)
@@ -113,7 +113,7 @@ impl Plugin for BehaviorsPlugin {
 					>,
 				),
 			)
-			.add_systems(Update, projectile_behavior::<Projectile>)
+			.add_systems(Update, projectile_behavior::<ProjectileContact>)
 			.add_systems(Update, (enemy, chase::<MovementConfig>, attack).chain())
 			.add_systems(Update, execute_beam)
 			.add_systems(Update, position_force_shield);

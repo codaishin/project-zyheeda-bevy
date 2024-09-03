@@ -9,42 +9,26 @@
 	},
 	"behavior": {
 		"OnActive": {
-			"contact": {
-				"spawn": {
-					"GroundTargetedAoe": {
-						"lifetime": {
-							"UntilOutlived": {
-								"secs": 5,
-								"nanos": 0
-							}
-						},
-						"max_range": 10,
-						"radius": 2
-					}
-				},
-				"start": []
-			},
-			"projection": {
-				"spawn": {
-					"GroundTargetedAoe": {
-						"lifetime": {
-							"UntilOutlived": {
-								"secs": 5,
-								"nanos": 0
-							}
-						},
-						"max_range": 10,
-						"radius": 2
-					}
-				},
-				"start": [
-					{
-						"Gravity": {
-							"strength": 2
+			"shape": {
+				"GroundTargetedAoe": {
+					"lifetime": {
+						"UntilOutlived": {
+							"secs": 5,
+							"nanos": 0
 						}
+					},
+					"max_range": 10,
+					"radius": 2
+				}
+			},
+			"contact": [],
+			"projection": [
+				{
+					"Gravity": {
+						"strength": 2
 					}
-				]
-			}
+				}
+			]
 		}
 	},
 	"is_usable_with": [

@@ -1,4 +1,4 @@
-use crate::components::shield::Shield;
+use crate::components::shield::ShieldContact;
 use bevy::{
 	ecs::system::Query,
 	math::Vec3,
@@ -6,7 +6,7 @@ use bevy::{
 };
 
 pub(crate) fn position_force_shield(
-	mut force_shields: Query<(&Shield, &mut Transform)>,
+	mut force_shields: Query<(&ShieldContact, &mut Transform)>,
 	transforms: Query<&GlobalTransform>,
 ) {
 	for (force_shield, mut transform) in &mut force_shields {
@@ -42,7 +42,7 @@ mod tests {
 			.id();
 		let agent = app
 			.world_mut()
-			.spawn((Shield { location }, Transform::default()))
+			.spawn((ShieldContact { location }, Transform::default()))
 			.id();
 
 		app.update();
@@ -66,7 +66,7 @@ mod tests {
 			.id();
 		let agent = app
 			.world_mut()
-			.spawn((Shield { location }, Transform::default()))
+			.spawn((ShieldContact { location }, Transform::default()))
 			.id();
 
 		app.update();
@@ -90,7 +90,7 @@ mod tests {
 			.id();
 		let agent = app
 			.world_mut()
-			.spawn((Shield { location }, Transform::default()))
+			.spawn((ShieldContact { location }, Transform::default()))
 			.id();
 
 		app.update();

@@ -1,6 +1,6 @@
 use super::ActOn;
 use crate::traits::ActionType;
-use bevy::prelude::Component;
+use bevy::prelude::{Component, Entity};
 use common::components::Health;
 use std::time::Duration;
 
@@ -22,7 +22,7 @@ impl DealsDamage {
 }
 
 impl ActOn<Health> for DealsDamage {
-	fn act_on(&mut self, health: &mut Health, delta: Duration) -> ActionType {
+	fn act(&mut self, _: Entity, health: &mut Health, delta: Duration) -> ActionType {
 		let DealsDamage(damage, action_type) = *self;
 
 		health.current -= match action_type {
@@ -43,7 +43,11 @@ mod tests {
 		let mut damage = DealsDamage::once(42.);
 		let mut health = Health::new(100.);
 
-		damage.act_on(&mut health, Duration::from_millis(100));
+		damage.act(
+			Entity::from_raw(11),
+			&mut health,
+			Duration::from_millis(100),
+		);
 
 		assert_eq!(
 			Health {
@@ -59,7 +63,7 @@ mod tests {
 		let mut damage = DealsDamage::once(42.);
 		let mut health = Health::new(100.);
 
-		let action_type = damage.act_on(&mut health, Duration::from_secs(1));
+		let action_type = damage.act(Entity::from_raw(11), &mut health, Duration::from_secs(1));
 
 		assert_eq!(ActionType::Once, action_type);
 	}
@@ -69,7 +73,11 @@ mod tests {
 		let mut damage = DealsDamage::once_per_target(42.);
 		let mut health = Health::new(100.);
 
-		damage.act_on(&mut health, Duration::from_millis(100));
+		damage.act(
+			Entity::from_raw(11),
+			&mut health,
+			Duration::from_millis(100),
+		);
 
 		assert_eq!(
 			Health {
@@ -85,7 +93,7 @@ mod tests {
 		let mut damage = DealsDamage::once_per_target(42.);
 		let mut health = Health::new(100.);
 
-		let action_type = damage.act_on(&mut health, Duration::from_secs(1));
+		let action_type = damage.act(Entity::from_raw(11), &mut health, Duration::from_secs(1));
 
 		assert_eq!(ActionType::OncePerTarget, action_type);
 	}
@@ -95,7 +103,11 @@ mod tests {
 		let mut damage = DealsDamage::once_per_second(42.);
 		let mut health = Health::new(100.);
 
-		damage.act_on(&mut health, Duration::from_millis(100));
+		damage.act(
+			Entity::from_raw(11),
+			&mut health,
+			Duration::from_millis(100),
+		);
 
 		assert_eq!(
 			Health {
@@ -111,7 +123,7 @@ mod tests {
 		let mut damage = DealsDamage::once_per_second(42.);
 		let mut health = Health::new(100.);
 
-		let action_type = damage.act_on(&mut health, Duration::from_secs(1));
+		let action_type = damage.act(Entity::from_raw(11), &mut health, Duration::from_secs(1));
 
 		assert_eq!(ActionType::Always, action_type);
 	}

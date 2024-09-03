@@ -2,18 +2,16 @@ pub mod shoot_hand_gun;
 pub mod skill_data;
 
 use crate::{
-	behaviors::Behavior,
+	behaviors::{build_skill_shape::BuildSkillShape, SkillBehaviorConfig},
 	items::{slot_key::SlotKey, ItemType},
 	traits::{Matches, Prime},
 };
 use animations::animation::Animation;
-use behaviors::components::{Contact, Projection};
 use bevy::{
 	asset::{Asset, Handle},
 	math::{Dir3, Ray3d, Vec3},
 	prelude::Image,
 	reflect::TypePath,
-	utils::default,
 };
 use common::resources::ColliderInfo;
 use std::{
@@ -41,7 +39,7 @@ pub struct Skill {
 	pub name: String,
 	pub active: Duration,
 	pub animate: Animate<SkillAnimation>,
-	pub behavior: SkillBehavior,
+	pub behavior: RunSkillBehavior,
 	pub is_usable_with: HashSet<ItemType>,
 	pub icon: Option<Handle<Image>>,
 }
@@ -143,19 +141,13 @@ pub(crate) enum SkillState {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub enum SkillBehavior {
-	OnActive(SkillBehaviors),
-	OnAim(SkillBehaviors),
+pub enum RunSkillBehavior {
+	OnActive(SkillBehaviorConfig),
+	OnAim(SkillBehaviorConfig),
 }
 
-impl Default for SkillBehavior {
+impl Default for RunSkillBehavior {
 	fn default() -> Self {
-		Self::OnActive(default())
+		Self::OnActive(SkillBehaviorConfig::from_shape(BuildSkillShape::NO_SHAPE))
 	}
-}
-
-#[derive(PartialEq, Debug, Clone, Default)]
-pub struct SkillBehaviors {
-	pub contact: Behavior<Contact>,
-	pub projection: Behavior<Projection>,
 }

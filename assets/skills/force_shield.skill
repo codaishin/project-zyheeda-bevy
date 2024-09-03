@@ -9,22 +9,15 @@
 	},
 	"behavior": {
 		"OnAim": {
-			"contact": {
-				"spawn": {
-					"Shield": {
-						"stoppable": true
-					}
-				},
-				"start": [
-					{
-						"Force": null
-					}
-				]
+			"shape": {
+				"Shield": null
 			},
-			"projection": {
-				"spawn": "Placeholder",
-				"start": []
-			}
+			"contact": [
+				{
+					"Force": null
+				}
+			],
+			"projection": []
 		}
 	},
 	"is_usable_with": [

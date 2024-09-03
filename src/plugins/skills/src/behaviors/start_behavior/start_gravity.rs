@@ -17,7 +17,9 @@ impl StartGravity {
 		_: &SkillSpawner,
 		_: &Target,
 	) {
-		entity.try_insert(Gravity::pull(self.strength));
+		entity.try_insert(Gravity {
+			strength: self.strength,
+		});
 	}
 }
 
@@ -58,8 +60,10 @@ mod tests {
 			.run_system_once_with(UnitsPerSecond::new(83.), gravity);
 
 		assert_eq!(
-			Some(&Gravity::pull(UnitsPerSecond::new(83.))),
-			app.world().entity(entity).get::<Gravity<()>>()
+			Some(&Gravity {
+				strength: UnitsPerSecond::new(83.)
+			}),
+			app.world().entity(entity).get::<Gravity>()
 		);
 	}
 }

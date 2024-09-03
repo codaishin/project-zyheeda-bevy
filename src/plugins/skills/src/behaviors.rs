@@ -1,15 +1,15 @@
-pub mod spawn_behavior;
+pub mod build_skill_shape;
 pub mod start_behavior;
 
-use crate::skills::SelectInfo;
+use crate::{skills::SelectInfo, traits::skill_builder::SkillShape};
 use bevy::{
 	ecs::system::EntityCommands,
 	math::Ray3d,
 	prelude::{default, Commands, Entity, GlobalTransform},
 };
+use build_skill_shape::BuildSkillShape;
 use common::{components::Outdated, resources::ColliderInfo};
-use spawn_behavior::{OnSkillStop, SpawnBehavior};
-use start_behavior::StartBehavior;
+use start_behavior::SkillBehavior;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct SkillSpawner(pub Entity, pub GlobalTransform);
@@ -69,59 +69,67 @@ impl Target {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub struct Behavior<T: Sync + Send + 'static> {
-	spawn: SpawnBehavior<T>,
-	start: Vec<StartBehavior>,
+pub struct SkillBehaviorConfig {
+	shape: BuildSkillShape,
+	contact: Vec<SkillBehavior>,
+	projection: Vec<SkillBehavior>,
 }
 
-impl<T: Sync + Send + 'static> Default for Behavior<T> {
-	fn default() -> Self {
+impl SkillBehaviorConfig {
+	pub(crate) fn from_shape(shape: BuildSkillShape) -> Self {
 		Self {
-			spawn: SpawnBehavior::Fn(|commands, _, _, _| {
-				(commands.spawn_empty(), OnSkillStop::Ignore)
-			}),
-			start: Default::default(),
-		}
-	}
-}
-
-impl<T: Default + Sync + Send + 'static> Behavior<T> {
-	pub fn new() -> Self {
-		Self::default()
-	}
-
-	pub fn with_spawn(self, spawn: SpawnBehavior<T>) -> Self {
-		Self {
-			spawn,
-			start: self.start,
+			shape,
+			contact: vec![],
+			projection: vec![],
 		}
 	}
 
-	pub fn with_start(self, start: Vec<StartBehavior>) -> Self {
+	pub(crate) fn with_contact_behaviors(self, contact: Vec<SkillBehavior>) -> Self {
 		Self {
-			spawn: self.spawn,
-			start,
+			shape: self.shape,
+			contact,
+			projection: self.projection,
 		}
 	}
 
-	pub fn spawn<'a>(
+	pub(crate) fn with_projection_behaviors(self, projection: Vec<SkillBehavior>) -> Self {
+		Self {
+			shape: self.shape,
+			contact: self.contact,
+			projection,
+		}
+	}
+
+	pub(crate) fn spawn_shape(
 		&self,
-		commands: &'a mut Commands,
+		commands: &mut Commands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
-	) -> (EntityCommands<'a>, OnSkillStop) {
-		self.spawn.apply(commands, caster, spawner, target)
+	) -> SkillShape {
+		self.shape.build(commands, caster, spawner, target)
 	}
 
-	pub fn start(
+	pub(crate) fn start_contact_behavior(
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
 	) {
-		for start in &self.start {
+		for start in &self.contact {
+			start.apply(entity, caster, spawner, target);
+		}
+	}
+
+	pub(crate) fn start_projection_behavior(
+		&self,
+		entity: &mut EntityCommands,
+		caster: &SkillCaster,
+		spawner: &SkillSpawner,
+		target: &Target,
+	) {
+		for start in &self.projection {
 			start.apply(entity, caster, spawner, target);
 		}
 	}

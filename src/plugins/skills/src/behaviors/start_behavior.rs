@@ -8,17 +8,19 @@ use force::StartForce;
 use start_deal_damage::StartDealingDamage;
 use start_gravity::StartGravity;
 
+#[cfg(test)]
 pub type StartBehaviorFn = fn(&mut EntityCommands, &SkillCaster, &SkillSpawner, &Target);
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum StartBehavior {
-	Fn(StartBehaviorFn),
+pub enum SkillBehavior {
 	Gravity(StartGravity),
 	Damage(StartDealingDamage),
 	Force(StartForce),
+	#[cfg(test)]
+	Fn(StartBehaviorFn),
 }
 
-impl StartBehavior {
+impl SkillBehavior {
 	pub fn apply(
 		&self,
 		entity: &mut EntityCommands,
@@ -27,10 +29,11 @@ impl StartBehavior {
 		target: &Target,
 	) {
 		match self {
-			StartBehavior::Fn(func) => func(entity, caster, spawn, target),
-			StartBehavior::Gravity(gr) => gr.apply(entity, caster, spawn, target),
-			StartBehavior::Damage(dm) => dm.apply(entity, caster, spawn, target),
-			StartBehavior::Force(fc) => fc.apply(entity, caster, spawn, target),
+			SkillBehavior::Gravity(gr) => gr.apply(entity, caster, spawn, target),
+			SkillBehavior::Damage(dm) => dm.apply(entity, caster, spawn, target),
+			SkillBehavior::Force(fc) => fc.apply(entity, caster, spawn, target),
+			#[cfg(test)]
+			SkillBehavior::Fn(func) => func(entity, caster, spawn, target),
 		}
 	}
 }
