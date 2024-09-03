@@ -11,12 +11,6 @@ use bevy::{
 use common::tools::UnitsPerSecond;
 use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
 
-#[derive(Default, Debug, PartialEq, Clone)]
-pub struct Contact;
-
-#[derive(Default, Debug, PartialEq, Clone)]
-pub struct Projection;
-
 #[derive(Component)]
 pub struct CamOrbit {
 	pub center: Vec3,

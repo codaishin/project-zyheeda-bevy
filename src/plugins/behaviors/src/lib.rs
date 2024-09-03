@@ -20,16 +20,14 @@ use common::{
 	states::{GameRunning, MouseContext},
 };
 use components::{
-	ground_targeted_aoe::GroundTargetedAoe,
+	ground_targeted_aoe::{GroundTargetedAoeContact, GroundTargetedAoeProjection},
 	projectile::Projectile,
 	shield::Shield,
 	Beam,
 	CamOrbit,
-	Contact,
 	Movement,
 	MovementConfig,
 	PositionBased,
-	Projection,
 	VelocityBased,
 	VoidSphere,
 };
@@ -65,8 +63,8 @@ impl Plugin for BehaviorsPlugin {
 			.register_prefab::<VoidSphere>()
 			.register_prefab::<Beam>()
 			.register_prefab::<Shield>()
-			.register_prefab::<GroundTargetedAoe<Projection>>()
-			.register_prefab::<GroundTargetedAoe<Contact>>()
+			.register_prefab::<GroundTargetedAoeContact>()
+			.register_prefab::<GroundTargetedAoeProjection>()
 			.add_systems(
 				Update,
 				(trigger_move_input_event::<CamRay>, move_player_on_event)
