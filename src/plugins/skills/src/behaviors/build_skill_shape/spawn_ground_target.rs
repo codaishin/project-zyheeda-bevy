@@ -1,6 +1,6 @@
 use crate::{
 	behaviors::{SkillCaster, SkillSpawner, Target},
-	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
+	traits::skill_builder::{BuildContact, BuildProjection, LifeTimeDefinition, SkillLifetime},
 };
 use behaviors::components::ground_targeted_aoe::{
 	GroundTargetedAoeContact,
@@ -9,18 +9,10 @@ use behaviors::components::ground_targeted_aoe::{
 use bevy::prelude::{Bundle, Transform};
 use common::tools::Units;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
-
-#[derive(Default, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub enum LifeTimeData {
-	#[default]
-	UntilStopped,
-	UntilOutlived(Duration),
-}
 
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct SpawnGroundTargetedAoe {
-	pub lifetime: LifeTimeData,
+	pub lifetime: LifeTimeDefinition,
 	pub max_range: Units,
 	pub radius: Units,
 }
@@ -53,7 +45,7 @@ impl BuildProjection for SpawnGroundTargetedAoe {
 }
 
 impl SkillLifetime for SpawnGroundTargetedAoe {
-	fn lifetime(&self) -> LifeTimeData {
+	fn lifetime(&self) -> LifeTimeDefinition {
 		self.lifetime
 	}
 }

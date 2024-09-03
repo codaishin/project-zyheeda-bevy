@@ -1,14 +1,11 @@
-use crate::behaviors::{
-	build_skill_shape::{spawn_ground_target::LifeTimeData, OnSkillStop},
-	SkillCaster,
-	SkillSpawner,
-	Target,
-};
+use crate::behaviors::{build_skill_shape::OnSkillStop, SkillCaster, SkillSpawner, Target};
 use behaviors::components::LifeTime;
 use bevy::{
 	ecs::system::EntityCommands,
 	prelude::{BuildChildren, Bundle, Commands, Entity},
 };
+use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 pub(crate) trait BuildContact {
 	fn build_contact(
@@ -28,8 +25,16 @@ pub(crate) trait BuildProjection {
 	) -> impl Bundle;
 }
 
+#[derive(Default, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub enum LifeTimeDefinition {
+	#[default]
+	UntilStopped,
+	Infinite,
+	UntilOutlived(Duration),
+}
+
 pub(crate) trait SkillLifetime {
-	fn lifetime(&self) -> LifeTimeData;
+	fn lifetime(&self) -> LifeTimeDefinition;
 }
 
 pub(crate) struct SkillShape {
@@ -61,8 +66,9 @@ where
 	) -> SkillShape {
 		let contact = commands.spawn(self.build_contact(caster, spawner, target));
 		let (contact, on_skill_stop) = match self.lifetime() {
-			LifeTimeData::UntilStopped => stoppable_contact(contact),
-			LifeTimeData::UntilOutlived(duration) => unstoppable_contact(contact, duration),
+			LifeTimeDefinition::UntilStopped => stoppable_contact(contact),
+			LifeTimeDefinition::UntilOutlived(duration) => lifetime_contact(contact, duration),
+			LifeTimeDefinition::Infinite => infinite_contact(contact),
 		};
 		let projection = commands
 			.spawn(self.build_projection(caster, spawner, target))
@@ -82,7 +88,7 @@ fn stoppable_contact(contact: EntityCommands) -> (Entity, OnSkillStop) {
 	(contact, OnSkillStop::Stop(contact))
 }
 
-fn unstoppable_contact(
+fn lifetime_contact(
 	mut contact: EntityCommands<'_>,
 	duration: std::time::Duration,
 ) -> (Entity, OnSkillStop) {
@@ -90,10 +96,13 @@ fn unstoppable_contact(
 	(contact.id(), OnSkillStop::Ignore)
 }
 
+fn infinite_contact(contact: EntityCommands) -> (Entity, OnSkillStop) {
+	let contact = contact.id();
+	(contact, OnSkillStop::Ignore)
+}
+
 #[cfg(test)]
 mod tests {
-	use std::time::Duration;
-
 	use super::*;
 	use bevy::{
 		app::App,
@@ -102,6 +111,7 @@ mod tests {
 		prelude::{Commands, Component, GlobalTransform, In, Parent, Transform},
 		utils::default,
 	};
+	use std::time::Duration;
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Contact {
@@ -118,11 +128,11 @@ mod tests {
 	}
 
 	struct _Skill {
-		lifetime: LifeTimeData,
+		lifetime: LifeTimeDefinition,
 	}
 
 	impl SkillLifetime for _Skill {
-		fn lifetime(&self) -> LifeTimeData {
+		fn lifetime(&self) -> LifeTimeDefinition {
 			self.lifetime
 		}
 	}
@@ -173,7 +183,7 @@ mod tests {
 	fn spawn_contact() {
 		let mut app = setup();
 		let skill = _Skill {
-			lifetime: LifeTimeData::UntilStopped,
+			lifetime: LifeTimeDefinition::UntilStopped,
 		};
 		let caster = SkillCaster(
 			Entity::from_raw(42),
@@ -206,7 +216,7 @@ mod tests {
 	fn spawn_projection() {
 		let mut app = setup();
 		let skill = _Skill {
-			lifetime: LifeTimeData::UntilStopped,
+			lifetime: LifeTimeDefinition::UntilStopped,
 		};
 		let caster = SkillCaster(
 			Entity::from_raw(42),
@@ -239,7 +249,7 @@ mod tests {
 	fn projection_is_child_of_contact() {
 		let mut app = setup();
 		let skill = _Skill {
-			lifetime: LifeTimeData::UntilStopped,
+			lifetime: LifeTimeDefinition::UntilStopped,
 		};
 		let caster = SkillCaster(
 			Entity::from_raw(42),
@@ -271,7 +281,7 @@ mod tests {
 	fn alive_until_stopped() {
 		let mut app = setup();
 		let skill = _Skill {
-			lifetime: LifeTimeData::UntilStopped,
+			lifetime: LifeTimeDefinition::UntilStopped,
 		};
 		let caster = SkillCaster(
 			Entity::from_raw(42),
@@ -294,10 +304,10 @@ mod tests {
 	}
 
 	#[test]
-	fn unstoppable() {
+	fn unstoppable_life_time() {
 		let mut app = setup();
 		let skill = _Skill {
-			lifetime: LifeTimeData::UntilOutlived(Duration::from_nanos(42)),
+			lifetime: LifeTimeDefinition::UntilOutlived(Duration::from_nanos(42)),
 		};
 		let caster = SkillCaster(
 			Entity::from_raw(42),
@@ -323,7 +333,7 @@ mod tests {
 	fn add_lifetime_to_unstoppable() {
 		let mut app = setup();
 		let skill = _Skill {
-			lifetime: LifeTimeData::UntilOutlived(Duration::from_nanos(42)),
+			lifetime: LifeTimeDefinition::UntilOutlived(Duration::from_nanos(42)),
 		};
 		let caster = SkillCaster(
 			Entity::from_raw(42),
@@ -346,5 +356,31 @@ mod tests {
 			Some(&LifeTime(Duration::from_nanos(42))),
 			app.world().entity(shape.contact).get::<LifeTime>()
 		);
+	}
+
+	#[test]
+	fn infinite_life_time() {
+		let mut app = setup();
+		let skill = _Skill {
+			lifetime: LifeTimeDefinition::Infinite,
+		};
+		let caster = SkillCaster(
+			Entity::from_raw(42),
+			GlobalTransform::from(Transform::from_xyz(1., 2., 3.)),
+		);
+		let spawner = SkillSpawner(
+			Entity::from_raw(43),
+			GlobalTransform::from(Transform::from_xyz(4., 5., 6.)),
+		);
+		let target = Target {
+			ray: Ray3d::new(Vec3::X, Vec3::Z),
+			..default()
+		};
+
+		let shape = app
+			.world_mut()
+			.run_system_once_with((skill, caster, spawner, target), build_skill);
+
+		assert_eq!(OnSkillStop::Ignore, shape.on_skill_stop)
 	}
 }

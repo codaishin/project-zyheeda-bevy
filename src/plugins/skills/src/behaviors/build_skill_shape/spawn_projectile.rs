@@ -1,7 +1,6 @@
-use super::spawn_ground_target::LifeTimeData;
 use crate::{
 	behaviors::{SkillCaster, SkillSpawner, Target},
-	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
+	traits::skill_builder::{BuildContact, BuildProjection, LifeTimeDefinition, SkillLifetime},
 };
 use behaviors::components::projectile::{
 	sub_type::SubType,
@@ -10,7 +9,6 @@ use behaviors::components::projectile::{
 };
 use bevy::prelude::{Bundle, SpatialBundle, Transform};
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct SpawnProjectile {
@@ -47,8 +45,7 @@ impl BuildProjection for SpawnProjectile {
 }
 
 impl SkillLifetime for SpawnProjectile {
-	fn lifetime(&self) -> LifeTimeData {
-		// FIXME: introduce infinite lifetime?
-		LifeTimeData::UntilOutlived(Duration::MAX)
+	fn lifetime(&self) -> LifeTimeDefinition {
+		LifeTimeDefinition::Infinite
 	}
 }
