@@ -53,7 +53,6 @@ impl Plugin for InteractionsPlugin {
 	fn build(&self, app: &mut App) {
 		let processing_label = Labels::PROCESSING.label();
 		let processing_delta = Labels::PROCESSING.delta();
-		let propagation_label = Labels::PROPAGATION.label();
 
 		app.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()
@@ -79,8 +78,8 @@ impl Plugin for InteractionsPlugin {
 				)
 					.chain(),
 			)
-			.add_systems(propagation_label.clone(), update_interacting_entities)
-			.add_systems(propagation_label.clone(), destroy);
+			.add_systems(Labels::PROPAGATION.label(), update_interacting_entities)
+			.add_systems(Labels::LAST.label(), destroy);
 	}
 }
 
