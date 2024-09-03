@@ -22,7 +22,7 @@ use common::{
 use components::{
 	ground_targeted_aoe::{GroundTargetedAoeContact, GroundTargetedAoeProjection},
 	projectile::{ProjectileContact, ProjectileProjection},
-	shield::Shield,
+	shield::{ShieldContact, ShieldProjection},
 	Beam,
 	CamOrbit,
 	Movement,
@@ -59,11 +59,12 @@ pub struct BehaviorsPlugin;
 impl Plugin for BehaviorsPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_event::<MoveInputEvent>()
-			.register_prefab::<ProjectileContact>()
-			.register_prefab::<ProjectileProjection>()
 			.register_prefab::<VoidSphere>()
 			.register_prefab::<Beam>()
-			.register_prefab::<Shield>()
+			.register_prefab::<ProjectileContact>()
+			.register_prefab::<ProjectileProjection>()
+			.register_prefab::<ShieldContact>()
+			.register_prefab::<ShieldProjection>()
 			.register_prefab::<GroundTargetedAoeContact>()
 			.register_prefab::<GroundTargetedAoeProjection>()
 			.add_systems(

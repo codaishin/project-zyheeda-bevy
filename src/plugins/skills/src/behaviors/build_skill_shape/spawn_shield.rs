@@ -3,7 +3,7 @@ use crate::{
 	behaviors::{SkillCaster, SkillSpawner, Target},
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
-use behaviors::components::shield::Shield;
+use behaviors::components::shield::{ShieldContact, ShieldProjection};
 use bevy::prelude::{Bundle, SpatialBundle, Transform};
 use serde::{Deserialize, Serialize};
 
@@ -15,7 +15,7 @@ impl BuildContact for SpawnShield {
 		let SkillSpawner(entity, transform) = spawner;
 
 		(
-			Shield { location: *entity },
+			ShieldContact { location: *entity },
 			SpatialBundle::from_transform(Transform::from(*transform)),
 		)
 	}
@@ -23,7 +23,7 @@ impl BuildContact for SpawnShield {
 
 impl BuildProjection for SpawnShield {
 	fn build_projection(&self, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> impl Bundle {
-		// FIXME: actually build something
+		ShieldProjection
 	}
 }
 
