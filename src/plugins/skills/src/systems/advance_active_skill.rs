@@ -1,5 +1,4 @@
 use crate::{
-	behaviors::SkillBehaviorConfig,
 	skills::{Animate, RunSkillBehavior, SkillState},
 	traits::{Flush, GetActiveSkill, GetAnimation, GetSkillBehavior, Schedule},
 };
@@ -119,16 +118,18 @@ fn animate<TAnimation, TAnimationDispatch: StartAnimation<TAnimation> + StopAnim
 	}
 }
 
-fn run_on_aim<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<SkillBehaviorConfig> {
-	match skill.behavior() {
-		RunSkillBehavior::OnAim(run) => Some(run),
+fn run_on_aim<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<RunSkillBehavior> {
+	let behavior = skill.behavior();
+	match &behavior {
+		RunSkillBehavior::OnAim(_) => Some(behavior),
 		_ => None,
 	}
 }
 
-fn run_on_active<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<SkillBehaviorConfig> {
-	match skill.behavior() {
-		RunSkillBehavior::OnActive(run) => Some(run),
+fn run_on_active<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<RunSkillBehavior> {
+	let behavior = skill.behavior();
+	match &behavior {
+		RunSkillBehavior::OnActive(_) => Some(behavior),
 		_ => None,
 	}
 }
@@ -136,7 +137,7 @@ fn run_on_active<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<SkillBehavi
 fn schedule_start<TSkillExecutor: Schedule, TSkill: GetSkillBehavior>(
 	executer: &mut TSkillExecutor,
 	skill: &TSkill,
-	get_start_fn: fn(&TSkill) -> Option<SkillBehaviorConfig>,
+	get_start_fn: fn(&TSkill) -> Option<RunSkillBehavior>,
 ) {
 	let Some(start_fn) = get_start_fn(skill) else {
 		return;
@@ -152,7 +153,11 @@ mod tests {
 			build_skill_shape::{BuildSkillShape, OnSkillStop},
 			SkillBehaviorConfig,
 		},
-		traits::{skill_builder::SkillShape, GetAnimation, GetSkillBehavior},
+		traits::{
+			skill_builder::{LifeTimeDefinition, SkillShape},
+			GetAnimation,
+			GetSkillBehavior,
+		},
 	};
 	use animations::traits::Priority;
 	use behaviors::components::{Face, OverrideFace};
@@ -269,7 +274,7 @@ mod tests {
 	}
 
 	impl Schedule for _Executor {
-		fn schedule(&mut self, start: SkillBehaviorConfig) {
+		fn schedule(&mut self, start: RunSkillBehavior) {
 			self.mock.schedule(start)
 		}
 	}
@@ -283,19 +288,27 @@ mod tests {
 	mock! {
 		_Executor {}
 		impl Schedule for _Executor {
-			fn schedule(&mut self, start: SkillBehaviorConfig);
+			fn schedule(&mut self, start: RunSkillBehavior);
 		}
 		impl Flush for _Executor {
 			fn flush(&mut self);
 		}
 	}
 
-	fn skill_behaviors() -> SkillBehaviorConfig {
-		SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|commands, _, _, _| SkillShape {
-			contact: commands.spawn_empty().id(),
-			projection: commands.spawn_empty().id(),
-			on_skill_stop: OnSkillStop::Ignore,
-		}))
+	fn skill_behavior<T>(
+		activation_type: impl Fn(SkillBehaviorConfig<T>) -> RunSkillBehavior,
+	) -> RunSkillBehavior
+	where
+		LifeTimeDefinition: From<T>,
+		T: Clone,
+	{
+		activation_type(SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
+			|commands, _, _, _| SkillShape {
+				contact: commands.spawn_empty().id(),
+				projection: commands.spawn_empty().id(),
+				on_skill_stop: OnSkillStop::Ignore,
+			},
+		)))
 	}
 
 	fn setup() -> (App, Entity) {
@@ -613,7 +626,7 @@ mod tests {
 				mock.expect_schedule()
 					.times(1)
 					.withf(|start| {
-						assert_eq!(start, &skill_behaviors());
+						assert_eq!(start, &skill_behavior(RunSkillBehavior::OnActive));
 						true
 					})
 					.return_const(());
@@ -628,7 +641,7 @@ mod tests {
 					);
 					skill
 						.expect_behavior()
-						.returning(|| RunSkillBehavior::OnActive(skill_behaviors()));
+						.returning(|| skill_behavior(RunSkillBehavior::OnActive));
 					skill
 				})),
 			},
@@ -646,7 +659,7 @@ mod tests {
 				mock.expect_schedule()
 					.times(1)
 					.withf(|start| {
-						assert_eq!(start, &skill_behaviors());
+						assert_eq!(start, &skill_behavior(RunSkillBehavior::OnAim));
 						true
 					})
 					.return_const(());
@@ -661,7 +674,7 @@ mod tests {
 					);
 					skill
 						.expect_behavior()
-						.returning(|| RunSkillBehavior::OnAim(skill_behaviors()));
+						.returning(|| skill_behavior(RunSkillBehavior::OnAim));
 					skill
 				})),
 			},

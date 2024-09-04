@@ -3,7 +3,7 @@ pub mod spawn_projectile;
 pub mod spawn_shield;
 
 use super::{SkillCaster, SkillSpawner, Target};
-use crate::traits::skill_builder::{SkillBuilder, SkillShape};
+use crate::traits::skill_builder::{LifeTimeDefinition, SkillBuilder, SkillShape};
 use bevy::prelude::{BuildChildren, Commands, Entity};
 use spawn_ground_target::SpawnGroundTargetedAoe;
 use spawn_projectile::SpawnProjectile;
@@ -19,14 +19,14 @@ pub enum OnSkillStop {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub(crate) enum BuildSkillShape {
+pub(crate) enum BuildSkillShape<T> {
 	Fn(BuildSkillShapeFn),
-	GroundTargetedAoe(SpawnGroundTargetedAoe),
+	GroundTargetedAoe(SpawnGroundTargetedAoe<T>),
 	Projectile(SpawnProjectile),
 	Shield(SpawnShield),
 }
 
-impl Default for BuildSkillShape {
+impl<T> Default for BuildSkillShape<T> {
 	fn default() -> Self {
 		Self::Fn(|commands, _, _, _| {
 			let contact = commands.spawn_empty().id();
@@ -40,8 +40,12 @@ impl Default for BuildSkillShape {
 	}
 }
 
-impl BuildSkillShape {
-	pub(crate) const NO_SHAPE: BuildSkillShape = BuildSkillShape::Fn(Self::no_shape);
+impl<TLifeTime> BuildSkillShape<TLifeTime>
+where
+	LifeTimeDefinition: From<TLifeTime>,
+	TLifeTime: Clone,
+{
+	pub(crate) const NO_SHAPE: BuildSkillShape<TLifeTime> = BuildSkillShape::Fn(Self::no_shape);
 
 	fn no_shape(
 		commands: &mut Commands,

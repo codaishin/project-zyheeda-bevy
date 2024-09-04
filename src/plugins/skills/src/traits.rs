@@ -9,7 +9,7 @@ pub(crate) mod state;
 pub(crate) mod swap_commands;
 
 use crate::{
-	behaviors::{SkillBehaviorConfig, SkillCaster, SkillSpawner, Target},
+	behaviors::{SkillCaster, SkillSpawner, Target},
 	components::slots::Slots,
 	items::slot_key::SlotKey,
 	skills::{Animate, RunSkillBehavior, Skill, SkillAnimation},
@@ -130,7 +130,7 @@ pub trait InputState<TMap: TryMapBackwards<TKey, SlotKey>, TKey: Eq + Hash> {
 }
 
 pub trait Schedule {
-	fn schedule(&mut self, shape: SkillBehaviorConfig);
+	fn schedule(&mut self, shape: RunSkillBehavior);
 }
 
 pub trait Execute {
