@@ -1,7 +1,10 @@
 pub mod build_skill_shape;
 pub mod start_behavior;
 
-use crate::{skills::SelectInfo, traits::skill_builder::SkillShape};
+use crate::{
+	skills::SelectInfo,
+	traits::skill_builder::{LifeTimeDefinition, SkillShape},
+};
 use bevy::{
 	ecs::system::EntityCommands,
 	math::Ray3d,
@@ -69,14 +72,18 @@ impl Target {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub struct SkillBehaviorConfig {
-	shape: BuildSkillShape,
+pub struct SkillBehaviorConfig<T> {
+	shape: BuildSkillShape<T>,
 	contact: Vec<SkillBehavior>,
 	projection: Vec<SkillBehavior>,
 }
 
-impl SkillBehaviorConfig {
-	pub(crate) fn from_shape(shape: BuildSkillShape) -> Self {
+impl<T> SkillBehaviorConfig<T>
+where
+	LifeTimeDefinition: From<T>,
+	T: Clone,
+{
+	pub(crate) fn from_shape(shape: BuildSkillShape<T>) -> Self {
 		Self {
 			shape,
 			contact: vec![],

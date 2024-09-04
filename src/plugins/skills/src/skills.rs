@@ -14,6 +14,7 @@ use bevy::{
 	reflect::TypePath,
 };
 use common::resources::ColliderInfo;
+use skill_data::skill_behavior_data::{OnActiveLifetime, OnAimLifeTime};
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result},
@@ -142,8 +143,8 @@ pub(crate) enum SkillState {
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum RunSkillBehavior {
-	OnActive(SkillBehaviorConfig),
-	OnAim(SkillBehaviorConfig),
+	OnActive(SkillBehaviorConfig<OnActiveLifetime>),
+	OnAim(SkillBehaviorConfig<OnAimLifeTime>),
 }
 
 impl Default for RunSkillBehavior {

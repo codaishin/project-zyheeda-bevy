@@ -8,20 +8,26 @@ use crate::{
 		SkillBehaviorConfig,
 	},
 	skills::RunSkillBehavior,
+	traits::skill_builder::LifeTimeDefinition,
 };
 use serde::{Deserialize, Serialize};
 use shape_data::SkillShapeData;
 use start_behavior_data::SkillBehaviorData;
+use std::time::Duration;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct SkillBehaviorConfigData {
-	shape: SkillShapeData,
+pub(crate) struct SkillBehaviorConfigData<T> {
+	shape: SkillShapeData<T>,
 	contact: Vec<SkillBehaviorData>,
 	projection: Vec<SkillBehaviorData>,
 }
 
-impl From<SkillBehaviorConfigData> for SkillBehaviorConfig {
-	fn from(value: SkillBehaviorConfigData) -> Self {
+impl<TLifeTime> From<SkillBehaviorConfigData<TLifeTime>> for SkillBehaviorConfig<TLifeTime>
+where
+	LifeTimeDefinition: From<TLifeTime>,
+	TLifeTime: Clone,
+{
+	fn from(value: SkillBehaviorConfigData<TLifeTime>) -> Self {
 		let shape = BuildSkillShape::from(value.shape);
 		let contact = value.contact.into_iter().map(SkillBehavior::from);
 		let projection = value.projection.into_iter().map(SkillBehavior::from);
@@ -31,10 +37,40 @@ impl From<SkillBehaviorConfigData> for SkillBehaviorConfig {
 	}
 }
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub enum OnActiveLifetime {
+	UntilOutlived(Duration),
+	Infinite,
+}
+
+impl From<OnActiveLifetime> for LifeTimeDefinition {
+	fn from(value: OnActiveLifetime) -> Self {
+		match value {
+			OnActiveLifetime::UntilOutlived(duration) => Self::UntilOutlived(duration),
+			OnActiveLifetime::Infinite => Self::Infinite,
+		}
+	}
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub enum OnAimLifeTime {
+	UntilStopped,
+	Infinite,
+}
+
+impl From<OnAimLifeTime> for LifeTimeDefinition {
+	fn from(value: OnAimLifeTime) -> Self {
+		match value {
+			OnAimLifeTime::UntilStopped => Self::UntilStopped,
+			OnAimLifeTime::Infinite => Self::Infinite,
+		}
+	}
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) enum RunSkillBehaviorData {
-	OnActive(SkillBehaviorConfigData),
-	OnAim(SkillBehaviorConfigData),
+	OnActive(SkillBehaviorConfigData<OnActiveLifetime>),
+	OnAim(SkillBehaviorConfigData<OnAimLifeTime>),
 }
 
 impl From<RunSkillBehaviorData> for RunSkillBehavior {

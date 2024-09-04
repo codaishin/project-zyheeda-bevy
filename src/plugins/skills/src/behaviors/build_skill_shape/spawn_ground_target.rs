@@ -11,13 +11,13 @@ use common::tools::Units;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct SpawnGroundTargetedAoe {
-	pub lifetime: LifeTimeDefinition,
+pub struct SpawnGroundTargetedAoe<TLifeTime> {
+	pub lifetime: TLifeTime,
 	pub max_range: Units,
 	pub radius: Units,
 }
 
-impl BuildContact for SpawnGroundTargetedAoe {
+impl<T> BuildContact for SpawnGroundTargetedAoe<T> {
 	fn build_contact(
 		&self,
 		caster: &SkillCaster,
@@ -36,7 +36,7 @@ impl BuildContact for SpawnGroundTargetedAoe {
 	}
 }
 
-impl BuildProjection for SpawnGroundTargetedAoe {
+impl<T> BuildProjection for SpawnGroundTargetedAoe<T> {
 	fn build_projection(&self, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> impl Bundle {
 		GroundTargetedAoeProjection {
 			radius: self.radius,
@@ -44,8 +44,12 @@ impl BuildProjection for SpawnGroundTargetedAoe {
 	}
 }
 
-impl SkillLifetime for SpawnGroundTargetedAoe {
+impl<T> SkillLifetime for SpawnGroundTargetedAoe<T>
+where
+	LifeTimeDefinition: From<T>,
+	T: Clone,
+{
 	fn lifetime(&self) -> LifeTimeDefinition {
-		self.lifetime
+		LifeTimeDefinition::from(self.lifetime.clone())
 	}
 }
