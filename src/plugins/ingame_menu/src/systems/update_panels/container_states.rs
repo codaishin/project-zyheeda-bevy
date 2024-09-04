@@ -52,8 +52,8 @@ mod tests {
 		ui::node_bundles::TextBundle,
 		utils::HashMap,
 	};
-	use common::traits::nested_mock::NestedMock;
-	use macros::NestedMock;
+	use common::traits::nested_mock::NestedMocks;
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
 	#[derive(Component)]
@@ -71,7 +71,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _Panel {
 		mock: Mock_Panel,
 	}
@@ -92,7 +92,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				KeyedPanel(42_usize),
-				_Panel::new_mock(|mock| {
+				_Panel::new().with_mock(|mock| {
 					mock.expect_set()
 						.times(1)
 						.with(eq(()), eq(PanelState::Empty))
@@ -127,7 +127,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				KeyedPanel(42_usize),
-				_Panel::new_mock(|mock| {
+				_Panel::new().with_mock(|mock| {
 					mock.expect_set()
 						.times(1)
 						.with(eq(()), eq(PanelState::Filled))
@@ -154,7 +154,7 @@ mod tests {
 		app.world_mut().spawn(_Container::new([]));
 		app.world_mut().spawn((
 			KeyedPanel(42_usize),
-			_Panel::new_mock(|mock| {
+			_Panel::new().with_mock(|mock| {
 				mock.expect_set().times(1).return_const(());
 			}),
 		));
@@ -177,7 +177,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				KeyedPanel(42_usize),
-				_Panel::new_mock(|mock| {
+				_Panel::new().with_mock(|mock| {
 					mock.expect_set()
 						.times(1)
 						.with(eq(()), eq(PanelState::Filled))
@@ -213,7 +213,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				KeyedPanel(42_usize),
-				_Panel::new_mock(|mock| {
+				_Panel::new().with_mock(|mock| {
 					mock.expect_set().return_const(());
 				}),
 			))

@@ -28,9 +28,8 @@ pub(crate) fn init_animation_clips<
 
 #[cfg(test)]
 mod tests {
-	use crate::resource::AnimationData;
-
 	use super::*;
+	use crate::resource::AnimationData;
 	use bevy::{
 		app::{App, Update},
 		prelude::Asset,
@@ -39,13 +38,13 @@ mod tests {
 	use common::{
 		resources::Shared,
 		test_tools::utils::SingleThreadedApp,
-		traits::{load_asset::Path, nested_mock::NestedMock},
+		traits::{load_asset::Path, nested_mock::NestedMocks},
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
 
-	#[derive(Resource, NestedMock)]
+	#[derive(Resource, NestedMocks)]
 	struct _Server {
 		mock: Mock_Server,
 	}
@@ -87,7 +86,7 @@ mod tests {
 				vec![Path::from("path/a"), Path::from("path/b")]
 			}
 		}
-		let mut app = setup::<_Agent>(_Server::new_mock(|mock| {
+		let mut app = setup::<_Agent>(_Server::new().with_mock(|mock| {
 			mock.expect_load_animation_assets()
 				.with(eq(vec![Path::from("path/a"), Path::from("path/b")]))
 				.return_const((
@@ -123,7 +122,7 @@ mod tests {
 			}
 		}
 
-		let mut app = setup::<_Agent>(_Server::new_mock(|mock| {
+		let mut app = setup::<_Agent>(_Server::new().with_mock(|mock| {
 			mock.expect_load_animation_assets()
 				.return_const((_AnimationGraph, HashMap::default()));
 		}));

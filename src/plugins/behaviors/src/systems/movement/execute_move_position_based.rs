@@ -50,9 +50,9 @@ mod test {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::{Units, UnitsPerSecond},
-		traits::{clamp_zero_positive::ClampZeroPositive, nested_mock::NestedMock},
+		traits::{clamp_zero_positive::ClampZeroPositive, nested_mock::NestedMocks},
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::time::Duration;
 
@@ -62,7 +62,7 @@ mod test {
 	#[derive(Component)]
 	struct ConfigSlow;
 
-	#[derive(Component, NestedMock, Debug)]
+	#[derive(Component, NestedMocks, Debug)]
 	struct _Movement {
 		pub mock: Mock_Movement,
 	}
@@ -122,7 +122,7 @@ mod test {
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let config = ConfigFast;
 		let time_delta = Duration::from_millis(30);
-		let movement = _Movement::new_mock(|mock| {
+		let movement = _Movement::new().with_mock(|mock| {
 			mock.expect_update()
 				.with(
 					eq(transform),
@@ -143,7 +143,7 @@ mod test {
 		let mut app = setup();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let config = ConfigFast;
-		let movement = _Movement::new_mock(|mock| {
+		let movement = _Movement::new().with_mock(|mock| {
 			mock.expect_update().times(2).return_const(false);
 		});
 
@@ -158,7 +158,7 @@ mod test {
 		let mut app = setup();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let config = ConfigFast;
-		let movement = _Movement::new_mock(|mock| {
+		let movement = _Movement::new().with_mock(|mock| {
 			mock.expect_update().return_const(true);
 		});
 
@@ -176,7 +176,7 @@ mod test {
 		let mut app = setup();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let config = ConfigFast;
-		let movement = _Movement::new_mock(|mock| {
+		let movement = _Movement::new().with_mock(|mock| {
 			mock.expect_update().return_const(false);
 		});
 
@@ -195,7 +195,7 @@ mod test {
 		let mut time = app.world_mut().resource_mut::<Time<Real>>();
 
 		let last_update = time.last_update().unwrap();
-		let movement = _Movement::new_mock(|mock| {
+		let movement = _Movement::new().with_mock(|mock| {
 			mock.expect_update().never().return_const(false);
 		});
 

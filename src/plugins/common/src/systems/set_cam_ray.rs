@@ -29,11 +29,11 @@ mod tests {
 		math::{Dir3, Ray3d, Vec3},
 		utils::default,
 	};
-	use common::traits::nested_mock::NestedMock;
-	use macros::NestedMock;
+	use common::traits::nested_mock::NestedMocks;
+	use macros::NestedMocks;
 	use mockall::automock;
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _Camera {
 		mock: Mock_Camera,
 	}
@@ -64,7 +64,7 @@ mod tests {
 
 	#[test]
 	fn add_ray() {
-		let mut app = setup(_Camera::new_mock(|mock| {
+		let mut app = setup(_Camera::new().with_mock(|mock| {
 			mock.expect_get_ray().return_const(Ray3d {
 				origin: Vec3::new(1., 2., 3.),
 				direction: Vec3::new(4., 5., 6.).try_into().unwrap(),
@@ -86,7 +86,7 @@ mod tests {
 
 	#[test]
 	fn add_none_ray() {
-		let mut app = setup(_Camera::new_mock(|mock| {
+		let mut app = setup(_Camera::new().with_mock(|mock| {
 			mock.expect_get_ray().return_const(None);
 		}));
 
@@ -99,7 +99,7 @@ mod tests {
 
 	#[test]
 	fn call_get_ray_with_proper_components() {
-		let mut app = setup(_Camera::new_mock(|mock| {
+		let mut app = setup(_Camera::new().with_mock(|mock| {
 			mock.expect_get_ray()
 				.withf(|cam_transform, window| {
 					{
@@ -116,14 +116,14 @@ mod tests {
 
 	#[test]
 	fn no_panic_when_not_labeled_camera_present() {
-		let mut app = setup(_Camera::new_mock(|mock| {
+		let mut app = setup(_Camera::new().with_mock(|mock| {
 			mock.expect_get_ray().return_const(Ray3d {
 				origin: Vec3::ZERO,
 				direction: Dir3::NEG_Z,
 			});
 		}));
 		app.world_mut()
-			.spawn((_Camera::new_mock(|_| {}), GlobalTransform::default()));
+			.spawn((_Camera::new(), GlobalTransform::default()));
 
 		app.update();
 	}

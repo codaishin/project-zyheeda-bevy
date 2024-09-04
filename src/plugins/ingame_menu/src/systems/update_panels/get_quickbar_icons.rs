@@ -95,9 +95,9 @@ mod tests {
 	use common::{
 		components::{Player, Side},
 		test_tools::utils::SingleThreadedApp,
-		traits::nested_mock::NestedMock,
+		traits::nested_mock::NestedMocks,
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use skills::{
 		components::{slots::Slots, Mounts, Slot},
@@ -119,7 +119,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _Combos {
 		mock: Mock_Combos,
 	}
@@ -203,7 +203,7 @@ mod tests {
 			Player,
 			slots(),
 			_Queue::default(),
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_peek_next().return_const(Skill {
 					icon: Some(get_handle("combo skill")),
 					..default()
@@ -232,7 +232,7 @@ mod tests {
 			Player,
 			slots(),
 			_Queue::default(),
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_peek_next()
 					.times(1)
 					.with(eq(SlotKey::Hand(Side::Off)), eq(slots()))
@@ -255,7 +255,7 @@ mod tests {
 			Player,
 			slots(),
 			_Queue::default(),
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_peek_next().return_const(Skill {
 					icon: Some(get_handle("combo skill")),
 					..default()
@@ -284,7 +284,7 @@ mod tests {
 			Player,
 			slots(),
 			_Queue::default(),
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_peek_next().return_const(None);
 			}),
 			_ComboTimeout(false),
@@ -317,7 +317,7 @@ mod tests {
 				slot_key: SlotKey::Hand(Side::Off),
 				mode: Activation::Waiting,
 			}]),
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_peek_next().return_const(Skill {
 					icon: Some(get_handle("combo skill")),
 					..default()
@@ -353,7 +353,7 @@ mod tests {
 				slot_key: SlotKey::Hand(Side::Off),
 				mode: Activation::Waiting,
 			}]),
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_peek_next().return_const(Skill {
 					icon: Some(get_handle("combo skill")),
 					..default()

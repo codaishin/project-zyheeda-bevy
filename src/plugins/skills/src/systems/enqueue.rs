@@ -83,9 +83,9 @@ mod tests {
 		components::Side,
 		simple_init,
 		test_tools::utils::SingleThreadedApp,
-		traits::{mock::Mock, nested_mock::NestedMock},
+		traits::{mock::Mock, nested_mock::NestedMocks},
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{automock, mock, predicate::eq};
 	use std::collections::HashMap;
 
@@ -148,7 +148,7 @@ mod tests {
 
 	#[test]
 	fn enqueue_skill_from_skills() {
-		#[derive(Component, NestedMock)]
+		#[derive(Component, NestedMocks)]
 		struct _Enqueue {
 			mock: Mock_Enqueue,
 		}
@@ -184,7 +184,7 @@ mod tests {
 		)]));
 		app.world_mut().spawn((
 			skills,
-			_Enqueue::new_mock(|mock| {
+			_Enqueue::new().with_mock(|mock| {
 				mock.expect_enqueue()
 					.times(1)
 					.with(eq((

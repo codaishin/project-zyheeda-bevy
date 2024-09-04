@@ -117,13 +117,13 @@ mod tests {
 	use common::{
 		components::Side,
 		test_tools::utils::{SingleThreadedApp, TickTime},
-		traits::{nested_mock::NestedMock, update_cumulative::CumulativeUpdate as UpdateTrait},
+		traits::{nested_mock::NestedMocks, update_cumulative::CumulativeUpdate as UpdateTrait},
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq, Sequence};
 	use std::{collections::HashMap, time::Duration};
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _Timeout {
 		mock: Mock_Timeout,
 	}
@@ -159,7 +159,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _Combos {
 		mock: Mock_Combos,
 	}
@@ -243,7 +243,7 @@ mod tests {
 	fn call_next_with_new_skills() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_flush().return_const(());
 				mock.expect_advance()
 					.times(1)
@@ -287,7 +287,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				_Combos::new_mock(|mock| {
+				_Combos::new().with_mock(|mock| {
 					mock.expect_flush().return_const(());
 					mock.expect_advance()
 						.with(eq(SlotKey::Hand(Side::Main)), eq(slots()))
@@ -361,7 +361,7 @@ mod tests {
 	fn combo_flush_when_empty() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_flush().times(1).return_const(());
 			}),
 			_Skills::default(),
@@ -375,7 +375,7 @@ mod tests {
 	fn no_combo_flush_when_not_empty() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_flush().never().return_const(());
 			}),
 			_Skills {
@@ -392,12 +392,12 @@ mod tests {
 	fn no_combo_flush_when_empty_and_not_timed_out() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Timeout::new_mock(|mock| {
+			_Timeout::new().with_mock(|mock| {
 				mock.expect_update_cumulative().return_const(());
 				mock.expect_is_timed_out().return_const(false);
 				mock.expect_flush().return_const(());
 			}),
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_flush().never().return_const(());
 			}),
 			_Skills::default(),
@@ -411,10 +411,10 @@ mod tests {
 	fn combo_flush_when_empty_and_timed_out() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_flush().times(1).return_const(());
 			}),
-			_Timeout::new_mock(|mock| {
+			_Timeout::new().with_mock(|mock| {
 				mock.expect_update_cumulative().return_const(());
 				mock.expect_is_timed_out().return_const(true);
 				mock.expect_flush().return_const(());
@@ -430,10 +430,10 @@ mod tests {
 	fn timeout_flush_when_empty_and_is_timed_out() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_flush().return_const(());
 			}),
-			_Timeout::new_mock(|mock| {
+			_Timeout::new().with_mock(|mock| {
 				mock.expect_update_cumulative().return_const(());
 				mock.expect_is_timed_out().return_const(true);
 				mock.expect_flush().times(1).return_const(());
@@ -449,10 +449,10 @@ mod tests {
 	fn timeout_flush_when_not_empty() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_flush().return_const(());
 			}),
-			_Timeout::new_mock(|mock| {
+			_Timeout::new().with_mock(|mock| {
 				mock.expect_update_cumulative().return_const(());
 				mock.expect_is_timed_out().return_const(false);
 				mock.expect_flush().times(1).return_const(());
@@ -471,10 +471,10 @@ mod tests {
 	fn no_timeout_flush_when_empty_and_is_not_timed_out() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_flush().return_const(());
 			}),
-			_Timeout::new_mock(|mock| {
+			_Timeout::new().with_mock(|mock| {
 				mock.expect_update_cumulative().return_const(());
 				mock.expect_is_timed_out().return_const(false);
 				mock.expect_flush().never().return_const(());
@@ -490,10 +490,10 @@ mod tests {
 	fn do_not_test_for_timeout_when_skill_queue_not_empty() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_flush().return_const(());
 			}),
-			_Timeout::new_mock(|mock| {
+			_Timeout::new().with_mock(|mock| {
 				mock.expect_update_cumulative().return_const(());
 				mock.expect_is_timed_out().never().return_const(false);
 				mock.expect_flush().return_const(());
@@ -513,10 +513,10 @@ mod tests {
 		let mut app = setup();
 		app.tick_time(Duration::from_secs(42));
 		app.world_mut().spawn((
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_flush().return_const(());
 			}),
-			_Timeout::new_mock(|mock| {
+			_Timeout::new().with_mock(|mock| {
 				mock.expect_update_cumulative()
 					.with(eq(Duration::from_secs(42)))
 					.return_const(());
@@ -534,10 +534,10 @@ mod tests {
 	fn call_update_and_timeout_in_sequence() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_flush().return_const(());
 			}),
-			_Timeout::new_mock(|mock| {
+			_Timeout::new().with_mock(|mock| {
 				let mut seq = Sequence::default();
 				mock.expect_update_cumulative()
 					.times(1)

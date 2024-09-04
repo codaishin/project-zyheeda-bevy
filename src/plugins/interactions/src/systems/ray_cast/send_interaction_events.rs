@@ -37,12 +37,12 @@ mod tests {
 	use common::{
 		components::ColliderRoot,
 		test_tools::utils::SingleThreadedApp,
-		traits::{cast_ray::TimeOfImpact, nested_mock::NestedMock},
+		traits::{cast_ray::TimeOfImpact, nested_mock::NestedMocks},
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq, Sequence};
 
-	#[derive(Resource, NestedMock)]
+	#[derive(Resource, NestedMocks)]
 	struct _Tracker {
 		mock: Mock_Tracker,
 	}
@@ -83,7 +83,7 @@ mod tests {
 
 	#[test]
 	fn call_flush() {
-		let mut app = setup(_Tracker::new_mock(|mock| {
+		let mut app = setup(_Tracker::new().with_mock(|mock| {
 			mock.expect_track().return_const(TrackState::Changed);
 			mock.expect_flush().times(1).return_const(vec![]);
 		}));
@@ -96,7 +96,7 @@ mod tests {
 	fn send_flushed_events() {
 		let a = ColliderRoot(Entity::from_raw(42));
 		let b = ColliderRoot(Entity::from_raw(46));
-		let mut app = setup(_Tracker::new_mock(|mock| {
+		let mut app = setup(_Tracker::new().with_mock(|mock| {
 			mock.expect_track().return_const(TrackState::Changed);
 			mock.expect_flush().return_const(vec![
 				InteractionEvent::of(a).collision(Collision::Started(b))
@@ -124,7 +124,7 @@ mod tests {
 			TimeOfImpact(900.),
 		);
 		let collisions = vec![];
-		let mut app = setup(_Tracker::new_mock(|mock| {
+		let mut app = setup(_Tracker::new().with_mock(|mock| {
 			mock.expect_track().return_const(TrackState::Changed);
 			mock.expect_flush().return_const(vec![]);
 		}));
@@ -154,7 +154,7 @@ mod tests {
 			interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(46)))),
 			interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(99)))),
 		];
-		let mut app = setup(_Tracker::new_mock(|mock| {
+		let mut app = setup(_Tracker::new().with_mock(|mock| {
 			mock.expect_track()
 				.with(eq(collisions[0]))
 				.return_const(TrackState::Unchanged);
@@ -187,7 +187,7 @@ mod tests {
 		let collisions =
 			vec![interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(42))))];
 		let mut sequence = Sequence::new();
-		let mut app = setup(_Tracker::new_mock(|mock| {
+		let mut app = setup(_Tracker::new().with_mock(|mock| {
 			mock.expect_track()
 				.times(1)
 				.in_sequence(&mut sequence)

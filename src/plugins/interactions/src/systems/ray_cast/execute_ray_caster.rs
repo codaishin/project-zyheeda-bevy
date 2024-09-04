@@ -48,11 +48,11 @@ mod tests {
 		utils::default,
 	};
 	use bevy_rapier3d::math::Real;
-	use common::traits::{cast_ray::TimeOfImpact, nested_mock::NestedMock};
-	use macros::NestedMock;
+	use common::traits::{cast_ray::TimeOfImpact, nested_mock::NestedMocks};
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Resource, NestedMock)]
+	#[derive(Resource, NestedMocks)]
 	struct _CastRay {
 		pub mock: Mock_CastRay,
 	}
@@ -73,7 +73,7 @@ mod tests {
 
 	#[test]
 	fn cast_ray() {
-		let mut app = setup(_CastRay::new_mock(|mock| {
+		let mut app = setup(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray_continuously_sorted()
 				.times(1)
 				.with(eq(RayCaster {
@@ -100,7 +100,7 @@ mod tests {
 
 	#[test]
 	fn add_cast_ray_result_with_targets() {
-		let mut app = setup(_CastRay::new_mock(|mock| {
+		let mut app = setup(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray_continuously_sorted()
 				.return_const(vec![
 					(Entity::from_raw(42), TimeOfImpact(42.)),
@@ -144,7 +144,7 @@ mod tests {
 
 	#[test]
 	fn cast_ray_only_once() {
-		let mut app = setup(_CastRay::new_mock(|mock| {
+		let mut app = setup(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray_continuously_sorted()
 				.times(1)
 				.return_const(vec![]);
@@ -165,7 +165,7 @@ mod tests {
 
 	#[test]
 	fn remove_ray_caster() {
-		let mut app = setup(_CastRay::new_mock(|mock| {
+		let mut app = setup(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray_continuously_sorted()
 				.return_const(vec![]);
 		}));

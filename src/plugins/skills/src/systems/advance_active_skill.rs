@@ -167,9 +167,9 @@ mod tests {
 	};
 	use common::{
 		test_tools::utils::{SingleThreadedApp, TickTime},
-		traits::nested_mock::NestedMock,
+		traits::nested_mock::NestedMocks,
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::{collections::HashSet, time::Duration};
 
@@ -228,7 +228,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _AnimationDispatch {
 		mock: Mock_AnimationDispatch,
 	}
@@ -268,7 +268,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _Executor {
 		mock: Mock_Executor,
 	}
@@ -316,11 +316,11 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				_AnimationDispatch::new_mock(|mock| {
+				_AnimationDispatch::new().with_mock(|mock| {
 					mock.expect_start_animation::<SkillLayer>().return_const(());
 					mock.expect_stop_animation::<SkillLayer>().return_const(());
 				}),
-				_Executor::new_mock(|mock| {
+				_Executor::new().with_mock(|mock| {
 					mock.expect_schedule().return_const(());
 					mock.expect_flush().return_const(());
 				}),
@@ -379,7 +379,7 @@ mod tests {
 				})),
 			},
 			Transform::default(),
-			_AnimationDispatch::new_mock(|mock| {
+			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_stop_animation::<SkillLayer>().return_const(());
 				mock.expect_start_animation()
 					.times(1)
@@ -413,7 +413,7 @@ mod tests {
 				})),
 			},
 			Transform::default(),
-			_AnimationDispatch::new_mock(|mock| {
+			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_stop_animation::<SkillLayer>().return_const(());
 				mock.expect_start_animation::<SkillLayer>()
 					.never()
@@ -441,7 +441,7 @@ mod tests {
 				})),
 			},
 			Transform::default(),
-			_AnimationDispatch::new_mock(|mock| {
+			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation::<SkillLayer>().return_const(());
 				mock.expect_stop_animation::<SkillLayer>()
 					.times(1)
@@ -472,7 +472,7 @@ mod tests {
 				})),
 			},
 			Transform::default(),
-			_AnimationDispatch::new_mock(|mock| {
+			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation::<SkillLayer>().return_const(());
 				mock.expect_stop_animation::<SkillLayer>()
 					.never()
@@ -500,7 +500,7 @@ mod tests {
 				})),
 			},
 			Transform::default(),
-			_AnimationDispatch::new_mock(|mock| {
+			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation::<SkillLayer>()
 					.never()
 					.return_const(());
@@ -519,7 +519,7 @@ mod tests {
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue { active: None },
 			Transform::default(),
-			_AnimationDispatch::new_mock(|mock| {
+			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation::<SkillLayer>().return_const(());
 				mock.expect_stop_animation::<SkillLayer>()
 					.times(1)
@@ -542,7 +542,7 @@ mod tests {
 				})),
 			},
 			Transform::default(),
-			_AnimationDispatch::new_mock(|mock| {
+			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation::<SkillLayer>().return_const(());
 				mock.expect_stop_animation::<SkillLayer>()
 					.never()
@@ -559,7 +559,7 @@ mod tests {
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue { active: None },
 			Transform::default(),
-			_AnimationDispatch::new_mock(|mock| {
+			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation::<SkillLayer>().return_const(());
 				mock.expect_stop_animation::<SkillLayer>()
 					.times(1)
@@ -621,7 +621,7 @@ mod tests {
 	fn run_on_active() {
 		let (mut app, agent) = setup();
 		app.world_mut().entity_mut(agent).insert((
-			_Executor::new_mock(|mock| {
+			_Executor::new().with_mock(|mock| {
 				mock.expect_flush().return_const(());
 				mock.expect_schedule()
 					.times(1)
@@ -654,7 +654,7 @@ mod tests {
 	fn run_on_aim() {
 		let (mut app, agent) = setup();
 		app.world_mut().entity_mut(agent).insert((
-			_Executor::new_mock(|mock| {
+			_Executor::new().with_mock(|mock| {
 				mock.expect_flush().return_const(());
 				mock.expect_schedule()
 					.times(1)
@@ -711,7 +711,7 @@ mod tests {
 	fn flush() {
 		let (mut app, agent) = setup();
 		app.world_mut().entity_mut(agent).insert((
-			_Executor::new_mock(|mock| {
+			_Executor::new().with_mock(|mock| {
 				mock.expect_schedule().return_const(());
 				mock.expect_flush().times(1).return_const(());
 			}),
@@ -734,7 +734,7 @@ mod tests {
 	fn do_not_stop_when_not_done() {
 		let (mut app, agent) = setup();
 		app.world_mut().entity_mut(agent).insert((
-			_Executor::new_mock(|mock| {
+			_Executor::new().with_mock(|mock| {
 				mock.expect_schedule().return_const(());
 				mock.expect_flush().never().return_const(());
 			}),

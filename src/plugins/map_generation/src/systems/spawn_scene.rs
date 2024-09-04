@@ -41,9 +41,9 @@ mod tests {
 	};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		traits::{load_asset::Path, nested_mock::NestedMock},
+		traits::{load_asset::Path, nested_mock::NestedMocks},
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use uuid::Uuid;
 
@@ -61,7 +61,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Resource, NestedMock)]
+	#[derive(Resource, NestedMocks)]
 	struct _LoadScene {
 		mock: Mock_LoadScene,
 	}
@@ -96,7 +96,7 @@ mod tests {
 				Transform::from_xyz(1., 2., 3.),
 				_Cell(Some(Path::from("A"))),
 			)],
-			_LoadScene::new_mock(|mock| {
+			_LoadScene::new().with_mock(|mock| {
 				mock.expect_load_asset()
 					.times(1)
 					.with(eq(Path::from("A")))

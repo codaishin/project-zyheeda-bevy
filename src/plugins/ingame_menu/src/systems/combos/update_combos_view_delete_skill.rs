@@ -35,23 +35,23 @@ mod tests {
 	use common::{
 		components::Side,
 		test_tools::utils::SingleThreadedApp,
-		traits::nested_mock::NestedMock,
+		traits::nested_mock::NestedMocks,
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use skills::{skills::Skill, traits::UpdateConfig};
 
 	#[derive(Component)]
 	struct _Agent;
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _Combos {
 		mock: Mock_Combos,
 	}
 
 	impl Default for _Combos {
 		fn default() -> Self {
-			Self::new_mock(|mock| {
+			Self::new().with_mock(|mock| {
 				mock.expect_update_config().return_const(());
 			})
 		}
@@ -82,7 +82,7 @@ mod tests {
 		));
 		app.world_mut().spawn((
 			_Agent,
-			_Combos::new_mock(|mock| {
+			_Combos::new().with_mock(|mock| {
 				mock.expect_update_config()
 					.times(1)
 					.with(

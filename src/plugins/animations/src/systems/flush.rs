@@ -17,11 +17,11 @@ mod tests {
 	use super::*;
 	use crate::traits::Priority;
 	use bevy::app::{App, Update};
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMock};
-	use macros::NestedMock;
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _Dispatch {
 		mock: Mock_Dispatch,
 	}
@@ -43,7 +43,7 @@ mod tests {
 	#[test]
 	fn call_flush() {
 		let mut app = setup();
-		app.world_mut().spawn(_Dispatch::new_mock(|mock| {
+		app.world_mut().spawn(_Dispatch::new().with_mock(|mock| {
 			mock.expect_flush_obsolete()
 				.times(1)
 				.with(eq(Priority::High))

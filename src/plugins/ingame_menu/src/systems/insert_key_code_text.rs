@@ -43,16 +43,16 @@ mod tests {
 	use common::{
 		assert_bundle,
 		test_tools::utils::SingleThreadedApp,
-		traits::{get_ui_text::UIText, nested_mock::NestedMock},
+		traits::{get_ui_text::UIText, nested_mock::NestedMocks},
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use uuid::Uuid;
 
 	#[derive(Clone, Copy, Debug, PartialEq)]
 	struct _Key;
 
-	#[derive(Resource, NestedMock)]
+	#[derive(Resource, NestedMocks)]
 	struct _Map {
 		mock: Mock_Map,
 	}
@@ -64,7 +64,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Resource, NestedMock)]
+	#[derive(Resource, NestedMocks)]
 	struct _Language {
 		mock: Mock_Language,
 	}
@@ -84,10 +84,10 @@ mod tests {
 	impl Default for Setup {
 		fn default() -> Self {
 			Self {
-				map: _Map::new_mock(|mock| {
+				map: _Map::new().with_mock(|mock| {
 					mock.expect_map_forward().return_const(KeyCode::KeyA);
 				}),
-				language: _Language::new_mock(|mock| {
+				language: _Language::new().with_mock(|mock| {
 					mock.expect_ui_text_for().return_const(UIText::Unmapped);
 				}),
 			}
@@ -106,10 +106,10 @@ mod tests {
 	#[test]
 	fn call_language_server_with_for_correct_key() {
 		let mut app = setup(Setup {
-			map: _Map::new_mock(|mock| {
+			map: _Map::new().with_mock(|mock| {
 				mock.expect_map_forward().return_const(KeyCode::KeyB);
 			}),
-			language: _Language::new_mock(|mock| {
+			language: _Language::new().with_mock(|mock| {
 				mock.expect_ui_text_for()
 					.times(1)
 					.with(eq(KeyCode::KeyB))
@@ -125,10 +125,10 @@ mod tests {
 	#[test]
 	fn spawn_text_bundle() {
 		let mut app = setup(Setup {
-			map: _Map::new_mock(|mock| {
+			map: _Map::new().with_mock(|mock| {
 				mock.expect_map_forward().return_const(KeyCode::KeyB);
 			}),
-			language: _Language::new_mock(|mock| {
+			language: _Language::new().with_mock(|mock| {
 				mock.expect_ui_text_for()
 					.return_const(UIText::String("my text".to_owned()));
 			}),
@@ -148,7 +148,7 @@ mod tests {
 	#[test]
 	fn spawn_text_bundle_text() {
 		let mut app = setup(Setup {
-			language: _Language::new_mock(|mock| {
+			language: _Language::new().with_mock(|mock| {
 				mock.expect_ui_text_for()
 					.return_const(UIText::String("my text".to_owned()));
 			}),
@@ -200,7 +200,7 @@ mod tests {
 			color: Color::BLACK,
 		};
 		let mut app = setup(Setup {
-			language: _Language::new_mock(|mock| {
+			language: _Language::new().with_mock(|mock| {
 				mock.expect_ui_text_for()
 					.return_const(UIText::String("my text".to_owned()));
 			}),
@@ -244,7 +244,7 @@ mod tests {
 	#[test]
 	fn remove_insert_command() {
 		let mut app = setup(Setup {
-			language: _Language::new_mock(|mock| {
+			language: _Language::new().with_mock(|mock| {
 				mock.expect_ui_text_for()
 					.return_const(UIText::String("my text".to_owned()));
 			}),
@@ -265,7 +265,7 @@ mod tests {
 	#[test]
 	fn remove_insert_command_even_when_key_cannot_be_mapped() {
 		let mut app = setup(Setup {
-			language: _Language::new_mock(|mock| {
+			language: _Language::new().with_mock(|mock| {
 				mock.expect_ui_text_for().return_const(UIText::Unmapped);
 			}),
 			..default()

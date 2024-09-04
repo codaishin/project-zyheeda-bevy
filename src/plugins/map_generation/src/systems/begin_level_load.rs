@@ -28,9 +28,9 @@ mod tests {
 	};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		traits::{load_asset::Path, nested_mock::NestedMock},
+		traits::{load_asset::Path, nested_mock::NestedMocks},
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use uuid::Uuid;
 
@@ -43,7 +43,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Resource, NestedMock)]
+	#[derive(Resource, NestedMocks)]
 	struct _LoadMap {
 		mock: Mock_LoadMap,
 	}
@@ -68,7 +68,7 @@ mod tests {
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let mut app = setup(_LoadMap::new_mock(|mock| {
+		let mut app = setup(_LoadMap::new().with_mock(|mock| {
 			mock.expect_load_asset()
 				.times(1)
 				.with(eq(Path::from("aaa/bbb/ccc.file_format")))
