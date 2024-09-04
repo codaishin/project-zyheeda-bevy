@@ -124,8 +124,8 @@ mod tests {
 	use super::*;
 	use crate::components::{Mounts, Slot};
 	use bevy::{ecs::entity::Entity, utils::default};
-	use common::{components::Side, traits::nested_mock::NestedMock};
-	use macros::NestedMock;
+	use common::{components::Side, traits::nested_mock::NestedMocks};
+	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::{cell::RefCell, collections::HashMap};
 
@@ -334,7 +334,7 @@ mod tests {
 		}
 	}
 
-	#[derive(NestedMock)]
+	#[derive(NestedMocks)]
 	struct _Entry {
 		mock: Mock_Entry,
 	}
@@ -354,7 +354,7 @@ mod tests {
 	#[test]
 	fn update_config_skill_use_correct_arguments() {
 		let mut combos = Combos::new(_Node {
-			entry: Some(_Entry::new_mock(|mock| {
+			entry: Some(_Entry::new().with_mock(|mock| {
 				mock.expect_insert().return_const(());
 			})),
 			..default()
@@ -377,7 +377,7 @@ mod tests {
 	#[test]
 	fn update_config_skill_call_entry_insert() {
 		let mut combos = Combos::new(_Node {
-			entry: Some(_Entry::new_mock(|mock| {
+			entry: Some(_Entry::new().with_mock(|mock| {
 				mock.expect_insert()
 					.times(1)
 					.with(eq(Some(Skill {
@@ -402,7 +402,7 @@ mod tests {
 	fn update_config_skill_clear_current() {
 		let mut combos = Combos {
 			value: _Node {
-				entry: Some(_Entry::new_mock(|mock| {
+				entry: Some(_Entry::new().with_mock(|mock| {
 					mock.expect_insert().return_const(());
 				})),
 				..default()
@@ -445,7 +445,7 @@ mod tests {
 	#[test]
 	fn update_config_re_key_use_correct_arguments() {
 		let mut combos = Combos::new(_Node {
-			entry: Some(_Entry::new_mock(|mock| {
+			entry: Some(_Entry::new().with_mock(|mock| {
 				mock.expect_re_key().return_const(());
 			})),
 			..default()
@@ -465,7 +465,7 @@ mod tests {
 	#[test]
 	fn update_config_re_key_call_entry_re_key() {
 		let mut combos = Combos::new(_Node {
-			entry: Some(_Entry::new_mock(|mock| {
+			entry: Some(_Entry::new().with_mock(|mock| {
 				mock.expect_re_key()
 					.times(1)
 					.with(eq(SlotKey::Hand(Side::Off)))
@@ -481,7 +481,7 @@ mod tests {
 	fn update_config_re_key_clear_current() {
 		let mut combos = Combos {
 			value: _Node {
-				entry: Some(_Entry::new_mock(|mock| {
+				entry: Some(_Entry::new().with_mock(|mock| {
 					mock.expect_re_key().return_const(());
 				})),
 				..default()
@@ -513,7 +513,7 @@ mod tests {
 	fn get_node() {
 		let combo = Combos {
 			value: _Node {
-				entry: Some(_Entry::new_mock(|mock| {
+				entry: Some(_Entry::new().with_mock(|mock| {
 					mock.expect_insert().return_const(());
 				})),
 				..default()

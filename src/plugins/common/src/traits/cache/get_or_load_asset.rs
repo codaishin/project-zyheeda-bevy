@@ -49,8 +49,8 @@ mod tests {
 		prelude::default,
 		render::texture::Image,
 	};
-	use common::traits::nested_mock::NestedMock;
-	use macros::NestedMock;
+	use common::traits::nested_mock::NestedMocks;
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use uuid::Uuid;
 
@@ -71,7 +71,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Resource, NestedMock)]
+	#[derive(Resource, NestedMocks)]
 	struct _LoadAsset {
 		mock: Mock_LoadAsset,
 	}
@@ -104,7 +104,7 @@ mod tests {
 
 	#[test]
 	fn return_stored_asset() {
-		let mut app = setup(_LoadAsset::new_mock(|mock| {
+		let mut app = setup(_LoadAsset::new().with_mock(|mock| {
 			mock.expect_load_asset::<Image>()
 				.return_const(Handle::default());
 		}));
@@ -127,7 +127,7 @@ mod tests {
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let mut app = setup(_LoadAsset::new_mock(|mock| {
+		let mut app = setup(_LoadAsset::new().with_mock(|mock| {
 			mock.expect_load_asset().return_const(handle.clone());
 		}));
 
@@ -141,7 +141,7 @@ mod tests {
 
 	#[test]
 	fn call_load_asset_with_proper_path() {
-		let mut app = setup(_LoadAsset::new_mock(|mock| {
+		let mut app = setup(_LoadAsset::new().with_mock(|mock| {
 			mock.expect_load_asset::<Image>()
 				.with(eq(Path::from("proper path")))
 				.return_const(Handle::default());

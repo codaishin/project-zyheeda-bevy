@@ -35,30 +35,6 @@ pub fn clamp_zero_positive_derive(input: TokenStream) -> TokenStream {
 	implementation.into()
 }
 
-#[proc_macro_derive(NestedMock)]
-pub fn nested_mock_derive(input: TokenStream) -> TokenStream {
-	let input = parse_macro_input!(input as DeriveInput);
-
-	let (mock_field_ident, mock_field_type) = match get_mock_field(&input) {
-		Ok(value) => value,
-		Err(error) => return TokenStream::from(error),
-	};
-	let ident = &input.ident;
-
-	let implementation = quote! {
-		impl common::traits::nested_mock::NestedMock<#mock_field_type> for #ident {
-			fn new_mock(mut configure_mock_fn: impl FnMut(&mut #mock_field_type)) -> Self {
-				let mut mock = #mock_field_type::default();
-				configure_mock_fn(&mut mock);
-
-				Self { #mock_field_ident: mock }
-			}
-		}
-	};
-
-	implementation.into()
-}
-
 #[proc_macro_derive(NestedMocks)]
 pub fn nested_mocks_derive(input: TokenStream) -> TokenStream {
 	let input = parse_macro_input!(input as DeriveInput);
@@ -102,40 +78,18 @@ pub fn nested_mocks_derive(input: TokenStream) -> TokenStream {
 enum SetupMockCompileError {
 	NotAStruct,
 	NoNamedFields,
-	FaultyFields,
 }
 
 impl From<SetupMockCompileError> for TokenStream {
 	fn from(value: SetupMockCompileError) -> Self {
 		match value {
 			SetupMockCompileError::NotAStruct => TokenStream::from(quote! {
-				compile_error!("SetupMock(s) can only be derived for structs");
+				compile_error!("SetupMocks can only be derived for structs");
 			}),
 			SetupMockCompileError::NoNamedFields => TokenStream::from(quote! {
-				compile_error!("SetupMock(s) can only be derived for structs with named fields");
-			}),
-			SetupMockCompileError::FaultyFields => TokenStream::from(quote! {
-				compile_error!("SetupMock can only be derived for structs with a single field named 'mock'");
+				compile_error!("SetupMocks can only be derived for structs with named fields");
 			}),
 		}
-	}
-}
-
-fn get_mock_field(input: &DeriveInput) -> Result<(&Ident, &Type), SetupMockCompileError> {
-	let fields = match get_fields(input) {
-		Ok(fields) => fields,
-		Err(error) => return Err(error),
-	};
-
-	let fields = fields.collect::<Vec<_>>();
-
-	let [(ident, ty)] = fields[..] else {
-		return Err(SetupMockCompileError::FaultyFields);
-	};
-
-	match ident {
-		Some(ident) if ident == "mock" => Ok((ident, ty)),
-		_ => Err(SetupMockCompileError::FaultyFields),
 	}
 }
 

@@ -33,12 +33,12 @@ mod tests {
 	};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		traits::{intersect_at::IntersectAt, nested_mock::NestedMock},
+		traits::{intersect_at::IntersectAt, nested_mock::NestedMocks},
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Resource, NestedMock)]
+	#[derive(Resource, NestedMocks)]
 	struct _Ray {
 		mock: Mock_Ray,
 	}
@@ -69,7 +69,7 @@ mod tests {
 
 	#[test]
 	fn trigger_immediately_on_left_mouse_press() {
-		let mut app = setup(_Ray::new_mock(|mock| {
+		let mut app = setup(_Ray::new().with_mock(|mock| {
 			mock.expect_intersect_at()
 				.return_const(Vec3::new(1., 2., 3.));
 		}));
@@ -87,7 +87,7 @@ mod tests {
 
 	#[test]
 	fn no_event_when_other_mouse_button_pressed() {
-		let mut app = setup(_Ray::new_mock(|mock| {
+		let mut app = setup(_Ray::new().with_mock(|mock| {
 			mock.expect_intersect_at().return_const(Vec3::default());
 		}));
 		app.world_mut()
@@ -101,7 +101,7 @@ mod tests {
 
 	#[test]
 	fn no_event_when_no_intersection() {
-		let mut app = setup(_Ray::new_mock(|mock| {
+		let mut app = setup(_Ray::new().with_mock(|mock| {
 			mock.expect_intersect_at().return_const(None);
 		}));
 		app.world_mut()
@@ -115,7 +115,7 @@ mod tests {
 
 	#[test]
 	fn call_intersect_with_height_zero() {
-		let mut app = setup(_Ray::new_mock(|mock| {
+		let mut app = setup(_Ray::new().with_mock(|mock| {
 			mock.expect_intersect_at()
 				.with(eq(0.))
 				.times(1)

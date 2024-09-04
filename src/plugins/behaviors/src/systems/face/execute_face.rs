@@ -97,12 +97,12 @@ mod tests {
 		components::{ColliderRoot, Immobilized},
 		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
-		traits::nested_mock::NestedMock,
+		traits::nested_mock::NestedMocks,
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Resource, NestedMock)]
+	#[derive(Resource, NestedMocks)]
 	struct _Cursor {
 		mock: Mock_Cursor,
 	}
@@ -132,7 +132,7 @@ mod tests {
 
 	#[test]
 	fn do_face_cursor() {
-		let mut app = setup(_Cursor::new_mock(|mock| {
+		let mut app = setup(_Cursor::new().with_mock(|mock| {
 			mock.expect_intersect_at()
 				.return_const(Vec3::new(1., 2., 3.));
 		}));
@@ -153,7 +153,7 @@ mod tests {
 
 	#[test]
 	fn do_not_face_cursor_if_face_cursor_component_missing() {
-		let mut app = setup(_Cursor::new_mock(|mock| {
+		let mut app = setup(_Cursor::new().with_mock(|mock| {
 			mock.expect_intersect_at()
 				.return_const(Vec3::new(1., 2., 3.));
 		}));
@@ -171,7 +171,7 @@ mod tests {
 
 	#[test]
 	fn use_zero_elevation_intersection() {
-		let mut app = setup(_Cursor::new_mock(|mock| {
+		let mut app = setup(_Cursor::new().with_mock(|mock| {
 			mock.expect_intersect_at()
 				.with(eq(0.))
 				.times(1)
@@ -184,7 +184,7 @@ mod tests {
 
 	#[test]
 	fn face_hovering_collider_root() {
-		let mut app = setup(_Cursor::new_mock(|mock| {
+		let mut app = setup(_Cursor::new().with_mock(|mock| {
 			mock.expect_intersect_at()
 				.return_const(Vec3::new(1., 2., 3.));
 		}));
@@ -214,7 +214,7 @@ mod tests {
 
 	#[test]
 	fn face_hovering_collider() {
-		let mut app = setup(_Cursor::new_mock(|mock| {
+		let mut app = setup(_Cursor::new().with_mock(|mock| {
 			mock.expect_intersect_at()
 				.return_const(Vec3::new(1., 2., 3.));
 		}));
@@ -243,7 +243,7 @@ mod tests {
 
 	#[test]
 	fn face_hovering_entity_with_collider_root() {
-		let mut app = setup(_Cursor::new_mock(|mock| {
+		let mut app = setup(_Cursor::new().with_mock(|mock| {
 			mock.expect_intersect_at()
 				.return_const(Vec3::new(1., 2., 3.));
 		}));
@@ -272,7 +272,7 @@ mod tests {
 
 	#[test]
 	fn face_hovering_entity_with_no_collider_root() {
-		let mut app = setup(_Cursor::new_mock(|mock| {
+		let mut app = setup(_Cursor::new().with_mock(|mock| {
 			mock.expect_intersect_at()
 				.return_const(Vec3::new(1., 2., 3.));
 		}));
@@ -300,7 +300,7 @@ mod tests {
 
 	#[test]
 	fn face_translation() {
-		let mut app = setup(_Cursor::new_mock(|mock| {
+		let mut app = setup(_Cursor::new().with_mock(|mock| {
 			mock.expect_intersect_at()
 				.return_const(Vec3::new(1., 2., 3.));
 		}));
@@ -324,7 +324,7 @@ mod tests {
 
 	#[test]
 	fn do_not_face_cursor_when_agent_immobilized() {
-		let mut app = setup(_Cursor::new_mock(|mock| {
+		let mut app = setup(_Cursor::new().with_mock(|mock| {
 			mock.expect_intersect_at()
 				.return_const(Vec3::new(1., 2., 3.));
 		}));
@@ -349,7 +349,7 @@ mod tests {
 
 	#[test]
 	fn face_hovering_collider_when_collided_immobilized() {
-		let mut app = setup(_Cursor::new_mock(|mock| {
+		let mut app = setup(_Cursor::new().with_mock(|mock| {
 			mock.expect_intersect_at()
 				.return_const(Vec3::new(1., 2., 3.));
 		}));

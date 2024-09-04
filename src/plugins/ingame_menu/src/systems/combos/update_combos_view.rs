@@ -25,14 +25,14 @@ mod tests {
 	use super::*;
 	use crate::traits::combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol};
 	use bevy::app::{App, Update};
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMock};
-	use macros::NestedMock;
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
 	#[derive(Component)]
 	struct _Agent;
 
-	#[derive(Component, NestedMock, Debug)]
+	#[derive(Component, NestedMocks, Debug)]
 	struct _ComboOverview {
 		mock: Mock_ComboOverview,
 	}
@@ -73,15 +73,16 @@ mod tests {
 				ComboTreeElement::Symbol(Symbol::Line),
 			]]),
 		));
-		app.world_mut().spawn(_ComboOverview::new_mock(|mock| {
-			mock.expect_update_combos_view()
-				.times(1)
-				.with(eq(vec![vec![
-					ComboTreeElement::Symbol(Symbol::Root),
-					ComboTreeElement::Symbol(Symbol::Line),
-				]]))
-				.return_const(());
-		}));
+		app.world_mut()
+			.spawn(_ComboOverview::new().with_mock(|mock| {
+				mock.expect_update_combos_view()
+					.times(1)
+					.with(eq(vec![vec![
+						ComboTreeElement::Symbol(Symbol::Root),
+						ComboTreeElement::Symbol(Symbol::Line),
+					]]))
+					.return_const(());
+			}));
 
 		app.update();
 	}
@@ -93,9 +94,10 @@ mod tests {
 			ComboTreeElement::Symbol(Symbol::Root),
 			ComboTreeElement::Symbol(Symbol::Line),
 		]]));
-		app.world_mut().spawn(_ComboOverview::new_mock(|mock| {
-			mock.expect_update_combos_view().never().return_const(());
-		}));
+		app.world_mut()
+			.spawn(_ComboOverview::new().with_mock(|mock| {
+				mock.expect_update_combos_view().never().return_const(());
+			}));
 
 		app.update();
 	}

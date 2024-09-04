@@ -90,13 +90,13 @@ mod tests {
 	use common::{
 		systems::log::test_tools::{fake_log_error_many_recourse, FakeErrorLogManyResource},
 		test_tools::utils::SingleThreadedApp,
-		traits::{load_asset::Path, nested_mock::NestedMock},
+		traits::{load_asset::Path, nested_mock::NestedMocks},
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use uuid::Uuid;
 
-	#[derive(TypePath, Asset, NestedMock)]
+	#[derive(TypePath, Asset, NestedMocks)]
 	struct _Folder {
 		mock: Mock_Folder,
 	}
@@ -149,7 +149,7 @@ mod tests {
 		let mut app = setup();
 		let folder_id = set_folder(
 			&mut app,
-			_Folder::new_mock(|mock| {
+			_Folder::new().with_mock(|mock| {
 				mock.expect_handle_from_path()
 					.times(1)
 					.with(eq(Path::from("my/skill/path")))
@@ -172,7 +172,7 @@ mod tests {
 		});
 		let folder_id = set_folder(
 			&mut app,
-			_Folder::new_mock(|mock| {
+			_Folder::new().with_mock(|mock| {
 				mock.expect_handle_from_path()
 					.with(eq(Path::from("my/path")))
 					.return_const(handle.clone());
@@ -199,7 +199,7 @@ mod tests {
 		let mut app = setup();
 		set_folder(
 			&mut app,
-			_Folder::new_mock(|mock| {
+			_Folder::new().with_mock(|mock| {
 				mock.expect_handle_from_path().never().return_const(None);
 			}),
 		);
@@ -214,7 +214,7 @@ mod tests {
 		let mut app = setup();
 		let folder_id = set_folder(
 			&mut app,
-			_Folder::new_mock(|mock| {
+			_Folder::new().with_mock(|mock| {
 				mock.expect_handle_from_path()
 					.times(1)
 					.with(eq(Path::from("my/skill/path")))
@@ -237,7 +237,7 @@ mod tests {
 		let mut app = setup();
 		let folder_id = set_folder(
 			&mut app,
-			_Folder::new_mock(|mock| {
+			_Folder::new().with_mock(|mock| {
 				mock.expect_handle_from_path().return_const(None);
 			}),
 		);
@@ -260,7 +260,7 @@ mod tests {
 		let mut app = setup();
 		set_folder(
 			&mut app,
-			_Folder::new_mock(|mock| {
+			_Folder::new().with_mock(|mock| {
 				mock.expect_handle_from_path().return_const(None);
 			}),
 		);
@@ -301,7 +301,7 @@ mod tests {
 		let mut app = setup();
 		let folder_id = set_folder(
 			&mut app,
-			_Folder::new_mock(|mock| {
+			_Folder::new().with_mock(|mock| {
 				mock.expect_handle_from_path().return_const(None);
 			}),
 		);

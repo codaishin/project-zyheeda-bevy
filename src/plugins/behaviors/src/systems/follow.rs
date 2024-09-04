@@ -19,14 +19,14 @@ pub(crate) fn follow<TTarget: Component, TMover: MoveTogether + Component>(
 mod tests {
 	use super::*;
 	use bevy::prelude::{App, Component, Transform, Update, Vec3};
-	use common::traits::nested_mock::NestedMock;
-	use macros::NestedMock;
+	use common::traits::nested_mock::NestedMocks;
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
 	#[derive(Component)]
 	struct _Target;
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _Mover {
 		pub mock: Mock_Mover,
 	}
@@ -45,7 +45,7 @@ mod tests {
 		app.world_mut()
 			.spawn((_Target, Transform::from_translation(Vec3::new(1., 2., 3.))));
 		app.world_mut().spawn((
-			_Mover::new_mock(|mock| {
+			_Mover::new().with_mock(|mock| {
 				mock.expect_move_together_with()
 					.with(
 						eq(Transform::from_xyz(10., 10., 10.)),

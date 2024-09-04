@@ -85,19 +85,19 @@ mod tests {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::UnitsPerSecond,
-		traits::nested_mock::NestedMock,
+		traits::nested_mock::NestedMocks,
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{automock, mock, predicate::eq};
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _Config {
 		mock: Mock_Config,
 	}
 
 	impl Default for _Config {
 		fn default() -> Self {
-			Self::new_mock(|mock| {
+			Self::new().with_mock(|mock| {
 				mock.expect_get_movement_data()
 					.return_const((default(), default()));
 			})
@@ -117,14 +117,14 @@ mod tests {
 	#[derive(Debug, PartialEq, Clone)]
 	struct _Animation;
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _MovementAnimations {
 		mock: Mock_MovementAnimations,
 	}
 
 	impl Default for _MovementAnimations {
 		fn default() -> Self {
-			Self::new_mock(|mock| {
+			Self::new().with_mock(|mock| {
 				mock.expect_animation().return_const(_Animation);
 			})
 		}
@@ -137,7 +137,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _AnimationDispatch {
 		mock: Mock_AnimationDispatch,
 	}
@@ -196,17 +196,17 @@ mod tests {
 	fn animate_fast() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Config::new_mock(|mock| {
+			_Config::new().with_mock(|mock| {
 				mock.expect_get_movement_data()
 					.return_const((UnitsPerSecond::default(), MovementMode::Fast));
 			}),
-			_MovementAnimations::new_mock(|mock| {
+			_MovementAnimations::new().with_mock(|mock| {
 				mock.expect_animation()
 					.times(1)
 					.with(eq(MovementMode::Fast))
 					.return_const(_Animation);
 			}),
-			_AnimationDispatch::new_mock(|mock| {
+			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation()
 					.times(1)
 					.with(eq(MovementLayer), eq(_Animation))
@@ -222,17 +222,17 @@ mod tests {
 	fn animate_slow() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Config::new_mock(|mock| {
+			_Config::new().with_mock(|mock| {
 				mock.expect_get_movement_data()
 					.return_const((UnitsPerSecond::default(), MovementMode::Slow));
 			}),
-			_MovementAnimations::new_mock(|mock| {
+			_MovementAnimations::new().with_mock(|mock| {
 				mock.expect_animation()
 					.times(1)
 					.with(eq(MovementMode::Slow))
 					.return_const(_Animation);
 			}),
-			_AnimationDispatch::new_mock(|mock| {
+			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation()
 					.times(1)
 					.with(eq(MovementLayer), eq(_Animation))
@@ -250,7 +250,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Config::default(),
 			_MovementAnimations::default(),
-			_AnimationDispatch::new_mock(|mock| {
+			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation::<MovementLayer>()
 					.never()
 					.return_const(());
@@ -268,7 +268,7 @@ mod tests {
 			.spawn((
 				_Config::default(),
 				_MovementAnimations::default(),
-				_AnimationDispatch::new_mock(|mock| {
+				_AnimationDispatch::new().with_mock(|mock| {
 					mock.expect_start_animation::<MovementLayer>()
 						.return_const(());
 					mock.expect_stop_animation::<MovementLayer>()
@@ -292,7 +292,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Config::default(),
 			_MovementAnimations::default(),
-			_AnimationDispatch::new_mock(|mock| {
+			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation()
 					.times(1)
 					.with(eq(MovementLayer), eq(_Animation))
@@ -313,7 +313,7 @@ mod tests {
 			.spawn((
 				_Config::default(),
 				_MovementAnimations::default(),
-				_AnimationDispatch::new_mock(|mock| {
+				_AnimationDispatch::new().with_mock(|mock| {
 					mock.expect_start_animation()
 						.times(1)
 						.with(eq(MovementLayer), eq(_Animation))
@@ -342,7 +342,7 @@ mod tests {
 			.spawn((
 				_Config::default(),
 				_MovementAnimations::default(),
-				_AnimationDispatch::new_mock(|mock| {
+				_AnimationDispatch::new().with_mock(|mock| {
 					mock.expect_start_animation()
 						.times(2)
 						.with(eq(MovementLayer), eq(_Animation))
@@ -368,7 +368,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Config::default(),
 			_MovementAnimations::default(),
-			_AnimationDispatch::new_mock(|mock| {
+			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation::<MovementLayer>()
 					.never()
 					.return_const(());

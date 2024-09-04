@@ -65,9 +65,9 @@ mod tests {
 	use common::{
 		resources::Shared,
 		test_tools::utils::SingleThreadedApp,
-		traits::{load_asset::Path, nested_mock::NestedMock},
+		traits::{load_asset::Path, nested_mock::NestedMocks},
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 
 	#[derive(Component)]
@@ -106,7 +106,7 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Player;
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _Transitions {
 		mock: Mock_Transitions,
 	}
@@ -160,7 +160,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Player,
-				_Transitions::new_mock(|mock| {
+				_Transitions::new().with_mock(|mock| {
 					mock.expect_is_playing().return_const(false);
 					mock.expect_repeat().never().return_const(());
 					mock.expect_replay()
@@ -189,7 +189,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Player,
-				_Transitions::new_mock(|mock| {
+				_Transitions::new().with_mock(|mock| {
 					mock.expect_is_playing().return_const(false);
 					mock.expect_replay().never().return_const(());
 					mock.expect_repeat()
@@ -218,7 +218,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Player,
-				_Transitions::new_mock(|mock| {
+				_Transitions::new().with_mock(|mock| {
 					mock.expect_is_playing()
 						.with(eq(_Index("my/path")))
 						.return_const(true);
@@ -247,7 +247,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Player,
-				_Transitions::new_mock(|mock| {
+				_Transitions::new().with_mock(|mock| {
 					mock.expect_is_playing().return_const(false);
 					mock.expect_replay().times(1).return_const(());
 					mock.expect_repeat().times(1).return_const(());
@@ -288,7 +288,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Player,
-				_Transitions::new_mock(|mock| {
+				_Transitions::new().with_mock(|mock| {
 					mock.expect_is_playing().never().return_const(false);
 					mock.expect_replay().never().return_const(());
 					mock.expect_repeat().never().return_const(());

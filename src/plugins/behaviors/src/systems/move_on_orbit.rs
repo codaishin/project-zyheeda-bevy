@@ -24,11 +24,11 @@ mod tests {
 	use super::*;
 	use crate::traits::{Orbit, Vec2Radians};
 	use bevy::{ecs::event::Events, input::mouse::MouseMotion};
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMock};
-	use macros::NestedMock;
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _Orbit {
 		mock: Mock_Orbit,
 	}
@@ -55,7 +55,7 @@ mod tests {
 	fn move_camera_on_move_event() {
 		let mut app = setup_app();
 		app.world_mut().spawn((
-			_Orbit::new_mock(|mock| {
+			_Orbit::new().with_mock(|mock| {
 				mock.expect_orbit()
 					.with(
 						eq(Transform::from_translation(Vec3::ZERO)),
@@ -82,7 +82,7 @@ mod tests {
 	fn do_not_move_camera_when_not_right_mouse_button_pressed() {
 		let mut app = setup_app();
 		app.world_mut().spawn((
-			_Orbit::new_mock(|mock| {
+			_Orbit::new().with_mock(|mock| {
 				mock.expect_orbit()
 					.with(
 						eq(Transform::from_translation(Vec3::ZERO)),

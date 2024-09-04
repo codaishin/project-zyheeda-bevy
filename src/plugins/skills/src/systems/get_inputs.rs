@@ -58,9 +58,9 @@ mod tests {
 	use common::{
 		components::Side,
 		test_tools::utils::SingleThreadedApp,
-		traits::nested_mock::NestedMock,
+		traits::nested_mock::NestedMocks,
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::automock;
 
 	#[derive(Resource, Clone, Debug, PartialEq)]
@@ -75,7 +75,7 @@ mod tests {
 	#[derive(Resource, Debug, PartialEq, Default)]
 	struct _Result(Input);
 
-	#[derive(Resource, NestedMock)]
+	#[derive(Resource, NestedMocks)]
 	struct _Superior {
 		mock: Mock_Superior,
 	}
@@ -93,7 +93,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Resource, NestedMock)]
+	#[derive(Resource, NestedMocks)]
 	struct _Inferior {
 		mock: Mock_Inferior,
 	}
@@ -129,7 +129,7 @@ mod tests {
 	#[test]
 	fn get_superior_inputs() {
 		let mut app = setup(
-			_Superior::new_mock(|mock| {
+			_Superior::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots()
 					.times(1)
 					.return_const(vec![SlotKey::Hand(Side::Main)]);
@@ -140,7 +140,7 @@ mod tests {
 					.times(1)
 					.return_const(vec![SlotKey::Hand(Side::Off)]);
 			}),
-			_Inferior::new_mock(|mock| {
+			_Inferior::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots().return_const(vec![]);
 				mock.expect_pressed_slots().return_const(vec![]);
 				mock.expect_just_released_slots().return_const(vec![]);
@@ -165,12 +165,12 @@ mod tests {
 	#[test]
 	fn get_inferior_inputs() {
 		let mut app = setup(
-			_Superior::new_mock(|mock| {
+			_Superior::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots().return_const(vec![]);
 				mock.expect_pressed_slots().return_const(vec![]);
 				mock.expect_just_released_slots().return_const(vec![]);
 			}),
-			_Inferior::new_mock(|mock| {
+			_Inferior::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots()
 					.times(1)
 					.return_const(vec![SlotKey::Hand(Side::Off)]);
@@ -201,13 +201,13 @@ mod tests {
 	#[test]
 	fn ignore_inferior_just_pressed_if_superior_pressed() {
 		let mut app = setup(
-			_Superior::new_mock(|mock| {
+			_Superior::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots().return_const(vec![]);
 				mock.expect_pressed_slots()
 					.return_const(vec![SlotKey::Hand(Side::Main)]);
 				mock.expect_just_released_slots().return_const(vec![]);
 			}),
-			_Inferior::new_mock(|mock| {
+			_Inferior::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots()
 					.return_const(vec![SlotKey::Hand(Side::Main)]);
 				mock.expect_pressed_slots().return_const(vec![]);
@@ -232,13 +232,13 @@ mod tests {
 	#[test]
 	fn ignore_inferior_just_released_if_superior_pressed() {
 		let mut app = setup(
-			_Superior::new_mock(|mock| {
+			_Superior::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots().return_const(vec![]);
 				mock.expect_pressed_slots()
 					.return_const(vec![SlotKey::Hand(Side::Main)]);
 				mock.expect_just_released_slots().return_const(vec![]);
 			}),
-			_Inferior::new_mock(|mock| {
+			_Inferior::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots().return_const(vec![]);
 				mock.expect_pressed_slots().return_const(vec![]);
 				mock.expect_just_released_slots()

@@ -73,12 +73,12 @@ mod tests {
 		app::{App, Update},
 		math::{Vec2, Vec3},
 	};
-	use common::traits::nested_mock::NestedMock;
-	use macros::NestedMock;
+	use common::traits::nested_mock::NestedMocks;
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::VecDeque;
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	pub struct _Camera {
 		pub mock: Mock_Camera,
 	}
@@ -115,7 +115,7 @@ mod tests {
 		match camera {
 			None => {
 				app.world_mut().spawn((
-					_Camera::new_mock(|mock| {
+					_Camera::new().with_mock(|mock| {
 						mock.expect_get_screen_position()
 							.return_const(Vec2::default());
 					}),
@@ -154,7 +154,7 @@ mod tests {
 		let camera_transform = GlobalTransform::from_xyz(4., 5., 6.);
 		let offset = Vec3::new(1., 2., 3.);
 		let mut app = setup(Some((
-			_Camera::new_mock(|mock| {
+			_Camera::new().with_mock(|mock| {
 				mock.expect_get_screen_position()
 					.times(1)
 					.with(eq(camera_transform), eq(Vec3::new(5., 3., 9.) + offset))
@@ -175,7 +175,7 @@ mod tests {
 	#[test]
 	fn set_bar_position() {
 		let mut app = setup(Some((
-			_Camera::new_mock(|mock| {
+			_Camera::new().with_mock(|mock| {
 				mock.expect_get_screen_position()
 					.return_const(Vec2::new(42., 24.));
 			}),
@@ -231,7 +231,7 @@ mod tests {
 		let camera_transform = GlobalTransform::from_xyz(4., 5., 6.);
 		let offset = Vec3::new(11., 12., 13.);
 		let mut app = setup(Some((
-			_Camera::new_mock(|mock| {
+			_Camera::new().with_mock(|mock| {
 				mock.expect_get_screen_position()
 					.times(2)
 					.with(eq(camera_transform), eq(Vec3::new(5., 3., 9.) + offset))
@@ -253,7 +253,7 @@ mod tests {
 	#[test]
 	fn update_bar_position() {
 		let mut app = setup(Some((
-			_Camera::new_mock(|mock| {
+			_Camera::new().with_mock(|mock| {
 				let mut screen_positions =
 					VecDeque::from([Vec2::new(11., 22.), Vec2::new(22., 33.)]);
 

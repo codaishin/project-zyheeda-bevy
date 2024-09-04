@@ -23,13 +23,13 @@ mod tests {
 	};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		traits::{load_asset::Path, nested_mock::NestedMock},
+		traits::{load_asset::Path, nested_mock::NestedMocks},
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use uuid::Uuid;
 
-	#[derive(Resource, NestedMock)]
+	#[derive(Resource, NestedMocks)]
 	struct _Server {
 		mock: Mock_Server,
 	}
@@ -55,7 +55,7 @@ mod tests {
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
-		let mut app = setup(_Server::new_mock(|mock| {
+		let mut app = setup(_Server::new().with_mock(|mock| {
 			mock.expect_load_folder_assets()
 				.return_const(handle.clone());
 		}));
@@ -69,7 +69,7 @@ mod tests {
 
 	#[test]
 	fn call_load_folder_assets_with_skill_path() {
-		let mut app = setup(_Server::new_mock(|mock| {
+		let mut app = setup(_Server::new().with_mock(|mock| {
 			mock.expect_load_folder_assets()
 				.times(1)
 				.with(eq(Path::from("skills")))

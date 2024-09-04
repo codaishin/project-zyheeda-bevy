@@ -84,13 +84,13 @@ mod tests {
 		components::Outdated,
 		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
-		traits::nested_mock::NestedMock,
+		traits::nested_mock::NestedMocks,
 	};
-	use macros::NestedMock;
+	use macros::NestedMocks;
 	use mockall::automock;
 	use std::ops::DerefMut;
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	struct _Executor {
 		mock: Mock_Executor,
 	}
@@ -179,7 +179,7 @@ mod tests {
 		let caster = set_caster(&mut app, &spawner);
 		app.world_mut()
 			.entity_mut(caster.0)
-			.insert(_Executor::new_mock(move |mock| {
+			.insert(_Executor::new().with_mock(move |mock| {
 				mock.expect_execute()
 					.times(1)
 					.returning(|commands, caster, spawner, target| {
@@ -216,7 +216,7 @@ mod tests {
 		let caster = set_caster(&mut app, &spawner);
 		app.world_mut()
 			.entity_mut(caster.0)
-			.insert(_Executor::new_mock(|mock| {
+			.insert(_Executor::new().with_mock(|mock| {
 				mock.expect_execute().times(1).return_const(());
 			}));
 
@@ -232,7 +232,7 @@ mod tests {
 		let caster = set_caster(&mut app, &spawner);
 		app.world_mut()
 			.entity_mut(caster.0)
-			.insert(_Executor::new_mock(|mock| {
+			.insert(_Executor::new().with_mock(|mock| {
 				mock.expect_execute().times(2).return_const(());
 			}));
 

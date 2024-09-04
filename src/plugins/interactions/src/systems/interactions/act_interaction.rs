@@ -50,11 +50,11 @@ mod tests {
 	use super::*;
 	use crate::traits::ActionType;
 	use bevy::{app::App, ecs::system::RunSystemOnce};
-	use common::{components::ColliderRoot, traits::nested_mock::NestedMock};
-	use macros::NestedMock;
+	use common::{components::ColliderRoot, traits::nested_mock::NestedMocks};
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Component, NestedMock)]
+	#[derive(Component, NestedMocks)]
 	pub struct _Actor {
 		mock: Mock_Actor,
 	}
@@ -91,7 +91,7 @@ mod tests {
 			.id();
 		app.world_mut()
 			.entity_mut(entity)
-			.insert(_Actor::new_mock(|mock| {
+			.insert(_Actor::new().with_mock(|mock| {
 				mock.expect_act()
 					.times(1)
 					.with(eq(entity), eq(_Target), eq(Duration::from_millis(42)))
@@ -113,7 +113,7 @@ mod tests {
 			.spawn((
 				ActedOnTargets::<_Actor>::default(),
 				InteractingEntities::new([ColliderRoot(target)]),
-				_Actor::new_mock(|mock| {
+				_Actor::new().with_mock(|mock| {
 					mock.expect_act().return_const(ActionType::Once);
 				}),
 			))
@@ -136,7 +136,7 @@ mod tests {
 			.spawn((
 				ActedOnTargets::<_Actor>::default(),
 				InteractingEntities::new([ColliderRoot(target)]),
-				_Actor::new_mock(|mock| {
+				_Actor::new().with_mock(|mock| {
 					mock.expect_act().return_const(ActionType::Once);
 				}),
 			))
@@ -159,7 +159,7 @@ mod tests {
 			.spawn((
 				ActedOnTargets::<_Actor>::default(),
 				InteractingEntities::new([ColliderRoot(target)]),
-				_Actor::new_mock(|mock| {
+				_Actor::new().with_mock(|mock| {
 					mock.expect_act().return_const(ActionType::Always);
 				}),
 			))
@@ -169,7 +169,7 @@ mod tests {
 			.spawn((
 				ActedOnTargets::<_Actor>::default(),
 				InteractingEntities::new([ColliderRoot(target)]),
-				_Actor::new_mock(|mock| {
+				_Actor::new().with_mock(|mock| {
 					mock.expect_act().return_const(ActionType::OncePerTarget);
 				}),
 			))
@@ -199,7 +199,7 @@ mod tests {
 			.spawn((
 				ActedOnTargets::<_Actor>::default(),
 				InteractingEntities::new([ColliderRoot(target)]),
-				_Actor::new_mock(|mock| {
+				_Actor::new().with_mock(|mock| {
 					mock.expect_act().return_const(ActionType::OncePerTarget);
 				}),
 			))
