@@ -1,11 +1,12 @@
-use crate::behaviors::{build_skill_shape::OnSkillStop, SkillCaster, SkillSpawner, Target};
+use crate::{
+	behaviors::{build_skill_shape::OnSkillStop, SkillCaster, SkillSpawner, Target},
+	skills::lifetime::LifeTimeDefinition,
+};
 use behaviors::components::LifeTime;
 use bevy::{
 	ecs::system::EntityCommands,
 	prelude::{BuildChildren, Bundle, Commands, Entity},
 };
-use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
 pub(crate) trait BuildContact {
 	fn build_contact(
@@ -23,14 +24,6 @@ pub(crate) trait BuildProjection {
 		spawner: &SkillSpawner,
 		target: &Target,
 	) -> impl Bundle;
-}
-
-#[derive(Default, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub enum LifeTimeDefinition {
-	#[default]
-	UntilStopped,
-	Infinite,
-	UntilOutlived(Duration),
 }
 
 pub(crate) trait SkillLifetime {

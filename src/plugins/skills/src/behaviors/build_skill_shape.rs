@@ -3,7 +3,10 @@ pub mod spawn_projectile;
 pub mod spawn_shield;
 
 use super::{SkillCaster, SkillSpawner, Target};
-use crate::traits::skill_builder::{LifeTimeDefinition, SkillBuilder, SkillShape};
+use crate::{
+	skills::lifetime::LifeTimeDefinition,
+	traits::skill_builder::{SkillBuilder, SkillShape},
+};
 use bevy::prelude::{BuildChildren, Commands, Entity};
 use spawn_ground_target::SpawnGroundTargetedAoe;
 use spawn_projectile::SpawnProjectile;

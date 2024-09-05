@@ -1,6 +1,6 @@
 pub(crate) mod animate_data;
+pub(crate) mod run_skill_behavior_data;
 pub(crate) mod skill_animation_data;
-pub(crate) mod skill_behavior_data;
 
 use super::Skill;
 use crate::items::ItemType;
@@ -9,8 +9,8 @@ use common::traits::{
 	load_asset::{LoadAsset, Path},
 	load_from::LoadFrom,
 };
+use run_skill_behavior_data::RunSkillBehaviorData;
 use serde::{Deserialize, Serialize};
-use skill_behavior_data::RunSkillBehaviorData;
 use std::{collections::HashSet, time::Duration};
 
 #[derive(Serialize, Deserialize, Debug)]

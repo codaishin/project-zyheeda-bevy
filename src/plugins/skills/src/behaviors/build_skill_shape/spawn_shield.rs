@@ -1,6 +1,7 @@
 use crate::{
 	behaviors::{SkillCaster, SkillSpawner, Target},
-	traits::skill_builder::{BuildContact, BuildProjection, LifeTimeDefinition, SkillLifetime},
+	skills::lifetime::LifeTimeDefinition,
+	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
 use behaviors::components::shield::{ShieldContact, ShieldProjection};
 use bevy::prelude::{Bundle, SpatialBundle, Transform};

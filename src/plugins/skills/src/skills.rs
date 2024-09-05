@@ -1,9 +1,11 @@
+pub(crate) mod lifetime;
 pub mod shoot_hand_gun;
 pub mod skill_data;
 
 use crate::{
 	behaviors::{build_skill_shape::BuildSkillShape, SkillBehaviorConfig},
 	items::{slot_key::SlotKey, ItemType},
+	skills::lifetime::{OnActiveLifetime, OnAimLifeTime},
 	traits::{Matches, Prime},
 };
 use animations::animation::Animation;
@@ -14,7 +16,6 @@ use bevy::{
 	reflect::TypePath,
 };
 use common::resources::ColliderInfo;
-use skill_data::skill_behavior_data::{OnActiveLifetime, OnAimLifeTime};
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result},
