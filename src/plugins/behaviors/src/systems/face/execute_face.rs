@@ -2,6 +2,7 @@ use crate::components::Face;
 use bevy::{
 	ecs::{
 		entity::Entity,
+		query::QueryFilter,
 		system::{In, Query, Res, Resource},
 	},
 	math::Vec3,
@@ -13,14 +14,15 @@ use common::{
 	traits::intersect_at::IntersectAt,
 };
 
-pub(crate) fn execute_face<TCursor: IntersectAt + Resource>(
+pub(crate) fn execute_face<TCursor: IntersectAt + Resource, TCursorFilter: QueryFilter>(
 	faces: In<Vec<(Entity, Face)>>,
 	mut transforms: Query<(&mut Transform, Option<&Immobilized>)>,
 	roots: Query<&ColliderRoot>,
 	cursor: Res<TCursor>,
 	hover: Res<MouseHover>,
+	cursor_filter: Query<(), TCursorFilter>,
 ) {
-	let cursor_target = get_target(&transforms, &cursor, &hover);
+	let cursor_target = get_cursor_target(&transforms, &cursor, &hover, &cursor_filter);
 	let face_targets = get_face_targets(&transforms, faces.0, roots, cursor_target);
 
 	for (id, target) in face_targets {
@@ -61,17 +63,22 @@ fn get_face_targets(
 		.collect()
 }
 
-fn get_target<TCursor: IntersectAt + Resource>(
+fn get_cursor_target<TCursor: IntersectAt + Resource, TFilter: QueryFilter>(
 	transforms: &Query<(&mut Transform, Option<&Immobilized>)>,
 	cursor: &Res<TCursor>,
 	hover: &Res<MouseHover>,
+	cursor_filter: &Query<(), TFilter>,
 ) -> Option<Vec3> {
 	let Some(collider_info) = &hover.0 else {
 		return cursor.intersect_at(0.);
 	};
 
 	let entity = collider_info.root.unwrap_or(collider_info.collider);
-	get_translation(entity, transforms)
+
+	match cursor_filter.get(entity) {
+		Ok(_) => get_translation(entity, transforms),
+		Err(_) => cursor.intersect_at(0.),
+	}
 }
 
 fn get_translation(
@@ -92,6 +99,7 @@ mod tests {
 		app::{App, Update},
 		ecs::{component::Component, system::IntoSystem},
 		math::Vec3,
+		prelude::Without,
 	};
 	use common::{
 		components::{ColliderRoot, Immobilized},
@@ -110,6 +118,9 @@ mod tests {
 	#[derive(Component)]
 	struct _Face(Face);
 
+	#[derive(Component)]
+	struct _Ignore;
+
 	#[automock]
 	impl IntersectAt for _Cursor {
 		fn intersect_at(&self, height: f32) -> Option<Vec3> {
@@ -123,7 +134,10 @@ mod tests {
 
 	fn setup(cursor: _Cursor) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, read_faces.pipe(execute_face::<_Cursor>));
+		app.add_systems(
+			Update,
+			read_faces.pipe(execute_face::<_Cursor, Without<_Ignore>>),
+		);
 		app.insert_resource(cursor);
 		app.init_resource::<MouseHover>();
 
@@ -213,6 +227,36 @@ mod tests {
 	}
 
 	#[test]
+	fn do_not_face_hovering_entity_with_collider_root_with_non_matching_filter() {
+		let mut app = setup(_Cursor::new().with_mock(|mock| {
+			mock.expect_intersect_at()
+				.return_const(Vec3::new(1., 2., 3.));
+		}));
+		let agent = app
+			.world_mut()
+			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor)))
+			.id();
+		let root = app
+			.world_mut()
+			.spawn((Transform::from_xyz(10., 11., 12.), _Ignore))
+			.id();
+		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
+		app.insert_resource(MouseHover(Some(ColliderInfo {
+			collider,
+			root: Some(root),
+		})));
+
+		app.update();
+
+		let agent = app.world().entity(agent);
+
+		assert_eq!(
+			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(1., 2., 3.), Vec3::Y)),
+			agent.get::<Transform>()
+		);
+	}
+
+	#[test]
 	fn face_hovering_collider() {
 		let mut app = setup(_Cursor::new().with_mock(|mock| {
 			mock.expect_intersect_at()
@@ -237,6 +281,35 @@ mod tests {
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
+			agent.get::<Transform>()
+		);
+	}
+
+	#[test]
+	fn do_not_face_hovering_collider_with_non_matching_filter() {
+		let mut app = setup(_Cursor::new().with_mock(|mock| {
+			mock.expect_intersect_at()
+				.return_const(Vec3::new(1., 2., 3.));
+		}));
+		let agent = app
+			.world_mut()
+			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor)))
+			.id();
+		let collider = app
+			.world_mut()
+			.spawn((Transform::from_xyz(10., 11., 12.), _Ignore))
+			.id();
+		app.insert_resource(MouseHover(Some(ColliderInfo {
+			collider,
+			root: None,
+		})));
+
+		app.update();
+
+		let agent = app.world().entity(agent);
+
+		assert_eq!(
+			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(1., 2., 3.), Vec3::Y)),
 			agent.get::<Transform>()
 		);
 	}

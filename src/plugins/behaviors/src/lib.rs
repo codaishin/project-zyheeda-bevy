@@ -11,6 +11,7 @@ use bevy::{
 	app::{App, Plugin, Update},
 	ecs::{schedule::IntoSystemConfigs, system::IntoSystem},
 	input::keyboard::KeyCode,
+	prelude::Without,
 	state::condition::in_state,
 	time::Virtual,
 };
@@ -90,7 +91,7 @@ impl Plugin for BehaviorsPlugin {
 						.pipe(idle),
 					execute_move_velocity_based::<MovementConfig, Movement<VelocityBased>>
 						.pipe(idle),
-					get_faces.pipe(execute_face::<CamRay>),
+					get_faces.pipe(execute_face::<CamRay, Without<Player>>),
 				)
 					.chain(),
 			)
