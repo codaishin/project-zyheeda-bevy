@@ -144,7 +144,7 @@ pub(crate) enum SkillState {
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum RunSkillBehavior {
-	OnActive(SkillBehaviorConfig<OnActiveLifetime>),
+	OnActive(SkillBehaviorConfig<OnActiveLifetime<Duration>>),
 	OnAim(SkillBehaviorConfig<OnAimLifeTime>),
 }
 

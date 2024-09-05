@@ -20,12 +20,13 @@ pub(crate) struct SkillBehaviorConfigData<T> {
 	projection: Vec<SkillBehaviorData>,
 }
 
-impl<TLifeTime> From<SkillBehaviorConfigData<TLifeTime>> for SkillBehaviorConfig<TLifeTime>
+impl<TLifeTimeIn, TLifeTimeOut> From<SkillBehaviorConfigData<TLifeTimeIn>>
+	for SkillBehaviorConfig<TLifeTimeOut>
 where
-	LifeTimeDefinition: From<TLifeTime>,
-	TLifeTime: Clone,
+	LifeTimeDefinition: From<TLifeTimeOut>,
+	TLifeTimeOut: Clone + From<TLifeTimeIn>,
 {
-	fn from(value: SkillBehaviorConfigData<TLifeTime>) -> Self {
+	fn from(value: SkillBehaviorConfigData<TLifeTimeIn>) -> Self {
 		let shape = BuildSkillShape::from(value.shape);
 		let contact = value.contact.into_iter().map(SkillBehavior::from);
 		let projection = value.projection.into_iter().map(SkillBehavior::from);

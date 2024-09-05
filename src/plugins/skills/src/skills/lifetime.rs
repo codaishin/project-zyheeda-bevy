@@ -1,3 +1,4 @@
+use common::tools::duration_data::DurationData;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -10,13 +11,22 @@ pub enum LifeTimeDefinition {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub enum OnActiveLifetime {
-	UntilOutlived(Duration),
+pub enum OnActiveLifetime<TDuration> {
+	UntilOutlived(TDuration),
 	Infinite,
 }
 
-impl From<OnActiveLifetime> for LifeTimeDefinition {
-	fn from(value: OnActiveLifetime) -> Self {
+impl From<OnActiveLifetime<DurationData>> for OnActiveLifetime<Duration> {
+	fn from(value: OnActiveLifetime<DurationData>) -> Self {
+		match value {
+			OnActiveLifetime::UntilOutlived(data) => Self::UntilOutlived(Duration::from(data)),
+			OnActiveLifetime::Infinite => Self::Infinite,
+		}
+	}
+}
+
+impl From<OnActiveLifetime<Duration>> for LifeTimeDefinition {
+	fn from(value: OnActiveLifetime<Duration>) -> Self {
 		match value {
 			OnActiveLifetime::UntilOutlived(duration) => Self::UntilOutlived(duration),
 			OnActiveLifetime::Infinite => Self::Infinite,

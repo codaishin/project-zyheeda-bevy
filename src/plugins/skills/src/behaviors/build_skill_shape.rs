@@ -22,9 +22,9 @@ pub enum OnSkillStop {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub(crate) enum BuildSkillShape<T> {
+pub(crate) enum BuildSkillShape<TLifeTime> {
 	Fn(BuildSkillShapeFn),
-	GroundTargetedAoe(SpawnGroundTargetedAoe<T>),
+	GroundTargetedAoe(SpawnGroundTargetedAoe<TLifeTime>),
 	Projectile(SpawnProjectile),
 	Shield(SpawnShield),
 }

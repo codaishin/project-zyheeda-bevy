@@ -7,12 +7,13 @@ use crate::{
 		RunSkillBehavior,
 	},
 };
+use common::tools::duration_data::DurationData;
 use serde::{Deserialize, Serialize};
 use skill_behavior_config_data::SkillBehaviorConfigData;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) enum RunSkillBehaviorData {
-	OnActive(SkillBehaviorConfigData<OnActiveLifetime>),
+	OnActive(SkillBehaviorConfigData<OnActiveLifetime<DurationData>>),
 	OnAim(SkillBehaviorConfigData<OnAimLifeTime>),
 }
 

@@ -12,8 +12,7 @@
 				"GroundTargetedAoe": {
 					"lifetime": {
 						"UntilOutlived": {
-							"secs": 5,
-							"nanos": 0
+							"seconds": 5
 						}
 					},
 					"max_range": 10,

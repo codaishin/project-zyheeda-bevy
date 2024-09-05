@@ -18,6 +18,19 @@ pub struct SpawnGroundTargetedAoe<TLifeTime> {
 	pub radius: Units,
 }
 
+impl<T> SpawnGroundTargetedAoe<T> {
+	pub(crate) fn map_lifetime<TLifetime>(self) -> SpawnGroundTargetedAoe<TLifetime>
+	where
+		TLifetime: From<T>,
+	{
+		SpawnGroundTargetedAoe {
+			lifetime: TLifetime::from(self.lifetime),
+			max_range: self.max_range,
+			radius: self.radius,
+		}
+	}
+}
+
 impl<T> BuildContact for SpawnGroundTargetedAoe<T> {
 	fn build_contact(
 		&self,
