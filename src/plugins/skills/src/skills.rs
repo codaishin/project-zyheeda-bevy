@@ -39,7 +39,7 @@ pub enum Animate<TAnimation> {
 #[derive(PartialEq, Debug, Default, Clone, TypePath, Asset)]
 pub struct Skill {
 	pub name: String,
-	pub active: Duration,
+	pub cast_time: Duration,
 	pub animate: Animate<SkillAnimation>,
 	pub behavior: RunSkillBehavior,
 	pub is_usable_with: HashSet<ItemType>,

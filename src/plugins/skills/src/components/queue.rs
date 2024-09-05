@@ -532,7 +532,7 @@ impl<'a> StateDuration<SkillState> for ActiveSkill<'a> {
 		match (key, &self.mode) {
 			(SkillState::Aim, Activation::Primed | Activation::Waiting) => Duration::MAX,
 			(SkillState::Aim, Activation::ActiveAfter(duration)) => *duration,
-			(SkillState::Active, _) => self.skill.active,
+			(SkillState::Active, _) => self.skill.cast_time,
 		}
 	}
 
@@ -582,7 +582,7 @@ mod test_queue_active_skill {
 			queue: VecDeque::from([
 				QueuedSkill {
 					skill: Skill {
-						active: Duration::from_millis(1),
+						cast_time: Duration::from_millis(1),
 						..default()
 					},
 					slot_key: SlotKey::Hand(Side::Main),
@@ -610,7 +610,7 @@ mod test_queue_active_skill {
 			queue: VecDeque::from([
 				QueuedSkill {
 					skill: Skill {
-						active: Duration::from_millis(1),
+						cast_time: Duration::from_millis(1),
 						..default()
 					},
 					slot_key: SlotKey::Hand(Side::Main),
@@ -638,7 +638,7 @@ mod test_queue_active_skill {
 			queue: VecDeque::from([
 				QueuedSkill {
 					skill: Skill {
-						active: Duration::from_millis(1),
+						cast_time: Duration::from_millis(1),
 						..default()
 					},
 					slot_key: SlotKey::Hand(Side::Main),

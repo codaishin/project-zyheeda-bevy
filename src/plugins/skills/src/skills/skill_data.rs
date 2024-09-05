@@ -5,9 +5,12 @@ pub(crate) mod skill_animation_data;
 use super::Skill;
 use crate::items::ItemType;
 use animate_data::AnimateData;
-use common::traits::{
-	load_asset::{LoadAsset, Path},
-	load_from::LoadFrom,
+use common::{
+	tools::duration_data::DurationData,
+	traits::{
+		load_asset::{LoadAsset, Path},
+		load_from::LoadFrom,
+	},
 };
 use run_skill_behavior_data::RunSkillBehaviorData;
 use serde::{Deserialize, Serialize};
@@ -16,7 +19,7 @@ use std::{collections::HashSet, time::Duration};
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct SkillData {
 	name: String,
-	active: Duration,
+	cast_time: DurationData,
 	animate: AnimateData,
 	behavior: RunSkillBehaviorData,
 	is_usable_with: HashSet<ItemType>,
@@ -30,7 +33,7 @@ impl LoadFrom<SkillData> for Skill {
 	) -> Self {
 		Self {
 			name: skill_data.name,
-			active: skill_data.active,
+			cast_time: Duration::from(skill_data.cast_time),
 			animate: skill_data.animate.into(),
 			behavior: skill_data.behavior.into(),
 			is_usable_with: skill_data.is_usable_with,
