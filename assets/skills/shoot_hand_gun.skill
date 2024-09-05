@@ -1,8 +1,7 @@
 {
 	"name": "Shoot Hand Gun",
-	"active": {
-		"secs": 0,
-		"nanos": 200000000
+	"cast_time": {
+		"seconds": 0.2
 	},
 	"animate": {
 		"Some": "ShootHandGun"

@@ -13,10 +13,13 @@ pub(crate) enum SkillShapeData<T> {
 	Shield(SpawnShield),
 }
 
-impl<TLifeTime> From<SkillShapeData<TLifeTime>> for BuildSkillShape<TLifeTime> {
-	fn from(value: SkillShapeData<TLifeTime>) -> Self {
+impl<TLifeTimeIn, TLifeTimeOut> From<SkillShapeData<TLifeTimeIn>> for BuildSkillShape<TLifeTimeOut>
+where
+	TLifeTimeOut: From<TLifeTimeIn>,
+{
+	fn from(value: SkillShapeData<TLifeTimeIn>) -> Self {
 		match value {
-			SkillShapeData::GroundTargetedAoe(v) => Self::GroundTargetedAoe(v),
+			SkillShapeData::GroundTargetedAoe(v) => Self::GroundTargetedAoe(v.map_lifetime()),
 			SkillShapeData::Projectile(v) => Self::Projectile(v),
 			SkillShapeData::Shield(v) => Self::Shield(v),
 		}

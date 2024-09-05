@@ -1,9 +1,11 @@
+pub(crate) mod lifetime;
 pub mod shoot_hand_gun;
 pub mod skill_data;
 
 use crate::{
 	behaviors::{build_skill_shape::BuildSkillShape, SkillBehaviorConfig},
 	items::{slot_key::SlotKey, ItemType},
+	skills::lifetime::{OnActiveLifetime, OnAimLifeTime},
 	traits::{Matches, Prime},
 };
 use animations::animation::Animation;
@@ -14,7 +16,6 @@ use bevy::{
 	reflect::TypePath,
 };
 use common::resources::ColliderInfo;
-use skill_data::skill_behavior_data::{OnActiveLifetime, OnAimLifeTime};
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result},
@@ -38,7 +39,7 @@ pub enum Animate<TAnimation> {
 #[derive(PartialEq, Debug, Default, Clone, TypePath, Asset)]
 pub struct Skill {
 	pub name: String,
-	pub active: Duration,
+	pub cast_time: Duration,
 	pub animate: Animate<SkillAnimation>,
 	pub behavior: RunSkillBehavior,
 	pub is_usable_with: HashSet<ItemType>,
@@ -143,7 +144,7 @@ pub(crate) enum SkillState {
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum RunSkillBehavior {
-	OnActive(SkillBehaviorConfig<OnActiveLifetime>),
+	OnActive(SkillBehaviorConfig<OnActiveLifetime<Duration>>),
 	OnAim(SkillBehaviorConfig<OnAimLifeTime>),
 }
 

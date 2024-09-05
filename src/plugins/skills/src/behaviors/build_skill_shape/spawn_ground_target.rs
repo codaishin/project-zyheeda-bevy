@@ -1,6 +1,7 @@
 use crate::{
 	behaviors::{SkillCaster, SkillSpawner, Target},
-	traits::skill_builder::{BuildContact, BuildProjection, LifeTimeDefinition, SkillLifetime},
+	skills::lifetime::LifeTimeDefinition,
+	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
 use behaviors::components::ground_targeted_aoe::{
 	GroundTargetedAoeContact,
@@ -15,6 +16,19 @@ pub struct SpawnGroundTargetedAoe<TLifeTime> {
 	pub lifetime: TLifeTime,
 	pub max_range: Units,
 	pub radius: Units,
+}
+
+impl<T> SpawnGroundTargetedAoe<T> {
+	pub(crate) fn map_lifetime<TLifetime>(self) -> SpawnGroundTargetedAoe<TLifetime>
+	where
+		TLifetime: From<T>,
+	{
+		SpawnGroundTargetedAoe {
+			lifetime: TLifetime::from(self.lifetime),
+			max_range: self.max_range,
+			radius: self.radius,
+		}
+	}
 }
 
 impl<T> BuildContact for SpawnGroundTargetedAoe<T> {

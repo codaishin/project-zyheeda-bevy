@@ -153,11 +153,8 @@ mod tests {
 			build_skill_shape::{BuildSkillShape, OnSkillStop},
 			SkillBehaviorConfig,
 		},
-		traits::{
-			skill_builder::{LifeTimeDefinition, SkillShape},
-			GetAnimation,
-			GetSkillBehavior,
-		},
+		skills::lifetime::LifeTimeDefinition,
+		traits::{skill_builder::SkillShape, GetAnimation, GetSkillBehavior},
 	};
 	use animations::traits::Priority;
 	use behaviors::components::{Face, OverrideFace};

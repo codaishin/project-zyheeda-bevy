@@ -6,8 +6,8 @@ use crate::{
 		SkillSpawner,
 		Target,
 	},
-	skills::RunSkillBehavior,
-	traits::{skill_builder::LifeTimeDefinition, Execute, Flush, Schedule},
+	skills::{lifetime::LifeTimeDefinition, RunSkillBehavior},
+	traits::{Execute, Flush, Schedule},
 };
 use bevy::{
 	ecs::{component::Component, entity::Entity, system::Commands},

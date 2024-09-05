@@ -2,8 +2,8 @@ pub mod build_skill_shape;
 pub mod start_behavior;
 
 use crate::{
-	skills::SelectInfo,
-	traits::skill_builder::{LifeTimeDefinition, SkillShape},
+	skills::{lifetime::LifeTimeDefinition, SelectInfo},
+	traits::skill_builder::SkillShape,
 };
 use bevy::{
 	ecs::system::EntityCommands,

@@ -1,8 +1,7 @@
 {
 	"name": "Gravity Well",
-	"active": {
-		"secs": 0,
-		"nanos": 200000000
+	"cast_time": {
+		"seconds": 0.2
 	},
 	"animate": {
 		"Some": "ShootHandGun"
@@ -13,8 +12,7 @@
 				"GroundTargetedAoe": {
 					"lifetime": {
 						"UntilOutlived": {
-							"secs": 5,
-							"nanos": 0
+							"seconds": 5
 						}
 					},
 					"max_range": 10,
