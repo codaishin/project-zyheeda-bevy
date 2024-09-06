@@ -11,7 +11,7 @@ mod skill_loader;
 
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::{
-	app::{Plugin, PreStartup, PreUpdate, Update},
+	app::{App, Plugin, PreStartup, PreUpdate, Update},
 	asset::{AssetApp, AssetServer, Handle, LoadedFolder},
 	ecs::{
 		entity::Entity,
@@ -73,100 +73,110 @@ use systems::{
 pub struct SkillsPlugin;
 
 impl Plugin for SkillsPlugin {
-	fn build(&self, app: &mut bevy::prelude::App) {
-		app.init_resource::<KeyMap<SlotKey, KeyCode>>()
-			.init_asset::<Skill>()
-			.init_asset::<LoadResult<Skill>>()
-			.register_asset_loader(SkillLoader::<LoadResult<Skill>>::default())
-			.add_systems(PreStartup, begin_loading_skills::<AssetServer>)
-			.add_systems(
-				Update,
-				map_load_results::<Skill, LoadError, AssetServer>.pipe(log_many),
-			)
-			.add_systems(PreStartup, load_models)
-			.add_systems(
-				PreUpdate,
-				(
-					init_slots,
-					add_skill_spawn,
-					load_models_commands_for_new_slots,
-				),
-			)
-			.add_systems(
-				PreUpdate,
-				skill_path_to_handle::<Inventory<Path>, Inventory<Handle<Skill>>, LoadedFolder>
-					.pipe(log_many),
-			)
-			.add_systems(
-				PreUpdate,
-				(
-					skill_path_to_handle::<Slots<Path>, Slots<Handle<Skill>>, LoadedFolder>
-						.pipe(log_many),
-					skill_handle_to_skill::<Slots<Handle<Skill>>, Slots<Skill>>.pipe(log_many),
-				)
-					.chain(),
-			)
-			.add_systems(
-				PreUpdate,
-				(
-					skill_path_to_handle::<ComboNode<Path>, ComboNode<Handle<Skill>>, LoadedFolder>
-						.pipe(log_many),
-					skill_handle_to_skill::<ComboNode<Handle<Skill>>, Combos>.pipe(log_many),
-				)
-					.chain(),
-			)
-			.add_systems(
-				Update,
-				(
-					get_inputs::<
-						KeyMap<SlotKey, KeyCode>,
-						ButtonInput<KeyCode>,
-						State<MouseContext<KeyCode>>,
-					>
-						.pipe(enqueue::<Slots, Queue, QueuedSkill>),
-					update_skill_combos::<Combos, CombosTimeOut, Queue, Virtual>,
-					advance_active_skill::<
-						Queue,
-						Animation,
-						AnimationDispatch,
-						SkillExecuter,
-						Virtual,
-					>,
-					execute::<SkillExecuter>,
-					flush::<Queue>,
-				)
-					.chain()
-					.run_if(in_state(GameRunning::On)),
-			)
-			.add_systems(Update, set_player_items)
-			.add_systems(
-				Update,
-				(
-					trigger_primed_mouse_context,
-					advance_just_triggered_mouse_context,
-					release_triggered_mouse_context,
-					advance_just_released_mouse_context,
-				),
-			)
-			.add_systems(
-				Update,
-				(
-					equip_item::<
-						Inventory<Handle<Skill>>,
-						InventoryKey,
-						Collection<Swap<InventoryKey, SlotKey>>,
-					>
-						.pipe(log_many),
-					equip_item::<
-						Inventory<Handle<Skill>>,
-						InventoryKey,
-						Collection<Swap<SlotKey, InventoryKey>>,
-					>
-						.pipe(log_many),
-					apply_load_models_commands.pipe(log_many),
-				),
-			);
+	fn build(&self, app: &mut App) {
+		skill_load(app);
+		skill_combo_load(app);
+		skill_slot_load(app);
+		skill_execution(app);
 	}
+}
+
+fn skill_load(app: &mut App) {
+	app.init_asset::<Skill>()
+		.init_asset::<LoadResult<Skill>>()
+		.register_asset_loader(SkillLoader::<LoadResult<Skill>>::default())
+		.add_systems(PreStartup, begin_loading_skills::<AssetServer>)
+		.add_systems(
+			Update,
+			map_load_results::<Skill, LoadError, AssetServer>.pipe(log_many),
+		);
+}
+
+fn skill_slot_load(app: &mut App) {
+	app.add_systems(PreStartup, load_models)
+		.add_systems(
+			PreUpdate,
+			(
+				init_slots,
+				add_skill_spawn,
+				load_models_commands_for_new_slots,
+			),
+		)
+		.add_systems(
+			PreUpdate,
+			skill_path_to_handle::<Inventory<Path>, Inventory<Handle<Skill>>, LoadedFolder>
+				.pipe(log_many),
+		)
+		.add_systems(
+			PreUpdate,
+			(
+				skill_path_to_handle::<Slots<Path>, Slots<Handle<Skill>>, LoadedFolder>
+					.pipe(log_many),
+				skill_handle_to_skill::<Slots<Handle<Skill>>, Slots<Skill>>.pipe(log_many),
+			)
+				.chain(),
+		)
+		.add_systems(Update, set_player_items)
+		.add_systems(
+			Update,
+			(
+				equip_item::<
+					Inventory<Handle<Skill>>,
+					InventoryKey,
+					Collection<Swap<InventoryKey, SlotKey>>,
+				>
+					.pipe(log_many),
+				equip_item::<
+					Inventory<Handle<Skill>>,
+					InventoryKey,
+					Collection<Swap<SlotKey, InventoryKey>>,
+				>
+					.pipe(log_many),
+				apply_load_models_commands.pipe(log_many),
+			),
+		);
+}
+
+fn skill_execution(app: &mut App) {
+	app.init_resource::<KeyMap<SlotKey, KeyCode>>()
+		.add_systems(
+			Update,
+			(
+				get_inputs::<
+					KeyMap<SlotKey, KeyCode>,
+					ButtonInput<KeyCode>,
+					State<MouseContext<KeyCode>>,
+				>
+					.pipe(enqueue::<Slots, Queue, QueuedSkill>),
+				update_skill_combos::<Combos, CombosTimeOut, Queue, Virtual>,
+				advance_active_skill::<Queue, Animation, AnimationDispatch, SkillExecuter, Virtual>,
+				execute::<SkillExecuter>,
+				flush::<Queue>,
+			)
+				.chain()
+				.run_if(in_state(GameRunning::On)),
+		)
+		.add_systems(
+			Update,
+			(
+				trigger_primed_mouse_context,
+				advance_just_triggered_mouse_context,
+				release_triggered_mouse_context,
+				advance_just_released_mouse_context,
+			),
+		);
+}
+
+fn skill_combo_load(app: &mut App) {
+	app.add_systems(
+		PreUpdate,
+		(
+			skill_path_to_handle::<ComboNode<Path>, ComboNode<Handle<Skill>>, LoadedFolder>
+				.pipe(log_many),
+			skill_handle_to_skill::<ComboNode<Handle<Skill>>, Combos>.pipe(log_many),
+		)
+			.chain(),
+	);
 }
 
 fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
