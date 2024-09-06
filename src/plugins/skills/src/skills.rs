@@ -21,6 +21,7 @@ use std::{
 	fmt::{Display, Formatter, Result},
 	time::Duration,
 };
+use uuid::Uuid;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct SkillAnimation {
@@ -38,6 +39,7 @@ pub enum Animate<TAnimation> {
 
 #[derive(PartialEq, Debug, Default, Clone, TypePath, Asset)]
 pub struct Skill {
+	pub id: Uuid,
 	pub name: String,
 	pub cast_time: Duration,
 	pub animate: Animate<SkillAnimation>,

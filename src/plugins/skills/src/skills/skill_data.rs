@@ -15,9 +15,11 @@ use common::{
 use run_skill_behavior_data::RunSkillBehaviorData;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, time::Duration};
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct SkillData {
+	id: Uuid,
 	name: String,
 	cast_time: DurationData,
 	animate: AnimateData,
@@ -32,6 +34,7 @@ impl LoadFrom<SkillData> for Skill {
 		asset_server: &mut TLoadAsset,
 	) -> Self {
 		Self {
+			id: skill_data.id,
 			name: skill_data.name,
 			cast_time: Duration::from(skill_data.cast_time),
 			animate: skill_data.animate.into(),
