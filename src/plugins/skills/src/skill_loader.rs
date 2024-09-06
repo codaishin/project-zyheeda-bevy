@@ -28,11 +28,12 @@ impl<TSkill> Default for SkillLoader<TSkill> {
 	}
 }
 
-#[derive(Debug)]
+#[derive(Debug, TypePath)]
+#[allow(dead_code)]
 pub enum LoadError {
 	IO(IOError),
 	ParseChars(Utf8Error),
-	ParseSkill(SerdeJsonError),
+	ParseObject(SerdeJsonError),
 }
 
 #[derive(Debug)]
@@ -46,18 +47,18 @@ impl Display for UnreachableError {
 
 impl Error for UnreachableError {}
 
-#[derive(Asset, TypePath)]
-pub enum LoadResult<TAsset: Asset> {
+#[derive(Asset, TypePath, Debug, PartialEq)]
+pub enum LoadResult<TAsset: Asset, TError: Sync + Send + TypePath + 'static = LoadError> {
 	Ok(TAsset),
-	Err(LoadError),
+	Err(TError),
 }
 
-impl<TAsset: Asset> LoadResult<TAsset> {
-	fn error<TError>(error: LoadError) -> Result<LoadResult<TAsset>, TError> {
+impl<TAsset: Asset, TError: Sync + Send + TypePath + 'static> LoadResult<TAsset, TError> {
+	fn error<TOuterError>(error: TError) -> Result<LoadResult<TAsset, TError>, TOuterError> {
 		Ok(LoadResult::Err(error))
 	}
 
-	fn ok<TError>(asset: TAsset) -> Result<LoadResult<TAsset>, TError> {
+	fn ok<TOuterError>(asset: TAsset) -> Result<LoadResult<TAsset, TError>, TOuterError> {
 		Ok(LoadResult::Ok(asset))
 	}
 }
@@ -91,7 +92,7 @@ impl<TAsset: Asset + LoadFrom<SkillData>> AssetLoader for SkillLoader<LoadResult
 
 		match data {
 			Ok(data) => LoadResult::ok(TAsset::load_from(data, load_context)),
-			Err(error) => LoadResult::error(LoadError::ParseSkill(error)),
+			Err(error) => LoadResult::error(LoadError::ParseObject(error)),
 		}
 	}
 }

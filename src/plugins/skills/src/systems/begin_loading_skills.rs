@@ -5,7 +5,7 @@ use bevy::{
 };
 use common::traits::{load_asset::Path, load_folder_assets::LoadFolderAssets};
 
-pub(crate) fn load_skills<TAssetServer: LoadFolderAssets + Resource>(
+pub(crate) fn begin_loading_skills<TAssetServer: LoadFolderAssets + Resource>(
 	mut commands: Commands,
 	asset_server: Res<TAssetServer>,
 ) {
@@ -45,7 +45,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(server);
 		app.init_resource::<SkillFolder>();
-		app.add_systems(Update, load_skills::<_Server>);
+		app.add_systems(Update, begin_loading_skills::<_Server>);
 
 		app
 	}

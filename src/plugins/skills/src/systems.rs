@@ -1,11 +1,12 @@
 pub(crate) mod advance_active_skill;
+pub(crate) mod begin_loading_skills;
 pub(crate) mod enqueue;
 pub(crate) mod equip;
 pub(crate) mod execute;
 pub(crate) mod flush;
 pub(crate) mod get_inputs;
 pub(crate) mod load_models;
-pub(crate) mod load_skills;
+pub(crate) mod map_load_results;
 pub(crate) mod mouse_context;
 pub(crate) mod skill_handle_to_skill;
 pub(crate) mod skill_path_to_handle;

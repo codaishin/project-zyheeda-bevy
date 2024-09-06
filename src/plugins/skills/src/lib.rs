@@ -42,11 +42,12 @@ use components::{
 	Mounts,
 };
 use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount};
-use skill_loader::{LoadResult, SkillLoader};
+use skill_loader::{LoadError, LoadResult, SkillLoader};
 use skills::{QueuedSkill, Skill};
 use std::{collections::HashSet, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,
+	begin_loading_skills::begin_loading_skills,
 	enqueue::enqueue,
 	equip::equip_item,
 	execute::execute,
@@ -56,7 +57,7 @@ use systems::{
 		apply_load_models_commands::apply_load_models_commands,
 		load_models_commands_for_new_slots::load_models_commands_for_new_slots,
 	},
-	load_skills::load_skills,
+	map_load_results::map_load_results,
 	mouse_context::{
 		advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
 		release::release_triggered_mouse_context,
@@ -75,8 +76,13 @@ impl Plugin for SkillsPlugin {
 	fn build(&self, app: &mut bevy::prelude::App) {
 		app.init_resource::<KeyMap<SlotKey, KeyCode>>()
 			.init_asset::<Skill>()
+			.init_asset::<LoadResult<Skill>>()
 			.register_asset_loader(SkillLoader::<LoadResult<Skill>>::default())
-			.add_systems(PreStartup, load_skills::<AssetServer>)
+			.add_systems(PreStartup, begin_loading_skills::<AssetServer>)
+			.add_systems(
+				Update,
+				map_load_results::<Skill, LoadError, AssetServer>.pipe(log_many),
+			)
 			.add_systems(PreStartup, load_models)
 			.add_systems(
 				PreUpdate,
