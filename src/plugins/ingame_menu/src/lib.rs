@@ -261,8 +261,8 @@ fn inventory_screen_systems(app: &mut App) {
 			Update,
 			(
 				panel_colors::<InventoryPanel>,
-				panel_container_states::<InventoryPanel, InventoryKey, Inventory<Handle<Skill>>>,
-				panel_container_states::<InventoryPanel, SlotKey, Slots<Handle<Skill>>>,
+				panel_container_states::<InventoryPanel, InventoryKey, Inventory<Skill>>,
+				panel_container_states::<InventoryPanel, SlotKey, Slots>,
 				drag::<Player, InventoryKey>,
 				drag::<Player, SlotKey>,
 				drop::<Player, InventoryKey, InventoryKey>,

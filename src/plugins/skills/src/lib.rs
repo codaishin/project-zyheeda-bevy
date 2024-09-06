@@ -13,7 +13,7 @@ mod states;
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::{
 	app::{App, Plugin, PreStartup, PreUpdate, Update},
-	asset::{AssetApp, AssetServer, Handle},
+	asset::{AssetApp, AssetServer},
 	ecs::{
 		entity::Entity,
 		query::Added,
@@ -125,13 +125,13 @@ fn skill_slot_load(app: &mut App) {
 			Update,
 			(
 				equip_item::<
-					Inventory<Handle<Skill>>,
+					Inventory<Skill>,
 					InventoryKey,
 					Collection<Swap<InventoryKey, SlotKey>>,
 				>
 					.pipe(log_many),
 				equip_item::<
-					Inventory<Handle<Skill>>,
+					Inventory<Skill>,
 					InventoryKey,
 					Collection<Swap<SlotKey, InventoryKey>>,
 				>

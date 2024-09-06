@@ -1,6 +1,5 @@
 use super::Item;
-use crate::{items::inventory_key::InventoryKey, skills::Skill, traits::TryMap};
-use bevy::asset::Handle;
+use crate::{items::inventory_key::InventoryKey, traits::TryMap};
 use common::{
 	components::Collection,
 	traits::get::{Get, GetMut},
@@ -8,8 +7,8 @@ use common::{
 
 pub type Inventory<TSkill> = Collection<Option<Item<TSkill>>>;
 
-impl Get<InventoryKey, Item<Handle<Skill>>> for Inventory<Handle<Skill>> {
-	fn get(&self, key: &InventoryKey) -> Option<&Item<Handle<Skill>>> {
+impl<TSkill> Get<InventoryKey, Item<TSkill>> for Inventory<TSkill> {
+	fn get(&self, key: &InventoryKey) -> Option<&Item<TSkill>> {
 		let item = self.0.get(key.0)?;
 		item.as_ref()
 	}
@@ -61,7 +60,7 @@ mod tests {
 
 	#[test]
 	fn get_first_item() {
-		let inventory = Inventory::new([Some(Item {
+		let inventory = Inventory::<&str>::new([Some(Item {
 			name: "my item",
 			..default()
 		})]);
@@ -77,14 +76,14 @@ mod tests {
 
 	#[test]
 	fn get_none_when_empty() {
-		let inventory = Inventory::new([]);
+		let inventory = Inventory::<&str>::new([]);
 
 		assert_eq!(None, inventory.get(&InventoryKey(0)));
 	}
 
 	#[test]
 	fn get_3rd_item() {
-		let inventory = Inventory::new([
+		let inventory = Inventory::<&str>::new([
 			None,
 			None,
 			Some(Item {

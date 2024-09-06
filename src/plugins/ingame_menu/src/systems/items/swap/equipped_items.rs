@@ -15,12 +15,11 @@ use common::{
 use skills::{
 	components::{slots::Slots, Slot},
 	items::slot_key::SlotKey,
-	skills::Skill,
 };
 
 type SlotsToSwap<'a> = (
 	Entity,
-	&'a mut Slots<Handle<Skill>>,
+	&'a mut Slots,
 	&'a Collection<Swap<SlotKey, SlotKey>>,
 );
 
@@ -44,7 +43,7 @@ pub fn swap_equipped_items(
 
 fn do_swap(
 	swap: &Swap<SlotKey, SlotKey>,
-	slots: &mut Mut<Slots<Handle<Skill>>>,
+	slots: &mut Mut<Slots>,
 	handles: &mut Query<&mut Handle<Scene>>,
 ) -> [Result<(), Error>; 2] {
 	let slot_results = [
@@ -88,7 +87,7 @@ fn do_swap(
 }
 
 fn get_handles(
-	slot: &Slot<Handle<Skill>>,
+	slot: &Slot,
 	handles: &mut Query<&mut Handle<Scene>>,
 ) -> Result<(Handle<Scene>, Handle<Scene>), QueryEntityError> {
 	Ok((
@@ -167,7 +166,7 @@ mod tests {
 					[
 						(
 							SlotKey::Hand(Side::Off),
-							Slot::<Handle<Skill>> {
+							Slot::<Skill> {
 								mounts: Mounts {
 									hand: slot_handle_ids[0],
 									forearm: slot_handle_ids[1],
@@ -205,11 +204,7 @@ mod tests {
 
 		let handles =
 			slot_handle_ids.map(|id| app.world().entity(id).get::<Handle<Scene>>().unwrap());
-		let slots = app
-			.world()
-			.entity(agent)
-			.get::<Slots<Handle<Skill>>>()
-			.unwrap();
+		let slots = app.world().entity(agent).get::<Slots>().unwrap();
 		let new_items = (
 			slots.0.get(&SlotKey::Hand(Side::Off)).unwrap().item.clone(),
 			slots
@@ -253,7 +248,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Handle<Skill>>([].into()),
+				Slots::<Skill>([].into()),
 				Collection::<Swap<SlotKey, SlotKey>>([].into()),
 			))
 			.id();
@@ -272,7 +267,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Handle<Skill>>([].into()),
+				Slots::<Skill>([].into()),
 				Collection([Swap(SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main))].into()),
 			))
 			.id();
@@ -304,7 +299,7 @@ mod tests {
 					[
 						(
 							SlotKey::Hand(Side::Off),
-							Slot::<Handle<Skill>> {
+							Slot::<Skill> {
 								mounts: Mounts {
 									hand: Entity::from_raw(100),
 									forearm: Entity::from_raw(200),
