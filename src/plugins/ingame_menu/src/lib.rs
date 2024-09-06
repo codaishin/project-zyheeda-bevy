@@ -243,8 +243,8 @@ fn combo_overview_systems(app: &mut App) {
 			Update,
 			(
 				visualize_invalid_skill::<Player, Slots, Unusable>,
-				insert_skill_select_dropdown::<Slots<Handle<Skill>>, Vertical>,
-				insert_skill_select_dropdown::<Slots<Handle<Skill>>, Horizontal>,
+				insert_skill_select_dropdown::<Slots, Vertical>,
+				insert_skill_select_dropdown::<Slots, Horizontal>,
 				insert_key_select_dropdown::<Player, Combos, AppendSkillCommand>,
 				update_combos_view_delete_skill::<Player, Combos>,
 				update_combo_skills::<Player, Combos, Vertical>,
@@ -261,8 +261,8 @@ fn inventory_screen_systems(app: &mut App) {
 			Update,
 			(
 				panel_colors::<InventoryPanel>,
-				panel_container_states::<InventoryPanel, InventoryKey, Inventory<Handle<Skill>>>,
-				panel_container_states::<InventoryPanel, SlotKey, Slots<Handle<Skill>>>,
+				panel_container_states::<InventoryPanel, InventoryKey, Inventory<Skill>>,
+				panel_container_states::<InventoryPanel, SlotKey, Slots>,
 				drag::<Player, InventoryKey>,
 				drag::<Player, SlotKey>,
 				drop::<Player, InventoryKey, InventoryKey>,

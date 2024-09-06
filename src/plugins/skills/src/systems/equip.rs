@@ -6,7 +6,7 @@ use crate::{
 };
 use bevy::{
 	ecs::component::Component,
-	prelude::{Commands, Entity, Handle, Query},
+	prelude::{Commands, Entity, Query},
 };
 use common::{
 	errors::{Error, Level},
@@ -18,12 +18,8 @@ use common::{
 };
 use std::mem::swap;
 
-type Components<'a, TContainer, TSwaps> = (
-	Entity,
-	&'a mut Slots<Handle<Skill>>,
-	&'a mut TContainer,
-	&'a mut TSwaps,
-);
+type Components<'a, TContainer, TSwaps> =
+	(Entity, &'a mut Slots, &'a mut TContainer, &'a mut TSwaps);
 
 pub fn equip_item<TContainer, TInnerKey, TSwaps>(
 	mut commands: Commands,
@@ -33,7 +29,7 @@ where
 	TContainer: Component,
 	TSwaps: Component,
 	for<'a> SwapController<'a, TInnerKey, SlotKey, TContainer, TSwaps>:
-		SwapCommands<SlotKey, Item<Handle<Skill>>>,
+		SwapCommands<SlotKey, Item<Skill>>,
 {
 	let mut results = vec![];
 	let commands = &mut commands;
@@ -66,29 +62,23 @@ where
 }
 
 fn try_swap(
-	slots: &mut Slots<Handle<Skill>>,
+	slots: &mut Slots,
 	slot_key: SlotKey,
-	item: Option<Item<Handle<Skill>>>,
-) -> Result<SwappedOut<Item<Handle<Skill>>>, (SwapError, Error)> {
+	item: Option<Item<Skill>>,
+) -> Result<SwappedOut<Item<Skill>>, (SwapError, Error)> {
 	let slot = get_slot(slots, slot_key)?;
 
 	Ok(swap_item(item, slot))
 }
 
-fn get_slot(
-	slots: &mut Slots<Handle<Skill>>,
-	slot_key: SlotKey,
-) -> Result<&mut Slot<Handle<Skill>>, (SwapError, Error)> {
+fn get_slot(slots: &mut Slots, slot_key: SlotKey) -> Result<&mut Slot<Skill>, (SwapError, Error)> {
 	match slots.0.get_mut(&slot_key) {
 		Some(slot) => Ok(slot),
 		None => Err((SwapError::TryAgain, slot_warning(slot_key))),
 	}
 }
 
-fn swap_item(
-	mut item: Option<Item<Handle<Skill>>>,
-	slot: &mut Slot<Handle<Skill>>,
-) -> SwappedOut<Item<Handle<Skill>>> {
+fn swap_item(mut item: Option<Item<Skill>>, slot: &mut Slot) -> SwappedOut<Item<Skill>> {
 	swap(&mut item, &mut slot.item);
 
 	SwappedOut(item)
@@ -107,7 +97,7 @@ mod tests {
 	use crate::{components::Mounts, skills::Skill};
 	use bevy::{
 		ecs::system::IntoSystem,
-		prelude::{App, Handle, Update},
+		prelude::{App, Update},
 		utils::default,
 	};
 	use common::{
@@ -125,17 +115,17 @@ mod tests {
 
 	#[derive(Component, PartialEq, Clone, Debug, Default)]
 	pub struct _Container {
-		swap_ins: HashMap<SlotKey, SwapIn<Item<Handle<Skill>>>>,
-		swap_outs: HashMap<SlotKey, SwappedOut<Item<Handle<Skill>>>>,
+		swap_ins: HashMap<SlotKey, SwapIn<Item<Skill>>>,
+		swap_outs: HashMap<SlotKey, SwappedOut<Item<Skill>>>,
 		errors: HashMap<SlotKey, SwapError>,
 	}
 
-	type SkillItem = Item<Handle<Skill>>;
-
-	impl<'a> SwapCommands<SlotKey, SkillItem> for SwapController<'a, (), SlotKey, _Container, _Swaps> {
+	impl<'a> SwapCommands<SlotKey, Item<Skill>>
+		for SwapController<'a, (), SlotKey, _Container, _Swaps>
+	{
 		fn try_swap(
 			&mut self,
-			mut swap_fn: impl FnMut(SlotKey, SwapIn<SkillItem>) -> SwapResult<SkillItem>,
+			mut swap_fn: impl FnMut(SlotKey, SwapIn<Item<Skill>>) -> SwapResult<Item<Skill>>,
 		) {
 			let SwapController { container, .. } = self;
 			for (slot_key, swap_in) in container.swap_ins.clone() {
@@ -172,7 +162,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Handle<Skill>>::new([(
+				Slots::<Skill>::new([(
 					SlotKey::Hand(Side::Main),
 					Slot {
 						item: None,
@@ -214,7 +204,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Handle<Skill>>::new([(
+				Slots::<Skill>::new([(
 					SlotKey::Hand(Side::Main),
 					Slot {
 						mounts: Mounts {
@@ -243,7 +233,7 @@ mod tests {
 		let agent = app.world().entity(agent);
 
 		assert_eq!(
-			Some(&Slots::<Handle<Skill>>::new([(
+			Some(&Slots::<Skill>::new([(
 				SlotKey::Hand(Side::Main),
 				Slot {
 					mounts: Mounts {
@@ -256,7 +246,7 @@ mod tests {
 					}),
 				},
 			)])),
-			agent.get::<Slots<Handle<Skill>>>()
+			agent.get::<Slots<Skill>>()
 		);
 	}
 
@@ -266,7 +256,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Handle<Skill>>::new([(
+				Slots::<Skill>::new([(
 					SlotKey::Hand(Side::Main),
 					Slot {
 						mounts: Mounts {
@@ -310,7 +300,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Handle<Skill>>::new([(
+				Slots::<Skill>::new([(
 					SlotKey::Hand(Side::Main),
 					Slot {
 						item: None,
@@ -343,7 +333,7 @@ mod tests {
 	fn return_error_when_slot_not_found() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			Slots::<Handle<Skill>>::new([(
+			Slots::<Skill>::new([(
 				SlotKey::Hand(Side::Main),
 				Slot {
 					item: None,
@@ -379,7 +369,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Handle<Skill>>::default(),
+				Slots::<Skill>::default(),
 				_Container::default(),
 				_Swaps { is_empty: true },
 			))
@@ -399,7 +389,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Handle<Skill>>::default(),
+				Slots::<Skill>::default(),
 				_Container::default(),
 				_Swaps { is_empty: false },
 			))

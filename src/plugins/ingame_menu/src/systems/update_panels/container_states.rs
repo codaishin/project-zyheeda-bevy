@@ -1,18 +1,17 @@
 use crate::{components::KeyedPanel, tools::PanelState, traits::set::Set};
 use bevy::{
-	asset::Handle,
 	ecs::{component::Component, system::Query},
 	hierarchy::Parent,
 	prelude::Entity,
 	text::Text,
 };
 use common::traits::get::Get;
-use skills::{items::Item, skills::Skill};
+use skills::items::Item;
 
 pub fn panel_container_states<
 	TPanel: Component + Set<(), PanelState>,
 	TKey: Copy + Send + Sync + 'static,
-	TContainer: Component + Get<TKey, Item<Handle<Skill>>>,
+	TContainer: Component + Get<TKey, Item>,
 >(
 	containers: Query<&TContainer>,
 	mut texts: Query<(&Parent, &mut Text)>,
@@ -57,16 +56,16 @@ mod tests {
 	use mockall::{automock, predicate::eq};
 
 	#[derive(Component)]
-	struct _Container(HashMap<usize, Item<Handle<Skill>>>);
+	struct _Container(HashMap<usize, Item>);
 
 	impl _Container {
-		pub fn new<const N: usize>(items: [(usize, Item<Handle<Skill>>); N]) -> Self {
+		pub fn new<const N: usize>(items: [(usize, Item); N]) -> Self {
 			Self(HashMap::from(items))
 		}
 	}
 
-	impl Get<usize, Item<Handle<Skill>>> for _Container {
-		fn get(&self, key: &usize) -> Option<&Item<Handle<Skill>>> {
+	impl Get<usize, Item> for _Container {
+		fn get(&self, key: &usize) -> Option<&Item> {
 			self.0.get(key)
 		}
 	}

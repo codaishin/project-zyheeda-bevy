@@ -1,8 +1,4 @@
-use crate::{
-	items::{inventory_key::InventoryKey, slot_key::SlotKey, Item},
-	skills::Skill,
-};
-use bevy::asset::Handle;
+use crate::items::{inventory_key::InventoryKey, slot_key::SlotKey, Item};
 use common::{
 	components::{Collection, Swap},
 	traits::{
@@ -48,16 +44,13 @@ impl<'a, TInnerKey, TOuterKey, TContainer, TSwaps>
 
 struct RetryFailed<T>(T);
 
-impl<'a, TContainer, TSwap, TContainerKey> SwapCommands<SlotKey, Item<Handle<Skill>>>
+impl<'a, TContainer, TSwap, TContainerKey> SwapCommands<SlotKey, Item>
 	for SwapController<'a, TContainerKey, SlotKey, TContainer, Collection<TSwap>>
 where
-	TContainer: GetMut<TContainerKey, Option<Item<Handle<Skill>>>>,
+	TContainer: GetMut<TContainerKey, Option<Item>>,
 	TSwap: Keys<TContainerKey, SlotKey> + Clone,
 {
-	fn try_swap(
-		&mut self,
-		swap_fn: impl FnMut(SlotKey, SwapIn<Item<Handle<Skill>>>) -> SwapResult<Item<Handle<Skill>>>,
-	) {
+	fn try_swap(&mut self, swap_fn: impl FnMut(SlotKey, SwapIn<Item>) -> SwapResult<Item>) {
 		let Collection(swaps) = self.swaps;
 
 		*swaps = swaps
@@ -74,13 +67,12 @@ where
 
 fn apply_swaps<
 	'a,
-	TContainer: GetMut<TContainerKey, Option<Item<Handle<Skill>>>>,
+	TContainer: GetMut<TContainerKey, Option<Item>>,
 	TContainerKey,
 	TSwap: Keys<TContainerKey, SlotKey> + Clone,
 >(
 	container: &'a mut TContainer,
-	mut swap_fn: impl FnMut(SlotKey, SwapIn<Item<Handle<Skill>>>) -> SwapResult<Item<Handle<Skill>>>
-		+ 'a,
+	mut swap_fn: impl FnMut(SlotKey, SwapIn<Item>) -> SwapResult<Item> + 'a,
 ) -> impl FnMut(&TSwap) -> Option<RetryFailed<TSwap>> + 'a {
 	move |swap| {
 		let (container_key, slot_key) = swap.keys();
@@ -134,10 +126,10 @@ mod tests {
 	}
 
 	#[derive(Debug, PartialEq)]
-	struct _Container(Vec<Option<Item<Handle<Skill>>>>);
+	struct _Container(Vec<Option<Item>>);
 
-	impl GetMut<_InnerKey, Option<Item<Handle<Skill>>>> for _Container {
-		fn get_mut(&mut self, key: &_InnerKey) -> Option<&mut Option<Item<Handle<Skill>>>> {
+	impl GetMut<_InnerKey, Option<Item>> for _Container {
+		fn get_mut(&mut self, key: &_InnerKey) -> Option<&mut Option<Item>> {
 			self.0.get_mut(key.0)
 		}
 	}

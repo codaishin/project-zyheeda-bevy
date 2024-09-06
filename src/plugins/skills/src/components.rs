@@ -16,8 +16,9 @@ use bevy::{
 	ecs::{component::Component, entity::Entity},
 	utils::default,
 };
-use common::{components::Collection, traits::load_asset::Path};
+use common::components::Collection;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Mounts<T> {
@@ -32,13 +33,13 @@ pub struct Slot<TSkill = Skill> {
 }
 
 pub(crate) type BoneName = str;
-pub(crate) type SlotContent = (Mounts<&'static BoneName>, Option<Item<Path>>);
+pub(crate) type SlotContent = (Mounts<&'static BoneName>, Option<Item<Uuid>>);
 pub(crate) type SlotDefinition = (SlotKey, SlotContent);
 
 #[derive(Component, Clone, PartialEq, Debug)]
 pub(crate) struct SlotsDefinition {
-	pub(crate) definitions: HashMap<SlotKey, (Mounts<&'static BoneName>, Option<Item<Path>>)>,
-	pub(crate) slot_buffer: Slots<Path>,
+	pub(crate) definitions: HashMap<SlotKey, (Mounts<&'static BoneName>, Option<Item<Uuid>>)>,
+	pub(crate) slot_buffer: Slots<Uuid>,
 }
 
 impl SlotsDefinition {
