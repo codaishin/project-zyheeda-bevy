@@ -8,6 +8,7 @@ pub(crate) mod get_inputs;
 pub(crate) mod load_models;
 pub(crate) mod map_load_results;
 pub(crate) mod mouse_context;
+pub(crate) mod set_skill_assets_to_loaded;
 pub(crate) mod skill_handle_to_skill;
 pub(crate) mod skill_path_to_handle;
 pub(crate) mod skill_spawn;

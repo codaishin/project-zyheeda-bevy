@@ -8,6 +8,7 @@ pub mod traits;
 mod behaviors;
 mod bundles;
 mod skill_loader;
+mod states;
 
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::{
@@ -20,6 +21,7 @@ use bevy::{
 		system::{Commands, IntoSystem, Query, Res},
 	},
 	input::{keyboard::KeyCode, ButtonInput},
+	prelude::AppExtStates,
 	state::{condition::in_state, state::State},
 	time::Virtual,
 };
@@ -44,6 +46,7 @@ use components::{
 use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount};
 use skill_loader::{LoadError, LoadResult, SkillLoader};
 use skills::{QueuedSkill, Skill};
+use states::SkillAssets;
 use std::{collections::HashSet, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,
@@ -63,6 +66,7 @@ use systems::{
 		release::release_triggered_mouse_context,
 		trigger_primed::trigger_primed_mouse_context,
 	},
+	set_skill_assets_to_loaded::set_skill_assets_to_loaded,
 	skill_handle_to_skill::skill_handle_to_skill,
 	skill_path_to_handle::skill_path_to_handle,
 	skill_spawn::add_skill_spawn,
@@ -85,11 +89,13 @@ fn skill_load(app: &mut App) {
 	app.init_asset::<Skill>()
 		.init_asset::<LoadResult<Skill>>()
 		.register_asset_loader(SkillLoader::<LoadResult<Skill>>::default())
+		.insert_state(SkillAssets::Loading)
 		.add_systems(PreStartup, begin_loading_skills::<AssetServer>)
 		.add_systems(
 			Update,
 			map_load_results::<Skill, LoadError, AssetServer>.pipe(log_many),
-		);
+		)
+		.add_systems(Update, set_skill_assets_to_loaded);
 }
 
 fn skill_slot_load(app: &mut App) {
