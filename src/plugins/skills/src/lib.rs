@@ -42,7 +42,7 @@ use components::{
 	Mounts,
 };
 use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount};
-use skill_loader::SkillLoader;
+use skill_loader::{LoadResult, SkillLoader};
 use skills::{QueuedSkill, Skill};
 use std::{collections::HashSet, time::Duration};
 use systems::{
@@ -75,7 +75,7 @@ impl Plugin for SkillsPlugin {
 	fn build(&self, app: &mut bevy::prelude::App) {
 		app.init_resource::<KeyMap<SlotKey, KeyCode>>()
 			.init_asset::<Skill>()
-			.register_asset_loader(SkillLoader::<Skill>::default())
+			.register_asset_loader(SkillLoader::<LoadResult<Skill>>::default())
 			.add_systems(PreStartup, load_skills::<AssetServer>)
 			.add_systems(PreStartup, load_models)
 			.add_systems(
