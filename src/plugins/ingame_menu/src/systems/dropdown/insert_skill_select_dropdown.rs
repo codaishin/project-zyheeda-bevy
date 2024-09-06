@@ -4,7 +4,7 @@ use crate::components::{
 	SkillSelectDropdownInsertCommand,
 };
 use bevy::{
-	asset::{Assets, Handle},
+	asset::Assets,
 	prelude::{Commands, Component, Entity, Query, Res, With},
 };
 use common::{
@@ -17,7 +17,7 @@ use skills::{
 };
 
 pub(crate) fn insert_skill_select_dropdown<
-	TEquipment: Get<SlotKey, Item<Handle<Skill>>> + Component,
+	TEquipment: Get<SlotKey, Item<Skill>> + Component,
 	TLayout: Sync + Send + 'static,
 >(
 	mut commands: Commands,
@@ -37,10 +37,7 @@ pub(crate) fn insert_skill_select_dropdown<
 	}
 }
 
-fn compatible_skills<
-	TEquipment: Get<SlotKey, Item<Handle<Skill>>>,
-	TLayout: Sync + Send + 'static,
->(
+fn compatible_skills<TEquipment: Get<SlotKey, Item<Skill>>, TLayout: Sync + Send + 'static>(
 	command: &SkillSelectDropdownInsertCommand<SlotKey, TLayout>,
 	slots: &TEquipment,
 	skills: &Res<Assets<Skill>>,
@@ -70,7 +67,7 @@ mod tests {
 	use crate::components::dropdown::Dropdown;
 	use bevy::{
 		app::{App, Update},
-		asset::{Asset, AssetId, Assets},
+		asset::{Asset, AssetId, Assets, Handle},
 		prelude::{default, Component},
 	};
 	use common::{
@@ -91,10 +88,10 @@ mod tests {
 	}
 
 	#[derive(Component)]
-	struct _Equipment(HashMap<SlotKey, Item<Handle<Skill>>>);
+	struct _Equipment(HashMap<SlotKey, Item<Skill>>);
 
-	impl Get<SlotKey, Item<Handle<Skill>>> for _Equipment {
-		fn get(&self, key: &SlotKey) -> Option<&Item<Handle<Skill>>> {
+	impl Get<SlotKey, Item<Skill>> for _Equipment {
+		fn get(&self, key: &SlotKey) -> Option<&Item<Skill>> {
 			self.0.get(key)
 		}
 	}
