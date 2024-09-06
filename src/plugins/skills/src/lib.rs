@@ -13,7 +13,7 @@ mod states;
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::{
 	app::{App, Plugin, PreStartup, PreUpdate, Update},
-	asset::{AssetApp, AssetServer, Handle, LoadedFolder},
+	asset::{AssetApp, AssetServer, Handle},
 	ecs::{
 		entity::Entity,
 		query::Added,
@@ -31,7 +31,7 @@ use common::{
 	resources::{key_map::KeyMap, Models},
 	states::{GameRunning, MouseContext},
 	systems::log::log_many,
-	traits::{load_asset::Path, try_insert_on::TryInsertOn},
+	traits::try_insert_on::TryInsertOn,
 };
 use components::{
 	combo_node::ComboNode,
@@ -44,6 +44,7 @@ use components::{
 	Mounts,
 };
 use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount};
+use resources::AliveAssets;
 use skill_loader::{LoadError, LoadResult, SkillLoader};
 use skills::{QueuedSkill, Skill};
 use states::SkillAssets;
@@ -67,18 +68,19 @@ use systems::{
 		trigger_primed::trigger_primed_mouse_context,
 	},
 	set_skill_assets_to_loaded::set_skill_assets_to_loaded,
-	skill_handle_to_skill::skill_handle_to_skill,
-	skill_path_to_handle::skill_path_to_handle,
 	skill_spawn::add_skill_spawn,
 	slots::init_slots,
 	update_skill_combos::update_skill_combos,
+	uuid_to_skill::uuid_to_skill,
 };
+use uuid::{uuid, Uuid};
 
 pub struct SkillsPlugin;
 
 impl Plugin for SkillsPlugin {
 	fn build(&self, app: &mut App) {
 		skill_load(app);
+		inventory(app);
 		skill_combo_load(app);
 		skill_slot_load(app);
 		skill_execution(app);
@@ -86,16 +88,24 @@ impl Plugin for SkillsPlugin {
 }
 
 fn skill_load(app: &mut App) {
-	app.init_asset::<Skill>()
+	app.insert_state(SkillAssets::Loading)
+		.init_asset::<Skill>()
 		.init_asset::<LoadResult<Skill>>()
+		.init_resource::<AliveAssets<Skill>>()
 		.register_asset_loader(SkillLoader::<LoadResult<Skill>>::default())
-		.insert_state(SkillAssets::Loading)
 		.add_systems(PreStartup, begin_loading_skills::<AssetServer>)
 		.add_systems(
 			Update,
 			map_load_results::<Skill, LoadError, AssetServer>.pipe(log_many),
 		)
 		.add_systems(Update, set_skill_assets_to_loaded);
+}
+
+fn inventory(app: &mut App) {
+	app.add_systems(
+		PreUpdate,
+		uuid_to_skill::<Inventory<Uuid>, Inventory<Skill>>,
+	);
 }
 
 fn skill_slot_load(app: &mut App) {
@@ -108,20 +118,8 @@ fn skill_slot_load(app: &mut App) {
 				load_models_commands_for_new_slots,
 			),
 		)
-		.add_systems(
-			PreUpdate,
-			skill_path_to_handle::<Inventory<Path>, Inventory<Handle<Skill>>, LoadedFolder>
-				.pipe(log_many),
-		)
-		.add_systems(
-			PreUpdate,
-			(
-				skill_path_to_handle::<Slots<Path>, Slots<Handle<Skill>>, LoadedFolder>
-					.pipe(log_many),
-				skill_handle_to_skill::<Slots<Handle<Skill>>, Slots<Skill>>.pipe(log_many),
-			)
-				.chain(),
-		)
+		.add_systems(PreUpdate, uuid_to_skill::<Slots<Uuid>, Slots>)
+		.add_systems(PreUpdate, uuid_to_skill::<Slots<Uuid>, Slots>)
 		.add_systems(Update, set_player_items)
 		.add_systems(
 			Update,
@@ -174,15 +172,7 @@ fn skill_execution(app: &mut App) {
 }
 
 fn skill_combo_load(app: &mut App) {
-	app.add_systems(
-		PreUpdate,
-		(
-			skill_path_to_handle::<ComboNode<Path>, ComboNode<Handle<Skill>>, LoadedFolder>
-				.pipe(log_many),
-			skill_handle_to_skill::<ComboNode<Handle<Skill>>, Combos>.pipe(log_many),
-		)
-			.chain(),
-	);
+	app.add_systems(PreUpdate, uuid_to_skill::<ComboNode<Uuid>, Combos>);
 }
 
 fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -224,7 +214,7 @@ fn get_loadout() -> Loadout {
 					Some(Item {
 						name: "Plasma Pistol A",
 						model: Some("pistol"),
-						skill: Some(Path::from("skills/shoot_hand_gun.skill")),
+						skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
 						item_type: HashSet::from([ItemType::Pistol]),
 						mount: Mount::Hand,
 					}),
@@ -240,7 +230,7 @@ fn get_loadout() -> Loadout {
 					Some(Item {
 						name: "Force Bracer",
 						model: Some("bracer"),
-						skill: Some(Path::from("skills/force_shield.skill")),
+						skill: Some(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba")),
 						item_type: HashSet::from([ItemType::Bracer]),
 						mount: Mount::Forearm,
 					}),
@@ -250,67 +240,16 @@ fn get_loadout() -> Loadout {
 	)
 }
 
-fn get_inventory() -> Inventory<Path> {
+fn get_inventory() -> Inventory<Uuid> {
 	Inventory::new([Some(Item {
 		name: "Plasma Pistol B",
 		model: Some("pistol"),
-		skill: Some(Path::from("skills/shoot_hand_gun.skill")),
+		skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
 		item_type: HashSet::from([ItemType::Pistol]),
 		mount: Mount::Hand,
 	})])
 }
 
-fn get_combos() -> ComboNode<Path> {
-	ComboNode::new([
-		(
-			SlotKey::Hand(Side::Off),
-			(
-				Path::from("skills/force_shield.skill"),
-				ComboNode::new([
-					(
-						SlotKey::Hand(Side::Off),
-						(
-							Path::from("skills/gravity_well.skill"),
-							ComboNode::new([
-								(
-									SlotKey::Hand(Side::Off),
-									(
-										Path::from("skills/gravity_well.skill"),
-										ComboNode::default(),
-									),
-								),
-								(
-									SlotKey::Hand(Side::Main),
-									(
-										Path::from("skills/gravity_well.skill"),
-										ComboNode::default(),
-									),
-								),
-							]),
-						),
-					),
-					(
-						SlotKey::Hand(Side::Main),
-						(
-							Path::from("skills/gravity_well.skill"),
-							ComboNode::new([(
-								SlotKey::Hand(Side::Main),
-								(
-									Path::from("skills/gravity_well.skill"),
-									ComboNode::default(),
-								),
-							)]),
-						),
-					),
-				]),
-			),
-		),
-		(
-			SlotKey::Hand(Side::Main),
-			(
-				Path::from("skills/gravity_well.skill"),
-				ComboNode::default(),
-			),
-		),
-	])
+fn get_combos() -> ComboNode<Uuid> {
+	ComboNode::new([])
 }

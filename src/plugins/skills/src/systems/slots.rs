@@ -113,19 +113,19 @@ fn new_handles_on(hand: Entity, forearm: Entity, commands: &mut Commands) -> Mou
 
 #[cfg(test)]
 mod tests {
+	use super::*;
 	use crate::{
 		components::slots::Slots,
 		items::{slot_key::SlotKey, Item},
 	};
-
-	use super::*;
 	use bevy::{
 		prelude::{App, BuildWorldChildren, Handle, Name, Quat, Transform, Update, Vec3},
 		scene::Scene,
 		utils::default,
 	};
-	use common::{components::Side, traits::load_asset::Path};
+	use common::components::Side;
 	use std::collections::HashMap;
+	use uuid::Uuid;
 
 	#[test]
 	fn add_slot_as_child_of_bone() {
@@ -297,7 +297,7 @@ mod tests {
 			.get::<Children>()
 			.and_then(|c| c.first())
 			.unwrap();
-		let slots = app.world().entity(root).get::<Slots<Path>>().unwrap();
+		let slots = app.world().entity(root).get::<Slots<Uuid>>().unwrap();
 
 		assert_eq!(
 			HashMap::from([(
@@ -512,7 +512,7 @@ mod tests {
 			.get::<Children>()
 			.and_then(|c| c.first())
 			.unwrap();
-		let slots = app.world().entity(root).get::<Slots<Path>>().unwrap();
+		let slots = app.world().entity(root).get::<Slots<Uuid>>().unwrap();
 
 		assert_eq!(
 			HashMap::from([(
