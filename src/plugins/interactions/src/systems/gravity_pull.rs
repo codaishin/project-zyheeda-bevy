@@ -53,7 +53,7 @@ fn velocity_vector(
 		let pull_strength = *pull.strength;
 
 		match predict(direction, pull_strength, delta) {
-			Predict::Overshoot => Some(direction),
+			Predict::Overshoot => Some(direction / delta.as_secs_f32()),
 			Predict::NormalAdvance => Some(direction.normalize() * pull_strength),
 		}
 	}
@@ -309,8 +309,9 @@ mod tests {
 	}
 
 	#[test]
-	fn use_direction_length_when_pull_times_delta_exceed_direction_length() {
+	fn use_direction_length_divided_by_delta_when_pull_times_delta_exceed_direction_length() {
 		let mut app = setup();
+		let delta = Duration::from_millis(501);
 		let towards = app
 			.world_mut()
 			.spawn(GlobalTransform::from(Transform::from_translation(
@@ -330,13 +331,14 @@ mod tests {
 			))
 			.id();
 
-		app.world_mut()
-			.run_system_once_with(Duration::from_millis(501), gravity_pull);
+		app.world_mut().run_system_once_with(delta, gravity_pull);
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
 			(
-				Some(&Velocity::linear(Vec3::new(-3., 0., 4.))),
+				Some(&Velocity::linear(
+					Vec3::new(-3., 0., 4.) / delta.as_secs_f32()
+				)),
 				Some(&Immobilized)
 			),
 			(agent.get::<Velocity>(), agent.get::<Immobilized>())
