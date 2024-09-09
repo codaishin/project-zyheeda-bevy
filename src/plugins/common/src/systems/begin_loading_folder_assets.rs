@@ -8,7 +8,7 @@ use bevy::{
 	prelude::{Commands, Resource},
 };
 
-pub fn begin_loading_folder_assets<
+pub(crate) fn begin_loading_folder_assets<
 	TAsset: Asset + AssetFolderPath,
 	TAssetServer: LoadFolderAssets + Resource,
 >(

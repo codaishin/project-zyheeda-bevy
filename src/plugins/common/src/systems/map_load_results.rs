@@ -11,7 +11,7 @@ use bevy::{
 };
 use std::fmt::Debug;
 
-pub fn map_load_results<
+pub(crate) fn map_load_results<
 	TAsset: Asset + Clone,
 	TError: Debug + Sync + Send + TypePath + 'static,
 	TGetAssetPath: Resource + GetAssetPath,

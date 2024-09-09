@@ -156,7 +156,7 @@ impl<TAsset: Asset> AssetFolder<TAsset> {
 }
 
 #[derive(Resource, Debug, PartialEq)]
-pub struct AliveAssets<TAsset: Asset>(HashSet<Handle<TAsset>>);
+pub(crate) struct AliveAssets<TAsset: Asset>(HashSet<Handle<TAsset>>);
 
 impl<TAsset: Asset> Default for AliveAssets<TAsset> {
 	fn default() -> Self {

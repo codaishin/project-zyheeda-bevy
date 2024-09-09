@@ -16,7 +16,7 @@ use std::{
 /// Generic asset loader that always returns `Ok`. Errors are stored within the `Ok`
 /// side of the result, so we can handle them on an individual level and prevent
 /// bevy from stopping the load process when loading the asset when loading a whole folder.
-pub struct FolderAssetLoader<TAsset, TDto> {
+pub(crate) struct FolderAssetLoader<TAsset, TDto> {
 	phantom_data: PhantomData<(TAsset, TDto)>,
 }
 
@@ -73,7 +73,7 @@ where
 }
 
 #[derive(Asset, TypePath, Debug, PartialEq)]
-pub enum LoadResult<TAsset: Asset, TError: Sync + Send + TypePath + 'static = LoadError> {
+pub(crate) enum LoadResult<TAsset: Asset, TError: Sync + Send + TypePath + 'static = LoadError> {
 	Ok(TAsset),
 	Err(TError),
 }
@@ -98,20 +98,20 @@ impl<TAsset: Asset> LoadResult<TAsset, LoadError> {
 
 #[derive(Debug, TypePath)]
 #[allow(dead_code)]
-pub enum LoadError {
+pub(crate) enum LoadError {
 	IO(IOError),
 	ParseChars(Utf8Error),
 	ParseObject(SerdeJsonError),
 }
 
 #[derive(Debug, TypePath)]
-pub enum ReadError {
+pub(crate) enum ReadError {
 	IO(IOError),
 	ParseChars(Utf8Error),
 }
 
 #[derive(Debug)]
-pub struct UnreachableError;
+pub(crate) struct UnreachableError;
 
 impl Display for UnreachableError {
 	fn fmt(&self, f: &mut Formatter) -> FmtResult {

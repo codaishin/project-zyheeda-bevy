@@ -1,7 +1,6 @@
 pub mod bundles;
 pub mod components;
 pub mod errors;
-pub mod folder_asset_loader;
 pub mod labels;
 pub mod resources;
 pub mod states;
@@ -9,6 +8,8 @@ pub mod systems;
 pub mod test_tools;
 pub mod tools;
 pub mod traits;
+
+pub(crate) mod folder_asset_loader;
 
 use bevy::{
 	app::{App, First, Plugin},

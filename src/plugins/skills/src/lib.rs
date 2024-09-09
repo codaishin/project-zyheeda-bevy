@@ -11,7 +11,7 @@ mod bundles;
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::{
 	app::{App, Plugin, PreStartup, PreUpdate, Update},
-	asset::{AssetApp, AssetServer},
+	asset::AssetServer,
 	ecs::{
 		entity::Entity,
 		query::Added,
@@ -19,23 +19,16 @@ use bevy::{
 		system::{Commands, IntoSystem, Query, Res},
 	},
 	input::{keyboard::KeyCode, ButtonInput},
-	prelude::AppExtStates,
 	state::{condition::in_state, state::State},
 	time::Virtual,
 };
 use bundles::Loadout;
 use common::{
 	components::{Collection, Player, Side, Swap},
-	folder_asset_loader::{FolderAssetLoader, LoadError, LoadResult},
-	resources::{key_map::KeyMap, AliveAssets, Models},
-	states::{AssetLoadState, GameRunning, LoadState, MouseContext},
-	systems::{
-		begin_loading_folder_assets::begin_loading_folder_assets,
-		log::log_many,
-		map_load_results::map_load_results,
-		set_assets_to_loaded::set_assets_to_loaded,
-	},
-	traits::try_insert_on::TryInsertOn,
+	resources::{key_map::KeyMap, Models},
+	states::{GameRunning, MouseContext},
+	systems::log::log_many,
+	traits::{register_folder_assets::RegisterFolderAssets, try_insert_on::TryInsertOn},
 };
 use components::{
 	combo_node::ComboNode,
@@ -86,20 +79,7 @@ impl Plugin for SkillsPlugin {
 }
 
 fn skill_load(app: &mut App) {
-	app.insert_state(AssetLoadState::<Skill>::new(LoadState::Loading))
-		.init_asset::<Skill>()
-		.init_asset::<LoadResult<Skill>>()
-		.init_resource::<AliveAssets<Skill>>()
-		.register_asset_loader(FolderAssetLoader::<Skill, SkillData>::default())
-		.add_systems(
-			PreStartup,
-			begin_loading_folder_assets::<Skill, AssetServer>,
-		)
-		.add_systems(
-			Update,
-			map_load_results::<Skill, LoadError, AssetServer>.pipe(log_many),
-		)
-		.add_systems(Update, set_assets_to_loaded::<Skill>);
+	app.register_folder_assets::<Skill, SkillData>();
 }
 
 fn inventory(app: &mut App) {

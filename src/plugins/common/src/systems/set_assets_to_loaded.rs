@@ -9,7 +9,7 @@ use bevy::{
 };
 use std::fmt::Debug;
 
-pub fn set_assets_to_loaded<TAsset>(
+pub(crate) fn set_assets_to_loaded<TAsset>(
 	current_state: Res<State<AssetLoadState<TAsset>>>,
 	mut next_state: ResMut<NextState<AssetLoadState<TAsset>>>,
 	mut folder_events: EventReader<AssetEvent<LoadedFolder>>,
