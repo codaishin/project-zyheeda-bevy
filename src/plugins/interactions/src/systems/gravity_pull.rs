@@ -51,26 +51,13 @@ fn velocity_vector(
 	move |pull| {
 		let direction = pull_towards(&pull)? - position;
 		let pull_strength = *pull.strength;
+		let delta_secs = delta.as_secs_f32();
 
-		match predict(direction, pull_strength, delta) {
-			Predict::Overshoot => Some(direction / delta.as_secs_f32()),
+		match predict(direction, pull_strength, delta_secs) {
+			Predict::Overshoot => Some(direction / delta_secs),
 			Predict::NormalAdvance => Some(direction.normalize() * pull_strength),
 		}
 	}
-}
-
-enum Predict {
-	Overshoot,
-	NormalAdvance,
-}
-
-fn predict(direction: Vec3, pull_strength: f32, delta: Duration) -> Predict {
-	let movement_in_one_frame = pull_strength * delta.as_secs_f32();
-	if direction.length() < movement_in_one_frame {
-		return Predict::Overshoot;
-	}
-
-	Predict::NormalAdvance
 }
 
 fn pull_towards(translation: impl Fn(Entity) -> Option<Vec3>) -> impl Fn(&Pull) -> Option<Vec3> {
@@ -82,6 +69,20 @@ fn pull_towards(translation: impl Fn(Entity) -> Option<Vec3>) -> impl Fn(&Pull) 
 
 fn sum(a: Vec3, b: Vec3) -> Vec3 {
 	a + b
+}
+
+enum Predict {
+	Overshoot,
+	NormalAdvance,
+}
+
+fn predict(direction: Vec3, pull_strength: f32, delta_secs: f32) -> Predict {
+	let movement_in_one_frame = pull_strength * delta_secs;
+	if direction.length() < movement_in_one_frame {
+		return Predict::Overshoot;
+	}
+
+	Predict::NormalAdvance
 }
 
 #[derive(Bundle)]
