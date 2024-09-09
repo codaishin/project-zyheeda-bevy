@@ -1,4 +1,9 @@
-use crate::{resources::SkillFolder, skill_loader::LoadResult, skills::Skill, states::SkillAssets};
+use crate::{
+	folder_asset_loader::LoadResult,
+	resources::SkillFolder,
+	skills::Skill,
+	states::SkillAssets,
+};
 use bevy::{
 	asset::{AssetEvent, Assets, LoadedFolder},
 	prelude::{EventReader, Local, NextState, Res, ResMut, State},
@@ -53,8 +58,8 @@ fn is_loaded(skill_folder: Res<SkillFolder>) -> impl Fn(&AssetEvent<LoadedFolder
 mod tests {
 	use super::*;
 	use crate::{
+		folder_asset_loader::LoadResult,
 		resources::SkillFolder,
-		skill_loader::LoadResult,
 		skills::Skill,
 		states::SkillAssets,
 	};

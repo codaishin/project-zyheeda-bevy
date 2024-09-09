@@ -7,7 +7,7 @@ pub mod traits;
 
 mod behaviors;
 mod bundles;
-mod skill_loader;
+mod folder_asset_loader;
 mod states;
 
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
@@ -43,10 +43,10 @@ use components::{
 	slots::Slots,
 	Mounts,
 };
+use folder_asset_loader::{FolderAssetLoader, LoadError, LoadResult};
 use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount};
 use resources::AliveAssets;
-use skill_loader::{LoadError, LoadResult, SkillLoader};
-use skills::{QueuedSkill, Skill};
+use skills::{skill_data::SkillData, QueuedSkill, Skill};
 use states::SkillAssets;
 use std::{collections::HashSet, time::Duration};
 use systems::{
@@ -92,7 +92,7 @@ fn skill_load(app: &mut App) {
 		.init_asset::<Skill>()
 		.init_asset::<LoadResult<Skill>>()
 		.init_resource::<AliveAssets<Skill>>()
-		.register_asset_loader(SkillLoader::<LoadResult<Skill>>::default())
+		.register_asset_loader(FolderAssetLoader::<Skill, SkillData>::default())
 		.add_systems(PreStartup, begin_loading_skills::<AssetServer>)
 		.add_systems(
 			Update,
