@@ -1,20 +1,21 @@
-use crate::{skills::Skill, states::SkillAssets, traits::TryMap};
+use crate::{skills::Skill, traits::TryMap};
 use bevy::{
 	asset::Assets,
 	prelude::{Commands, Component, Entity, Query, Res, State},
 };
+use common::states::{AssetLoadState, LoadState};
 use uuid::Uuid;
 
 pub(crate) fn uuid_to_skill<TSource, TResult>(
 	mut commands: Commands,
 	skills: Res<Assets<Skill>>,
 	sources: Query<(Entity, &TSource)>,
-	skill_assets: Res<State<SkillAssets>>,
+	state: Res<State<AssetLoadState<Skill>>>,
 ) where
 	TSource: Component + TryMap<Uuid, Skill, TResult>,
 	TResult: Component,
 {
-	if skill_assets.get() == &SkillAssets::Loading {
+	if **state.get() == LoadState::Loading {
 		return;
 	}
 
@@ -46,7 +47,6 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::states::SkillAssets;
 	use bevy::{
 		app::{App, Update},
 		asset::Assets,
@@ -68,7 +68,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_plugins(StatesPlugin);
-		app.insert_state(SkillAssets::Loading);
+		app.insert_state(AssetLoadState::<Skill>::new(LoadState::Loading));
 		app.init_resource::<Assets<Skill>>();
 
 		app.add_systems(Update, uuid_to_skill::<_Container<Uuid>, _Container<Skill>>);
@@ -80,7 +80,7 @@ mod tests {
 	fn map_uuid_to_skill_when_loaded() {
 		let id = Uuid::new_v4();
 		let mut app = setup();
-		app.insert_state(SkillAssets::Loaded);
+		app.insert_state(AssetLoadState::<Skill>::new(LoadState::Loaded));
 		app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
 			id,
 			name: "my skill".to_owned(),
@@ -104,7 +104,7 @@ mod tests {
 	fn remove_source() {
 		let id = Uuid::new_v4();
 		let mut app = setup();
-		app.insert_state(SkillAssets::Loaded);
+		app.insert_state(AssetLoadState::<Skill>::new(LoadState::Loaded));
 		app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
 			id,
 			name: "my skill".to_owned(),
@@ -121,7 +121,7 @@ mod tests {
 	fn do_nothing_when_skill_assets_loading() {
 		let id = Uuid::new_v4();
 		let mut app = setup();
-		app.insert_state(SkillAssets::Loading);
+		app.insert_state(AssetLoadState::<Skill>::new(LoadState::Loading));
 		app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
 			id,
 			name: "my skill".to_owned(),

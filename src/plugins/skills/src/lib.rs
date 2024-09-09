@@ -7,8 +7,6 @@ pub mod traits;
 
 mod behaviors;
 mod bundles;
-mod folder_asset_loader;
-mod states;
 
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::{
@@ -28,9 +26,15 @@ use bevy::{
 use bundles::Loadout;
 use common::{
 	components::{Collection, Player, Side, Swap},
-	resources::{key_map::KeyMap, Models},
-	states::{GameRunning, MouseContext},
-	systems::log::log_many,
+	folder_asset_loader::{FolderAssetLoader, LoadError, LoadResult},
+	resources::{key_map::KeyMap, AliveAssets, Models},
+	states::{AssetLoadState, GameRunning, LoadState, MouseContext},
+	systems::{
+		begin_loading_folder_assets::begin_loading_folder_assets,
+		log::log_many,
+		map_load_results::map_load_results,
+		set_assets_to_loaded::set_assets_to_loaded,
+	},
 	traits::try_insert_on::TryInsertOn,
 };
 use components::{
@@ -43,15 +47,11 @@ use components::{
 	slots::Slots,
 	Mounts,
 };
-use folder_asset_loader::{FolderAssetLoader, LoadError, LoadResult};
 use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount};
-use resources::AliveAssets;
 use skills::{skill_data::SkillData, QueuedSkill, Skill};
-use states::SkillAssets;
 use std::{collections::HashSet, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,
-	begin_loading_skills::begin_loading_skills,
 	enqueue::enqueue,
 	equip::equip_item,
 	execute::execute,
@@ -61,13 +61,11 @@ use systems::{
 		apply_load_models_commands::apply_load_models_commands,
 		load_models_commands_for_new_slots::load_models_commands_for_new_slots,
 	},
-	map_load_results::map_load_results,
 	mouse_context::{
 		advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
 		release::release_triggered_mouse_context,
 		trigger_primed::trigger_primed_mouse_context,
 	},
-	set_skill_assets_to_loaded::set_skill_assets_to_loaded,
 	skill_spawn::add_skill_spawn,
 	slots::init_slots,
 	update_skill_combos::update_skill_combos,
@@ -88,17 +86,20 @@ impl Plugin for SkillsPlugin {
 }
 
 fn skill_load(app: &mut App) {
-	app.insert_state(SkillAssets::Loading)
+	app.insert_state(AssetLoadState::<Skill>::new(LoadState::Loading))
 		.init_asset::<Skill>()
 		.init_asset::<LoadResult<Skill>>()
 		.init_resource::<AliveAssets<Skill>>()
 		.register_asset_loader(FolderAssetLoader::<Skill, SkillData>::default())
-		.add_systems(PreStartup, begin_loading_skills::<AssetServer>)
+		.add_systems(
+			PreStartup,
+			begin_loading_folder_assets::<Skill, AssetServer>,
+		)
 		.add_systems(
 			Update,
 			map_load_results::<Skill, LoadError, AssetServer>.pipe(log_many),
 		)
-		.add_systems(Update, set_skill_assets_to_loaded);
+		.add_systems(Update, set_assets_to_loaded::<Skill>);
 }
 
 fn inventory(app: &mut App) {

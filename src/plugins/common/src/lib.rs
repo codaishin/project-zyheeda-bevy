@@ -1,6 +1,7 @@
 pub mod bundles;
 pub mod components;
 pub mod errors;
+pub mod folder_asset_loader;
 pub mod labels;
 pub mod resources;
 pub mod states;
