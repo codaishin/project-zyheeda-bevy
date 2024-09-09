@@ -16,7 +16,10 @@ pub(crate) fn gravity_pull(
 	mut agents: Query<(Entity, &Transform, &mut EffectedByGravity)>,
 	transforms: Query<&GlobalTransform>,
 ) {
-	let get_transform = |pull: &Pull| Some(transforms.get(pull.towards).ok()?.translation());
+	let translation = |entity| {
+		let transform = transforms.get(entity).ok()?;
+		Some(transform.translation())
+	};
 
 	for (entity, transform, mut effected_by_gravity) in &mut agents {
 		if effected_by_gravity.pulls.is_empty() {
@@ -28,8 +31,8 @@ pub(crate) fn gravity_pull(
 		let velocity = effected_by_gravity
 			.pulls
 			.drain(..)
-			.filter_map(get_pull_vector(position, delta, &get_transform))
-			.reduce(|a, b| a + b)
+			.filter_map(velocity_vector(position, delta, pull_towards(translation)))
+			.reduce(sum)
 			.map(Velocity::linear);
 
 		let Some(velocity) = velocity else {
@@ -40,25 +43,45 @@ pub(crate) fn gravity_pull(
 	}
 }
 
-fn get_pull_vector(
+fn velocity_vector(
 	position: Vec3,
 	delta: Duration,
-	get_transform: &impl Fn(&Pull) -> Option<Vec3>,
-) -> impl Fn(Pull) -> Option<Vec3> + '_ {
+	pull_towards: impl Fn(&Pull) -> Option<Vec3>,
+) -> impl Fn(Pull) -> Option<Vec3> {
 	move |pull| {
-		let direction = get_transform(&pull)? - position;
+		let direction = pull_towards(&pull)? - position;
 		let pull_strength = *pull.strength;
 
-		if would_overshoot(direction, pull_strength, delta) {
-			Some(direction)
-		} else {
-			Some(direction.normalize() * pull_strength)
+		match predict(direction, pull_strength, delta) {
+			Predict::Overshoot => Some(direction),
+			Predict::NormalAdvance => Some(direction.normalize() * pull_strength),
 		}
 	}
 }
 
-fn would_overshoot(direction: Vec3, pull_strength: f32, delta: Duration) -> bool {
-	direction.length() < pull_strength * delta.as_secs_f32()
+enum Predict {
+	Overshoot,
+	NormalAdvance,
+}
+
+fn predict(direction: Vec3, pull_strength: f32, delta: Duration) -> Predict {
+	let movement_in_one_frame = pull_strength * delta.as_secs_f32();
+	if direction.length() < movement_in_one_frame {
+		return Predict::Overshoot;
+	}
+
+	Predict::NormalAdvance
+}
+
+fn pull_towards(translation: impl Fn(Entity) -> Option<Vec3>) -> impl Fn(&Pull) -> Option<Vec3> {
+	move |Pull { towards, .. }: &Pull| {
+		let translation = translation(*towards)?;
+		Some(Vec3::new(translation.x, 0., translation.z))
+	}
+}
+
+fn sum(a: Vec3, b: Vec3) -> Vec3 {
+	a + b
 }
 
 #[derive(Bundle)]
@@ -88,6 +111,41 @@ mod tests {
 			.world_mut()
 			.spawn(GlobalTransform::from(Transform::from_translation(
 				Vec3::new(0., 0., 3.),
+			)))
+			.id();
+		let agent = app
+			.world_mut()
+			.spawn((
+				Transform::from_xyz(1., 0., 0.),
+				EffectedByGravity {
+					pulls: vec![Pull {
+						strength: UnitsPerSecond::new(2.),
+						towards,
+					}],
+				},
+			))
+			.id();
+
+		app.world_mut()
+			.run_system_once_with(Duration::from_secs(1), gravity_pull);
+
+		let agent = app.world().entity(agent);
+		assert_eq!(
+			(
+				Some(&Velocity::linear(Vec3::new(-1., 0., 3.).normalize() * 2.)),
+				Some(&Immobilized)
+			),
+			(agent.get::<Velocity>(), agent.get::<Immobilized>())
+		)
+	}
+
+	#[test]
+	fn add_forced_movement_for_single_pull_and_put_gravity_center_at_zero_elevation() {
+		let mut app = setup();
+		let towards = app
+			.world_mut()
+			.spawn(GlobalTransform::from(Transform::from_translation(
+				Vec3::new(0., 10., 3.),
 			)))
 			.id();
 		let agent = app
