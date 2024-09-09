@@ -9,6 +9,8 @@ pub mod test_tools;
 pub mod tools;
 pub mod traits;
 
+pub(crate) mod folder_asset_loader;
+
 use bevy::{
 	app::{App, First, Plugin},
 	ecs::schedule::IntoSystemConfigs,

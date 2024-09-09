@@ -1,5 +1,7 @@
 pub mod accessor;
 pub mod add_asset;
+pub mod asset_file_extensions;
+pub mod asset_folder;
 pub mod cache;
 pub mod cast_ray;
 pub mod clamp_zero_positive;
@@ -22,6 +24,7 @@ pub mod mock;
 pub mod mouse_position;
 pub mod nested_mock;
 pub mod ownership_relation;
+pub mod register_folder_assets;
 pub mod remove_conditionally;
 pub mod state_duration;
 pub mod swap_command;

@@ -1544,6 +1544,7 @@ dependencies = [
  "macros",
  "mockall",
  "serde",
+ "serde_json",
  "tracing",
  "uuid",
 ]
@@ -3978,7 +3979,6 @@ dependencies = [
  "macros",
  "mockall",
  "serde",
- "serde_json",
  "tracing",
  "uuid",
 ]

@@ -15,7 +15,10 @@ use bevy::{
 	prelude::Image,
 	reflect::TypePath,
 };
-use common::resources::ColliderInfo;
+use common::{
+	resources::ColliderInfo,
+	traits::{asset_folder::AssetFolderPath, load_asset::Path},
+};
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result},
@@ -54,6 +57,12 @@ impl Display for Skill {
 			"" => write!(f, "Skill(<no name>)"),
 			name => write!(f, "Skill({})", name),
 		}
+	}
+}
+
+impl AssetFolderPath for Skill {
+	fn asset_folder_path() -> Path {
+		Path::from("skills")
 	}
 }
 

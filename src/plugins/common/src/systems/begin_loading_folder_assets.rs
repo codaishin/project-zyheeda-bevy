@@ -1,30 +1,36 @@
-use crate::resources::SkillFolder;
+use crate::{
+	resources::AssetFolder,
+	traits::{asset_folder::AssetFolderPath, load_folder_assets::LoadFolderAssets},
+};
 use bevy::{
+	asset::Asset,
 	ecs::system::Res,
 	prelude::{Commands, Resource},
 };
-use common::traits::{load_asset::Path, load_folder_assets::LoadFolderAssets};
 
-pub(crate) fn begin_loading_skills<TAssetServer: LoadFolderAssets + Resource>(
+pub(crate) fn begin_loading_folder_assets<
+	TAsset: Asset + AssetFolderPath,
+	TAssetServer: LoadFolderAssets + Resource,
+>(
 	mut commands: Commands,
 	asset_server: Res<TAssetServer>,
 ) {
-	let folder = asset_server.load_folder_assets(Path::from("skills"));
-	commands.insert_resource(SkillFolder(folder));
+	let folder = asset_server.load_folder_assets(TAsset::asset_folder_path());
+	commands.insert_resource(AssetFolder::<TAsset>::new(folder));
 }
 
 #[cfg(test)]
 mod tests {
+	use crate::traits::load_asset::Path;
+
 	use super::*;
 	use bevy::{
 		app::{App, Update},
 		asset::{AssetId, Handle, LoadedFolder},
 		prelude::Resource,
+		reflect::TypePath,
 	};
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{load_asset::Path, nested_mock::NestedMocks},
-	};
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use uuid::Uuid;
@@ -32,6 +38,15 @@ mod tests {
 	#[derive(Resource, NestedMocks)]
 	struct _Server {
 		mock: Mock_Server,
+	}
+
+	#[derive(Asset, TypePath, Debug, PartialEq)]
+	struct _Asset;
+
+	impl AssetFolderPath for _Asset {
+		fn asset_folder_path() -> Path {
+			Path::from("my/asset/folder/path")
+		}
 	}
 
 	#[automock]
@@ -44,8 +59,7 @@ mod tests {
 	fn setup(server: _Server) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(server);
-		app.init_resource::<SkillFolder>();
-		app.add_systems(Update, begin_loading_skills::<_Server>);
+		app.add_systems(Update, begin_loading_folder_assets::<_Asset, _Server>);
 
 		app
 	}
@@ -62,17 +76,17 @@ mod tests {
 
 		app.update();
 
-		let skill_folder = app.world().resource::<SkillFolder>();
+		let asset_folder = app.world().resource::<AssetFolder<_Asset>>();
 
-		assert_eq!(&SkillFolder(handle), skill_folder);
+		assert_eq!(&AssetFolder::<_Asset>::new(handle), asset_folder);
 	}
 
 	#[test]
-	fn call_load_folder_assets_with_skill_path() {
+	fn call_load_folder_assets_with_asset_path() {
 		let mut app = setup(_Server::new().with_mock(|mock| {
 			mock.expect_load_folder_assets()
 				.times(1)
-				.with(eq(Path::from("skills")))
+				.with(eq(_Asset::asset_folder_path()))
 				.return_const(Handle::default());
 		}));
 

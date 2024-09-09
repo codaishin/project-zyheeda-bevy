@@ -8,6 +8,7 @@ use animate_data::AnimateData;
 use common::{
 	tools::duration_data::DurationData,
 	traits::{
+		asset_file_extensions::AssetFileExtensions,
 		load_asset::{LoadAsset, Path},
 		load_from::LoadFrom,
 	},
@@ -26,6 +27,12 @@ pub(crate) struct SkillData {
 	behavior: RunSkillBehaviorData,
 	is_usable_with: HashSet<ItemType>,
 	icon: Option<Path>,
+}
+
+impl AssetFileExtensions for SkillData {
+	fn asset_file_extensions() -> &'static [&'static str] {
+		&["skill"]
+	}
 }
 
 impl LoadFrom<SkillData> for Skill {

@@ -1,12 +1,13 @@
-use crate::{resources::AliveAssets, skill_loader::LoadResult};
+use crate::{
+	errors::{Error, Level},
+	folder_asset_loader::LoadResult,
+	resources::AliveAssets,
+	traits::get_asset_path::GetAssetPath,
+};
 use bevy::{
 	asset::{Asset, AssetPath, Assets},
 	prelude::{Res, ResMut, Resource},
 	reflect::TypePath,
-};
-use common::{
-	errors::{Error, Level},
-	traits::get_asset_path::GetAssetPath,
 };
 use std::fmt::Debug;
 
@@ -58,7 +59,7 @@ fn error<TError: Debug>(error: &TError, path: Option<AssetPath>) -> Error {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::skill_loader::LoadResult;
+	use crate::folder_asset_loader::LoadResult;
 	use bevy::{
 		app::App,
 		asset::{AssetPath, Assets, UntypedAssetId},
