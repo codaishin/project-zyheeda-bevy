@@ -13,6 +13,7 @@ pub(crate) mod folder_asset_loader;
 
 use bevy::{
 	app::{App, First, Plugin},
+	asset::AssetServer,
 	ecs::schedule::IntoSystemConfigs,
 	render::camera::Camera,
 	state::app::AppExtStates,
@@ -21,7 +22,11 @@ use bevy_rapier3d::plugin::RapierContext;
 use components::MainCamera;
 use resources::language_server::LanguageServer;
 use states::{GameRunning, MouseContext};
-use systems::{set_cam_ray::set_cam_ray, set_mouse_hover::set_mouse_hover};
+use systems::{
+	load_asset_model::load_asset_model,
+	set_cam_ray::set_cam_ray,
+	set_mouse_hover::set_mouse_hover,
+};
 
 pub struct CommonPlugin;
 
@@ -37,6 +42,7 @@ impl Plugin for CommonPlugin {
 					set_mouse_hover::<RapierContext>,
 				)
 					.chain(),
-			);
+			)
+			.add_systems(First, load_asset_model::<AssetServer>);
 	}
 }
