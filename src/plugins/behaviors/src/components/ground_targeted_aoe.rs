@@ -1,8 +1,6 @@
 use bevy::{
-	color::Color,
 	ecs::{component::Component, system::EntityCommands},
-	math::{primitives::Sphere, Dir3, Quat, Ray3d, Vec3},
-	pbr::{PbrBundle, StandardMaterial},
+	math::{Dir3, Quat, Ray3d, Vec3},
 	prelude::{
 		default,
 		Annulus,
@@ -10,17 +8,17 @@ use bevy::{
 		Bundle,
 		Extrusion,
 		InfinitePlane3d,
+		SpatialBundle,
 		TransformBundle,
 	},
-	render::{alpha::AlphaMode, mesh::Mesh},
+	render::mesh::Mesh,
 	transform::components::Transform,
 };
 use bevy_rapier3d::prelude::{ActiveEvents, Collider, ComputedColliderShape, Sensor};
 use common::{
-	components::ColliderRoot,
+	components::{AssetModel, ColliderRoot},
 	errors::{Error, Level},
 	tools::Units,
-	traits::cache::GetOrCreateTypeAsset,
 };
 use prefabs::traits::{GetOrCreateAssets, Instantiate};
 use std::f32::consts::PI;
@@ -75,28 +73,14 @@ impl Default for GroundTargetedAoeContact {
 }
 
 impl Instantiate for GroundTargetedAoeContact {
-	fn instantiate(
-		&self,
-		on: &mut EntityCommands,
-		mut assets: impl GetOrCreateAssets,
-	) -> Result<(), Error> {
-		let base_color = Color::srgb(0.1, 0.1, 0.44);
-		let emissive = base_color.to_linear() * 100.;
+	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
 		let collider = self.collider_components()?;
+		let transform = Transform::from(self).with_scale(Vec3::splat(*self.radius * 2.));
 
-		on.try_insert(PbrBundle {
-			mesh: assets.get_or_create_for::<GroundTargetedAoeContact>(|| {
-				Mesh::from(Sphere::new(*self.radius))
-			}),
-			material: assets.get_or_create_for::<GroundTargetedAoeContact>(|| StandardMaterial {
-				base_color,
-				emissive,
-				alpha_mode: AlphaMode::Add,
-				..default()
-			}),
-			transform: Transform::from(self),
-			..default()
-		})
+		on.try_insert((
+			AssetModel("models/sphere.glb#Scene0"),
+			SpatialBundle::from(transform),
+		))
 		.with_children(|parent| {
 			parent.spawn((ColliderRoot(parent.parent_entity()), collider));
 		});
@@ -121,8 +105,8 @@ impl From<&GroundTargetedAoeContact> for Transform {
 impl ColliderComponents for GroundTargetedAoeContact {
 	fn collider_components(&self) -> Result<impl Bundle, Error> {
 		let transform = Transform::default().with_rotation(Quat::from_axis_angle(Vec3::X, PI / 2.));
-		let ring = Annulus::new(*self.radius - 0.1, *self.radius + 0.1);
-		let torus = Mesh::from(Extrusion::new(ring, 2.));
+		let ring = Annulus::new(0.49, 0.51);
+		let torus = Mesh::from(Extrusion::new(ring, 0.5));
 		let collider = Collider::from_bevy_mesh(&torus, &ComputedColliderShape::TriMesh);
 
 		let Some(collider) = collider else {
@@ -160,7 +144,7 @@ impl ColliderComponents for GroundTargetedAoeProjection {
 	fn collider_components(&self) -> Result<impl Bundle, Error> {
 		Ok((
 			TransformBundle::default(),
-			Collider::ball(*self.radius),
+			Collider::ball(0.5),
 			ActiveEvents::COLLISION_EVENTS,
 			Sensor,
 		))
