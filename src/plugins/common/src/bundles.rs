@@ -1,11 +1,13 @@
 use bevy::{
-	prelude::Bundle,
+	prelude::{Bundle, GlobalTransform, InheritedVisibility, ViewVisibility, Visibility},
 	transform::{bundles::TransformBundle, components::Transform},
 };
 use bevy_rapier3d::{
 	geometry::{ActiveEvents, Collider},
 	prelude::ActiveCollisionTypes,
 };
+
+use crate::components::AssetModel;
 
 #[derive(Bundle, Clone, Default)]
 pub struct ColliderBundle {
@@ -41,4 +43,14 @@ impl ColliderTransformBundle {
 			active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
 		}
 	}
+}
+
+#[derive(Bundle, Default)]
+pub struct AssetModelBundle {
+	pub model: AssetModel,
+	pub visibility: Visibility,
+	pub inherited_visibility: InheritedVisibility,
+	pub view_visibility: ViewVisibility,
+	pub transform: Transform,
+	pub global_transform: GlobalTransform,
 }

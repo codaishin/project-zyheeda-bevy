@@ -8,7 +8,6 @@ use bevy::{
 		Bundle,
 		Extrusion,
 		InfinitePlane3d,
-		SpatialBundle,
 		TransformBundle,
 	},
 	render::mesh::Mesh,
@@ -16,6 +15,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::{ActiveEvents, Collider, ComputedColliderShape, Sensor};
 use common::{
+	bundles::AssetModelBundle,
 	components::{AssetModel, ColliderRoot},
 	errors::{Error, Level},
 	tools::Units,
@@ -75,12 +75,14 @@ impl Default for GroundTargetedAoeContact {
 impl Instantiate for GroundTargetedAoeContact {
 	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
 		let collider = self.collider_components()?;
+		let model = AssetModel("models/sphere.glb#Scene0");
 		let transform = Transform::from(self).with_scale(Vec3::splat(*self.radius * 2.));
 
-		on.try_insert((
-			AssetModel("models/sphere.glb#Scene0"),
-			SpatialBundle::from(transform),
-		))
+		on.try_insert(AssetModelBundle {
+			model,
+			transform,
+			..default()
+		})
 		.with_children(|parent| {
 			parent.spawn((ColliderRoot(parent.parent_entity()), collider));
 		});

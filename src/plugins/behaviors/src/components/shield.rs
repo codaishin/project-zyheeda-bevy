@@ -7,7 +7,7 @@ use bevy::{
 };
 use bevy_rapier3d::{dynamics::RigidBody, geometry::Collider, prelude::Sensor};
 use common::{
-	bundles::ColliderTransformBundle,
+	bundles::{AssetModelBundle, ColliderTransformBundle},
 	components::{AssetModel, ColliderRoot},
 	errors::Error,
 };
@@ -27,7 +27,7 @@ impl Instantiate for ShieldContact {
 		};
 		let model = AssetModel("models/shield.glb#Scene0");
 
-		on.insert((RigidBody::Fixed, model))
+		on.insert((RigidBody::Fixed, AssetModelBundle { model, ..default() }))
 			.with_children(|parent| {
 				parent.spawn((
 					ColliderTransformBundle::new_static_collider(
