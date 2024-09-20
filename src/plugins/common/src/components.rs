@@ -93,3 +93,6 @@ pub struct MainCamera;
 
 #[derive(Component, Debug, PartialEq, Clone)]
 pub struct NoTarget;
+
+#[derive(Component, Debug, PartialEq)]
+pub struct AssetModel(pub &'static str);

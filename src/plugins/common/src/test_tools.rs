@@ -26,6 +26,7 @@ pub mod utils {
 		any::{type_name, Any, TypeId},
 		time::Duration,
 	};
+	use uuid::Uuid;
 
 	pub trait ApproxEqual<TTolerance> {
 		fn approx_equal(&self, other: &Self, tolerance: &TTolerance) -> bool;
@@ -275,4 +276,10 @@ pub mod utils {
 	}
 
 	pub use assert_bundle;
+
+	pub fn new_handle<TAsset: Asset>() -> Handle<TAsset> {
+		Handle::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		})
+	}
 }
