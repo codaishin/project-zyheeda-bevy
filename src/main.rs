@@ -30,6 +30,7 @@ use project_zyheeda::systems::{
 	movement::toggle_walk_run::player_toggle_walk_run,
 	void_sphere::ring_rotation::ring_rotation,
 };
+use shaders::ShaderPlugin;
 use skills::SkillsPlugin;
 use std::f32::consts::PI;
 
@@ -49,6 +50,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
 		.add_plugins(PrefabsPlugin)
+		.add_plugins(ShaderPlugin)
 		.add_plugins(IngameMenuPlugin)
 		.add_plugins(InteractionsPlugin)
 		.add_plugins(BarsPlugin)
