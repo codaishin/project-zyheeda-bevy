@@ -1,3 +1,5 @@
+pub mod components;
+
 use bevy::prelude::*;
 
 pub struct ShaderPlugin;
