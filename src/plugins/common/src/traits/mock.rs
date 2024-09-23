@@ -5,7 +5,7 @@ pub trait Mock {
 #[macro_export]
 macro_rules! simple_init {
 	($ident:ident) => {
-		impl Mock for $ident {
+		impl $crate::traits::mock::Mock for $ident {
 			fn new_mock(mut configure: impl FnMut(&mut Self)) -> Self {
 				let mut mock = Self::default();
 				configure(&mut mock);
