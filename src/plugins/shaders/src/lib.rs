@@ -1,7 +1,7 @@
 pub mod components;
 
 use bevy::prelude::*;
-use common::systems::{remove::remove_from, remove_from_children::remove_from_children_of};
+use common::systems::{remove::Remove, remove_from_children::RemoveFromChildren};
 use components::effect_shader::EffectShader;
 
 pub struct ShaderPlugin;
@@ -11,8 +11,8 @@ impl Plugin for ShaderPlugin {
 		app.add_systems(
 			Update,
 			(
-				remove_from::<EffectShader, Handle<StandardMaterial>>,
-				remove_from_children_of::<EffectShader, Handle<StandardMaterial>>,
+				Handle::<StandardMaterial>::remove_from::<EffectShader>,
+				Handle::<StandardMaterial>::remove_from_children_of::<EffectShader>,
 			),
 		);
 	}

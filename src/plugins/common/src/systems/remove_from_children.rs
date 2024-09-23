@@ -1,19 +1,30 @@
 use crate::traits::try_remove_from::TryRemoveFrom;
 use bevy::prelude::*;
 
-pub fn remove_from_children_of<TAgent, TComponent>(
-	commands: Commands,
-	agents: Query<Entity, With<TAgent>>,
-	children: Query<&Children>,
-	components: Query<(), With<TComponent>>,
-) where
-	TAgent: Component,
-	TComponent: Component,
-{
-	inner_remove_from_children_of(commands, agents, children, components);
+pub trait RemoveFromChildren<TComponent: Component> {
+	fn remove_from_children_of<TAgent>(
+		commands: Commands,
+		agents: Query<Entity, With<TAgent>>,
+		children: Query<&Children>,
+		components: Query<(), With<TComponent>>,
+	) where
+		TAgent: Component;
 }
 
-fn inner_remove_from_children_of<TCommands, TAgent, TComponent>(
+impl<TComponent: Component> RemoveFromChildren<TComponent> for TComponent {
+	fn remove_from_children_of<TAgent>(
+		commands: Commands,
+		agents: Query<Entity, With<TAgent>>,
+		children: Query<&Children>,
+		components: Query<(), With<TComponent>>,
+	) where
+		TAgent: Component,
+	{
+		remove_from_children_of(commands, agents, children, components);
+	}
+}
+
+fn remove_from_children_of<TCommands, TAgent, TComponent>(
 	mut commands: TCommands,
 	agents: Query<Entity, With<TAgent>>,
 	children: Query<&Children>,
@@ -82,7 +93,7 @@ pub mod tests {
 
 		app.world_mut().run_system_once_with(
 			mock,
-			inner_remove_from_children_of::<In<Mock_Commands>, _Agent, _Component>,
+			remove_from_children_of::<In<Mock_Commands>, _Agent, _Component>,
 		);
 	}
 
@@ -100,7 +111,7 @@ pub mod tests {
 
 		app.world_mut().run_system_once_with(
 			mock,
-			inner_remove_from_children_of::<In<Mock_Commands>, _Agent, _Component>,
+			remove_from_children_of::<In<Mock_Commands>, _Agent, _Component>,
 		);
 	}
 
@@ -120,7 +131,7 @@ pub mod tests {
 
 		app.world_mut().run_system_once_with(
 			mock,
-			inner_remove_from_children_of::<In<Mock_Commands>, _Agent, _Component>,
+			remove_from_children_of::<In<Mock_Commands>, _Agent, _Component>,
 		);
 	}
 }

@@ -1,19 +1,25 @@
 use crate::traits::try_remove_from::TryRemoveFrom;
 use bevy::prelude::*;
 
-type Agents<'w, 's, TAgent, TComponent> = Query<'w, 's, Entity, (With<TAgent>, With<TComponent>)>;
-
-pub fn remove_from<TAgent, TComponent>(commands: Commands, agents: Agents<TAgent, TComponent>)
-where
-	TAgent: Component,
-	TComponent: Component,
-{
-	inner_remove_from::<Commands, TAgent, TComponent>(commands, agents);
+pub trait Remove<TComponent: Component> {
+	fn remove_from<TAgent: Component>(
+		commands: Commands,
+		agents: Query<Entity, (With<TAgent>, With<TComponent>)>,
+	);
 }
 
-fn inner_remove_from<TCommands, TAgent, TComponent>(
+impl<TComponent: Component> Remove<TComponent> for TComponent {
+	fn remove_from<TAgent: Component>(
+		commands: Commands,
+		agents: Query<Entity, (With<TAgent>, With<TComponent>)>,
+	) {
+		remove_from::<Commands, TAgent, TComponent>(commands, agents)
+	}
+}
+
+fn remove_from<TCommands, TAgent, TComponent>(
 	mut commands: TCommands,
-	agents: Agents<TAgent, TComponent>,
+	agents: Query<Entity, (With<TAgent>, With<TComponent>)>,
 ) where
 	TCommands: TryRemoveFrom,
 	TAgent: Component,
@@ -68,10 +74,8 @@ mod tests {
 				.return_const(());
 		});
 
-		app.world_mut().run_system_once_with(
-			mock,
-			inner_remove_from::<In<Mock_Commands>, _Agent, _Component>,
-		);
+		app.world_mut()
+			.run_system_once_with(mock, remove_from::<In<Mock_Commands>, _Agent, _Component>);
 	}
 
 	#[test]
@@ -85,10 +89,8 @@ mod tests {
 				.return_const(());
 		});
 
-		app.world_mut().run_system_once_with(
-			mock,
-			inner_remove_from::<In<Mock_Commands>, _Agent, _Component>,
-		);
+		app.world_mut()
+			.run_system_once_with(mock, remove_from::<In<Mock_Commands>, _Agent, _Component>);
 	}
 
 	#[test]
@@ -102,9 +104,7 @@ mod tests {
 				.return_const(());
 		});
 
-		app.world_mut().run_system_once_with(
-			mock,
-			inner_remove_from::<In<Mock_Commands>, _Agent, _Component>,
-		);
+		app.world_mut()
+			.run_system_once_with(mock, remove_from::<In<Mock_Commands>, _Agent, _Component>);
 	}
 }
