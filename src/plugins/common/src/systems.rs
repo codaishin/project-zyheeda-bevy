@@ -1,4 +1,5 @@
 pub mod log;
+pub mod remove;
 
 pub(crate) mod begin_loading_folder_assets;
 pub(crate) mod load_asset_model;

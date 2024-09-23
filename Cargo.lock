@@ -3938,6 +3938,7 @@ name = "shaders"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "common",
 ]
 
 [[package]]
