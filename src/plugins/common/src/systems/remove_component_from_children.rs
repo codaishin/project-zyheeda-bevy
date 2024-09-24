@@ -8,21 +8,13 @@ pub trait RemoveFromChildren<TComponent: Component> {
 		children: Query<&Children>,
 		components: Query<(), With<TComponent>>,
 	) where
-		TAgent: Component;
-}
-
-impl<TComponent: Component> RemoveFromChildren<TComponent> for TComponent {
-	fn remove_from_children_of<TAgent>(
-		commands: Commands,
-		agents: Query<Entity, With<TAgent>>,
-		children: Query<&Children>,
-		components: Query<(), With<TComponent>>,
-	) where
 		TAgent: Component,
 	{
 		remove_from_children_of(commands, agents, children, components);
 	}
 }
+
+impl<TComponent: Component> RemoveFromChildren<TComponent> for TComponent {}
 
 fn remove_from_children_of<TCommands, TAgent, TComponent>(
 	mut commands: TCommands,

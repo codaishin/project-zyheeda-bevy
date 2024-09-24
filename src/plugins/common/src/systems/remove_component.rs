@@ -5,17 +5,12 @@ pub trait Remove<TComponent: Component> {
 	fn remove_from<TAgent: Component>(
 		commands: Commands,
 		agents: Query<Entity, (With<TAgent>, With<TComponent>)>,
-	);
-}
-
-impl<TComponent: Component> Remove<TComponent> for TComponent {
-	fn remove_from<TAgent: Component>(
-		commands: Commands,
-		agents: Query<Entity, (With<TAgent>, With<TComponent>)>,
 	) {
 		remove_from::<Commands, TAgent, TComponent>(commands, agents)
 	}
 }
+
+impl<TComponent: Component> Remove<TComponent> for TComponent {}
 
 fn remove_from<TCommands, TAgent, TComponent>(
 	mut commands: TCommands,
