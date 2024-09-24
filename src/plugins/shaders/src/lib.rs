@@ -13,6 +13,7 @@ use components::effect_shader::EffectShaders;
 use systems::{
 	add_child_effect_shader::add_child_effect_shader,
 	add_effect_shader::add_effect_shader,
+	instantiate_effect_shaders::EffectShadersController,
 };
 use traits::get_effect_material::GetEffectMaterial;
 
@@ -27,6 +28,7 @@ impl Plugin for ShaderPlugin {
 				Handle::<StandardMaterial>::remove_from_children_of::<EffectShaders>,
 				Handle::<Mesh>::move_into::<EffectShaders>,
 				Handle::<Mesh>::move_from_children_into::<EffectShaders>,
+				EffectShadersController::instantiate_shaders,
 			),
 		);
 	}

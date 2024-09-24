@@ -17,7 +17,7 @@ impl Push<Handle<Mesh>> for EffectShaders {
 	}
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct EffectShader {
 	handle: UntypedHandle,
 	insert_into: fn(&mut EntityCommands, &UntypedHandle),
