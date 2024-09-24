@@ -1,5 +1,6 @@
 pub mod log;
 pub mod move_component;
+pub mod move_component_from_children;
 pub mod remove_component;
 pub mod remove_component_from_children;
 

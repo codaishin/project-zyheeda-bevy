@@ -3,6 +3,7 @@ pub mod components;
 use bevy::prelude::*;
 use common::systems::{
 	move_component::MoveInto,
+	move_component_from_children::MoveFromChildrenInto,
 	remove_component::Remove,
 	remove_component_from_children::RemoveFromChildren,
 };
@@ -18,6 +19,7 @@ impl Plugin for ShaderPlugin {
 				Handle::<StandardMaterial>::remove_from::<EffectShaders>,
 				Handle::<StandardMaterial>::remove_from_children_of::<EffectShaders>,
 				Handle::<Mesh>::move_into::<EffectShaders>,
+				Handle::<Mesh>::move_from_children_into::<EffectShaders>,
 			),
 		);
 	}
