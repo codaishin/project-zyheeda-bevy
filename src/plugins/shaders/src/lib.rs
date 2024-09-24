@@ -1,4 +1,5 @@
 pub mod components;
+pub mod traits;
 
 use bevy::prelude::*;
 use common::systems::{
