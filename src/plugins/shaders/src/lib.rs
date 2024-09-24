@@ -10,7 +10,10 @@ use common::systems::{
 	remove_component_from_children::RemoveFromChildren,
 };
 use components::effect_shader::EffectShaders;
-use systems::add_effect_shader::add_effect_shader;
+use systems::{
+	add_child_effect_shader::add_child_effect_shader,
+	add_effect_shader::add_effect_shader,
+};
 use traits::get_effect_material::GetEffectMaterial;
 
 pub struct ShaderPlugin;
@@ -35,6 +38,12 @@ pub trait RegisterEffectShader {
 
 impl RegisterEffectShader for App {
 	fn register_effect_shader<TEffect: Component + GetEffectMaterial>(&mut self) -> &mut Self {
-		self.add_systems(Update, add_effect_shader::<TEffect>)
+		self.add_systems(
+			Update,
+			(
+				add_effect_shader::<TEffect>,
+				add_child_effect_shader::<TEffect>,
+			),
+		)
 	}
 }
