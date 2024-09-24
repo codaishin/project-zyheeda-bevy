@@ -8,6 +8,7 @@ use bevy::asset::UntypedAssetId;
 #[derive(Component, Default)]
 pub struct EffectShaders {
 	pub(crate) meshes: Vec<Handle<Mesh>>,
+	pub(crate) shaders: Vec<EffectShader>,
 }
 
 impl Push<Handle<Mesh>> for EffectShaders {
