@@ -12,6 +12,7 @@ use common::{
 	errors::Error,
 };
 use prefabs::traits::{GetOrCreateAssets, Instantiate};
+use shaders::components::effect_shader::EffectShaders;
 
 #[derive(Component, Debug, PartialEq)]
 pub struct ShieldContact {
@@ -27,17 +28,18 @@ impl Instantiate for ShieldContact {
 		};
 		let model = AssetModel("models/shield.glb#Scene0");
 
-		on.insert(RigidBody::Fixed).with_children(|parent| {
-			parent.spawn(AssetModelBundle { model, ..default() });
-			parent.spawn((
-				ColliderTransformBundle::new_static_collider(
-					default(),
-					Collider::cuboid(half_size.x, half_size.y, half_size.z),
-				),
-				Sensor,
-				ColliderRoot(parent.parent_entity()),
-			));
-		});
+		on.insert((RigidBody::Fixed, EffectShaders::default()))
+			.with_children(|parent| {
+				parent.spawn(AssetModelBundle { model, ..default() });
+				parent.spawn((
+					ColliderTransformBundle::new_static_collider(
+						default(),
+						Collider::cuboid(half_size.x, half_size.y, half_size.z),
+					),
+					Sensor,
+					ColliderRoot(parent.parent_entity()),
+				));
+			});
 
 		Ok(())
 	}

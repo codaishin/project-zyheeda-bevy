@@ -358,6 +358,7 @@ dependencies = [
  "mockall",
  "prefabs",
  "serde",
+ "shaders",
  "tracing",
 ]
 

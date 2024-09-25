@@ -22,6 +22,7 @@ use common::{
 	tools::Units,
 };
 use prefabs::traits::{GetOrCreateAssets, Instantiate};
+use shaders::components::effect_shader::EffectShaders;
 use std::f32::consts::PI;
 
 #[derive(Component, Debug, PartialEq, Clone)]
@@ -79,15 +80,18 @@ impl Instantiate for GroundTargetedAoeContact {
 		let model = AssetModel("models/sphere.glb#Scene0");
 		let transform = Transform::from(self);
 
-		on.insert(SpatialBundle::from_transform(transform))
-			.with_children(|parent| {
-				parent.spawn((ColliderRoot(parent.parent_entity()), collider));
-				parent.spawn(AssetModelBundle {
-					model,
-					transform: Transform::from_scale(Vec3::splat(*self.radius * 2.)),
-					..default()
-				});
+		on.insert((
+			SpatialBundle::from_transform(transform),
+			EffectShaders::default(),
+		))
+		.with_children(|parent| {
+			parent.spawn((ColliderRoot(parent.parent_entity()), collider));
+			parent.spawn(AssetModelBundle {
+				model,
+				transform: Transform::from_scale(Vec3::splat(*self.radius * 2.)),
+				..default()
 			});
+		});
 
 		Ok(())
 	}
