@@ -22,7 +22,7 @@ pub struct ShaderPlugin;
 impl Plugin for ShaderPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_systems(
-			Update,
+			PostUpdate,
 			(
 				Handle::<StandardMaterial>::remove_from::<EffectShaders>,
 				Handle::<StandardMaterial>::remove_from_children_of::<EffectShaders>,
