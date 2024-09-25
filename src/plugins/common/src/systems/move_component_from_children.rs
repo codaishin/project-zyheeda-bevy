@@ -1,4 +1,7 @@
-use crate::traits::{push::Push, try_remove_from::TryRemoveFrom};
+use crate::{
+	components::Unmovable,
+	traits::{push::Push, try_remove_from::TryRemoveFrom},
+};
 use bevy::prelude::*;
 
 pub trait MoveFromChildrenInto<TComponent>
@@ -8,7 +11,7 @@ where
 	fn move_from_children_into<TTarget>(
 		mut commands: Commands,
 		mut targets: Query<(Entity, Mut<TTarget>)>,
-		sources: Query<&TComponent>,
+		sources: Query<&TComponent, Without<Unmovable<TComponent>>>,
 		children: Query<&Children>,
 	) where
 		TTarget: Component + Push<TComponent>,
@@ -24,7 +27,7 @@ fn get_components<TComponent, TTarget: Push<TComponent>>(
 	entity: Entity,
 	mut target: Mut<TTarget>,
 	children: &Query<&Children>,
-	sources: &Query<&TComponent>,
+	sources: &Query<&TComponent, Without<Unmovable<TComponent>>>,
 ) where
 	TComponent: Component + Clone,
 {
@@ -42,6 +45,7 @@ impl<TComponent> MoveFromChildrenInto<TComponent> for TComponent where TComponen
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::components::Unmovable;
 	use bevy::ecs::system::RunSystemOnce;
 	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;
@@ -115,6 +119,23 @@ mod tests {
 				.times(1)
 				.with(eq(_Source))
 				.return_const(());
+		}
+	}
+
+	#[test]
+	fn do_nothing_when_source_unmovable() {
+		let mut app = setup();
+		let target = _Target::new().with_mock(assert);
+		let target = app.world_mut().spawn(target).id();
+		app.world_mut()
+			.spawn((_Source, Unmovable::<_Source>::default()))
+			.set_parent(target);
+
+		app.world_mut()
+			.run_system_once(_Source::move_from_children_into::<_Target>);
+
+		fn assert(mock: &mut Mock_Target) {
+			mock.expect_push().never().return_const(());
 		}
 	}
 }

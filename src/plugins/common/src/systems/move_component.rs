@@ -1,5 +1,10 @@
-use crate::traits::{push::Push, try_remove_from::TryRemoveFrom};
+use crate::{
+	components::Unmovable,
+	traits::{push::Push, try_remove_from::TryRemoveFrom},
+};
 use bevy::prelude::*;
+
+type Components<'a, TComponent, TTarget> = (Entity, &'a TComponent, Mut<'a, TTarget>);
 
 pub trait MoveInto<TComponent>
 where
@@ -7,7 +12,7 @@ where
 {
 	fn move_into<TTarget>(
 		mut commands: Commands,
-		mut entities: Query<(Entity, &TComponent, Mut<TTarget>)>,
+		mut entities: Query<Components<TComponent, TTarget>, Without<Unmovable<TComponent>>>,
 	) where
 		TTarget: Component + Push<TComponent>,
 	{
@@ -22,6 +27,8 @@ impl<TComponent> MoveInto<TComponent> for TComponent where TComponent: Component
 
 #[cfg(test)]
 mod tests {
+	use crate::components::Unmovable;
+
 	use super::*;
 	use bevy::ecs::system::RunSystemOnce;
 	use common::traits::nested_mock::NestedMocks;
@@ -76,5 +83,20 @@ mod tests {
 			.run_system_once(_Source::move_into::<_Target>);
 
 		assert_eq!(None, app.world().entity(entity).get::<_Source>());
+	}
+
+	#[test]
+	fn do_nothing_when_source_unmovable() {
+		let mut app = setup();
+		let target = _Target::new().with_mock(assert);
+		app.world_mut()
+			.spawn((_Source, target, Unmovable::<_Source>::default()));
+
+		app.world_mut()
+			.run_system_once(_Source::move_into::<_Target>);
+
+		fn assert(mock: &mut Mock_Target) {
+			mock.expect_push().never().return_const(());
+		}
 	}
 }

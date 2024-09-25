@@ -1,4 +1,4 @@
-use crate::traits::try_remove_from::TryRemoveFrom;
+use crate::{components::Unmovable, traits::try_remove_from::TryRemoveFrom};
 use bevy::prelude::*;
 
 pub trait RemoveFromChildren<TComponent: Component> {
@@ -6,7 +6,7 @@ pub trait RemoveFromChildren<TComponent: Component> {
 		commands: Commands,
 		agents: Query<Entity, With<TAgent>>,
 		children: Query<&Children>,
-		components: Query<(), With<TComponent>>,
+		components: Query<(), (With<TComponent>, Without<Unmovable<TComponent>>)>,
 	) where
 		TAgent: Component,
 	{
@@ -20,7 +20,7 @@ fn remove_from_children_of<TCommands, TAgent, TComponent>(
 	mut commands: TCommands,
 	agents: Query<Entity, With<TAgent>>,
 	children: Query<&Children>,
-	components: Query<(), With<TComponent>>,
+	components: Query<(), (With<TComponent>, Without<Unmovable<TComponent>>)>,
 ) where
 	TCommands: TryRemoveFrom,
 	TAgent: Component,
@@ -41,7 +41,7 @@ fn remove_from_children_of<TCommands, TAgent, TComponent>(
 #[cfg(test)]
 pub mod tests {
 	use super::*;
-	use crate::{simple_init, traits::mock::Mock};
+	use crate::{components::Unmovable, simple_init, traits::mock::Mock};
 	use bevy::ecs::system::RunSystemOnce;
 	use mockall::{mock, predicate::eq};
 
@@ -94,6 +94,26 @@ pub mod tests {
 		let mut app = setup();
 		let parent = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn(_Component).set_parent(parent);
+
+		let mock = Mock_Commands::new_mock(|mock| {
+			mock.expect_try_remove_from::<_Component>()
+				.never()
+				.return_const(());
+		});
+
+		app.world_mut().run_system_once_with(
+			mock,
+			remove_from_children_of::<In<Mock_Commands>, _Agent, _Component>,
+		);
+	}
+
+	#[test]
+	fn do_not_remove_when_unmovable() {
+		let mut app = setup();
+		let parent = app.world_mut().spawn(_Agent).id();
+		app.world_mut()
+			.spawn((_Component, Unmovable::<_Component>::default()))
+			.set_parent(parent);
 
 		let mock = Mock_Commands::new_mock(|mock| {
 			mock.expect_try_remove_from::<_Component>()

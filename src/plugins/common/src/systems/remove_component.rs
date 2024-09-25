@@ -1,10 +1,16 @@
-use crate::traits::try_remove_from::TryRemoveFrom;
+use crate::{components::Unmovable, traits::try_remove_from::TryRemoveFrom};
 use bevy::prelude::*;
+
+type Filter<TAgent, TComponent> = (
+	With<TAgent>,
+	With<TComponent>,
+	Without<Unmovable<TComponent>>,
+);
 
 pub trait Remove<TComponent: Component> {
 	fn remove_from<TAgent: Component>(
 		commands: Commands,
-		agents: Query<Entity, (With<TAgent>, With<TComponent>)>,
+		agents: Query<Entity, Filter<TAgent, TComponent>>,
 	) {
 		remove_from::<Commands, TAgent, TComponent>(commands, agents)
 	}
@@ -14,7 +20,7 @@ impl<TComponent: Component> Remove<TComponent> for TComponent {}
 
 fn remove_from<TCommands, TAgent, TComponent>(
 	mut commands: TCommands,
-	agents: Query<Entity, (With<TAgent>, With<TComponent>)>,
+	agents: Query<Entity, Filter<TAgent, TComponent>>,
 ) where
 	TCommands: TryRemoveFrom,
 	TAgent: Component,
@@ -28,7 +34,7 @@ fn remove_from<TCommands, TAgent, TComponent>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{simple_init, traits::mock::Mock};
+	use crate::{components::Unmovable, simple_init, traits::mock::Mock};
 	use bevy::ecs::system::RunSystemOnce;
 	use mockall::{mock, predicate::eq};
 
@@ -77,6 +83,22 @@ mod tests {
 	fn do_not_remove_component_when_no_agent() {
 		let mut app = setup();
 		app.world_mut().spawn(_Component);
+
+		let mock = Mock_Commands::new_mock(|mock| {
+			mock.expect_try_remove_from::<_Component>()
+				.never()
+				.return_const(());
+		});
+
+		app.world_mut()
+			.run_system_once_with(mock, remove_from::<In<Mock_Commands>, _Agent, _Component>);
+	}
+
+	#[test]
+	fn do_not_remove_component_when_marked_as_unmovable() {
+		let mut app = setup();
+		app.world_mut()
+			.spawn((_Component, _Agent, Unmovable::<_Component>::default()));
 
 		let mock = Mock_Commands::new_mock(|mock| {
 			mock.expect_try_remove_from::<_Component>()
