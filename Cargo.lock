@@ -358,6 +358,7 @@ dependencies = [
  "mockall",
  "prefabs",
  "serde",
+ "shaders",
  "tracing",
 ]
 
@@ -3623,6 +3624,7 @@ dependencies = [
  "prefabs",
  "serde",
  "serde_json",
+ "shaders",
  "skills",
  "tracing",
  "uuid",
@@ -3930,6 +3932,14 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "shaders"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "common",
 ]
 
 [[package]]

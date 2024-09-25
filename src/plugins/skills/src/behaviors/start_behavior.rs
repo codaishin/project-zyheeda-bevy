@@ -1,12 +1,12 @@
+pub mod deal_damage;
 pub mod force;
-pub mod start_deal_damage;
-pub mod start_gravity;
+pub mod gravity;
 
 use super::{SkillCaster, SkillSpawner, Target};
 use bevy::ecs::system::EntityCommands;
+use deal_damage::StartDealingDamage;
 use force::StartForce;
-use start_deal_damage::StartDealingDamage;
-use start_gravity::StartGravity;
+use gravity::StartGravity;
 
 #[cfg(test)]
 pub type StartBehaviorFn = fn(&mut EntityCommands, &SkillCaster, &SkillSpawner, &Target);

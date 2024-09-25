@@ -22,6 +22,7 @@ interactions = { path = "src/plugins/interactions" }
 light = { path = "src/plugins/light" }
 macros = { path = "src/plugins/macros" }
 prefabs = { path = "src/plugins/prefabs" }
+shaders = { path = "src/plugins/shaders" }
 skills = { path = "src/plugins/skills" }
 
 [profile.test]
@@ -57,6 +58,7 @@ interactions.workspace = true
 light.workspace = true
 macros.workspace = true
 prefabs.workspace = true
+shaders.workspace = true
 skills.workspace = true
 ingame_menu = { path = "src/plugins/ingame_menu" }
 map_generation = { path = "src/plugins/map_generation" }

@@ -1,4 +1,8 @@
 pub mod log;
+pub mod move_component;
+pub mod move_component_from_children;
+pub mod remove_component;
+pub mod remove_component_from_children;
 
 pub(crate) mod begin_loading_folder_assets;
 pub(crate) mod load_asset_model;

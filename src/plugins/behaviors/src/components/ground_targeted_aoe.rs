@@ -8,6 +8,7 @@ use bevy::{
 		Bundle,
 		Extrusion,
 		InfinitePlane3d,
+		SpatialBundle,
 		TransformBundle,
 	},
 	render::mesh::Mesh,
@@ -21,6 +22,7 @@ use common::{
 	tools::Units,
 };
 use prefabs::traits::{GetOrCreateAssets, Instantiate};
+use shaders::components::effect_shader::EffectShaders;
 use std::f32::consts::PI;
 
 #[derive(Component, Debug, PartialEq, Clone)]
@@ -76,15 +78,19 @@ impl Instantiate for GroundTargetedAoeContact {
 	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
 		let collider = self.collider_components()?;
 		let model = AssetModel("models/sphere.glb#Scene0");
-		let transform = Transform::from(self).with_scale(Vec3::splat(*self.radius * 2.));
+		let transform = Transform::from(self);
 
-		on.try_insert(AssetModelBundle {
-			model,
-			transform,
-			..default()
-		})
+		on.insert((
+			SpatialBundle::from_transform(transform),
+			EffectShaders::default(),
+		))
 		.with_children(|parent| {
 			parent.spawn((ColliderRoot(parent.parent_entity()), collider));
+			parent.spawn(AssetModelBundle {
+				model,
+				transform: Transform::from_scale(Vec3::splat(*self.radius * 2.)),
+				..default()
+			});
 		});
 
 		Ok(())
@@ -107,8 +113,8 @@ impl From<&GroundTargetedAoeContact> for Transform {
 impl ColliderComponents for GroundTargetedAoeContact {
 	fn collider_components(&self) -> Result<impl Bundle, Error> {
 		let transform = Transform::default().with_rotation(Quat::from_axis_angle(Vec3::X, PI / 2.));
-		let ring = Annulus::new(0.49, 0.51);
-		let torus = Mesh::from(Extrusion::new(ring, 0.5));
+		let ring = Annulus::new(*self.radius - 0.1, *self.radius + 0.1);
+		let torus = Mesh::from(Extrusion::new(ring, 2.));
 		let collider = Collider::from_bevy_mesh(&torus, &ComputedColliderShape::TriMesh);
 
 		let Some(collider) = collider else {
@@ -146,7 +152,7 @@ impl ColliderComponents for GroundTargetedAoeProjection {
 	fn collider_components(&self) -> Result<impl Bundle, Error> {
 		Ok((
 			TransformBundle::default(),
-			Collider::ball(0.5),
+			Collider::ball(*self.radius),
 			ActiveEvents::COLLISION_EVENTS,
 			Sensor,
 		))

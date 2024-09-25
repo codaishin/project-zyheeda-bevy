@@ -96,3 +96,12 @@ pub struct NoTarget;
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub struct AssetModel(pub &'static str);
+
+#[derive(Component, Debug, PartialEq)]
+pub struct Unmovable<TComponent: Component>(PhantomData<TComponent>);
+
+impl<TComponent: Component> Default for Unmovable<TComponent> {
+	fn default() -> Self {
+		Self(PhantomData)
+	}
+}
