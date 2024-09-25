@@ -1,9 +1,9 @@
 use crate::{
 	components::effect_shader::EffectShaders,
-	traits::insert_effect_shader::InsertEffectShader,
+	traits::insert_unmovable_effect_shader::InsertUnmovableEffectShader,
 };
 use bevy::prelude::*;
-use common::traits::try_insert_on::TryInsertOn;
+use common::{components::Unmovable, traits::try_insert_on::TryInsertOn};
 
 type Components<'a> = (
 	Entity,
@@ -54,9 +54,9 @@ impl EffectShadersController {
 			added.push(child.id());
 			child.set_parent(entity);
 
-			child.insert(mesh.clone());
+			child.insert((mesh.clone(), Unmovable::<Handle<Mesh>>::default()));
 			for shader in &shaders.shaders {
-				child.insert_effect_shader(shader);
+				child.insert_unmovable_effect_shader(shader);
 			}
 		}
 	}
@@ -66,7 +66,10 @@ impl EffectShadersController {
 mod tests {
 	use super::*;
 	use crate::components::effect_shader::{EffectShader, EffectShaders};
-	use common::test_tools::utils::{new_handle, SingleThreadedApp};
+	use common::{
+		components::Unmovable,
+		test_tools::utils::{new_handle, SingleThreadedApp},
+	};
 	use std::collections::HashSet;
 
 	#[derive(Asset, TypePath)]
@@ -109,9 +112,15 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			vec![Some(&handle)],
+			vec![(
+				Some(&handle),
+				Some(&Unmovable::<Handle<_Shader1>>::default())
+			)],
 			find_children(&mut app, entity)
-				.map(|child| child.get::<Handle<_Shader1>>())
+				.map(|child| (
+					child.get::<Handle<_Shader1>>(),
+					child.get::<Unmovable<Handle<_Shader1>>>()
+				))
 				.collect::<Vec<_>>()
 		)
 	}
@@ -130,9 +139,12 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			vec![Some(&handle)],
+			vec![(Some(&handle), Some(&Unmovable::<Handle<Mesh>>::default()))],
 			find_children(&mut app, entity)
-				.map(|child| child.get::<Handle<Mesh>>())
+				.map(|child| (
+					child.get::<Handle<Mesh>>(),
+					child.get::<Unmovable<Handle<Mesh>>>()
+				))
 				.collect::<Vec<_>>()
 		)
 	}
