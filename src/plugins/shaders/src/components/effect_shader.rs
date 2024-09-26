@@ -1,6 +1,6 @@
 use crate::traits::insert_unmovable_effect_shader::InsertUnmovableEffectShader;
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::{components::Unmovable, traits::push::Push};
+use common::{components::Unmovable, traits::push_component::PushComponent};
 
 #[cfg(test)]
 use bevy::asset::UntypedAssetId;
@@ -11,8 +11,8 @@ pub struct EffectShaders {
 	pub(crate) shaders: Vec<EffectShader>,
 }
 
-impl Push<Handle<Mesh>> for EffectShaders {
-	fn push(&mut self, mesh: Handle<Mesh>) {
+impl PushComponent<Handle<Mesh>> for EffectShaders {
+	fn push_component(&mut self, _: Entity, mesh: Handle<Mesh>) {
 		self.meshes.push(mesh);
 	}
 }
@@ -68,7 +68,7 @@ mod tests {
 		let mut shader = EffectShaders::default();
 		let mesh = new_handle::<Mesh>();
 
-		shader.push(mesh.clone());
+		shader.push_component(Entity::from_raw(42), mesh.clone());
 
 		assert_eq!(vec![mesh], shader.meshes);
 	}
@@ -79,7 +79,7 @@ mod tests {
 		let meshes = vec![new_handle::<Mesh>(), new_handle::<Mesh>()];
 
 		for mesh in &meshes {
-			shader.push(mesh.clone());
+			shader.push_component(Entity::from_raw(42), mesh.clone());
 		}
 
 		assert_eq!(meshes, shader.meshes);
