@@ -11,6 +11,7 @@ use common::systems::{
 	remove_component_from_children::RemoveFromChildren,
 };
 use components::{effect_shader::EffectShaders, force_material::ForceMaterial};
+use interactions::components::force::Force;
 use systems::{
 	add_child_effect_shader::add_child_effect_shader,
 	add_effect_shader::add_effect_shader,
@@ -23,6 +24,7 @@ pub struct ShaderPlugin;
 impl Plugin for ShaderPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_plugins(MaterialPlugin::<ForceMaterial>::default())
+			.register_effect_shader::<Force>()
 			.add_systems(Update, asset_process_delta::<ForceMaterial, Virtual>)
 			.add_systems(
 				PostUpdate,
@@ -37,7 +39,7 @@ impl Plugin for ShaderPlugin {
 	}
 }
 
-pub trait RegisterEffectShader {
+trait RegisterEffectShader {
 	fn register_effect_shader<TEffect: Component + GetEffectMaterial>(&mut self) -> &mut Self;
 }
 
