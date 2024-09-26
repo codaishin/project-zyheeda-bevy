@@ -9,7 +9,7 @@ use common::systems::{
 	remove_component::Remove,
 	remove_component_from_children::RemoveFromChildren,
 };
-use components::effect_shader::EffectShaders;
+use components::{effect_shader::EffectShaders, force_material::ForceMaterial};
 use systems::{
 	add_child_effect_shader::add_child_effect_shader,
 	add_effect_shader::add_effect_shader,
@@ -21,16 +21,17 @@ pub struct ShaderPlugin;
 
 impl Plugin for ShaderPlugin {
 	fn build(&self, app: &mut App) {
-		app.add_systems(
-			PostUpdate,
-			(
-				Handle::<StandardMaterial>::remove_from::<EffectShaders>,
-				Handle::<StandardMaterial>::remove_from_children_of::<EffectShaders>,
-				Handle::<Mesh>::move_into::<EffectShaders>,
-				Handle::<Mesh>::move_from_children_into::<EffectShaders>,
-				instantiate_effect_shaders,
-			),
-		);
+		app.add_plugins(MaterialPlugin::<ForceMaterial>::default())
+			.add_systems(
+				PostUpdate,
+				(
+					Handle::<StandardMaterial>::remove_from::<EffectShaders>,
+					Handle::<StandardMaterial>::remove_from_children_of::<EffectShaders>,
+					Handle::<Mesh>::move_into::<EffectShaders>,
+					Handle::<Mesh>::move_from_children_into::<EffectShaders>,
+					instantiate_effect_shaders,
+				),
+			);
 	}
 }
 
