@@ -3,61 +3,49 @@ use crate::{
 	traits::insert_unmovable_effect_shader::InsertUnmovableEffectShader,
 };
 use bevy::prelude::*;
-use common::{components::Unmovable, traits::try_insert_on::TryInsertOn};
+use common::components::Unmovable;
 
-type Components<'a> = (
-	Entity,
-	&'a EffectShaders,
-	Option<&'a EffectShadersController>,
-	Option<&'a Children>,
-);
-
-#[derive(Component, Default, Clone)]
-pub struct EffectShadersController(Vec<Entity>);
-
-impl EffectShadersController {
-	pub(crate) fn instantiate_shaders(
-		mut commands: Commands,
-		effect_shaders: Query<Components, Changed<EffectShaders>>,
-	) {
-		for (entity, shaders, controller, children) in &effect_shaders {
-			let mut controller = controller.cloned().unwrap_or_default();
-
-			controller.clear(&mut commands, children);
-			controller.instantiate(&mut commands, shaders, entity);
-
-			commands.try_insert_on(entity, controller);
-		}
+pub(crate) fn instantiate_effect_shaders(
+	mut commands: Commands,
+	effect_shaders: Query<(Entity, &EffectShaders, Option<&Children>), Changed<EffectShaders>>,
+	effect_shader_children: Query<&EffectShaderChild>,
+) {
+	for (entity, shaders, children) in &effect_shaders {
+		clear(&mut commands, children, &effect_shader_children);
+		instantiate(&mut commands, shaders, entity);
 	}
+}
 
-	fn clear(&self, commands: &mut Commands, children: Option<&Children>) {
-		let Some(children) = children else {
-			return;
+#[derive(Component)]
+pub(crate) struct EffectShaderChild;
+
+fn clear(
+	commands: &mut Commands,
+	children: Option<&Children>,
+	effect_shader_children: &Query<&EffectShaderChild>,
+) {
+	let Some(children) = children else {
+		return;
+	};
+	let is_effect_shader_child = |child: &&Entity| effect_shader_children.contains(**child);
+
+	for child in children.iter().filter(is_effect_shader_child) {
+		let Some(child) = commands.get_entity(*child) else {
+			continue;
 		};
 
-		let EffectShadersController(added) = self;
-
-		for child in children.iter().filter(|child| added.contains(child)) {
-			let Some(child) = commands.get_entity(*child) else {
-				continue;
-			};
-
-			child.despawn_recursive();
-		}
+		child.despawn_recursive();
 	}
+}
 
-	fn instantiate(&mut self, commands: &mut Commands, shaders: &EffectShaders, entity: Entity) {
-		let EffectShadersController(added) = self;
+fn instantiate(commands: &mut Commands, shaders: &EffectShaders, entity: Entity) {
+	for shader in &shaders.shaders {
+		for mesh in &shaders.meshes {
+			let mut child = commands.spawn(EffectShaderChild);
+			child.set_parent(entity);
 
-		for shader in &shaders.shaders {
-			for mesh in &shaders.meshes {
-				let mut child = commands.spawn_empty();
-				added.push(child.id());
-				child.set_parent(entity);
-
-				child.insert((mesh.clone(), Unmovable::<Handle<Mesh>>::default()));
-				child.insert_unmovable_effect_shader(shader);
-			}
+			child.insert((mesh.clone(), Unmovable::<Handle<Mesh>>::default()));
+			child.insert_unmovable_effect_shader(shader);
 		}
 	}
 }
@@ -93,7 +81,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, EffectShadersController::instantiate_shaders);
+		app.add_systems(Update, instantiate_effect_shaders);
 
 		app
 	}
@@ -234,7 +222,7 @@ mod tests {
 					child.contains::<Handle<_Shader2>>(),
 				))
 				.collect::<Vec<_>>()
-		)
+		);
 	}
 
 	#[test]
