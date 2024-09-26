@@ -49,13 +49,13 @@ impl EffectShadersController {
 	fn instantiate(&mut self, commands: &mut Commands, shaders: &EffectShaders, entity: Entity) {
 		let EffectShadersController(added) = self;
 
-		for mesh in &shaders.meshes {
-			let mut child = commands.spawn_empty();
-			added.push(child.id());
-			child.set_parent(entity);
+		for shader in &shaders.shaders {
+			for mesh in &shaders.meshes {
+				let mut child = commands.spawn_empty();
+				added.push(child.id());
+				child.set_parent(entity);
 
-			child.insert((mesh.clone(), Unmovable::<Handle<Mesh>>::default()));
-			for shader in &shaders.shaders {
+				child.insert((mesh.clone(), Unmovable::<Handle<Mesh>>::default()));
 				child.insert_unmovable_effect_shader(shader);
 			}
 		}
@@ -150,7 +150,7 @@ mod tests {
 	}
 
 	#[test]
-	fn pair_effect_shaders_with_each_mesh() {
+	fn pair_each_mesh_with_one_shader() {
 		let mut app = setup();
 		let meshes = vec![new_handle(), new_handle()];
 		let shader1 = new_handle::<_Shader1>();
@@ -168,8 +168,10 @@ mod tests {
 
 		assert_eq!(
 			HashSet::from([
-				(Some(&meshes[0]), Some(&shader1), Some(&shader2)),
-				(Some(&meshes[1]), Some(&shader1), Some(&shader2)),
+				(Some(&meshes[0]), Some(&shader1), None),
+				(Some(&meshes[0]), None, Some(&shader2)),
+				(Some(&meshes[1]), Some(&shader1), None),
+				(Some(&meshes[1]), None, Some(&shader2)),
 			]),
 			find_children(&mut app, entity)
 				.map(|child| (
