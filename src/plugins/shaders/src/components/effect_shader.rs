@@ -7,13 +7,19 @@ use bevy::asset::UntypedAssetId;
 
 #[derive(Component, Default)]
 pub struct EffectShaders {
-	pub(crate) meshes: Vec<Handle<Mesh>>,
+	pub(crate) meshes: Vec<MeshData>,
 	pub(crate) shaders: Vec<EffectShader>,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub(crate) struct MeshData {
+	pub(crate) entity: Entity,
+	pub(crate) handle: Handle<Mesh>,
+}
+
 impl PushComponent<Handle<Mesh>> for EffectShaders {
-	fn push_component(&mut self, _: Entity, mesh: Handle<Mesh>) {
-		self.meshes.push(mesh);
+	fn push_component(&mut self, entity: Entity, handle: Handle<Mesh>) {
+		self.meshes.push(MeshData { entity, handle });
 	}
 }
 
@@ -66,20 +72,30 @@ mod tests {
 	#[test]
 	fn push_mesh_handle() {
 		let mut shader = EffectShaders::default();
-		let mesh = new_handle::<Mesh>();
+		let entity = Entity::from_raw(42);
+		let handle = new_handle::<Mesh>();
 
-		shader.push_component(Entity::from_raw(42), mesh.clone());
+		shader.push_component(entity, handle.clone());
 
-		assert_eq!(vec![mesh], shader.meshes);
+		assert_eq!(vec![MeshData { entity, handle }], shader.meshes);
 	}
 
 	#[test]
 	fn push_mesh_handles() {
 		let mut shader = EffectShaders::default();
-		let meshes = vec![new_handle::<Mesh>(), new_handle::<Mesh>()];
+		let meshes = vec![
+			MeshData {
+				entity: Entity::from_raw(11),
+				handle: new_handle::<Mesh>(),
+			},
+			MeshData {
+				entity: Entity::from_raw(66),
+				handle: new_handle::<Mesh>(),
+			},
+		];
 
-		for mesh in &meshes {
-			shader.push_component(Entity::from_raw(42), mesh.clone());
+		for MeshData { entity, handle } in &meshes {
+			shader.push_component(*entity, handle.clone());
 		}
 
 		assert_eq!(meshes, shader.meshes);
