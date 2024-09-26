@@ -1,5 +1,5 @@
 use crate::{
-	components::effect_shader::EffectShaders,
+	components::effect_shader::{EffectShaders, MeshData},
 	traits::insert_unmovable_effect_shader::InsertUnmovableEffectShader,
 };
 use bevy::prelude::*;
@@ -7,45 +7,54 @@ use common::components::Unmovable;
 
 pub(crate) fn instantiate_effect_shaders(
 	mut commands: Commands,
-	effect_shaders: Query<(Entity, &EffectShaders, Option<&Children>), Changed<EffectShaders>>,
-	effect_shader_children: Query<&EffectShaderChild>,
+	effect_shaders: Query<&EffectShaders, Changed<EffectShaders>>,
+	effect_sub_shader: Query<&EffectSubShader>,
+	children: Query<&Children>,
 ) {
-	for (entity, shaders, children) in &effect_shaders {
-		clear(&mut commands, children, &effect_shader_children);
-		instantiate(&mut commands, shaders, entity);
+	for shaders in &effect_shaders {
+		clear(&mut commands, shaders, &effect_sub_shader, &children);
+		instantiate(&mut commands, shaders);
 	}
 }
 
 #[derive(Component)]
-pub(crate) struct EffectShaderChild;
+pub(crate) struct EffectSubShader;
 
 fn clear(
 	commands: &mut Commands,
-	children: Option<&Children>,
-	effect_shader_children: &Query<&EffectShaderChild>,
+	effect_shaders: &EffectShaders,
+	effect_sub_shader: &Query<&EffectSubShader>,
+	children: &Query<&Children>,
 ) {
-	let Some(children) = children else {
-		return;
-	};
-	let is_effect_shader_child = |child: &&Entity| effect_shader_children.contains(**child);
+	let is_effect_sub_shader = |child: &&Entity| effect_sub_shader.contains(**child);
 
-	for child in children.iter().filter(is_effect_shader_child) {
-		let Some(child) = commands.get_entity(*child) else {
+	for MeshData { entity, .. } in &effect_shaders.meshes {
+		let Ok(children) = children.get(*entity) else {
 			continue;
 		};
 
-		child.despawn_recursive();
+		for sub_shader in children.iter().filter(is_effect_sub_shader) {
+			let Some(sub_shader) = commands.get_entity(*sub_shader) else {
+				continue;
+			};
+
+			sub_shader.despawn_recursive();
+		}
 	}
 }
 
-fn instantiate(commands: &mut Commands, shaders: &EffectShaders, entity: Entity) {
+fn instantiate(commands: &mut Commands, shaders: &EffectShaders) {
 	for shader in &shaders.shaders {
-		for mesh in &shaders.meshes {
-			let mut child = commands.spawn(EffectShaderChild);
-			child.set_parent(entity);
+		for MeshData { handle, entity } in &shaders.meshes {
+			let mut sub_shader = commands.spawn(EffectSubShader);
+			sub_shader.set_parent(*entity);
 
-			child.insert((mesh.clone(), Unmovable::<Handle<Mesh>>::default()));
-			child.insert_unmovable_effect_shader(shader);
+			sub_shader.insert((
+				handle.clone(),
+				Unmovable::<Handle<Mesh>>::default(),
+				SpatialBundle::default(),
+			));
+			sub_shader.insert_unmovable_effect_shader(shader);
 		}
 	}
 }
@@ -53,8 +62,9 @@ fn instantiate(commands: &mut Commands, shaders: &EffectShaders, entity: Entity)
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::effect_shader::{EffectShader, EffectShaders};
+	use crate::components::effect_shader::{EffectShader, EffectShaders, MeshData};
 	use common::{
+		assert_bundle,
 		components::Unmovable,
 		test_tools::utils::{new_handle, SingleThreadedApp},
 	};
@@ -75,7 +85,7 @@ mod tests {
 		}
 	}
 
-	fn find_children(app: &mut App, entity: Entity) -> impl Iterator<Item = EntityRef> {
+	fn find_children(app: &App, entity: Entity) -> impl Iterator<Item = EntityRef> {
 		app.world().iter_entities().filter(child_of(entity))
 	}
 
@@ -89,13 +99,17 @@ mod tests {
 	#[test]
 	fn insert_single_shader_effect() {
 		let mut app = setup();
+		let mesh_entity = app.world_mut().spawn_empty().id();
 		let handle = new_handle::<_Shader1>();
 		let shader = EffectShader::from(handle.clone());
 		let shaders = EffectShaders {
-			meshes: vec![new_handle()],
+			meshes: vec![MeshData {
+				entity: mesh_entity,
+				handle: new_handle(),
+			}],
 			shaders: vec![shader],
 		};
-		let entity = app.world_mut().spawn(shaders).id();
+		app.world_mut().spawn(shaders);
 
 		app.update();
 
@@ -104,7 +118,7 @@ mod tests {
 				Some(&handle),
 				Some(&Unmovable::<Handle<_Shader1>>::default())
 			)],
-			find_children(&mut app, entity)
+			find_children(&app, mesh_entity)
 				.map(|child| (
 					child.get::<Handle<_Shader1>>(),
 					child.get::<Unmovable<Handle<_Shader1>>>()
@@ -116,19 +130,23 @@ mod tests {
 	#[test]
 	fn insert_single_mesh_copy() {
 		let mut app = setup();
+		let mesh_entity = app.world_mut().spawn_empty().id();
 		let handle = new_handle::<Mesh>();
 		let shader = EffectShader::from(new_handle::<_Shader1>());
 		let shaders = EffectShaders {
-			meshes: vec![handle.clone()],
+			meshes: vec![MeshData {
+				entity: mesh_entity,
+				handle: handle.clone(),
+			}],
 			shaders: vec![shader],
 		};
-		let entity = app.world_mut().spawn(shaders).id();
+		app.world_mut().spawn(shaders);
 
 		app.update();
 
 		assert_eq!(
 			vec![(Some(&handle), Some(&Unmovable::<Handle<Mesh>>::default()))],
-			find_children(&mut app, entity)
+			find_children(&app, mesh_entity)
 				.map(|child| (
 					child.get::<Handle<Mesh>>(),
 					child.get::<Unmovable<Handle<Mesh>>>()
@@ -138,9 +156,39 @@ mod tests {
 	}
 
 	#[test]
+	fn insert_spatial_bundle() {
+		let mut app = setup();
+		let mesh_entity = app.world_mut().spawn_empty().id();
+		let mesh = new_handle::<Mesh>();
+		let shader = EffectShader::from(new_handle::<_Shader1>());
+		let shaders = EffectShaders {
+			meshes: vec![MeshData {
+				entity: mesh_entity,
+				handle: mesh,
+			}],
+			shaders: vec![shader],
+		};
+		app.world_mut().spawn(shaders);
+
+		app.update();
+
+		let child = find_children(&app, mesh_entity).next().unwrap();
+		assert_bundle!(SpatialBundle, &app, child);
+	}
+
+	#[test]
 	fn pair_each_mesh_with_one_shader() {
 		let mut app = setup();
-		let meshes = vec![new_handle(), new_handle()];
+		let meshes = vec![
+			MeshData {
+				entity: app.world_mut().spawn_empty().id(),
+				handle: new_handle(),
+			},
+			MeshData {
+				entity: app.world_mut().spawn_empty().id(),
+				handle: new_handle(),
+			},
+		];
 		let shader1 = new_handle::<_Shader1>();
 		let shader2 = new_handle::<_Shader2>();
 		let shaders = EffectShaders {
@@ -150,22 +198,23 @@ mod tests {
 				EffectShader::from(shader2.clone()),
 			],
 		};
-		let entity = app.world_mut().spawn(shaders).id();
+		app.world_mut().spawn(shaders);
 
 		app.update();
 
 		assert_eq!(
 			HashSet::from([
-				(Some(&meshes[0]), Some(&shader1), None),
-				(Some(&meshes[0]), None, Some(&shader2)),
-				(Some(&meshes[1]), Some(&shader1), None),
-				(Some(&meshes[1]), None, Some(&shader2)),
+				(Some(&meshes[0].handle), Some(&shader1), None),
+				(Some(&meshes[0].handle), None, Some(&shader2)),
+				(Some(&meshes[1].handle), Some(&shader1), None),
+				(Some(&meshes[1].handle), None, Some(&shader2)),
 			]),
-			find_children(&mut app, entity)
-				.map(|child| (
-					child.get::<Handle<Mesh>>(),
-					child.get::<Handle<_Shader1>>(),
-					child.get::<Handle<_Shader2>>(),
+			find_children(&app, meshes[0].entity)
+				.chain(find_children(&app, meshes[1].entity))
+				.map(|entity| (
+					entity.get::<Handle<Mesh>>(),
+					entity.get::<Handle<_Shader1>>(),
+					entity.get::<Handle<_Shader2>>(),
 				))
 				.collect::<HashSet<_>>()
 		)
@@ -174,18 +223,22 @@ mod tests {
 	#[test]
 	fn do_not_spawn_children_twice() {
 		let mut app = setup();
+		let mesh_entity = app.world_mut().spawn_empty().id();
 		let shaders = EffectShaders {
-			meshes: vec![new_handle()],
+			meshes: vec![MeshData {
+				entity: mesh_entity,
+				handle: new_handle(),
+			}],
 			shaders: vec![EffectShader::from(new_handle::<_Shader1>())],
 		};
-		let entity = app.world_mut().spawn(shaders).id();
+		app.world_mut().spawn(shaders);
 
 		app.update();
 		app.update();
 
 		assert_eq!(
 			vec![(true, true)],
-			find_children(&mut app, entity)
+			find_children(&app, mesh_entity)
 				.map(|child| (
 					child.contains::<Handle<Mesh>>(),
 					child.contains::<Handle<_Shader1>>(),
@@ -197,8 +250,12 @@ mod tests {
 	#[test]
 	fn rewrite_again_when_effect_shaders_mutably_dereferenced() {
 		let mut app = setup();
+		let mesh_entity = app.world_mut().spawn_empty().id();
 		let shaders = EffectShaders {
-			meshes: vec![new_handle()],
+			meshes: vec![MeshData {
+				entity: mesh_entity,
+				handle: new_handle(),
+			}],
 			shaders: vec![EffectShader::from(new_handle::<_Shader1>())],
 		};
 		let entity = app.world_mut().spawn(shaders).id();
@@ -215,7 +272,7 @@ mod tests {
 
 		assert_eq!(
 			vec![(true, false, true)],
-			find_children(&mut app, entity)
+			find_children(&app, mesh_entity)
 				.map(|child| (
 					child.contains::<Handle<Mesh>>(),
 					child.contains::<Handle<_Shader1>>(),
@@ -231,8 +288,12 @@ mod tests {
 		struct _DeepChild;
 
 		let mut app = setup();
+		let mesh_entity = app.world_mut().spawn_empty().id();
 		let shaders = EffectShaders {
-			meshes: vec![new_handle()],
+			meshes: vec![MeshData {
+				entity: mesh_entity,
+				handle: new_handle(),
+			}],
 			shaders: vec![EffectShader::from(new_handle::<_Shader1>())],
 		};
 		let entity = app.world_mut().spawn(shaders).id();
@@ -244,11 +305,13 @@ mod tests {
 			.get_mut::<EffectShaders>()
 			.unwrap()
 			.shaders = vec![EffectShader::from(new_handle::<_Shader2>())];
-		let child = find_children(&mut app, entity)
+		let mesh_entity_child = find_children(&app, mesh_entity)
 			.map(|e| e.id())
 			.next()
 			.unwrap();
-		app.world_mut().spawn(_DeepChild).set_parent(child);
+		app.world_mut()
+			.spawn(_DeepChild)
+			.set_parent(mesh_entity_child);
 
 		app.update();
 
@@ -264,8 +327,12 @@ mod tests {
 	#[test]
 	fn when_rewriting_do_not_despawn_children_that_were_not_spawned_by_system() {
 		let mut app = setup();
+		let mesh_entity = app.world_mut().spawn_empty().id();
 		let shaders = EffectShaders {
-			meshes: vec![new_handle()],
+			meshes: vec![MeshData {
+				entity: mesh_entity,
+				handle: new_handle(),
+			}],
 			shaders: vec![EffectShader::from(new_handle::<_Shader1>())],
 		};
 		let entity = app.world_mut().spawn(shaders).id();
@@ -277,7 +344,7 @@ mod tests {
 			.get_mut::<EffectShaders>()
 			.unwrap()
 			.shaders = vec![EffectShader::from(new_handle::<_Shader2>())];
-		let child = app.world_mut().spawn_empty().set_parent(entity).id();
+		let child = app.world_mut().spawn_empty().set_parent(mesh_entity).id();
 
 		app.update();
 

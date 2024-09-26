@@ -1,3 +1,4 @@
+pub mod asset_process_delta;
 pub mod log;
 pub mod move_component;
 pub mod move_component_from_children;

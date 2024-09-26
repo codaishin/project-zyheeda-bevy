@@ -17,6 +17,11 @@
 	"[github-actions-workflow]": {
 		"editor.insertSpaces": true,
 	},
+	"[wgsl]": {
+		"editor.tabSize": 4,
+		"editor.insertSpaces": true,
+		"editor.defaultFormatter": "wgsl-analyzer.wgsl-analyzer"
+	},
 	"files.associations": {
 		"*.skill": "json",
 	},
@@ -48,6 +53,7 @@
 		"struct",
 		"structs",
 		"tonemapping",
+		"wgsl",
 		"withf",
 		"zyheeda"
 	]

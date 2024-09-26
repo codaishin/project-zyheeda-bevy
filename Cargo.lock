@@ -3940,6 +3940,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "common",
+ "interactions",
 ]
 
 [[package]]

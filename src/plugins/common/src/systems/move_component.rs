@@ -1,6 +1,6 @@
 use crate::{
 	components::Unmovable,
-	traits::{push::Push, try_remove_from::TryRemoveFrom},
+	traits::{push_component::PushComponent, try_remove_from::TryRemoveFrom},
 };
 use bevy::prelude::*;
 
@@ -14,10 +14,10 @@ where
 		mut commands: Commands,
 		mut entities: Query<Components<TComponent, TTarget>, Without<Unmovable<TComponent>>>,
 	) where
-		TTarget: Component + Push<TComponent>,
+		TTarget: Component + PushComponent<TComponent>,
 	{
 		for (entity, component, mut target) in &mut entities {
-			target.push(component.clone());
+			target.push_component(entity, component.clone());
 			commands.try_remove_from::<TComponent>(entity);
 		}
 	}
@@ -41,9 +41,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl Push<_Source> for _Target {
-		fn push(&mut self, value: _Source) {
-			self.mock.push(value);
+	impl PushComponent<_Source> for _Target {
+		fn push_component(&mut self, entity: Entity, component: _Source) {
+			self.mock.push_component(entity, component);
 		}
 	}
 
@@ -57,25 +57,26 @@ mod tests {
 	#[test]
 	fn add_source_to_target() {
 		let mut app = setup();
-		let target = _Target::new().with_mock(assert);
-		app.world_mut().spawn((_Source, target));
+		let entity = app.world_mut().spawn(_Source).id();
+
+		app.world_mut()
+			.entity_mut(entity)
+			.insert(_Target::new().with_mock(|mock: &mut Mock_Target| {
+				mock.expect_push_component()
+					.times(1)
+					.with(eq(entity), eq(_Source))
+					.return_const(());
+			}));
 
 		app.world_mut()
 			.run_system_once(_Source::move_into::<_Target>);
-
-		fn assert(mock: &mut Mock_Target) {
-			mock.expect_push()
-				.times(1)
-				.with(eq(_Source))
-				.return_const(());
-		}
 	}
 
 	#[test]
 	fn remove_source() {
 		let mut app = setup();
 		let target = _Target::new().with_mock(|mock: &mut Mock_Target| {
-			mock.expect_push().return_const(());
+			mock.expect_push_component().return_const(());
 		});
 		let entity = app.world_mut().spawn((_Source, target)).id();
 
@@ -88,15 +89,18 @@ mod tests {
 	#[test]
 	fn do_nothing_when_source_unmovable() {
 		let mut app = setup();
-		let target = _Target::new().with_mock(assert);
+		let entity = app
+			.world_mut()
+			.spawn((_Source, Unmovable::<_Source>::default()))
+			.id();
+
 		app.world_mut()
-			.spawn((_Source, target, Unmovable::<_Source>::default()));
+			.entity_mut(entity)
+			.insert(_Target::new().with_mock(|mock: &mut Mock_Target| {
+				mock.expect_push_component().never().return_const(());
+			}));
 
 		app.world_mut()
 			.run_system_once(_Source::move_into::<_Target>);
-
-		fn assert(mock: &mut Mock_Target) {
-			mock.expect_push().never().return_const(());
-		}
 	}
 }
