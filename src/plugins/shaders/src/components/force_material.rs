@@ -2,6 +2,8 @@ use bevy::{
 	prelude::*,
 	render::render_resource::{AsBindGroup, ShaderRef},
 };
+use common::traits::process_delta::ProcessDelta;
+use std::time::Duration;
 
 #[derive(Asset, TypePath, AsBindGroup, Clone, Default)]
 pub struct ForceMaterial {
@@ -19,6 +21,12 @@ impl From<Srgba> for ForceMaterial {
 			alpha_mode: AlphaMode::Blend,
 			lifetime_secs: 0.,
 		}
+	}
+}
+
+impl ProcessDelta for ForceMaterial {
+	fn process_delta(&mut self, delta: Duration) {
+		self.lifetime_secs += delta.as_secs_f32();
 	}
 }
 

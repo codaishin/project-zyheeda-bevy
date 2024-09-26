@@ -4,6 +4,7 @@ pub mod traits;
 
 use bevy::prelude::*;
 use common::systems::{
+	asset_process_delta::asset_process_delta,
 	move_component::MoveInto,
 	move_component_from_children::MoveFromChildrenInto,
 	remove_component::Remove,
@@ -22,6 +23,7 @@ pub struct ShaderPlugin;
 impl Plugin for ShaderPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_plugins(MaterialPlugin::<ForceMaterial>::default())
+			.add_systems(Update, asset_process_delta::<ForceMaterial, Virtual>)
 			.add_systems(
 				PostUpdate,
 				(
