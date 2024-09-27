@@ -33,18 +33,18 @@ impl EffectShader {
 		self.handle.id()
 	}
 
-	fn insert_as_unmovable_handle<TAsset: Asset>(
+	fn insert_as_unmovable_handle<TMaterial: Asset + Material>(
 		entity: &mut EntityCommands,
 		handle: &UntypedHandle,
 	) {
 		entity.insert((
-			handle.clone().typed::<TAsset>(),
-			Unmovable::<Handle<TAsset>>::default(),
+			handle.clone().typed::<TMaterial>(),
+			Unmovable::<Handle<TMaterial>>::default(),
 		));
 	}
 
-	fn remove_unmovable_handle<TAsset: Asset>(entity: &mut EntityCommands) {
-		entity.remove::<(Handle<TAsset>, Unmovable<Handle<TAsset>>)>();
+	fn remove_unmovable_handle<TMaterial: Asset + Material>(entity: &mut EntityCommands) {
+		entity.remove::<(Handle<TMaterial>, Unmovable<Handle<TMaterial>>)>();
 	}
 }
 
@@ -63,12 +63,12 @@ impl<'a> RemoveUnmovableEffectShader for EntityCommands<'a> {
 	}
 }
 
-impl<TAsset: Asset> From<Handle<TAsset>> for EffectShader {
-	fn from(handle: Handle<TAsset>) -> Self {
+impl<TMaterial: Asset + Material> From<Handle<TMaterial>> for EffectShader {
+	fn from(handle: Handle<TMaterial>) -> Self {
 		Self {
 			handle: handle.untyped(),
-			insert_into: EffectShader::insert_as_unmovable_handle::<TAsset>,
-			remove_from: EffectShader::remove_unmovable_handle::<TAsset>,
+			insert_into: EffectShader::insert_as_unmovable_handle::<TMaterial>,
+			remove_from: EffectShader::remove_unmovable_handle::<TMaterial>,
 		}
 	}
 }
@@ -76,7 +76,7 @@ impl<TAsset: Asset> From<Handle<TAsset>> for EffectShader {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::ecs::system::RunSystemOnce;
+	use bevy::{ecs::system::RunSystemOnce, render::render_resource::AsBindGroup};
 	use common::{components::Unmovable, test_tools::utils::new_handle};
 
 	#[test]
@@ -101,8 +101,10 @@ mod tests {
 		assert_eq!(meshes, shader.meshes);
 	}
 
-	#[derive(Asset, TypePath)]
-	struct _Asset;
+	#[derive(Asset, TypePath, Clone, AsBindGroup)]
+	struct _Asset {}
+
+	impl Material for _Asset {}
 
 	#[test]
 	fn effect_shader_id() {

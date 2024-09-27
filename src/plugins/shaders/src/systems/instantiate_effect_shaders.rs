@@ -54,16 +54,21 @@ fn instantiate(commands: &mut Commands, effect_shaders: &EffectShaders) {
 mod tests {
 	use super::*;
 	use crate::components::effect_shader::{EffectShader, EffectShaders};
+	use bevy::render::render_resource::AsBindGroup;
 	use common::{
 		components::Unmovable,
 		test_tools::utils::{new_handle, SingleThreadedApp},
 	};
 
-	#[derive(Asset, TypePath)]
-	struct _Shader1;
+	#[derive(Asset, TypePath, Clone, AsBindGroup)]
+	struct _Shader1 {}
 
-	#[derive(Asset, TypePath)]
-	struct _Shader2;
+	impl Material for _Shader1 {}
+
+	#[derive(Asset, TypePath, Clone, AsBindGroup)]
+	struct _Shader2 {}
+
+	impl Material for _Shader2 {}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
