@@ -17,6 +17,7 @@ use bevy_rapier3d::prelude::*;
 use common::{
 	components::{ColliderRoot, GroundOffset, Health, MainCamera, Player},
 	states::GameRunning,
+	test_tools::utils::SingleThreadedApp,
 	tools::{player_animation_path, UnitsPerSecond},
 	traits::clamp_zero_positive::ClampZeroPositive,
 	CommonPlugin,
@@ -35,7 +36,12 @@ use skills::SkillsPlugin;
 use std::f32::consts::PI;
 
 fn main() -> AppExit {
-	let app = &mut App::new();
+	let mut app = App::new()
+		.single_threaded(PreStartup)
+		.single_threaded(Startup)
+		.single_threaded(PostStartup);
+
+	let app = &mut app;
 
 	prepare_game(app);
 
