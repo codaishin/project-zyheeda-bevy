@@ -3,7 +3,7 @@ use crate::traits::{
 	remove_unmovable_effect_shader::RemoveUnmovableEffectShader,
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::{components::Unmovable, traits::push_component::PushComponent};
+use common::{components::Unmovable, traits::track::Track};
 
 #[cfg(test)]
 use bevy::asset::UntypedAssetId;
@@ -14,8 +14,8 @@ pub struct EffectShaders {
 	pub(crate) shaders: Vec<EffectShader>,
 }
 
-impl PushComponent<Handle<Mesh>> for EffectShaders {
-	fn push_component(&mut self, entity: Entity, _: Handle<Mesh>) {
+impl Track<Handle<Mesh>> for EffectShaders {
+	fn track(&mut self, entity: Entity) {
 		self.meshes.push(entity);
 	}
 }
@@ -83,9 +83,8 @@ mod tests {
 	fn push_mesh_handle() {
 		let mut shader = EffectShaders::default();
 		let entity = Entity::from_raw(42);
-		let handle = new_handle::<Mesh>();
 
-		shader.push_component(entity, handle.clone());
+		shader.track(entity);
 
 		assert_eq!(vec![entity], shader.meshes);
 	}
@@ -96,7 +95,7 @@ mod tests {
 		let meshes = vec![Entity::from_raw(11), Entity::from_raw(66)];
 
 		for entity in &meshes {
-			shader.push_component(*entity, new_handle());
+			shader.track(*entity);
 		}
 
 		assert_eq!(meshes, shader.meshes);
