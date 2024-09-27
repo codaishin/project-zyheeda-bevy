@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 use crate::{
 	folder_asset_loader::{FolderAssetLoader, LoadError, LoadResult},
 	resources::AliveAssets,
@@ -16,10 +14,11 @@ use crate::{
 		load_from::LoadFrom,
 	},
 };
+use std::fmt::Debug;
 
 use super::RegisterFolderAssets;
 use bevy::{
-	app::{App, PreStartup, Update},
+	app::{App, PostStartup, Update},
 	asset::{Asset, AssetApp, AssetServer},
 	prelude::{AppExtStates, IntoSystem},
 };
@@ -37,13 +36,15 @@ impl RegisterFolderAssets for App {
 			.init_resource::<AliveAssets<TAsset>>()
 			.register_asset_loader(FolderAssetLoader::<TAsset, TDto>::default())
 			.add_systems(
-				PreStartup,
+				PostStartup,
 				begin_loading_folder_assets::<TAsset, AssetServer>,
 			)
 			.add_systems(
 				Update,
-				map_load_results::<TAsset, LoadError, AssetServer>.pipe(log_many),
+				(
+					map_load_results::<TAsset, LoadError, AssetServer>.pipe(log_many),
+					set_assets_to_loaded::<TAsset>,
+				),
 			)
-			.add_systems(Update, set_assets_to_loaded::<TAsset>)
 	}
 }
