@@ -25,11 +25,13 @@ pub(crate) fn add_child_effect_shader<TEffect: Component + GetEffectMaterial>(
 mod tests {
 	use super::*;
 	use crate::components::effect_shader::EffectShaders;
-	use bevy::asset::UntypedAssetId;
+	use bevy::{asset::UntypedAssetId, render::render_resource::AsBindGroup};
 	use common::test_tools::utils::SingleThreadedApp;
 
-	#[derive(Asset, TypePath)]
-	pub struct _Material;
+	#[derive(Asset, TypePath, Clone, AsBindGroup)]
+	pub struct _Material {}
+
+	impl Material for _Material {}
 
 	#[derive(Component)]
 	struct _Effect;
@@ -38,7 +40,7 @@ mod tests {
 		type TMaterial = _Material;
 
 		fn get_effect_material(&self) -> Self::TMaterial {
-			_Material
+			_Material {}
 		}
 	}
 

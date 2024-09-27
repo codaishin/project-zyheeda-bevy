@@ -5,10 +5,10 @@ pub mod traits;
 use bevy::prelude::*;
 use common::systems::{
 	asset_process_delta::asset_process_delta,
-	move_component::MoveInto,
-	move_component_from_children::MoveFromChildrenInto,
 	remove_component::Remove,
 	remove_component_from_children::RemoveFromChildren,
+	track_component::TrackComponent,
+	track_component_from_children::TrackComponentInChildren,
 };
 use components::{effect_shader::EffectShaders, force_material::ForceMaterial};
 use interactions::components::force::Force;
@@ -31,8 +31,8 @@ impl Plugin for ShaderPlugin {
 				(
 					Handle::<StandardMaterial>::remove_from::<EffectShaders>,
 					Handle::<StandardMaterial>::remove_from_children_of::<EffectShaders>,
-					Handle::<Mesh>::move_into::<EffectShaders>,
-					Handle::<Mesh>::move_from_children_into::<EffectShaders>,
+					Handle::<Mesh>::track_by::<EffectShaders>,
+					Handle::<Mesh>::track_in_children_by::<EffectShaders>,
 					instantiate_effect_shaders,
 				),
 			);
