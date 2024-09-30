@@ -13,7 +13,7 @@ use common::systems::{
 };
 use components::effect_shader::EffectShaders;
 use interactions::components::force::Force;
-use materials::force_material::ForceMaterial;
+use materials::{force_material::ForceMaterial, gravity_material::GravityMaterial};
 use systems::{
 	add_child_effect_shader::add_child_effect_shader,
 	add_effect_shader::add_effect_shader,
@@ -25,19 +25,28 @@ pub struct ShaderPlugin;
 
 impl Plugin for ShaderPlugin {
 	fn build(&self, app: &mut App) {
-		app.add_plugins(MaterialPlugin::<ForceMaterial>::default())
-			.register_effect_shader::<Force>()
-			.add_systems(Update, asset_process_delta::<ForceMaterial, Virtual>)
-			.add_systems(
-				PostUpdate,
-				(
-					Handle::<StandardMaterial>::remove_from::<EffectShaders>,
-					Handle::<StandardMaterial>::remove_from_children_of::<EffectShaders>,
-					Handle::<Mesh>::track_by::<EffectShaders>,
-					Handle::<Mesh>::track_in_children_by::<EffectShaders>,
-					instantiate_effect_shaders,
-				),
-			);
+		app.add_plugins((
+			MaterialPlugin::<ForceMaterial>::default(),
+			MaterialPlugin::<GravityMaterial>::default(),
+		))
+		.register_effect_shader::<Force>()
+		.add_systems(
+			Update,
+			(
+				asset_process_delta::<ForceMaterial, Virtual>,
+				asset_process_delta::<GravityMaterial, Virtual>,
+			),
+		)
+		.add_systems(
+			PostUpdate,
+			(
+				Handle::<StandardMaterial>::remove_from::<EffectShaders>,
+				Handle::<StandardMaterial>::remove_from_children_of::<EffectShaders>,
+				Handle::<Mesh>::track_by::<EffectShaders>,
+				Handle::<Mesh>::track_in_children_by::<EffectShaders>,
+				instantiate_effect_shaders,
+			),
+		);
 	}
 }
 
