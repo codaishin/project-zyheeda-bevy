@@ -12,7 +12,7 @@ use common::systems::{
 	track_component_from_children::TrackComponentInChildren,
 };
 use components::effect_shader::EffectShaders;
-use interactions::components::force::Force;
+use interactions::components::{force::Force, gravity::Gravity};
 use materials::{force_material::ForceMaterial, gravity_material::GravityMaterial};
 use systems::{
 	add_child_effect_shader::add_child_effect_shader,
@@ -30,6 +30,7 @@ impl Plugin for ShaderPlugin {
 			MaterialPlugin::<GravityMaterial>::default(),
 		))
 		.register_effect_shader::<Force>()
+		.register_effect_shader::<Gravity>()
 		.add_systems(
 			Update,
 			(
