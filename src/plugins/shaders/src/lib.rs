@@ -1,4 +1,5 @@
 pub mod components;
+pub mod materials;
 pub mod systems;
 pub mod traits;
 
@@ -10,8 +11,9 @@ use common::systems::{
 	track_component::TrackComponent,
 	track_component_from_children::TrackComponentInChildren,
 };
-use components::{effect_shader::EffectShaders, force_material::ForceMaterial};
+use components::effect_shader::EffectShaders;
 use interactions::components::force::Force;
+use materials::force_material::ForceMaterial;
 use systems::{
 	add_child_effect_shader::add_child_effect_shader,
 	add_effect_shader::add_effect_shader,
