@@ -1,5 +1,5 @@
 use crate::{
-	components::{Movement, PositionBased},
+	components::{Movement, VelocityBased},
 	traits::ProjectileBehavior,
 };
 use bevy::{
@@ -26,7 +26,7 @@ pub(crate) fn projectile_behavior<TProjectile: ProjectileBehavior + Component>(
 
 	for (id, projectile, transform) in &projectiles {
 		let target = get_target(projectile, transform);
-		commands.try_insert_on(id, Movement::<PositionBased>::to(target));
+		commands.try_insert_on(id, Movement::<VelocityBased>::to(target));
 	}
 }
 
@@ -89,10 +89,10 @@ mod tests {
 		let projectile = app.world().entity(projectile);
 
 		assert_eq!(
-			Some(&Movement::<PositionBased>::to(
+			Some(&Movement::<VelocityBased>::to(
 				Vec3::new(1., 2., 3.).normalize() * 42.
 			)),
-			projectile.get::<Movement<PositionBased>>()
+			projectile.get::<Movement<VelocityBased>>()
 		);
 	}
 
@@ -116,10 +116,10 @@ mod tests {
 		let projectile = app.world().entity(projectile);
 
 		assert_eq!(
-			Some(&Movement::<PositionBased>::to(
+			Some(&Movement::<VelocityBased>::to(
 				Vec3::new(10., 20., 30.) + Vec3::new(1., 2., 3.).normalize() * 42.
 			)),
-			projectile.get::<Movement<PositionBased>>()
+			projectile.get::<Movement<VelocityBased>>()
 		);
 	}
 
@@ -155,7 +155,7 @@ mod tests {
 			app.world()
 				.iter_entities()
 				.filter(|entity| entity.contains::<_Child>()
-					|| entity.contains::<Movement<PositionBased>>())
+					|| entity.contains::<Movement<VelocityBased>>())
 				.count()
 		);
 	}

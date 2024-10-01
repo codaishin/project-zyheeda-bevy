@@ -73,7 +73,8 @@ impl Instantiate for ProjectileContact {
 		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		on.try_insert((
-			RigidBody::Fixed,
+			RigidBody::Dynamic,
+			GravityScale(0.),
 			Is::<Fragile>::interacting_with([Blocker::Physical, Blocker::Force]),
 			MovementConfig::Constant {
 				mode: MovementMode::Fast,
