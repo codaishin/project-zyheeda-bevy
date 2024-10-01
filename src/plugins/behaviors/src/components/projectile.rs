@@ -10,7 +10,7 @@ use bevy::{
 	prelude::Component,
 	utils::default,
 };
-use bevy_rapier3d::prelude::RigidBody;
+use bevy_rapier3d::prelude::{Ccd, GravityScale, RigidBody};
 use common::{
 	errors::Error,
 	test_tools::utils::ApproxEqual,
@@ -75,6 +75,7 @@ impl Instantiate for ProjectileContact {
 		on.try_insert((
 			RigidBody::Dynamic,
 			GravityScale(0.),
+			Ccd::enabled(),
 			Is::<Fragile>::interacting_with([Blocker::Physical, Blocker::Force]),
 			MovementConfig::Constant {
 				mode: MovementMode::Fast,
