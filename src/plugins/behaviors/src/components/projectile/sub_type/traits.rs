@@ -4,7 +4,7 @@ use bevy::{
 	pbr::{PbrBundle, PointLight, PointLightBundle, StandardMaterial},
 	prelude::{default, ChildBuilder, Transform},
 };
-use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider, Sensor};
+use bevy_rapier3d::prelude::{ActiveEvents, Collider, Sensor};
 use common::{
 	bundles::ColliderTransformBundle,
 	components::ColliderRoot,
@@ -48,7 +48,6 @@ impl<T: ProjectileTypeParameters + 'static> ProjectileSubtype for T {
 				transform,
 				collider: Collider::ball(radius),
 				active_events: ActiveEvents::COLLISION_EVENTS,
-				active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
 				..default()
 			},
 			Sensor,
@@ -70,7 +69,6 @@ impl<T: ProjectileTypeParameters + 'static> ProjectileSubtype for T {
 			ColliderTransformBundle {
 				collider: Collider::ball(*T::radius()),
 				active_events: ActiveEvents::COLLISION_EVENTS,
-				active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
 				..default()
 			},
 			Sensor,
