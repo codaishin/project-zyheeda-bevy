@@ -112,8 +112,8 @@ impl From<&GroundTargetedAoeContact> for Transform {
 impl ColliderComponents for GroundTargetedAoeContact {
 	fn collider_components(&self) -> Result<impl Bundle, Error> {
 		let transform = Transform::default().with_rotation(Quat::from_axis_angle(Vec3::X, PI / 2.));
-		let ring = Annulus::new(*self.radius - 0.1, *self.radius + 0.1);
-		let torus = Mesh::from(Extrusion::new(ring, 2.));
+		let ring = Annulus::new(*self.radius - 0.3, *self.radius);
+		let torus = Mesh::from(Extrusion::new(ring, 3.));
 		let collider = Collider::from_bevy_mesh(&torus, &ComputedColliderShape::TriMesh);
 
 		let Some(collider) = collider else {
