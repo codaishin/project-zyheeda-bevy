@@ -7,6 +7,6 @@ impl GetEffectMaterial for Force {
 	type TMaterial = ForceMaterial;
 
 	fn get_effect_material(&self) -> Self::TMaterial {
-		ForceMaterial::from(LIGHT_CYAN)
+		ForceMaterial::from(LIGHT_CYAN * 1.5)
 	}
 }
