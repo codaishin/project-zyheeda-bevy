@@ -45,8 +45,8 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     let pulse = pulse_inwards(fresnel, pulse_params);
     fresnel = distort(fresnel, distort_params);
 
-    let alpha = mix(pulse, fresnel, 2. / 3.);
-    return vec4(material_color.rgb, alpha);
+    let effect = mix(pulse, fresnel, 2. / 3.);
+    return vec4(material_color.rgb, material_color.a * effect);
 }
 
 fn fresnel(mesh: VertexOutput) -> f32 {

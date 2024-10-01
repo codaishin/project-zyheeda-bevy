@@ -38,7 +38,7 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     var fresnel = fresnel(mesh);
     fresnel = distort(fresnel, distort_params);
 
-    return vec4(material_color.rgb, fresnel);
+    return vec4(material_color.rgb, material_color.a * fresnel);
 }
 
 fn fresnel(mesh: VertexOutput) -> f32 {
