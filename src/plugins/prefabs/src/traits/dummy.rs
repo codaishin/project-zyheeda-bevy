@@ -55,7 +55,11 @@ impl Instantiate for Dummy {
 				..default()
 			});
 			parent.spawn((
-				ColliderTransformBundle::new_static_collider(transform, collider),
+				ColliderTransformBundle {
+					transform,
+					collider,
+					..default()
+				},
 				ColliderRoot(parent.parent_entity()),
 			));
 		});

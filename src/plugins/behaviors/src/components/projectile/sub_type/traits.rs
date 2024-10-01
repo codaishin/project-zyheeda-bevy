@@ -4,7 +4,7 @@ use bevy::{
 	pbr::{PbrBundle, PointLight, PointLightBundle, StandardMaterial},
 	prelude::{default, ChildBuilder, Transform},
 };
-use bevy_rapier3d::prelude::{Collider, Sensor};
+use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider, Sensor};
 use common::{
 	bundles::ColliderTransformBundle,
 	components::ColliderRoot,
@@ -44,7 +44,13 @@ impl<T: ProjectileTypeParameters + 'static> ProjectileSubtype for T {
 			..default()
 		});
 		parent.spawn((
-			ColliderTransformBundle::new_static_collider(transform, Collider::ball(radius)),
+			ColliderTransformBundle {
+				transform,
+				collider: Collider::ball(radius),
+				active_events: ActiveEvents::COLLISION_EVENTS,
+				active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
+				..default()
+			},
 			Sensor,
 			ColliderRoot(parent.parent_entity()),
 		));
@@ -61,7 +67,12 @@ impl<T: ProjectileTypeParameters + 'static> ProjectileSubtype for T {
 
 	fn spawn_projection(self, parent: &mut ChildBuilder) {
 		parent.spawn((
-			ColliderTransformBundle::new_static_collider(default(), Collider::ball(*T::radius())),
+			ColliderTransformBundle {
+				collider: Collider::ball(*T::radius()),
+				active_events: ActiveEvents::COLLISION_EVENTS,
+				active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
+				..default()
+			},
 			Sensor,
 			ColliderRoot(parent.parent_entity()),
 		));

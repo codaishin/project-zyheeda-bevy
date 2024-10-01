@@ -5,7 +5,11 @@ use bevy::{
 	prelude::{Component, Entity, Transform},
 	utils::default,
 };
-use bevy_rapier3d::{dynamics::RigidBody, geometry::Collider, prelude::Sensor};
+use bevy_rapier3d::{
+	dynamics::RigidBody,
+	geometry::Collider,
+	prelude::{ActiveCollisionTypes, ActiveEvents, Sensor},
+};
 use common::{
 	bundles::{AssetModelBundle, ColliderTransformBundle},
 	components::{AssetModel, ColliderRoot},
@@ -32,10 +36,12 @@ impl Instantiate for ShieldContact {
 			.with_children(|parent| {
 				parent.spawn(AssetModelBundle { model, ..default() });
 				parent.spawn((
-					ColliderTransformBundle::new_static_collider(
-						default(),
-						Collider::cuboid(half_size.x, half_size.y, half_size.z),
-					),
+					ColliderTransformBundle {
+						collider: Collider::cuboid(half_size.x, half_size.y, half_size.z),
+						active_events: ActiveEvents::COLLISION_EVENTS,
+						active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
+						..default()
+					},
 					Sensor,
 					ColliderRoot(parent.parent_entity()),
 				));
@@ -56,10 +62,13 @@ impl Instantiate for ShieldProjection {
 			z: 0.5,
 		};
 		on.try_insert((
-			ColliderTransformBundle::new_static_collider(
-				Transform::from_xyz(0., 0., -half_size.z),
-				Collider::cuboid(half_size.x, half_size.y, half_size.z),
-			),
+			ColliderTransformBundle {
+				transform: Transform::from_xyz(0., 0., -half_size.z),
+				collider: Collider::cuboid(half_size.x, half_size.y, half_size.z),
+				active_events: ActiveEvents::COLLISION_EVENTS,
+				active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
+				..default()
+			},
 			Sensor,
 		));
 

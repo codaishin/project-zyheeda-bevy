@@ -17,7 +17,7 @@ use bevy::{
 	math::{primitives::Torus, Dir3, Vec3},
 	pbr::{NotShadowCaster, PbrBundle, StandardMaterial},
 	render::mesh::Mesh,
-	transform::{bundles::TransformBundle, components::Transform},
+	transform::components::Transform,
 	utils::default,
 };
 use bevy_rapier3d::{
@@ -158,7 +158,7 @@ impl Instantiate for VoidSphere {
 			));
 			parent.spawn((
 				ColliderTransformBundle {
-					transform: TransformBundle::from_transform(transform),
+					transform,
 					collider: Collider::ball(VOID_SPHERE_OUTER_RADIUS),
 					..default()
 				},

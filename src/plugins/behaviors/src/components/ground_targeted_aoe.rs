@@ -1,22 +1,20 @@
 use bevy::{
 	ecs::{component::Component, system::EntityCommands},
 	math::{Dir3, Quat, Ray3d, Vec3},
-	prelude::{
-		default,
-		Annulus,
-		BuildChildren,
-		Bundle,
-		Extrusion,
-		InfinitePlane3d,
-		SpatialBundle,
-		TransformBundle,
-	},
+	prelude::{default, Annulus, BuildChildren, Bundle, Extrusion, InfinitePlane3d, SpatialBundle},
 	render::mesh::Mesh,
 	transform::components::Transform,
 };
-use bevy_rapier3d::prelude::{ActiveEvents, Collider, ComputedColliderShape, Sensor};
+use bevy_rapier3d::prelude::{
+	ActiveCollisionTypes,
+	ActiveEvents,
+	Collider,
+	ComputedColliderShape,
+	RigidBody,
+	Sensor,
+};
 use common::{
-	bundles::AssetModelBundle,
+	bundles::{AssetModelBundle, ColliderTransformBundle},
 	components::{AssetModel, ColliderRoot},
 	errors::{Error, Level},
 	tools::Units,
@@ -81,6 +79,7 @@ impl Instantiate for GroundTargetedAoeContact {
 		let transform = Transform::from(self);
 
 		on.insert((
+			RigidBody::Fixed,
 			SpatialBundle::from_transform(transform),
 			EffectShaders::default(),
 		))
@@ -125,9 +124,13 @@ impl ColliderComponents for GroundTargetedAoeContact {
 		};
 
 		Ok((
-			TransformBundle::from(transform),
-			collider,
-			ActiveEvents::COLLISION_EVENTS,
+			ColliderTransformBundle {
+				transform,
+				collider,
+				active_events: ActiveEvents::COLLISION_EVENTS,
+				active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
+				..default()
+			},
 			Sensor,
 		))
 	}
@@ -151,9 +154,12 @@ impl Instantiate for GroundTargetedAoeProjection {
 impl ColliderComponents for GroundTargetedAoeProjection {
 	fn collider_components(&self) -> Result<impl Bundle, Error> {
 		Ok((
-			TransformBundle::default(),
-			Collider::ball(*self.radius),
-			ActiveEvents::COLLISION_EVENTS,
+			ColliderTransformBundle {
+				collider: Collider::ball(*self.radius),
+				active_events: ActiveEvents::COLLISION_EVENTS,
+				active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
+				..default()
+			},
 			Sensor,
 		))
 	}
