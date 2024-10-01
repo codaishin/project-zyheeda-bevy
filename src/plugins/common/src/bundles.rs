@@ -1,6 +1,6 @@
 use bevy::{
 	prelude::{Bundle, GlobalTransform, InheritedVisibility, ViewVisibility, Visibility},
-	transform::{bundles::TransformBundle, components::Transform},
+	transform::components::Transform,
 };
 use bevy_rapier3d::{
 	geometry::{ActiveEvents, Collider},
@@ -29,20 +29,10 @@ impl ColliderBundle {
 #[derive(Bundle, Clone, Default)]
 pub struct ColliderTransformBundle {
 	pub collider: Collider,
-	pub transform: TransformBundle,
+	pub transform: Transform,
+	pub global_transform: GlobalTransform,
 	pub active_events: ActiveEvents,
 	pub active_collision_types: ActiveCollisionTypes,
-}
-
-impl ColliderTransformBundle {
-	pub fn new_static_collider(transform: Transform, collider: Collider) -> Self {
-		Self {
-			transform: TransformBundle::from_transform(transform),
-			collider,
-			active_events: ActiveEvents::COLLISION_EVENTS,
-			active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
-		}
-	}
 }
 
 #[derive(Bundle, Default)]
