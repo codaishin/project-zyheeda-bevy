@@ -2,7 +2,7 @@ use bevy::{
 	ecs::system::EntityCommands,
 	hierarchy::BuildChildren,
 	math::Vec3,
-	prelude::{Component, Entity, Transform},
+	prelude::*,
 	utils::default,
 };
 use bevy_rapier3d::{
@@ -11,7 +11,7 @@ use bevy_rapier3d::{
 	prelude::{ActiveCollisionTypes, ActiveEvents, Sensor},
 };
 use common::{
-	bundles::{AssetModelBundle, ColliderTransformBundle},
+	bundles::{AssetModelBundle, ColliderBundle, ColliderTransformBundle},
 	components::{AssetModel, ColliderRoot},
 	errors::Error,
 };
@@ -56,18 +56,20 @@ pub struct ShieldProjection;
 
 impl Instantiate for ShieldProjection {
 	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
-		let half_size = Vec3 {
-			x: 0.5,
-			y: 0.5,
-			z: 0.5,
-		};
+		let radius = 1.;
+		let transform = Transform::from_xyz(0., 0., -radius).with_scale(Vec3::splat(radius * 2.));
+
 		on.try_insert((
-			ColliderTransformBundle {
-				transform: Transform::from_xyz(0., 0., -half_size.z),
-				collider: Collider::cuboid(half_size.x, half_size.y, half_size.z),
+			EffectShaders::default(),
+			AssetModelBundle {
+				model: AssetModel("models/sphere.glb#Scene0"),
+				transform,
+				..default()
+			},
+			ColliderBundle {
+				collider: Collider::ball(0.5),
 				active_events: ActiveEvents::COLLISION_EVENTS,
 				active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
-				..default()
 			},
 			Sensor,
 		));

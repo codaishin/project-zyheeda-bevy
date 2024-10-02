@@ -16,16 +16,6 @@ pub struct ColliderBundle {
 	pub active_collision_types: ActiveCollisionTypes,
 }
 
-impl ColliderBundle {
-	pub fn new_static_collider(collider: Collider) -> Self {
-		Self {
-			collider,
-			active_events: ActiveEvents::COLLISION_EVENTS,
-			active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
-		}
-	}
-}
-
 #[derive(Bundle, Clone, Default)]
 pub struct ColliderTransformBundle {
 	pub collider: Collider,
