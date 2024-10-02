@@ -5,23 +5,26 @@ use crate::{
 };
 use bevy::prelude::*;
 
-pub trait RemoveFromChildren<TComponent: Component> {
-	fn remove_from_children_of<TAgent>(
+pub trait Remove<TAgent>
+where
+	TAgent: Component,
+{
+	fn remove_from_self_and_children<TComponent>(
 		commands: Commands,
 		agents: Query<Entity, With<TAgent>>,
 		children: Query<&Children>,
 		components_lookup: Query<(), (With<TComponent>, Without<Unmovable<TComponent>>)>,
 		agents_lookup: Query<(), With<TAgent>>,
 	) where
-		TAgent: Component,
+		TComponent: Component,
 	{
-		remove_from_children_of(commands, agents, children, components_lookup, agents_lookup);
+		remove_components(commands, agents, children, components_lookup, agents_lookup);
 	}
 }
 
-impl<TComponent: Component> RemoveFromChildren<TComponent> for TComponent {}
+impl<TComponent: Component> Remove<TComponent> for TComponent {}
 
-fn remove_from_children_of<TCommands, TAgent, TComponent>(
+fn remove_components<TCommands, TAgent, TComponent>(
 	mut commands: TCommands,
 	agents: Query<Entity, With<TAgent>>,
 	children: Query<&Children>,
@@ -39,16 +42,15 @@ fn remove_from_children_of<TCommands, TAgent, TComponent>(
 	let get_children = &|entity| children.get(entity).ok().map(|c| c.iter());
 	let has_component = &|entity| components_lookup.contains(entity);
 	let is_no_agent = &|entity| !agents_lookup.contains(entity);
-	let remove_component = &mut |entity| commands.try_remove_from::<TComponent>(entity);
+	let should_remove = &|entity| has_component(entity) && is_no_agent(entity);
+	let remove = &mut |entity| commands.try_remove_from::<TComponent>(entity);
 
 	for entity in &agents {
-		apply_recursively(
-			entity,
-			remove_component,
-			get_children,
-			has_component,
-			is_no_agent,
-		);
+		if has_component(entity) {
+			remove(entity);
+		}
+
+		apply_recursively(entity, remove, get_children, should_remove, is_no_agent);
 	}
 }
 
@@ -85,6 +87,24 @@ pub mod tests {
 	}
 
 	#[test]
+	fn remove_from_agent() {
+		let mut app = setup();
+		let parent = app.world_mut().spawn((_Agent, _Component)).id();
+
+		let mock = Mock_Commands::new_mock(|mock| {
+			mock.expect_try_remove_from::<_Component>()
+				.times(1)
+				.with(eq(parent))
+				.return_const(());
+		});
+
+		app.world_mut().run_system_once_with(
+			mock,
+			remove_components::<In<Mock_Commands>, _Agent, _Component>,
+		);
+	}
+
+	#[test]
 	fn remove_from_child() {
 		let mut app = setup();
 		let parent = app.world_mut().spawn(_Agent).id();
@@ -99,7 +119,7 @@ pub mod tests {
 
 		app.world_mut().run_system_once_with(
 			mock,
-			remove_from_children_of::<In<Mock_Commands>, _Agent, _Component>,
+			remove_components::<In<Mock_Commands>, _Agent, _Component>,
 		);
 	}
 
@@ -117,7 +137,7 @@ pub mod tests {
 
 		app.world_mut().run_system_once_with(
 			mock,
-			remove_from_children_of::<In<Mock_Commands>, _Agent, _Component>,
+			remove_components::<In<Mock_Commands>, _Agent, _Component>,
 		);
 	}
 
@@ -137,7 +157,7 @@ pub mod tests {
 
 		app.world_mut().run_system_once_with(
 			mock,
-			remove_from_children_of::<In<Mock_Commands>, _Agent, _Component>,
+			remove_components::<In<Mock_Commands>, _Agent, _Component>,
 		);
 	}
 
@@ -157,7 +177,7 @@ pub mod tests {
 
 		app.world_mut().run_system_once_with(
 			mock,
-			remove_from_children_of::<In<Mock_Commands>, _Agent, _Component>,
+			remove_components::<In<Mock_Commands>, _Agent, _Component>,
 		);
 	}
 
@@ -177,7 +197,7 @@ pub mod tests {
 
 		app.world_mut().run_system_once_with(
 			mock,
-			remove_from_children_of::<In<Mock_Commands>, _Agent, _Component>,
+			remove_components::<In<Mock_Commands>, _Agent, _Component>,
 		);
 	}
 }
