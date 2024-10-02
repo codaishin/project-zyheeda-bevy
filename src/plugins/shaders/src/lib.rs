@@ -6,9 +6,7 @@ pub mod traits;
 use bevy::prelude::*;
 use common::systems::{
 	asset_process_delta::asset_process_delta,
-	remove_component::Remove,
 	remove_component_from_children::RemoveFromChildren,
-	track_component::TrackComponent,
 	track_component_from_children::TrackComponentInChildren,
 };
 use components::effect_shader::EffectShaders;
@@ -41,9 +39,7 @@ impl Plugin for ShaderPlugin {
 		.add_systems(
 			PostUpdate,
 			(
-				Handle::<StandardMaterial>::remove_from::<EffectShaders>,
 				Handle::<StandardMaterial>::remove_from_children_of::<EffectShaders>,
-				Handle::<Mesh>::track_by::<EffectShaders>,
 				Handle::<Mesh>::track_in_children_by::<EffectShaders>,
 				instantiate_effect_shaders,
 			),
