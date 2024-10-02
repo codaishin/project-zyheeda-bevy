@@ -1,9 +1,7 @@
 pub mod asset_process_delta;
 pub mod log;
-pub mod remove_component;
-pub mod remove_component_from_children;
-pub mod track_component;
-pub mod track_component_from_children;
+pub mod remove_components;
+pub mod track_components;
 
 pub(crate) mod begin_loading_folder_assets;
 pub(crate) mod load_asset_model;

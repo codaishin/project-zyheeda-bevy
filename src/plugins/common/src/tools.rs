@@ -1,6 +1,8 @@
 pub mod duration_data;
 pub mod ordered_hash_map;
 
+pub(crate) mod get_recursively;
+
 use crate::{
 	components::Player,
 	traits::{clamp_zero_positive::ClampZeroPositive, load_asset::Path},
