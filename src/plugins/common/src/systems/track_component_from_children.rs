@@ -1,4 +1,4 @@
-use crate::traits::track::Track;
+use crate::{tools::apply_recursively, traits::track::Track};
 use bevy::prelude::*;
 
 pub trait TrackComponentInChildren<TComponent>
@@ -17,40 +17,13 @@ where
 			return;
 		}
 
-		let get_children = |entity| children.get(entity).ok();
-		let has_component = |entity| components_lookup.contains(entity);
-		let look_up_further = |entity| !targets_lookup.contains(entity);
+		let get_children = &|entity| children.get(entity).ok().map(|c| c.iter());
+		let has_component = &|entity| components_lookup.contains(entity);
+		let is_no_tracker = &|entity| !targets_lookup.contains(entity);
 
 		for (entity, mut target) in &mut targets {
-			let mut track = |child| target.track(child);
-			track_children_recursive(
-				entity,
-				&mut track,
-				&get_children,
-				&has_component,
-				&look_up_further,
-			);
-		}
-	}
-}
-
-fn track_children_recursive<'a>(
-	entity: Entity,
-	track: &mut impl FnMut(Entity),
-	get_children: &'a impl Fn(Entity) -> Option<&'a Children>,
-	has_component: &impl Fn(Entity) -> bool,
-	look_up_further: &impl Fn(Entity) -> bool,
-) {
-	let Some(children) = get_children(entity) else {
-		return;
-	};
-
-	for child in children.iter().cloned() {
-		if has_component(child) {
-			track(child);
-		}
-		if look_up_further(child) {
-			track_children_recursive(child, track, get_children, has_component, look_up_further);
+			let track = &mut |child| target.track(child);
+			apply_recursively(entity, track, get_children, has_component, is_no_tracker);
 		}
 	}
 }

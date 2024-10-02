@@ -85,6 +85,35 @@ impl From<Vec<Entity>> for Focus {
 	}
 }
 
+pub(crate) fn apply_recursively<'a, TRelatedEntities>(
+	root_entity: Entity,
+	apply_action: &mut impl FnMut(Entity),
+	fetch_related_entities: &'a impl Fn(Entity) -> Option<TRelatedEntities>,
+	is_valid: &impl Fn(Entity) -> bool,
+	should_apply_to_related: &impl Fn(Entity) -> bool,
+) where
+	TRelatedEntities: 'a + Iterator<Item = &'a Entity>,
+{
+	let Some(related_entities) = fetch_related_entities(root_entity) else {
+		return;
+	};
+
+	for related_entity in related_entities.cloned() {
+		if is_valid(related_entity) {
+			apply_action(related_entity);
+		}
+		if should_apply_to_related(related_entity) {
+			apply_recursively(
+				related_entity,
+				apply_action,
+				fetch_related_entities,
+				is_valid,
+				should_apply_to_related,
+			);
+		}
+	}
+}
+
 #[cfg(test)]
 mod test_clamp_zero_positive {
 	use super::*;
