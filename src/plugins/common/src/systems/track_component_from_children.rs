@@ -7,31 +7,51 @@ where
 {
 	fn track_in_children_by<TTracker>(
 		mut targets: Query<(Entity, Mut<TTracker>)>,
-		sources: Query<(), With<TComponent>>,
+		components_lookup: Query<(), With<TComponent>>,
+		targets_lookup: Query<(), With<TTracker>>,
 		children: Query<&Children>,
 	) where
 		TTracker: Component + Track<TComponent>,
 	{
-		for (entity, target) in &mut targets {
-			track_components(entity, target, &children, &sources);
+		if targets.is_empty() {
+			return;
+		}
+
+		let get_children = |entity| children.get(entity).ok();
+		let has_component = |entity| components_lookup.contains(entity);
+		let look_up_further = |entity| !targets_lookup.contains(entity);
+
+		for (entity, mut target) in &mut targets {
+			let mut track = |child| target.track(child);
+			track_children_recursive(
+				entity,
+				&mut track,
+				&get_children,
+				&has_component,
+				&look_up_further,
+			);
 		}
 	}
 }
 
-fn track_components<TComponent, TTracker>(
+fn track_children_recursive<'a>(
 	entity: Entity,
-	mut target: Mut<TTracker>,
-	children: &Query<&Children>,
-	components: &Query<(), With<TComponent>>,
-) where
-	TComponent: Component,
-	TTracker: Track<TComponent>,
-{
-	for child in children.iter_descendants(entity) {
-		if !components.contains(child) {
-			continue;
-		};
-		target.track(child);
+	track: &mut impl FnMut(Entity),
+	get_children: &'a impl Fn(Entity) -> Option<&'a Children>,
+	has_component: &impl Fn(Entity) -> bool,
+	look_up_further: &impl Fn(Entity) -> bool,
+) {
+	let Some(children) = get_children(entity) else {
+		return;
+	};
+
+	for child in children.iter().cloned() {
+		if has_component(child) {
+			track(child);
+		}
+		if look_up_further(child) {
+			track_children_recursive(child, track, get_children, has_component, look_up_further);
+		}
 	}
 }
 
@@ -87,7 +107,7 @@ mod tests {
 	}
 
 	#[test]
-	fn track_source_entity_from_deep_child_in_target() {
+	fn track_source_entity_of_deep_child_in_target() {
 		let mut app = setup();
 		let target = app.world_mut().spawn_empty().id();
 		let child = app.world_mut().spawn_empty().set_parent(target).id();
@@ -116,6 +136,31 @@ mod tests {
 			.entity_mut(target)
 			.insert(_Target::new().with_mock(|mock: &mut Mock_Target| {
 				mock.expect_track().never().return_const(());
+			}));
+
+		app.world_mut()
+			.run_system_once(_Source::track_in_children_by::<_Target>);
+	}
+
+	#[test]
+	fn do_not_track_source_entity_of_deep_child_when_target_component_in_between() {
+		let mut app = setup();
+		let parent = app.world_mut().spawn_empty().id();
+		let child = app.world_mut().spawn_empty().set_parent(parent).id();
+		let deep_child = app.world_mut().spawn(_Source).set_parent(child).id();
+
+		app.world_mut()
+			.entity_mut(parent)
+			.insert(_Target::new().with_mock(|mock: &mut Mock_Target| {
+				mock.expect_track().never().return_const(());
+			}));
+		app.world_mut()
+			.entity_mut(child)
+			.insert(_Target::new().with_mock(|mock: &mut Mock_Target| {
+				mock.expect_track()
+					.times(1)
+					.with(eq(deep_child))
+					.return_const(());
 			}));
 
 		app.world_mut()
