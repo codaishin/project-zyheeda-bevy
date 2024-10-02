@@ -4,10 +4,11 @@ use crate::{
 };
 use bevy::prelude::*;
 
+#[allow(clippy::type_complexity)]
 pub(crate) fn add_child_effect_shader<TEffect: Component + GetEffectMaterial>(
 	mut materials: ResMut<Assets<TEffect::TMaterial>>,
 	mut effect_shaders: Query<&mut EffectShaders>,
-	effects: Query<(Entity, &TEffect), Added<TEffect>>,
+	effects: Query<(Entity, &TEffect), (Added<TEffect>, Without<EffectShaders>)>,
 	parents: Query<&Parent>,
 ) {
 	for (entity, effect) in &effects {
@@ -86,6 +87,20 @@ mod tests {
 			(1, materials_ids(materials)),
 			(shaders.shaders.len(), shader_effect_ids(shaders))
 		);
+	}
+
+	#[test]
+	fn do_not_add_child_effect_shader_to_effect_shaders_when_child_has_effect_shaders() {
+		let mut app = setup();
+		let shaders = app.world_mut().spawn(EffectShaders::default()).id();
+		app.world_mut()
+			.spawn((EffectShaders::default(), _Effect))
+			.set_parent(shaders);
+
+		app.update();
+
+		let shaders = app.world().entity(shaders).get::<EffectShaders>().unwrap();
+		assert_eq!(vec![] as Vec<UntypedAssetId>, shader_effect_ids(shaders));
 	}
 
 	#[test]
