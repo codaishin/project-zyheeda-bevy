@@ -1,4 +1,7 @@
-use crate::{tools::apply_recursively, traits::track::Track};
+use crate::{
+	tools::get_recursively::{get_recursively_from, related::Child},
+	traits::track::Track,
+};
 use bevy::prelude::*;
 
 pub trait TrackComponentInChildren<TTracker>
@@ -18,18 +21,14 @@ where
 			return;
 		}
 
-		let get_children = &|entity| children.get(entity).ok().map(|c| c.iter());
-		let has_target = &|entity| targets_lookup.contains(entity);
-		let is_no_tracker = &|entity| !trackers_lookup.contains(entity);
-		let is_trackable = &|entity| has_target(entity) && is_no_tracker(entity);
+		let children = &|entity| children.get(entity).ok().map(|c| c.iter().map(Child::new));
+		let has_target = &|entity: &Entity| targets_lookup.contains(*entity);
+		let is_no_tracker = &|Child(entity): &Child| !trackers_lookup.contains(*entity);
 
 		for (entity, mut tracker) in &mut trackers {
-			let track = &mut |target| tracker.track(target);
-
-			if has_target(entity) {
-				track(entity);
+			for entity in get_recursively_from(entity, children, is_no_tracker).filter(has_target) {
+				tracker.track(entity)
 			}
-			apply_recursively(entity, track, get_children, is_trackable, is_no_tracker);
 		}
 	}
 }

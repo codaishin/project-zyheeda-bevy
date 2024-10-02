@@ -1,6 +1,6 @@
 use crate::{
 	components::Unmovable,
-	tools::apply_recursively,
+	tools::get_recursively::{get_recursively_from, related::Child},
 	traits::try_remove_from::TryRemoveFrom,
 };
 use bevy::prelude::*;
@@ -39,18 +39,14 @@ fn remove_components<TCommands, TAgent, TComponent>(
 		return;
 	}
 
-	let get_children = &|entity| children.get(entity).ok().map(|c| c.iter());
-	let has_component = &|entity| components_lookup.contains(entity);
-	let is_no_agent = &|entity| !agents_lookup.contains(entity);
-	let should_remove = &|entity| has_component(entity) && is_no_agent(entity);
-	let remove = &mut |entity| commands.try_remove_from::<TComponent>(entity);
+	let children = &|entity| children.get(entity).ok().map(|c| c.iter().map(Child::new));
+	let has_component = &|entity: &Entity| components_lookup.contains(*entity);
+	let is_no_agent = &|Child(entity): &Child| !agents_lookup.contains(*entity);
 
 	for entity in &agents {
-		if has_component(entity) {
-			remove(entity);
+		for entity in get_recursively_from(entity, children, is_no_agent).filter(has_component) {
+			commands.try_remove_from::<TComponent>(entity)
 		}
-
-		apply_recursively(entity, remove, get_children, should_remove, is_no_agent);
 	}
 }
 
