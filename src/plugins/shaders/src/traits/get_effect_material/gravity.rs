@@ -7,6 +7,6 @@ impl GetEffectMaterial for Gravity {
 	type TMaterial = GravityMaterial;
 
 	fn get_effect_material(&self) -> Self::TMaterial {
-		GravityMaterial::from(LIGHT_GRAY.with_alpha(0.3))
+		GravityMaterial::from(LIGHT_GRAY.with_alpha(0.5))
 	}
 }
