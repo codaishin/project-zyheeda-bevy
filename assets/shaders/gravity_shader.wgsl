@@ -38,14 +38,14 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     pulse_params.waves = 3.;
 
     var distort_params: DistortParams;
-    distort_params.falloff = 8.;
-    distort_params.intensity = 2.;
+    distort_params.falloff = 0.5;
+    distort_params.intensity = 1.2;
 
     var fresnel = fresnel(mesh);
     let pulse = pulse_inwards(fresnel, pulse_params);
     fresnel = distort(fresnel, distort_params);
 
-    let effect = mix(pulse, fresnel, 2. / 3.);
+    let effect = clamp(pulse - fresnel, 0., 1.);
     return vec4(material_color.rgb, material_color.a * effect);
 }
 
