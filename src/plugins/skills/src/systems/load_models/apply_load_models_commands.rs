@@ -1,7 +1,6 @@
 use crate::{
 	components::{slots::Slots, LoadModel, LoadModelsCommand},
 	items::{Item, Mount},
-	skills::Skill,
 };
 use bevy::{
 	asset::Handle,
@@ -17,7 +16,7 @@ use common::{
 pub(crate) fn apply_load_models_commands(
 	mut commands: Commands,
 	models: Res<Models>,
-	agents: Query<(Entity, &Slots<Handle<Skill>>, &LoadModelsCommand)>,
+	agents: Query<(Entity, &Slots, &LoadModelsCommand)>,
 ) -> Vec<Result<(), Error>> {
 	agents
 		.iter()
@@ -33,7 +32,7 @@ pub(crate) fn apply_load_models_commands(
 
 fn collect_model_data<'a>(
 	agent: Entity,
-	slots: &'a Slots<Handle<Skill>>,
+	slots: &'a Slots,
 	models: &'a Models,
 ) -> impl FnMut(&LoadModel) -> Option<LoadData> + 'a {
 	move |&LoadModel(slot_key)| {
@@ -49,7 +48,7 @@ fn collect_model_data<'a>(
 	}
 }
 
-fn try_get_handles(item: &Item<Handle<Skill>>, models: &Models) -> Result<Handles, Error> {
+fn try_get_handles(item: &Item, models: &Models) -> Result<Handles, Error> {
 	let Some(model) = item.model else {
 		return Ok(Handles {
 			hand: default(),
@@ -72,7 +71,7 @@ fn try_get_handles(item: &Item<Handle<Skill>>, models: &Models) -> Result<Handle
 	}
 }
 
-fn model_error(item: &Item<Handle<Skill>>) -> Error {
+fn model_error(item: &Item) -> Error {
 	Error {
 		msg: format!(
 			"Item({}): no model '{:?}' seems to exist, abandoning",
@@ -161,7 +160,7 @@ mod tests {
 		let hand = app.world_mut().spawn_empty().id();
 		let forearm = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
-			Slots::<Handle<Skill>>::new([(
+			Slots::<Skill>::new([(
 				SlotKey::Hand(Side::Off),
 				Slot {
 					mounts: Mounts { hand, forearm },
@@ -197,7 +196,7 @@ mod tests {
 		let hand = app.world_mut().spawn_empty().id();
 		let forearm = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
-			Slots::<Handle<Skill>>::new([(
+			Slots::<Skill>::new([(
 				SlotKey::Hand(Side::Off),
 				Slot {
 					mounts: Mounts { hand, forearm },
@@ -229,7 +228,7 @@ mod tests {
 		let hand = app.world_mut().spawn_empty().id();
 		let forearm = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
-			Slots::<Handle<Skill>>::new([(
+			Slots::<Skill>::new([(
 				SlotKey::Hand(Side::Off),
 				Slot {
 					mounts: Mounts { hand, forearm },
@@ -260,7 +259,7 @@ mod tests {
 		let hand = app.world_mut().spawn_empty().id();
 		let forearm = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
-			Slots::<Handle<Skill>>::new([(
+			Slots::<Skill>::new([(
 				SlotKey::Hand(Side::Off),
 				Slot {
 					mounts: Mounts { hand, forearm },
@@ -291,7 +290,7 @@ mod tests {
 		let hand = app.world_mut().spawn_empty().id();
 		let forearm = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
-			Slots::<Handle<Skill>>::new([(
+			Slots::<Skill>::new([(
 				SlotKey::Hand(Side::Off),
 				Slot {
 					mounts: Mounts { hand, forearm },
@@ -332,7 +331,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Handle<Skill>>::new([(
+				Slots::<Skill>::new([(
 					SlotKey::Hand(Side::Off),
 					Slot {
 						mounts: Mounts { hand, forearm },
