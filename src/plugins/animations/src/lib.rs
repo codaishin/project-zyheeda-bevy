@@ -6,7 +6,10 @@ mod animation_keys;
 mod resource;
 mod systems;
 
-use crate::systems::init_animation_graph::InitAnimationGraph;
+use crate::systems::{
+	init_animation_clips::InitAnimationClips,
+	init_animation_graph::InitAnimationGraph,
+};
 use bevy::{
 	animation::AnimationPlayer,
 	app::{App, Plugin, PostUpdate, Startup, Update},
@@ -22,11 +25,7 @@ use common::{
 };
 use components::animation_dispatch::AnimationDispatch;
 use resource::AnimationData;
-use systems::{
-	flush::flush,
-	init_animation_clips::init_animation_clips,
-	play_animation_clip::play_animation_clip,
-};
+use systems::{flush::flush, play_animation_clip::play_animation_clip};
 use traits::{GetAnimationPaths, RegisterAnimations};
 
 pub struct AnimationsPlugin;
@@ -38,7 +37,7 @@ impl RegisterAnimations for App {
 	{
 		self.add_systems(
 			Startup,
-			init_animation_clips::<TAgent, AnimationGraph, AnimationNodeIndex, AssetServer>,
+			TAgent::init_animation_clips::<AnimationGraph, AssetServer>,
 		)
 		.add_systems(
 			Update,

@@ -4,26 +4,31 @@ use crate::{
 };
 use bevy::{
 	asset::{Asset, Assets},
-	prelude::{Commands, Res, ResMut, Resource},
+	prelude::{AnimationNodeIndex, Commands, Res, ResMut, Resource},
 };
 use common::resources::Shared;
 
-pub(crate) fn init_animation_clips<
-	TAgent: GetAnimationPaths + Sync + Send + 'static,
-	TAnimationGraph: Asset + Sync + Send + 'static,
-	TAnimationNode: Clone + Sync + Send + 'static,
-	TServer: Resource + LoadAnimationAssets<TAnimationGraph, TAnimationNode>,
->(
-	mut commands: Commands,
-	server: Res<TServer>,
-	mut graphs: ResMut<Assets<TAnimationGraph>>,
-) {
-	let paths = TAgent::animation_paths();
-	let (graph, indices) = server.load_animation_assets(&paths);
-	let graph = graphs.add(graph);
+impl<TAgent> InitAnimationClips for TAgent where TAgent: GetAnimationPaths + Sync + Send + 'static {}
 
-	commands.insert_resource(Shared::from(indices));
-	commands.insert_resource(AnimationData::<TAgent, TAnimationGraph>::new(graph));
+pub(crate) trait InitAnimationClips
+where
+	Self: GetAnimationPaths + Sync + Send + Sized + 'static,
+{
+	fn init_animation_clips<
+		TAnimationGraph: Asset + Sync + Send + 'static,
+		TServer: Resource + LoadAnimationAssets<TAnimationGraph, AnimationNodeIndex>,
+	>(
+		mut commands: Commands,
+		server: Res<TServer>,
+		mut graphs: ResMut<Assets<TAnimationGraph>>,
+	) {
+		let paths = Self::animation_paths();
+		let (graph, indices) = server.load_animation_assets(&paths);
+		let graph = graphs.add(graph);
+
+		commands.insert_resource(Shared::from(indices));
+		commands.insert_resource(AnimationData::<Self, TAnimationGraph>::new(graph));
+	}
 }
 
 #[cfg(test)]
@@ -52,15 +57,12 @@ mod tests {
 	#[derive(Debug, PartialEq, Clone, TypePath, Asset)]
 	struct _AnimationGraph;
 
-	#[derive(Debug, PartialEq, Clone)]
-	struct _AnimationIndex(&'static str);
-
 	#[automock]
-	impl LoadAnimationAssets<_AnimationGraph, _AnimationIndex> for _Server {
+	impl LoadAnimationAssets<_AnimationGraph, AnimationNodeIndex> for _Server {
 		fn load_animation_assets(
 			&self,
 			paths: &[Path],
-		) -> (_AnimationGraph, HashMap<Path, _AnimationIndex>) {
+		) -> (_AnimationGraph, HashMap<Path, AnimationNodeIndex>) {
 			self.mock.load_animation_assets(paths)
 		}
 	}
@@ -71,7 +73,7 @@ mod tests {
 		app.insert_resource(Assets::<_AnimationGraph>::default());
 		app.add_systems(
 			Update,
-			init_animation_clips::<TAgent, _AnimationGraph, _AnimationIndex, _Server>,
+			TAgent::init_animation_clips::<_AnimationGraph, _Server>,
 		);
 
 		app
@@ -92,20 +94,22 @@ mod tests {
 				.return_const((
 					_AnimationGraph,
 					HashMap::from([
-						(Path::from("path/a"), _AnimationIndex("path/a")),
-						(Path::from("path/a"), _AnimationIndex("path/b")),
+						(Path::from("path/a"), AnimationNodeIndex::new(1)),
+						(Path::from("path/a"), AnimationNodeIndex::new(2)),
 					]),
 				));
 		}));
 
 		app.update();
 
-		let indices = app.world().get_resource::<Shared<Path, _AnimationIndex>>();
+		let indices = app
+			.world()
+			.get_resource::<Shared<Path, AnimationNodeIndex>>();
 
 		assert_eq!(
 			Some(&Shared::new([
-				(Path::from("path/a"), _AnimationIndex("path/a")),
-				(Path::from("path/a"), _AnimationIndex("path/b")),
+				(Path::from("path/a"), AnimationNodeIndex::new(1)),
+				(Path::from("path/a"), AnimationNodeIndex::new(2)),
 			])),
 			indices
 		)
