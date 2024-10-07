@@ -10,7 +10,7 @@ where
 {
 	fn track_in_self_and_children<TTarget>(
 		mut trackers: Query<(Entity, Mut<TTracker>)>,
-		targets_lookup: Query<(), With<TTarget>>,
+		targets_lookup: Query<(), Added<TTarget>>,
 		trackers_lookup: Query<(), With<TTracker>>,
 		children: Query<&Children>,
 	) where
@@ -37,6 +37,8 @@ impl<TTracker> TrackComponentInChildren<TTracker> for TTracker where TTracker: C
 
 #[cfg(test)]
 mod tests {
+	use crate::test_tools::utils::SingleThreadedApp;
+
 	use super::*;
 	use bevy::ecs::system::RunSystemOnce;
 	use common::traits::nested_mock::NestedMocks;
@@ -120,19 +122,19 @@ mod tests {
 	}
 
 	#[test]
-	fn do_nothing_when_target_missing() {
-		let mut app = setup();
+	fn do_not_track_when_target_not_new() {
+		let mut app = setup().single_threaded(Update);
 		let tracker = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn_empty().set_parent(tracker);
-
+		app.world_mut().spawn(_Target).set_parent(tracker);
 		app.world_mut()
 			.entity_mut(tracker)
 			.insert(_Tracker::new().with_mock(|mock: &mut Mock_Tracker| {
-				mock.expect_track().never().return_const(());
+				mock.expect_track().times(1).return_const(());
 			}));
 
-		app.world_mut()
-			.run_system_once(_Tracker::track_in_self_and_children::<_Target>);
+		app.add_systems(Update, _Tracker::track_in_self_and_children::<_Target>);
+		app.update();
+		app.update();
 	}
 
 	#[test]
