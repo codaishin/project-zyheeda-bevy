@@ -17,7 +17,7 @@ pub(crate) fn add_child_effect_shader<TEffect: Component + GetEffectMaterial>(
 				continue;
 			};
 			let handle = materials.add(effect.get_effect_material());
-			shaders.shaders.push(EffectShader::from(handle));
+			shaders.shaders.insert(EffectShader::from(handle));
 
 			/* This hurts my soul, but we cannot move `effect_shaders` into a lambda for `find_map` nor
 			 * mutably borrow `effect_shaders` multiple times, so we iterate and abort old-school.

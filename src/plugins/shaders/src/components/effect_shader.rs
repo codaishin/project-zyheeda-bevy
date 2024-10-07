@@ -3,24 +3,40 @@ use crate::traits::{
 	remove_unmovable_effect_shader::RemoveUnmovableEffectShader,
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::{components::Unmovable, traits::track::Track};
+use common::{
+	components::Unmovable,
+	traits::track::{IsTracking, Track, Untrack},
+};
+use std::collections::HashSet;
 
 #[cfg(test)]
 use bevy::asset::UntypedAssetId;
 
 #[derive(Component, Default)]
 pub struct EffectShaders {
-	pub(crate) meshes: Vec<Entity>,
-	pub(crate) shaders: Vec<EffectShader>,
+	pub(crate) meshes: HashSet<Entity>,
+	pub(crate) shaders: HashSet<EffectShader>,
 }
 
 impl Track<Handle<Mesh>> for EffectShaders {
 	fn track(&mut self, entity: Entity) {
-		self.meshes.push(entity);
+		self.meshes.insert(entity);
 	}
 }
 
-#[derive(Debug, PartialEq, Clone)]
+impl IsTracking<Handle<Mesh>> for EffectShaders {
+	fn is_tracking(&self, entity: &Entity) -> bool {
+		self.meshes.contains(entity)
+	}
+}
+
+impl Untrack<Handle<Mesh>> for EffectShaders {
+	fn untrack(&mut self, entity: &Entity) {
+		self.meshes.remove(entity);
+	}
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub(crate) struct EffectShader {
 	handle: UntypedHandle,
 	insert_into: fn(&mut EntityCommands, &UntypedHandle),
@@ -86,19 +102,47 @@ mod tests {
 
 		shader.track(entity);
 
-		assert_eq!(vec![entity], shader.meshes);
+		assert_eq!(HashSet::from([entity]), shader.meshes);
 	}
 
 	#[test]
 	fn push_mesh_handles() {
 		let mut shader = EffectShaders::default();
-		let meshes = vec![Entity::from_raw(11), Entity::from_raw(66)];
+		let entities = [Entity::from_raw(11), Entity::from_raw(66)];
 
-		for entity in &meshes {
+		for entity in &entities {
 			shader.track(*entity);
 		}
 
-		assert_eq!(meshes, shader.meshes);
+		assert_eq!(HashSet::from(entities), shader.meshes);
+	}
+
+	#[test]
+	fn remove_mesh_handles() {
+		let mut shader = EffectShaders {
+			meshes: HashSet::from([Entity::from_raw(11), Entity::from_raw(66)]),
+			..default()
+		};
+
+		shader.untrack(&Entity::from_raw(66));
+
+		assert_eq!(HashSet::from([Entity::from_raw(11)]), shader.meshes);
+	}
+
+	#[test]
+	fn contains_mesh_handles() {
+		let shader = EffectShaders {
+			meshes: HashSet::from([Entity::from_raw(11)]),
+			..default()
+		};
+
+		assert_eq!(
+			[true, false],
+			[
+				shader.is_tracking(&Entity::from_raw(11)),
+				shader.is_tracking(&Entity::from_raw(12))
+			]
+		);
 	}
 
 	#[derive(Asset, TypePath, Clone, AsBindGroup)]

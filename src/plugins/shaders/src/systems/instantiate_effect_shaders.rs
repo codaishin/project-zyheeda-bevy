@@ -7,6 +7,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::traits::try_insert_on::TryInsertOn;
+use std::collections::HashSet;
 
 pub(crate) fn instantiate_effect_shaders(
 	mut commands: Commands,
@@ -20,7 +21,7 @@ pub(crate) fn instantiate_effect_shaders(
 }
 
 #[derive(Component)]
-pub(crate) struct Active(Vec<EffectShader>);
+pub(crate) struct Active(HashSet<EffectShader>);
 
 fn clear(commands: &mut Commands, effect_shaders: &EffectShaders, active: Option<&Active>) {
 	let Some(Active(shaders)) = active else {
@@ -59,13 +60,14 @@ mod tests {
 		components::Unmovable,
 		test_tools::utils::{new_handle, SingleThreadedApp},
 	};
+	use std::collections::HashSet;
 
-	#[derive(Asset, TypePath, Clone, AsBindGroup)]
+	#[derive(Asset, TypePath, Clone, AsBindGroup, PartialEq, Eq, Hash)]
 	struct _Shader1 {}
 
 	impl Material for _Shader1 {}
 
-	#[derive(Asset, TypePath, Clone, AsBindGroup)]
+	#[derive(Asset, TypePath, Clone, AsBindGroup, PartialEq, Eq, Hash)]
 	struct _Shader2 {}
 
 	impl Material for _Shader2 {}
@@ -84,8 +86,8 @@ mod tests {
 		let handle = new_handle::<_Shader1>();
 		let shader = EffectShader::from(handle.clone());
 		let shaders = EffectShaders {
-			meshes: vec![mesh_entity],
-			shaders: vec![shader],
+			meshes: HashSet::from([mesh_entity]),
+			shaders: HashSet::from([shader]),
 		};
 		app.world_mut().spawn(shaders);
 
@@ -108,18 +110,18 @@ mod tests {
 	#[test]
 	fn pair_each_mesh_with_one_shader() {
 		let mut app = setup();
-		let mesh_entities = vec![
+		let mesh_entities = [
 			app.world_mut().spawn_empty().id(),
 			app.world_mut().spawn_empty().id(),
 		];
 		let shader1 = new_handle::<_Shader1>();
 		let shader2 = new_handle::<_Shader2>();
 		let shaders = EffectShaders {
-			meshes: mesh_entities.clone(),
-			shaders: vec![
+			meshes: HashSet::from(mesh_entities),
+			shaders: HashSet::from([
 				EffectShader::from(shader1.clone()),
 				EffectShader::from(shader2.clone()),
-			],
+			]),
 		};
 		app.world_mut().spawn(shaders);
 
@@ -156,8 +158,8 @@ mod tests {
 		let mut app = setup();
 		let mesh_entity = app.world_mut().spawn_empty().id();
 		let shaders = EffectShaders {
-			meshes: vec![mesh_entity],
-			shaders: vec![EffectShader::from(new_handle::<_Shader1>())],
+			meshes: HashSet::from([mesh_entity]),
+			shaders: HashSet::from([EffectShader::from(new_handle::<_Shader1>())]),
 		};
 		app.world_mut().spawn(shaders);
 
@@ -182,8 +184,8 @@ mod tests {
 		let shader1 = new_handle::<_Shader1>();
 		let shader2 = new_handle::<_Shader2>();
 		let shaders = EffectShaders {
-			meshes: vec![mesh_entity],
-			shaders: vec![EffectShader::from(shader1)],
+			meshes: HashSet::from([mesh_entity]),
+			shaders: HashSet::from([EffectShader::from(shader1)]),
 		};
 		let entity = app.world_mut().spawn(shaders).id();
 
@@ -193,7 +195,7 @@ mod tests {
 			.entity_mut(entity)
 			.get_mut::<EffectShaders>()
 			.unwrap()
-			.shaders = vec![EffectShader::from(shader2.clone())];
+			.shaders = HashSet::from([EffectShader::from(shader2.clone())]);
 
 		app.update();
 

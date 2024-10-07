@@ -40,7 +40,7 @@ impl Plugin for ShaderPlugin {
 			PostUpdate,
 			(
 				EffectShaders::remove_from_self_and_children::<Handle<StandardMaterial>>,
-				EffectShaders::track_in_self_and_children::<Handle<Mesh>>,
+				EffectShaders::track_in_self_and_children::<Handle<Mesh>>(),
 				instantiate_effect_shaders,
 			),
 		);
