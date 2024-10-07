@@ -1,4 +1,4 @@
-use crate::traits::{AnimationChainUpdate, AnimationPath, AnimationPlayMode};
+use crate::traits::AnimationChainUpdate;
 use common::{
 	tools::{Last, This},
 	traits::load_asset::Path,
@@ -14,7 +14,7 @@ pub enum PlayMode {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Animation {
 	pub path: Path,
-	play_mode: PlayMode,
+	pub(crate) play_mode: PlayMode,
 	pub update_fn: Option<fn(This<Animation>, Last<Animation>)>,
 }
 
@@ -25,18 +25,6 @@ impl Animation {
 			play_mode,
 			update_fn: None,
 		}
-	}
-}
-
-impl AnimationPlayMode for Animation {
-	fn animation_play_mode(&self) -> PlayMode {
-		self.play_mode
-	}
-}
-
-impl AnimationPath for Animation {
-	fn animation_path(&self) -> &Path {
-		&self.path
 	}
 }
 
@@ -65,13 +53,6 @@ mod tests {
 			(path, PlayMode::Repeat),
 			(animation.path, animation.play_mode)
 		)
-	}
-
-	#[test]
-	fn animation_play_mode() {
-		let animation = Animation::new(Path::from(""), PlayMode::Repeat);
-
-		assert_eq!(PlayMode::Repeat, animation.animation_play_mode());
 	}
 
 	trait _CombinationFn {

@@ -1,9 +1,14 @@
-use super::{GetAnimationDispatch, GetAnimationPaths, IdleLayer, StartAnimation};
+use super::{GetAnimationPaths, IdleLayer, StartAnimation};
 use crate::{
 	animation::{Animation, PlayMode},
 	components::animation_dispatch::AnimationDispatch,
 };
-use common::{components::Player, tools::player_animation_path, traits::load_asset::Path};
+use common::{
+	components::Player,
+	systems::init_associated_component::GetAssociated,
+	tools::player_animation_path,
+	traits::load_asset::Path,
+};
 
 impl GetAnimationPaths for Player {
 	fn animation_paths() -> Vec<Path> {
@@ -20,8 +25,8 @@ impl GetAnimationPaths for Player {
 	}
 }
 
-impl GetAnimationDispatch for Player {
-	fn animation_dispatch() -> AnimationDispatch {
+impl GetAssociated<AnimationDispatch> for Player {
+	fn get_associated_component() -> AnimationDispatch {
 		let mut animation_dispatch = AnimationDispatch::default();
 		animation_dispatch.start_animation(
 			IdleLayer,

@@ -1,4 +1,5 @@
 pub mod asset_process_delta;
+pub mod init_associated_component;
 pub mod log;
 pub mod remove_components;
 pub mod track_components;
