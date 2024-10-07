@@ -9,6 +9,7 @@ mod systems;
 use crate::systems::{
 	init_animation_clips::InitAnimationClips,
 	init_animation_graph::InitAnimationGraph,
+	play_animation_clip::PlayAnimationClip,
 };
 use bevy::{
 	animation::AnimationPlayer,
@@ -25,7 +26,7 @@ use common::{
 };
 use components::animation_dispatch::AnimationDispatch;
 use resource::AnimationData;
-use systems::{flush::flush, play_animation_clip::play_animation_clip};
+use systems::flush::flush;
 use traits::{GetAnimationPaths, RegisterAnimations};
 
 pub struct AnimationsPlugin;
@@ -51,21 +52,19 @@ impl RegisterAnimations for App {
 
 impl Plugin for AnimationsPlugin {
 	fn build(&self, app: &mut App) {
+		type AnimationQuery<'a> = (Mut<'a, AnimationPlayer>, Mut<'a, AnimationTransitions>);
+
 		app.register_animations::<Player>()
 			.add_systems(
 				Update,
-				play_animation_clip::<
-					AnimationDispatch,
-					(Mut<AnimationPlayer>, Mut<AnimationTransitions>),
-				>,
+				AnimationDispatch::play_animation_clip_via::<AnimationQuery>,
 			)
 			.add_systems(
 				PostUpdate,
-				AnimationDispatch::track_in_self_and_children::<AnimationPlayer>(),
-			)
-			.add_systems(
-				PostUpdate,
-				AnimationDispatch::track_in_self_and_children::<AnimationTransitions>(),
+				(
+					AnimationDispatch::track_in_self_and_children::<AnimationPlayer>(),
+					AnimationDispatch::track_in_self_and_children::<AnimationTransitions>(),
+				),
 			)
 			.add_systems(PostUpdate, flush::<AnimationDispatch>);
 	}

@@ -11,36 +11,42 @@ use crate::{
 use bevy::{ecs::query::QueryData, prelude::*};
 use common::{resources::Shared, traits::load_asset::Path};
 
-pub(crate) fn play_animation_clip<TAnimationDispatch, TAnimationPlayer>(
-	mut players: Query<TAnimationPlayer>,
-	dispatchers: Query<&TAnimationDispatch, Changed<TAnimationDispatch>>,
-	animations: Res<Shared<Path, AnimationNodeIndex>>,
-) where
-	TAnimationPlayer: QueryData,
-	for<'a> TAnimationPlayer::Item<'a>: ReplayAnimation<AnimationNodeIndex>
-		+ RepeatAnimation<AnimationNodeIndex>
-		+ IsPlaying<AnimationNodeIndex>,
-	for<'a> TAnimationDispatch:
-		Component + AnimationPlayers<'a> + HighestPriorityAnimation<Animation>,
-{
-	for dispatcher in &dispatchers {
-		for entity in dispatcher.animation_players() {
-			let Some(animation) = dispatcher.highest_priority_animation() else {
-				continue;
-			};
-			let Some(index) = animations.get(&animation.path) else {
-				continue;
-			};
-			let Ok(mut player) = players.get_mut(entity) else {
-				continue;
-			};
-			if player.is_playing(*index) {
-				continue;
-			}
+impl<TDispatch> PlayAnimationClip for TDispatch {}
 
-			match animation.play_mode {
-				PlayMode::Repeat => player.repeat(*index),
-				PlayMode::Replay => player.replay(*index),
+pub(crate) trait PlayAnimationClip
+where
+	Self: Sized,
+{
+	fn play_animation_clip_via<TAnimationPlayer>(
+		mut players: Query<TAnimationPlayer>,
+		dispatchers: Query<&Self, Changed<Self>>,
+		animations: Res<Shared<Path, AnimationNodeIndex>>,
+	) where
+		TAnimationPlayer: QueryData,
+		for<'a> TAnimationPlayer::Item<'a>: ReplayAnimation<AnimationNodeIndex>
+			+ RepeatAnimation<AnimationNodeIndex>
+			+ IsPlaying<AnimationNodeIndex>,
+		for<'a> Self: Component + AnimationPlayers<'a> + HighestPriorityAnimation<Animation>,
+	{
+		for dispatcher in &dispatchers {
+			for entity in dispatcher.animation_players() {
+				let Some(animation) = dispatcher.highest_priority_animation() else {
+					continue;
+				};
+				let Some(index) = animations.get(&animation.path) else {
+					continue;
+				};
+				let Ok(mut player) = players.get_mut(entity) else {
+					continue;
+				};
+				if player.is_playing(*index) {
+					continue;
+				}
+
+				match animation.play_mode {
+					PlayMode::Repeat => player.repeat(*index),
+					PlayMode::Replay => player.replay(*index),
+				}
 			}
 		}
 	}
@@ -148,7 +154,7 @@ mod tests {
 		app.insert_resource(Shared::new(animations));
 		app.add_systems(
 			Update,
-			play_animation_clip::<_AnimationDispatch, Mut<_AnimationPlayer>>,
+			_AnimationDispatch::play_animation_clip_via::<Mut<_AnimationPlayer>>,
 		);
 
 		app
