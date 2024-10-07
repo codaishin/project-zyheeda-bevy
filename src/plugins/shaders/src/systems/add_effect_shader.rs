@@ -10,7 +10,7 @@ pub(crate) fn add_effect_shader<TEffect: Component + GetEffectMaterial>(
 ) {
 	for (mut shaders, effect) in &mut effect_shaders {
 		let handle = materials.add(effect.get_effect_material());
-		shaders.shaders.push(EffectShader::from(handle));
+		shaders.shaders.insert(EffectShader::from(handle));
 	}
 }
 
