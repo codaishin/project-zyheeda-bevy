@@ -4,7 +4,6 @@ use crate::{
 		AnimationChainUpdate,
 		AnimationPlayers,
 		AnimationPlayersWithoutTransitions,
-		FlushObsolete,
 		HighestPriorityAnimation,
 		InsertAnimation,
 		MarkObsolete,
@@ -20,15 +19,12 @@ use std::{
 	mem,
 };
 
-#[derive(Debug, PartialEq)]
-struct FlushCount(usize);
-
 #[derive(Default, Debug, PartialEq)]
 enum Entry<TAnimation> {
 	#[default]
 	None,
 	Some(TAnimation),
-	Obsolete((TAnimation, FlushCount)),
+	Obsolete(TAnimation),
 }
 
 impl<TAnimation> Entry<TAnimation> {
@@ -45,7 +41,7 @@ pub struct AnimationDispatch<TAnimation = Animation> {
 }
 
 impl<TAnimation> AnimationDispatch<TAnimation> {
-	fn slot(&mut self, priority: Priority) -> &mut Entry<TAnimation> {
+	fn slot(&mut self, priority: &Priority) -> &mut Entry<TAnimation> {
 		match priority {
 			Priority::High => &mut self.stack.0,
 			Priority::Middle => &mut self.stack.1,
@@ -151,10 +147,10 @@ where
 impl<TAnimation: AnimationChainUpdate + Debug> InsertAnimation<TAnimation>
 	for AnimationDispatch<TAnimation>
 {
-	fn insert(&mut self, mut animation: TAnimation, priority: Priority) {
+	fn insert(&mut self, mut animation: TAnimation, priority: &Priority) {
 		let slot = self.slot(priority);
 
-		if let Entry::Some(last) | Entry::Obsolete((last, ..)) = slot {
+		if let Entry::Some(last) | Entry::Obsolete(last) = slot {
 			animation.chain_update(last);
 		}
 
@@ -163,24 +159,12 @@ impl<TAnimation: AnimationChainUpdate + Debug> InsertAnimation<TAnimation>
 }
 
 impl<TAnimation> MarkObsolete for AnimationDispatch<TAnimation> {
-	fn mark_obsolete(&mut self, priority: Priority) {
+	fn mark_obsolete(&mut self, priority: &Priority) {
 		let slot = self.slot(priority);
 
 		*slot = match slot.take() {
-			Entry::Some(animation) => Entry::Obsolete((animation, FlushCount(0))),
+			Entry::Some(animation) => Entry::Obsolete(animation),
 			_ => Entry::None,
-		}
-	}
-}
-
-impl<TAnimation> FlushObsolete for AnimationDispatch<TAnimation> {
-	fn flush_obsolete(&mut self, priority: Priority) {
-		let slot = self.slot(priority);
-
-		*slot = match slot.take() {
-			Entry::Obsolete((a, FlushCount(0))) => Entry::Obsolete((a, FlushCount(1))),
-			Entry::Obsolete((.., FlushCount(1))) => Entry::None,
-			e => e,
 		}
 	}
 }
@@ -214,7 +198,7 @@ mod tests {
 	#[test]
 	fn insert_low_priority() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("low"), Priority::Low);
+		dispatch.insert(_Animation::new("low"), &Priority::Low);
 
 		assert_eq!(
 			Some(_Animation::new("low")),
@@ -225,8 +209,8 @@ mod tests {
 	#[test]
 	fn insert_medium_priority() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("middle"), Priority::Middle);
-		dispatch.insert(_Animation::new("low"), Priority::Low);
+		dispatch.insert(_Animation::new("middle"), &Priority::Middle);
+		dispatch.insert(_Animation::new("low"), &Priority::Low);
 
 		assert_eq!(
 			Some(_Animation::new("middle")),
@@ -237,8 +221,8 @@ mod tests {
 	#[test]
 	fn insert_high_priority() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("high"), Priority::High);
-		dispatch.insert(_Animation::new("middle"), Priority::Middle);
+		dispatch.insert(_Animation::new("high"), &Priority::High);
+		dispatch.insert(_Animation::new("middle"), &Priority::Middle);
 
 		assert_eq!(
 			Some(_Animation::new("high")),
@@ -249,8 +233,8 @@ mod tests {
 	#[test]
 	fn mark_obsolete_low() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("low"), Priority::Low);
-		dispatch.mark_obsolete(Priority::Low);
+		dispatch.insert(_Animation::new("low"), &Priority::Low);
+		dispatch.mark_obsolete(&Priority::Low);
 
 		assert_eq!(None, dispatch.highest_priority_animation());
 	}
@@ -258,8 +242,8 @@ mod tests {
 	#[test]
 	fn mark_obsolete_middle() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("middle"), Priority::Middle);
-		dispatch.mark_obsolete(Priority::Middle);
+		dispatch.insert(_Animation::new("middle"), &Priority::Middle);
+		dispatch.mark_obsolete(&Priority::Middle);
 
 		assert_eq!(None, dispatch.highest_priority_animation());
 	}
@@ -267,8 +251,8 @@ mod tests {
 	#[test]
 	fn mark_obsolete_high() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("high"), Priority::High);
-		dispatch.mark_obsolete(Priority::High);
+		dispatch.insert(_Animation::new("high"), &Priority::High);
+		dispatch.mark_obsolete(&Priority::High);
 
 		assert_eq!(None, dispatch.highest_priority_animation());
 	}
@@ -276,8 +260,8 @@ mod tests {
 	#[test]
 	fn call_chain_update() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("last"), Priority::High);
-		dispatch.insert(_Animation::new("mock"), Priority::High);
+		dispatch.insert(_Animation::new("last"), &Priority::High);
+		dispatch.insert(_Animation::new("mock"), &Priority::High);
 
 		let mock = dispatch.highest_priority_animation().unwrap();
 
@@ -287,9 +271,9 @@ mod tests {
 	#[test]
 	fn call_chain_update_on_marked_obsolete() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("last"), Priority::High);
-		dispatch.mark_obsolete(Priority::High);
-		dispatch.insert(_Animation::new("mock"), Priority::High);
+		dispatch.insert(_Animation::new("last"), &Priority::High);
+		dispatch.mark_obsolete(&Priority::High);
+		dispatch.insert(_Animation::new("mock"), &Priority::High);
 
 		let mock = dispatch.highest_priority_animation().unwrap();
 
@@ -299,41 +283,14 @@ mod tests {
 	#[test]
 	fn do_not_call_chain_update_on_marked_obsolete_2_times_ago() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("last"), Priority::High);
-		dispatch.mark_obsolete(Priority::High);
-		dispatch.mark_obsolete(Priority::High);
-		dispatch.insert(_Animation::new("mock"), Priority::High);
+		dispatch.insert(_Animation::new("last"), &Priority::High);
+		dispatch.mark_obsolete(&Priority::High);
+		dispatch.mark_obsolete(&Priority::High);
+		dispatch.insert(_Animation::new("mock"), &Priority::High);
 
 		let mock = dispatch.highest_priority_animation().unwrap();
 
 		assert_eq!(vec![] as Vec<_Animation>, mock.chain_update_calls);
-	}
-
-	#[test]
-	fn do_not_call_chain_update_on_marked_obsolete_after_flushed_twice() {
-		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("last"), Priority::High);
-		dispatch.mark_obsolete(Priority::High);
-		dispatch.flush_obsolete(Priority::High);
-		dispatch.flush_obsolete(Priority::High);
-		dispatch.insert(_Animation::new("mock"), Priority::High);
-
-		let mock = dispatch.highest_priority_animation().unwrap();
-
-		assert_eq!(vec![] as Vec<_Animation>, mock.chain_update_calls);
-	}
-
-	#[test]
-	fn call_chain_update_on_marked_obsolete_after_flushed_once() {
-		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("last"), Priority::High);
-		dispatch.mark_obsolete(Priority::High);
-		dispatch.flush_obsolete(Priority::High);
-		dispatch.insert(_Animation::new("mock"), Priority::High);
-
-		let mock = dispatch.highest_priority_animation().unwrap();
-
-		assert_eq!(vec![_Animation::new("last")], mock.chain_update_calls);
 	}
 
 	fn as_track<TComponent>(

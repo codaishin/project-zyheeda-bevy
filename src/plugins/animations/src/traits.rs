@@ -16,7 +16,7 @@ pub trait HighestPriorityAnimation<TAnimation> {
 	fn highest_priority_animation(&self) -> Option<TAnimation>;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Priority {
 	High,
 	Middle,
@@ -24,15 +24,11 @@ pub enum Priority {
 }
 
 pub(crate) trait InsertAnimation<TAnimation> {
-	fn insert(&mut self, animation: TAnimation, priority: Priority);
+	fn insert(&mut self, animation: TAnimation, priority: &Priority);
 }
 
 pub(crate) trait MarkObsolete {
-	fn mark_obsolete(&mut self, priority: Priority);
-}
-
-pub(crate) trait FlushObsolete {
-	fn flush_obsolete(&mut self, priority: Priority);
+	fn mark_obsolete(&mut self, priority: &Priority);
 }
 
 pub(crate) trait IsPlaying<TIndex> {
@@ -119,7 +115,7 @@ impl<T: InsertAnimation<TAnimation>, TAnimation> StartAnimation<TAnimation> for 
 		TLayer: 'static,
 		Priority: From<TLayer>,
 	{
-		self.insert(animation, Priority::from(layer));
+		self.insert(animation, &Priority::from(layer));
 	}
 }
 
@@ -136,7 +132,7 @@ impl<T: MarkObsolete> StopAnimation for T {
 		TLayer: 'static,
 		Priority: From<TLayer>,
 	{
-		self.mark_obsolete(Priority::from(layer));
+		self.mark_obsolete(&Priority::from(layer));
 	}
 }
 
@@ -151,10 +147,10 @@ mod tests {
 	mock! {
 		_Dispatch {}
 		impl InsertAnimation<_Animation> for _Dispatch {
-			fn insert(&mut self, animation: _Animation, priority: Priority);
+			fn insert(&mut self, animation: _Animation, priority: &Priority);
 		}
 		impl MarkObsolete for _Dispatch {
-			fn mark_obsolete(&mut self, priority: Priority);
+			fn mark_obsolete(&mut self, priority:& Priority);
 		}
 	}
 

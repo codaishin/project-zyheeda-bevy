@@ -26,7 +26,6 @@ use common::{
 };
 use components::animation_dispatch::AnimationDispatch;
 use resource::AnimationData;
-use systems::flush::flush;
 use traits::{GetAnimationPaths, RegisterAnimations};
 
 pub struct AnimationsPlugin;
@@ -65,7 +64,6 @@ impl Plugin for AnimationsPlugin {
 					AnimationDispatch::track_in_self_and_children::<AnimationPlayer>(),
 					AnimationDispatch::track_in_self_and_children::<AnimationTransitions>(),
 				),
-			)
-			.add_systems(PostUpdate, flush::<AnimationDispatch>);
+			);
 	}
 }
