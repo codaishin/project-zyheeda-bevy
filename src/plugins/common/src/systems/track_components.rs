@@ -1,6 +1,6 @@
 use crate::{
 	tools::get_recursively::{get_recursively_from, related::Child},
-	traits::track::Track,
+	traits::track::{IsTracking, Track, Untrack},
 };
 use bevy::prelude::*;
 
@@ -31,29 +31,70 @@ where
 			}
 		}
 	}
+
+	fn untrack_in_self_and_children<TTarget>(
+		mut trackers: Query<Mut<TTracker>>,
+		mut removed_targets: RemovedComponents<TTarget>,
+	) where
+		TTarget: Component,
+		TTracker: IsTracking<TTarget> + Untrack<TTarget>,
+	{
+		for entity in removed_targets.read() {
+			for mut tracker in &mut trackers {
+				if !tracker.is_tracking(entity) {
+					continue;
+				}
+				tracker.untrack(entity);
+			}
+		}
+	}
 }
 
 impl<TTracker> TrackComponentInChildren<TTracker> for TTracker where TTracker: Component {}
 
 #[cfg(test)]
 mod tests {
-	use crate::test_tools::utils::SingleThreadedApp;
-
 	use super::*;
+	use crate::test_tools::utils::SingleThreadedApp;
 	use bevy::ecs::system::RunSystemOnce;
 	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
+	use mockall::{mock, predicate::eq};
 
 	#[derive(Component, Debug, Default, NestedMocks)]
 	struct _Tracker {
 		mock: Mock_Tracker,
 	}
 
-	#[automock]
 	impl Track<_Target> for _Tracker {
 		fn track(&mut self, entity: Entity) {
 			self.mock.track(entity);
+		}
+	}
+
+	impl IsTracking<_Target> for _Tracker {
+		fn is_tracking(&self, entity: Entity) -> bool {
+			self.mock.is_tracking(entity)
+		}
+	}
+
+	impl Untrack<_Target> for _Tracker {
+		fn untrack(&mut self, entity: Entity) {
+			self.mock.untrack(entity);
+		}
+	}
+
+	mock! {
+		#[derive(Debug)]
+		_Tracker {}
+		impl Track<_Target> for _Tracker {
+			fn track(&mut self, entity: Entity);
+		}
+		impl IsTracking<_Target> for _Tracker {
+			fn is_tracking(&self, entity: Entity) -> bool;
+		}
+		impl Untrack<_Target> for _Tracker {
+			fn untrack(&mut self, entity: Entity);
 		}
 	}
 
@@ -159,5 +200,93 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(_Tracker::track_in_self_and_children::<_Target>);
+	}
+
+	#[test]
+	fn untrack_target_entity_in_tracker() {
+		let mut app = setup();
+		let entity = app.world_mut().spawn(_Target).id();
+
+		app.update();
+		app.world_mut().entity_mut(entity).remove::<_Target>();
+
+		app.world_mut()
+			.entity_mut(entity)
+			.insert(_Tracker::new().with_mock(|mock: &mut Mock_Tracker| {
+				mock.expect_is_tracking()
+					.times(1)
+					.with(eq(entity))
+					.return_const(true);
+				mock.expect_untrack()
+					.times(1)
+					.with(eq(entity))
+					.return_const(());
+			}));
+
+		app.world_mut()
+			.run_system_once(_Tracker::untrack_in_self_and_children::<_Target>);
+	}
+
+	#[test]
+	fn do_not_untrack_target_entity_when_not_tracked() {
+		let mut app = setup();
+		let entity = app.world_mut().spawn(_Target).id();
+
+		app.update();
+		app.world_mut().entity_mut(entity).remove::<_Target>();
+
+		app.world_mut()
+			.entity_mut(entity)
+			.insert(_Tracker::new().with_mock(|mock: &mut Mock_Tracker| {
+				mock.expect_is_tracking().return_const(false);
+				mock.expect_untrack().times(0).return_const(());
+			}));
+
+		app.world_mut()
+			.run_system_once(_Tracker::untrack_in_self_and_children::<_Target>);
+	}
+
+	#[test]
+	fn do_not_untrack_target_not_removed() {
+		let mut app = setup();
+		let entity = app.world_mut().spawn(_Target).id();
+
+		app.update();
+
+		app.world_mut()
+			.entity_mut(entity)
+			.insert(_Tracker::new().with_mock(|mock: &mut Mock_Tracker| {
+				mock.expect_is_tracking().times(0).return_const(false);
+				mock.expect_untrack().times(0).return_const(());
+			}));
+
+		app.world_mut()
+			.run_system_once(_Tracker::untrack_in_self_and_children::<_Target>);
+	}
+
+	#[test]
+	fn untrack_target_of_child_entity_in_tracker() {
+		let mut app = setup();
+		let parent = app.world_mut().spawn_empty().id();
+		let child = app.world_mut().spawn(_Target).set_parent(parent).id();
+
+		app.update();
+		app.world_mut().entity_mut(child).remove::<_Target>();
+
+		app.world_mut()
+			.entity_mut(parent)
+			.insert(_Tracker::new().with_mock(|mock: &mut Mock_Tracker| {
+				mock.expect_is_tracking()
+					.times(1)
+					.with(eq(child))
+					.return_const(true);
+				mock.expect_untrack()
+					.times(1)
+					.with(eq(child))
+					.return_const(());
+			}));
+
+		app.world_mut()
+			.run_system_once(_Tracker::untrack_in_self_and_children::<_Target>);
 	}
 }
