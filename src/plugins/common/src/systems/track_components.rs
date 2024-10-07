@@ -1,6 +1,10 @@
 use crate::{
 	tools::get_recursively::{get_recursively_from, related::Child},
-	traits::track::{IsTracking, Track, Untrack},
+	traits::{
+		clear::Clear,
+		read::Read,
+		track::{IsTracking, Track, Untrack},
+	},
 };
 use bevy::prelude::*;
 
@@ -33,33 +37,50 @@ where
 	}
 
 	fn untrack_in_self_and_children<TTarget>(
-		mut trackers: Query<Mut<TTracker>>,
-		mut removed_targets: RemovedComponents<TTarget>,
+		removed_targets: RemovedComponents<TTarget>,
+		trackers: Query<Mut<TTracker>>,
 	) where
 		TTarget: Component,
-		TTracker: IsTracking<TTarget> + Untrack<TTarget>,
+		TTracker: IsTracking<TTarget> + Untrack<TTarget> + Component,
 	{
-		for entity in removed_targets.read() {
-			for mut tracker in &mut trackers {
-				if !tracker.is_tracking(entity) {
-					continue;
-				}
-				tracker.untrack(entity);
-			}
-		}
+		untrack_in_self_and_children(removed_targets, trackers);
 	}
 }
 
 impl<TTracker> TrackComponentInChildren<TTracker> for TTracker where TTracker: Component {}
 
+fn untrack_in_self_and_children<TTracker, TTarget, TRemoveEvents>(
+	mut removed_targets: TRemoveEvents,
+	mut trackers: Query<Mut<TTracker>>,
+) where
+	TTarget: Component,
+	TTracker: IsTracking<TTarget> + Untrack<TTarget> + Component,
+	for<'a> TRemoveEvents: Clear + Read<'a, TReturn: Iterator<Item = Entity>>,
+{
+	if trackers.is_empty() {
+		removed_targets.clear();
+		return;
+	}
+
+	for entity in removed_targets.read() {
+		for mut tracker in &mut trackers {
+			if !tracker.is_tracking(entity) {
+				continue;
+			}
+			tracker.untrack(entity);
+		}
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::test_tools::utils::SingleThreadedApp;
+	use crate::{simple_init, test_tools::utils::SingleThreadedApp, traits::mock::Mock};
 	use bevy::ecs::system::RunSystemOnce;
 	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
+	use std::collections::VecDeque;
 
 	#[derive(Component, Debug, Default, NestedMocks)]
 	struct _Tracker {
@@ -100,6 +121,51 @@ mod tests {
 
 	#[derive(Component, Debug, PartialEq, Clone)]
 	struct _Target;
+
+	#[derive(Clone)]
+	struct _Read(VecDeque<Entity>);
+
+	impl<const N: usize> From<[Entity; N]> for _Read {
+		fn from(value: [Entity; N]) -> Self {
+			Self(VecDeque::from(value))
+		}
+	}
+
+	impl Iterator for _Read {
+		type Item = Entity;
+
+		fn next(&mut self) -> Option<Self::Item> {
+			self.0.pop_front()
+		}
+	}
+
+	mock! {
+		_Removed {}
+		impl Clear for _Removed {
+			fn clear(&mut self);
+		}
+		impl<'a> Read<'a> for _Removed {
+			type TReturn = _Read;
+
+			fn read(&'a mut self) -> _Read;
+		}
+	}
+
+	simple_init!(Mock_Removed);
+
+	impl Clear for In<Mock_Removed> {
+		fn clear(&mut self) {
+			self.0.clear();
+		}
+	}
+
+	impl<'a> Read<'a> for In<Mock_Removed> {
+		type TReturn = _Read;
+
+		fn read(&'a mut self) -> _Read {
+			self.0.read()
+		}
+	}
 
 	fn setup() -> App {
 		App::new()
@@ -206,9 +272,10 @@ mod tests {
 	fn untrack_target_entity_in_tracker() {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(_Target).id();
-
-		app.update();
-		app.world_mut().entity_mut(entity).remove::<_Target>();
+		let removed = Mock_Removed::new_mock(|mock| {
+			mock.expect_clear().return_const(());
+			mock.expect_read().return_const(_Read::from([entity]));
+		});
 
 		app.world_mut()
 			.entity_mut(entity)
@@ -223,17 +290,20 @@ mod tests {
 					.return_const(());
 			}));
 
-		app.world_mut()
-			.run_system_once(_Tracker::untrack_in_self_and_children::<_Target>);
+		app.world_mut().run_system_once_with(
+			removed,
+			untrack_in_self_and_children::<_Tracker, _Target, In<Mock_Removed>>,
+		);
 	}
 
 	#[test]
 	fn do_not_untrack_target_entity_when_not_tracked() {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(_Target).id();
-
-		app.update();
-		app.world_mut().entity_mut(entity).remove::<_Target>();
+		let removed = Mock_Removed::new_mock(|mock| {
+			mock.expect_clear().return_const(());
+			mock.expect_read().return_const(_Read::from([entity]));
+		});
 
 		app.world_mut()
 			.entity_mut(entity)
@@ -242,16 +312,20 @@ mod tests {
 				mock.expect_untrack().times(0).return_const(());
 			}));
 
-		app.world_mut()
-			.run_system_once(_Tracker::untrack_in_self_and_children::<_Target>);
+		app.world_mut().run_system_once_with(
+			removed,
+			untrack_in_self_and_children::<_Tracker, _Target, In<Mock_Removed>>,
+		);
 	}
 
 	#[test]
 	fn do_not_untrack_target_not_removed() {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(_Target).id();
-
-		app.update();
+		let removed = Mock_Removed::new_mock(|mock| {
+			mock.expect_clear().return_const(());
+			mock.expect_read().return_const(_Read::from([]));
+		});
 
 		app.world_mut()
 			.entity_mut(entity)
@@ -260,8 +334,10 @@ mod tests {
 				mock.expect_untrack().times(0).return_const(());
 			}));
 
-		app.world_mut()
-			.run_system_once(_Tracker::untrack_in_self_and_children::<_Target>);
+		app.world_mut().run_system_once_with(
+			removed,
+			untrack_in_self_and_children::<_Tracker, _Target, In<Mock_Removed>>,
+		);
 	}
 
 	#[test]
@@ -269,9 +345,10 @@ mod tests {
 		let mut app = setup();
 		let parent = app.world_mut().spawn_empty().id();
 		let child = app.world_mut().spawn(_Target).set_parent(parent).id();
-
-		app.update();
-		app.world_mut().entity_mut(child).remove::<_Target>();
+		let removed = Mock_Removed::new_mock(|mock| {
+			mock.expect_clear().return_const(());
+			mock.expect_read().return_const(_Read::from([child]));
+		});
 
 		app.world_mut()
 			.entity_mut(parent)
@@ -286,7 +363,39 @@ mod tests {
 					.return_const(());
 			}));
 
-		app.world_mut()
-			.run_system_once(_Tracker::untrack_in_self_and_children::<_Target>);
+		app.world_mut().run_system_once_with(
+			removed,
+			untrack_in_self_and_children::<_Tracker, _Target, In<Mock_Removed>>,
+		);
+	}
+
+	#[test]
+	fn clear_removal_events_when_no_trackers_present() {
+		let mut app = setup();
+		app.world_mut().spawn(_Target);
+		let removed = Mock_Removed::new_mock(|mock| {
+			mock.expect_clear().times(1).return_const(());
+			mock.expect_read().return_const(_Read::from([]));
+		});
+
+		app.world_mut().run_system_once_with(
+			removed,
+			untrack_in_self_and_children::<_Tracker, _Target, In<Mock_Removed>>,
+		);
+	}
+
+	#[test]
+	fn do_not_iterate_removal_events_when_no_trackers_present() {
+		let mut app = setup();
+		app.world_mut().spawn(_Target);
+		let removed = Mock_Removed::new_mock(|mock| {
+			mock.expect_clear().return_const(());
+			mock.expect_read().never().return_const(_Read::from([]));
+		});
+
+		app.world_mut().run_system_once_with(
+			removed,
+			untrack_in_self_and_children::<_Tracker, _Target, In<Mock_Removed>>,
+		);
 	}
 }
