@@ -9,36 +9,18 @@ use crate::{
 		Priority,
 	},
 };
-use bevy::ecs::component::Component;
+use bevy::prelude::*;
 use std::{fmt::Debug, mem};
 
 #[derive(Debug, PartialEq)]
 struct FlushCount(usize);
 
+#[derive(Default, Debug, PartialEq)]
 enum Entry<TAnimation> {
+	#[default]
 	None,
 	Some(TAnimation),
 	Obsolete((TAnimation, FlushCount)),
-}
-
-impl<TAnimation: Debug> Debug for Entry<TAnimation> {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			Self::None => write!(f, "None"),
-			Self::Some(arg0) => f.debug_tuple("Some").field(arg0).finish(),
-			Self::Obsolete(arg0) => f.debug_tuple("Obsolete").field(arg0).finish(),
-		}
-	}
-}
-
-impl<TAnimation: PartialEq> PartialEq for Entry<TAnimation> {
-	fn eq(&self, other: &Self) -> bool {
-		match (self, other) {
-			(Self::Some(l0), Self::Some(r0)) => l0 == r0,
-			(Self::Obsolete(l0), Self::Obsolete(r0)) => l0 == r0,
-			_ => core::mem::discriminant(self) == core::mem::discriminant(other),
-		}
-	}
 }
 
 impl<TAnimation> Entry<TAnimation> {
@@ -47,28 +29,12 @@ impl<TAnimation> Entry<TAnimation> {
 	}
 }
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq)]
 pub struct AnimationDispatch<TAnimation = Animation>(
 	Entry<TAnimation>,
 	Entry<TAnimation>,
 	Entry<TAnimation>,
 );
-
-impl<TAnimation: Debug> Debug for AnimationDispatch<TAnimation> {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_tuple("AnimationDispatch")
-			.field(&self.0)
-			.field(&self.1)
-			.field(&self.2)
-			.finish()
-	}
-}
-
-impl<TAnimation: PartialEq> PartialEq for AnimationDispatch<TAnimation> {
-	fn eq(&self, other: &Self) -> bool {
-		self.0 == other.0 && self.1 == other.1 && self.2 == other.2
-	}
-}
 
 impl<TAnimation> AnimationDispatch<TAnimation> {
 	fn slot(&mut self, priority: Priority) -> &mut Entry<TAnimation> {
