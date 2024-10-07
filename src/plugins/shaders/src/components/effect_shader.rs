@@ -3,7 +3,10 @@ use crate::traits::{
 	remove_unmovable_effect_shader::RemoveUnmovableEffectShader,
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::{components::Unmovable, traits::track::Track};
+use common::{
+	components::Unmovable,
+	traits::track::{IsTracking, Track, Untrack},
+};
 use std::collections::HashSet;
 
 #[cfg(test)]
@@ -18,6 +21,18 @@ pub struct EffectShaders {
 impl Track<Handle<Mesh>> for EffectShaders {
 	fn track(&mut self, entity: Entity) {
 		self.meshes.insert(entity);
+	}
+}
+
+impl IsTracking<Handle<Mesh>> for EffectShaders {
+	fn is_tracking(&self, entity: Entity) -> bool {
+		self.meshes.contains(&entity)
+	}
+}
+
+impl Untrack<Handle<Mesh>> for EffectShaders {
+	fn untrack(&mut self, entity: Entity) {
+		self.meshes.remove(&entity);
 	}
 }
 
@@ -100,6 +115,34 @@ mod tests {
 		}
 
 		assert_eq!(HashSet::from(entities), shader.meshes);
+	}
+
+	#[test]
+	fn remove_mesh_handles() {
+		let mut shader = EffectShaders {
+			meshes: HashSet::from([Entity::from_raw(11), Entity::from_raw(66)]),
+			..default()
+		};
+
+		shader.untrack(Entity::from_raw(66));
+
+		assert_eq!(HashSet::from([Entity::from_raw(11)]), shader.meshes);
+	}
+
+	#[test]
+	fn contains_mesh_handles() {
+		let shader = EffectShaders {
+			meshes: HashSet::from([Entity::from_raw(11)]),
+			..default()
+		};
+
+		assert_eq!(
+			[true, false],
+			[
+				shader.is_tracking(Entity::from_raw(11)),
+				shader.is_tracking(Entity::from_raw(12))
+			]
+		);
 	}
 
 	#[derive(Asset, TypePath, Clone, AsBindGroup)]

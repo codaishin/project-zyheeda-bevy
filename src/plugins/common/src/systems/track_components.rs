@@ -8,46 +8,58 @@ use crate::{
 };
 use bevy::prelude::*;
 
+type TrackSystems<TTarget, TTracker> = (
+	fn(RemovedComponents<TTarget>, Query<Mut<TTracker>>),
+	fn(
+		Query<(Entity, Mut<TTracker>)>,
+		Query<(), Added<TTarget>>,
+		Query<(), With<TTracker>>,
+		Query<&Children>,
+	),
+);
+
+impl<TTracker> TrackComponentInChildren<TTracker> for TTracker where TTracker: Component {}
+
 pub trait TrackComponentInChildren<TTracker>
 where
 	TTracker: Component,
 {
-	fn track_in_self_and_children<TTarget>(
-		mut trackers: Query<(Entity, Mut<TTracker>)>,
-		targets_lookup: Query<(), Added<TTarget>>,
-		trackers_lookup: Query<(), With<TTracker>>,
-		children: Query<&Children>,
-	) where
+	fn track_in_self_and_children<TTarget>() -> TrackSystems<TTarget, TTracker>
+	where
 		TTarget: Component,
-		TTracker: Track<TTarget>,
+		TTracker: Track<TTarget> + Untrack<TTarget> + IsTracking<TTarget>,
 	{
-		if trackers.is_empty() {
-			return;
-		}
+		let untrack = |r: RemovedComponents<TTarget>, q: Query<Mut<TTracker>>| {
+			untrack_in_self_and_children(r, q)
+		};
 
-		let children = &|entity| children.get(entity).ok().map(|c| c.iter().map(Child::new));
-		let has_target = &|entity: &Entity| targets_lookup.contains(*entity);
-		let is_no_tracker = &|Child(entity): &Child| !trackers_lookup.contains(*entity);
-
-		for (entity, mut tracker) in &mut trackers {
-			for entity in get_recursively_from(entity, children, is_no_tracker).filter(has_target) {
-				tracker.track(entity)
-			}
-		}
-	}
-
-	fn untrack_in_self_and_children<TTarget>(
-		removed_targets: RemovedComponents<TTarget>,
-		trackers: Query<Mut<TTracker>>,
-	) where
-		TTarget: Component,
-		TTracker: IsTracking<TTarget> + Untrack<TTarget> + Component,
-	{
-		untrack_in_self_and_children(removed_targets, trackers);
+		(untrack, track_in_self_and_children::<TTracker, TTarget>)
 	}
 }
 
-impl<TTracker> TrackComponentInChildren<TTracker> for TTracker where TTracker: Component {}
+fn track_in_self_and_children<TTracker, TTarget>(
+	mut trackers: Query<(Entity, Mut<TTracker>)>,
+	targets_lookup: Query<(), Added<TTarget>>,
+	trackers_lookup: Query<(), With<TTracker>>,
+	children: Query<&Children>,
+) where
+	TTarget: Component,
+	TTracker: Track<TTarget> + Component,
+{
+	if trackers.is_empty() {
+		return;
+	}
+
+	let children = &|entity| children.get(entity).ok().map(|c| c.iter().map(Child::new));
+	let has_target = &|entity: &Entity| targets_lookup.contains(*entity);
+	let is_no_tracker = &|Child(entity): &Child| !trackers_lookup.contains(*entity);
+
+	for (entity, mut tracker) in &mut trackers {
+		for entity in get_recursively_from(entity, children, is_no_tracker).filter(has_target) {
+			tracker.track(entity)
+		}
+	}
+}
 
 fn untrack_in_self_and_children<TTracker, TTarget, TRemoveEvents>(
 	mut removed_targets: TRemoveEvents,
@@ -186,7 +198,7 @@ mod tests {
 			}));
 
 		app.world_mut()
-			.run_system_once(_Tracker::track_in_self_and_children::<_Target>);
+			.run_system_once(track_in_self_and_children::<_Tracker, _Target>);
 	}
 
 	#[test]
@@ -205,7 +217,7 @@ mod tests {
 			}));
 
 		app.world_mut()
-			.run_system_once(_Tracker::track_in_self_and_children::<_Target>);
+			.run_system_once(track_in_self_and_children::<_Tracker, _Target>);
 	}
 
 	#[test]
@@ -225,7 +237,7 @@ mod tests {
 			}));
 
 		app.world_mut()
-			.run_system_once(_Tracker::track_in_self_and_children::<_Target>);
+			.run_system_once(track_in_self_and_children::<_Tracker, _Target>);
 	}
 
 	#[test]
@@ -239,7 +251,7 @@ mod tests {
 				mock.expect_track().times(1).return_const(());
 			}));
 
-		app.add_systems(Update, _Tracker::track_in_self_and_children::<_Target>);
+		app.add_systems(Update, track_in_self_and_children::<_Tracker, _Target>);
 		app.update();
 		app.update();
 	}
@@ -265,7 +277,7 @@ mod tests {
 			}));
 
 		app.world_mut()
-			.run_system_once(_Tracker::track_in_self_and_children::<_Target>);
+			.run_system_once(track_in_self_and_children::<_Tracker, _Target>);
 	}
 
 	#[test]
