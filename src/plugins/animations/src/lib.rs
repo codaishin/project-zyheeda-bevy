@@ -11,14 +11,7 @@ use bevy::{
 	animation::AnimationPlayer,
 	app::{App, Plugin, PostUpdate, Startup, Update},
 	asset::AssetServer,
-	prelude::{
-		AnimationGraph,
-		AnimationNodeIndex,
-		AnimationTransitions,
-		Component,
-		IntoSystemConfigs,
-		Res,
-	},
+	prelude::*,
 };
 use common::{
 	components::Player,
@@ -32,7 +25,7 @@ use resource::AnimationData;
 use systems::{
 	flush::flush,
 	init_animation_clips::init_animation_clips,
-	init_animation_components::init_animation_components,
+	init_animation_player_components::init_animation_player_components,
 	play_animation_clip::play_animation_clip,
 };
 use traits::{GetAnimationPaths, RegisterAnimations};
@@ -44,35 +37,31 @@ impl RegisterAnimations for App {
 	where
 		TAgent: Component + GetAnimationPaths + GetAssociated<AnimationDispatch>,
 	{
-		let init_animations_clips =
-			init_animation_clips::<TAgent, AnimationGraph, AnimationNodeIndex, AssetServer>;
-		let init_animation_dispatch = TAgent::init_associated::<AnimationDispatch>;
-		let init_animation_components = init_animation_components::<TAgent>;
-		let play_animation_clip = play_animation_clip::<
-			TAgent,
-			Animation,
-			AnimationDispatch,
-			AnimationNodeIndex,
-			AnimationPlayer,
-			AnimationTransitions,
-		>;
-
-		self.add_systems(Startup, init_animations_clips)
-			.add_systems(
-				Update,
-				(
-					init_animation_dispatch,
-					init_animation_components,
-					play_animation_clip,
-				)
-					.chain(),
+		self.add_systems(
+			Startup,
+			init_animation_clips::<TAgent, AnimationGraph, AnimationNodeIndex, AssetServer>,
+		)
+		.add_systems(
+			Update,
+			(
+				TAgent::init_associated::<AnimationDispatch>,
+				init_animation_player_components::<TAgent>,
 			)
+				.chain(),
+		)
 	}
 }
 
 impl Plugin for AnimationsPlugin {
 	fn build(&self, app: &mut App) {
 		app.register_animations::<Player>()
+			.add_systems(
+				Update,
+				play_animation_clip::<
+					AnimationDispatch,
+					(Mut<AnimationPlayer>, Mut<AnimationTransitions>),
+				>,
+			)
 			.add_systems(
 				PostUpdate,
 				AnimationDispatch::<Animation>::track_in_self_and_children::<AnimationPlayer>(),

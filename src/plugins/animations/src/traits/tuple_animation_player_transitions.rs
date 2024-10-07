@@ -1,11 +1,8 @@
 use super::{IsPlaying, RepeatAnimation, ReplayAnimation};
-use bevy::{
-	animation::AnimationPlayer,
-	prelude::{AnimationNodeIndex, AnimationTransitions},
-};
+use bevy::prelude::*;
 use std::time::Duration;
 
-type Player<'a> = (&'a mut AnimationPlayer, &'a mut AnimationTransitions);
+type Player<'a> = (Mut<'a, AnimationPlayer>, Mut<'a, AnimationTransitions>);
 
 impl<'a> IsPlaying<AnimationNodeIndex> for Player<'a> {
 	fn is_playing(&self, index: AnimationNodeIndex) -> bool {

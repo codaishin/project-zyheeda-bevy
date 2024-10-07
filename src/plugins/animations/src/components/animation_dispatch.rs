@@ -2,6 +2,7 @@ use crate::{
 	animation::Animation,
 	traits::{
 		AnimationChainUpdate,
+		AnimationPlayers,
 		FlushObsolete,
 		HighestPriorityAnimation,
 		InsertAnimation,
@@ -11,7 +12,12 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::traits::track::{IsTracking, Track, Untrack};
-use std::{collections::HashSet, fmt::Debug, mem};
+use std::{
+	collections::{hash_set::Iter, HashSet},
+	fmt::Debug,
+	iter::Cloned,
+	mem,
+};
 
 #[derive(Debug, PartialEq)]
 struct FlushCount(usize);
@@ -73,12 +79,23 @@ impl<TAnimation> Untrack<AnimationPlayer> for AnimationDispatch<TAnimation> {
 	}
 }
 
-impl<TAnimation> HighestPriorityAnimation<TAnimation> for AnimationDispatch<TAnimation> {
-	fn highest_priority_animation(&self) -> Option<&TAnimation> {
+impl<'a, TAnimation> AnimationPlayers<'a> for AnimationDispatch<TAnimation> {
+	type TIter = Cloned<Iter<'a, Entity>>;
+
+	fn animation_players(&'a self) -> Self::TIter {
+		self.animation_players.iter().cloned()
+	}
+}
+
+impl<TAnimation> HighestPriorityAnimation<TAnimation> for AnimationDispatch<TAnimation>
+where
+	TAnimation: Clone,
+{
+	fn highest_priority_animation(&self) -> Option<TAnimation> {
 		match &self.stack {
-			(Entry::Some(animation), ..) => Some(animation),
-			(_, Entry::Some(animation), _) => Some(animation),
-			(.., Entry::Some(animation)) => Some(animation),
+			(Entry::Some(animation), ..) => Some(animation.clone()),
+			(_, Entry::Some(animation), _) => Some(animation.clone()),
+			(.., Entry::Some(animation)) => Some(animation.clone()),
 			_ => None,
 		}
 	}
@@ -153,7 +170,7 @@ mod tests {
 		dispatch.insert(_Animation::new("low"), Priority::Low);
 
 		assert_eq!(
-			Some(&_Animation::new("low")),
+			Some(_Animation::new("low")),
 			dispatch.highest_priority_animation()
 		);
 	}
@@ -165,7 +182,7 @@ mod tests {
 		dispatch.insert(_Animation::new("low"), Priority::Low);
 
 		assert_eq!(
-			Some(&_Animation::new("middle")),
+			Some(_Animation::new("middle")),
 			dispatch.highest_priority_animation()
 		);
 	}
@@ -177,7 +194,7 @@ mod tests {
 		dispatch.insert(_Animation::new("middle"), Priority::Middle);
 
 		assert_eq!(
-			Some(&_Animation::new("high")),
+			Some(_Animation::new("high")),
 			dispatch.highest_priority_animation()
 		);
 	}
@@ -311,6 +328,19 @@ mod tests {
 				dispatch.is_tracking(&Entity::from_raw(2)),
 				dispatch.is_tracking(&Entity::from_raw(3))
 			]
+		)
+	}
+
+	#[test]
+	fn iterate_animation_players() {
+		let dispatch = AnimationDispatch::<_Animation> {
+			animation_players: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			..default()
+		};
+
+		assert_eq!(
+			HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			dispatch.animation_players().collect::<HashSet<_>>(),
 		)
 	}
 }

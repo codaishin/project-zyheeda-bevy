@@ -1,8 +1,8 @@
-use crate::{components::Animator, AnimationData};
+use crate::AnimationData;
 use bevy::prelude::*;
 use common::traits::try_insert_on::TryInsertOn;
 
-pub(crate) fn init_animation_components<TAgent: Component + Sync + Send + 'static>(
+pub(crate) fn init_animation_player_components<TAgent: Component + Sync + Send + 'static>(
 	mut commands: Commands,
 	agents: Query<Entity, With<TAgent>>,
 	animation_data: Res<AnimationData<TAgent>>,
@@ -11,10 +11,9 @@ pub(crate) fn init_animation_components<TAgent: Component + Sync + Send + 'stati
 ) {
 	for animation_player in &animation_players {
 		for parent in parents.iter_ancestors(animation_player) {
-			let Ok(agent) = agents.get(parent) else {
+			let Ok(_) = agents.get(parent) else {
 				continue;
 			};
-			commands.try_insert_on(agent, Animator { animation_player });
 			commands.try_insert_on(
 				animation_player,
 				(
@@ -45,30 +44,10 @@ mod tests {
 
 	fn setup(animation_data: AnimationData<_Agent>) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, init_animation_components::<_Agent>);
+		app.add_systems(Update, init_animation_player_components::<_Agent>);
 		app.insert_resource(animation_data);
 
 		app
-	}
-
-	#[test]
-	fn add_animator_with_animation_player_id() {
-		let mut app = setup(AnimationData::new(new_handle()));
-		let agent = app.world_mut().spawn(_Agent).id();
-		let animation_player = app
-			.world_mut()
-			.spawn(AnimationPlayer::default())
-			.set_parent(agent)
-			.id();
-
-		app.update();
-
-		let agent = app.world().entity(agent);
-
-		assert_eq!(
-			Some(&Animator { animation_player }),
-			agent.get::<Animator>()
-		);
 	}
 
 	#[test]
@@ -121,22 +100,17 @@ mod tests {
 
 		app.update();
 
-		let mut entity = app.world_mut().entity_mut(agent);
-		entity.remove::<Animator>();
-
 		let mut entity = app.world_mut().entity_mut(animation_player);
 		entity.remove::<Handle<AnimationGraph>>();
 		entity.remove::<AnimationTransitions>();
 
 		app.update();
 
-		let agent = app.world().entity(agent);
 		let animation_player = app.world().entity(animation_player);
 
 		assert_eq!(
-			(false, false, false),
+			(false, false),
 			(
-				agent.contains::<Animator>(),
 				animation_player.contains::<Handle<AnimationGraph>>(),
 				animation_player.contains::<AnimationTransitions>()
 			)
@@ -159,9 +133,8 @@ mod tests {
 		let animation_player = app.world().entity(animation_player);
 
 		assert_eq!(
-			(false, false, false, false),
+			(false, false, false),
 			(
-				agent.contains::<Animator>(),
 				agent.contains::<AnimationDispatch>(),
 				animation_player.contains::<Handle<AnimationGraph>>(),
 				animation_player.contains::<AnimationTransitions>()

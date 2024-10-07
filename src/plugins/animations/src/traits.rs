@@ -3,8 +3,8 @@ pub(crate) mod player;
 pub(crate) mod player_idle;
 pub(crate) mod tuple_animation_player_transitions;
 
-use crate::{animation::PlayMode, components::animation_dispatch::AnimationDispatch};
-use bevy::prelude::Component;
+use crate::components::animation_dispatch::AnimationDispatch;
+use bevy::prelude::*;
 use common::{systems::init_associated_component::GetAssociated, traits::load_asset::Path};
 use std::collections::HashMap;
 
@@ -13,7 +13,7 @@ pub(crate) trait LoadAnimationAssets<TGraph, TIndex> {
 }
 
 pub trait HighestPriorityAnimation<TAnimation> {
-	fn highest_priority_animation(&self) -> Option<&TAnimation>;
+	fn highest_priority_animation(&self) -> Option<TAnimation>;
 }
 
 #[derive(Debug, PartialEq)]
@@ -35,14 +35,6 @@ pub(crate) trait FlushObsolete {
 	fn flush_obsolete(&mut self, priority: Priority);
 }
 
-pub(crate) trait AnimationPlayMode {
-	fn animation_play_mode(&self) -> PlayMode;
-}
-
-pub(crate) trait AnimationPath {
-	fn animation_path(&self) -> &Path;
-}
-
 pub(crate) trait IsPlaying<TIndex> {
 	fn is_playing(&self, index: TIndex) -> bool;
 }
@@ -57,6 +49,14 @@ pub(crate) trait RepeatAnimation<TIndex> {
 
 pub trait AnimationChainUpdate {
 	fn chain_update(&mut self, last: &Self);
+}
+
+pub trait AnimationPlayers<'a>
+where
+	Self::TIter: Iterator<Item = Entity>,
+{
+	type TIter;
+	fn animation_players(&'a self) -> Self::TIter;
 }
 
 pub trait GetAnimationPaths {
