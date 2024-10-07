@@ -3,6 +3,7 @@ use crate::{
 	traits::{
 		AnimationChainUpdate,
 		AnimationPlayers,
+		AnimationPlayersWithoutTransitions,
 		FlushObsolete,
 		HighestPriorityAnimation,
 		InsertAnimation,
@@ -39,6 +40,7 @@ impl<TAnimation> Entry<TAnimation> {
 #[derive(Component, Debug, PartialEq)]
 pub struct AnimationDispatch<TAnimation = Animation> {
 	pub(crate) animation_players: HashSet<Entity>,
+	animation_transitions: HashSet<Entity>,
 	stack: (Entry<TAnimation>, Entry<TAnimation>, Entry<TAnimation>),
 }
 
@@ -56,34 +58,79 @@ impl<TAnimation> Default for AnimationDispatch<TAnimation> {
 	fn default() -> Self {
 		Self {
 			animation_players: default(),
+			animation_transitions: default(),
 			stack: default(),
 		}
 	}
 }
 
-impl<TAnimation> Track<AnimationPlayer> for AnimationDispatch<TAnimation> {
+impl Track<AnimationPlayer> for AnimationDispatch {
 	fn track(&mut self, entity: Entity) {
 		self.animation_players.insert(entity);
 	}
 }
 
-impl<TAnimation> IsTracking<AnimationPlayer> for AnimationDispatch<TAnimation> {
+impl IsTracking<AnimationPlayer> for AnimationDispatch {
 	fn is_tracking(&self, entity: &Entity) -> bool {
 		self.animation_players.contains(entity)
 	}
 }
 
-impl<TAnimation> Untrack<AnimationPlayer> for AnimationDispatch<TAnimation> {
+impl Untrack<AnimationPlayer> for AnimationDispatch {
 	fn untrack(&mut self, entity: &Entity) {
 		self.animation_players.remove(entity);
 	}
 }
 
-impl<'a, TAnimation> AnimationPlayers<'a> for AnimationDispatch<TAnimation> {
+impl Track<AnimationTransitions> for AnimationDispatch {
+	fn track(&mut self, entity: Entity) {
+		self.animation_transitions.insert(entity);
+	}
+}
+
+impl IsTracking<AnimationTransitions> for AnimationDispatch {
+	fn is_tracking(&self, entity: &Entity) -> bool {
+		self.animation_transitions.contains(entity)
+	}
+}
+
+impl Untrack<AnimationTransitions> for AnimationDispatch {
+	fn untrack(&mut self, entity: &Entity) {
+		self.animation_transitions.remove(entity);
+	}
+}
+
+impl<'a> AnimationPlayers<'a> for AnimationDispatch {
 	type TIter = Cloned<Iter<'a, Entity>>;
 
 	fn animation_players(&'a self) -> Self::TIter {
 		self.animation_players.iter().cloned()
+	}
+}
+
+impl<'a> AnimationPlayersWithoutTransitions<'a> for AnimationDispatch {
+	type TIter = IterWithoutTransitions<'a>;
+
+	fn animation_players_without_transition(&'a self) -> Self::TIter {
+		IterWithoutTransitions {
+			dispatch: self,
+			iter: self.animation_players.iter(),
+		}
+	}
+}
+
+pub struct IterWithoutTransitions<'a> {
+	dispatch: &'a AnimationDispatch,
+	iter: Iter<'a, Entity>,
+}
+
+impl<'a> Iterator for IterWithoutTransitions<'a> {
+	type Item = Entity;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		self.iter
+			.find(|e| !self.dispatch.animation_transitions.contains(e))
+			.cloned()
 	}
 }
 
@@ -289,11 +336,20 @@ mod tests {
 		assert_eq!(vec![_Animation::new("last")], mock.chain_update_calls);
 	}
 
+	fn as_track<TComponent>(
+		tracker: &mut (impl Track<TComponent> + IsTracking<TComponent> + Untrack<TComponent>),
+	) -> &mut (impl Track<TComponent> + IsTracking<TComponent> + Untrack<TComponent>)
+	where
+		AnimationDispatch: Track<TComponent> + IsTracking<TComponent> + Untrack<TComponent>,
+	{
+		tracker
+	}
+
 	#[test]
 	fn track_animation_player() {
-		let mut dispatch = AnimationDispatch::<_Animation>::default();
-		dispatch.track(Entity::from_raw(1));
-		dispatch.track(Entity::from_raw(2));
+		let dispatch = &mut AnimationDispatch::default();
+		as_track::<AnimationPlayer>(dispatch).track(Entity::from_raw(1));
+		as_track::<AnimationPlayer>(dispatch).track(Entity::from_raw(2));
 
 		assert_eq!(
 			HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
@@ -303,11 +359,11 @@ mod tests {
 
 	#[test]
 	fn untrack_animation_player() {
-		let mut dispatch = AnimationDispatch::<_Animation> {
+		let dispatch = &mut AnimationDispatch {
 			animation_players: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			..default()
 		};
-		dispatch.untrack(&Entity::from_raw(1));
+		as_track::<AnimationPlayer>(dispatch).untrack(&Entity::from_raw(1));
 
 		assert_eq!(
 			HashSet::from([Entity::from_raw(2)]),
@@ -317,7 +373,7 @@ mod tests {
 
 	#[test]
 	fn is_tracking_animation_player() {
-		let dispatch = AnimationDispatch::<_Animation> {
+		let dispatch = &mut AnimationDispatch {
 			animation_players: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			..default()
 		};
@@ -325,15 +381,57 @@ mod tests {
 		assert_eq!(
 			[true, false],
 			[
-				dispatch.is_tracking(&Entity::from_raw(2)),
-				dispatch.is_tracking(&Entity::from_raw(3))
+				as_track::<AnimationPlayer>(dispatch).is_tracking(&Entity::from_raw(2)),
+				as_track::<AnimationPlayer>(dispatch).is_tracking(&Entity::from_raw(3)),
+			]
+		)
+	}
+
+	#[test]
+	fn track_animation_transition() {
+		let dispatch = &mut AnimationDispatch::default();
+		as_track::<AnimationTransitions>(dispatch).track(Entity::from_raw(1));
+		as_track::<AnimationTransitions>(dispatch).track(Entity::from_raw(2));
+
+		assert_eq!(
+			HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			dispatch.animation_transitions
+		)
+	}
+
+	#[test]
+	fn untrack_animation_transition() {
+		let dispatch = &mut AnimationDispatch {
+			animation_transitions: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			..default()
+		};
+		as_track::<AnimationTransitions>(dispatch).untrack(&Entity::from_raw(1));
+
+		assert_eq!(
+			HashSet::from([Entity::from_raw(2)]),
+			dispatch.animation_transitions
+		)
+	}
+
+	#[test]
+	fn is_tracking_animation_transition() {
+		let dispatch = &mut AnimationDispatch {
+			animation_transitions: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			..default()
+		};
+
+		assert_eq!(
+			[true, false],
+			[
+				as_track::<AnimationTransitions>(dispatch).is_tracking(&Entity::from_raw(2)),
+				as_track::<AnimationTransitions>(dispatch).is_tracking(&Entity::from_raw(3)),
 			]
 		)
 	}
 
 	#[test]
 	fn iterate_animation_players() {
-		let dispatch = AnimationDispatch::<_Animation> {
+		let dispatch = AnimationDispatch {
 			animation_players: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			..default()
 		};
@@ -341,6 +439,26 @@ mod tests {
 		assert_eq!(
 			HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			dispatch.animation_players().collect::<HashSet<_>>(),
+		)
+	}
+
+	#[test]
+	fn iterate_animation_players_without_transitions() {
+		let dispatch = AnimationDispatch {
+			animation_players: HashSet::from([
+				Entity::from_raw(1),
+				Entity::from_raw(2),
+				Entity::from_raw(3),
+			]),
+			animation_transitions: HashSet::from([Entity::from_raw(2)]),
+			..default()
+		};
+
+		assert_eq!(
+			HashSet::from([Entity::from_raw(1), Entity::from_raw(3)]),
+			dispatch
+				.animation_players_without_transition()
+				.collect::<HashSet<_>>(),
 		)
 	}
 }

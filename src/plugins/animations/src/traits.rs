@@ -59,6 +59,14 @@ where
 	fn animation_players(&'a self) -> Self::TIter;
 }
 
+pub trait AnimationPlayersWithoutTransitions<'a>
+where
+	Self::TIter: Iterator<Item = Entity>,
+{
+	type TIter;
+	fn animation_players_without_transition(&'a self) -> Self::TIter;
+}
+
 pub trait GetAnimationPaths {
 	fn animation_paths() -> Vec<Path>;
 }
