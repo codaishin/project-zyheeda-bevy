@@ -20,7 +20,7 @@ use bevy::{
 		Res,
 	},
 };
-use common::components::Player;
+use common::{components::Player, systems::track_components::TrackComponentInChildren};
 use components::animation_dispatch::AnimationDispatch;
 use resource::AnimationData;
 use systems::{
@@ -61,6 +61,10 @@ impl RegisterAnimations for App {
 impl Plugin for AnimationsPlugin {
 	fn build(&self, app: &mut App) {
 		app.register_animations::<Player>()
+			.add_systems(
+				PostUpdate,
+				AnimationDispatch::<Animation>::track_in_self_and_children::<AnimationPlayer>(),
+			)
 			.add_systems(PostUpdate, flush::<AnimationDispatch>);
 	}
 }

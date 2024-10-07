@@ -10,7 +10,8 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use std::{fmt::Debug, mem};
+use common::traits::track::{IsTracking, Track, Untrack};
+use std::{collections::HashSet, fmt::Debug, mem};
 
 #[derive(Debug, PartialEq)]
 struct FlushCount(usize);
@@ -30,34 +31,54 @@ impl<TAnimation> Entry<TAnimation> {
 }
 
 #[derive(Component, Debug, PartialEq)]
-pub struct AnimationDispatch<TAnimation = Animation>(
-	Entry<TAnimation>,
-	Entry<TAnimation>,
-	Entry<TAnimation>,
-);
+pub struct AnimationDispatch<TAnimation = Animation> {
+	pub(crate) animation_players: HashSet<Entity>,
+	stack: (Entry<TAnimation>, Entry<TAnimation>, Entry<TAnimation>),
+}
 
 impl<TAnimation> AnimationDispatch<TAnimation> {
 	fn slot(&mut self, priority: Priority) -> &mut Entry<TAnimation> {
 		match priority {
-			Priority::High => &mut self.0,
-			Priority::Middle => &mut self.1,
-			Priority::Low => &mut self.2,
+			Priority::High => &mut self.stack.0,
+			Priority::Middle => &mut self.stack.1,
+			Priority::Low => &mut self.stack.2,
 		}
 	}
 }
 
 impl<TAnimation> Default for AnimationDispatch<TAnimation> {
 	fn default() -> Self {
-		Self(Entry::None, Entry::None, Entry::None)
+		Self {
+			animation_players: default(),
+			stack: default(),
+		}
+	}
+}
+
+impl<TAnimation> Track<AnimationPlayer> for AnimationDispatch<TAnimation> {
+	fn track(&mut self, entity: Entity) {
+		self.animation_players.insert(entity);
+	}
+}
+
+impl<TAnimation> IsTracking<AnimationPlayer> for AnimationDispatch<TAnimation> {
+	fn is_tracking(&self, entity: &Entity) -> bool {
+		self.animation_players.contains(entity)
+	}
+}
+
+impl<TAnimation> Untrack<AnimationPlayer> for AnimationDispatch<TAnimation> {
+	fn untrack(&mut self, entity: &Entity) {
+		self.animation_players.remove(entity);
 	}
 }
 
 impl<TAnimation> HighestPriorityAnimation<TAnimation> for AnimationDispatch<TAnimation> {
 	fn highest_priority_animation(&self) -> Option<&TAnimation> {
-		match self {
-			AnimationDispatch(Entry::Some(animation), ..) => Some(animation),
-			AnimationDispatch(_, Entry::Some(animation), _) => Some(animation),
-			AnimationDispatch(.., Entry::Some(animation)) => Some(animation),
+		match &self.stack {
+			(Entry::Some(animation), ..) => Some(animation),
+			(_, Entry::Some(animation), _) => Some(animation),
+			(.., Entry::Some(animation)) => Some(animation),
 			_ => None,
 		}
 	}
@@ -249,5 +270,47 @@ mod tests {
 		let mock = dispatch.highest_priority_animation().unwrap();
 
 		assert_eq!(vec![_Animation::new("last")], mock.chain_update_calls);
+	}
+
+	#[test]
+	fn track_animation_player() {
+		let mut dispatch = AnimationDispatch::<_Animation>::default();
+		dispatch.track(Entity::from_raw(1));
+		dispatch.track(Entity::from_raw(2));
+
+		assert_eq!(
+			HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			dispatch.animation_players
+		)
+	}
+
+	#[test]
+	fn untrack_animation_player() {
+		let mut dispatch = AnimationDispatch::<_Animation> {
+			animation_players: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			..default()
+		};
+		dispatch.untrack(&Entity::from_raw(1));
+
+		assert_eq!(
+			HashSet::from([Entity::from_raw(2)]),
+			dispatch.animation_players
+		)
+	}
+
+	#[test]
+	fn is_tracking_animation_player() {
+		let dispatch = AnimationDispatch::<_Animation> {
+			animation_players: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			..default()
+		};
+
+		assert_eq!(
+			[true, false],
+			[
+				dispatch.is_tracking(&Entity::from_raw(2)),
+				dispatch.is_tracking(&Entity::from_raw(3))
+			]
+		)
 	}
 }
