@@ -6,9 +6,9 @@ pub trait Track<TComponent> {
 
 pub trait IsTracking<TComponent> {
 	#[must_use]
-	fn is_tracking(&self, entity: Entity) -> bool;
+	fn is_tracking(&self, entity: &Entity) -> bool;
 }
 
 pub trait Untrack<TComponent> {
-	fn untrack(&mut self, entity: Entity);
+	fn untrack(&mut self, entity: &Entity);
 }

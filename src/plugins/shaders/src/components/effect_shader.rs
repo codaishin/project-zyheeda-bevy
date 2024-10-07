@@ -25,14 +25,14 @@ impl Track<Handle<Mesh>> for EffectShaders {
 }
 
 impl IsTracking<Handle<Mesh>> for EffectShaders {
-	fn is_tracking(&self, entity: Entity) -> bool {
-		self.meshes.contains(&entity)
+	fn is_tracking(&self, entity: &Entity) -> bool {
+		self.meshes.contains(entity)
 	}
 }
 
 impl Untrack<Handle<Mesh>> for EffectShaders {
-	fn untrack(&mut self, entity: Entity) {
-		self.meshes.remove(&entity);
+	fn untrack(&mut self, entity: &Entity) {
+		self.meshes.remove(entity);
 	}
 }
 
@@ -124,7 +124,7 @@ mod tests {
 			..default()
 		};
 
-		shader.untrack(Entity::from_raw(66));
+		shader.untrack(&Entity::from_raw(66));
 
 		assert_eq!(HashSet::from([Entity::from_raw(11)]), shader.meshes);
 	}
@@ -139,8 +139,8 @@ mod tests {
 		assert_eq!(
 			[true, false],
 			[
-				shader.is_tracking(Entity::from_raw(11)),
-				shader.is_tracking(Entity::from_raw(12))
+				shader.is_tracking(&Entity::from_raw(11)),
+				shader.is_tracking(&Entity::from_raw(12))
 			]
 		);
 	}

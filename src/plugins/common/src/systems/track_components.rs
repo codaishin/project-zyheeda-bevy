@@ -76,10 +76,10 @@ fn untrack_in_self_and_children<TTracker, TTarget, TRemoveEvents>(
 
 	for entity in removed_targets.read() {
 		for mut tracker in &mut trackers {
-			if !tracker.is_tracking(entity) {
+			if !tracker.is_tracking(&entity) {
 				continue;
 			}
-			tracker.untrack(entity);
+			tracker.untrack(&entity);
 		}
 	}
 }
@@ -106,13 +106,13 @@ mod tests {
 	}
 
 	impl IsTracking<_Target> for _Tracker {
-		fn is_tracking(&self, entity: Entity) -> bool {
+		fn is_tracking(&self, entity: &Entity) -> bool {
 			self.mock.is_tracking(entity)
 		}
 	}
 
 	impl Untrack<_Target> for _Tracker {
-		fn untrack(&mut self, entity: Entity) {
+		fn untrack(&mut self, entity: &Entity) {
 			self.mock.untrack(entity);
 		}
 	}
@@ -124,10 +124,10 @@ mod tests {
 			fn track(&mut self, entity: Entity);
 		}
 		impl IsTracking<_Target> for _Tracker {
-			fn is_tracking(&self, entity: Entity) -> bool;
+			fn is_tracking(&self, entity: &Entity) -> bool;
 		}
 		impl Untrack<_Target> for _Tracker {
-			fn untrack(&mut self, entity: Entity);
+			fn untrack(&mut self, entity: &Entity);
 		}
 	}
 
