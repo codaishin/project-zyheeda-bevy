@@ -1,10 +1,8 @@
-use crate::{components::Animator, traits::GetAnimationDispatch, AnimationData};
+use crate::{components::Animator, AnimationData};
 use bevy::prelude::*;
 use common::traits::try_insert_on::TryInsertOn;
 
-pub(crate) fn init_animation_components<
-	TAgent: Component + GetAnimationDispatch + Sync + Send + 'static,
->(
+pub(crate) fn init_animation_components<TAgent: Component + Sync + Send + 'static>(
 	mut commands: Commands,
 	agents: Query<Entity, With<TAgent>>,
 	animation_data: Res<AnimationData<TAgent>>,
@@ -16,10 +14,7 @@ pub(crate) fn init_animation_components<
 			let Ok(agent) = agents.get(parent) else {
 				continue;
 			};
-			commands.try_insert_on(
-				agent,
-				(Animator { animation_player }, TAgent::animation_dispatch()),
-			);
+			commands.try_insert_on(agent, Animator { animation_player });
 			commands.try_insert_on(
 				animation_player,
 				(
@@ -34,29 +29,13 @@ pub(crate) fn init_animation_components<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		animation::{Animation, PlayMode},
-		components::animation_dispatch::AnimationDispatch,
-		traits::{SkillLayer, StartAnimation},
-	};
+	use crate::components::animation_dispatch::AnimationDispatch;
 	use bevy::prelude::{App, Update};
-	use common::{test_tools::utils::SingleThreadedApp, traits::load_asset::Path};
+	use common::test_tools::utils::SingleThreadedApp;
 	use uuid::Uuid;
 
 	#[derive(Component)]
 	struct _Agent;
-
-	impl GetAnimationDispatch for _Agent {
-		fn animation_dispatch() -> AnimationDispatch {
-			let mut dispatch = AnimationDispatch::default();
-			dispatch.start_animation(
-				SkillLayer,
-				Animation::new(Path::from("my/animation/path"), PlayMode::Repeat),
-			);
-
-			dispatch
-		}
-	}
 
 	fn new_handle<T: Asset>() -> Handle<T> {
 		Handle::Weak(AssetId::Uuid {
@@ -89,24 +68,6 @@ mod tests {
 		assert_eq!(
 			Some(&Animator { animation_player }),
 			agent.get::<Animator>()
-		);
-	}
-
-	#[test]
-	fn add_animation_dispatch() {
-		let mut app = setup(AnimationData::new(new_handle()));
-		let agent = app.world_mut().spawn(_Agent).id();
-		app.world_mut()
-			.spawn(AnimationPlayer::default())
-			.set_parent(agent);
-
-		app.update();
-
-		let agent = app.world().entity(agent);
-
-		assert_eq!(
-			Some(&_Agent::animation_dispatch()),
-			agent.get::<AnimationDispatch>()
 		);
 	}
 

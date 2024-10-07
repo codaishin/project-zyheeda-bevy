@@ -20,7 +20,13 @@ use bevy::{
 		Res,
 	},
 };
-use common::{components::Player, systems::track_components::TrackComponentInChildren};
+use common::{
+	components::Player,
+	systems::{
+		init_associated_component::{GetAssociated, InitAssociatedComponent},
+		track_components::TrackComponentInChildren,
+	},
+};
 use components::animation_dispatch::AnimationDispatch;
 use resource::AnimationData;
 use systems::{
@@ -29,17 +35,18 @@ use systems::{
 	init_animation_components::init_animation_components,
 	play_animation_clip::play_animation_clip,
 };
-use traits::{GetAnimationDispatch, GetAnimationPaths, RegisterAnimations};
+use traits::{GetAnimationPaths, RegisterAnimations};
 
 pub struct AnimationsPlugin;
 
 impl RegisterAnimations for App {
 	fn register_animations<TAgent>(&mut self) -> &mut Self
 	where
-		TAgent: Component + GetAnimationPaths + GetAnimationDispatch,
+		TAgent: Component + GetAnimationPaths + GetAssociated<AnimationDispatch>,
 	{
 		let init_animations_clips =
 			init_animation_clips::<TAgent, AnimationGraph, AnimationNodeIndex, AssetServer>;
+		let init_animation_dispatch = TAgent::init_associated::<AnimationDispatch>;
 		let init_animation_components = init_animation_components::<TAgent>;
 		let play_animation_clip = play_animation_clip::<
 			TAgent,
@@ -53,7 +60,12 @@ impl RegisterAnimations for App {
 		self.add_systems(Startup, init_animations_clips)
 			.add_systems(
 				Update,
-				(init_animation_components, play_animation_clip).chain(),
+				(
+					init_animation_dispatch,
+					init_animation_components,
+					play_animation_clip,
+				)
+					.chain(),
 			)
 	}
 }

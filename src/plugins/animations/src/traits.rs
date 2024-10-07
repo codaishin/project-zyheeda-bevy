@@ -5,7 +5,7 @@ pub(crate) mod tuple_animation_player_transitions;
 
 use crate::{animation::PlayMode, components::animation_dispatch::AnimationDispatch};
 use bevy::prelude::Component;
-use common::traits::load_asset::Path;
+use common::{systems::init_associated_component::GetAssociated, traits::load_asset::Path};
 use std::collections::HashMap;
 
 pub(crate) trait LoadAnimationAssets<TGraph, TIndex> {
@@ -63,12 +63,10 @@ pub trait GetAnimationPaths {
 	fn animation_paths() -> Vec<Path>;
 }
 
-pub trait GetAnimationDispatch {
-	fn animation_dispatch() -> AnimationDispatch;
-}
-
 pub trait RegisterAnimations {
-	fn register_animations<TAgent: Component + GetAnimationPaths + GetAnimationDispatch>(
+	fn register_animations<
+		TAgent: Component + GetAnimationPaths + GetAssociated<AnimationDispatch>,
+	>(
 		&mut self,
 	) -> &mut Self;
 }
