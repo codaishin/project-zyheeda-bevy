@@ -3,13 +3,7 @@ use crate::{
 	skills::QueuedSkill,
 	traits::{AdvanceCombo, Flush, IsTimedOut, IterAddedMut},
 };
-use bevy::{
-	ecs::{
-		component::Component,
-		system::{Query, Res},
-	},
-	time::Time,
-};
+use bevy::prelude::*;
 use common::traits::{iterate::Iterate, update_cumulative::CumulativeUpdate};
 use std::time::Duration;
 
@@ -30,73 +24,79 @@ pub(crate) fn update_skill_combos<
 	mut agents: Query<Components<TCombos, TComboTimeout, TSkills>>,
 ) {
 	let delta = time.delta();
-	for (mut combos, mut timeout, mut skills, slots) in &mut agents {
-		let combos = combos.as_mut();
-		let timeout = timeout.as_deref_mut();
-		let skills = skills.as_mut();
+	for (mut combos, timeout, mut skills, slots) in &mut agents {
+		update_skills(&mut skills, &mut combos, slots);
+		flush_combos_and_timeout(combos, timeout, skills, delta);
+	}
+}
 
-		for skill in skills.iter_added_mut() {
-			update_skill(combos, skill, slots);
-		}
+fn update_skills<TSkills: IterAddedMut<QueuedSkill>, TCombos: AdvanceCombo>(
+	skills: &mut Mut<TSkills>,
+	combos: &mut Mut<TCombos>,
+	slots: &Slots,
+) {
+	if skills.added_none() {
+		return;
+	}
 
-		for flushable in who_to_flush(combos, timeout, skills, delta) {
-			flushable.flush();
-		}
+	for skill in skills.iter_added_mut() {
+		update_skill(combos, skill, slots);
 	}
 }
 
 fn update_skill<TCombos: AdvanceCombo>(
-	combos: &mut TCombos,
+	combos: &mut Mut<TCombos>,
 	skill: &mut QueuedSkill,
 	slots: &Slots,
 ) {
-	let Some(combo_skill) = combos.advance(&skill.slot_key, slots) else {
+	let QueuedSkill {
+		skill, slot_key, ..
+	} = skill;
+
+	let Some(combo_skill) = combos.advance(slot_key, slots) else {
 		return;
 	};
-	*skill = QueuedSkill {
-		skill: combo_skill,
-		slot_key: skill.slot_key,
-		mode: skill.mode.clone(),
-	};
+
+	*skill = combo_skill;
 }
 
-fn who_to_flush<
-	'a,
+fn flush_combos_and_timeout<
 	TCombos: Flush,
 	TComboTimeout: CumulativeUpdate<Duration> + IsTimedOut + Flush,
 	TSkills: Iterate<QueuedSkill>,
 >(
-	combos: &'a mut TCombos,
-	timeout: Option<&'a mut TComboTimeout>,
-	skills: &mut TSkills,
+	mut combos: Mut<TCombos>,
+	timeout: Option<Mut<TComboTimeout>>,
+	skills: Mut<TSkills>,
 	delta: Duration,
-) -> Vec<&'a mut dyn Flush> {
-	if skills_queued(skills) {
-		return one_or_empty(timeout);
+) {
+	match (skills_queued(skills), timeout) {
+		(true, Some(mut timeout)) => timeout.flush(),
+		(false, None) => combos.flush(),
+		(false, Some(timeout)) => flush_when_timed_out(combos, timeout, delta),
+		_ => {}
 	}
-
-	let Some(timeout) = timeout else {
-		return vec![combos];
-	};
-
-	timeout.update_cumulative(delta);
-	if timeout.is_timed_out() {
-		return vec![combos, timeout];
-	}
-
-	vec![]
 }
 
-fn skills_queued<TSkills: Iterate<QueuedSkill>>(skills: &mut TSkills) -> bool {
+fn skills_queued<TSkills: Iterate<QueuedSkill>>(skills: Mut<TSkills>) -> bool {
 	skills.iterate().next().is_some()
 }
 
-fn one_or_empty<TFlush: Flush>(flush: Option<&mut TFlush>) -> Vec<&mut dyn Flush> {
-	flush.into_iter().map(as_dyn_flush).collect()
-}
+fn flush_when_timed_out<
+	TComboTimeout: CumulativeUpdate<Duration> + IsTimedOut + Flush,
+	TCombos: Flush,
+>(
+	mut combos: Mut<TCombos>,
+	mut timeout: Mut<TComboTimeout>,
+	delta: Duration,
+) {
+	timeout.update_cumulative(delta);
+	if !timeout.is_timed_out() {
+		return;
+	}
 
-fn as_dyn_flush<TFlush: Flush>(value: &mut TFlush) -> &mut dyn Flush {
-	value
+	combos.flush();
+	timeout.flush();
 }
 
 #[cfg(test)]
@@ -121,7 +121,7 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq, Sequence};
-	use std::{collections::HashMap, time::Duration};
+	use std::{collections::HashMap, marker::PhantomData, time::Duration};
 
 	#[derive(Component, NestedMocks)]
 	struct _Timeout {
@@ -193,6 +193,10 @@ mod tests {
 	}
 
 	impl IterAddedMut<QueuedSkill> for _Skills {
+		fn added_none(&self) -> bool {
+			self.recent.is_empty()
+		}
+
 		fn iter_added_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut QueuedSkill>
 		where
 			QueuedSkill: 'a,
@@ -555,5 +559,86 @@ mod tests {
 		app.tick_time(Duration::from_secs(42));
 
 		app.update();
+	}
+
+	#[derive(Component, PartialEq, Debug)]
+	struct _Changed<T: Component> {
+		changed: bool,
+		phantom_data: PhantomData<T>,
+	}
+
+	impl<T: Component> _Changed<T> {
+		fn new(changed: bool) -> Self {
+			Self {
+				changed,
+				phantom_data: PhantomData,
+			}
+		}
+	}
+
+	fn detect_change<T: Component>(mut query: Query<(Ref<T>, &mut _Changed<T>)>) {
+		for (component, mut changed) in &mut query {
+			changed.changed = component.is_changed();
+		}
+	}
+
+	#[test]
+	fn skills_not_marked_changed_when_empty() {
+		let mut app = setup().single_threaded(PostUpdate);
+		let entity = app
+			.world_mut()
+			.spawn((
+				_Changed::<_Skills>::new(false),
+				_Combos::new().with_mock(|mock| {
+					mock.expect_flush().return_const(());
+					mock.expect_advance().return_const(None);
+				}),
+				_Skills {
+					recent: vec![],
+					..default()
+				},
+				slots(),
+			))
+			.id();
+
+		app.add_systems(PostUpdate, detect_change::<_Skills>);
+		app.update(); // changed always true, because target was just added
+		app.update();
+
+		assert_eq!(
+			Some(&_Changed::new(false)),
+			app.world().entity(entity).get::<_Changed<_Skills>>(),
+		)
+	}
+
+	#[test]
+	fn combos_not_marked_changed_when_skills_not_empty_and_no_recently_added_skill() {
+		let mut app = setup().single_threaded(PostUpdate);
+		let entity = app
+			.world_mut()
+			.spawn((
+				_Changed::<_Combos>::new(false),
+				_Combos::new().with_mock(|_| {}),
+				_Skills {
+					early: vec![QueuedSkill::default()],
+					..default()
+				},
+				slots(),
+			))
+			.id();
+
+		app.update();
+
+		app.add_systems(PostUpdate, detect_change::<_Combos>);
+		app.update(); // changed always true, because target was just added
+		app.update();
+
+		assert_eq!(
+			Some(&false),
+			app.world()
+				.entity(entity)
+				.get::<_Changed<_Combos>>()
+				.map(|_Changed { changed, .. }| changed),
+		)
 	}
 }
