@@ -4,15 +4,7 @@ use crate::{
 };
 use animations::traits::{SkillLayer, StartAnimation, StopAnimation};
 use behaviors::components::{Face, OverrideFace};
-use bevy::{
-	ecs::{
-		component::Component,
-		entity::Entity,
-		system::{Commands, EntityCommands, Query, Res},
-		world::Mut,
-	},
-	time::Time,
-};
+use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::traits::state_duration::{StateMeta, StateUpdate};
 use std::time::Duration;
 
@@ -86,14 +78,12 @@ fn advance<
 >(
 	mut skill: (impl GetSkillBehavior + GetAnimation<TAnimation> + StateUpdate<SkillState>),
 	mut agent: EntityCommands,
-	mut animation_dispatch: Mut<TAnimationDispatch>,
+	animation_dispatch: Mut<TAnimationDispatch>,
 	mut skill_executer: Mut<TSkillExecutor>,
 	delta: Duration,
 ) -> Advancement {
 	let skill = &mut skill;
 	let agent = &mut agent;
-	let animation_dispatch = animation_dispatch.as_mut();
-	let skill_executer = skill_executer.as_mut();
 	let states = skill.update_state(delta);
 
 	agent.remove::<SideEffectsCleared>();
@@ -101,11 +91,11 @@ fn advance<
 	if states.contains(&StateMeta::Entering(SkillState::Aim)) {
 		agent.try_insert(OverrideFace(Face::Cursor));
 		animate(skill, animation_dispatch);
-		schedule_start(skill_executer, skill, run_on_aim);
+		schedule_start(&mut skill_executer, skill, run_on_aim);
 	}
 
 	if states.contains(&StateMeta::Entering(SkillState::Active)) {
-		schedule_start(skill_executer, skill, run_on_active);
+		schedule_start(&mut skill_executer, skill, run_on_active);
 	}
 
 	if states.contains(&StateMeta::Done) {
@@ -118,7 +108,7 @@ fn advance<
 
 fn animate<TAnimation, TAnimationDispatch: StartAnimation<TAnimation> + StopAnimation>(
 	skill: &mut (impl GetSkillBehavior + GetAnimation<TAnimation> + StateUpdate<SkillState>),
-	dispatch: &mut TAnimationDispatch,
+	mut dispatch: Mut<TAnimationDispatch>,
 ) {
 	match skill.animate() {
 		Animate::Some(animation) => dispatch.start_animation(SkillLayer, animation),
@@ -144,7 +134,7 @@ fn run_on_active<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<RunSkillBeh
 }
 
 fn schedule_start<TSkillExecutor: Schedule, TSkill: GetSkillBehavior>(
-	executer: &mut TSkillExecutor,
+	executer: &mut Mut<TSkillExecutor>,
 	skill: &TSkill,
 	get_start_fn: fn(&TSkill) -> Option<RunSkillBehavior>,
 ) {
@@ -178,7 +168,7 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
-	use std::{collections::HashSet, ops::DerefMut, time::Duration};
+	use std::{collections::HashSet, marker::PhantomData, ops::DerefMut, time::Duration};
 
 	#[derive(Default, Debug, PartialEq, Clone, Copy)]
 	struct _Animation(usize);
@@ -939,5 +929,103 @@ mod tests {
 		let agent = app.world().entity(agent);
 
 		assert_eq!(None, agent.get::<OverrideFace>());
+	}
+
+	#[derive(Component)]
+	struct _Changed<T: Component> {
+		changed: bool,
+		phantom_date: PhantomData<T>,
+	}
+
+	impl<T: Component> _Changed<T> {
+		fn new(changed: bool) -> Self {
+			Self {
+				changed,
+				phantom_date: PhantomData,
+			}
+		}
+	}
+
+	fn detect_change<T: Component>(mut query: Query<(Ref<T>, &mut _Changed<T>)>) {
+		for (component, mut changed) in &mut query {
+			changed.changed = component.is_changed();
+		}
+	}
+
+	#[test]
+	fn do_not_mutable_deref_animation_dispatch_when_no_animation_used() {
+		let (mut app, agent) = setup();
+		app = app.single_threaded(PostUpdate);
+		let entity = app
+			.world_mut()
+			.entity_mut(agent)
+			.insert((
+				_Dequeue {
+					active: Some(Box::new(move || {
+						Mock_Skill::new_mock(|mock| {
+							mock.expect_animate().return_const(Animate::Ignore);
+							mock.expect_behavior()
+								.return_const(RunSkillBehavior::default());
+							mock.expect_update_state().return_const(
+								HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
+									SkillState::Aim,
+								)]),
+							);
+						})
+					})),
+				},
+				Transform::default(),
+				_Changed::<_AnimationDispatch>::new(false),
+			))
+			.id();
+
+		app.add_systems(PostUpdate, detect_change::<_AnimationDispatch>);
+		app.update();
+		app.update();
+
+		assert_eq!(
+			Some(false),
+			app.world()
+				.entity(entity)
+				.get::<_Changed<_AnimationDispatch>>()
+				.map(|c| c.changed)
+		)
+	}
+
+	#[test]
+	fn do_not_mutable_deref_executer_when_skill_states_empty() {
+		let (mut app, agent) = setup();
+		app = app.single_threaded(PostUpdate);
+		let entity = app
+			.world_mut()
+			.entity_mut(agent)
+			.insert((
+				_Dequeue {
+					active: Some(Box::new(move || {
+						Mock_Skill::new_mock(|mock| {
+							mock.expect_animate().return_const(Animate::Ignore);
+							mock.expect_behavior()
+								.return_const(RunSkillBehavior::default());
+							mock.expect_update_state()
+								.return_const(HashSet::<StateMeta<SkillState>>::from([]));
+						})
+					})),
+				},
+				Transform::default(),
+				_Changed::<_Executor>::new(false),
+			))
+			.id();
+
+		app.add_systems(PostUpdate, detect_change::<_Executor>);
+		app.update();
+		app.update();
+
+		assert_eq!(
+			Some(false),
+			app.world()
+				.entity(entity)
+				.get::<_Changed<_Executor>>()
+				.map(|c| c.changed)
+		)
 	}
 }
