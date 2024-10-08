@@ -6,7 +6,6 @@ use animations::traits::{SkillLayer, StartAnimation, StopAnimation};
 use behaviors::components::{Face, OverrideFace};
 use bevy::{
 	ecs::{
-		change_detection::DetectChanges,
 		component::Component,
 		entity::Entity,
 		system::{Commands, EntityCommands, Query, Res},
@@ -23,11 +22,15 @@ enum Advancement {
 	InProcess,
 }
 
+#[derive(Component)]
+pub struct SideEffectsCleared;
+
 type Components<'a, TGetSkill, TAnimationDispatch, TSkillExecutor> = (
 	Entity,
 	&'a mut TGetSkill,
 	&'a mut TAnimationDispatch,
 	&'a mut TSkillExecutor,
+	Option<&'a SideEffectsCleared>,
 );
 
 pub(crate) fn advance_active_skill<
@@ -43,14 +46,13 @@ pub(crate) fn advance_active_skill<
 ) {
 	let delta = time.delta();
 
-	for (entity, mut dequeue, animation_dispatch, skill_executer) in &mut agents {
+	for (entity, mut dequeue, animation_dispatch, skill_executer, cleared) in &mut agents {
 		let Some(agent) = commands.get_entity(entity) else {
 			continue;
 		};
-		let changed = dequeue.is_changed();
 		let advancement = match dequeue.get_active() {
 			Some(skill) => advance(skill, agent, animation_dispatch, skill_executer, delta),
-			None if changed => remove_side_effects(agent, animation_dispatch),
+			None if is_not(cleared) => clear_side_effects(agent, animation_dispatch),
 			_ => Advancement::InProcess,
 		};
 
@@ -62,11 +64,16 @@ pub(crate) fn advance_active_skill<
 	}
 }
 
-fn remove_side_effects<TAnimationDispatch: StopAnimation>(
+fn is_not(cleared: Option<&SideEffectsCleared>) -> bool {
+	cleared.is_none()
+}
+
+fn clear_side_effects<TAnimationDispatch: StopAnimation>(
 	mut agent: EntityCommands,
 	mut animation_dispatch: Mut<TAnimationDispatch>,
 ) -> Advancement {
 	agent.remove::<OverrideFace>();
+	agent.try_insert(SideEffectsCleared);
 	animation_dispatch.stop_animation(SkillLayer);
 
 	Advancement::InProcess
@@ -88,6 +95,8 @@ fn advance<
 	let animation_dispatch = animation_dispatch.as_mut();
 	let skill_executer = skill_executer.as_mut();
 	let states = skill.update_state(delta);
+
+	agent.remove::<SideEffectsCleared>();
 
 	if states.contains(&StateMeta::Entering(SkillState::Aim)) {
 		agent.try_insert(OverrideFace(Face::Cursor));
@@ -168,7 +177,7 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
-	use std::{collections::HashSet, time::Duration};
+	use std::{collections::HashSet, ops::DerefMut, time::Duration};
 
 	#[derive(PartialEq)]
 	enum MockOption {
@@ -565,6 +574,68 @@ mod tests {
 		));
 
 		app.update();
+		app.update();
+	}
+
+	#[test]
+	fn remove_animation_only_once_even_when_mutably_dereferenced() {
+		let (mut app, agent) = setup();
+		let entity = app
+			.world_mut()
+			.entity_mut(agent)
+			.insert((
+				_Dequeue { active: None },
+				Transform::default(),
+				_AnimationDispatch::new().with_mock(|mock| {
+					mock.expect_start_animation::<SkillLayer>().return_const(());
+					mock.expect_stop_animation::<SkillLayer>()
+						.times(1)
+						.return_const(());
+				}),
+			))
+			.id();
+
+		app.update();
+		app.world_mut()
+			.entity_mut(entity)
+			.get_mut::<_Dequeue>()
+			.unwrap()
+			.deref_mut();
+		app.update();
+	}
+
+	#[test]
+	fn remove_animation_again_when_after_another_active_skill_done() {
+		let (mut app, agent) = setup();
+		let entity = app
+			.world_mut()
+			.entity_mut(agent)
+			.insert((
+				_Dequeue { active: None },
+				Transform::default(),
+				_AnimationDispatch::new().with_mock(|mock| {
+					mock.expect_start_animation::<SkillLayer>().return_const(());
+					mock.expect_stop_animation::<SkillLayer>()
+						.times(2)
+						.return_const(());
+				}),
+			))
+			.id();
+
+		app.update();
+		let mut dequeue = app.world_mut().entity_mut(entity);
+		let mut dequeue = dequeue.get_mut::<_Dequeue>().unwrap();
+		dequeue.active = Some(Box::new(|| {
+			let mut skill = mock_skill_without_default_setup_for([]);
+			skill
+				.expect_update_state()
+				.return_const(HashSet::<StateMeta<SkillState>>::from([]));
+			skill
+		}));
+		app.update();
+		let mut dequeue = app.world_mut().entity_mut(entity);
+		let mut dequeue = dequeue.get_mut::<_Dequeue>().unwrap();
+		dequeue.active = None;
 		app.update();
 	}
 
