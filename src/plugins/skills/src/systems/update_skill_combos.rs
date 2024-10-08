@@ -116,12 +116,12 @@ mod tests {
 	};
 	use common::{
 		components::Side,
-		test_tools::utils::{SingleThreadedApp, TickTime},
+		test_tools::utils::{Changed, SingleThreadedApp, TickTime},
 		traits::{nested_mock::NestedMocks, update_cumulative::CumulativeUpdate as UpdateTrait},
 	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq, Sequence};
-	use std::{collections::HashMap, marker::PhantomData, time::Duration};
+	use std::{collections::HashMap, time::Duration};
 
 	#[derive(Component, NestedMocks)]
 	struct _Timeout {
@@ -561,34 +561,13 @@ mod tests {
 		app.update();
 	}
 
-	#[derive(Component, PartialEq, Debug)]
-	struct _Changed<T: Component> {
-		changed: bool,
-		phantom_data: PhantomData<T>,
-	}
-
-	impl<T: Component> _Changed<T> {
-		fn new(changed: bool) -> Self {
-			Self {
-				changed,
-				phantom_data: PhantomData,
-			}
-		}
-	}
-
-	fn detect_change<T: Component>(mut query: Query<(Ref<T>, &mut _Changed<T>)>) {
-		for (component, mut changed) in &mut query {
-			changed.changed = component.is_changed();
-		}
-	}
-
 	#[test]
 	fn skills_not_marked_changed_when_empty() {
 		let mut app = setup().single_threaded(PostUpdate);
 		let entity = app
 			.world_mut()
 			.spawn((
-				_Changed::<_Skills>::new(false),
+				Changed::<_Skills>::new(false),
 				_Combos::new().with_mock(|mock| {
 					mock.expect_flush().return_const(());
 					mock.expect_advance().return_const(None);
@@ -601,13 +580,13 @@ mod tests {
 			))
 			.id();
 
-		app.add_systems(PostUpdate, detect_change::<_Skills>);
+		app.add_systems(PostUpdate, Changed::<_Skills>::detect);
 		app.update(); // changed always true, because target was just added
 		app.update();
 
 		assert_eq!(
-			Some(&_Changed::new(false)),
-			app.world().entity(entity).get::<_Changed<_Skills>>(),
+			Some(&Changed::new(false)),
+			app.world().entity(entity).get::<Changed<_Skills>>(),
 		)
 	}
 
@@ -617,7 +596,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				_Changed::<_Combos>::new(false),
+				Changed::<_Combos>::new(false),
 				_Combos::new().with_mock(|_| {}),
 				_Skills {
 					early: vec![QueuedSkill::default()],
@@ -629,7 +608,7 @@ mod tests {
 
 		app.update();
 
-		app.add_systems(PostUpdate, detect_change::<_Combos>);
+		app.add_systems(PostUpdate, Changed::<_Combos>::detect);
 		app.update(); // changed always true, because target was just added
 		app.update();
 
@@ -637,8 +616,8 @@ mod tests {
 			Some(&false),
 			app.world()
 				.entity(entity)
-				.get::<_Changed<_Combos>>()
-				.map(|_Changed { changed, .. }| changed),
+				.get::<Changed<_Combos>>()
+				.map(|Changed { changed, .. }| changed),
 		)
 	}
 }

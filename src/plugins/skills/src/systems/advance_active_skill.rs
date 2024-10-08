@@ -163,12 +163,12 @@ mod tests {
 	};
 	use common::{
 		simple_init,
-		test_tools::utils::{SingleThreadedApp, TickTime},
+		test_tools::utils::{Changed, SingleThreadedApp, TickTime},
 		traits::{mock::Mock, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
-	use std::{collections::HashSet, marker::PhantomData, ops::DerefMut, time::Duration};
+	use std::{collections::HashSet, ops::DerefMut, time::Duration};
 
 	#[derive(Default, Debug, PartialEq, Clone, Copy)]
 	struct _Animation(usize);
@@ -931,27 +931,6 @@ mod tests {
 		assert_eq!(None, agent.get::<OverrideFace>());
 	}
 
-	#[derive(Component)]
-	struct _Changed<T: Component> {
-		changed: bool,
-		phantom_date: PhantomData<T>,
-	}
-
-	impl<T: Component> _Changed<T> {
-		fn new(changed: bool) -> Self {
-			Self {
-				changed,
-				phantom_date: PhantomData,
-			}
-		}
-	}
-
-	fn detect_change<T: Component>(mut query: Query<(Ref<T>, &mut _Changed<T>)>) {
-		for (component, mut changed) in &mut query {
-			changed.changed = component.is_changed();
-		}
-	}
-
 	#[test]
 	fn do_not_mutable_deref_animation_dispatch_when_no_animation_used() {
 		let (mut app, agent) = setup();
@@ -975,20 +954,20 @@ mod tests {
 					})),
 				},
 				Transform::default(),
-				_Changed::<_AnimationDispatch>::new(false),
+				Changed::<_AnimationDispatch>::new(false),
 			))
 			.id();
 
-		app.add_systems(PostUpdate, detect_change::<_AnimationDispatch>);
+		app.add_systems(PostUpdate, Changed::<_AnimationDispatch>::detect);
 		app.update();
 		app.update();
 
 		assert_eq!(
-			Some(false),
+			Some(&false),
 			app.world()
 				.entity(entity)
-				.get::<_Changed<_AnimationDispatch>>()
-				.map(|c| c.changed)
+				.get::<Changed<_AnimationDispatch>>()
+				.map(|Changed { changed, .. }| changed)
 		)
 	}
 
@@ -1012,20 +991,20 @@ mod tests {
 					})),
 				},
 				Transform::default(),
-				_Changed::<_Executor>::new(false),
+				Changed::<_Executor>::new(false),
 			))
 			.id();
 
-		app.add_systems(PostUpdate, detect_change::<_Executor>);
+		app.add_systems(PostUpdate, Changed::<_Executor>::detect);
 		app.update();
 		app.update();
 
 		assert_eq!(
-			Some(false),
+			Some(&false),
 			app.world()
 				.entity(entity)
-				.get::<_Changed<_Executor>>()
-				.map(|c| c.changed)
+				.get::<Changed<_Executor>>()
+				.map(|Changed { changed, .. }| changed)
 		)
 	}
 }
