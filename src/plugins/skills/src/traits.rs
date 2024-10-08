@@ -37,6 +37,7 @@ pub(crate) trait IterMut<TItem> {
 }
 
 pub(crate) trait IterAddedMut<TItem> {
+	fn added_none(&self) -> bool;
 	fn iter_added_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut TItem>
 	where
 		TItem: 'a;

@@ -24,6 +24,7 @@ pub mod utils {
 	};
 	use std::{
 		any::{type_name, Any, TypeId},
+		marker::PhantomData,
 		time::Duration,
 	};
 	use uuid::Uuid;
@@ -281,5 +282,26 @@ pub mod utils {
 		Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		})
+	}
+
+	#[derive(Component, Debug, PartialEq)]
+	pub struct Changed<T: Component> {
+		pub changed: bool,
+		phantom_date: PhantomData<T>,
+	}
+
+	impl<T: Component> Changed<T> {
+		pub fn new(changed: bool) -> Self {
+			Self {
+				changed,
+				phantom_date: PhantomData,
+			}
+		}
+
+		pub fn detect(mut query: Query<(Ref<T>, &mut Changed<T>)>) {
+			for (component, mut changed) in &mut query {
+				changed.changed = component.is_changed();
+			}
+		}
 	}
 }

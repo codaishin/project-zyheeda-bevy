@@ -94,16 +94,24 @@ impl IterMut<QueuedSkill> for Queue {
 }
 
 impl IterAddedMut<QueuedSkill> for Queue {
+	fn added_none(&self) -> bool {
+		unchanged_length(self) == self.queue.len()
+	}
+
 	fn iter_added_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut QueuedSkill>
 	where
 		QueuedSkill: 'a,
 	{
-		let unchanged_len = match self.state {
-			State::Flushed => self.queue.len(),
-			State::Changed { len_before_change } => len_before_change,
-		};
+		let unchanged_length = unchanged_length(self);
 
-		self.queue.iter_mut().skip(unchanged_len)
+		self.queue.iter_mut().skip(unchanged_length)
+	}
+}
+
+fn unchanged_length(Queue { queue, state, .. }: &Queue) -> usize {
+	match state {
+		State::Flushed => queue.len(),
+		State::Changed { len_before_change } => *len_before_change,
 	}
 }
 
@@ -352,25 +360,31 @@ mod test_queue_collection {
 		));
 
 		assert_eq!(
-			vec![
-				&mut QueuedSkill {
-					slot_key: SlotKey::Hand(Side::Main),
-					skill: Skill {
-						name: "a".to_owned(),
+			(
+				false,
+				vec![
+					&mut QueuedSkill {
+						slot_key: SlotKey::Hand(Side::Main),
+						skill: Skill {
+							name: "a".to_owned(),
+							..default()
+						},
 						..default()
 					},
-					..default()
-				},
-				&mut QueuedSkill {
-					slot_key: SlotKey::Hand(Side::Off),
-					skill: Skill {
-						name: "b".to_owned(),
+					&mut QueuedSkill {
+						slot_key: SlotKey::Hand(Side::Off),
+						skill: Skill {
+							name: "b".to_owned(),
+							..default()
+						},
 						..default()
 					},
-					..default()
-				},
-			],
-			queue.iter_added_mut().collect::<Vec<_>>()
+				]
+			),
+			(
+				queue.added_none(),
+				queue.iter_added_mut().collect::<Vec<_>>()
+			)
 		)
 	}
 
@@ -402,25 +416,31 @@ mod test_queue_collection {
 		));
 
 		assert_eq!(
-			vec![
-				&mut QueuedSkill {
-					slot_key: SlotKey::Hand(Side::Main),
-					skill: Skill {
-						name: "b".to_owned(),
+			(
+				false,
+				vec![
+					&mut QueuedSkill {
+						slot_key: SlotKey::Hand(Side::Main),
+						skill: Skill {
+							name: "b".to_owned(),
+							..default()
+						},
 						..default()
 					},
-					..default()
-				},
-				&mut QueuedSkill {
-					slot_key: SlotKey::Hand(Side::Off),
-					skill: Skill {
-						name: "c".to_owned(),
+					&mut QueuedSkill {
+						slot_key: SlotKey::Hand(Side::Off),
+						skill: Skill {
+							name: "c".to_owned(),
+							..default()
+						},
 						..default()
 					},
-					..default()
-				},
-			],
-			queue.iter_added_mut().collect::<Vec<_>>()
+				],
+			),
+			(
+				queue.added_none(),
+				queue.iter_added_mut().collect::<Vec<_>>()
+			)
 		)
 	}
 
@@ -454,8 +474,11 @@ mod test_queue_collection {
 		queue.flush();
 
 		assert_eq!(
-			vec![] as Vec<&mut QueuedSkill>,
-			queue.iter_added_mut().collect::<Vec<_>>()
+			(true, vec![] as Vec<&mut QueuedSkill>),
+			(
+				queue.added_none(),
+				queue.iter_added_mut().collect::<Vec<_>>()
+			)
 		)
 	}
 
@@ -490,8 +513,11 @@ mod test_queue_collection {
 		queue.flush();
 
 		assert_eq!(
-			vec![] as Vec<&mut QueuedSkill>,
-			queue.iter_added_mut().collect::<Vec<_>>()
+			(true, vec![] as Vec<&mut QueuedSkill>,),
+			(
+				queue.added_none(),
+				queue.iter_added_mut().collect::<Vec<_>>()
+			)
 		)
 	}
 }
