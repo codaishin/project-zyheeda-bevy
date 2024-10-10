@@ -29,7 +29,7 @@ mod tests {
 
 	fn slots() -> Slots {
 		Slots(HashMap::from([(
-			SlotKey::Hand(Side::Main),
+			SlotKey::BottomHand(Side::Right),
 			Slot {
 				mounts: Mounts {
 					hand: Entity::from_raw(123),
@@ -42,7 +42,7 @@ mod tests {
 
 	fn other_slots() -> Slots {
 		Slots(HashMap::from([(
-			SlotKey::Hand(Side::Off),
+			SlotKey::BottomHand(Side::Left),
 			Slot {
 				mounts: Mounts {
 					hand: Entity::from_raw(321),
@@ -55,7 +55,7 @@ mod tests {
 
 	fn node() -> ComboNode {
 		ComboNode::new([(
-			SlotKey::Hand(Side::Main),
+			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
 					name: "some skill".to_owned(),
@@ -82,7 +82,7 @@ mod tests {
 				name: "my skill".to_owned(),
 				..default()
 			}),
-			combos.peek_next(&SlotKey::Hand(Side::Main), &slots())
+			combos.peek_next(&SlotKey::BottomHand(Side::Right), &slots())
 		);
 	}
 
@@ -93,7 +93,7 @@ mod tests {
 
 		assert_eq!(
 			None as Option<Skill>,
-			combos.peek_next(&SlotKey::Hand(Side::Main), &slots())
+			combos.peek_next(&SlotKey::BottomHand(Side::Right), &slots())
 		);
 	}
 
@@ -103,9 +103,9 @@ mod tests {
 		combos
 			.expect_peek_next()
 			.times(1)
-			.with(eq(SlotKey::Hand(Side::Off)), eq(other_slots()))
+			.with(eq(SlotKey::BottomHand(Side::Left)), eq(other_slots()))
 			.return_const(None);
 
-		let _: Option<Skill> = combos.peek_next(&SlotKey::Hand(Side::Off), &other_slots());
+		let _: Option<Skill> = combos.peek_next(&SlotKey::BottomHand(Side::Left), &other_slots());
 	}
 }

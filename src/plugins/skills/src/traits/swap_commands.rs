@@ -101,16 +101,22 @@ mod tests {
 
 	#[test]
 	fn swap_inventory_slot_keys() {
-		let swap = Swap(InventoryKey(42), SlotKey::Hand(Side::Main));
+		let swap = Swap(InventoryKey(42), SlotKey::BottomHand(Side::Right));
 
-		assert_eq!((InventoryKey(42), SlotKey::Hand(Side::Main)), swap.keys());
+		assert_eq!(
+			(InventoryKey(42), SlotKey::BottomHand(Side::Right)),
+			swap.keys()
+		);
 	}
 
 	#[test]
 	fn swap_slot_inventory_keys() {
-		let swap = Swap(SlotKey::Hand(Side::Main), InventoryKey(42));
+		let swap = Swap(SlotKey::BottomHand(Side::Right), InventoryKey(42));
 
-		assert_eq!((InventoryKey(42), SlotKey::Hand(Side::Main)), swap.keys());
+		assert_eq!(
+			(InventoryKey(42), SlotKey::BottomHand(Side::Right)),
+			swap.keys()
+		);
 	}
 
 	#[derive(Clone, Copy, Debug, PartialEq)]
@@ -137,7 +143,7 @@ mod tests {
 	#[test]
 	fn set_swapped_out_item_in_inventory() {
 		let mut container = _Container(vec![None]);
-		let mut swaps = Collection::new([_Swap(_InnerKey(0), SlotKey::Hand(Side::Off))]);
+		let mut swaps = Collection::new([_Swap(_InnerKey(0), SlotKey::BottomHand(Side::Left))]);
 
 		SwapController::new(&mut container, &mut swaps).try_swap(|_, _| {
 			Ok(SwappedOut(Some(Item {
@@ -161,12 +167,12 @@ mod tests {
 			name: "swap in",
 			..default()
 		})]);
-		let mut swaps = Collection::new([_Swap(_InnerKey(0), SlotKey::Hand(Side::Off))]);
+		let mut swaps = Collection::new([_Swap(_InnerKey(0), SlotKey::BottomHand(Side::Left))]);
 
 		SwapController::new(&mut container, &mut swaps).try_swap(|slot_key, item| {
 			assert_eq!(
 				(
-					SlotKey::Hand(Side::Off),
+					SlotKey::BottomHand(Side::Left),
 					SwapIn(Some(Item {
 						name: "swap in",
 						..default()
@@ -184,7 +190,7 @@ mod tests {
 			name: "unaffected",
 			..default()
 		})]);
-		let mut swaps = Collection::new([_Swap(_InnerKey(0), SlotKey::Hand(Side::Off))]);
+		let mut swaps = Collection::new([_Swap(_InnerKey(0), SlotKey::BottomHand(Side::Left))]);
 
 		SwapController::new(&mut container, &mut swaps)
 			.try_swap(|_, _| Ok(SwappedOut(Some(Item::default()))));
@@ -218,7 +224,7 @@ mod tests {
 		});
 
 		assert_eq!(
-			Collection::new([_Swap(_InnerKey(1), SlotKey::Hand(Side::Main))]),
+			Collection::new([_Swap(_InnerKey(1), SlotKey::BottomHand(Side::Right))]),
 			swaps
 		);
 	}
@@ -226,7 +232,7 @@ mod tests {
 	#[test]
 	fn swaps_not_empty() {
 		let mut container = _Container(vec![]);
-		let mut swaps = Collection::new([_Swap(_InnerKey(0), SlotKey::Hand(Side::Off))]);
+		let mut swaps = Collection::new([_Swap(_InnerKey(0), SlotKey::BottomHand(Side::Left))]);
 
 		assert!(!SwapController::new(&mut container, &mut swaps).is_empty());
 	}

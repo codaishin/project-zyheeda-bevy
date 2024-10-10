@@ -112,7 +112,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Slots::from([(
-				SlotKey::Hand(Side::Main),
+				SlotKey::BottomHand(Side::Right),
 				Item {
 					item_type: HashSet::from([ItemType::Pistol]),
 					..default()
@@ -126,7 +126,10 @@ mod tests {
 					is_usable_with: HashSet::from([ItemType::Bracer]),
 					..default()
 				},
-				vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+				vec![
+					SlotKey::BottomHand(Side::Left),
+					SlotKey::BottomHand(Side::Right),
+				],
 			))
 			.id();
 
@@ -143,7 +146,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Slots::from([(
-				SlotKey::Hand(Side::Main),
+				SlotKey::BottomHand(Side::Right),
 				Item {
 					item_type: HashSet::from([ItemType::Pistol]),
 					..default()
@@ -157,7 +160,10 @@ mod tests {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-				vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+				vec![
+					SlotKey::BottomHand(Side::Left),
+					SlotKey::BottomHand(Side::Right),
+				],
 			))
 			.id();
 
@@ -172,7 +178,7 @@ mod tests {
 	fn do_not_visualize_when_no_agents() {
 		let mut app = setup();
 		app.world_mut().spawn((_Slots::from([(
-			SlotKey::Hand(Side::Main),
+			SlotKey::BottomHand(Side::Right),
 			Item {
 				item_type: HashSet::from([ItemType::Bracer]),
 				..default()
@@ -185,7 +191,10 @@ mod tests {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-				vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+				vec![
+					SlotKey::BottomHand(Side::Left),
+					SlotKey::BottomHand(Side::Right),
+				],
 			))
 			.id();
 
@@ -202,7 +211,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Slots::from([(
-				SlotKey::Hand(Side::Main),
+				SlotKey::BottomHand(Side::Right),
 				Item {
 					item_type: HashSet::from([ItemType::Bracer]),
 					..default()
@@ -216,7 +225,10 @@ mod tests {
 					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
-				vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+				vec![
+					SlotKey::BottomHand(Side::Left),
+					SlotKey::BottomHand(Side::Right),
+				],
 			))
 			.id();
 
