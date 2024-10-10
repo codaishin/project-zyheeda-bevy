@@ -37,7 +37,7 @@ mod tests {
 
 	fn slots() -> Slots {
 		Slots(HashMap::from([(
-			SlotKey::Hand(Side::Right),
+			SlotKey::BottomHand(Side::Right),
 			Slot {
 				mounts: Mounts {
 					hand: Entity::from_raw(123),
@@ -50,7 +50,7 @@ mod tests {
 
 	fn other_slots() -> Slots {
 		Slots(HashMap::from([(
-			SlotKey::Hand(Side::Left),
+			SlotKey::BottomHand(Side::Left),
 			Slot {
 				mounts: Mounts {
 					hand: Entity::from_raw(321),
@@ -63,7 +63,7 @@ mod tests {
 
 	fn node() -> ComboNode {
 		ComboNode::new([(
-			SlotKey::Hand(Side::Right),
+			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
 					name: "some skill".to_owned(),
@@ -86,7 +86,7 @@ mod tests {
 			.with(eq(Some(node())))
 			.return_const(());
 
-		combos.advance(&SlotKey::Hand(Side::Right), &slots());
+		combos.advance(&SlotKey::BottomHand(Side::Right), &slots());
 	}
 
 	#[test]
@@ -101,7 +101,7 @@ mod tests {
 		));
 		combos.expect_set_next_combo().return_const(());
 
-		let skill = combos.advance(&SlotKey::Hand(Side::Right), &slots());
+		let skill = combos.advance(&SlotKey::BottomHand(Side::Right), &slots());
 
 		assert_eq!(
 			Some(Skill {
@@ -122,7 +122,7 @@ mod tests {
 			.with(eq(None))
 			.return_const(());
 
-		combos.advance(&SlotKey::Hand(Side::Right), &slots());
+		combos.advance(&SlotKey::BottomHand(Side::Right), &slots());
 	}
 
 	#[test]
@@ -131,7 +131,7 @@ mod tests {
 		combos.expect_peek_next().return_const(None);
 		combos.expect_set_next_combo().return_const(());
 
-		let skill = combos.advance(&SlotKey::Hand(Side::Right), &slots());
+		let skill = combos.advance(&SlotKey::BottomHand(Side::Right), &slots());
 
 		assert_eq!(None, skill);
 	}
@@ -142,10 +142,10 @@ mod tests {
 		combos
 			.expect_peek_next()
 			.times(1)
-			.with(eq(SlotKey::Hand(Side::Left)), eq(other_slots()))
+			.with(eq(SlotKey::BottomHand(Side::Left)), eq(other_slots()))
 			.return_const(None);
 		combos.expect_set_next_combo().return_const(());
 
-		combos.advance(&SlotKey::Hand(Side::Left), &other_slots());
+		combos.advance(&SlotKey::BottomHand(Side::Left), &other_slots());
 	}
 }

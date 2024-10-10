@@ -182,7 +182,7 @@ mod tests {
 
 	fn slots() -> Slots {
 		Slots(HashMap::from([(
-			SlotKey::Hand(Side::Right),
+			SlotKey::BottomHand(Side::Right),
 			Slot {
 				mounts: arbitrary_mounts(),
 				item: Some(Item {
@@ -214,7 +214,7 @@ mod tests {
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {
-				key: SlotKey::Hand(Side::Right),
+				key: SlotKey::BottomHand(Side::Right),
 				state: PanelState::Empty,
 			})
 			.id();
@@ -235,13 +235,13 @@ mod tests {
 			_Combos::new().with_mock(|mock| {
 				mock.expect_peek_next()
 					.times(1)
-					.with(eq(SlotKey::Hand(Side::Left)), eq(slots()))
+					.with(eq(SlotKey::BottomHand(Side::Left)), eq(slots()))
 					.return_const(None);
 			}),
 			_ComboTimeout(false),
 		));
 		app.world_mut().spawn(QuickbarPanel {
-			key: SlotKey::Hand(Side::Left),
+			key: SlotKey::BottomHand(Side::Left),
 			state: PanelState::Empty,
 		});
 
@@ -266,7 +266,7 @@ mod tests {
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {
-				key: SlotKey::Hand(Side::Right),
+				key: SlotKey::BottomHand(Side::Right),
 				state: PanelState::Empty,
 			})
 			.id();
@@ -292,7 +292,7 @@ mod tests {
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {
-				key: SlotKey::Hand(Side::Right),
+				key: SlotKey::BottomHand(Side::Right),
 				state: PanelState::Empty,
 			})
 			.id();
@@ -314,7 +314,7 @@ mod tests {
 					icon: Some(get_handle("active skill")),
 					..default()
 				},
-				slot_key: SlotKey::Hand(Side::Left),
+				slot_key: SlotKey::BottomHand(Side::Left),
 				mode: Activation::Waiting,
 			}]),
 			_Combos::new().with_mock(|mock| {
@@ -328,7 +328,7 @@ mod tests {
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {
-				key: SlotKey::Hand(Side::Left),
+				key: SlotKey::BottomHand(Side::Left),
 				state: PanelState::Empty,
 			})
 			.id();
@@ -350,7 +350,7 @@ mod tests {
 					icon: Some(get_handle("active skill")),
 					..default()
 				},
-				slot_key: SlotKey::Hand(Side::Left),
+				slot_key: SlotKey::BottomHand(Side::Left),
 				mode: Activation::Waiting,
 			}]),
 			_Combos::new().with_mock(|mock| {
@@ -364,7 +364,7 @@ mod tests {
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {
-				key: SlotKey::Hand(Side::Right),
+				key: SlotKey::BottomHand(Side::Right),
 				state: PanelState::Empty,
 			})
 			.id();
@@ -382,7 +382,7 @@ mod tests {
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {
-				key: SlotKey::Hand(Side::Right),
+				key: SlotKey::BottomHand(Side::Right),
 				state: PanelState::Empty,
 			})
 			.id();

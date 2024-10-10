@@ -132,13 +132,13 @@ mod tests {
 			_Superior::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots()
 					.times(1)
-					.return_const(vec![SlotKey::Hand(Side::Right)]);
+					.return_const(vec![SlotKey::BottomHand(Side::Right)]);
 				mock.expect_pressed_slots()
 					.times(1)
-					.return_const(vec![SlotKey::Hand(Side::Right)]);
+					.return_const(vec![SlotKey::BottomHand(Side::Right)]);
 				mock.expect_just_released_slots()
 					.times(1)
-					.return_const(vec![SlotKey::Hand(Side::Left)]);
+					.return_const(vec![SlotKey::BottomHand(Side::Left)]);
 			}),
 			_Inferior::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots().return_const(vec![]);
@@ -154,9 +154,9 @@ mod tests {
 
 		assert_eq!(
 			&_Result(Input {
-				just_pressed: vec![SlotKey::Hand(Side::Right)],
-				pressed: vec![SlotKey::Hand(Side::Right)],
-				just_released: vec![SlotKey::Hand(Side::Left)],
+				just_pressed: vec![SlotKey::BottomHand(Side::Right)],
+				pressed: vec![SlotKey::BottomHand(Side::Right)],
+				just_released: vec![SlotKey::BottomHand(Side::Left)],
 			}),
 			result
 		);
@@ -173,13 +173,13 @@ mod tests {
 			_Inferior::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots()
 					.times(1)
-					.return_const(vec![SlotKey::Hand(Side::Left)]);
+					.return_const(vec![SlotKey::BottomHand(Side::Left)]);
 				mock.expect_pressed_slots()
 					.times(1)
-					.return_const(vec![SlotKey::Hand(Side::Right)]);
+					.return_const(vec![SlotKey::BottomHand(Side::Right)]);
 				mock.expect_just_released_slots()
 					.times(1)
-					.return_const(vec![SlotKey::Hand(Side::Left)]);
+					.return_const(vec![SlotKey::BottomHand(Side::Left)]);
 			}),
 			_Map,
 		);
@@ -190,9 +190,9 @@ mod tests {
 
 		assert_eq!(
 			&_Result(Input {
-				just_pressed: vec![SlotKey::Hand(Side::Left)],
-				pressed: vec![SlotKey::Hand(Side::Right)],
-				just_released: vec![SlotKey::Hand(Side::Left)],
+				just_pressed: vec![SlotKey::BottomHand(Side::Left)],
+				pressed: vec![SlotKey::BottomHand(Side::Right)],
+				just_released: vec![SlotKey::BottomHand(Side::Left)],
 			}),
 			result
 		);
@@ -204,12 +204,12 @@ mod tests {
 			_Superior::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots().return_const(vec![]);
 				mock.expect_pressed_slots()
-					.return_const(vec![SlotKey::Hand(Side::Right)]);
+					.return_const(vec![SlotKey::BottomHand(Side::Right)]);
 				mock.expect_just_released_slots().return_const(vec![]);
 			}),
 			_Inferior::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots()
-					.return_const(vec![SlotKey::Hand(Side::Right)]);
+					.return_const(vec![SlotKey::BottomHand(Side::Right)]);
 				mock.expect_pressed_slots().return_const(vec![]);
 				mock.expect_just_released_slots().return_const(vec![]);
 			}),
@@ -222,7 +222,7 @@ mod tests {
 
 		assert_eq!(
 			&_Result(Input {
-				pressed: vec![SlotKey::Hand(Side::Right)],
+				pressed: vec![SlotKey::BottomHand(Side::Right)],
 				..default()
 			}),
 			result
@@ -235,14 +235,14 @@ mod tests {
 			_Superior::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots().return_const(vec![]);
 				mock.expect_pressed_slots()
-					.return_const(vec![SlotKey::Hand(Side::Right)]);
+					.return_const(vec![SlotKey::BottomHand(Side::Right)]);
 				mock.expect_just_released_slots().return_const(vec![]);
 			}),
 			_Inferior::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots().return_const(vec![]);
 				mock.expect_pressed_slots().return_const(vec![]);
 				mock.expect_just_released_slots()
-					.return_const(vec![SlotKey::Hand(Side::Right)]);
+					.return_const(vec![SlotKey::BottomHand(Side::Right)]);
 			}),
 			_Map,
 		);
@@ -252,7 +252,7 @@ mod tests {
 
 		assert_eq!(
 			&_Result(Input {
-				pressed: vec![SlotKey::Hand(Side::Right)],
+				pressed: vec![SlotKey::BottomHand(Side::Right)],
 				..default()
 			}),
 			result

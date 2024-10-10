@@ -31,7 +31,7 @@ impl GetAssociated<AnimationDispatch> for Player {
 		animation_dispatch.start_animation(
 			IdleLayer,
 			Animation::new(
-				Path::from(Player::MODEL_PATH.to_owned() + "#Animation2"),
+				Path::from(Player::MODEL_PATH.to_owned() + "#Animation1"),
 				PlayMode::Repeat,
 			),
 		);

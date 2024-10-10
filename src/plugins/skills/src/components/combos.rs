@@ -139,7 +139,7 @@ mod tests {
 	#[test]
 	fn call_next_with_correct_args() {
 		let slots = Slots(HashMap::from([(
-			SlotKey::Hand(Side::Right),
+			SlotKey::BottomHand(Side::Right),
 			Slot {
 				mounts: Mounts {
 					hand: Entity::from_raw(123),
@@ -148,7 +148,7 @@ mod tests {
 				item: None,
 			},
 		)]));
-		let trigger = SlotKey::Hand(Side::Left);
+		let trigger = SlotKey::BottomHand(Side::Left);
 
 		let mut mock = Mock_Next::default();
 		mock.expect_peek_next()
@@ -211,7 +211,7 @@ mod tests {
 		}
 
 		let slots = Slots(HashMap::from([(
-			SlotKey::Hand(Side::Right),
+			SlotKey::BottomHand(Side::Right),
 			Slot {
 				mounts: Mounts {
 					hand: Entity::from_raw(123),
@@ -220,7 +220,7 @@ mod tests {
 				item: None,
 			},
 		)]));
-		let trigger = SlotKey::Hand(Side::Left);
+		let trigger = SlotKey::BottomHand(Side::Left);
 
 		let combos = Combos::new(_Node("first"));
 
@@ -292,7 +292,10 @@ mod tests {
 			..default()
 		};
 		let combos_vec = vec![vec![(
-			vec![SlotKey::Hand(Side::Left), SlotKey::Hand(Side::Right)],
+			vec![
+				SlotKey::BottomHand(Side::Left),
+				SlotKey::BottomHand(Side::Right),
+			],
 			&skill,
 		)]];
 		let combos = Combos::new(_ComboNode(combos_vec.clone()));
@@ -361,7 +364,10 @@ mod tests {
 		});
 
 		combos.update_config(
-			&vec![SlotKey::Hand(Side::Right), SlotKey::Hand(Side::Left)],
+			&vec![
+				SlotKey::BottomHand(Side::Right),
+				SlotKey::BottomHand(Side::Left),
+			],
 			Some(Skill {
 				name: "my skill".to_owned(),
 				..default()
@@ -369,7 +375,10 @@ mod tests {
 		);
 
 		assert_eq!(
-			vec![vec![SlotKey::Hand(Side::Right), SlotKey::Hand(Side::Left)]],
+			vec![vec![
+				SlotKey::BottomHand(Side::Right),
+				SlotKey::BottomHand(Side::Left)
+			]],
 			combos.value.call_args.into_inner()
 		)
 	}
@@ -390,7 +399,7 @@ mod tests {
 		});
 
 		combos.update_config(
-			&vec![SlotKey::Hand(Side::Right)],
+			&vec![SlotKey::BottomHand(Side::Right)],
 			Some(Skill {
 				name: "my skill".to_owned(),
 				..default()
@@ -411,7 +420,7 @@ mod tests {
 		};
 
 		combos.update_config(
-			&vec![SlotKey::Hand(Side::Right)],
+			&vec![SlotKey::BottomHand(Side::Right)],
 			Some(Skill {
 				name: "my skill".to_owned(),
 				..default()
@@ -432,7 +441,7 @@ mod tests {
 		};
 
 		combos.update_config(
-			&vec![SlotKey::Hand(Side::Right)],
+			&vec![SlotKey::BottomHand(Side::Right)],
 			Some(Skill {
 				name: "my skill".to_owned(),
 				..default()
@@ -452,12 +461,18 @@ mod tests {
 		});
 
 		combos.update_config(
-			&vec![SlotKey::Hand(Side::Right), SlotKey::Hand(Side::Left)],
-			SlotKey::Hand(Side::Left),
+			&vec![
+				SlotKey::BottomHand(Side::Right),
+				SlotKey::BottomHand(Side::Left),
+			],
+			SlotKey::BottomHand(Side::Left),
 		);
 
 		assert_eq!(
-			vec![vec![SlotKey::Hand(Side::Right), SlotKey::Hand(Side::Left)]],
+			vec![vec![
+				SlotKey::BottomHand(Side::Right),
+				SlotKey::BottomHand(Side::Left)
+			]],
 			combos.value.call_args.into_inner()
 		)
 	}
@@ -468,13 +483,16 @@ mod tests {
 			entry: Some(_Entry::new().with_mock(|mock| {
 				mock.expect_re_key()
 					.times(1)
-					.with(eq(SlotKey::Hand(Side::Left)))
+					.with(eq(SlotKey::BottomHand(Side::Left)))
 					.return_const(());
 			})),
 			..default()
 		});
 
-		combos.update_config(&vec![SlotKey::Hand(Side::Right)], SlotKey::Hand(Side::Left));
+		combos.update_config(
+			&vec![SlotKey::BottomHand(Side::Right)],
+			SlotKey::BottomHand(Side::Left),
+		);
 	}
 
 	#[test]
@@ -489,7 +507,10 @@ mod tests {
 			current: Some(_Node::default()),
 		};
 
-		combos.update_config(&vec![SlotKey::Hand(Side::Right)], SlotKey::Hand(Side::Left));
+		combos.update_config(
+			&vec![SlotKey::BottomHand(Side::Right)],
+			SlotKey::BottomHand(Side::Left),
+		);
 
 		assert!(combos.current.is_none());
 	}
@@ -504,7 +525,10 @@ mod tests {
 			current: Some(_Node::default()),
 		};
 
-		combos.update_config(&vec![SlotKey::Hand(Side::Right)], SlotKey::Hand(Side::Left));
+		combos.update_config(
+			&vec![SlotKey::BottomHand(Side::Right)],
+			SlotKey::BottomHand(Side::Left),
+		);
 
 		assert!(combos.current.is_none());
 	}
@@ -521,12 +545,18 @@ mod tests {
 			current: None,
 		};
 
-		let entry = combo.node(&vec![SlotKey::Hand(Side::Right), SlotKey::Hand(Side::Left)]);
+		let entry = combo.node(&vec![
+			SlotKey::BottomHand(Side::Right),
+			SlotKey::BottomHand(Side::Left),
+		]);
 
 		assert_eq!(
 			(
 				true,
-				vec![vec![SlotKey::Hand(Side::Right), SlotKey::Hand(Side::Left)]]
+				vec![vec![
+					SlotKey::BottomHand(Side::Right),
+					SlotKey::BottomHand(Side::Left)
+				]]
 			),
 			(entry.is_some(), combo.value.call_args.into_inner())
 		)

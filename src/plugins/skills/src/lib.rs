@@ -186,11 +186,11 @@ fn get_loadout() -> Loadout {
 		"projectile_spawn",
 		[
 			(
-				SlotKey::Hand(Side::Left),
+				SlotKey::TopHand(Side::Left),
 				(
 					Mounts {
-						hand: "hand_slot.L",
-						forearm: "lower_arm.L",
+						hand: "top_hand_slot.L",
+						forearm: "top_forearm.L",
 					},
 					Some(Item {
 						name: "Plasma Pistol A",
@@ -202,11 +202,43 @@ fn get_loadout() -> Loadout {
 				),
 			),
 			(
-				SlotKey::Hand(Side::Right),
+				SlotKey::BottomHand(Side::Left),
 				(
 					Mounts {
-						hand: "hand_slot.R",
-						forearm: "lower_arm.R",
+						hand: "bottom_hand_slot.L",
+						forearm: "bottom_forearm.L",
+					},
+					Some(Item {
+						name: "Plasma Pistol B",
+						model: Some("pistol"),
+						skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
+						item_type: HashSet::from([ItemType::Pistol]),
+						mount: Mount::Hand,
+					}),
+				),
+			),
+			(
+				SlotKey::BottomHand(Side::Right),
+				(
+					Mounts {
+						hand: "bottom_hand_slot.R",
+						forearm: "bottom_forearm.R",
+					},
+					Some(Item {
+						name: "Force Bracer",
+						model: Some("bracer"),
+						skill: Some(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba")),
+						item_type: HashSet::from([ItemType::Bracer]),
+						mount: Mount::Forearm,
+					}),
+				),
+			),
+			(
+				SlotKey::TopHand(Side::Right),
+				(
+					Mounts {
+						hand: "top_hand_slot.R",
+						forearm: "top_forearm.R",
 					},
 					Some(Item {
 						name: "Force Bracer",
@@ -222,13 +254,29 @@ fn get_loadout() -> Loadout {
 }
 
 fn get_inventory() -> Inventory<Uuid> {
-	Inventory::new([Some(Item {
-		name: "Plasma Pistol B",
-		model: Some("pistol"),
-		skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
-		item_type: HashSet::from([ItemType::Pistol]),
-		mount: Mount::Hand,
-	})])
+	Inventory::new([
+		Some(Item {
+			name: "Plasma Pistol C",
+			model: Some("pistol"),
+			skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
+			item_type: HashSet::from([ItemType::Pistol]),
+			mount: Mount::Hand,
+		}),
+		Some(Item {
+			name: "Plasma Pistol D",
+			model: Some("pistol"),
+			skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
+			item_type: HashSet::from([ItemType::Pistol]),
+			mount: Mount::Hand,
+		}),
+		Some(Item {
+			name: "Plasma Pistol E",
+			model: Some("pistol"),
+			skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
+			item_type: HashSet::from([ItemType::Pistol]),
+			mount: Mount::Hand,
+		}),
+	])
 }
 
 fn get_combos() -> ComboNode<Uuid> {

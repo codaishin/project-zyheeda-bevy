@@ -28,8 +28,10 @@ use uuid::Uuid;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct SkillAnimation {
-	pub(crate) left: Animation,
-	pub(crate) right: Animation,
+	pub(crate) top_hand_left: Animation,
+	pub(crate) top_hand_right: Animation,
+	pub(crate) btm_hand_left: Animation,
+	pub(crate) btm_hand_right: Animation,
 }
 
 #[derive(PartialEq, Debug, Default, Clone)]

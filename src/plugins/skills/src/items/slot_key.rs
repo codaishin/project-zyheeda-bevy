@@ -9,24 +9,27 @@ use common::{
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum SlotKey {
-	Hand(Side),
+	TopHand(Side),
+	BottomHand(Side),
 }
 
 impl Default for SlotKey {
 	fn default() -> Self {
-		Self::Hand(Side::Right)
+		Self::BottomHand(Side::Right)
 	}
 }
 
 impl IterFinite for SlotKey {
 	fn iterator() -> Iter<Self> {
-		Iter(Some(SlotKey::Hand(Side::Right)))
+		Iter(Some(SlotKey::TopHand(Side::Left)))
 	}
 
 	fn next(current: &Iter<Self>) -> Option<Self> {
 		match current.0? {
-			SlotKey::Hand(Side::Right) => Some(SlotKey::Hand(Side::Left)),
-			SlotKey::Hand(Side::Left) => None,
+			SlotKey::TopHand(Side::Left) => Some(SlotKey::BottomHand(Side::Left)),
+			SlotKey::BottomHand(Side::Left) => Some(SlotKey::BottomHand(Side::Right)),
+			SlotKey::BottomHand(Side::Right) => Some(SlotKey::TopHand(Side::Right)),
+			SlotKey::TopHand(Side::Right) => None,
 		}
 	}
 }
@@ -34,8 +37,10 @@ impl IterFinite for SlotKey {
 impl From<SlotKey> for KeyCode {
 	fn from(value: SlotKey) -> Self {
 		match value {
-			SlotKey::Hand(Side::Right) => KeyCode::KeyE,
-			SlotKey::Hand(Side::Left) => KeyCode::KeyQ,
+			SlotKey::TopHand(Side::Left) => KeyCode::Digit1,
+			SlotKey::BottomHand(Side::Left) => KeyCode::Digit2,
+			SlotKey::BottomHand(Side::Right) => KeyCode::Digit3,
+			SlotKey::TopHand(Side::Right) => KeyCode::Digit4,
 		}
 	}
 }
@@ -43,8 +48,10 @@ impl From<SlotKey> for KeyCode {
 impl GetUiText<SlotKey> for English {
 	fn ui_text(value: &SlotKey) -> UIText {
 		match value {
-			SlotKey::Hand(Side::Right) => UIText::from("Main Hand"),
-			SlotKey::Hand(Side::Left) => UIText::from("Off Hand"),
+			SlotKey::TopHand(Side::Right) => UIText::from("Right Hand (Top)"),
+			SlotKey::TopHand(Side::Left) => UIText::from("Left Hand (Top)"),
+			SlotKey::BottomHand(Side::Right) => UIText::from("Right Hand (Bottom)"),
+			SlotKey::BottomHand(Side::Left) => UIText::from("Left Hand (Bottom)"),
 		}
 	}
 }
@@ -52,8 +59,10 @@ impl GetUiText<SlotKey> for English {
 impl GetUiText<SlotKey> for Japanese {
 	fn ui_text(value: &SlotKey) -> UIText {
 		match value {
-			SlotKey::Hand(Side::Right) => UIText::from("利き手"),
-			SlotKey::Hand(Side::Left) => UIText::from("利き手ではない手"),
+			SlotKey::TopHand(Side::Right) => UIText::from("右手「上」"),
+			SlotKey::TopHand(Side::Left) => UIText::from("左手「上」"),
+			SlotKey::BottomHand(Side::Right) => UIText::from("右手「下」"),
+			SlotKey::BottomHand(Side::Left) => UIText::from("左手「下」"),
 		}
 	}
 }
@@ -65,7 +74,12 @@ mod tests {
 	#[test]
 	fn iter_all_keys() {
 		assert_eq!(
-			vec![SlotKey::Hand(Side::Right), SlotKey::Hand(Side::Left)],
+			vec![
+				SlotKey::TopHand(Side::Left),
+				SlotKey::BottomHand(Side::Left),
+				SlotKey::BottomHand(Side::Right),
+				SlotKey::TopHand(Side::Right),
+			],
 			SlotKey::iterator().collect::<Vec<_>>()
 		);
 	}

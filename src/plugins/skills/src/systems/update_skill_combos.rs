@@ -235,7 +235,7 @@ mod tests {
 
 	fn slots() -> Slots {
 		Slots(HashMap::from([(
-			SlotKey::Hand(Side::Left),
+			SlotKey::BottomHand(Side::Left),
 			Slot {
 				mounts: mounts(),
 				item: None,
@@ -251,11 +251,11 @@ mod tests {
 				mock.expect_flush().return_const(());
 				mock.expect_advance()
 					.times(1)
-					.with(eq(SlotKey::Hand(Side::Right)), eq(slots()))
+					.with(eq(SlotKey::BottomHand(Side::Right)), eq(slots()))
 					.return_const(Skill::default());
 				mock.expect_advance()
 					.times(1)
-					.with(eq(SlotKey::Hand(Side::Left)), eq(slots()))
+					.with(eq(SlotKey::BottomHand(Side::Left)), eq(slots()))
 					.return_const(Skill::default());
 			}),
 			_Skills {
@@ -265,7 +265,7 @@ mod tests {
 							name: "skill a".to_owned(),
 							..default()
 						},
-						slot_key: SlotKey::Hand(Side::Right),
+						slot_key: SlotKey::BottomHand(Side::Right),
 						..default()
 					},
 					QueuedSkill {
@@ -273,7 +273,7 @@ mod tests {
 							name: "skill b".to_owned(),
 							..default()
 						},
-						slot_key: SlotKey::Hand(Side::Left),
+						slot_key: SlotKey::BottomHand(Side::Left),
 						..default()
 					},
 				],
@@ -294,13 +294,13 @@ mod tests {
 				_Combos::new().with_mock(|mock| {
 					mock.expect_flush().return_const(());
 					mock.expect_advance()
-						.with(eq(SlotKey::Hand(Side::Right)), eq(slots()))
+						.with(eq(SlotKey::BottomHand(Side::Right)), eq(slots()))
 						.return_const(Skill {
 							name: "replace a".to_owned(),
 							..default()
 						});
 					mock.expect_advance()
-						.with(eq(SlotKey::Hand(Side::Left)), eq(slots()))
+						.with(eq(SlotKey::BottomHand(Side::Left)), eq(slots()))
 						.return_const(Skill {
 							name: "replace b".to_owned(),
 							..default()
@@ -313,7 +313,7 @@ mod tests {
 								name: "skill a".to_owned(),
 								..default()
 							},
-							slot_key: SlotKey::Hand(Side::Right),
+							slot_key: SlotKey::BottomHand(Side::Right),
 							..default()
 						},
 						QueuedSkill {
@@ -321,7 +321,7 @@ mod tests {
 								name: "skill b".to_owned(),
 								..default()
 							},
-							slot_key: SlotKey::Hand(Side::Left),
+							slot_key: SlotKey::BottomHand(Side::Left),
 							..default()
 						},
 					],
@@ -343,7 +343,7 @@ mod tests {
 							name: "replace a".to_owned(),
 							..default()
 						},
-						slot_key: SlotKey::Hand(Side::Right),
+						slot_key: SlotKey::BottomHand(Side::Right),
 						..default()
 					},
 					QueuedSkill {
@@ -351,7 +351,7 @@ mod tests {
 							name: "replace b".to_owned(),
 							..default()
 						},
-						slot_key: SlotKey::Hand(Side::Left),
+						slot_key: SlotKey::BottomHand(Side::Left),
 						..default()
 					},
 				],

@@ -54,12 +54,12 @@ mod tests {
 		app.world_mut().spawn((
 			KeySelect {
 				extra: ReKeySkill {
-					to: SlotKey::Hand(Side::Left),
+					to: SlotKey::BottomHand(Side::Left),
 				},
 				key_path: vec![
-					SlotKey::Hand(Side::Right),
-					SlotKey::Hand(Side::Left),
-					SlotKey::Hand(Side::Right),
+					SlotKey::BottomHand(Side::Right),
+					SlotKey::BottomHand(Side::Left),
+					SlotKey::BottomHand(Side::Right),
 				],
 			},
 			Interaction::Pressed,
@@ -72,13 +72,13 @@ mod tests {
 		assert_eq!(
 			&_Result(Some(KeySelect {
 				extra: ReKeySkill {
-					to: SlotKey::Hand(Side::Left)
+					to: SlotKey::BottomHand(Side::Left)
 				},
 
 				key_path: vec![
-					SlotKey::Hand(Side::Right),
-					SlotKey::Hand(Side::Left),
-					SlotKey::Hand(Side::Right)
+					SlotKey::BottomHand(Side::Right),
+					SlotKey::BottomHand(Side::Left),
+					SlotKey::BottomHand(Side::Right)
 				]
 			})),
 			result
@@ -91,12 +91,12 @@ mod tests {
 		app.world_mut().spawn((
 			KeySelect {
 				extra: ReKeySkill {
-					to: SlotKey::Hand(Side::Right),
+					to: SlotKey::BottomHand(Side::Right),
 				},
 				key_path: vec![
-					SlotKey::Hand(Side::Right),
-					SlotKey::Hand(Side::Left),
-					SlotKey::Hand(Side::Right),
+					SlotKey::BottomHand(Side::Right),
+					SlotKey::BottomHand(Side::Left),
+					SlotKey::BottomHand(Side::Right),
 				],
 			},
 			Interaction::Hovered,
@@ -115,12 +115,12 @@ mod tests {
 		app.world_mut().spawn((
 			KeySelect {
 				extra: ReKeySkill {
-					to: SlotKey::Hand(Side::Right),
+					to: SlotKey::BottomHand(Side::Right),
 				},
 				key_path: vec![
-					SlotKey::Hand(Side::Right),
-					SlotKey::Hand(Side::Left),
-					SlotKey::Hand(Side::Right),
+					SlotKey::BottomHand(Side::Right),
+					SlotKey::BottomHand(Side::Left),
+					SlotKey::BottomHand(Side::Right),
 				],
 			},
 			Interaction::None,

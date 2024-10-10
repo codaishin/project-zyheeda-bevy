@@ -188,7 +188,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			},
 			MovementAnimations::new(
 				Animation::new(player_animation_path("Animation3"), PlayMode::Repeat),
-				Animation::new(player_animation_path("Animation1"), PlayMode::Repeat),
+				Animation::new(player_animation_path("Animation2"), PlayMode::Repeat),
 			),
 			RigidBody::Dynamic,
 			GravityScale(0.),

@@ -24,7 +24,7 @@ use bevy::{
 	},
 	utils::default,
 };
-use common::components::Side;
+use common::traits::iteration::IterFinite;
 use skills::items::slot_key::SlotKey;
 
 #[derive(Component)]
@@ -71,8 +71,9 @@ fn add_quickbar(parent: &mut ChildBuilder) {
 			},
 		))
 		.with_children(|quickbar| {
-			add_slot(quickbar, &SlotKey::Hand(Side::Left));
-			add_slot(quickbar, &SlotKey::Hand(Side::Right));
+			for slot_key in SlotKey::iterator() {
+				add_slot(quickbar, &slot_key);
+			}
 		});
 }
 

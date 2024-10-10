@@ -37,7 +37,7 @@ mod tests {
 		let slots = app
 			.world_mut()
 			.spawn(Slots::<Skill>::new([(
-				SlotKey::Hand(Side::Right),
+				SlotKey::BottomHand(Side::Right),
 				Slot {
 					mounts: Mounts {
 						hand: Entity::from_raw(42),
@@ -53,7 +53,7 @@ mod tests {
 		let slots = app.world().entity(slots);
 
 		assert_eq!(
-			Some(&LoadModelsCommand::new([LoadModel(SlotKey::Hand(
+			Some(&LoadModelsCommand::new([LoadModel(SlotKey::BottomHand(
 				Side::Right
 			))])),
 			slots.get::<LoadModelsCommand>()
@@ -67,7 +67,7 @@ mod tests {
 		let slots = app
 			.world_mut()
 			.spawn(Slots::<Skill>::new([(
-				SlotKey::Hand(Side::Right),
+				SlotKey::BottomHand(Side::Right),
 				Slot {
 					mounts: Mounts {
 						hand: Entity::from_raw(42),
@@ -86,7 +86,7 @@ mod tests {
 			.unwrap()
 			.0
 			.insert(
-				SlotKey::Hand(Side::Left),
+				SlotKey::BottomHand(Side::Left),
 				Slot {
 					mounts: Mounts {
 						hand: Entity::from_raw(42),
@@ -101,7 +101,7 @@ mod tests {
 		let slots = app.world().entity(slots);
 
 		assert_eq!(
-			Some(&LoadModelsCommand::new([LoadModel(SlotKey::Hand(
+			Some(&LoadModelsCommand::new([LoadModel(SlotKey::BottomHand(
 				Side::Right
 			))])),
 			slots.get::<LoadModelsCommand>()

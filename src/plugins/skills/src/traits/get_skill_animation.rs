@@ -10,13 +10,22 @@ impl<T: GetAnimationSetup> GetSkillAnimation for T {
 		}
 
 		let SkillAnimation {
-			mut left,
-			mut right,
+			mut top_hand_left,
+			mut top_hand_right,
+			mut btm_hand_left,
+			mut btm_hand_right,
 		} = T::get_animation();
 
-		left.update_fn = Some(apply_chain::<T>);
-		right.update_fn = Some(apply_chain::<T>);
-		SkillAnimation { left, right }
+		top_hand_left.update_fn = Some(apply_chain::<T>);
+		top_hand_right.update_fn = Some(apply_chain::<T>);
+		btm_hand_left.update_fn = Some(apply_chain::<T>);
+		btm_hand_right.update_fn = Some(apply_chain::<T>);
+		SkillAnimation {
+			top_hand_left,
+			top_hand_right,
+			btm_hand_left,
+			btm_hand_right,
+		}
 	}
 }
 
@@ -35,9 +44,8 @@ fn apply_chain<T: GetAnimationSetup>(mut this: This<Animation>, last: Last<Anima
 
 #[cfg(test)]
 mod test {
-	use crate::traits::AnimationChainIf;
-
 	use super::*;
+	use crate::traits::AnimationChainIf;
 	use animations::animation::PlayMode;
 	use common::traits::load_asset::Path;
 	use mockall::mock;
@@ -58,19 +66,28 @@ mod test {
 
 	#[test]
 	fn map_left_and_right_animation() {
-		let left = Animation::new(Path::from("left"), PlayMode::Repeat);
-		let right = Animation::new(Path::from("right"), PlayMode::Repeat);
+		let top_hand_left = Animation::new(Path::from("top hand left"), PlayMode::Repeat);
+		let top_hand_right = Animation::new(Path::from("top hand right"), PlayMode::Repeat);
+		let btm_hand_left = Animation::new(Path::from("btm hand left"), PlayMode::Repeat);
+		let btm_hand_right = Animation::new(Path::from("btm hand right"), PlayMode::Repeat);
 		let get_animation = Mock_MapAnimation::get_animation_context();
 		let get_chains = Mock_MapAnimation::get_chains_context();
 
 		get_animation.expect().return_const(SkillAnimation {
-			left: left.clone(),
-			right: right.clone(),
+			top_hand_left: top_hand_left.clone(),
+			top_hand_right: top_hand_right.clone(),
+			btm_hand_left: btm_hand_left.clone(),
+			btm_hand_right: btm_hand_right.clone(),
 		});
 		get_chains.expect().return_const(vec![]);
 
 		assert_eq!(
-			SkillAnimation { left, right },
+			SkillAnimation {
+				top_hand_left,
+				top_hand_right,
+				btm_hand_left,
+				btm_hand_right,
+			},
 			Mock_MapAnimation::animation()
 		)
 	}
@@ -79,14 +96,18 @@ mod test {
 
 	#[test]
 	fn add_apply_chain_func_when_chains_present() {
-		let mut left = Animation::new(Path::from("left"), PlayMode::Repeat);
-		let mut right = Animation::new(Path::from("right"), PlayMode::Repeat);
+		let mut top_hand_left = Animation::new(Path::from("top hand left"), PlayMode::Repeat);
+		let mut top_hand_right = Animation::new(Path::from("top hand right"), PlayMode::Repeat);
+		let mut btm_hand_left = Animation::new(Path::from("btm hand left"), PlayMode::Repeat);
+		let mut btm_hand_right = Animation::new(Path::from("btm hand right"), PlayMode::Repeat);
 		let get_animation = Mock_CallChain::get_animation_context();
 		let get_chains = Mock_CallChain::get_chains_context();
 
 		get_animation.expect().return_const(SkillAnimation {
-			left: left.clone(),
-			right: right.clone(),
+			top_hand_left: top_hand_left.clone(),
+			top_hand_right: top_hand_right.clone(),
+			btm_hand_left: btm_hand_left.clone(),
+			btm_hand_right: btm_hand_right.clone(),
 		});
 		get_chains.expect().return_const(vec![AnimationChainIf {
 			last: || Path::from(""),
@@ -94,10 +115,20 @@ mod test {
 			then: || Path::from(""),
 		}]);
 
-		left.update_fn = Some(apply_chain::<Mock_CallChain>);
-		right.update_fn = Some(apply_chain::<Mock_CallChain>);
+		top_hand_left.update_fn = Some(apply_chain::<Mock_CallChain>);
+		top_hand_right.update_fn = Some(apply_chain::<Mock_CallChain>);
+		btm_hand_left.update_fn = Some(apply_chain::<Mock_CallChain>);
+		btm_hand_right.update_fn = Some(apply_chain::<Mock_CallChain>);
 
-		assert_eq!(SkillAnimation { left, right }, Mock_CallChain::animation())
+		assert_eq!(
+			SkillAnimation {
+				top_hand_right,
+				top_hand_left,
+				btm_hand_left,
+				btm_hand_right
+			},
+			Mock_CallChain::animation()
+		)
 	}
 
 	mock_setup!(_ChainCombo);
