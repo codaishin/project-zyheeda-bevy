@@ -44,8 +44,8 @@ mod tests {
 	impl TryMapBackwards<KeyCode, SlotKey> for _Map {
 		fn try_map_backwards(&self, value: KeyCode) -> Option<SlotKey> {
 			match value {
-				KeyCode::KeyC => Some(SlotKey::Hand(Side::Main)),
-				KeyCode::KeyD => Some(SlotKey::Hand(Side::Off)),
+				KeyCode::KeyC => Some(SlotKey::Hand(Side::Right)),
+				KeyCode::KeyD => Some(SlotKey::Hand(Side::Left)),
 				_ => None,
 			}
 		}
@@ -61,7 +61,7 @@ mod tests {
 		input.clear_just_pressed(KeyCode::KeyD);
 
 		assert_eq!(
-			HashSet::from([SlotKey::Hand(Side::Main)]),
+			HashSet::from([SlotKey::Hand(Side::Right)]),
 			HashSet::from_iter(input.just_pressed_slots(&_Map)),
 		)
 	}
@@ -79,7 +79,7 @@ mod tests {
 		input.clear_just_pressed(KeyCode::KeyD);
 
 		assert_eq!(
-			HashSet::from([SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off),]),
+			HashSet::from([SlotKey::Hand(Side::Right), SlotKey::Hand(Side::Left),]),
 			HashSet::from_iter(input.pressed_slots(&_Map)),
 		)
 	}
@@ -100,7 +100,7 @@ mod tests {
 		input.clear_just_pressed(KeyCode::KeyD);
 
 		assert_eq!(
-			HashSet::from([SlotKey::Hand(Side::Main),]),
+			HashSet::from([SlotKey::Hand(Side::Right),]),
 			HashSet::from_iter(input.just_released_slots(&_Map)),
 		)
 	}

@@ -89,10 +89,10 @@ mod test {
 
 	#[test]
 	fn prime() {
-		let mut app = setup(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyZ));
+		let mut app = setup(_Map(SlotKey::Hand(Side::Right), KeyCode::KeyZ));
 
 		app.world_mut()
-			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::Pressed));
+			.spawn((_Panel(SlotKey::Hand(Side::Right)), Interaction::Pressed));
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
@@ -110,10 +110,10 @@ mod test {
 
 	#[test]
 	fn do_not_prime_when_not_pressed() {
-		let mut app = setup(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyZ));
+		let mut app = setup(_Map(SlotKey::Hand(Side::Right), KeyCode::KeyZ));
 
 		app.world_mut()
-			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::None));
+			.spawn((_Panel(SlotKey::Hand(Side::Right)), Interaction::None));
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);
@@ -131,10 +131,10 @@ mod test {
 
 	#[test]
 	fn prime_with_different_key() {
-		let mut app = setup(_Map(SlotKey::Hand(Side::Main), KeyCode::KeyT));
+		let mut app = setup(_Map(SlotKey::Hand(Side::Right), KeyCode::KeyT));
 
 		app.world_mut()
-			.spawn((_Panel(SlotKey::Hand(Side::Main)), Interaction::Pressed));
+			.spawn((_Panel(SlotKey::Hand(Side::Right)), Interaction::Pressed));
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
 			.set(MouseContext::Default);

@@ -18,8 +18,8 @@ impl<TElement> Collection<TElement> {
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum Side {
-	Main,
-	Off,
+	Right,
+	Left,
 }
 
 #[derive(Component)]

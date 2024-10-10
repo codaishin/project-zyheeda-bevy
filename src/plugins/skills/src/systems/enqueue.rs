@@ -176,7 +176,7 @@ mod tests {
 		let mut app = setup::<_Enqueue>();
 
 		let skills = _Skills(HashMap::from([(
-			SlotKey::Hand(Side::Main),
+			SlotKey::Hand(Side::Right),
 			Skill {
 				name: "my skill".to_owned(),
 				..default()
@@ -192,13 +192,13 @@ mod tests {
 							name: "my skill".to_owned(),
 							..default()
 						},
-						SlotKey::Hand(Side::Main),
+						SlotKey::Hand(Side::Right),
 					)))
 					.return_const(());
 			}),
 		));
 
-		app.world_mut().resource_mut::<_Input>().0.just_pressed = vec![SlotKey::Hand(Side::Main)];
+		app.world_mut().resource_mut::<_Input>().0.just_pressed = vec![SlotKey::Hand(Side::Right)];
 		app.update();
 	}
 
@@ -214,7 +214,7 @@ mod tests {
 				})],
 			},
 		));
-		app.world_mut().resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
+		app.world_mut().resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Right)];
 
 		app.update();
 	}
@@ -228,20 +228,20 @@ mod tests {
 				queued: vec![
 					Mock_SkillQueued::new_mock(|mock| {
 						mock.expect_matches()
-							.with(eq(SlotKey::Hand(Side::Main)))
+							.with(eq(SlotKey::Hand(Side::Right)))
 							.return_const(true);
 						mock.expect_prime().times(1).return_const(());
 					}),
 					Mock_SkillQueued::new_mock(|mock| {
 						mock.expect_matches()
-							.with(eq(SlotKey::Hand(Side::Main)))
+							.with(eq(SlotKey::Hand(Side::Right)))
 							.return_const(false);
 						mock.expect_prime().never().return_const(());
 					}),
 				],
 			},
 		));
-		app.world_mut().resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
+		app.world_mut().resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Right)];
 
 		app.update();
 	}
@@ -264,7 +264,7 @@ mod tests {
 				],
 			},
 		));
-		app.world_mut().resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Main)];
+		app.world_mut().resource_mut::<_Input>().0.just_released = vec![SlotKey::Hand(Side::Right)];
 
 		app.update();
 	}

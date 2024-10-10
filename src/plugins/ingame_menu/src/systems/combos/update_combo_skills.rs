@@ -86,7 +86,7 @@ mod tests {
 				mock.expect_update_config()
 					.times(1)
 					.with(
-						eq(vec![SlotKey::Hand(Side::Off)]),
+						eq(vec![SlotKey::Hand(Side::Left)]),
 						eq(Some(Skill {
 							name: "my skill".to_owned(),
 							..default()
@@ -101,7 +101,7 @@ mod tests {
 					name: "my skill".to_owned(),
 					..default()
 				},
-				vec![SlotKey::Hand(Side::Off)],
+				vec![SlotKey::Hand(Side::Left)],
 			),
 			Interaction::Pressed,
 		));
@@ -116,14 +116,14 @@ mod tests {
 		app.world_mut().spawn((
 			SkillButton::<DropdownItem<_Layout>>::new(
 				Skill::default(),
-				vec![SlotKey::Hand(Side::Off)],
+				vec![SlotKey::Hand(Side::Left)],
 			),
 			Interaction::Hovered,
 		));
 		app.world_mut().spawn((
 			SkillButton::<DropdownItem<_Layout>>::new(
 				Skill::default(),
-				vec![SlotKey::Hand(Side::Off)],
+				vec![SlotKey::Hand(Side::Left)],
 			),
 			Interaction::None,
 		));
@@ -138,7 +138,7 @@ mod tests {
 		app.world_mut().spawn((
 			SkillButton::<DropdownItem<_Layout>>::new(
 				Skill::default(),
-				vec![SlotKey::Hand(Side::Off)],
+				vec![SlotKey::Hand(Side::Left)],
 			),
 			Interaction::Pressed,
 		));

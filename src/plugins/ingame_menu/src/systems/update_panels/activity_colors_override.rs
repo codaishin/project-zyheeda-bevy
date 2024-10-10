@@ -181,7 +181,7 @@ mod tests {
 	fn set_to_active_when_matching_skill_active() {
 		let bundle = (
 			BackgroundColor::from(Color::NONE),
-			_Panel(SlotKey::Hand(Side::Main)),
+			_Panel(SlotKey::Hand(Side::Right)),
 		);
 		let (mut app, panel) = setup(bundle, _Map::None);
 
@@ -189,7 +189,7 @@ mod tests {
 			Player,
 			_Queue {
 				queued: vec![QueuedSkill {
-					slot_key: SlotKey::Hand(Side::Main),
+					slot_key: SlotKey::Hand(Side::Right),
 					..default()
 				}],
 			},
@@ -210,7 +210,7 @@ mod tests {
 	fn no_override_when_no_matching_skill_active() {
 		let bundle = (
 			BackgroundColor::from(Color::NONE),
-			_Panel(SlotKey::Hand(Side::Main)),
+			_Panel(SlotKey::Hand(Side::Right)),
 			ColorOverride,
 		);
 		let (mut app, panel) = setup(bundle, _Map::None);
@@ -219,7 +219,7 @@ mod tests {
 			Player,
 			_Queue {
 				queued: vec![QueuedSkill {
-					slot_key: SlotKey::Hand(Side::Off),
+					slot_key: SlotKey::Hand(Side::Left),
 					..default()
 				}],
 			},
@@ -240,7 +240,7 @@ mod tests {
 	fn no_override_when_no_skill_active() {
 		let bundle = (
 			BackgroundColor::from(Color::NONE),
-			_Panel(SlotKey::Hand(Side::Main)),
+			_Panel(SlotKey::Hand(Side::Right)),
 			ColorOverride,
 		);
 		let (mut app, panel) = setup(bundle, _Map::None);
@@ -262,9 +262,9 @@ mod tests {
 	fn set_to_pressed_when_matching_key_primed_in_mouse_context() {
 		let bundle = (
 			BackgroundColor::from(Color::NONE),
-			_Panel(SlotKey::Hand(Side::Main)),
+			_Panel(SlotKey::Hand(Side::Right)),
 		);
-		let (mut app, panel) = setup(bundle, _Map::Map(KeyCode::KeyQ, SlotKey::Hand(Side::Main)));
+		let (mut app, panel) = setup(bundle, _Map::Map(KeyCode::KeyQ, SlotKey::Hand(Side::Right)));
 
 		app.world_mut().spawn((Player, _Queue { queued: vec![] }));
 
@@ -288,7 +288,7 @@ mod tests {
 	fn set_to_queued_when_matching_with_queued_skill() {
 		let bundle = (
 			BackgroundColor::from(Color::NONE),
-			_Panel(SlotKey::Hand(Side::Main)),
+			_Panel(SlotKey::Hand(Side::Right)),
 		);
 		let (mut app, panel) = setup(bundle, _Map::None);
 
@@ -297,11 +297,11 @@ mod tests {
 			_Queue {
 				queued: vec![
 					QueuedSkill {
-						slot_key: SlotKey::Hand(Side::Off),
+						slot_key: SlotKey::Hand(Side::Left),
 						..default()
 					},
 					QueuedSkill {
-						slot_key: SlotKey::Hand(Side::Main),
+						slot_key: SlotKey::Hand(Side::Right),
 						..default()
 					},
 				],

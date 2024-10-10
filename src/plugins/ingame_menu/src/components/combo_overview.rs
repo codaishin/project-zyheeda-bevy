@@ -647,7 +647,7 @@ mod tests {
 				})),
 				..default()
 			},
-			key_path: vec![SlotKey::Hand(Side::Main)],
+			key_path: vec![SlotKey::Hand(Side::Right)],
 		}]];
 		let mut combo_overview = ComboOverview::default();
 		combo_overview.update_combos_view(combos.clone());

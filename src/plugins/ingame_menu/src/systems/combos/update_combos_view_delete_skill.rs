@@ -76,7 +76,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			DeleteSkill {
-				key_path: vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+				key_path: vec![SlotKey::Hand(Side::Left), SlotKey::Hand(Side::Right)],
 			},
 			Interaction::Pressed,
 		));
@@ -86,7 +86,7 @@ mod tests {
 				mock.expect_update_config()
 					.times(1)
 					.with(
-						eq(vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)]),
+						eq(vec![SlotKey::Hand(Side::Left), SlotKey::Hand(Side::Right)]),
 						eq(None),
 					)
 					.return_const(());
@@ -101,7 +101,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			DeleteSkill {
-				key_path: vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+				key_path: vec![SlotKey::Hand(Side::Left), SlotKey::Hand(Side::Right)],
 			},
 			Interaction::Pressed,
 		));
@@ -115,13 +115,13 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			DeleteSkill {
-				key_path: vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+				key_path: vec![SlotKey::Hand(Side::Left), SlotKey::Hand(Side::Right)],
 			},
 			Interaction::Hovered,
 		));
 		app.world_mut().spawn((
 			DeleteSkill {
-				key_path: vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+				key_path: vec![SlotKey::Hand(Side::Left), SlotKey::Hand(Side::Right)],
 			},
 			Interaction::None,
 		));
@@ -138,7 +138,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			DeleteSkill {
-				key_path: vec![SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main)],
+				key_path: vec![SlotKey::Hand(Side::Left), SlotKey::Hand(Side::Right)],
 			},
 			Interaction::Pressed,
 		));

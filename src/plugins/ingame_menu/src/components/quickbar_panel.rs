@@ -57,7 +57,7 @@ mod tests {
 	#[test]
 	fn get_empty() {
 		let panel = QuickbarPanel {
-			key: SlotKey::Hand(Side::Main),
+			key: SlotKey::Hand(Side::Right),
 			state: PanelState::Empty,
 		};
 		assert_eq!(&PanelState::Empty, panel.get());
@@ -66,7 +66,7 @@ mod tests {
 	#[test]
 	fn get_filled() {
 		let panel = QuickbarPanel {
-			key: SlotKey::Hand(Side::Main),
+			key: SlotKey::Hand(Side::Right),
 			state: PanelState::Filled,
 		};
 		assert_eq!(&PanelState::Filled, panel.get());
@@ -75,20 +75,20 @@ mod tests {
 	#[test]
 	fn get_legs() {
 		let panel = QuickbarPanel {
-			key: SlotKey::Hand(Side::Off),
+			key: SlotKey::Hand(Side::Left),
 			state: PanelState::Empty,
 		};
 
-		assert_eq!(&SlotKey::Hand(Side::Off), panel.get());
+		assert_eq!(&SlotKey::Hand(Side::Left), panel.get());
 	}
 
 	#[test]
 	fn get_main_hand() {
 		let panel = QuickbarPanel {
-			key: SlotKey::Hand(Side::Main),
+			key: SlotKey::Hand(Side::Right),
 			state: PanelState::Empty,
 		};
 
-		assert_eq!(&SlotKey::Hand(Side::Main), panel.get());
+		assert_eq!(&SlotKey::Hand(Side::Right), panel.get());
 	}
 }

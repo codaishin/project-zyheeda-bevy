@@ -186,7 +186,7 @@ fn get_loadout() -> Loadout {
 		"projectile_spawn",
 		[
 			(
-				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Left),
 				(
 					Mounts {
 						hand: "hand_slot.L",
@@ -202,7 +202,7 @@ fn get_loadout() -> Loadout {
 				),
 			),
 			(
-				SlotKey::Hand(Side::Main),
+				SlotKey::Hand(Side::Right),
 				(
 					Mounts {
 						hand: "hand_slot.R",

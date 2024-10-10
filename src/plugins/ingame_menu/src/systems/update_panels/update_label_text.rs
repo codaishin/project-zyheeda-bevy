@@ -106,7 +106,7 @@ mod tests {
 		let id = app
 			.world_mut()
 			.spawn((
-				Label::<_T, SlotKey>::new(SlotKey::Hand(Side::Main)),
+				Label::<_T, SlotKey>::new(SlotKey::Hand(Side::Right)),
 				Text::default(),
 			))
 			.id();
@@ -132,7 +132,7 @@ mod tests {
 		let id = app
 			.world_mut()
 			.spawn((
-				Label::<_T, SlotKey>::new(SlotKey::Hand(Side::Main)),
+				Label::<_T, SlotKey>::new(SlotKey::Hand(Side::Right)),
 				Text::from_section("OVERRIDE THIS", default()),
 			))
 			.id();
@@ -154,12 +154,12 @@ mod tests {
 		app.insert_resource(_Map::new().with_mock(|mock| {
 			mock.expect_map_forward()
 				.times(1)
-				.with(eq(SlotKey::Hand(Side::Off)))
+				.with(eq(SlotKey::Hand(Side::Left)))
 				.return_const(KeyCode::ArrowUp);
 		}));
 		app.insert_resource(_LanguageServer(KeyCode::ArrowUp, "IIIIII"));
 		app.world_mut().spawn((
-			Label::<_T, SlotKey>::new(SlotKey::Hand(Side::Off)),
+			Label::<_T, SlotKey>::new(SlotKey::Hand(Side::Left)),
 			Text::from_section("OVERRIDE THIS", default()),
 		));
 

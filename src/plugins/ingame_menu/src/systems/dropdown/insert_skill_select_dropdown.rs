@@ -136,7 +136,7 @@ mod tests {
 		app.world_mut().spawn((
 			Player,
 			_Equipment(HashMap::from([(
-				SlotKey::Hand(Side::Main),
+				SlotKey::Hand(Side::Right),
 				Item {
 					item_type: HashSet::from([ItemType::Pistol]),
 					..default()
@@ -146,7 +146,7 @@ mod tests {
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(
-				vec![SlotKey::Hand(Side::Main)],
+				vec![SlotKey::Hand(Side::Right)],
 			))
 			.id();
 
@@ -164,7 +164,7 @@ mod tests {
 							icon: Some(image_a.clone()),
 							..default()
 						},
-						vec![SlotKey::Hand(Side::Main)],
+						vec![SlotKey::Hand(Side::Right)],
 					),
 					SkillButton::<DropdownItem<_Layout>>::new(
 						Skill {
@@ -173,7 +173,7 @@ mod tests {
 							icon: Some(image_b.clone()),
 							..default()
 						},
-						vec![SlotKey::Hand(Side::Main)],
+						vec![SlotKey::Hand(Side::Right)],
 					)
 				]
 			}),
@@ -207,7 +207,7 @@ mod tests {
 		app.world_mut().spawn((
 			_NonPlayer,
 			_Equipment(HashMap::from([(
-				SlotKey::Hand(Side::Main),
+				SlotKey::Hand(Side::Right),
 				Item {
 					item_type: HashSet::from([ItemType::Pistol]),
 					..default()
@@ -217,7 +217,7 @@ mod tests {
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(
-				vec![SlotKey::Hand(Side::Main)],
+				vec![SlotKey::Hand(Side::Right)],
 			))
 			.id();
 
@@ -238,7 +238,7 @@ mod tests {
 		app.world_mut().spawn((
 			Player,
 			_Equipment(HashMap::from([(
-				SlotKey::Hand(Side::Main),
+				SlotKey::Hand(Side::Right),
 				Item {
 					item_type: HashSet::from([ItemType::Pistol]),
 					..default()
@@ -248,7 +248,7 @@ mod tests {
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(
-				vec![SlotKey::Hand(Side::Main)],
+				vec![SlotKey::Hand(Side::Right)],
 			))
 			.id();
 
@@ -271,7 +271,7 @@ mod tests {
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(
-				vec![SlotKey::Hand(Side::Main)],
+				vec![SlotKey::Hand(Side::Right)],
 			))
 			.id();
 

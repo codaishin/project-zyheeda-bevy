@@ -165,7 +165,7 @@ mod tests {
 				Slots(
 					[
 						(
-							SlotKey::Hand(Side::Off),
+							SlotKey::Hand(Side::Left),
 							Slot::<Skill> {
 								mounts: Mounts {
 									hand: slot_handle_ids[0],
@@ -179,7 +179,7 @@ mod tests {
 							},
 						),
 						(
-							SlotKey::Hand(Side::Main),
+							SlotKey::Hand(Side::Right),
 							Slot {
 								mounts: Mounts {
 									hand: slot_handle_ids[2],
@@ -195,7 +195,7 @@ mod tests {
 					]
 					.into(),
 				),
-				Collection([Swap(SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main))].into()),
+				Collection([Swap(SlotKey::Hand(Side::Left), SlotKey::Hand(Side::Right))].into()),
 			))
 			.id();
 
@@ -206,10 +206,15 @@ mod tests {
 			slot_handle_ids.map(|id| app.world().entity(id).get::<Handle<Scene>>().unwrap());
 		let slots = app.world().entity(agent).get::<Slots>().unwrap();
 		let new_items = (
-			slots.0.get(&SlotKey::Hand(Side::Off)).unwrap().item.clone(),
 			slots
 				.0
-				.get(&SlotKey::Hand(Side::Main))
+				.get(&SlotKey::Hand(Side::Left))
+				.unwrap()
+				.item
+				.clone(),
+			slots
+				.0
+				.get(&SlotKey::Hand(Side::Right))
 				.unwrap()
 				.item
 				.clone(),
@@ -268,7 +273,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Slots::<Skill>([].into()),
-				Collection([Swap(SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main))].into()),
+				Collection([Swap(SlotKey::Hand(Side::Left), SlotKey::Hand(Side::Right))].into()),
 			))
 			.id();
 
@@ -282,8 +287,8 @@ mod tests {
 
 		assert_eq!(
 			vec![
-				no_slot(SlotKey::Hand(Side::Off)),
-				no_slot(SlotKey::Hand(Side::Main))
+				no_slot(SlotKey::Hand(Side::Left)),
+				no_slot(SlotKey::Hand(Side::Right))
 			],
 			errors.0
 		)
@@ -298,7 +303,7 @@ mod tests {
 				Slots(
 					[
 						(
-							SlotKey::Hand(Side::Off),
+							SlotKey::Hand(Side::Left),
 							Slot::<Skill> {
 								mounts: Mounts {
 									hand: Entity::from_raw(100),
@@ -311,7 +316,7 @@ mod tests {
 							},
 						),
 						(
-							SlotKey::Hand(Side::Main),
+							SlotKey::Hand(Side::Right),
 							Slot {
 								mounts: Mounts {
 									hand: Entity::from_raw(101),
@@ -326,7 +331,7 @@ mod tests {
 					]
 					.into(),
 				),
-				Collection([Swap(SlotKey::Hand(Side::Off), SlotKey::Hand(Side::Main))].into()),
+				Collection([Swap(SlotKey::Hand(Side::Left), SlotKey::Hand(Side::Right))].into()),
 			))
 			.id();
 
@@ -340,8 +345,8 @@ mod tests {
 
 		assert_eq!(
 			vec![
-				handle_error(SlotKey::Hand(Side::Off)),
-				handle_error(SlotKey::Hand(Side::Main))
+				handle_error(SlotKey::Hand(Side::Left)),
+				handle_error(SlotKey::Hand(Side::Right))
 			],
 			errors.0
 		)

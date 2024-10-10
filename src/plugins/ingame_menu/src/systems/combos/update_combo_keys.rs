@@ -71,9 +71,9 @@ mod test {
 	fn call_update_config() {
 		let mut app = setup(Some(KeySelect {
 			extra: ReKeySkill {
-				to: SlotKey::Hand(Side::Main),
+				to: SlotKey::Hand(Side::Right),
 			},
-			key_path: vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
+			key_path: vec![SlotKey::Hand(Side::Right), SlotKey::Hand(Side::Left)],
 		}));
 
 		app.world_mut().spawn((
@@ -82,8 +82,8 @@ mod test {
 				mock.expect_update_config()
 					.times(1)
 					.with(
-						eq(vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]),
-						eq(SlotKey::Hand(Side::Main)),
+						eq(vec![SlotKey::Hand(Side::Right), SlotKey::Hand(Side::Left)]),
+						eq(SlotKey::Hand(Side::Right)),
 					)
 					.return_const(());
 			}),
@@ -98,9 +98,9 @@ mod test {
 
 		let mut app = setup(Some(KeySelect {
 			extra: ReKeySkill {
-				to: SlotKey::Hand(Side::Main),
+				to: SlotKey::Hand(Side::Right),
 			},
-			key_path: vec![SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)],
+			key_path: vec![SlotKey::Hand(Side::Right), SlotKey::Hand(Side::Left)],
 		}));
 
 		app.world_mut().spawn((_NonAgent, _Combos::default()));

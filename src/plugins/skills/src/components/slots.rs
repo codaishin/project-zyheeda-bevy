@@ -84,7 +84,7 @@ mod tests {
 	fn get_off_hand() {
 		let slots = Slots(
 			[(
-				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Left),
 				Slot::<()> {
 					mounts: mounts(),
 					item: Some(Item {
@@ -101,7 +101,7 @@ mod tests {
 				name: "my item",
 				..default()
 			}),
-			slots.get(&SlotKey::Hand(Side::Off))
+			slots.get(&SlotKey::Hand(Side::Left))
 		);
 	}
 
@@ -109,7 +109,7 @@ mod tests {
 	fn get_main_hand() {
 		let slots = Slots(
 			[(
-				SlotKey::Hand(Side::Main),
+				SlotKey::Hand(Side::Right),
 				Slot::<()> {
 					mounts: mounts(),
 					item: Some(Item {
@@ -126,7 +126,7 @@ mod tests {
 				name: "my item",
 				..default()
 			}),
-			slots.get(&SlotKey::Hand(Side::Main))
+			slots.get(&SlotKey::Hand(Side::Right))
 		);
 	}
 
@@ -134,7 +134,7 @@ mod tests {
 	fn get_none() {
 		let slots = Slots(
 			[(
-				SlotKey::Hand(Side::Main),
+				SlotKey::Hand(Side::Right),
 				Slot {
 					mounts: mounts(),
 					item: Some(Item {
@@ -146,14 +146,14 @@ mod tests {
 			.into(),
 		);
 
-		assert_eq!(None::<&Item>, slots.get(&SlotKey::Hand(Side::Off)));
+		assert_eq!(None::<&Item>, slots.get(&SlotKey::Hand(Side::Left)));
 	}
 
 	#[test]
 	fn get_skill() {
 		let slots = Slots(
 			[(
-				SlotKey::Hand(Side::Main),
+				SlotKey::Hand(Side::Right),
 				Slot {
 					mounts: mounts(),
 					item: Some(Item {
@@ -174,7 +174,7 @@ mod tests {
 				name: "my skill".to_owned(),
 				..default()
 			}),
-			slots.get(&SlotKey::Hand(Side::Main))
+			slots.get(&SlotKey::Hand(Side::Right))
 		);
 	}
 
@@ -185,7 +185,7 @@ mod tests {
 
 		let slots = Slots(
 			[(
-				SlotKey::Hand(Side::Main),
+				SlotKey::Hand(Side::Right),
 				Slot {
 					mounts: mounts(),
 					item: Some(Item {
@@ -200,7 +200,7 @@ mod tests {
 		let got = slots.try_map(|value| Some(_Mapped(value.to_string())));
 		let expected = Slots(
 			[(
-				SlotKey::Hand(Side::Main),
+				SlotKey::Hand(Side::Right),
 				Slot {
 					mounts: mounts(),
 					item: Some(Item {
@@ -222,7 +222,7 @@ mod tests {
 
 		let slots = Slots(
 			[(
-				SlotKey::Hand(Side::Main),
+				SlotKey::Hand(Side::Right),
 				Slot {
 					mounts: mounts(),
 					item: Some(Item {
@@ -240,7 +240,7 @@ mod tests {
 		let got = slots.try_map(|value| Some(_Mapped(value.to_string())));
 		let expected = Slots(
 			[(
-				SlotKey::Hand(Side::Main),
+				SlotKey::Hand(Side::Right),
 				Slot {
 					mounts: mounts(),
 					item: Some(Item {
@@ -266,7 +266,7 @@ mod tests {
 		let slots = Slots(
 			[
 				(
-					SlotKey::Hand(Side::Main),
+					SlotKey::Hand(Side::Right),
 					Slot {
 						mounts: mounts(),
 						item: Some(Item {
@@ -276,7 +276,7 @@ mod tests {
 					},
 				),
 				(
-					SlotKey::Hand(Side::Main),
+					SlotKey::Hand(Side::Right),
 					Slot {
 						mounts: mounts(),
 						item: Some(Item {
@@ -293,7 +293,7 @@ mod tests {
 		let expected = Slots(
 			[
 				(
-					SlotKey::Hand(Side::Main),
+					SlotKey::Hand(Side::Right),
 					Slot {
 						mounts: mounts(),
 						item: Some(Item {
@@ -303,7 +303,7 @@ mod tests {
 					},
 				),
 				(
-					SlotKey::Hand(Side::Main),
+					SlotKey::Hand(Side::Right),
 					Slot {
 						mounts: mounts(),
 						item: Some(Item {
@@ -327,7 +327,7 @@ mod tests {
 		let slots = Slots(
 			[
 				(
-					SlotKey::Hand(Side::Main),
+					SlotKey::Hand(Side::Right),
 					Slot {
 						mounts: mounts(),
 						item: Some(Item {
@@ -337,7 +337,7 @@ mod tests {
 					},
 				),
 				(
-					SlotKey::Hand(Side::Main),
+					SlotKey::Hand(Side::Right),
 					Slot {
 						mounts: mounts(),
 						item: None,
@@ -351,7 +351,7 @@ mod tests {
 		let expected = Slots(
 			[
 				(
-					SlotKey::Hand(Side::Main),
+					SlotKey::Hand(Side::Right),
 					Slot {
 						mounts: mounts(),
 						item: Some(Item {
@@ -361,7 +361,7 @@ mod tests {
 					},
 				),
 				(
-					SlotKey::Hand(Side::Main),
+					SlotKey::Hand(Side::Right),
 					Slot {
 						mounts: mounts(),
 						item: None,

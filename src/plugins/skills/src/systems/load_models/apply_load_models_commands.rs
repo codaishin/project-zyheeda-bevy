@@ -161,7 +161,7 @@ mod tests {
 		let forearm = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
 			Slots::<Skill>::new([(
-				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Left),
 				Slot {
 					mounts: Mounts { hand, forearm },
 					item: Some(Item {
@@ -171,7 +171,7 @@ mod tests {
 					}),
 				},
 			)]),
-			LoadModelsCommand::new([LoadModel(SlotKey::Hand(Side::Off))]),
+			LoadModelsCommand::new([LoadModel(SlotKey::Hand(Side::Left))]),
 		));
 
 		app.update();
@@ -197,7 +197,7 @@ mod tests {
 		let forearm = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
 			Slots::<Skill>::new([(
-				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Left),
 				Slot {
 					mounts: Mounts { hand, forearm },
 					item: Some(Item {
@@ -207,7 +207,7 @@ mod tests {
 					}),
 				},
 			)]),
-			LoadModelsCommand::new([LoadModel(SlotKey::Hand(Side::Off))]),
+			LoadModelsCommand::new([LoadModel(SlotKey::Hand(Side::Left))]),
 		));
 
 		app.update();
@@ -229,7 +229,7 @@ mod tests {
 		let forearm = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
 			Slots::<Skill>::new([(
-				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Left),
 				Slot {
 					mounts: Mounts { hand, forearm },
 					item: Some(Item {
@@ -238,7 +238,7 @@ mod tests {
 					}),
 				},
 			)]),
-			LoadModelsCommand::new([LoadModel(SlotKey::Hand(Side::Off))]),
+			LoadModelsCommand::new([LoadModel(SlotKey::Hand(Side::Left))]),
 		));
 
 		app.update();
@@ -260,7 +260,7 @@ mod tests {
 		let forearm = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
 			Slots::<Skill>::new([(
-				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Left),
 				Slot {
 					mounts: Mounts { hand, forearm },
 					item: Some(Item {
@@ -269,7 +269,7 @@ mod tests {
 					}),
 				},
 			)]),
-			LoadModelsCommand::new([LoadModel(SlotKey::Hand(Side::Off))]),
+			LoadModelsCommand::new([LoadModel(SlotKey::Hand(Side::Left))]),
 		));
 
 		app.update();
@@ -291,7 +291,7 @@ mod tests {
 		let forearm = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
 			Slots::<Skill>::new([(
-				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Left),
 				Slot {
 					mounts: Mounts { hand, forearm },
 					item: Some(Item {
@@ -301,7 +301,7 @@ mod tests {
 					}),
 				},
 			)]),
-			LoadModelsCommand::new([LoadModel(SlotKey::Hand(Side::Off))]),
+			LoadModelsCommand::new([LoadModel(SlotKey::Hand(Side::Left))]),
 		));
 
 		app.update();
@@ -332,7 +332,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Slots::<Skill>::new([(
-					SlotKey::Hand(Side::Off),
+					SlotKey::Hand(Side::Left),
 					Slot {
 						mounts: Mounts { hand, forearm },
 						item: Some(Item {
@@ -342,7 +342,7 @@ mod tests {
 						}),
 					},
 				)]),
-				LoadModelsCommand::new([LoadModel(SlotKey::Hand(Side::Off))]),
+				LoadModelsCommand::new([LoadModel(SlotKey::Hand(Side::Left))]),
 			))
 			.id();
 

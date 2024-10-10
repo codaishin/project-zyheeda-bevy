@@ -140,7 +140,7 @@ mod tests {
 			.id();
 		app.world_mut()
 			.spawn(SlotsDefinition::new([(
-				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Left),
 				(
 					Mounts {
 						hand: "hand bone",
@@ -178,7 +178,7 @@ mod tests {
 			.id();
 		app.world_mut()
 			.spawn(SlotsDefinition::new([(
-				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Left),
 				(
 					Mounts {
 						hand: "hand bone",
@@ -228,7 +228,7 @@ mod tests {
 			.id();
 		app.world_mut()
 			.spawn(SlotsDefinition::new([(
-				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Left),
 				(
 					Mounts {
 						hand: "hand bone",
@@ -275,7 +275,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn(SlotsDefinition::new([(
-				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Left),
 				(
 					Mounts {
 						hand: "hand bone",
@@ -301,7 +301,7 @@ mod tests {
 
 		assert_eq!(
 			HashMap::from([(
-				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Left),
 				Slot {
 					mounts: Mounts {
 						hand: hand_slot,
@@ -328,7 +328,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn(SlotsDefinition::new([(
-				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Left),
 				(
 					Mounts {
 						hand: "hand bone",
@@ -363,7 +363,7 @@ mod tests {
 			.world_mut()
 			.spawn(SlotsDefinition::new([
 				(
-					SlotKey::Hand(Side::Off),
+					SlotKey::Hand(Side::Left),
 					(
 						Mounts {
 							hand: "hand bone",
@@ -373,7 +373,7 @@ mod tests {
 					),
 				),
 				(
-					SlotKey::Hand(Side::Off),
+					SlotKey::Hand(Side::Left),
 					(
 						Mounts {
 							hand: "hand bone2",
@@ -394,7 +394,7 @@ mod tests {
 		assert_eq!(
 			Some(
 				&[(
-					SlotKey::Hand(Side::Off),
+					SlotKey::Hand(Side::Left),
 					(
 						Mounts {
 							hand: "hand bone2",
@@ -427,7 +427,7 @@ mod tests {
 			.world_mut()
 			.spawn(SlotsDefinition::new([
 				(
-					SlotKey::Hand(Side::Off),
+					SlotKey::Hand(Side::Left),
 					(
 						Mounts {
 							hand: "hand bone",
@@ -437,7 +437,7 @@ mod tests {
 					),
 				),
 				(
-					SlotKey::Hand(Side::Off),
+					SlotKey::Hand(Side::Left),
 					(
 						Mounts {
 							hand: "hand bone2",
@@ -458,7 +458,7 @@ mod tests {
 		assert_eq!(
 			Some(
 				&[(
-					SlotKey::Hand(Side::Off),
+					SlotKey::Hand(Side::Left),
 					(
 						Mounts {
 							hand: "hand bone2",
@@ -487,7 +487,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn(SlotsDefinition::new([(
-				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Left),
 				(
 					Mounts {
 						hand: "hand bone",
@@ -516,7 +516,7 @@ mod tests {
 
 		assert_eq!(
 			HashMap::from([(
-				SlotKey::Hand(Side::Off),
+				SlotKey::Hand(Side::Left),
 				Slot {
 					mounts: Mounts {
 						hand: hand_slot,

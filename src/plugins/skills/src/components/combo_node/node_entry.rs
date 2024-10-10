@@ -44,8 +44,8 @@ mod tests {
 	#[test]
 	fn no_followup_keys_when_no_skill_follows() {
 		let entry = NodeEntry::<_Skill> {
-			key: SlotKey::Hand(Side::Main),
-			tree: &OrderedHashMap::from([(SlotKey::Hand(Side::Main), (_Skill, default()))]),
+			key: SlotKey::Hand(Side::Right),
+			tree: &OrderedHashMap::from([(SlotKey::Hand(Side::Right), (_Skill, default()))]),
 		};
 
 		assert_eq!(
@@ -57,21 +57,21 @@ mod tests {
 	#[test]
 	fn iterate_followup_keys() {
 		let entry = NodeEntry::<_Skill> {
-			key: SlotKey::Hand(Side::Main),
+			key: SlotKey::Hand(Side::Right),
 			tree: &OrderedHashMap::from([(
-				SlotKey::Hand(Side::Main),
+				SlotKey::Hand(Side::Right),
 				(
 					_Skill,
 					ComboNode::new([
-						(SlotKey::Hand(Side::Main), (_Skill, default())),
-						(SlotKey::Hand(Side::Off), (_Skill, default())),
+						(SlotKey::Hand(Side::Right), (_Skill, default())),
+						(SlotKey::Hand(Side::Left), (_Skill, default())),
 					]),
 				),
 			)]),
 		};
 
 		assert_eq!(
-			HashSet::from([SlotKey::Hand(Side::Main), SlotKey::Hand(Side::Off)]),
+			HashSet::from([SlotKey::Hand(Side::Right), SlotKey::Hand(Side::Left)]),
 			entry.followup_keys().collect::<HashSet<_>>()
 		);
 	}
@@ -79,7 +79,7 @@ mod tests {
 	#[test]
 	fn no_followup_keys_when_entry_empty() {
 		let entry = NodeEntry::<_Skill> {
-			key: SlotKey::Hand(Side::Main),
+			key: SlotKey::Hand(Side::Right),
 			tree: &OrderedHashMap::from([]),
 		};
 
