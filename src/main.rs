@@ -15,7 +15,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{ColliderRoot, GroundOffset, Health, MainCamera, Player},
+	components::{flip::FlipHorizontally, ColliderRoot, GroundOffset, Health, MainCamera, Player},
 	states::GameRunning,
 	tools::{player_animation_path, UnitsPerSecond},
 	traits::clamp_zero_positive::ClampZeroPositive,
@@ -178,6 +178,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				scene: asset_server.load(Player::MODEL_PATH.to_owned() + "#Scene0"),
 				..default()
 			},
+			FlipHorizontally::with(Name::from("metarig")),
 			GroundOffset(Vec3::Y),
 			Player,
 			Blocker::insert([Blocker::Physical]),
