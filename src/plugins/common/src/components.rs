@@ -1,3 +1,5 @@
+pub mod flip;
+
 use bevy::{
 	ecs::{component::Component, entity::Entity},
 	math::Vec3,

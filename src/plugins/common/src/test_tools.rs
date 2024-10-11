@@ -39,6 +39,12 @@ pub mod utils {
 		}
 	}
 
+	impl ApproxEqual<f32> for Quat {
+		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+			self.abs_diff_eq(*other, *tolerance)
+		}
+	}
+
 	impl<T: ApproxEqual<f32>> ApproxEqual<f32> for Option<T> {
 		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
 			match (self, other) {

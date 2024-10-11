@@ -12,14 +12,14 @@ pub mod traits;
 pub(crate) mod folder_asset_loader;
 
 use bevy::{
-	app::{App, First, Plugin},
+	app::{App, First, Plugin, Update},
 	asset::AssetServer,
 	ecs::schedule::IntoSystemConfigs,
 	render::camera::Camera,
 	state::app::AppExtStates,
 };
 use bevy_rapier3d::plugin::RapierContext;
-use components::MainCamera;
+use components::{flip::FlipHorizontally, MainCamera};
 use resources::language_server::LanguageServer;
 use states::{GameRunning, MouseContext};
 use systems::{
@@ -43,6 +43,7 @@ impl Plugin for CommonPlugin {
 				)
 					.chain(),
 			)
-			.add_systems(First, load_asset_model::<AssetServer>);
+			.add_systems(First, load_asset_model::<AssetServer>)
+			.add_systems(Update, FlipHorizontally::system);
 	}
 }
