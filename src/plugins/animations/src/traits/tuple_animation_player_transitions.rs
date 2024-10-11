@@ -14,13 +14,17 @@ impl<'a> IsPlaying<AnimationNodeIndex> for Player<'a> {
 impl<'a> ReplayAnimation<AnimationNodeIndex> for Player<'a> {
 	fn replay(&mut self, index: AnimationNodeIndex) {
 		let (player, transitions) = self;
-		transitions.play(player, index, Duration::ZERO).replay();
+		transitions
+			.play(player, index, Duration::from_millis(100))
+			.replay();
 	}
 }
 
 impl<'a> RepeatAnimation<AnimationNodeIndex> for Player<'a> {
 	fn repeat(&mut self, index: AnimationNodeIndex) {
 		let (player, transitions) = self;
-		transitions.play(player, index, Duration::ZERO).repeat();
+		transitions
+			.play(player, index, Duration::from_millis(100))
+			.repeat();
 	}
 }
