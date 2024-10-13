@@ -85,7 +85,7 @@ pub mod debug_utils {
 			.add_systems(Update, toggle_gizmos)
 			.add_systems(
 				Update,
-				forward_gizmo(&["projectile_spawn", "Player"], &FORWARD_GIZMO_COLOR),
+				forward_gizmo(&["skill_spawn", "Player"], &FORWARD_GIZMO_COLOR),
 			)
 			.add_systems(Update, display_events);
 	}

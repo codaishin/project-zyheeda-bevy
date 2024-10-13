@@ -183,7 +183,7 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 
 fn get_loadout() -> Loadout {
 	Loadout::new(
-		"projectile_spawn",
+		"skill_spawn",
 		[
 			(
 				SlotKey::TopHand(Side::Left),
