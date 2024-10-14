@@ -1,6 +1,6 @@
 use crate::{
 	behaviors::{SkillCaster, SkillSpawner, Target},
-	components::SkillSpawn,
+	items::slot_key::SlotKey,
 	traits::Execute,
 };
 use bevy::{
@@ -12,31 +12,43 @@ use bevy::{
 	},
 	transform::components::GlobalTransform,
 };
-use common::resources::{CamRay, MouseHover};
+use common::{
+	resources::{CamRay, MouseHover},
+	traits::get::Get,
+};
 
-type Components<'a, TSkillExecutor> = (
+type Components<'a, TSkillExecutor, TGetSkillSpawnEntity> = (
 	Entity,
 	&'a mut TSkillExecutor,
 	&'a GlobalTransform,
-	&'a SkillSpawn<Entity>,
+	&'a TGetSkillSpawnEntity,
 );
 
-pub(crate) fn execute<TSkillExecutor: Component + Execute>(
-	cam_ray: Res<CamRay>,
-	mouse_hover: Res<MouseHover>,
-	mut commands: Commands,
-	mut agents: Query<Components<TSkillExecutor>, Changed<TSkillExecutor>>,
-	transforms: Query<(Entity, &GlobalTransform)>,
-) {
-	for (id, mut skill_executer, transform, skill_spawn) in &mut agents {
-		let Some(target) = get_target(&cam_ray, &mouse_hover, &transforms) else {
-			continue;
-		};
-		let Some(spawner) = get_spawner(skill_spawn, &transforms) else {
-			continue;
-		};
-		let caster = SkillCaster(id, *transform);
-		skill_executer.execute(&mut commands, &caster, &spawner, &target);
+impl<T> ExecuteSkills for T where T: Component + Execute {}
+
+pub(crate) trait ExecuteSkills
+where
+	Self: Component + Execute + Sized,
+{
+	fn execute_on<TGetSkillSpawnEntity>(
+		cam_ray: Res<CamRay>,
+		mouse_hover: Res<MouseHover>,
+		mut commands: Commands,
+		mut agents: Query<Components<Self, TGetSkillSpawnEntity>, Changed<Self>>,
+		transforms: Query<(Entity, &GlobalTransform)>,
+	) where
+		TGetSkillSpawnEntity: Component + Get<Option<SlotKey>, Entity>,
+	{
+		for (id, mut skill_executer, transform, skill_spawn) in &mut agents {
+			let Some(target) = get_target(&cam_ray, &mouse_hover, &transforms) else {
+				continue;
+			};
+			let Some(spawner) = get_spawner(skill_spawn, &transforms) else {
+				continue;
+			};
+			let caster = SkillCaster(id, *transform);
+			skill_executer.execute(&mut commands, &caster, &spawner, &target);
+		}
 	}
 }
 
@@ -61,11 +73,15 @@ fn get_target(
 	})
 }
 
-fn get_spawner(
-	skill_spawn: &SkillSpawn<Entity>,
+fn get_spawner<TGetSkillSpawnEntity>(
+	skill_spawn: &TGetSkillSpawnEntity,
 	transforms: &Query<(Entity, &GlobalTransform)>,
-) -> Option<SkillSpawner> {
-	let Ok((entity, transform)) = transforms.get(skill_spawn.0) else {
+) -> Option<SkillSpawner>
+where
+	TGetSkillSpawnEntity: Get<Option<SlotKey>, Entity>,
+{
+	let skill_spawn = skill_spawn.get(&None)?;
+	let Ok((entity, transform)) = transforms.get(*skill_spawn) else {
 		return None;
 	};
 
@@ -88,7 +104,7 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::automock;
-	use std::ops::DerefMut;
+	use std::{collections::HashMap, ops::DerefMut};
 
 	#[derive(Component, NestedMocks)]
 	struct _Executor {
@@ -106,6 +122,21 @@ mod tests {
 			target: &Target,
 		) {
 			self.mock.execute(commands, caster, spawner, target)
+		}
+	}
+
+	#[derive(Component)]
+	struct _Spawners(HashMap<Option<SlotKey>, SkillSpawner>);
+
+	impl _Spawners {
+		fn new<const N: usize>(spawners: [(Option<SlotKey>, SkillSpawner); N]) -> Self {
+			Self(HashMap::from(spawners))
+		}
+	}
+
+	impl Get<Option<SlotKey>, Entity> for _Spawners {
+		fn get<'a>(&'a self, key: &Option<SlotKey>) -> Option<&'a Entity> {
+			self.0.get(key).map(|s| &s.0)
 		}
 	}
 
@@ -145,12 +176,9 @@ mod tests {
 		SkillSpawner(entity, transform)
 	}
 
-	fn set_caster(app: &mut App, spawner: &SkillSpawner) -> SkillCaster {
+	fn set_caster(app: &mut App, spawners: _Spawners) -> SkillCaster {
 		let transform = GlobalTransform::from_xyz(42., 42., 42.);
-		let entity = app
-			.world_mut()
-			.spawn((transform, SkillSpawn(spawner.0)))
-			.id();
+		let entity = app.world_mut().spawn((transform, spawners)).id();
 
 		SkillCaster(entity, transform)
 	}
@@ -159,7 +187,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<CamRay>();
 		app.init_resource::<MouseHover>();
-		app.add_systems(Update, execute::<_Executor>);
+		app.add_systems(Update, _Executor::execute_on::<_Spawners>);
 
 		app
 	}
@@ -176,7 +204,7 @@ mod tests {
 		let mut app = setup();
 		let target = set_target(&mut app);
 		let spawner = set_spawner(&mut app);
-		let caster = set_caster(&mut app, &spawner);
+		let caster = set_caster(&mut app, _Spawners::new([(None, spawner)]));
 		app.world_mut()
 			.entity_mut(caster.0)
 			.insert(_Executor::new().with_mock(move |mock| {
@@ -213,7 +241,7 @@ mod tests {
 		let mut app = setup();
 		_ = set_target(&mut app);
 		let spawner = set_spawner(&mut app);
-		let caster = set_caster(&mut app, &spawner);
+		let caster = set_caster(&mut app, _Spawners::new([(None, spawner)]));
 		app.world_mut()
 			.entity_mut(caster.0)
 			.insert(_Executor::new().with_mock(|mock| {
@@ -229,7 +257,7 @@ mod tests {
 		let mut app = setup();
 		_ = set_target(&mut app);
 		let spawner = set_spawner(&mut app);
-		let caster = set_caster(&mut app, &spawner);
+		let caster = set_caster(&mut app, _Spawners::new([(None, spawner)]));
 		app.world_mut()
 			.entity_mut(caster.0)
 			.insert(_Executor::new().with_mock(|mock| {

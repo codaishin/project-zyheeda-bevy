@@ -52,9 +52,6 @@ impl SlotsDefinition {
 	}
 }
 
-#[derive(Component, Debug, PartialEq)]
-pub(crate) struct SkillSpawn<T>(pub T);
-
 #[derive(Debug, PartialEq)]
 pub(crate) struct LoadModel(pub SlotKey);
 
