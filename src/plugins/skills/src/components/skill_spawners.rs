@@ -2,7 +2,10 @@ use crate::items::slot_key::SlotKey;
 use bevy::prelude::*;
 use common::{
 	components::Side,
-	traits::track::{IsTracking, Track, Untrack},
+	traits::{
+		get::Get,
+		track::{IsTracking, Track, Untrack},
+	},
 };
 use std::{collections::HashMap, marker::PhantomData};
 
@@ -21,6 +24,12 @@ impl<T: SlotKeyMapping> Default for SkillSpawners<T> {
 			entities: default(),
 			phantom_data: default(),
 		}
+	}
+}
+
+impl Get<Option<SlotKey>, Entity> for SkillSpawners {
+	fn get(&self, key: &Option<SlotKey>) -> Option<&Entity> {
+		self.entities.get(key)
 	}
 }
 
@@ -196,5 +205,29 @@ mod tests {
 			HashMap::from([(None, Entity::from_raw(100))]),
 			spawners.entities
 		);
+	}
+
+	#[test]
+	fn get_entity() {
+		let spawners = SkillSpawners {
+			entities: HashMap::from([
+				(None, Entity::from_raw(100)),
+				(Some(SlotKey::TopHand(Side::Left)), Entity::from_raw(200)),
+			]),
+			..default()
+		};
+
+		assert_eq!(
+			[
+				Some(&Entity::from_raw(100)),
+				Some(&Entity::from_raw(200)),
+				None
+			],
+			[
+				spawners.get(&None),
+				spawners.get(&Some(SlotKey::TopHand(Side::Left))),
+				spawners.get(&Some(SlotKey::TopHand(Side::Right)))
+			],
+		)
 	}
 }
