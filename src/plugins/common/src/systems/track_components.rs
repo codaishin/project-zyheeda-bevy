@@ -12,7 +12,7 @@ type TrackSystems<TTarget, TTracker> = (
 	fn(RemovedComponents<TTarget>, Query<Mut<TTracker>>),
 	fn(
 		Query<(Entity, Mut<TTracker>)>,
-		Query<(), Added<TTarget>>,
+		Query<&TTarget, Added<TTarget>>,
 		Query<(), With<TTracker>>,
 		Query<&Children>,
 	),
@@ -39,7 +39,7 @@ where
 
 fn track_in_self_and_children<TTracker, TTarget>(
 	mut trackers: Query<(Entity, Mut<TTracker>)>,
-	targets_lookup: Query<(), Added<TTarget>>,
+	targets_lookup: Query<&TTarget, Added<TTarget>>,
 	trackers_lookup: Query<(), With<TTracker>>,
 	children: Query<&Children>,
 ) where
@@ -51,12 +51,15 @@ fn track_in_self_and_children<TTracker, TTarget>(
 	}
 
 	let children = &|entity| children.get(entity).ok().map(|c| c.iter().map(Child::new));
-	let has_target = &|entity: &Entity| targets_lookup.contains(*entity);
+	let get_target = &|entity: &Entity| targets_lookup.get(*entity).ok();
 	let is_no_tracker = &|Child(entity): &Child| !trackers_lookup.contains(*entity);
 
 	for (entity, mut tracker) in &mut trackers {
-		for entity in get_recursively_from(entity, children, is_no_tracker).filter(has_target) {
-			tracker.track(entity)
+		for entity in get_recursively_from(entity, children, is_no_tracker) {
+			let Some(target) = get_target(&entity) else {
+				continue;
+			};
+			tracker.track(entity, target);
 		}
 	}
 }
@@ -100,8 +103,8 @@ mod tests {
 	}
 
 	impl Track<_Target> for _Tracker {
-		fn track(&mut self, entity: Entity) {
-			self.mock.track(entity);
+		fn track(&mut self, entity: Entity, target: &_Target) {
+			self.mock.track(entity, target);
 		}
 	}
 
@@ -121,7 +124,7 @@ mod tests {
 		#[derive(Debug)]
 		_Tracker {}
 		impl Track<_Target> for _Tracker {
-			fn track(&mut self, entity: Entity);
+			fn track(&mut self, entity: Entity, target: &_Target);
 		}
 		impl IsTracking<_Target> for _Tracker {
 			fn is_tracking(&self, entity: &Entity) -> bool;
@@ -193,7 +196,7 @@ mod tests {
 			.insert(_Tracker::new().with_mock(|mock: &mut Mock_Tracker| {
 				mock.expect_track()
 					.times(1)
-					.with(eq(tracker))
+					.with(eq(tracker), eq(_Target))
 					.return_const(());
 			}));
 
@@ -212,7 +215,7 @@ mod tests {
 			.insert(_Tracker::new().with_mock(|mock: &mut Mock_Tracker| {
 				mock.expect_track()
 					.times(1)
-					.with(eq(target))
+					.with(eq(target), eq(_Target))
 					.return_const(());
 			}));
 
@@ -232,7 +235,7 @@ mod tests {
 			.insert(_Tracker::new().with_mock(|mock: &mut Mock_Tracker| {
 				mock.expect_track()
 					.times(1)
-					.with(eq(deep_child))
+					.with(eq(deep_child), eq(_Target))
 					.return_const(());
 			}));
 
@@ -272,7 +275,7 @@ mod tests {
 			.insert(_Tracker::new().with_mock(|mock: &mut Mock_Tracker| {
 				mock.expect_track()
 					.times(1)
-					.with(eq(child))
+					.with(eq(child), eq(_Target))
 					.return_const(());
 			}));
 

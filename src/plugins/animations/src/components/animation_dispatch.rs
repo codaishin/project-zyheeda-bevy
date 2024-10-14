@@ -61,7 +61,7 @@ impl<TAnimation> Default for AnimationDispatch<TAnimation> {
 }
 
 impl Track<AnimationPlayer> for AnimationDispatch {
-	fn track(&mut self, entity: Entity) {
+	fn track(&mut self, entity: Entity, _: &AnimationPlayer) {
 		self.animation_players.insert(entity);
 	}
 }
@@ -79,7 +79,7 @@ impl Untrack<AnimationPlayer> for AnimationDispatch {
 }
 
 impl Track<AnimationTransitions> for AnimationDispatch {
-	fn track(&mut self, entity: Entity) {
+	fn track(&mut self, entity: Entity, _: &AnimationTransitions) {
 		self.animation_transitions.insert(entity);
 	}
 }
@@ -305,8 +305,10 @@ mod tests {
 	#[test]
 	fn track_animation_player() {
 		let dispatch = &mut AnimationDispatch::default();
-		as_track::<AnimationPlayer>(dispatch).track(Entity::from_raw(1));
-		as_track::<AnimationPlayer>(dispatch).track(Entity::from_raw(2));
+		as_track::<AnimationPlayer>(dispatch)
+			.track(Entity::from_raw(1), &AnimationPlayer::default());
+		as_track::<AnimationPlayer>(dispatch)
+			.track(Entity::from_raw(2), &AnimationPlayer::default());
 
 		assert_eq!(
 			HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
@@ -347,8 +349,10 @@ mod tests {
 	#[test]
 	fn track_animation_transition() {
 		let dispatch = &mut AnimationDispatch::default();
-		as_track::<AnimationTransitions>(dispatch).track(Entity::from_raw(1));
-		as_track::<AnimationTransitions>(dispatch).track(Entity::from_raw(2));
+		as_track::<AnimationTransitions>(dispatch)
+			.track(Entity::from_raw(1), &AnimationTransitions::default());
+		as_track::<AnimationTransitions>(dispatch)
+			.track(Entity::from_raw(2), &AnimationTransitions::default());
 
 		assert_eq!(
 			HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
