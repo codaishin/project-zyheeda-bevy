@@ -571,8 +571,8 @@ impl<'a> StateDuration<SkillState> for ActiveSkill<'a> {
 }
 
 impl<'a> GetSkillBehavior for ActiveSkill<'a> {
-	fn behavior(&self) -> RunSkillBehavior {
-		self.skill.behavior.clone()
+	fn behavior(&self) -> (SlotKey, RunSkillBehavior) {
+		(*self.slot_key, self.skill.behavior.clone())
 	}
 }
 
@@ -819,12 +819,18 @@ mod test_queue_active_skill {
 				behavior: RunSkillBehavior::OnActive(behaviors.clone()),
 				..default()
 			},
-			slot_key: &SlotKey::BottomHand(Side::Right),
+			slot_key: &SlotKey::BottomHand(Side::Left),
 			mode: &mut Activation::default(),
 			duration: &mut Duration::default(),
 		};
 
-		assert_eq!(RunSkillBehavior::OnActive(behaviors), active.behavior());
+		assert_eq!(
+			(
+				SlotKey::BottomHand(Side::Left),
+				RunSkillBehavior::OnActive(behaviors)
+			),
+			active.behavior()
+		);
 	}
 
 	#[test]
@@ -841,12 +847,18 @@ mod test_queue_active_skill {
 				behavior: RunSkillBehavior::OnAim(behaviors.clone()),
 				..default()
 			},
-			slot_key: &SlotKey::BottomHand(Side::Right),
+			slot_key: &SlotKey::TopHand(Side::Right),
 			mode: &mut Activation::default(),
 			duration: &mut Duration::default(),
 		};
 
-		assert_eq!(RunSkillBehavior::OnAim(behaviors), active.behavior());
+		assert_eq!(
+			(
+				SlotKey::TopHand(Side::Right),
+				RunSkillBehavior::OnAim(behaviors)
+			),
+			active.behavior()
+		);
 	}
 
 	#[test]

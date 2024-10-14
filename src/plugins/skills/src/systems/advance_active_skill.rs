@@ -1,4 +1,5 @@
 use crate::{
+	items::slot_key::SlotKey,
 	skills::{Animate, RunSkillBehavior, SkillState},
 	traits::{Flush, GetActiveSkill, GetAnimation, GetSkillBehavior, Schedule},
 };
@@ -117,18 +118,18 @@ fn animate<TAnimation, TAnimationDispatch: StartAnimation<TAnimation> + StopAnim
 	}
 }
 
-fn run_on_aim<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<RunSkillBehavior> {
-	let behavior = skill.behavior();
+fn run_on_aim<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<(SlotKey, RunSkillBehavior)> {
+	let (slot_key, behavior) = skill.behavior();
 	match &behavior {
-		RunSkillBehavior::OnAim(_) => Some(behavior),
+		RunSkillBehavior::OnAim(_) => Some((slot_key, behavior)),
 		_ => None,
 	}
 }
 
-fn run_on_active<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<RunSkillBehavior> {
-	let behavior = skill.behavior();
+fn run_on_active<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<(SlotKey, RunSkillBehavior)> {
+	let (slot_key, behavior) = skill.behavior();
 	match &behavior {
-		RunSkillBehavior::OnActive(_) => Some(behavior),
+		RunSkillBehavior::OnActive(_) => Some((slot_key, behavior)),
 		_ => None,
 	}
 }
@@ -136,12 +137,12 @@ fn run_on_active<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<RunSkillBeh
 fn schedule_start<TSkillExecutor: Schedule, TSkill: GetSkillBehavior>(
 	executer: &mut Mut<TSkillExecutor>,
 	skill: &TSkill,
-	get_start_fn: fn(&TSkill) -> Option<RunSkillBehavior>,
+	get_start_fn: fn(&TSkill) -> Option<(SlotKey, RunSkillBehavior)>,
 ) {
-	let Some(start_fn) = get_start_fn(skill) else {
+	let Some((slot_key, start_fn)) = get_start_fn(skill) else {
 		return;
 	};
-	executer.schedule(start_fn);
+	executer.schedule(slot_key, start_fn);
 }
 
 #[cfg(test)]
@@ -162,6 +163,7 @@ mod tests {
 		time::{Real, Time},
 	};
 	use common::{
+		components::Side,
 		simple_init,
 		test_tools::utils::{Changed, SingleThreadedApp, TickTime},
 		traits::{mock::Mock, nested_mock::NestedMocks},
@@ -193,13 +195,13 @@ mod tests {
 	mock! {
 		_Skill {}
 		impl StateUpdate<SkillState> for _Skill {
-			fn update_state(&mut self, delta: Duration) -> HashSet<StateMeta<SkillState>> {}
+			fn update_state(&mut self, delta: Duration) -> HashSet<StateMeta<SkillState>>;
 		}
 		impl GetSkillBehavior for _Skill {
-			fn behavior<'a>(&self) -> RunSkillBehavior {}
+			fn behavior<'a>(&self) -> (SlotKey, RunSkillBehavior);
 		}
 		impl GetAnimation<_Animation> for _Skill {
-			fn animate(&self) -> Animate<_Animation> {}
+			fn animate(&self) -> Animate<_Animation>;
 		}
 	}
 
@@ -251,8 +253,8 @@ mod tests {
 	}
 
 	impl Schedule for _Executor {
-		fn schedule(&mut self, start: RunSkillBehavior) {
-			self.mock.schedule(start)
+		fn schedule(&mut self, slot_key: SlotKey, start: RunSkillBehavior) {
+			self.mock.schedule(slot_key, start)
 		}
 	}
 
@@ -265,7 +267,7 @@ mod tests {
 	mock! {
 		_Executor {}
 		impl Schedule for _Executor {
-			fn schedule(&mut self, start: RunSkillBehavior);
+			fn schedule(&mut self, slot_key: SlotKey, start: RunSkillBehavior);
 		}
 		impl Flush for _Executor {
 			fn flush(&mut self);
@@ -324,7 +326,7 @@ mod tests {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_animate().return_const(Animate::Ignore);
 						mock.expect_behavior()
-							.return_const(RunSkillBehavior::default());
+							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state()
 							.times(1)
 							.with(eq(Duration::from_millis(100)))
@@ -349,7 +351,7 @@ mod tests {
 						mock.expect_animate()
 							.return_const(Animate::Some(_Animation(42)));
 						mock.expect_behavior()
-							.return_const(RunSkillBehavior::default());
+							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
 								SkillState::Aim,
@@ -381,7 +383,7 @@ mod tests {
 						mock.expect_animate()
 							.return_const(Animate::Some(_Animation(42)));
 						mock.expect_behavior()
-							.return_const(RunSkillBehavior::default());
+							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([
 								StateMeta::In(SkillState::Aim),
@@ -414,7 +416,7 @@ mod tests {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_animate().return_const(Animate::None);
 						mock.expect_behavior()
-							.return_const(RunSkillBehavior::default());
+							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
 								SkillState::Aim,
@@ -445,7 +447,7 @@ mod tests {
 						skill.expect_animate().return_const(Animate::None);
 						skill
 							.expect_behavior()
-							.return_const(RunSkillBehavior::default());
+							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						skill.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([
 								StateMeta::In(SkillState::Aim),
@@ -478,7 +480,7 @@ mod tests {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_animate().return_const(Animate::Ignore);
 						mock.expect_behavior()
-							.return_const(RunSkillBehavior::default());
+							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
 								SkillState::Aim,
@@ -527,7 +529,7 @@ mod tests {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_animate().return_const(Animate::None);
 						mock.expect_behavior()
-							.return_const(RunSkillBehavior::default());
+							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(HashSet::default());
 					})
 				})),
@@ -614,7 +616,7 @@ mod tests {
 			Mock_Skill::new_mock(|mock| {
 				mock.expect_animate().return_const(Animate::None);
 				mock.expect_behavior()
-					.return_const(RunSkillBehavior::default());
+					.return_const((SlotKey::default(), RunSkillBehavior::default()));
 				mock.expect_update_state()
 					.return_const(HashSet::<StateMeta<SkillState>>::from([]));
 			})
@@ -635,7 +637,7 @@ mod tests {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_animate().return_const(Animate::None);
 						mock.expect_behavior()
-							.return_const(RunSkillBehavior::default());
+							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::Done]),
 						);
@@ -661,7 +663,7 @@ mod tests {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_animate().return_const(Animate::None);
 						mock.expect_behavior()
-							.return_const(RunSkillBehavior::default());
+							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
 								SkillState::Active,
@@ -688,8 +690,14 @@ mod tests {
 				mock.expect_flush().return_const(());
 				mock.expect_schedule()
 					.times(1)
-					.withf(|start| {
-						assert_eq!(start, &skill_behavior(RunSkillBehavior::OnActive));
+					.withf(|slot_key, start| {
+						assert_eq!(
+							(
+								&SlotKey::TopHand(Side::Left),
+								&skill_behavior(RunSkillBehavior::OnActive)
+							),
+							(slot_key, start),
+						);
 						true
 					})
 					.return_const(());
@@ -698,8 +706,12 @@ mod tests {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_animate().return_const(Animate::None);
-						mock.expect_behavior()
-							.returning(|| skill_behavior(RunSkillBehavior::OnActive));
+						mock.expect_behavior().returning(|| {
+							(
+								SlotKey::TopHand(Side::Left),
+								skill_behavior(RunSkillBehavior::OnActive),
+							)
+						});
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
 								SkillState::Active,
@@ -721,8 +733,14 @@ mod tests {
 				mock.expect_flush().return_const(());
 				mock.expect_schedule()
 					.times(1)
-					.withf(|start| {
-						assert_eq!(start, &skill_behavior(RunSkillBehavior::OnAim));
+					.withf(|slot_key, start| {
+						assert_eq!(
+							(
+								&SlotKey::BottomHand(Side::Left),
+								&skill_behavior(RunSkillBehavior::OnAim)
+							),
+							(slot_key, start),
+						);
 						true
 					})
 					.return_const(());
@@ -731,8 +749,12 @@ mod tests {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_animate().return_const(Animate::None);
-						mock.expect_behavior()
-							.returning(|| skill_behavior(RunSkillBehavior::OnAim));
+						mock.expect_behavior().returning(|| {
+							(
+								SlotKey::BottomHand(Side::Left),
+								skill_behavior(RunSkillBehavior::OnAim),
+							)
+						});
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
 								SkillState::Aim,
@@ -756,7 +778,7 @@ mod tests {
 						mock.expect_animate().return_const(Animate::None);
 						mock.expect_behavior()
 							.never()
-							.return_const(RunSkillBehavior::default());
+							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
 								SkillState::Active,
@@ -784,7 +806,7 @@ mod tests {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_animate().return_const(Animate::None);
 						mock.expect_behavior()
-							.return_const(RunSkillBehavior::default());
+							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::Done]),
 						);
@@ -810,7 +832,7 @@ mod tests {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_animate().return_const(Animate::None);
 						mock.expect_behavior()
-							.return_const(RunSkillBehavior::default());
+							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
 								SkillState::Active,
@@ -834,7 +856,7 @@ mod tests {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_animate().return_const(Animate::None);
 						mock.expect_behavior()
-							.return_const(RunSkillBehavior::default());
+							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
 								SkillState::Aim,
@@ -865,7 +887,7 @@ mod tests {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_animate().return_const(Animate::None);
 						mock.expect_behavior()
-							.return_const(RunSkillBehavior::default());
+							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
 								SkillState::Aim,
@@ -893,7 +915,7 @@ mod tests {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_animate().return_const(Animate::None);
 						mock.expect_behavior()
-							.return_const(RunSkillBehavior::default());
+							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
 								SkillState::Aim,
@@ -944,7 +966,7 @@ mod tests {
 						Mock_Skill::new_mock(|mock| {
 							mock.expect_animate().return_const(Animate::Ignore);
 							mock.expect_behavior()
-								.return_const(RunSkillBehavior::default());
+								.return_const((SlotKey::default(), RunSkillBehavior::default()));
 							mock.expect_update_state().return_const(
 								HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
 									SkillState::Aim,
@@ -984,7 +1006,7 @@ mod tests {
 						Mock_Skill::new_mock(|mock| {
 							mock.expect_animate().return_const(Animate::Ignore);
 							mock.expect_behavior()
-								.return_const(RunSkillBehavior::default());
+								.return_const((SlotKey::default(), RunSkillBehavior::default()));
 							mock.expect_update_state()
 								.return_const(HashSet::<StateMeta<SkillState>>::from([]));
 						})

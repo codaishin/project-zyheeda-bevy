@@ -6,6 +6,7 @@ use crate::{
 		SkillSpawner,
 		Target,
 	},
+	items::slot_key::SlotKey,
 	skills::{lifetime::LifeTimeDefinition, RunSkillBehavior},
 	traits::{Execute, Flush, Schedule},
 };
@@ -18,14 +19,17 @@ use bevy::{
 pub(crate) enum SkillExecuter {
 	#[default]
 	Idle,
-	Start(RunSkillBehavior),
+	Start {
+		slot_key: SlotKey,
+		shape: RunSkillBehavior,
+	},
 	StartedStoppable(Entity),
 	Stop(Entity),
 }
 
 impl Schedule for SkillExecuter {
-	fn schedule(&mut self, skill: RunSkillBehavior) {
-		*self = SkillExecuter::Start(skill);
+	fn schedule(&mut self, slot_key: SlotKey, shape: RunSkillBehavior) {
+		*self = SkillExecuter::Start { slot_key, shape };
 	}
 }
 
@@ -35,7 +39,7 @@ impl Flush for SkillExecuter {
 			SkillExecuter::StartedStoppable(entity) => {
 				*self = SkillExecuter::Stop(*entity);
 			}
-			SkillExecuter::Start(_) => {
+			SkillExecuter::Start { .. } => {
 				*self = SkillExecuter::Idle;
 			}
 			_ => {}
@@ -52,10 +56,16 @@ impl Execute for SkillExecuter {
 		target: &Target,
 	) {
 		match self {
-			SkillExecuter::Start(RunSkillBehavior::OnActive(skill)) => {
+			SkillExecuter::Start {
+				shape: RunSkillBehavior::OnActive(skill),
+				..
+			} => {
 				*self = execute(skill, commands, caster, spawner, target);
 			}
-			SkillExecuter::Start(RunSkillBehavior::OnAim(skill)) => {
+			SkillExecuter::Start {
+				shape: RunSkillBehavior::OnAim(skill),
+				..
+			} => {
 				*self = execute(skill, commands, caster, spawner, target);
 			}
 			SkillExecuter::Stop(skills) => {
@@ -132,7 +142,7 @@ mod tests {
 		transform::components::GlobalTransform,
 	};
 	use common::{
-		components::Outdated,
+		components::{Outdated, Side},
 		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
 	};
@@ -195,25 +205,27 @@ mod tests {
 
 	#[test]
 	fn set_self_to_start_skill() {
-		let skill = RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(
+		let shape = RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(
 			BuildSkillShape::Fn(|c, _, _, _| SkillShape {
 				contact: c.spawn_empty().id(),
 				projection: c.spawn_empty().id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			}),
 		));
+		let slot_key = SlotKey::BottomHand(Side::Left);
 
 		let mut executer = SkillExecuter::default();
-		executer.schedule(skill.clone());
+		executer.schedule(slot_key, shape.clone());
 
-		assert_eq!(SkillExecuter::Start(skill), executer);
+		assert_eq!(SkillExecuter::Start { slot_key, shape }, executer);
 	}
 
 	#[test]
 	fn spawn_skill_contact_entity_on_active() {
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, caster, spawner, target| {
-				SkillShape {
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(
+				BuildSkillShape::Fn(|cmd, caster, spawner, target| SkillShape {
 					contact: cmd
 						.spawn(_SpawnArgs {
 							caster: *caster,
@@ -223,9 +235,9 @@ mod tests {
 						.id(),
 					projection: cmd.spawn_empty().id(),
 					on_skill_stop: OnSkillStop::Ignore,
-				}
-			})),
-		)));
+				}),
+			)),
+		});
 
 		app.world_mut().run_system_once(execute);
 
@@ -265,10 +277,13 @@ mod tests {
 			}
 		}
 
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
-				.with_contact_behaviors(vec![SkillBehavior::Fn(behavior)]),
-		)));
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(
+				SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
+					.with_contact_behaviors(vec![SkillBehavior::Fn(behavior)]),
+			),
+		});
 
 		app.world_mut().run_system_once(execute);
 
@@ -291,9 +306,10 @@ mod tests {
 
 	#[test]
 	fn spawn_skill_projection_entity_on_active() {
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, caster, spawner, target| {
-				SkillShape {
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(
+				BuildSkillShape::Fn(|cmd, caster, spawner, target| SkillShape {
 					contact: cmd
 						.spawn(_SpawnArgs {
 							caster: *caster,
@@ -303,9 +319,9 @@ mod tests {
 						.id(),
 					projection: cmd.spawn_empty().id(),
 					on_skill_stop: OnSkillStop::Ignore,
-				}
-			})),
-		)));
+				}),
+			)),
+		});
 
 		app.world_mut().run_system_once(execute);
 
@@ -345,10 +361,13 @@ mod tests {
 			}
 		}
 
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
-				.with_projection_behaviors(vec![SkillBehavior::Fn(behavior)]),
-		)));
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(
+				SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
+					.with_projection_behaviors(vec![SkillBehavior::Fn(behavior)]),
+			),
+		});
 
 		app.world_mut().run_system_once(execute);
 
@@ -371,13 +390,16 @@ mod tests {
 
 	#[test]
 	fn set_to_started_contact_as_stoppable_on_active() {
-		let (mut app, executer) = setup(SkillExecuter::Start(RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, _, _, _| SkillShape {
-				contact: cmd.spawn_empty().id(),
-				projection: cmd.spawn_empty().id(),
-				on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
-			})),
-		)));
+		let (mut app, executer) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(
+				BuildSkillShape::Fn(|cmd, _, _, _| SkillShape {
+					contact: cmd.spawn_empty().id(),
+					projection: cmd.spawn_empty().id(),
+					on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
+				}),
+			)),
+		});
 
 		app.world_mut().run_system_once(execute);
 
@@ -391,13 +413,16 @@ mod tests {
 
 	#[test]
 	fn set_to_started_projection_as_stoppable_on_active() {
-		let (mut app, executer) = setup(SkillExecuter::Start(RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, _, _, _| SkillShape {
-				contact: cmd.spawn_empty().id(),
-				projection: cmd.spawn_empty().id(),
-				on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
-			})),
-		)));
+		let (mut app, executer) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(
+				BuildSkillShape::Fn(|cmd, _, _, _| SkillShape {
+					contact: cmd.spawn_empty().id(),
+					projection: cmd.spawn_empty().id(),
+					on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
+				}),
+			)),
+		});
 
 		app.world_mut().run_system_once(execute);
 
@@ -411,9 +436,12 @@ mod tests {
 
 	#[test]
 	fn set_to_idle_on_flush_when_set_to_start_on_active() {
-		let mut executer = SkillExecuter::Start(RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::NO_SHAPE),
-		));
+		let mut executer = SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(
+				BuildSkillShape::NO_SHAPE,
+			)),
+		};
 
 		executer.flush();
 
@@ -422,9 +450,10 @@ mod tests {
 
 	#[test]
 	fn spawn_skill_contact_entity_on_aim() {
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, caster, spawner, target| {
-				SkillShape {
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
+				|cmd, caster, spawner, target| SkillShape {
 					contact: cmd
 						.spawn(_SpawnArgs {
 							caster: *caster,
@@ -434,9 +463,9 @@ mod tests {
 						.id(),
 					projection: cmd.spawn_empty().id(),
 					on_skill_stop: OnSkillStop::Ignore,
-				}
-			})),
-		)));
+				},
+			))),
+		});
 
 		app.world_mut().run_system_once(execute);
 
@@ -456,7 +485,7 @@ mod tests {
 	}
 
 	#[test]
-	fn apply_contact_behavior_on_aaim() {
+	fn apply_contact_behavior_on_aim() {
 		#[derive(Component)]
 		struct _Contact;
 
@@ -476,10 +505,13 @@ mod tests {
 			}
 		}
 
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
-				.with_contact_behaviors(vec![SkillBehavior::Fn(behavior)]),
-		)));
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(
+				SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
+					.with_contact_behaviors(vec![SkillBehavior::Fn(behavior)]),
+			),
+		});
 
 		app.world_mut().run_system_once(execute);
 
@@ -502,9 +534,10 @@ mod tests {
 
 	#[test]
 	fn spawn_skill_projection_entity_on_aim() {
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, caster, spawner, target| {
-				SkillShape {
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
+				|cmd, caster, spawner, target| SkillShape {
 					contact: cmd
 						.spawn(_SpawnArgs {
 							caster: *caster,
@@ -514,9 +547,9 @@ mod tests {
 						.id(),
 					projection: cmd.spawn_empty().id(),
 					on_skill_stop: OnSkillStop::Ignore,
-				}
-			})),
-		)));
+				},
+			))),
+		});
 
 		app.world_mut().run_system_once(execute);
 
@@ -556,10 +589,13 @@ mod tests {
 			}
 		}
 
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
-				.with_projection_behaviors(vec![SkillBehavior::Fn(behavior)]),
-		)));
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(
+				SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
+					.with_projection_behaviors(vec![SkillBehavior::Fn(behavior)]),
+			),
+		});
 
 		app.world_mut().run_system_once(execute);
 
@@ -582,13 +618,16 @@ mod tests {
 
 	#[test]
 	fn set_to_started_contact_as_stoppable_on_aim() {
-		let (mut app, executer) = setup(SkillExecuter::Start(RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, _, _, _| SkillShape {
-				contact: cmd.spawn_empty().id(),
-				projection: cmd.spawn_empty().id(),
-				on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
-			})),
-		)));
+		let (mut app, executer) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
+				|cmd, _, _, _| SkillShape {
+					contact: cmd.spawn_empty().id(),
+					projection: cmd.spawn_empty().id(),
+					on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
+				},
+			))),
+		});
 
 		app.world_mut().run_system_once(execute);
 
@@ -602,13 +641,16 @@ mod tests {
 
 	#[test]
 	fn set_to_started_projection_as_stoppable_on_aim() {
-		let (mut app, executer) = setup(SkillExecuter::Start(RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, _, _, _| SkillShape {
-				contact: cmd.spawn_empty().id(),
-				projection: cmd.spawn_empty().id(),
-				on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
-			})),
-		)));
+		let (mut app, executer) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
+				|cmd, _, _, _| SkillShape {
+					contact: cmd.spawn_empty().id(),
+					projection: cmd.spawn_empty().id(),
+					on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
+				},
+			))),
+		});
 
 		app.world_mut().run_system_once(execute);
 
@@ -622,9 +664,12 @@ mod tests {
 
 	#[test]
 	fn set_to_idle_on_flush_when_set_to_start_on_aim() {
-		let mut executer = SkillExecuter::Start(RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::NO_SHAPE),
-		));
+		let mut executer = SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(
+				BuildSkillShape::NO_SHAPE,
+			)),
+		};
 
 		executer.flush();
 
