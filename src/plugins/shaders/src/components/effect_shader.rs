@@ -19,7 +19,7 @@ pub struct EffectShaders {
 }
 
 impl Track<Handle<Mesh>> for EffectShaders {
-	fn track(&mut self, entity: Entity) {
+	fn track(&mut self, entity: Entity, _: &Handle<Mesh>) {
 		self.meshes.insert(entity);
 	}
 }
@@ -100,7 +100,7 @@ mod tests {
 		let mut shader = EffectShaders::default();
 		let entity = Entity::from_raw(42);
 
-		shader.track(entity);
+		shader.track(entity, &new_handle());
 
 		assert_eq!(HashSet::from([entity]), shader.meshes);
 	}
@@ -111,7 +111,7 @@ mod tests {
 		let entities = [Entity::from_raw(11), Entity::from_raw(66)];
 
 		for entity in &entities {
-			shader.track(*entity);
+			shader.track(*entity, &new_handle());
 		}
 
 		assert_eq!(HashSet::from(entities), shader.meshes);
