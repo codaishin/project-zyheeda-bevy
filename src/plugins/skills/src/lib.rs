@@ -103,7 +103,6 @@ fn skill_slot_load(app: &mut App) {
 			),
 		)
 		.add_systems(PreUpdate, uuid_to_skill::<Slots<Uuid>, Slots>)
-		.add_systems(PreUpdate, uuid_to_skill::<Slots<Uuid>, Slots>)
 		.add_systems(Update, set_player_items)
 		.add_systems(
 			Update,
