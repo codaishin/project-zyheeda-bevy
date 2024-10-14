@@ -121,7 +121,7 @@ pub trait GetStaticSkillBehavior {
 }
 
 pub(crate) trait GetSkillBehavior {
-	fn behavior(&self) -> RunSkillBehavior;
+	fn behavior(&self) -> (SlotKey, RunSkillBehavior);
 }
 
 pub trait InputState<TMap: TryMapBackwards<TKey, SlotKey>, TKey: Eq + Hash> {
@@ -131,17 +131,19 @@ pub trait InputState<TMap: TryMapBackwards<TKey, SlotKey>, TKey: Eq + Hash> {
 }
 
 pub trait Schedule {
-	fn schedule(&mut self, shape: RunSkillBehavior);
+	fn schedule(&mut self, slot_key: SlotKey, shape: RunSkillBehavior);
 }
 
 pub trait Execute {
+	type TError;
+
 	fn execute(
 		&mut self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		spawner: &SkillSpawner,
+		get_spawner: impl Fn(&Option<SlotKey>) -> Option<SkillSpawner>,
 		target: &Target,
-	);
+	) -> Result<(), Self::TError>;
 }
 
 pub trait ShouldEnqueue {

@@ -1,31 +1,34 @@
 use crate::{
 	behaviors::{
 		build_skill_shape::OnSkillStop,
+		spawn_on::SpawnOn,
 		SkillBehaviorConfig,
 		SkillCaster,
 		SkillSpawner,
 		Target,
 	},
+	items::slot_key::SlotKey,
 	skills::{lifetime::LifeTimeDefinition, RunSkillBehavior},
 	traits::{Execute, Flush, Schedule},
 };
-use bevy::{
-	ecs::{component::Component, entity::Entity, system::Commands},
-	hierarchy::DespawnRecursiveExt,
-};
+use bevy::prelude::*;
+use common::errors::{Error, Level};
 
 #[derive(Component, Debug, PartialEq, Default, Clone)]
 pub(crate) enum SkillExecuter {
 	#[default]
 	Idle,
-	Start(RunSkillBehavior),
+	Start {
+		slot_key: SlotKey,
+		shape: RunSkillBehavior,
+	},
 	StartedStoppable(Entity),
 	Stop(Entity),
 }
 
 impl Schedule for SkillExecuter {
-	fn schedule(&mut self, skill: RunSkillBehavior) {
-		*self = SkillExecuter::Start(skill);
+	fn schedule(&mut self, slot_key: SlotKey, shape: RunSkillBehavior) {
+		*self = SkillExecuter::Start { slot_key, shape };
 	}
 }
 
@@ -35,7 +38,7 @@ impl Flush for SkillExecuter {
 			SkillExecuter::StartedStoppable(entity) => {
 				*self = SkillExecuter::Stop(*entity);
 			}
-			SkillExecuter::Start(_) => {
+			SkillExecuter::Start { .. } => {
 				*self = SkillExecuter::Idle;
 			}
 			_ => {}
@@ -43,26 +46,64 @@ impl Flush for SkillExecuter {
 	}
 }
 
+#[derive(Debug, PartialEq)]
+pub(crate) struct NoSkillSpawner(Option<SlotKey>);
+
+impl From<NoSkillSpawner> for Error {
+	fn from(NoSkillSpawner(slot): NoSkillSpawner) -> Self {
+		Error {
+			msg: format!("Could not find spawner for Slot: {slot:?}"),
+			lvl: Level::Error,
+		}
+	}
+}
+
 impl Execute for SkillExecuter {
+	type TError = NoSkillSpawner;
+
 	fn execute(
 		&mut self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		spawner: &SkillSpawner,
+		get_spawner: impl Fn(&Option<SlotKey>) -> Option<SkillSpawner>,
 		target: &Target,
-	) {
+	) -> Result<(), Self::TError> {
 		match self {
-			SkillExecuter::Start(RunSkillBehavior::OnActive(skill)) => {
+			SkillExecuter::Start {
+				shape: RunSkillBehavior::OnActive(skill),
+				slot_key,
+			} => {
+				let slot_key = match skill.spawn_on {
+					SpawnOn::Center => None,
+					SpawnOn::Slot => Some(*slot_key),
+				};
+				let Some(spawner) = &get_spawner(&slot_key) else {
+					return Err(NoSkillSpawner(slot_key));
+				};
 				*self = execute(skill, commands, caster, spawner, target);
 			}
-			SkillExecuter::Start(RunSkillBehavior::OnAim(skill)) => {
+
+			SkillExecuter::Start {
+				shape: RunSkillBehavior::OnAim(skill),
+				slot_key,
+			} => {
+				let slot_key = match skill.spawn_on {
+					SpawnOn::Center => None,
+					SpawnOn::Slot => Some(*slot_key),
+				};
+				let Some(spawner) = &get_spawner(&slot_key) else {
+					return Err(NoSkillSpawner(slot_key));
+				};
 				*self = execute(skill, commands, caster, spawner, target);
 			}
+
 			SkillExecuter::Stop(skills) => {
 				*self = stop(skills, commands);
 			}
 			_ => {}
-		}
+		};
+
+		Ok(())
 	}
 }
 
@@ -120,6 +161,7 @@ mod tests {
 	use crate::{
 		behaviors::{
 			build_skill_shape::{BuildSkillShape, OnSkillStop},
+			spawn_on::SpawnOn,
 			start_behavior::SkillBehavior,
 		},
 		traits::skill_builder::SkillShape,
@@ -132,10 +174,13 @@ mod tests {
 		transform::components::GlobalTransform,
 	};
 	use common::{
-		components::Outdated,
+		components::{Outdated, Side},
 		resources::ColliderInfo,
+		simple_init,
 		test_tools::utils::SingleThreadedApp,
+		traits::mock::Mock,
 	};
+	use mockall::{mock, predicate::eq};
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _SpawnArgs {
@@ -187,47 +232,79 @@ mod tests {
 
 		(app, executer)
 	}
+	trait GetSpawner {
+		fn get_spawner(&self, slot_key: &Option<SlotKey>) -> Option<SkillSpawner>;
+	}
 
-	fn execute(mut cmd: Commands, mut executers: Query<&mut SkillExecuter>) {
+	mock! {
+		_GetSpawner {}
+		impl GetSpawner for _GetSpawner {
+			fn get_spawner(&self, slot_key: &Option<SlotKey>) -> Option<SkillSpawner>;
+		}
+	}
+
+	simple_init!(Mock_GetSpawner);
+
+	fn execute(
+		In(get_spawner): In<Mock_GetSpawner>,
+		mut cmd: Commands,
+		mut executers: Query<&mut SkillExecuter>,
+	) -> Result<(), NoSkillSpawner> {
 		let mut executer = executers.single_mut();
-		executer.execute(&mut cmd, &get_caster(), &get_spawner(), &get_target())
+		executer.execute(
+			&mut cmd,
+			&get_caster(),
+			|slot_key| get_spawner.get_spawner(slot_key),
+			&get_target(),
+		)
 	}
 
 	#[test]
 	fn set_self_to_start_skill() {
-		let skill = RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(
+		let shape = RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(
 			BuildSkillShape::Fn(|c, _, _, _| SkillShape {
 				contact: c.spawn_empty().id(),
 				projection: c.spawn_empty().id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			}),
 		));
+		let slot_key = SlotKey::BottomHand(Side::Left);
 
 		let mut executer = SkillExecuter::default();
-		executer.schedule(skill.clone());
+		executer.schedule(slot_key, shape.clone());
 
-		assert_eq!(SkillExecuter::Start(skill), executer);
+		assert_eq!(SkillExecuter::Start { slot_key, shape }, executer);
 	}
 
 	#[test]
 	fn spawn_skill_contact_entity_on_active() {
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, caster, spawner, target| {
-				SkillShape {
-					contact: cmd
-						.spawn(_SpawnArgs {
-							caster: *caster,
-							spawner: *spawner,
-							target: *target,
-						})
-						.id(),
-					projection: cmd.spawn_empty().id(),
-					on_skill_stop: OnSkillStop::Ignore,
-				}
-			})),
-		)));
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(
+				SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
+					|cmd, caster, spawner, target| SkillShape {
+						contact: cmd
+							.spawn(_SpawnArgs {
+								caster: *caster,
+								spawner: *spawner,
+								target: *target,
+							})
+							.id(),
+						projection: cmd.spawn_empty().id(),
+						on_skill_stop: OnSkillStop::Ignore,
+					},
+				))
+				.spawning_on(SpawnOn::Slot),
+			),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner()
+				.with(eq(Some(SlotKey::BottomHand(Side::Right))))
+				.return_const(get_spawner());
+			mock.expect_get_spawner().return_const(None);
+		});
 
-		app.world_mut().run_system_once(execute);
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
 
 		let spawn_args = app
 			.world()
@@ -235,12 +312,63 @@ mod tests {
 			.find_map(|e| e.get::<_SpawnArgs>());
 
 		assert_eq!(
-			Some(&_SpawnArgs {
-				caster: get_caster(),
-				spawner: get_spawner(),
-				target: get_target()
-			}),
-			spawn_args
+			(
+				Ok(()),
+				Some(&_SpawnArgs {
+					caster: get_caster(),
+					spawner: get_spawner(),
+					target: get_target()
+				})
+			),
+			(ok, spawn_args)
+		)
+	}
+
+	#[test]
+	fn spawn_skill_contact_entity_on_active_centered() {
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(
+				SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
+					|cmd, caster, spawner, target| SkillShape {
+						contact: cmd
+							.spawn(_SpawnArgs {
+								caster: *caster,
+								spawner: *spawner,
+								target: *target,
+							})
+							.id(),
+						projection: cmd.spawn_empty().id(),
+						on_skill_stop: OnSkillStop::Ignore,
+					},
+				))
+				.spawning_on(SpawnOn::Center),
+			),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner()
+				.with(eq(None))
+				.return_const(get_spawner());
+			mock.expect_get_spawner().return_const(None);
+		});
+
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
+
+		let spawn_args = app
+			.world()
+			.iter_entities()
+			.find_map(|e| e.get::<_SpawnArgs>());
+
+		assert_eq!(
+			(
+				Ok(()),
+				Some(&_SpawnArgs {
+					caster: get_caster(),
+					spawner: get_spawner(),
+					target: get_target()
+				})
+			),
+			(ok, spawn_args)
 		)
 	}
 
@@ -265,12 +393,18 @@ mod tests {
 			}
 		}
 
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
-				.with_contact_behaviors(vec![SkillBehavior::Fn(behavior)]),
-		)));
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(
+				SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
+					.with_contact_behaviors(vec![SkillBehavior::Fn(behavior)]),
+			),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner().return_const(get_spawner());
+		});
 
-		app.world_mut().run_system_once(execute);
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
 
 		let spawn_args = app
 			.world()
@@ -280,20 +414,24 @@ mod tests {
 			.collect::<Vec<_>>();
 
 		assert_eq!(
-			vec![&_BehaviorArgs {
-				caster: get_caster(),
-				spawner: get_spawner(),
-				target: get_target()
-			}],
-			spawn_args
+			(
+				Ok(()),
+				vec![&_BehaviorArgs {
+					caster: get_caster(),
+					spawner: get_spawner(),
+					target: get_target()
+				}]
+			),
+			(ok, spawn_args)
 		);
 	}
 
 	#[test]
 	fn spawn_skill_projection_entity_on_active() {
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, caster, spawner, target| {
-				SkillShape {
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(
+				BuildSkillShape::Fn(|cmd, caster, spawner, target| SkillShape {
 					contact: cmd
 						.spawn(_SpawnArgs {
 							caster: *caster,
@@ -303,11 +441,14 @@ mod tests {
 						.id(),
 					projection: cmd.spawn_empty().id(),
 					on_skill_stop: OnSkillStop::Ignore,
-				}
-			})),
-		)));
+				}),
+			)),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner().return_const(get_spawner());
+		});
 
-		app.world_mut().run_system_once(execute);
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
 
 		let spawn_args = app
 			.world()
@@ -315,12 +456,15 @@ mod tests {
 			.find_map(|e| e.get::<_SpawnArgs>());
 
 		assert_eq!(
-			Some(&_SpawnArgs {
-				caster: get_caster(),
-				spawner: get_spawner(),
-				target: get_target()
-			}),
-			spawn_args
+			(
+				Ok(()),
+				Some(&_SpawnArgs {
+					caster: get_caster(),
+					spawner: get_spawner(),
+					target: get_target()
+				})
+			),
+			(ok, spawn_args)
 		)
 	}
 
@@ -345,12 +489,18 @@ mod tests {
 			}
 		}
 
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
-				.with_projection_behaviors(vec![SkillBehavior::Fn(behavior)]),
-		)));
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(
+				SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
+					.with_projection_behaviors(vec![SkillBehavior::Fn(behavior)]),
+			),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner().return_const(get_spawner());
+		});
 
-		app.world_mut().run_system_once(execute);
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
 
 		let spawn_args = app
 			.world()
@@ -360,60 +510,84 @@ mod tests {
 			.collect::<Vec<_>>();
 
 		assert_eq!(
-			vec![&_BehaviorArgs {
-				caster: get_caster(),
-				spawner: get_spawner(),
-				target: get_target()
-			}],
-			spawn_args
+			(
+				Ok(()),
+				vec![&_BehaviorArgs {
+					caster: get_caster(),
+					spawner: get_spawner(),
+					target: get_target()
+				}]
+			),
+			(ok, spawn_args)
 		);
 	}
 
 	#[test]
 	fn set_to_started_contact_as_stoppable_on_active() {
-		let (mut app, executer) = setup(SkillExecuter::Start(RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, _, _, _| SkillShape {
-				contact: cmd.spawn_empty().id(),
-				projection: cmd.spawn_empty().id(),
-				on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
-			})),
-		)));
+		let (mut app, executer) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(
+				BuildSkillShape::Fn(|cmd, _, _, _| SkillShape {
+					contact: cmd.spawn_empty().id(),
+					projection: cmd.spawn_empty().id(),
+					on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
+				}),
+			)),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner().return_const(get_spawner());
+		});
 
-		app.world_mut().run_system_once(execute);
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
 
 		let executer = app.world().entity(executer).get::<SkillExecuter>().unwrap();
 
 		assert_eq!(
-			&SkillExecuter::StartedStoppable(Entity::from_raw(998877)),
-			executer
+			(
+				Ok(()),
+				&SkillExecuter::StartedStoppable(Entity::from_raw(998877))
+			),
+			(ok, executer)
 		);
 	}
 
 	#[test]
 	fn set_to_started_projection_as_stoppable_on_active() {
-		let (mut app, executer) = setup(SkillExecuter::Start(RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, _, _, _| SkillShape {
-				contact: cmd.spawn_empty().id(),
-				projection: cmd.spawn_empty().id(),
-				on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
-			})),
-		)));
+		let (mut app, executer) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(
+				BuildSkillShape::Fn(|cmd, _, _, _| SkillShape {
+					contact: cmd.spawn_empty().id(),
+					projection: cmd.spawn_empty().id(),
+					on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
+				}),
+			)),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner().return_const(get_spawner());
+		});
 
-		app.world_mut().run_system_once(execute);
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
 
 		let executer = app.world().entity(executer).get::<SkillExecuter>().unwrap();
 
 		assert_eq!(
-			&SkillExecuter::StartedStoppable(Entity::from_raw(998877)),
-			executer
+			(
+				Ok(()),
+				&SkillExecuter::StartedStoppable(Entity::from_raw(998877))
+			),
+			(ok, executer)
 		);
 	}
 
 	#[test]
 	fn set_to_idle_on_flush_when_set_to_start_on_active() {
-		let mut executer = SkillExecuter::Start(RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::NO_SHAPE),
-		));
+		let mut executer = SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(
+				BuildSkillShape::NO_SHAPE,
+			)),
+		};
 
 		executer.flush();
 
@@ -421,24 +595,65 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_skill_contact_entity_on_aim() {
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, caster, spawner, target| {
-				SkillShape {
-					contact: cmd
-						.spawn(_SpawnArgs {
-							caster: *caster,
-							spawner: *spawner,
-							target: *target,
-						})
-						.id(),
-					projection: cmd.spawn_empty().id(),
-					on_skill_stop: OnSkillStop::Ignore,
-				}
-			})),
-		)));
+	fn result_on_active_error() {
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnActive(
+				SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
+					|cmd, caster, spawner, target| SkillShape {
+						contact: cmd
+							.spawn(_SpawnArgs {
+								caster: *caster,
+								spawner: *spawner,
+								target: *target,
+							})
+							.id(),
+						projection: cmd.spawn_empty().id(),
+						on_skill_stop: OnSkillStop::Ignore,
+					},
+				))
+				.spawning_on(SpawnOn::Slot),
+			),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner().return_const(None);
+		});
 
-		app.world_mut().run_system_once(execute);
+		assert_eq!(
+			Err(NoSkillSpawner(Some(SlotKey::BottomHand(Side::Right)))),
+			app.world_mut().run_system_once_with(spawner, execute),
+		);
+	}
+
+	#[test]
+	fn spawn_skill_contact_entity_on_aim() {
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(
+				SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
+					|cmd, caster, spawner, target| SkillShape {
+						contact: cmd
+							.spawn(_SpawnArgs {
+								caster: *caster,
+								spawner: *spawner,
+								target: *target,
+							})
+							.id(),
+						projection: cmd.spawn_empty().id(),
+						on_skill_stop: OnSkillStop::Ignore,
+					},
+				))
+				.spawning_on(SpawnOn::Slot),
+			),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner()
+				.with(eq(Some(SlotKey::BottomHand(Side::Right))))
+				.return_const(get_spawner());
+			mock.expect_get_spawner().return_const(None);
+		});
+
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
 
 		let spawn_args = app
 			.world()
@@ -446,17 +661,68 @@ mod tests {
 			.find_map(|e| e.get::<_SpawnArgs>());
 
 		assert_eq!(
-			Some(&_SpawnArgs {
-				caster: get_caster(),
-				spawner: get_spawner(),
-				target: get_target()
-			}),
-			spawn_args
+			(
+				Ok(()),
+				Some(&_SpawnArgs {
+					caster: get_caster(),
+					spawner: get_spawner(),
+					target: get_target()
+				})
+			),
+			(ok, spawn_args)
 		)
 	}
 
 	#[test]
-	fn apply_contact_behavior_on_aaim() {
+	fn spawn_skill_contact_entity_on_aim_centered() {
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(
+				SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
+					|cmd, caster, spawner, target| SkillShape {
+						contact: cmd
+							.spawn(_SpawnArgs {
+								caster: *caster,
+								spawner: *spawner,
+								target: *target,
+							})
+							.id(),
+						projection: cmd.spawn_empty().id(),
+						on_skill_stop: OnSkillStop::Ignore,
+					},
+				))
+				.spawning_on(SpawnOn::Center),
+			),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner()
+				.with(eq(None))
+				.return_const(get_spawner());
+			mock.expect_get_spawner().return_const(None);
+		});
+
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
+
+		let spawn_args = app
+			.world()
+			.iter_entities()
+			.find_map(|e| e.get::<_SpawnArgs>());
+
+		assert_eq!(
+			(
+				Ok(()),
+				Some(&_SpawnArgs {
+					caster: get_caster(),
+					spawner: get_spawner(),
+					target: get_target()
+				})
+			),
+			(ok, spawn_args)
+		)
+	}
+
+	#[test]
+	fn apply_contact_behavior_on_aim() {
 		#[derive(Component)]
 		struct _Contact;
 
@@ -476,12 +742,18 @@ mod tests {
 			}
 		}
 
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
-				.with_contact_behaviors(vec![SkillBehavior::Fn(behavior)]),
-		)));
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(
+				SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
+					.with_contact_behaviors(vec![SkillBehavior::Fn(behavior)]),
+			),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner().return_const(get_spawner());
+		});
 
-		app.world_mut().run_system_once(execute);
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
 
 		let spawn_args = app
 			.world()
@@ -491,20 +763,24 @@ mod tests {
 			.collect::<Vec<_>>();
 
 		assert_eq!(
-			vec![&_BehaviorArgs {
-				caster: get_caster(),
-				spawner: get_spawner(),
-				target: get_target()
-			}],
-			spawn_args
+			(
+				Ok(()),
+				vec![&_BehaviorArgs {
+					caster: get_caster(),
+					spawner: get_spawner(),
+					target: get_target()
+				}]
+			),
+			(ok, spawn_args)
 		);
 	}
 
 	#[test]
 	fn spawn_skill_projection_entity_on_aim() {
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, caster, spawner, target| {
-				SkillShape {
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
+				|cmd, caster, spawner, target| SkillShape {
 					contact: cmd
 						.spawn(_SpawnArgs {
 							caster: *caster,
@@ -514,11 +790,14 @@ mod tests {
 						.id(),
 					projection: cmd.spawn_empty().id(),
 					on_skill_stop: OnSkillStop::Ignore,
-				}
-			})),
-		)));
+				},
+			))),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner().return_const(get_spawner());
+		});
 
-		app.world_mut().run_system_once(execute);
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
 
 		let spawn_args = app
 			.world()
@@ -526,12 +805,15 @@ mod tests {
 			.find_map(|e| e.get::<_SpawnArgs>());
 
 		assert_eq!(
-			Some(&_SpawnArgs {
-				caster: get_caster(),
-				spawner: get_spawner(),
-				target: get_target()
-			}),
-			spawn_args
+			(
+				Ok(()),
+				Some(&_SpawnArgs {
+					caster: get_caster(),
+					spawner: get_spawner(),
+					target: get_target()
+				})
+			),
+			(ok, spawn_args)
 		)
 	}
 
@@ -556,12 +838,18 @@ mod tests {
 			}
 		}
 
-		let (mut app, ..) = setup(SkillExecuter::Start(RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
-				.with_projection_behaviors(vec![SkillBehavior::Fn(behavior)]),
-		)));
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(
+				SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
+					.with_projection_behaviors(vec![SkillBehavior::Fn(behavior)]),
+			),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner().return_const(get_spawner());
+		});
 
-		app.world_mut().run_system_once(execute);
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
 
 		let spawn_args = app
 			.world()
@@ -571,60 +859,115 @@ mod tests {
 			.collect::<Vec<_>>();
 
 		assert_eq!(
-			vec![&_BehaviorArgs {
-				caster: get_caster(),
-				spawner: get_spawner(),
-				target: get_target()
-			}],
-			spawn_args
+			(
+				Ok(()),
+				vec![&_BehaviorArgs {
+					caster: get_caster(),
+					spawner: get_spawner(),
+					target: get_target()
+				}]
+			),
+			(ok, spawn_args)
 		);
 	}
 
 	#[test]
 	fn set_to_started_contact_as_stoppable_on_aim() {
-		let (mut app, executer) = setup(SkillExecuter::Start(RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, _, _, _| SkillShape {
-				contact: cmd.spawn_empty().id(),
-				projection: cmd.spawn_empty().id(),
-				on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
-			})),
-		)));
+		let (mut app, executer) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
+				|cmd, _, _, _| SkillShape {
+					contact: cmd.spawn_empty().id(),
+					projection: cmd.spawn_empty().id(),
+					on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
+				},
+			))),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner().return_const(get_spawner());
+		});
 
-		app.world_mut().run_system_once(execute);
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
 
 		let executer = app.world().entity(executer).get::<SkillExecuter>().unwrap();
 
 		assert_eq!(
-			&SkillExecuter::StartedStoppable(Entity::from_raw(998877)),
-			executer
+			(
+				Ok(()),
+				&SkillExecuter::StartedStoppable(Entity::from_raw(998877))
+			),
+			(ok, executer)
 		);
 	}
 
 	#[test]
 	fn set_to_started_projection_as_stoppable_on_aim() {
-		let (mut app, executer) = setup(SkillExecuter::Start(RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, _, _, _| SkillShape {
-				contact: cmd.spawn_empty().id(),
-				projection: cmd.spawn_empty().id(),
-				on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
-			})),
-		)));
+		let (mut app, executer) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
+				|cmd, _, _, _| SkillShape {
+					contact: cmd.spawn_empty().id(),
+					projection: cmd.spawn_empty().id(),
+					on_skill_stop: OnSkillStop::Stop(Entity::from_raw(998877)),
+				},
+			))),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner().return_const(get_spawner());
+		});
 
-		app.world_mut().run_system_once(execute);
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
 
 		let executer = app.world().entity(executer).get::<SkillExecuter>().unwrap();
 
 		assert_eq!(
-			&SkillExecuter::StartedStoppable(Entity::from_raw(998877)),
-			executer
+			(
+				Ok(()),
+				&SkillExecuter::StartedStoppable(Entity::from_raw(998877))
+			),
+			(ok, executer)
+		);
+	}
+
+	#[test]
+	fn result_on_aim_error() {
+		let (mut app, ..) = setup(SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(
+				SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
+					|cmd, caster, spawner, target| SkillShape {
+						contact: cmd
+							.spawn(_SpawnArgs {
+								caster: *caster,
+								spawner: *spawner,
+								target: *target,
+							})
+							.id(),
+						projection: cmd.spawn_empty().id(),
+						on_skill_stop: OnSkillStop::Ignore,
+					},
+				))
+				.spawning_on(SpawnOn::Slot),
+			),
+		});
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner().return_const(None);
+		});
+
+		assert_eq!(
+			Err(NoSkillSpawner(Some(SlotKey::BottomHand(Side::Right)))),
+			app.world_mut().run_system_once_with(spawner, execute)
 		);
 	}
 
 	#[test]
 	fn set_to_idle_on_flush_when_set_to_start_on_aim() {
-		let mut executer = SkillExecuter::Start(RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(BuildSkillShape::NO_SHAPE),
-		));
+		let mut executer = SkillExecuter::Start {
+			slot_key: SlotKey::BottomHand(Side::Right),
+			shape: RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(
+				BuildSkillShape::NO_SHAPE,
+			)),
+		};
 
 		executer.flush();
 
@@ -659,27 +1002,36 @@ mod tests {
 		let mut executer = app.world_mut().entity_mut(executer);
 		let mut executer = executer.get_mut::<SkillExecuter>().unwrap();
 		*executer = SkillExecuter::Stop(skill);
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner().return_const(get_spawner());
+		});
 
-		app.world_mut().run_system_once(execute);
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
 
 		assert_eq!(
-			0,
-			app.world()
-				.iter_entities()
-				.filter(|e| e.contains::<_Parent>() || e.contains::<_Child>())
-				.count()
+			(Ok(()), 0),
+			(
+				ok,
+				app.world()
+					.iter_entities()
+					.filter(|e| e.contains::<_Parent>() || e.contains::<_Child>())
+					.count()
+			)
 		);
 	}
 
 	#[test]
 	fn set_to_idle_on_stop_execution() {
 		let (mut app, executer) = setup(SkillExecuter::Stop(Entity::from_raw(1)));
+		let spawner = Mock_GetSpawner::new_mock(|mock| {
+			mock.expect_get_spawner().return_const(get_spawner());
+		});
 
-		app.world_mut().run_system_once(execute);
+		let ok = app.world_mut().run_system_once_with(spawner, execute);
 
 		assert_eq!(
-			Some(&SkillExecuter::Idle),
-			app.world().entity(executer).get::<SkillExecuter>()
+			(Ok(()), Some(&SkillExecuter::Idle)),
+			(ok, app.world().entity(executer).get::<SkillExecuter>())
 		);
 	}
 }
