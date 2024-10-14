@@ -78,7 +78,7 @@ pub struct SkillBehaviorConfig<T> {
 	shape: BuildSkillShape<T>,
 	contact: Vec<SkillBehavior>,
 	projection: Vec<SkillBehavior>,
-	spawn_on: SpawnOn,
+	pub(crate) spawn_on: SpawnOn,
 }
 
 impl<T> SkillBehaviorConfig<T>

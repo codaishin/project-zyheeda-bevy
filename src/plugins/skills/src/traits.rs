@@ -135,13 +135,15 @@ pub trait Schedule {
 }
 
 pub trait Execute {
+	type TError;
+
 	fn execute(
 		&mut self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		spawner: &SkillSpawner,
+		get_spawner: impl Fn(&Option<SlotKey>) -> Option<SkillSpawner>,
 		target: &Target,
-	);
+	) -> Result<(), Self::TError>;
 }
 
 pub trait ShouldEnqueue {
