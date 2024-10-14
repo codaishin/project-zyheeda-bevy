@@ -4,6 +4,7 @@ pub(crate) mod start_behavior_data;
 use crate::{
 	behaviors::{
 		build_skill_shape::BuildSkillShape,
+		spawn_on::SpawnOn,
 		start_behavior::SkillBehavior,
 		SkillBehaviorConfig,
 	},
@@ -18,6 +19,7 @@ pub(crate) struct SkillBehaviorConfigData<T> {
 	shape: SkillShapeData<T>,
 	contact: Vec<SkillBehaviorData>,
 	projection: Vec<SkillBehaviorData>,
+	spawn_on: SpawnOn,
 }
 
 impl<TLifeTimeIn, TLifeTimeOut> From<SkillBehaviorConfigData<TLifeTimeIn>>
@@ -27,10 +29,11 @@ where
 	TLifeTimeOut: Clone + From<TLifeTimeIn>,
 {
 	fn from(value: SkillBehaviorConfigData<TLifeTimeIn>) -> Self {
-		let shape = BuildSkillShape::from(value.shape);
 		let contact = value.contact.into_iter().map(SkillBehavior::from);
 		let projection = value.projection.into_iter().map(SkillBehavior::from);
-		Self::from_shape(shape)
+
+		Self::from_shape(BuildSkillShape::from(value.shape))
+			.spawning_on(value.spawn_on)
 			.with_contact_behaviors(contact.collect())
 			.with_projection_behaviors(projection.collect())
 	}

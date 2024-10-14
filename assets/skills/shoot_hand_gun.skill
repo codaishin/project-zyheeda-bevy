@@ -14,6 +14,7 @@
 					"sub_type": "Plasma"
 				}
 			},
+			"spawn_on": "Slot",
 			"contact": [
 				{
 					"Damage": {

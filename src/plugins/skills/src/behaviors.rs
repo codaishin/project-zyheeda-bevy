@@ -1,4 +1,5 @@
 pub mod build_skill_shape;
+pub mod spawn_on;
 pub mod start_behavior;
 
 use crate::{
@@ -12,6 +13,7 @@ use bevy::{
 };
 use build_skill_shape::BuildSkillShape;
 use common::{components::Outdated, resources::ColliderInfo};
+use spawn_on::SpawnOn;
 use start_behavior::SkillBehavior;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -76,6 +78,7 @@ pub struct SkillBehaviorConfig<T> {
 	shape: BuildSkillShape<T>,
 	contact: Vec<SkillBehavior>,
 	projection: Vec<SkillBehavior>,
+	spawn_on: SpawnOn,
 }
 
 impl<T> SkillBehaviorConfig<T>
@@ -86,8 +89,18 @@ where
 	pub(crate) fn from_shape(shape: BuildSkillShape<T>) -> Self {
 		Self {
 			shape,
-			contact: vec![],
-			projection: vec![],
+			contact: default(),
+			projection: default(),
+			spawn_on: default(),
+		}
+	}
+
+	pub(crate) fn spawning_on(self, spawn_on: SpawnOn) -> Self {
+		Self {
+			shape: self.shape,
+			contact: self.contact,
+			spawn_on,
+			projection: self.projection,
 		}
 	}
 
@@ -95,6 +108,7 @@ where
 		Self {
 			shape: self.shape,
 			contact,
+			spawn_on: self.spawn_on,
 			projection: self.projection,
 		}
 	}
@@ -103,6 +117,7 @@ where
 		Self {
 			shape: self.shape,
 			contact: self.contact,
+			spawn_on: self.spawn_on,
 			projection,
 		}
 	}
