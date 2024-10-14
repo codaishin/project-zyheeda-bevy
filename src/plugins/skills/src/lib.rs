@@ -12,6 +12,7 @@ use animations::{animation::Animation, components::animation_dispatch::Animation
 use bevy::{
 	app::{App, Plugin, PreStartup, PreUpdate, Update},
 	asset::AssetServer,
+	core::Name,
 	ecs::{
 		entity::Entity,
 		query::Added,
@@ -27,7 +28,7 @@ use common::{
 	components::{Collection, Player, Side, Swap},
 	resources::{key_map::KeyMap, Models},
 	states::{GameRunning, MouseContext},
-	systems::log::log_many,
+	systems::{log::log_many, track_components::TrackComponentInChildren},
 	traits::{register_folder_assets::RegisterFolderAssets, try_insert_on::TryInsertOn},
 };
 use components::{
@@ -37,6 +38,7 @@ use components::{
 	inventory::Inventory,
 	queue::Queue,
 	skill_executer::SkillExecuter,
+	skill_spawners::SkillSpawners,
 	slots::Slots,
 	Mounts,
 };
@@ -96,6 +98,7 @@ fn skill_slot_load(app: &mut App) {
 			(
 				init_slots,
 				add_skill_spawn,
+				SkillSpawners::track_in_self_and_children::<Name>(),
 				load_models_commands_for_new_slots,
 			),
 		)
