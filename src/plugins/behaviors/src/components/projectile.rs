@@ -1,19 +1,11 @@
 pub mod sub_type;
 
 use super::{MovementConfig, MovementMode};
-use crate::traits::ProjectileBehavior;
-use bevy::{
-	self,
-	ecs::system::EntityCommands,
-	hierarchy::BuildChildren,
-	math::Dir3,
-	prelude::Component,
-	utils::default,
-};
+use crate::traits::{Caster, ProjectileBehavior, Spawner};
+use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::{Ccd, GravityScale, RigidBody};
 use common::{
 	errors::Error,
-	test_tools::utils::ApproxEqual,
 	tools::UnitsPerSecond,
 	traits::clamp_zero_positive::ClampZeroPositive,
 };
@@ -26,7 +18,8 @@ use sub_type::SubType;
 
 #[derive(Component, Debug, PartialEq)]
 pub struct ProjectileContact {
-	pub direction: Dir3,
+	pub caster: Entity,
+	pub spawner: Entity,
 	pub range: f32,
 	pub sub_type: SubType,
 }
@@ -36,31 +29,19 @@ pub struct ProjectileProjection {
 	pub sub_type: SubType,
 }
 
-impl Default for ProjectileContact {
-	fn default() -> Self {
-		Self {
-			direction: Dir3::NEG_Z,
-			range: default(),
-			sub_type: default(),
-		}
+impl Caster for ProjectileContact {
+	fn caster(&self) -> Entity {
+		self.caster
 	}
 }
 
-impl ApproxEqual<f32> for ProjectileContact {
-	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
-		self.direction
-			.as_vec3()
-			.approx_equal(&other.direction.as_vec3(), tolerance)
-			&& self.range == other.range
-			&& self.sub_type == other.sub_type
+impl Spawner for ProjectileContact {
+	fn spawner(&self) -> Entity {
+		self.spawner
 	}
 }
 
 impl ProjectileBehavior for ProjectileContact {
-	fn direction(&self) -> Dir3 {
-		self.direction
-	}
-
 	fn range(&self) -> f32 {
 		self.range
 	}

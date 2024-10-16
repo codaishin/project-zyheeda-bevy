@@ -17,32 +17,20 @@ use spawn_on::SpawnOn;
 use start_behavior::SkillBehavior;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct SkillSpawner(pub Entity, pub GlobalTransform);
+pub struct SkillSpawner(pub Entity);
 
 impl From<Entity> for SkillSpawner {
 	fn from(entity: Entity) -> Self {
-		Self(entity, default())
-	}
-}
-
-impl SkillSpawner {
-	pub fn with_transform(self, transform: impl Into<GlobalTransform>) -> Self {
-		Self(self.0, transform.into())
+		Self(entity)
 	}
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct SkillCaster(pub Entity, pub GlobalTransform);
+pub struct SkillCaster(pub Entity);
 
 impl From<Entity> for SkillCaster {
 	fn from(entity: Entity) -> Self {
-		Self(entity, default())
-	}
-}
-
-impl SkillCaster {
-	pub fn with_transform(self, transform: impl Into<GlobalTransform>) -> Self {
-		Self(self.0, transform.into())
+		Self(entity)
 	}
 }
 

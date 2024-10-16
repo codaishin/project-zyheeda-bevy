@@ -7,14 +7,7 @@ pub(crate) mod movement_config;
 pub(crate) mod void_sphere;
 
 use crate::components::{Attacker, MovementMode, Target};
-use bevy::{
-	ecs::{
-		bundle::Bundle,
-		system::{Commands, EntityCommands},
-	},
-	math::{Dir3, Vec2, Vec3},
-	transform::components::Transform,
-};
+use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::tools::{Units, UnitsPerSecond};
 use std::sync::Arc;
 
@@ -35,8 +28,15 @@ impl From<bool> for IsDone {
 	}
 }
 
-pub(crate) trait ProjectileBehavior {
-	fn direction(&self) -> Dir3;
+pub(crate) trait Caster {
+	fn caster(&self) -> Entity;
+}
+
+pub(crate) trait Spawner {
+	fn spawner(&self) -> Entity;
+}
+
+pub(crate) trait ProjectileBehavior: Caster {
 	fn range(&self) -> f32;
 }
 

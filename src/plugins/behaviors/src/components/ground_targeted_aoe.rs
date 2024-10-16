@@ -1,10 +1,4 @@
-use bevy::{
-	ecs::{component::Component, system::EntityCommands},
-	math::{Dir3, Quat, Ray3d, Vec3},
-	prelude::{default, Annulus, BuildChildren, Bundle, Extrusion, InfinitePlane3d, SpatialBundle},
-	render::mesh::Mesh,
-	transform::components::Transform,
-};
+use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::{
 	ActiveCollisionTypes,
 	ActiveEvents,
@@ -18,6 +12,7 @@ use common::{
 	components::{AssetModel, ColliderRoot},
 	errors::{Error, Level},
 	tools::Units,
+	traits::try_insert_on::TryInsertOn,
 };
 use prefabs::traits::{GetOrCreateAssets, Instantiate};
 use shaders::components::effect_shader::EffectShaders;
@@ -25,7 +20,7 @@ use std::f32::consts::PI;
 
 #[derive(Component, Debug, PartialEq, Clone)]
 pub struct GroundTargetedAoeContact {
-	pub caster: Transform,
+	pub caster: Entity,
 	pub target_ray: Ray3d,
 	pub max_range: Units,
 	pub radius: Units,
@@ -36,51 +31,88 @@ impl GroundTargetedAoeContact {
 		origin: Vec3::Y,
 		direction: Dir3::NEG_Y,
 	};
+
+	#[cfg(test)]
+	fn with_caster(caster: Entity) -> Self {
+		use common::traits::clamp_zero_positive::ClampZeroPositive;
+
+		GroundTargetedAoeContact {
+			caster,
+			target_ray: Self::DEFAULT_TARGET_RAY,
+			max_range: Units::new(f32::INFINITY),
+			radius: Units::new(1.),
+		}
+	}
+
+	#[cfg(test)]
+	fn with_target_ray(mut self, ray: Ray3d) -> Self {
+		self.target_ray = ray;
+		self
+	}
+
+	#[cfg(test)]
+	fn with_max_range(mut self, max_range: Units) -> Self {
+		self.max_range = max_range;
+		self
+	}
 }
 
 impl GroundTargetedAoeContact {
-	fn intersect_ground_plane(&self) -> Option<f32> {
-		self.target_ray
-			.intersect_plane(Vec3::ZERO, InfinitePlane3d::new(Vec3::Y))
+	fn ground_contact(&self) -> Option<Vec3> {
+		let toi = self
+			.target_ray
+			.intersect_plane(Vec3::ZERO, InfinitePlane3d::new(Vec3::Y))?;
+
+		Some(self.target_ray.origin + self.target_ray.direction * toi)
 	}
 
-	fn correct_for_max_range(&self, target_translation: &mut Vec3) {
-		let caster_translation = self.caster.translation;
-		let target_direction = *target_translation - caster_translation;
+	fn correct_for_max_range(&self, contact: &mut Transform, caster: &Transform) {
+		let direction = contact.translation - caster.translation;
 		let max_range = *self.max_range;
 
-		if target_direction.length() <= max_range {
+		if direction.length() <= max_range {
 			return;
 		}
 
-		*target_translation = caster_translation + target_direction.normalize() * max_range;
+		contact.translation = caster.translation + direction.normalize() * max_range;
 	}
-}
 
-trait ColliderComponents {
-	fn collider_components(&self) -> Result<impl Bundle, Error>;
-}
+	fn sync_forward(transform: &mut Transform, caster: &Transform) {
+		transform.look_to(caster.forward(), Vec3::Y);
+	}
 
-impl Default for GroundTargetedAoeContact {
-	fn default() -> Self {
-		Self {
-			caster: default(),
-			target_ray: GroundTargetedAoeContact::DEFAULT_TARGET_RAY,
-			max_range: default(),
-			radius: default(),
+	pub(crate) fn set_position(
+		mut commands: Commands,
+		transforms: Query<&Transform>,
+		ground_targets: Query<(Entity, &GroundTargetedAoeContact), Added<GroundTargetedAoeContact>>,
+	) {
+		for (entity, ground_target) in &ground_targets {
+			let Some(contact) = ground_target.ground_contact() else {
+				continue;
+			};
+			let mut transform = Transform::from_translation(contact);
+
+			if let Ok(caster) = transforms.get(ground_target.caster) {
+				ground_target.correct_for_max_range(&mut transform, caster);
+				Self::sync_forward(&mut transform, caster);
+			}
+
+			commands.try_insert_on(entity, transform);
 		}
 	}
+}
+trait ColliderComponents {
+	fn collider_components(&self) -> Result<impl Bundle, Error>;
 }
 
 impl Instantiate for GroundTargetedAoeContact {
 	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
 		let collider = self.collider_components()?;
 		let model = AssetModel("models/sphere.glb#Scene0");
-		let transform = Transform::from(self);
 
 		on.insert((
 			RigidBody::Fixed,
-			SpatialBundle::from_transform(transform),
+			SpatialBundle::default(),
 			EffectShaders::default(),
 		))
 		.with_children(|parent| {
@@ -93,19 +125,6 @@ impl Instantiate for GroundTargetedAoeContact {
 		});
 
 		Ok(())
-	}
-}
-
-impl From<&GroundTargetedAoeContact> for Transform {
-	fn from(ground_target: &GroundTargetedAoeContact) -> Self {
-		let mut target_translation = match ground_target.intersect_ground_plane() {
-			Some(toi) => ground_target.target_ray.origin + ground_target.target_ray.direction * toi,
-			None => ground_target.caster.translation,
-		};
-
-		ground_target.correct_for_max_range(&mut target_translation);
-
-		Transform::from_translation(target_translation).with_rotation(ground_target.caster.rotation)
 	}
 }
 
@@ -168,58 +187,162 @@ impl ColliderComponents for GroundTargetedAoeProjection {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::math::{Ray3d, Vec3};
-	use common::{tools::Units, traits::clamp_zero_positive::ClampZeroPositive};
+	use common::{
+		assert_eq_approx,
+		test_tools::utils::SingleThreadedApp,
+		traits::clamp_zero_positive::ClampZeroPositive,
+	};
 
-	#[test]
-	fn set_transform_at_ray_intersecting_zero_elevation_plane() {
-		assert_eq!(
-			Transform::from_xyz(3., 0., 0.),
-			Transform::from(&GroundTargetedAoeContact {
-				caster: Transform::from_xyz(10., 11., 12.),
-				target_ray: Ray3d::new(Vec3::new(0., 5., 0.), Vec3::new(3., -5., 0.)),
-				max_range: Units::new(42.),
-				..default()
-			})
-		);
+	fn setup() -> App {
+		let mut app = App::new().single_threaded(Update);
+		app.add_systems(Update, GroundTargetedAoeContact::set_position);
+
+		app
 	}
 
 	#[test]
-	fn set_transform_to_caster_transform_when_ray_not_hitting_zero_elevation_plane() {
+	fn set_to_intersection_of_target_ray_and_ground_level() {
+		let mut app = setup();
+		let caster = app.world_mut().spawn(Transform::default()).id();
+		let ray = Ray3d {
+			origin: Vec3::new(2., 5., 1.),
+			direction: Dir3::new_unchecked(Vec3::new(0., -5., 5.).normalize()),
+		};
+		let entity = app
+			.world_mut()
+			.spawn(GroundTargetedAoeContact::with_caster(caster).with_target_ray(ray))
+			.id();
+
+		app.update();
+
 		assert_eq!(
-			Transform::from_xyz(10., 0., 12.),
-			Transform::from(&GroundTargetedAoeContact {
-				caster: Transform::from_xyz(10., 0., 12.),
-				target_ray: Ray3d::new(Vec3::new(0., 5., 0.), Vec3::Y),
-				max_range: Units::new(42.),
-				..default()
-			})
-		);
+			Some(&Transform::from_xyz(2., 0., 6.)),
+			app.world().entity(entity).get::<Transform>(),
+		)
 	}
 
 	#[test]
-	fn limit_translation_to_be_within_max_range_from_caster() {
+	fn limit_by_max_range() {
+		let mut app = setup();
+		let caster = app.world_mut().spawn(Transform::default()).id();
+		let ray = Ray3d {
+			origin: Vec3::new(6., 1., 8.),
+			direction: Dir3::new_unchecked(Vec3::new(0., -1., 0.)),
+		};
+		let entity = app
+			.world_mut()
+			.spawn(
+				GroundTargetedAoeContact::with_caster(caster)
+					.with_target_ray(ray)
+					.with_max_range(Units::new(5.)),
+			)
+			.id();
+
+		app.update();
+
 		assert_eq!(
-			Transform::from_xyz(3., 0., 0.),
-			Transform::from(&GroundTargetedAoeContact {
-				caster: Transform::from_xyz(2., 0., 0.),
-				target_ray: Ray3d::new(Vec3::new(10., 3., 0.), Vec3::NEG_Y),
-				max_range: Units::new(1.),
-				..default()
-			})
-		);
+			Some(&Transform::from_xyz(3., 0., 4.)),
+			app.world().entity(entity).get::<Transform>(),
+		)
 	}
 
 	#[test]
-	fn look_towards_caster_forward() {
+	fn limit_by_max_range_when_caster_offset_from_zero() {
+		let mut app = setup();
+		let caster = app.world_mut().spawn(Transform::from_xyz(1., 0., 0.)).id();
+		let ray = Ray3d {
+			origin: Vec3::new(7., 1., 8.),
+			direction: Dir3::new_unchecked(Vec3::new(0., -1., 0.)),
+		};
+		let entity = app
+			.world_mut()
+			.spawn(
+				GroundTargetedAoeContact::with_caster(caster)
+					.with_target_ray(ray)
+					.with_max_range(Units::new(5.)),
+			)
+			.id();
+
+		app.update();
+
 		assert_eq!(
-			Transform::from_xyz(10., 0., 0.).looking_to(Vec3::ONE, Vec3::Y),
-			Transform::from(&GroundTargetedAoeContact {
-				caster: Transform::default().looking_to(Vec3::ONE, Vec3::Y),
-				target_ray: Ray3d::new(Vec3::new(10., 3., 0.), Vec3::NEG_Y),
-				max_range: Units::new(42.),
-				..default()
-			})
-		);
+			Some(&Transform::from_xyz(4., 0., 4.)),
+			app.world().entity(entity).get::<Transform>(),
+		)
+	}
+
+	#[test]
+	fn do_not_limit_by_max_range_when_caster_has_no_transform() {
+		let mut app = setup();
+		let caster = app.world_mut().spawn_empty().id();
+		let ray = Ray3d {
+			origin: Vec3::new(6., 1., 8.),
+			direction: Dir3::new_unchecked(Vec3::new(0., -1., 0.)),
+		};
+		let entity = app
+			.world_mut()
+			.spawn(
+				GroundTargetedAoeContact::with_caster(caster)
+					.with_target_ray(ray)
+					.with_max_range(Units::new(5.)),
+			)
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&Transform::from_xyz(6., 0., 8.)),
+			app.world().entity(entity).get::<Transform>(),
+		)
+	}
+
+	#[test]
+	fn set_forward_to_caster_forward() {
+		let mut app = setup();
+		let caster = app
+			.world_mut()
+			.spawn(Transform::default().looking_to(Vec3::new(3., 0., 4.), Vec3::Y))
+			.id();
+		let ray = Ray3d {
+			origin: Vec3::new(1., 1., 1.),
+			direction: Dir3::new_unchecked(Vec3::new(0., -1., 0.).normalize()),
+		};
+		let entity = app
+			.world_mut()
+			.spawn(GroundTargetedAoeContact::with_caster(caster).with_target_ray(ray))
+			.id();
+
+		app.update();
+
+		assert_eq_approx!(
+			Some(&Transform::from_xyz(1., 0., 1.).looking_to(Vec3::new(3., 0., 4.), Vec3::Y)),
+			app.world().entity(entity).get::<Transform>(),
+			0.000001
+		)
+	}
+
+	#[test]
+	fn only_set_transform_when_added() {
+		let mut app = setup();
+		let caster = app.world_mut().spawn(Transform::default()).id();
+		let ray = Ray3d {
+			origin: Vec3::new(1., 1., 1.),
+			direction: Dir3::new_unchecked(Vec3::new(0., -1., 0.).normalize()),
+		};
+		let entity = app
+			.world_mut()
+			.spawn(GroundTargetedAoeContact::with_caster(caster).with_target_ray(ray))
+			.id();
+
+		app.update();
+		let mut ground_target = app.world_mut().entity_mut(entity);
+		let mut transform = ground_target.get_mut::<Transform>().unwrap();
+		*transform = Transform::from_xyz(1., 2., 3.);
+		app.update();
+
+		assert_eq!(
+			Some(&Transform::from_xyz(1., 2., 3.)),
+			app.world().entity(entity).get::<Transform>(),
+		)
 	}
 }

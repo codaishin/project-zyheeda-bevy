@@ -30,7 +30,7 @@ pub(crate) fn advance_active_skill<
 	TGetSkill: GetActiveSkill<TAnimation, SkillState> + Component,
 	TAnimation: Send + Sync + 'static,
 	TAnimationDispatch: Component + StartAnimation<TAnimation> + StopAnimation,
-	TSkillExecutor: Component + Schedule + Flush,
+	TSkillExecutor: Component + Schedule<RunSkillBehavior> + Flush,
 	TTime: Send + Sync + Default + 'static,
 >(
 	time: Res<Time<TTime>>,
@@ -75,7 +75,7 @@ fn clear_side_effects<TAnimationDispatch: StopAnimation>(
 fn advance<
 	TAnimation: Send + Sync + 'static,
 	TAnimationDispatch: StartAnimation<TAnimation> + StopAnimation,
-	TSkillExecutor: Component + Schedule + Flush,
+	TSkillExecutor: Component + Schedule<RunSkillBehavior> + Flush,
 >(
 	mut skill: (impl GetSkillBehavior + GetAnimation<TAnimation> + StateUpdate<SkillState>),
 	mut agent: EntityCommands,
@@ -134,7 +134,7 @@ fn run_on_active<TSkill: GetSkillBehavior>(skill: &TSkill) -> Option<(SlotKey, R
 	}
 }
 
-fn schedule_start<TSkillExecutor: Schedule, TSkill: GetSkillBehavior>(
+fn schedule_start<TSkillExecutor: Schedule<RunSkillBehavior>, TSkill: GetSkillBehavior>(
 	executer: &mut Mut<TSkillExecutor>,
 	skill: &TSkill,
 	get_start_fn: fn(&TSkill) -> Option<(SlotKey, RunSkillBehavior)>,
@@ -252,7 +252,7 @@ mod tests {
 		mock: Mock_Executor,
 	}
 
-	impl Schedule for _Executor {
+	impl Schedule<RunSkillBehavior> for _Executor {
 		fn schedule(&mut self, slot_key: SlotKey, start: RunSkillBehavior) {
 			self.mock.schedule(slot_key, start)
 		}
@@ -266,7 +266,7 @@ mod tests {
 
 	mock! {
 		_Executor {}
-		impl Schedule for _Executor {
+		impl Schedule<RunSkillBehavior> for _Executor {
 			fn schedule(&mut self, slot_key: SlotKey, start: RunSkillBehavior);
 		}
 		impl Flush for _Executor {
