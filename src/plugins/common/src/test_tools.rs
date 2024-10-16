@@ -45,6 +45,20 @@ pub mod utils {
 		}
 	}
 
+	impl ApproxEqual<f32> for Transform {
+		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+			self.translation.approx_equal(&other.translation, tolerance)
+				&& self.scale.approx_equal(&other.scale, tolerance)
+				&& self.rotation.approx_equal(&other.rotation, tolerance)
+		}
+	}
+
+	impl ApproxEqual<f32> for &Transform {
+		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+			(*self).approx_equal(other, tolerance)
+		}
+	}
+
 	impl<T: ApproxEqual<f32>> ApproxEqual<f32> for Option<T> {
 		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
 			match (self, other) {

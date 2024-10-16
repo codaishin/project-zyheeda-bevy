@@ -7,7 +7,7 @@ use behaviors::components::ground_targeted_aoe::{
 	GroundTargetedAoeContact,
 	GroundTargetedAoeProjection,
 };
-use bevy::prelude::{Bundle, Transform};
+use bevy::prelude::Bundle;
 use common::tools::Units;
 use serde::{Deserialize, Serialize};
 
@@ -38,11 +38,11 @@ impl<T> BuildContact for SpawnGroundTargetedAoe<T> {
 		_: &SkillSpawner,
 		target: &Target,
 	) -> impl Bundle {
-		let SkillCaster(.., caster_transform) = caster;
+		let SkillCaster(caster, ..) = *caster;
 		let Target { ray, .. } = target;
 
 		GroundTargetedAoeContact {
-			caster: Transform::from(*caster_transform),
+			caster,
 			target_ray: *ray,
 			max_range: self.max_range,
 			radius: self.radius,

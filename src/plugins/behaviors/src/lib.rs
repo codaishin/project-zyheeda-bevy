@@ -116,6 +116,7 @@ impl Plugin for BehaviorsPlugin {
 			)
 			.add_systems(Update, projectile_behavior::<ProjectileContact>)
 			.add_systems(Update, (enemy, chase::<MovementConfig>, attack).chain())
+			.add_systems(Update, GroundTargetedAoeContact::set_position)
 			.add_systems(Update, execute_beam)
 			.add_systems(Update, position_force_shield);
 	}
