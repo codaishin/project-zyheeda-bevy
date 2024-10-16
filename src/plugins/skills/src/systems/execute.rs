@@ -1,48 +1,37 @@
 use crate::{
-	behaviors::{SkillCaster, SkillSpawner, Target},
-	items::slot_key::SlotKey,
+	behaviors::{SkillCaster, Target},
+	components::skill_spawners::SkillSpawners,
 	traits::Execute,
 };
 use bevy::prelude::*;
 use common::{
 	errors::Error,
 	resources::{CamRay, MouseHover},
-	traits::get::Get,
 };
 
-type Components<'a, TSkillExecutor, TGetSkillSpawnEntity> =
-	(Entity, &'a mut TSkillExecutor, &'a TGetSkillSpawnEntity);
+impl<T> ExecuteSkills for T {}
 
-impl<T> ExecuteSkills for T where T: Component + Execute {}
-
-pub(crate) trait ExecuteSkills
-where
-	Self: Component + Execute + Sized,
-{
-	fn execute_on<TGetSkillSpawnEntity>(
+pub(crate) trait ExecuteSkills {
+	fn execute_system(
 		cam_ray: Res<CamRay>,
 		mouse_hover: Res<MouseHover>,
 		mut commands: Commands,
-		mut agents: Query<Components<Self, TGetSkillSpawnEntity>, Changed<Self>>,
+		mut agents: Query<(Entity, &mut Self, &SkillSpawners), Changed<Self>>,
 		transforms: Query<&GlobalTransform>,
 	) -> Vec<Result<(), Error>>
 	where
-		TGetSkillSpawnEntity: Component + Get<Option<SlotKey>, Entity>,
+		Self: Component + Execute + Sized,
 		Error: From<Self::TError>,
 	{
 		agents
 			.iter_mut()
-			.map(|(id, mut skill_executer, skill_spawn)| {
+			.map(|(entity, mut skill_executer, skill_spawners)| {
 				match get_target(&cam_ray, &mouse_hover, &transforms) {
 					None => Ok(()),
 					Some(target) => skill_executer.execute(
 						&mut commands,
-						&SkillCaster(id),
-						|slot_key| {
-							skill_spawn
-								.get(slot_key)
-								.map(|entity| SkillSpawner(*entity))
-						},
+						&SkillCaster(entity),
+						skill_spawners,
 						&target,
 					),
 				}
@@ -81,32 +70,25 @@ fn get_target(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		ecs::system::RunSystemOnce,
-		math::{Ray3d, Vec3},
-		prelude::IntoSystem,
-		transform::components::GlobalTransform,
+	use crate::{
+		behaviors::SkillSpawner,
+		components::skill_spawners::SkillSpawners,
+		items::slot_key::SlotKey,
 	};
+	use bevy::ecs::system::RunSystemOnce;
 	use common::{
 		components::{Outdated, Side},
 		errors::Level,
 		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
+		traits::nested_mock::NestedMocks,
 	};
-	use std::{collections::HashMap, ops::DerefMut};
-
-	type Assert = Option<
-		Box<
-			dyn FnMut(&mut Commands, &SkillCaster, Option<SkillSpawner>, &Target)
-				+ Sync
-				+ Send
-				+ 'static,
-		>,
-	>;
+	use macros::NestedMocks;
+	use mockall::automock;
+	use std::ops::DerefMut;
 
 	#[derive(Clone, Copy)]
-	struct _Error(&'static str);
+	pub struct _Error(&'static str);
 
 	impl From<_Error> for Error {
 		fn from(_Error(msg): _Error) -> Self {
@@ -117,74 +99,24 @@ mod tests {
 		}
 	}
 
-	#[derive(Component)]
+	#[derive(Component, NestedMocks)]
 	struct _Executor {
-		result: Result<(), _Error>,
-		slot_key: Option<SlotKey>,
-		assert: Assert,
+		mock: Mock_Executor,
 	}
 
-	impl _Executor {
-		fn with_result(result: Result<(), _Error>) -> Self {
-			Self {
-				result,
-				slot_key: None,
-				assert: None,
-			}
-		}
-
-		fn with_slot_key(self, slot_key: Option<SlotKey>) -> Self {
-			Self {
-				result: self.result,
-				slot_key,
-				assert: self.assert,
-			}
-		}
-
-		fn with(
-			self,
-			assert: impl FnMut(&mut Commands, &SkillCaster, Option<SkillSpawner>, &Target)
-				+ Sync
-				+ Send
-				+ 'static,
-		) -> Self {
-			Self {
-				result: self.result,
-				slot_key: self.slot_key,
-				assert: Some(Box::new(assert)),
-			}
-		}
-	}
-
+	#[automock]
 	impl Execute for _Executor {
 		type TError = _Error;
 
-		fn execute(
+		#[allow(clippy::needless_lifetimes)]
+		fn execute<'w, 's>(
 			&mut self,
-			commands: &mut Commands,
+			commands: &mut Commands<'w, 's>,
 			caster: &SkillCaster,
-			get_spawner: impl Fn(&Option<SlotKey>) -> Option<SkillSpawner>,
+			spawners: &SkillSpawners,
 			target: &Target,
 		) -> Result<(), Self::TError> {
-			if let Some(assert) = &mut self.assert {
-				assert(commands, caster, get_spawner(&self.slot_key), target);
-			}
-			self.result
-		}
-	}
-
-	#[derive(Component)]
-	struct _Spawners(HashMap<Option<SlotKey>, SkillSpawner>);
-
-	impl _Spawners {
-		fn new<const N: usize>(spawners: [(Option<SlotKey>, SkillSpawner); N]) -> Self {
-			Self(HashMap::from(spawners))
-		}
-	}
-
-	impl Get<Option<SlotKey>, Entity> for _Spawners {
-		fn get<'a>(&'a self, key: &Option<SlotKey>) -> Option<&'a Entity> {
-			self.0.get(key).map(|s| &s.0)
+			self.mock.execute(commands, caster, spawners, target)
 		}
 	}
 
@@ -217,177 +149,124 @@ mod tests {
 		}
 	}
 
-	fn set_spawner(app: &mut App) -> SkillSpawner {
-		let entity = app.world_mut().spawn_empty().id();
-
-		SkillSpawner(entity)
-	}
-
-	fn set_caster(app: &mut App, spawners: _Spawners) -> SkillCaster {
-		let entity = app.world_mut().spawn(spawners).id();
-
-		SkillCaster(entity)
-	}
-
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<CamRay>();
 		app.init_resource::<MouseHover>();
 		app.add_systems(
 			Update,
-			_Executor::execute_on::<_Spawners>.pipe(|_: In<Vec<Result<(), Error>>>| {}),
+			_Executor::execute_system.pipe(|_: In<Vec<Result<(), Error>>>| {}),
 		);
 
 		app
 	}
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _Execution {
+	struct _ExecutionArgs {
 		caster: SkillCaster,
-		spawner: Option<SkillSpawner>,
+		spawners: SkillSpawners,
 		target: Target,
+	}
+
+	fn find_execution_args(app: &App) -> Option<&_ExecutionArgs> {
+		app.world()
+			.iter_entities()
+			.find_map(|e| e.get::<_ExecutionArgs>())
 	}
 
 	#[test]
 	fn execute_skill() {
 		let mut app = setup();
 		let target = set_target(&mut app);
-		let spawner = set_spawner(&mut app);
-		let caster = set_caster(&mut app, _Spawners::new([(None, spawner)]));
-		app.world_mut().entity_mut(caster.0).insert(
-			_Executor::with_result(Ok(())).with_slot_key(None).with(
-				|commands, caster, spawner, target| {
-					commands.spawn(_Execution {
-						caster: *caster,
-						spawner,
-						target: *target,
-					});
-				},
+		let spawners = SkillSpawners::new([
+			(
+				Some(SlotKey::BottomHand(Side::Left)),
+				SkillSpawner(Entity::from_raw(42)),
 			),
-		);
-
-		app.update();
-
-		let execution = app
-			.world()
-			.iter_entities()
-			.find_map(|e| e.get::<_Execution>());
-
-		assert_eq!(
-			Some(&_Execution {
-				caster,
-				spawner: Some(spawner),
-				target,
-			}),
-			execution
-		);
-	}
-
-	#[test]
-	fn execute_skill_on_slot() {
-		let mut app = setup();
-		let target = set_target(&mut app);
-		let spawner = set_spawner(&mut app);
-		let caster = set_caster(
-			&mut app,
-			_Spawners::new([(Some(SlotKey::TopHand(Side::Left)), spawner)]),
-		);
-		app.world_mut().entity_mut(caster.0).insert(
-			_Executor::with_result(Ok(()))
-				.with_slot_key(Some(SlotKey::TopHand(Side::Left)))
-				.with(|commands, caster, spawner, target| {
-					commands.spawn(_Execution {
-						caster: *caster,
-						spawner,
-						target: *target,
+			(
+				Some(SlotKey::TopHand(Side::Right)),
+				SkillSpawner(Entity::from_raw(43)),
+			),
+		]);
+		let caster = app.world_mut().spawn(spawners.clone()).id();
+		app.world_mut()
+			.entity_mut(caster)
+			.insert(_Executor::new().with_mock(|mock| {
+				mock.expect_execute()
+					.returning(|commands, caster, spawners, target| {
+						commands.spawn(_ExecutionArgs {
+							caster: *caster,
+							spawners: spawners.clone(),
+							target: *target,
+						});
+						Ok(())
 					});
-				}),
-		);
+			}));
 
 		app.update();
 
-		let execution = app
-			.world()
-			.iter_entities()
-			.find_map(|e| e.get::<_Execution>());
-
 		assert_eq!(
-			Some(&_Execution {
-				caster,
-				spawner: Some(spawner),
+			Some(&_ExecutionArgs {
+				caster: SkillCaster(caster),
+				spawners,
 				target,
 			}),
-			execution
+			find_execution_args(&app)
 		);
 	}
 
 	#[test]
 	fn execute_skill_only_once() {
-		static mut COUNT: usize = 0;
-
 		let mut app = setup();
-		_ = set_target(&mut app);
-		let spawner = set_spawner(&mut app);
-		let caster = set_caster(&mut app, _Spawners::new([(None, spawner)]));
-		app.world_mut()
-			.entity_mut(caster.0)
-			.insert(_Executor::with_result(Ok(())).with(|_, _, _, _| unsafe {
-				COUNT += 1;
-			}));
+		set_target(&mut app);
+		app.world_mut().spawn((
+			_Executor::new().with_mock(|mock| {
+				mock.expect_execute().times(1).return_const(Ok(()));
+			}),
+			SkillSpawners::new([]),
+		));
 
 		app.update();
 		app.update();
-
-		assert_eq!(1, unsafe {
-			{
-				COUNT
-			}
-		})
 	}
 
 	#[test]
 	fn execute_again_after_mutable_deref() {
-		static mut COUNT: usize = 0;
-
 		let mut app = setup();
-		_ = set_target(&mut app);
-		let spawner = set_spawner(&mut app);
-		let caster = set_caster(&mut app, _Spawners::new([(None, spawner)]));
-		app.world_mut()
-			.entity_mut(caster.0)
-			.insert(_Executor::with_result(Ok(())).with(|_, _, _, _| unsafe {
-				COUNT += 1;
-			}));
+		set_target(&mut app);
+		let caster = app
+			.world_mut()
+			.spawn((
+				_Executor::new().with_mock(|mock| {
+					mock.expect_execute().times(2).return_const(Ok(()));
+				}),
+				SkillSpawners::new([]),
+			))
+			.id();
 
 		app.update();
-
 		app.world_mut()
-			.entity_mut(caster.0)
+			.entity_mut(caster)
 			.get_mut::<_Executor>()
 			.unwrap()
 			.deref_mut();
-
 		app.update();
-
-		assert_eq!(2, unsafe {
-			{
-				COUNT
-			}
-		})
 	}
 
 	#[test]
 	fn return_error() {
 		let mut app = setup();
-		_ = set_target(&mut app);
-		let caster = set_caster(&mut app, _Spawners::new([]));
-		app.world_mut()
-			.entity_mut(caster.0)
-			.insert(_Executor::with_result(Err(_Error("error"))));
+		set_target(&mut app);
+		app.world_mut().spawn((
+			_Executor::new().with_mock(|mock| {
+				mock.expect_execute().return_const(Err(_Error("error")));
+			}),
+			SkillSpawners::new([]),
+		));
 
-		let errors = app
-			.world_mut()
-			.run_system_once(_Executor::execute_on::<_Spawners>);
+		app.update();
+
+		let errors = app.world_mut().run_system_once(_Executor::execute_system);
 
 		assert_eq!(
 			vec![Err(Error {

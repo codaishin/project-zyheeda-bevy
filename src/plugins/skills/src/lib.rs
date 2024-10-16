@@ -135,7 +135,7 @@ fn skill_execution(app: &mut App) {
 					.pipe(enqueue::<Slots, Queue, QueuedSkill>),
 				update_skill_combos::<Combos, CombosTimeOut, Queue, Virtual>,
 				advance_active_skill::<Queue, Animation, AnimationDispatch, SkillExecuter, Virtual>,
-				SkillExecuter::execute_on::<SkillSpawners>.pipe(log_many),
+				SkillExecuter::execute_system.pipe(log_many),
 				flush::<Queue>,
 			)
 				.chain()

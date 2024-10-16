@@ -9,12 +9,12 @@ pub(crate) mod state;
 pub(crate) mod swap_commands;
 
 use crate::{
-	behaviors::{SkillCaster, SkillSpawner, Target},
-	components::slots::Slots,
+	behaviors::{SkillCaster, Target},
+	components::{skill_spawners::SkillSpawners, slots::Slots},
 	items::slot_key::SlotKey,
 	skills::{Animate, RunSkillBehavior, Skill, SkillAnimation},
 };
-use bevy::ecs::system::Commands;
+use bevy::prelude::*;
 use common::traits::{load_asset::Path, map_value::TryMapBackwards, state_duration::StateUpdate};
 use std::hash::Hash;
 
@@ -134,14 +134,14 @@ pub trait Schedule {
 	fn schedule(&mut self, slot_key: SlotKey, shape: RunSkillBehavior);
 }
 
-pub trait Execute {
+pub(crate) trait Execute {
 	type TError;
 
 	fn execute(
 		&mut self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		get_spawner: impl Fn(&Option<SlotKey>) -> Option<SkillSpawner>,
+		spawners: &SkillSpawners,
 		target: &Target,
 	) -> Result<(), Self::TError>;
 }
