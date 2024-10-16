@@ -4,7 +4,7 @@ use crate::{
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
 use behaviors::components::shield::{ShieldContact, ShieldProjection};
-use bevy::prelude::{Bundle, SpatialBundle, Transform};
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -12,12 +12,9 @@ pub struct SpawnShield;
 
 impl BuildContact for SpawnShield {
 	fn build_contact(&self, _: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> impl Bundle {
-		let SkillSpawner(entity, transform) = spawner;
+		let SkillSpawner(location, ..) = *spawner;
 
-		(
-			ShieldContact { location: *entity },
-			SpatialBundle::from_transform(Transform::from(*transform)),
-		)
+		(ShieldContact { location }, SpatialBundle::default())
 	}
 }
 
