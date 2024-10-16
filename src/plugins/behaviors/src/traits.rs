@@ -28,8 +28,15 @@ impl From<bool> for IsDone {
 	}
 }
 
-pub(crate) trait ProjectileBehavior {
+pub(crate) trait Caster {
 	fn caster(&self) -> Entity;
+}
+
+pub(crate) trait Spawner {
+	fn spawner(&self) -> Entity;
+}
+
+pub(crate) trait ProjectileBehavior: Caster {
 	fn range(&self) -> f32;
 }
 

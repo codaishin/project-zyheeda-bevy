@@ -40,6 +40,7 @@ pub(crate) trait ProjectileMovement {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::traits::Caster;
 	use common::assert_eq_approx;
 
 	#[derive(Component)]
@@ -48,10 +49,13 @@ mod tests {
 		pub range: f32,
 	}
 
-	impl ProjectileBehavior for _Projectile {
+	impl Caster for _Projectile {
 		fn caster(&self) -> Entity {
 			self.caster
 		}
+	}
+
+	impl ProjectileBehavior for _Projectile {
 		fn range(&self) -> f32 {
 			self.range
 		}

@@ -49,7 +49,7 @@ use systems::{
 		move_player_on_event::move_player_on_event,
 		trigger_event::trigger_move_input_event,
 	},
-	projectile::movement::ProjectileMovement,
+	projectile::{movement::ProjectileMovement, set_position::ProjectileSetPosition},
 	shield::position_force_shield,
 	update_cool_downs::update_cool_downs,
 	update_life_times::update_lifetimes,
@@ -115,7 +115,10 @@ impl Plugin for BehaviorsPlugin {
 				),
 			)
 			.add_systems(Update, (enemy, chase::<MovementConfig>, attack).chain())
-			.add_systems(Update, ProjectileContact::movement)
+			.add_systems(
+				Update,
+				(ProjectileContact::set_position, ProjectileContact::movement).chain(),
+			)
 			.add_systems(Update, GroundTargetedAoeContact::set_position)
 			.add_systems(Update, execute_beam)
 			.add_systems(Update, position_force_shield);
