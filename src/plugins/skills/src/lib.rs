@@ -43,7 +43,7 @@ use components::{
 	Mounts,
 };
 use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount};
-use skills::{skill_data::SkillData, QueuedSkill, Skill};
+use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill};
 use std::{collections::HashSet, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,
@@ -135,7 +135,7 @@ fn skill_execution(app: &mut App) {
 					.pipe(enqueue::<Slots, Queue, QueuedSkill>),
 				update_skill_combos::<Combos, CombosTimeOut, Queue, Virtual>,
 				advance_active_skill::<Queue, Animation, AnimationDispatch, SkillExecuter, Virtual>,
-				SkillExecuter::execute_system.pipe(log_many),
+				SkillExecuter::<RunSkillBehavior>::execute_system.pipe(log_many),
 				flush::<Queue>,
 			)
 				.chain()
@@ -172,7 +172,7 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 	commands.try_insert_on(
 		player,
 		(
-			SkillExecuter::default(),
+			SkillExecuter::<RunSkillBehavior>::default(),
 			CombosTimeOut::after(Duration::from_secs(2)),
 			get_inventory(),
 			get_loadout(),

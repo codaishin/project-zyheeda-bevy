@@ -5,6 +5,7 @@ pub(crate) mod get_skill_animation;
 pub(crate) mod peek_next;
 pub(crate) mod skill_builder;
 pub(crate) mod skill_state;
+pub(crate) mod spawn_skill_behavior;
 pub(crate) mod state;
 pub(crate) mod swap_commands;
 
@@ -14,7 +15,6 @@ use crate::{
 	items::slot_key::SlotKey,
 	skills::{Animate, RunSkillBehavior, Skill, SkillAnimation},
 };
-use bevy::prelude::*;
 use common::traits::{load_asset::Path, map_value::TryMapBackwards, state_duration::StateUpdate};
 use std::hash::Hash;
 
@@ -130,16 +130,16 @@ pub trait InputState<TMap: TryMapBackwards<TKey, SlotKey>, TKey: Eq + Hash> {
 	fn just_released_slots(&self, map: &TMap) -> Vec<SlotKey>;
 }
 
-pub trait Schedule {
-	fn schedule(&mut self, slot_key: SlotKey, shape: RunSkillBehavior);
+pub trait Schedule<TBehavior> {
+	fn schedule(&mut self, slot_key: SlotKey, behavior: TBehavior);
 }
 
-pub(crate) trait Execute {
+pub(crate) trait Execute<TCommands> {
 	type TError;
 
 	fn execute(
 		&mut self,
-		commands: &mut Commands,
+		commands: &mut TCommands,
 		caster: &SkillCaster,
 		spawners: &SkillSpawners,
 		target: &Target,

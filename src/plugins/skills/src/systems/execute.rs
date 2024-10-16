@@ -20,8 +20,8 @@ pub(crate) trait ExecuteSkills {
 		transforms: Query<&GlobalTransform>,
 	) -> Vec<Result<(), Error>>
 	where
-		Self: Component + Execute + Sized,
-		Error: From<Self::TError>,
+		for<'w, 's> Self: Component + Execute<Commands<'w, 's>> + Sized,
+		for<'w, 's> Error: From<<Self as Execute<Commands<'w, 's>>>::TError>,
 	{
 		agents
 			.iter_mut()
@@ -84,7 +84,7 @@ mod tests {
 		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;
-	use mockall::automock;
+	use mockall::mock;
 	use std::ops::DerefMut;
 
 	#[derive(Clone, Copy)]
@@ -104,19 +104,32 @@ mod tests {
 		mock: Mock_Executor,
 	}
 
-	#[automock]
-	impl Execute for _Executor {
+	impl<'w, 's> Execute<Commands<'w, 's>> for _Executor {
 		type TError = _Error;
 
-		#[allow(clippy::needless_lifetimes)]
-		fn execute<'w, 's>(
+		fn execute(
 			&mut self,
-			commands: &mut Commands<'w, 's>,
+			commands: &mut Commands,
 			caster: &SkillCaster,
 			spawners: &SkillSpawners,
 			target: &Target,
 		) -> Result<(), Self::TError> {
 			self.mock.execute(commands, caster, spawners, target)
+		}
+	}
+
+	mock! {
+		_Executor {}
+		impl<'w, 's> Execute<Commands<'w, 's>> for _Executor {
+			type TError = _Error;
+
+			fn execute<'_w, '_s>(
+				&mut self,
+				commands: &mut Commands<'_w, '_s>,
+				caster: &SkillCaster,
+				spawners: &SkillSpawners,
+				target: &Target,
+			) -> Result<(), _Error>;
 		}
 	}
 
