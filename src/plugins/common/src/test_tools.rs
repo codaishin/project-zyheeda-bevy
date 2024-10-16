@@ -53,7 +53,10 @@ pub mod utils {
 		}
 	}
 
-	impl ApproxEqual<f32> for &Transform {
+	impl<T> ApproxEqual<f32> for &T
+	where
+		T: ApproxEqual<f32>,
+	{
 		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
 			(*self).approx_equal(other, tolerance)
 		}

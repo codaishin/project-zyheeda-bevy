@@ -23,12 +23,12 @@ impl BuildContact for SpawnProjectile {
 		spawner: &SkillSpawner,
 		_: &Target,
 	) -> impl Bundle {
-		let SkillCaster(.., caster) = caster;
+		let SkillCaster(caster, ..) = *caster;
 		let SkillSpawner(.., spawner) = spawner;
 
 		(
 			ProjectileContact {
-				direction: caster.forward(),
+				caster,
 				range: 10.,
 				sub_type: self.sub_type,
 			},

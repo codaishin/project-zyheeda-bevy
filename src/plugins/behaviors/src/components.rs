@@ -8,7 +8,7 @@ use bevy::{
 	ecs::{bundle::Bundle, component::Component, entity::Entity, system::EntityCommands},
 	math::Vec3,
 };
-use common::tools::UnitsPerSecond;
+use common::{test_tools::utils::ApproxEqual, tools::UnitsPerSecond};
 use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
 
 #[derive(Component)]
@@ -75,6 +75,12 @@ impl<TMovement> Movement<TMovement> {
 			cleanup: Some(TBundle::get_remover()),
 			phantom_data: self.phantom_data,
 		}
+	}
+}
+
+impl<TMovement> ApproxEqual<f32> for Movement<TMovement> {
+	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+		self.target.approx_equal(&other.target, tolerance) && self.cleanup == other.cleanup
 	}
 }
 
