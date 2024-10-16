@@ -38,7 +38,7 @@ impl<T> BuildContact for SpawnGroundTargetedAoe<T> {
 		_: &SkillSpawner,
 		target: &Target,
 	) -> impl Bundle {
-		let SkillCaster(caster, ..) = *caster;
+		let SkillCaster(caster) = *caster;
 		let Target { ray, .. } = target;
 
 		GroundTargetedAoeContact {

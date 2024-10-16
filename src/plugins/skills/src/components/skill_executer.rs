@@ -197,17 +197,11 @@ mod tests {
 	}
 
 	fn get_caster() -> SkillCaster {
-		SkillCaster(
-			Entity::from_raw(99),
-			GlobalTransform::from_xyz(42., 42., 42.),
-		)
+		SkillCaster(Entity::from_raw(99))
 	}
 
 	fn get_spawner() -> SkillSpawner {
-		SkillSpawner(
-			Entity::from_raw(111),
-			GlobalTransform::from_xyz(100., 100., 100.),
-		)
+		SkillSpawner(Entity::from_raw(111))
 	}
 
 	fn get_target() -> Target {

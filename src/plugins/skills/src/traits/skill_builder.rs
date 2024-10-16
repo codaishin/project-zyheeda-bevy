@@ -3,10 +3,7 @@ use crate::{
 	skills::lifetime::LifeTimeDefinition,
 };
 use behaviors::components::LifeTime;
-use bevy::{
-	ecs::system::EntityCommands,
-	prelude::{BuildChildren, Bundle, Commands, Entity},
-};
+use bevy::{ecs::system::EntityCommands, prelude::*};
 
 pub(crate) trait BuildContact {
 	fn build_contact(
@@ -101,7 +98,6 @@ mod tests {
 		app::App,
 		ecs::system::RunSystemOnce,
 		math::{Ray3d, Vec3},
-		prelude::{Commands, Component, GlobalTransform, In, Parent, Transform},
 		utils::default,
 	};
 	use std::time::Duration;
@@ -178,14 +174,8 @@ mod tests {
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilStopped,
 		};
-		let caster = SkillCaster(
-			Entity::from_raw(42),
-			GlobalTransform::from(Transform::from_xyz(1., 2., 3.)),
-		);
-		let spawner = SkillSpawner(
-			Entity::from_raw(43),
-			GlobalTransform::from(Transform::from_xyz(4., 5., 6.)),
-		);
+		let caster = SkillCaster(Entity::from_raw(42));
+		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = Target {
 			ray: Ray3d::new(Vec3::X, Vec3::Z),
 			..default()
@@ -211,14 +201,8 @@ mod tests {
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilStopped,
 		};
-		let caster = SkillCaster(
-			Entity::from_raw(42),
-			GlobalTransform::from(Transform::from_xyz(1., 2., 3.)),
-		);
-		let spawner = SkillSpawner(
-			Entity::from_raw(43),
-			GlobalTransform::from(Transform::from_xyz(4., 5., 6.)),
-		);
+		let caster = SkillCaster(Entity::from_raw(42));
+		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = Target {
 			ray: Ray3d::new(Vec3::X, Vec3::Z),
 			..default()
@@ -244,14 +228,8 @@ mod tests {
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilStopped,
 		};
-		let caster = SkillCaster(
-			Entity::from_raw(42),
-			GlobalTransform::from(Transform::from_xyz(1., 2., 3.)),
-		);
-		let spawner = SkillSpawner(
-			Entity::from_raw(43),
-			GlobalTransform::from(Transform::from_xyz(4., 5., 6.)),
-		);
+		let caster = SkillCaster(Entity::from_raw(42));
+		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = Target {
 			ray: Ray3d::new(Vec3::X, Vec3::Z),
 			..default()
@@ -276,14 +254,8 @@ mod tests {
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilStopped,
 		};
-		let caster = SkillCaster(
-			Entity::from_raw(42),
-			GlobalTransform::from(Transform::from_xyz(1., 2., 3.)),
-		);
-		let spawner = SkillSpawner(
-			Entity::from_raw(43),
-			GlobalTransform::from(Transform::from_xyz(4., 5., 6.)),
-		);
+		let caster = SkillCaster(Entity::from_raw(42));
+		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = Target {
 			ray: Ray3d::new(Vec3::X, Vec3::Z),
 			..default()
@@ -302,14 +274,8 @@ mod tests {
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilOutlived(Duration::from_nanos(42)),
 		};
-		let caster = SkillCaster(
-			Entity::from_raw(42),
-			GlobalTransform::from(Transform::from_xyz(1., 2., 3.)),
-		);
-		let spawner = SkillSpawner(
-			Entity::from_raw(43),
-			GlobalTransform::from(Transform::from_xyz(4., 5., 6.)),
-		);
+		let caster = SkillCaster(Entity::from_raw(42));
+		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = Target {
 			ray: Ray3d::new(Vec3::X, Vec3::Z),
 			..default()
@@ -328,14 +294,8 @@ mod tests {
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilOutlived(Duration::from_nanos(42)),
 		};
-		let caster = SkillCaster(
-			Entity::from_raw(42),
-			GlobalTransform::from(Transform::from_xyz(1., 2., 3.)),
-		);
-		let spawner = SkillSpawner(
-			Entity::from_raw(43),
-			GlobalTransform::from(Transform::from_xyz(4., 5., 6.)),
-		);
+		let caster = SkillCaster(Entity::from_raw(42));
+		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = Target {
 			ray: Ray3d::new(Vec3::X, Vec3::Z),
 			..default()
@@ -357,14 +317,8 @@ mod tests {
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::Infinite,
 		};
-		let caster = SkillCaster(
-			Entity::from_raw(42),
-			GlobalTransform::from(Transform::from_xyz(1., 2., 3.)),
-		);
-		let spawner = SkillSpawner(
-			Entity::from_raw(43),
-			GlobalTransform::from(Transform::from_xyz(4., 5., 6.)),
-		);
+		let caster = SkillCaster(Entity::from_raw(42));
+		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = Target {
 			ray: Ray3d::new(Vec3::X, Vec3::Z),
 			..default()

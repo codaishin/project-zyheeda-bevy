@@ -12,7 +12,7 @@ pub struct SpawnShield;
 
 impl BuildContact for SpawnShield {
 	fn build_contact(&self, _: &SkillCaster, spawner: &SkillSpawner, _: &Target) -> impl Bundle {
-		let SkillSpawner(location, ..) = *spawner;
+		let SkillSpawner(location) = *spawner;
 
 		(ShieldContact { location }, SpatialBundle::default())
 	}

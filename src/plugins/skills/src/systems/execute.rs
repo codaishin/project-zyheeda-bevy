@@ -10,12 +10,8 @@ use common::{
 	traits::get::Get,
 };
 
-type Components<'a, TSkillExecutor, TGetSkillSpawnEntity> = (
-	Entity,
-	&'a mut TSkillExecutor,
-	&'a GlobalTransform,
-	&'a TGetSkillSpawnEntity,
-);
+type Components<'a, TSkillExecutor, TGetSkillSpawnEntity> =
+	(Entity, &'a mut TSkillExecutor, &'a TGetSkillSpawnEntity);
 
 impl<T> ExecuteSkills for T where T: Component + Execute {}
 
@@ -36,17 +32,16 @@ where
 	{
 		agents
 			.iter_mut()
-			.map(|(id, mut skill_executer, transform, skill_spawn)| {
+			.map(|(id, mut skill_executer, skill_spawn)| {
 				match get_target(&cam_ray, &mouse_hover, &transforms) {
 					None => Ok(()),
 					Some(target) => skill_executer.execute(
 						&mut commands,
-						&SkillCaster(id, *transform),
+						&SkillCaster(id),
 						|slot_key| {
 							skill_spawn
 								.get(slot_key)
-								.and_then(|entity| Some((entity, transforms.get(*entity).ok()?)))
-								.map(|(entity, transform)| SkillSpawner(*entity, *transform))
+								.map(|entity| SkillSpawner(*entity))
 						},
 						&target,
 					),
@@ -223,17 +218,15 @@ mod tests {
 	}
 
 	fn set_spawner(app: &mut App) -> SkillSpawner {
-		let transform = GlobalTransform::from_xyz(100., 100., 100.);
-		let entity = app.world_mut().spawn(transform).id();
+		let entity = app.world_mut().spawn_empty().id();
 
-		SkillSpawner(entity, transform)
+		SkillSpawner(entity)
 	}
 
 	fn set_caster(app: &mut App, spawners: _Spawners) -> SkillCaster {
-		let transform = GlobalTransform::from_xyz(42., 42., 42.);
-		let entity = app.world_mut().spawn((transform, spawners)).id();
+		let entity = app.world_mut().spawn(spawners).id();
 
-		SkillCaster(entity, transform)
+		SkillCaster(entity)
 	}
 
 	fn setup() -> App {
