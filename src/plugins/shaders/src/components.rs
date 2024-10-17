@@ -1,2 +1,2 @@
-pub mod effect_shader;
-pub mod shadows_manager;
+pub(crate) mod effect_shader;
+pub(crate) mod shadows_manager;

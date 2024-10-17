@@ -13,7 +13,7 @@ use std::collections::HashSet;
 use bevy::asset::UntypedAssetId;
 
 #[derive(Component, Default)]
-pub struct EffectShaders {
+pub(crate) struct EffectShaders {
 	pub(crate) meshes: HashSet<Entity>,
 	pub(crate) shaders: HashSet<EffectShader>,
 }

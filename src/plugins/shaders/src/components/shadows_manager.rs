@@ -11,7 +11,7 @@ use std::{
 };
 
 #[derive(Component, Default, Debug, PartialEq)]
-pub struct ShadowsManager {
+pub(crate) struct ShadowsManager {
 	has_shadow: HashMap<Entity, HashSet<TypeId>>,
 }
 

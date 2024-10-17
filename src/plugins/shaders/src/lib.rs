@@ -1,7 +1,9 @@
-pub mod components;
-pub mod materials;
-pub mod systems;
-pub mod traits;
+pub mod bundles;
+
+pub(crate) mod components;
+pub(crate) mod materials;
+pub(crate) mod systems;
+pub(crate) mod traits;
 
 use bevy::prelude::*;
 use common::systems::{
