@@ -9,20 +9,7 @@ mod behaviors;
 mod bundles;
 
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
-use bevy::{
-	app::{App, Plugin, PreStartup, PreUpdate, Update},
-	asset::AssetServer,
-	core::Name,
-	ecs::{
-		entity::Entity,
-		query::Added,
-		schedule::IntoSystemConfigs,
-		system::{Commands, IntoSystem, Query, Res},
-	},
-	input::{keyboard::KeyCode, ButtonInput},
-	state::{condition::in_state, state::State},
-	time::Virtual,
-};
+use bevy::prelude::*;
 use bundles::Loadout;
 use common::{
 	components::{Collection, Player, Side, Swap},
@@ -91,7 +78,7 @@ fn inventory(app: &mut App) {
 }
 
 fn skill_slot_load(app: &mut App) {
-	app.add_systems(PreStartup, load_models)
+	app.add_systems(Startup, load_models)
 		.add_systems(
 			PreUpdate,
 			(
