@@ -1,3 +1,4 @@
+use crate::traits::effect_material::EffectMaterial;
 use bevy::{
 	prelude::*,
 	render::render_resource::{AsBindGroup, ShaderRef},
@@ -41,5 +42,11 @@ impl Material for ForceMaterial {
 
 	fn alpha_mode(&self) -> AlphaMode {
 		self.alpha_mode
+	}
+}
+
+impl EffectMaterial for ForceMaterial {
+	fn casts_shadows() -> bool {
+		false
 	}
 }

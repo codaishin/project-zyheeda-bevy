@@ -9,7 +9,7 @@ use common::systems::{
 	remove_components::Remove,
 	track_components::TrackComponentInChildren,
 };
-use components::effect_shader::EffectShaders;
+use components::{effect_shader::EffectShaders, shadows_manager::ShadowsManager};
 use interactions::components::{force::Force, gravity::Gravity};
 use materials::{force_material::ForceMaterial, gravity_material::GravityMaterial};
 use systems::{
@@ -17,7 +17,7 @@ use systems::{
 	add_effect_shader::add_effect_shader,
 	instantiate_effect_shaders::instantiate_effect_shaders,
 };
-use traits::get_effect_material::GetEffectMaterial;
+use traits::{effect_material::EffectMaterial, get_effect_material::GetEffectMaterial};
 
 pub struct ShaderPlugin;
 
@@ -42,17 +42,29 @@ impl Plugin for ShaderPlugin {
 				EffectShaders::remove_from_self_and_children::<Handle<StandardMaterial>>,
 				EffectShaders::track_in_self_and_children::<Handle<Mesh>>(),
 				instantiate_effect_shaders,
+				ShadowsManager::system,
 			),
 		);
 	}
 }
 
 trait RegisterEffectShader {
-	fn register_effect_shader<TEffect: Component + GetEffectMaterial>(&mut self) -> &mut Self;
+	fn register_effect_shader<TEffect>(&mut self) -> &mut Self
+	where
+		TEffect: Component + GetEffectMaterial,
+		TEffect::TMaterial: EffectMaterial;
 }
 
 impl RegisterEffectShader for App {
-	fn register_effect_shader<TEffect: Component + GetEffectMaterial>(&mut self) -> &mut Self {
+	fn register_effect_shader<TEffect>(&mut self) -> &mut Self
+	where
+		TEffect: Component + GetEffectMaterial,
+		TEffect::TMaterial: EffectMaterial + Asset,
+	{
+		self.add_systems(
+			Update,
+			ShadowsManager::track_in_self_and_children::<Handle<TEffect::TMaterial>>(),
+		);
 		self.add_systems(
 			Update,
 			(
