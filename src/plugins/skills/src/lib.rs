@@ -179,9 +179,6 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 		(
 			SkillExecuter::<RunSkillBehavior>::default(),
 			CombosTimeOut::after(Duration::from_secs(2)),
-			Lookup::<SubModels<Player>>::default(),
-			Lookup::<HandSlots<Player>>::default(),
-			Lookup::<ForearmSlots<Player>>::default(),
 			get_inventory(),
 			get_loadout(),
 			get_combos(),
@@ -189,7 +186,7 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 	);
 }
 
-fn get_loadout() -> Loadout {
+fn get_loadout() -> Loadout<Player> {
 	Loadout::new([
 		(
 			SlotKey::TopHand(Side::Left),
