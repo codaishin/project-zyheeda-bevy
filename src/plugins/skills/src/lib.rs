@@ -7,6 +7,7 @@ pub mod traits;
 
 mod behaviors;
 mod bundles;
+mod definitions;
 
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::prelude::*;
@@ -23,12 +24,16 @@ use components::{
 	combos::Combos,
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
+	lookup::Lookup,
 	queue::Queue,
 	skill_executer::SkillExecuter,
 	skill_spawners::SkillSpawners,
 	slots::Slots,
-	sub_models::SubModels,
 	Mounts,
+};
+use definitions::{
+	item_slots::{ForearmSlots, HandSlots},
+	sub_models::SubModels,
 };
 use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount};
 use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill};
@@ -92,9 +97,15 @@ fn skill_slot_load(app: &mut App) {
 		.add_systems(Update, set_player_items)
 		.add_systems(
 			Update,
-			SubModels::<Player>::track_in_self_and_children::<Name>()
-				.with::<Handle<Mesh>>()
-				.system(),
+			(
+				Lookup::<SubModels<Player>>::track_in_self_and_children::<Name>()
+					.with::<Handle<Mesh>>()
+					.system(),
+				Lookup::<HandSlots<Player>>::track_in_self_and_children::<Name>()
+					.system(),
+				Lookup::<ForearmSlots<Player>>::track_in_self_and_children::<Name>()
+					.system(),
+			)
 		)
 		.add_systems(
 			Update,
@@ -168,7 +179,9 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 		(
 			SkillExecuter::<RunSkillBehavior>::default(),
 			CombosTimeOut::after(Duration::from_secs(2)),
-			SubModels::<Player>::default(),
+			Lookup::<SubModels<Player>>::default(),
+			Lookup::<HandSlots<Player>>::default(),
+			Lookup::<ForearmSlots<Player>>::default(),
 			get_inventory(),
 			get_loadout(),
 			get_combos(),

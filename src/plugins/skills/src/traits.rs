@@ -1,5 +1,6 @@
 pub(crate) mod advance_combo;
 pub(crate) mod bevy_input;
+pub(crate) mod entity_names;
 pub(crate) mod flush;
 pub(crate) mod get_skill_animation;
 pub(crate) mod peek_next;
@@ -7,7 +8,6 @@ pub(crate) mod skill_builder;
 pub(crate) mod skill_state;
 pub(crate) mod spawn_skill_behavior;
 pub(crate) mod state;
-pub(crate) mod sub_model_names;
 pub(crate) mod swap_commands;
 
 use crate::{
