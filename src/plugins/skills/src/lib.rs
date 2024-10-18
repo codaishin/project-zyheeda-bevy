@@ -27,6 +27,7 @@ use components::{
 	skill_executer::SkillExecuter,
 	skill_spawners::SkillSpawners,
 	slots::Slots,
+	sub_models::SubModels,
 	Mounts,
 };
 use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount};
@@ -89,6 +90,7 @@ fn skill_slot_load(app: &mut App) {
 		)
 		.add_systems(PreUpdate, uuid_to_skill::<Slots<Uuid>, Slots>)
 		.add_systems(Update, set_player_items)
+		.add_systems(Update, SubModels::<Player>::track_in_self_and_children::<Name>())
 		.add_systems(
 			Update,
 			(
@@ -161,6 +163,7 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 		(
 			SkillExecuter::<RunSkillBehavior>::default(),
 			CombosTimeOut::after(Duration::from_secs(2)),
+			SubModels::<Player>::default(),
 			get_inventory(),
 			get_loadout(),
 			get_combos(),
