@@ -122,8 +122,7 @@ impl<TNode: RootKeys> RootKeys for Combos<TNode> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Mounts, Slot};
-	use bevy::{ecs::entity::Entity, utils::default};
+	use bevy::utils::default;
 	use common::{components::Side, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
@@ -138,16 +137,7 @@ mod tests {
 
 	#[test]
 	fn call_next_with_correct_args() {
-		let slots = Slots(HashMap::from([(
-			SlotKey::BottomHand(Side::Right),
-			Slot {
-				mounts: Mounts {
-					hand: Entity::from_raw(123),
-					forearm: Entity::from_raw(456),
-				},
-				item: None,
-			},
-		)]));
+		let slots = Slots(HashMap::from([(SlotKey::BottomHand(Side::Right), None)]));
 		let trigger = SlotKey::BottomHand(Side::Left);
 
 		let mut mock = Mock_Next::default();
@@ -210,16 +200,7 @@ mod tests {
 			}
 		}
 
-		let slots = Slots(HashMap::from([(
-			SlotKey::BottomHand(Side::Right),
-			Slot {
-				mounts: Mounts {
-					hand: Entity::from_raw(123),
-					forearm: Entity::from_raw(456),
-				},
-				item: None,
-			},
-		)]));
+		let slots = Slots(HashMap::from([(SlotKey::BottomHand(Side::Right), None)]));
 		let trigger = SlotKey::BottomHand(Side::Left);
 
 		let combos = Combos::new(_Node("first"));

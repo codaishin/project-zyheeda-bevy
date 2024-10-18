@@ -11,17 +11,12 @@ use crate::systems::{
 	init_animation_graph::InitAnimationGraph,
 	play_animation_clip::PlayAnimationClip,
 };
-use bevy::{
-	animation::AnimationPlayer,
-	app::{App, Plugin, PostUpdate, Startup, Update},
-	asset::AssetServer,
-	prelude::*,
-};
+use bevy::prelude::*;
 use common::{
 	components::Player,
 	systems::{
 		init_associated_component::{GetAssociated, InitAssociatedComponent},
-		track_components::TrackComponentInChildren,
+		track_components::TrackComponentInSelfAndChildren,
 	},
 };
 use components::animation_dispatch::AnimationDispatch;
@@ -61,8 +56,9 @@ impl Plugin for AnimationsPlugin {
 			.add_systems(
 				PostUpdate,
 				(
-					AnimationDispatch::track_in_self_and_children::<AnimationPlayer>(),
-					AnimationDispatch::track_in_self_and_children::<AnimationTransitions>(),
+					AnimationDispatch::track_in_self_and_children::<AnimationPlayer>().system(),
+					AnimationDispatch::track_in_self_and_children::<AnimationTransitions>()
+						.system(),
 				),
 			);
 	}

@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use common::systems::{
 	asset_process_delta::asset_process_delta,
 	remove_components::Remove,
-	track_components::TrackComponentInChildren,
+	track_components::TrackComponentInSelfAndChildren,
 };
 use components::{effect_shader::EffectShaders, shadows_manager::ShadowsManager};
 use interactions::components::{force::Force, gravity::Gravity};
@@ -42,7 +42,7 @@ impl Plugin for ShaderPlugin {
 			PostUpdate,
 			(
 				EffectShaders::remove_from_self_and_children::<Handle<StandardMaterial>>,
-				EffectShaders::track_in_self_and_children::<Handle<Mesh>>(),
+				EffectShaders::track_in_self_and_children::<Handle<Mesh>>().system(),
 				instantiate_effect_shaders,
 				ShadowsManager::system,
 			),
@@ -65,7 +65,7 @@ impl RegisterEffectShader for App {
 	{
 		self.add_systems(
 			Update,
-			ShadowsManager::track_in_self_and_children::<Handle<TEffect::TMaterial>>(),
+			ShadowsManager::track_in_self_and_children::<Handle<TEffect::TMaterial>>().system(),
 		);
 		self.add_systems(
 			Update,

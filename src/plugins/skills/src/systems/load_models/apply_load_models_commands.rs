@@ -1,48 +1,76 @@
 use crate::{
 	components::{slots::Slots, LoadModel, LoadModelsCommand},
-	items::{Item, Mount},
+	items::{slot_key::SlotKey, Item, Mount},
 };
-use bevy::{
-	asset::Handle,
-	prelude::{default, Commands, Entity, Query, Res},
-	scene::Scene,
-};
+use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
 	resources::Models,
-	traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
+	traits::{get::Get, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
 
-pub(crate) fn apply_load_models_commands(
+pub(crate) fn apply_load_models_commands<THands, TForearms>(
 	mut commands: Commands,
 	models: Res<Models>,
-	agents: Query<(Entity, &Slots, &LoadModelsCommand)>,
-) -> Vec<Result<(), Error>> {
+	agents: Query<(Entity, &Slots, &LoadModelsCommand, &THands, &TForearms)>,
+) -> Vec<Result<(), Error>>
+where
+	THands: Component + Get<SlotKey, Entity>,
+	TForearms: Component + Get<SlotKey, Entity>,
+{
 	agents
 		.iter()
-		.flat_map(|(agent, slots, load_models_command)| {
-			load_models_command
-				.0
+		.flat_map(|(entity, slots, cmd, hands, forearms)| {
+			cmd.0
 				.iter()
-				.filter_map(collect_model_data(agent, slots, &models))
+				.map(collect_model_data(entity, slots, &models, hands, forearms))
 		})
-		.map(|model_data| model_data.insert(&mut commands))
+		.filter_map(|model_data| match model_data {
+			Err(ModelDataError::SlotEmpty) => None,
+			Err(ModelDataError::NoMountEntity(key, mount)) => {
+				Some(Err(slot_entity_error(&key, &mount)))
+			}
+			Ok(model_data) => match model_data.insert(&mut commands) {
+				Ok(()) => None,
+				Err(error) => Some(Err(error)),
+			},
+		})
 		.collect()
 }
 
-fn collect_model_data<'a>(
+enum ModelDataError {
+	SlotEmpty,
+	NoMountEntity(SlotKey, Mount),
+}
+
+fn collect_model_data<'a, THandMounts, TForearmMounts>(
 	agent: Entity,
 	slots: &'a Slots,
 	models: &'a Models,
-) -> impl FnMut(&LoadModel) -> Option<LoadData> + 'a {
+	hand_mounts: &'a THandMounts,
+	forearm_mounts: &'a TForearmMounts,
+) -> impl FnMut(&LoadModel) -> Result<LoadData, ModelDataError> + 'a
+where
+	THandMounts: Component + Get<SlotKey, Entity>,
+	TForearmMounts: Component + Get<SlotKey, Entity>,
+{
 	move |&LoadModel(slot_key)| {
-		let slot = slots.0.get(&slot_key)?;
-		let item = slot.item.as_ref()?;
+		let item = slots
+			.0
+			.get(&slot_key)
+			.and_then(|item| item.as_ref())
+			.ok_or(ModelDataError::SlotEmpty)?;
+		let hand_mount = hand_mounts
+			.get(&slot_key)
+			.ok_or(ModelDataError::NoMountEntity(slot_key, Mount::Hand))?;
+		let forearm_mount = forearm_mounts
+			.get(&slot_key)
+			.ok_or(ModelDataError::NoMountEntity(slot_key, Mount::Forearm))?;
 
-		Some(LoadData {
+		Ok(LoadData {
 			agent,
-			hand: slot.mounts.hand,
-			forearm: slot.mounts.forearm,
+			hand: *hand_mount,
+			forearm: *forearm_mount,
 			models: try_get_handles(item, models),
 		})
 	}
@@ -81,6 +109,13 @@ fn model_error(item: &Item) -> Error {
 	}
 }
 
+fn slot_entity_error(key: &SlotKey, mount: &Mount) -> Error {
+	Error {
+		msg: format!("No {:?} slot entity for {:?} found, abandoning", mount, key,),
+		lvl: Level::Error,
+	}
+}
+
 struct LoadData {
 	agent: Entity,
 	hand: Entity,
@@ -112,33 +147,36 @@ impl LoadData {
 mod tests {
 	use super::*;
 	use crate::{
-		components::{LoadModel, Mounts, Slot},
+		components::LoadModel,
 		items::{slot_key::SlotKey, Item, Mount},
 		skills::Skill,
 	};
-	use bevy::{
-		app::{App, Update},
-		asset::AssetId,
-		prelude::IntoSystem,
-		scene::Scene,
-		utils::default,
-	};
-	use common::{
-		components::Side,
-		resources::Models,
-		systems::log::test_tools::{fake_log_error_many_recourse, FakeErrorLogManyResource},
-		test_tools::utils::SingleThreadedApp,
-	};
+	use bevy::ecs::system::RunSystemOnce;
+	use common::{components::Side, resources::Models, test_tools::utils::SingleThreadedApp};
 	use std::collections::HashMap;
 	use uuid::Uuid;
+
+	#[derive(Component, Default)]
+	struct _Hands(HashMap<SlotKey, Entity>);
+
+	impl Get<SlotKey, Entity> for _Hands {
+		fn get(&self, key: &SlotKey) -> Option<&Entity> {
+			self.0.get(key)
+		}
+	}
+
+	#[derive(Component, Default)]
+	struct _Forearms(HashMap<SlotKey, Entity>);
+
+	impl Get<SlotKey, Entity> for _Forearms {
+		fn get(&self, key: &SlotKey) -> Option<&Entity> {
+			self.0.get(key)
+		}
+	}
 
 	fn setup(models: Models) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(models);
-		app.add_systems(
-			Update,
-			apply_load_models_commands.pipe(fake_log_error_many_recourse),
-		);
 
 		app
 	}
@@ -160,21 +198,21 @@ mod tests {
 		let hand = app.world_mut().spawn_empty().id();
 		let forearm = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
+			_Hands([(SlotKey::BottomHand(Side::Left), hand)].into()),
+			_Forearms([(SlotKey::BottomHand(Side::Left), forearm)].into()),
 			Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Left),
-				Slot {
-					mounts: Mounts { hand, forearm },
-					item: Some(Item {
-						model: Some("my/model/path"),
-						mount: Mount::Hand,
-						..default()
-					}),
-				},
+				Some(Item {
+					model: Some("my/model/path"),
+					mount: Mount::Hand,
+					..default()
+				}),
 			)]),
 			LoadModelsCommand::new([LoadModel(SlotKey::BottomHand(Side::Left))]),
 		));
 
-		app.update();
+		app.world_mut()
+			.run_system_once(apply_load_models_commands::<_Hands, _Forearms>);
 
 		let hand = app.world().entity(hand);
 		let forearm = app.world().entity(forearm);
@@ -196,21 +234,21 @@ mod tests {
 		let hand = app.world_mut().spawn_empty().id();
 		let forearm = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
+			_Hands([(SlotKey::BottomHand(Side::Left), hand)].into()),
+			_Forearms([(SlotKey::BottomHand(Side::Left), forearm)].into()),
 			Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Left),
-				Slot {
-					mounts: Mounts { hand, forearm },
-					item: Some(Item {
-						model: Some("my/model/path"),
-						mount: Mount::Forearm,
-						..default()
-					}),
-				},
+				Some(Item {
+					model: Some("my/model/path"),
+					mount: Mount::Forearm,
+					..default()
+				}),
 			)]),
 			LoadModelsCommand::new([LoadModel(SlotKey::BottomHand(Side::Left))]),
 		));
 
-		app.update();
+		app.world_mut()
+			.run_system_once(apply_load_models_commands::<_Hands, _Forearms>);
 
 		let hand = app.world().entity(hand);
 		let forearm = app.world().entity(forearm);
@@ -228,20 +266,20 @@ mod tests {
 		let hand = app.world_mut().spawn_empty().id();
 		let forearm = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
+			_Hands([(SlotKey::BottomHand(Side::Left), hand)].into()),
+			_Forearms([(SlotKey::BottomHand(Side::Left), forearm)].into()),
 			Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Left),
-				Slot {
-					mounts: Mounts { hand, forearm },
-					item: Some(Item {
-						model: None,
-						..default()
-					}),
-				},
+				Some(Item {
+					model: None,
+					..default()
+				}),
 			)]),
 			LoadModelsCommand::new([LoadModel(SlotKey::BottomHand(Side::Left))]),
 		));
 
-		app.update();
+		app.world_mut()
+			.run_system_once(apply_load_models_commands::<_Hands, _Forearms>);
 
 		let hand = app.world().entity(hand);
 		let forearm = app.world().entity(forearm);
@@ -259,20 +297,20 @@ mod tests {
 		let hand = app.world_mut().spawn_empty().id();
 		let forearm = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
+			_Hands([(SlotKey::BottomHand(Side::Left), hand)].into()),
+			_Forearms([(SlotKey::BottomHand(Side::Left), forearm)].into()),
 			Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Left),
-				Slot {
-					mounts: Mounts { hand, forearm },
-					item: Some(Item {
-						model: Some("my/faulty/model/path"),
-						..default()
-					}),
-				},
+				Some(Item {
+					model: Some("my/faulty/model/path"),
+					..default()
+				}),
 			)]),
 			LoadModelsCommand::new([LoadModel(SlotKey::BottomHand(Side::Left))]),
 		));
 
-		app.update();
+		app.world_mut()
+			.run_system_once(apply_load_models_commands::<_Hands, _Forearms>);
 
 		let hand = app.world().entity(hand);
 		let forearm = app.world().entity(forearm);
@@ -290,30 +328,93 @@ mod tests {
 		let hand = app.world_mut().spawn_empty().id();
 		let forearm = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
+			_Hands([(SlotKey::BottomHand(Side::Left), hand)].into()),
+			_Forearms([(SlotKey::BottomHand(Side::Left), forearm)].into()),
 			Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Left),
-				Slot {
-					mounts: Mounts { hand, forearm },
-					item: Some(Item {
-						name: "my faulty item",
-						model: Some("my/faulty/model/path"),
-						..default()
-					}),
-				},
+				Some(Item {
+					name: "my faulty item",
+					model: Some("my/faulty/model/path"),
+					..default()
+				}),
 			)]),
 			LoadModelsCommand::new([LoadModel(SlotKey::BottomHand(Side::Left))]),
 		));
 
-		app.update();
-
-		let errors = app.world().get_resource::<FakeErrorLogManyResource>();
+		let errors = app
+			.world_mut()
+			.run_system_once(apply_load_models_commands::<_Hands, _Forearms>);
 
 		assert_eq!(
-			Some(&FakeErrorLogManyResource(vec![model_error(&Item {
+			vec![Err(model_error(&Item {
 				name: "my faulty item",
 				model: Some("my/faulty/model/path"),
 				..default()
-			})])),
+			}))],
+			errors,
+		)
+	}
+
+	#[test]
+	fn log_error_when_slot_entity_not_set_for_hand() {
+		let mut app = setup(Models(HashMap::from([("my/model/path", new_handle())])));
+
+		let forearm = app.world_mut().spawn_empty().id();
+		app.world_mut().spawn((
+			_Hands::default(),
+			_Forearms([(SlotKey::BottomHand(Side::Left), forearm)].into()),
+			Slots::<Skill>::new([(
+				SlotKey::BottomHand(Side::Left),
+				Some(Item {
+					name: "my faulty item",
+					model: Some("my/faulty/model/path"),
+					..default()
+				}),
+			)]),
+			LoadModelsCommand::new([LoadModel(SlotKey::BottomHand(Side::Left))]),
+		));
+
+		let errors = app
+			.world_mut()
+			.run_system_once(apply_load_models_commands::<_Hands, _Forearms>);
+
+		assert_eq!(
+			vec![Err(slot_entity_error(
+				&SlotKey::BottomHand(Side::Left),
+				&Mount::Hand
+			))],
+			errors,
+		)
+	}
+
+	#[test]
+	fn log_error_when_slot_entity_not_set_for_forearm() {
+		let mut app = setup(Models(HashMap::from([("my/model/path", new_handle())])));
+
+		let hand = app.world_mut().spawn_empty().id();
+		app.world_mut().spawn((
+			_Hands([(SlotKey::BottomHand(Side::Left), hand)].into()),
+			_Forearms::default(),
+			Slots::<Skill>::new([(
+				SlotKey::BottomHand(Side::Left),
+				Some(Item {
+					name: "my faulty item",
+					model: Some("my/faulty/model/path"),
+					..default()
+				}),
+			)]),
+			LoadModelsCommand::new([LoadModel(SlotKey::BottomHand(Side::Left))]),
+		));
+
+		let errors = app
+			.world_mut()
+			.run_system_once(apply_load_models_commands::<_Hands, _Forearms>);
+
+		assert_eq!(
+			vec![Err(slot_entity_error(
+				&SlotKey::BottomHand(Side::Left),
+				&Mount::Forearm
+			))],
 			errors,
 		)
 	}
@@ -331,22 +432,22 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
+				_Hands([(SlotKey::BottomHand(Side::Left), hand)].into()),
+				_Forearms([(SlotKey::BottomHand(Side::Left), forearm)].into()),
 				Slots::<Skill>::new([(
 					SlotKey::BottomHand(Side::Left),
-					Slot {
-						mounts: Mounts { hand, forearm },
-						item: Some(Item {
-							model: Some("my/model/path"),
-							mount: Mount::Hand,
-							..default()
-						}),
-					},
+					Some(Item {
+						model: Some("my/model/path"),
+						mount: Mount::Hand,
+						..default()
+					}),
 				)]),
 				LoadModelsCommand::new([LoadModel(SlotKey::BottomHand(Side::Left))]),
 			))
 			.id();
 
-		app.update();
+		app.world_mut()
+			.run_system_once(apply_load_models_commands::<_Hands, _Forearms>);
 
 		let agent = app.world().entity(agent);
 

@@ -74,7 +74,7 @@ fn if_item_skill_icon<'a>(
 ) -> impl FnOnce() -> Option<Handle<Image>> + 'a {
 	|| {
 		let slot = slots.0.get(&panel.key)?;
-		let item = slot.item.as_ref()?;
+		let item = slot.as_ref()?;
 
 		let skill = item.skill.as_ref()?;
 
@@ -100,7 +100,7 @@ mod tests {
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use skills::{
-		components::{slots::Slots, Mounts, Slot},
+		components::slots::Slots,
 		items::{slot_key::SlotKey, Item},
 		skills::Activation,
 	};
@@ -158,13 +158,6 @@ mod tests {
 		app
 	}
 
-	fn arbitrary_mounts() -> Mounts<Entity> {
-		Mounts {
-			hand: Entity::from_raw(100),
-			forearm: Entity::from_raw(200),
-		}
-	}
-
 	fn get_handle<TAsset: Asset>(name: &str) -> Handle<TAsset> {
 		match name {
 			"item skill" => Handle::Weak(AssetId::Uuid {
@@ -183,16 +176,13 @@ mod tests {
 	fn slots() -> Slots {
 		Slots(HashMap::from([(
 			SlotKey::BottomHand(Side::Right),
-			Slot {
-				mounts: arbitrary_mounts(),
-				item: Some(Item {
-					skill: Some(Skill {
-						icon: Some(get_handle("item skill")),
-						..default()
-					}),
+			Some(Item {
+				skill: Some(Skill {
+					icon: Some(get_handle("item skill")),
 					..default()
 				}),
-			},
+				..default()
+			}),
 		)]))
 	}
 

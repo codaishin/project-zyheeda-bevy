@@ -19,8 +19,7 @@ impl<T: PeekNext<(Skill, ComboNode)> + SetNextCombo<Option<ComboNode>>> AdvanceC
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Mounts, Slot};
-	use bevy::{ecs::entity::Entity, utils::default};
+	use bevy::utils::default;
 	use common::components::Side;
 	use mockall::{mock, predicate::eq};
 	use std::collections::HashMap;
@@ -36,29 +35,11 @@ mod tests {
 	}
 
 	fn slots() -> Slots {
-		Slots(HashMap::from([(
-			SlotKey::BottomHand(Side::Right),
-			Slot {
-				mounts: Mounts {
-					hand: Entity::from_raw(123),
-					forearm: Entity::from_raw(456),
-				},
-				item: None,
-			},
-		)]))
+		Slots(HashMap::from([(SlotKey::BottomHand(Side::Right), None)]))
 	}
 
 	fn other_slots() -> Slots {
-		Slots(HashMap::from([(
-			SlotKey::BottomHand(Side::Left),
-			Slot {
-				mounts: Mounts {
-					hand: Entity::from_raw(321),
-					forearm: Entity::from_raw(654),
-				},
-				item: None,
-			},
-		)]))
+		Slots(HashMap::from([(SlotKey::BottomHand(Side::Left), None)]))
 	}
 
 	fn node() -> ComboNode {
