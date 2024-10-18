@@ -1,19 +1,31 @@
+use crate::traits::{entity_names::EntityNames, key_string::KeyString};
 use bevy::prelude::*;
-use common::traits::track::{IsTracking, Track, Untrack};
+use common::traits::{
+	get::Get,
+	track::{IsTracking, Track, Untrack},
+};
 use std::{collections::HashMap, marker::PhantomData};
-
-use crate::traits::entity_names::EntityNames;
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct Lookup<T> {
-	models: HashMap<Name, Entity>,
+	entities: HashMap<Name, Entity>,
 	phantom_data: PhantomData<T>,
+}
+
+impl<T> Lookup<T> {
+	#[cfg(test)]
+	fn new<const N: usize>(entities: [(Name, Entity); N]) -> Self {
+		Self {
+			entities: HashMap::from(entities),
+			..default()
+		}
+	}
 }
 
 impl<T> Default for Lookup<T> {
 	fn default() -> Self {
 		Self {
-			models: HashMap::new(),
+			entities: HashMap::new(),
 			phantom_data: PhantomData,
 		}
 	}
@@ -28,19 +40,28 @@ where
 			return;
 		}
 
-		self.models.insert(name.clone(), entity);
+		self.entities.insert(name.clone(), entity);
 	}
 }
 
 impl<T> IsTracking<Name> for Lookup<T> {
 	fn is_tracking(&self, entity: &Entity) -> bool {
-		self.models.values().any(|e| e == entity)
+		self.entities.values().any(|e| e == entity)
 	}
 }
 
 impl<T> Untrack<Name> for Lookup<T> {
 	fn untrack(&mut self, entity: &Entity) {
-		self.models.retain(|_, e| e != entity);
+		self.entities.retain(|_, e| e != entity);
+	}
+}
+
+impl<T, TKey> Get<TKey, Entity> for Lookup<T>
+where
+	T: KeyString<TKey>,
+{
+	fn get(&self, key: &TKey) -> Option<&Entity> {
+		self.entities.get(&Name::from(T::key_string(key)))
 	}
 }
 
@@ -59,66 +80,98 @@ mod tests {
 
 	#[test]
 	fn track_name_if_contained_in_sub_model_names() {
-		let mut sub_models = Lookup::<_Agent>::default();
+		let mut lookup = Lookup::<_Agent>::default();
 
-		sub_models.track(Entity::from_raw(33), &Name::from("A"));
+		lookup.track(Entity::from_raw(33), &Name::from("A"));
 
 		assert_eq!(
 			Lookup {
-				models: HashMap::from([(Name::from("A"), Entity::from_raw(33))]),
+				entities: HashMap::from([(Name::from("A"), Entity::from_raw(33))]),
 				..default()
 			},
-			sub_models,
+			lookup,
 		);
 	}
 
 	#[test]
 	fn do_not_track_name_if_not_contained_in_sub_model_names() {
-		let mut sub_models = Lookup::<_Agent>::default();
+		let mut lookup = Lookup::<_Agent>::default();
 
-		sub_models.track(Entity::from_raw(33), &Name::from("D"));
+		lookup.track(Entity::from_raw(33), &Name::from("D"));
 
 		assert_eq!(
 			Lookup {
-				models: HashMap::from([]),
+				entities: HashMap::from([]),
 				..default()
 			},
-			sub_models,
+			lookup,
 		);
 	}
 
 	#[test]
 	fn is_tracking_true() {
-		let mut sub_models = Lookup::<_Agent>::default();
+		let mut lookup = Lookup::<_Agent>::default();
 
-		sub_models.track(Entity::from_raw(33), &Name::from("A"));
+		lookup.track(Entity::from_raw(33), &Name::from("A"));
 
-		assert!(sub_models.is_tracking(&Entity::from_raw(33)));
+		assert!(lookup.is_tracking(&Entity::from_raw(33)));
 	}
 
 	#[test]
 	fn is_tracking_false() {
-		let mut sub_models = Lookup::<_Agent>::default();
+		let mut lookup = Lookup::<_Agent>::default();
 
-		sub_models.track(Entity::from_raw(34), &Name::from("A"));
+		lookup.track(Entity::from_raw(34), &Name::from("A"));
 
-		assert!(!sub_models.is_tracking(&Entity::from_raw(33)));
+		assert!(!lookup.is_tracking(&Entity::from_raw(33)));
 	}
 
 	#[test]
 	fn untrack() {
-		let mut sub_models = Lookup::<_Agent>::default();
+		let mut lookup = Lookup::<_Agent>::default();
 
-		sub_models.track(Entity::from_raw(34), &Name::from("A"));
-		sub_models.track(Entity::from_raw(35), &Name::from("B"));
-		sub_models.untrack(&Entity::from_raw(34));
+		lookup.track(Entity::from_raw(34), &Name::from("A"));
+		lookup.track(Entity::from_raw(35), &Name::from("B"));
+		lookup.untrack(&Entity::from_raw(34));
 
 		assert_eq!(
 			Lookup {
-				models: HashMap::from([(Name::from("B"), Entity::from_raw(35))]),
+				entities: HashMap::from([(Name::from("B"), Entity::from_raw(35))]),
 				..default()
 			},
-			sub_models,
+			lookup,
 		);
+	}
+
+	struct _Key;
+
+	#[test]
+	fn get_entity_by_key() {
+		struct _T;
+
+		impl KeyString<_Key> for _T {
+			fn key_string(_: &_Key) -> &'static str {
+				"A"
+			}
+		}
+
+		let lookup = Lookup::<_T>::new([(Name::from("A"), Entity::from_raw(100))]);
+
+		assert_eq!(Some(&Entity::from_raw(100)), lookup.get(&_Key));
+	}
+
+	#[test]
+	fn get_entity_by_other_key() {
+		struct _T;
+
+		impl KeyString<_Key> for _T {
+			fn key_string(_: &_Key) -> &'static str {
+				"B"
+			}
+		}
+
+		let lookup = Lookup::<_T>::new([(Name::from("B"), Entity::from_raw(100))]);
+
+		assert_eq!(Some(&Entity::from_raw(100)), lookup.get(&_Key));
 	}
 }
