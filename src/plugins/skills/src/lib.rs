@@ -11,7 +11,7 @@ mod definitions;
 
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::prelude::*;
-use bundles::Loadout;
+use bundles::{ComboBundle, Loadout};
 use common::{
 	components::{Collection, Player, Side, Swap},
 	resources::{key_map::KeyMap, Models},
@@ -174,16 +174,7 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 		return;
 	};
 
-	commands.try_insert_on(
-		player,
-		(
-			SkillExecuter::<RunSkillBehavior>::default(),
-			CombosTimeOut::after(Duration::from_secs(2)),
-			get_inventory(),
-			get_loadout(),
-			get_combos(),
-		),
-	);
+	commands.try_insert_on(player, (get_inventory(), get_loadout(), get_combos()));
 }
 
 fn get_loadout() -> Loadout<Player> {
@@ -281,6 +272,9 @@ fn get_inventory() -> Inventory<Uuid> {
 	])
 }
 
-fn get_combos() -> ComboNode<Uuid> {
-	ComboNode::new([])
+fn get_combos() -> ComboBundle {
+	let timeout = CombosTimeOut::after(Duration::from_secs(2));
+	let combos = [];
+
+	ComboBundle::with_timeout(timeout).with_predefined_combos(combos)
 }
