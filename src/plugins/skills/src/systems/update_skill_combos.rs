@@ -103,14 +103,13 @@ fn flush_when_timed_out<
 mod tests {
 	use super::*;
 	use crate::{
-		components::{Mounts, Slot},
 		items::slot_key::SlotKey,
 		skills::{QueuedSkill, Skill},
 		traits::IsTimedOut,
 	};
 	use bevy::{
 		app::{App, Update},
-		ecs::{component::Component, entity::Entity},
+		ecs::component::Component,
 		time::{Real, Time},
 		utils::default,
 	};
@@ -214,13 +213,6 @@ mod tests {
 		}
 	}
 
-	fn mounts() -> Mounts<Entity> {
-		Mounts {
-			hand: Entity::from_raw(100),
-			forearm: Entity::from_raw(200),
-		}
-	}
-
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<Time<Real>>();
@@ -234,13 +226,7 @@ mod tests {
 	}
 
 	fn slots() -> Slots {
-		Slots(HashMap::from([(
-			SlotKey::BottomHand(Side::Left),
-			Slot {
-				mounts: mounts(),
-				item: None,
-			},
-		)]))
+		Slots(HashMap::from([(SlotKey::BottomHand(Side::Left), None)]))
 	}
 
 	#[test]

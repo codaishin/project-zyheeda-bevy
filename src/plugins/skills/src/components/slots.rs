@@ -1,14 +1,14 @@
-use super::{Item, Slot};
+use super::Item;
 use crate::{items::slot_key::SlotKey, skills::Skill, traits::TryMap};
 use bevy::ecs::component::Component;
 use common::traits::get::Get;
 use std::collections::HashMap;
 
 #[derive(Component, Clone, PartialEq, Debug)]
-pub struct Slots<TSkill = Skill>(pub HashMap<SlotKey, Slot<TSkill>>);
+pub struct Slots<TSkill = Skill>(pub HashMap<SlotKey, Option<Item<TSkill>>>);
 
 impl<T> Slots<T> {
-	pub fn new<const N: usize>(slots: [(SlotKey, Slot<T>); N]) -> Self {
+	pub fn new<const N: usize>(slots: [(SlotKey, Option<Item<T>>); N]) -> Self {
 		Self(HashMap::from(slots))
 	}
 }
@@ -22,7 +22,7 @@ impl<T> Default for Slots<T> {
 impl<TSkill> Get<SlotKey, Item<TSkill>> for Slots<TSkill> {
 	fn get(&self, key: &SlotKey) -> Option<&Item<TSkill>> {
 		let slot = self.0.get(key)?;
-		slot.item.as_ref()
+		slot.as_ref()
 	}
 }
 
@@ -44,20 +44,17 @@ impl<TIn, TOut> TryMap<TIn, TOut, Slots<TOut>> for Slots<TIn> {
 
 fn new_mapped_slot<TIn, TOut>(
 	mut map_fn: impl FnMut(&TIn) -> Option<TOut>,
-) -> impl FnMut((&SlotKey, &Slot<TIn>)) -> (SlotKey, Slot<TOut>) {
+) -> impl FnMut((&SlotKey, &Option<Item<TIn>>)) -> (SlotKey, Option<Item<TOut>>) {
 	move |(key, slot)| {
 		(
 			*key,
-			Slot {
-				mounts: slot.mounts.clone(),
-				item: slot.item.as_ref().map(|item| Item {
-					name: item.name,
-					skill: item.skill.as_ref().and_then(&mut map_fn),
-					model: item.model,
-					mount: item.mount,
-					item_type: item.item_type.clone(),
-				}),
-			},
+			slot.as_ref().map(|slot| Item {
+				name: slot.name,
+				skill: slot.skill.as_ref().and_then(&mut map_fn),
+				model: slot.model,
+				mount: slot.mount,
+				item_type: slot.item_type.clone(),
+			}),
 		)
 	}
 }
@@ -65,33 +62,20 @@ fn new_mapped_slot<TIn, TOut>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::Mounts,
-		items::{ItemType, Mount},
-	};
-	use bevy::{prelude::Entity, utils::default};
+	use crate::items::{ItemType, Mount};
+	use bevy::utils::default;
 	use common::components::Side;
 	use std::collections::HashSet;
 
-	fn mounts() -> Mounts<Entity> {
-		Mounts {
-			hand: Entity::from_raw(100),
-			forearm: Entity::from_raw(200),
-		}
-	}
-
 	#[test]
 	fn get_off_hand() {
-		let slots = Slots(
+		let slots = Slots::<Skill>(
 			[(
 				SlotKey::BottomHand(Side::Left),
-				Slot::<()> {
-					mounts: mounts(),
-					item: Some(Item {
-						name: "my item",
-						..default()
-					}),
-				},
+				Some(Item {
+					name: "my item",
+					..default()
+				}),
 			)]
 			.into(),
 		);
@@ -107,16 +91,13 @@ mod tests {
 
 	#[test]
 	fn get_main_hand() {
-		let slots = Slots(
+		let slots = Slots::<Skill>(
 			[(
 				SlotKey::BottomHand(Side::Right),
-				Slot::<()> {
-					mounts: mounts(),
-					item: Some(Item {
-						name: "my item",
-						..default()
-					}),
-				},
+				Some(Item {
+					name: "my item",
+					..default()
+				}),
 			)]
 			.into(),
 		);
@@ -132,16 +113,13 @@ mod tests {
 
 	#[test]
 	fn get_none() {
-		let slots = Slots(
+		let slots = Slots::<Skill>(
 			[(
 				SlotKey::BottomHand(Side::Right),
-				Slot {
-					mounts: mounts(),
-					item: Some(Item {
-						name: "my item",
-						..default()
-					}),
-				},
+				Some(Item {
+					name: "my item",
+					..default()
+				}),
 			)]
 			.into(),
 		);
@@ -151,20 +129,17 @@ mod tests {
 
 	#[test]
 	fn get_skill() {
-		let slots = Slots(
+		let slots = Slots::<Skill>(
 			[(
 				SlotKey::BottomHand(Side::Right),
-				Slot {
-					mounts: mounts(),
-					item: Some(Item {
-						name: "my item",
-						skill: Some(Skill {
-							name: "my skill".to_owned(),
-							..default()
-						}),
+				Some(Item {
+					name: "my item",
+					skill: Some(Skill {
+						name: "my skill".to_owned(),
 						..default()
 					}),
-				},
+					..default()
+				}),
 			)]
 			.into(),
 		);
@@ -186,13 +161,10 @@ mod tests {
 		let slots = Slots(
 			[(
 				SlotKey::BottomHand(Side::Right),
-				Slot {
-					mounts: mounts(),
-					item: Some(Item {
-						skill: Some("my/skill/path"),
-						..default()
-					}),
-				},
+				Some(Item {
+					skill: Some("my/skill/path"),
+					..default()
+				}),
 			)]
 			.into(),
 		);
@@ -201,13 +173,10 @@ mod tests {
 		let expected = Slots(
 			[(
 				SlotKey::BottomHand(Side::Right),
-				Slot {
-					mounts: mounts(),
-					item: Some(Item {
-						skill: Some(_Mapped("my/skill/path".to_owned())),
-						..default()
-					}),
-				},
+				Some(Item {
+					skill: Some(_Mapped("my/skill/path".to_owned())),
+					..default()
+				}),
 			)]
 			.into(),
 		);
@@ -223,16 +192,13 @@ mod tests {
 		let slots = Slots(
 			[(
 				SlotKey::BottomHand(Side::Right),
-				Slot {
-					mounts: mounts(),
-					item: Some(Item {
-						name: "my item",
-						skill: Some("my/skill/path"),
-						model: Some("model"),
-						item_type: HashSet::from([ItemType::Pistol]),
-						mount: Mount::Hand,
-					}),
-				},
+				Some(Item {
+					name: "my item",
+					skill: Some("my/skill/path"),
+					model: Some("model"),
+					item_type: HashSet::from([ItemType::Pistol]),
+					mount: Mount::Hand,
+				}),
 			)]
 			.into(),
 		);
@@ -241,16 +207,13 @@ mod tests {
 		let expected = Slots(
 			[(
 				SlotKey::BottomHand(Side::Right),
-				Slot {
-					mounts: mounts(),
-					item: Some(Item {
-						name: "my item",
-						skill: Some(_Mapped("my/skill/path".to_owned())),
-						model: Some("model"),
-						item_type: HashSet::from([ItemType::Pistol]),
-						mount: Mount::Hand,
-					}),
-				},
+				Some(Item {
+					name: "my item",
+					skill: Some(_Mapped("my/skill/path".to_owned())),
+					model: Some("model"),
+					item_type: HashSet::from([ItemType::Pistol]),
+					mount: Mount::Hand,
+				}),
 			)]
 			.into(),
 		);
@@ -267,23 +230,17 @@ mod tests {
 			[
 				(
 					SlotKey::BottomHand(Side::Right),
-					Slot {
-						mounts: mounts(),
-						item: Some(Item {
-							skill: Some("my/skill/path"),
-							..default()
-						}),
-					},
+					Some(Item {
+						skill: Some("my/skill/path"),
+						..default()
+					}),
 				),
 				(
 					SlotKey::BottomHand(Side::Right),
-					Slot {
-						mounts: mounts(),
-						item: Some(Item {
-							skill: None,
-							..default()
-						}),
-					},
+					Some(Item {
+						skill: None,
+						..default()
+					}),
 				),
 			]
 			.into(),
@@ -294,23 +251,17 @@ mod tests {
 			[
 				(
 					SlotKey::BottomHand(Side::Right),
-					Slot {
-						mounts: mounts(),
-						item: Some(Item {
-							skill: Some(_Mapped("my/skill/path".to_owned())),
-							..default()
-						}),
-					},
+					Some(Item {
+						skill: Some(_Mapped("my/skill/path".to_owned())),
+						..default()
+					}),
 				),
 				(
 					SlotKey::BottomHand(Side::Right),
-					Slot {
-						mounts: mounts(),
-						item: Some(Item {
-							skill: None,
-							..default()
-						}),
-					},
+					Some(Item {
+						skill: None,
+						..default()
+					}),
 				),
 			]
 			.into(),
@@ -328,21 +279,12 @@ mod tests {
 			[
 				(
 					SlotKey::BottomHand(Side::Right),
-					Slot {
-						mounts: mounts(),
-						item: Some(Item {
-							skill: Some("my/skill/path"),
-							..default()
-						}),
-					},
+					Some(Item {
+						skill: Some("my/skill/path"),
+						..default()
+					}),
 				),
-				(
-					SlotKey::BottomHand(Side::Right),
-					Slot {
-						mounts: mounts(),
-						item: None,
-					},
-				),
+				(SlotKey::BottomHand(Side::Right), None),
 			]
 			.into(),
 		);
@@ -352,21 +294,12 @@ mod tests {
 			[
 				(
 					SlotKey::BottomHand(Side::Right),
-					Slot {
-						mounts: mounts(),
-						item: Some(Item {
-							skill: Some(_Mapped("my/skill/path".to_owned())),
-							..default()
-						}),
-					},
+					Some(Item {
+						skill: Some(_Mapped("my/skill/path".to_owned())),
+						..default()
+					}),
 				),
-				(
-					SlotKey::BottomHand(Side::Right),
-					Slot {
-						mounts: mounts(),
-						item: None,
-					},
-				),
+				(SlotKey::BottomHand(Side::Right), None),
 			]
 			.into(),
 		);

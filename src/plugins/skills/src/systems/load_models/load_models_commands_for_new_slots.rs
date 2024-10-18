@@ -16,7 +16,7 @@ pub(crate) fn load_models_commands_for_new_slots(
 mod tests {
 	use super::*;
 	use crate::{
-		components::{LoadModel, LoadModelsCommand, Mounts, Slot},
+		components::{LoadModel, LoadModelsCommand},
 		items::slot_key::SlotKey,
 		skills::Skill,
 	};
@@ -38,13 +38,7 @@ mod tests {
 			.world_mut()
 			.spawn(Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Right),
-				Slot {
-					mounts: Mounts {
-						hand: Entity::from_raw(42),
-						forearm: Entity::from_raw(24),
-					},
-					item: None,
-				},
+				None,
 			)]))
 			.id();
 
@@ -68,13 +62,7 @@ mod tests {
 			.world_mut()
 			.spawn(Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Right),
-				Slot {
-					mounts: Mounts {
-						hand: Entity::from_raw(42),
-						forearm: Entity::from_raw(24),
-					},
-					item: None,
-				},
+				None,
 			)]))
 			.id();
 
@@ -85,16 +73,7 @@ mod tests {
 			.get_mut::<Slots<Skill>>()
 			.unwrap()
 			.0
-			.insert(
-				SlotKey::BottomHand(Side::Left),
-				Slot {
-					mounts: Mounts {
-						hand: Entity::from_raw(42),
-						forearm: Entity::from_raw(24),
-					},
-					item: None,
-				},
-			);
+			.insert(SlotKey::BottomHand(Side::Left), None);
 
 		app.update();
 

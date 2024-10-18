@@ -1,5 +1,5 @@
 use crate::{
-	components::{slots::Slots, LoadModel, LoadModelsCommand, Slot},
+	components::{slots::Slots, LoadModel, LoadModelsCommand},
 	items::{slot_key::SlotKey, Item},
 	skills::Skill,
 	traits::swap_commands::SwapController,
@@ -71,15 +71,15 @@ fn try_swap(
 	Ok(swap_item(item, slot))
 }
 
-fn get_slot(slots: &mut Slots, slot_key: SlotKey) -> Result<&mut Slot<Skill>, (SwapError, Error)> {
+fn get_slot(slots: &mut Slots, slot_key: SlotKey) -> Result<&mut Option<Item>, (SwapError, Error)> {
 	match slots.0.get_mut(&slot_key) {
 		Some(slot) => Ok(slot),
 		None => Err((SwapError::TryAgain, slot_warning(slot_key))),
 	}
 }
 
-fn swap_item(mut item: Option<Item<Skill>>, slot: &mut Slot) -> SwappedOut<Item<Skill>> {
-	swap(&mut item, &mut slot.item);
+fn swap_item(mut item: Option<Item<Skill>>, slot: &mut Option<Item>) -> SwappedOut<Item> {
+	swap(&mut item, slot);
 
 	SwappedOut(item)
 }
@@ -94,7 +94,7 @@ fn slot_warning(slot: SlotKey) -> Error {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::Mounts, skills::Skill};
+	use crate::skills::Skill;
 	use bevy::{
 		ecs::system::IntoSystem,
 		prelude::{App, Update},
@@ -162,16 +162,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Skill>::new([(
-					SlotKey::BottomHand(Side::Right),
-					Slot {
-						item: None,
-						mounts: Mounts {
-							hand: Entity::from_raw(42),
-							forearm: Entity::from_raw(24),
-						},
-					},
-				)]),
+				Slots::<Skill>::new([(SlotKey::BottomHand(Side::Right), None)]),
 				_Container {
 					swap_ins: HashMap::from([(
 						SlotKey::BottomHand(Side::Right),
@@ -204,16 +195,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Skill>::new([(
-					SlotKey::BottomHand(Side::Right),
-					Slot {
-						mounts: Mounts {
-							hand: Entity::from_raw(42),
-							forearm: Entity::from_raw(24),
-						},
-						item: None,
-					},
-				)]),
+				Slots::<Skill>::new([(SlotKey::BottomHand(Side::Right), None)]),
 				_Container {
 					swap_ins: HashMap::from([(
 						SlotKey::BottomHand(Side::Right),
@@ -235,16 +217,10 @@ mod tests {
 		assert_eq!(
 			Some(&Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Right),
-				Slot {
-					mounts: Mounts {
-						hand: Entity::from_raw(42),
-						forearm: Entity::from_raw(24),
-					},
-					item: Some(Item {
-						name: "swap in",
-						..default()
-					}),
-				},
+				Some(Item {
+					name: "swap in",
+					..default()
+				}),
 			)])),
 			agent.get::<Slots<Skill>>()
 		);
@@ -258,16 +234,10 @@ mod tests {
 			.spawn((
 				Slots::<Skill>::new([(
 					SlotKey::BottomHand(Side::Right),
-					Slot {
-						mounts: Mounts {
-							hand: Entity::from_raw(42),
-							forearm: Entity::from_raw(24),
-						},
-						item: Some(Item {
-							name: "swap out",
-							..default()
-						}),
-					},
+					Some(Item {
+						name: "swap out",
+						..default()
+					}),
 				)]),
 				_Container {
 					swap_ins: HashMap::from([(SlotKey::BottomHand(Side::Right), SwapIn(None))]),
@@ -300,16 +270,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Skill>::new([(
-					SlotKey::BottomHand(Side::Right),
-					Slot {
-						item: None,
-						mounts: Mounts {
-							hand: Entity::from_raw(42),
-							forearm: Entity::from_raw(24),
-						},
-					},
-				)]),
+				Slots::<Skill>::new([(SlotKey::BottomHand(Side::Right), None)]),
 				_Container {
 					swap_ins: HashMap::from([(SlotKey::BottomHand(Side::Left), SwapIn(None))]),
 					..default()
@@ -333,16 +294,7 @@ mod tests {
 	fn return_error_when_slot_not_found() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			Slots::<Skill>::new([(
-				SlotKey::BottomHand(Side::Right),
-				Slot {
-					item: None,
-					mounts: Mounts {
-						hand: Entity::from_raw(42),
-						forearm: Entity::from_raw(24),
-					},
-				},
-			)]),
+			Slots::<Skill>::new([(SlotKey::BottomHand(Side::Right), None)]),
 			_Container {
 				swap_ins: HashMap::from([(SlotKey::BottomHand(Side::Left), SwapIn(None))]),
 				..default()

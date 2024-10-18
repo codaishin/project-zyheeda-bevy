@@ -7,7 +7,7 @@ use common::traits::{
 use std::{collections::HashMap, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct Lookup<T> {
+pub struct Lookup<T> {
 	entities: HashMap<Name, Entity>,
 	phantom_data: PhantomData<T>,
 }

@@ -172,7 +172,7 @@ fn skill_is_usable(slots: &Slots, trigger: &SlotKey, skill: &Skill) -> bool {
 	let Some(slot) = slots.0.get(trigger) else {
 		return false;
 	};
-	let Some(item) = slot.item.as_ref() else {
+	let Some(item) = slot.as_ref() else {
 		return false;
 	};
 	skill
@@ -250,11 +250,8 @@ fn append_followups<'a>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::{Item, Mounts, Slot},
-		items::ItemType,
-	};
-	use bevy::{ecs::entity::Entity, prelude::default};
+	use crate::{components::Item, items::ItemType};
+	use bevy::prelude::default;
 	use common::components::Side;
 	use std::collections::{HashMap, HashSet};
 
@@ -262,29 +259,17 @@ mod tests {
 		Slots(HashMap::from([
 			(
 				SlotKey::BottomHand(Side::Right),
-				Slot {
-					mounts: Mounts {
-						hand: Entity::from_raw(123),
-						forearm: Entity::from_raw(456),
-					},
-					item: Some(Item {
-						item_type: HashSet::from([ItemType::Pistol]),
-						..default()
-					}),
-				},
+				Some(Item {
+					item_type: HashSet::from([ItemType::Pistol]),
+					..default()
+				}),
 			),
 			(
 				SlotKey::BottomHand(Side::Left),
-				Slot {
-					mounts: Mounts {
-						hand: Entity::from_raw(123),
-						forearm: Entity::from_raw(456),
-					},
-					item: Some(Item {
-						item_type: HashSet::from([ItemType::Bracer]),
-						..default()
-					}),
-				},
+				Some(Item {
+					item_type: HashSet::from([ItemType::Bracer]),
+					..default()
+				}),
 			),
 		]))
 	}
@@ -401,11 +386,7 @@ mod tests {
 	#[test]
 	fn peek_none_from_tree_when_slot_item_none() {
 		let mut slots = slots_main_pistol_off_sword();
-		slots
-			.0
-			.get_mut(&SlotKey::BottomHand(Side::Right))
-			.unwrap()
-			.item = None;
+		slots.0.remove(&SlotKey::BottomHand(Side::Right));
 
 		let node = ComboNode(OrderedHashMap::from([(
 			SlotKey::BottomHand(Side::Right),

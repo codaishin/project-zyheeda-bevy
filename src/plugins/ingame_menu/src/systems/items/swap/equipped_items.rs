@@ -1,38 +1,39 @@
-use bevy::{
-	asset::Handle,
-	ecs::{
-		query::QueryEntityError,
-		system::{Commands, Query},
-	},
-	prelude::{Entity, Mut},
-	scene::Scene,
-};
+use bevy::prelude::*;
 use common::{
 	components::{Collection, Swap},
 	errors::{Error, Level},
-	traits::try_remove_from::TryRemoveFrom,
+	traits::{get::Get, try_remove_from::TryRemoveFrom},
 };
-use skills::{
-	components::{slots::Slots, Slot},
-	items::slot_key::SlotKey,
-};
+use skills::{components::slots::Slots, items::slot_key::SlotKey};
 
-type SlotsToSwap<'a> = (
+type SlotsToSwap<'a, THandMounts, TForearmMounts> = (
 	Entity,
 	&'a mut Slots,
 	&'a Collection<Swap<SlotKey, SlotKey>>,
+	&'a THandMounts,
+	&'a TForearmMounts,
 );
 
-pub fn swap_equipped_items(
+pub fn swap_equipped_items<THandMounts, TForearmMounts>(
 	mut commands: Commands,
-	mut slots_to_swap: Query<SlotsToSwap>,
+	mut slots_to_swap: Query<SlotsToSwap<THandMounts, TForearmMounts>>,
 	mut handles: Query<&mut Handle<Scene>>,
-) -> Vec<Result<(), Error>> {
+) -> Vec<Result<(), Error>>
+where
+	THandMounts: Component + Get<SlotKey, Entity>,
+	TForearmMounts: Component + Get<SlotKey, Entity>,
+{
 	let mut results = vec![];
 
-	for (agent, mut slots, swaps) in &mut slots_to_swap {
+	for (agent, mut slots, swaps, hands, forearms) in &mut slots_to_swap {
 		for swap in &swaps.0 {
-			results.extend_from_slice(&do_swap(swap, &mut slots, &mut handles));
+			let [result0, result1] = do_swap(swap, &mut slots, &mut handles, hands, forearms);
+			if result0.is_err() {
+				results.push(result0);
+			}
+			if result1.is_err() {
+				results.push(result1);
+			}
 		}
 
 		commands.try_remove_from::<Collection<Swap<SlotKey, SlotKey>>>(agent);
@@ -41,11 +42,17 @@ pub fn swap_equipped_items(
 	results
 }
 
-fn do_swap(
+fn do_swap<THandMounts, TForearmMounts>(
 	swap: &Swap<SlotKey, SlotKey>,
 	slots: &mut Mut<Slots>,
 	handles: &mut Query<&mut Handle<Scene>>,
-) -> [Result<(), Error>; 2] {
+	hands: &THandMounts,
+	forearms: &TForearmMounts,
+) -> [Result<(), Error>; 2]
+where
+	THandMounts: Component + Get<SlotKey, Entity>,
+	TForearmMounts: Component + Get<SlotKey, Entity>,
+{
 	let slot_results = [
 		slots.0.get(&swap.0).cloned().ok_or(no_slot(swap.0)),
 		slots.0.get(&swap.1).cloned().ok_or(no_slot(swap.1)),
@@ -55,45 +62,81 @@ fn do_swap(
 		return slot_results.map(drop_ok);
 	};
 
-	let handle_results = [
-		get_handles(&slot0, handles).map_err(no_handle(swap.0)),
-		get_handles(&slot1, handles).map_err(no_handle(swap.1)),
+	let mounts = [
+		get_mounts(&swap.0, handles, hands, forearms).map_err(no_handle(swap.0)),
+		get_mounts(&swap.1, handles, hands, forearms).map_err(no_handle(swap.1)),
 	];
 
-	let [Ok((h0_hand, h0_forearm)), Ok((h1_hand, h1_forearm))] = handle_results else {
-		return handle_results.map(drop_ok);
+	let [Ok(mount0), Ok(mount1)] = mounts else {
+		return mounts.map(drop_ok);
 	};
 
 	if let Some(slot) = slots.0.get_mut(&swap.0) {
-		slot.item = slot1.item;
+		*slot = slot1;
 	}
 	if let Some(slot) = slots.0.get_mut(&swap.1) {
-		slot.item = slot0.item;
+		*slot = slot0;
 	}
-	if let Ok(mut handle) = handles.get_mut(slot0.mounts.hand) {
-		*handle = h1_hand;
+	if let Ok(mut handle) = handles.get_mut(mount0.hand.entity) {
+		*handle = mount1.hand.handle;
 	}
-	if let Ok(mut handle) = handles.get_mut(slot0.mounts.forearm) {
-		*handle = h1_forearm;
+	if let Ok(mut handle) = handles.get_mut(mount0.forearm.entity) {
+		*handle = mount1.forearm.handle;
 	}
-	if let Ok(mut handle) = handles.get_mut(slot1.mounts.hand) {
-		*handle = h0_hand;
+	if let Ok(mut handle) = handles.get_mut(mount1.hand.entity) {
+		*handle = mount0.hand.handle;
 	}
-	if let Ok(mut handle) = handles.get_mut(slot1.mounts.forearm) {
-		*handle = h0_forearm;
+	if let Ok(mut handle) = handles.get_mut(mount1.forearm.entity) {
+		*handle = mount0.forearm.handle;
 	}
 
 	[Ok(()), Ok(())]
 }
 
-fn get_handles(
-	slot: &Slot,
-	handles: &mut Query<&mut Handle<Scene>>,
-) -> Result<(Handle<Scene>, Handle<Scene>), QueryEntityError> {
-	Ok((
-		handles.get(slot.mounts.hand).cloned()?,
-		handles.get(slot.mounts.forearm).cloned()?,
-	))
+enum GetHandleError {
+	EntityUnknown,
+	QueryEntityError,
+}
+
+struct Mounts {
+	hand: Mount,
+	forearm: Mount,
+}
+
+struct Mount {
+	entity: Entity,
+	handle: Handle<Scene>,
+}
+
+fn get_mounts<THandMounts, TForearmMounts>(
+	key: &SlotKey,
+	handles: &Query<&mut Handle<Scene>>,
+	hands: &THandMounts,
+	forearms: &TForearmMounts,
+) -> Result<Mounts, GetHandleError>
+where
+	THandMounts: Component + Get<SlotKey, Entity>,
+	TForearmMounts: Component + Get<SlotKey, Entity>,
+{
+	let hand = hands.get(key).ok_or(GetHandleError::EntityUnknown)?;
+	let forearm = forearms.get(key).ok_or(GetHandleError::EntityUnknown)?;
+
+	Ok(Mounts {
+		hand: handles
+			.get(*hand)
+			.map(|handle| Mount {
+				entity: *hand,
+				handle: handle.clone(),
+			})
+			.map_err(|_| GetHandleError::QueryEntityError)?,
+		forearm: handles
+			.get(*forearm)
+			.map(|handle| Mount {
+				entity: *forearm,
+				handle: handle.clone(),
+			})
+			.map_err(|_| GetHandleError::QueryEntityError)?,
+	})
 }
 
 fn drop_ok<V>(result: Result<V, Error>) -> Result<(), Error> {
@@ -110,8 +153,11 @@ fn no_slot(slot_key: SlotKey) -> Error {
 	}
 }
 
-fn no_handle(slot_key: SlotKey) -> impl Fn(QueryEntityError) -> Error {
-	move |_| handle_error(slot_key)
+fn no_handle(slot_key: SlotKey) -> impl Fn(GetHandleError) -> Error {
+	move |error| match error {
+		GetHandleError::QueryEntityError => handle_error(slot_key),
+		GetHandleError::EntityUnknown => handle_entity_error(slot_key),
+	}
 }
 
 fn handle_error(slot_key: SlotKey) -> Error {
@@ -121,24 +167,23 @@ fn handle_error(slot_key: SlotKey) -> Error {
 	}
 }
 
+fn handle_entity_error(slot_key: SlotKey) -> Error {
+	Error {
+		msg: format!("{:?}: Handle Entity not found", slot_key),
+		lvl: Level::Error,
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		asset::{Asset, AssetId},
-		ecs::system::In,
-		prelude::{default, Entity, IntoSystem},
-	};
-	use common::{
-		components::Side,
-		systems::log::test_tools::{fake_log_error_lazy_many, FakeErrorLogMany},
-	};
+	use bevy::ecs::system::RunSystemOnce;
+	use common::components::Side;
 	use skills::{
-		components::{Mounts, Slot},
 		items::{Item, Mount},
 		skills::Skill,
 	};
+	use std::collections::HashMap;
 	use uuid::Uuid;
 
 	fn new_handle<T: Asset>() -> Handle<T> {
@@ -147,50 +192,75 @@ mod tests {
 		})
 	}
 
+	#[derive(Component, Default)]
+	struct _Hands(HashMap<SlotKey, Entity>);
+
+	impl Get<SlotKey, Entity> for _Hands {
+		fn get(&self, key: &SlotKey) -> Option<&Entity> {
+			self.0.get(key)
+		}
+	}
+
+	#[derive(Component, Default)]
+	struct _Forearms(HashMap<SlotKey, Entity>);
+
+	impl Get<SlotKey, Entity> for _Forearms {
+		fn get(&self, key: &SlotKey) -> Option<&Entity> {
+			self.0.get(key)
+		}
+	}
+
+	#[derive(Clone)]
+	struct _Mount {
+		entity: Entity,
+		handle: Handle<Scene>,
+	}
+
+	fn create_mounts<const N: usize>(app: &mut App) -> [_Mount; N] {
+		[(); N].map(|_| new_handle()).map(|handle| _Mount {
+			entity: app.world_mut().spawn(handle.clone()).id(),
+			handle: handle.clone(),
+		})
+	}
+
 	#[test]
 	fn swap_items() {
 		let mut app = App::new();
-		let slot_handles = [
-			new_handle::<Scene>(),
-			new_handle::<Scene>(),
-			new_handle::<Scene>(),
-			new_handle::<Scene>(),
-		];
-		let slot_handle_ids = slot_handles
-			.clone()
-			.map(|handle| app.world_mut().spawn(handle.clone()).id());
+		let mounts = create_mounts::<4>(&mut app);
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots(
+				_Hands(
+					[
+						(SlotKey::BottomHand(Side::Left), mounts[0].entity),
+						(SlotKey::BottomHand(Side::Right), mounts[1].entity),
+					]
+					.into(),
+				),
+				_Forearms(
+					[
+						(SlotKey::BottomHand(Side::Left), mounts[2].entity),
+						(SlotKey::BottomHand(Side::Right), mounts[3].entity),
+					]
+					.into(),
+				),
+				Slots::<Skill>(
 					[
 						(
 							SlotKey::BottomHand(Side::Left),
-							Slot::<Skill> {
-								mounts: Mounts {
-									hand: slot_handle_ids[0],
-									forearm: slot_handle_ids[1],
-								},
-								item: Some(Item {
-									name: "left item",
-									mount: Mount::Forearm,
-									..default()
-								}),
-							},
+							Some(Item {
+								name: "left item",
+								mount: Mount::Forearm,
+								..default()
+							}),
 						),
 						(
 							SlotKey::BottomHand(Side::Right),
-							Slot {
-								mounts: Mounts {
-									hand: slot_handle_ids[2],
-									forearm: slot_handle_ids[3],
-								},
-								item: Some(Item {
-									name: "right item",
-									mount: Mount::Hand,
-									..default()
-								}),
-							},
+							Some(Item {
+								name: "right item",
+								mount: Mount::Hand,
+								..default()
+							}),
 						),
 					]
 					.into(),
@@ -205,35 +275,37 @@ mod tests {
 			))
 			.id();
 
-		app.add_systems(Update, swap_equipped_items.pipe(|_: In<_>| {}));
-		app.update();
+		let errors = app
+			.world_mut()
+			.run_system_once(swap_equipped_items::<_Hands, _Forearms>);
 
-		let handles =
-			slot_handle_ids.map(|id| app.world().entity(id).get::<Handle<Scene>>().unwrap());
+		let swapped_handles = mounts.clone().map(|mount| {
+			app.world()
+				.entity(mount.entity)
+				.get::<Handle<Scene>>()
+				.unwrap()
+		});
 		let slots = app.world().entity(agent).get::<Slots>().unwrap();
 		let new_items = (
 			slots
 				.0
 				.get(&SlotKey::BottomHand(Side::Left))
 				.unwrap()
-				.item
 				.clone(),
 			slots
 				.0
 				.get(&SlotKey::BottomHand(Side::Right))
 				.unwrap()
-				.item
 				.clone(),
 		);
-		let errors = app.world().entity(agent).get::<FakeErrorLogMany>();
 
 		assert_eq!(
 			(
 				[
-					&slot_handles[2],
-					&slot_handles[3],
-					&slot_handles[0],
-					&slot_handles[1],
+					&mounts[1].handle,
+					&mounts[0].handle,
+					&mounts[3].handle,
+					&mounts[2].handle,
 				],
 				(
 					Some(Item {
@@ -247,9 +319,9 @@ mod tests {
 						..default()
 					})
 				),
-				None
+				vec![]
 			),
-			(handles, new_items, errors)
+			(swapped_handles, new_items, errors)
 		);
 	}
 
@@ -259,13 +331,15 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
+				_Hands::default(),
+				_Forearms::default(),
 				Slots::<Skill>([].into()),
 				Collection::<Swap<SlotKey, SlotKey>>([].into()),
 			))
 			.id();
 
-		app.add_systems(Update, swap_equipped_items.pipe(|_: In<_>| {}));
-		app.update();
+		app.world_mut()
+			.run_system_once(swap_equipped_items::<_Hands, _Forearms>);
 
 		let agent = app.world().entity(agent);
 
@@ -275,98 +349,136 @@ mod tests {
 	#[test]
 	fn log_slot_errors() {
 		let mut app = App::new();
-		let agent = app
+		app.world_mut().spawn((
+			_Hands::default(),
+			_Forearms::default(),
+			Slots::<Skill>([].into()),
+			Collection(
+				[Swap(
+					SlotKey::BottomHand(Side::Left),
+					SlotKey::BottomHand(Side::Right),
+				)]
+				.into(),
+			),
+		));
+
+		let errors = app
 			.world_mut()
-			.spawn((
-				Slots::<Skill>([].into()),
-				Collection(
-					[Swap(
-						SlotKey::BottomHand(Side::Left),
-						SlotKey::BottomHand(Side::Right),
-					)]
-					.into(),
-				),
-			))
-			.id();
-
-		app.add_systems(
-			Update,
-			swap_equipped_items.pipe(fake_log_error_lazy_many(agent)),
-		);
-		app.update();
-
-		let errors = app.world().entity(agent).get::<FakeErrorLogMany>().unwrap();
+			.run_system_once(swap_equipped_items::<_Hands, _Forearms>);
 
 		assert_eq!(
 			vec![
-				no_slot(SlotKey::BottomHand(Side::Left)),
-				no_slot(SlotKey::BottomHand(Side::Right))
+				Err(no_slot(SlotKey::BottomHand(Side::Left))),
+				Err(no_slot(SlotKey::BottomHand(Side::Right))),
 			],
-			errors.0
+			errors
+		)
+	}
+
+	#[test]
+	fn log_handle_entity_errors() {
+		let mut app = App::new();
+		app.world_mut().spawn((
+			_Hands::default(),
+			_Forearms::default(),
+			Slots::<Skill>(
+				[
+					(
+						SlotKey::BottomHand(Side::Left),
+						Some(Item {
+							name: "left item",
+							..default()
+						}),
+					),
+					(
+						SlotKey::BottomHand(Side::Right),
+						Some(Item {
+							name: "right item",
+							..default()
+						}),
+					),
+				]
+				.into(),
+			),
+			Collection(
+				[Swap(
+					SlotKey::BottomHand(Side::Left),
+					SlotKey::BottomHand(Side::Right),
+				)]
+				.into(),
+			),
+		));
+
+		let errors = app
+			.world_mut()
+			.run_system_once(swap_equipped_items::<_Hands, _Forearms>);
+
+		assert_eq!(
+			vec![
+				Err(handle_entity_error(SlotKey::BottomHand(Side::Left))),
+				Err(handle_entity_error(SlotKey::BottomHand(Side::Right)))
+			],
+			errors
 		)
 	}
 
 	#[test]
 	fn log_handle_errors() {
 		let mut app = App::new();
-		let agent = app
-			.world_mut()
-			.spawn((
-				Slots(
-					[
-						(
-							SlotKey::BottomHand(Side::Left),
-							Slot::<Skill> {
-								mounts: Mounts {
-									hand: Entity::from_raw(100),
-									forearm: Entity::from_raw(200),
-								},
-								item: Some(Item {
-									name: "left item",
-									..default()
-								}),
-							},
-						),
-						(
-							SlotKey::BottomHand(Side::Right),
-							Slot {
-								mounts: Mounts {
-									hand: Entity::from_raw(101),
-									forearm: Entity::from_raw(202),
-								},
-								item: Some(Item {
-									name: "right item",
-									..default()
-								}),
-							},
-						),
-					]
-					.into(),
-				),
-				Collection(
-					[Swap(
+		let entity_without_handle = app.world_mut().spawn_empty().id();
+		app.world_mut().spawn((
+			_Hands(
+				[
+					(SlotKey::BottomHand(Side::Left), entity_without_handle),
+					(SlotKey::BottomHand(Side::Right), entity_without_handle),
+				]
+				.into(),
+			),
+			_Forearms(
+				[
+					(SlotKey::BottomHand(Side::Left), entity_without_handle),
+					(SlotKey::BottomHand(Side::Right), entity_without_handle),
+				]
+				.into(),
+			),
+			Slots::<Skill>(
+				[
+					(
 						SlotKey::BottomHand(Side::Left),
+						Some(Item {
+							name: "left item",
+							..default()
+						}),
+					),
+					(
 						SlotKey::BottomHand(Side::Right),
-					)]
-					.into(),
-				),
-			))
-			.id();
+						Some(Item {
+							name: "right item",
+							..default()
+						}),
+					),
+				]
+				.into(),
+			),
+			Collection(
+				[Swap(
+					SlotKey::BottomHand(Side::Left),
+					SlotKey::BottomHand(Side::Right),
+				)]
+				.into(),
+			),
+		));
 
-		app.add_systems(
-			Update,
-			swap_equipped_items.pipe(fake_log_error_lazy_many(agent)),
-		);
-		app.update();
-
-		let errors = app.world().entity(agent).get::<FakeErrorLogMany>().unwrap();
+		let errors = app
+			.world_mut()
+			.run_system_once(swap_equipped_items::<_Hands, _Forearms>);
 
 		assert_eq!(
 			vec![
-				handle_error(SlotKey::BottomHand(Side::Left)),
-				handle_error(SlotKey::BottomHand(Side::Right))
+				Err(handle_error(SlotKey::BottomHand(Side::Left))),
+				Err(handle_error(SlotKey::BottomHand(Side::Right)))
 			],
-			errors.0
+			errors
 		)
 	}
 }

@@ -34,9 +34,11 @@ use skills::{
 		combos::Combos,
 		combos_time_out::CombosTimeOut,
 		inventory::Inventory,
+		lookup::Lookup,
 		queue::Queue,
 		slots::Slots,
 	},
+	definitions::item_slots::{ForearmSlots, HandSlots},
 	items::{inventory_key::InventoryKey, slot_key::SlotKey},
 	skills::Skill,
 };
@@ -274,7 +276,11 @@ fn inventory_screen_systems(app: &mut App) {
 		)
 		.add_systems(
 			Update,
-			(swap_equipped_items.pipe(log_many), swap_inventory_items),
+			(
+				swap_equipped_items::<Lookup<HandSlots<Player>>, Lookup<ForearmSlots<Player>>>
+					.pipe(log_many),
+				swap_inventory_items,
+			),
 		);
 }
 

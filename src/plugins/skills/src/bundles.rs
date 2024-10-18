@@ -6,18 +6,18 @@ use crate::{
 		queue::Queue,
 		skill_executer::SkillExecuter,
 		skill_spawners::SkillSpawners,
-		SlotDefinition,
-		SlotsDefinition,
+		slots::Slots,
 	},
 	definitions::{
 		item_slots::{ForearmSlots, HandSlots},
 		sub_models::SubModels,
 	},
-	items::slot_key::SlotKey,
+	items::{slot_key::SlotKey, Item},
 	skills::RunSkillBehavior,
 };
 use bevy::{ecs::bundle::Bundle, prelude::default};
 use common::components::Idle;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Bundle)]
@@ -48,7 +48,7 @@ pub struct Loadout<TAgent>
 where
 	TAgent: Sync + Send + 'static,
 {
-	slot_definition: SlotsDefinition,
+	slot_definition: Slots<Uuid>,
 	skill_execution: ExecutionBundle,
 	item_visualization: ItemVisualizationBundle<TAgent>,
 }
@@ -57,9 +57,9 @@ impl<TAgent> Loadout<TAgent>
 where
 	TAgent: Sync + Send + 'static,
 {
-	pub fn new<const N: usize>(slots_definitions: [SlotDefinition; N]) -> Self {
+	pub fn new<const N: usize>(slots_definitions: [(SlotKey, Option<Item<Uuid>>); N]) -> Self {
 		Self {
-			slot_definition: SlotsDefinition::new(slots_definitions),
+			slot_definition: Slots(HashMap::from(slots_definitions)),
 			skill_execution: default(),
 			item_visualization: default(),
 		}

@@ -15,7 +15,7 @@ const TOP_FOREARM_R: &str = "top_forearm.R";
 const BTM_FOREARM_L: &str = "bottom_forearm.L";
 const BTM_FOREARM_R: &str = "bottom_forearm.R";
 
-pub(crate) struct HandSlots<T>(PhantomData<T>);
+pub struct HandSlots<T>(PhantomData<T>);
 
 impl EntityNames for HandSlots<Player> {
 	fn entity_names() -> Vec<&'static str> {
@@ -34,7 +34,7 @@ impl KeyString<SlotKey> for HandSlots<Player> {
 	}
 }
 
-pub(crate) struct ForearmSlots<T>(PhantomData<T>);
+pub struct ForearmSlots<T>(PhantomData<T>);
 
 impl EntityNames for ForearmSlots<Player> {
 	fn entity_names() -> Vec<&'static str> {
