@@ -15,7 +15,7 @@ use common::{
 	components::{Collection, Player, Side, Swap},
 	resources::{key_map::KeyMap, Models},
 	states::{GameRunning, MouseContext},
-	systems::{log::log_many, track_components::TrackComponentInChildren},
+	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	traits::{register_folder_assets::RegisterFolderAssets, try_insert_on::TryInsertOn},
 };
 use components::{
@@ -84,13 +84,18 @@ fn skill_slot_load(app: &mut App) {
 			PreUpdate,
 			(
 				init_slots,
-				SkillSpawners::track_in_self_and_children::<Name>(),
+				SkillSpawners::track_in_self_and_children::<Name>().system(),
 				load_models_commands_for_new_slots,
 			),
 		)
 		.add_systems(PreUpdate, uuid_to_skill::<Slots<Uuid>, Slots>)
 		.add_systems(Update, set_player_items)
-		.add_systems(Update, SubModels::<Player>::track_in_self_and_children::<Name>())
+		.add_systems(
+			Update,
+			SubModels::<Player>::track_in_self_and_children::<Name>()
+				.with::<Handle<Mesh>>()
+				.system(),
+		)
 		.add_systems(
 			Update,
 			(

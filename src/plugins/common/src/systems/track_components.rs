@@ -1,3 +1,5 @@
+mod builder;
+
 use crate::{
 	tools::get_recursively::{get_recursively_from, related::Child},
 	traits::{
@@ -7,43 +9,33 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
+use builder::TrackSystemsBuilder;
 
-type TrackSystems<TTarget, TTracker> = (
-	fn(RemovedComponents<TTarget>, Query<Mut<TTracker>>),
-	fn(
-		Query<(Entity, Mut<TTracker>)>,
-		Query<&TTarget, Added<TTarget>>,
-		Query<(), With<TTracker>>,
-		Query<&Children>,
-	),
-);
+impl<TTracker> TrackComponentInSelfAndChildren for TTracker where TTracker: Component {}
 
-impl<TTracker> TrackComponentInChildren<TTracker> for TTracker where TTracker: Component {}
-
-pub trait TrackComponentInChildren<TTracker>
-where
-	TTracker: Component,
-{
-	fn track_in_self_and_children<TTarget>() -> TrackSystems<TTarget, TTracker>
+pub trait TrackComponentInSelfAndChildren {
+	fn track_in_self_and_children<TTarget>() -> TrackSystemsBuilder<Self, TTarget, TTarget>
 	where
 		TTarget: Component,
-		TTracker: Track<TTarget> + Untrack<TTarget> + IsTracking<TTarget>,
+		Self: Component + Track<TTarget> + Untrack<TTarget> + IsTracking<TTarget> + Sized,
 	{
-		let untrack = |r: RemovedComponents<TTarget>, q: Query<Mut<TTracker>>| {
-			untrack_in_self_and_children(r, q)
-		};
-
-		(untrack, track_in_self_and_children::<TTracker, TTarget>)
+		TrackSystemsBuilder {
+			untrack: |removed_targets: RemovedComponents<TTarget>, trackers: Query<Mut<Self>>| {
+				untrack_in_self_and_children(removed_targets, trackers)
+			},
+			track: track_in_self_and_children::<Self, TTarget, TTarget>,
+		}
 	}
 }
 
-fn track_in_self_and_children<TTracker, TTarget>(
+fn track_in_self_and_children<TTracker, TTarget, TFilter>(
 	mut trackers: Query<(Entity, Mut<TTracker>)>,
-	targets_lookup: Query<&TTarget, Added<TTarget>>,
+	targets_lookup: Query<&TTarget, (Added<TTarget>, With<TFilter>)>,
 	trackers_lookup: Query<(), With<TTracker>>,
 	children: Query<&Children>,
 ) where
 	TTarget: Component,
+	TFilter: Component,
 	TTracker: Track<TTarget> + Component,
 {
 	if trackers.is_empty() {
@@ -137,6 +129,9 @@ mod tests {
 	#[derive(Component, Debug, PartialEq, Clone)]
 	struct _Target;
 
+	#[derive(Component, Debug, PartialEq, Clone)]
+	struct _Filter;
+
 	#[derive(Clone)]
 	struct _Read(VecDeque<Entity>);
 
@@ -201,7 +196,7 @@ mod tests {
 			}));
 
 		app.world_mut()
-			.run_system_once(track_in_self_and_children::<_Tracker, _Target>);
+			.run_system_once(track_in_self_and_children::<_Tracker, _Target, _Target>);
 	}
 
 	#[test]
@@ -220,7 +215,7 @@ mod tests {
 			}));
 
 		app.world_mut()
-			.run_system_once(track_in_self_and_children::<_Tracker, _Target>);
+			.run_system_once(track_in_self_and_children::<_Tracker, _Target, _Target>);
 	}
 
 	#[test]
@@ -240,7 +235,7 @@ mod tests {
 			}));
 
 		app.world_mut()
-			.run_system_once(track_in_self_and_children::<_Tracker, _Target>);
+			.run_system_once(track_in_self_and_children::<_Tracker, _Target, _Target>);
 	}
 
 	#[test]
@@ -254,8 +249,29 @@ mod tests {
 				mock.expect_track().times(1).return_const(());
 			}));
 
-		app.add_systems(Update, track_in_self_and_children::<_Tracker, _Target>);
+		app.add_systems(
+			Update,
+			track_in_self_and_children::<_Tracker, _Target, _Target>,
+		);
 		app.update();
+		app.update();
+	}
+
+	#[test]
+	fn do_not_track_when_target_not_with_filter_component() {
+		let mut app = setup().single_threaded(Update);
+		let tracker = app.world_mut().spawn_empty().id();
+		app.world_mut().spawn(_Target).set_parent(tracker);
+		app.world_mut()
+			.entity_mut(tracker)
+			.insert(_Tracker::new().with_mock(|mock: &mut Mock_Tracker| {
+				mock.expect_track().never().return_const(());
+			}));
+
+		app.add_systems(
+			Update,
+			track_in_self_and_children::<_Tracker, _Target, _Filter>,
+		);
 		app.update();
 	}
 
@@ -280,7 +296,7 @@ mod tests {
 			}));
 
 		app.world_mut()
-			.run_system_once(track_in_self_and_children::<_Tracker, _Target>);
+			.run_system_once(track_in_self_and_children::<_Tracker, _Target, _Target>);
 	}
 
 	#[test]
