@@ -29,6 +29,7 @@ pub mod process_delta;
 pub mod read;
 pub mod register_folder_assets;
 pub mod remove_conditionally;
+pub mod set;
 pub mod state_duration;
 pub mod swap_command;
 pub mod track;

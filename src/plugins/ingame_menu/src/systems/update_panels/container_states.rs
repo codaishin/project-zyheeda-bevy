@@ -1,11 +1,11 @@
-use crate::{components::KeyedPanel, tools::PanelState, traits::set::Set};
+use crate::{components::KeyedPanel, tools::PanelState};
 use bevy::{
 	ecs::{component::Component, system::Query},
 	hierarchy::Parent,
 	prelude::Entity,
 	text::Text,
 };
-use common::traits::get::GetRef;
+use common::traits::{get::GetRef, set::Set};
 use skills::items::Item;
 
 pub fn panel_container_states<
