@@ -3,7 +3,7 @@ use crate::{
 	traits::colors::{HasPanelColors, PanelColors, DEFAULT_PANEL_COLORS},
 };
 use bevy::ecs::component::Component;
-use common::traits::{get::GetterRef, set::Setter};
+use common::traits::accessors::{get::GetterRef, set::Setter};
 
 #[derive(Component, Debug, PartialEq)]
 pub struct InventoryPanel(pub PanelState);

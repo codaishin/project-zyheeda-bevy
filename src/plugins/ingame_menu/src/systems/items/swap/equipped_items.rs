@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use common::{
 	components::{Collection, Swap},
 	errors::{Error, Level},
-	traits::{get::GetRef, try_remove_from::TryRemoveFrom},
+	traits::{accessors::get::GetRef, try_remove_from::TryRemoveFrom},
 };
 use skills::{components::slots::Slots, items::slot_key::SlotKey};
 

@@ -1,7 +1,7 @@
 use super::Item;
 use crate::{items::slot_key::SlotKey, skills::Skill, traits::TryMap};
 use bevy::ecs::component::Component;
-use common::traits::get::GetRef;
+use common::traits::accessors::get::GetRef;
 use std::collections::HashMap;
 
 #[derive(Component, Clone, PartialEq, Debug)]

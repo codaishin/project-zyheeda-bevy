@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
 	resources::Models,
-	traits::{get::GetRef, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
+	traits::{accessors::get::GetRef, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
 
 pub(crate) fn apply_load_models_commands<THands, TForearms>(

@@ -1,7 +1,7 @@
 use crate::traits::{entity_names::EntityNames, key_string::KeyString};
 use bevy::prelude::*;
 use common::traits::{
-	get::GetRef,
+	accessors::get::GetRef,
 	track::{IsTracking, Track, Untrack},
 };
 use std::{collections::HashMap, marker::PhantomData};

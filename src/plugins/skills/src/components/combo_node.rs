@@ -11,7 +11,7 @@ use bevy::ecs::component::Component;
 use common::{
 	tools::ordered_hash_map::{Entry, OrderedHashMap},
 	traits::{
-		get::{GetMut, GetRef},
+		accessors::get::{GetMut, GetRef},
 		insert::TryInsert,
 		iterate::Iterate,
 	},

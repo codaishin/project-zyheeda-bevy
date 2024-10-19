@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::{
 	components::Side,
 	traits::{
-		get::GetRef,
+		accessors::get::GetRef,
 		track::{IsTracking, Track, Untrack},
 	},
 };

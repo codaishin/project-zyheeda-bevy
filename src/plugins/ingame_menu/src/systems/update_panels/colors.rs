@@ -3,7 +3,7 @@ use bevy::{
 	ecs::{component::Component, query::Without, system::Query},
 	ui::{BackgroundColor, Interaction},
 };
-use common::traits::get::GetterRef;
+use common::traits::accessors::get::GetterRef;
 
 pub fn panel_colors<TPanel: Component + GetterRef<PanelState> + HasPanelColors>(
 	mut panels: Query<(&mut BackgroundColor, &Interaction, &TPanel), Without<ColorOverride>>,

@@ -6,7 +6,7 @@ use bevy::{
 	ecs::system::EntityCommands,
 	prelude::{Added, Commands, Component, Entity, Query, With},
 };
-use common::traits::get::GetRef;
+use common::traits::accessors::get::GetRef;
 use skills::items::{slot_key::SlotKey, Item, ItemType};
 use std::collections::HashSet;
 

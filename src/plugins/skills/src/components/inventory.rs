@@ -2,7 +2,7 @@ use super::Item;
 use crate::{items::inventory_key::InventoryKey, traits::TryMap};
 use common::{
 	components::Collection,
-	traits::get::{GetRef, GetMut},
+	traits::accessors::get::{GetMut, GetRef},
 };
 
 pub type Inventory<TSkill> = Collection<Option<Item<TSkill>>>;

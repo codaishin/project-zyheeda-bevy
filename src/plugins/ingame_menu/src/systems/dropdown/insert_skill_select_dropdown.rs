@@ -9,7 +9,7 @@ use bevy::{
 };
 use common::{
 	components::Player,
-	traits::{get::GetRef, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
+	traits::{accessors::get::GetRef, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
 use skills::{
 	items::{slot_key::SlotKey, Item},

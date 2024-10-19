@@ -2,7 +2,7 @@ use crate::items::{inventory_key::InventoryKey, slot_key::SlotKey, Item};
 use common::{
 	components::{Collection, Swap},
 	traits::{
-		get::GetMut,
+		accessors::get::GetMut,
 		swap_command::{SwapCommands, SwapError, SwapIn, SwapResult, SwappedOut},
 	},
 };

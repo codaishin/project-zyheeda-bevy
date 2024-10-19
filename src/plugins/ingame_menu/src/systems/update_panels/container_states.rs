@@ -5,7 +5,7 @@ use bevy::{
 	prelude::Entity,
 	text::Text,
 };
-use common::traits::{get::GetRef, set::Setter};
+use common::traits::accessors::{get::GetRef, set::Setter};
 use skills::items::Item;
 
 pub fn panel_container_states<

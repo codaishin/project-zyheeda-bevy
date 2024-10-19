@@ -9,7 +9,7 @@ use bevy::{
 };
 use common::{
 	states::MouseContext,
-	traits::{get::GetterRef, map_value::MapForward},
+	traits::{accessors::get::GetterRef, map_value::MapForward},
 };
 use skills::items::slot_key::SlotKey;
 

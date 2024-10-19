@@ -8,7 +8,7 @@ use bevy::ecs::{
 	component::Component,
 	system::{In, Query},
 };
-use common::traits::get::GetRef;
+use common::traits::accessors::get::GetRef;
 
 pub(crate) fn enqueue<
 	TSlots: GetRef<SlotKey, Skill> + Component,

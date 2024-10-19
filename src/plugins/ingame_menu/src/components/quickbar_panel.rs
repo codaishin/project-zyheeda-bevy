@@ -9,7 +9,7 @@ use crate::{
 	},
 };
 use bevy::{color::Color, ecs::component::Component};
-use common::traits::get::GetterRef;
+use common::traits::accessors::get::GetterRef;
 use skills::items::slot_key::SlotKey;
 
 #[derive(Component)]

@@ -18,7 +18,7 @@ use bevy::{
 use common::{
 	components::Player,
 	states::MouseContext,
-	traits::{get::GetterRef, iterate::Iterate, map_value::TryMapBackwards},
+	traits::{accessors::get::GetterRef, iterate::Iterate, map_value::TryMapBackwards},
 };
 use skills::{items::slot_key::SlotKey, skills::QueuedSkill};
 
