@@ -3,7 +3,7 @@ use crate::{
 	traits::colors::{HasPanelColors, PanelColors, DEFAULT_PANEL_COLORS},
 };
 use bevy::ecs::component::Component;
-use common::traits::{get::GetterRef, set::Set};
+use common::traits::{get::GetterRef, set::Setter};
 
 #[derive(Component, Debug, PartialEq)]
 pub struct InventoryPanel(pub PanelState);
@@ -20,8 +20,8 @@ impl GetterRef<PanelState> for InventoryPanel {
 	}
 }
 
-impl Set<(), PanelState> for InventoryPanel {
-	fn set(&mut self, _: (), value: PanelState) {
+impl Setter<PanelState> for InventoryPanel {
+	fn set(&mut self, value: PanelState) {
 		self.0 = value;
 	}
 }
@@ -49,14 +49,14 @@ mod tests {
 	#[test]
 	fn set_empty() {
 		let mut panel = InventoryPanel::from(PanelState::Filled);
-		panel.set((), PanelState::Empty);
+		panel.set(PanelState::Empty);
 		assert_eq!(PanelState::Empty, panel.0);
 	}
 
 	#[test]
 	fn set_filled() {
 		let mut panel = InventoryPanel::from(PanelState::Empty);
-		panel.set((), PanelState::Filled);
+		panel.set(PanelState::Filled);
 		assert_eq!(PanelState::Filled, panel.0);
 	}
 

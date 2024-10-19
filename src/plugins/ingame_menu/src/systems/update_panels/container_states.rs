@@ -5,11 +5,11 @@ use bevy::{
 	prelude::Entity,
 	text::Text,
 };
-use common::traits::{get::GetRef, set::Set};
+use common::traits::{get::GetRef, set::Setter};
 use skills::items::Item;
 
 pub fn panel_container_states<
-	TPanel: Component + Set<(), PanelState>,
+	TPanel: Component + Setter<PanelState>,
 	TKey: Copy + Send + Sync + 'static,
 	TContainer: Component + GetRef<TKey, Item>,
 >(
@@ -24,7 +24,7 @@ pub fn panel_container_states<
 			Some(item) => (PanelState::Filled, item.name),
 			None => (PanelState::Empty, "<Empty>"),
 		};
-		panel.set((), state);
+		panel.set(state);
 		set_label(&mut texts, entity, label);
 	}
 }
@@ -76,9 +76,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl Set<(), PanelState> for _Panel {
-		fn set(&mut self, key: (), value: PanelState) {
-			self.mock.set(key, value)
+	impl Setter<PanelState> for _Panel {
+		fn set(&mut self, value: PanelState) {
+			self.mock.set(value)
 		}
 	}
 
@@ -94,7 +94,7 @@ mod tests {
 				_Panel::new().with_mock(|mock| {
 					mock.expect_set()
 						.times(1)
-						.with(eq(()), eq(PanelState::Empty))
+						.with(eq(PanelState::Empty))
 						.return_const(());
 				}),
 			))
@@ -129,7 +129,7 @@ mod tests {
 				_Panel::new().with_mock(|mock| {
 					mock.expect_set()
 						.times(1)
-						.with(eq(()), eq(PanelState::Filled))
+						.with(eq(PanelState::Filled))
 						.return_const(());
 				}),
 			))
@@ -179,7 +179,7 @@ mod tests {
 				_Panel::new().with_mock(|mock| {
 					mock.expect_set()
 						.times(1)
-						.with(eq(()), eq(PanelState::Filled))
+						.with(eq(PanelState::Filled))
 						.return_const(());
 				}),
 			))
