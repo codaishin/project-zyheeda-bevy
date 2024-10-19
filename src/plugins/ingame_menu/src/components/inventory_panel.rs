@@ -6,7 +6,7 @@ use crate::{
 	},
 };
 use bevy::ecs::component::Component;
-use common::traits::get::GetStatic;
+use common::traits::get::GetterRef;
 
 #[derive(Component, Debug, PartialEq)]
 pub struct InventoryPanel(pub PanelState);
@@ -17,7 +17,7 @@ impl From<PanelState> for InventoryPanel {
 	}
 }
 
-impl GetStatic<PanelState> for InventoryPanel {
+impl GetterRef<PanelState> for InventoryPanel {
 	fn get(&self) -> &PanelState {
 		&self.0
 	}

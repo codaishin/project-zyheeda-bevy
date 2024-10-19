@@ -9,13 +9,13 @@ use bevy::{
 };
 use common::{
 	states::MouseContext,
-	traits::{get::GetStatic, map_value::MapForward},
+	traits::{get::GetterRef, map_value::MapForward},
 };
 use skills::items::slot_key::SlotKey;
 
 pub fn prime_mouse_context<
 	TMap: Resource + MapForward<SlotKey, KeyCode>,
-	TPanel: GetStatic<SlotKey> + Component,
+	TPanel: GetterRef<SlotKey> + Component,
 >(
 	mut mouse_context: ResMut<NextState<MouseContext>>,
 	key_map: Res<TMap>,
@@ -31,7 +31,7 @@ pub fn prime_mouse_context<
 	mouse_context.set(MouseContext::Primed(key_code));
 }
 
-fn get_key_code_from<TMap: MapForward<SlotKey, KeyCode>, TPanel: GetStatic<SlotKey>>(
+fn get_key_code_from<TMap: MapForward<SlotKey, KeyCode>, TPanel: GetterRef<SlotKey>>(
 	key_map: &'_ TMap,
 ) -> impl Fn((&TPanel, &Interaction)) -> KeyCode + '_ {
 	|(panel, _): (&TPanel, &Interaction)| key_map.map_forward(*panel.get())
@@ -58,7 +58,7 @@ mod test {
 	#[derive(Component)]
 	struct _Panel(pub SlotKey);
 
-	impl GetStatic<SlotKey> for _Panel {
+	impl GetterRef<SlotKey> for _Panel {
 		fn get(&self) -> &SlotKey {
 			&self.0
 		}

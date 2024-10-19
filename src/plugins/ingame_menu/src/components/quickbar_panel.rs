@@ -9,7 +9,7 @@ use crate::{
 	},
 };
 use bevy::{color::Color, ecs::component::Component};
-use common::traits::get::GetStatic;
+use common::traits::get::GetterRef;
 use skills::items::slot_key::SlotKey;
 
 #[derive(Component)]
@@ -18,13 +18,13 @@ pub struct QuickbarPanel {
 	pub state: PanelState,
 }
 
-impl GetStatic<PanelState> for QuickbarPanel {
+impl GetterRef<PanelState> for QuickbarPanel {
 	fn get(&self) -> &PanelState {
 		&self.state
 	}
 }
 
-impl GetStatic<SlotKey> for QuickbarPanel {
+impl GetterRef<SlotKey> for QuickbarPanel {
 	fn get(&self) -> &SlotKey {
 		&self.key
 	}

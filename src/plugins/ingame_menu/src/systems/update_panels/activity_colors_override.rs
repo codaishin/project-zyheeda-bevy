@@ -18,14 +18,14 @@ use bevy::{
 use common::{
 	components::Player,
 	states::MouseContext,
-	traits::{get::GetStatic, iterate::Iterate, map_value::TryMapBackwards},
+	traits::{get::GetterRef, iterate::Iterate, map_value::TryMapBackwards},
 };
 use skills::{items::slot_key::SlotKey, skills::QueuedSkill};
 
 pub fn panel_activity_colors_override<
 	TMap: Resource + TryMapBackwards<KeyCode, SlotKey>,
 	TQueue: Component + Iterate<QueuedSkill>,
-	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetStatic<SlotKey> + Component,
+	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetterRef<SlotKey> + Component,
 >(
 	mut commands: Commands,
 	mut buttons: Query<(Entity, &mut BackgroundColor, &TPanel)>,
@@ -127,7 +127,7 @@ mod tests {
 		};
 	}
 
-	impl GetStatic<SlotKey> for _Panel {
+	impl GetterRef<SlotKey> for _Panel {
 		fn get(&self) -> &SlotKey {
 			&self.0
 		}
