@@ -3,9 +3,9 @@ use bevy::{
 	ecs::{component::Component, query::Without, system::Query},
 	ui::{BackgroundColor, Interaction},
 };
-use common::traits::get::GetStatic;
+use common::traits::accessors::get::GetterRef;
 
-pub fn panel_colors<TPanel: Component + GetStatic<PanelState> + HasPanelColors>(
+pub fn panel_colors<TPanel: Component + GetterRef<PanelState> + HasPanelColors>(
 	mut panels: Query<(&mut BackgroundColor, &Interaction, &TPanel), Without<ColorOverride>>,
 ) {
 	let colors = TPanel::PANEL_COLORS;
@@ -32,7 +32,7 @@ mod tests {
 	#[derive(Component)]
 	struct _Empty;
 
-	impl GetStatic<PanelState> for _Empty {
+	impl GetterRef<PanelState> for _Empty {
 		fn get(&self) -> &PanelState {
 			&PanelState::Empty
 		}
@@ -41,7 +41,7 @@ mod tests {
 	#[derive(Component)]
 	struct _Filled;
 
-	impl GetStatic<PanelState> for _Filled {
+	impl GetterRef<PanelState> for _Filled {
 		fn get(&self) -> &PanelState {
 			&PanelState::Filled
 		}

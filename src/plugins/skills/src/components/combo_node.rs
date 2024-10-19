@@ -11,7 +11,7 @@ use bevy::ecs::component::Component;
 use common::{
 	tools::ordered_hash_map::{Entry, OrderedHashMap},
 	traits::{
-		get::{Get, GetMut},
+		accessors::get::{GetMut, GetRef},
 		insert::TryInsert,
 		iterate::Iterate,
 	},
@@ -32,7 +32,7 @@ impl<TSkill> Default for ComboNode<TSkill> {
 	}
 }
 
-impl<TKey: Iterate<SlotKey>> Get<TKey, Skill> for ComboNode {
+impl<TKey: Iterate<SlotKey>> GetRef<TKey, Skill> for ComboNode {
 	fn get(&self, slot_key_path: &TKey) -> Option<&Skill> {
 		let mut value = None;
 		let mut combo_map = &self.0;

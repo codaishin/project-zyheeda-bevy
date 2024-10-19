@@ -1,7 +1,7 @@
 use super::Item;
 use crate::{items::slot_key::SlotKey, skills::Skill, traits::TryMap};
 use bevy::ecs::component::Component;
-use common::traits::get::Get;
+use common::traits::accessors::get::GetRef;
 use std::collections::HashMap;
 
 #[derive(Component, Clone, PartialEq, Debug)]
@@ -19,14 +19,14 @@ impl<T> Default for Slots<T> {
 	}
 }
 
-impl<TSkill> Get<SlotKey, Item<TSkill>> for Slots<TSkill> {
+impl<TSkill> GetRef<SlotKey, Item<TSkill>> for Slots<TSkill> {
 	fn get(&self, key: &SlotKey) -> Option<&Item<TSkill>> {
 		let slot = self.0.get(key)?;
 		slot.as_ref()
 	}
 }
 
-impl Get<SlotKey, Skill> for Slots {
+impl GetRef<SlotKey, Skill> for Slots {
 	fn get(&self, key: &SlotKey) -> Option<&Skill> {
 		let item: &Item = self.get(key)?;
 

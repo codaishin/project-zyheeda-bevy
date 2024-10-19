@@ -1,12 +1,9 @@
 use crate::{
 	tools::PanelState,
-	traits::{
-		colors::{HasPanelColors, PanelColors, DEFAULT_PANEL_COLORS},
-		set::Set,
-	},
+	traits::colors::{HasPanelColors, PanelColors, DEFAULT_PANEL_COLORS},
 };
 use bevy::ecs::component::Component;
-use common::traits::get::GetStatic;
+use common::traits::accessors::{get::GetterRef, set::Setter};
 
 #[derive(Component, Debug, PartialEq)]
 pub struct InventoryPanel(pub PanelState);
@@ -17,14 +14,14 @@ impl From<PanelState> for InventoryPanel {
 	}
 }
 
-impl GetStatic<PanelState> for InventoryPanel {
+impl GetterRef<PanelState> for InventoryPanel {
 	fn get(&self) -> &PanelState {
 		&self.0
 	}
 }
 
-impl Set<(), PanelState> for InventoryPanel {
-	fn set(&mut self, _: (), value: PanelState) {
+impl Setter<PanelState> for InventoryPanel {
+	fn set(&mut self, value: PanelState) {
 		self.0 = value;
 	}
 }
@@ -52,14 +49,14 @@ mod tests {
 	#[test]
 	fn set_empty() {
 		let mut panel = InventoryPanel::from(PanelState::Filled);
-		panel.set((), PanelState::Empty);
+		panel.set(PanelState::Empty);
 		assert_eq!(PanelState::Empty, panel.0);
 	}
 
 	#[test]
 	fn set_filled() {
 		let mut panel = InventoryPanel::from(PanelState::Empty);
-		panel.set((), PanelState::Filled);
+		panel.set(PanelState::Filled);
 		assert_eq!(PanelState::Filled, panel.0);
 	}
 

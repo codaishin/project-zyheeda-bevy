@@ -2,12 +2,12 @@ use super::Item;
 use crate::{items::inventory_key::InventoryKey, traits::TryMap};
 use common::{
 	components::Collection,
-	traits::get::{Get, GetMut},
+	traits::accessors::get::{GetMut, GetRef},
 };
 
 pub type Inventory<TSkill> = Collection<Option<Item<TSkill>>>;
 
-impl<TSkill> Get<InventoryKey, Item<TSkill>> for Inventory<TSkill> {
+impl<TSkill> GetRef<InventoryKey, Item<TSkill>> for Inventory<TSkill> {
 	fn get(&self, key: &InventoryKey) -> Option<&Item<TSkill>> {
 		let item = self.0.get(key.0)?;
 		item.as_ref()

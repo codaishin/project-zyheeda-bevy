@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use common::{
 	components::{Collection, Swap},
 	errors::{Error, Level},
-	traits::{get::Get, try_remove_from::TryRemoveFrom},
+	traits::{accessors::get::GetRef, try_remove_from::TryRemoveFrom},
 };
 use skills::{components::slots::Slots, items::slot_key::SlotKey};
 
@@ -20,8 +20,8 @@ pub fn swap_equipped_items<THandMounts, TForearmMounts>(
 	mut handles: Query<&mut Handle<Scene>>,
 ) -> Vec<Result<(), Error>>
 where
-	THandMounts: Component + Get<SlotKey, Entity>,
-	TForearmMounts: Component + Get<SlotKey, Entity>,
+	THandMounts: Component + GetRef<SlotKey, Entity>,
+	TForearmMounts: Component + GetRef<SlotKey, Entity>,
 {
 	let mut results = vec![];
 
@@ -50,8 +50,8 @@ fn do_swap<THandMounts, TForearmMounts>(
 	forearms: &TForearmMounts,
 ) -> [Result<(), Error>; 2]
 where
-	THandMounts: Component + Get<SlotKey, Entity>,
-	TForearmMounts: Component + Get<SlotKey, Entity>,
+	THandMounts: Component + GetRef<SlotKey, Entity>,
+	TForearmMounts: Component + GetRef<SlotKey, Entity>,
 {
 	let slot_results = [
 		slots.0.get(&swap.0).cloned().ok_or(no_slot(swap.0)),
@@ -115,8 +115,8 @@ fn get_mounts<THandMounts, TForearmMounts>(
 	forearms: &TForearmMounts,
 ) -> Result<Mounts, GetHandleError>
 where
-	THandMounts: Component + Get<SlotKey, Entity>,
-	TForearmMounts: Component + Get<SlotKey, Entity>,
+	THandMounts: Component + GetRef<SlotKey, Entity>,
+	TForearmMounts: Component + GetRef<SlotKey, Entity>,
 {
 	let hand = hands.get(key).ok_or(GetHandleError::EntityUnknown)?;
 	let forearm = forearms.get(key).ok_or(GetHandleError::EntityUnknown)?;
@@ -195,7 +195,7 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Hands(HashMap<SlotKey, Entity>);
 
-	impl Get<SlotKey, Entity> for _Hands {
+	impl GetRef<SlotKey, Entity> for _Hands {
 		fn get(&self, key: &SlotKey) -> Option<&Entity> {
 			self.0.get(key)
 		}
@@ -204,7 +204,7 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Forearms(HashMap<SlotKey, Entity>);
 
-	impl Get<SlotKey, Entity> for _Forearms {
+	impl GetRef<SlotKey, Entity> for _Forearms {
 		fn get(&self, key: &SlotKey) -> Option<&Entity> {
 			self.0.get(key)
 		}

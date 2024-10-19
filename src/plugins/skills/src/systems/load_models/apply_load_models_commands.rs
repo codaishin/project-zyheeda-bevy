@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
 	resources::Models,
-	traits::{get::Get, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
+	traits::{accessors::get::GetRef, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
 
 pub(crate) fn apply_load_models_commands<THands, TForearms>(
@@ -15,8 +15,8 @@ pub(crate) fn apply_load_models_commands<THands, TForearms>(
 	agents: Query<(Entity, &Slots, &LoadModelsCommand, &THands, &TForearms)>,
 ) -> Vec<Result<(), Error>>
 where
-	THands: Component + Get<SlotKey, Entity>,
-	TForearms: Component + Get<SlotKey, Entity>,
+	THands: Component + GetRef<SlotKey, Entity>,
+	TForearms: Component + GetRef<SlotKey, Entity>,
 {
 	agents
 		.iter()
@@ -51,8 +51,8 @@ fn collect_model_data<'a, THandMounts, TForearmMounts>(
 	forearm_mounts: &'a TForearmMounts,
 ) -> impl FnMut(&LoadModel) -> Result<LoadData, ModelDataError> + 'a
 where
-	THandMounts: Component + Get<SlotKey, Entity>,
-	TForearmMounts: Component + Get<SlotKey, Entity>,
+	THandMounts: Component + GetRef<SlotKey, Entity>,
+	TForearmMounts: Component + GetRef<SlotKey, Entity>,
 {
 	move |&LoadModel(slot_key)| {
 		let item = slots
@@ -159,7 +159,7 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Hands(HashMap<SlotKey, Entity>);
 
-	impl Get<SlotKey, Entity> for _Hands {
+	impl GetRef<SlotKey, Entity> for _Hands {
 		fn get(&self, key: &SlotKey) -> Option<&Entity> {
 			self.0.get(key)
 		}
@@ -168,7 +168,7 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Forearms(HashMap<SlotKey, Entity>);
 
-	impl Get<SlotKey, Entity> for _Forearms {
+	impl GetRef<SlotKey, Entity> for _Forearms {
 		fn get(&self, key: &SlotKey) -> Option<&Entity> {
 			self.0.get(key)
 		}

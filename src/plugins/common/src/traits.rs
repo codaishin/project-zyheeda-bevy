@@ -1,4 +1,4 @@
-pub mod accessor;
+pub mod accessors;
 pub mod add_asset;
 pub mod asset_file_extensions;
 pub mod asset_folder;
@@ -6,7 +6,6 @@ pub mod cache;
 pub mod cast_ray;
 pub mod clamp_zero_positive;
 pub mod clear;
-pub mod get;
 pub mod get_asset_path;
 pub mod get_handle_from_path;
 pub mod get_ray;
