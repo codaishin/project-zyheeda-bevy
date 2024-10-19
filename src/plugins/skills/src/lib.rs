@@ -31,9 +31,9 @@ use components::{
 	slots::Slots,
 };
 use definitions::item_slots::{ForearmSlots, HandSlots};
-use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType, Mount};
+use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType};
 use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill};
-use std::{collections::HashSet, time::Duration};
+use std::time::Duration;
 use systems::{
 	advance_active_skill::advance_active_skill,
 	enqueue::enqueue,
@@ -181,8 +181,7 @@ fn get_loadout() -> Loadout<Player> {
 				name: "Plasma Pistol A",
 				model: Some("pistol"),
 				skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
-				item_type: HashSet::from([ItemType::Pistol]),
-				mount: Mount::Hand,
+				item_type: ItemType::Pistol,
 			}),
 		),
 		(
@@ -191,8 +190,7 @@ fn get_loadout() -> Loadout<Player> {
 				name: "Plasma Pistol B",
 				model: Some("pistol"),
 				skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
-				item_type: HashSet::from([ItemType::Pistol]),
-				mount: Mount::Hand,
+				item_type: ItemType::Pistol,
 			}),
 		),
 		(
@@ -201,8 +199,7 @@ fn get_loadout() -> Loadout<Player> {
 				name: "Force Bracer",
 				model: Some("bracer"),
 				skill: Some(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba")),
-				item_type: HashSet::from([ItemType::Bracer]),
-				mount: Mount::Forearm,
+				item_type: ItemType::Bracer,
 			}),
 		),
 		(
@@ -211,8 +208,7 @@ fn get_loadout() -> Loadout<Player> {
 				name: "Force Bracer",
 				model: Some("bracer"),
 				skill: Some(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba")),
-				item_type: HashSet::from([ItemType::Bracer]),
-				mount: Mount::Forearm,
+				item_type: ItemType::Bracer,
 			}),
 		),
 	])
@@ -224,22 +220,19 @@ fn get_inventory() -> Inventory<Uuid> {
 			name: "Plasma Pistol C",
 			model: Some("pistol"),
 			skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
-			item_type: HashSet::from([ItemType::Pistol]),
-			mount: Mount::Hand,
+			item_type: ItemType::Pistol,
 		}),
 		Some(Item {
 			name: "Plasma Pistol D",
 			model: Some("pistol"),
 			skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
-			item_type: HashSet::from([ItemType::Pistol]),
-			mount: Mount::Hand,
+			item_type: ItemType::Pistol,
 		}),
 		Some(Item {
 			name: "Plasma Pistol E",
 			model: Some("pistol"),
 			skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
-			item_type: HashSet::from([ItemType::Pistol]),
-			mount: Mount::Hand,
+			item_type: ItemType::Pistol,
 		}),
 	])
 }

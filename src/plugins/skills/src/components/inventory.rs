@@ -43,7 +43,6 @@ impl<TIn, TOut> TryMap<TIn, TOut, Inventory<TOut>> for Inventory<TIn> {
 				name: item.name,
 				model: item.model,
 				item_type: item.item_type.clone(),
-				mount: item.mount,
 			})
 		});
 
@@ -54,9 +53,8 @@ impl<TIn, TOut> TryMap<TIn, TOut, Inventory<TOut>> for Inventory<TIn> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::items::{ItemType, Mount};
+	use crate::items::ItemType;
 	use bevy::utils::default;
-	use std::collections::HashSet;
 
 	#[test]
 	fn get_first_item() {
@@ -130,8 +128,7 @@ mod tests {
 			skill: Some(_In("my skill")),
 			name: "my item",
 			model: Some("model"),
-			item_type: HashSet::from([ItemType::Bracer]),
-			mount: Mount::Forearm,
+			item_type: ItemType::Bracer,
 		})]);
 
 		let inventory = inventory.try_map(|value| Some(_Out(value.0)));
@@ -141,8 +138,7 @@ mod tests {
 				skill: Some(_Out("my skill")),
 				name: "my item",
 				model: Some("model"),
-				item_type: HashSet::from([ItemType::Bracer]),
-				mount: Mount::Forearm,
+				item_type: ItemType::Bracer,
 			})]),
 			inventory
 		);

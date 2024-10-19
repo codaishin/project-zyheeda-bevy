@@ -175,11 +175,7 @@ fn skill_is_usable(slots: &Slots, trigger: &SlotKey, skill: &Skill) -> bool {
 	let Some(item) = slot.as_ref() else {
 		return false;
 	};
-	skill
-		.is_usable_with
-		.intersection(&item.item_type)
-		.next()
-		.is_some()
+	skill.is_usable_with.contains(&item.item_type)
 }
 
 fn try_map<TIn, TOut>(
@@ -260,14 +256,14 @@ mod tests {
 			(
 				SlotKey::BottomHand(Side::Right),
 				Some(Item {
-					item_type: HashSet::from([ItemType::Pistol]),
+					item_type: ItemType::Pistol,
 					..default()
 				}),
 			),
 			(
 				SlotKey::BottomHand(Side::Left),
 				Some(Item {
-					item_type: HashSet::from([ItemType::Bracer]),
+					item_type: ItemType::Bracer,
 					..default()
 				}),
 			),

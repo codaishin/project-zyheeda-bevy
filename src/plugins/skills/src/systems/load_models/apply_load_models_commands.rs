@@ -1,12 +1,16 @@
 use crate::{
 	components::{slots::Slots, LoadModel, LoadModelsCommand},
-	items::{slot_key::SlotKey, Item, Mount},
+	items::{slot_key::SlotKey, Item, Visualization},
 };
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
 	resources::Models,
-	traits::{accessors::get::GetRef, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
+	traits::{
+		accessors::get::{GetRef, Getter},
+		try_insert_on::TryInsertOn,
+		try_remove_from::TryRemoveFrom,
+	},
 };
 
 pub(crate) fn apply_load_models_commands<THands, TForearms>(
@@ -40,7 +44,7 @@ where
 
 enum ModelDataError {
 	SlotEmpty,
-	NoMountEntity(SlotKey, Mount),
+	NoMountEntity(SlotKey, Visualization),
 }
 
 fn collect_model_data<'a, THandMounts, TForearmMounts>(
@@ -62,10 +66,16 @@ where
 			.ok_or(ModelDataError::SlotEmpty)?;
 		let hand_mount = hand_mounts
 			.get(&slot_key)
-			.ok_or(ModelDataError::NoMountEntity(slot_key, Mount::Hand))?;
+			.ok_or(ModelDataError::NoMountEntity(
+				slot_key,
+				Visualization::MountHand,
+			))?;
 		let forearm_mount = forearm_mounts
 			.get(&slot_key)
-			.ok_or(ModelDataError::NoMountEntity(slot_key, Mount::Forearm))?;
+			.ok_or(ModelDataError::NoMountEntity(
+				slot_key,
+				Visualization::MountForearm,
+			))?;
 
 		Ok(LoadData {
 			agent,
@@ -87,12 +97,12 @@ fn try_get_handles(item: &Item, models: &Models) -> Result<Handles, Error> {
 		return Err(model_error(item));
 	};
 
-	match item.mount {
-		Mount::Hand => Ok(Handles {
+	match item.item_type.get() {
+		Visualization::MountHand => Ok(Handles {
 			hand: model.clone(),
 			forearm: default(),
 		}),
-		Mount::Forearm => Ok(Handles {
+		Visualization::MountForearm => Ok(Handles {
 			hand: default(),
 			forearm: model.clone(),
 		}),
@@ -109,7 +119,7 @@ fn model_error(item: &Item) -> Error {
 	}
 }
 
-fn slot_entity_error(key: &SlotKey, mount: &Mount) -> Error {
+fn slot_entity_error(key: &SlotKey, mount: &Visualization) -> Error {
 	Error {
 		msg: format!("No {:?} slot entity for {:?} found, abandoning", mount, key,),
 		lvl: Level::Error,
@@ -148,7 +158,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::LoadModel,
-		items::{slot_key::SlotKey, Item, Mount},
+		items::{slot_key::SlotKey, Item, ItemType, Visualization},
 		skills::Skill,
 	};
 	use bevy::ecs::system::RunSystemOnce;
@@ -204,7 +214,7 @@ mod tests {
 				SlotKey::BottomHand(Side::Left),
 				Some(Item {
 					model: Some("my/model/path"),
-					mount: Mount::Hand,
+					item_type: ItemType::Pistol,
 					..default()
 				}),
 			)]),
@@ -240,7 +250,7 @@ mod tests {
 				SlotKey::BottomHand(Side::Left),
 				Some(Item {
 					model: Some("my/model/path"),
-					mount: Mount::Forearm,
+					item_type: ItemType::Bracer,
 					..default()
 				}),
 			)]),
@@ -381,7 +391,7 @@ mod tests {
 		assert_eq!(
 			vec![Err(slot_entity_error(
 				&SlotKey::BottomHand(Side::Left),
-				&Mount::Hand
+				&Visualization::MountHand
 			))],
 			errors,
 		)
@@ -413,7 +423,7 @@ mod tests {
 		assert_eq!(
 			vec![Err(slot_entity_error(
 				&SlotKey::BottomHand(Side::Left),
-				&Mount::Forearm
+				&Visualization::MountForearm
 			))],
 			errors,
 		)
@@ -438,7 +448,7 @@ mod tests {
 					SlotKey::BottomHand(Side::Left),
 					Some(Item {
 						model: Some("my/model/path"),
-						mount: Mount::Hand,
+						item_type: ItemType::Pistol,
 						..default()
 					}),
 				)]),

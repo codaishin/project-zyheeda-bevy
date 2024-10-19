@@ -52,7 +52,6 @@ fn new_mapped_slot<TIn, TOut>(
 				name: slot.name,
 				skill: slot.skill.as_ref().and_then(&mut map_fn),
 				model: slot.model,
-				mount: slot.mount,
 				item_type: slot.item_type.clone(),
 			}),
 		)
@@ -62,10 +61,9 @@ fn new_mapped_slot<TIn, TOut>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::items::{ItemType, Mount};
+	use crate::items::ItemType;
 	use bevy::utils::default;
 	use common::components::Side;
-	use std::collections::HashSet;
 
 	#[test]
 	fn get_off_hand() {
@@ -196,8 +194,7 @@ mod tests {
 					name: "my item",
 					skill: Some("my/skill/path"),
 					model: Some("model"),
-					item_type: HashSet::from([ItemType::Pistol]),
-					mount: Mount::Hand,
+					item_type: ItemType::Pistol,
 				}),
 			)]
 			.into(),
@@ -211,8 +208,7 @@ mod tests {
 					name: "my item",
 					skill: Some(_Mapped("my/skill/path".to_owned())),
 					model: Some("model"),
-					item_type: HashSet::from([ItemType::Pistol]),
-					mount: Mount::Hand,
+					item_type: ItemType::Pistol,
 				}),
 			)]
 			.into(),

@@ -7,8 +7,7 @@ use bevy::{
 	prelude::{Added, Commands, Component, Entity, Query, With},
 };
 use common::traits::accessors::get::GetRef;
-use skills::items::{slot_key::SlotKey, Item, ItemType};
-use std::collections::HashSet;
+use skills::items::{slot_key::SlotKey, Item};
 
 pub(crate) fn visualize_invalid_skill<
 	TAgent: Component,
@@ -41,7 +40,7 @@ fn visualize_unusable<TSlots: GetRef<SlotKey, Item>>(
 ) -> Option<()> {
 	let item = descriptor.key_path.last().and_then(|key| agent.get(key))?;
 
-	if are_overlapping(&item.item_type, &descriptor.skill.is_usable_with) {
+	if descriptor.skill.is_usable_with.contains(&item.item_type) {
 		return None;
 	}
 
@@ -50,10 +49,6 @@ fn visualize_unusable<TSlots: GetRef<SlotKey, Item>>(
 	visualize(&mut entity);
 
 	Some(())
-}
-
-fn are_overlapping(a: &HashSet<ItemType>, b: &HashSet<ItemType>) -> bool {
-	a.intersection(b).next().is_some()
 }
 
 #[cfg(test)]
@@ -114,7 +109,7 @@ mod tests {
 			_Slots::from([(
 				SlotKey::BottomHand(Side::Right),
 				Item {
-					item_type: HashSet::from([ItemType::Pistol]),
+					item_type: ItemType::Pistol,
 					..default()
 				},
 			)]),
@@ -148,7 +143,7 @@ mod tests {
 			_Slots::from([(
 				SlotKey::BottomHand(Side::Right),
 				Item {
-					item_type: HashSet::from([ItemType::Pistol]),
+					item_type: ItemType::Pistol,
 					..default()
 				},
 			)]),
@@ -180,7 +175,7 @@ mod tests {
 		app.world_mut().spawn((_Slots::from([(
 			SlotKey::BottomHand(Side::Right),
 			Item {
-				item_type: HashSet::from([ItemType::Bracer]),
+				item_type: ItemType::Bracer,
 				..default()
 			},
 		)]),));
@@ -213,7 +208,7 @@ mod tests {
 			_Slots::from([(
 				SlotKey::BottomHand(Side::Right),
 				Item {
-					item_type: HashSet::from([ItemType::Bracer]),
+					item_type: ItemType::Bracer,
 					..default()
 				},
 			)]),

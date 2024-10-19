@@ -180,7 +180,7 @@ mod tests {
 	use bevy::ecs::system::RunSystemOnce;
 	use common::components::Side;
 	use skills::{
-		items::{Item, Mount},
+		items::{Item, ItemType},
 		skills::Skill,
 	};
 	use std::collections::HashMap;
@@ -250,7 +250,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Left),
 							Some(Item {
 								name: "left item",
-								mount: Mount::Forearm,
+								item_type: ItemType::Bracer,
 								..default()
 							}),
 						),
@@ -258,7 +258,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							Some(Item {
 								name: "right item",
-								mount: Mount::Hand,
+								item_type: ItemType::Pistol,
 								..default()
 							}),
 						),
@@ -310,12 +310,12 @@ mod tests {
 				(
 					Some(Item {
 						name: "right item",
-						mount: Mount::Hand,
+						item_type: ItemType::Pistol,
 						..default()
 					}),
 					Some(Item {
 						name: "left item",
-						mount: Mount::Forearm,
+						item_type: ItemType::Bracer,
 						..default()
 					})
 				),

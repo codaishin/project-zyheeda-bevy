@@ -46,13 +46,7 @@ fn compatible_skills<TEquipment: GetRef<SlotKey, Item<Skill>>, TLayout: Sync + S
 	let item = slots.get(key)?;
 	let skills = skills
 		.iter()
-		.filter(|(_, skill)| {
-			skill
-				.is_usable_with
-				.intersection(&item.item_type)
-				.next()
-				.is_some()
-		})
+		.filter(|(_, skill)| skill.is_usable_with.contains(&item.item_type))
 		.map(|(_, skill)| {
 			SkillButton::<DropdownItem<TLayout>>::new(skill.clone(), command.key_path.clone())
 		})
@@ -138,7 +132,7 @@ mod tests {
 			_Equipment(HashMap::from([(
 				SlotKey::BottomHand(Side::Right),
 				Item {
-					item_type: HashSet::from([ItemType::Pistol]),
+					item_type: ItemType::Pistol,
 					..default()
 				},
 			)])),
@@ -209,7 +203,7 @@ mod tests {
 			_Equipment(HashMap::from([(
 				SlotKey::BottomHand(Side::Right),
 				Item {
-					item_type: HashSet::from([ItemType::Pistol]),
+					item_type: ItemType::Pistol,
 					..default()
 				},
 			)])),
@@ -240,7 +234,7 @@ mod tests {
 			_Equipment(HashMap::from([(
 				SlotKey::BottomHand(Side::Right),
 				Item {
-					item_type: HashSet::from([ItemType::Pistol]),
+					item_type: ItemType::Pistol,
 					..default()
 				},
 			)])),
