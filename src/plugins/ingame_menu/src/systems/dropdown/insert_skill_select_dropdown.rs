@@ -9,7 +9,7 @@ use bevy::{
 };
 use common::{
 	components::Player,
-	traits::{get::Get, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
+	traits::{get::GetRef, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
 use skills::{
 	items::{slot_key::SlotKey, Item},
@@ -17,7 +17,7 @@ use skills::{
 };
 
 pub(crate) fn insert_skill_select_dropdown<
-	TEquipment: Get<SlotKey, Item<Skill>> + Component,
+	TEquipment: GetRef<SlotKey, Item<Skill>> + Component,
 	TLayout: Sync + Send + 'static,
 >(
 	mut commands: Commands,
@@ -37,7 +37,7 @@ pub(crate) fn insert_skill_select_dropdown<
 	}
 }
 
-fn compatible_skills<TEquipment: Get<SlotKey, Item<Skill>>, TLayout: Sync + Send + 'static>(
+fn compatible_skills<TEquipment: GetRef<SlotKey, Item<Skill>>, TLayout: Sync + Send + 'static>(
 	command: &SkillSelectDropdownInsertCommand<SlotKey, TLayout>,
 	slots: &TEquipment,
 	skills: &Res<Assets<Skill>>,
@@ -90,7 +90,7 @@ mod tests {
 	#[derive(Component)]
 	struct _Equipment(HashMap<SlotKey, Item<Skill>>);
 
-	impl Get<SlotKey, Item<Skill>> for _Equipment {
+	impl GetRef<SlotKey, Item<Skill>> for _Equipment {
 		fn get(&self, key: &SlotKey) -> Option<&Item<Skill>> {
 			self.0.get(key)
 		}

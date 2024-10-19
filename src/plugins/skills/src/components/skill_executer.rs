@@ -13,7 +13,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
-	traits::{get::Get, try_despawn_recursive::TryDespawnRecursive},
+	traits::{get::GetRef, try_despawn_recursive::TryDespawnRecursive},
 };
 
 use super::skill_spawners::SkillSpawners;

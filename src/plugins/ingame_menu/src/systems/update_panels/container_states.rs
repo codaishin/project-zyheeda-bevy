@@ -5,13 +5,13 @@ use bevy::{
 	prelude::Entity,
 	text::Text,
 };
-use common::traits::get::Get;
+use common::traits::get::GetRef;
 use skills::items::Item;
 
 pub fn panel_container_states<
 	TPanel: Component + Set<(), PanelState>,
 	TKey: Copy + Send + Sync + 'static,
-	TContainer: Component + Get<TKey, Item>,
+	TContainer: Component + GetRef<TKey, Item>,
 >(
 	containers: Query<&TContainer>,
 	mut texts: Query<(&Parent, &mut Text)>,
@@ -64,7 +64,7 @@ mod tests {
 		}
 	}
 
-	impl Get<usize, Item> for _Container {
+	impl GetRef<usize, Item> for _Container {
 		fn get(&self, key: &usize) -> Option<&Item> {
 			self.0.get(key)
 		}

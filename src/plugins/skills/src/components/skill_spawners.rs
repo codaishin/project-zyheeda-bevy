@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::{
 	components::Side,
 	traits::{
-		get::Get,
+		get::GetRef,
 		track::{IsTracking, Track, Untrack},
 	},
 };
@@ -34,7 +34,7 @@ impl<T: SlotKeyMapping> Default for SkillSpawners<T> {
 	}
 }
 
-impl Get<Option<SlotKey>, SkillSpawner> for SkillSpawners {
+impl GetRef<Option<SlotKey>, SkillSpawner> for SkillSpawners {
 	fn get(&self, key: &Option<SlotKey>) -> Option<&SkillSpawner> {
 		self.spawners.get(key)
 	}

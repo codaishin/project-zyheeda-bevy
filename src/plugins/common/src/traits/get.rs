@@ -1,4 +1,4 @@
-pub trait Get<TKey, TValue> {
+pub trait GetRef<TKey, TValue> {
 	fn get(&self, key: &TKey) -> Option<&TValue>;
 }
 

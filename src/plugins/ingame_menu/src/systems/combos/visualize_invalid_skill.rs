@@ -6,13 +6,13 @@ use bevy::{
 	ecs::system::EntityCommands,
 	prelude::{Added, Commands, Component, Entity, Query, With},
 };
-use common::traits::get::Get;
+use common::traits::get::GetRef;
 use skills::items::{slot_key::SlotKey, Item, ItemType};
 use std::collections::HashSet;
 
 pub(crate) fn visualize_invalid_skill<
 	TAgent: Component,
-	TSlots: Component + Get<SlotKey, Item>,
+	TSlots: Component + GetRef<SlotKey, Item>,
 	TVisualization: InsertContentOn,
 >(
 	mut commands: Commands,
@@ -33,7 +33,7 @@ pub(crate) fn visualize_invalid_skill<
 	}
 }
 
-fn visualize_unusable<TSlots: Get<SlotKey, Item>>(
+fn visualize_unusable<TSlots: GetRef<SlotKey, Item>>(
 	commands: &mut Commands,
 	(entity, descriptor): (Entity, &SkillButton<DropdownTrigger>),
 	agent: &TSlots,
@@ -81,7 +81,7 @@ mod tests {
 		}
 	}
 
-	impl Get<SlotKey, Item> for _Slots {
+	impl GetRef<SlotKey, Item> for _Slots {
 		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Item> {
 			self.0.get(key)
 		}

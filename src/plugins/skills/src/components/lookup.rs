@@ -1,7 +1,7 @@
 use crate::traits::{entity_names::EntityNames, key_string::KeyString};
 use bevy::prelude::*;
 use common::traits::{
-	get::Get,
+	get::GetRef,
 	track::{IsTracking, Track, Untrack},
 };
 use std::{collections::HashMap, marker::PhantomData};
@@ -56,7 +56,7 @@ impl<T> Untrack<Name> for Lookup<T> {
 	}
 }
 
-impl<T, TKey> Get<TKey, Entity> for Lookup<T>
+impl<T, TKey> GetRef<TKey, Entity> for Lookup<T>
 where
 	T: KeyString<TKey>,
 {
