@@ -2470,6 +2470,7 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
+ "items",
  "macros",
  "mockall",
  "skills",
@@ -2517,6 +2518,18 @@ checksum = "617ee6cf8e3f66f3b4ea67a4058564628cde41901316e19f559e14c7c72c5e7b"
 dependencies = [
  "core-foundation-sys",
  "mach2",
+]
+
+[[package]]
+name = "items"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "common",
+ "macros",
+ "mockall",
+ "serde",
+ "uuid",
 ]
 
 [[package]]
@@ -3642,6 +3655,7 @@ dependencies = [
  "common",
  "ingame_menu",
  "interactions",
+ "items",
  "light",
  "macros",
  "map_generation",
@@ -4012,6 +4026,7 @@ dependencies = [
  "bevy_rapier3d",
  "common",
  "interactions",
+ "items",
  "macros",
  "mockall",
  "serde",

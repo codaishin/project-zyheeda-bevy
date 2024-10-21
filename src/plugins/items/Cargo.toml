@@ -1,16 +1,13 @@
 [package]
-name = "ingame_menu"
+name = "items"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
 bevy.workspace = true
-bevy_rapier3d.workspace = true
-tracing.workspace = true
+serde.workspace = true
 uuid.workspace = true
 common.workspace = true
-items.workspace = true
-skills.workspace = true
 
 [dev-dependencies]
 mockall.workspace = true

@@ -76,7 +76,7 @@ fn if_item_skill_icon<'a>(
 		let slot = slots.0.get(&panel.key)?;
 		let item = slot.as_ref()?;
 
-		let skill = item.skill.as_ref()?;
+		let skill = item.content.as_ref()?;
 
 		skill.icon.clone()
 	}
@@ -101,8 +101,9 @@ mod tests {
 	use mockall::{automock, predicate::eq};
 	use skills::{
 		components::slots::Slots,
-		items::{slot_key::SlotKey, Item},
+		item::SkillItem,
 		skills::Activation,
+		slot_key::SlotKey,
 	};
 	use std::collections::HashMap;
 	use uuid::Uuid;
@@ -176,8 +177,8 @@ mod tests {
 	fn slots() -> Slots {
 		Slots(HashMap::from([(
 			SlotKey::BottomHand(Side::Right),
-			Some(Item {
-				skill: Some(Skill {
+			Some(SkillItem {
+				content: Some(Skill {
 					icon: Some(get_handle("item skill")),
 					..default()
 				}),

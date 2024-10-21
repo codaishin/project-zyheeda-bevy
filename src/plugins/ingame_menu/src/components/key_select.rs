@@ -10,7 +10,7 @@ use crate::traits::{
 	GetKey,
 };
 use bevy::prelude::{BuildChildren, ChildBuilder, Component, NodeBundle};
-use skills::items::slot_key::SlotKey;
+use skills::slot_key::SlotKey;
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct ReKeySkill<TKey = SlotKey> {

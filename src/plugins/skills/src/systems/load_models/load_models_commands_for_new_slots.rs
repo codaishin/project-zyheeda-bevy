@@ -17,7 +17,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{LoadModel, LoadModelsCommand},
-		items::slot_key::SlotKey,
+		slot_key::SlotKey,
 		skills::Skill,
 	};
 	use bevy::app::{App, Update};

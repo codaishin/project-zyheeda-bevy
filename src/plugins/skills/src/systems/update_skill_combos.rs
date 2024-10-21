@@ -103,8 +103,8 @@ fn flush_when_timed_out<
 mod tests {
 	use super::*;
 	use crate::{
-		items::slot_key::SlotKey,
 		skills::{QueuedSkill, Skill},
+		slot_key::SlotKey,
 		traits::IsTimedOut,
 	};
 	use bevy::{

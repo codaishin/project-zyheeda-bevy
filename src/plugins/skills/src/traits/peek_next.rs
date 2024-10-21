@@ -1,7 +1,7 @@
 use super::PeekNext;
 use crate::{
 	components::{combo_node::ComboNode, slots::Slots},
-	items::slot_key::SlotKey,
+	slot_key::SlotKey,
 	skills::Skill,
 };
 

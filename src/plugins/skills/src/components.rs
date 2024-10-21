@@ -10,7 +10,7 @@ pub(crate) mod skill_executer;
 pub(crate) mod skill_spawners;
 
 use self::slots::Slots;
-use crate::items::{slot_key::SlotKey, Item};
+use crate::slot_key::SlotKey;
 use common::components::Collection;
 
 #[derive(Debug, PartialEq)]

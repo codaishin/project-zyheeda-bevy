@@ -3,7 +3,7 @@ use bevy::{
 	prelude::{Component, Query, With},
 	ui::Interaction,
 };
-use skills::{items::slot_key::SlotKey, skills::Skill, traits::UpdateConfig};
+use skills::{skills::Skill, slot_key::SlotKey, traits::UpdateConfig};
 
 pub(crate) fn update_combo_skills<TAgent, TCombos, TLayout>(
 	mut agents: Query<&mut TCombos, With<TAgent>>,

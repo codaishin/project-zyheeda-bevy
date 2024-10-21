@@ -1,6 +1,6 @@
 use crate::components::key_select::{KeySelect, ReKeySkill};
 use bevy::prelude::{Component, In, Query, With};
-use skills::{items::slot_key::SlotKey, traits::UpdateConfig};
+use skills::{slot_key::SlotKey, traits::UpdateConfig};
 
 pub(crate) fn update_combo_keys<TAgent, TCombos>(
 	key_select: In<Option<KeySelect<ReKeySkill<SlotKey>, SlotKey>>>,

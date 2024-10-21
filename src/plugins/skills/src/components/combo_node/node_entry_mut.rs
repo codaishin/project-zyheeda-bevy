@@ -1,6 +1,6 @@
 use super::{ComboNode, NodeEntryMut};
 use crate::{
-	items::slot_key::SlotKey,
+	slot_key::SlotKey,
 	traits::{Insert, ReKey},
 };
 use bevy::prelude::default;
@@ -81,7 +81,7 @@ fn move_and_merge_branches_with_same_key<TSkill>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::combo_node::ComboNode, items::slot_key::SlotKey, skills::Skill};
+	use crate::{components::combo_node::ComboNode, skills::Skill, slot_key::SlotKey};
 	use bevy::prelude::default;
 	use common::components::Side;
 

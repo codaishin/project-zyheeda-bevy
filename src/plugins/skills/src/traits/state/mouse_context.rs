@@ -1,4 +1,4 @@
-use crate::{items::slot_key::SlotKey, traits::InputState};
+use crate::{slot_key::SlotKey, traits::InputState};
 use bevy::{input::keyboard::KeyCode, state::state::State};
 use common::{states::MouseContext, traits::map_value::TryMapBackwards};
 

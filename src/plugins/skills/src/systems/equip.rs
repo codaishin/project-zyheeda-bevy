@@ -1,7 +1,7 @@
 use crate::{
 	components::{slots::Slots, LoadModel, LoadModelsCommand},
-	items::{slot_key::SlotKey, Item},
-	skills::Skill,
+	item::SkillItem,
+	slot_key::SlotKey,
 	traits::swap_commands::SwapController,
 };
 use bevy::{
@@ -29,7 +29,7 @@ where
 	TContainer: Component,
 	TSwaps: Component,
 	for<'a> SwapController<'a, TInnerKey, SlotKey, TContainer, TSwaps>:
-		SwapCommands<SlotKey, Item<Skill>>,
+		SwapCommands<SlotKey, SkillItem>,
 {
 	let mut results = vec![];
 	let commands = &mut commands;
@@ -64,21 +64,24 @@ where
 fn try_swap(
 	slots: &mut Slots,
 	slot_key: SlotKey,
-	item: Option<Item<Skill>>,
-) -> Result<SwappedOut<Item<Skill>>, (SwapError, Error)> {
+	item: Option<SkillItem>,
+) -> Result<SwappedOut<SkillItem>, (SwapError, Error)> {
 	let slot = get_slot(slots, slot_key)?;
 
 	Ok(swap_item(item, slot))
 }
 
-fn get_slot(slots: &mut Slots, slot_key: SlotKey) -> Result<&mut Option<Item>, (SwapError, Error)> {
+fn get_slot(
+	slots: &mut Slots,
+	slot_key: SlotKey,
+) -> Result<&mut Option<SkillItem>, (SwapError, Error)> {
 	match slots.0.get_mut(&slot_key) {
 		Some(slot) => Ok(slot),
 		None => Err((SwapError::TryAgain, slot_warning(slot_key))),
 	}
 }
 
-fn swap_item(mut item: Option<Item<Skill>>, slot: &mut Option<Item>) -> SwappedOut<Item> {
+fn swap_item(mut item: Option<SkillItem>, slot: &mut Option<SkillItem>) -> SwappedOut<SkillItem> {
 	swap(&mut item, slot);
 
 	SwappedOut(item)
@@ -115,17 +118,15 @@ mod tests {
 
 	#[derive(Component, PartialEq, Clone, Debug, Default)]
 	pub struct _Container {
-		swap_ins: HashMap<SlotKey, SwapIn<Item<Skill>>>,
-		swap_outs: HashMap<SlotKey, SwappedOut<Item<Skill>>>,
+		swap_ins: HashMap<SlotKey, SwapIn<SkillItem>>,
+		swap_outs: HashMap<SlotKey, SwappedOut<SkillItem>>,
 		errors: HashMap<SlotKey, SwapError>,
 	}
 
-	impl<'a> SwapCommands<SlotKey, Item<Skill>>
-		for SwapController<'a, (), SlotKey, _Container, _Swaps>
-	{
+	impl<'a> SwapCommands<SlotKey, SkillItem> for SwapController<'a, (), SlotKey, _Container, _Swaps> {
 		fn try_swap(
 			&mut self,
-			mut swap_fn: impl FnMut(SlotKey, SwapIn<Item<Skill>>) -> SwapResult<Item<Skill>>,
+			mut swap_fn: impl FnMut(SlotKey, SwapIn<SkillItem>) -> SwapResult<SkillItem>,
 		) {
 			let SwapController { container, .. } = self;
 			for (slot_key, swap_in) in container.swap_ins.clone() {
@@ -166,7 +167,7 @@ mod tests {
 				_Container {
 					swap_ins: HashMap::from([(
 						SlotKey::BottomHand(Side::Right),
-						SwapIn(Some(Item {
+						SwapIn(Some(SkillItem {
 							name: "my item",
 							..default()
 						})),
@@ -199,7 +200,7 @@ mod tests {
 				_Container {
 					swap_ins: HashMap::from([(
 						SlotKey::BottomHand(Side::Right),
-						SwapIn(Some(Item {
+						SwapIn(Some(SkillItem {
 							name: "swap in",
 							..default()
 						})),
@@ -217,7 +218,7 @@ mod tests {
 		assert_eq!(
 			Some(&Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Right),
-				Some(Item {
+				Some(SkillItem {
 					name: "swap in",
 					..default()
 				}),
@@ -234,7 +235,7 @@ mod tests {
 			.spawn((
 				Slots::<Skill>::new([(
 					SlotKey::BottomHand(Side::Right),
-					Some(Item {
+					Some(SkillItem {
 						name: "swap out",
 						..default()
 					}),
@@ -255,7 +256,7 @@ mod tests {
 		assert_eq!(
 			HashMap::from([(
 				SlotKey::BottomHand(Side::Right),
-				SwappedOut(Some(Item {
+				SwappedOut(Some(SkillItem {
 					name: "swap out",
 					..default()
 				}))

@@ -4,7 +4,7 @@ use common::{
 	errors::{Error, Level},
 	traits::{accessors::get::GetRef, try_remove_from::TryRemoveFrom},
 };
-use skills::{components::slots::Slots, items::slot_key::SlotKey};
+use skills::{components::slots::Slots, slot_key::SlotKey};
 
 type SlotsToSwap<'a, THandMounts, TForearmMounts> = (
 	Entity,
@@ -180,7 +180,7 @@ mod tests {
 	use bevy::ecs::system::RunSystemOnce;
 	use common::components::Side;
 	use skills::{
-		items::{Item, ItemType},
+		item::{item_type::SkillItemType, SkillItem},
 		skills::Skill,
 	};
 	use std::collections::HashMap;
@@ -248,17 +248,17 @@ mod tests {
 					[
 						(
 							SlotKey::BottomHand(Side::Left),
-							Some(Item {
+							Some(SkillItem {
 								name: "left item",
-								item_type: ItemType::Bracer,
+								item_type: SkillItemType::Bracer,
 								..default()
 							}),
 						),
 						(
 							SlotKey::BottomHand(Side::Right),
-							Some(Item {
+							Some(SkillItem {
 								name: "right item",
-								item_type: ItemType::Pistol,
+								item_type: SkillItemType::Pistol,
 								..default()
 							}),
 						),
@@ -308,14 +308,14 @@ mod tests {
 					&mounts[2].handle,
 				],
 				(
-					Some(Item {
+					Some(SkillItem {
 						name: "right item",
-						item_type: ItemType::Pistol,
+						item_type: SkillItemType::Pistol,
 						..default()
 					}),
-					Some(Item {
+					Some(SkillItem {
 						name: "left item",
-						item_type: ItemType::Bracer,
+						item_type: SkillItemType::Bracer,
 						..default()
 					})
 				),
@@ -385,14 +385,14 @@ mod tests {
 				[
 					(
 						SlotKey::BottomHand(Side::Left),
-						Some(Item {
+						Some(SkillItem {
 							name: "left item",
 							..default()
 						}),
 					),
 					(
 						SlotKey::BottomHand(Side::Right),
-						Some(Item {
+						Some(SkillItem {
 							name: "right item",
 							..default()
 						}),
@@ -445,14 +445,14 @@ mod tests {
 				[
 					(
 						SlotKey::BottomHand(Side::Left),
-						Some(Item {
+						Some(SkillItem {
 							name: "left item",
 							..default()
 						}),
 					),
 					(
 						SlotKey::BottomHand(Side::Right),
-						Some(Item {
+						Some(SkillItem {
 							name: "right item",
 							..default()
 						}),

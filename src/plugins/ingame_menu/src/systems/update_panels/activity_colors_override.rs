@@ -20,7 +20,7 @@ use common::{
 	states::MouseContext,
 	traits::{accessors::get::GetterRef, iterate::Iterate, map_value::TryMapBackwards},
 };
-use skills::{items::slot_key::SlotKey, skills::QueuedSkill};
+use skills::{skills::QueuedSkill, slot_key::SlotKey};
 
 pub fn panel_activity_colors_override<
 	TMap: Resource + TryMapBackwards<KeyCode, SlotKey>,

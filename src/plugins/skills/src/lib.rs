@@ -1,8 +1,10 @@
 pub mod components;
 pub mod definitions;
-pub mod items;
+pub mod inventory_key;
+pub mod item;
 pub mod resources;
 pub mod skills;
+pub mod slot_key;
 pub mod systems;
 pub mod traits;
 
@@ -31,8 +33,10 @@ use components::{
 	slots::Slots,
 };
 use definitions::item_slots::{ForearmSlots, HandSlots};
-use items::{inventory_key::InventoryKey, slot_key::SlotKey, Item, ItemType};
-use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill};
+use inventory_key::InventoryKey;
+use item::{item_type::SkillItemType, SkillItem};
+use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill, SkillId};
+use slot_key::SlotKey;
 use std::time::Duration;
 use systems::{
 	advance_active_skill::advance_active_skill,
@@ -53,7 +57,7 @@ use systems::{
 	update_skill_combos::update_skill_combos,
 	uuid_to_skill::uuid_to_skill,
 };
-use uuid::{uuid, Uuid};
+use uuid::uuid;
 
 pub struct SkillsPlugin;
 
@@ -74,7 +78,7 @@ fn skill_load(app: &mut App) {
 fn inventory(app: &mut App) {
 	app.add_systems(
 		PreUpdate,
-		uuid_to_skill::<Inventory<Uuid>, Inventory<Skill>>,
+		uuid_to_skill::<Inventory<SkillId>, Inventory<Skill>>,
 	);
 }
 
@@ -91,7 +95,7 @@ fn skill_slot_load(app: &mut App) {
 				load_models_commands_for_new_slots,
 			),
 		)
-		.add_systems(PreUpdate, uuid_to_skill::<Slots<Uuid>, Slots>)
+		.add_systems(PreUpdate, uuid_to_skill::<Slots<SkillId>, Slots>)
 		.add_systems(Update, set_player_items)
 		.add_systems(
 			Update,
@@ -154,7 +158,7 @@ fn skill_execution(app: &mut App) {
 }
 
 fn skill_combo_load(app: &mut App) {
-	app.add_systems(PreUpdate, uuid_to_skill::<ComboNode<Uuid>, Combos>);
+	app.add_systems(PreUpdate, uuid_to_skill::<ComboNode<SkillId>, Combos>);
 }
 
 fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -177,62 +181,62 @@ fn get_loadout() -> Loadout<Player> {
 	Loadout::new([
 		(
 			SlotKey::TopHand(Side::Left),
-			Some(Item {
+			Some(SkillItem {
 				name: "Plasma Pistol A",
 				model: Some("pistol"),
-				skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
-				item_type: ItemType::Pistol,
+				content: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+				item_type: SkillItemType::Pistol,
 			}),
 		),
 		(
 			SlotKey::BottomHand(Side::Left),
-			Some(Item {
+			Some(SkillItem {
 				name: "Plasma Pistol B",
 				model: Some("pistol"),
-				skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
-				item_type: ItemType::Pistol,
+				content: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+				item_type: SkillItemType::Pistol,
 			}),
 		),
 		(
 			SlotKey::BottomHand(Side::Right),
-			Some(Item {
+			Some(SkillItem {
 				name: "Force Bracer",
 				model: Some("bracer"),
-				skill: Some(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba")),
-				item_type: ItemType::Bracer,
+				content: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
+				item_type: SkillItemType::Bracer,
 			}),
 		),
 		(
 			SlotKey::TopHand(Side::Right),
-			Some(Item {
+			Some(SkillItem {
 				name: "Force Bracer",
 				model: Some("bracer"),
-				skill: Some(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba")),
-				item_type: ItemType::Bracer,
+				content: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
+				item_type: SkillItemType::Bracer,
 			}),
 		),
 	])
 }
 
-fn get_inventory() -> Inventory<Uuid> {
+fn get_inventory() -> Inventory<SkillId> {
 	Inventory::new([
-		Some(Item {
+		Some(SkillItem {
 			name: "Plasma Pistol C",
 			model: Some("pistol"),
-			skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
-			item_type: ItemType::Pistol,
+			content: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+			item_type: SkillItemType::Pistol,
 		}),
-		Some(Item {
+		Some(SkillItem {
 			name: "Plasma Pistol D",
 			model: Some("pistol"),
-			skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
-			item_type: ItemType::Pistol,
+			content: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+			item_type: SkillItemType::Pistol,
 		}),
-		Some(Item {
+		Some(SkillItem {
 			name: "Plasma Pistol E",
 			model: Some("pistol"),
-			skill: Some(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e")),
-			item_type: ItemType::Pistol,
+			content: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+			item_type: SkillItemType::Pistol,
 		}),
 	])
 }

@@ -1,6 +1,7 @@
 use crate::{
 	components::{slots::Slots, LoadModel, LoadModelsCommand},
-	items::{slot_key::SlotKey, Item, Visualization},
+	item::{visualization::Visualization, SkillItem},
+	slot_key::SlotKey,
 };
 use bevy::prelude::*;
 use common::{
@@ -86,7 +87,7 @@ where
 	}
 }
 
-fn try_get_handles(item: &Item, models: &Models) -> Result<Handles, Error> {
+fn try_get_handles(item: &SkillItem, models: &Models) -> Result<Handles, Error> {
 	let Some(model) = item.model else {
 		return Ok(Handles {
 			hand: default(),
@@ -109,7 +110,7 @@ fn try_get_handles(item: &Item, models: &Models) -> Result<Handles, Error> {
 	}
 }
 
-fn model_error(item: &Item) -> Error {
+fn model_error(item: &SkillItem) -> Error {
 	Error {
 		msg: format!(
 			"Item({}): no model '{:?}' seems to exist, abandoning",
@@ -156,11 +157,7 @@ impl LoadData {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::LoadModel,
-		items::{slot_key::SlotKey, Item, ItemType, Visualization},
-		skills::Skill,
-	};
+	use crate::{components::LoadModel, item::item_type::SkillItemType, skills::Skill};
 	use bevy::ecs::system::RunSystemOnce;
 	use common::{components::Side, resources::Models, test_tools::utils::SingleThreadedApp};
 	use std::collections::HashMap;
@@ -212,9 +209,9 @@ mod tests {
 			_Forearms([(SlotKey::BottomHand(Side::Left), forearm)].into()),
 			Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Left),
-				Some(Item {
+				Some(SkillItem {
 					model: Some("my/model/path"),
-					item_type: ItemType::Pistol,
+					item_type: SkillItemType::Pistol,
 					..default()
 				}),
 			)]),
@@ -248,9 +245,9 @@ mod tests {
 			_Forearms([(SlotKey::BottomHand(Side::Left), forearm)].into()),
 			Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Left),
-				Some(Item {
+				Some(SkillItem {
 					model: Some("my/model/path"),
-					item_type: ItemType::Bracer,
+					item_type: SkillItemType::Bracer,
 					..default()
 				}),
 			)]),
@@ -280,7 +277,7 @@ mod tests {
 			_Forearms([(SlotKey::BottomHand(Side::Left), forearm)].into()),
 			Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Left),
-				Some(Item {
+				Some(SkillItem {
 					model: None,
 					..default()
 				}),
@@ -311,7 +308,7 @@ mod tests {
 			_Forearms([(SlotKey::BottomHand(Side::Left), forearm)].into()),
 			Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Left),
-				Some(Item {
+				Some(SkillItem {
 					model: Some("my/faulty/model/path"),
 					..default()
 				}),
@@ -342,7 +339,7 @@ mod tests {
 			_Forearms([(SlotKey::BottomHand(Side::Left), forearm)].into()),
 			Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Left),
-				Some(Item {
+				Some(SkillItem {
 					name: "my faulty item",
 					model: Some("my/faulty/model/path"),
 					..default()
@@ -356,7 +353,7 @@ mod tests {
 			.run_system_once(apply_load_models_commands::<_Hands, _Forearms>);
 
 		assert_eq!(
-			vec![Err(model_error(&Item {
+			vec![Err(model_error(&SkillItem {
 				name: "my faulty item",
 				model: Some("my/faulty/model/path"),
 				..default()
@@ -375,7 +372,7 @@ mod tests {
 			_Forearms([(SlotKey::BottomHand(Side::Left), forearm)].into()),
 			Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Left),
-				Some(Item {
+				Some(SkillItem {
 					name: "my faulty item",
 					model: Some("my/faulty/model/path"),
 					..default()
@@ -407,7 +404,7 @@ mod tests {
 			_Forearms::default(),
 			Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Left),
-				Some(Item {
+				Some(SkillItem {
 					name: "my faulty item",
 					model: Some("my/faulty/model/path"),
 					..default()
@@ -446,9 +443,9 @@ mod tests {
 				_Forearms([(SlotKey::BottomHand(Side::Left), forearm)].into()),
 				Slots::<Skill>::new([(
 					SlotKey::BottomHand(Side::Left),
-					Some(Item {
+					Some(SkillItem {
 						model: Some("my/model/path"),
-						item_type: ItemType::Pistol,
+						item_type: SkillItemType::Pistol,
 						..default()
 					}),
 				)]),

@@ -3,8 +3,8 @@ pub mod node_entry_mut;
 
 use super::slots::Slots;
 use crate::{
-	items::slot_key::SlotKey,
 	skills::Skill,
+	slot_key::SlotKey,
 	traits::{Combo, GetCombosOrdered, GetNode, GetNodeMut, PeekNext, RootKeys, TryMap},
 };
 use bevy::ecs::component::Component;
@@ -246,7 +246,7 @@ fn append_followups<'a>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::Item, items::ItemType};
+	use crate::{item::SkillItem, SkillItemType};
 	use bevy::prelude::default;
 	use common::components::Side;
 	use std::collections::{HashMap, HashSet};
@@ -255,15 +255,15 @@ mod tests {
 		Slots(HashMap::from([
 			(
 				SlotKey::BottomHand(Side::Right),
-				Some(Item {
-					item_type: ItemType::Pistol,
+				Some(SkillItem {
+					item_type: SkillItemType::Pistol,
 					..default()
 				}),
 			),
 			(
 				SlotKey::BottomHand(Side::Left),
-				Some(Item {
-					item_type: ItemType::Bracer,
+				Some(SkillItem {
+					item_type: SkillItemType::Bracer,
 					..default()
 				}),
 			),
@@ -278,7 +278,7 @@ mod tests {
 			(
 				Skill {
 					name: "first".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Pistol]),
+					is_usable_with: HashSet::from([SkillItemType::Pistol]),
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(
@@ -301,7 +301,7 @@ mod tests {
 			Some((
 				Skill {
 					name: "first".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Pistol]),
+					is_usable_with: HashSet::from([SkillItemType::Pistol]),
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(
@@ -327,7 +327,7 @@ mod tests {
 			(
 				Skill {
 					name: "first".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Pistol]),
+					is_usable_with: HashSet::from([SkillItemType::Pistol]),
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(
@@ -357,7 +357,7 @@ mod tests {
 			(
 				Skill {
 					name: "first".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Bracer]),
+					is_usable_with: HashSet::from([SkillItemType::Bracer]),
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(
@@ -389,7 +389,7 @@ mod tests {
 			(
 				Skill {
 					name: "first".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Pistol]),
+					is_usable_with: HashSet::from([SkillItemType::Pistol]),
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(
@@ -421,7 +421,7 @@ mod tests {
 			(
 				Skill {
 					name: "first".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Pistol]),
+					is_usable_with: HashSet::from([SkillItemType::Pistol]),
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(

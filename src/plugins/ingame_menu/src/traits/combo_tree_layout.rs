@@ -1,4 +1,4 @@
-use skills::{items::slot_key::SlotKey, skills::Skill, traits::GetCombosOrdered};
+use skills::{skills::Skill, slot_key::SlotKey, traits::GetCombosOrdered};
 use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Clone, Copy)]

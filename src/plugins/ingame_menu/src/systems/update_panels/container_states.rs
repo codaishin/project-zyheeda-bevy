@@ -6,12 +6,12 @@ use bevy::{
 	text::Text,
 };
 use common::traits::accessors::{get::GetRef, set::Setter};
-use skills::items::Item;
+use skills::item::SkillItem;
 
 pub fn panel_container_states<
 	TPanel: Component + Setter<PanelState>,
 	TKey: Copy + Send + Sync + 'static,
-	TContainer: Component + GetRef<TKey, Item>,
+	TContainer: Component + GetRef<TKey, SkillItem>,
 >(
 	containers: Query<&TContainer>,
 	mut texts: Query<(&Parent, &mut Text)>,
@@ -56,16 +56,16 @@ mod tests {
 	use mockall::{automock, predicate::eq};
 
 	#[derive(Component)]
-	struct _Container(HashMap<usize, Item>);
+	struct _Container(HashMap<usize, SkillItem>);
 
 	impl _Container {
-		pub fn new<const N: usize>(items: [(usize, Item); N]) -> Self {
+		pub fn new<const N: usize>(items: [(usize, SkillItem); N]) -> Self {
 			Self(HashMap::from(items))
 		}
 	}
 
-	impl GetRef<usize, Item> for _Container {
-		fn get(&self, key: &usize) -> Option<&Item> {
+	impl GetRef<usize, SkillItem> for _Container {
+		fn get(&self, key: &usize) -> Option<&SkillItem> {
 			self.0.get(key)
 		}
 	}
@@ -117,7 +117,7 @@ mod tests {
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 		app.world_mut().spawn(_Container::new([(
 			42,
-			Item {
+			SkillItem {
 				name: "my item",
 				..default()
 			},
@@ -167,7 +167,7 @@ mod tests {
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 		app.world_mut().spawn(_Container::new([(
 			42,
-			Item {
+			SkillItem {
 				name: "my item",
 				..default()
 			},
@@ -203,7 +203,7 @@ mod tests {
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
 		app.world_mut().spawn(_Container::new([(
 			42,
-			Item {
+			SkillItem {
 				name: "my item",
 				..default()
 			},

@@ -13,7 +13,7 @@ use common::traits::{
 	get_ui_text::{GetUiTextFor, UIText},
 	map_value::MapForward,
 };
-use skills::items::slot_key::SlotKey;
+use skills::slot_key::SlotKey;
 
 type Labels<'a, T> = (&'a Label<T, SlotKey>, &'a mut Text);
 

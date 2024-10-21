@@ -40,7 +40,7 @@ use bevy::{
 	utils::default,
 };
 use common::traits::load_asset::{LoadAsset, Path};
-use skills::{items::slot_key::SlotKey, skills::Skill};
+use skills::{skills::Skill, slot_key::SlotKey};
 
 #[derive(Component, Default, Debug, PartialEq)]
 pub(crate) struct ComboOverview {

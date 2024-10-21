@@ -1,6 +1,6 @@
 use crate::{
-	items::slot_key::SlotKey,
 	skills::{Animate, RunSkillBehavior, SkillState},
+	slot_key::SlotKey,
 	traits::{Flush, GetActiveSkill, GetAnimation, GetSkillBehavior, Schedule},
 };
 use animations::traits::{SkillLayer, StartAnimation, StopAnimation};

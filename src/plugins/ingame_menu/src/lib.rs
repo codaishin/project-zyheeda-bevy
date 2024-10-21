@@ -39,8 +39,9 @@ use skills::{
 		slots::Slots,
 	},
 	definitions::item_slots::{ForearmSlots, HandSlots},
-	items::{inventory_key::InventoryKey, slot_key::SlotKey},
+	inventory_key::InventoryKey,
 	skills::Skill,
+	slot_key::SlotKey,
 };
 use std::time::Duration;
 use systems::{

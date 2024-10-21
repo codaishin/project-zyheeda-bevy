@@ -1,6 +1,6 @@
 use crate::{
-	items::slot_key::SlotKey,
 	skills::{Activation, Animate, QueuedSkill, RunSkillBehavior, Skill, SkillState},
+	slot_key::SlotKey,
 	traits::{
 		Enqueue,
 		Flush,

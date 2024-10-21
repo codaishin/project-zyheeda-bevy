@@ -1,10 +1,12 @@
-use crate::{skills::Skill, traits::TryMap};
+use crate::{
+	skills::{Skill, SkillId},
+	traits::TryMap,
+};
 use bevy::{
 	asset::Assets,
 	prelude::{Commands, Component, Entity, Query, Res, State},
 };
 use common::states::{AssetLoadState, LoadState};
-use uuid::Uuid;
 
 pub(crate) fn uuid_to_skill<TSource, TResult>(
 	mut commands: Commands,
@@ -12,7 +14,7 @@ pub(crate) fn uuid_to_skill<TSource, TResult>(
 	sources: Query<(Entity, &TSource)>,
 	state: Res<State<AssetLoadState<Skill>>>,
 ) where
-	TSource: Component + TryMap<Uuid, Skill, TResult>,
+	TSource: Component + TryMap<SkillId, Skill, TResult>,
 	TResult: Component,
 {
 	if **state.get() == LoadState::Loading {
@@ -33,13 +35,13 @@ pub(crate) fn uuid_to_skill<TSource, TResult>(
 
 fn apply_map<TSource, TResult>(source: &TSource, skills: &Res<Assets<Skill>>) -> TResult
 where
-	TSource: TryMap<Uuid, Skill, TResult>,
+	TSource: TryMap<SkillId, Skill, TResult>,
 {
-	source.try_map(|uuid| {
+	source.try_map(|skill_id| {
 		skills
 			.iter()
 			.map(|(_, skill)| skill)
-			.find(|skill| &skill.id == uuid)
+			.find(|skill| &skill.id == skill_id)
 			.cloned()
 	})
 }
@@ -55,12 +57,13 @@ mod tests {
 		utils::default,
 	};
 	use common::test_tools::utils::SingleThreadedApp;
+	use uuid::Uuid;
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Container<T: Sync + Send + 'static>(Option<T>);
 
-	impl TryMap<Uuid, Skill, _Container<Skill>> for _Container<Uuid> {
-		fn try_map(&self, mut map_fn: impl FnMut(&Uuid) -> Option<Skill>) -> _Container<Skill> {
+	impl TryMap<SkillId, Skill, _Container<Skill>> for _Container<SkillId> {
+		fn try_map(&self, mut map_fn: impl FnMut(&SkillId) -> Option<Skill>) -> _Container<Skill> {
 			_Container(self.0.and_then(|id| map_fn(&id)))
 		}
 	}
@@ -71,14 +74,17 @@ mod tests {
 		app.insert_state(AssetLoadState::<Skill>::new(LoadState::Loading));
 		app.init_resource::<Assets<Skill>>();
 
-		app.add_systems(Update, uuid_to_skill::<_Container<Uuid>, _Container<Skill>>);
+		app.add_systems(
+			Update,
+			uuid_to_skill::<_Container<SkillId>, _Container<Skill>>,
+		);
 
 		app
 	}
 
 	#[test]
 	fn map_uuid_to_skill_when_loaded() {
-		let id = Uuid::new_v4();
+		let id = SkillId(Uuid::new_v4());
 		let mut app = setup();
 		app.insert_state(AssetLoadState::<Skill>::new(LoadState::Loaded));
 		app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
@@ -102,7 +108,7 @@ mod tests {
 
 	#[test]
 	fn remove_source() {
-		let id = Uuid::new_v4();
+		let id = SkillId(Uuid::new_v4());
 		let mut app = setup();
 		app.insert_state(AssetLoadState::<Skill>::new(LoadState::Loaded));
 		app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
@@ -114,12 +120,12 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(agent).get::<_Container<Uuid>>())
+		assert_eq!(None, app.world().entity(agent).get::<_Container<SkillId>>())
 	}
 
 	#[test]
 	fn do_nothing_when_skill_assets_loading() {
-		let id = Uuid::new_v4();
+		let id = SkillId(Uuid::new_v4());
 		let mut app = setup();
 		app.insert_state(AssetLoadState::<Skill>::new(LoadState::Loading));
 		app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
@@ -135,7 +141,7 @@ mod tests {
 		assert_eq!(
 			(Some(&_Container(Some(id))), None),
 			(
-				agent.get::<_Container<Uuid>>(),
+				agent.get::<_Container<SkillId>>(),
 				agent.get::<_Container<Skill>>()
 			)
 		)

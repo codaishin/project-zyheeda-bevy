@@ -1,7 +1,7 @@
 use super::combo_overview::{ComboOverview, SkillButtonBundle};
 use crate::traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn};
 use bevy::prelude::{ChildBuilder, Component, NodeBundle};
-use skills::{items::slot_key::SlotKey, skills::Skill};
+use skills::{skills::Skill, slot_key::SlotKey};
 use std::marker::PhantomData;
 
 #[derive(Debug, Default, PartialEq, Clone)]

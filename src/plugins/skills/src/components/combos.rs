@@ -1,7 +1,7 @@
 use super::{combo_node::ComboNode, Slots};
 use crate::{
-	items::slot_key::SlotKey,
 	skills::Skill,
+	slot_key::SlotKey,
 	traits::{
 		Combo,
 		GetCombosOrdered,

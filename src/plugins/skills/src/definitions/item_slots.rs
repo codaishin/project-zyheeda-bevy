@@ -1,5 +1,5 @@
 use crate::{
-	items::slot_key::SlotKey,
+	slot_key::SlotKey,
 	traits::{entity_names::EntityNames, key_string::KeyString},
 };
 use common::components::{Player, Side};

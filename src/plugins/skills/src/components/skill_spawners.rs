@@ -1,4 +1,4 @@
-use crate::{behaviors::SkillSpawner, items::slot_key::SlotKey};
+use crate::{behaviors::SkillSpawner, slot_key::SlotKey};
 use bevy::prelude::*;
 use common::{
 	components::Side,

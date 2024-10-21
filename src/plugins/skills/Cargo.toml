@@ -13,6 +13,7 @@ animations.workspace = true
 behaviors.workspace = true
 common.workspace = true
 interactions.workspace = true
+items.workspace = true
 
 [dev-dependencies]
 mockall.workspace = true
