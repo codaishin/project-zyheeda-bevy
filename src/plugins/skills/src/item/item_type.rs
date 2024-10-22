@@ -1,7 +1,4 @@
 use crate::definitions::item_slots::{ForearmSlots, HandSlots};
-
-use super::visualization::Visualization;
-use common::traits::accessors::get::Getter;
 use items::traits::uses_visualizer::UsesVisualizer;
 use serde::{Deserialize, Serialize};
 
@@ -10,15 +7,6 @@ pub enum SkillItemType {
 	#[default]
 	Pistol,
 	Bracer,
-}
-
-impl Getter<Visualization> for SkillItemType {
-	fn get(&self) -> Visualization {
-		match self {
-			SkillItemType::Pistol => Visualization::MountHand,
-			SkillItemType::Bracer => Visualization::MountForearm,
-		}
-	}
 }
 
 impl<TAgent> UsesVisualizer<HandSlots<TAgent>> for SkillItemType {
@@ -36,18 +24,5 @@ impl<TAgent> UsesVisualizer<ForearmSlots<TAgent>> for SkillItemType {
 			SkillItemType::Pistol => false,
 			SkillItemType::Bracer => true,
 		}
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn item_type_mounts() {
-		assert_eq!(
-			[Visualization::MountHand, Visualization::MountForearm],
-			[SkillItemType::Pistol.get(), SkillItemType::Bracer.get()]
-		);
 	}
 }
