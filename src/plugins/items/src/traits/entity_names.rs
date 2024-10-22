@@ -1,3 +1,3 @@
-pub(crate) trait EntityNames {
+pub trait EntityNames {
 	fn entity_names() -> Vec<&'static str>;
 }

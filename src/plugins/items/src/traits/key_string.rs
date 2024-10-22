@@ -1,3 +1,3 @@
-pub(crate) trait KeyString<TKey> {
+pub trait KeyString<TKey> {
 	fn key_string(key: &TKey) -> &'static str;
 }

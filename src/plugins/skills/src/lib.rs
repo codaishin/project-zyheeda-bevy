@@ -26,7 +26,6 @@ use components::{
 	combos::Combos,
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
-	lookup::Lookup,
 	queue::Queue,
 	skill_executer::SkillExecuter,
 	skill_spawners::SkillSpawners,
@@ -38,6 +37,7 @@ use definitions::{
 };
 use inventory_key::InventoryKey;
 use item::{item_type::SkillItemType, SkillItem};
+use items::{components::visualizer::Visualizer, RegisterVisualizer};
 use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill, SkillId};
 use slot_key::SlotKey;
 use std::time::Duration;
@@ -86,10 +86,6 @@ fn inventory(app: &mut App) {
 }
 
 fn skill_slot_load(app: &mut App) {
-	type PlayerHands = Lookup<HandSlots<Player>>;
-	type PlayerForearms = Lookup<ForearmSlots<Player>>;
-	type PlayerSubModels = Lookup<SubModels<Player>>;
-
 	app.add_systems(Startup, load_models)
 		.add_systems(
 			PreUpdate,
@@ -100,16 +96,9 @@ fn skill_slot_load(app: &mut App) {
 		)
 		.add_systems(PreUpdate, uuid_to_skill::<Slots<SkillId>, Slots>)
 		.add_systems(Update, set_player_items)
-		.add_systems(
-			Update,
-			(
-				PlayerHands::track_in_self_and_children::<Name>().system(),
-				PlayerForearms::track_in_self_and_children::<Name>().system(),
-				PlayerSubModels::track_in_self_and_children::<Name>()
-					.with::<Handle<Mesh>>()
-					.system(),
-			)
-		)
+		.register_visualizer_for::<HandSlots<Player>, Name>()
+		.register_visualizer_for::<ForearmSlots<Player>, Name>()
+		.register_visualizer_for::<SubModels<Player>, Handle<Mesh>>()
 		.add_systems(
 			Update,
 			(
@@ -125,7 +114,11 @@ fn skill_slot_load(app: &mut App) {
 					Collection<Swap<SlotKey, InventoryKey>>,
 				>
 					.pipe(log_many),
-				apply_load_models_commands::<PlayerHands, PlayerForearms>.pipe(log_many),
+				apply_load_models_commands::<
+					Visualizer<HandSlots<Player>>,
+					Visualizer<ForearmSlots<Player>>
+				>
+					.pipe(log_many),
 			),
 		);
 }

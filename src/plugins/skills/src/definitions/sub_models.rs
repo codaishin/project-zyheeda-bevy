@@ -1,8 +1,6 @@
-use crate::{
-	slot_key::SlotKey,
-	traits::{entity_names::EntityNames, key_string::KeyString},
-};
+use crate::slot_key::SlotKey;
 use common::components::{Player, Side};
+use items::traits::{entity_names::EntityNames, key_string::KeyString};
 use std::marker::PhantomData;
 
 const ARM_TOP_L: &str = "ArmTopLeftModel";

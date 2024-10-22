@@ -2,7 +2,6 @@ use crate::{
 	components::{
 		combo_node::ComboNode,
 		combos_time_out::CombosTimeOut,
-		lookup::Lookup,
 		queue::Queue,
 		skill_executer::SkillExecuter,
 		skill_spawners::SkillSpawners,
@@ -18,6 +17,7 @@ use crate::{
 };
 use bevy::{ecs::bundle::Bundle, prelude::default};
 use common::components::Idle;
+use items::components::visualizer::Visualizer;
 use std::collections::HashMap;
 
 #[derive(Bundle)]
@@ -73,9 +73,9 @@ struct ItemVisualizationBundle<TAgent>
 where
 	TAgent: Sync + Send + 'static,
 {
-	sub_models: Lookup<SubModels<TAgent>>,
-	hand_slots: Lookup<HandSlots<TAgent>>,
-	forearm_slots: Lookup<ForearmSlots<TAgent>>,
+	sub_models: Visualizer<SubModels<TAgent>>,
+	hand_slots: Visualizer<HandSlots<TAgent>>,
+	forearm_slots: Visualizer<ForearmSlots<TAgent>>,
 }
 
 impl<TAgent> Default for ItemVisualizationBundle<TAgent>

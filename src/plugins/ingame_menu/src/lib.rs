@@ -29,12 +29,12 @@ use components::{
 	AppendSkillCommand,
 };
 use events::DropdownEvent;
+use items::components::visualizer::Visualizer;
 use skills::{
 	components::{
 		combos::Combos,
 		combos_time_out::CombosTimeOut,
 		inventory::Inventory,
-		lookup::Lookup,
 		queue::Queue,
 		slots::Slots,
 	},
@@ -278,7 +278,10 @@ fn inventory_screen_systems(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				swap_equipped_items::<Lookup<HandSlots<Player>>, Lookup<ForearmSlots<Player>>>
+				swap_equipped_items::<
+					Visualizer<HandSlots<Player>>,
+					Visualizer<ForearmSlots<Player>>,
+				>
 					.pipe(log_many),
 				swap_inventory_items,
 			),
