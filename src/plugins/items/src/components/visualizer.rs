@@ -8,13 +8,13 @@ use std::{collections::HashMap, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
 pub struct Visualizer<T> {
-	entities: HashMap<Name, Entity>,
+	pub(crate) entities: HashMap<Name, Entity>,
 	phantom_data: PhantomData<T>,
 }
 
 impl<T> Visualizer<T> {
 	#[cfg(test)]
-	fn new<const N: usize>(entities: [(Name, Entity); N]) -> Self {
+	pub(crate) fn new<const N: usize>(entities: [(Name, Entity); N]) -> Self {
 		Self {
 			entities: HashMap::from(entities),
 			..default()

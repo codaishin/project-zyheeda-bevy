@@ -96,9 +96,9 @@ fn skill_slot_load(app: &mut App) {
 		)
 		.add_systems(PreUpdate, uuid_to_skill::<Slots<SkillId>, Slots>)
 		.add_systems(Update, set_player_items)
-		.register_visualizer_for::<HandSlots<Player>, Name>()
-		.register_visualizer_for::<ForearmSlots<Player>, Name>()
-		.register_visualizer_for::<SubModels<Player>, Handle<Mesh>>()
+		.register_visualizer::<HandSlots<Player>, Name>()
+		.register_visualizer::<ForearmSlots<Player>, Name>()
+		.register_visualizer::<SubModels<Player>, Handle<Mesh>>()
 		.add_systems(
 			Update,
 			(

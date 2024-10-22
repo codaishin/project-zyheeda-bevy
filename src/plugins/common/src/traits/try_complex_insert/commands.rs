@@ -21,6 +21,17 @@ where
 	}
 }
 
+impl<TCommands, T> TryComplexInsert<T> for In<TCommands>
+where
+	TCommands: TryComplexInsert<T>,
+{
+	/// Implementation for `In` to allow commands mock injection
+	/// in tests
+	fn try_complex_insert(&mut self, entity: Entity, value: T) {
+		self.0.try_complex_insert(entity, value);
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;

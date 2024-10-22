@@ -1,6 +1,6 @@
 mod commands;
 
-use bevy::prelude::Entity;
+use bevy::prelude::*;
 
 pub trait TryComplexInsert<T> {
 	fn try_complex_insert(&mut self, entity: Entity, value: T);
