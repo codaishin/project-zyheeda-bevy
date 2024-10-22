@@ -1,8 +1,8 @@
 use super::{AdvanceCombo, PeekNext, SetNextCombo};
 use crate::{
 	components::{combo_node::ComboNode, slots::Slots},
-	slot_key::SlotKey,
 	skills::Skill,
+	slot_key::SlotKey,
 };
 
 impl<T: PeekNext<(Skill, ComboNode)> + SetNextCombo<Option<ComboNode>>> AdvanceCombo for T {
