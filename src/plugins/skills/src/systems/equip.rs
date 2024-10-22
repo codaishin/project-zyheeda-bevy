@@ -1,18 +1,14 @@
 use crate::{
-	components::{slots::Slots, LoadModel, LoadModelsCommand},
+	components::slots::Slots,
 	item::SkillItem,
 	slot_key::SlotKey,
 	traits::swap_commands::SwapController,
 };
-use bevy::{
-	ecs::component::Component,
-	prelude::{Commands, Entity, Query},
-};
+use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
 	traits::{
 		swap_command::{SwapCommands, SwapError, SwapIn, SwappedOut},
-		try_insert_on::TryInsertOn,
 		try_remove_from::TryRemoveFrom,
 	},
 };
@@ -37,25 +33,20 @@ where
 	for (agent, mut slots, mut container, mut swaps) in &mut agent {
 		let slots = slots.as_mut();
 		let mut swap_controller = SwapController::new(container.as_mut(), swaps.as_mut());
-		let mut load_models_command = LoadModelsCommand::new([]);
 
-		swap_controller.try_swap(
-			|slot_key, SwapIn(item)| match try_swap(slots, slot_key, item) {
-				Ok(swapped_out) => {
-					load_models_command.0.push(LoadModel(slot_key));
-					Ok(swapped_out)
-				}
+		swap_controller.try_swap(|slot_key, SwapIn(item)| {
+			match try_swap(slots, slot_key, item.clone()) {
+				Ok(swapped_out) => Ok(swapped_out),
 				Err((swap_error, log_error)) => {
 					results.push(Err(log_error));
 					Err(swap_error)
 				}
-			},
-		);
+			}
+		});
 
 		if swap_controller.is_empty() {
 			commands.try_remove_from::<TSwaps>(agent);
 		}
-		commands.try_insert_on(agent, load_models_command);
 	}
 
 	results
@@ -98,11 +89,6 @@ fn slot_warning(slot: SlotKey) -> Error {
 mod tests {
 	use super::*;
 	use crate::skills::Skill;
-	use bevy::{
-		ecs::system::IntoSystem,
-		prelude::{App, Update},
-		utils::default,
-	};
 	use common::{
 		components::Side,
 		systems::log::test_tools::{fake_log_error_many_recourse, FakeErrorLogManyResource},
@@ -155,39 +141,6 @@ mod tests {
 		);
 
 		app
-	}
-
-	#[test]
-	fn set_load_models_command() {
-		let mut app = setup();
-		let agent = app
-			.world_mut()
-			.spawn((
-				Slots::<Skill>::new([(SlotKey::BottomHand(Side::Right), None)]),
-				_Container {
-					swap_ins: HashMap::from([(
-						SlotKey::BottomHand(Side::Right),
-						SwapIn(Some(SkillItem {
-							name: "my item",
-							..default()
-						})),
-					)]),
-					..default()
-				},
-				_Swaps { is_empty: false },
-			))
-			.id();
-
-		app.update();
-
-		let agent = app.world().entity(agent);
-
-		assert_eq!(
-			Some(&LoadModelsCommand::new([LoadModel(SlotKey::BottomHand(
-				Side::Right
-			))])),
-			agent.get::<LoadModelsCommand>()
-		);
 	}
 
 	#[test]

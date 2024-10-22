@@ -37,7 +37,7 @@ use definitions::{
 };
 use inventory_key::InventoryKey;
 use item::{item_type::SkillItemType, SkillItem};
-use items::{components::visualizer::Visualizer, RegisterVisualizer};
+use items::RegisterVisualizer;
 use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill, SkillId};
 use slot_key::SlotKey;
 use std::time::Duration;
@@ -48,10 +48,6 @@ use systems::{
 	execute::ExecuteSkills,
 	flush::flush,
 	get_inputs::get_inputs,
-	load_models::{
-		apply_load_models_commands::apply_load_models_commands,
-		load_models_commands_for_new_slots::load_models_commands_for_new_slots,
-	},
 	mouse_context::{
 		advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
 		release::release_triggered_mouse_context,
@@ -59,6 +55,7 @@ use systems::{
 	},
 	update_skill_combos::update_skill_combos,
 	uuid_to_skill::uuid_to_skill,
+	visualize_slot_items::visualize_slot_items,
 };
 use uuid::uuid;
 
@@ -89,16 +86,14 @@ fn skill_slot_load(app: &mut App) {
 	app.add_systems(Startup, load_models)
 		.add_systems(
 			PreUpdate,
-			(
-				SkillSpawners::track_in_self_and_children::<Name>().system(),
-				load_models_commands_for_new_slots,
-			),
+			SkillSpawners::track_in_self_and_children::<Name>().system(),
 		)
 		.add_systems(PreUpdate, uuid_to_skill::<Slots<SkillId>, Slots>)
 		.add_systems(Update, set_player_items)
 		.register_visualizer::<HandSlots<Player>, Name>()
 		.register_visualizer::<ForearmSlots<Player>, Name>()
 		.register_visualizer::<SubModels<Player>, Handle<Mesh>>()
+		.add_systems(Update, visualize_slot_items::<Player>)
 		.add_systems(
 			Update,
 			(
@@ -112,11 +107,6 @@ fn skill_slot_load(app: &mut App) {
 					Inventory<Skill>,
 					InventoryKey,
 					Collection<Swap<SlotKey, InventoryKey>>,
-				>
-					.pipe(log_many),
-				apply_load_models_commands::<
-					Visualizer<HandSlots<Player>>,
-					Visualizer<ForearmSlots<Player>>
 				>
 					.pipe(log_many),
 			),

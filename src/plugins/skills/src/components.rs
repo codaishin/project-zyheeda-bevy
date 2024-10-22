@@ -7,12 +7,3 @@ pub mod slots;
 
 pub(crate) mod skill_executer;
 pub(crate) mod skill_spawners;
-
-use self::slots::Slots;
-use crate::slot_key::SlotKey;
-use common::components::Collection;
-
-#[derive(Debug, PartialEq)]
-pub(crate) struct LoadModel(pub SlotKey);
-
-pub(crate) type LoadModelsCommand = Collection<LoadModel>;

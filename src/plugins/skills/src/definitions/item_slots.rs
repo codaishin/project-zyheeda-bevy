@@ -13,6 +13,7 @@ const TOP_FOREARM_R: &str = "top_forearm.R";
 const BTM_FOREARM_L: &str = "bottom_forearm.L";
 const BTM_FOREARM_R: &str = "bottom_forearm.R";
 
+#[derive(Debug, PartialEq)]
 pub struct HandSlots<T>(PhantomData<T>);
 
 impl EntityNames for HandSlots<Player> {
@@ -32,6 +33,7 @@ impl KeyString<SlotKey> for HandSlots<Player> {
 	}
 }
 
+#[derive(Debug, PartialEq)]
 pub struct ForearmSlots<T>(PhantomData<T>);
 
 impl EntityNames for ForearmSlots<Player> {

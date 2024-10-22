@@ -1,4 +1,4 @@
-use super::{combo_node::ComboNode, Slots};
+use super::{combo_node::ComboNode, slots::Slots};
 use crate::{
 	skills::Skill,
 	slot_key::SlotKey,
