@@ -1,8 +1,6 @@
-use crate::{
-	items::slot_key::SlotKey,
-	traits::{entity_names::EntityNames, key_string::KeyString},
-};
+use crate::slot_key::SlotKey;
 use common::components::{Player, Side};
+use items::traits::{entity_names::EntityNames, key_string::KeyString};
 use std::marker::PhantomData;
 
 const TOP_HAND_L: &str = "top_hand_slot.L";
@@ -15,6 +13,7 @@ const TOP_FOREARM_R: &str = "top_forearm.R";
 const BTM_FOREARM_L: &str = "bottom_forearm.L";
 const BTM_FOREARM_R: &str = "bottom_forearm.R";
 
+#[derive(Debug, PartialEq)]
 pub struct HandSlots<T>(PhantomData<T>);
 
 impl EntityNames for HandSlots<Player> {
@@ -34,6 +33,7 @@ impl KeyString<SlotKey> for HandSlots<Player> {
 	}
 }
 
+#[derive(Debug, PartialEq)]
 pub struct ForearmSlots<T>(PhantomData<T>);
 
 impl EntityNames for ForearmSlots<Player> {

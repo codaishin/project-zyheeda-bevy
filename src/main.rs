@@ -23,6 +23,7 @@ use common::{
 };
 use ingame_menu::IngameMenuPlugin;
 use interactions::{components::blocker::Blocker, InteractionsPlugin};
+use items::ItemsPlugin;
 use light::{components::ResponsiveLightTrigger, LightPlugin};
 use map_generation::MapGenerationPlugin;
 use prefabs::PrefabsPlugin;
@@ -56,6 +57,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(IngameMenuPlugin)
 		.add_plugins(InteractionsPlugin)
 		.add_plugins(BarsPlugin)
+		.add_plugins(ItemsPlugin)
 		.add_plugins(SkillsPlugin)
 		.add_plugins(BehaviorsPlugin)
 		.add_plugins(AnimationsPlugin)

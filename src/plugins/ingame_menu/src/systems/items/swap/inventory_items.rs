@@ -8,7 +8,8 @@ use common::{
 };
 use skills::{
 	components::inventory::Inventory,
-	items::{inventory_key::InventoryKey, Item},
+	inventory_key::InventoryKey,
+	item::SkillItem,
 	skills::Skill,
 };
 use std::cmp::max;
@@ -30,14 +31,14 @@ pub fn swap_inventory_items(mut commands: Commands, mut items_to_swap: Query<Ite
 }
 
 fn do_swap(
-	inventory: &mut Mut<Collection<Option<Item<Skill>>>>,
+	inventory: &mut Mut<Collection<Option<SkillItem>>>,
 	swap: &Swap<InventoryKey, InventoryKey>,
 ) {
 	fill_to(&mut inventory.0, max(swap.0 .0, swap.1 .0));
 	inventory.0.swap(swap.0 .0, swap.1 .0);
 }
 
-fn fill_to(inventory: &mut Vec<Option<Item<Skill>>>, index: usize) {
+fn fill_to(inventory: &mut Vec<Option<SkillItem>>, index: usize) {
 	if index < inventory.len() {
 		return;
 	}
@@ -60,12 +61,12 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Inventory::<Skill>::new([
-					Some(Item {
+					Some(SkillItem {
 						name: "item a",
 						..default()
 					}),
 					None,
-					Some(Item {
+					Some(SkillItem {
 						name: "item b",
 						..default()
 					}),
@@ -82,12 +83,12 @@ mod tests {
 
 		assert_eq!(
 			vec![
-				Some(Item {
+				Some(SkillItem {
 					name: "item b",
 					..default()
 				}),
 				None,
-				Some(Item {
+				Some(SkillItem {
 					name: "item a",
 					..default()
 				})
@@ -102,7 +103,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Inventory::<Skill>::new([Some(Item {
+				Inventory::<Skill>::new([Some(SkillItem {
 					name: "item",
 					..default()
 				})]),
@@ -120,7 +121,7 @@ mod tests {
 			vec![
 				None,
 				None,
-				Some(Item {
+				Some(SkillItem {
 					name: "item",
 					..default()
 				})
@@ -135,7 +136,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Inventory::<Skill>::new([Some(Item {
+				Inventory::<Skill>::new([Some(SkillItem {
 					name: "item",
 					..default()
 				})]),
@@ -152,7 +153,7 @@ mod tests {
 		assert_eq!(
 			vec![
 				None,
-				Some(Item {
+				Some(SkillItem {
 					name: "item",
 					..default()
 				})

@@ -4,7 +4,7 @@ pub(crate) mod equip;
 pub(crate) mod execute;
 pub(crate) mod flush;
 pub(crate) mod get_inputs;
-pub(crate) mod load_models;
 pub(crate) mod mouse_context;
 pub(crate) mod update_skill_combos;
 pub(crate) mod uuid_to_skill;
+pub(crate) mod visualize_slot_items;

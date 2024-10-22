@@ -1,4 +1,4 @@
-use crate::items::{inventory_key::InventoryKey, slot_key::SlotKey, Item};
+use crate::{inventory_key::InventoryKey, item::SkillItem, slot_key::SlotKey};
 use common::{
 	components::{Collection, Swap},
 	traits::{
@@ -44,13 +44,16 @@ impl<'a, TInnerKey, TOuterKey, TContainer, TSwaps>
 
 struct RetryFailed<T>(T);
 
-impl<'a, TContainer, TSwap, TContainerKey> SwapCommands<SlotKey, Item>
+impl<'a, TContainer, TSwap, TContainerKey> SwapCommands<SlotKey, SkillItem>
 	for SwapController<'a, TContainerKey, SlotKey, TContainer, Collection<TSwap>>
 where
-	TContainer: GetMut<TContainerKey, Option<Item>>,
+	TContainer: GetMut<TContainerKey, Option<SkillItem>>,
 	TSwap: Keys<TContainerKey, SlotKey> + Clone,
 {
-	fn try_swap(&mut self, swap_fn: impl FnMut(SlotKey, SwapIn<Item>) -> SwapResult<Item>) {
+	fn try_swap(
+		&mut self,
+		swap_fn: impl FnMut(SlotKey, SwapIn<SkillItem>) -> SwapResult<SkillItem>,
+	) {
 		let Collection(swaps) = self.swaps;
 
 		*swaps = swaps
@@ -67,12 +70,12 @@ where
 
 fn apply_swaps<
 	'a,
-	TContainer: GetMut<TContainerKey, Option<Item>>,
+	TContainer: GetMut<TContainerKey, Option<SkillItem>>,
 	TContainerKey,
 	TSwap: Keys<TContainerKey, SlotKey> + Clone,
 >(
 	container: &'a mut TContainer,
-	mut swap_fn: impl FnMut(SlotKey, SwapIn<Item>) -> SwapResult<Item> + 'a,
+	mut swap_fn: impl FnMut(SlotKey, SwapIn<SkillItem>) -> SwapResult<SkillItem> + 'a,
 ) -> impl FnMut(&TSwap) -> Option<RetryFailed<TSwap>> + 'a {
 	move |swap| {
 		let (container_key, slot_key) = swap.keys();
@@ -132,10 +135,10 @@ mod tests {
 	}
 
 	#[derive(Debug, PartialEq)]
-	struct _Container(Vec<Option<Item>>);
+	struct _Container(Vec<Option<SkillItem>>);
 
-	impl GetMut<_InnerKey, Option<Item>> for _Container {
-		fn get_mut(&mut self, key: &_InnerKey) -> Option<&mut Option<Item>> {
+	impl GetMut<_InnerKey, Option<SkillItem>> for _Container {
+		fn get_mut(&mut self, key: &_InnerKey) -> Option<&mut Option<SkillItem>> {
 			self.0.get_mut(key.0)
 		}
 	}
@@ -146,14 +149,14 @@ mod tests {
 		let mut swaps = Collection::new([_Swap(_InnerKey(0), SlotKey::BottomHand(Side::Left))]);
 
 		SwapController::new(&mut container, &mut swaps).try_swap(|_, _| {
-			Ok(SwappedOut(Some(Item {
+			Ok(SwappedOut(Some(SkillItem {
 				name: "swapped out",
 				..default()
 			})))
 		});
 
 		assert_eq!(
-			_Container(vec![Some(Item {
+			_Container(vec![Some(SkillItem {
 				name: "swapped out",
 				..default()
 			})]),
@@ -163,7 +166,7 @@ mod tests {
 
 	#[test]
 	fn pass_swap_in_values_to_callback() {
-		let mut container = _Container(vec![Some(Item {
+		let mut container = _Container(vec![Some(SkillItem {
 			name: "swap in",
 			..default()
 		})]);
@@ -173,27 +176,27 @@ mod tests {
 			assert_eq!(
 				(
 					SlotKey::BottomHand(Side::Left),
-					SwapIn(Some(Item {
+					SwapIn(Some(SkillItem {
 						name: "swap in",
 						..default()
 					}))
 				),
 				(slot_key, item)
 			);
-			Ok(SwappedOut(Some(Item::default())))
+			Ok(SwappedOut(Some(SkillItem::default())))
 		});
 	}
 
 	#[test]
 	fn clear_swaps() {
-		let mut container = _Container(vec![Some(Item {
+		let mut container = _Container(vec![Some(SkillItem {
 			name: "unaffected",
 			..default()
 		})]);
 		let mut swaps = Collection::new([_Swap(_InnerKey(0), SlotKey::BottomHand(Side::Left))]);
 
 		SwapController::new(&mut container, &mut swaps)
-			.try_swap(|_, _| Ok(SwappedOut(Some(Item::default()))));
+			.try_swap(|_, _| Ok(SwappedOut(Some(SkillItem::default()))));
 
 		assert_eq!(Collection::new([]), swaps);
 	}
@@ -201,15 +204,15 @@ mod tests {
 	#[test]
 	fn retain_swap_try_again_errors() {
 		let mut container = _Container(vec![
-			Some(Item {
+			Some(SkillItem {
 				name: "disregard error",
 				..default()
 			}),
-			Some(Item {
+			Some(SkillItem {
 				name: "try again error",
 				..default()
 			}),
-			Some(Item::default()),
+			Some(SkillItem::default()),
 		]);
 		let mut swaps = Collection::new([
 			_Swap(_InnerKey(0), SlotKey::default()),

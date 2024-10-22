@@ -29,7 +29,7 @@ use common::traits::{
 	get_ui_text::{English, GetUiText, UIText},
 	iteration::{IterFinite, IterInfinite},
 };
-use skills::items::{inventory_key::InventoryKey, slot_key::SlotKey};
+use skills::{inventory_key::InventoryKey, slot_key::SlotKey};
 
 #[derive(Component)]
 pub struct InventoryScreen;

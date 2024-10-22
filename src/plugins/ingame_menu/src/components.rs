@@ -11,7 +11,7 @@ pub(crate) mod ui_overlay;
 
 use bevy::{color::Color, ecs::component::Component};
 use skill_button::Horizontal;
-use skills::items::slot_key::SlotKey;
+use skills::slot_key::SlotKey;
 use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]

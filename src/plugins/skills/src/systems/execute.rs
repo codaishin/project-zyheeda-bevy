@@ -73,7 +73,7 @@ mod tests {
 	use crate::{
 		behaviors::SkillSpawner,
 		components::skill_spawners::SkillSpawners,
-		items::slot_key::SlotKey,
+		slot_key::SlotKey,
 	};
 	use bevy::ecs::system::RunSystemOnce;
 	use common::{

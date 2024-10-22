@@ -1,4 +1,4 @@
-use crate::{items::slot_key::SlotKey, traits::InputState};
+use crate::{slot_key::SlotKey, traits::InputState};
 use bevy::{
 	ecs::system::{Res, Resource},
 	input::keyboard::KeyCode,

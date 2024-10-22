@@ -1,18 +1,14 @@
 use crate::{
-	components::{slots::Slots, LoadModel, LoadModelsCommand},
-	items::{slot_key::SlotKey, Item},
-	skills::Skill,
+	components::slots::Slots,
+	item::SkillItem,
+	slot_key::SlotKey,
 	traits::swap_commands::SwapController,
 };
-use bevy::{
-	ecs::component::Component,
-	prelude::{Commands, Entity, Query},
-};
+use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
 	traits::{
 		swap_command::{SwapCommands, SwapError, SwapIn, SwappedOut},
-		try_insert_on::TryInsertOn,
 		try_remove_from::TryRemoveFrom,
 	},
 };
@@ -29,7 +25,7 @@ where
 	TContainer: Component,
 	TSwaps: Component,
 	for<'a> SwapController<'a, TInnerKey, SlotKey, TContainer, TSwaps>:
-		SwapCommands<SlotKey, Item<Skill>>,
+		SwapCommands<SlotKey, SkillItem>,
 {
 	let mut results = vec![];
 	let commands = &mut commands;
@@ -37,25 +33,20 @@ where
 	for (agent, mut slots, mut container, mut swaps) in &mut agent {
 		let slots = slots.as_mut();
 		let mut swap_controller = SwapController::new(container.as_mut(), swaps.as_mut());
-		let mut load_models_command = LoadModelsCommand::new([]);
 
-		swap_controller.try_swap(
-			|slot_key, SwapIn(item)| match try_swap(slots, slot_key, item) {
-				Ok(swapped_out) => {
-					load_models_command.0.push(LoadModel(slot_key));
-					Ok(swapped_out)
-				}
+		swap_controller.try_swap(|slot_key, SwapIn(item)| {
+			match try_swap(slots, slot_key, item.clone()) {
+				Ok(swapped_out) => Ok(swapped_out),
 				Err((swap_error, log_error)) => {
 					results.push(Err(log_error));
 					Err(swap_error)
 				}
-			},
-		);
+			}
+		});
 
 		if swap_controller.is_empty() {
 			commands.try_remove_from::<TSwaps>(agent);
 		}
-		commands.try_insert_on(agent, load_models_command);
 	}
 
 	results
@@ -64,21 +55,24 @@ where
 fn try_swap(
 	slots: &mut Slots,
 	slot_key: SlotKey,
-	item: Option<Item<Skill>>,
-) -> Result<SwappedOut<Item<Skill>>, (SwapError, Error)> {
+	item: Option<SkillItem>,
+) -> Result<SwappedOut<SkillItem>, (SwapError, Error)> {
 	let slot = get_slot(slots, slot_key)?;
 
 	Ok(swap_item(item, slot))
 }
 
-fn get_slot(slots: &mut Slots, slot_key: SlotKey) -> Result<&mut Option<Item>, (SwapError, Error)> {
+fn get_slot(
+	slots: &mut Slots,
+	slot_key: SlotKey,
+) -> Result<&mut Option<SkillItem>, (SwapError, Error)> {
 	match slots.0.get_mut(&slot_key) {
 		Some(slot) => Ok(slot),
 		None => Err((SwapError::TryAgain, slot_warning(slot_key))),
 	}
 }
 
-fn swap_item(mut item: Option<Item<Skill>>, slot: &mut Option<Item>) -> SwappedOut<Item> {
+fn swap_item(mut item: Option<SkillItem>, slot: &mut Option<SkillItem>) -> SwappedOut<SkillItem> {
 	swap(&mut item, slot);
 
 	SwappedOut(item)
@@ -95,11 +89,6 @@ fn slot_warning(slot: SlotKey) -> Error {
 mod tests {
 	use super::*;
 	use crate::skills::Skill;
-	use bevy::{
-		ecs::system::IntoSystem,
-		prelude::{App, Update},
-		utils::default,
-	};
 	use common::{
 		components::Side,
 		systems::log::test_tools::{fake_log_error_many_recourse, FakeErrorLogManyResource},
@@ -115,17 +104,15 @@ mod tests {
 
 	#[derive(Component, PartialEq, Clone, Debug, Default)]
 	pub struct _Container {
-		swap_ins: HashMap<SlotKey, SwapIn<Item<Skill>>>,
-		swap_outs: HashMap<SlotKey, SwappedOut<Item<Skill>>>,
+		swap_ins: HashMap<SlotKey, SwapIn<SkillItem>>,
+		swap_outs: HashMap<SlotKey, SwappedOut<SkillItem>>,
 		errors: HashMap<SlotKey, SwapError>,
 	}
 
-	impl<'a> SwapCommands<SlotKey, Item<Skill>>
-		for SwapController<'a, (), SlotKey, _Container, _Swaps>
-	{
+	impl<'a> SwapCommands<SlotKey, SkillItem> for SwapController<'a, (), SlotKey, _Container, _Swaps> {
 		fn try_swap(
 			&mut self,
-			mut swap_fn: impl FnMut(SlotKey, SwapIn<Item<Skill>>) -> SwapResult<Item<Skill>>,
+			mut swap_fn: impl FnMut(SlotKey, SwapIn<SkillItem>) -> SwapResult<SkillItem>,
 		) {
 			let SwapController { container, .. } = self;
 			for (slot_key, swap_in) in container.swap_ins.clone() {
@@ -157,39 +144,6 @@ mod tests {
 	}
 
 	#[test]
-	fn set_load_models_command() {
-		let mut app = setup();
-		let agent = app
-			.world_mut()
-			.spawn((
-				Slots::<Skill>::new([(SlotKey::BottomHand(Side::Right), None)]),
-				_Container {
-					swap_ins: HashMap::from([(
-						SlotKey::BottomHand(Side::Right),
-						SwapIn(Some(Item {
-							name: "my item",
-							..default()
-						})),
-					)]),
-					..default()
-				},
-				_Swaps { is_empty: false },
-			))
-			.id();
-
-		app.update();
-
-		let agent = app.world().entity(agent);
-
-		assert_eq!(
-			Some(&LoadModelsCommand::new([LoadModel(SlotKey::BottomHand(
-				Side::Right
-			))])),
-			agent.get::<LoadModelsCommand>()
-		);
-	}
-
-	#[test]
 	fn set_swap_in_item() {
 		let mut app = setup();
 		let agent = app
@@ -199,7 +153,7 @@ mod tests {
 				_Container {
 					swap_ins: HashMap::from([(
 						SlotKey::BottomHand(Side::Right),
-						SwapIn(Some(Item {
+						SwapIn(Some(SkillItem {
 							name: "swap in",
 							..default()
 						})),
@@ -217,7 +171,7 @@ mod tests {
 		assert_eq!(
 			Some(&Slots::<Skill>::new([(
 				SlotKey::BottomHand(Side::Right),
-				Some(Item {
+				Some(SkillItem {
 					name: "swap in",
 					..default()
 				}),
@@ -234,7 +188,7 @@ mod tests {
 			.spawn((
 				Slots::<Skill>::new([(
 					SlotKey::BottomHand(Side::Right),
-					Some(Item {
+					Some(SkillItem {
 						name: "swap out",
 						..default()
 					}),
@@ -255,7 +209,7 @@ mod tests {
 		assert_eq!(
 			HashMap::from([(
 				SlotKey::BottomHand(Side::Right),
-				SwappedOut(Some(Item {
+				SwappedOut(Some(SkillItem {
 					name: "swap out",
 					..default()
 				}))

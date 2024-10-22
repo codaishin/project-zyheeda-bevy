@@ -6,8 +6,8 @@ use crate::{
 		SkillSpawner,
 		Target,
 	},
-	items::slot_key::SlotKey,
 	skills::RunSkillBehavior,
+	slot_key::SlotKey,
 	traits::{spawn_skill_behavior::SpawnSkillBehavior, Execute, Flush, Schedule},
 };
 use bevy::prelude::*;

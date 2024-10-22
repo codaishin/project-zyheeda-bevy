@@ -27,7 +27,7 @@ pub enum Side {
 #[derive(Component)]
 pub struct GroundOffset(pub Vec3);
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Debug, PartialEq)]
 pub struct Player;
 
 impl Player {

@@ -7,12 +7,11 @@ use bevy::{
 	prelude::{Added, Commands, Component, Entity, Query, With},
 };
 use common::traits::accessors::get::GetRef;
-use skills::items::{slot_key::SlotKey, Item, ItemType};
-use std::collections::HashSet;
+use skills::{item::SkillItem, slot_key::SlotKey};
 
 pub(crate) fn visualize_invalid_skill<
 	TAgent: Component,
-	TSlots: Component + GetRef<SlotKey, Item>,
+	TSlots: Component + GetRef<SlotKey, SkillItem>,
 	TVisualization: InsertContentOn,
 >(
 	mut commands: Commands,
@@ -33,7 +32,7 @@ pub(crate) fn visualize_invalid_skill<
 	}
 }
 
-fn visualize_unusable<TSlots: GetRef<SlotKey, Item>>(
+fn visualize_unusable<TSlots: GetRef<SlotKey, SkillItem>>(
 	commands: &mut Commands,
 	(entity, descriptor): (Entity, &SkillButton<DropdownTrigger>),
 	agent: &TSlots,
@@ -41,7 +40,7 @@ fn visualize_unusable<TSlots: GetRef<SlotKey, Item>>(
 ) -> Option<()> {
 	let item = descriptor.key_path.last().and_then(|key| agent.get(key))?;
 
-	if are_overlapping(&item.item_type, &descriptor.skill.is_usable_with) {
+	if descriptor.skill.is_usable_with.contains(&item.item_type) {
 		return None;
 	}
 
@@ -50,10 +49,6 @@ fn visualize_unusable<TSlots: GetRef<SlotKey, Item>>(
 	visualize(&mut entity);
 
 	Some(())
-}
-
-fn are_overlapping(a: &HashSet<ItemType>, b: &HashSet<ItemType>) -> bool {
-	a.intersection(b).next().is_some()
 }
 
 #[cfg(test)]
@@ -66,23 +61,23 @@ mod tests {
 		utils::default,
 	};
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
-	use skills::{items::ItemType, skills::Skill};
+	use skills::{item::item_type::SkillItemType, skills::Skill};
 	use std::collections::{HashMap, HashSet};
 
 	#[derive(Component)]
 	struct _Agent;
 
 	#[derive(Component)]
-	struct _Slots(HashMap<SlotKey, Item>);
+	struct _Slots(HashMap<SlotKey, SkillItem>);
 
-	impl<const N: usize> From<[(SlotKey, Item); N]> for _Slots {
-		fn from(value: [(SlotKey, Item); N]) -> Self {
+	impl<const N: usize> From<[(SlotKey, SkillItem); N]> for _Slots {
+		fn from(value: [(SlotKey, SkillItem); N]) -> Self {
 			Self(HashMap::from(value))
 		}
 	}
 
-	impl GetRef<SlotKey, Item> for _Slots {
-		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Item> {
+	impl GetRef<SlotKey, SkillItem> for _Slots {
+		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a SkillItem> {
 			self.0.get(key)
 		}
 	}
@@ -113,8 +108,8 @@ mod tests {
 			_Agent,
 			_Slots::from([(
 				SlotKey::BottomHand(Side::Right),
-				Item {
-					item_type: HashSet::from([ItemType::Pistol]),
+				SkillItem {
+					item_type: SkillItemType::Pistol,
 					..default()
 				},
 			)]),
@@ -123,7 +118,7 @@ mod tests {
 			.world_mut()
 			.spawn(SkillButton::<DropdownTrigger>::new(
 				Skill {
-					is_usable_with: HashSet::from([ItemType::Bracer]),
+					is_usable_with: HashSet::from([SkillItemType::Bracer]),
 					..default()
 				},
 				vec![
@@ -147,8 +142,8 @@ mod tests {
 			_Agent,
 			_Slots::from([(
 				SlotKey::BottomHand(Side::Right),
-				Item {
-					item_type: HashSet::from([ItemType::Pistol]),
+				SkillItem {
+					item_type: SkillItemType::Pistol,
 					..default()
 				},
 			)]),
@@ -157,7 +152,7 @@ mod tests {
 			.world_mut()
 			.spawn(SkillButton::<DropdownTrigger>::new(
 				Skill {
-					is_usable_with: HashSet::from([ItemType::Pistol]),
+					is_usable_with: HashSet::from([SkillItemType::Pistol]),
 					..default()
 				},
 				vec![
@@ -179,8 +174,8 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((_Slots::from([(
 			SlotKey::BottomHand(Side::Right),
-			Item {
-				item_type: HashSet::from([ItemType::Bracer]),
+			SkillItem {
+				item_type: SkillItemType::Bracer,
 				..default()
 			},
 		)]),));
@@ -188,7 +183,7 @@ mod tests {
 			.world_mut()
 			.spawn(SkillButton::<DropdownTrigger>::new(
 				Skill {
-					is_usable_with: HashSet::from([ItemType::Pistol]),
+					is_usable_with: HashSet::from([SkillItemType::Pistol]),
 					..default()
 				},
 				vec![
@@ -212,8 +207,8 @@ mod tests {
 			_Agent,
 			_Slots::from([(
 				SlotKey::BottomHand(Side::Right),
-				Item {
-					item_type: HashSet::from([ItemType::Bracer]),
+				SkillItem {
+					item_type: SkillItemType::Bracer,
 					..default()
 				},
 			)]),
@@ -222,7 +217,7 @@ mod tests {
 			.world_mut()
 			.spawn(SkillButton::<DropdownTrigger>::new(
 				Skill {
-					is_usable_with: HashSet::from([ItemType::Pistol]),
+					is_usable_with: HashSet::from([SkillItemType::Pistol]),
 					..default()
 				},
 				vec![

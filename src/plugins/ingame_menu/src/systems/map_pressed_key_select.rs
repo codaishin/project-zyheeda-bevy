@@ -29,7 +29,7 @@ mod tests {
 		ui::Interaction,
 	};
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
-	use skills::items::slot_key::SlotKey;
+	use skills::slot_key::SlotKey;
 
 	#[derive(Resource, Debug, PartialEq)]
 	struct _Result(Option<KeySelectReKey>);

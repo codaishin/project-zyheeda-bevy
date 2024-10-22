@@ -3,7 +3,7 @@ use bevy::{
 	prelude::{Component, Query, With},
 	ui::Interaction,
 };
-use skills::{items::slot_key::SlotKey, skills::Skill, traits::UpdateConfig};
+use skills::{skills::Skill, slot_key::SlotKey, traits::UpdateConfig};
 
 pub(crate) fn update_combos_view_delete_skill<
 	TAgent: Component,

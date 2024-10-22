@@ -19,6 +19,7 @@ bars = { path = "src/plugins/bars" }
 behaviors = { path = "src/plugins/behaviors" }
 common = { path = "src/plugins/common" }
 interactions = { path = "src/plugins/interactions" }
+items = { path = "src/plugins/items" }
 light = { path = "src/plugins/light" }
 macros = { path = "src/plugins/macros" }
 prefabs = { path = "src/plugins/prefabs" }
@@ -55,6 +56,7 @@ bars.workspace = true
 behaviors.workspace = true
 common.workspace = true
 interactions.workspace = true
+items.workspace = true
 light.workspace = true
 macros.workspace = true
 prefabs.workspace = true

@@ -1,0 +1,14 @@
+[package]
+name = "items"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bevy.workspace = true
+serde.workspace = true
+uuid.workspace = true
+common.workspace = true
+
+[dev-dependencies]
+mockall.workspace = true
+macros.workspace = true

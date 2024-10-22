@@ -72,12 +72,6 @@ pub mod tests {
 
 	simple_init!(Mock_Commands);
 
-	impl TryRemoveFrom for In<Mock_Commands> {
-		fn try_remove_from<TBundle: Bundle>(&mut self, entity: Entity) {
-			self.0.try_remove_from::<TBundle>(entity);
-		}
-	}
-
 	fn setup() -> App {
 		App::new()
 	}

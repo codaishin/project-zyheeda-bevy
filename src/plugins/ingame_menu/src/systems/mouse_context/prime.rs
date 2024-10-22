@@ -11,7 +11,7 @@ use common::{
 	states::MouseContext,
 	traits::{accessors::get::GetterRef, map_value::MapForward},
 };
-use skills::items::slot_key::SlotKey;
+use skills::slot_key::SlotKey;
 
 pub fn prime_mouse_context<
 	TMap: Resource + MapForward<SlotKey, KeyCode>,

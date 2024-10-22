@@ -2,8 +2,8 @@ pub(crate) mod animate_data;
 pub(crate) mod run_skill_behavior_data;
 pub(crate) mod skill_animation_data;
 
-use super::Skill;
-use crate::items::ItemType;
+use super::{Skill, SkillId};
+use crate::SkillItemType;
 use animate_data::AnimateData;
 use common::{
 	tools::duration_data::DurationData,
@@ -16,16 +16,15 @@ use common::{
 use run_skill_behavior_data::RunSkillBehaviorData;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, time::Duration};
-use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct SkillData {
-	id: Uuid,
+	id: SkillId,
 	name: String,
 	cast_time: DurationData,
 	animate: AnimateData,
 	behavior: RunSkillBehaviorData,
-	is_usable_with: HashSet<ItemType>,
+	is_usable_with: HashSet<SkillItemType>,
 	icon: Option<Path>,
 }
 

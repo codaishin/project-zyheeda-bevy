@@ -11,13 +11,10 @@ use common::{
 	components::Player,
 	traits::{accessors::get::GetRef, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
-use skills::{
-	items::{slot_key::SlotKey, Item},
-	skills::Skill,
-};
+use skills::{item::SkillItem, skills::Skill, slot_key::SlotKey};
 
 pub(crate) fn insert_skill_select_dropdown<
-	TEquipment: GetRef<SlotKey, Item<Skill>> + Component,
+	TEquipment: GetRef<SlotKey, SkillItem> + Component,
 	TLayout: Sync + Send + 'static,
 >(
 	mut commands: Commands,
@@ -37,7 +34,7 @@ pub(crate) fn insert_skill_select_dropdown<
 	}
 }
 
-fn compatible_skills<TEquipment: GetRef<SlotKey, Item<Skill>>, TLayout: Sync + Send + 'static>(
+fn compatible_skills<TEquipment: GetRef<SlotKey, SkillItem>, TLayout: Sync + Send + 'static>(
 	command: &SkillSelectDropdownInsertCommand<SlotKey, TLayout>,
 	slots: &TEquipment,
 	skills: &Res<Assets<Skill>>,
@@ -46,13 +43,7 @@ fn compatible_skills<TEquipment: GetRef<SlotKey, Item<Skill>>, TLayout: Sync + S
 	let item = slots.get(key)?;
 	let skills = skills
 		.iter()
-		.filter(|(_, skill)| {
-			skill
-				.is_usable_with
-				.intersection(&item.item_type)
-				.next()
-				.is_some()
-		})
+		.filter(|(_, skill)| skill.is_usable_with.contains(&item.item_type))
 		.map(|(_, skill)| {
 			SkillButton::<DropdownItem<TLayout>>::new(skill.clone(), command.key_path.clone())
 		})
@@ -74,7 +65,7 @@ mod tests {
 		components::{Player, Side},
 		test_tools::utils::SingleThreadedApp,
 	};
-	use skills::items::ItemType;
+	use skills::item::item_type::SkillItemType;
 	use std::collections::{HashMap, HashSet};
 	use uuid::Uuid;
 
@@ -88,10 +79,10 @@ mod tests {
 	}
 
 	#[derive(Component)]
-	struct _Equipment(HashMap<SlotKey, Item<Skill>>);
+	struct _Equipment(HashMap<SlotKey, SkillItem>);
 
-	impl GetRef<SlotKey, Item<Skill>> for _Equipment {
-		fn get(&self, key: &SlotKey) -> Option<&Item<Skill>> {
+	impl GetRef<SlotKey, SkillItem> for _Equipment {
+		fn get(&self, key: &SlotKey) -> Option<&SkillItem> {
 			self.0.get(key)
 		}
 	}
@@ -120,13 +111,13 @@ mod tests {
 		let skills = [
 			Skill {
 				name: "skill a".to_owned(),
-				is_usable_with: HashSet::from([ItemType::Pistol]),
+				is_usable_with: HashSet::from([SkillItemType::Pistol]),
 				icon: Some(image_a.clone()),
 				..default()
 			},
 			Skill {
 				name: "skill b".to_owned(),
-				is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
+				is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
 				icon: Some(image_b.clone()),
 				..default()
 			},
@@ -137,8 +128,8 @@ mod tests {
 			Player,
 			_Equipment(HashMap::from([(
 				SlotKey::BottomHand(Side::Right),
-				Item {
-					item_type: HashSet::from([ItemType::Pistol]),
+				SkillItem {
+					item_type: SkillItemType::Pistol,
 					..default()
 				},
 			)])),
@@ -160,7 +151,7 @@ mod tests {
 					SkillButton::<DropdownItem<_Layout>>::new(
 						Skill {
 							name: "skill a".to_owned(),
-							is_usable_with: HashSet::from([ItemType::Pistol]),
+							is_usable_with: HashSet::from([SkillItemType::Pistol]),
 							icon: Some(image_a.clone()),
 							..default()
 						},
@@ -169,7 +160,10 @@ mod tests {
 					SkillButton::<DropdownItem<_Layout>>::new(
 						Skill {
 							name: "skill b".to_owned(),
-							is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
+							is_usable_with: HashSet::from([
+								SkillItemType::Pistol,
+								SkillItemType::Bracer
+							]),
 							icon: Some(image_b.clone()),
 							..default()
 						},
@@ -191,13 +185,13 @@ mod tests {
 		let skills = [
 			Skill {
 				name: "skill a".to_owned(),
-				is_usable_with: HashSet::from([ItemType::Pistol]),
+				is_usable_with: HashSet::from([SkillItemType::Pistol]),
 				icon: Some(image_a.clone()),
 				..default()
 			},
 			Skill {
 				name: "skill b".to_owned(),
-				is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
+				is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
 				icon: Some(image_b.clone()),
 				..default()
 			},
@@ -208,8 +202,8 @@ mod tests {
 			_NonPlayer,
 			_Equipment(HashMap::from([(
 				SlotKey::BottomHand(Side::Right),
-				Item {
-					item_type: HashSet::from([ItemType::Pistol]),
+				SkillItem {
+					item_type: SkillItemType::Pistol,
 					..default()
 				},
 			)])),
@@ -239,8 +233,8 @@ mod tests {
 			Player,
 			_Equipment(HashMap::from([(
 				SlotKey::BottomHand(Side::Right),
-				Item {
-					item_type: HashSet::from([ItemType::Pistol]),
+				SkillItem {
+					item_type: SkillItemType::Pistol,
 					..default()
 				},
 			)])),

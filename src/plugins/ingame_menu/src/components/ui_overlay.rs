@@ -25,7 +25,7 @@ use bevy::{
 	utils::default,
 };
 use common::traits::iteration::IterFinite;
-use skills::items::slot_key::SlotKey;
+use skills::slot_key::SlotKey;
 
 #[derive(Component)]
 pub struct UIOverlay;

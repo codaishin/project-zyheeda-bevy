@@ -1,9 +1,7 @@
 pub(crate) mod advance_combo;
 pub(crate) mod bevy_input;
-pub(crate) mod entity_names;
 pub(crate) mod flush;
 pub(crate) mod get_skill_animation;
-pub(crate) mod key_string;
 pub(crate) mod peek_next;
 pub(crate) mod skill_builder;
 pub(crate) mod skill_state;
@@ -14,8 +12,8 @@ pub(crate) mod swap_commands;
 use crate::{
 	behaviors::{SkillCaster, Target},
 	components::{skill_spawners::SkillSpawners, slots::Slots},
-	items::slot_key::SlotKey,
 	skills::{Animate, RunSkillBehavior, Skill, SkillAnimation},
+	slot_key::SlotKey,
 };
 use common::traits::{load_asset::Path, map_value::TryMapBackwards, state_duration::StateUpdate};
 use std::hash::Hash;

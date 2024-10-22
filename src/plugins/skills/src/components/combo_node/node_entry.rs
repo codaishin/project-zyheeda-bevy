@@ -1,5 +1,5 @@
 use super::{ComboNode, NodeEntry};
-use crate::{items::slot_key::SlotKey, traits::FollowupKeys};
+use crate::{slot_key::SlotKey, traits::FollowupKeys};
 
 #[derive(Default)]
 enum Iter<'a, T: Iterator<Item = &'a SlotKey>> {

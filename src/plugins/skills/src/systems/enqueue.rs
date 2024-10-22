@@ -1,7 +1,7 @@
 use super::get_inputs::Input;
 use crate::{
-	items::slot_key::SlotKey,
 	skills::Skill,
+	slot_key::SlotKey,
 	traits::{Enqueue, IterMut, Matches, Prime},
 };
 use bevy::ecs::{

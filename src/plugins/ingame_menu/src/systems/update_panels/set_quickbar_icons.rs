@@ -40,7 +40,7 @@ mod tests {
 		ui::UiImage,
 	};
 	use common::test_tools::utils::SingleThreadedApp;
-	use skills::items::slot_key::SlotKey;
+	use skills::slot_key::SlotKey;
 	use uuid::Uuid;
 
 	#[derive(Resource)]

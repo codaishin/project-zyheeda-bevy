@@ -11,8 +11,9 @@ use crate::{
 		SkillSpawner,
 		Target,
 	},
-	items::{slot_key::SlotKey, ItemType},
+	item::item_type::SkillItemType,
 	skills::lifetime::{OnActiveLifetime, OnAimLifeTime},
+	slot_key::SlotKey,
 	traits::{spawn_skill_behavior::SpawnSkillBehavior, Matches, Prime},
 };
 use animations::animation::Animation;
@@ -21,7 +22,9 @@ use common::{
 	resources::ColliderInfo,
 	traits::{asset_folder::AssetFolderPath, load_asset::Path},
 };
+use items::traits::item_type::AssociatedItemType;
 use lifetime::LifeTimeDefinition;
+use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result},
@@ -45,14 +48,21 @@ pub enum Animate<TAnimation> {
 	Some(TAnimation),
 }
 
+#[derive(PartialEq, Debug, Default, Clone, Copy, Serialize, Deserialize)]
+pub struct SkillId(pub Uuid);
+
+impl AssociatedItemType for SkillId {
+	type TItemType = SkillItemType;
+}
+
 #[derive(PartialEq, Debug, Default, Clone, TypePath, Asset)]
 pub struct Skill {
-	pub id: Uuid,
+	pub id: SkillId,
 	pub name: String,
 	pub cast_time: Duration,
 	pub animate: Animate<SkillAnimation>,
 	pub behavior: RunSkillBehavior,
-	pub is_usable_with: HashSet<ItemType>,
+	pub is_usable_with: HashSet<SkillItemType>,
 	pub icon: Option<Handle<Image>>,
 }
 
@@ -69,6 +79,10 @@ impl AssetFolderPath for Skill {
 	fn asset_folder_path() -> Path {
 		Path::from("skills")
 	}
+}
+
+impl AssociatedItemType for Skill {
+	type TItemType = SkillItemType;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]

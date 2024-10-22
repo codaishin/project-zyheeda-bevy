@@ -2,7 +2,7 @@ use bevy::{
 	prelude::{Bundle, Component, TextBundle},
 	text::TextStyle,
 };
-use skills::items::slot_key::SlotKey;
+use skills::slot_key::SlotKey;
 
 #[derive(Bundle, Debug, Default)]
 pub(crate) struct KeyCodeTextInsertCommandBundle {

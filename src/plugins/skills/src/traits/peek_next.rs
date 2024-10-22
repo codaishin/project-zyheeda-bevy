@@ -1,8 +1,8 @@
 use super::PeekNext;
 use crate::{
 	components::{combo_node::ComboNode, slots::Slots},
-	items::slot_key::SlotKey,
 	skills::Skill,
+	slot_key::SlotKey,
 };
 
 impl<T: PeekNext<(Skill, ComboNode)>> PeekNext<Skill> for T {

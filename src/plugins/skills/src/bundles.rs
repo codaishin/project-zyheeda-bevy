@@ -2,7 +2,6 @@ use crate::{
 	components::{
 		combo_node::ComboNode,
 		combos_time_out::CombosTimeOut,
-		lookup::Lookup,
 		queue::Queue,
 		skill_executer::SkillExecuter,
 		skill_spawners::SkillSpawners,
@@ -12,17 +11,18 @@ use crate::{
 		item_slots::{ForearmSlots, HandSlots},
 		sub_models::SubModels,
 	},
-	items::{slot_key::SlotKey, Item},
-	skills::RunSkillBehavior,
+	item::SkillItem,
+	skills::{RunSkillBehavior, SkillId},
+	slot_key::SlotKey,
 };
 use bevy::{ecs::bundle::Bundle, prelude::default};
 use common::components::Idle;
+use items::components::visualizer::Visualizer;
 use std::collections::HashMap;
-use uuid::Uuid;
 
 #[derive(Bundle)]
 pub struct ComboBundle {
-	combos: ComboNode<Uuid>,
+	combos: ComboNode<SkillId>,
 	timeout: CombosTimeOut,
 }
 
@@ -36,7 +36,7 @@ impl ComboBundle {
 
 	pub fn with_predefined_combos<const N: usize>(
 		mut self,
-		combos: [(SlotKey, (Uuid, ComboNode<Uuid>)); N],
+		combos: [(SlotKey, (SkillId, ComboNode<SkillId>)); N],
 	) -> Self {
 		self.combos = ComboNode::new(combos);
 		self
@@ -48,7 +48,7 @@ pub struct Loadout<TAgent>
 where
 	TAgent: Sync + Send + 'static,
 {
-	slot_definition: Slots<Uuid>,
+	slot_definition: Slots<SkillId>,
 	skill_execution: ExecutionBundle,
 	item_visualization: ItemVisualizationBundle<TAgent>,
 }
@@ -57,7 +57,9 @@ impl<TAgent> Loadout<TAgent>
 where
 	TAgent: Sync + Send + 'static,
 {
-	pub fn new<const N: usize>(slots_definitions: [(SlotKey, Option<Item<Uuid>>); N]) -> Self {
+	pub fn new<const N: usize>(
+		slots_definitions: [(SlotKey, Option<SkillItem<SkillId>>); N],
+	) -> Self {
 		Self {
 			slot_definition: Slots(HashMap::from(slots_definitions)),
 			skill_execution: default(),
@@ -71,9 +73,9 @@ struct ItemVisualizationBundle<TAgent>
 where
 	TAgent: Sync + Send + 'static,
 {
-	sub_models: Lookup<SubModels<TAgent>>,
-	hand_slots: Lookup<HandSlots<TAgent>>,
-	forearm_slots: Lookup<ForearmSlots<TAgent>>,
+	sub_models: Visualizer<SubModels<TAgent>>,
+	hand_slots: Visualizer<HandSlots<TAgent>>,
+	forearm_slots: Visualizer<ForearmSlots<TAgent>>,
 }
 
 impl<TAgent> Default for ItemVisualizationBundle<TAgent>

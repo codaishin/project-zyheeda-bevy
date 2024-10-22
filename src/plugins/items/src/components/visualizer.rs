@@ -7,14 +7,14 @@ use common::traits::{
 use std::{collections::HashMap, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
-pub struct Lookup<T> {
-	entities: HashMap<Name, Entity>,
+pub struct Visualizer<T> {
+	pub(crate) entities: HashMap<Name, Entity>,
 	phantom_data: PhantomData<T>,
 }
 
-impl<T> Lookup<T> {
+impl<T> Visualizer<T> {
 	#[cfg(test)]
-	fn new<const N: usize>(entities: [(Name, Entity); N]) -> Self {
+	pub(crate) fn new<const N: usize>(entities: [(Name, Entity); N]) -> Self {
 		Self {
 			entities: HashMap::from(entities),
 			..default()
@@ -22,7 +22,7 @@ impl<T> Lookup<T> {
 	}
 }
 
-impl<T> Default for Lookup<T> {
+impl<T> Default for Visualizer<T> {
 	fn default() -> Self {
 		Self {
 			entities: HashMap::new(),
@@ -31,7 +31,7 @@ impl<T> Default for Lookup<T> {
 	}
 }
 
-impl<T> Track<Name> for Lookup<T>
+impl<T> Track<Name> for Visualizer<T>
 where
 	T: EntityNames,
 {
@@ -44,19 +44,19 @@ where
 	}
 }
 
-impl<T> IsTracking<Name> for Lookup<T> {
+impl<T> IsTracking<Name> for Visualizer<T> {
 	fn is_tracking(&self, entity: &Entity) -> bool {
 		self.entities.values().any(|e| e == entity)
 	}
 }
 
-impl<T> Untrack<Name> for Lookup<T> {
+impl<T> Untrack<Name> for Visualizer<T> {
 	fn untrack(&mut self, entity: &Entity) {
 		self.entities.retain(|_, e| e != entity);
 	}
 }
 
-impl<T, TKey> GetRef<TKey, Entity> for Lookup<T>
+impl<T, TKey> GetRef<TKey, Entity> for Visualizer<T>
 where
 	T: KeyString<TKey>,
 {
@@ -80,12 +80,12 @@ mod tests {
 
 	#[test]
 	fn track_name_if_contained_in_sub_model_names() {
-		let mut lookup = Lookup::<_Agent>::default();
+		let mut lookup = Visualizer::<_Agent>::default();
 
 		lookup.track(Entity::from_raw(33), &Name::from("A"));
 
 		assert_eq!(
-			Lookup {
+			Visualizer {
 				entities: HashMap::from([(Name::from("A"), Entity::from_raw(33))]),
 				..default()
 			},
@@ -95,12 +95,12 @@ mod tests {
 
 	#[test]
 	fn do_not_track_name_if_not_contained_in_sub_model_names() {
-		let mut lookup = Lookup::<_Agent>::default();
+		let mut lookup = Visualizer::<_Agent>::default();
 
 		lookup.track(Entity::from_raw(33), &Name::from("D"));
 
 		assert_eq!(
-			Lookup {
+			Visualizer {
 				entities: HashMap::from([]),
 				..default()
 			},
@@ -110,7 +110,7 @@ mod tests {
 
 	#[test]
 	fn is_tracking_true() {
-		let mut lookup = Lookup::<_Agent>::default();
+		let mut lookup = Visualizer::<_Agent>::default();
 
 		lookup.track(Entity::from_raw(33), &Name::from("A"));
 
@@ -119,7 +119,7 @@ mod tests {
 
 	#[test]
 	fn is_tracking_false() {
-		let mut lookup = Lookup::<_Agent>::default();
+		let mut lookup = Visualizer::<_Agent>::default();
 
 		lookup.track(Entity::from_raw(34), &Name::from("A"));
 
@@ -128,14 +128,14 @@ mod tests {
 
 	#[test]
 	fn untrack() {
-		let mut lookup = Lookup::<_Agent>::default();
+		let mut lookup = Visualizer::<_Agent>::default();
 
 		lookup.track(Entity::from_raw(34), &Name::from("A"));
 		lookup.track(Entity::from_raw(35), &Name::from("B"));
 		lookup.untrack(&Entity::from_raw(34));
 
 		assert_eq!(
-			Lookup {
+			Visualizer {
 				entities: HashMap::from([(Name::from("B"), Entity::from_raw(35))]),
 				..default()
 			},
@@ -155,7 +155,7 @@ mod tests {
 			}
 		}
 
-		let lookup = Lookup::<_T>::new([(Name::from("A"), Entity::from_raw(100))]);
+		let lookup = Visualizer::<_T>::new([(Name::from("A"), Entity::from_raw(100))]);
 
 		assert_eq!(Some(&Entity::from_raw(100)), lookup.get(&_Key));
 	}
@@ -170,7 +170,7 @@ mod tests {
 			}
 		}
 
-		let lookup = Lookup::<_T>::new([(Name::from("B"), Entity::from_raw(100))]);
+		let lookup = Visualizer::<_T>::new([(Name::from("B"), Entity::from_raw(100))]);
 
 		assert_eq!(Some(&Entity::from_raw(100)), lookup.get(&_Key));
 	}
