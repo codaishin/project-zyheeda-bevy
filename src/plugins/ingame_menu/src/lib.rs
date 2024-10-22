@@ -29,7 +29,6 @@ use components::{
 	AppendSkillCommand,
 };
 use events::DropdownEvent;
-use items::components::visualizer::Visualizer;
 use skills::{
 	components::{
 		combos::Combos,
@@ -38,7 +37,6 @@ use skills::{
 		queue::Queue,
 		slots::Slots,
 	},
-	definitions::item_slots::{ForearmSlots, HandSlots},
 	inventory_key::InventoryKey,
 	skills::Skill,
 	slot_key::SlotKey,
@@ -277,14 +275,7 @@ fn inventory_screen_systems(app: &mut App) {
 		)
 		.add_systems(
 			Update,
-			(
-				swap_equipped_items::<
-					Visualizer<HandSlots<Player>>,
-					Visualizer<ForearmSlots<Player>>,
-				>
-					.pipe(log_many),
-				swap_inventory_items,
-			),
+			(swap_equipped_items.pipe(log_many), swap_inventory_items),
 		);
 }
 
