@@ -32,7 +32,10 @@ use components::{
 	skill_spawners::SkillSpawners,
 	slots::Slots,
 };
-use definitions::item_slots::{ForearmSlots, HandSlots};
+use definitions::{
+	item_slots::{ForearmSlots, HandSlots},
+	sub_models::SubModels,
+};
 use inventory_key::InventoryKey;
 use item::{item_type::SkillItemType, SkillItem};
 use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill, SkillId};
@@ -83,9 +86,9 @@ fn inventory(app: &mut App) {
 }
 
 fn skill_slot_load(app: &mut App) {
-	type Hands = Lookup<HandSlots<Player>>;
-	type Forearms = Lookup<ForearmSlots<Player>>;
-	type SubModels = Lookup<ForearmSlots<Player>>;
+	type PlayerHands = Lookup<HandSlots<Player>>;
+	type PlayerForearms = Lookup<ForearmSlots<Player>>;
+	type PlayerSubModels = Lookup<SubModels<Player>>;
 
 	app.add_systems(Startup, load_models)
 		.add_systems(
@@ -100,9 +103,9 @@ fn skill_slot_load(app: &mut App) {
 		.add_systems(
 			Update,
 			(
-				Hands::track_in_self_and_children::<Name>().system(),
-				Forearms::track_in_self_and_children::<Name>().system(),
-				SubModels::track_in_self_and_children::<Name>()
+				PlayerHands::track_in_self_and_children::<Name>().system(),
+				PlayerForearms::track_in_self_and_children::<Name>().system(),
+				PlayerSubModels::track_in_self_and_children::<Name>()
 					.with::<Handle<Mesh>>()
 					.system(),
 			)
@@ -122,7 +125,7 @@ fn skill_slot_load(app: &mut App) {
 					Collection<Swap<SlotKey, InventoryKey>>,
 				>
 					.pipe(log_many),
-				apply_load_models_commands::<Hands, Forearms>.pipe(log_many),
+				apply_load_models_commands::<PlayerHands, PlayerForearms>.pipe(log_many),
 			),
 		);
 }
