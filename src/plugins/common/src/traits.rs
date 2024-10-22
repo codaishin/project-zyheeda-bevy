@@ -31,6 +31,7 @@ pub mod remove_conditionally;
 pub mod state_duration;
 pub mod swap_command;
 pub mod track;
+pub mod try_complex_insert;
 pub mod try_despawn_recursive;
 pub mod try_insert_on;
 pub mod try_remove_from;
