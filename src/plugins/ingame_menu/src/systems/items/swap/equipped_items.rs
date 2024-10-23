@@ -101,8 +101,6 @@ mod tests {
 									item_type: SkillItemType::Bracer,
 									..default()
 								},
-
-								..default()
 							}),
 						),
 						(
@@ -113,7 +111,6 @@ mod tests {
 									item_type: SkillItemType::Pistol,
 									..default()
 								},
-								..default()
 							}),
 						),
 					]
@@ -153,7 +150,6 @@ mod tests {
 							item_type: SkillItemType::Pistol,
 							..default()
 						},
-						..default()
 					}),
 					Some(SkillItem {
 						name: "left item",
@@ -161,8 +157,6 @@ mod tests {
 							item_type: SkillItemType::Bracer,
 							..default()
 						},
-
-						..default()
 					})
 				),
 				vec![]

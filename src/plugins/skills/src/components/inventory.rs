@@ -44,11 +44,11 @@ impl<TIn, TOut> TryMap<TIn, TOut, Inventory<TOut>> for Inventory<TIn> {
 
 			Some(SkillItem {
 				content: SkillItemContent {
+					model: item.content.model,
 					skill: item.content.skill.as_ref().and_then(map_fn),
 					item_type: item.content.item_type,
 				},
 				name: item.name,
-				model: item.model,
 			})
 		});
 

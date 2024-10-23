@@ -7,7 +7,12 @@ use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
 	tools::ModelPath,
-	traits::{load::Load, try_complex_insert::TryComplexInsert, try_remove_from::TryRemoveFrom},
+	traits::{
+		accessors::get::Getter,
+		load::Load,
+		try_complex_insert::TryComplexInsert,
+		try_remove_from::TryRemoveFrom,
+	},
 };
 use std::{collections::HashMap, marker::PhantomData};
 
@@ -30,7 +35,7 @@ impl<TView> VisualizeCommands<TView> {
 	pub fn with_item<TKey, TContent>(mut self, key: &TKey, item: Option<&Item<TContent>>) -> Self
 	where
 		TView: KeyString<TKey>,
-		Item<TContent>: UsesView<TView>,
+		TContent: UsesView<TView> + Getter<Option<ModelPath>>,
 	{
 		let model = Self::get_model(item);
 		self.commands.insert(TView::key_string(key), model);
@@ -39,15 +44,15 @@ impl<TView> VisualizeCommands<TView> {
 
 	fn get_model<TContent>(item: Option<&Item<TContent>>) -> Option<ModelPath>
 	where
-		Item<TContent>: UsesView<TView>,
+		TContent: UsesView<TView> + Getter<Option<ModelPath>>,
 	{
 		let item = item?;
 
-		if !item.uses_view() {
+		if !item.content.uses_view() {
 			return None;
 		}
 
-		item.model
+		item.content.get()
 	}
 
 	pub(crate) fn apply(
@@ -148,22 +153,30 @@ mod tests {
 	}
 
 	#[derive(Default)]
-	struct _UsesView(bool);
+	struct _Content {
+		uses_view: bool,
+		model: Option<ModelPath>,
+	}
 
-	type _Item = Item<_UsesView>;
-
-	impl UsesView<_View> for _Item {
+	impl UsesView<_View> for _Content {
 		fn uses_view(&self) -> bool {
-			let _UsesView(uses_view) = self.content;
-			uses_view
+			self.uses_view
+		}
+	}
+
+	impl Getter<Option<ModelPath>> for _Content {
+		fn get(&self) -> Option<ModelPath> {
+			self.model
 		}
 	}
 
 	#[test]
 	fn add_item() {
-		let item = _Item {
-			model: Some(ModelPath("my model")),
-			content: _UsesView(true),
+		let item = Item {
+			content: _Content {
+				uses_view: true,
+				model: Some(ModelPath("my model")),
+			},
 			..default()
 		};
 		let visualize = VisualizeCommands::<_View>::default().with_item(&_Key::A, Some(&item));
@@ -180,7 +193,7 @@ mod tests {
 	#[test]
 	fn add_none_item() {
 		let visualize = VisualizeCommands::<_View>::default()
-			.with_item(&_Key::A, None as Option<&Item<_UsesView>>);
+			.with_item(&_Key::A, None as Option<&Item<_Content>>);
 
 		assert_eq!(
 			VisualizeCommands::<_View> {
@@ -193,14 +206,18 @@ mod tests {
 
 	#[test]
 	fn add_multiple_items() {
-		let item_a = _Item {
-			model: Some(ModelPath("my model a")),
-			content: _UsesView(true),
+		let item_a = Item {
+			content: _Content {
+				uses_view: true,
+				model: Some(ModelPath("my model a")),
+			},
 			..default()
 		};
-		let item_b = _Item {
-			model: Some(ModelPath("my model b")),
-			content: _UsesView(true),
+		let item_b = Item {
+			content: _Content {
+				uses_view: true,
+				model: Some(ModelPath("my model b")),
+			},
 			..default()
 		};
 		let visualize = VisualizeCommands::<_View>::default()
@@ -221,9 +238,11 @@ mod tests {
 
 	#[test]
 	fn add_item_with_mode_none_when_not_using_view() {
-		let item = _Item {
-			model: Some(ModelPath("my model")),
-			content: _UsesView(false),
+		let item = Item {
+			content: _Content {
+				uses_view: false,
+				model: Some(ModelPath("my model")),
+			},
 			..default()
 		};
 		let visualize = VisualizeCommands::<_View>::default().with_item(&_Key::A, Some(&item));

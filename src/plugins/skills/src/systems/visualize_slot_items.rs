@@ -71,7 +71,10 @@ mod tests {
 	fn visualize_item() {
 		let mut app = setup();
 		let item = SkillItem {
-			model: Some(ModelPath("my model")),
+			content: SkillItemContent {
+				model: Some(ModelPath("my model")),
+				..default()
+			},
 			..default()
 		};
 		let entity = app
@@ -108,16 +111,16 @@ mod tests {
 	fn visualize_items() {
 		let mut app = setup();
 		let item_a = SkillItem {
-			model: Some(ModelPath("my bracer model")),
 			content: SkillItemContent {
+				model: Some(ModelPath("my bracer model")),
 				item_type: SkillItemType::Pistol,
 				..default()
 			},
 			..default()
 		};
 		let item_b = SkillItem {
-			model: Some(ModelPath("my forearm model")),
 			content: SkillItemContent {
+				model: Some(ModelPath("my forearm model")),
 				item_type: SkillItemType::Bracer,
 				..default()
 			},
@@ -162,7 +165,10 @@ mod tests {
 	fn do_nothing_when_not_with_agent_component() {
 		let mut app = setup();
 		let item = SkillItem {
-			model: Some(ModelPath("my model")),
+			content: SkillItemContent {
+				model: Some(ModelPath("my model")),
+				..default()
+			},
 			..default()
 		};
 		let entity = app
@@ -190,7 +196,10 @@ mod tests {
 	fn visualize_item_only_once() {
 		let mut app = setup();
 		let item = SkillItem {
-			model: Some(ModelPath("my model")),
+			content: SkillItemContent {
+				model: Some(ModelPath("my model")),
+				..default()
+			},
 			..default()
 		};
 		let entity = app
@@ -229,7 +238,10 @@ mod tests {
 				Slots::<Skill>::new([(
 					SlotKey::BottomHand(Side::Right),
 					Some(SkillItem {
-						model: Some(ModelPath("my model")),
+						content: SkillItemContent {
+							model: Some(ModelPath("my model")),
+							..default()
+						},
 						..default()
 					}),
 				)]),
@@ -241,7 +253,10 @@ mod tests {
 		let mut agent = app.world_mut().entity_mut(entity);
 		let mut slots = agent.get_mut::<Slots>().unwrap();
 		let item = SkillItem {
-			model: Some(ModelPath("my other model")),
+			content: SkillItemContent {
+				model: Some(ModelPath("my other model")),
+				..default()
+			},
 			..default()
 		};
 		*slots = Slots::<Skill>::new([(SlotKey::TopHand(Side::Right), Some(item.clone()))]);

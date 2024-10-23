@@ -156,8 +156,8 @@ fn get_loadout() -> Loadout<Player> {
 			SlotKey::TopHand(Side::Left),
 			Some(SkillItem {
 				name: "Plasma Pistol A",
-				model: Some(ModelPath("models/pistol.glb")),
 				content: SkillItemContent {
+					model: Some(ModelPath("models/pistol.glb")),
 					skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
 					item_type: SkillItemType::Pistol,
 				},
@@ -167,8 +167,8 @@ fn get_loadout() -> Loadout<Player> {
 			SlotKey::BottomHand(Side::Left),
 			Some(SkillItem {
 				name: "Plasma Pistol B",
-				model: Some(ModelPath("models/pistol.glb")),
 				content: SkillItemContent {
+					model: Some(ModelPath("models/pistol.glb")),
 					skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
 					item_type: SkillItemType::Pistol,
 				},
@@ -178,8 +178,8 @@ fn get_loadout() -> Loadout<Player> {
 			SlotKey::BottomHand(Side::Right),
 			Some(SkillItem {
 				name: "Force Bracer",
-				model: Some(ModelPath("models/bracer.glb")),
 				content: SkillItemContent {
+					model: Some(ModelPath("models/bracer.glb")),
 					skill: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
 					item_type: SkillItemType::Bracer,
 				},
@@ -189,8 +189,8 @@ fn get_loadout() -> Loadout<Player> {
 			SlotKey::TopHand(Side::Right),
 			Some(SkillItem {
 				name: "Force Bracer",
-				model: Some(ModelPath("models/bracer.glb")),
 				content: SkillItemContent {
+					model: Some(ModelPath("models/bracer.glb")),
 					skill: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
 					item_type: SkillItemType::Bracer,
 				},
@@ -203,24 +203,24 @@ fn get_inventory() -> Inventory<SkillId> {
 	Inventory::new([
 		Some(SkillItem {
 			name: "Plasma Pistol C",
-			model: Some(ModelPath("models/pistol.glb")),
 			content: SkillItemContent {
+				model: Some(ModelPath("models/pistol.glb")),
 				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
 				item_type: SkillItemType::Pistol,
 			},
 		}),
 		Some(SkillItem {
 			name: "Plasma Pistol D",
-			model: Some(ModelPath("models/pistol.glb")),
 			content: SkillItemContent {
+				model: Some(ModelPath("models/pistol.glb")),
 				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
 				item_type: SkillItemType::Pistol,
 			},
 		}),
 		Some(SkillItem {
 			name: "Plasma Pistol E",
-			model: Some(ModelPath("models/pistol.glb")),
 			content: SkillItemContent {
+				model: Some(ModelPath("models/pistol.glb")),
 				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
 				item_type: SkillItemType::Pistol,
 			},
