@@ -1,40 +1,29 @@
-use crate::{item::SkillItem, skills::Skill, slot_key::SlotKey, traits::TryMap};
+use crate::{
+	item::{SkillItem, SkillItemContent},
+	skills::Skill,
+	slot_key::SlotKey,
+	traits::TryMap,
+};
 use bevy::ecs::component::Component;
 use common::traits::accessors::get::GetRef;
-use items::traits::item_type::AssociatedItemType;
 use std::{collections::HashMap, fmt::Debug};
 
 #[derive(Component, Clone, PartialEq, Debug)]
-pub struct Slots<TSkill = Skill>(pub HashMap<SlotKey, Option<SkillItem<TSkill>>>)
-where
-	TSkill: AssociatedItemType,
-	TSkill::TItemType: Clone + PartialEq + Debug;
+pub struct Slots<TSkill = Skill>(pub HashMap<SlotKey, Option<SkillItem<TSkill>>>);
 
-impl<T> Slots<T>
-where
-	T: AssociatedItemType,
-	T::TItemType: Clone + PartialEq + Debug,
-{
+impl<T> Slots<T> {
 	pub fn new<const N: usize>(slots: [(SlotKey, Option<SkillItem<T>>); N]) -> Self {
 		Self(HashMap::from(slots))
 	}
 }
 
-impl<T> Default for Slots<T>
-where
-	T: AssociatedItemType,
-	T::TItemType: Clone + PartialEq + Debug,
-{
+impl<T> Default for Slots<T> {
 	fn default() -> Self {
 		Self::new([])
 	}
 }
 
-impl<T> GetRef<SlotKey, SkillItem<T>> for Slots<T>
-where
-	T: AssociatedItemType,
-	T::TItemType: Clone + PartialEq + Debug,
-{
+impl<T> GetRef<SlotKey, SkillItem<T>> for Slots<T> {
 	fn get(&self, key: &SlotKey) -> Option<&SkillItem<T>> {
 		let slot = self.0.get(key)?;
 		slot.as_ref()
@@ -45,18 +34,11 @@ impl GetRef<SlotKey, Skill> for Slots {
 	fn get(&self, key: &SlotKey) -> Option<&Skill> {
 		let item: &SkillItem = self.get(key)?;
 
-		item.content.as_ref()
+		item.content.skill.as_ref()
 	}
 }
 
-impl<TIn, TOut> TryMap<TIn, TOut, Slots<TOut>> for Slots<TIn>
-where
-	TIn: AssociatedItemType,
-	TIn::TItemType: Clone + PartialEq + Debug,
-	TOut: AssociatedItemType,
-	TOut::TItemType: Clone + PartialEq + Debug,
-	TOut::TItemType: From<TIn::TItemType>,
-{
+impl<TIn, TOut> TryMap<TIn, TOut, Slots<TOut>> for Slots<TIn> {
 	fn try_map(&self, map_fn: impl FnMut(&TIn) -> Option<TOut>) -> Slots<TOut> {
 		let slots = self.0.iter().map(new_mapped_slot(map_fn)).collect();
 
@@ -66,22 +48,18 @@ where
 
 fn new_mapped_slot<TIn, TOut>(
 	mut map_fn: impl FnMut(&TIn) -> Option<TOut>,
-) -> impl FnMut((&SlotKey, &Option<SkillItem<TIn>>)) -> (SlotKey, Option<SkillItem<TOut>>)
-where
-	TIn: AssociatedItemType,
-	TIn::TItemType: Clone + PartialEq + Debug,
-	TOut: AssociatedItemType,
-	TOut::TItemType: Clone + PartialEq + Debug,
-	TOut::TItemType: From<TIn::TItemType>,
-{
+) -> impl FnMut((&SlotKey, &Option<SkillItem<TIn>>)) -> (SlotKey, Option<SkillItem<TOut>>) {
 	move |(key, slot)| {
+		let map_fn = &mut map_fn;
 		(
 			*key,
 			slot.as_ref().map(|slot| SkillItem {
 				name: slot.name,
-				content: slot.content.as_ref().and_then(&mut map_fn),
+				content: SkillItemContent {
+					skill: slot.content.skill.as_ref().and_then(map_fn),
+					item_type: slot.content.item_type,
+				},
 				model: slot.model,
-				item_type: slot.item_type.clone().into(),
 			}),
 		)
 	}
@@ -163,10 +141,13 @@ mod tests {
 				SlotKey::BottomHand(Side::Right),
 				Some(SkillItem {
 					name: "my item",
-					content: Some(Skill {
-						name: "my skill".to_owned(),
+					content: SkillItemContent {
+						skill: Some(Skill {
+							name: "my skill".to_owned(),
+							..default()
+						}),
 						..default()
-					}),
+					},
 					..default()
 				}),
 			)]
@@ -182,25 +163,17 @@ mod tests {
 		);
 	}
 
-	#[derive(Debug, PartialEq, Clone)]
+	#[derive(Debug, PartialEq, Clone, Default)]
 	struct _UnMapped(&'static str);
 
 	#[derive(Debug, PartialEq, Clone, Default)]
 	struct _ItemTypeUnmapped;
 
-	impl AssociatedItemType for _UnMapped {
-		type TItemType = _ItemTypeUnmapped;
-	}
-
-	#[derive(Debug, PartialEq, Clone)]
+	#[derive(Debug, PartialEq, Clone, Default)]
 	struct _Mapped(String);
 
 	#[derive(Debug, PartialEq, Clone, Default)]
 	struct _ItemTypeMapped;
-
-	impl AssociatedItemType for _Mapped {
-		type TItemType = _ItemTypeMapped;
-	}
 
 	impl From<_ItemTypeUnmapped> for _ItemTypeMapped {
 		fn from(_: _ItemTypeUnmapped) -> Self {
@@ -214,7 +187,10 @@ mod tests {
 			[(
 				SlotKey::BottomHand(Side::Right),
 				Some(SkillItem {
-					content: Some(_UnMapped("my/skill/path")),
+					content: SkillItemContent {
+						skill: Some(_UnMapped("my/skill/path")),
+						..default()
+					},
 					..default()
 				}),
 			)]
@@ -226,7 +202,10 @@ mod tests {
 			[(
 				SlotKey::BottomHand(Side::Right),
 				Some(SkillItem {
-					content: Some(_Mapped("my/skill/path".to_owned())),
+					content: SkillItemContent {
+						skill: Some(_Mapped("my/skill/path".to_owned())),
+						..default()
+					},
 					..default()
 				}),
 			)]
@@ -243,14 +222,20 @@ mod tests {
 				(
 					SlotKey::BottomHand(Side::Right),
 					Some(SkillItem {
-						content: Some(_UnMapped("my/skill/path")),
+						content: SkillItemContent {
+							skill: Some(_UnMapped("my/skill/path")),
+							..default()
+						},
 						..default()
 					}),
 				),
 				(
 					SlotKey::BottomHand(Side::Right),
 					Some(SkillItem {
-						content: None,
+						content: SkillItemContent {
+							skill: None,
+							..default()
+						},
 						..default()
 					}),
 				),
@@ -264,14 +249,20 @@ mod tests {
 				(
 					SlotKey::BottomHand(Side::Right),
 					Some(SkillItem {
-						content: Some(_Mapped("my/skill/path".to_owned())),
+						content: SkillItemContent {
+							skill: Some(_Mapped("my/skill/path".to_owned())),
+							..default()
+						},
 						..default()
 					}),
 				),
 				(
 					SlotKey::BottomHand(Side::Right),
 					Some(SkillItem {
-						content: None,
+						content: SkillItemContent {
+							skill: None,
+							..default()
+						},
 						..default()
 					}),
 				),
@@ -289,7 +280,10 @@ mod tests {
 				(
 					SlotKey::BottomHand(Side::Right),
 					Some(SkillItem {
-						content: Some(_UnMapped("my/skill/path")),
+						content: SkillItemContent {
+							skill: Some(_UnMapped("my/skill/path")),
+							..default()
+						},
 						..default()
 					}),
 				),
@@ -304,7 +298,10 @@ mod tests {
 				(
 					SlotKey::BottomHand(Side::Right),
 					Some(SkillItem {
-						content: Some(_Mapped("my/skill/path".to_owned())),
+						content: SkillItemContent {
+							skill: Some(_Mapped("my/skill/path".to_owned())),
+							..default()
+						},
 						..default()
 					}),
 				),

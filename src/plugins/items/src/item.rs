@@ -1,38 +1,28 @@
-use crate::traits::item_type::AssociatedItemType;
 use bevy::prelude::*;
 use common::tools::ModelPath;
 use std::fmt::{Debug, Display, Formatter, Result};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Item<T>
-where
-	T: AssociatedItemType,
-{
+pub struct Item<TContent> {
 	pub name: &'static str,
 	pub model: Option<ModelPath>,
-	pub content: Option<T>,
-	pub item_type: T::TItemType,
+	pub content: TContent,
 }
 
-impl<T> Default for Item<T>
+impl<TContent> Default for Item<TContent>
 where
-	T: AssociatedItemType,
-	T::TItemType: Default,
+	TContent: Default,
 {
 	fn default() -> Self {
 		Self {
 			name: default(),
 			model: default(),
 			content: default(),
-			item_type: default(),
 		}
 	}
 }
 
-impl<T> Display for Item<T>
-where
-	T: AssociatedItemType,
-{
+impl<TContent> Display for Item<TContent> {
 	fn fmt(&self, f: &mut Formatter) -> Result {
 		write!(f, "Item({})", self.name)
 	}

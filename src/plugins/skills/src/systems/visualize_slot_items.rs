@@ -34,7 +34,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		definitions::item_slots::{ForearmSlots, HandSlots},
-		item::{item_type::SkillItemType, SkillItem},
+		item::{item_type::SkillItemType, SkillItem, SkillItemContent},
 		skills::Skill,
 		slot_key::SlotKey,
 	};
@@ -109,12 +109,18 @@ mod tests {
 		let mut app = setup();
 		let item_a = SkillItem {
 			model: Some(ModelPath("my bracer model")),
-			item_type: SkillItemType::Pistol,
+			content: SkillItemContent {
+				item_type: SkillItemType::Pistol,
+				..default()
+			},
 			..default()
 		};
 		let item_b = SkillItem {
 			model: Some(ModelPath("my forearm model")),
-			item_type: SkillItemType::Bracer,
+			content: SkillItemContent {
+				item_type: SkillItemType::Bracer,
+				..default()
+			},
 			..default()
 		};
 		let entity = app

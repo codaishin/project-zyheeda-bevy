@@ -40,7 +40,7 @@ use definitions::{
 	sub_models::SubModels,
 };
 use inventory_key::InventoryKey;
-use item::{item_type::SkillItemType, SkillItem};
+use item::{item_type::SkillItemType, SkillItem, SkillItemContent};
 use items::RegisterVisualizer;
 use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill, SkillId};
 use slot_key::SlotKey;
@@ -157,8 +157,10 @@ fn get_loadout() -> Loadout<Player> {
 			Some(SkillItem {
 				name: "Plasma Pistol A",
 				model: Some(ModelPath("models/pistol.glb")),
-				content: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
-				item_type: SkillItemType::Pistol,
+				content: SkillItemContent {
+					skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+					item_type: SkillItemType::Pistol,
+				},
 			}),
 		),
 		(
@@ -166,8 +168,10 @@ fn get_loadout() -> Loadout<Player> {
 			Some(SkillItem {
 				name: "Plasma Pistol B",
 				model: Some(ModelPath("models/pistol.glb")),
-				content: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
-				item_type: SkillItemType::Pistol,
+				content: SkillItemContent {
+					skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+					item_type: SkillItemType::Pistol,
+				},
 			}),
 		),
 		(
@@ -175,8 +179,10 @@ fn get_loadout() -> Loadout<Player> {
 			Some(SkillItem {
 				name: "Force Bracer",
 				model: Some(ModelPath("models/bracer.glb")),
-				content: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
-				item_type: SkillItemType::Bracer,
+				content: SkillItemContent {
+					skill: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
+					item_type: SkillItemType::Bracer,
+				},
 			}),
 		),
 		(
@@ -184,8 +190,10 @@ fn get_loadout() -> Loadout<Player> {
 			Some(SkillItem {
 				name: "Force Bracer",
 				model: Some(ModelPath("models/bracer.glb")),
-				content: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
-				item_type: SkillItemType::Bracer,
+				content: SkillItemContent {
+					skill: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
+					item_type: SkillItemType::Bracer,
+				},
 			}),
 		),
 	])
@@ -196,20 +204,26 @@ fn get_inventory() -> Inventory<SkillId> {
 		Some(SkillItem {
 			name: "Plasma Pistol C",
 			model: Some(ModelPath("models/pistol.glb")),
-			content: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
-			item_type: SkillItemType::Pistol,
+			content: SkillItemContent {
+				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+				item_type: SkillItemType::Pistol,
+			},
 		}),
 		Some(SkillItem {
 			name: "Plasma Pistol D",
 			model: Some(ModelPath("models/pistol.glb")),
-			content: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
-			item_type: SkillItemType::Pistol,
+			content: SkillItemContent {
+				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+				item_type: SkillItemType::Pistol,
+			},
 		}),
 		Some(SkillItem {
 			name: "Plasma Pistol E",
 			model: Some(ModelPath("models/pistol.glb")),
-			content: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
-			item_type: SkillItemType::Pistol,
+			content: SkillItemContent {
+				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+				item_type: SkillItemType::Pistol,
+			},
 		}),
 	])
 }

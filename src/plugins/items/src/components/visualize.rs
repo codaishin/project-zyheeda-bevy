@@ -1,7 +1,7 @@
 use super::visualizer::Visualizer;
 use crate::{
 	item::Item,
-	traits::{item_type::AssociatedItemType, key_string::KeyString, uses_view::UsesView},
+	traits::{key_string::KeyString, uses_view::UsesView},
 };
 use bevy::prelude::*;
 use common::{
@@ -30,7 +30,6 @@ impl<TView> VisualizeCommands<TView> {
 	pub fn with_item<TKey, TContent>(mut self, key: &TKey, item: Option<&Item<TContent>>) -> Self
 	where
 		TView: KeyString<TKey>,
-		TContent: AssociatedItemType,
 		Item<TContent>: UsesView<TView>,
 	{
 		let model = Self::get_model(item);
@@ -40,7 +39,6 @@ impl<TView> VisualizeCommands<TView> {
 
 	fn get_model<TContent>(item: Option<&Item<TContent>>) -> Option<ModelPath>
 	where
-		TContent: AssociatedItemType,
 		Item<TContent>: UsesView<TView>,
 	{
 		let item = item?;
@@ -149,22 +147,15 @@ mod tests {
 		}
 	}
 
-	struct _Content;
-
-	type _Item = Item<_Content>;
-
-	impl AssociatedItemType for _Content {
-		type TItemType = _ItemType;
-	}
-
 	#[derive(Default)]
-	struct _ItemType {
-		uses_view: bool,
-	}
+	struct _UsesView(bool);
+
+	type _Item = Item<_UsesView>;
 
 	impl UsesView<_View> for _Item {
 		fn uses_view(&self) -> bool {
-			self.item_type.uses_view
+			let _UsesView(uses_view) = self.content;
+			uses_view
 		}
 	}
 
@@ -172,7 +163,7 @@ mod tests {
 	fn add_item() {
 		let item = _Item {
 			model: Some(ModelPath("my model")),
-			item_type: _ItemType { uses_view: true },
+			content: _UsesView(true),
 			..default()
 		};
 		let visualize = VisualizeCommands::<_View>::default().with_item(&_Key::A, Some(&item));
@@ -189,7 +180,7 @@ mod tests {
 	#[test]
 	fn add_none_item() {
 		let visualize = VisualizeCommands::<_View>::default()
-			.with_item(&_Key::A, None as Option<&Item<_Content>>);
+			.with_item(&_Key::A, None as Option<&Item<_UsesView>>);
 
 		assert_eq!(
 			VisualizeCommands::<_View> {
@@ -204,12 +195,12 @@ mod tests {
 	fn add_multiple_items() {
 		let item_a = _Item {
 			model: Some(ModelPath("my model a")),
-			item_type: _ItemType { uses_view: true },
+			content: _UsesView(true),
 			..default()
 		};
 		let item_b = _Item {
 			model: Some(ModelPath("my model b")),
-			item_type: _ItemType { uses_view: true },
+			content: _UsesView(true),
 			..default()
 		};
 		let visualize = VisualizeCommands::<_View>::default()
@@ -229,10 +220,10 @@ mod tests {
 	}
 
 	#[test]
-	fn add_item_with_mode_none_when_not_using_visualizer() {
+	fn add_item_with_mode_none_when_not_using_view() {
 		let item = _Item {
 			model: Some(ModelPath("my model")),
-			item_type: _ItemType { uses_view: false },
+			content: _UsesView(false),
 			..default()
 		};
 		let visualize = VisualizeCommands::<_View>::default().with_item(&_Key::A, Some(&item));
