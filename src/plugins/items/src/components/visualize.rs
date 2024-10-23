@@ -31,7 +31,7 @@ impl<TView> VisualizeCommands<TView> {
 	where
 		TView: KeyString<TKey>,
 		TContent: AssociatedItemType,
-		TContent::TItemType: UsesView<TView>,
+		Item<TContent>: UsesView<TView>,
 	{
 		let model = Self::get_model(item);
 		self.commands.insert(TView::key_string(key), model);
@@ -41,11 +41,11 @@ impl<TView> VisualizeCommands<TView> {
 	fn get_model<TContent>(item: Option<&Item<TContent>>) -> Option<ModelPath>
 	where
 		TContent: AssociatedItemType,
-		TContent::TItemType: UsesView<TView>,
+		Item<TContent>: UsesView<TView>,
 	{
 		let item = item?;
 
-		if !item.item_type.uses_view() {
+		if !item.uses_view() {
 			return None;
 		}
 
@@ -162,9 +162,9 @@ mod tests {
 		uses_view: bool,
 	}
 
-	impl UsesView<_View> for _ItemType {
+	impl UsesView<_View> for _Item {
 		fn uses_view(&self) -> bool {
-			self.uses_view
+			self.item_type.uses_view
 		}
 	}
 
