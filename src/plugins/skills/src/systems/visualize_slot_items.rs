@@ -5,7 +5,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::traits::try_insert_on::TryInsertOn;
-use items::{components::visualize::Visualize, traits::key_string::KeyString};
+use items::{components::visualize::VisualizeCommands, traits::key_string::KeyString};
 
 #[allow(clippy::type_complexity)]
 pub(crate) fn visualize_slot_items<TAgent>(
@@ -17,8 +17,8 @@ pub(crate) fn visualize_slot_items<TAgent>(
 	ForearmSlots<TAgent>: KeyString<SlotKey>,
 {
 	for (entity, slots) in &agents {
-		let mut hand_slots = Visualize::<HandSlots<TAgent>>::default();
-		let mut forearm_slots = Visualize::<ForearmSlots<TAgent>>::default();
+		let mut hand_slots = VisualizeCommands::<HandSlots<TAgent>>::default();
+		let mut forearm_slots = VisualizeCommands::<ForearmSlots<TAgent>>::default();
 
 		for (key, item) in &slots.0 {
 			hand_slots = hand_slots.with_item(key, item.as_ref());
@@ -39,8 +39,8 @@ mod tests {
 		slot_key::SlotKey,
 	};
 	use bevy::{app::App, ecs::system::RunSystemOnce};
-	use common::components::Side;
-	use items::{components::visualize::Visualize, traits::key_string::KeyString};
+	use common::{components::Side, tools::ModelPath};
+	use items::{components::visualize::VisualizeCommands, traits::key_string::KeyString};
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Agent;
@@ -71,7 +71,7 @@ mod tests {
 	fn visualize_item() {
 		let mut app = setup();
 		let item = SkillItem {
-			model: Some("my model"),
+			model: Some(ModelPath("my model")),
 			..default()
 		};
 		let entity = app
@@ -89,17 +89,17 @@ mod tests {
 		assert_eq!(
 			(
 				Some(
-					&Visualize::<HandSlots<_Agent>>::default()
+					&VisualizeCommands::<HandSlots<_Agent>>::default()
 						.with_item(&SlotKey::BottomHand(Side::Right), Some(&item))
 				),
 				Some(
-					&Visualize::<ForearmSlots<_Agent>>::default()
+					&VisualizeCommands::<ForearmSlots<_Agent>>::default()
 						.with_item(&SlotKey::BottomHand(Side::Right), Some(&item))
 				)
 			),
 			(
-				entity.get::<Visualize<HandSlots<_Agent>>>(),
-				entity.get::<Visualize<ForearmSlots<_Agent>>>()
+				entity.get::<VisualizeCommands<HandSlots<_Agent>>>(),
+				entity.get::<VisualizeCommands<ForearmSlots<_Agent>>>()
 			),
 		)
 	}
@@ -108,12 +108,12 @@ mod tests {
 	fn visualize_items() {
 		let mut app = setup();
 		let item_a = SkillItem {
-			model: Some("my bracer model"),
+			model: Some(ModelPath("my bracer model")),
 			item_type: SkillItemType::Pistol,
 			..default()
 		};
 		let item_b = SkillItem {
-			model: Some("my forearm model"),
+			model: Some(ModelPath("my forearm model")),
 			item_type: SkillItemType::Bracer,
 			..default()
 		};
@@ -135,19 +135,19 @@ mod tests {
 		assert_eq!(
 			(
 				Some(
-					&Visualize::<HandSlots<_Agent>>::default()
+					&VisualizeCommands::<HandSlots<_Agent>>::default()
 						.with_item(&SlotKey::BottomHand(Side::Right), Some(&item_a))
 						.with_item(&SlotKey::TopHand(Side::Right), Some(&item_b))
 				),
 				Some(
-					&Visualize::<ForearmSlots<_Agent>>::default()
+					&VisualizeCommands::<ForearmSlots<_Agent>>::default()
 						.with_item(&SlotKey::BottomHand(Side::Right), Some(&item_a))
 						.with_item(&SlotKey::TopHand(Side::Right), Some(&item_b))
 				)
 			),
 			(
-				entity.get::<Visualize<HandSlots<_Agent>>>(),
-				entity.get::<Visualize<ForearmSlots<_Agent>>>()
+				entity.get::<VisualizeCommands<HandSlots<_Agent>>>(),
+				entity.get::<VisualizeCommands<ForearmSlots<_Agent>>>()
 			),
 		)
 	}
@@ -156,7 +156,7 @@ mod tests {
 	fn do_nothing_when_not_with_agent_component() {
 		let mut app = setup();
 		let item = SkillItem {
-			model: Some("my model"),
+			model: Some(ModelPath("my model")),
 			..default()
 		};
 		let entity = app
@@ -174,8 +174,8 @@ mod tests {
 		assert_eq!(
 			(None, None),
 			(
-				entity.get::<Visualize<HandSlots<_Agent>>>(),
-				entity.get::<Visualize<ForearmSlots<_Agent>>>()
+				entity.get::<VisualizeCommands<HandSlots<_Agent>>>(),
+				entity.get::<VisualizeCommands<ForearmSlots<_Agent>>>()
 			),
 		)
 	}
@@ -184,7 +184,7 @@ mod tests {
 	fn visualize_item_only_once() {
 		let mut app = setup();
 		let item = SkillItem {
-			model: Some("my model"),
+			model: Some(ModelPath("my model")),
 			..default()
 		};
 		let entity = app
@@ -198,8 +198,8 @@ mod tests {
 		app.add_systems(Update, visualize_slot_items::<_Agent>);
 		app.update();
 		app.world_mut().entity_mut(entity).remove::<(
-			Visualize<HandSlots<_Agent>>,
-			Visualize<ForearmSlots<_Agent>>,
+			VisualizeCommands<HandSlots<_Agent>>,
+			VisualizeCommands<ForearmSlots<_Agent>>,
 		)>();
 		app.update();
 
@@ -207,8 +207,8 @@ mod tests {
 		assert_eq!(
 			(None, None),
 			(
-				entity.get::<Visualize<HandSlots<_Agent>>>(),
-				entity.get::<Visualize<ForearmSlots<_Agent>>>()
+				entity.get::<VisualizeCommands<HandSlots<_Agent>>>(),
+				entity.get::<VisualizeCommands<ForearmSlots<_Agent>>>()
 			),
 		)
 	}
@@ -223,7 +223,7 @@ mod tests {
 				Slots::<Skill>::new([(
 					SlotKey::BottomHand(Side::Right),
 					Some(SkillItem {
-						model: Some("my model"),
+						model: Some(ModelPath("my model")),
 						..default()
 					}),
 				)]),
@@ -235,7 +235,7 @@ mod tests {
 		let mut agent = app.world_mut().entity_mut(entity);
 		let mut slots = agent.get_mut::<Slots>().unwrap();
 		let item = SkillItem {
-			model: Some("my other model"),
+			model: Some(ModelPath("my other model")),
 			..default()
 		};
 		*slots = Slots::<Skill>::new([(SlotKey::TopHand(Side::Right), Some(item.clone()))]);
@@ -245,17 +245,17 @@ mod tests {
 		assert_eq!(
 			(
 				Some(
-					&Visualize::<HandSlots<_Agent>>::default()
+					&VisualizeCommands::<HandSlots<_Agent>>::default()
 						.with_item(&SlotKey::TopHand(Side::Right), Some(&item))
 				),
 				Some(
-					&Visualize::<ForearmSlots<_Agent>>::default()
+					&VisualizeCommands::<ForearmSlots<_Agent>>::default()
 						.with_item(&SlotKey::TopHand(Side::Right), Some(&item))
 				)
 			),
 			(
-				entity.get::<Visualize<HandSlots<_Agent>>>(),
-				entity.get::<Visualize<ForearmSlots<_Agent>>>()
+				entity.get::<VisualizeCommands<HandSlots<_Agent>>>(),
+				entity.get::<VisualizeCommands<ForearmSlots<_Agent>>>()
 			),
 		)
 	}

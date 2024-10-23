@@ -3,14 +3,9 @@ pub mod language_server;
 
 use crate::{components::Outdated, traits::cache::Storage};
 use bevy::{
-	asset::{Asset, AssetServer, Handle, LoadedFolder},
-	ecs::{
-		component::Component,
-		entity::Entity,
-		system::{Res, Resource},
-	},
+	asset::{Asset, Handle, LoadedFolder},
+	ecs::{component::Component, entity::Entity, system::Resource},
 	math::Ray3d,
-	scene::Scene,
 };
 use std::{
 	collections::{
@@ -60,31 +55,6 @@ impl<T> Default for MouseHover<T> {
 
 #[derive(Resource, Default)]
 pub struct CamRay(pub Option<Ray3d>);
-
-#[derive(Resource, Default)]
-pub struct Models(pub HashMap<&'static str, Handle<Scene>>);
-
-pub type File = str;
-pub type SceneId = u8;
-
-impl Models {
-	pub fn new<const C: usize>(
-		pairs: [(&'static str, &File, SceneId); C],
-		asset_server: &Res<AssetServer>,
-	) -> Self {
-		Models(
-			pairs
-				.map(|(key, file, scene_id)| {
-					(
-						key,
-						asset_server.load(format!("models/{file}#Scene{scene_id}")),
-					)
-				})
-				.into_iter()
-				.collect(),
-		)
-	}
-}
 
 #[derive(Resource)]
 pub struct Shared<TKey: Eq + Hash, T: Clone> {

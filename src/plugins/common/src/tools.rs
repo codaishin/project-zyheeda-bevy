@@ -87,6 +87,9 @@ impl From<Vec<Entity>> for Focus {
 	}
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct ModelPath(pub &'static str);
+
 #[cfg(test)]
 mod test_clamp_zero_positive {
 	use super::*;

@@ -16,6 +16,7 @@ pub mod insert;
 pub mod intersect_at;
 pub mod iterate;
 pub mod iteration;
+pub mod load;
 pub mod load_asset;
 pub mod load_folder_assets;
 pub mod load_from;

@@ -1,88 +1,85 @@
 use super::visualizer::Visualizer;
 use crate::{
 	item::Item,
-	traits::{
-		item_type::AssociatedItemType,
-		key_string::KeyString,
-		uses_visualizer::UsesVisualizer,
-	},
+	traits::{item_type::AssociatedItemType, key_string::KeyString, uses_view::UsesView},
 };
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
-	resources::Models,
-	traits::{try_complex_insert::TryComplexInsert, try_remove_from::TryRemoveFrom},
+	tools::ModelPath,
+	traits::{load::Load, try_complex_insert::TryComplexInsert, try_remove_from::TryRemoveFrom},
 };
 use std::{collections::HashMap, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
-pub struct Visualize<TVisualizer> {
-	phantom_data: PhantomData<TVisualizer>,
-	items: HashMap<&'static str, Option<&'static str>>,
+pub struct VisualizeCommands<TView> {
+	phantom_data: PhantomData<TView>,
+	commands: HashMap<&'static str, Option<ModelPath>>,
 }
 
-impl<TVisualizer> Default for Visualize<TVisualizer> {
+impl<TView> Default for VisualizeCommands<TView> {
 	fn default() -> Self {
 		Self {
 			phantom_data: PhantomData,
-			items: default(),
+			commands: default(),
 		}
 	}
 }
 
-impl<TVisualizer> Visualize<TVisualizer> {
+impl<TView> VisualizeCommands<TView> {
 	pub fn with_item<TKey, TContent>(mut self, key: &TKey, item: Option<&Item<TContent>>) -> Self
 	where
-		TVisualizer: KeyString<TKey>,
+		TView: KeyString<TKey>,
 		TContent: AssociatedItemType,
-		TContent::TItemType: UsesVisualizer<TVisualizer>,
+		TContent::TItemType: UsesView<TView>,
 	{
 		let model = Self::get_model(item);
-		self.items.insert(TVisualizer::key_string(key), model);
+		self.commands.insert(TView::key_string(key), model);
 		self
 	}
 
-	fn get_model<TContent>(item: Option<&Item<TContent>>) -> Option<&'static str>
+	fn get_model<TContent>(item: Option<&Item<TContent>>) -> Option<ModelPath>
 	where
 		TContent: AssociatedItemType,
-		TContent::TItemType: UsesVisualizer<TVisualizer>,
+		TContent::TItemType: UsesView<TView>,
 	{
 		let item = item?;
 
-		if !item.item_type.uses_visualization() {
+		if !item.item_type.uses_view() {
 			return None;
 		}
 
 		item.model
 	}
 
-	pub(crate) fn system(
+	pub(crate) fn apply(
 		commands: Commands,
-		visualizers: Query<(Entity, &Visualizer<TVisualizer>, &Visualize<TVisualizer>)>,
-		models: Res<Models>,
+		visualizers: Query<(Entity, &Visualizer<TView>, &VisualizeCommands<TView>)>,
+		asset_server: Res<AssetServer>,
 	) -> Vec<Result<(), Error>>
 	where
-		TVisualizer: Sync + Send + 'static,
+		TView: Sync + Send + 'static,
 	{
-		visualize_system(commands, visualizers, models)
+		visualize_system(commands, visualizers, asset_server)
 	}
 }
 
-fn visualize_system<TCommands, TVisualizer>(
+fn visualize_system<TCommands, TAssetServer, TView>(
 	mut commands: TCommands,
-	visualizers: Query<(Entity, &Visualizer<TVisualizer>, &Visualize<TVisualizer>)>,
-	models: Res<Models>,
+	visualizers: Query<(Entity, &Visualizer<TView>, &VisualizeCommands<TView>)>,
+	asset_server: Res<TAssetServer>,
 ) -> Vec<Result<(), Error>>
 where
 	TCommands: TryComplexInsert<Option<Handle<Scene>>> + TryRemoveFrom,
-	TVisualizer: Send + Sync + 'static,
+	TAssetServer: Load<ModelPath, Handle<Scene>> + Resource,
+	TView: Send + Sync + 'static,
 {
 	let mut errors = vec![];
 
 	for (entity, visualizer, visualize) in &visualizers {
-		for (key, model) in &visualize.items {
-			let result = apply(&mut commands, &models, visualizer, key, model);
-			commands.try_remove_from::<Visualize<TVisualizer>>(entity);
+		for (key, model) in &visualize.commands {
+			let result = apply(&mut commands, &asset_server, visualizer, key, model);
+			commands.try_remove_from::<VisualizeCommands<TView>>(entity);
 
 			let Err(error) = result else {
 				continue;
@@ -94,45 +91,30 @@ where
 	errors
 }
 
-fn apply<TCommands, TVisualizer>(
+fn apply<TCommands, TAssetServer, TView>(
 	commands: &mut TCommands,
-	models: &Res<'_, Models>,
-	visualizer: &Visualizer<TVisualizer>,
+	asset_server: &Res<TAssetServer>,
+	visualizer: &Visualizer<TView>,
 	key: &'static str,
-	model: &Option<&'static str>,
+	model: &Option<ModelPath>,
 ) -> Result<(), Error>
 where
 	TCommands: TryComplexInsert<Option<Handle<Scene>>>,
+	TAssetServer: Load<ModelPath, Handle<Scene>> + Resource,
 {
-	let Some(entity) = visualizer.entities.get(&Name::from(key)) else {
-		return Err(entity_not_found_error(key));
-	};
+	let entity = visualizer
+		.entities
+		.get(&Name::from(key))
+		.ok_or(entity_not_found_error(key))?;
+	let model = model.as_ref().map(|m| asset_server.load(m));
 
-	match model {
-		None => {
-			commands.try_complex_insert(*entity, None);
-			Ok(())
-		}
-		Some(model) => {
-			let Some(model) = models.0.get(model) else {
-				return Err(model_not_found_error(model));
-			};
-			commands.try_complex_insert(*entity, Some(model.clone()));
-			Ok(())
-		}
-	}
+	commands.try_complex_insert(*entity, model);
+	Ok(())
 }
 
 fn entity_not_found_error(key: &'static str) -> Error {
 	Error {
 		msg: format!("no entity found for {key}"),
-		lvl: Level::Error,
-	}
-}
-
-fn model_not_found_error(model: &'static str) -> Error {
-	Error {
-		msg: format!("model for path {model} not found"),
 		lvl: Level::Error,
 	}
 }
@@ -143,12 +125,12 @@ mod tests {
 	use crate::components::visualizer::Visualizer;
 	use bevy::ecs::system::RunSystemOnce;
 	use common::{
-		resources::Models,
 		simple_init,
 		test_tools::utils::new_handle,
-		traits::{mock::Mock, try_complex_insert::TryComplexInsert},
+		traits::{mock::Mock, nested_mock::NestedMocks, try_complex_insert::TryComplexInsert},
 	};
-	use mockall::{mock, predicate::eq};
+	use macros::NestedMocks;
+	use mockall::{automock, mock, predicate::eq};
 
 	enum _Key {
 		A,
@@ -156,9 +138,9 @@ mod tests {
 	}
 
 	#[derive(Debug, PartialEq)]
-	struct _Visualizer;
+	struct _View;
 
-	impl KeyString<_Key> for _Visualizer {
+	impl KeyString<_Key> for _View {
 		fn key_string(key: &_Key) -> &'static str {
 			match key {
 				_Key::A => "a",
@@ -169,36 +151,36 @@ mod tests {
 
 	struct _Content;
 
+	type _Item = Item<_Content>;
+
 	impl AssociatedItemType for _Content {
-		type TItemType = _ContentItemType;
+		type TItemType = _ItemType;
 	}
 
 	#[derive(Default)]
-	struct _ContentItemType {
-		uses_visualizer: bool,
+	struct _ItemType {
+		uses_view: bool,
 	}
 
-	impl UsesVisualizer<_Visualizer> for _ContentItemType {
-		fn uses_visualization(&self) -> bool {
-			self.uses_visualizer
+	impl UsesView<_View> for _ItemType {
+		fn uses_view(&self) -> bool {
+			self.uses_view
 		}
 	}
 
 	#[test]
 	fn add_item() {
-		let item = Item::<_Content> {
-			model: Some("my model"),
-			item_type: _ContentItemType {
-				uses_visualizer: true,
-			},
+		let item = _Item {
+			model: Some(ModelPath("my model")),
+			item_type: _ItemType { uses_view: true },
 			..default()
 		};
-		let visualize = Visualize::<_Visualizer>::default().with_item(&_Key::A, Some(&item));
+		let visualize = VisualizeCommands::<_View>::default().with_item(&_Key::A, Some(&item));
 
 		assert_eq!(
-			Visualize::<_Visualizer> {
+			VisualizeCommands::<_View> {
 				phantom_data: PhantomData,
-				items: HashMap::from([("a", Some("my model"))]),
+				commands: HashMap::from([("a", Some(ModelPath("my model")))]),
 			},
 			visualize,
 		)
@@ -206,13 +188,13 @@ mod tests {
 
 	#[test]
 	fn add_none_item() {
-		let visualize = Visualize::<_Visualizer>::default()
+		let visualize = VisualizeCommands::<_View>::default()
 			.with_item(&_Key::A, None as Option<&Item<_Content>>);
 
 		assert_eq!(
-			Visualize::<_Visualizer> {
+			VisualizeCommands::<_View> {
 				phantom_data: PhantomData,
-				items: HashMap::from([("a", None)]),
+				commands: HashMap::from([("a", None)]),
 			},
 			visualize,
 		)
@@ -220,28 +202,27 @@ mod tests {
 
 	#[test]
 	fn add_multiple_items() {
-		let item_a = Item::<_Content> {
-			model: Some("my model a"),
-			item_type: _ContentItemType {
-				uses_visualizer: true,
-			},
+		let item_a = _Item {
+			model: Some(ModelPath("my model a")),
+			item_type: _ItemType { uses_view: true },
 			..default()
 		};
-		let item_b = Item::<_Content> {
-			model: Some("my model b"),
-			item_type: _ContentItemType {
-				uses_visualizer: true,
-			},
+		let item_b = _Item {
+			model: Some(ModelPath("my model b")),
+			item_type: _ItemType { uses_view: true },
 			..default()
 		};
-		let visualize = Visualize::<_Visualizer>::default()
+		let visualize = VisualizeCommands::<_View>::default()
 			.with_item(&_Key::A, Some(&item_a))
 			.with_item(&_Key::B, Some(&item_b));
 
 		assert_eq!(
-			Visualize::<_Visualizer> {
+			VisualizeCommands::<_View> {
 				phantom_data: PhantomData,
-				items: HashMap::from([("a", Some("my model a")), ("b", Some("my model b"))]),
+				commands: HashMap::from([
+					("a", Some(ModelPath("my model a"))),
+					("b", Some(ModelPath("my model b")))
+				]),
 			},
 			visualize,
 		)
@@ -249,19 +230,17 @@ mod tests {
 
 	#[test]
 	fn add_item_with_mode_none_when_not_using_visualizer() {
-		let item = Item::<_Content> {
-			model: Some("my model"),
-			item_type: _ContentItemType {
-				uses_visualizer: false,
-			},
+		let item = _Item {
+			model: Some(ModelPath("my model")),
+			item_type: _ItemType { uses_view: false },
 			..default()
 		};
-		let visualize = Visualize::<_Visualizer>::default().with_item(&_Key::A, Some(&item));
+		let visualize = VisualizeCommands::<_View>::default().with_item(&_Key::A, Some(&item));
 
 		assert_eq!(
-			Visualize::<_Visualizer> {
+			VisualizeCommands::<_View> {
 				phantom_data: PhantomData,
-				items: HashMap::from([("a", None as Option<&str>)]),
+				commands: HashMap::from([("a", None as Option<ModelPath>)]),
 			},
 			visualize,
 		)
@@ -279,20 +258,37 @@ mod tests {
 
 	simple_init!(Mock_Commands);
 
-	fn setup<const N: usize>(models: [(&'static str, Handle<Scene>); N]) -> App {
+	#[derive(Resource, Default, NestedMocks)]
+	struct _AssetServer {
+		mock: Mock_AssetServer,
+	}
+
+	#[automock]
+	impl Load<ModelPath, Handle<Scene>> for _AssetServer {
+		fn load(&self, key: &ModelPath) -> Handle<Scene> {
+			self.mock.load(key)
+		}
+	}
+
+	fn setup(asset_server: _AssetServer) -> App {
 		let mut app = App::new();
-		app.insert_resource(Models(HashMap::from(models)));
+		app.insert_resource(asset_server);
 		app
 	}
 
 	#[test]
 	fn visualize_scene() {
 		let handle = new_handle();
-		let mut app = setup([("my model", handle.clone())]);
+		let mut app = setup(_AssetServer::new().with_mock(|mock| {
+			mock.expect_load()
+				.times(1)
+				.with(eq(ModelPath("my model")))
+				.return_const(handle.clone());
+		}));
 		app.world_mut().spawn((
-			Visualizer::<_Visualizer>::new([(Name::from("a"), Entity::from_raw(42))]),
-			Visualize::<_Visualizer> {
-				items: HashMap::from([("a", Some("my model"))]),
+			Visualizer::<_View>::new([(Name::from("a"), Entity::from_raw(42))]),
+			VisualizeCommands::<_View> {
+				commands: HashMap::from([("a", Some(ModelPath("my model")))]),
 				..default()
 			},
 		));
@@ -302,21 +298,25 @@ mod tests {
 				.times(1)
 				.with(eq(Entity::from_raw(42)), eq(Some(handle.clone())))
 				.return_const(());
-			mock.expect_try_remove_from::<Visualize<_Visualizer>>()
+			mock.expect_try_remove_from::<VisualizeCommands<_View>>()
 				.return_const(());
 		});
 
-		app.world_mut()
-			.run_system_once_with(commands, visualize_system::<In<Mock_Commands>, _Visualizer>);
+		app.world_mut().run_system_once_with(
+			commands,
+			visualize_system::<In<Mock_Commands>, _AssetServer, _View>,
+		);
 	}
 
 	#[test]
 	fn visualize_none() {
-		let mut app = setup([]);
+		let mut app = setup(_AssetServer::new().with_mock(|mock| {
+			mock.expect_load().never().return_const(new_handle());
+		}));
 		app.world_mut().spawn((
-			Visualizer::<_Visualizer>::new([(Name::from("a"), Entity::from_raw(42))]),
-			Visualize::<_Visualizer> {
-				items: HashMap::from([("a", None)]),
+			Visualizer::<_View>::new([(Name::from("a"), Entity::from_raw(42))]),
+			VisualizeCommands::<_View> {
+				commands: HashMap::from([("a", None)]),
 				..default()
 			},
 		));
@@ -326,24 +326,27 @@ mod tests {
 				.times(1)
 				.with(eq(Entity::from_raw(42)), eq(None))
 				.return_const(());
-			mock.expect_try_remove_from::<Visualize<_Visualizer>>()
+			mock.expect_try_remove_from::<VisualizeCommands<_View>>()
 				.return_const(());
 		});
 
-		app.world_mut()
-			.run_system_once_with(commands, visualize_system::<In<Mock_Commands>, _Visualizer>);
+		app.world_mut().run_system_once_with(
+			commands,
+			visualize_system::<In<Mock_Commands>, _AssetServer, _View>,
+		);
 	}
 
 	#[test]
 	fn remove_visualize_component() {
-		let handle = new_handle();
-		let mut app = setup([("my model", handle.clone())]);
+		let mut app = setup(_AssetServer::new().with_mock(|mock| {
+			mock.expect_load().return_const(new_handle());
+		}));
 		let entity = app
 			.world_mut()
 			.spawn((
-				Visualizer::<_Visualizer>::new([(Name::from("a"), Entity::from_raw(42))]),
-				Visualize::<_Visualizer> {
-					items: HashMap::from([("a", Some("my model"))]),
+				Visualizer::<_View>::new([(Name::from("a"), Entity::from_raw(42))]),
+				VisualizeCommands::<_View> {
+					commands: HashMap::from([("a", Some(ModelPath("my model")))]),
 					..default()
 				},
 			))
@@ -351,60 +354,40 @@ mod tests {
 
 		let commands = Mock_Commands::new_mock(|mock| {
 			mock.expect_try_complex_insert().return_const(());
-			mock.expect_try_remove_from::<Visualize<_Visualizer>>()
+			mock.expect_try_remove_from::<VisualizeCommands<_View>>()
 				.times(1)
 				.with(eq(entity))
 				.return_const(());
 		});
 
-		app.world_mut()
-			.run_system_once_with(commands, visualize_system::<In<Mock_Commands>, _Visualizer>);
-	}
-
-	#[test]
-	fn return_error_when_model_not_found() {
-		let handle = new_handle();
-		let mut app = setup([("my model", handle.clone())]);
-		app.world_mut().spawn((
-			Visualizer::<_Visualizer>::new([(Name::from("a"), Entity::from_raw(42))]),
-			Visualize::<_Visualizer> {
-				items: HashMap::from([("a", Some("other model"))]),
-				..default()
-			},
-		));
-		let commands = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_complex_insert().never().return_const(());
-			mock.expect_try_remove_from::<Visualize<_Visualizer>>()
-				.return_const(());
-		});
-
-		let results = app
-			.world_mut()
-			.run_system_once_with(commands, visualize_system::<In<Mock_Commands>, _Visualizer>);
-
-		assert_eq!(vec![Err(model_not_found_error("other model"))], results);
+		app.world_mut().run_system_once_with(
+			commands,
+			visualize_system::<In<Mock_Commands>, _AssetServer, _View>,
+		);
 	}
 
 	#[test]
 	fn return_error_when_key_entity_not_found() {
-		let handle = new_handle();
-		let mut app = setup([("my model", handle.clone())]);
+		let mut app = setup(_AssetServer::new().with_mock(|mock| {
+			mock.expect_load().never().return_const(new_handle());
+		}));
 		app.world_mut().spawn((
-			Visualizer::<_Visualizer>::new([(Name::from("a"), Entity::from_raw(42))]),
-			Visualize::<_Visualizer> {
-				items: HashMap::from([("other key", Some("my model"))]),
+			Visualizer::<_View>::new([(Name::from("a"), Entity::from_raw(42))]),
+			VisualizeCommands::<_View> {
+				commands: HashMap::from([("other key", Some(ModelPath("my model")))]),
 				..default()
 			},
 		));
 		let commands = Mock_Commands::new_mock(|mock| {
 			mock.expect_try_complex_insert().never().return_const(());
-			mock.expect_try_remove_from::<Visualize<_Visualizer>>()
+			mock.expect_try_remove_from::<VisualizeCommands<_View>>()
 				.return_const(());
 		});
 
-		let results = app
-			.world_mut()
-			.run_system_once_with(commands, visualize_system::<In<Mock_Commands>, _Visualizer>);
+		let results = app.world_mut().run_system_once_with(
+			commands,
+			visualize_system::<In<Mock_Commands>, _AssetServer, _View>,
+		);
 
 		assert_eq!(vec![Err(entity_not_found_error("other key"))], results);
 	}
