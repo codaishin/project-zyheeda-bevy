@@ -26,7 +26,7 @@ pub mod nested_mock;
 pub mod ownership_relation;
 pub mod process_delta;
 pub mod read;
-pub mod register_folder_assets;
+pub mod register_custom_folder_assets;
 pub mod remove_conditionally;
 pub mod state_duration;
 pub mod swap_command;

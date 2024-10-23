@@ -19,7 +19,10 @@ use common::{
 	resources::{key_map::KeyMap, Models},
 	states::{GameRunning, MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
-	traits::{register_folder_assets::RegisterFolderAssets, try_insert_on::TryInsertOn},
+	traits::{
+		register_custom_folder_assets::RegisterCustomFolderAssets,
+		try_insert_on::TryInsertOn,
+	},
 };
 use components::{
 	combo_node::ComboNode,
@@ -72,7 +75,7 @@ impl Plugin for SkillsPlugin {
 }
 
 fn skill_load(app: &mut App) {
-	app.register_folder_assets::<Skill, SkillData>();
+	app.register_custom_folder_assets::<Skill, SkillData>();
 }
 
 fn inventory(app: &mut App) {
