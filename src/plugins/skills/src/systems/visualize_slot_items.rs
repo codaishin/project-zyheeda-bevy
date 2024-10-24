@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::traits::{accessors::get::Getter, try_insert_on::TryInsertOn};
 use items::{
 	components::visualize::VisualizeCommands,
-	traits::{key_string::KeyString, uses_view::UsesView, view_component::ViewComponent},
+	traits::{uses_view::UsesView, view::ItemView},
 };
 
 #[allow(clippy::type_complexity)]
@@ -11,12 +11,11 @@ pub(crate) fn visualize_slot_items<TView>(
 	mut commands: Commands,
 	agents: Query<(Entity, &Slots), Changed<Slots>>,
 ) where
-	TView: KeyString<SlotKey> + ViewComponent + Sync + Send + 'static,
-	TView::TViewComponent: Default + Sync + Send + 'static,
-	SkillItemContent: UsesView<TView> + Getter<TView::TViewComponent>,
+	TView: ItemView<SlotKey> + Sync + Send + 'static,
+	SkillItemContent: UsesView<TView> + Getter<TView::TViewComponents>,
 {
 	for (entity, slots) in &agents {
-		let mut visualize = VisualizeCommands::<TView>::default();
+		let mut visualize = VisualizeCommands::<TView, SlotKey>::default();
 
 		for (key, item) in &slots.0 {
 			visualize = visualize.with_item(key, item.as_ref());
@@ -36,22 +35,13 @@ mod tests {
 	};
 	use bevy::ecs::system::RunSystemOnce;
 	use common::components::{AssetModel, Side};
-	use items::{components::visualize::VisualizeCommands, traits::key_string::KeyString};
+	use items::components::visualize::VisualizeCommands;
 
 	#[derive(Debug, PartialEq)]
 	struct _View;
 
-	#[derive(Debug, PartialEq, Default, Clone)]
+	#[derive(Component, Debug, PartialEq, Default, Clone)]
 	struct _ViewComponent(SkillItemContent);
-
-	impl KeyString<SlotKey> for _View {
-		fn key_string(key: &SlotKey) -> &'static str {
-			match key {
-				SlotKey::TopHand(_) => "top",
-				SlotKey::BottomHand(_) => "btm",
-			}
-		}
-	}
 
 	impl UsesView<_View> for SkillItemContent {
 		fn uses_view(&self) -> bool {
@@ -59,8 +49,16 @@ mod tests {
 		}
 	}
 
-	impl ViewComponent for _View {
-		type TViewComponent = _ViewComponent;
+	impl ItemView<SlotKey> for _View {
+		type TFilter = ();
+		type TViewComponents = _ViewComponent;
+
+		fn view_entity_name(key: &SlotKey) -> &'static str {
+			match key {
+				SlotKey::TopHand(_) => "top",
+				SlotKey::BottomHand(_) => "btm",
+			}
+		}
 	}
 
 	impl Getter<_ViewComponent> for SkillItemContent {
@@ -97,10 +95,10 @@ mod tests {
 		let entity = app.world().entity(entity);
 		assert_eq!(
 			Some(
-				&VisualizeCommands::<_View>::default()
+				&VisualizeCommands::<_View, SlotKey>::default()
 					.with_item(&SlotKey::BottomHand(Side::Right), Some(&item))
 			),
-			entity.get::<VisualizeCommands<_View>>(),
+			entity.get::<VisualizeCommands<_View, SlotKey>>(),
 		);
 	}
 
@@ -137,11 +135,11 @@ mod tests {
 		let entity = app.world().entity(entity);
 		assert_eq!(
 			Some(
-				&VisualizeCommands::<_View>::default()
+				&VisualizeCommands::<_View, SlotKey>::default()
 					.with_item(&SlotKey::BottomHand(Side::Right), Some(&item_a))
 					.with_item(&SlotKey::TopHand(Side::Right), Some(&item_b))
 			),
-			entity.get::<VisualizeCommands<_View>>(),
+			entity.get::<VisualizeCommands<_View, SlotKey>>(),
 		);
 	}
 
@@ -167,11 +165,11 @@ mod tests {
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.remove::<VisualizeCommands<_View>>();
+			.remove::<VisualizeCommands<_View, SlotKey>>();
 		app.update();
 
 		let entity = app.world().entity(entity);
-		assert_eq!(None, entity.get::<VisualizeCommands<_View>>());
+		assert_eq!(None, entity.get::<VisualizeCommands<_View, SlotKey>>());
 	}
 
 	#[test]
@@ -208,10 +206,10 @@ mod tests {
 		let entity = app.world().entity(entity);
 		assert_eq!(
 			Some(
-				&VisualizeCommands::<_View>::default()
+				&VisualizeCommands::<_View, SlotKey>::default()
 					.with_item(&SlotKey::TopHand(Side::Right), Some(&item))
 			),
-			entity.get::<VisualizeCommands<_View>>(),
+			entity.get::<VisualizeCommands<_View, SlotKey>>(),
 		);
 	}
 }

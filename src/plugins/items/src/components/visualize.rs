@@ -1,7 +1,7 @@
 use super::visualizer::Visualizer;
 use crate::{
 	item::Item,
-	traits::{key_string::KeyString, uses_view::UsesView, view_component::ViewComponent},
+	traits::{uses_view::UsesView, view::ItemView},
 };
 use bevy::prelude::*;
 use common::{
@@ -11,17 +11,17 @@ use common::{
 use std::{collections::HashMap, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
-pub struct VisualizeCommands<TView>
+pub struct VisualizeCommands<TView, TKey>
 where
-	TView: ViewComponent,
+	TView: ItemView<TKey>,
 {
-	phantom_data: PhantomData<TView>,
-	commands: HashMap<&'static str, TView::TViewComponent>,
+	phantom_data: PhantomData<(TView, TKey)>,
+	commands: HashMap<&'static str, TView::TViewComponents>,
 }
 
-impl<TView> Default for VisualizeCommands<TView>
+impl<TView, TKey> Default for VisualizeCommands<TView, TKey>
 where
-	TView: ViewComponent,
+	TView: ItemView<TKey>,
 {
 	fn default() -> Self {
 		Self {
@@ -31,24 +31,25 @@ where
 	}
 }
 
-impl<TView> VisualizeCommands<TView>
+impl<TView, TKey> VisualizeCommands<TView, TKey>
 where
-	TView: ViewComponent,
-	TView::TViewComponent: Default,
+	TView: ItemView<TKey>,
+	TView::TViewComponents: Default,
 {
-	pub fn with_item<TKey, TContent>(mut self, key: &TKey, item: Option<&Item<TContent>>) -> Self
+	pub fn with_item<TContent>(mut self, key: &TKey, item: Option<&Item<TContent>>) -> Self
 	where
-		TView: KeyString<TKey>,
-		TContent: UsesView<TView> + Getter<TView::TViewComponent>,
+		TView: ItemView<TKey>,
+		TContent: UsesView<TView> + Getter<TView::TViewComponents>,
 	{
-		let model = Self::get_model(item);
-		self.commands.insert(TView::key_string(key), model);
+		let components = Self::view_components(item);
+		let view_slot = TView::view_entity_name(key);
+		self.commands.insert(view_slot, components);
 		self
 	}
 
-	fn get_model<TContent>(item: Option<&Item<TContent>>) -> TView::TViewComponent
+	fn view_components<TContent>(item: Option<&Item<TContent>>) -> TView::TViewComponents
 	where
-		TContent: UsesView<TView> + Getter<TView::TViewComponent>,
+		TContent: UsesView<TView> + Getter<TView::TViewComponents>,
 	{
 		let Some(item) = item else {
 			return default();
@@ -63,29 +64,35 @@ where
 
 	pub(crate) fn apply(
 		commands: Commands,
-		visualizers: Query<(Entity, &Visualizer<TView>, &VisualizeCommands<TView>)>,
+		visualizers: Query<VisualizerComponents<TView, TKey>>,
 	) -> Vec<Result<(), Error>>
 	where
 		TView: Sync + Send + 'static,
-		TView::TViewComponent: Component + Clone + Sync + Send + 'static,
+		TKey: Sync + Send + 'static,
 	{
 		visualize_system(commands, visualizers)
 	}
 }
 
-fn visualize_system<TCommands, TView>(
+type VisualizerComponents<'a, TView, TKey> = (
+	Entity,
+	&'a Visualizer<TView, TKey>,
+	&'a VisualizeCommands<TView, TKey>,
+);
+
+fn visualize_system<TCommands, TView, TKey>(
 	mut commands: TCommands,
-	visualizers: Query<(Entity, &Visualizer<TView>, &VisualizeCommands<TView>)>,
+	visualizers: Query<VisualizerComponents<TView, TKey>>,
 ) -> Vec<Result<(), Error>>
 where
 	TCommands: TryInsertOn + TryRemoveFrom,
-	TView: ViewComponent + Send + Sync + 'static,
-	TView::TViewComponent: Component + Clone + Send + Sync + 'static,
+	TView: ItemView<TKey> + Send + Sync + 'static,
+	TKey: Sync + Send + 'static,
 {
 	let mut errors = vec![];
 
 	for (entity, visualizer, visualize) in &visualizers {
-		commands.try_remove_from::<VisualizeCommands<TView>>(entity);
+		commands.try_remove_from::<VisualizeCommands<TView, TKey>>(entity);
 
 		for (key, model) in &visualize.commands {
 			let result = apply(&mut commands, visualizer, key, model);
@@ -100,15 +107,15 @@ where
 	errors
 }
 
-fn apply<TCommands, TView, TComponent>(
+fn apply<TCommands, TView, TKey, TComponent>(
 	commands: &mut TCommands,
-	visualizer: &Visualizer<TView>,
+	visualizer: &Visualizer<TView, TKey>,
 	key: &'static str,
 	model: &TComponent,
 ) -> Result<(), Error>
 where
 	TCommands: TryInsertOn,
-	TComponent: Component + Clone,
+	TComponent: Bundle + Clone,
 {
 	let entity = visualizer
 		.entities
@@ -134,6 +141,7 @@ mod tests {
 	use common::{simple_init, traits::mock::Mock};
 	use mockall::{mock, predicate::eq};
 
+	#[derive(Debug, PartialEq)]
 	enum _Key {
 		A,
 		B,
@@ -149,17 +157,16 @@ mod tests {
 		Value(&'static str),
 	}
 
-	impl KeyString<_Key> for _View {
-		fn key_string(key: &_Key) -> &'static str {
+	impl ItemView<_Key> for _View {
+		type TFilter = ();
+		type TViewComponents = _ViewComponent;
+
+		fn view_entity_name(key: &_Key) -> &'static str {
 			match key {
 				_Key::A => "a",
 				_Key::B => "b",
 			}
 		}
-	}
-
-	impl ViewComponent for _View {
-		type TViewComponent = _ViewComponent;
 	}
 
 	#[derive(Default)]
@@ -189,10 +196,11 @@ mod tests {
 			},
 			..default()
 		};
-		let visualize = VisualizeCommands::<_View>::default().with_item(&_Key::A, Some(&item));
+		let visualize =
+			VisualizeCommands::<_View, _Key>::default().with_item(&_Key::A, Some(&item));
 
 		assert_eq!(
-			VisualizeCommands::<_View> {
+			VisualizeCommands::<_View, _Key> {
 				phantom_data: PhantomData,
 				commands: HashMap::from([("a", _ViewComponent::Value("my model"))]),
 			},
@@ -202,11 +210,11 @@ mod tests {
 
 	#[test]
 	fn add_none_item() {
-		let visualize = VisualizeCommands::<_View>::default()
+		let visualize = VisualizeCommands::<_View, _Key>::default()
 			.with_item(&_Key::A, None as Option<&Item<_Content>>);
 
 		assert_eq!(
-			VisualizeCommands::<_View> {
+			VisualizeCommands::<_View, _Key> {
 				phantom_data: PhantomData,
 				commands: HashMap::from([("a", _ViewComponent::Default)]),
 			},
@@ -230,12 +238,12 @@ mod tests {
 			},
 			..default()
 		};
-		let visualize = VisualizeCommands::<_View>::default()
+		let visualize = VisualizeCommands::<_View, _Key>::default()
 			.with_item(&_Key::A, Some(&item_a))
 			.with_item(&_Key::B, Some(&item_b));
 
 		assert_eq!(
-			VisualizeCommands::<_View> {
+			VisualizeCommands::<_View, _Key> {
 				phantom_data: PhantomData,
 				commands: HashMap::from([
 					("a", _ViewComponent::Value("my model a")),
@@ -255,10 +263,11 @@ mod tests {
 			},
 			..default()
 		};
-		let visualize = VisualizeCommands::<_View>::default().with_item(&_Key::A, Some(&item));
+		let visualize =
+			VisualizeCommands::<_View, _Key>::default().with_item(&_Key::A, Some(&item));
 
 		assert_eq!(
-			VisualizeCommands::<_View> {
+			VisualizeCommands::<_View, _Key> {
 				phantom_data: PhantomData,
 				commands: HashMap::from([("a", _ViewComponent::Default)]),
 			},
@@ -286,8 +295,8 @@ mod tests {
 	fn visualize_scene() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			Visualizer::<_View>::new([(Name::from("a"), Entity::from_raw(42))]),
-			VisualizeCommands::<_View> {
+			Visualizer::<_View, _Key>::new([(Name::from("a"), Entity::from_raw(42))]),
+			VisualizeCommands::<_View, _Key> {
 				commands: HashMap::from([("a", _ViewComponent::Value("my model"))]),
 				..default()
 			},
@@ -301,20 +310,20 @@ mod tests {
 					eq(_ViewComponent::Value("my model")),
 				)
 				.return_const(());
-			mock.expect_try_remove_from::<VisualizeCommands<_View>>()
+			mock.expect_try_remove_from::<VisualizeCommands<_View, _Key>>()
 				.return_const(());
 		});
 
 		app.world_mut()
-			.run_system_once_with(commands, visualize_system::<In<Mock_Commands>, _View>);
+			.run_system_once_with(commands, visualize_system::<In<Mock_Commands>, _View, _Key>);
 	}
 
 	#[test]
 	fn visualize_none() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			Visualizer::<_View>::new([(Name::from("a"), Entity::from_raw(42))]),
-			VisualizeCommands::<_View> {
+			Visualizer::<_View, _Key>::new([(Name::from("a"), Entity::from_raw(42))]),
+			VisualizeCommands::<_View, _Key> {
 				commands: HashMap::from([("a", _ViewComponent::Default)]),
 				..default()
 			},
@@ -325,12 +334,12 @@ mod tests {
 				.times(1)
 				.with(eq(Entity::from_raw(42)), eq(_ViewComponent::Default))
 				.return_const(());
-			mock.expect_try_remove_from::<VisualizeCommands<_View>>()
+			mock.expect_try_remove_from::<VisualizeCommands<_View, _Key>>()
 				.return_const(());
 		});
 
 		app.world_mut()
-			.run_system_once_with(commands, visualize_system::<In<Mock_Commands>, _View>);
+			.run_system_once_with(commands, visualize_system::<In<Mock_Commands>, _View, _Key>);
 	}
 
 	#[test]
@@ -339,8 +348,8 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Visualizer::<_View>::new([(Name::from("a"), Entity::from_raw(42))]),
-				VisualizeCommands::<_View> {
+				Visualizer::<_View, _Key>::new([(Name::from("a"), Entity::from_raw(42))]),
+				VisualizeCommands::<_View, _Key> {
 					commands: HashMap::from([("a", _ViewComponent::Value("my model"))]),
 					..default()
 				},
@@ -350,14 +359,14 @@ mod tests {
 		let commands = Mock_Commands::new_mock(|mock| {
 			mock.expect_try_insert_on::<_ViewComponent>()
 				.return_const(());
-			mock.expect_try_remove_from::<VisualizeCommands<_View>>()
+			mock.expect_try_remove_from::<VisualizeCommands<_View, _Key>>()
 				.times(1)
 				.with(eq(entity))
 				.return_const(());
 		});
 
 		app.world_mut()
-			.run_system_once_with(commands, visualize_system::<In<Mock_Commands>, _View>);
+			.run_system_once_with(commands, visualize_system::<In<Mock_Commands>, _View, _Key>);
 	}
 
 	#[test]
@@ -366,8 +375,8 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Visualizer::<_View>::new([(Name::from("a"), Entity::from_raw(42))]),
-				VisualizeCommands::<_View> {
+				Visualizer::<_View, _Key>::new([(Name::from("a"), Entity::from_raw(42))]),
+				VisualizeCommands::<_View, _Key> {
 					commands: HashMap::new(),
 					..default()
 				},
@@ -377,22 +386,22 @@ mod tests {
 		let commands = Mock_Commands::new_mock(|mock| {
 			mock.expect_try_insert_on::<_ViewComponent>()
 				.return_const(());
-			mock.expect_try_remove_from::<VisualizeCommands<_View>>()
+			mock.expect_try_remove_from::<VisualizeCommands<_View, _Key>>()
 				.times(1)
 				.with(eq(entity))
 				.return_const(());
 		});
 
 		app.world_mut()
-			.run_system_once_with(commands, visualize_system::<In<Mock_Commands>, _View>);
+			.run_system_once_with(commands, visualize_system::<In<Mock_Commands>, _View, _Key>);
 	}
 
 	#[test]
 	fn return_error_when_key_entity_not_found() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			Visualizer::<_View>::new([(Name::from("a"), Entity::from_raw(42))]),
-			VisualizeCommands::<_View> {
+			Visualizer::<_View, _Key>::new([(Name::from("a"), Entity::from_raw(42))]),
+			VisualizeCommands::<_View, _Key> {
 				commands: HashMap::from([("other key", _ViewComponent::Value("my model"))]),
 				..default()
 			},
@@ -401,13 +410,13 @@ mod tests {
 			mock.expect_try_insert_on::<_ViewComponent>()
 				.never()
 				.return_const(());
-			mock.expect_try_remove_from::<VisualizeCommands<_View>>()
+			mock.expect_try_remove_from::<VisualizeCommands<_View, _Key>>()
 				.return_const(());
 		});
 
 		let results = app
 			.world_mut()
-			.run_system_once_with(commands, visualize_system::<In<Mock_Commands>, _View>);
+			.run_system_once_with(commands, visualize_system::<In<Mock_Commands>, _View, _Key>);
 
 		assert_eq!(vec![Err(entity_not_found_error("other key"))], results);
 	}

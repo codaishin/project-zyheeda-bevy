@@ -73,9 +73,9 @@ struct ItemVisualizationBundle<TAgent>
 where
 	TAgent: Sync + Send + 'static,
 {
-	sub_models: Visualizer<SubModels<TAgent>>,
-	hand_slots: Visualizer<HandSlots<TAgent>>,
-	forearm_slots: Visualizer<ForearmSlots<TAgent>>,
+	sub_models: Visualizer<SubModels<TAgent>, SlotKey>,
+	hand_slots: Visualizer<HandSlots<TAgent>, SlotKey>,
+	forearm_slots: Visualizer<ForearmSlots<TAgent>, SlotKey>,
 }
 
 impl<TAgent> Default for ItemVisualizationBundle<TAgent>
