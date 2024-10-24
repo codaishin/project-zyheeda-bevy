@@ -7,17 +7,12 @@ use crate::{
 		skill_spawners::SkillSpawners,
 		slots::Slots,
 	},
-	definitions::{
-		item_slots::{ForearmSlots, HandSlots},
-		sub_models::SubModels,
-	},
 	item::SkillItem,
 	skills::{RunSkillBehavior, SkillId},
 	slot_key::SlotKey,
 };
-use bevy::{ecs::bundle::Bundle, prelude::default};
+use bevy::prelude::*;
 use common::components::Idle;
-use items::components::visualizer::Visualizer;
 use std::collections::HashMap;
 
 #[derive(Bundle)]
@@ -44,49 +39,18 @@ impl ComboBundle {
 }
 
 #[derive(Bundle)]
-pub struct Loadout<TAgent>
-where
-	TAgent: Sync + Send + 'static,
-{
+pub struct Loadout {
 	slot_definition: Slots<SkillId>,
 	skill_execution: ExecutionBundle,
-	item_visualization: ItemVisualizationBundle<TAgent>,
 }
 
-impl<TAgent> Loadout<TAgent>
-where
-	TAgent: Sync + Send + 'static,
-{
+impl Loadout {
 	pub fn new<const N: usize>(
 		slots_definitions: [(SlotKey, Option<SkillItem<SkillId>>); N],
 	) -> Self {
 		Self {
 			slot_definition: Slots(HashMap::from(slots_definitions)),
 			skill_execution: default(),
-			item_visualization: default(),
-		}
-	}
-}
-
-#[derive(Bundle)]
-struct ItemVisualizationBundle<TAgent>
-where
-	TAgent: Sync + Send + 'static,
-{
-	sub_models: Visualizer<SubModels<TAgent>, SlotKey>,
-	hand_slots: Visualizer<HandSlots<TAgent>, SlotKey>,
-	forearm_slots: Visualizer<ForearmSlots<TAgent>, SlotKey>,
-}
-
-impl<TAgent> Default for ItemVisualizationBundle<TAgent>
-where
-	TAgent: Sync + Send + 'static,
-{
-	fn default() -> Self {
-		Self {
-			sub_models: default(),
-			hand_slots: default(),
-			forearm_slots: default(),
 		}
 	}
 }

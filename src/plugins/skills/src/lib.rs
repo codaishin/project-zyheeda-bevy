@@ -89,8 +89,8 @@ fn skill_slot_load(app: &mut App) {
 	)
 	.add_systems(PreUpdate, uuid_to_skill::<Slots<SkillId>, Slots>)
 	.add_systems(Update, set_player_items)
-	.register_item_view::<HandSlots<Player>>()
-	.register_item_view::<ForearmSlots<Player>>()
+	.register_item_view_for::<Player, HandSlots<Player>>()
+	.register_item_view_for::<Player, ForearmSlots<Player>>()
 	.add_systems(
 		Update,
 		(
@@ -151,7 +151,7 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 	commands.try_insert_on(player, (get_inventory(), get_loadout(), get_combos()));
 }
 
-fn get_loadout() -> Loadout<Player> {
+fn get_loadout() -> Loadout {
 	Loadout::new([
 		(
 			SlotKey::TopHand(Side::Left),

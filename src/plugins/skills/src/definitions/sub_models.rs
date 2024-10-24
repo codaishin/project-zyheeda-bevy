@@ -7,6 +7,7 @@ use common::components::{Player, Side};
 use items::traits::view::ItemView;
 use std::marker::PhantomData;
 
+#[allow(dead_code)] // FIXME: remove "allow" when properly integrated
 pub(crate) struct SubModels<T>(PhantomData<T>);
 
 impl ItemView<SlotKey> for SubModels<Player> {

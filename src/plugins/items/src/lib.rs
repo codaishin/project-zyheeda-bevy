@@ -4,7 +4,11 @@ pub mod traits;
 
 use bevy::prelude::*;
 use common::{
-	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
+	systems::{
+		add_component_to::AddTo,
+		log::log_many,
+		track_components::TrackComponentInSelfAndChildren,
+	},
 	traits::iteration::IterFinite,
 };
 use components::{visualize::VisualizeCommands, visualizer::Visualizer};
@@ -17,26 +21,29 @@ impl Plugin for ItemsPlugin {
 }
 
 pub trait RegisterItemView<TKey> {
-	fn register_item_view<TView>(&mut self) -> &mut Self
+	fn register_item_view_for<TAgent, TView>(&mut self) -> &mut Self
 	where
+		TAgent: Component,
 		TView: ItemView<TKey> + Send + Sync + 'static,
 		TKey: IterFinite + Sync + Send + 'static;
 }
 
 impl<TKey> RegisterItemView<TKey> for App {
-	fn register_item_view<TView>(&mut self) -> &mut Self
+	fn register_item_view_for<TAgent, TView>(&mut self) -> &mut Self
 	where
+		TAgent: Component,
 		TView: ItemView<TKey> + Send + Sync + 'static,
 		TKey: IterFinite + Sync + Send + 'static,
 	{
-		self.add_systems(
-			Update,
-			(
-				Visualizer::<TView, TKey>::track_in_self_and_children::<Name>()
-					.filter::<TView::TFilter>()
-					.system(),
-				VisualizeCommands::<TView, TKey>::apply.pipe(log_many),
-			),
-		)
+		self.add_systems(PreUpdate, Visualizer::<TView, TKey>::add_to::<TAgent>)
+			.add_systems(
+				Update,
+				(
+					Visualizer::<TView, TKey>::track_in_self_and_children::<Name>()
+						.filter::<TView::TFilter>()
+						.system(),
+					VisualizeCommands::<TView, TKey>::apply.pipe(log_many),
+				),
+			)
 	}
 }
