@@ -8,13 +8,13 @@ use crate::{
 		track::{IsTracking, Track, Untrack},
 	},
 };
-use bevy::prelude::*;
+use bevy::{ecs::query::QueryFilter, prelude::*};
 use builder::TrackSystemsBuilder;
 
 impl<TTracker> TrackComponentInSelfAndChildren for TTracker where TTracker: Component {}
 
 pub trait TrackComponentInSelfAndChildren {
-	fn track_in_self_and_children<TTarget>() -> TrackSystemsBuilder<Self, TTarget, TTarget>
+	fn track_in_self_and_children<TTarget>() -> TrackSystemsBuilder<Self, TTarget, ()>
 	where
 		TTarget: Component,
 		Self: Component + Track<TTarget> + Untrack<TTarget> + IsTracking<TTarget> + Sized,
@@ -23,19 +23,19 @@ pub trait TrackComponentInSelfAndChildren {
 			untrack: |removed_targets: RemovedComponents<TTarget>, trackers: Query<Mut<Self>>| {
 				untrack_in_self_and_children(removed_targets, trackers)
 			},
-			track: track_in_self_and_children::<Self, TTarget, TTarget>,
+			track: track_in_self_and_children::<Self, TTarget, ()>,
 		}
 	}
 }
 
 fn track_in_self_and_children<TTracker, TTarget, TFilter>(
 	mut trackers: Query<(Entity, Mut<TTracker>)>,
-	targets_lookup: Query<&TTarget, (Added<TTarget>, With<TFilter>)>,
+	targets_lookup: Query<&TTarget, (Added<TTarget>, TFilter)>,
 	trackers_lookup: Query<(), With<TTracker>>,
 	children: Query<&Children>,
 ) where
 	TTarget: Component,
-	TFilter: Component,
+	TFilter: QueryFilter,
 	TTracker: Track<TTarget> + Component,
 {
 	if trackers.is_empty() {
@@ -196,7 +196,7 @@ mod tests {
 			}));
 
 		app.world_mut()
-			.run_system_once(track_in_self_and_children::<_Tracker, _Target, _Target>);
+			.run_system_once(track_in_self_and_children::<_Tracker, _Target, ()>);
 	}
 
 	#[test]
@@ -215,7 +215,7 @@ mod tests {
 			}));
 
 		app.world_mut()
-			.run_system_once(track_in_self_and_children::<_Tracker, _Target, _Target>);
+			.run_system_once(track_in_self_and_children::<_Tracker, _Target, ()>);
 	}
 
 	#[test]
@@ -235,7 +235,7 @@ mod tests {
 			}));
 
 		app.world_mut()
-			.run_system_once(track_in_self_and_children::<_Tracker, _Target, _Target>);
+			.run_system_once(track_in_self_and_children::<_Tracker, _Target, ()>);
 	}
 
 	#[test]
@@ -249,10 +249,7 @@ mod tests {
 				mock.expect_track().times(1).return_const(());
 			}));
 
-		app.add_systems(
-			Update,
-			track_in_self_and_children::<_Tracker, _Target, _Target>,
-		);
+		app.add_systems(Update, track_in_self_and_children::<_Tracker, _Target, ()>);
 		app.update();
 		app.update();
 	}
@@ -270,7 +267,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			track_in_self_and_children::<_Tracker, _Target, _Filter>,
+			track_in_self_and_children::<_Tracker, _Target, With<_Filter>>,
 		);
 		app.update();
 	}
@@ -296,7 +293,7 @@ mod tests {
 			}));
 
 		app.world_mut()
-			.run_system_once(track_in_self_and_children::<_Tracker, _Target, _Target>);
+			.run_system_once(track_in_self_and_children::<_Tracker, _Target, ()>);
 	}
 
 	#[test]

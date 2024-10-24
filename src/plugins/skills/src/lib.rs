@@ -37,7 +37,7 @@ use components::{
 use definitions::item_slots::{ForearmSlots, HandSlots};
 use inventory_key::InventoryKey;
 use item::{item_type::SkillItemType, SkillItem, SkillItemContent};
-use items::RegisterVisualizer;
+use items::RegisterItemView;
 use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill, SkillId};
 use slot_key::SlotKey;
 use std::time::Duration;
@@ -89,8 +89,8 @@ fn skill_slot_load(app: &mut App) {
 	)
 	.add_systems(PreUpdate, uuid_to_skill::<Slots<SkillId>, Slots>)
 	.add_systems(Update, set_player_items)
-	.register_view::<HandSlots<Player>, Name>()
-	.register_view::<ForearmSlots<Player>, Name>()
+	.register_item_view::<HandSlots<Player>>()
+	.register_item_view::<ForearmSlots<Player>>()
 	.add_systems(
 		Update,
 		(

@@ -4,6 +4,7 @@ use items::traits::{
 	entity_names::EntityNames,
 	key_string::KeyString,
 	view_component::ViewComponent,
+	view_filter::ViewFilter,
 };
 use std::marker::PhantomData;
 
@@ -41,6 +42,10 @@ impl ViewComponent for HandSlots<Player> {
 	type TViewComponent = AssetModel;
 }
 
+impl ViewFilter for HandSlots<Player> {
+	type TFilter = ();
+}
+
 #[derive(Debug, PartialEq)]
 pub struct ForearmSlots<T>(PhantomData<T>);
 
@@ -63,4 +68,8 @@ impl KeyString<SlotKey> for ForearmSlots<Player> {
 
 impl ViewComponent for ForearmSlots<Player> {
 	type TViewComponent = AssetModel;
+}
+
+impl ViewFilter for ForearmSlots<Player> {
+	type TFilter = ();
 }
