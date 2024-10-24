@@ -44,7 +44,7 @@ mod tests {
 	use crate::test_tools::utils::SingleThreadedApp;
 	use bevy::{
 		app::{App, Update},
-		asset::AssetId,
+		asset::{AssetId, AssetPath},
 		ecs::system::RunSystemOnce,
 		prelude::default,
 		render::texture::Image,
@@ -78,7 +78,11 @@ mod tests {
 
 	#[automock]
 	impl LoadAsset for _LoadAsset {
-		fn load_asset<TAsset: Asset>(&mut self, path: Path) -> Handle<TAsset> {
+		fn load_asset<'a, TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
+		where
+			TAsset: Asset,
+			TPath: Into<AssetPath<'static>> + 'static,
+		{
 			self.mock.load_asset(path)
 		}
 	}
@@ -105,7 +109,7 @@ mod tests {
 	#[test]
 	fn return_stored_asset() {
 		let mut app = setup(_LoadAsset::new().with_mock(|mock| {
-			mock.expect_load_asset::<Image>()
+			mock.expect_load_asset::<Image, Path>()
 				.return_const(Handle::default());
 		}));
 		let stored_asset = Handle::Weak(AssetId::Uuid {
@@ -128,7 +132,8 @@ mod tests {
 			uuid: Uuid::new_v4(),
 		});
 		let mut app = setup(_LoadAsset::new().with_mock(|mock| {
-			mock.expect_load_asset().return_const(handle.clone());
+			mock.expect_load_asset::<Image, Path>()
+				.return_const(handle.clone());
 		}));
 
 		run_in_system(&mut app, |load_asset, storage| {
@@ -142,7 +147,7 @@ mod tests {
 	#[test]
 	fn call_load_asset_with_proper_path() {
 		let mut app = setup(_LoadAsset::new().with_mock(|mock| {
-			mock.expect_load_asset::<Image>()
+			mock.expect_load_asset::<Image, Path>()
 				.with(eq(Path::from("proper path")))
 				.return_const(Handle::default());
 		}));

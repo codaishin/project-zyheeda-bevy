@@ -30,7 +30,7 @@ impl Instantiate for ShieldContact {
 			y: 0.5,
 			z: 0.05,
 		};
-		let model = AssetModel::Path("models/shield.glb#Scene0");
+		let model = AssetModel::Path("models/shield.glb");
 
 		on.insert((RigidBody::Fixed, EffectShadersBundle::default()))
 			.with_children(|parent| {
@@ -62,7 +62,7 @@ impl Instantiate for ShieldProjection {
 		on.try_insert((
 			EffectShadersBundle::default(),
 			AssetModelBundle {
-				model: AssetModel::Path("models/sphere.glb#Scene0"),
+				model: AssetModel::Path("models/sphere.glb"),
 				transform,
 				..default()
 			},

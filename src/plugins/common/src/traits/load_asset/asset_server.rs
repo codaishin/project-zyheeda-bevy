@@ -1,8 +1,12 @@
-use super::{LoadAsset, Path};
-use bevy::asset::{Asset, AssetServer, Handle};
+use super::LoadAsset;
+use bevy::{asset::AssetPath, prelude::*};
 
 impl LoadAsset for AssetServer {
-	fn load_asset<TAsset: Asset>(&mut self, path: Path) -> Handle<TAsset> {
+	fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
+	where
+		TAsset: Asset,
+		TPath: Into<AssetPath<'static>>,
+	{
 		self.load(path)
 	}
 }

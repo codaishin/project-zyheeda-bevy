@@ -18,17 +18,21 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		asset::{Asset, Handle},
+		asset::{Asset, AssetPath, Handle},
 		prelude::default,
 		ui::{node_bundles::NodeBundle, Style, Val},
 	};
-	use common::{assert_bundle, traits::load_asset::Path};
+	use common::assert_bundle;
 
 	#[derive(Component, Resource, Default)]
 	struct _Server;
 
 	impl LoadAsset for _Server {
-		fn load_asset<TAsset: Asset>(&mut self, _: Path) -> Handle<TAsset> {
+		fn load_asset<TAsset, TPath>(&mut self, _: TPath) -> Handle<TAsset>
+		where
+			TAsset: Asset,
+			TPath: Into<AssetPath<'static>> + 'static,
+		{
 			Handle::default()
 		}
 	}

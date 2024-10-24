@@ -35,7 +35,7 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		asset::{Asset, AssetId, Handle},
+		asset::{Asset, AssetId, AssetPath, Handle},
 		ecs::system::IntoSystem,
 		scene::Scene,
 	};
@@ -68,7 +68,11 @@ mod tests {
 
 	#[automock]
 	impl LoadAsset for _LoadScene {
-		fn load_asset<TAsset: Asset>(&mut self, path: Path) -> Handle<TAsset> {
+		fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
+		where
+			TAsset: Asset,
+			TPath: Into<AssetPath<'static>> + 'static,
+		{
 			self.mock.load_asset(path)
 		}
 	}
