@@ -96,8 +96,12 @@ pub struct MainCamera;
 #[derive(Component, Debug, PartialEq, Clone)]
 pub struct NoTarget;
 
-#[derive(Component, Debug, PartialEq, Default)]
-pub struct AssetModel(pub &'static str);
+#[derive(Component, Debug, PartialEq, Default, Clone, Copy)]
+pub enum AssetModel {
+	#[default]
+	None,
+	Path(&'static str),
+}
 
 #[derive(Component, Debug, PartialEq)]
 pub struct Unmovable<TComponent: Component>(PhantomData<TComponent>);

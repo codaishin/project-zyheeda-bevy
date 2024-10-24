@@ -1,26 +1,23 @@
-use crate::{inventory_key::InventoryKey, item::SkillItem, traits::TryMap};
+use crate::{
+	inventory_key::InventoryKey,
+	item::{SkillItem, SkillItemContent},
+	traits::TryMap,
+};
 use common::{
 	components::Collection,
 	traits::accessors::get::{GetMut, GetRef},
 };
-use items::traits::item_type::AssociatedItemType;
 
 pub type Inventory<TSkill> = Collection<Option<SkillItem<TSkill>>>;
 
-impl<TSkill> GetRef<InventoryKey, SkillItem<TSkill>> for Inventory<TSkill>
-where
-	TSkill: AssociatedItemType,
-{
+impl<TSkill> GetRef<InventoryKey, SkillItem<TSkill>> for Inventory<TSkill> {
 	fn get(&self, key: &InventoryKey) -> Option<&SkillItem<TSkill>> {
 		let item = self.0.get(key.0)?;
 		item.as_ref()
 	}
 }
 
-impl<T> GetMut<InventoryKey, Option<SkillItem<T>>> for Inventory<T>
-where
-	T: AssociatedItemType,
-{
+impl<T> GetMut<InventoryKey, Option<SkillItem<T>>> for Inventory<T> {
 	fn get_mut(&mut self, InventoryKey(index): &InventoryKey) -> Option<&mut Option<SkillItem<T>>> {
 		let items = &mut self.0;
 
@@ -32,32 +29,26 @@ where
 	}
 }
 
-fn fill<T>(inventory: &mut Vec<Option<SkillItem<T>>>, inventory_key: usize)
-where
-	T: AssociatedItemType,
-{
+fn fill<T>(inventory: &mut Vec<Option<SkillItem<T>>>, inventory_key: usize) {
 	let fill_len = inventory_key - inventory.len() + 1;
 	for _ in 0..fill_len {
 		inventory.push(None);
 	}
 }
 
-impl<TIn, TOut> TryMap<TIn, TOut, Inventory<TOut>> for Inventory<TIn>
-where
-	TIn: AssociatedItemType,
-	TIn::TItemType: Clone,
-	TOut: AssociatedItemType,
-	TOut::TItemType: Clone + From<TIn::TItemType>,
-{
+impl<TIn, TOut> TryMap<TIn, TOut, Inventory<TOut>> for Inventory<TIn> {
 	fn try_map(&self, mut map_fn: impl FnMut(&TIn) -> Option<TOut>) -> Inventory<TOut> {
 		let inventory = self.0.iter().map(|item| {
 			let item = item.as_ref()?;
+			let map_fn = &mut map_fn;
 
 			Some(SkillItem {
-				content: item.content.as_ref().and_then(&mut map_fn),
+				content: SkillItemContent {
+					model: item.content.model,
+					skill: item.content.skill.as_ref().and_then(map_fn),
+					item_type: item.content.item_type,
+				},
 				name: item.name,
-				model: item.model,
-				item_type: item.item_type.clone().into(),
 			})
 		});
 
@@ -75,10 +66,6 @@ mod tests {
 
 	#[derive(Debug, PartialEq, Default)]
 	struct _ItemType;
-
-	impl AssociatedItemType for _Item {
-		type TItemType = _ItemType;
-	}
 
 	#[test]
 	fn get_first_item() {
@@ -123,22 +110,14 @@ mod tests {
 		);
 	}
 
-	#[derive(Debug, PartialEq, Default)]
+	#[derive(Debug, PartialEq, Default, Clone, Copy)]
 	struct _In(&'static str);
-
-	impl AssociatedItemType for _In {
-		type TItemType = _InItemType;
-	}
 
 	#[derive(Debug, PartialEq, Default, Clone)]
 	struct _InItemType;
 
 	#[derive(Debug, PartialEq, Default)]
 	struct _Out(&'static str);
-
-	impl AssociatedItemType for _Out {
-		type TItemType = _OutItemType;
-	}
 
 	#[derive(Debug, PartialEq, Default, Clone)]
 	struct _OutItemType;
@@ -152,7 +131,10 @@ mod tests {
 	#[test]
 	fn map_inventory_item_skills() {
 		let inventory = Inventory::new([Some(SkillItem {
-			content: Some(_In("my skill")),
+			content: SkillItemContent {
+				skill: Some(_In("my skill")),
+				..default()
+			},
 			..default()
 		})]);
 
@@ -160,7 +142,10 @@ mod tests {
 
 		assert_eq!(
 			Inventory::new([Some(SkillItem {
-				content: Some(_Out("my skill")),
+				content: SkillItemContent {
+					skill: Some(_Out("my skill")),
+					..default()
+				},
 				..default()
 			})]),
 			inventory
@@ -171,18 +156,24 @@ mod tests {
 	fn do_not_discard_empty_slots() {
 		let inventory = Inventory::new([
 			Some(SkillItem {
-				content: Some(_In("my skill")),
+				content: SkillItemContent {
+					skill: Some(_In("my skill")),
+					..default()
+				},
 				..default()
 			}),
 			None,
 		]);
 
-		let inventory = inventory.try_map(|value| Some(_Out(value.0)));
+		let inventory = inventory.try_map(|_In(value)| Some(_Out(value)));
 
 		assert_eq!(
 			Inventory::new([
 				Some(SkillItem {
-					content: Some(_Out("my skill")),
+					content: SkillItemContent {
+						skill: Some(_Out("my skill")),
+						..default()
+					},
 					..default()
 				}),
 				None
@@ -195,18 +186,24 @@ mod tests {
 	fn do_not_discard_empty_skills() {
 		let inventory = Inventory::<_In>::new([
 			Some(SkillItem {
-				content: None,
+				content: SkillItemContent {
+					skill: None,
+					..default()
+				},
 				..default()
 			}),
 			None,
 		]);
 
-		let inventory = inventory.try_map(|value| Some(_Out(value.0)));
+		let inventory = inventory.try_map(|_In(value)| Some(_Out(value)));
 
 		assert_eq!(
 			Inventory::new([
 				Some(SkillItem {
-					content: None,
+					content: SkillItemContent {
+						skill: None,
+						..default()
+					},
 					..default()
 				}),
 				None

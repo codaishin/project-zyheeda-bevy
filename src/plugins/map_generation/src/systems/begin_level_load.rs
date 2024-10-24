@@ -1,5 +1,6 @@
 use crate::{components::LoadLevelCommand, map::Map, traits::SourcePath};
 use bevy::{
+	asset::Handle,
 	ecs::system::{Commands, Resource},
 	prelude::ResMut,
 	reflect::TypePath,
@@ -13,7 +14,7 @@ pub(crate) fn begin_level_load<
 	mut commands: Commands,
 	mut map_loader: ResMut<TLoadMap>,
 ) {
-	let map = map_loader.load_asset::<Map<TCell>>(TCell::source_path());
+	let map: Handle<Map<TCell>> = map_loader.load_asset(TCell::source_path());
 	commands.insert_resource(LoadLevelCommand(map));
 }
 
@@ -23,7 +24,7 @@ mod tests {
 	use crate::components::LoadLevelCommand;
 	use bevy::{
 		app::{App, Update},
-		asset::{Asset, AssetId, Handle},
+		asset::{Asset, AssetId, AssetPath, Handle},
 		reflect::TypePath,
 	};
 	use common::{
@@ -50,7 +51,11 @@ mod tests {
 
 	#[automock]
 	impl LoadAsset for _LoadMap {
-		fn load_asset<TAsset: Asset>(&mut self, path: Path) -> Handle<TAsset> {
+		fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
+		where
+			TAsset: Asset,
+			TPath: Into<AssetPath<'static>> + 'static,
+		{
 			self.mock.load_asset(path)
 		}
 	}

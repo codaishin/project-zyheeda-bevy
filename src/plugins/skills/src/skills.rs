@@ -22,7 +22,6 @@ use common::{
 	resources::ColliderInfo,
 	traits::{asset_folder::AssetFolderPath, load_asset::Path},
 };
-use items::traits::item_type::AssociatedItemType;
 use lifetime::LifeTimeDefinition;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -51,10 +50,6 @@ pub enum Animate<TAnimation> {
 #[derive(PartialEq, Debug, Default, Clone, Copy, Serialize, Deserialize)]
 pub struct SkillId(pub Uuid);
 
-impl AssociatedItemType for SkillId {
-	type TItemType = SkillItemType;
-}
-
 #[derive(PartialEq, Debug, Default, Clone, TypePath, Asset)]
 pub struct Skill {
 	pub id: SkillId,
@@ -79,10 +74,6 @@ impl AssetFolderPath for Skill {
 	fn asset_folder_path() -> Path {
 		Path::from("skills")
 	}
-}
-
-impl AssociatedItemType for Skill {
-	type TItemType = SkillItemType;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]

@@ -3,9 +3,16 @@ pub mod item;
 pub mod traits;
 
 use bevy::prelude::*;
-use common::systems::{log::log_many, track_components::TrackComponentInSelfAndChildren};
-use components::{visualize::Visualize, visualizer::Visualizer};
-use traits::{entity_names::EntityNames, key_string::KeyString};
+use common::{
+	systems::{
+		add_component_to::AddTo,
+		log::log_many,
+		track_components::TrackComponentInSelfAndChildren,
+	},
+	traits::iteration::IterFinite,
+};
+use components::{visualize::VisualizeCommands, visualizer::Visualizer};
+use traits::view::ItemView;
 
 pub struct ItemsPlugin;
 
@@ -13,25 +20,30 @@ impl Plugin for ItemsPlugin {
 	fn build(&self, _: &mut App) {}
 }
 
-pub trait RegisterVisualizer<TKey> {
-	fn register_visualizer<TVisualizer, TConstraint: Component>(&mut self) -> &mut Self
+pub trait RegisterItemView<TKey> {
+	fn register_item_view_for<TAgent, TView>(&mut self) -> &mut Self
 	where
-		TVisualizer: EntityNames + KeyString<TKey> + Send + Sync + 'static;
+		TAgent: Component,
+		TView: ItemView<TKey> + Send + Sync + 'static,
+		TKey: IterFinite + Sync + Send + 'static;
 }
 
-impl<TKey> RegisterVisualizer<TKey> for App {
-	fn register_visualizer<TVisualizer, TConstraint: Component>(&mut self) -> &mut Self
+impl<TKey> RegisterItemView<TKey> for App {
+	fn register_item_view_for<TAgent, TView>(&mut self) -> &mut Self
 	where
-		TVisualizer: EntityNames + KeyString<TKey> + Send + Sync + 'static,
+		TAgent: Component,
+		TView: ItemView<TKey> + Send + Sync + 'static,
+		TKey: IterFinite + Sync + Send + 'static,
 	{
-		self.add_systems(
-			Update,
-			(
-				Visualizer::<TVisualizer>::track_in_self_and_children::<Name>()
-					.with::<TConstraint>()
-					.system(),
-				Visualize::<TVisualizer>::system.pipe(log_many),
-			),
-		)
+		self.add_systems(PreUpdate, Visualizer::<TView, TKey>::add_to::<TAgent>)
+			.add_systems(
+				Update,
+				(
+					Visualizer::<TView, TKey>::track_in_self_and_children::<Name>()
+						.filter::<TView::TFilter>()
+						.system(),
+					VisualizeCommands::<TView, TKey>::apply.pipe(log_many),
+				),
+			)
 	}
 }

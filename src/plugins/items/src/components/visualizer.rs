@@ -1,4 +1,4 @@
-use crate::traits::{entity_names::EntityNames, key_string::KeyString};
+use crate::traits::{entity_names::ViewEntityNames, view::ItemView};
 use bevy::prelude::*;
 use common::traits::{
 	accessors::get::GetRef,
@@ -7,12 +7,12 @@ use common::traits::{
 use std::{collections::HashMap, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
-pub struct Visualizer<T> {
+pub(crate) struct Visualizer<TView, TKey> {
 	pub(crate) entities: HashMap<Name, Entity>,
-	phantom_data: PhantomData<T>,
+	phantom_data: PhantomData<(TView, TKey)>,
 }
 
-impl<T> Visualizer<T> {
+impl<TView, TKey> Visualizer<TView, TKey> {
 	#[cfg(test)]
 	pub(crate) fn new<const N: usize>(entities: [(Name, Entity); N]) -> Self {
 		Self {
@@ -22,7 +22,7 @@ impl<T> Visualizer<T> {
 	}
 }
 
-impl<T> Default for Visualizer<T> {
+impl<TView, TKey> Default for Visualizer<TView, TKey> {
 	fn default() -> Self {
 		Self {
 			entities: HashMap::new(),
@@ -31,12 +31,12 @@ impl<T> Default for Visualizer<T> {
 	}
 }
 
-impl<T> Track<Name> for Visualizer<T>
+impl<TView, TKey> Track<Name> for Visualizer<TView, TKey>
 where
-	T: EntityNames,
+	TView: ViewEntityNames<TKey>,
 {
 	fn track(&mut self, entity: Entity, name: &Name) {
-		if !T::entity_names().contains(&name.as_str()) {
+		if !TView::view_entity_names().contains(&name.as_str()) {
 			return;
 		}
 
@@ -44,24 +44,24 @@ where
 	}
 }
 
-impl<T> IsTracking<Name> for Visualizer<T> {
+impl<TView, TKey> IsTracking<Name> for Visualizer<TView, TKey> {
 	fn is_tracking(&self, entity: &Entity) -> bool {
 		self.entities.values().any(|e| e == entity)
 	}
 }
 
-impl<T> Untrack<Name> for Visualizer<T> {
+impl<TView, TKey> Untrack<Name> for Visualizer<TView, TKey> {
 	fn untrack(&mut self, entity: &Entity) {
 		self.entities.retain(|_, e| e != entity);
 	}
 }
 
-impl<T, TKey> GetRef<TKey, Entity> for Visualizer<T>
+impl<TView, TKey> GetRef<TKey, Entity> for Visualizer<TView, TKey>
 where
-	T: KeyString<TKey>,
+	TView: ItemView<TKey>,
 {
 	fn get(&self, key: &TKey) -> Option<&Entity> {
-		self.entities.get(&Name::from(T::key_string(key)))
+		self.entities.get(&TView::view_entity_name(key).into())
 	}
 }
 
@@ -70,17 +70,20 @@ mod tests {
 	use super::*;
 
 	#[derive(Debug, PartialEq)]
-	struct _Agent;
+	struct _View;
 
-	impl EntityNames for _Agent {
-		fn entity_names() -> Vec<&'static str> {
+	#[derive(Debug, PartialEq)]
+	struct _Key;
+
+	impl ViewEntityNames<_Key> for _View {
+		fn view_entity_names() -> Vec<&'static str> {
 			vec!["A", "B", "C"]
 		}
 	}
 
 	#[test]
 	fn track_name_if_contained_in_sub_model_names() {
-		let mut lookup = Visualizer::<_Agent>::default();
+		let mut lookup = Visualizer::<_View, _Key>::default();
 
 		lookup.track(Entity::from_raw(33), &Name::from("A"));
 
@@ -95,7 +98,7 @@ mod tests {
 
 	#[test]
 	fn do_not_track_name_if_not_contained_in_sub_model_names() {
-		let mut lookup = Visualizer::<_Agent>::default();
+		let mut lookup = Visualizer::<_View, _Key>::default();
 
 		lookup.track(Entity::from_raw(33), &Name::from("D"));
 
@@ -110,7 +113,7 @@ mod tests {
 
 	#[test]
 	fn is_tracking_true() {
-		let mut lookup = Visualizer::<_Agent>::default();
+		let mut lookup = Visualizer::<_View, _Key>::default();
 
 		lookup.track(Entity::from_raw(33), &Name::from("A"));
 
@@ -119,7 +122,7 @@ mod tests {
 
 	#[test]
 	fn is_tracking_false() {
-		let mut lookup = Visualizer::<_Agent>::default();
+		let mut lookup = Visualizer::<_View, _Key>::default();
 
 		lookup.track(Entity::from_raw(34), &Name::from("A"));
 
@@ -128,7 +131,7 @@ mod tests {
 
 	#[test]
 	fn untrack() {
-		let mut lookup = Visualizer::<_Agent>::default();
+		let mut lookup = Visualizer::<_View, _Key>::default();
 
 		lookup.track(Entity::from_raw(34), &Name::from("A"));
 		lookup.track(Entity::from_raw(35), &Name::from("B"));
@@ -143,34 +146,38 @@ mod tests {
 		);
 	}
 
-	struct _Key;
-
 	#[test]
 	fn get_entity_by_key() {
-		struct _T;
+		struct _View;
 
-		impl KeyString<_Key> for _T {
-			fn key_string(_: &_Key) -> &'static str {
+		impl ItemView<_Key> for _View {
+			type TFilter = ();
+			type TViewComponents = ();
+
+			fn view_entity_name(_: &_Key) -> &'static str {
 				"A"
 			}
 		}
 
-		let lookup = Visualizer::<_T>::new([(Name::from("A"), Entity::from_raw(100))]);
+		let lookup = Visualizer::<_View, _Key>::new([(Name::from("A"), Entity::from_raw(100))]);
 
 		assert_eq!(Some(&Entity::from_raw(100)), lookup.get(&_Key));
 	}
 
 	#[test]
 	fn get_entity_by_other_key() {
-		struct _T;
+		struct _View;
 
-		impl KeyString<_Key> for _T {
-			fn key_string(_: &_Key) -> &'static str {
+		impl ItemView<_Key> for _View {
+			type TFilter = ();
+			type TViewComponents = ();
+
+			fn view_entity_name(_: &_Key) -> &'static str {
 				"B"
 			}
 		}
 
-		let lookup = Visualizer::<_T>::new([(Name::from("B"), Entity::from_raw(100))]);
+		let lookup = Visualizer::<_View, _Key>::new([(Name::from("B"), Entity::from_raw(100))]);
 
 		assert_eq!(Some(&Entity::from_raw(100)), lookup.get(&_Key));
 	}

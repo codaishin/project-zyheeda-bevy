@@ -1,20 +1,25 @@
 use crate::{components::AssetModel, traits::load_asset::LoadAsset};
-use bevy::{
-	prelude::{Commands, Entity, Query, ResMut, Resource},
-	scene::Scene,
-};
+use bevy::prelude::*;
 
-pub(crate) fn load_asset_model<TServer: Resource + LoadAsset>(
+pub(crate) fn load_asset_model<TServer>(
 	mut commands: Commands,
 	asset_models: Query<(Entity, &AssetModel)>,
 	mut asset_server: ResMut<TServer>,
-) {
-	for (entity, AssetModel(path)) in &asset_models {
+) where
+	for<'a> TServer: Resource + LoadAsset,
+{
+	for (entity, asset_model) in &asset_models {
 		let Some(mut entity) = commands.get_entity(entity) else {
 			continue;
 		};
 
-		let handle = asset_server.load_asset::<Scene>((*path).into());
+		let handle = match asset_model {
+			AssetModel::None => Handle::<Scene>::default(),
+			AssetModel::Path(path) => {
+				asset_server.load_asset(GltfAssetLabel::Scene(0).from_asset(*path))
+			}
+		};
+
 		entity.insert(handle);
 		entity.remove::<AssetModel>();
 	}
@@ -23,14 +28,8 @@ pub(crate) fn load_asset_model<TServer: Resource + LoadAsset>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::AssetModel, test_tools::utils::new_handle, traits::load_asset::Path};
-	use bevy::{
-		app::App,
-		asset::{Asset, Handle},
-		ecs::system::RunSystemOnce,
-		prelude::Resource,
-		scene::Scene,
-	};
+	use crate::{components::AssetModel, test_tools::utils::new_handle};
+	use bevy::{asset::AssetPath, ecs::system::RunSystemOnce};
 	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -42,7 +41,10 @@ mod tests {
 
 	#[automock]
 	impl LoadAsset for _AssetServer {
-		fn load_asset<TAsset: Asset>(&mut self, path: Path) -> Handle<TAsset> {
+		fn load_asset<TAsset: Asset, TPath: Into<AssetPath<'static>> + 'static>(
+			&mut self,
+			path: TPath,
+		) -> Handle<TAsset> {
 			self.mock.load_asset(path)
 		}
 	}
@@ -59,14 +61,11 @@ mod tests {
 		let handle = new_handle();
 		let mut app = setup(
 			_AssetServer::new().with_mock(|mock: &mut Mock_AssetServer| {
-				mock.expect_load_asset::<Scene>()
+				mock.expect_load_asset::<Scene, AssetPath<'static>>()
 					.return_const(handle.clone());
 			}),
 		);
-		let model = app
-			.world_mut()
-			.spawn(AssetModel("my/model.glb#Scene0"))
-			.id();
+		let model = app.world_mut().spawn(AssetModel::Path("my/model.glb")).id();
 
 		app.world_mut()
 			.run_system_once(load_asset_model::<_AssetServer>);
@@ -78,17 +77,36 @@ mod tests {
 	}
 
 	#[test]
+	fn load_default_asset_when_set_to_none() {
+		let mut app = setup(
+			_AssetServer::new().with_mock(|mock: &mut Mock_AssetServer| {
+				mock.expect_load_asset::<Scene, AssetPath<'static>>()
+					.return_const(new_handle());
+			}),
+		);
+		let model = app.world_mut().spawn(AssetModel::None).id();
+
+		app.world_mut()
+			.run_system_once(load_asset_model::<_AssetServer>);
+
+		assert_eq!(
+			Some(&Handle::default()),
+			app.world().entity(model).get::<Handle<Scene>>(),
+		);
+	}
+
+	#[test]
 	fn load_asset_with_correct_path() {
 		let mut app = setup(_AssetServer::new().with_mock(assert_correct_path));
-		app.world_mut().spawn(AssetModel("my/model.glb#Scene0"));
+		app.world_mut().spawn(AssetModel::Path("my/model.glb"));
 
 		app.world_mut()
 			.run_system_once(load_asset_model::<_AssetServer>);
 
 		fn assert_correct_path(mock: &mut Mock_AssetServer) {
-			mock.expect_load_asset::<Scene>()
+			mock.expect_load_asset::<Scene, AssetPath<'static>>()
 				.times(1)
-				.with(eq(Path::from("my/model.glb#Scene0")))
+				.with(eq(GltfAssetLabel::Scene(0).from_asset("my/model.glb")))
 				.return_const(new_handle());
 		}
 	}
@@ -97,13 +115,11 @@ mod tests {
 	fn remove_asset_model_component() {
 		let mut app = setup(
 			_AssetServer::new().with_mock(|mock: &mut Mock_AssetServer| {
-				mock.expect_load_asset::<Scene>().return_const(new_handle());
+				mock.expect_load_asset::<Scene, AssetPath<'static>>()
+					.return_const(new_handle());
 			}),
 		);
-		let model = app
-			.world_mut()
-			.spawn(AssetModel("my/model.glb#Scene0"))
-			.id();
+		let model = app.world_mut().spawn(AssetModel::Path("my/model.glb")).id();
 
 		app.world_mut()
 			.run_system_once(load_asset_model::<_AssetServer>);

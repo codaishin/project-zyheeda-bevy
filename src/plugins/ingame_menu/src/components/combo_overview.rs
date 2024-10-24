@@ -631,7 +631,7 @@ fn add_delete_button(key_path: &[SlotKey], parent: &mut ChildBuilder) {
 mod tests {
 	use super::*;
 	use crate::traits::combo_tree_layout::ComboTreeElement;
-	use bevy::asset::{Asset, AssetId};
+	use bevy::asset::{Asset, AssetId, AssetPath};
 	use common::{components::Side, simple_init, traits::mock::Mock};
 	use mockall::{mock, predicate::eq};
 	use skills::skills::Skill;
@@ -658,7 +658,10 @@ mod tests {
 	mock! {
 		_Server {}
 		impl LoadAsset for _Server {
-			fn load_asset<TAsset: Asset>(&mut self, path: Path) -> Handle<TAsset>;
+			fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
+			where
+				TAsset: Asset,
+				TPath: Into<AssetPath<'static>> + 'static;
 		}
 	}
 
@@ -670,7 +673,8 @@ mod tests {
 			uuid: Uuid::new_v4(),
 		});
 		let mut server = Mock_Server::new_mock(|mock| {
-			mock.expect_load_asset().return_const(handle.clone());
+			mock.expect_load_asset::<Image, Path>()
+				.return_const(handle.clone());
 		});
 		let combos = ComboOverview::load_ui(&mut server);
 
@@ -686,7 +690,7 @@ mod tests {
 	#[test]
 	fn load_ui_with_asset_of_correct_path() {
 		let mut server = Mock_Server::new_mock(|mock| {
-			mock.expect_load_asset::<Image>()
+			mock.expect_load_asset::<Image, Path>()
 				.times(1)
 				.with(eq(Path::from("icons/empty.png")))
 				.return_const(Handle::default());

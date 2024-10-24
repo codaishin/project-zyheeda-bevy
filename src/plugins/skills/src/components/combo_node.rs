@@ -175,7 +175,7 @@ fn skill_is_usable(slots: &Slots, trigger: &SlotKey, skill: &Skill) -> bool {
 	let Some(item) = slot.as_ref() else {
 		return false;
 	};
-	skill.is_usable_with.contains(&item.item_type)
+	skill.is_usable_with.contains(&item.content.item_type)
 }
 
 fn try_map<TIn, TOut>(
@@ -246,7 +246,10 @@ fn append_followups<'a>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{item::SkillItem, SkillItemType};
+	use crate::{
+		item::{SkillItem, SkillItemContent},
+		SkillItemType,
+	};
 	use bevy::prelude::default;
 	use common::components::Side;
 	use std::collections::{HashMap, HashSet};
@@ -256,14 +259,20 @@ mod tests {
 			(
 				SlotKey::BottomHand(Side::Right),
 				Some(SkillItem {
-					item_type: SkillItemType::Pistol,
+					content: SkillItemContent {
+						item_type: SkillItemType::Pistol,
+						..default()
+					},
 					..default()
 				}),
 			),
 			(
 				SlotKey::BottomHand(Side::Left),
 				Some(SkillItem {
-					item_type: SkillItemType::Bracer,
+					content: SkillItemContent {
+						item_type: SkillItemType::Bracer,
+						..default()
+					},
 					..default()
 				}),
 			),

@@ -1,31 +1,27 @@
-use crate::{
-	components::slots::Slots,
-	definitions::item_slots::{ForearmSlots, HandSlots},
-	slot_key::SlotKey,
-};
+use crate::{components::slots::Slots, item::SkillItemContent, slot_key::SlotKey};
 use bevy::prelude::*;
-use common::traits::try_insert_on::TryInsertOn;
-use items::{components::visualize::Visualize, traits::key_string::KeyString};
+use common::traits::{accessors::get::Getter, try_insert_on::TryInsertOn};
+use items::{
+	components::visualize::VisualizeCommands,
+	traits::{uses_view::UsesView, view::ItemView},
+};
 
 #[allow(clippy::type_complexity)]
-pub(crate) fn visualize_slot_items<TAgent>(
+pub(crate) fn visualize_slot_items<TView>(
 	mut commands: Commands,
-	agents: Query<(Entity, &Slots), (With<TAgent>, Changed<Slots>)>,
+	agents: Query<(Entity, &Slots), Changed<Slots>>,
 ) where
-	TAgent: Component,
-	HandSlots<TAgent>: KeyString<SlotKey>,
-	ForearmSlots<TAgent>: KeyString<SlotKey>,
+	TView: ItemView<SlotKey> + Sync + Send + 'static,
+	SkillItemContent: UsesView<TView> + Getter<TView::TViewComponents>,
 {
 	for (entity, slots) in &agents {
-		let mut hand_slots = Visualize::<HandSlots<TAgent>>::default();
-		let mut forearm_slots = Visualize::<ForearmSlots<TAgent>>::default();
+		let mut visualize = VisualizeCommands::<TView, SlotKey>::default();
 
 		for (key, item) in &slots.0 {
-			hand_slots = hand_slots.with_item(key, item.as_ref());
-			forearm_slots = forearm_slots.with_item(key, item.as_ref());
+			visualize = visualize.with_item(key, item.as_ref());
 		}
 
-		commands.try_insert_on(entity, (hand_slots, forearm_slots));
+		commands.try_insert_on(entity, visualize);
 	}
 }
 
@@ -33,20 +29,31 @@ pub(crate) fn visualize_slot_items<TAgent>(
 mod tests {
 	use super::*;
 	use crate::{
-		definitions::item_slots::{ForearmSlots, HandSlots},
-		item::{item_type::SkillItemType, SkillItem},
+		item::{item_type::SkillItemType, SkillItem, SkillItemContent},
 		skills::Skill,
 		slot_key::SlotKey,
 	};
-	use bevy::{app::App, ecs::system::RunSystemOnce};
-	use common::components::Side;
-	use items::{components::visualize::Visualize, traits::key_string::KeyString};
+	use bevy::ecs::system::RunSystemOnce;
+	use common::components::{AssetModel, Side};
+	use items::components::visualize::VisualizeCommands;
 
-	#[derive(Component, Debug, PartialEq)]
-	struct _Agent;
+	#[derive(Debug, PartialEq)]
+	struct _View;
 
-	impl KeyString<SlotKey> for HandSlots<_Agent> {
-		fn key_string(key: &SlotKey) -> &'static str {
+	#[derive(Component, Debug, PartialEq, Default, Clone)]
+	struct _ViewComponent(SkillItemContent);
+
+	impl UsesView<_View> for SkillItemContent {
+		fn uses_view(&self) -> bool {
+			true
+		}
+	}
+
+	impl ItemView<SlotKey> for _View {
+		type TFilter = ();
+		type TViewComponents = _ViewComponent;
+
+		fn view_entity_name(key: &SlotKey) -> &'static str {
 			match key {
 				SlotKey::TopHand(_) => "top",
 				SlotKey::BottomHand(_) => "btm",
@@ -54,12 +61,9 @@ mod tests {
 		}
 	}
 
-	impl KeyString<SlotKey> for ForearmSlots<_Agent> {
-		fn key_string(key: &SlotKey) -> &'static str {
-			match key {
-				SlotKey::TopHand(_) => "top",
-				SlotKey::BottomHand(_) => "btm",
-			}
+	impl Getter<_ViewComponent> for SkillItemContent {
+		fn get(&self) -> _ViewComponent {
+			_ViewComponent(self.clone())
 		}
 	}
 
@@ -71,92 +75,10 @@ mod tests {
 	fn visualize_item() {
 		let mut app = setup();
 		let item = SkillItem {
-			model: Some("my model"),
-			..default()
-		};
-		let entity = app
-			.world_mut()
-			.spawn((
-				_Agent,
-				Slots::<Skill>::new([(SlotKey::BottomHand(Side::Right), Some(item.clone()))]),
-			))
-			.id();
-
-		app.world_mut()
-			.run_system_once(visualize_slot_items::<_Agent>);
-
-		let entity = app.world().entity(entity);
-		assert_eq!(
-			(
-				Some(
-					&Visualize::<HandSlots<_Agent>>::default()
-						.with_item(&SlotKey::BottomHand(Side::Right), Some(&item))
-				),
-				Some(
-					&Visualize::<ForearmSlots<_Agent>>::default()
-						.with_item(&SlotKey::BottomHand(Side::Right), Some(&item))
-				)
-			),
-			(
-				entity.get::<Visualize<HandSlots<_Agent>>>(),
-				entity.get::<Visualize<ForearmSlots<_Agent>>>()
-			),
-		)
-	}
-
-	#[test]
-	fn visualize_items() {
-		let mut app = setup();
-		let item_a = SkillItem {
-			model: Some("my bracer model"),
-			item_type: SkillItemType::Pistol,
-			..default()
-		};
-		let item_b = SkillItem {
-			model: Some("my forearm model"),
-			item_type: SkillItemType::Bracer,
-			..default()
-		};
-		let entity = app
-			.world_mut()
-			.spawn((
-				_Agent,
-				Slots::<Skill>::new([
-					(SlotKey::BottomHand(Side::Right), Some(item_a.clone())),
-					(SlotKey::TopHand(Side::Right), Some(item_b.clone())),
-				]),
-			))
-			.id();
-
-		app.world_mut()
-			.run_system_once(visualize_slot_items::<_Agent>);
-
-		let entity = app.world().entity(entity);
-		assert_eq!(
-			(
-				Some(
-					&Visualize::<HandSlots<_Agent>>::default()
-						.with_item(&SlotKey::BottomHand(Side::Right), Some(&item_a))
-						.with_item(&SlotKey::TopHand(Side::Right), Some(&item_b))
-				),
-				Some(
-					&Visualize::<ForearmSlots<_Agent>>::default()
-						.with_item(&SlotKey::BottomHand(Side::Right), Some(&item_a))
-						.with_item(&SlotKey::TopHand(Side::Right), Some(&item_b))
-				)
-			),
-			(
-				entity.get::<Visualize<HandSlots<_Agent>>>(),
-				entity.get::<Visualize<ForearmSlots<_Agent>>>()
-			),
-		)
-	}
-
-	#[test]
-	fn do_nothing_when_not_with_agent_component() {
-		let mut app = setup();
-		let item = SkillItem {
-			model: Some("my model"),
+			content: SkillItemContent {
+				model: AssetModel::Path("my model"),
+				..default()
+			},
 			..default()
 		};
 		let entity = app
@@ -168,49 +90,86 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once(visualize_slot_items::<_Agent>);
+			.run_system_once(visualize_slot_items::<_View>);
 
 		let entity = app.world().entity(entity);
 		assert_eq!(
-			(None, None),
-			(
-				entity.get::<Visualize<HandSlots<_Agent>>>(),
-				entity.get::<Visualize<ForearmSlots<_Agent>>>()
+			Some(
+				&VisualizeCommands::<_View, SlotKey>::default()
+					.with_item(&SlotKey::BottomHand(Side::Right), Some(&item))
 			),
-		)
+			entity.get::<VisualizeCommands<_View, SlotKey>>(),
+		);
+	}
+
+	#[test]
+	fn visualize_items() {
+		let mut app = setup();
+		let item_a = SkillItem {
+			content: SkillItemContent {
+				model: AssetModel::Path("my bracer model"),
+				item_type: SkillItemType::Pistol,
+				..default()
+			},
+			..default()
+		};
+		let item_b = SkillItem {
+			content: SkillItemContent {
+				model: AssetModel::Path("my forearm model"),
+				item_type: SkillItemType::Bracer,
+				..default()
+			},
+			..default()
+		};
+		let entity = app
+			.world_mut()
+			.spawn(Slots::<Skill>::new([
+				(SlotKey::BottomHand(Side::Right), Some(item_a.clone())),
+				(SlotKey::TopHand(Side::Right), Some(item_b.clone())),
+			]))
+			.id();
+
+		app.world_mut()
+			.run_system_once(visualize_slot_items::<_View>);
+
+		let entity = app.world().entity(entity);
+		assert_eq!(
+			Some(
+				&VisualizeCommands::<_View, SlotKey>::default()
+					.with_item(&SlotKey::BottomHand(Side::Right), Some(&item_a))
+					.with_item(&SlotKey::TopHand(Side::Right), Some(&item_b))
+			),
+			entity.get::<VisualizeCommands<_View, SlotKey>>(),
+		);
 	}
 
 	#[test]
 	fn visualize_item_only_once() {
 		let mut app = setup();
 		let item = SkillItem {
-			model: Some("my model"),
+			content: SkillItemContent {
+				model: AssetModel::Path("my model"),
+				..default()
+			},
 			..default()
 		};
 		let entity = app
 			.world_mut()
-			.spawn((
-				_Agent,
-				Slots::<Skill>::new([(SlotKey::BottomHand(Side::Right), Some(item.clone()))]),
-			))
+			.spawn(Slots::<Skill>::new([(
+				SlotKey::BottomHand(Side::Right),
+				Some(item.clone()),
+			)]))
 			.id();
 
-		app.add_systems(Update, visualize_slot_items::<_Agent>);
+		app.add_systems(Update, visualize_slot_items::<_View>);
 		app.update();
-		app.world_mut().entity_mut(entity).remove::<(
-			Visualize<HandSlots<_Agent>>,
-			Visualize<ForearmSlots<_Agent>>,
-		)>();
+		app.world_mut()
+			.entity_mut(entity)
+			.remove::<VisualizeCommands<_View, SlotKey>>();
 		app.update();
 
 		let entity = app.world().entity(entity);
-		assert_eq!(
-			(None, None),
-			(
-				entity.get::<Visualize<HandSlots<_Agent>>>(),
-				entity.get::<Visualize<ForearmSlots<_Agent>>>()
-			),
-		)
+		assert_eq!(None, entity.get::<VisualizeCommands<_View, SlotKey>>());
 	}
 
 	#[test]
@@ -218,24 +177,27 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((
-				_Agent,
-				Slots::<Skill>::new([(
-					SlotKey::BottomHand(Side::Right),
-					Some(SkillItem {
-						model: Some("my model"),
+			.spawn(Slots::<Skill>::new([(
+				SlotKey::BottomHand(Side::Right),
+				Some(SkillItem {
+					content: SkillItemContent {
+						model: AssetModel::Path("my model"),
 						..default()
-					}),
-				)]),
-			))
+					},
+					..default()
+				}),
+			)]))
 			.id();
 
-		app.add_systems(Update, visualize_slot_items::<_Agent>);
+		app.add_systems(Update, visualize_slot_items::<_View>);
 		app.update();
 		let mut agent = app.world_mut().entity_mut(entity);
 		let mut slots = agent.get_mut::<Slots>().unwrap();
 		let item = SkillItem {
-			model: Some("my other model"),
+			content: SkillItemContent {
+				model: AssetModel::Path("my other model"),
+				..default()
+			},
 			..default()
 		};
 		*slots = Slots::<Skill>::new([(SlotKey::TopHand(Side::Right), Some(item.clone()))]);
@@ -243,20 +205,11 @@ mod tests {
 
 		let entity = app.world().entity(entity);
 		assert_eq!(
-			(
-				Some(
-					&Visualize::<HandSlots<_Agent>>::default()
-						.with_item(&SlotKey::TopHand(Side::Right), Some(&item))
-				),
-				Some(
-					&Visualize::<ForearmSlots<_Agent>>::default()
-						.with_item(&SlotKey::TopHand(Side::Right), Some(&item))
-				)
+			Some(
+				&VisualizeCommands::<_View, SlotKey>::default()
+					.with_item(&SlotKey::TopHand(Side::Right), Some(&item))
 			),
-			(
-				entity.get::<Visualize<HandSlots<_Agent>>>(),
-				entity.get::<Visualize<ForearmSlots<_Agent>>>()
-			),
-		)
+			entity.get::<VisualizeCommands<_View, SlotKey>>(),
+		);
 	}
 }

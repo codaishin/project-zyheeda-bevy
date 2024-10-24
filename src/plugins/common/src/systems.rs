@@ -1,3 +1,4 @@
+pub mod add_component_to;
 pub mod asset_process_delta;
 pub mod init_associated_component;
 pub mod log;

@@ -43,7 +43,7 @@ fn compatible_skills<TEquipment: GetRef<SlotKey, SkillItem>, TLayout: Sync + Sen
 	let item = slots.get(key)?;
 	let skills = skills
 		.iter()
-		.filter(|(_, skill)| skill.is_usable_with.contains(&item.item_type))
+		.filter(|(_, skill)| skill.is_usable_with.contains(&item.content.item_type))
 		.map(|(_, skill)| {
 			SkillButton::<DropdownItem<TLayout>>::new(skill.clone(), command.key_path.clone())
 		})
@@ -65,7 +65,7 @@ mod tests {
 		components::{Player, Side},
 		test_tools::utils::SingleThreadedApp,
 	};
-	use skills::item::item_type::SkillItemType;
+	use skills::item::{item_type::SkillItemType, SkillItemContent};
 	use std::collections::{HashMap, HashSet};
 	use uuid::Uuid;
 
@@ -129,7 +129,10 @@ mod tests {
 			_Equipment(HashMap::from([(
 				SlotKey::BottomHand(Side::Right),
 				SkillItem {
-					item_type: SkillItemType::Pistol,
+					content: SkillItemContent {
+						item_type: SkillItemType::Pistol,
+						..default()
+					},
 					..default()
 				},
 			)])),
@@ -203,7 +206,10 @@ mod tests {
 			_Equipment(HashMap::from([(
 				SlotKey::BottomHand(Side::Right),
 				SkillItem {
-					item_type: SkillItemType::Pistol,
+					content: SkillItemContent {
+						item_type: SkillItemType::Pistol,
+						..default()
+					},
 					..default()
 				},
 			)])),
@@ -234,7 +240,10 @@ mod tests {
 			_Equipment(HashMap::from([(
 				SlotKey::BottomHand(Side::Right),
 				SkillItem {
-					item_type: SkillItemType::Pistol,
+					content: SkillItemContent {
+						item_type: SkillItemType::Pistol,
+						..default()
+					},
 					..default()
 				},
 			)])),

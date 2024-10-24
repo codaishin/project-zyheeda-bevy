@@ -1,34 +1,21 @@
 use crate::slot_key::SlotKey;
-use common::components::{Player, Side};
-use items::traits::{entity_names::EntityNames, key_string::KeyString};
+use common::components::{AssetModel, Player, Side};
+use items::traits::view::ItemView;
 use std::marker::PhantomData;
-
-const TOP_HAND_L: &str = "top_hand_slot.L";
-const TOP_HAND_R: &str = "top_hand_slot.R";
-const BTM_HAND_L: &str = "bottom_hand_slot.L";
-const BTM_HAND_R: &str = "bottom_hand_slot.R";
-
-const TOP_FOREARM_L: &str = "top_forearm.L";
-const TOP_FOREARM_R: &str = "top_forearm.R";
-const BTM_FOREARM_L: &str = "bottom_forearm.L";
-const BTM_FOREARM_R: &str = "bottom_forearm.R";
 
 #[derive(Debug, PartialEq)]
 pub struct HandSlots<T>(PhantomData<T>);
 
-impl EntityNames for HandSlots<Player> {
-	fn entity_names() -> Vec<&'static str> {
-		vec![TOP_HAND_L, TOP_HAND_R, BTM_HAND_L, BTM_HAND_R]
-	}
-}
+impl ItemView<SlotKey> for HandSlots<Player> {
+	type TFilter = ();
+	type TViewComponents = AssetModel;
 
-impl KeyString<SlotKey> for HandSlots<Player> {
-	fn key_string(key: &SlotKey) -> &'static str {
+	fn view_entity_name(key: &SlotKey) -> &'static str {
 		match key {
-			SlotKey::TopHand(Side::Left) => TOP_HAND_L,
-			SlotKey::TopHand(Side::Right) => TOP_HAND_R,
-			SlotKey::BottomHand(Side::Left) => BTM_HAND_L,
-			SlotKey::BottomHand(Side::Right) => BTM_HAND_R,
+			SlotKey::TopHand(Side::Left) => "top_hand_slot.L",
+			SlotKey::TopHand(Side::Right) => "top_hand_slot.R",
+			SlotKey::BottomHand(Side::Left) => "bottom_hand_slot.L",
+			SlotKey::BottomHand(Side::Right) => "bottom_hand_slot.R",
 		}
 	}
 }
@@ -36,19 +23,16 @@ impl KeyString<SlotKey> for HandSlots<Player> {
 #[derive(Debug, PartialEq)]
 pub struct ForearmSlots<T>(PhantomData<T>);
 
-impl EntityNames for ForearmSlots<Player> {
-	fn entity_names() -> Vec<&'static str> {
-		vec![TOP_FOREARM_L, TOP_FOREARM_R, BTM_FOREARM_L, BTM_FOREARM_R]
-	}
-}
+impl ItemView<SlotKey> for ForearmSlots<Player> {
+	type TFilter = ();
+	type TViewComponents = AssetModel;
 
-impl KeyString<SlotKey> for ForearmSlots<Player> {
-	fn key_string(key: &SlotKey) -> &'static str {
+	fn view_entity_name(key: &SlotKey) -> &'static str {
 		match key {
-			SlotKey::TopHand(Side::Left) => TOP_FOREARM_L,
-			SlotKey::TopHand(Side::Right) => TOP_FOREARM_R,
-			SlotKey::BottomHand(Side::Left) => BTM_FOREARM_L,
-			SlotKey::BottomHand(Side::Right) => BTM_FOREARM_R,
+			SlotKey::TopHand(Side::Left) => "top_forearm.L",
+			SlotKey::TopHand(Side::Right) => "top_forearm.R",
+			SlotKey::BottomHand(Side::Left) => "bottom_forearm.L",
+			SlotKey::BottomHand(Side::Right) => "bottom_forearm.R",
 		}
 	}
 }

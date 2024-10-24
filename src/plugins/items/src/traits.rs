@@ -1,4 +1,3 @@
 pub mod entity_names;
-pub mod item_type;
-pub mod key_string;
-pub mod uses_visualizer;
+pub mod uses_view;
+pub mod view;

@@ -75,7 +75,7 @@ mod tests {
 	use bevy::ecs::system::RunSystemOnce;
 	use common::components::Side;
 	use skills::{
-		item::{item_type::SkillItemType, SkillItem},
+		item::{item_type::SkillItemType, SkillItem, SkillItemContent},
 		skills::Skill,
 	};
 
@@ -97,16 +97,20 @@ mod tests {
 							SlotKey::BottomHand(Side::Left),
 							Some(SkillItem {
 								name: "left item",
-								item_type: SkillItemType::Bracer,
-								..default()
+								content: SkillItemContent {
+									item_type: SkillItemType::Bracer,
+									..default()
+								},
 							}),
 						),
 						(
 							SlotKey::BottomHand(Side::Right),
 							Some(SkillItem {
 								name: "right item",
-								item_type: SkillItemType::Pistol,
-								..default()
+								content: SkillItemContent {
+									item_type: SkillItemType::Pistol,
+									..default()
+								},
 							}),
 						),
 					]
@@ -142,13 +146,17 @@ mod tests {
 				(
 					Some(SkillItem {
 						name: "right item",
-						item_type: SkillItemType::Pistol,
-						..default()
+						content: SkillItemContent {
+							item_type: SkillItemType::Pistol,
+							..default()
+						},
 					}),
 					Some(SkillItem {
 						name: "left item",
-						item_type: SkillItemType::Bracer,
-						..default()
+						content: SkillItemContent {
+							item_type: SkillItemType::Bracer,
+							..default()
+						},
 					})
 				),
 				vec![]

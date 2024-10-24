@@ -32,5 +32,8 @@ impl<'a> From<Path> for AssetPath<'a> {
 }
 
 pub trait LoadAsset {
-	fn load_asset<TAsset: Asset>(&mut self, path: Path) -> Handle<TAsset>;
+	fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
+	where
+		TAsset: Asset,
+		TPath: Into<AssetPath<'static>> + 'static;
 }

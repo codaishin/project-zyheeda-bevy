@@ -40,7 +40,11 @@ fn visualize_unusable<TSlots: GetRef<SlotKey, SkillItem>>(
 ) -> Option<()> {
 	let item = descriptor.key_path.last().and_then(|key| agent.get(key))?;
 
-	if descriptor.skill.is_usable_with.contains(&item.item_type) {
+	if descriptor
+		.skill
+		.is_usable_with
+		.contains(&item.content.item_type)
+	{
 		return None;
 	}
 
@@ -61,7 +65,10 @@ mod tests {
 		utils::default,
 	};
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
-	use skills::{item::item_type::SkillItemType, skills::Skill};
+	use skills::{
+		item::{item_type::SkillItemType, SkillItemContent},
+		skills::Skill,
+	};
 	use std::collections::{HashMap, HashSet};
 
 	#[derive(Component)]
@@ -109,7 +116,10 @@ mod tests {
 			_Slots::from([(
 				SlotKey::BottomHand(Side::Right),
 				SkillItem {
-					item_type: SkillItemType::Pistol,
+					content: SkillItemContent {
+						item_type: SkillItemType::Pistol,
+						..default()
+					},
 					..default()
 				},
 			)]),
@@ -143,7 +153,10 @@ mod tests {
 			_Slots::from([(
 				SlotKey::BottomHand(Side::Right),
 				SkillItem {
-					item_type: SkillItemType::Pistol,
+					content: SkillItemContent {
+						item_type: SkillItemType::Pistol,
+						..default()
+					},
 					..default()
 				},
 			)]),
@@ -175,7 +188,10 @@ mod tests {
 		app.world_mut().spawn((_Slots::from([(
 			SlotKey::BottomHand(Side::Right),
 			SkillItem {
-				item_type: SkillItemType::Bracer,
+				content: SkillItemContent {
+					item_type: SkillItemType::Bracer,
+					..default()
+				},
 				..default()
 			},
 		)]),));
@@ -208,7 +224,10 @@ mod tests {
 			_Slots::from([(
 				SlotKey::BottomHand(Side::Right),
 				SkillItem {
-					item_type: SkillItemType::Bracer,
+					content: SkillItemContent {
+						item_type: SkillItemType::Bracer,
+						..default()
+					},
 					..default()
 				},
 			)]),

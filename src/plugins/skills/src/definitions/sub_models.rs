@@ -1,28 +1,25 @@
 use crate::slot_key::SlotKey;
+use bevy::{
+	asset::Handle,
+	prelude::{Mesh, With},
+};
 use common::components::{Player, Side};
-use items::traits::{entity_names::EntityNames, key_string::KeyString};
+use items::traits::view::ItemView;
 use std::marker::PhantomData;
 
-const ARM_TOP_L: &str = "ArmTopLeftModel";
-const ARM_TOP_R: &str = "ArmTopRightModel";
-const ARM_BTM_L: &str = "ArmBottomLeftModel";
-const ARM_BTM_R: &str = "ArmBottomRightModel";
-
+#[allow(dead_code)] // FIXME: remove "allow" when properly integrated
 pub(crate) struct SubModels<T>(PhantomData<T>);
 
-impl EntityNames for SubModels<Player> {
-	fn entity_names() -> Vec<&'static str> {
-		vec![ARM_TOP_L, ARM_TOP_R, ARM_BTM_L, ARM_BTM_R]
-	}
-}
+impl ItemView<SlotKey> for SubModels<Player> {
+	type TFilter = With<Handle<Mesh>>;
+	type TViewComponents = (); // FIXME: Use correct component
 
-impl KeyString<SlotKey> for SubModels<Player> {
-	fn key_string(key: &SlotKey) -> &'static str {
+	fn view_entity_name(key: &SlotKey) -> &'static str {
 		match key {
-			SlotKey::TopHand(Side::Left) => ARM_TOP_L,
-			SlotKey::TopHand(Side::Right) => ARM_TOP_R,
-			SlotKey::BottomHand(Side::Left) => ARM_BTM_L,
-			SlotKey::BottomHand(Side::Right) => ARM_BTM_R,
+			SlotKey::TopHand(Side::Left) => "ArmTopLeftModel",
+			SlotKey::TopHand(Side::Right) => "ArmTopRightModel",
+			SlotKey::BottomHand(Side::Left) => "ArmBottomLeftModel",
+			SlotKey::BottomHand(Side::Right) => "ArmBottomRightModel",
 		}
 	}
 }

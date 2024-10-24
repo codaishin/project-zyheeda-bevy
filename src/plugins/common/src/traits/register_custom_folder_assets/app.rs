@@ -16,7 +16,7 @@ use crate::{
 };
 use std::fmt::Debug;
 
-use super::RegisterFolderAssets;
+use super::RegisterCustomFolderAssets;
 use bevy::{
 	app::{App, PostStartup, Update},
 	asset::{Asset, AssetApp, AssetServer},
@@ -24,8 +24,8 @@ use bevy::{
 };
 use serde::Deserialize;
 
-impl RegisterFolderAssets for App {
-	fn register_folder_assets<TAsset, TDto>(&mut self) -> &mut Self
+impl RegisterCustomFolderAssets for App {
+	fn register_custom_folder_assets<TAsset, TDto>(&mut self) -> &mut Self
 	where
 		TAsset: Asset + AssetFolderPath + LoadFrom<TDto> + Clone + Debug,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + Sync + Send + 'static,

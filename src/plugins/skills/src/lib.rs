@@ -15,11 +15,14 @@ use animations::{animation::Animation, components::animation_dispatch::Animation
 use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
-	components::{Collection, Player, Side, Swap},
-	resources::{key_map::KeyMap, Models},
+	components::{AssetModel, Collection, Player, Side, Swap},
+	resources::key_map::KeyMap,
 	states::{GameRunning, MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
-	traits::{register_folder_assets::RegisterFolderAssets, try_insert_on::TryInsertOn},
+	traits::{
+		register_custom_folder_assets::RegisterCustomFolderAssets,
+		try_insert_on::TryInsertOn,
+	},
 };
 use components::{
 	combo_node::ComboNode,
@@ -31,13 +34,10 @@ use components::{
 	skill_spawners::SkillSpawners,
 	slots::Slots,
 };
-use definitions::{
-	item_slots::{ForearmSlots, HandSlots},
-	sub_models::SubModels,
-};
+use definitions::item_slots::{ForearmSlots, HandSlots};
 use inventory_key::InventoryKey;
-use item::{item_type::SkillItemType, SkillItem};
-use items::RegisterVisualizer;
+use item::{item_type::SkillItemType, SkillItem, SkillItemContent};
+use items::RegisterItemView;
 use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill, SkillId};
 use slot_key::SlotKey;
 use std::time::Duration;
@@ -72,7 +72,7 @@ impl Plugin for SkillsPlugin {
 }
 
 fn skill_load(app: &mut App) {
-	app.register_folder_assets::<Skill, SkillData>();
+	app.register_custom_folder_assets::<Skill, SkillData>();
 }
 
 fn inventory(app: &mut App) {
@@ -83,34 +83,30 @@ fn inventory(app: &mut App) {
 }
 
 fn skill_slot_load(app: &mut App) {
-	app.add_systems(Startup, load_models)
-		.add_systems(
-			PreUpdate,
-			SkillSpawners::track_in_self_and_children::<Name>().system(),
-		)
-		.add_systems(PreUpdate, uuid_to_skill::<Slots<SkillId>, Slots>)
-		.add_systems(Update, set_player_items)
-		.register_visualizer::<HandSlots<Player>, Name>()
-		.register_visualizer::<ForearmSlots<Player>, Name>()
-		.register_visualizer::<SubModels<Player>, Handle<Mesh>>()
-		.add_systems(Update, visualize_slot_items::<Player>)
-		.add_systems(
-			Update,
-			(
-				equip_item::<
-					Inventory<Skill>,
-					InventoryKey,
-					Collection<Swap<InventoryKey, SlotKey>>,
-				>
-					.pipe(log_many),
-				equip_item::<
-					Inventory<Skill>,
-					InventoryKey,
-					Collection<Swap<SlotKey, InventoryKey>>,
-				>
-					.pipe(log_many),
-			),
-		);
+	app.add_systems(
+		PreUpdate,
+		SkillSpawners::track_in_self_and_children::<Name>().system(),
+	)
+	.add_systems(PreUpdate, uuid_to_skill::<Slots<SkillId>, Slots>)
+	.add_systems(Update, set_player_items)
+	.register_item_view_for::<Player, HandSlots<Player>>()
+	.register_item_view_for::<Player, ForearmSlots<Player>>()
+	.add_systems(
+		Update,
+		(
+			visualize_slot_items::<HandSlots<Player>>,
+			visualize_slot_items::<ForearmSlots<Player>>,
+		),
+	)
+	.add_systems(
+		Update,
+		(
+			equip_item::<Inventory<Skill>, InventoryKey, Collection<Swap<InventoryKey, SlotKey>>>
+				.pipe(log_many),
+			equip_item::<Inventory<Skill>, InventoryKey, Collection<Swap<SlotKey, InventoryKey>>>
+				.pipe(log_many),
+		),
+	);
 }
 
 fn skill_execution(app: &mut App) {
@@ -147,14 +143,6 @@ fn skill_combo_load(app: &mut App) {
 	app.add_systems(PreUpdate, uuid_to_skill::<ComboNode<SkillId>, Combos>);
 }
 
-fn load_models(mut commands: Commands, asset_server: Res<AssetServer>) {
-	let models = Models::new(
-		[("pistol", "pistol.glb", 0), ("bracer", "bracer.glb", 0)],
-		&asset_server,
-	);
-	commands.insert_resource(models);
-}
-
 fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>>) {
 	let Ok(player) = players.get_single() else {
 		return;
@@ -163,42 +151,50 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 	commands.try_insert_on(player, (get_inventory(), get_loadout(), get_combos()));
 }
 
-fn get_loadout() -> Loadout<Player> {
+fn get_loadout() -> Loadout {
 	Loadout::new([
 		(
 			SlotKey::TopHand(Side::Left),
 			Some(SkillItem {
 				name: "Plasma Pistol A",
-				model: Some("pistol"),
-				content: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
-				item_type: SkillItemType::Pistol,
+				content: SkillItemContent {
+					model: AssetModel::Path("models/pistol.glb"),
+					skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+					item_type: SkillItemType::Pistol,
+				},
 			}),
 		),
 		(
 			SlotKey::BottomHand(Side::Left),
 			Some(SkillItem {
 				name: "Plasma Pistol B",
-				model: Some("pistol"),
-				content: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
-				item_type: SkillItemType::Pistol,
+				content: SkillItemContent {
+					model: AssetModel::Path("models/pistol.glb"),
+					skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+					item_type: SkillItemType::Pistol,
+				},
 			}),
 		),
 		(
 			SlotKey::BottomHand(Side::Right),
 			Some(SkillItem {
 				name: "Force Bracer",
-				model: Some("bracer"),
-				content: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
-				item_type: SkillItemType::Bracer,
+				content: SkillItemContent {
+					model: AssetModel::Path("models/bracer.glb"),
+					skill: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
+					item_type: SkillItemType::Bracer,
+				},
 			}),
 		),
 		(
 			SlotKey::TopHand(Side::Right),
 			Some(SkillItem {
 				name: "Force Bracer",
-				model: Some("bracer"),
-				content: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
-				item_type: SkillItemType::Bracer,
+				content: SkillItemContent {
+					model: AssetModel::Path("models/bracer.glb"),
+					skill: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
+					item_type: SkillItemType::Bracer,
+				},
 			}),
 		),
 	])
@@ -208,21 +204,27 @@ fn get_inventory() -> Inventory<SkillId> {
 	Inventory::new([
 		Some(SkillItem {
 			name: "Plasma Pistol C",
-			model: Some("pistol"),
-			content: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
-			item_type: SkillItemType::Pistol,
+			content: SkillItemContent {
+				model: AssetModel::Path("models/pistol.glb"),
+				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+				item_type: SkillItemType::Pistol,
+			},
 		}),
 		Some(SkillItem {
 			name: "Plasma Pistol D",
-			model: Some("pistol"),
-			content: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
-			item_type: SkillItemType::Pistol,
+			content: SkillItemContent {
+				model: AssetModel::Path("models/pistol.glb"),
+				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+				item_type: SkillItemType::Pistol,
+			},
 		}),
 		Some(SkillItem {
 			name: "Plasma Pistol E",
-			model: Some("pistol"),
-			content: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
-			item_type: SkillItemType::Pistol,
+			content: SkillItemContent {
+				model: AssetModel::Path("models/pistol.glb"),
+				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+				item_type: SkillItemType::Pistol,
+			},
 		}),
 	])
 }

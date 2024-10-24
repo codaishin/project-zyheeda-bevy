@@ -108,7 +108,7 @@ trait ColliderComponents {
 impl Instantiate for GroundTargetedAoeContact {
 	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
 		let collider = self.collider_components()?;
-		let model = AssetModel("models/sphere.glb#Scene0");
+		let model = AssetModel::Path("models/sphere.glb");
 
 		on.insert((
 			RigidBody::Fixed,
