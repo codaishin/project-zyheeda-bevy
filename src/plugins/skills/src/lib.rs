@@ -15,11 +15,10 @@ use animations::{animation::Animation, components::animation_dispatch::Animation
 use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
-	components::{Collection, Player, Side, Swap},
+	components::{AssetModel, Collection, Player, Side, Swap},
 	resources::key_map::KeyMap,
 	states::{GameRunning, MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
-	tools::ModelPath,
 	traits::{
 		register_custom_folder_assets::RegisterCustomFolderAssets,
 		try_insert_on::TryInsertOn,
@@ -157,7 +156,7 @@ fn get_loadout() -> Loadout<Player> {
 			Some(SkillItem {
 				name: "Plasma Pistol A",
 				content: SkillItemContent {
-					model: Some(ModelPath("models/pistol.glb")),
+					model: AssetModel::Path("models/pistol.glb"),
 					skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
 					item_type: SkillItemType::Pistol,
 				},
@@ -168,7 +167,7 @@ fn get_loadout() -> Loadout<Player> {
 			Some(SkillItem {
 				name: "Plasma Pistol B",
 				content: SkillItemContent {
-					model: Some(ModelPath("models/pistol.glb")),
+					model: AssetModel::Path("models/pistol.glb"),
 					skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
 					item_type: SkillItemType::Pistol,
 				},
@@ -179,7 +178,7 @@ fn get_loadout() -> Loadout<Player> {
 			Some(SkillItem {
 				name: "Force Bracer",
 				content: SkillItemContent {
-					model: Some(ModelPath("models/bracer.glb")),
+					model: AssetModel::Path("models/bracer.glb"),
 					skill: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
 					item_type: SkillItemType::Bracer,
 				},
@@ -190,7 +189,7 @@ fn get_loadout() -> Loadout<Player> {
 			Some(SkillItem {
 				name: "Force Bracer",
 				content: SkillItemContent {
-					model: Some(ModelPath("models/bracer.glb")),
+					model: AssetModel::Path("models/bracer.glb"),
 					skill: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
 					item_type: SkillItemType::Bracer,
 				},
@@ -204,7 +203,7 @@ fn get_inventory() -> Inventory<SkillId> {
 		Some(SkillItem {
 			name: "Plasma Pistol C",
 			content: SkillItemContent {
-				model: Some(ModelPath("models/pistol.glb")),
+				model: AssetModel::Path("models/pistol.glb"),
 				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
 				item_type: SkillItemType::Pistol,
 			},
@@ -212,7 +211,7 @@ fn get_inventory() -> Inventory<SkillId> {
 		Some(SkillItem {
 			name: "Plasma Pistol D",
 			content: SkillItemContent {
-				model: Some(ModelPath("models/pistol.glb")),
+				model: AssetModel::Path("models/pistol.glb"),
 				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
 				item_type: SkillItemType::Pistol,
 			},
@@ -220,7 +219,7 @@ fn get_inventory() -> Inventory<SkillId> {
 		Some(SkillItem {
 			name: "Plasma Pistol E",
 			content: SkillItemContent {
-				model: Some(ModelPath("models/pistol.glb")),
+				model: AssetModel::Path("models/pistol.glb"),
 				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
 				item_type: SkillItemType::Pistol,
 			},

@@ -39,7 +39,7 @@ mod tests {
 		slot_key::SlotKey,
 	};
 	use bevy::{app::App, ecs::system::RunSystemOnce};
-	use common::{components::Side, tools::ModelPath};
+	use common::components::{AssetModel, Side};
 	use items::{components::visualize::VisualizeCommands, traits::key_string::KeyString};
 
 	#[derive(Component, Debug, PartialEq)]
@@ -72,7 +72,7 @@ mod tests {
 		let mut app = setup();
 		let item = SkillItem {
 			content: SkillItemContent {
-				model: Some(ModelPath("my model")),
+				model: AssetModel::Path("my model"),
 				..default()
 			},
 			..default()
@@ -112,7 +112,7 @@ mod tests {
 		let mut app = setup();
 		let item_a = SkillItem {
 			content: SkillItemContent {
-				model: Some(ModelPath("my bracer model")),
+				model: AssetModel::Path("my bracer model"),
 				item_type: SkillItemType::Pistol,
 				..default()
 			},
@@ -120,7 +120,7 @@ mod tests {
 		};
 		let item_b = SkillItem {
 			content: SkillItemContent {
-				model: Some(ModelPath("my forearm model")),
+				model: AssetModel::Path("my forearm model"),
 				item_type: SkillItemType::Bracer,
 				..default()
 			},
@@ -166,7 +166,7 @@ mod tests {
 		let mut app = setup();
 		let item = SkillItem {
 			content: SkillItemContent {
-				model: Some(ModelPath("my model")),
+				model: AssetModel::Path("my model"),
 				..default()
 			},
 			..default()
@@ -197,7 +197,7 @@ mod tests {
 		let mut app = setup();
 		let item = SkillItem {
 			content: SkillItemContent {
-				model: Some(ModelPath("my model")),
+				model: AssetModel::Path("my model"),
 				..default()
 			},
 			..default()
@@ -239,7 +239,7 @@ mod tests {
 					SlotKey::BottomHand(Side::Right),
 					Some(SkillItem {
 						content: SkillItemContent {
-							model: Some(ModelPath("my model")),
+							model: AssetModel::Path("my model"),
 							..default()
 						},
 						..default()
@@ -254,7 +254,7 @@ mod tests {
 		let mut slots = agent.get_mut::<Slots>().unwrap();
 		let item = SkillItem {
 			content: SkillItemContent {
-				model: Some(ModelPath("my other model")),
+				model: AssetModel::Path("my other model"),
 				..default()
 			},
 			..default()

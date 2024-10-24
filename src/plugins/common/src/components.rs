@@ -96,7 +96,7 @@ pub struct MainCamera;
 #[derive(Component, Debug, PartialEq, Clone)]
 pub struct NoTarget;
 
-#[derive(Component, Debug, PartialEq, Default)]
+#[derive(Component, Debug, PartialEq, Default, Clone, Copy)]
 pub enum AssetModel {
 	#[default]
 	None,
