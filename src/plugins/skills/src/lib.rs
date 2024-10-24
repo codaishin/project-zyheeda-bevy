@@ -95,7 +95,13 @@ fn skill_slot_load(app: &mut App) {
 	.register_view::<HandSlots<Player>, Name>()
 	.register_view::<ForearmSlots<Player>, Name>()
 	.register_view::<SubModels<Player>, Handle<Mesh>>()
-	.add_systems(Update, visualize_slot_items::<Player>)
+	.add_systems(
+		Update,
+		(
+			visualize_slot_items::<HandSlots<Player>>,
+			visualize_slot_items::<ForearmSlots<Player>>,
+		),
+	)
 	.add_systems(
 		Update,
 		(
