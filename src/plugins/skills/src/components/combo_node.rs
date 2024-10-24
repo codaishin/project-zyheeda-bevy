@@ -247,7 +247,7 @@ fn append_followups<'a>(
 mod tests {
 	use super::*;
 	use crate::{
-		item::{SkillItemContent, SkillItem},
+		item::{SkillItem, SkillItemContent},
 		SkillItemType,
 	};
 	use bevy::prelude::default;
