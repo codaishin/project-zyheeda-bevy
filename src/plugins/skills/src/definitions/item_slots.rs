@@ -1,6 +1,10 @@
 use crate::slot_key::SlotKey;
-use common::components::{Player, Side};
-use items::traits::{entity_names::EntityNames, key_string::KeyString};
+use common::components::{AssetModel, Player, Side};
+use items::traits::{
+	entity_names::EntityNames,
+	key_string::KeyString,
+	view_component::ViewComponent,
+};
 use std::marker::PhantomData;
 
 const TOP_HAND_L: &str = "top_hand_slot.L";
@@ -33,6 +37,10 @@ impl KeyString<SlotKey> for HandSlots<Player> {
 	}
 }
 
+impl ViewComponent for HandSlots<Player> {
+	type TViewComponent = AssetModel;
+}
+
 #[derive(Debug, PartialEq)]
 pub struct ForearmSlots<T>(PhantomData<T>);
 
@@ -51,4 +59,8 @@ impl KeyString<SlotKey> for ForearmSlots<Player> {
 			SlotKey::BottomHand(Side::Right) => BTM_FOREARM_R,
 		}
 	}
+}
+
+impl ViewComponent for ForearmSlots<Player> {
+	type TViewComponent = AssetModel;
 }

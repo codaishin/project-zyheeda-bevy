@@ -34,10 +34,7 @@ use components::{
 	skill_spawners::SkillSpawners,
 	slots::Slots,
 };
-use definitions::{
-	item_slots::{ForearmSlots, HandSlots},
-	sub_models::SubModels,
-};
+use definitions::item_slots::{ForearmSlots, HandSlots};
 use inventory_key::InventoryKey;
 use item::{item_type::SkillItemType, SkillItem, SkillItemContent};
 use items::RegisterVisualizer;
@@ -94,7 +91,6 @@ fn skill_slot_load(app: &mut App) {
 	.add_systems(Update, set_player_items)
 	.register_view::<HandSlots<Player>, Name>()
 	.register_view::<ForearmSlots<Player>, Name>()
-	.register_view::<SubModels<Player>, Handle<Mesh>>()
 	.add_systems(
 		Update,
 		(

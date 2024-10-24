@@ -1,9 +1,9 @@
 use crate::{components::slots::Slots, item::SkillItemContent, slot_key::SlotKey};
 use bevy::prelude::*;
-use common::traits::try_insert_on::TryInsertOn;
+use common::traits::{accessors::get::Getter, try_insert_on::TryInsertOn};
 use items::{
 	components::visualize::VisualizeCommands,
-	traits::{key_string::KeyString, uses_view::UsesView},
+	traits::{key_string::KeyString, uses_view::UsesView, view_component::ViewComponent},
 };
 
 #[allow(clippy::type_complexity)]
@@ -11,8 +11,9 @@ pub(crate) fn visualize_slot_items<TView>(
 	mut commands: Commands,
 	agents: Query<(Entity, &Slots), Changed<Slots>>,
 ) where
-	TView: KeyString<SlotKey> + Sync + Send + 'static,
-	SkillItemContent: UsesView<TView>,
+	TView: KeyString<SlotKey> + ViewComponent + Sync + Send + 'static,
+	TView::TViewComponent: Default + Sync + Send + 'static,
+	SkillItemContent: UsesView<TView> + Getter<TView::TViewComponent>,
 {
 	for (entity, slots) in &agents {
 		let mut visualize = VisualizeCommands::<TView>::default();
@@ -40,6 +41,9 @@ mod tests {
 	#[derive(Debug, PartialEq)]
 	struct _View;
 
+	#[derive(Debug, PartialEq, Default, Clone)]
+	struct _ViewComponent(SkillItemContent);
+
 	impl KeyString<SlotKey> for _View {
 		fn key_string(key: &SlotKey) -> &'static str {
 			match key {
@@ -52,6 +56,16 @@ mod tests {
 	impl UsesView<_View> for SkillItemContent {
 		fn uses_view(&self) -> bool {
 			true
+		}
+	}
+
+	impl ViewComponent for _View {
+		type TViewComponent = _ViewComponent;
+	}
+
+	impl Getter<_ViewComponent> for SkillItemContent {
+		fn get(&self) -> _ViewComponent {
+			_ViewComponent(self.clone())
 		}
 	}
 
