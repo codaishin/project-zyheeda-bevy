@@ -80,9 +80,10 @@ where
 	let mut errors = vec![];
 
 	for (entity, visualizer, visualize) in &visualizers {
+		commands.try_remove_from::<VisualizeCommands<TView>>(entity);
+
 		for (key, model) in &visualize.commands {
 			let result = apply(&mut commands, &asset_server, visualizer, key, model);
-			commands.try_remove_from::<VisualizeCommands<TView>>(entity);
 
 			let Err(error) = result else {
 				continue;
@@ -357,6 +358,36 @@ mod tests {
 				Visualizer::<_View>::new([(Name::from("a"), Entity::from_raw(42))]),
 				VisualizeCommands::<_View> {
 					commands: HashMap::from([("a", Some(ModelPath("my model")))]),
+					..default()
+				},
+			))
+			.id();
+
+		let commands = Mock_Commands::new_mock(|mock| {
+			mock.expect_try_complex_insert().return_const(());
+			mock.expect_try_remove_from::<VisualizeCommands<_View>>()
+				.times(1)
+				.with(eq(entity))
+				.return_const(());
+		});
+
+		app.world_mut().run_system_once_with(
+			commands,
+			visualize_system::<In<Mock_Commands>, _AssetServer, _View>,
+		);
+	}
+
+	#[test]
+	fn remove_visualize_component_even_when_commands_empty() {
+		let mut app = setup(_AssetServer::new().with_mock(|mock| {
+			mock.expect_load().return_const(new_handle());
+		}));
+		let entity = app
+			.world_mut()
+			.spawn((
+				Visualizer::<_View>::new([(Name::from("a"), Entity::from_raw(42))]),
+				VisualizeCommands::<_View> {
+					commands: HashMap::new(),
 					..default()
 				},
 			))
