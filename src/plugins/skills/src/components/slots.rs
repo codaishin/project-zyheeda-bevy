@@ -56,7 +56,7 @@ fn new_mapped_slot<TIn, TOut>(
 			slot.as_ref().map(|slot| SkillItem {
 				name: slot.name,
 				content: SkillItemContent {
-					model: slot.content.model,
+					render: slot.content.render.clone(),
 					skill: slot.content.skill.as_ref().and_then(map_fn),
 					item_type: slot.content.item_type,
 				},
