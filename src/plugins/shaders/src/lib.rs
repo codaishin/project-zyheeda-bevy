@@ -1,7 +1,6 @@
-pub mod bundles;
+pub mod components;
 pub mod materials;
 
-pub(crate) mod components;
 pub(crate) mod systems;
 pub(crate) mod traits;
 
@@ -11,7 +10,7 @@ use common::systems::{
 	remove_components::Remove,
 	track_components::TrackComponentInSelfAndChildren,
 };
-use components::{effect_shader::EffectShaders, shadows_manager::ShadowsManager};
+use components::effect_shader::EffectShaders;
 use interactions::components::{force::Force, gravity::Gravity};
 use materials::{
 	essence_material::EssenceMaterial,
@@ -49,7 +48,6 @@ impl Plugin for ShaderPlugin {
 					EffectShaders::remove_from_self_and_children::<Handle<StandardMaterial>>,
 					EffectShaders::track_in_self_and_children::<Handle<Mesh>>().system(),
 					instantiate_effect_shaders,
-					ShadowsManager::system,
 				),
 			);
 	}
@@ -68,16 +66,14 @@ impl RegisterShader for App {
 		TMaterial: ShadowsAwareMaterial,
 		TMaterial::Data: PartialEq + Eq + Hash + Clone,
 	{
-		self.add_systems(
-			Update,
-			ShadowsManager::track_in_self_and_children::<Handle<TMaterial>>().system(),
-		);
-
 		if self.is_plugin_added::<MaterialPlugin<TMaterial>>() {
 			return self;
 		}
 
-		self.add_plugins(MaterialPlugin::<TMaterial>::default())
+		self.add_plugins(MaterialPlugin::<TMaterial> {
+			shadows_enabled: TMaterial::shadows_enabled(),
+			..default()
+		})
 	}
 }
 

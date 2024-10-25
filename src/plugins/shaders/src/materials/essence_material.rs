@@ -30,7 +30,7 @@ impl Material for EssenceMaterial {
 }
 
 impl ShadowsAwareMaterial for EssenceMaterial {
-	fn casts_shadows() -> bool {
+	fn shadows_enabled() -> bool {
 		true
 	}
 }

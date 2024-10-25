@@ -15,7 +15,7 @@ use common::{
 	traits::try_insert_on::TryInsertOn,
 };
 use prefabs::traits::{GetOrCreateAssets, Instantiate};
-use shaders::bundles::EffectShadersBundle;
+use shaders::components::effect_shader::EffectShaders;
 use std::f32::consts::PI;
 
 #[derive(Component, Debug, PartialEq, Clone)]
@@ -113,7 +113,7 @@ impl Instantiate for GroundTargetedAoeContact {
 		on.insert((
 			RigidBody::Fixed,
 			SpatialBundle::default(),
-			EffectShadersBundle::default(),
+			EffectShaders::default(),
 		))
 		.with_children(|parent| {
 			parent.spawn((ColliderRoot(parent.parent_entity()), collider));

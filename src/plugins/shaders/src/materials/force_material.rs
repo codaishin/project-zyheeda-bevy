@@ -46,7 +46,7 @@ impl Material for ForceMaterial {
 }
 
 impl ShadowsAwareMaterial for ForceMaterial {
-	fn casts_shadows() -> bool {
+	fn shadows_enabled() -> bool {
 		false
 	}
 }

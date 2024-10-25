@@ -46,7 +46,7 @@ impl Material for GravityMaterial {
 }
 
 impl ShadowsAwareMaterial for GravityMaterial {
-	fn casts_shadows() -> bool {
+	fn shadows_enabled() -> bool {
 		false
 	}
 }
