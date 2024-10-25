@@ -1,4 +1,4 @@
-use crate::traits::effect_material::EffectMaterial;
+use crate::traits::shadows_aware_material::ShadowsAwareMaterial;
 use bevy::{pbr::NotShadowCaster, prelude::*};
 use common::traits::{
 	track::{IsTracking, Track, Untrack},
@@ -65,7 +65,7 @@ impl ShadowsManager {
 
 impl<TShader> Track<Handle<TShader>> for ShadowsManager
 where
-	TShader: Asset + EffectMaterial,
+	TShader: Asset + ShadowsAwareMaterial,
 {
 	fn track(&mut self, entity: Entity, _: &Handle<TShader>) {
 		match (self.has_shadow.entry(entity), TShader::casts_shadows()) {
@@ -117,7 +117,7 @@ mod tests {
 
 	impl Material for _CastsShadowsA {}
 
-	impl EffectMaterial for _CastsShadowsA {
+	impl ShadowsAwareMaterial for _CastsShadowsA {
 		fn casts_shadows() -> bool {
 			true
 		}
@@ -128,7 +128,7 @@ mod tests {
 
 	impl Material for _CastsShadowsB {}
 
-	impl EffectMaterial for _CastsShadowsB {
+	impl ShadowsAwareMaterial for _CastsShadowsB {
 		fn casts_shadows() -> bool {
 			true
 		}
@@ -139,7 +139,7 @@ mod tests {
 
 	impl Material for _CastsNoShadows {}
 
-	impl EffectMaterial for _CastsNoShadows {
+	impl ShadowsAwareMaterial for _CastsNoShadows {
 		fn casts_shadows() -> bool {
 			false
 		}
@@ -149,7 +149,7 @@ mod tests {
 		shadow_manager: &mut ShadowsManager,
 	) -> &mut (impl IsTracking<Handle<T>> + Track<Handle<T>> + Untrack<Handle<T>>)
 	where
-		T: EffectMaterial + Asset,
+		T: ShadowsAwareMaterial + Asset,
 	{
 		shadow_manager
 	}
