@@ -16,7 +16,7 @@ use common::{
 	errors::Error,
 };
 use prefabs::traits::{GetOrCreateAssets, Instantiate};
-use shaders::bundles::EffectShadersBundle;
+use shaders::components::effect_shader::EffectShaders;
 
 #[derive(Component, Debug, PartialEq)]
 pub struct ShieldContact {
@@ -32,7 +32,7 @@ impl Instantiate for ShieldContact {
 		};
 		let model = AssetModel::Path("models/shield.glb");
 
-		on.insert((RigidBody::Fixed, EffectShadersBundle::default()))
+		on.insert((RigidBody::Fixed, EffectShaders::default()))
 			.with_children(|parent| {
 				parent.spawn(AssetModelBundle { model, ..default() });
 				parent.spawn((
@@ -60,7 +60,7 @@ impl Instantiate for ShieldProjection {
 		let transform = Transform::from_xyz(0., 0., -radius).with_scale(Vec3::splat(radius * 2.));
 
 		on.try_insert((
-			EffectShadersBundle::default(),
+			EffectShaders::default(),
 			AssetModelBundle {
 				model: AssetModel::Path("models/sphere.glb"),
 				transform,

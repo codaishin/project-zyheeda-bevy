@@ -1,1 +1,1 @@
-pub(crate) mod effect_shader;
+pub mod effect_shader;
