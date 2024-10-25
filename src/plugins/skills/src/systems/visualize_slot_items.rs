@@ -29,8 +29,8 @@ pub(crate) fn visualize_slot_items<TView>(
 mod tests {
 	use super::*;
 	use crate::{
-		components::renderer::Renderer,
-		item::{item_type::SkillItemType, SkillItem, SkillItemContent},
+		components::renderer::{ModelRender, Renderer},
+		item::{SkillItem, SkillItemContent},
 		skills::Skill,
 		slot_key::SlotKey,
 	};
@@ -78,7 +78,7 @@ mod tests {
 		let item = SkillItem {
 			content: SkillItemContent {
 				render: Renderer {
-					model: AssetModel::Path("my model"),
+					model: ModelRender::Hand(AssetModel::Path("my model")),
 					..default()
 				},
 				..default()
@@ -112,10 +112,9 @@ mod tests {
 		let item_a = SkillItem {
 			content: SkillItemContent {
 				render: Renderer {
-					model: AssetModel::Path("my bracer model"),
+					model: ModelRender::Hand(AssetModel::Path("my hand model")),
 					..default()
 				},
-				item_type: SkillItemType::Pistol,
 				..default()
 			},
 			..default()
@@ -123,10 +122,9 @@ mod tests {
 		let item_b = SkillItem {
 			content: SkillItemContent {
 				render: Renderer {
-					model: AssetModel::Path("my forearm model"),
+					model: ModelRender::Forearm(AssetModel::Path("my forearm model")),
 					..default()
 				},
-				item_type: SkillItemType::Bracer,
 				..default()
 			},
 			..default()
@@ -159,7 +157,7 @@ mod tests {
 		let item = SkillItem {
 			content: SkillItemContent {
 				render: Renderer {
-					model: AssetModel::Path("my model"),
+					model: ModelRender::Hand(AssetModel::Path("my model")),
 					..default()
 				},
 				..default()
@@ -195,7 +193,7 @@ mod tests {
 				Some(SkillItem {
 					content: SkillItemContent {
 						render: Renderer {
-							model: AssetModel::Path("my model"),
+							model: ModelRender::Hand(AssetModel::Path("my model")),
 							..default()
 						},
 						..default()
@@ -212,7 +210,7 @@ mod tests {
 		let item = SkillItem {
 			content: SkillItemContent {
 				render: Renderer {
-					model: AssetModel::Path("my other model"),
+					model: ModelRender::Hand(AssetModel::Path("my other model")),
 					..default()
 				},
 				..default()

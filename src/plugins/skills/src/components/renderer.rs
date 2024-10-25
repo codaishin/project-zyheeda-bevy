@@ -7,8 +7,16 @@ use shaders::materials::essence_material::EssenceMaterial;
 
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct Renderer {
-	pub model: AssetModel,
+	pub model: ModelRender,
 	pub essence: EssenceRender,
+}
+
+#[derive(Debug, PartialEq, Default, Clone)]
+pub enum ModelRender {
+	#[default]
+	None,
+	Hand(AssetModel),
+	Forearm(AssetModel),
 }
 
 #[derive(Component, Debug, PartialEq, Clone, Default)]
