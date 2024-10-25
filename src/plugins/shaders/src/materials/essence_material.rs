@@ -5,7 +5,7 @@ use bevy::{
 
 use crate::traits::shadows_aware_material::ShadowsAwareMaterial;
 
-#[derive(Asset, TypePath, AsBindGroup, Clone, Default)]
+#[derive(Asset, TypePath, AsBindGroup, Clone, Default, Debug, PartialEq)]
 pub struct EssenceMaterial {
 	#[uniform(0)]
 	pub texture_color: LinearRgba,

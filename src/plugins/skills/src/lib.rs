@@ -30,6 +30,7 @@ use components::{
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
 	queue::Queue,
+	renderer::EssenceRender,
 	skill_executer::SkillExecuter,
 	skill_spawners::SkillSpawners,
 	slots::Slots,
@@ -68,6 +69,8 @@ impl Plugin for SkillsPlugin {
 		skill_combo_load(app);
 		skill_slot_load(app);
 		skill_execution(app);
+
+		item_essence_render(app);
 	}
 }
 
@@ -234,4 +237,8 @@ fn get_combos() -> ComboBundle {
 	let combos = [];
 
 	ComboBundle::with_timeout(timeout).with_predefined_combos(combos)
+}
+
+fn item_essence_render(app: &mut App) {
+	app.add_systems(Update, EssenceRender::apply_material_exclusivity);
 }

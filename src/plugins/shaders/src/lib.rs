@@ -1,7 +1,7 @@
 pub mod bundles;
+pub mod materials;
 
 pub(crate) mod components;
-pub(crate) mod materials;
 pub(crate) mod systems;
 pub(crate) mod traits;
 
