@@ -12,7 +12,13 @@ mod behaviors;
 mod bundles;
 
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
-use bevy::prelude::*;
+use bevy::{
+	color::palettes::{
+		css::LIGHT_CYAN,
+		tailwind::{CYAN_100, CYAN_200},
+	},
+	prelude::*,
+};
 use bundles::{ComboBundle, Loadout};
 use common::{
 	components::{AssetModel, Collection, Player, Side, Swap},
@@ -30,14 +36,19 @@ use components::{
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
 	queue::Queue,
+	renderer::{EssenceRender, Renderer},
 	skill_executer::SkillExecuter,
 	skill_spawners::SkillSpawners,
 	slots::Slots,
 };
-use definitions::item_slots::{ForearmSlots, HandSlots};
+use definitions::{
+	item_slots::{ForearmSlots, HandSlots},
+	sub_models::SubModels,
+};
 use inventory_key::InventoryKey;
 use item::{item_type::SkillItemType, SkillItem, SkillItemContent};
 use items::RegisterItemView;
+use shaders::materials::essence_material::EssenceMaterial;
 use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill, SkillId};
 use slot_key::SlotKey;
 use std::time::Duration;
@@ -68,6 +79,8 @@ impl Plugin for SkillsPlugin {
 		skill_combo_load(app);
 		skill_slot_load(app);
 		skill_execution(app);
+
+		item_essence_render(app);
 	}
 }
 
@@ -91,11 +104,13 @@ fn skill_slot_load(app: &mut App) {
 	.add_systems(Update, set_player_items)
 	.register_item_view_for::<Player, HandSlots<Player>>()
 	.register_item_view_for::<Player, ForearmSlots<Player>>()
+	.register_item_view_for::<Player, SubModels<Player>>()
 	.add_systems(
 		Update,
 		(
 			visualize_slot_items::<HandSlots<Player>>,
 			visualize_slot_items::<ForearmSlots<Player>>,
+			visualize_slot_items::<SubModels<Player>>,
 		),
 	)
 	.add_systems(
@@ -158,7 +173,10 @@ fn get_loadout() -> Loadout {
 			Some(SkillItem {
 				name: "Plasma Pistol A",
 				content: SkillItemContent {
-					model: AssetModel::Path("models/pistol.glb"),
+					render: Renderer {
+						model: AssetModel::Path("models/pistol.glb"),
+						essence: EssenceRender::StandardMaterial,
+					},
 					skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
 					item_type: SkillItemType::Pistol,
 				},
@@ -169,7 +187,10 @@ fn get_loadout() -> Loadout {
 			Some(SkillItem {
 				name: "Plasma Pistol B",
 				content: SkillItemContent {
-					model: AssetModel::Path("models/pistol.glb"),
+					render: Renderer {
+						model: AssetModel::Path("models/pistol.glb"),
+						essence: EssenceRender::StandardMaterial,
+					},
 					skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
 					item_type: SkillItemType::Pistol,
 				},
@@ -178,22 +199,38 @@ fn get_loadout() -> Loadout {
 		(
 			SlotKey::BottomHand(Side::Right),
 			Some(SkillItem {
-				name: "Force Bracer",
+				name: "Force Essence A",
 				content: SkillItemContent {
-					model: AssetModel::Path("models/bracer.glb"),
+					render: Renderer {
+						model: AssetModel::None,
+						essence: EssenceRender::Material(EssenceMaterial {
+							texture_color: CYAN_100.into(),
+							fill_color: CYAN_200.into(),
+							fresnel_color: (LIGHT_CYAN * 1.5).into(),
+							..default()
+						}),
+					},
 					skill: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
-					item_type: SkillItemType::Bracer,
+					item_type: SkillItemType::Essence,
 				},
 			}),
 		),
 		(
 			SlotKey::TopHand(Side::Right),
 			Some(SkillItem {
-				name: "Force Bracer",
+				name: "Force Essence B",
 				content: SkillItemContent {
-					model: AssetModel::Path("models/bracer.glb"),
+					render: Renderer {
+						model: AssetModel::None,
+						essence: EssenceRender::Material(EssenceMaterial {
+							texture_color: CYAN_100.into(),
+							fill_color: CYAN_200.into(),
+							fresnel_color: (LIGHT_CYAN * 1.5).into(),
+							..default()
+						}),
+					},
 					skill: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
-					item_type: SkillItemType::Bracer,
+					item_type: SkillItemType::Essence,
 				},
 			}),
 		),
@@ -205,7 +242,10 @@ fn get_inventory() -> Inventory<SkillId> {
 		Some(SkillItem {
 			name: "Plasma Pistol C",
 			content: SkillItemContent {
-				model: AssetModel::Path("models/pistol.glb"),
+				render: Renderer {
+					model: AssetModel::Path("models/pistol.glb"),
+					essence: EssenceRender::StandardMaterial,
+				},
 				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
 				item_type: SkillItemType::Pistol,
 			},
@@ -213,7 +253,10 @@ fn get_inventory() -> Inventory<SkillId> {
 		Some(SkillItem {
 			name: "Plasma Pistol D",
 			content: SkillItemContent {
-				model: AssetModel::Path("models/pistol.glb"),
+				render: Renderer {
+					model: AssetModel::Path("models/pistol.glb"),
+					essence: EssenceRender::StandardMaterial,
+				},
 				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
 				item_type: SkillItemType::Pistol,
 			},
@@ -221,7 +264,10 @@ fn get_inventory() -> Inventory<SkillId> {
 		Some(SkillItem {
 			name: "Plasma Pistol E",
 			content: SkillItemContent {
-				model: AssetModel::Path("models/pistol.glb"),
+				render: Renderer {
+					model: AssetModel::Path("models/pistol.glb"),
+					essence: EssenceRender::StandardMaterial,
+				},
 				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
 				item_type: SkillItemType::Pistol,
 			},
@@ -234,4 +280,8 @@ fn get_combos() -> ComboBundle {
 	let combos = [];
 
 	ComboBundle::with_timeout(timeout).with_predefined_combos(combos)
+}
+
+fn item_essence_render(app: &mut App) {
+	app.add_systems(Update, EssenceRender::apply_material_exclusivity);
 }

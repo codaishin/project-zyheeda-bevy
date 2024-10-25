@@ -29,6 +29,7 @@ pub(crate) fn visualize_slot_items<TView>(
 mod tests {
 	use super::*;
 	use crate::{
+		components::renderer::Renderer,
 		item::{item_type::SkillItemType, SkillItem, SkillItemContent},
 		skills::Skill,
 		slot_key::SlotKey,
@@ -76,7 +77,10 @@ mod tests {
 		let mut app = setup();
 		let item = SkillItem {
 			content: SkillItemContent {
-				model: AssetModel::Path("my model"),
+				render: Renderer {
+					model: AssetModel::Path("my model"),
+					..default()
+				},
 				..default()
 			},
 			..default()
@@ -107,7 +111,10 @@ mod tests {
 		let mut app = setup();
 		let item_a = SkillItem {
 			content: SkillItemContent {
-				model: AssetModel::Path("my bracer model"),
+				render: Renderer {
+					model: AssetModel::Path("my bracer model"),
+					..default()
+				},
 				item_type: SkillItemType::Pistol,
 				..default()
 			},
@@ -115,7 +122,10 @@ mod tests {
 		};
 		let item_b = SkillItem {
 			content: SkillItemContent {
-				model: AssetModel::Path("my forearm model"),
+				render: Renderer {
+					model: AssetModel::Path("my forearm model"),
+					..default()
+				},
 				item_type: SkillItemType::Bracer,
 				..default()
 			},
@@ -148,7 +158,10 @@ mod tests {
 		let mut app = setup();
 		let item = SkillItem {
 			content: SkillItemContent {
-				model: AssetModel::Path("my model"),
+				render: Renderer {
+					model: AssetModel::Path("my model"),
+					..default()
+				},
 				..default()
 			},
 			..default()
@@ -181,7 +194,10 @@ mod tests {
 				SlotKey::BottomHand(Side::Right),
 				Some(SkillItem {
 					content: SkillItemContent {
-						model: AssetModel::Path("my model"),
+						render: Renderer {
+							model: AssetModel::Path("my model"),
+							..default()
+						},
 						..default()
 					},
 					..default()
@@ -195,7 +211,10 @@ mod tests {
 		let mut slots = agent.get_mut::<Slots>().unwrap();
 		let item = SkillItem {
 			content: SkillItemContent {
-				model: AssetModel::Path("my other model"),
+				render: Renderer {
+					model: AssetModel::Path("my other model"),
+					..default()
+				},
 				..default()
 			},
 			..default()

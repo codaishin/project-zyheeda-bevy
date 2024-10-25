@@ -1,4 +1,4 @@
-use crate::traits::effect_material::EffectMaterial;
+use crate::traits::shadows_aware_material::ShadowsAwareMaterial;
 use bevy::{
 	prelude::*,
 	render::render_resource::{AsBindGroup, ShaderRef},
@@ -45,7 +45,7 @@ impl Material for GravityMaterial {
 	}
 }
 
-impl EffectMaterial for GravityMaterial {
+impl ShadowsAwareMaterial for GravityMaterial {
 	fn casts_shadows() -> bool {
 		false
 	}
