@@ -26,7 +26,7 @@ impl<TAgent> UsesView<HandSlots<TAgent>> for SkillItemContent {
 		match self.item_type {
 			SkillItemType::Pistol => true,
 			SkillItemType::Bracer => false,
-			SkillItemType::Essence => false,
+			SkillItemType::ForceEssence => false,
 		}
 	}
 }
@@ -36,7 +36,7 @@ impl<TAgent> UsesView<ForearmSlots<TAgent>> for SkillItemContent {
 		match self.item_type {
 			SkillItemType::Pistol => false,
 			SkillItemType::Bracer => true,
-			SkillItemType::Essence => false,
+			SkillItemType::ForceEssence => false,
 		}
 	}
 }
@@ -46,7 +46,7 @@ impl<TAgent> UsesView<SubModels<TAgent>> for SkillItemContent {
 		match self.item_type {
 			SkillItemType::Pistol => false,
 			SkillItemType::Bracer => false,
-			SkillItemType::Essence => true,
+			SkillItemType::ForceEssence => true,
 		}
 	}
 }
