@@ -1,7 +1,7 @@
 pub mod item_type;
 
 use crate::{
-	components::renderer::{EssenceRender, Renderer},
+	components::renderer::{EssenceRender, ModelRender, Renderer},
 	definitions::{
 		item_slots::{ForearmSlots, HandSlots},
 		sub_models::SubModels,
@@ -23,37 +23,29 @@ pub struct SkillItemContent<TSkill = Skill> {
 
 impl<TAgent> UsesView<HandSlots<TAgent>> for SkillItemContent {
 	fn uses_view(&self) -> bool {
-		match self.item_type {
-			SkillItemType::Pistol => true,
-			SkillItemType::Bracer => false,
-			SkillItemType::ForceEssence => false,
-		}
+		matches!(self.render.model, ModelRender::Hand(_))
 	}
 }
 
 impl<TAgent> UsesView<ForearmSlots<TAgent>> for SkillItemContent {
 	fn uses_view(&self) -> bool {
-		match self.item_type {
-			SkillItemType::Pistol => false,
-			SkillItemType::Bracer => true,
-			SkillItemType::ForceEssence => false,
-		}
+		matches!(self.render.model, ModelRender::Forearm(_))
 	}
 }
 
 impl<TAgent> UsesView<SubModels<TAgent>> for SkillItemContent {
 	fn uses_view(&self) -> bool {
-		match self.item_type {
-			SkillItemType::Pistol => false,
-			SkillItemType::Bracer => false,
-			SkillItemType::ForceEssence => true,
-		}
+		matches!(self.render.essence, EssenceRender::Material(_))
 	}
 }
 
 impl Getter<AssetModel> for SkillItemContent {
 	fn get(&self) -> AssetModel {
-		self.render.model
+		match self.render.model {
+			ModelRender::Hand(model) => model,
+			ModelRender::Forearm(model) => model,
+			ModelRender::None => AssetModel::None,
+		}
 	}
 }
 

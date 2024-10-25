@@ -36,7 +36,7 @@ use components::{
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
 	queue::Queue,
-	renderer::{EssenceRender, Renderer},
+	renderer::{EssenceRender, ModelRender, Renderer},
 	skill_executer::SkillExecuter,
 	skill_spawners::SkillSpawners,
 	slots::Slots,
@@ -167,6 +167,13 @@ fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>
 }
 
 fn get_loadout() -> Loadout {
+	let force_essence_material = EssenceMaterial {
+		texture_color: CYAN_100.into(),
+		fill_color: CYAN_200.into(),
+		fresnel_color: (LIGHT_CYAN * 1.5).into(),
+		..default()
+	};
+
 	Loadout::new([
 		(
 			SlotKey::TopHand(Side::Left),
@@ -174,7 +181,7 @@ fn get_loadout() -> Loadout {
 				name: "Plasma Pistol A",
 				content: SkillItemContent {
 					render: Renderer {
-						model: AssetModel::Path("models/pistol.glb"),
+						model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
 						essence: EssenceRender::StandardMaterial,
 					},
 					skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
@@ -188,7 +195,7 @@ fn get_loadout() -> Loadout {
 				name: "Plasma Pistol B",
 				content: SkillItemContent {
 					render: Renderer {
-						model: AssetModel::Path("models/pistol.glb"),
+						model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
 						essence: EssenceRender::StandardMaterial,
 					},
 					skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
@@ -202,13 +209,8 @@ fn get_loadout() -> Loadout {
 				name: "Force Essence A",
 				content: SkillItemContent {
 					render: Renderer {
-						model: AssetModel::None,
-						essence: EssenceRender::Material(EssenceMaterial {
-							texture_color: CYAN_100.into(),
-							fill_color: CYAN_200.into(),
-							fresnel_color: (LIGHT_CYAN * 1.5).into(),
-							..default()
-						}),
+						model: ModelRender::None,
+						essence: EssenceRender::Material(force_essence_material.clone()),
 					},
 					skill: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
 					item_type: SkillItemType::ForceEssence,
@@ -221,13 +223,8 @@ fn get_loadout() -> Loadout {
 				name: "Force Essence B",
 				content: SkillItemContent {
 					render: Renderer {
-						model: AssetModel::None,
-						essence: EssenceRender::Material(EssenceMaterial {
-							texture_color: CYAN_100.into(),
-							fill_color: CYAN_200.into(),
-							fresnel_color: (LIGHT_CYAN * 1.5).into(),
-							..default()
-						}),
+						model: ModelRender::None,
+						essence: EssenceRender::Material(force_essence_material.clone()),
 					},
 					skill: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
 					item_type: SkillItemType::ForceEssence,
@@ -243,7 +240,7 @@ fn get_inventory() -> Inventory<SkillId> {
 			name: "Plasma Pistol C",
 			content: SkillItemContent {
 				render: Renderer {
-					model: AssetModel::Path("models/pistol.glb"),
+					model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
 					essence: EssenceRender::StandardMaterial,
 				},
 				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
@@ -254,7 +251,7 @@ fn get_inventory() -> Inventory<SkillId> {
 			name: "Plasma Pistol D",
 			content: SkillItemContent {
 				render: Renderer {
-					model: AssetModel::Path("models/pistol.glb"),
+					model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
 					essence: EssenceRender::StandardMaterial,
 				},
 				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
@@ -265,7 +262,7 @@ fn get_inventory() -> Inventory<SkillId> {
 			name: "Plasma Pistol E",
 			content: SkillItemContent {
 				render: Renderer {
-					model: AssetModel::Path("models/pistol.glb"),
+					model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
 					essence: EssenceRender::StandardMaterial,
 				},
 				skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
