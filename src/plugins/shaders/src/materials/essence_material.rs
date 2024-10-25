@@ -12,10 +12,10 @@ pub struct EssenceMaterial {
 	#[uniform(1)]
 	pub fill_color: LinearRgba,
 	#[uniform(2)]
-	pub shine: LinearRgba,
+	pub fresnel_color: LinearRgba,
 	#[texture(3)]
 	#[sampler(4)]
-	pub color_texture: Option<Handle<Image>>,
+	pub texture: Option<Handle<Image>>,
 	pub alpha_mode: AlphaMode,
 }
 

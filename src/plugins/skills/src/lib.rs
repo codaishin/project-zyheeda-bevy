@@ -206,7 +206,7 @@ fn get_loadout() -> Loadout {
 						essence: EssenceRender::Material(EssenceMaterial {
 							texture_color: CYAN_100.into(),
 							fill_color: CYAN_200.into(),
-							shine: (LIGHT_CYAN * 1.5).into(),
+							fresnel_color: (LIGHT_CYAN * 1.5).into(),
 							..default()
 						}),
 					},
@@ -225,7 +225,7 @@ fn get_loadout() -> Loadout {
 						essence: EssenceRender::Material(EssenceMaterial {
 							texture_color: CYAN_100.into(),
 							fill_color: CYAN_200.into(),
-							shine: (LIGHT_CYAN * 1.5).into(),
+							fresnel_color: (LIGHT_CYAN * 1.5).into(),
 							..default()
 						}),
 					},
