@@ -20,10 +20,6 @@ pub struct EssenceMaterial {
 }
 
 impl Material for EssenceMaterial {
-	fn vertex_shader() -> ShaderRef {
-		"shaders/essence_shader.wgsl".into()
-	}
-
 	fn fragment_shader() -> ShaderRef {
 		"shaders/essence_shader.wgsl".into()
 	}

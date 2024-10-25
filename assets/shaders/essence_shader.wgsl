@@ -17,23 +17,10 @@ struct DistortParams {
     intensity: f32,
 }
 
-@vertex
-fn vertex(vertex: Vertex) -> VertexOutput {
-    let world = get_world_from_local(vertex.instance_index);
-    let vertex_position = vec4<f32>(vertex.position, 1.0);
-
-    var out: VertexOutput;
-    out.position = mesh_position_local_to_clip(world, vertex_position);
-    out.world_position = mesh_position_local_to_world(world, vertex_position);
-    out.world_normal = mesh_normal_local_to_world(vertex.normal, vertex.instance_index);
-    out.uv = vertex.uv;
-    return out;
-}
-
 @fragment
 fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     var distort_params: DistortParams;
-    distort_params.falloff = 15.;
+    distort_params.falloff = 5.;
     distort_params.intensity = 4.;
 
     let fresnel = distort(fresnel(mesh), distort_params);
