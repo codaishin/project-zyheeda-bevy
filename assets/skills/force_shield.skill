@@ -22,7 +22,7 @@
 		}
 	},
 	"is_usable_with": [
-		"Bracer"
+		"ForceEssence"
 	],
 	"icon": "icons/force_shield.png"
 }

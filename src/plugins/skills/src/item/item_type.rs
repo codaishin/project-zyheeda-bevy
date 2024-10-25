@@ -5,5 +5,5 @@ pub enum SkillItemType {
 	#[default]
 	Pistol,
 	Bracer,
-	Essence,
+	ForceEssence,
 }
