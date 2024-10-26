@@ -5,7 +5,7 @@ mod systems;
 mod traits;
 
 use bevy::{
-	app::{App, Plugin, Startup, Update},
+	app::{App, Plugin, PostStartup, Update},
 	asset::AssetServer,
 	ecs::system::IntoSystem,
 };
@@ -27,8 +27,8 @@ impl Plugin for MapGenerationPlugin {
 	fn build(&self, app: &mut App) {
 		app.register_prefab::<Light<Floating>>()
 			.register_prefab::<Light<Wall>>()
-			.register_map_cell::<MapCell>(Startup)
-			.register_map_cell::<LightCell>(Startup)
+			.register_map_cell::<MapCell>(PostStartup)
+			.register_map_cell::<LightCell>(PostStartup)
 			.add_systems(
 				Update,
 				(
