@@ -66,7 +66,7 @@ fn prepare_game(app: &mut App) {
 		.insert_resource(ClearColor(Color::BLACK))
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
-		.add_systems(Startup, setup_simple_3d_scene)
+		.add_systems(PostStartup, setup_simple_3d_scene)
 		.add_systems(PreUpdate, player_toggle_walk_run)
 		.add_systems(Update, ring_rotation);
 }
