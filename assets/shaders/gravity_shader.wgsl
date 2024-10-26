@@ -1,8 +1,3 @@
-#import bevy_pbr::mesh_functions::get_world_from_local
-#import bevy_pbr::mesh_functions::mesh_position_local_to_clip
-#import bevy_pbr::mesh_functions::mesh_position_local_to_world
-#import bevy_pbr::mesh_functions::mesh_normal_local_to_world
-#import bevy_pbr::forward_io::Vertex
 #import bevy_pbr::forward_io::VertexOutput
 #import bevy_pbr::mesh_view_bindings::view
 #import "shaders/helpers.wgsl"::fresnel
@@ -15,18 +10,6 @@
 struct PulseParams {
     speed: f32,
     waves: f32,
-}
-
-@vertex
-fn vertex(vertex: Vertex) -> VertexOutput {
-    let world = get_world_from_local(vertex.instance_index);
-    let vertex_position = vec4<f32>(vertex.position, 1.0);
-
-    var out: VertexOutput;
-    out.position = mesh_position_local_to_clip(world, vertex_position);
-    out.world_position = mesh_position_local_to_world(world, vertex_position);
-    out.world_normal = mesh_normal_local_to_world(vertex.normal, vertex.instance_index);
-    return out;
 }
 
 @fragment

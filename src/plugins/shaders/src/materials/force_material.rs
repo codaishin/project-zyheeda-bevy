@@ -32,10 +32,6 @@ impl ProcessDelta for ForceMaterial {
 }
 
 impl Material for ForceMaterial {
-	fn vertex_shader() -> ShaderRef {
-		"shaders/force_shader.wgsl".into()
-	}
-
 	fn fragment_shader() -> ShaderRef {
 		"shaders/force_shader.wgsl".into()
 	}

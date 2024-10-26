@@ -32,10 +32,6 @@ impl ProcessDelta for GravityMaterial {
 }
 
 impl Material for GravityMaterial {
-	fn vertex_shader() -> ShaderRef {
-		"shaders/gravity_shader.wgsl".into()
-	}
-
 	fn fragment_shader() -> ShaderRef {
 		"shaders/gravity_shader.wgsl".into()
 	}
