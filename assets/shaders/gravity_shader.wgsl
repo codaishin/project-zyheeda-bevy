@@ -6,6 +6,8 @@
 #import bevy_pbr::forward_io::VertexOutput
 #import bevy_pbr::mesh_view_bindings::view
 #import "shaders/helpers.wgsl"::fresnel
+#import "shaders/helpers.wgsl"::distort
+#import "shaders/helpers.wgsl"::DistortParams
 
 @group(2) @binding(0) var<uniform> material_color: vec4<f32>;
 @group(2) @binding(1) var<uniform> time_secs: f32;
@@ -13,11 +15,6 @@
 struct PulseParams {
     speed: f32,
     waves: f32,
-}
-
-struct DistortParams {
-    falloff: f32,
-    intensity: f32,
 }
 
 @vertex
@@ -54,9 +51,4 @@ fn pulse_inwards(value: f32, params: PulseParams) -> f32 {
     // I am sure there is a bettwe way to do this, but this get's the job done.
     let offset = params.waves * (time_secs * params.speed + value);
     return abs(sin(offset));
-}
-
-fn distort(value: f32, params: DistortParams) -> f32 {
-    let distorted = pow(value, params.falloff) * params.intensity;
-    return clamp(distorted, 0., 1.);
 }

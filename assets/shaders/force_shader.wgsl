@@ -6,16 +6,13 @@
 #import bevy_pbr::forward_io::VertexOutput
 #import bevy_pbr::mesh_view_bindings::view
 #import "shaders/helpers.wgsl"::fresnel
+#import "shaders/helpers.wgsl"::distort
+#import "shaders/helpers.wgsl"::DistortParams
 
 @group(2) @binding(0) var<uniform> material_color: vec4<f32>;
 @group(2) @binding(1) var<uniform> time_secs: f32;
 @group(2) @binding(2) var material_color_texture: texture_2d<f32>;
 @group(2) @binding(3) var material_color_sampler: sampler;
-
-struct DistortParams {
-    falloff: f32,
-    intensity: f32,
-}
 
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
@@ -40,8 +37,4 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     fresnel = distort(fresnel, distort_params);
 
     return vec4(material_color.rgb, material_color.a * fresnel);
-}
-
-fn distort(value: f32, params: DistortParams) -> f32 {
-    return pow(value, params.falloff) * params.intensity;
 }

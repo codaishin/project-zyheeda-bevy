@@ -9,3 +9,12 @@ fn fresnel(
     let normalized_angle = dot(normal, view_vector);
     return clamp(1.0 - normalized_angle, 0.0, 1.0);
 }
+
+struct DistortParams {
+    falloff: f32,
+    intensity: f32,
+}
+
+fn distort(value: f32, params: DistortParams) -> f32 {
+    return pow(value, params.falloff) * params.intensity;
+}
