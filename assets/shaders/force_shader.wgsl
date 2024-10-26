@@ -5,6 +5,7 @@
 #import bevy_pbr::forward_io::Vertex
 #import bevy_pbr::forward_io::VertexOutput
 #import bevy_pbr::mesh_view_bindings::view
+#import "shaders/helpers.wgsl"::fresnel
 
 @group(2) @binding(0) var<uniform> material_color: vec4<f32>;
 @group(2) @binding(1) var<uniform> time_secs: f32;
@@ -35,18 +36,10 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     distort_params.falloff = 6.;
     distort_params.intensity = 2.;
 
-    var fresnel = fresnel(mesh);
+    var fresnel = fresnel(mesh.world_normal, mesh.world_position, view.world_position);
     fresnel = distort(fresnel, distort_params);
 
     return vec4(material_color.rgb, material_color.a * fresnel);
-}
-
-fn fresnel(mesh: VertexOutput) -> f32 {
-    // concept taken from fresnel example in https://github.com/rust-adventure/bevy-examples
-    let normal = normalize(mesh.world_normal);
-    let view_vector = normalize(view.world_position.xyz - mesh.world_position.xyz);
-    let normalized_angle = dot(normal, view_vector);
-    return clamp(1.0 - normalized_angle, 0.0, 1.0);
 }
 
 fn distort(value: f32, params: DistortParams) -> f32 {
