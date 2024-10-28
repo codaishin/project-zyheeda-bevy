@@ -1,16 +1,20 @@
 pub mod item_type;
 
 use crate::{
-	components::renderer::{EssenceRender, ModelRender, Renderer},
+	components::renderer::{ModelRender, Renderer},
 	definitions::{
 		item_slots::{ForearmSlots, HandSlots},
 		sub_models::SubModels,
 	},
 	skills::Skill,
+	slot_key::SlotKey,
 };
-use common::{components::AssetModel, traits::accessors::get::Getter};
+use common::components::{AssetModel, Player};
 use item_type::SkillItemType;
-use items::{item::Item, traits::uses_view::UsesView};
+use items::{
+	item::Item,
+	traits::{get_view_data::GetViewData, view::ItemView},
+};
 
 pub type SkillItem<TSkill = Skill> = Item<SkillItemContent<TSkill>>;
 
@@ -21,36 +25,24 @@ pub struct SkillItemContent<TSkill = Skill> {
 	pub item_type: SkillItemType,
 }
 
-impl<TAgent> UsesView<HandSlots<TAgent>> for SkillItemContent {
-	fn uses_view(&self) -> bool {
-		matches!(self.render.model, ModelRender::Hand(_))
-	}
-}
-
-impl<TAgent> UsesView<ForearmSlots<TAgent>> for SkillItemContent {
-	fn uses_view(&self) -> bool {
-		matches!(self.render.model, ModelRender::Forearm(_))
-	}
-}
-
-impl<TAgent> UsesView<SubModels<TAgent>> for SkillItemContent {
-	fn uses_view(&self) -> bool {
-		matches!(self.render.essence, EssenceRender::Material(_))
-	}
-}
-
-impl Getter<AssetModel> for SkillItemContent {
-	fn get(&self) -> AssetModel {
+impl GetViewData<HandSlots<Player>, SlotKey> for SkillItemContent {
+	fn get_view_data(&self) -> <HandSlots<Player> as ItemView<SlotKey>>::TViewComponents {
 		match self.render.model {
 			ModelRender::Hand(model) => model,
-			ModelRender::Forearm(model) => model,
-			ModelRender::None => AssetModel::None,
+			_ => AssetModel::None,
 		}
 	}
 }
-
-impl Getter<EssenceRender> for SkillItemContent {
-	fn get(&self) -> EssenceRender {
+impl GetViewData<ForearmSlots<Player>, SlotKey> for SkillItemContent {
+	fn get_view_data(&self) -> <ForearmSlots<Player> as ItemView<SlotKey>>::TViewComponents {
+		match self.render.model {
+			ModelRender::Forearm(model) => model,
+			_ => AssetModel::None,
+		}
+	}
+}
+impl GetViewData<SubModels<Player>, SlotKey> for SkillItemContent {
+	fn get_view_data(&self) -> <SubModels<Player> as ItemView<SlotKey>>::TViewComponents {
 		self.render.essence.clone()
 	}
 }

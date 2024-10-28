@@ -1,3 +1,3 @@
 pub mod entity_names;
-pub mod uses_view;
+pub mod get_view_data;
 pub mod view;
