@@ -27,6 +27,7 @@ use interactions::{components::blocker::Blocker, InteractionsPlugin};
 use items::ItemsPlugin;
 use light::{components::ResponsiveLightTrigger, LightPlugin};
 use map_generation::MapGenerationPlugin;
+use player::PlayerPlugin;
 use prefabs::PrefabsPlugin;
 use project_zyheeda::systems::{
 	movement::toggle_walk_run::player_toggle_walk_run,
@@ -65,6 +66,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(LightPlugin)
 		.add_plugins(MapGenerationPlugin)
 		.add_plugins(GameStatePlugin)
+		.add_plugins(PlayerPlugin)
 		.insert_resource(ClearColor(Color::BLACK))
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
