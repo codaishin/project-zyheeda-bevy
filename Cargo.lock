@@ -2126,6 +2126,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "game_state"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "gethostname"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3653,6 +3660,7 @@ dependencies = [
  "bevy-inspector-egui",
  "bevy_rapier3d",
  "common",
+ "game_state",
  "ingame_menu",
  "interactions",
  "items",
