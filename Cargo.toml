@@ -18,6 +18,7 @@ animations = { path = "src/plugins/animations" }
 bars = { path = "src/plugins/bars" }
 behaviors = { path = "src/plugins/behaviors" }
 common = { path = "src/plugins/common" }
+enemy = { path = "src/plugins/enemy" }
 game_state = { path = "src/plugins/game_state" }
 interactions = { path = "src/plugins/interactions" }
 items = { path = "src/plugins/items" }
@@ -57,6 +58,7 @@ animations.workspace = true
 bars.workspace = true
 behaviors.workspace = true
 common.workspace = true
+enemy.workspace = true
 interactions.workspace = true
 items.workspace = true
 game_state.workspace = true

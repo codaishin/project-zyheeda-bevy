@@ -21,6 +21,7 @@ use common::{
 	traits::clamp_zero_positive::ClampZeroPositive,
 	CommonPlugin,
 };
+use enemy::EnemyPlugin;
 use game_state::GameStatePlugin;
 use ingame_menu::IngameMenuPlugin;
 use interactions::{components::blocker::Blocker, InteractionsPlugin};
@@ -64,6 +65,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(MapGenerationPlugin)
 		.add_plugins(GameStatePlugin)
 		.add_plugins(PlayerPlugin)
+		.add_plugins(EnemyPlugin)
 		.insert_resource(ClearColor(Color::BLACK))
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)

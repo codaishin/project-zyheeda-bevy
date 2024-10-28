@@ -1924,6 +1924,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "enemy"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "epaint"
 version = "0.28.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3669,6 +3676,7 @@ dependencies = [
  "bevy-inspector-egui",
  "bevy_rapier3d",
  "common",
+ "enemy",
  "game_state",
  "ingame_menu",
  "interactions",

@@ -1,0 +1,7 @@
+[package]
+name = "enemy"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bevy.workspace = true
