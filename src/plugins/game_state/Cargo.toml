@@ -5,3 +5,10 @@ edition.workspace = true
 
 [dependencies]
 bevy.workspace = true
+bevy_rapier3d.workspace = true
+animations.workspace = true
+behaviors.workspace = true
+common.workspace = true
+bars.workspace = true
+interactions.workspace = true
+light.workspace = true

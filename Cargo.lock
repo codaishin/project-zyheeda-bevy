@@ -2138,7 +2138,14 @@ dependencies = [
 name = "game_state"
 version = "0.1.0"
 dependencies = [
+ "animations",
+ "bars",
+ "behaviors",
  "bevy",
+ "bevy_rapier3d",
+ "common",
+ "interactions",
+ "light",
 ]
 
 [[package]]
