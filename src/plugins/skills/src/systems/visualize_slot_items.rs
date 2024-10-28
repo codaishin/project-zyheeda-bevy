@@ -1,9 +1,9 @@
 use crate::{components::slots::Slots, item::SkillItemContent, slot_key::SlotKey};
 use bevy::prelude::*;
-use common::traits::{accessors::get::Getter, try_insert_on::TryInsertOn};
+use common::traits::try_insert_on::TryInsertOn;
 use items::{
 	components::visualize::VisualizeCommands,
-	traits::{uses_view::UsesView, view::ItemView},
+	traits::{get_view_data::GetViewData, view::ItemView},
 };
 
 #[allow(clippy::type_complexity)]
@@ -12,7 +12,7 @@ pub(crate) fn visualize_slot_items<TView>(
 	agents: Query<(Entity, &Slots), Changed<Slots>>,
 ) where
 	TView: ItemView<SlotKey> + Sync + Send + 'static,
-	SkillItemContent: UsesView<TView> + Getter<TView::TViewComponents>,
+	SkillItemContent: GetViewData<TView, SlotKey>,
 {
 	for (entity, slots) in &agents {
 		let mut visualize = VisualizeCommands::<TView, SlotKey>::default();
@@ -44,12 +44,6 @@ mod tests {
 	#[derive(Component, Debug, PartialEq, Default, Clone)]
 	struct _ViewComponent(SkillItemContent);
 
-	impl UsesView<_View> for SkillItemContent {
-		fn uses_view(&self) -> bool {
-			true
-		}
-	}
-
 	impl ItemView<SlotKey> for _View {
 		type TFilter = ();
 		type TViewComponents = _ViewComponent;
@@ -62,8 +56,8 @@ mod tests {
 		}
 	}
 
-	impl Getter<_ViewComponent> for SkillItemContent {
-		fn get(&self) -> _ViewComponent {
+	impl GetViewData<_View, SlotKey> for SkillItemContent {
+		fn get_view_data(&self) -> _ViewComponent {
 			_ViewComponent(self.clone())
 		}
 	}

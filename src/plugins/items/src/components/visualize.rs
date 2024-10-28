@@ -1,12 +1,12 @@
 use super::visualizer::Visualizer;
 use crate::{
 	item::Item,
-	traits::{uses_view::UsesView, view::ItemView},
+	traits::{get_view_data::GetViewData, view::ItemView},
 };
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
-	traits::{accessors::get::Getter, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
+	traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
 use std::{collections::HashMap, marker::PhantomData};
 
@@ -34,12 +34,11 @@ where
 impl<TView, TKey> VisualizeCommands<TView, TKey>
 where
 	TView: ItemView<TKey>,
-	TView::TViewComponents: Default,
 {
 	pub fn with_item<TContent>(mut self, key: &TKey, item: Option<&Item<TContent>>) -> Self
 	where
 		TView: ItemView<TKey>,
-		TContent: UsesView<TView> + Getter<TView::TViewComponents>,
+		TContent: GetViewData<TView, TKey>,
 	{
 		let components = Self::view_components(item);
 		let view_slot = TView::view_entity_name(key);
@@ -49,17 +48,13 @@ where
 
 	fn view_components<TContent>(item: Option<&Item<TContent>>) -> TView::TViewComponents
 	where
-		TContent: UsesView<TView> + Getter<TView::TViewComponents>,
+		TContent: GetViewData<TView, TKey>,
 	{
 		let Some(item) = item else {
 			return default();
 		};
 
-		if !item.content.uses_view() {
-			return default();
-		}
-
-		item.content.get()
+		item.content.get_view_data()
 	}
 
 	pub(crate) fn apply(
@@ -170,30 +165,18 @@ mod tests {
 	}
 
 	#[derive(Default)]
-	struct _Content {
-		uses_view: bool,
-		model: _ViewComponent,
-	}
+	struct _Content(_ViewComponent);
 
-	impl UsesView<_View> for _Content {
-		fn uses_view(&self) -> bool {
-			self.uses_view
-		}
-	}
-
-	impl Getter<_ViewComponent> for _Content {
-		fn get(&self) -> _ViewComponent {
-			self.model
+	impl GetViewData<_View, _Key> for _Content {
+		fn get_view_data(&self) -> <_View as ItemView<_Key>>::TViewComponents {
+			self.0
 		}
 	}
 
 	#[test]
 	fn add_item() {
 		let item = Item {
-			content: _Content {
-				uses_view: true,
-				model: _ViewComponent::Value("my model"),
-			},
+			content: _Content(_ViewComponent::Value("my model")),
 			..default()
 		};
 		let visualize =
@@ -225,17 +208,11 @@ mod tests {
 	#[test]
 	fn add_multiple_items() {
 		let item_a = Item {
-			content: _Content {
-				uses_view: true,
-				model: _ViewComponent::Value("my model a"),
-			},
+			content: _Content(_ViewComponent::Value("my model a")),
 			..default()
 		};
 		let item_b = Item {
-			content: _Content {
-				uses_view: true,
-				model: _ViewComponent::Value("my model b"),
-			},
+			content: _Content(_ViewComponent::Value("my model b")),
 			..default()
 		};
 		let visualize = VisualizeCommands::<_View, _Key>::default()
@@ -249,27 +226,6 @@ mod tests {
 					("a", _ViewComponent::Value("my model a")),
 					("b", _ViewComponent::Value("my model b"))
 				]),
-			},
-			visualize,
-		)
-	}
-
-	#[test]
-	fn add_item_with_mode_none_when_not_using_view() {
-		let item = Item {
-			content: _Content {
-				uses_view: false,
-				model: _ViewComponent::Value("my model"),
-			},
-			..default()
-		};
-		let visualize =
-			VisualizeCommands::<_View, _Key>::default().with_item(&_Key::A, Some(&item));
-
-		assert_eq!(
-			VisualizeCommands::<_View, _Key> {
-				phantom_data: PhantomData,
-				commands: HashMap::from([("a", _ViewComponent::Default)]),
 			},
 			visualize,
 		)
