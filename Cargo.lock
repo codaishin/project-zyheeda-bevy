@@ -1927,7 +1927,9 @@ dependencies = [
 name = "enemy"
 version = "0.1.0"
 dependencies = [
+ "behaviors",
  "bevy",
+ "common",
 ]
 
 [[package]]

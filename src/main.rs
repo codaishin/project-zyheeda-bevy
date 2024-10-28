@@ -30,7 +30,6 @@ use light::{components::ResponsiveLightTrigger, LightPlugin};
 use map_generation::MapGenerationPlugin;
 use player::PlayerPlugin;
 use prefabs::PrefabsPlugin;
-use project_zyheeda::systems::void_sphere::ring_rotation::ring_rotation;
 use shaders::ShaderPlugin;
 use skills::SkillsPlugin;
 use std::f32::consts::PI;
@@ -69,8 +68,7 @@ fn prepare_game(app: &mut App) {
 		.insert_resource(ClearColor(Color::BLACK))
 		.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
 		.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>)
-		.add_systems(PostStartup, setup_simple_3d_scene)
-		.add_systems(Update, ring_rotation);
+		.add_systems(PostStartup, setup_simple_3d_scene);
 }
 
 #[cfg(debug_assertions)]
