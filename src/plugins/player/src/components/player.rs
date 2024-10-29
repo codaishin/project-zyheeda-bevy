@@ -3,8 +3,23 @@ use animations::{
 	components::animation_dispatch::AnimationDispatch,
 	traits::{GetAnimationPaths, IdleLayer, StartAnimation},
 };
-use bevy::prelude::*;
-use common::{systems::init_associated_component::GetAssociated, traits::load_asset::Path};
+use bars::components::Bar;
+use behaviors::{
+	animation::MovementAnimations,
+	components::{MovementConfig, MovementMode},
+};
+use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy_rapier3d::prelude::*;
+use common::{
+	components::{flip::FlipHorizontally, AssetModel, ColliderRoot, GroundOffset},
+	errors::Error,
+	systems::init_associated_component::GetAssociated,
+	tools::UnitsPerSecond,
+	traits::{clamp_zero_positive::ClampZeroPositive, load_asset::Path},
+};
+use interactions::components::blocker::Blocker;
+use light::components::ResponsiveLightTrigger;
+use prefabs::traits::{GetOrCreateAssets, Instantiate};
 
 #[derive(Component, Default, Debug, PartialEq)]
 pub struct Player;
@@ -41,5 +56,39 @@ impl GetAssociated<AnimationDispatch> for Player {
 		);
 
 		animation_dispatch
+	}
+}
+
+impl Instantiate for Player {
+	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
+		on.insert((
+			Name::from("Player"),
+			AssetModel::Path(Player::MODEL_PATH),
+			FlipHorizontally::with(Name::from("metarig")),
+			Bar::default(),
+			GroundOffset(Vec3::Y),
+			Blocker::insert([Blocker::Physical]),
+			MovementConfig::Dynamic {
+				current_mode: MovementMode::Fast,
+				slow_speed: UnitsPerSecond::new(0.75),
+				fast_speed: UnitsPerSecond::new(1.5),
+			},
+			MovementAnimations::new(
+				Animation::new(Player::animation_path("Animation3"), PlayMode::Repeat),
+				Animation::new(Player::animation_path("Animation2"), PlayMode::Repeat),
+			),
+			RigidBody::Dynamic,
+			GravityScale(0.),
+			LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y,
+		))
+		.with_children(|parent| {
+			parent.spawn((
+				ResponsiveLightTrigger,
+				Collider::capsule(Vec3::new(0.0, 0.2, -0.05), Vec3::new(0.0, 1.4, -0.05), 0.2),
+				ColliderRoot(parent.parent_entity()),
+			));
+		});
+
+		Ok(())
 	}
 }
