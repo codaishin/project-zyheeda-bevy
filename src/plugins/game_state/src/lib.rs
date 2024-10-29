@@ -4,7 +4,12 @@ use animations::animation::{Animation, PlayMode};
 use bars::components::Bar;
 use behaviors::{
 	animation::MovementAnimations,
-	components::{CamOrbit, MovementConfig, MovementMode, VoidSphere},
+	components::{
+		cam_orbit::{CamOrbit, CamOrbitCenter},
+		MovementConfig,
+		MovementMode,
+		VoidSphere,
+	},
 	traits::{Orbit, Vec2Radians},
 };
 use bevy::{
@@ -39,13 +44,13 @@ fn setup_simple_3d_scene(
 	mut next_state: ResMut<NextState<GameRunning>>,
 	asset_server: Res<AssetServer>,
 ) {
-	spawn_player(&mut commands, asset_server);
-	spawn_camera(&mut commands);
+	let player = spawn_player(&mut commands, asset_server);
+	spawn_camera(&mut commands, player);
 	spawn_void_spheres(&mut commands);
 	next_state.set(GameRunning::On);
 }
 
-fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
+fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) -> Entity {
 	commands
 		.spawn((
 			Name::from("Player"),
@@ -78,13 +83,14 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				Collider::capsule(Vec3::new(0.0, 0.2, -0.05), Vec3::new(0.0, 1.4, -0.05), 0.2),
 				ColliderRoot(parent.parent_entity()),
 			));
-		});
+		})
+		.id()
 }
 
-fn spawn_camera(commands: &mut Commands) {
+fn spawn_camera(commands: &mut Commands, player: Entity) {
 	let mut transform = Transform::from_translation(Vec3::X);
 	let mut orbit = CamOrbit {
-		center: Vec3::ZERO,
+		center: CamOrbitCenter::from(Vec3::ZERO).with_entity(player),
 		distance: 15.,
 		sensitivity: 1.,
 	};

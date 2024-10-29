@@ -13,11 +13,11 @@ use common::{
 	states::{GameRunning, MouseContext},
 };
 use components::{
+	cam_orbit::CamOrbit,
 	ground_targeted_aoe::{GroundTargetedAoeContact, GroundTargetedAoeProjection},
 	projectile::{ProjectileContact, ProjectileProjection},
 	shield::{ShieldContact, ShieldProjection},
 	Beam,
-	CamOrbit,
 	Movement,
 	MovementConfig,
 	PositionBased,
@@ -30,9 +30,9 @@ use systems::{
 	attack::{attack, execute_beam::execute_beam},
 	chase::chase,
 	face::{execute_face::execute_face, get_faces::get_faces},
-	follow::follow,
 	idle::idle,
 	move_on_orbit::move_on_orbit,
+	move_with_target::move_with_target,
 	movement::{
 		animate_movement::animate_movement,
 		execute_move_position_based::execute_move_position_based,
@@ -70,7 +70,8 @@ impl Plugin for BehaviorsPlugin {
 			)
 			.add_systems(
 				Update,
-				move_on_orbit::<CamOrbit>.run_if(in_state(GameRunning::On)),
+				(move_on_orbit::<CamOrbit>, move_with_target::<CamOrbit>)
+					.run_if(in_state(GameRunning::On)),
 			)
 			.add_systems(
 				Update,
@@ -112,23 +113,5 @@ impl Plugin for BehaviorsPlugin {
 			.add_systems(Update, GroundTargetedAoeContact::set_position)
 			.add_systems(Update, execute_beam)
 			.add_systems(Update, position_force_shield);
-	}
-}
-
-pub trait RegisterPlayerComponent {
-	fn register_player_component<TAgent>(&mut self) -> &mut Self
-	where
-		TAgent: Component;
-}
-
-impl RegisterPlayerComponent for App {
-	fn register_player_component<TAgent>(&mut self) -> &mut Self
-	where
-		TAgent: Component,
-	{
-		self.add_systems(
-			Update,
-			follow::<TAgent, CamOrbit>.run_if(in_state(GameRunning::On)),
-		)
 	}
 }

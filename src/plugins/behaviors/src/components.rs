@@ -1,22 +1,12 @@
+pub mod cam_orbit;
 pub mod ground_targeted_aoe;
 pub mod projectile;
 pub mod shield;
 
 use crate::traits::{RemoveComponent, SpawnAttack};
-use bevy::{
-	color::{Color, LinearRgba},
-	ecs::{bundle::Bundle, component::Component, entity::Entity, system::EntityCommands},
-	math::Vec3,
-};
+use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{test_tools::utils::ApproxEqual, tools::UnitsPerSecond};
 use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
-
-#[derive(Component)]
-pub struct CamOrbit {
-	pub center: Vec3,
-	pub distance: f32,
-	pub sensitivity: f32,
-}
 
 #[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub enum Face {
