@@ -11,7 +11,7 @@ mod debug;
 use bevy::prelude::*;
 use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
-	states::{GameState, Paused, Playing},
+	states::{game_state::GameState, menu_state::MenuState},
 	systems::log::log_many,
 	traits::load_asset::Path,
 };
@@ -68,7 +68,6 @@ use systems::{
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
 	map_pressed_key_select::map_pressed_key_select,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
-	set_state::set_state,
 	set_state_from_input::set_state_from_input,
 	spawn::spawn,
 	tooltip::tooltip,
@@ -83,7 +82,6 @@ use systems::{
 		update_label_text::update_label_text,
 	},
 };
-use tools::menu_state::MenuState;
 use traits::{
 	get_node::GetNode,
 	instantiate_content_on::InstantiateContentOn,
@@ -97,13 +95,13 @@ use visualization::unusable::Unusable;
 type SlotKeyMap = KeyMap<SlotKey, KeyCode>;
 
 trait AddUI {
-	fn add_ui<TComponent>(&mut self, on_state: MenuState) -> &mut Self
+	fn add_ui<TComponent>(&mut self, on_state: GameState) -> &mut Self
 	where
 		TComponent: Component + LoadUi<AssetServer> + GetNode + InstantiateContentOn;
 }
 
 impl AddUI for App {
-	fn add_ui<TComponent>(&mut self, on_state: MenuState) -> &mut Self
+	fn add_ui<TComponent>(&mut self, on_state: GameState) -> &mut Self
 	where
 		TComponent: Component + LoadUi<AssetServer> + GetNode + InstantiateContentOn,
 	{
@@ -189,7 +187,7 @@ impl Plugin for IngameMenuPlugin {
 }
 
 fn resources(app: &mut App) {
-	app.init_state::<MenuState>()
+	app.init_state::<GameState>()
 		.init_resource::<Shared<Path, Handle<Image>>>()
 		.insert_resource(TooltipUIControl {
 			tooltip_delay: Duration::from_millis(500),
@@ -201,13 +199,11 @@ fn events(app: &mut App) {
 }
 
 fn state_control_systems(app: &mut App) {
-	app.add_systems(Update, set_state_from_input::<MenuState>)
-		.add_systems(OnExit(MenuState::None), set_state::<GameState, Paused>)
-		.add_systems(OnEnter(MenuState::None), set_state::<GameState, Playing>);
+	app.add_systems(Update, set_state_from_input::<GameState>);
 }
 
 fn ui_overlay_systems(app: &mut App) {
-	app.add_ui::<UIOverlay>(MenuState::None)
+	app.add_ui::<UIOverlay>(GameState::Play)
 		.add_systems(
 			Update,
 			(
@@ -216,7 +212,7 @@ fn ui_overlay_systems(app: &mut App) {
 				panel_colors::<QuickbarPanel>,
 				panel_activity_colors_override::<SlotKeyMap, Queue, QuickbarPanel>,
 			)
-				.run_if(in_state(MenuState::None)),
+				.run_if(in_state(GameState::Play)),
 		)
 		.add_systems(
 			Update,
@@ -228,7 +224,7 @@ fn ui_overlay_systems(app: &mut App) {
 }
 
 fn combo_overview_systems(app: &mut App) {
-	app.add_ui::<ComboOverview>(MenuState::ComboOverview)
+	app.add_ui::<ComboOverview>(GameState::IngameMenu(MenuState::ComboOverview))
 		.add_dropdown::<SkillButton<DropdownItem<Vertical>>>()
 		.add_dropdown::<SkillButton<DropdownItem<Horizontal>>>()
 		.add_dropdown::<KeySelect<ReKeySkill>>()
@@ -238,7 +234,7 @@ fn combo_overview_systems(app: &mut App) {
 			Update,
 			update_combos_view::<Player, Combos, ComboOverview>
 				.run_if(either(added::<ComboOverview>).or(changed::<Player, Combos>))
-				.run_if(in_state(MenuState::ComboOverview)),
+				.run_if(in_state(GameState::IngameMenu(MenuState::ComboOverview))),
 		)
 		.add_systems(
 			Update,
@@ -252,12 +248,12 @@ fn combo_overview_systems(app: &mut App) {
 				update_combo_skills::<Player, Combos, Horizontal>,
 				map_pressed_key_select.pipe(update_combo_keys::<Player, Combos>),
 			)
-				.run_if(in_state(MenuState::ComboOverview)),
+				.run_if(in_state(GameState::IngameMenu(MenuState::ComboOverview))),
 		);
 }
 
 fn inventory_screen_systems(app: &mut App) {
-	app.add_ui::<InventoryScreen>(MenuState::Inventory)
+	app.add_ui::<InventoryScreen>(GameState::IngameMenu(MenuState::Inventory))
 		.add_systems(
 			Update,
 			(
@@ -271,7 +267,7 @@ fn inventory_screen_systems(app: &mut App) {
 				drop::<Player, SlotKey, InventoryKey>,
 				drop::<Player, InventoryKey, SlotKey>,
 			)
-				.run_if(in_state(MenuState::Inventory)),
+				.run_if(in_state(GameState::IngameMenu(MenuState::Inventory))),
 		)
 		.add_systems(
 			Update,

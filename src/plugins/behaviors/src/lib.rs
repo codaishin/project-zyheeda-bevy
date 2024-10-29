@@ -10,7 +10,7 @@ use animations::{animation::Animation, components::animation_dispatch::Animation
 use bevy::prelude::*;
 use common::{
 	resources::CamRay,
-	states::{GameState, MouseContext},
+	states::{game_state::GameState, MouseContext},
 };
 use components::{
 	cam_orbit::CamOrbit,

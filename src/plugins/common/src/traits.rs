@@ -9,7 +9,6 @@ pub mod clear;
 pub mod get_asset_path;
 pub mod get_handle_from_path;
 pub mod get_ray;
-pub mod get_state;
 pub mod get_ui_text;
 pub mod has_collisions;
 pub mod insert;

@@ -1,4 +1,6 @@
-use crate::traits::get_state::GetState;
+pub mod game_state;
+pub mod menu_state;
+
 use bevy::{input::keyboard::KeyCode, prelude::States};
 use std::{
 	fmt::Debug,
@@ -6,30 +8,6 @@ use std::{
 	marker::PhantomData,
 	ops::Deref,
 };
-
-#[derive(Debug, Hash, PartialEq, Eq, Clone, Default, States)]
-pub enum GameState {
-	#[default]
-	None,
-	Play,
-	Paused,
-}
-
-pub struct Playing;
-
-pub struct Paused;
-
-impl GetState<Playing> for GameState {
-	fn get_state() -> Self {
-		GameState::Play
-	}
-}
-
-impl GetState<Paused> for GameState {
-	fn get_state() -> Self {
-		GameState::Paused
-	}
-}
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Default, States)]
 pub enum MouseContext<TKey = KeyCode>
@@ -95,20 +73,4 @@ impl<TAsset: Debug + Send + Sync + 'static> AssetLoadState<TAsset> {
 pub enum LoadState {
 	Loading,
 	Loaded,
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use crate::traits::get_state::test_tools::get;
-
-	#[test]
-	fn turn_on() {
-		assert_eq!(GameState::Play, get::<GameState, Playing>());
-	}
-
-	#[test]
-	fn turn_off() {
-		assert_eq!(GameState::Paused, get::<GameState, Paused>());
-	}
 }

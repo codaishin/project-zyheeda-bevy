@@ -21,7 +21,7 @@ use bevy::{
 use bevy_rapier3d::plugin::RapierContext;
 use components::{flip::FlipHorizontally, MainCamera};
 use resources::language_server::LanguageServer;
-use states::{GameState, MouseContext};
+use states::{game_state::GameState, MouseContext};
 use systems::{
 	load_asset_model::load_asset_model,
 	set_cam_ray::set_cam_ray,

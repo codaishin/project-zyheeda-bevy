@@ -8,7 +8,7 @@ use bevy::{
 	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
 	prelude::*,
 };
-use common::{components::MainCamera, states::GameState};
+use common::{components::MainCamera, states::game_state::GameState};
 use enemy::components::void_sphere::VoidSphere;
 use player::bundle::PlayerBundle;
 use std::f32::consts::PI;

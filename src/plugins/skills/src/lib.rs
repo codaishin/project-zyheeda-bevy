@@ -23,7 +23,7 @@ use bundles::{ComboBundle, Loadout};
 use common::{
 	components::{AssetModel, Collection, Side, Swap},
 	resources::key_map::KeyMap,
-	states::{GameState, MouseContext},
+	states::{game_state::GameState, MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	traits::{
 		register_custom_folder_assets::RegisterCustomFolderAssets,

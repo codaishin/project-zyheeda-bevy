@@ -7,37 +7,15 @@ use crate::{
 };
 #[cfg(debug_assertions)]
 use crate::{
-	tools::menu_state::MenuState,
 	traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn},
 	AddUI,
 };
-use bevy::{
-	app::{App, Update},
-	asset::AssetServer,
-	color::Color,
-	ecs::system::Res,
-	hierarchy::{BuildChildren, BuildWorldChildren, ChildBuilder, DespawnRecursiveExt},
-	prelude::{Changed, Commands, Component, Entity, Query, State},
-	text::TextStyle,
-	time::{Real, Time},
-	ui::{
-		node_bundles::{ButtonBundle, NodeBundle, TextBundle},
-		AlignItems,
-		FlexDirection,
-		Interaction,
-		JustifyContent,
-		PositionType,
-		Style,
-		UiRect,
-		Val,
-	},
-	utils::default,
-};
-use common::{tools::Index, traits::iteration::IterFinite};
+use bevy::prelude::*;
+use common::{states::game_state::GameState, tools::Index, traits::iteration::IterFinite};
 use std::{marker::PhantomData, time::Duration};
 
 #[derive(Component, Default)]
-struct StateTime(Duration, Option<MenuState>);
+struct StateTime(Duration, Option<GameState>);
 
 impl LoadUi<AssetServer> for StateTime {
 	fn load_ui(_: &mut AssetServer) -> Self {
@@ -66,7 +44,7 @@ impl InstantiateContentOn for StateTime {
 		let state = self.1.map(|s| format!("{s:?}")).unwrap_or("???".into());
 		parent.spawn(TextBundle::from_section(
 			format!(
-				"{}.{:0>3} seconds in menu: {state}",
+				"{}.{:0>3} seconds in state: {state}",
 				self.0.as_secs(),
 				self.0.subsec_millis()
 			),
@@ -81,7 +59,7 @@ impl InstantiateContentOn for StateTime {
 fn update_state_time(
 	mut run_times: Query<&mut StateTime>,
 	time: Res<Time<Real>>,
-	state: Res<State<MenuState>>,
+	state: Res<State<GameState>>,
 ) {
 	let Ok(mut run_time) = run_times.get_single_mut() else {
 		return;
@@ -91,7 +69,7 @@ fn update_state_time(
 }
 
 pub fn setup_run_time_display(app: &mut App) {
-	for state in MenuState::iterator() {
+	for state in GameState::iterator() {
 		app.add_ui::<StateTime>(state);
 	}
 	app.add_systems(Update, update_state_time);
