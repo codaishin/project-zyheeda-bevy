@@ -1,21 +1,15 @@
-use super::ToArc;
-use crate::components::{
-	AttackConfig,
-	BeamConfig,
-	Enemy,
-	Foe,
-	MovementConfig,
-	MovementMode,
-	VoidSphere,
-	VoidSpherePart,
-};
 use bars::components::Bar;
+use behaviors::{
+	components::{AttackConfig, BeamConfig, Enemy, Foe, MovementConfig, MovementMode},
+	traits::ToArc,
+};
 use bevy::{
 	color::{Color, LinearRgba},
 	ecs::{bundle::Bundle, system::EntityCommands},
 	hierarchy::BuildChildren,
 	math::{primitives::Torus, Dir3, Vec3},
 	pbr::{NotShadowCaster, PbrBundle, StandardMaterial},
+	prelude::*,
 	render::mesh::Mesh,
 	transform::components::Transform,
 	utils::default,
@@ -34,6 +28,21 @@ use common::{
 use interactions::components::{blocker::Blocker, effected_by::EffectedBy};
 use prefabs::traits::{sphere, GetOrCreateAssets, Instantiate};
 use std::{f32::consts::PI, time::Duration};
+
+#[derive(Component)]
+pub struct VoidSphere;
+
+impl VoidSphere {
+	pub const AGGRO_RANGE: f32 = 10.;
+	pub const ATTACK_RANGE: f32 = 5.;
+}
+
+#[derive(Component, Clone)]
+pub enum VoidSpherePart {
+	Core,
+	RingA(UnitsPerSecond),
+	RingB(UnitsPerSecond),
+}
 
 #[derive(Bundle)]
 pub struct PbrVoidSphereBundle {

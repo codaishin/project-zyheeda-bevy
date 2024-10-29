@@ -22,21 +22,6 @@ pub struct OverrideFace(pub Face);
 #[derive(Component, Debug, PartialEq)]
 pub struct SetFace(pub Face);
 
-#[derive(Component)]
-pub struct VoidSphere;
-
-impl VoidSphere {
-	pub const AGGRO_RANGE: f32 = 10.;
-	pub const ATTACK_RANGE: f32 = 5.;
-}
-
-#[derive(Component, Clone)]
-pub enum VoidSpherePart {
-	Core,
-	RingA(UnitsPerSecond),
-	RingB(UnitsPerSecond),
-}
-
 #[derive(PartialEq, Debug)]
 pub struct PositionBased;
 

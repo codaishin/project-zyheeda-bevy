@@ -3,7 +3,6 @@ pub(crate) mod beam_config;
 pub(crate) mod bundle;
 pub(crate) mod movement;
 pub(crate) mod movement_config;
-pub(crate) mod void_sphere;
 
 use crate::components::{Attacker, MovementMode, Target};
 use bevy::{ecs::system::EntityCommands, prelude::*};

@@ -22,7 +22,6 @@ use components::{
 	MovementConfig,
 	PositionBased,
 	VelocityBased,
-	VoidSphere,
 };
 use events::MoveInputEvent;
 use prefabs::traits::RegisterPrefab;
@@ -50,7 +49,6 @@ pub struct BehaviorsPlugin;
 impl Plugin for BehaviorsPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_event::<MoveInputEvent>()
-			.register_prefab::<VoidSphere>()
 			.register_prefab::<Beam>()
 			.register_prefab::<ProjectileContact>()
 			.register_prefab::<ProjectileProjection>()

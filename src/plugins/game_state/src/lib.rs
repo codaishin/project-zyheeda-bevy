@@ -8,7 +8,6 @@ use behaviors::{
 		cam_orbit::{CamOrbit, CamOrbitCenter},
 		MovementConfig,
 		MovementMode,
-		VoidSphere,
 	},
 	traits::{Orbit, Vec2Radians},
 };
@@ -23,6 +22,7 @@ use common::{
 	tools::UnitsPerSecond,
 	traits::clamp_zero_positive::ClampZeroPositive,
 };
+use enemy::components::void_sphere::VoidSphere;
 use interactions::components::blocker::Blocker;
 use light::components::ResponsiveLightTrigger;
 use player::components::player::Player;

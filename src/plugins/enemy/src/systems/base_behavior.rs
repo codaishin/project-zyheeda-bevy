@@ -2,7 +2,7 @@ use behaviors::components::{Attack, Chase, Enemy, Foe};
 use bevy::prelude::*;
 use player::components::player::Player;
 
-pub(crate) fn behavior(
+pub(crate) fn base_enemy_behavior(
 	mut commands: Commands,
 	agents: Query<(Entity, &GlobalTransform, &Enemy)>,
 	players: Query<(Entity, &GlobalTransform), With<Player>>,
@@ -62,7 +62,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new();
-		app.add_systems(Update, behavior);
+		app.add_systems(Update, base_enemy_behavior);
 
 		app
 	}
