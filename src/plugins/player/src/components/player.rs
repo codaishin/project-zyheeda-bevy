@@ -11,7 +11,7 @@ use behaviors::{
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{flip::FlipHorizontally, AssetModel, ColliderRoot, GroundOffset},
+	components::{AssetModel, ColliderRoot, GroundOffset},
 	errors::Error,
 	systems::init_associated_component::GetAssociated,
 	tools::UnitsPerSecond,
@@ -63,8 +63,7 @@ impl Instantiate for Player {
 	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
 		on.insert((
 			Name::from("Player"),
-			AssetModel::Path(Player::MODEL_PATH),
-			FlipHorizontally::with(Name::from("metarig")),
+			AssetModel::Path(Player::MODEL_PATH).flip_on(Name::from("metarig")),
 			Bar::default(),
 			GroundOffset(Vec3::Y),
 			Blocker::insert([Blocker::Physical]),

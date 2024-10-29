@@ -1,9 +1,7 @@
 pub mod flip;
 
-use bevy::{
-	ecs::{component::Component, entity::Entity},
-	math::Vec3,
-};
+use bevy::prelude::*;
+use flip::FlipHorizontally;
 use std::marker::PhantomData;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -94,6 +92,12 @@ pub enum AssetModel {
 	#[default]
 	None,
 	Path(&'static str),
+}
+
+impl AssetModel {
+	pub fn flip_on(self, name: Name) -> (Self, FlipHorizontally) {
+		(self, FlipHorizontally::with(name))
+	}
 }
 
 #[derive(Component, Debug, PartialEq)]
