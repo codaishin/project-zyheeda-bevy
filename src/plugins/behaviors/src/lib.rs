@@ -60,7 +60,11 @@ impl Plugin for BehaviorsPlugin {
 			.register_prefab::<GroundTargetedAoeProjection>()
 			.add_systems(
 				Update,
-				trigger_move_input_event::<CamRay>
+				(
+					trigger_move_input_event::<CamRay>,
+					get_faces.pipe(execute_face::<CamRay>),
+				)
+					.chain()
 					.run_if(in_state(GameRunning::On))
 					.run_if(in_state(MouseContext::<KeyCode>::Default)),
 			)
@@ -125,10 +129,6 @@ impl RegisterPlayerComponent for App {
 		self.add_systems(
 			Update,
 			follow::<TAgent, CamOrbit>.run_if(in_state(GameRunning::On)),
-		)
-		.add_systems(
-			Update,
-			get_faces.pipe(execute_face::<CamRay, Without<TAgent>>),
 		)
 	}
 }
