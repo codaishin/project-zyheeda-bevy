@@ -3,10 +3,10 @@ use bevy::{
 	input::{keyboard::KeyCode, ButtonInput},
 	state::state::{FreelyMutableState, NextState, State, States},
 };
-use common::traits::iteration::IterFinite;
+use common::traits::{iteration::IterFinite, states::PlayState};
 
 pub(crate) fn set_state_from_input<
-	TState: States + FreelyMutableState + Default + IterFinite + Copy,
+	TState: States + FreelyMutableState + PlayState + IterFinite + Copy,
 >(
 	keys: Res<ButtonInput<KeyCode>>,
 	current_state: Res<State<TState>>,
@@ -22,7 +22,7 @@ pub(crate) fn set_state_from_input<
 	next_state.set(new_state);
 }
 
-fn get_new_state<TState: States + Default + IterFinite + Copy>(
+fn get_new_state<TState: States + PlayState + IterFinite + Copy>(
 	keys: &Res<ButtonInput<KeyCode>>,
 	current_state: &TState,
 	state: TState,
@@ -39,7 +39,7 @@ where
 	}
 
 	match current_state == &state {
-		true => Some(TState::default()),
+		true => Some(TState::play_state()),
 		false => Some(state),
 	}
 }
@@ -53,12 +53,19 @@ mod tests {
 	};
 	use common::{test_tools::utils::SingleThreadedApp, traits::iteration::Iter};
 
-	#[derive(Debug, PartialEq, States, Default, Hash, Eq, Clone, Copy)]
+	#[derive(Default, Debug, PartialEq, States, Hash, Eq, Clone, Copy)]
 	enum _State {
 		#[default]
 		Default,
+		Play,
 		A,
 		B,
+	}
+
+	impl PlayState for _State {
+		fn play_state() -> Self {
+			_State::Play
+		}
 	}
 
 	impl IterFinite for _State {
@@ -68,7 +75,8 @@ mod tests {
 
 		fn next(current: &Iter<Self>) -> Option<Self> {
 			match current.0? {
-				_State::Default => Some(_State::A),
+				_State::Default => Some(_State::Play),
+				_State::Play => Some(_State::A),
 				_State::A => Some(_State::B),
 				_State::B => None,
 			}
@@ -81,6 +89,7 @@ mod tests {
 		fn try_from(value: _State) -> Result<Self, Self::Error> {
 			match value {
 				_State::Default => Err(()),
+				_State::Play => Err(()),
 				_State::A => Ok(KeyCode::KeyA),
 				_State::B => Ok(KeyCode::KeyB),
 			}
@@ -131,7 +140,7 @@ mod tests {
 	}
 
 	#[test]
-	fn set_back_to_default_if_already_a() {
+	fn set_to_play_on_a_if_already_a() {
 		let mut app = setup();
 		let mut input = app
 			.world_mut()
@@ -144,6 +153,6 @@ mod tests {
 		app.update();
 
 		let state = app.world().get_resource::<State<_State>>().unwrap();
-		assert_eq!(&_State::Default, state.get());
+		assert_eq!(&_State::Play, state.get());
 	}
 }

@@ -11,19 +11,25 @@ use crate::{
 	AddUI,
 };
 use bevy::prelude::*;
-use common::{states::game_state::GameState, tools::Index, traits::iteration::IterFinite};
-use std::{marker::PhantomData, time::Duration};
+use common::{tools::Index, traits::iteration::IterFinite};
+use std::{fmt::Debug, marker::PhantomData, time::Duration};
 
-#[derive(Component, Default)]
-struct StateTime(Duration, Option<GameState>);
+#[derive(Component)]
+struct StateTime<TState>(Duration, Option<TState>);
 
-impl LoadUi<AssetServer> for StateTime {
+impl<TState> Default for StateTime<TState> {
+	fn default() -> Self {
+		Self(Duration::ZERO, None)
+	}
+}
+
+impl<TState> LoadUi<AssetServer> for StateTime<TState> {
 	fn load_ui(_: &mut AssetServer) -> Self {
 		StateTime::default()
 	}
 }
 
-impl GetNode for StateTime {
+impl<TState> GetNode for StateTime<TState> {
 	fn node(&self) -> NodeBundle {
 		NodeBundle {
 			style: Style {
@@ -39,7 +45,10 @@ impl GetNode for StateTime {
 	}
 }
 
-impl InstantiateContentOn for StateTime {
+impl<TState> InstantiateContentOn for StateTime<TState>
+where
+	TState: Debug + Copy,
+{
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		let state = self.1.map(|s| format!("{s:?}")).unwrap_or("???".into());
 		parent.spawn(TextBundle::from_section(
@@ -56,11 +65,13 @@ impl InstantiateContentOn for StateTime {
 	}
 }
 
-fn update_state_time(
-	mut run_times: Query<&mut StateTime>,
+fn update_state_time<TState>(
+	mut run_times: Query<&mut StateTime<TState>>,
 	time: Res<Time<Real>>,
-	state: Res<State<GameState>>,
-) {
+	state: Res<State<TState>>,
+) where
+	TState: States + Copy,
+{
 	let Ok(mut run_time) = run_times.get_single_mut() else {
 		return;
 	};
@@ -68,11 +79,14 @@ fn update_state_time(
 	run_time.1 = Some(*state.get());
 }
 
-pub fn setup_run_time_display(app: &mut App) {
-	for state in GameState::iterator() {
-		app.add_ui::<StateTime>(state);
+pub fn setup_run_time_display<TState>(app: &mut App)
+where
+	TState: IterFinite + States + Copy,
+{
+	for state in TState::iterator() {
+		app.add_ui::<StateTime<TState>>(state);
 	}
-	app.add_systems(Update, update_state_time);
+	app.add_systems(Update, update_state_time::<TState>);
 }
 
 #[derive(Component)]

@@ -1,6 +1,3 @@
-pub mod game_state;
-pub mod menu_state;
-
 use bevy::{input::keyboard::KeyCode, prelude::States};
 use std::{
 	fmt::Debug,

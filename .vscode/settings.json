@@ -36,6 +36,7 @@
 		"despawn",
 		"despawned",
 		"despawning",
+		"egui",
 		"fragiles",
 		"gltf",
 		"Hasher",

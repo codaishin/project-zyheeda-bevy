@@ -8,10 +8,7 @@ mod systems;
 use animation::MovementAnimations;
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::prelude::*;
-use common::{
-	resources::CamRay,
-	states::{game_state::GameState, MouseContext},
-};
+use common::{resources::CamRay, states::MouseContext};
 use components::{
 	cam_orbit::CamOrbit,
 	ground_targeted_aoe::{GroundTargetedAoeContact, GroundTargetedAoeProjection},
@@ -44,9 +41,14 @@ use systems::{
 	update_life_times::update_lifetimes,
 };
 
-pub struct BehaviorsPlugin;
+pub struct BehaviorsPlugin<TState> {
+	pub play_state: TState,
+}
 
-impl Plugin for BehaviorsPlugin {
+impl<TState> Plugin for BehaviorsPlugin<TState>
+where
+	TState: States + Copy,
+{
 	fn build(&self, app: &mut App) {
 		app.add_event::<MoveInputEvent>()
 			.register_prefab::<Beam>()
@@ -63,13 +65,13 @@ impl Plugin for BehaviorsPlugin {
 					get_faces.pipe(execute_face::<CamRay>),
 				)
 					.chain()
-					.run_if(in_state(GameState::Play))
+					.run_if(in_state(self.play_state))
 					.run_if(in_state(MouseContext::<KeyCode>::Default)),
 			)
 			.add_systems(
 				Update,
 				(move_on_orbit::<CamOrbit>, move_with_target::<CamOrbit>)
-					.run_if(in_state(GameState::Play)),
+					.run_if(in_state(self.play_state)),
 			)
 			.add_systems(
 				Update,

@@ -1,6 +1,9 @@
 use super::menu_state::MenuState;
-use crate::traits::iteration::{Iter, IterFinite};
 use bevy::prelude::*;
+use common::traits::{
+	iteration::{Iter, IterFinite},
+	states::PlayState,
+};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Default, States)]
 pub enum GameState {
@@ -44,6 +47,12 @@ impl IterFinite for GameState {
 			}
 			GameState::IngameMenu(MenuState::ComboOverview) => None,
 		}
+	}
+}
+
+impl PlayState for GameState {
+	fn play_state() -> Self {
+		Self::Play
 	}
 }
 

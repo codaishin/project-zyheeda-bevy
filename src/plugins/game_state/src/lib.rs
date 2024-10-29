@@ -1,3 +1,5 @@
+pub mod states;
+
 mod systems;
 
 use behaviors::{
@@ -8,17 +10,25 @@ use bevy::{
 	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
 	prelude::*,
 };
-use common::{components::MainCamera, states::game_state::GameState};
+use common::components::MainCamera;
 use enemy::components::void_sphere::VoidSphere;
 use player::bundle::PlayerBundle;
+use states::{game_state::GameState, menu_state::MenuState};
 use std::f32::consts::PI;
 use systems::pause_virtual_time::pause_virtual_time;
 
 pub struct GameStatePlugin;
 
+impl GameStatePlugin {
+	pub const PLAY: GameState = GameState::Play;
+	pub const INVENTORY: GameState = GameState::IngameMenu(MenuState::Inventory);
+	pub const COMBO_OVERVIEW: GameState = GameState::IngameMenu(MenuState::ComboOverview);
+}
+
 impl Plugin for GameStatePlugin {
 	fn build(&self, app: &mut App) {
-		app.add_systems(PostStartup, setup_simple_3d_scene)
+		app.init_state::<GameState>()
+			.add_systems(PostStartup, setup_simple_3d_scene)
 			.add_systems(OnEnter(GameState::Play), pause_virtual_time::<false>)
 			.add_systems(OnExit(GameState::Play), pause_virtual_time::<true>);
 	}

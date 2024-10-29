@@ -21,7 +21,7 @@ use bevy::{
 use bevy_rapier3d::plugin::RapierContext;
 use components::{flip::FlipHorizontally, MainCamera};
 use resources::language_server::LanguageServer;
-use states::{game_state::GameState, MouseContext};
+use states::MouseContext;
 use systems::{
 	load_asset_model::load_asset_model,
 	set_cam_ray::set_cam_ray,
@@ -33,7 +33,6 @@ pub struct CommonPlugin;
 impl Plugin for CommonPlugin {
 	fn build(&self, app: &mut App) {
 		app.init_resource::<LanguageServer>()
-			.init_state::<GameState>()
 			.init_state::<MouseContext>()
 			.add_systems(
 				First,

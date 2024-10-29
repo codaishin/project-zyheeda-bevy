@@ -8,12 +8,11 @@ mod visualization;
 #[cfg(debug_assertions)]
 mod debug;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, state::state::FreelyMutableState};
 use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
-	states::{game_state::GameState, menu_state::MenuState},
 	systems::log::log_many,
-	traits::load_asset::Path,
+	traits::{iteration::IterFinite, load_asset::Path, states::PlayState},
 };
 use components::{
 	combo_overview::ComboOverview,
@@ -94,14 +93,17 @@ use visualization::unusable::Unusable;
 
 type SlotKeyMap = KeyMap<SlotKey, KeyCode>;
 
-trait AddUI {
-	fn add_ui<TComponent>(&mut self, on_state: GameState) -> &mut Self
+trait AddUI<TState> {
+	fn add_ui<TComponent>(&mut self, on_state: TState) -> &mut Self
 	where
 		TComponent: Component + LoadUi<AssetServer> + GetNode + InstantiateContentOn;
 }
 
-impl AddUI for App {
-	fn add_ui<TComponent>(&mut self, on_state: GameState) -> &mut Self
+impl<TState> AddUI<TState> for App
+where
+	TState: States + Copy,
+{
+	fn add_ui<TComponent>(&mut self, on_state: TState) -> &mut Self
 	where
 		TComponent: Component + LoadUi<AssetServer> + GetNode + InstantiateContentOn,
 	{
@@ -166,120 +168,133 @@ impl AddDropdown for App {
 	}
 }
 
-pub struct IngameMenuPlugin;
+pub struct IngameMenuPlugin<T> {
+	pub play_state: T,
+	pub inventory_state: T,
+	pub combo_overview_state: T,
+}
 
-impl Plugin for IngameMenuPlugin {
-	fn build(&self, app: &mut App) {
-		resources(app);
-		events(app);
-		state_control_systems(app);
-		ui_overlay_systems(app);
-		combo_overview_systems(app);
-		inventory_screen_systems(app);
-		general_systems(app);
+impl<TState> IngameMenuPlugin<TState>
+where
+	TState: States + FreelyMutableState + PlayState + IterFinite + Copy,
+	KeyCode: TryFrom<TState>,
+{
+	fn resources(&self, app: &mut App) {
+		app.init_resource::<Shared<Path, Handle<Image>>>()
+			.insert_resource(TooltipUIControl {
+				tooltip_delay: Duration::from_millis(500),
+			});
+	}
 
-		#[cfg(debug_assertions)]
-		{
-			debug::setup_run_time_display(app);
-			debug::setup_dropdown_test(app);
-		}
+	fn events(&self, app: &mut App) {
+		app.add_event::<DropdownEvent>();
+	}
+
+	fn state_control_systems(&self, app: &mut App) {
+		app.add_systems(Update, set_state_from_input::<TState>);
+	}
+
+	fn ui_overlay_systems(&self, app: &mut App) {
+		app.add_ui::<UIOverlay>(self.play_state)
+			.add_systems(
+				Update,
+				(
+					get_quickbar_icons::<Queue, Combos, CombosTimeOut>.pipe(set_quickbar_icons),
+					update_label_text::<SlotKeyMap, LanguageServer, QuickbarPanel>,
+					panel_colors::<QuickbarPanel>,
+					panel_activity_colors_override::<SlotKeyMap, Queue, QuickbarPanel>,
+				)
+					.run_if(in_state(self.play_state)),
+			)
+			.add_systems(
+				Update,
+				(
+					set_ui_mouse_context,
+					prime_mouse_context::<SlotKeyMap, QuickbarPanel>,
+				),
+			);
+	}
+
+	fn combo_overview_systems(&self, app: &mut App) {
+		app.add_ui::<ComboOverview>(self.combo_overview_state)
+			.add_dropdown::<SkillButton<DropdownItem<Vertical>>>()
+			.add_dropdown::<SkillButton<DropdownItem<Horizontal>>>()
+			.add_dropdown::<KeySelect<ReKeySkill>>()
+			.add_dropdown::<KeySelect<AppendSkill>>()
+			.add_tooltip::<Skill>()
+			.add_systems(
+				Update,
+				update_combos_view::<Player, Combos, ComboOverview>
+					.run_if(either(added::<ComboOverview>).or(changed::<Player, Combos>))
+					.run_if(in_state(self.combo_overview_state)),
+			)
+			.add_systems(
+				Update,
+				(
+					visualize_invalid_skill::<Player, Slots, Unusable>,
+					insert_skill_select_dropdown::<Slots, Vertical>,
+					insert_skill_select_dropdown::<Slots, Horizontal>,
+					insert_key_select_dropdown::<Player, Combos, AppendSkillCommand>,
+					update_combos_view_delete_skill::<Player, Combos>,
+					update_combo_skills::<Player, Combos, Vertical>,
+					update_combo_skills::<Player, Combos, Horizontal>,
+					map_pressed_key_select.pipe(update_combo_keys::<Player, Combos>),
+				)
+					.run_if(in_state(self.combo_overview_state)),
+			);
+	}
+
+	fn inventory_screen_systems(&self, app: &mut App) {
+		app.add_ui::<InventoryScreen>(self.inventory_state)
+			.add_systems(
+				Update,
+				(
+					panel_colors::<InventoryPanel>,
+					panel_container_states::<InventoryPanel, InventoryKey, Inventory<Skill>>,
+					panel_container_states::<InventoryPanel, SlotKey, Slots>,
+					drag::<Player, InventoryKey>,
+					drag::<Player, SlotKey>,
+					drop::<Player, InventoryKey, InventoryKey>,
+					drop::<Player, SlotKey, SlotKey>,
+					drop::<Player, SlotKey, InventoryKey>,
+					drop::<Player, InventoryKey, SlotKey>,
+				)
+					.run_if(in_state(self.inventory_state)),
+			)
+			.add_systems(
+				Update,
+				(swap_equipped_items.pipe(log_many), swap_inventory_items),
+			);
+	}
+
+	fn general_systems(&self, app: &mut App) {
+		app.add_systems(Update, image_color)
+			.add_systems(Update, adjust_global_z_index)
+			.add_systems(
+				Update,
+				insert_key_code_text::<SlotKey, SlotKeyMap, LanguageServer>,
+			);
 	}
 }
 
-fn resources(app: &mut App) {
-	app.init_state::<GameState>()
-		.init_resource::<Shared<Path, Handle<Image>>>()
-		.insert_resource(TooltipUIControl {
-			tooltip_delay: Duration::from_millis(500),
-		});
-}
+impl<TState> Plugin for IngameMenuPlugin<TState>
+where
+	TState: States + FreelyMutableState + PlayState + IterFinite + Copy,
+	KeyCode: TryFrom<TState>,
+{
+	fn build(&self, app: &mut App) {
+		self.resources(app);
+		self.events(app);
+		self.state_control_systems(app);
+		self.ui_overlay_systems(app);
+		self.combo_overview_systems(app);
+		self.inventory_screen_systems(app);
+		self.general_systems(app);
 
-fn events(app: &mut App) {
-	app.add_event::<DropdownEvent>();
-}
-
-fn state_control_systems(app: &mut App) {
-	app.add_systems(Update, set_state_from_input::<GameState>);
-}
-
-fn ui_overlay_systems(app: &mut App) {
-	app.add_ui::<UIOverlay>(GameState::Play)
-		.add_systems(
-			Update,
-			(
-				get_quickbar_icons::<Queue, Combos, CombosTimeOut>.pipe(set_quickbar_icons),
-				update_label_text::<SlotKeyMap, LanguageServer, QuickbarPanel>,
-				panel_colors::<QuickbarPanel>,
-				panel_activity_colors_override::<SlotKeyMap, Queue, QuickbarPanel>,
-			)
-				.run_if(in_state(GameState::Play)),
-		)
-		.add_systems(
-			Update,
-			(
-				set_ui_mouse_context,
-				prime_mouse_context::<SlotKeyMap, QuickbarPanel>,
-			),
-		);
-}
-
-fn combo_overview_systems(app: &mut App) {
-	app.add_ui::<ComboOverview>(GameState::IngameMenu(MenuState::ComboOverview))
-		.add_dropdown::<SkillButton<DropdownItem<Vertical>>>()
-		.add_dropdown::<SkillButton<DropdownItem<Horizontal>>>()
-		.add_dropdown::<KeySelect<ReKeySkill>>()
-		.add_dropdown::<KeySelect<AppendSkill>>()
-		.add_tooltip::<Skill>()
-		.add_systems(
-			Update,
-			update_combos_view::<Player, Combos, ComboOverview>
-				.run_if(either(added::<ComboOverview>).or(changed::<Player, Combos>))
-				.run_if(in_state(GameState::IngameMenu(MenuState::ComboOverview))),
-		)
-		.add_systems(
-			Update,
-			(
-				visualize_invalid_skill::<Player, Slots, Unusable>,
-				insert_skill_select_dropdown::<Slots, Vertical>,
-				insert_skill_select_dropdown::<Slots, Horizontal>,
-				insert_key_select_dropdown::<Player, Combos, AppendSkillCommand>,
-				update_combos_view_delete_skill::<Player, Combos>,
-				update_combo_skills::<Player, Combos, Vertical>,
-				update_combo_skills::<Player, Combos, Horizontal>,
-				map_pressed_key_select.pipe(update_combo_keys::<Player, Combos>),
-			)
-				.run_if(in_state(GameState::IngameMenu(MenuState::ComboOverview))),
-		);
-}
-
-fn inventory_screen_systems(app: &mut App) {
-	app.add_ui::<InventoryScreen>(GameState::IngameMenu(MenuState::Inventory))
-		.add_systems(
-			Update,
-			(
-				panel_colors::<InventoryPanel>,
-				panel_container_states::<InventoryPanel, InventoryKey, Inventory<Skill>>,
-				panel_container_states::<InventoryPanel, SlotKey, Slots>,
-				drag::<Player, InventoryKey>,
-				drag::<Player, SlotKey>,
-				drop::<Player, InventoryKey, InventoryKey>,
-				drop::<Player, SlotKey, SlotKey>,
-				drop::<Player, SlotKey, InventoryKey>,
-				drop::<Player, InventoryKey, SlotKey>,
-			)
-				.run_if(in_state(GameState::IngameMenu(MenuState::Inventory))),
-		)
-		.add_systems(
-			Update,
-			(swap_equipped_items.pipe(log_many), swap_inventory_items),
-		);
-}
-
-fn general_systems(app: &mut App) {
-	app.add_systems(Update, image_color)
-		.add_systems(Update, adjust_global_z_index)
-		.add_systems(
-			Update,
-			insert_key_code_text::<SlotKey, SlotKeyMap, LanguageServer>,
-		);
+		#[cfg(debug_assertions)]
+		{
+			debug::setup_run_time_display::<TState>(app);
+			debug::setup_dropdown_test(app);
+		}
+	}
 }

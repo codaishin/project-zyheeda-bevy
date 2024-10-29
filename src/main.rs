@@ -35,18 +35,26 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(CommonPlugin)
 		.add_plugins(PrefabsPlugin)
 		.add_plugins(ShaderPlugin)
-		.add_plugins(IngameMenuPlugin)
 		.add_plugins(InteractionsPlugin)
 		.add_plugins(BarsPlugin)
 		.add_plugins(ItemsPlugin)
-		.add_plugins(SkillsPlugin)
-		.add_plugins(BehaviorsPlugin)
 		.add_plugins(AnimationsPlugin)
 		.add_plugins(LightPlugin)
 		.add_plugins(MapGenerationPlugin)
-		.add_plugins(GameStatePlugin)
 		.add_plugins(PlayerPlugin)
 		.add_plugins(EnemyPlugin)
+		.add_plugins(IngameMenuPlugin {
+			play_state: GameStatePlugin::PLAY,
+			inventory_state: GameStatePlugin::INVENTORY,
+			combo_overview_state: GameStatePlugin::COMBO_OVERVIEW,
+		})
+		.add_plugins(SkillsPlugin {
+			play_state: GameStatePlugin::PLAY,
+		})
+		.add_plugins(BehaviorsPlugin {
+			play_state: GameStatePlugin::PLAY,
+		})
+		.add_plugins(GameStatePlugin)
 		.insert_resource(ClearColor(Color::BLACK));
 }
 
