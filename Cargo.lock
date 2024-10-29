@@ -1930,6 +1930,7 @@ dependencies = [
  "behaviors",
  "bevy",
  "common",
+ "player",
 ]
 
 [[package]]
@@ -2146,6 +2147,7 @@ dependencies = [
  "common",
  "interactions",
  "light",
+ "player",
 ]
 
 [[package]]
@@ -2496,6 +2498,7 @@ dependencies = [
  "items",
  "macros",
  "mockall",
+ "player",
  "skills",
  "tracing",
  "uuid",
@@ -3556,6 +3559,7 @@ checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
 name = "player"
 version = "0.1.0"
 dependencies = [
+ "animations",
  "behaviors",
  "bevy",
  "common",
@@ -4064,6 +4068,7 @@ dependencies = [
  "items",
  "macros",
  "mockall",
+ "player",
  "serde",
  "shaders",
  "tracing",

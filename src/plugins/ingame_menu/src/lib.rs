@@ -10,7 +10,6 @@ mod debug;
 
 use bevy::prelude::*;
 use common::{
-	components::Player,
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
 	states::{GameRunning, Off, On},
 	systems::log::log_many,
@@ -29,6 +28,7 @@ use components::{
 	AppendSkillCommand,
 };
 use events::DropdownEvent;
+use player::components::player::Player;
 use skills::{
 	components::{
 		combos::Combos,

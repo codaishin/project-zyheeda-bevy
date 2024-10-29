@@ -10,6 +10,7 @@ tracing.workspace = true
 uuid.workspace = true
 common.workspace = true
 items.workspace = true
+player.workspace = true
 skills.workspace = true
 
 [dev-dependencies]

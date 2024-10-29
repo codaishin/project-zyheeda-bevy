@@ -1,9 +1,7 @@
 use crate::components::quickbar_panel::QuickbarPanel;
-use bevy::{
-	asset::Handle,
-	prelude::{Component, Entity, Image, Query, With},
-};
-use common::{components::Player, traits::iterate::Iterate};
+use bevy::prelude::*;
+use common::traits::iterate::Iterate;
+use player::components::player::Player;
 use skills::{
 	components::slots::Slots,
 	skills::{QueuedSkill, Skill},
@@ -86,14 +84,8 @@ fn if_item_skill_icon<'a>(
 mod tests {
 	use super::*;
 	use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
-	use bevy::{
-		app::{App, Update},
-		asset::{Asset, AssetId},
-		ecs::system::In,
-		prelude::{default, Commands, IntoSystem, Resource},
-	};
 	use common::{
-		components::{Player, Side},
+		components::Side,
 		test_tools::utils::SingleThreadedApp,
 		traits::nested_mock::NestedMocks,
 	};

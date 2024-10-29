@@ -3,8 +3,9 @@ use bevy::{
 	asset::Handle,
 	prelude::{Mesh, With},
 };
-use common::components::{Player, Side};
+use common::components::Side;
 use items::traits::view::ItemView;
+use player::components::player::Player;
 use std::marker::PhantomData;
 
 pub(crate) struct SubModels<T>(PhantomData<T>);

@@ -2,16 +2,16 @@ use super::{IsPlaying, RepeatAnimation, ReplayAnimation};
 use bevy::prelude::*;
 use std::time::Duration;
 
-type Player<'a> = (Mut<'a, AnimationPlayer>, Mut<'a, AnimationTransitions>);
+type AnimationPlayerComponents<'a> = (Mut<'a, AnimationPlayer>, Mut<'a, AnimationTransitions>);
 
-impl<'a> IsPlaying<AnimationNodeIndex> for Player<'a> {
+impl<'a> IsPlaying<AnimationNodeIndex> for AnimationPlayerComponents<'a> {
 	fn is_playing(&self, index: AnimationNodeIndex) -> bool {
 		let (player, _) = self;
 		player.is_playing_animation(index)
 	}
 }
 
-impl<'a> ReplayAnimation<AnimationNodeIndex> for Player<'a> {
+impl<'a> ReplayAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'a> {
 	fn replay(&mut self, index: AnimationNodeIndex) {
 		let (player, transitions) = self;
 		transitions
@@ -20,7 +20,7 @@ impl<'a> ReplayAnimation<AnimationNodeIndex> for Player<'a> {
 	}
 }
 
-impl<'a> RepeatAnimation<AnimationNodeIndex> for Player<'a> {
+impl<'a> RepeatAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'a> {
 	fn repeat(&mut self, index: AnimationNodeIndex) {
 		let (player, transitions) = self;
 		transitions

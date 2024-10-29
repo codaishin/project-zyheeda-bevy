@@ -27,13 +27,6 @@ pub enum Side {
 #[derive(Component)]
 pub struct GroundOffset(pub Vec3);
 
-#[derive(Component, Default, Debug, PartialEq)]
-pub struct Player;
-
-impl Player {
-	pub const MODEL_PATH: &'static str = "models/player.glb";
-}
-
 #[derive(Component, Debug, PartialEq)]
 pub struct Immobilized;
 

@@ -1,6 +1,7 @@
 use crate::slot_key::SlotKey;
-use common::components::{AssetModel, Player, Side};
+use common::components::{AssetModel, Side};
 use items::traits::view::ItemView;
+use player::components::player::Player;
 use std::marker::PhantomData;
 
 #[derive(Debug, PartialEq)]

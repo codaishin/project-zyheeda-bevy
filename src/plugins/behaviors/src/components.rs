@@ -105,10 +105,10 @@ pub enum MovementConfig {
 }
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct Chase(pub Entity);
+pub struct Chase(pub Entity);
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct Attack(pub Entity);
+pub struct Attack(pub Entity);
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Attacker(pub Entity);

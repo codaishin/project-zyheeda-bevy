@@ -1,6 +1,5 @@
 pub(crate) mod attack;
 pub(crate) mod chase;
-pub(crate) mod enemy;
 pub(crate) mod face;
 pub(crate) mod follow;
 pub(crate) mod idle;

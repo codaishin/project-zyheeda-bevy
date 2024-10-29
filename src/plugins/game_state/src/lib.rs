@@ -1,7 +1,5 @@
 mod systems;
 
-use std::f32::consts::PI;
-
 use animations::animation::{Animation, PlayMode};
 use bars::components::Bar;
 use behaviors::{
@@ -15,13 +13,15 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{flip::FlipHorizontally, ColliderRoot, GroundOffset, Health, MainCamera, Player},
+	components::{flip::FlipHorizontally, ColliderRoot, GroundOffset, Health, MainCamera},
 	states::GameRunning,
-	tools::{player_animation_path, UnitsPerSecond},
+	tools::UnitsPerSecond,
 	traits::clamp_zero_positive::ClampZeroPositive,
 };
 use interactions::components::blocker::Blocker;
 use light::components::ResponsiveLightTrigger;
+use player::components::player::Player;
+use std::f32::consts::PI;
 use systems::pause_virtual_time::pause_virtual_time;
 
 pub struct GameStatePlugin;
@@ -36,8 +36,8 @@ impl Plugin for GameStatePlugin {
 
 fn setup_simple_3d_scene(
 	mut commands: Commands,
-	asset_server: Res<AssetServer>,
 	mut next_state: ResMut<NextState<GameRunning>>,
+	asset_server: Res<AssetServer>,
 ) {
 	spawn_player(&mut commands, asset_server);
 	spawn_camera(&mut commands);
@@ -52,7 +52,7 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 			Health::new(100.),
 			Bar::default(),
 			SceneBundle {
-				scene: asset_server.load(Player::MODEL_PATH.to_owned() + "#Scene0"),
+				scene: asset_server.load(GltfAssetLabel::Scene(0).from_asset(Player::MODEL_PATH)),
 				..default()
 			},
 			FlipHorizontally::with(Name::from("metarig")),
@@ -65,8 +65,8 @@ fn spawn_player(commands: &mut Commands, asset_server: Res<AssetServer>) {
 				fast_speed: UnitsPerSecond::new(1.5),
 			},
 			MovementAnimations::new(
-				Animation::new(player_animation_path("Animation3"), PlayMode::Repeat),
-				Animation::new(player_animation_path("Animation2"), PlayMode::Repeat),
+				Animation::new(Player::animation_path("Animation3"), PlayMode::Repeat),
+				Animation::new(Player::animation_path("Animation2"), PlayMode::Repeat),
 			),
 			RigidBody::Dynamic,
 			GravityScale(0.),

@@ -1,22 +1,14 @@
 pub mod animation;
 pub mod components;
+pub mod events;
 pub mod traits;
 
-mod events;
 mod systems;
 
 use animation::MovementAnimations;
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
-use bevy::{
-	app::{App, Plugin, Update},
-	ecs::{schedule::IntoSystemConfigs, system::IntoSystem},
-	input::keyboard::KeyCode,
-	prelude::Without,
-	state::condition::in_state,
-	time::Virtual,
-};
+use bevy::prelude::*;
 use common::{
-	components::Player,
 	resources::CamRay,
 	states::{GameRunning, MouseContext},
 };
@@ -37,7 +29,6 @@ use prefabs::traits::RegisterPrefab;
 use systems::{
 	attack::{attack, execute_beam::execute_beam},
 	chase::chase,
-	enemy::enemy,
 	face::{execute_face::execute_face, get_faces::get_faces},
 	follow::follow,
 	idle::idle,
@@ -46,7 +37,6 @@ use systems::{
 		animate_movement::animate_movement,
 		execute_move_position_based::execute_move_position_based,
 		execute_move_velocity_based::execute_move_velocity_based,
-		move_player_on_event::move_player_on_event,
 		trigger_event::trigger_move_input_event,
 	},
 	projectile::{movement::ProjectileMovement, set_position::ProjectileSetPosition},
@@ -70,15 +60,13 @@ impl Plugin for BehaviorsPlugin {
 			.register_prefab::<GroundTargetedAoeProjection>()
 			.add_systems(
 				Update,
-				(trigger_move_input_event::<CamRay>, move_player_on_event)
-					.chain()
+				trigger_move_input_event::<CamRay>
 					.run_if(in_state(GameRunning::On))
 					.run_if(in_state(MouseContext::<KeyCode>::Default)),
 			)
 			.add_systems(
 				Update,
-				(follow::<Player, CamOrbit>, move_on_orbit::<CamOrbit>)
-					.run_if(in_state(GameRunning::On)),
+				move_on_orbit::<CamOrbit>.run_if(in_state(GameRunning::On)),
 			)
 			.add_systems(
 				Update,
@@ -91,9 +79,7 @@ impl Plugin for BehaviorsPlugin {
 						.pipe(idle),
 					execute_move_velocity_based::<MovementConfig, Movement<VelocityBased>>
 						.pipe(idle),
-					get_faces.pipe(execute_face::<CamRay, Without<Player>>),
-				)
-					.chain(),
+				),
 			)
 			.add_systems(
 				Update,
@@ -114,7 +100,7 @@ impl Plugin for BehaviorsPlugin {
 					>,
 				),
 			)
-			.add_systems(Update, (enemy, chase::<MovementConfig>, attack).chain())
+			.add_systems(Update, (chase::<MovementConfig>, attack).chain())
 			.add_systems(
 				Update,
 				(ProjectileContact::set_position, ProjectileContact::movement).chain(),
@@ -122,5 +108,27 @@ impl Plugin for BehaviorsPlugin {
 			.add_systems(Update, GroundTargetedAoeContact::set_position)
 			.add_systems(Update, execute_beam)
 			.add_systems(Update, position_force_shield);
+	}
+}
+
+pub trait RegisterPlayerComponent {
+	fn register_player_component<TAgent>(&mut self) -> &mut Self
+	where
+		TAgent: Component;
+}
+
+impl RegisterPlayerComponent for App {
+	fn register_player_component<TAgent>(&mut self) -> &mut Self
+	where
+		TAgent: Component,
+	{
+		self.add_systems(
+			Update,
+			follow::<TAgent, CamOrbit>.run_if(in_state(GameRunning::On)),
+		)
+		.add_systems(
+			Update,
+			get_faces.pipe(execute_face::<CamRay, Without<TAgent>>),
+		)
 	}
 }

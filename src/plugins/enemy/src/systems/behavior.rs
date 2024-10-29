@@ -1,15 +1,8 @@
-use crate::components::{Attack, Chase, Enemy, Foe};
-use bevy::{
-	ecs::{
-		entity::Entity,
-		query::With,
-		system::{Commands, Query},
-	},
-	transform::components::GlobalTransform,
-};
-use common::components::Player;
+use behaviors::components::{Attack, Chase, Enemy, Foe};
+use bevy::prelude::*;
+use player::components::player::Player;
 
-pub(crate) fn enemy(
+pub(crate) fn behavior(
 	mut commands: Commands,
 	agents: Query<(Entity, &GlobalTransform, &Enemy)>,
 	players: Query<(Entity, &GlobalTransform), With<Player>>,
@@ -66,16 +59,10 @@ fn strategy(enemy: Enemy, distance: f32) -> Strategy {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Attack, Chase, Enemy, Foe};
-	use bevy::{
-		app::{App, Update},
-		transform::components::GlobalTransform,
-	};
-	use common::components::Player;
 
 	fn setup() -> App {
 		let mut app = App::new();
-		app.add_systems(Update, enemy);
+		app.add_systems(Update, behavior);
 
 		app
 	}

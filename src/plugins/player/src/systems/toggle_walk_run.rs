@@ -1,6 +1,6 @@
+use crate::components::player::Player;
 use behaviors::components::{MovementConfig, MovementMode};
 use bevy::prelude::*;
-use common::components::Player;
 
 pub fn player_toggle_walk_run(
 	mut player: Query<&mut MovementConfig, With<Player>>,

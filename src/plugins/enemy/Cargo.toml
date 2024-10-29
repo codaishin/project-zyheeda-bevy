@@ -7,3 +7,4 @@ edition.workspace = true
 bevy.workspace = true
 behaviors.workspace = true
 common.workspace = true
+player.workspace = true

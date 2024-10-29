@@ -9,12 +9,13 @@ use crate::{
 	skills::Skill,
 	slot_key::SlotKey,
 };
-use common::components::{AssetModel, Player};
+use common::components::AssetModel;
 use item_type::SkillItemType;
 use items::{
 	item::Item,
 	traits::{get_view_data::GetViewData, view::ItemView},
 };
+use player::components::player::Player;
 
 pub type SkillItem<TSkill = Skill> = Item<SkillItemContent<TSkill>>;
 
