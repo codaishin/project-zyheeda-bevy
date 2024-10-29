@@ -8,26 +8,26 @@ use std::{
 };
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Default, States)]
-pub enum GameRunning {
+pub enum GameState {
 	#[default]
 	None,
-	On,
-	Off,
+	Play,
+	Paused,
 }
 
-pub struct On;
+pub struct Playing;
 
-pub struct Off;
+pub struct Paused;
 
-impl GetState<On> for GameRunning {
+impl GetState<Playing> for GameState {
 	fn get_state() -> Self {
-		GameRunning::On
+		GameState::Play
 	}
 }
 
-impl GetState<Off> for GameRunning {
+impl GetState<Paused> for GameState {
 	fn get_state() -> Self {
-		GameRunning::Off
+		GameState::Paused
 	}
 }
 
@@ -104,11 +104,11 @@ mod tests {
 
 	#[test]
 	fn turn_on() {
-		assert_eq!(GameRunning::On, get::<GameRunning, On>());
+		assert_eq!(GameState::Play, get::<GameState, Playing>());
 	}
 
 	#[test]
 	fn turn_off() {
-		assert_eq!(GameRunning::Off, get::<GameRunning, Off>());
+		assert_eq!(GameState::Paused, get::<GameState, Paused>());
 	}
 }

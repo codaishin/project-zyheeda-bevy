@@ -23,7 +23,7 @@ use bundles::{ComboBundle, Loadout};
 use common::{
 	components::{AssetModel, Collection, Side, Swap},
 	resources::key_map::KeyMap,
-	states::{GameRunning, MouseContext},
+	states::{GameState, MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	traits::{
 		register_custom_folder_assets::RegisterCustomFolderAssets,
@@ -142,7 +142,7 @@ fn skill_execution(app: &mut App) {
 				flush::<Queue>,
 			)
 				.chain()
-				.run_if(in_state(GameRunning::On)),
+				.run_if(in_state(GameState::Play)),
 		)
 		.add_systems(
 			Update,

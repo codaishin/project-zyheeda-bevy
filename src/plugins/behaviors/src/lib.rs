@@ -10,7 +10,7 @@ use animations::{animation::Animation, components::animation_dispatch::Animation
 use bevy::prelude::*;
 use common::{
 	resources::CamRay,
-	states::{GameRunning, MouseContext},
+	states::{GameState, MouseContext},
 };
 use components::{
 	cam_orbit::CamOrbit,
@@ -63,13 +63,13 @@ impl Plugin for BehaviorsPlugin {
 					get_faces.pipe(execute_face::<CamRay>),
 				)
 					.chain()
-					.run_if(in_state(GameRunning::On))
+					.run_if(in_state(GameState::Play))
 					.run_if(in_state(MouseContext::<KeyCode>::Default)),
 			)
 			.add_systems(
 				Update,
 				(move_on_orbit::<CamOrbit>, move_with_target::<CamOrbit>)
-					.run_if(in_state(GameRunning::On)),
+					.run_if(in_state(GameState::Play)),
 			)
 			.add_systems(
 				Update,

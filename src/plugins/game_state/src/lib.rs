@@ -8,7 +8,7 @@ use bevy::{
 	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
 	prelude::*,
 };
-use common::{components::MainCamera, states::GameRunning};
+use common::{components::MainCamera, states::GameState};
 use enemy::components::void_sphere::VoidSphere;
 use player::bundle::PlayerBundle;
 use std::f32::consts::PI;
@@ -19,16 +19,16 @@ pub struct GameStatePlugin;
 impl Plugin for GameStatePlugin {
 	fn build(&self, app: &mut App) {
 		app.add_systems(PostStartup, setup_simple_3d_scene)
-			.add_systems(OnEnter(GameRunning::On), pause_virtual_time::<false>)
-			.add_systems(OnExit(GameRunning::On), pause_virtual_time::<true>);
+			.add_systems(OnEnter(GameState::Play), pause_virtual_time::<false>)
+			.add_systems(OnExit(GameState::Play), pause_virtual_time::<true>);
 	}
 }
 
-fn setup_simple_3d_scene(mut commands: Commands, mut next_state: ResMut<NextState<GameRunning>>) {
+fn setup_simple_3d_scene(mut commands: Commands, mut next_state: ResMut<NextState<GameState>>) {
 	let player = spawn_player(&mut commands);
 	spawn_camera(&mut commands, player);
 	spawn_void_spheres(&mut commands);
-	next_state.set(GameRunning::On);
+	next_state.set(GameState::Play);
 }
 
 fn spawn_player(commands: &mut Commands) -> Entity {

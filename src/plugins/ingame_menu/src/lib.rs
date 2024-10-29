@@ -11,7 +11,7 @@ mod debug;
 use bevy::prelude::*;
 use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
-	states::{GameRunning, Off, On},
+	states::{GameState, Paused, Playing},
 	systems::log::log_many,
 	traits::load_asset::Path,
 };
@@ -202,8 +202,8 @@ fn events(app: &mut App) {
 
 fn state_control_systems(app: &mut App) {
 	app.add_systems(Update, set_state_from_input::<MenuState>)
-		.add_systems(OnExit(MenuState::None), set_state::<GameRunning, Off>)
-		.add_systems(OnEnter(MenuState::None), set_state::<GameRunning, On>);
+		.add_systems(OnExit(MenuState::None), set_state::<GameState, Paused>)
+		.add_systems(OnEnter(MenuState::None), set_state::<GameState, Playing>);
 }
 
 fn ui_overlay_systems(app: &mut App) {
