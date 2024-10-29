@@ -1,22 +1,12 @@
+pub mod cam_orbit;
 pub mod ground_targeted_aoe;
 pub mod projectile;
 pub mod shield;
 
 use crate::traits::{RemoveComponent, SpawnAttack};
-use bevy::{
-	color::{Color, LinearRgba},
-	ecs::{bundle::Bundle, component::Component, entity::Entity, system::EntityCommands},
-	math::Vec3,
-};
+use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{test_tools::utils::ApproxEqual, tools::UnitsPerSecond};
 use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
-
-#[derive(Component)]
-pub struct CamOrbit {
-	pub center: Vec3,
-	pub distance: f32,
-	pub sensitivity: f32,
-}
 
 #[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub enum Face {
@@ -31,21 +21,6 @@ pub struct OverrideFace(pub Face);
 
 #[derive(Component, Debug, PartialEq)]
 pub struct SetFace(pub Face);
-
-#[derive(Component)]
-pub struct VoidSphere;
-
-impl VoidSphere {
-	pub const AGGRO_RANGE: f32 = 10.;
-	pub const ATTACK_RANGE: f32 = 5.;
-}
-
-#[derive(Component, Clone)]
-pub enum VoidSpherePart {
-	Core,
-	RingA(UnitsPerSecond),
-	RingB(UnitsPerSecond),
-}
 
 #[derive(PartialEq, Debug)]
 pub struct PositionBased;
@@ -105,10 +80,10 @@ pub enum MovementConfig {
 }
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct Chase(pub Entity);
+pub struct Chase(pub Entity);
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct Attack(pub Entity);
+pub struct Attack(pub Entity);
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Attacker(pub Entity);

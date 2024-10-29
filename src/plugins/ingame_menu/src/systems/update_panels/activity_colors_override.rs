@@ -16,10 +16,10 @@ use bevy::{
 	ui::BackgroundColor,
 };
 use common::{
-	components::Player,
 	states::MouseContext,
 	traits::{accessors::get::GetterRef, iterate::Iterate, map_value::TryMapBackwards},
 };
+use player::components::player::Player;
 use skills::{skills::QueuedSkill, slot_key::SlotKey};
 
 pub fn panel_activity_colors_override<

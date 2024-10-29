@@ -1,10 +1,8 @@
 pub(crate) mod beam;
 pub(crate) mod beam_config;
 pub(crate) mod bundle;
-pub(crate) mod cam_orbit;
 pub(crate) mod movement;
 pub(crate) mod movement_config;
-pub(crate) mod void_sphere;
 
 use crate::components::{Attacker, MovementMode, Target};
 use bevy::{ecs::system::EntityCommands, prelude::*};
@@ -49,6 +47,7 @@ pub trait Orbit {
 }
 
 pub(crate) trait MoveTogether {
+	fn entity(&self) -> Option<Entity>;
 	fn move_together_with(&mut self, transform: &mut Transform, new_position: Vec3);
 }
 

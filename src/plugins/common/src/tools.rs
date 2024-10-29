@@ -3,10 +3,7 @@ pub mod ordered_hash_map;
 
 pub(crate) mod get_recursively;
 
-use crate::{
-	components::Player,
-	traits::{clamp_zero_positive::ClampZeroPositive, load_asset::Path},
-};
+use crate::traits::clamp_zero_positive::ClampZeroPositive;
 use bevy::prelude::Entity;
 use macros::ClampZeroPositive;
 use serde::{Deserialize, Serialize};
@@ -60,10 +57,6 @@ pub struct Intensity(f32);
 
 #[derive(Debug, PartialEq, Clone, ClampZeroPositive)]
 pub struct IntensityChangePerSecond(f32);
-
-pub fn player_animation_path(animation_name: &str) -> Path {
-	Path::from(Player::MODEL_PATH.to_owned() + "#" + animation_name)
-}
 
 #[derive(Default)]
 pub struct Index<T>(pub T);

@@ -1,27 +1,58 @@
-use super::{MoveTogether, Orbit, Vec2Radians};
-use crate::components::CamOrbit;
+use crate::traits::{MoveTogether, Orbit, Vec2Radians};
 use bevy::prelude::*;
 
+#[derive(Component)]
+pub struct CamOrbit {
+	pub center: CamOrbitCenter,
+	pub distance: f32,
+	pub sensitivity: f32,
+}
+
+pub struct CamOrbitCenter {
+	pub entity: Option<Entity>,
+	pub translation: Vec3,
+}
+
+impl CamOrbitCenter {
+	pub fn with_entity(mut self, entity: Entity) -> Self {
+		self.entity = Some(entity);
+		self
+	}
+}
+
+impl From<Vec3> for CamOrbitCenter {
+	fn from(translation: Vec3) -> Self {
+		CamOrbitCenter {
+			entity: None,
+			translation,
+		}
+	}
+}
+
 impl Orbit for CamOrbit {
-	fn orbit(&self, agent: &mut Transform, angles: Vec2Radians) {
-		let mut arm =
-			Transform::from_translation(self.center).looking_at(agent.translation, Vec3::Y);
-		let angles = angles * self.sensitivity;
+	fn orbit(&self, agent: &mut Transform, angle: Vec2Radians) {
+		let mut arm = Transform::from_translation(self.center.translation)
+			.looking_at(agent.translation, Vec3::Y);
+		let angle = angle * self.sensitivity;
 
-		arm.rotate_y(-angles.x);
-		arm.rotate_local_x(angles.y);
+		arm.rotate_y(-angle.x);
+		arm.rotate_local_x(angle.y);
 
-		agent.translation = self.center + (arm.forward() * self.distance);
-		agent.look_at(self.center, Vec3::Y);
+		agent.translation = self.center.translation + (arm.forward() * self.distance);
+		agent.look_at(self.center.translation, Vec3::Y);
 	}
 }
 
 impl MoveTogether for CamOrbit {
-	fn move_together_with(&mut self, transform: &mut Transform, new_position: Vec3) {
-		let offset = (transform.translation - self.center).normalize() * self.distance;
+	fn entity(&self) -> Option<Entity> {
+		self.center.entity
+	}
 
-		self.center = new_position;
-		transform.translation = self.center + offset;
+	fn move_together_with(&mut self, transform: &mut Transform, new_position: Vec3) {
+		let offset = (transform.translation - self.center.translation).normalize() * self.distance;
+
+		self.center.translation = new_position;
+		transform.translation = self.center.translation + offset;
 	}
 }
 
@@ -35,7 +66,7 @@ mod test_orbit {
 	fn apply_distance() {
 		let mut agent = Transform::from_translation(Vec3::X);
 		let cam_orbit = CamOrbit {
-			center: Vec3::ZERO,
+			center: Vec3::ZERO.into(),
 			distance: 11.,
 			sensitivity: 1.,
 		};
@@ -49,7 +80,7 @@ mod test_orbit {
 	fn apply_distance_with_center_offset() {
 		let mut agent = Transform::from_translation(Vec3::new(1., 2., 1.));
 		let cam_orbit = CamOrbit {
-			center: Vec3::ONE,
+			center: Vec3::ONE.into(),
 			distance: 11.,
 			sensitivity: 1.,
 		};
@@ -62,7 +93,7 @@ mod test_orbit {
 	#[test]
 	fn rotate_around_y() {
 		let cam_orbit = CamOrbit {
-			center: Vec3::new(0., 2., 0.),
+			center: Vec3::new(0., 2., 0.).into(),
 			distance: 3.,
 			sensitivity: 1.,
 		};
@@ -77,7 +108,7 @@ mod test_orbit {
 	#[test]
 	fn rotate_around_x() {
 		let cam_orbit = CamOrbit {
-			center: Vec3::new(0., 2., 0.),
+			center: Vec3::new(0., 2., 0.).into(),
 			distance: 3.,
 			sensitivity: 1.,
 		};
@@ -92,7 +123,7 @@ mod test_orbit {
 	#[test]
 	fn rotate_with_sensitivity() {
 		let cam_orbit = CamOrbit {
-			center: Vec3::ZERO,
+			center: Vec3::ZERO.into(),
 			distance: 1.,
 			sensitivity: 0.5,
 		};
@@ -107,7 +138,7 @@ mod test_orbit {
 	#[test]
 	fn look_at_center() {
 		let cam_orbit = CamOrbit {
-			center: Vec3::new(1., 2., 3.),
+			center: Vec3::new(1., 2., 3.).into(),
 			distance: 3.,
 			sensitivity: 1.,
 		};
@@ -115,7 +146,7 @@ mod test_orbit {
 
 		cam_orbit.orbit(&mut agent, Vec2Radians::ZERO);
 
-		let expected_forward = (cam_orbit.center - agent.translation).normalize();
+		let expected_forward = (cam_orbit.center.translation - agent.translation).normalize();
 
 		assert_eq_approx!(expected_forward, agent.forward(), 0.00001);
 	}
@@ -128,13 +159,13 @@ mod test_move_together {
 	#[test]
 	fn set_partner_to_proper_distance() {
 		let mut orbit = CamOrbit {
-			center: Vec3::ZERO,
+			center: Vec3::ZERO.into(),
 			distance: 42.,
 			sensitivity: 0.,
 		};
 		let mut transform = Transform::from_xyz(1., 0., 0.);
 
-		orbit.move_together_with(&mut transform, orbit.center);
+		orbit.move_together_with(&mut transform, orbit.center.translation);
 
 		assert_eq!(Vec3::new(42., 0., 0.), transform.translation);
 	}
@@ -142,13 +173,13 @@ mod test_move_together {
 	#[test]
 	fn set_partner_to_proper_distance_from_offset() {
 		let mut orbit = CamOrbit {
-			center: Vec3::ONE,
+			center: Vec3::ONE.into(),
 			distance: 11.,
 			sensitivity: 0.,
 		};
 		let mut transform = Transform::from_xyz(1., 1., 7.);
 
-		orbit.move_together_with(&mut transform, orbit.center);
+		orbit.move_together_with(&mut transform, orbit.center.translation);
 
 		assert_eq!(Vec3::new(1., 1., 12.), transform.translation);
 	}
@@ -156,7 +187,7 @@ mod test_move_together {
 	#[test]
 	fn set_center_to_new_position() {
 		let mut orbit = CamOrbit {
-			center: Vec3::ZERO,
+			center: Vec3::ZERO.into(),
 			distance: 42.,
 			sensitivity: 0.,
 		};
@@ -164,13 +195,13 @@ mod test_move_together {
 
 		orbit.move_together_with(&mut transform, Vec3::new(11., -4., 9.));
 
-		assert_eq!(Vec3::new(11., -4., 9.), orbit.center);
+		assert_eq!(Vec3::new(11., -4., 9.), orbit.center.translation);
 	}
 
 	#[test]
 	fn also_move_partner_transform() {
 		let mut orbit = CamOrbit {
-			center: Vec3::ZERO,
+			center: Vec3::ZERO.into(),
 			distance: 10.,
 			sensitivity: 0.,
 		};

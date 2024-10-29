@@ -3,14 +3,13 @@ use crate::components::{
 	skill_button::{DropdownItem, SkillButton},
 	SkillSelectDropdownInsertCommand,
 };
-use bevy::{
-	asset::Assets,
-	prelude::{Commands, Component, Entity, Query, Res, With},
+use bevy::prelude::*;
+use common::traits::{
+	accessors::get::GetRef,
+	try_insert_on::TryInsertOn,
+	try_remove_from::TryRemoveFrom,
 };
-use common::{
-	components::Player,
-	traits::{accessors::get::GetRef, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
-};
+use player::components::player::Player;
 use skills::{item::SkillItem, skills::Skill, slot_key::SlotKey};
 
 pub(crate) fn insert_skill_select_dropdown<
@@ -56,15 +55,7 @@ fn compatible_skills<TEquipment: GetRef<SlotKey, SkillItem>, TLayout: Sync + Sen
 mod tests {
 	use super::*;
 	use crate::components::dropdown::Dropdown;
-	use bevy::{
-		app::{App, Update},
-		asset::{Asset, AssetId, Assets, Handle},
-		prelude::{default, Component},
-	};
-	use common::{
-		components::{Player, Side},
-		test_tools::utils::SingleThreadedApp,
-	};
+	use common::{components::Side, test_tools::utils::SingleThreadedApp};
 	use skills::item::{item_type::SkillItemType, SkillItemContent};
 	use std::collections::{HashMap, HashSet};
 	use uuid::Uuid;

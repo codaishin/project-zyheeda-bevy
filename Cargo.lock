@@ -1924,6 +1924,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "enemy"
+version = "0.1.0"
+dependencies = [
+ "bars",
+ "behaviors",
+ "bevy",
+ "bevy_rapier3d",
+ "common",
+ "interactions",
+ "player",
+ "prefabs",
+]
+
+[[package]]
 name = "epaint"
 version = "0.28.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2123,6 +2137,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "54614a3312934d066701a80f20f15fa3b56d67ac7722b39eea5b4c9dd1d66c94"
 dependencies = [
  "thread_local",
+]
+
+[[package]]
+name = "game_state"
+version = "0.1.0"
+dependencies = [
+ "animations",
+ "bars",
+ "behaviors",
+ "bevy",
+ "bevy_rapier3d",
+ "common",
+ "enemy",
+ "interactions",
+ "light",
+ "player",
 ]
 
 [[package]]
@@ -2473,6 +2503,7 @@ dependencies = [
  "items",
  "macros",
  "mockall",
+ "player",
  "skills",
  "tracing",
  "uuid",
@@ -3530,6 +3561,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
 
 [[package]]
+name = "player"
+version = "0.1.0"
+dependencies = [
+ "animations",
+ "bars",
+ "behaviors",
+ "bevy",
+ "bevy_rapier3d",
+ "common",
+ "interactions",
+ "light",
+ "prefabs",
+]
+
+[[package]]
 name = "png"
 version = "0.17.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3653,6 +3699,8 @@ dependencies = [
  "bevy-inspector-egui",
  "bevy_rapier3d",
  "common",
+ "enemy",
+ "game_state",
  "ingame_menu",
  "interactions",
  "items",
@@ -3660,6 +3708,7 @@ dependencies = [
  "macros",
  "map_generation",
  "mockall",
+ "player",
  "prefabs",
  "serde",
  "serde_json",
@@ -4029,6 +4078,7 @@ dependencies = [
  "items",
  "macros",
  "mockall",
+ "player",
  "serde",
  "shaders",
  "tracing",

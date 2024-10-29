@@ -1,22 +1,15 @@
 [package]
-name = "skills"
+name = "player"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
 bevy.workspace = true
 bevy_rapier3d.workspace = true
-serde.workspace = true
-tracing.workspace = true
-uuid.workspace = true
 animations.workspace = true
+bars.workspace = true
 behaviors.workspace = true
 common.workspace = true
 interactions.workspace = true
-items.workspace = true
-player.workspace = true
-shaders.workspace = true
-
-[dev-dependencies]
-mockall.workspace = true
-macros.workspace = true
+light.workspace = true
+prefabs.workspace = true

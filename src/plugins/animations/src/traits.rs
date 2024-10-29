@@ -31,15 +31,15 @@ pub(crate) trait MarkObsolete {
 	fn mark_obsolete(&mut self, priority: &Priority);
 }
 
-pub(crate) trait IsPlaying<TIndex> {
+pub trait IsPlaying<TIndex> {
 	fn is_playing(&self, index: TIndex) -> bool;
 }
 
-pub(crate) trait ReplayAnimation<TIndex> {
+pub trait ReplayAnimation<TIndex> {
 	fn replay(&mut self, index: TIndex);
 }
 
-pub(crate) trait RepeatAnimation<TIndex> {
+pub trait RepeatAnimation<TIndex> {
 	fn repeat(&mut self, index: TIndex);
 }
 

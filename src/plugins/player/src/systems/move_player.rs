@@ -1,4 +1,5 @@
-use crate::{
+use crate::components::player::Player;
+use behaviors::{
 	components::{Face, Movement, SetFace, VelocityBased},
 	events::MoveInputEvent,
 };
@@ -8,9 +9,8 @@ use bevy::ecs::{
 	query::With,
 	system::{Commands, Query},
 };
-use common::components::Player;
 
-pub(crate) fn move_player_on_event(
+pub(crate) fn move_player(
 	mut commands: Commands,
 	mut move_input_events: EventReader<MoveInputEvent>,
 	players: Query<Entity, With<Player>>,
@@ -34,16 +34,12 @@ pub(crate) fn move_player_on_event(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Face, Movement, SetFace};
-	use bevy::{
-		app::{App, Update},
-		math::Vec3,
-	};
+	use bevy::prelude::*;
 	use common::test_tools::utils::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, move_player_on_event);
+		app.add_systems(Update, move_player);
 		app.add_event::<MoveInputEvent>();
 
 		app
