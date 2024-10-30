@@ -1,8 +1,9 @@
+pub mod traits;
+
 mod components;
 mod events;
 mod systems;
 mod tools;
-mod traits;
 mod visualization;
 
 #[cfg(debug_assertions)]
@@ -84,6 +85,7 @@ use systems::{
 use traits::{
 	get_node::GetNode,
 	instantiate_content_on::InstantiateContentOn,
+	reacts_to_menu_hotkeys::ReactsToMenuHotkeys,
 	GetLayout,
 	LoadUi,
 	RootStyle,
@@ -176,7 +178,7 @@ pub struct MenuPlugin<T> {
 
 impl<TState> MenuPlugin<TState>
 where
-	TState: States + FreelyMutableState + PlayState + IterFinite + Copy,
+	TState: States + FreelyMutableState + PlayState + IterFinite + ReactsToMenuHotkeys + Copy,
 	KeyCode: TryFrom<TState>,
 {
 	fn resources(&self, app: &mut App) {
@@ -279,7 +281,7 @@ where
 
 impl<TState> Plugin for MenuPlugin<TState>
 where
-	TState: States + FreelyMutableState + PlayState + IterFinite + Copy,
+	TState: States + FreelyMutableState + PlayState + IterFinite + ReactsToMenuHotkeys + Copy,
 	KeyCode: TryFrom<TState>,
 {
 	fn build(&self, app: &mut App) {

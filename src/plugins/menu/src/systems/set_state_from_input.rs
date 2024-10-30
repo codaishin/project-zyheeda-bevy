@@ -5,8 +5,10 @@ use bevy::{
 };
 use common::traits::{iteration::IterFinite, states::PlayState};
 
+use crate::traits::reacts_to_menu_hotkeys::ReactsToMenuHotkeys;
+
 pub(crate) fn set_state_from_input<
-	TState: States + FreelyMutableState + PlayState + IterFinite + Copy,
+	TState: States + FreelyMutableState + PlayState + IterFinite + ReactsToMenuHotkeys + Copy,
 >(
 	keys: Res<ButtonInput<KeyCode>>,
 	current_state: Res<State<TState>>,
@@ -14,6 +16,10 @@ pub(crate) fn set_state_from_input<
 ) where
 	KeyCode: TryFrom<TState>,
 {
+	if !current_state.reacts_to_menu_hotkeys() {
+		return;
+	}
+
 	let get_new_state = |state| get_new_state(&keys, current_state.get(), state);
 	let Some(new_state) = TState::iterator().find_map(get_new_state) else {
 		return;
@@ -60,6 +66,7 @@ mod tests {
 		Play,
 		A,
 		B,
+		NonReactive,
 	}
 
 	impl PlayState for _State {
@@ -78,8 +85,19 @@ mod tests {
 				_State::Default => Some(_State::Play),
 				_State::Play => Some(_State::A),
 				_State::A => Some(_State::B),
-				_State::B => None,
+				_State::B => Some(_State::NonReactive),
+				_State::NonReactive => None,
 			}
+		}
+	}
+
+	impl ReactsToMenuHotkeys for _State {
+		fn reacts_to_menu_hotkeys(&self) -> bool {
+			if self == &_State::NonReactive {
+				return false;
+			}
+
+			true
 		}
 	}
 
@@ -92,6 +110,7 @@ mod tests {
 				_State::Play => Err(()),
 				_State::A => Ok(KeyCode::KeyA),
 				_State::B => Ok(KeyCode::KeyB),
+				_State::NonReactive => Err(()),
 			}
 		}
 	}
@@ -154,5 +173,22 @@ mod tests {
 
 		let state = app.world().get_resource::<State<_State>>().unwrap();
 		assert_eq!(&_State::Play, state.get());
+	}
+
+	#[test]
+	fn do_not_change_state_if_non_reactive() {
+		let mut app = setup();
+		let mut input = app
+			.world_mut()
+			.get_resource_mut::<ButtonInput<KeyCode>>()
+			.unwrap();
+		input.press(KeyCode::KeyA);
+
+		app.insert_state(_State::NonReactive);
+		app.update();
+		app.update();
+
+		let state = app.world().get_resource::<State<_State>>().unwrap();
+		assert_eq!(&_State::NonReactive, state.get());
 	}
 }

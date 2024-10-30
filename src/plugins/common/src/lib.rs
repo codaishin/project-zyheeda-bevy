@@ -15,6 +15,7 @@ use bevy::{
 	app::{App, First, Plugin, Update},
 	asset::AssetServer,
 	ecs::schedule::IntoSystemConfigs,
+	prelude::{in_state, States},
 	render::camera::Camera,
 	state::app::AppExtStates,
 };
@@ -28,9 +29,14 @@ use systems::{
 	set_mouse_hover::set_mouse_hover,
 };
 
-pub struct CommonPlugin;
+pub struct CommonPlugin<TState> {
+	pub play_state: TState,
+}
 
-impl Plugin for CommonPlugin {
+impl<TState> Plugin for CommonPlugin<TState>
+where
+	TState: States + Copy,
+{
 	fn build(&self, app: &mut App) {
 		app.init_resource::<LanguageServer>()
 			.init_state::<MouseContext>()
@@ -40,7 +46,8 @@ impl Plugin for CommonPlugin {
 					set_cam_ray::<Camera, MainCamera>,
 					set_mouse_hover::<RapierContext>,
 				)
-					.chain(),
+					.chain()
+					.run_if(in_state(self.play_state)),
 			)
 			.add_systems(First, load_asset_model::<AssetServer>)
 			.add_systems(Update, FlipHorizontally::system);

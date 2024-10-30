@@ -4,14 +4,28 @@ use common::traits::{
 	iteration::{Iter, IterFinite},
 	states::PlayState,
 };
+use menu::traits::reacts_to_menu_hotkeys::ReactsToMenuHotkeys;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Default, States)]
 pub enum GameState {
 	#[default]
 	None,
+	StartMenu,
+	NewGame,
 	Play,
-	Paused,
 	IngameMenu(MenuState),
+}
+
+impl ReactsToMenuHotkeys for GameState {
+	fn reacts_to_menu_hotkeys(&self) -> bool {
+		match self {
+			GameState::None => false,
+			GameState::StartMenu => false,
+			GameState::NewGame => false,
+			GameState::Play => true,
+			GameState::IngameMenu(_) => true,
+		}
+	}
 }
 
 #[derive(Debug, PartialEq)]
@@ -39,9 +53,10 @@ impl IterFinite for GameState {
 
 	fn next(Iter(current): &Iter<Self>) -> Option<Self> {
 		match current.as_ref()? {
-			GameState::None => Some(GameState::Play),
-			GameState::Play => Some(GameState::Paused),
-			GameState::Paused => Some(GameState::IngameMenu(MenuState::Inventory)),
+			GameState::None => Some(GameState::StartMenu),
+			GameState::StartMenu => Some(GameState::NewGame),
+			GameState::NewGame => Some(GameState::Play),
+			GameState::Play => Some(GameState::IngameMenu(MenuState::Inventory)),
 			GameState::IngameMenu(MenuState::Inventory) => {
 				Some(GameState::IngameMenu(MenuState::ComboOverview))
 			}
@@ -65,8 +80,9 @@ mod tests {
 		assert_eq!(
 			vec![
 				GameState::None,
+				GameState::StartMenu,
+				GameState::NewGame,
 				GameState::Play,
-				GameState::Paused,
 				GameState::IngameMenu(MenuState::Inventory),
 				GameState::IngameMenu(MenuState::ComboOverview)
 			],
@@ -78,6 +94,7 @@ mod tests {
 	fn get_key_codes() {
 		assert_eq!(
 			vec![
+				Err(NoKeySet),
 				Err(NoKeySet),
 				Err(NoKeySet),
 				Err(NoKeySet),

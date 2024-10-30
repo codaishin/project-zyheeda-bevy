@@ -5,6 +5,8 @@ pub(crate) mod get_node;
 pub(crate) mod instantiate_content_on;
 pub(crate) mod tooltip_ui_control;
 
+pub mod reacts_to_menu_hotkeys;
+
 use crate::tools::Layout;
 use bevy::{ecs::system::EntityCommands, prelude::Bundle, ui::Style};
 use combo_tree_layout::ComboTreeLayout;

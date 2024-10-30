@@ -2152,6 +2152,7 @@ dependencies = [
  "enemy",
  "interactions",
  "light",
+ "menu",
  "player",
 ]
 

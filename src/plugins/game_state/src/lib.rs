@@ -10,7 +10,7 @@ use bevy::{
 	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
 	prelude::*,
 };
-use common::components::MainCamera;
+use common::{components::MainCamera, traits::try_insert_on::TryInsertOn};
 use enemy::components::void_sphere::VoidSphere;
 use player::bundle::PlayerBundle;
 use states::{game_state::GameState, menu_state::MenuState};
@@ -20,6 +20,7 @@ use systems::pause_virtual_time::pause_virtual_time;
 pub struct GameStatePlugin;
 
 impl GameStatePlugin {
+	pub const NEW_GAME: GameState = GameState::NewGame;
 	pub const PLAY: GameState = GameState::Play;
 	pub const INVENTORY: GameState = GameState::IngameMenu(MenuState::Inventory);
 	pub const COMBO_OVERVIEW: GameState = GameState::IngameMenu(MenuState::ComboOverview);
@@ -27,35 +28,15 @@ impl GameStatePlugin {
 
 impl Plugin for GameStatePlugin {
 	fn build(&self, app: &mut App) {
-		app.init_state::<GameState>()
-			.add_systems(PostStartup, setup_simple_3d_scene)
+		app.insert_state(GameState::StartMenu)
+			.add_systems(PostStartup, spawn_camera)
+			.add_systems(OnEnter(GameState::NewGame), setup_simple_3d_scene)
 			.add_systems(OnEnter(GameState::Play), pause_virtual_time::<false>)
 			.add_systems(OnExit(GameState::Play), pause_virtual_time::<true>);
 	}
 }
 
-fn setup_simple_3d_scene(mut commands: Commands, mut next_state: ResMut<NextState<GameState>>) {
-	let player = spawn_player(&mut commands);
-	spawn_camera(&mut commands, player);
-	spawn_void_spheres(&mut commands);
-	next_state.set(GameState::Play);
-}
-
-fn spawn_player(commands: &mut Commands) -> Entity {
-	commands.spawn(PlayerBundle::default()).id()
-}
-
-fn spawn_camera(commands: &mut Commands, player: Entity) {
-	let mut transform = Transform::from_translation(Vec3::X);
-	let mut orbit = CamOrbit {
-		center: CamOrbitCenter::from(Vec3::ZERO).with_entity(player),
-		distance: 15.,
-		sensitivity: 1.,
-	};
-
-	orbit.orbit(&mut transform, Vec2Radians::new(-PI / 3., PI / 3.));
-	orbit.sensitivity = 0.005;
-
+fn spawn_camera(mut commands: Commands) {
 	commands.spawn((
 		MainCamera,
 		Camera3dBundle {
@@ -64,12 +45,46 @@ fn spawn_camera(commands: &mut Commands, player: Entity) {
 				..default()
 			},
 			tonemapping: Tonemapping::TonyMcMapface,
-			transform,
 			..default()
 		},
 		BloomSettings::default(),
-		orbit,
 	));
+}
+
+fn setup_simple_3d_scene(
+	mut commands: Commands,
+	mut next_state: ResMut<NextState<GameState>>,
+	cameras: Query<Entity, With<MainCamera>>,
+) {
+	let player = spawn_player(&mut commands);
+	set_camera_to_orbit_player(&mut commands, cameras, player);
+	spawn_void_spheres(&mut commands);
+
+	next_state.set(GameState::Play);
+}
+
+fn spawn_player(commands: &mut Commands) -> Entity {
+	commands.spawn(PlayerBundle::default()).id()
+}
+
+fn set_camera_to_orbit_player(
+	commands: &mut Commands,
+	cameras: Query<Entity, With<MainCamera>>,
+	player: Entity,
+) {
+	for entity in &cameras {
+		let mut transform = Transform::from_translation(Vec3::X);
+		let mut orbit = CamOrbit {
+			center: CamOrbitCenter::from(Vec3::ZERO).with_entity(player),
+			distance: 15.,
+			sensitivity: 1.,
+		};
+
+		orbit.orbit(&mut transform, Vec2Radians::new(-PI / 3., PI / 3.));
+		orbit.sensitivity = 0.005;
+
+		commands.try_insert_on(entity, (transform, orbit));
+	}
 }
 
 fn spawn_void_spheres(commands: &mut Commands) {
