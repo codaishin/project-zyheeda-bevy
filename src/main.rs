@@ -6,11 +6,11 @@ use bevy_rapier3d::prelude::*;
 use common::CommonPlugin;
 use enemy::EnemyPlugin;
 use game_state::GameStatePlugin;
-use ingame_menu::IngameMenuPlugin;
 use interactions::InteractionsPlugin;
 use items::ItemsPlugin;
 use light::LightPlugin;
 use map_generation::MapGenerationPlugin;
+use menu::MenuPlugin;
 use player::PlayerPlugin;
 use prefabs::PrefabsPlugin;
 use shaders::ShaderPlugin;
@@ -43,7 +43,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(MapGenerationPlugin)
 		.add_plugins(PlayerPlugin)
 		.add_plugins(EnemyPlugin)
-		.add_plugins(IngameMenuPlugin {
+		.add_plugins(MenuPlugin {
 			play_state: GameStatePlugin::PLAY,
 			inventory_state: GameStatePlugin::INVENTORY,
 			combo_overview_state: GameStatePlugin::COMBO_OVERVIEW,

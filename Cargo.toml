@@ -68,7 +68,7 @@ player.workspace = true
 prefabs.workspace = true
 shaders.workspace = true
 skills.workspace = true
-ingame_menu = { path = "src/plugins/ingame_menu" }
+menu = { path = "src/plugins/menu" }
 map_generation = { path = "src/plugins/map_generation" }
 
 

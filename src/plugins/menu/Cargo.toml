@@ -1,5 +1,5 @@
 [package]
-name = "ingame_menu"
+name = "menu"
 version.workspace = true
 edition.workspace = true
 

@@ -168,13 +168,13 @@ impl AddDropdown for App {
 	}
 }
 
-pub struct IngameMenuPlugin<T> {
+pub struct MenuPlugin<T> {
 	pub play_state: T,
 	pub inventory_state: T,
 	pub combo_overview_state: T,
 }
 
-impl<TState> IngameMenuPlugin<TState>
+impl<TState> MenuPlugin<TState>
 where
 	TState: States + FreelyMutableState + PlayState + IterFinite + Copy,
 	KeyCode: TryFrom<TState>,
@@ -277,7 +277,7 @@ where
 	}
 }
 
-impl<TState> Plugin for IngameMenuPlugin<TState>
+impl<TState> Plugin for MenuPlugin<TState>
 where
 	TState: States + FreelyMutableState + PlayState + IterFinite + Copy,
 	KeyCode: TryFrom<TState>,
