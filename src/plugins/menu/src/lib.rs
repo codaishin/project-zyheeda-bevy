@@ -23,6 +23,8 @@ use components::{
 	key_select::{AppendSkill, KeySelect, ReKeySkill},
 	quickbar_panel::QuickbarPanel,
 	skill_button::{DropdownItem, Horizontal, SkillButton, Vertical},
+	start_menu::StartMenu,
+	start_menu_button::StartMenuButton,
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
 	ui_overlay::UIOverlay,
 	AppendSkillCommand,
@@ -171,6 +173,7 @@ impl AddDropdown for App {
 }
 
 pub struct MenuPlugin<T> {
+	pub start_state: T,
 	pub play_state: T,
 	pub inventory_state: T,
 	pub combo_overview_state: T,
@@ -192,11 +195,16 @@ where
 		app.add_event::<DropdownEvent>();
 	}
 
-	fn state_control_systems(&self, app: &mut App) {
+	fn state_control(&self, app: &mut App) {
 		app.add_systems(Update, set_state_from_input::<TState>);
 	}
 
-	fn ui_overlay_systems(&self, app: &mut App) {
+	fn start_menu(&self, app: &mut App) {
+		app.add_ui::<StartMenu>(self.start_state)
+			.add_systems(Update, panel_colors::<StartMenuButton>);
+	}
+
+	fn ui_overlay(&self, app: &mut App) {
 		app.add_ui::<UIOverlay>(self.play_state)
 			.add_systems(
 				Update,
@@ -217,7 +225,7 @@ where
 			);
 	}
 
-	fn combo_overview_systems(&self, app: &mut App) {
+	fn combo_overview(&self, app: &mut App) {
 		app.add_ui::<ComboOverview>(self.combo_overview_state)
 			.add_dropdown::<SkillButton<DropdownItem<Vertical>>>()
 			.add_dropdown::<SkillButton<DropdownItem<Horizontal>>>()
@@ -246,7 +254,7 @@ where
 			);
 	}
 
-	fn inventory_screen_systems(&self, app: &mut App) {
+	fn inventory_screen(&self, app: &mut App) {
 		app.add_ui::<InventoryScreen>(self.inventory_state)
 			.add_systems(
 				Update,
@@ -287,10 +295,11 @@ where
 	fn build(&self, app: &mut App) {
 		self.resources(app);
 		self.events(app);
-		self.state_control_systems(app);
-		self.ui_overlay_systems(app);
-		self.combo_overview_systems(app);
-		self.inventory_screen_systems(app);
+		self.state_control(app);
+		self.start_menu(app);
+		self.ui_overlay(app);
+		self.combo_overview(app);
+		self.inventory_screen(app);
 		self.general_systems(app);
 
 		#[cfg(debug_assertions)]

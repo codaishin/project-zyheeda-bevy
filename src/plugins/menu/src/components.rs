@@ -6,6 +6,9 @@ pub(crate) mod key_code_text_insert_command;
 pub(crate) mod key_select;
 pub(crate) mod quickbar_panel;
 pub(crate) mod skill_button;
+pub(crate) mod start_game;
+pub(crate) mod start_menu;
+pub(crate) mod start_menu_button;
 pub(crate) mod tooltip;
 pub(crate) mod ui_overlay;
 

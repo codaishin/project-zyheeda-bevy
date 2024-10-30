@@ -20,6 +20,7 @@ use systems::pause_virtual_time::pause_virtual_time;
 pub struct GameStatePlugin;
 
 impl GameStatePlugin {
+	pub const START: GameState = GameState::StartMenu;
 	pub const NEW_GAME: GameState = GameState::NewGame;
 	pub const PLAY: GameState = GameState::Play;
 	pub const INVENTORY: GameState = GameState::IngameMenu(MenuState::Inventory);
