@@ -11,14 +11,7 @@ pub mod traits;
 
 pub(crate) mod folder_asset_loader;
 
-use bevy::{
-	app::{App, First, Plugin, Update},
-	asset::AssetServer,
-	ecs::schedule::IntoSystemConfigs,
-	prelude::{in_state, States},
-	render::camera::Camera,
-	state::app::AppExtStates,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContext;
 use components::{flip::FlipHorizontally, MainCamera};
 use resources::language_server::LanguageServer;
@@ -29,14 +22,9 @@ use systems::{
 	set_mouse_hover::set_mouse_hover,
 };
 
-pub struct CommonPlugin<TState> {
-	pub play_state: TState,
-}
+pub struct CommonPlugin;
 
-impl<TState> Plugin for CommonPlugin<TState>
-where
-	TState: States + Copy,
-{
+impl Plugin for CommonPlugin {
 	fn build(&self, app: &mut App) {
 		app.init_resource::<LanguageServer>()
 			.init_state::<MouseContext>()
@@ -46,8 +34,7 @@ where
 					set_cam_ray::<Camera, MainCamera>,
 					set_mouse_hover::<RapierContext>,
 				)
-					.chain()
-					.run_if(in_state(self.play_state)),
+					.chain(),
 			)
 			.add_systems(First, load_asset_model::<AssetServer>)
 			.add_systems(Update, FlipHorizontally::system);

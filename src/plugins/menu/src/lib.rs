@@ -23,6 +23,7 @@ use components::{
 	key_select::{AppendSkill, KeySelect, ReKeySkill},
 	quickbar_panel::QuickbarPanel,
 	skill_button::{DropdownItem, Horizontal, SkillButton, Vertical},
+	start_game::StartGame,
 	start_menu::StartMenu,
 	start_menu_button::StartMenuButton,
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
@@ -70,6 +71,7 @@ use systems::{
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
 	map_pressed_key_select::map_pressed_key_select,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
+	on_press_set::OnPressSet,
 	set_state_from_input::set_state_from_input,
 	spawn::spawn,
 	tooltip::tooltip,
@@ -174,6 +176,7 @@ impl AddDropdown for App {
 
 pub struct MenuPlugin<T> {
 	pub start_state: T,
+	pub new_game_state: T,
 	pub play_state: T,
 	pub inventory_state: T,
 	pub combo_overview_state: T,
@@ -201,7 +204,8 @@ where
 
 	fn start_menu(&self, app: &mut App) {
 		app.add_ui::<StartMenu>(self.start_state)
-			.add_systems(Update, panel_colors::<StartMenuButton>);
+			.add_systems(Update, panel_colors::<StartMenuButton>)
+			.add_systems(Update, StartGame::on_press_set(self.new_game_state));
 	}
 
 	fn ui_overlay(&self, app: &mut App) {

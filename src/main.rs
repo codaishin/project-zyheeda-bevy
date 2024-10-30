@@ -32,6 +32,7 @@ fn main() -> AppExit {
 fn prepare_game(app: &mut App) {
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+		.add_plugins(CommonPlugin)
 		.add_plugins(PrefabsPlugin)
 		.add_plugins(ShaderPlugin)
 		.add_plugins(InteractionsPlugin)
@@ -41,14 +42,12 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(LightPlugin)
 		.add_plugins(PlayerPlugin)
 		.add_plugins(EnemyPlugin)
-		.add_plugins(CommonPlugin {
-			play_state: GameStatePlugin::PLAY,
-		})
 		.add_plugins(MapGenerationPlugin {
 			new_game_state: GameStatePlugin::NEW_GAME,
 		})
 		.add_plugins(MenuPlugin {
 			start_state: GameStatePlugin::START,
+			new_game_state: GameStatePlugin::NEW_GAME,
 			play_state: GameStatePlugin::PLAY,
 			inventory_state: GameStatePlugin::INVENTORY,
 			combo_overview_state: GameStatePlugin::COMBO_OVERVIEW,
