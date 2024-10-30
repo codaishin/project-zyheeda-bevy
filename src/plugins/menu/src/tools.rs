@@ -1,9 +1,6 @@
-pub(crate) mod menu_state;
-
-use std::ops::{Add, Div, Mul, Sub};
-
 use bevy::ui::{UiRect, Val};
 use common::tools::Index;
+use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PanelState {

@@ -4,11 +4,7 @@ mod map_loader;
 mod systems;
 mod traits;
 
-use bevy::{
-	app::{App, Plugin, PostStartup, Update},
-	asset::AssetServer,
-	ecs::system::IntoSystem,
-};
+use bevy::prelude::*;
 use components::{Floating, Light, Wall, WallBack};
 use map::{LightCell, MapCell};
 use prefabs::traits::RegisterPrefab;
@@ -21,14 +17,19 @@ use systems::{
 };
 use traits::RegisterMapCell;
 
-pub struct MapGenerationPlugin;
+pub struct MapGenerationPlugin<TState> {
+	pub new_game_state: TState,
+}
 
-impl Plugin for MapGenerationPlugin {
+impl<TState> Plugin for MapGenerationPlugin<TState>
+where
+	TState: States + Copy,
+{
 	fn build(&self, app: &mut App) {
 		app.register_prefab::<Light<Floating>>()
 			.register_prefab::<Light<Wall>>()
-			.register_map_cell::<MapCell>(PostStartup)
-			.register_map_cell::<LightCell>(PostStartup)
+			.register_map_cell::<MapCell>(OnEnter(self.new_game_state))
+			.register_map_cell::<LightCell>(OnEnter(self.new_game_state))
 			.add_systems(
 				Update,
 				(

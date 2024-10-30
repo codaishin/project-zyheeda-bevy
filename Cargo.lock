@@ -2152,6 +2152,7 @@ dependencies = [
  "enemy",
  "interactions",
  "light",
+ "menu",
  "player",
 ]
 
@@ -2494,22 +2495,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a257582fdcde896fd96463bf2d40eefea0580021c0712a0e2b028b60b47a837a"
 
 [[package]]
-name = "ingame_menu"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy_rapier3d",
- "common",
- "items",
- "macros",
- "mockall",
- "player",
- "skills",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "inotify"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2832,6 +2817,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd3f7eed9d3848f8b98834af67102b720745c4ec028fcd0aa0239277e7de374f"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "menu"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_rapier3d",
+ "common",
+ "items",
+ "macros",
+ "mockall",
+ "player",
+ "skills",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -3701,12 +3702,12 @@ dependencies = [
  "common",
  "enemy",
  "game_state",
- "ingame_menu",
  "interactions",
  "items",
  "light",
  "macros",
  "map_generation",
+ "menu",
  "mockall",
  "player",
  "prefabs",
