@@ -16,6 +16,7 @@ use common::{
 	traits::{iteration::IterFinite, load_asset::Path, states::PlayState},
 };
 use components::{
+	button_interaction::ButtonInteraction,
 	combo_overview::ComboOverview,
 	dropdown::Dropdown,
 	inventory_panel::InventoryPanel,
@@ -287,7 +288,8 @@ where
 			.add_systems(
 				Update,
 				insert_key_code_text::<SlotKey, SlotKeyMap, LanguageServer>,
-			);
+			)
+			.add_systems(Last, ButtonInteraction::system);
 	}
 }
 
