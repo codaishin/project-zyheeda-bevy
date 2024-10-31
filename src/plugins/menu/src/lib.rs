@@ -72,7 +72,7 @@ use systems::{
 	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
 	map_pressed_key_select::map_pressed_key_select,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
-	on_press_set::OnPressSet,
+	on_release_set::OnReleaseSet,
 	set_state_from_input::set_state_from_input,
 	spawn::spawn,
 	tooltip::tooltip,
@@ -206,7 +206,7 @@ where
 	fn start_menu(&self, app: &mut App) {
 		app.add_ui::<StartMenu>(self.start_state)
 			.add_systems(Update, panel_colors::<StartMenuButton>)
-			.add_systems(Update, StartGame::on_press_set(self.new_game_state));
+			.add_systems(Update, StartGame::on_release_set(self.new_game_state));
 	}
 
 	fn ui_overlay(&self, app: &mut App) {
