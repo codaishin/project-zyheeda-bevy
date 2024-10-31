@@ -37,7 +37,7 @@ impl ButtonInteraction {
 
 impl IsReleased for ButtonInteraction {
 	fn is_released(&self) -> bool {
-		matches!(self, Self::Released { hovered: _ })
+		matches!(self, Self::Released { hovered: true })
 	}
 }
 
@@ -107,17 +107,17 @@ mod tests {
 	}
 
 	#[test]
-	fn is_released_true_with_hover() {
+	fn is_released_on_release_with_hover() {
 		let interaction = ButtonInteraction::Released { hovered: true };
 
 		assert!(interaction.is_released());
 	}
 
 	#[test]
-	fn is_released_true_without_hover() {
+	fn is_not_released_on_release_without_hover() {
 		let interaction = ButtonInteraction::Released { hovered: false };
 
-		assert!(interaction.is_released());
+		assert!(!interaction.is_released());
 	}
 
 	#[test]
