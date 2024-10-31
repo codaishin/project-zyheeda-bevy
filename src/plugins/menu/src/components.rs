@@ -1,3 +1,4 @@
+pub(crate) mod button_interaction;
 pub(crate) mod combo_overview;
 pub(crate) mod dropdown;
 pub(crate) mod inventory_panel;
