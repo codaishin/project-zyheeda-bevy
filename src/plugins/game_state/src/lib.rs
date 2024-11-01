@@ -36,7 +36,7 @@ impl Plugin for GameStatePlugin {
 			.add_systems(PostStartup, spawn_camera)
 			.add_systems(
 				OnEnter(Self::NEW_GAME),
-				setup_scene_and_set_state_to(Self::LOADING),
+				(setup_scene, transition_to_state(Self::LOADING)).chain(),
 			)
 			.add_systems(Last, LoadTracker::when_all_loaded_set(Self::PLAY))
 			.add_systems(OnEnter(Self::PLAY), pause_virtual_time::<false>)
@@ -59,19 +59,16 @@ fn spawn_camera(mut commands: Commands) {
 	));
 }
 
-fn setup_scene_and_set_state_to<TState>(
-	state: TState,
-) -> impl Fn(Commands, ResMut<NextState<TState>>, Query<Entity, With<MainCamera>>)
-where
-	TState: FreelyMutableState + Copy,
-{
-	move |mut commands: Commands,
-	      mut next_state: ResMut<NextState<TState>>,
-	      cameras: Query<Entity, With<MainCamera>>| {
-		let player = spawn_player(&mut commands);
-		set_camera_to_orbit_player(&mut commands, cameras, player);
-		spawn_void_spheres(&mut commands);
+fn setup_scene(mut commands: Commands, cameras: Query<Entity, With<MainCamera>>) {
+	let player = spawn_player(&mut commands);
+	set_camera_to_orbit_player(&mut commands, cameras, player);
+	spawn_void_spheres(&mut commands);
+}
 
+fn transition_to_state<TState: FreelyMutableState + Copy>(
+	state: TState,
+) -> impl Fn(ResMut<NextState<TState>>) {
+	move |mut next_state: ResMut<NextState<TState>>| {
 		next_state.set(state);
 	}
 }
