@@ -24,6 +24,7 @@ interactions = { path = "src/plugins/interactions" }
 items = { path = "src/plugins/items" }
 light = { path = "src/plugins/light" }
 macros = { path = "src/plugins/macros" }
+map_generation = { path = "src/plugins/map_generation" }
 menu = { path = "src/plugins/menu" }
 player = { path = "src/plugins/player" }
 prefabs = { path = "src/plugins/prefabs" }
@@ -71,7 +72,7 @@ prefabs.workspace = true
 shaders.workspace = true
 skills.workspace = true
 menu.workspace = true
-map_generation = { path = "src/plugins/map_generation" }
+map_generation.workspace = true
 loading.workspace = true
 
 
