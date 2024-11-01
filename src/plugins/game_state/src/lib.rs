@@ -9,6 +9,7 @@ use behaviors::{
 use bevy::{
 	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
 	prelude::*,
+	state::state::FreelyMutableState,
 };
 use common::{components::MainCamera, traits::try_insert_on::TryInsertOn};
 use enemy::components::void_sphere::VoidSphere;
@@ -30,11 +31,14 @@ impl GameStatePlugin {
 
 impl Plugin for GameStatePlugin {
 	fn build(&self, app: &mut App) {
-		app.insert_state(GameState::StartMenu)
+		app.insert_state(Self::START)
 			.add_systems(PostStartup, spawn_camera)
-			.add_systems(OnEnter(GameState::NewGame), setup_simple_3d_scene)
-			.add_systems(OnEnter(GameState::Play), pause_virtual_time::<false>)
-			.add_systems(OnExit(GameState::Play), pause_virtual_time::<true>);
+			.add_systems(
+				OnEnter(Self::NEW_GAME),
+				setup_scene_and_set_state_to(Self::PLAY),
+			)
+			.add_systems(OnEnter(Self::PLAY), pause_virtual_time::<false>)
+			.add_systems(OnExit(Self::PLAY), pause_virtual_time::<true>);
 	}
 }
 
@@ -53,16 +57,21 @@ fn spawn_camera(mut commands: Commands) {
 	));
 }
 
-fn setup_simple_3d_scene(
-	mut commands: Commands,
-	mut next_state: ResMut<NextState<GameState>>,
-	cameras: Query<Entity, With<MainCamera>>,
-) {
-	let player = spawn_player(&mut commands);
-	set_camera_to_orbit_player(&mut commands, cameras, player);
-	spawn_void_spheres(&mut commands);
+fn setup_scene_and_set_state_to<TState>(
+	state: TState,
+) -> impl Fn(Commands, ResMut<NextState<TState>>, Query<Entity, With<MainCamera>>)
+where
+	TState: FreelyMutableState + Copy,
+{
+	move |mut commands: Commands,
+	      mut next_state: ResMut<NextState<TState>>,
+	      cameras: Query<Entity, With<MainCamera>>| {
+		let player = spawn_player(&mut commands);
+		set_camera_to_orbit_player(&mut commands, cameras, player);
+		spawn_void_spheres(&mut commands);
 
-	next_state.set(GameState::Play);
+		next_state.set(state);
+	}
 }
 
 fn spawn_player(commands: &mut Commands) -> Entity {
