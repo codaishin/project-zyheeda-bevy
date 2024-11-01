@@ -133,13 +133,32 @@ mod tests {
 	use super::*;
 	use crate::components::visualizer::Visualizer;
 	use bevy::ecs::system::RunSystemOnce;
-	use common::{simple_init, traits::mock::Mock};
+	use common::{
+		simple_init,
+		traits::{
+			iteration::{Iter, IterFinite},
+			mock::Mock,
+		},
+	};
 	use mockall::{mock, predicate::eq};
 
-	#[derive(Debug, PartialEq)]
+	#[derive(Debug, PartialEq, Clone, Copy)]
 	enum _Key {
 		A,
 		B,
+	}
+
+	impl IterFinite for _Key {
+		fn iterator() -> Iter<Self> {
+			Iter(Some(_Key::A))
+		}
+
+		fn next(Iter(current): &Iter<Self>) -> Option<Self> {
+			match current.as_ref()? {
+				_Key::A => Some(_Key::B),
+				_Key::B => None,
+			}
+		}
 	}
 
 	#[derive(Debug, PartialEq)]

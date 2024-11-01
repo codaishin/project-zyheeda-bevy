@@ -3,10 +3,12 @@ use crate::resources::load_tracker::LoadTracker;
 use bevy::prelude::*;
 
 impl<TMarker> RegisterLoadTracking<TMarker> for App {
-	fn register_load_tracking<T, TSystem>(&mut self, system: TSystem) -> &mut Self
+	fn register_load_tracking<T>(
+		&mut self,
+		system: impl IntoSystem<(), Loaded, TMarker>,
+	) -> &mut Self
 	where
 		T: 'static,
-		TSystem: IntoSystem<(), Loaded, TMarker>,
 	{
 		self.add_systems(
 			Update,

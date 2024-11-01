@@ -8,6 +8,7 @@ bevy.workspace = true
 serde.workspace = true
 uuid.workspace = true
 common.workspace = true
+loading.workspace = true
 
 [dev-dependencies]
 mockall.workspace = true
