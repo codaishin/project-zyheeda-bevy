@@ -24,7 +24,7 @@ mod tests {
 	}
 
 	#[test]
-	fn init_resource() {
+	fn remove_resource() {
 		let mut app = setup();
 		app.init_resource::<_Resource>();
 
