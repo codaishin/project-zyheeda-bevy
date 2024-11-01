@@ -13,6 +13,7 @@ use bevy::{
 };
 use common::{components::MainCamera, traits::try_insert_on::TryInsertOn};
 use enemy::components::void_sphere::VoidSphere;
+use loading::resources::load_tracker::LoadTracker;
 use player::bundle::PlayerBundle;
 use states::{game_state::GameState, menu_state::MenuState};
 use std::f32::consts::PI;
@@ -35,8 +36,9 @@ impl Plugin for GameStatePlugin {
 			.add_systems(PostStartup, spawn_camera)
 			.add_systems(
 				OnEnter(Self::NEW_GAME),
-				setup_scene_and_set_state_to(Self::PLAY),
+				setup_scene_and_set_state_to(Self::LOADING),
 			)
+			.add_systems(Last, LoadTracker::when_all_loaded_set(Self::PLAY))
 			.add_systems(OnEnter(Self::PLAY), pause_virtual_time::<false>)
 			.add_systems(OnExit(Self::PLAY), pause_virtual_time::<true>);
 	}

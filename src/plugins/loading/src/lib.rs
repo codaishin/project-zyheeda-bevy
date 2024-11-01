@@ -1,8 +1,7 @@
+pub mod resources;
 pub mod traits;
 
-mod resources;
-
-use bevy::prelude::*;
+use bevy::{prelude::*, state::state::FreelyMutableState};
 use common::traits::{init_resource::InitResource, remove_resource::RemoveResource};
 use resources::load_tracker::LoadTracker;
 
@@ -12,7 +11,7 @@ pub struct LoadingPlugin<TState> {
 
 impl<TState> Plugin for LoadingPlugin<TState>
 where
-	TState: States + Copy,
+	TState: FreelyMutableState + Copy,
 {
 	fn build(&self, app: &mut App) {
 		app.add_systems(OnEnter(self.load_state), LoadTracker::init)

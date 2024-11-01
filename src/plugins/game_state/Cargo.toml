@@ -13,5 +13,6 @@ common.workspace = true
 enemy.workspace = true
 interactions.workspace = true
 light.workspace = true
+loading.workspace = true
 menu.workspace = true
 player.workspace = true
