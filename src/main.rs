@@ -43,7 +43,9 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(LightPlugin)
 		.add_plugins(PlayerPlugin)
 		.add_plugins(EnemyPlugin)
-		.add_plugins(LoadingPlugin)
+		.add_plugins(LoadingPlugin {
+			load_state: GameStatePlugin::LOADING,
+		})
 		.add_plugins(MapGenerationPlugin {
 			new_game_state: GameStatePlugin::NEW_GAME,
 		})
