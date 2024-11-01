@@ -29,6 +29,7 @@ player = { path = "src/plugins/player" }
 prefabs = { path = "src/plugins/prefabs" }
 shaders = { path = "src/plugins/shaders" }
 skills = { path = "src/plugins/skills" }
+loading = { path = "src/plugins/loading" }
 
 [profile.test]
 opt-level = 0
@@ -71,6 +72,7 @@ shaders.workspace = true
 skills.workspace = true
 menu.workspace = true
 map_generation = { path = "src/plugins/map_generation" }
+loading.workspace = true
 
 
 [dev-dependencies]

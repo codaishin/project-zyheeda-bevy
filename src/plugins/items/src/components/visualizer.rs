@@ -2,8 +2,10 @@ use crate::traits::{entity_names::ViewEntityNames, view::ItemView};
 use bevy::prelude::*;
 use common::traits::{
 	accessors::get::GetRef,
+	iteration::IterFinite,
 	track::{IsTracking, Track, Untrack},
 };
+use loading::resources::load_tracker::Loaded;
 use std::{collections::HashMap, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
@@ -12,13 +14,26 @@ pub(crate) struct Visualizer<TView, TKey> {
 	phantom_data: PhantomData<(TView, TKey)>,
 }
 
-impl<TView, TKey> Visualizer<TView, TKey> {
+impl<TView, TKey> Visualizer<TView, TKey>
+where
+	TKey: IterFinite + Copy + Sync + Send + 'static,
+	TView: Sync + Send + 'static,
+{
 	#[cfg(test)]
 	pub(crate) fn new<const N: usize>(entities: [(Name, Entity); N]) -> Self {
 		Self {
 			entities: HashMap::from(entities),
 			..default()
 		}
+	}
+
+	pub(crate) fn view_entities_loaded(visualizers: Query<&Self>) -> Loaded {
+		let key_count = TKey::iterator().count();
+		Loaded(
+			visualizers
+				.iter()
+				.all(|visualizer| visualizer.entities.len() == key_count),
+		)
 	}
 }
 
@@ -68,12 +83,32 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use bevy::ecs::system::RunSystemOnce;
+	use common::traits::iteration::Iter;
 
 	#[derive(Debug, PartialEq)]
 	struct _View;
 
-	#[derive(Debug, PartialEq)]
-	struct _Key;
+	#[derive(Debug, PartialEq, Clone, Copy)]
+	enum _Key {
+		A,
+		B,
+		C,
+	}
+
+	impl IterFinite for _Key {
+		fn iterator() -> Iter<Self> {
+			Iter(Some(_Key::A))
+		}
+
+		fn next(Iter(current): &Iter<Self>) -> Option<Self> {
+			match current.as_ref()? {
+				_Key::A => Some(_Key::B),
+				_Key::B => Some(_Key::C),
+				_Key::C => None,
+			}
+		}
+	}
 
 	impl ViewEntityNames<_Key> for _View {
 		fn view_entity_names() -> Vec<&'static str> {
@@ -161,7 +196,7 @@ mod tests {
 
 		let lookup = Visualizer::<_View, _Key>::new([(Name::from("A"), Entity::from_raw(100))]);
 
-		assert_eq!(Some(&Entity::from_raw(100)), lookup.get(&_Key));
+		assert_eq!(Some(&Entity::from_raw(100)), lookup.get(&_Key::A));
 	}
 
 	#[test]
@@ -179,6 +214,41 @@ mod tests {
 
 		let lookup = Visualizer::<_View, _Key>::new([(Name::from("B"), Entity::from_raw(100))]);
 
-		assert_eq!(Some(&Entity::from_raw(100)), lookup.get(&_Key));
+		assert_eq!(Some(&Entity::from_raw(100)), lookup.get(&_Key::A));
+	}
+
+	fn setup() -> App {
+		App::new()
+	}
+
+	#[test]
+	fn all_view_entities_loaded() {
+		let mut app = setup();
+		app.world_mut().spawn(Visualizer::<_View, _Key>::new([
+			(Name::from("A"), Entity::from_raw(1)),
+			(Name::from("B"), Entity::from_raw(2)),
+			(Name::from("C"), Entity::from_raw(3)),
+		]));
+
+		let loaded = app
+			.world_mut()
+			.run_system_once(Visualizer::<_View, _Key>::view_entities_loaded);
+
+		assert_eq!(Loaded(true), loaded);
+	}
+
+	#[test]
+	fn not_all_view_entities_loaded() {
+		let mut app = setup();
+		app.world_mut().spawn(Visualizer::<_View, _Key>::new([
+			(Name::from("A"), Entity::from_raw(1)),
+			(Name::from("C"), Entity::from_raw(3)),
+		]));
+
+		let loaded = app
+			.world_mut()
+			.run_system_once(Visualizer::<_View, _Key>::view_entities_loaded);
+
+		assert_eq!(Loaded(false), loaded);
 	}
 }

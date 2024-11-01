@@ -95,7 +95,10 @@ where
 			PreUpdate,
 			SkillSpawners::track_in_self_and_children::<Name>().system(),
 		)
-		.add_systems(PreUpdate, uuid_to_skill::<Slots<SkillId>, Slots>)
+		.add_systems(
+			PreUpdate,
+			uuid_to_skill::<Slots<SkillId>, Slots>.run_if(in_state(self.play_state)),
+		)
 		.add_systems(Update, Self::set_player_items)
 		.register_item_view_for::<Player, HandSlots<Player>>()
 		.register_item_view_for::<Player, ForearmSlots<Player>>()

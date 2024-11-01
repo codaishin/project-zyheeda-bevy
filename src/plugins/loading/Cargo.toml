@@ -1,15 +1,12 @@
 [package]
-name = "items"
+name = "loading"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
 bevy.workspace = true
-serde.workspace = true
-uuid.workspace = true
 common.workspace = true
-loading.workspace = true
+macros.workspace = true
 
 [dev-dependencies]
 mockall.workspace = true
-macros.workspace = true
