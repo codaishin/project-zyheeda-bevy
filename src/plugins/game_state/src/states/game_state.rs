@@ -11,6 +11,7 @@ pub enum GameState {
 	#[default]
 	None,
 	StartMenu,
+	Loading,
 	NewGame,
 	Play,
 	IngameMenu(MenuState),
@@ -19,11 +20,12 @@ pub enum GameState {
 impl ReactsToMenuHotkeys for GameState {
 	fn reacts_to_menu_hotkeys(&self) -> bool {
 		match self {
-			GameState::None => false,
-			GameState::StartMenu => false,
-			GameState::NewGame => false,
-			GameState::Play => true,
-			GameState::IngameMenu(_) => true,
+			Self::None => false,
+			Self::StartMenu => false,
+			Self::Loading => false,
+			Self::NewGame => false,
+			Self::Play => true,
+			Self::IngameMenu(_) => true,
 		}
 	}
 }
@@ -55,7 +57,8 @@ impl IterFinite for GameState {
 		match current.as_ref()? {
 			GameState::None => Some(GameState::StartMenu),
 			GameState::StartMenu => Some(GameState::NewGame),
-			GameState::NewGame => Some(GameState::Play),
+			GameState::NewGame => Some(GameState::Loading),
+			GameState::Loading => Some(GameState::Play),
 			GameState::Play => Some(GameState::IngameMenu(MenuState::Inventory)),
 			GameState::IngameMenu(MenuState::Inventory) => {
 				Some(GameState::IngameMenu(MenuState::ComboOverview))
@@ -82,6 +85,7 @@ mod tests {
 				GameState::None,
 				GameState::StartMenu,
 				GameState::NewGame,
+				GameState::Loading,
 				GameState::Play,
 				GameState::IngameMenu(MenuState::Inventory),
 				GameState::IngameMenu(MenuState::ComboOverview)
@@ -94,6 +98,7 @@ mod tests {
 	fn get_key_codes() {
 		assert_eq!(
 			vec![
+				Err(NoKeySet),
 				Err(NoKeySet),
 				Err(NoKeySet),
 				Err(NoKeySet),
