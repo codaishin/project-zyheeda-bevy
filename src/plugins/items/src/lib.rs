@@ -12,7 +12,10 @@ use common::{
 	traits::iteration::IterFinite,
 };
 use components::{visualize::VisualizeCommands, visualizer::Visualizer};
-use loading::traits::register_load_tracking::RegisterLoadTracking;
+use loading::{
+	systems::is_loading::is_loading,
+	traits::register_load_tracking::RegisterLoadTracking,
+};
 use traits::view::ItemView;
 
 pub struct ItemsPlugin;
@@ -44,7 +47,9 @@ impl<TKey> RegisterItemView<TKey> for App {
 					Visualizer::<TView, TKey>::track_in_self_and_children::<Name>()
 						.filter::<TView::TFilter>()
 						.system(),
-					VisualizeCommands::<TView, TKey>::apply.pipe(log_many),
+					VisualizeCommands::<TView, TKey>::apply
+						.pipe(log_many)
+						.run_if(not(is_loading)),
 				),
 			)
 	}
