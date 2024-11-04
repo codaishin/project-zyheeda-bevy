@@ -1,4 +1,4 @@
-use bevy::{prelude::*, state::state::FreelyMutableState};
+use bevy::{prelude::*, render::MainWorld, state::state::FreelyMutableState};
 use std::{any::TypeId, collections::HashMap};
 
 #[derive(Resource, Default, Debug, PartialEq)]
@@ -13,6 +13,21 @@ impl LoadTracker {
 		T: 'static,
 	{
 		tracker.0.insert(TypeId::of::<T>(), loaded);
+	}
+
+	pub(crate) fn track_in_main_world<T>(In(loaded): In<Loaded>, mut main_world: ResMut<MainWorld>)
+	where
+		T: 'static,
+	{
+		let Some(mut tracker) = main_world.get_resource_mut::<LoadTracker>() else {
+			return;
+		};
+
+		tracker.0.insert(TypeId::of::<T>(), loaded);
+	}
+
+	pub(crate) fn main_world_is_loading(main_world: Res<MainWorld>) -> bool {
+		main_world.get_resource::<LoadTracker>().is_some()
 	}
 
 	pub fn when_all_loaded_set<TState>(
