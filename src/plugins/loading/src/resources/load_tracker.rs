@@ -17,17 +17,24 @@ pub(crate) struct LoadData {
 pub struct Loaded(pub bool);
 
 impl LoadTracker {
-	pub(crate) fn track<T>(In(loaded): In<Loaded>, mut tracker: ResMut<LoadTracker>)
+	fn insert<T>(&mut self, loaded: Loaded)
 	where
 		T: 'static,
 	{
-		tracker.0.insert(
+		self.0.insert(
 			TypeId::of::<T>(),
 			LoadData {
 				type_name: type_name::<T>(),
 				loaded,
 			},
 		);
+	}
+
+	pub(crate) fn track<T>(In(loaded): In<Loaded>, mut tracker: ResMut<LoadTracker>)
+	where
+		T: 'static,
+	{
+		tracker.insert::<T>(loaded);
 	}
 
 	pub(crate) fn track_in_main_world<T>(In(loaded): In<Loaded>, mut main_world: ResMut<MainWorld>)
@@ -38,13 +45,7 @@ impl LoadTracker {
 			return;
 		};
 
-		tracker.0.insert(
-			TypeId::of::<T>(),
-			LoadData {
-				type_name: type_name::<T>(),
-				loaded,
-			},
-		);
+		tracker.insert::<T>(loaded);
 	}
 
 	pub(crate) fn main_world_is_loading(main_world: Res<MainWorld>) -> bool {
