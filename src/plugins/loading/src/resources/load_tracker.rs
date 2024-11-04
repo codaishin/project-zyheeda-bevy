@@ -1,10 +1,19 @@
 use bevy::{prelude::*, render::MainWorld, state::state::FreelyMutableState};
-use std::{any::TypeId, collections::HashMap};
+use std::{
+	any::{type_name, TypeId},
+	collections::HashMap,
+};
 
 #[derive(Resource, Default, Debug, PartialEq)]
-pub struct LoadTracker(HashMap<TypeId, Loaded>);
+pub struct LoadTracker(HashMap<TypeId, LoadData>);
 
 #[derive(Debug, PartialEq)]
+pub(crate) struct LoadData {
+	type_name: &'static str,
+	loaded: Loaded,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Loaded(pub bool);
 
 impl LoadTracker {
@@ -12,7 +21,13 @@ impl LoadTracker {
 	where
 		T: 'static,
 	{
-		tracker.0.insert(TypeId::of::<T>(), loaded);
+		tracker.0.insert(
+			TypeId::of::<T>(),
+			LoadData {
+				type_name: type_name::<T>(),
+				loaded,
+			},
+		);
 	}
 
 	pub(crate) fn track_in_main_world<T>(In(loaded): In<Loaded>, mut main_world: ResMut<MainWorld>)
@@ -23,7 +38,13 @@ impl LoadTracker {
 			return;
 		};
 
-		tracker.0.insert(TypeId::of::<T>(), loaded);
+		tracker.0.insert(
+			TypeId::of::<T>(),
+			LoadData {
+				type_name: type_name::<T>(),
+				loaded,
+			},
+		);
 	}
 
 	pub(crate) fn main_world_is_loading(main_world: Res<MainWorld>) -> bool {
@@ -41,7 +62,11 @@ impl LoadTracker {
 				return;
 			};
 
-			let not_all_loaded = load_tracker.0.values().any(|Loaded(loaded)| !*loaded);
+			let not_all_loaded = load_tracker
+				.0
+				.values()
+				.map(|l| l.loaded)
+				.any(|Loaded(loaded)| !loaded);
 
 			if not_all_loaded {
 				return;
@@ -84,8 +109,20 @@ mod tests {
 
 		assert_eq!(
 			&LoadTracker(HashMap::from([
-				(TypeId::of::<f32>(), Loaded(true)),
-				(TypeId::of::<u32>(), Loaded(false)),
+				(
+					TypeId::of::<f32>(),
+					LoadData {
+						type_name: type_name::<f32>(),
+						loaded: Loaded(true)
+					}
+				),
+				(
+					TypeId::of::<u32>(),
+					LoadData {
+						type_name: type_name::<u32>(),
+						loaded: Loaded(false)
+					}
+				),
 			])),
 			app.world().resource::<LoadTracker>(),
 		);
@@ -94,8 +131,20 @@ mod tests {
 	#[test]
 	fn set_state_when_all_loaded() {
 		let mut app = setup(Some(LoadTracker(HashMap::from([
-			(TypeId::of::<f32>(), Loaded(true)),
-			(TypeId::of::<u32>(), Loaded(true)),
+			(
+				TypeId::of::<f32>(),
+				LoadData {
+					type_name: type_name::<f32>(),
+					loaded: Loaded(true),
+				},
+			),
+			(
+				TypeId::of::<u32>(),
+				LoadData {
+					type_name: type_name::<u32>(),
+					loaded: Loaded(true),
+				},
+			),
 		]))));
 
 		app.world_mut()
@@ -113,8 +162,20 @@ mod tests {
 	#[test]
 	fn do_not_set_state_when_not_all_loaded() {
 		let mut app = setup(Some(LoadTracker(HashMap::from([
-			(TypeId::of::<f32>(), Loaded(true)),
-			(TypeId::of::<u32>(), Loaded(false)),
+			(
+				TypeId::of::<f32>(),
+				LoadData {
+					type_name: type_name::<f32>(),
+					loaded: Loaded(true),
+				},
+			),
+			(
+				TypeId::of::<u32>(),
+				LoadData {
+					type_name: type_name::<u32>(),
+					loaded: Loaded(false),
+				},
+			),
 		]))));
 
 		app.world_mut()
