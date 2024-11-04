@@ -14,6 +14,7 @@ use map_generation::MapGenerationPlugin;
 use menu::MenuPlugin;
 use player::PlayerPlugin;
 use prefabs::PrefabsPlugin;
+use rendering::RenderingPlugin;
 use shaders::ShaderPlugin;
 use skills::SkillsPlugin;
 
@@ -43,6 +44,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(LightPlugin)
 		.add_plugins(PlayerPlugin)
 		.add_plugins(EnemyPlugin)
+		.add_plugins(RenderingPlugin)
 		.add_plugins(LoadingPlugin {
 			load_state: GameStatePlugin::LOADING,
 		})
