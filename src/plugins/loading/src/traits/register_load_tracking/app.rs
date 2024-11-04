@@ -1,5 +1,5 @@
 use super::{Loaded, RegisterLoadTracking};
-use crate::resources::load_tracker::LoadTracker;
+use crate::{resources::load_tracker::LoadTracker, systems::is_loading::is_loading};
 use bevy::prelude::*;
 
 impl<TMarker> RegisterLoadTracking<TMarker> for App {
@@ -12,9 +12,7 @@ impl<TMarker> RegisterLoadTracking<TMarker> for App {
 	{
 		self.add_systems(
 			Update,
-			system
-				.pipe(LoadTracker::track::<T>)
-				.run_if(resource_exists::<LoadTracker>),
+			system.pipe(LoadTracker::track::<T>).run_if(is_loading),
 		)
 	}
 }
