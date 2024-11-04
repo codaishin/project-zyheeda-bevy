@@ -4,23 +4,17 @@ use crate::{
 };
 use bevy::{
 	asset::Assets,
-	prelude::{Commands, Component, Entity, Query, Res, State},
+	prelude::{Commands, Component, Entity, Query, Res},
 };
-use common::states::{AssetLoadState, LoadState};
 
 pub(crate) fn uuid_to_skill<TSource, TResult>(
 	mut commands: Commands,
 	skills: Res<Assets<Skill>>,
 	sources: Query<(Entity, &TSource)>,
-	state: Res<State<AssetLoadState<Skill>>>,
 ) where
 	TSource: Component + TryMap<SkillId, Skill, TResult>,
 	TResult: Component,
 {
-	if **state.get() == LoadState::Loading {
-		return;
-	}
-
 	for (entity, source) in &sources {
 		let result = apply_map(source, &skills);
 
@@ -52,7 +46,6 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		asset::Assets,
-		prelude::AppExtStates,
 		state::app::StatesPlugin,
 		utils::default,
 	};
@@ -71,7 +64,6 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_plugins(StatesPlugin);
-		app.insert_state(AssetLoadState::<Skill>::new(LoadState::Loading));
 		app.init_resource::<Assets<Skill>>();
 
 		app.add_systems(
@@ -86,7 +78,6 @@ mod tests {
 	fn map_uuid_to_skill_when_loaded() {
 		let id = SkillId(Uuid::new_v4());
 		let mut app = setup();
-		app.insert_state(AssetLoadState::<Skill>::new(LoadState::Loaded));
 		app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
 			id,
 			name: "my skill".to_owned(),
@@ -110,7 +101,6 @@ mod tests {
 	fn remove_source() {
 		let id = SkillId(Uuid::new_v4());
 		let mut app = setup();
-		app.insert_state(AssetLoadState::<Skill>::new(LoadState::Loaded));
 		app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
 			id,
 			name: "my skill".to_owned(),
@@ -121,29 +111,5 @@ mod tests {
 		app.update();
 
 		assert_eq!(None, app.world().entity(agent).get::<_Container<SkillId>>())
-	}
-
-	#[test]
-	fn do_nothing_when_skill_assets_loading() {
-		let id = SkillId(Uuid::new_v4());
-		let mut app = setup();
-		app.insert_state(AssetLoadState::<Skill>::new(LoadState::Loading));
-		app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
-			id,
-			name: "my skill".to_owned(),
-			..default()
-		});
-		let agent = app.world_mut().spawn(_Container(Some(id))).id();
-
-		app.update();
-
-		let agent = app.world().entity(agent);
-		assert_eq!(
-			(Some(&_Container(Some(id))), None),
-			(
-				agent.get::<_Container<SkillId>>(),
-				agent.get::<_Container<Skill>>()
-			)
-		)
 	}
 }

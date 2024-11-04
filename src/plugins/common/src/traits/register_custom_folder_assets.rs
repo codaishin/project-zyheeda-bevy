@@ -1,3 +1,5 @@
+mod app;
+
 use super::{
 	asset_file_extensions::AssetFileExtensions,
 	asset_folder::AssetFolderPath,
@@ -6,7 +8,6 @@ use super::{
 use bevy::asset::Asset;
 use serde::Deserialize;
 use std::fmt::Debug;
-pub mod app;
 
 pub trait RegisterCustomFolderAssets {
 	fn register_custom_folder_assets<TSkill, TDto>(&mut self) -> &mut Self
