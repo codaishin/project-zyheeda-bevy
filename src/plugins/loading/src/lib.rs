@@ -4,10 +4,12 @@ pub mod traits;
 
 use bevy::{prelude::*, state::state::FreelyMutableState};
 use common::traits::{init_resource::InitResource, remove_resource::RemoveResource};
-use resources::load_tracker::LoadTracker;
+use resources::track::Track;
+use traits::progress::{AssetLoadProgress, DependencyResolveProgress};
 
 pub struct LoadingPlugin<TState> {
-	pub load_state: TState,
+	pub load_assets: TState,
+	pub resolve_dependencies: TState,
 }
 
 impl<TState> Plugin for LoadingPlugin<TState>
@@ -15,7 +17,12 @@ where
 	TState: FreelyMutableState + Copy,
 {
 	fn build(&self, app: &mut App) {
-		app.add_systems(OnEnter(self.load_state), LoadTracker::init)
-			.add_systems(OnExit(self.load_state), LoadTracker::remove);
+		let load = self.load_assets;
+		let resolve = self.resolve_dependencies;
+
+		app.add_systems(OnEnter(load), Track::<AssetLoadProgress>::init)
+			.add_systems(OnExit(load), Track::<AssetLoadProgress>::remove)
+			.add_systems(OnEnter(resolve), Track::<DependencyResolveProgress>::init)
+			.add_systems(OnExit(resolve), Track::<DependencyResolveProgress>::remove);
 	}
 }

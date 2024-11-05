@@ -176,11 +176,11 @@ impl AddDropdown for App {
 }
 
 pub struct MenuPlugin<T> {
-	pub start_state: T,
-	pub new_game_state: T,
-	pub play_state: T,
-	pub inventory_state: T,
-	pub combo_overview_state: T,
+	pub start: T,
+	pub new_game: T,
+	pub play: T,
+	pub inventory: T,
+	pub combo_overview: T,
 }
 
 impl<TState> MenuPlugin<TState>
@@ -204,13 +204,13 @@ where
 	}
 
 	fn start_menu(&self, app: &mut App) {
-		app.add_ui::<StartMenu>(self.start_state)
+		app.add_ui::<StartMenu>(self.start)
 			.add_systems(Update, panel_colors::<StartMenuButton>)
-			.add_systems(Update, StartGame::on_release_set(self.new_game_state));
+			.add_systems(Update, StartGame::on_release_set(self.new_game));
 	}
 
 	fn ui_overlay(&self, app: &mut App) {
-		app.add_ui::<UIOverlay>(self.play_state)
+		app.add_ui::<UIOverlay>(self.play)
 			.add_systems(
 				Update,
 				(
@@ -219,7 +219,7 @@ where
 					panel_colors::<QuickbarPanel>,
 					panel_activity_colors_override::<SlotKeyMap, Queue, QuickbarPanel>,
 				)
-					.run_if(in_state(self.play_state)),
+					.run_if(in_state(self.play)),
 			)
 			.add_systems(
 				Update,
@@ -231,7 +231,7 @@ where
 	}
 
 	fn combo_overview(&self, app: &mut App) {
-		app.add_ui::<ComboOverview>(self.combo_overview_state)
+		app.add_ui::<ComboOverview>(self.combo_overview)
 			.add_dropdown::<SkillButton<DropdownItem<Vertical>>>()
 			.add_dropdown::<SkillButton<DropdownItem<Horizontal>>>()
 			.add_dropdown::<KeySelect<ReKeySkill>>()
@@ -241,7 +241,7 @@ where
 				Update,
 				update_combos_view::<Player, Combos, ComboOverview>
 					.run_if(either(added::<ComboOverview>).or(changed::<Player, Combos>))
-					.run_if(in_state(self.combo_overview_state)),
+					.run_if(in_state(self.combo_overview)),
 			)
 			.add_systems(
 				Update,
@@ -255,12 +255,12 @@ where
 					update_combo_skills::<Player, Combos, Horizontal>,
 					map_pressed_key_select.pipe(update_combo_keys::<Player, Combos>),
 				)
-					.run_if(in_state(self.combo_overview_state)),
+					.run_if(in_state(self.combo_overview)),
 			);
 	}
 
 	fn inventory_screen(&self, app: &mut App) {
-		app.add_ui::<InventoryScreen>(self.inventory_state)
+		app.add_ui::<InventoryScreen>(self.inventory)
 			.add_systems(
 				Update,
 				(
@@ -274,7 +274,7 @@ where
 					drop::<Player, SlotKey, InventoryKey>,
 					drop::<Player, InventoryKey, SlotKey>,
 				)
-					.run_if(in_state(self.inventory_state)),
+					.run_if(in_state(self.inventory)),
 			)
 			.add_systems(
 				Update,

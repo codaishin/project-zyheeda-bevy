@@ -46,23 +46,24 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(EnemyPlugin)
 		.add_plugins(RenderingPlugin)
 		.add_plugins(LoadingPlugin {
-			load_state: GameStatePlugin::LOADING,
+			load_assets: GameStatePlugin::LOAD_ASSETS,
+			resolve_dependencies: GameStatePlugin::RESOLVE_DEPENDENCIES,
 		})
 		.add_plugins(MapGenerationPlugin {
-			new_game_state: GameStatePlugin::NEW_GAME,
+			new_game: GameStatePlugin::NEW_GAME,
 		})
 		.add_plugins(MenuPlugin {
-			start_state: GameStatePlugin::START,
-			new_game_state: GameStatePlugin::NEW_GAME,
-			play_state: GameStatePlugin::PLAY,
-			inventory_state: GameStatePlugin::INVENTORY,
-			combo_overview_state: GameStatePlugin::COMBO_OVERVIEW,
+			start: GameStatePlugin::START,
+			new_game: GameStatePlugin::NEW_GAME,
+			play: GameStatePlugin::PLAY,
+			inventory: GameStatePlugin::INVENTORY,
+			combo_overview: GameStatePlugin::COMBO_OVERVIEW,
 		})
 		.add_plugins(SkillsPlugin {
-			play_state: GameStatePlugin::PLAY,
+			play: GameStatePlugin::PLAY,
 		})
 		.add_plugins(BehaviorsPlugin {
-			play_state: GameStatePlugin::PLAY,
+			play: GameStatePlugin::PLAY,
 		})
 		.add_plugins(GameStatePlugin)
 		.insert_resource(ClearColor(Color::BLACK));

@@ -1,4 +1,4 @@
-use super::menu_state::MenuState;
+use super::{load_state::LoadState, menu_state::MenuState};
 use bevy::prelude::*;
 use common::traits::{
 	iteration::{Iter, IterFinite},
@@ -11,7 +11,7 @@ pub enum GameState {
 	#[default]
 	None,
 	StartMenu,
-	Loading,
+	Loading(LoadState),
 	NewGame,
 	Play,
 	IngameMenu(MenuState),
@@ -22,7 +22,7 @@ impl ReactsToMenuHotkeys for GameState {
 		match self {
 			Self::None => false,
 			Self::StartMenu => false,
-			Self::Loading => false,
+			Self::Loading(_) => false,
 			Self::NewGame => false,
 			Self::Play => true,
 			Self::IngameMenu(_) => true,
@@ -57,8 +57,11 @@ impl IterFinite for GameState {
 		match current.as_ref()? {
 			GameState::None => Some(GameState::StartMenu),
 			GameState::StartMenu => Some(GameState::NewGame),
-			GameState::NewGame => Some(GameState::Loading),
-			GameState::Loading => Some(GameState::Play),
+			GameState::NewGame => Some(GameState::Loading(LoadState::LoadAssets)),
+			GameState::Loading(LoadState::LoadAssets) => {
+				Some(GameState::Loading(LoadState::ResoleDependencies))
+			}
+			GameState::Loading(LoadState::ResoleDependencies) => Some(GameState::Play),
 			GameState::Play => Some(GameState::IngameMenu(MenuState::Inventory)),
 			GameState::IngameMenu(MenuState::Inventory) => {
 				Some(GameState::IngameMenu(MenuState::ComboOverview))
@@ -85,7 +88,8 @@ mod tests {
 				GameState::None,
 				GameState::StartMenu,
 				GameState::NewGame,
-				GameState::Loading,
+				GameState::Loading(LoadState::LoadAssets),
+				GameState::Loading(LoadState::ResoleDependencies),
 				GameState::Play,
 				GameState::IngameMenu(MenuState::Inventory),
 				GameState::IngameMenu(MenuState::ComboOverview)
@@ -98,6 +102,7 @@ mod tests {
 	fn get_key_codes() {
 		assert_eq!(
 			vec![
+				Err(NoKeySet),
 				Err(NoKeySet),
 				Err(NoKeySet),
 				Err(NoKeySet),
