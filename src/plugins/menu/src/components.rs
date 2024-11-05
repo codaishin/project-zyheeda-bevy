@@ -5,6 +5,7 @@ pub(crate) mod inventory_panel;
 pub(crate) mod inventory_screen;
 pub(crate) mod key_code_text_insert_command;
 pub(crate) mod key_select;
+pub(crate) mod loading_screen;
 pub(crate) mod quickbar_panel;
 pub(crate) mod skill_button;
 pub(crate) mod start_game;
