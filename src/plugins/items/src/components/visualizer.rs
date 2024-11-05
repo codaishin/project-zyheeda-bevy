@@ -5,7 +5,7 @@ use common::traits::{
 	iteration::IterFinite,
 	track::{IsTracking, Track, Untrack},
 };
-use loading::resources::load_tracker::Loaded;
+use loading::resources::track::Loaded;
 use std::{collections::HashMap, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]

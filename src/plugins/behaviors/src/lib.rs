@@ -42,7 +42,7 @@ use systems::{
 };
 
 pub struct BehaviorsPlugin<TState> {
-	pub play_state: TState,
+	pub play: TState,
 }
 
 impl<TState> Plugin for BehaviorsPlugin<TState>
@@ -65,13 +65,13 @@ where
 					get_faces.pipe(execute_face::<CamRay>),
 				)
 					.chain()
-					.run_if(in_state(self.play_state))
+					.run_if(in_state(self.play))
 					.run_if(in_state(MouseContext::<KeyCode>::Default)),
 			)
 			.add_systems(
 				Update,
 				(move_on_orbit::<CamOrbit>, move_with_target::<CamOrbit>)
-					.run_if(in_state(self.play_state)),
+					.run_if(in_state(self.play)),
 			)
 			.add_systems(
 				Update,

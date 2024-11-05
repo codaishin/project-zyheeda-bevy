@@ -13,8 +13,11 @@ use common::{
 };
 use components::{visualize::VisualizeCommands, visualizer::Visualizer};
 use loading::{
-	systems::is_loading::is_loading,
-	traits::register_load_tracking::RegisterLoadTracking,
+	systems::is_processing::is_processing,
+	traits::{
+		progress::{AssetLoadProgress, DependencyResolveProgress},
+		register_load_tracking::RegisterLoadTracking,
+	},
 };
 use traits::view::ItemView;
 
@@ -39,18 +42,20 @@ impl<TKey> RegisterItemView<TKey> for App {
 		TView: ItemView<TKey> + Send + Sync + 'static,
 		TKey: IterFinite + Sync + Send + 'static,
 	{
-		self.register_load_tracking::<TView>(Visualizer::<TView, TKey>::view_entities_loaded)
-			.add_systems(PreUpdate, Visualizer::<TView, TKey>::add_to::<TAgent>)
-			.add_systems(
-				Update,
-				(
-					Visualizer::<TView, TKey>::track_in_self_and_children::<Name>()
-						.filter::<TView::TFilter>()
-						.system(),
-					VisualizeCommands::<TView, TKey>::apply
-						.pipe(log_many)
-						.run_if(not(is_loading)),
-				),
-			)
+		self.register_load_tracking::<TView, DependencyResolveProgress>(
+			Visualizer::<TView, TKey>::view_entities_loaded,
+		)
+		.add_systems(PreUpdate, Visualizer::<TView, TKey>::add_to::<TAgent>)
+		.add_systems(
+			Update,
+			(
+				Visualizer::<TView, TKey>::track_in_self_and_children::<Name>()
+					.filter::<TView::TFilter>()
+					.system(),
+				VisualizeCommands::<TView, TKey>::apply
+					.pipe(log_many)
+					.run_if(not(is_processing::<AssetLoadProgress>)),
+			),
+		)
 	}
 }

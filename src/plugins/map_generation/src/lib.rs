@@ -18,7 +18,7 @@ use systems::{
 use traits::RegisterMapCell;
 
 pub struct MapGenerationPlugin<TState> {
-	pub new_game_state: TState,
+	pub new_game: TState,
 }
 
 impl<TState> Plugin for MapGenerationPlugin<TState>
@@ -28,8 +28,8 @@ where
 	fn build(&self, app: &mut App) {
 		app.register_prefab::<Light<Floating>>()
 			.register_prefab::<Light<Wall>>()
-			.register_map_cell::<MapCell>(OnEnter(self.new_game_state))
-			.register_map_cell::<LightCell>(OnEnter(self.new_game_state))
+			.register_map_cell::<MapCell>(OnEnter(self.new_game))
+			.register_map_cell::<LightCell>(OnEnter(self.new_game))
 			.add_systems(
 				Update,
 				(

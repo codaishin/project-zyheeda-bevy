@@ -72,7 +72,7 @@ use systems::{
 use uuid::uuid;
 
 pub struct SkillsPlugin<TState> {
-	pub play_state: TState,
+	pub play: TState,
 }
 
 impl<TState> SkillsPlugin<TState>
@@ -97,7 +97,7 @@ where
 		)
 		.add_systems(
 			PreUpdate,
-			uuid_to_skill::<Slots<SkillId>, Slots>.run_if(in_state(self.play_state)),
+			uuid_to_skill::<Slots<SkillId>, Slots>.run_if(in_state(self.play)),
 		)
 		.add_systems(Update, Self::set_player_items)
 		.register_item_view_for::<Player, HandSlots<Player>>()
@@ -145,7 +145,7 @@ where
 					flush::<Queue>,
 				)
 					.chain()
-					.run_if(in_state(self.play_state)),
+					.run_if(in_state(self.play)),
 			)
 			.add_systems(
 				Update,

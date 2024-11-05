@@ -13,7 +13,10 @@ use bevy::{
 };
 use common::{components::MainCamera, traits::try_insert_on::TryInsertOn};
 use enemy::components::void_sphere::VoidSphere;
-use loading::resources::load_tracker::LoadTracker;
+use loading::{
+	resources::track::Track,
+	traits::progress::{AssetLoadProgress, DependencyResolveProgress},
+};
 use player::bundle::PlayerBundle;
 use states::{game_state::GameState, load_state::LoadState, menu_state::MenuState};
 use std::f32::consts::PI;
@@ -39,7 +42,13 @@ impl Plugin for GameStatePlugin {
 				OnEnter(Self::NEW_GAME),
 				(setup_scene, transition_to_state(Self::LOAD_ASSETS)).chain(),
 			)
-			.add_systems(Last, LoadTracker::when_all_loaded_set(Self::PLAY))
+			.add_systems(
+				Last,
+				(
+					Track::<AssetLoadProgress>::when_all_done_set(Self::RESOLVE_DEPENDENCIES),
+					Track::<DependencyResolveProgress>::when_all_done_set(Self::PLAY),
+				),
+			)
 			.add_systems(OnEnter(Self::PLAY), pause_virtual_time::<false>)
 			.add_systems(OnExit(Self::PLAY), pause_virtual_time::<true>);
 	}
