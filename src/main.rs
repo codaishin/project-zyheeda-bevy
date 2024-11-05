@@ -46,7 +46,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(EnemyPlugin)
 		.add_plugins(RenderingPlugin)
 		.add_plugins(LoadingPlugin {
-			load_state: GameStatePlugin::LOADING,
+			load_state: GameStatePlugin::LOAD_ASSETS,
 		})
 		.add_plugins(MapGenerationPlugin {
 			new_game_state: GameStatePlugin::NEW_GAME,

@@ -15,7 +15,7 @@ use common::{components::MainCamera, traits::try_insert_on::TryInsertOn};
 use enemy::components::void_sphere::VoidSphere;
 use loading::resources::load_tracker::LoadTracker;
 use player::bundle::PlayerBundle;
-use states::{game_state::GameState, menu_state::MenuState};
+use states::{game_state::GameState, load_state::LoadState, menu_state::MenuState};
 use std::f32::consts::PI;
 use systems::pause_virtual_time::pause_virtual_time;
 
@@ -24,7 +24,8 @@ pub struct GameStatePlugin;
 impl GameStatePlugin {
 	pub const START: GameState = GameState::StartMenu;
 	pub const NEW_GAME: GameState = GameState::NewGame;
-	pub const LOADING: GameState = GameState::Loading;
+	pub const LOAD_ASSETS: GameState = GameState::Loading(LoadState::LoadAssets);
+	pub const RESOLVE_DEPENDENCIES: GameState = GameState::Loading(LoadState::ResoleDependencies);
 	pub const PLAY: GameState = GameState::Play;
 	pub const INVENTORY: GameState = GameState::IngameMenu(MenuState::Inventory);
 	pub const COMBO_OVERVIEW: GameState = GameState::IngameMenu(MenuState::ComboOverview);
@@ -36,7 +37,7 @@ impl Plugin for GameStatePlugin {
 			.add_systems(PostStartup, spawn_camera)
 			.add_systems(
 				OnEnter(Self::NEW_GAME),
-				(setup_scene, transition_to_state(Self::LOADING)).chain(),
+				(setup_scene, transition_to_state(Self::LOAD_ASSETS)).chain(),
 			)
 			.add_systems(Last, LoadTracker::when_all_loaded_set(Self::PLAY))
 			.add_systems(OnEnter(Self::PLAY), pause_virtual_time::<false>)
