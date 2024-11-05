@@ -22,6 +22,7 @@ use components::{
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
 	key_select::{AppendSkill, KeySelect, ReKeySkill},
+	loading_screen::LoadingScreen,
 	quickbar_panel::QuickbarPanel,
 	skill_button::{DropdownItem, Horizontal, SkillButton, Vertical},
 	start_game::StartGame,
@@ -32,6 +33,7 @@ use components::{
 	AppendSkillCommand,
 };
 use events::DropdownEvent;
+use loading::traits::progress::{AssetLoadProgress, DependencyResolveProgress};
 use player::components::player::Player;
 use skills::{
 	components::{
@@ -177,6 +179,8 @@ impl AddDropdown for App {
 
 pub struct MenuPlugin<T> {
 	pub start: T,
+	pub load_assets: T,
+	pub resolve_dependencies: T,
 	pub new_game: T,
 	pub play: T,
 	pub inventory: T,
@@ -207,6 +211,11 @@ where
 		app.add_ui::<StartMenu>(self.start)
 			.add_systems(Update, panel_colors::<StartMenuButton>)
 			.add_systems(Update, StartGame::on_release_set(self.new_game));
+	}
+
+	fn loading_screen(&self, app: &mut App) {
+		app.add_ui::<LoadingScreen<AssetLoadProgress>>(self.load_assets)
+			.add_ui::<LoadingScreen<DependencyResolveProgress>>(self.resolve_dependencies);
 	}
 
 	fn ui_overlay(&self, app: &mut App) {
@@ -303,6 +312,7 @@ where
 		self.events(app);
 		self.state_control(app);
 		self.start_menu(app);
+		self.loading_screen(app);
 		self.ui_overlay(app);
 		self.combo_overview(app);
 		self.inventory_screen(app);

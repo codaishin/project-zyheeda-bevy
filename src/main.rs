@@ -55,6 +55,8 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(MenuPlugin {
 			start: GameStatePlugin::START,
 			new_game: GameStatePlugin::NEW_GAME,
+			load_assets: GameStatePlugin::LOAD_ASSETS,
+			resolve_dependencies: GameStatePlugin::RESOLVE_DEPENDENCIES,
 			play: GameStatePlugin::PLAY,
 			inventory: GameStatePlugin::INVENTORY,
 			combo_overview: GameStatePlugin::COMBO_OVERVIEW,
