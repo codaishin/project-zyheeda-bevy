@@ -7,12 +7,9 @@ use crate::SkillItemType;
 use animate_data::AnimateData;
 use common::{
 	tools::duration_data::DurationData,
-	traits::{
-		asset_file_extensions::AssetFileExtensions,
-		load_asset::{LoadAsset, Path},
-		load_from::LoadFrom,
-	},
+	traits::load_asset::{LoadAsset, Path},
 };
+use loading::traits::{asset_file_extensions::AssetFileExtensions, load_from::LoadFrom};
 use run_skill_behavior_data::RunSkillBehaviorData;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, time::Duration};

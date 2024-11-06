@@ -2,6 +2,8 @@ pub mod resources;
 pub mod systems;
 pub mod traits;
 
+pub(crate) mod folder_asset_loader;
+
 use bevy::{prelude::*, state::state::FreelyMutableState};
 use common::traits::{init_resource::InitResource, remove_resource::RemoveResource};
 use resources::track::Track;

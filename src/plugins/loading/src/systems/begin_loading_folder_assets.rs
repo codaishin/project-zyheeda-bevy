@@ -1,12 +1,6 @@
-use crate::{
-	resources::AssetFolder,
-	traits::{asset_folder::AssetFolderPath, load_folder_assets::LoadFolderAssets},
-};
-use bevy::{
-	asset::Asset,
-	ecs::system::Res,
-	prelude::{Commands, Resource},
-};
+use crate::{resources::asset_folder::AssetFolder, traits::asset_folder::AssetFolderPath};
+use bevy::prelude::*;
+use common::traits::load_folder_assets::LoadFolderAssets;
 
 pub(crate) fn begin_loading_folder_assets<
 	TAsset: Asset + AssetFolderPath,
@@ -21,8 +15,6 @@ pub(crate) fn begin_loading_folder_assets<
 
 #[cfg(test)]
 mod tests {
-	use crate::traits::load_asset::Path;
-
 	use super::*;
 	use bevy::{
 		app::{App, Update},
@@ -30,7 +22,10 @@ mod tests {
 		prelude::Resource,
 		reflect::TypePath,
 	};
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		traits::{load_asset::Path, nested_mock::NestedMocks},
+	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use uuid::Uuid;

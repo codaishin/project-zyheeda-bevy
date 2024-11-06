@@ -15,7 +15,7 @@ use std::{
 
 /// Generic asset loader that always returns `Ok`. Errors are stored within the `Ok`
 /// side of the result, so we can handle them on an individual level and prevent
-/// bevy from stopping the load process when loading the asset when loading a whole folder.
+/// bevy from stopping the load process when encountering an error.
 pub(crate) struct FolderAssetLoader<TAsset, TDto> {
 	phantom_data: PhantomData<(TAsset, TDto)>,
 }

@@ -25,10 +25,7 @@ use common::{
 	resources::key_map::KeyMap,
 	states::MouseContext,
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
-	traits::{
-		register_custom_folder_assets::RegisterCustomFolderAssets,
-		try_insert_on::TryInsertOn,
-	},
+	traits::try_insert_on::TryInsertOn,
 };
 use components::{
 	combo_node::ComboNode,
@@ -48,6 +45,7 @@ use definitions::{
 use inventory_key::InventoryKey;
 use item::{item_type::SkillItemType, SkillItem, SkillItemContent};
 use items::RegisterItemView;
+use loading::traits::register_custom_folder_assets::RegisterCustomFolderAssets;
 use player::components::player::Player;
 use shaders::materials::essence_material::EssenceMaterial;
 use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill, SkillId};

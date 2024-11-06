@@ -2,20 +2,14 @@ pub mod key_map;
 pub mod language_server;
 
 use crate::{components::Outdated, traits::cache::Storage};
-use bevy::{
-	asset::{Asset, Handle, LoadedFolder},
-	ecs::{component::Component, entity::Entity, system::Resource},
-	math::Ray3d,
-};
+use bevy::prelude::*;
 use std::{
 	collections::{
 		hash_map::Entry::{Occupied, Vacant},
 		HashMap,
-		HashSet,
 	},
 	fmt::Debug,
 	hash::Hash,
-	marker::PhantomData,
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -110,45 +104,9 @@ impl<TKey: Eq + Hash, T: Clone> From<HashMap<TKey, T>> for Shared<TKey, T> {
 	}
 }
 
-#[derive(Resource, Debug, PartialEq)]
-pub struct AssetFolder<TAsset: Asset> {
-	phantom_data: PhantomData<TAsset>,
-	pub folder: Handle<LoadedFolder>,
-}
-
-impl<TAsset: Asset> AssetFolder<TAsset> {
-	pub(crate) fn new(folder: Handle<LoadedFolder>) -> Self {
-		Self {
-			phantom_data: PhantomData,
-			folder,
-		}
-	}
-}
-
-#[derive(Resource, Debug, PartialEq)]
-pub(crate) struct AliveAssets<TAsset: Asset>(HashSet<Handle<TAsset>>);
-
-impl<TAsset: Asset> Default for AliveAssets<TAsset> {
-	fn default() -> Self {
-		Self(Default::default())
-	}
-}
-
-impl<TAsset: Asset> AliveAssets<TAsset> {
-	#[cfg(test)]
-	pub(crate) fn iter(&self) -> impl Iterator<Item = &Handle<TAsset>> {
-		self.0.iter()
-	}
-
-	pub(crate) fn insert(&mut self, handle: Handle<TAsset>) {
-		self.0.insert(handle);
-	}
-}
-
 #[cfg(test)]
 mod test_shared_asset {
 	use super::*;
-	use bevy::{asset::AssetId, render::mesh::Mesh};
 	use uuid::Uuid;
 
 	#[test]
