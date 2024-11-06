@@ -1,7 +1,7 @@
 use crate::{inventory_key::InventoryKey, item::Item};
 use bevy::asset::Handle;
 use common::{
-	components::Collection,
+	components::collection::Collection,
 	traits::accessors::get::{GetMut, GetRef},
 };
 

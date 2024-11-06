@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use common::{
-	components::{Collection, Swap},
+	components::{collection::Collection, Swap},
 	errors::{Error, Level},
 	traits::try_remove_from::TryRemoveFrom,
 };

@@ -9,7 +9,7 @@ use bevy::{
 	prelude::{Entity, MouseButton, Res},
 	ui::Interaction,
 };
-use common::components::{Collection, Swap};
+use common::components::{collection::Collection, Swap};
 
 pub fn drop<
 	TAgent: Component,

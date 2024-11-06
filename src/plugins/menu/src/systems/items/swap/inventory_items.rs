@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use common::{
-	components::{Collection, Swap},
+	components::{collection::Collection, Swap},
 	traits::try_remove_from::TryRemoveFrom,
 };
 use skills::{components::inventory::Inventory, inventory_key::InventoryKey, item::Item};

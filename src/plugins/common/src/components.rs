@@ -1,3 +1,4 @@
+pub mod collection;
 pub mod essence;
 pub mod flip;
 
@@ -8,15 +9,6 @@ use std::marker::PhantomData;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Swap<T1, T2>(pub T1, pub T2);
-
-#[derive(Component, Debug, PartialEq)]
-pub struct Collection<TElement>(pub Vec<TElement>);
-
-impl<TElement> Collection<TElement> {
-	pub fn new<const N: usize>(elements: [TElement; N]) -> Self {
-		Self(elements.into())
-	}
-}
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum Side {

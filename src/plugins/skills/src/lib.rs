@@ -13,7 +13,7 @@ mod bundles;
 use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
-	components::{Collection, Side, Swap},
+	components::{collection::Collection, Side, Swap},
 	resources::key_map::KeyMap,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
