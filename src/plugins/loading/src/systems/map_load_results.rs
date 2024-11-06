@@ -1,13 +1,12 @@
-use crate::{
-	errors::{Error, Level},
-	folder_asset_loader::LoadResult,
-	resources::AliveAssets,
-	traits::get_asset_path::GetAssetPath,
-};
+use crate::{folder_asset_loader::LoadResult, resources::AliveAssets};
 use bevy::{
 	asset::{Asset, AssetPath, Assets},
 	prelude::{Res, ResMut, Resource},
 	reflect::TypePath,
+};
+use common::{
+	errors::{Error, Level},
+	traits::get_asset_path::GetAssetPath,
 };
 use std::fmt::Debug;
 

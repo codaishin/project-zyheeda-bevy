@@ -18,11 +18,9 @@ use crate::{
 };
 use animations::animation::Animation;
 use bevy::prelude::*;
-use common::{
-	resources::ColliderInfo,
-	traits::{asset_folder::AssetFolderPath, load_asset::Path},
-};
+use common::{resources::ColliderInfo, traits::load_asset::Path};
 use lifetime::LifeTimeDefinition;
+use loading::traits::asset_folder::AssetFolderPath;
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashSet,

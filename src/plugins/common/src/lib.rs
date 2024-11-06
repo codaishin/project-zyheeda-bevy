@@ -9,8 +9,6 @@ pub mod test_tools;
 pub mod tools;
 pub mod traits;
 
-pub(crate) mod folder_asset_loader;
-
 use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContext;
 use components::{flip::FlipHorizontally, MainCamera};

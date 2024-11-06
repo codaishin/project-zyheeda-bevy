@@ -4,7 +4,6 @@ use crate::{
 	resources::AliveAssets,
 	systems::{
 		begin_loading_folder_assets::begin_loading_folder_assets,
-		log::log_many,
 		map_load_results::map_load_results,
 	},
 	traits::{
@@ -18,6 +17,7 @@ use bevy::{
 	asset::{Asset, AssetApp, AssetServer},
 	prelude::IntoSystem,
 };
+use common::systems::log::log_many;
 use serde::Deserialize;
 use std::fmt::Debug;
 
