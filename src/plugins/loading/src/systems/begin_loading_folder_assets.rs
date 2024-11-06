@@ -1,4 +1,4 @@
-use crate::{resources::AssetFolder, traits::asset_folder::AssetFolderPath};
+use crate::{resources::asset_folder::AssetFolder, traits::asset_folder::AssetFolderPath};
 use bevy::prelude::*;
 use common::traits::load_folder_assets::LoadFolderAssets;
 

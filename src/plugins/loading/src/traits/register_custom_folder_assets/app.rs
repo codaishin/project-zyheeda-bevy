@@ -1,7 +1,7 @@
 use super::RegisterCustomFolderAssets;
 use crate::{
 	folder_asset_loader::{FolderAssetLoader, LoadError, LoadResult},
-	resources::{track::Track, AliveAssets},
+	resources::{alive_assets::AliveAssets, track::Track},
 	systems::{
 		begin_loading_folder_assets::begin_loading_folder_assets,
 		is_loaded::is_loaded,

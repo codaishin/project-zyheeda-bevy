@@ -1,5 +1,5 @@
 use crate::{
-	resources::{track::Loaded, AssetFolder},
+	resources::{asset_folder::AssetFolder, track::Loaded},
 	traits::is_fully_loaded::IsFullyLoaded,
 };
 use bevy::prelude::*;

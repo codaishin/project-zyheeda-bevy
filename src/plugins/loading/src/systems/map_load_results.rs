@@ -1,4 +1,4 @@
-use crate::{folder_asset_loader::LoadResult, resources::AliveAssets};
+use crate::{folder_asset_loader::LoadResult, resources::alive_assets::AliveAssets};
 use bevy::{
 	asset::{Asset, AssetPath, Assets},
 	prelude::{Res, ResMut, Resource},
