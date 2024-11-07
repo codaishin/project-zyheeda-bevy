@@ -2,6 +2,7 @@ pub mod resources;
 pub mod systems;
 pub mod traits;
 
+pub(crate) mod asset_loader;
 pub(crate) mod folder_asset_loader;
 
 use bevy::{prelude::*, state::state::FreelyMutableState};

@@ -13,6 +13,7 @@ use crate::{
 		asset_folder::AssetFolderPath,
 		load_from::LoadFrom,
 		progress::AssetLoadProgress,
+		register_custom_assets::RegisterCustomAssets,
 		register_load_tracking::RegisterLoadTracking,
 	},
 };
@@ -32,10 +33,10 @@ impl RegisterCustomFolderAssets for App {
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + Sync + Send + 'static,
 	{
 		self.init_asset::<LoadResult<TAsset>>()
-			.init_asset::<TAsset>()
+			.register_custom_assets::<TAsset, TDto>()
 			.init_resource::<AliveAssets<TAsset>>()
 			.register_asset_loader(FolderAssetLoader::<TAsset, TDto>::default())
-			.register_load_tracking::<TAsset, AssetLoadProgress>(is_loaded::<TAsset>)
+			.register_load_tracking::<AliveAssets<TAsset>, AssetLoadProgress>(is_loaded::<TAsset>)
 			.add_systems(
 				First,
 				begin_loading_folder_assets::<TAsset, AssetServer>
