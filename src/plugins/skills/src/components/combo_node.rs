@@ -5,7 +5,7 @@ use super::slots::Slots;
 use crate::{
 	skills::Skill,
 	slot_key::SlotKey,
-	traits::{Combo, GetCombosOrdered, GetNode, GetNodeMut, PeekNext, RootKeys, TryMap},
+	traits::{Combo, GetCombosOrdered, GetNode, GetNodeMut, PeekNext, RootKeys},
 };
 use bevy::ecs::component::Component;
 use common::{
@@ -176,24 +176,6 @@ fn skill_is_usable(slots: &Slots, trigger: &SlotKey, skill: &Skill) -> bool {
 		return false;
 	};
 	skill.is_usable_with.contains(&item.content.item_type)
-}
-
-fn try_map<TIn, TOut>(
-	node: &ComboNode<TIn>,
-	map_fn: &mut impl FnMut(&TIn) -> Option<TOut>,
-) -> ComboNode<TOut> {
-	let combos = node
-		.0
-		.iter()
-		.filter_map(|(key, (skill, next))| Some((*key, (map_fn(skill)?, try_map(next, map_fn)))));
-
-	ComboNode(OrderedHashMap::from_iter(combos))
-}
-
-impl<TIn, TOut, TResult: From<ComboNode<TOut>>> TryMap<TIn, TOut, TResult> for ComboNode<TIn> {
-	fn try_map(&self, mut map_fn: impl FnMut(&TIn) -> Option<TOut>) -> TResult {
-		TResult::from(try_map(self, &mut map_fn))
-	}
 }
 
 impl GetCombosOrdered for ComboNode {
@@ -790,54 +772,6 @@ mod tests {
 		fn from(value: ComboNode<_Out>) -> Self {
 			_Result(value)
 		}
-	}
-
-	#[test]
-	fn try_map_skills() {
-		let node = ComboNode::new([(
-			SlotKey::BottomHand(Side::Left),
-			(_In("my skill"), ComboNode::new([])),
-		)]);
-
-		let combos = node.try_map(&mut |value: &_In| Some(_Out(value.0)));
-
-		assert_eq!(
-			_Result(ComboNode::new([(
-				SlotKey::BottomHand(Side::Left),
-				(_Out("my skill"), ComboNode::new([])),
-			)])),
-			combos
-		);
-	}
-
-	#[test]
-	fn try_map_child_nodes() {
-		let node = ComboNode::new([(
-			SlotKey::BottomHand(Side::Left),
-			(
-				_In("my skill"),
-				ComboNode::new([(
-					SlotKey::BottomHand(Side::Right),
-					(_In("my child skill"), ComboNode::new([])),
-				)]),
-			),
-		)]);
-
-		let combos = node.try_map(&mut |value: &_In| Some(_Out(value.0)));
-
-		assert_eq!(
-			_Result(ComboNode::new([(
-				SlotKey::BottomHand(Side::Left),
-				(
-					_Out("my skill"),
-					ComboNode::new([(
-						SlotKey::BottomHand(Side::Right),
-						(_Out("my child skill"), ComboNode::new([])),
-					)])
-				),
-			)])),
-			combos
-		);
 	}
 
 	#[test]

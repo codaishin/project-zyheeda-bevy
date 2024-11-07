@@ -109,3 +109,25 @@ fn get_fields(
 		.iter()
 		.map(|field| (field.ident.as_ref(), &field.ty)))
 }
+
+#[proc_macro]
+pub fn skill_asset(input: TokenStream) -> TokenStream {
+	let Ok(syn::Lit::Str(literal)) = syn::parse::<syn::Lit>(input.clone()) else {
+		return TokenStream::from(quote! {
+			compile_error!("Only string literals are accepted")
+		});
+	};
+
+	let asset_path = format!("skills/{}.skill", literal.value());
+	let path = format!("assets/{}", asset_path);
+
+	if !std::path::Path::new(&path).exists() {
+		return TokenStream::from(quote! {
+			compile_error!("No skill with that name found in `assets/skills/`")
+		});
+	}
+
+	TokenStream::from(quote! {
+		#asset_path
+	})
+}

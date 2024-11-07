@@ -104,6 +104,28 @@ pub(crate) enum LoadError {
 	ParseObject(SerdeJsonError),
 }
 
+impl Display for LoadError {
+	fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+		match self {
+			LoadError::IO(err) => write!(f, "Failed to read asset file: {}", err),
+			LoadError::ParseChars(err) => {
+				write!(f, "Invalid character encoding in asset file: {}", err)
+			}
+			LoadError::ParseObject(err) => write!(f, "Failed to parse asset data: {}", err),
+		}
+	}
+}
+
+impl Error for LoadError {
+	fn source(&self) -> Option<&(dyn Error + 'static)> {
+		match self {
+			LoadError::IO(err) => Some(err),
+			LoadError::ParseChars(err) => Some(err),
+			LoadError::ParseObject(err) => Some(err),
+		}
+	}
+}
+
 #[derive(Debug, TypePath)]
 pub(crate) enum ReadError {
 	IO(IOError),

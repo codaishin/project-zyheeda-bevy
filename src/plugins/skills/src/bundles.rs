@@ -1,6 +1,6 @@
 use crate::{
 	components::{
-		combo_node::ComboNode,
+		combos::Combos,
 		combos_time_out::CombosTimeOut,
 		queue::Queue,
 		skill_executer::SkillExecuter,
@@ -8,7 +8,7 @@ use crate::{
 		slots::Slots,
 	},
 	item::SkillItem,
-	skills::{RunSkillBehavior, SkillId},
+	skills::RunSkillBehavior,
 	slot_key::SlotKey,
 };
 use bevy::prelude::*;
@@ -17,7 +17,7 @@ use std::collections::HashMap;
 
 #[derive(Bundle)]
 pub struct ComboBundle {
-	combos: ComboNode<SkillId>,
+	combos: Combos,
 	timeout: CombosTimeOut,
 }
 
@@ -28,26 +28,16 @@ impl ComboBundle {
 			timeout,
 		}
 	}
-
-	pub fn with_predefined_combos<const N: usize>(
-		mut self,
-		combos: [(SlotKey, (SkillId, ComboNode<SkillId>)); N],
-	) -> Self {
-		self.combos = ComboNode::new(combos);
-		self
-	}
 }
 
 #[derive(Bundle)]
 pub struct Loadout {
-	slot_definition: Slots<SkillId>,
+	slot_definition: Slots,
 	skill_execution: ExecutionBundle,
 }
 
 impl Loadout {
-	pub fn new<const N: usize>(
-		slots_definitions: [(SlotKey, Option<SkillItem<SkillId>>); N],
-	) -> Self {
+	pub fn new<const N: usize>(slots_definitions: [(SlotKey, Option<SkillItem>); N]) -> Self {
 		Self {
 			slot_definition: Slots(HashMap::from(slots_definitions)),
 			skill_execution: default(),

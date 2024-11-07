@@ -58,10 +58,6 @@ pub trait IsTimedOut {
 	fn is_timed_out(&self) -> bool;
 }
 
-pub trait TryMap<TIn, TOut, TResult> {
-	fn try_map(&self, map_fn: impl FnMut(&TIn) -> Option<TOut>) -> TResult;
-}
-
 pub trait PeekNext<TNext> {
 	fn peek_next(&self, trigger: &SlotKey, slots: &Slots) -> Option<TNext>;
 }

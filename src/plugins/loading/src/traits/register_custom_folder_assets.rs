@@ -10,8 +10,8 @@ use serde::Deserialize;
 use std::fmt::Debug;
 
 pub trait RegisterCustomFolderAssets {
-	fn register_custom_folder_assets<TSkill, TDto>(&mut self) -> &mut Self
+	fn register_custom_folder_assets<TAsset, TDto>(&mut self) -> &mut Self
 	where
-		TSkill: Asset + AssetFolderPath + LoadFrom<TDto> + Clone + Debug,
+		TAsset: Asset + AssetFolderPath + LoadFrom<TDto> + Clone + Debug,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + Sync + Send + 'static;
 }
