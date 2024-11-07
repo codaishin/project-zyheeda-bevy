@@ -54,8 +54,10 @@ impl<TKey> RegisterItemView<TKey> for App {
 					.system(),
 				VisualizeCommands::<TView, TKey>::apply
 					.pipe(log_many)
-					.run_if(not(is_processing::<AssetLoadProgress>)),
-			),
+					.run_if(not(is_processing::<AssetLoadProgress>))
+					.run_if(not(is_processing::<DependencyResolveProgress>)),
+			)
+				.chain(),
 		)
 	}
 }
