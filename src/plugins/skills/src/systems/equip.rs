@@ -88,7 +88,6 @@ fn slot_warning(slot: SlotKey) -> Error {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::skills::Skill;
 	use common::{
 		components::Side,
 		systems::log::test_tools::{fake_log_error_many_recourse, FakeErrorLogManyResource},
@@ -149,7 +148,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Skill>::new([(SlotKey::BottomHand(Side::Right), None)]),
+				Slots::new([(SlotKey::BottomHand(Side::Right), None)]),
 				_Container {
 					swap_ins: HashMap::from([(
 						SlotKey::BottomHand(Side::Right),
@@ -169,14 +168,14 @@ mod tests {
 		let agent = app.world().entity(agent);
 
 		assert_eq!(
-			Some(&Slots::<Skill>::new([(
+			Some(&Slots::new([(
 				SlotKey::BottomHand(Side::Right),
 				Some(SkillItem {
 					name: "swap in",
 					..default()
 				}),
 			)])),
-			agent.get::<Slots<Skill>>()
+			agent.get::<Slots>()
 		);
 	}
 
@@ -186,7 +185,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Skill>::new([(
+				Slots::new([(
 					SlotKey::BottomHand(Side::Right),
 					Some(SkillItem {
 						name: "swap out",
@@ -224,7 +223,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Skill>::new([(SlotKey::BottomHand(Side::Right), None)]),
+				Slots::new([(SlotKey::BottomHand(Side::Right), None)]),
 				_Container {
 					swap_ins: HashMap::from([(SlotKey::BottomHand(Side::Left), SwapIn(None))]),
 					..default()
@@ -248,7 +247,7 @@ mod tests {
 	fn return_error_when_slot_not_found() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			Slots::<Skill>::new([(SlotKey::BottomHand(Side::Right), None)]),
+			Slots::new([(SlotKey::BottomHand(Side::Right), None)]),
 			_Container {
 				swap_ins: HashMap::from([(SlotKey::BottomHand(Side::Left), SwapIn(None))]),
 				..default()
@@ -275,7 +274,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Skill>::default(),
+				Slots::default(),
 				_Container::default(),
 				_Swaps { is_empty: true },
 			))
@@ -295,7 +294,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Skill>::default(),
+				Slots::default(),
 				_Container::default(),
 				_Swaps { is_empty: false },
 			))

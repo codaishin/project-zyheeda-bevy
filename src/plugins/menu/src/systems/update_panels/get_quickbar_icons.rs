@@ -18,6 +18,7 @@ type PlayerComponents<'a, TQueue, TCombos, TComboTimeout> = (
 pub(crate) fn get_quickbar_icons<TQueue, TCombos, TComboTimeout>(
 	players: Query<PlayerComponents<TQueue, TCombos, TComboTimeout>, With<Player>>,
 	panels: Query<(Entity, &mut QuickbarPanel)>,
+	skills: Res<Assets<Skill>>,
 ) -> Vec<(Entity, Option<Handle<Image>>)>
 where
 	TQueue: Component + Iterate<QueuedSkill>,
@@ -30,7 +31,7 @@ where
 	let get_icon_path = |(entity, panel): (Entity, &QuickbarPanel)| {
 		let icon = if_active_skill_icon(panel, queue)
 			.or_else(if_combo_skill_icon(panel, slots, combos, combo_timeout))
-			.or_else(if_item_skill_icon(panel, slots));
+			.or_else(if_item_skill_icon(panel, slots, &skills));
 
 		(entity, icon)
 	};
@@ -69,12 +70,13 @@ fn if_combo_skill_icon<'a, TCombos: PeekNext<Skill>, TComboTimeout: IsTimedOut>(
 fn if_item_skill_icon<'a>(
 	panel: &'a QuickbarPanel,
 	slots: &'a Slots,
+	skills: &'a Assets<Skill>,
 ) -> impl FnOnce() -> Option<Handle<Image>> + 'a {
 	|| {
 		let slot = slots.0.get(&panel.key)?;
 		let item = slot.as_ref()?;
-
 		let skill = item.content.skill.as_ref()?;
+		let skill = skills.get(skill.id())?;
 
 		skill.icon.clone()
 	}
@@ -86,7 +88,7 @@ mod tests {
 	use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
 	use common::{
 		components::Side,
-		test_tools::utils::SingleThreadedApp,
+		test_tools::utils::{new_handle, SingleThreadedApp},
 		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;
@@ -140,15 +142,19 @@ mod tests {
 		commands.insert_resource(_Result(result.0));
 	}
 
-	fn setup() -> App {
+	fn setup() -> (App, Slots) {
 		let mut app = App::new().single_threaded(Update);
+		let mut skill_assets = Assets::<Skill>::default();
+		let slots = slots(&mut skill_assets);
+
+		app.insert_resource(skill_assets);
 		app.init_resource::<_Result>();
 		app.add_systems(
 			Update,
 			get_quickbar_icons::<_Queue, _Combos, _ComboTimeout>.pipe(store_result),
 		);
 
-		app
+		(app, slots)
 	}
 
 	fn get_handle<TAsset: Asset>(name: &str) -> Handle<TAsset> {
@@ -166,15 +172,20 @@ mod tests {
 		}
 	}
 
-	fn slots() -> Slots {
+	fn slots(skill_assets: &mut Assets<Skill>) -> Slots {
+		let handle = new_handle();
+		let skill = Skill {
+			icon: Some(get_handle("item skill")),
+			..default()
+		};
+
+		skill_assets.insert(handle.id(), skill);
+
 		Slots(HashMap::from([(
 			SlotKey::BottomHand(Side::Right),
 			Some(SkillItem {
 				content: SkillItemContent {
-					skill: Some(Skill {
-						icon: Some(get_handle("item skill")),
-						..default()
-					}),
+					skill: Some(handle),
 					..default()
 				},
 				..default()
@@ -184,10 +195,10 @@ mod tests {
 
 	#[test]
 	fn return_combo_skill_icon_when_no_skill_active_and_combo_not_timed_out() {
-		let mut app = setup();
+		let (mut app, slots) = setup();
 		app.world_mut().spawn((
 			Player,
-			slots(),
+			slots,
 			_Queue::default(),
 			_Combos::new().with_mock(|mock| {
 				mock.expect_peek_next().return_const(Skill {
@@ -213,15 +224,15 @@ mod tests {
 
 	#[test]
 	fn peek_combo_with_correct_arguments() {
-		let mut app = setup();
+		let (mut app, slots) = setup();
 		app.world_mut().spawn((
 			Player,
-			slots(),
+			slots.clone(),
 			_Queue::default(),
 			_Combos::new().with_mock(|mock| {
 				mock.expect_peek_next()
 					.times(1)
-					.with(eq(SlotKey::BottomHand(Side::Left)), eq(slots()))
+					.with(eq(SlotKey::BottomHand(Side::Left)), eq(slots.clone()))
 					.return_const(None);
 			}),
 			_ComboTimeout(false),
@@ -236,10 +247,10 @@ mod tests {
 
 	#[test]
 	fn return_item_skill_icon_when_no_skill_active_and_combo_timed_out() {
-		let mut app = setup();
+		let (mut app, slots) = setup();
 		app.world_mut().spawn((
 			Player,
-			slots(),
+			slots,
 			_Queue::default(),
 			_Combos::new().with_mock(|mock| {
 				mock.expect_peek_next().return_const(Skill {
@@ -265,10 +276,10 @@ mod tests {
 
 	#[test]
 	fn return_item_skill_icon_when_no_skill_active_and_combo_empty_but_not_timed_out() {
-		let mut app = setup();
+		let (mut app, slots) = setup();
 		app.world_mut().spawn((
 			Player,
-			slots(),
+			slots,
 			_Queue::default(),
 			_Combos::new().with_mock(|mock| {
 				mock.expect_peek_next().return_const(None);
@@ -291,10 +302,10 @@ mod tests {
 
 	#[test]
 	fn return_active_skill_icon_when_skill_active() {
-		let mut app = setup();
+		let (mut app, slots) = setup();
 		app.world_mut().spawn((
 			Player,
-			slots(),
+			slots,
 			_Queue(vec![QueuedSkill {
 				skill: Skill {
 					icon: Some(get_handle("active skill")),
@@ -327,10 +338,10 @@ mod tests {
 
 	#[test]
 	fn return_item_skill_icon_when_skill_active_for_other_slot() {
-		let mut app = setup();
+		let (mut app, slots) = setup();
 		app.world_mut().spawn((
 			Player,
-			slots(),
+			slots,
 			_Queue(vec![QueuedSkill {
 				skill: Skill {
 					icon: Some(get_handle("active skill")),
@@ -363,8 +374,8 @@ mod tests {
 
 	#[test]
 	fn return_item_skill_icon_when_no_skill_active_and_no_combo_components_present() {
-		let mut app = setup();
-		app.world_mut().spawn((Player, slots(), _Queue::default()));
+		let (mut app, slots) = setup();
+		app.world_mut().spawn((Player, slots, _Queue::default()));
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {

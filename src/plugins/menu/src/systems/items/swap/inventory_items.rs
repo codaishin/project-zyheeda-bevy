@@ -6,17 +6,12 @@ use common::{
 	components::{Collection, Swap},
 	traits::try_remove_from::TryRemoveFrom,
 };
-use skills::{
-	components::inventory::Inventory,
-	inventory_key::InventoryKey,
-	item::SkillItem,
-	skills::Skill,
-};
+use skills::{components::inventory::Inventory, inventory_key::InventoryKey, item::SkillItem};
 use std::cmp::max;
 
 type ItemsToSwap<'a> = (
 	Entity,
-	&'a mut Inventory<Skill>,
+	&'a mut Inventory,
 	&'a Collection<Swap<InventoryKey, InventoryKey>>,
 );
 
@@ -60,7 +55,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Inventory::<Skill>::new([
+				Inventory::new([
 					Some(SkillItem {
 						name: "item a",
 						..default()
@@ -79,7 +74,7 @@ mod tests {
 		app.update();
 
 		let agent = app.world().entity(agent);
-		let inventory = agent.get::<Inventory<Skill>>().unwrap();
+		let inventory = agent.get::<Inventory>().unwrap();
 
 		assert_eq!(
 			vec![
@@ -103,7 +98,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Inventory::<Skill>::new([Some(SkillItem {
+				Inventory::new([Some(SkillItem {
 					name: "item",
 					..default()
 				})]),
@@ -115,7 +110,7 @@ mod tests {
 		app.update();
 
 		let agent = app.world().entity(agent);
-		let inventory = agent.get::<Inventory<Skill>>().unwrap();
+		let inventory = agent.get::<Inventory>().unwrap();
 
 		assert_eq!(
 			vec![
@@ -136,7 +131,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Inventory::<Skill>::new([Some(SkillItem {
+				Inventory::new([Some(SkillItem {
 					name: "item",
 					..default()
 				})]),
@@ -148,7 +143,7 @@ mod tests {
 		app.update();
 
 		let agent = app.world().entity(agent);
-		let inventory = agent.get::<Inventory<Skill>>().unwrap();
+		let inventory = agent.get::<Inventory>().unwrap();
 
 		assert_eq!(
 			vec![
@@ -168,7 +163,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Inventory::<Skill>::new([]),
+				Inventory::new([]),
 				Collection::<Swap<InventoryKey, InventoryKey>>::new([]),
 			))
 			.id();

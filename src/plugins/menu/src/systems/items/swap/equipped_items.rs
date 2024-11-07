@@ -74,10 +74,7 @@ mod tests {
 	use super::*;
 	use bevy::ecs::system::RunSystemOnce;
 	use common::components::Side;
-	use skills::{
-		item::{item_type::SkillItemType, SkillItem, SkillItemContent},
-		skills::Skill,
-	};
+	use skills::item::{item_type::SkillItemType, SkillItem, SkillItemContent};
 
 	#[derive(Clone)]
 	struct _Mount {
@@ -91,7 +88,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Skill>(
+				Slots(
 					[
 						(
 							SlotKey::BottomHand(Side::Left),
@@ -171,7 +168,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::<Skill>([].into()),
+				Slots([].into()),
 				Collection::<Swap<SlotKey, SlotKey>>([].into()),
 			))
 			.id();
@@ -187,7 +184,7 @@ mod tests {
 	fn log_slot_errors() {
 		let mut app = App::new();
 		app.world_mut().spawn((
-			Slots::<Skill>([].into()),
+			Slots([].into()),
 			Collection(
 				[Swap(
 					SlotKey::BottomHand(Side::Left),

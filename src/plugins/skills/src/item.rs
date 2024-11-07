@@ -9,6 +9,7 @@ use crate::{
 	skills::Skill,
 	slot_key::SlotKey,
 };
+use bevy::prelude::*;
 use common::components::AssetModel;
 use item_type::SkillItemType;
 use items::{
@@ -17,12 +18,12 @@ use items::{
 };
 use player::components::player::Player;
 
-pub type SkillItem<TSkill = Skill> = Item<SkillItemContent<TSkill>>;
+pub type SkillItem = Item<SkillItemContent>;
 
 #[derive(Debug, PartialEq, Default, Clone)]
-pub struct SkillItemContent<TSkill = Skill> {
+pub struct SkillItemContent {
 	pub render: Renderer,
-	pub skill: Option<TSkill>,
+	pub skill: Option<Handle<Skill>>,
 	pub item_type: SkillItemType,
 }
 

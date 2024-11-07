@@ -274,7 +274,7 @@ where
 				Update,
 				(
 					panel_colors::<InventoryPanel>,
-					panel_container_states::<InventoryPanel, InventoryKey, Inventory<Skill>>,
+					panel_container_states::<InventoryPanel, InventoryKey, Inventory>,
 					panel_container_states::<InventoryPanel, SlotKey, Slots>,
 					drag::<Player, InventoryKey>,
 					drag::<Player, SlotKey>,

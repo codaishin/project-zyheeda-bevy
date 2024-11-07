@@ -31,7 +31,6 @@ mod tests {
 	use crate::{
 		components::renderer::{ModelRender, Renderer},
 		item::{SkillItem, SkillItemContent},
-		skills::Skill,
 		slot_key::SlotKey,
 	};
 	use bevy::ecs::system::RunSystemOnce;
@@ -81,7 +80,7 @@ mod tests {
 		};
 		let entity = app
 			.world_mut()
-			.spawn(Slots::<Skill>::new([(
+			.spawn(Slots::new([(
 				SlotKey::BottomHand(Side::Right),
 				Some(item.clone()),
 			)]))
@@ -125,7 +124,7 @@ mod tests {
 		};
 		let entity = app
 			.world_mut()
-			.spawn(Slots::<Skill>::new([
+			.spawn(Slots::new([
 				(SlotKey::BottomHand(Side::Right), Some(item_a.clone())),
 				(SlotKey::TopHand(Side::Right), Some(item_b.clone())),
 			]))
@@ -160,7 +159,7 @@ mod tests {
 		};
 		let entity = app
 			.world_mut()
-			.spawn(Slots::<Skill>::new([(
+			.spawn(Slots::new([(
 				SlotKey::BottomHand(Side::Right),
 				Some(item.clone()),
 			)]))
@@ -182,7 +181,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Slots::<Skill>::new([(
+			.spawn(Slots::new([(
 				SlotKey::BottomHand(Side::Right),
 				Some(SkillItem {
 					content: SkillItemContent {
@@ -211,7 +210,7 @@ mod tests {
 			},
 			..default()
 		};
-		*slots = Slots::<Skill>::new([(SlotKey::TopHand(Side::Right), Some(item.clone()))]);
+		*slots = Slots::new([(SlotKey::TopHand(Side::Right), Some(item.clone()))]);
 		app.update();
 
 		let entity = app.world().entity(entity);
