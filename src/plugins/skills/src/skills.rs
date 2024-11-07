@@ -21,13 +21,11 @@ use bevy::prelude::*;
 use common::{resources::ColliderInfo, traits::load_asset::Path};
 use lifetime::LifeTimeDefinition;
 use loading::traits::asset_folder::AssetFolderPath;
-use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result},
 	time::Duration,
 };
-use uuid::Uuid;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct SkillAnimation {
@@ -45,12 +43,8 @@ pub enum Animate<TAnimation> {
 	Some(TAnimation),
 }
 
-#[derive(PartialEq, Debug, Default, Clone, Copy, Serialize, Deserialize)]
-pub struct SkillId(pub Uuid);
-
 #[derive(PartialEq, Debug, Default, Clone, TypePath, Asset)]
 pub struct Skill {
-	pub id: SkillId,
 	pub name: String,
 	pub cast_time: Duration,
 	pub animate: Animate<SkillAnimation>,

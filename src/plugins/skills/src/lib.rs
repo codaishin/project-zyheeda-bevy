@@ -28,7 +28,6 @@ use common::{
 	traits::try_insert_on::TryInsertOn,
 };
 use components::{
-	combo_node::ComboNode,
 	combos::Combos,
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
@@ -46,9 +45,10 @@ use inventory_key::InventoryKey;
 use item::{item_type::SkillItemType, SkillItem, SkillItemContent};
 use items::RegisterItemView;
 use loading::traits::register_custom_folder_assets::RegisterCustomFolderAssets;
+use macros::skill_asset;
 use player::components::player::Player;
 use shaders::materials::essence_material::EssenceMaterial;
-use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill, SkillId};
+use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill};
 use slot_key::SlotKey;
 use std::time::Duration;
 use systems::{
@@ -64,10 +64,8 @@ use systems::{
 		trigger_primed::trigger_primed_mouse_context,
 	},
 	update_skill_combos::update_skill_combos,
-	uuid_to_skill::uuid_to_skill,
 	visualize_slot_items::visualize_slot_items,
 };
-use uuid::uuid;
 
 pub struct SkillsPlugin<TState> {
 	pub play: TState,
@@ -81,21 +79,10 @@ where
 		app.register_custom_folder_assets::<Skill, SkillData>();
 	}
 
-	fn inventory(&self, app: &mut App) {
-		app.add_systems(
-			PreUpdate,
-			uuid_to_skill::<Inventory<SkillId>, Inventory<Skill>>,
-		);
-	}
-
 	fn skill_slot_load(&self, app: &mut App) {
 		app.add_systems(
 			PreUpdate,
 			SkillSpawners::track_in_self_and_children::<Name>().system(),
-		)
-		.add_systems(
-			PreUpdate,
-			uuid_to_skill::<Slots<SkillId>, Slots>.run_if(in_state(self.play)),
 		)
 		.add_systems(Update, Self::set_player_items)
 		.register_item_view_for::<Player, HandSlots<Player>>()
@@ -156,26 +143,27 @@ where
 			);
 	}
 
-	fn skill_combo_load(&self, app: &mut App) {
-		app.add_systems(PreUpdate, uuid_to_skill::<ComboNode<SkillId>, Combos>);
-	}
-
-	fn set_player_items(mut commands: Commands, players: Query<Entity, Added<Player>>) {
+	fn set_player_items(
+		mut commands: Commands,
+		players: Query<Entity, Added<Player>>,
+		asset_server: Res<AssetServer>,
+	) {
 		let Ok(player) = players.get_single() else {
 			return;
 		};
+		let asset_server = asset_server.as_ref();
 
 		commands.try_insert_on(
 			player,
 			(
-				Self::get_inventory(),
-				Self::get_loadout(),
+				Self::get_inventory(asset_server),
+				Self::get_loadout(asset_server),
 				Self::get_combos(),
 			),
 		);
 	}
 
-	fn get_loadout() -> Loadout {
+	fn get_loadout(asset_server: &AssetServer) -> Loadout {
 		let force_essence_material = EssenceMaterial {
 			texture_color: CYAN_100.into(),
 			fill_color: CYAN_200.into(),
@@ -193,7 +181,7 @@ where
 							model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
 							essence: EssenceRender::StandardMaterial,
 						},
-						skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+						skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
 						item_type: SkillItemType::Pistol,
 					},
 				}),
@@ -207,7 +195,7 @@ where
 							model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
 							essence: EssenceRender::StandardMaterial,
 						},
-						skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+						skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
 						item_type: SkillItemType::Pistol,
 					},
 				}),
@@ -221,7 +209,7 @@ where
 							model: ModelRender::None,
 							essence: EssenceRender::Material(force_essence_material.clone()),
 						},
-						skill: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
+						skill: Some(asset_server.load(skill_asset!("force_shield"))),
 						item_type: SkillItemType::ForceEssence,
 					},
 				}),
@@ -235,7 +223,7 @@ where
 							model: ModelRender::None,
 							essence: EssenceRender::Material(force_essence_material.clone()),
 						},
-						skill: Some(SkillId(uuid!("a27de679-0fab-4e21-b4f0-b5a6cddc6aba"))),
+						skill: Some(asset_server.load(skill_asset!("force_shield"))),
 						item_type: SkillItemType::ForceEssence,
 					},
 				}),
@@ -243,7 +231,7 @@ where
 		])
 	}
 
-	fn get_inventory() -> Inventory<SkillId> {
+	fn get_inventory(asset_server: &AssetServer) -> Inventory<Handle<Skill>> {
 		Inventory::new([
 			Some(SkillItem {
 				name: "Plasma Pistol C",
@@ -252,7 +240,7 @@ where
 						model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
 						essence: EssenceRender::StandardMaterial,
 					},
-					skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+					skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
 					item_type: SkillItemType::Pistol,
 				},
 			}),
@@ -263,7 +251,7 @@ where
 						model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
 						essence: EssenceRender::StandardMaterial,
 					},
-					skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+					skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
 					item_type: SkillItemType::Pistol,
 				},
 			}),
@@ -274,7 +262,7 @@ where
 						model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
 						essence: EssenceRender::StandardMaterial,
 					},
-					skill: Some(SkillId(uuid!("b2d5b9cb-b09d-42d4-a0cc-556cb118ef2e"))),
+					skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
 					item_type: SkillItemType::Pistol,
 				},
 			}),
@@ -283,9 +271,8 @@ where
 
 	fn get_combos() -> ComboBundle {
 		let timeout = CombosTimeOut::after(Duration::from_secs(2));
-		let combos = [];
 
-		ComboBundle::with_timeout(timeout).with_predefined_combos(combos)
+		ComboBundle::with_timeout(timeout)
 	}
 
 	fn item_essence_render(&self, app: &mut App) {
@@ -299,8 +286,6 @@ where
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);
-		self.inventory(app);
-		self.skill_combo_load(app);
 		self.skill_slot_load(app);
 		self.skill_execution(app);
 

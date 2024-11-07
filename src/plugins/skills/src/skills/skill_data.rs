@@ -2,7 +2,7 @@ pub(crate) mod animate_data;
 pub(crate) mod run_skill_behavior_data;
 pub(crate) mod skill_animation_data;
 
-use super::{Skill, SkillId};
+use super::Skill;
 use crate::SkillItemType;
 use animate_data::AnimateData;
 use common::{
@@ -16,7 +16,6 @@ use std::{collections::HashSet, time::Duration};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct SkillData {
-	id: SkillId,
 	name: String,
 	cast_time: DurationData,
 	animate: AnimateData,
@@ -37,7 +36,6 @@ impl LoadFrom<SkillData> for Skill {
 		asset_server: &mut TLoadAsset,
 	) -> Self {
 		Self {
-			id: skill_data.id,
 			name: skill_data.name,
 			cast_time: Duration::from(skill_data.cast_time),
 			animate: skill_data.animate.into(),
