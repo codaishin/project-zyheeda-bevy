@@ -40,9 +40,21 @@ fn compatible_skills<TEquipment: GetRef<SlotKey, SkillItem>, TLayout: Sync + Sen
 ) -> Option<Vec<SkillButton<DropdownItem<TLayout>>>> {
 	let key = command.key_path.last()?;
 	let item = slots.get(key)?;
+
+	let mut seen = Vec::new();
 	let skills = skills
 		.iter()
-		.filter(|(_, skill)| skill.is_usable_with.contains(&item.content.item_type))
+		.filter(|(_, skill)| {
+			if !skill.is_usable_with.contains(&item.content.item_type) {
+				return false;
+			}
+			if seen.contains(skill) {
+				return false;
+			}
+
+			seen.push(skill);
+			true
+		})
 		.map(|(_, skill)| {
 			SkillButton::<DropdownItem<TLayout>>::new(skill.clone(), command.key_path.clone())
 		})
@@ -104,6 +116,86 @@ mod tests {
 				name: "skill a".to_owned(),
 				is_usable_with: HashSet::from([SkillItemType::Pistol]),
 				icon: Some(image_a.clone()),
+				..default()
+			},
+			Skill {
+				name: "skill b".to_owned(),
+				is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
+				icon: Some(image_b.clone()),
+				..default()
+			},
+		];
+		let mut app = setup(skills);
+
+		app.world_mut().spawn((
+			Player,
+			_Equipment(HashMap::from([(
+				SlotKey::BottomHand(Side::Right),
+				SkillItem {
+					content: SkillItemContent {
+						item_type: SkillItemType::Pistol,
+						..default()
+					},
+					..default()
+				},
+			)])),
+		));
+		let dropdown = app
+			.world_mut()
+			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(
+				vec![SlotKey::BottomHand(Side::Right)],
+			))
+			.id();
+
+		app.update();
+
+		let dropdown = app.world().entity(dropdown);
+
+		assert_eq!(
+			Some(&Dropdown {
+				items: vec![
+					SkillButton::<DropdownItem<_Layout>>::new(
+						Skill {
+							name: "skill a".to_owned(),
+							is_usable_with: HashSet::from([SkillItemType::Pistol]),
+							icon: Some(image_a.clone()),
+							..default()
+						},
+						vec![SlotKey::BottomHand(Side::Right)],
+					),
+					SkillButton::<DropdownItem<_Layout>>::new(
+						Skill {
+							name: "skill b".to_owned(),
+							is_usable_with: HashSet::from([
+								SkillItemType::Pistol,
+								SkillItemType::Bracer
+							]),
+							icon: Some(image_b.clone()),
+							..default()
+						},
+						vec![SlotKey::BottomHand(Side::Right)],
+					)
+				]
+			}),
+			dropdown.get::<Dropdown<SkillButton<DropdownItem<_Layout>>>>()
+		)
+	}
+
+	#[test]
+	fn list_unique_skills() {
+		let image_a = new_handle();
+		let image_b = new_handle();
+		let skills = [
+			Skill {
+				name: "skill a".to_owned(),
+				is_usable_with: HashSet::from([SkillItemType::Pistol]),
+				icon: Some(image_a.clone()),
+				..default()
+			},
+			Skill {
+				name: "skill b".to_owned(),
+				is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
+				icon: Some(image_b.clone()),
 				..default()
 			},
 			Skill {
