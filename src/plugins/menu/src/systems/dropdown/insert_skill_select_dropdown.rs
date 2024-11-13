@@ -13,12 +13,13 @@ use player::components::player::Player;
 use skills::{item::SkillItem, skills::Skill, slot_key::SlotKey};
 
 pub(crate) fn insert_skill_select_dropdown<
-	TEquipment: GetRef<SlotKey, SkillItem> + Component,
+	TEquipment: GetRef<SlotKey, Handle<SkillItem>> + Component,
 	TLayout: Sync + Send + 'static,
 >(
 	mut commands: Commands,
 	dropdown_commands: Query<(Entity, &SkillSelectDropdownInsertCommand<SlotKey, TLayout>)>,
 	slots: Query<&TEquipment, With<Player>>,
+	items: Res<Assets<SkillItem>>,
 	skills: Res<Assets<Skill>>,
 ) {
 	let Ok(slots) = slots.get_single() else {
@@ -26,20 +27,24 @@ pub(crate) fn insert_skill_select_dropdown<
 	};
 
 	for (entity, command) in &dropdown_commands {
-		if let Some(items) = compatible_skills(command, slots, &skills) {
+		if let Some(items) = compatible_skills(command, slots, &items, &skills) {
 			commands.try_insert_on(entity, Dropdown { items });
 		}
 		commands.try_remove_from::<SkillSelectDropdownInsertCommand<SlotKey, TLayout>>(entity);
 	}
 }
 
-fn compatible_skills<TEquipment: GetRef<SlotKey, SkillItem>, TLayout: Sync + Send + 'static>(
+fn compatible_skills<
+	TEquipment: GetRef<SlotKey, Handle<SkillItem>>,
+	TLayout: Sync + Send + 'static,
+>(
 	command: &SkillSelectDropdownInsertCommand<SlotKey, TLayout>,
 	slots: &TEquipment,
-	skills: &Res<Assets<Skill>>,
+	items: &Assets<SkillItem>,
+	skills: &Assets<Skill>,
 ) -> Option<Vec<SkillButton<DropdownItem<TLayout>>>> {
 	let key = command.key_path.last()?;
-	let item = slots.get(key)?;
+	let item = slots.get(key).and_then(|item| items.get(item))?;
 
 	let mut seen = Vec::new();
 	let skills = skills
@@ -82,21 +87,44 @@ mod tests {
 	}
 
 	#[derive(Component)]
-	struct _Equipment(HashMap<SlotKey, SkillItem>);
+	struct _Equipment(HashMap<SlotKey, Handle<SkillItem>>);
 
-	impl GetRef<SlotKey, SkillItem> for _Equipment {
-		fn get(&self, key: &SlotKey) -> Option<&SkillItem> {
+	impl GetRef<SlotKey, Handle<SkillItem>> for _Equipment {
+		fn get(&self, key: &SlotKey) -> Option<&Handle<SkillItem>> {
 			self.0.get(key)
 		}
 	}
 
-	fn setup<const N: usize>(skills: [Skill; N]) -> App {
-		let mut app = App::new().single_threaded(Update);
-		let mut skill_assets = Assets::<Skill>::default();
-		let _ = skills.map(|skill| skill_assets.add(skill));
+	fn setup_skills_and_equipment<const S: usize, const E: usize>(
+		skills: [Skill; S],
+		equipment: [(SlotKey, SkillItem); E],
+	) -> (_Equipment, Assets<SkillItem>, Assets<Skill>) {
+		let mut item_assets = Assets::default();
+		let mut skill_assets = Assets::default();
 
-		app.insert_resource(skill_assets);
+		for skill in skills {
+			skill_assets.add(skill);
+		}
+
+		let equipment = equipment
+			.into_iter()
+			.map(|(key, item)| (key, item_assets.add(item)))
+			.collect();
+
+		(_Equipment(equipment), item_assets, skill_assets)
+	}
+
+	fn setup_app<const S: usize, const E: usize>(
+		agent: impl Component,
+		skills: [Skill; S],
+		equipment: [(SlotKey, SkillItem); E],
+	) -> App {
+		let (equipment, items, skills) = setup_skills_and_equipment(skills, equipment);
+		let mut app = App::new().single_threaded(Update);
+		app.insert_resource(items);
+		app.insert_resource(skills);
 		app.add_systems(Update, insert_skill_select_dropdown::<_Equipment, _Layout>);
+		app.world_mut().spawn((agent, equipment));
 
 		app
 	}
@@ -111,25 +139,23 @@ mod tests {
 	fn list_compatible_skills() {
 		let image_a = new_handle();
 		let image_b = new_handle();
-		let skills = [
-			Skill {
-				name: "skill a".to_owned(),
-				is_usable_with: HashSet::from([SkillItemType::Pistol]),
-				icon: Some(image_a.clone()),
-				..default()
-			},
-			Skill {
-				name: "skill b".to_owned(),
-				is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
-				icon: Some(image_b.clone()),
-				..default()
-			},
-		];
-		let mut app = setup(skills);
-
-		app.world_mut().spawn((
+		let mut app = setup_app(
 			Player,
-			_Equipment(HashMap::from([(
+			[
+				Skill {
+					name: "skill a".to_owned(),
+					is_usable_with: HashSet::from([SkillItemType::Pistol]),
+					icon: Some(image_a.clone()),
+					..default()
+				},
+				Skill {
+					name: "skill b".to_owned(),
+					is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
+					icon: Some(image_b.clone()),
+					..default()
+				},
+			],
+			[(
 				SlotKey::BottomHand(Side::Right),
 				SkillItem {
 					content: SkillItemContent {
@@ -138,8 +164,8 @@ mod tests {
 					},
 					..default()
 				},
-			)])),
-		));
+			)],
+		);
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(
@@ -185,31 +211,29 @@ mod tests {
 	fn list_unique_skills() {
 		let image_a = new_handle();
 		let image_b = new_handle();
-		let skills = [
-			Skill {
-				name: "skill a".to_owned(),
-				is_usable_with: HashSet::from([SkillItemType::Pistol]),
-				icon: Some(image_a.clone()),
-				..default()
-			},
-			Skill {
-				name: "skill b".to_owned(),
-				is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
-				icon: Some(image_b.clone()),
-				..default()
-			},
-			Skill {
-				name: "skill b".to_owned(),
-				is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
-				icon: Some(image_b.clone()),
-				..default()
-			},
-		];
-		let mut app = setup(skills);
-
-		app.world_mut().spawn((
+		let mut app = setup_app(
 			Player,
-			_Equipment(HashMap::from([(
+			[
+				Skill {
+					name: "skill a".to_owned(),
+					is_usable_with: HashSet::from([SkillItemType::Pistol]),
+					icon: Some(image_a.clone()),
+					..default()
+				},
+				Skill {
+					name: "skill b".to_owned(),
+					is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
+					icon: Some(image_b.clone()),
+					..default()
+				},
+				Skill {
+					name: "skill b".to_owned(),
+					is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
+					icon: Some(image_b.clone()),
+					..default()
+				},
+			],
+			[(
 				SlotKey::BottomHand(Side::Right),
 				SkillItem {
 					content: SkillItemContent {
@@ -218,8 +242,8 @@ mod tests {
 					},
 					..default()
 				},
-			)])),
-		));
+			)],
+		);
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(
@@ -268,25 +292,23 @@ mod tests {
 
 		let image_a = new_handle();
 		let image_b = new_handle();
-		let skills = [
-			Skill {
-				name: "skill a".to_owned(),
-				is_usable_with: HashSet::from([SkillItemType::Pistol]),
-				icon: Some(image_a.clone()),
-				..default()
-			},
-			Skill {
-				name: "skill b".to_owned(),
-				is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
-				icon: Some(image_b.clone()),
-				..default()
-			},
-		];
-		let mut app = setup(skills.clone());
-
-		app.world_mut().spawn((
+		let mut app = setup_app(
 			_NonPlayer,
-			_Equipment(HashMap::from([(
+			[
+				Skill {
+					name: "skill a".to_owned(),
+					is_usable_with: HashSet::from([SkillItemType::Pistol]),
+					icon: Some(image_a.clone()),
+					..default()
+				},
+				Skill {
+					name: "skill b".to_owned(),
+					is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
+					icon: Some(image_b.clone()),
+					..default()
+				},
+			],
+			[(
 				SlotKey::BottomHand(Side::Right),
 				SkillItem {
 					content: SkillItemContent {
@@ -295,8 +317,8 @@ mod tests {
 					},
 					..default()
 				},
-			)])),
-		));
+			)],
+		);
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(
@@ -316,11 +338,10 @@ mod tests {
 
 	#[test]
 	fn remove_command() {
-		let mut app = setup([]);
-
-		app.world_mut().spawn((
+		let mut app = setup_app(
 			Player,
-			_Equipment(HashMap::from([(
+			[],
+			[(
 				SlotKey::BottomHand(Side::Right),
 				SkillItem {
 					content: SkillItemContent {
@@ -329,8 +350,8 @@ mod tests {
 					},
 					..default()
 				},
-			)])),
-		));
+			)],
+		);
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(
@@ -350,10 +371,7 @@ mod tests {
 
 	#[test]
 	fn remove_command_when_not_item() {
-		let mut app = setup([]);
-
-		app.world_mut()
-			.spawn((Player, _Equipment(HashMap::from([]))));
+		let mut app = setup_app(Player, [], []);
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(

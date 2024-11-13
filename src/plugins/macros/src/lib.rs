@@ -131,3 +131,25 @@ pub fn skill_asset(input: TokenStream) -> TokenStream {
 		#asset_path
 	})
 }
+
+#[proc_macro]
+pub fn item_asset(input: TokenStream) -> TokenStream {
+	let Ok(syn::Lit::Str(literal)) = syn::parse::<syn::Lit>(input.clone()) else {
+		return TokenStream::from(quote! {
+			compile_error!("Only string literals are accepted")
+		});
+	};
+
+	let asset_path = format!("items/{}.item", literal.value());
+	let path = format!("assets/{}", asset_path);
+
+	if !std::path::Path::new(&path).exists() {
+		return TokenStream::from(quote! {
+			compile_error!("No item with that name found in `assets/items/`")
+		});
+	}
+
+	TokenStream::from(quote! {
+		#asset_path
+	})
+}

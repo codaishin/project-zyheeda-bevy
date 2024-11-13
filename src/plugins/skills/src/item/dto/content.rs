@@ -1,4 +1,4 @@
-use super::material::MaterialDto;
+use super::essence::EssenceDto;
 use crate::{
 	components::renderer::{EssenceRender, ModelRender, Renderer},
 	item::{item_type::SkillItemType, SkillItemContent},
@@ -13,7 +13,7 @@ type SkillPath = String;
 #[derive(Debug, PartialEq, Serialize, Deserialize, TypePath)]
 pub(crate) struct SkillItemContentDto {
 	model: ModelRender,
-	material: MaterialDto,
+	essence: EssenceDto,
 	skill: Option<SkillPath>,
 	item_type: SkillItemType,
 }
@@ -26,7 +26,7 @@ impl LoadFrom<SkillItemContentDto> for SkillItemContent {
 		Self {
 			render: Renderer {
 				model: from.model,
-				essence: EssenceRender::from(from.material),
+				essence: EssenceRender::from(from.essence),
 			},
 			skill: from.skill.map(|path| asset_server.load_asset(path)),
 			item_type: from.item_type,

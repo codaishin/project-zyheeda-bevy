@@ -1,7 +1,4 @@
-use bevy::{
-	ecs::system::{Commands, Query},
-	prelude::{Entity, Mut},
-};
+use bevy::prelude::*;
 use common::{
 	components::{Collection, Swap},
 	traits::try_remove_from::TryRemoveFrom,
@@ -26,14 +23,14 @@ pub fn swap_inventory_items(mut commands: Commands, mut items_to_swap: Query<Ite
 }
 
 fn do_swap(
-	inventory: &mut Mut<Collection<Option<SkillItem>>>,
+	inventory: &mut Mut<Collection<Option<Handle<SkillItem>>>>,
 	swap: &Swap<InventoryKey, InventoryKey>,
 ) {
 	fill_to(&mut inventory.0, max(swap.0 .0, swap.1 .0));
 	inventory.0.swap(swap.0 .0, swap.1 .0);
 }
 
-fn fill_to(inventory: &mut Vec<Option<SkillItem>>, index: usize) {
+fn fill_to(inventory: &mut Vec<Option<Handle<SkillItem>>>, index: usize) {
 	if index < inventory.len() {
 		return;
 	}
@@ -44,85 +41,77 @@ fn fill_to(inventory: &mut Vec<Option<SkillItem>>, index: usize) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::app::{App, Update};
+	use bevy::ecs::system::RunSystemOnce;
+	use common::test_tools::utils::new_handle;
+
+	fn setup() -> App {
+		App::new()
+	}
 
 	#[test]
 	fn swap_items() {
-		let mut app = App::new();
+		let item_a = new_handle();
+		let item_b = new_handle();
+		let mut app = setup();
 		let agent = app
 			.world_mut()
 			.spawn((
-				Inventory::new([
-					Some(SkillItem::named("item a")),
-					None,
-					Some(SkillItem::named("item b")),
-				]),
+				Inventory::new([Some(item_a.clone()), None, Some(item_b.clone())]),
 				Collection::new([Swap(InventoryKey(0), InventoryKey(2))]),
 			))
 			.id();
 
-		app.add_systems(Update, swap_inventory_items);
-		app.update();
-
-		let agent = app.world().entity(agent);
-		let inventory = agent.get::<Inventory>().unwrap();
+		app.world_mut().run_system_once(swap_inventory_items);
 
 		assert_eq!(
-			vec![
-				Some(SkillItem::named("item b")),
-				None,
-				Some(SkillItem::named("item a")),
-			],
-			inventory.0
-		)
+			Some(&Inventory::new([Some(item_b), None, Some(item_a)])),
+			app.world().entity(agent).get::<Inventory>()
+		);
 	}
 
 	#[test]
 	fn swap_items_out_or_range() {
-		let mut app = App::new();
+		let item = new_handle();
+		let mut app = setup();
 		let agent = app
 			.world_mut()
 			.spawn((
-				Inventory::new([Some(SkillItem::named("item"))]),
+				Inventory::new([Some(item.clone())]),
 				Collection::new([Swap(InventoryKey(0), InventoryKey(2))]),
 			))
 			.id();
 
-		app.add_systems(Update, swap_inventory_items);
-		app.update();
-
-		let agent = app.world().entity(agent);
-		let inventory = agent.get::<Inventory>().unwrap();
+		app.world_mut().run_system_once(swap_inventory_items);
 
 		assert_eq!(
-			vec![None, None, Some(SkillItem::named("item"))],
-			inventory.0
-		)
+			Some(&Inventory::new([None, None, Some(item)])),
+			app.world().entity(agent).get::<Inventory>()
+		);
 	}
 
 	#[test]
 	fn swap_items_index_and_len_are_same() {
-		let mut app = App::new();
+		let item = new_handle();
+		let mut app = setup();
 		let agent = app
 			.world_mut()
 			.spawn((
-				Inventory::new([Some(SkillItem::named("item"))]),
+				Inventory::new([Some(item.clone())]),
 				Collection::new([Swap(InventoryKey(0), InventoryKey(1))]),
 			))
 			.id();
 
-		app.add_systems(Update, swap_inventory_items);
-		app.update();
+		app.world_mut().run_system_once(swap_inventory_items);
 
-		let agent = app.world().entity(agent);
-		let inventory = agent.get::<Inventory>().unwrap();
-
-		assert_eq!(vec![None, Some(SkillItem::named("item"))], inventory.0)
+		assert_eq!(
+			Some(&Inventory::new([None, Some(item)])),
+			app.world().entity(agent).get::<Inventory>()
+		);
 	}
 
 	#[test]
 	fn remove_swap_collection() {
-		let mut app = App::new();
+		let mut app = setup();
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -131,8 +120,7 @@ mod tests {
 			))
 			.id();
 
-		app.add_systems(Update, swap_inventory_items);
-		app.update();
+		app.world_mut().run_system_once(swap_inventory_items);
 
 		let agent = app.world().entity(agent);
 

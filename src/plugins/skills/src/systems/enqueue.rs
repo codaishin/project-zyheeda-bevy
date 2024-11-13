@@ -1,5 +1,6 @@
 use super::get_inputs::Input;
 use crate::{
+	item::SkillItem,
 	skills::Skill,
 	slot_key::SlotKey,
 	traits::{Enqueue, IterMut, Matches, Prime},
@@ -11,46 +12,58 @@ use bevy::{
 use common::traits::accessors::get::GetRef;
 
 pub(crate) fn enqueue<
-	TSlots: GetRef<SlotKey, Handle<Skill>> + Component,
+	TSlots: GetRef<SlotKey, Handle<SkillItem>> + Component,
 	TQueue: Enqueue<(Skill, SlotKey)> + IterMut<TQueuedSkill> + Component,
 	TQueuedSkill: Prime + Matches<SlotKey>,
 >(
 	input: In<Input>,
 	mut agents: Query<(&TSlots, &mut TQueue)>,
+	items: Res<Assets<SkillItem>>,
 	skills: Res<Assets<Skill>>,
 ) {
 	for (slots, mut queue) in &mut agents {
 		let queue = queue.as_mut();
-		enqueue_new_skills(&input, queue, slots, &skills);
+		enqueue_new_skills(&input, queue, slots, &items, &skills);
 		prime_skills(&input, queue);
 	}
 }
 
-fn enqueue_new_skills<TSlots: GetRef<SlotKey, Handle<Skill>>, TQueue: Enqueue<(Skill, SlotKey)>>(
+fn enqueue_new_skills<
+	TSlots: GetRef<SlotKey, Handle<SkillItem>>,
+	TQueue: Enqueue<(Skill, SlotKey)>,
+>(
 	input: &In<Input>,
 	queue: &mut TQueue,
 	slots: &TSlots,
+	items: &Assets<SkillItem>,
 	skills: &Assets<Skill>,
 ) {
 	for key in input.just_pressed.iter() {
-		enqueue_new_skill(key, queue, slots, skills);
+		enqueue_new_skill(key, queue, slots, items, skills);
 	}
 }
 
-fn enqueue_new_skill<TSlots: GetRef<SlotKey, Handle<Skill>>, TQueue: Enqueue<(Skill, SlotKey)>>(
+fn enqueue_new_skill<
+	TSlots: GetRef<SlotKey, Handle<SkillItem>>,
+	TQueue: Enqueue<(Skill, SlotKey)>,
+>(
 	key: &SlotKey,
 	queue: &mut TQueue,
 	slots: &TSlots,
+	items: &Assets<SkillItem>,
 	skills: &Assets<Skill>,
 ) {
-	let Some(skill) = slots.get(key).cloned() else {
-		return;
-	};
-	let Some(skill) = skills.get(&skill).cloned() else {
+	let skill = slots
+		.get(key)
+		.and_then(|item_handle| items.get(item_handle))
+		.and_then(|item| item.content.skill.as_ref())
+		.and_then(|skill_handle| skills.get(skill_handle));
+
+	let Some(skill) = skill else {
 		return;
 	};
 
-	queue.enqueue((skill, *key));
+	queue.enqueue((skill.clone(), *key));
 }
 
 fn prime_skills<TQueue: IterMut<TQueuedSkill>, TQueuedSkill: Prime + Matches<SlotKey>>(
@@ -80,6 +93,8 @@ fn get_queued_skill<'a, TQueue: IterMut<TQueuedSkill>, TQueuedSkill: 'a + Matche
 
 #[cfg(test)]
 mod tests {
+	use crate::item::SkillItemContent;
+
 	use super::*;
 	use bevy::{
 		app::{App, Update},
@@ -113,10 +128,10 @@ mod tests {
 	simple_init!(Mock_SkillQueued);
 
 	#[derive(Component, Default)]
-	struct _Skills(HashMap<SlotKey, Handle<Skill>>);
+	struct _Skills(HashMap<SlotKey, Handle<SkillItem>>);
 
-	impl GetRef<SlotKey, Handle<Skill>> for _Skills {
-		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Handle<Skill>> {
+	impl GetRef<SlotKey, Handle<SkillItem>> for _Skills {
+		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Handle<SkillItem>> {
 			self.0.get(key)
 		}
 	}
@@ -142,15 +157,22 @@ mod tests {
 	struct _SkillLoader;
 
 	fn setup<TEnqueue: Enqueue<(Skill, SlotKey)> + IterMut<Mock_SkillQueued> + Component>(
+		items: Vec<(AssetId<SkillItem>, SkillItem)>,
 		skills: Vec<(AssetId<Skill>, Skill)>,
 	) -> App {
 		let mut app = App::new().single_threaded(Update);
+		let mut item_assets = Assets::<SkillItem>::default();
 		let mut skill_assets = Assets::<Skill>::default();
+
+		for (id, item) in items {
+			item_assets.insert(id, item);
+		}
 
 		for (id, skill) in skills {
 			skill_assets.insert(id, skill);
 		}
 
+		app.insert_resource(item_assets);
 		app.insert_resource(skill_assets);
 		app.init_resource::<_Input>();
 
@@ -190,18 +212,28 @@ mod tests {
 			}
 		}
 
-		let handle = new_handle();
-		let mut app = setup::<_Enqueue>(vec![(
-			handle.id(),
-			Skill {
-				name: "my skill".to_owned(),
-				..default()
-			},
-		)]);
+		let item = new_handle();
+		let skill = new_handle();
+		let mut app = setup::<_Enqueue>(
+			vec![(
+				item.id(),
+				SkillItem::default().with_content(SkillItemContent {
+					skill: Some(skill.clone()),
+					..default()
+				}),
+			)],
+			vec![(
+				skill.id(),
+				Skill {
+					name: "my skill".to_owned(),
+					..default()
+				},
+			)],
+		);
 
 		let skills = _Skills(HashMap::from([(
 			SlotKey::BottomHand(Side::Right),
-			handle.clone(),
+			item.clone(),
 		)]));
 		app.world_mut().spawn((
 			skills,
@@ -226,7 +258,7 @@ mod tests {
 
 	#[test]
 	fn prime_skill() {
-		let mut app = setup::<_Enqueue>(vec![]);
+		let mut app = setup::<_Enqueue>(vec![], vec![]);
 		app.world_mut().spawn((
 			_Skills::default(),
 			_Enqueue {
@@ -244,7 +276,7 @@ mod tests {
 
 	#[test]
 	fn prime_skill_matching_with_key() {
-		let mut app = setup::<_Enqueue>(vec![]);
+		let mut app = setup::<_Enqueue>(vec![], vec![]);
 		app.world_mut().spawn((
 			_Skills::default(),
 			_Enqueue {
@@ -272,7 +304,7 @@ mod tests {
 
 	#[test]
 	fn prime_all_in_queue() {
-		let mut app = setup::<_Enqueue>(vec![]);
+		let mut app = setup::<_Enqueue>(vec![], vec![]);
 		app.world_mut().spawn((
 			_Skills::default(),
 			_Enqueue {

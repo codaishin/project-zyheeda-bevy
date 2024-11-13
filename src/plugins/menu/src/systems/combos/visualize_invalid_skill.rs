@@ -2,16 +2,13 @@ use crate::{
 	components::skill_button::{DropdownTrigger, SkillButton},
 	traits::InsertContentOn,
 };
-use bevy::{
-	ecs::system::EntityCommands,
-	prelude::{Added, Commands, Component, Entity, Query, With},
-};
+use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::traits::accessors::get::GetRef;
 use skills::{item::SkillItem, slot_key::SlotKey};
 
 pub(crate) fn visualize_invalid_skill<
 	TAgent: Component,
-	TSlots: Component + GetRef<SlotKey, SkillItem>,
+	TSlots: Component + GetRef<SlotKey, Handle<SkillItem>>,
 	TVisualization: InsertContentOn,
 >(
 	mut commands: Commands,
@@ -20,6 +17,7 @@ pub(crate) fn visualize_invalid_skill<
 		Added<SkillButton<DropdownTrigger>>,
 	>,
 	agents: Query<&TSlots, With<TAgent>>,
+	items: Res<Assets<SkillItem>>,
 ) {
 	let Ok(agent) = agents.get_single() else {
 		return;
@@ -28,17 +26,22 @@ pub(crate) fn visualize_invalid_skill<
 	let visualize = TVisualization::insert_content_on;
 
 	for descriptor in &descriptors {
-		visualize_unusable(&mut commands, descriptor, agent, visualize);
+		visualize_unusable(&mut commands, descriptor, agent, &items, visualize);
 	}
 }
 
-fn visualize_unusable<TSlots: GetRef<SlotKey, SkillItem>>(
+fn visualize_unusable<TSlots: GetRef<SlotKey, Handle<SkillItem>>>(
 	commands: &mut Commands,
 	(entity, descriptor): (Entity, &SkillButton<DropdownTrigger>),
 	agent: &TSlots,
+	items: &Assets<SkillItem>,
 	visualize: fn(&mut EntityCommands),
 ) -> Option<()> {
-	let item = descriptor.key_path.last().and_then(|key| agent.get(key))?;
+	let item = descriptor
+		.key_path
+		.last()
+		.and_then(|key| agent.get(key))
+		.and_then(|item| items.get(item))?;
 
 	if descriptor
 		.skill
@@ -75,16 +78,16 @@ mod tests {
 	struct _Agent;
 
 	#[derive(Component)]
-	struct _Slots(HashMap<SlotKey, SkillItem>);
+	struct _Slots(HashMap<SlotKey, Handle<SkillItem>>);
 
-	impl<const N: usize> From<[(SlotKey, SkillItem); N]> for _Slots {
-		fn from(value: [(SlotKey, SkillItem); N]) -> Self {
+	impl<const N: usize> From<[(SlotKey, Handle<SkillItem>); N]> for _Slots {
+		fn from(value: [(SlotKey, Handle<SkillItem>); N]) -> Self {
 			Self(HashMap::from(value))
 		}
 	}
 
-	impl GetRef<SlotKey, SkillItem> for _Slots {
-		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a SkillItem> {
+	impl GetRef<SlotKey, Handle<SkillItem>> for _Slots {
+		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Handle<SkillItem>> {
 			self.0.get(key)
 		}
 	}
@@ -98,8 +101,26 @@ mod tests {
 		}
 	}
 
-	fn setup() -> App {
+	fn setup_slots<const N: usize>(
+		slots: [(SlotKey, SkillItem); N],
+	) -> (_Slots, Assets<SkillItem>) {
+		let mut items = Assets::default();
+		let slots = slots
+			.into_iter()
+			.map(|(key, item)| (key, items.add(item)))
+			.collect();
+
+		(_Slots(slots), items)
+	}
+
+	fn setup_app_and_slots_on<const N: usize>(
+		agent: impl Component,
+		slots: [(SlotKey, SkillItem); N],
+	) -> App {
+		let (slots, items) = setup_slots(slots);
 		let mut app = App::new().single_threaded(Update);
+		app.insert_resource(items);
+		app.world_mut().spawn((agent, slots));
 		app.add_systems(
 			Update,
 			visualize_invalid_skill::<_Agent, _Slots, _Visualization>,
@@ -110,10 +131,9 @@ mod tests {
 
 	#[test]
 	fn visualize_unusable() {
-		let mut app = setup();
-		app.world_mut().spawn((
+		let mut app = setup_app_and_slots_on(
 			_Agent,
-			_Slots::from([(
+			[(
 				SlotKey::BottomHand(Side::Right),
 				SkillItem {
 					content: SkillItemContent {
@@ -122,8 +142,8 @@ mod tests {
 					},
 					..default()
 				},
-			)]),
-		));
+			)],
+		);
 		let skill = app
 			.world_mut()
 			.spawn(SkillButton::<DropdownTrigger>::new(
@@ -141,16 +161,14 @@ mod tests {
 		app.update();
 
 		let skill = app.world().entity(skill);
-
 		assert_eq!(Some(&_Visualization), skill.get::<_Visualization>())
 	}
 
 	#[test]
 	fn do_not_visualize_usable() {
-		let mut app = setup();
-		app.world_mut().spawn((
+		let mut app = setup_app_and_slots_on(
 			_Agent,
-			_Slots::from([(
+			[(
 				SlotKey::BottomHand(Side::Right),
 				SkillItem {
 					content: SkillItemContent {
@@ -159,8 +177,8 @@ mod tests {
 					},
 					..default()
 				},
-			)]),
-		));
+			)],
+		);
 		let skill = app
 			.world_mut()
 			.spawn(SkillButton::<DropdownTrigger>::new(
@@ -178,50 +196,17 @@ mod tests {
 		app.update();
 
 		let skill = app.world().entity(skill);
-
 		assert_eq!(None, skill.get::<_Visualization>())
 	}
 
 	#[test]
 	fn do_not_visualize_when_no_agents() {
-		let mut app = setup();
-		app.world_mut().spawn((_Slots::from([(
-			SlotKey::BottomHand(Side::Right),
-			SkillItem {
-				content: SkillItemContent {
-					item_type: SkillItemType::Bracer,
-					..default()
-				},
-				..default()
-			},
-		)]),));
-		let skill = app
-			.world_mut()
-			.spawn(SkillButton::<DropdownTrigger>::new(
-				Skill {
-					is_usable_with: HashSet::from([SkillItemType::Pistol]),
-					..default()
-				},
-				vec![
-					SlotKey::BottomHand(Side::Left),
-					SlotKey::BottomHand(Side::Right),
-				],
-			))
-			.id();
+		#[derive(Component)]
+		struct _NonAgent;
 
-		app.update();
-
-		let skill = app.world().entity(skill);
-
-		assert_eq!(None, skill.get::<_Visualization>())
-	}
-
-	#[test]
-	fn do_not_visualize_when_not_added() {
-		let mut app = setup();
-		app.world_mut().spawn((
-			_Agent,
-			_Slots::from([(
+		let mut app = setup_app_and_slots_on(
+			_NonAgent,
+			[(
 				SlotKey::BottomHand(Side::Right),
 				SkillItem {
 					content: SkillItemContent {
@@ -230,8 +215,8 @@ mod tests {
 					},
 					..default()
 				},
-			)]),
-		));
+			)],
+		);
 		let skill = app
 			.world_mut()
 			.spawn(SkillButton::<DropdownTrigger>::new(
@@ -248,12 +233,44 @@ mod tests {
 
 		app.update();
 
-		app.world_mut().entity_mut(skill).remove::<_Visualization>();
+		let skill = app.world().entity(skill);
+		assert_eq!(None, skill.get::<_Visualization>())
+	}
 
+	#[test]
+	fn do_not_visualize_when_not_added() {
+		let mut app = setup_app_and_slots_on(
+			_Agent,
+			[(
+				SlotKey::BottomHand(Side::Right),
+				SkillItem {
+					content: SkillItemContent {
+						item_type: SkillItemType::Bracer,
+						..default()
+					},
+					..default()
+				},
+			)],
+		);
+		let skill = app
+			.world_mut()
+			.spawn(SkillButton::<DropdownTrigger>::new(
+				Skill {
+					is_usable_with: HashSet::from([SkillItemType::Pistol]),
+					..default()
+				},
+				vec![
+					SlotKey::BottomHand(Side::Left),
+					SlotKey::BottomHand(Side::Right),
+				],
+			))
+			.id();
+
+		app.update();
+		app.world_mut().entity_mut(skill).remove::<_Visualization>();
 		app.update();
 
 		let skill = app.world().entity(skill);
-
 		assert_eq!(None, skill.get::<_Visualization>())
 	}
 }

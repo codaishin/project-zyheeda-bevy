@@ -25,7 +25,7 @@ where
 	TContainer: Component,
 	TSwaps: Component,
 	for<'a> SwapController<'a, TInnerKey, SlotKey, TContainer, TSwaps>:
-		SwapCommands<SlotKey, SkillItem>,
+		SwapCommands<SlotKey, Handle<SkillItem>>,
 {
 	let mut results = vec![];
 	let commands = &mut commands;
@@ -55,8 +55,8 @@ where
 fn try_swap(
 	slots: &mut Slots,
 	slot_key: SlotKey,
-	item: Option<SkillItem>,
-) -> Result<SwappedOut<SkillItem>, (SwapError, Error)> {
+	item: Option<Handle<SkillItem>>,
+) -> Result<SwappedOut<Handle<SkillItem>>, (SwapError, Error)> {
 	let slot = get_slot(slots, slot_key)?;
 
 	Ok(swap_item(item, slot))
@@ -65,14 +65,17 @@ fn try_swap(
 fn get_slot(
 	slots: &mut Slots,
 	slot_key: SlotKey,
-) -> Result<&mut Option<SkillItem>, (SwapError, Error)> {
+) -> Result<&mut Option<Handle<SkillItem>>, (SwapError, Error)> {
 	match slots.0.get_mut(&slot_key) {
 		Some(slot) => Ok(slot),
 		None => Err((SwapError::TryAgain, slot_warning(slot_key))),
 	}
 }
 
-fn swap_item(mut item: Option<SkillItem>, slot: &mut Option<SkillItem>) -> SwappedOut<SkillItem> {
+fn swap_item(
+	mut item: Option<Handle<SkillItem>>,
+	slot: &mut Option<Handle<SkillItem>>,
+) -> SwappedOut<Handle<SkillItem>> {
 	swap(&mut item, slot);
 
 	SwappedOut(item)
@@ -91,7 +94,7 @@ mod tests {
 	use common::{
 		components::Side,
 		systems::log::test_tools::{fake_log_error_many_recourse, FakeErrorLogManyResource},
-		test_tools::utils::SingleThreadedApp,
+		test_tools::utils::{new_handle, SingleThreadedApp},
 		traits::swap_command::{SwapError, SwapIn, SwapResult, SwappedOut},
 	};
 	use std::collections::HashMap;
@@ -103,15 +106,17 @@ mod tests {
 
 	#[derive(Component, PartialEq, Clone, Debug, Default)]
 	pub struct _Container {
-		swap_ins: HashMap<SlotKey, SwapIn<SkillItem>>,
-		swap_outs: HashMap<SlotKey, SwappedOut<SkillItem>>,
+		swap_ins: HashMap<SlotKey, SwapIn<Handle<SkillItem>>>,
+		swap_outs: HashMap<SlotKey, SwappedOut<Handle<SkillItem>>>,
 		errors: HashMap<SlotKey, SwapError>,
 	}
 
-	impl<'a> SwapCommands<SlotKey, SkillItem> for SwapController<'a, (), SlotKey, _Container, _Swaps> {
+	impl<'a> SwapCommands<SlotKey, Handle<SkillItem>>
+		for SwapController<'a, (), SlotKey, _Container, _Swaps>
+	{
 		fn try_swap(
 			&mut self,
-			mut swap_fn: impl FnMut(SlotKey, SwapIn<SkillItem>) -> SwapResult<SkillItem>,
+			mut swap_fn: impl FnMut(SlotKey, SwapIn<Handle<SkillItem>>) -> SwapResult<Handle<SkillItem>>,
 		) {
 			let SwapController { container, .. } = self;
 			for (slot_key, swap_in) in container.swap_ins.clone() {
@@ -144,6 +149,7 @@ mod tests {
 
 	#[test]
 	fn set_swap_in_item() {
+		let item = new_handle();
 		let mut app = setup();
 		let agent = app
 			.world_mut()
@@ -152,7 +158,7 @@ mod tests {
 				_Container {
 					swap_ins: HashMap::from([(
 						SlotKey::BottomHand(Side::Right),
-						SwapIn(Some(SkillItem::named("swap in"))),
+						SwapIn(Some(item.clone())),
 					)]),
 					..default()
 				},
@@ -167,7 +173,7 @@ mod tests {
 		assert_eq!(
 			Some(&Slots::new([(
 				SlotKey::BottomHand(Side::Right),
-				Some(SkillItem::named("swap in")),
+				Some(item),
 			)])),
 			agent.get::<Slots>()
 		);
@@ -175,14 +181,12 @@ mod tests {
 
 	#[test]
 	fn set_swap_out_item() {
+		let item = new_handle();
 		let mut app = setup();
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::new([(
-					SlotKey::BottomHand(Side::Right),
-					Some(SkillItem::named("swap out")),
-				)]),
+				Slots::new([(SlotKey::BottomHand(Side::Right), Some(item.clone()))]),
 				_Container {
 					swap_ins: HashMap::from([(SlotKey::BottomHand(Side::Right), SwapIn(None))]),
 					..default()
@@ -197,10 +201,7 @@ mod tests {
 		let container = agent.get::<_Container>().unwrap();
 
 		assert_eq!(
-			HashMap::from([(
-				SlotKey::BottomHand(Side::Right),
-				SwappedOut(Some(SkillItem::named("swap out"))),
-			)]),
+			HashMap::from([(SlotKey::BottomHand(Side::Right), SwappedOut(Some(item)),)]),
 			container.swap_outs
 		);
 	}

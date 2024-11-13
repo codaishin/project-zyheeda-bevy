@@ -37,7 +37,9 @@ pub struct Loadout {
 }
 
 impl Loadout {
-	pub fn new<const N: usize>(slots_definitions: [(SlotKey, Option<SkillItem>); N]) -> Self {
+	pub fn new<const N: usize>(
+		slots_definitions: [(SlotKey, Option<Handle<SkillItem>>); N],
+	) -> Self {
 		Self {
 			slot_definition: Slots(HashMap::from(slots_definitions)),
 			skill_execution: default(),

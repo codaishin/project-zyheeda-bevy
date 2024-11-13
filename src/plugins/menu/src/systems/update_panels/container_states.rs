@@ -1,32 +1,41 @@
+use std::fmt::Debug;
+
 use crate::{components::KeyedPanel, tools::PanelState};
-use bevy::{
-	ecs::{component::Component, system::Query},
-	hierarchy::Parent,
-	prelude::Entity,
-	text::Text,
-};
+use bevy::{hierarchy::Parent, prelude::*};
 use common::traits::accessors::{get::GetRef, set::Setter};
 use skills::item::SkillItem;
 
-pub fn panel_container_states<
-	TPanel: Component + Setter<PanelState>,
-	TKey: Copy + Send + Sync + 'static,
-	TContainer: Component + GetRef<TKey, SkillItem>,
->(
+pub fn panel_container_states<TPanel, TKey, TContainer>(
 	containers: Query<&TContainer>,
 	mut texts: Query<(&Parent, &mut Text)>,
 	mut panels: Query<(Entity, &KeyedPanel<TKey>, &mut TPanel)>,
-) {
+	items: Res<Assets<SkillItem>>,
+) where
+	TPanel: Component + Setter<PanelState>,
+	TKey: Debug + Copy + Send + Sync + 'static,
+	TContainer: Component + GetRef<TKey, Handle<SkillItem>>,
+{
 	let container = containers.single();
 
-	for (entity, keyed_panel, mut panel) in &mut panels {
-		let (state, label) = match container.get(&keyed_panel.0) {
+	for (entity, KeyedPanel(key), mut panel) in &mut panels {
+		let (state, label) = match get_item(container, key, &items) {
 			Some(item) => (PanelState::Filled, item.name.clone()),
 			None => (PanelState::Empty, "<Empty>".to_owned()),
 		};
 		panel.set(state);
 		set_label(&mut texts, entity, label);
 	}
+}
+
+fn get_item<'a, TContainer, TKey>(
+	container: &'a TContainer,
+	key: &TKey,
+	items: &'a Assets<SkillItem>,
+) -> Option<&'a SkillItem>
+where
+	TContainer: GetRef<TKey, Handle<SkillItem>>,
+{
+	container.get(key).and_then(|item| items.get(item))
 }
 
 fn set_label(texts: &mut Query<(&Parent, &mut Text)>, entity: Entity, label: String) {
@@ -44,28 +53,17 @@ fn set_label(texts: &mut Query<(&Parent, &mut Text)>, entity: Entity, label: Str
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		hierarchy::BuildWorldChildren,
-		prelude::default,
-		ui::node_bundles::TextBundle,
-		utils::HashMap,
-	};
+	use bevy::ecs::system::RunSystemOnce;
 	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use std::collections::HashMap;
 
 	#[derive(Component)]
-	struct _Container(HashMap<usize, SkillItem>);
+	struct _Container(HashMap<usize, Handle<SkillItem>>);
 
-	impl _Container {
-		pub fn new<const N: usize>(items: [(usize, SkillItem); N]) -> Self {
-			Self(HashMap::from(items))
-		}
-	}
-
-	impl GetRef<usize, SkillItem> for _Container {
-		fn get(&self, key: &usize) -> Option<&SkillItem> {
+	impl GetRef<usize, Handle<SkillItem>> for _Container {
+		fn get(&self, key: &usize) -> Option<&Handle<SkillItem>> {
 			self.0.get(key)
 		}
 	}
@@ -82,11 +80,32 @@ mod tests {
 		}
 	}
 
+	fn setup_container<const N: usize>(
+		items: [(usize, SkillItem); N],
+	) -> (_Container, Assets<SkillItem>) {
+		let mut item_assets = Assets::default();
+		let mut container = HashMap::default();
+
+		for (key, item) in items {
+			let item = item_assets.add(item);
+			container.insert(key, item);
+		}
+
+		(_Container(container), item_assets)
+	}
+
+	fn setup_app<const N: usize>(items: [(usize, SkillItem); N]) -> App {
+		let (container, items) = setup_container(items);
+		let mut app = App::new();
+		app.insert_resource(items);
+		app.world_mut().spawn(container);
+
+		app
+	}
+
 	#[test]
 	fn set_empty() {
-		let mut app = App::new();
-		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
-		app.world_mut().spawn(_Container::new([]));
+		let mut app = setup_app([]);
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -105,7 +124,8 @@ mod tests {
 			.set_parent(panel)
 			.id();
 
-		app.update();
+		app.world_mut()
+			.run_system_once(panel_container_states::<_Panel, usize, _Container>);
 
 		let text = app.world().entity(text).get::<Text>().unwrap();
 		assert_eq!("<Empty>", text.sections[0].value);
@@ -113,10 +133,7 @@ mod tests {
 
 	#[test]
 	fn set_filled() {
-		let mut app = App::new();
-		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
-		app.world_mut()
-			.spawn(_Container::new([(42, SkillItem::named("my item"))]));
+		let mut app = setup_app([(42, SkillItem::named("my item"))]);
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -135,17 +152,46 @@ mod tests {
 			.set_parent(panel)
 			.id();
 
-		app.update();
+		app.world_mut()
+			.run_system_once(panel_container_states::<_Panel, usize, _Container>);
 
 		let text = app.world().entity(text).get::<Text>().unwrap();
 		assert_eq!("my item", text.sections[0].value);
 	}
 
 	#[test]
+	fn set_empty_when_item_cannot_be_retrieved() {
+		let mut app = setup_app([(42, SkillItem::named("my item"))]);
+		let panel = app
+			.world_mut()
+			.spawn((
+				KeyedPanel(42_usize),
+				_Panel::new().with_mock(|mock| {
+					mock.expect_set()
+						.times(1)
+						.with(eq(PanelState::Empty))
+						.return_const(());
+				}),
+			))
+			.id();
+		let text = app
+			.world_mut()
+			.spawn(TextBundle::from_section("", default()))
+			.set_parent(panel)
+			.id();
+		let mut items = app.world_mut().resource_mut::<Assets<SkillItem>>();
+		*items = Assets::default();
+
+		app.world_mut()
+			.run_system_once(panel_container_states::<_Panel, usize, _Container>);
+
+		let text = app.world().entity(text).get::<Text>().unwrap();
+		assert_eq!("<Empty>", text.sections[0].value.as_str());
+	}
+
+	#[test]
 	fn still_set_state_when_no_children() {
-		let mut app = App::new();
-		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
-		app.world_mut().spawn(_Container::new([]));
+		let mut app = setup_app([]);
 		app.world_mut().spawn((
 			KeyedPanel(42_usize),
 			_Panel::new().with_mock(|mock| {
@@ -153,15 +199,13 @@ mod tests {
 			}),
 		));
 
-		app.update();
+		app.world_mut()
+			.run_system_once(panel_container_states::<_Panel, usize, _Container>);
 	}
 
 	#[test]
 	fn set_when_text_not_first_child() {
-		let mut app = App::new();
-		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
-		app.world_mut()
-			.spawn(_Container::new([(42, SkillItem::named("my item"))]));
+		let mut app = setup_app([(42, SkillItem::named("my item"))]);
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -181,7 +225,8 @@ mod tests {
 			.set_parent(panel)
 			.id();
 
-		app.update();
+		app.world_mut()
+			.run_system_once(panel_container_states::<_Panel, usize, _Container>);
 
 		let text = app.world().entity(text).get::<Text>().unwrap();
 		assert_eq!("my item", text.sections[0].value);
@@ -189,10 +234,7 @@ mod tests {
 
 	#[test]
 	fn add_section_when_text_has_no_sections() {
-		let mut app = App::new();
-		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
-		app.world_mut()
-			.spawn(_Container::new([(42, SkillItem::named("my item"))]));
+		let mut app = setup_app([(42, SkillItem::named("my item"))]);
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -209,7 +251,8 @@ mod tests {
 			.set_parent(panel)
 			.id();
 
-		app.update();
+		app.world_mut()
+			.run_system_once(panel_container_states::<_Panel, usize, _Container>);
 
 		let text = app.world().entity(text).get::<Text>().unwrap();
 		assert_eq!("my item", text.sections[0].value);
