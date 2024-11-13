@@ -1,5 +1,7 @@
 pub mod item_type;
 
+pub(crate) mod dto;
+
 use crate::{
 	components::renderer::{ModelRender, Renderer},
 	definitions::{
@@ -20,7 +22,7 @@ use player::components::player::Player;
 
 pub type SkillItem = Item<SkillItemContent>;
 
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Debug, PartialEq, Default, Clone, TypePath)]
 pub struct SkillItemContent {
 	pub render: Renderer,
 	pub skill: Option<Handle<Skill>>,
@@ -29,16 +31,16 @@ pub struct SkillItemContent {
 
 impl GetViewData<HandSlots<Player>, SlotKey> for SkillItemContent {
 	fn get_view_data(&self) -> <HandSlots<Player> as ItemView<SlotKey>>::TViewComponents {
-		match self.render.model {
-			ModelRender::Hand(model) => model,
+		match &self.render.model {
+			ModelRender::Hand(model) => model.clone(),
 			_ => AssetModel::None,
 		}
 	}
 }
 impl GetViewData<ForearmSlots<Player>, SlotKey> for SkillItemContent {
 	fn get_view_data(&self) -> <ForearmSlots<Player> as ItemView<SlotKey>>::TViewComponents {
-		match self.render.model {
-			ModelRender::Forearm(model) => model,
+		match &self.render.model {
+			ModelRender::Forearm(model) => model.clone(),
 			_ => AssetModel::None,
 		}
 	}

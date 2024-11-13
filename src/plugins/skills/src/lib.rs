@@ -42,9 +42,12 @@ use definitions::{
 	sub_models::SubModels,
 };
 use inventory_key::InventoryKey;
-use item::{item_type::SkillItemType, SkillItem, SkillItemContent};
+use item::{dto::SkillItemDto, item_type::SkillItemType, SkillItem, SkillItemContent};
 use items::RegisterItemView;
-use loading::traits::register_custom_folder_assets::RegisterCustomFolderAssets;
+use loading::traits::{
+	register_custom_assets::RegisterCustomAssets,
+	register_custom_folder_assets::RegisterCustomFolderAssets,
+};
 use macros::skill_asset;
 use player::components::player::Player;
 use shaders::materials::essence_material::EssenceMaterial;
@@ -78,6 +81,10 @@ where
 {
 	fn skill_load(&self, app: &mut App) {
 		app.register_custom_folder_assets::<Skill, SkillData>();
+	}
+
+	fn item_load(&self, app: &mut App) {
+		app.register_custom_assets::<SkillItem, SkillItemDto>();
 	}
 
 	fn skill_slot_load(&self, app: &mut App) {
@@ -281,6 +288,7 @@ where
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);
+		self.item_load(app);
 		self.skill_slot_load(app);
 		self.skill_execution(app);
 
