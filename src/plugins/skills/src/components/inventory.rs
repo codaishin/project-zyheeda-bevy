@@ -36,20 +36,13 @@ fn fill(inventory: &mut Vec<Option<SkillItem>>, inventory_key: usize) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::utils::default;
 
 	#[test]
 	fn get_first_item() {
-		let inventory = Inventory::new([Some(SkillItem {
-			name: "my item",
-			..default()
-		})]);
+		let inventory = Inventory::new([Some(SkillItem::named("my item"))]);
 
 		assert_eq!(
-			Some(&SkillItem {
-				name: "my item",
-				..default()
-			}),
+			Some(&SkillItem::named("my item")),
 			inventory.get(&InventoryKey(0))
 		);
 	}
@@ -63,63 +56,33 @@ mod tests {
 
 	#[test]
 	fn get_3rd_item() {
-		let inventory = Inventory::new([
-			None,
-			None,
-			Some(SkillItem {
-				name: "my item",
-				..default()
-			}),
-		]);
+		let inventory = Inventory::new([None, None, Some(SkillItem::named("my item"))]);
 
 		assert_eq!(
-			Some(&SkillItem {
-				name: "my item",
-				..default()
-			}),
+			Some(&SkillItem::named("my item")),
 			inventory.get(&InventoryKey(2))
 		);
 	}
 
 	#[test]
 	fn get_item_mut() {
-		let mut inventory = Inventory::new([Some(SkillItem {
-			name: "my item",
-			..default()
-		})]);
+		let mut inventory = Inventory::new([Some(SkillItem::named("my item"))]);
 
 		let item = inventory.get_mut(&InventoryKey(0));
-		assert_eq!(
-			Some(&mut Some(SkillItem {
-				name: "my item",
-				..default()
-			})),
-			item
-		);
+		assert_eq!(Some(&mut Some(SkillItem::named("my item"))), item);
 	}
 
 	#[test]
 	fn get_item_mut_exceeding_range() {
-		let mut inventory = Inventory::new([Some(SkillItem {
-			name: "my item",
-			..default()
-		})]);
+		let mut inventory = Inventory::new([Some(SkillItem::named("my item"))]);
 
-		*inventory.get_mut(&InventoryKey(1)).expect("no item found") = Some(SkillItem {
-			name: "my other item",
-			..default()
-		});
+		*inventory.get_mut(&InventoryKey(1)).expect("no item found") =
+			Some(SkillItem::named("my other item"));
 
 		assert_eq!(
 			Inventory::new([
-				Some(SkillItem {
-					name: "my item",
-					..default()
-				}),
-				Some(SkillItem {
-					name: "my other item",
-					..default()
-				})
+				Some(SkillItem::named("my item")),
+				Some(SkillItem::named("my other item")),
 			]),
 			inventory
 		);

@@ -92,23 +92,21 @@ mod tests {
 					[
 						(
 							SlotKey::BottomHand(Side::Left),
-							Some(SkillItem {
-								name: "left item",
-								content: SkillItemContent {
+							Some(
+								SkillItem::named("left item").with_content(SkillItemContent {
 									item_type: SkillItemType::Bracer,
 									..default()
-								},
-							}),
+								}),
+							),
 						),
 						(
 							SlotKey::BottomHand(Side::Right),
-							Some(SkillItem {
-								name: "right item",
-								content: SkillItemContent {
+							Some(
+								SkillItem::named("right item").with_content(SkillItemContent {
 									item_type: SkillItemType::Pistol,
 									..default()
-								},
-							}),
+								}),
+							),
 						),
 					]
 					.into(),
@@ -141,20 +139,18 @@ mod tests {
 		assert_eq!(
 			(
 				(
-					Some(SkillItem {
-						name: "right item",
-						content: SkillItemContent {
+					Some(
+						SkillItem::named("right item").with_content(SkillItemContent {
 							item_type: SkillItemType::Pistol,
 							..default()
-						},
-					}),
-					Some(SkillItem {
-						name: "left item",
-						content: SkillItemContent {
+						}),
+					),
+					Some(
+						SkillItem::named("left item").with_content(SkillItemContent {
 							item_type: SkillItemType::Bracer,
 							..default()
-						},
-					})
+						}),
+					)
 				),
 				vec![]
 			),

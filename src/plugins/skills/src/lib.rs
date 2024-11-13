@@ -176,98 +176,91 @@ where
 		Loadout::new([
 			(
 				SlotKey::TopHand(Side::Left),
-				Some(SkillItem {
-					name: "Plasma Pistol A",
-					content: SkillItemContent {
+				Some(
+					SkillItem::named("Plasma Pistol").with_content(SkillItemContent {
 						render: Renderer {
 							model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
 							essence: EssenceRender::StandardMaterial,
 						},
 						skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
 						item_type: SkillItemType::Pistol,
-					},
-				}),
+					}),
+				),
 			),
 			(
 				SlotKey::BottomHand(Side::Left),
-				Some(SkillItem {
-					name: "Plasma Pistol B",
-					content: SkillItemContent {
+				Some(
+					SkillItem::named("Plasma Pistol").with_content(SkillItemContent {
 						render: Renderer {
 							model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
 							essence: EssenceRender::StandardMaterial,
 						},
 						skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
 						item_type: SkillItemType::Pistol,
-					},
-				}),
+					}),
+				),
 			),
 			(
 				SlotKey::BottomHand(Side::Right),
-				Some(SkillItem {
-					name: "Force Essence A",
-					content: SkillItemContent {
+				Some(
+					SkillItem::named("Force Essence").with_content(SkillItemContent {
 						render: Renderer {
 							model: ModelRender::None,
 							essence: EssenceRender::Material(force_essence_material.clone()),
 						},
 						skill: Some(asset_server.load(skill_asset!("force_shield"))),
 						item_type: SkillItemType::ForceEssence,
-					},
-				}),
+					}),
+				),
 			),
 			(
 				SlotKey::TopHand(Side::Right),
-				Some(SkillItem {
-					name: "Force Essence B",
-					content: SkillItemContent {
+				Some(
+					SkillItem::named("Force Essence").with_content(SkillItemContent {
 						render: Renderer {
 							model: ModelRender::None,
 							essence: EssenceRender::Material(force_essence_material.clone()),
 						},
 						skill: Some(asset_server.load(skill_asset!("force_shield"))),
 						item_type: SkillItemType::ForceEssence,
-					},
-				}),
+					}),
+				),
 			),
 		])
 	}
 
 	fn get_inventory(asset_server: &AssetServer) -> Inventory {
 		Inventory::new([
-			Some(SkillItem {
-				name: "Plasma Pistol C",
-				content: SkillItemContent {
+			Some(
+				SkillItem::named("Plasma Pistol").with_content(SkillItemContent {
 					render: Renderer {
 						model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
 						essence: EssenceRender::StandardMaterial,
 					},
 					skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
 					item_type: SkillItemType::Pistol,
-				},
-			}),
-			Some(SkillItem {
-				name: "Plasma Pistol D",
-				content: SkillItemContent {
+				}),
+			),
+			Some(
+				SkillItem::named("Plasma Pistol").with_content(SkillItemContent {
 					render: Renderer {
 						model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
 						essence: EssenceRender::StandardMaterial,
 					},
 					skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
 					item_type: SkillItemType::Pistol,
-				},
-			}),
-			Some(SkillItem {
-				name: "Plasma Pistol E",
-				content: SkillItemContent {
+				}),
+			),
+			Some(
+				SkillItem::named("Plasma Pistol").with_content(SkillItemContent {
 					render: Renderer {
 						model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
 						essence: EssenceRender::StandardMaterial,
 					},
 					skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
 					item_type: SkillItemType::Pistol,
-				},
-			}),
+				}),
+			),
 		])
 	}
 

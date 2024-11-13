@@ -21,15 +21,15 @@ pub fn panel_container_states<
 
 	for (entity, keyed_panel, mut panel) in &mut panels {
 		let (state, label) = match container.get(&keyed_panel.0) {
-			Some(item) => (PanelState::Filled, item.name),
-			None => (PanelState::Empty, "<Empty>"),
+			Some(item) => (PanelState::Filled, item.name.clone()),
+			None => (PanelState::Empty, "<Empty>".to_owned()),
 		};
 		panel.set(state);
 		set_label(&mut texts, entity, label);
 	}
 }
 
-fn set_label(texts: &mut Query<(&Parent, &mut Text)>, entity: Entity, label: &str) {
+fn set_label(texts: &mut Query<(&Parent, &mut Text)>, entity: Entity, label: String) {
 	let Some((.., mut text)) = texts.iter_mut().find(|(p, ..)| p.get() == entity) else {
 		return;
 	};
@@ -37,7 +37,7 @@ fn set_label(texts: &mut Query<(&Parent, &mut Text)>, entity: Entity, label: &st
 	if text.sections.is_empty() {
 		text.sections.push(label.into());
 	} else {
-		text.sections[0].value = label.into();
+		text.sections[0].value = label;
 	}
 }
 
@@ -115,13 +115,8 @@ mod tests {
 	fn set_filled() {
 		let mut app = App::new();
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
-		app.world_mut().spawn(_Container::new([(
-			42,
-			SkillItem {
-				name: "my item",
-				..default()
-			},
-		)]));
+		app.world_mut()
+			.spawn(_Container::new([(42, SkillItem::named("my item"))]));
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -165,13 +160,8 @@ mod tests {
 	fn set_when_text_not_first_child() {
 		let mut app = App::new();
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
-		app.world_mut().spawn(_Container::new([(
-			42,
-			SkillItem {
-				name: "my item",
-				..default()
-			},
-		)]));
+		app.world_mut()
+			.spawn(_Container::new([(42, SkillItem::named("my item"))]));
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -201,13 +191,8 @@ mod tests {
 	fn add_section_when_text_has_no_sections() {
 		let mut app = App::new();
 		app.add_systems(Update, panel_container_states::<_Panel, usize, _Container>);
-		app.world_mut().spawn(_Container::new([(
-			42,
-			SkillItem {
-				name: "my item",
-				..default()
-			},
-		)]));
+		app.world_mut()
+			.spawn(_Container::new([(42, SkillItem::named("my item"))]));
 		let panel = app
 			.world_mut()
 			.spawn((

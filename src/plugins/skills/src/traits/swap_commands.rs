@@ -148,38 +148,25 @@ mod tests {
 		let mut container = _Container(vec![None]);
 		let mut swaps = Collection::new([_Swap(_InnerKey(0), SlotKey::BottomHand(Side::Left))]);
 
-		SwapController::new(&mut container, &mut swaps).try_swap(|_, _| {
-			Ok(SwappedOut(Some(SkillItem {
-				name: "swapped out",
-				..default()
-			})))
-		});
+		SwapController::new(&mut container, &mut swaps)
+			.try_swap(|_, _| Ok(SwappedOut(Some(SkillItem::named("swapped out")))));
 
 		assert_eq!(
-			_Container(vec![Some(SkillItem {
-				name: "swapped out",
-				..default()
-			})]),
+			_Container(vec![Some(SkillItem::named("swapped out"))]),
 			container
 		);
 	}
 
 	#[test]
 	fn pass_swap_in_values_to_callback() {
-		let mut container = _Container(vec![Some(SkillItem {
-			name: "swap in",
-			..default()
-		})]);
+		let mut container = _Container(vec![Some(SkillItem::named("swap in"))]);
 		let mut swaps = Collection::new([_Swap(_InnerKey(0), SlotKey::BottomHand(Side::Left))]);
 
 		SwapController::new(&mut container, &mut swaps).try_swap(|slot_key, item| {
 			assert_eq!(
 				(
 					SlotKey::BottomHand(Side::Left),
-					SwapIn(Some(SkillItem {
-						name: "swap in",
-						..default()
-					}))
+					SwapIn(Some(SkillItem::named("swap in")))
 				),
 				(slot_key, item)
 			);
@@ -189,10 +176,7 @@ mod tests {
 
 	#[test]
 	fn clear_swaps() {
-		let mut container = _Container(vec![Some(SkillItem {
-			name: "unaffected",
-			..default()
-		})]);
+		let mut container = _Container(vec![Some(SkillItem::named("unaffected"))]);
 		let mut swaps = Collection::new([_Swap(_InnerKey(0), SlotKey::BottomHand(Side::Left))]);
 
 		SwapController::new(&mut container, &mut swaps)
@@ -204,14 +188,8 @@ mod tests {
 	#[test]
 	fn retain_swap_try_again_errors() {
 		let mut container = _Container(vec![
-			Some(SkillItem {
-				name: "disregard error",
-				..default()
-			}),
-			Some(SkillItem {
-				name: "try again error",
-				..default()
-			}),
+			Some(SkillItem::named("disregard error")),
+			Some(SkillItem::named("try again error")),
 			Some(SkillItem::default()),
 		]);
 		let mut swaps = Collection::new([

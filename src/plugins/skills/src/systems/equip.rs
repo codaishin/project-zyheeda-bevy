@@ -152,10 +152,7 @@ mod tests {
 				_Container {
 					swap_ins: HashMap::from([(
 						SlotKey::BottomHand(Side::Right),
-						SwapIn(Some(SkillItem {
-							name: "swap in",
-							..default()
-						})),
+						SwapIn(Some(SkillItem::named("swap in"))),
 					)]),
 					..default()
 				},
@@ -170,10 +167,7 @@ mod tests {
 		assert_eq!(
 			Some(&Slots::new([(
 				SlotKey::BottomHand(Side::Right),
-				Some(SkillItem {
-					name: "swap in",
-					..default()
-				}),
+				Some(SkillItem::named("swap in")),
 			)])),
 			agent.get::<Slots>()
 		);
@@ -187,10 +181,7 @@ mod tests {
 			.spawn((
 				Slots::new([(
 					SlotKey::BottomHand(Side::Right),
-					Some(SkillItem {
-						name: "swap out",
-						..default()
-					}),
+					Some(SkillItem::named("swap out")),
 				)]),
 				_Container {
 					swap_ins: HashMap::from([(SlotKey::BottomHand(Side::Right), SwapIn(None))]),
@@ -208,10 +199,7 @@ mod tests {
 		assert_eq!(
 			HashMap::from([(
 				SlotKey::BottomHand(Side::Right),
-				SwappedOut(Some(SkillItem {
-					name: "swap out",
-					..default()
-				}))
+				SwappedOut(Some(SkillItem::named("swap out"))),
 			)]),
 			container.swap_outs
 		);

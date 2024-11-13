@@ -46,19 +46,13 @@ mod tests {
 		let slots = Slots(
 			[(
 				SlotKey::BottomHand(Side::Left),
-				Some(SkillItem {
-					name: "my item",
-					..default()
-				}),
+				Some(SkillItem::named("my item")),
 			)]
 			.into(),
 		);
 
 		assert_eq!(
-			Some(&SkillItem {
-				name: "my item",
-				..default()
-			}),
+			Some(&SkillItem::named("my item")),
 			slots.get(&SlotKey::BottomHand(Side::Left))
 		);
 	}
@@ -68,19 +62,13 @@ mod tests {
 		let slots = Slots(
 			[(
 				SlotKey::BottomHand(Side::Right),
-				Some(SkillItem {
-					name: "my item",
-					..default()
-				}),
+				Some(SkillItem::named("my item")),
 			)]
 			.into(),
 		);
 
 		assert_eq!(
-			Some(&SkillItem {
-				name: "my item",
-				..default()
-			}),
+			Some(&SkillItem::named("my item")),
 			slots.get(&SlotKey::BottomHand(Side::Right))
 		);
 	}
@@ -90,10 +78,7 @@ mod tests {
 		let slots = Slots(
 			[(
 				SlotKey::BottomHand(Side::Right),
-				Some(SkillItem {
-					name: "my item",
-					..default()
-				}),
+				Some(SkillItem::named("my item")),
 			)]
 			.into(),
 		);
@@ -110,13 +95,10 @@ mod tests {
 		let slots = Slots(
 			[(
 				SlotKey::BottomHand(Side::Right),
-				Some(SkillItem {
-					name: "my item",
-					content: SkillItemContent {
-						skill: Some(handle.clone()),
-						..default()
-					},
-				}),
+				Some(SkillItem::named("my item").with_content(SkillItemContent {
+					skill: Some(handle.clone()),
+					..default()
+				})),
 			)]
 			.into(),
 		);

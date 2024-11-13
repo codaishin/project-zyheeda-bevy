@@ -44,10 +44,7 @@ fn fill_to(inventory: &mut Vec<Option<SkillItem>>, index: usize) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		prelude::default,
-	};
+	use bevy::app::{App, Update};
 
 	#[test]
 	fn swap_items() {
@@ -56,15 +53,9 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Inventory::new([
-					Some(SkillItem {
-						name: "item a",
-						..default()
-					}),
+					Some(SkillItem::named("item a")),
 					None,
-					Some(SkillItem {
-						name: "item b",
-						..default()
-					}),
+					Some(SkillItem::named("item b")),
 				]),
 				Collection::new([Swap(InventoryKey(0), InventoryKey(2))]),
 			))
@@ -78,15 +69,9 @@ mod tests {
 
 		assert_eq!(
 			vec![
-				Some(SkillItem {
-					name: "item b",
-					..default()
-				}),
+				Some(SkillItem::named("item b")),
 				None,
-				Some(SkillItem {
-					name: "item a",
-					..default()
-				})
+				Some(SkillItem::named("item a")),
 			],
 			inventory.0
 		)
@@ -98,10 +83,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Inventory::new([Some(SkillItem {
-					name: "item",
-					..default()
-				})]),
+				Inventory::new([Some(SkillItem::named("item"))]),
 				Collection::new([Swap(InventoryKey(0), InventoryKey(2))]),
 			))
 			.id();
@@ -113,14 +95,7 @@ mod tests {
 		let inventory = agent.get::<Inventory>().unwrap();
 
 		assert_eq!(
-			vec![
-				None,
-				None,
-				Some(SkillItem {
-					name: "item",
-					..default()
-				})
-			],
+			vec![None, None, Some(SkillItem::named("item"))],
 			inventory.0
 		)
 	}
@@ -131,10 +106,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Inventory::new([Some(SkillItem {
-					name: "item",
-					..default()
-				})]),
+				Inventory::new([Some(SkillItem::named("item"))]),
 				Collection::new([Swap(InventoryKey(0), InventoryKey(1))]),
 			))
 			.id();
@@ -145,16 +117,7 @@ mod tests {
 		let agent = app.world().entity(agent);
 		let inventory = agent.get::<Inventory>().unwrap();
 
-		assert_eq!(
-			vec![
-				None,
-				Some(SkillItem {
-					name: "item",
-					..default()
-				})
-			],
-			inventory.0
-		)
+		assert_eq!(vec![None, Some(SkillItem::named("item"))], inventory.0)
 	}
 
 	#[test]
