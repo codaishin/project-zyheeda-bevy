@@ -87,14 +87,18 @@ pub struct MainCamera;
 #[derive(Component, Debug, PartialEq, Clone)]
 pub struct NoTarget;
 
-#[derive(Component, Debug, PartialEq, Default, Clone, Copy)]
+#[derive(Component, Debug, PartialEq, Default, Clone)]
 pub enum AssetModel {
 	#[default]
 	None,
-	Path(&'static str),
+	Path(String),
 }
 
 impl AssetModel {
+	pub fn path(path: &str) -> AssetModel {
+		AssetModel::Path(path.to_owned())
+	}
+
 	pub fn flip_on(self, name: Name) -> (Self, FlipHorizontally) {
 		(self, FlipHorizontally::with(name))
 	}

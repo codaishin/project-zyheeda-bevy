@@ -71,7 +71,7 @@ mod tests {
 		let item = SkillItem {
 			content: SkillItemContent {
 				render: Renderer {
-					model: ModelRender::Hand(AssetModel::Path("my model")),
+					model: ModelRender::Hand(AssetModel::path("my model")),
 					..default()
 				},
 				..default()
@@ -105,7 +105,7 @@ mod tests {
 		let item_a = SkillItem {
 			content: SkillItemContent {
 				render: Renderer {
-					model: ModelRender::Hand(AssetModel::Path("my hand model")),
+					model: ModelRender::Hand(AssetModel::path("my hand model")),
 					..default()
 				},
 				..default()
@@ -115,7 +115,7 @@ mod tests {
 		let item_b = SkillItem {
 			content: SkillItemContent {
 				render: Renderer {
-					model: ModelRender::Forearm(AssetModel::Path("my forearm model")),
+					model: ModelRender::Forearm(AssetModel::path("my forearm model")),
 					..default()
 				},
 				..default()
@@ -150,7 +150,7 @@ mod tests {
 		let item = SkillItem {
 			content: SkillItemContent {
 				render: Renderer {
-					model: ModelRender::Hand(AssetModel::Path("my model")),
+					model: ModelRender::Hand(AssetModel::path("my model")),
 					..default()
 				},
 				..default()
@@ -186,7 +186,7 @@ mod tests {
 				Some(SkillItem {
 					content: SkillItemContent {
 						render: Renderer {
-							model: ModelRender::Hand(AssetModel::Path("my model")),
+							model: ModelRender::Hand(AssetModel::path("my model")),
 							..default()
 						},
 						..default()
@@ -203,7 +203,7 @@ mod tests {
 		let item = SkillItem {
 			content: SkillItemContent {
 				render: Renderer {
-					model: ModelRender::Hand(AssetModel::Path("my other model")),
+					model: ModelRender::Hand(AssetModel::path("my other model")),
 					..default()
 				},
 				..default()

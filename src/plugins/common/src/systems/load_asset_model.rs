@@ -16,7 +16,7 @@ pub(crate) fn load_asset_model<TServer>(
 		let handle = match asset_model {
 			AssetModel::None => Handle::<Scene>::default(),
 			AssetModel::Path(path) => {
-				asset_server.load_asset(GltfAssetLabel::Scene(0).from_asset(*path))
+				asset_server.load_asset(GltfAssetLabel::Scene(0).from_asset(path.clone()))
 			}
 		};
 
@@ -65,7 +65,7 @@ mod tests {
 					.return_const(handle.clone());
 			}),
 		);
-		let model = app.world_mut().spawn(AssetModel::Path("my/model.glb")).id();
+		let model = app.world_mut().spawn(AssetModel::path("my/model.glb")).id();
 
 		app.world_mut()
 			.run_system_once(load_asset_model::<_AssetServer>);
@@ -98,7 +98,7 @@ mod tests {
 	#[test]
 	fn load_asset_with_correct_path() {
 		let mut app = setup(_AssetServer::new().with_mock(assert_correct_path));
-		app.world_mut().spawn(AssetModel::Path("my/model.glb"));
+		app.world_mut().spawn(AssetModel::path("my/model.glb"));
 
 		app.world_mut()
 			.run_system_once(load_asset_model::<_AssetServer>);
@@ -119,7 +119,7 @@ mod tests {
 					.return_const(new_handle());
 			}),
 		);
-		let model = app.world_mut().spawn(AssetModel::Path("my/model.glb")).id();
+		let model = app.world_mut().spawn(AssetModel::path("my/model.glb")).id();
 
 		app.world_mut()
 			.run_system_once(load_asset_model::<_AssetServer>);

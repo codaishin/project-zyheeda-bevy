@@ -63,7 +63,7 @@ impl Instantiate for Player {
 	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
 		on.insert((
 			Name::from("Player"),
-			AssetModel::Path(Player::MODEL_PATH).flip_on(Name::from("metarig")),
+			AssetModel::path(Player::MODEL_PATH).flip_on(Name::from("metarig")),
 			Bar::default(),
 			GroundOffset(Vec3::Y),
 			Blocker::insert([Blocker::Physical]),

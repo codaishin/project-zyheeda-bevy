@@ -179,7 +179,7 @@ where
 				Some(
 					SkillItem::named("Plasma Pistol").with_content(SkillItemContent {
 						render: Renderer {
-							model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
+							model: ModelRender::Hand(AssetModel::path("models/pistol.glb")),
 							essence: EssenceRender::StandardMaterial,
 						},
 						skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
@@ -192,7 +192,7 @@ where
 				Some(
 					SkillItem::named("Plasma Pistol").with_content(SkillItemContent {
 						render: Renderer {
-							model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
+							model: ModelRender::Hand(AssetModel::path("models/pistol.glb")),
 							essence: EssenceRender::StandardMaterial,
 						},
 						skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
@@ -234,7 +234,7 @@ where
 			Some(
 				SkillItem::named("Plasma Pistol").with_content(SkillItemContent {
 					render: Renderer {
-						model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
+						model: ModelRender::Hand(AssetModel::path("models/pistol.glb")),
 						essence: EssenceRender::StandardMaterial,
 					},
 					skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
@@ -244,7 +244,7 @@ where
 			Some(
 				SkillItem::named("Plasma Pistol").with_content(SkillItemContent {
 					render: Renderer {
-						model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
+						model: ModelRender::Hand(AssetModel::path("models/pistol.glb")),
 						essence: EssenceRender::StandardMaterial,
 					},
 					skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
@@ -254,7 +254,7 @@ where
 			Some(
 				SkillItem::named("Plasma Pistol").with_content(SkillItemContent {
 					render: Renderer {
-						model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
+						model: ModelRender::Hand(AssetModel::path("models/pistol.glb")),
 						essence: EssenceRender::StandardMaterial,
 					},
 					skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
