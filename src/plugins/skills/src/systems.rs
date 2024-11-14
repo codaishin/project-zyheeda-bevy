@@ -6,5 +6,5 @@ pub(crate) mod flush;
 pub(crate) mod flush_skill_combos;
 pub(crate) mod get_inputs;
 pub(crate) mod mouse_context;
-pub(crate) mod update_skill_combos2;
+pub(crate) mod update_skill_combos;
 pub(crate) mod visualize_slot_items;

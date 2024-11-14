@@ -531,7 +531,7 @@ mod tests {
 
 			let next = node.peek_next2(&SlotKey::BottomHand(Side::Right), &SkillItemType::Pistol);
 
-			assert_eq!(None, next)
+			assert_eq!(None as Option<(Skill, ComboNode)>, next)
 		}
 	}
 
