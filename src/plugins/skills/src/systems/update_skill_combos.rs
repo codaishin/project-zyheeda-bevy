@@ -2,7 +2,7 @@ use crate::{
 	components::slots::Slots,
 	item::SkillItem,
 	skills::QueuedSkill,
-	traits::{AdvanceCombo2, IterAddedMut},
+	traits::{AdvanceCombo, IterAddedMut},
 };
 use bevy::prelude::*;
 use common::traits::accessors::get::GetRef;
@@ -10,7 +10,7 @@ use common::traits::accessors::get::GetRef;
 pub(crate) fn update_skill_combos<TCombos, TQueue>(
 	mut agents: Query<(&mut TCombos, &mut TQueue, &Slots)>,
 ) where
-	TCombos: AdvanceCombo2 + Component,
+	TCombos: AdvanceCombo + Component,
 	TQueue: IterAddedMut<QueuedSkill> + Component,
 {
 	for (mut combos, mut queue, slots) in &mut agents {
@@ -28,7 +28,7 @@ fn update_skill_with_advanced_combo<TCombos>(
 	added: &mut QueuedSkill,
 	slots: &Slots,
 ) where
-	TCombos: AdvanceCombo2,
+	TCombos: AdvanceCombo,
 {
 	let QueuedSkill {
 		skill, slot_key, ..
@@ -36,7 +36,7 @@ fn update_skill_with_advanced_combo<TCombos>(
 	let Some(item): Option<&SkillItem> = slots.get(slot_key) else {
 		return;
 	};
-	let Some(advanced) = combos.advance2(&added.slot_key, &item.content.item_type) else {
+	let Some(advanced) = combos.advance_combo(&added.slot_key, &item.content.item_type) else {
 		return;
 	};
 
@@ -64,14 +64,14 @@ mod tests {
 
 	mock! {
 		_Combos {}
-		impl AdvanceCombo2 for _Combos {
-			fn advance2(&mut self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill> {}
+		impl AdvanceCombo for _Combos {
+			fn advance_combo(&mut self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill> {}
 		}
 	}
 
-	impl AdvanceCombo2 for _Combos {
-		fn advance2(&mut self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill> {
-			self.mock.advance2(trigger, item_type)
+	impl AdvanceCombo for _Combos {
+		fn advance_combo(&mut self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill> {
+			self.mock.advance_combo(trigger, item_type)
 		}
 	}
 
@@ -102,14 +102,14 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Combos::new().with_mock(|mock| {
-				mock.expect_advance2()
+				mock.expect_advance_combo()
 					.times(1)
 					.with(
 						eq(SlotKey::BottomHand(Side::Right)),
 						eq(SkillItemType::ForceEssence),
 					)
 					.return_const(Skill::default());
-				mock.expect_advance2()
+				mock.expect_advance_combo()
 					.times(1)
 					.with(
 						eq(SlotKey::BottomHand(Side::Left)),
@@ -164,7 +164,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Combos::new().with_mock(|mock| {
-					mock.expect_advance2().return_const(Skill {
+					mock.expect_advance_combo().return_const(Skill {
 						name: "replace a".to_owned(),
 						..default()
 					});

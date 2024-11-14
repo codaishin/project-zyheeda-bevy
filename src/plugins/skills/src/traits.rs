@@ -1,4 +1,3 @@
-pub(crate) mod advance_combo;
 pub(crate) mod advance_combo2;
 pub(crate) mod bevy_input;
 pub(crate) mod flush;
@@ -12,7 +11,7 @@ pub(crate) mod swap_commands;
 
 use crate::{
 	behaviors::{SkillCaster, Target},
-	components::{skill_spawners::SkillSpawners, slots::Slots},
+	components::skill_spawners::SkillSpawners,
 	item::item_type::SkillItemType,
 	skills::{Animate, RunSkillBehavior, Skill, SkillAnimation},
 	slot_key::SlotKey,
@@ -61,19 +60,11 @@ pub trait IsTimedOut {
 }
 
 pub trait PeekNext<TNext> {
-	fn peek_next(&self, trigger: &SlotKey, slots: &Slots) -> Option<TNext>;
-}
-
-pub trait PeekNext2<TNext> {
-	fn peek_next2(&self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<TNext>;
+	fn peek_next(&self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<TNext>;
 }
 
 pub(crate) trait AdvanceCombo {
-	fn advance(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill>;
-}
-
-pub(crate) trait AdvanceCombo2 {
-	fn advance2(&mut self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill>;
+	fn advance_combo(&mut self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill>;
 }
 
 pub(crate) trait SetNextCombo<TCombo> {

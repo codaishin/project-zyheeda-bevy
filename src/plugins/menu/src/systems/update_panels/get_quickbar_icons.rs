@@ -6,7 +6,7 @@ use skills::{
 	components::slots::Slots,
 	item::SkillItem,
 	skills::{QueuedSkill, Skill},
-	traits::{IsTimedOut, PeekNext2},
+	traits::{IsTimedOut, PeekNext},
 };
 
 type PlayerComponents<'a, TQueue, TCombos, TComboTimeout> = (
@@ -23,7 +23,7 @@ pub(crate) fn get_quickbar_icons<TQueue, TCombos, TComboTimeout>(
 ) -> Vec<(Entity, Option<Handle<Image>>)>
 where
 	TQueue: Component + Iterate<QueuedSkill>,
-	TCombos: Component + PeekNext2<Skill>,
+	TCombos: Component + PeekNext<Skill>,
 	TComboTimeout: Component + IsTimedOut,
 {
 	let Ok((slots, queue, combos, combo_timeout)) = players.get_single() else {
@@ -53,7 +53,7 @@ fn if_active_skill_icon<TQueue: Iterate<QueuedSkill>>(
 	active_skill.skill.icon.clone()
 }
 
-fn if_combo_skill_icon<'a, TCombos: PeekNext2<Skill>, TComboTimeout: IsTimedOut>(
+fn if_combo_skill_icon<'a, TCombos: PeekNext<Skill>, TComboTimeout: IsTimedOut>(
 	panel: &'a QuickbarPanel,
 	slots: &'a Slots,
 	combos: Option<&'a TCombos>,
@@ -64,7 +64,7 @@ fn if_combo_skill_icon<'a, TCombos: PeekNext2<Skill>, TComboTimeout: IsTimedOut>
 			return None;
 		}
 		let item: &SkillItem = slots.get(&panel.key)?;
-		let next_combo = combos?.peek_next2(&panel.key, &item.content.item_type)?;
+		let next_combo = combos?.peek_next(&panel.key, &item.content.item_type)?;
 		next_combo.icon
 	}
 }
@@ -122,9 +122,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl PeekNext2<Skill> for _Combos {
-		fn peek_next2(&self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill> {
-			self.mock.peek_next2(trigger, item_type)
+	impl PeekNext<Skill> for _Combos {
+		fn peek_next(&self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill> {
+			self.mock.peek_next(trigger, item_type)
 		}
 	}
 
@@ -187,7 +187,7 @@ mod tests {
 			slots,
 			_Queue::default(),
 			_Combos::new().with_mock(|mock| {
-				mock.expect_peek_next2().return_const(Skill {
+				mock.expect_peek_next().return_const(Skill {
 					icon: Some(get_handle("combo skill")),
 					..default()
 				});
@@ -246,7 +246,7 @@ mod tests {
 			slots,
 			_Queue::default(),
 			_Combos::new().with_mock(|mock| {
-				mock.expect_peek_next2()
+				mock.expect_peek_next()
 					.times(1)
 					.with(
 						eq(SlotKey::BottomHand(Side::Left)),
@@ -280,7 +280,7 @@ mod tests {
 			slots,
 			_Queue::default(),
 			_Combos::new().with_mock(|mock| {
-				mock.expect_peek_next2().return_const(Skill {
+				mock.expect_peek_next().return_const(Skill {
 					icon: Some(get_handle("combo skill")),
 					..default()
 				});
@@ -317,7 +317,7 @@ mod tests {
 			slots,
 			_Queue::default(),
 			_Combos::new().with_mock(|mock| {
-				mock.expect_peek_next2().return_const(None);
+				mock.expect_peek_next().return_const(None);
 			}),
 			_ComboTimeout(false),
 		));
@@ -358,7 +358,7 @@ mod tests {
 				mode: Activation::Waiting,
 			}]),
 			_Combos::new().with_mock(|mock| {
-				mock.expect_peek_next2().return_const(Skill {
+				mock.expect_peek_next().return_const(Skill {
 					icon: Some(get_handle("combo skill")),
 					..default()
 				});
@@ -402,7 +402,7 @@ mod tests {
 				mode: Activation::Waiting,
 			}]),
 			_Combos::new().with_mock(|mock| {
-				mock.expect_peek_next2().return_const(Skill {
+				mock.expect_peek_next().return_const(Skill {
 					icon: Some(get_handle("combo skill")),
 					..default()
 				});

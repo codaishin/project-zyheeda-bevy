@@ -1,4 +1,4 @@
-use super::{AdvanceCombo2, PeekNext2, SetNextCombo};
+use super::{AdvanceCombo, PeekNext, SetNextCombo};
 use crate::{
 	components::combo_node::ComboNode,
 	item::item_type::SkillItemType,
@@ -6,12 +6,12 @@ use crate::{
 	slot_key::SlotKey,
 };
 
-impl<T> AdvanceCombo2 for T
+impl<T> AdvanceCombo for T
 where
-	T: PeekNext2<(Skill, ComboNode)> + SetNextCombo<Option<ComboNode>>,
+	T: PeekNext<(Skill, ComboNode)> + SetNextCombo<Option<ComboNode>>,
 {
-	fn advance2(&mut self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill> {
-		let Some((skill, next_combo)) = self.peek_next2(trigger, item_type) else {
+	fn advance_combo(&mut self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill> {
+		let Some((skill, next_combo)) = self.peek_next(trigger, item_type) else {
 			self.set_next_combo(None);
 			return None;
 		};
@@ -30,8 +30,8 @@ mod tests {
 
 	mock! {
 		_Combos {}
-		impl PeekNext2<(Skill, ComboNode)> for _Combos {
-			fn peek_next2(&self, trigger: &SlotKey, slots: &SkillItemType) -> Option<(Skill, ComboNode)>;
+		impl PeekNext<(Skill, ComboNode)> for _Combos {
+			fn peek_next(&self, trigger: &SlotKey, slots: &SkillItemType) -> Option<(Skill, ComboNode)>;
 		}
 		impl SetNextCombo<Option<ComboNode>> for _Combos {
 			fn set_next_combo(&mut self, value: Option<ComboNode>);
@@ -56,7 +56,7 @@ mod tests {
 	#[test]
 	fn call_set_next_combo_with_next_when_peek_was_some() {
 		let mut combos = Mock_Combos::new_mock(|mock| {
-			mock.expect_peek_next2()
+			mock.expect_peek_next()
 				.with(
 					eq(SlotKey::BottomHand(Side::Right)),
 					eq(SkillItemType::Pistol),
@@ -68,13 +68,13 @@ mod tests {
 				.return_const(());
 		});
 
-		combos.advance2(&SlotKey::default(), &SkillItemType::default());
+		combos.advance_combo(&SlotKey::default(), &SkillItemType::default());
 	}
 
 	#[test]
 	fn return_skill_when_peek_next_was_some() {
 		let mut combos = Mock_Combos::new_mock(|mock| {
-			mock.expect_peek_next2().return_const((
+			mock.expect_peek_next().return_const((
 				Skill {
 					name: "return this".to_owned(),
 					..default()
@@ -84,7 +84,7 @@ mod tests {
 			mock.expect_set_next_combo().return_const(());
 		});
 
-		let skill = combos.advance2(&SlotKey::default(), &SkillItemType::default());
+		let skill = combos.advance_combo(&SlotKey::default(), &SkillItemType::default());
 
 		assert_eq!(
 			Some(Skill {
@@ -98,24 +98,24 @@ mod tests {
 	#[test]
 	fn call_set_next_combo_with_none_when_peek_was_none() {
 		let mut combos = Mock_Combos::new_mock(|mock| {
-			mock.expect_peek_next2().return_const(None);
+			mock.expect_peek_next().return_const(None);
 			mock.expect_set_next_combo()
 				.times(1)
 				.with(eq(None))
 				.return_const(());
 		});
 
-		combos.advance2(&SlotKey::default(), &SkillItemType::default());
+		combos.advance_combo(&SlotKey::default(), &SkillItemType::default());
 	}
 
 	#[test]
 	fn return_none_when_peek_next_was_none() {
 		let mut combos = Mock_Combos::new_mock(|mock| {
-			mock.expect_peek_next2().return_const(None);
+			mock.expect_peek_next().return_const(None);
 			mock.expect_set_next_combo().return_const(());
 		});
 
-		let skill = combos.advance2(&SlotKey::default(), &SkillItemType::default());
+		let skill = combos.advance_combo(&SlotKey::default(), &SkillItemType::default());
 
 		assert_eq!(None, skill);
 	}
@@ -123,7 +123,7 @@ mod tests {
 	#[test]
 	fn call_peek_next_with_correct_args() {
 		let mut combos = Mock_Combos::new_mock(|mock| {
-			mock.expect_peek_next2()
+			mock.expect_peek_next()
 				.times(1)
 				.with(
 					eq(SlotKey::BottomHand(Side::Left)),
@@ -133,7 +133,7 @@ mod tests {
 			mock.expect_set_next_combo().return_const(());
 		});
 
-		combos.advance2(
+		combos.advance_combo(
 			&SlotKey::BottomHand(Side::Left),
 			&SkillItemType::ForceEssence,
 		);
