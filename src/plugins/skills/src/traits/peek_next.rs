@@ -1,13 +1,14 @@
 use super::PeekNext;
 use crate::{
-	components::{combo_node::ComboNode, slots::Slots},
+	components::combo_node::ComboNode,
+	item::item_type::SkillItemType,
 	skills::Skill,
 	slot_key::SlotKey,
 };
 
 impl<T: PeekNext<(Skill, ComboNode)>> PeekNext<Skill> for T {
-	fn peek_next(&self, trigger: &SlotKey, slots: &Slots) -> Option<Skill> {
-		self.peek_next(trigger, slots).map(|(skill, _)| skill)
+	fn peek_next(&self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill> {
+		self.peek_next(trigger, item_type).map(|(skill, _)| skill)
 	}
 }
 
@@ -17,21 +18,12 @@ mod tests {
 	use bevy::utils::default;
 	use common::components::Side;
 	use mockall::{mock, predicate::eq};
-	use std::collections::HashMap;
 
 	mock! {
 		_Combos {}
 		impl PeekNext<(Skill, ComboNode)> for _Combos {
-			fn peek_next(&self, trigger: &SlotKey, slots: &Slots) -> Option<(Skill, ComboNode)>;
+			fn peek_next(&self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<(Skill, ComboNode)>;
 		}
-	}
-
-	fn slots() -> Slots {
-		Slots(HashMap::from([(SlotKey::BottomHand(Side::Right), None)]))
-	}
-
-	fn other_slots() -> Slots {
-		Slots(HashMap::from([(SlotKey::BottomHand(Side::Left), None)]))
 	}
 
 	fn node() -> ComboNode {
@@ -63,7 +55,7 @@ mod tests {
 				name: "my skill".to_owned(),
 				..default()
 			}),
-			combos.peek_next(&SlotKey::BottomHand(Side::Right), &slots())
+			combos.peek_next(&SlotKey::BottomHand(Side::Right), &SkillItemType::Pistol)
 		);
 	}
 
@@ -74,7 +66,7 @@ mod tests {
 
 		assert_eq!(
 			None as Option<Skill>,
-			combos.peek_next(&SlotKey::BottomHand(Side::Right), &slots())
+			combos.peek_next(&SlotKey::BottomHand(Side::Right), &SkillItemType::Pistol)
 		);
 	}
 
@@ -84,9 +76,15 @@ mod tests {
 		combos
 			.expect_peek_next()
 			.times(1)
-			.with(eq(SlotKey::BottomHand(Side::Left)), eq(other_slots()))
+			.with(
+				eq(SlotKey::BottomHand(Side::Left)),
+				eq(SkillItemType::ForceEssence),
+			)
 			.return_const(None);
 
-		let _: Option<Skill> = combos.peek_next(&SlotKey::BottomHand(Side::Left), &other_slots());
+		let _: Option<Skill> = combos.peek_next(
+			&SlotKey::BottomHand(Side::Left),
+			&SkillItemType::ForceEssence,
+		);
 	}
 }

@@ -57,6 +57,7 @@ use systems::{
 	equip::equip_item,
 	execute::ExecuteSkills,
 	flush::flush,
+	flush_skill_combos::flush_skill_combos,
 	get_inputs::get_inputs,
 	mouse_context::{
 		advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
@@ -118,7 +119,8 @@ where
 						State<MouseContext<KeyCode>>,
 					>
 						.pipe(enqueue::<Slots, Queue, QueuedSkill>),
-					update_skill_combos::<Combos, CombosTimeOut, Queue, Virtual>,
+					update_skill_combos::<Combos, Queue>,
+					flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 					advance_active_skill::<
 						Queue,
 						Animation,

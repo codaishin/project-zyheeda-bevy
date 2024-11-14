@@ -1,8 +1,8 @@
 pub mod node_entry;
 pub mod node_entry_mut;
 
-use super::slots::Slots;
 use crate::{
+	item::item_type::SkillItemType,
 	skills::Skill,
 	slot_key::SlotKey,
 	traits::{Combo, GetCombosOrdered, GetNode, GetNodeMut, PeekNext, RootKeys},
@@ -160,22 +160,20 @@ impl<TKey: Iterate<SlotKey>> TryInsert<TKey, Skill> for ComboNode {
 }
 
 impl PeekNext<(Skill, ComboNode)> for ComboNode {
-	fn peek_next(&self, trigger: &SlotKey, slots: &Slots) -> Option<(Skill, ComboNode)> {
-		let tree = &self.0;
-		tree.get(trigger)
-			.filter(|(skill, ..)| skill_is_usable(slots, trigger, skill))
-			.cloned()
-	}
-}
+	fn peek_next(
+		&self,
+		trigger: &SlotKey,
+		item_type: &SkillItemType,
+	) -> Option<(Skill, ComboNode)> {
+		let ComboNode(tree) = self;
+		let (skill, combo) = tree.get(trigger)?;
 
-fn skill_is_usable(slots: &Slots, trigger: &SlotKey, skill: &Skill) -> bool {
-	let Some(slot) = slots.0.get(trigger) else {
-		return false;
-	};
-	let Some(item) = slot.as_ref() else {
-		return false;
-	};
-	skill.is_usable_with.contains(&item.content.item_type)
+		if !skill.is_usable_with.contains(item_type) {
+			return None;
+		}
+
+		Some((skill.clone(), combo.clone()))
+	}
 }
 
 impl GetCombosOrdered for ComboNode {
@@ -228,42 +226,13 @@ fn append_followups<'a>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		item::{SkillItem, SkillItemContent},
-		SkillItemType,
-	};
+	use crate::SkillItemType;
 	use bevy::prelude::default;
 	use common::components::Side;
-	use std::collections::{HashMap, HashSet};
-
-	fn slots_main_pistol_off_sword() -> Slots {
-		Slots(HashMap::from([
-			(
-				SlotKey::BottomHand(Side::Right),
-				Some(SkillItem {
-					content: SkillItemContent {
-						item_type: SkillItemType::Pistol,
-						..default()
-					},
-					..default()
-				}),
-			),
-			(
-				SlotKey::BottomHand(Side::Left),
-				Some(SkillItem {
-					content: SkillItemContent {
-						item_type: SkillItemType::Bracer,
-						..default()
-					},
-					..default()
-				}),
-			),
-		]))
-	}
+	use std::collections::HashSet;
 
 	#[test]
 	fn peek_next_from_tree() {
-		let slots = slots_main_pistol_off_sword();
 		let node = ComboNode(OrderedHashMap::from([(
 			SlotKey::BottomHand(Side::Right),
 			(
@@ -285,8 +254,7 @@ mod tests {
 			),
 		)]));
 
-		let next: Option<(Skill, ComboNode)> =
-			node.peek_next(&SlotKey::BottomHand(Side::Right), &slots);
+		let next = node.peek_next(&SlotKey::BottomHand(Side::Right), &SkillItemType::Pistol);
 
 		assert_eq!(
 			Some((
@@ -311,38 +279,7 @@ mod tests {
 	}
 
 	#[test]
-	fn peek_none_from_tree_when_slot_on_slot_mismatch() {
-		let slots = slots_main_pistol_off_sword();
-		let node = ComboNode(OrderedHashMap::from([(
-			SlotKey::BottomHand(Side::Right),
-			(
-				Skill {
-					name: "first".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Pistol]),
-					..default()
-				},
-				ComboNode(OrderedHashMap::from([(
-					SlotKey::BottomHand(Side::Right),
-					(
-						Skill {
-							name: "second".to_owned(),
-							..default()
-						},
-						ComboNode(default()),
-					),
-				)])),
-			),
-		)]));
-
-		let next: Option<(Skill, ComboNode)> =
-			node.peek_next(&SlotKey::BottomHand(Side::Left), &slots);
-
-		assert_eq!(None, next)
-	}
-
-	#[test]
-	fn peek_none_from_tree_when_slot_on_item_type_mismatch() {
-		let slots = slots_main_pistol_off_sword();
+	fn peek_none_if_item_type_not_usable() {
 		let node = ComboNode(OrderedHashMap::from([(
 			SlotKey::BottomHand(Side::Right),
 			(
@@ -364,74 +301,9 @@ mod tests {
 			),
 		)]));
 
-		let next: Option<(Skill, ComboNode)> =
-			node.peek_next(&SlotKey::BottomHand(Side::Right), &slots);
+		let next = node.peek_next(&SlotKey::BottomHand(Side::Right), &SkillItemType::Pistol);
 
-		assert_eq!(None, next)
-	}
-
-	#[test]
-	fn peek_none_from_tree_when_slot_item_none() {
-		let mut slots = slots_main_pistol_off_sword();
-		slots.0.remove(&SlotKey::BottomHand(Side::Right));
-
-		let node = ComboNode(OrderedHashMap::from([(
-			SlotKey::BottomHand(Side::Right),
-			(
-				Skill {
-					name: "first".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Pistol]),
-					..default()
-				},
-				ComboNode(OrderedHashMap::from([(
-					SlotKey::BottomHand(Side::Right),
-					(
-						Skill {
-							name: "second".to_owned(),
-							..default()
-						},
-						ComboNode(default()),
-					),
-				)])),
-			),
-		)]));
-
-		let next: Option<(Skill, ComboNode)> =
-			node.peek_next(&SlotKey::BottomHand(Side::Right), &slots);
-
-		assert_eq!(None, next)
-	}
-
-	#[test]
-	fn peek_none_from_tree_when_slot_none() {
-		let mut slots = slots_main_pistol_off_sword();
-		slots.0.remove(&SlotKey::BottomHand(Side::Right));
-
-		let node = ComboNode(OrderedHashMap::from([(
-			SlotKey::BottomHand(Side::Right),
-			(
-				Skill {
-					name: "first".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Pistol]),
-					..default()
-				},
-				ComboNode(OrderedHashMap::from([(
-					SlotKey::BottomHand(Side::Right),
-					(
-						Skill {
-							name: "second".to_owned(),
-							..default()
-						},
-						ComboNode(default()),
-					),
-				)])),
-			),
-		)]));
-
-		let next: Option<(Skill, ComboNode)> =
-			node.peek_next(&SlotKey::BottomHand(Side::Right), &slots);
-
-		assert_eq!(None, next)
+		assert_eq!(None as Option<(Skill, ComboNode)>, next)
 	}
 
 	#[test]

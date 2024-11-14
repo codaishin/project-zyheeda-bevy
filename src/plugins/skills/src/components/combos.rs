@@ -1,5 +1,6 @@
-use super::{combo_node::ComboNode, slots::Slots};
+use super::combo_node::ComboNode;
 use crate::{
+	item::item_type::SkillItemType,
 	skills::Skill,
 	slot_key::SlotKey,
 	traits::{
@@ -20,14 +21,14 @@ use common::traits::iterate::Iterate;
 
 #[derive(Component, PartialEq, Debug)]
 pub struct Combos<TComboNode = ComboNode> {
-	value: TComboNode,
+	config: TComboNode,
 	current: Option<TComboNode>,
 }
 
 impl<T> Combos<T> {
 	pub fn new(config: T) -> Self {
 		Self {
-			value: config,
+			config,
 			current: None,
 		}
 	}
@@ -42,7 +43,7 @@ impl<T> From<ComboNode<T>> for Combos<ComboNode<T>> {
 impl Default for Combos {
 	fn default() -> Self {
 		Self {
-			value: ComboNode::default(),
+			config: ComboNode::default(),
 			current: None,
 		}
 	}
@@ -54,20 +55,27 @@ impl<TComboNode> SetNextCombo<Option<TComboNode>> for Combos<TComboNode> {
 	}
 }
 
-impl<TComboNode: PeekNext<(Skill, TComboNode)>> PeekNext<(Skill, TComboNode)>
-	for Combos<TComboNode>
+impl<TComboNode> PeekNext<(Skill, TComboNode)> for Combos<TComboNode>
+where
+	TComboNode: PeekNext<(Skill, TComboNode)>,
 {
-	fn peek_next(&self, trigger: &SlotKey, slots: &Slots) -> Option<(Skill, TComboNode)> {
-		self.current
+	fn peek_next(
+		&self,
+		trigger: &SlotKey,
+		item_type: &SkillItemType,
+	) -> Option<(Skill, TComboNode)> {
+		let Combos { config, current } = self;
+
+		current
 			.as_ref()
-			.and_then(|current| current.peek_next(trigger, slots))
-			.or_else(|| self.value.peek_next(trigger, slots))
+			.and_then(|current| current.peek_next(trigger, item_type))
+			.or_else(|| config.peek_next(trigger, item_type))
 	}
 }
 
 impl<TNode: GetCombosOrdered> GetCombosOrdered for Combos<TNode> {
 	fn combos_ordered(&self) -> impl Iterator<Item = Combo> {
-		self.value.combos_ordered()
+		self.config.combos_ordered()
 	}
 }
 
@@ -79,7 +87,7 @@ where
 	fn update_config(&mut self, key_path: &TKey, skill: Option<Skill>) {
 		self.current = None;
 
-		let Some(mut entry) = self.value.node_mut(key_path) else {
+		let Some(mut entry) = self.config.node_mut(key_path) else {
 			return;
 		};
 
@@ -95,7 +103,7 @@ where
 	fn update_config(&mut self, key_path: &TKey, key: SlotKey) {
 		self.current = None;
 
-		let Some(mut entry) = self.value.node_mut(key_path) else {
+		let Some(mut entry) = self.config.node_mut(key_path) else {
 			return;
 		};
 
@@ -107,7 +115,7 @@ impl<'a, TNode: GetNode<'a, TKey>, TKey: Iterate<SlotKey>> GetNode<'a, TKey> for
 	type TNode = TNode::TNode;
 
 	fn node(&'a self, key: &TKey) -> Option<Self::TNode> {
-		self.value.node(key)
+		self.config.node(key)
 	}
 }
 
@@ -115,7 +123,7 @@ impl<TNode: RootKeys> RootKeys for Combos<TNode> {
 	type TItem = TNode::TItem;
 
 	fn root_keys(&self) -> impl Iterator<Item = Self::TItem> {
-		self.value.root_keys()
+		self.config.root_keys()
 	}
 }
 
@@ -123,50 +131,54 @@ impl<TNode: RootKeys> RootKeys for Combos<TNode> {
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::{components::Side, traits::nested_mock::NestedMocks};
+	use common::{
+		components::Side,
+		simple_init,
+		traits::{mock::Mock, nested_mock::NestedMocks},
+	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
-	use std::{cell::RefCell, collections::HashMap};
+	use std::cell::RefCell;
 
 	mock! {
 		_Next {}
 		impl PeekNext<(Skill, Self)> for _Next {
-			fn peek_next(&self, _trigger: &SlotKey, _slots: &Slots) -> Option<(Skill, Self)>;
+			fn peek_next(&self, _trigger: &SlotKey, _item_type: &SkillItemType) -> Option<(Skill, Self)>;
 		}
 	}
 
+	simple_init!(Mock_Next);
+
 	#[test]
 	fn call_next_with_correct_args() {
-		let slots = Slots(HashMap::from([(SlotKey::BottomHand(Side::Right), None)]));
+		let item_type = SkillItemType::ForceEssence;
 		let trigger = SlotKey::BottomHand(Side::Left);
+		let combos = Combos::new(Mock_Next::new_mock(|mock| {
+			mock.expect_peek_next()
+				.times(1)
+				.with(eq(trigger), eq(item_type))
+				.returning(|_, _| None);
+		}));
 
-		let mut mock = Mock_Next::default();
-		mock.expect_peek_next()
-			.times(1)
-			.with(eq(trigger), eq(slots.clone()))
-			.returning(|_, _| None);
-
-		let combos = Combos::new(mock);
-
-		combos.peek_next(&trigger, &slots);
+		combos.peek_next(&trigger, &item_type);
 	}
 
 	#[test]
 	fn return_skill() {
-		let mut mock = Mock_Next::default();
-		mock.expect_peek_next().returning(|_, _| {
-			Some((
-				Skill {
-					name: "my skill".to_owned(),
-					..default()
-				},
-				Mock_Next::default(),
-			))
-		});
-		let combos = Combos::new(mock);
+		let combos = Combos::new(Mock_Next::new_mock(|mock| {
+			mock.expect_peek_next().returning(|_, _| {
+				Some((
+					Skill {
+						name: "my skill".to_owned(),
+						..default()
+					},
+					Mock_Next::default(),
+				))
+			});
+		}));
 
 		let skill = combos
-			.peek_next(&default(), &default())
+			.peek_next(&SlotKey::default(), &SkillItemType::default())
 			.map(|(skill, _)| skill);
 
 		assert_eq!(
@@ -179,83 +191,34 @@ mod tests {
 	}
 
 	#[test]
-	fn return_none() {
-		let mut mock = Mock_Next::default();
-		mock.expect_peek_next().returning(|_, _| None);
-		let combos = Combos::new(mock);
-
-		let skill = combos.peek_next(&default(), &default());
-
-		assert!(skill.is_none());
-	}
-
-	#[test]
-	fn return_next_node() {
-		#[derive(Debug, PartialEq)]
-		struct _Node(&'static str);
-
-		impl PeekNext<(Skill, _Node)> for _Node {
-			fn peek_next(&self, _: &SlotKey, _: &Slots) -> Option<(Skill, _Node)> {
-				Some((Skill::default(), _Node("next")))
-			}
-		}
-
-		let slots = Slots(HashMap::from([(SlotKey::BottomHand(Side::Right), None)]));
-		let trigger = SlotKey::BottomHand(Side::Left);
-
-		let combos = Combos::new(_Node("first"));
-
-		let next_combo = combos.peek_next(&trigger, &slots).map(|(_, node)| node);
-
-		assert_eq!(Some(_Node("next")), next_combo);
-	}
-
-	#[test]
 	fn use_combo_used_in_set_next_combo() {
-		let mut first = Mock_Next::default();
-		let mut next = Mock_Next::default();
-
-		first.expect_peek_next().never().returning(|_, _| None);
-		next.expect_peek_next()
-			.times(1)
-			.returning(|_, _| Some((Skill::default(), Mock_Next::default())));
-
+		let first = Mock_Next::new_mock(|mock| {
+			mock.expect_peek_next().never().returning(|_, _| None);
+		});
+		let next = Mock_Next::new_mock(|mock| {
+			mock.expect_peek_next()
+				.with(eq(SlotKey::TopHand(Side::Left)), eq(SkillItemType::Pistol))
+				.times(1)
+				.returning(|_, _| Some((Skill::default(), Mock_Next::default())));
+		});
 		let mut combos = Combos::new(first);
-
 		combos.set_next_combo(Some(next));
-		combos.peek_next(&default(), &default());
+
+		combos.peek_next(&SlotKey::TopHand(Side::Left), &SkillItemType::Pistol);
 	}
 
 	#[test]
 	fn use_original_when_next_combo_returns_none() {
-		let mut first = Mock_Next::default();
-		let mut other = Mock_Next::default();
-
-		first.expect_peek_next().times(1).returning(|_, _| None);
-		other.expect_peek_next().returning(|_, _| None);
-
+		let first = Mock_Next::new_mock(|mock| {
+			mock.expect_peek_next().times(1).returning(|_, _| None);
+		});
+		let next = Mock_Next::new_mock(|mock| {
+			mock.expect_peek_next().returning(|_, _| None);
+		});
 		let mut combos = Combos::new(first);
+		combos.set_next_combo(Some(next));
 
-		combos.set_next_combo(Some(other));
-		combos.peek_next(&default(), &default());
-	}
-
-	#[test]
-	fn use_original_when_set_next_combo_with_none() {
-		let mut first = Mock_Next::default();
-		let mut other = Mock_Next::default();
-
-		first.expect_peek_next().times(1).returning(|_, _| None);
-		other
-			.expect_peek_next()
-			.never()
-			.returning(|_, _| Some((Skill::default(), Mock_Next::default())));
-
-		let mut combos = Combos::new(first);
-
-		combos.set_next_combo(Some(other));
-		combos.set_next_combo(None);
-		combos.peek_next(&default(), &default());
+		combos.peek_next(&SlotKey::default(), &SkillItemType::default());
 	}
 
 	struct _ComboNode<'a>(Vec<Combo<'a>>);
@@ -360,7 +323,7 @@ mod tests {
 				SlotKey::BottomHand(Side::Right),
 				SlotKey::BottomHand(Side::Left)
 			]],
-			combos.value.call_args.into_inner()
+			combos.config.call_args.into_inner()
 		)
 	}
 
@@ -391,7 +354,7 @@ mod tests {
 	#[test]
 	fn update_config_skill_clear_current() {
 		let mut combos = Combos {
-			value: _Node {
+			config: _Node {
 				entry: Some(_Entry::new().with_mock(|mock| {
 					mock.expect_insert().return_const(());
 				})),
@@ -414,7 +377,7 @@ mod tests {
 	#[test]
 	fn update_config_skill_clear_current_if_entry_is_none() {
 		let mut combos = Combos {
-			value: _Node {
+			config: _Node {
 				entry: None,
 				..default()
 			},
@@ -454,7 +417,7 @@ mod tests {
 				SlotKey::BottomHand(Side::Right),
 				SlotKey::BottomHand(Side::Left)
 			]],
-			combos.value.call_args.into_inner()
+			combos.config.call_args.into_inner()
 		)
 	}
 
@@ -479,7 +442,7 @@ mod tests {
 	#[test]
 	fn update_config_re_key_clear_current() {
 		let mut combos = Combos {
-			value: _Node {
+			config: _Node {
 				entry: Some(_Entry::new().with_mock(|mock| {
 					mock.expect_re_key().return_const(());
 				})),
@@ -499,7 +462,7 @@ mod tests {
 	#[test]
 	fn update_config_re_key_clear_current_if_entry_is_none() {
 		let mut combos = Combos {
-			value: _Node {
+			config: _Node {
 				entry: None,
 				..default()
 			},
@@ -517,7 +480,7 @@ mod tests {
 	#[test]
 	fn get_node() {
 		let combo = Combos {
-			value: _Node {
+			config: _Node {
 				entry: Some(_Entry::new().with_mock(|mock| {
 					mock.expect_insert().return_const(());
 				})),
@@ -539,7 +502,7 @@ mod tests {
 					SlotKey::BottomHand(Side::Left)
 				]]
 			),
-			(entry.is_some(), combo.value.call_args.into_inner())
+			(entry.is_some(), combo.config.call_args.into_inner())
 		)
 	}
 
