@@ -1,4 +1,5 @@
 pub(crate) mod advance_combo;
+pub(crate) mod advance_combo2;
 pub(crate) mod bevy_input;
 pub(crate) mod flush;
 pub(crate) mod get_skill_animation;
@@ -69,6 +70,10 @@ pub trait PeekNext2<TNext> {
 
 pub(crate) trait AdvanceCombo {
 	fn advance(&mut self, trigger: &SlotKey, slots: &Slots) -> Option<Skill>;
+}
+
+pub(crate) trait AdvanceCombo2 {
+	fn advance2(&mut self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill>;
 }
 
 pub(crate) trait SetNextCombo<TCombo> {
