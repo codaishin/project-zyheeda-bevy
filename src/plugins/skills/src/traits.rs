@@ -1,4 +1,4 @@
-pub(crate) mod advance_combo2;
+pub(crate) mod advance_combo;
 pub(crate) mod bevy_input;
 pub(crate) mod flush;
 pub(crate) mod get_skill_animation;

@@ -31,7 +31,7 @@ mod tests {
 	mock! {
 		_Combos {}
 		impl PeekNext<(Skill, ComboNode)> for _Combos {
-			fn peek_next(&self, trigger: &SlotKey, slots: &SkillItemType) -> Option<(Skill, ComboNode)>;
+			fn peek_next(&self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<(Skill, ComboNode)>;
 		}
 		impl SetNextCombo<Option<ComboNode>> for _Combos {
 			fn set_next_combo(&mut self, value: Option<ComboNode>);
@@ -68,7 +68,7 @@ mod tests {
 				.return_const(());
 		});
 
-		combos.advance_combo(&SlotKey::default(), &SkillItemType::default());
+		combos.advance_combo(&SlotKey::BottomHand(Side::Right), &SkillItemType::Pistol);
 	}
 
 	#[test]
