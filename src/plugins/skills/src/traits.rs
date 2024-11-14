@@ -12,6 +12,7 @@ pub(crate) mod swap_commands;
 use crate::{
 	behaviors::{SkillCaster, Target},
 	components::{skill_spawners::SkillSpawners, slots::Slots},
+	item::item_type::SkillItemType,
 	skills::{Animate, RunSkillBehavior, Skill, SkillAnimation},
 	slot_key::SlotKey,
 };
@@ -60,6 +61,10 @@ pub trait IsTimedOut {
 
 pub trait PeekNext<TNext> {
 	fn peek_next(&self, trigger: &SlotKey, slots: &Slots) -> Option<TNext>;
+}
+
+pub trait PeekNext2<TNext> {
+	fn peek_next2(&self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<TNext>;
 }
 
 pub(crate) trait AdvanceCombo {
