@@ -122,7 +122,7 @@ mod tests {
 		where
 			QueuedSkill: 'a,
 		{
-			self.skills.iterate()
+			self.skills.iter()
 		}
 	}
 
