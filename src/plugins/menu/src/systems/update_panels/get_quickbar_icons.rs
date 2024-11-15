@@ -19,6 +19,7 @@ type PlayerComponents<'a, TQueue, TCombos, TComboTimeout> = (
 pub(crate) fn get_quickbar_icons<TQueue, TCombos, TComboTimeout>(
 	players: Query<PlayerComponents<TQueue, TCombos, TComboTimeout>, With<Player>>,
 	panels: Query<(Entity, &mut QuickbarPanel)>,
+	items: Res<Assets<SkillItem>>,
 	skills: Res<Assets<Skill>>,
 ) -> Vec<(Entity, Option<Handle<Image>>)>
 where
@@ -26,13 +27,13 @@ where
 	TCombos: Component + PeekNext<Skill>,
 	TComboTimeout: Component + IsTimedOut,
 {
-	let Ok((slots, queue, combos, combo_timeout)) = players.get_single() else {
+	let Ok((slots, queue, combos, timeout)) = players.get_single() else {
 		return vec![];
 	};
 	let get_icon_path = |(entity, panel): (Entity, &QuickbarPanel)| {
-		let icon = if_active_skill_icon(panel, queue)
-			.or_else(if_combo_skill_icon(panel, slots, combos, combo_timeout))
-			.or_else(if_item_skill_icon(panel, slots, &skills));
+		let icon = active_skill_icon(panel, queue)
+			.or_else(combo_skill_icon(panel, &items, slots, combos, timeout))
+			.or_else(item_skill_icon(panel, &items, &skills, slots));
 
 		(entity, icon)
 	};
@@ -40,7 +41,7 @@ where
 	panels.iter().map(get_icon_path).collect()
 }
 
-fn if_active_skill_icon<TQueue: Iterate<QueuedSkill>>(
+fn active_skill_icon<TQueue: Iterate<QueuedSkill>>(
 	panel: &QuickbarPanel,
 	queue: &TQueue,
 ) -> Option<Handle<Image>> {
@@ -53,8 +54,9 @@ fn if_active_skill_icon<TQueue: Iterate<QueuedSkill>>(
 	active_skill.skill.icon.clone()
 }
 
-fn if_combo_skill_icon<'a, TCombos: PeekNext<Skill>, TComboTimeout: IsTimedOut>(
+fn combo_skill_icon<'a, TCombos: PeekNext<Skill>, TComboTimeout: IsTimedOut>(
 	panel: &'a QuickbarPanel,
+	items: &'a Assets<SkillItem>,
 	slots: &'a Slots,
 	combos: Option<&'a TCombos>,
 	timed_out: Option<&'a TComboTimeout>,
@@ -63,24 +65,26 @@ fn if_combo_skill_icon<'a, TCombos: PeekNext<Skill>, TComboTimeout: IsTimedOut>(
 		if timed_out?.is_timed_out() {
 			return None;
 		}
-		let item: &SkillItem = slots.get(&panel.key)?;
+		let item_handle = slots.get(&panel.key)?;
+		let item = items.get(item_handle.id())?;
 		let next_combo = combos?.peek_next(&panel.key, &item.content.item_type)?;
 		next_combo.icon
 	}
 }
 
-fn if_item_skill_icon<'a>(
+fn item_skill_icon<'a>(
 	panel: &'a QuickbarPanel,
-	slots: &'a Slots,
+	items: &'a Assets<SkillItem>,
 	skills: &'a Assets<Skill>,
+	slots: &'a Slots,
 ) -> impl FnOnce() -> Option<Handle<Image>> + 'a {
 	|| {
-		let slot = slots.0.get(&panel.key)?;
-		let item = slot.as_ref()?;
-		let skill = item.content.skill.as_ref()?;
-		let skill = skills.get(skill.id())?;
-
-		skill.icon.clone()
+		slots
+			.get(&panel.key)
+			.and_then(|item| items.get(item))
+			.and_then(|item| item.content.skill.as_ref())
+			.and_then(|skill| skills.get(skill))
+			.and_then(|skill| skill.icon.clone())
 	}
 }
 
@@ -144,8 +148,9 @@ mod tests {
 		commands.insert_resource(_Result(result.0));
 	}
 
-	fn setup(skills: Assets<Skill>) -> App {
+	fn setup(items: Assets<SkillItem>, skills: Assets<Skill>) -> App {
 		let mut app = App::new().single_threaded(Update);
+		app.insert_resource(items);
 		app.insert_resource(skills);
 		app.init_resource::<_Result>();
 		app.add_systems(
@@ -173,7 +178,7 @@ mod tests {
 
 	#[test]
 	fn return_combo_skill_icon_when_no_skill_active_and_combo_not_timed_out() {
-		let (slots, skills) = setup_slots([(
+		let (slots, items, skills) = setup_slots([(
 			SlotKey::BottomHand(Side::Right),
 			SkillItemType::Pistol,
 			Skill {
@@ -181,7 +186,7 @@ mod tests {
 				..default()
 			},
 		)]);
-		let mut app = setup(skills);
+		let mut app = setup(items, skills);
 		app.world_mut().spawn((
 			Player,
 			slots,
@@ -210,29 +215,28 @@ mod tests {
 
 	fn setup_slots<const N: usize>(
 		skills: [(SlotKey, SkillItemType, Skill); N],
-	) -> (Slots, Assets<Skill>) {
+	) -> (Slots, Assets<SkillItem>, Assets<Skill>) {
 		let mut slots = HashMap::new();
 		let mut skill_assets = Assets::default();
+		let mut item_assets = Assets::default();
 
 		for (slot_key, item_type, skill) in skills {
-			let skill_handle = skill_assets.add(skill);
-			let item = SkillItem {
-				content: SkillItemContent {
-					item_type,
-					skill: Some(skill_handle),
-					..default()
-				},
+			let skill = skill_assets.add(skill);
+			let item = SkillItem::default().with_content(SkillItemContent {
+				item_type,
+				skill: Some(skill),
 				..default()
-			};
+			});
+			let item = item_assets.add(item);
 			slots.insert(slot_key, Some(item));
 		}
 
-		(Slots(slots), skill_assets)
+		(Slots(slots), item_assets, skill_assets)
 	}
 
 	#[test]
 	fn peek_combo_with_correct_arguments() {
-		let (slots, skills) = setup_slots([(
+		let (slots, items, skills) = setup_slots([(
 			SlotKey::BottomHand(Side::Left),
 			SkillItemType::ForceEssence,
 			Skill {
@@ -240,7 +244,7 @@ mod tests {
 				..default()
 			},
 		)]);
-		let mut app = setup(skills);
+		let mut app = setup(items, skills);
 		app.world_mut().spawn((
 			Player,
 			slots,
@@ -266,7 +270,7 @@ mod tests {
 
 	#[test]
 	fn return_item_skill_icon_when_no_skill_active_and_combo_timed_out() {
-		let (slots, skills) = setup_slots([(
+		let (slots, items, skills) = setup_slots([(
 			SlotKey::BottomHand(Side::Right),
 			SkillItemType::Pistol,
 			Skill {
@@ -274,7 +278,7 @@ mod tests {
 				..default()
 			},
 		)]);
-		let mut app = setup(skills);
+		let mut app = setup(items, skills);
 		app.world_mut().spawn((
 			Player,
 			slots,
@@ -303,7 +307,7 @@ mod tests {
 
 	#[test]
 	fn return_item_skill_icon_when_no_skill_active_and_combo_empty_but_not_timed_out() {
-		let (slots, skills) = setup_slots([(
+		let (slots, items, skills) = setup_slots([(
 			SlotKey::BottomHand(Side::Right),
 			SkillItemType::Pistol,
 			Skill {
@@ -311,7 +315,7 @@ mod tests {
 				..default()
 			},
 		)]);
-		let mut app = setup(skills);
+		let mut app = setup(items, skills);
 		app.world_mut().spawn((
 			Player,
 			slots,
@@ -337,7 +341,7 @@ mod tests {
 
 	#[test]
 	fn return_active_skill_icon_when_skill_active() {
-		let (slots, skills) = setup_slots([(
+		let (slots, items, skills) = setup_slots([(
 			SlotKey::BottomHand(Side::Right),
 			SkillItemType::Pistol,
 			Skill {
@@ -345,7 +349,7 @@ mod tests {
 				..default()
 			},
 		)]);
-		let mut app = setup(skills);
+		let mut app = setup(items, skills);
 		app.world_mut().spawn((
 			Player,
 			slots,
@@ -381,7 +385,7 @@ mod tests {
 
 	#[test]
 	fn return_item_skill_icon_when_skill_active_for_other_slot() {
-		let (slots, skills) = setup_slots([(
+		let (slots, items, skills) = setup_slots([(
 			SlotKey::BottomHand(Side::Right),
 			SkillItemType::Pistol,
 			Skill {
@@ -389,7 +393,7 @@ mod tests {
 				..default()
 			},
 		)]);
-		let mut app = setup(skills);
+		let mut app = setup(items, skills);
 		app.world_mut().spawn((
 			Player,
 			slots,
@@ -425,7 +429,7 @@ mod tests {
 
 	#[test]
 	fn return_item_skill_icon_when_no_skill_active_and_no_combo_components_present() {
-		let (slots, skills) = setup_slots([(
+		let (slots, items, skills) = setup_slots([(
 			SlotKey::BottomHand(Side::Right),
 			SkillItemType::Pistol,
 			Skill {
@@ -433,7 +437,7 @@ mod tests {
 				..default()
 			},
 		)]);
-		let mut app = setup(skills);
+		let mut app = setup(items, skills);
 		app.world_mut().spawn((Player, slots, _Queue::default()));
 		let panel = app
 			.world_mut()

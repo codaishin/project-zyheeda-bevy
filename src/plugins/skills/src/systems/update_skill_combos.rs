@@ -9,6 +9,7 @@ use common::traits::accessors::get::GetRef;
 
 pub(crate) fn update_skill_combos<TCombos, TQueue>(
 	mut agents: Query<(&mut TCombos, &mut TQueue, &Slots)>,
+	items: Res<Assets<SkillItem>>,
 ) where
 	TCombos: AdvanceCombo + Component,
 	TQueue: IterAddedMut<QueuedSkill> + Component,
@@ -18,7 +19,7 @@ pub(crate) fn update_skill_combos<TCombos, TQueue>(
 			continue;
 		}
 		for skill in queue.iter_added_mut() {
-			update_skill_with_advanced_combo(&mut combos, skill, slots);
+			update_skill_with_advanced_combo(&mut combos, skill, slots, &items);
 		}
 	}
 }
@@ -27,13 +28,17 @@ fn update_skill_with_advanced_combo<TCombos>(
 	combos: &mut Mut<TCombos>,
 	added: &mut QueuedSkill,
 	slots: &Slots,
+	items: &Res<Assets<SkillItem>>,
 ) where
 	TCombos: AdvanceCombo,
 {
 	let QueuedSkill {
 		skill, slot_key, ..
 	} = added;
-	let Some(item): Option<&SkillItem> = slots.get(slot_key) else {
+	let Some(item_handle) = slots.get(slot_key) else {
+		return;
+	};
+	let Some(item) = items.get(item_handle.id()) else {
 		return;
 	};
 	let Some(advanced) = combos.advance_combo(&added.slot_key, &item.content.item_type) else {
@@ -56,6 +61,7 @@ mod tests {
 	use common::{components::Side, test_tools::utils::Changed, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
+	use std::collections::HashMap;
 
 	#[derive(Component, NestedMocks)]
 	struct _Combos {
@@ -93,13 +99,55 @@ mod tests {
 		}
 	}
 
-	fn setup() -> App {
-		App::new()
+	fn setup_app(items: Assets<SkillItem>) -> App {
+		let mut app = App::new();
+		app.insert_resource(items);
+
+		app
+	}
+
+	fn setup_slots<const N: usize>(
+		slots_and_items: [(SlotKey, Option<SkillItem>); N],
+	) -> (Slots, Assets<SkillItem>) {
+		let mut assets = Assets::default();
+		let mut slots = HashMap::default();
+
+		for (slot_key, item) in slots_and_items {
+			let Some(item) = item else {
+				continue;
+			};
+			let handle = assets.add(item);
+			slots.insert(slot_key, Some(handle));
+		}
+
+		(Slots(slots), assets)
 	}
 
 	#[test]
 	fn call_advance_with_matching_slot_key_and_item_type() {
-		let mut app = setup();
+		let (slots, items) = setup_slots([
+			(
+				SlotKey::BottomHand(Side::Right),
+				Some(SkillItem {
+					content: SkillItemContent {
+						item_type: SkillItemType::ForceEssence,
+						..default()
+					},
+					..default()
+				}),
+			),
+			(
+				SlotKey::BottomHand(Side::Left),
+				Some(SkillItem {
+					content: SkillItemContent {
+						item_type: SkillItemType::Pistol,
+						..default()
+					},
+					..default()
+				}),
+			),
+		]);
+		let mut app = setup_app(items);
 		app.world_mut().spawn((
 			_Combos::new().with_mock(|mock| {
 				mock.expect_advance_combo()
@@ -129,28 +177,7 @@ mod tests {
 					},
 				],
 			},
-			Slots::new([
-				(
-					SlotKey::BottomHand(Side::Right),
-					Some(SkillItem {
-						content: SkillItemContent {
-							item_type: SkillItemType::ForceEssence,
-							..default()
-						},
-						..default()
-					}),
-				),
-				(
-					SlotKey::BottomHand(Side::Left),
-					Some(SkillItem {
-						content: SkillItemContent {
-							item_type: SkillItemType::Pistol,
-							..default()
-						},
-						..default()
-					}),
-				),
-			]),
+			slots,
 		));
 
 		app.world_mut()
@@ -159,7 +186,8 @@ mod tests {
 
 	#[test]
 	fn update_skill_with_combo_skills() {
-		let mut app = setup();
+		let (slots, items) = setup_slots([(SlotKey::default(), Some(SkillItem::default()))]);
+		let mut app = setup_app(items);
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -178,7 +206,7 @@ mod tests {
 						..default()
 					}],
 				},
-				Slots::new([(SlotKey::default(), Some(SkillItem::default()))]),
+				slots,
 			))
 			.id();
 
@@ -204,14 +232,15 @@ mod tests {
 
 	#[test]
 	fn queue_not_marked_changed_when_non_added() {
-		let mut app = setup();
+		let (slots, items) = setup_slots([]);
+		let mut app = setup_app(items);
 		let entity = app
 			.world_mut()
 			.spawn((
 				Changed::<_Queue>::new(false),
 				_Combos::new(),
 				_Queue::default(),
-				Slots::default(),
+				slots,
 			))
 			.id();
 

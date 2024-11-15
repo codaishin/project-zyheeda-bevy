@@ -3,6 +3,7 @@ use common::{
 	components::AssetModel,
 	traits::{add_asset::AddAsset, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
+use serde::{Deserialize, Serialize};
 use shaders::materials::essence_material::EssenceMaterial;
 
 #[derive(Debug, PartialEq, Default, Clone)]
@@ -11,7 +12,7 @@ pub struct Renderer {
 	pub essence: EssenceRender,
 }
 
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub enum ModelRender {
 	#[default]
 	None,

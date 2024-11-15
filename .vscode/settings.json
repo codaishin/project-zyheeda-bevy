@@ -24,6 +24,7 @@
 	},
 	"files.associations": {
 		"*.skill": "json",
+		"*.item": "json",
 	},
 	"cSpell.words": [
 		"automock",

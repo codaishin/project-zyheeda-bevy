@@ -2,6 +2,7 @@ pub mod flip;
 
 use bevy::prelude::*;
 use flip::FlipHorizontally;
+use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -87,14 +88,18 @@ pub struct MainCamera;
 #[derive(Component, Debug, PartialEq, Clone)]
 pub struct NoTarget;
 
-#[derive(Component, Debug, PartialEq, Default, Clone, Copy)]
+#[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub enum AssetModel {
 	#[default]
 	None,
-	Path(&'static str),
+	Path(String),
 }
 
 impl AssetModel {
+	pub fn path(path: &str) -> AssetModel {
+		AssetModel::Path(path.to_owned())
+	}
+
 	pub fn flip_on(self, name: Name) -> (Self, FlipHorizontally) {
 		(self, FlipHorizontally::with(name))
 	}

@@ -38,7 +38,7 @@ where
 	pub fn with_item<TContent>(mut self, key: &TKey, item: Option<&Item<TContent>>) -> Self
 	where
 		TView: ItemView<TKey>,
-		TContent: GetViewData<TView, TKey>,
+		TContent: GetViewData<TView, TKey> + TypePath + Sync + Send + 'static,
 	{
 		let components = Self::view_components(item);
 		let view_slot = TView::view_entity_name(key);
@@ -48,7 +48,7 @@ where
 
 	fn view_components<TContent>(item: Option<&Item<TContent>>) -> TView::TViewComponents
 	where
-		TContent: GetViewData<TView, TKey>,
+		TContent: GetViewData<TView, TKey> + TypePath + Sync + Send + 'static,
 	{
 		let Some(item) = item else {
 			return default();
@@ -183,7 +183,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Default)]
+	#[derive(Default, TypePath)]
 	struct _Content(_ViewComponent);
 
 	impl GetViewData<_View, _Key> for _Content {

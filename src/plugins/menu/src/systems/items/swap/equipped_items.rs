@@ -73,8 +73,7 @@ fn no_slot(slot_key: SlotKey) -> Error {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::RunSystemOnce;
-	use common::components::Side;
-	use skills::item::{item_type::SkillItemType, SkillItem, SkillItemContent};
+	use common::{components::Side, test_tools::utils::new_handle};
 
 	#[derive(Clone)]
 	struct _Mount {
@@ -82,37 +81,22 @@ mod tests {
 		handle: Handle<Scene>,
 	}
 
+	fn setup() -> App {
+		App::new()
+	}
+
 	#[test]
 	fn swap_items() {
-		let mut app = App::new();
+		let left_item = new_handle();
+		let right_item = new_handle();
+		let mut app = setup();
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots(
-					[
-						(
-							SlotKey::BottomHand(Side::Left),
-							Some(SkillItem {
-								name: "left item",
-								content: SkillItemContent {
-									item_type: SkillItemType::Bracer,
-									..default()
-								},
-							}),
-						),
-						(
-							SlotKey::BottomHand(Side::Right),
-							Some(SkillItem {
-								name: "right item",
-								content: SkillItemContent {
-									item_type: SkillItemType::Pistol,
-									..default()
-								},
-							}),
-						),
-					]
-					.into(),
-				),
+				Slots::new([
+					(SlotKey::BottomHand(Side::Left), Some(left_item.clone())),
+					(SlotKey::BottomHand(Side::Right), Some(right_item.clone())),
+				]),
 				Collection(
 					[Swap(
 						SlotKey::BottomHand(Side::Left),
@@ -124,47 +108,23 @@ mod tests {
 			.id();
 
 		let errors = app.world_mut().run_system_once(swap_equipped_items);
-		let slots = app.world().entity(agent).get::<Slots>().unwrap();
-		let new_items = (
-			slots
-				.0
-				.get(&SlotKey::BottomHand(Side::Left))
-				.unwrap()
-				.clone(),
-			slots
-				.0
-				.get(&SlotKey::BottomHand(Side::Right))
-				.unwrap()
-				.clone(),
-		);
 
+		let slots = app.world().entity(agent).get::<Slots>();
 		assert_eq!(
 			(
-				(
-					Some(SkillItem {
-						name: "right item",
-						content: SkillItemContent {
-							item_type: SkillItemType::Pistol,
-							..default()
-						},
-					}),
-					Some(SkillItem {
-						name: "left item",
-						content: SkillItemContent {
-							item_type: SkillItemType::Bracer,
-							..default()
-						},
-					})
-				),
+				Some(&Slots::new([
+					(SlotKey::BottomHand(Side::Left), Some(right_item.clone())),
+					(SlotKey::BottomHand(Side::Right), Some(left_item.clone())),
+				])),
 				vec![]
 			),
-			(new_items, errors)
+			(slots, errors)
 		);
 	}
 
 	#[test]
 	fn remove_collection() {
-		let mut app = App::new();
+		let mut app = setup();
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -176,13 +136,12 @@ mod tests {
 		app.world_mut().run_system_once(swap_equipped_items);
 
 		let agent = app.world().entity(agent);
-
 		assert!(!agent.contains::<Collection<Swap<SlotKey, SlotKey>>>());
 	}
 
 	#[test]
 	fn log_slot_errors() {
-		let mut app = App::new();
+		let mut app = setup();
 		app.world_mut().spawn((
 			Slots([].into()),
 			Collection(

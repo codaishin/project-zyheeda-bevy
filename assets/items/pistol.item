@@ -1,0 +1,13 @@
+{
+	"name": "Plasma Pistol",
+	"content": {
+		"model": {
+			"Hand": {
+				"Path": "models/pistol.glb"
+			}
+		},
+		"essence": "None",
+		"skill": "skills/shoot_hand_gun.skill",
+		"item_type": "Pistol"
+	}
+}

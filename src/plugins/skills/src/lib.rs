@@ -12,16 +12,10 @@ mod behaviors;
 mod bundles;
 
 use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
-use bevy::{
-	color::palettes::{
-		css::LIGHT_CYAN,
-		tailwind::{CYAN_100, CYAN_200},
-	},
-	prelude::*,
-};
+use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
-	components::{AssetModel, Collection, Side, Swap},
+	components::{Collection, Side, Swap},
 	resources::key_map::KeyMap,
 	states::MouseContext,
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
@@ -32,7 +26,7 @@ use components::{
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
 	queue::Queue,
-	renderer::{EssenceRender, ModelRender, Renderer},
+	renderer::EssenceRender,
 	skill_executer::SkillExecuter,
 	skill_spawners::SkillSpawners,
 	slots::Slots,
@@ -42,12 +36,14 @@ use definitions::{
 	sub_models::SubModels,
 };
 use inventory_key::InventoryKey;
-use item::{item_type::SkillItemType, SkillItem, SkillItemContent};
+use item::{dto::SkillItemDto, item_type::SkillItemType, SkillItem};
 use items::RegisterItemView;
-use loading::traits::register_custom_folder_assets::RegisterCustomFolderAssets;
-use macros::skill_asset;
+use loading::traits::{
+	register_custom_assets::RegisterCustomAssets,
+	register_custom_folder_assets::RegisterCustomFolderAssets,
+};
+use macros::item_asset;
 use player::components::player::Player;
-use shaders::materials::essence_material::EssenceMaterial;
 use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill};
 use slot_key::SlotKey;
 use std::time::Duration;
@@ -78,6 +74,10 @@ where
 {
 	fn skill_load(&self, app: &mut App) {
 		app.register_custom_folder_assets::<Skill, SkillData>();
+	}
+
+	fn item_load(&self, app: &mut App) {
+		app.register_custom_assets::<SkillItem, SkillItemDto>();
 	}
 
 	fn skill_slot_load(&self, app: &mut App) {
@@ -166,108 +166,31 @@ where
 	}
 
 	fn get_loadout(asset_server: &AssetServer) -> Loadout {
-		let force_essence_material = EssenceMaterial {
-			texture_color: CYAN_100.into(),
-			fill_color: CYAN_200.into(),
-			fresnel_color: (LIGHT_CYAN * 1.5).into(),
-			..default()
-		};
-
 		Loadout::new([
 			(
 				SlotKey::TopHand(Side::Left),
-				Some(SkillItem {
-					name: "Plasma Pistol A",
-					content: SkillItemContent {
-						render: Renderer {
-							model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
-							essence: EssenceRender::StandardMaterial,
-						},
-						skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
-						item_type: SkillItemType::Pistol,
-					},
-				}),
+				Some(asset_server.load(item_asset!("pistol"))),
 			),
 			(
 				SlotKey::BottomHand(Side::Left),
-				Some(SkillItem {
-					name: "Plasma Pistol B",
-					content: SkillItemContent {
-						render: Renderer {
-							model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
-							essence: EssenceRender::StandardMaterial,
-						},
-						skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
-						item_type: SkillItemType::Pistol,
-					},
-				}),
+				Some(asset_server.load(item_asset!("pistol"))),
 			),
 			(
 				SlotKey::BottomHand(Side::Right),
-				Some(SkillItem {
-					name: "Force Essence A",
-					content: SkillItemContent {
-						render: Renderer {
-							model: ModelRender::None,
-							essence: EssenceRender::Material(force_essence_material.clone()),
-						},
-						skill: Some(asset_server.load(skill_asset!("force_shield"))),
-						item_type: SkillItemType::ForceEssence,
-					},
-				}),
+				Some(asset_server.load(item_asset!("force_essence"))),
 			),
 			(
 				SlotKey::TopHand(Side::Right),
-				Some(SkillItem {
-					name: "Force Essence B",
-					content: SkillItemContent {
-						render: Renderer {
-							model: ModelRender::None,
-							essence: EssenceRender::Material(force_essence_material.clone()),
-						},
-						skill: Some(asset_server.load(skill_asset!("force_shield"))),
-						item_type: SkillItemType::ForceEssence,
-					},
-				}),
+				Some(asset_server.load(item_asset!("force_essence"))),
 			),
 		])
 	}
 
 	fn get_inventory(asset_server: &AssetServer) -> Inventory {
 		Inventory::new([
-			Some(SkillItem {
-				name: "Plasma Pistol C",
-				content: SkillItemContent {
-					render: Renderer {
-						model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
-						essence: EssenceRender::StandardMaterial,
-					},
-					skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
-					item_type: SkillItemType::Pistol,
-				},
-			}),
-			Some(SkillItem {
-				name: "Plasma Pistol D",
-				content: SkillItemContent {
-					render: Renderer {
-						model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
-						essence: EssenceRender::StandardMaterial,
-					},
-					skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
-					item_type: SkillItemType::Pistol,
-				},
-			}),
-			Some(SkillItem {
-				name: "Plasma Pistol E",
-				content: SkillItemContent {
-					render: Renderer {
-						model: ModelRender::Hand(AssetModel::Path("models/pistol.glb")),
-						essence: EssenceRender::StandardMaterial,
-					},
-					skill: Some(asset_server.load(skill_asset!("shoot_hand_gun"))),
-					item_type: SkillItemType::Pistol,
-				},
-			}),
+			Some(asset_server.load(item_asset!("pistol"))),
+			Some(asset_server.load(item_asset!("pistol"))),
+			Some(asset_server.load(item_asset!("pistol"))),
 		])
 	}
 
@@ -288,6 +211,7 @@ where
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);
+		self.item_load(app);
 		self.skill_slot_load(app);
 		self.skill_execution(app);
 
