@@ -4,10 +4,13 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+# external
 bevy.workspace = true
 bevy_rapier3d.workspace = true
 tracing.workspace = true
 uuid.workspace = true
+
+# internal
 common.workspace = true
 items.workspace = true
 loading.workspace = true
@@ -15,5 +18,8 @@ player.workspace = true
 skills.workspace = true
 
 [dev-dependencies]
+# external
 mockall.workspace = true
+
+# internal
 macros.workspace = true

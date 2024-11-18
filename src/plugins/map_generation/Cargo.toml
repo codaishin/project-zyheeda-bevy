@@ -4,14 +4,20 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+# external
 bevy.workspace = true
 bevy_rapier3d.workspace = true
 uuid.workspace = true
+
+# internal
 common.workspace = true
 interactions.workspace = true
 light.workspace = true
 prefabs.workspace = true
 
 [dev-dependencies]
+# external
 mockall.workspace = true
+
+# internal
 macros.workspace = true
