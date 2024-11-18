@@ -46,10 +46,10 @@ impl GetAnimationPaths for Player {
 	}
 }
 
-struct IdleLayer;
+struct Idle;
 
-impl From<IdleLayer> for AnimationPriority {
-	fn from(_: IdleLayer) -> Self {
+impl From<Idle> for AnimationPriority {
+	fn from(_: Idle) -> Self {
 		AnimationPriority::Low
 	}
 }
@@ -61,7 +61,7 @@ where
 	fn get_associated_component() -> TAnimationDispatch {
 		let mut animation_dispatch = TAnimationDispatch::default();
 		animation_dispatch.start_animation(
-			IdleLayer,
+			Idle,
 			Animation::new(Player::animation_path("Animation1"), PlayMode::Repeat),
 		);
 

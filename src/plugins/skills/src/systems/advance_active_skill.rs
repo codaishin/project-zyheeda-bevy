@@ -21,10 +21,10 @@ enum Advancement {
 pub struct SideEffectsCleared;
 
 #[derive(Debug, PartialEq)]
-struct SkillLayer;
+struct UseSkill;
 
-impl From<SkillLayer> for AnimationPriority {
-	fn from(_: SkillLayer) -> Self {
+impl From<UseSkill> for AnimationPriority {
+	fn from(_: UseSkill) -> Self {
 		AnimationPriority::High
 	}
 }
@@ -77,7 +77,7 @@ fn clear_side_effects<TAnimationDispatch: StopAnimation>(
 ) -> Advancement {
 	agent.remove::<OverrideFace>();
 	agent.try_insert(SideEffectsCleared);
-	animation_dispatch.stop_animation(SkillLayer);
+	animation_dispatch.stop_animation(UseSkill);
 
 	Advancement::InProcess
 }
@@ -121,8 +121,8 @@ fn animate<TAnimationDispatch: StartAnimation + StopAnimation>(
 	mut dispatch: Mut<TAnimationDispatch>,
 ) {
 	match skill.animate() {
-		Animate::Some(animation) => dispatch.start_animation(SkillLayer, animation),
-		Animate::None => dispatch.stop_animation(SkillLayer),
+		Animate::Some(animation) => dispatch.start_animation(UseSkill, animation),
+		Animate::None => dispatch.stop_animation(UseSkill),
 		Animate::Ignore => {}
 	}
 }
@@ -302,8 +302,8 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_AnimationDispatch::new().with_mock(|mock| {
-					mock.expect_start_animation::<SkillLayer>().return_const(());
-					mock.expect_stop_animation::<SkillLayer>().return_const(());
+					mock.expect_start_animation::<UseSkill>().return_const(());
+					mock.expect_stop_animation::<UseSkill>().return_const(());
 				}),
 				_Executor::new().with_mock(|mock| {
 					mock.expect_schedule().return_const(());
@@ -371,11 +371,11 @@ mod tests {
 			},
 			Transform::default(),
 			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_stop_animation::<SkillLayer>().return_const(());
+				mock.expect_stop_animation::<UseSkill>().return_const(());
 				mock.expect_start_animation()
 					.times(1)
 					.with(
-						eq(SkillLayer),
+						eq(UseSkill),
 						eq(Animation::new(Path::from("42"), PlayMode::Repeat)),
 					)
 					.return_const(());
@@ -412,8 +412,8 @@ mod tests {
 			},
 			Transform::default(),
 			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_stop_animation::<SkillLayer>().return_const(());
-				mock.expect_start_animation::<SkillLayer>()
+				mock.expect_stop_animation::<UseSkill>().return_const(());
+				mock.expect_start_animation::<UseSkill>()
 					.never()
 					.return_const(());
 			}),
@@ -442,8 +442,8 @@ mod tests {
 			},
 			Transform::default(),
 			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_start_animation::<SkillLayer>().return_const(());
-				mock.expect_stop_animation::<SkillLayer>()
+				mock.expect_start_animation::<UseSkill>().return_const(());
+				mock.expect_stop_animation::<UseSkill>()
 					.times(1)
 					.return_const(());
 			}),
@@ -476,8 +476,8 @@ mod tests {
 			},
 			Transform::default(),
 			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_start_animation::<SkillLayer>().return_const(());
-				mock.expect_stop_animation::<SkillLayer>()
+				mock.expect_start_animation::<UseSkill>().return_const(());
+				mock.expect_stop_animation::<UseSkill>()
 					.never()
 					.return_const(());
 			}),
@@ -506,10 +506,10 @@ mod tests {
 			},
 			Transform::default(),
 			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_start_animation::<SkillLayer>()
+				mock.expect_start_animation::<UseSkill>()
 					.never()
 					.return_const(());
-				mock.expect_stop_animation::<SkillLayer>()
+				mock.expect_stop_animation::<UseSkill>()
 					.never()
 					.return_const(());
 			}),
@@ -525,8 +525,8 @@ mod tests {
 			_Dequeue { active: None },
 			Transform::default(),
 			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_start_animation::<SkillLayer>().return_const(());
-				mock.expect_stop_animation::<SkillLayer>()
+				mock.expect_start_animation::<UseSkill>().return_const(());
+				mock.expect_stop_animation::<UseSkill>()
 					.times(1)
 					.return_const(());
 			}),
@@ -551,8 +551,8 @@ mod tests {
 			},
 			Transform::default(),
 			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_start_animation::<SkillLayer>().return_const(());
-				mock.expect_stop_animation::<SkillLayer>()
+				mock.expect_start_animation::<UseSkill>().return_const(());
+				mock.expect_stop_animation::<UseSkill>()
 					.never()
 					.return_const(());
 			}),
@@ -568,8 +568,8 @@ mod tests {
 			_Dequeue { active: None },
 			Transform::default(),
 			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_start_animation::<SkillLayer>().return_const(());
-				mock.expect_stop_animation::<SkillLayer>()
+				mock.expect_start_animation::<UseSkill>().return_const(());
+				mock.expect_stop_animation::<UseSkill>()
 					.times(1)
 					.return_const(());
 			}),
@@ -589,8 +589,8 @@ mod tests {
 				_Dequeue { active: None },
 				Transform::default(),
 				_AnimationDispatch::new().with_mock(|mock| {
-					mock.expect_start_animation::<SkillLayer>().return_const(());
-					mock.expect_stop_animation::<SkillLayer>()
+					mock.expect_start_animation::<UseSkill>().return_const(());
+					mock.expect_stop_animation::<UseSkill>()
 						.times(1)
 						.return_const(());
 				}),
@@ -616,8 +616,8 @@ mod tests {
 				_Dequeue { active: None },
 				Transform::default(),
 				_AnimationDispatch::new().with_mock(|mock| {
-					mock.expect_start_animation::<SkillLayer>().return_const(());
-					mock.expect_stop_animation::<SkillLayer>()
+					mock.expect_start_animation::<UseSkill>().return_const(());
+					mock.expect_stop_animation::<UseSkill>()
 						.times(2)
 						.return_const(());
 				}),
