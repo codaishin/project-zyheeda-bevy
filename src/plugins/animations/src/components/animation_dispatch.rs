@@ -1,15 +1,12 @@
-use crate::{
-	animation::Animation,
-	traits::{
-		AnimationChainUpdate,
-		AnimationPlayers,
-		AnimationPlayersWithoutTransitions,
-		HighestPriorityAnimation,
-	},
+use crate::traits::{
+	AnimationChainUpdate,
+	AnimationPlayers,
+	AnimationPlayersWithoutTransitions,
+	HighestPriorityAnimation,
 };
 use bevy::prelude::*;
 use common::traits::{
-	animation::{AnimationPriority, StartAnimation, StopAnimation},
+	animation::{Animation, AnimationPriority, StartAnimation, StopAnimation},
 	track::{IsTracking, Track, Untrack},
 };
 use std::{
@@ -50,6 +47,20 @@ impl<TAnimation> AnimationDispatch<TAnimation> {
 			AnimationPriority::Medium => &mut self.stack.1,
 			AnimationPriority::Low => &mut self.stack.2,
 		}
+	}
+
+	fn start_animation<TLayer>(&mut self, layer: TLayer, mut animation: TAnimation)
+	where
+		TLayer: Into<AnimationPriority>,
+		TAnimation: AnimationChainUpdate,
+	{
+		let slot = self.slot(layer);
+
+		if let Entry::Some(last) | Entry::Obsolete(last) = slot {
+			animation.chain_update(last);
+		}
+
+		*slot = Entry::Some(animation);
 	}
 }
 
@@ -147,20 +158,12 @@ where
 	}
 }
 
-impl<TAnimation: AnimationChainUpdate + Debug> StartAnimation<TAnimation>
-	for AnimationDispatch<TAnimation>
-{
-	fn start_animation<TLayer>(&mut self, layer: TLayer, mut animation: TAnimation)
+impl StartAnimation for AnimationDispatch {
+	fn start_animation<TLayer>(&mut self, layer: TLayer, animation: Animation)
 	where
 		TLayer: Into<AnimationPriority>,
 	{
-		let slot = self.slot(layer);
-
-		if let Entry::Some(last) | Entry::Obsolete(last) = slot {
-			animation.chain_update(last);
-		}
-
-		*slot = Entry::Some(animation);
+		self.start_animation(layer, animation);
 	}
 }
 

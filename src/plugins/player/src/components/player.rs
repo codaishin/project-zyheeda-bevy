@@ -1,4 +1,3 @@
-use animations::animation::{Animation, PlayMode};
 use bars::components::Bar;
 use behaviors::{
 	animation::MovementAnimations,
@@ -12,7 +11,7 @@ use common::{
 	systems::init_associated_component::GetAssociated,
 	tools::UnitsPerSecond,
 	traits::{
-		animation::{AnimationPriority, GetAnimationPaths, StartAnimation},
+		animation::{Animation, AnimationPriority, GetAnimationPaths, PlayMode, StartAnimation},
 		clamp_zero_positive::ClampZeroPositive,
 		load_asset::Path,
 	},
@@ -57,7 +56,7 @@ impl From<IdleLayer> for AnimationPriority {
 
 impl<TAnimationDispatch> GetAssociated<TAnimationDispatch> for Player
 where
-	TAnimationDispatch: Component + StartAnimation<Animation> + Default,
+	TAnimationDispatch: Component + StartAnimation + Default,
 {
 	fn get_associated_component() -> TAnimationDispatch {
 		let mut animation_dispatch = TAnimationDispatch::default();

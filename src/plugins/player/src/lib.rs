@@ -3,7 +3,6 @@ pub mod components;
 
 mod systems;
 
-use animations::animation::Animation;
 use bevy::prelude::*;
 use common::traits::animation::{RegisterAnimations, StartAnimation};
 use components::player::Player;
@@ -17,7 +16,7 @@ pub struct PlayerPlugin<TAnimationPlugin, TAnimationDispatch>(
 
 impl<TAnimationPlugin, TAnimationDispatch> PlayerPlugin<TAnimationPlugin, TAnimationDispatch>
 where
-	TAnimationDispatch: Component + StartAnimation<Animation> + Default,
+	TAnimationDispatch: Component + StartAnimation + Default,
 {
 	pub fn new(animation_plugin: &mut TAnimationPlugin) -> Self
 	where

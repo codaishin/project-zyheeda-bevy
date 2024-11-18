@@ -32,9 +32,8 @@ impl From<MovementLayer> for AnimationPriority {
 pub(crate) fn animate_movement<
 	TMovementConfig: Component + MovementData,
 	TMovement: Component,
-	TAnimation: Clone + Sync + Send + 'static,
-	TAnimations: Component + GetAnimation<TAnimation>,
-	TAnimationDispatch: Component + StartAnimation<TAnimation> + StopAnimation,
+	TAnimations: Component + GetAnimation,
+	TAnimationDispatch: Component + StartAnimation + StopAnimation,
 >(
 	mut agents: Query<
 		Components<TMovementConfig, TAnimations, TAnimationDispatch, TMovement>,
@@ -55,9 +54,8 @@ pub(crate) fn animate_movement<
 fn start_animation<
 	TMovementConfig: MovementData,
 	TMovement,
-	TAnimation: Clone,
-	TAnimations: GetAnimation<TAnimation>,
-	TAnimationDispatch: StartAnimation<TAnimation>,
+	TAnimations: GetAnimation,
+	TAnimationDispatch: StartAnimation,
 >(
 	config: Ref<TMovementConfig>,
 	animations: &TAnimations,
@@ -93,7 +91,11 @@ mod tests {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::UnitsPerSecond,
-		traits::nested_mock::NestedMocks,
+		traits::{
+			animation::{Animation, PlayMode},
+			load_asset::Path,
+			nested_mock::NestedMocks,
+		},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, mock, predicate::eq};
@@ -123,9 +125,6 @@ mod tests {
 	#[derive(Component)]
 	struct _Movement;
 
-	#[derive(Debug, PartialEq, Clone)]
-	struct _Animation;
-
 	#[derive(Component, NestedMocks)]
 	struct _MovementAnimations {
 		mock: Mock_MovementAnimations,
@@ -134,14 +133,15 @@ mod tests {
 	impl Default for _MovementAnimations {
 		fn default() -> Self {
 			Self::new().with_mock(|mock| {
-				mock.expect_animation().return_const(_Animation);
+				mock.expect_animation()
+					.return_const(Animation::new(Path::from(""), PlayMode::Repeat));
 			})
 		}
 	}
 
 	#[automock]
-	impl GetAnimation<_Animation> for _MovementAnimations {
-		fn animation(&self, key: &MovementMode) -> &_Animation {
+	impl GetAnimation for _MovementAnimations {
+		fn animation(&self, key: &MovementMode) -> &Animation {
 			self.mock.animation(key)
 		}
 	}
@@ -151,8 +151,8 @@ mod tests {
 		mock: Mock_AnimationDispatch,
 	}
 
-	impl StartAnimation<_Animation> for _AnimationDispatch {
-		fn start_animation<TLayer>(&mut self, layer: TLayer, animation: _Animation)
+	impl StartAnimation for _AnimationDispatch {
+		fn start_animation<TLayer>(&mut self, layer: TLayer, animation: Animation)
 		where
 			TLayer: Into<AnimationPriority> + 'static,
 		{
@@ -171,13 +171,13 @@ mod tests {
 
 	mock! {
 		_AnimationDispatch {}
-		impl StartAnimation<_Animation> for _AnimationDispatch {
-			fn start_animation<TLayer>(&mut self, layer: TLayer, animation: _Animation) where
-			TLayer: Into<AnimationPriority> + 'static;
+		impl StartAnimation for _AnimationDispatch {
+			fn start_animation<TLayer>(&mut self, layer: TLayer, animation: Animation)
+				where TLayer: Into<AnimationPriority> + 'static;
 		}
 		impl StopAnimation for _AnimationDispatch {
-			fn stop_animation<TLayer>(&mut self, layer: TLayer)	where
-			TLayer: Into<AnimationPriority> + 'static;
+			fn stop_animation<TLayer>(&mut self, layer: TLayer)
+				where TLayer: Into<AnimationPriority> + 'static;
 		}
 	}
 
@@ -185,13 +185,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			animate_movement::<
-				_Config,
-				_Movement,
-				_Animation,
-				_MovementAnimations,
-				_AnimationDispatch,
-			>,
+			animate_movement::<_Config, _Movement, _MovementAnimations, _AnimationDispatch>,
 		);
 
 		app
@@ -209,12 +203,15 @@ mod tests {
 				mock.expect_animation()
 					.times(1)
 					.with(eq(MovementMode::Fast))
-					.return_const(_Animation);
+					.return_const(Animation::new(Path::from("fast"), PlayMode::Repeat));
 			}),
 			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation()
 					.times(1)
-					.with(eq(MovementLayer), eq(_Animation))
+					.with(
+						eq(MovementLayer),
+						eq(Animation::new(Path::from("fast"), PlayMode::Repeat)),
+					)
 					.return_const(());
 			}),
 			_Movement,
@@ -235,12 +232,15 @@ mod tests {
 				mock.expect_animation()
 					.times(1)
 					.with(eq(MovementMode::Slow))
-					.return_const(_Animation);
+					.return_const(Animation::new(Path::from("slow"), PlayMode::Repeat));
 			}),
 			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation()
 					.times(1)
-					.with(eq(MovementLayer), eq(_Animation))
+					.with(
+						eq(MovementLayer),
+						eq(Animation::new(Path::from("slow"), PlayMode::Repeat)),
+					)
 					.return_const(());
 			}),
 			_Movement,
@@ -298,9 +298,8 @@ mod tests {
 			_Config::default(),
 			_MovementAnimations::default(),
 			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_start_animation()
+				mock.expect_start_animation::<MovementLayer>()
 					.times(1)
-					.with(eq(MovementLayer), eq(_Animation))
 					.return_const(());
 			}),
 			_Movement,
@@ -319,9 +318,8 @@ mod tests {
 				_Config::default(),
 				_MovementAnimations::default(),
 				_AnimationDispatch::new().with_mock(|mock| {
-					mock.expect_start_animation()
+					mock.expect_start_animation::<MovementLayer>()
 						.times(1)
-						.with(eq(MovementLayer), eq(_Animation))
 						.return_const(());
 				}),
 				_Movement,
@@ -348,9 +346,8 @@ mod tests {
 				_Config::default(),
 				_MovementAnimations::default(),
 				_AnimationDispatch::new().with_mock(|mock| {
-					mock.expect_start_animation()
+					mock.expect_start_animation::<MovementLayer>()
 						.times(2)
-						.with(eq(MovementLayer), eq(_Animation))
 						.return_const(());
 				}),
 				_Movement,

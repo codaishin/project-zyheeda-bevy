@@ -1,8 +1,9 @@
-use bevy::prelude::Component;
-
-use crate::systems::init_associated_component::GetAssociated;
-
 use super::load_asset::Path;
+use crate::{
+	systems::init_associated_component::GetAssociated,
+	tools::{Last, This},
+};
+use bevy::prelude::Component;
 
 pub enum AnimationPriority {
 	High,
@@ -10,8 +11,8 @@ pub enum AnimationPriority {
 	Low,
 }
 
-pub trait StartAnimation<TAnimation> {
-	fn start_animation<TLayer>(&mut self, layer: TLayer, animation: TAnimation)
+pub trait StartAnimation {
+	fn start_animation<TLayer>(&mut self, layer: TLayer, animation: Animation)
 	where
 		TLayer: Into<AnimationPriority> + 'static;
 }
@@ -35,4 +36,27 @@ where
 	>(
 		&mut self,
 	);
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum PlayMode {
+	Replay,
+	Repeat,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Animation {
+	pub path: Path,
+	pub play_mode: PlayMode,
+	pub update_fn: Option<fn(This<Animation>, Last<Animation>)>,
+}
+
+impl Animation {
+	pub fn new(path: Path, play_mode: PlayMode) -> Self {
+		Self {
+			path,
+			play_mode,
+			update_fn: None,
+		}
+	}
 }

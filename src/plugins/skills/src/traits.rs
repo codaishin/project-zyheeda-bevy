@@ -16,7 +16,12 @@ use crate::{
 	skills::{Animate, RunSkillBehavior, Skill, SkillAnimation},
 	slot_key::SlotKey,
 };
-use common::traits::{load_asset::Path, map_value::TryMapBackwards, state_duration::StateUpdate};
+use common::traits::{
+	animation::Animation,
+	load_asset::Path,
+	map_value::TryMapBackwards,
+	state_duration::StateUpdate,
+};
 use std::hash::Hash;
 
 pub(crate) trait Enqueue<TItem> {
@@ -48,10 +53,10 @@ pub(crate) trait Prime {
 	fn prime(&mut self);
 }
 
-pub(crate) trait GetActiveSkill<TAnimation, TSkillState: Clone> {
+pub(crate) trait GetActiveSkill<TSkillState: Clone> {
 	fn get_active(
 		&mut self,
-	) -> Option<impl GetSkillBehavior + GetAnimation<TAnimation> + StateUpdate<TSkillState>>;
+	) -> Option<impl GetSkillBehavior + GetAnimation + StateUpdate<TSkillState>>;
 	fn clear_active(&mut self);
 }
 
@@ -109,8 +114,8 @@ pub trait UpdateConfig<TKey, TValue> {
 	fn update_config(&mut self, key: &TKey, value: TValue);
 }
 
-pub(crate) trait GetAnimation<TAnimation> {
-	fn animate(&self) -> Animate<TAnimation>;
+pub(crate) trait GetAnimation {
+	fn animate(&self) -> Animate<Animation>;
 }
 
 pub trait GetStaticSkillBehavior {

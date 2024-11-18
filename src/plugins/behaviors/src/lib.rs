@@ -6,7 +6,7 @@ pub mod traits;
 mod systems;
 
 use animation::MovementAnimations;
-use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
+use animations::components::animation_dispatch::AnimationDispatch;
 use bevy::prelude::*;
 use common::{resources::CamRay, states::MouseContext};
 use components::{
@@ -92,14 +92,12 @@ where
 					animate_movement::<
 						MovementConfig,
 						Movement<PositionBased>,
-						Animation,
 						MovementAnimations,
 						AnimationDispatch,
 					>,
 					animate_movement::<
 						MovementConfig,
 						Movement<VelocityBased>,
-						Animation,
 						MovementAnimations,
 						AnimationDispatch,
 					>,

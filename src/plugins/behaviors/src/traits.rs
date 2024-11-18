@@ -6,7 +6,10 @@ pub(crate) mod movement_config;
 
 use crate::components::{Attacker, MovementMode, Target};
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::tools::{Units, UnitsPerSecond};
+use common::{
+	tools::{Units, UnitsPerSecond},
+	traits::animation::Animation,
+};
 use std::sync::Arc;
 
 pub type Vec2Radians = Vec2;
@@ -83,6 +86,6 @@ pub trait RemoveComponent<T: Bundle> {
 	fn get_remover() -> fn(&mut EntityCommands);
 }
 
-pub(crate) trait GetAnimation<TAnimation> {
-	fn animation<'s>(&'s self, key: &MovementMode) -> &'s TAnimation;
+pub(crate) trait GetAnimation {
+	fn animation<'s>(&'s self, key: &MovementMode) -> &'s Animation;
 }

@@ -38,9 +38,8 @@ type Components<'a, TGetSkill, TAnimationDispatch, TSkillExecutor> = (
 );
 
 pub(crate) fn advance_active_skill<
-	TGetSkill: GetActiveSkill<TAnimation, SkillState> + Component,
-	TAnimation: Send + Sync + 'static,
-	TAnimationDispatch: Component + StartAnimation<TAnimation> + StopAnimation,
+	TGetSkill: GetActiveSkill<SkillState> + Component,
+	TAnimationDispatch: Component + StartAnimation + StopAnimation,
 	TSkillExecutor: Component + Schedule<RunSkillBehavior> + Flush,
 	TTime: Send + Sync + Default + 'static,
 >(
@@ -84,11 +83,10 @@ fn clear_side_effects<TAnimationDispatch: StopAnimation>(
 }
 
 fn advance<
-	TAnimation: Send + Sync + 'static,
-	TAnimationDispatch: StartAnimation<TAnimation> + StopAnimation,
+	TAnimationDispatch: StartAnimation + StopAnimation,
 	TSkillExecutor: Component + Schedule<RunSkillBehavior> + Flush,
 >(
-	mut skill: (impl GetSkillBehavior + GetAnimation<TAnimation> + StateUpdate<SkillState>),
+	mut skill: (impl GetSkillBehavior + GetAnimation + StateUpdate<SkillState>),
 	mut agent: EntityCommands,
 	animation_dispatch: Mut<TAnimationDispatch>,
 	mut skill_executer: Mut<TSkillExecutor>,
@@ -118,8 +116,8 @@ fn advance<
 	Advancement::InProcess
 }
 
-fn animate<TAnimation, TAnimationDispatch: StartAnimation<TAnimation> + StopAnimation>(
-	skill: &mut (impl GetSkillBehavior + GetAnimation<TAnimation> + StateUpdate<SkillState>),
+fn animate<TAnimationDispatch: StartAnimation + StopAnimation>(
+	skill: &mut (impl GetSkillBehavior + GetAnimation + StateUpdate<SkillState>),
 	mut dispatch: Mut<TAnimationDispatch>,
 ) {
 	match skill.animate() {
@@ -176,28 +174,30 @@ mod tests {
 		components::Side,
 		simple_init,
 		test_tools::utils::{Changed, SingleThreadedApp, TickTime},
-		traits::{mock::Mock, nested_mock::NestedMocks},
+		traits::{
+			animation::{Animation, PlayMode},
+			load_asset::Path,
+			mock::Mock,
+			nested_mock::NestedMocks,
+		},
 	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::{collections::HashSet, ops::DerefMut, time::Duration};
-
-	#[derive(Default, Debug, PartialEq, Clone, Copy)]
-	struct _Animation(usize);
 
 	#[derive(Component, Default)]
 	struct _Dequeue {
 		pub active: Option<Box<dyn FnMut() -> Mock_Skill + Sync + Send>>,
 	}
 
-	impl GetActiveSkill<_Animation, SkillState> for _Dequeue {
+	impl GetActiveSkill<SkillState> for _Dequeue {
 		fn clear_active(&mut self) {
 			self.active = None;
 		}
 
 		fn get_active(
 			&mut self,
-		) -> Option<impl GetSkillBehavior + GetAnimation<_Animation> + StateUpdate<SkillState>> {
+		) -> Option<impl GetSkillBehavior + GetAnimation + StateUpdate<SkillState>> {
 			self.active.as_mut().map(|f| f())
 		}
 	}
@@ -210,8 +210,8 @@ mod tests {
 		impl GetSkillBehavior for _Skill {
 			fn behavior<'a>(&self) -> (SlotKey, RunSkillBehavior);
 		}
-		impl GetAnimation<_Animation> for _Skill {
-			fn animate(&self) -> Animate<_Animation>;
+		impl GetAnimation for _Skill {
+			fn animate(&self) -> Animate<Animation>;
 		}
 	}
 
@@ -222,8 +222,8 @@ mod tests {
 		mock: Mock_AnimationDispatch,
 	}
 
-	impl StartAnimation<_Animation> for _AnimationDispatch {
-		fn start_animation<TLayer>(&mut self, layer: TLayer, animation: _Animation)
+	impl StartAnimation for _AnimationDispatch {
+		fn start_animation<TLayer>(&mut self, layer: TLayer, animation: Animation)
 		where
 			TLayer: Into<AnimationPriority> + 'static,
 		{
@@ -242,8 +242,8 @@ mod tests {
 
 	mock! {
 		_AnimationDispatch {}
-		impl StartAnimation<_Animation> for _AnimationDispatch {
-			fn start_animation<TLayer>(&mut self, layer: TLayer, animation: _Animation)
+		impl StartAnimation for _AnimationDispatch {
+			fn start_animation<TLayer>(&mut self, layer: TLayer, animation: Animation)
 			where
 				TLayer: Into<AnimationPriority> + 'static;
 		}
@@ -317,7 +317,7 @@ mod tests {
 		app.update();
 		app.add_systems(
 			Update,
-			advance_active_skill::<_Dequeue, _Animation, _AnimationDispatch, _Executor, Real>,
+			advance_active_skill::<_Dequeue, _AnimationDispatch, _Executor, Real>,
 		);
 
 		(app, agent)
@@ -355,7 +355,10 @@ mod tests {
 				active: Some(Box::new(move || {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_animate()
-							.return_const(Animate::Some(_Animation(42)));
+							.return_const(Animate::Some(Animation::new(
+								Path::from("42"),
+								PlayMode::Repeat,
+							)));
 						mock.expect_behavior()
 							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
@@ -371,7 +374,10 @@ mod tests {
 				mock.expect_stop_animation::<SkillLayer>().return_const(());
 				mock.expect_start_animation()
 					.times(1)
-					.with(eq(SkillLayer), eq(_Animation(42)))
+					.with(
+						eq(SkillLayer),
+						eq(Animation::new(Path::from("42"), PlayMode::Repeat)),
+					)
 					.return_const(());
 			}),
 		));
@@ -387,7 +393,10 @@ mod tests {
 				active: Some(Box::new(move || {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_animate()
-							.return_const(Animate::Some(_Animation(42)));
+							.return_const(Animate::Some(Animation::new(
+								Path::from("42"),
+								PlayMode::Repeat,
+							)));
 						mock.expect_behavior()
 							.return_const((SlotKey::default(), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(

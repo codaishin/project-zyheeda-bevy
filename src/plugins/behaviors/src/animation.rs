@@ -1,6 +1,6 @@
 use crate::{components::MovementMode, traits::GetAnimation};
-use animations::animation::Animation;
 use bevy::ecs::component::Component;
+use common::traits::animation::Animation;
 
 #[derive(Component)]
 pub struct MovementAnimations<TAnimation = Animation> {
@@ -14,8 +14,8 @@ impl MovementAnimations {
 	}
 }
 
-impl<TAnimation> GetAnimation<TAnimation> for MovementAnimations<TAnimation> {
-	fn animation(&self, key: &MovementMode) -> &TAnimation {
+impl GetAnimation for MovementAnimations {
+	fn animation(&self, key: &MovementMode) -> &Animation {
 		match key {
 			MovementMode::Fast => &self.fast,
 			MovementMode::Slow => &self.slow,
@@ -26,6 +26,7 @@ impl<TAnimation> GetAnimation<TAnimation> for MovementAnimations<TAnimation> {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use common::traits::{animation::PlayMode, load_asset::Path};
 
 	#[derive(Default, Debug, PartialEq)]
 	struct _Animation(&'static str);
@@ -33,12 +34,12 @@ mod tests {
 	#[test]
 	fn get_fast() {
 		let animation = MovementAnimations {
-			slow: _Animation::default(),
-			fast: _Animation("fast"),
+			slow: Animation::new(Path::from("slow"), PlayMode::Repeat),
+			fast: Animation::new(Path::from("fast"), PlayMode::Repeat),
 		};
 
 		assert_eq!(
-			&_Animation("fast"),
+			&Animation::new(Path::from("fast"), PlayMode::Repeat),
 			animation.animation(&MovementMode::Fast)
 		);
 	}
@@ -46,12 +47,12 @@ mod tests {
 	#[test]
 	fn get_slow() {
 		let animation = MovementAnimations {
-			slow: _Animation("slow"),
-			fast: _Animation::default(),
+			slow: Animation::new(Path::from("slow"), PlayMode::Repeat),
+			fast: Animation::new(Path::from("fast"), PlayMode::Repeat),
 		};
 
 		assert_eq!(
-			&_Animation("slow"),
+			&Animation::new(Path::from("slow"), PlayMode::Repeat),
 			animation.animation(&MovementMode::Slow)
 		);
 	}

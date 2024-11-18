@@ -11,7 +11,7 @@ pub mod traits;
 mod behaviors;
 mod bundles;
 
-use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
+use animations::components::animation_dispatch::AnimationDispatch;
 use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
@@ -121,13 +121,7 @@ where
 						.pipe(enqueue::<Slots, Queue, QueuedSkill>),
 					update_skill_combos::<Combos, Queue>,
 					flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
-					advance_active_skill::<
-						Queue,
-						Animation,
-						AnimationDispatch,
-						SkillExecuter,
-						Virtual,
-					>,
+					advance_active_skill::<Queue, AnimationDispatch, SkillExecuter, Virtual>,
 					SkillExecuter::<RunSkillBehavior>::execute_system.pipe(log_many),
 					flush::<Queue>,
 				)
