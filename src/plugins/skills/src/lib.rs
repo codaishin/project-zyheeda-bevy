@@ -18,10 +18,7 @@ use common::{
 	resources::key_map::KeyMap,
 	states::MouseContext,
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
-	traits::{
-		animation::{AnimationDispatchType, StartAnimation, StopAnimation},
-		try_insert_on::TryInsertOn,
-	},
+	traits::{animation::HasAnimationsDispatch, try_insert_on::TryInsertOn},
 };
 use components::{
 	combos::Combos,
@@ -74,8 +71,7 @@ pub struct SkillsPlugin<TAnimationsPlugin, TState> {
 impl<TAnimationsPlugin, TState> SkillsPlugin<TAnimationsPlugin, TState>
 where
 	TState: States + Copy,
-	TAnimationsPlugin: Plugin + AnimationDispatchType,
-	TAnimationsPlugin::AnimationDispatch: StartAnimation + StopAnimation + Component,
+	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 {
 	pub fn depends_on(_: &TAnimationsPlugin, play: TState) -> Self {
 		Self {
@@ -135,7 +131,7 @@ where
 					flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 					advance_active_skill::<
 						Queue,
-						TAnimationsPlugin::AnimationDispatch,
+						TAnimationsPlugin::TAnimationDispatch,
 						SkillExecuter,
 						Virtual,
 					>,
@@ -219,8 +215,7 @@ where
 impl<TAnimationsPlugin, TState> Plugin for SkillsPlugin<TAnimationsPlugin, TState>
 where
 	TState: States + Copy,
-	TAnimationsPlugin: Plugin + AnimationDispatchType,
-	TAnimationsPlugin::AnimationDispatch: StartAnimation + StopAnimation + Component,
+	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);

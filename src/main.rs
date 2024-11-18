@@ -32,8 +32,8 @@ fn main() -> AppExit {
 }
 
 fn prepare_game(app: &mut App) {
-	let mut animations_plugin = AnimationsPlugin::default();
-	let player_plugin = PlayerPlugin::depends_on(&mut animations_plugin);
+	let animations_plugin = AnimationsPlugin;
+	let player_plugin = PlayerPlugin::depends_on(&animations_plugin);
 	let skills_plugin = SkillsPlugin::depends_on(&animations_plugin, GameStatePlugin::PLAY);
 	let behaviors_plugin = BehaviorsPlugin::depends_on(&animations_plugin, GameStatePlugin::PLAY);
 

@@ -4,36 +4,30 @@ pub mod components;
 mod systems;
 
 use bevy::prelude::*;
-use common::traits::animation::{RegisterAnimations, StartAnimation};
+use common::traits::animation::RegisterAnimations;
 use components::player::Player;
 use prefabs::traits::RegisterPrefab;
 use std::marker::PhantomData;
 use systems::{move_player::move_player, toggle_walk_run::player_toggle_walk_run};
 
-pub struct PlayerPlugin<TAnimationPlugin, TAnimationDispatch>(
-	PhantomData<(TAnimationPlugin, TAnimationDispatch)>,
-);
+pub struct PlayerPlugin<TAnimationPlugin>(PhantomData<TAnimationPlugin>);
 
-impl<TAnimationPlugin, TAnimationDispatch> PlayerPlugin<TAnimationPlugin, TAnimationDispatch>
+impl<TAnimationPlugin> PlayerPlugin<TAnimationPlugin>
 where
-	TAnimationDispatch: Component + StartAnimation + Default,
+	TAnimationPlugin: RegisterAnimations,
 {
-	pub fn depends_on(animation_plugin: &mut TAnimationPlugin) -> Self
-	where
-		TAnimationPlugin: RegisterAnimations<TAnimationDispatch>,
-	{
-		animation_plugin.register_animations::<Player>();
+	pub fn depends_on(_: &TAnimationPlugin) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TAnimationPlugin, TAnimationDispatch> Plugin
-	for PlayerPlugin<TAnimationPlugin, TAnimationDispatch>
+impl<TAnimationPlugin> Plugin for PlayerPlugin<TAnimationPlugin>
 where
-	TAnimationPlugin: Sync + Send + 'static,
-	TAnimationDispatch: Component,
+	TAnimationPlugin: Plugin + RegisterAnimations,
 {
 	fn build(&self, app: &mut App) {
+		TAnimationPlugin::register_animations::<Player>(app);
+
 		app.register_prefab::<Player>()
 			.add_systems(Update, (player_toggle_walk_run, move_player));
 	}

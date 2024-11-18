@@ -27,19 +27,14 @@ pub trait GetAnimationPaths {
 	fn animation_paths() -> Vec<Path>;
 }
 
-pub trait RegisterAnimations<TAnimationDispatch>
-where
-	TAnimationDispatch: Component,
-{
-	fn register_animations<
-		TAgent: Component + GetAnimationPaths + GetAssociated<TAnimationDispatch>,
-	>(
-		&mut self,
-	);
+pub trait HasAnimationsDispatch {
+	type TAnimationDispatch: Component + StartAnimation + StopAnimation + Default;
 }
 
-pub trait AnimationDispatchType {
-	type AnimationDispatch;
+pub trait RegisterAnimations: HasAnimationsDispatch {
+	fn register_animations<TAgent>(app: &mut App)
+	where
+		TAgent: Component + GetAnimationPaths + GetAssociated<Self::TAnimationDispatch>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]

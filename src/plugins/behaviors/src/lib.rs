@@ -7,11 +7,7 @@ mod systems;
 
 use animation::MovementAnimations;
 use bevy::prelude::*;
-use common::{
-	resources::CamRay,
-	states::MouseContext,
-	traits::animation::{AnimationDispatchType, StartAnimation, StopAnimation},
-};
+use common::{resources::CamRay, states::MouseContext, traits::animation::HasAnimationsDispatch};
 use components::{
 	cam_orbit::CamOrbit,
 	ground_targeted_aoe::{GroundTargetedAoeContact, GroundTargetedAoeProjection},
@@ -53,8 +49,7 @@ pub struct BehaviorsPlugin<TAnimationsPlugin, TState> {
 impl<TAnimationsPlugin, TState> BehaviorsPlugin<TAnimationsPlugin, TState>
 where
 	TState: States + Copy,
-	TAnimationsPlugin: Plugin + AnimationDispatchType,
-	TAnimationsPlugin::AnimationDispatch: StartAnimation + StopAnimation + Component,
+	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 {
 	pub fn depends_on(_: &TAnimationsPlugin, play: TState) -> Self {
 		Self {
@@ -67,8 +62,7 @@ where
 impl<TAnimationsPlugin, TState> Plugin for BehaviorsPlugin<TAnimationsPlugin, TState>
 where
 	TState: States + Copy,
-	TAnimationsPlugin: Plugin + AnimationDispatchType,
-	TAnimationsPlugin::AnimationDispatch: StartAnimation + StopAnimation + Component,
+	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 {
 	fn build(&self, app: &mut App) {
 		app.add_event::<MoveInputEvent>()
@@ -114,13 +108,13 @@ where
 						MovementConfig,
 						Movement<PositionBased>,
 						MovementAnimations,
-						TAnimationsPlugin::AnimationDispatch,
+						TAnimationsPlugin::TAnimationDispatch,
 					>,
 					animate_movement::<
 						MovementConfig,
 						Movement<VelocityBased>,
 						MovementAnimations,
-						TAnimationsPlugin::AnimationDispatch,
+						TAnimationsPlugin::TAnimationDispatch,
 					>,
 				),
 			)
