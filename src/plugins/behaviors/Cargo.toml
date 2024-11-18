@@ -11,7 +11,6 @@ serde.workspace = true
 tracing.workspace = true
 
 # internal
-animations.workspace = true
 bars.workspace = true
 common.workspace = true
 interactions.workspace = true

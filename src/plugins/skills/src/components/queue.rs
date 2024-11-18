@@ -11,11 +11,10 @@ use crate::{
 		IterMut,
 	},
 };
-use animations::animation::Animation;
 use bevy::{ecs::component::Component, utils::default};
 use common::{
 	components::Side,
-	traits::{iterate::Iterate, state_duration::StateDuration},
+	traits::{animation::Animation, iterate::Iterate, state_duration::StateDuration},
 };
 use std::{collections::VecDeque, time::Duration};
 
@@ -529,11 +528,11 @@ struct ActiveSkill<'a> {
 	duration: &'a mut Duration,
 }
 
-impl GetActiveSkill<Animation, SkillState> for Queue {
+impl GetActiveSkill<SkillState> for Queue {
 	#[allow(refining_impl_trait)]
 	fn get_active(
 		&mut self,
-	) -> Option<impl GetSkillBehavior + GetAnimation<Animation> + StateDuration<SkillState>> {
+	) -> Option<impl GetSkillBehavior + GetAnimation + StateDuration<SkillState>> {
 		let skill = self.queue.front_mut()?;
 
 		if self.duration.is_none() {
@@ -576,7 +575,7 @@ impl<'a> GetSkillBehavior for ActiveSkill<'a> {
 	}
 }
 
-impl<'a> GetAnimation<Animation> for ActiveSkill<'a> {
+impl<'a> GetAnimation for ActiveSkill<'a> {
 	fn animate(&self) -> Animate<Animation> {
 		match (&self.skill.animate, self.slot_key) {
 			(Animate::None, ..) => Animate::None,
@@ -608,9 +607,11 @@ mod test_queue_active_skill {
 		skills::{Animate, RunSkillBehavior, SkillAnimation},
 		traits::skill_builder::SkillShape,
 	};
-	use animations::animation::PlayMode;
 	use bevy::prelude::default;
-	use common::{components::Side, traits::load_asset::Path};
+	use common::{
+		components::Side,
+		traits::{animation::PlayMode, load_asset::Path},
+	};
 
 	#[test]
 	fn get_phasing_times_waiting() {

@@ -11,7 +11,6 @@ pub mod traits;
 mod behaviors;
 mod bundles;
 
-use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
@@ -19,7 +18,7 @@ use common::{
 	resources::key_map::KeyMap,
 	states::MouseContext,
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
-	traits::try_insert_on::TryInsertOn,
+	traits::{animation::HasAnimationsDispatch, try_insert_on::TryInsertOn},
 };
 use components::{
 	combos::Combos,
@@ -46,7 +45,7 @@ use macros::item_asset;
 use player::components::player::Player;
 use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill};
 use slot_key::SlotKey;
-use std::time::Duration;
+use std::{marker::PhantomData, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,
 	enqueue::enqueue,
@@ -64,14 +63,23 @@ use systems::{
 	visualize_slot_items::visualize_slot_items,
 };
 
-pub struct SkillsPlugin<TState> {
-	pub play: TState,
+pub struct SkillsPlugin<TAnimationsPlugin, TState> {
+	phantom_data: PhantomData<TAnimationsPlugin>,
+	play: TState,
 }
 
-impl<TState> SkillsPlugin<TState>
+impl<TAnimationsPlugin, TState> SkillsPlugin<TAnimationsPlugin, TState>
 where
 	TState: States + Copy,
+	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 {
+	pub fn depends_on(_: &TAnimationsPlugin, play: TState) -> Self {
+		Self {
+			phantom_data: PhantomData,
+			play,
+		}
+	}
+
 	fn skill_load(&self, app: &mut App) {
 		app.register_custom_folder_assets::<Skill, SkillData>();
 	}
@@ -123,8 +131,7 @@ where
 					flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 					advance_active_skill::<
 						Queue,
-						Animation,
-						AnimationDispatch,
+						TAnimationsPlugin::TAnimationDispatch,
 						SkillExecuter,
 						Virtual,
 					>,
@@ -205,9 +212,10 @@ where
 	}
 }
 
-impl<TState> Plugin for SkillsPlugin<TState>
+impl<TAnimationsPlugin, TState> Plugin for SkillsPlugin<TAnimationsPlugin, TState>
 where
 	TState: States + Copy,
+	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);

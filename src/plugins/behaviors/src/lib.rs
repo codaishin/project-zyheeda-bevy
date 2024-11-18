@@ -6,9 +6,8 @@ pub mod traits;
 mod systems;
 
 use animation::MovementAnimations;
-use animations::{animation::Animation, components::animation_dispatch::AnimationDispatch};
 use bevy::prelude::*;
-use common::{resources::CamRay, states::MouseContext};
+use common::{resources::CamRay, states::MouseContext, traits::animation::HasAnimationsDispatch};
 use components::{
 	cam_orbit::CamOrbit,
 	ground_targeted_aoe::{GroundTargetedAoeContact, GroundTargetedAoeProjection},
@@ -22,6 +21,7 @@ use components::{
 };
 use events::MoveInputEvent;
 use prefabs::traits::RegisterPrefab;
+use std::marker::PhantomData;
 use systems::{
 	attack::{attack, execute_beam::execute_beam},
 	chase::chase,
@@ -41,13 +41,28 @@ use systems::{
 	update_life_times::update_lifetimes,
 };
 
-pub struct BehaviorsPlugin<TState> {
-	pub play: TState,
+pub struct BehaviorsPlugin<TAnimationsPlugin, TState> {
+	depends_on: PhantomData<TAnimationsPlugin>,
+	play: TState,
 }
 
-impl<TState> Plugin for BehaviorsPlugin<TState>
+impl<TAnimationsPlugin, TState> BehaviorsPlugin<TAnimationsPlugin, TState>
 where
 	TState: States + Copy,
+	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
+{
+	pub fn depends_on(_: &TAnimationsPlugin, play: TState) -> Self {
+		Self {
+			depends_on: PhantomData,
+			play,
+		}
+	}
+}
+
+impl<TAnimationsPlugin, TState> Plugin for BehaviorsPlugin<TAnimationsPlugin, TState>
+where
+	TState: States + Copy,
+	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 {
 	fn build(&self, app: &mut App) {
 		app.add_event::<MoveInputEvent>()
@@ -92,16 +107,14 @@ where
 					animate_movement::<
 						MovementConfig,
 						Movement<PositionBased>,
-						Animation,
 						MovementAnimations,
-						AnimationDispatch,
+						TAnimationsPlugin::TAnimationDispatch,
 					>,
 					animate_movement::<
 						MovementConfig,
 						Movement<VelocityBased>,
-						Animation,
 						MovementAnimations,
-						AnimationDispatch,
+						TAnimationsPlugin::TAnimationDispatch,
 					>,
 				),
 			)

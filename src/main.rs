@@ -32,6 +32,11 @@ fn main() -> AppExit {
 }
 
 fn prepare_game(app: &mut App) {
+	let animations_plugin = AnimationsPlugin;
+	let player_plugin = PlayerPlugin::depends_on(&animations_plugin);
+	let skills_plugin = SkillsPlugin::depends_on(&animations_plugin, GameStatePlugin::PLAY);
+	let behaviors_plugin = BehaviorsPlugin::depends_on(&animations_plugin, GameStatePlugin::PLAY);
+
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
@@ -40,9 +45,9 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(InteractionsPlugin)
 		.add_plugins(BarsPlugin)
 		.add_plugins(ItemsPlugin)
-		.add_plugins(AnimationsPlugin)
+		.add_plugins(animations_plugin)
 		.add_plugins(LightPlugin)
-		.add_plugins(PlayerPlugin)
+		.add_plugins(player_plugin)
 		.add_plugins(EnemyPlugin)
 		.add_plugins(RenderingPlugin)
 		.add_plugins(LoadingPlugin {
@@ -61,12 +66,8 @@ fn prepare_game(app: &mut App) {
 			inventory: GameStatePlugin::INVENTORY,
 			combo_overview: GameStatePlugin::COMBO_OVERVIEW,
 		})
-		.add_plugins(SkillsPlugin {
-			play: GameStatePlugin::PLAY,
-		})
-		.add_plugins(BehaviorsPlugin {
-			play: GameStatePlugin::PLAY,
-		})
+		.add_plugins(skills_plugin)
+		.add_plugins(behaviors_plugin)
 		.add_plugins(GameStatePlugin)
 		.insert_resource(ClearColor(Color::BLACK));
 }

@@ -1,32 +1,8 @@
 use crate::traits::AnimationChainUpdate;
 use common::{
 	tools::{Last, This},
-	traits::load_asset::Path,
+	traits::animation::Animation,
 };
-use core::fmt::Debug;
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum PlayMode {
-	Replay,
-	Repeat,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Animation {
-	pub path: Path,
-	pub(crate) play_mode: PlayMode,
-	pub update_fn: Option<fn(This<Animation>, Last<Animation>)>,
-}
-
-impl Animation {
-	pub fn new(path: Path, play_mode: PlayMode) -> Self {
-		Self {
-			path,
-			play_mode,
-			update_fn: None,
-		}
-	}
-}
 
 impl AnimationChainUpdate for Animation {
 	fn chain_update(&mut self, last: &Animation) {
@@ -41,19 +17,9 @@ impl AnimationChainUpdate for Animation {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use common::traits::{animation::PlayMode, load_asset::Path};
 	use mockall::mock;
 	use std::ops::Deref;
-
-	#[test]
-	fn new() {
-		let path = Path::from("a/path");
-		let animation = Animation::new(path.clone(), PlayMode::Repeat);
-
-		assert_eq!(
-			(path, PlayMode::Repeat),
-			(animation.path, animation.play_mode)
-		)
-	}
 
 	trait _CombinationFn {
 		fn combination_fn(a: This<Animation>, b: Last<Animation>);

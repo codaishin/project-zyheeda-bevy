@@ -1,15 +1,18 @@
-use crate::{
-	animation::{Animation, PlayMode},
-	traits::{
-		AnimationPlayers,
-		HighestPriorityAnimation,
-		IsPlaying,
-		RepeatAnimation,
-		ReplayAnimation,
-	},
+use crate::traits::{
+	AnimationPlayers,
+	HighestPriorityAnimation,
+	IsPlaying,
+	RepeatAnimation,
+	ReplayAnimation,
 };
 use bevy::{ecs::query::QueryData, prelude::*};
-use common::{resources::Shared, traits::load_asset::Path};
+use common::{
+	resources::Shared,
+	traits::{
+		animation::{Animation, PlayMode},
+		load_asset::Path,
+	},
+};
 
 impl<TDispatch> PlayAnimationClip for TDispatch {}
 
@@ -55,7 +58,6 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::animation::PlayMode;
 	use common::{
 		resources::Shared,
 		test_tools::utils::SingleThreadedApp,

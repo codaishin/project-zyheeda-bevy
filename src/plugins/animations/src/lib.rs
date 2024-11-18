@@ -10,23 +10,25 @@ use crate::systems::{
 	init_animation_graph::InitAnimationGraph,
 };
 use bevy::prelude::*;
-use common::systems::{
-	init_associated_component::{GetAssociated, InitAssociatedComponent},
-	track_components::TrackComponentInSelfAndChildren,
+use common::{
+	systems::{
+		init_associated_component::{GetAssociated, InitAssociatedComponent},
+		track_components::TrackComponentInSelfAndChildren,
+	},
+	traits::animation::{GetAnimationPaths, HasAnimationsDispatch, RegisterAnimations},
 };
 use components::animation_dispatch::AnimationDispatch;
 use resource::AnimationData;
 use systems::play_animation_clip::PlayAnimationClip;
-use traits::{GetAnimationPaths, RegisterAnimations};
 
 pub struct AnimationsPlugin;
 
-impl RegisterAnimations for App {
-	fn register_animations<TAgent>(&mut self) -> &mut Self
+impl RegisterAnimations for AnimationsPlugin {
+	fn register_animations<TAgent>(app: &mut App)
 	where
 		TAgent: Component + GetAnimationPaths + GetAssociated<AnimationDispatch>,
 	{
-		self.add_systems(
+		app.add_systems(
 			Startup,
 			TAgent::init_animation_clips::<AnimationGraph, AssetServer>,
 		)
@@ -36,8 +38,12 @@ impl RegisterAnimations for App {
 				TAgent::init_associated::<AnimationDispatch>,
 				TAgent::init_animation_graph_and_transitions::<AnimationDispatch>,
 			),
-		)
+		);
 	}
+}
+
+impl HasAnimationsDispatch for AnimationsPlugin {
+	type TAnimationDispatch = AnimationDispatch;
 }
 
 impl Plugin for AnimationsPlugin {

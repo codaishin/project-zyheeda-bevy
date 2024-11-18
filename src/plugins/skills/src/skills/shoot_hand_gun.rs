@@ -1,6 +1,6 @@
 use super::SkillAnimation;
 use crate::traits::{AnimationChainIf, GetAnimationSetup};
-use animations::animation::{Animation, PlayMode};
+use common::traits::animation::{Animation, PlayMode};
 use player::components::player::Player;
 use std::marker::PhantomData;
 

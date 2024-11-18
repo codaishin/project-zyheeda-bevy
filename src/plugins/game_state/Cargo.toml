@@ -9,7 +9,6 @@ bevy.workspace = true
 bevy_rapier3d.workspace = true
 
 # internal
-animations.workspace = true
 bars.workspace = true
 behaviors.workspace = true
 common.workspace = true

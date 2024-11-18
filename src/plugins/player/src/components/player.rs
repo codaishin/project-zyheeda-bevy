@@ -1,8 +1,3 @@
-use animations::{
-	animation::{Animation, PlayMode},
-	components::animation_dispatch::AnimationDispatch,
-	traits::{GetAnimationPaths, IdleLayer, StartAnimation},
-};
 use bars::components::Bar;
 use behaviors::{
 	animation::MovementAnimations,
@@ -15,7 +10,11 @@ use common::{
 	errors::Error,
 	systems::init_associated_component::GetAssociated,
 	tools::UnitsPerSecond,
-	traits::{clamp_zero_positive::ClampZeroPositive, load_asset::Path},
+	traits::{
+		animation::{Animation, AnimationPriority, GetAnimationPaths, PlayMode, StartAnimation},
+		clamp_zero_positive::ClampZeroPositive,
+		load_asset::Path,
+	},
 };
 use interactions::components::blocker::Blocker;
 use light::components::ResponsiveLightTrigger;
@@ -47,11 +46,22 @@ impl GetAnimationPaths for Player {
 	}
 }
 
-impl GetAssociated<AnimationDispatch> for Player {
-	fn get_associated_component() -> AnimationDispatch {
-		let mut animation_dispatch = AnimationDispatch::default();
+struct Idle;
+
+impl From<Idle> for AnimationPriority {
+	fn from(_: Idle) -> Self {
+		AnimationPriority::Low
+	}
+}
+
+impl<TAnimationDispatch> GetAssociated<TAnimationDispatch> for Player
+where
+	TAnimationDispatch: Component + StartAnimation + Default,
+{
+	fn get_associated_component() -> TAnimationDispatch {
+		let mut animation_dispatch = TAnimationDispatch::default();
 		animation_dispatch.start_animation(
-			IdleLayer,
+			Idle,
 			Animation::new(Player::animation_path("Animation1"), PlayMode::Repeat),
 		);
 

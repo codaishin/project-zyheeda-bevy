@@ -16,9 +16,11 @@ use crate::{
 	slot_key::SlotKey,
 	traits::{spawn_skill_behavior::SpawnSkillBehavior, Matches, Prime},
 };
-use animations::animation::Animation;
 use bevy::prelude::*;
-use common::{resources::ColliderInfo, traits::load_asset::Path};
+use common::{
+	resources::ColliderInfo,
+	traits::{animation::Animation, load_asset::Path},
+};
 use lifetime::LifeTimeDefinition;
 use loading::traits::asset_folder::AssetFolderPath;
 use std::{

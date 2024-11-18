@@ -1,7 +1,9 @@
 use super::{GetAnimationSetup, GetSkillAnimation};
 use crate::skills::SkillAnimation;
-use animations::animation::Animation;
-use common::tools::{Last, This};
+use common::{
+	tools::{Last, This},
+	traits::animation::Animation,
+};
 
 impl<T: GetAnimationSetup> GetSkillAnimation for T {
 	fn animation() -> SkillAnimation {
@@ -46,8 +48,7 @@ fn apply_chain<T: GetAnimationSetup>(mut this: This<Animation>, last: Last<Anima
 mod test {
 	use super::*;
 	use crate::traits::AnimationChainIf;
-	use animations::animation::PlayMode;
-	use common::traits::load_asset::Path;
+	use common::traits::{animation::PlayMode, load_asset::Path};
 	use mockall::mock;
 
 	macro_rules! mock_setup {
