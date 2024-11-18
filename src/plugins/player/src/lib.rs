@@ -1,7 +1,6 @@
 pub mod bundle;
 pub mod components;
 
-mod animation_keys;
 mod systems;
 
 use animations::animation::Animation;
