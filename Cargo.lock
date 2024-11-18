@@ -354,7 +354,6 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 name = "behaviors"
 version = "0.1.0"
 dependencies = [
- "animations",
  "bars",
  "bevy",
  "bevy_rapier3d",
@@ -2143,7 +2142,6 @@ dependencies = [
 name = "game_state"
 version = "0.1.0"
 dependencies = [
- "animations",
  "bars",
  "behaviors",
  "bevy",
@@ -3581,7 +3579,6 @@ checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
 name = "player"
 version = "0.1.0"
 dependencies = [
- "animations",
  "bars",
  "behaviors",
  "bevy",
@@ -4096,7 +4093,6 @@ checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
 name = "skills"
 version = "0.1.0"
 dependencies = [
- "animations",
  "behaviors",
  "bevy",
  "bevy_rapier3d",

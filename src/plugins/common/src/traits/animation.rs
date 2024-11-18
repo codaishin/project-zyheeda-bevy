@@ -3,7 +3,7 @@ use crate::{
 	systems::init_associated_component::GetAssociated,
 	tools::{Last, This},
 };
-use bevy::prelude::Component;
+use bevy::prelude::*;
 
 pub enum AnimationPriority {
 	High,
@@ -36,6 +36,10 @@ where
 	>(
 		&mut self,
 	);
+}
+
+pub trait AnimationDispatchType {
+	type AnimationDispatch;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]

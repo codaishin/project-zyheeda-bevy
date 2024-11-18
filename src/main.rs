@@ -33,7 +33,9 @@ fn main() -> AppExit {
 
 fn prepare_game(app: &mut App) {
 	let mut animations_plugin = AnimationsPlugin::default();
-	let player_plugin = PlayerPlugin::new(&mut animations_plugin);
+	let player_plugin = PlayerPlugin::depends_on(&mut animations_plugin);
+	let skills_plugin = SkillsPlugin::depends_on(&animations_plugin, GameStatePlugin::PLAY);
+	let behaviors_plugin = BehaviorsPlugin::depends_on(&animations_plugin, GameStatePlugin::PLAY);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
@@ -64,12 +66,8 @@ fn prepare_game(app: &mut App) {
 			inventory: GameStatePlugin::INVENTORY,
 			combo_overview: GameStatePlugin::COMBO_OVERVIEW,
 		})
-		.add_plugins(SkillsPlugin {
-			play: GameStatePlugin::PLAY,
-		})
-		.add_plugins(BehaviorsPlugin {
-			play: GameStatePlugin::PLAY,
-		})
+		.add_plugins(skills_plugin)
+		.add_plugins(behaviors_plugin)
 		.add_plugins(GameStatePlugin)
 		.insert_resource(ClearColor(Color::BLACK));
 }

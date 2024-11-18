@@ -18,7 +18,7 @@ impl<TAnimationPlugin, TAnimationDispatch> PlayerPlugin<TAnimationPlugin, TAnima
 where
 	TAnimationDispatch: Component + StartAnimation + Default,
 {
-	pub fn new(animation_plugin: &mut TAnimationPlugin) -> Self
+	pub fn depends_on(animation_plugin: &mut TAnimationPlugin) -> Self
 	where
 		TAnimationPlugin: RegisterAnimations<TAnimationDispatch>,
 	{
