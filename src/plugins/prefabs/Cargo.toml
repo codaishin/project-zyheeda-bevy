@@ -4,10 +4,13 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+# external
 bevy.workspace = true
 bevy_rapier3d.workspace = true
 tracing.workspace = true
 uuid.workspace = true
+
+# internal
 bars.workspace = true
 common.workspace = true
 interactions.workspace = true

@@ -4,6 +4,9 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+# external
 bevy.workspace = true
+
+# internal
 common.workspace = true
 interactions.workspace = true

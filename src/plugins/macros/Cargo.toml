@@ -7,5 +7,6 @@ edition.workspace = true
 proc-macro = true
 
 [dependencies]
+# external
 syn = "2.0"
 quote = "1.0"

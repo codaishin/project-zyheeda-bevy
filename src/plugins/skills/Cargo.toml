@@ -4,11 +4,14 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+# external
 bevy.workspace = true
 bevy_rapier3d.workspace = true
 serde.workspace = true
 tracing.workspace = true
 uuid.workspace = true
+
+# internal
 animations.workspace = true
 behaviors.workspace = true
 common.workspace = true
@@ -20,4 +23,5 @@ player.workspace = true
 shaders.workspace = true
 
 [dev-dependencies]
+# external
 mockall.workspace = true

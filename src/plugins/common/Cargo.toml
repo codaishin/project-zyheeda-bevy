@@ -4,15 +4,20 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+# external
 bevy.workspace = true
 bevy_rapier3d.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
 uuid.workspace = true
+
+# internal
 macros.workspace = true
 
 [dev-dependencies]
+# external
 mockall.workspace = true
-macros.workspace = true
+
+# internal
 common.workspace = true
