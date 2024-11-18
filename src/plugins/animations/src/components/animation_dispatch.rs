@@ -5,13 +5,13 @@ use crate::{
 		AnimationPlayers,
 		AnimationPlayersWithoutTransitions,
 		HighestPriorityAnimation,
-		InsertAnimation,
-		MarkObsolete,
-		Priority,
 	},
 };
 use bevy::prelude::*;
-use common::traits::track::{IsTracking, Track, Untrack};
+use common::traits::{
+	animation::{AnimationPriority, StartAnimation, StopAnimation},
+	track::{IsTracking, Track, Untrack},
+};
 use std::{
 	collections::{hash_set::Iter, HashSet},
 	fmt::Debug,
@@ -41,11 +41,14 @@ pub struct AnimationDispatch<TAnimation = Animation> {
 }
 
 impl<TAnimation> AnimationDispatch<TAnimation> {
-	fn slot(&mut self, priority: &Priority) -> &mut Entry<TAnimation> {
-		match priority {
-			Priority::High => &mut self.stack.0,
-			Priority::Middle => &mut self.stack.1,
-			Priority::Low => &mut self.stack.2,
+	fn slot<TLayer>(&mut self, layer: TLayer) -> &mut Entry<TAnimation>
+	where
+		TLayer: Into<AnimationPriority>,
+	{
+		match layer.into() {
+			AnimationPriority::High => &mut self.stack.0,
+			AnimationPriority::Medium => &mut self.stack.1,
+			AnimationPriority::Low => &mut self.stack.2,
 		}
 	}
 }
@@ -144,11 +147,14 @@ where
 	}
 }
 
-impl<TAnimation: AnimationChainUpdate + Debug> InsertAnimation<TAnimation>
+impl<TAnimation: AnimationChainUpdate + Debug> StartAnimation<TAnimation>
 	for AnimationDispatch<TAnimation>
 {
-	fn insert(&mut self, mut animation: TAnimation, priority: &Priority) {
-		let slot = self.slot(priority);
+	fn start_animation<TLayer>(&mut self, layer: TLayer, mut animation: TAnimation)
+	where
+		TLayer: Into<AnimationPriority>,
+	{
+		let slot = self.slot(layer);
 
 		if let Entry::Some(last) | Entry::Obsolete(last) = slot {
 			animation.chain_update(last);
@@ -158,9 +164,12 @@ impl<TAnimation: AnimationChainUpdate + Debug> InsertAnimation<TAnimation>
 	}
 }
 
-impl<TAnimation> MarkObsolete for AnimationDispatch<TAnimation> {
-	fn mark_obsolete(&mut self, priority: &Priority) {
-		let slot = self.slot(priority);
+impl<TAnimation> StopAnimation for AnimationDispatch<TAnimation> {
+	fn stop_animation<TLayer>(&mut self, layer: TLayer)
+	where
+		TLayer: Into<AnimationPriority>,
+	{
+		let slot = self.slot(layer);
 
 		*slot = match slot.take() {
 			Entry::Some(animation) => Entry::Obsolete(animation),
@@ -195,10 +204,33 @@ mod tests {
 		}
 	}
 
+	struct _Low;
+
+	impl From<_Low> for AnimationPriority {
+		fn from(_: _Low) -> Self {
+			AnimationPriority::Low
+		}
+	}
+	struct _Med;
+
+	impl From<_Med> for AnimationPriority {
+		fn from(_: _Med) -> Self {
+			AnimationPriority::Medium
+		}
+	}
+
+	struct _High;
+
+	impl From<_High> for AnimationPriority {
+		fn from(_: _High) -> Self {
+			AnimationPriority::High
+		}
+	}
+
 	#[test]
 	fn insert_low_priority() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("low"), &Priority::Low);
+		dispatch.start_animation(_Low, _Animation::new("low"));
 
 		assert_eq!(
 			Some(_Animation::new("low")),
@@ -209,8 +241,8 @@ mod tests {
 	#[test]
 	fn insert_medium_priority() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("middle"), &Priority::Middle);
-		dispatch.insert(_Animation::new("low"), &Priority::Low);
+		dispatch.start_animation(_Med, _Animation::new("middle"));
+		dispatch.start_animation(_Low, _Animation::new("low"));
 
 		assert_eq!(
 			Some(_Animation::new("middle")),
@@ -221,8 +253,8 @@ mod tests {
 	#[test]
 	fn insert_high_priority() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("high"), &Priority::High);
-		dispatch.insert(_Animation::new("middle"), &Priority::Middle);
+		dispatch.start_animation(_High, _Animation::new("high"));
+		dispatch.start_animation(_Med, _Animation::new("middle"));
 
 		assert_eq!(
 			Some(_Animation::new("high")),
@@ -233,8 +265,8 @@ mod tests {
 	#[test]
 	fn mark_obsolete_low() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("low"), &Priority::Low);
-		dispatch.mark_obsolete(&Priority::Low);
+		dispatch.start_animation(_Low, _Animation::new("low"));
+		dispatch.stop_animation(_Low);
 
 		assert_eq!(None, dispatch.highest_priority_animation());
 	}
@@ -242,8 +274,8 @@ mod tests {
 	#[test]
 	fn mark_obsolete_middle() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("middle"), &Priority::Middle);
-		dispatch.mark_obsolete(&Priority::Middle);
+		dispatch.start_animation(_Med, _Animation::new("middle"));
+		dispatch.stop_animation(_Med);
 
 		assert_eq!(None, dispatch.highest_priority_animation());
 	}
@@ -251,8 +283,8 @@ mod tests {
 	#[test]
 	fn mark_obsolete_high() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("high"), &Priority::High);
-		dispatch.mark_obsolete(&Priority::High);
+		dispatch.start_animation(_High, _Animation::new("high"));
+		dispatch.stop_animation(_High);
 
 		assert_eq!(None, dispatch.highest_priority_animation());
 	}
@@ -260,8 +292,8 @@ mod tests {
 	#[test]
 	fn call_chain_update() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("last"), &Priority::High);
-		dispatch.insert(_Animation::new("mock"), &Priority::High);
+		dispatch.start_animation(_High, _Animation::new("last"));
+		dispatch.start_animation(_High, _Animation::new("mock"));
 
 		let mock = dispatch.highest_priority_animation().unwrap();
 
@@ -271,9 +303,9 @@ mod tests {
 	#[test]
 	fn call_chain_update_on_marked_obsolete() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("last"), &Priority::High);
-		dispatch.mark_obsolete(&Priority::High);
-		dispatch.insert(_Animation::new("mock"), &Priority::High);
+		dispatch.start_animation(_High, _Animation::new("last"));
+		dispatch.stop_animation(_High);
+		dispatch.start_animation(_High, _Animation::new("mock"));
 
 		let mock = dispatch.highest_priority_animation().unwrap();
 
@@ -283,10 +315,10 @@ mod tests {
 	#[test]
 	fn do_not_call_chain_update_on_marked_obsolete_2_times_ago() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.insert(_Animation::new("last"), &Priority::High);
-		dispatch.mark_obsolete(&Priority::High);
-		dispatch.mark_obsolete(&Priority::High);
-		dispatch.insert(_Animation::new("mock"), &Priority::High);
+		dispatch.start_animation(_High, _Animation::new("last"));
+		dispatch.stop_animation(_High);
+		dispatch.stop_animation(_High);
+		dispatch.start_animation(_High, _Animation::new("mock"));
 
 		let mock = dispatch.highest_priority_animation().unwrap();
 

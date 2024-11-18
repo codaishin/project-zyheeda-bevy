@@ -1,5 +1,4 @@
 use crate::traits::{GetAnimation, MovementData};
-use animations::traits::{MovementLayer, StartAnimation, StopAnimation};
 use bevy::ecs::{
 	change_detection::DetectChanges,
 	component::Component,
@@ -9,7 +8,10 @@ use bevy::ecs::{
 	system::Query,
 	world::Ref,
 };
-use common::components::Immobilized;
+use common::{
+	components::Immobilized,
+	traits::animation::{AnimationPriority, StartAnimation, StopAnimation},
+};
 
 type Components<'a, TMovementConfig, TAnimations, TAnimationDispatch, TMovement> = (
 	Ref<'a, TMovementConfig>,
@@ -17,6 +19,15 @@ type Components<'a, TMovementConfig, TAnimations, TAnimationDispatch, TMovement>
 	&'a mut TAnimationDispatch,
 	Ref<'a, TMovement>,
 );
+
+#[derive(Debug, PartialEq)]
+struct MovementLayer;
+
+impl From<MovementLayer> for AnimationPriority {
+	fn from(_: MovementLayer) -> Self {
+		Self::Medium
+	}
+}
 
 pub(crate) fn animate_movement<
 	TMovementConfig: Component + MovementData,
@@ -33,15 +44,15 @@ pub(crate) fn animate_movement<
 	mut removed_movements: RemovedComponents<TMovement>,
 ) {
 	for (config, animations, dispatch, movement) in &mut agents {
-		insert_animation(config, animations, dispatch, movement);
+		start_animation(config, animations, dispatch, movement);
 	}
 
 	for entity in removed_movements.read() {
-		remove_animation(entity, &mut agents_without_movement);
+		stop_animation(entity, &mut agents_without_movement);
 	}
 }
 
-fn insert_animation<
+fn start_animation<
 	TMovementConfig: MovementData,
 	TMovement,
 	TAnimation: Clone,
@@ -61,7 +72,7 @@ fn insert_animation<
 	dispatch.start_animation(MovementLayer, animation.clone());
 }
 
-fn remove_animation<TMovement: Component, TAnimationDispatch: Component + StopAnimation>(
+fn stop_animation<TMovement: Component, TAnimationDispatch: Component + StopAnimation>(
 	entity: Entity,
 	agent_without_movement: &mut Query<&mut TAnimationDispatch, Without<TMovement>>,
 ) {
@@ -73,11 +84,8 @@ fn remove_animation<TMovement: Component, TAnimationDispatch: Component + StopAn
 
 #[cfg(test)]
 mod tests {
-	use std::ops::DerefMut;
-
 	use super::*;
 	use crate::components::MovementMode;
-	use animations::traits::Priority;
 	use bevy::{
 		app::{App, Update},
 		utils::default,
@@ -89,6 +97,7 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, mock, predicate::eq};
+	use std::ops::DerefMut;
 
 	#[derive(Component, NestedMocks)]
 	struct _Config {
@@ -145,8 +154,7 @@ mod tests {
 	impl StartAnimation<_Animation> for _AnimationDispatch {
 		fn start_animation<TLayer>(&mut self, layer: TLayer, animation: _Animation)
 		where
-			TLayer: 'static,
-			Priority: From<TLayer>,
+			TLayer: Into<AnimationPriority> + 'static,
 		{
 			self.mock.start_animation(layer, animation)
 		}
@@ -155,8 +163,7 @@ mod tests {
 	impl StopAnimation for _AnimationDispatch {
 		fn stop_animation<TLayer>(&mut self, layer: TLayer)
 		where
-			TLayer: 'static,
-			Priority: From<TLayer>,
+			TLayer: Into<AnimationPriority> + 'static,
 		{
 			self.mock.stop_animation(layer)
 		}
@@ -166,13 +173,11 @@ mod tests {
 		_AnimationDispatch {}
 		impl StartAnimation<_Animation> for _AnimationDispatch {
 			fn start_animation<TLayer>(&mut self, layer: TLayer, animation: _Animation) where
-				TLayer: 'static,
-				Priority: From<TLayer>;
+			TLayer: Into<AnimationPriority> + 'static;
 		}
 		impl StopAnimation for _AnimationDispatch {
 			fn stop_animation<TLayer>(&mut self, layer: TLayer)	where
-				TLayer: 'static,
-				Priority: From<TLayer>;
+			TLayer: Into<AnimationPriority> + 'static;
 		}
 	}
 

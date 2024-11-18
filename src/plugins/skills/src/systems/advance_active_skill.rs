@@ -3,10 +3,12 @@ use crate::{
 	slot_key::SlotKey,
 	traits::{Flush, GetActiveSkill, GetAnimation, GetSkillBehavior, Schedule},
 };
-use animations::traits::{SkillLayer, StartAnimation, StopAnimation};
 use behaviors::components::{Face, OverrideFace};
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::traits::state_duration::{StateMeta, StateUpdate};
+use common::traits::{
+	animation::{AnimationPriority, StartAnimation, StopAnimation},
+	state_duration::{StateMeta, StateUpdate},
+};
 use std::time::Duration;
 
 #[derive(PartialEq)]
@@ -17,6 +19,15 @@ enum Advancement {
 
 #[derive(Component)]
 pub struct SideEffectsCleared;
+
+#[derive(Debug, PartialEq)]
+struct SkillLayer;
+
+impl From<SkillLayer> for AnimationPriority {
+	fn from(_: SkillLayer) -> Self {
+		AnimationPriority::High
+	}
+}
 
 type Components<'a, TGetSkill, TAnimationDispatch, TSkillExecutor> = (
 	Entity,
@@ -156,7 +167,6 @@ mod tests {
 		skills::lifetime::LifeTimeDefinition,
 		traits::{skill_builder::SkillShape, GetAnimation, GetSkillBehavior},
 	};
-	use animations::traits::Priority;
 	use behaviors::components::{Face, OverrideFace};
 	use bevy::{
 		prelude::{App, Transform, Update},
@@ -215,8 +225,7 @@ mod tests {
 	impl StartAnimation<_Animation> for _AnimationDispatch {
 		fn start_animation<TLayer>(&mut self, layer: TLayer, animation: _Animation)
 		where
-			TLayer: 'static,
-			Priority: From<TLayer>,
+			TLayer: Into<AnimationPriority> + 'static,
 		{
 			self.mock.start_animation(layer, animation)
 		}
@@ -225,8 +234,7 @@ mod tests {
 	impl StopAnimation for _AnimationDispatch {
 		fn stop_animation<TLayer>(&mut self, layer: TLayer)
 		where
-			TLayer: 'static,
-			Priority: From<TLayer>,
+			TLayer: Into<AnimationPriority> + 'static,
 		{
 			self.mock.stop_animation(layer)
 		}
@@ -237,13 +245,11 @@ mod tests {
 		impl StartAnimation<_Animation> for _AnimationDispatch {
 			fn start_animation<TLayer>(&mut self, layer: TLayer, animation: _Animation)
 			where
-				TLayer: 'static,
-				Priority: From<TLayer>;
+				TLayer: Into<AnimationPriority> + 'static;
 		}
 		impl StopAnimation for _AnimationDispatch {
 			fn stop_animation<TLayer>(&mut self, layer: TLayer) where
-				TLayer: 'static,
-				Priority: From<TLayer>;
+				TLayer: Into<AnimationPriority> + 'static;
 		}
 	}
 
