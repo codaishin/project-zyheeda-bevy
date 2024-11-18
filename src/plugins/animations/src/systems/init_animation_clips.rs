@@ -1,12 +1,9 @@
-use crate::{
-	resource::AnimationData,
-	traits::{GetAnimationPaths, LoadAnimationAssets},
-};
+use crate::{resource::AnimationData, traits::LoadAnimationAssets};
 use bevy::{
 	asset::{Asset, Assets},
 	prelude::{AnimationNodeIndex, Commands, Res, ResMut, Resource},
 };
-use common::resources::Shared;
+use common::{resources::Shared, traits::animation::GetAnimationPaths};
 
 impl<TAgent> InitAnimationClips for TAgent where TAgent: GetAnimationPaths + Sync + Send + 'static {}
 

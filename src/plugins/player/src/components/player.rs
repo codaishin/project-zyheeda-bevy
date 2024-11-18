@@ -1,8 +1,4 @@
-use animations::{
-	animation::{Animation, PlayMode},
-	components::animation_dispatch::AnimationDispatch,
-	traits::GetAnimationPaths,
-};
+use animations::animation::{Animation, PlayMode};
 use bars::components::Bar;
 use behaviors::{
 	animation::MovementAnimations,
@@ -16,7 +12,7 @@ use common::{
 	systems::init_associated_component::GetAssociated,
 	tools::UnitsPerSecond,
 	traits::{
-		animation::{AnimationPriority, StartAnimation},
+		animation::{AnimationPriority, GetAnimationPaths, StartAnimation},
 		clamp_zero_positive::ClampZeroPositive,
 		load_asset::Path,
 	},
@@ -51,17 +47,20 @@ impl GetAnimationPaths for Player {
 	}
 }
 
-impl GetAssociated<AnimationDispatch> for Player {
-	fn get_associated_component() -> AnimationDispatch {
-		struct IdleLayer;
+struct IdleLayer;
 
-		impl From<IdleLayer> for AnimationPriority {
-			fn from(_: IdleLayer) -> Self {
-				AnimationPriority::Low
-			}
-		}
+impl From<IdleLayer> for AnimationPriority {
+	fn from(_: IdleLayer) -> Self {
+		AnimationPriority::Low
+	}
+}
 
-		let mut animation_dispatch = AnimationDispatch::default();
+impl<TAnimationDispatch> GetAssociated<TAnimationDispatch> for Player
+where
+	TAnimationDispatch: Component + StartAnimation<Animation> + Default,
+{
+	fn get_associated_component() -> TAnimationDispatch {
+		let mut animation_dispatch = TAnimationDispatch::default();
 		animation_dispatch.start_animation(
 			IdleLayer,
 			Animation::new(Player::animation_path("Animation1"), PlayMode::Repeat),

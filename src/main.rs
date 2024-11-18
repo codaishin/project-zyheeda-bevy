@@ -32,6 +32,9 @@ fn main() -> AppExit {
 }
 
 fn prepare_game(app: &mut App) {
+	let mut animations_plugin = AnimationsPlugin::default();
+	let player_plugin = PlayerPlugin::new(&mut animations_plugin);
+
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
@@ -40,9 +43,9 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(InteractionsPlugin)
 		.add_plugins(BarsPlugin)
 		.add_plugins(ItemsPlugin)
-		.add_plugins(AnimationsPlugin)
+		.add_plugins(animations_plugin)
 		.add_plugins(LightPlugin)
-		.add_plugins(PlayerPlugin)
+		.add_plugins(player_plugin)
 		.add_plugins(EnemyPlugin)
 		.add_plugins(RenderingPlugin)
 		.add_plugins(LoadingPlugin {

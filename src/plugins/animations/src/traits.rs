@@ -2,9 +2,8 @@ pub(crate) mod asset_server;
 pub(crate) mod player_idle;
 pub(crate) mod tuple_animation_player_transitions;
 
-use crate::components::animation_dispatch::AnimationDispatch;
 use bevy::prelude::*;
-use common::{systems::init_associated_component::GetAssociated, traits::load_asset::Path};
+use common::traits::load_asset::Path;
 use std::collections::HashMap;
 
 pub(crate) trait LoadAnimationAssets<TGraph, TIndex> {
@@ -45,16 +44,4 @@ where
 {
 	type TIter;
 	fn animation_players_without_transition(&'a self) -> Self::TIter;
-}
-
-pub trait GetAnimationPaths {
-	fn animation_paths() -> Vec<Path>;
-}
-
-pub trait RegisterAnimations {
-	fn register_animations<
-		TAgent: Component + GetAnimationPaths + GetAssociated<AnimationDispatch>,
-	>(
-		&mut self,
-	) -> &mut Self;
 }
