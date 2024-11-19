@@ -9,9 +9,11 @@ use common::{
 	bundles::ColliderTransformBundle,
 	components::ColliderRoot,
 	tools::{Intensity, Units},
-	traits::cache::GetOrCreateTypeAsset,
+	traits::{
+		cache::GetOrCreateTypeAsset,
+		prefab::{sphere, GetOrCreateAssets},
+	},
 };
-use prefabs::traits::{sphere, GetOrCreateAssets};
 
 pub(super) trait ProjectileTypeParameters {
 	fn radius() -> Units;

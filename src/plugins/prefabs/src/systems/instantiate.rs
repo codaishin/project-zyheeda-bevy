@@ -1,18 +1,11 @@
-use crate::traits::Instantiate;
-use bevy::{
-	asset::Handle,
-	ecs::{
-		component::Component,
-		entity::Entity,
-		query::Added,
-		system::{Commands, Query, ResMut, Resource},
-	},
-	pbr::StandardMaterial,
-	render::mesh::Mesh,
-};
+use crate::components::SpawnAfterInstantiation;
+use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
-	traits::cache::{GetOrCreateAsset, GetOrCreateAssetFactory},
+	traits::{
+		cache::{GetOrCreateAsset, GetOrCreateAssetFactory},
+		prefab::Prefab,
+	},
 };
 use std::any::TypeId;
 
@@ -46,7 +39,7 @@ pub fn instantiate<TAgent, TMeshAssets, TSMatAssets, TMeshStorage, TSMatStorage,
 	agents: Query<(Entity, &TAgent), Added<TAgent>>,
 ) -> Vec<Result<(), Error>>
 where
-	TAgent: Component + Instantiate,
+	TAgent: Component + Prefab,
 	TMeshAssets: Resource,
 	TSMatAssets: Resource,
 	TMeshStorage: Resource,
@@ -65,7 +58,7 @@ where
 				lvl: Level::Error,
 			});
 		};
-		agent.instantiate(
+		agent.instantiate_on::<SpawnAfterInstantiation>(
 			&mut entity,
 			GetHandlesFns {
 				mesh: &mut |type_id: TypeId, mesh: &mut dyn FnMut() -> Mesh| {
@@ -84,19 +77,21 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::GetOrCreateAssets;
 	use bevy::{
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},
 		color::Color,
-		ecs::system::{EntityCommands, IntoSystem},
+		ecs::system::{EntityCommands, IntoSystem, RunSystemOnce},
 		math::primitives::Sphere,
 		prelude::default,
 	};
 	use common::{
 		errors::Level,
 		systems::log::test_tools::{fake_log_error_lazy_many, FakeErrorLogMany},
-		traits::cache::GetOrCreateTypeAsset,
+		traits::{
+			cache::GetOrCreateTypeAsset,
+			prefab::{AfterInstantiation, GetOrCreateAssets},
+		},
 	};
 	use std::marker::PhantomData;
 	use uuid::Uuid;
@@ -114,18 +109,27 @@ mod tests {
 		}
 	}
 
+	#[derive(Component, Debug, PartialEq)]
+	struct _Child;
+
 	#[derive(Component)]
 	struct _Result<TAsset: Asset>(Handle<TAsset>);
 
-	impl Instantiate for _Agent {
-		fn instantiate(
+	impl Prefab for _Agent {
+		fn instantiate_on<TAfterInstantiation>(
 			&self,
-			on: &mut EntityCommands,
+			entity: &mut EntityCommands,
 			mut assets: impl GetOrCreateAssets,
-		) -> Result<(), Error> {
-			on.try_insert((
+		) -> Result<(), Error>
+		where
+			TAfterInstantiation: AfterInstantiation,
+		{
+			entity.try_insert((
 				_Result(assets.get_or_create_for::<_Agent>(_Agent::mesh)),
 				_Result(assets.get_or_create_for::<_Agent>(_Agent::material)),
+				TAfterInstantiation::spawn(|parent| {
+					parent.spawn(_Child);
+				}),
 			));
 			Ok(())
 		}
@@ -134,8 +138,8 @@ mod tests {
 	#[derive(Component)]
 	struct _AgentWithInstantiationError;
 
-	impl Instantiate for _AgentWithInstantiationError {
-		fn instantiate(
+	impl Prefab for _AgentWithInstantiationError {
+		fn instantiate_on<TAfterInstantiation>(
 			&self,
 			_: &mut EntityCommands,
 			_: impl GetOrCreateAssets,
@@ -195,7 +199,7 @@ mod tests {
 		}
 	}
 
-	fn setup<TAgent: Component + Instantiate, TCombine>() -> (App, Entity)
+	fn setup<TAgent: Component + Prefab, TCombine>() -> (App, Entity)
 	where
 		for<'a> TCombine: GetOrCreateAssetFactory<_Assets<Mesh>, Mesh, _Storage<Mesh>, TypeId>
 			+ GetOrCreateAssetFactory<_Assets<SMat>, SMat, _Storage<SMat>, TypeId>
@@ -305,6 +309,15 @@ mod tests {
 		assert_eq!(Some(HANDLE.clone()), result.map(|r| r.0.clone()));
 	}
 
+	fn children(app: &App, entity: Entity) -> impl Iterator<Item = EntityRef> {
+		app.world().iter_entities().filter(move |child| {
+			child
+				.get::<Parent>()
+				.map(|parent| parent.get() == entity)
+				.unwrap_or(false)
+		})
+	}
+
 	#[test]
 	fn call_get_or_create_for_mesh_correctly() {
 		struct _Factory;
@@ -386,6 +399,54 @@ mod tests {
 					.collect::<Vec<_>>()
 			);
 		}
+	}
+
+	#[test]
+	fn add_spawn_after_instantiation_component() {
+		struct _Factory;
+
+		impl GetOrCreateAssetFactory<_Assets<Mesh>, Mesh, _Storage<Mesh>, TypeId> for _Factory {
+			fn create_from(
+				_: ResMut<_Assets<Mesh>>,
+				_: ResMut<_Storage<Mesh>>,
+			) -> impl GetOrCreateAsset<TypeId, Mesh> {
+				_Cache::default()
+			}
+		}
+
+		impl GetOrCreateAssetFactory<_Assets<SMat>, SMat, _Storage<SMat>, TypeId> for _Factory {
+			fn create_from(
+				_: ResMut<_Assets<SMat>>,
+				_: ResMut<_Storage<SMat>>,
+			) -> impl GetOrCreateAsset<TypeId, SMat> {
+				_Cache::default()
+			}
+		}
+
+		let (mut app, ..) = setup::<_Agent, _Factory>();
+		let agent = app.world_mut().spawn(_Agent).id();
+
+		app.update();
+		let with_children = app
+			.world()
+			.entity(agent)
+			.get::<SpawnAfterInstantiation>()
+			.unwrap()
+			.clone();
+		// Can't compare `SpawnAfterInstantiation` directly (Arc<dyn Fn(..)>), so we apply the spawn
+		// function to see that the configured child is spawned correctly
+		app.world_mut()
+			.run_system_once(move |mut commands: Commands| {
+				let mut entity = commands.entity(agent);
+				entity.with_children(|parent| (with_children.spawn)(parent));
+			});
+
+		assert_eq!(
+			vec![&_Child],
+			children(&app, agent)
+				.filter_map(|child| child.get::<_Child>())
+				.collect::<Vec<_>>()
+		);
 	}
 
 	#[test]

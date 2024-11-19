@@ -1,20 +1,38 @@
+mod components;
 mod systems;
 
-pub mod components;
-pub mod traits;
-
-use std::any::TypeId;
-
-use bevy::{
-	app::{App, Plugin},
-	asset::Handle,
-	pbr::StandardMaterial,
-	render::mesh::Mesh,
+use bevy::prelude::*;
+use common::{
+	labels::Labels,
+	resources::Shared,
+	systems::log::log_many,
+	tools::Factory,
+	traits::{
+		cache::get_or_create_asset::CreateAssetCache,
+		prefab::{Prefab, RegisterPrefab},
+	},
 };
-use common::{labels::Labels, resources::Shared};
-use systems::instantiate_children::instantiate_children;
+use std::any::TypeId;
+use systems::{instantiate::instantiate, instantiate_children::instantiate_children};
 
 pub struct PrefabsPlugin;
+
+impl RegisterPrefab for PrefabsPlugin {
+	fn register_prefab<TPrefab: Prefab + Component>(app: &mut App) {
+		let instantiate_system = instantiate::<
+			TPrefab,
+			Assets<Mesh>,
+			Assets<StandardMaterial>,
+			Shared<TypeId, Handle<Mesh>>,
+			Shared<TypeId, Handle<StandardMaterial>>,
+			Factory<CreateAssetCache>,
+		>;
+		app.add_systems(
+			Labels::INSTANTIATION.label(),
+			instantiate_system.pipe(log_many),
+		);
+	}
+}
 
 impl Plugin for PrefabsPlugin {
 	fn build(&self, app: &mut App) {

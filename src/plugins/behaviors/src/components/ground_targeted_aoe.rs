@@ -12,9 +12,11 @@ use common::{
 	components::{AssetModel, ColliderRoot},
 	errors::{Error, Level},
 	tools::Units,
-	traits::try_insert_on::TryInsertOn,
+	traits::{
+		prefab::{GetOrCreateAssets, Prefab},
+		try_insert_on::TryInsertOn,
+	},
 };
-use prefabs::traits::{GetOrCreateAssets, Instantiate};
 use shaders::components::effect_shader::EffectShaders;
 use std::f32::consts::PI;
 
@@ -105,24 +107,29 @@ trait ColliderComponents {
 	fn collider_components(&self) -> Result<impl Bundle, Error>;
 }
 
-impl Instantiate for GroundTargetedAoeContact {
-	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
+impl Prefab for GroundTargetedAoeContact {
+	fn instantiate_on<TAfterInstantiation>(
+		&self,
+		entity: &mut EntityCommands,
+		_: impl GetOrCreateAssets,
+	) -> Result<(), Error> {
 		let collider = self.collider_components()?;
 		let model = AssetModel::path("models/sphere.glb");
 
-		on.insert((
-			RigidBody::Fixed,
-			SpatialBundle::default(),
-			EffectShaders::default(),
-		))
-		.with_children(|parent| {
-			parent.spawn((ColliderRoot(parent.parent_entity()), collider));
-			parent.spawn(AssetModelBundle {
-				model,
-				transform: Transform::from_scale(Vec3::splat(*self.radius * 2.)),
-				..default()
+		entity
+			.insert((
+				RigidBody::Fixed,
+				SpatialBundle::default(),
+				EffectShaders::default(),
+			))
+			.with_children(|parent| {
+				parent.spawn((ColliderRoot(parent.parent_entity()), collider));
+				parent.spawn(AssetModelBundle {
+					model,
+					transform: Transform::from_scale(Vec3::splat(*self.radius * 2.)),
+					..default()
+				});
 			});
-		});
 
 		Ok(())
 	}
@@ -160,11 +167,15 @@ pub struct GroundTargetedAoeProjection {
 	pub radius: Units,
 }
 
-impl Instantiate for GroundTargetedAoeProjection {
-	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
+impl Prefab for GroundTargetedAoeProjection {
+	fn instantiate_on<TAfterInstantiation>(
+		&self,
+		entity: &mut EntityCommands,
+		_: impl GetOrCreateAssets,
+	) -> Result<(), Error> {
 		let collider = self.collider_components()?;
 
-		on.try_insert(collider);
+		entity.try_insert(collider);
 
 		Ok(())
 	}

@@ -1,16 +1,16 @@
-use crate::components::WithChildren;
+use crate::components::SpawnAfterInstantiation;
 use bevy::prelude::{BuildChildren, Commands, Entity, Query};
 
 pub(crate) fn instantiate_children(
 	mut commands: Commands,
-	delayed: Query<(Entity, &WithChildren)>,
+	delayed: Query<(Entity, &SpawnAfterInstantiation)>,
 ) {
 	for (entity, delayed) in &delayed {
 		let Some(mut entity) = commands.get_entity(entity) else {
 			continue;
 		};
 		entity.with_children(|parent| (delayed.spawn)(parent));
-		entity.remove::<WithChildren>();
+		entity.remove::<SpawnAfterInstantiation>();
 	}
 }
 
@@ -21,7 +21,7 @@ mod tests {
 		app::{App, Update},
 		prelude::{Component, Parent},
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{test_tools::utils::SingleThreadedApp, traits::prefab::AfterInstantiation};
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -39,7 +39,7 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn(WithChildren::delayed(|parent| {
+			.spawn(SpawnAfterInstantiation::spawn(|parent| {
 				parent.spawn(_Component);
 			}))
 			.id();
@@ -65,7 +65,7 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn(WithChildren::delayed(|parent| {
+			.spawn(SpawnAfterInstantiation::spawn(|parent| {
 				parent.spawn(_Component);
 			}))
 			.id();
@@ -74,6 +74,6 @@ mod tests {
 
 		let entity = app.world().entity(entity);
 
-		assert!(!entity.contains::<WithChildren>());
+		assert!(!entity.contains::<SpawnAfterInstantiation>());
 	}
 }

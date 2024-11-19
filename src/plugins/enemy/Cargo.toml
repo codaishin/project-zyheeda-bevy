@@ -14,4 +14,3 @@ behaviors.workspace = true
 common.workspace = true
 interactions.workspace = true
 player.workspace = true
-prefabs.workspace = true

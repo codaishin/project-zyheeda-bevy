@@ -22,6 +22,7 @@ pub mod mock;
 pub mod mouse_position;
 pub mod nested_mock;
 pub mod ownership_relation;
+pub mod prefab;
 pub mod process_delta;
 pub mod read;
 pub mod remove_conditionally;

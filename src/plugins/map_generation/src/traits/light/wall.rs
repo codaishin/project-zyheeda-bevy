@@ -16,11 +16,11 @@ use common::{
 	traits::{
 		cache::GetOrCreateTypeAsset,
 		clamp_zero_positive::ClampZeroPositive,
+		prefab::{GetOrCreateAssets, Prefab},
 		try_insert_on::TryInsertOn,
 	},
 };
 use light::components::{ResponsiveLight, ResponsiveLightData};
-use prefabs::traits::{GetOrCreateAssets, Instantiate};
 
 impl ExtraComponentsDefinition for Light<Wall> {
 	fn target_names() -> Vec<String> {
@@ -41,14 +41,14 @@ struct WallLightOn;
 
 struct WallLightOff;
 
-impl Instantiate for Light<Wall> {
-	fn instantiate(
+impl Prefab for Light<Wall> {
+	fn instantiate_on<TAfterInstantiation>(
 		&self,
-		on: &mut EntityCommands,
+		entity: &mut EntityCommands,
 		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
-		let model = on.id();
-		let mut commands = on.commands();
+		let model = entity.id();
+		let mut commands = entity.commands();
 
 		let light_on_material = assets.get_or_create_for::<WallLightOn>(|| StandardMaterial {
 			base_color: Color::WHITE,

@@ -8,24 +8,29 @@ use bevy::{
 	transform::components::Transform,
 	utils::default,
 };
-use common::{errors::Error, traits::cache::GetOrCreateTypeAsset};
+use common::{
+	errors::Error,
+	traits::{
+		cache::GetOrCreateTypeAsset,
+		prefab::{AfterInstantiation, GetOrCreateAssets, Prefab},
+	},
+};
 use interactions::components::{
 	blocker::Blocker,
 	deals_damage::DealsDamage,
 	is::{InterruptableRay, Is},
 };
-use prefabs::{
-	components::WithChildren,
-	traits::{GetOrCreateAssets, Instantiate},
-};
 use std::f32::consts::PI;
 
-impl Instantiate for Beam {
-	fn instantiate(
+impl Prefab for Beam {
+	fn instantiate_on<TAfterInstantiation>(
 		&self,
-		on: &mut EntityCommands,
+		entity: &mut EntityCommands,
 		mut assets: impl GetOrCreateAssets,
-	) -> Result<(), Error> {
+	) -> Result<(), Error>
+	where
+		TAfterInstantiation: AfterInstantiation,
+	{
 		let mesh = assets.get_or_create_for::<Beam>(|| {
 			Mesh::from(Cylinder {
 				radius: 0.01,
@@ -38,22 +43,21 @@ impl Instantiate for Beam {
 			alpha_mode: AlphaMode::Add,
 			..default()
 		});
-		let render = move |parent: &mut ChildBuilder| {
-			parent.spawn((
-				PbrBundle {
-					material: material.clone(),
-					mesh: mesh.clone(),
-					transform: Transform::from_rotation(Quat::from_rotation_x(PI / 2.)),
-					..default()
-				},
-				NotShadowCaster,
-			));
-		};
 
-		on.try_insert((
+		entity.try_insert((
 			Is::<InterruptableRay>::interacting_with([Blocker::Physical, Blocker::Force]),
 			DealsDamage::once_per_second(self.damage),
-			WithChildren::delayed(render),
+			TAfterInstantiation::spawn(move |parent: &mut ChildBuilder| {
+				parent.spawn((
+					PbrBundle {
+						material: material.clone(),
+						mesh: mesh.clone(),
+						transform: Transform::from_rotation(Quat::from_rotation_x(PI / 2.)),
+						..default()
+					},
+					NotShadowCaster,
+				));
+			}),
 		));
 
 		Ok(())

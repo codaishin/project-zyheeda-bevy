@@ -7,13 +7,15 @@ use bevy_rapier3d::prelude::{Ccd, GravityScale, RigidBody};
 use common::{
 	errors::Error,
 	tools::UnitsPerSecond,
-	traits::clamp_zero_positive::ClampZeroPositive,
+	traits::{
+		clamp_zero_positive::ClampZeroPositive,
+		prefab::{GetOrCreateAssets, Prefab},
+	},
 };
 use interactions::components::{
 	blocker::Blocker,
 	is::{Fragile, Is},
 };
-use prefabs::traits::{GetOrCreateAssets, Instantiate};
 use sub_type::SubType;
 
 #[derive(Component, Debug, PartialEq)]
@@ -47,31 +49,36 @@ impl ProjectileBehavior for ProjectileContact {
 	}
 }
 
-impl Instantiate for ProjectileContact {
-	fn instantiate(
+impl Prefab for ProjectileContact {
+	fn instantiate_on<TAfterInstantiation>(
 		&self,
-		on: &mut EntityCommands,
+		entity: &mut EntityCommands,
 		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
-		on.try_insert((
-			RigidBody::Dynamic,
-			GravityScale(0.),
-			Ccd::enabled(),
-			Is::<Fragile>::interacting_with([Blocker::Physical, Blocker::Force]),
-			MovementConfig::Constant {
-				mode: MovementMode::Fast,
-				speed: UnitsPerSecond::new(15.),
-			},
-		))
-		.with_children(|parent| self.sub_type.spawn_contact(parent, &mut assets));
+		entity
+			.try_insert((
+				RigidBody::Dynamic,
+				GravityScale(0.),
+				Ccd::enabled(),
+				Is::<Fragile>::interacting_with([Blocker::Physical, Blocker::Force]),
+				MovementConfig::Constant {
+					mode: MovementMode::Fast,
+					speed: UnitsPerSecond::new(15.),
+				},
+			))
+			.with_children(|parent| self.sub_type.spawn_contact(parent, &mut assets));
 
 		Ok(())
 	}
 }
 
-impl Instantiate for ProjectileProjection {
-	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
-		on.with_children(|parent| self.sub_type.spawn_projection(parent));
+impl Prefab for ProjectileProjection {
+	fn instantiate_on<TAfterInstantiation>(
+		&self,
+		entity: &mut EntityCommands,
+		_: impl GetOrCreateAssets,
+	) -> Result<(), Error> {
+		entity.with_children(|parent| self.sub_type.spawn_projection(parent));
 
 		Ok(())
 	}

@@ -5,10 +5,10 @@ mod systems;
 mod traits;
 
 use bevy::prelude::*;
-use common::states::game_state::GameState;
+use common::{states::game_state::GameState, traits::prefab::RegisterPrefab};
 use components::{Floating, Light, Wall, WallBack};
 use map::{LightCell, MapCell};
-use prefabs::traits::RegisterPrefab;
+use std::marker::PhantomData;
 use systems::{
 	apply_extra_components::apply_extra_components,
 	get_cell_transforms::get_cell_transforms,
@@ -18,15 +18,28 @@ use systems::{
 };
 use traits::RegisterMapCell;
 
-pub struct MapGenerationPlugin;
+pub struct MapGenerationPlugin<TPrefabsPlugin>(PhantomData<TPrefabsPlugin>);
 
-impl Plugin for MapGenerationPlugin {
+impl<TPrefabsPlugin> MapGenerationPlugin<TPrefabsPlugin>
+where
+	TPrefabsPlugin: Plugin + RegisterPrefab,
+{
+	pub fn depends_on(_: &TPrefabsPlugin) -> Self {
+		Self(PhantomData)
+	}
+}
+
+impl<TPrefabsPlugin> Plugin for MapGenerationPlugin<TPrefabsPlugin>
+where
+	TPrefabsPlugin: Plugin + RegisterPrefab,
+{
 	fn build(&self, app: &mut App) {
 		let new_game = GameState::NewGame;
 
-		app.register_prefab::<Light<Floating>>()
-			.register_prefab::<Light<Wall>>()
-			.register_map_cell::<MapCell>(OnEnter(new_game))
+		TPrefabsPlugin::register_prefab::<Light<Floating>>(app);
+		TPrefabsPlugin::register_prefab::<Light<Wall>>(app);
+
+		app.register_map_cell::<MapCell>(OnEnter(new_game))
 			.register_map_cell::<LightCell>(OnEnter(new_game))
 			.add_systems(
 				Update,

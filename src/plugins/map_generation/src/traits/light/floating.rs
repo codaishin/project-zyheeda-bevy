@@ -8,13 +8,18 @@ use bevy::{
 	transform::components::Transform,
 	utils::default,
 };
-use common::{errors::Error, traits::cache::GetOrCreateTypeAsset};
-use prefabs::traits::{sphere, GetOrCreateAssets, Instantiate};
+use common::{
+	errors::Error,
+	traits::{
+		cache::GetOrCreateTypeAsset,
+		prefab::{sphere, GetOrCreateAssets, Prefab},
+	},
+};
 
-impl Instantiate for Light<Floating> {
-	fn instantiate(
+impl Prefab for Light<Floating> {
+	fn instantiate_on<TAfterInstantiation>(
 		&self,
-		on: &mut EntityCommands,
+		entity: &mut EntityCommands,
 		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		let radius = 0.1;
@@ -26,7 +31,8 @@ impl Instantiate for Light<Floating> {
 		});
 		let transform = Transform::from_xyz(0., 1.8, 0.);
 
-		on.try_insert(VisibilityBundle::default())
+		entity
+			.try_insert(VisibilityBundle::default())
 			.with_children(|parent| {
 				parent
 					.spawn((
