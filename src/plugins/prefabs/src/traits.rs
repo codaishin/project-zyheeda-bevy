@@ -1,6 +1,5 @@
 pub mod app;
 pub(crate) mod dummy;
-pub(crate) mod projectile;
 
 use bevy::{
 	ecs::{component::Component, system::EntityCommands},
