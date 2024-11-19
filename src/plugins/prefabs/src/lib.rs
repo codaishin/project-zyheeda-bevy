@@ -9,7 +9,7 @@ use common::{
 	tools::Factory,
 	traits::{
 		cache::get_or_create_asset::CreateAssetCache,
-		prefab::{Instantiate, RegisterPrefab},
+		prefab::{Prefab, RegisterPrefab},
 	},
 };
 use std::any::TypeId;
@@ -18,7 +18,7 @@ use systems::{instantiate::instantiate, instantiate_children::instantiate_childr
 pub struct PrefabsPlugin;
 
 impl RegisterPrefab for PrefabsPlugin {
-	fn register_prefab<TPrefab: Instantiate + Component>(app: &mut App) {
+	fn register_prefab<TPrefab: Prefab + Component>(app: &mut App) {
 		let instantiate_system = instantiate::<
 			TPrefab,
 			Assets<Mesh>,

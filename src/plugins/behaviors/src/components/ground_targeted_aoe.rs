@@ -13,7 +13,7 @@ use common::{
 	errors::{Error, Level},
 	tools::Units,
 	traits::{
-		prefab::{GetOrCreateAssets, Instantiate},
+		prefab::{GetOrCreateAssets, Prefab},
 		try_insert_on::TryInsertOn,
 	},
 };
@@ -107,7 +107,7 @@ trait ColliderComponents {
 	fn collider_components(&self) -> Result<impl Bundle, Error>;
 }
 
-impl Instantiate for GroundTargetedAoeContact {
+impl Prefab for GroundTargetedAoeContact {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
@@ -167,7 +167,7 @@ pub struct GroundTargetedAoeProjection {
 	pub radius: Units,
 }
 
-impl Instantiate for GroundTargetedAoeProjection {
+impl Prefab for GroundTargetedAoeProjection {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,

@@ -16,7 +16,7 @@ use common::{
 	traits::{
 		cache::GetOrCreateTypeAsset,
 		clamp_zero_positive::ClampZeroPositive,
-		prefab::{GetOrCreateAssets, Instantiate},
+		prefab::{GetOrCreateAssets, Prefab},
 		try_insert_on::TryInsertOn,
 	},
 };
@@ -41,7 +41,7 @@ struct WallLightOn;
 
 struct WallLightOff;
 
-impl Instantiate for Light<Wall> {
+impl Prefab for Light<Wall> {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,

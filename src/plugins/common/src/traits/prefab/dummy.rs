@@ -4,7 +4,7 @@ use crate::{
 	errors::Error,
 	traits::{
 		cache::GetOrCreateTypeAsset,
-		prefab::{GetOrCreateAssets, Instantiate},
+		prefab::{GetOrCreateAssets, Prefab},
 	},
 };
 use bevy::{
@@ -25,7 +25,7 @@ const DUMMY_DIMENSIONS: Vec3 = Vec3 {
 	z: 0.4,
 };
 
-impl Instantiate for Dummy {
+impl Prefab for Dummy {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		on: &mut EntityCommands,

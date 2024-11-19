@@ -12,7 +12,7 @@ use common::{
 	errors::Error,
 	traits::{
 		cache::GetOrCreateTypeAsset,
-		prefab::{AfterInstantiation, GetOrCreateAssets, Instantiate},
+		prefab::{AfterInstantiation, GetOrCreateAssets, Prefab},
 	},
 };
 use interactions::components::{
@@ -22,7 +22,7 @@ use interactions::components::{
 };
 use std::f32::consts::PI;
 
-impl Instantiate for Beam {
+impl Prefab for Beam {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,

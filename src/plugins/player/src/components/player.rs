@@ -14,7 +14,7 @@ use common::{
 		animation::{Animation, AnimationPriority, GetAnimationPaths, PlayMode, StartAnimation},
 		clamp_zero_positive::ClampZeroPositive,
 		load_asset::Path,
-		prefab::{GetOrCreateAssets, Instantiate},
+		prefab::{GetOrCreateAssets, Prefab},
 	},
 };
 use interactions::components::blocker::Blocker;
@@ -69,7 +69,7 @@ where
 	}
 }
 
-impl Instantiate for Player {
+impl Prefab for Player {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,

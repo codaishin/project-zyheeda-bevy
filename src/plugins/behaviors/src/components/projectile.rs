@@ -9,7 +9,7 @@ use common::{
 	tools::UnitsPerSecond,
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
-		prefab::{GetOrCreateAssets, Instantiate},
+		prefab::{GetOrCreateAssets, Prefab},
 	},
 };
 use interactions::components::{
@@ -49,7 +49,7 @@ impl ProjectileBehavior for ProjectileContact {
 	}
 }
 
-impl Instantiate for ProjectileContact {
+impl Prefab for ProjectileContact {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
@@ -72,7 +72,7 @@ impl Instantiate for ProjectileContact {
 	}
 }
 
-impl Instantiate for ProjectileProjection {
+impl Prefab for ProjectileProjection {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,

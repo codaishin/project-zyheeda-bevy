@@ -18,7 +18,7 @@ pub trait AfterInstantiation {
 	fn spawn(spawn_fn: impl Fn(&mut ChildBuilder) + Sync + Send + 'static) -> impl Bundle;
 }
 
-pub trait Instantiate {
+pub trait Prefab {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
@@ -29,7 +29,7 @@ pub trait Instantiate {
 }
 
 pub trait RegisterPrefab {
-	fn register_prefab<TPrefab: Instantiate + Component>(app: &mut App);
+	fn register_prefab<TPrefab: Prefab + Component>(app: &mut App);
 }
 
 pub fn sphere(radius: f32) -> Mesh {

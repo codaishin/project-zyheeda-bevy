@@ -26,7 +26,7 @@ use common::{
 	traits::{
 		cache::GetOrCreateTypeAsset,
 		clamp_zero_positive::ClampZeroPositive,
-		prefab::{sphere, GetOrCreateAssets, Instantiate},
+		prefab::{sphere, GetOrCreateAssets, Prefab},
 	},
 };
 use interactions::components::{blocker::Blocker, effected_by::EffectedBy};
@@ -84,7 +84,7 @@ struct VoidSphereCore;
 
 struct VoidSphereRing;
 
-impl Instantiate for VoidSphere {
+impl Prefab for VoidSphere {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		on: &mut EntityCommands,

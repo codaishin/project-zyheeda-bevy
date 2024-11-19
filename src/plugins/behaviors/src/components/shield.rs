@@ -14,7 +14,7 @@ use common::{
 	bundles::{AssetModelBundle, ColliderBundle, ColliderTransformBundle},
 	components::{AssetModel, ColliderRoot},
 	errors::Error,
-	traits::prefab::{GetOrCreateAssets, Instantiate},
+	traits::prefab::{GetOrCreateAssets, Prefab},
 };
 use shaders::components::effect_shader::EffectShaders;
 
@@ -23,7 +23,7 @@ pub struct ShieldContact {
 	pub location: Entity,
 }
 
-impl Instantiate for ShieldContact {
+impl Prefab for ShieldContact {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
@@ -59,7 +59,7 @@ impl Instantiate for ShieldContact {
 #[derive(Component, Debug, PartialEq)]
 pub struct ShieldProjection;
 
-impl Instantiate for ShieldProjection {
+impl Prefab for ShieldProjection {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,

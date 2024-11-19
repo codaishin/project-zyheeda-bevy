@@ -12,11 +12,11 @@ use common::{
 	errors::Error,
 	traits::{
 		cache::GetOrCreateTypeAsset,
-		prefab::{sphere, GetOrCreateAssets, Instantiate},
+		prefab::{sphere, GetOrCreateAssets, Prefab},
 	},
 };
 
-impl Instantiate for Light<Floating> {
+impl Prefab for Light<Floating> {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
