@@ -15,7 +15,7 @@ use menu::MenuPlugin;
 use player::PlayerPlugin;
 use prefabs::PrefabsPlugin;
 use rendering::RenderingPlugin;
-use shaders::ShaderPlugin;
+use shaders::ShadersPlugin;
 use skills::SkillsPlugin;
 
 fn main() -> AppExit {
@@ -44,7 +44,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
 		.add_plugins(prefabs_plugin)
-		.add_plugins(ShaderPlugin)
+		.add_plugins(ShadersPlugin)
 		.add_plugins(InteractionsPlugin)
 		.add_plugins(BarsPlugin)
 		.add_plugins(ItemsPlugin)

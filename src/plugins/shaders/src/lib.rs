@@ -28,9 +28,9 @@ use traits::{
 	shadows_aware_material::ShadowsAwareMaterial,
 };
 
-pub struct ShaderPlugin;
+pub struct ShadersPlugin;
 
-impl Plugin for ShaderPlugin {
+impl Plugin for ShadersPlugin {
 	fn build(&self, app: &mut App) {
 		app.register_shader::<EssenceMaterial>()
 			.register_effect_shader_for::<Force>()
