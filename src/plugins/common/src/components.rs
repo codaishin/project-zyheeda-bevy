@@ -32,9 +32,6 @@ pub struct Immobilized;
 #[derive(Component, Debug, PartialEq)]
 pub struct Idle;
 
-#[derive(Component)]
-pub struct Dummy;
-
 #[derive(Component, Debug, PartialEq)]
 pub struct Health {
 	pub current: f32,

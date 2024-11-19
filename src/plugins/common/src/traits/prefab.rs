@@ -1,5 +1,3 @@
-mod dummy;
-
 use crate::{errors::Error, traits::cache::GetOrCreateAsset};
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use std::any::TypeId;
