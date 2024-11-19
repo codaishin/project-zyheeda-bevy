@@ -43,7 +43,7 @@ fn prepare_game(app: &mut App) {
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
-		.add_plugins(PrefabsPlugin)
+		.add_plugins(prefabs_plugin)
 		.add_plugins(ShaderPlugin)
 		.add_plugins(InteractionsPlugin)
 		.add_plugins(BarsPlugin)
