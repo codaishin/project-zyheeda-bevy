@@ -16,7 +16,7 @@ use bundles::{ComboBundle, Loadout};
 use common::{
 	components::{Collection, Side, Swap},
 	resources::key_map::KeyMap,
-	states::{game_state::GameState, MouseContext},
+	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	traits::{animation::HasAnimationsDispatch, try_insert_on::TryInsertOn},
 };

@@ -16,7 +16,7 @@ use bevy::{
 	ui::BackgroundColor,
 };
 use common::{
-	states::MouseContext,
+	states::mouse_context::MouseContext,
 	traits::{accessors::get::GetterRef, iterate::Iterate, map_value::TryMapBackwards},
 };
 use player::components::player::Player;

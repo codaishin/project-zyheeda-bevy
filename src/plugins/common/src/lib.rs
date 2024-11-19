@@ -13,7 +13,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContext;
 use components::{flip::FlipHorizontally, MainCamera};
 use resources::language_server::LanguageServer;
-use states::MouseContext;
+use states::mouse_context::MouseContext;
 use systems::{
 	load_asset_model::load_asset_model,
 	set_cam_ray::set_cam_ray,

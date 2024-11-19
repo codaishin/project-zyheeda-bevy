@@ -2,7 +2,7 @@ use bevy::{
 	ecs::system::{Res, ResMut},
 	state::state::{NextState, State},
 };
-use common::states::MouseContext;
+use common::states::mouse_context::MouseContext;
 
 pub(crate) fn advance_just_triggered_mouse_context(
 	mouse_context: Res<State<MouseContext>>,

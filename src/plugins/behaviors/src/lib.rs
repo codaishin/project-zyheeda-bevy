@@ -9,7 +9,7 @@ use animation::MovementAnimations;
 use bevy::prelude::*;
 use common::{
 	resources::CamRay,
-	states::{game_state::GameState, MouseContext},
+	states::{game_state::GameState, mouse_context::MouseContext},
 	traits::animation::HasAnimationsDispatch,
 };
 use components::{

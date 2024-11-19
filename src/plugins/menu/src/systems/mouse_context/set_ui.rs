@@ -3,7 +3,7 @@ use bevy::{
 	state::state::{NextState, State},
 	ui::Interaction,
 };
-use common::states::MouseContext;
+use common::states::mouse_context::MouseContext;
 
 pub fn set_ui_mouse_context(
 	current_state: Res<State<MouseContext>>,

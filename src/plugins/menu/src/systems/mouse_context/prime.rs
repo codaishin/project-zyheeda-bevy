@@ -8,7 +8,7 @@ use bevy::{
 	ui::Interaction,
 };
 use common::{
-	states::MouseContext,
+	states::mouse_context::MouseContext,
 	traits::{accessors::get::GetterRef, map_value::MapForward},
 };
 use skills::slot_key::SlotKey;

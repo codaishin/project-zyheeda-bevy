@@ -1,6 +1,6 @@
 use crate::{slot_key::SlotKey, traits::InputState};
 use bevy::{input::keyboard::KeyCode, state::state::State};
-use common::{states::MouseContext, traits::map_value::TryMapBackwards};
+use common::{states::mouse_context::MouseContext, traits::map_value::TryMapBackwards};
 
 impl<TMap: TryMapBackwards<KeyCode, SlotKey>> InputState<TMap, KeyCode>
 	for State<MouseContext<KeyCode>>
