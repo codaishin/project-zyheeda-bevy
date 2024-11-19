@@ -3,7 +3,7 @@ use bevy::{
 	input::{mouse::MouseButton, ButtonInput},
 	state::state::{NextState, State},
 };
-use common::states::MouseContext;
+use common::states::mouse_context::MouseContext;
 
 pub(crate) fn trigger_primed_mouse_context(
 	mouse_input: Res<ButtonInput<MouseButton>>,

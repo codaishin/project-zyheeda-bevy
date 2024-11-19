@@ -1,5 +1,3 @@
-pub mod states;
-
 mod systems;
 
 use behaviors::{
@@ -11,46 +9,45 @@ use bevy::{
 	prelude::*,
 	state::state::FreelyMutableState,
 };
-use common::{components::MainCamera, traits::try_insert_on::TryInsertOn};
+use common::{
+	components::MainCamera,
+	states::{game_state::GameState, load_state::LoadState},
+	traits::try_insert_on::TryInsertOn,
+};
 use enemy::components::void_sphere::VoidSphere;
 use loading::{
 	resources::track::Track,
-	traits::progress::{AssetLoadProgress, DependencyResolveProgress},
+	traits::progress::{AssetsProgress, DependenciesProgress},
 };
 use player::bundle::PlayerBundle;
-use states::{game_state::GameState, load_state::LoadState, menu_state::MenuState};
 use std::f32::consts::PI;
 use systems::pause_virtual_time::pause_virtual_time;
 
 pub struct GameStatePlugin;
 
-impl GameStatePlugin {
-	pub const START: GameState = GameState::StartMenu;
-	pub const NEW_GAME: GameState = GameState::NewGame;
-	pub const LOAD_ASSETS: GameState = GameState::Loading(LoadState::LoadAssets);
-	pub const RESOLVE_DEPENDENCIES: GameState = GameState::Loading(LoadState::ResoleDependencies);
-	pub const PLAY: GameState = GameState::Play;
-	pub const INVENTORY: GameState = GameState::IngameMenu(MenuState::Inventory);
-	pub const COMBO_OVERVIEW: GameState = GameState::IngameMenu(MenuState::ComboOverview);
-}
-
 impl Plugin for GameStatePlugin {
 	fn build(&self, app: &mut App) {
-		app.insert_state(Self::START)
+		let start_menu = GameState::StartMenu;
+		let new_game = GameState::NewGame;
+		let load_assets = GameState::Loading(LoadState::Assets);
+		let load_dependencies = GameState::Loading(LoadState::Dependencies);
+		let play = GameState::Play;
+
+		app.insert_state(start_menu)
 			.add_systems(PostStartup, spawn_camera)
 			.add_systems(
-				OnEnter(Self::NEW_GAME),
-				(setup_scene, transition_to_state(Self::LOAD_ASSETS)).chain(),
+				OnEnter(new_game),
+				(setup_scene, transition_to_state(load_assets)).chain(),
 			)
 			.add_systems(
 				Last,
 				(
-					Track::<AssetLoadProgress>::when_all_done_set(Self::RESOLVE_DEPENDENCIES),
-					Track::<DependencyResolveProgress>::when_all_done_set(Self::PLAY),
+					Track::<AssetsProgress>::when_all_done_set(load_dependencies),
+					Track::<DependenciesProgress>::when_all_done_set(play),
 				),
 			)
-			.add_systems(OnEnter(Self::PLAY), pause_virtual_time::<false>)
-			.add_systems(OnExit(Self::PLAY), pause_virtual_time::<true>);
+			.add_systems(OnEnter(play), pause_virtual_time::<false>)
+			.add_systems(OnExit(play), pause_virtual_time::<true>);
 	}
 }
 

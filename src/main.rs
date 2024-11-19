@@ -34,8 +34,8 @@ fn main() -> AppExit {
 fn prepare_game(app: &mut App) {
 	let animations_plugin = AnimationsPlugin;
 	let player_plugin = PlayerPlugin::depends_on(&animations_plugin);
-	let skills_plugin = SkillsPlugin::depends_on(&animations_plugin, GameStatePlugin::PLAY);
-	let behaviors_plugin = BehaviorsPlugin::depends_on(&animations_plugin, GameStatePlugin::PLAY);
+	let skills_plugin = SkillsPlugin::depends_on(&animations_plugin);
+	let behaviors_plugin = BehaviorsPlugin::depends_on(&animations_plugin);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
@@ -50,22 +50,9 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(player_plugin)
 		.add_plugins(EnemyPlugin)
 		.add_plugins(RenderingPlugin)
-		.add_plugins(LoadingPlugin {
-			load_assets: GameStatePlugin::LOAD_ASSETS,
-			resolve_dependencies: GameStatePlugin::RESOLVE_DEPENDENCIES,
-		})
-		.add_plugins(MapGenerationPlugin {
-			new_game: GameStatePlugin::NEW_GAME,
-		})
-		.add_plugins(MenuPlugin {
-			start: GameStatePlugin::START,
-			new_game: GameStatePlugin::NEW_GAME,
-			load_assets: GameStatePlugin::LOAD_ASSETS,
-			resolve_dependencies: GameStatePlugin::RESOLVE_DEPENDENCIES,
-			play: GameStatePlugin::PLAY,
-			inventory: GameStatePlugin::INVENTORY,
-			combo_overview: GameStatePlugin::COMBO_OVERVIEW,
-		})
+		.add_plugins(LoadingPlugin)
+		.add_plugins(MapGenerationPlugin)
+		.add_plugins(MenuPlugin)
 		.add_plugins(skills_plugin)
 		.add_plugins(behaviors_plugin)
 		.add_plugins(GameStatePlugin)

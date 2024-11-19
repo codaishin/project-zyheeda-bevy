@@ -7,7 +7,11 @@ mod systems;
 
 use animation::MovementAnimations;
 use bevy::prelude::*;
-use common::{resources::CamRay, states::MouseContext, traits::animation::HasAnimationsDispatch};
+use common::{
+	resources::CamRay,
+	states::{game_state::GameState, mouse_context::MouseContext},
+	traits::animation::HasAnimationsDispatch,
+};
 use components::{
 	cam_orbit::CamOrbit,
 	ground_targeted_aoe::{GroundTargetedAoeContact, GroundTargetedAoeProjection},
@@ -41,27 +45,19 @@ use systems::{
 	update_life_times::update_lifetimes,
 };
 
-pub struct BehaviorsPlugin<TAnimationsPlugin, TState> {
-	depends_on: PhantomData<TAnimationsPlugin>,
-	play: TState,
-}
+pub struct BehaviorsPlugin<TAnimationsPlugin>(PhantomData<TAnimationsPlugin>);
 
-impl<TAnimationsPlugin, TState> BehaviorsPlugin<TAnimationsPlugin, TState>
+impl<TAnimationsPlugin> BehaviorsPlugin<TAnimationsPlugin>
 where
-	TState: States + Copy,
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 {
-	pub fn depends_on(_: &TAnimationsPlugin, play: TState) -> Self {
-		Self {
-			depends_on: PhantomData,
-			play,
-		}
+	pub fn depends_on(_: &TAnimationsPlugin) -> Self {
+		Self(PhantomData)
 	}
 }
 
-impl<TAnimationsPlugin, TState> Plugin for BehaviorsPlugin<TAnimationsPlugin, TState>
+impl<TAnimationsPlugin> Plugin for BehaviorsPlugin<TAnimationsPlugin>
 where
-	TState: States + Copy,
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 {
 	fn build(&self, app: &mut App) {
@@ -80,13 +76,13 @@ where
 					get_faces.pipe(execute_face::<CamRay>),
 				)
 					.chain()
-					.run_if(in_state(self.play))
+					.run_if(in_state(GameState::Play))
 					.run_if(in_state(MouseContext::<KeyCode>::Default)),
 			)
 			.add_systems(
 				Update,
 				(move_on_orbit::<CamOrbit>, move_with_target::<CamOrbit>)
-					.run_if(in_state(self.play)),
+					.run_if(in_state(GameState::Play)),
 			)
 			.add_systems(
 				Update,

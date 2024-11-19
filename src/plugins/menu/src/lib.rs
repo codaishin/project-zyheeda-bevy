@@ -9,11 +9,12 @@ mod visualization;
 #[cfg(debug_assertions)]
 mod debug;
 
-use bevy::{prelude::*, state::state::FreelyMutableState};
+use bevy::prelude::*;
 use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
+	states::{game_state::GameState, load_state::LoadState, menu_state::MenuState},
 	systems::log::log_many,
-	traits::{iteration::IterFinite, load_asset::Path, states::PlayState},
+	traits::load_asset::Path,
 };
 use components::{
 	button_interaction::ButtonInteraction,
@@ -33,7 +34,7 @@ use components::{
 	AppendSkillCommand,
 };
 use events::DropdownEvent;
-use loading::traits::progress::{AssetLoadProgress, DependencyResolveProgress};
+use loading::traits::progress::{AssetsProgress, DependenciesProgress};
 use player::components::player::Player;
 use skills::{
 	components::{
@@ -92,7 +93,6 @@ use systems::{
 use traits::{
 	get_node::GetNode,
 	instantiate_content_on::InstantiateContentOn,
-	reacts_to_menu_hotkeys::ReactsToMenuHotkeys,
 	GetLayout,
 	LoadUi,
 	RootStyle,
@@ -177,21 +177,9 @@ impl AddDropdown for App {
 	}
 }
 
-pub struct MenuPlugin<T> {
-	pub start: T,
-	pub load_assets: T,
-	pub resolve_dependencies: T,
-	pub new_game: T,
-	pub play: T,
-	pub inventory: T,
-	pub combo_overview: T,
-}
+pub struct MenuPlugin;
 
-impl<TState> MenuPlugin<TState>
-where
-	TState: States + FreelyMutableState + PlayState + IterFinite + ReactsToMenuHotkeys + Copy,
-	KeyCode: TryFrom<TState>,
-{
+impl MenuPlugin {
 	fn resources(&self, app: &mut App) {
 		app.init_resource::<Shared<Path, Handle<Image>>>()
 			.insert_resource(TooltipUIControl {
@@ -204,22 +192,30 @@ where
 	}
 
 	fn state_control(&self, app: &mut App) {
-		app.add_systems(Update, set_state_from_input::<TState>);
+		app.add_systems(Update, set_state_from_input::<GameState>);
 	}
 
 	fn start_menu(&self, app: &mut App) {
-		app.add_ui::<StartMenu>(self.start)
+		let start_menu = GameState::StartMenu;
+		let new_game = GameState::NewGame;
+
+		app.add_ui::<StartMenu>(start_menu)
 			.add_systems(Update, panel_colors::<StartMenuButton>)
-			.add_systems(Update, StartGame::on_release_set(self.new_game));
+			.add_systems(Update, StartGame::on_release_set(new_game));
 	}
 
 	fn loading_screen(&self, app: &mut App) {
-		app.add_ui::<LoadingScreen<AssetLoadProgress>>(self.load_assets)
-			.add_ui::<LoadingScreen<DependencyResolveProgress>>(self.resolve_dependencies);
+		let load_assets = GameState::Loading(LoadState::Assets);
+		let load_dependencies = GameState::Loading(LoadState::Dependencies);
+
+		app.add_ui::<LoadingScreen<AssetsProgress>>(load_assets)
+			.add_ui::<LoadingScreen<DependenciesProgress>>(load_dependencies);
 	}
 
 	fn ui_overlay(&self, app: &mut App) {
-		app.add_ui::<UIOverlay>(self.play)
+		let play = GameState::Play;
+
+		app.add_ui::<UIOverlay>(play)
 			.add_systems(
 				Update,
 				(
@@ -228,7 +224,7 @@ where
 					panel_colors::<QuickbarPanel>,
 					panel_activity_colors_override::<SlotKeyMap, Queue, QuickbarPanel>,
 				)
-					.run_if(in_state(self.play)),
+					.run_if(in_state(play)),
 			)
 			.add_systems(
 				Update,
@@ -240,7 +236,9 @@ where
 	}
 
 	fn combo_overview(&self, app: &mut App) {
-		app.add_ui::<ComboOverview>(self.combo_overview)
+		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
+
+		app.add_ui::<ComboOverview>(combo_overview)
 			.add_dropdown::<SkillButton<DropdownItem<Vertical>>>()
 			.add_dropdown::<SkillButton<DropdownItem<Horizontal>>>()
 			.add_dropdown::<KeySelect<ReKeySkill>>()
@@ -250,7 +248,7 @@ where
 				Update,
 				update_combos_view::<Player, Combos, ComboOverview>
 					.run_if(either(added::<ComboOverview>).or(changed::<Player, Combos>))
-					.run_if(in_state(self.combo_overview)),
+					.run_if(in_state(combo_overview)),
 			)
 			.add_systems(
 				Update,
@@ -264,12 +262,14 @@ where
 					update_combo_skills::<Player, Combos, Horizontal>,
 					map_pressed_key_select.pipe(update_combo_keys::<Player, Combos>),
 				)
-					.run_if(in_state(self.combo_overview)),
+					.run_if(in_state(combo_overview)),
 			);
 	}
 
 	fn inventory_screen(&self, app: &mut App) {
-		app.add_ui::<InventoryScreen>(self.inventory)
+		let inventory = GameState::IngameMenu(MenuState::Inventory);
+
+		app.add_ui::<InventoryScreen>(inventory)
 			.add_systems(
 				Update,
 				(
@@ -283,7 +283,7 @@ where
 					drop::<Player, SlotKey, InventoryKey>,
 					drop::<Player, InventoryKey, SlotKey>,
 				)
-					.run_if(in_state(self.inventory)),
+					.run_if(in_state(inventory)),
 			)
 			.add_systems(
 				Update,
@@ -302,11 +302,7 @@ where
 	}
 }
 
-impl<TState> Plugin for MenuPlugin<TState>
-where
-	TState: States + FreelyMutableState + PlayState + IterFinite + ReactsToMenuHotkeys + Copy,
-	KeyCode: TryFrom<TState>,
-{
+impl Plugin for MenuPlugin {
 	fn build(&self, app: &mut App) {
 		self.resources(app);
 		self.events(app);
@@ -320,7 +316,7 @@ where
 
 		#[cfg(debug_assertions)]
 		{
-			debug::setup_run_time_display::<TState>(app);
+			debug::setup_run_time_display(app);
 			debug::setup_dropdown_test(app);
 		}
 	}

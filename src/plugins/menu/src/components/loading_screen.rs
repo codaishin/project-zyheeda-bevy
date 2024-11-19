@@ -1,6 +1,6 @@
 use crate::traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn, LoadUi};
 use bevy::prelude::*;
-use loading::traits::progress::{AssetLoadProgress, DependencyResolveProgress, Progress};
+use loading::traits::progress::{AssetsProgress, DependenciesProgress, Progress};
 use std::marker::PhantomData;
 
 #[derive(Component)]
@@ -37,7 +37,7 @@ where
 	}
 }
 
-impl InstantiateContentOn for LoadingScreen<AssetLoadProgress> {
+impl InstantiateContentOn for LoadingScreen<AssetsProgress> {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		parent.spawn(TextBundle::from_section(
 			"Loading Assets ...",
@@ -49,7 +49,7 @@ impl InstantiateContentOn for LoadingScreen<AssetLoadProgress> {
 	}
 }
 
-impl InstantiateContentOn for LoadingScreen<DependencyResolveProgress> {
+impl InstantiateContentOn for LoadingScreen<DependenciesProgress> {
 	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
 		parent.spawn(TextBundle::from_section(
 			"Resolving Dependencies ...",

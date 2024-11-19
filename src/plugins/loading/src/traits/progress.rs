@@ -3,16 +3,16 @@ pub trait Progress: internal::Progress {}
 impl<T> Progress for T where T: internal::Progress {}
 
 #[derive(Default, Debug, PartialEq)]
-pub struct AssetLoadProgress;
+pub struct AssetsProgress;
 
 #[derive(Default, Debug, PartialEq)]
-pub struct DependencyResolveProgress;
+pub struct DependenciesProgress;
 
 mod internal {
 	use super::*;
 
 	pub trait Progress {}
 
-	impl Progress for AssetLoadProgress {}
-	impl Progress for DependencyResolveProgress {}
+	impl Progress for AssetsProgress {}
+	impl Progress for DependenciesProgress {}
 }

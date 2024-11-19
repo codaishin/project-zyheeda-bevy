@@ -11,7 +11,7 @@ use crate::{
 	AddUI,
 };
 use bevy::prelude::*;
-use common::{tools::Index, traits::iteration::IterFinite};
+use common::{states::game_state::GameState, tools::Index, traits::iteration::IterFinite};
 use std::{fmt::Debug, marker::PhantomData, time::Duration};
 
 #[derive(Component)]
@@ -79,14 +79,11 @@ fn update_state_time<TState>(
 	run_time.1 = Some(*state.get());
 }
 
-pub fn setup_run_time_display<TState>(app: &mut App)
-where
-	TState: IterFinite + States + Copy,
-{
-	for state in TState::iterator() {
-		app.add_ui::<StateTime<TState>>(state);
+pub fn setup_run_time_display(app: &mut App) {
+	for state in GameState::iterator() {
+		app.add_ui::<StateTime<GameState>>(state);
 	}
-	app.add_systems(Update, update_state_time::<TState>);
+	app.add_systems(Update, update_state_time::<GameState>);
 }
 
 #[derive(Component)]

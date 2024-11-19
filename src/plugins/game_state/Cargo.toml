@@ -9,12 +9,9 @@ bevy.workspace = true
 bevy_rapier3d.workspace = true
 
 # internal
-bars.workspace = true
 behaviors.workspace = true
 common.workspace = true
 enemy.workspace = true
-interactions.workspace = true
-light.workspace = true
 loading.workspace = true
 menu.workspace = true
 player.workspace = true
