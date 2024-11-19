@@ -17,7 +17,6 @@ use common::{
 		try_insert_on::TryInsertOn,
 	},
 };
-use shaders::components::effect_shader::EffectShaders;
 use std::f32::consts::PI;
 
 #[derive(Component, Debug, PartialEq, Clone)]
@@ -117,11 +116,7 @@ impl Prefab for GroundTargetedAoeContact {
 		let model = AssetModel::path("models/sphere.glb");
 
 		entity
-			.insert((
-				RigidBody::Fixed,
-				SpatialBundle::default(),
-				EffectShaders::default(),
-			))
+			.insert((RigidBody::Fixed, SpatialBundle::default()))
 			.with_children(|parent| {
 				parent.spawn((ColliderRoot(parent.parent_entity()), collider));
 				parent.spawn(AssetModelBundle {

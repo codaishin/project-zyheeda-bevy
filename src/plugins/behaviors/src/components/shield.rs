@@ -16,7 +16,6 @@ use common::{
 	errors::Error,
 	traits::prefab::{GetOrCreateAssets, Prefab},
 };
-use shaders::components::effect_shader::EffectShaders;
 
 #[derive(Component, Debug, PartialEq)]
 pub struct ShieldContact {
@@ -36,21 +35,19 @@ impl Prefab for ShieldContact {
 		};
 		let model = AssetModel::path("models/shield.glb");
 
-		entity
-			.insert((RigidBody::Fixed, EffectShaders::default()))
-			.with_children(|parent| {
-				parent.spawn(AssetModelBundle { model, ..default() });
-				parent.spawn((
-					ColliderTransformBundle {
-						collider: Collider::cuboid(half_size.x, half_size.y, half_size.z),
-						active_events: ActiveEvents::COLLISION_EVENTS,
-						active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
-						..default()
-					},
-					Sensor,
-					ColliderRoot(parent.parent_entity()),
-				));
-			});
+		entity.insert(RigidBody::Fixed).with_children(|parent| {
+			parent.spawn(AssetModelBundle { model, ..default() });
+			parent.spawn((
+				ColliderTransformBundle {
+					collider: Collider::cuboid(half_size.x, half_size.y, half_size.z),
+					active_events: ActiveEvents::COLLISION_EVENTS,
+					active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
+					..default()
+				},
+				Sensor,
+				ColliderRoot(parent.parent_entity()),
+			));
+		});
 
 		Ok(())
 	}
@@ -69,7 +66,6 @@ impl Prefab for ShieldProjection {
 		let transform = Transform::from_xyz(0., 0., -radius).with_scale(Vec3::splat(radius * 2.));
 
 		entity.try_insert((
-			EffectShaders::default(),
 			AssetModelBundle {
 				model: AssetModel::path("models/sphere.glb"),
 				transform,

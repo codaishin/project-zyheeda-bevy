@@ -363,7 +363,6 @@ dependencies = [
  "macros",
  "mockall",
  "serde",
- "shaders",
  "tracing",
 ]
 

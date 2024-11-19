@@ -15,7 +15,7 @@ macro_rules! label {
 pub struct Labels;
 
 impl Labels {
-	label!(INSTANTIATION, FixedPreUpdate);
+	label!(PREFAB_INSTANTIATION, FixedPreUpdate);
 	label!(PROCESSING, FixedUpdate);
 	label!(PROPAGATION, FixedPostUpdate);
 	label!(LAST, Last);

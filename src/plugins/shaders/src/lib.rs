@@ -64,7 +64,7 @@ impl RegisterForEffectShading for ShadersPlugin {
 		TComponent: Component,
 	{
 		app.add_systems(
-			Labels::PROCESSING.label(),
+			Labels::PREFAB_INSTANTIATION.label(),
 			TComponent::insert_associated::<EffectShaders>(Configure::LeaveAsIs),
 		);
 	}
