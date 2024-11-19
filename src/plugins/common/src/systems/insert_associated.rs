@@ -1,28 +1,27 @@
 use crate::traits::try_insert_on::TryInsertOn;
 use bevy::prelude::*;
 
-impl<TComponent> InitAssociatedComponent for TComponent where Self: Component {}
+impl<TComponent> InsertAssociated for TComponent where Self: Component {}
 
-pub trait InitAssociatedComponent
+pub trait InsertAssociated
 where
-	Self: Component,
+	Self: Component + Sized,
 {
-	fn init_associated<TComponent>(mut commands: Commands, agents: Query<Entity, Added<Self>>)
+	fn insert_associated<TBundle>(mut commands: Commands, entities: Query<Entity, Added<Self>>)
 	where
-		Self: GetAssociated<TComponent> + Component + Sized,
-		TComponent: Component,
+		Self: InitializeAssociated<TBundle>,
+		TBundle: Bundle + Default,
 	{
-		for entity in &agents {
-			commands.try_insert_on(entity, Self::get_associated_component());
+		for entity in &entities {
+			let mut bundle = TBundle::default();
+			Self::initialize_associated(&mut bundle);
+			commands.try_insert_on(entity, bundle);
 		}
 	}
 }
 
-pub trait GetAssociated<TComponent>
-where
-	TComponent: Component,
-{
-	fn get_associated_component() -> TComponent;
+pub trait InitializeAssociated<TBundle> {
+	fn initialize_associated(bundle: &mut TBundle);
 }
 
 #[cfg(test)]
@@ -33,18 +32,18 @@ mod tests {
 	#[derive(Component)]
 	struct _Agent;
 
-	#[derive(Component, Debug, PartialEq)]
-	struct _Associated;
+	#[derive(Component, Debug, PartialEq, Default)]
+	struct _Associated(&'static str);
 
-	impl GetAssociated<_Associated> for _Agent {
-		fn get_associated_component() -> _Associated {
-			_Associated
+	impl InitializeAssociated<_Associated> for _Agent {
+		fn initialize_associated(bundle: &mut _Associated) {
+			*bundle = _Associated("overridden");
 		}
 	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, _Agent::init_associated::<_Associated>);
+		app.add_systems(Update, _Agent::insert_associated::<_Associated>);
 
 		app
 	}
@@ -57,7 +56,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Associated),
+			Some(&_Associated("overridden")),
 			app.world().entity(entity).get::<_Associated>(),
 		)
 	}
