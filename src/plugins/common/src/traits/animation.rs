@@ -1,6 +1,6 @@
 use super::load_asset::Path;
 use crate::{
-	systems::init_associated_component::GetAssociated,
+	systems::insert_associated::InitializeAssociated,
 	tools::{Last, This},
 };
 use bevy::prelude::*;
@@ -28,13 +28,13 @@ pub trait GetAnimationPaths {
 }
 
 pub trait HasAnimationsDispatch {
-	type TAnimationDispatch: Component + StartAnimation + StopAnimation + Default;
+	type TAnimationDispatch: StartAnimation + StopAnimation + Component;
 }
 
 pub trait RegisterAnimations: HasAnimationsDispatch {
 	fn register_animations<TAgent>(app: &mut App)
 	where
-		TAgent: Component + GetAnimationPaths + GetAssociated<Self::TAnimationDispatch>;
+		TAgent: Component + GetAnimationPaths + InitializeAssociated<Self::TAnimationDispatch>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]

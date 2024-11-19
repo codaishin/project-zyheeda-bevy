@@ -12,7 +12,7 @@ use crate::systems::{
 use bevy::prelude::*;
 use common::{
 	systems::{
-		init_associated_component::{GetAssociated, InitAssociatedComponent},
+		insert_associated::{InitializeAssociated, InsertAssociated},
 		track_components::TrackComponentInSelfAndChildren,
 	},
 	traits::animation::{GetAnimationPaths, HasAnimationsDispatch, RegisterAnimations},
@@ -26,7 +26,7 @@ pub struct AnimationsPlugin;
 impl RegisterAnimations for AnimationsPlugin {
 	fn register_animations<TAgent>(app: &mut App)
 	where
-		TAgent: Component + GetAnimationPaths + GetAssociated<AnimationDispatch>,
+		TAgent: Component + GetAnimationPaths + InitializeAssociated<Self::TAnimationDispatch>,
 	{
 		app.add_systems(
 			Startup,
@@ -35,7 +35,7 @@ impl RegisterAnimations for AnimationsPlugin {
 		.add_systems(
 			Update,
 			(
-				TAgent::init_associated::<AnimationDispatch>,
+				TAgent::insert_associated::<AnimationDispatch>,
 				TAgent::init_animation_graph_and_transitions::<AnimationDispatch>,
 			),
 		);
