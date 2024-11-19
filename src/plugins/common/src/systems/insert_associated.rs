@@ -7,21 +7,30 @@ pub trait InsertAssociated
 where
 	Self: Component + Sized,
 {
-	fn insert_associated<TBundle>(mut commands: Commands, entities: Query<Entity, Added<Self>>)
+	fn insert_associated<TBundle>(
+		configure: Configure<TBundle>,
+	) -> impl Fn(Commands, Query<Entity, Added<Self>>)
 	where
-		Self: InitializeAssociated<TBundle>,
 		TBundle: Bundle + Default,
 	{
-		for entity in &entities {
-			let mut bundle = TBundle::default();
-			Self::initialize_associated(&mut bundle);
-			commands.try_insert_on(entity, bundle);
+		let configure = match configure {
+			Configure::Apply(configure) => configure,
+			_ => |_: &mut TBundle| {},
+		};
+
+		move |mut commands: Commands, entities: Query<Entity, Added<Self>>| {
+			for entity in &entities {
+				let mut bundle = TBundle::default();
+				configure(&mut bundle);
+				commands.try_insert_on(entity, bundle);
+			}
 		}
 	}
 }
 
-pub trait InitializeAssociated<TBundle> {
-	fn initialize_associated(bundle: &mut TBundle);
+pub enum Configure<TBundle> {
+	LeaveAsIs,
+	Apply(fn(&mut TBundle)),
 }
 
 #[cfg(test)]
@@ -35,22 +44,18 @@ mod tests {
 	#[derive(Component, Debug, PartialEq, Default)]
 	struct _Associated(&'static str);
 
-	impl InitializeAssociated<_Associated> for _Agent {
-		fn initialize_associated(bundle: &mut _Associated) {
-			*bundle = _Associated("overridden");
-		}
-	}
-
-	fn setup() -> App {
+	fn setup(configure: Configure<_Associated>) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, _Agent::insert_associated::<_Associated>);
+		app.add_systems(Update, _Agent::insert_associated::<_Associated>(configure));
 
 		app
 	}
 
 	#[test]
 	fn add_associated_component() {
-		let mut app = setup();
+		let mut app = setup(Configure::Apply(|bundle: &mut _Associated| {
+			*bundle = _Associated("overridden");
+		}));
 		let entity = app.world_mut().spawn(_Agent).id();
 
 		app.update();
@@ -63,7 +68,7 @@ mod tests {
 
 	#[test]
 	fn do_not_add_associated_component_when_no_agent() {
-		let mut app = setup();
+		let mut app = setup(Configure::LeaveAsIs);
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.update();
@@ -73,7 +78,7 @@ mod tests {
 
 	#[test]
 	fn do_not_add_associated_component_when_agent_not_new() {
-		let mut app = setup();
+		let mut app = setup(Configure::LeaveAsIs);
 		let entity = app.world_mut().spawn(_Agent).id();
 
 		app.update();

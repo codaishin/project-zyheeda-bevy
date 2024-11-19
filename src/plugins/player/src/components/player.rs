@@ -8,10 +8,17 @@ use bevy_rapier3d::prelude::*;
 use common::{
 	components::{AssetModel, ColliderRoot, GroundOffset},
 	errors::Error,
-	systems::insert_associated::InitializeAssociated,
 	tools::UnitsPerSecond,
 	traits::{
-		animation::{Animation, AnimationPriority, GetAnimationPaths, PlayMode, StartAnimation},
+		animation::{
+			Animation,
+			AnimationPriority,
+			ConfigureNewAnimationDispatch,
+			GetAnimationPaths,
+			PlayMode,
+			StartAnimation,
+			StopAnimation,
+		},
 		clamp_zero_positive::ClampZeroPositive,
 		load_asset::Path,
 		prefab::{GetOrCreateAssets, Prefab},
@@ -54,12 +61,9 @@ impl From<Idle> for AnimationPriority {
 	}
 }
 
-impl<TAnimationDispatch> InitializeAssociated<TAnimationDispatch> for Player
-where
-	TAnimationDispatch: StartAnimation,
-{
-	fn initialize_associated(animation_dispatch: &mut TAnimationDispatch) {
-		animation_dispatch.start_animation(
+impl ConfigureNewAnimationDispatch for Player {
+	fn configure(new_animation_dispatch: &mut (impl StartAnimation + StopAnimation)) {
+		new_animation_dispatch.start_animation(
 			Idle,
 			Animation::new(Player::animation_path("Animation1"), PlayMode::Repeat),
 		);

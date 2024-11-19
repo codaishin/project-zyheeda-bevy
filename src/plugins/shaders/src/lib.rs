@@ -5,10 +5,15 @@ pub(crate) mod systems;
 pub(crate) mod traits;
 
 use bevy::{prelude::*, render::render_resource::AsBindGroup};
-use common::systems::{
-	asset_process_delta::asset_process_delta,
-	remove_components::Remove,
-	track_components::TrackComponentInSelfAndChildren,
+use common::{
+	labels::Labels,
+	systems::{
+		asset_process_delta::asset_process_delta,
+		insert_associated::{Configure, InsertAssociated},
+		remove_components::Remove,
+		track_components::TrackComponentInSelfAndChildren,
+	},
+	traits::shaders::RegisterForEffectShading,
 };
 use components::effect_shader::EffectShaders;
 use interactions::components::{force::Force, gravity::Gravity};
@@ -50,6 +55,18 @@ impl Plugin for ShadersPlugin {
 					instantiate_effect_shaders,
 				),
 			);
+	}
+}
+
+impl RegisterForEffectShading for ShadersPlugin {
+	fn register_for_effect_shading<TComponent>(app: &mut App)
+	where
+		TComponent: Component,
+	{
+		app.add_systems(
+			Labels::PROCESSING.label(),
+			TComponent::insert_associated::<EffectShaders>(Configure::LeaveAsIs),
+		);
 	}
 }
 
