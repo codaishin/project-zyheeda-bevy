@@ -2,8 +2,8 @@ mod plasma_projectile;
 mod traits;
 
 use bevy::prelude::ChildBuilder;
+use common::traits::prefab::GetOrCreateAssets;
 use plasma_projectile::PlasmaProjectile;
-use prefabs::traits::GetOrCreateAssets;
 use serde::{Deserialize, Serialize};
 use traits::ProjectileSubtype;
 

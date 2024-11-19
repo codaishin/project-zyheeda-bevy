@@ -15,7 +15,6 @@ bars.workspace = true
 common.workspace = true
 interactions.workspace = true
 light.workspace = true
-prefabs.workspace = true
 shaders.workspace = true
 
 [dev-dependencies]

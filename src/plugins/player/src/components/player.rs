@@ -14,11 +14,11 @@ use common::{
 		animation::{Animation, AnimationPriority, GetAnimationPaths, PlayMode, StartAnimation},
 		clamp_zero_positive::ClampZeroPositive,
 		load_asset::Path,
+		prefab::{GetOrCreateAssets, Instantiate},
 	},
 };
 use interactions::components::blocker::Blocker;
 use light::components::ResponsiveLightTrigger;
-use prefabs::traits::{GetOrCreateAssets, Instantiate};
 
 #[derive(Component, Default, Debug, PartialEq)]
 pub struct Player;
@@ -70,33 +70,38 @@ where
 }
 
 impl Instantiate for Player {
-	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
-		on.insert((
-			Name::from("Player"),
-			AssetModel::path(Player::MODEL_PATH).flip_on(Name::from("metarig")),
-			Bar::default(),
-			GroundOffset(Vec3::Y),
-			Blocker::insert([Blocker::Physical]),
-			MovementConfig::Dynamic {
-				current_mode: MovementMode::Fast,
-				slow_speed: UnitsPerSecond::new(0.75),
-				fast_speed: UnitsPerSecond::new(1.5),
-			},
-			MovementAnimations::new(
-				Animation::new(Player::animation_path("Animation3"), PlayMode::Repeat),
-				Animation::new(Player::animation_path("Animation2"), PlayMode::Repeat),
-			),
-			RigidBody::Dynamic,
-			GravityScale(0.),
-			LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y,
-		))
-		.with_children(|parent| {
-			parent.spawn((
-				ResponsiveLightTrigger,
-				Collider::capsule(Vec3::new(0.0, 0.2, -0.05), Vec3::new(0.0, 1.4, -0.05), 0.2),
-				ColliderRoot(parent.parent_entity()),
-			));
-		});
+	fn instantiate_on<TAfterInstantiation>(
+		&self,
+		entity: &mut EntityCommands,
+		_: impl GetOrCreateAssets,
+	) -> Result<(), Error> {
+		entity
+			.insert((
+				Name::from("Player"),
+				AssetModel::path(Player::MODEL_PATH).flip_on(Name::from("metarig")),
+				Bar::default(),
+				GroundOffset(Vec3::Y),
+				Blocker::insert([Blocker::Physical]),
+				MovementConfig::Dynamic {
+					current_mode: MovementMode::Fast,
+					slow_speed: UnitsPerSecond::new(0.75),
+					fast_speed: UnitsPerSecond::new(1.5),
+				},
+				MovementAnimations::new(
+					Animation::new(Player::animation_path("Animation3"), PlayMode::Repeat),
+					Animation::new(Player::animation_path("Animation2"), PlayMode::Repeat),
+				),
+				RigidBody::Dynamic,
+				GravityScale(0.),
+				LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y,
+			))
+			.with_children(|parent| {
+				parent.spawn((
+					ResponsiveLightTrigger,
+					Collider::capsule(Vec3::new(0.0, 0.2, -0.05), Vec3::new(0.0, 1.4, -0.05), 0.2),
+					ColliderRoot(parent.parent_entity()),
+				));
+			});
 
 		Ok(())
 	}

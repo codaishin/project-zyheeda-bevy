@@ -14,8 +14,8 @@ use common::{
 	bundles::{AssetModelBundle, ColliderBundle, ColliderTransformBundle},
 	components::{AssetModel, ColliderRoot},
 	errors::Error,
+	traits::prefab::{GetOrCreateAssets, Instantiate},
 };
-use prefabs::traits::{GetOrCreateAssets, Instantiate};
 use shaders::components::effect_shader::EffectShaders;
 
 #[derive(Component, Debug, PartialEq)]
@@ -24,7 +24,11 @@ pub struct ShieldContact {
 }
 
 impl Instantiate for ShieldContact {
-	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
+	fn instantiate_on<TAfterInstantiation>(
+		&self,
+		entity: &mut EntityCommands,
+		_: impl GetOrCreateAssets,
+	) -> Result<(), Error> {
 		let half_size = Vec3 {
 			x: 0.5,
 			y: 0.5,
@@ -32,7 +36,8 @@ impl Instantiate for ShieldContact {
 		};
 		let model = AssetModel::path("models/shield.glb");
 
-		on.insert((RigidBody::Fixed, EffectShaders::default()))
+		entity
+			.insert((RigidBody::Fixed, EffectShaders::default()))
 			.with_children(|parent| {
 				parent.spawn(AssetModelBundle { model, ..default() });
 				parent.spawn((
@@ -55,11 +60,15 @@ impl Instantiate for ShieldContact {
 pub struct ShieldProjection;
 
 impl Instantiate for ShieldProjection {
-	fn instantiate(&self, on: &mut EntityCommands, _: impl GetOrCreateAssets) -> Result<(), Error> {
+	fn instantiate_on<TAfterInstantiation>(
+		&self,
+		entity: &mut EntityCommands,
+		_: impl GetOrCreateAssets,
+	) -> Result<(), Error> {
 		let radius = 1.;
 		let transform = Transform::from_xyz(0., 0., -radius).with_scale(Vec3::splat(radius * 2.));
 
-		on.try_insert((
+		entity.try_insert((
 			EffectShaders::default(),
 			AssetModelBundle {
 				model: AssetModel::path("models/sphere.glb"),

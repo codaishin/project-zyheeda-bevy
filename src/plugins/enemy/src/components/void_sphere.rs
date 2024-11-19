@@ -23,10 +23,13 @@ use common::{
 	components::{ColliderRoot, GroundOffset, Health},
 	errors::Error,
 	tools::UnitsPerSecond,
-	traits::{cache::GetOrCreateTypeAsset, clamp_zero_positive::ClampZeroPositive},
+	traits::{
+		cache::GetOrCreateTypeAsset,
+		clamp_zero_positive::ClampZeroPositive,
+		prefab::{sphere, GetOrCreateAssets, Instantiate},
+	},
 };
 use interactions::components::{blocker::Blocker, effected_by::EffectedBy};
-use prefabs::traits::{sphere, GetOrCreateAssets, Instantiate};
 use std::{f32::consts::PI, time::Duration};
 
 #[derive(Component)]
@@ -82,7 +85,7 @@ struct VoidSphereCore;
 struct VoidSphereRing;
 
 impl Instantiate for VoidSphere {
-	fn instantiate(
+	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		on: &mut EntityCommands,
 		mut assets: impl GetOrCreateAssets,

@@ -10,7 +10,7 @@ use bevy::prelude::*;
 use common::{
 	resources::CamRay,
 	states::{game_state::GameState, mouse_context::MouseContext},
-	traits::animation::HasAnimationsDispatch,
+	traits::{animation::HasAnimationsDispatch, prefab::RegisterPrefab},
 };
 use components::{
 	cam_orbit::CamOrbit,
@@ -24,7 +24,6 @@ use components::{
 	VelocityBased,
 };
 use events::MoveInputEvent;
-use prefabs::traits::RegisterPrefab;
 use std::marker::PhantomData;
 use systems::{
 	attack::{attack, execute_beam::execute_beam},
@@ -45,30 +44,36 @@ use systems::{
 	update_life_times::update_lifetimes,
 };
 
-pub struct BehaviorsPlugin<TAnimationsPlugin>(PhantomData<TAnimationsPlugin>);
+pub struct BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin>(
+	PhantomData<(TAnimationsPlugin, TPrefabsPlugin)>,
+);
 
-impl<TAnimationsPlugin> BehaviorsPlugin<TAnimationsPlugin>
+impl<TAnimationsPlugin, TPrefabsPlugin> BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
+	TPrefabsPlugin: Plugin + RegisterPrefab,
 {
-	pub fn depends_on(_: &TAnimationsPlugin) -> Self {
-		Self(PhantomData)
+	pub fn depends_on(_: &TAnimationsPlugin, _: &TPrefabsPlugin) -> Self {
+		Self(PhantomData::<(TAnimationsPlugin, TPrefabsPlugin)>)
 	}
 }
 
-impl<TAnimationsPlugin> Plugin for BehaviorsPlugin<TAnimationsPlugin>
+impl<TAnimationsPlugin, TPrefabsPlugin> Plugin
+	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
+	TPrefabsPlugin: Plugin + RegisterPrefab,
 {
 	fn build(&self, app: &mut App) {
+		TPrefabsPlugin::register_prefab::<Beam>(app);
+		TPrefabsPlugin::register_prefab::<ProjectileContact>(app);
+		TPrefabsPlugin::register_prefab::<ProjectileProjection>(app);
+		TPrefabsPlugin::register_prefab::<ShieldContact>(app);
+		TPrefabsPlugin::register_prefab::<ShieldProjection>(app);
+		TPrefabsPlugin::register_prefab::<GroundTargetedAoeContact>(app);
+		TPrefabsPlugin::register_prefab::<GroundTargetedAoeProjection>(app);
+
 		app.add_event::<MoveInputEvent>()
-			.register_prefab::<Beam>()
-			.register_prefab::<ProjectileContact>()
-			.register_prefab::<ProjectileProjection>()
-			.register_prefab::<ShieldContact>()
-			.register_prefab::<ShieldProjection>()
-			.register_prefab::<GroundTargetedAoeContact>()
-			.register_prefab::<GroundTargetedAoeProjection>()
 			.add_systems(
 				Update,
 				(

@@ -1,13 +1,7 @@
-pub mod app;
-pub(crate) mod dummy;
+mod dummy;
 
-use bevy::{
-	ecs::{component::Component, system::EntityCommands},
-	math::primitives::Sphere,
-	pbr::StandardMaterial,
-	render::mesh::Mesh,
-};
-use common::{errors::Error, traits::cache::GetOrCreateAsset};
+use crate::{errors::Error, traits::cache::GetOrCreateAsset};
+use bevy::{ecs::system::EntityCommands, prelude::*};
 use std::any::TypeId;
 
 pub trait GetOrCreateAssets:
@@ -20,16 +14,22 @@ impl<TAssetHandles> GetOrCreateAssets for TAssetHandles where
 {
 }
 
+pub trait AfterInstantiation {
+	fn spawn(spawn_fn: impl Fn(&mut ChildBuilder) + Sync + Send + 'static) -> impl Bundle;
+}
+
 pub trait Instantiate {
-	fn instantiate(
+	fn instantiate_on<TAfterInstantiation>(
 		&self,
-		on: &mut EntityCommands,
+		entity: &mut EntityCommands,
 		assets: impl GetOrCreateAssets,
-	) -> Result<(), Error>;
+	) -> Result<(), Error>
+	where
+		TAfterInstantiation: AfterInstantiation;
 }
 
 pub trait RegisterPrefab {
-	fn register_prefab<TPrefab: Instantiate + Component>(&mut self) -> &mut Self;
+	fn register_prefab<TPrefab: Instantiate + Component>(app: &mut App);
 }
 
 pub fn sphere(radius: f32) -> Mesh {

@@ -33,9 +33,12 @@ fn main() -> AppExit {
 
 fn prepare_game(app: &mut App) {
 	let animations_plugin = AnimationsPlugin;
-	let player_plugin = PlayerPlugin::depends_on(&animations_plugin);
+	let prefabs_plugin = PrefabsPlugin;
 	let skills_plugin = SkillsPlugin::depends_on(&animations_plugin);
-	let behaviors_plugin = BehaviorsPlugin::depends_on(&animations_plugin);
+	let enemy_plugin = EnemyPlugin::depends_on(&prefabs_plugin);
+	let map_generation_plugin = MapGenerationPlugin::depends_on(&prefabs_plugin);
+	let player_plugin = PlayerPlugin::depends_on(&animations_plugin, &prefabs_plugin);
+	let behaviors_plugin = BehaviorsPlugin::depends_on(&animations_plugin, &prefabs_plugin);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
@@ -48,10 +51,10 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(animations_plugin)
 		.add_plugins(LightPlugin)
 		.add_plugins(player_plugin)
-		.add_plugins(EnemyPlugin)
+		.add_plugins(enemy_plugin)
 		.add_plugins(RenderingPlugin)
 		.add_plugins(LoadingPlugin)
-		.add_plugins(MapGenerationPlugin)
+		.add_plugins(map_generation_plugin)
 		.add_plugins(MenuPlugin)
 		.add_plugins(skills_plugin)
 		.add_plugins(behaviors_plugin)

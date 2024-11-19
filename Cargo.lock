@@ -362,7 +362,6 @@ dependencies = [
  "light",
  "macros",
  "mockall",
- "prefabs",
  "serde",
  "shaders",
  "tracing",
@@ -1933,7 +1932,6 @@ dependencies = [
  "common",
  "interactions",
  "player",
- "prefabs",
 ]
 
 [[package]]
@@ -2791,7 +2789,6 @@ dependencies = [
  "light",
  "macros",
  "mockall",
- "prefabs",
  "uuid",
 ]
 
@@ -3583,7 +3580,6 @@ dependencies = [
  "common",
  "interactions",
  "light",
- "prefabs",
 ]
 
 [[package]]

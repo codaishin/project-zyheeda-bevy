@@ -13,7 +13,6 @@ uuid.workspace = true
 common.workspace = true
 interactions.workspace = true
 light.workspace = true
-prefabs.workspace = true
 
 [dev-dependencies]
 # external

@@ -1,4 +1,12 @@
-use super::{GetOrCreateAssets, Instantiate};
+use crate::{
+	bundles::ColliderTransformBundle,
+	components::{ColliderRoot, Dummy},
+	errors::Error,
+	traits::{
+		cache::GetOrCreateTypeAsset,
+		prefab::{GetOrCreateAssets, Instantiate},
+	},
+};
 use bevy::{
 	color::Color,
 	ecs::system::EntityCommands,
@@ -10,12 +18,6 @@ use bevy::{
 	utils::default,
 };
 use bevy_rapier3d::geometry::Collider;
-use common::{
-	bundles::ColliderTransformBundle,
-	components::{ColliderRoot, Dummy},
-	errors::Error,
-	traits::cache::GetOrCreateTypeAsset,
-};
 
 const DUMMY_DIMENSIONS: Vec3 = Vec3 {
 	x: 0.4,
@@ -24,7 +26,7 @@ const DUMMY_DIMENSIONS: Vec3 = Vec3 {
 };
 
 impl Instantiate for Dummy {
-	fn instantiate(
+	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		on: &mut EntityCommands,
 		mut assets: impl GetOrCreateAssets,
