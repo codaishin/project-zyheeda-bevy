@@ -12,7 +12,7 @@ use crate::{
 		asset_file_extensions::AssetFileExtensions,
 		asset_folder::AssetFolderPath,
 		load_from::LoadFrom,
-		progress::AssetLoadProgress,
+		progress::AssetsProgress,
 		register_custom_assets::RegisterCustomAssets,
 		register_load_tracking::RegisterLoadTracking,
 	},
@@ -36,17 +36,17 @@ impl RegisterCustomFolderAssets for App {
 			.register_custom_assets::<TAsset, TDto>()
 			.init_resource::<AliveAssets<TAsset>>()
 			.register_asset_loader(FolderAssetLoader::<TAsset, TDto>::default())
-			.register_load_tracking::<AliveAssets<TAsset>, AssetLoadProgress>(is_loaded::<TAsset>)
+			.register_load_tracking::<AliveAssets<TAsset>, AssetsProgress>(is_loaded::<TAsset>)
 			.add_systems(
 				First,
 				begin_loading_folder_assets::<TAsset, AssetServer>
-					.run_if(resource_added::<Track<AssetLoadProgress>>),
+					.run_if(resource_added::<Track<AssetsProgress>>),
 			)
 			.add_systems(
 				Update,
 				map_load_results::<TAsset, LoadError, AssetServer>
 					.pipe(log_many)
-					.run_if(is_processing::<AssetLoadProgress>),
+					.run_if(is_processing::<AssetsProgress>),
 			)
 	}
 }

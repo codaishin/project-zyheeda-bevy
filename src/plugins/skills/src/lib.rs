@@ -16,7 +16,7 @@ use bundles::{ComboBundle, Loadout};
 use common::{
 	components::{Collection, Side, Swap},
 	resources::key_map::KeyMap,
-	states::MouseContext,
+	states::{game_state::GameState, MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	traits::{animation::HasAnimationsDispatch, try_insert_on::TryInsertOn},
 };
@@ -63,21 +63,14 @@ use systems::{
 	visualize_slot_items::visualize_slot_items,
 };
 
-pub struct SkillsPlugin<TAnimationsPlugin, TState> {
-	phantom_data: PhantomData<TAnimationsPlugin>,
-	play: TState,
-}
+pub struct SkillsPlugin<TAnimationsPlugin>(PhantomData<TAnimationsPlugin>);
 
-impl<TAnimationsPlugin, TState> SkillsPlugin<TAnimationsPlugin, TState>
+impl<TAnimationsPlugin> SkillsPlugin<TAnimationsPlugin>
 where
-	TState: States + Copy,
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 {
-	pub fn depends_on(_: &TAnimationsPlugin, play: TState) -> Self {
-		Self {
-			phantom_data: PhantomData,
-			play,
-		}
+	pub fn depends_on(_: &TAnimationsPlugin) -> Self {
+		Self(PhantomData)
 	}
 
 	fn skill_load(&self, app: &mut App) {
@@ -139,7 +132,7 @@ where
 					flush::<Queue>,
 				)
 					.chain()
-					.run_if(in_state(self.play)),
+					.run_if(in_state(GameState::Play)),
 			)
 			.add_systems(
 				Update,
@@ -212,9 +205,8 @@ where
 	}
 }
 
-impl<TAnimationsPlugin, TState> Plugin for SkillsPlugin<TAnimationsPlugin, TState>
+impl<TAnimationsPlugin> Plugin for SkillsPlugin<TAnimationsPlugin>
 where
-	TState: States + Copy,
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 {
 	fn build(&self, app: &mut App) {

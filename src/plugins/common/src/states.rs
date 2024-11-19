@@ -1,4 +1,8 @@
-use bevy::{input::keyboard::KeyCode, prelude::States};
+pub mod game_state;
+pub mod load_state;
+pub mod menu_state;
+
+use bevy::{input::keyboard::KeyCode, prelude::*};
 use std::{fmt::Debug, hash::Hash};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Default, States)]

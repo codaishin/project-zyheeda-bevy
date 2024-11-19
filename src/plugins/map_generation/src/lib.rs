@@ -5,6 +5,7 @@ mod systems;
 mod traits;
 
 use bevy::prelude::*;
+use common::states::game_state::GameState;
 use components::{Floating, Light, Wall, WallBack};
 use map::{LightCell, MapCell};
 use prefabs::traits::RegisterPrefab;
@@ -17,19 +18,16 @@ use systems::{
 };
 use traits::RegisterMapCell;
 
-pub struct MapGenerationPlugin<TState> {
-	pub new_game: TState,
-}
+pub struct MapGenerationPlugin;
 
-impl<TState> Plugin for MapGenerationPlugin<TState>
-where
-	TState: States + Copy,
-{
+impl Plugin for MapGenerationPlugin {
 	fn build(&self, app: &mut App) {
+		let new_game = GameState::NewGame;
+
 		app.register_prefab::<Light<Floating>>()
 			.register_prefab::<Light<Wall>>()
-			.register_map_cell::<MapCell>(OnEnter(self.new_game))
-			.register_map_cell::<LightCell>(OnEnter(self.new_game))
+			.register_map_cell::<MapCell>(OnEnter(new_game))
+			.register_map_cell::<LightCell>(OnEnter(new_game))
 			.add_systems(
 				Update,
 				(

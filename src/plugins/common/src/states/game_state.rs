@@ -1,10 +1,9 @@
 use super::{load_state::LoadState, menu_state::MenuState};
-use bevy::prelude::*;
-use common::traits::{
+use crate::traits::{
 	iteration::{Iter, IterFinite},
 	states::PlayState,
 };
-use menu::traits::reacts_to_menu_hotkeys::ReactsToMenuHotkeys;
+use bevy::prelude::*;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Default, States)]
 pub enum GameState {
@@ -15,19 +14,6 @@ pub enum GameState {
 	NewGame,
 	Play,
 	IngameMenu(MenuState),
-}
-
-impl ReactsToMenuHotkeys for GameState {
-	fn reacts_to_menu_hotkeys(&self) -> bool {
-		match self {
-			Self::None => false,
-			Self::StartMenu => false,
-			Self::Loading(_) => false,
-			Self::NewGame => false,
-			Self::Play => true,
-			Self::IngameMenu(_) => true,
-		}
-	}
 }
 
 #[derive(Debug, PartialEq)]
@@ -57,11 +43,11 @@ impl IterFinite for GameState {
 		match current.as_ref()? {
 			GameState::None => Some(GameState::StartMenu),
 			GameState::StartMenu => Some(GameState::NewGame),
-			GameState::NewGame => Some(GameState::Loading(LoadState::LoadAssets)),
-			GameState::Loading(LoadState::LoadAssets) => {
-				Some(GameState::Loading(LoadState::ResoleDependencies))
+			GameState::NewGame => Some(GameState::Loading(LoadState::Assets)),
+			GameState::Loading(LoadState::Assets) => {
+				Some(GameState::Loading(LoadState::Dependencies))
 			}
-			GameState::Loading(LoadState::ResoleDependencies) => Some(GameState::Play),
+			GameState::Loading(LoadState::Dependencies) => Some(GameState::Play),
 			GameState::Play => Some(GameState::IngameMenu(MenuState::Inventory)),
 			GameState::IngameMenu(MenuState::Inventory) => {
 				Some(GameState::IngameMenu(MenuState::ComboOverview))
@@ -88,8 +74,8 @@ mod tests {
 				GameState::None,
 				GameState::StartMenu,
 				GameState::NewGame,
-				GameState::Loading(LoadState::LoadAssets),
-				GameState::Loading(LoadState::ResoleDependencies),
+				GameState::Loading(LoadState::Assets),
+				GameState::Loading(LoadState::Dependencies),
 				GameState::Play,
 				GameState::IngameMenu(MenuState::Inventory),
 				GameState::IngameMenu(MenuState::ComboOverview)
