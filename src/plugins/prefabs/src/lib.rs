@@ -3,8 +3,6 @@ mod systems;
 pub mod components;
 pub mod traits;
 
-use std::any::TypeId;
-
 use bevy::{
 	app::{App, Plugin},
 	asset::Handle,
@@ -12,6 +10,7 @@ use bevy::{
 	render::mesh::Mesh,
 };
 use common::{labels::Labels, resources::Shared};
+use std::any::TypeId;
 use systems::instantiate_children::instantiate_children;
 
 pub struct PrefabsPlugin;
