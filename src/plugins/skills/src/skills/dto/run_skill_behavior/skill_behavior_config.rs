@@ -1,5 +1,5 @@
-pub(crate) mod shape_data;
-pub(crate) mod start_behavior_data;
+pub(crate) mod shape;
+pub(crate) mod start_behavior;
 
 use crate::{
 	behaviors::{
@@ -11,24 +11,24 @@ use crate::{
 	skills::lifetime::LifeTimeDefinition,
 };
 use serde::{Deserialize, Serialize};
-use shape_data::SkillShapeData;
-use start_behavior_data::SkillBehaviorData;
+use shape::SkillShapeDto;
+use start_behavior::SkillBehaviorDto;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct SkillBehaviorConfigData<T> {
-	shape: SkillShapeData<T>,
-	contact: Vec<SkillBehaviorData>,
-	projection: Vec<SkillBehaviorData>,
+pub(crate) struct SkillBehaviorConfigDto<T> {
+	shape: SkillShapeDto<T>,
+	contact: Vec<SkillBehaviorDto>,
+	projection: Vec<SkillBehaviorDto>,
 	spawn_on: SpawnOn,
 }
 
-impl<TLifeTimeIn, TLifeTimeOut> From<SkillBehaviorConfigData<TLifeTimeIn>>
+impl<TLifeTimeIn, TLifeTimeOut> From<SkillBehaviorConfigDto<TLifeTimeIn>>
 	for SkillBehaviorConfig<TLifeTimeOut>
 where
 	LifeTimeDefinition: From<TLifeTimeOut>,
 	TLifeTimeOut: Clone + From<TLifeTimeIn>,
 {
-	fn from(value: SkillBehaviorConfigData<TLifeTimeIn>) -> Self {
+	fn from(value: SkillBehaviorConfigDto<TLifeTimeIn>) -> Self {
 		let contact = value.contact.into_iter().map(SkillBehavior::from);
 		let projection = value.projection.into_iter().map(SkillBehavior::from);
 

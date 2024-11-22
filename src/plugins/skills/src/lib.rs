@@ -42,7 +42,7 @@ use loading::traits::{
 };
 use macros::item_asset;
 use player::components::player::Player;
-use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill};
+use skills::{dto::SkillDto, QueuedSkill, RunSkillBehavior, Skill};
 use slot_key::SlotKey;
 use std::{marker::PhantomData, time::Duration};
 use systems::{
@@ -73,7 +73,7 @@ where
 	}
 
 	fn skill_load(&self, app: &mut App) {
-		app.register_custom_folder_assets::<Skill, SkillData>();
+		app.register_custom_folder_assets::<Skill, SkillDto>();
 	}
 
 	fn item_load(&self, app: &mut App) {

@@ -7,18 +7,18 @@ use crate::behaviors::start_behavior::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) enum SkillBehaviorData {
+pub(crate) enum SkillBehaviorDto {
 	Gravity(StartGravity),
 	Damage(StartDealingDamage),
 	Force(StartForce),
 }
 
-impl From<SkillBehaviorData> for SkillBehavior {
-	fn from(value: SkillBehaviorData) -> Self {
+impl From<SkillBehaviorDto> for SkillBehavior {
+	fn from(value: SkillBehaviorDto) -> Self {
 		match value {
-			SkillBehaviorData::Gravity(v) => Self::Gravity(v),
-			SkillBehaviorData::Damage(v) => Self::Damage(v),
-			SkillBehaviorData::Force(v) => Self::Force(v),
+			SkillBehaviorDto::Gravity(v) => Self::Gravity(v),
+			SkillBehaviorDto::Damage(v) => Self::Damage(v),
+			SkillBehaviorDto::Force(v) => Self::Force(v),
 		}
 	}
 }
