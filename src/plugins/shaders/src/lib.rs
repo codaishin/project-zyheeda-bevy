@@ -5,12 +5,18 @@ pub(crate) mod systems;
 pub(crate) mod traits;
 
 use bevy::{prelude::*, render::render_resource::AsBindGroup};
-use common::systems::{
-	asset_process_delta::asset_process_delta,
-	remove_components::Remove,
-	track_components::TrackComponentInSelfAndChildren,
+use common::{
+	components::essence::Essence,
+	labels::Labels,
+	systems::{
+		asset_process_delta::asset_process_delta,
+		insert_associated::{Configure, InsertAssociated, InsertOn},
+		remove_components::Remove,
+		track_components::TrackComponentInSelfAndChildren,
+	},
+	traits::shaders::RegisterForEffectShading,
 };
-use components::effect_shader::EffectShaders;
+use components::{effect_shader::EffectShaders, material_override::MaterialOverride};
 use interactions::components::{force::Force, gravity::Gravity};
 use materials::{
 	essence_material::EssenceMaterial,
@@ -28,12 +34,11 @@ use traits::{
 	shadows_aware_material::ShadowsAwareMaterial,
 };
 
-pub struct ShaderPlugin;
+pub struct ShadersPlugin;
 
-impl Plugin for ShaderPlugin {
-	fn build(&self, app: &mut App) {
-		app.register_shader::<EssenceMaterial>()
-			.register_effect_shader_for::<Force>()
+impl ShadersPlugin {
+	fn build_for_effect_shaders(app: &mut App) {
+		app.register_effect_shader_for::<Force>()
 			.register_effect_shader_for::<Gravity>()
 			.add_systems(
 				Update,
@@ -50,6 +55,39 @@ impl Plugin for ShaderPlugin {
 					instantiate_effect_shaders,
 				),
 			);
+	}
+
+	fn build_for_essence_material(app: &mut App) {
+		type InsertOnMeshWithEssence = InsertOn<Essence, With<Handle<Mesh>>, Changed<Essence>>;
+		let configure_material = Configure::Apply(MaterialOverride::configure);
+
+		app.register_shader::<EssenceMaterial>().add_systems(
+			Update,
+			(
+				InsertOnMeshWithEssence::associated::<MaterialOverride>(configure_material),
+				MaterialOverride::apply_material_exclusivity,
+			)
+				.chain(),
+		);
+	}
+}
+
+impl Plugin for ShadersPlugin {
+	fn build(&self, app: &mut App) {
+		Self::build_for_effect_shaders(app);
+		Self::build_for_essence_material(app);
+	}
+}
+
+impl RegisterForEffectShading for ShadersPlugin {
+	fn register_for_effect_shading<TComponent>(app: &mut App)
+	where
+		TComponent: Component,
+	{
+		app.add_systems(
+			Labels::PREFAB_INSTANTIATION.label(),
+			InsertOn::<TComponent>::associated::<EffectShaders>(Configure::LeaveAsIs),
+		);
 	}
 }
 

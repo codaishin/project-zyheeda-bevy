@@ -28,7 +28,7 @@ impl RegisterPrefab for PrefabsPlugin {
 			Factory<CreateAssetCache>,
 		>;
 		app.add_systems(
-			Labels::INSTANTIATION.label(),
+			Labels::PREFAB_INSTANTIATION.label(),
 			instantiate_system.pipe(log_many),
 		);
 	}
@@ -38,6 +38,6 @@ impl Plugin for PrefabsPlugin {
 	fn build(&self, app: &mut App) {
 		app.init_resource::<Shared<TypeId, Handle<Mesh>>>()
 			.init_resource::<Shared<TypeId, Handle<StandardMaterial>>>()
-			.add_systems(Labels::INSTANTIATION.label(), instantiate_children);
+			.add_systems(Labels::PREFAB_INSTANTIATION.label(), instantiate_children);
 	}
 }

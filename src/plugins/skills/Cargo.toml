@@ -19,7 +19,6 @@ items.workspace = true
 loading.workspace = true
 macros.workspace = true
 player.workspace = true
-shaders.workspace = true
 
 [dev-dependencies]
 # external

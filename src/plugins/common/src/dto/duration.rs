@@ -2,12 +2,12 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub struct DurationData {
+pub struct DurationDto {
 	seconds: f32,
 }
 
-impl From<DurationData> for Duration {
-	fn from(DurationData { seconds }: DurationData) -> Self {
+impl From<DurationDto> for Duration {
+	fn from(DurationDto { seconds }: DurationDto) -> Self {
 		Duration::from_secs_f32(seconds)
 	}
 }
@@ -18,7 +18,7 @@ mod tests {
 
 	#[test]
 	fn convert_to_duration() {
-		let data = DurationData { seconds: 42.11 };
+		let data = DurationDto { seconds: 42.11 };
 
 		let duration = Duration::from(data);
 

@@ -1,8 +1,5 @@
 use super::load_asset::Path;
-use crate::{
-	systems::insert_associated::InitializeAssociated,
-	tools::{Last, This},
-};
+use crate::tools::{Last, This};
 use bevy::prelude::*;
 
 pub enum AnimationPriority {
@@ -31,10 +28,17 @@ pub trait HasAnimationsDispatch {
 	type TAnimationDispatch: StartAnimation + StopAnimation + Component;
 }
 
+pub trait ConfigureNewAnimationDispatch {
+	fn configure_animation_dispatch(
+		&self,
+		new_animation_dispatch: &mut (impl StartAnimation + StopAnimation),
+	);
+}
+
 pub trait RegisterAnimations: HasAnimationsDispatch {
 	fn register_animations<TAgent>(app: &mut App)
 	where
-		TAgent: Component + GetAnimationPaths + InitializeAssociated<Self::TAnimationDispatch>;
+		TAgent: Component + GetAnimationPaths + ConfigureNewAnimationDispatch;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]

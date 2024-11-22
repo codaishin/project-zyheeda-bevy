@@ -35,7 +35,7 @@ pub(crate) fn visualize_slot_items<TView>(
 mod tests {
 	use super::*;
 	use crate::{
-		components::renderer::{ModelRender, Renderer},
+		components::model_render::ModelRender,
 		item::{SkillItem, SkillItemContent},
 		slot_key::SlotKey,
 	};
@@ -88,10 +88,7 @@ mod tests {
 		let handle = new_handle();
 		let item = SkillItem {
 			content: SkillItemContent {
-				render: Renderer {
-					model: ModelRender::Hand(AssetModel::path("my model")),
-					..default()
-				},
+				model: ModelRender::Hand(AssetModel::path("my model")),
 				..default()
 			},
 			..default()
@@ -169,20 +166,14 @@ mod tests {
 		let handle_b = new_handle();
 		let item_a = SkillItem {
 			content: SkillItemContent {
-				render: Renderer {
-					model: ModelRender::Hand(AssetModel::path("my hand model")),
-					..default()
-				},
+				model: ModelRender::Hand(AssetModel::path("my hand model")),
 				..default()
 			},
 			..default()
 		};
 		let item_b = SkillItem {
 			content: SkillItemContent {
-				render: Renderer {
-					model: ModelRender::Forearm(AssetModel::path("my forearm model")),
-					..default()
-				},
+				model: ModelRender::Forearm(AssetModel::path("my forearm model")),
 				..default()
 			},
 			..default()
@@ -218,10 +209,7 @@ mod tests {
 		let handle = new_handle();
 		let item = SkillItem {
 			content: SkillItemContent {
-				render: Renderer {
-					model: ModelRender::Hand(AssetModel::path("my model")),
-					..default()
-				},
+				model: ModelRender::Hand(AssetModel::path("my model")),
 				..default()
 			},
 			..default()
@@ -251,10 +239,7 @@ mod tests {
 		let handle = new_handle();
 		let item = SkillItem {
 			content: SkillItemContent {
-				render: Renderer {
-					model: ModelRender::Hand(AssetModel::path("my other model")),
-					..default()
-				},
+				model: ModelRender::Hand(AssetModel::path("my other model")),
 				..default()
 			},
 			..default()

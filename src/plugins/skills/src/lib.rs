@@ -25,7 +25,6 @@ use components::{
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
 	queue::Queue,
-	renderer::EssenceRender,
 	skill_executer::SkillExecuter,
 	skill_spawners::SkillSpawners,
 	slots::Slots,
@@ -43,7 +42,7 @@ use loading::traits::{
 };
 use macros::item_asset;
 use player::components::player::Player;
-use skills::{skill_data::SkillData, QueuedSkill, RunSkillBehavior, Skill};
+use skills::{dto::SkillDto, QueuedSkill, RunSkillBehavior, Skill};
 use slot_key::SlotKey;
 use std::{marker::PhantomData, time::Duration};
 use systems::{
@@ -74,7 +73,7 @@ where
 	}
 
 	fn skill_load(&self, app: &mut App) {
-		app.register_custom_folder_assets::<Skill, SkillData>();
+		app.register_custom_folder_assets::<Skill, SkillDto>();
 	}
 
 	fn item_load(&self, app: &mut App) {
@@ -199,10 +198,6 @@ where
 
 		ComboBundle::with_timeout(timeout)
 	}
-
-	fn item_essence_render(&self, app: &mut App) {
-		app.add_systems(Update, EssenceRender::apply_material_exclusivity);
-	}
 }
 
 impl<TAnimationsPlugin> Plugin for SkillsPlugin<TAnimationsPlugin>
@@ -214,7 +209,5 @@ where
 		self.item_load(app);
 		self.skill_slot_load(app);
 		self.skill_execution(app);
-
-		self.item_essence_render(app);
 	}
 }

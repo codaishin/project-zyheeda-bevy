@@ -363,7 +363,6 @@ dependencies = [
  "macros",
  "mockall",
  "serde",
- "shaders",
  "tracing",
 ]
 
@@ -4046,6 +4045,8 @@ dependencies = [
  "bevy",
  "common",
  "interactions",
+ "macros",
+ "mockall",
 ]
 
 [[package]]
@@ -4097,7 +4098,6 @@ dependencies = [
  "mockall",
  "player",
  "serde",
- "shaders",
  "tracing",
  "uuid",
 ]

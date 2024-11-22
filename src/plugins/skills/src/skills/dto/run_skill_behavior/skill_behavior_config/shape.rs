@@ -7,21 +7,21 @@ use crate::behaviors::build_skill_shape::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) enum SkillShapeData<T> {
+pub(crate) enum SkillShapeDto<T> {
 	GroundTargetedAoe(SpawnGroundTargetedAoe<T>),
 	Projectile(SpawnProjectile),
 	Shield(SpawnShield),
 }
 
-impl<TLifeTimeIn, TLifeTimeOut> From<SkillShapeData<TLifeTimeIn>> for BuildSkillShape<TLifeTimeOut>
+impl<TLifeTimeIn, TLifeTimeOut> From<SkillShapeDto<TLifeTimeIn>> for BuildSkillShape<TLifeTimeOut>
 where
 	TLifeTimeOut: From<TLifeTimeIn>,
 {
-	fn from(value: SkillShapeData<TLifeTimeIn>) -> Self {
+	fn from(value: SkillShapeDto<TLifeTimeIn>) -> Self {
 		match value {
-			SkillShapeData::GroundTargetedAoe(v) => Self::GroundTargetedAoe(v.map_lifetime()),
-			SkillShapeData::Projectile(v) => Self::Projectile(v),
-			SkillShapeData::Shield(v) => Self::Shield(v),
+			SkillShapeDto::GroundTargetedAoe(v) => Self::GroundTargetedAoe(v.map_lifetime()),
+			SkillShapeDto::Projectile(v) => Self::Projectile(v),
+			SkillShapeDto::Shield(v) => Self::Shield(v),
 		}
 	}
 }

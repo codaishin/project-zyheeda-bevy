@@ -5,14 +5,14 @@ use crate::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) enum SkillAnimationData {
+pub(crate) enum SkillAnimationDto {
 	ShootHandGun,
 }
 
-impl From<SkillAnimationData> for SkillAnimation {
-	fn from(value: SkillAnimationData) -> Self {
+impl From<SkillAnimationDto> for SkillAnimation {
+	fn from(value: SkillAnimationDto) -> Self {
 		match value {
-			SkillAnimationData::ShootHandGun => ShootHandGun::animation(),
+			SkillAnimationDto::ShootHandGun => ShootHandGun::animation(),
 		}
 	}
 }

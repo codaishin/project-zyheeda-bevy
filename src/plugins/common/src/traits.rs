@@ -27,6 +27,7 @@ pub mod process_delta;
 pub mod read;
 pub mod remove_conditionally;
 pub mod remove_resource;
+pub mod shaders;
 pub mod state_duration;
 pub mod states;
 pub mod swap_command;

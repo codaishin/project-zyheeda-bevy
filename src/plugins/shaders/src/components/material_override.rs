@@ -1,33 +1,38 @@
-use bevy::prelude::*;
+use crate::materials::essence_material::EssenceMaterial;
+use bevy::{
+	color::palettes::{
+		css::LIGHT_CYAN,
+		tailwind::{CYAN_100, CYAN_200},
+	},
+	prelude::*,
+};
 use common::{
-	components::AssetModel,
+	components::essence::Essence,
 	traits::{add_asset::AddAsset, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
-use serde::{Deserialize, Serialize};
-use shaders::materials::essence_material::EssenceMaterial;
-
-#[derive(Debug, PartialEq, Default, Clone)]
-pub struct Renderer {
-	pub model: ModelRender,
-	pub essence: EssenceRender,
-}
-
-#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
-pub enum ModelRender {
-	#[default]
-	None,
-	Hand(AssetModel),
-	Forearm(AssetModel),
-}
 
 #[derive(Component, Debug, PartialEq, Clone, Default)]
-pub enum EssenceRender {
+pub enum MaterialOverride {
 	#[default]
-	StandardMaterial,
+	None,
 	Material(EssenceMaterial),
 }
 
-impl EssenceRender {
+impl MaterialOverride {
+	pub(crate) fn configure(essence: &Essence, material: &mut MaterialOverride) {
+		*material = match essence {
+			Essence::None => MaterialOverride::None,
+			Essence::Force => MaterialOverride::Material(EssenceMaterial {
+				texture_color: CYAN_100.into(),
+				fill_color: CYAN_200.into(),
+				fresnel_color: (LIGHT_CYAN * 1.5).into(),
+				..default()
+			}),
+		}
+	}
+}
+
+impl MaterialOverride {
 	pub(crate) fn apply_material_exclusivity(
 		commands: Commands,
 		assets: ResMut<Assets<EssenceMaterial>>,
@@ -39,7 +44,7 @@ impl EssenceRender {
 
 type MaterialComponents<'a> = (
 	Entity,
-	&'a EssenceRender,
+	&'a MaterialOverride,
 	Option<&'a Handle<StandardMaterial>>,
 	Option<&'a Inactive>,
 );
@@ -56,12 +61,12 @@ fn apply_material_exclusivity<TAssets>(
 {
 	for (entity, essence_render, active, inactive) in &essence_renders {
 		match essence_render {
-			EssenceRender::StandardMaterial => {
+			MaterialOverride::None => {
 				commands.try_remove_from::<Handle<EssenceMaterial>>(entity);
 
 				activate_standard_material(&mut commands, entity, inactive);
 			}
-			EssenceRender::Material(essence_material) => {
+			MaterialOverride::Material(essence_material) => {
 				commands.try_insert_on(entity, assets.add_asset(essence_material.clone()));
 
 				deactivate_standard_material(&mut commands, entity, active);
@@ -138,7 +143,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				new_handle::<StandardMaterial>(),
-				EssenceRender::Material(material),
+				MaterialOverride::Material(material),
 			))
 			.id();
 
@@ -160,7 +165,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				new_handle::<StandardMaterial>(),
-				EssenceRender::Material(EssenceMaterial::default()),
+				MaterialOverride::Material(EssenceMaterial::default()),
 			))
 			.id();
 
@@ -180,10 +185,7 @@ mod tests {
 		}));
 		let entity = app
 			.world_mut()
-			.spawn((
-				new_handle::<EssenceMaterial>(),
-				EssenceRender::StandardMaterial,
-			))
+			.spawn((new_handle::<EssenceMaterial>(), MaterialOverride::None))
 			.id();
 
 		app.world_mut()
@@ -205,15 +207,15 @@ mod tests {
 			.world_mut()
 			.spawn((
 				original_material.clone(),
-				EssenceRender::Material(EssenceMaterial::default()),
+				MaterialOverride::Material(EssenceMaterial::default()),
 			))
 			.id();
 
 		app.world_mut()
 			.run_system_once(apply_material_exclusivity::<_Assets>);
 		let mut entity_ref = app.world_mut().entity_mut(entity);
-		let mut essence_render = entity_ref.get_mut::<EssenceRender>().unwrap();
-		*essence_render = EssenceRender::StandardMaterial;
+		let mut essence_render = entity_ref.get_mut::<MaterialOverride>().unwrap();
+		*essence_render = MaterialOverride::None;
 		app.world_mut()
 			.run_system_once(apply_material_exclusivity::<_Assets>);
 

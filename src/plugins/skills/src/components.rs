@@ -2,8 +2,8 @@ pub mod combo_node;
 pub mod combos;
 pub mod combos_time_out;
 pub mod inventory;
+pub mod model_render;
 pub mod queue;
-pub mod renderer;
 pub mod slots;
 
 pub(crate) mod skill_executer;

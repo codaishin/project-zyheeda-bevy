@@ -10,7 +10,11 @@ use bevy::prelude::*;
 use common::{
 	resources::CamRay,
 	states::{game_state::GameState, mouse_context::MouseContext},
-	traits::{animation::HasAnimationsDispatch, prefab::RegisterPrefab},
+	traits::{
+		animation::HasAnimationsDispatch,
+		prefab::RegisterPrefab,
+		shaders::RegisterForEffectShading,
+	},
 };
 use components::{
 	cam_orbit::CamOrbit,
@@ -44,25 +48,28 @@ use systems::{
 	update_life_times::update_lifetimes,
 };
 
-pub struct BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin>(
-	PhantomData<(TAnimationsPlugin, TPrefabsPlugin)>,
+pub struct BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin>(
+	PhantomData<(TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin)>,
 );
 
-impl<TAnimationsPlugin, TPrefabsPlugin> BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin>
+impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin>
+	BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
+	TShadersPlugin: Plugin + RegisterForEffectShading,
 {
-	pub fn depends_on(_: &TAnimationsPlugin, _: &TPrefabsPlugin) -> Self {
-		Self(PhantomData::<(TAnimationsPlugin, TPrefabsPlugin)>)
+	pub fn depends_on(_: &TAnimationsPlugin, _: &TPrefabsPlugin, _: &TShadersPlugin) -> Self {
+		Self(PhantomData::<(TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin)>)
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin> Plugin
-	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin>
+impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin> Plugin
+	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
+	TShadersPlugin: Plugin + RegisterForEffectShading,
 {
 	fn build(&self, app: &mut App) {
 		TPrefabsPlugin::register_prefab::<Beam>(app);
@@ -72,6 +79,10 @@ where
 		TPrefabsPlugin::register_prefab::<ShieldProjection>(app);
 		TPrefabsPlugin::register_prefab::<GroundTargetedAoeContact>(app);
 		TPrefabsPlugin::register_prefab::<GroundTargetedAoeProjection>(app);
+
+		TShadersPlugin::register_for_effect_shading::<ShieldContact>(app);
+		TShadersPlugin::register_for_effect_shading::<ShieldProjection>(app);
+		TShadersPlugin::register_for_effect_shading::<GroundTargetedAoeContact>(app);
 
 		app.add_event::<MoveInputEvent>()
 			.add_systems(
