@@ -1,3 +1,4 @@
+pub mod essence;
 pub mod flip;
 
 use bevy::prelude::*;

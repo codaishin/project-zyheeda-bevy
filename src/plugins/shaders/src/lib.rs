@@ -6,6 +6,7 @@ pub(crate) mod traits;
 
 use bevy::{prelude::*, render::render_resource::AsBindGroup};
 use common::{
+	components::essence::Essence,
 	labels::Labels,
 	systems::{
 		asset_process_delta::asset_process_delta,
@@ -35,10 +36,9 @@ use traits::{
 
 pub struct ShadersPlugin;
 
-impl Plugin for ShadersPlugin {
-	fn build(&self, app: &mut App) {
-		app.register_shader::<EssenceMaterial>()
-			.register_effect_shader_for::<Force>()
+impl ShadersPlugin {
+	fn build_for_effect_shaders(app: &mut App) {
+		app.register_effect_shader_for::<Force>()
 			.register_effect_shader_for::<Gravity>()
 			.add_systems(
 				Update,
@@ -54,8 +54,28 @@ impl Plugin for ShadersPlugin {
 					EffectShaders::track_in_self_and_children::<Handle<Mesh>>().system(),
 					instantiate_effect_shaders,
 				),
+			);
+	}
+
+	fn build_for_essence_material(app: &mut App) {
+		type InsertOnMeshWithEssence = InsertOn<Essence, With<Handle<Mesh>>, Changed<Essence>>;
+		let configure_material = Configure::Apply(MaterialOverride::configure);
+
+		app.register_shader::<EssenceMaterial>().add_systems(
+			Update,
+			(
+				InsertOnMeshWithEssence::associated::<MaterialOverride>(configure_material),
+				MaterialOverride::apply_material_exclusivity,
 			)
-			.add_systems(Update, MaterialOverride::apply_material_exclusivity);
+				.chain(),
+		);
+	}
+}
+
+impl Plugin for ShadersPlugin {
+	fn build(&self, app: &mut App) {
+		Self::build_for_effect_shaders(app);
+		Self::build_for_essence_material(app);
 	}
 }
 

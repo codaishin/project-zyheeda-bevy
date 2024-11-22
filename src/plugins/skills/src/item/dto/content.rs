@@ -1,20 +1,18 @@
-use super::essence::EssenceDto;
 use crate::{
-	components::renderer::{ModelRender, Renderer},
+	components::model_render::ModelRender,
 	item::{item_type::SkillItemType, SkillItemContent},
 };
 use bevy::reflect::TypePath;
-use common::traits::load_asset::LoadAsset;
+use common::{components::essence::Essence, traits::load_asset::LoadAsset};
 use loading::traits::{asset_file_extensions::AssetFileExtensions, load_from::LoadFrom};
 use serde::{Deserialize, Serialize};
-use shaders::components::material_override::MaterialOverride;
 
 type SkillPath = String;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, TypePath)]
 pub(crate) struct SkillItemContentDto {
 	model: ModelRender,
-	essence: EssenceDto,
+	essence: Essence,
 	skill: Option<SkillPath>,
 	item_type: SkillItemType,
 }
@@ -25,10 +23,8 @@ impl LoadFrom<SkillItemContentDto> for SkillItemContent {
 		asset_server: &mut TLoadAsset,
 	) -> Self {
 		Self {
-			render: Renderer {
-				model: from.model,
-				arm_shader: MaterialOverride::from(from.essence),
-			},
+			model: from.model,
+			essence: from.essence,
 			skill: from.skill.map(|path| asset_server.load_asset(path)),
 			item_type: from.item_type,
 		}

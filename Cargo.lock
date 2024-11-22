@@ -4098,7 +4098,6 @@ dependencies = [
  "mockall",
  "player",
  "serde",
- "shaders",
  "tracing",
  "uuid",
 ]
