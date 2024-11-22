@@ -29,7 +29,10 @@ pub trait HasAnimationsDispatch {
 }
 
 pub trait ConfigureNewAnimationDispatch {
-	fn configure(new_animation_dispatch: &mut (impl StartAnimation + StopAnimation));
+	fn configure_animation_dispatch(
+		&self,
+		new_animation_dispatch: &mut (impl StartAnimation + StopAnimation),
+	);
 }
 
 pub trait RegisterAnimations: HasAnimationsDispatch {

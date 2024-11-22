@@ -12,7 +12,7 @@ use crate::systems::{
 use bevy::prelude::*;
 use common::{
 	systems::{
-		insert_associated::{Configure, InsertAssociated},
+		insert_associated::{Configure, InsertAssociated, InsertOn},
 		track_components::TrackComponentInSelfAndChildren,
 	},
 	traits::animation::{
@@ -33,6 +33,8 @@ impl RegisterAnimations for AnimationsPlugin {
 	where
 		TAgent: Component + GetAnimationPaths + ConfigureNewAnimationDispatch,
 	{
+		let configure_dispatch = Configure::Apply(TAgent::configure_animation_dispatch);
+
 		app.add_systems(
 			Startup,
 			TAgent::init_animation_clips::<AnimationGraph, AssetServer>,
@@ -40,7 +42,7 @@ impl RegisterAnimations for AnimationsPlugin {
 		.add_systems(
 			Update,
 			(
-				TAgent::insert_associated::<AnimationDispatch>(Configure::Apply(TAgent::configure)),
+				InsertOn::<TAgent>::associated::<AnimationDispatch>(configure_dispatch),
 				TAgent::init_animation_graph_and_transitions::<AnimationDispatch>,
 			),
 		);

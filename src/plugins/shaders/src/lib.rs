@@ -9,7 +9,7 @@ use common::{
 	labels::Labels,
 	systems::{
 		asset_process_delta::asset_process_delta,
-		insert_associated::{Configure, InsertAssociated},
+		insert_associated::{Configure, InsertAssociated, InsertOn},
 		remove_components::Remove,
 		track_components::TrackComponentInSelfAndChildren,
 	},
@@ -66,7 +66,7 @@ impl RegisterForEffectShading for ShadersPlugin {
 	{
 		app.add_systems(
 			Labels::PREFAB_INSTANTIATION.label(),
-			TComponent::insert_associated::<EffectShaders>(Configure::LeaveAsIs),
+			InsertOn::<TComponent>::associated::<EffectShaders>(Configure::LeaveAsIs),
 		);
 	}
 }

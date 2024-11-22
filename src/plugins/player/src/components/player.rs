@@ -62,7 +62,10 @@ impl From<Idle> for AnimationPriority {
 }
 
 impl ConfigureNewAnimationDispatch for Player {
-	fn configure(new_animation_dispatch: &mut (impl StartAnimation + StopAnimation)) {
+	fn configure_animation_dispatch(
+		&self,
+		new_animation_dispatch: &mut (impl StartAnimation + StopAnimation),
+	) {
 		new_animation_dispatch.start_animation(
 			Idle,
 			Animation::new(Player::animation_path("Animation1"), PlayMode::Repeat),
