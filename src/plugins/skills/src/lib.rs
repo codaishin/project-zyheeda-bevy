@@ -25,7 +25,6 @@ use components::{
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
 	queue::Queue,
-	renderer::EssenceRender,
 	skill_executer::SkillExecuter,
 	skill_spawners::SkillSpawners,
 	slots::Slots,
@@ -199,10 +198,6 @@ where
 
 		ComboBundle::with_timeout(timeout)
 	}
-
-	fn item_essence_render(&self, app: &mut App) {
-		app.add_systems(Update, EssenceRender::apply_material_exclusivity);
-	}
 }
 
 impl<TAnimationsPlugin> Plugin for SkillsPlugin<TAnimationsPlugin>
@@ -214,7 +209,5 @@ where
 		self.item_load(app);
 		self.skill_slot_load(app);
 		self.skill_execution(app);
-
-		self.item_essence_render(app);
 	}
 }

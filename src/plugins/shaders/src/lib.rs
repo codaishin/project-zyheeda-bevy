@@ -15,7 +15,7 @@ use common::{
 	},
 	traits::shaders::RegisterForEffectShading,
 };
-use components::effect_shader::EffectShaders;
+use components::{effect_shader::EffectShaders, material_override::MaterialOverride};
 use interactions::components::{force::Force, gravity::Gravity};
 use materials::{
 	essence_material::EssenceMaterial,
@@ -54,7 +54,8 @@ impl Plugin for ShadersPlugin {
 					EffectShaders::track_in_self_and_children::<Handle<Mesh>>().system(),
 					instantiate_effect_shaders,
 				),
-			);
+			)
+			.add_systems(Update, MaterialOverride::apply_material_exclusivity);
 	}
 }
 

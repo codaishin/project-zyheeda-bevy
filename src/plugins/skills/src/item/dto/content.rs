@@ -1,12 +1,13 @@
 use super::essence::EssenceDto;
 use crate::{
-	components::renderer::{EssenceRender, ModelRender, Renderer},
+	components::renderer::{ModelRender, Renderer},
 	item::{item_type::SkillItemType, SkillItemContent},
 };
 use bevy::reflect::TypePath;
 use common::traits::load_asset::LoadAsset;
 use loading::traits::{asset_file_extensions::AssetFileExtensions, load_from::LoadFrom};
 use serde::{Deserialize, Serialize};
+use shaders::components::material_override::MaterialOverride;
 
 type SkillPath = String;
 
@@ -26,7 +27,7 @@ impl LoadFrom<SkillItemContentDto> for SkillItemContent {
 		Self {
 			render: Renderer {
 				model: from.model,
-				essence: EssenceRender::from(from.essence),
+				arm_shader: MaterialOverride::from(from.essence),
 			},
 			skill: from.skill.map(|path| asset_server.load_asset(path)),
 			item_type: from.item_type,

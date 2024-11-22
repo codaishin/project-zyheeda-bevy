@@ -47,6 +47,6 @@ impl GetViewData<ForearmSlots<Player>, SlotKey> for SkillItemContent {
 }
 impl GetViewData<SubModels<Player>, SlotKey> for SkillItemContent {
 	fn get_view_data(&self) -> <SubModels<Player> as ItemView<SlotKey>>::TViewComponents {
-		self.render.essence.clone()
+		self.render.arm_shader.clone()
 	}
 }
