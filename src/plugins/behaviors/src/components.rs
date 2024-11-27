@@ -113,9 +113,6 @@ pub struct Enemy {
 	pub foe: Foe,
 }
 
-#[derive(Component, Debug, PartialEq, Default)]
-pub struct LifeTime(pub Duration);
-
 #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
 pub struct BeamConfig {
 	pub damage: f32,

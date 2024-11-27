@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::{
 	behaviors::{SkillCaster, Target},
 	components::skill_spawners::SkillSpawners,
@@ -12,7 +14,7 @@ use common::{
 impl<T> ExecuteSkills for T {}
 
 pub(crate) trait ExecuteSkills {
-	fn execute_system(
+	fn execute_system<TLifetime>(
 		cam_ray: Res<CamRay>,
 		mouse_hover: Res<MouseHover>,
 		mut commands: Commands,
@@ -20,8 +22,9 @@ pub(crate) trait ExecuteSkills {
 		transforms: Query<&GlobalTransform>,
 	) -> Vec<Result<(), Error>>
 	where
-		for<'w, 's> Self: Component + Execute<Commands<'w, 's>> + Sized,
-		for<'w, 's> Error: From<<Self as Execute<Commands<'w, 's>>>::TError>,
+		for<'w, 's> Self: Component + Execute<Commands<'w, 's>, TLifetime> + Sized,
+		for<'w, 's> Error: From<<Self as Execute<Commands<'w, 's>, TLifetime>>::TError>,
+		TLifetime: From<Duration> + Component,
 	{
 		agents
 			.iter_mut()
@@ -104,7 +107,16 @@ mod tests {
 		mock: Mock_Executor,
 	}
 
-	impl<'w, 's> Execute<Commands<'w, 's>> for _Executor {
+	#[derive(Component, Debug, PartialEq)]
+	struct _Lifetime;
+
+	impl From<Duration> for _Lifetime {
+		fn from(_: Duration) -> Self {
+			_Lifetime
+		}
+	}
+
+	impl<'w, 's> Execute<Commands<'w, 's>, _Lifetime> for _Executor {
 		type TError = _Error;
 
 		fn execute(
@@ -120,7 +132,7 @@ mod tests {
 
 	mock! {
 		_Executor {}
-		impl<'w, 's> Execute<Commands<'w, 's>> for _Executor {
+		impl<'w, 's> Execute<Commands<'w, 's>, _Lifetime> for _Executor {
 			type TError = _Error;
 
 			fn execute<'_w, '_s>(
@@ -168,7 +180,7 @@ mod tests {
 		app.init_resource::<MouseHover>();
 		app.add_systems(
 			Update,
-			_Executor::execute_system.pipe(|_: In<Vec<Result<(), Error>>>| {}),
+			_Executor::execute_system::<_Lifetime>.pipe(|_: In<Vec<Result<(), Error>>>| {}),
 		);
 
 		app

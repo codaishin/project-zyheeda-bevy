@@ -33,20 +33,25 @@ fn main() -> AppExit {
 }
 
 fn prepare_game(app: &mut App) {
+	let life_cycles = LifeCyclesPlugin;
 	let animations_plugin = AnimationsPlugin;
 	let prefabs_plugin = PrefabsPlugin;
 	let shaders_plugin = ShadersPlugin;
-	let skills_plugin = SkillsPlugin::depends_on(&animations_plugin);
+	let skills_plugin = SkillsPlugin::depends_on(&animations_plugin, &life_cycles);
 	let enemy_plugin = EnemyPlugin::depends_on(&prefabs_plugin);
 	let map_generation_plugin = MapGenerationPlugin::depends_on(&prefabs_plugin);
 	let player_plugin = PlayerPlugin::depends_on(&animations_plugin, &prefabs_plugin);
-	let behaviors_plugin =
-		BehaviorsPlugin::depends_on(&animations_plugin, &prefabs_plugin, &shaders_plugin);
+	let behaviors_plugin = BehaviorsPlugin::depends_on(
+		&animations_plugin,
+		&prefabs_plugin,
+		&shaders_plugin,
+		&life_cycles,
+	);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
-		.add_plugins(LifeCyclesPlugin)
+		.add_plugins(life_cycles)
 		.add_plugins(prefabs_plugin)
 		.add_plugins(shaders_plugin)
 		.add_plugins(InteractionsPlugin)

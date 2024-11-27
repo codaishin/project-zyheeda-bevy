@@ -162,7 +162,6 @@ mod tests {
 			build_skill_shape::{BuildSkillShape, OnSkillStop},
 			SkillBehaviorConfig,
 		},
-		skills::lifetime::LifeTimeDefinition,
 		traits::{skill_builder::SkillShape, GetAnimation, GetSkillBehavior},
 	};
 	use behaviors::components::{Face, OverrideFace};
@@ -280,13 +279,9 @@ mod tests {
 		}
 	}
 
-	fn skill_behavior<T>(
-		activation_type: impl Fn(SkillBehaviorConfig<T>) -> RunSkillBehavior,
-	) -> RunSkillBehavior
-	where
-		LifeTimeDefinition: From<T>,
-		T: Clone,
-	{
+	fn skill_behavior(
+		activation_type: impl Fn(SkillBehaviorConfig) -> RunSkillBehavior,
+	) -> RunSkillBehavior {
 		activation_type(SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
 			|commands, _, _, _| SkillShape {
 				contact: commands.spawn_empty().id(),

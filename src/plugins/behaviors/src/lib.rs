@@ -12,6 +12,7 @@ use common::{
 	states::{game_state::GameState, mouse_context::MouseContext},
 	traits::{
 		animation::HasAnimationsDispatch,
+		handles_lifetime::HandlesLifetime,
 		prefab::RegisterPrefab,
 		shaders::RegisterForEffectShading,
 	},
@@ -45,31 +46,49 @@ use systems::{
 	projectile::{movement::ProjectileMovement, set_position::ProjectileSetPosition},
 	shield::position_force_shield,
 	update_cool_downs::update_cool_downs,
-	update_life_times::update_lifetimes,
 };
 
-pub struct BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin>(
-	PhantomData<(TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin)>,
+pub struct BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TLifeCyclePlugin>(
+	PhantomData<(
+		TAnimationsPlugin,
+		TPrefabsPlugin,
+		TShadersPlugin,
+		TLifeCyclePlugin,
+	)>,
 );
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin>
-	BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin>
+impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TLifeCyclePlugin>
+	BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TLifeCyclePlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
 	TShadersPlugin: Plugin + RegisterForEffectShading,
+	TLifeCyclePlugin: Plugin + HandlesLifetime,
 {
-	pub fn depends_on(_: &TAnimationsPlugin, _: &TPrefabsPlugin, _: &TShadersPlugin) -> Self {
-		Self(PhantomData::<(TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin)>)
+	pub fn depends_on(
+		_: &TAnimationsPlugin,
+		_: &TPrefabsPlugin,
+		_: &TShadersPlugin,
+		_: &TLifeCyclePlugin,
+	) -> Self {
+		Self(
+			PhantomData::<(
+				TAnimationsPlugin,
+				TPrefabsPlugin,
+				TShadersPlugin,
+				TLifeCyclePlugin,
+			)>,
+		)
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin> Plugin
-	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin>
+impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TLifeCyclePlugin> Plugin
+	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TLifeCyclePlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
 	TShadersPlugin: Plugin + RegisterForEffectShading,
+	TLifeCyclePlugin: Plugin + HandlesLifetime,
 {
 	fn build(&self, app: &mut App) {
 		TPrefabsPlugin::register_prefab::<Beam>(app);
@@ -100,10 +119,7 @@ where
 				(move_on_orbit::<CamOrbit>, move_with_target::<CamOrbit>)
 					.run_if(in_state(GameState::Play)),
 			)
-			.add_systems(
-				Update,
-				(update_cool_downs::<Virtual>, update_lifetimes::<Virtual>),
-			)
+			.add_systems(Update, update_cool_downs::<Virtual>)
 			.add_systems(
 				Update,
 				(
@@ -136,7 +152,7 @@ where
 				(ProjectileContact::set_position, ProjectileContact::movement).chain(),
 			)
 			.add_systems(Update, GroundTargetedAoeContact::set_position)
-			.add_systems(Update, execute_beam)
+			.add_systems(Update, execute_beam::<TLifeCyclePlugin::TLifetime>)
 			.add_systems(Update, position_force_shield);
 	}
 }

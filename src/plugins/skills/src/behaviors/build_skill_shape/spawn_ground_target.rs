@@ -1,37 +1,36 @@
+use std::time::Duration;
+
 use crate::{
 	behaviors::{SkillCaster, SkillSpawner, Target},
-	skills::lifetime::LifeTimeDefinition,
+	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
 use behaviors::components::ground_targeted_aoe::{
 	GroundTargetedAoeContact,
 	GroundTargetedAoeProjection,
 };
-use bevy::prelude::Bundle;
-use common::tools::Units;
+use bevy::prelude::*;
+use common::{dto::duration::DurationDto, tools::Units};
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct SpawnGroundTargetedAoe<TLifeTime> {
-	pub lifetime: TLifeTime,
+pub struct SpawnGroundTargetedAoe<TDuration = Duration> {
+	pub lifetime: LifeTimeDefinition<TDuration>,
 	pub max_range: Units,
 	pub radius: Units,
 }
 
-impl<T> SpawnGroundTargetedAoe<T> {
-	pub(crate) fn map_lifetime<TLifetime>(self) -> SpawnGroundTargetedAoe<TLifetime>
-	where
-		TLifetime: From<T>,
-	{
-		SpawnGroundTargetedAoe {
-			lifetime: TLifetime::from(self.lifetime),
-			max_range: self.max_range,
-			radius: self.radius,
+impl From<SpawnGroundTargetedAoe<DurationDto>> for SpawnGroundTargetedAoe {
+	fn from(with_lifetime_dto: SpawnGroundTargetedAoe<DurationDto>) -> Self {
+		Self {
+			lifetime: with_lifetime_dto.lifetime.into(),
+			max_range: with_lifetime_dto.max_range,
+			radius: with_lifetime_dto.radius,
 		}
 	}
 }
 
-impl<T> BuildContact for SpawnGroundTargetedAoe<T> {
+impl BuildContact for SpawnGroundTargetedAoe {
 	fn build_contact(
 		&self,
 		caster: &SkillCaster,
@@ -50,7 +49,7 @@ impl<T> BuildContact for SpawnGroundTargetedAoe<T> {
 	}
 }
 
-impl<T> BuildProjection for SpawnGroundTargetedAoe<T> {
+impl BuildProjection for SpawnGroundTargetedAoe {
 	fn build_projection(&self, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> impl Bundle {
 		GroundTargetedAoeProjection {
 			radius: self.radius,
@@ -58,12 +57,8 @@ impl<T> BuildProjection for SpawnGroundTargetedAoe<T> {
 	}
 }
 
-impl<T> SkillLifetime for SpawnGroundTargetedAoe<T>
-where
-	LifeTimeDefinition: From<T>,
-	T: Clone,
-{
+impl SkillLifetime for SpawnGroundTargetedAoe {
 	fn lifetime(&self) -> LifeTimeDefinition {
-		LifeTimeDefinition::from(self.lifetime.clone())
+		self.lifetime
 	}
 }

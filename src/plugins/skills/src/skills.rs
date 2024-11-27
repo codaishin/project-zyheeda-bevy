@@ -1,5 +1,5 @@
 pub(crate) mod dto;
-pub(crate) mod lifetime;
+pub(crate) mod lifetime_definition;
 pub(crate) mod shoot_hand_gun;
 
 use crate::{
@@ -12,7 +12,6 @@ use crate::{
 		Target,
 	},
 	item::item_type::SkillItemType,
-	skills::lifetime::{OnActiveLifetime, OnAimLifeTime},
 	slot_key::SlotKey,
 	traits::{spawn_skill_behavior::SpawnSkillBehavior, Matches, Prime},
 };
@@ -21,7 +20,6 @@ use common::{
 	resources::ColliderInfo,
 	traits::{animation::Animation, load_asset::Path},
 };
-use lifetime::LifeTimeDefinition;
 use loading::traits::asset_folder::AssetFolderPath;
 use std::{
 	collections::HashSet,
@@ -159,8 +157,8 @@ pub(crate) enum SkillState {
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum RunSkillBehavior {
-	OnActive(SkillBehaviorConfig<OnActiveLifetime<Duration>>),
-	OnAim(SkillBehaviorConfig<OnAimLifeTime>),
+	OnActive(SkillBehaviorConfig),
+	OnAim(SkillBehaviorConfig),
 }
 
 impl Default for RunSkillBehavior {
@@ -177,32 +175,38 @@ impl<'w, 's> SpawnSkillBehavior<Commands<'w, 's>> for RunSkillBehavior {
 		}
 	}
 
-	fn spawn(
+	fn spawn<TLifetime>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
-	) -> OnSkillStop {
+	) -> OnSkillStop
+	where
+		TLifetime: From<Duration> + Component,
+	{
 		match self {
-			RunSkillBehavior::OnActive(conf) => spawn(conf, commands, caster, spawner, target),
-			RunSkillBehavior::OnAim(conf) => spawn(conf, commands, caster, spawner, target),
+			RunSkillBehavior::OnActive(conf) => {
+				spawn::<TLifetime>(conf, commands, caster, spawner, target)
+			}
+			RunSkillBehavior::OnAim(conf) => {
+				spawn::<TLifetime>(conf, commands, caster, spawner, target)
+			}
 		}
 	}
 }
 
-fn spawn<T>(
-	behavior: &SkillBehaviorConfig<T>,
+fn spawn<TLifetime>(
+	behavior: &SkillBehaviorConfig,
 	commands: &mut Commands,
 	caster: &SkillCaster,
 	spawner: &SkillSpawner,
 	target: &Target,
 ) -> OnSkillStop
 where
-	LifeTimeDefinition: From<T>,
-	T: Clone,
+	TLifetime: From<Duration> + Component,
 {
-	let shape = behavior.spawn_shape(commands, caster, spawner, target);
+	let shape = behavior.spawn_shape::<TLifetime>(commands, caster, spawner, target);
 
 	if let Some(mut contact) = commands.get_entity(shape.contact) {
 		behavior.start_contact_behavior(&mut contact, caster, spawner, target);
@@ -234,6 +238,15 @@ mod tests {
 
 	#[derive(Component)]
 	struct _Projection;
+
+	#[derive(Component, Debug, PartialEq)]
+	struct _Lifetime;
+
+	impl From<Duration> for _Lifetime {
+		fn from(_: Duration) -> Self {
+			_Lifetime
+		}
+	}
 
 	fn behavior(e: &mut EntityCommands, c: &SkillCaster, s: &SkillSpawner, t: &Target) {
 		e.try_insert(_Args {
@@ -311,7 +324,7 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn(cmd, &caster, &spawner, &target);
+				behavior.spawn::<_Lifetime>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -351,7 +364,7 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn(cmd, &caster, &spawner, &target);
+				behavior.spawn::<_Lifetime>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -387,7 +400,7 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn(cmd, &caster, &spawner, &target);
+				behavior.spawn::<_Lifetime>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -424,7 +437,7 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn(cmd, &caster, &spawner, &target);
+				behavior.spawn::<_Lifetime>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -460,7 +473,7 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn(cmd, &caster, &spawner, &target);
+				behavior.spawn::<_Lifetime>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -507,7 +520,7 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn(cmd, &caster, &spawner, &target);
+				behavior.spawn::<_Lifetime>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -547,7 +560,7 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn(cmd, &caster, &spawner, &target);
+				behavior.spawn::<_Lifetime>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -586,7 +599,7 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn(cmd, &caster, &spawner, &target);
+				behavior.spawn::<_Lifetime>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -630,7 +643,7 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn(cmd, &caster, &spawner, &target);
+				behavior.spawn::<_Lifetime>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -669,7 +682,7 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn(cmd, &caster, &spawner, &target);
+				behavior.spawn::<_Lifetime>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);

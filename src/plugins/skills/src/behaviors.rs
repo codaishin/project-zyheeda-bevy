@@ -2,19 +2,17 @@ pub mod build_skill_shape;
 pub mod spawn_on;
 pub mod start_behavior;
 
-use crate::{
-	skills::{lifetime::LifeTimeDefinition, SelectInfo},
-	traits::skill_builder::SkillShape,
-};
+use crate::{skills::SelectInfo, traits::skill_builder::SkillShape};
 use bevy::{
 	ecs::system::EntityCommands,
 	math::Ray3d,
-	prelude::{default, Commands, Entity, GlobalTransform},
+	prelude::{default, Commands, Component, Entity, GlobalTransform},
 };
 use build_skill_shape::BuildSkillShape;
 use common::{components::Outdated, resources::ColliderInfo};
 use spawn_on::SpawnOn;
 use start_behavior::SkillBehavior;
+use std::time::Duration;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct SkillSpawner(pub Entity);
@@ -62,19 +60,15 @@ impl Target {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub struct SkillBehaviorConfig<T> {
-	shape: BuildSkillShape<T>,
+pub struct SkillBehaviorConfig {
+	shape: BuildSkillShape,
 	contact: Vec<SkillBehavior>,
 	projection: Vec<SkillBehavior>,
 	pub(crate) spawn_on: SpawnOn,
 }
 
-impl<T> SkillBehaviorConfig<T>
-where
-	LifeTimeDefinition: From<T>,
-	T: Clone,
-{
-	pub(crate) fn from_shape(shape: BuildSkillShape<T>) -> Self {
+impl SkillBehaviorConfig {
+	pub(crate) fn from_shape(shape: BuildSkillShape) -> Self {
 		Self {
 			shape,
 			contact: default(),
@@ -110,14 +104,18 @@ where
 		}
 	}
 
-	pub(crate) fn spawn_shape(
+	pub(crate) fn spawn_shape<TLifetime>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
-	) -> SkillShape {
-		self.shape.build(commands, caster, spawner, target)
+	) -> SkillShape
+	where
+		TLifetime: From<Duration> + Component,
+	{
+		self.shape
+			.build::<TLifetime>(commands, caster, spawner, target)
 	}
 
 	pub(crate) fn start_contact_behavior(

@@ -1,6 +1,6 @@
 use crate::{
 	behaviors::{SkillCaster, SkillSpawner, Target},
-	skills::lifetime::LifeTimeDefinition,
+	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
 use behaviors::components::shield::{ShieldContact, ShieldProjection};

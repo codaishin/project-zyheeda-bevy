@@ -1,3 +1,4 @@
+use super::skill_spawners::SkillSpawners;
 use crate::{
 	behaviors::{
 		build_skill_shape::OnSkillStop,
@@ -15,8 +16,7 @@ use common::{
 	errors::{Error, Level},
 	traits::{accessors::get::GetRef, try_despawn_recursive::TryDespawnRecursive},
 };
-
-use super::skill_spawners::SkillSpawners;
+use std::time::Duration;
 
 #[derive(Component, Debug, PartialEq, Default, Clone)]
 pub(crate) enum SkillExecuter<TSkillBehavior = RunSkillBehavior> {
@@ -62,10 +62,11 @@ impl From<NoSkillSpawner> for Error {
 	}
 }
 
-impl<TCommands, TBehavior> Execute<TCommands> for SkillExecuter<TBehavior>
+impl<TCommands, TBehavior, TLifetime> Execute<TCommands, TLifetime> for SkillExecuter<TBehavior>
 where
 	TBehavior: SpawnSkillBehavior<TCommands>,
 	TCommands: TryDespawnRecursive,
+	TLifetime: From<Duration> + Component,
 {
 	type TError = NoSkillSpawner;
 
@@ -82,7 +83,7 @@ where
 				slot_key,
 			} => {
 				let spawner = get_spawner(shape, spawners, *slot_key)?;
-				*self = match shape.spawn(commands, caster, spawner, target) {
+				*self = match shape.spawn::<TLifetime>(commands, caster, spawner, target) {
 					OnSkillStop::Ignore => SkillExecuter::Idle,
 					OnSkillStop::Stop(entity) => SkillExecuter::StartedStoppable(entity),
 				};
@@ -140,6 +141,15 @@ mod tests {
 
 	struct _Commands;
 
+	#[derive(Component, Debug, PartialEq)]
+	struct _Lifetime;
+
+	impl From<Duration> for _Lifetime {
+		fn from(_: Duration) -> Self {
+			_Lifetime
+		}
+	}
+
 	impl TryDespawnRecursive for _Commands {
 		fn try_despawn_recursive(&mut self, _: Entity) {}
 	}
@@ -161,13 +171,16 @@ mod tests {
 			SpawnOn::Slot
 		}
 
-		fn spawn(
+		fn spawn<TLifetime>(
 			&self,
 			_: &mut _Commands,
 			_: &SkillCaster,
 			_: &SkillSpawner,
 			_: &Target,
-		) -> OnSkillStop {
+		) -> OnSkillStop
+		where
+			TLifetime: From<Duration> + Component,
+		{
 			self.0.clone()
 		}
 	}
@@ -176,17 +189,22 @@ mod tests {
 		_Behavior {}
 		impl SpawnSkillBehavior<Mock_Commands> for _Behavior {
 			fn spawn_on(&self) -> SpawnOn;
-			fn spawn(
+			fn spawn<TLifetime>(
 				&self,
 				commands: &mut Mock_Commands,
 				caster: &SkillCaster,
 				spawner: &SkillSpawner,
 				target: &Target,
-			) -> OnSkillStop;
+			) -> OnSkillStop
+			where
+				TLifetime: From<Duration> + Component;
 		}
 	}
 
 	simple_init!(Mock_Behavior);
+
+	type _Executer<'a, TCommands> =
+		&'a mut dyn Execute<TCommands, _Lifetime, TError = NoSkillSpawner>;
 
 	fn get_target() -> Target {
 		Target {
@@ -222,11 +240,11 @@ mod tests {
 		let spawners = SkillSpawners::new([(Some(SlotKey::BottomHand(Side::Right)), spawner)]);
 		let target = get_target();
 
-		let mut executer = SkillExecuter::Start {
+		let executer: _Executer<Mock_Commands> = &mut SkillExecuter::Start {
 			slot_key: SlotKey::BottomHand(Side::Right),
 			behavior: Mock_Behavior::new_mock(|mock| {
 				mock.expect_spawn_on().return_const(SpawnOn::Slot);
-				mock.expect_spawn()
+				mock.expect_spawn::<_Lifetime>()
 					.withf(move |_, c, s, t| {
 						assert_eq!((&caster, &spawner, &target), (c, s, t));
 						true
@@ -248,11 +266,11 @@ mod tests {
 			mock.expect_try_despawn_recursive().return_const(());
 		});
 
-		let mut executer = SkillExecuter::Start {
+		let executer: _Executer<Mock_Commands> = &mut SkillExecuter::Start {
 			slot_key: SlotKey::BottomHand(Side::Right),
 			behavior: Mock_Behavior::new_mock(|mock| {
 				mock.expect_spawn_on().return_const(SpawnOn::Center);
-				mock.expect_spawn()
+				mock.expect_spawn::<_Lifetime>()
 					.withf(move |_, c, s, t| {
 						assert_eq!((&caster, &spawner, &target), (c, s, t));
 						true
@@ -276,7 +294,10 @@ mod tests {
 			behavior: _BehaviorSlotted(OnSkillStop::Ignore),
 		};
 
-		_ = executer.execute(&mut _Commands, &caster, &spawners, &target);
+		{
+			let executer: _Executer<_Commands> = &mut executer;
+			_ = executer.execute(&mut _Commands, &caster, &spawners, &target);
+		}
 
 		assert_eq!(SkillExecuter::Idle, executer);
 	}
@@ -293,7 +314,10 @@ mod tests {
 			behavior: _BehaviorSlotted(OnSkillStop::Stop(Entity::from_raw(123))),
 		};
 
-		_ = executer.execute(&mut _Commands, &caster, &spawners, &target);
+		{
+			let executer: _Executer<_Commands> = &mut executer;
+			_ = executer.execute(&mut _Commands, &caster, &spawners, &target);
+		}
 
 		assert_eq!(
 			SkillExecuter::StartedStoppable(Entity::from_raw(123)),
@@ -307,11 +331,12 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(2));
 		let spawners = SkillSpawners::new([(None, spawner)]);
 		let target = get_target();
-		let mut executer = SkillExecuter::Start {
+		let executer: _Executer<Mock_Commands> = &mut SkillExecuter::Start {
 			slot_key: SlotKey::BottomHand(Side::Right),
 			behavior: Mock_Behavior::new_mock(|mock| {
 				mock.expect_spawn_on().return_const(SpawnOn::Slot);
-				mock.expect_spawn().return_const(OnSkillStop::Ignore);
+				mock.expect_spawn::<_Lifetime>()
+					.return_const(OnSkillStop::Ignore);
 			}),
 		};
 
@@ -349,7 +374,8 @@ mod tests {
 		let caster = SkillCaster(Entity::from_raw(1));
 		let spawners = SkillSpawners::new([]);
 		let target = get_target();
-		let mut executer = SkillExecuter::<Mock_Behavior>::Stop(Entity::from_raw(123));
+		let executer: _Executer<Mock_Commands> =
+			&mut SkillExecuter::<Mock_Behavior>::Stop(Entity::from_raw(123));
 
 		let mut commands = Mock_Commands::new_mock(|mock| {
 			mock.expect_try_despawn_recursive()
@@ -370,7 +396,10 @@ mod tests {
 		let mut commands = _Commands;
 		let mut executer = SkillExecuter::<_BehaviorSlotted>::Stop(Entity::from_raw(1));
 
-		_ = executer.execute(&mut commands, &caster, &spawners, &target);
+		{
+			let executer: _Executer<_Commands> = &mut executer;
+			_ = executer.execute(&mut commands, &caster, &spawners, &target);
+		}
 
 		assert_eq!(SkillExecuter::Idle, executer);
 	}

@@ -1,20 +1,31 @@
-use crate::components::LifeTime;
 use bevy::prelude::*;
 use common::{components::destroy::Destroy, traits::try_insert_on::TryInsertOn};
+use std::time::Duration;
 
-pub(crate) fn update_lifetimes<TTime: Default + Sync + Send + 'static>(
-	mut commands: Commands,
-	mut lifetimes: Query<(Entity, &mut LifeTime, Option<&Destroy>)>,
-	time: Res<Time<TTime>>,
-) {
-	let delta = time.delta();
+#[derive(Component, Debug, PartialEq, Default)]
+pub struct Lifetime(Duration);
 
-	for (id, mut lifetime, despawn) in &mut lifetimes {
-		if delta < lifetime.0 {
-			lifetime.0 -= delta;
-		} else if despawn.is_none() {
-			commands.try_insert_on(id, Destroy::DELAYED);
+impl Lifetime {
+	pub(crate) fn update<TTime: Default + Sync + Send + 'static>(
+		mut commands: Commands,
+		mut lifetimes: Query<(Entity, &mut Lifetime, Option<&Destroy>)>,
+		time: Res<Time<TTime>>,
+	) {
+		let delta = time.delta();
+
+		for (id, mut lifetime, despawn) in &mut lifetimes {
+			if delta < lifetime.0 {
+				lifetime.0 -= delta;
+			} else if despawn.is_none() {
+				commands.try_insert_on(id, Destroy::DELAYED);
+			}
 		}
+	}
+}
+
+impl From<Duration> for Lifetime {
+	fn from(duration: Duration) -> Self {
+		Lifetime(duration)
 	}
 }
 
@@ -26,7 +37,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, update_lifetimes::<Real>);
+		app.add_systems(Update, Lifetime::update::<Real>);
 		app.init_resource::<Time<Real>>();
 
 		app
@@ -37,15 +48,15 @@ mod tests {
 		let mut app = setup();
 		let lifetime = app
 			.world_mut()
-			.spawn(LifeTime(Duration::from_secs(100)))
+			.spawn(Lifetime(Duration::from_secs(100)))
 			.id();
 
 		app.tick_time(Duration::from_secs(10));
 		app.update();
 
-		let lifetime = app.world().entity(lifetime).get::<LifeTime>();
+		let lifetime = app.world().entity(lifetime).get::<Lifetime>();
 
-		assert_eq!(Some(&LifeTime(Duration::from_secs(90))), lifetime);
+		assert_eq!(Some(&Lifetime(Duration::from_secs(90))), lifetime);
 	}
 
 	#[test]
@@ -53,7 +64,7 @@ mod tests {
 		let mut app = setup();
 		let lifetime = app
 			.world_mut()
-			.spawn(LifeTime(Duration::from_secs(100)))
+			.spawn(Lifetime(Duration::from_secs(100)))
 			.id();
 
 		app.tick_time(Duration::from_secs(100));
@@ -69,7 +80,7 @@ mod tests {
 		let mut app = setup();
 		let lifetime = app
 			.world_mut()
-			.spawn(LifeTime(Duration::from_secs(100)))
+			.spawn(Lifetime(Duration::from_secs(100)))
 			.id();
 
 		app.tick_time(Duration::from_secs(101));
@@ -86,7 +97,7 @@ mod tests {
 		let lifetime = app
 			.world_mut()
 			.spawn((
-				LifeTime(Duration::from_secs(100)),
+				Lifetime(Duration::from_secs(100)),
 				Destroy::AfterFrames(100),
 			))
 			.id();

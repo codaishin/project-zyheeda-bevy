@@ -4,22 +4,20 @@ use crate::behaviors::build_skill_shape::{
 	spawn_shield::SpawnShield,
 	BuildSkillShape,
 };
+use common::dto::duration::DurationDto;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) enum SkillShapeDto<T> {
-	GroundTargetedAoe(SpawnGroundTargetedAoe<T>),
+pub(crate) enum SkillShapeDto {
+	GroundTargetedAoe(SpawnGroundTargetedAoe<DurationDto>),
 	Projectile(SpawnProjectile),
 	Shield(SpawnShield),
 }
 
-impl<TLifeTimeIn, TLifeTimeOut> From<SkillShapeDto<TLifeTimeIn>> for BuildSkillShape<TLifeTimeOut>
-where
-	TLifeTimeOut: From<TLifeTimeIn>,
-{
-	fn from(value: SkillShapeDto<TLifeTimeIn>) -> Self {
+impl From<SkillShapeDto> for BuildSkillShape {
+	fn from(value: SkillShapeDto) -> Self {
 		match value {
-			SkillShapeDto::GroundTargetedAoe(v) => Self::GroundTargetedAoe(v.map_lifetime()),
+			SkillShapeDto::GroundTargetedAoe(v) => Self::GroundTargetedAoe(v.into()),
 			SkillShapeDto::Projectile(v) => Self::Projectile(v),
 			SkillShapeDto::Shield(v) => Self::Shield(v),
 		}
