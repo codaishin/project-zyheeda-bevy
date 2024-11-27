@@ -26,8 +26,6 @@ use resources::{
 	track_ray_interactions::TrackRayInteractions,
 };
 use systems::{
-	destroy::destroy,
-	destroy_dead::set_dead_to_be_destroyed,
 	gravity_pull::gravity_pull,
 	interactions::{
 		act_interaction::act_interaction,
@@ -60,7 +58,6 @@ impl Plugin for InteractionsPlugin {
 			.init_resource::<TrackRayInteractions>()
 			.add_interaction::<DealsDamage, Health>()
 			.add_interaction::<Gravity, EffectedByGravity>()
-			.add_systems(processing_label.clone(), set_dead_to_be_destroyed)
 			.add_systems(processing_label.clone(), BlockerInsertCommand::system)
 			.add_systems(processing_label.clone(), apply_fragile_blocks)
 			.add_systems(
@@ -78,8 +75,7 @@ impl Plugin for InteractionsPlugin {
 				)
 					.chain(),
 			)
-			.add_systems(Labels::PROPAGATION.label(), update_interacting_entities)
-			.add_systems(Labels::LAST.label(), destroy);
+			.add_systems(Labels::PROPAGATION.label(), update_interacting_entities);
 	}
 }
 
