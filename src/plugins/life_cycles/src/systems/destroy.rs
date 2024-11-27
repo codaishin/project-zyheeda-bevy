@@ -1,5 +1,5 @@
+use crate::components::destroy::Destroy;
 use bevy::prelude::*;
-use common::components::destroy::Destroy;
 
 pub(crate) fn destroy(mut commands: Commands, mut agents: Query<(Entity, &mut Destroy)>) {
 	for (id, mut destroy) in &mut agents {

@@ -9,6 +9,7 @@ pub mod get_asset_path;
 pub mod get_handle_from_path;
 pub mod get_ray;
 pub mod get_ui_text;
+pub mod handles_destruction;
 pub mod handles_lifetime;
 pub mod has_collisions;
 pub mod init_resource;

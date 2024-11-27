@@ -1,5 +1,6 @@
+use super::destroy::Destroy;
 use bevy::prelude::*;
-use common::{components::destroy::Destroy, traits::try_insert_on::TryInsertOn};
+use common::traits::try_insert_on::TryInsertOn;
 use std::time::Duration;
 
 #[derive(Component, Debug, PartialEq, Default)]

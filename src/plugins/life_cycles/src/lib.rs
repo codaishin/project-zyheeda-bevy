@@ -2,8 +2,11 @@ mod components;
 mod systems;
 
 use bevy::prelude::*;
-use common::{labels::Labels, traits::handles_lifetime::HandlesLifetime};
-use components::lifetime::Lifetime;
+use common::{
+	labels::Labels,
+	traits::{handles_destruction::HandlesDestruction, handles_lifetime::HandlesLifetime},
+};
+use components::{destroy::Destroy, lifetime::Lifetime};
 use systems::{destroy::destroy, destroy_dead::set_dead_to_be_destroyed};
 
 pub struct LifeCyclesPlugin;
@@ -18,4 +21,8 @@ impl Plugin for LifeCyclesPlugin {
 
 impl HandlesLifetime for LifeCyclesPlugin {
 	type TLifetime = Lifetime;
+}
+
+impl HandlesDestruction for LifeCyclesPlugin {
+	type TDestroy = Destroy;
 }
