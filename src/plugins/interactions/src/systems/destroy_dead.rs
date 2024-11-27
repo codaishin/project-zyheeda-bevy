@@ -1,9 +1,8 @@
-use crate::components::Destroy;
-use bevy::ecs::{
-	entity::Entity,
-	system::{Commands, Query},
+use bevy::prelude::*;
+use common::{
+	components::{destroy::Destroy, Health},
+	traits::try_insert_on::TryInsertOn,
 };
-use common::{components::Health, traits::try_insert_on::TryInsertOn};
 
 pub(crate) fn set_dead_to_be_destroyed(mut commands: Commands, agents: Query<(Entity, &Health)>) {
 	for id in agents.iter().filter_map(dead) {
@@ -22,9 +21,6 @@ fn dead((id, health): (Entity, &Health)) -> Option<Entity> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Destroy;
-	use bevy::app::{App, Update};
-	use common::components::Health;
 
 	fn setup() -> App {
 		let mut app = App::new();

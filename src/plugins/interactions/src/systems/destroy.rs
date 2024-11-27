@@ -1,11 +1,5 @@
-use crate::components::Destroy;
-use bevy::{
-	ecs::{
-		entity::Entity,
-		system::{Commands, Query},
-	},
-	hierarchy::DespawnRecursiveExt,
-};
+use bevy::prelude::*;
+use common::components::destroy::Destroy;
 
 pub(crate) fn destroy(mut commands: Commands, mut agents: Query<(Entity, &mut Destroy)>) {
 	for (id, mut destroy) in &mut agents {
@@ -21,11 +15,6 @@ pub(crate) fn destroy(mut commands: Commands, mut agents: Query<(Entity, &mut De
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Destroy;
-	use bevy::{
-		app::{App, Update},
-		hierarchy::BuildWorldChildren,
-	};
 
 	fn setup() -> App {
 		let mut app = App::new();

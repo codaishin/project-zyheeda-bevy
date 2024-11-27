@@ -2,16 +2,14 @@ use crate::{
 	components::{
 		blocker::Blockers,
 		is::{Fragile, Is},
-		Destroy,
 	},
 	events::{Collision, InteractionEvent},
 };
-use bevy::ecs::{
-	entity::Entity,
-	event::EventReader,
-	system::{Commands, Query},
+use bevy::prelude::*;
+use common::{
+	components::{destroy::Destroy, ColliderRoot},
+	traits::try_insert_on::TryInsertOn,
 };
-use common::{components::ColliderRoot, traits::try_insert_on::TryInsertOn};
 
 pub(crate) fn apply_fragile_blocks(
 	mut commands: Commands,
@@ -57,8 +55,7 @@ fn fragile_blocked_entity(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{blocker::Blocker, Destroy};
-	use bevy::app::{App, Update};
+	use crate::components::blocker::Blocker;
 	use common::{components::ColliderRoot, test_tools::utils::SingleThreadedApp};
 
 	fn setup() -> App {

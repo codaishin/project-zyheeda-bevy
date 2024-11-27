@@ -93,16 +93,6 @@ impl<'a> From<RayFilter> for QueryFilter<'a> {
 }
 
 #[derive(Component, Debug, PartialEq)]
-pub enum Destroy {
-	Immediately,
-	AfterFrames(u8),
-}
-
-impl Destroy {
-	pub const DELAYED: Destroy = Destroy::AfterFrames(2);
-}
-
-#[derive(Component, Debug, PartialEq)]
 pub struct Delay<TActor: ActOn<TTarget> + Clone, TTarget> {
 	pub actor: TActor,
 	pub after: Duration,
