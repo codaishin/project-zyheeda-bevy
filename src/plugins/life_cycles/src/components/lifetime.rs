@@ -9,16 +9,16 @@ pub struct Lifetime(Duration);
 impl Lifetime {
 	pub(crate) fn update<TTime: Default + Sync + Send + 'static>(
 		mut commands: Commands,
-		mut lifetimes: Query<(Entity, &mut Lifetime, Option<&Destroy>)>,
+		mut lifetimes: Query<(Entity, &mut Lifetime)>,
 		time: Res<Time<TTime>>,
 	) {
 		let delta = time.delta();
 
-		for (id, mut lifetime, despawn) in &mut lifetimes {
+		for (id, mut lifetime) in &mut lifetimes {
 			if delta < lifetime.0 {
 				lifetime.0 -= delta;
-			} else if despawn.is_none() {
-				commands.try_insert_on(id, Destroy::DELAYED);
+			} else {
+				commands.try_insert_on(id, Destroy);
 			}
 		}
 	}
@@ -73,7 +73,7 @@ mod tests {
 
 		let lifetime = app.world().entity(lifetime);
 
-		assert_eq!(Some(&Destroy::DELAYED), lifetime.get::<Destroy>());
+		assert_eq!(Some(&Destroy), lifetime.get::<Destroy>());
 	}
 
 	#[test]
@@ -89,25 +89,6 @@ mod tests {
 
 		let lifetime = app.world().entity(lifetime);
 
-		assert_eq!(Some(&Destroy::DELAYED), lifetime.get::<Destroy>());
-	}
-
-	#[test]
-	fn do_not_add_despawn_when_already_present() {
-		let mut app = setup();
-		let lifetime = app
-			.world_mut()
-			.spawn((
-				Lifetime(Duration::from_secs(100)),
-				Destroy::AfterFrames(100),
-			))
-			.id();
-
-		app.tick_time(Duration::from_secs(100));
-		app.update();
-
-		let lifetime = app.world().entity(lifetime);
-
-		assert_eq!(Some(&Destroy::AfterFrames(100)), lifetime.get::<Destroy>());
+		assert_eq!(Some(&Destroy), lifetime.get::<Destroy>());
 	}
 }
