@@ -1,20 +1,13 @@
 pub(crate) mod skill_behavior_config;
 
-use crate::{
-	behaviors::SkillBehaviorConfig,
-	skills::{
-		lifetime::{OnActiveLifetime, OnAimLifeTime},
-		RunSkillBehavior,
-	},
-};
-use common::dto::duration::DurationDto;
+use crate::{behaviors::SkillBehaviorConfig, skills::RunSkillBehavior};
 use serde::{Deserialize, Serialize};
 use skill_behavior_config::SkillBehaviorConfigDto;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) enum RunSkillBehaviorDto {
-	OnActive(SkillBehaviorConfigDto<OnActiveLifetime<DurationDto>>),
-	OnAim(SkillBehaviorConfigDto<OnAimLifeTime>),
+	OnActive(SkillBehaviorConfigDto),
+	OnAim(SkillBehaviorConfigDto),
 }
 
 impl From<RunSkillBehaviorDto> for RunSkillBehavior {

@@ -136,7 +136,7 @@ pub trait Schedule<TBehavior> {
 	fn schedule(&mut self, slot_key: SlotKey, behavior: TBehavior);
 }
 
-pub(crate) trait Execute<TCommands> {
+pub(crate) trait Execute<TCommands, TLifetime> {
 	type TError;
 
 	fn execute(

@@ -3,14 +3,12 @@ pub mod spawn_projectile;
 pub mod spawn_shield;
 
 use super::{SkillCaster, SkillSpawner, Target};
-use crate::{
-	skills::lifetime::LifeTimeDefinition,
-	traits::skill_builder::{SkillBuilder, SkillShape},
-};
-use bevy::prelude::{BuildChildren, Commands, Entity};
+use crate::traits::skill_builder::{SkillBuilder, SkillShape};
+use bevy::prelude::{BuildChildren, Commands, Component, Entity};
 use spawn_ground_target::SpawnGroundTargetedAoe;
 use spawn_projectile::SpawnProjectile;
 use spawn_shield::SpawnShield;
+use std::time::Duration;
 
 pub(crate) type BuildSkillShapeFn =
 	for<'a> fn(&'a mut Commands, &SkillCaster, &SkillSpawner, &Target) -> SkillShape;
@@ -22,14 +20,14 @@ pub enum OnSkillStop {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub(crate) enum BuildSkillShape<TLifeTime> {
+pub(crate) enum BuildSkillShape {
 	Fn(BuildSkillShapeFn),
-	GroundTargetedAoe(SpawnGroundTargetedAoe<TLifeTime>),
+	GroundTargetedAoe(SpawnGroundTargetedAoe),
 	Projectile(SpawnProjectile),
 	Shield(SpawnShield),
 }
 
-impl<T> Default for BuildSkillShape<T> {
+impl Default for BuildSkillShape {
 	fn default() -> Self {
 		Self::Fn(|commands, _, _, _| {
 			let contact = commands.spawn_empty().id();
@@ -43,12 +41,8 @@ impl<T> Default for BuildSkillShape<T> {
 	}
 }
 
-impl<TLifeTime> BuildSkillShape<TLifeTime>
-where
-	LifeTimeDefinition: From<TLifeTime>,
-	TLifeTime: Clone,
-{
-	pub(crate) const NO_SHAPE: BuildSkillShape<TLifeTime> = BuildSkillShape::Fn(Self::no_shape);
+impl BuildSkillShape {
+	pub(crate) const NO_SHAPE: BuildSkillShape = BuildSkillShape::Fn(Self::no_shape);
 
 	fn no_shape(
 		commands: &mut Commands,
@@ -67,18 +61,21 @@ where
 		}
 	}
 
-	pub(crate) fn build(
+	pub(crate) fn build<TLifeTime>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
 		spawn: &SkillSpawner,
 		target: &Target,
-	) -> SkillShape {
+	) -> SkillShape
+	where
+		TLifeTime: From<Duration> + Component,
+	{
 		match self {
 			Self::Fn(func) => func(commands, caster, spawn, target),
-			Self::GroundTargetedAoe(gt) => gt.build(commands, caster, spawn, target),
-			Self::Projectile(pr) => pr.build(commands, caster, spawn, target),
-			Self::Shield(sh) => sh.build(commands, caster, spawn, target),
+			Self::GroundTargetedAoe(gt) => gt.build::<TLifeTime>(commands, caster, spawn, target),
+			Self::Projectile(pr) => pr.build::<TLifeTime>(commands, caster, spawn, target),
+			Self::Shield(sh) => sh.build::<TLifeTime>(commands, caster, spawn, target),
 		}
 	}
 }

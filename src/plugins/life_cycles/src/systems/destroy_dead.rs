@@ -1,12 +1,10 @@
+use crate::components::destroy::Destroy;
 use bevy::prelude::*;
-use common::{
-	components::{destroy::Destroy, Health},
-	traits::try_insert_on::TryInsertOn,
-};
+use common::{components::Health, traits::try_insert_on::TryInsertOn};
 
 pub(crate) fn set_dead_to_be_destroyed(mut commands: Commands, agents: Query<(Entity, &Health)>) {
 	for id in agents.iter().filter_map(dead) {
-		commands.try_insert_on(id, Destroy::Immediately);
+		commands.try_insert_on(id, Destroy);
 	}
 }
 

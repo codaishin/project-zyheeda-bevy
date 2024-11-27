@@ -11,7 +11,7 @@ use bevy::{
 	prelude::IntoSystem,
 };
 use bevy_rapier3d::plugin::RapierContext;
-use common::{components::Health, labels::Labels};
+use common::{components::Health, labels::Labels, traits::handles_destruction::HandlesDestruction};
 use components::{
 	acted_on_targets::ActedOnTargets,
 	blocker::BlockerInsertCommand,
@@ -25,6 +25,7 @@ use resources::{
 	track_interaction_duplicates::TrackInteractionDuplicates,
 	track_ray_interactions::TrackRayInteractions,
 };
+use std::marker::PhantomData;
 use systems::{
 	gravity_pull::gravity_pull,
 	interactions::{
@@ -44,9 +45,21 @@ use systems::{
 };
 use traits::ActOn;
 
-pub struct InteractionsPlugin;
+pub struct InteractionsPlugin<TLifeCyclePlugin>(PhantomData<TLifeCyclePlugin>);
 
-impl Plugin for InteractionsPlugin {
+impl<TLifeCyclePlugin> InteractionsPlugin<TLifeCyclePlugin>
+where
+	TLifeCyclePlugin: Plugin + HandlesDestruction,
+{
+	pub fn depends_on(_: &TLifeCyclePlugin) -> Self {
+		Self(PhantomData)
+	}
+}
+
+impl<TLifeCyclePlugin> Plugin for InteractionsPlugin<TLifeCyclePlugin>
+where
+	TLifeCyclePlugin: Plugin + HandlesDestruction,
+{
 	fn build(&self, app: &mut App) {
 		let processing_label = Labels::PROCESSING.label();
 		let processing_delta = Labels::PROCESSING.delta();
@@ -58,7 +71,10 @@ impl Plugin for InteractionsPlugin {
 			.add_interaction::<DealsDamage, Health>()
 			.add_interaction::<Gravity, EffectedByGravity>()
 			.add_systems(processing_label.clone(), BlockerInsertCommand::system)
-			.add_systems(processing_label.clone(), apply_fragile_blocks)
+			.add_systems(
+				processing_label.clone(),
+				apply_fragile_blocks::<TLifeCyclePlugin::TDestroy>,
+			)
 			.add_systems(
 				processing_label.clone(),
 				processing_delta.pipe(gravity_pull),

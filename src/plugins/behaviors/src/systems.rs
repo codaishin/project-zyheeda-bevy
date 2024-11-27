@@ -8,4 +8,3 @@ pub(crate) mod movement;
 pub(crate) mod projectile;
 pub(crate) mod shield;
 pub(crate) mod update_cool_downs;
-pub(crate) mod update_life_times;

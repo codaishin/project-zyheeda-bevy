@@ -1,4 +1,4 @@
-use crate::components::{Beam, BeamCommand, BeamConfig, LifeTime};
+use crate::components::{Beam, BeamCommand, BeamConfig};
 use bevy::{
 	ecs::{
 		entity::Entity,
@@ -7,7 +7,7 @@ use bevy::{
 	},
 	hierarchy::DespawnRecursiveExt,
 	math::{Dir3, Vec3},
-	prelude::SpatialBundle,
+	prelude::{Component, SpatialBundle},
 	transform::{
 		bundles::TransformBundle,
 		components::{GlobalTransform, Transform},
@@ -22,19 +22,22 @@ use interactions::{
 	components::{RayCaster, RayFilter},
 	events::{InteractionEvent, Ray},
 };
+use std::time::Duration;
 
-pub(crate) fn execute_beam(
+pub(crate) fn execute_beam<TLifeTime>(
 	mut commands: Commands,
 	mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
 	beam_commands: Query<(Entity, &BeamConfig, &BeamCommand, Option<&Beam>)>,
 	transforms: Query<(&GlobalTransform, Option<&GroundOffset>)>,
-) {
+) where
+	TLifeTime: From<Duration> + Component,
+{
 	for beam_command in &beam_commands {
 		ray_cast_or_despawn(&mut commands, &transforms, beam_command);
 	}
 
 	for event in ray_cast_events.read() {
-		spawn_beam(&mut commands, &beam_commands, event);
+		spawn_beam::<TLifeTime>(&mut commands, &beam_commands, event);
 		update_beam(&mut commands, &beam_commands, event);
 	}
 }
@@ -92,11 +95,13 @@ fn get_filter(source: Entity) -> Option<RayFilter> {
 		.ok()
 }
 
-fn spawn_beam(
+fn spawn_beam<TLifeTime>(
 	commands: &mut Commands,
 	beam_commands: &Query<(Entity, &BeamConfig, &BeamCommand, Option<&Beam>)>,
 	InteractionEvent(ColliderRoot(source), ray): &InteractionEvent<Ray>,
-) {
+) where
+	TLifeTime: From<Duration> + Component,
+{
 	let Ok((id, cfg, _, None)) = beam_commands.get(*source) else {
 		return;
 	};
@@ -115,7 +120,7 @@ fn spawn_beam(
 			color: cfg.color,
 			emissive: cfg.emissive,
 		},
-		LifeTime(cfg.lifetime),
+		TLifeTime::from(cfg.lifetime),
 	));
 }
 
@@ -153,7 +158,7 @@ fn get_beam_transform(from: Vec3, to: Vec3, Ray(.., TimeOfImpact(toi)): &Ray) ->
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{Beam, BeamConfig, LifeTime};
+	use crate::components::{Beam, BeamConfig};
 	use bevy::{
 		app::{App, Update},
 		color::{Color, LinearRgba},
@@ -173,9 +178,18 @@ mod tests {
 	use interactions::components::RayCaster;
 	use std::time::Duration;
 
+	#[derive(Component, Debug, PartialEq)]
+	struct _LifeTime(Duration);
+
+	impl From<Duration> for _LifeTime {
+		fn from(duration: Duration) -> Self {
+			_LifeTime(duration)
+		}
+	}
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, execute_beam);
+		app.add_systems(Update, execute_beam::<_LifeTime>);
 		app.add_event::<InteractionEvent<Ray>>();
 
 		app
@@ -352,9 +366,9 @@ mod tests {
 					color: Color::srgb(0.1, 0.2, 0.3),
 					emissive: LinearRgba::new(1., 0.9, 0.8, 0.7)
 				}),
-				Some(&LifeTime(Duration::from_millis(100))),
+				Some(&_LifeTime(Duration::from_millis(100))),
 			),
-			(beam.get::<Beam>(), beam.get::<LifeTime>())
+			(beam.get::<Beam>(), beam.get::<_LifeTime>())
 		);
 	}
 

@@ -18,7 +18,11 @@ use common::{
 	resources::key_map::KeyMap,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
-	traits::{animation::HasAnimationsDispatch, try_insert_on::TryInsertOn},
+	traits::{
+		animation::HasAnimationsDispatch,
+		handles_lifetime::HandlesLifetime,
+		try_insert_on::TryInsertOn,
+	},
 };
 use components::{
 	combos::Combos,
@@ -62,14 +66,17 @@ use systems::{
 	visualize_slot_items::visualize_slot_items,
 };
 
-pub struct SkillsPlugin<TAnimationsPlugin>(PhantomData<TAnimationsPlugin>);
+pub struct SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin>(
+	PhantomData<(TAnimationsPlugin, TLifeCyclePlugin)>,
+);
 
-impl<TAnimationsPlugin> SkillsPlugin<TAnimationsPlugin>
+impl<TAnimationsPlugin, TLifeCyclePlugin> SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
+	TLifeCyclePlugin: Plugin + HandlesLifetime,
 {
-	pub fn depends_on(_: &TAnimationsPlugin) -> Self {
-		Self(PhantomData)
+	pub fn depends_on(_: &TAnimationsPlugin, _: &TLifeCyclePlugin) -> Self {
+		Self(PhantomData::<(TAnimationsPlugin, TLifeCyclePlugin)>)
 	}
 
 	fn skill_load(&self, app: &mut App) {
@@ -108,7 +115,10 @@ where
 		);
 	}
 
-	fn skill_execution(&self, app: &mut App) {
+	fn skill_execution<TLifetime>(&self, app: &mut App)
+	where
+		TLifetime: From<Duration> + Component,
+	{
 		app.init_resource::<KeyMap<SlotKey, KeyCode>>()
 			.add_systems(
 				Update,
@@ -127,7 +137,7 @@ where
 						SkillExecuter,
 						Virtual,
 					>,
-					SkillExecuter::<RunSkillBehavior>::execute_system.pipe(log_many),
+					SkillExecuter::<RunSkillBehavior>::execute_system::<TLifetime>.pipe(log_many),
 					flush::<Queue>,
 				)
 					.chain()
@@ -200,14 +210,16 @@ where
 	}
 }
 
-impl<TAnimationsPlugin> Plugin for SkillsPlugin<TAnimationsPlugin>
+impl<TAnimationsPlugin, TLifeCyclePlugin> Plugin
+	for SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
+	TLifeCyclePlugin: Plugin + HandlesLifetime,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);
 		self.item_load(app);
 		self.skill_slot_load(app);
-		self.skill_execution(app);
+		self.skill_execution::<TLifeCyclePlugin::TLifetime>(app);
 	}
 }
