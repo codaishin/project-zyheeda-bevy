@@ -8,6 +8,7 @@ use enemy::EnemyPlugin;
 use game_state::GameStatePlugin;
 use interactions::InteractionsPlugin;
 use items::ItemsPlugin;
+use life_cycles::LifeCyclesPlugin;
 use light::LightPlugin;
 use loading::LoadingPlugin;
 use map_generation::MapGenerationPlugin;
@@ -45,6 +46,7 @@ fn prepare_game(app: &mut App) {
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
+		.add_plugins(LifeCyclesPlugin)
 		.add_plugins(prefabs_plugin)
 		.add_plugins(shaders_plugin)
 		.add_plugins(InteractionsPlugin)

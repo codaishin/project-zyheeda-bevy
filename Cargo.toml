@@ -25,6 +25,7 @@ enemy = { path = "src/plugins/enemy" }
 game_state = { path = "src/plugins/game_state" }
 interactions = { path = "src/plugins/interactions" }
 items = { path = "src/plugins/items" }
+life_cycles = { path = "src/plugins/life_cycles" }
 light = { path = "src/plugins/light" }
 loading = { path = "src/plugins/loading" }
 macros = { path = "src/plugins/macros" }
@@ -72,6 +73,7 @@ enemy.workspace = true
 game_state.workspace = true
 interactions.workspace = true
 items.workspace = true
+life_cycles.workspace = true
 light.workspace = true
 loading.workspace = true
 macros.workspace = true

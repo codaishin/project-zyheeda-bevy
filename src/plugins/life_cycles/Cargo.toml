@@ -1,0 +1,15 @@
+[package]
+name = "life_cycles"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# external
+bevy.workspace = true
+
+# internal
+common.workspace = true
+
+[dev-dependencies]
+# external
+mockall.workspace = true

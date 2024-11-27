@@ -1,13 +1,6 @@
 use crate::components::LifeTime;
-use bevy::{
-	ecs::{
-		entity::Entity,
-		system::{Commands, Query, Res},
-	},
-	time::Time,
-};
-use common::traits::try_insert_on::TryInsertOn;
-use interactions::components::Destroy;
+use bevy::prelude::*;
+use common::{components::destroy::Destroy, traits::try_insert_on::TryInsertOn};
 
 pub(crate) fn update_lifetimes<TTime: Default + Sync + Send + 'static>(
 	mut commands: Commands,
@@ -28,10 +21,6 @@ pub(crate) fn update_lifetimes<TTime: Default + Sync + Send + 'static>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		time::Real,
-	};
 	use common::test_tools::utils::{SingleThreadedApp, TickTime};
 	use std::time::Duration;
 

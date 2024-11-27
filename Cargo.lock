@@ -2700,6 +2700,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "life_cycles"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "common",
+ "mockall",
+]
+
+[[package]]
 name = "light"
 version = "0.1.0"
 dependencies = [
@@ -3709,6 +3718,7 @@ dependencies = [
  "game_state",
  "interactions",
  "items",
+ "life_cycles",
  "light",
  "loading",
  "macros",

@@ -26,14 +26,11 @@ use resources::{
 	track_ray_interactions::TrackRayInteractions,
 };
 use systems::{
-	destroy::destroy,
-	destroy_dead::set_dead_to_be_destroyed,
 	gravity_pull::gravity_pull,
 	interactions::{
 		act_interaction::act_interaction,
 		add_component::add_component_to,
 		apply_fragile_blocks::apply_fragile_blocks,
-		delay::delay,
 		map_collision_events::map_collision_events_to,
 		untrack_non_interacting_targets::untrack_non_interacting_targets,
 		update_interacting_entities::update_interacting_entities,
@@ -60,7 +57,6 @@ impl Plugin for InteractionsPlugin {
 			.init_resource::<TrackRayInteractions>()
 			.add_interaction::<DealsDamage, Health>()
 			.add_interaction::<Gravity, EffectedByGravity>()
-			.add_systems(processing_label.clone(), set_dead_to_be_destroyed)
 			.add_systems(processing_label.clone(), BlockerInsertCommand::system)
 			.add_systems(processing_label.clone(), apply_fragile_blocks)
 			.add_systems(
@@ -78,8 +74,7 @@ impl Plugin for InteractionsPlugin {
 				)
 					.chain(),
 			)
-			.add_systems(Labels::PROPAGATION.label(), update_interacting_entities)
-			.add_systems(Labels::LAST.label(), destroy);
+			.add_systems(Labels::PROPAGATION.label(), update_interacting_entities);
 	}
 }
 
@@ -103,7 +98,6 @@ impl AddInteraction for App {
 				add_component_to::<TActor, ActedOnTargets<TActor>>,
 				delta.pipe(act_interaction::<TActor, TTarget>),
 				untrack_non_interacting_targets::<TActor>,
-				delta.pipe(delay::<TActor, TTarget>),
 			)
 				.chain(),
 		)
