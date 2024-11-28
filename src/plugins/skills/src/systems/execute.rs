@@ -116,7 +116,7 @@ mod tests {
 		}
 	}
 
-	impl<'w, 's> Execute<Commands<'w, 's>, _Lifetime> for _Executor {
+	impl Execute<Commands<'_, '_>, _Lifetime> for _Executor {
 		type TError = _Error;
 
 		fn execute(

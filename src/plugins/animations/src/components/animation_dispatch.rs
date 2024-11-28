@@ -134,7 +134,7 @@ pub struct IterWithoutTransitions<'a> {
 	iter: Iter<'a, Entity>,
 }
 
-impl<'a> Iterator for IterWithoutTransitions<'a> {
+impl Iterator for IterWithoutTransitions<'_> {
 	type Item = Entity;
 
 	fn next(&mut self) -> Option<Self::Item> {

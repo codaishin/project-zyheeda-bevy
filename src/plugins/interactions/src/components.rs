@@ -52,7 +52,7 @@ pub struct RayFilter {
 #[derive(Debug, PartialEq)]
 pub struct CannotParsePredicate;
 
-impl<'a> TryFrom<QueryFilter<'a>> for RayFilter {
+impl TryFrom<QueryFilter<'_>> for RayFilter {
 	type Error = CannotParsePredicate;
 
 	fn try_from(query_filter: QueryFilter) -> Result<Self, CannotParsePredicate> {
@@ -79,7 +79,7 @@ impl<'a> TryFrom<QueryFilter<'a>> for RayFilter {
 	}
 }
 
-impl<'a> From<RayFilter> for QueryFilter<'a> {
+impl From<RayFilter> for QueryFilter<'_> {
 	fn from(ray_filter: RayFilter) -> Self {
 		Self {
 			groups: ray_filter.groups,

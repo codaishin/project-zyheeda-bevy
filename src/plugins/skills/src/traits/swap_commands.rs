@@ -45,8 +45,8 @@ impl<'a, TInnerKey, TOuterKey, TContainer, TSwaps>
 
 struct RetryFailed<T>(T);
 
-impl<'a, TContainer, TSwap, TContainerKey> SwapCommands<SlotKey, Handle<SkillItem>>
-	for SwapController<'a, TContainerKey, SlotKey, TContainer, Collection<TSwap>>
+impl<TContainer, TSwap, TContainerKey> SwapCommands<SlotKey, Handle<SkillItem>>
+	for SwapController<'_, TContainerKey, SlotKey, TContainer, Collection<TSwap>>
 where
 	TContainer: GetMut<TContainerKey, Option<Handle<SkillItem>>>,
 	TSwap: Keys<TContainerKey, SlotKey> + Clone,

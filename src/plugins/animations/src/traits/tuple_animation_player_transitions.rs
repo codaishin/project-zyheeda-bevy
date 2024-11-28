@@ -4,14 +4,14 @@ use std::time::Duration;
 
 type AnimationPlayerComponents<'a> = (Mut<'a, AnimationPlayer>, Mut<'a, AnimationTransitions>);
 
-impl<'a> IsPlaying<AnimationNodeIndex> for AnimationPlayerComponents<'a> {
+impl IsPlaying<AnimationNodeIndex> for AnimationPlayerComponents<'_> {
 	fn is_playing(&self, index: AnimationNodeIndex) -> bool {
 		let (player, _) = self;
 		player.is_playing_animation(index)
 	}
 }
 
-impl<'a> ReplayAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'a> {
+impl ReplayAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'_> {
 	fn replay(&mut self, index: AnimationNodeIndex) {
 		let (player, transitions) = self;
 		transitions
@@ -20,7 +20,7 @@ impl<'a> ReplayAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'a> {
 	}
 }
 
-impl<'a> RepeatAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'a> {
+impl RepeatAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'_> {
 	fn repeat(&mut self, index: AnimationNodeIndex) {
 		let (player, transitions) = self;
 		transitions

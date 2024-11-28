@@ -190,6 +190,7 @@ fn combos(combo_node: &ComboNode, key_path: Vec<SlotKey>) -> impl Iterator<Item 
 		.flat_map(append_followup_combo_steps)
 }
 
+#[allow(clippy::type_complexity)]
 fn build_path<'a>(
 	key_path: Vec<SlotKey>,
 ) -> impl FnMut((&SlotKey, &'a (Skill, ComboNode))) -> (Vec<SlotKey>, &'a Skill, &'a ComboNode) {

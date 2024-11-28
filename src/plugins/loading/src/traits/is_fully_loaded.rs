@@ -9,7 +9,7 @@ pub trait IsFullyLoaded {
 		TAsset: Asset;
 }
 
-impl<'w, T> IsFullyLoaded for Res<'w, T>
+impl<T> IsFullyLoaded for Res<'_, T>
 where
 	T: Resource + IsFullyLoaded,
 {

@@ -208,7 +208,7 @@ where
 	entry: HashMapOccupiedEntry<'a, TKey, TValue>,
 }
 
-impl<'a, TKey, TValue> OccupiedEntry<'a, TKey, TValue>
+impl<TKey, TValue> OccupiedEntry<'_, TKey, TValue>
 where
 	TKey: Eq + Hash + Copy,
 {
