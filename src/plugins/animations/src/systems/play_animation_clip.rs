@@ -120,19 +120,19 @@ mod tests {
 		mock: Mock_AnimationPlayer,
 	}
 
-	impl<'a> ReplayAnimation<AnimationNodeIndex> for Mut<'a, _AnimationPlayer> {
+	impl ReplayAnimation<AnimationNodeIndex> for Mut<'_, _AnimationPlayer> {
 		fn replay(&mut self, index: AnimationNodeIndex) {
 			self.mock.replay(index);
 		}
 	}
 
-	impl<'a> RepeatAnimation<AnimationNodeIndex> for Mut<'a, _AnimationPlayer> {
+	impl RepeatAnimation<AnimationNodeIndex> for Mut<'_, _AnimationPlayer> {
 		fn repeat(&mut self, index: AnimationNodeIndex) {
 			self.mock.repeat(index);
 		}
 	}
 
-	impl<'a> IsPlaying<AnimationNodeIndex> for Mut<'a, _AnimationPlayer> {
+	impl IsPlaying<AnimationNodeIndex> for Mut<'_, _AnimationPlayer> {
 		fn is_playing(&self, index: AnimationNodeIndex) -> bool {
 			self.mock.is_playing(index)
 		}

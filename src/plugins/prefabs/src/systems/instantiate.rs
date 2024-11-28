@@ -18,13 +18,13 @@ struct GetHandlesFns<'a> {
 	material: GetHandleFn<'a, SMat>,
 }
 
-impl<'a> GetOrCreateAsset<TypeId, Mesh> for GetHandlesFns<'a> {
+impl GetOrCreateAsset<TypeId, Mesh> for GetHandlesFns<'_> {
 	fn get_or_create(&mut self, key: TypeId, mut create: impl FnMut() -> Mesh) -> Handle<Mesh> {
 		(self.mesh)(key, &mut create)
 	}
 }
 
-impl<'a> GetOrCreateAsset<TypeId, SMat> for GetHandlesFns<'a> {
+impl GetOrCreateAsset<TypeId, SMat> for GetHandlesFns<'_> {
 	fn get_or_create(&mut self, key: TypeId, mut create: impl FnMut() -> SMat) -> Handle<SMat> {
 		(self.material)(key, &mut create)
 	}

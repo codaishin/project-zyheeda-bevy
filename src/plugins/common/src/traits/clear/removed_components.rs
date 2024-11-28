@@ -1,7 +1,7 @@
 use super::Clear;
 use bevy::prelude::*;
 
-impl<'w, 's, TComponent> Clear for RemovedComponents<'w, 's, TComponent>
+impl<TComponent> Clear for RemovedComponents<'_, '_, TComponent>
 where
 	TComponent: Component,
 {

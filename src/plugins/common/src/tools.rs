@@ -20,7 +20,7 @@ pub struct Factory<T>(PhantomData<T>);
 #[derive(Debug, PartialEq)]
 pub struct This<'a, T: Debug + PartialEq>(pub &'a mut T);
 
-impl<'a, T: Debug + PartialEq> Deref for This<'a, T> {
+impl<T: Debug + PartialEq> Deref for This<'_, T> {
 	type Target = T;
 
 	fn deref(&self) -> &Self::Target {
@@ -28,7 +28,7 @@ impl<'a, T: Debug + PartialEq> Deref for This<'a, T> {
 	}
 }
 
-impl<'a, T: Debug + PartialEq> DerefMut for This<'a, T> {
+impl<T: Debug + PartialEq> DerefMut for This<'_, T> {
 	fn deref_mut(&mut self) -> &mut Self::Target {
 		self.0
 	}
@@ -37,7 +37,7 @@ impl<'a, T: Debug + PartialEq> DerefMut for This<'a, T> {
 #[derive(Debug, PartialEq)]
 pub struct Last<'a, T: Debug + PartialEq>(pub &'a T);
 
-impl<'a, T: Debug + PartialEq> Deref for Last<'a, T> {
+impl<T: Debug + PartialEq> Deref for Last<'_, T> {
 	type Target = T;
 
 	fn deref(&self) -> &Self::Target {

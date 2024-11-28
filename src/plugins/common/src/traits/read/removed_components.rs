@@ -1,7 +1,7 @@
 use super::Read;
 use bevy::{ecs::removal_detection::RemovedIter, prelude::*};
 
-impl<'w, 's, 'a, TComponent> Read<'a> for RemovedComponents<'w, 's, TComponent>
+impl<'a, TComponent> Read<'a> for RemovedComponents<'_, '_, TComponent>
 where
 	TComponent: Component,
 {

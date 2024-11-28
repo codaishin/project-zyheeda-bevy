@@ -25,7 +25,7 @@ impl<'a> From<&'a str> for Path {
 	}
 }
 
-impl<'a> From<Path> for AssetPath<'a> {
+impl From<Path> for AssetPath<'_> {
 	fn from(value: Path) -> Self {
 		AssetPath::from(value.0)
 	}

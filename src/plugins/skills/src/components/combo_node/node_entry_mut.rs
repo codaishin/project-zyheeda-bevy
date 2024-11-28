@@ -6,7 +6,7 @@ use crate::{
 use bevy::prelude::default;
 use common::tools::ordered_hash_map::{Entry, OrderedHashMap};
 
-impl<'a, TSkill> Insert<Option<TSkill>> for NodeEntryMut<'a, TSkill> {
+impl<TSkill> Insert<Option<TSkill>> for NodeEntryMut<'_, TSkill> {
 	fn insert(&mut self, value: Option<TSkill>) {
 		match value {
 			Some(value) => update_entry(self, value),
@@ -31,7 +31,7 @@ fn clear_entry<TSkill>(entry: &mut NodeEntryMut<TSkill>) {
 	entry.tree.remove(&entry.key);
 }
 
-impl<'a, TSkill> ReKey<SlotKey> for NodeEntryMut<'a, TSkill> {
+impl<TSkill> ReKey<SlotKey> for NodeEntryMut<'_, TSkill> {
 	fn re_key(&mut self, new_key: SlotKey) {
 		if self.key == new_key {
 			return;

@@ -19,6 +19,7 @@ where
 	TComponent: Component,
 	(TFilter1, TFilter2): QueryFilter,
 {
+	#[allow(clippy::type_complexity)]
 	fn associated<TBundle>(
 		configure: Configure<TComponent, TBundle>,
 	) -> impl Fn(Commands, Query<(Entity, &TComponent), (TFilter1, TFilter2)>)

@@ -286,13 +286,13 @@ mod tests {
 		mock: Mock_Entry,
 	}
 
-	impl<'a> Insert<Option<Skill>> for &'a mut _Entry {
+	impl Insert<Option<Skill>> for &mut _Entry {
 		fn insert(&mut self, value: Option<Skill>) {
 			self.mock.insert(value)
 		}
 	}
 
-	impl<'a> ReKey<SlotKey> for &'a mut _Entry {
+	impl ReKey<SlotKey> for &mut _Entry {
 		fn re_key(&mut self, key: SlotKey) {
 			self.mock.re_key(key)
 		}

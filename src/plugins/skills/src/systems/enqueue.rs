@@ -185,6 +185,7 @@ mod tests {
 		app
 	}
 
+	#[allow(static_mut_refs)]
 	#[test]
 	fn enqueue_skill_from_skills() {
 		#[derive(Component, NestedMocks)]

@@ -200,6 +200,7 @@ mod tests {
 		)
 	}
 
+	#[allow(static_mut_refs)]
 	#[test]
 	fn retrieve_entry_with_correct_key_path() {
 		struct _Combos;

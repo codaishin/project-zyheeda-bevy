@@ -64,7 +64,7 @@ impl EffectShader {
 	}
 }
 
-impl<'a> InsertUnmovableEffectShader for EntityCommands<'a> {
+impl InsertUnmovableEffectShader for EntityCommands<'_> {
 	fn insert_unmovable_effect_shader(&mut self, effect_shader: &EffectShader) {
 		let insert_into = effect_shader.insert_into;
 		let handle = &effect_shader.handle;
@@ -72,7 +72,7 @@ impl<'a> InsertUnmovableEffectShader for EntityCommands<'a> {
 	}
 }
 
-impl<'a> RemoveUnmovableEffectShader for EntityCommands<'a> {
+impl RemoveUnmovableEffectShader for EntityCommands<'_> {
 	fn remove_unmovable_effect_shader(&mut self, effect_shader: &EffectShader) {
 		let remove_from = effect_shader.remove_from;
 		remove_from(self)

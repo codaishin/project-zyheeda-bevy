@@ -552,7 +552,7 @@ impl GetActiveSkill<SkillState> for Queue {
 	}
 }
 
-impl<'a> StateDuration<SkillState> for ActiveSkill<'a> {
+impl StateDuration<SkillState> for ActiveSkill<'_> {
 	fn get_state_duration(&self, key: SkillState) -> Duration {
 		match (key, &self.mode) {
 			(SkillState::Aim, Activation::Primed | Activation::Waiting) => Duration::MAX,
@@ -569,13 +569,13 @@ impl<'a> StateDuration<SkillState> for ActiveSkill<'a> {
 	}
 }
 
-impl<'a> GetSkillBehavior for ActiveSkill<'a> {
+impl GetSkillBehavior for ActiveSkill<'_> {
 	fn behavior(&self) -> (SlotKey, RunSkillBehavior) {
 		(*self.slot_key, self.skill.behavior.clone())
 	}
 }
 
-impl<'a> GetAnimation for ActiveSkill<'a> {
+impl GetAnimation for ActiveSkill<'_> {
 	fn animate(&self) -> Animate<Animation> {
 		match (&self.skill.animate, self.slot_key) {
 			(Animate::None, ..) => Animate::None,

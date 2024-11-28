@@ -1,7 +1,7 @@
 use super::TryRemoveFrom;
 use bevy::prelude::*;
 
-impl<'w, 's> TryRemoveFrom for Commands<'w, 's> {
+impl TryRemoveFrom for Commands<'_, '_> {
 	fn try_remove_from<TBundle: Bundle>(&mut self, entity: Entity) {
 		let Some(mut entity) = self.get_entity(entity) else {
 			return;

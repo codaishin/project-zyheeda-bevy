@@ -167,7 +167,7 @@ impl Default for RunSkillBehavior {
 	}
 }
 
-impl<'w, 's> SpawnSkillBehavior<Commands<'w, 's>> for RunSkillBehavior {
+impl SpawnSkillBehavior<Commands<'_, '_>> for RunSkillBehavior {
 	fn spawn_on(&self) -> SpawnOn {
 		match self {
 			RunSkillBehavior::OnActive(skill) => skill.spawn_on,
