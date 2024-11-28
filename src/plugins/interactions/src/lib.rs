@@ -5,15 +5,21 @@ pub mod traits;
 mod resources;
 mod systems;
 
-use bevy::{
-	app::{App, Plugin},
-	ecs::{component::Component, schedule::IntoSystemConfigs},
-	prelude::IntoSystem,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContext;
-use common::{components::Health, labels::Labels, traits::handles_destruction::HandlesDestruction};
+use common::{
+	self,
+	components::Health,
+	labels::Labels,
+	traits::{
+		handles_beams::{BeamParameters, HandlesBeams},
+		handles_destruction::HandlesDestruction,
+		handles_lifetime::HandlesLifetime,
+	},
+};
 use components::{
 	acted_on_targets::ActedOnTargets,
+	beam::{Beam, BeamCommand},
 	blocker::BlockerInsertCommand,
 	deals_damage::DealsDamage,
 	effected_by_gravity::EffectedByGravity,
@@ -49,7 +55,7 @@ pub struct InteractionsPlugin<TLifeCyclePlugin>(PhantomData<TLifeCyclePlugin>);
 
 impl<TLifeCyclePlugin> InteractionsPlugin<TLifeCyclePlugin>
 where
-	TLifeCyclePlugin: Plugin + HandlesDestruction,
+	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime,
 {
 	pub fn depends_on(_: &TLifeCyclePlugin) -> Self {
 		Self(PhantomData)
@@ -58,7 +64,7 @@ where
 
 impl<TLifeCyclePlugin> Plugin for InteractionsPlugin<TLifeCyclePlugin>
 where
-	TLifeCyclePlugin: Plugin + HandlesDestruction,
+	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime,
 {
 	fn build(&self, app: &mut App) {
 		let processing_label = Labels::PROCESSING.label();
@@ -90,7 +96,8 @@ where
 				)
 					.chain(),
 			)
-			.add_systems(Labels::PROPAGATION.label(), update_interacting_entities);
+			.add_systems(Labels::PROPAGATION.label(), update_interacting_entities)
+			.add_systems(Update, Beam::execute::<TLifeCyclePlugin::TLifetime>);
 	}
 }
 
@@ -117,5 +124,14 @@ impl AddInteraction for App {
 			)
 				.chain(),
 		)
+	}
+}
+
+impl<TLifeCyclePlugin> HandlesBeams for InteractionsPlugin<TLifeCyclePlugin> {
+	fn beam_from<T>(value: &T) -> impl Bundle
+	where
+		T: BeamParameters,
+	{
+		BeamCommand::from(value)
 	}
 }

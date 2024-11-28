@@ -47,10 +47,10 @@ enum Strategy {
 }
 
 fn strategy(enemy: Enemy, distance: f32) -> Strategy {
-	if distance > enemy.aggro_range {
+	if distance > *enemy.aggro_range {
 		return Strategy::Idle;
 	}
-	if distance > enemy.attack_range {
+	if distance > *enemy.attack_range {
 		return Strategy::Chase;
 	}
 	Strategy::Attack
@@ -58,6 +58,8 @@ fn strategy(enemy: Enemy, distance: f32) -> Strategy {
 
 #[cfg(test)]
 mod tests {
+	use common::{tools::Units, traits::clamp_zero_positive::ClampZeroPositive};
+
 	use super::*;
 
 	fn setup() -> App {
@@ -80,8 +82,8 @@ mod tests {
 				GlobalTransform::from_xyz(2., 0., 1.),
 				Attack(player),
 				Enemy {
-					attack_range: 1.,
-					aggro_range: 2.,
+					attack_range: Units::new(1.),
+					aggro_range: Units::new(2.),
 					foe: Foe::Player,
 				},
 			))
@@ -110,8 +112,8 @@ mod tests {
 				GlobalTransform::from_xyz(1., 0., 0.5),
 				Chase(player),
 				Enemy {
-					attack_range: 1.,
-					aggro_range: 2.,
+					attack_range: Units::new(1.),
+					aggro_range: Units::new(2.),
 					foe: Foe::Player,
 				},
 			))
@@ -141,8 +143,8 @@ mod tests {
 				Chase(player),
 				Attack(player),
 				Enemy {
-					attack_range: 1.,
-					aggro_range: 2.,
+					attack_range: Units::new(1.),
+					aggro_range: Units::new(2.),
 					foe: Foe::Player,
 				},
 			))
@@ -168,8 +170,8 @@ mod tests {
 				GlobalTransform::from_xyz(2., 0., 1.),
 				Attack(foe),
 				Enemy {
-					attack_range: 1.,
-					aggro_range: 2.,
+					attack_range: Units::new(1.),
+					aggro_range: Units::new(2.),
 					foe: Foe::Entity(foe),
 				},
 			))
@@ -198,8 +200,8 @@ mod tests {
 				GlobalTransform::from_xyz(1., 0., 0.5),
 				Chase(foe),
 				Enemy {
-					attack_range: 1.,
-					aggro_range: 2.,
+					attack_range: Units::new(1.),
+					aggro_range: Units::new(2.),
 					foe: Foe::Entity(foe),
 				},
 			))
@@ -229,8 +231,8 @@ mod tests {
 				Chase(foe),
 				Attack(foe),
 				Enemy {
-					attack_range: 1.,
-					aggro_range: 2.,
+					attack_range: Units::new(1.),
+					aggro_range: Units::new(2.),
 					foe: Foe::Entity(foe),
 				},
 			))

@@ -2,10 +2,14 @@ pub mod cam_orbit;
 pub mod ground_targeted_aoe;
 pub mod projectile;
 pub mod shield;
+pub mod void_beam;
 
 use crate::traits::{RemoveComponent, SpawnAttack};
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::{test_tools::utils::ApproxEqual, tools::UnitsPerSecond};
+use common::{
+	test_tools::utils::ApproxEqual,
+	tools::{Units, UnitsPerSecond},
+};
 use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
 
 #[derive(Default, Debug, PartialEq, Clone, Copy)]
@@ -108,31 +112,7 @@ pub enum Foe {
 
 #[derive(Component, Clone, Copy)]
 pub struct Enemy {
-	pub aggro_range: f32,
-	pub attack_range: f32,
+	pub aggro_range: Units,
+	pub attack_range: Units,
 	pub foe: Foe,
-}
-
-#[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
-pub struct BeamConfig {
-	pub damage: f32,
-	pub color: Color,
-	pub emissive: LinearRgba,
-	pub lifetime: Duration,
-	pub range: f32,
-}
-
-#[derive(Component, Clone, Copy, Debug, PartialEq)]
-pub struct BeamCommand {
-	pub source: Entity,
-	pub target: Entity,
-}
-
-#[derive(Component, Default, Debug, PartialEq)]
-pub(crate) struct Beam {
-	pub damage: f32,
-	pub from: Vec3,
-	pub to: Vec3,
-	pub color: Color,
-	pub emissive: LinearRgba,
 }

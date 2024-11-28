@@ -1,6 +1,13 @@
 use bars::components::Bar;
 use behaviors::{
-	components::{AttackConfig, BeamConfig, Enemy, Foe, MovementConfig, MovementMode},
+	components::{
+		void_beam::VoidBeamAttack,
+		AttackConfig,
+		Enemy,
+		Foe,
+		MovementConfig,
+		MovementMode,
+	},
 	traits::ToArc,
 };
 use bevy::{
@@ -22,7 +29,7 @@ use common::{
 	bundles::ColliderTransformBundle,
 	components::{ColliderRoot, GroundOffset, Health},
 	errors::Error,
-	tools::UnitsPerSecond,
+	tools::{Units, UnitsPerSecond},
 	traits::{
 		cache::GetOrCreateTypeAsset,
 		clamp_zero_positive::ClampZeroPositive,
@@ -36,8 +43,12 @@ use std::{f32::consts::PI, time::Duration};
 pub struct VoidSphere;
 
 impl VoidSphere {
-	pub const AGGRO_RANGE: f32 = 10.;
-	pub const ATTACK_RANGE: f32 = 5.;
+	pub fn aggro_range() -> Units {
+		Units::new(10.)
+	}
+	pub fn attack_range() -> Units {
+		Units::new(5.)
+	}
 }
 
 #[derive(Component, Clone)]
@@ -124,19 +135,19 @@ impl Prefab<()> for VoidSphere {
 				speed: UnitsPerSecond::new(1.),
 			},
 			AttackConfig {
-				spawn: BeamConfig {
+				spawn: VoidBeamAttack {
 					damage: 10.,
 					color: Color::BLACK,
 					emissive: LinearRgba::new(23.0, 23.0, 23.0, 1.),
 					lifetime: Duration::from_secs(1),
-					range: VoidSphere::ATTACK_RANGE,
+					range: VoidSphere::attack_range(),
 				}
 				.to_arc(),
 				cool_down: Duration::from_secs(5),
 			},
 			Enemy {
-				aggro_range: VoidSphere::AGGRO_RANGE,
-				attack_range: VoidSphere::ATTACK_RANGE,
+				aggro_range: VoidSphere::aggro_range(),
+				attack_range: VoidSphere::attack_range(),
 				foe: Foe::Player,
 			},
 		));

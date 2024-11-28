@@ -46,7 +46,7 @@ fn prepare_game(app: &mut App) {
 		&animations_plugin,
 		&prefabs_plugin,
 		&shaders_plugin,
-		&life_cycles_plugin,
+		&interactions_plugin,
 	);
 
 	app.add_plugins(DefaultPlugins)

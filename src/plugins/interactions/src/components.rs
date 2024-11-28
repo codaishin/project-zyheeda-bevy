@@ -8,6 +8,8 @@ pub mod gravity;
 pub mod interacting_entities;
 pub mod is;
 
+pub(crate) mod beam;
+
 use crate::traits::ActOn;
 use bevy::{
 	ecs::{component::Component, entity::Entity},
