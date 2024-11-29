@@ -3,7 +3,7 @@ use crate::{
 	skills::lifetime_definition::LifeTimeDefinition,
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use std::time::Duration;
+use common::traits::handles_lifetime::HandlesLifetime;
 
 pub(crate) trait BuildContact {
 	fn build_contact(
@@ -34,7 +34,7 @@ pub(crate) struct SkillShape {
 }
 
 pub(crate) trait SkillBuilder {
-	fn build<TLifetime>(
+	fn build<TLifetimeDependency>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -42,14 +42,14 @@ pub(crate) trait SkillBuilder {
 		target: &Target,
 	) -> SkillShape
 	where
-		TLifetime: From<Duration> + Component;
+		TLifetimeDependency: HandlesLifetime;
 }
 
 impl<T> SkillBuilder for T
 where
 	T: BuildContact + BuildProjection + SkillLifetime,
 {
-	fn build<TLifetime>(
+	fn build<TLifetimeDependency>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -57,12 +57,13 @@ where
 		target: &Target,
 	) -> SkillShape
 	where
-		TLifetime: From<Duration> + Component,
+		TLifetimeDependency: HandlesLifetime,
 	{
+		let contact_with_lifetime = contact::<TLifetimeDependency>;
 		let entity = commands.spawn(self.build_contact(caster, spawner, target));
 		let (contact, on_skill_stop) = match self.lifetime() {
 			LifeTimeDefinition::UntilStopped => contact_stoppable(entity),
-			LifeTimeDefinition::UntilOutlived(duration) => contact::<TLifetime>(entity, duration),
+			LifeTimeDefinition::UntilOutlived(duration) => contact_with_lifetime(entity, duration),
 			LifeTimeDefinition::Infinite => contact_infinite(entity),
 		};
 		let projection = commands
@@ -83,14 +84,14 @@ fn contact_stoppable(contact: EntityCommands) -> (Entity, OnSkillStop) {
 	(contact, OnSkillStop::Stop(contact))
 }
 
-fn contact<TLifetime>(
+fn contact<TLifetimeDependency>(
 	mut contact: EntityCommands<'_>,
 	duration: std::time::Duration,
 ) -> (Entity, OnSkillStop)
 where
-	TLifetime: From<Duration> + Component,
+	TLifetimeDependency: HandlesLifetime,
 {
-	contact.insert(TLifetime::from(duration));
+	contact.insert(TLifetimeDependency::lifetime(duration));
 	(contact.id(), OnSkillStop::Ignore)
 }
 
@@ -126,6 +127,14 @@ mod tests {
 
 	struct _Skill {
 		lifetime: LifeTimeDefinition,
+	}
+
+	struct _HandlesLifetime;
+
+	impl HandlesLifetime for _HandlesLifetime {
+		fn lifetime(duration: Duration) -> impl Bundle {
+			_Lifetime(duration)
+		}
 	}
 
 	#[derive(Component, Debug, PartialEq)]
@@ -178,7 +187,7 @@ mod tests {
 		mut commands: Commands,
 	) -> SkillShape {
 		let In((skill, caster, spawner, target)) = args;
-		skill.build::<_Lifetime>(&mut commands, &caster, &spawner, &target)
+		skill.build::<_HandlesLifetime>(&mut commands, &caster, &spawner, &target)
 	}
 
 	fn setup() -> App {

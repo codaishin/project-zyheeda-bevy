@@ -1,6 +1,6 @@
-use bevy::prelude::Component;
+use bevy::prelude::*;
 use std::time::Duration;
 
 pub trait HandlesLifetime {
-	type TLifetime: From<Duration> + Component;
+	fn lifetime(duration: Duration) -> impl Bundle;
 }

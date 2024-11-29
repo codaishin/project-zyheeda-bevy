@@ -255,16 +255,7 @@ mod tests {
 	struct _HandlesLifetime;
 
 	impl HandlesLifetime for _HandlesLifetime {
-		type TLifetime = _Lifetime;
-	}
-
-	#[derive(Component, Debug, PartialEq)]
-	struct _Lifetime;
-
-	impl From<Duration> for _Lifetime {
-		fn from(_: Duration) -> Self {
-			_Lifetime
-		}
+		fn lifetime(_: Duration) -> impl Bundle {}
 	}
 
 	struct _HandlesEffects;

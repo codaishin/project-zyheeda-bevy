@@ -4,11 +4,11 @@ pub mod spawn_shield;
 
 use super::{SkillCaster, SkillSpawner, Target};
 use crate::traits::skill_builder::{SkillBuilder, SkillShape};
-use bevy::prelude::{BuildChildren, Commands, Component, Entity};
+use bevy::prelude::*;
+use common::traits::handles_lifetime::HandlesLifetime;
 use spawn_ground_target::SpawnGroundTargetedAoe;
 use spawn_projectile::SpawnProjectile;
 use spawn_shield::SpawnShield;
-use std::time::Duration;
 
 pub(crate) type BuildSkillShapeFn =
 	for<'a> fn(&'a mut Commands, &SkillCaster, &SkillSpawner, &Target) -> SkillShape;
@@ -61,7 +61,7 @@ impl BuildSkillShape {
 		}
 	}
 
-	pub(crate) fn build<TLifetime>(
+	pub(crate) fn build<TLifetimeDependency>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -69,13 +69,17 @@ impl BuildSkillShape {
 		target: &Target,
 	) -> SkillShape
 	where
-		TLifetime: From<Duration> + Component,
+		TLifetimeDependency: HandlesLifetime,
 	{
 		match self {
 			Self::Fn(func) => func(commands, caster, spawn, target),
-			Self::GroundTargetedAoe(gt) => gt.build::<TLifetime>(commands, caster, spawn, target),
-			Self::Projectile(pr) => pr.build::<TLifetime>(commands, caster, spawn, target),
-			Self::Shield(sh) => sh.build::<TLifetime>(commands, caster, spawn, target),
+			Self::GroundTargetedAoe(gt) => {
+				gt.build::<TLifetimeDependency>(commands, caster, spawn, target)
+			}
+			Self::Projectile(pr) => {
+				pr.build::<TLifetimeDependency>(commands, caster, spawn, target)
+			}
+			Self::Shield(sh) => sh.build::<TLifetimeDependency>(commands, caster, spawn, target),
 		}
 	}
 }

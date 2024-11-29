@@ -4,7 +4,7 @@ use common::traits::try_insert_on::TryInsertOn;
 use std::time::Duration;
 
 #[derive(Component, Debug, PartialEq, Default)]
-pub struct Lifetime(Duration);
+pub(crate) struct Lifetime(pub(crate) Duration);
 
 impl Lifetime {
 	pub(crate) fn update<TTime: Default + Sync + Send + 'static>(
@@ -21,12 +21,6 @@ impl Lifetime {
 				commands.try_insert_on(id, Destroy);
 			}
 		}
-	}
-}
-
-impl From<Duration> for Lifetime {
-	fn from(duration: Duration) -> Self {
-		Lifetime(duration)
 	}
 }
 
