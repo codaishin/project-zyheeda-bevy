@@ -1,16 +1,9 @@
 use crate::{
 	components::{acted_on_targets::ActedOnTargets, interacting_entities::InteractingEntities},
-	traits::{ActOn, ActionType},
+	traits::ActOn,
 };
-use bevy::{
-	ecs::{
-		component::Component,
-		entity::Entity,
-		system::{Commands, Query},
-	},
-	prelude::In,
-};
-use common::traits::try_remove_from::TryRemoveFrom;
+use bevy::prelude::*;
+use common::{effects::EffectApplies, traits::try_remove_from::TryRemoveFrom};
 use std::time::Duration;
 
 type Components<'a, TActor> = (
@@ -33,13 +26,13 @@ pub(crate) fn act_interaction<TActor: ActOn<TTarget> + Component, TTarget: Compo
 			};
 
 			match actor.act(entity, &mut target, delta) {
-				ActionType::Once => {
+				EffectApplies::Once => {
 					commands.try_remove_from::<TActor>(entity);
 				}
-				ActionType::OncePerTarget => {
+				EffectApplies::OncePerTarget => {
 					acted_on.entities.insert(target_entity);
 				}
-				ActionType::Always => {}
+				EffectApplies::Always => {}
 			}
 		}
 	}
@@ -48,8 +41,7 @@ pub(crate) fn act_interaction<TActor: ActOn<TTarget> + Component, TTarget: Compo
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::ActionType;
-	use bevy::{app::App, ecs::system::RunSystemOnce};
+	use bevy::ecs::system::RunSystemOnce;
 	use common::{components::ColliderRoot, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -69,7 +61,7 @@ mod tests {
 			self_entity: Entity,
 			target: &mut _Target,
 			delta: Duration,
-		) -> ActionType {
+		) -> EffectApplies {
 			self.mock.act(self_entity, target, delta)
 		}
 	}
@@ -95,7 +87,7 @@ mod tests {
 				mock.expect_act()
 					.times(1)
 					.with(eq(entity), eq(_Target), eq(Duration::from_millis(42)))
-					.return_const(ActionType::Once);
+					.return_const(EffectApplies::Once);
 			}));
 
 		app.world_mut().run_system_once_with(
@@ -114,7 +106,7 @@ mod tests {
 				ActedOnTargets::<_Actor>::default(),
 				InteractingEntities::new([ColliderRoot(target)]),
 				_Actor::new().with_mock(|mock| {
-					mock.expect_act().return_const(ActionType::Once);
+					mock.expect_act().return_const(EffectApplies::Once);
 				}),
 			))
 			.id();
@@ -137,7 +129,7 @@ mod tests {
 				ActedOnTargets::<_Actor>::default(),
 				InteractingEntities::new([ColliderRoot(target)]),
 				_Actor::new().with_mock(|mock| {
-					mock.expect_act().return_const(ActionType::Once);
+					mock.expect_act().return_const(EffectApplies::Once);
 				}),
 			))
 			.id();
@@ -160,7 +152,7 @@ mod tests {
 				ActedOnTargets::<_Actor>::default(),
 				InteractingEntities::new([ColliderRoot(target)]),
 				_Actor::new().with_mock(|mock| {
-					mock.expect_act().return_const(ActionType::Always);
+					mock.expect_act().return_const(EffectApplies::Always);
 				}),
 			))
 			.id();
@@ -170,7 +162,7 @@ mod tests {
 				ActedOnTargets::<_Actor>::default(),
 				InteractingEntities::new([ColliderRoot(target)]),
 				_Actor::new().with_mock(|mock| {
-					mock.expect_act().return_const(ActionType::OncePerTarget);
+					mock.expect_act().return_const(EffectApplies::OncePerTarget);
 				}),
 			))
 			.id();
@@ -200,7 +192,7 @@ mod tests {
 				ActedOnTargets::<_Actor>::default(),
 				InteractingEntities::new([ColliderRoot(target)]),
 				_Actor::new().with_mock(|mock| {
-					mock.expect_act().return_const(ActionType::OncePerTarget);
+					mock.expect_act().return_const(EffectApplies::OncePerTarget);
 				}),
 			))
 			.id();

@@ -5,12 +5,14 @@ use crate::behaviors::{
 	SkillSpawner,
 	Target,
 };
-use bevy::prelude::*;
-use std::time::Duration;
+use common::{
+	effects::deal_damage::DealDamage,
+	traits::{handles_effect::HandlesEffect, handles_lifetime::HandlesLifetime},
+};
 
 pub(crate) trait SpawnSkillBehavior<TCommands> {
 	fn spawn_on(&self) -> SpawnOn;
-	fn spawn<TLifetime>(
+	fn spawn<TLifetimeDependency, TEffectDependency>(
 		&self,
 		commands: &mut TCommands,
 		caster: &SkillCaster,
@@ -18,5 +20,6 @@ pub(crate) trait SpawnSkillBehavior<TCommands> {
 		target: &Target,
 	) -> OnSkillStop
 	where
-		TLifetime: From<Duration> + Component;
+		TLifetimeDependency: HandlesLifetime + 'static,
+		TEffectDependency: HandlesEffect<DealDamage> + 'static;
 }

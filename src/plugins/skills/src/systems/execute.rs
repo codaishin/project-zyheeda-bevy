@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::{
 	behaviors::{SkillCaster, Target},
 	components::skill_spawners::SkillSpawners,
@@ -7,14 +5,16 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
+	effects::deal_damage::DealDamage,
 	errors::Error,
 	resources::{CamRay, MouseHover},
+	traits::{handles_effect::HandlesEffect, handles_lifetime::HandlesLifetime},
 };
 
 impl<T> ExecuteSkills for T {}
 
 pub(crate) trait ExecuteSkills {
-	fn execute_system<TLifetime>(
+	fn execute_system<TLifetimeDependency, TEffectDependency>(
 		cam_ray: Res<CamRay>,
 		mouse_hover: Res<MouseHover>,
 		mut commands: Commands,
@@ -22,9 +22,13 @@ pub(crate) trait ExecuteSkills {
 		transforms: Query<&GlobalTransform>,
 	) -> Vec<Result<(), Error>>
 	where
-		for<'w, 's> Self: Component + Execute<Commands<'w, 's>, TLifetime> + Sized,
-		for<'w, 's> Error: From<<Self as Execute<Commands<'w, 's>, TLifetime>>::TError>,
-		TLifetime: From<Duration> + Component,
+		for<'w, 's> Self:
+			Component + Execute<Commands<'w, 's>, TLifetimeDependency, TEffectDependency> + Sized,
+		for<'w, 's> Error: From<
+			<Self as Execute<Commands<'w, 's>, TLifetimeDependency, TEffectDependency>>::TError,
+		>,
+		TLifetimeDependency: HandlesLifetime,
+		TEffectDependency: HandlesEffect<DealDamage>,
 	{
 		agents
 			.iter_mut()
@@ -88,7 +92,7 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::mock;
-	use std::ops::DerefMut;
+	use std::{ops::DerefMut, time::Duration};
 
 	#[derive(Clone, Copy)]
 	pub struct _Error(&'static str);
@@ -107,6 +111,12 @@ mod tests {
 		mock: Mock_Executor,
 	}
 
+	struct _HandlesLife;
+
+	impl HandlesLifetime for _HandlesLife {
+		type TLifetime = _Lifetime;
+	}
+
 	#[derive(Component, Debug, PartialEq)]
 	struct _Lifetime;
 
@@ -116,7 +126,13 @@ mod tests {
 		}
 	}
 
-	impl Execute<Commands<'_, '_>, _Lifetime> for _Executor {
+	struct _HandlesEffects;
+
+	impl<T> HandlesEffect<T> for _HandlesEffects {
+		fn effect(_: T) -> impl Bundle {}
+	}
+
+	impl Execute<Commands<'_, '_>, _HandlesLife, _HandlesEffects> for _Executor {
 		type TError = _Error;
 
 		fn execute(
@@ -132,7 +148,7 @@ mod tests {
 
 	mock! {
 		_Executor {}
-		impl<'w, 's> Execute<Commands<'w, 's>, _Lifetime> for _Executor {
+		impl<'w, 's> Execute<Commands<'w, 's>, _HandlesLife, _HandlesEffects> for _Executor {
 			type TError = _Error;
 
 			fn execute<'_w, '_s>(
@@ -175,12 +191,14 @@ mod tests {
 	}
 
 	fn setup() -> App {
+		let execute_system = _Executor::execute_system::<_HandlesLife, _HandlesEffects>;
+
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<CamRay>();
 		app.init_resource::<MouseHover>();
 		app.add_systems(
 			Update,
-			_Executor::execute_system::<_Lifetime>.pipe(|_: In<Vec<Result<(), Error>>>| {}),
+			execute_system.pipe(|_: In<Vec<Result<(), Error>>>| {}),
 		);
 
 		app
@@ -291,7 +309,9 @@ mod tests {
 
 		app.update();
 
-		let errors = app.world_mut().run_system_once(_Executor::execute_system);
+		let errors = app
+			.world_mut()
+			.run_system_once(_Executor::execute_system::<_HandlesLife, _HandlesEffects>);
 
 		assert_eq!(
 			vec![Err(Error {

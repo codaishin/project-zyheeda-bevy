@@ -15,11 +15,13 @@ use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
 	components::{Collection, Side, Swap},
+	effects::deal_damage::DealDamage,
 	resources::key_map::KeyMap,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	traits::{
 		animation::HasAnimationsDispatch,
+		handles_effect::HandlesEffect,
 		handles_lifetime::HandlesLifetime,
 		try_insert_on::TryInsertOn,
 	},
@@ -66,17 +68,23 @@ use systems::{
 	visualize_slot_items::visualize_slot_items,
 };
 
-pub struct SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin>(
-	PhantomData<(TAnimationsPlugin, TLifeCyclePlugin)>,
+pub struct SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin>(
+	PhantomData<(TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin)>,
 );
 
-impl<TAnimationsPlugin, TLifeCyclePlugin> SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin>
+impl<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin>
+	SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TLifeCyclePlugin: Plugin + HandlesLifetime,
+	TInteractionsPlugin: Plugin + HandlesEffect<DealDamage>,
 {
-	pub fn depends_on(_: &TAnimationsPlugin, _: &TLifeCyclePlugin) -> Self {
-		Self(PhantomData::<(TAnimationsPlugin, TLifeCyclePlugin)>)
+	pub fn depends_on(
+		_: &TAnimationsPlugin,
+		_: &TLifeCyclePlugin,
+		_: &TInteractionsPlugin,
+	) -> Self {
+		Self(PhantomData::<(TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin)>)
 	}
 
 	fn skill_load(&self, app: &mut App) {
@@ -115,10 +123,12 @@ where
 		);
 	}
 
-	fn skill_execution<TLifetime>(&self, app: &mut App)
-	where
-		TLifetime: From<Duration> + Component,
-	{
+	fn skill_execution(&self, app: &mut App) {
+		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<
+			TLifeCyclePlugin,
+			TInteractionsPlugin,
+		>;
+
 		app.init_resource::<KeyMap<SlotKey, KeyCode>>()
 			.add_systems(
 				Update,
@@ -137,7 +147,7 @@ where
 						SkillExecuter,
 						Virtual,
 					>,
-					SkillExecuter::<RunSkillBehavior>::execute_system::<TLifetime>.pipe(log_many),
+					execute_skill.pipe(log_many),
 					flush::<Queue>,
 				)
 					.chain()
@@ -210,16 +220,17 @@ where
 	}
 }
 
-impl<TAnimationsPlugin, TLifeCyclePlugin> Plugin
-	for SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin>
+impl<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin> Plugin
+	for SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TLifeCyclePlugin: Plugin + HandlesLifetime,
+	TInteractionsPlugin: Plugin + HandlesEffect<DealDamage>,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);
 		self.item_load(app);
 		self.skill_slot_load(app);
-		self.skill_execution::<TLifeCyclePlugin::TLifetime>(app);
+		self.skill_execution(app);
 	}
 }

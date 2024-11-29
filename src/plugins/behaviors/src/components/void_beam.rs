@@ -5,16 +5,17 @@ use crate::{
 use bevy::{ecs::system::EntityCommands, pbr::NotShadowCaster, prelude::*};
 use common::{
 	blocker::Blocker,
+	effects::deal_damage::DealDamage,
 	errors::Error,
 	tools::Units,
 	traits::{
 		cache::GetOrCreateTypeAsset,
+		handles_effect::HandlesEffect,
 		handles_interactions::{BeamParameters, HandlesInteractions},
 		prefab::{AfterInstantiation, GetOrCreateAssets, Prefab},
 		try_despawn_recursive::TryDespawnRecursive,
 	},
 };
-use interactions::components::deals_damage::DealsDamage;
 use std::{f32::consts::PI, sync::Arc, time::Duration};
 
 #[derive(Component, Debug, PartialEq)]
@@ -53,7 +54,7 @@ impl BeamParameters for VoidBeam {
 
 impl<TInteractions> Prefab<TInteractions> for VoidBeam
 where
-	TInteractions: HandlesInteractions,
+	TInteractions: HandlesInteractions + HandlesEffect<DealDamage>,
 {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
@@ -79,7 +80,7 @@ where
 		entity.try_insert((
 			TInteractions::beam_from(self),
 			TInteractions::is_ray_interrupted_by([Blocker::Physical, Blocker::Force]),
-			DealsDamage::once_per_second(self.attack.damage),
+			TInteractions::effect(DealDamage::once_per_second(self.attack.damage)),
 			TAfterInstantiation::spawn(move |parent: &mut ChildBuilder| {
 				parent.spawn((
 					PbrBundle {

@@ -11,9 +11,11 @@ use common::{
 	self,
 	blocker::BlockerInsertCommand,
 	components::Health,
+	effects::deal_damage::DealDamage,
 	labels::Labels,
 	traits::{
 		handles_destruction::HandlesDestruction,
+		handles_effect::HandlesEffect,
 		handles_interactions::{BeamParameters, HandlesInteractions},
 		handles_lifetime::HandlesLifetime,
 	},
@@ -22,7 +24,7 @@ use components::{
 	acted_on_targets::ActedOnTargets,
 	beam::{Beam, BeamCommand},
 	blockers::ApplyBlockerInsertion,
-	deals_damage::DealsDamage,
+	effect::Effect,
 	effected_by_gravity::EffectedByGravity,
 	gravity::Gravity,
 	interacting_entities::InteractingEntities,
@@ -76,7 +78,7 @@ where
 			.add_event::<InteractionEvent<Ray>>()
 			.init_resource::<TrackInteractionDuplicates>()
 			.init_resource::<TrackRayInteractions>()
-			.add_interaction::<DealsDamage, Health>()
+			.add_interaction::<Effect<DealDamage>, Health>()
 			.add_interaction::<Gravity, EffectedByGravity>()
 			.add_systems(processing_label.clone(), BlockerInsertCommand::apply)
 			.add_systems(
@@ -147,5 +149,11 @@ impl<TLifeCyclePlugin> HandlesInteractions for InteractionsPlugin<TLifeCyclePlug
 		T: BeamParameters,
 	{
 		BeamCommand::from(value)
+	}
+}
+
+impl<TLifecyclePlugin> HandlesEffect<DealDamage> for InteractionsPlugin<TLifecyclePlugin> {
+	fn effect(effect: DealDamage) -> impl Bundle {
+		Effect(effect)
 	}
 }

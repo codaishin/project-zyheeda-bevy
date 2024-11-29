@@ -1,7 +1,7 @@
 use super::effected_by_gravity::{EffectedByGravity, Pull};
-use crate::traits::{ActOn, ActionType};
+use crate::traits::ActOn;
 use bevy::prelude::{Component, Entity};
-use common::tools::UnitsPerSecond;
+use common::{effects::EffectApplies, tools::UnitsPerSecond};
 use std::time::Duration;
 
 #[derive(Component, Debug, PartialEq, Clone)]
@@ -15,12 +15,12 @@ impl ActOn<EffectedByGravity> for Gravity {
 		self_entity: Entity,
 		target: &mut EffectedByGravity,
 		_: Duration,
-	) -> ActionType {
+	) -> EffectApplies {
 		target.pulls.push(Pull {
 			strength: self.strength,
 			towards: self_entity,
 		});
-		ActionType::Always
+		EffectApplies::Always
 	}
 }
 
@@ -42,7 +42,7 @@ mod tests {
 			Duration::ZERO,
 		);
 
-		assert_eq!(action_type, ActionType::Always);
+		assert_eq!(action_type, EffectApplies::Always);
 	}
 
 	#[test]
