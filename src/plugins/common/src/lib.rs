@@ -2,6 +2,7 @@ pub mod blocker;
 pub mod bundles;
 pub mod components;
 pub mod dto;
+pub mod effects;
 pub mod errors;
 pub mod labels;
 pub mod resources;

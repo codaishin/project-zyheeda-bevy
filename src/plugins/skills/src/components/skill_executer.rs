@@ -13,10 +13,15 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
+	effects::deal_damage::DealDamage,
 	errors::{Error, Level},
-	traits::{accessors::get::GetRef, try_despawn_recursive::TryDespawnRecursive},
+	traits::{
+		accessors::get::GetRef,
+		handles_effect::HandlesEffect,
+		handles_lifetime::HandlesLifetime,
+		try_despawn_recursive::TryDespawnRecursive,
+	},
 };
-use std::time::Duration;
 
 #[derive(Component, Debug, PartialEq, Default, Clone)]
 pub(crate) enum SkillExecuter<TSkillBehavior = RunSkillBehavior> {
@@ -24,7 +29,7 @@ pub(crate) enum SkillExecuter<TSkillBehavior = RunSkillBehavior> {
 	Idle,
 	Start {
 		slot_key: SlotKey,
-		behavior: TSkillBehavior,
+		shape: TSkillBehavior,
 	},
 	StartedStoppable(Entity),
 	Stop(Entity),
@@ -32,7 +37,10 @@ pub(crate) enum SkillExecuter<TSkillBehavior = RunSkillBehavior> {
 
 impl<TBehavior> Schedule<TBehavior> for SkillExecuter<TBehavior> {
 	fn schedule(&mut self, slot_key: SlotKey, behavior: TBehavior) {
-		*self = SkillExecuter::Start { slot_key, behavior };
+		*self = SkillExecuter::Start {
+			slot_key,
+			shape: behavior,
+		};
 	}
 }
 
@@ -62,11 +70,13 @@ impl From<NoSkillSpawner> for Error {
 	}
 }
 
-impl<TCommands, TBehavior, TLifetime> Execute<TCommands, TLifetime> for SkillExecuter<TBehavior>
+impl<TCommands, TBehavior, TLifetimeDependency, TEffectDependency>
+	Execute<TCommands, TLifetimeDependency, TEffectDependency> for SkillExecuter<TBehavior>
 where
 	TBehavior: SpawnSkillBehavior<TCommands>,
 	TCommands: TryDespawnRecursive,
-	TLifetime: From<Duration> + Component,
+	TLifetimeDependency: HandlesLifetime + 'static,
+	TEffectDependency: HandlesEffect<DealDamage> + 'static,
 {
 	type TError = NoSkillSpawner;
 
@@ -78,12 +88,13 @@ where
 		target: &Target,
 	) -> Result<(), Self::TError> {
 		match self {
-			SkillExecuter::Start {
-				behavior: shape,
-				slot_key,
-			} => {
+			SkillExecuter::Start { shape, slot_key } => {
 				let spawner = get_spawner(shape, spawners, *slot_key)?;
-				*self = match shape.spawn::<TLifetime>(commands, caster, spawner, target) {
+				let on_skill_stop_behavior = shape.spawn::<TLifetimeDependency, TEffectDependency>(
+					commands, caster, spawner, target,
+				);
+
+				*self = match on_skill_stop_behavior {
 					OnSkillStop::Ignore => SkillExecuter::Idle,
 					OnSkillStop::Stop(entity) => SkillExecuter::StartedStoppable(entity),
 				};
@@ -138,8 +149,15 @@ mod tests {
 		traits::mock::Mock,
 	};
 	use mockall::{mock, predicate::eq};
+	use std::time::Duration;
 
 	struct _Commands;
+
+	struct _HandlesLifetimes;
+
+	impl HandlesLifetime for _HandlesLifetimes {
+		type TLifetime = _Lifetime;
+	}
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Lifetime;
@@ -148,6 +166,15 @@ mod tests {
 		fn from(_: Duration) -> Self {
 			_Lifetime
 		}
+	}
+
+	struct _HandlesEffects;
+
+	impl<T> HandlesEffect<T> for _HandlesEffects
+	where
+		T: Sync + Send + 'static,
+	{
+		fn effect(_: T) -> impl Bundle {}
 	}
 
 	impl TryDespawnRecursive for _Commands {
@@ -164,14 +191,14 @@ mod tests {
 	simple_init!(Mock_Commands);
 
 	#[derive(Debug, PartialEq, Clone)]
-	struct _BehaviorSlotted(OnSkillStop);
+	struct _ShapeSlotted(OnSkillStop);
 
-	impl SpawnSkillBehavior<_Commands> for _BehaviorSlotted {
+	impl SpawnSkillBehavior<_Commands> for _ShapeSlotted {
 		fn spawn_on(&self) -> SpawnOn {
 			SpawnOn::Slot
 		}
 
-		fn spawn<TLifetime>(
+		fn spawn<TLifetimeDependency, TEffectDependency>(
 			&self,
 			_: &mut _Commands,
 			_: &SkillCaster,
@@ -179,7 +206,8 @@ mod tests {
 			_: &Target,
 		) -> OnSkillStop
 		where
-			TLifetime: From<Duration> + Component,
+			TLifetimeDependency: HandlesLifetime + 'static,
+			TEffectDependency: HandlesEffect<DealDamage> + 'static,
 		{
 			self.0.clone()
 		}
@@ -189,7 +217,7 @@ mod tests {
 		_Behavior {}
 		impl SpawnSkillBehavior<Mock_Commands> for _Behavior {
 			fn spawn_on(&self) -> SpawnOn;
-			fn spawn<TLifetime>(
+			fn spawn<TLifetimeDependency, TEffectDependency>(
 				&self,
 				commands: &mut Mock_Commands,
 				caster: &SkillCaster,
@@ -197,14 +225,15 @@ mod tests {
 				target: &Target,
 			) -> OnSkillStop
 			where
-				TLifetime: From<Duration> + Component;
+				TLifetimeDependency: HandlesLifetime + 'static,
+				TEffectDependency: HandlesEffect<DealDamage> + 'static;
 		}
 	}
 
 	simple_init!(Mock_Behavior);
 
 	type _Executer<'a, TCommands> =
-		&'a mut dyn Execute<TCommands, _Lifetime, TError = NoSkillSpawner>;
+		&'a mut dyn Execute<TCommands, _HandlesLifetimes, _HandlesEffects, TError = NoSkillSpawner>;
 
 	fn get_target() -> Target {
 		Target {
@@ -224,13 +253,13 @@ mod tests {
 
 	#[test]
 	fn set_self_to_start_skill() {
-		let behavior = _BehaviorSlotted(OnSkillStop::Ignore);
+		let shape = _ShapeSlotted(OnSkillStop::Ignore);
 		let slot_key = SlotKey::BottomHand(Side::Left);
 
 		let mut executer = SkillExecuter::default();
-		executer.schedule(slot_key, behavior.clone());
+		executer.schedule(slot_key, shape.clone());
 
-		assert_eq!(SkillExecuter::Start { slot_key, behavior }, executer);
+		assert_eq!(SkillExecuter::Start { slot_key, shape }, executer);
 	}
 
 	#[test]
@@ -242,9 +271,9 @@ mod tests {
 
 		let executer: _Executer<Mock_Commands> = &mut SkillExecuter::Start {
 			slot_key: SlotKey::BottomHand(Side::Right),
-			behavior: Mock_Behavior::new_mock(|mock| {
+			shape: Mock_Behavior::new_mock(|mock| {
 				mock.expect_spawn_on().return_const(SpawnOn::Slot);
-				mock.expect_spawn::<_Lifetime>()
+				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects>()
 					.withf(move |_, c, s, t| {
 						assert_eq!((&caster, &spawner, &target), (c, s, t));
 						true
@@ -268,9 +297,9 @@ mod tests {
 
 		let executer: _Executer<Mock_Commands> = &mut SkillExecuter::Start {
 			slot_key: SlotKey::BottomHand(Side::Right),
-			behavior: Mock_Behavior::new_mock(|mock| {
+			shape: Mock_Behavior::new_mock(|mock| {
 				mock.expect_spawn_on().return_const(SpawnOn::Center);
-				mock.expect_spawn::<_Lifetime>()
+				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects>()
 					.withf(move |_, c, s, t| {
 						assert_eq!((&caster, &spawner, &target), (c, s, t));
 						true
@@ -291,7 +320,7 @@ mod tests {
 
 		let mut executer = SkillExecuter::Start {
 			slot_key: SlotKey::BottomHand(Side::Right),
-			behavior: _BehaviorSlotted(OnSkillStop::Ignore),
+			shape: _ShapeSlotted(OnSkillStop::Ignore),
 		};
 
 		{
@@ -311,7 +340,7 @@ mod tests {
 
 		let mut executer = SkillExecuter::Start {
 			slot_key: SlotKey::BottomHand(Side::Right),
-			behavior: _BehaviorSlotted(OnSkillStop::Stop(Entity::from_raw(123))),
+			shape: _ShapeSlotted(OnSkillStop::Stop(Entity::from_raw(123))),
 		};
 
 		{
@@ -333,9 +362,9 @@ mod tests {
 		let target = get_target();
 		let executer: _Executer<Mock_Commands> = &mut SkillExecuter::Start {
 			slot_key: SlotKey::BottomHand(Side::Right),
-			behavior: Mock_Behavior::new_mock(|mock| {
+			shape: Mock_Behavior::new_mock(|mock| {
 				mock.expect_spawn_on().return_const(SpawnOn::Slot);
-				mock.expect_spawn::<_Lifetime>()
+				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects>()
 					.return_const(OnSkillStop::Ignore);
 			}),
 		};
@@ -352,7 +381,7 @@ mod tests {
 	fn set_to_idle_on_flush_when_set_to_start() {
 		let mut executer = SkillExecuter::Start {
 			slot_key: SlotKey::BottomHand(Side::Right),
-			behavior: _BehaviorSlotted(OnSkillStop::Ignore),
+			shape: _ShapeSlotted(OnSkillStop::Ignore),
 		};
 
 		executer.flush();
@@ -362,7 +391,7 @@ mod tests {
 
 	#[test]
 	fn set_to_stop_on_flush_when_set_to_started() {
-		let mut executer = SkillExecuter::<_BehaviorSlotted>::StartedStoppable(Entity::from_raw(1));
+		let mut executer = SkillExecuter::<_ShapeSlotted>::StartedStoppable(Entity::from_raw(1));
 
 		executer.flush();
 
@@ -394,7 +423,7 @@ mod tests {
 		let spawners = SkillSpawners::new([(None, spawner)]);
 		let target = get_target();
 		let mut commands = _Commands;
-		let mut executer = SkillExecuter::<_BehaviorSlotted>::Stop(Entity::from_raw(1));
+		let mut executer = SkillExecuter::<_ShapeSlotted>::Stop(Entity::from_raw(1));
 
 		{
 			let executer: _Executer<_Commands> = &mut executer;

@@ -8,10 +8,12 @@ mod systems;
 use animation::MovementAnimations;
 use bevy::prelude::*;
 use common::{
+	effects::deal_damage::DealDamage,
 	resources::CamRay,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	traits::{
 		animation::HasAnimationsDispatch,
+		handles_effect::HandlesEffect,
 		handles_interactions::HandlesInteractions,
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 		shaders::RegisterForEffectShading,
@@ -63,7 +65,7 @@ where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
 	TShadersPlugin: Plugin + RegisterForEffectShading,
-	TInteractionsPlugin: Plugin + HandlesInteractions,
+	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
 {
 	pub fn depends_on(
 		_: &TAnimationsPlugin,
@@ -88,7 +90,7 @@ where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
 	TShadersPlugin: Plugin + RegisterForEffectShading,
-	TInteractionsPlugin: Plugin + HandlesInteractions,
+	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
 {
 	fn build(&self, app: &mut App) {
 		TPrefabsPlugin::register_prefab::<ProjectileProjection>(app);

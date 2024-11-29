@@ -61,7 +61,7 @@ impl BuildSkillShape {
 		}
 	}
 
-	pub(crate) fn build<TLifeTime>(
+	pub(crate) fn build<TLifetime>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -69,13 +69,13 @@ impl BuildSkillShape {
 		target: &Target,
 	) -> SkillShape
 	where
-		TLifeTime: From<Duration> + Component,
+		TLifetime: From<Duration> + Component,
 	{
 		match self {
 			Self::Fn(func) => func(commands, caster, spawn, target),
-			Self::GroundTargetedAoe(gt) => gt.build::<TLifeTime>(commands, caster, spawn, target),
-			Self::Projectile(pr) => pr.build::<TLifeTime>(commands, caster, spawn, target),
-			Self::Shield(sh) => sh.build::<TLifeTime>(commands, caster, spawn, target),
+			Self::GroundTargetedAoe(gt) => gt.build::<TLifetime>(commands, caster, spawn, target),
+			Self::Projectile(pr) => pr.build::<TLifetime>(commands, caster, spawn, target),
+			Self::Shield(sh) => sh.build::<TLifetime>(commands, caster, spawn, target),
 		}
 	}
 }

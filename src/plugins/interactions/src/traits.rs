@@ -1,19 +1,12 @@
 use bevy::prelude::Entity;
 use bevy_rapier3d::prelude::CollisionEvent;
-use common::{blocker::Blocker, components::ColliderRoot};
+use common::{blocker::Blocker, components::ColliderRoot, effects::EffectApplies};
 use std::time::Duration;
 
 pub(crate) mod rapier_context;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum ActionType {
-	Once,
-	OncePerTarget,
-	Always,
-}
-
 pub trait ActOn<TTarget> {
-	fn act(&mut self, self_entity: Entity, target: &mut TTarget, delta: Duration) -> ActionType;
+	fn act(&mut self, self_entity: Entity, target: &mut TTarget, delta: Duration) -> EffectApplies;
 }
 
 pub trait FromCollisionEvent {

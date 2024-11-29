@@ -1,6 +1,5 @@
 pub mod acted_on_targets;
 pub mod blockers;
-pub mod deals_damage;
 pub mod effected_by;
 pub mod effected_by_gravity;
 pub mod force;
@@ -8,9 +7,9 @@ pub mod gravity;
 pub mod interacting_entities;
 
 pub(crate) mod beam;
+pub(crate) mod effect;
 pub(crate) mod is;
 
-use crate::traits::ActOn;
 use bevy::{
 	ecs::{component::Component, entity::Entity},
 	math::{Dir3, Vec3},

@@ -13,7 +13,6 @@ tracing.workspace = true
 # internal
 bars.workspace = true
 common.workspace = true
-interactions.workspace = true
 light.workspace = true
 
 [dev-dependencies]

@@ -1,6 +1,6 @@
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
 use bevy::ecs::system::EntityCommands;
-use interactions::components::deals_damage::DealsDamage;
+use common::{effects::deal_damage::DealDamage, traits::handles_effect::HandlesEffect};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -11,17 +11,19 @@ pub enum StartDealingDamage {
 }
 
 impl StartDealingDamage {
-	pub fn apply(
+	pub fn apply<TEffectDependency>(
 		&self,
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
 		_: &SkillSpawner,
 		_: &Target,
-	) {
+	) where
+		TEffectDependency: HandlesEffect<DealDamage>,
+	{
 		entity.try_insert(match *self {
-			Self::SingleTarget(dmg) => DealsDamage::once(dmg),
-			Self::Piercing(dmg) => DealsDamage::once_per_target(dmg),
-			Self::OverTime(dmg) => DealsDamage::once_per_second(dmg),
+			Self::SingleTarget(dmg) => TEffectDependency::effect(DealDamage::once(dmg)),
+			Self::Piercing(dmg) => TEffectDependency::effect(DealDamage::once_per_target(dmg)),
+			Self::OverTime(dmg) => TEffectDependency::effect(DealDamage::once_per_second(dmg)),
 		});
 	}
 }
@@ -29,17 +31,24 @@ impl StartDealingDamage {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		ecs::system::RunSystemOnce,
-		prelude::{Commands, Entity},
-	};
+	use bevy::{ecs::system::RunSystemOnce, prelude::*};
 	use common::test_tools::utils::SingleThreadedApp;
+
+	struct _HandlesDamage;
+
+	impl HandlesEffect<DealDamage> for _HandlesDamage {
+		fn effect(effect: DealDamage) -> impl Bundle {
+			_Damage(effect)
+		}
+	}
+
+	#[derive(Component, Debug, PartialEq)]
+	struct _Damage(DealDamage);
 
 	fn damage(damage: StartDealingDamage) -> impl Fn(Commands) -> Entity {
 		move |mut commands| {
 			let mut entity = commands.spawn_empty();
-			damage.apply(
+			damage.apply::<_HandlesDamage>(
 				&mut entity,
 				&SkillCaster::from(Entity::from_raw(42)),
 				&SkillSpawner::from(Entity::from_raw(43)),
@@ -63,8 +72,8 @@ mod tests {
 			.run_system_once(damage(start_dealing_damage));
 
 		assert_eq!(
-			Some(&DealsDamage::once(42.)),
-			app.world().entity(entity).get::<DealsDamage>()
+			Some(&_Damage(DealDamage::once(42.))),
+			app.world().entity(entity).get::<_Damage>(),
 		);
 	}
 	#[test]
@@ -77,8 +86,8 @@ mod tests {
 			.run_system_once(damage(start_dealing_damage));
 
 		assert_eq!(
-			Some(&DealsDamage::once_per_target(42.)),
-			app.world().entity(entity).get::<DealsDamage>()
+			Some(&_Damage(DealDamage::once_per_target(42.))),
+			app.world().entity(entity).get::<_Damage>(),
 		);
 	}
 	#[test]
@@ -91,8 +100,8 @@ mod tests {
 			.run_system_once(damage(start_dealing_damage));
 
 		assert_eq!(
-			Some(&DealsDamage::once_per_second(42.)),
-			app.world().entity(entity).get::<DealsDamage>()
+			Some(&_Damage(DealDamage::once_per_second(42.))),
+			app.world().entity(entity).get::<_Damage>(),
 		);
 	}
 }

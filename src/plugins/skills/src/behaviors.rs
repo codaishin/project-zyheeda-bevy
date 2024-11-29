@@ -3,16 +3,16 @@ pub mod spawn_on;
 pub mod start_behavior;
 
 use crate::{skills::SelectInfo, traits::skill_builder::SkillShape};
-use bevy::{
-	ecs::system::EntityCommands,
-	math::Ray3d,
-	prelude::{default, Commands, Component, Entity, GlobalTransform},
-};
+use bevy::{ecs::system::EntityCommands, math::Ray3d, prelude::*};
 use build_skill_shape::BuildSkillShape;
-use common::{components::Outdated, resources::ColliderInfo};
+use common::{
+	components::Outdated,
+	effects::deal_damage::DealDamage,
+	resources::ColliderInfo,
+	traits::{handles_effect::HandlesEffect, handles_lifetime::HandlesLifetime},
+};
 use spawn_on::SpawnOn;
 use start_behavior::SkillBehavior;
-use std::time::Duration;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct SkillSpawner(pub Entity);
@@ -104,7 +104,7 @@ impl SkillBehaviorConfig {
 		}
 	}
 
-	pub(crate) fn spawn_shape<TLifetime>(
+	pub(crate) fn spawn_shape<TDependency>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -112,33 +112,37 @@ impl SkillBehaviorConfig {
 		target: &Target,
 	) -> SkillShape
 	where
-		TLifetime: From<Duration> + Component,
+		TDependency: HandlesLifetime,
 	{
 		self.shape
-			.build::<TLifetime>(commands, caster, spawner, target)
+			.build::<TDependency::TLifetime>(commands, caster, spawner, target)
 	}
 
-	pub(crate) fn start_contact_behavior(
+	pub(crate) fn start_contact_behavior<TDependency>(
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
-	) {
+	) where
+		TDependency: HandlesEffect<DealDamage>,
+	{
 		for start in &self.contact {
-			start.apply(entity, caster, spawner, target);
+			start.apply::<TDependency>(entity, caster, spawner, target);
 		}
 	}
 
-	pub(crate) fn start_projection_behavior(
+	pub(crate) fn start_projection_behavior<TDependency>(
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
-	) {
+	) where
+		TDependency: HandlesEffect<DealDamage>,
+	{
 		for start in &self.projection {
-			start.apply(entity, caster, spawner, target);
+			start.apply::<TDependency>(entity, caster, spawner, target);
 		}
 	}
 }
