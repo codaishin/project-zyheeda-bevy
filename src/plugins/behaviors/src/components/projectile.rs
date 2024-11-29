@@ -49,7 +49,7 @@ impl ProjectileBehavior for ProjectileContact {
 	}
 }
 
-impl Prefab for ProjectileContact {
+impl Prefab<()> for ProjectileContact {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
@@ -72,7 +72,7 @@ impl Prefab for ProjectileContact {
 	}
 }
 
-impl Prefab for ProjectileProjection {
+impl Prefab<()> for ProjectileProjection {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,

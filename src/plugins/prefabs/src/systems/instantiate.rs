@@ -30,7 +30,15 @@ impl GetOrCreateAsset<TypeId, SMat> for GetHandlesFns<'_> {
 	}
 }
 
-pub fn instantiate<TAgent, TMeshAssets, TSMatAssets, TMeshStorage, TSMatStorage, TFactory>(
+pub fn instantiate<
+	TAgent,
+	TMeshAssets,
+	TSMatAssets,
+	TMeshStorage,
+	TSMatStorage,
+	TFactory,
+	TDependency,
+>(
 	mut commands: Commands,
 	meshes: ResMut<TMeshAssets>,
 	smats: ResMut<TSMatAssets>,
@@ -39,7 +47,7 @@ pub fn instantiate<TAgent, TMeshAssets, TSMatAssets, TMeshStorage, TSMatStorage,
 	agents: Query<(Entity, &TAgent), Added<TAgent>>,
 ) -> Vec<Result<(), Error>>
 where
-	TAgent: Component + Prefab,
+	TAgent: Component + Prefab<TDependency>,
 	TMeshAssets: Resource,
 	TSMatAssets: Resource,
 	TMeshStorage: Resource,
@@ -115,7 +123,7 @@ mod tests {
 	#[derive(Component)]
 	struct _Result<TAsset: Asset>(Handle<TAsset>);
 
-	impl Prefab for _Agent {
+	impl Prefab<()> for _Agent {
 		fn instantiate_on<TAfterInstantiation>(
 			&self,
 			entity: &mut EntityCommands,
@@ -138,7 +146,7 @@ mod tests {
 	#[derive(Component)]
 	struct _AgentWithInstantiationError;
 
-	impl Prefab for _AgentWithInstantiationError {
+	impl Prefab<()> for _AgentWithInstantiationError {
 		fn instantiate_on<TAfterInstantiation>(
 			&self,
 			_: &mut EntityCommands,
@@ -199,7 +207,7 @@ mod tests {
 		}
 	}
 
-	fn setup<TAgent: Component + Prefab, TCombine>() -> (App, Entity)
+	fn setup<TAgent: Component + Prefab<()>, TCombine>() -> (App, Entity)
 	where
 		for<'a> TCombine: GetOrCreateAssetFactory<_Assets<Mesh>, Mesh, _Storage<Mesh>, TypeId>
 			+ GetOrCreateAssetFactory<_Assets<SMat>, SMat, _Storage<SMat>, TypeId>
@@ -214,6 +222,7 @@ mod tests {
 			_Storage<Mesh>,
 			_Storage<SMat>,
 			TCombine,
+			(),
 		>;
 		app.init_resource::<_Assets<Mesh>>();
 		app.init_resource::<_Assets<SMat>>();

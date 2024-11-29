@@ -84,7 +84,7 @@ struct VoidSphereCore;
 
 struct VoidSphereRing;
 
-impl Prefab for VoidSphere {
+impl Prefab<()> for VoidSphere {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		on: &mut EntityCommands,
