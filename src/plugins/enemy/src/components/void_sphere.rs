@@ -26,6 +26,7 @@ use bevy_rapier3d::{
 	geometry::Collider,
 };
 use common::{
+	blocker::Blocker,
 	bundles::ColliderTransformBundle,
 	components::{ColliderRoot, GroundOffset, Health},
 	errors::Error,
@@ -36,7 +37,7 @@ use common::{
 		prefab::{sphere, GetOrCreateAssets, Prefab},
 	},
 };
-use interactions::components::{blocker::Blocker, effected_by::EffectedBy};
+use interactions::components::effected_by::EffectedBy;
 use std::{f32::consts::PI, time::Duration};
 
 #[derive(Component)]

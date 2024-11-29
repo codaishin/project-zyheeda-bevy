@@ -1,7 +1,6 @@
-use crate::components::blocker::Blocker;
 use bevy::prelude::Entity;
 use bevy_rapier3d::prelude::CollisionEvent;
-use common::components::ColliderRoot;
+use common::{blocker::Blocker, components::ColliderRoot};
 use std::time::Duration;
 
 pub(crate) mod rapier_context;

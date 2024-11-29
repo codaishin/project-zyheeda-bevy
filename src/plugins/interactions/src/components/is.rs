@@ -1,8 +1,7 @@
-use std::collections::HashSet;
-
-use super::blocker::Blocker;
 use crate::traits::Blockable;
 use bevy::prelude::Component;
+use common::blocker::Blocker;
+use std::collections::HashSet;
 
 #[derive(Component)]
 pub struct Is<T>(pub(crate) T);

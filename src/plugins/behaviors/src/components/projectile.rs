@@ -5,6 +5,7 @@ use crate::traits::{Caster, ProjectileBehavior, Spawner};
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::{Ccd, GravityScale, RigidBody};
 use common::{
+	blocker::Blocker,
 	errors::Error,
 	tools::UnitsPerSecond,
 	traits::{
@@ -12,10 +13,7 @@ use common::{
 		prefab::{GetOrCreateAssets, Prefab},
 	},
 };
-use interactions::components::{
-	blocker::Blocker,
-	is::{Fragile, Is},
-};
+use interactions::components::is::{Fragile, Is};
 use sub_type::SubType;
 
 #[derive(Component, Debug, PartialEq)]

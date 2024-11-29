@@ -1,6 +1,7 @@
 use crate::behaviors::{SkillCaster, SkillSpawner, Target};
 use bevy::ecs::system::EntityCommands;
-use interactions::components::{blocker::Blocker, force::Force};
+use common::blocker::Blocker;
+use interactions::components::force::Force;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -26,8 +27,7 @@ mod tests {
 		ecs::system::RunSystemOnce,
 		prelude::{Commands, Entity},
 	};
-	use common::test_tools::utils::SingleThreadedApp;
-	use interactions::components::blocker::BlockerInsertCommand;
+	use common::{blocker::BlockerInsertCommand, test_tools::utils::SingleThreadedApp};
 
 	fn force(mut commands: Commands) -> Entity {
 		let mut entity = commands.spawn_empty();

@@ -4,6 +4,7 @@ use crate::{
 };
 use bevy::{ecs::system::EntityCommands, pbr::NotShadowCaster, prelude::*};
 use common::{
+	blocker::Blocker,
 	errors::Error,
 	tools::Units,
 	traits::{
@@ -14,7 +15,6 @@ use common::{
 	},
 };
 use interactions::components::{
-	blocker::Blocker,
 	deals_damage::DealsDamage,
 	is::{InterruptableRay, Is},
 };

@@ -1,3 +1,4 @@
+pub mod blocker;
 pub mod bundles;
 pub mod components;
 pub mod dto;

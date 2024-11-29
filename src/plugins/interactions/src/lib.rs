@@ -9,6 +9,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContext;
 use common::{
 	self,
+	blocker::BlockerInsertCommand,
 	components::Health,
 	labels::Labels,
 	traits::{
@@ -20,7 +21,7 @@ use common::{
 use components::{
 	acted_on_targets::ActedOnTargets,
 	beam::{Beam, BeamCommand},
-	blocker::BlockerInsertCommand,
+	blockers::ApplyBlockerInsertion,
 	deals_damage::DealsDamage,
 	effected_by_gravity::EffectedByGravity,
 	gravity::Gravity,
@@ -76,7 +77,7 @@ where
 			.init_resource::<TrackRayInteractions>()
 			.add_interaction::<DealsDamage, Health>()
 			.add_interaction::<Gravity, EffectedByGravity>()
-			.add_systems(processing_label.clone(), BlockerInsertCommand::system)
+			.add_systems(processing_label.clone(), BlockerInsertCommand::apply)
 			.add_systems(
 				processing_label.clone(),
 				apply_fragile_blocks::<TLifeCyclePlugin::TDestroy>,
