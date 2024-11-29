@@ -115,7 +115,7 @@ impl SkillBehaviorConfig {
 		TDependency: HandlesLifetime,
 	{
 		self.shape
-			.build::<TDependency::TLifetime>(commands, caster, spawner, target)
+			.build::<TDependency>(commands, caster, spawner, target)
 	}
 
 	pub(crate) fn start_contact_behavior<TDependency>(

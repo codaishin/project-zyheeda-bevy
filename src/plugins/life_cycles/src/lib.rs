@@ -7,6 +7,7 @@ use common::{
 	traits::{handles_destruction::HandlesDestruction, handles_lifetime::HandlesLifetime},
 };
 use components::{destroy::Destroy, lifetime::Lifetime};
+use std::time::Duration;
 use systems::{destroy::destroy, destroy_dead::set_dead_to_be_destroyed};
 
 pub struct LifeCyclesPlugin;
@@ -20,7 +21,9 @@ impl Plugin for LifeCyclesPlugin {
 }
 
 impl HandlesLifetime for LifeCyclesPlugin {
-	type TLifetime = Lifetime;
+	fn lifetime(duration: Duration) -> impl Bundle {
+		Lifetime(duration)
+	}
 }
 
 impl HandlesDestruction for LifeCyclesPlugin {

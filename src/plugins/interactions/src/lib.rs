@@ -101,7 +101,7 @@ where
 					.chain(),
 			)
 			.add_systems(Labels::PROPAGATION.label(), update_interacting_entities)
-			.add_systems(Update, Beam::execute::<TLifeCyclePlugin::TLifetime>);
+			.add_systems(Update, Beam::execute::<TLifeCyclePlugin>);
 	}
 }
 

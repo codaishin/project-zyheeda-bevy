@@ -8,6 +8,7 @@ use common::{
 	traits::{
 		cast_ray::TimeOfImpact,
 		handles_interactions::BeamParameters,
+		handles_lifetime::HandlesLifetime,
 		try_despawn_recursive::TryDespawnRecursive,
 		try_insert_on::TryInsertOn,
 	},
@@ -21,13 +22,13 @@ pub(crate) struct Beam {
 }
 
 impl Beam {
-	pub(crate) fn execute<TLifeTime>(
+	pub(crate) fn execute<TLifetimeDependency>(
 		mut commands: Commands,
 		mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
 		beams: Query<(Entity, &BeamCommand, Option<&Beam>)>,
 		transforms: Query<(&GlobalTransform, Option<&GroundOffset>)>,
 	) where
-		TLifeTime: From<Duration> + Component,
+		TLifetimeDependency: HandlesLifetime,
 	{
 		for (entity, cmd, ..) in &beams {
 			match commands.get_entity(cmd.source) {
@@ -38,7 +39,9 @@ impl Beam {
 
 		for InteractionEvent(ColliderRoot(source), ray) in ray_cast_events.read() {
 			match beams.get(*source) {
-				Ok((entity, cmd, None)) => spawn_beam::<TLifeTime>(&mut commands, entity, ray, cmd),
+				Ok((entity, cmd, None)) => {
+					spawn_beam::<TLifetimeDependency>(&mut commands, entity, ray, cmd)
+				}
 				Ok((entity, .., Some(_))) => update_beam_transform(&mut commands, entity, ray),
 				Err(_) => {}
 			}
@@ -119,9 +122,13 @@ fn get_filter(source: Entity) -> Option<RayFilter> {
 		.ok()
 }
 
-fn spawn_beam<TLifeTime>(commands: &mut Commands, entity: Entity, ray: &Ray, cmd: &BeamCommand)
-where
-	TLifeTime: From<Duration> + Component,
+fn spawn_beam<TLifetimeDependency>(
+	commands: &mut Commands,
+	entity: Entity,
+	ray: &Ray,
+	cmd: &BeamCommand,
+) where
+	TLifetimeDependency: HandlesLifetime,
 {
 	let (source, target, transform) = unpack_beam_ray(ray);
 	commands.try_insert_on(
@@ -129,7 +136,7 @@ where
 		(
 			SpatialBundle::from_transform(transform),
 			Beam { source, target },
-			TLifeTime::from(cmd.params.lifetime),
+			TLifetimeDependency::lifetime(cmd.params.lifetime),
 		),
 	);
 }
@@ -178,18 +185,20 @@ mod tests {
 	};
 	use std::time::Duration;
 
-	#[derive(Component, Debug, PartialEq)]
-	struct _LifeTime(Duration);
+	struct _HandlesLifetime;
 
-	impl From<Duration> for _LifeTime {
-		fn from(duration: Duration) -> Self {
+	impl HandlesLifetime for _HandlesLifetime {
+		fn lifetime(duration: Duration) -> impl Bundle {
 			_LifeTime(duration)
 		}
 	}
 
+	#[derive(Component, Debug, PartialEq)]
+	struct _LifeTime(Duration);
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, Beam::execute::<_LifeTime>);
+		app.add_systems(Update, Beam::execute::<_HandlesLifetime>);
 		app.add_event::<InteractionEvent<Ray>>();
 
 		app
