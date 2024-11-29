@@ -1,23 +1,23 @@
 use crate::{
-	components::effect_shader::{EffectShader, EffectShaders},
+	components::effect_shaders_target::{EffectShaderHandle, EffectShadersTarget},
 	traits::get_effect_material::GetEffectMaterial,
 };
 use bevy::prelude::*;
 
 pub(crate) fn add_effect_shader<TEffect: Component + GetEffectMaterial>(
 	mut materials: ResMut<Assets<TEffect::TMaterial>>,
-	mut effect_shaders: Query<(&mut EffectShaders, &TEffect), Added<TEffect>>,
+	mut effect_shaders: Query<(&mut EffectShadersTarget, &TEffect), Added<TEffect>>,
 ) {
 	for (mut shaders, effect) in &mut effect_shaders {
 		let handle = materials.add(effect.get_effect_material());
-		shaders.shaders.insert(EffectShader::from(handle));
+		shaders.shaders.insert(EffectShaderHandle::from(handle));
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::effect_shader::EffectShaders;
+	use crate::components::effect_shaders_target::EffectShadersTarget;
 	use bevy::{asset::UntypedAssetId, render::render_resource::AsBindGroup};
 	use common::test_tools::utils::SingleThreadedApp;
 
@@ -52,7 +52,7 @@ mod tests {
 			.collect::<Vec<_>>()
 	}
 
-	fn shader_effect_ids(effect_shaders: &EffectShaders) -> Vec<UntypedAssetId> {
+	fn shader_effect_ids(effect_shaders: &EffectShadersTarget) -> Vec<UntypedAssetId> {
 		effect_shaders
 			.shaders
 			.iter()
@@ -65,13 +65,17 @@ mod tests {
 		let mut app = setup();
 		let shaders = app
 			.world_mut()
-			.spawn((EffectShaders::default(), _Effect))
+			.spawn((EffectShadersTarget::default(), _Effect))
 			.id();
 
 		app.update();
 
 		let materials = app.world().resource::<Assets<_Material>>();
-		let shaders = app.world().entity(shaders).get::<EffectShaders>().unwrap();
+		let shaders = app
+			.world()
+			.entity(shaders)
+			.get::<EffectShadersTarget>()
+			.unwrap();
 		assert_eq!(
 			(1, materials_ids(materials)),
 			(shaders.shaders.len(), shader_effect_ids(shaders))
@@ -83,14 +87,18 @@ mod tests {
 		let mut app = setup();
 		let shaders = app
 			.world_mut()
-			.spawn((EffectShaders::default(), _Effect))
+			.spawn((EffectShadersTarget::default(), _Effect))
 			.id();
 
 		app.update();
 		app.update();
 
 		let materials = app.world().resource::<Assets<_Material>>();
-		let shaders = app.world().entity(shaders).get::<EffectShaders>().unwrap();
+		let shaders = app
+			.world()
+			.entity(shaders)
+			.get::<EffectShadersTarget>()
+			.unwrap();
 		assert_eq!(
 			(1, materials_ids(materials)),
 			(shaders.shaders.len(), shader_effect_ids(shaders))

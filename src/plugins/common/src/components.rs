@@ -104,9 +104,9 @@ impl AssetModel {
 }
 
 #[derive(Component, Debug, PartialEq)]
-pub struct Unmovable<TComponent: Component>(PhantomData<TComponent>);
+pub struct Protected<TComponent: Component>(PhantomData<TComponent>);
 
-impl<TComponent: Component> Default for Unmovable<TComponent> {
+impl<TComponent: Component> Default for Protected<TComponent> {
 	fn default() -> Self {
 		Self(PhantomData)
 	}

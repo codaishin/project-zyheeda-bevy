@@ -1,10 +1,10 @@
 use crate::traits::{
-	insert_unmovable_effect_shader::InsertUnmovableEffectShader,
-	remove_unmovable_effect_shader::RemoveUnmovableEffectShader,
+	insert_protected_effect_shader::InsertProtectedEffectShader,
+	remove_protected_effect_shader::RemoveProtectedEffectShader,
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{
-	components::Unmovable,
+	components::Protected,
 	traits::track::{IsTracking, Track, Untrack},
 };
 use std::collections::HashSet;
@@ -13,78 +13,78 @@ use std::collections::HashSet;
 use bevy::asset::UntypedAssetId;
 
 #[derive(Component, Default)]
-pub struct EffectShaders {
+pub struct EffectShadersTarget {
 	pub(crate) meshes: HashSet<Entity>,
-	pub(crate) shaders: HashSet<EffectShader>,
+	pub(crate) shaders: HashSet<EffectShaderHandle>,
 }
 
-impl Track<Handle<Mesh>> for EffectShaders {
+impl Track<Handle<Mesh>> for EffectShadersTarget {
 	fn track(&mut self, entity: Entity, _: &Handle<Mesh>) {
 		self.meshes.insert(entity);
 	}
 }
 
-impl IsTracking<Handle<Mesh>> for EffectShaders {
+impl IsTracking<Handle<Mesh>> for EffectShadersTarget {
 	fn is_tracking(&self, entity: &Entity) -> bool {
 		self.meshes.contains(entity)
 	}
 }
 
-impl Untrack<Handle<Mesh>> for EffectShaders {
+impl Untrack<Handle<Mesh>> for EffectShadersTarget {
 	fn untrack(&mut self, entity: &Entity) {
 		self.meshes.remove(entity);
 	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub(crate) struct EffectShader {
+pub(crate) struct EffectShaderHandle {
 	handle: UntypedHandle,
 	insert_into: fn(&mut EntityCommands, &UntypedHandle),
 	remove_from: fn(&mut EntityCommands),
 }
 
-impl EffectShader {
+impl EffectShaderHandle {
 	#[cfg(test)]
 	pub(crate) fn id(&self) -> UntypedAssetId {
 		self.handle.id()
 	}
 
-	fn insert_as_unmovable_handle<TMaterial: Asset + Material>(
+	fn insert_protected_handle<TMaterial: Asset + Material>(
 		entity: &mut EntityCommands,
 		handle: &UntypedHandle,
 	) {
 		entity.insert((
 			handle.clone().typed::<TMaterial>(),
-			Unmovable::<Handle<TMaterial>>::default(),
+			Protected::<Handle<TMaterial>>::default(),
 		));
 	}
 
-	fn remove_unmovable_handle<TMaterial: Asset + Material>(entity: &mut EntityCommands) {
-		entity.remove::<(Handle<TMaterial>, Unmovable<Handle<TMaterial>>)>();
+	fn remove_protected_handle<TMaterial: Asset + Material>(entity: &mut EntityCommands) {
+		entity.remove::<(Handle<TMaterial>, Protected<Handle<TMaterial>>)>();
 	}
 }
 
-impl InsertUnmovableEffectShader for EntityCommands<'_> {
-	fn insert_unmovable_effect_shader(&mut self, effect_shader: &EffectShader) {
+impl InsertProtectedEffectShader for EntityCommands<'_> {
+	fn insert_protected_effect_shader(&mut self, effect_shader: &EffectShaderHandle) {
 		let insert_into = effect_shader.insert_into;
 		let handle = &effect_shader.handle;
 		insert_into(self, handle)
 	}
 }
 
-impl RemoveUnmovableEffectShader for EntityCommands<'_> {
-	fn remove_unmovable_effect_shader(&mut self, effect_shader: &EffectShader) {
+impl RemoveProtectedEffectShader for EntityCommands<'_> {
+	fn remove_protected_effect_shader(&mut self, effect_shader: &EffectShaderHandle) {
 		let remove_from = effect_shader.remove_from;
 		remove_from(self)
 	}
 }
 
-impl<TMaterial: Asset + Material> From<Handle<TMaterial>> for EffectShader {
+impl<TMaterial: Asset + Material> From<Handle<TMaterial>> for EffectShaderHandle {
 	fn from(handle: Handle<TMaterial>) -> Self {
 		Self {
 			handle: handle.untyped(),
-			insert_into: EffectShader::insert_as_unmovable_handle::<TMaterial>,
-			remove_from: EffectShader::remove_unmovable_handle::<TMaterial>,
+			insert_into: EffectShaderHandle::insert_protected_handle::<TMaterial>,
+			remove_from: EffectShaderHandle::remove_protected_handle::<TMaterial>,
 		}
 	}
 }
@@ -93,11 +93,11 @@ impl<TMaterial: Asset + Material> From<Handle<TMaterial>> for EffectShader {
 mod tests {
 	use super::*;
 	use bevy::{ecs::system::RunSystemOnce, render::render_resource::AsBindGroup};
-	use common::{components::Unmovable, test_tools::utils::new_handle};
+	use common::{components::Protected, test_tools::utils::new_handle};
 
 	#[test]
 	fn push_mesh_handle() {
-		let mut shader = EffectShaders::default();
+		let mut shader = EffectShadersTarget::default();
 		let entity = Entity::from_raw(42);
 
 		shader.track(entity, &new_handle());
@@ -107,7 +107,7 @@ mod tests {
 
 	#[test]
 	fn push_mesh_handles() {
-		let mut shader = EffectShaders::default();
+		let mut shader = EffectShadersTarget::default();
 		let entities = [Entity::from_raw(11), Entity::from_raw(66)];
 
 		for entity in &entities {
@@ -119,7 +119,7 @@ mod tests {
 
 	#[test]
 	fn remove_mesh_handles() {
-		let mut shader = EffectShaders {
+		let mut shader = EffectShadersTarget {
 			meshes: HashSet::from([Entity::from_raw(11), Entity::from_raw(66)]),
 			..default()
 		};
@@ -131,7 +131,7 @@ mod tests {
 
 	#[test]
 	fn contains_mesh_handles() {
-		let shader = EffectShaders {
+		let shader = EffectShadersTarget {
 			meshes: HashSet::from([Entity::from_raw(11)]),
 			..default()
 		};
@@ -154,13 +154,13 @@ mod tests {
 	fn effect_shader_id() {
 		let handle = new_handle::<_Asset>();
 
-		let shader = EffectShader::from(handle.clone());
+		let shader = EffectShaderHandle::from(handle.clone());
 
 		assert_eq!(handle.id().untyped(), shader.id());
 	}
 
 	fn insert_shader_system(
-		In(shader): In<EffectShader>,
+		In(shader): In<EffectShaderHandle>,
 		mut commands: Commands,
 		entities: Query<Entity>,
 	) {
@@ -169,12 +169,12 @@ mod tests {
 				continue;
 			};
 
-			entity.insert_unmovable_effect_shader(&shader)
+			entity.insert_protected_effect_shader(&shader)
 		}
 	}
 
 	fn remove_shader_system(
-		In(shader): In<EffectShader>,
+		In(shader): In<EffectShaderHandle>,
 		mut commands: Commands,
 		entities: Query<Entity>,
 	) {
@@ -183,7 +183,7 @@ mod tests {
 				continue;
 			};
 
-			entity.remove_unmovable_effect_shader(&shader)
+			entity.remove_protected_effect_shader(&shader)
 		}
 	}
 
@@ -191,7 +191,7 @@ mod tests {
 	fn insert_effect_shader() {
 		let mut app = App::new();
 		let handle = new_handle::<_Asset>();
-		let shader = EffectShader::from(handle.clone());
+		let shader = EffectShaderHandle::from(handle.clone());
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
@@ -204,31 +204,31 @@ mod tests {
 	}
 
 	#[test]
-	fn insert_effect_shader_unmovable() {
+	fn insert_protected_effect_shader() {
 		let mut app = App::new();
-		let shader = EffectShader::from(new_handle::<_Asset>());
+		let shader = EffectShaderHandle::from(new_handle::<_Asset>());
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
 			.run_system_once_with(shader, insert_shader_system);
 
 		assert_eq!(
-			Some(&Unmovable::<Handle<_Asset>>::default()),
+			Some(&Protected::<Handle<_Asset>>::default()),
 			app.world()
 				.entity(entity)
-				.get::<Unmovable<Handle<_Asset>>>()
+				.get::<Protected<Handle<_Asset>>>()
 		);
 	}
 
 	#[test]
 	fn remove_inserted_components() {
 		let mut app = App::new();
-		let shader = EffectShader::from(new_handle::<_Asset>());
+		let shader = EffectShaderHandle::from(new_handle::<_Asset>());
 		let entity = app
 			.world_mut()
 			.spawn((
 				new_handle::<_Asset>(),
-				Unmovable::<Handle<_Asset>>::default(),
+				Protected::<Handle<_Asset>>::default(),
 			))
 			.id();
 
@@ -241,7 +241,7 @@ mod tests {
 				app.world().entity(entity).get::<Handle<_Asset>>(),
 				app.world()
 					.entity(entity)
-					.get::<Unmovable<Handle<_Asset>>>(),
+					.get::<Protected<Handle<_Asset>>>(),
 			)
 		);
 	}

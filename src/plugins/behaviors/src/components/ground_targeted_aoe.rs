@@ -13,6 +13,7 @@ use common::{
 	errors::{Error, Level},
 	tools::Units,
 	traits::{
+		handles_effect_shading::HandlesEffectShading,
 		prefab::{GetOrCreateAssets, Prefab},
 		try_insert_on::TryInsertOn,
 	},
@@ -106,7 +107,10 @@ trait ColliderComponents {
 	fn collider_components(&self) -> Result<impl Bundle, Error>;
 }
 
-impl Prefab<()> for GroundTargetedAoeContact {
+impl<TShadersPlugin> Prefab<TShadersPlugin> for GroundTargetedAoeContact
+where
+	TShadersPlugin: HandlesEffectShading,
+{
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
@@ -116,7 +120,11 @@ impl Prefab<()> for GroundTargetedAoeContact {
 		let model = AssetModel::path("models/sphere.glb");
 
 		entity
-			.insert((RigidBody::Fixed, SpatialBundle::default()))
+			.insert((
+				RigidBody::Fixed,
+				SpatialBundle::default(),
+				TShadersPlugin::effect_shader_target(),
+			))
 			.with_children(|parent| {
 				parent.spawn((ColliderRoot(parent.parent_entity()), collider));
 				parent.spawn(AssetModelBundle {

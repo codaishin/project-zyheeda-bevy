@@ -14,9 +14,9 @@ use common::{
 	traits::{
 		animation::HasAnimationsDispatch,
 		handles_effect::HandlesEffect,
+		handles_effect_shading::HandlesEffectShading,
 		handles_interactions::HandlesInteractions,
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
-		shaders::RegisterForEffectShading,
 	},
 };
 use components::{
@@ -64,7 +64,7 @@ impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
-	TShadersPlugin: Plugin + RegisterForEffectShading,
+	TShadersPlugin: Plugin + HandlesEffectShading,
 	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
 {
 	pub fn depends_on(
@@ -89,22 +89,19 @@ impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin> Plu
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
-	TShadersPlugin: Plugin + RegisterForEffectShading,
+	TShadersPlugin: Plugin + HandlesEffectShading,
 	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
 {
 	fn build(&self, app: &mut App) {
 		TPrefabsPlugin::register_prefab::<ProjectileProjection>(app);
-		TPrefabsPlugin::register_prefab::<ShieldContact>(app);
-		TPrefabsPlugin::register_prefab::<ShieldProjection>(app);
-		TPrefabsPlugin::register_prefab::<GroundTargetedAoeContact>(app);
 		TPrefabsPlugin::register_prefab::<GroundTargetedAoeProjection>(app);
 		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>()
 			.register_prefab::<VoidBeam>(app)
 			.register_prefab::<ProjectileContact>(app);
-
-		TShadersPlugin::register_for_effect_shading::<ShieldContact>(app);
-		TShadersPlugin::register_for_effect_shading::<ShieldProjection>(app);
-		TShadersPlugin::register_for_effect_shading::<GroundTargetedAoeContact>(app);
+		TPrefabsPlugin::with_dependency::<TShadersPlugin>()
+			.register_prefab::<ShieldContact>(app)
+			.register_prefab::<ShieldProjection>(app)
+			.register_prefab::<GroundTargetedAoeContact>(app);
 
 		app.add_event::<MoveInputEvent>()
 			.add_systems(
