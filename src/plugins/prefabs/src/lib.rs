@@ -9,16 +9,30 @@ use common::{
 	tools::Factory,
 	traits::{
 		cache::get_or_create_asset::CreateAssetCache,
-		prefab::{Prefab, RegisterPrefab},
+		prefab::{Prefab, RegisterPrefab, RegisterPrefabWithDependency},
 	},
 };
-use std::any::TypeId;
+use std::{any::TypeId, marker::PhantomData};
 use systems::{instantiate::instantiate, instantiate_children::instantiate_children};
 
 pub struct PrefabsPlugin;
 
-impl RegisterPrefab for PrefabsPlugin {
-	fn register_prefab<TPrefab: Prefab + Component>(app: &mut App) {
+impl Plugin for PrefabsPlugin {
+	fn build(&self, app: &mut App) {
+		app.init_resource::<Shared<TypeId, Handle<Mesh>>>()
+			.init_resource::<Shared<TypeId, Handle<StandardMaterial>>>()
+			.add_systems(Labels::PREFAB_INSTANTIATION.label(), instantiate_children);
+	}
+}
+
+pub struct PrefabsManager<TDependency>(PhantomData<TDependency>);
+
+impl<TDependency> PrefabsManager<TDependency> {
+	fn register_prefab<TPrefab>(app: &mut App)
+	where
+		TDependency: 'static,
+		TPrefab: Prefab<TDependency> + Component,
+	{
 		let instantiate_system = instantiate::<
 			TPrefab,
 			Assets<Mesh>,
@@ -26,6 +40,7 @@ impl RegisterPrefab for PrefabsPlugin {
 			Shared<TypeId, Handle<Mesh>>,
 			Shared<TypeId, Handle<StandardMaterial>>,
 			Factory<CreateAssetCache>,
+			TDependency,
 		>;
 		app.add_systems(
 			Labels::PREFAB_INSTANTIATION.label(),
@@ -34,10 +49,26 @@ impl RegisterPrefab for PrefabsPlugin {
 	}
 }
 
-impl Plugin for PrefabsPlugin {
-	fn build(&self, app: &mut App) {
-		app.init_resource::<Shared<TypeId, Handle<Mesh>>>()
-			.init_resource::<Shared<TypeId, Handle<StandardMaterial>>>()
-			.add_systems(Labels::PREFAB_INSTANTIATION.label(), instantiate_children);
+impl<TDependency> RegisterPrefabWithDependency<TDependency> for PrefabsManager<TDependency>
+where
+	TDependency: 'static,
+{
+	fn register_prefab<TPrefab: Prefab<TDependency> + Component>(self, app: &mut App) -> Self {
+		PrefabsManager::<TDependency>::register_prefab::<TPrefab>(app);
+
+		self
+	}
+}
+
+impl RegisterPrefab for PrefabsPlugin {
+	fn register_prefab<TPrefab: Prefab<()> + Component>(app: &mut App) {
+		PrefabsManager::<()>::register_prefab::<TPrefab>(app);
+	}
+
+	fn with_dependency<TDependency>() -> impl RegisterPrefabWithDependency<TDependency>
+	where
+		TDependency: 'static,
+	{
+		PrefabsManager(PhantomData)
 	}
 }

@@ -73,7 +73,7 @@ impl ConfigureNewAnimationDispatch for Player {
 	}
 }
 
-impl Prefab for Player {
+impl Prefab<()> for Player {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,

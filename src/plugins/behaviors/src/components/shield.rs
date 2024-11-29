@@ -22,7 +22,7 @@ pub struct ShieldContact {
 	pub location: Entity,
 }
 
-impl Prefab for ShieldContact {
+impl Prefab<()> for ShieldContact {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
@@ -56,7 +56,7 @@ impl Prefab for ShieldContact {
 #[derive(Component, Debug, PartialEq)]
 pub struct ShieldProjection;
 
-impl Prefab for ShieldProjection {
+impl Prefab<()> for ShieldProjection {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,

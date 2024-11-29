@@ -41,7 +41,7 @@ struct WallLightOn;
 
 struct WallLightOff;
 
-impl Prefab for Light<Wall> {
+impl Prefab<()> for Light<Wall> {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,

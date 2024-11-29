@@ -16,7 +16,7 @@ use common::{
 	},
 };
 
-impl Prefab for Light<Floating> {
+impl Prefab<()> for Light<Floating> {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,

@@ -22,7 +22,7 @@ use interactions::components::{
 };
 use std::f32::consts::PI;
 
-impl Prefab for Beam {
+impl Prefab<()> for Beam {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
