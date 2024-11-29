@@ -12,7 +12,7 @@ use common::{
 	states::{game_state::GameState, mouse_context::MouseContext},
 	traits::{
 		animation::HasAnimationsDispatch,
-		handles_beams::HandlesBeams,
+		handles_interactions::HandlesInteractions,
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 		shaders::RegisterForEffectShading,
 	},
@@ -63,7 +63,7 @@ where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
 	TShadersPlugin: Plugin + RegisterForEffectShading,
-	TInteractionsPlugin: Plugin + HandlesBeams,
+	TInteractionsPlugin: Plugin + HandlesInteractions,
 {
 	pub fn depends_on(
 		_: &TAnimationsPlugin,
@@ -88,16 +88,17 @@ where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
 	TShadersPlugin: Plugin + RegisterForEffectShading,
-	TInteractionsPlugin: Plugin + HandlesBeams,
+	TInteractionsPlugin: Plugin + HandlesInteractions,
 {
 	fn build(&self, app: &mut App) {
-		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>().register_prefab::<VoidBeam>(app);
-		TPrefabsPlugin::register_prefab::<ProjectileContact>(app);
 		TPrefabsPlugin::register_prefab::<ProjectileProjection>(app);
 		TPrefabsPlugin::register_prefab::<ShieldContact>(app);
 		TPrefabsPlugin::register_prefab::<ShieldProjection>(app);
 		TPrefabsPlugin::register_prefab::<GroundTargetedAoeContact>(app);
 		TPrefabsPlugin::register_prefab::<GroundTargetedAoeProjection>(app);
+		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>()
+			.register_prefab::<VoidBeam>(app)
+			.register_prefab::<ProjectileContact>(app);
 
 		TShadersPlugin::register_for_effect_shading::<ShieldContact>(app);
 		TShadersPlugin::register_for_effect_shading::<ShieldProjection>(app);

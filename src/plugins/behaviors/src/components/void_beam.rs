@@ -9,15 +9,12 @@ use common::{
 	tools::Units,
 	traits::{
 		cache::GetOrCreateTypeAsset,
-		handles_beams::{BeamParameters, HandlesBeams},
+		handles_interactions::{BeamParameters, HandlesInteractions},
 		prefab::{AfterInstantiation, GetOrCreateAssets, Prefab},
 		try_despawn_recursive::TryDespawnRecursive,
 	},
 };
-use interactions::components::{
-	deals_damage::DealsDamage,
-	is::{InterruptableRay, Is},
-};
+use interactions::components::deals_damage::DealsDamage;
 use std::{f32::consts::PI, sync::Arc, time::Duration};
 
 #[derive(Component, Debug, PartialEq)]
@@ -56,7 +53,7 @@ impl BeamParameters for VoidBeam {
 
 impl<TInteractions> Prefab<TInteractions> for VoidBeam
 where
-	TInteractions: HandlesBeams,
+	TInteractions: HandlesInteractions,
 {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
@@ -81,7 +78,7 @@ where
 
 		entity.try_insert((
 			TInteractions::beam_from(self),
-			Is::<InterruptableRay>::interacting_with([Blocker::Physical, Blocker::Force]),
+			TInteractions::is_ray_interrupted_by([Blocker::Physical, Blocker::Force]),
 			DealsDamage::once_per_second(self.attack.damage),
 			TAfterInstantiation::spawn(move |parent: &mut ChildBuilder| {
 				parent.spawn((

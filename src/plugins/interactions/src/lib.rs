@@ -13,8 +13,8 @@ use common::{
 	components::Health,
 	labels::Labels,
 	traits::{
-		handles_beams::{BeamParameters, HandlesBeams},
 		handles_destruction::HandlesDestruction,
+		handles_interactions::{BeamParameters, HandlesInteractions},
 		handles_lifetime::HandlesLifetime,
 	},
 };
@@ -26,6 +26,7 @@ use components::{
 	effected_by_gravity::EffectedByGravity,
 	gravity::Gravity,
 	interacting_entities::InteractingEntities,
+	is::{Fragile, InterruptableRay, Is},
 };
 use events::{InteractionEvent, Ray};
 use resources::{
@@ -128,7 +129,19 @@ impl AddInteraction for App {
 	}
 }
 
-impl<TLifeCyclePlugin> HandlesBeams for InteractionsPlugin<TLifeCyclePlugin> {
+impl<TLifeCyclePlugin> HandlesInteractions for InteractionsPlugin<TLifeCyclePlugin> {
+	fn is_fragile_when_colliding_with<const N: usize>(
+		blockers: [common::blocker::Blocker; N],
+	) -> impl Bundle {
+		Is::<Fragile>::interacting_with(blockers)
+	}
+
+	fn is_ray_interrupted_by<const N: usize>(
+		blockers: [common::blocker::Blocker; N],
+	) -> impl Bundle {
+		Is::<InterruptableRay>::interacting_with(blockers)
+	}
+
 	fn beam_from<T>(value: &T) -> impl Bundle
 	where
 		T: BeamParameters,

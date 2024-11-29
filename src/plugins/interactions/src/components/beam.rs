@@ -7,7 +7,7 @@ use common::{
 	tools::Units,
 	traits::{
 		cast_ray::TimeOfImpact,
-		handles_beams::BeamParameters,
+		handles_interactions::BeamParameters,
 		try_despawn_recursive::TryDespawnRecursive,
 		try_insert_on::TryInsertOn,
 	},
