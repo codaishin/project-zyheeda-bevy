@@ -18,7 +18,7 @@ use common::{
 impl<T> ExecuteSkills for T {}
 
 pub(crate) trait ExecuteSkills {
-	fn execute_system<TLifetimeDependency, TEffectDependency, TShaderDependency>(
+	fn execute_system<TLifetimes, TEffects, TShaders>(
 		cam_ray: Res<CamRay>,
 		mouse_hover: Res<MouseHover>,
 		mut commands: Commands,
@@ -26,20 +26,13 @@ pub(crate) trait ExecuteSkills {
 		transforms: Query<&GlobalTransform>,
 	) -> Vec<Result<(), Error>>
 	where
-		for<'w, 's> Self: Component
-			+ Execute<Commands<'w, 's>, TLifetimeDependency, TEffectDependency, TShaderDependency>
-			+ Sized,
-		for<'w, 's> Error: From<
-			<Self as Execute<
-				Commands<'w, 's>,
-				TLifetimeDependency,
-				TEffectDependency,
-				TShaderDependency,
-			>>::TError,
-		>,
-		TLifetimeDependency: HandlesLifetime,
-		TEffectDependency: HandlesEffect<DealDamage>,
-		TShaderDependency: HandlesEffectShadingFor<ForceShield>,
+		for<'w, 's> Self:
+			Component + Execute<Commands<'w, 's>, TLifetimes, TEffects, TShaders> + Sized,
+		for<'w, 's> Error:
+			From<<Self as Execute<Commands<'w, 's>, TLifetimes, TEffects, TShaders>>::TError>,
+		TLifetimes: HandlesLifetime,
+		TEffects: HandlesEffect<DealDamage>,
+		TShaders: HandlesEffectShadingFor<ForceShield>,
 	{
 		agents
 			.iter_mut()

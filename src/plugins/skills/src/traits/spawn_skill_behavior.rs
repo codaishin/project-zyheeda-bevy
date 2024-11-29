@@ -13,7 +13,7 @@ use common::traits::{
 
 pub(crate) trait SpawnSkillBehavior<TCommands> {
 	fn spawn_on(&self) -> SpawnOn;
-	fn spawn<TLifetimeDependency, TEffectDependency, TShaderDependency>(
+	fn spawn<TLifetimes, TEffects, TShaders>(
 		&self,
 		commands: &mut TCommands,
 		caster: &SkillCaster,
@@ -21,7 +21,7 @@ pub(crate) trait SpawnSkillBehavior<TCommands> {
 		target: &Target,
 	) -> OnSkillStop
 	where
-		TLifetimeDependency: HandlesLifetime + 'static,
-		TEffectDependency: HandlesAllEffects + 'static,
-		TShaderDependency: HandlesEffectShadingForAll + 'static;
+		TLifetimes: HandlesLifetime + 'static,
+		TEffects: HandlesAllEffects + 'static,
+		TShaders: HandlesEffectShadingForAll + 'static;
 }

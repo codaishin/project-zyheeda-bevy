@@ -14,24 +14,21 @@ pub struct StartGravity {
 }
 
 impl StartGravity {
-	pub fn apply<TEffectDependency, TShaderDependency>(
+	pub fn apply<TEffects, TShaders>(
 		&self,
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
 		_: &SkillSpawner,
 		_: &Target,
 	) where
-		TEffectDependency: HandlesEffect<Gravity>,
-		TShaderDependency: HandlesEffectShadingFor<Gravity>,
+		TEffects: HandlesEffect<Gravity>,
+		TShaders: HandlesEffectShadingFor<Gravity>,
 	{
 		let gravity = Gravity {
 			strength: self.strength,
 			effect_applies: self.effect_applies,
 		};
-		entity.try_insert((
-			TEffectDependency::effect(gravity),
-			TShaderDependency::effect_shader(gravity),
-		));
+		entity.try_insert((TEffects::effect(gravity), TShaders::effect_shader(gravity)));
 	}
 }
 

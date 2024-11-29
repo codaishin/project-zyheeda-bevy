@@ -25,26 +25,22 @@ pub enum SkillBehavior {
 }
 
 impl SkillBehavior {
-	pub fn apply<TEffectDependency, TShaderDependency>(
+	pub fn apply<TEffects, TShaders>(
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
 		spawn: &SkillSpawner,
 		target: &Target,
 	) where
-		TEffectDependency: HandlesAllEffects,
-		TShaderDependency: HandlesEffectShadingForAll,
+		TEffects: HandlesAllEffects,
+		TShaders: HandlesEffectShadingForAll,
 	{
 		match self {
 			SkillBehavior::Gravity(gr) => {
-				gr.apply::<TEffectDependency, TShaderDependency>(entity, caster, spawn, target)
+				gr.apply::<TEffects, TShaders>(entity, caster, spawn, target)
 			}
-			SkillBehavior::Damage(dm) => {
-				dm.apply::<TEffectDependency>(entity, caster, spawn, target)
-			}
-			SkillBehavior::ForceShield(fc) => {
-				fc.apply::<TShaderDependency>(entity, caster, spawn, target)
-			}
+			SkillBehavior::Damage(dm) => dm.apply::<TEffects>(entity, caster, spawn, target),
+			SkillBehavior::ForceShield(fc) => fc.apply::<TShaders>(entity, caster, spawn, target),
 			#[cfg(test)]
 			SkillBehavior::Fn(func) => func(entity, caster, spawn, target),
 		}

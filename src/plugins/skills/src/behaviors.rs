@@ -121,33 +121,33 @@ impl SkillBehaviorConfig {
 			.build::<TDependency>(commands, caster, spawner, target)
 	}
 
-	pub(crate) fn start_contact_behavior<TEffectDependency, TShaderDependency>(
+	pub(crate) fn start_contact_behavior<TEffects, TShaders>(
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
 	) where
-		TEffectDependency: HandlesAllEffects,
-		TShaderDependency: HandlesEffectShadingForAll,
+		TEffects: HandlesAllEffects,
+		TShaders: HandlesEffectShadingForAll,
 	{
 		for start in &self.contact {
-			start.apply::<TEffectDependency, TShaderDependency>(entity, caster, spawner, target);
+			start.apply::<TEffects, TShaders>(entity, caster, spawner, target);
 		}
 	}
 
-	pub(crate) fn start_projection_behavior<TEffectDependency, TShaderDependency>(
+	pub(crate) fn start_projection_behavior<TEffects, TShaders>(
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
 	) where
-		TEffectDependency: HandlesAllEffects,
-		TShaderDependency: HandlesEffectShadingForAll,
+		TEffects: HandlesAllEffects,
+		TShaders: HandlesEffectShadingForAll,
 	{
 		for start in &self.projection {
-			start.apply::<TEffectDependency, TShaderDependency>(entity, caster, spawner, target);
+			start.apply::<TEffects, TShaders>(entity, caster, spawner, target);
 		}
 	}
 }

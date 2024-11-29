@@ -70,15 +70,14 @@ impl From<NoSkillSpawner> for Error {
 	}
 }
 
-impl<TCommands, TBehavior, TLifetimeDependency, TEffectDependency, TShaderDependency>
-	Execute<TCommands, TLifetimeDependency, TEffectDependency, TShaderDependency>
-	for SkillExecuter<TBehavior>
+impl<TCommands, TBehavior, TLifetimes, TEffects, TShaders>
+	Execute<TCommands, TLifetimes, TEffects, TShaders> for SkillExecuter<TBehavior>
 where
 	TBehavior: SpawnSkillBehavior<TCommands>,
 	TCommands: TryDespawnRecursive,
-	TLifetimeDependency: HandlesLifetime + 'static,
-	TEffectDependency: HandlesAllEffects + 'static,
-	TShaderDependency: HandlesEffectShadingForAll + 'static,
+	TLifetimes: HandlesLifetime + 'static,
+	TEffects: HandlesAllEffects + 'static,
+	TShaders: HandlesEffectShadingForAll + 'static,
 {
 	type TError = NoSkillSpawner;
 
@@ -93,9 +92,7 @@ where
 			SkillExecuter::Start { shape, slot_key } => {
 				let spawner = get_spawner(shape, spawners, *slot_key)?;
 				let on_skill_stop_behavior = shape
-					.spawn::<TLifetimeDependency, TEffectDependency, TShaderDependency>(
-						commands, caster, spawner, target,
-					);
+					.spawn::<TLifetimes, TEffects, TShaders>(commands, caster, spawner, target);
 
 				*self = match on_skill_stop_behavior {
 					OnSkillStop::Ignore => SkillExecuter::Idle,
@@ -205,7 +202,7 @@ mod tests {
 			SpawnOn::Slot
 		}
 
-		fn spawn<TLifetimeDependency, TEffectDependency, TShaderDependency>(
+		fn spawn<TLifetimes, TEffects, TShaders>(
 			&self,
 			_: &mut _Commands,
 			_: &SkillCaster,
@@ -213,9 +210,9 @@ mod tests {
 			_: &Target,
 		) -> OnSkillStop
 		where
-			TLifetimeDependency: HandlesLifetime + 'static,
-			TEffectDependency: HandlesAllEffects + 'static,
-			TShaderDependency: HandlesEffectShadingForAll + 'static,
+			TLifetimes: HandlesLifetime + 'static,
+			TEffects: HandlesAllEffects + 'static,
+			TShaders: HandlesEffectShadingForAll + 'static,
 		{
 			self.0.clone()
 		}
@@ -225,7 +222,7 @@ mod tests {
 		_Behavior {}
 		impl SpawnSkillBehavior<Mock_Commands> for _Behavior {
 			fn spawn_on(&self) -> SpawnOn;
-			fn spawn<TLifetimeDependency, TEffectDependency, TShaderDependency>(
+			fn spawn<TLifetimes, TEffects, TShaders>(
 				&self,
 				commands: &mut Mock_Commands,
 				caster: &SkillCaster,
@@ -233,9 +230,9 @@ mod tests {
 				target: &Target,
 			) -> OnSkillStop
 			where
-				TLifetimeDependency: HandlesLifetime + 'static,
-				TEffectDependency: HandlesAllEffects + 'static,
-			TShaderDependency: HandlesEffectShadingForAll + 'static;
+				TLifetimes: HandlesLifetime + 'static,
+				TEffects: HandlesAllEffects + 'static,
+			TShaders: HandlesEffectShadingForAll + 'static;
 		}
 	}
 

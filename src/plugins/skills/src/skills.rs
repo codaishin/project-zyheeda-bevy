@@ -181,7 +181,7 @@ impl SpawnSkillBehavior<Commands<'_, '_>> for RunSkillBehavior {
 		}
 	}
 
-	fn spawn<TLifetimeDependency, TEffectDependency, TShaderDependency>(
+	fn spawn<TLifetimes, TEffects, TShaders>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -189,26 +189,22 @@ impl SpawnSkillBehavior<Commands<'_, '_>> for RunSkillBehavior {
 		target: &Target,
 	) -> OnSkillStop
 	where
-		TLifetimeDependency: HandlesLifetime + 'static,
-		TEffectDependency: HandlesAllEffects + 'static,
-		TShaderDependency: HandlesEffectShadingForAll + 'static,
+		TLifetimes: HandlesLifetime + 'static,
+		TEffects: HandlesAllEffects + 'static,
+		TShaders: HandlesEffectShadingForAll + 'static,
 	{
 		match self {
 			RunSkillBehavior::OnActive(conf) => {
-				spawn::<TLifetimeDependency, TEffectDependency, TShaderDependency>(
-					conf, commands, caster, spawner, target,
-				)
+				spawn::<TLifetimes, TEffects, TShaders>(conf, commands, caster, spawner, target)
 			}
 			RunSkillBehavior::OnAim(conf) => {
-				spawn::<TLifetimeDependency, TEffectDependency, TShaderDependency>(
-					conf, commands, caster, spawner, target,
-				)
+				spawn::<TLifetimes, TEffects, TShaders>(conf, commands, caster, spawner, target)
 			}
 		}
 	}
 }
 
-fn spawn<TLifetimeDependency, TEffectDependency, TShaderDependency>(
+fn spawn<TLifetimes, TEffects, TShaders>(
 	behavior: &SkillBehaviorConfig,
 	commands: &mut Commands,
 	caster: &SkillCaster,
@@ -216,14 +212,14 @@ fn spawn<TLifetimeDependency, TEffectDependency, TShaderDependency>(
 	target: &Target,
 ) -> OnSkillStop
 where
-	TLifetimeDependency: HandlesLifetime + 'static,
-	TEffectDependency: HandlesAllEffects + 'static,
-	TShaderDependency: HandlesEffectShadingForAll + 'static,
+	TLifetimes: HandlesLifetime + 'static,
+	TEffects: HandlesAllEffects + 'static,
+	TShaders: HandlesEffectShadingForAll + 'static,
 {
-	let shape = behavior.spawn_shape::<TLifetimeDependency>(commands, caster, spawner, target);
+	let shape = behavior.spawn_shape::<TLifetimes>(commands, caster, spawner, target);
 
 	if let Some(mut contact) = commands.get_entity(shape.contact) {
-		behavior.start_contact_behavior::<TEffectDependency, TShaderDependency>(
+		behavior.start_contact_behavior::<TEffects, TShaders>(
 			&mut contact,
 			caster,
 			spawner,
@@ -232,7 +228,7 @@ where
 	};
 
 	if let Some(mut projection) = commands.get_entity(shape.projection) {
-		behavior.start_projection_behavior::<TEffectDependency, TShaderDependency>(
+		behavior.start_projection_behavior::<TEffects, TShaders>(
 			&mut projection,
 			caster,
 			spawner,

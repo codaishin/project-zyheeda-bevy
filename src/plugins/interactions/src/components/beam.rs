@@ -22,13 +22,13 @@ pub(crate) struct Beam {
 }
 
 impl Beam {
-	pub(crate) fn execute<TLifetimeDependency>(
+	pub(crate) fn execute<TLifetimes>(
 		mut commands: Commands,
 		mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
 		beams: Query<(Entity, &BeamCommand, Option<&Beam>)>,
 		transforms: Query<(&GlobalTransform, Option<&GroundOffset>)>,
 	) where
-		TLifetimeDependency: HandlesLifetime,
+		TLifetimes: HandlesLifetime,
 	{
 		for (entity, cmd, ..) in &beams {
 			match commands.get_entity(cmd.source) {
@@ -40,7 +40,7 @@ impl Beam {
 		for InteractionEvent(ColliderRoot(source), ray) in ray_cast_events.read() {
 			match beams.get(*source) {
 				Ok((entity, cmd, None)) => {
-					spawn_beam::<TLifetimeDependency>(&mut commands, entity, ray, cmd)
+					spawn_beam::<TLifetimes>(&mut commands, entity, ray, cmd)
 				}
 				Ok((entity, .., Some(_))) => update_beam_transform(&mut commands, entity, ray),
 				Err(_) => {}
@@ -122,13 +122,9 @@ fn get_filter(source: Entity) -> Option<RayFilter> {
 		.ok()
 }
 
-fn spawn_beam<TLifetimeDependency>(
-	commands: &mut Commands,
-	entity: Entity,
-	ray: &Ray,
-	cmd: &BeamCommand,
-) where
-	TLifetimeDependency: HandlesLifetime,
+fn spawn_beam<TLifetimes>(commands: &mut Commands, entity: Entity, ray: &Ray, cmd: &BeamCommand)
+where
+	TLifetimes: HandlesLifetime,
 {
 	let (source, target, transform) = unpack_beam_ray(ray);
 	commands.try_insert_on(
@@ -136,7 +132,7 @@ fn spawn_beam<TLifetimeDependency>(
 		(
 			SpatialBundle::from_transform(transform),
 			Beam { source, target },
-			TLifetimeDependency::lifetime(cmd.params.lifetime),
+			TLifetimes::lifetime(cmd.params.lifetime),
 		),
 	);
 }

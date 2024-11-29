@@ -11,18 +11,18 @@ use serde::{Deserialize, Serialize};
 pub struct StartForceShield;
 
 impl StartForceShield {
-	pub fn apply<TShaderDependency>(
+	pub fn apply<TShaders>(
 		&self,
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
 		_: &SkillSpawner,
 		_: &Target,
 	) where
-		TShaderDependency: HandlesEffectShadingFor<ForceShield>,
+		TShaders: HandlesEffectShadingFor<ForceShield>,
 	{
 		entity.try_insert((
 			Blocker::insert([Blocker::Force]),
-			TShaderDependency::effect_shader(ForceShield),
+			TShaders::effect_shader(ForceShield),
 		));
 	}
 }
