@@ -17,12 +17,11 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	effects::{deal_damage::DealDamage, force_shield::ForceShield},
 	resources::ColliderInfo,
 	traits::{
 		animation::Animation,
-		handles_effect::HandlesEffect,
-		handles_effect_shading::HandlesEffectShadingFor,
+		handles_effect::HandlesAllEffects,
+		handles_effect_shading::HandlesEffectShadingForAll,
 		handles_lifetime::HandlesLifetime,
 		load_asset::Path,
 	},
@@ -191,8 +190,8 @@ impl SpawnSkillBehavior<Commands<'_, '_>> for RunSkillBehavior {
 	) -> OnSkillStop
 	where
 		TLifetimeDependency: HandlesLifetime + 'static,
-		TEffectDependency: HandlesEffect<DealDamage> + 'static,
-		TShaderDependency: HandlesEffectShadingFor<ForceShield> + 'static,
+		TEffectDependency: HandlesAllEffects + 'static,
+		TShaderDependency: HandlesEffectShadingForAll + 'static,
 	{
 		match self {
 			RunSkillBehavior::OnActive(conf) => {
@@ -218,8 +217,8 @@ fn spawn<TLifetimeDependency, TEffectDependency, TShaderDependency>(
 ) -> OnSkillStop
 where
 	TLifetimeDependency: HandlesLifetime + 'static,
-	TEffectDependency: HandlesEffect<DealDamage> + 'static,
-	TShaderDependency: HandlesEffectShadingFor<ForceShield> + 'static,
+	TEffectDependency: HandlesAllEffects + 'static,
+	TShaderDependency: HandlesEffectShadingForAll + 'static,
 {
 	let shape = behavior.spawn_shape::<TLifetimeDependency>(commands, caster, spawner, target);
 
@@ -249,7 +248,11 @@ mod tests {
 	use super::*;
 	use crate::{behaviors::start_behavior::SkillBehavior, traits::skill_builder::SkillShape};
 	use bevy::ecs::system::{EntityCommands, RunSystemOnce};
-	use common::{components::Outdated, test_tools::utils::SingleThreadedApp};
+	use common::{
+		components::Outdated,
+		test_tools::utils::SingleThreadedApp,
+		traits::{handles_effect::HandlesEffect, handles_effect_shading::HandlesEffectShadingFor},
+	};
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Args {

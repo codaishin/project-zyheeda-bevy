@@ -1,4 +1,5 @@
 pub(crate) mod deal_damage;
+pub(crate) mod gravity;
 
 use bevy::prelude::*;
 

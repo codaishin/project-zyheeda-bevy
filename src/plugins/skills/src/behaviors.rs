@@ -7,11 +7,10 @@ use bevy::{ecs::system::EntityCommands, math::Ray3d, prelude::*};
 use build_skill_shape::BuildSkillShape;
 use common::{
 	components::Outdated,
-	effects::{deal_damage::DealDamage, force_shield::ForceShield},
 	resources::ColliderInfo,
 	traits::{
-		handles_effect::HandlesEffect,
-		handles_effect_shading::HandlesEffectShadingFor,
+		handles_effect::HandlesAllEffects,
+		handles_effect_shading::HandlesEffectShadingForAll,
 		handles_lifetime::HandlesLifetime,
 	},
 };
@@ -129,8 +128,8 @@ impl SkillBehaviorConfig {
 		spawner: &SkillSpawner,
 		target: &Target,
 	) where
-		TEffectDependency: HandlesEffect<DealDamage>,
-		TShaderDependency: HandlesEffectShadingFor<ForceShield>,
+		TEffectDependency: HandlesAllEffects,
+		TShaderDependency: HandlesEffectShadingForAll,
 	{
 		for start in &self.contact {
 			start.apply::<TEffectDependency, TShaderDependency>(entity, caster, spawner, target);
@@ -144,8 +143,8 @@ impl SkillBehaviorConfig {
 		spawner: &SkillSpawner,
 		target: &Target,
 	) where
-		TEffectDependency: HandlesEffect<DealDamage>,
-		TShaderDependency: HandlesEffectShadingFor<ForceShield>,
+		TEffectDependency: HandlesAllEffects,
+		TShaderDependency: HandlesEffectShadingForAll,
 	{
 		for start in &self.projection {
 			start.apply::<TEffectDependency, TShaderDependency>(entity, caster, spawner, target);

@@ -1,5 +1,3 @@
-mod gravity;
-
 use bevy::prelude::*;
 
 pub(crate) trait GetEffectMaterial {

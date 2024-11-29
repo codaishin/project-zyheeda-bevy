@@ -1,4 +1,5 @@
 pub(crate) mod force_shield;
+pub(crate) mod gravity;
 
 use bevy::prelude::*;
 

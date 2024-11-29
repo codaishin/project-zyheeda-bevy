@@ -15,14 +15,13 @@ use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
 	components::{Collection, Side, Swap},
-	effects::{deal_damage::DealDamage, force_shield::ForceShield},
 	resources::key_map::KeyMap,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	traits::{
 		animation::HasAnimationsDispatch,
-		handles_effect::HandlesEffect,
-		handles_effect_shading::HandlesEffectShadingFor,
+		handles_effect::HandlesAllEffects,
+		handles_effect_shading::HandlesEffectShadingForAll,
 		handles_lifetime::HandlesLifetime,
 		try_insert_on::TryInsertOn,
 	},
@@ -83,8 +82,8 @@ impl<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TLifeCyclePlugin: Plugin + HandlesLifetime,
-	TInteractionsPlugin: Plugin + HandlesEffect<DealDamage>,
-	TShadersPlugin: Plugin + HandlesEffectShadingFor<ForceShield>,
+	TInteractionsPlugin: Plugin + HandlesAllEffects,
+	TShadersPlugin: Plugin + HandlesEffectShadingForAll,
 {
 	pub fn depends_on(
 		_: &TAnimationsPlugin,
@@ -241,8 +240,8 @@ impl<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin> P
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TLifeCyclePlugin: Plugin + HandlesLifetime,
-	TInteractionsPlugin: Plugin + HandlesEffect<DealDamage>,
-	TShadersPlugin: Plugin + HandlesEffectShadingFor<ForceShield>,
+	TInteractionsPlugin: Plugin + HandlesAllEffects,
+	TShadersPlugin: Plugin + HandlesEffectShadingForAll,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);

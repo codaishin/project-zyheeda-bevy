@@ -13,12 +13,11 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	effects::{deal_damage::DealDamage, force_shield::ForceShield},
 	errors::{Error, Level},
 	traits::{
 		accessors::get::GetRef,
-		handles_effect::HandlesEffect,
-		handles_effect_shading::HandlesEffectShadingFor,
+		handles_effect::HandlesAllEffects,
+		handles_effect_shading::HandlesEffectShadingForAll,
 		handles_lifetime::HandlesLifetime,
 		try_despawn_recursive::TryDespawnRecursive,
 	},
@@ -78,8 +77,8 @@ where
 	TBehavior: SpawnSkillBehavior<TCommands>,
 	TCommands: TryDespawnRecursive,
 	TLifetimeDependency: HandlesLifetime + 'static,
-	TEffectDependency: HandlesEffect<DealDamage> + 'static,
-	TShaderDependency: HandlesEffectShadingFor<ForceShield> + 'static,
+	TEffectDependency: HandlesAllEffects + 'static,
+	TShaderDependency: HandlesEffectShadingForAll + 'static,
 {
 	type TError = NoSkillSpawner;
 
@@ -150,7 +149,11 @@ mod tests {
 		components::{Outdated, Side},
 		resources::ColliderInfo,
 		simple_init,
-		traits::mock::Mock,
+		traits::{
+			handles_effect::HandlesEffect,
+			handles_effect_shading::HandlesEffectShadingFor,
+			mock::Mock,
+		},
 	};
 	use mockall::{mock, predicate::eq};
 	use std::time::Duration;
@@ -211,8 +214,8 @@ mod tests {
 		) -> OnSkillStop
 		where
 			TLifetimeDependency: HandlesLifetime + 'static,
-			TEffectDependency: HandlesEffect<DealDamage> + 'static,
-			TShaderDependency: HandlesEffectShadingFor<ForceShield> + 'static,
+			TEffectDependency: HandlesAllEffects + 'static,
+			TShaderDependency: HandlesEffectShadingForAll + 'static,
 		{
 			self.0.clone()
 		}
@@ -231,8 +234,8 @@ mod tests {
 			) -> OnSkillStop
 			where
 				TLifetimeDependency: HandlesLifetime + 'static,
-				TEffectDependency: HandlesEffect<DealDamage> + 'static,
-				TShaderDependency: HandlesEffectShadingFor<ForceShield> + 'static;
+				TEffectDependency: HandlesAllEffects + 'static,
+			TShaderDependency: HandlesEffectShadingForAll + 'static;
 		}
 	}
 

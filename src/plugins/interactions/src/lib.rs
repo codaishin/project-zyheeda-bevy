@@ -11,7 +11,7 @@ use common::{
 	self,
 	blocker::BlockerInsertCommand,
 	components::Health,
-	effects::deal_damage::DealDamage,
+	effects::{deal_damage::DealDamage, gravity::Gravity},
 	labels::Labels,
 	traits::{
 		handles_destruction::HandlesDestruction,
@@ -26,7 +26,6 @@ use components::{
 	blockers::ApplyBlockerInsertion,
 	effect::Effect,
 	effected_by_gravity::EffectedByGravity,
-	gravity::Gravity,
 	interacting_entities::InteractingEntities,
 	is::{Fragile, InterruptableRay, Is},
 };
@@ -79,7 +78,7 @@ where
 			.init_resource::<TrackInteractionDuplicates>()
 			.init_resource::<TrackRayInteractions>()
 			.add_interaction::<Effect<DealDamage>, Health>()
-			.add_interaction::<Gravity, EffectedByGravity>()
+			.add_interaction::<Effect<Gravity>, EffectedByGravity>()
 			.add_systems(processing_label.clone(), BlockerInsertCommand::apply)
 			.add_systems(
 				processing_label.clone(),
@@ -152,8 +151,16 @@ impl<TLifeCyclePlugin> HandlesInteractions for InteractionsPlugin<TLifeCyclePlug
 	}
 }
 
-impl<TLifecyclePlugin> HandlesEffect<DealDamage> for InteractionsPlugin<TLifecyclePlugin> {
-	fn effect(effect: DealDamage) -> impl Bundle {
+trait InteractiveEffects {}
+
+impl InteractiveEffects for DealDamage {}
+impl InteractiveEffects for Gravity {}
+
+impl<TLifecyclePlugin, TEffect> HandlesEffect<TEffect> for InteractionsPlugin<TLifecyclePlugin>
+where
+	TEffect: InteractiveEffects + Sync + Send + 'static,
+{
+	fn effect(effect: TEffect) -> impl Bundle {
 		Effect(effect)
 	}
 }

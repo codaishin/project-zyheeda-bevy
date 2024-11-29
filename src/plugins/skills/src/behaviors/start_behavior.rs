@@ -4,9 +4,9 @@ pub mod gravity;
 
 use super::{SkillCaster, SkillSpawner, Target};
 use bevy::ecs::system::EntityCommands;
-use common::{
-	effects::{deal_damage::DealDamage, force_shield::ForceShield},
-	traits::{handles_effect::HandlesEffect, handles_effect_shading::HandlesEffectShadingFor},
+use common::traits::{
+	handles_effect::HandlesAllEffects,
+	handles_effect_shading::HandlesEffectShadingForAll,
 };
 use deal_damage::StartDealingDamage;
 use force_shield::StartForceShield;
@@ -32,11 +32,13 @@ impl SkillBehavior {
 		spawn: &SkillSpawner,
 		target: &Target,
 	) where
-		TEffectDependency: HandlesEffect<DealDamage>,
-		TShaderDependency: HandlesEffectShadingFor<ForceShield>,
+		TEffectDependency: HandlesAllEffects,
+		TShaderDependency: HandlesEffectShadingForAll,
 	{
 		match self {
-			SkillBehavior::Gravity(gr) => gr.apply(entity, caster, spawn, target),
+			SkillBehavior::Gravity(gr) => {
+				gr.apply::<TEffectDependency, TShaderDependency>(entity, caster, spawn, target)
+			}
 			SkillBehavior::Damage(dm) => {
 				dm.apply::<TEffectDependency>(entity, caster, spawn, target)
 			}

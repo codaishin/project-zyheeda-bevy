@@ -7,7 +7,7 @@ pub(crate) mod traits;
 use bevy::{prelude::*, render::render_resource::AsBindGroup};
 use common::{
 	components::essence::Essence,
-	effects::force_shield::ForceShield,
+	effects::{force_shield::ForceShield, gravity::Gravity},
 	systems::{
 		asset_process_delta::asset_process_delta,
 		insert_associated::{Configure, InsertAssociated, InsertOn},
@@ -21,7 +21,6 @@ use components::{
 	effect_shaders_target::EffectShadersTarget,
 	material_override::MaterialOverride,
 };
-use interactions::components::gravity::Gravity;
 use materials::{
 	essence_material::EssenceMaterial,
 	force_material::ForceMaterial,
@@ -43,7 +42,7 @@ pub struct ShadersPlugin;
 impl ShadersPlugin {
 	fn build_for_effect_shaders(app: &mut App) {
 		app.register_effect_shader::<EffectShader<ForceShield>>()
-			.register_effect_shader::<Gravity>()
+			.register_effect_shader::<EffectShader<Gravity>>()
 			.add_systems(
 				Update,
 				(
@@ -86,6 +85,7 @@ impl Plugin for ShadersPlugin {
 trait ShadedEffect {}
 
 impl ShadedEffect for ForceShield {}
+impl ShadedEffect for Gravity {}
 
 impl<TEffect> HandlesEffectShadingFor<TEffect> for ShadersPlugin
 where
