@@ -5,16 +5,20 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	effects::deal_damage::DealDamage,
+	effects::{deal_damage::DealDamage, force_shield::ForceShield},
 	errors::Error,
 	resources::{CamRay, MouseHover},
-	traits::{handles_effect::HandlesEffect, handles_lifetime::HandlesLifetime},
+	traits::{
+		handles_effect::HandlesEffect,
+		handles_effect_shading::HandlesEffectShadingFor,
+		handles_lifetime::HandlesLifetime,
+	},
 };
 
 impl<T> ExecuteSkills for T {}
 
 pub(crate) trait ExecuteSkills {
-	fn execute_system<TLifetimeDependency, TEffectDependency>(
+	fn execute_system<TLifetimeDependency, TEffectDependency, TShaderDependency>(
 		cam_ray: Res<CamRay>,
 		mouse_hover: Res<MouseHover>,
 		mut commands: Commands,
@@ -22,13 +26,20 @@ pub(crate) trait ExecuteSkills {
 		transforms: Query<&GlobalTransform>,
 	) -> Vec<Result<(), Error>>
 	where
-		for<'w, 's> Self:
-			Component + Execute<Commands<'w, 's>, TLifetimeDependency, TEffectDependency> + Sized,
+		for<'w, 's> Self: Component
+			+ Execute<Commands<'w, 's>, TLifetimeDependency, TEffectDependency, TShaderDependency>
+			+ Sized,
 		for<'w, 's> Error: From<
-			<Self as Execute<Commands<'w, 's>, TLifetimeDependency, TEffectDependency>>::TError,
+			<Self as Execute<
+				Commands<'w, 's>,
+				TLifetimeDependency,
+				TEffectDependency,
+				TShaderDependency,
+			>>::TError,
 		>,
 		TLifetimeDependency: HandlesLifetime,
 		TEffectDependency: HandlesEffect<DealDamage>,
+		TShaderDependency: HandlesEffectShadingFor<ForceShield>,
 	{
 		agents
 			.iter_mut()
@@ -88,7 +99,7 @@ mod tests {
 		errors::Level,
 		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
-		traits::nested_mock::NestedMocks,
+		traits::{handles_effect_shading::HandlesEffectShadingFor, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;
 	use mockall::mock;
@@ -123,7 +134,13 @@ mod tests {
 		fn effect(_: T) -> impl Bundle {}
 	}
 
-	impl Execute<Commands<'_, '_>, _HandlesLife, _HandlesEffects> for _Executor {
+	struct _HandlesShading;
+
+	impl<T> HandlesEffectShadingFor<T> for _HandlesShading {
+		fn effect_shader(_: T) -> impl Bundle {}
+	}
+
+	impl Execute<Commands<'_, '_>, _HandlesLife, _HandlesEffects, _HandlesShading> for _Executor {
 		type TError = _Error;
 
 		fn execute(
@@ -139,7 +156,12 @@ mod tests {
 
 	mock! {
 		_Executor {}
-		impl<'w, 's> Execute<Commands<'w, 's>, _HandlesLife, _HandlesEffects> for _Executor {
+		impl<'w, 's> Execute<
+			Commands<'w, 's>,
+			_HandlesLife,
+			_HandlesEffects,
+			_HandlesShading
+		> for _Executor {
 			type TError = _Error;
 
 			fn execute<'_w, '_s>(
@@ -182,7 +204,8 @@ mod tests {
 	}
 
 	fn setup() -> App {
-		let execute_system = _Executor::execute_system::<_HandlesLife, _HandlesEffects>;
+		let execute_system =
+			_Executor::execute_system::<_HandlesLife, _HandlesEffects, _HandlesShading>;
 
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<CamRay>();
@@ -300,9 +323,9 @@ mod tests {
 
 		app.update();
 
-		let errors = app
-			.world_mut()
-			.run_system_once(_Executor::execute_system::<_HandlesLife, _HandlesEffects>);
+		let errors = app.world_mut().run_system_once(
+			_Executor::execute_system::<_HandlesLife, _HandlesEffects, _HandlesShading>,
+		);
 
 		assert_eq!(
 			vec![Err(Error {

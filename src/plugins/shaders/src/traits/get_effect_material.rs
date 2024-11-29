@@ -1,4 +1,3 @@
-mod force;
 mod gravity;
 
 use bevy::prelude::*;

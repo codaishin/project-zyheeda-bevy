@@ -7,16 +7,21 @@ pub(crate) mod traits;
 use bevy::{prelude::*, render::render_resource::AsBindGroup};
 use common::{
 	components::essence::Essence,
+	effects::force_shield::ForceShield,
 	systems::{
 		asset_process_delta::asset_process_delta,
 		insert_associated::{Configure, InsertAssociated, InsertOn},
 		remove_components::Remove,
 		track_components::TrackComponentInSelfAndChildren,
 	},
-	traits::handles_effect_shading::HandlesEffectShading,
+	traits::handles_effect_shading::{HandlesEffectShading, HandlesEffectShadingFor},
 };
-use components::{effect_shaders_target::EffectShadersTarget, material_override::MaterialOverride};
-use interactions::components::{force::Force, gravity::Gravity};
+use components::{
+	effect_shader::EffectShader,
+	effect_shaders_target::EffectShadersTarget,
+	material_override::MaterialOverride,
+};
+use interactions::components::gravity::Gravity;
 use materials::{
 	essence_material::EssenceMaterial,
 	force_material::ForceMaterial,
@@ -37,7 +42,7 @@ pub struct ShadersPlugin;
 
 impl ShadersPlugin {
 	fn build_for_effect_shaders(app: &mut App) {
-		app.register_effect_shader::<Force>()
+		app.register_effect_shader::<EffectShader<ForceShield>>()
 			.register_effect_shader::<Gravity>()
 			.add_systems(
 				Update,
@@ -75,6 +80,19 @@ impl Plugin for ShadersPlugin {
 	fn build(&self, app: &mut App) {
 		Self::build_for_effect_shaders(app);
 		Self::build_for_essence_material(app);
+	}
+}
+
+trait ShadedEffect {}
+
+impl ShadedEffect for ForceShield {}
+
+impl<TEffect> HandlesEffectShadingFor<TEffect> for ShadersPlugin
+where
+	TEffect: ShadedEffect + Sync + Send + 'static,
+{
+	fn effect_shader(effect: TEffect) -> impl Bundle {
+		EffectShader(effect)
 	}
 }
 

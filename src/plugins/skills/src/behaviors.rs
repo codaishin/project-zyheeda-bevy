@@ -7,9 +7,13 @@ use bevy::{ecs::system::EntityCommands, math::Ray3d, prelude::*};
 use build_skill_shape::BuildSkillShape;
 use common::{
 	components::Outdated,
-	effects::deal_damage::DealDamage,
+	effects::{deal_damage::DealDamage, force_shield::ForceShield},
 	resources::ColliderInfo,
-	traits::{handles_effect::HandlesEffect, handles_lifetime::HandlesLifetime},
+	traits::{
+		handles_effect::HandlesEffect,
+		handles_effect_shading::HandlesEffectShadingFor,
+		handles_lifetime::HandlesLifetime,
+	},
 };
 use spawn_on::SpawnOn;
 use start_behavior::SkillBehavior;
@@ -118,31 +122,33 @@ impl SkillBehaviorConfig {
 			.build::<TDependency>(commands, caster, spawner, target)
 	}
 
-	pub(crate) fn start_contact_behavior<TDependency>(
+	pub(crate) fn start_contact_behavior<TEffectDependency, TShaderDependency>(
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
 	) where
-		TDependency: HandlesEffect<DealDamage>,
+		TEffectDependency: HandlesEffect<DealDamage>,
+		TShaderDependency: HandlesEffectShadingFor<ForceShield>,
 	{
 		for start in &self.contact {
-			start.apply::<TDependency>(entity, caster, spawner, target);
+			start.apply::<TEffectDependency, TShaderDependency>(entity, caster, spawner, target);
 		}
 	}
 
-	pub(crate) fn start_projection_behavior<TDependency>(
+	pub(crate) fn start_projection_behavior<TEffectDependency, TShaderDependency>(
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &Target,
 	) where
-		TDependency: HandlesEffect<DealDamage>,
+		TEffectDependency: HandlesEffect<DealDamage>,
+		TShaderDependency: HandlesEffectShadingFor<ForceShield>,
 	{
 		for start in &self.projection {
-			start.apply::<TDependency>(entity, caster, spawner, target);
+			start.apply::<TEffectDependency, TShaderDependency>(entity, caster, spawner, target);
 		}
 	}
 }

@@ -15,13 +15,14 @@ use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
 	components::{Collection, Side, Swap},
-	effects::deal_damage::DealDamage,
+	effects::{deal_damage::DealDamage, force_shield::ForceShield},
 	resources::key_map::KeyMap,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	traits::{
 		animation::HasAnimationsDispatch,
 		handles_effect::HandlesEffect,
+		handles_effect_shading::HandlesEffectShadingFor,
 		handles_lifetime::HandlesLifetime,
 		try_insert_on::TryInsertOn,
 	},
@@ -68,23 +69,37 @@ use systems::{
 	visualize_slot_items::visualize_slot_items,
 };
 
-pub struct SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin>(
-	PhantomData<(TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin)>,
+pub struct SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin>(
+	PhantomData<(
+		TAnimationsPlugin,
+		TLifeCyclePlugin,
+		TInteractionsPlugin,
+		TShadersPlugin,
+	)>,
 );
 
-impl<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin>
-	SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin>
+impl<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin>
+	SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TLifeCyclePlugin: Plugin + HandlesLifetime,
 	TInteractionsPlugin: Plugin + HandlesEffect<DealDamage>,
+	TShadersPlugin: Plugin + HandlesEffectShadingFor<ForceShield>,
 {
 	pub fn depends_on(
 		_: &TAnimationsPlugin,
 		_: &TLifeCyclePlugin,
+		_: &TShadersPlugin,
 		_: &TInteractionsPlugin,
 	) -> Self {
-		Self(PhantomData::<(TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin)>)
+		Self(
+			PhantomData::<(
+				TAnimationsPlugin,
+				TLifeCyclePlugin,
+				TInteractionsPlugin,
+				TShadersPlugin,
+			)>,
+		)
 	}
 
 	fn skill_load(&self, app: &mut App) {
@@ -127,6 +142,7 @@ where
 		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<
 			TLifeCyclePlugin,
 			TInteractionsPlugin,
+			TShadersPlugin,
 		>;
 
 		app.init_resource::<KeyMap<SlotKey, KeyCode>>()
@@ -220,12 +236,13 @@ where
 	}
 }
 
-impl<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin> Plugin
-	for SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin>
+impl<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin> Plugin
+	for SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TLifeCyclePlugin: Plugin + HandlesLifetime,
 	TInteractionsPlugin: Plugin + HandlesEffect<DealDamage>,
+	TShadersPlugin: Plugin + HandlesEffectShadingFor<ForceShield>,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);
