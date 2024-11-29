@@ -1,11 +1,13 @@
 use super::Effect;
 use crate::{
 	components::effected_by_gravity::{EffectedByGravity, Pull},
-	traits::ActOn,
+	traits::{act_on::ActOn, is_effect::IsEffect},
 };
 use bevy::prelude::*;
 use common::effects::{gravity::Gravity, EffectApplies};
 use std::time::Duration;
+
+impl IsEffect for Effect<Gravity> {}
 
 impl ActOn<EffectedByGravity> for Effect<Gravity> {
 	fn act(

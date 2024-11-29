@@ -1,11 +1,13 @@
 use super::Effect;
-use crate::traits::ActOn;
+use crate::traits::{act_on::ActOn, is_effect::IsEffect};
 use bevy::prelude::Entity;
 use common::{
 	components::Health,
 	effects::{deal_damage::DealDamage, EffectApplies},
 };
 use std::time::Duration;
+
+impl IsEffect for Effect<DealDamage> {}
 
 impl ActOn<Health> for Effect<DealDamage> {
 	fn act(&mut self, _: Entity, health: &mut Health, delta: Duration) -> EffectApplies {

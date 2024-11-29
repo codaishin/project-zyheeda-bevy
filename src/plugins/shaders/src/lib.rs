@@ -82,14 +82,9 @@ impl Plugin for ShadersPlugin {
 	}
 }
 
-trait ShadedEffect {}
-
-impl ShadedEffect for ForceShield {}
-impl ShadedEffect for Gravity {}
-
 impl<TEffect> HandlesEffectShadingFor<TEffect> for ShadersPlugin
 where
-	TEffect: ShadedEffect + Sync + Send + 'static,
+	EffectShader<TEffect>: GetEffectMaterial + Sync + Send + 'static,
 {
 	fn effect_shader(effect: TEffect) -> impl Bundle {
 		EffectShader(effect)

@@ -52,7 +52,7 @@ use systems::{
 		send_interaction_events::send_interaction_events,
 	},
 };
-use traits::ActOn;
+use traits::{act_on::ActOn, is_effect::IsEffect};
 
 pub struct InteractionsPlugin<TLifeCyclePlugin>(PhantomData<TLifeCyclePlugin>);
 
@@ -151,14 +151,9 @@ impl<TLifeCyclePlugin> HandlesInteractions for InteractionsPlugin<TLifeCyclePlug
 	}
 }
 
-trait InteractiveEffects {}
-
-impl InteractiveEffects for DealDamage {}
-impl InteractiveEffects for Gravity {}
-
 impl<TLifecyclePlugin, TEffect> HandlesEffect<TEffect> for InteractionsPlugin<TLifecyclePlugin>
 where
-	TEffect: InteractiveEffects + Sync + Send + 'static,
+	Effect<TEffect>: IsEffect + Sync + Send + 'static,
 {
 	fn effect(effect: TEffect) -> impl Bundle {
 		Effect(effect)
