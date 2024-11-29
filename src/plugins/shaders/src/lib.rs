@@ -7,17 +7,20 @@ pub(crate) mod traits;
 use bevy::{prelude::*, render::render_resource::AsBindGroup};
 use common::{
 	components::essence::Essence,
-	labels::Labels,
+	effects::{force_shield::ForceShield, gravity::Gravity},
 	systems::{
 		asset_process_delta::asset_process_delta,
 		insert_associated::{Configure, InsertAssociated, InsertOn},
 		remove_components::Remove,
 		track_components::TrackComponentInSelfAndChildren,
 	},
-	traits::shaders::RegisterForEffectShading,
+	traits::handles_effect_shading::{HandlesEffectShading, HandlesEffectShadingFor},
 };
-use components::{effect_shader::EffectShaders, material_override::MaterialOverride};
-use interactions::components::{force::Force, gravity::Gravity};
+use components::{
+	effect_shader::EffectShader,
+	effect_shaders_target::EffectShadersTarget,
+	material_override::MaterialOverride,
+};
 use materials::{
 	essence_material::EssenceMaterial,
 	force_material::ForceMaterial,
@@ -38,8 +41,8 @@ pub struct ShadersPlugin;
 
 impl ShadersPlugin {
 	fn build_for_effect_shaders(app: &mut App) {
-		app.register_effect_shader_for::<Force>()
-			.register_effect_shader_for::<Gravity>()
+		app.register_effect_shader::<EffectShader<ForceShield>>()
+			.register_effect_shader::<EffectShader<Gravity>>()
 			.add_systems(
 				Update,
 				(
@@ -50,8 +53,8 @@ impl ShadersPlugin {
 			.add_systems(
 				PostUpdate,
 				(
-					EffectShaders::remove_from_self_and_children::<Handle<StandardMaterial>>,
-					EffectShaders::track_in_self_and_children::<Handle<Mesh>>().system(),
+					EffectShadersTarget::remove_from_self_and_children::<Handle<StandardMaterial>>,
+					EffectShadersTarget::track_in_self_and_children::<Handle<Mesh>>().system(),
 					instantiate_effect_shaders,
 				),
 			);
@@ -79,15 +82,18 @@ impl Plugin for ShadersPlugin {
 	}
 }
 
-impl RegisterForEffectShading for ShadersPlugin {
-	fn register_for_effect_shading<TComponent>(app: &mut App)
-	where
-		TComponent: Component,
-	{
-		app.add_systems(
-			Labels::PREFAB_INSTANTIATION.label(),
-			InsertOn::<TComponent>::associated::<EffectShaders>(Configure::LeaveAsIs),
-		);
+impl<TEffect> HandlesEffectShadingFor<TEffect> for ShadersPlugin
+where
+	EffectShader<TEffect>: GetEffectMaterial + Sync + Send + 'static,
+{
+	fn effect_shader(effect: TEffect) -> impl Bundle {
+		EffectShader(effect)
+	}
+}
+
+impl HandlesEffectShading for ShadersPlugin {
+	fn effect_shader_target() -> impl Bundle {
+		EffectShadersTarget::default()
 	}
 }
 
@@ -116,7 +122,7 @@ impl RegisterShader for App {
 }
 
 trait RegisterEffectShader {
-	fn register_effect_shader_for<TEffect>(&mut self) -> &mut Self
+	fn register_effect_shader<TEffect>(&mut self) -> &mut Self
 	where
 		TEffect: Component + GetEffectMaterial,
 		TEffect::TMaterial: ShadowsAwareMaterial,
@@ -124,7 +130,7 @@ trait RegisterEffectShader {
 }
 
 impl RegisterEffectShader for App {
-	fn register_effect_shader_for<TEffect>(&mut self) -> &mut Self
+	fn register_effect_shader<TEffect>(&mut self) -> &mut Self
 	where
 		TEffect: Component + GetEffectMaterial,
 		TEffect::TMaterial: ShadowsAwareMaterial + Asset,

@@ -9,7 +9,6 @@ bevy.workspace = true
 
 # internal
 common.workspace = true
-interactions.workspace = true
 
 [dev-dependencies]
 # external

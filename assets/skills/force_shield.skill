@@ -14,7 +14,7 @@
 			"spawn_on": "Center",
 			"contact": [
 				{
-					"Force": null
+					"ForceShield": null
 				}
 			],
 			"projection": []

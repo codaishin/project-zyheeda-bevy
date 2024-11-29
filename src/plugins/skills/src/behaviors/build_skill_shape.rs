@@ -61,7 +61,7 @@ impl BuildSkillShape {
 		}
 	}
 
-	pub(crate) fn build<TLifetimeDependency>(
+	pub(crate) fn build<TLifetimes>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -69,17 +69,13 @@ impl BuildSkillShape {
 		target: &Target,
 	) -> SkillShape
 	where
-		TLifetimeDependency: HandlesLifetime,
+		TLifetimes: HandlesLifetime,
 	{
 		match self {
 			Self::Fn(func) => func(commands, caster, spawn, target),
-			Self::GroundTargetedAoe(gt) => {
-				gt.build::<TLifetimeDependency>(commands, caster, spawn, target)
-			}
-			Self::Projectile(pr) => {
-				pr.build::<TLifetimeDependency>(commands, caster, spawn, target)
-			}
-			Self::Shield(sh) => sh.build::<TLifetimeDependency>(commands, caster, spawn, target),
+			Self::GroundTargetedAoe(gt) => gt.build::<TLifetimes>(commands, caster, spawn, target),
+			Self::Projectile(pr) => pr.build::<TLifetimes>(commands, caster, spawn, target),
+			Self::Shield(sh) => sh.build::<TLifetimes>(commands, caster, spawn, target),
 		}
 	}
 }

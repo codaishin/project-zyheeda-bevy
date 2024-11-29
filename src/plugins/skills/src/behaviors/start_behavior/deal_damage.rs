@@ -11,19 +11,19 @@ pub enum StartDealingDamage {
 }
 
 impl StartDealingDamage {
-	pub fn apply<TEffectDependency>(
+	pub fn apply<TEffects>(
 		&self,
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
 		_: &SkillSpawner,
 		_: &Target,
 	) where
-		TEffectDependency: HandlesEffect<DealDamage>,
+		TEffects: HandlesEffect<DealDamage>,
 	{
 		entity.try_insert(match *self {
-			Self::SingleTarget(dmg) => TEffectDependency::effect(DealDamage::once(dmg)),
-			Self::Piercing(dmg) => TEffectDependency::effect(DealDamage::once_per_target(dmg)),
-			Self::OverTime(dmg) => TEffectDependency::effect(DealDamage::once_per_second(dmg)),
+			Self::SingleTarget(dmg) => TEffects::effect(DealDamage::once(dmg)),
+			Self::Piercing(dmg) => TEffects::effect(DealDamage::once_per_target(dmg)),
+			Self::OverTime(dmg) => TEffects::effect(DealDamage::once_per_second(dmg)),
 		});
 	}
 }

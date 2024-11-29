@@ -1,5 +1,5 @@
 use crate::{
-	components::Unmovable,
+	components::Protected,
 	tools::get_recursively::{get_recursively_from, related::Child},
 	traits::try_remove_from::TryRemoveFrom,
 };
@@ -13,7 +13,7 @@ where
 		commands: Commands,
 		agents: Query<Entity, With<TAgent>>,
 		children: Query<&Children>,
-		components_lookup: Query<(), (With<TComponent>, Without<Unmovable<TComponent>>)>,
+		components_lookup: Query<(), (With<TComponent>, Without<Protected<TComponent>>)>,
 		agents_lookup: Query<(), With<TAgent>>,
 	) where
 		TComponent: Component,
@@ -28,7 +28,7 @@ fn remove_components<TCommands, TAgent, TComponent>(
 	mut commands: TCommands,
 	agents: Query<Entity, With<TAgent>>,
 	children: Query<&Children>,
-	components_lookup: Query<(), (With<TComponent>, Without<Unmovable<TComponent>>)>,
+	components_lookup: Query<(), (With<TComponent>, Without<Protected<TComponent>>)>,
 	agents_lookup: Query<(), With<TAgent>>,
 ) where
 	TCommands: TryRemoveFrom,
@@ -53,7 +53,7 @@ fn remove_components<TCommands, TAgent, TComponent>(
 #[cfg(test)]
 pub mod tests {
 	use super::*;
-	use crate::{components::Unmovable, simple_init, traits::mock::Mock};
+	use crate::{components::Protected, simple_init, traits::mock::Mock};
 	use bevy::ecs::system::RunSystemOnce;
 	use mockall::{mock, predicate::eq};
 
@@ -132,11 +132,11 @@ pub mod tests {
 	}
 
 	#[test]
-	fn do_not_remove_when_unmovable() {
+	fn do_not_remove_when_protected() {
 		let mut app = setup();
 		let parent = app.world_mut().spawn(_Agent).id();
 		app.world_mut()
-			.spawn((_Component, Unmovable::<_Component>::default()))
+			.spawn((_Component, Protected::<_Component>::default()))
 			.set_parent(parent);
 
 		let mock = Mock_Commands::new_mock(|mock| {

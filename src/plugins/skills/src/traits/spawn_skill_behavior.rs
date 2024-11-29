@@ -5,14 +5,15 @@ use crate::behaviors::{
 	SkillSpawner,
 	Target,
 };
-use common::{
-	effects::deal_damage::DealDamage,
-	traits::{handles_effect::HandlesEffect, handles_lifetime::HandlesLifetime},
+use common::traits::{
+	handles_effect::HandlesAllEffects,
+	handles_effect_shading::HandlesEffectShadingForAll,
+	handles_lifetime::HandlesLifetime,
 };
 
 pub(crate) trait SpawnSkillBehavior<TCommands> {
 	fn spawn_on(&self) -> SpawnOn;
-	fn spawn<TLifetimeDependency, TEffectDependency>(
+	fn spawn<TLifetimes, TEffects, TShaders>(
 		&self,
 		commands: &mut TCommands,
 		caster: &SkillCaster,
@@ -20,6 +21,7 @@ pub(crate) trait SpawnSkillBehavior<TCommands> {
 		target: &Target,
 	) -> OnSkillStop
 	where
-		TLifetimeDependency: HandlesLifetime + 'static,
-		TEffectDependency: HandlesEffect<DealDamage> + 'static;
+		TLifetimes: HandlesLifetime + 'static,
+		TEffects: HandlesAllEffects + 'static,
+		TShaders: HandlesEffectShadingForAll + 'static;
 }

@@ -34,7 +34,7 @@ pub(crate) struct SkillShape {
 }
 
 pub(crate) trait SkillBuilder {
-	fn build<TLifetimeDependency>(
+	fn build<TLifetimes>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -42,14 +42,14 @@ pub(crate) trait SkillBuilder {
 		target: &Target,
 	) -> SkillShape
 	where
-		TLifetimeDependency: HandlesLifetime;
+		TLifetimes: HandlesLifetime;
 }
 
 impl<T> SkillBuilder for T
 where
 	T: BuildContact + BuildProjection + SkillLifetime,
 {
-	fn build<TLifetimeDependency>(
+	fn build<TLifetimes>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -57,9 +57,9 @@ where
 		target: &Target,
 	) -> SkillShape
 	where
-		TLifetimeDependency: HandlesLifetime,
+		TLifetimes: HandlesLifetime,
 	{
-		let contact_with_lifetime = contact::<TLifetimeDependency>;
+		let contact_with_lifetime = contact::<TLifetimes>;
 		let entity = commands.spawn(self.build_contact(caster, spawner, target));
 		let (contact, on_skill_stop) = match self.lifetime() {
 			LifeTimeDefinition::UntilStopped => contact_stoppable(entity),
@@ -84,14 +84,14 @@ fn contact_stoppable(contact: EntityCommands) -> (Entity, OnSkillStop) {
 	(contact, OnSkillStop::Stop(contact))
 }
 
-fn contact<TLifetimeDependency>(
+fn contact<TLifetimes>(
 	mut contact: EntityCommands<'_>,
 	duration: std::time::Duration,
 ) -> (Entity, OnSkillStop)
 where
-	TLifetimeDependency: HandlesLifetime,
+	TLifetimes: HandlesLifetime,
 {
-	contact.insert(TLifetimeDependency::lifetime(duration));
+	contact.insert(TLifetimes::lifetime(duration));
 	(contact.id(), OnSkillStop::Ignore)
 }
 

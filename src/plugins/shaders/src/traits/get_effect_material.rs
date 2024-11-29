@@ -1,6 +1,3 @@
-mod force;
-mod gravity;
-
 use bevy::prelude::*;
 
 pub(crate) trait GetEffectMaterial {

@@ -24,7 +24,8 @@
 			"projection": [
 				{
 					"Gravity": {
-						"strength": 2
+						"strength": 2,
+						"effect_applies": "Always"
 					}
 				}
 			]
