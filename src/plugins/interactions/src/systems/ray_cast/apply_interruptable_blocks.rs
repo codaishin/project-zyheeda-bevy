@@ -1,12 +1,11 @@
-use std::collections::{HashMap, HashSet};
-
 use super::execute_ray_caster::RayCastResult;
 use crate::components::{
-	blocker::{Blocker, Blockers},
+	blockers::Blockers,
 	is::{InterruptableRay, Is},
 };
 use bevy::prelude::{Entity, In, Query};
-use common::{components::ColliderRoot, traits::cast_ray::TimeOfImpact};
+use common::{blocker::Blocker, components::ColliderRoot, traits::cast_ray::TimeOfImpact};
+use std::collections::{HashMap, HashSet};
 
 pub(crate) fn apply_interruptable_ray_blocks(
 	In(mut ray_casts): In<HashMap<Entity, RayCastResult>>,
@@ -68,10 +67,7 @@ fn is_effected(InterruptableRay(by): &InterruptableRay, blockers: &HashSet<Block
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::{blocker::Blocker, is::Is},
-		events::RayCastInfo,
-	};
+	use crate::events::RayCastInfo;
 	use bevy::{app::App, ecs::system::RunSystemOnce, prelude::default};
 	use common::{components::ColliderRoot, traits::cast_ray::TimeOfImpact};
 

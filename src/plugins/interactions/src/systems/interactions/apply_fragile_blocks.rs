@@ -1,6 +1,6 @@
 use crate::{
 	components::{
-		blocker::Blockers,
+		blockers::Blockers,
 		is::{Fragile, Is},
 	},
 	events::{Collision, InteractionEvent},
@@ -54,8 +54,11 @@ fn fragile_blocked_entity(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::blocker::Blocker;
-	use common::{components::ColliderRoot, test_tools::utils::SingleThreadedApp};
+	use common::{
+		blocker::Blocker,
+		components::ColliderRoot,
+		test_tools::utils::SingleThreadedApp,
+	};
 
 	#[derive(Component, Default, Debug, PartialEq)]
 	struct _Destroy;

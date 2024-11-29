@@ -1,5 +1,3 @@
-pub(crate) mod execute_beam;
-
 use crate::components::{Attack, AttackConfig, Attacker, OnCoolDown, Target};
 use bevy::ecs::{
 	component::Component,

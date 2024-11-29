@@ -2,8 +2,7 @@ use super::ExtraComponentsDefinition;
 use crate::components::{Unlit, Wall, WallBack};
 use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::geometry::Collider;
-use common::components::NoTarget;
-use interactions::components::blocker::Blocker;
+use common::{blocker::Blocker, components::NoTarget};
 
 impl ExtraComponentsDefinition for Wall {
 	fn target_names() -> Vec<String> {

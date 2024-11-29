@@ -1,5 +1,3 @@
-pub(crate) mod beam;
-pub(crate) mod beam_config;
 pub(crate) mod bundle;
 pub(crate) mod movement;
 pub(crate) mod movement_config;
@@ -66,7 +64,7 @@ pub(crate) trait Cleanup {
 	fn cleanup(&self, agent: &mut EntityCommands);
 }
 
-type DespawnFn = Arc<dyn Fn(&mut Commands) + Sync + Send>;
+pub type DespawnFn = Arc<dyn Fn(&mut Commands) + Sync + Send>;
 
 pub trait SpawnAttack {
 	fn spawn(&self, commands: &mut Commands, attacker: Attacker, target: Target) -> DespawnFn;

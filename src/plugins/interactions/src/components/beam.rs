@@ -1,0 +1,490 @@
+use super::{RayCaster, RayFilter};
+use crate::events::{InteractionEvent, Ray};
+use bevy::prelude::*;
+use bevy_rapier3d::prelude::*;
+use common::{
+	components::{ColliderRoot, GroundOffset},
+	tools::Units,
+	traits::{
+		cast_ray::TimeOfImpact,
+		handles_interactions::BeamParameters,
+		try_despawn_recursive::TryDespawnRecursive,
+		try_insert_on::TryInsertOn,
+	},
+};
+use std::time::Duration;
+
+#[derive(Component, Debug, PartialEq)]
+pub(crate) struct Beam {
+	source: Vec3,
+	target: Vec3,
+}
+
+impl Beam {
+	pub(crate) fn execute<TLifeTime>(
+		mut commands: Commands,
+		mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
+		beams: Query<(Entity, &BeamCommand, Option<&Beam>)>,
+		transforms: Query<(&GlobalTransform, Option<&GroundOffset>)>,
+	) where
+		TLifeTime: From<Duration> + Component,
+	{
+		for (entity, cmd, ..) in &beams {
+			match commands.get_entity(cmd.source) {
+				Some(_) => defer_beam_ray_cast(&mut commands, &transforms, entity, cmd),
+				None => despawn_beam(&mut commands, entity),
+			}
+		}
+
+		for InteractionEvent(ColliderRoot(source), ray) in ray_cast_events.read() {
+			match beams.get(*source) {
+				Ok((entity, cmd, None)) => spawn_beam::<TLifeTime>(&mut commands, entity, ray, cmd),
+				Ok((entity, .., Some(_))) => update_beam_transform(&mut commands, entity, ray),
+				Err(_) => {}
+			}
+		}
+	}
+}
+
+#[derive(Component, Debug, PartialEq)]
+pub struct BeamCommand {
+	source: Entity,
+	target: Entity,
+	params: Parameters,
+}
+
+impl<T> From<&T> for BeamCommand
+where
+	T: BeamParameters,
+{
+	fn from(value: &T) -> Self {
+		BeamCommand {
+			source: value.source(),
+			target: value.target(),
+			params: Parameters {
+				range: value.range(),
+				lifetime: value.lifetime(),
+			},
+		}
+	}
+}
+
+#[derive(Debug, PartialEq, Default)]
+pub(crate) struct Parameters {
+	range: Units,
+	lifetime: Duration,
+}
+
+fn defer_beam_ray_cast(
+	commands: &mut Commands,
+	transforms: &Query<(&GlobalTransform, Option<&GroundOffset>)>,
+	entity: Entity,
+	cmd: &BeamCommand,
+) {
+	let Ok((source_transform, source_offset)) = transforms.get(cmd.source) else {
+		return;
+	};
+	let Ok((target_transform, target_offset)) = transforms.get(cmd.target) else {
+		return;
+	};
+	let Some(filter) = get_filter(cmd.source) else {
+		return;
+	};
+	let origin = translation(source_transform, source_offset);
+	let target = translation(target_transform, target_offset);
+	let Ok(direction) = Dir3::new(target - origin) else {
+		return;
+	};
+
+	commands.try_insert_on(
+		entity,
+		RayCaster {
+			origin,
+			direction,
+			solid: true,
+			filter,
+			max_toi: TimeOfImpact(*cmd.params.range),
+		},
+	);
+}
+
+fn despawn_beam(commands: &mut Commands, entity: Entity) {
+	commands.try_despawn_recursive(entity)
+}
+
+fn get_filter(source: Entity) -> Option<RayFilter> {
+	QueryFilter::default()
+		.exclude_rigid_body(source)
+		.try_into()
+		.ok()
+}
+
+fn spawn_beam<TLifeTime>(commands: &mut Commands, entity: Entity, ray: &Ray, cmd: &BeamCommand)
+where
+	TLifeTime: From<Duration> + Component,
+{
+	let (source, target, transform) = unpack_beam_ray(ray);
+	commands.try_insert_on(
+		entity,
+		(
+			SpatialBundle::from_transform(transform),
+			Beam { source, target },
+			TLifeTime::from(cmd.params.lifetime),
+		),
+	);
+}
+
+fn update_beam_transform(commands: &mut Commands, entity: Entity, ray: &Ray) {
+	let (.., transform) = unpack_beam_ray(ray);
+	commands.try_insert_on(entity, TransformBundle::from(transform));
+}
+
+fn translation(transform: &GlobalTransform, offset: Option<&GroundOffset>) -> Vec3 {
+	transform.translation() + offset.map_or(Vec3::ZERO, |offset| offset.0)
+}
+
+type SourceTranslation = Vec3;
+type TargetTranslation = Vec3;
+
+fn get_beam_range(ray: &Ray3d, toi: f32) -> (SourceTranslation, TargetTranslation) {
+	(ray.origin, ray.origin + *ray.direction * toi)
+}
+
+fn unpack_beam_ray(
+	Ray(ray, TimeOfImpact(toi)): &Ray,
+) -> (SourceTranslation, TargetTranslation, Transform) {
+	let (source, target) = get_beam_range(ray, *toi);
+
+	(
+		source,
+		target,
+		Transform::from_translation((source + target) / 2.)
+			.looking_at(target, Vec3::Y)
+			.with_scale(Vec3::ONE.with_z(*toi)),
+	)
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::{
+		components::RayCaster,
+		events::{InteractionEvent, Ray},
+	};
+	use common::{
+		assert_bundle,
+		test_tools::utils::SingleThreadedApp,
+		traits::{cast_ray::TimeOfImpact, clamp_zero_positive::ClampZeroPositive},
+	};
+	use std::time::Duration;
+
+	#[derive(Component, Debug, PartialEq)]
+	struct _LifeTime(Duration);
+
+	impl From<Duration> for _LifeTime {
+		fn from(duration: Duration) -> Self {
+			_LifeTime(duration)
+		}
+	}
+
+	fn setup() -> App {
+		let mut app = App::new().single_threaded(Update);
+		app.add_systems(Update, Beam::execute::<_LifeTime>);
+		app.add_event::<InteractionEvent<Ray>>();
+
+		app
+	}
+
+	#[test]
+	fn insert_ray_caster() {
+		let mut app = setup();
+		let source = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(1., 0., 0.))
+			.id();
+		let target = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(1., 0., 4.))
+			.id();
+		let beam = app
+			.world_mut()
+			.spawn(BeamCommand {
+				source,
+				target,
+				params: Parameters {
+					range: Units::new(100.),
+					..default()
+				},
+			})
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&RayCaster {
+				origin: Vec3::new(1., 0., 0.),
+				direction: Dir3::Z,
+				max_toi: TimeOfImpact(100.),
+				solid: true,
+				filter: QueryFilter::default()
+					.exclude_rigid_body(source)
+					.try_into()
+					.unwrap(),
+			}),
+			app.world().entity(beam).get::<RayCaster>()
+		);
+	}
+
+	#[test]
+	fn insert_ray_caster_with_ground_offset_for_target() {
+		let mut app = setup();
+		let source = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(1., 0., 0.))
+			.id();
+		let target = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::from_xyz(1., 0., 4.),
+				GroundOffset(Vec3::new(0., 1., 0.)),
+			))
+			.id();
+		let beam = app
+			.world_mut()
+			.spawn(BeamCommand {
+				source,
+				target,
+				params: Parameters {
+					range: Units::new(100.),
+					..default()
+				},
+			})
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&RayCaster {
+				origin: Vec3::new(1., 0., 0.),
+				direction: Vec3::new(0., 1., 4.).normalize().try_into().unwrap(),
+				max_toi: TimeOfImpact(100.),
+				solid: true,
+				filter: QueryFilter::default()
+					.exclude_rigid_body(source)
+					.try_into()
+					.unwrap(),
+			}),
+			app.world().entity(beam).get::<RayCaster>()
+		);
+	}
+
+	#[test]
+	fn insert_ray_caster_with_ground_offset_for_source() {
+		let mut app = setup();
+		let source = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::from_xyz(1., 0., 0.),
+				GroundOffset(Vec3::new(0., 1., 0.)),
+			))
+			.id();
+		let target = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(1., 0., 4.))
+			.id();
+		let beam = app
+			.world_mut()
+			.spawn(BeamCommand {
+				source,
+				target,
+				params: Parameters {
+					range: Units::new(100.),
+					..default()
+				},
+			})
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&RayCaster {
+				origin: Vec3::new(1., 1., 0.),
+				direction: Vec3::new(0., -1., 4.).normalize().try_into().unwrap(),
+				max_toi: TimeOfImpact(100.),
+				solid: true,
+				filter: QueryFilter::default()
+					.exclude_rigid_body(source)
+					.try_into()
+					.unwrap(),
+			}),
+			app.world().entity(beam).get::<RayCaster>()
+		);
+	}
+
+	#[test]
+	fn spawn_beam_from_interaction() {
+		let mut app = setup();
+		let source = app.world_mut().spawn(GlobalTransform::default()).id();
+		let beam = app
+			.world_mut()
+			.spawn(BeamCommand {
+				source,
+				target: Entity::from_raw(default()),
+				params: Parameters {
+					lifetime: Duration::from_millis(100),
+					..default()
+				},
+			})
+			.id();
+		app.world_mut()
+			.send_event(InteractionEvent::of(ColliderRoot(beam)).ray(
+				Ray3d {
+					origin: Vec3::Z,
+					direction: Dir3::Y,
+				},
+				TimeOfImpact(10.),
+			));
+
+		app.update();
+
+		assert_eq!(
+			(
+				Some(&Beam {
+					source: Vec3::Z,
+					target: Vec3::new(0., 10., 1.),
+				}),
+				Some(&_LifeTime(Duration::from_millis(100))),
+			),
+			(
+				app.world().entity(beam).get::<Beam>(),
+				app.world().entity(beam).get::<_LifeTime>()
+			)
+		);
+	}
+
+	#[test]
+	fn set_spatial_bundle() {
+		let mut app = setup();
+		let source = app.world_mut().spawn(GlobalTransform::default()).id();
+		let beam = app
+			.world_mut()
+			.spawn(BeamCommand {
+				source,
+				target: Entity::from_raw(default()),
+				params: Parameters::default(),
+			})
+			.id();
+		app.world_mut()
+			.send_event(InteractionEvent::of(ColliderRoot(beam)).ray(
+				Ray3d {
+					origin: Vec3::new(0., 1., 0.),
+					direction: Dir3::X,
+				},
+				TimeOfImpact(10.),
+			));
+
+		app.update();
+
+		assert_bundle!(
+			SpatialBundle,
+			&app,
+			app.world().entity(beam),
+			With::assert(|transform: &Transform| {
+				assert_eq!(
+					&Transform::from_xyz(5., 1., 0.)
+						.looking_at(Vec3::new(10., 1., 0.), Vec3::Y)
+						.with_scale(Vec3 {
+							x: 1.,
+							y: 1.,
+							z: 10.
+						}),
+					transform
+				);
+			})
+		);
+	}
+
+	#[test]
+	fn update_transform_only_when_beam_component_already_present() {
+		let mut app = setup();
+		let source = app.world_mut().spawn(GlobalTransform::default()).id();
+		let beam = app
+			.world_mut()
+			.spawn((
+				BeamCommand {
+					source,
+					target: Entity::from_raw(default()),
+					params: Parameters::default(),
+				},
+				Beam {
+					source: Vec3::default(),
+					target: Vec3::default(),
+				},
+			))
+			.id();
+		app.world_mut()
+			.send_event(InteractionEvent::of(ColliderRoot(beam)).ray(
+				Ray3d {
+					origin: Vec3::new(0., 1., 0.),
+					direction: Dir3::X,
+				},
+				TimeOfImpact(10.),
+			));
+
+		app.update();
+
+		assert_eq!(
+			(
+				Some(
+					&Transform::from_xyz(5., 1., 0.)
+						.looking_at(Vec3::new(10., 1., 0.), Vec3::Y)
+						.with_scale(Vec3 {
+							x: 1.,
+							y: 1.,
+							z: 10.
+						})
+				),
+				Some(&Beam {
+					source: Vec3::default(),
+					target: Vec3::default(),
+				})
+			),
+			(
+				app.world().entity(beam).get::<Transform>(),
+				app.world().entity(beam).get::<Beam>(),
+			),
+		)
+	}
+
+	#[test]
+	fn remove_beam_when_source_not_removed() {
+		let mut app = setup();
+		let source = app.world_mut().spawn(GlobalTransform::default()).id();
+		let beam = app
+			.world_mut()
+			.spawn(BeamCommand {
+				source,
+				target: Entity::from_raw(default()),
+				params: Parameters::default(),
+			})
+			.id();
+		let child = app.world_mut().spawn_empty().set_parent(beam).id();
+		app.world_mut()
+			.send_event(InteractionEvent::of(ColliderRoot(beam)).ray(
+				Ray3d {
+					origin: Vec3::new(0., 1., 0.),
+					direction: Dir3::X,
+				},
+				TimeOfImpact(10.),
+			));
+
+		app.update();
+		app.world_mut().entity_mut(source).despawn();
+		app.update();
+
+		let beam = app.world().get_entity(beam);
+		let child = app.world().get_entity(child);
+
+		assert_eq!((true, true), (beam.is_none(), child.is_none()));
+	}
+}

@@ -6,6 +6,7 @@ use behaviors::{
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
+	blocker::Blocker,
 	components::{AssetModel, ColliderRoot, GroundOffset},
 	errors::Error,
 	tools::UnitsPerSecond,
@@ -24,7 +25,6 @@ use common::{
 		prefab::{GetOrCreateAssets, Prefab},
 	},
 };
-use interactions::components::blocker::Blocker;
 use light::components::ResponsiveLightTrigger;
 
 #[derive(Component, Default, Debug, PartialEq)]

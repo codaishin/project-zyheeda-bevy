@@ -1,5 +1,5 @@
-use bevy::prelude::{Commands, Component, Entity, Query};
-use common::traits::iteration::{Iter, IterFinite};
+use bevy::prelude::*;
+use common::blocker::{Blocker, BlockerInsertCommand};
 use std::collections::HashSet;
 
 #[derive(Component, Default, Debug, PartialEq)]
@@ -12,35 +12,10 @@ impl Blockers {
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum Blocker {
-	Physical,
-	Force,
-}
-impl IterFinite for Blocker {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(Blocker::Physical))
-	}
+impl ApplyBlockerInsertion for BlockerInsertCommand {}
 
-	fn next(current: &Iter<Self>) -> Option<Self> {
-		match current.0? {
-			Blocker::Physical => Some(Blocker::Force),
-			Blocker::Force => None,
-		}
-	}
-}
-
-impl Blocker {
-	pub fn insert<const N: usize>(blockers: [Blocker; N]) -> BlockerInsertCommand {
-		BlockerInsertCommand(HashSet::from(blockers))
-	}
-}
-
-#[derive(Component, Debug, PartialEq)]
-pub struct BlockerInsertCommand(HashSet<Blocker>);
-
-impl BlockerInsertCommand {
-	pub(crate) fn system(
+pub(crate) trait ApplyBlockerInsertion {
+	fn apply(
 		mut commands: Commands,
 		agents: Query<(Entity, &BlockerInsertCommand)>,
 		mut blockers: Query<&mut Blockers>,
@@ -69,7 +44,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, BlockerInsertCommand::system);
+		app.add_systems(Update, BlockerInsertCommand::apply);
 
 		app
 	}

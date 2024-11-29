@@ -1,12 +1,14 @@
 pub mod acted_on_targets;
-pub mod blocker;
+pub mod blockers;
 pub mod deals_damage;
 pub mod effected_by;
 pub mod effected_by_gravity;
 pub mod force;
 pub mod gravity;
 pub mod interacting_entities;
-pub mod is;
+
+pub(crate) mod beam;
+pub(crate) mod is;
 
 use crate::traits::ActOn;
 use bevy::{

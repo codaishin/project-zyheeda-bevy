@@ -5,16 +5,14 @@ use crate::traits::{Caster, ProjectileBehavior, Spawner};
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::{Ccd, GravityScale, RigidBody};
 use common::{
+	blocker::Blocker,
 	errors::Error,
 	tools::UnitsPerSecond,
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
+		handles_interactions::HandlesInteractions,
 		prefab::{GetOrCreateAssets, Prefab},
 	},
-};
-use interactions::components::{
-	blocker::Blocker,
-	is::{Fragile, Is},
 };
 use sub_type::SubType;
 
@@ -49,7 +47,10 @@ impl ProjectileBehavior for ProjectileContact {
 	}
 }
 
-impl Prefab<()> for ProjectileContact {
+impl<TInteractions> Prefab<TInteractions> for ProjectileContact
+where
+	TInteractions: HandlesInteractions,
+{
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
@@ -60,7 +61,7 @@ impl Prefab<()> for ProjectileContact {
 				RigidBody::Dynamic,
 				GravityScale(0.),
 				Ccd::enabled(),
-				Is::<Fragile>::interacting_with([Blocker::Physical, Blocker::Force]),
+				TInteractions::is_fragile_when_colliding_with([Blocker::Physical, Blocker::Force]),
 				MovementConfig::Constant {
 					mode: MovementMode::Fast,
 					speed: UnitsPerSecond::new(15.),

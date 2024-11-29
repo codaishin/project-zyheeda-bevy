@@ -12,8 +12,8 @@ use common::{
 	states::{game_state::GameState, mouse_context::MouseContext},
 	traits::{
 		animation::HasAnimationsDispatch,
-		handles_lifetime::HandlesLifetime,
-		prefab::RegisterPrefab,
+		handles_interactions::HandlesInteractions,
+		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 		shaders::RegisterForEffectShading,
 	},
 };
@@ -22,7 +22,7 @@ use components::{
 	ground_targeted_aoe::{GroundTargetedAoeContact, GroundTargetedAoeProjection},
 	projectile::{ProjectileContact, ProjectileProjection},
 	shield::{ShieldContact, ShieldProjection},
-	Beam,
+	void_beam::VoidBeam,
 	Movement,
 	MovementConfig,
 	PositionBased,
@@ -31,7 +31,7 @@ use components::{
 use events::MoveInputEvent;
 use std::marker::PhantomData;
 use systems::{
-	attack::{attack, execute_beam::execute_beam},
+	attack::attack,
 	chase::chase,
 	face::{execute_face::execute_face, get_faces::get_faces},
 	idle::idle,
@@ -48,56 +48,57 @@ use systems::{
 	update_cool_downs::update_cool_downs,
 };
 
-pub struct BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TLifeCyclePlugin>(
+pub struct BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>(
 	PhantomData<(
 		TAnimationsPlugin,
 		TPrefabsPlugin,
 		TShadersPlugin,
-		TLifeCyclePlugin,
+		TInteractionsPlugin,
 	)>,
 );
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TLifeCyclePlugin>
-	BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TLifeCyclePlugin>
+impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>
+	BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
 	TShadersPlugin: Plugin + RegisterForEffectShading,
-	TLifeCyclePlugin: Plugin + HandlesLifetime,
+	TInteractionsPlugin: Plugin + HandlesInteractions,
 {
 	pub fn depends_on(
 		_: &TAnimationsPlugin,
 		_: &TPrefabsPlugin,
 		_: &TShadersPlugin,
-		_: &TLifeCyclePlugin,
+		_: &TInteractionsPlugin,
 	) -> Self {
 		Self(
 			PhantomData::<(
 				TAnimationsPlugin,
 				TPrefabsPlugin,
 				TShadersPlugin,
-				TLifeCyclePlugin,
+				TInteractionsPlugin,
 			)>,
 		)
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TLifeCyclePlugin> Plugin
-	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TLifeCyclePlugin>
+impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin> Plugin
+	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
 	TShadersPlugin: Plugin + RegisterForEffectShading,
-	TLifeCyclePlugin: Plugin + HandlesLifetime,
+	TInteractionsPlugin: Plugin + HandlesInteractions,
 {
 	fn build(&self, app: &mut App) {
-		TPrefabsPlugin::register_prefab::<Beam>(app);
-		TPrefabsPlugin::register_prefab::<ProjectileContact>(app);
 		TPrefabsPlugin::register_prefab::<ProjectileProjection>(app);
 		TPrefabsPlugin::register_prefab::<ShieldContact>(app);
 		TPrefabsPlugin::register_prefab::<ShieldProjection>(app);
 		TPrefabsPlugin::register_prefab::<GroundTargetedAoeContact>(app);
 		TPrefabsPlugin::register_prefab::<GroundTargetedAoeProjection>(app);
+		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>()
+			.register_prefab::<VoidBeam>(app)
+			.register_prefab::<ProjectileContact>(app);
 
 		TShadersPlugin::register_for_effect_shading::<ShieldContact>(app);
 		TShadersPlugin::register_for_effect_shading::<ShieldProjection>(app);
@@ -152,7 +153,6 @@ where
 				(ProjectileContact::set_position, ProjectileContact::movement).chain(),
 			)
 			.add_systems(Update, GroundTargetedAoeContact::set_position)
-			.add_systems(Update, execute_beam::<TLifeCyclePlugin::TLifetime>)
 			.add_systems(Update, position_force_shield);
 	}
 }

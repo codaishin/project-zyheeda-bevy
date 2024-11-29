@@ -5,20 +5,28 @@ pub mod traits;
 mod resources;
 mod systems;
 
-use bevy::{
-	app::{App, Plugin},
-	ecs::{component::Component, schedule::IntoSystemConfigs},
-	prelude::IntoSystem,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContext;
-use common::{components::Health, labels::Labels, traits::handles_destruction::HandlesDestruction};
+use common::{
+	self,
+	blocker::BlockerInsertCommand,
+	components::Health,
+	labels::Labels,
+	traits::{
+		handles_destruction::HandlesDestruction,
+		handles_interactions::{BeamParameters, HandlesInteractions},
+		handles_lifetime::HandlesLifetime,
+	},
+};
 use components::{
 	acted_on_targets::ActedOnTargets,
-	blocker::BlockerInsertCommand,
+	beam::{Beam, BeamCommand},
+	blockers::ApplyBlockerInsertion,
 	deals_damage::DealsDamage,
 	effected_by_gravity::EffectedByGravity,
 	gravity::Gravity,
 	interacting_entities::InteractingEntities,
+	is::{Fragile, InterruptableRay, Is},
 };
 use events::{InteractionEvent, Ray};
 use resources::{
@@ -49,7 +57,7 @@ pub struct InteractionsPlugin<TLifeCyclePlugin>(PhantomData<TLifeCyclePlugin>);
 
 impl<TLifeCyclePlugin> InteractionsPlugin<TLifeCyclePlugin>
 where
-	TLifeCyclePlugin: Plugin + HandlesDestruction,
+	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime,
 {
 	pub fn depends_on(_: &TLifeCyclePlugin) -> Self {
 		Self(PhantomData)
@@ -58,7 +66,7 @@ where
 
 impl<TLifeCyclePlugin> Plugin for InteractionsPlugin<TLifeCyclePlugin>
 where
-	TLifeCyclePlugin: Plugin + HandlesDestruction,
+	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime,
 {
 	fn build(&self, app: &mut App) {
 		let processing_label = Labels::PROCESSING.label();
@@ -70,7 +78,7 @@ where
 			.init_resource::<TrackRayInteractions>()
 			.add_interaction::<DealsDamage, Health>()
 			.add_interaction::<Gravity, EffectedByGravity>()
-			.add_systems(processing_label.clone(), BlockerInsertCommand::system)
+			.add_systems(processing_label.clone(), BlockerInsertCommand::apply)
 			.add_systems(
 				processing_label.clone(),
 				apply_fragile_blocks::<TLifeCyclePlugin::TDestroy>,
@@ -90,7 +98,8 @@ where
 				)
 					.chain(),
 			)
-			.add_systems(Labels::PROPAGATION.label(), update_interacting_entities);
+			.add_systems(Labels::PROPAGATION.label(), update_interacting_entities)
+			.add_systems(Update, Beam::execute::<TLifeCyclePlugin::TLifetime>);
 	}
 }
 
@@ -117,5 +126,26 @@ impl AddInteraction for App {
 			)
 				.chain(),
 		)
+	}
+}
+
+impl<TLifeCyclePlugin> HandlesInteractions for InteractionsPlugin<TLifeCyclePlugin> {
+	fn is_fragile_when_colliding_with<const N: usize>(
+		blockers: [common::blocker::Blocker; N],
+	) -> impl Bundle {
+		Is::<Fragile>::interacting_with(blockers)
+	}
+
+	fn is_ray_interrupted_by<const N: usize>(
+		blockers: [common::blocker::Blocker; N],
+	) -> impl Bundle {
+		Is::<InterruptableRay>::interacting_with(blockers)
+	}
+
+	fn beam_from<T>(value: &T) -> impl Bundle
+	where
+		T: BeamParameters,
+	{
+		BeamCommand::from(value)
 	}
 }
