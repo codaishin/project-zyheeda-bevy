@@ -124,7 +124,9 @@ mod tests {
 	struct _HandlesEffects;
 
 	impl<T> HandlesEffect<T> for _HandlesEffects {
+		type TTarget = ();
 		fn effect(_: T) -> impl Bundle {}
+		fn attribute(_: Self::TTarget) -> impl Bundle {}
 	}
 
 	struct _HandlesShading;

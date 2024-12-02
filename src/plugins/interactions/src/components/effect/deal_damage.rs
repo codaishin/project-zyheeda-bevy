@@ -7,7 +7,14 @@ use common::{
 };
 use std::time::Duration;
 
-impl IsEffect for Effect<DealDamage> {}
+impl IsEffect for Effect<DealDamage> {
+	type TTarget = Health;
+	type TTargetComponent = Health;
+
+	fn attribute(health: Self::TTarget) -> Self::TTargetComponent {
+		health
+	}
+}
 
 impl ActOn<Health> for Effect<DealDamage> {
 	fn act(&mut self, _: Entity, health: &mut Health, delta: Duration) -> EffectApplies {

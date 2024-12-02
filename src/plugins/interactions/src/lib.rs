@@ -25,7 +25,7 @@ use components::{
 	beam::{Beam, BeamCommand},
 	blockers::ApplyBlockerInsertion,
 	effect::Effect,
-	effected_by_gravity::EffectedByGravity,
+	gravity_affected::GravityAffected,
 	interacting_entities::InteractingEntities,
 	is::{Fragile, InterruptableRay, Is},
 };
@@ -36,7 +36,7 @@ use resources::{
 };
 use std::marker::PhantomData;
 use systems::{
-	gravity_pull::gravity_pull,
+	gravity_affected::apply_gravity_pull,
 	interactions::{
 		act_interaction::act_interaction,
 		add_component::add_component_to,
@@ -78,7 +78,7 @@ where
 			.init_resource::<TrackInteractionDuplicates>()
 			.init_resource::<TrackRayInteractions>()
 			.add_interaction::<Effect<DealDamage>, Health>()
-			.add_interaction::<Effect<Gravity>, EffectedByGravity>()
+			.add_interaction::<Effect<Gravity>, GravityAffected>()
 			.add_systems(processing_label.clone(), BlockerInsertCommand::apply)
 			.add_systems(
 				processing_label.clone(),
@@ -86,7 +86,7 @@ where
 			)
 			.add_systems(
 				processing_label.clone(),
-				processing_delta.pipe(gravity_pull),
+				processing_delta.pipe(apply_gravity_pull),
 			)
 			.add_systems(
 				processing_label.clone(),
@@ -155,7 +155,13 @@ impl<TLifecyclePlugin, TEffect> HandlesEffect<TEffect> for InteractionsPlugin<TL
 where
 	Effect<TEffect>: IsEffect + Sync + Send + 'static,
 {
+	type TTarget = <Effect<TEffect> as IsEffect>::TTarget;
+
 	fn effect(effect: TEffect) -> impl Bundle {
 		Effect(effect)
+	}
+
+	fn attribute(target_attribute: Self::TTarget) -> impl Bundle {
+		Effect::<TEffect>::attribute(target_attribute)
 	}
 }

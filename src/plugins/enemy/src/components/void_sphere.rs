@@ -37,7 +37,7 @@ use common::{
 		prefab::{sphere, GetOrCreateAssets, Prefab},
 	},
 };
-use interactions::components::effected_by::EffectedBy;
+use interactions::components::gravity_affected::GravityAffected;
 use std::{f32::consts::PI, time::Duration};
 
 #[derive(Component)]
@@ -125,7 +125,7 @@ impl Prefab<()> for VoidSphere {
 
 		on.try_insert((
 			Blocker::insert([Blocker::Physical]),
-			EffectedBy::gravity(),
+			GravityAffected::default(),
 			GroundOffset(VOID_SPHERE_GROUND_OFFSET),
 			RigidBody::Dynamic,
 			GravityScale(0.),
