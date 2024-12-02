@@ -3657,7 +3657,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "interactions",
  "mockall",
  "tracing",
  "uuid",
