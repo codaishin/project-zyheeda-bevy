@@ -10,13 +10,12 @@ use bevy_rapier3d::plugin::RapierContext;
 use common::{
 	self,
 	blocker::BlockerInsertCommand,
-	components::Health,
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	labels::Labels,
 	traits::{
 		handles_destruction::HandlesDestruction,
-		handles_effect::HandlesEffect,
 		handles_interactions::{BeamParameters, HandlesInteractions},
+		handles_life::HandlesLife,
 		handles_lifetime::HandlesLifetime,
 	},
 };
@@ -52,13 +51,13 @@ use systems::{
 		send_interaction_events::send_interaction_events,
 	},
 };
-use traits::{act_on::ActOn, is_effect::IsEffect};
+use traits::act_on::ActOn;
 
 pub struct InteractionsPlugin<TLifeCyclePlugin>(PhantomData<TLifeCyclePlugin>);
 
 impl<TLifeCyclePlugin> InteractionsPlugin<TLifeCyclePlugin>
 where
-	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime,
+	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
 	pub fn depends_on(_: &TLifeCyclePlugin) -> Self {
 		Self(PhantomData)
@@ -67,7 +66,7 @@ where
 
 impl<TLifeCyclePlugin> Plugin for InteractionsPlugin<TLifeCyclePlugin>
 where
-	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime,
+	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
 	fn build(&self, app: &mut App) {
 		let processing_label = Labels::PROCESSING.label();
@@ -77,7 +76,7 @@ where
 			.add_event::<InteractionEvent<Ray>>()
 			.init_resource::<TrackInteractionDuplicates>()
 			.init_resource::<TrackRayInteractions>()
-			.add_interaction::<Effect<DealDamage>, Health>()
+			.add_interaction::<Effect<DealDamage>, TLifeCyclePlugin::TLife>()
 			.add_interaction::<Effect<Gravity>, GravityAffected>()
 			.add_systems(processing_label.clone(), BlockerInsertCommand::apply)
 			.add_systems(
@@ -148,20 +147,5 @@ impl<TLifeCyclePlugin> HandlesInteractions for InteractionsPlugin<TLifeCyclePlug
 		T: BeamParameters,
 	{
 		BeamCommand::from(value)
-	}
-}
-
-impl<TLifecyclePlugin, TEffect> HandlesEffect<TEffect> for InteractionsPlugin<TLifecyclePlugin>
-where
-	Effect<TEffect>: IsEffect + Sync + Send + 'static,
-{
-	type TTarget = <Effect<TEffect> as IsEffect>::TTarget;
-
-	fn effect(effect: TEffect) -> impl Bundle {
-		Effect(effect)
-	}
-
-	fn attribute(target_attribute: Self::TTarget) -> impl Bundle {
-		Effect::<TEffect>::attribute(target_attribute)
 	}
 }

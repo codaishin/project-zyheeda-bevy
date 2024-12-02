@@ -3,7 +3,7 @@ use crate::{
 	traits::{UIBarColors, UIBarUpdate},
 };
 use bevy::color::Color;
-use common::components::Health;
+use common::attributes::health::Health;
 
 impl UIBarUpdate<Health> for BarValues<Health> {
 	fn update(&mut self, value: &Health) {

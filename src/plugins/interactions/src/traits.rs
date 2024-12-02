@@ -1,5 +1,4 @@
 pub(crate) mod act_on;
-pub(crate) mod is_effect;
 pub(crate) mod rapier_context;
 
 use bevy::prelude::Entity;

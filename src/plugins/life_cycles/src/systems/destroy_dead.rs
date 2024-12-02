@@ -18,9 +18,8 @@ fn dead((entity, Life(health)): (Entity, &Life)) -> Option<Entity> {
 
 #[cfg(test)]
 mod tests {
-	use common::components::Health;
-
 	use super::*;
+	use common::attributes::health::Health;
 
 	fn setup() -> App {
 		let mut app = App::new();

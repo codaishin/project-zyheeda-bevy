@@ -1,20 +1,24 @@
 use super::Effect;
 use crate::{
 	components::gravity_affected::{GravityAffected, GravityPull},
-	traits::{act_on::ActOn, is_effect::IsEffect},
+	traits::act_on::ActOn,
+	InteractionsPlugin,
 };
 use bevy::prelude::*;
 use common::{
-	attributes::affected_by::AffectedBy,
 	effects::{gravity::Gravity, EffectApplies},
+	traits::handles_effect::HandlesEffect,
 };
 use std::time::Duration;
 
-impl IsEffect for Effect<Gravity> {
-	type TTarget = AffectedBy<Gravity>;
-	type TTargetComponent = GravityAffected;
+impl<TLifecyclePlugin> HandlesEffect<Gravity> for InteractionsPlugin<TLifecyclePlugin> {
+	type TTarget = Effect<Gravity>;
 
-	fn attribute(_: Self::TTarget) -> Self::TTargetComponent {
+	fn effect(effect: Gravity) -> impl Bundle {
+		Effect(effect)
+	}
+
+	fn attribute(_: Self::TTarget) -> impl Bundle {
 		GravityAffected::default()
 	}
 }

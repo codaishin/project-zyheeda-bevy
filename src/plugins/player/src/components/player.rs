@@ -6,8 +6,10 @@ use behaviors::{
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
+	attributes::health::Health,
 	blocker::Blocker,
 	components::{AssetModel, ColliderRoot, GroundOffset},
+	effects::deal_damage::DealDamage,
 	errors::Error,
 	tools::UnitsPerSecond,
 	traits::{
@@ -21,6 +23,7 @@ use common::{
 			StopAnimation,
 		},
 		clamp_zero_positive::ClampZeroPositive,
+		handles_effect::HandlesEffect,
 		load_asset::Path,
 		prefab::{GetOrCreateAssets, Prefab},
 	},
@@ -73,7 +76,10 @@ impl ConfigureNewAnimationDispatch for Player {
 	}
 }
 
-impl Prefab<()> for Player {
+impl<TInteractionsPlugin> Prefab<TInteractionsPlugin> for Player
+where
+	TInteractionsPlugin: HandlesEffect<DealDamage, TTarget = Health>,
+{
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
@@ -83,6 +89,7 @@ impl Prefab<()> for Player {
 			.insert((
 				Name::from("Player"),
 				AssetModel::path(Player::MODEL_PATH).flip_on(Name::from("metarig")),
+				TInteractionsPlugin::attribute(Health::new(100.)),
 				Bar::default(),
 				GroundOffset(Vec3::Y),
 				Blocker::insert([Blocker::Physical]),

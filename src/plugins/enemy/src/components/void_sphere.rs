@@ -26,14 +26,17 @@ use bevy_rapier3d::{
 	geometry::Collider,
 };
 use common::{
+	attributes::health::Health,
 	blocker::Blocker,
 	bundles::ColliderTransformBundle,
-	components::{ColliderRoot, GroundOffset, Health},
+	components::{ColliderRoot, GroundOffset},
+	effects::deal_damage::DealDamage,
 	errors::Error,
 	tools::{Units, UnitsPerSecond},
 	traits::{
 		cache::GetOrCreateTypeAsset,
 		clamp_zero_positive::ClampZeroPositive,
+		handles_effect::HandlesEffect,
 		prefab::{sphere, GetOrCreateAssets, Prefab},
 	},
 };
@@ -96,7 +99,10 @@ struct VoidSphereCore;
 
 struct VoidSphereRing;
 
-impl Prefab<()> for VoidSphere {
+impl<TInteractionPlugin> Prefab<TInteractionPlugin> for VoidSphere
+where
+	TInteractionPlugin: HandlesEffect<DealDamage, TTarget = Health>,
+{
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		on: &mut EntityCommands,
@@ -129,7 +135,7 @@ impl Prefab<()> for VoidSphere {
 			GroundOffset(VOID_SPHERE_GROUND_OFFSET),
 			RigidBody::Dynamic,
 			GravityScale(0.),
-			Health::new(5.),
+			TInteractionPlugin::attribute(Health::new(5.)),
 			Bar::default(),
 			MovementConfig::Constant {
 				mode: MovementMode::Slow,

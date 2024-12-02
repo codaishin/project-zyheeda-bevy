@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use common::{components::Health, traits::handles_life::ChangeLife};
+use common::{
+	attributes::health::Health,
+	traits::{accessors::get::GetterRef, handles_life::ChangeLife},
+};
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 pub struct Life(pub(crate) Health);
@@ -10,6 +13,20 @@ impl ChangeLife for Life {
 
 		*current += value;
 		*current = current.min(*max);
+	}
+}
+
+impl From<Health> for Life {
+	fn from(health: Health) -> Self {
+		Life(health)
+	}
+}
+
+impl GetterRef<Health> for Life {
+	fn get(&self) -> &Health {
+		let Life(health) = self;
+
+		health
 	}
 }
 

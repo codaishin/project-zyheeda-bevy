@@ -44,15 +44,17 @@ fn prepare_game(app: &mut App) {
 		&shaders_plugin,
 		&interactions_plugin,
 	);
-	let enemy_plugin = EnemyPlugin::depends_on(&prefabs_plugin);
+	let enemy_plugin = EnemyPlugin::depends_on(&prefabs_plugin, &interactions_plugin);
 	let map_generation_plugin = MapGenerationPlugin::depends_on(&prefabs_plugin);
-	let player_plugin = PlayerPlugin::depends_on(&animations_plugin, &prefabs_plugin);
+	let player_plugin =
+		PlayerPlugin::depends_on(&animations_plugin, &prefabs_plugin, &interactions_plugin);
 	let behaviors_plugin = BehaviorsPlugin::depends_on(
 		&animations_plugin,
 		&prefabs_plugin,
 		&shaders_plugin,
 		&interactions_plugin,
 	);
+	let bars_plugin = BarsPlugin::depends_on(&life_cycles_plugin);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
@@ -61,7 +63,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(prefabs_plugin)
 		.add_plugins(shaders_plugin)
 		.add_plugins(interactions_plugin)
-		.add_plugins(BarsPlugin)
+		.add_plugins(bars_plugin)
 		.add_plugins(ItemsPlugin)
 		.add_plugins(animations_plugin)
 		.add_plugins(LightPlugin)

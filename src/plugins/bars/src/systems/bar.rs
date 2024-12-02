@@ -12,57 +12,71 @@ use bevy::{
 	transform::components::GlobalTransform,
 };
 
-type WithOutBarValues<'a, TSource> = (Entity, &'a GlobalTransform, &'a TSource, &'a mut Bar);
-type WithBarValues<'a, TSource> = (
-	&'a GlobalTransform,
-	&'a TSource,
-	&'a mut Bar,
-	&'a mut BarValues<TSource>,
-);
-
-pub(crate) fn bar<TSource: Component, TCamera: Component + GetScreenPosition>(
-	commands: Commands,
-	without_bar_values: Query<WithOutBarValues<TSource>, Without<BarValues<TSource>>>,
-	with_bar_values: Query<WithBarValues<TSource>>,
-	camera: Query<(&TCamera, &GlobalTransform)>,
-) where
-	BarValues<TSource>: UIBarUpdate<TSource>,
+#[allow(clippy::type_complexity)]
+pub(crate) fn bar<TSource: Component, TValue, TCamera: Component + GetScreenPosition>(
+	get: fn(&TSource) -> &TValue,
+) -> impl Fn(
+	Commands,
+	Query<(Entity, &GlobalTransform, &TSource, &mut Bar), Without<BarValues<TValue>>>,
+	Query<(&GlobalTransform, &TSource, &mut Bar, &mut BarValues<TValue>)>,
+	Query<(&TCamera, &GlobalTransform)>,
+)
+where
+	TValue: Sync + Send + 'static,
+	BarValues<TValue>: UIBarUpdate<TValue>,
 {
-	let Ok((camera, camera_transform)) = camera.get_single() else {
-		return;
-	};
-	add_bar_values(commands, without_bar_values, camera, camera_transform);
-	update_bar_values(with_bar_values, camera, camera_transform);
+	type NewBars<'a, 'b, 'c, TSource> = (Entity, &'a GlobalTransform, &'b TSource, &'c mut Bar);
+	type OldBars<'a, 'b, 'c, 'd, TSource, TValue> = (
+		&'a GlobalTransform,
+		&'b TSource,
+		&'c mut Bar,
+		&'d mut BarValues<TValue>,
+	);
+
+	move |commands: Commands,
+	      without_bar_values: Query<NewBars<TSource>, Without<BarValues<TValue>>>,
+	      with_bar_values: Query<OldBars<TSource, TValue>>,
+	      camera: Query<(&TCamera, &GlobalTransform)>| {
+		let Ok((camera, camera_transform)) = camera.get_single() else {
+			return;
+		};
+		add_bar_values(get, commands, without_bar_values, camera, camera_transform);
+		update_bar_values(get, with_bar_values, camera, camera_transform);
+	}
 }
 
-fn add_bar_values<TSource: Component, TCamera: Component + GetScreenPosition>(
+fn add_bar_values<TSource: Component, TValue, TCamera: Component + GetScreenPosition>(
+	get_value: fn(&TSource) -> &TValue,
 	mut commands: Commands,
-	mut agents: Query<WithOutBarValues<TSource>, Without<BarValues<TSource>>>,
+	mut agents: Query<(Entity, &GlobalTransform, &TSource, &mut Bar), Without<BarValues<TValue>>>,
 	camera: &TCamera,
 	camera_transform: &GlobalTransform,
 ) where
-	BarValues<TSource>: UIBarUpdate<TSource>,
+	TValue: Sync + Send + 'static,
+	BarValues<TValue>: UIBarUpdate<TValue>,
 {
 	for (id, transform, display, mut bar) in &mut agents {
 		let world_position = transform.translation() + bar.offset;
 		bar.position = camera.get_screen_position(camera_transform, world_position);
-		let mut bar_values = BarValues::<TSource>::default();
-		bar_values.update(display);
+		let mut bar_values = BarValues::default();
+		bar_values.update(get_value(display));
 		commands.entity(id).insert(bar_values);
 	}
 }
 
-fn update_bar_values<TSource: Component, TCamera: Component + GetScreenPosition>(
-	mut agents: Query<WithBarValues<TSource>>,
+fn update_bar_values<TSource: Component, TValue, TCamera: Component + GetScreenPosition>(
+	get_value: fn(&TSource) -> &TValue,
+	mut agents: Query<(&GlobalTransform, &TSource, &mut Bar, &mut BarValues<TValue>)>,
 	camera: &TCamera,
 	camera_transform: &GlobalTransform,
 ) where
-	BarValues<TSource>: UIBarUpdate<TSource>,
+	TValue: Sync + Send + 'static,
+	BarValues<TValue>: UIBarUpdate<TValue>,
 {
 	for (transform, display, mut bar, mut bar_values) in &mut agents {
 		let world_position = transform.translation() + bar.offset;
 		bar.position = camera.get_screen_position(camera_transform, world_position);
-		bar_values.update(display);
+		bar_values.update(get_value(display));
 	}
 }
 
@@ -76,7 +90,7 @@ mod tests {
 	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
-	use std::collections::VecDeque;
+	use std::{collections::VecDeque, ops::DerefMut};
 
 	#[derive(Component, NestedMocks)]
 	pub struct _Camera {
@@ -96,13 +110,16 @@ mod tests {
 	}
 
 	#[derive(Component, Default)]
-	pub struct _Source {
+	struct _Source(_Value);
+
+	#[derive(Default)]
+	struct _Value {
 		current: u8,
 		max: u8,
 	}
 
-	impl UIBarUpdate<_Source> for BarValues<_Source> {
-		fn update(&mut self, value: &_Source) {
+	impl UIBarUpdate<_Value> for BarValues<_Value> {
+		fn update(&mut self, value: &_Value) {
 			self.current = value.current as f32;
 			self.max = value.max as f32;
 		}
@@ -110,7 +127,10 @@ mod tests {
 
 	fn setup(camera: Option<(_Camera, GlobalTransform)>) -> App {
 		let mut app = App::new();
-		app.add_systems(Update, bar::<_Source, _Camera>);
+		app.add_systems(
+			Update,
+			bar::<_Source, _Value, _Camera>(|_Source(value)| value),
+		);
 
 		match camera {
 			None => {
@@ -146,7 +166,7 @@ mod tests {
 
 		let agent = app.world().entity(agent);
 
-		assert!(agent.contains::<BarValues<_Source>>());
+		assert!(agent.contains::<BarValues<_Value>>());
 	}
 
 	#[test]
@@ -210,7 +230,7 @@ mod tests {
 			.spawn((
 				GlobalTransform::default(),
 				Bar::default(),
-				_Source { current: 1, max: 2 },
+				_Source(_Value { current: 1, max: 2 }),
 			))
 			.id();
 
@@ -220,9 +240,7 @@ mod tests {
 
 		assert_eq!(
 			Some((1., 2.)),
-			agent
-				.get::<BarValues<_Source>>()
-				.map(|b| (b.current, b.max))
+			agent.get::<BarValues<_Value>>().map(|b| (b.current, b.max))
 		);
 	}
 
@@ -292,16 +310,17 @@ mod tests {
 			.spawn((
 				GlobalTransform::default(),
 				Bar::default(),
-				_Source { current: 1, max: 2 },
+				_Source(_Value { current: 1, max: 2 }),
 			))
 			.id();
 
 		app.update();
 
 		let mut agent_mut = app.world_mut().entity_mut(agent);
-		let mut display = agent_mut.get_mut::<_Source>().unwrap();
-		display.current = 10;
-		display.max = 33;
+		let mut source = agent_mut.get_mut::<_Source>().unwrap();
+		let _Source(values) = source.deref_mut();
+		values.current = 10;
+		values.max = 33;
 
 		app.update();
 
@@ -309,9 +328,7 @@ mod tests {
 
 		assert_eq!(
 			Some((10., 33.)),
-			agent
-				.get::<BarValues<_Source>>()
-				.map(|b| (b.current, b.max))
+			agent.get::<BarValues<_Value>>().map(|b| (b.current, b.max))
 		);
 	}
 }
