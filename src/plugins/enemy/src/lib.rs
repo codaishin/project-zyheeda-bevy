@@ -3,8 +3,8 @@ mod systems;
 
 use bevy::prelude::*;
 use common::{
-	attributes::health::Health,
-	effects::deal_damage::DealDamage,
+	attributes::{affected_by::AffectedBy, health::Health},
+	effects::{deal_damage::DealDamage, gravity::Gravity},
 	traits::{
 		handles_effect::HandlesEffect,
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
@@ -28,7 +28,9 @@ impl<TPrefabsPlugin, TInteractionsPlugin> Plugin
 	for EnemyPlugin<TPrefabsPlugin, TInteractionsPlugin>
 where
 	TPrefabsPlugin: Plugin + RegisterPrefab,
-	TInteractionsPlugin: Plugin + HandlesEffect<DealDamage, TTarget = Health>,
+	TInteractionsPlugin: Plugin
+		+ HandlesEffect<DealDamage, TTarget = Health>
+		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
 {
 	fn build(&self, app: &mut App) {
 		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>().register_prefab::<VoidSphere>(app);

@@ -1,3 +1,5 @@
+pub mod gravity;
+
 use std::marker::PhantomData;
 
 pub struct AffectedBy<TEffect>(PhantomData<TEffect>);

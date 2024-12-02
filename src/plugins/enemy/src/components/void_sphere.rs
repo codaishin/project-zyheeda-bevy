@@ -26,11 +26,14 @@ use bevy_rapier3d::{
 	geometry::Collider,
 };
 use common::{
-	attributes::health::Health,
+	attributes::{
+		affected_by::{Affected, AffectedBy},
+		health::Health,
+	},
 	blocker::Blocker,
 	bundles::ColliderTransformBundle,
 	components::{ColliderRoot, GroundOffset},
-	effects::deal_damage::DealDamage,
+	effects::{deal_damage::DealDamage, gravity::Gravity},
 	errors::Error,
 	tools::{Units, UnitsPerSecond},
 	traits::{
@@ -40,7 +43,6 @@ use common::{
 		prefab::{sphere, GetOrCreateAssets, Prefab},
 	},
 };
-use interactions::components::gravity_affected::GravityAffected;
 use std::{f32::consts::PI, time::Duration};
 
 #[derive(Component)]
@@ -101,7 +103,8 @@ struct VoidSphereRing;
 
 impl<TInteractionPlugin> Prefab<TInteractionPlugin> for VoidSphere
 where
-	TInteractionPlugin: HandlesEffect<DealDamage, TTarget = Health>,
+	TInteractionPlugin: HandlesEffect<DealDamage, TTarget = Health>
+		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
 {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
@@ -131,11 +134,11 @@ where
 
 		on.try_insert((
 			Blocker::insert([Blocker::Physical]),
-			GravityAffected::default(),
 			GroundOffset(VOID_SPHERE_GROUND_OFFSET),
 			RigidBody::Dynamic,
 			GravityScale(0.),
-			TInteractionPlugin::attribute(Health::new(5.)),
+			Health::new(5.).bundle_via::<TInteractionPlugin>(),
+			Affected::by::<Gravity>().bundle_via::<TInteractionPlugin>(),
 			Bar::default(),
 			MovementConfig::Constant {
 				mode: MovementMode::Slow,

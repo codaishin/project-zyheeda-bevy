@@ -6,13 +6,14 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
+	attributes::affected_by::AffectedBy,
 	effects::{gravity::Gravity, EffectApplies},
 	traits::handles_effect::HandlesEffect,
 };
 use std::time::Duration;
 
 impl<TLifecyclePlugin> HandlesEffect<Gravity> for InteractionsPlugin<TLifecyclePlugin> {
-	type TTarget = Effect<Gravity>;
+	type TTarget = AffectedBy<Gravity>;
 
 	fn effect(effect: Gravity) -> impl Bundle {
 		Effect(effect)

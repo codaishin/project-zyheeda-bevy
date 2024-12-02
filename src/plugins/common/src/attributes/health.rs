@@ -1,3 +1,6 @@
+use crate::{effects::deal_damage::DealDamage, traits::handles_effect::HandlesEffect};
+use bevy::prelude::*;
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Health {
 	pub current: f32,
@@ -10,5 +13,12 @@ impl Health {
 			current: value,
 			max: value,
 		}
+	}
+
+	pub fn bundle_via<TPlugin>(self) -> impl Bundle
+	where
+		TPlugin: HandlesEffect<DealDamage, TTarget = Health>,
+	{
+		TPlugin::attribute(self)
 	}
 }

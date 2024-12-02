@@ -89,7 +89,7 @@ where
 			.insert((
 				Name::from("Player"),
 				AssetModel::path(Player::MODEL_PATH).flip_on(Name::from("metarig")),
-				TInteractionsPlugin::attribute(Health::new(100.)),
+				Health::new(100.).bundle_via::<TInteractionsPlugin>(),
 				Bar::default(),
 				GroundOffset(Vec3::Y),
 				Blocker::insert([Blocker::Physical]),
