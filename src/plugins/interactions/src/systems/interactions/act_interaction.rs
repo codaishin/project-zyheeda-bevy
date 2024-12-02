@@ -41,11 +41,10 @@ pub(crate) fn act_interaction<TActor: ActOn<TTarget> + Component, TTarget: Compo
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::is_effect::IsEffect;
 	use bevy::ecs::system::RunSystemOnce;
 	use common::{components::ColliderRoot, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
-	use mockall::{mock, predicate::eq};
+	use mockall::{automock, predicate::eq};
 
 	#[derive(Component, NestedMocks)]
 	pub struct _Actor {
@@ -55,8 +54,7 @@ mod tests {
 	#[derive(Component, Debug, PartialEq, Clone, Copy)]
 	pub struct _Target;
 
-	impl IsEffect for _Actor {}
-
+	#[automock]
 	impl ActOn<_Target> for _Actor {
 		fn act(
 			&mut self,
@@ -65,14 +63,6 @@ mod tests {
 			delta: Duration,
 		) -> EffectApplies {
 			self.mock.act(self_entity, target, delta)
-		}
-	}
-
-	mock! {
-		_Actor {}
-		impl IsEffect for _Actor {}
-		impl ActOn<_Target> for _Actor {
-			fn act(&mut self, e: Entity, t: &mut _Target, d: Duration) -> EffectApplies;
 		}
 	}
 

@@ -275,7 +275,9 @@ mod tests {
 	where
 		T: Sync + Send + 'static,
 	{
+		type TTarget = ();
 		fn effect(_: T) -> impl Bundle {}
+		fn attribute(_: Self::TTarget) -> impl Bundle {}
 	}
 
 	struct _HandlesShading;

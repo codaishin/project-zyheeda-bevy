@@ -1,3 +1,4 @@
+pub mod attributes;
 pub mod blocker;
 pub mod bundles;
 pub mod components;

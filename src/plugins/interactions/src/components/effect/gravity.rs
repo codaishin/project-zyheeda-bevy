@@ -1,24 +1,39 @@
 use super::Effect;
 use crate::{
-	components::effected_by_gravity::{EffectedByGravity, Pull},
-	traits::{act_on::ActOn, is_effect::IsEffect},
+	components::gravity_affected::{GravityAffected, GravityPull},
+	traits::act_on::ActOn,
+	InteractionsPlugin,
 };
 use bevy::prelude::*;
-use common::effects::{gravity::Gravity, EffectApplies};
+use common::{
+	attributes::affected_by::AffectedBy,
+	effects::{gravity::Gravity, EffectApplies},
+	traits::handles_effect::HandlesEffect,
+};
 use std::time::Duration;
 
-impl IsEffect for Effect<Gravity> {}
+impl<TLifecyclePlugin> HandlesEffect<Gravity> for InteractionsPlugin<TLifecyclePlugin> {
+	type TTarget = AffectedBy<Gravity>;
 
-impl ActOn<EffectedByGravity> for Effect<Gravity> {
+	fn effect(effect: Gravity) -> impl Bundle {
+		Effect(effect)
+	}
+
+	fn attribute(_: Self::TTarget) -> impl Bundle {
+		GravityAffected::default()
+	}
+}
+
+impl ActOn<GravityAffected> for Effect<Gravity> {
 	fn act(
 		&mut self,
 		self_entity: Entity,
-		target: &mut EffectedByGravity,
+		target: &mut GravityAffected,
 		_: Duration,
 	) -> EffectApplies {
 		let Effect(gravity) = self;
 
-		target.pulls.push(Pull {
+		target.push(GravityPull {
 			strength: gravity.strength,
 			towards: self_entity,
 		});
@@ -30,7 +45,7 @@ impl ActOn<EffectedByGravity> for Effect<Gravity> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{effected_by::EffectedBy, effected_by_gravity::Pull};
+	use crate::components::gravity_affected::GravityPull;
 	use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
 
 	#[test]
@@ -42,7 +57,7 @@ mod tests {
 
 		let action_type = gravity.act(
 			Entity::from_raw(42),
-			&mut EffectedBy::gravity(),
+			&mut GravityAffected::default(),
 			Duration::ZERO,
 		);
 
@@ -55,22 +70,16 @@ mod tests {
 			strength: UnitsPerSecond::new(42.),
 			..default()
 		});
-		let mut effected_by_gravity = EffectedBy::gravity();
+		let mut gravity_pulls = GravityAffected::default();
 
-		gravity.act(
-			Entity::from_raw(42),
-			&mut effected_by_gravity,
-			Duration::ZERO,
-		);
+		gravity.act(Entity::from_raw(42), &mut gravity_pulls, Duration::ZERO);
 
 		assert_eq!(
-			EffectedByGravity {
-				pulls: vec![Pull {
-					strength: UnitsPerSecond::new(42.),
-					towards: Entity::from_raw(42),
-				}]
-			},
-			effected_by_gravity
+			GravityAffected::new([GravityPull {
+				strength: UnitsPerSecond::new(42.),
+				towards: Entity::from_raw(42),
+			}]),
+			gravity_pulls
 		);
 	}
 }

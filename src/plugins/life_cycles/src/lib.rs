@@ -4,9 +4,13 @@ mod systems;
 use bevy::prelude::*;
 use common::{
 	labels::Labels,
-	traits::{handles_destruction::HandlesDestruction, handles_lifetime::HandlesLifetime},
+	traits::{
+		handles_destruction::HandlesDestruction,
+		handles_life::HandlesLife,
+		handles_lifetime::HandlesLifetime,
+	},
 };
-use components::{destroy::Destroy, lifetime::Lifetime};
+use components::{destroy::Destroy, life::Life, lifetime::Lifetime};
 use std::time::Duration;
 use systems::{destroy::destroy, destroy_dead::set_dead_to_be_destroyed};
 
@@ -28,4 +32,8 @@ impl HandlesLifetime for LifeCyclesPlugin {
 
 impl HandlesDestruction for LifeCyclesPlugin {
 	type TDestroy = Destroy;
+}
+
+impl HandlesLife for LifeCyclesPlugin {
+	type TLife = Life;
 }

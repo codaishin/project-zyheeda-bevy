@@ -44,9 +44,13 @@ mod tests {
 	struct _HandlesEffects;
 
 	impl HandlesEffect<Gravity> for _HandlesEffects {
+		type TTarget = ();
+
 		fn effect(effect: Gravity) -> impl Bundle {
 			_Effect(effect)
 		}
+
+		fn attribute(_: Self::TTarget) -> impl Bundle {}
 	}
 
 	#[derive(Component, Debug, PartialEq)]

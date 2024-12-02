@@ -1,11 +1,9 @@
 pub(crate) mod act_on;
-pub(crate) mod is_effect;
 pub(crate) mod rapier_context;
 
 use bevy::prelude::Entity;
 use bevy_rapier3d::prelude::CollisionEvent;
 use common::{blocker::Blocker, components::ColliderRoot};
-use is_effect::IsEffect;
 
 pub trait FromCollisionEvent {
 	fn from_collision<F>(event: &CollisionEvent, get_root: F) -> Self

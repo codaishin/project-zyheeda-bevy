@@ -1,4 +1,4 @@
-use crate::components::effected_by_gravity::{EffectedByGravity, Pull};
+use crate::components::gravity_affected::{GravityAffected, GravityPull};
 use bevy::{
 	math::Vec3,
 	prelude::{Bundle, Commands, Entity, GlobalTransform, In, Query, Transform},
@@ -10,10 +10,10 @@ use common::{
 };
 use std::time::Duration;
 
-pub(crate) fn gravity_pull(
+pub(crate) fn apply_gravity_pull(
 	In(delta): In<Duration>,
 	mut commands: Commands,
-	mut agents: Query<(Entity, &Transform, &mut EffectedByGravity)>,
+	mut agents: Query<(Entity, &Transform, &mut GravityAffected)>,
 	transforms: Query<&GlobalTransform>,
 ) {
 	let translation = |entity| {
@@ -21,16 +21,15 @@ pub(crate) fn gravity_pull(
 		Some(transform.translation())
 	};
 
-	for (entity, transform, mut effected_by_gravity) in &mut agents {
-		if effected_by_gravity.pulls.is_empty() {
+	for (entity, transform, mut gravity_affected) in &mut agents {
+		if gravity_affected.is_not_pulled() {
 			commands.try_remove_from::<Immobilized>(entity);
 			continue;
 		}
 
 		let position = transform.translation;
-		let velocity = effected_by_gravity
-			.pulls
-			.drain(..)
+		let velocity = gravity_affected
+			.drain_pulls(..)
 			.filter_map(velocity_vector(position, delta, pull_towards(translation)))
 			.reduce(sum)
 			.map(Velocity::linear);
@@ -46,8 +45,8 @@ pub(crate) fn gravity_pull(
 fn velocity_vector(
 	position: Vec3,
 	delta: Duration,
-	pull_towards: impl Fn(&Pull) -> Option<Vec3>,
-) -> impl Fn(Pull) -> Option<Vec3> {
+	pull_towards: impl Fn(&GravityPull) -> Option<Vec3>,
+) -> impl Fn(GravityPull) -> Option<Vec3> {
 	move |pull| {
 		let direction = pull_towards(&pull)? - position;
 		let pull_strength = *pull.strength;
@@ -60,8 +59,10 @@ fn velocity_vector(
 	}
 }
 
-fn pull_towards(translation: impl Fn(Entity) -> Option<Vec3>) -> impl Fn(&Pull) -> Option<Vec3> {
-	move |Pull { towards, .. }: &Pull| {
+fn pull_towards(
+	translation: impl Fn(Entity) -> Option<Vec3>,
+) -> impl Fn(&GravityPull) -> Option<Vec3> {
+	move |GravityPull { towards, .. }: &GravityPull| {
 		let translation = translation(*towards)?;
 		Some(Vec3::new(translation.x, 0., translation.z))
 	}
@@ -97,7 +98,7 @@ impl ForcedMovement {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::effected_by_gravity::Pull;
+	use crate::components::gravity_affected::GravityPull;
 	use bevy::{app::App, ecs::system::RunSystemOnce, math::Vec3, prelude::Transform};
 	use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
 
@@ -118,17 +119,15 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 0., 0.),
-				EffectedByGravity {
-					pulls: vec![Pull {
-						strength: UnitsPerSecond::new(2.),
-						towards,
-					}],
-				},
+				GravityAffected::new([GravityPull {
+					strength: UnitsPerSecond::new(2.),
+					towards,
+				}]),
 			))
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), gravity_pull);
+			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull);
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -153,17 +152,15 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 0., 0.),
-				EffectedByGravity {
-					pulls: vec![Pull {
-						strength: UnitsPerSecond::new(2.),
-						towards,
-					}],
-				},
+				GravityAffected::new([GravityPull {
+					strength: UnitsPerSecond::new(2.),
+					towards,
+				}]),
 			))
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), gravity_pull);
+			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull);
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -194,23 +191,21 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 0., 0.),
-				EffectedByGravity {
-					pulls: vec![
-						Pull {
-							strength: UnitsPerSecond::new(2.),
-							towards: towards_a,
-						},
-						Pull {
-							strength: UnitsPerSecond::new(3.),
-							towards: towards_b,
-						},
-					],
-				},
+				GravityAffected::new([
+					GravityPull {
+						strength: UnitsPerSecond::new(2.),
+						towards: towards_a,
+					},
+					GravityPull {
+						strength: UnitsPerSecond::new(3.),
+						towards: towards_b,
+					},
+				]),
 			))
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), gravity_pull);
+			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull);
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -230,14 +225,11 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
-			.spawn((
-				Transform::from_xyz(1., 0., 0.),
-				EffectedByGravity { pulls: vec![] },
-			))
+			.spawn((Transform::from_xyz(1., 0., 0.), GravityAffected::default()))
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), gravity_pull);
+			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull);
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -265,28 +257,26 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 0., 0.),
-				EffectedByGravity {
-					pulls: vec![
-						Pull {
-							strength: UnitsPerSecond::new(2.),
-							towards: towards_a,
-						},
-						Pull {
-							strength: UnitsPerSecond::new(3.),
-							towards: towards_b,
-						},
-					],
-				},
+				GravityAffected::new([
+					GravityPull {
+						strength: UnitsPerSecond::new(2.),
+						towards: towards_a,
+					},
+					GravityPull {
+						strength: UnitsPerSecond::new(3.),
+						towards: towards_b,
+					},
+				]),
 			))
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), gravity_pull);
+			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull);
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
-			Some(&EffectedByGravity { pulls: vec![] }),
-			agent.get::<EffectedByGravity>()
+			Some(&GravityAffected::default()),
+			agent.get::<GravityAffected>()
 		)
 	}
 
@@ -298,12 +288,12 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(1., 0., 0.),
 				Immobilized,
-				EffectedByGravity { pulls: vec![] },
+				GravityAffected::default(),
 			))
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), gravity_pull);
+			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull);
 
 		let agent = app.world().entity(agent);
 		assert_eq!(None, agent.get::<Immobilized>())
@@ -323,16 +313,15 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(3., 0., 0.),
-				EffectedByGravity {
-					pulls: vec![Pull {
-						strength: UnitsPerSecond::new(10.),
-						towards,
-					}],
-				},
+				GravityAffected::new([GravityPull {
+					strength: UnitsPerSecond::new(10.),
+					towards,
+				}]),
 			))
 			.id();
 
-		app.world_mut().run_system_once_with(delta, gravity_pull);
+		app.world_mut()
+			.run_system_once_with(delta, apply_gravity_pull);
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -359,17 +348,15 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(3., 0., 0.),
-				EffectedByGravity {
-					pulls: vec![Pull {
-						strength: UnitsPerSecond::new(10.),
-						towards,
-					}],
-				},
+				GravityAffected::new([GravityPull {
+					strength: UnitsPerSecond::new(10.),
+					towards,
+				}]),
 			))
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_millis(499), gravity_pull);
+			.run_system_once_with(Duration::from_millis(499), apply_gravity_pull);
 
 		let agent = app.world().entity(agent);
 		assert_eq!(

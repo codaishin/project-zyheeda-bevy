@@ -33,21 +33,6 @@ pub struct Immobilized;
 #[derive(Component, Debug, PartialEq)]
 pub struct Idle;
 
-#[derive(Component, Debug, PartialEq)]
-pub struct Health {
-	pub current: f32,
-	pub max: f32,
-}
-
-impl Health {
-	pub fn new(value: f32) -> Self {
-		Self {
-			current: value,
-			max: value,
-		}
-	}
-}
-
 #[derive(Component, PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord)]
 pub struct ColliderRoot(pub Entity);
 

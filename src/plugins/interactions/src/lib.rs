@@ -10,13 +10,12 @@ use bevy_rapier3d::plugin::RapierContext;
 use common::{
 	self,
 	blocker::BlockerInsertCommand,
-	components::Health,
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	labels::Labels,
 	traits::{
 		handles_destruction::HandlesDestruction,
-		handles_effect::HandlesEffect,
 		handles_interactions::{BeamParameters, HandlesInteractions},
+		handles_life::HandlesLife,
 		handles_lifetime::HandlesLifetime,
 	},
 };
@@ -25,7 +24,7 @@ use components::{
 	beam::{Beam, BeamCommand},
 	blockers::ApplyBlockerInsertion,
 	effect::Effect,
-	effected_by_gravity::EffectedByGravity,
+	gravity_affected::GravityAffected,
 	interacting_entities::InteractingEntities,
 	is::{Fragile, InterruptableRay, Is},
 };
@@ -36,7 +35,7 @@ use resources::{
 };
 use std::marker::PhantomData;
 use systems::{
-	gravity_pull::gravity_pull,
+	gravity_affected::apply_gravity_pull,
 	interactions::{
 		act_interaction::act_interaction,
 		add_component::add_component_to,
@@ -52,13 +51,13 @@ use systems::{
 		send_interaction_events::send_interaction_events,
 	},
 };
-use traits::{act_on::ActOn, is_effect::IsEffect};
+use traits::act_on::ActOn;
 
 pub struct InteractionsPlugin<TLifeCyclePlugin>(PhantomData<TLifeCyclePlugin>);
 
 impl<TLifeCyclePlugin> InteractionsPlugin<TLifeCyclePlugin>
 where
-	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime,
+	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
 	pub fn depends_on(_: &TLifeCyclePlugin) -> Self {
 		Self(PhantomData)
@@ -67,7 +66,7 @@ where
 
 impl<TLifeCyclePlugin> Plugin for InteractionsPlugin<TLifeCyclePlugin>
 where
-	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime,
+	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
 	fn build(&self, app: &mut App) {
 		let processing_label = Labels::PROCESSING.label();
@@ -77,8 +76,8 @@ where
 			.add_event::<InteractionEvent<Ray>>()
 			.init_resource::<TrackInteractionDuplicates>()
 			.init_resource::<TrackRayInteractions>()
-			.add_interaction::<Effect<DealDamage>, Health>()
-			.add_interaction::<Effect<Gravity>, EffectedByGravity>()
+			.add_interaction::<Effect<DealDamage>, TLifeCyclePlugin::TLife>()
+			.add_interaction::<Effect<Gravity>, GravityAffected>()
 			.add_systems(processing_label.clone(), BlockerInsertCommand::apply)
 			.add_systems(
 				processing_label.clone(),
@@ -86,7 +85,7 @@ where
 			)
 			.add_systems(
 				processing_label.clone(),
-				processing_delta.pipe(gravity_pull),
+				processing_delta.pipe(apply_gravity_pull),
 			)
 			.add_systems(
 				processing_label.clone(),
@@ -148,14 +147,5 @@ impl<TLifeCyclePlugin> HandlesInteractions for InteractionsPlugin<TLifeCyclePlug
 		T: BeamParameters,
 	{
 		BeamCommand::from(value)
-	}
-}
-
-impl<TLifecyclePlugin, TEffect> HandlesEffect<TEffect> for InteractionsPlugin<TLifecyclePlugin>
-where
-	Effect<TEffect>: IsEffect + Sync + Send + 'static,
-{
-	fn effect(effect: TEffect) -> impl Bundle {
-		Effect(effect)
 	}
 }

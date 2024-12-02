@@ -1928,7 +1928,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "interactions",
  "player",
 ]
 
@@ -2792,7 +2791,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "interactions",
  "light",
  "macros",
  "mockall",
@@ -3585,7 +3583,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "interactions",
  "light",
 ]
 
@@ -3660,7 +3657,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "interactions",
  "mockall",
  "tracing",
  "uuid",

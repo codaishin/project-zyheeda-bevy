@@ -37,9 +37,13 @@ mod tests {
 	struct _HandlesDamage;
 
 	impl HandlesEffect<DealDamage> for _HandlesDamage {
+		type TTarget = ();
+
 		fn effect(effect: DealDamage) -> impl Bundle {
 			_Damage(effect)
 		}
+
+		fn attribute(_: Self::TTarget) -> impl Bundle {}
 	}
 
 	#[derive(Component, Debug, PartialEq)]
