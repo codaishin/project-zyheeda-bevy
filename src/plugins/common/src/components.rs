@@ -33,7 +33,7 @@ pub struct Immobilized;
 #[derive(Component, Debug, PartialEq)]
 pub struct Idle;
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Clone, Copy)]
 pub struct Health {
 	pub current: f32,
 	pub max: f32,
