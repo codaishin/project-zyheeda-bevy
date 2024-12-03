@@ -5,7 +5,7 @@ pub mod traits;
 use bevy::prelude::*;
 use common::{
 	systems::{
-		add_component_to::AddTo,
+		insert_associated::{Configure, InsertAssociated, InsertOn},
 		log::log_many,
 		track_components::TrackComponentInSelfAndChildren,
 	},
@@ -45,7 +45,10 @@ impl<TKey> RegisterItemView<TKey> for App {
 		self.register_load_tracking::<TView, DependenciesProgress>(
 			Visualizer::<TView, TKey>::view_entities_loaded,
 		)
-		.add_systems(PreUpdate, Visualizer::<TView, TKey>::add_to::<TAgent>)
+		.add_systems(
+			PreUpdate,
+			InsertOn::<TAgent>::associated::<Visualizer<TView, TKey>>(Configure::LeaveAsIs),
+		)
 		.add_systems(
 			Update,
 			(
