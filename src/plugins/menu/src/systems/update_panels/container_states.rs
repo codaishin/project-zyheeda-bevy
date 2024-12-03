@@ -3,17 +3,17 @@ use std::fmt::Debug;
 use crate::{components::KeyedPanel, tools::PanelState};
 use bevy::{hierarchy::Parent, prelude::*};
 use common::traits::accessors::{get::GetRef, set::Setter};
-use skills::item::SkillItem;
+use skills::item::Item;
 
 pub fn panel_container_states<TPanel, TKey, TContainer>(
 	containers: Query<&TContainer>,
 	mut texts: Query<(&Parent, &mut Text)>,
 	mut panels: Query<(Entity, &KeyedPanel<TKey>, &mut TPanel)>,
-	items: Res<Assets<SkillItem>>,
+	items: Res<Assets<Item>>,
 ) where
 	TPanel: Component + Setter<PanelState>,
 	TKey: Debug + Copy + Send + Sync + 'static,
-	TContainer: Component + GetRef<TKey, Handle<SkillItem>>,
+	TContainer: Component + GetRef<TKey, Handle<Item>>,
 {
 	let container = containers.single();
 
@@ -30,10 +30,10 @@ pub fn panel_container_states<TPanel, TKey, TContainer>(
 fn get_item<'a, TContainer, TKey>(
 	container: &'a TContainer,
 	key: &TKey,
-	items: &'a Assets<SkillItem>,
-) -> Option<&'a SkillItem>
+	items: &'a Assets<Item>,
+) -> Option<&'a Item>
 where
-	TContainer: GetRef<TKey, Handle<SkillItem>>,
+	TContainer: GetRef<TKey, Handle<Item>>,
 {
 	container.get(key).and_then(|item| items.get(item))
 }
@@ -60,10 +60,10 @@ mod tests {
 	use std::collections::HashMap;
 
 	#[derive(Component)]
-	struct _Container(HashMap<usize, Handle<SkillItem>>);
+	struct _Container(HashMap<usize, Handle<Item>>);
 
-	impl GetRef<usize, Handle<SkillItem>> for _Container {
-		fn get(&self, key: &usize) -> Option<&Handle<SkillItem>> {
+	impl GetRef<usize, Handle<Item>> for _Container {
+		fn get(&self, key: &usize) -> Option<&Handle<Item>> {
 			self.0.get(key)
 		}
 	}
@@ -81,8 +81,8 @@ mod tests {
 	}
 
 	fn setup_container<const N: usize>(
-		items: [(usize, SkillItem); N],
-	) -> (_Container, Assets<SkillItem>) {
+		items: [(usize, Item); N],
+	) -> (_Container, Assets<Item>) {
 		let mut item_assets = Assets::default();
 		let mut container = HashMap::default();
 
@@ -94,7 +94,7 @@ mod tests {
 		(_Container(container), item_assets)
 	}
 
-	fn setup_app<const N: usize>(items: [(usize, SkillItem); N]) -> App {
+	fn setup_app<const N: usize>(items: [(usize, Item); N]) -> App {
 		let (container, items) = setup_container(items);
 		let mut app = App::new();
 		app.insert_resource(items);
@@ -133,7 +133,7 @@ mod tests {
 
 	#[test]
 	fn set_filled() {
-		let mut app = setup_app([(42, SkillItem::named("my item"))]);
+		let mut app = setup_app([(42, Item::named("my item"))]);
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -161,7 +161,7 @@ mod tests {
 
 	#[test]
 	fn set_empty_when_item_cannot_be_retrieved() {
-		let mut app = setup_app([(42, SkillItem::named("my item"))]);
+		let mut app = setup_app([(42, Item::named("my item"))]);
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -179,7 +179,7 @@ mod tests {
 			.spawn(TextBundle::from_section("", default()))
 			.set_parent(panel)
 			.id();
-		let mut items = app.world_mut().resource_mut::<Assets<SkillItem>>();
+		let mut items = app.world_mut().resource_mut::<Assets<Item>>();
 		*items = Assets::default();
 
 		app.world_mut()
@@ -205,7 +205,7 @@ mod tests {
 
 	#[test]
 	fn set_when_text_not_first_child() {
-		let mut app = setup_app([(42, SkillItem::named("my item"))]);
+		let mut app = setup_app([(42, Item::named("my item"))]);
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -234,7 +234,7 @@ mod tests {
 
 	#[test]
 	fn add_section_when_text_has_no_sections() {
-		let mut app = setup_app([(42, SkillItem::named("my item"))]);
+		let mut app = setup_app([(42, Item::named("my item"))]);
 		let panel = app
 			.world_mut()
 			.spawn((

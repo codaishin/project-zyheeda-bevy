@@ -1,6 +1,6 @@
 use crate::{
 	components::slots::Slots,
-	item::SkillItem,
+	item::Item,
 	slot_key::SlotKey,
 	traits::swap_commands::SwapController,
 };
@@ -25,7 +25,7 @@ where
 	TContainer: Component,
 	TSwaps: Component,
 	for<'a> SwapController<'a, TInnerKey, SlotKey, TContainer, TSwaps>:
-		SwapCommands<SlotKey, Handle<SkillItem>>,
+		SwapCommands<SlotKey, Handle<Item>>,
 {
 	let mut results = vec![];
 	let commands = &mut commands;
@@ -55,8 +55,8 @@ where
 fn try_swap(
 	slots: &mut Slots,
 	slot_key: SlotKey,
-	item: Option<Handle<SkillItem>>,
-) -> Result<SwappedOut<Handle<SkillItem>>, (SwapError, Error)> {
+	item: Option<Handle<Item>>,
+) -> Result<SwappedOut<Handle<Item>>, (SwapError, Error)> {
 	let slot = get_slot(slots, slot_key)?;
 
 	Ok(swap_item(item, slot))
@@ -65,7 +65,7 @@ fn try_swap(
 fn get_slot(
 	slots: &mut Slots,
 	slot_key: SlotKey,
-) -> Result<&mut Option<Handle<SkillItem>>, (SwapError, Error)> {
+) -> Result<&mut Option<Handle<Item>>, (SwapError, Error)> {
 	match slots.0.get_mut(&slot_key) {
 		Some(slot) => Ok(slot),
 		None => Err((SwapError::TryAgain, slot_warning(slot_key))),
@@ -73,9 +73,9 @@ fn get_slot(
 }
 
 fn swap_item(
-	mut item: Option<Handle<SkillItem>>,
-	slot: &mut Option<Handle<SkillItem>>,
-) -> SwappedOut<Handle<SkillItem>> {
+	mut item: Option<Handle<Item>>,
+	slot: &mut Option<Handle<Item>>,
+) -> SwappedOut<Handle<Item>> {
 	swap(&mut item, slot);
 
 	SwappedOut(item)
@@ -106,17 +106,17 @@ mod tests {
 
 	#[derive(Component, PartialEq, Clone, Debug, Default)]
 	pub struct _Container {
-		swap_ins: HashMap<SlotKey, SwapIn<Handle<SkillItem>>>,
-		swap_outs: HashMap<SlotKey, SwappedOut<Handle<SkillItem>>>,
+		swap_ins: HashMap<SlotKey, SwapIn<Handle<Item>>>,
+		swap_outs: HashMap<SlotKey, SwappedOut<Handle<Item>>>,
 		errors: HashMap<SlotKey, SwapError>,
 	}
 
-	impl SwapCommands<SlotKey, Handle<SkillItem>>
+	impl SwapCommands<SlotKey, Handle<Item>>
 		for SwapController<'_, (), SlotKey, _Container, _Swaps>
 	{
 		fn try_swap(
 			&mut self,
-			mut swap_fn: impl FnMut(SlotKey, SwapIn<Handle<SkillItem>>) -> SwapResult<Handle<SkillItem>>,
+			mut swap_fn: impl FnMut(SlotKey, SwapIn<Handle<Item>>) -> SwapResult<Handle<Item>>,
 		) {
 			let SwapController { container, .. } = self;
 			for (slot_key, swap_in) in container.swap_ins.clone() {

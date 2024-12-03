@@ -1,24 +1,24 @@
-use crate::{inventory_key::InventoryKey, item::SkillItem};
+use crate::{inventory_key::InventoryKey, item::Item};
 use bevy::asset::Handle;
 use common::{
 	components::Collection,
 	traits::accessors::get::{GetMut, GetRef},
 };
 
-pub type Inventory = Collection<Option<Handle<SkillItem>>>;
+pub type Inventory = Collection<Option<Handle<Item>>>;
 
-impl GetRef<InventoryKey, Handle<SkillItem>> for Inventory {
-	fn get(&self, key: &InventoryKey) -> Option<&Handle<SkillItem>> {
+impl GetRef<InventoryKey, Handle<Item>> for Inventory {
+	fn get(&self, key: &InventoryKey) -> Option<&Handle<Item>> {
 		let item = self.0.get(key.0)?;
 		item.as_ref()
 	}
 }
 
-impl GetMut<InventoryKey, Option<Handle<SkillItem>>> for Inventory {
+impl GetMut<InventoryKey, Option<Handle<Item>>> for Inventory {
 	fn get_mut(
 		&mut self,
 		InventoryKey(index): &InventoryKey,
-	) -> Option<&mut Option<Handle<SkillItem>>> {
+	) -> Option<&mut Option<Handle<Item>>> {
 		let items = &mut self.0;
 
 		if index >= &items.len() {
@@ -29,7 +29,7 @@ impl GetMut<InventoryKey, Option<Handle<SkillItem>>> for Inventory {
 	}
 }
 
-fn fill(inventory: &mut Vec<Option<Handle<SkillItem>>>, inventory_key: usize) {
+fn fill(inventory: &mut Vec<Option<Handle<Item>>>, inventory_key: usize) {
 	let fill_len = inventory_key - inventory.len() + 1;
 	for _ in 0..fill_len {
 		inventory.push(None);

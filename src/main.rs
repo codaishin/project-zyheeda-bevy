@@ -7,7 +7,6 @@ use common::CommonPlugin;
 use enemy::EnemyPlugin;
 use game_state::GameStatePlugin;
 use interactions::InteractionsPlugin;
-use items::ItemsPlugin;
 use life_cycles::LifeCyclesPlugin;
 use light::LightPlugin;
 use loading::LoadingPlugin;
@@ -64,7 +63,6 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(shaders_plugin)
 		.add_plugins(interactions_plugin)
 		.add_plugins(bars_plugin)
-		.add_plugins(ItemsPlugin)
 		.add_plugins(animations_plugin)
 		.add_plugins(LightPlugin)
 		.add_plugins(player_plugin)

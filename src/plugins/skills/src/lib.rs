@@ -1,5 +1,4 @@
 pub mod components;
-pub mod definitions;
 pub mod inventory_key;
 pub mod item;
 pub mod resources;
@@ -35,13 +34,8 @@ use components::{
 	skill_spawners::SkillSpawners,
 	slots::Slots,
 };
-use definitions::{
-	item_slots::{ForearmSlots, HandSlots},
-	sub_models::SubModels,
-};
 use inventory_key::InventoryKey;
-use item::{dto::SkillItemDto, item_type::SkillItemType, SkillItem};
-use items::RegisterItemView;
+use item::{dto::ItemDto, item_type::SkillItemType, Item};
 use loading::traits::{
 	register_custom_assets::RegisterCustomAssets,
 	register_custom_folder_assets::RegisterCustomFolderAssets,
@@ -65,7 +59,6 @@ use systems::{
 		trigger_primed::trigger_primed_mouse_context,
 	},
 	update_skill_combos::update_skill_combos,
-	visualize_slot_items::visualize_slot_items,
 };
 
 pub struct SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin>(
@@ -106,7 +99,7 @@ where
 	}
 
 	fn item_load(&self, app: &mut App) {
-		app.register_custom_assets::<SkillItem, SkillItemDto>();
+		app.register_custom_assets::<Item, ItemDto>();
 	}
 
 	fn skill_slot_load(&self, app: &mut App) {
@@ -115,17 +108,6 @@ where
 			SkillSpawners::track_in_self_and_children::<Name>().system(),
 		)
 		.add_systems(Update, Self::set_player_items)
-		.register_item_view_for::<Player, HandSlots<Player>>()
-		.register_item_view_for::<Player, ForearmSlots<Player>>()
-		.register_item_view_for::<Player, SubModels<Player>>()
-		.add_systems(
-			Update,
-			(
-				visualize_slot_items::<HandSlots<Player>>,
-				visualize_slot_items::<ForearmSlots<Player>>,
-				visualize_slot_items::<SubModels<Player>>,
-			),
-		)
 		.add_systems(
 			Update,
 			(

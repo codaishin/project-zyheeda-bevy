@@ -2519,19 +2519,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "items"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "common",
- "loading",
- "macros",
- "mockall",
- "serde",
- "uuid",
-]
-
-[[package]]
 name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2830,7 +2817,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "items",
  "loading",
  "macros",
  "mockall",
@@ -3704,7 +3690,6 @@ dependencies = [
  "enemy",
  "game_state",
  "interactions",
- "items",
  "life_cycles",
  "light",
  "loading",
@@ -4087,7 +4072,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "items",
  "loading",
  "macros",
  "mockall",

@@ -1,6 +1,6 @@
 use super::get_inputs::Input;
 use crate::{
-	item::SkillItem,
+	item::Item,
 	skills::Skill,
 	slot_key::SlotKey,
 	traits::{Enqueue, IterMut, Matches, Prime},
@@ -12,13 +12,13 @@ use bevy::{
 use common::traits::accessors::get::GetRef;
 
 pub(crate) fn enqueue<
-	TSlots: GetRef<SlotKey, Handle<SkillItem>> + Component,
+	TSlots: GetRef<SlotKey, Handle<Item>> + Component,
 	TQueue: Enqueue<(Skill, SlotKey)> + IterMut<TQueuedSkill> + Component,
 	TQueuedSkill: Prime + Matches<SlotKey>,
 >(
 	input: In<Input>,
 	mut agents: Query<(&TSlots, &mut TQueue)>,
-	items: Res<Assets<SkillItem>>,
+	items: Res<Assets<Item>>,
 	skills: Res<Assets<Skill>>,
 ) {
 	for (slots, mut queue) in &mut agents {
@@ -28,14 +28,11 @@ pub(crate) fn enqueue<
 	}
 }
 
-fn enqueue_new_skills<
-	TSlots: GetRef<SlotKey, Handle<SkillItem>>,
-	TQueue: Enqueue<(Skill, SlotKey)>,
->(
+fn enqueue_new_skills<TSlots: GetRef<SlotKey, Handle<Item>>, TQueue: Enqueue<(Skill, SlotKey)>>(
 	input: &In<Input>,
 	queue: &mut TQueue,
 	slots: &TSlots,
-	items: &Assets<SkillItem>,
+	items: &Assets<Item>,
 	skills: &Assets<Skill>,
 ) {
 	for key in input.just_pressed.iter() {
@@ -43,20 +40,17 @@ fn enqueue_new_skills<
 	}
 }
 
-fn enqueue_new_skill<
-	TSlots: GetRef<SlotKey, Handle<SkillItem>>,
-	TQueue: Enqueue<(Skill, SlotKey)>,
->(
+fn enqueue_new_skill<TSlots: GetRef<SlotKey, Handle<Item>>, TQueue: Enqueue<(Skill, SlotKey)>>(
 	key: &SlotKey,
 	queue: &mut TQueue,
 	slots: &TSlots,
-	items: &Assets<SkillItem>,
+	items: &Assets<Item>,
 	skills: &Assets<Skill>,
 ) {
 	let skill = slots
 		.get(key)
 		.and_then(|item_handle| items.get(item_handle))
-		.and_then(|item| item.content.skill.as_ref())
+		.and_then(|item| item.skill.as_ref())
 		.and_then(|skill_handle| skills.get(skill_handle));
 
 	let Some(skill) = skill else {
@@ -93,8 +87,6 @@ fn get_queued_skill<'a, TQueue: IterMut<TQueuedSkill>, TQueuedSkill: 'a + Matche
 
 #[cfg(test)]
 mod tests {
-	use crate::item::SkillItemContent;
-
 	use super::*;
 	use bevy::{
 		app::{App, Update},
@@ -128,10 +120,10 @@ mod tests {
 	simple_init!(Mock_SkillQueued);
 
 	#[derive(Component, Default)]
-	struct _Skills(HashMap<SlotKey, Handle<SkillItem>>);
+	struct _Skills(HashMap<SlotKey, Handle<Item>>);
 
-	impl GetRef<SlotKey, Handle<SkillItem>> for _Skills {
-		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Handle<SkillItem>> {
+	impl GetRef<SlotKey, Handle<Item>> for _Skills {
+		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Handle<Item>> {
 			self.0.get(key)
 		}
 	}
@@ -157,11 +149,11 @@ mod tests {
 	struct _SkillLoader;
 
 	fn setup<TEnqueue: Enqueue<(Skill, SlotKey)> + IterMut<Mock_SkillQueued> + Component>(
-		items: Vec<(AssetId<SkillItem>, SkillItem)>,
+		items: Vec<(AssetId<Item>, Item)>,
 		skills: Vec<(AssetId<Skill>, Skill)>,
 	) -> App {
 		let mut app = App::new().single_threaded(Update);
-		let mut item_assets = Assets::<SkillItem>::default();
+		let mut item_assets = Assets::<Item>::default();
 		let mut skill_assets = Assets::<Skill>::default();
 
 		for (id, item) in items {
@@ -218,10 +210,10 @@ mod tests {
 		let mut app = setup::<_Enqueue>(
 			vec![(
 				item.id(),
-				SkillItem::default().with_content(SkillItemContent {
+				Item {
 					skill: Some(skill.clone()),
 					..default()
-				}),
+				},
 			)],
 			vec![(
 				skill.id(),

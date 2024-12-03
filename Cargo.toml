@@ -72,7 +72,6 @@ common.workspace = true
 enemy.workspace = true
 game_state.workspace = true
 interactions.workspace = true
-items.workspace = true
 life_cycles.workspace = true
 light.workspace = true
 loading.workspace = true

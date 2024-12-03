@@ -1,13 +1,13 @@
-use crate::{item::SkillItem, slot_key::SlotKey};
+use crate::{item::Item, slot_key::SlotKey};
 use bevy::prelude::*;
 use common::traits::accessors::get::GetRef;
 use std::{collections::HashMap, fmt::Debug};
 
 #[derive(Component, Clone, PartialEq, Debug)]
-pub struct Slots(pub HashMap<SlotKey, Option<Handle<SkillItem>>>);
+pub struct Slots(pub HashMap<SlotKey, Option<Handle<Item>>>);
 
 impl Slots {
-	pub fn new<const N: usize>(slots: [(SlotKey, Option<Handle<SkillItem>>); N]) -> Self {
+	pub fn new<const N: usize>(slots: [(SlotKey, Option<Handle<Item>>); N]) -> Self {
 		Self(HashMap::from(slots))
 	}
 }
@@ -18,8 +18,8 @@ impl Default for Slots {
 	}
 }
 
-impl GetRef<SlotKey, Handle<SkillItem>> for Slots {
-	fn get(&self, key: &SlotKey) -> Option<&Handle<SkillItem>> {
+impl GetRef<SlotKey, Handle<Item>> for Slots {
+	fn get(&self, key: &SlotKey) -> Option<&Handle<Item>> {
 		let slot = self.0.get(key)?;
 		slot.as_ref()
 	}
@@ -51,7 +51,7 @@ mod tests {
 		let slots = Slots([(SlotKey::BottomHand(Side::Right), Some(new_handle()))].into());
 
 		assert_eq!(
-			None::<&Handle<SkillItem>>,
+			None::<&Handle<Item>>,
 			slots.get(&SlotKey::BottomHand(Side::Left))
 		);
 	}

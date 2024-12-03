@@ -1,4 +1,4 @@
-use crate::{inventory_key::InventoryKey, item::SkillItem, slot_key::SlotKey};
+use crate::{inventory_key::InventoryKey, item::Item, slot_key::SlotKey};
 use bevy::asset::Handle;
 use common::{
 	components::{Collection, Swap},
@@ -45,15 +45,15 @@ impl<'a, TInnerKey, TOuterKey, TContainer, TSwaps>
 
 struct RetryFailed<T>(T);
 
-impl<TContainer, TSwap, TContainerKey> SwapCommands<SlotKey, Handle<SkillItem>>
+impl<TContainer, TSwap, TContainerKey> SwapCommands<SlotKey, Handle<Item>>
 	for SwapController<'_, TContainerKey, SlotKey, TContainer, Collection<TSwap>>
 where
-	TContainer: GetMut<TContainerKey, Option<Handle<SkillItem>>>,
+	TContainer: GetMut<TContainerKey, Option<Handle<Item>>>,
 	TSwap: Keys<TContainerKey, SlotKey> + Clone,
 {
 	fn try_swap(
 		&mut self,
-		swap_fn: impl FnMut(SlotKey, SwapIn<Handle<SkillItem>>) -> SwapResult<Handle<SkillItem>>,
+		swap_fn: impl FnMut(SlotKey, SwapIn<Handle<Item>>) -> SwapResult<Handle<Item>>,
 	) {
 		let Collection(swaps) = self.swaps;
 
@@ -71,12 +71,12 @@ where
 
 fn apply_swaps<
 	'a,
-	TContainer: GetMut<TContainerKey, Option<Handle<SkillItem>>>,
+	TContainer: GetMut<TContainerKey, Option<Handle<Item>>>,
 	TContainerKey,
 	TSwap: Keys<TContainerKey, SlotKey> + Clone,
 >(
 	container: &'a mut TContainer,
-	mut swap_fn: impl FnMut(SlotKey, SwapIn<Handle<SkillItem>>) -> SwapResult<Handle<SkillItem>> + 'a,
+	mut swap_fn: impl FnMut(SlotKey, SwapIn<Handle<Item>>) -> SwapResult<Handle<Item>> + 'a,
 ) -> impl FnMut(&TSwap) -> Option<RetryFailed<TSwap>> + 'a {
 	move |swap| {
 		let (container_key, slot_key) = swap.keys();
@@ -140,10 +140,10 @@ mod tests {
 	}
 
 	#[derive(Debug, PartialEq)]
-	struct _Container(Vec<Option<Handle<SkillItem>>>);
+	struct _Container(Vec<Option<Handle<Item>>>);
 
-	impl GetMut<_InnerKey, Option<Handle<SkillItem>>> for _Container {
-		fn get_mut(&mut self, key: &_InnerKey) -> Option<&mut Option<Handle<SkillItem>>> {
+	impl GetMut<_InnerKey, Option<Handle<Item>>> for _Container {
+		fn get_mut(&mut self, key: &_InnerKey) -> Option<&mut Option<Handle<Item>>> {
 			self.0.get_mut(key.0)
 		}
 	}
