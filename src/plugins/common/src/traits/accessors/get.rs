@@ -1,3 +1,5 @@
+mod assets;
+
 pub trait Get<TKey, TValue> {
 	fn get(&self, key: &TKey) -> Option<TValue>;
 }
