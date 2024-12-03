@@ -1,5 +1,5 @@
 [package]
-name = "item_visualization"
+name = "visualization"
 version.workspace = true
 edition.workspace = true
 
@@ -10,7 +10,11 @@ bevy.workspace = true
 
 # internal
 common.workspace = true
+loading.workspace = true
 
 [dev-dependencies]
 # external
 mockall.workspace = true
+
+# internal
+macros.workspace = true

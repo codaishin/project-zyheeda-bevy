@@ -1,9 +1,7 @@
 {
 	"name": "Force Essence",
-	"content": {
-		"model": "None",
-		"essence": "Force",
-		"skill": "skills/force_shield.skill",
-		"item_type": "ForceEssence"
-	}
+	"model": "None",
+	"essence": "Force",
+	"skill": "skills/force_shield.skill",
+	"item_type": "ForceEssence"
 }

@@ -24,7 +24,7 @@ common = { path = "src/plugins/common" }
 enemy = { path = "src/plugins/enemy" }
 game_state = { path = "src/plugins/game_state" }
 interactions = { path = "src/plugins/interactions" }
-item_visualization = { path = "src/plugins/item_visualization" }
+visualization = { path = "src/plugins/visualization" }
 items = { path = "src/plugins/items" }
 life_cycles = { path = "src/plugins/life_cycles" }
 light = { path = "src/plugins/light" }
@@ -73,7 +73,7 @@ common.workspace = true
 enemy.workspace = true
 game_state.workspace = true
 interactions.workspace = true
-item_visualization.workspace = true
+visualization.workspace = true
 life_cycles.workspace = true
 light.workspace = true
 loading.workspace = true

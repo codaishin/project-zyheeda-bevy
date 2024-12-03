@@ -1,12 +1,12 @@
 use super::model_render::ModelRender;
 use crate::{item::Item, slot_key::SlotKey};
-use bevy::prelude::*;
+use bevy::{asset::Handle, prelude::*};
 use common::{
 	components::{essence::Essence, AssetModel, Side},
 	traits::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,
-		register_item_visualization::{ContainsVisibleItemAssets, Forearm, Hand, SubMeshEssence},
+		register_visualization::ContainsVisibleItemAssets,
 	},
 };
 use std::{collections::HashMap, fmt::Debug};
@@ -49,6 +49,8 @@ impl GetAsset for Slots {
 	}
 }
 
+pub(crate) struct Hand;
+
 impl ContainsVisibleItemAssets<Hand> for Slots {
 	type TVisualizationEntityConstraint = ();
 
@@ -71,6 +73,8 @@ impl ContainsVisibleItemAssets<Hand> for Slots {
 		}
 	}
 }
+
+pub(crate) struct Forearm;
 
 impl ContainsVisibleItemAssets<Forearm> for Slots {
 	type TVisualizationEntityConstraint = ();
@@ -95,6 +99,8 @@ impl ContainsVisibleItemAssets<Forearm> for Slots {
 	}
 }
 
+pub(crate) struct SubMeshEssence;
+
 impl ContainsVisibleItemAssets<SubMeshEssence> for Slots {
 	type TVisualizationEntityConstraint = With<Handle<Mesh>>;
 
@@ -111,7 +117,7 @@ impl ContainsVisibleItemAssets<SubMeshEssence> for Slots {
 		match item {
 			Some(Item { essence, .. }) => *essence,
 			_ => Essence::None,
-		};
+		}
 	}
 }
 

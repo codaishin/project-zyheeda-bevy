@@ -7,7 +7,6 @@ use common::CommonPlugin;
 use enemy::EnemyPlugin;
 use game_state::GameStatePlugin;
 use interactions::InteractionsPlugin;
-use item_visualization::ItemVisualizationPlugin;
 use life_cycles::LifeCyclesPlugin;
 use light::LightPlugin;
 use loading::LoadingPlugin;
@@ -18,6 +17,7 @@ use prefabs::PrefabsPlugin;
 use rendering::RenderingPlugin;
 use shaders::ShadersPlugin;
 use skills::SkillsPlugin;
+use visualization::VisualizationPlugin;
 
 fn main() -> AppExit {
 	let mut app = App::new();
@@ -37,13 +37,14 @@ fn prepare_game(app: &mut App) {
 	let animations_plugin = AnimationsPlugin;
 	let prefabs_plugin = PrefabsPlugin;
 	let shaders_plugin = ShadersPlugin;
-	let item_visualization_plugin = ItemVisualizationPlugin;
+	let visualization_plugin = VisualizationPlugin;
 	let interactions_plugin = InteractionsPlugin::depends_on(&life_cycles_plugin);
 	let skills_plugin = SkillsPlugin::depends_on(
 		&animations_plugin,
 		&life_cycles_plugin,
 		&shaders_plugin,
 		&interactions_plugin,
+		&visualization_plugin,
 	);
 	let enemy_plugin = EnemyPlugin::depends_on(&prefabs_plugin, &interactions_plugin);
 	let map_generation_plugin = MapGenerationPlugin::depends_on(&prefabs_plugin);
@@ -64,7 +65,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(prefabs_plugin)
 		.add_plugins(shaders_plugin)
 		.add_plugins(interactions_plugin)
-		.add_plugins(item_visualization_plugin)
+		.add_plugins(visualization_plugin)
 		.add_plugins(bars_plugin)
 		.add_plugins(animations_plugin)
 		.add_plugins(LightPlugin)
