@@ -61,37 +61,20 @@ use systems::{
 	update_skill_combos::update_skill_combos,
 };
 
-pub struct SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin>(
-	PhantomData<(
-		TAnimationsPlugin,
-		TLifeCyclePlugin,
-		TInteractionsPlugin,
-		TShadersPlugin,
-	)>,
+pub struct SkillsPlugin<TAnimations, TLifeCycles, TInteractions, TShaders>(
+	PhantomData<(TAnimations, TLifeCycles, TInteractions, TShaders)>,
 );
 
-impl<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin>
-	SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin>
+impl<TAnimations, TLifeCycles, TInteractions, TShaders>
+	SkillsPlugin<TAnimations, TLifeCycles, TInteractions, TShaders>
 where
-	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
-	TLifeCyclePlugin: Plugin + HandlesLifetime,
-	TInteractionsPlugin: Plugin + HandlesAllEffects,
-	TShadersPlugin: Plugin + HandlesEffectShadingForAll,
+	TAnimations: Plugin + HasAnimationsDispatch,
+	TLifeCycles: Plugin + HandlesLifetime,
+	TInteractions: Plugin + HandlesAllEffects,
+	TShaders: Plugin + HandlesEffectShadingForAll,
 {
-	pub fn depends_on(
-		_: &TAnimationsPlugin,
-		_: &TLifeCyclePlugin,
-		_: &TShadersPlugin,
-		_: &TInteractionsPlugin,
-	) -> Self {
-		Self(
-			PhantomData::<(
-				TAnimationsPlugin,
-				TLifeCyclePlugin,
-				TInteractionsPlugin,
-				TShadersPlugin,
-			)>,
-		)
+	pub fn depends_on(_: &TAnimations, _: &TLifeCycles, _: &TShaders, _: &TInteractions) -> Self {
+		Self(PhantomData::<(TAnimations, TLifeCycles, TInteractions, TShaders)>)
 	}
 
 	fn skill_load(&self, app: &mut App) {
@@ -121,9 +104,9 @@ where
 
 	fn skill_execution(&self, app: &mut App) {
 		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<
-			TLifeCyclePlugin,
-			TInteractionsPlugin,
-			TShadersPlugin,
+			TLifeCycles,
+			TInteractions,
+			TShaders,
 		>;
 
 		app.init_resource::<KeyMap<SlotKey, KeyCode>>()
@@ -140,7 +123,7 @@ where
 					flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 					advance_active_skill::<
 						Queue,
-						TAnimationsPlugin::TAnimationDispatch,
+						TAnimations::TAnimationDispatch,
 						SkillExecuter,
 						Virtual,
 					>,
@@ -217,13 +200,13 @@ where
 	}
 }
 
-impl<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin> Plugin
-	for SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin>
+impl<TAnimations, TLifeCycles, TInteractions, TShaders> Plugin
+	for SkillsPlugin<TAnimations, TLifeCycles, TInteractions, TShaders>
 where
-	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
-	TLifeCyclePlugin: Plugin + HandlesLifetime,
-	TInteractionsPlugin: Plugin + HandlesAllEffects,
-	TShadersPlugin: Plugin + HandlesEffectShadingForAll,
+	TAnimations: Plugin + HasAnimationsDispatch,
+	TLifeCycles: Plugin + HandlesLifetime,
+	TInteractions: Plugin + HandlesAllEffects,
+	TShaders: Plugin + HandlesEffectShadingForAll,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);
