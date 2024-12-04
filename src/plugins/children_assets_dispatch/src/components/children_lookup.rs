@@ -2,22 +2,22 @@ use bevy::prelude::{Component, Entity, Name, Query};
 use common::traits::{
 	accessors::get::GetRef,
 	iteration::IterFinite,
-	register_visualization::ContainsVisibleItemAssets,
+	register_assets_for_children::ContainsAssetIdsForChildren,
 	track::{IsTracking, Track, Untrack},
 };
 use loading::resources::track::Loaded;
 use std::{collections::HashMap, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct Visualize<TItemContainer, TMarker> {
+pub(crate) struct ChildrenLookup<TParent, TMarker> {
 	pub(crate) entities: HashMap<Name, Entity>,
-	phantom_data: PhantomData<(TItemContainer, TMarker)>,
+	phantom_data: PhantomData<(TParent, TMarker)>,
 }
 
-impl<TItemContainer, TMarker> Visualize<TItemContainer, TMarker>
+impl<TParent, TMarker> ChildrenLookup<TParent, TMarker>
 where
-	TItemContainer: ContainsVisibleItemAssets<TMarker> + Sync + Send + 'static,
-	TItemContainer::TKey: IterFinite,
+	TParent: ContainsAssetIdsForChildren<TMarker> + Sync + Send + 'static,
+	TParent::TChildKey: IterFinite,
 	TMarker: Sync + Send + 'static,
 {
 	#[cfg(test)]
@@ -31,7 +31,7 @@ where
 	}
 
 	pub(crate) fn entities_loaded(visualizers: Query<&Self>) -> Loaded {
-		let key_count = TItemContainer::TKey::iterator().count();
+		let key_count = TParent::TChildKey::iterator().count();
 		Loaded(
 			visualizers
 				.iter()
@@ -40,7 +40,7 @@ where
 	}
 }
 
-impl<TItemContainer, TMarker> Default for Visualize<TItemContainer, TMarker> {
+impl<TParent, TMarker> Default for ChildrenLookup<TParent, TMarker> {
 	fn default() -> Self {
 		Self {
 			entities: HashMap::new(),
@@ -49,15 +49,15 @@ impl<TItemContainer, TMarker> Default for Visualize<TItemContainer, TMarker> {
 	}
 }
 
-impl<TItemContainer, TMarker> Track<Name> for Visualize<TItemContainer, TMarker>
+impl<TParent, TMarker> Track<Name> for ChildrenLookup<TParent, TMarker>
 where
-	TItemContainer: ContainsVisibleItemAssets<TMarker>,
-	TItemContainer::TKey: IterFinite,
+	TParent: ContainsAssetIdsForChildren<TMarker>,
+	TParent::TChildKey: IterFinite,
 {
 	fn track(&mut self, entity: Entity, name: &Name) {
-		let entity_keys = TItemContainer::TKey::iterator();
+		let entity_keys = TParent::TChildKey::iterator();
 		let entity_not_valid = !entity_keys
-			.map(|key| TItemContainer::visualization_entity_name(&key))
+			.map(|key| TParent::child_name(&key))
 			.any(|entity_name| entity_name == name.as_str());
 
 		if entity_not_valid {
@@ -68,25 +68,25 @@ where
 	}
 }
 
-impl<TContainer, TMarker> IsTracking<Name> for Visualize<TContainer, TMarker> {
+impl<TContainer, TMarker> IsTracking<Name> for ChildrenLookup<TContainer, TMarker> {
 	fn is_tracking(&self, entity: &Entity) -> bool {
 		self.entities.values().any(|e| e == entity)
 	}
 }
 
-impl<TContainer, TMarker> Untrack<Name> for Visualize<TContainer, TMarker> {
+impl<TContainer, TMarker> Untrack<Name> for ChildrenLookup<TContainer, TMarker> {
 	fn untrack(&mut self, entity: &Entity) {
 		self.entities.retain(|_, e| e != entity);
 	}
 }
 
-impl<TContainer, TMarker> GetRef<TContainer::TKey, Entity> for Visualize<TContainer, TMarker>
+impl<TContainer, TMarker> GetRef<TContainer::TChildKey, Entity>
+	for ChildrenLookup<TContainer, TMarker>
 where
-	TContainer: ContainsVisibleItemAssets<TMarker>,
+	TContainer: ContainsAssetIdsForChildren<TMarker>,
 {
-	fn get(&self, key: &TContainer::TKey) -> Option<&Entity> {
-		self.entities
-			.get(&TContainer::visualization_entity_name(key).into())
+	fn get(&self, key: &TContainer::TChildKey) -> Option<&Entity> {
+		self.entities.get(&TContainer::child_name(key).into())
 	}
 }
 
@@ -142,10 +142,13 @@ mod tests {
 		}
 	}
 
-	impl ContainsVisibleItemAssets<_View> for _ItemContainer {
-		type TVisualizationEntityConstraint = ();
+	impl ContainsAssetIdsForChildren<_View> for _ItemContainer {
+		type TChildAsset = _Asset;
+		type TChildKey = _Key;
+		type TChildFilter = ();
+		type TChildBundle = ();
 
-		fn visualization_entity_name(key: &Self::TKey) -> &'static str {
+		fn child_name(key: &Self::TChildKey) -> &'static str {
 			match key {
 				_Key::A => "A",
 				_Key::B => "B",
@@ -153,17 +156,17 @@ mod tests {
 			}
 		}
 
-		fn visualization_component(_: Option<&Self::TAsset>) -> impl Bundle {}
+		fn asset_component(_: Option<&Self::TChildAsset>) -> Self::TChildBundle {}
 	}
 
 	#[test]
 	fn track_name_if_contained_in_sub_model_names() {
-		let mut lookup = Visualize::<_ItemContainer, _View>::default();
+		let mut lookup = ChildrenLookup::<_ItemContainer, _View>::default();
 
 		lookup.track(Entity::from_raw(33), &Name::from("A"));
 
 		assert_eq!(
-			Visualize {
+			ChildrenLookup {
 				entities: HashMap::from([(Name::from("A"), Entity::from_raw(33))]),
 				..default()
 			},
@@ -173,12 +176,12 @@ mod tests {
 
 	#[test]
 	fn do_not_track_name_if_not_contained_in_sub_model_names() {
-		let mut lookup = Visualize::<_ItemContainer, _View>::default();
+		let mut lookup = ChildrenLookup::<_ItemContainer, _View>::default();
 
 		lookup.track(Entity::from_raw(33), &Name::from("D"));
 
 		assert_eq!(
-			Visualize {
+			ChildrenLookup {
 				entities: HashMap::from([]),
 				..default()
 			},
@@ -188,7 +191,7 @@ mod tests {
 
 	#[test]
 	fn is_tracking_true() {
-		let mut lookup = Visualize::<_ItemContainer, _View>::default();
+		let mut lookup = ChildrenLookup::<_ItemContainer, _View>::default();
 
 		lookup.track(Entity::from_raw(33), &Name::from("A"));
 
@@ -197,7 +200,7 @@ mod tests {
 
 	#[test]
 	fn is_tracking_false() {
-		let mut lookup = Visualize::<_ItemContainer, _View>::default();
+		let mut lookup = ChildrenLookup::<_ItemContainer, _View>::default();
 
 		lookup.track(Entity::from_raw(34), &Name::from("A"));
 
@@ -206,14 +209,14 @@ mod tests {
 
 	#[test]
 	fn untrack() {
-		let mut lookup = Visualize::<_ItemContainer, _View>::default();
+		let mut lookup = ChildrenLookup::<_ItemContainer, _View>::default();
 
 		lookup.track(Entity::from_raw(34), &Name::from("A"));
 		lookup.track(Entity::from_raw(35), &Name::from("B"));
 		lookup.untrack(&Entity::from_raw(34));
 
 		assert_eq!(
-			Visualize {
+			ChildrenLookup {
 				entities: HashMap::from([(Name::from("B"), Entity::from_raw(35))]),
 				..default()
 			},
@@ -223,16 +226,20 @@ mod tests {
 
 	#[test]
 	fn get_entity_by_key() {
-		let lookup =
-			Visualize::<_ItemContainer, _View>::new([(Name::from("A"), Entity::from_raw(100))]);
+		let lookup = ChildrenLookup::<_ItemContainer, _View>::new([(
+			Name::from("A"),
+			Entity::from_raw(100),
+		)]);
 
 		assert_eq!(Some(&Entity::from_raw(100)), lookup.get(&_Key::A));
 	}
 
 	#[test]
 	fn get_entity_by_other_key() {
-		let lookup =
-			Visualize::<_ItemContainer, _View>::new([(Name::from("B"), Entity::from_raw(100))]);
+		let lookup = ChildrenLookup::<_ItemContainer, _View>::new([(
+			Name::from("B"),
+			Entity::from_raw(100),
+		)]);
 
 		assert_eq!(Some(&Entity::from_raw(100)), lookup.get(&_Key::B));
 	}
@@ -245,7 +252,7 @@ mod tests {
 	fn all_view_entities_loaded() {
 		let mut app = setup();
 		app.world_mut()
-			.spawn(Visualize::<_ItemContainer, _View>::new([
+			.spawn(ChildrenLookup::<_ItemContainer, _View>::new([
 				(Name::from("A"), Entity::from_raw(1)),
 				(Name::from("B"), Entity::from_raw(2)),
 				(Name::from("C"), Entity::from_raw(3)),
@@ -253,7 +260,7 @@ mod tests {
 
 		let loaded = app
 			.world_mut()
-			.run_system_once(Visualize::<_ItemContainer, _View>::entities_loaded);
+			.run_system_once(ChildrenLookup::<_ItemContainer, _View>::entities_loaded);
 
 		assert_eq!(Loaded(true), loaded);
 	}
@@ -262,14 +269,14 @@ mod tests {
 	fn not_all_view_entities_loaded() {
 		let mut app = setup();
 		app.world_mut()
-			.spawn(Visualize::<_ItemContainer, _View>::new([
+			.spawn(ChildrenLookup::<_ItemContainer, _View>::new([
 				(Name::from("A"), Entity::from_raw(1)),
 				(Name::from("C"), Entity::from_raw(3)),
 			]));
 
 		let loaded = app
 			.world_mut()
-			.run_system_once(Visualize::<_ItemContainer, _View>::entities_loaded);
+			.run_system_once(ChildrenLookup::<_ItemContainer, _View>::entities_loaded);
 
 		assert_eq!(Loaded(false), loaded);
 	}

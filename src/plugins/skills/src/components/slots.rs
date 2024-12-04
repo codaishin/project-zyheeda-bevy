@@ -6,7 +6,7 @@ use common::{
 	traits::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,
-		register_visualization::ContainsVisibleItemAssets,
+		register_assets_for_children::ContainsAssetIdsForChildren,
 	},
 };
 use std::{collections::HashMap, fmt::Debug};
@@ -49,12 +49,15 @@ impl GetAsset for Slots {
 	}
 }
 
-pub(crate) struct Hand;
+pub(crate) struct HandItemSlots;
 
-impl ContainsVisibleItemAssets<Hand> for Slots {
-	type TVisualizationEntityConstraint = ();
+impl ContainsAssetIdsForChildren<HandItemSlots> for Slots {
+	type TChildKey = SlotKey;
+	type TChildFilter = ();
+	type TChildAsset = Item;
+	type TChildBundle = AssetModel;
 
-	fn visualization_entity_name(key: &Self::TKey) -> &'static str {
+	fn child_name(key: &Self::TChildKey) -> &'static str {
 		match key {
 			SlotKey::TopHand(Side::Left) => "top_hand_slot.L",
 			SlotKey::TopHand(Side::Right) => "top_hand_slot.R",
@@ -63,7 +66,7 @@ impl ContainsVisibleItemAssets<Hand> for Slots {
 		}
 	}
 
-	fn visualization_component(item: Option<&Self::TAsset>) -> impl Bundle {
+	fn asset_component(item: Option<&Self::TChildAsset>) -> Self::TChildBundle {
 		match item {
 			Some(Item {
 				model: ModelRender::Hand(asset_model),
@@ -74,12 +77,15 @@ impl ContainsVisibleItemAssets<Hand> for Slots {
 	}
 }
 
-pub(crate) struct Forearm;
+pub(crate) struct ForearmItemSlots;
 
-impl ContainsVisibleItemAssets<Forearm> for Slots {
-	type TVisualizationEntityConstraint = ();
+impl ContainsAssetIdsForChildren<ForearmItemSlots> for Slots {
+	type TChildKey = SlotKey;
+	type TChildFilter = ();
+	type TChildAsset = Item;
+	type TChildBundle = AssetModel;
 
-	fn visualization_entity_name(key: &Self::TKey) -> &'static str {
+	fn child_name(key: &Self::TChildKey) -> &'static str {
 		match key {
 			SlotKey::TopHand(Side::Left) => "top_forearm.L",
 			SlotKey::TopHand(Side::Right) => "top_forearm.R",
@@ -88,7 +94,7 @@ impl ContainsVisibleItemAssets<Forearm> for Slots {
 		}
 	}
 
-	fn visualization_component(item: Option<&Self::TAsset>) -> impl Bundle {
+	fn asset_component(item: Option<&Self::TChildAsset>) -> Self::TChildBundle {
 		match item {
 			Some(Item {
 				model: ModelRender::Forearm(asset_model),
@@ -99,12 +105,15 @@ impl ContainsVisibleItemAssets<Forearm> for Slots {
 	}
 }
 
-pub(crate) struct SubMeshEssence;
+pub(crate) struct SubMeshEssenceSlots;
 
-impl ContainsVisibleItemAssets<SubMeshEssence> for Slots {
-	type TVisualizationEntityConstraint = With<Handle<Mesh>>;
+impl ContainsAssetIdsForChildren<SubMeshEssenceSlots> for Slots {
+	type TChildKey = SlotKey;
+	type TChildFilter = With<Handle<Mesh>>;
+	type TChildAsset = Item;
+	type TChildBundle = Essence;
 
-	fn visualization_entity_name(key: &Self::TKey) -> &'static str {
+	fn child_name(key: &Self::TChildKey) -> &'static str {
 		match key {
 			SlotKey::TopHand(Side::Left) => "ArmTopLeftModel",
 			SlotKey::TopHand(Side::Right) => "ArmTopRightModel",
@@ -113,7 +122,7 @@ impl ContainsVisibleItemAssets<SubMeshEssence> for Slots {
 		}
 	}
 
-	fn visualization_component(item: Option<&Self::TAsset>) -> impl Bundle {
+	fn asset_component(item: Option<&Self::TChildAsset>) -> Self::TChildBundle {
 		match item {
 			Some(Item { essence, .. }) => *essence,
 			_ => Essence::None,

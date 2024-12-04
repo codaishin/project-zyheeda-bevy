@@ -32,7 +32,7 @@ pub mod ownership_relation;
 pub mod prefab;
 pub mod process_delta;
 pub mod read;
-pub mod register_visualization;
+pub mod register_assets_for_children;
 pub mod remove_conditionally;
 pub mod remove_resource;
 pub mod state_duration;

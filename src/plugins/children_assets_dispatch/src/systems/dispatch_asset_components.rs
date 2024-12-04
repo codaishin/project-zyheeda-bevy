@@ -1,52 +1,58 @@
-use crate::components::visualize::Visualize;
+use crate::components::children_lookup::ChildrenLookup;
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{
 	errors::{Error, Level},
 	traits::{
 		accessors::get::GetRef,
+		get_asset::GetAsset,
 		iteration::IterFinite,
-		register_visualization::ContainsVisibleItemAssets,
+		register_assets_for_children::ContainsAssetIdsForChildren,
 		try_insert_on::TryInsertOn,
 	},
 };
 
-impl<TComponent> ApplyVisualization for TComponent {}
+impl<TComponent> DispatchAssetComponents for TComponent {}
 
-pub(crate) trait ApplyVisualization {
-	fn apply_visualization<TMarker>(
+pub(crate) trait DispatchAssetComponents {
+	fn dispatch_asset_components<TMarker>(
 		commands: Commands,
-		assets: Res<Assets<Self::TAsset>>,
-		visualizers: Query<(&Self, &Visualize<Self, TMarker>), Changed<Self>>,
+		assets: Res<Assets<Self::TChildAsset>>,
+		children_lookups: Query<(&Self, &ChildrenLookup<Self, TMarker>), Changed<Self>>,
 	) -> Vec<Result<(), Error>>
 	where
-		Self: ContainsVisibleItemAssets<TMarker> + Component + Sized,
+		Self: Component
+			+ Sized
+			+ ContainsAssetIdsForChildren<TMarker>
+			+ GetAsset<TKey = Self::TChildKey, TAsset = Self::TChildAsset>,
 		Self::TKey: IterFinite,
 		TMarker: Sync + Send + 'static,
 	{
-		visualize_system(commands, assets, visualizers)
+		dispatch_system(commands, assets, children_lookups)
 	}
 }
 
-fn visualize_system<TCommands, TAssets, TComponent, TMarker, TFilter>(
+fn dispatch_system<TCommands, TAssets, TComponent, TMarker, TFilter>(
 	mut commands: TCommands,
 	assets: Res<TAssets>,
-	components: Query<(&TComponent, &Visualize<TComponent, TMarker>), TFilter>,
+	components: Query<(&TComponent, &ChildrenLookup<TComponent, TMarker>), TFilter>,
 ) -> Vec<Result<(), Error>>
 where
 	TCommands: TryInsertOn,
-	TAssets: GetRef<Handle<TComponent::TAsset>, TComponent::TAsset> + Resource,
-	TComponent: ContainsVisibleItemAssets<TMarker> + Component,
-	TComponent::TKey: IterFinite,
+	TAssets: GetRef<Handle<TComponent::TChildAsset>, TComponent::TChildAsset> + Resource,
+	TComponent: Component
+		+ ContainsAssetIdsForChildren<TMarker>
+		+ GetAsset<TKey = TComponent::TChildKey, TAsset = TComponent::TChildAsset>,
+	TComponent::TChildKey: IterFinite,
 	TMarker: Sync + Send + 'static,
 	TFilter: QueryFilter,
 {
 	let mut errors = vec![];
 
 	for (container, visualize) in &components {
-		for key in TComponent::TKey::iterator() {
+		for key in TComponent::TChildKey::iterator() {
 			let asset = container.get_asset(&key, assets.as_ref());
-			let bundle = TComponent::visualization_component(asset);
-			let result = apply(&mut commands, visualize, key, bundle);
+			let bundle = TComponent::asset_component(asset);
+			let result = dispatch(&mut commands, visualize, key, bundle);
 			let Err(error) = result else {
 				continue;
 			};
@@ -57,18 +63,18 @@ where
 	errors
 }
 
-fn apply<TCommands, TComponent, TMarker>(
+fn dispatch<TCommands, TComponent, TMarker>(
 	commands: &mut TCommands,
-	visualizer: &Visualize<TComponent, TMarker>,
-	key: TComponent::TKey,
+	children_lookup: &ChildrenLookup<TComponent, TMarker>,
+	key: TComponent::TChildKey,
 	bundle: impl Bundle,
 ) -> Result<(), Error>
 where
 	TCommands: TryInsertOn,
-	TComponent: ContainsVisibleItemAssets<TMarker>,
+	TComponent: ContainsAssetIdsForChildren<TMarker>,
 {
-	let key = TComponent::visualization_entity_name(&key);
-	let entity = visualizer
+	let key = TComponent::child_name(&key);
+	let entity = children_lookup
 		.entities
 		.get(&Name::from(key))
 		.ok_or(entity_not_found_error(key))?;
@@ -152,17 +158,20 @@ mod tests {
 
 	struct _Marker;
 
-	impl ContainsVisibleItemAssets<_Marker> for _Component {
-		type TVisualizationEntityConstraint = ();
+	impl ContainsAssetIdsForChildren<_Marker> for _Component {
+		type TChildKey = _Key;
+		type TChildAsset = _Asset;
+		type TChildFilter = ();
+		type TChildBundle = _Visualize;
 
-		fn visualization_entity_name(key: &Self::TKey) -> &'static str {
+		fn child_name(key: &Self::TChildKey) -> &'static str {
 			match key {
 				_Key::A => "a",
 				_Key::B => "b",
 			}
 		}
 
-		fn visualization_component(_: Option<&Self::TAsset>) -> impl Bundle {
+		fn asset_component(_: Option<&Self::TChildAsset>) -> Self::TChildBundle {
 			_Visualize
 		}
 	}
@@ -199,12 +208,12 @@ mod tests {
 	}
 
 	#[test]
-	fn insert_visualize_component() {
+	fn dispatch_component_to_child() {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_get().return_const(&_Asset);
 		}));
 		app.world_mut().spawn((
-			Visualize::<_Component, _Marker>::new([(Name::from("a"), Entity::from_raw(42))]),
+			ChildrenLookup::<_Component, _Marker>::new([(Name::from("a"), Entity::from_raw(42))]),
 			_Component::new([(_Key::A, new_handle())]),
 		));
 		let commands = Mock_Commands::new_mock(|mock| {
@@ -216,17 +225,17 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			commands,
-			visualize_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
+			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
 		);
 	}
 
 	#[test]
-	fn insert_visualize_component_on_different_target() {
+	fn dispatch_component_to_different_child() {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_get().return_const(&_Asset);
 		}));
 		app.world_mut().spawn((
-			Visualize::<_Component, _Marker>::new([(Name::from("b"), Entity::from_raw(42))]),
+			ChildrenLookup::<_Component, _Marker>::new([(Name::from("b"), Entity::from_raw(42))]),
 			_Component::new([(_Key::B, new_handle())]),
 		));
 		let commands = Mock_Commands::new_mock(|mock| {
@@ -238,7 +247,7 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			commands,
-			visualize_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
+			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
 		);
 	}
 
@@ -252,7 +261,7 @@ mod tests {
 				.return_const(&_Asset);
 		}));
 		app.world_mut().spawn((
-			Visualize::<_Component, _Marker>::new([(Name::from("a"), Entity::from_raw(42))]),
+			ChildrenLookup::<_Component, _Marker>::new([(Name::from("a"), Entity::from_raw(42))]),
 			_Component::new([(_Key::A, handle)]),
 		));
 		let commands = Mock_Commands::new_mock(|mock| {
@@ -261,7 +270,7 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			commands,
-			visualize_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
+			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
 		);
 	}
 
@@ -276,7 +285,7 @@ mod tests {
 			mock.expect_get().never().return_const(&_Asset);
 		}));
 		app.world_mut().spawn((
-			Visualize::<_Component, _Marker>::new([(Name::from("a"), Entity::from_raw(42))]),
+			ChildrenLookup::<_Component, _Marker>::new([(Name::from("a"), Entity::from_raw(42))]),
 			_Component::new([(_Key::A, new_handle())]),
 			_Ignore,
 		));
@@ -288,7 +297,7 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			commands,
-			visualize_system::<In<Mock_Commands>, _Assets, _Component, _Marker, _Filter>,
+			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, _Filter>,
 		);
 	}
 
@@ -298,7 +307,7 @@ mod tests {
 			mock.expect_get().return_const(&_Asset);
 		}));
 		app.world_mut().spawn((
-			Visualize::<_Component, _Marker>::new([]),
+			ChildrenLookup::<_Component, _Marker>::new([]),
 			_Component::new([]),
 		));
 		let commands = Mock_Commands::new_mock(|mock| {
@@ -307,7 +316,7 @@ mod tests {
 
 		let results = app.world_mut().run_system_once_with(
 			commands,
-			visualize_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
+			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
 		);
 
 		assert_eq!(
