@@ -15,10 +15,7 @@ impl GetRef<InventoryKey, Handle<Item>> for Inventory {
 }
 
 impl GetMut<InventoryKey, Option<Handle<Item>>> for Inventory {
-	fn get_mut(
-		&mut self,
-		InventoryKey(index): &InventoryKey,
-	) -> Option<&mut Option<Handle<Item>>> {
+	fn get_mut(&mut self, InventoryKey(index): &InventoryKey) -> Option<&mut Option<Handle<Item>>> {
 		let items = &mut self.0;
 
 		if index >= &items.len() {

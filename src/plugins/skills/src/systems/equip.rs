@@ -111,9 +111,7 @@ mod tests {
 		errors: HashMap<SlotKey, SwapError>,
 	}
 
-	impl SwapCommands<SlotKey, Handle<Item>>
-		for SwapController<'_, (), SlotKey, _Container, _Swaps>
-	{
+	impl SwapCommands<SlotKey, Handle<Item>> for SwapController<'_, (), SlotKey, _Container, _Swaps> {
 		fn try_swap(
 			&mut self,
 			mut swap_fn: impl FnMut(SlotKey, SwapIn<Handle<Item>>) -> SwapResult<Handle<Item>>,

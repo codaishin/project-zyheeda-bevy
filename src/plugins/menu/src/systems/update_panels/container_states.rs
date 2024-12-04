@@ -80,9 +80,7 @@ mod tests {
 		}
 	}
 
-	fn setup_container<const N: usize>(
-		items: [(usize, Item); N],
-	) -> (_Container, Assets<Item>) {
+	fn setup_container<const N: usize>(items: [(usize, Item); N]) -> (_Container, Assets<Item>) {
 		let mut item_assets = Assets::default();
 		let mut container = HashMap::default();
 
