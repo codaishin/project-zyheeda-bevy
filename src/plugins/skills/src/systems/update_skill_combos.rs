@@ -1,6 +1,6 @@
 use crate::{
 	components::slots::Slots,
-	item::SkillItem,
+	item::Item,
 	skills::QueuedSkill,
 	traits::{AdvanceCombo, IterAddedMut},
 };
@@ -9,7 +9,7 @@ use common::traits::accessors::get::GetRef;
 
 pub(crate) fn update_skill_combos<TCombos, TQueue>(
 	mut agents: Query<(&mut TCombos, &mut TQueue, &Slots)>,
-	items: Res<Assets<SkillItem>>,
+	items: Res<Assets<Item>>,
 ) where
 	TCombos: AdvanceCombo + Component,
 	TQueue: IterAddedMut<QueuedSkill> + Component,
@@ -28,7 +28,7 @@ fn update_skill_with_advanced_combo<TCombos>(
 	combos: &mut Mut<TCombos>,
 	added: &mut QueuedSkill,
 	slots: &Slots,
-	items: &Res<Assets<SkillItem>>,
+	items: &Res<Assets<Item>>,
 ) where
 	TCombos: AdvanceCombo,
 {
@@ -41,7 +41,7 @@ fn update_skill_with_advanced_combo<TCombos>(
 	let Some(item) = items.get(item_handle.id()) else {
 		return;
 	};
-	let Some(advanced) = combos.advance_combo(&added.slot_key, &item.content.item_type) else {
+	let Some(advanced) = combos.advance_combo(&added.slot_key, &item.item_type) else {
 		return;
 	};
 
@@ -53,7 +53,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::slots::Slots,
-		item::{item_type::SkillItemType, SkillItem, SkillItemContent},
+		item::{item_type::SkillItemType, Item},
 		skills::Skill,
 		slot_key::SlotKey,
 	};
@@ -99,7 +99,7 @@ mod tests {
 		}
 	}
 
-	fn setup_app(items: Assets<SkillItem>) -> App {
+	fn setup_app(items: Assets<Item>) -> App {
 		let mut app = App::new();
 		app.insert_resource(items);
 
@@ -107,8 +107,8 @@ mod tests {
 	}
 
 	fn setup_slots<const N: usize>(
-		slots_and_items: [(SlotKey, Option<SkillItem>); N],
-	) -> (Slots, Assets<SkillItem>) {
+		slots_and_items: [(SlotKey, Option<Item>); N],
+	) -> (Slots, Assets<Item>) {
 		let mut assets = Assets::default();
 		let mut slots = HashMap::default();
 
@@ -128,21 +128,15 @@ mod tests {
 		let (slots, items) = setup_slots([
 			(
 				SlotKey::BottomHand(Side::Right),
-				Some(SkillItem {
-					content: SkillItemContent {
-						item_type: SkillItemType::ForceEssence,
-						..default()
-					},
+				Some(Item {
+					item_type: SkillItemType::ForceEssence,
 					..default()
 				}),
 			),
 			(
 				SlotKey::BottomHand(Side::Left),
-				Some(SkillItem {
-					content: SkillItemContent {
-						item_type: SkillItemType::Pistol,
-						..default()
-					},
+				Some(Item {
+					item_type: SkillItemType::Pistol,
 					..default()
 				}),
 			),
@@ -186,7 +180,7 @@ mod tests {
 
 	#[test]
 	fn update_skill_with_combo_skills() {
-		let (slots, items) = setup_slots([(SlotKey::default(), Some(SkillItem::default()))]);
+		let (slots, items) = setup_slots([(SlotKey::default(), Some(Item::default()))]);
 		let mut app = setup_app(items);
 		let agent = app
 			.world_mut()

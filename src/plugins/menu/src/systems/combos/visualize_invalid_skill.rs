@@ -4,11 +4,11 @@ use crate::{
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::traits::accessors::get::GetRef;
-use skills::{item::SkillItem, slot_key::SlotKey};
+use skills::{item::Item, slot_key::SlotKey};
 
 pub(crate) fn visualize_invalid_skill<
 	TAgent: Component,
-	TSlots: Component + GetRef<SlotKey, Handle<SkillItem>>,
+	TSlots: Component + GetRef<SlotKey, Handle<Item>>,
 	TVisualization: InsertContentOn,
 >(
 	mut commands: Commands,
@@ -17,7 +17,7 @@ pub(crate) fn visualize_invalid_skill<
 		Added<SkillButton<DropdownTrigger>>,
 	>,
 	agents: Query<&TSlots, With<TAgent>>,
-	items: Res<Assets<SkillItem>>,
+	items: Res<Assets<Item>>,
 ) {
 	let Ok(agent) = agents.get_single() else {
 		return;
@@ -30,11 +30,11 @@ pub(crate) fn visualize_invalid_skill<
 	}
 }
 
-fn visualize_unusable<TSlots: GetRef<SlotKey, Handle<SkillItem>>>(
+fn visualize_unusable<TSlots: GetRef<SlotKey, Handle<Item>>>(
 	commands: &mut Commands,
 	(entity, descriptor): (Entity, &SkillButton<DropdownTrigger>),
 	agent: &TSlots,
-	items: &Assets<SkillItem>,
+	items: &Assets<Item>,
 	visualize: fn(&mut EntityCommands),
 ) -> Option<()> {
 	let item = descriptor
@@ -43,11 +43,7 @@ fn visualize_unusable<TSlots: GetRef<SlotKey, Handle<SkillItem>>>(
 		.and_then(|key| agent.get(key))
 		.and_then(|item| items.get(item))?;
 
-	if descriptor
-		.skill
-		.is_usable_with
-		.contains(&item.content.item_type)
-	{
+	if descriptor.skill.is_usable_with.contains(&item.item_type) {
 		return None;
 	}
 
@@ -68,26 +64,23 @@ mod tests {
 		utils::default,
 	};
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
-	use skills::{
-		item::{item_type::SkillItemType, SkillItemContent},
-		skills::Skill,
-	};
+	use skills::{item::item_type::SkillItemType, skills::Skill};
 	use std::collections::{HashMap, HashSet};
 
 	#[derive(Component)]
 	struct _Agent;
 
 	#[derive(Component)]
-	struct _Slots(HashMap<SlotKey, Handle<SkillItem>>);
+	struct _Slots(HashMap<SlotKey, Handle<Item>>);
 
-	impl<const N: usize> From<[(SlotKey, Handle<SkillItem>); N]> for _Slots {
-		fn from(value: [(SlotKey, Handle<SkillItem>); N]) -> Self {
+	impl<const N: usize> From<[(SlotKey, Handle<Item>); N]> for _Slots {
+		fn from(value: [(SlotKey, Handle<Item>); N]) -> Self {
 			Self(HashMap::from(value))
 		}
 	}
 
-	impl GetRef<SlotKey, Handle<SkillItem>> for _Slots {
-		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Handle<SkillItem>> {
+	impl GetRef<SlotKey, Handle<Item>> for _Slots {
+		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Handle<Item>> {
 			self.0.get(key)
 		}
 	}
@@ -101,9 +94,7 @@ mod tests {
 		}
 	}
 
-	fn setup_slots<const N: usize>(
-		slots: [(SlotKey, SkillItem); N],
-	) -> (_Slots, Assets<SkillItem>) {
+	fn setup_slots<const N: usize>(slots: [(SlotKey, Item); N]) -> (_Slots, Assets<Item>) {
 		let mut items = Assets::default();
 		let slots = slots
 			.into_iter()
@@ -115,7 +106,7 @@ mod tests {
 
 	fn setup_app_and_slots_on<const N: usize>(
 		agent: impl Component,
-		slots: [(SlotKey, SkillItem); N],
+		slots: [(SlotKey, Item); N],
 	) -> App {
 		let (slots, items) = setup_slots(slots);
 		let mut app = App::new().single_threaded(Update);
@@ -135,11 +126,8 @@ mod tests {
 			_Agent,
 			[(
 				SlotKey::BottomHand(Side::Right),
-				SkillItem {
-					content: SkillItemContent {
-						item_type: SkillItemType::Pistol,
-						..default()
-					},
+				Item {
+					item_type: SkillItemType::Pistol,
 					..default()
 				},
 			)],
@@ -170,11 +158,8 @@ mod tests {
 			_Agent,
 			[(
 				SlotKey::BottomHand(Side::Right),
-				SkillItem {
-					content: SkillItemContent {
-						item_type: SkillItemType::Pistol,
-						..default()
-					},
+				Item {
+					item_type: SkillItemType::Pistol,
 					..default()
 				},
 			)],
@@ -208,11 +193,8 @@ mod tests {
 			_NonAgent,
 			[(
 				SlotKey::BottomHand(Side::Right),
-				SkillItem {
-					content: SkillItemContent {
-						item_type: SkillItemType::Bracer,
-						..default()
-					},
+				Item {
+					item_type: SkillItemType::Bracer,
 					..default()
 				},
 			)],
@@ -243,11 +225,8 @@ mod tests {
 			_Agent,
 			[(
 				SlotKey::BottomHand(Side::Right),
-				SkillItem {
-					content: SkillItemContent {
-						item_type: SkillItemType::Bracer,
-						..default()
-					},
+				Item {
+					item_type: SkillItemType::Bracer,
 					..default()
 				},
 			)],

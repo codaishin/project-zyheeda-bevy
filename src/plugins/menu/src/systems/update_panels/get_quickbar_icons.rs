@@ -4,7 +4,7 @@ use common::traits::{accessors::get::GetRef, iterate::Iterate};
 use player::components::player::Player;
 use skills::{
 	components::slots::Slots,
-	item::SkillItem,
+	item::Item,
 	skills::{QueuedSkill, Skill},
 	traits::{IsTimedOut, PeekNext},
 };
@@ -19,7 +19,7 @@ type PlayerComponents<'a, TQueue, TCombos, TComboTimeout> = (
 pub(crate) fn get_quickbar_icons<TQueue, TCombos, TComboTimeout>(
 	players: Query<PlayerComponents<TQueue, TCombos, TComboTimeout>, With<Player>>,
 	panels: Query<(Entity, &mut QuickbarPanel)>,
-	items: Res<Assets<SkillItem>>,
+	items: Res<Assets<Item>>,
 	skills: Res<Assets<Skill>>,
 ) -> Vec<(Entity, Option<Handle<Image>>)>
 where
@@ -56,7 +56,7 @@ fn active_skill_icon<TQueue: Iterate<QueuedSkill>>(
 
 fn combo_skill_icon<'a, TCombos: PeekNext<Skill>, TComboTimeout: IsTimedOut>(
 	panel: &'a QuickbarPanel,
-	items: &'a Assets<SkillItem>,
+	items: &'a Assets<Item>,
 	slots: &'a Slots,
 	combos: Option<&'a TCombos>,
 	timed_out: Option<&'a TComboTimeout>,
@@ -67,14 +67,14 @@ fn combo_skill_icon<'a, TCombos: PeekNext<Skill>, TComboTimeout: IsTimedOut>(
 		}
 		let item_handle = slots.get(&panel.key)?;
 		let item = items.get(item_handle.id())?;
-		let next_combo = combos?.peek_next(&panel.key, &item.content.item_type)?;
+		let next_combo = combos?.peek_next(&panel.key, &item.item_type)?;
 		next_combo.icon
 	}
 }
 
 fn item_skill_icon<'a>(
 	panel: &'a QuickbarPanel,
-	items: &'a Assets<SkillItem>,
+	items: &'a Assets<Item>,
 	skills: &'a Assets<Skill>,
 	slots: &'a Slots,
 ) -> impl FnOnce() -> Option<Handle<Image>> + 'a {
@@ -82,7 +82,7 @@ fn item_skill_icon<'a>(
 		slots
 			.get(&panel.key)
 			.and_then(|item| items.get(item))
-			.and_then(|item| item.content.skill.as_ref())
+			.and_then(|item| item.skill.as_ref())
 			.and_then(|skill| skills.get(skill))
 			.and_then(|skill| skill.icon.clone())
 	}
@@ -101,7 +101,7 @@ mod tests {
 	use mockall::{automock, predicate::eq};
 	use skills::{
 		components::slots::Slots,
-		item::{item_type::SkillItemType, SkillItem, SkillItemContent},
+		item::{item_type::SkillItemType, Item},
 		skills::Activation,
 		slot_key::SlotKey,
 	};
@@ -148,7 +148,7 @@ mod tests {
 		commands.insert_resource(_Result(result.0));
 	}
 
-	fn setup(items: Assets<SkillItem>, skills: Assets<Skill>) -> App {
+	fn setup(items: Assets<Item>, skills: Assets<Skill>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(items);
 		app.insert_resource(skills);
@@ -215,18 +215,18 @@ mod tests {
 
 	fn setup_slots<const N: usize>(
 		skills: [(SlotKey, SkillItemType, Skill); N],
-	) -> (Slots, Assets<SkillItem>, Assets<Skill>) {
+	) -> (Slots, Assets<Item>, Assets<Skill>) {
 		let mut slots = HashMap::new();
 		let mut skill_assets = Assets::default();
 		let mut item_assets = Assets::default();
 
 		for (slot_key, item_type, skill) in skills {
 			let skill = skill_assets.add(skill);
-			let item = SkillItem::default().with_content(SkillItemContent {
+			let item = Item {
 				item_type,
 				skill: Some(skill),
 				..default()
-			});
+			};
 			let item = item_assets.add(item);
 			slots.insert(slot_key, Some(item));
 		}

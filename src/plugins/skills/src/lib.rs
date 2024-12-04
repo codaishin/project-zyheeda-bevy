@@ -1,5 +1,4 @@
 pub mod components;
-pub mod definitions;
 pub mod inventory_key;
 pub mod item;
 pub mod resources;
@@ -23,6 +22,7 @@ use common::{
 		handles_effect::HandlesAllEffects,
 		handles_effect_shading::HandlesEffectShadingForAll,
 		handles_lifetime::HandlesLifetime,
+		register_assets_for_children::RegisterAssetsForChildren,
 		try_insert_on::TryInsertOn,
 	},
 };
@@ -33,15 +33,10 @@ use components::{
 	queue::Queue,
 	skill_executer::SkillExecuter,
 	skill_spawners::SkillSpawners,
-	slots::Slots,
-};
-use definitions::{
-	item_slots::{ForearmSlots, HandSlots},
-	sub_models::SubModels,
+	slots::{ForearmItemSlots, HandItemSlots, Slots, SubMeshEssenceSlots},
 };
 use inventory_key::InventoryKey;
-use item::{dto::SkillItemDto, item_type::SkillItemType, SkillItem};
-use items::RegisterItemView;
+use item::{dto::ItemDto, item_type::SkillItemType, Item};
 use loading::traits::{
 	register_custom_assets::RegisterCustomAssets,
 	register_custom_folder_assets::RegisterCustomFolderAssets,
@@ -65,38 +60,41 @@ use systems::{
 		trigger_primed::trigger_primed_mouse_context,
 	},
 	update_skill_combos::update_skill_combos,
-	visualize_slot_items::visualize_slot_items,
 };
 
-pub struct SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin>(
+pub struct SkillsPlugin<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets>(
 	PhantomData<(
-		TAnimationsPlugin,
-		TLifeCyclePlugin,
-		TInteractionsPlugin,
-		TShadersPlugin,
+		TAnimations,
+		TLifeCycles,
+		TInteractions,
+		TShaders,
+		TDispatchChildrenAssets,
 	)>,
 );
 
-impl<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin>
-	SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin>
+impl<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets>
+	SkillsPlugin<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets>
 where
-	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
-	TLifeCyclePlugin: Plugin + HandlesLifetime,
-	TInteractionsPlugin: Plugin + HandlesAllEffects,
-	TShadersPlugin: Plugin + HandlesEffectShadingForAll,
+	TAnimations: Plugin + HasAnimationsDispatch,
+	TLifeCycles: Plugin + HandlesLifetime,
+	TInteractions: Plugin + HandlesAllEffects,
+	TShaders: Plugin + HandlesEffectShadingForAll,
+	TDispatchChildrenAssets: Plugin + RegisterAssetsForChildren,
 {
 	pub fn depends_on(
-		_: &TAnimationsPlugin,
-		_: &TLifeCyclePlugin,
-		_: &TShadersPlugin,
-		_: &TInteractionsPlugin,
+		_: &TAnimations,
+		_: &TLifeCycles,
+		_: &TShaders,
+		_: &TInteractions,
+		_: &TDispatchChildrenAssets,
 	) -> Self {
 		Self(
 			PhantomData::<(
-				TAnimationsPlugin,
-				TLifeCyclePlugin,
-				TInteractionsPlugin,
-				TShadersPlugin,
+				TAnimations,
+				TLifeCycles,
+				TInteractions,
+				TShaders,
+				TDispatchChildrenAssets,
 			)>,
 		)
 	}
@@ -106,26 +104,19 @@ where
 	}
 
 	fn item_load(&self, app: &mut App) {
-		app.register_custom_assets::<SkillItem, SkillItemDto>();
+		app.register_custom_assets::<Item, ItemDto>();
 	}
 
 	fn skill_slot_load(&self, app: &mut App) {
+		TDispatchChildrenAssets::register_assets_for_children::<Slots, HandItemSlots>(app);
+		TDispatchChildrenAssets::register_assets_for_children::<Slots, ForearmItemSlots>(app);
+		TDispatchChildrenAssets::register_assets_for_children::<Slots, SubMeshEssenceSlots>(app);
+
 		app.add_systems(
 			PreUpdate,
 			SkillSpawners::track_in_self_and_children::<Name>().system(),
 		)
 		.add_systems(Update, Self::set_player_items)
-		.register_item_view_for::<Player, HandSlots<Player>>()
-		.register_item_view_for::<Player, ForearmSlots<Player>>()
-		.register_item_view_for::<Player, SubModels<Player>>()
-		.add_systems(
-			Update,
-			(
-				visualize_slot_items::<HandSlots<Player>>,
-				visualize_slot_items::<ForearmSlots<Player>>,
-				visualize_slot_items::<SubModels<Player>>,
-			),
-		)
 		.add_systems(
 			Update,
 			(
@@ -139,9 +130,9 @@ where
 
 	fn skill_execution(&self, app: &mut App) {
 		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<
-			TLifeCyclePlugin,
-			TInteractionsPlugin,
-			TShadersPlugin,
+			TLifeCycles,
+			TInteractions,
+			TShaders,
 		>;
 
 		app.init_resource::<KeyMap<SlotKey, KeyCode>>()
@@ -158,7 +149,7 @@ where
 					flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 					advance_active_skill::<
 						Queue,
-						TAnimationsPlugin::TAnimationDispatch,
+						TAnimations::TAnimationDispatch,
 						SkillExecuter,
 						Virtual,
 					>,
@@ -235,13 +226,14 @@ where
 	}
 }
 
-impl<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin> Plugin
-	for SkillsPlugin<TAnimationsPlugin, TLifeCyclePlugin, TInteractionsPlugin, TShadersPlugin>
+impl<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets> Plugin
+	for SkillsPlugin<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets>
 where
-	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
-	TLifeCyclePlugin: Plugin + HandlesLifetime,
-	TInteractionsPlugin: Plugin + HandlesAllEffects,
-	TShadersPlugin: Plugin + HandlesEffectShadingForAll,
+	TAnimations: Plugin + HasAnimationsDispatch,
+	TLifeCycles: Plugin + HandlesLifetime,
+	TInteractions: Plugin + HandlesAllEffects,
+	TShaders: Plugin + HandlesEffectShadingForAll,
+	TDispatchChildrenAssets: Plugin + RegisterAssetsForChildren,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);

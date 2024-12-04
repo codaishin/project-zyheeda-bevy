@@ -3,7 +3,7 @@ use common::{
 	components::{Collection, Swap},
 	traits::try_remove_from::TryRemoveFrom,
 };
-use skills::{components::inventory::Inventory, inventory_key::InventoryKey, item::SkillItem};
+use skills::{components::inventory::Inventory, inventory_key::InventoryKey, item::Item};
 use std::cmp::max;
 
 type ItemsToSwap<'a> = (
@@ -23,14 +23,14 @@ pub fn swap_inventory_items(mut commands: Commands, mut items_to_swap: Query<Ite
 }
 
 fn do_swap(
-	inventory: &mut Mut<Collection<Option<Handle<SkillItem>>>>,
+	inventory: &mut Mut<Collection<Option<Handle<Item>>>>,
 	swap: &Swap<InventoryKey, InventoryKey>,
 ) {
 	fill_to(&mut inventory.0, max(swap.0 .0, swap.1 .0));
 	inventory.0.swap(swap.0 .0, swap.1 .0);
 }
 
-fn fill_to(inventory: &mut Vec<Option<Handle<SkillItem>>>, index: usize) {
+fn fill_to(inventory: &mut Vec<Option<Handle<Item>>>, index: usize) {
 	if index < inventory.len() {
 		return;
 	}

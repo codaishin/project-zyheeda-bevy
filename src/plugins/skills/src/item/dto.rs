@@ -1,6 +1,35 @@
-use content::SkillItemContentDto;
-use items::item::dto::ItemDto;
+use super::Item;
+use crate::{components::model_render::ModelRender, item::item_type::SkillItemType};
+use bevy::reflect::TypePath;
+use common::{components::essence::Essence, traits::load_asset::LoadAsset};
+use loading::traits::{asset_file_extensions::AssetFileExtensions, load_from::LoadFrom};
+use serde::{Deserialize, Serialize};
 
-pub(crate) mod content;
+type SkillPath = String;
 
-pub(crate) type SkillItemDto = ItemDto<SkillItemContentDto>;
+#[derive(Debug, PartialEq, Serialize, Deserialize, TypePath)]
+pub(crate) struct ItemDto {
+	name: String,
+	model: ModelRender,
+	essence: Essence,
+	skill: Option<SkillPath>,
+	item_type: SkillItemType,
+}
+
+impl LoadFrom<ItemDto> for Item {
+	fn load_from<TLoadAsset: LoadAsset>(from: ItemDto, asset_server: &mut TLoadAsset) -> Self {
+		Self {
+			name: from.name,
+			model: from.model,
+			essence: from.essence,
+			skill: from.skill.map(|path| asset_server.load_asset(path)),
+			item_type: from.item_type,
+		}
+	}
+}
+
+impl AssetFileExtensions for ItemDto {
+	fn asset_file_extensions() -> &'static [&'static str] {
+		&[".item"]
+	}
+}

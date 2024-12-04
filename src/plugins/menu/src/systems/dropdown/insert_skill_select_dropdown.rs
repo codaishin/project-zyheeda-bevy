@@ -10,16 +10,16 @@ use common::traits::{
 	try_remove_from::TryRemoveFrom,
 };
 use player::components::player::Player;
-use skills::{item::SkillItem, skills::Skill, slot_key::SlotKey};
+use skills::{item::Item, skills::Skill, slot_key::SlotKey};
 
 pub(crate) fn insert_skill_select_dropdown<
-	TEquipment: GetRef<SlotKey, Handle<SkillItem>> + Component,
+	TEquipment: GetRef<SlotKey, Handle<Item>> + Component,
 	TLayout: Sync + Send + 'static,
 >(
 	mut commands: Commands,
 	dropdown_commands: Query<(Entity, &SkillSelectDropdownInsertCommand<SlotKey, TLayout>)>,
 	slots: Query<&TEquipment, With<Player>>,
-	items: Res<Assets<SkillItem>>,
+	items: Res<Assets<Item>>,
 	skills: Res<Assets<Skill>>,
 ) {
 	let Ok(slots) = slots.get_single() else {
@@ -34,13 +34,10 @@ pub(crate) fn insert_skill_select_dropdown<
 	}
 }
 
-fn compatible_skills<
-	TEquipment: GetRef<SlotKey, Handle<SkillItem>>,
-	TLayout: Sync + Send + 'static,
->(
+fn compatible_skills<TEquipment: GetRef<SlotKey, Handle<Item>>, TLayout: Sync + Send + 'static>(
 	command: &SkillSelectDropdownInsertCommand<SlotKey, TLayout>,
 	slots: &TEquipment,
-	items: &Assets<SkillItem>,
+	items: &Assets<Item>,
 	skills: &Assets<Skill>,
 ) -> Option<Vec<SkillButton<DropdownItem<TLayout>>>> {
 	let key = command.key_path.last()?;
@@ -50,7 +47,7 @@ fn compatible_skills<
 	let skills = skills
 		.iter()
 		.filter(|(_, skill)| {
-			if !skill.is_usable_with.contains(&item.content.item_type) {
+			if !skill.is_usable_with.contains(&item.item_type) {
 				return false;
 			}
 			if seen.contains(skill) {
@@ -73,7 +70,7 @@ mod tests {
 	use super::*;
 	use crate::components::dropdown::Dropdown;
 	use common::{components::Side, test_tools::utils::SingleThreadedApp};
-	use skills::item::{item_type::SkillItemType, SkillItemContent};
+	use skills::item::item_type::SkillItemType;
 	use std::collections::{HashMap, HashSet};
 	use uuid::Uuid;
 
@@ -87,18 +84,18 @@ mod tests {
 	}
 
 	#[derive(Component)]
-	struct _Equipment(HashMap<SlotKey, Handle<SkillItem>>);
+	struct _Equipment(HashMap<SlotKey, Handle<Item>>);
 
-	impl GetRef<SlotKey, Handle<SkillItem>> for _Equipment {
-		fn get(&self, key: &SlotKey) -> Option<&Handle<SkillItem>> {
+	impl GetRef<SlotKey, Handle<Item>> for _Equipment {
+		fn get(&self, key: &SlotKey) -> Option<&Handle<Item>> {
 			self.0.get(key)
 		}
 	}
 
 	fn setup_skills_and_equipment<const S: usize, const E: usize>(
 		skills: [Skill; S],
-		equipment: [(SlotKey, SkillItem); E],
-	) -> (_Equipment, Assets<SkillItem>, Assets<Skill>) {
+		equipment: [(SlotKey, Item); E],
+	) -> (_Equipment, Assets<Item>, Assets<Skill>) {
 		let mut item_assets = Assets::default();
 		let mut skill_assets = Assets::default();
 
@@ -117,7 +114,7 @@ mod tests {
 	fn setup_app<const S: usize, const E: usize>(
 		agent: impl Component,
 		skills: [Skill; S],
-		equipment: [(SlotKey, SkillItem); E],
+		equipment: [(SlotKey, Item); E],
 	) -> App {
 		let (equipment, items, skills) = setup_skills_and_equipment(skills, equipment);
 		let mut app = App::new().single_threaded(Update);
@@ -157,11 +154,8 @@ mod tests {
 			],
 			[(
 				SlotKey::BottomHand(Side::Right),
-				SkillItem {
-					content: SkillItemContent {
-						item_type: SkillItemType::Pistol,
-						..default()
-					},
+				Item {
+					item_type: SkillItemType::Pistol,
 					..default()
 				},
 			)],
@@ -235,11 +229,8 @@ mod tests {
 			],
 			[(
 				SlotKey::BottomHand(Side::Right),
-				SkillItem {
-					content: SkillItemContent {
-						item_type: SkillItemType::Pistol,
-						..default()
-					},
+				Item {
+					item_type: SkillItemType::Pistol,
 					..default()
 				},
 			)],
@@ -310,11 +301,8 @@ mod tests {
 			],
 			[(
 				SlotKey::BottomHand(Side::Right),
-				SkillItem {
-					content: SkillItemContent {
-						item_type: SkillItemType::Pistol,
-						..default()
-					},
+				Item {
+					item_type: SkillItemType::Pistol,
 					..default()
 				},
 			)],
@@ -343,11 +331,8 @@ mod tests {
 			[],
 			[(
 				SlotKey::BottomHand(Side::Right),
-				SkillItem {
-					content: SkillItemContent {
-						item_type: SkillItemType::Pistol,
-						..default()
-					},
+				Item {
+					item_type: SkillItemType::Pistol,
 					..default()
 				},
 			)],

@@ -1480,6 +1480,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
+name = "children_assets_dispatch"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "common",
+ "loading",
+ "macros",
+ "mockall",
+]
+
+[[package]]
 name = "clang-sys"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2519,19 +2530,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "items"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "common",
- "loading",
- "macros",
- "mockall",
- "serde",
- "uuid",
-]
-
-[[package]]
 name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2830,7 +2828,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "items",
  "loading",
  "macros",
  "mockall",
@@ -3700,11 +3697,11 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_rapier3d",
+ "children_assets_dispatch",
  "common",
  "enemy",
  "game_state",
  "interactions",
- "items",
  "life_cycles",
  "light",
  "loading",
@@ -4087,7 +4084,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "items",
  "loading",
  "macros",
  "mockall",

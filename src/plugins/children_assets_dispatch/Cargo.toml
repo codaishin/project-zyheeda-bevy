@@ -1,13 +1,12 @@
 [package]
-name = "items"
+name = "children_assets_dispatch"
 version.workspace = true
 edition.workspace = true
+
 
 [dependencies]
 # external
 bevy.workspace = true
-serde.workspace = true
-uuid.workspace = true
 
 # internal
 common.workspace = true

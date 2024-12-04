@@ -7,7 +7,7 @@ use crate::{
 		skill_spawners::SkillSpawners,
 		slots::Slots,
 	},
-	item::SkillItem,
+	item::Item,
 	skills::RunSkillBehavior,
 	slot_key::SlotKey,
 };
@@ -37,9 +37,7 @@ pub struct Loadout {
 }
 
 impl Loadout {
-	pub fn new<const N: usize>(
-		slots_definitions: [(SlotKey, Option<Handle<SkillItem>>); N],
-	) -> Self {
+	pub fn new<const N: usize>(slots_definitions: [(SlotKey, Option<Handle<Item>>); N]) -> Self {
 		Self {
 			slot_definition: Slots(HashMap::from(slots_definitions)),
 			skill_execution: default(),
