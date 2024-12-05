@@ -6,7 +6,7 @@ impl ReactsToMenuHotkeys for GameState {
 		match self {
 			Self::None => false,
 			Self::StartMenu => false,
-			Self::Loading(_) => false,
+			Self::Loading => false,
 			Self::NewGame => false,
 			Self::Play => true,
 			Self::IngameMenu(_) => true,

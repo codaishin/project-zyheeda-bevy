@@ -1,4 +1,5 @@
 use bevy::{prelude::*, render::MainWorld, state::state::FreelyMutableState};
+use common::traits::handles_load_tracking::Loaded;
 use std::{
 	any::{type_name, TypeId},
 	collections::HashMap,
@@ -6,7 +7,7 @@ use std::{
 };
 
 #[derive(Resource, Default, Debug, PartialEq)]
-pub struct Track<T> {
+pub(crate) struct Track<T> {
 	items: HashMap<TypeId, LoadData>,
 	phantom_data: PhantomData<T>,
 }
@@ -16,9 +17,6 @@ pub(crate) struct LoadData {
 	type_name: &'static str,
 	loaded: Loaded,
 }
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Loaded(pub bool);
 
 impl<TProgress> Track<TProgress>
 where

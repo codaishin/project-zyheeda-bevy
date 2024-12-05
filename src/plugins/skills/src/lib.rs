@@ -23,6 +23,7 @@ use common::{
 		handles_effect_shading::HandlesEffectShadingForAll,
 		handles_lifetime::HandlesLifetime,
 		register_assets_for_children::RegisterAssetsForChildren,
+		register_custom_assets::{RegisterCustomAssets, RegisterCustomFolderAssets},
 		try_insert_on::TryInsertOn,
 	},
 };
@@ -37,10 +38,6 @@ use components::{
 };
 use inventory_key::InventoryKey;
 use item::{dto::ItemDto, item_type::SkillItemType, Item};
-use loading::traits::{
-	register_custom_assets::RegisterCustomAssets,
-	register_custom_folder_assets::RegisterCustomFolderAssets,
-};
 use macros::item_asset;
 use player::components::player::Player;
 use skills::{dto::SkillDto, QueuedSkill, RunSkillBehavior, Skill};
@@ -62,24 +59,33 @@ use systems::{
 	update_skill_combos::update_skill_combos,
 };
 
-pub struct SkillsPlugin<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets>(
+pub struct SkillsPlugin<
+	TAnimations,
+	TLifeCycles,
+	TInteractions,
+	TShaders,
+	TDispatchChildrenAssets,
+	TLoading,
+>(
 	PhantomData<(
 		TAnimations,
 		TLifeCycles,
 		TInteractions,
 		TShaders,
 		TDispatchChildrenAssets,
+		TLoading,
 	)>,
 );
 
-impl<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets>
-	SkillsPlugin<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets>
+impl<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets, TLoading>
+	SkillsPlugin<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets, TLoading>
 where
 	TAnimations: Plugin + HasAnimationsDispatch,
 	TLifeCycles: Plugin + HandlesLifetime,
 	TInteractions: Plugin + HandlesAllEffects,
 	TShaders: Plugin + HandlesEffectShadingForAll,
 	TDispatchChildrenAssets: Plugin + RegisterAssetsForChildren,
+	TLoading: Plugin + RegisterCustomAssets + RegisterCustomFolderAssets,
 {
 	pub fn depends_on(
 		_: &TAnimations,
@@ -87,6 +93,7 @@ where
 		_: &TShaders,
 		_: &TInteractions,
 		_: &TDispatchChildrenAssets,
+		_: &TLoading,
 	) -> Self {
 		Self(
 			PhantomData::<(
@@ -95,16 +102,17 @@ where
 				TInteractions,
 				TShaders,
 				TDispatchChildrenAssets,
+				TLoading,
 			)>,
 		)
 	}
 
 	fn skill_load(&self, app: &mut App) {
-		app.register_custom_folder_assets::<Skill, SkillDto>();
+		TLoading::register_custom_folder_assets::<Skill, SkillDto>(app);
 	}
 
 	fn item_load(&self, app: &mut App) {
-		app.register_custom_assets::<Item, ItemDto>();
+		TLoading::register_custom_assets::<Item, ItemDto>(app);
 	}
 
 	fn skill_slot_load(&self, app: &mut App) {
@@ -226,14 +234,22 @@ where
 	}
 }
 
-impl<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets> Plugin
-	for SkillsPlugin<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets>
+impl<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets, TLoading> Plugin
+	for SkillsPlugin<
+		TAnimations,
+		TLifeCycles,
+		TInteractions,
+		TShaders,
+		TDispatchChildrenAssets,
+		TLoading,
+	>
 where
 	TAnimations: Plugin + HasAnimationsDispatch,
 	TLifeCycles: Plugin + HandlesLifetime,
 	TInteractions: Plugin + HandlesAllEffects,
 	TShaders: Plugin + HandlesEffectShadingForAll,
 	TDispatchChildrenAssets: Plugin + RegisterAssetsForChildren,
+	TLoading: Plugin + RegisterCustomAssets + RegisterCustomFolderAssets,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);

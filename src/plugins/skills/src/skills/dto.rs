@@ -7,9 +7,11 @@ use crate::SkillItemType;
 use animate::AnimateDto;
 use common::{
 	dto::duration::DurationDto,
-	traits::load_asset::{LoadAsset, Path},
+	traits::{
+		load_asset::{LoadAsset, Path},
+		register_custom_assets::{AssetFileExtensions, LoadFrom},
+	},
 };
-use loading::traits::{asset_file_extensions::AssetFileExtensions, load_from::LoadFrom};
 use run_skill_behavior::RunSkillBehaviorDto;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, time::Duration};

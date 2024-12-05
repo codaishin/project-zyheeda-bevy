@@ -1,4 +1,4 @@
-use super::{load_state::LoadState, menu_state::MenuState};
+use super::menu_state::MenuState;
 use crate::traits::{
 	iteration::{Iter, IterFinite},
 	states::PlayState,
@@ -10,7 +10,7 @@ pub enum GameState {
 	#[default]
 	None,
 	StartMenu,
-	Loading(LoadState),
+	Loading,
 	NewGame,
 	Play,
 	IngameMenu(MenuState),
@@ -43,11 +43,8 @@ impl IterFinite for GameState {
 		match current.as_ref()? {
 			GameState::None => Some(GameState::StartMenu),
 			GameState::StartMenu => Some(GameState::NewGame),
-			GameState::NewGame => Some(GameState::Loading(LoadState::Assets)),
-			GameState::Loading(LoadState::Assets) => {
-				Some(GameState::Loading(LoadState::Dependencies))
-			}
-			GameState::Loading(LoadState::Dependencies) => Some(GameState::Play),
+			GameState::NewGame => Some(GameState::Loading),
+			GameState::Loading => Some(GameState::Play),
 			GameState::Play => Some(GameState::IngameMenu(MenuState::Inventory)),
 			GameState::IngameMenu(MenuState::Inventory) => {
 				Some(GameState::IngameMenu(MenuState::ComboOverview))
@@ -74,8 +71,7 @@ mod tests {
 				GameState::None,
 				GameState::StartMenu,
 				GameState::NewGame,
-				GameState::Loading(LoadState::Assets),
-				GameState::Loading(LoadState::Dependencies),
+				GameState::Loading,
 				GameState::Play,
 				GameState::IngameMenu(MenuState::Inventory),
 				GameState::IngameMenu(MenuState::ComboOverview)
@@ -88,7 +84,6 @@ mod tests {
 	fn get_key_codes() {
 		assert_eq!(
 			vec![
-				Err(NoKeySet),
 				Err(NoKeySet),
 				Err(NoKeySet),
 				Err(NoKeySet),

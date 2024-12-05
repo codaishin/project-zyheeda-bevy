@@ -12,9 +12,12 @@ mod debug;
 use bevy::prelude::*;
 use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
-	states::{game_state::GameState, load_state::LoadState, menu_state::MenuState},
+	states::{game_state::GameState, menu_state::MenuState},
 	systems::log::log_many,
-	traits::load_asset::Path,
+	traits::{
+		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
+		load_asset::Path,
+	},
 };
 use components::{
 	button_interaction::ButtonInteraction,
@@ -34,7 +37,6 @@ use components::{
 	AppendSkillCommand,
 };
 use events::DropdownEvent;
-use loading::traits::progress::{AssetsProgress, DependenciesProgress};
 use player::components::player::Player;
 use skills::{
 	components::{
@@ -48,7 +50,7 @@ use skills::{
 	skills::Skill,
 	slot_key::SlotKey,
 };
-use std::time::Duration;
+use std::{marker::PhantomData, time::Duration};
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
 	combos::{
@@ -177,9 +179,21 @@ impl AddDropdown for App {
 	}
 }
 
-pub struct MenuPlugin;
+pub struct MenuPlugin<TLoading>(PhantomData<TLoading>);
 
-impl MenuPlugin {
+impl<TLoading> MenuPlugin<TLoading>
+where
+	TLoading: Plugin + HandlesLoadTracking,
+{
+	pub fn depends_on(_: &TLoading) -> Self {
+		Self(PhantomData)
+	}
+}
+
+impl<TLoading> MenuPlugin<TLoading>
+where
+	TLoading: Plugin + HandlesLoadTracking,
+{
 	fn resources(&self, app: &mut App) {
 		app.init_resource::<Shared<Path, Handle<Image>>>()
 			.insert_resource(TooltipUIControl {
@@ -205,8 +219,8 @@ impl MenuPlugin {
 	}
 
 	fn loading_screen(&self, app: &mut App) {
-		let load_assets = GameState::Loading(LoadState::Assets);
-		let load_dependencies = GameState::Loading(LoadState::Dependencies);
+		let load_assets = TLoading::processing_state::<AssetsProgress>();
+		let load_dependencies = TLoading::processing_state::<DependenciesProgress>();
 
 		app.add_ui::<LoadingScreen<AssetsProgress>>(load_assets)
 			.add_ui::<LoadingScreen<DependenciesProgress>>(load_dependencies);
@@ -302,7 +316,10 @@ impl MenuPlugin {
 	}
 }
 
-impl Plugin for MenuPlugin {
+impl<TLoading> Plugin for MenuPlugin<TLoading>
+where
+	TLoading: Plugin + HandlesLoadTracking,
+{
 	fn build(&self, app: &mut App) {
 		self.resources(app);
 		self.events(app);

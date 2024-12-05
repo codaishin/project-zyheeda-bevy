@@ -1485,7 +1485,6 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "common",
- "loading",
  "macros",
  "mockall",
 ]
@@ -2156,7 +2155,6 @@ dependencies = [
  "bevy_rapier3d",
  "common",
  "enemy",
- "loading",
  "menu",
  "player",
 ]
@@ -2828,7 +2826,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "loading",
  "macros",
  "mockall",
  "player",
@@ -3879,7 +3876,7 @@ name = "rendering"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "loading",
+ "common",
 ]
 
 [[package]]
@@ -4084,7 +4081,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "loading",
  "macros",
  "mockall",
  "player",

@@ -8,4 +8,4 @@ edition.workspace = true
 bevy.workspace = true
 
 # internal
-loading.workspace = true
+common.workspace = true

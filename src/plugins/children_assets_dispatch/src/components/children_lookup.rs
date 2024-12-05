@@ -1,11 +1,11 @@
 use bevy::prelude::{Component, Entity, Name, Query};
 use common::traits::{
 	accessors::get::GetRef,
+	handles_load_tracking::Loaded,
 	iteration::IterFinite,
 	register_assets_for_children::ContainsAssetIdsForChildren,
 	track::{IsTracking, Track, Untrack},
 };
-use loading::resources::track::Loaded;
 use std::{collections::HashMap, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
