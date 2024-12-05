@@ -1,6 +1,12 @@
 use bevy::{app::AppLabel, ecs::schedule::ScheduleLabel, prelude::*};
 
 pub trait RegisterLoadTracking {
+	fn register_after_load_system<TMarker>(
+		app: &mut App,
+		schedule: impl ScheduleLabel,
+		system: impl IntoSystem<(), (), TMarker>,
+	);
+
 	fn register_load_tracking<T, TProgress>() -> impl InApp + InSubApp
 	where
 		T: 'static,
@@ -15,9 +21,9 @@ pub trait InSubApp {
 	fn in_sub_app<TMarker>(
 		self,
 		app: &mut App,
-		all_loaded: impl IntoSystem<(), Loaded, TMarker>,
 		app_label: impl AppLabel,
 		schedule: impl ScheduleLabel,
+		all_loaded: impl IntoSystem<(), Loaded, TMarker>,
 	);
 }
 

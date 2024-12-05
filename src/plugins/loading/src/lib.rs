@@ -57,6 +57,19 @@ impl Plugin for LoadingPlugin {
 }
 
 impl RegisterLoadTracking for LoadingPlugin {
+	fn register_after_load_system<TMarker>(
+		app: &mut App,
+		schedule: impl ScheduleLabel,
+		system: impl IntoSystem<(), (), TMarker>,
+	) {
+		app.add_systems(
+			schedule,
+			system
+				.run_if(not(is_processing::<AssetsProgress>))
+				.run_if(not(is_processing::<DependenciesProgress>)),
+		);
+	}
+
 	fn register_load_tracking<T, TProgress>() -> impl InApp + InSubApp
 	where
 		T: 'static,
@@ -91,9 +104,9 @@ where
 	fn in_sub_app<TMarker>(
 		self,
 		app: &mut App,
-		all_loaded: impl IntoSystem<(), Loaded, TMarker>,
 		app_label: impl AppLabel,
 		schedule: impl ScheduleLabel,
+		all_loaded: impl IntoSystem<(), Loaded, TMarker>,
 	) {
 		app.sub_app_mut(app_label).add_systems(
 			schedule,

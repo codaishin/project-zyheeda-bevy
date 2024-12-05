@@ -1,7 +1,7 @@
 use crate::resources::track::Track;
 use bevy::prelude::*;
 
-pub fn is_processing<TProgress>(track: Option<Res<Track<TProgress>>>) -> bool
+pub(crate) fn is_processing<TProgress>(track: Option<Res<Track<TProgress>>>) -> bool
 where
 	TProgress: Sync + Send + 'static,
 {

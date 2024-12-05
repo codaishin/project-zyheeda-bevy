@@ -26,9 +26,9 @@ where
 	fn build(&self, app: &mut App) {
 		TLoading::register_load_tracking::<PipelineCache, AssetsProgress>().in_sub_app(
 			app,
-			no_waiting_pipelines,
 			RenderApp,
 			ExtractSchedule,
+			no_waiting_pipelines,
 		);
 	}
 }

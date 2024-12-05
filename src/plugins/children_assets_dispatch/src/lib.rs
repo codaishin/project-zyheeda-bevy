@@ -14,16 +14,10 @@ use common::{
 		get_asset::GetAsset,
 		iteration::IterFinite,
 		register_assets_for_children::{ContainsAssetIdsForChildren, RegisterAssetsForChildren},
-		register_load_tracking::{
-			AssetsProgress,
-			DependenciesProgress,
-			InApp,
-			RegisterLoadTracking,
-		},
+		register_load_tracking::{DependenciesProgress, InApp, RegisterLoadTracking},
 	},
 };
 use components::children_lookup::ChildrenLookup;
-use loading::{self, systems::is_processing::is_processing};
 use std::marker::PhantomData;
 
 pub struct ChildrenAssetsDispatchPlugin<TLoading>(PhantomData<TLoading>);
@@ -63,23 +57,18 @@ where
 			ChildrenLookup::<TParent, T>::track_in_self_and_children::<Name>()
 				.filter::<TParent::TChildFilter>()
 				.system();
-		let dispatch_asset_components_to_children = TParent::dispatch_asset_components::<T>
-			.pipe(log_many)
-			.run_if(not(is_processing::<AssetsProgress>))
-			.run_if(not(is_processing::<DependenciesProgress>));
+		let dispatch_asset_components_to_children =
+			TParent::dispatch_asset_components::<T>.pipe(log_many);
 
+		TLoading::register_after_load_system(app, Update, dispatch_asset_components_to_children);
 		TLoading::register_load_tracking::<T, DependenciesProgress>()
 			.in_app(app, all_children_present);
 
 		app.add_systems(
 			on_prefab_instantiation,
-			insert_children_lookup(Configure::LeaveAsIs),
-		)
-		.add_systems(
-			Update,
 			(
+				insert_children_lookup(Configure::LeaveAsIs),
 				store_children_in_lookup,
-				dispatch_asset_components_to_children,
 			)
 				.chain(),
 		);
