@@ -9,4 +9,3 @@ bevy.workspace = true
 
 # internal
 common.workspace = true
-loading.workspace = true

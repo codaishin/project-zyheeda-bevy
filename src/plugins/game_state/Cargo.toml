@@ -12,6 +12,5 @@ bevy_rapier3d.workspace = true
 behaviors.workspace = true
 common.workspace = true
 enemy.workspace = true
-loading.workspace = true
 menu.workspace = true
 player.workspace = true
