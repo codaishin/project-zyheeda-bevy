@@ -12,13 +12,13 @@ use bevy::{
 use common::{
 	components::MainCamera,
 	states::{game_state::GameState, load_state::LoadState},
-	traits::try_insert_on::TryInsertOn,
+	traits::{
+		register_load_tracking::{AssetsProgress, DependenciesProgress},
+		try_insert_on::TryInsertOn,
+	},
 };
 use enemy::components::void_sphere::VoidSphere;
-use loading::{
-	resources::track::Track,
-	traits::progress::{AssetsProgress, DependenciesProgress},
-};
+use loading::resources::track::Track;
 use player::bundle::PlayerBundle;
 use std::f32::consts::PI;
 use systems::pause_virtual_time::pause_virtual_time;

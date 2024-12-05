@@ -14,57 +14,74 @@ use common::{
 		get_asset::GetAsset,
 		iteration::IterFinite,
 		register_assets_for_children::{ContainsAssetIdsForChildren, RegisterAssetsForChildren},
+		register_load_tracking::{
+			AssetsProgress,
+			DependenciesProgress,
+			InApp,
+			RegisterLoadTracking,
+		},
 	},
 };
 use components::children_lookup::ChildrenLookup;
-use loading::{
-	systems::is_processing::is_processing,
-	traits::{
-		progress::{AssetsProgress, DependenciesProgress},
-		register_load_tracking::RegisterLoadTracking,
-	},
-};
+use loading::{self, systems::is_processing::is_processing};
+use std::marker::PhantomData;
 
-pub struct ChildrenAssetsDispatchPlugin;
+pub struct ChildrenAssetsDispatchPlugin<TLoading>(PhantomData<TLoading>);
 
-impl Plugin for ChildrenAssetsDispatchPlugin {
+impl<TLoading> ChildrenAssetsDispatchPlugin<TLoading>
+where
+	TLoading: Plugin + RegisterLoadTracking,
+{
+	pub fn depends_on(_: &TLoading) -> Self {
+		Self(PhantomData)
+	}
+}
+
+impl<TLoading> Plugin for ChildrenAssetsDispatchPlugin<TLoading>
+where
+	TLoading: Plugin + RegisterLoadTracking,
+{
 	fn build(&self, _: &mut App) {}
 }
 
-impl RegisterAssetsForChildren for ChildrenAssetsDispatchPlugin {
-	fn register_assets_for_children<TParent, TMarker>(app: &mut App)
+impl<TLoading> RegisterAssetsForChildren for ChildrenAssetsDispatchPlugin<TLoading>
+where
+	TLoading: Plugin + RegisterLoadTracking,
+{
+	fn register_assets_for_children<TParent, T>(app: &mut App)
 	where
 		TParent: Component
-			+ ContainsAssetIdsForChildren<TMarker>
+			+ ContainsAssetIdsForChildren<T>
 			+ GetAsset<TKey = TParent::TChildKey, TAsset = TParent::TChildAsset>,
 		TParent::TChildKey: IterFinite,
-		TMarker: Sync + Send + 'static,
+		T: Sync + Send + 'static,
 	{
 		let on_prefab_instantiation = Labels::PREFAB_INSTANTIATION.label();
-		let all_children_present = ChildrenLookup::<TParent, TMarker>::entities_loaded;
-		let insert_children_lookup =
-			InsertOn::<TParent>::associated::<ChildrenLookup<TParent, TMarker>>;
+		let all_children_present = ChildrenLookup::<TParent, T>::entities_loaded;
+		let insert_children_lookup = InsertOn::<TParent>::associated::<ChildrenLookup<TParent, T>>;
 		let store_children_in_lookup =
-			ChildrenLookup::<TParent, TMarker>::track_in_self_and_children::<Name>()
+			ChildrenLookup::<TParent, T>::track_in_self_and_children::<Name>()
 				.filter::<TParent::TChildFilter>()
 				.system();
-		let dispatch_asset_components_to_children = TParent::dispatch_asset_components::<TMarker>
+		let dispatch_asset_components_to_children = TParent::dispatch_asset_components::<T>
 			.pipe(log_many)
 			.run_if(not(is_processing::<AssetsProgress>))
 			.run_if(not(is_processing::<DependenciesProgress>));
 
-		app.register_load_tracking::<TMarker, DependenciesProgress>(all_children_present)
-			.add_systems(
-				on_prefab_instantiation,
-				insert_children_lookup(Configure::LeaveAsIs),
+		TLoading::register_load_tracking::<T, DependenciesProgress>()
+			.in_app(app, all_children_present);
+
+		app.add_systems(
+			on_prefab_instantiation,
+			insert_children_lookup(Configure::LeaveAsIs),
+		)
+		.add_systems(
+			Update,
+			(
+				store_children_in_lookup,
+				dispatch_asset_components_to_children,
 			)
-			.add_systems(
-				Update,
-				(
-					store_children_in_lookup,
-					dispatch_asset_components_to_children,
-				)
-					.chain(),
-			);
+				.chain(),
+		);
 	}
 }

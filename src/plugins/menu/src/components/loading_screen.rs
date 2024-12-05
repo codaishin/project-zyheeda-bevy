@@ -1,6 +1,6 @@
 use crate::traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn, LoadUi};
 use bevy::prelude::*;
-use loading::traits::progress::{AssetsProgress, DependenciesProgress, Progress};
+use common::traits::register_load_tracking::{AssetsProgress, DependenciesProgress, Progress};
 use std::marker::PhantomData;
 
 #[derive(Component)]

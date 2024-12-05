@@ -3,9 +3,9 @@ use common::traits::{
 	accessors::get::GetRef,
 	iteration::IterFinite,
 	register_assets_for_children::ContainsAssetIdsForChildren,
+	register_load_tracking::Loaded,
 	track::{IsTracking, Track, Untrack},
 };
-use loading::resources::track::Loaded;
 use std::{collections::HashMap, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]

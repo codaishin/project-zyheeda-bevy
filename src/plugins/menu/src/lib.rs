@@ -14,7 +14,10 @@ use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
 	states::{game_state::GameState, load_state::LoadState, menu_state::MenuState},
 	systems::log::log_many,
-	traits::load_asset::Path,
+	traits::{
+		load_asset::Path,
+		register_load_tracking::{AssetsProgress, DependenciesProgress},
+	},
 };
 use components::{
 	button_interaction::ButtonInteraction,
@@ -34,7 +37,6 @@ use components::{
 	AppendSkillCommand,
 };
 use events::DropdownEvent;
-use loading::traits::progress::{AssetsProgress, DependenciesProgress};
 use player::components::player::Player;
 use skills::{
 	components::{

@@ -12,17 +12,19 @@ use crate::{
 		asset_file_extensions::AssetFileExtensions,
 		asset_folder::AssetFolderPath,
 		load_from::LoadFrom,
-		progress::AssetsProgress,
 		register_custom_assets::RegisterCustomAssets,
-		register_load_tracking::RegisterLoadTracking,
 	},
+	LoadingPlugin,
 };
 use bevy::{
 	app::{App, First, Update},
 	asset::{Asset, AssetApp, AssetServer},
 	prelude::{resource_added, IntoSystem, IntoSystemConfigs},
 };
-use common::systems::log::log_many;
+use common::{
+	systems::log::log_many,
+	traits::register_load_tracking::{AssetsProgress, InApp, RegisterLoadTracking},
+};
 use serde::Deserialize;
 use std::fmt::Debug;
 
@@ -32,11 +34,13 @@ impl RegisterCustomFolderAssets for App {
 		TAsset: Asset + AssetFolderPath + LoadFrom<TDto> + Clone + Debug,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + Sync + Send + 'static,
 	{
+		LoadingPlugin::register_load_tracking::<AliveAssets<TAsset>, AssetsProgress>()
+			.in_app(self, is_loaded::<TAsset>);
+
 		self.init_asset::<LoadResult<TAsset>>()
 			.register_custom_assets::<TAsset, TDto>()
 			.init_resource::<AliveAssets<TAsset>>()
 			.register_asset_loader(FolderAssetLoader::<TAsset, TDto>::default())
-			.register_load_tracking::<AliveAssets<TAsset>, AssetsProgress>(is_loaded::<TAsset>)
 			.add_systems(
 				First,
 				begin_loading_folder_assets::<TAsset, AssetServer>

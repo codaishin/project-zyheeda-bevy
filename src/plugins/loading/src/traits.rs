@@ -5,4 +5,3 @@ pub mod load_from;
 pub mod progress;
 pub mod register_custom_assets;
 pub mod register_custom_folder_assets;
-pub mod register_load_tracking;
