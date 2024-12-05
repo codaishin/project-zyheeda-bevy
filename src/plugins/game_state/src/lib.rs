@@ -13,19 +13,35 @@ use common::{
 	components::MainCamera,
 	states::{game_state::GameState, load_state::LoadState},
 	traits::{
-		register_load_tracking::{AssetsProgress, DependenciesProgress},
+		register_load_tracking::{
+			AssetsProgress,
+			DependenciesProgress,
+			RegisterLoadTracking,
+			SetState,
+		},
 		try_insert_on::TryInsertOn,
 	},
 };
 use enemy::components::void_sphere::VoidSphere;
-use loading::resources::track::Track;
 use player::bundle::PlayerBundle;
-use std::f32::consts::PI;
+use std::{f32::consts::PI, marker::PhantomData};
 use systems::pause_virtual_time::pause_virtual_time;
 
-pub struct GameStatePlugin;
+pub struct GameStatePlugin<TLoading>(PhantomData<TLoading>);
 
-impl Plugin for GameStatePlugin {
+impl<TLoading> GameStatePlugin<TLoading>
+where
+	TLoading: Plugin + RegisterLoadTracking,
+{
+	pub fn depends_on(_: &TLoading) -> Self {
+		GameStatePlugin(PhantomData)
+	}
+}
+
+impl<TLoading> Plugin for GameStatePlugin<TLoading>
+where
+	TLoading: Plugin + RegisterLoadTracking,
+{
 	fn build(&self, app: &mut App) {
 		let start_menu = GameState::StartMenu;
 		let new_game = GameState::NewGame;
@@ -33,18 +49,14 @@ impl Plugin for GameStatePlugin {
 		let load_dependencies = GameState::Loading(LoadState::Dependencies);
 		let play = GameState::Play;
 
+		TLoading::when_done::<AssetsProgress>().set_state(app, load_dependencies);
+		TLoading::when_done::<DependenciesProgress>().set_state(app, play);
+
 		app.insert_state(start_menu)
 			.add_systems(PostStartup, spawn_camera)
 			.add_systems(
 				OnEnter(new_game),
 				(setup_scene, transition_to_state(load_assets)).chain(),
-			)
-			.add_systems(
-				Last,
-				(
-					Track::<AssetsProgress>::when_all_done_set(load_dependencies),
-					Track::<DependenciesProgress>::when_all_done_set(play),
-				),
 			)
 			.add_systems(OnEnter(play), pause_virtual_time::<false>)
 			.add_systems(OnExit(play), pause_virtual_time::<true>);

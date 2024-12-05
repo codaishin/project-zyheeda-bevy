@@ -7,7 +7,7 @@ use std::{
 };
 
 #[derive(Resource, Default, Debug, PartialEq)]
-pub struct Track<T> {
+pub(crate) struct Track<T> {
 	items: HashMap<TypeId, LoadData>,
 	phantom_data: PhantomData<T>,
 }

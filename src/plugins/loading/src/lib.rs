@@ -6,7 +6,12 @@ pub(crate) mod asset_loader;
 pub(crate) mod folder_asset_loader;
 
 use asset_loader::CustomAssetLoader;
-use bevy::{app::AppLabel, ecs::schedule::ScheduleLabel, prelude::*};
+use bevy::{
+	app::AppLabel,
+	ecs::schedule::ScheduleLabel,
+	prelude::*,
+	state::state::FreelyMutableState,
+};
 use common::{
 	states::{game_state::GameState, load_state::LoadState},
 	systems::log::log_many,
@@ -27,6 +32,7 @@ use common::{
 			Loaded,
 			Progress,
 			RegisterLoadTracking,
+			SetState,
 		},
 		remove_resource::RemoveResource,
 	},
@@ -68,6 +74,13 @@ impl RegisterLoadTracking for LoadingPlugin {
 				.run_if(not(is_processing::<AssetsProgress>))
 				.run_if(not(is_processing::<DependenciesProgress>)),
 		);
+	}
+
+	fn when_done<TProgress>() -> impl SetState
+	where
+		TProgress: Progress + Sync + Send + 'static,
+	{
+		SetStateAfter(PhantomData::<TProgress>)
 	}
 
 	fn register_load_tracking<T, TProgress>() -> impl InApp + InSubApp
@@ -114,6 +127,20 @@ where
 				.pipe(Track::<TProgress>::track_in_main_world::<T>)
 				.run_if(Track::<TProgress>::main_world_is_processing),
 		);
+	}
+}
+
+struct SetStateAfter<TProgress>(PhantomData<TProgress>);
+
+impl<TProgress> SetState for SetStateAfter<TProgress>
+where
+	TProgress: Progress + Sync + Send + 'static,
+{
+	fn set_state<TState>(self, app: &mut App, state: TState)
+	where
+		TState: FreelyMutableState + Copy,
+	{
+		app.add_systems(Last, Track::<TProgress>::when_all_done_set(state));
 	}
 }
 

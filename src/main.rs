@@ -60,6 +60,7 @@ fn prepare_game(app: &mut App) {
 	);
 	let bars_plugin = BarsPlugin::depends_on(&life_cycles_plugin);
 	let rendering_plugin = RenderingPlugin::depends_on(&loading_plugin);
+	let game_state_plugin = GameStatePlugin::depends_on(&loading_plugin);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
@@ -80,7 +81,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(MenuPlugin)
 		.add_plugins(skills_plugin)
 		.add_plugins(behaviors_plugin)
-		.add_plugins(GameStatePlugin)
+		.add_plugins(game_state_plugin)
 		.insert_resource(ClearColor(Color::BLACK));
 }
 
