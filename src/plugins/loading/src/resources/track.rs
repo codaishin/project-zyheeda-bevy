@@ -1,5 +1,5 @@
 use bevy::{prelude::*, render::MainWorld, state::state::FreelyMutableState};
-use common::traits::register_load_tracking::Loaded;
+use common::traits::handles_load_tracking::Loaded;
 use std::{
 	any::{type_name, TypeId},
 	collections::HashMap,

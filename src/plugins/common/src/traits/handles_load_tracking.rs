@@ -5,16 +5,21 @@ use bevy::{
 	state::state::FreelyMutableState,
 };
 
-pub trait RegisterLoadTracking {
+pub trait HandlesLoadTracking {
+	fn processing_state<TProgress>() -> impl States + Copy
+	where
+		TProgress: Progress + Send + Sync + 'static;
+
 	fn register_after_load_system<TMarker>(
 		app: &mut App,
 		schedule: impl ScheduleLabel,
 		system: impl IntoSystem<(), (), TMarker>,
 	);
 
-	fn when_done<TProgress>() -> impl SetState
+	#[must_use]
+	fn begin_loading_on<TState>(app: &mut App, state: TState) -> impl OnLoadingDone
 	where
-		TProgress: Progress + Sync + Send + 'static;
+		TState: States + Copy;
 
 	fn register_load_tracking<T, TProgress>() -> impl InApp + InSubApp
 	where
@@ -36,8 +41,8 @@ pub trait InSubApp {
 	);
 }
 
-pub trait SetState {
-	fn set_state<TState>(self, app: &mut App, state: TState)
+pub trait OnLoadingDone {
+	fn when_done_set<TState>(self, state: TState)
 	where
 		TState: FreelyMutableState + Copy;
 }
@@ -45,15 +50,28 @@ pub trait SetState {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Loaded(pub bool);
 
-pub trait Progress: internal::Progress {}
+pub trait Progress: internal::Progress {
+	const IS_PROCESSING: IsProcessing;
+}
 
-impl<T> Progress for T where T: internal::Progress {}
+pub enum IsProcessing {
+	Assets,
+	Dependencies,
+}
 
 #[derive(Default, Debug, PartialEq)]
 pub struct AssetsProgress;
 
+impl Progress for AssetsProgress {
+	const IS_PROCESSING: IsProcessing = IsProcessing::Assets;
+}
+
 #[derive(Default, Debug, PartialEq)]
 pub struct DependenciesProgress;
+
+impl Progress for DependenciesProgress {
+	const IS_PROCESSING: IsProcessing = IsProcessing::Dependencies;
+}
 
 mod internal {
 	use super::*;

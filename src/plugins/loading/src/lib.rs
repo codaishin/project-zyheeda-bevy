@@ -2,9 +2,11 @@ pub mod resources;
 pub mod systems;
 pub mod traits;
 
-pub(crate) mod asset_loader;
-pub(crate) mod folder_asset_loader;
+mod asset_loader;
+mod folder_asset_loader;
+mod states;
 
+use crate::states::load_state::LoadState;
 use asset_loader::CustomAssetLoader;
 use bevy::{
 	app::AppLabel,
@@ -13,9 +15,19 @@ use bevy::{
 	state::state::FreelyMutableState,
 };
 use common::{
-	states::{game_state::GameState, load_state::LoadState},
+	states::transition_to_state,
 	systems::log::log_many,
 	traits::{
+		handles_load_tracking::{
+			AssetsProgress,
+			DependenciesProgress,
+			HandlesLoadTracking,
+			InApp,
+			InSubApp,
+			Loaded,
+			OnLoadingDone,
+			Progress,
+		},
 		init_resource::InitResource,
 		register_custom_assets::{
 			AssetFileExtensions,
@@ -23,16 +35,6 @@ use common::{
 			LoadFrom,
 			RegisterCustomAssets,
 			RegisterCustomFolderAssets,
-		},
-		register_load_tracking::{
-			AssetsProgress,
-			DependenciesProgress,
-			InApp,
-			InSubApp,
-			Loaded,
-			Progress,
-			RegisterLoadTracking,
-			SetState,
 		},
 		remove_resource::RemoveResource,
 	},
@@ -44,7 +46,6 @@ use std::marker::PhantomData;
 use systems::{
 	begin_loading_folder_assets::begin_loading_folder_assets,
 	is_loaded::is_loaded,
-	is_processing::is_processing,
 	map_load_results::map_load_results,
 };
 
@@ -52,35 +53,47 @@ pub struct LoadingPlugin;
 
 impl Plugin for LoadingPlugin {
 	fn build(&self, app: &mut App) {
-		let load_assets = GameState::Loading(LoadState::Assets);
-		let load_deps = GameState::Loading(LoadState::Dependencies);
+		let load_assets = LoadState::LoadAssets;
+		let load_deps = LoadState::ResolveDependencies;
+		let done = LoadState::Done;
 
-		app.add_systems(OnEnter(load_assets), Track::<AssetsProgress>::init)
+		app.init_state::<LoadState>()
+			.add_systems(OnEnter(load_assets), Track::<AssetsProgress>::init)
 			.add_systems(OnExit(load_assets), Track::<AssetsProgress>::remove)
 			.add_systems(OnEnter(load_deps), Track::<DependenciesProgress>::init)
-			.add_systems(OnExit(load_deps), Track::<DependenciesProgress>::remove);
+			.add_systems(OnExit(load_deps), Track::<DependenciesProgress>::remove)
+			.add_systems(
+				Last,
+				(
+					Track::<AssetsProgress>::when_all_done_set(load_deps),
+					Track::<DependenciesProgress>::when_all_done_set(done),
+				),
+			);
 	}
 }
 
-impl RegisterLoadTracking for LoadingPlugin {
+impl HandlesLoadTracking for LoadingPlugin {
+	fn processing_state<TProgress>() -> impl States + Copy
+	where
+		TProgress: Progress + Send + Sync + 'static,
+	{
+		LoadState::processing::<TProgress>()
+	}
+
 	fn register_after_load_system<TMarker>(
 		app: &mut App,
 		schedule: impl ScheduleLabel,
 		system: impl IntoSystem<(), (), TMarker>,
 	) {
-		app.add_systems(
-			schedule,
-			system
-				.run_if(not(is_processing::<AssetsProgress>))
-				.run_if(not(is_processing::<DependenciesProgress>)),
-		);
+		app.add_systems(schedule, system.run_if(in_state(LoadState::Done)));
 	}
 
-	fn when_done<TProgress>() -> impl SetState
+	fn begin_loading_on<TState>(app: &mut App, state: TState) -> impl OnLoadingDone
 	where
-		TProgress: Progress + Sync + Send + 'static,
+		TState: States + Copy,
 	{
-		SetStateAfter(PhantomData::<TProgress>)
+		app.add_systems(OnEnter(state), transition_to_state(LoadState::LoadAssets));
+		SetStateWhenDone(app)
 	}
 
 	fn register_load_tracking<T, TProgress>() -> impl InApp + InSubApp
@@ -89,6 +102,21 @@ impl RegisterLoadTracking for LoadingPlugin {
 		TProgress: Progress + Send + Sync + 'static,
 	{
 		Register(PhantomData::<(T, TProgress)>)
+	}
+}
+
+struct SetStateWhenDone<'a>(&'a mut App);
+
+impl OnLoadingDone for SetStateWhenDone<'_> {
+	fn when_done_set<TState>(self, state: TState)
+	where
+		TState: FreelyMutableState + Copy,
+	{
+		let Self(app) = self;
+		app.add_systems(
+			Last,
+			Track::<DependenciesProgress>::when_all_done_set(state),
+		);
 	}
 }
 
@@ -104,7 +132,7 @@ where
 			Update,
 			all_loaded
 				.pipe(Track::<TProgress>::track::<T>)
-				.run_if(is_processing::<TProgress>),
+				.run_if(in_state(LoadState::processing::<TProgress>())),
 		);
 	}
 }
@@ -127,20 +155,6 @@ where
 				.pipe(Track::<TProgress>::track_in_main_world::<T>)
 				.run_if(Track::<TProgress>::main_world_is_processing),
 		);
-	}
-}
-
-struct SetStateAfter<TProgress>(PhantomData<TProgress>);
-
-impl<TProgress> SetState for SetStateAfter<TProgress>
-where
-	TProgress: Progress + Sync + Send + 'static,
-{
-	fn set_state<TState>(self, app: &mut App, state: TState)
-	where
-		TState: FreelyMutableState + Copy,
-	{
-		app.add_systems(Last, Track::<TProgress>::when_all_done_set(state));
 	}
 }
 
@@ -169,15 +183,14 @@ impl RegisterCustomFolderAssets for LoadingPlugin {
 			.init_resource::<AliveAssets<TAsset>>()
 			.register_asset_loader(FolderAssetLoader::<TAsset, TDto>::default())
 			.add_systems(
-				First,
-				begin_loading_folder_assets::<TAsset, AssetServer>
-					.run_if(resource_added::<Track<AssetsProgress>>),
+				OnEnter(LoadState::LoadAssets),
+				begin_loading_folder_assets::<TAsset, AssetServer>,
 			)
 			.add_systems(
 				Update,
 				map_load_results::<TAsset, LoadError, AssetServer>
 					.pipe(log_many)
-					.run_if(is_processing::<AssetsProgress>),
+					.run_if(in_state(LoadState::LoadAssets)),
 			);
 	}
 }

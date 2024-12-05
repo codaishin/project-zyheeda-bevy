@@ -1,9 +1,9 @@
 use bevy::prelude::{Component, Entity, Name, Query};
 use common::traits::{
 	accessors::get::GetRef,
+	handles_load_tracking::Loaded,
 	iteration::IterFinite,
 	register_assets_for_children::ContainsAssetIdsForChildren,
-	register_load_tracking::Loaded,
 	track::{IsTracking, Track, Untrack},
 };
 use std::{collections::HashMap, marker::PhantomData};

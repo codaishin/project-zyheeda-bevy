@@ -7,18 +7,12 @@ use behaviors::{
 use bevy::{
 	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
 	prelude::*,
-	state::state::FreelyMutableState,
 };
 use common::{
 	components::MainCamera,
-	states::{game_state::GameState, load_state::LoadState},
+	states::{game_state::GameState, transition_to_state},
 	traits::{
-		register_load_tracking::{
-			AssetsProgress,
-			DependenciesProgress,
-			RegisterLoadTracking,
-			SetState,
-		},
+		handles_load_tracking::{HandlesLoadTracking, OnLoadingDone},
 		try_insert_on::TryInsertOn,
 	},
 };
@@ -31,7 +25,7 @@ pub struct GameStatePlugin<TLoading>(PhantomData<TLoading>);
 
 impl<TLoading> GameStatePlugin<TLoading>
 where
-	TLoading: Plugin + RegisterLoadTracking,
+	TLoading: Plugin + HandlesLoadTracking,
 {
 	pub fn depends_on(_: &TLoading) -> Self {
 		GameStatePlugin(PhantomData)
@@ -40,23 +34,21 @@ where
 
 impl<TLoading> Plugin for GameStatePlugin<TLoading>
 where
-	TLoading: Plugin + RegisterLoadTracking,
+	TLoading: Plugin + HandlesLoadTracking,
 {
 	fn build(&self, app: &mut App) {
 		let start_menu = GameState::StartMenu;
 		let new_game = GameState::NewGame;
-		let load_assets = GameState::Loading(LoadState::Assets);
-		let load_dependencies = GameState::Loading(LoadState::Dependencies);
+		let loading = GameState::Loading;
 		let play = GameState::Play;
 
-		TLoading::when_done::<AssetsProgress>().set_state(app, load_dependencies);
-		TLoading::when_done::<DependenciesProgress>().set_state(app, play);
+		TLoading::begin_loading_on(app, loading).when_done_set(play);
 
 		app.insert_state(start_menu)
 			.add_systems(PostStartup, spawn_camera)
 			.add_systems(
 				OnEnter(new_game),
-				(setup_scene, transition_to_state(load_assets)).chain(),
+				(setup_scene, transition_to_state(loading)).chain(),
 			)
 			.add_systems(OnEnter(play), pause_virtual_time::<false>)
 			.add_systems(OnExit(play), pause_virtual_time::<true>);
@@ -82,14 +74,6 @@ fn setup_scene(mut commands: Commands, cameras: Query<Entity, With<MainCamera>>)
 	let player = spawn_player(&mut commands);
 	set_camera_to_orbit_player(&mut commands, cameras, player);
 	spawn_void_spheres(&mut commands);
-}
-
-fn transition_to_state<TState: FreelyMutableState + Copy>(
-	state: TState,
-) -> impl Fn(ResMut<NextState<TState>>) {
-	move |mut next_state: ResMut<NextState<TState>>| {
-		next_state.set(state);
-	}
 }
 
 fn spawn_player(commands: &mut Commands) -> Entity {

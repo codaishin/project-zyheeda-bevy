@@ -12,9 +12,9 @@ use common::{
 	},
 	traits::{
 		get_asset::GetAsset,
+		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, InApp},
 		iteration::IterFinite,
 		register_assets_for_children::{ContainsAssetIdsForChildren, RegisterAssetsForChildren},
-		register_load_tracking::{DependenciesProgress, InApp, RegisterLoadTracking},
 	},
 };
 use components::children_lookup::ChildrenLookup;
@@ -24,7 +24,7 @@ pub struct ChildrenAssetsDispatchPlugin<TLoading>(PhantomData<TLoading>);
 
 impl<TLoading> ChildrenAssetsDispatchPlugin<TLoading>
 where
-	TLoading: Plugin + RegisterLoadTracking,
+	TLoading: Plugin + HandlesLoadTracking,
 {
 	pub fn depends_on(_: &TLoading) -> Self {
 		Self(PhantomData)
@@ -33,14 +33,14 @@ where
 
 impl<TLoading> Plugin for ChildrenAssetsDispatchPlugin<TLoading>
 where
-	TLoading: Plugin + RegisterLoadTracking,
+	TLoading: Plugin + HandlesLoadTracking,
 {
 	fn build(&self, _: &mut App) {}
 }
 
 impl<TLoading> RegisterAssetsForChildren for ChildrenAssetsDispatchPlugin<TLoading>
 where
-	TLoading: Plugin + RegisterLoadTracking,
+	TLoading: Plugin + HandlesLoadTracking,
 {
 	fn register_assets_for_children<TParent, T>(app: &mut App)
 	where
