@@ -1,8 +1,8 @@
-use crate::traits::{asset_file_extensions::AssetFileExtensions, load_from::LoadFrom};
 use bevy::{
 	asset::{io::Reader, Asset, AssetLoader, AsyncReadExt, LoadContext},
 	reflect::TypePath,
 };
+use common::traits::register_custom_assets::{AssetFileExtensions, LoadFrom};
 use serde::Deserialize;
 use serde_json::error::Error as SerdeJsonError;
 use std::{

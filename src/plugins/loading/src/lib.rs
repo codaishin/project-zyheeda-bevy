@@ -5,11 +5,20 @@ pub mod traits;
 pub(crate) mod asset_loader;
 pub(crate) mod folder_asset_loader;
 
+use asset_loader::CustomAssetLoader;
 use bevy::{app::AppLabel, ecs::schedule::ScheduleLabel, prelude::*};
 use common::{
 	states::{game_state::GameState, load_state::LoadState},
+	systems::log::log_many,
 	traits::{
 		init_resource::InitResource,
+		register_custom_assets::{
+			AssetFileExtensions,
+			AssetFolderPath,
+			LoadFrom,
+			RegisterCustomAssets,
+			RegisterCustomFolderAssets,
+		},
 		register_load_tracking::{
 			AssetsProgress,
 			DependenciesProgress,
@@ -22,9 +31,16 @@ use common::{
 		remove_resource::RemoveResource,
 	},
 };
-use resources::track::Track;
+use folder_asset_loader::{FolderAssetLoader, LoadError, LoadResult};
+use resources::{alive_assets::AliveAssets, track::Track};
+use serde::Deserialize;
 use std::marker::PhantomData;
-use systems::is_processing::is_processing;
+use systems::{
+	begin_loading_folder_assets::begin_loading_folder_assets,
+	is_loaded::is_loaded,
+	is_processing::is_processing,
+	map_load_results::map_load_results,
+};
 
 pub struct LoadingPlugin;
 
@@ -85,5 +101,43 @@ where
 				.pipe(Track::<TProgress>::track_in_main_world::<T>)
 				.run_if(Track::<TProgress>::main_world_is_processing),
 		);
+	}
+}
+
+impl RegisterCustomAssets for LoadingPlugin {
+	fn register_custom_assets<TAsset, TDto>(app: &mut App)
+	where
+		TAsset: Asset + LoadFrom<TDto> + Clone + std::fmt::Debug,
+		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + Sync + Send + 'static,
+	{
+		app.init_asset::<TAsset>()
+			.register_asset_loader(CustomAssetLoader::<TAsset, TDto>::default());
+	}
+}
+
+impl RegisterCustomFolderAssets for LoadingPlugin {
+	fn register_custom_folder_assets<TAsset, TDto>(app: &mut App)
+	where
+		TAsset: Asset + AssetFolderPath + LoadFrom<TDto> + Clone + std::fmt::Debug,
+		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + Sync + Send + 'static,
+	{
+		LoadingPlugin::register_custom_assets::<TAsset, TDto>(app);
+		LoadingPlugin::register_load_tracking::<AliveAssets<TAsset>, AssetsProgress>()
+			.in_app(app, is_loaded::<TAsset>);
+
+		app.init_asset::<LoadResult<TAsset>>()
+			.init_resource::<AliveAssets<TAsset>>()
+			.register_asset_loader(FolderAssetLoader::<TAsset, TDto>::default())
+			.add_systems(
+				First,
+				begin_loading_folder_assets::<TAsset, AssetServer>
+					.run_if(resource_added::<Track<AssetsProgress>>),
+			)
+			.add_systems(
+				Update,
+				map_load_results::<TAsset, LoadError, AssetServer>
+					.pipe(log_many)
+					.run_if(is_processing::<AssetsProgress>),
+			);
 	}
 }

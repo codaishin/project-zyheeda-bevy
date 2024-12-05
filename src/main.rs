@@ -46,6 +46,7 @@ fn prepare_game(app: &mut App) {
 		&shaders_plugin,
 		&interactions_plugin,
 		&children_assets_dispatch_plugin,
+		&loading_plugin,
 	);
 	let enemy_plugin = EnemyPlugin::depends_on(&prefabs_plugin, &interactions_plugin);
 	let map_generation_plugin = MapGenerationPlugin::depends_on(&prefabs_plugin);

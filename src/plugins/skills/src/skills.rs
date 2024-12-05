@@ -24,9 +24,9 @@ use common::{
 		handles_effect_shading::HandlesEffectShadingForAll,
 		handles_lifetime::HandlesLifetime,
 		load_asset::Path,
+		register_custom_assets::AssetFolderPath,
 	},
 };
-use loading::traits::asset_folder::AssetFolderPath;
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result},

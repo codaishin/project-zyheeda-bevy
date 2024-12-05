@@ -1,6 +1,9 @@
-use crate::{resources::asset_folder::AssetFolder, traits::asset_folder::AssetFolderPath};
+use crate::resources::asset_folder::AssetFolder;
 use bevy::prelude::*;
-use common::traits::load_folder_assets::LoadFolderAssets;
+use common::traits::{
+	load_folder_assets::LoadFolderAssets,
+	register_custom_assets::AssetFolderPath,
+};
 
 pub(crate) fn begin_loading_folder_assets<
 	TAsset: Asset + AssetFolderPath,
