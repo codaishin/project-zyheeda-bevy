@@ -358,7 +358,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "light",
  "macros",
  "mockall",
  "serde",
