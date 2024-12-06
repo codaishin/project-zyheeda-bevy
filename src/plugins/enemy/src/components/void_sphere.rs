@@ -1,4 +1,3 @@
-use bars::components::Bar;
 use behaviors::{
 	components::{
 		void_beam::VoidBeamAttack,
@@ -39,6 +38,7 @@ use common::{
 	traits::{
 		cache::GetOrCreateTypeAsset,
 		clamp_zero_positive::ClampZeroPositive,
+		handles_bars::HandlesBars,
 		handles_effect::HandlesEffect,
 		prefab::{sphere, GetOrCreateAssets, Prefab},
 	},
@@ -101,10 +101,11 @@ struct VoidSphereCore;
 
 struct VoidSphereRing;
 
-impl<TInteractionPlugin> Prefab<TInteractionPlugin> for VoidSphere
+impl<TInteractions, TBars> Prefab<(TInteractions, TBars)> for VoidSphere
 where
-	TInteractionPlugin: HandlesEffect<DealDamage, TTarget = Health>
+	TInteractions: HandlesEffect<DealDamage, TTarget = Health>
 		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
+	TBars: HandlesBars,
 {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
@@ -137,9 +138,9 @@ where
 			GroundOffset(VOID_SPHERE_GROUND_OFFSET),
 			RigidBody::Dynamic,
 			GravityScale(0.),
-			Health::new(5.).bundle_via::<TInteractionPlugin>(),
-			Affected::by::<Gravity>().bundle_via::<TInteractionPlugin>(),
-			Bar::default(),
+			Health::new(5.).bundle_via::<TInteractions>(),
+			Affected::by::<Gravity>().bundle_via::<TInteractions>(),
+			TBars::new_bar(),
 			MovementConfig::Constant {
 				mode: MovementMode::Slow,
 				speed: UnitsPerSecond::new(1.),
