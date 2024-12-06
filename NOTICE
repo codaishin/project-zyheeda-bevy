@@ -1,0 +1,41 @@
+NOTICE
+
+This project uses the following third-party software:
+
+1. Bevy (0.14.2)
+   License: Dual-licensed under MIT and Apache 2.0
+   Source: https://github.com/bevyengine/bevy
+
+2. Bevy Inspector (0.27.0)
+   License: Dual-licensed under MIT and Apache 2.0
+   Source: https://github.com/jakobhellermann/bevy-inspector-egui
+
+3. Bevy Rapier 3D (0.27.0)
+   License: Licensed under Apache 2.0
+   Source: https://github.com/dimforge/rapier
+
+4. Mockall (0.13.1)
+   License: Dual-licensed under MIT and Apache 2.0
+   Source: https://github.com/asomers/mockall
+
+5. Serde (1.0.215)
+   License: Dual-licensed under MIT and Apache 2.0
+   Source: https://github.com/serde-rs/serde
+
+6. Serde Json (1.0.133)
+   License: Dual-licensed under MIT and Apache 2.0
+   Source: https://github.com/serde-rs/json
+
+7. Tracing (0.1.41)
+   License: Licensed under MIT
+   Source: https://github.com/tokio-rs/tracing
+
+8. Uuid (1.11.0)
+   License: Dual-licensed under MIT and Apache 2.0
+   Source: https://github.com/uuid-rs/uuid
+
+This project also includes internal plugins located under `src/plugins/`, which are developed and maintained as part of this project.
+
+This project lists direct dependencies only. Transitive dependencies, their licenses, and their attributions are managed by the respective upstream projects. For a full list of dependencies and their licenses, you can use the `cargo-license` tool or run `cargo tree` in the source code repository.
+
+This NOTICE file is provided for informational purposes only and is not intended to modify the terms of the licenses referenced above.
