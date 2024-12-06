@@ -1,7 +1,4 @@
 pub mod components;
-pub(crate) mod systems;
-
-use std::marker::PhantomData;
 
 use bevy::{
 	app::{App, Plugin, Update},
@@ -15,10 +12,7 @@ use common::traits::{
 	prefab::RegisterPrefab,
 };
 use components::responsive_light::ResponsiveLight;
-use systems::{
-	apply_responsive_light_change::apply_responsive_light_change,
-	detect_responsive_light_change::detect_responsive_light_change,
-};
+use std::marker::PhantomData;
 
 pub struct LightPlugin<TPrefabs>(PhantomData<TPrefabs>);
 
@@ -41,8 +35,8 @@ where
 		app.insert_resource(AmbientLight::NONE).add_systems(
 			Update,
 			(
-				detect_responsive_light_change::<CollidingEntities>,
-				apply_responsive_light_change::<Virtual>,
+				ResponsiveLight::detect_change::<CollidingEntities>,
+				ResponsiveLight::apply_change::<Virtual>,
 			)
 				.chain(),
 		);
