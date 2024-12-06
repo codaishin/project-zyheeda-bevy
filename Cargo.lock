@@ -354,7 +354,6 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 name = "behaviors"
 version = "0.1.0"
 dependencies = [
- "bars",
  "bevy",
  "bevy_rapier3d",
  "common",
@@ -1928,7 +1927,6 @@ dependencies = [
 name = "enemy"
 version = "0.1.0"
 dependencies = [
- "bars",
  "behaviors",
  "bevy",
  "bevy_rapier3d",
@@ -3562,7 +3560,6 @@ checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
 name = "player"
 version = "0.1.0"
 dependencies = [
- "bars",
  "behaviors",
  "bevy",
  "bevy_rapier3d",
@@ -3636,7 +3633,6 @@ dependencies = [
 name = "prefabs"
 version = "0.1.0"
 dependencies = [
- "bars",
  "bevy",
  "bevy_rapier3d",
  "common",

@@ -49,13 +49,15 @@ fn prepare_game(app: &mut App) {
 		&children_assets_dispatch_plugin,
 		&loading_plugin,
 	);
-	let enemy_plugin = EnemyPlugin::depends_on(&prefabs_plugin, &interactions_plugin);
+	let bars_plugin = BarsPlugin::depends_on(&life_cycles_plugin);
+	let enemy_plugin = EnemyPlugin::depends_on(&prefabs_plugin, &interactions_plugin, &bars_plugin);
 	let map_generation_plugin = MapGenerationPlugin::depends_on(&prefabs_plugin, &light_plugin);
 	let player_plugin = PlayerPlugin::depends_on(
 		&animations_plugin,
 		&prefabs_plugin,
 		&interactions_plugin,
 		&light_plugin,
+		&bars_plugin,
 	);
 	let behaviors_plugin = BehaviorsPlugin::depends_on(
 		&animations_plugin,
@@ -63,7 +65,6 @@ fn prepare_game(app: &mut App) {
 		&shaders_plugin,
 		&interactions_plugin,
 	);
-	let bars_plugin = BarsPlugin::depends_on(&life_cycles_plugin);
 	let rendering_plugin = RenderingPlugin::depends_on(&loading_plugin);
 	let game_state_plugin = GameStatePlugin::depends_on(&loading_plugin);
 	let menu_plugin = MenuPlugin::depends_on(&loading_plugin);

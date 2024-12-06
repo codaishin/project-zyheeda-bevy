@@ -11,7 +11,6 @@ serde.workspace = true
 tracing.workspace = true
 
 # internal
-bars.workspace = true
 common.workspace = true
 
 [dev-dependencies]

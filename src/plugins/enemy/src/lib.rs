@@ -6,6 +6,7 @@ use common::{
 	attributes::{affected_by::AffectedBy, health::Health},
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	traits::{
+		handles_bars::HandlesBars,
 		handles_effect::HandlesEffect,
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 	},
@@ -14,26 +15,26 @@ use components::void_sphere::VoidSphere;
 use std::marker::PhantomData;
 use systems::{base_behavior::base_enemy_behavior, void_sphere::ring_rotation::ring_rotation};
 
-pub struct EnemyPlugin<TPrefabsPlugin, TInteractionsPlugin>(
-	PhantomData<(TPrefabsPlugin, TInteractionsPlugin)>,
+pub struct EnemyPlugin<TPrefabs, TInteractions, TBars>(
+	PhantomData<(TPrefabs, TInteractions, TBars)>,
 );
 
-impl<TPrefabsPlugin, TInteractionsPlugin> EnemyPlugin<TPrefabsPlugin, TInteractionsPlugin> {
-	pub fn depends_on(_: &TPrefabsPlugin, _: &TInteractionsPlugin) -> Self {
-		Self(PhantomData::<(TPrefabsPlugin, TInteractionsPlugin)>)
+impl<TPrefabs, TInteractions, TBars> EnemyPlugin<TPrefabs, TInteractions, TBars> {
+	pub fn depends_on(_: &TPrefabs, _: &TInteractions, _: &TBars) -> Self {
+		Self(PhantomData::<(TPrefabs, TInteractions, TBars)>)
 	}
 }
 
-impl<TPrefabsPlugin, TInteractionsPlugin> Plugin
-	for EnemyPlugin<TPrefabsPlugin, TInteractionsPlugin>
+impl<TPrefabs, TInteractions, TBars> Plugin for EnemyPlugin<TPrefabs, TInteractions, TBars>
 where
-	TPrefabsPlugin: Plugin + RegisterPrefab,
-	TInteractionsPlugin: Plugin
+	TPrefabs: Plugin + RegisterPrefab,
+	TInteractions: Plugin
 		+ HandlesEffect<DealDamage, TTarget = Health>
 		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
+	TBars: Plugin + HandlesBars,
 {
 	fn build(&self, app: &mut App) {
-		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>().register_prefab::<VoidSphere>(app);
+		TPrefabs::with_dependency::<(TInteractions, TBars)>().register_prefab::<VoidSphere>(app);
 
 		app.add_systems(Update, ring_rotation)
 			.add_systems(Update, base_enemy_behavior);
