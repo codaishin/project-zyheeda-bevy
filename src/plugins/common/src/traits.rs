@@ -10,6 +10,7 @@ pub mod get_asset_path;
 pub mod get_handle_from_path;
 pub mod get_ray;
 pub mod get_ui_text;
+pub mod handles_bars;
 pub mod handles_destruction;
 pub mod handles_effect;
 pub mod handles_effect_shading;
