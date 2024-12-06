@@ -28,7 +28,7 @@ use common::{
 		prefab::{GetOrCreateAssets, Prefab},
 	},
 };
-use light::components::ResponsiveLightTrigger;
+use light::components::responsive_light_trigger::ResponsiveLightTrigger;
 
 #[derive(Component, Default, Debug, PartialEq)]
 pub struct Player;

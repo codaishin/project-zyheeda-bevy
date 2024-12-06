@@ -9,7 +9,7 @@ use bevy::{
 };
 use bevy_rapier3d::geometry::CollidingEntities;
 use common::traits::handles_lights::{HandlesLights, Responsive};
-use components::ResponsiveLight;
+use components::responsive_light::ResponsiveLight;
 use systems::{
 	apply_responsive_light_change::apply_responsive_light_change,
 	detect_responsive_light_change::detect_responsive_light_change,

@@ -1,4 +1,4 @@
-use crate::components::ResponsiveLight;
+use crate::components::responsive_light::ResponsiveLight;
 use bevy::prelude::*;
 use bevy_rapier3d::geometry::{ActiveEvents, Collider, CollidingEntities, Sensor};
 use common::traits::try_insert_on::TryInsertOn;
@@ -25,10 +25,6 @@ pub(crate) fn insert_responsive_light_collider(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		asset::{Asset, AssetId, Handle},
-	};
 	use bevy_rapier3d::geometry::ActiveEvents;
 	use common::{
 		test_tools::utils::SingleThreadedApp,

@@ -1,4 +1,8 @@
-use crate::components::{ChangeLight, ResponsiveLight, ResponsiveLightTrigger};
+use crate::components::{
+	responsive_light::ResponsiveLight,
+	responsive_light_change::ResponsiveLightChange,
+	responsive_light_trigger::ResponsiveLightTrigger,
+};
 use bevy::ecs::{
 	component::Component,
 	entity::Entity,
@@ -25,23 +29,18 @@ fn get_change<TColliderCollection: HasCollisions>(
 	responsive: &ResponsiveLight,
 	collisions: &TColliderCollection,
 	triggers: &Query<&ResponsiveLightTrigger>,
-) -> ChangeLight {
+) -> ResponsiveLightChange {
 	if collisions.collisions().any(|e| triggers.contains(e)) {
-		return ChangeLight::Increase(responsive.clone());
+		return ResponsiveLightChange::Increase(responsive.clone());
 	}
 
-	ChangeLight::Decrease(responsive.clone())
+	ResponsiveLightChange::Decrease(responsive.clone())
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{ChangeLight, ResponsiveLightTrigger};
-	use bevy::{
-		app::{App, Update},
-		asset::{Asset, AssetId, Handle},
-		ecs::entity::Entity,
-	};
+	use bevy::prelude::*;
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::{Intensity, IntensityChangePerSecond, Units},
@@ -96,8 +95,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&ChangeLight::Increase(responsive)),
-			app.world().entity(entity).get::<ChangeLight>(),
+			Some(&ResponsiveLightChange::Increase(responsive)),
+			app.world().entity(entity).get::<ResponsiveLightChange>(),
 		)
 	}
 
@@ -125,8 +124,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&ChangeLight::Decrease(responsive)),
-			app.world().entity(entity).get::<ChangeLight>(),
+			Some(&ResponsiveLightChange::Decrease(responsive)),
+			app.world().entity(entity).get::<ResponsiveLightChange>(),
 		)
 	}
 }
