@@ -1,9 +1,5 @@
 use crate::components::ResponsiveLight;
-use bevy::ecs::{
-	entity::Entity,
-	query::Added,
-	system::{Commands, Query},
-};
+use bevy::prelude::*;
 use bevy_rapier3d::geometry::{ActiveEvents, Collider, CollidingEntities, Sensor};
 use common::traits::try_insert_on::TryInsertOn;
 use std::ops::Deref;
@@ -16,7 +12,8 @@ pub(crate) fn insert_responsive_light_collider(
 		commands.try_insert_on(
 			id,
 			(
-				Collider::ball(*light.data.range.deref()),
+				TransformBundle::default(),
+				Collider::ball(*light.range.deref()),
 				Sensor,
 				ActiveEvents::COLLISION_EVENTS,
 				CollidingEntities::default(),
@@ -28,7 +25,6 @@ pub(crate) fn insert_responsive_light_collider(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::ResponsiveLightData;
 	use bevy::{
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},
@@ -62,13 +58,11 @@ mod tests {
 			.spawn(ResponsiveLight {
 				model: Entity::from_raw(1),
 				light: Entity::from_raw(2),
-				data: ResponsiveLightData {
-					range: Units::new(42.),
-					light_on_material: new_handle(),
-					light_off_material: new_handle(),
-					max: Intensity::new(100.),
-					change: IntensityChangePerSecond::new(10.),
-				},
+				range: Units::new(42.),
+				light_on_material: new_handle(),
+				light_off_material: new_handle(),
+				max: Intensity::new(100.),
+				change: IntensityChangePerSecond::new(10.),
 			})
 			.id();
 
@@ -100,13 +94,11 @@ mod tests {
 			.spawn(ResponsiveLight {
 				model: Entity::from_raw(1),
 				light: Entity::from_raw(2),
-				data: ResponsiveLightData {
-					range: Units::new(42.),
-					light_on_material: new_handle(),
-					light_off_material: new_handle(),
-					max: Intensity::new(100.),
-					change: IntensityChangePerSecond::new(10.),
-				},
+				range: Units::new(42.),
+				light_on_material: new_handle(),
+				light_off_material: new_handle(),
+				max: Intensity::new(100.),
+				change: IntensityChangePerSecond::new(10.),
 			})
 			.id();
 

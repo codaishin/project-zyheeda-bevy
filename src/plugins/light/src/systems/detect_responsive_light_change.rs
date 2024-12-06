@@ -36,7 +36,7 @@ fn get_change<TColliderCollection: HasCollisions>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{ChangeLight, ResponsiveLightData, ResponsiveLightTrigger};
+	use crate::components::{ChangeLight, ResponsiveLightTrigger};
 	use bevy::{
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},
@@ -81,13 +81,11 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: light_on_material.clone(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(11.),
-			},
+			range: Units::new(0.),
+			light_on_material: light_on_material.clone(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(11.),
 		};
 
 		let entity = app
@@ -112,13 +110,11 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: light_off_material.clone(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(11.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: light_off_material.clone(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(11.),
 		};
 
 		let entity = app

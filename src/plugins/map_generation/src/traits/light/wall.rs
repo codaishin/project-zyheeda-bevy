@@ -16,11 +16,10 @@ use common::{
 	traits::{
 		cache::GetOrCreateTypeAsset,
 		clamp_zero_positive::ClampZeroPositive,
+		handles_lights::{HandlesLights, Responsive},
 		prefab::{GetOrCreateAssets, Prefab},
-		try_insert_on::TryInsertOn,
 	},
 };
-use light::components::{ResponsiveLight, ResponsiveLightData};
 
 impl ExtraComponentsDefinition for Light<Wall> {
 	fn target_names() -> Vec<String> {
@@ -41,15 +40,16 @@ struct WallLightOn;
 
 struct WallLightOff;
 
-impl Prefab<()> for Light<Wall> {
+impl<TLights> Prefab<TLights> for Light<Wall>
+where
+	TLights: HandlesLights,
+{
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
 		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		let model = entity.id();
-		let mut commands = entity.commands();
-
 		let light_on_material = assets.get_or_create_for::<WallLightOn>(|| StandardMaterial {
 			base_color: Color::WHITE,
 			emissive: Color::linear_rgb(140.0, 140.0, 140.0).into(),
@@ -60,35 +60,30 @@ impl Prefab<()> for Light<Wall> {
 			..default()
 		});
 
-		let light = commands
-			.spawn(PointLightBundle {
-				point_light: PointLight {
-					shadows_enabled: false,
-					intensity: 0.,
-					..default()
-				},
-				visibility: Visibility::Hidden,
-				..default()
-			})
-			.set_parent(model)
-			.id();
-		commands.try_insert_on(
-			model,
-			(
-				light_off_material.clone(),
-				ResponsiveLight {
-					model,
-					light,
-					data: ResponsiveLightData {
-						range: Units::new(3.5),
-						light_on_material,
-						light_off_material,
-						max: Intensity::new(8000.),
-						change: IntensityChangePerSecond::new(4000.),
+		entity.with_children(|parent| {
+			let light = parent
+				.spawn(PointLightBundle {
+					point_light: PointLight {
+						shadows_enabled: false,
+						intensity: 0.,
+						..default()
 					},
-				},
-			),
-		);
+					visibility: Visibility::Hidden,
+					..default()
+				})
+				.id();
+			parent.spawn(TLights::responsive_light_bundle(Responsive {
+				model,
+				light,
+				range: Units::new(3.5),
+				light_on_material,
+				light_off_material: light_off_material.clone(),
+				max: Intensity::new(8000.),
+				change: IntensityChangePerSecond::new(4000.),
+			}));
+		});
+
+		entity.try_insert(light_off_material);
 
 		Ok(())
 	}

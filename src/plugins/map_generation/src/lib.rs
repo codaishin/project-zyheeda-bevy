@@ -5,7 +5,13 @@ mod systems;
 mod traits;
 
 use bevy::prelude::*;
-use common::{states::game_state::GameState, traits::prefab::RegisterPrefab};
+use common::{
+	states::game_state::GameState,
+	traits::{
+		handles_lights::HandlesLights,
+		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
+	},
+};
 use components::{Floating, Light, Wall, WallBack};
 use map::{LightCell, MapCell};
 use std::marker::PhantomData;
@@ -18,26 +24,28 @@ use systems::{
 };
 use traits::RegisterMapCell;
 
-pub struct MapGenerationPlugin<TPrefabsPlugin>(PhantomData<TPrefabsPlugin>);
+pub struct MapGenerationPlugin<TPrefabsPlugin, TLights>(PhantomData<(TPrefabsPlugin, TLights)>);
 
-impl<TPrefabsPlugin> MapGenerationPlugin<TPrefabsPlugin>
+impl<TPrefabs, TLights> MapGenerationPlugin<TPrefabs, TLights>
 where
-	TPrefabsPlugin: Plugin + RegisterPrefab,
+	TPrefabs: Plugin + RegisterPrefab,
+	TLights: Plugin + HandlesLights,
 {
-	pub fn depends_on(_: &TPrefabsPlugin) -> Self {
-		Self(PhantomData)
+	pub fn depends_on(_: &TPrefabs, _: &TLights) -> Self {
+		Self(PhantomData::<(TPrefabs, TLights)>)
 	}
 }
 
-impl<TPrefabsPlugin> Plugin for MapGenerationPlugin<TPrefabsPlugin>
+impl<TPrefabs, TLights> Plugin for MapGenerationPlugin<TPrefabs, TLights>
 where
-	TPrefabsPlugin: Plugin + RegisterPrefab,
+	TPrefabs: Plugin + RegisterPrefab,
+	TLights: Plugin + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
 		let new_game = GameState::NewGame;
 
-		TPrefabsPlugin::register_prefab::<Light<Floating>>(app);
-		TPrefabsPlugin::register_prefab::<Light<Wall>>(app);
+		TPrefabs::register_prefab::<Light<Floating>>(app);
+		TPrefabs::with_dependency::<TLights>().register_prefab::<Light<Wall>>(app);
 
 		app.register_map_cell::<MapCell>(OnEnter(new_game))
 			.register_map_cell::<LightCell>(OnEnter(new_game))
