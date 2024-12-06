@@ -1,7 +1,14 @@
-use bevy::prelude::*;
+use std::ops::Deref;
+
+use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy_rapier3d::prelude::{ActiveEvents, Collider, CollidingEntities, Sensor};
 use common::{
+	errors::Error,
 	tools::{Intensity, IntensityChangePerSecond, Units},
-	traits::handles_lights::Responsive,
+	traits::{
+		handles_lights::Responsive,
+		prefab::{GetOrCreateAssets, Prefab},
+	},
 };
 
 #[derive(Component, Debug, PartialEq, Clone)]
@@ -26,5 +33,23 @@ impl From<Responsive> for ResponsiveLight {
 			max: data.max,
 			change: data.change,
 		}
+	}
+}
+
+impl Prefab<()> for ResponsiveLight {
+	fn instantiate_on<TAfterInstantiation>(
+		&self,
+		entity: &mut EntityCommands,
+		_: impl GetOrCreateAssets,
+	) -> Result<(), Error> {
+		entity.try_insert((
+			TransformBundle::default(),
+			Collider::ball(*self.range.deref()),
+			Sensor,
+			ActiveEvents::COLLISION_EVENTS,
+			CollidingEntities::default(),
+		));
+
+		Ok(())
 	}
 }

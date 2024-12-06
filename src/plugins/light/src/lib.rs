@@ -1,6 +1,8 @@
 pub mod components;
 pub(crate) mod systems;
 
+use std::marker::PhantomData;
+
 use bevy::{
 	app::{App, Plugin, Update},
 	ecs::schedule::IntoSystemConfigs,
@@ -8,32 +10,46 @@ use bevy::{
 	time::Virtual,
 };
 use bevy_rapier3d::geometry::CollidingEntities;
-use common::traits::handles_lights::{HandlesLights, Responsive};
+use common::traits::{
+	handles_lights::{HandlesLights, Responsive},
+	prefab::RegisterPrefab,
+};
 use components::responsive_light::ResponsiveLight;
 use systems::{
 	apply_responsive_light_change::apply_responsive_light_change,
 	detect_responsive_light_change::detect_responsive_light_change,
-	insert_responsive_light_collider::insert_responsive_light_collider,
 };
 
-pub struct LightPlugin;
+pub struct LightPlugin<TPrefabs>(PhantomData<TPrefabs>);
 
-impl Plugin for LightPlugin {
-	fn build(&self, app: &mut App) {
-		app.insert_resource(AmbientLight::NONE)
-			.add_systems(Update, insert_responsive_light_collider)
-			.add_systems(
-				Update,
-				(
-					detect_responsive_light_change::<CollidingEntities>,
-					apply_responsive_light_change::<Virtual>,
-				)
-					.chain(),
-			);
+impl<TPrefabs> LightPlugin<TPrefabs>
+where
+	TPrefabs: Plugin + RegisterPrefab,
+{
+	pub fn depends_on(_: &TPrefabs) -> Self {
+		Self(PhantomData)
 	}
 }
 
-impl HandlesLights for LightPlugin {
+impl<TPrefabs> Plugin for LightPlugin<TPrefabs>
+where
+	TPrefabs: Plugin + RegisterPrefab,
+{
+	fn build(&self, app: &mut App) {
+		TPrefabs::register_prefab::<ResponsiveLight>(app);
+
+		app.insert_resource(AmbientLight::NONE).add_systems(
+			Update,
+			(
+				detect_responsive_light_change::<CollidingEntities>,
+				apply_responsive_light_change::<Virtual>,
+			)
+				.chain(),
+		);
+	}
+}
+
+impl<TPrefabs> HandlesLights for LightPlugin<TPrefabs> {
 	type TResponsiveLightBundle = ResponsiveLight;
 
 	fn responsive_light_bundle(responsive_light: Responsive) -> Self::TResponsiveLightBundle {
