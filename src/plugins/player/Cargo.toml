@@ -12,4 +12,3 @@ bevy_rapier3d.workspace = true
 bars.workspace = true
 behaviors.workspace = true
 common.workspace = true
-light.workspace = true

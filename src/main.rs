@@ -51,8 +51,12 @@ fn prepare_game(app: &mut App) {
 	);
 	let enemy_plugin = EnemyPlugin::depends_on(&prefabs_plugin, &interactions_plugin);
 	let map_generation_plugin = MapGenerationPlugin::depends_on(&prefabs_plugin, &light_plugin);
-	let player_plugin =
-		PlayerPlugin::depends_on(&animations_plugin, &prefabs_plugin, &interactions_plugin);
+	let player_plugin = PlayerPlugin::depends_on(
+		&animations_plugin,
+		&prefabs_plugin,
+		&interactions_plugin,
+		&light_plugin,
+	);
 	let behaviors_plugin = BehaviorsPlugin::depends_on(
 		&animations_plugin,
 		&prefabs_plugin,

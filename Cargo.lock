@@ -3567,7 +3567,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "light",
 ]
 
 [[package]]

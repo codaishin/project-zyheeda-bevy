@@ -3,8 +3,10 @@ use bevy::prelude::*;
 
 pub trait HandlesLights {
 	type TResponsiveLightBundle: Bundle;
+	type TResponsiveLightTrigger: Bundle;
 
 	fn responsive_light_bundle(responsive_light: Responsive) -> Self::TResponsiveLightBundle;
+	fn responsive_light_trigger() -> Self::TResponsiveLightTrigger;
 }
 
 #[derive(Debug, PartialEq, Clone)]

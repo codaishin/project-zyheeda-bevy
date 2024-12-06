@@ -10,6 +10,7 @@ use common::{
 	traits::{
 		animation::RegisterAnimations,
 		handles_effect::HandlesEffect,
+		handles_lights::HandlesLights,
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 	},
 };
@@ -17,30 +18,29 @@ use components::player::Player;
 use std::marker::PhantomData;
 use systems::{move_player::move_player, toggle_walk_run::player_toggle_walk_run};
 
-pub struct PlayerPlugin<TAnimationPlugin, TPrefabsPlugin, TInteractionsPlugin>(
-	PhantomData<(TAnimationPlugin, TPrefabsPlugin, TInteractionsPlugin)>,
+pub struct PlayerPlugin<TAnimation, TPrefabs, TInteractions, TLights>(
+	PhantomData<(TAnimation, TPrefabs, TInteractions, TLights)>,
 );
 
-impl<TAnimationPlugin, TPrefabsPlugin, TInteractionsPlugin>
-	PlayerPlugin<TAnimationPlugin, TPrefabsPlugin, TInteractionsPlugin>
-where
-	TAnimationPlugin: RegisterAnimations,
+impl<TAnimation, TPrefabs, TInteractions, TLights>
+	PlayerPlugin<TAnimation, TPrefabs, TInteractions, TLights>
 {
-	pub fn depends_on(_: &TAnimationPlugin, _: &TPrefabsPlugin, _: &TInteractionsPlugin) -> Self {
-		Self(PhantomData::<(TAnimationPlugin, TPrefabsPlugin, TInteractionsPlugin)>)
+	pub fn depends_on(_: &TAnimation, _: &TPrefabs, _: &TInteractions, _: &TLights) -> Self {
+		Self(PhantomData::<(TAnimation, TPrefabs, TInteractions, TLights)>)
 	}
 }
 
-impl<TAnimationPlugin, TPrefabsPlugin, TInteractionsPlugin> Plugin
-	for PlayerPlugin<TAnimationPlugin, TPrefabsPlugin, TInteractionsPlugin>
+impl<TAnimation, TPrefabs, TInteractions, TLights> Plugin
+	for PlayerPlugin<TAnimation, TPrefabs, TInteractions, TLights>
 where
-	TAnimationPlugin: Plugin + RegisterAnimations,
-	TPrefabsPlugin: Plugin + RegisterPrefab,
-	TInteractionsPlugin: Plugin + HandlesEffect<DealDamage, TTarget = Health>,
+	TAnimation: Plugin + RegisterAnimations,
+	TPrefabs: Plugin + RegisterPrefab,
+	TInteractions: Plugin + HandlesEffect<DealDamage, TTarget = Health>,
+	TLights: Plugin + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
-		TAnimationPlugin::register_animations::<Player>(app);
-		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>().register_prefab::<Player>(app);
+		TAnimation::register_animations::<Player>(app);
+		TPrefabs::with_dependency::<(TInteractions, TLights)>().register_prefab::<Player>(app);
 
 		app.add_systems(Update, (player_toggle_walk_run, move_player));
 	}

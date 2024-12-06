@@ -11,7 +11,10 @@ use common::traits::{
 	handles_lights::{HandlesLights, Responsive},
 	prefab::RegisterPrefab,
 };
-use components::responsive_light::ResponsiveLight;
+use components::{
+	responsive_light::ResponsiveLight,
+	responsive_light_trigger::ResponsiveLightTrigger,
+};
 use std::marker::PhantomData;
 
 pub struct LightPlugin<TPrefabs>(PhantomData<TPrefabs>);
@@ -45,8 +48,13 @@ where
 
 impl<TPrefabs> HandlesLights for LightPlugin<TPrefabs> {
 	type TResponsiveLightBundle = ResponsiveLight;
+	type TResponsiveLightTrigger = ResponsiveLightTrigger;
 
 	fn responsive_light_bundle(responsive_light: Responsive) -> Self::TResponsiveLightBundle {
 		ResponsiveLight::from(responsive_light)
+	}
+
+	fn responsive_light_trigger() -> Self::TResponsiveLightTrigger {
+		ResponsiveLightTrigger
 	}
 }

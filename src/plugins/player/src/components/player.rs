@@ -24,11 +24,11 @@ use common::{
 		},
 		clamp_zero_positive::ClampZeroPositive,
 		handles_effect::HandlesEffect,
+		handles_lights::HandlesLights,
 		load_asset::Path,
 		prefab::{GetOrCreateAssets, Prefab},
 	},
 };
-use light::components::responsive_light_trigger::ResponsiveLightTrigger;
 
 #[derive(Component, Default, Debug, PartialEq)]
 pub struct Player;
@@ -76,9 +76,10 @@ impl ConfigureNewAnimationDispatch for Player {
 	}
 }
 
-impl<TInteractionsPlugin> Prefab<TInteractionsPlugin> for Player
+impl<TInteractions, TLights> Prefab<(TInteractions, TLights)> for Player
 where
-	TInteractionsPlugin: HandlesEffect<DealDamage, TTarget = Health>,
+	TInteractions: HandlesEffect<DealDamage, TTarget = Health>,
+	TLights: HandlesLights,
 {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
@@ -89,7 +90,7 @@ where
 			.insert((
 				Name::from("Player"),
 				AssetModel::path(Player::MODEL_PATH).flip_on(Name::from("metarig")),
-				Health::new(100.).bundle_via::<TInteractionsPlugin>(),
+				Health::new(100.).bundle_via::<TInteractions>(),
 				Bar::default(),
 				GroundOffset(Vec3::Y),
 				Blocker::insert([Blocker::Physical]),
@@ -108,7 +109,7 @@ where
 			))
 			.with_children(|parent| {
 				parent.spawn((
-					ResponsiveLightTrigger,
+					TLights::responsive_light_trigger(),
 					Collider::capsule(Vec3::new(0.0, 0.2, -0.05), Vec3::new(0.0, 1.4, -0.05), 0.2),
 					ColliderRoot(parent.parent_entity()),
 				));
