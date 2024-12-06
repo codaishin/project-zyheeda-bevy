@@ -1,4 +1,3 @@
-use bars::components::Bar;
 use behaviors::{
 	animation::MovementAnimations,
 	components::{MovementConfig, MovementMode},
@@ -23,6 +22,7 @@ use common::{
 			StopAnimation,
 		},
 		clamp_zero_positive::ClampZeroPositive,
+		handles_bars::HandlesBars,
 		handles_effect::HandlesEffect,
 		handles_lights::HandlesLights,
 		load_asset::Path,
@@ -76,10 +76,11 @@ impl ConfigureNewAnimationDispatch for Player {
 	}
 }
 
-impl<TInteractions, TLights> Prefab<(TInteractions, TLights)> for Player
+impl<TInteractions, TLights, TBars> Prefab<(TInteractions, TLights, TBars)> for Player
 where
 	TInteractions: HandlesEffect<DealDamage, TTarget = Health>,
 	TLights: HandlesLights,
+	TBars: HandlesBars,
 {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
@@ -91,7 +92,7 @@ where
 				Name::from("Player"),
 				AssetModel::path(Player::MODEL_PATH).flip_on(Name::from("metarig")),
 				Health::new(100.).bundle_via::<TInteractions>(),
-				Bar::default(),
+				TBars::new_bar(),
 				GroundOffset(Vec3::Y),
 				Blocker::insert([Blocker::Physical]),
 				MovementConfig::Dynamic {
