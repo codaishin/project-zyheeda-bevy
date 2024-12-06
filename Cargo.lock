@@ -358,7 +358,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "light",
  "macros",
  "mockall",
  "serde",
@@ -2779,7 +2778,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "light",
  "macros",
  "mockall",
  "uuid",
@@ -3569,7 +3567,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
- "light",
 ]
 
 [[package]]

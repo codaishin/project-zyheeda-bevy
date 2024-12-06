@@ -16,6 +16,7 @@ pub mod handles_effect_shading;
 pub mod handles_interactions;
 pub mod handles_life;
 pub mod handles_lifetime;
+pub mod handles_lights;
 pub mod handles_load_tracking;
 pub mod has_collisions;
 pub mod init_resource;

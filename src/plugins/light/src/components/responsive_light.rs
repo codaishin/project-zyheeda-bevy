@@ -1,15 +1,93 @@
-use crate::components::{ChangeLight, ResponsiveLight};
-use bevy::{
-	ecs::{
-		entity::Entity,
-		system::{Commands, Query, Res},
-	},
-	pbr::PointLight,
-	render::view::Visibility,
-	time::Time,
+use super::{
+	responsive_light_change::ResponsiveLightChange,
+	responsive_light_trigger::ResponsiveLightTrigger,
 };
-use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
+use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy_rapier3d::prelude::{ActiveEvents, Collider, CollidingEntities, Sensor};
+use common::{
+	errors::Error,
+	tools::{Intensity, IntensityChangePerSecond, Units},
+	traits::{
+		handles_lights::Responsive,
+		has_collisions::HasCollisions,
+		prefab::{GetOrCreateAssets, Prefab},
+		try_insert_on::TryInsertOn,
+		try_remove_from::TryRemoveFrom,
+	},
+};
 use std::{ops::Deref, time::Duration};
+
+#[derive(Component, Debug, PartialEq, Clone)]
+pub struct ResponsiveLight {
+	pub model: Entity,
+	pub light: Entity,
+	pub range: Units,
+	pub light_on_material: Handle<StandardMaterial>,
+	pub light_off_material: Handle<StandardMaterial>,
+	pub max: Intensity,
+	pub change: IntensityChangePerSecond,
+}
+
+impl ResponsiveLight {
+	pub(crate) fn detect_change<TColliderCollection: HasCollisions + Component>(
+		mut commands: Commands,
+		responsive_lights: Query<
+			(Entity, &ResponsiveLight, &TColliderCollection),
+			Changed<TColliderCollection>,
+		>,
+		triggers: Query<&ResponsiveLightTrigger>,
+	) {
+		for (id, responsive, collisions) in &responsive_lights {
+			let change_light = get_change(responsive, collisions, &triggers);
+			commands.try_insert_on(id, change_light);
+		}
+	}
+
+	pub(crate) fn apply_change<TTime: Sync + Send + 'static + Default>(
+		mut commands: Commands,
+		mut lights: Query<&mut PointLight>,
+		changes: Query<(Entity, &ResponsiveLightChange)>,
+		time: Res<Time<TTime>>,
+	) {
+		let delta = time.delta();
+		for (id, change) in &changes {
+			let state = apply_change(&mut commands, &mut lights, change, delta);
+			remove_change_component(&mut commands, state, id);
+		}
+	}
+}
+
+impl From<Responsive> for ResponsiveLight {
+	fn from(data: Responsive) -> Self {
+		ResponsiveLight {
+			model: data.model,
+			light: data.light,
+			range: data.range,
+			light_on_material: data.light_on_material,
+			light_off_material: data.light_off_material,
+			max: data.max,
+			change: data.change,
+		}
+	}
+}
+
+impl Prefab<()> for ResponsiveLight {
+	fn instantiate_on<TAfterInstantiation>(
+		&self,
+		entity: &mut EntityCommands,
+		_: impl GetOrCreateAssets,
+	) -> Result<(), Error> {
+		entity.try_insert((
+			TransformBundle::default(),
+			Collider::ball(*self.range.deref()),
+			Sensor,
+			ActiveEvents::COLLISION_EVENTS,
+			CollidingEntities::default(),
+		));
+
+		Ok(())
+	}
+}
 
 #[derive(PartialEq)]
 enum State {
@@ -17,28 +95,15 @@ enum State {
 	Busy,
 }
 
-pub(crate) fn apply_responsive_light_change<TTime: Sync + Send + 'static + Default>(
-	mut commands: Commands,
-	mut lights: Query<&mut PointLight>,
-	changes: Query<(Entity, &ChangeLight)>,
-	time: Res<Time<TTime>>,
-) {
-	let delta = time.delta();
-	for (id, change) in &changes {
-		let state = apply_change(&mut commands, &mut lights, change, delta);
-		remove_change_component(&mut commands, state, id);
-	}
-}
-
 fn apply_change(
 	commands: &mut Commands,
 	lights: &mut Query<&mut PointLight>,
-	change: &ChangeLight,
+	change: &ResponsiveLightChange,
 	delta: Duration,
 ) -> State {
 	match change {
-		ChangeLight::Increase(light) => increase(commands, lights, light, delta),
-		ChangeLight::Decrease(light) => decrease(commands, lights, light, delta),
+		ResponsiveLightChange::Increase(light) => increase(commands, lights, light, delta),
+		ResponsiveLightChange::Decrease(light) => decrease(commands, lights, light, delta),
 	}
 }
 
@@ -46,7 +111,7 @@ fn remove_change_component(commands: &mut Commands, state: State, id: Entity) {
 	if state != State::Done {
 		return;
 	}
-	commands.try_remove_from::<ChangeLight>(id);
+	commands.try_remove_from::<ResponsiveLightChange>(id);
 }
 
 fn increase(
@@ -61,11 +126,11 @@ fn increase(
 
 	if target_light.intensity == 0. {
 		commands.try_insert_on(light.light, Visibility::Visible);
-		commands.try_insert_on(light.model, light.data.light_on_material.clone());
+		commands.try_insert_on(light.model, light.light_on_material.clone());
 	}
 
-	let change = *light.data.change.deref() * delta.as_secs_f32();
-	let max = *light.data.max.deref();
+	let change = *light.change.deref() * delta.as_secs_f32();
+	let max = *light.max.deref();
 	if max - target_light.intensity > change {
 		target_light.intensity += change;
 		return State::Busy;
@@ -86,31 +151,126 @@ fn decrease(
 		return State::Busy;
 	};
 
-	let change = *light.data.change.deref() * delta.as_secs_f32();
+	let change = *light.change.deref() * delta.as_secs_f32();
 	if change < target_light.intensity {
 		target_light.intensity -= change;
 		return State::Busy;
 	}
 
 	target_light.intensity = 0.;
-	commands.try_insert_on(light.model, light.data.light_off_material.clone());
+	commands.try_insert_on(light.model, light.light_off_material.clone());
 	commands.try_insert_on(light.light, Visibility::Hidden);
 
 	State::Done
 }
 
+fn get_change<TColliderCollection: HasCollisions>(
+	responsive: &ResponsiveLight,
+	collisions: &TColliderCollection,
+	triggers: &Query<&ResponsiveLightTrigger>,
+) -> ResponsiveLightChange {
+	if collisions.collisions().any(|e| triggers.contains(e)) {
+		return ResponsiveLightChange::Increase(responsive.clone());
+	}
+
+	ResponsiveLightChange::Decrease(responsive.clone())
+}
+
 #[cfg(test)]
-mod tests {
+mod test_detect_change {
 	use super::*;
-	use crate::components::{ResponsiveLight, ResponsiveLightData};
-	use bevy::{
-		app::{App, Update},
-		asset::{Asset, AssetId, Handle},
-		pbr::StandardMaterial,
-		render::view::Visibility,
-		time::{Real, Time},
-		utils::default,
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		tools::{Intensity, IntensityChangePerSecond, Units},
+		traits::clamp_zero_positive::ClampZeroPositive,
 	};
+	use uuid::Uuid;
+
+	#[derive(Component)]
+	struct _Collisions(Vec<Entity>);
+
+	impl HasCollisions for _Collisions {
+		fn collisions(&self) -> impl Iterator<Item = Entity> + '_ {
+			self.0.iter().cloned()
+		}
+	}
+
+	fn setup() -> App {
+		let mut app = App::new().single_threaded(Update);
+		app.add_systems(Update, ResponsiveLight::detect_change::<_Collisions>);
+
+		app
+	}
+
+	fn new_handle<T: Asset>() -> Handle<T> {
+		Handle::Weak(AssetId::Uuid {
+			uuid: Uuid::new_v4(),
+		})
+	}
+
+	#[test]
+	fn apply_on() {
+		let mut app = setup();
+		let light_on_material = new_handle();
+		let trigger = app.world_mut().spawn(ResponsiveLightTrigger).id();
+		let model = app.world_mut().spawn_empty().id();
+		let light = app.world_mut().spawn_empty().id();
+		let responsive = ResponsiveLight {
+			model,
+			light,
+			range: Units::new(0.),
+			light_on_material: light_on_material.clone(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(11.),
+		};
+
+		let entity = app
+			.world_mut()
+			.spawn((responsive.clone(), _Collisions(vec![trigger])))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&ResponsiveLightChange::Increase(responsive)),
+			app.world().entity(entity).get::<ResponsiveLightChange>(),
+		)
+	}
+
+	#[test]
+	fn apply_off() {
+		let mut app = setup();
+		let light_off_material = new_handle();
+		let model = app.world_mut().spawn_empty().id();
+		let light = app.world_mut().spawn_empty().id();
+		let responsive = ResponsiveLight {
+			model,
+			light,
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: light_off_material.clone(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(11.),
+		};
+
+		let entity = app
+			.world_mut()
+			.spawn((responsive.clone(), _Collisions(vec![])))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&ResponsiveLightChange::Decrease(responsive)),
+			app.world().entity(entity).get::<ResponsiveLightChange>(),
+		)
+	}
+}
+
+#[cfg(test)]
+mod test_apply_change {
+	use super::*;
 	use common::{
 		test_tools::utils::{SingleThreadedApp, TickTime},
 		tools::{Intensity, IntensityChangePerSecond, Units},
@@ -128,7 +288,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<Time<Real>>();
-		app.add_systems(Update, apply_responsive_light_change::<Real>);
+		app.add_systems(Update, ResponsiveLight::apply_change::<Real>);
 
 		app
 	}
@@ -147,15 +307,14 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(11.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(11.),
 		};
-		app.world_mut().spawn(ChangeLight::Increase(responsive));
+		app.world_mut()
+			.spawn(ResponsiveLightChange::Increase(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -179,15 +338,14 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(11.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(11.),
 		};
-		app.world_mut().spawn(ChangeLight::Increase(responsive));
+		app.world_mut()
+			.spawn(ResponsiveLightChange::Increase(responsive));
 
 		app.tick_time(Duration::from_millis(100));
 		app.update();
@@ -211,15 +369,14 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(200.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(200.),
 		};
-		app.world_mut().spawn(ChangeLight::Increase(responsive));
+		app.world_mut()
+			.spawn(ResponsiveLightChange::Increase(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -243,15 +400,14 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(11.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(11.),
 		};
-		app.world_mut().spawn(ChangeLight::Increase(responsive));
+		app.world_mut()
+			.spawn(ResponsiveLightChange::Increase(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -275,15 +431,14 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(11.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(11.),
 		};
-		app.world_mut().spawn(ChangeLight::Increase(responsive));
+		app.world_mut()
+			.spawn(ResponsiveLightChange::Increase(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -308,15 +463,14 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: light_on_material.clone(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(11.),
-			},
+			range: Units::new(0.),
+			light_on_material: light_on_material.clone(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(11.),
 		};
-		app.world_mut().spawn(ChangeLight::Increase(responsive));
+		app.world_mut()
+			.spawn(ResponsiveLightChange::Increase(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -343,15 +497,14 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(11.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(11.),
 		};
-		app.world_mut().spawn(ChangeLight::Increase(responsive));
+		app.world_mut()
+			.spawn(ResponsiveLightChange::Increase(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -375,17 +528,15 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(58.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(58.),
 		};
 		let responsive = app
 			.world_mut()
-			.spawn(ChangeLight::Increase(responsive))
+			.spawn(ResponsiveLightChange::Increase(responsive))
 			.id();
 
 		app.tick_time(Duration::from_secs(1));
@@ -393,7 +544,7 @@ mod tests {
 
 		let responsive = app.world().entity(responsive);
 
-		assert_eq!(None, responsive.get::<ChangeLight>());
+		assert_eq!(None, responsive.get::<ResponsiveLightChange>());
 	}
 
 	#[test]
@@ -410,17 +561,15 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(57.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(57.),
 		};
 		let responsive_entity = app
 			.world_mut()
-			.spawn(ChangeLight::Increase(responsive.clone()))
+			.spawn(ResponsiveLightChange::Increase(responsive.clone()))
 			.id();
 
 		app.tick_time(Duration::from_secs(1));
@@ -429,8 +578,8 @@ mod tests {
 		let responsive_entity = app.world().entity(responsive_entity);
 
 		assert_eq!(
-			Some(&ChangeLight::Increase(responsive)),
-			responsive_entity.get::<ChangeLight>()
+			Some(&ResponsiveLightChange::Increase(responsive)),
+			responsive_entity.get::<ResponsiveLightChange>()
 		);
 	}
 
@@ -448,15 +597,14 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(11.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(11.),
 		};
-		app.world_mut().spawn(ChangeLight::Decrease(responsive));
+		app.world_mut()
+			.spawn(ResponsiveLightChange::Decrease(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -480,15 +628,14 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(11.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(11.),
 		};
-		app.world_mut().spawn(ChangeLight::Decrease(responsive));
+		app.world_mut()
+			.spawn(ResponsiveLightChange::Decrease(responsive));
 
 		app.tick_time(Duration::from_millis(100));
 		app.update();
@@ -513,15 +660,14 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: light_off_material.clone(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(42.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: light_off_material.clone(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(42.),
 		};
-		app.world_mut().spawn(ChangeLight::Decrease(responsive));
+		app.world_mut()
+			.spawn(ResponsiveLightChange::Decrease(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -549,15 +695,14 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: light_off_material.clone(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(41.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: light_off_material.clone(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(41.),
 		};
-		app.world_mut().spawn(ChangeLight::Decrease(responsive));
+		app.world_mut()
+			.spawn(ResponsiveLightChange::Decrease(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -582,15 +727,14 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: light_off_material.clone(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(43.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: light_off_material.clone(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(43.),
 		};
-		app.world_mut().spawn(ChangeLight::Decrease(responsive));
+		app.world_mut()
+			.spawn(ResponsiveLightChange::Decrease(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -617,15 +761,14 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(43.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(43.),
 		};
-		app.world_mut().spawn(ChangeLight::Decrease(responsive));
+		app.world_mut()
+			.spawn(ResponsiveLightChange::Decrease(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -649,17 +792,15 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(42.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(42.),
 		};
 		let responsive = app
 			.world_mut()
-			.spawn(ChangeLight::Decrease(responsive))
+			.spawn(ResponsiveLightChange::Decrease(responsive))
 			.id();
 
 		app.tick_time(Duration::from_secs(1));
@@ -667,7 +808,7 @@ mod tests {
 
 		let responsive = app.world().entity(responsive);
 
-		assert_eq!(None, responsive.get::<ChangeLight>());
+		assert_eq!(None, responsive.get::<ResponsiveLightChange>());
 	}
 
 	#[test]
@@ -684,17 +825,15 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(41.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(41.),
 		};
 		let responsive_entity = app
 			.world_mut()
-			.spawn(ChangeLight::Decrease(responsive.clone()))
+			.spawn(ResponsiveLightChange::Decrease(responsive.clone()))
 			.id();
 
 		app.tick_time(Duration::from_secs(1));
@@ -703,8 +842,8 @@ mod tests {
 		let responsive_entity = app.world().entity(responsive_entity);
 
 		assert_eq!(
-			Some(&ChangeLight::Decrease(responsive)),
-			responsive_entity.get::<ChangeLight>()
+			Some(&ResponsiveLightChange::Decrease(responsive)),
+			responsive_entity.get::<ResponsiveLightChange>()
 		);
 	}
 
@@ -722,15 +861,14 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(42.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(42.),
 		};
-		app.world_mut().spawn(ChangeLight::Decrease(responsive));
+		app.world_mut()
+			.spawn(ResponsiveLightChange::Decrease(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -754,15 +892,14 @@ mod tests {
 		let responsive = ResponsiveLight {
 			model,
 			light,
-			data: ResponsiveLightData {
-				range: Units::new(0.),
-				light_on_material: new_handle(),
-				light_off_material: new_handle(),
-				max: Intensity::new(100.),
-				change: IntensityChangePerSecond::new(41.),
-			},
+			range: Units::new(0.),
+			light_on_material: new_handle(),
+			light_off_material: new_handle(),
+			max: Intensity::new(100.),
+			change: IntensityChangePerSecond::new(41.),
 		};
-		app.world_mut().spawn(ChangeLight::Decrease(responsive));
+		app.world_mut()
+			.spawn(ResponsiveLightChange::Decrease(responsive));
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
