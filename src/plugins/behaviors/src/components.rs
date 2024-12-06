@@ -4,13 +4,10 @@ pub mod projectile;
 pub mod shield;
 pub mod void_beam;
 
-use crate::traits::{RemoveComponent, SpawnAttack};
+use crate::traits::RemoveComponent;
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::{
-	test_tools::utils::ApproxEqual,
-	tools::{Units, UnitsPerSecond},
-};
-use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
+use common::{test_tools::utils::ApproxEqual, tools::UnitsPerSecond};
+use std::{fmt::Debug, marker::PhantomData, time::Duration};
 
 #[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub enum Face {
@@ -95,24 +92,5 @@ pub struct Attacker(pub Entity);
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Target(pub Entity);
 
-#[derive(Component)]
-pub struct AttackConfig {
-	pub spawn: Arc<dyn SpawnAttack + Sync + Send>,
-	pub cool_down: Duration,
-}
-
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct OnCoolDown(pub Duration);
-
-#[derive(Clone, Copy)]
-pub enum Foe {
-	Player,
-	Entity(Entity),
-}
-
-#[derive(Component, Clone, Copy)]
-pub struct Enemy {
-	pub aggro_range: Units,
-	pub attack_range: Units,
-	pub foe: Foe,
-}

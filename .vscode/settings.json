@@ -36,6 +36,8 @@
 		"Deque",
 		"despawn",
 		"despawned",
+		"despawner",
+		"despawners",
 		"despawning",
 		"egui",
 		"fragiles",

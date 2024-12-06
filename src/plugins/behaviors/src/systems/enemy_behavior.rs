@@ -1,40 +1,51 @@
-use behaviors::components::{Attack, Chase, Enemy, Foe};
+use crate::components::{Attack, Chase};
 use bevy::prelude::*;
-use player::components::player::Player;
+use common::traits::{
+	accessors::get::GetterRef,
+	handles_behaviors::{AttackConfig, AttackTarget},
+};
 
-pub(crate) fn base_enemy_behavior(
-	mut commands: Commands,
-	agents: Query<(Entity, &GlobalTransform, &Enemy)>,
-	players: Query<(Entity, &GlobalTransform), With<Player>>,
-	all: Query<(Entity, &GlobalTransform)>,
-) {
-	let player = players.get_single().ok();
-	let valid_foe = |(id, transform, agent): (Entity, &GlobalTransform, &Enemy)| {
-		let (foe_id, foe_transform) = match agent.foe {
-			Foe::Player => player?,
-			Foe::Entity(entity) => all.get(entity).ok()?,
-		};
-		let distance = (transform.translation() - foe_transform.translation()).length();
-		Some((id, *agent, foe_id, distance))
-	};
+impl<T> EnemyBehaviorSystem for T {}
 
-	for (id, agent, foe, distance) in agents.iter().filter_map(valid_foe) {
-		let Some(mut entity) = commands.get_entity(id) else {
-			continue;
-		};
+pub(crate) trait EnemyBehaviorSystem {
+	fn select_behavior<TPlayer>(
+		mut commands: Commands,
+		agents: Query<(Entity, &GlobalTransform, &Self)>,
+		players: Query<(Entity, &GlobalTransform), With<TPlayer>>,
+		all: Query<(Entity, &GlobalTransform)>,
+	) where
+		TPlayer: Component,
+		Self: GetterRef<AttackConfig> + Component + Sized,
+	{
+		let player = players.get_single().ok();
 
-		match strategy(agent, distance) {
-			Strategy::Attack => {
-				entity.try_insert(Attack(foe));
-				entity.remove::<Chase>();
-			}
-			Strategy::Chase => {
-				entity.try_insert(Chase(foe));
-				entity.remove::<Attack>();
-			}
-			Strategy::Idle => {
-				entity.remove::<Chase>();
-				entity.remove::<Attack>();
+		for (id, transform, attack) in agents.iter() {
+			let attack = attack.get();
+			let foe = match attack.target {
+				AttackTarget::Player => player,
+				AttackTarget::Entity(entity) => all.get(entity).ok(),
+			};
+			let Some((foe, foe_transform)) = foe else {
+				continue;
+			};
+			let distance = (transform.translation() - foe_transform.translation()).length();
+			let Some(mut entity) = commands.get_entity(id) else {
+				continue;
+			};
+
+			match strategy(attack, distance) {
+				Strategy::Attack => {
+					entity.try_insert(Attack(foe));
+					entity.remove::<Chase>();
+				}
+				Strategy::Chase => {
+					entity.try_insert(Chase(foe));
+					entity.remove::<Attack>();
+				}
+				Strategy::Idle => {
+					entity.remove::<Chase>();
+					entity.remove::<Attack>();
+				}
 			}
 		}
 	}
@@ -46,25 +57,38 @@ enum Strategy {
 	Idle,
 }
 
-fn strategy(enemy: Enemy, distance: f32) -> Strategy {
-	if distance > *enemy.aggro_range {
+fn strategy(attack: &AttackConfig, distance: f32) -> Strategy {
+	if distance > *attack.aggro_range {
 		return Strategy::Idle;
 	}
-	if distance > *enemy.attack_range {
+	if distance > *attack.range {
 		return Strategy::Chase;
 	}
+
 	Strategy::Attack
 }
 
 #[cfg(test)]
 mod tests {
+	use super::*;
 	use common::{tools::Units, traits::clamp_zero_positive::ClampZeroPositive};
 
-	use super::*;
+	#[derive(Component)]
+	struct _Player;
+
+	#[derive(Component, Default)]
+	struct _Enemy(AttackConfig);
+
+	impl GetterRef<AttackConfig> for _Enemy {
+		fn get(&self) -> &AttackConfig {
+			let _Enemy(attack) = self;
+			attack
+		}
+	}
 
 	fn setup() -> App {
 		let mut app = App::new();
-		app.add_systems(Update, base_enemy_behavior);
+		app.add_systems(Update, _Enemy::select_behavior::<_Player>);
 
 		app
 	}
@@ -74,18 +98,19 @@ mod tests {
 		let mut app = setup();
 		let player = app
 			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), Player))
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
 			.id();
 		let enemy = app
 			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(2., 0., 1.),
 				Attack(player),
-				Enemy {
-					attack_range: Units::new(1.),
+				_Enemy(AttackConfig {
 					aggro_range: Units::new(2.),
-					foe: Foe::Player,
-				},
+					range: Units::new(1.),
+					target: AttackTarget::Player,
+					..default()
+				}),
 			))
 			.id();
 
@@ -104,18 +129,19 @@ mod tests {
 		let mut app = setup();
 		let player = app
 			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), Player))
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
 			.id();
 		let enemy = app
 			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 0.5),
 				Chase(player),
-				Enemy {
-					attack_range: Units::new(1.),
+				_Enemy(AttackConfig {
 					aggro_range: Units::new(2.),
-					foe: Foe::Player,
-				},
+					range: Units::new(1.),
+					target: AttackTarget::Player,
+					..default()
+				}),
 			))
 			.id();
 
@@ -134,7 +160,7 @@ mod tests {
 		let mut app = setup();
 		let player = app
 			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), Player))
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
 			.id();
 		let enemy = app
 			.world_mut()
@@ -142,11 +168,12 @@ mod tests {
 				GlobalTransform::from_xyz(3., 0., 3.),
 				Chase(player),
 				Attack(player),
-				Enemy {
-					attack_range: Units::new(1.),
+				_Enemy(AttackConfig {
 					aggro_range: Units::new(2.),
-					foe: Foe::Player,
-				},
+					range: Units::new(1.),
+					target: AttackTarget::Player,
+					..default()
+				}),
 			))
 			.id();
 
@@ -169,11 +196,12 @@ mod tests {
 			.spawn((
 				GlobalTransform::from_xyz(2., 0., 1.),
 				Attack(foe),
-				Enemy {
-					attack_range: Units::new(1.),
+				_Enemy(AttackConfig {
 					aggro_range: Units::new(2.),
-					foe: Foe::Entity(foe),
-				},
+					range: Units::new(1.),
+					target: AttackTarget::Entity(foe),
+					..default()
+				}),
 			))
 			.id();
 
@@ -199,11 +227,12 @@ mod tests {
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 0.5),
 				Chase(foe),
-				Enemy {
-					attack_range: Units::new(1.),
+				_Enemy(AttackConfig {
 					aggro_range: Units::new(2.),
-					foe: Foe::Entity(foe),
-				},
+					range: Units::new(1.),
+					target: AttackTarget::Entity(foe),
+					..default()
+				}),
 			))
 			.id();
 
@@ -230,11 +259,12 @@ mod tests {
 				GlobalTransform::from_xyz(3., 0., 3.),
 				Chase(foe),
 				Attack(foe),
-				Enemy {
-					attack_range: Units::new(1.),
+				_Enemy(AttackConfig {
 					aggro_range: Units::new(2.),
-					foe: Foe::Entity(foe),
-				},
+					range: Units::new(1.),
+					target: AttackTarget::Entity(foe),
+					..default()
+				}),
 			))
 			.id();
 
