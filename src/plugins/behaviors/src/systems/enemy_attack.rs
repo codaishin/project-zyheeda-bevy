@@ -1,61 +1,79 @@
-use crate::components::{Attack, AttackConfig, Attacker, OnCoolDown, Target};
-use bevy::ecs::{
-	component::Component,
-	entity::Entity,
-	query::Without,
-	removal_detection::RemovedComponents,
-	system::{Commands, Query},
+use crate::{
+	components::{Attack, Attacker, OnCoolDown, Target},
+	traits::GetAttackSpawner,
 };
-use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
+use bevy::prelude::*;
+use common::traits::{
+	accessors::get::GetterRef,
+	handles_enemies::CoolDown,
+	try_insert_on::TryInsertOn,
+	try_remove_from::TryRemoveFrom,
+};
 use std::sync::Arc;
+
+impl<T> AttackSystem for T {}
+
+pub(crate) trait AttackSystem {
+	fn attack<TGetAttackSpawner>(
+		mut commands: Commands,
+		mut removed_attacks: RemovedComponents<Attack>,
+		enemies: Query<(Entity, &Attack, &Self), Without<OnCoolDown>>,
+		despawners: Query<&Despawn>,
+	) where
+		TGetAttackSpawner: GetAttackSpawner<Self>,
+		Self: GetterRef<CoolDown> + Component + Sized,
+	{
+		for (entity, Attack(target), enemy) in &enemies {
+			let CoolDown(cold_down) = enemy.get();
+			let spawner = TGetAttackSpawner::attack_spawner(enemy);
+			let despawn_fn = spawner.spawn(&mut commands, Attacker(entity), Target(*target));
+			commands.try_insert_on(entity, (OnCoolDown(*cold_down), Despawn(despawn_fn)));
+		}
+
+		for entity in removed_attacks.read() {
+			let Ok(Despawn(despawn_fn)) = despawners.get(entity) else {
+				continue;
+			};
+			despawn_fn(&mut commands);
+			commands.try_remove_from::<Despawn>(entity);
+		}
+	}
+}
 
 #[derive(Component)]
 pub(crate) struct Despawn(Arc<dyn Fn(&mut Commands) + Sync + Send>);
-
-pub(crate) fn attack(
-	mut commands: Commands,
-	mut removed_attacks: RemovedComponents<Attack>,
-	attackers: Query<(Entity, &Attack, &AttackConfig), Without<OnCoolDown>>,
-	despawns: Query<&Despawn>,
-) {
-	for (id, attack, conf, ..) in &attackers {
-		let spawn = &conf.spawn;
-		let despawn = spawn.spawn(&mut commands, Attacker(id), Target(attack.0));
-		commands.try_insert_on(id, (OnCoolDown(conf.cool_down), Despawn(despawn)));
-	}
-
-	for id in removed_attacks.read() {
-		let Ok(despawn) = despawns.get(id) else {
-			continue;
-		};
-		(despawn.0)(&mut commands);
-		commands.try_remove_from::<Despawn>(id);
-	}
-}
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use crate::{
 		components::{Attacker, Target},
-		traits::{SpawnAttack, ToArc},
-	};
-	use bevy::{
-		app::{App, Update},
-		ecs::component::Component,
+		traits::SpawnAttack,
 	};
 	use common::test_tools::utils::SingleThreadedApp;
 	use std::{sync::Arc, time::Duration};
 
-	#[derive(Component, Debug, PartialEq)]
-	struct _FakeAttack {
-		attacker: Attacker,
-		target: Target,
+	#[derive(Component)]
+	struct _Enemy(CoolDown);
+
+	impl GetterRef<CoolDown> for _Enemy {
+		fn get(&self) -> &CoolDown {
+			let _Enemy(cool_down) = self;
+			cool_down
+		}
 	}
 
-	struct _FakeAttackConfig;
+	struct _FakeAttackSpawnerFactory;
 
-	impl SpawnAttack for _FakeAttackConfig {
+	impl GetAttackSpawner<_Enemy> for _FakeAttackSpawnerFactory {
+		fn attack_spawner(_: &_Enemy) -> Arc<dyn SpawnAttack> {
+			Arc::new(_FakeAttackSpawner)
+		}
+	}
+
+	struct _FakeAttackSpawner;
+
+	impl SpawnAttack for _FakeAttackSpawner {
 		fn spawn(
 			&self,
 			commands: &mut Commands,
@@ -69,9 +87,15 @@ mod tests {
 		}
 	}
 
+	#[derive(Component, Debug, PartialEq)]
+	struct _FakeAttack {
+		attacker: Attacker,
+		target: Target,
+	}
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, attack);
+		app.add_systems(Update, _Enemy::attack::<_FakeAttackSpawnerFactory>);
 
 		app
 	}
@@ -81,13 +105,7 @@ mod tests {
 		let mut app = setup();
 		let attacker = app
 			.world_mut()
-			.spawn((
-				Attack(Entity::from_raw(11)),
-				AttackConfig {
-					spawn: _FakeAttackConfig.to_arc(),
-					cool_down: Duration::ZERO,
-				},
-			))
+			.spawn((Attack(Entity::from_raw(11)), _Enemy(CoolDown::default())))
 			.id();
 
 		app.update();
@@ -113,10 +131,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Attack(Entity::from_raw(11)),
-				AttackConfig {
-					spawn: _FakeAttackConfig.to_arc(),
-					cool_down: Duration::from_secs(42),
-				},
+				_Enemy(CoolDown(Duration::from_secs(42))),
 			))
 			.id();
 
@@ -137,11 +152,8 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Attack(Entity::from_raw(11)),
+				_Enemy(CoolDown::default()),
 				OnCoolDown(Duration::from_millis(100)),
-				AttackConfig {
-					spawn: _FakeAttackConfig.to_arc(),
-					cool_down: Duration::ZERO,
-				},
 			))
 			.id();
 
@@ -164,13 +176,7 @@ mod tests {
 		let mut app = setup();
 		let attacker = app
 			.world_mut()
-			.spawn((
-				Attack(Entity::from_raw(11)),
-				AttackConfig {
-					spawn: _FakeAttackConfig.to_arc(),
-					cool_down: Duration::ZERO,
-				},
-			))
+			.spawn((Attack(Entity::from_raw(11)), _Enemy(CoolDown::default())))
 			.id();
 
 		app.update();
@@ -192,13 +198,7 @@ mod tests {
 		let mut app = setup();
 		let attacker = app
 			.world_mut()
-			.spawn((
-				Attack(Entity::from_raw(11)),
-				AttackConfig {
-					spawn: _FakeAttackConfig.to_arc(),
-					cool_down: Duration::ZERO,
-				},
-			))
+			.spawn((Attack(Entity::from_raw(11)), _Enemy(CoolDown::default())))
 			.id();
 
 		app.update();

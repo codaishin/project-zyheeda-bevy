@@ -4,7 +4,13 @@ pub mod events;
 pub mod traits;
 
 mod systems;
+mod tools;
 
+use crate::systems::{
+	enemy_attack::AttackSystem,
+	enemy_behavior::EnemyBehaviorSystem,
+	enemy_chase::ChaseSystem,
+};
 use animation::MovementAnimations;
 use bevy::prelude::*;
 use common::{
@@ -15,7 +21,9 @@ use common::{
 		animation::HasAnimationsDispatch,
 		handles_effect::HandlesEffect,
 		handles_effect_shading::HandlesEffectShading,
+		handles_enemies::HandlesEnemies,
 		handles_interactions::HandlesInteractions,
+		handles_player::HandlesPlayer,
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 	},
 };
@@ -33,8 +41,6 @@ use components::{
 use events::MoveInputEvent;
 use std::marker::PhantomData;
 use systems::{
-	attack::attack,
-	chase::chase,
 	face::{execute_face::execute_face, get_faces::get_faces},
 	idle::idle,
 	move_on_orbit::move_on_orbit,
@@ -49,56 +55,60 @@ use systems::{
 	shield::position_force_shield,
 	update_cool_downs::update_cool_downs,
 };
+use tools::AttackSpawnerFactory;
 
-pub struct BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>(
+pub struct BehaviorsPlugin<TAnimations, TPrefabs, TShaders, TInteractions, TPlayers, TEnemies>(
 	PhantomData<(
-		TAnimationsPlugin,
-		TPrefabsPlugin,
-		TShadersPlugin,
-		TInteractionsPlugin,
+		TAnimations,
+		TPrefabs,
+		TShaders,
+		TInteractions,
+		TPlayers,
+		TEnemies,
 	)>,
 );
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>
-	BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>
-where
-	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
-	TPrefabsPlugin: Plugin + RegisterPrefab,
-	TShadersPlugin: Plugin + HandlesEffectShading,
-	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
+impl<TAnimations, TPrefabs, TShaders, TInteractions, TPlayers, TEnemies>
+	BehaviorsPlugin<TAnimations, TPrefabs, TShaders, TInteractions, TPlayers, TEnemies>
 {
 	pub fn depends_on(
-		_: &TAnimationsPlugin,
-		_: &TPrefabsPlugin,
-		_: &TShadersPlugin,
-		_: &TInteractionsPlugin,
+		_: &TAnimations,
+		_: &TPrefabs,
+		_: &TShaders,
+		_: &TInteractions,
+		_: &TPlayers,
+		_: &TEnemies,
 	) -> Self {
 		Self(
 			PhantomData::<(
-				TAnimationsPlugin,
-				TPrefabsPlugin,
-				TShadersPlugin,
-				TInteractionsPlugin,
+				TAnimations,
+				TPrefabs,
+				TShaders,
+				TInteractions,
+				TPlayers,
+				TEnemies,
 			)>,
 		)
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin> Plugin
-	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>
+impl<TAnimations, TPrefabs, TShaders, TInteractions, TPlayers, TEnemies> Plugin
+	for BehaviorsPlugin<TAnimations, TPrefabs, TShaders, TInteractions, TPlayers, TEnemies>
 where
-	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
-	TPrefabsPlugin: Plugin + RegisterPrefab,
-	TShadersPlugin: Plugin + HandlesEffectShading,
-	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
+	TAnimations: Plugin + HasAnimationsDispatch,
+	TPrefabs: Plugin + RegisterPrefab,
+	TShaders: Plugin + HandlesEffectShading,
+	TInteractions: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
+	TPlayers: Plugin + HandlesPlayer,
+	TEnemies: Plugin + HandlesEnemies,
 {
 	fn build(&self, app: &mut App) {
-		TPrefabsPlugin::register_prefab::<ProjectileProjection>(app);
-		TPrefabsPlugin::register_prefab::<GroundTargetedAoeProjection>(app);
-		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>()
+		TPrefabs::register_prefab::<ProjectileProjection>(app);
+		TPrefabs::register_prefab::<GroundTargetedAoeProjection>(app);
+		TPrefabs::with_dependency::<TInteractions>()
 			.register_prefab::<VoidBeam>(app)
 			.register_prefab::<ProjectileContact>(app);
-		TPrefabsPlugin::with_dependency::<TShadersPlugin>()
+		TPrefabs::with_dependency::<TShaders>()
 			.register_prefab::<ShieldContact>(app)
 			.register_prefab::<ShieldProjection>(app)
 			.register_prefab::<GroundTargetedAoeContact>(app);
@@ -136,17 +146,25 @@ where
 						MovementConfig,
 						Movement<PositionBased>,
 						MovementAnimations,
-						TAnimationsPlugin::TAnimationDispatch,
+						TAnimations::TAnimationDispatch,
 					>,
 					animate_movement::<
 						MovementConfig,
 						Movement<VelocityBased>,
 						MovementAnimations,
-						TAnimationsPlugin::TAnimationDispatch,
+						TAnimations::TAnimationDispatch,
 					>,
 				),
 			)
-			.add_systems(Update, (chase::<MovementConfig>, attack).chain())
+			.add_systems(
+				Update,
+				(
+					TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>,
+					TEnemies::TEnemy::chase,
+					TEnemies::TEnemy::attack::<AttackSpawnerFactory>,
+				)
+					.chain(),
+			)
 			.add_systems(
 				Update,
 				(ProjectileContact::set_position, ProjectileContact::movement).chain(),

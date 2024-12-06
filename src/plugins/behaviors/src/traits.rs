@@ -70,14 +70,8 @@ pub trait SpawnAttack {
 	fn spawn(&self, commands: &mut Commands, attacker: Attacker, target: Target) -> DespawnFn;
 }
 
-pub trait ToArc {
-	fn to_arc(self) -> Arc<Self>;
-}
-
-impl<T: SpawnAttack> ToArc for T {
-	fn to_arc(self) -> Arc<Self> {
-		Arc::new(self)
-	}
+pub trait GetAttackSpawner<TEnemy> {
+	fn attack_spawner(enemy: &TEnemy) -> Arc<dyn SpawnAttack>;
 }
 
 pub trait RemoveComponent<T: Bundle> {

@@ -64,6 +64,8 @@ fn prepare_game(app: &mut App) {
 		&prefabs_plugin,
 		&shaders_plugin,
 		&interactions_plugin,
+		&player_plugin,
+		&enemy_plugin,
 	);
 	let rendering_plugin = RenderingPlugin::depends_on(&loading_plugin);
 	let game_state_plugin = GameStatePlugin::depends_on(&loading_plugin);

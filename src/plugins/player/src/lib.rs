@@ -12,6 +12,7 @@ use common::{
 		handles_bars::HandlesBars,
 		handles_effect::HandlesEffect,
 		handles_lights::HandlesLights,
+		handles_player::HandlesPlayer,
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 	},
 };
@@ -53,4 +54,10 @@ where
 
 		app.add_systems(Update, (player_toggle_walk_run, move_player));
 	}
+}
+
+impl<TAnimation, TPrefabs, TInteractions, TLights, TBars> HandlesPlayer
+	for PlayerPlugin<TAnimation, TPrefabs, TInteractions, TLights, TBars>
+{
+	type TPlayer = Player;
 }
