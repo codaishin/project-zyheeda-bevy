@@ -15,6 +15,7 @@ use animation::MovementAnimations;
 use bevy::prelude::*;
 use common::{
 	effects::deal_damage::DealDamage,
+	labels::Labels,
 	resources::CamRay,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	traits::{
@@ -114,6 +115,10 @@ where
 			.register_prefab::<GroundTargetedAoeContact>(app);
 
 		app.add_event::<MoveInputEvent>()
+			.add_systems(
+				Labels::PREFAB_INSTANTIATION.label(),
+				CamOrbit::orbit::<TPlayers::TPlayer>,
+			)
 			.add_systems(
 				Update,
 				(

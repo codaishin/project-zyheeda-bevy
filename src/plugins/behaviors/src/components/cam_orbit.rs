@@ -1,11 +1,42 @@
+use std::f32::consts::PI;
+
 use crate::traits::{MoveTogether, Orbit, Vec2Radians};
 use bevy::prelude::*;
+use common::{components::MainCamera, traits::try_insert_on::TryInsertOn};
 
 #[derive(Component)]
 pub struct CamOrbit {
 	pub center: CamOrbitCenter,
 	pub distance: f32,
 	pub sensitivity: f32,
+}
+
+impl CamOrbit {
+	pub(crate) fn orbit<TPlayer>(
+		mut commands: Commands,
+		cameras: Query<Entity, With<MainCamera>>,
+		players: Query<Entity, Added<TPlayer>>,
+	) where
+		TPlayer: Component,
+	{
+		let Ok(player) = players.get_single() else {
+			return;
+		};
+
+		for entity in &cameras {
+			let mut transform = Transform::from_translation(Vec3::X);
+			let mut orbit = CamOrbit {
+				center: CamOrbitCenter::from(Vec3::ZERO).with_entity(player),
+				distance: 15.,
+				sensitivity: 1.,
+			};
+
+			orbit.orbit(&mut transform, Vec2Radians::new(-PI / 3., PI / 3.));
+			orbit.sensitivity = 0.005;
+
+			commands.try_insert_on(entity, (transform, orbit));
+		}
+	}
 }
 
 pub struct CamOrbitCenter {
