@@ -9,7 +9,6 @@ pub struct CamOrbit {
 	pub distance: f32,
 	pub sensitivity: f32,
 }
-
 impl CamOrbit {
 	pub(crate) fn orbit<TAgent>(
 		mut commands: Commands,
