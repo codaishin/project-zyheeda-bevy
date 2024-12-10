@@ -1,6 +1,6 @@
 use bevy::prelude::{Component, Entity, Name, Query};
 use common::traits::{
-	accessors::get::GetRef,
+	accessors::get::GetRefOption,
 	handles_load_tracking::Loaded,
 	iteration::IterFinite,
 	register_assets_for_children::ContainsAssetIdsForChildren,
@@ -80,7 +80,7 @@ impl<TContainer, TMarker> Untrack<Name> for ChildrenLookup<TContainer, TMarker> 
 	}
 }
 
-impl<TContainer, TMarker> GetRef<TContainer::TChildKey, Entity>
+impl<TContainer, TMarker> GetRefOption<TContainer::TChildKey, Entity>
 	for ChildrenLookup<TContainer, TMarker>
 where
 	TContainer: ContainsAssetIdsForChildren<TMarker>,
@@ -136,7 +136,7 @@ mod tests {
 			_: &'a TAssets,
 		) -> Option<&'a Self::TAsset>
 		where
-			TAssets: GetRef<Handle<Self::TAsset>, Self::TAsset>,
+			TAssets: GetRefOption<Handle<Self::TAsset>, Self::TAsset>,
 		{
 			None
 		}

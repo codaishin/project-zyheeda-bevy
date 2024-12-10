@@ -3,7 +3,7 @@ use bevy::asset::Handle;
 use common::{
 	components::{Collection, Swap},
 	traits::{
-		accessors::get::GetMut,
+		accessors::get::GetMutOption,
 		swap_command::{SwapCommands, SwapError, SwapIn, SwapResult, SwappedOut},
 	},
 };
@@ -48,7 +48,7 @@ struct RetryFailed<T>(T);
 impl<TContainer, TSwap, TContainerKey> SwapCommands<SlotKey, Handle<Item>>
 	for SwapController<'_, TContainerKey, SlotKey, TContainer, Collection<TSwap>>
 where
-	TContainer: GetMut<TContainerKey, Option<Handle<Item>>>,
+	TContainer: GetMutOption<TContainerKey, Option<Handle<Item>>>,
 	TSwap: Keys<TContainerKey, SlotKey> + Clone,
 {
 	fn try_swap(
@@ -71,7 +71,7 @@ where
 
 fn apply_swaps<
 	'a,
-	TContainer: GetMut<TContainerKey, Option<Handle<Item>>>,
+	TContainer: GetMutOption<TContainerKey, Option<Handle<Item>>>,
 	TContainerKey,
 	TSwap: Keys<TContainerKey, SlotKey> + Clone,
 >(
@@ -142,7 +142,7 @@ mod tests {
 	#[derive(Debug, PartialEq)]
 	struct _Container(Vec<Option<Handle<Item>>>);
 
-	impl GetMut<_InnerKey, Option<Handle<Item>>> for _Container {
+	impl GetMutOption<_InnerKey, Option<Handle<Item>>> for _Container {
 		fn get_mut(&mut self, key: &_InnerKey) -> Option<&mut Option<Handle<Item>>> {
 			self.0.get_mut(key.0)
 		}

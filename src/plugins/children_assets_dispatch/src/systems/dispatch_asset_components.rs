@@ -3,7 +3,7 @@ use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{
 	errors::{Error, Level},
 	traits::{
-		accessors::get::GetRef,
+		accessors::get::GetRefOption,
 		get_asset::GetAsset,
 		iteration::IterFinite,
 		register_assets_for_children::ContainsAssetIdsForChildren,
@@ -38,7 +38,7 @@ fn dispatch_system<TCommands, TAssets, TComponent, TMarker, TFilter>(
 ) -> Vec<Result<(), Error>>
 where
 	TCommands: TryInsertOn,
-	TAssets: GetRef<Handle<TComponent::TChildAsset>, TComponent::TChildAsset> + Resource,
+	TAssets: GetRefOption<Handle<TComponent::TChildAsset>, TComponent::TChildAsset> + Resource,
 	TComponent: Component
 		+ ContainsAssetIdsForChildren<TMarker>
 		+ GetAsset<TKey = TComponent::TChildKey, TAsset = TComponent::TChildAsset>,
@@ -148,7 +148,7 @@ mod tests {
 			assets: &'a TAssets,
 		) -> Option<&'a Self::TAsset>
 		where
-			TAssets: GetRef<Handle<Self::TAsset>, Self::TAsset>,
+			TAssets: GetRefOption<Handle<Self::TAsset>, Self::TAsset>,
 		{
 			let _Component(handles) = self;
 			let handle = handles.get(key)?;
@@ -185,7 +185,7 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetRef<Handle<_Asset>, _Asset> for _Assets {
+	impl GetRefOption<Handle<_Asset>, _Asset> for _Assets {
 		fn get<'a>(&'a self, key: &Handle<_Asset>) -> Option<&'a _Asset> {
 			self.mock.get(key)
 		}

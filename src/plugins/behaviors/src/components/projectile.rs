@@ -1,6 +1,5 @@
 pub mod sub_type;
 
-use super::{MovementConfig, MovementMode};
 use crate::traits::{Caster, ProjectileBehavior, Spawner};
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::{Ccd, GravityScale, RigidBody};
@@ -10,11 +9,14 @@ use common::{
 	tools::UnitsPerSecond,
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
+		handles_behaviors::Speed,
 		handles_interactions::HandlesInteractions,
 		prefab::{GetOrCreateAssets, Prefab},
 	},
 };
 use sub_type::SubType;
+
+use super::constant_movement::ConstantMovement;
 
 #[derive(Component, Debug, PartialEq)]
 pub struct ProjectileContact {
@@ -58,14 +60,11 @@ where
 	) -> Result<(), Error> {
 		entity
 			.try_insert((
+				ConstantMovement::velocity_based(Speed(UnitsPerSecond::new(15.))),
 				RigidBody::Dynamic,
 				GravityScale(0.),
 				Ccd::enabled(),
 				TInteractions::is_fragile_when_colliding_with([Blocker::Physical, Blocker::Force]),
-				MovementConfig::Constant {
-					mode: MovementMode::Fast,
-					speed: UnitsPerSecond::new(15.),
-				},
 			))
 			.with_children(|parent| self.sub_type.spawn_contact(parent, &mut assets));
 

@@ -1,4 +1,3 @@
-pub mod animation;
 pub mod components;
 pub mod events;
 pub mod traits;
@@ -10,8 +9,8 @@ use crate::systems::{
 	enemy_attack::AttackSystem,
 	enemy_behavior::EnemyBehaviorSystem,
 	enemy_chase::ChaseSystem,
+	movement::{process_move_input::ProcessMoveInput, toggle_walk_run::ToggleWalkRun},
 };
-use animation::MovementAnimations;
 use bevy::prelude::*;
 use common::{
 	effects::deal_damage::DealDamage,
@@ -19,13 +18,15 @@ use common::{
 	resources::CamRay,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	traits::{
-		accessors::get::GetterRef,
-		animation::HasAnimationsDispatch,
+		accessors::get::{GetterMut, GetterRef},
+		animation::{Animation, HasAnimationsDispatch, RegisterAnimations},
 		handles_behaviors::{
 			AttackConfig,
 			AttackCoolDown,
 			ConstantMovementSpeed,
 			HandlesBehaviors,
+			MovementMode,
+			Speed,
 		},
 		handles_effect::HandlesEffect,
 		handles_effect_shading::HandlesEffectShading,
@@ -35,12 +36,12 @@ use common::{
 };
 use components::{
 	cam_orbit::CamOrbit,
+	constant_movement::ConstantMovement,
 	ground_targeted_aoe::{GroundTargetedAoeContact, GroundTargetedAoeProjection},
 	projectile::{ProjectileContact, ProjectileProjection},
 	shield::{ShieldContact, ShieldProjection},
 	void_beam::VoidBeam,
 	Movement,
-	MovementConfig,
 	PositionBased,
 	VelocityBased,
 };
@@ -114,27 +115,17 @@ where
 			.add_systems(
 				Update,
 				(
-					execute_move_position_based::<MovementConfig, Movement<PositionBased>, Virtual>
-						.pipe(idle),
-					execute_move_velocity_based::<MovementConfig, Movement<VelocityBased>>
-						.pipe(idle),
-				),
-			)
-			.add_systems(
-				Update,
-				(
-					animate_movement::<
-						MovementConfig,
+					execute_move_position_based::<
+						ConstantMovement<PositionBased>,
 						Movement<PositionBased>,
-						MovementAnimations,
-						TAnimations::TAnimationDispatch,
-					>,
-					animate_movement::<
-						MovementConfig,
+						Virtual,
+					>
+						.pipe(idle),
+					execute_move_velocity_based::<
+						ConstantMovement<VelocityBased>,
 						Movement<VelocityBased>,
-						MovementAnimations,
-						TAnimations::TAnimationDispatch,
-					>,
+					>
+						.pipe(idle),
 				),
 			)
 			.add_systems(
@@ -148,6 +139,8 @@ where
 
 impl<TAnimations, TPrefabs, TShaders, TInteractions> HandlesBehaviors
 	for BehaviorsPlugin<TAnimations, TPrefabs, TShaders, TInteractions>
+where
+	TAnimations: RegisterAnimations,
 {
 	// FIXME: Handle undefined behavior when using for multiple agents
 	fn register_camera_orbit_for<TAgent>(app: &mut App)
@@ -157,6 +150,25 @@ impl<TAnimations, TPrefabs, TShaders, TInteractions> HandlesBehaviors
 		app.add_systems(
 			Labels::PREFAB_INSTANTIATION.label(),
 			CamOrbit::orbit::<TAgent>,
+		);
+	}
+
+	fn register_player_movement<TPlayer>(app: &mut App)
+	where
+		TPlayer: Component + GetterRef<Speed> + GetterRef<Animation> + GetterMut<MovementMode>,
+	{
+		app.add_systems(
+			PreUpdate,
+			(
+				TPlayer::toggle_walk_run,
+				TPlayer::process_move_input::<VelocityBased>,
+				execute_move_velocity_based::<TPlayer, Movement<VelocityBased>>.pipe(idle),
+			)
+				.chain(),
+		)
+		.add_systems(
+			Update,
+			animate_movement::<TPlayer, Movement<VelocityBased>, TAnimations::TAnimationDispatch>,
 		);
 	}
 

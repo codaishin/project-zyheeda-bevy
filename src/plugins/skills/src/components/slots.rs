@@ -4,7 +4,7 @@ use bevy::{asset::Handle, prelude::*};
 use common::{
 	components::{essence::Essence, AssetModel, Side},
 	traits::{
-		accessors::get::GetRef,
+		accessors::get::GetRefOption,
 		get_asset::GetAsset,
 		register_assets_for_children::ContainsAssetIdsForChildren,
 	},
@@ -26,7 +26,7 @@ impl Default for Slots {
 	}
 }
 
-impl GetRef<SlotKey, Handle<Item>> for Slots {
+impl GetRefOption<SlotKey, Handle<Item>> for Slots {
 	fn get(&self, key: &SlotKey) -> Option<&Handle<Item>> {
 		let slot = self.0.get(key)?;
 		slot.as_ref()
@@ -43,7 +43,7 @@ impl GetAsset for Slots {
 		assets: &'a TAssets,
 	) -> Option<&'a Self::TAsset>
 	where
-		TAssets: GetRef<Handle<Self::TAsset>, Self::TAsset>,
+		TAssets: GetRefOption<Handle<Self::TAsset>, Self::TAsset>,
 	{
 		assets.get(self.get(key)?)
 	}

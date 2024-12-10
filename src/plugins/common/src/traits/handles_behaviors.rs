@@ -1,4 +1,7 @@
-use super::accessors::get::GetterRef;
+use super::{
+	accessors::get::{GetterMut, GetterRef},
+	animation::Animation,
+};
 use crate::tools::{Units, UnitsPerSecond};
 use bevy::prelude::*;
 use std::time::Duration;
@@ -9,6 +12,10 @@ pub trait HandlesBehaviors {
 	fn register_camera_orbit_for<TAgent>(app: &mut App)
 	where
 		TAgent: Component;
+
+	fn register_player_movement<TPlayer>(app: &mut App)
+	where
+		TPlayer: Component + GetterRef<Speed> + GetterRef<Animation> + GetterMut<MovementMode>;
 
 	fn register_enemies_for<TPlayer, TEnemy>(app: &mut App)
 	where
@@ -45,3 +52,13 @@ pub enum AttackTarget {
 	Player,
 	Entity(Entity),
 }
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default)]
+pub enum MovementMode {
+	#[default]
+	Slow,
+	Fast,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
+pub struct Speed(pub UnitsPerSecond);

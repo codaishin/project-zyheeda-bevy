@@ -1,7 +1,7 @@
-use super::GetRef;
+use super::GetRefOption;
 use bevy::prelude::*;
 
-impl<TAsset> GetRef<Handle<TAsset>, TAsset> for Assets<TAsset>
+impl<TAsset> GetRefOption<Handle<TAsset>, TAsset> for Assets<TAsset>
 where
 	TAsset: Asset,
 {

@@ -1,8 +1,6 @@
 pub mod bundle;
 pub mod components;
 
-mod systems;
-
 use bevy::prelude::*;
 use common::{
 	attributes::health::Health,
@@ -17,9 +15,8 @@ use common::{
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 	},
 };
-use components::player::Player;
+use components::{player::Player, player_movement::PlayerMovement};
 use std::marker::PhantomData;
-use systems::{move_player::move_player, toggle_walk_run::player_toggle_walk_run};
 
 pub struct PlayerPlugin<TAnimation, TPrefabs, TInteractions, TLights, TBars, TBehaviors>(
 	PhantomData<(
@@ -69,10 +66,9 @@ where
 	fn build(&self, app: &mut App) {
 		TAnimation::register_animations::<Player>(app);
 		TBehaviors::register_camera_orbit_for::<Player>(app);
+		TBehaviors::register_player_movement::<PlayerMovement>(app);
 		TPrefabs::with_dependency::<(TInteractions, TLights, TBars)>()
 			.register_prefab::<Player>(app);
-
-		app.add_systems(Update, (player_toggle_walk_run, move_player));
 	}
 }
 

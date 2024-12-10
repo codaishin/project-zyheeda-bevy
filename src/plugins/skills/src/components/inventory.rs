@@ -2,19 +2,19 @@ use crate::{inventory_key::InventoryKey, item::Item};
 use bevy::asset::Handle;
 use common::{
 	components::Collection,
-	traits::accessors::get::{GetMut, GetRef},
+	traits::accessors::get::{GetMutOption, GetRefOption},
 };
 
 pub type Inventory = Collection<Option<Handle<Item>>>;
 
-impl GetRef<InventoryKey, Handle<Item>> for Inventory {
+impl GetRefOption<InventoryKey, Handle<Item>> for Inventory {
 	fn get(&self, key: &InventoryKey) -> Option<&Handle<Item>> {
 		let item = self.0.get(key.0)?;
 		item.as_ref()
 	}
 }
 
-impl GetMut<InventoryKey, Option<Handle<Item>>> for Inventory {
+impl GetMutOption<InventoryKey, Option<Handle<Item>>> for Inventory {
 	fn get_mut(&mut self, InventoryKey(index): &InventoryKey) -> Option<&mut Option<Handle<Item>>> {
 		let items = &mut self.0;
 

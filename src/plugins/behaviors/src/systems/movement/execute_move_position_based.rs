@@ -1,38 +1,36 @@
 use crate::{
 	systems::idle::SetToIdle,
-	traits::{MovementData, MovementPositionBased},
+	traits::{IsDone, MovementPositionBased},
 };
 use bevy::prelude::*;
 use common::{
 	components::Immobilized,
 	tools::Units,
-	traits::clamp_zero_positive::ClampZeroPositive,
+	traits::{
+		accessors::get::GetterRef,
+		clamp_zero_positive::ClampZeroPositive,
+		handles_behaviors::Speed,
+	},
 };
-use std::ops::Deref;
 
-type Components<'a, TConfig, TMovement> =
-	(Entity, &'a mut TMovement, &'a mut Transform, &'a TConfig);
-
-pub(crate) fn execute_move_position_based<
-	TMovementConfig: Component + MovementData,
+pub(crate) fn execute_move_position_based<TAgent, TMovement, TTime>(
+	time: Res<Time<TTime>>,
+	mut agents: Query<(Entity, &TAgent, &mut Transform, &mut TMovement), Without<Immobilized>>,
+) -> SetToIdle<TMovement>
+where
+	TAgent: Component + GetterRef<Speed>,
 	TMovement: Component + MovementPositionBased,
 	TTime: Send + Sync + Default + 'static,
->(
-	time: Res<Time<TTime>>,
-	mut agents: Query<Components<TMovementConfig, TMovement>, Without<Immobilized>>,
-) -> SetToIdle<TMovement> {
+{
 	let done_entities = agents
 		.iter_mut()
-		.filter_map(|(entity, mut movement, mut transform, config)| {
-			let (speed, ..) = config.get_movement_data();
-			let distance = time.delta_seconds() * *speed.deref();
+		.filter_map(|(entity, agent, mut transform, mut movement)| {
+			let Speed(speed) = *agent.get();
+			let distance = *speed * time.delta_seconds();
 
-			match movement
-				.update(&mut transform, Units::new(distance))
-				.is_done()
-			{
-				true => Some(entity),
-				false => None,
+			match movement.update(&mut transform, Units::new(distance)) {
+				IsDone(true) => Some(entity),
+				IsDone(false) => None,
 			}
 		})
 		.collect();
@@ -43,12 +41,9 @@ pub(crate) fn execute_move_position_based<
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{
-		components::MovementMode,
-		traits::{IsDone, MovementData},
-	};
+	use bevy::ecs::system::RunSystemOnce;
 	use common::{
-		test_tools::utils::SingleThreadedApp,
+		test_tools::utils::TickTime,
 		tools::{Units, UnitsPerSecond},
 		traits::{clamp_zero_positive::ClampZeroPositive, nested_mock::NestedMocks},
 	};
@@ -57,18 +52,19 @@ mod test {
 	use std::time::Duration;
 
 	#[derive(Component)]
-	struct ConfigFast;
+	struct _Agent(Speed);
 
-	#[derive(Component)]
-	struct ConfigSlow;
+	impl GetterRef<Speed> for _Agent {
+		fn get(&self) -> &Speed {
+			let _Agent(speed) = self;
+			speed
+		}
+	}
 
 	#[derive(Component, NestedMocks, Debug)]
 	struct _Movement {
 		pub mock: Mock_Movement,
 	}
-
-	#[derive(Component, Debug, PartialEq)]
-	struct _Idle;
 
 	#[automock]
 	impl MovementPositionBased for _Movement {
@@ -77,38 +73,10 @@ mod test {
 		}
 	}
 
-	impl MovementData for ConfigFast {
-		fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode) {
-			(UnitsPerSecond::new(11.), MovementMode::Fast)
-		}
-	}
-
-	impl MovementData for ConfigSlow {
-		fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode) {
-			(UnitsPerSecond::new(1.), MovementMode::Slow)
-		}
-	}
-
-	fn idle(set_to_idle: In<SetToIdle<_Movement>>, mut commands: Commands) {
-		for entity in set_to_idle.entities.iter() {
-			commands.entity(*entity).insert(_Idle);
-		}
-	}
-
 	fn setup() -> App {
-		let mut app = App::new().single_threaded(Update);
-		let mut time = Time::<Real>::default();
-
-		time.update();
-		app.insert_resource(time);
-		app.update();
-		app.add_systems(
-			Update,
-			(
-				execute_move_position_based::<ConfigFast, _Movement, Real>.pipe(idle),
-				execute_move_position_based::<ConfigSlow, _Movement, Real>.pipe(idle),
-			),
-		);
+		let mut app = App::new();
+		app.init_resource::<Time<Real>>();
+		app.tick_time(Duration::default());
 
 		app
 	}
@@ -116,93 +84,78 @@ mod test {
 	#[test]
 	fn move_agent_once() {
 		let mut app = setup();
-		let mut time = app.world_mut().resource_mut::<Time<Real>>();
+		let delta = Duration::from_millis(30);
+		app.tick_time(delta);
+		app.world_mut().spawn((
+			_Agent(Speed(UnitsPerSecond::new(11.))),
+			_Movement::new().with_mock(|mock| {
+				mock.expect_update()
+					.with(
+						eq(Transform::from_xyz(1., 2., 3.)),
+						eq(Units::new(delta.as_secs_f32() * 11.)),
+					)
+					.times(1)
+					.return_const(IsDone(false));
+			}),
+			Transform::from_xyz(1., 2., 3.),
+		));
 
-		let last_update = time.last_update().unwrap();
-		let transform = Transform::from_xyz(1., 2., 3.);
-		let config = ConfigFast;
-		let time_delta = Duration::from_millis(30);
-		let movement = _Movement::new().with_mock(|mock| {
-			mock.expect_update()
-				.with(
-					eq(transform),
-					eq(Units::new(time_delta.as_secs_f32() * 11.)),
-				)
-				.times(1)
-				.return_const(false);
-		});
-
-		time.update_with_instant(last_update + time_delta);
-		app.world_mut().spawn((config, movement, transform));
-
-		app.update();
+		app.world_mut()
+			.run_system_once(execute_move_position_based::<_Agent, _Movement, Real>);
 	}
 
 	#[test]
-	fn move_agent_twice() {
+	fn return_set_to_idle_with_done_entity() {
 		let mut app = setup();
-		let transform = Transform::from_xyz(1., 2., 3.);
-		let config = ConfigFast;
-		let movement = _Movement::new().with_mock(|mock| {
-			mock.expect_update().times(2).return_const(false);
-		});
+		let agent = app
+			.world_mut()
+			.spawn((
+				_Agent(Speed(UnitsPerSecond::new(11.))),
+				_Movement::new().with_mock(|mock| {
+					mock.expect_update().return_const(IsDone(true));
+				}),
+				Transform::default(),
+			))
+			.id();
 
-		app.world_mut().spawn((config, movement, transform));
+		let SetToIdle { entities, .. } = app
+			.world_mut()
+			.run_system_once(execute_move_position_based::<_Agent, _Movement, Real>);
 
-		app.update();
-		app.update();
+		assert_eq!(vec![agent], entities);
 	}
 
 	#[test]
-	fn return_entity_to_idle_when_done() {
+	fn return_set_to_idle_without_not_done_entity() {
 		let mut app = setup();
-		let transform = Transform::from_xyz(1., 2., 3.);
-		let config = ConfigFast;
-		let movement = _Movement::new().with_mock(|mock| {
-			mock.expect_update().return_const(true);
-		});
+		app.world_mut().spawn((
+			_Agent(Speed(UnitsPerSecond::new(11.))),
+			_Movement::new().with_mock(|mock| {
+				mock.expect_update().return_const(IsDone(false));
+			}),
+			Transform::default(),
+		));
 
-		let agent = app.world_mut().spawn((config, movement, transform)).id();
+		let SetToIdle { entities, .. } = app
+			.world_mut()
+			.run_system_once(execute_move_position_based::<_Agent, _Movement, Real>);
 
-		app.update();
-
-		let agent = app.world().entity(agent);
-
-		assert_eq!(Some(&_Idle), agent.get::<_Idle>());
-	}
-
-	#[test]
-	fn do_not_return_entity_to_idle_when_not_done() {
-		let mut app = setup();
-		let transform = Transform::from_xyz(1., 2., 3.);
-		let config = ConfigFast;
-		let movement = _Movement::new().with_mock(|mock| {
-			mock.expect_update().return_const(false);
-		});
-
-		let agent = app.world_mut().spawn((config, movement, transform)).id();
-
-		app.update();
-
-		let agent = app.world().entity(agent);
-
-		assert_eq!(None, agent.get::<_Idle>());
+		assert_eq!(vec![] as Vec<Entity>, entities);
 	}
 
 	#[test]
 	fn do_not_move_agent_when_immobilized() {
 		let mut app = setup();
-		let mut time = app.world_mut().resource_mut::<Time<Real>>();
+		app.world_mut().spawn((
+			_Agent(Speed(UnitsPerSecond::new(11.))),
+			_Movement::new().with_mock(|mock| {
+				mock.expect_update().never().return_const(IsDone(false));
+			}),
+			Transform::default(),
+			Immobilized,
+		));
 
-		let last_update = time.last_update().unwrap();
-		let movement = _Movement::new().with_mock(|mock| {
-			mock.expect_update().never().return_const(false);
-		});
-
-		time.update_with_instant(last_update + Duration::from_millis(30));
 		app.world_mut()
-			.spawn((ConfigFast, movement, Transform::default(), Immobilized));
-
-		app.update();
+			.run_system_once(execute_move_position_based::<_Agent, _Movement, Real>);
 	}
 }

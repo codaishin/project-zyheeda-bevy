@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::{components::KeyedPanel, tools::PanelState};
 use bevy::{hierarchy::Parent, prelude::*};
-use common::traits::accessors::{get::GetRef, set::Setter};
+use common::traits::accessors::{get::GetRefOption, set::Setter};
 use skills::item::Item;
 
 pub fn panel_container_states<TPanel, TKey, TContainer>(
@@ -13,7 +13,7 @@ pub fn panel_container_states<TPanel, TKey, TContainer>(
 ) where
 	TPanel: Component + Setter<PanelState>,
 	TKey: Debug + Copy + Send + Sync + 'static,
-	TContainer: Component + GetRef<TKey, Handle<Item>>,
+	TContainer: Component + GetRefOption<TKey, Handle<Item>>,
 {
 	let container = containers.single();
 
@@ -33,7 +33,7 @@ fn get_item<'a, TContainer, TKey>(
 	items: &'a Assets<Item>,
 ) -> Option<&'a Item>
 where
-	TContainer: GetRef<TKey, Handle<Item>>,
+	TContainer: GetRefOption<TKey, Handle<Item>>,
 {
 	container.get(key).and_then(|item| items.get(item))
 }
@@ -62,7 +62,7 @@ mod tests {
 	#[derive(Component)]
 	struct _Container(HashMap<usize, Handle<Item>>);
 
-	impl GetRef<usize, Handle<Item>> for _Container {
+	impl GetRefOption<usize, Handle<Item>> for _Container {
 		fn get(&self, key: &usize) -> Option<&Handle<Item>> {
 			self.0.get(key)
 		}

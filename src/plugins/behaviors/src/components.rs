@@ -4,9 +4,11 @@ pub mod projectile;
 pub mod shield;
 pub mod void_beam;
 
+pub(crate) mod constant_movement;
+
 use crate::traits::RemoveComponent;
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::{test_tools::utils::ApproxEqual, tools::UnitsPerSecond};
+use common::test_tools::utils::ApproxEqual;
 use std::{fmt::Debug, marker::PhantomData, time::Duration};
 
 #[derive(Default, Debug, PartialEq, Clone, Copy)]
@@ -58,26 +60,6 @@ impl<TMovement> ApproxEqual<f32> for Movement<TMovement> {
 	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
 		self.target.approx_equal(&other.target, tolerance) && self.cleanup == other.cleanup
 	}
-}
-
-#[derive(Clone, Copy, PartialEq, Debug, Default)]
-pub enum MovementMode {
-	#[default]
-	Fast,
-	Slow,
-}
-
-#[derive(Component, Clone, Copy)]
-pub enum MovementConfig {
-	Constant {
-		mode: MovementMode,
-		speed: UnitsPerSecond,
-	},
-	Dynamic {
-		current_mode: MovementMode,
-		fast_speed: UnitsPerSecond,
-		slow_speed: UnitsPerSecond,
-	},
 }
 
 #[derive(Component, Debug, PartialEq)]

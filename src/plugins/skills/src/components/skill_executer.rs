@@ -15,7 +15,7 @@ use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
 	traits::{
-		accessors::get::GetRef,
+		accessors::get::GetRefOption,
 		handles_effect::HandlesAllEffects,
 		handles_effect_shading::HandlesEffectShadingForAll,
 		handles_lifetime::HandlesLifetime,

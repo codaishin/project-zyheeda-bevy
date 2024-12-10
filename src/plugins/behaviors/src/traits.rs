@@ -1,31 +1,15 @@
 pub(crate) mod bundle;
 pub(crate) mod movement;
-pub(crate) mod movement_config;
 
-use crate::components::{Attacker, MovementMode, Target};
+use crate::components::{Attacker, Target};
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::{
-	tools::{Units, UnitsPerSecond},
-	traits::animation::Animation,
-};
+use common::{tools::Units, traits::handles_behaviors::Speed};
 use std::sync::Arc;
 
 pub type Vec2Radians = Vec2;
 
 #[derive(Debug, PartialEq, Default, Clone, Copy)]
-pub(crate) struct IsDone(bool);
-
-impl IsDone {
-	pub fn is_done(&self) -> bool {
-		self.0
-	}
-}
-
-impl From<bool> for IsDone {
-	fn from(value: bool) -> Self {
-		Self(value)
-	}
-}
+pub(crate) struct IsDone(pub(crate) bool);
 
 pub(crate) trait Caster {
 	fn caster(&self) -> Entity;
@@ -37,10 +21,6 @@ pub(crate) trait Spawner {
 
 pub(crate) trait ProjectileBehavior: Caster {
 	fn range(&self) -> f32;
-}
-
-pub(crate) trait MovementData {
-	fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode);
 }
 
 pub trait Orbit {
@@ -57,7 +37,7 @@ pub(crate) trait MovementPositionBased {
 }
 
 pub(crate) trait MovementVelocityBased {
-	fn update(&self, agent: &mut EntityCommands, position: Vec3, speed: UnitsPerSecond) -> IsDone;
+	fn update(&self, agent: &mut EntityCommands, position: Vec3, speed: Speed) -> IsDone;
 }
 
 pub(crate) trait Cleanup {
@@ -76,8 +56,4 @@ pub trait GetAttackSpawner<TEnemy> {
 
 pub trait RemoveComponent<T: Bundle> {
 	fn get_remover() -> fn(&mut EntityCommands);
-}
-
-pub(crate) trait GetAnimation {
-	fn animation<'s>(&'s self, key: &MovementMode) -> &'s Animation;
 }

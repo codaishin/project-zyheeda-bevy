@@ -13,11 +13,11 @@ impl MovementPositionBased for Movement<PositionBased> {
 
 		if distance > direction.length() {
 			agent.translation = target;
-			return IsDone::from(true);
+			return IsDone(true);
 		}
 
 		agent.translation += direction.normalize() * distance;
-		IsDone::from(false)
+		IsDone(false)
 	}
 }
 
@@ -65,7 +65,7 @@ mod tests {
 		let mut movement = Movement::<PositionBased>::to(Vec3::ONE);
 		let mut agent = Transform::from_translation(Vec3::ZERO);
 
-		assert!(movement.update(&mut agent, Units::new(100.)).is_done());
+		assert_eq!(IsDone(true), movement.update(&mut agent, Units::new(100.)));
 	}
 
 	#[test]
@@ -73,7 +73,7 @@ mod tests {
 		let mut movement = Movement::<PositionBased>::to(Vec3::ONE);
 		let mut agent = Transform::from_translation(Vec3::ZERO);
 
-		assert!(!movement.update(&mut agent, Units::new(0.1)).is_done());
+		assert_eq!(IsDone(false), movement.update(&mut agent, Units::new(0.1)));
 	}
 
 	#[test]

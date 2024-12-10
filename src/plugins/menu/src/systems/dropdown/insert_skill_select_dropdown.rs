@@ -5,7 +5,7 @@ use crate::components::{
 };
 use bevy::prelude::*;
 use common::traits::{
-	accessors::get::GetRef,
+	accessors::get::GetRefOption,
 	try_insert_on::TryInsertOn,
 	try_remove_from::TryRemoveFrom,
 };
@@ -13,7 +13,7 @@ use player::components::player::Player;
 use skills::{item::Item, skills::Skill, slot_key::SlotKey};
 
 pub(crate) fn insert_skill_select_dropdown<
-	TEquipment: GetRef<SlotKey, Handle<Item>> + Component,
+	TEquipment: GetRefOption<SlotKey, Handle<Item>> + Component,
 	TLayout: Sync + Send + 'static,
 >(
 	mut commands: Commands,
@@ -34,7 +34,10 @@ pub(crate) fn insert_skill_select_dropdown<
 	}
 }
 
-fn compatible_skills<TEquipment: GetRef<SlotKey, Handle<Item>>, TLayout: Sync + Send + 'static>(
+fn compatible_skills<
+	TEquipment: GetRefOption<SlotKey, Handle<Item>>,
+	TLayout: Sync + Send + 'static,
+>(
 	command: &SkillSelectDropdownInsertCommand<SlotKey, TLayout>,
 	slots: &TEquipment,
 	items: &Assets<Item>,
@@ -86,7 +89,7 @@ mod tests {
 	#[derive(Component)]
 	struct _Equipment(HashMap<SlotKey, Handle<Item>>);
 
-	impl GetRef<SlotKey, Handle<Item>> for _Equipment {
+	impl GetRefOption<SlotKey, Handle<Item>> for _Equipment {
 		fn get(&self, key: &SlotKey) -> Option<&Handle<Item>> {
 			self.0.get(key)
 		}

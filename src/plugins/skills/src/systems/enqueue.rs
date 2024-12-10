@@ -9,10 +9,10 @@ use bevy::{
 	asset::{Assets, Handle},
 	ecs::prelude::*,
 };
-use common::traits::accessors::get::GetRef;
+use common::traits::accessors::get::GetRefOption;
 
 pub(crate) fn enqueue<
-	TSlots: GetRef<SlotKey, Handle<Item>> + Component,
+	TSlots: GetRefOption<SlotKey, Handle<Item>> + Component,
 	TQueue: Enqueue<(Skill, SlotKey)> + IterMut<TQueuedSkill> + Component,
 	TQueuedSkill: Prime + Matches<SlotKey>,
 >(
@@ -28,7 +28,7 @@ pub(crate) fn enqueue<
 	}
 }
 
-fn enqueue_new_skills<TSlots: GetRef<SlotKey, Handle<Item>>, TQueue: Enqueue<(Skill, SlotKey)>>(
+fn enqueue_new_skills<TSlots: GetRefOption<SlotKey, Handle<Item>>, TQueue: Enqueue<(Skill, SlotKey)>>(
 	input: &In<Input>,
 	queue: &mut TQueue,
 	slots: &TSlots,
@@ -40,7 +40,7 @@ fn enqueue_new_skills<TSlots: GetRef<SlotKey, Handle<Item>>, TQueue: Enqueue<(Sk
 	}
 }
 
-fn enqueue_new_skill<TSlots: GetRef<SlotKey, Handle<Item>>, TQueue: Enqueue<(Skill, SlotKey)>>(
+fn enqueue_new_skill<TSlots: GetRefOption<SlotKey, Handle<Item>>, TQueue: Enqueue<(Skill, SlotKey)>>(
 	key: &SlotKey,
 	queue: &mut TQueue,
 	slots: &TSlots,
@@ -122,7 +122,7 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Skills(HashMap<SlotKey, Handle<Item>>);
 
-	impl GetRef<SlotKey, Handle<Item>> for _Skills {
+	impl GetRefOption<SlotKey, Handle<Item>> for _Skills {
 		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Handle<Item>> {
 			self.0.get(key)
 		}

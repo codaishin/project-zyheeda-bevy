@@ -4,23 +4,22 @@ use crate::{
 };
 use bevy::{ecs::system::EntityCommands, math::Vec3};
 use bevy_rapier3d::dynamics::Velocity;
-use common::tools::UnitsPerSecond;
-use std::ops::Deref;
+use common::traits::handles_behaviors::Speed;
 
 const SENSITIVITY: f32 = 0.1;
 
 impl MovementVelocityBased for Movement<VelocityBased> {
-	fn update(&self, agent: &mut EntityCommands, position: Vec3, speed: UnitsPerSecond) -> IsDone {
-		let speed = *speed.deref();
+	fn update(&self, agent: &mut EntityCommands, position: Vec3, Speed(speed): Speed) -> IsDone {
+		let speed = *speed;
 		let direction = self.target - position;
 
 		if direction.length() < SENSITIVITY * speed {
 			agent.try_insert(Velocity::default());
-			return IsDone::from(true);
+			return IsDone(true);
 		}
 
 		agent.try_insert(Velocity::linear(direction.normalize() * speed));
-		IsDone::from(false)
+		IsDone(false)
 	}
 }
 
@@ -38,6 +37,7 @@ mod tests {
 	use bevy_rapier3d::dynamics::Velocity;
 	use common::{
 		test_tools::utils::SingleThreadedApp,
+		tools::UnitsPerSecond,
 		traits::clamp_zero_positive::ClampZeroPositive,
 	};
 
@@ -45,7 +45,7 @@ mod tests {
 	struct _Result(IsDone);
 
 	#[derive(Component)]
-	struct _Params((Vec3, UnitsPerSecond));
+	struct _Params((Vec3, Speed));
 
 	fn execute(
 		mut commands: Commands,
@@ -76,14 +76,14 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Movement::<VelocityBased>::to(target),
-				_Params((position, speed)),
+				_Params((position, Speed(speed))),
 			))
 			.id();
 
 		app.update();
 
 		let agent = app.world().entity(agent);
-		let direction = (target - position).normalize() * *speed.deref();
+		let direction = *speed * (target - position).normalize();
 
 		assert_eq!(Some(&Velocity::linear(direction)), agent.get::<Velocity>());
 	}
@@ -98,7 +98,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Movement::<VelocityBased>::to(target),
-				_Params((position, speed)),
+				_Params((position, Speed(speed))),
 			))
 			.id();
 
@@ -106,7 +106,7 @@ mod tests {
 
 		let agent = app.world().entity(agent);
 
-		assert_eq!(Some(&_Result(false.into())), agent.get::<_Result>());
+		assert_eq!(Some(&_Result(IsDone(false))), agent.get::<_Result>());
 	}
 
 	#[test]
@@ -119,7 +119,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Movement::<VelocityBased>::to(target),
-				_Params((position, speed)),
+				_Params((position, Speed(speed))),
 				Velocity::default(),
 			))
 			.id();
@@ -141,7 +141,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Movement::<VelocityBased>::to(target),
-				_Params((position, speed)),
+				_Params((position, Speed(speed))),
 			))
 			.id();
 
@@ -149,7 +149,7 @@ mod tests {
 
 		let agent = app.world().entity(agent);
 
-		assert_eq!(Some(&_Result(true.into())), agent.get::<_Result>());
+		assert_eq!(Some(&_Result(IsDone(true))), agent.get::<_Result>());
 	}
 
 	#[test]
@@ -162,7 +162,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Movement::<VelocityBased>::to(target),
-				_Params((position, speed)),
+				_Params((position, Speed(speed))),
 				Velocity::default(),
 			))
 			.id();
@@ -172,7 +172,7 @@ mod tests {
 		let agent = app.world().entity(agent);
 
 		assert_eq!(
-			(Some(&Velocity::default()), Some(&_Result(true.into()))),
+			(Some(&Velocity::default()), Some(&_Result(IsDone(true)))),
 			(agent.get::<Velocity>(), agent.get::<_Result>())
 		);
 	}

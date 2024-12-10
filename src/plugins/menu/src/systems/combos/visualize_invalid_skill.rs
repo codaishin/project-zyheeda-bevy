@@ -3,12 +3,12 @@ use crate::{
 	traits::InsertContentOn,
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::traits::accessors::get::GetRef;
+use common::traits::accessors::get::GetRefOption;
 use skills::{item::Item, slot_key::SlotKey};
 
 pub(crate) fn visualize_invalid_skill<
 	TAgent: Component,
-	TSlots: Component + GetRef<SlotKey, Handle<Item>>,
+	TSlots: Component + GetRefOption<SlotKey, Handle<Item>>,
 	TVisualization: InsertContentOn,
 >(
 	mut commands: Commands,
@@ -30,7 +30,7 @@ pub(crate) fn visualize_invalid_skill<
 	}
 }
 
-fn visualize_unusable<TSlots: GetRef<SlotKey, Handle<Item>>>(
+fn visualize_unusable<TSlots: GetRefOption<SlotKey, Handle<Item>>>(
 	commands: &mut Commands,
 	(entity, descriptor): (Entity, &SkillButton<DropdownTrigger>),
 	agent: &TSlots,
@@ -79,7 +79,7 @@ mod tests {
 		}
 	}
 
-	impl GetRef<SlotKey, Handle<Item>> for _Slots {
+	impl GetRefOption<SlotKey, Handle<Item>> for _Slots {
 		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Handle<Item>> {
 			self.0.get(key)
 		}

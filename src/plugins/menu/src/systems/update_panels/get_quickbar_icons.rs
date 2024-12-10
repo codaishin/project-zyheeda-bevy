@@ -1,6 +1,6 @@
 use crate::components::quickbar_panel::QuickbarPanel;
 use bevy::prelude::*;
-use common::traits::{accessors::get::GetRef, iterate::Iterate};
+use common::traits::{accessors::get::GetRefOption, iterate::Iterate};
 use player::components::player::Player;
 use skills::{
 	components::slots::Slots,

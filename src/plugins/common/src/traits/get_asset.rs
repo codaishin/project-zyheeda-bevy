@@ -1,4 +1,4 @@
-use super::accessors::get::GetRef;
+use super::accessors::get::GetRefOption;
 use bevy::prelude::*;
 
 pub trait GetAsset {
@@ -11,5 +11,5 @@ pub trait GetAsset {
 		assets: &'a TAssets,
 	) -> Option<&'a Self::TAsset>
 	where
-		TAssets: GetRef<Handle<Self::TAsset>, Self::TAsset>;
+		TAssets: GetRefOption<Handle<Self::TAsset>, Self::TAsset>;
 }

@@ -5,7 +5,7 @@ use crate::{
 	traits::{AdvanceCombo, IterAddedMut},
 };
 use bevy::prelude::*;
-use common::traits::accessors::get::GetRef;
+use common::traits::accessors::get::GetRefOption;
 
 pub(crate) fn update_skill_combos<TCombos, TQueue>(
 	mut agents: Query<(&mut TCombos, &mut TQueue, &Slots)>,

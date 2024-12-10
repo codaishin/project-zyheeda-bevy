@@ -1,7 +1,4 @@
-use behaviors::{
-	animation::MovementAnimations,
-	components::{MovementConfig, MovementMode},
-};
+use super::player_movement::{Config, PlayerMovement};
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
@@ -23,6 +20,7 @@ use common::{
 		},
 		clamp_zero_positive::ClampZeroPositive,
 		handles_bars::HandlesBars,
+		handles_behaviors::{MovementMode, Speed},
 		handles_effect::HandlesEffect,
 		handles_lights::HandlesLights,
 		load_asset::Path,
@@ -95,15 +93,23 @@ where
 				TBars::new_bar(),
 				GroundOffset(Vec3::Y),
 				Blocker::insert([Blocker::Physical]),
-				MovementConfig::Dynamic {
-					current_mode: MovementMode::Fast,
-					slow_speed: UnitsPerSecond::new(0.75),
-					fast_speed: UnitsPerSecond::new(1.5),
+				PlayerMovement {
+					mode: MovementMode::Fast,
+					speeds: Config {
+						slow: Speed(UnitsPerSecond::new(0.75)),
+						fast: Speed(UnitsPerSecond::new(1.6)),
+					},
+					animations: Config {
+						slow: Animation::new(
+							Player::animation_path("Animation2"),
+							PlayMode::Repeat,
+						),
+						fast: Animation::new(
+							Player::animation_path("Animation3"),
+							PlayMode::Repeat,
+						),
+					},
 				},
-				MovementAnimations::new(
-					Animation::new(Player::animation_path("Animation3"), PlayMode::Repeat),
-					Animation::new(Player::animation_path("Animation2"), PlayMode::Repeat),
-				),
 				RigidBody::Dynamic,
 				GravityScale(0.),
 				LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y,
