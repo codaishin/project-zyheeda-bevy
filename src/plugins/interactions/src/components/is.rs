@@ -11,7 +11,7 @@ where
 	T: Blockable,
 	Is<T>: Component,
 {
-	pub fn interacting_with<const N: usize>(blockers: [Blocker; N]) -> Self {
+	pub fn interacting_with(blockers: &[Blocker]) -> Self {
 		Is(T::blockable(blockers))
 	}
 }
@@ -19,15 +19,15 @@ where
 pub struct Fragile(pub(crate) HashSet<Blocker>);
 
 impl Blockable for Fragile {
-	fn blockable<const N: usize>(blockers: [Blocker; N]) -> Self {
-		Fragile(HashSet::from(blockers))
+	fn blockable(blockers: &[Blocker]) -> Self {
+		Fragile(HashSet::from_iter(blockers.iter().cloned()))
 	}
 }
 
 pub struct InterruptableRay(pub(crate) HashSet<Blocker>);
 
 impl Blockable for InterruptableRay {
-	fn blockable<const N: usize>(blockers: [Blocker; N]) -> Self {
-		InterruptableRay(HashSet::from(blockers))
+	fn blockable(blockers: &[Blocker]) -> Self {
+		InterruptableRay(HashSet::from_iter(blockers.iter().cloned()))
 	}
 }

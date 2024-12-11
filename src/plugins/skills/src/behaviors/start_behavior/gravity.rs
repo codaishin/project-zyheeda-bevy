@@ -1,4 +1,4 @@
-use crate::behaviors::{SkillCaster, SkillSpawner, Target};
+use crate::behaviors::{SkillCaster, SkillSpawner, SkillTarget};
 use bevy::ecs::system::EntityCommands;
 use common::{
 	effects::{gravity::Gravity, EffectApplies},
@@ -19,7 +19,7 @@ impl StartGravity {
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
 		_: &SkillSpawner,
-		_: &Target,
+		_: &SkillTarget,
 	) where
 		TEffects: HandlesEffect<Gravity>,
 		TShaders: HandlesEffectShadingFor<Gravity>,
@@ -80,7 +80,7 @@ mod tests {
 			&mut entity,
 			&SkillCaster::from(Entity::from_raw(42)),
 			&SkillSpawner::from(Entity::from_raw(43)),
-			&Target::default(),
+			&SkillTarget::default(),
 		);
 		entity.id()
 	}

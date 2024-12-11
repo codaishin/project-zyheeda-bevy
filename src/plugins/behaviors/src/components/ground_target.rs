@@ -21,14 +21,13 @@ use common::{
 use std::f32::consts::PI;
 
 #[derive(Component, Debug, PartialEq, Clone)]
-pub struct GroundTargetedAoeContact {
+pub struct GroundTarget {
 	pub caster: Entity,
 	pub target_ray: Ray3d,
-	pub max_range: Units,
-	pub radius: Units,
+	pub max_cast_range: Units,
 }
 
-impl GroundTargetedAoeContact {
+impl GroundTarget {
 	pub const DEFAULT_TARGET_RAY: Ray3d = Ray3d {
 		origin: Vec3::Y,
 		direction: Dir3::NEG_Y,
@@ -38,11 +37,10 @@ impl GroundTargetedAoeContact {
 	fn with_caster(caster: Entity) -> Self {
 		use common::traits::clamp_zero_positive::ClampZeroPositive;
 
-		GroundTargetedAoeContact {
+		GroundTarget {
 			caster,
 			target_ray: Self::DEFAULT_TARGET_RAY,
-			max_range: Units::new(f32::INFINITY),
-			radius: Units::new(1.),
+			max_cast_range: Units::new(f32::INFINITY),
 		}
 	}
 
@@ -54,12 +52,12 @@ impl GroundTargetedAoeContact {
 
 	#[cfg(test)]
 	fn with_max_range(mut self, max_range: Units) -> Self {
-		self.max_range = max_range;
+		self.max_cast_range = max_range;
 		self
 	}
 }
 
-impl GroundTargetedAoeContact {
+impl GroundTarget {
 	fn ground_contact(&self) -> Option<Vec3> {
 		let toi = self
 			.target_ray
@@ -70,7 +68,7 @@ impl GroundTargetedAoeContact {
 
 	fn correct_for_max_range(&self, contact: &mut Transform, caster: &Transform) {
 		let direction = contact.translation - caster.translation;
-		let max_range = *self.max_range;
+		let max_range = *self.max_cast_range;
 
 		if direction.length() <= max_range {
 			return;
@@ -86,7 +84,7 @@ impl GroundTargetedAoeContact {
 	pub(crate) fn set_position(
 		mut commands: Commands,
 		transforms: Query<&Transform>,
-		ground_targets: Query<(Entity, &GroundTargetedAoeContact), Added<GroundTargetedAoeContact>>,
+		ground_targets: Query<(Entity, &GroundTarget), Added<GroundTarget>>,
 	) {
 		for (entity, ground_target) in &ground_targets {
 			let Some(contact) = ground_target.ground_contact() else {
@@ -107,7 +105,7 @@ trait ColliderComponents {
 	fn collider_components(&self) -> Result<impl Bundle, Error>;
 }
 
-impl<TShadersPlugin> Prefab<TShadersPlugin> for GroundTargetedAoeContact
+impl<TShadersPlugin> Prefab<TShadersPlugin> for GroundTarget
 where
 	TShadersPlugin: HandlesEffectShading,
 {
@@ -129,7 +127,7 @@ where
 				parent.spawn((ColliderRoot(parent.parent_entity()), collider));
 				parent.spawn(AssetModelBundle {
 					model,
-					transform: Transform::from_scale(Vec3::splat(*self.radius * 2.)),
+					transform: Transform::default(),
 					..default()
 				});
 			});
@@ -138,10 +136,10 @@ where
 	}
 }
 
-impl ColliderComponents for GroundTargetedAoeContact {
+impl ColliderComponents for GroundTarget {
 	fn collider_components(&self) -> Result<impl Bundle, Error> {
 		let transform = Transform::default().with_rotation(Quat::from_axis_angle(Vec3::X, PI / 2.));
-		let ring = Annulus::new(*self.radius - 0.3, *self.radius);
+		let ring = Annulus::new(1., 1.); //*self.radius - 0.3, *self.radius);
 		let torus = Mesh::from(Extrusion::new(ring, 3.));
 		let collider = Collider::from_bevy_mesh(&torus, &ComputedColliderShape::TriMesh);
 
@@ -209,7 +207,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, GroundTargetedAoeContact::set_position);
+		app.add_systems(Update, GroundTarget::set_position);
 
 		app
 	}
@@ -224,7 +222,7 @@ mod tests {
 		};
 		let entity = app
 			.world_mut()
-			.spawn(GroundTargetedAoeContact::with_caster(caster).with_target_ray(ray))
+			.spawn(GroundTarget::with_caster(caster).with_target_ray(ray))
 			.id();
 
 		app.update();
@@ -246,7 +244,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(
-				GroundTargetedAoeContact::with_caster(caster)
+				GroundTarget::with_caster(caster)
 					.with_target_ray(ray)
 					.with_max_range(Units::new(5.)),
 			)
@@ -271,7 +269,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(
-				GroundTargetedAoeContact::with_caster(caster)
+				GroundTarget::with_caster(caster)
 					.with_target_ray(ray)
 					.with_max_range(Units::new(5.)),
 			)
@@ -296,7 +294,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(
-				GroundTargetedAoeContact::with_caster(caster)
+				GroundTarget::with_caster(caster)
 					.with_target_ray(ray)
 					.with_max_range(Units::new(5.)),
 			)
@@ -323,7 +321,7 @@ mod tests {
 		};
 		let entity = app
 			.world_mut()
-			.spawn(GroundTargetedAoeContact::with_caster(caster).with_target_ray(ray))
+			.spawn(GroundTarget::with_caster(caster).with_target_ray(ray))
 			.id();
 
 		app.update();
@@ -345,7 +343,7 @@ mod tests {
 		};
 		let entity = app
 			.world_mut()
-			.spawn(GroundTargetedAoeContact::with_caster(caster).with_target_ray(ray))
+			.spawn(GroundTarget::with_caster(caster).with_target_ray(ray))
 			.id();
 
 		app.update();

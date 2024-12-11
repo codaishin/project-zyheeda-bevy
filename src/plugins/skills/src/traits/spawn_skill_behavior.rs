@@ -3,8 +3,8 @@ use crate::behaviors::{
 	spawn_on::SpawnOn,
 	SkillCaster,
 	SkillSpawner,
-	Target,
 };
+use behaviors::components::skill_behavior::SkillTarget;
 use common::traits::{
 	handles_effect::HandlesAllEffects,
 	handles_effect_shading::HandlesEffectShadingForAll,
@@ -18,7 +18,7 @@ pub(crate) trait SpawnSkillBehavior<TCommands> {
 		commands: &mut TCommands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
-		target: &Target,
+		target: &SkillTarget,
 	) -> OnSkillStop
 	where
 		TLifetimes: HandlesLifetime + 'static,

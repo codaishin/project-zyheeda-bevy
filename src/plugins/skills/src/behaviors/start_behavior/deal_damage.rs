@@ -1,4 +1,4 @@
-use crate::behaviors::{SkillCaster, SkillSpawner, Target};
+use crate::behaviors::{SkillCaster, SkillSpawner, SkillTarget};
 use bevy::ecs::system::EntityCommands;
 use common::{effects::deal_damage::DealDamage, traits::handles_effect::HandlesEffect};
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ impl StartDealingDamage {
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
 		_: &SkillSpawner,
-		_: &Target,
+		_: &SkillTarget,
 	) where
 		TEffects: HandlesEffect<DealDamage>,
 	{
@@ -56,7 +56,7 @@ mod tests {
 				&mut entity,
 				&SkillCaster::from(Entity::from_raw(42)),
 				&SkillSpawner::from(Entity::from_raw(43)),
-				&Target::default(),
+				&SkillTarget::default(),
 			);
 			entity.id()
 		}

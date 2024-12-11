@@ -2,7 +2,7 @@ pub mod deal_damage;
 pub mod force_shield;
 pub mod gravity;
 
-use super::{SkillCaster, SkillSpawner, Target};
+use super::{SkillCaster, SkillSpawner, SkillTarget};
 use bevy::ecs::system::EntityCommands;
 use common::traits::{
 	handles_effect::HandlesAllEffects,
@@ -13,7 +13,7 @@ use force_shield::StartForceShield;
 use gravity::StartGravity;
 
 #[cfg(test)]
-pub type StartBehaviorFn = fn(&mut EntityCommands, &SkillCaster, &SkillSpawner, &Target);
+pub type StartBehaviorFn = fn(&mut EntityCommands, &SkillCaster, &SkillSpawner, &SkillTarget);
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum SkillBehavior {
@@ -30,7 +30,7 @@ impl SkillBehavior {
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
 		spawn: &SkillSpawner,
-		target: &Target,
+		target: &SkillTarget,
 	) where
 		TEffects: HandlesAllEffects,
 		TShaders: HandlesEffectShadingForAll,

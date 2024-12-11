@@ -1,8 +1,5 @@
-use crate::{
-	behaviors::{SkillCaster, Target},
-	components::skill_spawners::SkillSpawners,
-	traits::Execute,
-};
+use crate::{behaviors::SkillCaster, components::skill_spawners::SkillSpawners, traits::Execute};
+use behaviors::components::skill_behavior::SkillTarget;
 use bevy::prelude::*;
 use common::{
 	effects::{deal_damage::DealDamage, force_shield::ForceShield},
@@ -66,10 +63,10 @@ fn get_target(
 	cam_ray: &Res<CamRay>,
 	mouse_hover: &Res<MouseHover>,
 	transforms: &Query<&GlobalTransform>,
-) -> Option<Target> {
+) -> Option<SkillTarget> {
 	let get_transform = |entity| transforms.get(entity).ok().cloned();
 
-	Some(Target {
+	Some(SkillTarget {
 		ray: cam_ray.0?,
 		collision_info: mouse_hover
 			.0
@@ -143,7 +140,7 @@ mod tests {
 			commands: &mut Commands,
 			caster: &SkillCaster,
 			spawners: &SkillSpawners,
-			target: &Target,
+			target: &SkillTarget,
 		) -> Result<(), Self::TError> {
 			self.mock.execute(commands, caster, spawners, target)
 		}
@@ -164,12 +161,12 @@ mod tests {
 				commands: &mut Commands<'_w, '_s>,
 				caster: &SkillCaster,
 				spawners: &SkillSpawners,
-				target: &Target,
+				target: &SkillTarget,
 			) -> Result<(), _Error>;
 		}
 	}
 
-	fn set_target(app: &mut App) -> Target {
+	fn set_target(app: &mut App) -> SkillTarget {
 		let cam_ray = Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(4., 5., 6.));
 		app.world_mut().resource_mut::<CamRay>().0 = Some(cam_ray);
 
@@ -183,7 +180,7 @@ mod tests {
 			root: Some(root),
 		});
 
-		Target {
+		SkillTarget {
 			ray: cam_ray,
 			collision_info: Some(ColliderInfo {
 				collider: Outdated {
@@ -217,7 +214,7 @@ mod tests {
 	struct _ExecutionArgs {
 		caster: SkillCaster,
 		spawners: SkillSpawners,
-		target: Target,
+		target: SkillTarget,
 	}
 
 	fn find_execution_args(app: &App) -> Option<&_ExecutionArgs> {

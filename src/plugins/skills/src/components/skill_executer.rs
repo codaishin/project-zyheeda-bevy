@@ -1,16 +1,11 @@
 use super::skill_spawners::SkillSpawners;
 use crate::{
-	behaviors::{
-		build_skill_shape::OnSkillStop,
-		spawn_on::SpawnOn,
-		SkillCaster,
-		SkillSpawner,
-		Target,
-	},
+	behaviors::{build_skill_shape::OnSkillStop, spawn_on::SpawnOn, SkillCaster, SkillSpawner},
 	skills::RunSkillBehavior,
 	slot_key::SlotKey,
 	traits::{spawn_skill_behavior::SpawnSkillBehavior, Execute, Flush, Schedule},
 };
+use behaviors::components::skill_behavior::SkillTarget;
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
@@ -86,7 +81,7 @@ where
 		commands: &mut TCommands,
 		caster: &SkillCaster,
 		spawners: &SkillSpawners,
-		target: &Target,
+		target: &SkillTarget,
 	) -> Result<(), Self::TError> {
 		match self {
 			SkillExecuter::Start { shape, slot_key } => {
@@ -209,7 +204,7 @@ mod tests {
 			_: &mut _Commands,
 			_: &SkillCaster,
 			_: &SkillSpawner,
-			_: &Target,
+			_: &SkillTarget,
 		) -> OnSkillStop
 		where
 			TLifetimes: HandlesLifetime + 'static,
@@ -229,7 +224,7 @@ mod tests {
 				commands: &mut Mock_Commands,
 				caster: &SkillCaster,
 				spawner: &SkillSpawner,
-				target: &Target,
+				target: &SkillTarget,
 			) -> OnSkillStop
 			where
 				TLifetimes: HandlesLifetime + 'static,
@@ -248,8 +243,8 @@ mod tests {
 		TError = NoSkillSpawner,
 	>;
 
-	fn get_target() -> Target {
-		Target {
+	fn get_target() -> SkillTarget {
+		SkillTarget {
 			ray: Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(4., 5., 6.)),
 			collision_info: Some(ColliderInfo {
 				collider: Outdated {

@@ -1,14 +1,11 @@
 use std::time::Duration;
 
 use crate::{
-	behaviors::{SkillCaster, SkillSpawner, Target},
+	behaviors::{SkillCaster, SkillSpawner, SkillTarget},
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
-use behaviors::components::ground_targeted_aoe::{
-	GroundTargetedAoeContact,
-	GroundTargetedAoeProjection,
-};
+use behaviors::components::ground_target::{GroundTarget, GroundTargetedAoeProjection};
 use bevy::prelude::*;
 use common::{dto::duration::DurationDto, tools::Units};
 use serde::{Deserialize, Serialize};
@@ -35,22 +32,22 @@ impl BuildContact for SpawnGroundTargetedAoe {
 		&self,
 		caster: &SkillCaster,
 		_: &SkillSpawner,
-		target: &Target,
+		target: &SkillTarget,
 	) -> impl Bundle {
 		let SkillCaster(caster) = *caster;
-		let Target { ray, .. } = target;
+		let SkillTarget { ray, .. } = target;
 
-		GroundTargetedAoeContact {
+		GroundTarget {
 			caster,
 			target_ray: *ray,
-			max_range: self.max_range,
-			radius: self.radius,
+			max_cast_range: self.max_range,
+			// radius: self.radius,
 		}
 	}
 }
 
 impl BuildProjection for SpawnGroundTargetedAoe {
-	fn build_projection(&self, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> impl Bundle {
+	fn build_projection(&self, _: &SkillCaster, _: &SkillSpawner, _: &SkillTarget) -> impl Bundle {
 		GroundTargetedAoeProjection {
 			radius: self.radius,
 		}

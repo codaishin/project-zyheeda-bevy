@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContext;
 use common::{
 	self,
-	blocker::BlockerInsertCommand,
+	blocker::{Blocker, BlockerInsertCommand},
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	labels::Labels,
 	traits::{
@@ -130,15 +130,11 @@ impl AddInteraction for App {
 }
 
 impl<TLifeCyclePlugin> HandlesInteractions for InteractionsPlugin<TLifeCyclePlugin> {
-	fn is_fragile_when_colliding_with<const N: usize>(
-		blockers: [common::blocker::Blocker; N],
-	) -> impl Bundle {
+	fn is_fragile_when_colliding_with(blockers: &[Blocker]) -> impl Bundle {
 		Is::<Fragile>::interacting_with(blockers)
 	}
 
-	fn is_ray_interrupted_by<const N: usize>(
-		blockers: [common::blocker::Blocker; N],
-	) -> impl Bundle {
+	fn is_ray_interrupted_by(blockers: &[Blocker]) -> impl Bundle {
 		Is::<InterruptableRay>::interacting_with(blockers)
 	}
 

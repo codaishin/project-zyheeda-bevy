@@ -21,7 +21,7 @@ use common::{
 };
 use components::{
 	cam_orbit::CamOrbit,
-	ground_targeted_aoe::{GroundTargetedAoeContact, GroundTargetedAoeProjection},
+	ground_target::{GroundTarget, GroundTargetedAoeProjection},
 	projectile::{ProjectileContact, ProjectileProjection},
 	shield::{ShieldContact, ShieldProjection},
 	void_beam::VoidBeam,
@@ -101,7 +101,7 @@ where
 		TPrefabsPlugin::with_dependency::<TShadersPlugin>()
 			.register_prefab::<ShieldContact>(app)
 			.register_prefab::<ShieldProjection>(app)
-			.register_prefab::<GroundTargetedAoeContact>(app);
+			.register_prefab::<GroundTarget>(app);
 
 		app.add_event::<MoveInputEvent>()
 			.add_systems(
@@ -151,7 +151,7 @@ where
 				Update,
 				(ProjectileContact::set_position, ProjectileContact::movement).chain(),
 			)
-			.add_systems(Update, GroundTargetedAoeContact::set_position)
+			.add_systems(Update, GroundTarget::set_position)
 			.add_systems(Update, position_force_shield);
 	}
 }

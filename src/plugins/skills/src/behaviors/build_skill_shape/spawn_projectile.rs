@@ -1,12 +1,11 @@
 use crate::{
-	behaviors::{SkillCaster, SkillSpawner, Target},
+	behaviors::{SkillCaster, SkillSpawner},
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
-use behaviors::components::projectile::{
-	sub_type::SubType,
-	ProjectileContact,
-	ProjectileProjection,
+use behaviors::components::{
+	projectile::{sub_type::SubType, ProjectileContact, ProjectileProjection},
+	skill_behavior::SkillTarget,
 };
 use bevy::prelude::{Bundle, SpatialBundle};
 use serde::{Deserialize, Serialize};
@@ -21,7 +20,7 @@ impl BuildContact for SpawnProjectile {
 		&self,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
-		_: &Target,
+		_: &SkillTarget,
 	) -> impl Bundle {
 		let SkillCaster(caster) = *caster;
 		let SkillSpawner(spawner) = *spawner;
@@ -39,7 +38,7 @@ impl BuildContact for SpawnProjectile {
 }
 
 impl BuildProjection for SpawnProjectile {
-	fn build_projection(&self, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> impl Bundle {
+	fn build_projection(&self, _: &SkillCaster, _: &SkillSpawner, _: &SkillTarget) -> impl Bundle {
 		ProjectileProjection {
 			sub_type: self.sub_type,
 		}

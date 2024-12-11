@@ -1,8 +1,11 @@
 pub mod cam_orbit;
-pub mod ground_targeted_aoe;
+pub mod ground_target;
 pub mod projectile;
 pub mod shield;
+pub mod skill_behavior;
 pub mod void_beam;
+
+pub(crate) mod move_with;
 
 use crate::traits::{RemoveComponent, SpawnAttack};
 use bevy::{ecs::system::EntityCommands, prelude::*};
@@ -70,7 +73,7 @@ pub enum MovementMode {
 	Slow,
 }
 
-#[derive(Component, Clone, Copy)]
+#[derive(Component, Debug, PartialEq, Clone, Copy)]
 pub enum MovementConfig {
 	Constant {
 		mode: MovementMode,

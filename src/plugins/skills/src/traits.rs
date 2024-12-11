@@ -10,12 +10,13 @@ pub(crate) mod state;
 pub(crate) mod swap_commands;
 
 use crate::{
-	behaviors::{SkillCaster, Target},
+	behaviors::SkillCaster,
 	components::skill_spawners::SkillSpawners,
 	item::item_type::SkillItemType,
 	skills::{Animate, RunSkillBehavior, Skill, SkillAnimation},
 	slot_key::SlotKey,
 };
+use behaviors::components::skill_behavior::SkillTarget;
 use common::traits::{
 	animation::Animation,
 	load_asset::Path,
@@ -144,7 +145,7 @@ pub(crate) trait Execute<TCommands, TLifetimes, TEffects, TShaders> {
 		commands: &mut TCommands,
 		caster: &SkillCaster,
 		spawners: &SkillSpawners,
-		target: &Target,
+		target: &SkillTarget,
 	) -> Result<(), Self::TError>;
 }
 

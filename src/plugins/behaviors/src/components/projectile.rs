@@ -61,7 +61,7 @@ where
 				RigidBody::Dynamic,
 				GravityScale(0.),
 				Ccd::enabled(),
-				TInteractions::is_fragile_when_colliding_with([Blocker::Physical, Blocker::Force]),
+				TInteractions::is_fragile_when_colliding_with(&[Blocker::Physical, Blocker::Force]),
 				MovementConfig::Constant {
 					mode: MovementMode::Fast,
 					speed: UnitsPerSecond::new(15.),

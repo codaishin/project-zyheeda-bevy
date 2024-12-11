@@ -27,5 +27,5 @@ pub(crate) trait Flush {
 }
 
 pub(crate) trait Blockable {
-	fn blockable<const N: usize>(blockers: [Blocker; N]) -> Self;
+	fn blockable(blockers: &[Blocker]) -> Self;
 }
