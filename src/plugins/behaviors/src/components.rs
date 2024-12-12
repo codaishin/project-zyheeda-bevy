@@ -6,6 +6,7 @@ pub mod skill_behavior;
 pub mod void_beam;
 
 pub(crate) mod set_position_and_rotation;
+pub(crate) mod when_traveled_insert;
 
 use crate::traits::{RemoveComponent, SpawnAttack};
 use bevy::{ecs::system::EntityCommands, prelude::*};

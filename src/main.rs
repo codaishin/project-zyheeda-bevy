@@ -63,6 +63,7 @@ fn prepare_game(app: &mut App) {
 		&animations_plugin,
 		&prefabs_plugin,
 		&shaders_plugin,
+		&life_cycles_plugin,
 		&interactions_plugin,
 	);
 	let rendering_plugin = RenderingPlugin::depends_on(&loading_plugin);

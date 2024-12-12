@@ -2,6 +2,7 @@ use super::{Integrity, Motion, Shape};
 use crate::components::{
 	ground_target::GroundTarget,
 	set_position_and_rotation::SetPositionAndRotation,
+	when_traveled_insert::WhenTraveled,
 	Always,
 	MovementConfig,
 	MovementMode,
@@ -17,12 +18,14 @@ use bevy_rapier3d::prelude::{
 	GravityScale,
 	RigidBody,
 	Sensor,
+	Velocity,
 };
 use common::{
 	bundles::{AssetModelBundle, ColliderTransformBundle},
 	components::{AssetModel, ColliderRoot},
 	errors::{Error, Level},
 	traits::{
+		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
 		prefab::{AfterInstantiation, GetOrCreateAssets, Prefab},
 	},
@@ -39,12 +42,13 @@ pub struct SkillContact {
 impl SkillContact {
 	const SPHERE_MODEL: &str = "models/sphere.glb";
 
-	fn prefab<TInteractions>(&self, entity: &mut EntityCommands) -> Result<(), Error>
+	fn prefab<TInteractions, TLifeCycles>(&self, entity: &mut EntityCommands) -> Result<(), Error>
 	where
 		TInteractions: HandlesInteractions,
+		TLifeCycles: HandlesDestruction,
 	{
 		self.insert_shape_components(entity)?;
-		self.insert_motion_components(entity);
+		self.insert_motion_components::<TLifeCycles>(entity);
 		self.insert_integrity_components::<TInteractions>(entity);
 
 		Ok(())
@@ -82,7 +86,10 @@ impl SkillContact {
 		Ok(())
 	}
 
-	fn insert_motion_components(&self, entity: &mut EntityCommands) {
+	fn insert_motion_components<TLifeCycles>(&self, entity: &mut EntityCommands)
+	where
+		TLifeCycles: HandlesDestruction,
+	{
 		match self.motion {
 			Motion::HeldBy { spawner } => {
 				entity.try_insert((
@@ -108,6 +115,7 @@ impl SkillContact {
 				caster,
 				spawner,
 				speed,
+				max_range,
 			} => {
 				entity.try_insert((
 					RigidBody::Dynamic,
@@ -117,7 +125,9 @@ impl SkillContact {
 						mode: MovementMode::Fast,
 						speed,
 					},
-					SetPositionAndRotation::<Once>::to(spawner),
+					WhenTraveled::via::<Velocity>()
+						.distance(max_range)
+						.insert::<TLifeCycles::TDestroy>(),
 				));
 			}
 		}
@@ -167,9 +177,10 @@ impl SkillContact {
 	}
 }
 
-impl<TInteractions> Prefab<TInteractions> for SkillContact
+impl<TInteractions, TLifeCycles> Prefab<(TInteractions, TLifeCycles)> for SkillContact
 where
 	TInteractions: HandlesInteractions,
+	TLifeCycles: HandlesDestruction,
 {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
@@ -179,12 +190,14 @@ where
 	where
 		TAfterInstantiation: AfterInstantiation,
 	{
-		self.prefab::<TInteractions>(entity)
+		self.prefab::<TInteractions, TLifeCycles>(entity)
 	}
 }
 
 #[cfg(test)]
 mod tests {
+	use crate::components::when_traveled_insert::InsertAfterDistanceTraveled;
+
 	use super::*;
 	use bevy::ecs::system::RunSystemOnce;
 	use common::{
@@ -211,6 +224,15 @@ mod tests {
 		{
 		}
 	}
+
+	struct _LifeCycles;
+
+	impl HandlesDestruction for _LifeCycles {
+		type TDestroy = _Destroy;
+	}
+
+	#[derive(Component, Debug, PartialEq, Default)]
+	struct _Destroy;
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _IsFragile(Vec<Blocker>);
@@ -247,7 +269,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			contact.prefab::<_Interactions>(entity)
+			contact.prefab::<_Interactions, _LifeCycles>(entity)
 		}));
 
 		assert_bundle!(
@@ -276,7 +298,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			contact.prefab::<_Interactions>(entity)
+			contact.prefab::<_Interactions, _LifeCycles>(entity)
 		}));
 
 		assert_bundle!(
@@ -303,7 +325,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			contact.prefab::<_Interactions>(entity)
+			contact.prefab::<_Interactions, _LifeCycles>(entity)
 		}));
 
 		assert_eq!(
@@ -314,6 +336,7 @@ mod tests {
 				None,
 				None,
 				Some(&SetPositionAndRotation::<Always>::to(Entity::from_raw(11))),
+				None,
 				None,
 			),
 			(
@@ -328,6 +351,9 @@ mod tests {
 				app.world()
 					.entity(entity)
 					.get::<SetPositionAndRotation<Once>>(),
+				app.world()
+					.entity(entity)
+					.get::<InsertAfterDistanceTraveled<_Destroy, Velocity>>(),
 			)
 		);
 	}
@@ -351,7 +377,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			contact.prefab::<_Interactions>(entity)
+			contact.prefab::<_Interactions, _LifeCycles>(entity)
 		}));
 
 		assert_eq!(
@@ -370,6 +396,7 @@ mod tests {
 				}),
 				None,
 				None,
+				None,
 			),
 			(
 				app.world().entity(entity).get::<RigidBody>(),
@@ -383,6 +410,9 @@ mod tests {
 				app.world()
 					.entity(entity)
 					.get::<SetPositionAndRotation<Once>>(),
+				app.world()
+					.entity(entity)
+					.get::<InsertAfterDistanceTraveled<_Destroy, Velocity>>(),
 			)
 		);
 	}
@@ -399,11 +429,12 @@ mod tests {
 				caster: Entity::from_raw(55),
 				spawner: Entity::from_raw(66),
 				speed: UnitsPerSecond::new(11.),
+				max_range: Units::new(1111.),
 			},
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			contact.prefab::<_Interactions>(entity)
+			contact.prefab::<_Interactions, _LifeCycles>(entity)
 		}));
 
 		assert_eq!(
@@ -418,6 +449,11 @@ mod tests {
 				None,
 				None,
 				Some(&SetPositionAndRotation::<Once>::to(Entity::from_raw(66))),
+				Some(
+					&WhenTraveled::via::<Velocity>()
+						.distance(Units::new(1111.))
+						.insert::<_Destroy>()
+				),
 			),
 			(
 				app.world().entity(entity).get::<RigidBody>(),
@@ -431,6 +467,9 @@ mod tests {
 				app.world()
 					.entity(entity)
 					.get::<SetPositionAndRotation<Once>>(),
+				app.world()
+					.entity(entity)
+					.get::<InsertAfterDistanceTraveled<_Destroy, Velocity>>(),
 			)
 		);
 	}
@@ -451,7 +490,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			contact.prefab::<_Interactions>(entity)
+			contact.prefab::<_Interactions, _LifeCycles>(entity)
 		}));
 
 		assert_eq!(
@@ -482,7 +521,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			contact.prefab::<_Interactions>(entity)
+			contact.prefab::<_Interactions, _LifeCycles>(entity)
 		}));
 
 		let child = children_of(&app, entity)
@@ -512,7 +551,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			contact.prefab::<_Interactions>(entity)
+			contact.prefab::<_Interactions, _LifeCycles>(entity)
 		}));
 
 		let child = children_of(&app, entity)
@@ -555,7 +594,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			contact.prefab::<_Interactions>(entity)
+			contact.prefab::<_Interactions, _LifeCycles>(entity)
 		}));
 
 		let child = children_of(&app, entity)
@@ -578,7 +617,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			contact.prefab::<_Interactions>(entity)
+			contact.prefab::<_Interactions, _LifeCycles>(entity)
 		}));
 
 		let child = children_of(&app, entity)
@@ -603,7 +642,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			contact.prefab::<_Interactions>(entity)
+			contact.prefab::<_Interactions, _LifeCycles>(entity)
 		}));
 
 		let child = children_of(&app, entity)
@@ -635,7 +674,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			contact.prefab::<_Interactions>(entity)
+			contact.prefab::<_Interactions, _LifeCycles>(entity)
 		}));
 
 		let child = children_of(&app, entity)
@@ -673,7 +712,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			contact.prefab::<_Interactions>(entity)
+			contact.prefab::<_Interactions, _LifeCycles>(entity)
 		}));
 
 		let child = children_of(&app, entity)
@@ -698,7 +737,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			contact.prefab::<_Interactions>(entity)
+			contact.prefab::<_Interactions, _LifeCycles>(entity)
 		}));
 
 		let child = children_of(&app, entity)

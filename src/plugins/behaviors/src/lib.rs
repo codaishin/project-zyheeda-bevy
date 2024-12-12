@@ -7,12 +7,14 @@ mod systems;
 
 use animation::MovementAnimations;
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::Velocity;
 use common::{
 	effects::deal_damage::DealDamage,
 	resources::CamRay,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	traits::{
 		animation::HasAnimationsDispatch,
+		handles_destruction::HandlesDestruction,
 		handles_effect::HandlesEffect,
 		handles_effect_shading::HandlesEffectShading,
 		handles_interactions::HandlesInteractions,
@@ -26,6 +28,7 @@ use components::{
 	set_position_and_rotation::SetPositionAndRotation,
 	shield::{ShieldContact, ShieldProjection},
 	void_beam::VoidBeam,
+	when_traveled_insert::InsertAfterDistanceTraveled,
 	Always,
 	Movement,
 	MovementConfig,
@@ -52,46 +55,37 @@ use systems::{
 	update_cool_downs::update_cool_downs,
 };
 
-pub struct BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>(
-	PhantomData<(
-		TAnimationsPlugin,
-		TPrefabsPlugin,
-		TShadersPlugin,
-		TInteractionsPlugin,
-	)>,
+pub struct BehaviorsPlugin<TAnimations, TPrefabs, TShaders, TLifeCycles, TInteractions>(
+	PhantomData<(TAnimations, TPrefabs, TShaders, TLifeCycles, TInteractions)>,
 );
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>
-	BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>
-where
-	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
-	TPrefabsPlugin: Plugin + RegisterPrefab,
-	TShadersPlugin: Plugin + HandlesEffectShading,
-	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
+impl<TAnimations, TPrefabs, TShaders, TLifeCycles, TInteractions>
+	BehaviorsPlugin<TAnimations, TPrefabs, TShaders, TLifeCycles, TInteractions>
 {
 	pub fn depends_on(
-		_: &TAnimationsPlugin,
-		_: &TPrefabsPlugin,
-		_: &TShadersPlugin,
-		_: &TInteractionsPlugin,
+		_: &TAnimations,
+		_: &TPrefabs,
+		_: &TShaders,
+		_: &TLifeCycles,
+		_: &TInteractions,
 	) -> Self {
-		Self(
-			PhantomData::<(
-				TAnimationsPlugin,
-				TPrefabsPlugin,
-				TShadersPlugin,
-				TInteractionsPlugin,
-			)>,
-		)
+		Self(PhantomData::<(TAnimations, TPrefabs, TShaders, TLifeCycles, TInteractions)>)
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin> Plugin
-	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>
+impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TLifeCycles, TInteractionsPlugin> Plugin
+	for BehaviorsPlugin<
+		TAnimationsPlugin,
+		TPrefabsPlugin,
+		TShadersPlugin,
+		TLifeCycles,
+		TInteractionsPlugin,
+	>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
 	TShadersPlugin: Plugin + HandlesEffectShading,
+	TLifeCycles: Plugin + HandlesDestruction,
 	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
 {
 	fn build(&self, app: &mut App) {
@@ -149,6 +143,10 @@ where
 				),
 			)
 			.add_systems(Update, (chase::<MovementConfig>, attack).chain())
+			.add_systems(
+				Update,
+				InsertAfterDistanceTraveled::<TLifeCycles::TDestroy, Velocity>::system,
+			)
 			.add_systems(Update, ProjectileContact::movement)
 			.add_systems(Update, GroundTarget::set_position)
 			.add_systems(Update, SetPositionAndRotation::<Always>::system)

@@ -41,6 +41,7 @@ pub enum Motion {
 		caster: Entity,
 		spawner: Entity,
 		speed: UnitsPerSecond,
+		max_range: Units,
 	},
 }
 
