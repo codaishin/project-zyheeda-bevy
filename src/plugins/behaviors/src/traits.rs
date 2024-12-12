@@ -28,14 +28,6 @@ impl From<bool> for IsDone {
 	}
 }
 
-pub(crate) trait Caster {
-	fn caster(&self) -> Entity;
-}
-
-pub(crate) trait ProjectileBehavior: Caster {
-	fn range(&self) -> f32;
-}
-
 pub(crate) trait MovementData {
 	fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode);
 }

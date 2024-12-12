@@ -2,10 +2,9 @@ use super::{Integrity, Motion, Shape};
 use crate::components::{
 	ground_target::GroundTarget,
 	set_position_and_rotation::SetPositionAndRotation,
+	set_to_move_forward::SetVelocityForward,
 	when_traveled_insert::WhenTraveled,
 	Always,
-	MovementConfig,
-	MovementMode,
 	Once,
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
@@ -121,8 +120,9 @@ impl SkillContact {
 					RigidBody::Dynamic,
 					GravityScale(0.),
 					Ccd::enabled(),
-					MovementConfig::Constant {
-						mode: MovementMode::Fast,
+					SetPositionAndRotation::<Once>::to(spawner),
+					SetVelocityForward {
+						rotation: caster,
 						speed,
 					},
 					WhenTraveled::via::<Velocity>()
@@ -162,7 +162,6 @@ impl SkillContact {
 			transform,
 			collider,
 			active_events: ActiveEvents::COLLISION_EVENTS,
-			active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
 			..default()
 		})
 	}
@@ -171,7 +170,6 @@ impl SkillContact {
 		ColliderTransformBundle {
 			collider: collider.clone(),
 			active_events: ActiveEvents::COLLISION_EVENTS,
-			active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
 			..default()
 		}
 	}
@@ -334,8 +332,8 @@ mod tests {
 				None,
 				None,
 				None,
-				None,
 				Some(&SetPositionAndRotation::<Always>::to(Entity::from_raw(11))),
+				None,
 				None,
 				None,
 			),
@@ -343,7 +341,6 @@ mod tests {
 				app.world().entity(entity).get::<RigidBody>(),
 				app.world().entity(entity).get::<GravityScale>(),
 				app.world().entity(entity).get::<Ccd>(),
-				app.world().entity(entity).get::<MovementConfig>(),
 				app.world().entity(entity).get::<GroundTarget>(),
 				app.world()
 					.entity(entity)
@@ -351,6 +348,7 @@ mod tests {
 				app.world()
 					.entity(entity)
 					.get::<SetPositionAndRotation<Once>>(),
+				app.world().entity(entity).get::<SetVelocityForward>(),
 				app.world()
 					.entity(entity)
 					.get::<InsertAfterDistanceTraveled<_Destroy, Velocity>>(),
@@ -385,7 +383,6 @@ mod tests {
 				Some(&RigidBody::Fixed),
 				None,
 				None,
-				None,
 				Some(&GroundTarget {
 					caster: Entity::from_raw(42),
 					max_cast_range: Units::new(42.),
@@ -397,12 +394,12 @@ mod tests {
 				None,
 				None,
 				None,
+				None,
 			),
 			(
 				app.world().entity(entity).get::<RigidBody>(),
 				app.world().entity(entity).get::<GravityScale>(),
 				app.world().entity(entity).get::<Ccd>(),
-				app.world().entity(entity).get::<MovementConfig>(),
 				app.world().entity(entity).get::<GroundTarget>(),
 				app.world()
 					.entity(entity)
@@ -410,6 +407,7 @@ mod tests {
 				app.world()
 					.entity(entity)
 					.get::<SetPositionAndRotation<Once>>(),
+				app.world().entity(entity).get::<SetVelocityForward>(),
 				app.world()
 					.entity(entity)
 					.get::<InsertAfterDistanceTraveled<_Destroy, Velocity>>(),
@@ -442,13 +440,13 @@ mod tests {
 				Some(&RigidBody::Dynamic),
 				Some(&GravityScale(0.)),
 				Some(&Ccd::enabled()),
-				Some(&MovementConfig::Constant {
-					mode: MovementMode::Fast,
-					speed: UnitsPerSecond::new(11.),
-				}),
 				None,
 				None,
 				Some(&SetPositionAndRotation::<Once>::to(Entity::from_raw(66))),
+				Some(&SetVelocityForward {
+					rotation: Entity::from_raw(55),
+					speed: UnitsPerSecond::new(11.),
+				}),
 				Some(
 					&WhenTraveled::via::<Velocity>()
 						.distance(Units::new(1111.))
@@ -459,7 +457,6 @@ mod tests {
 				app.world().entity(entity).get::<RigidBody>(),
 				app.world().entity(entity).get::<GravityScale>(),
 				app.world().entity(entity).get::<Ccd>(),
-				app.world().entity(entity).get::<MovementConfig>(),
 				app.world().entity(entity).get::<GroundTarget>(),
 				app.world()
 					.entity(entity)
@@ -467,6 +464,7 @@ mod tests {
 				app.world()
 					.entity(entity)
 					.get::<SetPositionAndRotation<Once>>(),
+				app.world().entity(entity).get::<SetVelocityForward>(),
 				app.world()
 					.entity(entity)
 					.get::<InsertAfterDistanceTraveled<_Destroy, Velocity>>(),

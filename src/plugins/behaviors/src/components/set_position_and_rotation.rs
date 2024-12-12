@@ -4,20 +4,20 @@ use bevy::prelude::*;
 use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
-pub(crate) struct SetPositionAndRotation<T> {
+pub(crate) struct SetPositionAndRotation<TFilter> {
 	pub(crate) entity: Entity,
-	phantom_data: PhantomData<T>,
+	phantom_data: PhantomData<TFilter>,
 }
 
 impl HasFilter for SetPositionAndRotation<Once> {
-	type TFilter = Added<SetPositionAndRotation<Once>>;
+	type TFilter = Added<Self>;
 }
 
 impl HasFilter for SetPositionAndRotation<Always> {
 	type TFilter = ();
 }
 
-impl<T> SetPositionAndRotation<T>
+impl<TFilter> SetPositionAndRotation<TFilter>
 where
 	Self: HasFilter + Send + Sync + 'static,
 {

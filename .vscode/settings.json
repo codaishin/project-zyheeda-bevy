@@ -27,6 +27,7 @@
 		"*.item": "json",
 	},
 	"cSpell.words": [
+		"angvel",
 		"automock",
 		"beamer",
 		"beamers",
@@ -44,6 +45,7 @@
 		"Icosphere",
 		"ingame",
 		"interruptable",
+		"linvel",
 		"Loadout",
 		"Mapface",
 		"metarig",

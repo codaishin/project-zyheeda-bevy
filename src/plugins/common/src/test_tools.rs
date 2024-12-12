@@ -22,7 +22,7 @@ pub mod utils {
 			ZIndex,
 		},
 	};
-	use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider};
+	use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider, Velocity};
 	use std::{
 		any::{type_name, Any, TypeId},
 		marker::PhantomData,
@@ -51,6 +51,13 @@ pub mod utils {
 			self.translation.approx_equal(&other.translation, tolerance)
 				&& self.scale.approx_equal(&other.scale, tolerance)
 				&& self.rotation.approx_equal(&other.rotation, tolerance)
+		}
+	}
+
+	impl ApproxEqual<f32> for Velocity {
+		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+			self.linvel.approx_equal(&other.linvel, tolerance)
+				&& self.angvel.approx_equal(&other.angvel, tolerance)
 		}
 	}
 

@@ -26,6 +26,7 @@ use components::{
 	ground_target::{GroundTarget, GroundTargetedAoeProjection},
 	projectile::{ProjectileContact, ProjectileProjection},
 	set_position_and_rotation::SetPositionAndRotation,
+	set_to_move_forward::SetVelocityForward,
 	shield::{ShieldContact, ShieldProjection},
 	void_beam::VoidBeam,
 	when_traveled_insert::InsertAfterDistanceTraveled,
@@ -51,7 +52,6 @@ use systems::{
 		execute_move_velocity_based::execute_move_velocity_based,
 		trigger_event::trigger_move_input_event,
 	},
-	projectile::movement::ProjectileMovement,
 	update_cool_downs::update_cool_downs,
 };
 
@@ -143,12 +143,12 @@ where
 				),
 			)
 			.add_systems(Update, (chase::<MovementConfig>, attack).chain())
+			.add_systems(Update, GroundTarget::set_position)
 			.add_systems(
 				Update,
 				InsertAfterDistanceTraveled::<TLifeCycles::TDestroy, Velocity>::system,
 			)
-			.add_systems(Update, ProjectileContact::movement)
-			.add_systems(Update, GroundTarget::set_position)
+			.add_systems(Update, SetVelocityForward::system)
 			.add_systems(Update, SetPositionAndRotation::<Always>::system)
 			.add_systems(Update, SetPositionAndRotation::<Once>::system);
 	}

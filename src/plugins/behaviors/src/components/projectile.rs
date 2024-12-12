@@ -1,7 +1,6 @@
 pub mod sub_type;
 
 use super::{MovementConfig, MovementMode};
-use crate::traits::{Caster, ProjectileBehavior};
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::{Ccd, GravityScale, RigidBody};
 use common::{
@@ -27,18 +26,6 @@ pub struct ProjectileContact {
 #[derive(Component, Debug, PartialEq)]
 pub struct ProjectileProjection {
 	pub sub_type: SubType,
-}
-
-impl Caster for ProjectileContact {
-	fn caster(&self) -> Entity {
-		self.caster
-	}
-}
-
-impl ProjectileBehavior for ProjectileContact {
-	fn range(&self) -> f32 {
-		self.range
-	}
 }
 
 impl<TInteractions> Prefab<TInteractions> for ProjectileContact
