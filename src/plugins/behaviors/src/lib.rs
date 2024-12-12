@@ -22,6 +22,7 @@ use common::{
 use components::{
 	cam_orbit::CamOrbit,
 	ground_target::{GroundTarget, GroundTargetedAoeProjection},
+	move_with::MoveWith,
 	projectile::{ProjectileContact, ProjectileProjection},
 	shield::{ShieldContact, ShieldProjection},
 	void_beam::VoidBeam,
@@ -46,7 +47,6 @@ use systems::{
 		trigger_event::trigger_move_input_event,
 	},
 	projectile::{movement::ProjectileMovement, set_position::ProjectileSetPosition},
-	shield::position_force_shield,
 	update_cool_downs::update_cool_downs,
 };
 
@@ -152,6 +152,6 @@ where
 				(ProjectileContact::set_position, ProjectileContact::movement).chain(),
 			)
 			.add_systems(Update, GroundTarget::set_position)
-			.add_systems(Update, position_force_shield);
+			.add_systems(Update, MoveWith::set_position);
 	}
 }
