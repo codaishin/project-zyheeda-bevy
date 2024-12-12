@@ -1,7 +1,7 @@
 pub mod sub_type;
 
 use super::{MovementConfig, MovementMode};
-use crate::traits::{Caster, ProjectileBehavior, Spawner};
+use crate::traits::{Caster, ProjectileBehavior};
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::{Ccd, GravityScale, RigidBody};
 use common::{
@@ -32,12 +32,6 @@ pub struct ProjectileProjection {
 impl Caster for ProjectileContact {
 	fn caster(&self) -> Entity {
 		self.caster
-	}
-}
-
-impl Spawner for ProjectileContact {
-	fn spawner(&self) -> Entity {
-		self.spawner
 	}
 }
 

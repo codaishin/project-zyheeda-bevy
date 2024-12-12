@@ -38,6 +38,8 @@ pub enum Motion {
 		target_ray: Ray3d,
 	},
 	Projectile {
+		caster: Entity,
+		spawner: Entity,
 		speed: UnitsPerSecond,
 	},
 }

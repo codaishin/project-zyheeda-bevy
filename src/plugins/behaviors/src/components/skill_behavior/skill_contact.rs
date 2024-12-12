@@ -1,9 +1,11 @@
 use super::{Integrity, Motion, Shape};
 use crate::components::{
 	ground_target::GroundTarget,
-	move_with::MoveWith,
+	set_position_and_rotation::SetPositionAndRotation,
+	Always,
 	MovementConfig,
 	MovementMode,
+	Once,
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::{
@@ -83,7 +85,10 @@ impl SkillContact {
 	fn insert_motion_components(&self, entity: &mut EntityCommands) {
 		match self.motion {
 			Motion::HeldBy { spawner } => {
-				entity.try_insert((RigidBody::Fixed, MoveWith { entity: spawner }));
+				entity.try_insert((
+					RigidBody::Fixed,
+					SetPositionAndRotation::<Always>::to(spawner),
+				));
 			}
 			Motion::Stationary {
 				caster,
@@ -99,7 +104,11 @@ impl SkillContact {
 					},
 				));
 			}
-			Motion::Projectile { speed } => {
+			Motion::Projectile {
+				caster,
+				spawner,
+				speed,
+			} => {
 				entity.try_insert((
 					RigidBody::Dynamic,
 					GravityScale(0.),
@@ -108,6 +117,7 @@ impl SkillContact {
 						mode: MovementMode::Fast,
 						speed,
 					},
+					SetPositionAndRotation::<Once>::to(spawner),
 				));
 			}
 		}
@@ -176,9 +186,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{ground_target::GroundTarget, move_with::MoveWith};
 	use bevy::ecs::system::RunSystemOnce;
-	use bevy_rapier3d::prelude::Collider;
 	use common::{
 		assert_bundle,
 		blocker::Blocker,
@@ -305,9 +313,8 @@ mod tests {
 				None,
 				None,
 				None,
-				Some(&MoveWith {
-					entity: Entity::from_raw(11)
-				})
+				Some(&SetPositionAndRotation::<Always>::to(Entity::from_raw(11))),
+				None,
 			),
 			(
 				app.world().entity(entity).get::<RigidBody>(),
@@ -315,7 +322,12 @@ mod tests {
 				app.world().entity(entity).get::<Ccd>(),
 				app.world().entity(entity).get::<MovementConfig>(),
 				app.world().entity(entity).get::<GroundTarget>(),
-				app.world().entity(entity).get::<MoveWith>(),
+				app.world()
+					.entity(entity)
+					.get::<SetPositionAndRotation<Always>>(),
+				app.world()
+					.entity(entity)
+					.get::<SetPositionAndRotation<Once>>(),
 			)
 		);
 	}
@@ -357,6 +369,7 @@ mod tests {
 					},
 				}),
 				None,
+				None,
 			),
 			(
 				app.world().entity(entity).get::<RigidBody>(),
@@ -364,7 +377,12 @@ mod tests {
 				app.world().entity(entity).get::<Ccd>(),
 				app.world().entity(entity).get::<MovementConfig>(),
 				app.world().entity(entity).get::<GroundTarget>(),
-				app.world().entity(entity).get::<MoveWith>(),
+				app.world()
+					.entity(entity)
+					.get::<SetPositionAndRotation<Always>>(),
+				app.world()
+					.entity(entity)
+					.get::<SetPositionAndRotation<Once>>(),
 			)
 		);
 	}
@@ -378,6 +396,8 @@ mod tests {
 			},
 			integrity: Integrity::Solid,
 			motion: Motion::Projectile {
+				caster: Entity::from_raw(55),
+				spawner: Entity::from_raw(66),
 				speed: UnitsPerSecond::new(11.),
 			},
 		};
@@ -397,6 +417,7 @@ mod tests {
 				}),
 				None,
 				None,
+				Some(&SetPositionAndRotation::<Once>::to(Entity::from_raw(66))),
 			),
 			(
 				app.world().entity(entity).get::<RigidBody>(),
@@ -404,7 +425,12 @@ mod tests {
 				app.world().entity(entity).get::<Ccd>(),
 				app.world().entity(entity).get::<MovementConfig>(),
 				app.world().entity(entity).get::<GroundTarget>(),
-				app.world().entity(entity).get::<MoveWith>(),
+				app.world()
+					.entity(entity)
+					.get::<SetPositionAndRotation<Always>>(),
+				app.world()
+					.entity(entity)
+					.get::<SetPositionAndRotation<Once>>(),
 			)
 		);
 	}
