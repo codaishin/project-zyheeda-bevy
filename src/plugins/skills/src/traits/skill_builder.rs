@@ -7,12 +7,14 @@ use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::traits::handles_lifetime::HandlesLifetime;
 
 pub(crate) trait BuildContact {
+	type TContact: Component;
+
 	fn build_contact(
 		&self,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &SkillTarget,
-	) -> impl Bundle;
+	) -> Self::TContact;
 }
 
 pub(crate) trait BuildProjection {
@@ -154,12 +156,14 @@ mod tests {
 	}
 
 	impl BuildContact for _Skill {
+		type TContact = _Contact;
+
 		fn build_contact(
 			&self,
 			caster: &SkillCaster,
 			spawner: &SkillSpawner,
 			target: &SkillTarget,
-		) -> impl Bundle {
+		) -> Self::TContact {
 			_Contact {
 				caster: *caster,
 				spawner: *spawner,

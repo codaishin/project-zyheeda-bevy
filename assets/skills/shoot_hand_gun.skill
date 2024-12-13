@@ -9,9 +9,7 @@
 	"behavior": {
 		"OnActive": {
 			"shape": {
-				"Projectile": {
-					"sub_type": "Plasma"
-				}
+				"Projectile": null
 			},
 			"spawn_on": "Slot",
 			"contact": [

@@ -4,25 +4,37 @@ use crate::{
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
 use behaviors::components::{
-	shield::{ShieldContact, ShieldProjection},
-	skill_behavior::SkillTarget,
+	shield::ShieldProjection,
+	skill_behavior::{skill_contact::SkillContact, Integrity, Motion, Shape, SkillTarget},
 };
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::Collider;
+use common::components::AssetModel;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct SpawnShield;
 
 impl BuildContact for SpawnShield {
+	type TContact = SkillContact;
+
 	fn build_contact(
 		&self,
 		_: &SkillCaster,
 		spawner: &SkillSpawner,
 		_: &SkillTarget,
-	) -> impl Bundle {
-		let SkillSpawner(location) = *spawner;
+	) -> Self::TContact {
+		let SkillSpawner(spawner) = *spawner;
 
-		(ShieldContact { location }, SpatialBundle::default())
+		SkillContact {
+			shape: Shape::Custom {
+				model: AssetModel::path("models/shield.glb"),
+				collider: Collider::cuboid(0.5, 0.5, 0.05),
+				scale: Vec3::splat(1.),
+			},
+			integrity: Integrity::Solid,
+			motion: Motion::HeldBy { spawner },
+		}
 	}
 }
 

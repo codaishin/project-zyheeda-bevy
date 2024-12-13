@@ -1,33 +1,24 @@
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use bevy_rapier3d::prelude::{
-	ActiveCollisionTypes,
-	ActiveEvents,
-	Collider,
-	ComputedColliderShape,
-	RigidBody,
-	Sensor,
-};
+use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider, Sensor};
 use common::{
-	bundles::{AssetModelBundle, ColliderTransformBundle},
-	components::{AssetModel, ColliderRoot},
-	errors::{Error, Level},
+	bundles::ColliderTransformBundle,
+	errors::Error,
 	tools::Units,
 	traits::{
-		handles_effect_shading::HandlesEffectShading,
 		prefab::{GetOrCreateAssets, Prefab},
 		try_insert_on::TryInsertOn,
 	},
 };
-use std::f32::consts::PI;
 
 #[derive(Component, Debug, PartialEq, Clone)]
-pub struct GroundTarget {
+pub(crate) struct GroundTarget {
 	pub caster: Entity,
 	pub target_ray: Ray3d,
 	pub max_cast_range: Units,
 }
 
 impl GroundTarget {
+	#[cfg(test)]
 	pub const DEFAULT_TARGET_RAY: Ray3d = Ray3d {
 		origin: Vec3::Y,
 		direction: Dir3::NEG_Y,
@@ -103,64 +94,6 @@ impl GroundTarget {
 }
 trait ColliderComponents {
 	fn collider_components(&self) -> Result<impl Bundle, Error>;
-}
-
-impl<TShadersPlugin> Prefab<TShadersPlugin> for GroundTarget
-where
-	TShadersPlugin: HandlesEffectShading,
-{
-	fn instantiate_on<TAfterInstantiation>(
-		&self,
-		entity: &mut EntityCommands,
-		_: impl GetOrCreateAssets,
-	) -> Result<(), Error> {
-		let collider = self.collider_components()?;
-		let model = AssetModel::path("models/sphere.glb");
-
-		entity
-			.insert((
-				RigidBody::Fixed,
-				SpatialBundle::default(),
-				TShadersPlugin::effect_shader_target(),
-			))
-			.with_children(|parent| {
-				parent.spawn((ColliderRoot(parent.parent_entity()), collider));
-				parent.spawn(AssetModelBundle {
-					model,
-					transform: Transform::default(),
-					..default()
-				});
-			});
-
-		Ok(())
-	}
-}
-
-impl ColliderComponents for GroundTarget {
-	fn collider_components(&self) -> Result<impl Bundle, Error> {
-		let transform = Transform::default().with_rotation(Quat::from_axis_angle(Vec3::X, PI / 2.));
-		let ring = Annulus::new(1., 1.); //*self.radius - 0.3, *self.radius);
-		let torus = Mesh::from(Extrusion::new(ring, 3.));
-		let collider = Collider::from_bevy_mesh(&torus, &ComputedColliderShape::TriMesh);
-
-		let Some(collider) = collider else {
-			return Err(Error {
-				msg: "Cannot create ground targeted AoE contact collider".to_owned(),
-				lvl: Level::Error,
-			});
-		};
-
-		Ok((
-			ColliderTransformBundle {
-				transform,
-				collider,
-				active_events: ActiveEvents::COLLISION_EVENTS,
-				active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
-				..default()
-			},
-			Sensor,
-		))
-	}
 }
 
 #[derive(Component, Debug, PartialEq, Clone)]

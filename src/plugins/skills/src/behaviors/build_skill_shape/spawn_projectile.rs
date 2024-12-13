@@ -4,44 +4,52 @@ use crate::{
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
 use behaviors::components::{
-	projectile::{sub_type::SubType, ProjectileContact, ProjectileProjection},
-	skill_behavior::SkillTarget,
+	projectile::ProjectileProjection,
+	skill_behavior::{skill_contact::SkillContact, Integrity, Motion, Shape, SkillTarget},
 };
-use bevy::prelude::{Bundle, SpatialBundle};
+use bevy::prelude::Bundle;
+use common::{
+	blocker::Blocker,
+	tools::{Units, UnitsPerSecond},
+	traits::clamp_zero_positive::ClampZeroPositive,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct SpawnProjectile {
-	sub_type: SubType,
-}
+pub struct SpawnProjectile;
 
 impl BuildContact for SpawnProjectile {
+	type TContact = SkillContact;
+
 	fn build_contact(
 		&self,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		_: &SkillTarget,
-	) -> impl Bundle {
+	) -> Self::TContact {
 		let SkillCaster(caster) = *caster;
 		let SkillSpawner(spawner) = *spawner;
 
-		(
-			ProjectileContact {
+		SkillContact {
+			shape: Shape::Sphere {
+				radius: Units::new(0.05),
+			},
+			integrity: Integrity::Fragile {
+				destroyed_by: vec![Blocker::Physical, Blocker::Force],
+			},
+			motion: Motion::Projectile {
 				caster,
 				spawner,
-				range: 10.,
-				sub_type: self.sub_type,
+				speed: UnitsPerSecond::new(15.),
+				max_range: Units::new(20.),
 			},
-			SpatialBundle::default(),
-		)
+		}
 	}
 }
 
 impl BuildProjection for SpawnProjectile {
 	fn build_projection(&self, _: &SkillCaster, _: &SkillSpawner, _: &SkillTarget) -> impl Bundle {
-		ProjectileProjection {
-			sub_type: self.sub_type,
-		}
+		ProjectileProjection
 	}
 }
 

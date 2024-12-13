@@ -23,11 +23,10 @@ use common::{
 };
 use components::{
 	cam_orbit::CamOrbit,
-	ground_target::{GroundTarget, GroundTargetedAoeProjection},
-	projectile::{ProjectileContact, ProjectileProjection},
+	ground_target::GroundTarget,
 	set_position_and_rotation::SetPositionAndRotation,
 	set_to_move_forward::SetVelocityForward,
-	shield::{ShieldContact, ShieldProjection},
+	skill_behavior::skill_contact::SkillContact,
 	void_beam::VoidBeam,
 	when_traveled_insert::InsertAfterDistanceTraveled,
 	Always,
@@ -89,15 +88,9 @@ where
 	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
 {
 	fn build(&self, app: &mut App) {
-		TPrefabsPlugin::register_prefab::<ProjectileProjection>(app);
-		TPrefabsPlugin::register_prefab::<GroundTargetedAoeProjection>(app);
-		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>()
-			.register_prefab::<VoidBeam>(app)
-			.register_prefab::<ProjectileContact>(app);
-		TPrefabsPlugin::with_dependency::<TShadersPlugin>()
-			.register_prefab::<ShieldContact>(app)
-			.register_prefab::<ShieldProjection>(app)
-			.register_prefab::<GroundTarget>(app);
+		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>().register_prefab::<VoidBeam>(app);
+		TPrefabsPlugin::with_dependency::<(TInteractionsPlugin, TLifeCycles)>()
+			.register_prefab::<SkillContact>(app);
 
 		app.add_event::<MoveInputEvent>()
 			.add_systems(

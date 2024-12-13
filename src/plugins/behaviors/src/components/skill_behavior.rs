@@ -1,4 +1,4 @@
-pub(crate) mod skill_contact;
+pub mod skill_contact;
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Collider;
