@@ -3,11 +3,13 @@ use crate::{
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
-use behaviors::components::{
-	ground_target::GroundTargetedAoeProjection,
-	skill_behavior::{skill_contact::SkillContact, Integrity, Motion, Shape},
+use behaviors::components::skill_behavior::{
+	skill_contact::SkillContact,
+	skill_projection::SkillProjection,
+	Integrity,
+	Motion,
+	Shape,
 };
-use bevy::prelude::*;
 use common::{dto::duration::DurationDto, tools::Units};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -44,6 +46,7 @@ impl BuildContact for SpawnGroundTargetedAoe {
 		SkillContact {
 			shape: Shape::Sphere {
 				radius: self.radius,
+				hollow_collider: true,
 			},
 			integrity: Integrity::Solid,
 			motion: Motion::Stationary {
@@ -56,9 +59,20 @@ impl BuildContact for SpawnGroundTargetedAoe {
 }
 
 impl BuildProjection for SpawnGroundTargetedAoe {
-	fn build_projection(&self, _: &SkillCaster, _: &SkillSpawner, _: &SkillTarget) -> impl Bundle {
-		GroundTargetedAoeProjection {
-			radius: self.radius,
+	type TProjection = SkillProjection;
+
+	fn build_projection(
+		&self,
+		_: &SkillCaster,
+		_: &SkillSpawner,
+		_: &SkillTarget,
+	) -> Self::TProjection {
+		SkillProjection {
+			shape: Shape::Sphere {
+				radius: self.radius,
+				hollow_collider: false,
+			},
+			offset: None,
 		}
 	}
 }

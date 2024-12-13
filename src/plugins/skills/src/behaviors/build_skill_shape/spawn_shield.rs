@@ -3,13 +3,22 @@ use crate::{
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
-use behaviors::components::{
-	shield::ShieldProjection,
-	skill_behavior::{skill_contact::SkillContact, Integrity, Motion, Shape, SkillTarget},
+use behaviors::components::skill_behavior::{
+	skill_contact::SkillContact,
+	skill_projection::SkillProjection,
+	Integrity,
+	Motion,
+	Offset,
+	Shape,
+	SkillTarget,
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Collider;
-use common::components::AssetModel;
+use common::{
+	components::AssetModel,
+	tools::Units,
+	traits::clamp_zero_positive::ClampZeroPositive,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -39,8 +48,24 @@ impl BuildContact for SpawnShield {
 }
 
 impl BuildProjection for SpawnShield {
-	fn build_projection(&self, _: &SkillCaster, _: &SkillSpawner, _: &SkillTarget) -> impl Bundle {
-		ShieldProjection
+	type TProjection = SkillProjection;
+
+	fn build_projection(
+		&self,
+		_: &SkillCaster,
+		_: &SkillSpawner,
+		_: &SkillTarget,
+	) -> Self::TProjection {
+		let radius = 1.;
+		let offset = Vec3::new(0., 0., radius);
+
+		SkillProjection {
+			shape: Shape::Sphere {
+				radius: Units::new(radius),
+				hollow_collider: false,
+			},
+			offset: Some(Offset(offset)),
+		}
 	}
 }
 

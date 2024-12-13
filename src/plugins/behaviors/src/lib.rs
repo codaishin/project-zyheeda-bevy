@@ -26,7 +26,7 @@ use components::{
 	ground_target::GroundTarget,
 	set_position_and_rotation::SetPositionAndRotation,
 	set_to_move_forward::SetVelocityForward,
-	skill_behavior::skill_contact::SkillContact,
+	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	void_beam::VoidBeam,
 	when_traveled_insert::InsertAfterDistanceTraveled,
 	Always,
@@ -91,6 +91,7 @@ where
 		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>().register_prefab::<VoidBeam>(app);
 		TPrefabsPlugin::with_dependency::<(TInteractionsPlugin, TLifeCycles)>()
 			.register_prefab::<SkillContact>(app);
+		TPrefabsPlugin::register_prefab::<SkillProjection>(app);
 
 		app.add_event::<MoveInputEvent>()
 			.add_systems(

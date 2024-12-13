@@ -1,7 +1,5 @@
 pub mod cam_orbit;
 pub mod ground_target;
-pub mod projectile;
-pub mod shield;
 pub mod skill_behavior;
 pub mod void_beam;
 

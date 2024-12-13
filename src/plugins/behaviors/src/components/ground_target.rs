@@ -1,14 +1,5 @@
-use bevy::{ecs::system::EntityCommands, prelude::*};
-use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider, Sensor};
-use common::{
-	bundles::ColliderTransformBundle,
-	errors::Error,
-	tools::Units,
-	traits::{
-		prefab::{GetOrCreateAssets, Prefab},
-		try_insert_on::TryInsertOn,
-	},
-};
+use bevy::prelude::*;
+use common::{tools::Units, traits::try_insert_on::TryInsertOn};
 
 #[derive(Component, Debug, PartialEq, Clone)]
 pub(crate) struct GroundTarget {
@@ -90,42 +81,6 @@ impl GroundTarget {
 
 			commands.try_insert_on(entity, transform);
 		}
-	}
-}
-trait ColliderComponents {
-	fn collider_components(&self) -> Result<impl Bundle, Error>;
-}
-
-#[derive(Component, Debug, PartialEq, Clone)]
-pub struct GroundTargetedAoeProjection {
-	pub radius: Units,
-}
-
-impl Prefab<()> for GroundTargetedAoeProjection {
-	fn instantiate_on<TAfterInstantiation>(
-		&self,
-		entity: &mut EntityCommands,
-		_: impl GetOrCreateAssets,
-	) -> Result<(), Error> {
-		let collider = self.collider_components()?;
-
-		entity.try_insert(collider);
-
-		Ok(())
-	}
-}
-
-impl ColliderComponents for GroundTargetedAoeProjection {
-	fn collider_components(&self) -> Result<impl Bundle, Error> {
-		Ok((
-			ColliderTransformBundle {
-				collider: Collider::ball(*self.radius),
-				active_events: ActiveEvents::COLLISION_EVENTS,
-				active_collision_types: ActiveCollisionTypes::STATIC_STATIC,
-				..default()
-			},
-			Sensor,
-		))
 	}
 }
 

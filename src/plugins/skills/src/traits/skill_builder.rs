@@ -18,12 +18,14 @@ pub(crate) trait BuildContact {
 }
 
 pub(crate) trait BuildProjection {
+	type TProjection: Component;
+
 	fn build_projection(
 		&self,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &SkillTarget,
-	) -> impl Bundle;
+	) -> Self::TProjection;
 }
 
 pub(crate) trait SkillLifetime {
@@ -173,12 +175,14 @@ mod tests {
 	}
 
 	impl BuildProjection for _Skill {
+		type TProjection = _Projection;
+
 		fn build_projection(
 			&self,
 			caster: &SkillCaster,
 			spawner: &SkillSpawner,
 			target: &SkillTarget,
-		) -> impl Bundle {
+		) -> Self::TProjection {
 			_Projection {
 				caster: *caster,
 				spawner: *spawner,
