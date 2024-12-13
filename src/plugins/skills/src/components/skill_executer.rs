@@ -12,7 +12,7 @@ use common::{
 	traits::{
 		accessors::get::GetRef,
 		handles_effect::HandlesAllEffects,
-		handles_effect_shading::HandlesEffectShadingForAll,
+		handles_effect_shading::HandlesEffectShading,
 		handles_lifetime::HandlesLifetime,
 		try_despawn_recursive::TryDespawnRecursive,
 	},
@@ -72,7 +72,7 @@ where
 	TCommands: TryDespawnRecursive,
 	TLifetimes: HandlesLifetime + 'static,
 	TEffects: HandlesAllEffects + 'static,
-	TShaders: HandlesEffectShadingForAll + 'static,
+	TShaders: HandlesEffectShading + 'static,
 {
 	type TError = NoSkillSpawner;
 
@@ -178,6 +178,10 @@ mod tests {
 		fn effect_shader(_: T) -> impl Bundle {}
 	}
 
+	impl HandlesEffectShading for _HandlesShading {
+		fn effect_shader_target() -> impl Bundle {}
+	}
+
 	impl TryDespawnRecursive for _Commands {
 		fn try_despawn_recursive(&mut self, _: Entity) {}
 	}
@@ -209,7 +213,7 @@ mod tests {
 		where
 			TLifetimes: HandlesLifetime + 'static,
 			TEffects: HandlesAllEffects + 'static,
-			TShaders: HandlesEffectShadingForAll + 'static,
+			TShaders: HandlesEffectShading + 'static,
 		{
 			self.0.clone()
 		}
@@ -229,7 +233,7 @@ mod tests {
 			where
 				TLifetimes: HandlesLifetime + 'static,
 				TEffects: HandlesAllEffects + 'static,
-			TShaders: HandlesEffectShadingForAll + 'static;
+			TShaders: HandlesEffectShading + 'static;
 		}
 	}
 

@@ -19,7 +19,7 @@ use bevy::prelude::*;
 use common::traits::{
 	animation::Animation,
 	handles_effect::HandlesAllEffects,
-	handles_effect_shading::HandlesEffectShadingForAll,
+	handles_effect_shading::HandlesEffectShading,
 	handles_lifetime::HandlesLifetime,
 	load_asset::Path,
 	register_custom_assets::AssetFolderPath,
@@ -170,7 +170,7 @@ impl SpawnSkillBehavior<Commands<'_, '_>> for RunSkillBehavior {
 	where
 		TLifetimes: HandlesLifetime + 'static,
 		TEffects: HandlesAllEffects + 'static,
-		TShaders: HandlesEffectShadingForAll + 'static,
+		TShaders: HandlesEffectShading + 'static,
 	{
 		match self {
 			RunSkillBehavior::OnActive(conf) => {
@@ -193,9 +193,9 @@ fn spawn<TLifetimes, TEffects, TShaders>(
 where
 	TLifetimes: HandlesLifetime + 'static,
 	TEffects: HandlesAllEffects + 'static,
-	TShaders: HandlesEffectShadingForAll + 'static,
+	TShaders: HandlesEffectShading + 'static,
 {
-	let shape = behavior.spawn_shape::<TLifetimes>(commands, caster, spawner, target);
+	let shape = behavior.spawn_shape::<TLifetimes, TShaders>(commands, caster, spawner, target);
 
 	if let Some(mut contact) = commands.get_entity(shape.contact) {
 		behavior.start_contact_behavior::<TEffects, TShaders>(
@@ -264,6 +264,10 @@ mod tests {
 
 	impl<T> HandlesEffectShadingFor<T> for _HandlesShading {
 		fn effect_shader(_: T) -> impl Bundle {}
+	}
+
+	impl HandlesEffectShading for _HandlesShading {
+		fn effect_shader_target() -> impl Bundle {}
 	}
 
 	fn behavior(e: &mut EntityCommands, c: &SkillCaster, s: &SkillSpawner, t: &SkillTarget) {

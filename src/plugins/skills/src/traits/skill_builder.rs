@@ -4,7 +4,10 @@ use crate::{
 };
 use behaviors::components::skill_behavior::SkillTarget;
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::traits::handles_lifetime::HandlesLifetime;
+use common::traits::{
+	handles_effect_shading::HandlesEffectShading,
+	handles_lifetime::HandlesLifetime,
+};
 
 pub(crate) trait BuildContact {
 	type TContact: Component;
@@ -39,7 +42,7 @@ pub(crate) struct SkillShape {
 }
 
 pub(crate) trait SkillBuilder {
-	fn build<TLifetimes>(
+	fn build<TLifetimes, TShaders>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -47,14 +50,15 @@ pub(crate) trait SkillBuilder {
 		target: &SkillTarget,
 	) -> SkillShape
 	where
-		TLifetimes: HandlesLifetime;
+		TLifetimes: HandlesLifetime,
+		TShaders: HandlesEffectShading;
 }
 
 impl<T> SkillBuilder for T
 where
 	T: BuildContact + BuildProjection + SkillLifetime,
 {
-	fn build<TLifetimes>(
+	fn build<TLifetimes, TShaders>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -63,16 +67,23 @@ where
 	) -> SkillShape
 	where
 		TLifetimes: HandlesLifetime,
+		TShaders: HandlesEffectShading,
 	{
 		let contact_with_lifetime = contact::<TLifetimes>;
-		let entity = commands.spawn(self.build_contact(caster, spawner, target));
+		let entity = commands.spawn((
+			self.build_contact(caster, spawner, target),
+			TShaders::effect_shader_target(),
+		));
 		let (contact, on_skill_stop) = match self.lifetime() {
 			LifeTimeDefinition::UntilStopped => contact_stoppable(entity),
 			LifeTimeDefinition::UntilOutlived(duration) => contact_with_lifetime(entity, duration),
 			LifeTimeDefinition::Infinite => contact_infinite(entity),
 		};
 		let projection = commands
-			.spawn(self.build_projection(caster, spawner, target))
+			.spawn((
+				self.build_projection(caster, spawner, target),
+				TShaders::effect_shader_target(),
+			))
 			.set_parent(contact)
 			.id();
 
@@ -114,6 +125,7 @@ mod tests {
 		math::{Ray3d, Vec3},
 		utils::default,
 	};
+	use common::traits::handles_effect_shading::HandlesEffectShadingFor;
 	use std::time::Duration;
 
 	#[derive(Component, Debug, PartialEq)]
@@ -144,6 +156,21 @@ mod tests {
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Lifetime(Duration);
+
+	struct _HandlesShading;
+
+	impl<T> HandlesEffectShadingFor<T> for _HandlesShading {
+		fn effect_shader(_: T) -> impl Bundle {}
+	}
+
+	impl HandlesEffectShading for _HandlesShading {
+		fn effect_shader_target() -> impl Bundle {
+			_EffectShadersTarget
+		}
+	}
+
+	#[derive(Component, Debug, PartialEq)]
+	struct _EffectShadersTarget;
 
 	impl From<Duration> for _Lifetime {
 		fn from(duration: Duration) -> Self {
@@ -196,7 +223,7 @@ mod tests {
 		mut commands: Commands,
 	) -> SkillShape {
 		let In((skill, caster, spawner, target)) = args;
-		skill.build::<_HandlesLifetime>(&mut commands, &caster, &spawner, &target)
+		skill.build::<_HandlesLifetime, _HandlesShading>(&mut commands, &caster, &spawner, &target)
 	}
 
 	fn setup() -> App {
@@ -231,6 +258,31 @@ mod tests {
 	}
 
 	#[test]
+	fn spawn_contact_with_effect_shaders_target() {
+		let mut app = setup();
+		let skill = _Skill {
+			lifetime: LifeTimeDefinition::UntilStopped,
+		};
+		let caster = SkillCaster(Entity::from_raw(42));
+		let spawner = SkillSpawner(Entity::from_raw(43));
+		let target = SkillTarget {
+			ray: Ray3d::new(Vec3::X, Vec3::Z),
+			..default()
+		};
+
+		let shape = app
+			.world_mut()
+			.run_system_once_with((skill, caster, spawner, target), build_skill);
+
+		assert_eq!(
+			Some(&_EffectShadersTarget),
+			app.world()
+				.entity(shape.contact)
+				.get::<_EffectShadersTarget>()
+		)
+	}
+
+	#[test]
 	fn spawn_projection() {
 		let mut app = setup();
 		let skill = _Skill {
@@ -254,6 +306,31 @@ mod tests {
 				target
 			}),
 			app.world().entity(shape.projection).get::<_Projection>()
+		)
+	}
+
+	#[test]
+	fn spawn_projection_with_effect_shaders_target() {
+		let mut app = setup();
+		let skill = _Skill {
+			lifetime: LifeTimeDefinition::UntilStopped,
+		};
+		let caster = SkillCaster(Entity::from_raw(42));
+		let spawner = SkillSpawner(Entity::from_raw(43));
+		let target = SkillTarget {
+			ray: Ray3d::new(Vec3::X, Vec3::Z),
+			..default()
+		};
+
+		let shape = app
+			.world_mut()
+			.run_system_once_with((skill, caster, spawner, target), build_skill);
+
+		assert_eq!(
+			Some(&_EffectShadersTarget),
+			app.world()
+				.entity(shape.projection)
+				.get::<_EffectShadersTarget>()
 		)
 	}
 

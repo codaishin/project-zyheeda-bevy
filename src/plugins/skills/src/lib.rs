@@ -20,7 +20,7 @@ use common::{
 	traits::{
 		animation::HasAnimationsDispatch,
 		handles_effect::HandlesAllEffects,
-		handles_effect_shading::HandlesEffectShadingForAll,
+		handles_effect_shading::HandlesEffectShading,
 		handles_lifetime::HandlesLifetime,
 		register_assets_for_children::RegisterAssetsForChildren,
 		register_custom_assets::{RegisterCustomAssets, RegisterCustomFolderAssets},
@@ -83,7 +83,7 @@ where
 	TAnimations: Plugin + HasAnimationsDispatch,
 	TLifeCycles: Plugin + HandlesLifetime,
 	TInteractions: Plugin + HandlesAllEffects,
-	TShaders: Plugin + HandlesEffectShadingForAll,
+	TShaders: Plugin + HandlesEffectShading,
 	TDispatchChildrenAssets: Plugin + RegisterAssetsForChildren,
 	TLoading: Plugin + RegisterCustomAssets + RegisterCustomFolderAssets,
 {
@@ -247,7 +247,7 @@ where
 	TAnimations: Plugin + HasAnimationsDispatch,
 	TLifeCycles: Plugin + HandlesLifetime,
 	TInteractions: Plugin + HandlesAllEffects,
-	TShaders: Plugin + HandlesEffectShadingForAll,
+	TShaders: Plugin + HandlesEffectShading,
 	TDispatchChildrenAssets: Plugin + RegisterAssetsForChildren,
 	TLoading: Plugin + RegisterCustomAssets + RegisterCustomFolderAssets,
 {

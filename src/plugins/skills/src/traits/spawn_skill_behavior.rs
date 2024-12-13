@@ -7,7 +7,7 @@ use crate::behaviors::{
 use behaviors::components::skill_behavior::SkillTarget;
 use common::traits::{
 	handles_effect::HandlesAllEffects,
-	handles_effect_shading::HandlesEffectShadingForAll,
+	handles_effect_shading::HandlesEffectShading,
 	handles_lifetime::HandlesLifetime,
 };
 
@@ -23,5 +23,5 @@ pub(crate) trait SpawnSkillBehavior<TCommands> {
 	where
 		TLifetimes: HandlesLifetime + 'static,
 		TEffects: HandlesAllEffects + 'static,
-		TShaders: HandlesEffectShadingForAll + 'static;
+		TShaders: HandlesEffectShading + 'static;
 }
