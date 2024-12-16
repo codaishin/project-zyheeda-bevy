@@ -19,7 +19,10 @@ where
 			for entity in dispatch.animation_players_without_transition() {
 				commands.try_insert_on(
 					entity,
-					(graph.graph.clone(), AnimationTransitions::default()),
+					(
+						AnimationGraphHandle(graph.graph.clone()),
+						AnimationTransitions::default(),
+					),
 				);
 			}
 		}
@@ -112,8 +115,8 @@ mod tests {
 		let animation_player = app.world().entity(animation_player);
 
 		assert_eq!(
-			Some(&animation_graph_handle),
-			animation_player.get::<Handle<AnimationGraph>>()
+			Some(&AnimationGraphHandle(animation_graph_handle)),
+			animation_player.get::<AnimationGraphHandle>()
 		);
 	}
 
@@ -152,7 +155,7 @@ mod tests {
 		assert_eq!(
 			(false, false),
 			(
-				animation_player.contains::<Handle<AnimationGraph>>(),
+				animation_player.contains::<AnimationGraphHandle>(),
 				animation_player.contains::<AnimationTransitions>()
 			)
 		);
@@ -173,7 +176,7 @@ mod tests {
 		app.update();
 
 		let mut entity = app.world_mut().entity_mut(animation_player);
-		entity.remove::<Handle<AnimationGraph>>();
+		entity.remove::<AnimationGraphHandle>();
 		entity.remove::<AnimationTransitions>();
 
 		app.update();
@@ -183,7 +186,7 @@ mod tests {
 		assert_eq!(
 			(false, false),
 			(
-				animation_player.contains::<Handle<AnimationGraph>>(),
+				animation_player.contains::<AnimationGraphHandle>(),
 				animation_player.contains::<AnimationTransitions>()
 			)
 		);
@@ -207,7 +210,7 @@ mod tests {
 		app.update();
 
 		let mut entity = app.world_mut().entity_mut(animation_player);
-		entity.remove::<Handle<AnimationGraph>>();
+		entity.remove::<AnimationGraphHandle>();
 		entity.remove::<AnimationTransitions>();
 		app.world_mut()
 			.entity_mut(agent)
@@ -222,7 +225,7 @@ mod tests {
 		assert_eq!(
 			(true, true),
 			(
-				animation_player.contains::<Handle<AnimationGraph>>(),
+				animation_player.contains::<AnimationGraphHandle>(),
 				animation_player.contains::<AnimationTransitions>()
 			)
 		);
@@ -247,7 +250,7 @@ mod tests {
 		assert_eq!(
 			(false, false),
 			(
-				animation_player.contains::<Handle<AnimationGraph>>(),
+				animation_player.contains::<AnimationGraphHandle>(),
 				animation_player.contains::<AnimationTransitions>()
 			)
 		);
