@@ -31,5 +31,6 @@ impl GetScreenPosition for Camera {
 		world_position: Vec3,
 	) -> Option<Vec2> {
 		self.world_to_viewport(camera_transform, world_position)
+			.ok()
 	}
 }
