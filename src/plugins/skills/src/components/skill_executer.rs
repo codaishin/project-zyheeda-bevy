@@ -12,7 +12,6 @@ use common::{
 	traits::{
 		accessors::get::GetRef,
 		handles_effect::HandlesAllEffects,
-		handles_effect_shading::HandlesEffectShading,
 		handles_lifetime::HandlesLifetime,
 		try_despawn_recursive::TryDespawnRecursive,
 	},
@@ -65,14 +64,13 @@ impl From<NoSkillSpawner> for Error {
 	}
 }
 
-impl<TCommands, TBehavior, TLifetimes, TEffects, TShaders>
-	Execute<TCommands, TLifetimes, TEffects, TShaders> for SkillExecuter<TBehavior>
+impl<TCommands, TBehavior, TLifetimes, TEffects> Execute<TCommands, TLifetimes, TEffects>
+	for SkillExecuter<TBehavior>
 where
 	TBehavior: SpawnSkillBehavior<TCommands>,
 	TCommands: TryDespawnRecursive,
 	TLifetimes: HandlesLifetime + 'static,
 	TEffects: HandlesAllEffects + 'static,
-	TShaders: HandlesEffectShading + 'static,
 {
 	type TError = NoSkillSpawner;
 
@@ -86,8 +84,8 @@ where
 		match self {
 			SkillExecuter::Start { shape, slot_key } => {
 				let spawner = get_spawner(shape, spawners, *slot_key)?;
-				let on_skill_stop_behavior = shape
-					.spawn::<TLifetimes, TEffects, TShaders>(commands, caster, spawner, target);
+				let on_skill_stop_behavior =
+					shape.spawn::<TLifetimes, TEffects>(commands, caster, spawner, target);
 
 				*self = match on_skill_stop_behavior {
 					OnSkillStop::Ignore => SkillExecuter::Idle,
@@ -173,12 +171,6 @@ mod tests {
 	#[derive(Component)]
 	struct _Effect;
 
-	struct _HandlesShading;
-
-	impl HandlesEffectShading for _HandlesShading {
-		fn effect_shader_target() -> impl Bundle {}
-	}
-
 	impl TryDespawnRecursive for _Commands {
 		fn try_despawn_recursive(&mut self, _: Entity) {}
 	}
@@ -200,7 +192,7 @@ mod tests {
 			SpawnOn::Slot
 		}
 
-		fn spawn<TLifetimes, TEffects, TShaders>(
+		fn spawn<TLifetimes, TEffects>(
 			&self,
 			_: &mut _Commands,
 			_: &SkillCaster,
@@ -210,7 +202,6 @@ mod tests {
 		where
 			TLifetimes: HandlesLifetime + 'static,
 			TEffects: HandlesAllEffects + 'static,
-			TShaders: HandlesEffectShading + 'static,
 		{
 			self.0.clone()
 		}
@@ -220,7 +211,7 @@ mod tests {
 		_Behavior {}
 		impl SpawnSkillBehavior<Mock_Commands> for _Behavior {
 			fn spawn_on(&self) -> SpawnOn;
-			fn spawn<TLifetimes, TEffects, TShaders>(
+			fn spawn<TLifetimes, TEffects>(
 				&self,
 				commands: &mut Mock_Commands,
 				caster: &SkillCaster,
@@ -229,20 +220,14 @@ mod tests {
 			) -> OnSkillStop
 			where
 				TLifetimes: HandlesLifetime + 'static,
-				TEffects: HandlesAllEffects + 'static,
-			TShaders: HandlesEffectShading + 'static;
+				TEffects: HandlesAllEffects + 'static;
 		}
 	}
 
 	simple_init!(Mock_Behavior);
 
-	type _Executer<'a, TCommands> = &'a mut dyn Execute<
-		TCommands,
-		_HandlesLifetimes,
-		_HandlesEffects,
-		_HandlesShading,
-		TError = NoSkillSpawner,
-	>;
+	type _Executer<'a, TCommands> =
+		&'a mut dyn Execute<TCommands, _HandlesLifetimes, _HandlesEffects, TError = NoSkillSpawner>;
 
 	fn get_target() -> SkillTarget {
 		SkillTarget {
@@ -282,7 +267,7 @@ mod tests {
 			slot_key: SlotKey::BottomHand(Side::Right),
 			shape: Mock_Behavior::new_mock(|mock| {
 				mock.expect_spawn_on().return_const(SpawnOn::Slot);
-				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects, _HandlesShading>()
+				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects>()
 					.withf(move |_, c, s, t| {
 						assert_eq!((&caster, &spawner, &target), (c, s, t));
 						true
@@ -308,7 +293,7 @@ mod tests {
 			slot_key: SlotKey::BottomHand(Side::Right),
 			shape: Mock_Behavior::new_mock(|mock| {
 				mock.expect_spawn_on().return_const(SpawnOn::Center);
-				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects, _HandlesShading>()
+				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects>()
 					.withf(move |_, c, s, t| {
 						assert_eq!((&caster, &spawner, &target), (c, s, t));
 						true
@@ -373,7 +358,7 @@ mod tests {
 			slot_key: SlotKey::BottomHand(Side::Right),
 			shape: Mock_Behavior::new_mock(|mock| {
 				mock.expect_spawn_on().return_const(SpawnOn::Slot);
-				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects, _HandlesShading>()
+				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects>()
 					.return_const(OnSkillStop::Ignore);
 			}),
 		};

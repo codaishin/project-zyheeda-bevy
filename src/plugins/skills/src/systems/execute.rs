@@ -11,7 +11,7 @@ use common::{
 impl<T> ExecuteSkills for T {}
 
 pub(crate) trait ExecuteSkills {
-	fn execute_system<TLifetimes, TEffects, TShaders>(
+	fn execute_system<TLifetimes, TEffects>(
 		cam_ray: Res<CamRay>,
 		mouse_hover: Res<MouseHover>,
 		mut commands: Commands,
@@ -19,10 +19,8 @@ pub(crate) trait ExecuteSkills {
 		transforms: Query<&GlobalTransform>,
 	) -> Vec<Result<(), Error>>
 	where
-		for<'w, 's> Self:
-			Component + Execute<Commands<'w, 's>, TLifetimes, TEffects, TShaders> + Sized,
-		for<'w, 's> Error:
-			From<<Self as Execute<Commands<'w, 's>, TLifetimes, TEffects, TShaders>>::TError>,
+		for<'w, 's> Self: Component + Execute<Commands<'w, 's>, TLifetimes, TEffects> + Sized,
+		for<'w, 's> Error: From<<Self as Execute<Commands<'w, 's>, TLifetimes, TEffects>>::TError>,
 		TLifetimes: HandlesLifetime,
 		TEffects: HandlesEffect<DealDamage>,
 	{
@@ -129,9 +127,7 @@ mod tests {
 	#[derive(Component)]
 	struct _Effect;
 
-	struct _HandlesShading;
-
-	impl Execute<Commands<'_, '_>, _HandlesLife, _HandlesEffects, _HandlesShading> for _Executor {
+	impl Execute<Commands<'_, '_>, _HandlesLife, _HandlesEffects> for _Executor {
 		type TError = _Error;
 
 		fn execute(
@@ -151,7 +147,6 @@ mod tests {
 			Commands<'w, 's>,
 			_HandlesLife,
 			_HandlesEffects,
-			_HandlesShading
 		> for _Executor {
 			type TError = _Error;
 
@@ -195,8 +190,7 @@ mod tests {
 	}
 
 	fn setup() -> App {
-		let execute_system =
-			_Executor::execute_system::<_HandlesLife, _HandlesEffects, _HandlesShading>;
+		let execute_system = _Executor::execute_system::<_HandlesLife, _HandlesEffects>;
 
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<CamRay>();
@@ -314,9 +308,9 @@ mod tests {
 
 		app.update();
 
-		let errors = app.world_mut().run_system_once(
-			_Executor::execute_system::<_HandlesLife, _HandlesEffects, _HandlesShading>,
-		);
+		let errors = app
+			.world_mut()
+			.run_system_once(_Executor::execute_system::<_HandlesLife, _HandlesEffects>);
 
 		assert_eq!(
 			vec![Err(Error {

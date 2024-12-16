@@ -16,7 +16,6 @@ use common::{
 		animation::HasAnimationsDispatch,
 		handles_destruction::HandlesDestruction,
 		handles_effect::HandlesEffect,
-		handles_effect_shading::HandlesEffectShading,
 		handles_interactions::HandlesInteractions,
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 	},
@@ -54,36 +53,23 @@ use systems::{
 	update_cool_downs::update_cool_downs,
 };
 
-pub struct BehaviorsPlugin<TAnimations, TPrefabs, TShaders, TLifeCycles, TInteractions>(
-	PhantomData<(TAnimations, TPrefabs, TShaders, TLifeCycles, TInteractions)>,
+pub struct BehaviorsPlugin<TAnimations, TPrefabs, TLifeCycles, TInteractions>(
+	PhantomData<(TAnimations, TPrefabs, TLifeCycles, TInteractions)>,
 );
 
-impl<TAnimations, TPrefabs, TShaders, TLifeCycles, TInteractions>
-	BehaviorsPlugin<TAnimations, TPrefabs, TShaders, TLifeCycles, TInteractions>
+impl<TAnimations, TPrefabs, TLifeCycles, TInteractions>
+	BehaviorsPlugin<TAnimations, TPrefabs, TLifeCycles, TInteractions>
 {
-	pub fn depends_on(
-		_: &TAnimations,
-		_: &TPrefabs,
-		_: &TShaders,
-		_: &TLifeCycles,
-		_: &TInteractions,
-	) -> Self {
-		Self(PhantomData::<(TAnimations, TPrefabs, TShaders, TLifeCycles, TInteractions)>)
+	pub fn depends_on(_: &TAnimations, _: &TPrefabs, _: &TLifeCycles, _: &TInteractions) -> Self {
+		Self(PhantomData::<(TAnimations, TPrefabs, TLifeCycles, TInteractions)>)
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TLifeCycles, TInteractionsPlugin> Plugin
-	for BehaviorsPlugin<
-		TAnimationsPlugin,
-		TPrefabsPlugin,
-		TShadersPlugin,
-		TLifeCycles,
-		TInteractionsPlugin,
-	>
+impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin> Plugin
+	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
-	TShadersPlugin: Plugin + HandlesEffectShading,
 	TLifeCycles: Plugin + HandlesDestruction,
 	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
 {

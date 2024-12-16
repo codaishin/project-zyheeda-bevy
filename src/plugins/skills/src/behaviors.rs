@@ -6,11 +6,7 @@ use crate::traits::skill_builder::SkillShape;
 use behaviors::components::skill_behavior::SkillTarget;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use build_skill_shape::BuildSkillShape;
-use common::traits::{
-	handles_effect::HandlesAllEffects,
-	handles_effect_shading::HandlesEffectShading,
-	handles_lifetime::HandlesLifetime,
-};
+use common::traits::{handles_effect::HandlesAllEffects, handles_lifetime::HandlesLifetime};
 use spawn_on::SpawnOn;
 use start_behavior::SkillBehavior;
 
@@ -77,7 +73,7 @@ impl SkillBehaviorConfig {
 		}
 	}
 
-	pub(crate) fn spawn_shape<TLifeCycles, TShaders>(
+	pub(crate) fn spawn_shape<TLifeCycles>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -86,10 +82,9 @@ impl SkillBehaviorConfig {
 	) -> SkillShape
 	where
 		TLifeCycles: HandlesLifetime,
-		TShaders: HandlesEffectShading,
 	{
 		self.shape
-			.build::<TLifeCycles, TShaders>(commands, caster, spawner, target)
+			.build::<TLifeCycles>(commands, caster, spawner, target)
 	}
 
 	pub(crate) fn start_contact_behavior<TEffects>(

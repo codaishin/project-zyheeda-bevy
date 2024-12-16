@@ -17,7 +17,7 @@ use common::{
 	},
 	traits::{
 		handles_effect::{HandlesAllEffects, HandlesEffect},
-		handles_effect_shading::HandlesEffectShading,
+		handles_skills::HandlesSkills,
 		prefab::RegisterPrefab,
 	},
 };
@@ -42,14 +42,17 @@ use traits::{
 	shadows_aware_material::ShadowsAwareMaterial,
 };
 
-pub struct ShadersPlugin<TPrefabs, TInteractions>(PhantomData<(TPrefabs, TInteractions)>);
+pub struct ShadersPlugin<TPrefabs, TInteractions, TSkills>(
+	PhantomData<(TPrefabs, TInteractions, TSkills)>,
+);
 
-impl<TPrefabs, TInteractions> ShadersPlugin<TPrefabs, TInteractions>
+impl<TPrefabs, TInteractions, TSkills> ShadersPlugin<TPrefabs, TInteractions, TSkills>
 where
 	TPrefabs: Plugin + RegisterPrefab,
 	TInteractions: Plugin + HandlesAllEffects,
+	TSkills: Plugin + HandlesSkills,
 {
-	pub fn depends_on(_: &TPrefabs, _: &TInteractions) -> Self {
+	pub fn depends_on(_: &TPrefabs, _: &TInteractions, _: &TSkills) -> Self {
 		Self(PhantomData)
 	}
 
@@ -61,6 +64,17 @@ where
 		register_effect_shader::<TInteractions, DealDamage>(app);
 
 		app.add_systems(
+			Labels::PREFAB_INSTANTIATION.label(),
+			(
+				InsertOn::<TSkills::SkillContact>::associated::<EffectShadersTarget>(
+					Configure::LeaveAsIs,
+				),
+				InsertOn::<TSkills::SkillProjection>::associated::<EffectShadersTarget>(
+					Configure::LeaveAsIs,
+				),
+			),
+		)
+		.add_systems(
 			Update,
 			(
 				asset_process_delta::<ForceMaterial, Virtual>,
@@ -92,20 +106,15 @@ where
 	}
 }
 
-impl<TPrefabs, TInteractions> Plugin for ShadersPlugin<TPrefabs, TInteractions>
+impl<TPrefabs, TInteractions, TSkills> Plugin for ShadersPlugin<TPrefabs, TInteractions, TSkills>
 where
 	TPrefabs: Plugin + RegisterPrefab,
 	TInteractions: Plugin + HandlesAllEffects,
+	TSkills: Plugin + HandlesSkills,
 {
 	fn build(&self, app: &mut App) {
 		Self::build_for_effect_shaders(app);
 		Self::build_for_essence_material(app);
-	}
-}
-
-impl<TPrefabs, TInteractions> HandlesEffectShading for ShadersPlugin<TPrefabs, TInteractions> {
-	fn effect_shader_target() -> impl Bundle {
-		EffectShadersTarget::default()
 	}
 }
 
