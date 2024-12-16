@@ -1,3 +1,7 @@
+mod deal_damage;
+mod force_shield;
+mod gravity;
+
 use bevy::prelude::*;
 
 pub(crate) trait GetEffectMaterial {

@@ -3,20 +3,30 @@ use crate::{
 	traits::get_effect_material::GetEffectMaterial,
 };
 use bevy::prelude::*;
+use common::traits::handles_effect::HandlesEffect;
 
 #[allow(clippy::type_complexity)]
-pub(crate) fn add_child_effect_shader<TEffectShader: Component + GetEffectMaterial>(
-	mut materials: ResMut<Assets<TEffectShader::TMaterial>>,
+pub(crate) fn add_child_effect_shader<TInteractions, TEffect>(
+	mut materials: ResMut<Assets<TEffect::TMaterial>>,
 	mut effect_shaders_targets: Query<&mut EffectShadersTarget>,
-	effect_shaders: Query<Entity, (Added<TEffectShader>, Without<EffectShadersTarget>)>,
+	effect_shaders: Query<
+		Entity,
+		(
+			Added<TInteractions::TEffectComponent>,
+			Without<EffectShadersTarget>,
+		),
+	>,
 	parents: Query<&Parent>,
-) {
+) where
+	TEffect: GetEffectMaterial,
+	TInteractions: HandlesEffect<TEffect>,
+{
 	for entity in &effect_shaders {
 		for parent in parents.iter_ancestors(entity) {
 			let Ok(mut shaders) = effect_shaders_targets.get_mut(parent) else {
 				continue;
 			};
-			let handle = materials.add(TEffectShader::get_effect_material());
+			let handle = materials.add(TEffect::get_effect_material());
 			shaders.shaders.insert(EffectShaderHandle::from(handle));
 
 			/* This hurts my soul, but we cannot move `effect_shaders_targets` into a lambda for
@@ -40,8 +50,10 @@ mod tests {
 
 	impl Material for _Material {}
 
-	#[derive(Component)]
 	struct _Effect;
+
+	#[derive(Component)]
+	struct _EffectComponent;
 
 	impl GetEffectMaterial for _Effect {
 		type TMaterial = _Material;
@@ -51,10 +63,23 @@ mod tests {
 		}
 	}
 
+	struct _HandlesEffects;
+
+	impl HandlesEffect<_Effect> for _HandlesEffects {
+		type TTarget = ();
+		type TEffectComponent = _EffectComponent;
+
+		fn effect(_: _Effect) -> Self::TEffectComponent {
+			_EffectComponent
+		}
+
+		fn attribute(_: Self::TTarget) -> impl Bundle {}
+	}
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<Assets<_Material>>();
-		app.add_systems(Update, add_child_effect_shader::<_Effect>);
+		app.add_systems(Update, add_child_effect_shader::<_HandlesEffects, _Effect>);
 
 		app
 	}
@@ -78,7 +103,7 @@ mod tests {
 	fn add_child_effect_shader_to_effect_shaders() {
 		let mut app = setup();
 		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
-		app.world_mut().spawn(_Effect).set_parent(shaders);
+		app.world_mut().spawn(_EffectComponent).set_parent(shaders);
 
 		app.update();
 
@@ -99,7 +124,7 @@ mod tests {
 		let mut app = setup();
 		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
 		app.world_mut()
-			.spawn((EffectShadersTarget::default(), _Effect))
+			.spawn((EffectShadersTarget::default(), _EffectComponent))
 			.set_parent(shaders);
 
 		app.update();
@@ -117,7 +142,7 @@ mod tests {
 		let mut app = setup();
 		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
 		let child = app.world_mut().spawn_empty().set_parent(shaders).id();
-		app.world_mut().spawn(_Effect).set_parent(child);
+		app.world_mut().spawn(_EffectComponent).set_parent(child);
 
 		app.update();
 
@@ -137,7 +162,7 @@ mod tests {
 	fn add_child_effect_shader_to_effect_shaders_only_once() {
 		let mut app = setup();
 		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
-		app.world_mut().spawn(_Effect).set_parent(shaders);
+		app.world_mut().spawn(_EffectComponent).set_parent(shaders);
 
 		app.update();
 		app.update();
@@ -163,7 +188,7 @@ mod tests {
 			.spawn(EffectShadersTarget::default())
 			.set_parent(parent)
 			.id();
-		app.world_mut().spawn(_Effect).set_parent(child);
+		app.world_mut().spawn(_EffectComponent).set_parent(child);
 
 		app.update();
 

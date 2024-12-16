@@ -125,7 +125,6 @@ mod tests {
 		math::{Ray3d, Vec3},
 		utils::default,
 	};
-	use common::traits::handles_effect_shading::HandlesEffectShadingFor;
 	use std::time::Duration;
 
 	#[derive(Component, Debug, PartialEq)]
@@ -158,10 +157,6 @@ mod tests {
 	struct _Lifetime(Duration);
 
 	struct _HandlesShading;
-
-	impl<T> HandlesEffectShadingFor<T> for _HandlesShading {
-		fn effect_shader(_: T) -> impl Bundle {}
-	}
 
 	impl HandlesEffectShading for _HandlesShading {
 		fn effect_shader_target() -> impl Bundle {

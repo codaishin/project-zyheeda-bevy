@@ -11,13 +11,15 @@ use common::{
 };
 use std::time::Duration;
 
-impl<TLifecyclePlugin> HandlesEffect<DealDamage> for InteractionsPlugin<TLifecyclePlugin>
+impl<TPrefabs, TLifecyclePlugin> HandlesEffect<DealDamage>
+	for InteractionsPlugin<TPrefabs, TLifecyclePlugin>
 where
 	TLifecyclePlugin: HandlesLife,
 {
 	type TTarget = Health;
+	type TEffectComponent = Effect<DealDamage>;
 
-	fn effect(effect: DealDamage) -> impl Bundle {
+	fn effect(effect: DealDamage) -> Self::TEffectComponent {
 		Effect(effect)
 	}
 

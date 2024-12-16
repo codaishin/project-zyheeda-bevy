@@ -10,13 +10,14 @@ use bevy_rapier3d::plugin::RapierContext;
 use common::{
 	self,
 	blocker::{Blocker, BlockerInsertCommand},
-	effects::{deal_damage::DealDamage, gravity::Gravity},
+	effects::{deal_damage::DealDamage, force_shield::ForceShield, gravity::Gravity},
 	labels::Labels,
 	traits::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::{BeamParameters, HandlesInteractions},
 		handles_life::HandlesLife,
 		handles_lifetime::HandlesLifetime,
+		prefab::RegisterPrefab,
 	},
 };
 use components::{
@@ -53,22 +54,27 @@ use systems::{
 };
 use traits::act_on::ActOn;
 
-pub struct InteractionsPlugin<TLifeCyclePlugin>(PhantomData<TLifeCyclePlugin>);
+pub struct InteractionsPlugin<TPrefabs, TLifeCyclePlugin>(
+	PhantomData<(TPrefabs, TLifeCyclePlugin)>,
+);
 
-impl<TLifeCyclePlugin> InteractionsPlugin<TLifeCyclePlugin>
+impl<TPrefabs, TLifeCyclePlugin> InteractionsPlugin<TPrefabs, TLifeCyclePlugin>
 where
 	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
-	pub fn depends_on(_: &TLifeCyclePlugin) -> Self {
+	pub fn depends_on(_: &TPrefabs, _: &TLifeCyclePlugin) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLifeCyclePlugin> Plugin for InteractionsPlugin<TLifeCyclePlugin>
+impl<TPrefabs, TLifeCyclePlugin> Plugin for InteractionsPlugin<TPrefabs, TLifeCyclePlugin>
 where
+	TPrefabs: Plugin + RegisterPrefab,
 	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
 	fn build(&self, app: &mut App) {
+		TPrefabs::register_prefab::<Effect<ForceShield>>(app);
+
 		let processing_label = Labels::PROCESSING.label();
 		let processing_delta = Labels::PROCESSING.delta();
 
@@ -129,7 +135,9 @@ impl AddInteraction for App {
 	}
 }
 
-impl<TLifeCyclePlugin> HandlesInteractions for InteractionsPlugin<TLifeCyclePlugin> {
+impl<TPrefabs, TLifeCyclePlugin> HandlesInteractions
+	for InteractionsPlugin<TPrefabs, TLifeCyclePlugin>
+{
 	fn is_fragile_when_colliding_with(blockers: &[Blocker]) -> impl Bundle {
 		Is::<Fragile>::interacting_with(blockers)
 	}

@@ -141,11 +141,7 @@ mod tests {
 		components::{Outdated, Side},
 		resources::ColliderInfo,
 		simple_init,
-		traits::{
-			handles_effect::HandlesEffect,
-			handles_effect_shading::HandlesEffectShadingFor,
-			mock::Mock,
-		},
+		traits::{handles_effect::HandlesEffect, mock::Mock},
 	};
 	use mockall::{mock, predicate::eq};
 	use std::time::Duration;
@@ -165,18 +161,19 @@ mod tests {
 		T: Sync + Send + 'static,
 	{
 		type TTarget = ();
-		fn effect(_: T) -> impl Bundle {}
+		type TEffectComponent = _Effect;
+
+		fn effect(_: T) -> _Effect {
+			_Effect
+		}
+
 		fn attribute(_: Self::TTarget) -> impl Bundle {}
 	}
 
-	struct _HandlesShading;
+	#[derive(Component)]
+	struct _Effect;
 
-	impl<T> HandlesEffectShadingFor<T> for _HandlesShading
-	where
-		T: Sync + Send + 'static,
-	{
-		fn effect_shader(_: T) -> impl Bundle {}
-	}
+	struct _HandlesShading;
 
 	impl HandlesEffectShading for _HandlesShading {
 		fn effect_shader_target() -> impl Bundle {}

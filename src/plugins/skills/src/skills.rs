@@ -198,21 +198,11 @@ where
 	let shape = behavior.spawn_shape::<TLifetimes, TShaders>(commands, caster, spawner, target);
 
 	if let Some(mut contact) = commands.get_entity(shape.contact) {
-		behavior.start_contact_behavior::<TEffects, TShaders>(
-			&mut contact,
-			caster,
-			spawner,
-			target,
-		);
+		behavior.start_contact_behavior::<TEffects>(&mut contact, caster, spawner, target);
 	};
 
 	if let Some(mut projection) = commands.get_entity(shape.projection) {
-		behavior.start_projection_behavior::<TEffects, TShaders>(
-			&mut projection,
-			caster,
-			spawner,
-			target,
-		);
+		behavior.start_projection_behavior::<TEffects>(&mut projection, caster, spawner, target);
 	};
 
 	shape.on_skill_stop
@@ -227,7 +217,7 @@ mod tests {
 		components::Outdated,
 		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
-		traits::{handles_effect::HandlesEffect, handles_effect_shading::HandlesEffectShadingFor},
+		traits::handles_effect::HandlesEffect,
 	};
 
 	#[derive(Component, Debug, PartialEq)]
@@ -256,15 +246,19 @@ mod tests {
 		T: Sync + Send + 'static,
 	{
 		type TTarget = ();
-		fn effect(_: T) -> impl Bundle {}
+		type TEffectComponent = _Effect;
+
+		fn effect(_: T) -> _Effect {
+			_Effect
+		}
+
 		fn attribute(_: Self::TTarget) -> impl Bundle {}
 	}
 
-	struct _HandlesShading;
+	#[derive(Component)]
+	struct _Effect;
 
-	impl<T> HandlesEffectShadingFor<T> for _HandlesShading {
-		fn effect_shader(_: T) -> impl Bundle {}
-	}
+	struct _HandlesShading;
 
 	impl HandlesEffectShading for _HandlesShading {
 		fn effect_shader_target() -> impl Bundle {}

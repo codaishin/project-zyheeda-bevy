@@ -2,14 +2,10 @@ use crate::{behaviors::SkillCaster, components::skill_spawners::SkillSpawners, t
 use behaviors::components::skill_behavior::SkillTarget;
 use bevy::prelude::*;
 use common::{
-	effects::{deal_damage::DealDamage, force_shield::ForceShield},
+	effects::deal_damage::DealDamage,
 	errors::Error,
 	resources::{CamRay, MouseHover},
-	traits::{
-		handles_effect::HandlesEffect,
-		handles_effect_shading::HandlesEffectShadingFor,
-		handles_lifetime::HandlesLifetime,
-	},
+	traits::{handles_effect::HandlesEffect, handles_lifetime::HandlesLifetime},
 };
 
 impl<T> ExecuteSkills for T {}
@@ -29,7 +25,6 @@ pub(crate) trait ExecuteSkills {
 			From<<Self as Execute<Commands<'w, 's>, TLifetimes, TEffects, TShaders>>::TError>,
 		TLifetimes: HandlesLifetime,
 		TEffects: HandlesEffect<DealDamage>,
-		TShaders: HandlesEffectShadingFor<ForceShield>,
 	{
 		agents
 			.iter_mut()
@@ -89,7 +84,7 @@ mod tests {
 		errors::Level,
 		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
-		traits::{handles_effect_shading::HandlesEffectShadingFor, nested_mock::NestedMocks},
+		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;
 	use mockall::mock;
@@ -122,15 +117,19 @@ mod tests {
 
 	impl<T> HandlesEffect<T> for _HandlesEffects {
 		type TTarget = ();
-		fn effect(_: T) -> impl Bundle {}
+		type TEffectComponent = _Effect;
+
+		fn effect(_: T) -> _Effect {
+			_Effect
+		}
+
 		fn attribute(_: Self::TTarget) -> impl Bundle {}
 	}
 
-	struct _HandlesShading;
+	#[derive(Component)]
+	struct _Effect;
 
-	impl<T> HandlesEffectShadingFor<T> for _HandlesShading {
-		fn effect_shader(_: T) -> impl Bundle {}
-	}
+	struct _HandlesShading;
 
 	impl Execute<Commands<'_, '_>, _HandlesLife, _HandlesEffects, _HandlesShading> for _Executor {
 		type TError = _Error;

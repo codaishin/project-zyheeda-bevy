@@ -1,5 +1,7 @@
-use super::EffectShader;
-use crate::traits::get_effect_material::GetEffectMaterial;
+use crate::{
+	components::effect_shaders::EffectShader,
+	traits::get_effect_material::GetEffectMaterial,
+};
 use bevy::{color::palettes::css::WHITE, ecs::system::EntityCommands, prelude::*};
 use common::{
 	effects::deal_damage::DealDamage,
@@ -7,7 +9,7 @@ use common::{
 	traits::prefab::{GetOrCreateAssets, Prefab},
 };
 
-impl GetEffectMaterial for EffectShader<DealDamage> {
+impl GetEffectMaterial for DealDamage {
 	type TMaterial = StandardMaterial;
 
 	fn get_effect_material() -> Self::TMaterial {
@@ -28,14 +30,16 @@ impl Prefab<()> for EffectShader<DealDamage> {
 		entity: &mut EntityCommands,
 		_: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
-		entity.try_insert(PointLightBundle {
-			point_light: PointLight {
-				color: Color::from(WHITE),
-				intensity: 8000.,
-				shadows_enabled: true,
+		entity.with_children(|parent| {
+			parent.spawn(PointLightBundle {
+				point_light: PointLight {
+					color: Color::from(WHITE),
+					intensity: 8000.,
+					shadows_enabled: true,
+					..default()
+				},
 				..default()
-			},
-			..default()
+			});
 		});
 
 		Ok(())

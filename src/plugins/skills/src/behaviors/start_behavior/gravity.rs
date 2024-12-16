@@ -3,7 +3,7 @@ use bevy::ecs::system::EntityCommands;
 use common::{
 	effects::{gravity::Gravity, EffectApplies},
 	tools::UnitsPerSecond,
-	traits::{handles_effect::HandlesEffect, handles_effect_shading::HandlesEffectShadingFor},
+	traits::handles_effect::HandlesEffect,
 };
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +14,7 @@ pub struct StartGravity {
 }
 
 impl StartGravity {
-	pub fn apply<TEffects, TShaders>(
+	pub fn apply<TEffects>(
 		&self,
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
@@ -22,13 +22,11 @@ impl StartGravity {
 		_: &SkillTarget,
 	) where
 		TEffects: HandlesEffect<Gravity>,
-		TShaders: HandlesEffectShadingFor<Gravity>,
 	{
-		let gravity = Gravity {
+		entity.try_insert(TEffects::effect(Gravity {
 			strength: self.strength,
 			effect_applies: self.effect_applies,
-		};
-		entity.try_insert((TEffects::effect(gravity), TShaders::effect_shader(gravity)));
+		}));
 	}
 }
 
@@ -45,8 +43,9 @@ mod tests {
 
 	impl HandlesEffect<Gravity> for _HandlesEffects {
 		type TTarget = ();
+		type TEffectComponent = _Effect;
 
-		fn effect(effect: Gravity) -> impl Bundle {
+		fn effect(effect: Gravity) -> _Effect {
 			_Effect(effect)
 		}
 
@@ -55,17 +54,6 @@ mod tests {
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Effect(Gravity);
-
-	struct _HandlesShading;
-
-	impl HandlesEffectShadingFor<Gravity> for _HandlesShading {
-		fn effect_shader(effect: Gravity) -> impl Bundle {
-			_Shader(effect)
-		}
-	}
-
-	#[derive(Component, Debug, PartialEq)]
-	struct _Shader(Gravity);
 
 	fn gravity(
 		In((pull, effect_applies)): In<(UnitsPerSecond, EffectApplies)>,
@@ -76,7 +64,7 @@ mod tests {
 			strength: pull,
 			effect_applies,
 		}
-		.apply::<_HandlesEffects, _HandlesShading>(
+		.apply::<_HandlesEffects>(
 			&mut entity,
 			&SkillCaster::from(Entity::from_raw(42)),
 			&SkillSpawner::from(Entity::from_raw(43)),
@@ -87,24 +75,6 @@ mod tests {
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)
-	}
-
-	#[test]
-	fn spawn_gravity_shader() {
-		let mut app = setup();
-
-		let entity = app.world_mut().run_system_once_with(
-			(UnitsPerSecond::new(83.), EffectApplies::OncePerTarget),
-			gravity,
-		);
-
-		assert_eq!(
-			Some(&_Shader(Gravity {
-				strength: UnitsPerSecond::new(83.),
-				effect_applies: EffectApplies::OncePerTarget,
-			})),
-			app.world().entity(entity).get::<_Shader>()
-		);
 	}
 
 	#[test]
