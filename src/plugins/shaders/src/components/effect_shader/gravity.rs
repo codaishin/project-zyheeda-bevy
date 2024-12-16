@@ -9,7 +9,7 @@ use common::effects::gravity::Gravity;
 impl GetEffectMaterial for EffectShader<Gravity> {
 	type TMaterial = GravityMaterial;
 
-	fn get_effect_material(&self) -> Self::TMaterial {
+	fn get_effect_material() -> Self::TMaterial {
 		GravityMaterial::from(LIGHT_GRAY.with_alpha(0.5))
 	}
 }

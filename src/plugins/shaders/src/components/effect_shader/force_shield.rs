@@ -9,7 +9,7 @@ use common::effects::force_shield::ForceShield;
 impl GetEffectMaterial for EffectShader<ForceShield> {
 	type TMaterial = ForceMaterial;
 
-	fn get_effect_material(&self) -> Self::TMaterial {
+	fn get_effect_material() -> Self::TMaterial {
 		ForceMaterial::from(LIGHT_CYAN * 1.5)
 	}
 }

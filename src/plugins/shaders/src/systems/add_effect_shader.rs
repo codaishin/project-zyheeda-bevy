@@ -4,12 +4,12 @@ use crate::{
 };
 use bevy::prelude::*;
 
-pub(crate) fn add_effect_shader<TEffect: Component + GetEffectMaterial>(
-	mut materials: ResMut<Assets<TEffect::TMaterial>>,
-	mut effect_shaders: Query<(&mut EffectShadersTarget, &TEffect), Added<TEffect>>,
+pub(crate) fn add_effect_shader<TEffectShader: Component + GetEffectMaterial>(
+	mut materials: ResMut<Assets<TEffectShader::TMaterial>>,
+	mut effect_shaders: Query<&mut EffectShadersTarget, Added<TEffectShader>>,
 ) {
-	for (mut shaders, effect) in &mut effect_shaders {
-		let handle = materials.add(effect.get_effect_material());
+	for mut shaders in &mut effect_shaders {
+		let handle = materials.add(TEffectShader::get_effect_material());
 		shaders.shaders.insert(EffectShaderHandle::from(handle));
 	}
 }
@@ -32,7 +32,7 @@ mod tests {
 	impl GetEffectMaterial for _Effect {
 		type TMaterial = _Material;
 
-		fn get_effect_material(&self) -> Self::TMaterial {
+		fn get_effect_material() -> Self::TMaterial {
 			_Material {}
 		}
 	}

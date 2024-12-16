@@ -102,8 +102,8 @@ impl<TEffect, TPrefabs> HandlesEffectShadingFor<TEffect> for ShadersPlugin<TPref
 where
 	EffectShader<TEffect>: GetEffectMaterial + Sync + Send + 'static,
 {
-	fn effect_shader(effect: TEffect) -> impl Bundle {
-		EffectShader(effect)
+	fn effect_shader(_: TEffect) -> impl Bundle {
+		EffectShader(PhantomData)
 	}
 }
 

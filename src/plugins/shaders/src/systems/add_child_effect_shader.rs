@@ -5,22 +5,23 @@ use crate::{
 use bevy::prelude::*;
 
 #[allow(clippy::type_complexity)]
-pub(crate) fn add_child_effect_shader<TEffect: Component + GetEffectMaterial>(
-	mut materials: ResMut<Assets<TEffect::TMaterial>>,
-	mut effect_shaders: Query<&mut EffectShadersTarget>,
-	effects: Query<(Entity, &TEffect), (Added<TEffect>, Without<EffectShadersTarget>)>,
+pub(crate) fn add_child_effect_shader<TEffectShader: Component + GetEffectMaterial>(
+	mut materials: ResMut<Assets<TEffectShader::TMaterial>>,
+	mut effect_shaders_targets: Query<&mut EffectShadersTarget>,
+	effect_shaders: Query<Entity, (Added<TEffectShader>, Without<EffectShadersTarget>)>,
 	parents: Query<&Parent>,
 ) {
-	for (entity, effect) in &effects {
+	for entity in &effect_shaders {
 		for parent in parents.iter_ancestors(entity) {
-			let Ok(mut shaders) = effect_shaders.get_mut(parent) else {
+			let Ok(mut shaders) = effect_shaders_targets.get_mut(parent) else {
 				continue;
 			};
-			let handle = materials.add(effect.get_effect_material());
+			let handle = materials.add(TEffectShader::get_effect_material());
 			shaders.shaders.insert(EffectShaderHandle::from(handle));
 
-			/* This hurts my soul, but we cannot move `effect_shaders` into a lambda for `find_map` nor
-			 * mutably borrow `effect_shaders` multiple times, so we iterate and abort old-school.
+			/* This hurts my soul, but we cannot move `effect_shaders_targets` into a lambda for
+			 * `find_map` nor mutably borrow `effect_shaders` multiple times, so we iterate and abort
+			 * old-school.
 			 */
 			break;
 		}
@@ -45,7 +46,7 @@ mod tests {
 	impl GetEffectMaterial for _Effect {
 		type TMaterial = _Material;
 
-		fn get_effect_material(&self) -> Self::TMaterial {
+		fn get_effect_material() -> Self::TMaterial {
 			_Material {}
 		}
 	}

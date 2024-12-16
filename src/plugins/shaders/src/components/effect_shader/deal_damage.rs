@@ -10,7 +10,7 @@ use common::{
 impl GetEffectMaterial for EffectShader<DealDamage> {
 	type TMaterial = StandardMaterial;
 
-	fn get_effect_material(&self) -> Self::TMaterial {
+	fn get_effect_material() -> Self::TMaterial {
 		let base_color = Color::from(WHITE);
 		let emissive_amount = 2300.0;
 
