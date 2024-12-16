@@ -1,4 +1,4 @@
-use crate::effects::{force_shield::ForceShield, gravity::Gravity};
+use crate::effects::{deal_damage::DealDamage, force_shield::ForceShield, gravity::Gravity};
 use bevy::prelude::*;
 
 pub trait HandlesEffectShadingFor<TEffect> {
@@ -6,12 +6,16 @@ pub trait HandlesEffectShadingFor<TEffect> {
 }
 
 pub trait HandlesEffectShadingForAll:
-	HandlesEffectShadingFor<ForceShield> + HandlesEffectShadingFor<Gravity>
+	HandlesEffectShadingFor<ForceShield>
+	+ HandlesEffectShadingFor<Gravity>
+	+ HandlesEffectShadingFor<DealDamage>
 {
 }
 
 impl<T> HandlesEffectShadingForAll for T where
-	T: HandlesEffectShadingFor<ForceShield> + HandlesEffectShadingFor<Gravity>
+	T: HandlesEffectShadingFor<ForceShield>
+		+ HandlesEffectShadingFor<Gravity>
+		+ HandlesEffectShadingFor<DealDamage>
 {
 }
 

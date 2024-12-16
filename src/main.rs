@@ -36,8 +36,8 @@ fn prepare_game(app: &mut App) {
 	let life_cycles_plugin = LifeCyclesPlugin;
 	let animations_plugin = AnimationsPlugin;
 	let prefabs_plugin = PrefabsPlugin;
-	let shaders_plugin = ShadersPlugin;
 	let loading_plugin = LoadingPlugin;
+	let shaders_plugin = ShadersPlugin::depends_on(&prefabs_plugin);
 	let light_plugin = LightPlugin::depends_on(&prefabs_plugin);
 	let children_assets_dispatch_plugin = ChildrenAssetsDispatchPlugin::depends_on(&loading_plugin);
 	let interactions_plugin = InteractionsPlugin::depends_on(&life_cycles_plugin);

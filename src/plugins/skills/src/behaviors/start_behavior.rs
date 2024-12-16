@@ -39,7 +39,9 @@ impl SkillBehavior {
 			SkillBehavior::Gravity(gr) => {
 				gr.apply::<TEffects, TShaders>(entity, caster, spawn, target)
 			}
-			SkillBehavior::Damage(dm) => dm.apply::<TEffects>(entity, caster, spawn, target),
+			SkillBehavior::Damage(dm) => {
+				dm.apply::<TEffects, TShaders>(entity, caster, spawn, target)
+			}
 			SkillBehavior::ForceShield(fc) => fc.apply::<TShaders>(entity, caster, spawn, target),
 			#[cfg(test)]
 			SkillBehavior::Fn(func) => func(entity, caster, spawn, target),

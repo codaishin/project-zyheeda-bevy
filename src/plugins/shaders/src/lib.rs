@@ -7,14 +7,17 @@ pub(crate) mod traits;
 use bevy::{prelude::*, render::render_resource::AsBindGroup};
 use common::{
 	components::essence::Essence,
-	effects::{force_shield::ForceShield, gravity::Gravity},
+	effects::{deal_damage::DealDamage, force_shield::ForceShield, gravity::Gravity},
 	systems::{
 		asset_process_delta::asset_process_delta,
 		insert_associated::{Configure, InsertAssociated, InsertOn},
 		remove_components::Remove,
 		track_components::TrackComponentInSelfAndChildren,
 	},
-	traits::handles_effect_shading::{HandlesEffectShading, HandlesEffectShadingFor},
+	traits::{
+		handles_effect_shading::{HandlesEffectShading, HandlesEffectShadingFor},
+		prefab::RegisterPrefab,
+	},
 };
 use components::{
 	effect_shader::EffectShader,
@@ -26,7 +29,7 @@ use materials::{
 	force_material::ForceMaterial,
 	gravity_material::GravityMaterial,
 };
-use std::hash::Hash;
+use std::{hash::Hash, marker::PhantomData};
 use systems::{
 	add_child_effect_shader::add_child_effect_shader,
 	add_effect_shader::add_effect_shader,
@@ -37,12 +40,22 @@ use traits::{
 	shadows_aware_material::ShadowsAwareMaterial,
 };
 
-pub struct ShadersPlugin;
+pub struct ShadersPlugin<TPrefabs>(PhantomData<TPrefabs>);
 
-impl ShadersPlugin {
+impl<TPrefabs> ShadersPlugin<TPrefabs>
+where
+	TPrefabs: Plugin + RegisterPrefab,
+{
+	pub fn depends_on(_: &TPrefabs) -> Self {
+		Self(PhantomData)
+	}
+
 	fn build_for_effect_shaders(app: &mut App) {
-		app.register_effect_shader::<EffectShader<ForceShield>>()
-			.register_effect_shader::<EffectShader<Gravity>>()
+		TPrefabs::register_prefab::<EffectShader<DealDamage>>(app);
+
+		app.register_custom_effect_shader::<EffectShader<ForceShield>>()
+			.register_custom_effect_shader::<EffectShader<Gravity>>()
+			.register_standard_effect_shader::<EffectShader<DealDamage>>()
 			.add_systems(
 				Update,
 				(
@@ -75,14 +88,17 @@ impl ShadersPlugin {
 	}
 }
 
-impl Plugin for ShadersPlugin {
+impl<TPrefabs> Plugin for ShadersPlugin<TPrefabs>
+where
+	TPrefabs: Plugin + RegisterPrefab,
+{
 	fn build(&self, app: &mut App) {
 		Self::build_for_effect_shaders(app);
 		Self::build_for_essence_material(app);
 	}
 }
 
-impl<TEffect> HandlesEffectShadingFor<TEffect> for ShadersPlugin
+impl<TEffect, TPrefabs> HandlesEffectShadingFor<TEffect> for ShadersPlugin<TPrefabs>
 where
 	EffectShader<TEffect>: GetEffectMaterial + Sync + Send + 'static,
 {
@@ -91,7 +107,7 @@ where
 	}
 }
 
-impl HandlesEffectShading for ShadersPlugin {
+impl<TPrefabs> HandlesEffectShading for ShadersPlugin<TPrefabs> {
 	fn effect_shader_target() -> impl Bundle {
 		EffectShadersTarget::default()
 	}
@@ -121,27 +137,48 @@ impl RegisterShader for App {
 	}
 }
 
-trait RegisterEffectShader {
-	fn register_effect_shader<TEffect>(&mut self) -> &mut Self
+trait RegisterCustomEffectShader {
+	fn register_custom_effect_shader<TEffectShader>(&mut self) -> &mut Self
 	where
-		TEffect: Component + GetEffectMaterial,
-		TEffect::TMaterial: ShadowsAwareMaterial,
-		<TEffect::TMaterial as AsBindGroup>::Data: PartialEq + Eq + Hash + Clone;
+		TEffectShader: Component + GetEffectMaterial,
+		TEffectShader::TMaterial: ShadowsAwareMaterial,
+		<TEffectShader::TMaterial as AsBindGroup>::Data: PartialEq + Eq + Hash + Clone;
 }
 
-impl RegisterEffectShader for App {
-	fn register_effect_shader<TEffect>(&mut self) -> &mut Self
+impl RegisterCustomEffectShader for App {
+	fn register_custom_effect_shader<TEffectShader>(&mut self) -> &mut Self
 	where
-		TEffect: Component + GetEffectMaterial,
-		TEffect::TMaterial: ShadowsAwareMaterial + Asset,
-		<TEffect::TMaterial as AsBindGroup>::Data: PartialEq + Eq + Hash + Clone,
+		TEffectShader: Component + GetEffectMaterial,
+		TEffectShader::TMaterial: ShadowsAwareMaterial + Asset,
+		<TEffectShader::TMaterial as AsBindGroup>::Data: PartialEq + Eq + Hash + Clone,
 	{
-		self.register_shader::<TEffect::TMaterial>();
+		self.register_shader::<TEffectShader::TMaterial>();
 		self.add_systems(
 			Update,
 			(
-				add_effect_shader::<TEffect>,
-				add_child_effect_shader::<TEffect>,
+				add_effect_shader::<TEffectShader>,
+				add_child_effect_shader::<TEffectShader>,
+			),
+		)
+	}
+}
+
+trait RegisterStandardEffectShader {
+	fn register_standard_effect_shader<TEffectShader>(&mut self) -> &mut Self
+	where
+		TEffectShader: Component + GetEffectMaterial;
+}
+
+impl RegisterStandardEffectShader for App {
+	fn register_standard_effect_shader<TEffectShader>(&mut self) -> &mut Self
+	where
+		TEffectShader: Component + GetEffectMaterial,
+	{
+		self.add_systems(
+			Update,
+			(
+				add_effect_shader::<TEffectShader>,
+				add_child_effect_shader::<TEffectShader>,
 			),
 		)
 	}
