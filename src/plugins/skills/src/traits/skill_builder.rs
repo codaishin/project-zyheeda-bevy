@@ -1,26 +1,31 @@
 use crate::{
-	behaviors::{build_skill_shape::OnSkillStop, SkillCaster, SkillSpawner, Target},
+	behaviors::{build_skill_shape::OnSkillStop, SkillCaster, SkillSpawner},
 	skills::lifetime_definition::LifeTimeDefinition,
 };
+use behaviors::components::skill_behavior::SkillTarget;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::traits::handles_lifetime::HandlesLifetime;
 
 pub(crate) trait BuildContact {
+	type TContact: Component;
+
 	fn build_contact(
 		&self,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
-		target: &Target,
-	) -> impl Bundle;
+		target: &SkillTarget,
+	) -> Self::TContact;
 }
 
 pub(crate) trait BuildProjection {
+	type TProjection: Component;
+
 	fn build_projection(
 		&self,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
-		target: &Target,
-	) -> impl Bundle;
+		target: &SkillTarget,
+	) -> Self::TProjection;
 }
 
 pub(crate) trait SkillLifetime {
@@ -39,7 +44,7 @@ pub(crate) trait SkillBuilder {
 		commands: &mut Commands,
 		caster: &SkillCaster,
 		spawn: &SkillSpawner,
-		target: &Target,
+		target: &SkillTarget,
 	) -> SkillShape
 	where
 		TLifetimes: HandlesLifetime;
@@ -54,7 +59,7 @@ where
 		commands: &mut Commands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
-		target: &Target,
+		target: &SkillTarget,
 	) -> SkillShape
 	where
 		TLifetimes: HandlesLifetime,
@@ -115,14 +120,14 @@ mod tests {
 	struct _Contact {
 		caster: SkillCaster,
 		spawner: SkillSpawner,
-		target: Target,
+		target: SkillTarget,
 	}
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Projection {
 		caster: SkillCaster,
 		spawner: SkillSpawner,
-		target: Target,
+		target: SkillTarget,
 	}
 
 	struct _Skill {
@@ -153,12 +158,14 @@ mod tests {
 	}
 
 	impl BuildContact for _Skill {
+		type TContact = _Contact;
+
 		fn build_contact(
 			&self,
 			caster: &SkillCaster,
 			spawner: &SkillSpawner,
-			target: &Target,
-		) -> impl Bundle {
+			target: &SkillTarget,
+		) -> Self::TContact {
 			_Contact {
 				caster: *caster,
 				spawner: *spawner,
@@ -168,12 +175,14 @@ mod tests {
 	}
 
 	impl BuildProjection for _Skill {
+		type TProjection = _Projection;
+
 		fn build_projection(
 			&self,
 			caster: &SkillCaster,
 			spawner: &SkillSpawner,
-			target: &Target,
-		) -> impl Bundle {
+			target: &SkillTarget,
+		) -> Self::TProjection {
 			_Projection {
 				caster: *caster,
 				spawner: *spawner,
@@ -183,7 +192,7 @@ mod tests {
 	}
 
 	fn build_skill(
-		args: In<(_Skill, SkillCaster, SkillSpawner, Target)>,
+		args: In<(_Skill, SkillCaster, SkillSpawner, SkillTarget)>,
 		mut commands: Commands,
 	) -> SkillShape {
 		let In((skill, caster, spawner, target)) = args;
@@ -202,7 +211,7 @@ mod tests {
 		};
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
-		let target = Target {
+		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Vec3::Z),
 			..default()
 		};
@@ -229,7 +238,7 @@ mod tests {
 		};
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
-		let target = Target {
+		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Vec3::Z),
 			..default()
 		};
@@ -256,7 +265,7 @@ mod tests {
 		};
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
-		let target = Target {
+		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Vec3::Z),
 			..default()
 		};
@@ -282,7 +291,7 @@ mod tests {
 		};
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
-		let target = Target {
+		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Vec3::Z),
 			..default()
 		};
@@ -302,7 +311,7 @@ mod tests {
 		};
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
-		let target = Target {
+		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Vec3::Z),
 			..default()
 		};
@@ -322,7 +331,7 @@ mod tests {
 		};
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
-		let target = Target {
+		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Vec3::Z),
 			..default()
 		};
@@ -345,7 +354,7 @@ mod tests {
 		};
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
-		let target = Target {
+		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Vec3::Z),
 			..default()
 		};

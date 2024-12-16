@@ -1,17 +1,18 @@
-use std::time::Duration;
-
 use crate::{
-	behaviors::{SkillCaster, SkillSpawner, Target},
+	behaviors::{SkillCaster, SkillSpawner, SkillTarget},
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
-use behaviors::components::ground_targeted_aoe::{
-	GroundTargetedAoeContact,
-	GroundTargetedAoeProjection,
+use behaviors::components::skill_behavior::{
+	skill_contact::SkillContact,
+	skill_projection::SkillProjection,
+	Integrity,
+	Motion,
+	Shape,
 };
-use bevy::prelude::*;
 use common::{dto::duration::DurationDto, tools::Units};
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct SpawnGroundTargetedAoe<TDuration = Duration> {
@@ -31,28 +32,47 @@ impl From<SpawnGroundTargetedAoe<DurationDto>> for SpawnGroundTargetedAoe {
 }
 
 impl BuildContact for SpawnGroundTargetedAoe {
+	type TContact = SkillContact;
+
 	fn build_contact(
 		&self,
 		caster: &SkillCaster,
 		_: &SkillSpawner,
-		target: &Target,
-	) -> impl Bundle {
+		target: &SkillTarget,
+	) -> Self::TContact {
 		let SkillCaster(caster) = *caster;
-		let Target { ray, .. } = target;
+		let SkillTarget { ray, .. } = target;
 
-		GroundTargetedAoeContact {
-			caster,
-			target_ray: *ray,
-			max_range: self.max_range,
-			radius: self.radius,
+		SkillContact {
+			shape: Shape::Sphere {
+				radius: self.radius,
+				hollow_collider: true,
+			},
+			integrity: Integrity::Solid,
+			motion: Motion::Stationary {
+				caster,
+				max_cast_range: self.max_range,
+				target_ray: *ray,
+			},
 		}
 	}
 }
 
 impl BuildProjection for SpawnGroundTargetedAoe {
-	fn build_projection(&self, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> impl Bundle {
-		GroundTargetedAoeProjection {
-			radius: self.radius,
+	type TProjection = SkillProjection;
+
+	fn build_projection(
+		&self,
+		_: &SkillCaster,
+		_: &SkillSpawner,
+		_: &SkillTarget,
+	) -> Self::TProjection {
+		SkillProjection {
+			shape: Shape::Sphere {
+				radius: self.radius,
+				hollow_collider: false,
+			},
+			offset: None,
 		}
 	}
 }

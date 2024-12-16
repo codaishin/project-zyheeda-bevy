@@ -2,18 +2,11 @@ pub mod build_skill_shape;
 pub mod spawn_on;
 pub mod start_behavior;
 
-use crate::{skills::SelectInfo, traits::skill_builder::SkillShape};
-use bevy::{ecs::system::EntityCommands, math::Ray3d, prelude::*};
+use crate::traits::skill_builder::SkillShape;
+use behaviors::components::skill_behavior::SkillTarget;
+use bevy::{ecs::system::EntityCommands, prelude::*};
 use build_skill_shape::BuildSkillShape;
-use common::{
-	components::Outdated,
-	resources::ColliderInfo,
-	traits::{
-		handles_effect::HandlesAllEffects,
-		handles_effect_shading::HandlesEffectShadingForAll,
-		handles_lifetime::HandlesLifetime,
-	},
-};
+use common::traits::{handles_effect::HandlesAllEffects, handles_lifetime::HandlesLifetime};
 use spawn_on::SpawnOn;
 use start_behavior::SkillBehavior;
 
@@ -32,33 +25,6 @@ pub struct SkillCaster(pub Entity);
 impl From<Entity> for SkillCaster {
 	fn from(entity: Entity) -> Self {
 		Self(entity)
-	}
-}
-
-pub type Target = SelectInfo<Outdated<GlobalTransform>>;
-
-impl From<Ray3d> for Target {
-	fn from(ray: Ray3d) -> Self {
-		Self { ray, ..default() }
-	}
-}
-
-impl Target {
-	pub fn with_ray(self, ray: Ray3d) -> Self {
-		Self {
-			ray,
-			collision_info: self.collision_info,
-		}
-	}
-
-	pub fn with_collision_info(
-		self,
-		collision_info: Option<ColliderInfo<Outdated<GlobalTransform>>>,
-	) -> Self {
-		Self {
-			ray: self.ray,
-			collision_info,
-		}
 	}
 }
 
@@ -107,47 +73,45 @@ impl SkillBehaviorConfig {
 		}
 	}
 
-	pub(crate) fn spawn_shape<TDependency>(
+	pub(crate) fn spawn_shape<TLifeCycles>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
-		target: &Target,
+		target: &SkillTarget,
 	) -> SkillShape
 	where
-		TDependency: HandlesLifetime,
+		TLifeCycles: HandlesLifetime,
 	{
 		self.shape
-			.build::<TDependency>(commands, caster, spawner, target)
+			.build::<TLifeCycles>(commands, caster, spawner, target)
 	}
 
-	pub(crate) fn start_contact_behavior<TEffects, TShaders>(
+	pub(crate) fn start_contact_behavior<TEffects>(
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
-		target: &Target,
+		target: &SkillTarget,
 	) where
 		TEffects: HandlesAllEffects,
-		TShaders: HandlesEffectShadingForAll,
 	{
 		for start in &self.contact {
-			start.apply::<TEffects, TShaders>(entity, caster, spawner, target);
+			start.apply::<TEffects>(entity, caster, spawner, target);
 		}
 	}
 
-	pub(crate) fn start_projection_behavior<TEffects, TShaders>(
+	pub(crate) fn start_projection_behavior<TEffects>(
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
-		target: &Target,
+		target: &SkillTarget,
 	) where
 		TEffects: HandlesAllEffects,
-		TShaders: HandlesEffectShadingForAll,
 	{
 		for start in &self.projection {
-			start.apply::<TEffects, TShaders>(entity, caster, spawner, target);
+			start.apply::<TEffects>(entity, caster, spawner, target);
 		}
 	}
 }

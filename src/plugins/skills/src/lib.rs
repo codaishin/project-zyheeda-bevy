@@ -10,6 +10,10 @@ pub mod traits;
 mod behaviors;
 mod bundles;
 
+use ::behaviors::components::skill_behavior::{
+	skill_contact::SkillContact,
+	skill_projection::SkillProjection,
+};
 use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
@@ -20,8 +24,8 @@ use common::{
 	traits::{
 		animation::HasAnimationsDispatch,
 		handles_effect::HandlesAllEffects,
-		handles_effect_shading::HandlesEffectShadingForAll,
 		handles_lifetime::HandlesLifetime,
+		handles_skills::HandlesSkills,
 		register_assets_for_children::RegisterAssetsForChildren,
 		register_custom_assets::{RegisterCustomAssets, RegisterCustomFolderAssets},
 		try_insert_on::TryInsertOn,
@@ -59,38 +63,28 @@ use systems::{
 	update_skill_combos::update_skill_combos,
 };
 
-pub struct SkillsPlugin<
-	TAnimations,
-	TLifeCycles,
-	TInteractions,
-	TShaders,
-	TDispatchChildrenAssets,
-	TLoading,
->(
+pub struct SkillsPlugin<TAnimations, TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading>(
 	PhantomData<(
 		TAnimations,
 		TLifeCycles,
 		TInteractions,
-		TShaders,
 		TDispatchChildrenAssets,
 		TLoading,
 	)>,
 );
 
-impl<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets, TLoading>
-	SkillsPlugin<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets, TLoading>
+impl<TAnimations, TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading>
+	SkillsPlugin<TAnimations, TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading>
 where
 	TAnimations: Plugin + HasAnimationsDispatch,
 	TLifeCycles: Plugin + HandlesLifetime,
 	TInteractions: Plugin + HandlesAllEffects,
-	TShaders: Plugin + HandlesEffectShadingForAll,
 	TDispatchChildrenAssets: Plugin + RegisterAssetsForChildren,
 	TLoading: Plugin + RegisterCustomAssets + RegisterCustomFolderAssets,
 {
 	pub fn depends_on(
 		_: &TAnimations,
 		_: &TLifeCycles,
-		_: &TShaders,
 		_: &TInteractions,
 		_: &TDispatchChildrenAssets,
 		_: &TLoading,
@@ -100,7 +94,6 @@ where
 				TAnimations,
 				TLifeCycles,
 				TInteractions,
-				TShaders,
 				TDispatchChildrenAssets,
 				TLoading,
 			)>,
@@ -137,11 +130,8 @@ where
 	}
 
 	fn skill_execution(&self, app: &mut App) {
-		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<
-			TLifeCycles,
-			TInteractions,
-			TShaders,
-		>;
+		let execute_skill =
+			SkillExecuter::<RunSkillBehavior>::execute_system::<TLifeCycles, TInteractions>;
 
 		app.init_resource::<KeyMap<SlotKey, KeyCode>>()
 			.add_systems(
@@ -234,20 +224,12 @@ where
 	}
 }
 
-impl<TAnimations, TLifeCycles, TInteractions, TShaders, TDispatchChildrenAssets, TLoading> Plugin
-	for SkillsPlugin<
-		TAnimations,
-		TLifeCycles,
-		TInteractions,
-		TShaders,
-		TDispatchChildrenAssets,
-		TLoading,
-	>
+impl<TAnimations, TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading> Plugin
+	for SkillsPlugin<TAnimations, TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading>
 where
 	TAnimations: Plugin + HasAnimationsDispatch,
 	TLifeCycles: Plugin + HandlesLifetime,
 	TInteractions: Plugin + HandlesAllEffects,
-	TShaders: Plugin + HandlesEffectShadingForAll,
 	TDispatchChildrenAssets: Plugin + RegisterAssetsForChildren,
 	TLoading: Plugin + RegisterCustomAssets + RegisterCustomFolderAssets,
 {
@@ -257,4 +239,11 @@ where
 		self.skill_slot_load(app);
 		self.skill_execution(app);
 	}
+}
+
+impl<TAnimations, TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading> HandlesSkills
+	for SkillsPlugin<TAnimations, TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading>
+{
+	type SkillContact = SkillContact;
+	type SkillProjection = SkillProjection;
 }

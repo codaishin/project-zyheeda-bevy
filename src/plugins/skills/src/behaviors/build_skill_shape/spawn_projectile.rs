@@ -1,47 +1,71 @@
 use crate::{
-	behaviors::{SkillCaster, SkillSpawner, Target},
+	behaviors::{SkillCaster, SkillSpawner},
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
-use behaviors::components::projectile::{
-	sub_type::SubType,
-	ProjectileContact,
-	ProjectileProjection,
+use behaviors::components::skill_behavior::{
+	skill_contact::SkillContact,
+	skill_projection::SkillProjection,
+	Integrity,
+	Motion,
+	Shape,
+	SkillTarget,
 };
-use bevy::prelude::{Bundle, SpatialBundle};
+use common::{
+	blocker::Blocker,
+	tools::{Units, UnitsPerSecond},
+	traits::clamp_zero_positive::ClampZeroPositive,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct SpawnProjectile {
-	sub_type: SubType,
-}
+pub struct SpawnProjectile;
 
 impl BuildContact for SpawnProjectile {
+	type TContact = SkillContact;
+
 	fn build_contact(
 		&self,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
-		_: &Target,
-	) -> impl Bundle {
+		_: &SkillTarget,
+	) -> Self::TContact {
 		let SkillCaster(caster) = *caster;
 		let SkillSpawner(spawner) = *spawner;
 
-		(
-			ProjectileContact {
+		SkillContact {
+			shape: Shape::Sphere {
+				radius: Units::new(0.05),
+				hollow_collider: false,
+			},
+			integrity: Integrity::Fragile {
+				destroyed_by: vec![Blocker::Physical, Blocker::Force],
+			},
+			motion: Motion::Projectile {
 				caster,
 				spawner,
-				range: 10.,
-				sub_type: self.sub_type,
+				speed: UnitsPerSecond::new(15.),
+				max_range: Units::new(20.),
 			},
-			SpatialBundle::default(),
-		)
+		}
 	}
 }
 
 impl BuildProjection for SpawnProjectile {
-	fn build_projection(&self, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> impl Bundle {
-		ProjectileProjection {
-			sub_type: self.sub_type,
+	type TProjection = SkillProjection;
+
+	fn build_projection(
+		&self,
+		_: &SkillCaster,
+		_: &SkillSpawner,
+		_: &SkillTarget,
+	) -> Self::TProjection {
+		SkillProjection {
+			shape: Shape::Sphere {
+				radius: Units::new(0.5),
+				hollow_collider: false,
+			},
+			offset: None,
 		}
 	}
 }

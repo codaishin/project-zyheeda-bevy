@@ -1,4 +1,5 @@
 pub(crate) mod bundle;
+pub(crate) mod has_filter;
 pub(crate) mod movement;
 pub(crate) mod movement_config;
 
@@ -25,18 +26,6 @@ impl From<bool> for IsDone {
 	fn from(value: bool) -> Self {
 		Self(value)
 	}
-}
-
-pub(crate) trait Caster {
-	fn caster(&self) -> Entity;
-}
-
-pub(crate) trait Spawner {
-	fn spawner(&self) -> Entity;
-}
-
-pub(crate) trait ProjectileBehavior: Caster {
-	fn range(&self) -> f32;
 }
 
 pub(crate) trait MovementData {

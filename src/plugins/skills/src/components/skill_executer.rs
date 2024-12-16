@@ -1,23 +1,17 @@
 use super::skill_spawners::SkillSpawners;
 use crate::{
-	behaviors::{
-		build_skill_shape::OnSkillStop,
-		spawn_on::SpawnOn,
-		SkillCaster,
-		SkillSpawner,
-		Target,
-	},
+	behaviors::{build_skill_shape::OnSkillStop, spawn_on::SpawnOn, SkillCaster, SkillSpawner},
 	skills::RunSkillBehavior,
 	slot_key::SlotKey,
 	traits::{spawn_skill_behavior::SpawnSkillBehavior, Execute, Flush, Schedule},
 };
+use behaviors::components::skill_behavior::SkillTarget;
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
 	traits::{
 		accessors::get::GetRef,
 		handles_effect::HandlesAllEffects,
-		handles_effect_shading::HandlesEffectShadingForAll,
 		handles_lifetime::HandlesLifetime,
 		try_despawn_recursive::TryDespawnRecursive,
 	},
@@ -70,14 +64,13 @@ impl From<NoSkillSpawner> for Error {
 	}
 }
 
-impl<TCommands, TBehavior, TLifetimes, TEffects, TShaders>
-	Execute<TCommands, TLifetimes, TEffects, TShaders> for SkillExecuter<TBehavior>
+impl<TCommands, TBehavior, TLifetimes, TEffects> Execute<TCommands, TLifetimes, TEffects>
+	for SkillExecuter<TBehavior>
 where
 	TBehavior: SpawnSkillBehavior<TCommands>,
 	TCommands: TryDespawnRecursive,
 	TLifetimes: HandlesLifetime + 'static,
 	TEffects: HandlesAllEffects + 'static,
-	TShaders: HandlesEffectShadingForAll + 'static,
 {
 	type TError = NoSkillSpawner;
 
@@ -86,13 +79,13 @@ where
 		commands: &mut TCommands,
 		caster: &SkillCaster,
 		spawners: &SkillSpawners,
-		target: &Target,
+		target: &SkillTarget,
 	) -> Result<(), Self::TError> {
 		match self {
 			SkillExecuter::Start { shape, slot_key } => {
 				let spawner = get_spawner(shape, spawners, *slot_key)?;
-				let on_skill_stop_behavior = shape
-					.spawn::<TLifetimes, TEffects, TShaders>(commands, caster, spawner, target);
+				let on_skill_stop_behavior =
+					shape.spawn::<TLifetimes, TEffects>(commands, caster, spawner, target);
 
 				*self = match on_skill_stop_behavior {
 					OnSkillStop::Ignore => SkillExecuter::Idle,
@@ -146,11 +139,7 @@ mod tests {
 		components::{Outdated, Side},
 		resources::ColliderInfo,
 		simple_init,
-		traits::{
-			handles_effect::HandlesEffect,
-			handles_effect_shading::HandlesEffectShadingFor,
-			mock::Mock,
-		},
+		traits::{handles_effect::HandlesEffect, mock::Mock},
 	};
 	use mockall::{mock, predicate::eq};
 	use std::time::Duration;
@@ -170,18 +159,17 @@ mod tests {
 		T: Sync + Send + 'static,
 	{
 		type TTarget = ();
-		fn effect(_: T) -> impl Bundle {}
+		type TEffectComponent = _Effect;
+
+		fn effect(_: T) -> _Effect {
+			_Effect
+		}
+
 		fn attribute(_: Self::TTarget) -> impl Bundle {}
 	}
 
-	struct _HandlesShading;
-
-	impl<T> HandlesEffectShadingFor<T> for _HandlesShading
-	where
-		T: Sync + Send + 'static,
-	{
-		fn effect_shader(_: T) -> impl Bundle {}
-	}
+	#[derive(Component)]
+	struct _Effect;
 
 	impl TryDespawnRecursive for _Commands {
 		fn try_despawn_recursive(&mut self, _: Entity) {}
@@ -204,17 +192,16 @@ mod tests {
 			SpawnOn::Slot
 		}
 
-		fn spawn<TLifetimes, TEffects, TShaders>(
+		fn spawn<TLifetimes, TEffects>(
 			&self,
 			_: &mut _Commands,
 			_: &SkillCaster,
 			_: &SkillSpawner,
-			_: &Target,
+			_: &SkillTarget,
 		) -> OnSkillStop
 		where
 			TLifetimes: HandlesLifetime + 'static,
 			TEffects: HandlesAllEffects + 'static,
-			TShaders: HandlesEffectShadingForAll + 'static,
 		{
 			self.0.clone()
 		}
@@ -224,32 +211,26 @@ mod tests {
 		_Behavior {}
 		impl SpawnSkillBehavior<Mock_Commands> for _Behavior {
 			fn spawn_on(&self) -> SpawnOn;
-			fn spawn<TLifetimes, TEffects, TShaders>(
+			fn spawn<TLifetimes, TEffects>(
 				&self,
 				commands: &mut Mock_Commands,
 				caster: &SkillCaster,
 				spawner: &SkillSpawner,
-				target: &Target,
+				target: &SkillTarget,
 			) -> OnSkillStop
 			where
 				TLifetimes: HandlesLifetime + 'static,
-				TEffects: HandlesAllEffects + 'static,
-			TShaders: HandlesEffectShadingForAll + 'static;
+				TEffects: HandlesAllEffects + 'static;
 		}
 	}
 
 	simple_init!(Mock_Behavior);
 
-	type _Executer<'a, TCommands> = &'a mut dyn Execute<
-		TCommands,
-		_HandlesLifetimes,
-		_HandlesEffects,
-		_HandlesShading,
-		TError = NoSkillSpawner,
-	>;
+	type _Executer<'a, TCommands> =
+		&'a mut dyn Execute<TCommands, _HandlesLifetimes, _HandlesEffects, TError = NoSkillSpawner>;
 
-	fn get_target() -> Target {
-		Target {
+	fn get_target() -> SkillTarget {
+		SkillTarget {
 			ray: Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(4., 5., 6.)),
 			collision_info: Some(ColliderInfo {
 				collider: Outdated {
@@ -286,7 +267,7 @@ mod tests {
 			slot_key: SlotKey::BottomHand(Side::Right),
 			shape: Mock_Behavior::new_mock(|mock| {
 				mock.expect_spawn_on().return_const(SpawnOn::Slot);
-				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects, _HandlesShading>()
+				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects>()
 					.withf(move |_, c, s, t| {
 						assert_eq!((&caster, &spawner, &target), (c, s, t));
 						true
@@ -312,7 +293,7 @@ mod tests {
 			slot_key: SlotKey::BottomHand(Side::Right),
 			shape: Mock_Behavior::new_mock(|mock| {
 				mock.expect_spawn_on().return_const(SpawnOn::Center);
-				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects, _HandlesShading>()
+				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects>()
 					.withf(move |_, c, s, t| {
 						assert_eq!((&caster, &spawner, &target), (c, s, t));
 						true
@@ -377,7 +358,7 @@ mod tests {
 			slot_key: SlotKey::BottomHand(Side::Right),
 			shape: Mock_Behavior::new_mock(|mock| {
 				mock.expect_spawn_on().return_const(SpawnOn::Slot);
-				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects, _HandlesShading>()
+				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects>()
 					.return_const(OnSkillStop::Ignore);
 			}),
 		};

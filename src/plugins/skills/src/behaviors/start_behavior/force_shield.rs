@@ -1,29 +1,22 @@
-use crate::behaviors::{SkillCaster, SkillSpawner, Target};
+use crate::behaviors::{SkillCaster, SkillSpawner, SkillTarget};
 use bevy::ecs::system::EntityCommands;
-use common::{
-	blocker::Blocker,
-	effects::force_shield::ForceShield,
-	traits::handles_effect_shading::HandlesEffectShadingFor,
-};
+use common::{effects::force_shield::ForceShield, traits::handles_effect::HandlesEffect};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct StartForceShield;
 
 impl StartForceShield {
-	pub fn apply<TShaders>(
+	pub fn apply<TInteractions>(
 		&self,
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
 		_: &SkillSpawner,
-		_: &Target,
+		_: &SkillTarget,
 	) where
-		TShaders: HandlesEffectShadingFor<ForceShield>,
+		TInteractions: HandlesEffect<ForceShield>,
 	{
-		entity.try_insert((
-			Blocker::insert([Blocker::Force]),
-			TShaders::effect_shader(ForceShield),
-		));
+		entity.try_insert(TInteractions::effect(ForceShield));
 	}
 }
 
@@ -31,14 +24,19 @@ impl StartForceShield {
 mod tests {
 	use super::*;
 	use bevy::{ecs::system::RunSystemOnce, prelude::*};
-	use common::{blocker::BlockerInsertCommand, test_tools::utils::SingleThreadedApp};
+	use common::test_tools::utils::SingleThreadedApp;
 
-	struct _HandlesShading;
+	struct _HandlesInteractions;
 
-	impl HandlesEffectShadingFor<ForceShield> for _HandlesShading {
-		fn effect_shader(effect: ForceShield) -> impl Bundle {
+	impl HandlesEffect<ForceShield> for _HandlesInteractions {
+		type TTarget = ();
+		type TEffectComponent = _ForceShield;
+
+		fn effect(effect: ForceShield) -> Self::TEffectComponent {
 			_ForceShield(effect)
 		}
+
+		fn attribute(_: Self::TTarget) -> impl Bundle {}
 	}
 
 	#[derive(Component, Debug, PartialEq)]
@@ -46,29 +44,17 @@ mod tests {
 
 	fn force_shield(mut commands: Commands) -> Entity {
 		let mut entity = commands.spawn_empty();
-		StartForceShield.apply::<_HandlesShading>(
+		StartForceShield.apply::<_HandlesInteractions>(
 			&mut entity,
 			&SkillCaster::from(Entity::from_raw(42)),
 			&SkillSpawner::from(Entity::from_raw(43)),
-			&Target::default(),
+			&SkillTarget::default(),
 		);
 		entity.id()
 	}
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)
-	}
-
-	#[test]
-	fn spawn_force() {
-		let mut app = setup();
-
-		let entity = app.world_mut().run_system_once(force_shield);
-
-		assert_eq!(
-			Some(&Blocker::insert([Blocker::Force])),
-			app.world().entity(entity).get::<BlockerInsertCommand>()
-		);
 	}
 
 	#[test]

@@ -2,7 +2,7 @@ pub mod spawn_ground_target;
 pub mod spawn_projectile;
 pub mod spawn_shield;
 
-use super::{SkillCaster, SkillSpawner, Target};
+use super::{SkillCaster, SkillSpawner, SkillTarget};
 use crate::traits::skill_builder::{SkillBuilder, SkillShape};
 use bevy::prelude::*;
 use common::traits::handles_lifetime::HandlesLifetime;
@@ -11,7 +11,7 @@ use spawn_projectile::SpawnProjectile;
 use spawn_shield::SpawnShield;
 
 pub(crate) type BuildSkillShapeFn =
-	for<'a> fn(&'a mut Commands, &SkillCaster, &SkillSpawner, &Target) -> SkillShape;
+	for<'a> fn(&'a mut Commands, &SkillCaster, &SkillSpawner, &SkillTarget) -> SkillShape;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum OnSkillStop {
@@ -48,7 +48,7 @@ impl BuildSkillShape {
 		commands: &mut Commands,
 		_: &SkillCaster,
 		_: &SkillSpawner,
-		_: &Target,
+		_: &SkillTarget,
 	) -> SkillShape {
 		let contact = commands.spawn_empty().id();
 		let projection = commands.spawn_empty().set_parent(contact).id();
@@ -66,7 +66,7 @@ impl BuildSkillShape {
 		commands: &mut Commands,
 		caster: &SkillCaster,
 		spawn: &SkillSpawner,
-		target: &Target,
+		target: &SkillTarget,
 	) -> SkillShape
 	where
 		TLifetimes: HandlesLifetime,

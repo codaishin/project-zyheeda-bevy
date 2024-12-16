@@ -1,8 +1,11 @@
 pub mod cam_orbit;
-pub mod ground_targeted_aoe;
-pub mod projectile;
-pub mod shield;
+pub mod ground_target;
+pub mod skill_behavior;
 pub mod void_beam;
+
+pub(crate) mod set_position_and_rotation;
+pub(crate) mod set_to_move_forward;
+pub(crate) mod when_traveled_insert;
 
 use crate::traits::{RemoveComponent, SpawnAttack};
 use bevy::{ecs::system::EntityCommands, prelude::*};
@@ -19,6 +22,12 @@ pub enum Face {
 	Entity(Entity),
 	Translation(Vec3),
 }
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub(crate) struct Always;
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub(crate) struct Once;
 
 #[derive(Component, Debug, PartialEq)]
 pub struct OverrideFace(pub Face);
@@ -70,7 +79,7 @@ pub enum MovementMode {
 	Slow,
 }
 
-#[derive(Component, Clone, Copy)]
+#[derive(Component, Debug, PartialEq, Clone, Copy)]
 pub enum MovementConfig {
 	Constant {
 		mode: MovementMode,

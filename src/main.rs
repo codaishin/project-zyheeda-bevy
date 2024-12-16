@@ -36,19 +36,19 @@ fn prepare_game(app: &mut App) {
 	let life_cycles_plugin = LifeCyclesPlugin;
 	let animations_plugin = AnimationsPlugin;
 	let prefabs_plugin = PrefabsPlugin;
-	let shaders_plugin = ShadersPlugin;
 	let loading_plugin = LoadingPlugin;
 	let light_plugin = LightPlugin::depends_on(&prefabs_plugin);
 	let children_assets_dispatch_plugin = ChildrenAssetsDispatchPlugin::depends_on(&loading_plugin);
-	let interactions_plugin = InteractionsPlugin::depends_on(&life_cycles_plugin);
+	let interactions_plugin = InteractionsPlugin::depends_on(&prefabs_plugin, &life_cycles_plugin);
 	let skills_plugin = SkillsPlugin::depends_on(
 		&animations_plugin,
 		&life_cycles_plugin,
-		&shaders_plugin,
 		&interactions_plugin,
 		&children_assets_dispatch_plugin,
 		&loading_plugin,
 	);
+	let shaders_plugin =
+		ShadersPlugin::depends_on(&prefabs_plugin, &interactions_plugin, &skills_plugin);
 	let bars_plugin = BarsPlugin::depends_on(&life_cycles_plugin);
 	let enemy_plugin = EnemyPlugin::depends_on(&prefabs_plugin, &interactions_plugin, &bars_plugin);
 	let map_generation_plugin = MapGenerationPlugin::depends_on(&prefabs_plugin, &light_plugin);
@@ -62,7 +62,7 @@ fn prepare_game(app: &mut App) {
 	let behaviors_plugin = BehaviorsPlugin::depends_on(
 		&animations_plugin,
 		&prefabs_plugin,
-		&shaders_plugin,
+		&life_cycles_plugin,
 		&interactions_plugin,
 	);
 	let rendering_plugin = RenderingPlugin::depends_on(&loading_plugin);

@@ -9,23 +9,19 @@ use crate::{
 		SkillBehaviorConfig,
 		SkillCaster,
 		SkillSpawner,
-		Target,
 	},
 	item::item_type::SkillItemType,
 	slot_key::SlotKey,
 	traits::{spawn_skill_behavior::SpawnSkillBehavior, Matches, Prime},
 };
+use behaviors::components::skill_behavior::SkillTarget;
 use bevy::prelude::*;
-use common::{
-	resources::ColliderInfo,
-	traits::{
-		animation::Animation,
-		handles_effect::HandlesAllEffects,
-		handles_effect_shading::HandlesEffectShadingForAll,
-		handles_lifetime::HandlesLifetime,
-		load_asset::Path,
-		register_custom_assets::AssetFolderPath,
-	},
+use common::traits::{
+	animation::Animation,
+	handles_effect::HandlesAllEffects,
+	handles_lifetime::HandlesLifetime,
+	load_asset::Path,
+	register_custom_assets::AssetFolderPath,
 };
 use std::{
 	collections::HashSet,
@@ -71,24 +67,6 @@ impl Display for Skill {
 impl AssetFolderPath for Skill {
 	fn asset_folder_path() -> Path {
 		Path::from("skills")
-	}
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct SelectInfo<T> {
-	pub ray: Ray3d,
-	pub collision_info: Option<ColliderInfo<T>>,
-}
-
-impl<T> Default for SelectInfo<T> {
-	fn default() -> Self {
-		Self {
-			ray: Ray3d {
-				origin: Vec3::ZERO,
-				direction: Dir3::NEG_Z,
-			},
-			collision_info: None,
-		}
 	}
 }
 
@@ -181,59 +159,47 @@ impl SpawnSkillBehavior<Commands<'_, '_>> for RunSkillBehavior {
 		}
 	}
 
-	fn spawn<TLifetimes, TEffects, TShaders>(
+	fn spawn<TLifetimes, TEffects>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
-		target: &Target,
+		target: &SkillTarget,
 	) -> OnSkillStop
 	where
 		TLifetimes: HandlesLifetime + 'static,
 		TEffects: HandlesAllEffects + 'static,
-		TShaders: HandlesEffectShadingForAll + 'static,
 	{
 		match self {
 			RunSkillBehavior::OnActive(conf) => {
-				spawn::<TLifetimes, TEffects, TShaders>(conf, commands, caster, spawner, target)
+				spawn::<TLifetimes, TEffects>(conf, commands, caster, spawner, target)
 			}
 			RunSkillBehavior::OnAim(conf) => {
-				spawn::<TLifetimes, TEffects, TShaders>(conf, commands, caster, spawner, target)
+				spawn::<TLifetimes, TEffects>(conf, commands, caster, spawner, target)
 			}
 		}
 	}
 }
 
-fn spawn<TLifetimes, TEffects, TShaders>(
+fn spawn<TLifetimes, TEffects>(
 	behavior: &SkillBehaviorConfig,
 	commands: &mut Commands,
 	caster: &SkillCaster,
 	spawner: &SkillSpawner,
-	target: &Target,
+	target: &SkillTarget,
 ) -> OnSkillStop
 where
 	TLifetimes: HandlesLifetime + 'static,
 	TEffects: HandlesAllEffects + 'static,
-	TShaders: HandlesEffectShadingForAll + 'static,
 {
 	let shape = behavior.spawn_shape::<TLifetimes>(commands, caster, spawner, target);
 
 	if let Some(mut contact) = commands.get_entity(shape.contact) {
-		behavior.start_contact_behavior::<TEffects, TShaders>(
-			&mut contact,
-			caster,
-			spawner,
-			target,
-		);
+		behavior.start_contact_behavior::<TEffects>(&mut contact, caster, spawner, target);
 	};
 
 	if let Some(mut projection) = commands.get_entity(shape.projection) {
-		behavior.start_projection_behavior::<TEffects, TShaders>(
-			&mut projection,
-			caster,
-			spawner,
-			target,
-		);
+		behavior.start_projection_behavior::<TEffects>(&mut projection, caster, spawner, target);
 	};
 
 	shape.on_skill_stop
@@ -246,15 +212,16 @@ mod tests {
 	use bevy::ecs::system::{EntityCommands, RunSystemOnce};
 	use common::{
 		components::Outdated,
+		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
-		traits::{handles_effect::HandlesEffect, handles_effect_shading::HandlesEffectShadingFor},
+		traits::handles_effect::HandlesEffect,
 	};
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Args {
 		caster: SkillCaster,
 		spawner: SkillSpawner,
-		target: Target,
+		target: SkillTarget,
 	}
 
 	#[derive(Component)]
@@ -276,17 +243,19 @@ mod tests {
 		T: Sync + Send + 'static,
 	{
 		type TTarget = ();
-		fn effect(_: T) -> impl Bundle {}
+		type TEffectComponent = _Effect;
+
+		fn effect(_: T) -> _Effect {
+			_Effect
+		}
+
 		fn attribute(_: Self::TTarget) -> impl Bundle {}
 	}
 
-	struct _HandlesShading;
+	#[derive(Component)]
+	struct _Effect;
 
-	impl<T> HandlesEffectShadingFor<T> for _HandlesShading {
-		fn effect_shader(_: T) -> impl Bundle {}
-	}
-
-	fn behavior(e: &mut EntityCommands, c: &SkillCaster, s: &SkillSpawner, t: &Target) {
+	fn behavior(e: &mut EntityCommands, c: &SkillCaster, s: &SkillSpawner, t: &SkillTarget) {
 		e.try_insert(_Args {
 			caster: *c,
 			spawner: *s,
@@ -294,8 +263,8 @@ mod tests {
 		});
 	}
 
-	fn get_target() -> Target {
-		Target {
+	fn get_target() -> SkillTarget {
+		SkillTarget {
 			ray: Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(4., 5., 6.)),
 			collision_info: Some(ColliderInfo {
 				collider: Outdated {
@@ -362,9 +331,8 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesShading>(
-					cmd, &caster, &spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -404,9 +372,8 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesShading>(
-					cmd, &caster, &spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -423,7 +390,12 @@ mod tests {
 
 	#[test]
 	fn apply_contact_behavior_on_active() {
-		fn shape(cmd: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> SkillShape {
+		fn shape(
+			cmd: &mut Commands,
+			_: &SkillCaster,
+			_: &SkillSpawner,
+			_: &SkillTarget,
+		) -> SkillShape {
 			SkillShape {
 				contact: cmd.spawn(_Contact).id(),
 				projection: cmd.spawn_empty().id(),
@@ -442,9 +414,8 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesShading>(
-					cmd, &caster, &spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -481,9 +452,8 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesShading>(
-					cmd, &caster, &spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -500,7 +470,12 @@ mod tests {
 
 	#[test]
 	fn apply_projection_behavior_on_active() {
-		fn shape(cmd: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> SkillShape {
+		fn shape(
+			cmd: &mut Commands,
+			_: &SkillCaster,
+			_: &SkillSpawner,
+			_: &SkillTarget,
+		) -> SkillShape {
 			SkillShape {
 				contact: cmd.spawn_empty().id(),
 				projection: cmd.spawn(_Projection).id(),
@@ -519,9 +494,8 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesShading>(
-					cmd, &caster, &spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -568,9 +542,8 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesShading>(
-					cmd, &caster, &spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -610,9 +583,8 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesShading>(
-					cmd, &caster, &spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -632,7 +604,12 @@ mod tests {
 		#[derive(Component)]
 		struct _Contact;
 
-		fn shape(cmd: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> SkillShape {
+		fn shape(
+			cmd: &mut Commands,
+			_: &SkillCaster,
+			_: &SkillSpawner,
+			_: &SkillTarget,
+		) -> SkillShape {
 			SkillShape {
 				contact: cmd.spawn(_Contact).id(),
 				projection: cmd.spawn_empty().id(),
@@ -651,9 +628,8 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesShading>(
-					cmd, &caster, &spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -697,9 +673,8 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesShading>(
-					cmd, &caster, &spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);
@@ -719,7 +694,12 @@ mod tests {
 		#[derive(Component)]
 		struct _Projection;
 
-		fn shape(cmd: &mut Commands, _: &SkillCaster, _: &SkillSpawner, _: &Target) -> SkillShape {
+		fn shape(
+			cmd: &mut Commands,
+			_: &SkillCaster,
+			_: &SkillSpawner,
+			_: &SkillTarget,
+		) -> SkillShape {
 			SkillShape {
 				contact: cmd.spawn_empty().id(),
 				projection: cmd.spawn(_Projection).id(),
@@ -738,9 +718,8 @@ mod tests {
 
 		app.world_mut().run_system_once_with(
 			move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesShading>(
-					cmd, &caster, &spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
 		);

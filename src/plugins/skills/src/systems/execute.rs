@@ -1,24 +1,17 @@
-use crate::{
-	behaviors::{SkillCaster, Target},
-	components::skill_spawners::SkillSpawners,
-	traits::Execute,
-};
+use crate::{behaviors::SkillCaster, components::skill_spawners::SkillSpawners, traits::Execute};
+use behaviors::components::skill_behavior::SkillTarget;
 use bevy::prelude::*;
 use common::{
-	effects::{deal_damage::DealDamage, force_shield::ForceShield},
+	effects::deal_damage::DealDamage,
 	errors::Error,
 	resources::{CamRay, MouseHover},
-	traits::{
-		handles_effect::HandlesEffect,
-		handles_effect_shading::HandlesEffectShadingFor,
-		handles_lifetime::HandlesLifetime,
-	},
+	traits::{handles_effect::HandlesEffect, handles_lifetime::HandlesLifetime},
 };
 
 impl<T> ExecuteSkills for T {}
 
 pub(crate) trait ExecuteSkills {
-	fn execute_system<TLifetimes, TEffects, TShaders>(
+	fn execute_system<TLifetimes, TEffects>(
 		cam_ray: Res<CamRay>,
 		mouse_hover: Res<MouseHover>,
 		mut commands: Commands,
@@ -26,13 +19,10 @@ pub(crate) trait ExecuteSkills {
 		transforms: Query<&GlobalTransform>,
 	) -> Vec<Result<(), Error>>
 	where
-		for<'w, 's> Self:
-			Component + Execute<Commands<'w, 's>, TLifetimes, TEffects, TShaders> + Sized,
-		for<'w, 's> Error:
-			From<<Self as Execute<Commands<'w, 's>, TLifetimes, TEffects, TShaders>>::TError>,
+		for<'w, 's> Self: Component + Execute<Commands<'w, 's>, TLifetimes, TEffects> + Sized,
+		for<'w, 's> Error: From<<Self as Execute<Commands<'w, 's>, TLifetimes, TEffects>>::TError>,
 		TLifetimes: HandlesLifetime,
 		TEffects: HandlesEffect<DealDamage>,
-		TShaders: HandlesEffectShadingFor<ForceShield>,
 	{
 		agents
 			.iter_mut()
@@ -66,10 +56,10 @@ fn get_target(
 	cam_ray: &Res<CamRay>,
 	mouse_hover: &Res<MouseHover>,
 	transforms: &Query<&GlobalTransform>,
-) -> Option<Target> {
+) -> Option<SkillTarget> {
 	let get_transform = |entity| transforms.get(entity).ok().cloned();
 
-	Some(Target {
+	Some(SkillTarget {
 		ray: cam_ray.0?,
 		collision_info: mouse_hover
 			.0
@@ -92,7 +82,7 @@ mod tests {
 		errors::Level,
 		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
-		traits::{handles_effect_shading::HandlesEffectShadingFor, nested_mock::NestedMocks},
+		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;
 	use mockall::mock;
@@ -125,17 +115,19 @@ mod tests {
 
 	impl<T> HandlesEffect<T> for _HandlesEffects {
 		type TTarget = ();
-		fn effect(_: T) -> impl Bundle {}
+		type TEffectComponent = _Effect;
+
+		fn effect(_: T) -> _Effect {
+			_Effect
+		}
+
 		fn attribute(_: Self::TTarget) -> impl Bundle {}
 	}
 
-	struct _HandlesShading;
+	#[derive(Component)]
+	struct _Effect;
 
-	impl<T> HandlesEffectShadingFor<T> for _HandlesShading {
-		fn effect_shader(_: T) -> impl Bundle {}
-	}
-
-	impl Execute<Commands<'_, '_>, _HandlesLife, _HandlesEffects, _HandlesShading> for _Executor {
+	impl Execute<Commands<'_, '_>, _HandlesLife, _HandlesEffects> for _Executor {
 		type TError = _Error;
 
 		fn execute(
@@ -143,7 +135,7 @@ mod tests {
 			commands: &mut Commands,
 			caster: &SkillCaster,
 			spawners: &SkillSpawners,
-			target: &Target,
+			target: &SkillTarget,
 		) -> Result<(), Self::TError> {
 			self.mock.execute(commands, caster, spawners, target)
 		}
@@ -155,7 +147,6 @@ mod tests {
 			Commands<'w, 's>,
 			_HandlesLife,
 			_HandlesEffects,
-			_HandlesShading
 		> for _Executor {
 			type TError = _Error;
 
@@ -164,12 +155,12 @@ mod tests {
 				commands: &mut Commands<'_w, '_s>,
 				caster: &SkillCaster,
 				spawners: &SkillSpawners,
-				target: &Target,
+				target: &SkillTarget,
 			) -> Result<(), _Error>;
 		}
 	}
 
-	fn set_target(app: &mut App) -> Target {
+	fn set_target(app: &mut App) -> SkillTarget {
 		let cam_ray = Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(4., 5., 6.));
 		app.world_mut().resource_mut::<CamRay>().0 = Some(cam_ray);
 
@@ -183,7 +174,7 @@ mod tests {
 			root: Some(root),
 		});
 
-		Target {
+		SkillTarget {
 			ray: cam_ray,
 			collision_info: Some(ColliderInfo {
 				collider: Outdated {
@@ -199,8 +190,7 @@ mod tests {
 	}
 
 	fn setup() -> App {
-		let execute_system =
-			_Executor::execute_system::<_HandlesLife, _HandlesEffects, _HandlesShading>;
+		let execute_system = _Executor::execute_system::<_HandlesLife, _HandlesEffects>;
 
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<CamRay>();
@@ -217,7 +207,7 @@ mod tests {
 	struct _ExecutionArgs {
 		caster: SkillCaster,
 		spawners: SkillSpawners,
-		target: Target,
+		target: SkillTarget,
 	}
 
 	fn find_execution_args(app: &App) -> Option<&_ExecutionArgs> {
@@ -318,9 +308,9 @@ mod tests {
 
 		app.update();
 
-		let errors = app.world_mut().run_system_once(
-			_Executor::execute_system::<_HandlesLife, _HandlesEffects, _HandlesShading>,
-		);
+		let errors = app
+			.world_mut()
+			.run_system_once(_Executor::execute_system::<_HandlesLife, _HandlesEffects>);
 
 		assert_eq!(
 			vec![Err(Error {

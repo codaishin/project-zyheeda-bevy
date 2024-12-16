@@ -22,6 +22,7 @@ pub mod utils {
 			ZIndex,
 		},
 	};
+	use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider, Velocity};
 	use std::{
 		any::{type_name, Any, TypeId},
 		marker::PhantomData,
@@ -50,6 +51,13 @@ pub mod utils {
 			self.translation.approx_equal(&other.translation, tolerance)
 				&& self.scale.approx_equal(&other.scale, tolerance)
 				&& self.rotation.approx_equal(&other.rotation, tolerance)
+		}
+	}
+
+	impl ApproxEqual<f32> for Velocity {
+		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+			self.linvel.approx_equal(&other.linvel, tolerance)
+				&& self.angvel.approx_equal(&other.angvel, tolerance)
 		}
 	}
 
@@ -247,6 +255,31 @@ pub mod utils {
 		T::bundle_ids(app)
 	}
 
+	impl BundleIds for AssetModelBundle {
+		fn bundle_ids(app: &App) -> Vec<(ComponentName, Option<ComponentId>)> {
+			vec![
+				AssetModel::name_and_id(app),
+				Visibility::name_and_id(app),
+				InheritedVisibility::name_and_id(app),
+				ViewVisibility::name_and_id(app),
+				Transform::name_and_id(app),
+				GlobalTransform::name_and_id(app),
+			]
+		}
+	}
+
+	impl BundleIds for ColliderTransformBundle {
+		fn bundle_ids(app: &App) -> Vec<(ComponentName, Option<ComponentId>)> {
+			vec![
+				Collider::name_and_id(app),
+				Transform::name_and_id(app),
+				GlobalTransform::name_and_id(app),
+				ActiveEvents::name_and_id(app),
+				ActiveCollisionTypes::name_and_id(app),
+			]
+		}
+	}
+
 	#[macro_export]
 	macro_rules! assert_bundle {
 		($bundle:ty, $app:expr, $entity:expr) => {
@@ -300,6 +333,11 @@ pub mod utils {
 	}
 
 	pub use assert_bundle;
+
+	use crate::{
+		bundles::{AssetModelBundle, ColliderTransformBundle},
+		components::AssetModel,
+	};
 
 	pub fn new_handle<TAsset: Asset>() -> Handle<TAsset> {
 		Handle::Weak(AssetId::Uuid {

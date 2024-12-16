@@ -12,10 +12,13 @@ use common::{
 };
 use std::time::Duration;
 
-impl<TLifecyclePlugin> HandlesEffect<Gravity> for InteractionsPlugin<TLifecyclePlugin> {
+impl<TPrefabs, TLifecyclePlugin> HandlesEffect<Gravity>
+	for InteractionsPlugin<TPrefabs, TLifecyclePlugin>
+{
 	type TTarget = AffectedBy<Gravity>;
+	type TEffectComponent = Effect<Gravity>;
 
-	fn effect(effect: Gravity) -> impl Bundle {
+	fn effect(effect: Gravity) -> Self::TEffectComponent {
 		Effect(effect)
 	}
 

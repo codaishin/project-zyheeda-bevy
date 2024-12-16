@@ -7,26 +7,31 @@ mod systems;
 
 use animation::MovementAnimations;
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::Velocity;
 use common::{
 	effects::deal_damage::DealDamage,
 	resources::CamRay,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	traits::{
 		animation::HasAnimationsDispatch,
+		handles_destruction::HandlesDestruction,
 		handles_effect::HandlesEffect,
-		handles_effect_shading::HandlesEffectShading,
 		handles_interactions::HandlesInteractions,
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 	},
 };
 use components::{
 	cam_orbit::CamOrbit,
-	ground_targeted_aoe::{GroundTargetedAoeContact, GroundTargetedAoeProjection},
-	projectile::{ProjectileContact, ProjectileProjection},
-	shield::{ShieldContact, ShieldProjection},
+	ground_target::GroundTarget,
+	set_position_and_rotation::SetPositionAndRotation,
+	set_to_move_forward::SetVelocityForward,
+	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	void_beam::VoidBeam,
+	when_traveled_insert::InsertAfterDistanceTraveled,
+	Always,
 	Movement,
 	MovementConfig,
+	Once,
 	PositionBased,
 	VelocityBased,
 };
@@ -45,63 +50,34 @@ use systems::{
 		execute_move_velocity_based::execute_move_velocity_based,
 		trigger_event::trigger_move_input_event,
 	},
-	projectile::{movement::ProjectileMovement, set_position::ProjectileSetPosition},
-	shield::position_force_shield,
 	update_cool_downs::update_cool_downs,
 };
 
-pub struct BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>(
-	PhantomData<(
-		TAnimationsPlugin,
-		TPrefabsPlugin,
-		TShadersPlugin,
-		TInteractionsPlugin,
-	)>,
+pub struct BehaviorsPlugin<TAnimations, TPrefabs, TLifeCycles, TInteractions>(
+	PhantomData<(TAnimations, TPrefabs, TLifeCycles, TInteractions)>,
 );
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>
-	BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>
-where
-	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
-	TPrefabsPlugin: Plugin + RegisterPrefab,
-	TShadersPlugin: Plugin + HandlesEffectShading,
-	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
+impl<TAnimations, TPrefabs, TLifeCycles, TInteractions>
+	BehaviorsPlugin<TAnimations, TPrefabs, TLifeCycles, TInteractions>
 {
-	pub fn depends_on(
-		_: &TAnimationsPlugin,
-		_: &TPrefabsPlugin,
-		_: &TShadersPlugin,
-		_: &TInteractionsPlugin,
-	) -> Self {
-		Self(
-			PhantomData::<(
-				TAnimationsPlugin,
-				TPrefabsPlugin,
-				TShadersPlugin,
-				TInteractionsPlugin,
-			)>,
-		)
+	pub fn depends_on(_: &TAnimations, _: &TPrefabs, _: &TLifeCycles, _: &TInteractions) -> Self {
+		Self(PhantomData::<(TAnimations, TPrefabs, TLifeCycles, TInteractions)>)
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin> Plugin
-	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TShadersPlugin, TInteractionsPlugin>
+impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin> Plugin
+	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
-	TShadersPlugin: Plugin + HandlesEffectShading,
+	TLifeCycles: Plugin + HandlesDestruction,
 	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
 {
 	fn build(&self, app: &mut App) {
-		TPrefabsPlugin::register_prefab::<ProjectileProjection>(app);
-		TPrefabsPlugin::register_prefab::<GroundTargetedAoeProjection>(app);
-		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>()
-			.register_prefab::<VoidBeam>(app)
-			.register_prefab::<ProjectileContact>(app);
-		TPrefabsPlugin::with_dependency::<TShadersPlugin>()
-			.register_prefab::<ShieldContact>(app)
-			.register_prefab::<ShieldProjection>(app)
-			.register_prefab::<GroundTargetedAoeContact>(app);
+		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>().register_prefab::<VoidBeam>(app);
+		TPrefabsPlugin::with_dependency::<(TInteractionsPlugin, TLifeCycles)>()
+			.register_prefab::<SkillContact>(app);
+		TPrefabsPlugin::register_prefab::<SkillProjection>(app);
 
 		app.add_event::<MoveInputEvent>()
 			.add_systems(
@@ -147,11 +123,13 @@ where
 				),
 			)
 			.add_systems(Update, (chase::<MovementConfig>, attack).chain())
+			.add_systems(Update, GroundTarget::set_position)
 			.add_systems(
 				Update,
-				(ProjectileContact::set_position, ProjectileContact::movement).chain(),
+				InsertAfterDistanceTraveled::<TLifeCycles::TDestroy, Velocity>::system,
 			)
-			.add_systems(Update, GroundTargetedAoeContact::set_position)
-			.add_systems(Update, position_force_shield);
+			.add_systems(Update, SetVelocityForward::system)
+			.add_systems(Update, SetPositionAndRotation::<Always>::system)
+			.add_systems(Update, SetPositionAndRotation::<Once>::system);
 	}
 }
