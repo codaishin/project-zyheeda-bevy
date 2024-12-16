@@ -20,7 +20,7 @@ pub(crate) fn load_asset_model<TServer>(
 			}
 		};
 
-		entity.insert(handle);
+		entity.insert(SceneRoot(handle));
 		entity.remove::<AssetModel>();
 	}
 }
@@ -29,7 +29,10 @@ pub(crate) fn load_asset_model<TServer>(
 mod tests {
 	use super::*;
 	use crate::{components::AssetModel, test_tools::utils::new_handle};
-	use bevy::{asset::AssetPath, ecs::system::RunSystemOnce};
+	use bevy::{
+		asset::AssetPath,
+		ecs::system::{RunSystemError, RunSystemOnce},
+	};
 	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -57,7 +60,7 @@ mod tests {
 	}
 
 	#[test]
-	fn load_asset() {
+	fn load_asset() -> Result<(), RunSystemError> {
 		let handle = new_handle();
 		let mut app = setup(
 			_AssetServer::new().with_mock(|mock: &mut Mock_AssetServer| {
@@ -68,16 +71,17 @@ mod tests {
 		let model = app.world_mut().spawn(AssetModel::path("my/model.glb")).id();
 
 		app.world_mut()
-			.run_system_once(load_asset_model::<_AssetServer>);
+			.run_system_once(load_asset_model::<_AssetServer>)?;
 
 		assert_eq!(
-			Some(&handle),
-			app.world().entity(model).get::<Handle<Scene>>(),
+			Some(&SceneRoot(handle)),
+			app.world().entity(model).get::<SceneRoot>(),
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn load_default_asset_when_set_to_none() {
+	fn load_default_asset_when_set_to_none() -> Result<(), RunSystemError> {
 		let mut app = setup(
 			_AssetServer::new().with_mock(|mock: &mut Mock_AssetServer| {
 				mock.expect_load_asset::<Scene, AssetPath<'static>>()
@@ -87,21 +91,22 @@ mod tests {
 		let model = app.world_mut().spawn(AssetModel::None).id();
 
 		app.world_mut()
-			.run_system_once(load_asset_model::<_AssetServer>);
+			.run_system_once(load_asset_model::<_AssetServer>)?;
 
 		assert_eq!(
-			Some(&Handle::default()),
-			app.world().entity(model).get::<Handle<Scene>>(),
+			Some(&SceneRoot(Handle::default())),
+			app.world().entity(model).get::<SceneRoot>(),
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn load_asset_with_correct_path() {
+	fn load_asset_with_correct_path() -> Result<(), RunSystemError> {
 		let mut app = setup(_AssetServer::new().with_mock(assert_correct_path));
 		app.world_mut().spawn(AssetModel::path("my/model.glb"));
 
 		app.world_mut()
-			.run_system_once(load_asset_model::<_AssetServer>);
+			.run_system_once(load_asset_model::<_AssetServer>)?;
 
 		fn assert_correct_path(mock: &mut Mock_AssetServer) {
 			mock.expect_load_asset::<Scene, AssetPath<'static>>()
@@ -109,10 +114,11 @@ mod tests {
 				.with(eq(GltfAssetLabel::Scene(0).from_asset("my/model.glb")))
 				.return_const(new_handle());
 		}
+		Ok(())
 	}
 
 	#[test]
-	fn remove_asset_model_component() {
+	fn remove_asset_model_component() -> Result<(), RunSystemError> {
 		let mut app = setup(
 			_AssetServer::new().with_mock(|mock: &mut Mock_AssetServer| {
 				mock.expect_load_asset::<Scene, AssetPath<'static>>()
@@ -122,8 +128,9 @@ mod tests {
 		let model = app.world_mut().spawn(AssetModel::path("my/model.glb")).id();
 
 		app.world_mut()
-			.run_system_once(load_asset_model::<_AssetServer>);
+			.run_system_once(load_asset_model::<_AssetServer>)?;
 
 		assert_eq!(None, app.world().entity(model).get::<AssetModel>(),);
+		Ok(())
 	}
 }

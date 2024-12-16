@@ -7,18 +7,22 @@ use bevy::{
 	ecs::{
 		entity::Entity,
 		query::With,
-		system::{Commands, Query, Res, Resource},
+		system::{Commands, Query, Res},
 	},
 	math::Ray3d,
+	prelude::Component,
 };
 
-pub(crate) fn set_mouse_hover<TCastRay: CastRay<Ray3d> + Resource>(
+pub(crate) fn set_mouse_hover<TCastRay: CastRay<Ray3d> + Component>(
 	mut commands: Commands,
 	cam_ray: Option<Res<CamRay>>,
-	ray_caster: Res<TCastRay>,
+	ray_caster: Query<&TCastRay>,
 	roots: Query<&ColliderRoot>,
 	non_target_ables: Query<(), With<NoTarget>>,
 ) {
+	let Ok(ray_caster) = ray_caster.get_single() else {
+		return;
+	};
 	let mouse_hover = match ray_cast(cam_ray, ray_caster) {
 		Some((collider, ..)) => get_mouse_hover(collider, roots, non_target_ables),
 		_ => MouseHover::default(),
@@ -42,9 +46,9 @@ fn get_mouse_hover(
 	}
 }
 
-fn ray_cast<TCastRay: CastRay<Ray3d> + Resource>(
+fn ray_cast<TCastRay: CastRay<Ray3d>>(
 	cam_ray: Option<Res<CamRay>>,
-	ray_caster: Res<TCastRay>,
+	ray_caster: &TCastRay,
 ) -> Option<(Entity, TimeOfImpact)> {
 	ray_caster.cast_ray(&cam_ray?.0?)
 }
@@ -66,7 +70,7 @@ mod tests {
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Resource, NestedMocks)]
+	#[derive(Component, NestedMocks)]
 	struct _CastRay {
 		pub mock: Mock_CastRay,
 	}
@@ -97,7 +101,7 @@ mod tests {
 	fn add_target_collider() {
 		let mut app = setup(test_ray());
 		let collider = app.world_mut().spawn_empty().id();
-		app.insert_resource(_CastRay::new().with_mock(|mock| {
+		app.world_mut().spawn(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray()
 				.return_const((collider, TimeOfImpact(0.)));
 		}));
@@ -117,7 +121,7 @@ mod tests {
 		let mut app = setup(test_ray());
 		let root = app.world_mut().spawn_empty().id();
 		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
-		app.insert_resource(_CastRay::new().with_mock(|mock| {
+		app.world_mut().spawn(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray()
 				.return_const((collider, TimeOfImpact(0.)));
 		}));
@@ -135,7 +139,7 @@ mod tests {
 	#[test]
 	fn set_mouse_hover_none_when_no_collision() {
 		let mut app = setup(test_ray());
-		app.insert_resource(_CastRay::new().with_mock(|mock| {
+		app.world_mut().spawn(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray().return_const(None);
 		}));
 
@@ -150,7 +154,7 @@ mod tests {
 	fn set_mouse_hover_none_when_no_ray() {
 		let mut app = setup(None);
 		let collider = app.world_mut().spawn_empty().id();
-		app.insert_resource(_CastRay::new().with_mock(|mock| {
+		app.world_mut().spawn(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray()
 				.return_const((collider, TimeOfImpact(0.)));
 		}));
@@ -167,7 +171,7 @@ mod tests {
 		let mut app = setup(test_ray());
 		let root = app.world_mut().spawn(NoTarget).id();
 		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
-		app.insert_resource(_CastRay::new().with_mock(|mock| {
+		app.world_mut().spawn(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray()
 				.return_const((collider, TimeOfImpact(0.)));
 		}));
@@ -183,7 +187,7 @@ mod tests {
 	fn set_mouse_hover_none_when_collider_marked_as_no_target() {
 		let mut app = setup(test_ray());
 		let collider = app.world_mut().spawn(NoTarget).id();
-		app.insert_resource(_CastRay::new().with_mock(|mock| {
+		app.world_mut().spawn(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray()
 				.return_const((collider, TimeOfImpact(0.)));
 		}));
@@ -198,7 +202,7 @@ mod tests {
 	#[test]
 	fn call_cast_ray_with_parameters() {
 		let mut app = setup(test_ray());
-		app.insert_resource(_CastRay::new().with_mock(|mock| {
+		app.world_mut().spawn(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray()
 				.times(1)
 				.with(eq(test_ray().unwrap()))
@@ -211,7 +215,7 @@ mod tests {
 	#[test]
 	fn no_panic_when_cam_ray_missing() {
 		let mut app = App::new();
-		app.insert_resource(_CastRay::new().with_mock(|mock| {
+		app.world_mut().spawn(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray().return_const(None);
 		}));
 		app.add_systems(Update, set_mouse_hover::<_CastRay>);

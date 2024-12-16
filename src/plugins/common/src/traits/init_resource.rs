@@ -14,7 +14,7 @@ impl<T> InitResource for T where T: Resource + Default {}
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::ecs::system::RunSystemOnce;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 
 	#[derive(Resource, Default, Debug, PartialEq)]
 	struct _Resource;
@@ -24,11 +24,12 @@ mod tests {
 	}
 
 	#[test]
-	fn init_resource() {
+	fn init_resource() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
-		app.world_mut().run_system_once(_Resource::init);
+		app.world_mut().run_system_once(_Resource::init)?;
 
 		assert_eq!(Some(&_Resource), app.world().get_resource::<_Resource>());
+		Ok(())
 	}
 }

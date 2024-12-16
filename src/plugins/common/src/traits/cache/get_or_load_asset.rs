@@ -3,10 +3,7 @@ use crate::{
 	tools::Factory,
 	traits::load_asset::{LoadAsset, Path},
 };
-use bevy::{
-	asset::{Asset, Handle},
-	prelude::{ResMut, Resource},
-};
+use bevy::prelude::*;
 
 pub struct LoadAssetCache;
 
@@ -43,11 +40,8 @@ mod tests {
 	use super::*;
 	use crate::test_tools::utils::SingleThreadedApp;
 	use bevy::{
-		app::{App, Update},
-		asset::{AssetId, AssetPath},
-		ecs::system::RunSystemOnce,
-		prelude::default,
-		render::texture::Image,
+		asset::AssetPath,
+		ecs::system::{RunSystemError, RunSystemOnce},
 	};
 	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;
@@ -98,16 +92,16 @@ mod tests {
 	fn run_in_system(
 		app: &mut App,
 		mut callback: impl FnMut(ResMut<_LoadAsset>, ResMut<_Storage>) + Send + Sync + 'static,
-	) {
+	) -> Result<(), RunSystemError> {
 		app.world_mut().run_system_once(
 			move |load_asset: ResMut<_LoadAsset>, storage: ResMut<_Storage>| {
 				callback(load_asset, storage);
 			},
-		);
+		)
 	}
 
 	#[test]
-	fn return_stored_asset() {
+	fn return_stored_asset() -> Result<(), RunSystemError> {
 		let mut app = setup(_LoadAsset::new().with_mock(|mock| {
 			mock.expect_load_asset::<Image, Path>()
 				.return_const(Handle::default());
@@ -127,7 +121,7 @@ mod tests {
 	}
 
 	#[test]
-	fn call_storage_with_proper_args() {
+	fn call_storage_with_proper_args() -> Result<(), RunSystemError> {
 		let handle = Handle::Weak(AssetId::Uuid {
 			uuid: Uuid::new_v4(),
 		});
@@ -138,14 +132,15 @@ mod tests {
 
 		run_in_system(&mut app, |load_asset, storage| {
 			(load_asset, storage).get_or_load(Path::from("proper path"));
-		});
+		})?;
 
 		let storage = app.world().resource::<_Storage>();
 		assert_eq!(vec![(Path::from("proper path"), handle)], storage.args);
+		Ok(())
 	}
 
 	#[test]
-	fn call_load_asset_with_proper_path() {
+	fn call_load_asset_with_proper_path() -> Result<(), RunSystemError> {
 		let mut app = setup(_LoadAsset::new().with_mock(|mock| {
 			mock.expect_load_asset::<Image, Path>()
 				.with(eq(Path::from("proper path")))
@@ -154,6 +149,6 @@ mod tests {
 
 		run_in_system(&mut app, |load_asset, storage| {
 			(load_asset, storage).get_or_load(Path::from("proper path"));
-		});
+		})
 	}
 }

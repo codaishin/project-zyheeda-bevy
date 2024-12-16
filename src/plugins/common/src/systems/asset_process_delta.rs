@@ -19,7 +19,7 @@ pub fn asset_process_delta<TAsset, TTime>(
 mod tests {
 	use super::*;
 	use crate::test_tools::utils::TickTime;
-	use bevy::ecs::system::RunSystemOnce;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -47,14 +47,14 @@ mod tests {
 	}
 
 	#[test]
-	fn call_with_time_delta() {
+	fn call_with_time_delta() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let asset = _Asset::new().with_mock(assert);
-		let _ = app.world_mut().resource_mut::<Assets<_Asset>>().add(asset);
+		app.world_mut().resource_mut::<Assets<_Asset>>().add(asset);
 
 		app.tick_time(Duration::from_millis(42));
 		app.world_mut()
-			.run_system_once(asset_process_delta::<_Asset, Real>);
+			.run_system_once(asset_process_delta::<_Asset, Real>)?;
 
 		fn assert(mock: &mut Mock_Asset) {
 			mock.expect_process_delta()
@@ -62,5 +62,6 @@ mod tests {
 				.with(eq(Duration::from_millis(42)))
 				.return_const(());
 		}
+		Ok(())
 	}
 }

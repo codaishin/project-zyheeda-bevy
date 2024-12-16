@@ -54,7 +54,7 @@ fn remove_components<TCommands, TAgent, TComponent>(
 pub mod tests {
 	use super::*;
 	use crate::{components::Protected, simple_init, traits::mock::Mock};
-	use bevy::ecs::system::RunSystemOnce;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use mockall::{mock, predicate::eq};
 
 	#[derive(Component, Debug, PartialEq)]
@@ -77,7 +77,7 @@ pub mod tests {
 	}
 
 	#[test]
-	fn remove_from_agent() {
+	fn remove_from_agent() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let parent = app.world_mut().spawn((_Agent, _Component)).id();
 
@@ -91,11 +91,11 @@ pub mod tests {
 		app.world_mut().run_system_once_with(
 			mock,
 			remove_components::<In<Mock_Commands>, _Agent, _Component>,
-		);
+		)
 	}
 
 	#[test]
-	fn remove_from_child() {
+	fn remove_from_child() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let parent = app.world_mut().spawn(_Agent).id();
 		let child = app.world_mut().spawn(_Component).set_parent(parent).id();
@@ -110,11 +110,11 @@ pub mod tests {
 		app.world_mut().run_system_once_with(
 			mock,
 			remove_components::<In<Mock_Commands>, _Agent, _Component>,
-		);
+		)
 	}
 
 	#[test]
-	fn do_not_remove_when_parent_no_agent() {
+	fn do_not_remove_when_parent_no_agent() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let parent = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn(_Component).set_parent(parent);
@@ -128,11 +128,11 @@ pub mod tests {
 		app.world_mut().run_system_once_with(
 			mock,
 			remove_components::<In<Mock_Commands>, _Agent, _Component>,
-		);
+		)
 	}
 
 	#[test]
-	fn do_not_remove_when_protected() {
+	fn do_not_remove_when_protected() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let parent = app.world_mut().spawn(_Agent).id();
 		app.world_mut()
@@ -148,11 +148,11 @@ pub mod tests {
 		app.world_mut().run_system_once_with(
 			mock,
 			remove_components::<In<Mock_Commands>, _Agent, _Component>,
-		);
+		)
 	}
 
 	#[test]
-	fn remove_from_deep_child() {
+	fn remove_from_deep_child() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let parent = app.world_mut().spawn(_Agent).id();
 		let child = app.world_mut().spawn_empty().set_parent(parent).id();
@@ -168,11 +168,11 @@ pub mod tests {
 		app.world_mut().run_system_once_with(
 			mock,
 			remove_components::<In<Mock_Commands>, _Agent, _Component>,
-		);
+		)
 	}
 
 	#[test]
-	fn do_not_remove_from_deep_child_multiple_times_when_nested() {
+	fn do_not_remove_from_deep_child_multiple_times_when_nested() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let parent = app.world_mut().spawn(_Agent).id();
 		let child = app.world_mut().spawn(_Agent).set_parent(parent).id();
@@ -188,6 +188,6 @@ pub mod tests {
 		app.world_mut().run_system_once_with(
 			mock,
 			remove_components::<In<Mock_Commands>, _Agent, _Component>,
-		);
+		)
 	}
 }
