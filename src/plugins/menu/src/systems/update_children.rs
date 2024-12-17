@@ -1,7 +1,7 @@
-use crate::traits::update_children::UpdateChildren;
+use crate::traits::insert_ui_content::InsertUiContent;
 use bevy::prelude::*;
 
-pub(crate) fn update_children<TComponent: UpdateChildren + Component>(
+pub(crate) fn update_children<TComponent: InsertUiContent + Component>(
 	mut commands: Commands,
 	components: Query<(Entity, &TComponent), Changed<TComponent>>,
 ) {
@@ -10,7 +10,7 @@ pub(crate) fn update_children<TComponent: UpdateChildren + Component>(
 			continue;
 		};
 		entity.despawn_descendants();
-		entity.with_children(|parent| component.update_children(parent));
+		entity.with_children(|parent| component.insert_ui_content(parent));
 	}
 }
 
@@ -25,8 +25,8 @@ mod tests {
 	#[derive(Component)]
 	struct _Component(&'static str);
 
-	impl UpdateChildren for _Component {
-		fn update_children(&self, parent: &mut ChildBuilder) {
+	impl InsertUiContent for _Component {
+		fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 			parent.spawn(_Child("A"));
 			parent.spawn(_Child("B"));
 			parent.spawn(_Child("C"));

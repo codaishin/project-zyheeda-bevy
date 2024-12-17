@@ -1,26 +1,36 @@
 use crate::{
-	components::{dropdown::Dropdown, tooltip::Tooltip},
-	tools::Layout,
-	traits::{
-		ui_components::{GetZIndex, GetZIndexGlobal},
-		GetLayout,
-		GetRootNode,
-		LoadUi,
+	components::{
+		dropdown::Dropdown,
+		tooltip::{Tooltip, TooltipUiConfig},
 	},
+	tools::Layout,
+	traits::{GetLayout, GetRootNode, LoadUi},
 	AddDropdown,
 	AddTooltip,
 };
 #[cfg(debug_assertions)]
-use crate::{
-	traits::{ui_components::GetUIComponents, update_children::UpdateChildren},
-	AddUI,
-};
+use crate::{traits::insert_ui_content::InsertUiContent, AddUI};
 use bevy::prelude::*;
 use common::{states::game_state::GameState, tools::Index, traits::iteration::IterFinite};
 use std::{fmt::Debug, marker::PhantomData, time::Duration};
 
 #[derive(Component)]
+#[require(Node(squared), BackgroundColor(black))]
 struct StateTime<TState>(Duration, Option<TState>);
+
+fn squared() -> Node {
+	Node {
+		position_type: PositionType::Absolute,
+		right: Val::Px(10.),
+		bottom: Val::Px(10.),
+		border: UiRect::all(Val::Px(2.)),
+		..default()
+	}
+}
+
+fn black() -> BackgroundColor {
+	BackgroundColor(Color::BLACK)
+}
 
 impl<TState> Default for StateTime<TState> {
 	fn default() -> Self {
@@ -34,30 +44,11 @@ impl<TState> LoadUi<AssetServer> for StateTime<TState> {
 	}
 }
 
-impl<TState> GetZIndex for StateTime<TState> {}
-
-impl<TState> GetZIndexGlobal for StateTime<TState> {}
-
-impl<TState> GetUIComponents for StateTime<TState> {
-	fn ui_components(&self) -> (Node, BackgroundColor) {
-		(
-			Node {
-				position_type: PositionType::Absolute,
-				right: Val::Px(10.),
-				bottom: Val::Px(10.),
-				border: UiRect::all(Val::Px(2.)),
-				..default()
-			},
-			Color::BLACK.into(),
-		)
-	}
-}
-
-impl<TState> UpdateChildren for StateTime<TState>
+impl<TState> InsertUiContent for StateTime<TState>
 where
 	TState: Debug + Copy,
 {
-	fn update_children(&self, parent: &mut ChildBuilder) {
+	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		let state = self.1.map(|s| format!("{s:?}")).unwrap_or("???".into());
 		parent.spawn((
 			Text::new(format!(
@@ -127,23 +118,25 @@ impl DropdownButton {
 	}
 }
 
+#[derive(Clone)]
 struct ButtonTooltip(String);
 
-impl GetUIComponents for Tooltip<ButtonTooltip> {
-	fn ui_components(&self) -> (Node, BackgroundColor) {
-		(
-			Node {
-				top: Val::Px(-25.0),
-				padding: UiRect::all(Val::Px(5.0)),
-				..default()
-			},
-			Color::WHITE.into(),
-		)
+impl TooltipUiConfig for ButtonTooltip {
+	fn node() -> Node {
+		Node {
+			top: Val::Px(-25.0),
+			padding: UiRect::all(Val::Px(5.0)),
+			..default()
+		}
+	}
+
+	fn background_color() -> BackgroundColor {
+		BackgroundColor(Color::WHITE)
 	}
 }
 
-impl UpdateChildren for Tooltip<ButtonTooltip> {
-	fn update_children(&self, parent: &mut ChildBuilder) {
+impl InsertUiContent for Tooltip<ButtonTooltip> {
+	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		parent.spawn((Text::new(&self.value().0), DropdownButton::text_style()));
 	}
 }
@@ -160,6 +153,7 @@ impl<TLayout> Default for WithSubDropdown<TLayout> {
 }
 
 #[derive(Component)]
+#[require(Node)]
 struct ButtonOption<TLayout: Sync + Send + 'static, TValue = &'static str> {
 	phantom_data: PhantomData<TLayout>,
 	value: TValue,
@@ -186,14 +180,8 @@ impl<TLayout: Sync + Send + 'static, TValue> ButtonOption<TLayout, TValue> {
 	}
 }
 
-impl<TLayout: Sync + Send + 'static, TValue> GetUIComponents for ButtonOption<TLayout, TValue> {
-	fn ui_components(&self) -> (Node, BackgroundColor) {
-		(default(), default())
-	}
-}
-
-impl<TLayout: Sync + Send + 'static> UpdateChildren for ButtonOption<TLayout> {
-	fn update_children(&self, parent: &mut ChildBuilder) {
+impl<TLayout: Sync + Send + 'static> InsertUiContent for ButtonOption<TLayout> {
+	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		let option = (
 			DropdownButton::bundle(),
 			self.clone(),
@@ -205,10 +193,10 @@ impl<TLayout: Sync + Send + 'static> UpdateChildren for ButtonOption<TLayout> {
 	}
 }
 
-impl<TLayout: Sync + Send + 'static, TSubLayout: Sync + Send + 'static> UpdateChildren
+impl<TLayout: Sync + Send + 'static, TSubLayout: Sync + Send + 'static> InsertUiContent
 	for ButtonOption<TLayout, WithSubDropdown<TSubLayout>>
 {
-	fn update_children(&self, parent: &mut ChildBuilder) {
+	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		let option = (
 			DropdownButton::bundle(),
 			Dropdown {

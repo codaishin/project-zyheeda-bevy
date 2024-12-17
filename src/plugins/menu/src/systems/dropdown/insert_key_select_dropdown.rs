@@ -19,7 +19,7 @@ pub(crate) fn insert_key_select_dropdown<TAgent, TCombos, TExtra>(
 	};
 
 	for (entity, insert_command) in &insert_commands {
-		let Some(bundle) = (insert_command, combos).bundle() else {
+		let Some(bundle) = (insert_command, combos).component() else {
 			despawn(&mut commands, entity);
 			continue;
 		};
@@ -57,7 +57,7 @@ mod tests {
 	impl<'a> GetComponent for (&'a InsertCommand<_Extra>, &'a _Combos) {
 		type TComponent = _Bundle;
 
-		fn bundle(&self) -> Option<Self::TComponent> {
+		fn component(&self) -> Option<Self::TComponent> {
 			let (cmd, ..) = self;
 			cmd.extra.0.clone()
 		}

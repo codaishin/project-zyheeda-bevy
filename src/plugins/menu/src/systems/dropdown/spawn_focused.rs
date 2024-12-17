@@ -4,7 +4,7 @@ use crate::{
 		GlobalZIndexTop,
 	},
 	tools::Layout,
-	traits::{GetLayout, GetRootNode, UI},
+	traits::{insert_ui_content::InsertUiContent, GetLayout, GetRootNode},
 };
 use bevy::prelude::*;
 use common::tools::Focus;
@@ -14,7 +14,7 @@ pub(crate) fn dropdown_spawn_focused<TItem>(
 	mut commands: Commands,
 	dropdowns: Query<(Entity, &Dropdown<TItem>)>,
 ) where
-	TItem: UI + Sync + Send + 'static,
+	TItem: InsertUiContent + Sync + Send + 'static,
 	Dropdown<TItem>: GetRootNode + GetLayout,
 {
 	let Focus::New(new_focus) = focus.0 else {
@@ -78,11 +78,14 @@ fn repetitions(count: usize, max_index: u16) -> (u16, u16) {
 	(limit, count as u16 / limit)
 }
 
-fn spawn_items<TItem: UI>(dropdown_node: &mut ChildBuilder, dropdown: &Dropdown<TItem>) {
+fn spawn_items<TItem>(dropdown_node: &mut ChildBuilder, dropdown: &Dropdown<TItem>)
+where
+	TItem: InsertUiContent,
+{
 	for item in &dropdown.items {
 		dropdown_node
-			.spawn(item.ui_components())
-			.with_children(|item_node| item.update_children(item_node));
+			.spawn(Node::default())
+			.with_children(|item_node| item.insert_ui_content(item_node));
 	}
 }
 
@@ -92,7 +95,7 @@ mod tests {
 	use crate::{
 		components::GlobalZIndexTop,
 		tools::Layout,
-		traits::{ui_components::GetUIComponents, update_children::UpdateChildren},
+		traits::insert_ui_content::InsertUiContent,
 	};
 	use common::{test_tools::utils::SingleThreadedApp, tools::Index};
 	use mockall::mock;
@@ -102,14 +105,8 @@ mod tests {
 			#[derive(Debug, PartialEq)]
 			struct $item;
 
-			impl GetUIComponents for $item {
-				fn ui_components(&self) -> (Node, BackgroundColor) {
-					(default(), default())
-				}
-			}
-
-			impl UpdateChildren for $item {
-				fn update_children(&self, _: &mut ChildBuilder) {}
+			impl InsertUiContent for $item {
+				fn insert_ui_content(&self, _: &mut ChildBuilder) {}
 			}
 		};
 	}
@@ -170,11 +167,8 @@ mod tests {
 
 	mock! {
 		_Item {}
-		impl GetUIComponents for _Item {
-			fn ui_components(&self) -> (Node, BackgroundColor);
-		}
-		impl UpdateChildren for _Item {
-			fn update_children<'a>(&self, parent: &mut ChildBuilder<'a>);
+		impl InsertUiContent for _Item {
+			fn insert_ui_content<'a>(&self, parent: &mut ChildBuilder<'a>);
 		}
 	}
 
@@ -195,7 +189,7 @@ mod tests {
 
 	fn setup<TItem>() -> App
 	where
-		TItem: UI + Send + Sync + 'static,
+		TItem: InsertUiContent + Send + Sync + 'static,
 		Dropdown<TItem>: GetRootNode + GetLayout,
 	{
 		let mut app = App::new().single_threaded(Update);
@@ -331,17 +325,10 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_dropdown_item_node_with_node_and_background() {
+	fn spawn_dropdown_item_container_node() {
 		let mut app = setup::<Mock_Item>();
 		let mut item = Mock_Item::default();
-		item.expect_ui_components().return_const((
-			Node {
-				top: Val::Px(42.),
-				..default()
-			},
-			BackgroundColor(Color::linear_rgb(1., 2., 0.)),
-		));
-		item.expect_update_children().return_const(());
+		item.expect_insert_ui_content().return_const(());
 
 		let dropdown = app.world_mut().spawn(Dropdown { items: vec![item] }).id();
 		app.world_mut()
@@ -353,16 +340,7 @@ mod tests {
 		let dropdown_ui_content = last_child_of!(app, dropdown_ui).id();
 		let item_node = last_child_of!(app, dropdown_ui_content);
 
-		assert_eq!(
-			(
-				Some(&Node {
-					top: Val::Px(42.),
-					..default()
-				}),
-				Some(&BackgroundColor(Color::linear_rgb(1., 2., 0.))),
-			),
-			(item_node.get::<Node>(), item_node.get::<BackgroundColor>())
-		)
+		assert_eq!(Some(&Node::default()), item_node.get::<Node>());
 	}
 
 	#[test]
@@ -372,9 +350,7 @@ mod tests {
 
 		let mut app = setup::<Mock_Item>();
 		let mut item = Mock_Item::default();
-		item.expect_ui_components()
-			.return_const((Node::default(), BackgroundColor::default()));
-		item.expect_update_children().returning(|item_node| {
+		item.expect_insert_ui_content().returning(|item_node| {
 			item_node.spawn(_Content("My Content"));
 		});
 

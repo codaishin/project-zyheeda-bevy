@@ -1,12 +1,7 @@
 use super::{inventory_panel::InventoryPanel, KeyedPanel};
 use crate::{
 	tools::PanelState,
-	traits::{
-		colors::HasPanelColors,
-		ui_components::{GetUIComponents, GetZIndex, GetZIndexGlobal},
-		update_children::UpdateChildren,
-		LoadUi,
-	},
+	traits::{colors::HasPanelColors, insert_ui_content::InsertUiContent, LoadUi},
 };
 use bevy::prelude::*;
 use common::traits::{
@@ -16,7 +11,22 @@ use common::traits::{
 use skills::{inventory_key::InventoryKey, slot_key::SlotKey};
 
 #[derive(Component)]
+#[require(Node(full_screen), BackgroundColor(gray))]
 pub struct InventoryScreen;
+
+fn full_screen() -> Node {
+	Node {
+		width: Val::Vw(100.0),
+		height: Val::Vh(100.0),
+		align_items: AlignItems::Center,
+		justify_content: JustifyContent::Center,
+		..default()
+	}
+}
+
+fn gray() -> BackgroundColor {
+	BackgroundColor(Color::srgba(0.5, 0.5, 0.5, 0.5))
+}
 
 impl LoadUi<AssetServer> for InventoryScreen {
 	fn load_ui(_: &mut AssetServer) -> Self {
@@ -24,27 +34,8 @@ impl LoadUi<AssetServer> for InventoryScreen {
 	}
 }
 
-impl GetZIndex for InventoryScreen {}
-
-impl GetZIndexGlobal for InventoryScreen {}
-
-impl GetUIComponents for InventoryScreen {
-	fn ui_components(&self) -> (Node, BackgroundColor) {
-		(
-			Node {
-				width: Val::Vw(100.0),
-				height: Val::Vh(100.0),
-				align_items: AlignItems::Center,
-				justify_content: JustifyContent::Center,
-				..default()
-			},
-			Color::srgba(0.5, 0.5, 0.5, 0.5).into(),
-		)
-	}
-}
-
-impl UpdateChildren for InventoryScreen {
-	fn update_children(&self, parent: &mut ChildBuilder) {
+impl InsertUiContent for InventoryScreen {
+	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		parent
 			.spawn(Node {
 				flex_direction: FlexDirection::Row,

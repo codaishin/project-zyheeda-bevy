@@ -1,19 +1,24 @@
 use super::{quickbar_panel::QuickbarPanel, Label, Quickbar};
 use crate::{
 	tools::PanelState,
-	traits::{
-		colors::HasPanelColors,
-		ui_components::{GetUIComponents, GetZIndex, GetZIndexGlobal},
-		update_children::UpdateChildren,
-		LoadUi,
-	},
+	traits::{colors::HasPanelColors, insert_ui_content::InsertUiContent, LoadUi},
 };
 use bevy::prelude::*;
 use common::traits::iteration::IterFinite;
 use skills::slot_key::SlotKey;
 
 #[derive(Component)]
+#[require(Node(full_screen))]
 pub struct UIOverlay;
+
+fn full_screen() -> Node {
+	Node {
+		width: Val::Percent(100.0),
+		height: Val::Percent(100.0),
+		flex_direction: FlexDirection::ColumnReverse,
+		..default()
+	}
+}
 
 impl LoadUi<AssetServer> for UIOverlay {
 	fn load_ui(_: &mut AssetServer) -> Self {
@@ -21,26 +26,8 @@ impl LoadUi<AssetServer> for UIOverlay {
 	}
 }
 
-impl GetZIndex for UIOverlay {}
-
-impl GetZIndexGlobal for UIOverlay {}
-
-impl GetUIComponents for UIOverlay {
-	fn ui_components(&self) -> (Node, BackgroundColor) {
-		(
-			Node {
-				width: Val::Percent(100.0),
-				height: Val::Percent(100.0),
-				flex_direction: FlexDirection::ColumnReverse,
-				..default()
-			},
-			default(),
-		)
-	}
-}
-
-impl UpdateChildren for UIOverlay {
-	fn update_children(&self, parent: &mut ChildBuilder) {
+impl InsertUiContent for UIOverlay {
+	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		add_quickbar(parent);
 	}
 }

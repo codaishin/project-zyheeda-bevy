@@ -1,14 +1,21 @@
 use super::{start_game::StartGame, start_menu_button::StartMenuButton};
-use crate::traits::{
-	colors::DEFAULT_PANEL_COLORS,
-	ui_components::{GetUIComponents, GetZIndex, GetZIndexGlobal},
-	update_children::UpdateChildren,
-	LoadUi,
-};
+use crate::traits::{colors::DEFAULT_PANEL_COLORS, insert_ui_content::InsertUiContent, LoadUi};
 use bevy::prelude::*;
 
 #[derive(Component)]
+#[require(Node(full_screen))]
 pub(crate) struct StartMenu;
+
+fn full_screen() -> Node {
+	Node {
+		width: Val::Vw(100.0),
+		height: Val::Vh(100.0),
+		align_items: AlignItems::Center,
+		justify_content: JustifyContent::Center,
+		flex_direction: FlexDirection::Column,
+		..default()
+	}
+}
 
 impl LoadUi<AssetServer> for StartMenu {
 	fn load_ui(_: &mut AssetServer) -> Self {
@@ -16,28 +23,8 @@ impl LoadUi<AssetServer> for StartMenu {
 	}
 }
 
-impl GetZIndex for StartMenu {}
-
-impl GetZIndexGlobal for StartMenu {}
-
-impl GetUIComponents for StartMenu {
-	fn ui_components(&self) -> (Node, BackgroundColor) {
-		(
-			Node {
-				width: Val::Vw(100.0),
-				height: Val::Vh(100.0),
-				align_items: AlignItems::Center,
-				justify_content: JustifyContent::Center,
-				flex_direction: FlexDirection::Column,
-				..default()
-			},
-			default(),
-		)
-	}
-}
-
-impl UpdateChildren for StartMenu {
-	fn update_children(&self, parent: &mut ChildBuilder) {
+impl InsertUiContent for StartMenu {
+	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		parent
 			.spawn(Node {
 				margin: UiRect::bottom(Val::Px(30.)),

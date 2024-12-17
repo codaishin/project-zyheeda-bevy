@@ -2,24 +2,37 @@ pub(crate) mod skill;
 
 use super::GlobalZIndexTop;
 use crate::traits::{
+	insert_ui_content::InsertUiContent,
 	tooltip_ui_control::{
 		DespawnAllTooltips,
 		DespawnOutdatedTooltips,
 		SpawnTooltips,
 		UpdateTooltipPosition,
 	},
-	ui_components::GetUIComponents,
-	update_children::UpdateChildren,
 };
 use bevy::prelude::*;
 use std::{marker::PhantomData, time::Duration};
 
 #[derive(Component, Debug, PartialEq, Clone)]
-pub(crate) struct Tooltip<T>(T);
+#[require(Node(T::node), BackgroundColor(T::background_color))]
+pub(crate) struct Tooltip<T>(T)
+where
+	T: TooltipUiConfig;
+
+pub(crate) trait TooltipUiConfig {
+	fn node() -> Node {
+		default()
+	}
+
+	fn background_color() -> BackgroundColor {
+		default()
+	}
+}
 
 impl<T> Tooltip<T>
 where
-	Tooltip<T>: GetUIComponents + UpdateChildren,
+	T: TooltipUiConfig,
+	Tooltip<T>: InsertUiContent,
 {
 	pub(crate) fn new(value: T) -> Self {
 		Tooltip(value)
@@ -68,7 +81,10 @@ impl<T: Sync + Send + 'static> DespawnAllTooltips<TooltipUI<T>> for TooltipUICon
 	}
 }
 
-impl<T: Send + Sync + 'static> DespawnOutdatedTooltips<TooltipUI<T>, T> for TooltipUIControl {
+impl<T> DespawnOutdatedTooltips<TooltipUI<T>, T> for TooltipUIControl
+where
+	T: TooltipUiConfig + Send + Sync + 'static,
+{
 	fn despawn_outdated(
 		&self,
 		uis: &Query<(Entity, &TooltipUI<T>, &mut Node)>,
@@ -97,16 +113,18 @@ impl<T: Sync + Send + 'static> UpdateTooltipPosition<TooltipUI<T>> for TooltipUI
 	}
 }
 
-impl<T: Sync + Send + 'static> SpawnTooltips<T> for TooltipUIControl {
+impl<T> SpawnTooltips<T> for TooltipUIControl
+where
+	T: TooltipUiConfig + Clone + Send + Sync + 'static,
+	Tooltip<T>: InsertUiContent,
+{
 	fn spawn(
 		&self,
 		commands: &mut Commands,
 		tooltip_entity: Entity,
 		tooltip: &Tooltip<T>,
 		position: Vec2,
-	) where
-		Tooltip<T>: UpdateChildren + GetUIComponents,
-	{
+	) {
 		let container_node = (
 			TooltipUI::<T>::new(tooltip_entity, self.tooltip_delay),
 			Node {
@@ -121,13 +139,9 @@ impl<T: Sync + Send + 'static> SpawnTooltips<T> for TooltipUIControl {
 			.spawn(container_node)
 			.with_children(|container_node| {
 				container_node
-					.spawn((
-						tooltip.ui_components(),
-						GlobalZIndexTop,
-						Visibility::Inherited,
-					))
+					.spawn((tooltip.clone(), GlobalZIndexTop, Visibility::Inherited))
 					.with_children(|tooltip_node| {
-						tooltip.update_children(tooltip_node);
+						tooltip.insert_ui_content(tooltip_node);
 					});
 			});
 	}
@@ -145,7 +159,10 @@ mod tests {
 		App::new().single_threaded(Update)
 	}
 
-	fn setup_despawn_all<T: Sync + Send + 'static>() -> App {
+	fn setup_despawn_all<T>() -> App
+	where
+		T: Sync + Send + 'static,
+	{
 		let mut app = new_app();
 		app.add_systems(
 			Update,
@@ -157,7 +174,10 @@ mod tests {
 		app
 	}
 
-	fn setup_despawn_outdated<T: Sync + Send + 'static>() -> App {
+	fn setup_despawn_outdated<T>() -> App
+	where
+		T: TooltipUiConfig + Clone + Sync + Send + 'static,
+	{
 		let mut app = new_app();
 		app.add_systems(
 			Update,
@@ -175,7 +195,10 @@ mod tests {
 		app
 	}
 
-	fn setup_update_position<T: Sync + Send + 'static>(position: Vec2) -> App {
+	fn setup_update_position<T>(position: Vec2) -> App
+	where
+		T: Sync + Send + 'static,
+	{
 		let mut app = new_app();
 		app.add_systems(
 			Update,
@@ -187,27 +210,15 @@ mod tests {
 		app
 	}
 
+	#[derive(Clone, Debug, PartialEq)]
 	struct _T {
-		color: Color,
-		display: Display,
 		content: &'static str,
 	}
 
-	impl GetUIComponents for Tooltip<_T> {
-		fn ui_components(&self) -> (Node, BackgroundColor) {
-			let Tooltip(_T { display, color, .. }) = *self;
-			(
-				Node {
-					display,
-					..default()
-				},
-				color.into(),
-			)
-		}
-	}
+	impl TooltipUiConfig for _T {}
 
-	impl UpdateChildren for Tooltip<_T> {
-		fn update_children(&self, parent: &mut ChildBuilder) {
+	impl InsertUiContent for Tooltip<_T> {
+		fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 			parent.spawn(_Child(self.0.content));
 		}
 	}
@@ -276,6 +287,8 @@ mod tests {
 
 		assert_eq!(0, children.count());
 	}
+
+	impl TooltipUiConfig for &'static str {}
 
 	#[test]
 	fn despawn_outdated() {
@@ -409,11 +422,7 @@ mod tests {
 	#[test]
 	fn spawn_tooltip() {
 		let mut app = setup_spawn(Vec2 { x: 11., y: 101. }, default());
-		app.world_mut().spawn(Tooltip(_T {
-			color: Color::srgb(1., 0.5, 0.),
-			content: "",
-			display: Display::Grid,
-		}));
+		app.world_mut().spawn(Tooltip(_T { content: "" }));
 
 		app.update();
 
@@ -422,32 +431,13 @@ mod tests {
 			.iter_entities()
 			.find(|e| e.contains::<TooltipUI<_T>>())
 			.expect("no tooltip spawned");
-		assert_eq!(
-			(
-				Some(&BackgroundColor(Color::NONE)),
-				Some(&Node {
-					left: Val::Px(11.),
-					top: Val::Px(101.),
-					..default()
-				}),
-				Some(&Visibility::Hidden),
-			),
-			(
-				tooltip_ui.get::<BackgroundColor>(),
-				tooltip_ui.get::<Node>(),
-				tooltip_ui.get::<Visibility>(),
-			)
-		);
+		assert_eq!(Some(&Visibility::Hidden), tooltip_ui.get::<Visibility>());
 	}
 
 	#[test]
-	fn spawn_node_bundle_of_tooltip_on_child() {
+	fn spawn_contained_tooltip_on_child() {
 		let mut app = setup_spawn(default(), default());
-		app.world_mut().spawn(Tooltip(_T {
-			color: Color::srgb(1., 0.5, 0.),
-			content: "",
-			display: Display::Grid,
-		}));
+		app.world_mut().spawn(Tooltip(_T { content: "father" }));
 
 		app.update();
 
@@ -460,28 +450,15 @@ mod tests {
 			.expect("no tooltip child found");
 		let tooltip_ui_child = app.world().entity(*tooltip_ui_child);
 		assert_eq!(
-			(
-				Some(&Node {
-					display: Display::Grid,
-					..default()
-				}),
-				Some(&BackgroundColor(Color::srgb(1., 0.5, 0.)))
-			),
-			(
-				tooltip_ui_child.get::<Node>(),
-				tooltip_ui_child.get::<BackgroundColor>(),
-			)
+			Some(&Tooltip(_T { content: "father" })),
+			tooltip_ui_child.get::<Tooltip<_T>>(),
 		);
 	}
 
 	#[test]
 	fn spawn_tooltip_global_z_index_top_on_child() {
 		let mut app = setup_spawn(Vec2 { x: 11., y: 101. }, default());
-		app.world_mut().spawn(Tooltip(_T {
-			color: Color::srgb(1., 0.5, 0.),
-			content: "",
-			display: Display::Grid,
-		}));
+		app.world_mut().spawn(Tooltip(_T { content: "" }));
 
 		app.update();
 
@@ -503,9 +480,7 @@ mod tests {
 	fn spawn_content_of_tooltip_on_child() {
 		let mut app = setup_spawn(default(), default());
 		app.world_mut().spawn(Tooltip(_T {
-			color: Color::srgb(1., 0.5, 0.),
 			content: "My Content",
-			display: Display::Grid,
 		}));
 
 		app.update();
@@ -528,14 +503,7 @@ mod tests {
 	#[test]
 	fn spawn_tooltip_ui_with_source_reference() {
 		let mut app = setup_spawn(default(), default());
-		let tooltip = app
-			.world_mut()
-			.spawn(Tooltip(_T {
-				color: Color::srgb(1., 0.5, 0.),
-				content: "",
-				display: Display::Grid,
-			}))
-			.id();
+		let tooltip = app.world_mut().spawn(Tooltip(_T { content: "" })).id();
 
 		app.update();
 
@@ -550,11 +518,7 @@ mod tests {
 	#[test]
 	fn spawn_tooltip_ui_with_delay() {
 		let mut app = setup_spawn(default(), Duration::from_secs(4000));
-		app.world_mut().spawn(Tooltip(_T {
-			color: Color::srgb(1., 0.5, 0.),
-			content: "",
-			display: Display::Grid,
-		}));
+		app.world_mut().spawn(Tooltip(_T { content: "" }));
 
 		app.update();
 

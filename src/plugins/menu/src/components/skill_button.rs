@@ -1,6 +1,6 @@
 use super::{combo_overview::ComboOverview, tooltip::Tooltip};
-use crate::traits::{ui_components::GetUIComponents, update_children::UpdateChildren};
-use bevy::{color::palettes::tailwind::CYAN_100, prelude::*};
+use crate::traits::insert_ui_content::InsertUiContent;
+use bevy::prelude::*;
 use skills::{skills::Skill, slot_key::SlotKey};
 use std::marker::PhantomData;
 
@@ -17,6 +17,7 @@ pub(crate) struct Horizontal;
 pub(crate) struct DropdownItem<TLayout>(PhantomData<TLayout>);
 
 #[derive(Component, Debug, Default, PartialEq, Clone)]
+#[require(Node)]
 pub(crate) struct SkillButton<T> {
 	phantom_data: PhantomData<T>,
 	pub(crate) skill: Skill,
@@ -33,18 +34,11 @@ impl<T> SkillButton<T> {
 	}
 }
 
-impl<T> GetUIComponents for SkillButton<T> {
-	fn ui_components(&self) -> (Node, BackgroundColor) {
-		(default(), BackgroundColor(CYAN_100.into()))
-	}
-}
-
-impl<T: Clone + Sync + Send + 'static> UpdateChildren for SkillButton<T> {
-	fn update_children(&self, parent: &mut ChildBuilder) {
-		let icon = self.skill.icon.clone();
+impl<T: Clone + Sync + Send + 'static> InsertUiContent for SkillButton<T> {
+	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		parent.spawn((
 			self.clone(),
-			ComboOverview::skill_button(icon),
+			ComboOverview::skill_button(self.skill.icon.clone()),
 			Tooltip::<Skill>::new(self.skill.clone()),
 		));
 	}

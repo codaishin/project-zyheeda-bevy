@@ -22,7 +22,7 @@ where
 {
 	type TComponent = Dropdown<KeySelect<AppendSkill<TKey>, TKey>>;
 
-	fn bundle(&self) -> Option<Self::TComponent> {
+	fn component(&self) -> Option<Self::TComponent> {
 		let (insert_command, combos) = self;
 
 		let followups = match insert_command.key_path.is_empty() {
@@ -155,7 +155,7 @@ mod tests {
 					},
 				]
 			}),
-			source.bundle()
+			source.component()
 		)
 	}
 
@@ -196,7 +196,7 @@ mod tests {
 					},
 				]
 			}),
-			source.bundle()
+			source.component()
 		)
 	}
 
@@ -227,7 +227,7 @@ mod tests {
 			&_Combos,
 		);
 
-		_ = source.bundle();
+		_ = source.component();
 
 		assert_eq!(vec![key_path], unsafe { KEY_PATHS.clone() },)
 	}
@@ -256,7 +256,7 @@ mod tests {
 			&_Combos,
 		);
 
-		assert_eq!(None, source.bundle())
+		assert_eq!(None, source.component())
 	}
 
 	#[test]
@@ -288,7 +288,7 @@ mod tests {
 					key_path: vec![]
 				},]
 			}),
-			source.bundle()
+			source.component()
 		)
 	}
 }

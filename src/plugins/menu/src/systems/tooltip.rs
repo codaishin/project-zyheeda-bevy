@@ -1,14 +1,13 @@
 use crate::{
-	components::tooltip::Tooltip,
+	components::tooltip::{Tooltip, TooltipUiConfig},
 	traits::{
+		insert_ui_content::InsertUiContent,
 		tooltip_ui_control::{
 			DespawnAllTooltips,
 			DespawnOutdatedTooltips,
 			SpawnTooltips,
 			UpdateTooltipPosition,
 		},
-		ui_components::GetUIComponents,
-		update_children::UpdateChildren,
 	},
 };
 use bevy::prelude::*;
@@ -22,8 +21,8 @@ pub(crate) fn tooltip<T, TUI, TUIControl, TWindow>(
 	mut tooltip_uis: Query<(Entity, &TUI, &mut Node)>,
 	removed_tooltips: RemovedComponents<Tooltip<T>>,
 ) where
-	T: Sync + Send + 'static,
-	Tooltip<T>: UpdateChildren + GetUIComponents,
+	T: TooltipUiConfig + Sync + Send + 'static,
+	Tooltip<T>: InsertUiContent,
 	TUI: Component,
 	TUIControl: Resource
 		+ DespawnAllTooltips<TUI>
@@ -54,7 +53,7 @@ pub(crate) fn tooltip<T, TUI, TUIControl, TWindow>(
 	}
 }
 
-fn is_hovering<T: Sync + Send + 'static>(
+fn is_hovering<T: TooltipUiConfig + Sync + Send + 'static>(
 	(.., interaction): &(Entity, &Tooltip<T>, &Interaction),
 ) -> bool {
 	interaction == &&Interaction::Hovered
@@ -63,7 +62,7 @@ fn is_hovering<T: Sync + Send + 'static>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::update_children::UpdateChildren;
+	use crate::{components::tooltip::TooltipUiConfig, traits::insert_ui_content::InsertUiContent};
 	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::mock;
@@ -85,16 +84,10 @@ mod tests {
 		content: &'static str,
 	}
 
-	impl GetUIComponents for Tooltip<_T> {
-		fn ui_components(&self) -> (Node, BackgroundColor) {
-			todo!();
-		}
-	}
+	impl TooltipUiConfig for _T {}
 
-	impl UpdateChildren for Tooltip<_T> {
-		fn update_children(&self, _: &mut ChildBuilder) {
-			todo!();
-		}
+	impl InsertUiContent for Tooltip<_T> {
+		fn insert_ui_content(&self, _: &mut ChildBuilder) {}
 	}
 
 	#[derive(Component)]
@@ -144,7 +137,7 @@ mod tests {
 			tooltip: &Tooltip<_T>,
 			position: Vec2,
 		) where
-			Tooltip<_T>: UpdateChildren + GetUIComponents,
+			Tooltip<_T>: InsertUiContent,
 		{
 			self.mock.spawn(commands, tooltip_entity, tooltip, position)
 		}
@@ -185,7 +178,7 @@ mod tests {
 				tooltip: &Tooltip<_T>,
 				position: Vec2
 			) where
-				Tooltip<_T>: UpdateChildren + GetUIComponents;
+				Tooltip<_T>: InsertUiContent;
 		}
 	}
 

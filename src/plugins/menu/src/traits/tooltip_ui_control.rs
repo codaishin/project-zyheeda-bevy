@@ -1,5 +1,5 @@
-use super::{ui_components::GetUIComponents, update_children::UpdateChildren};
-use crate::components::tooltip::Tooltip;
+use super::insert_ui_content::InsertUiContent;
+use crate::components::tooltip::{Tooltip, TooltipUiConfig};
 use bevy::prelude::*;
 
 pub(crate) trait DespawnAllTooltips<TUI> {
@@ -8,7 +8,10 @@ pub(crate) trait DespawnAllTooltips<TUI> {
 		TUI: Component + Sized;
 }
 
-pub(crate) trait DespawnOutdatedTooltips<TUI, T: Send + Sync + 'static> {
+pub(crate) trait DespawnOutdatedTooltips<TUI, T>
+where
+	T: TooltipUiConfig + Send + Sync + 'static,
+{
 	fn despawn_outdated(
 		&self,
 		uis: &Query<(Entity, &TUI, &mut Node)>,
@@ -24,7 +27,10 @@ pub(crate) trait UpdateTooltipPosition<TUI> {
 		TUI: Component + Sized;
 }
 
-pub(crate) trait SpawnTooltips<T> {
+pub(crate) trait SpawnTooltips<T>
+where
+	T: TooltipUiConfig,
+{
 	fn spawn(
 		&self,
 		commands: &mut Commands,
@@ -32,5 +38,5 @@ pub(crate) trait SpawnTooltips<T> {
 		tooltip: &Tooltip<T>,
 		position: Vec2,
 	) where
-		Tooltip<T>: UpdateChildren + GetUIComponents;
+		Tooltip<T>: InsertUiContent;
 }

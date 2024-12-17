@@ -11,8 +11,7 @@ use crate::{
 	traits::{
 		colors::DEFAULT_PANEL_COLORS,
 		combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol},
-		ui_components::{GetUIComponents, GetZIndex, GetZIndexGlobal},
-		update_children::UpdateChildren,
+		insert_ui_content::InsertUiContent,
 		LoadUi,
 		UpdateCombosView,
 	},
@@ -22,9 +21,23 @@ use common::traits::load_asset::{LoadAsset, Path};
 use skills::{skills::Skill, slot_key::SlotKey};
 
 #[derive(Component, Default, Debug, PartialEq)]
+#[require(Node(full_screen), BackgroundColor(gray))]
 pub(crate) struct ComboOverview {
 	new_skill_icon: Handle<Image>,
 	layout: ComboTreeLayout,
+}
+
+fn full_screen() -> Node {
+	Node {
+		width: Val::Vw(100.),
+		height: Val::Vh(100.),
+		flex_direction: FlexDirection::Column,
+		..default()
+	}
+}
+
+fn gray() -> BackgroundColor {
+	BackgroundColor(Color::srgba(0.5, 0.5, 0.5, 0.5))
 }
 
 impl<TAssetServer> LoadUi<TAssetServer> for ComboOverview
@@ -67,7 +80,9 @@ impl ComboOverview {
 		}
 	}
 
-	pub(crate) fn skill_button(icon: Option<Handle<Image>>) -> (Button, Node, ImageNode) {
+	pub(crate) fn skill_button(
+		icon: Option<Handle<Image>>,
+	) -> (Button, Node, ImageNode, BackgroundColor) {
 		let node = Node {
 			width: Val::from(Self::SKILL_BUTTON_DIMENSIONS.width),
 			height: Val::from(Self::SKILL_BUTTON_DIMENSIONS.height),
@@ -78,10 +93,20 @@ impl ComboOverview {
 		};
 
 		let Some(icon) = icon else {
-			return (Button, node, ImageNode::default());
+			return (
+				Button,
+				node,
+				default(),
+				BackgroundColor(DEFAULT_PANEL_COLORS.empty),
+			);
 		};
 
-		(Button, node, ImageNode::new(icon))
+		(
+			Button,
+			node,
+			ImageNode::new(icon),
+			BackgroundColor(DEFAULT_PANEL_COLORS.filled),
+		)
 	}
 
 	pub(crate) fn skill_key_button_offset_node() -> Node {
@@ -249,29 +274,8 @@ impl UpdateCombosView for ComboOverview {
 	}
 }
 
-impl GetZIndex for ComboOverview {}
-
-impl GetZIndexGlobal for ComboOverview {}
-
-impl GetUIComponents for ComboOverview {
-	fn ui_components(&self) -> (Node, BackgroundColor) {
-		(
-			Node {
-				position_type: PositionType::Absolute,
-				top: Val::Px(30.0),
-				left: Val::Px(30.0),
-				right: Val::Px(30.0),
-				bottom: Val::Px(30.0),
-				flex_direction: FlexDirection::Column,
-				..default()
-			},
-			Color::srgba(0.5, 0.5, 0.5, 0.5).into(),
-		)
-	}
-}
-
-impl UpdateChildren for ComboOverview {
-	fn update_children(&self, parent: &mut ChildBuilder) {
+impl InsertUiContent for ComboOverview {
+	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		add_title(parent, "Combos");
 		if self.layout.is_empty() {
 			add_empty_combo(parent, &self.new_skill_icon);
@@ -331,10 +335,7 @@ fn add_combo_starter(
 				add_back(parent);
 			}
 			parent
-				.spawn((
-					ComboOverview::skill_button(Some(icon.clone())),
-					BackgroundColor(DEFAULT_PANEL_COLORS.empty),
-				))
+				.spawn(ComboOverview::skill_button(Some(icon.clone())))
 				.with_children(|parent| {
 					for add_front in add_fronts {
 						add_front(&[], parent);
@@ -423,10 +424,7 @@ fn add_empty(parent: &mut ChildBuilder, add_backs: &[fn(&mut ChildBuilder)]) {
 			for add_back in add_backs {
 				add_back(parent);
 			}
-			parent.spawn((
-				ComboOverview::skill_button(None),
-				BackgroundColor(DEFAULT_PANEL_COLORS.filled),
-			));
+			parent.spawn(ComboOverview::skill_button(None));
 		});
 }
 
@@ -450,7 +448,6 @@ fn add_skill(
 				.spawn((
 					button,
 					ComboOverview::skill_button(icon),
-					BackgroundColor(DEFAULT_PANEL_COLORS.filled),
 					SkillSelectDropdownInsertCommand::<SlotKey, Vertical>::new(key_path.to_vec()),
 				))
 				.with_children(|parent| {
