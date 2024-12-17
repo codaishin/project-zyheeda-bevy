@@ -1,6 +1,5 @@
 pub mod attributes;
 pub mod blocker;
-pub mod bundles;
 pub mod components;
 pub mod dto;
 pub mod effects;

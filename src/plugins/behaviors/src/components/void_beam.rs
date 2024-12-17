@@ -83,12 +83,9 @@ where
 			TInteractions::effect(DealDamage::once_per_second(self.attack.damage)),
 			TAfterInstantiation::spawn(move |parent: &mut ChildBuilder| {
 				parent.spawn((
-					PbrBundle {
-						material: material.clone(),
-						mesh: mesh.clone(),
-						transform: Transform::from_rotation(Quat::from_rotation_x(PI / 2.)),
-						..default()
-					},
+					Mesh3d(mesh.clone()),
+					MeshMaterial3d(material.clone()),
+					Transform::from_rotation(Quat::from_rotation_x(PI / 2.)),
 					NotShadowCaster,
 				));
 			}),

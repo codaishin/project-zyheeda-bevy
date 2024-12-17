@@ -25,7 +25,7 @@ pub(crate) fn execute_move_position_based<
 		.iter_mut()
 		.filter_map(|(entity, mut movement, mut transform, config)| {
 			let (speed, ..) = config.get_movement_data();
-			let distance = time.delta_seconds() * *speed.deref();
+			let distance = time.delta_secs() * *speed.deref();
 
 			match movement
 				.update(&mut transform, Units::new(distance))

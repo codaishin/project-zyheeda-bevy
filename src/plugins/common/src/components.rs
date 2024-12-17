@@ -2,6 +2,7 @@ pub mod essence;
 pub mod flip;
 
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::*;
 use flip::FlipHorizontally;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
@@ -34,6 +35,7 @@ pub struct Immobilized;
 pub struct Idle;
 
 #[derive(Component, PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord)]
+#[require(Collider, Transform, ActiveEvents, ActiveCollisionTypes)]
 pub struct ColliderRoot(pub Entity);
 
 #[derive(Component, PartialEq, Debug, Clone, Copy, Default)]
@@ -72,6 +74,7 @@ pub struct MainCamera;
 pub struct NoTarget;
 
 #[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[require(Transform, Visibility)]
 pub enum AssetModel {
 	#[default]
 	None,

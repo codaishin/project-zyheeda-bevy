@@ -20,7 +20,7 @@ pub(crate) fn move_with_target<TFollow: MoveTogether + Component>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::ecs::system::RunSystemOnce;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -45,7 +45,7 @@ mod tests {
 	}
 
 	#[test]
-	fn do_follow() {
+	fn do_follow() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let target = app
 			.world_mut()
@@ -65,11 +65,11 @@ mod tests {
 			Transform::from_xyz(10., 10., 10.),
 		));
 
-		app.world_mut().run_system_once(move_with_target::<_Move>);
+		app.world_mut().run_system_once(move_with_target::<_Move>)
 	}
 
 	#[test]
-	fn do_follow_for_multiple_followers() {
+	fn do_follow_for_multiple_followers() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let target = app
 			.world_mut()
@@ -102,6 +102,6 @@ mod tests {
 			Transform::from_xyz(11., 11., 11.),
 		));
 
-		app.world_mut().run_system_once(move_with_target::<_Move>);
+		app.world_mut().run_system_once(move_with_target::<_Move>)
 	}
 }

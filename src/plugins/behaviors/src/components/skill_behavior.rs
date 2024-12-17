@@ -10,11 +10,11 @@ use bevy_rapier3d::prelude::{
 	GravityScale,
 	RigidBody,
 	Sensor,
+	TriMeshFlags,
 	Velocity,
 };
 use common::{
 	blocker::Blocker,
-	bundles::{AssetModelBundle, ColliderTransformBundle},
 	components::{AssetModel, ColliderRoot, Outdated},
 	errors::{Error, Level},
 	resources::ColliderInfo,
@@ -49,16 +49,15 @@ impl Shape {
 	const SPHERE_MODEL: &str = "models/sphere.glb";
 
 	fn prefab(&self, entity: &mut EntityCommands, offset: Vec3) -> Result<(), Error> {
-		let (model, collider) = match self {
+		let ((model, model_transform), (collider, collider_transform)) = match self {
 			Shape::Sphere {
 				radius,
 				hollow_collider,
 			} => (
-				AssetModelBundle {
-					model: AssetModel::path(Self::SPHERE_MODEL),
-					transform: Transform::from_scale(Vec3::splat(**radius * 2.)),
-					..default()
-				},
+				(
+					AssetModel::path(Self::SPHERE_MODEL),
+					Transform::from_scale(Vec3::splat(**radius * 2.)),
+				),
 				match hollow_collider {
 					true => Self::ring_collider(**radius)?,
 					false => Self::sphere_collider(**radius),
@@ -69,42 +68,39 @@ impl Shape {
 				collider,
 				scale,
 			} => (
-				AssetModelBundle {
-					model: model.clone(),
-					transform: Transform::from_scale(*scale),
-					..default()
-				},
+				(model.clone(), Transform::from_scale(*scale)),
 				Self::custom_collider(collider, *scale),
 			),
 		};
 
 		entity
-			.try_insert(SpatialBundle {
-				transform: Transform::from_translation(offset),
-				..default()
-			})
+			.try_insert((Transform::from_translation(offset), Visibility::default()))
 			.with_children(|parent| {
-				parent.spawn(model);
-				parent.spawn((collider, ColliderRoot(parent.parent_entity()), Sensor));
+				parent.spawn((model, model_transform));
+				parent.spawn((
+					ColliderRoot(parent.parent_entity()),
+					collider,
+					collider_transform,
+					ActiveEvents::COLLISION_EVENTS,
+					Sensor,
+				));
 			});
 
 		Ok(())
 	}
 
-	fn sphere_collider(radius: f32) -> ColliderTransformBundle {
-		ColliderTransformBundle {
-			collider: Collider::ball(radius),
-			active_events: ActiveEvents::COLLISION_EVENTS,
-			transform: Transform::default(),
-			..default()
-		}
+	fn sphere_collider(radius: f32) -> (Collider, Transform) {
+		(Collider::ball(radius), Transform::default())
 	}
 
-	fn ring_collider(radius: f32) -> Result<ColliderTransformBundle, Error> {
+	fn ring_collider(radius: f32) -> Result<(Collider, Transform), Error> {
 		let transform = Transform::default().with_rotation(Quat::from_axis_angle(Vec3::X, PI / 2.));
 		let ring = Annulus::new(radius * 0.9, radius);
-		let torus = Mesh::from(Extrusion::new(ring, 3.));
-		let collider = Collider::from_bevy_mesh(&torus, &ComputedColliderShape::TriMesh);
+		let torus = Mesh::from(Extrusion::new(ring, radius * 2.));
+		let collider = Collider::from_bevy_mesh(
+			&torus,
+			&ComputedColliderShape::TriMesh(TriMeshFlags::MERGE_DUPLICATE_VERTICES),
+		);
 
 		let Some(collider) = collider else {
 			return Err(Error {
@@ -113,21 +109,11 @@ impl Shape {
 			});
 		};
 
-		Ok(ColliderTransformBundle {
-			transform,
-			collider,
-			active_events: ActiveEvents::COLLISION_EVENTS,
-			..default()
-		})
+		Ok((collider, transform))
 	}
 
-	fn custom_collider(collider: &Collider, scale: Vec3) -> ColliderTransformBundle {
-		ColliderTransformBundle {
-			collider: collider.clone(),
-			active_events: ActiveEvents::COLLISION_EVENTS,
-			transform: Transform::from_scale(scale),
-			..default()
-		}
+	fn custom_collider(collider: &Collider, scale: Vec3) -> (Collider, Transform) {
+		(collider.clone(), Transform::from_scale(scale))
 	}
 }
 
@@ -274,12 +260,10 @@ impl SkillTarget {
 mod tests {
 	use super::*;
 	use crate::components::when_traveled_insert::InsertAfterDistanceTraveled;
-	use bevy::ecs::system::RunSystemOnce;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::prelude::ActiveCollisionTypes;
 	use common::{
-		assert_bundle,
 		blocker::Blocker,
-		bundles::AssetModelBundle,
 		components::{AssetModel, ColliderRoot},
 		tools::{Units, UnitsPerSecond},
 		traits::{
@@ -336,7 +320,7 @@ mod tests {
 	}
 
 	#[test]
-	fn held_components() {
+	fn held_components() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let motion = Motion::HeldBy {
 			spawner: Entity::from_raw(11),
@@ -344,7 +328,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
 			motion.prefab::<_LifeCycles>(entity)
-		}));
+		}))?;
 
 		assert_eq!(
 			(
@@ -374,10 +358,11 @@ mod tests {
 					.get::<InsertAfterDistanceTraveled<_Destroy, Velocity>>(),
 			)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn stationary_components() {
+	fn stationary_components() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let motion = Motion::Stationary {
 			caster: Entity::from_raw(42),
@@ -390,7 +375,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
 			motion.prefab::<_LifeCycles>(entity)
-		}));
+		}))?;
 
 		assert_eq!(
 			(
@@ -427,10 +412,11 @@ mod tests {
 					.get::<InsertAfterDistanceTraveled<_Destroy, Velocity>>(),
 			)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn projectile_components() {
+	fn projectile_components() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let motion = Motion::Projectile {
 			caster: Entity::from_raw(55),
@@ -441,7 +427,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
 			motion.prefab::<_LifeCycles>(entity)
-		}));
+		}))?;
 
 		assert_eq!(
 			(
@@ -478,10 +464,11 @@ mod tests {
 					.get::<InsertAfterDistanceTraveled<_Destroy, Velocity>>(),
 			)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn fragile_components() {
+	fn fragile_components() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let integrity = Integrity::Fragile {
 			destroyed_by: vec![Blocker::Physical],
@@ -489,12 +476,13 @@ mod tests {
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
 			integrity.prefab::<_Interactions>(entity)
-		}));
+		}))?;
 
 		assert_eq!(
 			Some(&_IsFragile(vec![Blocker::Physical])),
 			app.world().entity(entity).get::<_IsFragile>(),
 		);
+		Ok(())
 	}
 
 	fn children_of(app: &App, entity: Entity) -> impl Iterator<Item = EntityRef> {
@@ -506,7 +494,7 @@ mod tests {
 	}
 
 	#[test]
-	fn spatial_bundle_sphere() {
+	fn transform_and_visibility_sphere() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let shape = Shape::Sphere {
 			radius: Units::new(42.),
@@ -515,20 +503,23 @@ mod tests {
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
 			shape.prefab(entity, Vec3::new(1., 2., 3.))
-		}));
+		}))?;
 
-		assert_bundle!(
-			SpatialBundle,
-			&app,
-			app.world().entity(entity),
-			With::assert(|transform: &Transform| {
-				assert_eq!(&Transform::from_xyz(1., 2., 3.), transform);
-			})
+		assert_eq!(
+			(
+				Some(&Transform::from_xyz(1., 2., 3.)),
+				Some(&Visibility::Inherited)
+			),
+			(
+				app.world().entity(entity).get::<Transform>(),
+				app.world().entity(entity).get::<Visibility>(),
+			)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn spatial_bundle_custom_shape() {
+	fn transform_and_visibility_custom_shape() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let shape = Shape::Custom {
 			model: AssetModel::path(""),
@@ -538,20 +529,23 @@ mod tests {
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
 			shape.prefab(entity, Vec3::new(1., 2., 3.))
-		}));
+		}))?;
 
-		assert_bundle!(
-			SpatialBundle,
-			&app,
-			app.world().entity(entity),
-			With::assert(|transform: &Transform| {
-				assert_eq!(&Transform::from_xyz(1., 2., 3.), transform);
-			})
+		assert_eq!(
+			(
+				Some(&Transform::from_xyz(1., 2., 3.)),
+				Some(&Visibility::Inherited)
+			),
+			(
+				app.world().entity(entity).get::<Transform>(),
+				app.world().entity(entity).get::<Visibility>(),
+			)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn shape_sphere() {
+	fn shape_sphere() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let shape = Shape::Sphere {
 			radius: Units::new(42.),
@@ -560,26 +554,23 @@ mod tests {
 
 		_ = app
 			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)));
+			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
 
 		let child = children_of(&app, entity)
 			.next()
 			.expect("no entity children");
-		assert_bundle!(
-			AssetModelBundle,
-			&app,
-			child,
-			With::assert(|transform: &Transform| {
-				assert_eq!(&Transform::from_scale(Vec3::splat(42. * 2.)), transform);
-			}),
-			With::assert(|model: &AssetModel| {
-				assert_eq!(&AssetModel::path(Shape::SPHERE_MODEL), model);
-			})
+		assert_eq!(
+			(
+				Some(&Transform::from_scale(Vec3::splat(42. * 2.))),
+				Some(&AssetModel::path(Shape::SPHERE_MODEL)),
+			),
+			(child.get::<Transform>(), child.get::<AssetModel>(),)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn collider_sphere_sphere() {
+	fn collider_sphere_sphere() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let shape = Shape::Sphere {
 			radius: Units::new(42.),
@@ -588,35 +579,30 @@ mod tests {
 
 		_ = app
 			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)));
+			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
 
 		let child = children_of(&app, entity)
 			.nth(1)
 			.expect("no second entity children");
-		assert_bundle!(
-			ColliderTransformBundle,
-			&app,
-			child,
-			With::assert(|transform: &Transform| {
-				assert_eq!(&Transform::default(), transform);
-			}),
-			With::assert(|collider: &Collider| {
-				assert_eq!(
-					Collider::ball(42.).as_ball().map(|b| b.raw),
-					collider.as_ball().map(|b| b.raw),
-				);
-			}),
-			With::assert(|active_events: &ActiveEvents| {
-				assert_eq!(&ActiveEvents::COLLISION_EVENTS, active_events);
-			}),
-			With::assert(|active_collision_events: &ActiveCollisionTypes| {
-				assert_eq!(&ActiveCollisionTypes::default(), active_collision_events);
-			})
+		assert_eq!(
+			(
+				Some(&Transform::default()),
+				Some(Collider::ball(42.).as_ball().map(|b| b.raw)),
+				Some(&ActiveEvents::COLLISION_EVENTS),
+				Some(&ActiveCollisionTypes::default()),
+			),
+			(
+				child.get::<Transform>(),
+				child.get::<Collider>().map(|c| c.as_ball().map(|c| c.raw)),
+				child.get::<ActiveEvents>(),
+				child.get::<ActiveCollisionTypes>(),
+			),
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn collider_sphere_hollow_as_ring() {
+	fn collider_sphere_hollow_as_ring() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let shape = Shape::Sphere {
 			radius: Units::new(42.),
@@ -625,39 +611,37 @@ mod tests {
 
 		_ = app
 			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)));
+			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
 
 		let child = children_of(&app, entity)
 			.nth(1)
 			.expect("no second entity children");
-		let expected = Shape::ring_collider(42.).unwrap();
-		assert_bundle!(
-			ColliderTransformBundle,
-			&app,
-			child,
-			With::assert(|transform: &Transform| {
-				assert_eq!(&expected.transform, transform);
-			}),
-			// FIXME: The trimesh data is not directly comparable.
-			// The following assertion would ideally verify equality,
-			// but `TriMesh` (t.raw) does not implement `PartialEq`.
-			// With::assert(|collider: &Collider| {
-			// 	assert_eq!(
-			// 		expected.collider.as_trimesh().map(|t| t.raw),
-			// 		collider.as_trimesh().map(|t| t.raw),
-			// 	);
-			// }),
-			With::assert(|active_events: &ActiveEvents| {
-				assert_eq!(&ActiveEvents::COLLISION_EVENTS, active_events);
-			}),
-			With::assert(|active_collision_events: &ActiveCollisionTypes| {
-				assert_eq!(&ActiveCollisionTypes::default(), active_collision_events);
-			})
+		let (_expected_collider, expected_transform) = Shape::ring_collider(42.).unwrap();
+		assert_eq!(
+			(
+				Some(&expected_transform),
+				// FIXME: Can't compare tri meshes, but in principle this is the shape we'd expect:
+				// Some(_expected_collider.as_trimesh().map(|c| c.raw)),
+				Some(true),
+				Some(&ActiveEvents::COLLISION_EVENTS),
+				Some(&ActiveCollisionTypes::default()),
+			),
+			(
+				child.get::<Transform>(),
+				// FIXME: Can't compare tri meshes, but in principle this is the shape we spawned:
+				// child
+				// 	.get::<Collider>()
+				// 	.map(|c| c.as_trimesh().map(|c| c.raw)),
+				child.get::<Collider>().map(|c| c.as_trimesh().is_some()),
+				child.get::<ActiveEvents>(),
+				child.get::<ActiveCollisionTypes>(),
+			),
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn collider_sphere_sensor() {
+	fn collider_sphere_sensor() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let shape = Shape::Sphere {
 			radius: Units::new(42.),
@@ -666,16 +650,17 @@ mod tests {
 
 		_ = app
 			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)));
+			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
 
 		let child = children_of(&app, entity)
 			.nth(1)
 			.expect("no second entity children");
 		assert!(child.contains::<Sensor>());
+		Ok(())
 	}
 
 	#[test]
-	fn collider_sphere_root() {
+	fn collider_sphere_root() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let shape = Shape::Sphere {
 			radius: Units::new(42.),
@@ -684,16 +669,17 @@ mod tests {
 
 		_ = app
 			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)));
+			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
 
 		let child = children_of(&app, entity)
 			.nth(1)
 			.expect("no second entity children");
 		assert_eq!(Some(&ColliderRoot(entity)), child.get::<ColliderRoot>());
+		Ok(())
 	}
 
 	#[test]
-	fn shape_custom() {
+	fn shape_custom() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let shape = Shape::Custom {
 			model: AssetModel::path("custom"),
@@ -703,26 +689,23 @@ mod tests {
 
 		_ = app
 			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)));
+			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
 
 		let child = children_of(&app, entity)
 			.next()
 			.expect("no entity children");
-		assert_bundle!(
-			AssetModelBundle,
-			&app,
-			child,
-			With::assert(|transform: &Transform| {
-				assert_eq!(&Transform::from_scale(Vec3::new(3., 2., 1.)), transform);
-			}),
-			With::assert(|model: &AssetModel| {
-				assert_eq!(&AssetModel::path("custom"), model);
-			})
+		assert_eq!(
+			(
+				Some(&AssetModel::path("custom")),
+				Some(&Transform::from_scale(Vec3::new(3., 2., 1.))),
+			),
+			(child.get::<AssetModel>(), child.get::<Transform>()),
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn collider_custom() {
+	fn collider_custom() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let shape = Shape::Custom {
 			model: AssetModel::path("custom"),
@@ -732,35 +715,32 @@ mod tests {
 
 		_ = app
 			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)));
+			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
 
 		let child = children_of(&app, entity)
 			.nth(1)
 			.expect("no second entity children");
-		assert_bundle!(
-			ColliderTransformBundle,
-			&app,
-			child,
-			With::assert(|transform: &Transform| {
-				assert_eq!(&Transform::from_scale(Vec3::new(3., 2., 1.)), transform);
-			}),
-			With::assert(|collider: &Collider| {
-				assert_eq!(
-					Collider::cuboid(1., 2., 3.).as_cuboid().map(|c| c.raw),
-					collider.as_cuboid().map(|c| c.raw)
-				);
-			}),
-			With::assert(|active_events: &ActiveEvents| {
-				assert_eq!(&ActiveEvents::COLLISION_EVENTS, active_events);
-			}),
-			With::assert(|active_collision_events: &ActiveCollisionTypes| {
-				assert_eq!(&ActiveCollisionTypes::default(), active_collision_events);
-			})
+		assert_eq!(
+			(
+				Some(&Transform::from_scale(Vec3::new(3., 2., 1.))),
+				Some(Collider::cuboid(1., 2., 3.).as_cuboid().map(|b| b.raw)),
+				Some(&ActiveEvents::COLLISION_EVENTS),
+				Some(&ActiveCollisionTypes::default()),
+			),
+			(
+				child.get::<Transform>(),
+				child
+					.get::<Collider>()
+					.map(|c| c.as_cuboid().map(|c| c.raw)),
+				child.get::<ActiveEvents>(),
+				child.get::<ActiveCollisionTypes>(),
+			),
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn collider_custom_sensor() {
+	fn collider_custom_sensor() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let shape = Shape::Custom {
 			model: AssetModel::path("custom"),
@@ -770,16 +750,17 @@ mod tests {
 
 		_ = app
 			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)));
+			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
 
 		let child = children_of(&app, entity)
 			.nth(1)
 			.expect("no second entity children");
 		assert!(child.contains::<Sensor>());
+		Ok(())
 	}
 
 	#[test]
-	fn collider_custom_root() {
+	fn collider_custom_root() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let shape = Shape::Custom {
 			model: AssetModel::path("custom"),
@@ -789,11 +770,12 @@ mod tests {
 
 		_ = app
 			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)));
+			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
 
 		let child = children_of(&app, entity)
 			.nth(1)
 			.expect("no second entity children");
 		assert_eq!(Some(&ColliderRoot(entity)), child.get::<ColliderRoot>());
+		Ok(())
 	}
 }
