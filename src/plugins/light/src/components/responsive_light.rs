@@ -78,7 +78,7 @@ impl Prefab<()> for ResponsiveLight {
 		_: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		entity.try_insert((
-			TransformBundle::default(),
+			Transform::default(),
 			Collider::ball(*self.range.deref()),
 			Sensor,
 			ActiveEvents::COLLISION_EVENTS,
@@ -126,7 +126,7 @@ fn increase(
 
 	if target_light.intensity == 0. {
 		commands.try_insert_on(light.light, Visibility::Visible);
-		commands.try_insert_on(light.model, light.light_on_material.clone());
+		commands.try_insert_on(light.model, MeshMaterial3d(light.light_on_material.clone()));
 	}
 
 	let change = *light.change.deref() * delta.as_secs_f32();
@@ -158,7 +158,10 @@ fn decrease(
 	}
 
 	target_light.intensity = 0.;
-	commands.try_insert_on(light.model, light.light_off_material.clone());
+	commands.try_insert_on(
+		light.model,
+		MeshMaterial3d(light.light_off_material.clone()),
+	);
 	commands.try_insert_on(light.light, Visibility::Hidden);
 
 	State::Done
@@ -387,7 +390,7 @@ mod test_apply_change {
 	}
 
 	#[test]
-	fn insert_light_visibility_on_increase() {
+	fn insert_light_visibility_visible_on_increase() {
 		let mut app = setup();
 		let light = app
 			.world_mut()
@@ -418,7 +421,7 @@ mod test_apply_change {
 	}
 
 	#[test]
-	fn do_not_insert_light_visibility_on_increase_when_intensity_not_zero() {
+	fn do_not_insert_light_visibility_visible_on_increase_when_intensity_not_zero() {
 		let mut app = setup();
 		let light = app
 			.world_mut()
@@ -445,7 +448,7 @@ mod test_apply_change {
 
 		let light = app.world().entity(light);
 
-		assert_eq!(None, light.get::<Visibility>());
+		assert_eq!(Some(&Visibility::Inherited), light.get::<Visibility>());
 	}
 
 	#[test]
@@ -479,7 +482,9 @@ mod test_apply_change {
 
 		assert_eq!(
 			Some(&light_on_material),
-			model.get::<Handle<StandardMaterial>>()
+			model
+				.get::<MeshMaterial3d<StandardMaterial>>()
+				.map(|m| &m.0)
 		);
 	}
 
@@ -511,7 +516,12 @@ mod test_apply_change {
 
 		let model = app.world().entity(model);
 
-		assert_eq!(None, model.get::<Handle<StandardMaterial>>());
+		assert_eq!(
+			None,
+			model
+				.get::<MeshMaterial3d<StandardMaterial>>()
+				.map(|m| &m.0)
+		);
 	}
 
 	#[test]
@@ -676,7 +686,9 @@ mod test_apply_change {
 
 		assert_eq!(
 			Some(&light_off_material),
-			model.get::<Handle<StandardMaterial>>()
+			model
+				.get::<MeshMaterial3d<StandardMaterial>>()
+				.map(|m| &m.0)
 		);
 	}
 
@@ -709,7 +721,12 @@ mod test_apply_change {
 
 		let model = app.world().entity(model);
 
-		assert_eq!(None, model.get::<Handle<StandardMaterial>>());
+		assert_eq!(
+			None,
+			model
+				.get::<MeshMaterial3d<StandardMaterial>>()
+				.map(|m| &m.0)
+		);
 	}
 
 	#[test]
@@ -743,7 +760,9 @@ mod test_apply_change {
 
 		assert_eq!(
 			Some(&light_off_material),
-			model.get::<Handle<StandardMaterial>>()
+			model
+				.get::<MeshMaterial3d<StandardMaterial>>()
+				.map(|m| &m.0)
 		);
 	}
 
@@ -906,6 +925,6 @@ mod test_apply_change {
 
 		let light = app.world().entity(light);
 
-		assert_eq!(None, light.get::<Visibility>());
+		assert_eq!(Some(&Visibility::Inherited), light.get::<Visibility>());
 	}
 }
