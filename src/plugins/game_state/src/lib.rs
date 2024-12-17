@@ -5,7 +5,7 @@ use behaviors::{
 	traits::{Orbit, Vec2Radians},
 };
 use bevy::{
-	core_pipeline::{bloom::BloomSettings, tonemapping::Tonemapping},
+	core_pipeline::{bloom::Bloom, tonemapping::Tonemapping},
 	prelude::*,
 };
 use common::{
@@ -58,15 +58,13 @@ where
 fn spawn_camera(mut commands: Commands) {
 	commands.spawn((
 		MainCamera,
-		Camera3dBundle {
-			camera: Camera {
-				hdr: true,
-				..default()
-			},
-			tonemapping: Tonemapping::TonyMcMapface,
+		Camera3d::default(),
+		Camera {
+			hdr: true,
 			..default()
 		},
-		BloomSettings::default(),
+		Tonemapping::TonyMcMapface,
+		Bloom::default(),
 	));
 }
 
@@ -113,7 +111,8 @@ fn spawn_void_spheres(commands: &mut Commands) {
 		commands.spawn((
 			Name::new(name),
 			VoidSphere,
-			SpatialBundle::from_transform(Transform::from_translation(direction * distance)),
+			Transform::from_translation(direction * distance),
+			Visibility::default(),
 		));
 	}
 }
