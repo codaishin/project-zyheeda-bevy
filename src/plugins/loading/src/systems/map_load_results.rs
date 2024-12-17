@@ -62,7 +62,7 @@ mod tests {
 	use bevy::{
 		app::App,
 		asset::{AssetPath, Assets, UntypedAssetId},
-		ecs::system::RunSystemOnce,
+		ecs::system::{RunSystemError, RunSystemOnce},
 		reflect::TypePath,
 	};
 	use std::collections::HashMap;
@@ -102,56 +102,59 @@ mod tests {
 	}
 
 	#[test]
-	fn add_loaded_asset() {
+	fn add_loaded_asset() -> Result<(), RunSystemError> {
 		let mut app = setup([(LoadResult::Ok(_Asset), None)]);
 
 		app.world_mut()
-			.run_system_once(map_load_results::<_Asset, _Error, _Server>);
+			.run_system_once(map_load_results::<_Asset, _Error, _Server>)?;
 
 		let assets = app.world().resource::<Assets<_Asset>>();
 		assert_eq!(
 			vec![&_Asset],
 			assets.iter().map(|(_, a)| a).collect::<Vec<_>>()
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn empty_load_results() {
+	fn empty_load_results() -> Result<(), RunSystemError> {
 		let mut app = setup([
 			(LoadResult::Ok(_Asset), None),
 			(LoadResult::Err(_Error), None),
 		]);
 
 		app.world_mut()
-			.run_system_once(map_load_results::<_Asset, _Error, _Server>);
+			.run_system_once(map_load_results::<_Asset, _Error, _Server>)?;
 
 		let load_results = app.world().resource::<Assets<LoadResult<_Asset, _Error>>>();
 		assert_eq!(
 			vec![] as Vec<&LoadResult<_Asset, _Error>>,
 			load_results.iter().map(|(_, a)| a).collect::<Vec<_>>()
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn return_error() {
+	fn return_error() -> Result<(), RunSystemError> {
 		let mut app = setup([(LoadResult::Err(_Error), Some(AssetPath::from("my/path")))]);
 
 		let results = app
 			.world_mut()
-			.run_system_once(map_load_results::<_Asset, _Error, _Server>);
+			.run_system_once(map_load_results::<_Asset, _Error, _Server>)?;
 
 		assert_eq!(
 			vec![Err(error(&_Error, Some(AssetPath::from("my/path"))))],
 			results
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn store_asset_handle_so_it_is_not_unloaded() {
+	fn store_asset_handle_so_it_is_not_unloaded() -> Result<(), RunSystemError> {
 		let mut app = setup([(LoadResult::Ok(_Asset), None)]);
 
 		app.world_mut()
-			.run_system_once(map_load_results::<_Asset, _Error, _Server>);
+			.run_system_once(map_load_results::<_Asset, _Error, _Server>)?;
 
 		let assets = app.world().resource::<Assets<_Asset>>();
 		let (id, _) = assets.iter().next().unwrap();
@@ -162,5 +165,6 @@ mod tests {
 			.map(|h| h.id())
 			.collect::<Vec<_>>();
 		assert_eq!(vec![id], alive_assets);
+		Ok(())
 	}
 }
