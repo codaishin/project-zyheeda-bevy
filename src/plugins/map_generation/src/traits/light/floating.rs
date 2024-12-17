@@ -1,13 +1,5 @@
 use crate::components::{Floating, Light};
-use bevy::{
-	color::Color,
-	ecs::system::EntityCommands,
-	hierarchy::BuildChildren,
-	pbr::{NotShadowCaster, PbrBundle, PointLight, PointLightBundle, StandardMaterial},
-	render::view::VisibilityBundle,
-	transform::components::Transform,
-	utils::default,
-};
+use bevy::{pbr::NotShadowCaster, prelude::*};
 use common::{
 	errors::Error,
 	traits::{
@@ -32,28 +24,22 @@ impl Prefab<()> for Light<Floating> {
 		let transform = Transform::from_xyz(0., 1.8, 0.);
 
 		entity
-			.try_insert(VisibilityBundle::default())
+			.try_insert(Visibility::default())
 			.with_children(|parent| {
 				parent
 					.spawn((
-						PbrBundle {
-							mesh,
-							material,
-							transform,
-							..default()
-						},
+						Mesh3d(mesh),
+						MeshMaterial3d(material),
+						transform,
 						NotShadowCaster,
 					))
 					.with_children(|parent| {
-						parent.spawn((PointLightBundle {
-							point_light: PointLight {
-								shadows_enabled: true,
-								intensity: 10_000.0,
-								radius,
-								..default()
-							},
+						parent.spawn(PointLight {
+							shadows_enabled: true,
+							intensity: 10_000.0,
+							radius,
 							..default()
-						},));
+						});
 					});
 			});
 

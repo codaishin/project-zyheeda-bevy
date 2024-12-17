@@ -2,14 +2,7 @@ use crate::{
 	components::{Light, Wall},
 	traits::ExtraComponentsDefinition,
 };
-use bevy::{
-	color::Color,
-	ecs::system::EntityCommands,
-	hierarchy::BuildChildren,
-	pbr::{PointLight, PointLightBundle, StandardMaterial},
-	prelude::default,
-	render::view::Visibility,
-};
+use bevy::prelude::*;
 use common::{
 	errors::Error,
 	tools::{Intensity, IntensityChangePerSecond, Units},
@@ -62,15 +55,14 @@ where
 
 		entity.with_children(|parent| {
 			let light = parent
-				.spawn(PointLightBundle {
-					point_light: PointLight {
+				.spawn((
+					PointLight {
 						shadows_enabled: false,
 						intensity: 0.,
 						..default()
 					},
-					visibility: Visibility::Hidden,
-					..default()
-				})
+					Visibility::Hidden,
+				))
 				.id();
 			parent.spawn(TLights::responsive_light_bundle(Responsive {
 				model,
@@ -83,7 +75,7 @@ where
 			}));
 		});
 
-		entity.try_insert(light_off_material);
+		entity.try_insert(MeshMaterial3d(light_off_material));
 
 		Ok(())
 	}

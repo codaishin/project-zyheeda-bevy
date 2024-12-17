@@ -1,19 +1,12 @@
 use crate::components::Unlit;
-use bevy::{
-	asset::{Assets, Handle},
-	ecs::{
-		query::Added,
-		system::{Query, ResMut},
-	},
-	pbr::StandardMaterial,
-};
+use bevy::prelude::*;
 
 pub(crate) fn unlit_material(
-	handles: Query<&Handle<StandardMaterial>, Added<Unlit>>,
-	mut materials: ResMut<Assets<StandardMaterial>>,
+	materials: Query<&MeshMaterial3d<StandardMaterial>, Added<Unlit>>,
+	mut assets: ResMut<Assets<StandardMaterial>>,
 ) {
-	for handle in &handles {
-		let Some(material) = materials.get_mut(handle) else {
+	for MeshMaterial3d(handle) in &materials {
+		let Some(material) = assets.get_mut(handle) else {
 			continue;
 		};
 		material.unlit = true;
@@ -49,7 +42,8 @@ mod tests {
 				unlit: false,
 				..default()
 			});
-		app.world_mut().spawn((material.clone(), Unlit));
+		app.world_mut()
+			.spawn((MeshMaterial3d(material.clone()), Unlit));
 
 		app.update();
 
@@ -71,7 +65,8 @@ mod tests {
 				unlit: false,
 				..default()
 			});
-		app.world_mut().spawn((material.clone(), Unlit));
+		app.world_mut()
+			.spawn((MeshMaterial3d(material.clone()), Unlit));
 
 		app.update();
 

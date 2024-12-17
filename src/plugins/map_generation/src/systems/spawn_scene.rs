@@ -1,9 +1,4 @@
-use bevy::{
-	ecs::system::{Commands, In, ResMut, Resource},
-	scene::SceneBundle,
-	transform::components::Transform,
-	utils::default,
-};
+use bevy::prelude::*;
 use common::traits::load_asset::{LoadAsset, Path};
 
 pub(crate) fn spawn_scene<TCell: Clone, TAsset: LoadAsset + Resource>(
@@ -15,11 +10,7 @@ pub(crate) fn spawn_scene<TCell: Clone, TAsset: LoadAsset + Resource>(
 {
 	for (transform, path) in cells.0.iter().filter_map(with_cell_path) {
 		let scene = load_asset.load_asset(path);
-		commands.spawn(SceneBundle {
-			scene,
-			transform,
-			..default()
-		});
+		commands.spawn((SceneRoot(scene), transform));
 	}
 }
 
@@ -33,12 +24,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		asset::{Asset, AssetId, AssetPath, Handle},
-		ecs::system::IntoSystem,
-		scene::Scene,
-	};
+	use bevy::asset::AssetPath;
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		traits::{load_asset::Path, nested_mock::NestedMocks},
@@ -113,8 +99,11 @@ mod tests {
 		let spawned = app
 			.world()
 			.iter_entities()
-			.find_map(|e| Some((e.get::<Handle<Scene>>()?, e.get::<Transform>()?)));
+			.find_map(|e| Some((e.get::<SceneRoot>()?, e.get::<Transform>()?)));
 
-		assert_eq!(Some((&scene, &Transform::from_xyz(1., 2., 3.))), spawned);
+		assert_eq!(
+			Some((&SceneRoot(scene), &Transform::from_xyz(1., 2., 3.))),
+			spawned
+		);
 	}
 }

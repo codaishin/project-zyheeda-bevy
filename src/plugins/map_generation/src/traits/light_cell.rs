@@ -3,11 +3,7 @@ use crate::{
 	components::{Floating, Light},
 	map::LightCell,
 };
-use bevy::{
-	ecs::system::Commands,
-	math::Dir3,
-	transform::{bundles::TransformBundle, components::Transform},
-};
+use bevy::prelude::*;
 use common::traits::load_asset::Path;
 
 impl SourcePath for LightCell {
@@ -31,7 +27,7 @@ impl Spawn for LightCell {
 		let LightCell::Floating = self else {
 			return;
 		};
-		commands.spawn((Light::<Floating>::default(), TransformBundle::from(at)));
+		commands.spawn((Light::<Floating>::default(), at));
 	}
 }
 
