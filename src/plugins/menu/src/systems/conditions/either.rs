@@ -49,7 +49,7 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::App,
-		ecs::system::RunSystemOnce,
+		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::{Component, IntoSystem},
 	};
 
@@ -59,12 +59,14 @@ mod tests {
 	#[derive(Component)]
 	struct _C2;
 
-	fn run_system<T: IntoSystem<(), Out, Marker>, Out, Marker>(system: T) -> Out {
+	fn run_system<T: IntoSystem<(), Out, Marker>, Out, Marker>(
+		system: T,
+	) -> Result<Out, RunSystemError> {
 		App::new().world_mut().run_system_once(system)
 	}
 
 	#[test]
-	fn true_when_both_true() {
+	fn true_when_both_true() -> Result<(), RunSystemError> {
 		fn f1(_: Query<&_C1>) -> bool {
 			true
 		}
@@ -72,11 +74,12 @@ mod tests {
 			true
 		}
 
-		assert!(run_system(either(f1).or(f2)));
+		assert!(run_system(either(f1).or(f2))?);
+		Ok(())
 	}
 
 	#[test]
-	fn false_when_both_false() {
+	fn false_when_both_false() -> Result<(), RunSystemError> {
 		fn f1(_: Query<&_C1>) -> bool {
 			false
 		}
@@ -84,11 +87,12 @@ mod tests {
 			false
 		}
 
-		assert!(!run_system(either(f1).or(f2)));
+		assert!(!run_system(either(f1).or(f2))?);
+		Ok(())
 	}
 
 	#[test]
-	fn true_when_only_first_true() {
+	fn true_when_only_first_true() -> Result<(), RunSystemError> {
 		fn f1(_: Query<&_C1>) -> bool {
 			true
 		}
@@ -96,11 +100,12 @@ mod tests {
 			false
 		}
 
-		assert!(run_system(either(f1).or(f2)));
+		assert!(run_system(either(f1).or(f2))?);
+		Ok(())
 	}
 
 	#[test]
-	fn true_when_only_second_true() {
+	fn true_when_only_second_true() -> Result<(), RunSystemError> {
 		fn f1(_: Query<&_C1>) -> bool {
 			false
 		}
@@ -108,6 +113,7 @@ mod tests {
 			true
 		}
 
-		assert!(run_system(either(f1).or(f2)));
+		assert!(run_system(either(f1).or(f2))?);
+		Ok(())
 	}
 }

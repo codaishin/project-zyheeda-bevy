@@ -14,7 +14,7 @@ pub(crate) mod start_menu_button;
 pub(crate) mod tooltip;
 pub(crate) mod ui_overlay;
 
-use bevy::{color::Color, ecs::component::Component};
+use bevy::prelude::*;
 use skill_button::Horizontal;
 use skills::slot_key::SlotKey;
 use std::marker::PhantomData;

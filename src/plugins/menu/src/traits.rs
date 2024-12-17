@@ -1,34 +1,34 @@
 pub(crate) mod colors;
 pub(crate) mod combo_tree_layout;
 pub(crate) mod get_bundle;
-pub(crate) mod get_node;
-pub(crate) mod instantiate_content_on;
 pub(crate) mod is_released;
 pub(crate) mod tooltip_ui_control;
+pub(crate) mod ui_components;
+pub(crate) mod update_children;
 
 pub mod reacts_to_menu_hotkeys;
 
 use crate::tools::Layout;
-use bevy::{ecs::system::EntityCommands, prelude::Bundle, ui::Style};
+use bevy::{ecs::system::EntityCommands, prelude::*};
 use combo_tree_layout::ComboTreeLayout;
 use common::traits::load_asset::LoadAsset;
-use get_node::GetNode;
-use instantiate_content_on::InstantiateContentOn;
+use ui_components::GetUIComponents;
+use update_children::UpdateChildren;
 
 pub(crate) trait UpdateCombosView {
 	fn update_combos_view(&mut self, combos: ComboTreeLayout);
 }
 
-pub(crate) trait UI: GetNode + InstantiateContentOn {}
+pub(crate) trait UI: GetUIComponents + UpdateChildren {}
 
-impl<T: GetNode + InstantiateContentOn> UI for T {}
+impl<T: GetUIComponents + UpdateChildren> UI for T {}
 
 pub(crate) trait LoadUi<TAssetServer: LoadAsset> {
 	fn load_ui(server: &mut TAssetServer) -> Self;
 }
 
-pub(crate) trait RootStyle {
-	fn root_style(&self) -> Style;
+pub(crate) trait GetRootNode {
+	fn root_node(&self) -> Node;
 }
 
 pub(crate) trait GetLayout {
@@ -43,10 +43,10 @@ pub(crate) trait GetKey<TKey> {
 	fn get_key<'a>(&'a self, key_path: &'a [TKey]) -> Option<&'a TKey>;
 }
 
-pub(crate) trait GetBundle
+pub(crate) trait GetComponent
 where
-	Self::TBundle: Bundle,
+	Self::TComponent: Component,
 {
-	type TBundle;
-	fn bundle(&self) -> Option<Self::TBundle>;
+	type TComponent;
+	fn bundle(&self) -> Option<Self::TComponent>;
 }

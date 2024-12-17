@@ -1,4 +1,8 @@
-use crate::traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn, LoadUi};
+use crate::traits::{
+	ui_components::{GetUIComponents, GetZIndex, GetZIndexGlobal},
+	update_children::UpdateChildren,
+	LoadUi,
+};
 use bevy::prelude::*;
 use common::traits::handles_load_tracking::{AssetsProgress, DependenciesProgress, Progress};
 use std::marker::PhantomData;
@@ -17,31 +21,47 @@ where
 	}
 }
 
-impl<T> GetNode for LoadingScreen<T>
+impl<T> GetZIndex for LoadingScreen<T>
 where
 	T: Progress,
 {
-	fn node(&self) -> NodeBundle {
-		NodeBundle {
-			style: Style {
+	fn z_index(&self) -> Option<ZIndex> {
+		Some(ZIndex(i32::MAX))
+	}
+}
+
+impl<T> GetZIndexGlobal for LoadingScreen<T>
+where
+	T: Progress,
+{
+	fn z_index_global(&self) -> Option<GlobalZIndex> {
+		Some(GlobalZIndex(i32::MAX))
+	}
+}
+
+impl<T> GetUIComponents for LoadingScreen<T>
+where
+	T: Progress,
+{
+	fn ui_components(&self) -> (Node, BackgroundColor) {
+		(
+			Node {
 				width: Val::Vw(100.),
 				height: Val::Vh(100.),
 				flex_direction: FlexDirection::ColumnReverse,
 				padding: UiRect::bottom(Val::Px(100.)).with_left(Val::Px(50.)),
 				..default()
 			},
-			background_color: Color::BLACK.into(),
-			z_index: ZIndex::Global(i32::MAX),
-			..default()
-		}
+			Color::BLACK.into(),
+		)
 	}
 }
 
-impl InstantiateContentOn for LoadingScreen<AssetsProgress> {
-	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
-		parent.spawn(TextBundle::from_section(
-			"Loading Assets ...",
-			TextStyle {
+impl UpdateChildren for LoadingScreen<AssetsProgress> {
+	fn update_children(&self, parent: &mut ChildBuilder) {
+		parent.spawn((
+			Text::new("Loading Assets ..."),
+			TextFont {
 				font_size: 32.,
 				..default()
 			},
@@ -49,11 +69,11 @@ impl InstantiateContentOn for LoadingScreen<AssetsProgress> {
 	}
 }
 
-impl InstantiateContentOn for LoadingScreen<DependenciesProgress> {
-	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
-		parent.spawn(TextBundle::from_section(
-			"Resolving Dependencies ...",
-			TextStyle {
+impl UpdateChildren for LoadingScreen<DependenciesProgress> {
+	fn update_children(&self, parent: &mut ChildBuilder) {
+		parent.spawn((
+			Text::new("Resolving Dependencies ..."),
+			TextFont {
 				font_size: 32.,
 				..default()
 			},

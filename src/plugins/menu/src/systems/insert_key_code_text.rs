@@ -1,5 +1,5 @@
 use crate::components::key_code_text_insert_command::KeyCodeTextInsertCommand;
-use bevy::prelude::{Commands, Entity, KeyCode, Query, Res, Resource, TextBundle};
+use bevy::prelude::*;
 use common::traits::{
 	get_ui_text::{GetUiTextFor, UIText},
 	map_value::MapForward,
@@ -18,11 +18,16 @@ pub(crate) fn insert_key_code_text<TKey, TKeyMap, TLanguageServer>(
 	TLanguageServer: Resource + GetUiTextFor<KeyCode>,
 {
 	for (entity, insert_command) in &insert_commands {
-		let key = key_map.map_forward(*insert_command.key());
+		let key = key_map.map_forward(insert_command.key);
 		if let UIText::String(text) = language_server.ui_text_for(&key) {
 			commands.try_insert_on(
 				entity,
-				TextBundle::from_section(text, insert_command.text_style().clone()),
+				(
+					Text::new(text),
+					insert_command.font.clone(),
+					insert_command.color,
+					insert_command.layout,
+				),
 			);
 		};
 		commands.try_remove_from::<KeyCodeTextInsertCommand<TKey>>(entity);
@@ -32,24 +37,14 @@ pub(crate) fn insert_key_code_text<TKey, TKeyMap, TLanguageServer>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		asset::{AssetId, Handle},
-		color::Color,
-		prelude::TextBundle,
-		text::{Text, TextStyle},
-		utils::default,
-	};
 	use common::{
-		assert_bundle,
 		test_tools::utils::SingleThreadedApp,
 		traits::{get_ui_text::UIText, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
-	use uuid::Uuid;
 
-	#[derive(Clone, Copy, Debug, PartialEq)]
+	#[derive(Clone, Copy, Debug, PartialEq, Default)]
 	struct _Key;
 
 	#[derive(Resource, NestedMocks)]
@@ -104,7 +99,7 @@ mod tests {
 	}
 
 	#[test]
-	fn call_language_server_with_for_correct_key() {
+	fn call_language_server_for_correct_key() {
 		let mut app = setup(Setup {
 			map: _Map::new().with_mock(|mock| {
 				mock.expect_map_forward().return_const(KeyCode::KeyB);
@@ -116,8 +111,10 @@ mod tests {
 					.return_const(UIText::Unmapped);
 			}),
 		});
-		app.world_mut()
-			.spawn(KeyCodeTextInsertCommand::new(_Key, TextStyle::default()));
+		app.world_mut().spawn(KeyCodeTextInsertCommand {
+			key: _Key,
+			..default()
+		});
 
 		app.update();
 	}
@@ -135,18 +132,16 @@ mod tests {
 		});
 		let text = app
 			.world_mut()
-			.spawn(KeyCodeTextInsertCommand::new(_Key, TextStyle::default()))
+			.spawn(KeyCodeTextInsertCommand::<_Key>::default())
 			.id();
 
 		app.update();
 
-		let text = app.world().entity(text);
-
-		assert_bundle!(TextBundle, &app, text);
+		assert!(app.world().entity(text).get::<Text>().is_some());
 	}
 
 	#[test]
-	fn spawn_text_bundle_text() {
+	fn spawn_text() {
 		let mut app = setup(Setup {
 			language: _Language::new().with_mock(|mock| {
 				mock.expect_ui_text_for()
@@ -156,88 +151,38 @@ mod tests {
 		});
 		let text = app
 			.world_mut()
-			.spawn(KeyCodeTextInsertCommand::new(_Key, TextStyle::default()))
+			.spawn(KeyCodeTextInsertCommand {
+				key: _Key,
+				font: TextFont {
+					font_size: 11.,
+					..default()
+				},
+				color: TextColor(Color::linear_rgb(0.5, 0.1, 0.2)),
+				layout: TextLayout {
+					justify: JustifyText::Justified,
+					..default()
+				},
+			})
 			.id();
 
 		app.update();
 
 		let text = app.world().entity(text);
-		let default_style = TextStyle::default();
-
-		assert_bundle!(
-			TextBundle,
-			&app,
-			text,
-			With::assert(|text: &Text| {
-				assert_eq!(
-					text.sections
-						.iter()
-						.map(|t| (
-							t.value.clone(),
-							t.style.color,
-							t.style.font.clone(),
-							t.style.font_size
-						))
-						.collect::<Vec<_>>(),
-					vec![(
-						"my text".to_owned(),
-						default_style.color,
-						default_style.font.clone(),
-						default_style.font_size,
-					)]
-				);
-			})
-		);
-	}
-
-	#[test]
-	fn spawn_text_bundle_style() {
-		let text_style = TextStyle {
-			font: Handle::Weak(AssetId::Uuid {
-				uuid: Uuid::new_v4(),
-			}),
-			font_size: 42.,
-			color: Color::BLACK,
-		};
-		let mut app = setup(Setup {
-			language: _Language::new().with_mock(|mock| {
-				mock.expect_ui_text_for()
-					.return_const(UIText::String("my text".to_owned()));
-			}),
-			..default()
-		});
-		let text = app
-			.world_mut()
-			.spawn(KeyCodeTextInsertCommand::new(_Key, text_style.clone()))
-			.id();
-
-		app.update();
-
-		let text = app.world().entity(text);
-
-		assert_bundle!(
-			TextBundle,
-			&app,
-			text,
-			With::assert(|text: &Text| {
-				assert_eq!(
-					text.sections
-						.iter()
-						.map(|t| (
-							t.value.clone(),
-							t.style.color,
-							t.style.font.clone(),
-							t.style.font_size
-						))
-						.collect::<Vec<_>>(),
-					vec![(
-						"my text".to_owned(),
-						text_style.color,
-						text_style.font.clone(),
-						text_style.font_size,
-					)]
-				);
-			})
+		assert_eq!(
+			(
+				Some("my text"),
+				Some(&11.),
+				Some(&Color::linear_rgb(0.5, 0.1, 0.2)),
+				Some(&JustifyText::Justified)
+			),
+			(
+				text.get::<Text>().map(|Text(text)| text.as_str()),
+				text.get::<TextFont>()
+					.map(|TextFont { font_size, .. }| font_size),
+				text.get::<TextColor>().map(|TextColor(color)| color),
+				text.get::<TextLayout>()
+					.map(|TextLayout { justify, .. }| justify)
+			)
 		);
 	}
 
@@ -252,7 +197,7 @@ mod tests {
 		});
 		let text = app
 			.world_mut()
-			.spawn(KeyCodeTextInsertCommand::new(_Key, TextStyle::default()))
+			.spawn(KeyCodeTextInsertCommand::<_Key>::default())
 			.id();
 
 		app.update();
@@ -272,7 +217,10 @@ mod tests {
 		});
 		let text = app
 			.world_mut()
-			.spawn(KeyCodeTextInsertCommand::new(_Key, TextStyle::default()))
+			.spawn(KeyCodeTextInsertCommand {
+				key: _Key,
+				..default()
+			})
 			.id();
 
 		app.update();

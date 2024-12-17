@@ -1,9 +1,5 @@
 use crate::components::dropdown::DropdownUI;
-use bevy::{
-	hierarchy::DespawnRecursiveExt,
-	prelude::{Commands, Entity, In, Query},
-	ui::Interaction,
-};
+use bevy::prelude::*;
 use common::tools::Focus;
 
 pub(crate) fn dropdown_despawn_when_no_children_pressed<TItem: Sync + Send + 'static>(
@@ -54,11 +50,6 @@ fn unfocus(new_focus: &mut Vec<Entity>, despawned: &Entity) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		hierarchy::BuildWorldChildren,
-		prelude::{Component, IntoSystem, Res, Resource},
-	};
 	use common::test_tools::utils::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq)]

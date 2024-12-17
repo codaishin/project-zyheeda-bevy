@@ -5,16 +5,13 @@ use crate::{
 		skill_button::{DropdownItem, Horizontal, SkillButton, Vertical},
 	},
 	tools::Layout,
-	traits::{GetLayout, RootStyle},
+	traits::{GetLayout, GetRootNode},
 };
-use bevy::{
-	prelude::default,
-	ui::{PositionType, Style, Val},
-};
+use bevy::prelude::*;
 
-impl RootStyle for Dropdown<SkillButton<DropdownItem<Vertical>>> {
-	fn root_style(&self) -> Style {
-		Style {
+impl GetRootNode for Dropdown<SkillButton<DropdownItem<Vertical>>> {
+	fn root_node(&self) -> Node {
+		Node {
 			position_type: PositionType::Absolute,
 			top: Val::from(ComboOverview::SKILL_BUTTON_DIMENSIONS.height_inner()),
 			left: Val::from(ComboOverview::SKILL_BUTTON_DIMENSIONS.minimum_inner()),
@@ -29,9 +26,9 @@ impl GetLayout for Dropdown<SkillButton<DropdownItem<Vertical>>> {
 	}
 }
 
-impl RootStyle for Dropdown<SkillButton<DropdownItem<Horizontal>>> {
-	fn root_style(&self) -> Style {
-		Style {
+impl GetRootNode for Dropdown<SkillButton<DropdownItem<Horizontal>>> {
+	fn root_node(&self) -> Node {
+		Node {
 			position_type: PositionType::Absolute,
 			top: Val::from(ComboOverview::KEY_BUTTON_DIMENSIONS.minimum_inner()),
 			left: Val::from(ComboOverview::KEY_BUTTON_DIMENSIONS.width_inner()),

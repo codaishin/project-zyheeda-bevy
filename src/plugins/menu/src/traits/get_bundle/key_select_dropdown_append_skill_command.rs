@@ -5,7 +5,7 @@ use crate::{
 		AppendSkillCommand,
 		KeySelectDropdownInsertCommand,
 	},
-	traits::GetBundle,
+	traits::GetComponent,
 };
 use common::traits::iteration::IterFinite;
 use skills::traits::{FollowupKeys, GetNode, RootKeys};
@@ -15,14 +15,14 @@ type Source<'a, TKey, TCombos> = (
 	&'a TCombos,
 );
 
-impl<'a, TKey, TCombos> GetBundle for Source<'a, TKey, TCombos>
+impl<'a, TKey, TCombos> GetComponent for Source<'a, TKey, TCombos>
 where
 	TKey: IterFinite + PartialEq + Send + Sync + 'static,
 	TCombos: GetNode<'a, Vec<TKey>, TNode: FollowupKeys<TItem = TKey>> + RootKeys<TItem = TKey>,
 {
-	type TBundle = Dropdown<KeySelect<AppendSkill<TKey>, TKey>>;
+	type TComponent = Dropdown<KeySelect<AppendSkill<TKey>, TKey>>;
 
-	fn bundle(&self) -> Option<Self::TBundle> {
+	fn bundle(&self) -> Option<Self::TComponent> {
 		let (insert_command, combos) = self;
 
 		let followups = match insert_command.key_path.is_empty() {

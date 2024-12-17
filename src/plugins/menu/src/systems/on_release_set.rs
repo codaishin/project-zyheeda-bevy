@@ -43,7 +43,10 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{ecs::system::RunSystemOnce, state::app::StatesPlugin};
+	use bevy::{
+		ecs::system::{RunSystemError, RunSystemOnce},
+		state::app::StatesPlugin,
+	};
 
 	#[derive(States, Default, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	enum _State {
@@ -73,12 +76,12 @@ mod tests {
 	}
 
 	#[test]
-	fn set_state_when_released() {
+	fn set_state_when_released() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut().spawn((_Component, _Released(true)));
 
 		app.world_mut()
-			.run_system_once(on_release_set::<_State, _Component, _Released>(_State::B));
+			.run_system_once(on_release_set::<_State, _Component, _Released>(_State::B))?;
 
 		let state = app.world().resource::<NextState<_State>>();
 		assert!(
@@ -87,15 +90,16 @@ mod tests {
 			NextState::Pending(_State::B),
 			state,
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn do_set_next_state_if_not_released() {
+	fn do_set_next_state_if_not_released() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut().spawn((_Component, _Released(false)));
 
 		app.world_mut()
-			.run_system_once(on_release_set::<_State, _Component, _Released>(_State::B));
+			.run_system_once(on_release_set::<_State, _Component, _Released>(_State::B))?;
 
 		let state = app.world().resource::<NextState<_State>>();
 		assert!(
@@ -104,15 +108,16 @@ mod tests {
 			NextState::<_State>::Unchanged,
 			state,
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn do_set_next_state_if_component_not_present() {
+	fn do_set_next_state_if_component_not_present() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut().spawn(_Released(true));
 
 		app.world_mut()
-			.run_system_once(on_release_set::<_State, _Component, _Released>(_State::B));
+			.run_system_once(on_release_set::<_State, _Component, _Released>(_State::B))?;
 
 		let state = app.world().resource::<NextState<_State>>();
 		assert!(
@@ -121,5 +126,6 @@ mod tests {
 			NextState::<_State>::Unchanged,
 			state,
 		);
+		Ok(())
 	}
 }

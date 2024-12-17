@@ -4,12 +4,12 @@ use super::{
 	SkillSelectDropdownInsertCommand,
 };
 use crate::traits::{
-	get_node::GetNode,
-	instantiate_content_on::InstantiateContentOn,
-	GetBundle,
+	ui_components::GetUIComponents,
+	update_children::UpdateChildren,
+	GetComponent,
 	GetKey,
 };
-use bevy::prelude::{BuildChildren, ChildBuilder, Component, NodeBundle};
+use bevy::prelude::*;
 use skills::slot_key::SlotKey;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -40,18 +40,18 @@ pub(crate) struct KeySelect<TExtra, TKey = SlotKey> {
 	pub(crate) key_path: Vec<TKey>,
 }
 
-impl<TExtra> GetNode for KeySelect<TExtra> {
-	fn node(&self) -> NodeBundle {
-		NodeBundle::default()
+impl<TExtra> GetUIComponents for KeySelect<TExtra> {
+	fn ui_components(&self) -> (Node, BackgroundColor) {
+		(default(), default())
 	}
 }
 
-impl<TExtra> InstantiateContentOn for KeySelect<TExtra>
+impl<TExtra> UpdateChildren for KeySelect<TExtra>
 where
 	TExtra: GetKey<SlotKey>,
-	KeySelect<TExtra>: GetBundle,
+	KeySelect<TExtra>: GetComponent,
 {
-	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
+	fn update_children(&self, parent: &mut ChildBuilder) {
 		let Some(bundle) = self.bundle() else {
 			return;
 		};
@@ -60,25 +60,25 @@ where
 		};
 
 		parent
-			.spawn((bundle, ComboOverview::skill_key_button_bundle()))
+			.spawn((bundle, ComboOverview::skill_key_button()))
 			.with_children(|parent| {
 				parent.spawn(ComboOverview::skill_key_text(*key));
 			});
 	}
 }
 
-impl GetBundle for KeySelect<ReKeySkill> {
-	type TBundle = KeySelect<ReKeySkill>;
+impl GetComponent for KeySelect<ReKeySkill> {
+	type TComponent = KeySelect<ReKeySkill>;
 
-	fn bundle(&self) -> Option<Self::TBundle> {
+	fn bundle(&self) -> Option<Self::TComponent> {
 		Some(self.clone())
 	}
 }
 
-impl<TKey: Copy + Sync + Send + 'static> GetBundle for KeySelect<AppendSkill<TKey>, TKey> {
-	type TBundle = SkillSelectDropdownInsertCommand<TKey, Horizontal>;
+impl<TKey: Copy + Sync + Send + 'static> GetComponent for KeySelect<AppendSkill<TKey>, TKey> {
+	type TComponent = SkillSelectDropdownInsertCommand<TKey, Horizontal>;
 
-	fn bundle(&self) -> Option<Self::TBundle> {
+	fn bundle(&self) -> Option<Self::TComponent> {
 		Some(SkillSelectDropdownInsertCommand::new(
 			[self.key_path.clone(), vec![self.extra.on]].concat(),
 		))

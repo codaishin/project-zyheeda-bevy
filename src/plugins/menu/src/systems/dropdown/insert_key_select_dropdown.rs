@@ -1,5 +1,5 @@
-use crate::{components::KeySelectDropdownInsertCommand, traits::GetBundle};
-use bevy::prelude::{Commands, Component, DespawnRecursiveExt, Entity, Query, With};
+use crate::{components::KeySelectDropdownInsertCommand, traits::GetComponent};
+use bevy::prelude::*;
 use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
 
 type InsertCommand<TExtra> = KeySelectDropdownInsertCommand<TExtra>;
@@ -12,7 +12,7 @@ pub(crate) fn insert_key_select_dropdown<TAgent, TCombos, TExtra>(
 	TAgent: Component,
 	TCombos: Component,
 	TExtra: Sync + Send + 'static,
-	for<'a> (&'a InsertCommand<TExtra>, &'a TCombos): GetBundle,
+	for<'a> (&'a InsertCommand<TExtra>, &'a TCombos): GetComponent,
 {
 	let Ok(combos) = agents.get_single() else {
 		return;
@@ -40,10 +40,6 @@ fn despawn(commands: &mut Commands, entity: Entity) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		prelude::BuildWorldChildren,
-	};
 	use common::test_tools::utils::SingleThreadedApp;
 
 	#[derive(Component)]
@@ -58,10 +54,10 @@ mod tests {
 	#[derive(Component, Debug, PartialEq, Clone)]
 	struct _Bundle;
 
-	impl<'a> GetBundle for (&'a InsertCommand<_Extra>, &'a _Combos) {
-		type TBundle = _Bundle;
+	impl<'a> GetComponent for (&'a InsertCommand<_Extra>, &'a _Combos) {
+		type TComponent = _Bundle;
 
-		fn bundle(&self) -> Option<Self::TBundle> {
+		fn bundle(&self) -> Option<Self::TComponent> {
 			let (cmd, ..) = self;
 			cmd.extra.0.clone()
 		}
@@ -148,7 +144,7 @@ mod tests {
 
 		app.update();
 
-		let entity = app.world().get_entity(entity).map(|e| e.id());
+		let entity = app.world().get_entity(entity).map(|e| e.id()).ok();
 
 		assert_eq!(None, entity);
 	}
@@ -168,7 +164,7 @@ mod tests {
 
 		app.update();
 
-		let child = app.world().get_entity(child).map(|e| e.id());
+		let child = app.world().get_entity(child).map(|e| e.id()).ok();
 
 		assert_eq!(None, child);
 	}

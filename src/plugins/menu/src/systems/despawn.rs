@@ -1,12 +1,4 @@
-use bevy::{
-	ecs::{
-		component::Component,
-		query::With,
-		system::{Commands, Query},
-	},
-	hierarchy::DespawnRecursiveExt,
-	prelude::Entity,
-};
+use bevy::prelude::*;
 
 pub fn despawn<TComponent: Component>(
 	mut commands: Commands,
@@ -19,11 +11,6 @@ pub fn despawn<TComponent: Component>(
 
 #[cfg(test)]
 mod tests {
-	use bevy::{
-		app::{App, Update},
-		hierarchy::BuildWorldChildren,
-	};
-
 	use super::*;
 
 	#[derive(Component)]
@@ -38,7 +25,7 @@ mod tests {
 		app.add_systems(Update, despawn::<_Component>);
 		app.update();
 
-		let entity = app.world().get_entity(entity);
+		let entity = app.world().get_entity(entity).ok();
 
 		assert!(entity.is_none());
 	}
@@ -49,12 +36,12 @@ mod tests {
 
 		let entity = app.world_mut().spawn(_Component).id();
 		let child = app.world_mut().spawn(()).id();
-		app.world_mut().entity_mut(entity).push_children(&[child]);
+		app.world_mut().entity_mut(entity).add_children(&[child]);
 
 		app.add_systems(Update, despawn::<_Component>);
 		app.update();
 
-		let child = app.world().get_entity(child);
+		let child = app.world().get_entity(child).ok();
 
 		assert!(child.is_none());
 	}

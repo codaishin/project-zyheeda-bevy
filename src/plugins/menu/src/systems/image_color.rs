@@ -1,13 +1,10 @@
 use crate::components::ImageColorCommand;
-use bevy::{
-	prelude::{Commands, Entity, Query},
-	ui::UiImage,
-};
+use bevy::prelude::*;
 use common::traits::try_remove_from::TryRemoveFrom;
 
 pub(crate) fn image_color(
 	mut commands: Commands,
-	mut images: Query<(Entity, &mut UiImage, &ImageColorCommand)>,
+	mut images: Query<(Entity, &mut ImageNode, &ImageColorCommand)>,
 ) {
 	for (entity, mut image, image_command) in &mut images {
 		image.color = image_command.0;
@@ -19,12 +16,6 @@ pub(crate) fn image_color(
 mod tests {
 	use super::*;
 	use crate::components::ImageColorCommand;
-	use bevy::{
-		app::{App, Update},
-		asset::Handle,
-		color::Color,
-		ui::UiImage,
-	};
 	use common::test_tools::utils::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -40,16 +31,20 @@ mod tests {
 		let image = app
 			.world_mut()
 			.spawn((
-				UiImage::from(Handle::default()),
+				ImageNode::new(Handle::default()),
 				ImageColorCommand(Color::srgb(0.1, 0.2, 0.3)),
 			))
 			.id();
 
 		app.update();
 
-		let image = app.world().entity(image).get::<UiImage>().unwrap();
-
-		assert_eq!(Color::srgb(0.1, 0.2, 0.3), image.color)
+		assert_eq!(
+			Some(Color::srgb(0.1, 0.2, 0.3)),
+			app.world()
+				.entity(image)
+				.get::<ImageNode>()
+				.map(|i| i.color)
+		)
 	}
 
 	#[test]
@@ -58,15 +53,13 @@ mod tests {
 		let image = app
 			.world_mut()
 			.spawn((
-				UiImage::from(Handle::default()),
+				ImageNode::new(Handle::default()),
 				ImageColorCommand(Color::srgb(0.1, 0.2, 0.3)),
 			))
 			.id();
 
 		app.update();
 
-		let image = app.world().entity(image);
-
-		assert_eq!(None, image.get::<ImageColorCommand>());
+		assert_eq!(None, app.world().entity(image).get::<ImageColorCommand>());
 	}
 }

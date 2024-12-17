@@ -1,13 +1,9 @@
-use super::{get_node::GetNode, instantiate_content_on::InstantiateContentOn};
+use super::{ui_components::GetUIComponents, update_children::UpdateChildren};
 use crate::components::tooltip::Tooltip;
-use bevy::{
-	math::Vec2,
-	prelude::{Commands, Component, Entity, Query, RemovedComponents},
-	ui::Style,
-};
+use bevy::prelude::*;
 
 pub(crate) trait DespawnAllTooltips<TUI> {
-	fn despawn_all(&self, uis: &Query<(Entity, &TUI, &mut Style)>, commands: &mut Commands)
+	fn despawn_all(&self, uis: &Query<(Entity, &TUI, &mut Node)>, commands: &mut Commands)
 	where
 		TUI: Component + Sized;
 }
@@ -15,7 +11,7 @@ pub(crate) trait DespawnAllTooltips<TUI> {
 pub(crate) trait DespawnOutdatedTooltips<TUI, T: Send + Sync + 'static> {
 	fn despawn_outdated(
 		&self,
-		uis: &Query<(Entity, &TUI, &mut Style)>,
+		uis: &Query<(Entity, &TUI, &mut Node)>,
 		commands: &mut Commands,
 		outdated_tooltips: RemovedComponents<Tooltip<T>>,
 	) where
@@ -23,7 +19,7 @@ pub(crate) trait DespawnOutdatedTooltips<TUI, T: Send + Sync + 'static> {
 }
 
 pub(crate) trait UpdateTooltipPosition<TUI> {
-	fn update_position(&self, uis: &mut Query<(Entity, &TUI, &mut Style)>, position: Vec2)
+	fn update_position(&self, uis: &mut Query<(Entity, &TUI, &mut Node)>, position: Vec2)
 	where
 		TUI: Component + Sized;
 }
@@ -36,5 +32,5 @@ pub(crate) trait SpawnTooltips<T> {
 		tooltip: &Tooltip<T>,
 		position: Vec2,
 	) where
-		Tooltip<T>: InstantiateContentOn + GetNode;
+		Tooltip<T>: UpdateChildren + GetUIComponents;
 }

@@ -1,10 +1,11 @@
 pub(crate) mod key_select;
 pub(crate) mod skill_descriptor;
 
-use bevy::prelude::{default, Component, Entity};
+use bevy::prelude::*;
 use std::{collections::HashSet, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
+#[require(Button)]
 pub(crate) struct Dropdown<TItem> {
 	pub(crate) items: Vec<TItem>,
 }

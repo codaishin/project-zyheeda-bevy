@@ -1,8 +1,8 @@
 use super::{start_game::StartGame, start_menu_button::StartMenuButton};
 use crate::traits::{
 	colors::DEFAULT_PANEL_COLORS,
-	get_node::GetNode,
-	instantiate_content_on::InstantiateContentOn,
+	ui_components::{GetUIComponents, GetZIndex, GetZIndexGlobal},
+	update_children::UpdateChildren,
 	LoadUi,
 };
 use bevy::prelude::*;
@@ -16,10 +16,14 @@ impl LoadUi<AssetServer> for StartMenu {
 	}
 }
 
-impl GetNode for StartMenu {
-	fn node(&self) -> NodeBundle {
-		NodeBundle {
-			style: Style {
+impl GetZIndex for StartMenu {}
+
+impl GetZIndexGlobal for StartMenu {}
+
+impl GetUIComponents for StartMenu {
+	fn ui_components(&self) -> (Node, BackgroundColor) {
+		(
+			Node {
 				width: Val::Vw(100.0),
 				height: Val::Vh(100.0),
 				align_items: AlignItems::Center,
@@ -27,55 +31,50 @@ impl GetNode for StartMenu {
 				flex_direction: FlexDirection::Column,
 				..default()
 			},
-			..default()
-		}
+			default(),
+		)
 	}
 }
 
-impl InstantiateContentOn for StartMenu {
-	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
+impl UpdateChildren for StartMenu {
+	fn update_children(&self, parent: &mut ChildBuilder) {
 		parent
-			.spawn(NodeBundle {
-				style: Style {
-					margin: UiRect::bottom(Val::Px(30.)),
-					..default()
-				},
+			.spawn(Node {
+				margin: UiRect::bottom(Val::Px(30.)),
 				..default()
 			})
 			.with_children(|parent| {
-				parent.spawn(TextBundle::from_section(
-					"Project Zyheeda",
-					TextStyle {
+				parent.spawn((
+					Text::new("Project Zyheeda"),
+					TextFont {
 						font_size: 64.0,
-						color: DEFAULT_PANEL_COLORS.text,
 						..default()
 					},
+					TextColor(DEFAULT_PANEL_COLORS.text),
 				));
 			});
 		parent
 			.spawn((
-				ButtonBundle {
-					style: Style {
-						width: Val::Px(300.0),
-						height: Val::Px(100.0),
-						margin: UiRect::all(Val::Px(2.0)),
-						justify_content: JustifyContent::Center,
-						align_items: AlignItems::Center,
-						..default()
-					},
+				Button,
+				Node {
+					width: Val::Px(300.0),
+					height: Val::Px(100.0),
+					margin: UiRect::all(Val::Px(2.0)),
+					justify_content: JustifyContent::Center,
+					align_items: AlignItems::Center,
 					..default()
 				},
 				StartMenuButton,
 				StartGame,
 			))
 			.with_children(|parent| {
-				parent.spawn(TextBundle::from_section(
-					"New Game",
-					TextStyle {
+				parent.spawn((
+					Text::new("New Game"),
+					TextFont {
 						font_size: 32.0,
-						color: DEFAULT_PANEL_COLORS.text,
 						..default()
 					},
+					TextColor(DEFAULT_PANEL_COLORS.text),
 				));
 			});
 	}

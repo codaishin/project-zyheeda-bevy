@@ -1,6 +1,6 @@
-use super::combo_overview::{ComboOverview, SkillButtonBundle};
-use crate::traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn};
-use bevy::prelude::{ChildBuilder, Component, NodeBundle};
+use super::{combo_overview::ComboOverview, tooltip::Tooltip};
+use crate::traits::{ui_components::GetUIComponents, update_children::UpdateChildren};
+use bevy::{color::palettes::tailwind::CYAN_100, prelude::*};
 use skills::{skills::Skill, slot_key::SlotKey};
 use std::marker::PhantomData;
 
@@ -23,17 +23,7 @@ pub(crate) struct SkillButton<T> {
 	pub(crate) key_path: Vec<SlotKey>,
 }
 
-impl SkillButton<DropdownTrigger> {
-	pub(crate) fn new(skill: Skill, key_path: Vec<SlotKey>) -> SkillButton<DropdownTrigger> {
-		SkillButton {
-			phantom_data: PhantomData,
-			skill,
-			key_path,
-		}
-	}
-}
-
-impl<TLayout> SkillButton<DropdownItem<TLayout>> {
+impl<T> SkillButton<T> {
 	pub(crate) fn new(skill: Skill, key_path: Vec<SlotKey>) -> Self {
 		Self {
 			phantom_data: PhantomData,
@@ -43,15 +33,19 @@ impl<TLayout> SkillButton<DropdownItem<TLayout>> {
 	}
 }
 
-impl<T> GetNode for SkillButton<T> {
-	fn node(&self) -> NodeBundle {
-		NodeBundle::default()
+impl<T> GetUIComponents for SkillButton<T> {
+	fn ui_components(&self) -> (Node, BackgroundColor) {
+		(default(), BackgroundColor(CYAN_100.into()))
 	}
 }
 
-impl<T: Clone + Sync + Send + 'static> InstantiateContentOn for SkillButton<T> {
-	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
+impl<T: Clone + Sync + Send + 'static> UpdateChildren for SkillButton<T> {
+	fn update_children(&self, parent: &mut ChildBuilder) {
 		let icon = self.skill.icon.clone();
-		parent.spawn(ComboOverview::skill_button_bundle(icon).with_button(self.clone()));
+		parent.spawn((
+			self.clone(),
+			ComboOverview::skill_button(icon),
+			Tooltip::<Skill>::new(self.skill.clone()),
+		));
 	}
 }

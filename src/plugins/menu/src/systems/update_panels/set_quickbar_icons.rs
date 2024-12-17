@@ -1,11 +1,5 @@
 use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
-use bevy::{
-	asset::Handle,
-	ecs::system::In,
-	prelude::{Commands, Entity, Query},
-	render::texture::Image,
-	ui::UiImage,
-};
+use bevy::prelude::*;
 use common::traits::try_insert_on::TryInsertOn;
 
 pub(crate) fn set_quickbar_icons(
@@ -24,7 +18,7 @@ pub(crate) fn set_quickbar_icons(
 		};
 
 		panel.state = state;
-		commands.try_insert_on(entity, UiImage::new(image));
+		commands.try_insert_on(entity, ImageNode::new(image));
 	}
 }
 
@@ -32,13 +26,6 @@ pub(crate) fn set_quickbar_icons(
 mod tests {
 	use super::*;
 	use crate::tools::PanelState;
-	use bevy::{
-		app::{App, Update},
-		asset::{AssetId, Handle},
-		ecs::system::Res,
-		prelude::{IntoSystem, Resource},
-		ui::UiImage,
-	};
 	use common::test_tools::utils::SingleThreadedApp;
 	use skills::slot_key::SlotKey;
 	use uuid::Uuid;
@@ -82,9 +69,9 @@ mod tests {
 		let panel = app.world().entity(panel);
 
 		assert_eq!(
-			(Some(handle), Some(PanelState::Filled)),
+			(Some(&handle), Some(PanelState::Filled)),
 			(
-				panel.get::<UiImage>().map(|image| image.texture.clone()),
+				panel.get::<ImageNode>().map(|image| &image.image),
 				panel.get::<QuickbarPanel>().map(|panel| panel.state)
 			)
 		)
@@ -107,9 +94,9 @@ mod tests {
 		let panel = app.world().entity(panel);
 
 		assert_eq!(
-			(Some(Handle::default()), Some(PanelState::Empty)),
+			(Some(&Handle::default()), Some(PanelState::Empty)),
 			(
-				panel.get::<UiImage>().map(|image| image.texture.clone()),
+				panel.get::<ImageNode>().map(|image| &image.image),
 				panel.get::<QuickbarPanel>().map(|panel| panel.state)
 			)
 		);

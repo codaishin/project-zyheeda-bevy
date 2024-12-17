@@ -1,14 +1,5 @@
 use crate::components::Label;
-use bevy::{
-	ecs::{
-		query::Added,
-		system::{Query, Resource},
-		world::Mut,
-	},
-	input::keyboard::KeyCode,
-	prelude::{default, Res},
-	text::{Text, TextSection},
-};
+use bevy::prelude::*;
 use common::traits::{
 	get_ui_text::{GetUiTextFor, UIText},
 	map_value::MapForward,
@@ -44,22 +35,8 @@ fn update_text<TMap: MapForward<SlotKey, KeyCode>, TLanguageServer: GetUiTextFor
 	let UIText::String(value) = language_server.ui_text_for(&key) else {
 		return;
 	};
-	let update = match text.sections.is_empty() {
-		true => add_first_section,
-		false => set_first_section,
-	};
-	update(&mut text, &value);
-}
-
-fn add_first_section(text: &mut Mut<Text>, value: &str) {
-	text.sections.push(TextSection {
-		value: value.to_string(),
-		..default()
-	});
-}
-
-fn set_first_section(text: &mut Mut<Text>, value: &str) {
-	text.sections[0].value = value.to_string()
+	let Text(text) = text.as_mut();
+	*text = value;
 }
 
 #[cfg(test)]
@@ -114,11 +91,12 @@ mod tests {
 		app.add_systems(Update, update_label_text::<_Map, _LanguageServer, _T>);
 		app.update();
 
-		let text = app.world().entity(id).get::<Text>().unwrap();
-
 		assert_eq!(
-			Some("IIIIII".to_owned()),
-			text.sections.first().map(|t| t.value.clone())
+			Some("IIIIII"),
+			app.world()
+				.entity(id)
+				.get::<Text>()
+				.map(|Text(text)| text.as_str())
 		)
 	}
 
@@ -133,18 +111,19 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Label::<_T, SlotKey>::new(SlotKey::BottomHand(Side::Right)),
-				Text::from_section("OVERRIDE THIS", default()),
+				Text::new("OVERRIDE THIS"),
 			))
 			.id();
 
 		app.add_systems(Update, update_label_text::<_Map, _LanguageServer, _T>);
 		app.update();
 
-		let text = app.world().entity(id).get::<Text>().unwrap();
-
 		assert_eq!(
-			Some("IIIIII".to_owned()),
-			text.sections.first().map(|t| t.value.clone())
+			Some("IIIIII"),
+			app.world()
+				.entity(id)
+				.get::<Text>()
+				.map(|Text(text)| text.as_str())
 		)
 	}
 
@@ -160,7 +139,7 @@ mod tests {
 		app.insert_resource(_LanguageServer(KeyCode::ArrowUp, "IIIIII"));
 		app.world_mut().spawn((
 			Label::<_T, SlotKey>::new(SlotKey::BottomHand(Side::Left)),
-			Text::from_section("OVERRIDE THIS", default()),
+			Text::new("OVERRIDE THIS"),
 		));
 
 		app.add_systems(Update, update_label_text::<_Map, _LanguageServer, _T>);

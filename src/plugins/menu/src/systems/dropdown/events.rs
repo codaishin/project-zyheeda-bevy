@@ -42,11 +42,11 @@ mod tests {
 		app.update();
 
 		let events = app.world().resource::<Events<DropdownEvent>>();
-		let mut reader = events.get_reader();
+		let mut cursor = events.get_cursor();
 
 		assert_eq!(
 			vec![&DropdownEvent::Added(dropdown)],
-			reader.read(events).collect::<Vec<_>>()
+			cursor.read(events).collect::<Vec<_>>()
 		)
 	}
 
@@ -58,11 +58,11 @@ mod tests {
 		app.update();
 
 		let events = app.world().resource::<Events<DropdownEvent>>();
-		let mut reader = events.get_reader();
+		let mut cursor = events.get_cursor();
 
 		assert_eq!(
 			vec![] as Vec<&DropdownEvent>,
-			reader.read(events).collect::<Vec<_>>()
+			cursor.read(events).collect::<Vec<_>>()
 		)
 	}
 
@@ -75,11 +75,11 @@ mod tests {
 		app.update();
 
 		let events = app.world().resource::<Events<DropdownEvent>>();
-		let mut reader = events.get_reader();
+		let mut cursor = events.get_cursor();
 
 		assert_eq!(
 			vec![&DropdownEvent::Added(dropdown)],
-			reader.read(events).collect::<Vec<_>>()
+			cursor.read(events).collect::<Vec<_>>()
 		)
 	}
 
@@ -97,14 +97,14 @@ mod tests {
 		app.update();
 
 		let events = app.world().resource::<Events<DropdownEvent>>();
-		let mut reader = events.get_reader();
+		let mut cursor = events.get_cursor();
 
 		assert_eq!(
 			vec![
 				&DropdownEvent::Added(dropdown),
 				&DropdownEvent::Removed(dropdown)
 			],
-			reader.read(events).collect::<Vec<_>>()
+			cursor.read(events).collect::<Vec<_>>()
 		)
 	}
 }

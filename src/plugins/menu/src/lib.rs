@@ -93,11 +93,11 @@ use systems::{
 	},
 };
 use traits::{
-	get_node::GetNode,
-	instantiate_content_on::InstantiateContentOn,
+	ui_components::{GetUIComponents, GetZIndex, GetZIndexGlobal},
+	update_children::UpdateChildren,
 	GetLayout,
+	GetRootNode,
 	LoadUi,
-	RootStyle,
 	UI,
 };
 use visualization::unusable::Unusable;
@@ -107,7 +107,12 @@ type SlotKeyMap = KeyMap<SlotKey, KeyCode>;
 trait AddUI<TState> {
 	fn add_ui<TComponent>(&mut self, on_state: TState) -> &mut Self
 	where
-		TComponent: Component + LoadUi<AssetServer> + GetNode + InstantiateContentOn;
+		TComponent: Component
+			+ LoadUi<AssetServer>
+			+ GetUIComponents
+			+ GetZIndex
+			+ GetZIndexGlobal
+			+ UpdateChildren;
 }
 
 impl<TState> AddUI<TState> for App
@@ -116,7 +121,12 @@ where
 {
 	fn add_ui<TComponent>(&mut self, on_state: TState) -> &mut Self
 	where
-		TComponent: Component + LoadUi<AssetServer> + GetNode + InstantiateContentOn,
+		TComponent: Component
+			+ LoadUi<AssetServer>
+			+ GetUIComponents
+			+ GetZIndex
+			+ GetZIndexGlobal
+			+ UpdateChildren,
 	{
 		let spawn_component = (
 			spawn::<TComponent, AssetServer>,
@@ -134,14 +144,14 @@ trait AddTooltip {
 	fn add_tooltip<T>(&mut self) -> &mut Self
 	where
 		T: Sync + Send + 'static,
-		Tooltip<T>: InstantiateContentOn + GetNode;
+		Tooltip<T>: UpdateChildren + GetUIComponents;
 }
 
 impl AddTooltip for App {
 	fn add_tooltip<T>(&mut self) -> &mut Self
 	where
 		T: Sync + Send + 'static,
-		Tooltip<T>: InstantiateContentOn + GetNode,
+		Tooltip<T>: UpdateChildren + GetUIComponents,
 	{
 		self.add_systems(
 			Update,
@@ -157,14 +167,14 @@ trait AddDropdown {
 	fn add_dropdown<TItem>(&mut self) -> &mut Self
 	where
 		TItem: UI + Sync + Send + 'static,
-		Dropdown<TItem>: RootStyle + GetLayout;
+		Dropdown<TItem>: GetRootNode + GetLayout;
 }
 
 impl AddDropdown for App {
 	fn add_dropdown<TItem>(&mut self) -> &mut Self
 	where
 		TItem: UI + Sync + Send + 'static,
-		Dropdown<TItem>: RootStyle + GetLayout,
+		Dropdown<TItem>: GetRootNode + GetLayout,
 	{
 		self.add_systems(
 			Update,

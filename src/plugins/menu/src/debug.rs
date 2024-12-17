@@ -1,13 +1,18 @@
 use crate::{
 	components::{dropdown::Dropdown, tooltip::Tooltip},
 	tools::Layout,
-	traits::{GetLayout, LoadUi, RootStyle},
+	traits::{
+		ui_components::{GetZIndex, GetZIndexGlobal},
+		GetLayout,
+		GetRootNode,
+		LoadUi,
+	},
 	AddDropdown,
 	AddTooltip,
 };
 #[cfg(debug_assertions)]
 use crate::{
-	traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn},
+	traits::{ui_components::GetUIComponents, update_children::UpdateChildren},
 	AddUI,
 };
 use bevy::prelude::*;
@@ -29,35 +34,38 @@ impl<TState> LoadUi<AssetServer> for StateTime<TState> {
 	}
 }
 
-impl<TState> GetNode for StateTime<TState> {
-	fn node(&self) -> NodeBundle {
-		NodeBundle {
-			style: Style {
+impl<TState> GetZIndex for StateTime<TState> {}
+
+impl<TState> GetZIndexGlobal for StateTime<TState> {}
+
+impl<TState> GetUIComponents for StateTime<TState> {
+	fn ui_components(&self) -> (Node, BackgroundColor) {
+		(
+			Node {
 				position_type: PositionType::Absolute,
 				right: Val::Px(10.),
 				bottom: Val::Px(10.),
 				border: UiRect::all(Val::Px(2.)),
 				..default()
 			},
-			background_color: Color::BLACK.into(),
-			..default()
-		}
+			Color::BLACK.into(),
+		)
 	}
 }
 
-impl<TState> InstantiateContentOn for StateTime<TState>
+impl<TState> UpdateChildren for StateTime<TState>
 where
 	TState: Debug + Copy,
 {
-	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
+	fn update_children(&self, parent: &mut ChildBuilder) {
 		let state = self.1.map(|s| format!("{s:?}")).unwrap_or("???".into());
-		parent.spawn(TextBundle::from_section(
-			format!(
+		parent.spawn((
+			Text::new(format!(
 				"{}.{:0>3} seconds in state: {state}",
 				self.0.as_secs(),
 				self.0.subsec_millis()
-			),
-			TextStyle {
+			)),
+			TextFont {
 				font_size: 20.,
 				..default()
 			},
@@ -87,14 +95,15 @@ pub fn setup_run_time_display(app: &mut App) {
 }
 
 #[derive(Component)]
-struct Button {
+struct DropdownButton {
 	text: &'static str,
 }
 
-impl Button {
-	fn bundle() -> ButtonBundle {
-		ButtonBundle {
-			style: Style {
+impl DropdownButton {
+	fn bundle() -> (Button, Node, BorderColor, BackgroundColor) {
+		(
+			Button,
+			Node {
 				width: Val::Px(60.),
 				height: Val::Px(60.),
 				border: UiRect::all(Val::Px(3.)),
@@ -102,43 +111,40 @@ impl Button {
 				align_items: AlignItems::Center,
 				..default()
 			},
-			border_color: Color::srgb(0.8, 0.7, 0.23).into(),
-			background_color: Color::WHITE.into(),
-			..default()
-		}
+			Color::srgb(0.8, 0.7, 0.23).into(),
+			Color::WHITE.into(),
+		)
 	}
 
-	fn text_style() -> TextStyle {
-		TextStyle {
-			font_size: 30.,
-			color: Color::BLACK,
-			..default()
-		}
+	fn text_style() -> (TextFont, TextColor) {
+		(
+			TextFont {
+				font_size: 30.,
+				..default()
+			},
+			TextColor(Color::BLACK),
+		)
 	}
 }
 
 struct ButtonTooltip(String);
 
-impl GetNode for Tooltip<ButtonTooltip> {
-	fn node(&self) -> NodeBundle {
-		NodeBundle {
-			style: Style {
+impl GetUIComponents for Tooltip<ButtonTooltip> {
+	fn ui_components(&self) -> (Node, BackgroundColor) {
+		(
+			Node {
 				top: Val::Px(-25.0),
 				padding: UiRect::all(Val::Px(5.0)),
 				..default()
 			},
-			background_color: Color::WHITE.into(),
-			..default()
-		}
+			Color::WHITE.into(),
+		)
 	}
 }
 
-impl InstantiateContentOn for Tooltip<ButtonTooltip> {
-	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
-		parent.spawn(TextBundle::from_section(
-			&self.value().0,
-			Button::text_style(),
-		));
+impl UpdateChildren for Tooltip<ButtonTooltip> {
+	fn update_children(&self, parent: &mut ChildBuilder) {
+		parent.spawn((Text::new(&self.value().0), DropdownButton::text_style()));
 	}
 }
 
@@ -180,45 +186,47 @@ impl<TLayout: Sync + Send + 'static, TValue> ButtonOption<TLayout, TValue> {
 	}
 }
 
-impl<TLayout: Sync + Send + 'static, TValue> GetNode for ButtonOption<TLayout, TValue> {
-	fn node(&self) -> NodeBundle {
-		NodeBundle::default()
+impl<TLayout: Sync + Send + 'static, TValue> GetUIComponents for ButtonOption<TLayout, TValue> {
+	fn ui_components(&self) -> (Node, BackgroundColor) {
+		(default(), default())
 	}
 }
 
-impl<TLayout: Sync + Send + 'static> InstantiateContentOn for ButtonOption<TLayout> {
-	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
+impl<TLayout: Sync + Send + 'static> UpdateChildren for ButtonOption<TLayout> {
+	fn update_children(&self, parent: &mut ChildBuilder) {
 		let option = (
-			Button::bundle(),
+			DropdownButton::bundle(),
 			self.clone(),
 			Tooltip::new(ButtonTooltip(format!("Button: {}", self.value))),
 		);
 		parent.spawn(option).with_children(|button| {
-			button.spawn(TextBundle::from_section(self.value, Button::text_style()));
+			button.spawn((Text::new(self.value), DropdownButton::text_style()));
 		});
 	}
 }
 
-impl<TLayout: Sync + Send + 'static, TSubLayout: Sync + Send + 'static> InstantiateContentOn
+impl<TLayout: Sync + Send + 'static, TSubLayout: Sync + Send + 'static> UpdateChildren
 	for ButtonOption<TLayout, WithSubDropdown<TSubLayout>>
 {
-	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
+	fn update_children(&self, parent: &mut ChildBuilder) {
 		let option = (
-			Button::bundle(),
+			DropdownButton::bundle(),
 			Dropdown {
 				items: get_button_options_numbered::<TSubLayout>(self.target),
 			},
 			Tooltip::new(ButtonTooltip("Button: subs".to_owned())),
 		);
 		parent.spawn(option).with_children(|button| {
-			button.spawn(TextBundle::from_section("subs", Button::text_style()));
+			button.spawn((Text::new("subs"), DropdownButton::text_style()));
 		});
 	}
 }
 
-impl<TLayout: Sync + Send + 'static, TValue> RootStyle for Dropdown<ButtonOption<TLayout, TValue>> {
-	fn root_style(&self) -> Style {
-		Style {
+impl<TLayout: Sync + Send + 'static, TValue> GetRootNode
+	for Dropdown<ButtonOption<TLayout, TValue>>
+{
+	fn root_node(&self) -> Node {
+		Node {
 			position_type: PositionType::Absolute,
 			top: Val::Percent(0.),
 			right: Val::Percent(100.),
@@ -245,20 +253,23 @@ impl<TValue> GetLayout for Dropdown<ButtonOption<TwoColumns, TValue>> {
 	}
 }
 
-fn update_button_text(mut commands: Commands, buttons: Query<(Entity, &Button), Changed<Button>>) {
+fn update_button_text(
+	mut commands: Commands,
+	buttons: Query<(Entity, &DropdownButton), Changed<DropdownButton>>,
+) {
 	for (entity, button) in &buttons {
 		let Some(mut entity) = commands.get_entity(entity) else {
 			continue;
 		};
 		entity.despawn_descendants();
 		entity.with_children(|parent| {
-			parent.spawn(TextBundle::from_section(button.text, Button::text_style()));
+			parent.spawn((Text::new(button.text), DropdownButton::text_style()));
 		});
 	}
 }
 
 fn replace_button_text<TLayout: Sync + Send + 'static>(
-	mut buttons: Query<&mut Button>,
+	mut buttons: Query<&mut DropdownButton>,
 	options: Query<(&ButtonOption<TLayout>, &Interaction), Changed<Interaction>>,
 ) {
 	for (options, interaction) in &options {
@@ -313,45 +324,42 @@ pub fn setup_dropdown_test(app: &mut App) {
 			),
 		)
 		.world_mut()
-		.spawn(NodeBundle {
-			style: Style {
-				position_type: PositionType::Absolute,
-				top: Val::Px(20.),
-				right: Val::Px(20.),
-				flex_direction: FlexDirection::Column,
-				..default()
-			},
+		.spawn(Node {
+			position_type: PositionType::Absolute,
+			top: Val::Px(20.),
+			right: Val::Px(20.),
+			flex_direction: FlexDirection::Column,
 			..default()
 		})
 		.with_children(|container| {
 			let mut button = container.spawn_empty();
 			button.insert((
-				Button { text: "" },
-				Button::bundle(),
+				DropdownButton { text: "" },
+				DropdownButton::bundle(),
 				Dropdown {
 					items: get_button_options_numbered::<SingleRow>(button.id()),
 				},
 			));
 			let mut button = container.spawn_empty();
 			button.insert((
-				Button { text: "" },
-				Button::bundle(),
+				DropdownButton { text: "" },
+				DropdownButton::bundle(),
 				Dropdown {
 					items: get_button_options_numbered::<SingleColumn>(button.id()),
 				},
 			));
 			let mut button = container.spawn_empty();
 			button.insert((
-				Button { text: "" },
-				Button::bundle(),
+				DropdownButton { text: "" },
+				DropdownButton::bundle(),
 				Dropdown {
 					items: get_button_options_numbered::<TwoColumns>(button.id()),
 				},
 			));
 			let mut button = container.spawn_empty();
 			button.insert((
-				Button { text: "" },
-				Button::bundle(),
+				DropdownButton { text: "" },
+				DropdownButton::bundle(),
 				Dropdown {
 					items: get_button_options::<SingleRow, WithSubDropdown<SingleColumn>>(
 						button.id(),

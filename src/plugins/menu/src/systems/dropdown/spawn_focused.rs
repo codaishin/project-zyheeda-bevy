@@ -4,14 +4,9 @@ use crate::{
 		GlobalZIndexTop,
 	},
 	tools::Layout,
-	traits::{GetLayout, RootStyle, UI},
+	traits::{GetLayout, GetRootNode, UI},
 };
-use bevy::{
-	hierarchy::{BuildChildren, ChildBuilder},
-	prelude::{Commands, Entity, In, Query},
-	ui::{node_bundles::NodeBundle, Display, RepeatedGridTrack, Style},
-	utils::default,
-};
+use bevy::prelude::*;
 use common::tools::Focus;
 
 pub(crate) fn dropdown_spawn_focused<TItem>(
@@ -20,7 +15,7 @@ pub(crate) fn dropdown_spawn_focused<TItem>(
 	dropdowns: Query<(Entity, &Dropdown<TItem>)>,
 ) where
 	TItem: UI + Sync + Send + 'static,
-	Dropdown<TItem>: RootStyle + GetLayout,
+	Dropdown<TItem>: GetRootNode + GetLayout,
 {
 	let Focus::New(new_focus) = focus.0 else {
 		return;
@@ -39,31 +34,25 @@ pub(crate) fn dropdown_spawn_focused<TItem>(
 				.spawn((
 					GlobalZIndexTop,
 					DropdownUI::<TItem>::new(source),
-					NodeBundle {
-						style: dropdown.root_style(),
-						..default()
-					},
+					dropdown.root_node(),
 				))
 				.with_children(|container_node| {
 					container_node
-						.spawn(NodeBundle {
-							style: get_style(dropdown),
-							..default()
-						})
+						.spawn(get_node(dropdown))
 						.with_children(|dropdown_node| spawn_items(dropdown_node, dropdown));
 				});
 		});
 	}
 }
 
-fn get_style<TItem>(dropdown: &Dropdown<TItem>) -> Style
+fn get_node<TItem>(dropdown: &Dropdown<TItem>) -> Node
 where
 	Dropdown<TItem>: GetLayout,
 {
 	match &dropdown.layout() {
 		Layout::LastColumn(max_index) => {
 			let (limit, auto) = repetitions(dropdown.items.len(), max_index.0);
-			Style {
+			Node {
 				display: Display::Grid,
 				grid_template_columns: RepeatedGridTrack::auto(limit),
 				grid_template_rows: RepeatedGridTrack::auto(auto),
@@ -72,7 +61,7 @@ where
 		}
 		Layout::LastRow(max_index) => {
 			let (limit, auto) = repetitions(dropdown.items.len(), max_index.0);
-			Style {
+			Node {
 				display: Display::Grid,
 				grid_template_columns: RepeatedGridTrack::auto(auto),
 				grid_template_rows: RepeatedGridTrack::auto(limit),
@@ -92,8 +81,8 @@ fn repetitions(count: usize, max_index: u16) -> (u16, u16) {
 fn spawn_items<TItem: UI>(dropdown_node: &mut ChildBuilder, dropdown: &Dropdown<TItem>) {
 	for item in &dropdown.items {
 		dropdown_node
-			.spawn(item.node())
-			.with_children(|item_node| item.instantiate_content_on(item_node));
+			.spawn(item.ui_components())
+			.with_children(|item_node| item.update_children(item_node));
 	}
 }
 
@@ -103,16 +92,9 @@ mod tests {
 	use crate::{
 		components::GlobalZIndexTop,
 		tools::Layout,
-		traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn},
+		traits::{ui_components::GetUIComponents, update_children::UpdateChildren},
 	};
-	use bevy::{
-		app::{App, Update},
-		hierarchy::{ChildBuilder, Parent},
-		prelude::{Component, IntoSystem, Res, Resource},
-		ui::{node_bundles::NodeBundle, Display, RepeatedGridTrack, Style, Val},
-		utils::default,
-	};
-	use common::{assert_bundle, test_tools::utils::SingleThreadedApp, tools::Index};
+	use common::{test_tools::utils::SingleThreadedApp, tools::Index};
 	use mockall::mock;
 
 	macro_rules! impl_item {
@@ -120,14 +102,14 @@ mod tests {
 			#[derive(Debug, PartialEq)]
 			struct $item;
 
-			impl GetNode for $item {
-				fn node(&self) -> NodeBundle {
-					NodeBundle::default()
+			impl GetUIComponents for $item {
+				fn ui_components(&self) -> (Node, BackgroundColor) {
+					(default(), default())
 				}
 			}
 
-			impl InstantiateContentOn for $item {
-				fn instantiate_content_on(&self, _: &mut ChildBuilder) {}
+			impl UpdateChildren for $item {
+				fn update_children(&self, _: &mut ChildBuilder) {}
 			}
 		};
 	}
@@ -136,9 +118,9 @@ mod tests {
 		($item:ident) => {
 			impl_item! {$item}
 
-			impl RootStyle for Dropdown<$item> {
-				fn root_style(&self) -> Style {
-					Style::default()
+			impl GetRootNode for Dropdown<$item> {
+				fn root_node(&self) -> Node {
+					Node::default()
 				}
 			}
 
@@ -154,9 +136,9 @@ mod tests {
 		($item:ident, $layout:expr) => {
 			impl_item! {$item}
 
-			impl RootStyle for Dropdown<$item> {
-				fn root_style(&self) -> Style {
-					Style::default()
+			impl GetRootNode for Dropdown<$item> {
+				fn root_node(&self) -> Node {
+					Node::default()
 				}
 			}
 
@@ -168,13 +150,13 @@ mod tests {
 		};
 	}
 
-	macro_rules! impl_dropdown_with_style {
-		($item:ident, $style:expr) => {
+	macro_rules! impl_dropdown_with_node {
+		($item:ident, $node:expr) => {
 			impl_item! {$item}
 
-			impl RootStyle for Dropdown<$item> {
-				fn root_style(&self) -> Style {
-					$style
+			impl GetRootNode for Dropdown<$item> {
+				fn root_node(&self) -> Node {
+					$node
 				}
 			}
 
@@ -188,17 +170,17 @@ mod tests {
 
 	mock! {
 		_Item {}
-		impl GetNode for _Item {
-			fn node(&self) -> NodeBundle;
+		impl GetUIComponents for _Item {
+			fn ui_components(&self) -> (Node, BackgroundColor);
 		}
-		impl InstantiateContentOn for _Item {
-			fn instantiate_content_on<'a>(&self, parent: &mut ChildBuilder<'a>);
+		impl UpdateChildren for _Item {
+			fn update_children<'a>(&self, parent: &mut ChildBuilder<'a>);
 		}
 	}
 
-	impl RootStyle for Dropdown<Mock_Item> {
-		fn root_style(&self) -> Style {
-			Style::default()
+	impl GetRootNode for Dropdown<Mock_Item> {
+		fn root_node(&self) -> Node {
+			Node::default()
 		}
 	}
 
@@ -214,7 +196,7 @@ mod tests {
 	fn setup<TItem>() -> App
 	where
 		TItem: UI + Send + Sync + 'static,
-		Dropdown<TItem>: RootStyle + GetLayout,
+		Dropdown<TItem>: GetRootNode + GetLayout,
 	{
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<_In>();
@@ -262,7 +244,7 @@ mod tests {
 
 		let dropdown_ui = last_child_of!(app, dropdown);
 
-		assert_bundle!(NodeBundle, &app, dropdown_ui);
+		assert!(dropdown_ui.contains::<Node>());
 	}
 
 	#[test]
@@ -287,9 +269,9 @@ mod tests {
 
 	#[test]
 	fn spawn_dropdown_ui_with_dropdown_style() {
-		impl_dropdown_with_style!(
+		impl_dropdown_with_node!(
 			_Item,
-			Style {
+			Node {
 				top: Val::Px(404.),
 				..default()
 			}
@@ -306,11 +288,11 @@ mod tests {
 		let dropdown_ui = last_child_of!(app, dropdown);
 
 		assert_eq!(
-			Some(&Style {
+			Some(&Node {
 				top: Val::Px(404.),
 				..default()
 			}),
-			dropdown_ui.get::<Style>(),
+			dropdown_ui.get::<Node>(),
 		);
 	}
 
@@ -331,7 +313,7 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_dropdown_ui_content_with_node_bundle() {
+	fn spawn_dropdown_ui_content_with_node() {
 		impl_dropdown!(_Item);
 
 		let mut app = setup::<_Item>();
@@ -345,21 +327,21 @@ mod tests {
 		let dropdown_ui = last_child_of!(app, dropdown).id();
 		let dropdown_ui_content = last_child_of!(app, dropdown_ui);
 
-		assert_bundle!(NodeBundle, &app, dropdown_ui_content);
+		assert!(dropdown_ui_content.contains::<Node>());
 	}
 
 	#[test]
-	fn spawn_dropdown_item_node_with_node_bundle() {
+	fn spawn_dropdown_item_node_with_node_and_background() {
 		let mut app = setup::<Mock_Item>();
 		let mut item = Mock_Item::default();
-		item.expect_node().return_const(NodeBundle {
-			style: Style {
+		item.expect_ui_components().return_const((
+			Node {
 				top: Val::Px(42.),
 				..default()
 			},
-			..default()
-		});
-		item.expect_instantiate_content_on().return_const(());
+			BackgroundColor(Color::linear_rgb(1., 2., 0.)),
+		));
+		item.expect_update_children().return_const(());
 
 		let dropdown = app.world_mut().spawn(Dropdown { items: vec![item] }).id();
 		app.world_mut()
@@ -371,17 +353,15 @@ mod tests {
 		let dropdown_ui_content = last_child_of!(app, dropdown_ui).id();
 		let item_node = last_child_of!(app, dropdown_ui_content);
 
-		assert_bundle!(
-			NodeBundle,
-			&app,
-			item_node,
-			With::assert(|style: &Style| assert_eq!(
-				&Style {
+		assert_eq!(
+			(
+				Some(&Node {
 					top: Val::Px(42.),
 					..default()
-				},
-				style
-			))
+				}),
+				Some(&BackgroundColor(Color::linear_rgb(1., 2., 0.))),
+			),
+			(item_node.get::<Node>(), item_node.get::<BackgroundColor>())
 		)
 	}
 
@@ -392,8 +372,9 @@ mod tests {
 
 		let mut app = setup::<Mock_Item>();
 		let mut item = Mock_Item::default();
-		item.expect_node().return_const(NodeBundle::default());
-		item.expect_instantiate_content_on().returning(|item_node| {
+		item.expect_ui_components()
+			.return_const((Node::default(), BackgroundColor::default()));
+		item.expect_update_children().returning(|item_node| {
 			item_node.spawn(_Content("My Content"));
 		});
 
@@ -436,13 +417,13 @@ mod tests {
 		let dropdown_ui_content = last_child_of!(app, dropdown_ui);
 
 		assert_eq!(
-			Some(&Style {
+			Some(&Node {
 				display: Display::Grid,
 				grid_template_columns: RepeatedGridTrack::auto(3),
 				grid_template_rows: RepeatedGridTrack::auto(2),
 				..default()
 			}),
-			dropdown_ui_content.get::<Style>()
+			dropdown_ui_content.get::<Node>()
 		);
 	}
 
@@ -468,13 +449,13 @@ mod tests {
 		let dropdown_ui_content = last_child_of!(app, dropdown_ui);
 
 		assert_eq!(
-			Some(&Style {
+			Some(&Node {
 				display: Display::Grid,
 				grid_template_columns: RepeatedGridTrack::auto(2),
 				grid_template_rows: RepeatedGridTrack::auto(3),
 				..default()
 			}),
-			dropdown_ui_content.get::<Style>()
+			dropdown_ui_content.get::<Node>()
 		);
 	}
 
@@ -500,13 +481,13 @@ mod tests {
 		let dropdown_ui_content = last_child_of!(app, dropdown_ui);
 
 		assert_eq!(
-			Some(&Style {
+			Some(&Node {
 				display: Display::Grid,
 				grid_template_columns: RepeatedGridTrack::auto(2),
 				grid_template_rows: RepeatedGridTrack::auto(3),
 				..default()
 			}),
-			dropdown_ui_content.get::<Style>()
+			dropdown_ui_content.get::<Node>()
 		);
 	}
 
@@ -532,13 +513,13 @@ mod tests {
 		let dropdown_ui_content = last_child_of!(app, dropdown_ui);
 
 		assert_eq!(
-			Some(&Style {
+			Some(&Node {
 				display: Display::Grid,
 				grid_template_columns: RepeatedGridTrack::auto(3),
 				grid_template_rows: RepeatedGridTrack::auto(2),
 				..default()
 			}),
-			dropdown_ui_content.get::<Style>()
+			dropdown_ui_content.get::<Node>()
 		);
 	}
 

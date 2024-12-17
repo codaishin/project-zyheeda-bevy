@@ -1,8 +1,5 @@
 use crate::components::GlobalZIndexTop;
-use bevy::{
-	prelude::{Commands, DetectChanges, Entity, Query, Ref},
-	ui::ZIndex,
-};
+use bevy::prelude::*;
 use common::traits::try_insert_on::TryInsertOn;
 
 pub(crate) fn adjust_global_z_index(
@@ -18,7 +15,7 @@ pub(crate) fn adjust_global_z_index(
 
 	for (entity, ..) in global_z_tops.iter().filter(is_new) {
 		top_z_index += 1;
-		commands.try_insert_on(entity, ZIndex::Global(top_z_index));
+		commands.try_insert_on(entity, GlobalZIndex(top_z_index));
 	}
 }
 
@@ -53,7 +50,7 @@ mod tests {
 
 		let entity = app.world().entity(entity);
 
-		assert_eq!(Some(&ZIndex::Global(1)), entity.get::<ZIndex>())
+		assert_eq!(Some(&GlobalZIndex(1)), entity.get::<GlobalZIndex>())
 	}
 
 	#[test]
@@ -70,8 +67,8 @@ mod tests {
 		let entities = entities.map(|entity| app.world().entity(entity));
 
 		assert_eq!(
-			[Some(&ZIndex::Global(1)), Some(&ZIndex::Global(2))],
-			entities.map(|entity| entity.get::<ZIndex>())
+			[Some(&GlobalZIndex(1)), Some(&GlobalZIndex(2))],
+			entities.map(|entity| entity.get::<GlobalZIndex>())
 		)
 	}
 
@@ -89,8 +86,8 @@ mod tests {
 		let entities = entities.map(|entity| app.world().entity(entity));
 
 		assert_eq!(
-			[Some(&ZIndex::Global(1)), None],
-			entities.map(|entity| entity.get::<ZIndex>())
+			[Some(&GlobalZIndex(1)), None],
+			entities.map(|entity| entity.get::<GlobalZIndex>())
 		)
 	}
 
@@ -114,11 +111,11 @@ mod tests {
 
 		assert_eq!(
 			[
-				Some(&ZIndex::Global(1)),
-				Some(&ZIndex::Global(2)),
-				Some(&ZIndex::Global(3))
+				Some(&GlobalZIndex(1)),
+				Some(&GlobalZIndex(2)),
+				Some(&GlobalZIndex(3))
 			],
-			entities.map(|entity| entity.get::<ZIndex>())
+			entities.map(|entity| entity.get::<GlobalZIndex>())
 		)
 	}
 }

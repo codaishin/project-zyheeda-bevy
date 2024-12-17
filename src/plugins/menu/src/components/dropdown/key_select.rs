@@ -5,16 +5,13 @@ use crate::{
 		key_select::{AppendSkill, KeySelect, ReKeySkill},
 	},
 	tools::Layout,
-	traits::{GetLayout, RootStyle},
+	traits::{GetLayout, GetRootNode},
 };
-use bevy::{
-	prelude::default,
-	ui::{PositionType, Style, Val},
-};
+use bevy::prelude::*;
 
-impl RootStyle for Dropdown<KeySelect<ReKeySkill>> {
-	fn root_style(&self) -> Style {
-		Style {
+impl GetRootNode for Dropdown<KeySelect<ReKeySkill>> {
+	fn root_node(&self) -> Node {
+		Node {
 			position_type: PositionType::Absolute,
 			top: Val::from(ComboOverview::KEY_BUTTON_DIMENSIONS.height_inner()),
 			left: Val::from(ComboOverview::KEY_BUTTON_DIMENSIONS.minimum_inner()),
@@ -23,9 +20,9 @@ impl RootStyle for Dropdown<KeySelect<ReKeySkill>> {
 	}
 }
 
-impl RootStyle for Dropdown<KeySelect<AppendSkill>> {
-	fn root_style(&self) -> Style {
-		Style {
+impl GetRootNode for Dropdown<KeySelect<AppendSkill>> {
+	fn root_node(&self) -> Node {
+		Node {
 			position_type: PositionType::Absolute,
 			top: Val::from(ComboOverview::MODIFY_BUTTON_DIMENSIONS.minimum_inner()),
 			left: Val::from(ComboOverview::MODIFY_BUTTON_DIMENSIONS.width_inner()),

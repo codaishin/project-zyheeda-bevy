@@ -3,27 +3,12 @@ use crate::{
 	tools::PanelState,
 	traits::{
 		colors::HasPanelColors,
-		get_node::GetNode,
-		instantiate_content_on::InstantiateContentOn,
+		ui_components::{GetUIComponents, GetZIndex, GetZIndexGlobal},
+		update_children::UpdateChildren,
 		LoadUi,
 	},
 };
-use bevy::{
-	asset::AssetServer,
-	hierarchy::{BuildChildren, ChildBuilder},
-	prelude::Component,
-	text::TextStyle,
-	ui::{
-		node_bundles::{ButtonBundle, NodeBundle, TextBundle},
-		AlignItems,
-		FlexDirection,
-		JustifyContent,
-		Style,
-		UiRect,
-		Val,
-	},
-	utils::default,
-};
+use bevy::prelude::*;
 use common::traits::iteration::IterFinite;
 use skills::slot_key::SlotKey;
 
@@ -36,22 +21,26 @@ impl LoadUi<AssetServer> for UIOverlay {
 	}
 }
 
-impl GetNode for UIOverlay {
-	fn node(&self) -> NodeBundle {
-		NodeBundle {
-			style: Style {
+impl GetZIndex for UIOverlay {}
+
+impl GetZIndexGlobal for UIOverlay {}
+
+impl GetUIComponents for UIOverlay {
+	fn ui_components(&self) -> (Node, BackgroundColor) {
+		(
+			Node {
 				width: Val::Percent(100.0),
 				height: Val::Percent(100.0),
 				flex_direction: FlexDirection::ColumnReverse,
 				..default()
 			},
-			..default()
-		}
+			default(),
+		)
 	}
 }
 
-impl InstantiateContentOn for UIOverlay {
-	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
+impl UpdateChildren for UIOverlay {
+	fn update_children(&self, parent: &mut ChildBuilder) {
 		add_quickbar(parent);
 	}
 }
@@ -60,13 +49,10 @@ fn add_quickbar(parent: &mut ChildBuilder) {
 	parent
 		.spawn((
 			Quickbar,
-			NodeBundle {
-				style: Style {
-					width: Val::Percent(500.0),
-					height: Val::Px(100.0),
-					border: UiRect::all(Val::Px(20.)),
-					..default()
-				},
+			Node {
+				width: Val::Percent(500.0),
+				height: Val::Px(100.0),
+				border: UiRect::all(Val::Px(20.)),
 				..default()
 			},
 		))
@@ -79,66 +65,48 @@ fn add_quickbar(parent: &mut ChildBuilder) {
 
 fn add_slot(quickbar: &mut ChildBuilder, key: &SlotKey) {
 	quickbar
-		.spawn(get_background())
+		.spawn(Node {
+			width: Val::Px(65.0),
+			height: Val::Px(65.0),
+			margin: UiRect::all(Val::Px(2.0)),
+			justify_content: JustifyContent::Center,
+			align_items: AlignItems::Center,
+			..default()
+		})
 		.with_children(|background| {
 			background
-				.spawn(get_quickbar_panel_bundle(key))
+				.spawn(get_quickbar_panel(key))
 				.with_children(|panel| {
 					panel.spawn(get_panel_label(key));
 				});
 		});
 }
 
-fn get_panel_label(key: &SlotKey) -> (Label<QuickbarPanel, SlotKey>, TextBundle) {
+fn get_panel_label(key: &SlotKey) -> (Label<QuickbarPanel, SlotKey>, Text, TextFont, TextColor) {
 	(
 		Label::new(*key),
-		TextBundle::from_section(
-			"?",
-			TextStyle {
-				font_size: 20.0,
-				color: QuickbarPanel::PANEL_COLORS.text,
-				..default()
-			},
-		),
+		Text::new("?"),
+		TextFont {
+			font_size: 20.0,
+			..default()
+		},
+		TextColor(QuickbarPanel::PANEL_COLORS.text),
 	)
 }
 
-fn get_quickbar_panel_bundle(key: &SlotKey) -> (QuickbarPanel, ButtonBundle) {
+fn get_quickbar_panel(key: &SlotKey) -> (QuickbarPanel, Button, Node) {
 	(
 		QuickbarPanel {
 			key: *key,
 			state: PanelState::Empty,
 		},
-		get_panel_button(),
+		Button,
+		Node {
+			width: Val::Percent(100.),
+			height: Val::Percent(100.),
+			justify_content: JustifyContent::Start,
+			align_items: AlignItems::Start,
+			..default()
+		},
 	)
-}
-
-fn get_background() -> NodeBundle {
-	let slot_style = Style {
-		width: Val::Px(65.0),
-		height: Val::Px(65.0),
-		margin: UiRect::all(Val::Px(2.0)),
-		justify_content: JustifyContent::Center,
-		align_items: AlignItems::Center,
-		..default()
-	};
-	NodeBundle {
-		style: slot_style.clone(),
-		background_color: QuickbarPanel::PANEL_COLORS.empty.into(),
-		..default()
-	}
-}
-
-fn get_panel_button() -> ButtonBundle {
-	let slot_style = Style {
-		width: Val::Percent(100.),
-		height: Val::Percent(100.),
-		justify_content: JustifyContent::Start,
-		align_items: AlignItems::Start,
-		..default()
-	};
-	ButtonBundle {
-		style: slot_style.clone(),
-		..default()
-	}
 }
