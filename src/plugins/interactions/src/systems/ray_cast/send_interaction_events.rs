@@ -2,7 +2,7 @@ use crate::{
 	events::{InteractionEvent, Ray},
 	traits::{Flush, Track, TrackState},
 };
-use bevy::prelude::{EventWriter, In, ResMut, Resource};
+use bevy::prelude::*;
 
 pub(crate) fn send_interaction_events<TTracker>(
 	In(interactions): In<Vec<(InteractionEvent<Ray>, Vec<InteractionEvent>)>>,
@@ -27,13 +27,7 @@ pub(crate) fn send_interaction_events<TTracker>(
 mod tests {
 	use super::*;
 	use crate::events::Collision;
-	use bevy::{
-		app::{App, Update},
-		ecs::system::RunSystemOnce,
-		math::{Ray3d, Vec3},
-		prelude::{Entity, Events},
-		utils::default,
-	};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		components::ColliderRoot,
 		test_tools::utils::SingleThreadedApp,
@@ -82,18 +76,18 @@ mod tests {
 	}
 
 	#[test]
-	fn call_flush() {
+	fn call_flush() -> Result<(), RunSystemError> {
 		let mut app = setup(_Tracker::new().with_mock(|mock| {
 			mock.expect_track().return_const(TrackState::Changed);
 			mock.expect_flush().times(1).return_const(vec![]);
 		}));
 
 		app.world_mut()
-			.run_system_once_with(vec![], send_interaction_events::<_Tracker>);
+			.run_system_once_with(vec![], send_interaction_events::<_Tracker>)
 	}
 
 	#[test]
-	fn send_flushed_events() {
+	fn send_flushed_events() -> Result<(), RunSystemError> {
 		let a = ColliderRoot(Entity::from_raw(42));
 		let b = ColliderRoot(Entity::from_raw(46));
 		let mut app = setup(_Tracker::new().with_mock(|mock| {
@@ -104,23 +98,27 @@ mod tests {
 		}));
 
 		app.world_mut()
-			.run_system_once_with(vec![], send_interaction_events::<_Tracker>);
+			.run_system_once_with(vec![], send_interaction_events::<_Tracker>)?;
 
 		let events = app.world().resource::<Events<InteractionEvent>>();
-		let mut reader = events.get_reader();
-		let events = reader.read(events);
+		let mut cursor = events.get_cursor();
+		let events = cursor.read(events);
 
 		assert_eq!(
 			vec![&InteractionEvent::of(a).collision(Collision::Started(b)),],
 			events.collect::<Vec<_>>()
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn send_ray_events_from_input() {
+	fn send_ray_events_from_input() -> Result<(), RunSystemError> {
 		let interaction = InteractionEvent::of(ColliderRoot(Entity::from_raw(11)));
 		let ray = interaction.ray(
-			Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(3., 2., 1.)),
+			Ray3d::new(
+				Vec3::new(1., 2., 3.),
+				Dir3::new_unchecked(Vec3::new(3., 2., 1.).normalize()),
+			),
 			TimeOfImpact(900.),
 		);
 		let collisions = vec![];
@@ -130,25 +128,29 @@ mod tests {
 		}));
 
 		app.world_mut()
-			.run_system_once_with(vec![(ray, collisions)], send_interaction_events::<_Tracker>);
+			.run_system_once_with(vec![(ray, collisions)], send_interaction_events::<_Tracker>)?;
 
 		let events = app.world().resource::<Events<InteractionEvent<Ray>>>();
-		let mut reader = events.get_reader();
-		let events = reader.read(events);
+		let mut cursor = events.get_cursor();
+		let events = cursor.read(events);
 
 		assert_eq!(
 			vec![&interaction.ray(
-				Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(3., 2., 1.)),
+				Ray3d::new(
+					Vec3::new(1., 2., 3.),
+					Dir3::new_unchecked(Vec3::new(3., 2., 1.).normalize())
+				),
 				TimeOfImpact(900.),
 			)],
 			events.collect::<Vec<_>>()
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn send_changed_collider_events_from_input() {
+	fn send_changed_collider_events_from_input() -> Result<(), RunSystemError> {
 		let interaction = InteractionEvent::of(ColliderRoot(Entity::from_raw(11)));
-		let ray = interaction.ray(Ray3d::new(default(), Vec3::X), default());
+		let ray = interaction.ray(Ray3d::new(default(), Dir3::X), default());
 		let collisions = vec![
 			interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(42)))),
 			interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(46)))),
@@ -168,22 +170,23 @@ mod tests {
 		}));
 
 		app.world_mut()
-			.run_system_once_with(vec![(ray, collisions)], send_interaction_events::<_Tracker>);
+			.run_system_once_with(vec![(ray, collisions)], send_interaction_events::<_Tracker>)?;
 
 		let events = app.world().resource::<Events<InteractionEvent>>();
-		let mut reader = events.get_reader();
-		let events = reader.read(events);
+		let mut cursor = events.get_cursor();
+		let events = cursor.read(events);
 
 		assert_eq!(
 			vec![&interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(46))))],
 			events.collect::<Vec<_>>()
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn call_track_and_then_flush_in_correct_order() {
+	fn call_track_and_then_flush_in_correct_order() -> Result<(), RunSystemError> {
 		let interaction = InteractionEvent::of(ColliderRoot(Entity::from_raw(11)));
-		let ray = interaction.ray(Ray3d::new(default(), Vec3::X), default());
+		let ray = interaction.ray(Ray3d::new(default(), Dir3::X), default());
 		let collisions =
 			vec![interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(42))))];
 		let mut sequence = Sequence::new();
@@ -199,6 +202,6 @@ mod tests {
 		}));
 
 		app.world_mut()
-			.run_system_once_with(vec![(ray, collisions)], send_interaction_events::<_Tracker>);
+			.run_system_once_with(vec![(ray, collisions)], send_interaction_events::<_Tracker>)
 	}
 }

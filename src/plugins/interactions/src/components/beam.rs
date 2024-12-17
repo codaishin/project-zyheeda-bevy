@@ -16,6 +16,7 @@ use common::{
 use std::time::Duration;
 
 #[derive(Component, Debug, PartialEq)]
+#[require(Transform, Visibility)]
 pub(crate) struct Beam {
 	source: Vec3,
 	target: Vec3,
@@ -130,7 +131,7 @@ where
 	commands.try_insert_on(
 		entity,
 		(
-			SpatialBundle::from_transform(transform),
+			transform,
 			Beam { source, target },
 			TLifetimes::lifetime(cmd.params.lifetime),
 		),
@@ -139,7 +140,7 @@ where
 
 fn update_beam_transform(commands: &mut Commands, entity: Entity, ray: &Ray) {
 	let (.., transform) = unpack_beam_ray(ray);
-	commands.try_insert_on(entity, TransformBundle::from(transform));
+	commands.try_insert_on(entity, transform);
 }
 
 fn translation(transform: &GlobalTransform, offset: Option<&GroundOffset>) -> Vec3 {
@@ -175,7 +176,6 @@ mod tests {
 		events::{InteractionEvent, Ray},
 	};
 	use common::{
-		assert_bundle,
 		test_tools::utils::SingleThreadedApp,
 		traits::{cast_ray::TimeOfImpact, clamp_zero_positive::ClampZeroPositive},
 	};
@@ -368,7 +368,7 @@ mod tests {
 	}
 
 	#[test]
-	fn set_spatial_bundle() {
+	fn set_spatial_components() {
 		let mut app = setup();
 		let source = app.world_mut().spawn(GlobalTransform::default()).id();
 		let beam = app
@@ -390,22 +390,23 @@ mod tests {
 
 		app.update();
 
-		assert_bundle!(
-			SpatialBundle,
-			&app,
-			app.world().entity(beam),
-			With::assert(|transform: &Transform| {
-				assert_eq!(
+		assert_eq!(
+			(
+				Some(
 					&Transform::from_xyz(5., 1., 0.)
 						.looking_at(Vec3::new(10., 1., 0.), Vec3::Y)
 						.with_scale(Vec3 {
 							x: 1.,
 							y: 1.,
 							z: 10.
-						}),
-					transform
-				);
-			})
+						})
+				),
+				Some(&Visibility::default()),
+			),
+			(
+				app.world().entity(beam).get::<Transform>(),
+				app.world().entity(beam).get::<Visibility>(),
+			)
 		);
 	}
 
@@ -490,6 +491,6 @@ mod tests {
 		let beam = app.world().get_entity(beam);
 		let child = app.world().get_entity(child);
 
-		assert_eq!((true, true), (beam.is_none(), child.is_none()));
+		assert_eq!((false, false), (beam.is_ok(), child.is_ok()));
 	}
 }

@@ -93,8 +93,8 @@ mod tests {
 		app.update();
 
 		let events = app.world().resource::<Events<_Event>>();
-		let mut reader = events.get_reader();
-		let events = reader.read(events);
+		let mut cursor = events.get_cursor();
+		let events = cursor.read(events);
 
 		assert_eq!(vec![&_Event, &_Event], events.collect::<Vec<_>>())
 	}
@@ -133,8 +133,8 @@ mod tests {
 		app.update();
 
 		let events = app.world().resource::<Events<_Event>>();
-		let mut reader = events.get_reader();
-		let events = reader.read(events);
+		let mut cursor = events.get_cursor();
+		let events = cursor.read(events);
 
 		assert_eq!(
 			vec![&_Event(ColliderRoot(a), ColliderRoot(b))],
@@ -172,8 +172,8 @@ mod tests {
 		app.update();
 
 		let events = app.world().resource::<Events<_Event>>();
-		let mut reader = events.get_reader();
-		let events = reader.read(events);
+		let mut cursor = events.get_cursor();
+		let events = cursor.read(events);
 
 		assert_eq!(vec![] as Vec<&_Event>, events.collect::<Vec<_>>())
 	}

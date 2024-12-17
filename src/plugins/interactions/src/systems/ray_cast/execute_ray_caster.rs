@@ -1,11 +1,5 @@
 use crate::{components::RayCaster, events::RayCastInfo};
-use bevy::{
-	ecs::{
-		entity::Entity,
-		system::{Commands, Query, Res, Resource},
-	},
-	math::Ray3d,
-};
+use bevy::prelude::*;
 use common::traits::{cast_ray::CastRayContinuouslySorted, try_remove_from::TryRemoveFrom};
 use std::collections::HashMap;
 
@@ -14,12 +8,16 @@ pub(crate) struct RayCastResult {
 	pub(crate) info: RayCastInfo,
 }
 
-pub(crate) fn execute_ray_caster<TCastRay: CastRayContinuouslySorted<RayCaster> + Resource>(
+pub(crate) fn execute_ray_caster<TCastRay: CastRayContinuouslySorted<RayCaster> + Component>(
 	mut commands: Commands,
 	ray_casters: Query<(Entity, &RayCaster)>,
-	cast_ray: Res<TCastRay>,
+	cast_ray: Query<&TCastRay>,
 ) -> HashMap<Entity, RayCastResult> {
 	let mut results = HashMap::new();
+
+	let Ok(cast_ray) = cast_ray.get_single() else {
+		return results;
+	};
 
 	for (source, ray_caster) in &ray_casters {
 		let info = RayCastInfo {
@@ -41,18 +39,13 @@ pub(crate) fn execute_ray_caster<TCastRay: CastRayContinuouslySorted<RayCaster> 
 mod tests {
 	use super::*;
 	use crate::events::RayCastInfo;
-	use bevy::{
-		app::App,
-		ecs::{entity::Entity, system::RunSystemOnce},
-		math::{Dir3, Vec3},
-		utils::default,
-	};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::math::Real;
 	use common::traits::{cast_ray::TimeOfImpact, nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Resource, NestedMocks)]
+	#[derive(Component, NestedMocks)]
 	struct _CastRay {
 		pub mock: Mock_CastRay,
 	}
@@ -66,13 +59,13 @@ mod tests {
 
 	fn setup(cast_ray: _CastRay) -> App {
 		let mut app = App::new();
-		app.insert_resource(cast_ray);
+		app.world_mut().spawn(cast_ray);
 
 		app
 	}
 
 	#[test]
-	fn cast_ray() {
+	fn cast_ray() -> Result<(), RunSystemError> {
 		let mut app = setup(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray_continuously_sorted()
 				.times(1)
@@ -95,11 +88,12 @@ mod tests {
 		});
 
 		app.world_mut()
-			.run_system_once(execute_ray_caster::<_CastRay>);
+			.run_system_once(execute_ray_caster::<_CastRay>)?;
+		Ok(())
 	}
 
 	#[test]
-	fn add_cast_ray_result_with_targets() {
+	fn add_cast_ray_result_with_targets() -> Result<(), RunSystemError> {
 		let mut app = setup(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray_continuously_sorted()
 				.return_const(vec![
@@ -119,7 +113,7 @@ mod tests {
 
 		let results = app
 			.world_mut()
-			.run_system_once(execute_ray_caster::<_CastRay>);
+			.run_system_once(execute_ray_caster::<_CastRay>)?;
 
 		assert_eq!(
 			HashMap::from([(
@@ -140,10 +134,11 @@ mod tests {
 			)]),
 			results
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn cast_ray_only_once() {
+	fn cast_ray_only_once() -> Result<(), RunSystemError> {
 		let mut app = setup(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray_continuously_sorted()
 				.times(1)
@@ -158,13 +153,14 @@ mod tests {
 		});
 
 		app.world_mut()
-			.run_system_once(execute_ray_caster::<_CastRay>);
+			.run_system_once(execute_ray_caster::<_CastRay>)?;
 		app.world_mut()
-			.run_system_once(execute_ray_caster::<_CastRay>);
+			.run_system_once(execute_ray_caster::<_CastRay>)?;
+		Ok(())
 	}
 
 	#[test]
-	fn remove_ray_caster() {
+	fn remove_ray_caster() -> Result<(), RunSystemError> {
 		let mut app = setup(_CastRay::new().with_mock(|mock| {
 			mock.expect_cast_ray_continuously_sorted()
 				.return_const(vec![]);
@@ -181,10 +177,11 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once(execute_ray_caster::<_CastRay>);
+			.run_system_once(execute_ray_caster::<_CastRay>)?;
 
 		let ray_caster = app.world().entity(ray_caster);
 
 		assert!(!ray_caster.contains::<RayCaster>());
+		Ok(())
 	}
 }

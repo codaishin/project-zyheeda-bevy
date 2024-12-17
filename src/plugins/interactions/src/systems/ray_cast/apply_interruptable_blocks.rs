@@ -3,7 +3,7 @@ use crate::components::{
 	blockers::Blockers,
 	is::{InterruptableRay, Is},
 };
-use bevy::prelude::{Entity, In, Query};
+use bevy::prelude::*;
 use common::{blocker::Blocker, components::ColliderRoot, traits::cast_ray::TimeOfImpact};
 use std::collections::{HashMap, HashSet};
 
@@ -68,7 +68,7 @@ fn is_effected(InterruptableRay(by): &InterruptableRay, blockers: &HashSet<Block
 mod tests {
 	use super::*;
 	use crate::events::RayCastInfo;
-	use bevy::{app::App, ecs::system::RunSystemOnce, prelude::default};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{components::ColliderRoot, traits::cast_ray::TimeOfImpact};
 
 	fn setup() -> App {
@@ -76,7 +76,7 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_blocked_hits_from_ray_cast_result() {
+	fn remove_blocked_hits_from_ray_cast_result() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let close = app.world_mut().spawn_empty().id();
 		let blocker = app
@@ -107,7 +107,7 @@ mod tests {
 
 		let ray_casts = app
 			.world_mut()
-			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks);
+			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks)?;
 
 		assert_eq!(
 			HashMap::from([(
@@ -121,11 +121,13 @@ mod tests {
 				}
 			)]),
 			ray_casts
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn remove_blocked_hits_from_ray_cast_result_when_using_collider_root() {
+	fn remove_blocked_hits_from_ray_cast_result_when_using_collider_root(
+	) -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let close = app.world_mut().spawn_empty().id();
 		let root = app
@@ -157,7 +159,7 @@ mod tests {
 
 		let ray_casts = app
 			.world_mut()
-			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks);
+			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks)?;
 
 		assert_eq!(
 			HashMap::from([(
@@ -171,11 +173,12 @@ mod tests {
 				}
 			)]),
 			ray_casts
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn do_nothing_if_not_blocked_by_anything() {
+	fn do_nothing_if_not_blocked_by_anything() -> Result<(), RunSystemError> {
 		let no_blockers = &[];
 
 		let mut app = setup();
@@ -206,7 +209,7 @@ mod tests {
 
 		let ray_casts = app
 			.world_mut()
-			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks);
+			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks)?;
 
 		assert_eq!(
 			HashMap::from([(
@@ -224,11 +227,12 @@ mod tests {
 				}
 			)]),
 			ray_casts
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn do_nothing_if_blockers_do_not_match() {
+	fn do_nothing_if_blockers_do_not_match() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let close = app.world_mut().spawn_empty().id();
 		let blocker = app
@@ -257,7 +261,7 @@ mod tests {
 
 		let ray_casts = app
 			.world_mut()
-			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks);
+			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks)?;
 
 		assert_eq!(
 			HashMap::from([(
@@ -275,6 +279,7 @@ mod tests {
 				}
 			)]),
 			ray_casts
-		)
+		);
+		Ok(())
 	}
 }
