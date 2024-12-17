@@ -23,7 +23,10 @@ impl StartForceShield {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{ecs::system::RunSystemOnce, prelude::*};
+	use bevy::{
+		ecs::system::{RunSystemError, RunSystemOnce},
+		prelude::*,
+	};
 	use common::test_tools::utils::SingleThreadedApp;
 
 	struct _HandlesInteractions;
@@ -58,14 +61,15 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_force_marker() {
+	fn spawn_force_marker() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
-		let entity = app.world_mut().run_system_once(force_shield);
+		let entity = app.world_mut().run_system_once(force_shield)?;
 
 		assert_eq!(
 			Some(&_ForceShield(ForceShield)),
 			app.world().entity(entity).get::<_ForceShield>()
 		);
+		Ok(())
 	}
 }

@@ -25,7 +25,7 @@ use common::traits::{
 };
 use std::{
 	collections::HashSet,
-	fmt::{Display, Formatter, Result},
+	fmt::{Display, Formatter, Result as FmtResult},
 	time::Duration,
 };
 
@@ -56,7 +56,7 @@ pub struct Skill {
 }
 
 impl Display for Skill {
-	fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+	fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
 		match self.name.as_str() {
 			"" => write!(f, "Skill(<no name>)"),
 			name => write!(f, "Skill({})", name),
@@ -209,7 +209,7 @@ where
 mod tests {
 	use super::*;
 	use crate::{behaviors::start_behavior::SkillBehavior, traits::skill_builder::SkillShape};
-	use bevy::ecs::system::{EntityCommands, RunSystemOnce};
+	use bevy::ecs::system::{EntityCommands, RunSystemError, RunSystemOnce};
 	use common::{
 		components::Outdated,
 		resources::ColliderInfo,
@@ -265,7 +265,10 @@ mod tests {
 
 	fn get_target() -> SkillTarget {
 		SkillTarget {
-			ray: Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(4., 5., 6.)),
+			ray: Ray3d::new(
+				Vec3::new(1., 2., 3.),
+				Dir3::new_unchecked(Vec3::new(4., 5., 6.).normalize()),
+			),
 			collision_info: Some(ColliderInfo {
 				collider: Outdated {
 					entity: Entity::from_raw(11),
@@ -307,7 +310,7 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_skill_contact_entity_on_active() {
+	fn spawn_skill_contact_entity_on_active() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnActive(
 			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, caster, spawner, target| {
@@ -335,7 +338,7 @@ mod tests {
 					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
-		);
+		)?;
 
 		assert_eq!(
 			vec![&_Args {
@@ -344,11 +347,12 @@ mod tests {
 				target
 			}],
 			spawned_args(&app, no_filter)
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn spawn_skill_contact_entity_on_active_centered() {
+	fn spawn_skill_contact_entity_on_active_centered() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnActive(
 			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, caster, spawner, target| {
@@ -376,7 +380,7 @@ mod tests {
 					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
-		);
+		)?;
 
 		assert_eq!(
 			vec![&_Args {
@@ -386,10 +390,11 @@ mod tests {
 			}],
 			spawned_args(&app, no_filter)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn apply_contact_behavior_on_active() {
+	fn apply_contact_behavior_on_active() -> Result<(), RunSystemError> {
 		fn shape(
 			cmd: &mut Commands,
 			_: &SkillCaster,
@@ -418,7 +423,7 @@ mod tests {
 					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
-		);
+		)?;
 
 		assert_eq!(
 			vec![&_Args {
@@ -428,10 +433,11 @@ mod tests {
 			}],
 			spawned_args(&app, filter::<_Contact>)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn spawn_skill_projection_entity_on_active() {
+	fn spawn_skill_projection_entity_on_active() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(
 			BuildSkillShape::Fn(|cmd, caster, spawner, target| SkillShape {
@@ -456,7 +462,7 @@ mod tests {
 					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
-		);
+		)?;
 
 		assert_eq!(
 			vec![&_Args {
@@ -466,10 +472,11 @@ mod tests {
 			}],
 			spawned_args(&app, no_filter)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn apply_projection_behavior_on_active() {
+	fn apply_projection_behavior_on_active() -> Result<(), RunSystemError> {
 		fn shape(
 			cmd: &mut Commands,
 			_: &SkillCaster,
@@ -498,7 +505,7 @@ mod tests {
 					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
-		);
+		)?;
 
 		let spawn_args = app
 			.world()
@@ -515,10 +522,11 @@ mod tests {
 			}],
 			spawn_args
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn spawn_skill_contact_entity_on_aim() {
+	fn spawn_skill_contact_entity_on_aim() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnAim(
 			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, caster, spawner, target| {
@@ -546,7 +554,7 @@ mod tests {
 					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
-		);
+		)?;
 
 		assert_eq!(
 			vec![&_Args {
@@ -556,10 +564,11 @@ mod tests {
 			}],
 			spawned_args(&app, no_filter)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn spawn_skill_contact_entity_on_aim_centered() {
+	fn spawn_skill_contact_entity_on_aim_centered() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnAim(
 			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|cmd, caster, spawner, target| {
@@ -587,7 +596,7 @@ mod tests {
 					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
-		);
+		)?;
 
 		assert_eq!(
 			vec![&_Args {
@@ -597,10 +606,11 @@ mod tests {
 			}],
 			spawned_args(&app, no_filter)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn apply_contact_behavior_on_aim() {
+	fn apply_contact_behavior_on_aim() -> Result<(), RunSystemError> {
 		#[derive(Component)]
 		struct _Contact;
 
@@ -632,7 +642,7 @@ mod tests {
 					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
-		);
+		)?;
 
 		let spawn_args = app
 			.world()
@@ -649,10 +659,11 @@ mod tests {
 			}],
 			spawn_args
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn spawn_skill_projection_entity_on_aim() {
+	fn spawn_skill_projection_entity_on_aim() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(
 			BuildSkillShape::Fn(|cmd, caster, spawner, target| SkillShape {
@@ -677,7 +688,7 @@ mod tests {
 					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
-		);
+		)?;
 
 		assert_eq!(
 			vec![&_Args {
@@ -687,10 +698,11 @@ mod tests {
 			}],
 			spawned_args(&app, no_filter)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn apply_projection_behavior_on_aim() {
+	fn apply_projection_behavior_on_aim() -> Result<(), RunSystemError> {
 		#[derive(Component)]
 		struct _Projection;
 
@@ -722,7 +734,7 @@ mod tests {
 					.spawn::<_HandlesLifetime, _HandlesEffects>(cmd, &caster, &spawner, &target);
 			},
 			execute_callback,
-		);
+		)?;
 
 		let spawn_args = app
 			.world()
@@ -739,5 +751,6 @@ mod tests {
 			}],
 			spawn_args
 		);
+		Ok(())
 	}
 }

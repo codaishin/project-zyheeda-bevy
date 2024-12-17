@@ -231,7 +231,10 @@ mod tests {
 
 	fn get_target() -> SkillTarget {
 		SkillTarget {
-			ray: Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(4., 5., 6.)),
+			ray: Ray3d::new(
+				Vec3::new(1., 2., 3.),
+				Dir3::new_unchecked(Vec3::new(4., 5., 6.).normalize()),
+			),
 			collision_info: Some(ColliderInfo {
 				collider: Outdated {
 					entity: Entity::from_raw(11),

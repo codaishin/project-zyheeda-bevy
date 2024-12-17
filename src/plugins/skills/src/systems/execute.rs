@@ -76,7 +76,7 @@ mod tests {
 		components::skill_spawners::SkillSpawners,
 		slot_key::SlotKey,
 	};
-	use bevy::ecs::system::RunSystemOnce;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		components::{Outdated, Side},
 		errors::Level,
@@ -161,7 +161,10 @@ mod tests {
 	}
 
 	fn set_target(app: &mut App) -> SkillTarget {
-		let cam_ray = Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(4., 5., 6.));
+		let cam_ray = Ray3d::new(
+			Vec3::new(1., 2., 3.),
+			Dir3::new_unchecked(Vec3::new(4., 5., 6.).normalize()),
+		);
 		app.world_mut().resource_mut::<CamRay>().0 = Some(cam_ray);
 
 		let collider_transform = GlobalTransform::from_xyz(10., 10., 10.);
@@ -296,7 +299,7 @@ mod tests {
 	}
 
 	#[test]
-	fn return_error() {
+	fn return_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		set_target(&mut app);
 		app.world_mut().spawn((
@@ -310,7 +313,7 @@ mod tests {
 
 		let errors = app
 			.world_mut()
-			.run_system_once(_Executor::execute_system::<_HandlesLife, _HandlesEffects>);
+			.run_system_once(_Executor::execute_system::<_HandlesLife, _HandlesEffects>)?;
 
 		assert_eq!(
 			vec![Err(Error {
@@ -318,6 +321,7 @@ mod tests {
 				lvl: Level::Error
 			})],
 			errors
-		)
+		);
+		Ok(())
 	}
 }

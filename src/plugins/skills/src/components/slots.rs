@@ -109,7 +109,7 @@ pub(crate) struct SubMeshEssenceSlots;
 
 impl ContainsAssetIdsForChildren<SubMeshEssenceSlots> for Slots {
 	type TChildKey = SlotKey;
-	type TChildFilter = With<Handle<Mesh>>;
+	type TChildFilter = With<Mesh3d>;
 	type TChildAsset = Item;
 	type TChildBundle = Essence;
 

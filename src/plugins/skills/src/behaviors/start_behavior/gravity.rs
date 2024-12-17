@@ -33,7 +33,10 @@ impl StartGravity {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{ecs::system::RunSystemOnce, prelude::*};
+	use bevy::{
+		ecs::system::{RunSystemError, RunSystemOnce},
+		prelude::*,
+	};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		traits::clamp_zero_positive::ClampZeroPositive,
@@ -78,12 +81,12 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_gravity_effect() {
+	fn spawn_gravity_effect() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
 		let entity = app
 			.world_mut()
-			.run_system_once_with((UnitsPerSecond::new(42.), EffectApplies::Once), gravity);
+			.run_system_once_with((UnitsPerSecond::new(42.), EffectApplies::Once), gravity)?;
 
 		assert_eq!(
 			Some(&_Effect(Gravity {
@@ -92,5 +95,6 @@ mod tests {
 			})),
 			app.world().entity(entity).get::<_Effect>()
 		);
+		Ok(())
 	}
 }

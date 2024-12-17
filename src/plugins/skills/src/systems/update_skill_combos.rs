@@ -57,7 +57,7 @@ mod tests {
 		skills::Skill,
 		slot_key::SlotKey,
 	};
-	use bevy::ecs::system::RunSystemOnce;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{components::Side, test_tools::utils::Changed, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
@@ -124,7 +124,7 @@ mod tests {
 	}
 
 	#[test]
-	fn call_advance_with_matching_slot_key_and_item_type() {
+	fn call_advance_with_matching_slot_key_and_item_type() -> Result<(), RunSystemError> {
 		let (slots, items) = setup_slots([
 			(
 				SlotKey::BottomHand(Side::Right),
@@ -175,11 +175,11 @@ mod tests {
 		));
 
 		app.world_mut()
-			.run_system_once(update_skill_combos::<_Combos, _Queue>);
+			.run_system_once(update_skill_combos::<_Combos, _Queue>)
 	}
 
 	#[test]
-	fn update_skill_with_combo_skills() {
+	fn update_skill_with_combo_skills() -> Result<(), RunSystemError> {
 		let (slots, items) = setup_slots([(SlotKey::default(), Some(Item::default()))]);
 		let mut app = setup_app(items);
 		let agent = app
@@ -205,7 +205,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once(update_skill_combos::<_Combos, _Queue>);
+			.run_system_once(update_skill_combos::<_Combos, _Queue>)?;
 
 		let agent = app.world().entity(agent);
 
@@ -222,6 +222,7 @@ mod tests {
 			}),
 			agent.get::<_Queue>()
 		);
+		Ok(())
 	}
 
 	#[test]
@@ -246,6 +247,6 @@ mod tests {
 		assert_eq!(
 			Some(&Changed::new(false)),
 			app.world().entity(entity).get::<Changed<_Queue>>(),
-		)
+		);
 	}
 }
