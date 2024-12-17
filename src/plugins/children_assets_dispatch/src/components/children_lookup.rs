@@ -93,7 +93,10 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{ecs::system::RunSystemOnce, prelude::*};
+	use bevy::{
+		ecs::system::{RunSystemError, RunSystemOnce},
+		prelude::*,
+	};
 	use common::traits::{get_asset::GetAsset, iteration::Iter};
 
 	#[derive(Component, Debug, PartialEq)]
@@ -249,7 +252,7 @@ mod tests {
 	}
 
 	#[test]
-	fn all_view_entities_loaded() {
+	fn all_view_entities_loaded() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut()
 			.spawn(ChildrenLookup::<_ItemContainer, _View>::new([
@@ -260,13 +263,14 @@ mod tests {
 
 		let loaded = app
 			.world_mut()
-			.run_system_once(ChildrenLookup::<_ItemContainer, _View>::entities_loaded);
+			.run_system_once(ChildrenLookup::<_ItemContainer, _View>::entities_loaded)?;
 
 		assert_eq!(Loaded(true), loaded);
+		Ok(())
 	}
 
 	#[test]
-	fn not_all_view_entities_loaded() {
+	fn not_all_view_entities_loaded() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut()
 			.spawn(ChildrenLookup::<_ItemContainer, _View>::new([
@@ -276,8 +280,9 @@ mod tests {
 
 		let loaded = app
 			.world_mut()
-			.run_system_once(ChildrenLookup::<_ItemContainer, _View>::entities_loaded);
+			.run_system_once(ChildrenLookup::<_ItemContainer, _View>::entities_loaded)?;
 
 		assert_eq!(Loaded(false), loaded);
+		Ok(())
 	}
 }
