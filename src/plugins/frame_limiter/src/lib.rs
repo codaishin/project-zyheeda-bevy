@@ -17,7 +17,13 @@ impl Plugin for FrameLimiterPlugin {
 			.add_systems(Render, Sleep::system.in_set(RenderSet::Cleanup));
 
 		#[cfg(debug_assertions)]
-		app.add_systems(Update, debug::MeasureFps::system);
+		{
+			use debug::*;
+
+			app.insert_resource(Fps(u32::MAX))
+				.add_systems(Startup, DisplayFps::spawn)
+				.add_systems(Update, (MeasureFps::system, DisplayFps::update).chain());
+		}
 	}
 }
 
@@ -40,14 +46,16 @@ impl Sleep {
 
 #[cfg(debug_assertions)]
 mod debug {
-	use bevy::prelude::Local;
+	use super::*;
 	use std::{ops::DerefMut, time::Instant};
+
+	#[derive(Resource, Debug, PartialEq)]
+	pub(super) struct Fps(pub(super) u32);
 
 	#[derive(Debug, PartialEq)]
 	pub(super) struct MeasureFps {
 		timer: Instant,
 		counter: u32,
-		fps: u32,
 	}
 
 	impl Default for MeasureFps {
@@ -55,24 +63,55 @@ mod debug {
 			Self {
 				timer: Instant::now(),
 				counter: 0,
-				fps: u32::MAX,
 			}
 		}
 	}
 
 	impl MeasureFps {
-		pub(super) fn system(mut fps: Local<MeasureFps>) {
-			let fps = fps.deref_mut();
-			fps.counter += 1;
+		pub(super) fn system(mut measure: Local<MeasureFps>, mut fps: ResMut<Fps>) {
+			let measure = measure.deref_mut();
+			measure.counter += 1;
 
-			if fps.timer.elapsed().as_secs() < 1 {
+			if measure.timer.elapsed().as_secs() < 1 {
 				return;
 			}
 
-			fps.fps = fps.counter;
-			fps.timer = Instant::now();
-			fps.counter = 0;
-			println!("FPS: {}", fps.fps);
+			*fps = Fps(measure.counter);
+			*measure = MeasureFps::default();
+		}
+	}
+
+	#[derive(Component, Debug, PartialEq)]
+	#[require(Node(DisplayFps::top_left), Text)]
+	pub(super) struct DisplayFps;
+
+	impl DisplayFps {
+		fn top_left() -> Node {
+			Node {
+				position_type: PositionType::Absolute,
+				left: Val::Px(10.),
+				top: Val::Px(10.),
+				width: Val::Px(100.),
+				height: Val::Px(20.),
+				..default()
+			}
+		}
+
+		pub(super) fn spawn(mut commands: Commands) {
+			commands.spawn(DisplayFps);
+		}
+
+		pub(super) fn update(mut displays: Query<&mut Text, With<DisplayFps>>, fps: Res<Fps>) {
+			if !fps.is_changed() {
+				return;
+			}
+
+			let Ok(mut text) = displays.get_single_mut() else {
+				return;
+			};
+
+			let Fps(fps) = *fps;
+			*text = Text(format!("FPS: {fps}"));
 		}
 	}
 }
