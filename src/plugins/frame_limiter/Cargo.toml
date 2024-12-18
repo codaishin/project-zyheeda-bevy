@@ -1,0 +1,8 @@
+[package]
+name = "frame_limiter"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# external
+bevy.workspace = true
