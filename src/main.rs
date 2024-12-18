@@ -34,8 +34,6 @@ fn main() -> AppExit {
 }
 
 fn prepare_game(app: &mut App) {
-	let target_fps = 60;
-
 	let life_cycles_plugin = LifeCyclesPlugin;
 	let animations_plugin = AnimationsPlugin;
 	let prefabs_plugin = PrefabsPlugin;
@@ -92,22 +90,8 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(skills_plugin)
 		.add_plugins(behaviors_plugin)
 		.add_plugins(game_state_plugin)
-		.add_plugins(FrameLimiterPlugin { target_fps })
-		.insert_resource(ClearColor(Color::BLACK))
-		.add_systems(Startup, configure_rapier(target_fps));
-}
-
-fn configure_rapier(target_fps: u32) -> impl Fn(ResMut<TimestepMode>) {
-	let target_fps = target_fps as f32;
-
-	move |mut time_step_mode: ResMut<TimestepMode>| {
-		let time_step_mode = time_step_mode.as_mut();
-		*time_step_mode = TimestepMode::Variable {
-			max_dt: 1. / target_fps,
-			time_scale: 1.,
-			substeps: 1,
-		}
-	}
+		.add_plugins(FrameLimiterPlugin { target_fps: 60 })
+		.insert_resource(ClearColor(Color::BLACK));
 }
 
 #[cfg(debug_assertions)]

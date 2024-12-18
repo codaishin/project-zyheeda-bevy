@@ -1,38 +1,61 @@
+#[cfg(debug_assertions)]
+mod debug;
+
 use bevy::{
 	prelude::*,
 	render::{Render, RenderApp, RenderSet},
 };
+use bevy_rapier3d::plugin::TimestepMode;
 use std::{
 	thread,
 	time::{Duration, Instant},
 };
 
+/// A plugin inspired by the `bevy_framepace` plugin:
+/// <https://github.com/aevyrie/bevy_framepace>.
+///
+/// This plugin implements a stripped down frame-limiting logic,
+/// designed to cap the frames per second (FPS) at the specified
+/// `target_fps`. Its primary purpose is to mitigate unexpected FPS
+/// drops that can occur on certain systems (e.g., Linux with X11
+/// and Nvidia GPUs) during mouse movement or clicks.
+///
+/// The frame rate can only be limited within the range of 1 to 60 FPS
+/// due to the render schedule (which we hook into) running at 60 FPS.
 pub struct FrameLimiterPlugin {
 	pub target_fps: u32,
 }
 
 impl Plugin for FrameLimiterPlugin {
 	fn build(&self, app: &mut App) {
-		let time_per_frame = Duration::from_secs(1) / self.target_fps;
+		#[cfg(debug_assertions)]
+		debug::init(app);
+
+		let time_per_frame = match self.target_fps {
+			0 => {
+				error!("Target FPS was set to 0, using 1 FPS instead");
+				Duration::from_secs(1)
+			}
+			target_fps if target_fps > 60 => {
+				error!("Target FPS was set to >60, using 60 FPS instead");
+				Duration::from_secs(1) / 60
+			}
+			target_fps => Duration::from_secs(1) / target_fps,
+		};
 
 		app.insert_resource(Time::<Fixed>::from_duration(time_per_frame));
 
-		app.sub_app_mut(RenderApp)
+		let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
+			error!("RenderApp is unavailable. Frame limiting will not apply to rendering, only to fixed schedules.");
+			return;
+		};
+
+		render_app
 			.insert_resource(Sleep(time_per_frame))
 			.insert_resource(LastSleep(Instant::now()))
 			.add_systems(Render, Sleep::system.in_set(RenderSet::Cleanup));
 
-		#[cfg(debug_assertions)]
-		{
-			use debug::*;
-
-			app.insert_resource(Fps::<()>::new(u32::MAX))
-				.insert_resource(Fps::<Fixed>::new(u32::MAX))
-				.add_systems(Startup, DisplayFps::spawn)
-				.add_systems(Update, DisplayFps::update)
-				.add_systems(Update, MeasureFps::system::<()>)
-				.add_systems(FixedUpdate, MeasureFps::system::<Fixed>);
-		}
+		app.add_systems(Update, configure_rapier(time_per_frame));
 	}
 }
 
@@ -53,94 +76,17 @@ impl Sleep {
 	}
 }
 
-#[cfg(debug_assertions)]
-mod debug {
-	use super::*;
-	use std::{marker::PhantomData, ops::DerefMut, time::Instant};
+fn configure_rapier(time_per_frame: Duration) -> impl Fn(Option<ResMut<TimestepMode>>) {
+	move |time_step_mode: Option<ResMut<TimestepMode>>| {
+		let Some(mut time_step_mode) = time_step_mode else {
+			return;
+		};
+		let time_step_mode = time_step_mode.as_mut();
 
-	#[derive(Resource, Debug, PartialEq)]
-	pub(super) struct Fps<T = ()> {
-		pub(super) fps: u32,
-		phantom_data: PhantomData<T>,
-	}
-
-	impl<T> Fps<T> {
-		pub(super) fn new(value: u32) -> Self {
-			Self {
-				fps: value,
-				phantom_data: PhantomData,
-			}
-		}
-	}
-
-	#[derive(Debug, PartialEq)]
-	pub(super) struct MeasureFps {
-		timer: Instant,
-		counter: u32,
-	}
-
-	impl Default for MeasureFps {
-		fn default() -> Self {
-			Self {
-				timer: Instant::now(),
-				counter: 0,
-			}
-		}
-	}
-
-	impl MeasureFps {
-		pub(super) fn system<T>(mut measure: Local<MeasureFps>, mut fps: ResMut<Fps<T>>)
-		where
-			T: Sync + Send + 'static,
-		{
-			let measure = measure.deref_mut();
-			measure.counter += 1;
-
-			if measure.timer.elapsed().as_secs() < 1 {
-				return;
-			}
-
-			*fps = Fps::<T>::new(measure.counter);
-			*measure = MeasureFps::default();
-		}
-	}
-
-	#[derive(Component, Debug, PartialEq)]
-	#[require(Node(DisplayFps::top_left), Text)]
-	pub(super) struct DisplayFps;
-
-	impl DisplayFps {
-		fn top_left() -> Node {
-			Node {
-				position_type: PositionType::Absolute,
-				left: Val::Px(10.),
-				top: Val::Px(10.),
-				width: Val::Px(300.),
-				height: Val::Px(20.),
-				..default()
-			}
-		}
-
-		pub(super) fn spawn(mut commands: Commands) {
-			commands.spawn(DisplayFps);
-		}
-
-		pub(super) fn update(
-			mut displays: Query<&mut Text, With<DisplayFps>>,
-			fps: Res<Fps>,
-			fps_fixed: Res<Fps<Fixed>>,
-		) {
-			if !fps.is_changed() {
-				return;
-			}
-
-			let Ok(mut text) = displays.get_single_mut() else {
-				return;
-			};
-
-			let Fps { fps, .. } = *fps;
-			let Fps::<Fixed> { fps: fps_fixed, .. } = *fps_fixed;
-			*text = Text(format!("FPS: {fps} (fixed: {fps_fixed})"));
+		*time_step_mode = TimestepMode::Variable {
+			max_dt: time_per_frame.as_secs_f32(),
+			time_scale: 1.,
+			substeps: 1,
 		}
 	}
 }
