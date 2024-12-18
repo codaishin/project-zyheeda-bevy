@@ -2,15 +2,15 @@ NOTICE
 
 This project uses the following third-party software:
 
-1. Bevy (0.14.2)
+1. Bevy (0.15.0)
    License: Dual-licensed under MIT and Apache 2.0
    Source: https://github.com/bevyengine/bevy
 
-2. Bevy Inspector (0.27.0)
+2. Bevy Inspector Egui (0.28.0)
    License: Dual-licensed under MIT and Apache 2.0
    Source: https://github.com/jakobhellermann/bevy-inspector-egui
 
-3. Bevy Rapier 3D (0.27.0)
+3. Bevy Rapier 3D (0.28.0)
    License: Licensed under Apache 2.0
    Source: https://github.com/dimforge/rapier
 
