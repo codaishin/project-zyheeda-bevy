@@ -6,6 +6,7 @@ use bevy_rapier3d::prelude::*;
 use children_assets_dispatch::ChildrenAssetsDispatchPlugin;
 use common::CommonPlugin;
 use enemy::EnemyPlugin;
+use frame_limiter::FrameLimiterPlugin;
 use game_state::GameStatePlugin;
 use interactions::InteractionsPlugin;
 use life_cycles::LifeCyclesPlugin;
@@ -89,6 +90,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(skills_plugin)
 		.add_plugins(behaviors_plugin)
 		.add_plugins(game_state_plugin)
+		.add_plugins(FrameLimiterPlugin { target_fps: 60 })
 		.insert_resource(ClearColor(Color::BLACK));
 }
 

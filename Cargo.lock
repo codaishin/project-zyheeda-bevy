@@ -2361,6 +2361,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c2141d6d6c8512188a7891b4b01590a45f6dac67afb4f255c4124dbb86d4eaa"
 
 [[package]]
+name = "frame_limiter"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_rapier3d",
+]
+
+[[package]]
 name = "futures-channel"
 version = "0.3.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3966,6 +3974,7 @@ dependencies = [
  "children_assets_dispatch",
  "common",
  "enemy",
+ "frame_limiter",
  "game_state",
  "interactions",
  "life_cycles",
