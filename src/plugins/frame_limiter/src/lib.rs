@@ -7,13 +7,19 @@ use std::{
 	time::{Duration, Instant},
 };
 
-pub struct FrameLimiterPlugin;
+pub struct FrameLimiterPlugin {
+	pub target_fps: u32,
+}
 
 impl Plugin for FrameLimiterPlugin {
 	fn build(&self, app: &mut App) {
+		let time_per_frame = Duration::from_secs(1) / self.target_fps;
+
+		app.insert_resource(Time::<Fixed>::from_duration(time_per_frame));
+
 		app.sub_app_mut(RenderApp)
+			.insert_resource(Sleep(time_per_frame))
 			.insert_resource(LastSleep(Instant::now()))
-			.insert_resource(Sleep(Duration::from_secs(1) / 60))
 			.add_systems(Render, Sleep::system.in_set(RenderSet::Cleanup));
 
 		#[cfg(debug_assertions)]

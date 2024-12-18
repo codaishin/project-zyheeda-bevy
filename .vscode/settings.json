@@ -58,6 +58,8 @@
 		"srgba",
 		"struct",
 		"structs",
+		"substeps",
+		"timestep",
 		"tonemapping",
 		"trimesh",
 		"wgsl",
