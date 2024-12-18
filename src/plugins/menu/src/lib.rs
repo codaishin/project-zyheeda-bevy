@@ -32,7 +32,7 @@ use components::{
 	start_game::StartGame,
 	start_menu::StartMenu,
 	start_menu_button::StartMenuButton,
-	tooltip::{Tooltip, TooltipUI, TooltipUIControl},
+	tooltip::{Tooltip, TooltipUI, TooltipUIControl, TooltipUiConfig},
 	ui_overlay::UIOverlay,
 	AppendSkillCommand,
 };
@@ -92,14 +92,7 @@ use systems::{
 		update_label_text::update_label_text,
 	},
 };
-use traits::{
-	get_node::GetNode,
-	instantiate_content_on::InstantiateContentOn,
-	GetLayout,
-	LoadUi,
-	RootStyle,
-	UI,
-};
+use traits::{insert_ui_content::InsertUiContent, GetLayout, GetRootNode, LoadUi};
 use visualization::unusable::Unusable;
 
 type SlotKeyMap = KeyMap<SlotKey, KeyCode>;
@@ -107,7 +100,7 @@ type SlotKeyMap = KeyMap<SlotKey, KeyCode>;
 trait AddUI<TState> {
 	fn add_ui<TComponent>(&mut self, on_state: TState) -> &mut Self
 	where
-		TComponent: Component + LoadUi<AssetServer> + GetNode + InstantiateContentOn;
+		TComponent: Component + LoadUi<AssetServer> + InsertUiContent;
 }
 
 impl<TState> AddUI<TState> for App
@@ -116,7 +109,7 @@ where
 {
 	fn add_ui<TComponent>(&mut self, on_state: TState) -> &mut Self
 	where
-		TComponent: Component + LoadUi<AssetServer> + GetNode + InstantiateContentOn,
+		TComponent: Component + LoadUi<AssetServer> + InsertUiContent,
 	{
 		let spawn_component = (
 			spawn::<TComponent, AssetServer>,
@@ -133,15 +126,15 @@ where
 trait AddTooltip {
 	fn add_tooltip<T>(&mut self) -> &mut Self
 	where
-		T: Sync + Send + 'static,
-		Tooltip<T>: InstantiateContentOn + GetNode;
+		T: TooltipUiConfig + Clone + Sync + Send + 'static,
+		Tooltip<T>: InsertUiContent;
 }
 
 impl AddTooltip for App {
 	fn add_tooltip<T>(&mut self) -> &mut Self
 	where
-		T: Sync + Send + 'static,
-		Tooltip<T>: InstantiateContentOn + GetNode,
+		T: TooltipUiConfig + Clone + Sync + Send + 'static,
+		Tooltip<T>: InsertUiContent,
 	{
 		self.add_systems(
 			Update,
@@ -156,15 +149,15 @@ impl AddTooltip for App {
 trait AddDropdown {
 	fn add_dropdown<TItem>(&mut self) -> &mut Self
 	where
-		TItem: UI + Sync + Send + 'static,
-		Dropdown<TItem>: RootStyle + GetLayout;
+		TItem: InsertUiContent + Sync + Send + 'static,
+		Dropdown<TItem>: GetRootNode + GetLayout;
 }
 
 impl AddDropdown for App {
 	fn add_dropdown<TItem>(&mut self) -> &mut Self
 	where
-		TItem: UI + Sync + Send + 'static,
-		Dropdown<TItem>: RootStyle + GetLayout,
+		TItem: InsertUiContent + Sync + Send + 'static,
+		Dropdown<TItem>: GetRootNode + GetLayout,
 	{
 		self.add_systems(
 			Update,

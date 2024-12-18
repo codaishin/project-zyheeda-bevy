@@ -93,7 +93,10 @@ fn entity_not_found_error(key: &'static str) -> Error {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{ecs::system::RunSystemOnce, utils::HashMap};
+	use bevy::{
+		ecs::system::{RunSystemError, RunSystemOnce},
+		utils::HashMap,
+	};
 	use common::{
 		simple_init,
 		test_tools::utils::new_handle,
@@ -208,7 +211,7 @@ mod tests {
 	}
 
 	#[test]
-	fn dispatch_component_to_child() {
+	fn dispatch_component_to_child() -> Result<(), RunSystemError> {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_get().return_const(&_Asset);
 		}));
@@ -226,11 +229,12 @@ mod tests {
 		app.world_mut().run_system_once_with(
 			commands,
 			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
-		);
+		)?;
+		Ok(())
 	}
 
 	#[test]
-	fn dispatch_component_to_different_child() {
+	fn dispatch_component_to_different_child() -> Result<(), RunSystemError> {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_get().return_const(&_Asset);
 		}));
@@ -248,11 +252,12 @@ mod tests {
 		app.world_mut().run_system_once_with(
 			commands,
 			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
-		);
+		)?;
+		Ok(())
 	}
 
 	#[test]
-	fn use_correct_handle() {
+	fn use_correct_handle() -> Result<(), RunSystemError> {
 		let handle = new_handle();
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_get()
@@ -271,11 +276,12 @@ mod tests {
 		app.world_mut().run_system_once_with(
 			commands,
 			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
-		);
+		)?;
+		Ok(())
 	}
 
 	#[test]
-	fn apply_system_filter() {
+	fn apply_system_filter() -> Result<(), RunSystemError> {
 		#[derive(Component)]
 		struct _Ignore;
 
@@ -298,11 +304,12 @@ mod tests {
 		app.world_mut().run_system_once_with(
 			commands,
 			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, _Filter>,
-		);
+		)?;
+		Ok(())
 	}
 
 	#[test]
-	fn return_error_when_key_entity_not_found() {
+	fn return_error_when_key_entity_not_found() -> Result<(), RunSystemError> {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_get().return_const(&_Asset);
 		}));
@@ -317,7 +324,7 @@ mod tests {
 		let results = app.world_mut().run_system_once_with(
 			commands,
 			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
-		);
+		)?;
 
 		assert_eq!(
 			vec![
@@ -326,5 +333,6 @@ mod tests {
 			],
 			results
 		);
+		Ok(())
 	}
 }

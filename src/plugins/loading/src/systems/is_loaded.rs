@@ -30,7 +30,10 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{asset::LoadedFolder, ecs::system::RunSystemOnce};
+	use bevy::{
+		asset::LoadedFolder,
+		ecs::system::{RunSystemError, RunSystemOnce},
+	};
 	use common::{test_tools::utils::new_handle, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -65,7 +68,7 @@ mod tests {
 	}
 
 	#[test]
-	fn fully_loaded() {
+	fn fully_loaded() -> Result<(), RunSystemError> {
 		let handle = new_handle();
 		let server = _Server::new().with_mock(|mock| {
 			mock.expect_is_fully_loaded::<LoadedFolder>()
@@ -77,13 +80,14 @@ mod tests {
 
 		let loaded = app
 			.world_mut()
-			.run_system_once_with(server, is_loaded_internal::<In<_Server>, _Asset>);
+			.run_system_once_with(server, is_loaded_internal::<In<_Server>, _Asset>)?;
 
 		assert_eq!(Loaded(true), loaded);
+		Ok(())
 	}
 
 	#[test]
-	fn not_fully_loaded() {
+	fn not_fully_loaded() -> Result<(), RunSystemError> {
 		let handle = new_handle();
 		let server = _Server::new().with_mock(|mock| {
 			mock.expect_is_fully_loaded::<LoadedFolder>()
@@ -95,13 +99,14 @@ mod tests {
 
 		let loaded = app
 			.world_mut()
-			.run_system_once_with(server, is_loaded_internal::<In<_Server>, _Asset>);
+			.run_system_once_with(server, is_loaded_internal::<In<_Server>, _Asset>)?;
 
 		assert_eq!(Loaded(false), loaded);
+		Ok(())
 	}
 
 	#[test]
-	fn not_fully_loaded_when_asset_folder_resource_does_not_exist() {
+	fn not_fully_loaded_when_asset_folder_resource_does_not_exist() -> Result<(), RunSystemError> {
 		let server = _Server::new().with_mock(|mock| {
 			mock.expect_is_fully_loaded::<LoadedFolder>()
 				.never()
@@ -111,8 +116,9 @@ mod tests {
 
 		let loaded = app
 			.world_mut()
-			.run_system_once_with(server, is_loaded_internal::<In<_Server>, _Asset>);
+			.run_system_once_with(server, is_loaded_internal::<In<_Server>, _Asset>)?;
 
 		assert_eq!(Loaded(false), loaded);
+		Ok(())
 	}
 }

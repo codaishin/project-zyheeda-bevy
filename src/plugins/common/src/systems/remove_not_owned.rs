@@ -1,13 +1,5 @@
 use crate::components::OwnedBy;
-use bevy::{
-	ecs::{
-		component::Component,
-		entity::Entity,
-		query::With,
-		system::{Commands, Query},
-	},
-	hierarchy::DespawnRecursiveExt,
-};
+use bevy::prelude::*;
 
 pub(crate) fn remove_not_owned<TOwner: Component>(
 	mut commands: Commands,
@@ -32,10 +24,6 @@ fn remove(commands: &mut Commands, id: Entity) {
 mod tests {
 	use super::*;
 	use crate::test_tools::utils::SingleThreadedApp;
-	use bevy::{
-		app::{App, Update},
-		hierarchy::BuildWorldChildren,
-	};
 
 	#[derive(Component)]
 	struct _Owner;
@@ -58,7 +46,7 @@ mod tests {
 
 		app.update();
 
-		assert!(app.world().get_entity(owned).is_none());
+		assert!(app.world().get_entity(owned).is_err());
 	}
 
 	#[test]
@@ -73,7 +61,7 @@ mod tests {
 
 		app.update();
 
-		assert!(app.world().get_entity(child).is_none());
+		assert!(app.world().get_entity(child).is_err());
 	}
 
 	#[test]
@@ -84,6 +72,6 @@ mod tests {
 
 		app.update();
 
-		assert!(app.world().get_entity(owned).is_some());
+		assert!(app.world().get_entity(owned).is_ok());
 	}
 }

@@ -1,4 +1,4 @@
-use bevy::asset::{io::Reader, Asset, AssetLoader, AsyncReadExt, LoadContext};
+use bevy::asset::{io::Reader, Asset, AssetLoader, LoadContext};
 use std::{
 	error::Error,
 	fmt::{Display, Formatter, Result as FmtResult},
@@ -41,11 +41,11 @@ impl<TAsset: From<String> + Asset> AssetLoader for TextLoader<TAsset> {
 	type Settings = ();
 	type Error = TextLoaderError;
 
-	async fn load<'a>(
-		&'a self,
-		reader: &'a mut Reader<'_>,
-		_settings: &'a Self::Settings,
-		_load_context: &'a mut LoadContext<'_>,
+	async fn load(
+		&self,
+		reader: &mut dyn Reader,
+		_: &Self::Settings,
+		_: &mut LoadContext<'_>,
 	) -> Result<Self::Asset, Self::Error> {
 		let mut bytes = Vec::new();
 		let result = reader

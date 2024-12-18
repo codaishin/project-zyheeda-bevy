@@ -1,8 +1,7 @@
 use crate::{
-	components::tooltip::Tooltip,
+	components::tooltip::{Tooltip, TooltipUiConfig},
 	traits::{
-		get_node::GetNode,
-		instantiate_content_on::InstantiateContentOn,
+		insert_ui_content::InsertUiContent,
 		tooltip_ui_control::{
 			DespawnAllTooltips,
 			DespawnOutdatedTooltips,
@@ -11,11 +10,7 @@ use crate::{
 		},
 	},
 };
-use bevy::{
-	ecs::system::Res,
-	prelude::{Changed, Commands, Component, Entity, Query, RemovedComponents, Resource},
-	ui::{Interaction, Style},
-};
+use bevy::prelude::*;
 use common::traits::mouse_position::MousePosition;
 
 pub(crate) fn tooltip<T, TUI, TUIControl, TWindow>(
@@ -23,11 +18,11 @@ pub(crate) fn tooltip<T, TUI, TUIControl, TWindow>(
 	ui_control: Res<TUIControl>,
 	windows: Query<&TWindow>,
 	changed_tooltip_interactions: Query<(Entity, &Tooltip<T>, &Interaction), Changed<Interaction>>,
-	mut tooltip_uis: Query<(Entity, &TUI, &mut Style)>,
+	mut tooltip_uis: Query<(Entity, &TUI, &mut Node)>,
 	removed_tooltips: RemovedComponents<Tooltip<T>>,
 ) where
-	T: Sync + Send + 'static,
-	Tooltip<T>: InstantiateContentOn + GetNode,
+	T: TooltipUiConfig + Sync + Send + 'static,
+	Tooltip<T>: InsertUiContent,
 	TUI: Component,
 	TUIControl: Resource
 		+ DespawnAllTooltips<TUI>
@@ -58,7 +53,7 @@ pub(crate) fn tooltip<T, TUI, TUIControl, TWindow>(
 	}
 }
 
-fn is_hovering<T: Sync + Send + 'static>(
+fn is_hovering<T: TooltipUiConfig + Sync + Send + 'static>(
 	(.., interaction): &(Entity, &Tooltip<T>, &Interaction),
 ) -> bool {
 	interaction == &&Interaction::Hovered
@@ -67,14 +62,7 @@ fn is_hovering<T: Sync + Send + 'static>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::instantiate_content_on::InstantiateContentOn;
-	use bevy::{
-		app::{App, Update},
-		hierarchy::ChildBuilder,
-		math::Vec2,
-		prelude::{default, Resource},
-		ui::{node_bundles::NodeBundle, Style},
-	};
+	use crate::{components::tooltip::TooltipUiConfig, traits::insert_ui_content::InsertUiContent};
 	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::mock;
@@ -96,16 +84,10 @@ mod tests {
 		content: &'static str,
 	}
 
-	impl GetNode for Tooltip<_T> {
-		fn node(&self) -> NodeBundle {
-			todo!();
-		}
-	}
+	impl TooltipUiConfig for _T {}
 
-	impl InstantiateContentOn for Tooltip<_T> {
-		fn instantiate_content_on(&self, _: &mut ChildBuilder) {
-			todo!();
-		}
+	impl InsertUiContent for Tooltip<_T> {
+		fn insert_ui_content(&self, _: &mut ChildBuilder) {}
 	}
 
 	#[derive(Component)]
@@ -117,7 +99,7 @@ mod tests {
 	}
 
 	impl DespawnAllTooltips<_UI> for _UIControl {
-		fn despawn_all(&self, uis: &Query<(Entity, &_UI, &mut Style)>, commands: &mut Commands)
+		fn despawn_all(&self, uis: &Query<(Entity, &_UI, &mut Node)>, commands: &mut Commands)
 		where
 			_UI: Component + Sized,
 		{
@@ -128,7 +110,7 @@ mod tests {
 	impl DespawnOutdatedTooltips<_UI, _T> for _UIControl {
 		fn despawn_outdated(
 			&self,
-			uis: &Query<(Entity, &_UI, &mut Style)>,
+			uis: &Query<(Entity, &_UI, &mut Node)>,
 			commands: &mut Commands,
 			outdated_tooltips: RemovedComponents<Tooltip<_T>>,
 		) where
@@ -139,7 +121,7 @@ mod tests {
 	}
 
 	impl UpdateTooltipPosition<_UI> for _UIControl {
-		fn update_position(&self, uis: &mut Query<(Entity, &_UI, &mut Style)>, position: Vec2)
+		fn update_position(&self, uis: &mut Query<(Entity, &_UI, &mut Node)>, position: Vec2)
 		where
 			_UI: Component + Sized,
 		{
@@ -155,7 +137,7 @@ mod tests {
 			tooltip: &Tooltip<_T>,
 			position: Vec2,
 		) where
-			Tooltip<_T>: InstantiateContentOn + GetNode,
+			Tooltip<_T>: InsertUiContent,
 		{
 			self.mock.spawn(commands, tooltip_entity, tooltip, position)
 		}
@@ -166,7 +148,7 @@ mod tests {
 		impl DespawnAllTooltips<_UI> for _UIControl {
 			fn despawn_all<'a, 'b, 'c, 'd, 'e, 'f>(
 				&self,
-				uis: &Query<'a, 'b, (Entity, &'c _UI, &'d  mut Style)>,
+				uis: &Query<'a, 'b, (Entity, &'c _UI, &'d  mut Node)>,
 				commands: & mut Commands<'e, 'f>
 			) where
 				Self: Component + Sized;
@@ -174,7 +156,7 @@ mod tests {
 		impl DespawnOutdatedTooltips<_UI, _T> for _UIControl {
 			fn despawn_outdated<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h>(
 				&self,
-				uis: &Query<'a, 'b, (Entity, &'c  _UI, &'d  mut Style)>,
+				uis: &Query<'a, 'b, (Entity, &'c  _UI, &'d  mut Node)>,
 				commands: &mut Commands<'e, 'f>,
 				outdated_tooltips: RemovedComponents<'g, 'h, Tooltip<_T>>,
 			) where
@@ -183,7 +165,7 @@ mod tests {
 		impl UpdateTooltipPosition<_UI> for _UIControl {
 			fn update_position<'a, 'b, 'c, 'd>(
 				&self,
-				uis: &mut Query<'a, 'b, (Entity, &'c _UI, &'d mut Style)>,
+				uis: &mut Query<'a, 'b, (Entity, &'c _UI, &'d mut Node)>,
 				position: Vec2
 			) where
 				Self: Component + Sized;
@@ -196,7 +178,7 @@ mod tests {
 				tooltip: &Tooltip<_T>,
 				position: Vec2
 			) where
-				Tooltip<_T>: InstantiateContentOn + GetNode;
+				Tooltip<_T>: InsertUiContent;
 		}
 	}
 

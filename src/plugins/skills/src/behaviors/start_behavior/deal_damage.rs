@@ -31,7 +31,10 @@ impl StartDealingDamage {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{ecs::system::RunSystemOnce, prelude::*};
+	use bevy::{
+		ecs::system::{RunSystemError, RunSystemOnce},
+		prelude::*,
+	};
 	use common::test_tools::utils::SingleThreadedApp;
 
 	struct _HandlesDamage;
@@ -70,47 +73,50 @@ mod tests {
 	}
 
 	#[test]
-	fn insert_single_target_damage() {
+	fn insert_single_target_damage() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
 		let start_dealing_damage = StartDealingDamage::SingleTarget(42.);
 		let entity = app
 			.world_mut()
-			.run_system_once(damage(start_dealing_damage));
+			.run_system_once(damage(start_dealing_damage))?;
 
 		assert_eq!(
 			Some(&_Effect(DealDamage::once(42.))),
 			app.world().entity(entity).get::<_Effect>(),
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn insert_piercing_damage() {
+	fn insert_piercing_damage() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
 		let start_dealing_damage = StartDealingDamage::Piercing(42.);
 		let entity = app
 			.world_mut()
-			.run_system_once(damage(start_dealing_damage));
+			.run_system_once(damage(start_dealing_damage))?;
 
 		assert_eq!(
 			Some(&_Effect(DealDamage::once_per_target(42.))),
 			app.world().entity(entity).get::<_Effect>(),
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn insert_over_time_damage() {
+	fn insert_over_time_damage() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
 		let start_dealing_damage = StartDealingDamage::OverTime(42.);
 		let entity = app
 			.world_mut()
-			.run_system_once(damage(start_dealing_damage));
+			.run_system_once(damage(start_dealing_damage))?;
 
 		assert_eq!(
 			Some(&_Effect(DealDamage::once_per_second(42.))),
 			app.world().entity(entity).get::<_Effect>(),
 		);
+		Ok(())
 	}
 }

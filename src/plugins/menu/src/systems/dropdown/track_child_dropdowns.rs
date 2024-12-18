@@ -1,5 +1,5 @@
 use crate::{components::dropdown::DropdownUI, events::DropdownEvent};
-use bevy::prelude::{Entity, EventReader, HierarchyQueryExt, Parent, Query};
+use bevy::prelude::*;
 
 pub(crate) fn dropdown_track_child_dropdowns<TItem: Send + Sync + 'static>(
 	mut events: EventReader<DropdownEvent>,
@@ -39,10 +39,6 @@ fn remove_child<TItem: Send + Sync + 'static>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		prelude::{BuildWorldChildren, Entity},
-	};
 	use common::test_tools::utils::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq)]

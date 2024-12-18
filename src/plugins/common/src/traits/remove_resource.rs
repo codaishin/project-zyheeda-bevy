@@ -14,7 +14,7 @@ impl<T> RemoveResource for T where T: Resource {}
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::ecs::system::RunSystemOnce;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 
 	#[derive(Resource, Default, Debug, PartialEq)]
 	struct _Resource;
@@ -24,12 +24,13 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_resource() {
+	fn remove_resource() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.init_resource::<_Resource>();
 
-		app.world_mut().run_system_once(_Resource::remove);
+		app.world_mut().run_system_once(_Resource::remove)?;
 
 		assert_eq!(None, app.world().get_resource::<_Resource>());
+		Ok(())
 	}
 }

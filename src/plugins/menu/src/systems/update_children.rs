@@ -1,10 +1,7 @@
-use crate::traits::instantiate_content_on::InstantiateContentOn;
-use bevy::{
-	hierarchy::{BuildChildren, DespawnRecursiveExt},
-	prelude::{Changed, Commands, Component, Entity, Query},
-};
+use crate::traits::insert_ui_content::InsertUiContent;
+use bevy::prelude::*;
 
-pub(crate) fn update_children<TComponent: InstantiateContentOn + Component>(
+pub(crate) fn update_children<TComponent: InsertUiContent + Component>(
 	mut commands: Commands,
 	components: Query<(Entity, &TComponent), Changed<TComponent>>,
 ) {
@@ -13,17 +10,13 @@ pub(crate) fn update_children<TComponent: InstantiateContentOn + Component>(
 			continue;
 		};
 		entity.despawn_descendants();
-		entity.with_children(|parent| component.instantiate_content_on(parent));
+		entity.with_children(|parent| component.insert_ui_content(parent));
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		hierarchy::{BuildWorldChildren, ChildBuilder, Parent},
-	};
 	use common::test_tools::utils::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
@@ -32,8 +25,8 @@ mod tests {
 	#[derive(Component)]
 	struct _Component(&'static str);
 
-	impl InstantiateContentOn for _Component {
-		fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
+	impl InsertUiContent for _Component {
+		fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 			parent.spawn(_Child("A"));
 			parent.spawn(_Child("B"));
 			parent.spawn(_Child("C"));

@@ -89,7 +89,7 @@ mod tests {
 		app::{App, Update},
 		asset::{Asset, AssetId, Handle},
 		color::Color,
-		ecs::system::{EntityCommands, IntoSystem, RunSystemOnce},
+		ecs::system::{EntityCommands, IntoSystem, RunSystemError, RunSystemOnce},
 		math::primitives::Sphere,
 		prelude::default,
 	};
@@ -411,7 +411,7 @@ mod tests {
 	}
 
 	#[test]
-	fn add_spawn_after_instantiation_component() {
+	fn add_spawn_after_instantiation_component() -> Result<(), RunSystemError> {
 		struct _Factory;
 
 		impl GetOrCreateAssetFactory<_Assets<Mesh>, Mesh, _Storage<Mesh>, TypeId> for _Factory {
@@ -436,7 +436,7 @@ mod tests {
 		let agent = app.world_mut().spawn(_Agent).id();
 
 		app.update();
-		let with_children = app
+		let after_instantiation = app
 			.world()
 			.entity(agent)
 			.get::<SpawnAfterInstantiation>()
@@ -447,8 +447,9 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut commands: Commands| {
 				let mut entity = commands.entity(agent);
-				entity.with_children(|parent| (with_children.spawn)(parent));
-			});
+				let spawn_on = after_instantiation.spawn.clone();
+				entity.with_children(|parent| spawn_on(parent));
+			})?;
 
 		assert_eq!(
 			vec![&_Child],
@@ -456,6 +457,7 @@ mod tests {
 				.filter_map(|child| child.get::<_Child>())
 				.collect::<Vec<_>>()
 		);
+		Ok(())
 	}
 
 	#[test]

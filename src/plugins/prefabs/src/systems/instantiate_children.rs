@@ -1,5 +1,5 @@
 use crate::components::SpawnAfterInstantiation;
-use bevy::prelude::{BuildChildren, Commands, Entity, Query};
+use bevy::prelude::*;
 
 pub(crate) fn instantiate_children(
 	mut commands: Commands,
@@ -19,7 +19,7 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		prelude::{Component, Parent},
+		prelude::{ChildBuild, Component, Parent},
 	};
 	use common::{test_tools::utils::SingleThreadedApp, traits::prefab::AfterInstantiation};
 

@@ -42,18 +42,15 @@ fn set_label(texts: &mut Query<(&Parent, &mut Text)>, entity: Entity, label: Str
 	let Some((.., mut text)) = texts.iter_mut().find(|(p, ..)| p.get() == entity) else {
 		return;
 	};
+	let Text(text) = text.as_mut();
 
-	if text.sections.is_empty() {
-		text.sections.push(label.into());
-	} else {
-		text.sections[0].value = label;
-	}
+	*text = label;
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::ecs::system::RunSystemOnce;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -102,7 +99,7 @@ mod tests {
 	}
 
 	#[test]
-	fn set_empty() {
+	fn set_empty() -> Result<(), RunSystemError> {
 		let mut app = setup_app([]);
 		let panel = app
 			.world_mut()
@@ -116,21 +113,23 @@ mod tests {
 				}),
 			))
 			.id();
-		let text = app
-			.world_mut()
-			.spawn(TextBundle::from_section("", default()))
-			.set_parent(panel)
-			.id();
+		let text = app.world_mut().spawn(Text::new("")).set_parent(panel).id();
 
 		app.world_mut()
-			.run_system_once(panel_container_states::<_Panel, usize, _Container>);
+			.run_system_once(panel_container_states::<_Panel, usize, _Container>)?;
 
-		let text = app.world().entity(text).get::<Text>().unwrap();
-		assert_eq!("<Empty>", text.sections[0].value);
+		assert_eq!(
+			Some("<Empty>"),
+			app.world()
+				.entity(text)
+				.get::<Text>()
+				.map(|Text(t)| t.as_str())
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn set_filled() {
+	fn set_filled() -> Result<(), RunSystemError> {
 		let mut app = setup_app([(42, Item::named("my item"))]);
 		let panel = app
 			.world_mut()
@@ -144,21 +143,23 @@ mod tests {
 				}),
 			))
 			.id();
-		let text = app
-			.world_mut()
-			.spawn(TextBundle::from_section("", default()))
-			.set_parent(panel)
-			.id();
+		let text = app.world_mut().spawn(Text::new("")).set_parent(panel).id();
 
 		app.world_mut()
-			.run_system_once(panel_container_states::<_Panel, usize, _Container>);
+			.run_system_once(panel_container_states::<_Panel, usize, _Container>)?;
 
-		let text = app.world().entity(text).get::<Text>().unwrap();
-		assert_eq!("my item", text.sections[0].value);
+		assert_eq!(
+			Some("my item"),
+			app.world()
+				.entity(text)
+				.get::<Text>()
+				.map(|Text(t)| t.as_str())
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn set_empty_when_item_cannot_be_retrieved() {
+	fn set_empty_when_item_cannot_be_retrieved() -> Result<(), RunSystemError> {
 		let mut app = setup_app([(42, Item::named("my item"))]);
 		let panel = app
 			.world_mut()
@@ -172,23 +173,25 @@ mod tests {
 				}),
 			))
 			.id();
-		let text = app
-			.world_mut()
-			.spawn(TextBundle::from_section("", default()))
-			.set_parent(panel)
-			.id();
+		let text = app.world_mut().spawn(Text::new("")).set_parent(panel).id();
 		let mut items = app.world_mut().resource_mut::<Assets<Item>>();
 		*items = Assets::default();
 
 		app.world_mut()
-			.run_system_once(panel_container_states::<_Panel, usize, _Container>);
+			.run_system_once(panel_container_states::<_Panel, usize, _Container>)?;
 
-		let text = app.world().entity(text).get::<Text>().unwrap();
-		assert_eq!("<Empty>", text.sections[0].value.as_str());
+		assert_eq!(
+			Some("<Empty>"),
+			app.world()
+				.entity(text)
+				.get::<Text>()
+				.map(|Text(t)| t.as_str())
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn still_set_state_when_no_children() {
+	fn still_set_state_when_no_children() -> Result<(), RunSystemError> {
 		let mut app = setup_app([]);
 		app.world_mut().spawn((
 			KeyedPanel(42_usize),
@@ -198,11 +201,11 @@ mod tests {
 		));
 
 		app.world_mut()
-			.run_system_once(panel_container_states::<_Panel, usize, _Container>);
+			.run_system_once(panel_container_states::<_Panel, usize, _Container>)
 	}
 
 	#[test]
-	fn set_when_text_not_first_child() {
+	fn set_when_text_not_first_child() -> Result<(), RunSystemError> {
 		let mut app = setup_app([(42, Item::named("my item"))]);
 		let panel = app
 			.world_mut()
@@ -217,42 +220,18 @@ mod tests {
 			))
 			.id();
 		app.world_mut().spawn(()).set_parent(panel);
-		let text = app
-			.world_mut()
-			.spawn(TextBundle::from_section("", default()))
-			.set_parent(panel)
-			.id();
+		let text = app.world_mut().spawn(Text::new("")).set_parent(panel).id();
 
 		app.world_mut()
-			.run_system_once(panel_container_states::<_Panel, usize, _Container>);
+			.run_system_once(panel_container_states::<_Panel, usize, _Container>)?;
 
-		let text = app.world().entity(text).get::<Text>().unwrap();
-		assert_eq!("my item", text.sections[0].value);
-	}
-
-	#[test]
-	fn add_section_when_text_has_no_sections() {
-		let mut app = setup_app([(42, Item::named("my item"))]);
-		let panel = app
-			.world_mut()
-			.spawn((
-				KeyedPanel(42_usize),
-				_Panel::new().with_mock(|mock| {
-					mock.expect_set().return_const(());
-				}),
-			))
-			.id();
-		app.world_mut().spawn(()).set_parent(panel);
-		let text = app
-			.world_mut()
-			.spawn(Text::default())
-			.set_parent(panel)
-			.id();
-
-		app.world_mut()
-			.run_system_once(panel_container_states::<_Panel, usize, _Container>);
-
-		let text = app.world().entity(text).get::<Text>().unwrap();
-		assert_eq!("my item", text.sections[0].value);
+		assert_eq!(
+			Some("my item"),
+			app.world()
+				.entity(text)
+				.get::<Text>()
+				.map(|Text(t)| t.as_str())
+		);
+		Ok(())
 	}
 }

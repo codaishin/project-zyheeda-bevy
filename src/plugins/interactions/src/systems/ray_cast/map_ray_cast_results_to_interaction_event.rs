@@ -1,6 +1,6 @@
 use super::execute_ray_caster::RayCastResult;
 use crate::events::{Collision, InteractionEvent, Ray};
-use bevy::prelude::{Entity, In, Query};
+use bevy::prelude::*;
 use common::components::ColliderRoot;
 use std::collections::HashMap;
 
@@ -38,12 +38,7 @@ fn get_root(entity: Entity, roots: &Query<&ColliderRoot>) -> ColliderRoot {
 mod tests {
 	use super::*;
 	use crate::events::RayCastInfo;
-	use bevy::{
-		app::App,
-		ecs::system::RunSystemOnce,
-		math::{Ray3d, Vec3},
-		prelude::Entity,
-	};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::traits::cast_ray::TimeOfImpact;
 
 	fn setup() -> App {
@@ -51,7 +46,7 @@ mod tests {
 	}
 
 	#[test]
-	fn build_events() {
+	fn build_events() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
 		let ray_casts = HashMap::from([(
@@ -63,20 +58,26 @@ mod tests {
 						(Entity::from_raw(11), TimeOfImpact(11.)),
 					],
 					max_toi: TimeOfImpact(100.),
-					ray: Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(5., 6., 7.)),
+					ray: Ray3d::new(
+						Vec3::new(1., 2., 3.),
+						Dir3::new_unchecked(Vec3::new(5., 6., 7.).normalize()),
+					),
 				},
 			},
 		)]);
 
 		let events = app
 			.world_mut()
-			.run_system_once_with(ray_casts, map_ray_cast_result_to_interaction_events);
+			.run_system_once_with(ray_casts, map_ray_cast_result_to_interaction_events)?;
 
 		let interaction = InteractionEvent::of(ColliderRoot(Entity::from_raw(5)));
 		assert_eq!(
 			vec![(
 				interaction.ray(
-					Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(5., 6., 7.)),
+					Ray3d::new(
+						Vec3::new(1., 2., 3.),
+						Dir3::new_unchecked(Vec3::new(5., 6., 7.).normalize())
+					),
 					TimeOfImpact(100.)
 				),
 				vec![
@@ -86,10 +87,12 @@ mod tests {
 			)],
 			events
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn send_event_for_each_target_collision_using_collider_root_reference() {
+	fn send_event_for_each_target_collision_using_collider_root_reference(
+	) -> Result<(), RunSystemError> {
 		let mut app = setup();
 
 		let collider_a = app
@@ -109,20 +112,26 @@ mod tests {
 						(collider_b, TimeOfImpact(11.)),
 					],
 					max_toi: TimeOfImpact(100.),
-					ray: Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(5., 6., 7.)),
+					ray: Ray3d::new(
+						Vec3::new(1., 2., 3.),
+						Dir3::new_unchecked(Vec3::new(5., 6., 7.).normalize()),
+					),
 				},
 			},
 		)]);
 
 		let events = app
 			.world_mut()
-			.run_system_once_with(ray_casts, map_ray_cast_result_to_interaction_events);
+			.run_system_once_with(ray_casts, map_ray_cast_result_to_interaction_events)?;
 
 		let interaction = InteractionEvent::of(ColliderRoot(Entity::from_raw(5)));
 		assert_eq!(
 			vec![(
 				interaction.ray(
-					Ray3d::new(Vec3::new(1., 2., 3.), Vec3::new(5., 6., 7.)),
+					Ray3d::new(
+						Vec3::new(1., 2., 3.),
+						Dir3::new_unchecked(Vec3::new(5., 6., 7.).normalize())
+					),
 					TimeOfImpact(100.)
 				),
 				vec![
@@ -132,5 +141,6 @@ mod tests {
 			)],
 			events
 		);
+		Ok(())
 	}
 }

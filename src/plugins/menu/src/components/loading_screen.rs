@@ -1,12 +1,48 @@
-use crate::traits::{get_node::GetNode, instantiate_content_on::InstantiateContentOn, LoadUi};
+use crate::traits::{insert_ui_content::InsertUiContent, LoadUi};
 use bevy::prelude::*;
 use common::traits::handles_load_tracking::{AssetsProgress, DependenciesProgress, Progress};
 use std::marker::PhantomData;
 
 #[derive(Component)]
+#[require(
+	Node(full_screen),
+	BackgroundColor(black),
+	ZIndex(ZIndex::max),
+	GlobalZIndex(GlobalZIndex::max)
+)]
 pub(crate) struct LoadingScreen<T>(PhantomData<T>)
 where
 	T: Progress;
+
+fn full_screen() -> Node {
+	Node {
+		width: Val::Vw(100.),
+		height: Val::Vh(100.),
+		flex_direction: FlexDirection::ColumnReverse,
+		padding: UiRect::bottom(Val::Px(100.)).with_left(Val::Px(50.)),
+		..default()
+	}
+}
+
+fn black() -> BackgroundColor {
+	BackgroundColor(Color::BLACK)
+}
+
+trait Max {
+	fn max() -> Self;
+}
+
+impl Max for ZIndex {
+	fn max() -> Self {
+		Self(i32::MAX)
+	}
+}
+
+impl Max for GlobalZIndex {
+	fn max() -> Self {
+		Self(i32::MAX)
+	}
+}
 
 impl<T> LoadUi<AssetServer> for LoadingScreen<T>
 where
@@ -17,31 +53,11 @@ where
 	}
 }
 
-impl<T> GetNode for LoadingScreen<T>
-where
-	T: Progress,
-{
-	fn node(&self) -> NodeBundle {
-		NodeBundle {
-			style: Style {
-				width: Val::Vw(100.),
-				height: Val::Vh(100.),
-				flex_direction: FlexDirection::ColumnReverse,
-				padding: UiRect::bottom(Val::Px(100.)).with_left(Val::Px(50.)),
-				..default()
-			},
-			background_color: Color::BLACK.into(),
-			z_index: ZIndex::Global(i32::MAX),
-			..default()
-		}
-	}
-}
-
-impl InstantiateContentOn for LoadingScreen<AssetsProgress> {
-	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
-		parent.spawn(TextBundle::from_section(
-			"Loading Assets ...",
-			TextStyle {
+impl InsertUiContent for LoadingScreen<AssetsProgress> {
+	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
+		parent.spawn((
+			Text::new("Loading Assets ..."),
+			TextFont {
 				font_size: 32.,
 				..default()
 			},
@@ -49,11 +65,11 @@ impl InstantiateContentOn for LoadingScreen<AssetsProgress> {
 	}
 }
 
-impl InstantiateContentOn for LoadingScreen<DependenciesProgress> {
-	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
-		parent.spawn(TextBundle::from_section(
-			"Resolving Dependencies ...",
-			TextStyle {
+impl InsertUiContent for LoadingScreen<DependenciesProgress> {
+	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
+		parent.spawn((
+			Text::new("Resolving Dependencies ..."),
+			TextFont {
 				font_size: 32.,
 				..default()
 			},

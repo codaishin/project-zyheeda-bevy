@@ -1,30 +1,13 @@
 pub mod utils {
 	use bevy::{
 		app::App,
-		ecs::{
-			component::ComponentId,
-			schedule::{ExecutorKind, ScheduleLabel},
-		},
+		ecs::schedule::{ExecutorKind, ScheduleLabel},
 		prelude::{Component, *},
-		render::view::{InheritedVisibility, ViewVisibility, Visibility},
-		text::TextLayoutInfo,
 		time::Time,
-		transform::components::{GlobalTransform, Transform},
-		ui::{
-			node_bundles::NodeBundle,
-			widget::TextFlags,
-			BackgroundColor,
-			BorderColor,
-			ContentSize,
-			FocusPolicy,
-			Node,
-			Style,
-			ZIndex,
-		},
 	};
-	use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider, Velocity};
+	use bevy_rapier3d::prelude::Velocity;
 	use std::{
-		any::{type_name, Any, TypeId},
+		any::{Any, TypeId},
 		marker::PhantomData,
 		time::Duration,
 	};
@@ -180,164 +163,6 @@ pub mod utils {
 			}
 		}
 	}
-
-	type ComponentName = &'static str;
-
-	pub trait ComponentNameAndId {
-		fn name_and_id(app: &App) -> (ComponentName, Option<ComponentId>);
-	}
-
-	impl<TComponent: Component> ComponentNameAndId for TComponent {
-		fn name_and_id(app: &App) -> (ComponentName, Option<ComponentId>) {
-			(
-				type_name::<TComponent>(),
-				app.world().component_id::<TComponent>(),
-			)
-		}
-	}
-
-	pub trait BundleIds {
-		fn bundle_ids(app: &App) -> Vec<(ComponentName, Option<ComponentId>)>;
-	}
-
-	impl BundleIds for NodeBundle {
-		fn bundle_ids(app: &App) -> Vec<(ComponentName, Option<ComponentId>)> {
-			vec![
-				Node::name_and_id(app),
-				Style::name_and_id(app),
-				BackgroundColor::name_and_id(app),
-				BorderColor::name_and_id(app),
-				FocusPolicy::name_and_id(app),
-				Transform::name_and_id(app),
-				GlobalTransform::name_and_id(app),
-				Visibility::name_and_id(app),
-				InheritedVisibility::name_and_id(app),
-				ViewVisibility::name_and_id(app),
-				ZIndex::name_and_id(app),
-			]
-		}
-	}
-
-	impl BundleIds for SpatialBundle {
-		fn bundle_ids(app: &App) -> Vec<(ComponentName, Option<ComponentId>)> {
-			vec![
-				Visibility::name_and_id(app),
-				InheritedVisibility::name_and_id(app),
-				ViewVisibility::name_and_id(app),
-				Transform::name_and_id(app),
-				GlobalTransform::name_and_id(app),
-			]
-		}
-	}
-
-	impl BundleIds for TextBundle {
-		fn bundle_ids(app: &App) -> Vec<(ComponentName, Option<ComponentId>)> {
-			vec![
-				Node::name_and_id(app),
-				Style::name_and_id(app),
-				Text::name_and_id(app),
-				TextLayoutInfo::name_and_id(app),
-				TextFlags::name_and_id(app),
-				ContentSize::name_and_id(app),
-				FocusPolicy::name_and_id(app),
-				Transform::name_and_id(app),
-				GlobalTransform::name_and_id(app),
-				Visibility::name_and_id(app),
-				InheritedVisibility::name_and_id(app),
-				ViewVisibility::name_and_id(app),
-				ZIndex::name_and_id(app),
-				BackgroundColor::name_and_id(app),
-			]
-		}
-	}
-
-	pub fn get_ids<T: BundleIds>(app: &App) -> Vec<(ComponentName, Option<ComponentId>)> {
-		T::bundle_ids(app)
-	}
-
-	impl BundleIds for AssetModelBundle {
-		fn bundle_ids(app: &App) -> Vec<(ComponentName, Option<ComponentId>)> {
-			vec![
-				AssetModel::name_and_id(app),
-				Visibility::name_and_id(app),
-				InheritedVisibility::name_and_id(app),
-				ViewVisibility::name_and_id(app),
-				Transform::name_and_id(app),
-				GlobalTransform::name_and_id(app),
-			]
-		}
-	}
-
-	impl BundleIds for ColliderTransformBundle {
-		fn bundle_ids(app: &App) -> Vec<(ComponentName, Option<ComponentId>)> {
-			vec![
-				Collider::name_and_id(app),
-				Transform::name_and_id(app),
-				GlobalTransform::name_and_id(app),
-				ActiveEvents::name_and_id(app),
-				ActiveCollisionTypes::name_and_id(app),
-			]
-		}
-	}
-
-	#[macro_export]
-	macro_rules! assert_bundle {
-		($bundle:ty, $app:expr, $entity:expr) => {
-			let names_and_ids = $crate::test_tools::utils::get_ids::<$bundle>($app);
-			let missing = names_and_ids
-				.iter()
-				.filter(|(_, id)| id.is_none() || !$entity.contains_id(id.unwrap()))
-				.map(|(name, ..)| name)
-				.collect::<Vec<_>>();
-
-			if !missing.is_empty() {
-				panic!(
-					"Entity {:?}: Bundle <{}> incomplete with missing: {:#?}",
-					$entity.id(),
-					std::any::type_name::<$bundle>(),
-					missing
-				);
-			}
-		};
-
-		($bundle:ty, $app:expr, $entity:expr, $assert:expr) => {{
-			assert_bundle!($bundle, $app, $entity);
-
-			struct With<TComponent: bevy::ecs::component::Component, TAssert: Fn(&TComponent)>(
-				TAssert,
-				std::marker::PhantomData<TComponent>
-			);
-
-			impl <TComponent: bevy::ecs::component::Component, TAssert: Fn(&TComponent)> With<TComponent, TAssert> {
-				fn assert(assert_fn: TAssert) -> Self {
-					Self(assert_fn, std::marker::PhantomData)
-				}
-
-				fn execute(&self, entity: bevy::ecs::world::EntityRef) {
-					let component = entity.get::<TComponent>().unwrap_or_else(|| panic!(
-						"Entity {:?} does not contain a component of type <{}>",
-						entity.id(),
-						std::any::type_name::<TComponent>(),
-					));
-					(self.0)(component);
-				}
-			}
-
-			$assert.execute($entity);
-		}};
-
-		($bundle:ty, $app:expr,$entity:expr, $assert:expr, $($rest:expr),+) => {{
-			assert_bundle!($bundle, $app, $entity, $assert);
-			assert_bundle!($bundle, $app, $entity, $($rest),+);
-		}};
-	}
-
-	pub use assert_bundle;
-
-	use crate::{
-		bundles::{AssetModelBundle, ColliderTransformBundle},
-		components::AssetModel,
-	};
 
 	pub fn new_handle<TAsset: Asset>() -> Handle<TAsset> {
 		Handle::Weak(AssetId::Uuid {

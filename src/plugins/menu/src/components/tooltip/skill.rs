@@ -1,39 +1,31 @@
-use super::Tooltip;
-use crate::traits::{
-	colors::DEFAULT_PANEL_COLORS,
-	get_node::GetNode,
-	instantiate_content_on::InstantiateContentOn,
-};
-use bevy::{
-	prelude::{default, ChildBuilder, NodeBundle, TextBundle},
-	text::TextStyle,
-	ui::{Style, UiRect, Val},
-};
+use super::{Tooltip, TooltipUiConfig};
+use crate::traits::{colors::DEFAULT_PANEL_COLORS, insert_ui_content::InsertUiContent};
+use bevy::prelude::*;
 use skills::skills::Skill;
 
-impl GetNode for Tooltip<Skill> {
-	fn node(&self) -> NodeBundle {
-		NodeBundle {
-			style: Style {
-				top: Val::Px(-25.0),
-				padding: UiRect::all(Val::Px(5.0)),
-				..default()
-			},
-			background_color: DEFAULT_PANEL_COLORS.text.into(),
+impl TooltipUiConfig for Skill {
+	fn node() -> Node {
+		Node {
+			top: Val::Px(-25.0),
+			padding: UiRect::all(Val::Px(5.0)),
 			..default()
 		}
 	}
+
+	fn background_color() -> BackgroundColor {
+		BackgroundColor(DEFAULT_PANEL_COLORS.text)
+	}
 }
 
-impl InstantiateContentOn for Tooltip<Skill> {
-	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
-		parent.spawn(TextBundle::from_section(
-			self.0.name.clone(),
-			TextStyle {
+impl InsertUiContent for Tooltip<Skill> {
+	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
+		parent.spawn((
+			Text::new(&self.0.name),
+			TextFont {
 				font_size: 20.0,
-				color: DEFAULT_PANEL_COLORS.filled,
 				..default()
 			},
+			TextColor(DEFAULT_PANEL_COLORS.filled),
 		));
 	}
 }

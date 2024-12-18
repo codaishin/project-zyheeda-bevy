@@ -31,13 +31,10 @@ impl Prefab<()> for EffectShader<DealDamage> {
 		_: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		entity.with_children(|parent| {
-			parent.spawn(PointLightBundle {
-				point_light: PointLight {
-					color: Color::from(WHITE),
-					intensity: 8000.,
-					shadows_enabled: true,
-					..default()
-				},
+			parent.spawn(PointLight {
+				color: Color::from(WHITE),
+				intensity: 8000.,
+				shadows_enabled: true,
 				..default()
 			});
 		});

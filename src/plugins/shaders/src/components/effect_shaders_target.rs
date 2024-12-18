@@ -18,19 +18,19 @@ pub struct EffectShadersTarget {
 	pub(crate) shaders: HashSet<EffectShaderHandle>,
 }
 
-impl Track<Handle<Mesh>> for EffectShadersTarget {
-	fn track(&mut self, entity: Entity, _: &Handle<Mesh>) {
+impl Track<Mesh3d> for EffectShadersTarget {
+	fn track(&mut self, entity: Entity, _: &Mesh3d) {
 		self.meshes.insert(entity);
 	}
 }
 
-impl IsTracking<Handle<Mesh>> for EffectShadersTarget {
+impl IsTracking<Mesh3d> for EffectShadersTarget {
 	fn is_tracking(&self, entity: &Entity) -> bool {
 		self.meshes.contains(entity)
 	}
 }
 
-impl Untrack<Handle<Mesh>> for EffectShadersTarget {
+impl Untrack<Mesh3d> for EffectShadersTarget {
 	fn untrack(&mut self, entity: &Entity) {
 		self.meshes.remove(entity);
 	}
@@ -54,13 +54,16 @@ impl EffectShaderHandle {
 		handle: &UntypedHandle,
 	) {
 		entity.insert((
-			handle.clone().typed::<TMaterial>(),
-			Protected::<Handle<TMaterial>>::default(),
+			MeshMaterial3d(handle.clone().typed::<TMaterial>()),
+			Protected::<MeshMaterial3d<TMaterial>>::default(),
 		));
 	}
 
 	fn remove_protected_handle<TMaterial: Asset + Material>(entity: &mut EntityCommands) {
-		entity.remove::<(Handle<TMaterial>, Protected<Handle<TMaterial>>)>();
+		entity.remove::<(
+			MeshMaterial3d<TMaterial>,
+			Protected<MeshMaterial3d<TMaterial>>,
+		)>();
 	}
 }
 
@@ -92,7 +95,10 @@ impl<TMaterial: Asset + Material> From<Handle<TMaterial>> for EffectShaderHandle
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{ecs::system::RunSystemOnce, render::render_resource::AsBindGroup};
+	use bevy::{
+		ecs::system::{RunSystemError, RunSystemOnce},
+		render::render_resource::AsBindGroup,
+	};
 	use common::{components::Protected, test_tools::utils::new_handle};
 
 	#[test]
@@ -100,7 +106,7 @@ mod tests {
 		let mut shader = EffectShadersTarget::default();
 		let entity = Entity::from_raw(42);
 
-		shader.track(entity, &new_handle());
+		shader.track(entity, &Mesh3d(new_handle()));
 
 		assert_eq!(HashSet::from([entity]), shader.meshes);
 	}
@@ -111,7 +117,7 @@ mod tests {
 		let entities = [Entity::from_raw(11), Entity::from_raw(66)];
 
 		for entity in &entities {
-			shader.track(*entity, &new_handle());
+			shader.track(*entity, &Mesh3d(new_handle()));
 		}
 
 		assert_eq!(HashSet::from(entities), shader.meshes);
@@ -145,7 +151,7 @@ mod tests {
 		);
 	}
 
-	#[derive(Asset, TypePath, Clone, AsBindGroup)]
+	#[derive(Asset, TypePath, Clone, AsBindGroup, Debug, PartialEq)]
 	struct _Asset {}
 
 	impl Material for _Asset {}
@@ -188,61 +194,64 @@ mod tests {
 	}
 
 	#[test]
-	fn insert_effect_shader() {
+	fn insert_effect_shader() -> Result<(), RunSystemError> {
 		let mut app = App::new();
 		let handle = new_handle::<_Asset>();
 		let shader = EffectShaderHandle::from(handle.clone());
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once_with(shader, insert_shader_system);
+			.run_system_once_with(shader, insert_shader_system)?;
 
 		assert_eq!(
-			Some(&handle),
-			app.world().entity(entity).get::<Handle<_Asset>>()
+			Some(&MeshMaterial3d(handle)),
+			app.world().entity(entity).get::<MeshMaterial3d<_Asset>>()
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn insert_protected_effect_shader() {
+	fn insert_protected_effect_shader() -> Result<(), RunSystemError> {
 		let mut app = App::new();
 		let shader = EffectShaderHandle::from(new_handle::<_Asset>());
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once_with(shader, insert_shader_system);
+			.run_system_once_with(shader, insert_shader_system)?;
 
 		assert_eq!(
-			Some(&Protected::<Handle<_Asset>>::default()),
+			Some(&Protected::<MeshMaterial3d<_Asset>>::default()),
 			app.world()
 				.entity(entity)
-				.get::<Protected<Handle<_Asset>>>()
+				.get::<Protected<MeshMaterial3d<_Asset>>>()
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn remove_inserted_components() {
+	fn remove_inserted_components() -> Result<(), RunSystemError> {
 		let mut app = App::new();
 		let shader = EffectShaderHandle::from(new_handle::<_Asset>());
 		let entity = app
 			.world_mut()
 			.spawn((
-				new_handle::<_Asset>(),
-				Protected::<Handle<_Asset>>::default(),
+				MeshMaterial3d(new_handle::<_Asset>()),
+				Protected::<MeshMaterial3d<_Asset>>::default(),
 			))
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(shader, remove_shader_system);
+			.run_system_once_with(shader, remove_shader_system)?;
 
 		assert_eq!(
 			(None, None),
 			(
-				app.world().entity(entity).get::<Handle<_Asset>>(),
+				app.world().entity(entity).get::<MeshMaterial3d<_Asset>>(),
 				app.world()
 					.entity(entity)
-					.get::<Protected<Handle<_Asset>>>(),
+					.get::<Protected<MeshMaterial3d<_Asset>>>(),
 			)
 		);
+		Ok(())
 	}
 }

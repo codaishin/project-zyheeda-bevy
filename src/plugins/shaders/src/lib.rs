@@ -84,15 +84,17 @@ where
 		.add_systems(
 			PostUpdate,
 			(
-				EffectShadersTarget::remove_from_self_and_children::<Handle<StandardMaterial>>,
-				EffectShadersTarget::track_in_self_and_children::<Handle<Mesh>>().system(),
+				EffectShadersTarget::remove_from_self_and_children::<
+					MeshMaterial3d<StandardMaterial>,
+				>,
+				EffectShadersTarget::track_in_self_and_children::<Mesh3d>().system(),
 				instantiate_effect_shaders,
 			),
 		);
 	}
 
 	fn build_for_essence_material(app: &mut App) {
-		type InsertOnMeshWithEssence = InsertOn<Essence, With<Handle<Mesh>>, Changed<Essence>>;
+		type InsertOnMeshWithEssence = InsertOn<Essence, With<Mesh3d>, Changed<Essence>>;
 		let configure_material = Configure::Apply(MaterialOverride::configure);
 
 		app.register_shader::<EssenceMaterial>().add_systems(

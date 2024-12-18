@@ -94,7 +94,10 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{ecs::system::RunSystemOnce, state::app::StatesPlugin};
+	use bevy::{
+		ecs::system::{RunSystemError, RunSystemOnce},
+		state::app::StatesPlugin,
+	};
 	use common::test_tools::utils::SingleThreadedApp;
 
 	#[derive(States, Default, Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -116,13 +119,13 @@ mod tests {
 	}
 
 	#[test]
-	fn track_load_status() {
+	fn track_load_status() -> Result<(), RunSystemError> {
 		let mut app = setup(Some(Track::<_Progress>::default()));
 
 		app.world_mut()
-			.run_system_once_with(Loaded(true), Track::<_Progress>::track::<f32>);
+			.run_system_once_with(Loaded(true), Track::<_Progress>::track::<f32>)?;
 		app.world_mut()
-			.run_system_once_with(Loaded(false), Track::<_Progress>::track::<u32>);
+			.run_system_once_with(Loaded(false), Track::<_Progress>::track::<u32>)?;
 
 		assert_eq!(
 			&Track::<_Progress>::new([
@@ -143,10 +146,11 @@ mod tests {
 			]),
 			app.world().resource::<Track<_Progress>>(),
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn set_state_when_all_loaded() {
+	fn set_state_when_all_loaded() -> Result<(), RunSystemError> {
 		let mut app = setup(Some(Track::new([
 			(
 				TypeId::of::<f32>(),
@@ -165,7 +169,7 @@ mod tests {
 		])));
 
 		app.world_mut()
-			.run_system_once(Track::<_Progress>::when_all_done_set(_State));
+			.run_system_once(Track::<_Progress>::when_all_done_set(_State))?;
 
 		let state = app.world().resource::<NextState<_State>>();
 		assert!(
@@ -174,10 +178,11 @@ mod tests {
 			NextState::Pending(_State),
 			state,
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn do_not_set_state_when_not_all_loaded() {
+	fn do_not_set_state_when_not_all_loaded() -> Result<(), RunSystemError> {
 		let mut app = setup(Some(Track::<_Progress>::new([
 			(
 				TypeId::of::<f32>(),
@@ -196,7 +201,7 @@ mod tests {
 		])));
 
 		app.world_mut()
-			.run_system_once(Track::<_Progress>::when_all_done_set(_State));
+			.run_system_once(Track::<_Progress>::when_all_done_set(_State))?;
 
 		let state = app.world().resource::<NextState<_State>>();
 		assert!(
@@ -205,13 +210,14 @@ mod tests {
 			NextState::<_State>::Unchanged,
 			state,
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn no_panic_when_tracker_does_not_exist() {
+	fn no_panic_when_tracker_does_not_exist() -> Result<(), RunSystemError> {
 		let mut app = setup(None);
 
 		app.world_mut()
-			.run_system_once(Track::<_Progress>::when_all_done_set(_State));
+			.run_system_once(Track::<_Progress>::when_all_done_set(_State))
 	}
 }

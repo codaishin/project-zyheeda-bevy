@@ -65,12 +65,12 @@ mod tests {
 	};
 	use std::collections::HashSet;
 
-	#[derive(Asset, TypePath, Clone, AsBindGroup, PartialEq, Eq, Hash)]
+	#[derive(Asset, TypePath, Clone, AsBindGroup, PartialEq, Eq, Hash, Debug)]
 	struct _Shader1 {}
 
 	impl Material for _Shader1 {}
 
-	#[derive(Asset, TypePath, Clone, AsBindGroup, PartialEq, Eq, Hash)]
+	#[derive(Asset, TypePath, Clone, AsBindGroup, PartialEq, Eq, Hash, Debug)]
 	struct _Shader2 {}
 
 	impl Material for _Shader2 {}
@@ -98,14 +98,16 @@ mod tests {
 
 		assert_eq!(
 			(
-				Some(&handle),
-				Some(&Protected::<Handle<_Shader1>>::default())
+				Some(&MeshMaterial3d(handle)),
+				Some(&Protected::<MeshMaterial3d<_Shader1>>::default())
 			),
 			(
-				app.world().entity(mesh_entity).get::<Handle<_Shader1>>(),
 				app.world()
 					.entity(mesh_entity)
-					.get::<Protected<Handle<_Shader1>>>()
+					.get::<MeshMaterial3d<_Shader1>>(),
+				app.world()
+					.entity(mesh_entity)
+					.get::<Protected<MeshMaterial3d<_Shader1>>>()
 			)
 		)
 	}
@@ -132,25 +134,31 @@ mod tests {
 
 		assert_eq!(
 			(
-				(Some(&shader1), Some(&shader2)),
-				(Some(&shader1), Some(&shader2)),
+				(
+					Some(&MeshMaterial3d(shader1.clone())),
+					Some(&MeshMaterial3d(shader2.clone()))
+				),
+				(
+					Some(&MeshMaterial3d(shader1)),
+					Some(&MeshMaterial3d(shader2))
+				),
 			),
 			(
 				(
 					app.world()
 						.entity(mesh_entities[0])
-						.get::<Handle<_Shader1>>(),
+						.get::<MeshMaterial3d<_Shader1>>(),
 					app.world()
 						.entity(mesh_entities[0])
-						.get::<Handle<_Shader2>>(),
+						.get::<MeshMaterial3d<_Shader2>>(),
 				),
 				(
 					app.world()
 						.entity(mesh_entities[1])
-						.get::<Handle<_Shader1>>(),
+						.get::<MeshMaterial3d<_Shader1>>(),
 					app.world()
 						.entity(mesh_entities[1])
-						.get::<Handle<_Shader2>>(),
+						.get::<MeshMaterial3d<_Shader2>>(),
 				)
 			)
 		)
@@ -170,13 +178,15 @@ mod tests {
 
 		app.world_mut()
 			.entity_mut(mesh_entity)
-			.remove::<Handle<_Shader1>>();
+			.remove::<MeshMaterial3d<_Shader1>>();
 
 		app.update();
 
 		assert_eq!(
 			None,
-			app.world().entity(mesh_entity).get::<Handle<_Shader1>>(),
+			app.world()
+				.entity(mesh_entity)
+				.get::<MeshMaterial3d<_Shader1>>(),
 		)
 	}
 
@@ -203,10 +213,14 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(None, Some(&shader2)),
+			(None, Some(&MeshMaterial3d(shader2))),
 			(
-				app.world().entity(mesh_entity).get::<Handle<_Shader1>>(),
-				app.world().entity(mesh_entity).get::<Handle<_Shader2>>(),
+				app.world()
+					.entity(mesh_entity)
+					.get::<MeshMaterial3d<_Shader1>>(),
+				app.world()
+					.entity(mesh_entity)
+					.get::<MeshMaterial3d<_Shader2>>(),
 			)
 		);
 	}

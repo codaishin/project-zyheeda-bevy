@@ -1,5 +1,5 @@
 use crate::folder_asset_loader::{LoadError, ReadError};
-use bevy::asset::{io::Reader, Asset, AssetLoader, AsyncReadExt, LoadContext};
+use bevy::asset::{io::Reader, Asset, AssetLoader, LoadContext};
 use common::traits::register_custom_assets::{AssetFileExtensions, LoadFrom};
 use serde::Deserialize;
 use std::{marker::PhantomData, str::from_utf8};
@@ -10,7 +10,7 @@ pub(crate) struct CustomAssetLoader<TAsset, TDto> {
 
 impl<TAsset, TDto> CustomAssetLoader<TAsset, TDto> {
 	async fn read<'a>(
-		reader: &'a mut Reader<'_>,
+		reader: &mut dyn Reader,
 		buffer: &'a mut Vec<u8>,
 	) -> Result<&'a str, ReadError> {
 		reader.read_to_end(buffer).await.map_err(ReadError::IO)?;
@@ -39,11 +39,11 @@ where
 		TDto::asset_file_extensions()
 	}
 
-	async fn load<'a>(
-		&'a self,
-		reader: &'a mut Reader<'_>,
-		_: &'a Self::Settings,
-		context: &'a mut LoadContext<'_>,
+	async fn load(
+		&self,
+		reader: &mut dyn Reader,
+		_: &Self::Settings,
+		context: &mut LoadContext<'_>,
 	) -> Result<Self::Asset, Self::Error> {
 		let buffer = &mut vec![];
 

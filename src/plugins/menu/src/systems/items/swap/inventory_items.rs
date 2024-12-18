@@ -41,7 +41,7 @@ fn fill_to(inventory: &mut Vec<Option<Handle<Item>>>, index: usize) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::ecs::system::RunSystemOnce;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::test_tools::utils::new_handle;
 
 	fn setup() -> App {
@@ -49,7 +49,7 @@ mod tests {
 	}
 
 	#[test]
-	fn swap_items() {
+	fn swap_items() -> Result<(), RunSystemError> {
 		let item_a = new_handle();
 		let item_b = new_handle();
 		let mut app = setup();
@@ -61,16 +61,17 @@ mod tests {
 			))
 			.id();
 
-		app.world_mut().run_system_once(swap_inventory_items);
+		app.world_mut().run_system_once(swap_inventory_items)?;
 
 		assert_eq!(
 			Some(&Inventory::new([Some(item_b), None, Some(item_a)])),
 			app.world().entity(agent).get::<Inventory>()
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn swap_items_out_or_range() {
+	fn swap_items_out_or_range() -> Result<(), RunSystemError> {
 		let item = new_handle();
 		let mut app = setup();
 		let agent = app
@@ -81,16 +82,17 @@ mod tests {
 			))
 			.id();
 
-		app.world_mut().run_system_once(swap_inventory_items);
+		app.world_mut().run_system_once(swap_inventory_items)?;
 
 		assert_eq!(
 			Some(&Inventory::new([None, None, Some(item)])),
 			app.world().entity(agent).get::<Inventory>()
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn swap_items_index_and_len_are_same() {
+	fn swap_items_index_and_len_are_same() -> Result<(), RunSystemError> {
 		let item = new_handle();
 		let mut app = setup();
 		let agent = app
@@ -101,16 +103,17 @@ mod tests {
 			))
 			.id();
 
-		app.world_mut().run_system_once(swap_inventory_items);
+		app.world_mut().run_system_once(swap_inventory_items)?;
 
 		assert_eq!(
 			Some(&Inventory::new([None, Some(item)])),
 			app.world().entity(agent).get::<Inventory>()
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn remove_swap_collection() {
+	fn remove_swap_collection() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
@@ -120,10 +123,11 @@ mod tests {
 			))
 			.id();
 
-		app.world_mut().run_system_once(swap_inventory_items);
+		app.world_mut().run_system_once(swap_inventory_items)?;
 
 		let agent = app.world().entity(agent);
 
 		assert!(!agent.contains::<Collection<Swap<InventoryKey, InventoryKey>>>());
+		Ok(())
 	}
 }

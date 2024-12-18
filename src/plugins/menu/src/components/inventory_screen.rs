@@ -1,30 +1,9 @@
 use super::{inventory_panel::InventoryPanel, KeyedPanel};
 use crate::{
 	tools::PanelState,
-	traits::{
-		colors::HasPanelColors,
-		get_node::GetNode,
-		instantiate_content_on::InstantiateContentOn,
-		LoadUi,
-	},
+	traits::{colors::HasPanelColors, insert_ui_content::InsertUiContent, LoadUi},
 };
-use bevy::{
-	asset::AssetServer,
-	color::Color,
-	hierarchy::{BuildChildren, ChildBuilder},
-	prelude::Component,
-	text::TextStyle,
-	ui::{
-		node_bundles::{ButtonBundle, NodeBundle, TextBundle},
-		AlignItems,
-		FlexDirection,
-		JustifyContent,
-		Style,
-		UiRect,
-		Val,
-	},
-	utils::default,
-};
+use bevy::prelude::*;
 use common::traits::{
 	get_ui_text::{English, GetUiText, UIText},
 	iteration::{IterFinite, IterInfinite},
@@ -32,7 +11,22 @@ use common::traits::{
 use skills::{inventory_key::InventoryKey, slot_key::SlotKey};
 
 #[derive(Component)]
+#[require(Node(full_screen), BackgroundColor(gray))]
 pub struct InventoryScreen;
+
+fn full_screen() -> Node {
+	Node {
+		width: Val::Vw(100.0),
+		height: Val::Vh(100.0),
+		align_items: AlignItems::Center,
+		justify_content: JustifyContent::Center,
+		..default()
+	}
+}
+
+fn gray() -> BackgroundColor {
+	BackgroundColor(Color::srgba(0.5, 0.5, 0.5, 0.5))
+}
 
 impl LoadUi<AssetServer> for InventoryScreen {
 	fn load_ui(_: &mut AssetServer) -> Self {
@@ -40,31 +34,12 @@ impl LoadUi<AssetServer> for InventoryScreen {
 	}
 }
 
-impl GetNode for InventoryScreen {
-	fn node(&self) -> NodeBundle {
-		NodeBundle {
-			style: Style {
-				width: Val::Vw(100.0),
-				height: Val::Vh(100.0),
-				align_items: AlignItems::Center,
-				justify_content: JustifyContent::Center,
-				..default()
-			},
-			background_color: Color::srgba(0.5, 0.5, 0.5, 0.5).into(),
-			..default()
-		}
-	}
-}
-
-impl InstantiateContentOn for InventoryScreen {
-	fn instantiate_content_on(&self, parent: &mut ChildBuilder) {
+impl InsertUiContent for InventoryScreen {
+	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		parent
-			.spawn(NodeBundle {
-				style: Style {
-					flex_direction: FlexDirection::Row,
-					align_items: AlignItems::Start,
-					..default()
-				},
+			.spawn(Node {
+				flex_direction: FlexDirection::Row,
+				align_items: AlignItems::Start,
 				..default()
 			})
 			.with_children(add_equipment())
@@ -76,13 +51,10 @@ fn add_inventory() -> impl Fn(&mut ChildBuilder) {
 	move |parent| {
 		let mut keys = InventoryKey::iterator_infinite();
 		parent
-			.spawn(NodeBundle {
-				style: Style {
-					flex_direction: FlexDirection::Column,
-					align_items: AlignItems::Center,
-					margin: UiRect::all(Val::Px(5.0)),
-					..default()
-				},
+			.spawn(Node {
+				flex_direction: FlexDirection::Column,
+				align_items: AlignItems::Center,
+				margin: UiRect::all(Val::Px(5.0)),
 				..default()
 			})
 			.with_children(|parent| {
@@ -95,13 +67,10 @@ fn add_inventory() -> impl Fn(&mut ChildBuilder) {
 fn add_equipment() -> impl Fn(&mut ChildBuilder) {
 	move |parent| {
 		parent
-			.spawn(NodeBundle {
-				style: Style {
-					flex_direction: FlexDirection::Column,
-					align_items: AlignItems::End,
-					margin: UiRect::all(Val::Px(5.0)),
-					..default()
-				},
+			.spawn(Node {
+				flex_direction: FlexDirection::Column,
+				align_items: AlignItems::End,
+				margin: UiRect::all(Val::Px(5.0)),
 				..default()
 			})
 			.with_children(|parent| {
@@ -115,22 +84,19 @@ fn add_equipment() -> impl Fn(&mut ChildBuilder) {
 
 fn add_title(parent: &mut ChildBuilder, title: &str) {
 	parent
-		.spawn(NodeBundle {
-			style: Style {
-				flex_direction: FlexDirection::Row,
-				align_items: AlignItems::Center,
-				..default()
-			},
+		.spawn(Node {
+			flex_direction: FlexDirection::Row,
+			align_items: AlignItems::Center,
 			..default()
 		})
 		.with_children(|parent| {
-			parent.spawn(TextBundle::from_section(
-				title,
-				TextStyle {
+			parent.spawn((
+				Text::new(title),
+				TextFont {
 					font_size: 40.0,
-					color: InventoryPanel::PANEL_COLORS.text,
 					..default()
 				},
+				TextColor(InventoryPanel::PANEL_COLORS.text),
 			));
 		});
 }
@@ -144,55 +110,48 @@ fn add_grid<TKey: Sync + Send + 'static>(
 ) {
 	for _ in 0..element_count_y {
 		parent
-			.spawn(NodeBundle {
-				style: Style {
-					flex_direction: FlexDirection::Row,
-					align_items: AlignItems::Center,
-					..default()
-				},
+			.spawn(Node {
+				flex_direction: FlexDirection::Row,
+				align_items: AlignItems::Center,
 				..default()
 			})
 			.with_children(|parent| {
 				if let UIText::String(label) = grid_label.clone() {
-					parent.spawn(TextBundle::from_section(
-						label,
-						TextStyle {
+					parent.spawn((
+						Text::new(label),
+						TextFont {
 							font_size: 20.0,
-							color: InventoryPanel::PANEL_COLORS.text,
 							..default()
 						},
+						TextColor(InventoryPanel::PANEL_COLORS.text),
 					));
 				}
 				for _ in 0..element_count_x {
 					parent
 						.spawn((
+							Button,
 							KeyedPanel(element_key()),
 							InventoryPanel::from(PanelState::Empty),
-							get_panel_button(),
+							Node {
+								width: Val::Px(65.0),
+								height: Val::Px(65.0),
+								margin: UiRect::all(Val::Px(2.0)),
+								justify_content: JustifyContent::Center,
+								align_items: AlignItems::Center,
+								..default()
+							},
 						))
 						.with_children(|parent| {
-							parent.spawn(TextBundle::from_section(
-								"<Empty>",
-								TextStyle {
+							parent.spawn((
+								Text::new("<Empty>"),
+								TextFont {
 									font_size: 15.0,
-									color: InventoryPanel::PANEL_COLORS.text,
 									..default()
 								},
+								TextColor(InventoryPanel::PANEL_COLORS.text),
 							));
 						});
 				}
 			});
 	}
-}
-
-fn get_panel_button() -> ButtonBundle {
-	let style = Style {
-		width: Val::Px(65.0),
-		height: Val::Px(65.0),
-		margin: UiRect::all(Val::Px(2.0)),
-		justify_content: JustifyContent::Center,
-		align_items: AlignItems::Center,
-		..default()
-	};
-	ButtonBundle { style, ..default() }
 }

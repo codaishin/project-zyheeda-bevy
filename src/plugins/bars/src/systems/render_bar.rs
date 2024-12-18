@@ -11,7 +11,7 @@ use bevy::{
 	hierarchy::BuildChildren,
 	math::Vec2,
 	prelude::default,
-	ui::{node_bundles::NodeBundle, BackgroundColor, PositionType, Style, Val},
+	ui::{BackgroundColor, Node, PositionType, Val},
 };
 use common::components::OwnedBy;
 
@@ -20,7 +20,7 @@ const BASE_DIMENSIONS: Vec2 = Vec2::new(100., 10.);
 pub(crate) fn render_bar<T: Send + Sync + 'static>(
 	mut commands: Commands,
 	mut bars: Query<(Entity, &Bar, &mut BarValues<T>)>,
-	mut styles: Query<&mut Style>,
+	mut styles: Query<&mut Node>,
 ) where
 	BarValues<T>: UIBarColors,
 {
@@ -46,30 +46,26 @@ fn add_ui<T: Send + Sync + 'static>(
 	let background = commands
 		.spawn((
 			OwnedBy::<Bar>::with(bar_id),
-			NodeBundle {
-				style: Style {
-					width: Val::Px(scaled_dimension.x),
-					height: Val::Px(scaled_dimension.y),
-					position_type: PositionType::Absolute,
-					left: Val::Px(position.x - scaled_dimension.x / 2.),
-					top: Val::Px(position.y - scaled_dimension.y / 2.),
-					..default()
-				},
-				background_color: BackgroundColor::from(BarValues::<T>::background_color()),
+			Node {
+				width: Val::Px(scaled_dimension.x),
+				height: Val::Px(scaled_dimension.y),
+				position_type: PositionType::Absolute,
+				left: Val::Px(position.x - scaled_dimension.x / 2.),
+				top: Val::Px(position.y - scaled_dimension.y / 2.),
 				..default()
 			},
+			BackgroundColor::from(BarValues::<T>::background_color()),
 		))
 		.id();
 	let foreground = commands
-		.spawn(NodeBundle {
-			style: Style {
+		.spawn((
+			Node {
 				width: Val::Percent(bar_values.current / bar_values.max * 100.),
 				height: Val::Percent(100.),
 				..default()
 			},
-			background_color: BackgroundColor::from(BarValues::<T>::foreground_color()),
-			..default()
-		})
+			BackgroundColor::from(BarValues::<T>::foreground_color()),
+		))
 		.set_parent(background)
 		.id();
 	bar_values.ui = Some(UI {
@@ -79,7 +75,7 @@ fn add_ui<T: Send + Sync + 'static>(
 }
 
 fn update_ui<T>(
-	styles: &mut Query<&mut Style>,
+	styles: &mut Query<&mut Node>,
 	ui: UI,
 	bar: &Bar,
 	bar_values: Mut<BarValues<T>>,
@@ -217,7 +213,7 @@ mod tests {
 			.world()
 			.iter_entities()
 			.filter(no_parent)
-			.find_map(|e| e.get::<Style>())
+			.find_map(|e| e.get::<Node>())
 			.unwrap();
 
 		assert_eq!(
@@ -245,7 +241,7 @@ mod tests {
 			.world()
 			.iter_entities()
 			.filter(no_parent)
-			.find_map(|e| e.get::<Style>())
+			.find_map(|e| e.get::<Node>())
 			.unwrap();
 
 		assert_eq!(
@@ -276,7 +272,7 @@ mod tests {
 			.world()
 			.iter_entities()
 			.filter(no_parent)
-			.find_map(|e| e.get::<Style>())
+			.find_map(|e| e.get::<Node>())
 			.unwrap();
 
 		assert_eq!(
@@ -308,7 +304,7 @@ mod tests {
 			.world()
 			.iter_entities()
 			.filter(no_parent)
-			.find_map(|e| e.get::<Style>())
+			.find_map(|e| e.get::<Node>())
 			.unwrap();
 
 		assert_eq!(
@@ -387,7 +383,7 @@ mod tests {
 			.world()
 			.iter_entities()
 			.filter(with_parent)
-			.find_map(|e| e.get::<Style>())
+			.find_map(|e| e.get::<Node>())
 			.unwrap();
 
 		assert_eq!(Val::Percent(20.), style.width);
@@ -418,7 +414,7 @@ mod tests {
 			.world()
 			.iter_entities()
 			.filter(no_parent)
-			.filter_map(|e| e.get::<Style>())
+			.filter_map(|e| e.get::<Node>())
 			.collect::<Vec<_>>();
 		let style = styles[0];
 
@@ -457,7 +453,7 @@ mod tests {
 			.world()
 			.iter_entities()
 			.filter(no_parent)
-			.filter_map(|e| e.get::<Style>())
+			.filter_map(|e| e.get::<Node>())
 			.collect::<Vec<_>>();
 		let style = styles[0];
 
@@ -496,7 +492,7 @@ mod tests {
 			.world()
 			.iter_entities()
 			.filter(with_parent)
-			.find_map(|e| e.get::<Style>())
+			.find_map(|e| e.get::<Node>())
 			.unwrap();
 
 		assert_eq!(Val::Percent(120. / 200. * 100.), style.width);

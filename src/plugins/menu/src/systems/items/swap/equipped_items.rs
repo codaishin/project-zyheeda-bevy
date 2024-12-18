@@ -72,7 +72,7 @@ fn no_slot(slot_key: SlotKey) -> Error {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::ecs::system::RunSystemOnce;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{components::Side, test_tools::utils::new_handle};
 
 	#[derive(Clone)]
@@ -86,7 +86,7 @@ mod tests {
 	}
 
 	#[test]
-	fn swap_items() {
+	fn swap_items() -> Result<(), RunSystemError> {
 		let left_item = new_handle();
 		let right_item = new_handle();
 		let mut app = setup();
@@ -107,7 +107,7 @@ mod tests {
 			))
 			.id();
 
-		let errors = app.world_mut().run_system_once(swap_equipped_items);
+		let errors = app.world_mut().run_system_once(swap_equipped_items)?;
 
 		let slots = app.world().entity(agent).get::<Slots>();
 		assert_eq!(
@@ -120,10 +120,11 @@ mod tests {
 			),
 			(slots, errors)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn remove_collection() {
+	fn remove_collection() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
@@ -133,14 +134,15 @@ mod tests {
 			))
 			.id();
 
-		app.world_mut().run_system_once(swap_equipped_items);
+		app.world_mut().run_system_once(swap_equipped_items)?;
 
 		let agent = app.world().entity(agent);
 		assert!(!agent.contains::<Collection<Swap<SlotKey, SlotKey>>>());
+		Ok(())
 	}
 
 	#[test]
-	fn log_slot_errors() {
+	fn log_slot_errors() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut().spawn((
 			Slots([].into()),
@@ -153,7 +155,7 @@ mod tests {
 			),
 		));
 
-		let errors = app.world_mut().run_system_once(swap_equipped_items);
+		let errors = app.world_mut().run_system_once(swap_equipped_items)?;
 
 		assert_eq!(
 			vec![
@@ -161,6 +163,7 @@ mod tests {
 				Err(no_slot(SlotKey::BottomHand(Side::Right))),
 			],
 			errors
-		)
+		);
+		Ok(())
 	}
 }

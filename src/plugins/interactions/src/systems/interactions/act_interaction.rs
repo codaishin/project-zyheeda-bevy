@@ -41,7 +41,7 @@ pub(crate) fn act_interaction<TActor: ActOn<TTarget> + Component, TTarget: Compo
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::ecs::system::RunSystemOnce;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{components::ColliderRoot, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -71,7 +71,7 @@ mod tests {
 	}
 
 	#[test]
-	fn act_on_target() {
+	fn act_on_target() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let target = app.world_mut().spawn(_Target).id();
 		let entity = app
@@ -93,11 +93,11 @@ mod tests {
 		app.world_mut().run_system_once_with(
 			Duration::from_millis(42),
 			act_interaction::<_Actor, _Target>,
-		);
+		)
 	}
 
 	#[test]
-	fn remove_actor() {
+	fn remove_actor() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let target = app.world_mut().spawn(_Target).id();
 		let actor = app
@@ -112,15 +112,16 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::ZERO, act_interaction::<_Actor, _Target>);
+			.run_system_once_with(Duration::ZERO, act_interaction::<_Actor, _Target>)?;
 
 		let actor = app.world().entity(actor);
 
 		assert!(!actor.contains::<_Actor>());
+		Ok(())
 	}
 
 	#[test]
-	fn do_not_remove_actor_when_not_acted() {
+	fn do_not_remove_actor_when_not_acted() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let target = app.world_mut().spawn_empty().id();
 		let actor = app
@@ -135,15 +136,16 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::ZERO, act_interaction::<_Actor, _Target>);
+			.run_system_once_with(Duration::ZERO, act_interaction::<_Actor, _Target>)?;
 
 		let actor = app.world().entity(actor);
 
 		assert!(actor.contains::<_Actor>());
+		Ok(())
 	}
 
 	#[test]
-	fn do_not_remove_actor_when_action_type_not_once() {
+	fn do_not_remove_actor_when_action_type_not_once() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let target = app.world_mut().spawn(_Target).id();
 		let actor_always = app
@@ -168,7 +170,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::ZERO, act_interaction::<_Actor, _Target>);
+			.run_system_once_with(Duration::ZERO, act_interaction::<_Actor, _Target>)?;
 
 		let actor_always = app.world().entity(actor_always);
 		let actor_once_per_target = app.world().entity(actor_once_per_target);
@@ -180,10 +182,11 @@ mod tests {
 				actor_once_per_target.contains::<_Actor>()
 			)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn add_to_acted_on_when_action_type_is_once_per_target() {
+	fn add_to_acted_on_when_action_type_is_once_per_target() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let target = app.world_mut().spawn(_Target).id();
 		let actor = app
@@ -198,7 +201,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::ZERO, act_interaction::<_Actor, _Target>);
+			.run_system_once_with(Duration::ZERO, act_interaction::<_Actor, _Target>)?;
 
 		let actor = app.world().entity(actor);
 
@@ -206,5 +209,6 @@ mod tests {
 			Some(&ActedOnTargets::new([target])),
 			actor.get::<ActedOnTargets<_Actor>>()
 		);
+		Ok(())
 	}
 }

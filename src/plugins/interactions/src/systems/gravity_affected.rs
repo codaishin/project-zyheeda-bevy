@@ -99,7 +99,12 @@ impl ForcedMovement {
 mod tests {
 	use super::*;
 	use crate::components::gravity_affected::GravityPull;
-	use bevy::{app::App, ecs::system::RunSystemOnce, math::Vec3, prelude::Transform};
+	use bevy::{
+		app::App,
+		ecs::system::{RunSystemError, RunSystemOnce},
+		math::Vec3,
+		prelude::Transform,
+	};
 	use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
 
 	fn setup() -> App {
@@ -107,7 +112,7 @@ mod tests {
 	}
 
 	#[test]
-	fn add_forced_movement_for_single_pull() {
+	fn add_forced_movement_for_single_pull() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let towards = app
 			.world_mut()
@@ -127,7 +132,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull);
+			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull)?;
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -136,11 +141,13 @@ mod tests {
 				Some(&Immobilized)
 			),
 			(agent.get::<Velocity>(), agent.get::<Immobilized>())
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn add_forced_movement_for_single_pull_and_put_gravity_center_at_zero_elevation() {
+	fn add_forced_movement_for_single_pull_and_put_gravity_center_at_zero_elevation(
+	) -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let towards = app
 			.world_mut()
@@ -160,7 +167,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull);
+			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull)?;
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -169,11 +176,12 @@ mod tests {
 				Some(&Immobilized)
 			),
 			(agent.get::<Velocity>(), agent.get::<Immobilized>())
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn add_forced_movement_for_multiple_pulls() {
+	fn add_forced_movement_for_multiple_pulls() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let towards_a = app
 			.world_mut()
@@ -205,7 +213,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull);
+			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull)?;
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -217,11 +225,12 @@ mod tests {
 				Some(&Immobilized)
 			),
 			(agent.get::<Velocity>(), agent.get::<Immobilized>())
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn do_not_add_forced_movement_if_pulls_array_empty() {
+	fn do_not_add_forced_movement_if_pulls_array_empty() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
@@ -229,17 +238,18 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull);
+			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull)?;
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
 			(None, None),
 			(agent.get::<Velocity>(), agent.get::<Immobilized>())
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn empty_pulls_array() {
+	fn empty_pulls_array() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let towards_a = app
 			.world_mut()
@@ -271,17 +281,18 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull);
+			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull)?;
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
 			Some(&GravityAffected::default()),
 			agent.get::<GravityAffected>()
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn remove_immobilized_if_pulls_empty() {
+	fn remove_immobilized_if_pulls_empty() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
@@ -293,14 +304,16 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull);
+			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull)?;
 
 		let agent = app.world().entity(agent);
-		assert_eq!(None, agent.get::<Immobilized>())
+		assert_eq!(None, agent.get::<Immobilized>());
+		Ok(())
 	}
 
 	#[test]
-	fn use_direction_length_divided_by_delta_when_pull_times_delta_exceed_direction_length() {
+	fn use_direction_length_divided_by_delta_when_pull_times_delta_exceed_direction_length(
+	) -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let delta = Duration::from_millis(501);
 		let towards = app
@@ -321,7 +334,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(delta, apply_gravity_pull);
+			.run_system_once_with(delta, apply_gravity_pull)?;
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -332,11 +345,13 @@ mod tests {
 				Some(&Immobilized)
 			),
 			(agent.get::<Velocity>(), agent.get::<Immobilized>())
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn use_pull_strength_when_pull_times_delta_do_not_exceed_direction_length() {
+	fn use_pull_strength_when_pull_times_delta_do_not_exceed_direction_length(
+	) -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let towards = app
 			.world_mut()
@@ -356,7 +371,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_millis(499), apply_gravity_pull);
+			.run_system_once_with(Duration::from_millis(499), apply_gravity_pull)?;
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -365,6 +380,7 @@ mod tests {
 				Some(&Immobilized)
 			),
 			(agent.get::<Velocity>(), agent.get::<Immobilized>())
-		)
+		);
+		Ok(())
 	}
 }

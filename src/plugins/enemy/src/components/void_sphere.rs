@@ -11,10 +11,10 @@ use behaviors::{
 };
 use bevy::{
 	color::{Color, LinearRgba},
-	ecs::{bundle::Bundle, system::EntityCommands},
+	ecs::system::EntityCommands,
 	hierarchy::BuildChildren,
 	math::{primitives::Torus, Dir3, Vec3},
-	pbr::{NotShadowCaster, PbrBundle, StandardMaterial},
+	pbr::{NotShadowCaster, StandardMaterial},
 	prelude::*,
 	render::mesh::Mesh,
 	transform::components::Transform,
@@ -30,7 +30,6 @@ use common::{
 		health::Health,
 	},
 	blocker::Blocker,
-	bundles::ColliderTransformBundle,
 	components::{ColliderRoot, GroundOffset},
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	errors::Error,
@@ -58,37 +57,11 @@ impl VoidSphere {
 }
 
 #[derive(Component, Clone)]
+#[require(Mesh3d, MeshMaterial3d<StandardMaterial>, NotShadowCaster)]
 pub enum VoidSpherePart {
 	Core,
 	RingA(UnitsPerSecond),
 	RingB(UnitsPerSecond),
-}
-
-#[derive(Bundle)]
-pub struct PbrVoidSphereBundle {
-	pbr_bundle: PbrBundle,
-	not_shadow_caster: NotShadowCaster,
-	void_sphere_part: VoidSpherePart,
-}
-
-impl PbrVoidSphereBundle {
-	pub fn new(pbr_bundle: PbrBundle, part: VoidSpherePart) -> Self {
-		Self {
-			pbr_bundle,
-			not_shadow_caster: NotShadowCaster,
-			void_sphere_part: part,
-		}
-	}
-}
-
-impl Clone for PbrVoidSphereBundle {
-	fn clone(&self) -> Self {
-		Self {
-			pbr_bundle: self.pbr_bundle.clone(),
-			not_shadow_caster: NotShadowCaster,
-			void_sphere_part: self.void_sphere_part.clone(),
-		}
-	}
 }
 
 const VOID_SPHERE_INNER_RADIUS: f32 = 0.3;
@@ -163,40 +136,28 @@ where
 			},
 		));
 		on.with_children(|parent| {
-			parent.spawn(PbrVoidSphereBundle::new(
-				PbrBundle {
-					mesh: core_mesh,
-					material: core_material,
-					transform,
-					..default()
-				},
+			parent.spawn((
 				VoidSpherePart::Core,
-			));
-			parent.spawn(PbrVoidSphereBundle::new(
-				PbrBundle {
-					mesh: ring_mesh.clone(),
-					material: ring_material.clone(),
-					transform,
-					..default()
-				},
-				VoidSpherePart::RingA(UnitsPerSecond::new(PI / 50.)),
-			));
-			parent.spawn(PbrVoidSphereBundle::new(
-				PbrBundle {
-					mesh: ring_mesh,
-					material: ring_material,
-					transform: transform_2nd_ring,
-					..default()
-				},
-				VoidSpherePart::RingB(UnitsPerSecond::new(PI / 75.)),
+				Mesh3d(core_mesh),
+				MeshMaterial3d(core_material),
+				transform,
 			));
 			parent.spawn((
-				ColliderTransformBundle {
-					transform,
-					collider: Collider::ball(VOID_SPHERE_OUTER_RADIUS),
-					..default()
-				},
+				VoidSpherePart::RingA(UnitsPerSecond::new(PI / 50.)),
+				Mesh3d(ring_mesh.clone()),
+				MeshMaterial3d(ring_material.clone()),
+				transform,
+			));
+			parent.spawn((
+				VoidSpherePart::RingB(UnitsPerSecond::new(PI / 75.)),
+				Mesh3d(ring_mesh),
+				MeshMaterial3d(ring_material),
+				transform_2nd_ring,
+			));
+			parent.spawn((
 				ColliderRoot(parent.parent_entity()),
+				Collider::ball(VOID_SPHERE_OUTER_RADIUS),
+				transform,
 			));
 		});
 

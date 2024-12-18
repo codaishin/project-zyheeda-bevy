@@ -5,7 +5,7 @@ use crate::{
 		AppendSkillCommand,
 		KeySelectDropdownInsertCommand,
 	},
-	traits::GetBundle,
+	traits::GetComponent,
 };
 use common::traits::iteration::IterFinite;
 use skills::traits::{FollowupKeys, GetNode, RootKeys};
@@ -15,14 +15,14 @@ type Source<'a, TKey, TCombos> = (
 	&'a TCombos,
 );
 
-impl<'a, TKey, TCombos> GetBundle for Source<'a, TKey, TCombos>
+impl<'a, TKey, TCombos> GetComponent for Source<'a, TKey, TCombos>
 where
 	TKey: IterFinite + PartialEq + Send + Sync + 'static,
 	TCombos: GetNode<'a, Vec<TKey>, TNode: FollowupKeys<TItem = TKey>> + RootKeys<TItem = TKey>,
 {
-	type TBundle = Dropdown<KeySelect<AppendSkill<TKey>, TKey>>;
+	type TComponent = Dropdown<KeySelect<AppendSkill<TKey>, TKey>>;
 
-	fn bundle(&self) -> Option<Self::TBundle> {
+	fn component(&self) -> Option<Self::TComponent> {
 		let (insert_command, combos) = self;
 
 		let followups = match insert_command.key_path.is_empty() {
@@ -155,7 +155,7 @@ mod tests {
 					},
 				]
 			}),
-			source.bundle()
+			source.component()
 		)
 	}
 
@@ -196,7 +196,7 @@ mod tests {
 					},
 				]
 			}),
-			source.bundle()
+			source.component()
 		)
 	}
 
@@ -227,7 +227,7 @@ mod tests {
 			&_Combos,
 		);
 
-		_ = source.bundle();
+		_ = source.component();
 
 		assert_eq!(vec![key_path], unsafe { KEY_PATHS.clone() },)
 	}
@@ -256,7 +256,7 @@ mod tests {
 			&_Combos,
 		);
 
-		assert_eq!(None, source.bundle())
+		assert_eq!(None, source.component())
 	}
 
 	#[test]
@@ -288,7 +288,7 @@ mod tests {
 					key_path: vec![]
 				},]
 			}),
-			source.bundle()
+			source.component()
 		)
 	}
 }

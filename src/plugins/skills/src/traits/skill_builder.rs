@@ -110,7 +110,7 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::App,
-		ecs::system::RunSystemOnce,
+		ecs::system::{RunSystemError, RunSystemOnce},
 		math::{Ray3d, Vec3},
 		utils::default,
 	};
@@ -204,7 +204,7 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_contact() {
+	fn spawn_contact() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilStopped,
@@ -212,13 +212,13 @@ mod tests {
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = SkillTarget {
-			ray: Ray3d::new(Vec3::X, Vec3::Z),
+			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
 		};
 
 		let shape = app
 			.world_mut()
-			.run_system_once_with((skill, caster, spawner, target), build_skill);
+			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
 
 		assert_eq!(
 			Some(&_Contact {
@@ -227,11 +227,12 @@ mod tests {
 				target
 			}),
 			app.world().entity(shape.contact).get::<_Contact>()
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn spawn_projection() {
+	fn spawn_projection() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilStopped,
@@ -239,13 +240,13 @@ mod tests {
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = SkillTarget {
-			ray: Ray3d::new(Vec3::X, Vec3::Z),
+			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
 		};
 
 		let shape = app
 			.world_mut()
-			.run_system_once_with((skill, caster, spawner, target), build_skill);
+			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
 
 		assert_eq!(
 			Some(&_Projection {
@@ -254,11 +255,12 @@ mod tests {
 				target
 			}),
 			app.world().entity(shape.projection).get::<_Projection>()
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn projection_is_child_of_contact() {
+	fn projection_is_child_of_contact() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilStopped,
@@ -266,13 +268,13 @@ mod tests {
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = SkillTarget {
-			ray: Ray3d::new(Vec3::X, Vec3::Z),
+			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
 		};
 
 		let shape = app
 			.world_mut()
-			.run_system_once_with((skill, caster, spawner, target), build_skill);
+			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
 
 		assert_eq!(
 			Some(shape.contact),
@@ -280,11 +282,12 @@ mod tests {
 				.entity(shape.projection)
 				.get::<Parent>()
 				.map(Parent::get)
-		)
+		);
+		Ok(())
 	}
 
 	#[test]
-	fn alive_until_stopped() {
+	fn alive_until_stopped() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilStopped,
@@ -292,19 +295,20 @@ mod tests {
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = SkillTarget {
-			ray: Ray3d::new(Vec3::X, Vec3::Z),
+			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
 		};
 
 		let shape = app
 			.world_mut()
-			.run_system_once_with((skill, caster, spawner, target), build_skill);
+			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
 
-		assert_eq!(OnSkillStop::Stop(shape.contact), shape.on_skill_stop)
+		assert_eq!(OnSkillStop::Stop(shape.contact), shape.on_skill_stop);
+		Ok(())
 	}
 
 	#[test]
-	fn unstoppable_life_time() {
+	fn unstoppable_life_time() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilOutlived(Duration::from_nanos(42)),
@@ -312,19 +316,20 @@ mod tests {
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = SkillTarget {
-			ray: Ray3d::new(Vec3::X, Vec3::Z),
+			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
 		};
 
 		let shape = app
 			.world_mut()
-			.run_system_once_with((skill, caster, spawner, target), build_skill);
+			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
 
-		assert_eq!(OnSkillStop::Ignore, shape.on_skill_stop)
+		assert_eq!(OnSkillStop::Ignore, shape.on_skill_stop);
+		Ok(())
 	}
 
 	#[test]
-	fn add_lifetime_to_unstoppable() {
+	fn add_lifetime_to_unstoppable() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilOutlived(Duration::from_nanos(42)),
@@ -332,22 +337,23 @@ mod tests {
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = SkillTarget {
-			ray: Ray3d::new(Vec3::X, Vec3::Z),
+			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
 		};
 
 		let shape = app
 			.world_mut()
-			.run_system_once_with((skill, caster, spawner, target), build_skill);
+			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
 
 		assert_eq!(
 			Some(&_Lifetime(Duration::from_nanos(42))),
 			app.world().entity(shape.contact).get::<_Lifetime>()
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn infinite_life_time() {
+	fn infinite_life_time() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::Infinite,
@@ -355,14 +361,15 @@ mod tests {
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = SkillTarget {
-			ray: Ray3d::new(Vec3::X, Vec3::Z),
+			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
 		};
 
 		let shape = app
 			.world_mut()
-			.run_system_once_with((skill, caster, spawner, target), build_skill);
+			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
 
-		assert_eq!(OnSkillStop::Ignore, shape.on_skill_stop)
+		assert_eq!(OnSkillStop::Ignore, shape.on_skill_stop);
+		Ok(())
 	}
 }

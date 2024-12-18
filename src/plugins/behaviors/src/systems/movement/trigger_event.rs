@@ -62,9 +62,9 @@ mod tests {
 
 	fn move_input_events(app: &App) -> Vec<MoveInputEvent> {
 		let events = app.world().resource::<Events<MoveInputEvent>>();
-		let mut reader = events.get_reader();
+		let mut cursor = events.get_cursor();
 
-		reader.read(events).cloned().collect()
+		cursor.read(events).cloned().collect()
 	}
 
 	#[test]
