@@ -26,9 +26,12 @@ impl Plugin for FrameLimiterPlugin {
 		{
 			use debug::*;
 
-			app.insert_resource(Fps(u32::MAX))
+			app.insert_resource(Fps::<()>::new(u32::MAX))
+				.insert_resource(Fps::<Fixed>::new(u32::MAX))
 				.add_systems(Startup, DisplayFps::spawn)
-				.add_systems(Update, (MeasureFps::system, DisplayFps::update).chain());
+				.add_systems(Update, DisplayFps::update)
+				.add_systems(Update, MeasureFps::system::<()>)
+				.add_systems(FixedUpdate, MeasureFps::system::<Fixed>);
 		}
 	}
 }
@@ -53,10 +56,22 @@ impl Sleep {
 #[cfg(debug_assertions)]
 mod debug {
 	use super::*;
-	use std::{ops::DerefMut, time::Instant};
+	use std::{marker::PhantomData, ops::DerefMut, time::Instant};
 
 	#[derive(Resource, Debug, PartialEq)]
-	pub(super) struct Fps(pub(super) u32);
+	pub(super) struct Fps<T = ()> {
+		pub(super) fps: u32,
+		phantom_data: PhantomData<T>,
+	}
+
+	impl<T> Fps<T> {
+		pub(super) fn new(value: u32) -> Self {
+			Self {
+				fps: value,
+				phantom_data: PhantomData,
+			}
+		}
+	}
 
 	#[derive(Debug, PartialEq)]
 	pub(super) struct MeasureFps {
@@ -74,7 +89,10 @@ mod debug {
 	}
 
 	impl MeasureFps {
-		pub(super) fn system(mut measure: Local<MeasureFps>, mut fps: ResMut<Fps>) {
+		pub(super) fn system<T>(mut measure: Local<MeasureFps>, mut fps: ResMut<Fps<T>>)
+		where
+			T: Sync + Send + 'static,
+		{
 			let measure = measure.deref_mut();
 			measure.counter += 1;
 
@@ -82,7 +100,7 @@ mod debug {
 				return;
 			}
 
-			*fps = Fps(measure.counter);
+			*fps = Fps::<T>::new(measure.counter);
 			*measure = MeasureFps::default();
 		}
 	}
@@ -97,7 +115,7 @@ mod debug {
 				position_type: PositionType::Absolute,
 				left: Val::Px(10.),
 				top: Val::Px(10.),
-				width: Val::Px(100.),
+				width: Val::Px(300.),
 				height: Val::Px(20.),
 				..default()
 			}
@@ -107,7 +125,11 @@ mod debug {
 			commands.spawn(DisplayFps);
 		}
 
-		pub(super) fn update(mut displays: Query<&mut Text, With<DisplayFps>>, fps: Res<Fps>) {
+		pub(super) fn update(
+			mut displays: Query<&mut Text, With<DisplayFps>>,
+			fps: Res<Fps>,
+			fps_fixed: Res<Fps<Fixed>>,
+		) {
 			if !fps.is_changed() {
 				return;
 			}
@@ -116,8 +138,9 @@ mod debug {
 				return;
 			};
 
-			let Fps(fps) = *fps;
-			*text = Text(format!("FPS: {fps}"));
+			let Fps { fps, .. } = *fps;
+			let Fps::<Fixed> { fps: fps_fixed, .. } = *fps_fixed;
+			*text = Text(format!("FPS: {fps} (fixed: {fps_fixed})"));
 		}
 	}
 }
