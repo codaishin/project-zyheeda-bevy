@@ -83,12 +83,12 @@ where
 			.add_systems(
 				Update,
 				(
-					trigger_move_input_event::<CamRay>,
+					trigger_move_input_event::<CamRay>
+						.run_if(in_state(MouseContext::<KeyCode>::Default)),
 					get_faces.pipe(execute_face::<CamRay>),
 				)
 					.chain()
-					.run_if(in_state(GameState::Play))
-					.run_if(in_state(MouseContext::<KeyCode>::Default)),
+					.run_if(in_state(GameState::Play)),
 			)
 			.add_systems(
 				Update,
