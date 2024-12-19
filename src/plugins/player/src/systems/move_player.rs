@@ -1,6 +1,6 @@
 use crate::components::player::Player;
 use behaviors::{
-	components::{Face, Movement, SetFace, VelocityBased},
+	components::{Movement, SetFace, VelocityBased},
 	events::MoveInputEvent,
 };
 use bevy::ecs::{
@@ -9,6 +9,7 @@ use bevy::ecs::{
 	query::With,
 	system::{Commands, Query},
 };
+use common::traits::handles_orientation::Face;
 
 pub(crate) fn move_player(
 	mut commands: Commands,

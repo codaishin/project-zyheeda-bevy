@@ -12,16 +12,9 @@ use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{
 	test_tools::utils::ApproxEqual,
 	tools::{Units, UnitsPerSecond},
+	traits::handles_orientation::Face,
 };
 use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
-
-#[derive(Default, Debug, PartialEq, Clone, Copy)]
-pub enum Face {
-	#[default]
-	Cursor,
-	Entity(Entity),
-	Translation(Vec3),
-}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) struct Always;

@@ -1,4 +1,3 @@
-use crate::components::Face;
 use bevy::{
 	ecs::{
 		entity::Entity,
@@ -10,7 +9,7 @@ use bevy::{
 use common::{
 	components::{ColliderRoot, Immobilized},
 	resources::MouseHover,
-	traits::intersect_at::IntersectAt,
+	traits::{handles_orientation::Face, intersect_at::IntersectAt},
 };
 
 pub(crate) fn execute_face<TCursor: IntersectAt + Resource>(

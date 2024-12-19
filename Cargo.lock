@@ -4456,7 +4456,6 @@ checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
 name = "skills"
 version = "0.1.0"
 dependencies = [
- "behaviors",
  "bevy",
  "bevy_rapier3d",
  "common",

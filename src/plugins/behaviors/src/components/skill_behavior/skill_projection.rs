@@ -1,17 +1,26 @@
-use super::{Offset, Shape};
+use super::SimplePrefab;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{
 	errors::Error,
-	traits::prefab::{AfterInstantiation, GetOrCreateAssets, Prefab},
+	traits::{
+		handles_destruction::HandlesDestruction,
+		handles_interactions::HandlesInteractions,
+		handles_skill_behaviors::{ProjectionOffset, Shape},
+		prefab::{AfterInstantiation, GetOrCreateAssets, Prefab},
+	},
 };
 
 #[derive(Component, Debug, Clone)]
 pub struct SkillProjection {
 	pub shape: Shape,
-	pub offset: Option<Offset>,
+	pub offset: Option<ProjectionOffset>,
 }
 
-impl Prefab<()> for SkillProjection {
+impl<TInteractions, TLifeCycles> Prefab<(TInteractions, TLifeCycles)> for SkillProjection
+where
+	TInteractions: HandlesInteractions,
+	TLifeCycles: HandlesDestruction,
+{
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
@@ -21,10 +30,11 @@ impl Prefab<()> for SkillProjection {
 		TAfterInstantiation: AfterInstantiation,
 	{
 		let offset = match self.offset {
-			Some(Offset(offset)) => offset,
+			Some(ProjectionOffset(offset)) => offset,
 			_ => Vec3::ZERO,
 		};
 
-		self.shape.prefab(entity, offset)
+		self.shape
+			.prefab::<TInteractions, TLifeCycles>(entity, offset)
 	}
 }

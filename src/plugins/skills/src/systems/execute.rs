@@ -1,17 +1,24 @@
-use crate::{behaviors::SkillCaster, components::skill_spawners::SkillSpawners, traits::Execute};
-use behaviors::components::skill_behavior::SkillTarget;
+use crate::{
+	behaviors::SkillCaster,
+	components::{skill_spawners::SkillSpawners, SkillTarget},
+	traits::Execute,
+};
 use bevy::prelude::*;
 use common::{
 	effects::deal_damage::DealDamage,
 	errors::Error,
 	resources::{CamRay, MouseHover},
-	traits::{handles_effect::HandlesEffect, handles_lifetime::HandlesLifetime},
+	traits::{
+		handles_effect::HandlesEffect,
+		handles_lifetime::HandlesLifetime,
+		handles_skill_behaviors::HandlesSkillBehaviors,
+	},
 };
 
 impl<T> ExecuteSkills for T {}
 
 pub(crate) trait ExecuteSkills {
-	fn execute_system<TLifetimes, TEffects>(
+	fn execute_system<TLifetimes, TEffects, TSkillBehaviors>(
 		cam_ray: Res<CamRay>,
 		mouse_hover: Res<MouseHover>,
 		mut commands: Commands,
@@ -19,10 +26,14 @@ pub(crate) trait ExecuteSkills {
 		transforms: Query<&GlobalTransform>,
 	) -> Vec<Result<(), Error>>
 	where
-		for<'w, 's> Self: Component + Execute<Commands<'w, 's>, TLifetimes, TEffects> + Sized,
-		for<'w, 's> Error: From<<Self as Execute<Commands<'w, 's>, TLifetimes, TEffects>>::TError>,
+		for<'w, 's> Self:
+			Component + Execute<Commands<'w, 's>, TLifetimes, TEffects, TSkillBehaviors> + Sized,
+		for<'w, 's> Error: From<
+			<Self as Execute<Commands<'w, 's>, TLifetimes, TEffects, TSkillBehaviors>>::TError,
+		>,
 		TLifetimes: HandlesLifetime,
 		TEffects: HandlesEffect<DealDamage>,
+		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
 		agents
 			.iter_mut()
@@ -82,7 +93,10 @@ mod tests {
 		errors::Level,
 		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
-		traits::nested_mock::NestedMocks,
+		traits::{
+			handles_skill_behaviors::{Integrity, Motion, ProjectionOffset, Shape},
+			nested_mock::NestedMocks,
+		},
 	};
 	use macros::NestedMocks;
 	use mockall::mock;
@@ -127,7 +141,31 @@ mod tests {
 	#[derive(Component)]
 	struct _Effect;
 
-	impl Execute<Commands<'_, '_>, _HandlesLife, _HandlesEffects> for _Executor {
+	struct _HandlesSkillBehaviors;
+
+	impl HandlesSkillBehaviors for _HandlesSkillBehaviors {
+		type TSkillContact = _Contact;
+
+		type TSkillProjection = _Projection;
+
+		fn skill_contact(_: Shape, _: Integrity, _: Motion) -> Self::TSkillContact {
+			_Contact
+		}
+
+		fn skill_projection(_: Shape, _: Option<ProjectionOffset>) -> Self::TSkillProjection {
+			_Projection
+		}
+	}
+
+	#[derive(Component)]
+	struct _Contact;
+
+	#[derive(Component)]
+	struct _Projection;
+
+	impl Execute<Commands<'_, '_>, _HandlesLife, _HandlesEffects, _HandlesSkillBehaviors>
+		for _Executor
+	{
 		type TError = _Error;
 
 		fn execute(
@@ -147,6 +185,7 @@ mod tests {
 			Commands<'w, 's>,
 			_HandlesLife,
 			_HandlesEffects,
+			_HandlesSkillBehaviors
 		> for _Executor {
 			type TError = _Error;
 
@@ -193,7 +232,8 @@ mod tests {
 	}
 
 	fn setup() -> App {
-		let execute_system = _Executor::execute_system::<_HandlesLife, _HandlesEffects>;
+		let execute_system =
+			_Executor::execute_system::<_HandlesLife, _HandlesEffects, _HandlesSkillBehaviors>;
 
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<CamRay>();
@@ -311,9 +351,9 @@ mod tests {
 
 		app.update();
 
-		let errors = app
-			.world_mut()
-			.run_system_once(_Executor::execute_system::<_HandlesLife, _HandlesEffects>)?;
+		let errors = app.world_mut().run_system_once(
+			_Executor::execute_system::<_HandlesLife, _HandlesEffects, _HandlesSkillBehaviors>,
+		)?;
 
 		assert_eq!(
 			vec![Err(Error {

@@ -1,23 +1,24 @@
 use crate::{
 	behaviors::{SkillCaster, SkillSpawner},
+	components::SkillTarget,
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
-};
-use behaviors::components::skill_behavior::{
-	skill_contact::SkillContact,
-	skill_projection::SkillProjection,
-	Integrity,
-	Motion,
-	Offset,
-	Shape,
-	SkillTarget,
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Collider;
 use common::{
 	components::AssetModel,
 	tools::Units,
-	traits::clamp_zero_positive::ClampZeroPositive,
+	traits::{
+		clamp_zero_positive::ClampZeroPositive,
+		handles_skill_behaviors::{
+			HandlesSkillBehaviors,
+			Integrity,
+			Motion,
+			ProjectionOffset,
+			Shape,
+		},
+	},
 };
 use serde::{Deserialize, Serialize};
 
@@ -25,47 +26,49 @@ use serde::{Deserialize, Serialize};
 pub struct SpawnShield;
 
 impl BuildContact for SpawnShield {
-	type TContact = SkillContact;
-
-	fn build_contact(
+	fn build_contact<TSkillBehaviors>(
 		&self,
 		_: &SkillCaster,
 		spawner: &SkillSpawner,
 		_: &SkillTarget,
-	) -> Self::TContact {
+	) -> TSkillBehaviors::TSkillContact
+	where
+		TSkillBehaviors: HandlesSkillBehaviors,
+	{
 		let SkillSpawner(spawner) = *spawner;
 
-		SkillContact {
-			shape: Shape::Custom {
+		TSkillBehaviors::skill_contact(
+			Shape::Custom {
 				model: AssetModel::path("models/shield.glb"),
 				collider: Collider::cuboid(0.5, 0.5, 0.05),
 				scale: Vec3::splat(1.),
 			},
-			integrity: Integrity::Solid,
-			motion: Motion::HeldBy { spawner },
-		}
+			Integrity::Solid,
+			Motion::HeldBy { spawner },
+		)
 	}
 }
 
 impl BuildProjection for SpawnShield {
-	type TProjection = SkillProjection;
-
-	fn build_projection(
+	fn build_projection<TSkillBehaviors>(
 		&self,
 		_: &SkillCaster,
 		_: &SkillSpawner,
 		_: &SkillTarget,
-	) -> Self::TProjection {
+	) -> TSkillBehaviors::TSkillProjection
+	where
+		TSkillBehaviors: HandlesSkillBehaviors,
+	{
 		let radius = 1.;
 		let offset = Vec3::new(0., 0., radius);
 
-		SkillProjection {
-			shape: Shape::Sphere {
+		TSkillBehaviors::skill_projection(
+			Shape::Sphere {
 				radius: Units::new(radius),
 				hollow_collider: false,
 			},
-			offset: Some(Offset(offset)),
-		}
+			Some(ProjectionOffset(offset)),
+		)
 	}
 }
 

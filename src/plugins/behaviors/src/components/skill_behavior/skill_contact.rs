@@ -1,11 +1,12 @@
-use super::{Integrity, Motion, Shape};
+use super::SimplePrefab;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{
 	errors::Error,
 	traits::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
-		prefab::{AfterInstantiation, GetOrCreateAssets, Prefab},
+		handles_skill_behaviors::{Integrity, Motion, Shape},
+		prefab::{GetOrCreateAssets, Prefab},
 	},
 };
 
@@ -25,13 +26,13 @@ where
 		&self,
 		entity: &mut EntityCommands,
 		_: impl GetOrCreateAssets,
-	) -> Result<(), Error>
-	where
-		TAfterInstantiation: AfterInstantiation,
-	{
-		self.shape.prefab(entity, Vec3::ZERO)?;
-		self.motion.prefab::<TLifeCycles>(entity)?;
-		self.integrity.prefab::<TInteractions>(entity)?;
+	) -> Result<(), Error> {
+		self.shape
+			.prefab::<TInteractions, TLifeCycles>(entity, Vec3::ZERO)?;
+		self.motion
+			.prefab::<TInteractions, TLifeCycles>(entity, ())?;
+		self.integrity
+			.prefab::<TInteractions, TLifeCycles>(entity, ())?;
 
 		Ok(())
 	}

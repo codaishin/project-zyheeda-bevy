@@ -17,6 +17,14 @@ use common::{
 		handles_destruction::HandlesDestruction,
 		handles_effect::HandlesEffect,
 		handles_interactions::HandlesInteractions,
+		handles_orientation::{Face, HandlesOrientation},
+		handles_skill_behaviors::{
+			HandlesSkillBehaviors,
+			Integrity,
+			Motion,
+			ProjectionOffset,
+			Shape,
+		},
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 	},
 };
@@ -32,6 +40,7 @@ use components::{
 	Movement,
 	MovementConfig,
 	Once,
+	OverrideFace,
 	PositionBased,
 	VelocityBased,
 };
@@ -77,7 +86,8 @@ where
 		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>().register_prefab::<VoidBeam>(app);
 		TPrefabsPlugin::with_dependency::<(TInteractionsPlugin, TLifeCycles)>()
 			.register_prefab::<SkillContact>(app);
-		TPrefabsPlugin::register_prefab::<SkillProjection>(app);
+		TPrefabsPlugin::with_dependency::<(TInteractionsPlugin, TLifeCycles)>()
+			.register_prefab::<SkillProjection>(app);
 
 		app.add_event::<MoveInputEvent>()
 			.add_systems(
@@ -131,5 +141,34 @@ where
 			.add_systems(Update, SetVelocityForward::system)
 			.add_systems(Update, SetPositionAndRotation::<Always>::system)
 			.add_systems(Update, SetPositionAndRotation::<Once>::system);
+	}
+}
+
+impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin> HandlesSkillBehaviors
+	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin>
+{
+	type TSkillContact = SkillContact;
+	type TSkillProjection = SkillProjection;
+
+	fn skill_contact(shape: Shape, integrity: Integrity, motion: Motion) -> Self::TSkillContact {
+		SkillContact {
+			shape,
+			integrity,
+			motion,
+		}
+	}
+
+	fn skill_projection(shape: Shape, offset: Option<ProjectionOffset>) -> Self::TSkillProjection {
+		SkillProjection { shape, offset }
+	}
+}
+
+impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin> HandlesOrientation
+	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin>
+{
+	type TFaceTemporarily = OverrideFace;
+
+	fn temporarily(face: Face) -> Self::TFaceTemporarily {
+		OverrideFace(face)
 	}
 }

@@ -5,7 +5,10 @@ pub mod spawn_shield;
 use super::{SkillCaster, SkillSpawner, SkillTarget};
 use crate::traits::skill_builder::{SkillBuilder, SkillShape};
 use bevy::prelude::*;
-use common::traits::handles_lifetime::HandlesLifetime;
+use common::traits::{
+	handles_lifetime::HandlesLifetime,
+	handles_skill_behaviors::HandlesSkillBehaviors,
+};
 use spawn_ground_target::SpawnGroundTargetedAoe;
 use spawn_projectile::SpawnProjectile;
 use spawn_shield::SpawnShield;
@@ -61,7 +64,7 @@ impl BuildSkillShape {
 		}
 	}
 
-	pub(crate) fn build<TLifetimes>(
+	pub(crate) fn build<TLifetimes, TSkillBehaviors>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -70,12 +73,19 @@ impl BuildSkillShape {
 	) -> SkillShape
 	where
 		TLifetimes: HandlesLifetime,
+		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
 		match self {
 			Self::Fn(func) => func(commands, caster, spawn, target),
-			Self::GroundTargetedAoe(gt) => gt.build::<TLifetimes>(commands, caster, spawn, target),
-			Self::Projectile(pr) => pr.build::<TLifetimes>(commands, caster, spawn, target),
-			Self::Shield(sh) => sh.build::<TLifetimes>(commands, caster, spawn, target),
+			Self::GroundTargetedAoe(gt) => {
+				gt.build::<TLifetimes, TSkillBehaviors>(commands, caster, spawn, target)
+			}
+			Self::Projectile(pr) => {
+				pr.build::<TLifetimes, TSkillBehaviors>(commands, caster, spawn, target)
+			}
+			Self::Shield(sh) => {
+				sh.build::<TLifetimes, TSkillBehaviors>(commands, caster, spawn, target)
+			}
 		}
 	}
 }

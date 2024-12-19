@@ -1,16 +1,14 @@
 use crate::{
-	behaviors::{SkillCaster, SkillSpawner, SkillTarget},
+	behaviors::{SkillCaster, SkillSpawner},
+	components::SkillTarget,
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };
-use behaviors::components::skill_behavior::{
-	skill_contact::SkillContact,
-	skill_projection::SkillProjection,
-	Integrity,
-	Motion,
-	Shape,
+use common::{
+	dto::duration::DurationDto,
+	tools::Units,
+	traits::handles_skill_behaviors::{HandlesSkillBehaviors, Integrity, Motion, Shape},
 };
-use common::{dto::duration::DurationDto, tools::Units};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -32,48 +30,50 @@ impl From<SpawnGroundTargetedAoe<DurationDto>> for SpawnGroundTargetedAoe {
 }
 
 impl BuildContact for SpawnGroundTargetedAoe {
-	type TContact = SkillContact;
-
-	fn build_contact(
+	fn build_contact<TSkillBehaviors>(
 		&self,
 		caster: &SkillCaster,
 		_: &SkillSpawner,
 		target: &SkillTarget,
-	) -> Self::TContact {
+	) -> TSkillBehaviors::TSkillContact
+	where
+		TSkillBehaviors: HandlesSkillBehaviors,
+	{
 		let SkillCaster(caster) = *caster;
 		let SkillTarget { ray, .. } = target;
 
-		SkillContact {
-			shape: Shape::Sphere {
+		TSkillBehaviors::skill_contact(
+			Shape::Sphere {
 				radius: self.radius,
 				hollow_collider: true,
 			},
-			integrity: Integrity::Solid,
-			motion: Motion::Stationary {
+			Integrity::Solid,
+			Motion::Stationary {
 				caster,
 				max_cast_range: self.max_range,
 				target_ray: *ray,
 			},
-		}
+		)
 	}
 }
 
 impl BuildProjection for SpawnGroundTargetedAoe {
-	type TProjection = SkillProjection;
-
-	fn build_projection(
+	fn build_projection<TSkillBehaviors>(
 		&self,
 		_: &SkillCaster,
 		_: &SkillSpawner,
 		_: &SkillTarget,
-	) -> Self::TProjection {
-		SkillProjection {
-			shape: Shape::Sphere {
+	) -> TSkillBehaviors::TSkillProjection
+	where
+		TSkillBehaviors: HandlesSkillBehaviors,
+	{
+		TSkillBehaviors::skill_projection(
+			Shape::Sphere {
 				radius: self.radius,
 				hollow_collider: false,
 			},
-			offset: None,
-		}
+			None,
+		)
 	}
 }
 
