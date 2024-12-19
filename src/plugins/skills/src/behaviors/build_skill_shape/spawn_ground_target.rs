@@ -1,5 +1,6 @@
 use crate::{
-	behaviors::{SkillCaster, SkillSpawner, SkillTarget},
+	behaviors::{SkillCaster, SkillSpawner},
+	components::SkillTarget,
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
 };

@@ -12,7 +12,6 @@ tracing.workspace = true
 uuid.workspace = true
 
 # internal
-behaviors.workspace = true
 common.workspace = true
 macros.workspace = true
 player.workspace = true

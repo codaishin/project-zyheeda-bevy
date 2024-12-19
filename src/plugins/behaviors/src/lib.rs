@@ -14,6 +14,7 @@ use common::{
 	states::{game_state::GameState, mouse_context::MouseContext},
 	traits::{
 		animation::HasAnimationsDispatch,
+		handles_behaviors::{HandlesBehaviors, Integrity, Motion, ProjectionOffset, Shape},
 		handles_destruction::HandlesDestruction,
 		handles_effect::HandlesEffect,
 		handles_interactions::HandlesInteractions,
@@ -77,7 +78,8 @@ where
 		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>().register_prefab::<VoidBeam>(app);
 		TPrefabsPlugin::with_dependency::<(TInteractionsPlugin, TLifeCycles)>()
 			.register_prefab::<SkillContact>(app);
-		TPrefabsPlugin::register_prefab::<SkillProjection>(app);
+		TPrefabsPlugin::with_dependency::<(TInteractionsPlugin, TLifeCycles)>()
+			.register_prefab::<SkillProjection>(app);
 
 		app.add_event::<MoveInputEvent>()
 			.add_systems(
@@ -131,5 +133,24 @@ where
 			.add_systems(Update, SetVelocityForward::system)
 			.add_systems(Update, SetPositionAndRotation::<Always>::system)
 			.add_systems(Update, SetPositionAndRotation::<Once>::system);
+	}
+}
+
+impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin> HandlesBehaviors
+	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin>
+{
+	type TSkillContact = SkillContact;
+	type TSkillProjection = SkillProjection;
+
+	fn skill_contact(shape: Shape, integrity: Integrity, motion: Motion) -> Self::TSkillContact {
+		SkillContact {
+			shape,
+			integrity,
+			motion,
+		}
+	}
+
+	fn skill_projection(shape: Shape, offset: Option<ProjectionOffset>) -> Self::TSkillProjection {
+		SkillProjection { shape, offset }
 	}
 }
