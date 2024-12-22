@@ -6,6 +6,8 @@ mod systems;
 
 use crate::systems::{
 	attack::AttackSystem,
+	base_behavior::SelectBehavior,
+	chase::ChaseSystem,
 	movement::{animate_movement::AnimateMovement, execute_move_velocity_based::ExecuteMovement},
 	set_player_movement::SetPlayerMovement,
 };
@@ -22,7 +24,7 @@ use common::{
 		handles_enemies::HandlesEnemies,
 		handles_interactions::HandlesInteractions,
 		handles_orientation::{Face, HandlesOrientation},
-		handles_player::HandlesPlayerMovement,
+		handles_player::{ConfiguresPlayerMovement, HandlesPlayer},
 		handles_skill_behaviors::{
 			HandlesSkillBehaviors,
 			Integrity,
@@ -49,7 +51,6 @@ use components::{
 use events::MoveInputEvent;
 use std::marker::PhantomData;
 use systems::{
-	chase::chase,
 	face::{execute_face::execute_face, get_faces::get_faces},
 	idle::idle,
 	move_on_orbit::move_on_orbit,
@@ -99,7 +100,7 @@ where
 	TLifeCycles: Plugin + HandlesDestruction,
 	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
 	TEnemies: Plugin + HandlesEnemies,
-	TPlayers: Plugin + HandlesPlayerMovement,
+	TPlayers: Plugin + HandlesPlayer + ConfiguresPlayerMovement,
 {
 	fn build(&self, app: &mut App) {
 		TPrefabsPlugin::with_dependency::<(TInteractionsPlugin, TLifeCycles)>()
@@ -136,7 +137,20 @@ where
 						.pipe(idle),
 				),
 			)
-			.add_systems(Update, (chase, TEnemies::TEnemy::attack).chain())
+			.add_systems(
+				Update,
+				(
+					TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>,
+					TEnemies::TEnemy::chase,
+					TEnemies::TEnemy::animate_movement::<
+						Movement<VelocityBased>,
+						TAnimationsPlugin::TAnimationDispatch,
+					>,
+					TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>.pipe(idle),
+					TEnemies::TEnemy::attack,
+				)
+					.chain(),
+			)
 			.add_systems(Update, GroundTarget::set_position)
 			.add_systems(
 				Update,

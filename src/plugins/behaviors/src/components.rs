@@ -2,6 +2,7 @@ pub mod cam_orbit;
 pub mod ground_target;
 pub mod skill_behavior;
 
+pub(crate) mod idle;
 pub(crate) mod set_position_and_rotation;
 pub(crate) mod set_to_move_forward;
 pub(crate) mod when_traveled_insert;
@@ -10,7 +11,7 @@ use crate::traits::RemoveComponent;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{
 	test_tools::utils::ApproxEqual,
-	tools::{Units, UnitsPerSecond},
+	tools::UnitsPerSecond,
 	traits::{animation::Animation, handles_orientation::Face},
 };
 use std::{fmt::Debug, marker::PhantomData, time::Duration};
@@ -82,16 +83,3 @@ pub struct Attack(pub Entity);
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct OnCoolDown(pub Duration);
-
-#[derive(Clone, Copy)]
-pub enum Foe {
-	Player,
-	Entity(Entity),
-}
-
-#[derive(Component, Clone, Copy)]
-pub struct Enemy {
-	pub aggro_range: Units,
-	pub attack_range: Units,
-	pub foe: Foe,
-}

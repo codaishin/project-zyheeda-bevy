@@ -17,7 +17,7 @@ use common::{
 };
 use components::{enemy::Enemy, void_beam::VoidBeam, void_sphere::VoidSphere};
 use std::marker::PhantomData;
-use systems::{base_behavior::base_enemy_behavior, void_sphere::ring_rotation::ring_rotation};
+use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct EnemyPlugin<TPrefabs, TInteractions, TBars>(
 	PhantomData<(TPrefabs, TInteractions, TBars)>,
@@ -42,8 +42,7 @@ where
 		TPrefabs::with_dependency::<(TInteractions, TBars)>().register_prefab::<VoidSphere>(app);
 		TPrefabs::with_dependency::<TInteractions>().register_prefab::<VoidBeam>(app);
 
-		app.add_systems(Update, ring_rotation)
-			.add_systems(Update, base_enemy_behavior);
+		app.add_systems(Update, ring_rotation);
 	}
 }
 

@@ -1,10 +1,5 @@
-use crate::traits::Cleanup;
-use bevy::ecs::{
-	component::Component,
-	entity::Entity,
-	system::{Commands, In, Query},
-};
-use common::components::Idle;
+use crate::{components::idle::Idle, traits::Cleanup};
+use bevy::prelude::*;
 use std::marker::PhantomData;
 
 #[derive(Debug, PartialEq)]
@@ -43,11 +38,7 @@ pub(crate) fn idle<TCleanup: Component + Cleanup>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		ecs::system::{EntityCommands, IntoSystem, Res, Resource},
-	};
-	use common::{components::Idle, test_tools::utils::SingleThreadedApp};
+	use common::test_tools::utils::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Cleaned;

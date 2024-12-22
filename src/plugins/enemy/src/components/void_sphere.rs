@@ -1,5 +1,4 @@
 use super::{enemy::Enemy, void_beam::VoidBeamAttack};
-use behaviors::components::MovementConfig;
 use bevy::{
 	color::{Color, LinearRgba},
 	ecs::system::EntityCommands,
@@ -45,8 +44,10 @@ impl VoidSphere {
 		let attack_range = Units::new(5.);
 
 		Enemy {
-			aggro_range: Units::new(10.),
-			attack_range,
+			speed: UnitsPerSecond::new(1.).into(),
+			movement_animation: None,
+			aggro_range: Units::new(10.).into(),
+			attack_range: attack_range.into(),
 			target: EnemyTarget::Player,
 			attack: Arc::new(VoidBeamAttack {
 				damage: 10.,
@@ -118,10 +119,6 @@ where
 			Health::new(5.).bundle_via::<TInteractions>(),
 			Affected::by::<Gravity>().bundle_via::<TInteractions>(),
 			TBars::new_bar(),
-			MovementConfig {
-				speed: UnitsPerSecond::new(1.),
-				..default()
-			},
 		));
 		on.with_children(|parent| {
 			parent.spawn((

@@ -2140,11 +2140,9 @@ dependencies = [
 name = "enemy"
 version = "0.1.0"
 dependencies = [
- "behaviors",
  "bevy",
  "bevy_rapier3d",
  "common",
- "player",
 ]
 
 [[package]]

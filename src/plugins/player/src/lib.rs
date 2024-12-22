@@ -12,7 +12,7 @@ use common::{
 		handles_bars::HandlesBars,
 		handles_effect::HandlesEffect,
 		handles_lights::HandlesLights,
-		handles_player::HandlesPlayerMovement,
+		handles_player::{HandlesPlayer, ConfiguresPlayerMovement},
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 	},
 };
@@ -56,7 +56,13 @@ where
 	}
 }
 
-impl<TAnimation, TPrefabs, TInteractions, TLights, TBars> HandlesPlayerMovement
+impl<TAnimation, TPrefabs, TInteractions, TLights, TBars> HandlesPlayer
+	for PlayerPlugin<TAnimation, TPrefabs, TInteractions, TLights, TBars>
+{
+	type TPlayer = Player;
+}
+
+impl<TAnimation, TPrefabs, TInteractions, TLights, TBars> ConfiguresPlayerMovement
 	for PlayerPlugin<TAnimation, TPrefabs, TInteractions, TLights, TBars>
 {
 	type TPlayerMovement = PlayerMovement;

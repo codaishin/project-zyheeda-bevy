@@ -1,3 +1,5 @@
+pub mod aggro_range;
+pub mod attack_range;
 pub mod movement_animation;
 pub mod ordered_hash_map;
 pub mod speed;
@@ -50,7 +52,7 @@ impl<T: Debug + PartialEq> Deref for Last<'_, T> {
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive, Serialize, Deserialize)]
 pub struct UnitsPerSecond(f32);
 
-#[derive(Debug, PartialEq, Clone, Copy, ClampZeroPositive, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Copy, ClampZeroPositive, Serialize, Deserialize, PartialOrd)]
 pub struct Units(f32);
 
 #[derive(Debug, PartialEq, Clone, ClampZeroPositive)]

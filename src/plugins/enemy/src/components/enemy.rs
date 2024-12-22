@@ -1,30 +1,70 @@
 use crate::traits::insert_attack::InsertAttack;
 use bevy::prelude::*;
 use common::{
-	tools::Units,
-	traits::handles_enemies::{Attacker, EnemyAttack, EnemyConfig, EnemyTarget, Target},
+	tools::{
+		aggro_range::AggroRange,
+		attack_range::AttackRange,
+		movement_animation::MovementAnimation,
+		speed::Speed,
+	},
+	traits::{
+		accessors::get::{Getter, GetterRefOptional},
+		handles_enemies::{Attacker, EnemyAttack, EnemyTarget, Target},
+	},
 };
 use std::{sync::Arc, time::Duration};
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct Enemy {
-	pub(crate) aggro_range: Units,
-	pub(crate) attack_range: Units,
+	pub(crate) speed: Speed,
+	pub(crate) movement_animation: Option<MovementAnimation>,
+	pub(crate) aggro_range: AggroRange,
+	pub(crate) attack_range: AttackRange,
 	pub(crate) target: EnemyTarget,
 	pub(crate) attack: Arc<dyn InsertAttack + Sync + Send + 'static>,
 	pub(crate) cool_down: Duration,
 }
 
-impl EnemyConfig for Enemy {
-	fn attack_range(&self) -> Units {
-		self.attack_range
+impl Default for Enemy {
+	fn default() -> Self {
+		Self {
+			speed: Default::default(),
+			movement_animation: Default::default(),
+			aggro_range: Default::default(),
+			attack_range: Default::default(),
+			target: Default::default(),
+			attack: Arc::new(NoAttack),
+			cool_down: Default::default(),
+		}
 	}
+}
 
-	fn aggro_range(&self) -> Units {
+impl Getter<Speed> for Enemy {
+	fn get(&self) -> Speed {
+		self.speed
+	}
+}
+
+impl GetterRefOptional<MovementAnimation> for Enemy {
+	fn get(&self) -> Option<&MovementAnimation> {
+		self.movement_animation.as_ref()
+	}
+}
+
+impl Getter<AggroRange> for Enemy {
+	fn get(&self) -> AggroRange {
 		self.aggro_range
 	}
+}
 
-	fn target(&self) -> EnemyTarget {
+impl Getter<AttackRange> for Enemy {
+	fn get(&self) -> AttackRange {
+		self.attack_range
+	}
+}
+
+impl Getter<EnemyTarget> for Enemy {
+	fn get(&self) -> EnemyTarget {
 		self.target
 	}
 }
@@ -37,4 +77,10 @@ impl EnemyAttack for Enemy {
 	fn cool_down(&self) -> Duration {
 		self.cool_down
 	}
+}
+
+struct NoAttack;
+
+impl InsertAttack for NoAttack {
+	fn insert_attack(&self, _: &mut EntityCommands, _: Attacker, _: Target) {}
 }

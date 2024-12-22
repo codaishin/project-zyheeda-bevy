@@ -1,15 +1,21 @@
-use crate::tools::Units;
+use super::accessors::get::{Getter, GetterRefOptional};
+use crate::tools::{
+	aggro_range::AggroRange,
+	attack_range::AttackRange,
+	movement_animation::MovementAnimation,
+	speed::Speed,
+};
 use bevy::prelude::*;
 use std::time::Duration;
 
 pub trait HandlesEnemies {
-	type TEnemy: Component + EnemyConfig + EnemyAttack;
-}
-
-pub trait EnemyConfig {
-	fn attack_range(&self) -> Units;
-	fn aggro_range(&self) -> Units;
-	fn target(&self) -> EnemyTarget;
+	type TEnemy: Component
+		+ Getter<Speed>
+		+ GetterRefOptional<MovementAnimation>
+		+ Getter<EnemyTarget>
+		+ Getter<AggroRange>
+		+ Getter<AttackRange>
+		+ EnemyAttack;
 }
 
 pub trait EnemyAttack {
@@ -17,10 +23,11 @@ pub trait EnemyAttack {
 	fn cool_down(&self) -> Duration;
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub enum EnemyTarget {
+	#[default]
 	Player,
-	Enemy(Entity),
+	Entity(Entity),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]

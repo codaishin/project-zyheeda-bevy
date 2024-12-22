@@ -31,9 +31,6 @@ pub struct GroundOffset(pub Vec3);
 #[derive(Component, Debug, PartialEq)]
 pub struct Immobilized;
 
-#[derive(Component, Debug, PartialEq)]
-pub struct Idle;
-
 #[derive(Component, PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord)]
 #[require(Collider, Transform, ActiveEvents, ActiveCollisionTypes)]
 pub struct ColliderRoot(pub Entity);
