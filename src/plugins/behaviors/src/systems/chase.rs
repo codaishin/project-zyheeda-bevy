@@ -1,21 +1,11 @@
-use crate::{components::Chase, traits::MovementData};
-use bevy::{
-	ecs::{
-		component::Component,
-		entity::Entity,
-		removal_detection::RemovedComponents,
-		system::{Commands, Query},
-	},
-	prelude::Without,
-	transform::components::GlobalTransform,
-};
+use crate::components::{Chase, MovementConfig};
+use bevy::prelude::*;
 use bevy_rapier3d::dynamics::Velocity;
 use common::{components::Immobilized, traits::try_insert_on::TryInsertOn};
-use std::ops::Deref;
 
-pub(crate) fn chase<TMovementConfig: Component + MovementData>(
+pub(crate) fn chase(
 	mut commands: Commands,
-	chasers: Query<(Entity, &GlobalTransform, &TMovementConfig, &Chase), Without<Immobilized>>,
+	chasers: Query<(Entity, &GlobalTransform, &MovementConfig, &Chase), Without<Immobilized>>,
 	mut removed_chasers: RemovedComponents<Chase>,
 	transforms: Query<&GlobalTransform>,
 ) {
@@ -29,11 +19,10 @@ pub(crate) fn chase<TMovementConfig: Component + MovementData>(
 	}
 
 	for (id, transform, conf, target) in chasers_with_valid_target {
-		let (speed, ..) = conf.get_movement_data();
 		let position = transform.translation();
 		commands.try_insert_on(
 			id,
-			Velocity::linear((target - position).normalize() * *speed.deref()),
+			Velocity::linear(*conf.speed * (target - position).normalize()),
 		);
 	}
 }
@@ -41,27 +30,12 @@ pub(crate) fn chase<TMovementConfig: Component + MovementData>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::MovementMode, traits::MovementData};
-	use bevy::{
-		app::{App, Update},
-		math::Vec3,
-		transform::components::GlobalTransform,
-	};
 	use bevy_rapier3d::dynamics::Velocity;
 	use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
 
-	#[derive(Component)]
-	struct _MovementConfig(f32);
-
-	impl MovementData for _MovementConfig {
-		fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode) {
-			(UnitsPerSecond::new(self.0), MovementMode::Fast)
-		}
-	}
-
 	fn setup(foe_position: Vec3) -> (App, Entity) {
 		let mut app = App::new();
-		app.add_systems(Update, chase::<_MovementConfig>);
+		app.add_systems(Update, chase);
 		let foe = app
 			.world_mut()
 			.spawn(GlobalTransform::from_translation(foe_position))
@@ -76,7 +50,14 @@ mod tests {
 		let (mut app, foe) = setup(foe_position);
 		let chaser = app
 			.world_mut()
-			.spawn((GlobalTransform::default(), Chase(foe), _MovementConfig(42.)))
+			.spawn((
+				GlobalTransform::default(),
+				Chase(foe),
+				MovementConfig {
+					speed: UnitsPerSecond::new(42.),
+					..default()
+				},
+			))
 			.id();
 
 		app.update();
@@ -99,7 +80,10 @@ mod tests {
 			.spawn((
 				GlobalTransform::from_translation(position),
 				Chase(foe),
-				_MovementConfig(42.),
+				MovementConfig {
+					speed: UnitsPerSecond::new(42.),
+					..default()
+				},
 			))
 			.id();
 
@@ -121,7 +105,14 @@ mod tests {
 		let (mut app, foe) = setup(foe_position);
 		let chaser = app
 			.world_mut()
-			.spawn((GlobalTransform::default(), Chase(foe), _MovementConfig(42.)))
+			.spawn((
+				GlobalTransform::default(),
+				Chase(foe),
+				MovementConfig {
+					speed: UnitsPerSecond::new(42.),
+					..default()
+				},
+			))
 			.id();
 
 		app.update();
@@ -144,7 +135,10 @@ mod tests {
 			.spawn((
 				GlobalTransform::default(),
 				Chase(foe),
-				_MovementConfig(42.),
+				MovementConfig {
+					speed: UnitsPerSecond::new(42.),
+					..default()
+				},
 				Immobilized,
 			))
 			.id();

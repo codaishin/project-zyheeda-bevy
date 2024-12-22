@@ -11,7 +11,7 @@ use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{
 	test_tools::utils::ApproxEqual,
 	tools::{Units, UnitsPerSecond},
-	traits::handles_orientation::Face,
+	traits::{animation::Animation, handles_orientation::Face},
 };
 use std::{fmt::Debug, marker::PhantomData, time::Duration};
 
@@ -26,9 +26,6 @@ pub struct OverrideFace(pub Face);
 
 #[derive(Component, Debug, PartialEq)]
 pub struct SetFace(pub Face);
-
-#[derive(PartialEq, Debug)]
-pub struct PositionBased;
 
 #[derive(PartialEq, Debug)]
 pub struct VelocityBased;
@@ -71,17 +68,10 @@ pub enum MovementMode {
 	Slow,
 }
 
-#[derive(Component, Debug, PartialEq, Clone, Copy)]
-pub enum MovementConfig {
-	Constant {
-		mode: MovementMode,
-		speed: UnitsPerSecond,
-	},
-	Dynamic {
-		current_mode: MovementMode,
-		fast_speed: UnitsPerSecond,
-		slow_speed: UnitsPerSecond,
-	},
+#[derive(Component, Debug, PartialEq, Clone, Default)]
+pub struct MovementConfig {
+	pub speed: UnitsPerSecond,
+	pub animation: Option<Animation>,
 }
 
 #[derive(Component, Debug, PartialEq)]

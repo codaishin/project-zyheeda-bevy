@@ -16,6 +16,10 @@ pub trait GetterRef<TValue> {
 	fn get(&self) -> &TValue;
 }
 
+pub trait GetterRefOptional<TValue> {
+	fn get(&self) -> Option<&TValue>;
+}
+
 pub trait Getter<TValue> {
 	fn get(&self) -> TValue;
 }

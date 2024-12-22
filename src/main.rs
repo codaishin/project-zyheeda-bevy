@@ -57,6 +57,7 @@ fn prepare_game(app: &mut App) {
 		&life_cycles_plugin,
 		&interactions_plugin,
 		&enemy_plugin,
+		&player_plugin,
 	);
 	let skills_plugin = SkillsPlugin::depends_on(
 		&animations_plugin,

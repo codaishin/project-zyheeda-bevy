@@ -1,7 +1,4 @@
-use behaviors::{
-	animation::MovementAnimations,
-	components::{MovementConfig, MovementMode},
-};
+use super::player_movement::{Config, MovementMode, PlayerMovement};
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
@@ -31,13 +28,30 @@ use common::{
 };
 
 #[derive(Component, Default, Debug, PartialEq)]
+#[require(PlayerMovement(Player::movement))]
 pub struct Player;
 
 impl Player {
-	pub const MODEL_PATH: &'static str = "models/player.glb";
+	const MODEL_PATH: &'static str = "models/player.glb";
 
 	pub fn animation_path(animation_name: &str) -> Path {
 		Path::from(Self::MODEL_PATH.to_owned() + "#" + animation_name)
+	}
+
+	fn movement() -> PlayerMovement {
+		PlayerMovement {
+			mode: MovementMode::Fast,
+			fast: Config {
+				speed: UnitsPerSecond::new(1.5).into(),
+				animation: Animation::new(Self::animation_path("Animation3"), PlayMode::Repeat)
+					.into(),
+			},
+			slow: Config {
+				speed: UnitsPerSecond::new(0.75).into(),
+				animation: Animation::new(Self::animation_path("Animation2"), PlayMode::Repeat)
+					.into(),
+			},
+		}
 	}
 }
 
@@ -95,15 +109,6 @@ where
 				TBars::new_bar(),
 				GroundOffset(Vec3::Y),
 				Blocker::insert([Blocker::Physical]),
-				MovementConfig::Dynamic {
-					current_mode: MovementMode::Fast,
-					slow_speed: UnitsPerSecond::new(0.75),
-					fast_speed: UnitsPerSecond::new(1.5),
-				},
-				MovementAnimations::new(
-					Animation::new(Player::animation_path("Animation3"), PlayMode::Repeat),
-					Animation::new(Player::animation_path("Animation2"), PlayMode::Repeat),
-				),
 				RigidBody::Dynamic,
 				GravityScale(0.),
 				LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y,

@@ -12,12 +12,13 @@ use common::{
 		handles_bars::HandlesBars,
 		handles_effect::HandlesEffect,
 		handles_lights::HandlesLights,
+		handles_player::HandlesPlayerMovement,
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 	},
 };
-use components::player::Player;
+use components::{player::Player, player_movement::PlayerMovement};
 use std::marker::PhantomData;
-use systems::{move_player::move_player, toggle_walk_run::player_toggle_walk_run};
+use systems::toggle_walk_run::player_toggle_walk_run;
 
 pub struct PlayerPlugin<TAnimation, TPrefabs, TInteractions, TLights, TBars>(
 	PhantomData<(TAnimation, TPrefabs, TInteractions, TLights, TBars)>,
@@ -51,6 +52,12 @@ where
 		TPrefabs::with_dependency::<(TInteractions, TLights, TBars)>()
 			.register_prefab::<Player>(app);
 
-		app.add_systems(Update, (player_toggle_walk_run, move_player));
+		app.add_systems(Update, player_toggle_walk_run);
 	}
+}
+
+impl<TAnimation, TPrefabs, TInteractions, TLights, TBars> HandlesPlayerMovement
+	for PlayerPlugin<TAnimation, TPrefabs, TInteractions, TLights, TBars>
+{
+	type TPlayerMovement = PlayerMovement;
 }

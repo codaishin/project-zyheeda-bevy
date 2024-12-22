@@ -1,24 +1,39 @@
-use crate::traits::{GetAnimation, MovementData};
-use bevy::ecs::{
-	change_detection::DetectChanges,
-	component::Component,
-	entity::Entity,
-	query::Without,
-	removal_detection::RemovedComponents,
-	system::Query,
-	world::Ref,
-};
+use bevy::prelude::*;
 use common::{
 	components::Immobilized,
-	traits::animation::{AnimationPriority, StartAnimation, StopAnimation},
+	tools::movement_animation::MovementAnimation,
+	traits::{
+		accessors::get::GetterRefOptional,
+		animation::{AnimationPriority, StartAnimation, StopAnimation},
+	},
 };
 
-type Components<'a, TMovementConfig, TAnimations, TAnimationDispatch, TMovement> = (
-	Ref<'a, TMovementConfig>,
-	&'a TAnimations,
-	&'a mut TAnimationDispatch,
-	Ref<'a, TMovement>,
-);
+impl<T> AnimateMovement for T {}
+
+pub(crate) trait AnimateMovement {
+	#[allow(clippy::type_complexity)]
+	fn animate_movement<
+		TMovement: Component,
+		TAnimationDispatch: Component + StartAnimation + StopAnimation,
+	>(
+		mut agents: Query<
+			(Ref<Self>, &mut TAnimationDispatch, Ref<TMovement>),
+			Without<Immobilized>,
+		>,
+		mut agents_without_movement: Query<&mut TAnimationDispatch, Without<TMovement>>,
+		mut removed_movements: RemovedComponents<TMovement>,
+	) where
+		Self: Component + Sized + GetterRefOptional<MovementAnimation>,
+	{
+		for (config, dispatch, movement) in &mut agents {
+			start_animation(config, dispatch, movement);
+		}
+
+		for entity in removed_movements.read() {
+			stop_animation(entity, &mut agents_without_movement);
+		}
+	}
+}
 
 #[derive(Debug, PartialEq)]
 struct Move;
@@ -29,44 +44,20 @@ impl From<Move> for AnimationPriority {
 	}
 }
 
-pub(crate) fn animate_movement<
-	TMovementConfig: Component + MovementData,
-	TMovement: Component,
-	TAnimations: Component + GetAnimation,
-	TAnimationDispatch: Component + StartAnimation + StopAnimation,
->(
-	mut agents: Query<
-		Components<TMovementConfig, TAnimations, TAnimationDispatch, TMovement>,
-		Without<Immobilized>,
-	>,
-	mut agents_without_movement: Query<&mut TAnimationDispatch, Without<TMovement>>,
-	mut removed_movements: RemovedComponents<TMovement>,
-) {
-	for (config, animations, dispatch, movement) in &mut agents {
-		start_animation(config, animations, dispatch, movement);
-	}
-
-	for entity in removed_movements.read() {
-		stop_animation(entity, &mut agents_without_movement);
-	}
-}
-
-fn start_animation<
-	TMovementConfig: MovementData,
-	TMovement,
-	TAnimations: GetAnimation,
-	TAnimationDispatch: StartAnimation,
->(
-	config: Ref<TMovementConfig>,
-	animations: &TAnimations,
-	mut dispatch: bevy::prelude::Mut<TAnimationDispatch>,
+fn start_animation<TConfig, TMovement, TAnimationDispatch>(
+	config: Ref<TConfig>,
+	mut dispatch: Mut<TAnimationDispatch>,
 	movement: Ref<TMovement>,
-) {
+) where
+	TConfig: GetterRefOptional<MovementAnimation>,
+	TAnimationDispatch: StartAnimation,
+{
 	if !movement.is_added() && !config.is_changed() {
 		return;
 	}
-	let (.., mode) = config.get_movement_data();
-	let animation = animations.animation(&mode);
+	let Some(MovementAnimation(animation)) = &config.get() else {
+		return;
+	};
 	dispatch.start_animation(Move, animation.clone());
 }
 
@@ -83,14 +74,8 @@ fn stop_animation<TMovement: Component, TAnimationDispatch: Component + StopAnim
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::MovementMode;
-	use bevy::{
-		app::{App, Update},
-		utils::default,
-	};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		tools::UnitsPerSecond,
 		traits::{
 			animation::{Animation, PlayMode},
 			load_asset::Path,
@@ -98,53 +83,20 @@ mod tests {
 		},
 	};
 	use macros::NestedMocks;
-	use mockall::{automock, mock, predicate::eq};
+	use mockall::{mock, predicate::eq};
 	use std::ops::DerefMut;
 
-	#[derive(Component, NestedMocks)]
-	struct _Config {
-		mock: Mock_Config,
-	}
+	#[derive(Component)]
+	struct _Agent(Option<MovementAnimation>);
 
-	impl Default for _Config {
-		fn default() -> Self {
-			Self::new().with_mock(|mock| {
-				mock.expect_get_movement_data()
-					.return_const((default(), default()));
-			})
-		}
-	}
-
-	#[automock]
-	impl MovementData for _Config {
-		fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode) {
-			self.mock.get_movement_data()
+	impl GetterRefOptional<MovementAnimation> for _Agent {
+		fn get(&self) -> Option<&MovementAnimation> {
+			self.0.as_ref()
 		}
 	}
 
 	#[derive(Component)]
 	struct _Movement;
-
-	#[derive(Component, NestedMocks)]
-	struct _MovementAnimations {
-		mock: Mock_MovementAnimations,
-	}
-
-	impl Default for _MovementAnimations {
-		fn default() -> Self {
-			Self::new().with_mock(|mock| {
-				mock.expect_animation()
-					.return_const(Animation::new(Path::from(""), PlayMode::Repeat));
-			})
-		}
-	}
-
-	#[automock]
-	impl GetAnimation for _MovementAnimations {
-		fn animation(&self, key: &MovementMode) -> &Animation {
-			self.mock.animation(key)
-		}
-	}
 
 	#[derive(Component, NestedMocks)]
 	struct _AnimationDispatch {
@@ -185,26 +137,19 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			animate_movement::<_Config, _Movement, _MovementAnimations, _AnimationDispatch>,
+			_Agent::animate_movement::<_Movement, _AnimationDispatch>,
 		);
 
 		app
 	}
 
 	#[test]
-	fn animate_fast() {
+	fn animate() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Config::new().with_mock(|mock| {
-				mock.expect_get_movement_data()
-					.return_const((UnitsPerSecond::default(), MovementMode::Fast));
-			}),
-			_MovementAnimations::new().with_mock(|mock| {
-				mock.expect_animation()
-					.times(1)
-					.with(eq(MovementMode::Fast))
-					.return_const(Animation::new(Path::from("fast"), PlayMode::Repeat));
-			}),
+			_Agent(Some(
+				Animation::new(Path::from("fast"), PlayMode::Repeat).into(),
+			)),
 			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation()
 					.times(1)
@@ -221,40 +166,12 @@ mod tests {
 	}
 
 	#[test]
-	fn animate_slow() {
-		let mut app = setup();
-		app.world_mut().spawn((
-			_Config::new().with_mock(|mock| {
-				mock.expect_get_movement_data()
-					.return_const((UnitsPerSecond::default(), MovementMode::Slow));
-			}),
-			_MovementAnimations::new().with_mock(|mock| {
-				mock.expect_animation()
-					.times(1)
-					.with(eq(MovementMode::Slow))
-					.return_const(Animation::new(Path::from("slow"), PlayMode::Repeat));
-			}),
-			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_start_animation()
-					.times(1)
-					.with(
-						eq(Move),
-						eq(Animation::new(Path::from("slow"), PlayMode::Repeat)),
-					)
-					.return_const(());
-			}),
-			_Movement,
-		));
-
-		app.update();
-	}
-
-	#[test]
 	fn do_not_animate_when_no_movement_component() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Config::default(),
-			_MovementAnimations::default(),
+			_Agent(Some(
+				Animation::new(Path::from(""), PlayMode::Repeat).into(),
+			)),
 			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation::<Move>()
 					.never()
@@ -271,8 +188,9 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				_Config::default(),
-				_MovementAnimations::default(),
+				_Agent(Some(
+					Animation::new(Path::from(""), PlayMode::Repeat).into(),
+				)),
 				_AnimationDispatch::new().with_mock(|mock| {
 					mock.expect_start_animation::<Move>().return_const(());
 					mock.expect_stop_animation::<Move>()
@@ -294,8 +212,9 @@ mod tests {
 	fn animate_only_when_movement_added() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Config::default(),
-			_MovementAnimations::default(),
+			_Agent(Some(
+				Animation::new(Path::from(""), PlayMode::Repeat).into(),
+			)),
 			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation::<Move>()
 					.times(1)
@@ -314,8 +233,9 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				_Config::default(),
-				_MovementAnimations::default(),
+				_Agent(Some(
+					Animation::new(Path::from(""), PlayMode::Repeat).into(),
+				)),
 				_AnimationDispatch::new().with_mock(|mock| {
 					mock.expect_start_animation::<Move>()
 						.times(1)
@@ -342,8 +262,9 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				_Config::default(),
-				_MovementAnimations::default(),
+				_Agent(Some(
+					Animation::new(Path::from(""), PlayMode::Repeat).into(),
+				)),
 				_AnimationDispatch::new().with_mock(|mock| {
 					mock.expect_start_animation::<Move>()
 						.times(2)
@@ -356,7 +277,7 @@ mod tests {
 
 		app.world_mut()
 			.entity_mut(agent)
-			.get_mut::<_Config>()
+			.get_mut::<_Agent>()
 			.unwrap()
 			.deref_mut();
 
@@ -367,8 +288,9 @@ mod tests {
 	fn no_animate_when_immobilized() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Config::default(),
-			_MovementAnimations::default(),
+			_Agent(Some(
+				Animation::new(Path::from(""), PlayMode::Repeat).into(),
+			)),
 			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation::<Move>()
 					.never()

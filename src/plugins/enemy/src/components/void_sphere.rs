@@ -1,5 +1,5 @@
 use super::{enemy::Enemy, void_beam::VoidBeamAttack};
-use behaviors::components::{MovementConfig, MovementMode};
+use behaviors::components::MovementConfig;
 use bevy::{
 	color::{Color, LinearRgba},
 	ecs::system::EntityCommands,
@@ -118,9 +118,9 @@ where
 			Health::new(5.).bundle_via::<TInteractions>(),
 			Affected::by::<Gravity>().bundle_via::<TInteractions>(),
 			TBars::new_bar(),
-			MovementConfig::Constant {
-				mode: MovementMode::Slow,
+			MovementConfig {
 				speed: UnitsPerSecond::new(1.),
+				..default()
 			},
 		));
 		on.with_children(|parent| {

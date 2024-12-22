@@ -1,4 +1,6 @@
+pub mod movement_animation;
 pub mod ordered_hash_map;
+pub mod speed;
 
 pub(crate) mod get_recursively;
 

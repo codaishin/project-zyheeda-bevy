@@ -1,12 +1,14 @@
-pub mod animation;
 pub mod components;
 pub mod events;
 pub mod traits;
 
 mod systems;
 
-use crate::systems::attack::AttackSystem;
-use animation::MovementAnimations;
+use crate::systems::{
+	attack::AttackSystem,
+	movement::{animate_movement::AnimateMovement, execute_move_velocity_based::ExecuteMovement},
+	set_player_movement::SetPlayerMovement,
+};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
@@ -20,6 +22,7 @@ use common::{
 		handles_enemies::HandlesEnemies,
 		handles_interactions::HandlesInteractions,
 		handles_orientation::{Face, HandlesOrientation},
+		handles_player::HandlesPlayerMovement,
 		handles_skill_behaviors::{
 			HandlesSkillBehaviors,
 			Integrity,
@@ -39,10 +42,8 @@ use components::{
 	when_traveled_insert::InsertAfterDistanceTraveled,
 	Always,
 	Movement,
-	MovementConfig,
 	Once,
 	OverrideFace,
-	PositionBased,
 	VelocityBased,
 };
 use events::MoveInputEvent;
@@ -53,21 +54,23 @@ use systems::{
 	idle::idle,
 	move_on_orbit::move_on_orbit,
 	move_with_target::move_with_target,
-	movement::{
-		animate_movement::animate_movement,
-		execute_move_position_based::execute_move_position_based,
-		execute_move_velocity_based::execute_move_velocity_based,
-		trigger_event::trigger_move_input_event,
-	},
+	movement::trigger_event::trigger_move_input_event,
 	update_cool_downs::update_cool_downs,
 };
 
-pub struct BehaviorsPlugin<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies>(
-	PhantomData<(TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies)>,
+pub struct BehaviorsPlugin<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies, TPlayer>(
+	PhantomData<(
+		TAnimations,
+		TPrefabs,
+		TLifeCycles,
+		TInteractions,
+		TEnemies,
+		TPlayer,
+	)>,
 );
 
-impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies>
-	BehaviorsPlugin<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies>
+impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies, TPlayer>
+	BehaviorsPlugin<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies, TPlayer>
 {
 	pub fn depends_on(
 		_: &TAnimations,
@@ -75,19 +78,28 @@ impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies>
 		_: &TLifeCycles,
 		_: &TInteractions,
 		_: &TEnemies,
+		_: &TPlayer,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies> Plugin
-	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies>
+impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies, TPlayers> Plugin
+	for BehaviorsPlugin<
+		TAnimationsPlugin,
+		TPrefabsPlugin,
+		TLifeCycles,
+		TInteractionsPlugin,
+		TEnemies,
+		TPlayers,
+	>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
 	TLifeCycles: Plugin + HandlesDestruction,
 	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
 	TEnemies: Plugin + HandlesEnemies,
+	TPlayers: Plugin + HandlesPlayerMovement,
 {
 	fn build(&self, app: &mut App) {
 		TPrefabsPlugin::with_dependency::<(TInteractionsPlugin, TLifeCycles)>()
@@ -115,33 +127,16 @@ where
 			.add_systems(
 				Update,
 				(
-					execute_move_position_based::<MovementConfig, Movement<PositionBased>, Virtual>
-						.pipe(idle),
-					execute_move_velocity_based::<MovementConfig, Movement<VelocityBased>>
-						.pipe(idle),
-				),
-			)
-			.add_systems(
-				Update,
-				(
-					animate_movement::<
-						MovementConfig,
-						Movement<PositionBased>,
-						MovementAnimations,
-						TAnimationsPlugin::TAnimationDispatch,
-					>,
-					animate_movement::<
-						MovementConfig,
+					TPlayers::TPlayerMovement::set_movement,
+					TPlayers::TPlayerMovement::animate_movement::<
 						Movement<VelocityBased>,
-						MovementAnimations,
 						TAnimationsPlugin::TAnimationDispatch,
 					>,
+					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>
+						.pipe(idle),
 				),
 			)
-			.add_systems(
-				Update,
-				(chase::<MovementConfig>, TEnemies::TEnemy::attack).chain(),
-			)
+			.add_systems(Update, (chase, TEnemies::TEnemy::attack).chain())
 			.add_systems(Update, GroundTarget::set_position)
 			.add_systems(
 				Update,
@@ -153,9 +148,16 @@ where
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies>
+impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies, TPlayers>
 	HandlesSkillBehaviors
-	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies>
+	for BehaviorsPlugin<
+		TAnimationsPlugin,
+		TPrefabsPlugin,
+		TLifeCycles,
+		TInteractionsPlugin,
+		TEnemies,
+		TPlayers,
+	>
 {
 	type TSkillContact = SkillContact;
 	type TSkillProjection = SkillProjection;
@@ -173,9 +175,16 @@ impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemi
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies>
+impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies, TPlayers>
 	HandlesOrientation
-	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies>
+	for BehaviorsPlugin<
+		TAnimationsPlugin,
+		TPrefabsPlugin,
+		TLifeCycles,
+		TInteractionsPlugin,
+		TEnemies,
+		TPlayers,
+	>
 {
 	type TFaceTemporarily = OverrideFace;
 
