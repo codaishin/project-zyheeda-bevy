@@ -5,6 +5,7 @@ pub mod traits;
 
 mod systems;
 
+use crate::systems::attack::AttackSystem;
 use animation::MovementAnimations;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
@@ -16,6 +17,7 @@ use common::{
 		animation::HasAnimationsDispatch,
 		handles_destruction::HandlesDestruction,
 		handles_effect::HandlesEffect,
+		handles_enemies::HandlesEnemies,
 		handles_interactions::HandlesInteractions,
 		handles_orientation::{Face, HandlesOrientation},
 		handles_skill_behaviors::{
@@ -34,7 +36,6 @@ use components::{
 	set_position_and_rotation::SetPositionAndRotation,
 	set_to_move_forward::SetVelocityForward,
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
-	void_beam::VoidBeam,
 	when_traveled_insert::InsertAfterDistanceTraveled,
 	Always,
 	Movement,
@@ -47,7 +48,6 @@ use components::{
 use events::MoveInputEvent;
 use std::marker::PhantomData;
 use systems::{
-	attack::attack,
 	chase::chase,
 	face::{execute_face::execute_face, get_faces::get_faces},
 	idle::idle,
@@ -62,28 +62,34 @@ use systems::{
 	update_cool_downs::update_cool_downs,
 };
 
-pub struct BehaviorsPlugin<TAnimations, TPrefabs, TLifeCycles, TInteractions>(
-	PhantomData<(TAnimations, TPrefabs, TLifeCycles, TInteractions)>,
+pub struct BehaviorsPlugin<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies>(
+	PhantomData<(TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies)>,
 );
 
-impl<TAnimations, TPrefabs, TLifeCycles, TInteractions>
-	BehaviorsPlugin<TAnimations, TPrefabs, TLifeCycles, TInteractions>
+impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies>
+	BehaviorsPlugin<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies>
 {
-	pub fn depends_on(_: &TAnimations, _: &TPrefabs, _: &TLifeCycles, _: &TInteractions) -> Self {
-		Self(PhantomData::<(TAnimations, TPrefabs, TLifeCycles, TInteractions)>)
+	pub fn depends_on(
+		_: &TAnimations,
+		_: &TPrefabs,
+		_: &TLifeCycles,
+		_: &TInteractions,
+		_: &TEnemies,
+	) -> Self {
+		Self(PhantomData)
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin> Plugin
-	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin>
+impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies> Plugin
+	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies>
 where
 	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
 	TPrefabsPlugin: Plugin + RegisterPrefab,
 	TLifeCycles: Plugin + HandlesDestruction,
 	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
+	TEnemies: Plugin + HandlesEnemies,
 {
 	fn build(&self, app: &mut App) {
-		TPrefabsPlugin::with_dependency::<TInteractionsPlugin>().register_prefab::<VoidBeam>(app);
 		TPrefabsPlugin::with_dependency::<(TInteractionsPlugin, TLifeCycles)>()
 			.register_prefab::<SkillContact>(app);
 		TPrefabsPlugin::with_dependency::<(TInteractionsPlugin, TLifeCycles)>()
@@ -132,7 +138,10 @@ where
 					>,
 				),
 			)
-			.add_systems(Update, (chase::<MovementConfig>, attack).chain())
+			.add_systems(
+				Update,
+				(chase::<MovementConfig>, TEnemies::TEnemy::attack).chain(),
+			)
 			.add_systems(Update, GroundTarget::set_position)
 			.add_systems(
 				Update,
@@ -144,8 +153,9 @@ where
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin> HandlesSkillBehaviors
-	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin>
+impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies>
+	HandlesSkillBehaviors
+	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies>
 {
 	type TSkillContact = SkillContact;
 	type TSkillProjection = SkillProjection;
@@ -163,8 +173,9 @@ impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin> Handle
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin> HandlesOrientation
-	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin>
+impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies>
+	HandlesOrientation
+	for BehaviorsPlugin<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies>
 {
 	type TFaceTemporarily = OverrideFace;
 

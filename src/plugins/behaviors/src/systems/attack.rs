@@ -1,4 +1,4 @@
-use crate::components::{Attack, AttackConfig, Attacker, OnCoolDown, Target};
+use crate::components::{Attack, OnCoolDown};
 use bevy::ecs::{
 	component::Component,
 	entity::Entity,
@@ -6,46 +6,62 @@ use bevy::ecs::{
 	removal_detection::RemovedComponents,
 	system::{Commands, Query},
 };
-use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
-use std::sync::Arc;
+use common::traits::{
+	handles_enemies::{Attacker, EnemyAttack, Target},
+	try_despawn_recursive::TryDespawnRecursive,
+	try_insert_on::TryInsertOn,
+	try_remove_from::TryRemoveFrom,
+};
 
-#[derive(Component)]
-pub(crate) struct Despawn(Arc<dyn Fn(&mut Commands) + Sync + Send>);
+impl<T> AttackSystem for T {}
 
-pub(crate) fn attack(
-	mut commands: Commands,
-	mut removed_attacks: RemovedComponents<Attack>,
-	attackers: Query<(Entity, &Attack, &AttackConfig), Without<OnCoolDown>>,
-	despawns: Query<&Despawn>,
-) {
-	for (id, attack, conf, ..) in &attackers {
-		let spawn = &conf.spawn;
-		let despawn = spawn.spawn(&mut commands, Attacker(id), Target(attack.0));
-		commands.try_insert_on(id, (OnCoolDown(conf.cool_down), Despawn(despawn)));
-	}
+pub trait AttackSystem {
+	fn attack(
+		mut commands: Commands,
+		mut stop_attacks: RemovedComponents<Attack>,
+		attackers: Query<(Entity, &Self, &Attack), Without<OnCoolDown>>,
+		ongoing: Query<&Ongoing>,
+	) where
+		Self: Component + EnemyAttack + Sized,
+	{
+		for (entity, enemy, Attack(target)) in &attackers {
+			let mut attack_entity = commands.spawn_empty();
+			let attack = attack_entity.id();
 
-	for id in removed_attacks.read() {
-		let Ok(despawn) = despawns.get(id) else {
-			continue;
-		};
-		(despawn.0)(&mut commands);
-		commands.try_remove_from::<Despawn>(id);
+			enemy.insert_attack(&mut attack_entity, Attacker(entity), Target(*target));
+			attack_entity
+				.commands()
+				.try_insert_on(entity, (OnCoolDown(enemy.cool_down()), Ongoing(attack)));
+		}
+
+		for attacker in stop_attacks.read() {
+			let Ok(Ongoing(attack)) = ongoing.get(attacker).cloned() else {
+				continue;
+			};
+			commands.try_despawn_recursive(attack);
+			commands.try_remove_from::<Ongoing>(attacker);
+		}
 	}
 }
+
+#[derive(Component, Debug, PartialEq, Clone, Copy)]
+pub(crate) struct Ongoing(Entity);
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::{Attacker, Target},
-		traits::{SpawnAttack, ToArc},
-	};
 	use bevy::{
 		app::{App, Update},
 		ecs::component::Component,
+		prelude::EntityCommands,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
-	use std::{sync::Arc, time::Duration};
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		traits::{handles_enemies::EnemyAttack, nested_mock::NestedMocks},
+	};
+	use macros::NestedMocks;
+	use mockall::automock;
+	use std::time::Duration;
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _FakeAttack {
@@ -53,25 +69,34 @@ mod tests {
 		target: Target,
 	}
 
-	struct _FakeAttackConfig;
+	#[derive(Component, Debug, PartialEq)]
+	struct _FakeAttackEmpty;
 
-	impl SpawnAttack for _FakeAttackConfig {
-		fn spawn(
+	#[derive(Component, NestedMocks)]
+	struct _Enemy {
+		mock: Mock_Enemy,
+	}
+
+	#[automock]
+	impl EnemyAttack for _Enemy {
+		#[allow(clippy::needless_lifetimes)]
+		fn insert_attack<'a>(
 			&self,
-			commands: &mut Commands,
+			entity: &mut EntityCommands<'a>,
 			attacker: Attacker,
 			target: Target,
-		) -> Arc<dyn Fn(&mut Commands) + Sync + Send> {
-			let attack = commands.spawn(_FakeAttack { attacker, target }).id();
-			Arc::new(move |commands| {
-				commands.entity(attack).despawn();
-			})
+		) {
+			self.mock.insert_attack(entity, attacker, target);
+		}
+
+		fn cool_down(&self) -> Duration {
+			self.mock.cool_down()
 		}
 	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, attack);
+		app.add_systems(Update, _Enemy::attack);
 
 		app
 	}
@@ -83,26 +108,27 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Attack(Entity::from_raw(11)),
-				AttackConfig {
-					spawn: _FakeAttackConfig.to_arc(),
-					cool_down: Duration::ZERO,
-				},
+				_Enemy::new().with_mock(|mock| {
+					mock.expect_insert_attack()
+						.times(1)
+						.returning(|entity, attacker, target| {
+							entity.insert(_FakeAttack { attacker, target });
+						});
+					mock.expect_cool_down().return_const(Duration::ZERO);
+				}),
 			))
 			.id();
 
 		app.update();
-
-		let fake_attack = app
-			.world()
-			.iter_entities()
-			.find_map(|e| e.get::<_FakeAttack>());
 
 		assert_eq!(
 			Some(&_FakeAttack {
 				attacker: Attacker(attacker),
 				target: Target(Entity::from_raw(11))
 			}),
-			fake_attack
+			app.world()
+				.iter_entities()
+				.find_map(|e| e.get::<_FakeAttack>())
 		);
 	}
 
@@ -113,20 +139,19 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Attack(Entity::from_raw(11)),
-				AttackConfig {
-					spawn: _FakeAttackConfig.to_arc(),
-					cool_down: Duration::from_secs(42),
-				},
+				_Enemy::new().with_mock(|mock| {
+					mock.expect_insert_attack().return_const(());
+					mock.expect_cool_down()
+						.return_const(Duration::from_secs(42));
+				}),
 			))
 			.id();
 
 		app.update();
 
-		let attacker = app.world().entity(attacker);
-
 		assert_eq!(
 			Some(&OnCoolDown(Duration::from_secs(42))),
-			attacker.get::<OnCoolDown>()
+			app.world().entity(attacker).get::<OnCoolDown>()
 		);
 	}
 
@@ -138,77 +163,78 @@ mod tests {
 			.spawn((
 				Attack(Entity::from_raw(11)),
 				OnCoolDown(Duration::from_millis(100)),
-				AttackConfig {
-					spawn: _FakeAttackConfig.to_arc(),
-					cool_down: Duration::ZERO,
-				},
+				_Enemy::new().with_mock(|mock| {
+					mock.expect_insert_attack().returning(|entity, _, _| {
+						entity.insert(_FakeAttackEmpty);
+					});
+					mock.expect_cool_down()
+						.return_const(Duration::from_secs(42));
+				}),
 			))
 			.id();
 
 		app.update();
 
-		let fake_attack = app
-			.world()
-			.iter_entities()
-			.find_map(|e| e.get::<_FakeAttack>());
-		let attacker = app.world().entity(attacker);
-
 		assert_eq!(
 			(None, Some(&OnCoolDown(Duration::from_millis(100)))),
-			(fake_attack, attacker.get::<OnCoolDown>())
+			(
+				app.world()
+					.iter_entities()
+					.find_map(|e| e.get::<_FakeAttackEmpty>()),
+				app.world().entity(attacker).get::<OnCoolDown>()
+			)
 		);
 	}
 
 	#[test]
-	fn use_despawn_function_when_attack_removed() {
+	fn despawn_attack_entity_when_attack_removed() {
 		let mut app = setup();
 		let attacker = app
 			.world_mut()
 			.spawn((
 				Attack(Entity::from_raw(11)),
-				AttackConfig {
-					spawn: _FakeAttackConfig.to_arc(),
-					cool_down: Duration::ZERO,
-				},
+				_Enemy::new().with_mock(|mock| {
+					mock.expect_insert_attack().returning(|entity, _, _| {
+						entity.insert(_FakeAttackEmpty);
+					});
+					mock.expect_cool_down().return_const(Duration::ZERO);
+				}),
 			))
 			.id();
 
 		app.update();
-
 		app.world_mut().entity_mut(attacker).remove::<Attack>();
-
 		app.update();
 
-		let fake_attack = app
-			.world()
-			.iter_entities()
-			.find_map(|e| e.get::<_FakeAttack>());
-
-		assert_eq!(None, fake_attack);
+		assert_eq!(
+			None,
+			app.world()
+				.iter_entities()
+				.find_map(|e| e.get::<_FakeAttackEmpty>())
+		);
 	}
 
 	#[test]
-	fn remove_despawn_component_when_attack_removed() {
+	fn remove_ongoing_component_when_attack_removed() {
 		let mut app = setup();
 		let attacker = app
 			.world_mut()
 			.spawn((
 				Attack(Entity::from_raw(11)),
-				AttackConfig {
-					spawn: _FakeAttackConfig.to_arc(),
-					cool_down: Duration::ZERO,
-				},
+				_Enemy::new().with_mock(|mock| {
+					mock.expect_insert_attack().return_const(());
+					mock.expect_cool_down().return_const(Duration::ZERO);
+				}),
 			))
 			.id();
 
 		app.update();
-
 		app.world_mut().entity_mut(attacker).remove::<Attack>();
-
 		app.update();
 
-		let despawners = app.world().iter_entities().find_map(|e| e.get::<Despawn>());
-
-		assert!(despawners.is_none());
+		assert_eq!(
+			None,
+			app.world().iter_entities().find_map(|e| e.get::<Ongoing>())
+		);
 	}
 }

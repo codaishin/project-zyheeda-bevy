@@ -1,20 +1,19 @@
 pub mod cam_orbit;
 pub mod ground_target;
 pub mod skill_behavior;
-pub mod void_beam;
 
 pub(crate) mod set_position_and_rotation;
 pub(crate) mod set_to_move_forward;
 pub(crate) mod when_traveled_insert;
 
-use crate::traits::{RemoveComponent, SpawnAttack};
+use crate::traits::RemoveComponent;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{
 	test_tools::utils::ApproxEqual,
 	tools::{Units, UnitsPerSecond},
 	traits::handles_orientation::Face,
 };
-use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
+use std::{fmt::Debug, marker::PhantomData, time::Duration};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) struct Always;
@@ -90,18 +89,6 @@ pub struct Chase(pub Entity);
 
 #[derive(Component, Debug, PartialEq)]
 pub struct Attack(pub Entity);
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Attacker(pub Entity);
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Target(pub Entity);
-
-#[derive(Component)]
-pub struct AttackConfig {
-	pub spawn: Arc<dyn SpawnAttack + Sync + Send>,
-	pub cool_down: Duration,
-}
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct OnCoolDown(pub Duration);

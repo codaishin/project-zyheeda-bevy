@@ -3,13 +3,12 @@ pub(crate) mod has_filter;
 pub(crate) mod movement;
 pub(crate) mod movement_config;
 
-use crate::components::{Attacker, MovementMode, Target};
+use crate::components::MovementMode;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{
 	tools::{Units, UnitsPerSecond},
 	traits::animation::Animation,
 };
-use std::sync::Arc;
 
 pub type Vec2Radians = Vec2;
 
@@ -51,22 +50,6 @@ pub(crate) trait MovementVelocityBased {
 
 pub(crate) trait Cleanup {
 	fn cleanup(&self, agent: &mut EntityCommands);
-}
-
-pub type DespawnFn = Arc<dyn Fn(&mut Commands) + Sync + Send>;
-
-pub trait SpawnAttack {
-	fn spawn(&self, commands: &mut Commands, attacker: Attacker, target: Target) -> DespawnFn;
-}
-
-pub trait ToArc {
-	fn to_arc(self) -> Arc<Self>;
-}
-
-impl<T: SpawnAttack> ToArc for T {
-	fn to_arc(self) -> Arc<Self> {
-		Arc::new(self)
-	}
 }
 
 pub trait RemoveComponent<T: Bundle> {
