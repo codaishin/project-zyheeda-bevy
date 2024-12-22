@@ -1,9 +1,5 @@
 mod systems;
 
-use behaviors::{
-	components::cam_orbit::{CamOrbit, CamOrbitCenter},
-	traits::{Orbit, Vec2Radians},
-};
 use bevy::{
 	core_pipeline::{bloom::Bloom, tonemapping::Tonemapping},
 	prelude::*,
@@ -11,14 +7,11 @@ use bevy::{
 use common::{
 	components::MainCamera,
 	states::{game_state::GameState, transition_to_state},
-	traits::{
-		handles_load_tracking::{HandlesLoadTracking, OnLoadingDone},
-		try_insert_on::TryInsertOn,
-	},
+	traits::handles_load_tracking::{HandlesLoadTracking, OnLoadingDone},
 };
 use enemy::components::void_sphere::VoidSphere;
 use player::bundle::PlayerBundle;
-use std::{f32::consts::PI, marker::PhantomData};
+use std::marker::PhantomData;
 use systems::pause_virtual_time::pause_virtual_time;
 
 pub struct GameStatePlugin<TLoading>(PhantomData<TLoading>);
@@ -68,34 +61,13 @@ fn spawn_camera(mut commands: Commands) {
 	));
 }
 
-fn setup_scene(mut commands: Commands, cameras: Query<Entity, With<MainCamera>>) {
-	let player = spawn_player(&mut commands);
-	set_camera_to_orbit_player(&mut commands, cameras, player);
+fn setup_scene(mut commands: Commands) {
+	spawn_player(&mut commands);
 	spawn_void_spheres(&mut commands);
 }
 
 fn spawn_player(commands: &mut Commands) -> Entity {
 	commands.spawn(PlayerBundle::default()).id()
-}
-
-fn set_camera_to_orbit_player(
-	commands: &mut Commands,
-	cameras: Query<Entity, With<MainCamera>>,
-	player: Entity,
-) {
-	for entity in &cameras {
-		let mut transform = Transform::from_translation(Vec3::X);
-		let mut orbit = CamOrbit {
-			center: CamOrbitCenter::from(Vec3::ZERO).with_entity(player),
-			distance: 15.,
-			sensitivity: 1.,
-		};
-
-		orbit.orbit(&mut transform, Vec2Radians::new(-PI / 3., PI / 3.));
-		orbit.sensitivity = 0.005;
-
-		commands.try_insert_on(entity, (transform, orbit));
-	}
 }
 
 fn spawn_void_spheres(commands: &mut Commands) {

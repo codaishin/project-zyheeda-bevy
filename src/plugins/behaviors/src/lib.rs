@@ -14,6 +14,7 @@ use crate::systems::{
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
+	components::MainCamera,
 	effects::deal_damage::DealDamage,
 	resources::CamRay,
 	states::{game_state::GameState, mouse_context::MouseContext},
@@ -56,6 +57,7 @@ use systems::{
 	move_on_orbit::move_on_orbit,
 	move_with_target::move_with_target,
 	movement::trigger_event::trigger_move_input_event,
+	set_camera_to_orbit_player::SetCameraToOrbit,
 	update_cool_downs::update_cool_downs,
 };
 
@@ -125,6 +127,7 @@ where
 					.run_if(in_state(GameState::Play)),
 			)
 			.add_systems(Update, update_cool_downs::<Virtual>)
+			.add_systems(Update, MainCamera::set_camera_to_orbit::<TPlayers::TPlayer>)
 			.add_systems(
 				Update,
 				(

@@ -2413,7 +2413,6 @@ dependencies = [
 name = "game_state"
 version = "0.1.0"
 dependencies = [
- "behaviors",
  "bevy",
  "bevy_rapier3d",
  "common",

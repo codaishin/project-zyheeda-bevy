@@ -6,5 +6,6 @@ pub(crate) mod face;
 pub(crate) mod move_on_orbit;
 pub(crate) mod move_with_target;
 pub(crate) mod movement;
+pub(crate) mod set_camera_to_orbit_player;
 pub(crate) mod set_player_movement;
 pub(crate) mod update_cool_downs;
