@@ -12,7 +12,7 @@ use common::{
 		handles_bars::HandlesBars,
 		handles_effect::HandlesEffect,
 		handles_lights::HandlesLights,
-		handles_player::{HandlesPlayer, ConfiguresPlayerMovement},
+		handles_player::{ConfiguresPlayerMovement, HandlesPlayer},
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 	},
 };
