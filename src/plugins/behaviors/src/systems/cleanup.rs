@@ -1,14 +1,14 @@
-use crate::{components::idle::Idle, traits::Cleanup};
+use crate::traits::Cleanup;
 use bevy::prelude::*;
 use std::marker::PhantomData;
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct SetToIdle<T> {
+pub(crate) struct SetToCleanUp<T> {
 	pub entities: Vec<Entity>,
 	phantom_data: PhantomData<T>,
 }
 
-impl<T> SetToIdle<T> {
+impl<T> SetToCleanUp<T> {
 	pub fn new(entities: Vec<Entity>) -> Self {
 		Self {
 			entities,
@@ -17,8 +17,8 @@ impl<T> SetToIdle<T> {
 	}
 }
 
-pub(crate) fn idle<TCleanup: Component + Cleanup>(
-	set_to_idle: In<SetToIdle<TCleanup>>,
+pub(crate) fn cleanup<TCleanup: Component + Cleanup>(
+	set_to_idle: In<SetToCleanUp<TCleanup>>,
 	mut commands: Commands,
 	cleanups: Query<&TCleanup>,
 ) {
@@ -30,7 +30,6 @@ pub(crate) fn idle<TCleanup: Component + Cleanup>(
 			continue;
 		};
 		cleanup.cleanup(entity);
-		entity.try_insert(Idle);
 		entity.remove::<TCleanup>();
 	}
 }
@@ -60,36 +59,10 @@ mod tests {
 		app.init_resource::<_DoIdle>();
 		app.add_systems(
 			Update,
-			(|c: Res<_DoIdle>| SetToIdle::new(c.0.clone())).pipe(idle::<_Cleanup>),
+			(|c: Res<_DoIdle>| SetToCleanUp::new(c.0.clone())).pipe(cleanup::<_Cleanup>),
 		);
 
 		app
-	}
-
-	#[test]
-	fn add_idle() {
-		let mut app = setup();
-		let agent = app.world_mut().spawn(_Cleanup).id();
-		app.insert_resource(_DoIdle(vec![agent]));
-
-		app.update();
-
-		let agent = app.world().entity(agent);
-
-		assert_eq!(Some(&Idle), agent.get::<Idle>());
-	}
-
-	#[test]
-	fn do_not_add_idle_when_no_cleanup_present() {
-		let mut app = setup();
-		let agent = app.world_mut().spawn_empty().id();
-		app.insert_resource(_DoIdle(vec![agent]));
-
-		app.update();
-
-		let agent = app.world().entity(agent);
-
-		assert_eq!(None, agent.get::<Idle>());
 	}
 
 	#[test]

@@ -2,7 +2,6 @@ pub mod cam_orbit;
 pub mod ground_target;
 pub mod skill_behavior;
 
-pub(crate) mod idle;
 pub(crate) mod set_position_and_rotation;
 pub(crate) mod set_to_move_forward;
 pub(crate) mod when_traveled_insert;

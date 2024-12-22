@@ -1,5 +1,5 @@
 use crate::{
-	systems::idle::SetToIdle,
+	systems::cleanup::SetToCleanUp,
 	traits::{IsDone, MovementVelocityBased},
 };
 use bevy::prelude::*;
@@ -11,7 +11,7 @@ pub(crate) trait ExecuteMovement {
 	fn execute_movement<TMovement>(
 		mut commands: Commands,
 		agents: Query<(Entity, &GlobalTransform, &Self, &TMovement), Without<Immobilized>>,
-	) -> SetToIdle<TMovement>
+	) -> SetToCleanUp<TMovement>
 	where
 		Self: Component + Sized + Getter<Speed>,
 		TMovement: Component + MovementVelocityBased,
@@ -30,7 +30,7 @@ pub(crate) trait ExecuteMovement {
 			})
 			.collect();
 
-		SetToIdle::new(done_entities)
+		SetToCleanUp::new(done_entities)
 	}
 }
 
@@ -60,7 +60,7 @@ mod tests {
 	struct _Movement(IsDone);
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _Idle;
+	struct _Cleanup;
 
 	impl MovementVelocityBased for _Movement {
 		fn update(
@@ -74,15 +74,15 @@ mod tests {
 		}
 	}
 
-	fn idle(set_to_idle: In<SetToIdle<_Movement>>, mut commands: Commands) {
+	fn cleanup(set_to_idle: In<SetToCleanUp<_Movement>>, mut commands: Commands) {
 		for entity in set_to_idle.entities.iter() {
-			commands.entity(*entity).insert(_Idle);
+			commands.entity(*entity).insert(_Cleanup);
 		}
 	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, _Agent::execute_movement::<_Movement>.pipe(idle));
+		app.add_systems(Update, _Agent::execute_movement::<_Movement>.pipe(cleanup));
 
 		app
 	}
@@ -100,19 +100,17 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world().entity(agent);
-
 		assert_eq!(
 			Some(&_MoveParams((
 				Vec3::new(1., 2., 3.),
 				UnitsPerSecond::new(11.)
 			))),
-			agent.get::<_MoveParams>()
+			app.world().entity(agent).get::<_MoveParams>()
 		);
 	}
 
 	#[test]
-	fn return_entity_to_idle_when_done() {
+	fn return_entity_for_cleanup_when_done() {
 		let mut app = setup();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let agent = _Agent::default();
@@ -125,13 +123,11 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world().entity(agent);
-
-		assert_eq!(Some(&_Idle), agent.get::<_Idle>());
+		assert_eq!(Some(&_Cleanup), app.world().entity(agent).get::<_Cleanup>());
 	}
 
 	#[test]
-	fn do_not_return_entity_to_idle_when_not_done() {
+	fn do_not_return_entity_for_cleanup_when_not_done() {
 		let mut app = setup();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let agent = _Agent::default();
@@ -144,9 +140,7 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world().entity(agent);
-
-		assert_eq!(None, agent.get::<_Idle>());
+		assert_eq!(None, app.world().entity(agent).get::<_Cleanup>());
 	}
 
 	#[test]

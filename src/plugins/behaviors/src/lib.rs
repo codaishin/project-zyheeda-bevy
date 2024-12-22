@@ -51,8 +51,8 @@ use components::{
 use events::MoveInputEvent;
 use std::marker::PhantomData;
 use systems::{
+	cleanup::cleanup,
 	face::{execute_face::execute_face, get_faces::get_faces},
-	idle::idle,
 	move_on_orbit::move_on_orbit,
 	move_with_target::move_with_target,
 	movement::trigger_event::trigger_move_input_event,
@@ -134,7 +134,7 @@ where
 						TAnimationsPlugin::TAnimationDispatch,
 					>,
 					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>
-						.pipe(idle),
+						.pipe(cleanup),
 				),
 			)
 			.add_systems(
@@ -146,7 +146,7 @@ where
 						Movement<VelocityBased>,
 						TAnimationsPlugin::TAnimationDispatch,
 					>,
-					TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>.pipe(idle),
+					TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>.pipe(cleanup),
 					TEnemies::TEnemy::attack,
 				)
 					.chain(),
