@@ -1,14 +1,4 @@
-use behaviors::{
-	components::{
-		void_beam::VoidBeamAttack,
-		AttackConfig,
-		Enemy,
-		Foe,
-		MovementConfig,
-		MovementMode,
-	},
-	traits::ToArc,
-};
+use super::{enemy::Enemy, void_beam::VoidBeamAttack};
 use bevy::{
 	color::{Color, LinearRgba},
 	ecs::system::EntityCommands,
@@ -39,20 +29,35 @@ use common::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_bars::HandlesBars,
 		handles_effect::HandlesEffect,
+		handles_enemies::EnemyTarget,
 		prefab::{sphere, GetOrCreateAssets, Prefab},
 	},
 };
-use std::{f32::consts::PI, time::Duration};
+use std::{f32::consts::PI, sync::Arc, time::Duration};
 
 #[derive(Component)]
+#[require(Enemy(VoidSphere::as_enemy))]
 pub struct VoidSphere;
 
 impl VoidSphere {
-	pub fn aggro_range() -> Units {
-		Units::new(10.)
-	}
-	pub fn attack_range() -> Units {
-		Units::new(5.)
+	fn as_enemy() -> Enemy {
+		let attack_range = Units::new(5.);
+
+		Enemy {
+			speed: UnitsPerSecond::new(1.).into(),
+			movement_animation: None,
+			aggro_range: Units::new(10.).into(),
+			attack_range: attack_range.into(),
+			target: EnemyTarget::Player,
+			attack: Arc::new(VoidBeamAttack {
+				damage: 10.,
+				color: Color::BLACK,
+				emissive: LinearRgba::new(23.0, 23.0, 23.0, 1.),
+				lifetime: Duration::from_secs(1),
+				range: attack_range,
+			}),
+			cool_down: Duration::from_secs(5),
+		}
 	}
 }
 
@@ -114,26 +119,6 @@ where
 			Health::new(5.).bundle_via::<TInteractions>(),
 			Affected::by::<Gravity>().bundle_via::<TInteractions>(),
 			TBars::new_bar(),
-			MovementConfig::Constant {
-				mode: MovementMode::Slow,
-				speed: UnitsPerSecond::new(1.),
-			},
-			AttackConfig {
-				spawn: VoidBeamAttack {
-					damage: 10.,
-					color: Color::BLACK,
-					emissive: LinearRgba::new(23.0, 23.0, 23.0, 1.),
-					lifetime: Duration::from_secs(1),
-					range: VoidSphere::attack_range(),
-				}
-				.to_arc(),
-				cool_down: Duration::from_secs(5),
-			},
-			Enemy {
-				aggro_range: VoidSphere::aggro_range(),
-				attack_range: VoidSphere::attack_range(),
-				foe: Foe::Player,
-			},
 		));
 		on.with_children(|parent| {
 			parent.spawn((

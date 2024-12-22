@@ -17,7 +17,7 @@ use common::{
 	},
 	traits::{
 		handles_effect::{HandlesAllEffects, HandlesEffect},
-		handles_skills::HandlesSkills,
+		handles_skill_behaviors::HandlesSkillBehaviors,
 		prefab::RegisterPrefab,
 	},
 };
@@ -42,17 +42,17 @@ use traits::{
 	shadows_aware_material::ShadowsAwareMaterial,
 };
 
-pub struct ShadersPlugin<TPrefabs, TInteractions, TSkills>(
-	PhantomData<(TPrefabs, TInteractions, TSkills)>,
+pub struct ShadersPlugin<TPrefabs, TInteractions, TBehaviors>(
+	PhantomData<(TPrefabs, TInteractions, TBehaviors)>,
 );
 
-impl<TPrefabs, TInteractions, TSkills> ShadersPlugin<TPrefabs, TInteractions, TSkills>
+impl<TPrefabs, TInteractions, TBehaviors> ShadersPlugin<TPrefabs, TInteractions, TBehaviors>
 where
 	TPrefabs: Plugin + RegisterPrefab,
 	TInteractions: Plugin + HandlesAllEffects,
-	TSkills: Plugin + HandlesSkills,
+	TBehaviors: Plugin + HandlesSkillBehaviors,
 {
-	pub fn depends_on(_: &TPrefabs, _: &TInteractions, _: &TSkills) -> Self {
+	pub fn depends_on(_: &TPrefabs, _: &TInteractions, _: &TBehaviors) -> Self {
 		Self(PhantomData)
 	}
 
@@ -66,10 +66,10 @@ where
 		app.add_systems(
 			Labels::PREFAB_INSTANTIATION.label(),
 			(
-				InsertOn::<TSkills::SkillContact>::associated::<EffectShadersTarget>(
+				InsertOn::<TBehaviors::TSkillContact>::associated::<EffectShadersTarget>(
 					Configure::LeaveAsIs,
 				),
-				InsertOn::<TSkills::SkillProjection>::associated::<EffectShadersTarget>(
+				InsertOn::<TBehaviors::TSkillProjection>::associated::<EffectShadersTarget>(
 					Configure::LeaveAsIs,
 				),
 			),
@@ -108,11 +108,12 @@ where
 	}
 }
 
-impl<TPrefabs, TInteractions, TSkills> Plugin for ShadersPlugin<TPrefabs, TInteractions, TSkills>
+impl<TPrefabs, TInteractions, TBehaviors> Plugin
+	for ShadersPlugin<TPrefabs, TInteractions, TBehaviors>
 where
 	TPrefabs: Plugin + RegisterPrefab,
 	TInteractions: Plugin + HandlesAllEffects,
-	TSkills: Plugin + HandlesSkills,
+	TBehaviors: Plugin + HandlesSkillBehaviors,
 {
 	fn build(&self, app: &mut App) {
 		Self::build_for_effect_shaders(app);

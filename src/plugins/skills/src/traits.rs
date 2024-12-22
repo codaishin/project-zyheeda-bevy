@@ -11,12 +11,11 @@ pub(crate) mod swap_commands;
 
 use crate::{
 	behaviors::SkillCaster,
-	components::skill_spawners::SkillSpawners,
+	components::{skill_spawners::SkillSpawners, SkillTarget},
 	item::item_type::SkillItemType,
 	skills::{Animate, RunSkillBehavior, Skill, SkillAnimation},
 	slot_key::SlotKey,
 };
-use behaviors::components::skill_behavior::SkillTarget;
 use common::traits::{
 	animation::Animation,
 	load_asset::Path,
@@ -137,7 +136,7 @@ pub trait Schedule<TBehavior> {
 	fn schedule(&mut self, slot_key: SlotKey, behavior: TBehavior);
 }
 
-pub(crate) trait Execute<TCommands, TLifetimes, TEffects> {
+pub(crate) trait Execute<TCommands, TLifetimes, TEffects, TSkillBehavior> {
 	type TError;
 
 	fn execute(

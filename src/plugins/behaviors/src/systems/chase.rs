@@ -1,158 +1,84 @@
-use crate::{components::Chase, traits::MovementData};
-use bevy::{
-	ecs::{
-		component::Component,
-		entity::Entity,
-		removal_detection::RemovedComponents,
-		system::{Commands, Query},
-	},
-	prelude::Without,
-	transform::components::GlobalTransform,
-};
-use bevy_rapier3d::dynamics::Velocity;
-use common::{components::Immobilized, traits::try_insert_on::TryInsertOn};
-use std::ops::Deref;
+use crate::components::{Chase, Movement, VelocityBased};
+use bevy::prelude::*;
+use common::traits::try_insert_on::TryInsertOn;
 
-pub(crate) fn chase<TMovementConfig: Component + MovementData>(
-	mut commands: Commands,
-	chasers: Query<(Entity, &GlobalTransform, &TMovementConfig, &Chase), Without<Immobilized>>,
-	mut removed_chasers: RemovedComponents<Chase>,
-	transforms: Query<&GlobalTransform>,
-) {
-	let chasers_with_valid_target = chasers.iter().filter_map(|(id, transform, conf, chase)| {
-		let target = transforms.get(chase.0).ok()?;
-		Some((id, transform, conf, target.translation()))
-	});
+impl<T> ChaseSystem for T {}
 
-	for id in removed_chasers.read() {
-		commands.try_insert_on(id, Velocity::zero());
-	}
+pub(crate) trait ChaseSystem {
+	fn chase(
+		mut commands: Commands,
+		chasers: Query<(Entity, &Chase), With<Self>>,
+		mut removed_chasers: RemovedComponents<Chase>,
+		transforms: Query<&GlobalTransform>,
+	) where
+		Self: Component + Sized,
+	{
+		for entity in removed_chasers.read() {
+			let Ok(target) = transforms.get(entity) else {
+				continue;
+			};
+			commands.try_insert_on(entity, Movement::<VelocityBased>::to(target.translation()));
+		}
 
-	for (id, transform, conf, target) in chasers_with_valid_target {
-		let (speed, ..) = conf.get_movement_data();
-		let position = transform.translation();
-		commands.try_insert_on(
-			id,
-			Velocity::linear((target - position).normalize() * *speed.deref()),
-		);
+		for (entity, Chase(target)) in &chasers {
+			let Ok(target) = transforms.get(*target) else {
+				continue;
+			};
+			commands.try_insert_on(entity, Movement::<VelocityBased>::to(target.translation()));
+		}
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::MovementMode, traits::MovementData};
-	use bevy::{
-		app::{App, Update},
-		math::Vec3,
-		transform::components::GlobalTransform,
-	};
-	use bevy_rapier3d::dynamics::Velocity;
-	use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
 
 	#[derive(Component)]
-	struct _MovementConfig(f32);
+	struct _Agent;
 
-	impl MovementData for _MovementConfig {
-		fn get_movement_data(&self) -> (UnitsPerSecond, MovementMode) {
-			(UnitsPerSecond::new(self.0), MovementMode::Fast)
-		}
-	}
-
-	fn setup(foe_position: Vec3) -> (App, Entity) {
+	fn setup(target_position: Vec3) -> (App, Entity) {
 		let mut app = App::new();
-		app.add_systems(Update, chase::<_MovementConfig>);
-		let foe = app
+		app.add_systems(Update, _Agent::chase);
+		let target = app
 			.world_mut()
-			.spawn(GlobalTransform::from_translation(foe_position))
+			.spawn(GlobalTransform::from_translation(target_position))
 			.id();
 
-		(app, foe)
+		(app, target)
 	}
 
 	#[test]
-	fn velocity_to_follow_player() {
-		let foe_position = Vec3::new(1., 2., 3.);
-		let (mut app, foe) = setup(foe_position);
+	fn set_movement_to_follow_target_when_chasing() {
+		let target_position = Vec3::new(1., 2., 3.);
+		let (mut app, target) = setup(target_position);
 		let chaser = app
 			.world_mut()
-			.spawn((GlobalTransform::default(), Chase(foe), _MovementConfig(42.)))
+			.spawn((_Agent, GlobalTransform::default(), Chase(target)))
 			.id();
 
 		app.update();
 
-		let chaser = app.world().entity(chaser);
-
 		assert_eq!(
-			Some(&Velocity::linear(foe_position.normalize() * 42.)),
-			chaser.get::<Velocity>()
+			Some(&Movement::<VelocityBased>::to(target_position)),
+			app.world().entity(chaser).get::<Movement<VelocityBased>>()
 		);
 	}
 
 	#[test]
-	fn velocity_to_follow_player_from_offset() {
-		let foe_position = Vec3::new(1., 2., 3.);
-		let (mut app, foe) = setup(foe_position);
-		let position = Vec3::new(4., 5., 6.);
+	fn set_movement_to_follow_self_when_not_chasing() {
+		let (mut app, target) = setup(Vec3::new(1., 2., 3.));
 		let chaser = app
 			.world_mut()
-			.spawn((
-				GlobalTransform::from_translation(position),
-				Chase(foe),
-				_MovementConfig(42.),
-			))
+			.spawn((_Agent, GlobalTransform::from_xyz(3., 2., 1.), Chase(target)))
 			.id();
 
 		app.update();
-
-		let chaser = app.world().entity(chaser);
-
-		assert_eq!(
-			Some(&Velocity::linear(
-				(foe_position - position).normalize() * 42.
-			)),
-			chaser.get::<Velocity>()
-		);
-	}
-
-	#[test]
-	fn set_velocity_zero_when_chase_removed() {
-		let foe_position = Vec3::new(1., 2., 3.);
-		let (mut app, foe) = setup(foe_position);
-		let chaser = app
-			.world_mut()
-			.spawn((GlobalTransform::default(), Chase(foe), _MovementConfig(42.)))
-			.id();
-
-		app.update();
-
 		app.world_mut().entity_mut(chaser).remove::<Chase>();
-
 		app.update();
 
-		let chaser = app.world().entity(chaser);
-
-		assert_eq!(Some(&Velocity::zero()), chaser.get::<Velocity>());
-	}
-
-	#[test]
-	fn no_velocity_to_follow_player_when_immobilized() {
-		let foe_position = Vec3::new(1., 2., 3.);
-		let (mut app, foe) = setup(foe_position);
-		let chaser = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::default(),
-				Chase(foe),
-				_MovementConfig(42.),
-				Immobilized,
-			))
-			.id();
-
-		app.update();
-
-		let chaser = app.world().entity(chaser);
-
-		assert_eq!(None, chaser.get::<Velocity>());
+		assert_eq!(
+			Some(&Movement::<VelocityBased>::to(Vec3::new(3., 2., 1.))),
+			app.world().entity(chaser).get::<Movement<VelocityBased>>()
+		);
 	}
 }

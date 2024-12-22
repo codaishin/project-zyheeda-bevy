@@ -1,5 +1,6 @@
-use crate::components::{Face, OverrideFace, SetFace};
+use crate::components::{OverrideFace, SetFace};
 use bevy::ecs::{entity::Entity, system::Query};
+use common::traits::handles_orientation::Face;
 
 pub(crate) fn get_faces(
 	faces: Query<(Entity, Option<&SetFace>, Option<&OverrideFace>)>,

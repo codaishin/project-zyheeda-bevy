@@ -12,7 +12,6 @@ use crate::{
 	slot_key::SlotKey,
 };
 use bevy::prelude::*;
-use common::components::Idle;
 use std::collections::HashMap;
 
 #[derive(Bundle)]
@@ -50,7 +49,6 @@ struct ExecutionBundle {
 	queue: Queue,
 	executor: SkillExecuter<RunSkillBehavior>,
 	skill_spawners: SkillSpawners,
-	idle: Idle,
 }
 
 impl Default for ExecutionBundle {
@@ -59,7 +57,6 @@ impl Default for ExecutionBundle {
 			queue: default(),
 			executor: default(),
 			skill_spawners: default(),
-			idle: Idle,
 		}
 	}
 }

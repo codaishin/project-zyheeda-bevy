@@ -1,20 +1,16 @@
 use crate::{
 	behaviors::{SkillCaster, SkillSpawner},
+	components::SkillTarget,
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
-};
-use behaviors::components::skill_behavior::{
-	skill_contact::SkillContact,
-	skill_projection::SkillProjection,
-	Integrity,
-	Motion,
-	Shape,
-	SkillTarget,
 };
 use common::{
 	blocker::Blocker,
 	tools::{Units, UnitsPerSecond},
-	traits::clamp_zero_positive::ClampZeroPositive,
+	traits::{
+		clamp_zero_positive::ClampZeroPositive,
+		handles_skill_behaviors::{HandlesSkillBehaviors, Integrity, Motion, Shape},
+	},
 };
 use serde::{Deserialize, Serialize};
 
@@ -22,51 +18,53 @@ use serde::{Deserialize, Serialize};
 pub struct SpawnProjectile;
 
 impl BuildContact for SpawnProjectile {
-	type TContact = SkillContact;
-
-	fn build_contact(
+	fn build_contact<TSkillBehaviors>(
 		&self,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		_: &SkillTarget,
-	) -> Self::TContact {
+	) -> TSkillBehaviors::TSkillContact
+	where
+		TSkillBehaviors: HandlesSkillBehaviors,
+	{
 		let SkillCaster(caster) = *caster;
 		let SkillSpawner(spawner) = *spawner;
 
-		SkillContact {
-			shape: Shape::Sphere {
+		TSkillBehaviors::skill_contact(
+			Shape::Sphere {
 				radius: Units::new(0.05),
 				hollow_collider: false,
 			},
-			integrity: Integrity::Fragile {
+			Integrity::Fragile {
 				destroyed_by: vec![Blocker::Physical, Blocker::Force],
 			},
-			motion: Motion::Projectile {
+			Motion::Projectile {
 				caster,
 				spawner,
 				speed: UnitsPerSecond::new(15.),
 				max_range: Units::new(20.),
 			},
-		}
+		)
 	}
 }
 
 impl BuildProjection for SpawnProjectile {
-	type TProjection = SkillProjection;
-
-	fn build_projection(
+	fn build_projection<TSkillBehaviors>(
 		&self,
 		_: &SkillCaster,
 		_: &SkillSpawner,
 		_: &SkillTarget,
-	) -> Self::TProjection {
-		SkillProjection {
-			shape: Shape::Sphere {
+	) -> TSkillBehaviors::TSkillProjection
+	where
+		TSkillBehaviors: HandlesSkillBehaviors,
+	{
+		TSkillBehaviors::skill_projection(
+			Shape::Sphere {
 				radius: Units::new(0.5),
 				hollow_collider: false,
 			},
-			offset: None,
-		}
+			None,
+		)
 	}
 }
 

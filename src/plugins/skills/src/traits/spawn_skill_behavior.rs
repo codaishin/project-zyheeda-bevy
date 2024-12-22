@@ -1,15 +1,16 @@
-use crate::behaviors::{
-	build_skill_shape::OnSkillStop,
-	spawn_on::SpawnOn,
-	SkillCaster,
-	SkillSpawner,
+use crate::{
+	behaviors::{build_skill_shape::OnSkillStop, spawn_on::SpawnOn, SkillCaster, SkillSpawner},
+	components::SkillTarget,
 };
-use behaviors::components::skill_behavior::SkillTarget;
-use common::traits::{handles_effect::HandlesAllEffects, handles_lifetime::HandlesLifetime};
+use common::traits::{
+	handles_effect::HandlesAllEffects,
+	handles_lifetime::HandlesLifetime,
+	handles_skill_behaviors::HandlesSkillBehaviors,
+};
 
 pub(crate) trait SpawnSkillBehavior<TCommands> {
 	fn spawn_on(&self) -> SpawnOn;
-	fn spawn<TLifetimes, TEffects>(
+	fn spawn<TLifetimes, TEffects, TSkillBehaviors>(
 		&self,
 		commands: &mut TCommands,
 		caster: &SkillCaster,
@@ -18,5 +19,6 @@ pub(crate) trait SpawnSkillBehavior<TCommands> {
 	) -> OnSkillStop
 	where
 		TLifetimes: HandlesLifetime + 'static,
-		TEffects: HandlesAllEffects + 'static;
+		TEffects: HandlesAllEffects + 'static,
+		TSkillBehaviors: HandlesSkillBehaviors + 'static;
 }

@@ -1,7 +1,3 @@
-use crate::{
-	components::{Attacker, Target},
-	traits::{DespawnFn, SpawnAttack},
-};
 use bevy::{ecs::system::EntityCommands, pbr::NotShadowCaster, prelude::*};
 use common::{
 	blocker::Blocker,
@@ -11,12 +7,14 @@ use common::{
 	traits::{
 		cache::GetOrCreateTypeAsset,
 		handles_effect::HandlesEffect,
+		handles_enemies::{Attacker, Target},
 		handles_interactions::{BeamParameters, HandlesInteractions},
 		prefab::{AfterInstantiation, GetOrCreateAssets, Prefab},
-		try_despawn_recursive::TryDespawnRecursive,
 	},
 };
-use std::{f32::consts::PI, sync::Arc, time::Duration};
+use std::{f32::consts::PI, time::Duration};
+
+use crate::traits::insert_attack::InsertAttack;
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct VoidBeam {
@@ -95,27 +93,17 @@ where
 	}
 }
 
-impl SpawnAttack for VoidBeamAttack {
-	fn spawn(
+impl InsertAttack for VoidBeamAttack {
+	fn insert_attack(
 		&self,
-		commands: &mut Commands,
+		entity: &mut EntityCommands,
 		Attacker(attacker): Attacker,
 		Target(target): Target,
-	) -> DespawnFn {
-		despawn(
-			commands
-				.spawn(VoidBeam {
-					attack: *self,
-					attacker,
-					target,
-				})
-				.id(),
-		)
+	) {
+		entity.insert(VoidBeam {
+			attack: *self,
+			attacker,
+			target,
+		});
 	}
-}
-
-fn despawn(entity: Entity) -> DespawnFn {
-	Arc::new(move |commands| {
-		commands.try_despawn_recursive(entity);
-	})
 }

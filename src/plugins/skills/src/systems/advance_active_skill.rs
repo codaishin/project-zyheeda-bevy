@@ -3,10 +3,10 @@ use crate::{
 	slot_key::SlotKey,
 	traits::{Flush, GetActiveSkill, GetAnimation, GetSkillBehavior, Schedule},
 };
-use behaviors::components::{Face, OverrideFace};
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::traits::{
 	animation::{AnimationPriority, StartAnimation, StopAnimation},
+	handles_orientation::{Face, HandlesOrientation},
 	state_duration::{StateMeta, StateUpdate},
 };
 use std::time::Duration;
@@ -40,6 +40,7 @@ type Components<'a, TGetSkill, TAnimationDispatch, TSkillExecutor> = (
 pub(crate) fn advance_active_skill<
 	TGetSkill: GetActiveSkill<SkillState> + Component,
 	TAnimationDispatch: Component + StartAnimation + StopAnimation,
+	TOrientation: HandlesOrientation,
 	TSkillExecutor: Component + Schedule<RunSkillBehavior> + Flush,
 	TTime: Send + Sync + Default + 'static,
 >(
@@ -54,8 +55,16 @@ pub(crate) fn advance_active_skill<
 			continue;
 		};
 		let advancement = match dequeue.get_active() {
-			Some(skill) => advance(skill, agent, animation_dispatch, skill_executer, delta),
-			None if is_not(cleared) => clear_side_effects(agent, animation_dispatch),
+			Some(skill) => advance::<TAnimationDispatch, TOrientation, TSkillExecutor>(
+				skill,
+				agent,
+				animation_dispatch,
+				skill_executer,
+				delta,
+			),
+			None if is_not(cleared) => {
+				clear_side_effects::<TAnimationDispatch, TOrientation>(agent, animation_dispatch)
+			}
 			_ => Advancement::InProcess,
 		};
 
@@ -71,27 +80,33 @@ fn is_not(cleared: Option<&SideEffectsCleared>) -> bool {
 	cleared.is_none()
 }
 
-fn clear_side_effects<TAnimationDispatch: StopAnimation>(
+fn clear_side_effects<TAnimationDispatch, TOrientation>(
 	mut agent: EntityCommands,
 	mut animation_dispatch: Mut<TAnimationDispatch>,
-) -> Advancement {
-	agent.remove::<OverrideFace>();
+) -> Advancement
+where
+	TAnimationDispatch: StopAnimation,
+	TOrientation: HandlesOrientation,
+{
+	agent.remove::<TOrientation::TFaceTemporarily>();
 	agent.try_insert(SideEffectsCleared);
 	animation_dispatch.stop_animation(UseSkill);
 
 	Advancement::InProcess
 }
 
-fn advance<
-	TAnimationDispatch: StartAnimation + StopAnimation,
-	TSkillExecutor: Component + Schedule<RunSkillBehavior> + Flush,
->(
+fn advance<TAnimationDispatch, TOrientation, TSkillExecutor>(
 	mut skill: (impl GetSkillBehavior + GetAnimation + StateUpdate<SkillState>),
 	mut agent: EntityCommands,
 	animation_dispatch: Mut<TAnimationDispatch>,
 	mut skill_executer: Mut<TSkillExecutor>,
 	delta: Duration,
-) -> Advancement {
+) -> Advancement
+where
+	TAnimationDispatch: StartAnimation + StopAnimation,
+	TOrientation: HandlesOrientation,
+	TSkillExecutor: Component + Schedule<RunSkillBehavior> + Flush,
+{
 	let skill = &mut skill;
 	let agent = &mut agent;
 	let states = skill.update_state(delta);
@@ -99,7 +114,7 @@ fn advance<
 	agent.remove::<SideEffectsCleared>();
 
 	if states.contains(&StateMeta::Entering(SkillState::Aim)) {
-		agent.try_insert(OverrideFace(Face::Cursor));
+		agent.try_insert(TOrientation::temporarily(Face::Cursor));
 		animate(skill, animation_dispatch);
 		schedule_start(&mut skill_executer, skill, run_on_aim);
 	}
@@ -164,7 +179,6 @@ mod tests {
 		},
 		traits::{skill_builder::SkillShape, GetAnimation, GetSkillBehavior},
 	};
-	use behaviors::components::{Face, OverrideFace};
 	use bevy::{
 		prelude::{App, Transform, Update},
 		time::{Real, Time},
@@ -252,6 +266,19 @@ mod tests {
 		}
 	}
 
+	struct _HandlesOrientation;
+
+	impl HandlesOrientation for _HandlesOrientation {
+		type TFaceTemporarily = _TempFace;
+
+		fn temporarily(face: Face) -> Self::TFaceTemporarily {
+			_TempFace(face)
+		}
+	}
+
+	#[derive(Component, Debug, PartialEq, Clone)]
+	struct _TempFace(Face);
+
 	#[derive(Component, NestedMocks)]
 	struct _Executor {
 		mock: Mock_Executor,
@@ -312,7 +339,13 @@ mod tests {
 		app.update();
 		app.add_systems(
 			Update,
-			advance_active_skill::<_Dequeue, _AnimationDispatch, _Executor, Real>,
+			advance_active_skill::<
+				_Dequeue,
+				_AnimationDispatch,
+				_HandlesOrientation,
+				_Executor,
+				Real,
+			>,
 		);
 
 		(app, agent)
@@ -882,10 +915,7 @@ mod tests {
 
 		let agent = app.world().entity(agent);
 
-		assert_eq!(
-			Some(&OverrideFace(Face::Cursor)),
-			agent.get::<OverrideFace>()
-		);
+		assert_eq!(Some(&_TempFace(Face::Cursor)), agent.get::<_TempFace>());
 	}
 
 	#[test]
@@ -913,7 +943,7 @@ mod tests {
 
 		let agent = app.world().entity(agent);
 
-		assert_eq!(None, agent.get::<OverrideFace>());
+		assert_eq!(None, agent.get::<_TempFace>());
 	}
 
 	#[test]
@@ -941,10 +971,7 @@ mod tests {
 
 		let agent = app.world().entity(agent);
 
-		assert_eq!(
-			Some(&OverrideFace(Face::Cursor)),
-			agent.get::<OverrideFace>()
-		);
+		assert_eq!(Some(&_TempFace(Face::Cursor)), agent.get::<_TempFace>());
 	}
 
 	#[test]
@@ -953,14 +980,14 @@ mod tests {
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue { active: None },
 			Transform::from_xyz(-1., -2., -3.),
-			OverrideFace(Face::Cursor),
+			_TempFace(Face::Cursor),
 		));
 
 		app.update();
 
 		let agent = app.world().entity(agent);
 
-		assert_eq!(None, agent.get::<OverrideFace>());
+		assert_eq!(None, agent.get::<_TempFace>());
 	}
 
 	#[test]

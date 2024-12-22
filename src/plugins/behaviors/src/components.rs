@@ -1,27 +1,19 @@
 pub mod cam_orbit;
 pub mod ground_target;
 pub mod skill_behavior;
-pub mod void_beam;
 
 pub(crate) mod set_position_and_rotation;
 pub(crate) mod set_to_move_forward;
 pub(crate) mod when_traveled_insert;
 
-use crate::traits::{RemoveComponent, SpawnAttack};
+use crate::traits::RemoveComponent;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{
 	test_tools::utils::ApproxEqual,
-	tools::{Units, UnitsPerSecond},
+	tools::UnitsPerSecond,
+	traits::{animation::Animation, handles_orientation::Face},
 };
-use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
-
-#[derive(Default, Debug, PartialEq, Clone, Copy)]
-pub enum Face {
-	#[default]
-	Cursor,
-	Entity(Entity),
-	Translation(Vec3),
-}
+use std::{fmt::Debug, marker::PhantomData, time::Duration};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) struct Always;
@@ -34,9 +26,6 @@ pub struct OverrideFace(pub Face);
 
 #[derive(Component, Debug, PartialEq)]
 pub struct SetFace(pub Face);
-
-#[derive(PartialEq, Debug)]
-pub struct PositionBased;
 
 #[derive(PartialEq, Debug)]
 pub struct VelocityBased;
@@ -79,17 +68,10 @@ pub enum MovementMode {
 	Slow,
 }
 
-#[derive(Component, Debug, PartialEq, Clone, Copy)]
-pub enum MovementConfig {
-	Constant {
-		mode: MovementMode,
-		speed: UnitsPerSecond,
-	},
-	Dynamic {
-		current_mode: MovementMode,
-		fast_speed: UnitsPerSecond,
-		slow_speed: UnitsPerSecond,
-	},
+#[derive(Component, Debug, PartialEq, Clone, Default)]
+pub struct MovementConfig {
+	pub speed: UnitsPerSecond,
+	pub animation: Option<Animation>,
 }
 
 #[derive(Component, Debug, PartialEq)]
@@ -98,30 +80,5 @@ pub struct Chase(pub Entity);
 #[derive(Component, Debug, PartialEq)]
 pub struct Attack(pub Entity);
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Attacker(pub Entity);
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Target(pub Entity);
-
-#[derive(Component)]
-pub struct AttackConfig {
-	pub spawn: Arc<dyn SpawnAttack + Sync + Send>,
-	pub cool_down: Duration,
-}
-
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct OnCoolDown(pub Duration);
-
-#[derive(Clone, Copy)]
-pub enum Foe {
-	Player,
-	Entity(Entity),
-}
-
-#[derive(Component, Clone, Copy)]
-pub struct Enemy {
-	pub aggro_range: Units,
-	pub attack_range: Units,
-	pub foe: Foe,
-}

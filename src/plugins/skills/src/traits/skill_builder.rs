@@ -1,31 +1,34 @@
 use crate::{
 	behaviors::{build_skill_shape::OnSkillStop, SkillCaster, SkillSpawner},
+	components::SkillTarget,
 	skills::lifetime_definition::LifeTimeDefinition,
 };
-use behaviors::components::skill_behavior::SkillTarget;
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::traits::handles_lifetime::HandlesLifetime;
+use common::traits::{
+	handles_lifetime::HandlesLifetime,
+	handles_skill_behaviors::HandlesSkillBehaviors,
+};
 
 pub(crate) trait BuildContact {
-	type TContact: Component;
-
-	fn build_contact(
+	fn build_contact<TSkillBehaviors>(
 		&self,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &SkillTarget,
-	) -> Self::TContact;
+	) -> TSkillBehaviors::TSkillContact
+	where
+		TSkillBehaviors: HandlesSkillBehaviors + 'static;
 }
 
 pub(crate) trait BuildProjection {
-	type TProjection: Component;
-
-	fn build_projection(
+	fn build_projection<TSkillBehaviors>(
 		&self,
 		caster: &SkillCaster,
 		spawner: &SkillSpawner,
 		target: &SkillTarget,
-	) -> Self::TProjection;
+	) -> TSkillBehaviors::TSkillProjection
+	where
+		TSkillBehaviors: HandlesSkillBehaviors + 'static;
 }
 
 pub(crate) trait SkillLifetime {
@@ -39,7 +42,7 @@ pub(crate) struct SkillShape {
 }
 
 pub(crate) trait SkillBuilder {
-	fn build<TLifetimes>(
+	fn build<TLifetimes, TSkillBehaviors>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -47,14 +50,15 @@ pub(crate) trait SkillBuilder {
 		target: &SkillTarget,
 	) -> SkillShape
 	where
-		TLifetimes: HandlesLifetime;
+		TLifetimes: HandlesLifetime,
+		TSkillBehaviors: HandlesSkillBehaviors + 'static;
 }
 
 impl<T> SkillBuilder for T
 where
 	T: BuildContact + BuildProjection + SkillLifetime,
 {
-	fn build<TLifetimes>(
+	fn build<TLifetimes, TSkillBehaviors>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -63,16 +67,17 @@ where
 	) -> SkillShape
 	where
 		TLifetimes: HandlesLifetime,
+		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
 		let contact_with_lifetime = contact::<TLifetimes>;
-		let entity = commands.spawn(self.build_contact(caster, spawner, target));
+		let entity = commands.spawn(self.build_contact::<TSkillBehaviors>(caster, spawner, target));
 		let (contact, on_skill_stop) = match self.lifetime() {
 			LifeTimeDefinition::UntilStopped => contact_stoppable(entity),
 			LifeTimeDefinition::UntilOutlived(duration) => contact_with_lifetime(entity, duration),
 			LifeTimeDefinition::Infinite => contact_infinite(entity),
 		};
 		let projection = commands
-			.spawn(self.build_projection(caster, spawner, target))
+			.spawn(self.build_projection::<TSkillBehaviors>(caster, spawner, target))
 			.set_parent(contact)
 			.id();
 
@@ -114,24 +119,42 @@ mod tests {
 		math::{Ray3d, Vec3},
 		utils::default,
 	};
+	use common::{
+		simple_init,
+		traits::{
+			handles_skill_behaviors::{Integrity, Motion, ProjectionOffset, Shape},
+			mock::Mock,
+		},
+	};
+	use macros::NestedMocks;
+	use mockall::{mock, predicate::eq};
 	use std::time::Duration;
 
-	#[derive(Component, Debug, PartialEq)]
-	struct _Contact {
-		caster: SkillCaster,
-		spawner: SkillSpawner,
-		target: SkillTarget,
+	struct _HandlesSkillBehaviors;
+
+	impl HandlesSkillBehaviors for _HandlesSkillBehaviors {
+		type TSkillContact = _Contact;
+		type TSkillProjection = _Projection;
+
+		fn skill_contact(_: Shape, _: Integrity, _: Motion) -> Self::TSkillContact {
+			panic!("Mock should be called")
+		}
+
+		fn skill_projection(_: Shape, _: Option<ProjectionOffset>) -> Self::TSkillProjection {
+			panic!("Mock should be called")
+		}
 	}
 
-	#[derive(Component, Debug, PartialEq)]
-	struct _Projection {
-		caster: SkillCaster,
-		spawner: SkillSpawner,
-		target: SkillTarget,
-	}
+	#[derive(Component, Debug, PartialEq, Clone)]
+	struct _Contact;
 
+	#[derive(Component, Debug, PartialEq, Clone)]
+	struct _Projection;
+
+	#[derive(NestedMocks)]
 	struct _Skill {
 		lifetime: LifeTimeDefinition,
+		mock: Mock_Skill,
 	}
 
 	struct _HandlesLifetime;
@@ -158,45 +181,72 @@ mod tests {
 	}
 
 	impl BuildContact for _Skill {
-		type TContact = _Contact;
-
-		fn build_contact(
+		fn build_contact<TSkillBehaviors>(
 			&self,
 			caster: &SkillCaster,
 			spawner: &SkillSpawner,
 			target: &SkillTarget,
-		) -> Self::TContact {
-			_Contact {
-				caster: *caster,
-				spawner: *spawner,
-				target: *target,
-			}
+		) -> TSkillBehaviors::TSkillContact
+		where
+			TSkillBehaviors: HandlesSkillBehaviors + 'static,
+		{
+			self.mock
+				.build_contact::<TSkillBehaviors>(caster, spawner, target)
 		}
 	}
 
 	impl BuildProjection for _Skill {
-		type TProjection = _Projection;
-
-		fn build_projection(
+		fn build_projection<TSkillBehaviors>(
 			&self,
 			caster: &SkillCaster,
 			spawner: &SkillSpawner,
 			target: &SkillTarget,
-		) -> Self::TProjection {
-			_Projection {
-				caster: *caster,
-				spawner: *spawner,
-				target: *target,
-			}
+		) -> TSkillBehaviors::TSkillProjection
+		where
+			TSkillBehaviors: HandlesSkillBehaviors + 'static,
+		{
+			self.mock
+				.build_projection::<TSkillBehaviors>(caster, spawner, target)
 		}
 	}
+
+	mock! {
+		_Skill {}
+		impl BuildContact for _Skill {
+			fn build_contact<TSkillBehaviors>(
+				&self,
+				caster: &SkillCaster,
+				spawner: &SkillSpawner,
+				target: &SkillTarget,
+			) -> TSkillBehaviors::TSkillContact
+			where
+				TSkillBehaviors: HandlesSkillBehaviors + 'static;
+		}
+		impl BuildProjection for _Skill {
+			fn build_projection<TSkillBehaviors>(
+				&self,
+				caster: &SkillCaster,
+				spawner: &SkillSpawner,
+				target: &SkillTarget,
+			) -> TSkillBehaviors::TSkillProjection
+			where
+				TSkillBehaviors: HandlesSkillBehaviors + 'static;
+		}
+	}
+
+	simple_init!(Mock_Skill);
 
 	fn build_skill(
 		args: In<(_Skill, SkillCaster, SkillSpawner, SkillTarget)>,
 		mut commands: Commands,
 	) -> SkillShape {
 		let In((skill, caster, spawner, target)) = args;
-		skill.build::<_HandlesLifetime>(&mut commands, &caster, &spawner, &target)
+		skill.build::<_HandlesLifetime, _HandlesSkillBehaviors>(
+			&mut commands,
+			&caster,
+			&spawner,
+			&target,
+		)
 	}
 
 	fn setup() -> App {
@@ -206,14 +256,22 @@ mod tests {
 	#[test]
 	fn spawn_contact() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let skill = _Skill {
-			lifetime: LifeTimeDefinition::UntilStopped,
-		};
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
+		};
+		let skill = _Skill {
+			lifetime: LifeTimeDefinition::UntilStopped,
+			mock: Mock_Skill::new_mock(|mock| {
+				mock.expect_build_contact::<_HandlesSkillBehaviors>()
+					.times(1)
+					.with(eq(caster), eq(spawner), eq(target))
+					.return_const(_Contact);
+				mock.expect_build_projection::<_HandlesSkillBehaviors>()
+					.return_const(_Projection);
+			}),
 		};
 
 		let shape = app
@@ -221,11 +279,7 @@ mod tests {
 			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
 
 		assert_eq!(
-			Some(&_Contact {
-				caster,
-				spawner,
-				target
-			}),
+			Some(&_Contact),
 			app.world().entity(shape.contact).get::<_Contact>()
 		);
 		Ok(())
@@ -234,14 +288,22 @@ mod tests {
 	#[test]
 	fn spawn_projection() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let skill = _Skill {
-			lifetime: LifeTimeDefinition::UntilStopped,
-		};
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
+		};
+		let skill = _Skill {
+			lifetime: LifeTimeDefinition::UntilStopped,
+			mock: Mock_Skill::new_mock(|mock| {
+				mock.expect_build_contact::<_HandlesSkillBehaviors>()
+					.return_const(_Contact);
+				mock.expect_build_projection::<_HandlesSkillBehaviors>()
+					.times(1)
+					.with(eq(caster), eq(spawner), eq(target))
+					.return_const(_Projection);
+			}),
 		};
 
 		let shape = app
@@ -249,11 +311,7 @@ mod tests {
 			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
 
 		assert_eq!(
-			Some(&_Projection {
-				caster,
-				spawner,
-				target
-			}),
+			Some(&_Projection),
 			app.world().entity(shape.projection).get::<_Projection>()
 		);
 		Ok(())
@@ -262,14 +320,20 @@ mod tests {
 	#[test]
 	fn projection_is_child_of_contact() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let skill = _Skill {
-			lifetime: LifeTimeDefinition::UntilStopped,
-		};
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
+		};
+		let skill = _Skill {
+			lifetime: LifeTimeDefinition::UntilStopped,
+			mock: Mock_Skill::new_mock(|mock| {
+				mock.expect_build_contact::<_HandlesSkillBehaviors>()
+					.return_const(_Contact);
+				mock.expect_build_projection::<_HandlesSkillBehaviors>()
+					.return_const(_Projection);
+			}),
 		};
 
 		let shape = app
@@ -289,14 +353,20 @@ mod tests {
 	#[test]
 	fn alive_until_stopped() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let skill = _Skill {
-			lifetime: LifeTimeDefinition::UntilStopped,
-		};
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
+		};
+		let skill = _Skill {
+			lifetime: LifeTimeDefinition::UntilStopped,
+			mock: Mock_Skill::new_mock(|mock| {
+				mock.expect_build_contact::<_HandlesSkillBehaviors>()
+					.return_const(_Contact);
+				mock.expect_build_projection::<_HandlesSkillBehaviors>()
+					.return_const(_Projection);
+			}),
 		};
 
 		let shape = app
@@ -310,14 +380,20 @@ mod tests {
 	#[test]
 	fn unstoppable_life_time() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let skill = _Skill {
-			lifetime: LifeTimeDefinition::UntilOutlived(Duration::from_nanos(42)),
-		};
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
+		};
+		let skill = _Skill {
+			lifetime: LifeTimeDefinition::UntilOutlived(Duration::from_nanos(42)),
+			mock: Mock_Skill::new_mock(|mock| {
+				mock.expect_build_contact::<_HandlesSkillBehaviors>()
+					.return_const(_Contact);
+				mock.expect_build_projection::<_HandlesSkillBehaviors>()
+					.return_const(_Projection);
+			}),
 		};
 
 		let shape = app
@@ -331,14 +407,20 @@ mod tests {
 	#[test]
 	fn add_lifetime_to_unstoppable() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let skill = _Skill {
-			lifetime: LifeTimeDefinition::UntilOutlived(Duration::from_nanos(42)),
-		};
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
+		};
+		let skill = _Skill {
+			lifetime: LifeTimeDefinition::UntilOutlived(Duration::from_nanos(42)),
+			mock: Mock_Skill::new_mock(|mock| {
+				mock.expect_build_contact::<_HandlesSkillBehaviors>()
+					.return_const(_Contact);
+				mock.expect_build_projection::<_HandlesSkillBehaviors>()
+					.return_const(_Projection);
+			}),
 		};
 
 		let shape = app
@@ -355,14 +437,20 @@ mod tests {
 	#[test]
 	fn infinite_life_time() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let skill = _Skill {
-			lifetime: LifeTimeDefinition::Infinite,
-		};
 		let caster = SkillCaster(Entity::from_raw(42));
 		let spawner = SkillSpawner(Entity::from_raw(43));
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
+		};
+		let skill = _Skill {
+			lifetime: LifeTimeDefinition::Infinite,
+			mock: Mock_Skill::new_mock(|mock| {
+				mock.expect_build_contact::<_HandlesSkillBehaviors>()
+					.return_const(_Contact);
+				mock.expect_build_projection::<_HandlesSkillBehaviors>()
+					.return_const(_Projection);
+			}),
 		};
 
 		let shape = app

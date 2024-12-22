@@ -1,28 +1,6 @@
 pub mod skill_contact;
 pub mod skill_projection;
 
-use bevy::{ecs::system::EntityCommands, prelude::*};
-use bevy_rapier3d::prelude::{
-	ActiveEvents,
-	Ccd,
-	Collider,
-	ComputedColliderShape,
-	GravityScale,
-	RigidBody,
-	Sensor,
-	TriMeshFlags,
-	Velocity,
-};
-use common::{
-	blocker::Blocker,
-	components::{AssetModel, ColliderRoot, Outdated},
-	errors::{Error, Level},
-	resources::ColliderInfo,
-	tools::{Units, UnitsPerSecond},
-	traits::{handles_destruction::HandlesDestruction, handles_interactions::HandlesInteractions},
-};
-use std::f32::consts::PI;
-
 use super::{
 	ground_target::GroundTarget,
 	set_position_and_rotation::SetPositionAndRotation,
@@ -31,36 +9,54 @@ use super::{
 	Always,
 	Once,
 };
+use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy_rapier3d::prelude::*;
+use common::{
+	components::{AssetModel, ColliderRoot},
+	errors::{Error, Level},
+	traits::{
+		handles_destruction::HandlesDestruction,
+		handles_interactions::HandlesInteractions,
+		handles_skill_behaviors::{Integrity, Motion, Shape},
+	},
+};
+use std::f32::consts::PI;
 
-#[derive(Debug, Clone)]
-pub enum Shape {
-	Sphere {
-		radius: Units,
-		hollow_collider: bool,
-	},
-	Custom {
-		model: AssetModel,
-		collider: Collider,
-		scale: Vec3,
-	},
+trait SimplePrefab {
+	type TExtra;
+
+	fn prefab<TInteractions, TLifeCycles>(
+		&self,
+		entity: &mut EntityCommands,
+		extra: Self::TExtra,
+	) -> Result<(), Error>
+	where
+		TInteractions: HandlesInteractions,
+		TLifeCycles: HandlesDestruction;
 }
 
-impl Shape {
-	const SPHERE_MODEL: &str = "models/sphere.glb";
+const SPHERE_MODEL: &str = "models/sphere.glb";
 
-	fn prefab(&self, entity: &mut EntityCommands, offset: Vec3) -> Result<(), Error> {
+impl SimplePrefab for Shape {
+	type TExtra = Vec3;
+
+	fn prefab<TInteractions, TLifeCycles>(
+		&self,
+		entity: &mut EntityCommands,
+		offset: Vec3,
+	) -> Result<(), Error> {
 		let ((model, model_transform), (collider, collider_transform)) = match self {
 			Shape::Sphere {
 				radius,
 				hollow_collider,
 			} => (
 				(
-					AssetModel::path(Self::SPHERE_MODEL),
+					AssetModel::path(SPHERE_MODEL),
 					Transform::from_scale(Vec3::splat(**radius * 2.)),
 				),
 				match hollow_collider {
-					true => Self::ring_collider(**radius)?,
-					false => Self::sphere_collider(**radius),
+					true => ring_collider(**radius)?,
+					false => sphere_collider(**radius),
 				},
 			),
 			Shape::Custom {
@@ -69,7 +65,7 @@ impl Shape {
 				scale,
 			} => (
 				(model.clone(), Transform::from_scale(*scale)),
-				Self::custom_collider(collider, *scale),
+				custom_collider(collider, *scale),
 			),
 		};
 
@@ -88,43 +84,43 @@ impl Shape {
 
 		Ok(())
 	}
-
-	fn sphere_collider(radius: f32) -> (Collider, Transform) {
-		(Collider::ball(radius), Transform::default())
-	}
-
-	fn ring_collider(radius: f32) -> Result<(Collider, Transform), Error> {
-		let transform = Transform::default().with_rotation(Quat::from_axis_angle(Vec3::X, PI / 2.));
-		let ring = Annulus::new(radius * 0.9, radius);
-		let torus = Mesh::from(Extrusion::new(ring, radius * 2.));
-		let collider = Collider::from_bevy_mesh(
-			&torus,
-			&ComputedColliderShape::TriMesh(TriMeshFlags::MERGE_DUPLICATE_VERTICES),
-		);
-
-		let Some(collider) = collider else {
-			return Err(Error {
-				msg: "Cannot create spherical contact collider".to_owned(),
-				lvl: Level::Error,
-			});
-		};
-
-		Ok((collider, transform))
-	}
-
-	fn custom_collider(collider: &Collider, scale: Vec3) -> (Collider, Transform) {
-		(collider.clone(), Transform::from_scale(scale))
-	}
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum Integrity {
-	Solid,
-	Fragile { destroyed_by: Vec<Blocker> },
+fn sphere_collider(radius: f32) -> (Collider, Transform) {
+	(Collider::ball(radius), Transform::default())
 }
 
-impl Integrity {
-	fn prefab<TInteractions>(&self, entity: &mut EntityCommands) -> Result<(), Error>
+fn ring_collider(radius: f32) -> Result<(Collider, Transform), Error> {
+	let transform = Transform::default().with_rotation(Quat::from_axis_angle(Vec3::X, PI / 2.));
+	let ring = Annulus::new(radius * 0.9, radius);
+	let torus = Mesh::from(Extrusion::new(ring, radius * 2.));
+	let collider = Collider::from_bevy_mesh(
+		&torus,
+		&ComputedColliderShape::TriMesh(TriMeshFlags::MERGE_DUPLICATE_VERTICES),
+	);
+
+	let Some(collider) = collider else {
+		return Err(Error {
+			msg: "Cannot create spherical contact collider".to_owned(),
+			lvl: Level::Error,
+		});
+	};
+
+	Ok((collider, transform))
+}
+
+fn custom_collider(collider: &Collider, scale: Vec3) -> (Collider, Transform) {
+	(collider.clone(), Transform::from_scale(scale))
+}
+
+impl SimplePrefab for Integrity {
+	type TExtra = ();
+
+	fn prefab<TInteractions, TLifeCycles>(
+		&self,
+		entity: &mut EntityCommands,
+		_: (),
+	) -> Result<(), Error>
 	where
 		TInteractions: HandlesInteractions,
 	{
@@ -139,26 +135,14 @@ impl Integrity {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum Motion {
-	HeldBy {
-		spawner: Entity,
-	},
-	Stationary {
-		caster: Entity,
-		max_cast_range: Units,
-		target_ray: Ray3d,
-	},
-	Projectile {
-		caster: Entity,
-		spawner: Entity,
-		speed: UnitsPerSecond,
-		max_range: Units,
-	},
-}
+impl SimplePrefab for Motion {
+	type TExtra = ();
 
-impl Motion {
-	fn prefab<TLifeCycles>(&self, entity: &mut EntityCommands) -> Result<(), Error>
+	fn prefab<TInteractions, TLifeCycles>(
+		&self,
+		entity: &mut EntityCommands,
+		_: (),
+	) -> Result<(), Error>
 	where
 		TLifeCycles: HandlesDestruction,
 	{
@@ -205,54 +189,6 @@ impl Motion {
 			}
 		}
 		Ok(())
-	}
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Offset(pub Vec3);
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct SelectInfo<T> {
-	pub ray: Ray3d,
-	pub collision_info: Option<ColliderInfo<T>>,
-}
-
-impl<T> Default for SelectInfo<T> {
-	fn default() -> Self {
-		Self {
-			ray: Ray3d {
-				origin: Vec3::ZERO,
-				direction: Dir3::NEG_Z,
-			},
-			collision_info: None,
-		}
-	}
-}
-
-pub type SkillTarget = SelectInfo<Outdated<GlobalTransform>>;
-
-impl From<Ray3d> for SkillTarget {
-	fn from(ray: Ray3d) -> Self {
-		Self { ray, ..default() }
-	}
-}
-
-impl SkillTarget {
-	pub fn with_ray(self, ray: Ray3d) -> Self {
-		Self {
-			ray,
-			collision_info: self.collision_info,
-		}
-	}
-
-	pub fn with_collision_info(
-		self,
-		collision_info: Option<ColliderInfo<Outdated<GlobalTransform>>>,
-	) -> Self {
-		Self {
-			ray: self.ray,
-			collision_info,
-		}
 	}
 }
 
@@ -327,7 +263,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			motion.prefab::<_LifeCycles>(entity)
+			motion.prefab::<_Interactions, _LifeCycles>(entity, ())
 		}))?;
 
 		assert_eq!(
@@ -374,7 +310,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			motion.prefab::<_LifeCycles>(entity)
+			motion.prefab::<_Interactions, _LifeCycles>(entity, ())
 		}))?;
 
 		assert_eq!(
@@ -426,7 +362,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			motion.prefab::<_LifeCycles>(entity)
+			motion.prefab::<_Interactions, _LifeCycles>(entity, ())
 		}))?;
 
 		assert_eq!(
@@ -475,7 +411,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			integrity.prefab::<_Interactions>(entity)
+			integrity.prefab::<_Interactions, _LifeCycles>(entity, ())
 		}))?;
 
 		assert_eq!(
@@ -502,7 +438,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			shape.prefab(entity, Vec3::new(1., 2., 3.))
+			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::new(1., 2., 3.))
 		}))?;
 
 		assert_eq!(
@@ -528,7 +464,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			shape.prefab(entity, Vec3::new(1., 2., 3.))
+			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::new(1., 2., 3.))
 		}))?;
 
 		assert_eq!(
@@ -552,9 +488,9 @@ mod tests {
 			hollow_collider: false,
 		};
 
-		_ = app
-			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
+		_ = app.world_mut().run_system_once(test_system(move |entity| {
+			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+		}))?;
 
 		let child = children_of(&app, entity)
 			.next()
@@ -562,7 +498,7 @@ mod tests {
 		assert_eq!(
 			(
 				Some(&Transform::from_scale(Vec3::splat(42. * 2.))),
-				Some(&AssetModel::path(Shape::SPHERE_MODEL)),
+				Some(&AssetModel::path(SPHERE_MODEL)),
 			),
 			(child.get::<Transform>(), child.get::<AssetModel>(),)
 		);
@@ -577,9 +513,9 @@ mod tests {
 			hollow_collider: false,
 		};
 
-		_ = app
-			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
+		_ = app.world_mut().run_system_once(test_system(move |entity| {
+			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+		}))?;
 
 		let child = children_of(&app, entity)
 			.nth(1)
@@ -609,14 +545,14 @@ mod tests {
 			hollow_collider: true,
 		};
 
-		_ = app
-			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
+		_ = app.world_mut().run_system_once(test_system(move |entity| {
+			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+		}))?;
 
 		let child = children_of(&app, entity)
 			.nth(1)
 			.expect("no second entity children");
-		let (_expected_collider, expected_transform) = Shape::ring_collider(42.).unwrap();
+		let (_expected_collider, expected_transform) = ring_collider(42.).unwrap();
 		assert_eq!(
 			(
 				Some(&expected_transform),
@@ -648,9 +584,9 @@ mod tests {
 			hollow_collider: false,
 		};
 
-		_ = app
-			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
+		_ = app.world_mut().run_system_once(test_system(move |entity| {
+			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+		}))?;
 
 		let child = children_of(&app, entity)
 			.nth(1)
@@ -667,9 +603,9 @@ mod tests {
 			hollow_collider: false,
 		};
 
-		_ = app
-			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
+		_ = app.world_mut().run_system_once(test_system(move |entity| {
+			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+		}))?;
 
 		let child = children_of(&app, entity)
 			.nth(1)
@@ -687,9 +623,9 @@ mod tests {
 			scale: Vec3::new(3., 2., 1.),
 		};
 
-		_ = app
-			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
+		_ = app.world_mut().run_system_once(test_system(move |entity| {
+			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+		}))?;
 
 		let child = children_of(&app, entity)
 			.next()
@@ -713,9 +649,9 @@ mod tests {
 			scale: Vec3::new(3., 2., 1.),
 		};
 
-		_ = app
-			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
+		_ = app.world_mut().run_system_once(test_system(move |entity| {
+			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+		}))?;
 
 		let child = children_of(&app, entity)
 			.nth(1)
@@ -748,9 +684,9 @@ mod tests {
 			scale: Vec3::default(),
 		};
 
-		_ = app
-			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
+		_ = app.world_mut().run_system_once(test_system(move |entity| {
+			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+		}))?;
 
 		let child = children_of(&app, entity)
 			.nth(1)
@@ -768,9 +704,9 @@ mod tests {
 			scale: Vec3::default(),
 		};
 
-		_ = app
-			.world_mut()
-			.run_system_once(test_system(move |entity| shape.prefab(entity, Vec3::ZERO)))?;
+		_ = app.world_mut().run_system_once(test_system(move |entity| {
+			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+		}))?;
 
 		let child = children_of(&app, entity)
 			.nth(1)
