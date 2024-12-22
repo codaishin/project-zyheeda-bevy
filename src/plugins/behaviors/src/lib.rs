@@ -4,13 +4,6 @@ pub mod traits;
 
 mod systems;
 
-use crate::systems::{
-	attack::AttackSystem,
-	base_behavior::SelectBehavior,
-	chase::ChaseSystem,
-	movement::{animate_movement::AnimateMovement, execute_move_velocity_based::ExecuteMovement},
-	set_player_movement::SetPlayerMovement,
-};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
@@ -52,12 +45,20 @@ use components::{
 use events::MoveInputEvent;
 use std::marker::PhantomData;
 use systems::{
+	attack::AttackSystem,
+	base_behavior::SelectBehavior,
+	chase::ChaseSystem,
 	cleanup::cleanup,
 	face::{execute_face::execute_face, get_faces::get_faces},
-	move_on_orbit::move_on_orbit,
-	move_with_target::move_with_target,
-	movement::trigger_event::trigger_move_input_event,
-	set_camera_to_orbit_player::SetCameraToOrbit,
+	movement::{
+		animate_movement::AnimateMovement,
+		execute_move_velocity_based::ExecuteMovement,
+		move_on_orbit::move_on_orbit,
+		move_with_target::move_with_target,
+		set_camera_to_orbit_player::SetCameraToOrbit,
+		set_player_movement::SetPlayerMovement,
+		trigger_event::trigger_move_input_event,
+	},
 	update_cool_downs::update_cool_downs,
 };
 
