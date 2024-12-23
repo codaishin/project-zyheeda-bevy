@@ -4454,7 +4454,6 @@ dependencies = [
  "common",
  "macros",
  "mockall",
- "player",
  "serde",
  "tracing",
  "uuid",

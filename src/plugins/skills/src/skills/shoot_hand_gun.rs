@@ -1,18 +1,23 @@
 use super::SkillAnimation;
-use crate::traits::{AnimationChainIf, GetAnimationSetup};
-use common::traits::animation::{Animation, PlayMode};
-use player::components::player::Player;
+use crate::{
+	slot_key::SlotKey,
+	traits::{AnimationChainIf, GetAnimationSetup},
+};
+use common::components::Side;
 use std::marker::PhantomData;
 
 pub(crate) struct ShootHandGun<T = ()>(PhantomData<T>);
 
 impl GetAnimationSetup for ShootHandGun {
-	fn get_animation() -> SkillAnimation {
+	fn get_animation<TPlayer>() -> SkillAnimation
+	where
+		TPlayer: crate::traits::PlayerAnimations,
+	{
 		SkillAnimation {
-			top_hand_left: Animation::new(Player::animation_path("Animation6"), PlayMode::Repeat),
-			top_hand_right: Animation::new(Player::animation_path("Animation7"), PlayMode::Repeat),
-			btm_hand_left: Animation::new(Player::animation_path("Animation4"), PlayMode::Repeat),
-			btm_hand_right: Animation::new(Player::animation_path("Animation5"), PlayMode::Repeat),
+			top_hand_left: TPlayer::animation(SlotKey::TopHand(Side::Left)),
+			top_hand_right: TPlayer::animation(SlotKey::TopHand(Side::Left)),
+			btm_hand_left: TPlayer::animation(SlotKey::TopHand(Side::Left)),
+			btm_hand_right: TPlayer::animation(SlotKey::TopHand(Side::Left)),
 		}
 	}
 

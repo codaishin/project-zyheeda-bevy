@@ -160,10 +160,14 @@ pub(crate) struct AnimationChainIf {
 }
 
 pub(crate) trait GetAnimationSetup {
-	fn get_animation() -> SkillAnimation;
+	fn get_animation<TPlayer>() -> SkillAnimation
+	where
+		TPlayer: PlayerAnimations;
 	fn get_chains() -> Vec<AnimationChainIf>;
 }
 
 pub(crate) trait GetSkillAnimation {
-	fn animation() -> SkillAnimation;
+	fn animation<TPlayer>() -> SkillAnimation
+	where
+		TPlayer: PlayerAnimations;
 }

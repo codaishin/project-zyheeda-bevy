@@ -1,4 +1,4 @@
-use super::{GetAnimationSetup, GetSkillAnimation};
+use super::{GetAnimationSetup, GetSkillAnimation, PlayerAnimations};
 use crate::skills::SkillAnimation;
 use common::{
 	tools::{Last, This},
@@ -6,9 +6,12 @@ use common::{
 };
 
 impl<T: GetAnimationSetup> GetSkillAnimation for T {
-	fn animation() -> SkillAnimation {
+	fn animation<TPlayer>() -> SkillAnimation
+	where
+		TPlayer: PlayerAnimations,
+	{
 		if T::get_chains().is_empty() {
-			return T::get_animation();
+			return T::get_animation::<TPlayer>();
 		}
 
 		let SkillAnimation {
@@ -16,7 +19,7 @@ impl<T: GetAnimationSetup> GetSkillAnimation for T {
 			mut top_hand_right,
 			mut btm_hand_left,
 			mut btm_hand_right,
-		} = T::get_animation();
+		} = T::get_animation::<TPlayer>();
 
 		top_hand_left.update_fn = Some(apply_chain::<T>);
 		top_hand_right.update_fn = Some(apply_chain::<T>);
