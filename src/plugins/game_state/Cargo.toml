@@ -11,4 +11,3 @@ bevy_rapier3d.workspace = true
 # internal
 common.workspace = true
 menu.workspace = true
-player.workspace = true

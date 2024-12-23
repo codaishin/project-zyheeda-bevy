@@ -14,6 +14,7 @@ pub mod handles_bars;
 pub mod handles_destruction;
 pub mod handles_effect;
 pub mod handles_enemies;
+pub mod handles_game_states;
 pub mod handles_interactions;
 pub mod handles_life;
 pub mod handles_lifetime;
