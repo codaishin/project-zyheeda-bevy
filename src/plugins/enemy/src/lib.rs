@@ -42,7 +42,8 @@ where
 		TPrefabs::with_dependency::<(TInteractions, TBars)>().register_prefab::<VoidSphere>(app);
 		TPrefabs::with_dependency::<TInteractions>().register_prefab::<VoidBeam>(app);
 
-		app.add_systems(Update, ring_rotation);
+		app.add_systems(Startup, VoidSphere::spawn)
+			.add_systems(Update, ring_rotation);
 	}
 }
 

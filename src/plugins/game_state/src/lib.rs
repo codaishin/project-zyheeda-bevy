@@ -9,7 +9,6 @@ use common::{
 	states::{game_state::GameState, transition_to_state},
 	traits::handles_load_tracking::{HandlesLoadTracking, OnLoadingDone},
 };
-use enemy::components::void_sphere::VoidSphere;
 use player::bundle::PlayerBundle;
 use std::marker::PhantomData;
 use systems::pause_virtual_time::pause_virtual_time;
@@ -63,28 +62,8 @@ fn spawn_camera(mut commands: Commands) {
 
 fn setup_scene(mut commands: Commands) {
 	spawn_player(&mut commands);
-	spawn_void_spheres(&mut commands);
 }
 
 fn spawn_player(commands: &mut Commands) -> Entity {
 	commands.spawn(PlayerBundle::default()).id()
-}
-
-fn spawn_void_spheres(commands: &mut Commands) {
-	let directions = [
-		("Sphere A", Vec3::new(1., 0., 1.)),
-		("Sphere B", Vec3::new(-1., 0., 1.)),
-		("Sphere C", Vec3::new(1., 0., -1.)),
-		("Sphere D", Vec3::new(-1., 0., -1.)),
-	];
-	let distance = 10.;
-
-	for (name, direction) in directions {
-		commands.spawn((
-			Name::new(name),
-			VoidSphere,
-			Transform::from_translation(direction * distance),
-			Visibility::default(),
-		));
-	}
 }
