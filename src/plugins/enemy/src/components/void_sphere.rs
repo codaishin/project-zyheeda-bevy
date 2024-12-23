@@ -59,6 +59,25 @@ impl VoidSphere {
 			cool_down: Duration::from_secs(5),
 		}
 	}
+
+	pub(crate) fn spawn(mut commands: Commands) {
+		let directions = [
+			("Sphere A", Vec3::new(1., 0., 1.)),
+			("Sphere B", Vec3::new(-1., 0., 1.)),
+			("Sphere C", Vec3::new(1., 0., -1.)),
+			("Sphere D", Vec3::new(-1., 0., -1.)),
+		];
+		let distance = 10.;
+
+		for (name, direction) in directions {
+			commands.spawn((
+				Name::new(name),
+				VoidSphere,
+				Transform::from_translation(direction * distance),
+				Visibility::default(),
+			));
+		}
+	}
 }
 
 #[derive(Component, Clone)]
