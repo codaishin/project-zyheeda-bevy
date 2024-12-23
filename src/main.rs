@@ -77,7 +77,7 @@ fn prepare_game(app: &mut App) {
 	let shaders_plugin =
 		ShadersPlugin::depends_on(&prefabs_plugin, &interactions_plugin, &behaviors_plugin);
 	let rendering_plugin = RenderingPlugin::depends_on(&loading_plugin);
-	let menu_plugin = MenuPlugin::depends_on(&loading_plugin);
+	let menu_plugin = MenuPlugin::depends_on(&loading_plugin, &player_plugin);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())

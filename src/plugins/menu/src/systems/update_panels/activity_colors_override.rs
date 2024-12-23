@@ -19,17 +19,17 @@ use common::{
 	states::mouse_context::MouseContext,
 	traits::{accessors::get::GetterRef, iterate::Iterate, map_value::TryMapBackwards},
 };
-use player::components::player::Player;
 use skills::{skills::QueuedSkill, slot_key::SlotKey};
 
 pub fn panel_activity_colors_override<
+	TPlayer: Component,
 	TMap: Resource + TryMapBackwards<KeyCode, SlotKey>,
 	TQueue: Component + Iterate<QueuedSkill>,
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetterRef<SlotKey> + Component,
 >(
 	mut commands: Commands,
 	mut buttons: Query<(Entity, &mut BackgroundColor, &TPanel)>,
-	player: Query<&TQueue, With<Player>>,
+	player: Query<&TQueue, With<TPlayer>>,
 	key_map: Res<TMap>,
 	mouse_context: Res<State<MouseContext>>,
 ) {
@@ -107,6 +107,9 @@ mod tests {
 	use skills::skills::QueuedSkill;
 
 	#[derive(Component)]
+	struct _Player;
+
+	#[derive(Component)]
 	struct _Panel(pub SlotKey);
 
 	impl HasActiveColor for _Panel {
@@ -167,7 +170,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			panel_activity_colors_override::<_Map, _Queue, _Panel>,
+			panel_activity_colors_override::<_Player, _Map, _Queue, _Panel>,
 		);
 		app.add_plugins(StatesPlugin);
 		app.init_state::<MouseContext>();
@@ -186,7 +189,7 @@ mod tests {
 		let (mut app, panel) = setup(bundle, _Map::None);
 
 		app.world_mut().spawn((
-			Player,
+			_Player,
 			_Queue {
 				queued: vec![QueuedSkill {
 					slot_key: SlotKey::BottomHand(Side::Right),
@@ -216,7 +219,7 @@ mod tests {
 		let (mut app, panel) = setup(bundle, _Map::None);
 
 		app.world_mut().spawn((
-			Player,
+			_Player,
 			_Queue {
 				queued: vec![QueuedSkill {
 					slot_key: SlotKey::BottomHand(Side::Left),
@@ -245,7 +248,7 @@ mod tests {
 		);
 		let (mut app, panel) = setup(bundle, _Map::None);
 
-		app.world_mut().spawn((Player, _Queue { queued: vec![] }));
+		app.world_mut().spawn((_Player, _Queue { queued: vec![] }));
 
 		app.update();
 
@@ -269,7 +272,7 @@ mod tests {
 			_Map::Map(KeyCode::KeyQ, SlotKey::BottomHand(Side::Right)),
 		);
 
-		app.world_mut().spawn((Player, _Queue { queued: vec![] }));
+		app.world_mut().spawn((_Player, _Queue { queued: vec![] }));
 
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
@@ -296,7 +299,7 @@ mod tests {
 		let (mut app, panel) = setup(bundle, _Map::None);
 
 		app.world_mut().spawn((
-			Player,
+			_Player,
 			_Queue {
 				queued: vec![
 					QueuedSkill {
