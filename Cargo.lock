@@ -2417,7 +2417,6 @@ dependencies = [
  "bevy_rapier3d",
  "common",
  "menu",
- "player",
 ]
 
 [[package]]
