@@ -1,7 +1,6 @@
 use crate::components::quickbar_panel::QuickbarPanel;
 use bevy::prelude::*;
 use common::traits::{accessors::get::GetRef, iterate::Iterate};
-use player::components::player::Player;
 use skills::{
 	components::slots::Slots,
 	item::Item,
@@ -16,13 +15,14 @@ type PlayerComponents<'a, TQueue, TCombos, TComboTimeout> = (
 	Option<&'a TComboTimeout>,
 );
 
-pub(crate) fn get_quickbar_icons<TQueue, TCombos, TComboTimeout>(
-	players: Query<PlayerComponents<TQueue, TCombos, TComboTimeout>, With<Player>>,
+pub(crate) fn get_quickbar_icons<TPlayer, TQueue, TCombos, TComboTimeout>(
+	players: Query<PlayerComponents<TQueue, TCombos, TComboTimeout>, With<TPlayer>>,
 	panels: Query<(Entity, &mut QuickbarPanel)>,
 	items: Res<Assets<Item>>,
 	skills: Res<Assets<Skill>>,
 ) -> Vec<(Entity, Option<Handle<Image>>)>
 where
+	TPlayer: Component,
 	TQueue: Component + Iterate<QueuedSkill>,
 	TCombos: Component + PeekNext<Skill>,
 	TComboTimeout: Component + IsTimedOut,
@@ -107,6 +107,9 @@ mod tests {
 	use std::collections::HashMap;
 	use uuid::Uuid;
 
+	#[derive(Component)]
+	struct _Player;
+
 	#[derive(Component, Default)]
 	struct _Queue(Vec<QueuedSkill>);
 
@@ -154,7 +157,7 @@ mod tests {
 		app.init_resource::<_Result>();
 		app.add_systems(
 			Update,
-			get_quickbar_icons::<_Queue, _Combos, _ComboTimeout>.pipe(store_result),
+			get_quickbar_icons::<_Player, _Queue, _Combos, _ComboTimeout>.pipe(store_result),
 		);
 
 		app
@@ -187,7 +190,7 @@ mod tests {
 		)]);
 		let mut app = setup(items, skills);
 		app.world_mut().spawn((
-			Player,
+			_Player,
 			slots,
 			_Queue::default(),
 			_Combos::new().with_mock(|mock| {
@@ -245,7 +248,7 @@ mod tests {
 		)]);
 		let mut app = setup(items, skills);
 		app.world_mut().spawn((
-			Player,
+			_Player,
 			slots,
 			_Queue::default(),
 			_Combos::new().with_mock(|mock| {
@@ -279,7 +282,7 @@ mod tests {
 		)]);
 		let mut app = setup(items, skills);
 		app.world_mut().spawn((
-			Player,
+			_Player,
 			slots,
 			_Queue::default(),
 			_Combos::new().with_mock(|mock| {
@@ -316,7 +319,7 @@ mod tests {
 		)]);
 		let mut app = setup(items, skills);
 		app.world_mut().spawn((
-			Player,
+			_Player,
 			slots,
 			_Queue::default(),
 			_Combos::new().with_mock(|mock| {
@@ -350,7 +353,7 @@ mod tests {
 		)]);
 		let mut app = setup(items, skills);
 		app.world_mut().spawn((
-			Player,
+			_Player,
 			slots,
 			_Queue(vec![QueuedSkill {
 				skill: Skill {
@@ -394,7 +397,7 @@ mod tests {
 		)]);
 		let mut app = setup(items, skills);
 		app.world_mut().spawn((
-			Player,
+			_Player,
 			slots,
 			_Queue(vec![QueuedSkill {
 				skill: Skill {
@@ -437,7 +440,7 @@ mod tests {
 			},
 		)]);
 		let mut app = setup(items, skills);
-		app.world_mut().spawn((Player, slots, _Queue::default()));
+		app.world_mut().spawn((_Player, slots, _Queue::default()));
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {
