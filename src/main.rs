@@ -60,12 +60,12 @@ fn prepare_game(app: &mut App) {
 		&player_plugin,
 	);
 	let skills_plugin = SkillsPlugin::depends_on(
-		&animations_plugin,
 		&life_cycles_plugin,
 		&interactions_plugin,
 		&children_assets_dispatch_plugin,
 		&loading_plugin,
 		&behaviors_plugin,
+		&player_plugin,
 	);
 	let shaders_plugin =
 		ShadersPlugin::depends_on(&prefabs_plugin, &interactions_plugin, &behaviors_plugin);

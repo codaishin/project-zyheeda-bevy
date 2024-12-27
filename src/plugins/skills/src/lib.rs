@@ -18,10 +18,10 @@ use common::{
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	tools::slot_key::{Side, SlotKey},
 	traits::{
-		animation::HasAnimationsDispatch,
 		handles_effect::HandlesAllEffects,
 		handles_lifetime::HandlesLifetime,
 		handles_orientation::HandlesOrientation,
+		handles_player::ConfiguresPlayerSkillAnimations,
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		register_assets_for_children::RegisterAssetsForChildren,
 		register_custom_assets::{RegisterCustomAssets, RegisterCustomFolderAssets},
@@ -60,47 +60,40 @@ use systems::{
 };
 
 pub struct SkillsPlugin<
-	TAnimations,
 	TLifeCycles,
 	TInteractions,
 	TDispatchChildrenAssets,
 	TLoading,
 	TBehaviors,
+	TPlayers,
 >(
 	PhantomData<(
-		TAnimations,
 		TLifeCycles,
 		TInteractions,
 		TDispatchChildrenAssets,
 		TLoading,
 		TBehaviors,
+		TPlayers,
 	)>,
 );
 
-impl<TAnimations, TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors>
-	SkillsPlugin<
-		TAnimations,
-		TLifeCycles,
-		TInteractions,
-		TDispatchChildrenAssets,
-		TLoading,
-		TBehaviors,
-	>
+impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, TPlayers>
+	SkillsPlugin<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, TPlayers>
 where
-	TAnimations: Plugin + HasAnimationsDispatch,
 	TLifeCycles: Plugin + HandlesLifetime,
 	TInteractions: Plugin + HandlesAllEffects,
 	TDispatchChildrenAssets: Plugin + RegisterAssetsForChildren,
 	TLoading: Plugin + RegisterCustomAssets + RegisterCustomFolderAssets,
 	TBehaviors: Plugin + HandlesSkillBehaviors + HandlesOrientation,
+	TPlayers: Plugin + ConfiguresPlayerSkillAnimations,
 {
 	pub fn depends_on(
-		_: &TAnimations,
 		_: &TLifeCycles,
 		_: &TInteractions,
 		_: &TDispatchChildrenAssets,
 		_: &TLoading,
 		_: &TBehaviors,
+		_: &TPlayers,
 	) -> Self {
 		Self(PhantomData)
 	}
@@ -153,13 +146,7 @@ where
 						.pipe(enqueue::<Slots, Queue, QueuedSkill>),
 					update_skill_combos::<Combos, Queue>,
 					flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
-					advance_active_skill::<
-						Queue,
-						TAnimations::TAnimationDispatch,
-						TBehaviors,
-						SkillExecuter,
-						Virtual,
-					>,
+					advance_active_skill::<Queue, TPlayers, TBehaviors, SkillExecuter, Virtual>,
 					execute_skill.pipe(log_many),
 					flush::<Queue>,
 				)
@@ -233,22 +220,22 @@ where
 	}
 }
 
-impl<TAnimations, TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors> Plugin
+impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, TPlayers> Plugin
 	for SkillsPlugin<
-		TAnimations,
 		TLifeCycles,
 		TInteractions,
 		TDispatchChildrenAssets,
 		TLoading,
 		TBehaviors,
+		TPlayers,
 	>
 where
-	TAnimations: Plugin + HasAnimationsDispatch,
 	TLifeCycles: Plugin + HandlesLifetime,
 	TInteractions: Plugin + HandlesAllEffects,
 	TDispatchChildrenAssets: Plugin + RegisterAssetsForChildren,
 	TLoading: Plugin + RegisterCustomAssets + RegisterCustomFolderAssets,
 	TBehaviors: Plugin + HandlesSkillBehaviors + HandlesOrientation,
+	TPlayers: Plugin + ConfiguresPlayerSkillAnimations,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);

@@ -4462,6 +4462,7 @@ dependencies = [
  "mockall",
  "player",
  "serde",
+ "test-case",
  "tracing",
  "uuid",
 ]

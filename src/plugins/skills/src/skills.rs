@@ -26,6 +26,7 @@ use common::{
 		register_custom_assets::AssetFolderPath,
 	},
 };
+use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result as FmtResult},
@@ -40,19 +41,19 @@ pub struct SkillAnimation {
 	pub(crate) btm_hand_right: Animation,
 }
 
-#[derive(PartialEq, Debug, Default, Clone)]
-pub enum Animate<TAnimation> {
+#[derive(PartialEq, Debug, Default, Clone, Copy, Serialize, Deserialize)]
+pub enum AnimationStrategy {
 	#[default]
-	Ignore,
 	None,
-	Some(TAnimation),
+	DoNotAnimate,
+	Animate,
 }
 
 #[derive(PartialEq, Debug, Default, Clone, TypePath, Asset)]
 pub struct Skill {
 	pub name: String,
 	pub cast_time: Duration,
-	pub animate: Animate<SkillAnimation>,
+	pub animation: AnimationStrategy,
 	pub behavior: RunSkillBehavior,
 	pub is_usable_with: HashSet<SkillItemType>,
 	pub icon: Option<Handle<Image>>,

@@ -1,19 +1,19 @@
 use crate::{
-	skills::{Activation, Animate, QueuedSkill, RunSkillBehavior, Skill, SkillState},
+	skills::{Activation, AnimationStrategy, QueuedSkill, RunSkillBehavior, Skill, SkillState},
 	traits::{
 		Enqueue,
 		Flush,
 		GetActiveSkill,
-		GetAnimation,
+		GetAnimationStrategy,
 		GetSkillBehavior,
 		IterAddedMut,
 		IterMut,
 	},
 };
-use bevy::{ecs::component::Component, utils::default};
+use bevy::{ecs::component::Component, prelude::*};
 use common::{
-	tools::slot_key::{Side, SlotKey},
-	traits::{animation::Animation, iterate::Iterate, state_duration::StateDuration},
+	tools::slot_key::SlotKey,
+	traits::{iterate::Iterate, state_duration::StateDuration},
 };
 use std::{collections::VecDeque, time::Duration};
 
@@ -531,7 +531,7 @@ impl GetActiveSkill<SkillState> for Queue {
 	#[allow(refining_impl_trait)]
 	fn get_active(
 		&mut self,
-	) -> Option<impl GetSkillBehavior + GetAnimation + StateDuration<SkillState>> {
+	) -> Option<impl GetSkillBehavior + GetAnimationStrategy + StateDuration<SkillState>> {
 		let skill = self.queue.front_mut()?;
 
 		if self.duration.is_none() {
@@ -574,24 +574,9 @@ impl GetSkillBehavior for ActiveSkill<'_> {
 	}
 }
 
-impl GetAnimation for ActiveSkill<'_> {
-	fn animate(&self) -> Animate<Animation> {
-		match (&self.skill.animate, self.slot_key) {
-			(Animate::None, ..) => Animate::None,
-			(Animate::Ignore, ..) => Animate::Ignore,
-			(Animate::Some(a), SlotKey::TopHand(Side::Right)) => {
-				Animate::Some(a.top_hand_right.clone())
-			}
-			(Animate::Some(a), SlotKey::TopHand(Side::Left)) => {
-				Animate::Some(a.top_hand_left.clone())
-			}
-			(Animate::Some(a), SlotKey::BottomHand(Side::Right)) => {
-				Animate::Some(a.btm_hand_right.clone())
-			}
-			(Animate::Some(a), SlotKey::BottomHand(Side::Left)) => {
-				Animate::Some(a.btm_hand_left.clone())
-			}
-		}
+impl GetAnimationStrategy for ActiveSkill<'_> {
+	fn animation_strategy(&self) -> AnimationStrategy {
+		self.skill.animation
 	}
 }
 
@@ -603,11 +588,11 @@ mod test_queue_active_skill {
 			build_skill_shape::{BuildSkillShape, OnSkillStop},
 			SkillBehaviorConfig,
 		},
-		skills::{Animate, RunSkillBehavior, SkillAnimation},
+		skills::{AnimationStrategy, RunSkillBehavior},
 		traits::skill_builder::SkillShape,
 	};
-	use bevy::prelude::default;
-	use common::traits::{animation::PlayMode, load_asset::Path};
+	use common::tools::slot_key::Side;
+	use test_case::test_case;
 
 	#[test]
 	fn get_phasing_times_waiting() {
@@ -858,50 +843,28 @@ mod test_queue_active_skill {
 		);
 	}
 
-	#[test]
-	fn get_animations() {
-		let animation = SkillAnimation {
-			top_hand_left: Animation::new(Path::from("path/top/left"), PlayMode::Repeat),
-			top_hand_right: Animation::new(Path::from("path/top/right"), PlayMode::Replay),
-			btm_hand_left: Animation::new(Path::from("path/bottom/left"), PlayMode::Repeat),
-			btm_hand_right: Animation::new(Path::from("path/bottom/right"), PlayMode::Replay),
+	#[test_case(AnimationStrategy::DoNotAnimate; "do not animate")]
+	#[test_case(AnimationStrategy::Animate; "animate")]
+	#[test_case(AnimationStrategy::None; "none")]
+	fn get_animation(animation: AnimationStrategy) {
+		let active = ActiveSkill {
+			skill: &Skill {
+				animation,
+				..default()
+			},
+			slot_key: &SlotKey::default(),
+			mode: &mut Activation::default(),
+			duration: &mut Duration::default(),
 		};
 
-		let actives = [
-			ActiveSkill {
-				skill: &Skill {
-					animate: Animate::Some(animation.clone()),
-					..default()
-				},
-				slot_key: &SlotKey::BottomHand(Side::Right),
-				mode: &mut Activation::default(),
-				duration: &mut Duration::default(),
-			},
-			ActiveSkill {
-				skill: &Skill {
-					animate: Animate::Some(animation.clone()),
-					..default()
-				},
-				slot_key: &SlotKey::BottomHand(Side::Left),
-				mode: &mut Activation::default(),
-				duration: &mut Duration::default(),
-			},
-		];
-
-		assert_eq!(
-			[
-				Animate::Some(animation.btm_hand_right),
-				Animate::Some(animation.btm_hand_left),
-			],
-			actives.map(|s| s.animate()),
-		)
+		assert_eq!(animation, active.animation_strategy());
 	}
 
 	#[test]
 	fn get_ignore_animation() {
 		let active = ActiveSkill {
 			skill: &mut Skill {
-				animate: Animate::Ignore,
+				animation: AnimationStrategy::None,
 				..default()
 			},
 			slot_key: &SlotKey::BottomHand(Side::Right),
@@ -909,14 +872,14 @@ mod test_queue_active_skill {
 			duration: &mut Duration::default(),
 		};
 
-		assert_eq!(Animate::Ignore, active.animate())
+		assert_eq!(AnimationStrategy::None, active.animation_strategy())
 	}
 
 	#[test]
 	fn get_none_animation() {
 		let active = ActiveSkill {
 			skill: &Skill {
-				animate: Animate::None,
+				animation: AnimationStrategy::None,
 				..default()
 			},
 			slot_key: &SlotKey::BottomHand(Side::Right),
@@ -924,6 +887,6 @@ mod test_queue_active_skill {
 			duration: &mut Duration::default(),
 		};
 
-		assert_eq!(Animate::None, active.animate())
+		assert_eq!(AnimationStrategy::None, active.animation_strategy())
 	}
 }

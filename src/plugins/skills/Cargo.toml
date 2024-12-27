@@ -19,3 +19,4 @@ player.workspace = true
 [dev-dependencies]
 # external
 mockall.workspace = true
+test-case.workspace = true

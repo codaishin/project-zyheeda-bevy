@@ -3,9 +3,7 @@
 	"cast_time": {
 		"seconds": 0.2
 	},
-	"animate": {
-		"Some": "ShootHandGun"
-	},
+	"animation": "Animate",
 	"behavior": {
 		"OnActive": {
 			"shape": {
