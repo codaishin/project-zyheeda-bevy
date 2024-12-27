@@ -38,13 +38,20 @@ fn prepare_game(app: &mut App) {
 	let animations_plugin = AnimationsPlugin;
 	let prefabs_plugin = PrefabsPlugin;
 	let loading_plugin = LoadingPlugin;
+	let game_state_plugin = GameStatePlugin::depends_on(&loading_plugin);
 	let light_plugin = LightPlugin::depends_on(&prefabs_plugin);
 	let children_assets_dispatch_plugin = ChildrenAssetsDispatchPlugin::depends_on(&loading_plugin);
 	let interactions_plugin = InteractionsPlugin::depends_on(&prefabs_plugin, &life_cycles_plugin);
 	let bars_plugin = BarsPlugin::depends_on(&life_cycles_plugin);
-	let enemy_plugin = EnemyPlugin::depends_on(&prefabs_plugin, &interactions_plugin, &bars_plugin);
+	let enemy_plugin = EnemyPlugin::depends_on(
+		&game_state_plugin,
+		&prefabs_plugin,
+		&interactions_plugin,
+		&bars_plugin,
+	);
 	let map_generation_plugin = MapGenerationPlugin::depends_on(&prefabs_plugin, &light_plugin);
 	let player_plugin = PlayerPlugin::depends_on(
+		&game_state_plugin,
 		&animations_plugin,
 		&prefabs_plugin,
 		&interactions_plugin,
@@ -70,8 +77,7 @@ fn prepare_game(app: &mut App) {
 	let shaders_plugin =
 		ShadersPlugin::depends_on(&prefabs_plugin, &interactions_plugin, &behaviors_plugin);
 	let rendering_plugin = RenderingPlugin::depends_on(&loading_plugin);
-	let game_state_plugin = GameStatePlugin::depends_on(&loading_plugin);
-	let menu_plugin = MenuPlugin::depends_on(&loading_plugin);
+	let menu_plugin = MenuPlugin::depends_on(&loading_plugin, &player_plugin);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())

@@ -31,7 +31,7 @@ use common::{
 };
 
 #[derive(Component, Default, Debug, PartialEq)]
-#[require(PlayerMovement(Player::movement))]
+#[require(PlayerMovement(Player::movement), Transform, Visibility)]
 pub struct Player;
 
 impl Player {
@@ -72,6 +72,10 @@ impl Player {
 					.into(),
 			},
 		}
+	}
+
+	pub(crate) fn spawn(mut commands: Commands) {
+		commands.spawn(Player);
 	}
 }
 

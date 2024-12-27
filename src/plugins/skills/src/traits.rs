@@ -1,7 +1,6 @@
 pub(crate) mod advance_combo;
 pub(crate) mod bevy_input;
 pub(crate) mod flush;
-pub(crate) mod get_skill_animation;
 pub(crate) mod peek_next;
 pub(crate) mod skill_builder;
 pub(crate) mod skill_state;
@@ -13,11 +12,11 @@ use crate::{
 	behaviors::SkillCaster,
 	components::{skill_spawners::SkillSpawners, SkillTarget},
 	item::item_type::SkillItemType,
-	skills::{AnimationStrategy, RunSkillBehavior, Skill, SkillAnimation},
+	skills::{AnimationStrategy, RunSkillBehavior, Skill},
 };
 use common::{
 	tools::slot_key::SlotKey,
-	traits::{load_asset::Path, map_value::TryMapBackwards, state_duration::StateUpdate},
+	traits::{map_value::TryMapBackwards, state_duration::StateUpdate},
 };
 use std::hash::Hash;
 
@@ -147,20 +146,4 @@ pub(crate) trait Execute<TCommands, TLifetimes, TEffects, TSkillBehavior> {
 
 pub trait ShouldEnqueue {
 	fn should_enqueue(&self) -> bool;
-}
-
-#[derive(Clone)]
-pub(crate) struct AnimationChainIf {
-	pub this: fn() -> Path,
-	pub last: fn() -> Path,
-	pub then: fn() -> Path,
-}
-
-pub(crate) trait GetAnimationSetup {
-	fn get_animation() -> SkillAnimation;
-	fn get_chains() -> Vec<AnimationChainIf>;
-}
-
-pub(crate) trait GetSkillAnimation {
-	fn animation() -> SkillAnimation;
 }

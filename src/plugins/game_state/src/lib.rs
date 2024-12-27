@@ -7,9 +7,11 @@ use bevy::{
 use common::{
 	components::MainCamera,
 	states::{game_state::GameState, transition_to_state},
-	traits::handles_load_tracking::{HandlesLoadTracking, OnLoadingDone},
+	traits::{
+		handles_game_states::HandlesGameStates,
+		handles_load_tracking::{HandlesLoadTracking, OnLoadingDone},
+	},
 };
-use player::bundle::PlayerBundle;
 use std::marker::PhantomData;
 use systems::pause_virtual_time::pause_virtual_time;
 
@@ -38,10 +40,7 @@ where
 
 		app.insert_state(start_menu)
 			.add_systems(PostStartup, spawn_camera)
-			.add_systems(
-				OnEnter(new_game),
-				(setup_scene, transition_to_state(loading)).chain(),
-			)
+			.add_systems(OnEnter(new_game), transition_to_state(loading))
 			.add_systems(OnEnter(play), pause_virtual_time::<false>)
 			.add_systems(OnExit(play), pause_virtual_time::<true>);
 	}
@@ -60,10 +59,11 @@ fn spawn_camera(mut commands: Commands) {
 	));
 }
 
-fn setup_scene(mut commands: Commands) {
-	spawn_player(&mut commands);
-}
-
-fn spawn_player(commands: &mut Commands) -> Entity {
-	commands.spawn(PlayerBundle::default()).id()
+impl<TLoading> HandlesGameStates for GameStatePlugin<TLoading> {
+	fn on_starting_new_game<TSystem, TMarker>(app: &mut App, systems: TSystem)
+	where
+		TSystem: IntoSystemConfigs<TMarker>,
+	{
+		app.add_systems(OnEnter(GameState::NewGame), systems);
+	}
 }

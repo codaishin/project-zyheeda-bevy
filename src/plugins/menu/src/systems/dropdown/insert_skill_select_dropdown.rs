@@ -8,16 +8,16 @@ use common::{
 	tools::slot_key::SlotKey,
 	traits::{accessors::get::GetRef, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
-use player::components::player::Player;
 use skills::{item::Item, skills::Skill};
 
 pub(crate) fn insert_skill_select_dropdown<
+	TPlayer: Component,
 	TEquipment: GetRef<SlotKey, Handle<Item>> + Component,
 	TLayout: Sync + Send + 'static,
 >(
 	mut commands: Commands,
 	dropdown_commands: Query<(Entity, &SkillSelectDropdownInsertCommand<SlotKey, TLayout>)>,
-	slots: Query<&TEquipment, With<Player>>,
+	slots: Query<&TEquipment, With<TPlayer>>,
 	items: Res<Assets<Item>>,
 	skills: Res<Assets<Skill>>,
 ) {
@@ -73,6 +73,9 @@ mod tests {
 	use std::collections::{HashMap, HashSet};
 	use uuid::Uuid;
 
+	#[derive(Component)]
+	struct _Player;
+
 	#[derive(Debug, PartialEq)]
 	struct _Layout;
 
@@ -119,7 +122,10 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(items);
 		app.insert_resource(skills);
-		app.add_systems(Update, insert_skill_select_dropdown::<_Equipment, _Layout>);
+		app.add_systems(
+			Update,
+			insert_skill_select_dropdown::<_Player, _Equipment, _Layout>,
+		);
 		app.world_mut().spawn((agent, equipment));
 
 		app
@@ -136,7 +142,7 @@ mod tests {
 		let image_a = new_handle();
 		let image_b = new_handle();
 		let mut app = setup_app(
-			Player,
+			_Player,
 			[
 				Skill {
 					name: "skill a".to_owned(),
@@ -205,7 +211,7 @@ mod tests {
 		let image_a = new_handle();
 		let image_b = new_handle();
 		let mut app = setup_app(
-			Player,
+			_Player,
 			[
 				Skill {
 					name: "skill a".to_owned(),
@@ -326,7 +332,7 @@ mod tests {
 	#[test]
 	fn remove_command() {
 		let mut app = setup_app(
-			Player,
+			_Player,
 			[],
 			[(
 				SlotKey::BottomHand(Side::Right),
@@ -355,7 +361,7 @@ mod tests {
 
 	#[test]
 	fn remove_command_when_not_item() {
-		let mut app = setup_app(Player, [], []);
+		let mut app = setup_app(_Player, [], []);
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(

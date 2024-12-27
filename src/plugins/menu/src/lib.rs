@@ -17,6 +17,7 @@ use common::{
 	tools::slot_key::SlotKey,
 	traits::{
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
+		handles_player::HandlesPlayer,
 		load_asset::Path,
 	},
 };
@@ -38,7 +39,6 @@ use components::{
 	AppendSkillCommand,
 };
 use events::DropdownEvent;
-use player::components::player::Player;
 use skills::{
 	components::{
 		combos::Combos,
@@ -172,20 +172,18 @@ impl AddDropdown for App {
 	}
 }
 
-pub struct MenuPlugin<TLoading>(PhantomData<TLoading>);
+pub struct MenuPlugin<TLoading, TPlayers>(PhantomData<(TLoading, TPlayers)>);
 
-impl<TLoading> MenuPlugin<TLoading>
-where
-	TLoading: Plugin + HandlesLoadTracking,
-{
-	pub fn depends_on(_: &TLoading) -> Self {
+impl<TLoading, TPlayers> MenuPlugin<TLoading, TPlayers> {
+	pub fn depends_on(_: &TLoading, _: &TPlayers) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading> MenuPlugin<TLoading>
+impl<TLoading, TPlayers> MenuPlugin<TLoading, TPlayers>
 where
 	TLoading: Plugin + HandlesLoadTracking,
+	TPlayers: Plugin + HandlesPlayer,
 {
 	fn resources(&self, app: &mut App) {
 		app.init_resource::<Shared<Path, Handle<Image>>>()
@@ -226,10 +224,16 @@ where
 			.add_systems(
 				Update,
 				(
-					get_quickbar_icons::<Queue, Combos, CombosTimeOut>.pipe(set_quickbar_icons),
+					get_quickbar_icons::<TPlayers::TPlayer, Queue, Combos, CombosTimeOut>
+						.pipe(set_quickbar_icons),
 					update_label_text::<SlotKeyMap, LanguageServer, QuickbarPanel>,
 					panel_colors::<QuickbarPanel>,
-					panel_activity_colors_override::<SlotKeyMap, Queue, QuickbarPanel>,
+					panel_activity_colors_override::<
+						TPlayers::TPlayer,
+						SlotKeyMap,
+						Queue,
+						QuickbarPanel,
+					>,
 				)
 					.run_if(in_state(play)),
 			)
@@ -253,21 +257,21 @@ where
 			.add_tooltip::<Skill>()
 			.add_systems(
 				Update,
-				update_combos_view::<Player, Combos, ComboOverview>
-					.run_if(either(added::<ComboOverview>).or(changed::<Player, Combos>))
+				update_combos_view::<TPlayers::TPlayer, Combos, ComboOverview>
+					.run_if(either(added::<ComboOverview>).or(changed::<TPlayers::TPlayer, Combos>))
 					.run_if(in_state(combo_overview)),
 			)
 			.add_systems(
 				Update,
 				(
-					visualize_invalid_skill::<Player, Slots, Unusable>,
-					insert_skill_select_dropdown::<Slots, Vertical>,
-					insert_skill_select_dropdown::<Slots, Horizontal>,
-					insert_key_select_dropdown::<Player, Combos, AppendSkillCommand>,
-					update_combos_view_delete_skill::<Player, Combos>,
-					update_combo_skills::<Player, Combos, Vertical>,
-					update_combo_skills::<Player, Combos, Horizontal>,
-					map_pressed_key_select.pipe(update_combo_keys::<Player, Combos>),
+					visualize_invalid_skill::<TPlayers::TPlayer, Slots, Unusable>,
+					insert_skill_select_dropdown::<TPlayers::TPlayer, Slots, Vertical>,
+					insert_skill_select_dropdown::<TPlayers::TPlayer, Slots, Horizontal>,
+					insert_key_select_dropdown::<TPlayers::TPlayer, Combos, AppendSkillCommand>,
+					update_combos_view_delete_skill::<TPlayers::TPlayer, Combos>,
+					update_combo_skills::<TPlayers::TPlayer, Combos, Vertical>,
+					update_combo_skills::<TPlayers::TPlayer, Combos, Horizontal>,
+					map_pressed_key_select.pipe(update_combo_keys::<TPlayers::TPlayer, Combos>),
 				)
 					.run_if(in_state(combo_overview)),
 			);
@@ -283,12 +287,12 @@ where
 					panel_colors::<InventoryPanel>,
 					panel_container_states::<InventoryPanel, InventoryKey, Inventory>,
 					panel_container_states::<InventoryPanel, SlotKey, Slots>,
-					drag::<Player, InventoryKey>,
-					drag::<Player, SlotKey>,
-					drop::<Player, InventoryKey, InventoryKey>,
-					drop::<Player, SlotKey, SlotKey>,
-					drop::<Player, SlotKey, InventoryKey>,
-					drop::<Player, InventoryKey, SlotKey>,
+					drag::<TPlayers::TPlayer, InventoryKey>,
+					drag::<TPlayers::TPlayer, SlotKey>,
+					drop::<TPlayers::TPlayer, InventoryKey, InventoryKey>,
+					drop::<TPlayers::TPlayer, SlotKey, SlotKey>,
+					drop::<TPlayers::TPlayer, SlotKey, InventoryKey>,
+					drop::<TPlayers::TPlayer, InventoryKey, SlotKey>,
 				)
 					.run_if(in_state(inventory)),
 			)
@@ -309,9 +313,10 @@ where
 	}
 }
 
-impl<TLoading> Plugin for MenuPlugin<TLoading>
+impl<TLoading, TPlayers> Plugin for MenuPlugin<TLoading, TPlayers>
 where
 	TLoading: Plugin + HandlesLoadTracking,
+	TPlayers: Plugin + HandlesPlayer,
 {
 	fn build(&self, app: &mut App) {
 		self.resources(app);

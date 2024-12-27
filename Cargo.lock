@@ -2417,7 +2417,6 @@ dependencies = [
  "bevy_rapier3d",
  "common",
  "menu",
- "player",
 ]
 
 [[package]]
@@ -3079,7 +3078,6 @@ dependencies = [
  "common",
  "macros",
  "mockall",
- "player",
  "skills",
  "tracing",
  "uuid",
@@ -4460,7 +4458,6 @@ dependencies = [
  "common",
  "macros",
  "mockall",
- "player",
  "serde",
  "test-case",
  "tracing",

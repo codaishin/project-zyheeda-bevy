@@ -1,5 +1,4 @@
 pub(crate) mod run_skill_behavior;
-pub(crate) mod skill_animation;
 
 use super::{AnimationStrategy, Skill};
 use crate::SkillItemType;
