@@ -4,12 +4,14 @@ pub mod node_entry_mut;
 use crate::{
 	item::item_type::SkillItemType,
 	skills::Skill,
-	slot_key::SlotKey,
 	traits::{Combo, GetCombosOrdered, GetNode, GetNodeMut, PeekNext, RootKeys},
 };
 use bevy::ecs::component::Component;
 use common::{
-	tools::ordered_hash_map::{Entry, OrderedHashMap},
+	tools::{
+		ordered_hash_map::{Entry, OrderedHashMap},
+		slot_key::SlotKey,
+	},
 	traits::{
 		accessors::get::{GetMut, GetRef},
 		insert::TryInsert,
@@ -229,7 +231,7 @@ mod tests {
 	use super::*;
 	use crate::SkillItemType;
 	use bevy::prelude::default;
-	use common::components::Side;
+	use common::tools::slot_key::Side;
 	use std::collections::HashSet;
 
 	#[test]

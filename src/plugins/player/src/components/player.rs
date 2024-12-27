@@ -7,7 +7,10 @@ use common::{
 	components::{AssetModel, ColliderRoot, GroundOffset},
 	effects::deal_damage::DealDamage,
 	errors::Error,
-	tools::UnitsPerSecond,
+	tools::{
+		slot_key::{Side, SlotKey},
+		UnitsPerSecond,
+	},
 	traits::{
 		animation::{
 			Animation,
@@ -36,6 +39,23 @@ impl Player {
 
 	pub fn animation_path(animation_name: &str) -> Path {
 		Path::from(Self::MODEL_PATH.to_owned() + "#" + animation_name)
+	}
+
+	pub fn skill_animation(slot: &SlotKey) -> Animation {
+		match slot {
+			SlotKey::TopHand(Side::Left) => {
+				Animation::new(Player::animation_path("Animation6"), PlayMode::Repeat)
+			}
+			SlotKey::TopHand(Side::Right) => {
+				Animation::new(Player::animation_path("Animation7"), PlayMode::Repeat)
+			}
+			SlotKey::BottomHand(Side::Left) => {
+				Animation::new(Player::animation_path("Animation4"), PlayMode::Repeat)
+			}
+			SlotKey::BottomHand(Side::Right) => {
+				Animation::new(Player::animation_path("Animation5"), PlayMode::Repeat)
+			}
+		}
 	}
 
 	fn movement() -> PlayerMovement {

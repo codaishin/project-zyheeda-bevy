@@ -1,10 +1,12 @@
 use crate::components::Label;
 use bevy::prelude::*;
-use common::traits::{
-	get_ui_text::{GetUiTextFor, UIText},
-	map_value::MapForward,
+use common::{
+	tools::slot_key::SlotKey,
+	traits::{
+		get_ui_text::{GetUiTextFor, UIText},
+		map_value::MapForward,
+	},
 };
-use skills::slot_key::SlotKey;
 
 type Labels<'a, T> = (&'a Label<T, SlotKey>, &'a mut Text);
 
@@ -43,7 +45,7 @@ fn update_text<TMap: MapForward<SlotKey, KeyCode>, TLanguageServer: GetUiTextFor
 mod tests {
 	use super::*;
 	use bevy::app::{App, Update};
-	use common::{components::Side, traits::nested_mock::NestedMocks};
+	use common::{tools::slot_key::Side, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 

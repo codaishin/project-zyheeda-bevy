@@ -34,6 +34,10 @@ This project uses the following third-party software:
    License: Dual-licensed under MIT and Apache 2.0
    Source: https://github.com/uuid-rs/uuid
 
+9. Test-Case (3.3.1)
+   License: Licensed under MIT
+   Source: https://github.com/frondeus/test-case
+
 This project also includes internal plugins located under `src/plugins/`, which are developed and maintained as part of this project.
 
 This project lists direct dependencies only. Transitive dependencies, their licenses, and their attributions are managed by the respective upstream projects. For a full list of dependencies and their licenses, you can use the `cargo-license` tool or run `cargo tree` in the source code repository.

@@ -1,6 +1,10 @@
-use crate::{slot_key::SlotKey, traits::InputState};
+use crate::traits::InputState;
 use bevy::{input::keyboard::KeyCode, state::state::State};
-use common::{states::mouse_context::MouseContext, traits::map_value::TryMapBackwards};
+use common::{
+	states::mouse_context::MouseContext,
+	tools::slot_key::SlotKey,
+	traits::map_value::TryMapBackwards,
+};
 
 impl<TMap: TryMapBackwards<KeyCode, SlotKey>> InputState<TMap, KeyCode>
 	for State<MouseContext<KeyCode>>
@@ -41,7 +45,7 @@ fn get_slot_key<TMap: TryMapBackwards<KeyCode, SlotKey>>(
 mod tests {
 	use super::*;
 	use bevy::input::keyboard::KeyCode;
-	use common::components::Side;
+	use common::tools::slot_key::Side;
 	use std::collections::HashSet;
 
 	struct _Map;

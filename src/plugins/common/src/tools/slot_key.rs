@@ -1,11 +1,8 @@
-use bevy::input::keyboard::KeyCode;
-use common::{
-	components::Side,
-	traits::{
-		get_ui_text::{English, GetUiText, Japanese, UIText},
-		iteration::{Iter, IterFinite},
-	},
+use crate::traits::{
+	get_ui_text::{English, GetUiText, Japanese, UIText},
+	iteration::{Iter, IterFinite},
 };
+use bevy::prelude::*;
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum SlotKey {
@@ -65,6 +62,12 @@ impl GetUiText<SlotKey> for Japanese {
 			SlotKey::BottomHand(Side::Left) => UIText::from("左手「下」"),
 		}
 	}
+}
+
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
+pub enum Side {
+	Right,
+	Left,
 }
 
 #[cfg(test)]

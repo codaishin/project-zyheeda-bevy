@@ -15,8 +15,8 @@ pub(crate) mod tooltip;
 pub(crate) mod ui_overlay;
 
 use bevy::prelude::*;
+use common::tools::slot_key::SlotKey;
 use skill_button::Horizontal;
-use skills::slot_key::SlotKey;
 use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]

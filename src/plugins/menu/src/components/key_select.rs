@@ -5,7 +5,7 @@ use super::{
 };
 use crate::traits::{insert_ui_content::InsertUiContent, GetComponent, GetKey};
 use bevy::prelude::*;
-use skills::slot_key::SlotKey;
+use common::tools::slot_key::SlotKey;
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct ReKeySkill<TKey = SlotKey> {

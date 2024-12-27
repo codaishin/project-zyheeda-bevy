@@ -1,10 +1,6 @@
 use super::{AdvanceCombo, PeekNext, SetNextCombo};
-use crate::{
-	components::combo_node::ComboNode,
-	item::item_type::SkillItemType,
-	skills::Skill,
-	slot_key::SlotKey,
-};
+use crate::{components::combo_node::ComboNode, item::item_type::SkillItemType, skills::Skill};
+use common::tools::slot_key::SlotKey;
 
 impl<T> AdvanceCombo for T
 where
@@ -25,7 +21,7 @@ where
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::{components::Side, simple_init, traits::mock::Mock};
+	use common::{simple_init, tools::slot_key::Side, traits::mock::Mock};
 	use mockall::{mock, predicate::eq};
 
 	mock! {

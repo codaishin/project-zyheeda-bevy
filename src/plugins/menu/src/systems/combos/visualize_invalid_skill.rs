@@ -3,8 +3,8 @@ use crate::{
 	traits::InsertContentOn,
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::traits::accessors::get::GetRef;
-use skills::{item::Item, slot_key::SlotKey};
+use common::{tools::slot_key::SlotKey, traits::accessors::get::GetRef};
+use skills::item::Item;
 
 pub(crate) fn visualize_invalid_skill<
 	TAgent: Component,
@@ -63,7 +63,7 @@ mod tests {
 		prelude::Component,
 		utils::default,
 	};
-	use common::{components::Side, test_tools::utils::SingleThreadedApp};
+	use common::{test_tools::utils::SingleThreadedApp, tools::slot_key::Side};
 	use skills::{item::item_type::SkillItemType, skills::Skill};
 	use std::collections::{HashMap, HashSet};
 

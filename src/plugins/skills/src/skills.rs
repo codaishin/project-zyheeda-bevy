@@ -12,18 +12,21 @@ use crate::{
 	},
 	components::SkillTarget,
 	item::item_type::SkillItemType,
-	slot_key::SlotKey,
 	traits::{spawn_skill_behavior::SpawnSkillBehavior, Matches, Prime},
 };
 use bevy::prelude::*;
-use common::traits::{
-	animation::Animation,
-	handles_effect::HandlesAllEffects,
-	handles_lifetime::HandlesLifetime,
-	handles_skill_behaviors::HandlesSkillBehaviors,
-	load_asset::Path,
-	register_custom_assets::AssetFolderPath,
+use common::{
+	tools::slot_key::SlotKey,
+	traits::{
+		animation::Animation,
+		handles_effect::HandlesAllEffects,
+		handles_lifetime::HandlesLifetime,
+		handles_skill_behaviors::HandlesSkillBehaviors,
+		load_asset::Path,
+		register_custom_assets::AssetFolderPath,
+	},
 };
+use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result as FmtResult},
@@ -38,19 +41,19 @@ pub struct SkillAnimation {
 	pub(crate) btm_hand_right: Animation,
 }
 
-#[derive(PartialEq, Debug, Default, Clone)]
-pub enum Animate<TAnimation> {
+#[derive(PartialEq, Debug, Default, Clone, Copy, Serialize, Deserialize)]
+pub enum AnimationStrategy {
 	#[default]
-	Ignore,
 	None,
-	Some(TAnimation),
+	DoNotAnimate,
+	Animate,
 }
 
 #[derive(PartialEq, Debug, Default, Clone, TypePath, Asset)]
 pub struct Skill {
 	pub name: String,
 	pub cast_time: Duration,
-	pub animate: Animate<SkillAnimation>,
+	pub animation: AnimationStrategy,
 	pub behavior: RunSkillBehavior,
 	pub is_usable_with: HashSet<SkillItemType>,
 	pub icon: Option<Handle<Image>>,

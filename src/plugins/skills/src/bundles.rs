@@ -9,9 +9,9 @@ use crate::{
 	},
 	item::Item,
 	skills::RunSkillBehavior,
-	slot_key::SlotKey,
 };
 use bevy::prelude::*;
+use common::tools::slot_key::SlotKey;
 use std::collections::HashMap;
 
 #[derive(Bundle)]

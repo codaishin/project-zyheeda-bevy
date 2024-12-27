@@ -1,7 +1,7 @@
-use crate::{behaviors::SkillSpawner, slot_key::SlotKey};
+use crate::behaviors::SkillSpawner;
 use bevy::prelude::*;
 use common::{
-	components::Side,
+	tools::slot_key::{Side, SlotKey},
 	traits::{
 		accessors::get::GetRef,
 		track::{IsTracking, Track, Untrack},
@@ -94,7 +94,6 @@ impl SlotKeyMapping for PlayerSpawnsMapping {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::components::Side;
 
 	#[test]
 	fn name_to_slot_key() {

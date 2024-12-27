@@ -4,11 +4,14 @@ use crate::{
 	traits::{colors::HasPanelColors, insert_ui_content::InsertUiContent, LoadUi},
 };
 use bevy::prelude::*;
-use common::traits::{
-	get_ui_text::{English, GetUiText, UIText},
-	iteration::{IterFinite, IterInfinite},
+use common::{
+	tools::slot_key::SlotKey,
+	traits::{
+		get_ui_text::{English, GetUiText, UIText},
+		iteration::{IterFinite, IterInfinite},
+	},
 };
-use skills::{inventory_key::InventoryKey, slot_key::SlotKey};
+use skills::inventory_key::InventoryKey;
 
 #[derive(Component)]
 #[require(Node(full_screen), BackgroundColor(gray))]

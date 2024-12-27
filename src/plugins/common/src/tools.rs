@@ -2,6 +2,7 @@ pub mod aggro_range;
 pub mod attack_range;
 pub mod movement_animation;
 pub mod ordered_hash_map;
+pub mod slot_key;
 pub mod speed;
 
 pub(crate) mod get_recursively;

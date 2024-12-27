@@ -1,4 +1,5 @@
-use skills::{skills::Skill, slot_key::SlotKey, traits::GetCombosOrdered};
+use common::tools::slot_key::SlotKey;
+use skills::{skills::Skill, traits::GetCombosOrdered};
 use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -139,7 +140,7 @@ fn replace_symbols_at(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::components::Side;
+	use common::tools::slot_key::Side;
 	use skills::traits::Combo;
 
 	struct _Combos(Vec<Vec<(Vec<SlotKey>, Skill)>>);

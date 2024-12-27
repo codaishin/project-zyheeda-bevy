@@ -1,10 +1,8 @@
-pub(crate) mod animate;
 pub(crate) mod run_skill_behavior;
 pub(crate) mod skill_animation;
 
-use super::Skill;
+use super::{AnimationStrategy, Skill};
 use crate::SkillItemType;
-use animate::AnimateDto;
 use common::{
 	dto::duration::DurationDto,
 	traits::{
@@ -20,7 +18,7 @@ use std::{collections::HashSet, time::Duration};
 pub(crate) struct SkillDto {
 	name: String,
 	cast_time: DurationDto,
-	animate: AnimateDto,
+	animation: AnimationStrategy,
 	behavior: RunSkillBehaviorDto,
 	is_usable_with: HashSet<SkillItemType>,
 	icon: Option<Path>,
@@ -40,7 +38,7 @@ impl LoadFrom<SkillDto> for Skill {
 		Self {
 			name: skill_data.name,
 			cast_time: Duration::from(skill_data.cast_time),
-			animate: skill_data.animate.into(),
+			animation: skill_data.animation,
 			behavior: skill_data.behavior.into(),
 			is_usable_with: skill_data.is_usable_with,
 			icon: skill_data.icon.map(|icon| asset_server.load_asset(icon)),

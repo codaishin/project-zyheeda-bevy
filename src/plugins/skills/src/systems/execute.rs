@@ -82,17 +82,14 @@ fn get_target(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		behaviors::SkillSpawner,
-		components::skill_spawners::SkillSpawners,
-		slot_key::SlotKey,
-	};
+	use crate::{behaviors::SkillSpawner, components::skill_spawners::SkillSpawners};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
-		components::{Outdated, Side},
+		components::Outdated,
 		errors::Level,
 		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
+		tools::slot_key::{Side, SlotKey},
 		traits::{
 			handles_skill_behaviors::{Integrity, Motion, ProjectionOffset, Shape},
 			nested_mock::NestedMocks,

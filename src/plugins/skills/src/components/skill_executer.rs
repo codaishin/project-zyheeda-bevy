@@ -2,12 +2,12 @@ use super::{skill_spawners::SkillSpawners, SkillTarget};
 use crate::{
 	behaviors::{build_skill_shape::OnSkillStop, spawn_on::SpawnOn, SkillCaster, SkillSpawner},
 	skills::RunSkillBehavior,
-	slot_key::SlotKey,
 	traits::{spawn_skill_behavior::SpawnSkillBehavior, Execute, Flush, Schedule},
 };
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
+	tools::slot_key::SlotKey,
 	traits::{
 		accessors::get::GetRef,
 		handles_effect::HandlesAllEffects,
@@ -138,9 +138,10 @@ mod tests {
 	use super::*;
 	use crate::{behaviors::spawn_on::SpawnOn, components::skill_spawners::SkillSpawners};
 	use common::{
-		components::{Outdated, Side},
+		components::Outdated,
 		resources::ColliderInfo,
 		simple_init,
+		tools::slot_key::Side,
 		traits::{
 			handles_effect::HandlesEffect,
 			handles_skill_behaviors::{Integrity, Motion, ProjectionOffset, Shape},

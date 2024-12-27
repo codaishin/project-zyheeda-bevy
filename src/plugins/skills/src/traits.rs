@@ -13,14 +13,11 @@ use crate::{
 	behaviors::SkillCaster,
 	components::{skill_spawners::SkillSpawners, SkillTarget},
 	item::item_type::SkillItemType,
-	skills::{Animate, RunSkillBehavior, Skill, SkillAnimation},
-	slot_key::SlotKey,
+	skills::{AnimationStrategy, RunSkillBehavior, Skill, SkillAnimation},
 };
-use common::traits::{
-	animation::Animation,
-	load_asset::Path,
-	map_value::TryMapBackwards,
-	state_duration::StateUpdate,
+use common::{
+	tools::slot_key::SlotKey,
+	traits::{load_asset::Path, map_value::TryMapBackwards, state_duration::StateUpdate},
 };
 use std::hash::Hash;
 
@@ -56,7 +53,7 @@ pub(crate) trait Prime {
 pub(crate) trait GetActiveSkill<TSkillState: Clone> {
 	fn get_active(
 		&mut self,
-	) -> Option<impl GetSkillBehavior + GetAnimation + StateUpdate<TSkillState>>;
+	) -> Option<impl GetSkillBehavior + GetAnimationStrategy + StateUpdate<TSkillState>>;
 	fn clear_active(&mut self);
 }
 
@@ -114,8 +111,8 @@ pub trait UpdateConfig<TKey, TValue> {
 	fn update_config(&mut self, key: &TKey, value: TValue);
 }
 
-pub(crate) trait GetAnimation {
-	fn animate(&self) -> Animate<Animation>;
+pub(crate) trait GetAnimationStrategy {
+	fn animation_strategy(&self) -> AnimationStrategy;
 }
 
 pub trait GetStaticSkillBehavior {

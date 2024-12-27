@@ -7,16 +7,25 @@ use bevy::prelude::*;
 use common::{
 	attributes::health::Health,
 	effects::deal_damage::DealDamage,
+	tools::slot_key::SlotKey,
 	traits::{
 		animation::RegisterAnimations,
 		handles_bars::HandlesBars,
 		handles_effect::HandlesEffect,
 		handles_lights::HandlesLights,
-		handles_player::{ConfiguresPlayerMovement, HandlesPlayer},
+		handles_player::{
+			ConfiguresPlayerMovement,
+			ConfiguresPlayerSkillAnimations,
+			HandlesPlayer,
+		},
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 	},
 };
-use components::{player::Player, player_movement::PlayerMovement};
+use components::{
+	player::Player,
+	player_movement::PlayerMovement,
+	skill_animation::SkillAnimation,
+};
 use std::marker::PhantomData;
 use systems::toggle_walk_run::player_toggle_walk_run;
 
@@ -52,7 +61,10 @@ where
 		TPrefabs::with_dependency::<(TInteractions, TLights, TBars)>()
 			.register_prefab::<Player>(app);
 
-		app.add_systems(Update, player_toggle_walk_run);
+		app.add_systems(Update, player_toggle_walk_run).add_systems(
+			Update,
+			SkillAnimation::system::<TAnimation::TAnimationDispatch>,
+		);
 	}
 }
 
@@ -66,4 +78,18 @@ impl<TAnimation, TPrefabs, TInteractions, TLights, TBars> ConfiguresPlayerMoveme
 	for PlayerPlugin<TAnimation, TPrefabs, TInteractions, TLights, TBars>
 {
 	type TPlayerMovement = PlayerMovement;
+}
+
+impl<TAnimation, TPrefabs, TInteractions, TLights, TBars> ConfiguresPlayerSkillAnimations
+	for PlayerPlugin<TAnimation, TPrefabs, TInteractions, TLights, TBars>
+{
+	type TAnimationMarker = SkillAnimation;
+
+	fn start_skill_animation(slot_key: SlotKey) -> Self::TAnimationMarker {
+		SkillAnimation::Start(slot_key)
+	}
+
+	fn stop_skill_animation() -> Self::TAnimationMarker {
+		SkillAnimation::Stop
+	}
 }

@@ -1,12 +1,8 @@
-use crate::{
-	components::slots::Slots,
-	item::Item,
-	slot_key::SlotKey,
-	traits::swap_commands::SwapController,
-};
+use crate::{components::slots::Slots, item::Item, traits::swap_commands::SwapController};
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
+	tools::slot_key::SlotKey,
 	traits::{
 		swap_command::{SwapCommands, SwapError, SwapIn, SwappedOut},
 		try_remove_from::TryRemoveFrom,
@@ -92,9 +88,9 @@ fn slot_warning(slot: SlotKey) -> Error {
 mod tests {
 	use super::*;
 	use common::{
-		components::Side,
 		systems::log::test_tools::{fake_log_error_many_recourse, FakeErrorLogManyResource},
 		test_tools::utils::{new_handle, SingleThreadedApp},
+		tools::slot_key::Side,
 		traits::swap_command::{SwapError, SwapIn, SwapResult, SwappedOut},
 	};
 	use std::collections::HashMap;

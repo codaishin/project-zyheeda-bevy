@@ -10,3 +10,11 @@ bevy_rapier3d.workspace = true
 
 # internal
 common.workspace = true
+
+[dev-dependencies]
+# external
+mockall.workspace = true
+test-case.workspace = true
+
+# internal
+macros.workspace = true

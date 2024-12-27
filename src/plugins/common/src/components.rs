@@ -19,12 +19,6 @@ impl<TElement> Collection<TElement> {
 	}
 }
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
-pub enum Side {
-	Right,
-	Left,
-}
-
 #[derive(Component)]
 pub struct GroundOffset(pub Vec3);
 

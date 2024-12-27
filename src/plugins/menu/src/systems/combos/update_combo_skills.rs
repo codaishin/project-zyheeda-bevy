@@ -3,7 +3,8 @@ use bevy::{
 	prelude::{Component, Query, With},
 	ui::Interaction,
 };
-use skills::{skills::Skill, slot_key::SlotKey, traits::UpdateConfig};
+use common::tools::slot_key::SlotKey;
+use skills::{skills::Skill, traits::UpdateConfig};
 
 pub(crate) fn update_combo_skills<TAgent, TCombos, TLayout>(
 	mut agents: Query<&mut TCombos, With<TAgent>>,
@@ -37,8 +38,8 @@ mod tests {
 		utils::default,
 	};
 	use common::{
-		components::Side,
 		test_tools::utils::SingleThreadedApp,
+		tools::slot_key::Side,
 		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;
