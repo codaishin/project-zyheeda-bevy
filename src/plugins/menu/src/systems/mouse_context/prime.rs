@@ -9,9 +9,9 @@ use bevy::{
 };
 use common::{
 	states::mouse_context::MouseContext,
+	tools::slot_key::SlotKey,
 	traits::{accessors::get::GetterRef, map_value::MapForward},
 };
-use skills::slot_key::SlotKey;
 
 pub fn prime_mouse_context<
 	TMap: Resource + MapForward<SlotKey, KeyCode>,
@@ -53,7 +53,7 @@ mod test {
 		},
 		ui::Interaction,
 	};
-	use common::components::Side;
+	use common::tools::slot_key::Side;
 
 	#[derive(Component)]
 	struct _Panel(pub SlotKey);

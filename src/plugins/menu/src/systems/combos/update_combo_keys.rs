@@ -1,6 +1,7 @@
 use crate::components::key_select::{KeySelect, ReKeySkill};
 use bevy::prelude::{Component, In, Query, With};
-use skills::{slot_key::SlotKey, traits::UpdateConfig};
+use common::tools::slot_key::SlotKey;
+use skills::traits::UpdateConfig;
 
 pub(crate) fn update_combo_keys<TAgent, TCombos>(
 	key_select: In<Option<KeySelect<ReKeySkill<SlotKey>, SlotKey>>>,
@@ -27,8 +28,8 @@ mod test {
 		prelude::IntoSystem,
 	};
 	use common::{
-		components::Side,
 		test_tools::utils::SingleThreadedApp,
+		tools::slot_key::Side,
 		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;

@@ -1,6 +1,5 @@
 use crate::{
 	skills::{Activation, Animate, QueuedSkill, RunSkillBehavior, Skill, SkillState},
-	slot_key::SlotKey,
 	traits::{
 		Enqueue,
 		Flush,
@@ -13,7 +12,7 @@ use crate::{
 };
 use bevy::{ecs::component::Component, utils::default};
 use common::{
-	components::Side,
+	tools::slot_key::{Side, SlotKey},
 	traits::{animation::Animation, iterate::Iterate, state_duration::StateDuration},
 };
 use std::{collections::VecDeque, time::Duration};
@@ -118,7 +117,7 @@ fn unchanged_length(Queue { queue, state, .. }: &Queue) -> usize {
 mod test_queue_collection {
 	use super::*;
 	use bevy::utils::default;
-	use common::components::Side;
+	use common::tools::slot_key::Side;
 
 	#[test]
 	fn enqueue_one_skill() {
@@ -608,10 +607,7 @@ mod test_queue_active_skill {
 		traits::skill_builder::SkillShape,
 	};
 	use bevy::prelude::default;
-	use common::{
-		components::Side,
-		traits::{animation::PlayMode, load_asset::Path},
-	};
+	use common::traits::{animation::PlayMode, load_asset::Path};
 
 	#[test]
 	fn get_phasing_times_waiting() {

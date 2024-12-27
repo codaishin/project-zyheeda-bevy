@@ -1,13 +1,15 @@
 use crate::{
 	skills::{Animate, RunSkillBehavior, SkillState},
-	slot_key::SlotKey,
 	traits::{Flush, GetActiveSkill, GetAnimation, GetSkillBehavior, Schedule},
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::traits::{
-	animation::{AnimationPriority, StartAnimation, StopAnimation},
-	handles_orientation::{Face, HandlesOrientation},
-	state_duration::{StateMeta, StateUpdate},
+use common::{
+	tools::slot_key::SlotKey,
+	traits::{
+		animation::{AnimationPriority, StartAnimation, StopAnimation},
+		handles_orientation::{Face, HandlesOrientation},
+		state_duration::{StateMeta, StateUpdate},
+	},
 };
 use std::time::Duration;
 
@@ -184,9 +186,9 @@ mod tests {
 		time::{Real, Time},
 	};
 	use common::{
-		components::Side,
 		simple_init,
 		test_tools::utils::{Changed, SingleThreadedApp, TickTime},
+		tools::slot_key::Side,
 		traits::{
 			animation::{Animation, PlayMode},
 			load_asset::Path,

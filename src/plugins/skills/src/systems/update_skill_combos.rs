@@ -55,10 +55,13 @@ mod tests {
 		components::slots::Slots,
 		item::{item_type::SkillItemType, Item},
 		skills::Skill,
-		slot_key::SlotKey,
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{components::Side, test_tools::utils::Changed, traits::nested_mock::NestedMocks};
+	use common::{
+		test_tools::utils::Changed,
+		tools::slot_key::{Side, SlotKey},
+		traits::nested_mock::NestedMocks,
+	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::collections::HashMap;

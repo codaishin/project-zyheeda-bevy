@@ -1,9 +1,9 @@
-use crate::{slot_key::SlotKey, traits::InputState};
+use crate::traits::InputState;
 use bevy::{
 	ecs::system::{Res, Resource},
 	input::keyboard::KeyCode,
 };
-use common::traits::map_value::TryMapBackwards;
+use common::{tools::slot_key::SlotKey, traits::map_value::TryMapBackwards};
 
 #[derive(Default, Debug, PartialEq, Clone)]
 pub(crate) struct Input {
@@ -56,8 +56,8 @@ mod tests {
 		utils::default,
 	};
 	use common::{
-		components::Side,
 		test_tools::utils::SingleThreadedApp,
+		tools::slot_key::Side,
 		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;

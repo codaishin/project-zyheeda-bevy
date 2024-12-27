@@ -1,5 +1,6 @@
 use super::{ComboNode, NodeEntry};
-use crate::{slot_key::SlotKey, traits::FollowupKeys};
+use crate::traits::FollowupKeys;
+use common::tools::slot_key::SlotKey;
 
 #[derive(Default)]
 enum Iter<'a, T: Iterator<Item = &'a SlotKey>> {
@@ -36,7 +37,7 @@ mod tests {
 	use super::*;
 	use crate::components::combo_node::ComboNode;
 	use bevy::prelude::default;
-	use common::{components::Side, tools::ordered_hash_map::OrderedHashMap};
+	use common::tools::{ordered_hash_map::OrderedHashMap, slot_key::Side};
 	use std::collections::HashSet;
 
 	struct _Skill;

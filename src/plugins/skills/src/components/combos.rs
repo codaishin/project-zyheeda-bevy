@@ -2,7 +2,6 @@ use super::combo_node::ComboNode;
 use crate::{
 	item::item_type::SkillItemType,
 	skills::Skill,
-	slot_key::SlotKey,
 	traits::{
 		Combo,
 		GetCombosOrdered,
@@ -17,7 +16,7 @@ use crate::{
 	},
 };
 use bevy::ecs::component::Component;
-use common::traits::iterate::Iterate;
+use common::{tools::slot_key::SlotKey, traits::iterate::Iterate};
 
 #[derive(Component, PartialEq, Debug)]
 pub struct Combos<TComboNode = ComboNode> {
@@ -132,8 +131,8 @@ mod tests {
 	use super::*;
 	use bevy::utils::default;
 	use common::{
-		components::Side,
 		simple_init,
+		tools::slot_key::Side,
 		traits::{mock::Mock, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;

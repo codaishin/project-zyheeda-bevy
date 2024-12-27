@@ -1,7 +1,8 @@
 use super::{combo_overview::ComboOverview, tooltip::Tooltip};
 use crate::traits::insert_ui_content::InsertUiContent;
 use bevy::prelude::*;
-use skills::{skills::Skill, slot_key::SlotKey};
+use common::tools::slot_key::SlotKey;
+use skills::skills::Skill;
 use std::marker::PhantomData;
 
 #[derive(Debug, Default, PartialEq, Clone)]

@@ -28,8 +28,10 @@ mod tests {
 		prelude::{Commands, In, IntoSystem, Resource},
 		ui::Interaction,
 	};
-	use common::{components::Side, test_tools::utils::SingleThreadedApp};
-	use skills::slot_key::SlotKey;
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		tools::slot_key::{Side, SlotKey},
+	};
 
 	#[derive(Resource, Debug, PartialEq)]
 	struct _Result(Option<KeySelectReKey>);

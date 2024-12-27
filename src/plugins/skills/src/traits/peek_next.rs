@@ -1,10 +1,6 @@
 use super::PeekNext;
-use crate::{
-	components::combo_node::ComboNode,
-	item::item_type::SkillItemType,
-	skills::Skill,
-	slot_key::SlotKey,
-};
+use crate::{components::combo_node::ComboNode, item::item_type::SkillItemType, skills::Skill};
+use common::tools::slot_key::SlotKey;
 
 impl<T: PeekNext<(Skill, ComboNode)>> PeekNext<Skill> for T {
 	fn peek_next(&self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill> {
@@ -16,7 +12,7 @@ impl<T: PeekNext<(Skill, ComboNode)>> PeekNext<Skill> for T {
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::components::Side;
+	use common::tools::slot_key::Side;
 	use mockall::{mock, predicate::eq};
 
 	mock! {

@@ -14,13 +14,15 @@ use crate::{
 	components::{skill_spawners::SkillSpawners, SkillTarget},
 	item::item_type::SkillItemType,
 	skills::{Animate, RunSkillBehavior, Skill, SkillAnimation},
-	slot_key::SlotKey,
 };
-use common::traits::{
-	animation::Animation,
-	load_asset::Path,
-	map_value::TryMapBackwards,
-	state_duration::StateUpdate,
+use common::{
+	tools::slot_key::SlotKey,
+	traits::{
+		animation::Animation,
+		load_asset::Path,
+		map_value::TryMapBackwards,
+		state_duration::StateUpdate,
+	},
 };
 use std::hash::Hash;
 

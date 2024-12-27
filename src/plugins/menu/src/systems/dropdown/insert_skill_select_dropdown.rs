@@ -4,13 +4,12 @@ use crate::components::{
 	SkillSelectDropdownInsertCommand,
 };
 use bevy::prelude::*;
-use common::traits::{
-	accessors::get::GetRef,
-	try_insert_on::TryInsertOn,
-	try_remove_from::TryRemoveFrom,
+use common::{
+	tools::slot_key::SlotKey,
+	traits::{accessors::get::GetRef, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
 use player::components::player::Player;
-use skills::{item::Item, skills::Skill, slot_key::SlotKey};
+use skills::{item::Item, skills::Skill};
 
 pub(crate) fn insert_skill_select_dropdown<
 	TEquipment: GetRef<SlotKey, Handle<Item>> + Component,
@@ -69,7 +68,7 @@ fn compatible_skills<TEquipment: GetRef<SlotKey, Handle<Item>>, TLayout: Sync + 
 mod tests {
 	use super::*;
 	use crate::components::dropdown::Dropdown;
-	use common::{components::Side, test_tools::utils::SingleThreadedApp};
+	use common::{test_tools::utils::SingleThreadedApp, tools::slot_key::Side};
 	use skills::item::item_type::SkillItemType;
 	use std::collections::{HashMap, HashSet};
 	use uuid::Uuid;

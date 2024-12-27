@@ -12,17 +12,19 @@ use crate::{
 	},
 	components::SkillTarget,
 	item::item_type::SkillItemType,
-	slot_key::SlotKey,
 	traits::{spawn_skill_behavior::SpawnSkillBehavior, Matches, Prime},
 };
 use bevy::prelude::*;
-use common::traits::{
-	animation::Animation,
-	handles_effect::HandlesAllEffects,
-	handles_lifetime::HandlesLifetime,
-	handles_skill_behaviors::HandlesSkillBehaviors,
-	load_asset::Path,
-	register_custom_assets::AssetFolderPath,
+use common::{
+	tools::slot_key::SlotKey,
+	traits::{
+		animation::Animation,
+		handles_effect::HandlesAllEffects,
+		handles_lifetime::HandlesLifetime,
+		handles_skill_behaviors::HandlesSkillBehaviors,
+		load_asset::Path,
+		register_custom_assets::AssetFolderPath,
+	},
 };
 use std::{
 	collections::HashSet,

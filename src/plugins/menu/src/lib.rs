@@ -14,6 +14,7 @@ use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
 	states::{game_state::GameState, menu_state::MenuState},
 	systems::log::log_many,
+	tools::slot_key::SlotKey,
 	traits::{
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		load_asset::Path,
@@ -48,7 +49,6 @@ use skills::{
 	},
 	inventory_key::InventoryKey,
 	skills::Skill,
-	slot_key::SlotKey,
 };
 use std::{marker::PhantomData, time::Duration};
 use systems::{

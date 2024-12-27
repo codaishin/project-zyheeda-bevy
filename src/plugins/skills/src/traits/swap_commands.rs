@@ -1,7 +1,8 @@
-use crate::{inventory_key::InventoryKey, item::Item, slot_key::SlotKey};
+use crate::{inventory_key::InventoryKey, item::Item};
 use bevy::asset::Handle;
 use common::{
 	components::{Collection, Swap},
+	tools::slot_key::SlotKey,
 	traits::{
 		accessors::get::GetMut,
 		swap_command::{SwapCommands, SwapError, SwapIn, SwapResult, SwappedOut},
@@ -102,8 +103,8 @@ mod tests {
 	use super::*;
 	use bevy::utils::default;
 	use common::{
-		components::Side,
 		test_tools::utils::new_handle,
+		tools::slot_key::Side,
 		traits::swap_command::SwapError,
 	};
 

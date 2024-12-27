@@ -3,7 +3,6 @@ pub mod inventory_key;
 pub mod item;
 pub mod resources;
 pub mod skills;
-pub mod slot_key;
 pub mod systems;
 pub mod traits;
 
@@ -13,10 +12,11 @@ mod bundles;
 use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
-	components::{Collection, Side, Swap},
+	components::{Collection, Swap},
 	resources::key_map::KeyMap,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
+	tools::slot_key::{Side, SlotKey},
 	traits::{
 		animation::HasAnimationsDispatch,
 		handles_effect::HandlesAllEffects,
@@ -42,7 +42,6 @@ use item::{dto::ItemDto, item_type::SkillItemType, Item};
 use macros::item_asset;
 use player::components::player::Player;
 use skills::{dto::SkillDto, QueuedSkill, RunSkillBehavior, Skill};
-use slot_key::SlotKey;
 use std::{marker::PhantomData, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,

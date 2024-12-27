@@ -1,8 +1,9 @@
 use super::model_render::ModelRender;
-use crate::{item::Item, slot_key::SlotKey};
+use crate::item::Item;
 use bevy::{asset::Handle, prelude::*};
 use common::{
-	components::{essence::Essence, AssetModel, Side},
+	components::{essence::Essence, AssetModel},
+	tools::slot_key::{Side, SlotKey},
 	traits::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,
@@ -133,7 +134,7 @@ impl ContainsAssetIdsForChildren<SubMeshEssenceSlots> for Slots {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{components::Side, test_tools::utils::new_handle};
+	use common::test_tools::utils::new_handle;
 
 	#[test]
 	fn get_off_hand() {

@@ -2,9 +2,10 @@ use bevy::prelude::*;
 use common::{
 	components::{Collection, Swap},
 	errors::{Error, Level},
+	tools::slot_key::SlotKey,
 	traits::try_remove_from::TryRemoveFrom,
 };
-use skills::{components::slots::Slots, slot_key::SlotKey};
+use skills::components::slots::Slots;
 
 type SlotsToSwap<'a> = (
 	Entity,
@@ -73,7 +74,7 @@ fn no_slot(slot_key: SlotKey) -> Error {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{components::Side, test_tools::utils::new_handle};
+	use common::{test_tools::utils::new_handle, tools::slot_key::Side};
 
 	#[derive(Clone)]
 	struct _Mount {

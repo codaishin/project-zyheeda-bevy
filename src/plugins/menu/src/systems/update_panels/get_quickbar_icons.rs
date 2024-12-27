@@ -93,8 +93,8 @@ mod tests {
 	use super::*;
 	use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
 	use common::{
-		components::Side,
 		test_tools::utils::SingleThreadedApp,
+		tools::slot_key::{Side, SlotKey},
 		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;
@@ -103,7 +103,6 @@ mod tests {
 		components::slots::Slots,
 		item::{item_type::SkillItemType, Item},
 		skills::Activation,
-		slot_key::SlotKey,
 	};
 	use std::collections::HashMap;
 	use uuid::Uuid;

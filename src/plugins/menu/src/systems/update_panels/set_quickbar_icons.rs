@@ -26,8 +26,7 @@ pub(crate) fn set_quickbar_icons(
 mod tests {
 	use super::*;
 	use crate::tools::PanelState;
-	use common::test_tools::utils::SingleThreadedApp;
-	use skills::slot_key::SlotKey;
+	use common::{test_tools::utils::SingleThreadedApp, tools::slot_key::SlotKey};
 	use uuid::Uuid;
 
 	#[derive(Resource)]

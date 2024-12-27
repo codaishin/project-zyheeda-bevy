@@ -2,14 +2,13 @@ use super::get_inputs::Input;
 use crate::{
 	item::Item,
 	skills::Skill,
-	slot_key::SlotKey,
 	traits::{Enqueue, IterMut, Matches, Prime},
 };
 use bevy::{
 	asset::{Assets, Handle},
 	ecs::prelude::*,
 };
-use common::traits::accessors::get::GetRef;
+use common::{tools::slot_key::SlotKey, traits::accessors::get::GetRef};
 
 pub(crate) fn enqueue<
 	TSlots: GetRef<SlotKey, Handle<Item>> + Component,
@@ -95,9 +94,9 @@ mod tests {
 		prelude::default,
 	};
 	use common::{
-		components::Side,
 		simple_init,
 		test_tools::utils::{new_handle, SingleThreadedApp},
+		tools::slot_key::Side,
 		traits::{mock::Mock, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;

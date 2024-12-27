@@ -17,10 +17,11 @@ use bevy::{
 };
 use common::{
 	states::mouse_context::MouseContext,
+	tools::slot_key::SlotKey,
 	traits::{accessors::get::GetterRef, iterate::Iterate, map_value::TryMapBackwards},
 };
 use player::components::player::Player;
-use skills::{skills::QueuedSkill, slot_key::SlotKey};
+use skills::skills::QueuedSkill;
 
 pub fn panel_activity_colors_override<
 	TMap: Resource + TryMapBackwards<KeyCode, SlotKey>,
@@ -103,7 +104,7 @@ mod tests {
 		},
 		utils::default,
 	};
-	use common::components::Side;
+	use common::tools::slot_key::Side;
 	use skills::skills::QueuedSkill;
 
 	#[derive(Component)]

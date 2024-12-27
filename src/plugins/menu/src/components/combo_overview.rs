@@ -17,8 +17,11 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use common::traits::load_asset::{LoadAsset, Path};
-use skills::{skills::Skill, slot_key::SlotKey};
+use common::{
+	tools::slot_key::SlotKey,
+	traits::load_asset::{LoadAsset, Path},
+};
+use skills::skills::Skill;
 
 #[derive(Component, Default, Debug, PartialEq)]
 #[require(Node(full_screen), BackgroundColor(gray))]
@@ -538,7 +541,7 @@ mod tests {
 	use super::*;
 	use crate::traits::combo_tree_layout::ComboTreeElement;
 	use bevy::asset::{Asset, AssetId, AssetPath};
-	use common::{components::Side, simple_init, traits::mock::Mock};
+	use common::{simple_init, tools::slot_key::Side, traits::mock::Mock};
 	use mockall::{mock, predicate::eq};
 	use skills::skills::Skill;
 	use uuid::Uuid;

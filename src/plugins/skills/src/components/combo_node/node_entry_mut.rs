@@ -1,10 +1,10 @@
 use super::{ComboNode, NodeEntryMut};
-use crate::{
-	slot_key::SlotKey,
-	traits::{Insert, ReKey},
-};
+use crate::traits::{Insert, ReKey};
 use bevy::prelude::default;
-use common::tools::ordered_hash_map::{Entry, OrderedHashMap};
+use common::tools::{
+	ordered_hash_map::{Entry, OrderedHashMap},
+	slot_key::SlotKey,
+};
 
 impl<TSkill> Insert<Option<TSkill>> for NodeEntryMut<'_, TSkill> {
 	fn insert(&mut self, value: Option<TSkill>) {
@@ -81,9 +81,9 @@ fn move_and_merge_branches_with_same_key<TSkill>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::combo_node::ComboNode, skills::Skill, slot_key::SlotKey};
+	use crate::{components::combo_node::ComboNode, skills::Skill};
 	use bevy::prelude::default;
-	use common::components::Side;
+	use common::tools::slot_key::Side;
 
 	#[test]
 	fn insert_skill() {
