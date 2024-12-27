@@ -14,7 +14,6 @@ uuid.workspace = true
 # internal
 common.workspace = true
 macros.workspace = true
-player.workspace = true
 
 [dev-dependencies]
 # external

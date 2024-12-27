@@ -1,6 +1,5 @@
 pub(crate) mod dto;
 pub(crate) mod lifetime_definition;
-pub(crate) mod shoot_hand_gun;
 
 use crate::{
 	behaviors::{

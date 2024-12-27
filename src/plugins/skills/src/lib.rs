@@ -21,7 +21,7 @@ use common::{
 		handles_effect::HandlesAllEffects,
 		handles_lifetime::HandlesLifetime,
 		handles_orientation::HandlesOrientation,
-		handles_player::ConfiguresPlayerSkillAnimations,
+		handles_player::{ConfiguresPlayerSkillAnimations, HandlesPlayer},
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		register_assets_for_children::RegisterAssetsForChildren,
 		register_custom_assets::{RegisterCustomAssets, RegisterCustomFolderAssets},
@@ -40,7 +40,6 @@ use components::{
 use inventory_key::InventoryKey;
 use item::{dto::ItemDto, item_type::SkillItemType, Item};
 use macros::item_asset;
-use player::components::player::Player;
 use skills::{dto::SkillDto, QueuedSkill, RunSkillBehavior, Skill};
 use std::{marker::PhantomData, time::Duration};
 use systems::{
@@ -85,7 +84,7 @@ where
 	TDispatchChildrenAssets: Plugin + RegisterAssetsForChildren,
 	TLoading: Plugin + RegisterCustomAssets + RegisterCustomFolderAssets,
 	TBehaviors: Plugin + HandlesSkillBehaviors + HandlesOrientation,
-	TPlayers: Plugin + ConfiguresPlayerSkillAnimations,
+	TPlayers: Plugin + HandlesPlayer + ConfiguresPlayerSkillAnimations,
 {
 	pub fn depends_on(
 		_: &TLifeCycles,
@@ -166,7 +165,7 @@ where
 
 	fn set_player_items(
 		mut commands: Commands,
-		players: Query<Entity, Added<Player>>,
+		players: Query<Entity, Added<TPlayers::TPlayer>>,
 		asset_server: Res<AssetServer>,
 	) {
 		let Ok(player) = players.get_single() else {
@@ -235,7 +234,7 @@ where
 	TDispatchChildrenAssets: Plugin + RegisterAssetsForChildren,
 	TLoading: Plugin + RegisterCustomAssets + RegisterCustomFolderAssets,
 	TBehaviors: Plugin + HandlesSkillBehaviors + HandlesOrientation,
-	TPlayers: Plugin + ConfiguresPlayerSkillAnimations,
+	TPlayers: Plugin + HandlesPlayer + ConfiguresPlayerSkillAnimations,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);
