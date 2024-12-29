@@ -31,7 +31,6 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
 }
 
 fn pulse_inwards(value: f32, params: PulseParams) -> f32 {
-    // I am sure there is a bettwe way to do this, but this get's the job done.
     let offset = params.waves * (time_secs * params.speed + value);
     return abs(sin(offset));
 }

@@ -556,18 +556,18 @@ mod tests {
 		assert_eq!(
 			(
 				Some(&expected_transform),
-				// FIXME: Can't compare tri meshes, but in principle this is the shape we'd expect:
-				// Some(_expected_collider.as_trimesh().map(|c| c.raw)),
+				/* FIXME: Can't compare tri meshes, but in principle this is the shape we'd expect:
+				 * Some(_expected_collider.as_trimesh().map(|c| c.raw)),
+				 */
 				Some(true),
 				Some(&ActiveEvents::COLLISION_EVENTS),
 				Some(&ActiveCollisionTypes::default()),
 			),
 			(
 				child.get::<Transform>(),
-				// FIXME: Can't compare tri meshes, but in principle this is the shape we spawned:
-				// child
-				// 	.get::<Collider>()
-				// 	.map(|c| c.as_trimesh().map(|c| c.raw)),
+				/* FIXME: Can't compare tri meshes, but in principle this is the shape we spawned:
+				 * child.get::<Collider>().map(|c| c.as_trimesh().map(|c| c.raw)),
+				 */
 				child.get::<Collider>().map(|c| c.as_trimesh().is_some()),
 				child.get::<ActiveEvents>(),
 				child.get::<ActiveCollisionTypes>(),
