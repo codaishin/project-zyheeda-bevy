@@ -26,6 +26,20 @@
 		"*.skill": "json",
 		"*.item": "json",
 	},
+	"editor.semanticTokenColorCustomizations": {
+		"rules": {
+			"comment": "#b42b2b",
+			"comment.documentation": "#2d8f3f"
+		},
+	},
+	"todo-tree.highlights.customHighlight": {
+		"FIXME": {
+			"foreground": "#000000",
+			"background": "#b42b2b",
+			"iconColour": "#b42b2b",
+			"gutterIcon": true
+		}
+	},
 	"cSpell.words": [
 		"angvel",
 		"automock",
