@@ -32,15 +32,14 @@ use common::{
 use components::{
 	cam_orbit::CamOrbit,
 	ground_target::GroundTarget,
+	movement::{velocity_based::VelocityBased, Movement},
 	set_position_and_rotation::SetPositionAndRotation,
 	set_to_move_forward::SetVelocityForward,
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	when_traveled_insert::InsertAfterDistanceTraveled,
 	Always,
-	Movement,
 	Once,
 	OverrideFace,
-	VelocityBased,
 };
 use events::MoveInputEvent;
 use std::marker::PhantomData;

@@ -1,8 +1,40 @@
 pub(crate) mod velocity_based;
 
-use super::Cleanup;
-use crate::components::Movement;
-use bevy::ecs::system::EntityCommands;
+use crate::traits::{Cleanup, RemoveComponent};
+use bevy::prelude::*;
+use common::test_tools::utils::ApproxEqual;
+use std::marker::PhantomData;
+
+#[derive(Component, Clone, PartialEq, Debug, Default)]
+pub struct Movement<TMovement> {
+	pub(crate) target: Vec3,
+	pub(crate) cleanup: Option<fn(&mut EntityCommands)>,
+	phantom_data: PhantomData<TMovement>,
+}
+
+impl<TMovement> Movement<TMovement> {
+	pub fn to(target: Vec3) -> Self {
+		Self {
+			target,
+			cleanup: None,
+			phantom_data: PhantomData,
+		}
+	}
+
+	pub fn remove_on_cleanup<TBundle: Bundle>(self) -> Self {
+		Self {
+			target: self.target,
+			cleanup: Some(TBundle::get_remover()),
+			phantom_data: self.phantom_data,
+		}
+	}
+}
+
+impl<TMovement> ApproxEqual<f32> for Movement<TMovement> {
+	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+		self.target.approx_equal(&other.target, tolerance) && self.cleanup == other.cleanup
+	}
+}
 
 impl<T> Cleanup for Movement<T> {
 	fn cleanup(&self, agent: &mut EntityCommands) {

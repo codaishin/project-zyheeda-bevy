@@ -1,5 +1,8 @@
 use crate::{
-	components::{Movement, SetFace, VelocityBased},
+	components::{
+		movement::{velocity_based::VelocityBased, Movement},
+		SetFace,
+	},
 	events::MoveInputEvent,
 };
 use bevy::prelude::*;

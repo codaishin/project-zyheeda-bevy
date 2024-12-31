@@ -1,4 +1,7 @@
-use crate::components::{Chase, Movement, VelocityBased};
+use crate::components::{
+	movement::{velocity_based::VelocityBased, Movement},
+	Chase,
+};
 use bevy::prelude::*;
 use common::traits::try_insert_on::TryInsertOn;
 

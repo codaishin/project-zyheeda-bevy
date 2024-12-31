@@ -1,17 +1,17 @@
-use crate::{
-	components::{Movement, VelocityBased},
-	traits::{IsDone, MovementVelocityBased},
-};
-use bevy::{ecs::system::EntityCommands, math::Vec3};
-use bevy_rapier3d::dynamics::Velocity;
+use super::Movement;
+use crate::traits::{IsDone, MovementVelocityBased};
+use bevy::prelude::*;
+use bevy_rapier3d::prelude::Velocity;
 use common::tools::UnitsPerSecond;
-use std::ops::Deref;
+
+#[derive(PartialEq, Debug)]
+pub struct VelocityBased;
 
 const SENSITIVITY: f32 = 0.1;
 
 impl MovementVelocityBased for Movement<VelocityBased> {
 	fn update(&self, agent: &mut EntityCommands, position: Vec3, speed: UnitsPerSecond) -> IsDone {
-		let speed = *speed.deref();
+		let speed = *speed;
 		let direction = self.target - position;
 
 		if direction.length() < SENSITIVITY * speed {
@@ -83,7 +83,7 @@ mod tests {
 		app.update();
 
 		let agent = app.world().entity(agent);
-		let direction = (target - position).normalize() * *speed.deref();
+		let direction = (target - position).normalize() * *speed;
 
 		assert_eq!(Some(&Velocity::linear(direction)), agent.get::<Velocity>());
 	}

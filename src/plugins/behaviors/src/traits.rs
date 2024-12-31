@@ -1,6 +1,5 @@
 pub(crate) mod bundle;
 pub(crate) mod has_filter;
-pub(crate) mod movement;
 
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::tools::UnitsPerSecond;
