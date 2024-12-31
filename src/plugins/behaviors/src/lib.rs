@@ -127,7 +127,14 @@ where
 			)
 			.add_systems(Update, update_cool_downs::<Virtual>)
 			.add_systems(Update, MainCamera::set_camera_to_orbit::<TPlayers::TPlayer>)
-			.add_systems(Update, Movement::<VelocityBased>::update)
+			.add_systems(
+				Update,
+				(
+					Movement::<VelocityBased>::update,
+					Movement::<VelocityBased>::cleanup,
+				)
+					.chain(),
+			)
 			.add_systems(
 				Update,
 				(

@@ -1,8 +1,8 @@
-use super::Movement;
+use super::{Movement, OnMovementRemoved};
 use crate::traits::{IsDone, MovementVelocityBased};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use common::tools::UnitsPerSecond;
+use common::{components::Immobilized, tools::UnitsPerSecond};
 
 #[derive(PartialEq, Debug)]
 pub struct VelocityBased;
@@ -15,12 +15,19 @@ impl MovementVelocityBased for Movement<VelocityBased> {
 		let direction = self.target - position;
 
 		if direction.length() < SENSITIVITY * speed {
-			agent.try_insert(Velocity::default());
 			return IsDone::from(true);
 		}
 
 		agent.try_insert(Velocity::linear(direction.normalize() * speed));
 		IsDone::from(false)
+	}
+}
+
+impl OnMovementRemoved for Movement<VelocityBased> {
+	type TConstraint = Without<Immobilized>;
+
+	fn on_movement_removed(entity: &mut EntityCommands) {
+		entity.try_insert(Velocity::zero());
 	}
 }
 
@@ -45,11 +52,11 @@ mod tests {
 	struct _Result(IsDone);
 
 	#[derive(Component)]
-	struct _Params((Vec3, UnitsPerSecond));
+	struct _UpdateParams((Vec3, UnitsPerSecond));
 
-	fn execute(
+	fn call_update(
 		mut commands: Commands,
-		agents: Query<(Entity, &Movement<VelocityBased>, &_Params)>,
+		agents: Query<(Entity, &Movement<VelocityBased>, &_UpdateParams)>,
 	) {
 		for (id, movement, params) in &agents {
 			let agent = &mut commands.entity(id);
@@ -59,16 +66,28 @@ mod tests {
 		}
 	}
 
-	fn setup() -> App {
+	struct _OnRemoveCalled;
+
+	fn call_on_remove(
+		mut commands: Commands,
+		entities: Query<Entity, <Movement<VelocityBased> as OnMovementRemoved>::TConstraint>,
+	) {
+		for entity in &entities {
+			let entity = &mut commands.entity(entity);
+			Movement::<VelocityBased>::on_movement_removed(entity);
+		}
+	}
+
+	fn setup<TMarker>(system: impl IntoSystemConfigs<TMarker>) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, execute);
+		app.add_systems(Update, system);
 
 		app
 	}
 
 	#[test]
 	fn apply_velocity() {
-		let mut app = setup();
+		let mut app = setup(call_update);
 		let position = Vec3::new(3., 0., 2.);
 		let target = Vec3::new(10., 0., 7.);
 		let speed = UnitsPerSecond::new(11.);
@@ -76,7 +95,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Movement::<VelocityBased>::to(target),
-				_Params((position, speed)),
+				_UpdateParams((position, speed)),
 			))
 			.id();
 
@@ -90,7 +109,7 @@ mod tests {
 
 	#[test]
 	fn not_done() {
-		let mut app = setup();
+		let mut app = setup(call_update);
 		let position = Vec3::new(3., 0., 2.);
 		let target = Vec3::new(10., 0., 7.);
 		let speed = UnitsPerSecond::new(11.);
@@ -98,7 +117,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Movement::<VelocityBased>::to(target),
-				_Params((position, speed)),
+				_UpdateParams((position, speed)),
 			))
 			.id();
 
@@ -111,7 +130,7 @@ mod tests {
 
 	#[test]
 	fn remove_velocity_when_direction_length_zero() {
-		let mut app = setup();
+		let mut app = setup(call_update);
 		let position = Vec3::new(10., 0., 7.);
 		let target = Vec3::new(10., 0., 7.);
 		let speed = UnitsPerSecond::new(11.);
@@ -119,7 +138,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Movement::<VelocityBased>::to(target),
-				_Params((position, speed)),
+				_UpdateParams((position, speed)),
 				Velocity::default(),
 			))
 			.id();
@@ -133,7 +152,7 @@ mod tests {
 
 	#[test]
 	fn done_when_direction_length_zero() {
-		let mut app = setup();
+		let mut app = setup(call_update);
 		let position = Vec3::new(10., 0., 7.);
 		let target = Vec3::new(10., 0., 7.);
 		let speed = UnitsPerSecond::new(11.);
@@ -141,7 +160,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Movement::<VelocityBased>::to(target),
-				_Params((position, speed)),
+				_UpdateParams((position, speed)),
 			))
 			.id();
 
@@ -154,7 +173,7 @@ mod tests {
 
 	#[test]
 	fn remove_velocity_when_direction_within_sensitivity() {
-		let mut app = setup();
+		let mut app = setup(call_update);
 		let position = Vec3::new(10., 0., 7.);
 		let target = position + Vec3::X * SENSITIVITY * 10.;
 		let speed = UnitsPerSecond::new(11.);
@@ -162,7 +181,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Movement::<VelocityBased>::to(target),
-				_Params((position, speed)),
+				_UpdateParams((position, speed)),
 				Velocity::default(),
 			))
 			.id();
@@ -175,5 +194,28 @@ mod tests {
 			(Some(&Velocity::default()), Some(&_Result(true.into()))),
 			(agent.get::<Velocity>(), agent.get::<_Result>())
 		);
+	}
+
+	#[test]
+	fn set_velocity_zero_when_calling_on_remove() {
+		let mut app = setup(call_on_remove);
+		let entity = app.world_mut().spawn_empty().id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&Velocity::zero()),
+			app.world().entity(entity).get::<Velocity>()
+		);
+	}
+
+	#[test]
+	fn do_not_set_velocity_zero_when_calling_on_remove_and_immobilized() {
+		let mut app = setup(call_on_remove);
+		let entity = app.world_mut().spawn(Immobilized).id();
+
+		app.update();
+
+		assert_eq!(None, app.world().entity(entity).get::<Velocity>());
 	}
 }
