@@ -47,7 +47,6 @@ use systems::{
 	attack::AttackSystem,
 	base_behavior::SelectBehavior,
 	chase::ChaseSystem,
-	cleanup::cleanup,
 	face::{execute_face::execute_face, get_faces::get_faces},
 	movement::{
 		animate_movement::AnimateMovement,
@@ -137,8 +136,7 @@ where
 						Movement<VelocityBased>,
 						TAnimationsPlugin::TAnimationDispatch,
 					>,
-					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>
-						.pipe(cleanup),
+					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
 				),
 			)
 			.add_systems(
@@ -150,7 +148,7 @@ where
 						Movement<VelocityBased>,
 						TAnimationsPlugin::TAnimationDispatch,
 					>,
-					TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>.pipe(cleanup),
+					TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>,
 					TEnemies::TEnemy::attack,
 				)
 					.chain(),

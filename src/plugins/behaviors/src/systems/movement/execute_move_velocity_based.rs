@@ -1,7 +1,4 @@
-use crate::{
-	systems::cleanup::SetToCleanUp,
-	traits::{IsDone, MovementVelocityBased},
-};
+use crate::traits::{IsDone, MovementVelocityBased};
 use bevy::prelude::*;
 use common::{components::Immobilized, tools::speed::Speed, traits::accessors::get::Getter};
 
@@ -11,26 +8,23 @@ pub(crate) trait ExecuteMovement {
 	fn execute_movement<TMovement>(
 		mut commands: Commands,
 		agents: Query<(Entity, &GlobalTransform, &Self, &TMovement), Without<Immobilized>>,
-	) -> SetToCleanUp<TMovement>
-	where
+	) where
 		Self: Component + Sized + Getter<Speed>,
 		TMovement: Component + MovementVelocityBased,
 	{
-		let done_entities = agents
-			.iter()
-			.filter_map(|(id, transform, config, movement)| {
-				let Speed(speed) = config.get();
-				let entity = &mut commands.get_entity(id)?;
-				let position = transform.translation();
+		for (id, transform, config, movement) in &agents {
+			let Some(mut entity) = commands.get_entity(id) else {
+				continue;
+			};
+			let Speed(speed) = config.get();
+			let position = transform.translation();
 
-				match movement.update(entity, position, speed) {
-					IsDone(true) => Some(entity.id()),
-					IsDone(false) => None,
-				}
-			})
-			.collect();
+			let IsDone(true) = movement.update(&mut entity, position, speed) else {
+				continue;
+			};
 
-		SetToCleanUp::new(done_entities)
+			entity.remove::<TMovement>();
+		}
 	}
 }
 
@@ -56,11 +50,8 @@ mod tests {
 	#[derive(Component, PartialEq, Debug)]
 	struct _MoveParams((Vec3, UnitsPerSecond));
 
-	#[derive(Component, Default, Debug)]
+	#[derive(Component, Default, Debug, PartialEq)]
 	struct _Movement(IsDone);
-
-	#[derive(Component, Debug, PartialEq)]
-	struct _Cleanup;
 
 	impl MovementVelocityBased for _Movement {
 		fn update(
@@ -74,15 +65,9 @@ mod tests {
 		}
 	}
 
-	fn cleanup(set_to_idle: In<SetToCleanUp<_Movement>>, mut commands: Commands) {
-		for entity in set_to_idle.entities.iter() {
-			commands.entity(*entity).insert(_Cleanup);
-		}
-	}
-
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, _Agent::execute_movement::<_Movement>.pipe(cleanup));
+		app.add_systems(Update, _Agent::execute_movement::<_Movement>);
 
 		app
 	}
@@ -110,12 +95,11 @@ mod tests {
 	}
 
 	#[test]
-	fn return_entity_for_cleanup_when_done() {
+	fn remove_movement_when_done() {
 		let mut app = setup();
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let agent = _Agent::default();
 		let movement = _Movement(true.into());
-
 		let agent = app
 			.world_mut()
 			.spawn((agent, GlobalTransform::from(transform), movement))
@@ -123,7 +107,7 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(Some(&_Cleanup), app.world().entity(agent).get::<_Cleanup>());
+		assert_eq!(None, app.world().entity(agent).get::<_Movement>());
 	}
 
 	#[test]
@@ -132,7 +116,6 @@ mod tests {
 		let transform = Transform::from_xyz(1., 2., 3.);
 		let agent = _Agent::default();
 		let movement = _Movement(false.into());
-
 		let agent = app
 			.world_mut()
 			.spawn((agent, GlobalTransform::from(transform), movement))
@@ -140,7 +123,10 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(agent).get::<_Cleanup>());
+		assert_eq!(
+			Some(&_Movement(false.into())),
+			app.world().entity(agent).get::<_Movement>()
+		);
 	}
 
 	#[test]

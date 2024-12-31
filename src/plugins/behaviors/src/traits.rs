@@ -1,4 +1,3 @@
-pub(crate) mod bundle;
 pub(crate) mod has_filter;
 
 use bevy::{ecs::system::EntityCommands, prelude::*};
@@ -26,12 +25,4 @@ pub(crate) trait MoveTogether {
 
 pub(crate) trait MovementVelocityBased {
 	fn update(&self, agent: &mut EntityCommands, position: Vec3, speed: UnitsPerSecond) -> IsDone;
-}
-
-pub(crate) trait Cleanup {
-	fn cleanup(&self, agent: &mut EntityCommands);
-}
-
-pub trait RemoveComponent<T: Bundle> {
-	fn get_remover() -> fn(&mut EntityCommands);
 }

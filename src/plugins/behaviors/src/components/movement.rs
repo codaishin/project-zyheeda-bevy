@@ -1,11 +1,14 @@
 pub(crate) mod velocity_based;
 
 use super::SetFace;
-use crate::traits::Cleanup;
 use bevy::prelude::*;
 use common::{
 	test_tools::utils::ApproxEqual,
-	traits::{handles_orientation::Face, try_insert_on::TryInsertOn},
+	traits::{
+		handles_orientation::Face,
+		try_insert_on::TryInsertOn,
+		try_remove_from::TryRemoveFrom,
+	},
 };
 use std::marker::PhantomData;
 
@@ -23,19 +26,20 @@ impl<TMovement> Movement<TMovement> {
 		}
 	}
 
-	pub(crate) fn update(mut commands: Commands, movements: Query<(Entity, &Self), Changed<Self>>)
-	where
+	pub(crate) fn update(
+		mut commands: Commands,
+		mut removed: RemovedComponents<Self>,
+		changed: Query<(Entity, &Self), Changed<Self>>,
+	) where
 		TMovement: Sync + Send + 'static,
 	{
-		for (entity, movement) in &movements {
+		for (entity, movement) in &changed {
 			commands.try_insert_on(entity, SetFace(Face::Translation(movement.target)));
 		}
-	}
-}
 
-impl<T> Cleanup for Movement<T> {
-	fn cleanup(&self, agent: &mut EntityCommands) {
-		agent.remove::<SetFace>();
+		for entity in removed.read() {
+			commands.try_remove_from::<SetFace>(entity);
+		}
 	}
 }
 
@@ -53,28 +57,11 @@ mod tests {
 
 	struct _T;
 
-	fn call_cleanup(mut commands: Commands, query: Query<(Entity, &Movement<_T>)>) {
-		for (id, movement) in &query {
-			movement.cleanup(&mut commands.entity(id));
-		}
-	}
-
 	fn setup() -> App {
-		App::new().single_threaded(Update)
-	}
+		let mut app = App::new().single_threaded(Update);
+		app.add_systems(Update, Movement::<_T>::update);
 
-	#[test]
-	fn use_cleanup() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((Movement::<_T>::to(default()), SetFace(Face::Cursor)))
-			.id();
-
-		app.world_mut().run_system_once(call_cleanup)?;
-
-		assert_eq!(None, app.world().entity(entity).get::<SetFace>());
-		Ok(())
+		app
 	}
 
 	#[test]
@@ -102,7 +89,6 @@ mod tests {
 			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
 			.id();
 
-		app.add_systems(Update, Movement::<_T>::update);
 		app.update();
 		app.world_mut().entity_mut(entity).remove::<SetFace>();
 		app.update();
@@ -118,7 +104,6 @@ mod tests {
 			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
 			.id();
 
-		app.add_systems(Update, Movement::<_T>::update);
 		app.update();
 		let mut movement = app.world_mut().entity_mut(entity);
 		let mut movement = movement.get_mut::<Movement<_T>>().unwrap();
@@ -129,5 +114,20 @@ mod tests {
 			Some(&SetFace(Face::Translation(Vec3::new(3., 4., 5.)))),
 			app.world().entity(entity).get::<SetFace>()
 		);
+	}
+
+	#[test]
+	fn remove_set_face_on_update_when_removed() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((Movement::<_T>::to(default()), SetFace(Face::Cursor)))
+			.id();
+
+		app.update();
+		app.world_mut().entity_mut(entity).remove::<Movement<_T>>();
+		app.update();
+
+		assert_eq!(None, app.world().entity(entity).get::<SetFace>());
 	}
 }
