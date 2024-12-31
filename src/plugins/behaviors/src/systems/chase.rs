@@ -1,6 +1,9 @@
-use crate::components::{Chase, Movement, VelocityBased};
+use crate::components::{
+	movement::{velocity_based::VelocityBased, Movement},
+	Chase,
+};
 use bevy::prelude::*;
-use common::traits::try_insert_on::TryInsertOn;
+use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
 
 impl<T> ChaseSystem for T {}
 
@@ -14,10 +17,7 @@ pub(crate) trait ChaseSystem {
 		Self: Component + Sized,
 	{
 		for entity in removed_chasers.read() {
-			let Ok(target) = transforms.get(entity) else {
-				continue;
-			};
-			commands.try_insert_on(entity, Movement::<VelocityBased>::to(target.translation()));
+			commands.try_remove_from::<Movement<VelocityBased>>(entity);
 		}
 
 		for (entity, Chase(target)) in &chasers {
@@ -65,7 +65,7 @@ mod tests {
 	}
 
 	#[test]
-	fn set_movement_to_follow_self_when_not_chasing() {
+	fn remove_movement_when_not_chasing() {
 		let (mut app, target) = setup(Vec3::new(1., 2., 3.));
 		let chaser = app
 			.world_mut()
@@ -77,7 +77,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Movement::<VelocityBased>::to(Vec3::new(3., 2., 1.))),
+			None,
 			app.world().entity(chaser).get::<Movement<VelocityBased>>()
 		);
 	}

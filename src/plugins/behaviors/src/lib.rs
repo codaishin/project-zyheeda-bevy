@@ -32,15 +32,14 @@ use common::{
 use components::{
 	cam_orbit::CamOrbit,
 	ground_target::GroundTarget,
+	movement::{velocity_based::VelocityBased, Movement},
 	set_position_and_rotation::SetPositionAndRotation,
 	set_to_move_forward::SetVelocityForward,
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	when_traveled_insert::InsertAfterDistanceTraveled,
 	Always,
-	Movement,
 	Once,
 	OverrideFace,
-	VelocityBased,
 };
 use events::MoveInputEvent;
 use std::marker::PhantomData;
@@ -48,11 +47,10 @@ use systems::{
 	attack::AttackSystem,
 	base_behavior::SelectBehavior,
 	chase::ChaseSystem,
-	cleanup::cleanup,
 	face::{execute_face::execute_face, get_faces::get_faces},
 	movement::{
 		animate_movement::AnimateMovement,
-		execute_move_velocity_based::ExecuteMovement,
+		execute_move_update::ExecuteMovement,
 		move_on_orbit::move_on_orbit,
 		move_with_target::move_with_target,
 		set_camera_to_orbit_player::SetCameraToOrbit,
@@ -132,13 +130,20 @@ where
 			.add_systems(
 				Update,
 				(
+					Movement::<VelocityBased>::update,
+					Movement::<VelocityBased>::cleanup,
+				)
+					.chain(),
+			)
+			.add_systems(
+				Update,
+				(
 					TPlayers::TPlayerMovement::set_movement,
 					TPlayers::TPlayerMovement::animate_movement::<
 						Movement<VelocityBased>,
 						TAnimationsPlugin::TAnimationDispatch,
 					>,
-					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>
-						.pipe(cleanup),
+					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
 				),
 			)
 			.add_systems(
@@ -150,7 +155,7 @@ where
 						Movement<VelocityBased>,
 						TAnimationsPlugin::TAnimationDispatch,
 					>,
-					TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>.pipe(cleanup),
+					TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>,
 					TEnemies::TEnemy::attack,
 				)
 					.chain(),
