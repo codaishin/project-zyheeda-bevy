@@ -1,25 +1,27 @@
-use crate::traits::{IsDone, MovementVelocityBased};
+use crate::traits::{IsDone, MovementUpdate};
 use bevy::prelude::*;
-use common::{components::Immobilized, tools::speed::Speed, traits::accessors::get::Getter};
+use common::{tools::speed::Speed, traits::accessors::get::Getter};
 
 impl<T> ExecuteMovement for T {}
 
 pub(crate) trait ExecuteMovement {
 	fn execute_movement<TMovement>(
 		mut commands: Commands,
-		agents: Query<(Entity, &GlobalTransform, &Self, &TMovement), Without<Immobilized>>,
+		mut agents: Query<
+			(Entity, TMovement::TComponents<'_>, &Self, &TMovement),
+			TMovement::TConstraint,
+		>,
 	) where
 		Self: Component + Sized + Getter<Speed>,
-		TMovement: Component + MovementVelocityBased,
+		TMovement: Component + MovementUpdate,
 	{
-		for (id, transform, config, movement) in &agents {
+		for (id, components, config, movement) in &mut agents {
 			let Some(mut entity) = commands.get_entity(id) else {
 				continue;
 			};
 			let Speed(speed) = config.get();
-			let position = transform.translation();
 
-			let IsDone(true) = movement.update(&mut entity, position, speed) else {
+			let IsDone(true) = movement.update(&mut entity, components, speed) else {
 				continue;
 			};
 
@@ -46,24 +48,32 @@ mod tests {
 			self.0
 		}
 	}
+	#[derive(Component, PartialEq, Debug, Clone, Copy)]
+	struct _Component;
 
 	#[derive(Component, PartialEq, Debug)]
-	struct _MoveParams((Vec3, UnitsPerSecond));
+	struct _MoveParams((_Component, UnitsPerSecond));
 
 	#[derive(Component, Default, Debug, PartialEq)]
 	struct _Movement(IsDone);
 
-	impl MovementVelocityBased for _Movement {
+	impl MovementUpdate for _Movement {
+		type TComponents<'a> = &'a _Component;
+		type TConstraint = Without<_DoNotMove>;
+
 		fn update(
 			&self,
 			agent: &mut EntityCommands,
-			position: Vec3,
+			component: &_Component,
 			speed: UnitsPerSecond,
 		) -> IsDone {
-			agent.insert(_MoveParams((position, speed)));
+			agent.insert(_MoveParams((*component, speed)));
 			self.0
 		}
 	}
+
+	#[derive(Component)]
+	struct _DoNotMove;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -75,21 +85,14 @@ mod tests {
 	#[test]
 	fn apply_speed() {
 		let mut app = setup();
-		let transform = Transform::from_xyz(1., 2., 3.);
 		let agent = _Agent(UnitsPerSecond::new(11.).into());
 		let movement = _Movement(false.into());
-		let agent = app
-			.world_mut()
-			.spawn((agent, GlobalTransform::from(transform), movement))
-			.id();
+		let agent = app.world_mut().spawn((agent, _Component, movement)).id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&_MoveParams((
-				Vec3::new(1., 2., 3.),
-				UnitsPerSecond::new(11.)
-			))),
+			Some(&_MoveParams((_Component, UnitsPerSecond::new(11.)))),
 			app.world().entity(agent).get::<_MoveParams>()
 		);
 	}
@@ -97,13 +100,9 @@ mod tests {
 	#[test]
 	fn remove_movement_when_done() {
 		let mut app = setup();
-		let transform = Transform::from_xyz(1., 2., 3.);
 		let agent = _Agent::default();
 		let movement = _Movement(true.into());
-		let agent = app
-			.world_mut()
-			.spawn((agent, GlobalTransform::from(transform), movement))
-			.id();
+		let agent = app.world_mut().spawn((agent, _Component, movement)).id();
 
 		app.update();
 
@@ -113,13 +112,9 @@ mod tests {
 	#[test]
 	fn do_not_return_entity_for_cleanup_when_not_done() {
 		let mut app = setup();
-		let transform = Transform::from_xyz(1., 2., 3.);
 		let agent = _Agent::default();
 		let movement = _Movement(false.into());
-		let agent = app
-			.world_mut()
-			.spawn((agent, GlobalTransform::from(transform), movement))
-			.id();
+		let agent = app.world_mut().spawn((agent, _Component, movement)).id();
 
 		app.update();
 
@@ -130,15 +125,15 @@ mod tests {
 	}
 
 	#[test]
-	fn no_movement_when_immobilized() {
+	fn no_movement_when_constraint_violated() {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
 			.spawn((
 				_Agent::default(),
-				GlobalTransform::from_xyz(1., 2., 3.),
+				_Component,
 				_Movement(false.into()),
-				Immobilized,
+				_DoNotMove,
 			))
 			.id();
 

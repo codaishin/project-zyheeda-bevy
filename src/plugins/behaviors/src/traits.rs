@@ -1,6 +1,12 @@
 pub(crate) mod has_filter;
 
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::{
+	ecs::{
+		query::{QueryData, QueryFilter, QueryItem},
+		system::EntityCommands,
+	},
+	prelude::*,
+};
 use common::tools::UnitsPerSecond;
 
 pub type Vec2Radians = Vec2;
@@ -23,6 +29,14 @@ pub(crate) trait MoveTogether {
 	fn move_together_with(&mut self, transform: &mut Transform, new_position: Vec3);
 }
 
-pub(crate) trait MovementVelocityBased {
-	fn update(&self, agent: &mut EntityCommands, position: Vec3, speed: UnitsPerSecond) -> IsDone;
+pub(crate) trait MovementUpdate {
+	type TComponents<'a>: QueryData;
+	type TConstraint: QueryFilter;
+
+	fn update(
+		&self,
+		agent: &mut EntityCommands,
+		components: QueryItem<Self::TComponents<'_>>,
+		speed: UnitsPerSecond,
+	) -> IsDone;
 }

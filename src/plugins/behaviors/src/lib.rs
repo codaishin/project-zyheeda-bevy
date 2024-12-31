@@ -50,7 +50,7 @@ use systems::{
 	face::{execute_face::execute_face, get_faces::get_faces},
 	movement::{
 		animate_movement::AnimateMovement,
-		execute_move_velocity_based::ExecuteMovement,
+		execute_move_update::ExecuteMovement,
 		move_on_orbit::move_on_orbit,
 		move_with_target::move_with_target,
 		set_camera_to_orbit_player::SetCameraToOrbit,
