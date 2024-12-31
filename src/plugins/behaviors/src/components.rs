@@ -7,14 +7,12 @@ pub(crate) mod set_position_and_rotation;
 pub(crate) mod set_to_move_forward;
 pub(crate) mod when_traveled_insert;
 
-use crate::traits::RemoveComponent;
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::prelude::*;
 use common::{
-	test_tools::utils::ApproxEqual,
 	tools::UnitsPerSecond,
 	traits::{animation::Animation, handles_orientation::Face},
 };
-use std::{fmt::Debug, marker::PhantomData, time::Duration};
+use std::{fmt::Debug, time::Duration};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) struct Always;

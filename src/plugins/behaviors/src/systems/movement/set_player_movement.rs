@@ -1,12 +1,8 @@
 use crate::{
-	components::{
-		movement::{velocity_based::VelocityBased, Movement},
-		SetFace,
-	},
+	components::movement::{velocity_based::VelocityBased, Movement},
 	events::MoveInputEvent,
 };
 use bevy::prelude::*;
-use common::traits::handles_orientation::Face;
 
 impl<T> SetPlayerMovement for T {}
 
@@ -27,10 +23,7 @@ pub trait SetPlayerMovement {
 
 		for event in move_input_events.read() {
 			let target = event.0;
-			player.try_insert((
-				Movement::<VelocityBased>::to(target).remove_on_cleanup::<SetFace>(),
-				SetFace(Face::Translation(target)),
-			));
+			player.try_insert(Movement::<VelocityBased>::to(target));
 		}
 	}
 }
@@ -60,20 +53,9 @@ mod tests {
 
 		app.update();
 
-		let player = app.world().entity(player);
-
 		assert_eq!(
-			(
-				Some(
-					&Movement::<VelocityBased>::to(Vec3::new(1., 2., 3.),)
-						.remove_on_cleanup::<SetFace>()
-				),
-				Some(&SetFace(Face::Translation(Vec3::new(1., 2., 3.)))),
-			),
-			(
-				player.get::<Movement<VelocityBased>>(),
-				player.get::<SetFace>(),
-			)
+			Some(&Movement::<VelocityBased>::to(Vec3::new(1., 2., 3.))),
+			app.world().entity(player).get::<Movement<VelocityBased>>(),
 		);
 	}
 }
