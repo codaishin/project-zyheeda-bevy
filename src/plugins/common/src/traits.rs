@@ -37,7 +37,6 @@ pub mod mouse_position;
 pub mod nested_mock;
 pub mod ownership_relation;
 pub mod prefab;
-pub mod process_delta;
 pub mod read;
 pub mod register_assets_for_children;
 pub mod register_custom_assets;
