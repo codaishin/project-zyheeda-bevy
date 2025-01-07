@@ -10,7 +10,6 @@ use common::{
 	effects::{deal_damage::DealDamage, force_shield::ForceShield, gravity::Gravity},
 	labels::Labels,
 	systems::{
-		asset_process_delta::asset_process_delta,
 		insert_associated::{Configure, InsertAssociated, InsertOn},
 		remove_components::Remove,
 		track_components::TrackComponentInSelfAndChildren,
@@ -26,11 +25,7 @@ use components::{
 	effect_shaders_target::EffectShadersTarget,
 	material_override::MaterialOverride,
 };
-use materials::{
-	essence_material::EssenceMaterial,
-	force_material::ForceMaterial,
-	gravity_material::GravityMaterial,
-};
+use materials::essence_material::EssenceMaterial;
 use std::{hash::Hash, marker::PhantomData};
 use systems::{
 	add_child_effect_shader::add_child_effect_shader,
@@ -72,13 +67,6 @@ where
 				InsertOn::<TBehaviors::TSkillProjection>::associated::<EffectShadersTarget>(
 					Configure::LeaveAsIs,
 				),
-			),
-		)
-		.add_systems(
-			Update,
-			(
-				asset_process_delta::<ForceMaterial, Virtual>,
-				asset_process_delta::<GravityMaterial, Virtual>,
 			),
 		)
 		.add_systems(

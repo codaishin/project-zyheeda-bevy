@@ -1,9 +1,8 @@
+use crate::traits::shadows_aware_material::ShadowsAwareMaterial;
 use bevy::{
 	prelude::*,
 	render::render_resource::{AsBindGroup, ShaderRef},
 };
-
-use crate::traits::shadows_aware_material::ShadowsAwareMaterial;
 
 #[derive(Asset, TypePath, AsBindGroup, Clone, Default, Debug, PartialEq)]
 pub struct EssenceMaterial {
