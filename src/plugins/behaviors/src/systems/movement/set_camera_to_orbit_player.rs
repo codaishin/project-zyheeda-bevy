@@ -5,6 +5,7 @@ use crate::{
 use bevy::prelude::*;
 use common::traits::try_insert_on::TryInsertOn;
 use std::f32::consts::PI;
+
 impl<T> SetCameraToOrbit for T {}
 
 pub(crate) trait SetCameraToOrbit {
