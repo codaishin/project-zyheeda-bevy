@@ -4,7 +4,13 @@ pub mod materials;
 pub(crate) mod systems;
 pub(crate) mod traits;
 
-use bevy::{prelude::*, render::render_resource::AsBindGroup};
+use bevy::{
+	prelude::*,
+	render::{
+		render_resource::{AsBindGroup, PipelineCache},
+		RenderApp,
+	},
+};
 use common::{
 	components::essence::Essence,
 	effects::{deal_damage::DealDamage, force_shield::ForceShield, gravity::Gravity},
@@ -16,6 +22,7 @@ use common::{
 	},
 	traits::{
 		handles_effect::{HandlesAllEffects, HandlesEffect},
+		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, InSubApp},
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		prefab::RegisterPrefab,
 	},
@@ -31,27 +38,39 @@ use systems::{
 	add_child_effect_shader::add_child_effect_shader,
 	add_effect_shader::add_effect_shader,
 	instantiate_effect_shaders::instantiate_effect_shaders,
+	no_waiting_pipelines::no_waiting_pipelines,
 };
 use traits::{
 	get_effect_material::GetEffectMaterial,
 	shadows_aware_material::ShadowsAwareMaterial,
 };
 
-pub struct ShadersPlugin<TPrefabs, TInteractions, TBehaviors>(
-	PhantomData<(TPrefabs, TInteractions, TBehaviors)>,
+pub struct ShadersPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>(
+	PhantomData<(TPrefabs, TLoading, TInteractions, TBehaviors)>,
 );
 
-impl<TPrefabs, TInteractions, TBehaviors> ShadersPlugin<TPrefabs, TInteractions, TBehaviors>
+impl<TPrefabs, TLoading, TInteractions, TBehaviors>
+	ShadersPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
 where
 	TPrefabs: Plugin + RegisterPrefab,
+	TLoading: Plugin + HandlesLoadTracking,
 	TInteractions: Plugin + HandlesAllEffects,
 	TBehaviors: Plugin + HandlesSkillBehaviors,
 {
-	pub fn depends_on(_: &TPrefabs, _: &TInteractions, _: &TBehaviors) -> Self {
+	pub fn depends_on(_: &TPrefabs, _: &TLoading, _: &TInteractions, _: &TBehaviors) -> Self {
 		Self(PhantomData)
 	}
 
-	fn build_for_effect_shaders(app: &mut App) {
+	fn track_render_pipeline_ready(app: &mut App) {
+		TLoading::register_load_tracking::<PipelineCache, AssetsProgress>().in_sub_app(
+			app,
+			RenderApp,
+			ExtractSchedule,
+			no_waiting_pipelines,
+		);
+	}
+
+	fn effect_shaders(app: &mut App) {
 		TPrefabs::register_prefab::<EffectShader<DealDamage>>(app);
 
 		register_custom_effect_shader::<TInteractions, ForceShield>(app);
@@ -81,7 +100,7 @@ where
 		);
 	}
 
-	fn build_for_essence_material(app: &mut App) {
+	fn essence_material(app: &mut App) {
 		type InsertOnMeshWithEssence = InsertOn<Essence, With<Mesh3d>, Changed<Essence>>;
 		let configure_material = Configure::Apply(MaterialOverride::configure);
 
@@ -96,16 +115,18 @@ where
 	}
 }
 
-impl<TPrefabs, TInteractions, TBehaviors> Plugin
-	for ShadersPlugin<TPrefabs, TInteractions, TBehaviors>
+impl<TPrefabs, TLoading, TInteractions, TBehaviors> Plugin
+	for ShadersPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
 where
 	TPrefabs: Plugin + RegisterPrefab,
+	TLoading: Plugin + HandlesLoadTracking,
 	TInteractions: Plugin + HandlesAllEffects,
 	TBehaviors: Plugin + HandlesSkillBehaviors,
 {
 	fn build(&self, app: &mut App) {
-		Self::build_for_effect_shaders(app);
-		Self::build_for_essence_material(app);
+		Self::track_render_pipeline_ready(app);
+		Self::effect_shaders(app);
+		Self::essence_material(app);
 	}
 }
 
