@@ -218,8 +218,8 @@ mod tests {
 	use bevy::ecs::system::{EntityCommands, RunSystemError, RunSystemOnce};
 	use common::{
 		components::Outdated,
-		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
+		tools::collider_info::ColliderInfo,
 		traits::{
 			handles_effect::HandlesEffect,
 			handles_skill_behaviors::{Integrity, Motion, ProjectionOffset, Shape},

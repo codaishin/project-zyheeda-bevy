@@ -1,7 +1,7 @@
 pub mod key_map;
 pub mod language_server;
 
-use crate::{components::Outdated, traits::cache::Storage};
+use crate::traits::cache::Storage;
 use bevy::prelude::*;
 use std::{
 	collections::{
@@ -11,44 +11,6 @@ use std::{
 	fmt::Debug,
 	hash::Hash,
 };
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct ColliderInfo<T> {
-	pub collider: T,
-	pub root: Option<T>,
-}
-
-impl ColliderInfo<Entity> {
-	pub fn with_component<TComponent: Component + Clone>(
-		&self,
-		get_component: impl Fn(Entity) -> Option<TComponent>,
-	) -> Option<ColliderInfo<Outdated<TComponent>>> {
-		Some(ColliderInfo {
-			collider: Outdated {
-				component: get_component(self.collider)?,
-				entity: self.collider,
-			},
-			root: self.root.and_then(|root| {
-				Some(Outdated {
-					component: get_component(root)?,
-					entity: root,
-				})
-			}),
-		})
-	}
-}
-
-#[derive(Resource, Debug, PartialEq, Clone)]
-pub struct MouseHover<T = Entity>(pub Option<ColliderInfo<T>>);
-
-impl<T> Default for MouseHover<T> {
-	fn default() -> Self {
-		Self(None)
-	}
-}
-
-#[derive(Resource, Default)]
-pub struct CamRay(pub Option<Ray3d>);
 
 #[derive(Resource)]
 pub struct Shared<TKey: Eq + Hash, T: Clone> {

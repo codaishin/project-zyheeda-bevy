@@ -1,6 +1,14 @@
-use super::IntersectAt;
-use crate::resources::CamRay;
-use bevy::{math::Vec3, prelude::InfinitePlane3d};
+use bevy::prelude::*;
+use common::traits::{accessors::get::GetterRefOptional, intersect_at::IntersectAt};
+
+#[derive(Resource, Default)]
+pub struct CamRay(pub(crate) Option<Ray3d>);
+
+impl GetterRefOptional<Ray3d> for CamRay {
+	fn get(&self) -> Option<&Ray3d> {
+		self.0.as_ref()
+	}
+}
 
 impl IntersectAt for CamRay {
 	fn intersect_at(&self, height: f32) -> Option<Vec3> {

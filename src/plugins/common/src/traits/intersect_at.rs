@@ -1,5 +1,3 @@
-pub mod cam_ray;
-
 use bevy::math::Vec3;
 
 pub trait IntersectAt {

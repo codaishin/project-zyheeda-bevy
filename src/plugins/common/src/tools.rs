@@ -1,5 +1,6 @@
 pub mod aggro_range;
 pub mod attack_range;
+pub mod collider_info;
 pub mod movement_animation;
 pub mod ordered_hash_map;
 pub mod slot_key;

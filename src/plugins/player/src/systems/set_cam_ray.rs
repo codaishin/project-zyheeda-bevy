@@ -1,4 +1,4 @@
-use crate::{resources::CamRay, traits::get_ray::GetCamRay};
+use crate::resources::cam_ray::CamRay;
 use bevy::{
 	ecs::{
 		component::Component,
@@ -8,6 +8,7 @@ use bevy::{
 	transform::components::GlobalTransform,
 	window::Window,
 };
+use common::traits::get_ray::GetCamRay;
 
 pub(crate) fn set_cam_ray<TCamera: GetCamRay + Component, TLabel: Component>(
 	mut commands: Commands,
@@ -23,13 +24,12 @@ pub(crate) fn set_cam_ray<TCamera: GetCamRay + Component, TLabel: Component>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::test_tools::utils::SingleThreadedApp;
 	use bevy::{
 		app::{App, Update},
 		math::{Dir3, Ray3d, Vec3},
 		utils::default,
 	};
-	use common::traits::nested_mock::NestedMocks;
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::automock;
 

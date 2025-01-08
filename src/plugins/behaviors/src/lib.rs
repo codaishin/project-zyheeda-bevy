@@ -9,7 +9,6 @@ use bevy_rapier3d::prelude::Velocity;
 use common::{
 	components::MainCamera,
 	effects::deal_damage::DealDamage,
-	resources::CamRay,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	traits::{
 		animation::HasAnimationsDispatch,
@@ -18,7 +17,12 @@ use common::{
 		handles_enemies::HandlesEnemies,
 		handles_interactions::HandlesInteractions,
 		handles_orientation::{Face, HandlesOrientation},
-		handles_player::{ConfiguresPlayerMovement, HandlesPlayer},
+		handles_player::{
+			ConfiguresPlayerMovement,
+			HandlesPlayer,
+			HandlesPlayerCam,
+			HandlesPlayerMouse,
+		},
 		handles_skill_behaviors::{
 			HandlesSkillBehaviors,
 			Integrity,
@@ -101,7 +105,8 @@ where
 	TLifeCycles: Plugin + HandlesDestruction,
 	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
 	TEnemies: Plugin + HandlesEnemies,
-	TPlayers: Plugin + HandlesPlayer + ConfiguresPlayerMovement,
+	TPlayers:
+		Plugin + HandlesPlayer + HandlesPlayerCam + HandlesPlayerMouse + ConfiguresPlayerMovement,
 {
 	fn build(&self, app: &mut App) {
 		TPrefabsPlugin::with_dependency::<(TInteractionsPlugin, TLifeCycles)>()
@@ -113,9 +118,9 @@ where
 			.add_systems(
 				Update,
 				(
-					trigger_move_input_event::<CamRay>
+					trigger_move_input_event::<TPlayers::TCamRay>
 						.run_if(in_state(MouseContext::<KeyCode>::Default)),
-					get_faces.pipe(execute_face::<CamRay>),
+					get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
 				)
 					.chain()
 					.run_if(in_state(GameState::Play)),
