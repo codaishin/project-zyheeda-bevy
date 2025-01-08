@@ -18,6 +18,13 @@ use common::{
 	states::transition_to_state,
 	systems::log::log_many,
 	traits::{
+		handles_custom_assets::{
+			AssetFileExtensions,
+			AssetFolderPath,
+			HandlesCustomAssets,
+			HandlesCustomFolderAssets,
+			LoadFrom,
+		},
 		handles_load_tracking::{
 			AssetsProgress,
 			DependenciesProgress,
@@ -29,13 +36,6 @@ use common::{
 			Progress,
 		},
 		init_resource::InitResource,
-		register_custom_assets::{
-			AssetFileExtensions,
-			AssetFolderPath,
-			LoadFrom,
-			RegisterCustomAssets,
-			RegisterCustomFolderAssets,
-		},
 		remove_resource::RemoveResource,
 	},
 };
@@ -158,7 +158,7 @@ where
 	}
 }
 
-impl RegisterCustomAssets for LoadingPlugin {
+impl HandlesCustomAssets for LoadingPlugin {
 	fn register_custom_assets<TAsset, TDto>(app: &mut App)
 	where
 		TAsset: Asset + LoadFrom<TDto> + Clone + std::fmt::Debug,
@@ -169,7 +169,7 @@ impl RegisterCustomAssets for LoadingPlugin {
 	}
 }
 
-impl RegisterCustomFolderAssets for LoadingPlugin {
+impl HandlesCustomFolderAssets for LoadingPlugin {
 	fn register_custom_folder_assets<TAsset, TDto>(app: &mut App)
 	where
 		TAsset: Asset + AssetFolderPath + LoadFrom<TDto> + Clone + std::fmt::Debug,

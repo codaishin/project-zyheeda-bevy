@@ -3,14 +3,14 @@ use bevy::prelude::*;
 use serde::Deserialize;
 use std::fmt::Debug;
 
-pub trait RegisterCustomAssets {
+pub trait HandlesCustomAssets {
 	fn register_custom_assets<TAsset, TDto>(app: &mut App)
 	where
 		TAsset: Asset + LoadFrom<TDto> + Clone + Debug,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + Sync + Send + 'static;
 }
 
-pub trait RegisterCustomFolderAssets {
+pub trait HandlesCustomFolderAssets {
 	fn register_custom_folder_assets<TAsset, TDto>(app: &mut App)
 	where
 		TAsset: Asset + AssetFolderPath + LoadFrom<TDto> + Clone + Debug,

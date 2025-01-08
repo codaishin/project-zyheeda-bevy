@@ -19,12 +19,12 @@ use common::{
 	tools::slot_key::{Side, SlotKey},
 	traits::{
 		handles_assets_for_children::HandlesAssetsForChildren,
+		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_effect::HandlesAllEffects,
 		handles_lifetime::HandlesLifetime,
 		handles_orientation::HandlesOrientation,
 		handles_player::{ConfiguresPlayerSkillAnimations, HandlesPlayer},
 		handles_skill_behaviors::HandlesSkillBehaviors,
-		register_custom_assets::{RegisterCustomAssets, RegisterCustomFolderAssets},
 		try_insert_on::TryInsertOn,
 	},
 };
@@ -82,7 +82,7 @@ where
 	TLifeCycles: Plugin + HandlesLifetime,
 	TInteractions: Plugin + HandlesAllEffects,
 	TDispatchChildrenAssets: Plugin + HandlesAssetsForChildren,
-	TLoading: Plugin + RegisterCustomAssets + RegisterCustomFolderAssets,
+	TLoading: Plugin + HandlesCustomAssets + HandlesCustomFolderAssets,
 	TBehaviors: Plugin + HandlesSkillBehaviors + HandlesOrientation,
 	TPlayers: Plugin + HandlesPlayer + ConfiguresPlayerSkillAnimations,
 {
@@ -232,7 +232,7 @@ where
 	TLifeCycles: Plugin + HandlesLifetime,
 	TInteractions: Plugin + HandlesAllEffects,
 	TDispatchChildrenAssets: Plugin + HandlesAssetsForChildren,
-	TLoading: Plugin + RegisterCustomAssets + RegisterCustomFolderAssets,
+	TLoading: Plugin + HandlesCustomAssets + HandlesCustomFolderAssets,
 	TBehaviors: Plugin + HandlesSkillBehaviors + HandlesOrientation,
 	TPlayers: Plugin + HandlesPlayer + ConfiguresPlayerSkillAnimations,
 {

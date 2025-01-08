@@ -5,8 +5,8 @@ use crate::SkillItemType;
 use common::{
 	dto::duration::DurationDto,
 	traits::{
+		handles_custom_assets::{AssetFileExtensions, LoadFrom},
 		load_asset::{LoadAsset, Path},
-		register_custom_assets::{AssetFileExtensions, LoadFrom},
 	},
 };
 use run_skill_behavior::RunSkillBehaviorDto;
