@@ -1,5 +1,5 @@
 [package]
-name = "shaders"
+name = "graphics"
 version.workspace = true
 edition.workspace = true
 

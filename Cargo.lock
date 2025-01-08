@@ -2612,6 +2612,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "graphics"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "common",
+ "macros",
+ "mockall",
+]
+
+[[package]]
 name = "grid"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3971,6 +3981,7 @@ dependencies = [
  "enemy",
  "frame_limiter",
  "game_state",
+ "graphics",
  "interactions",
  "life_cycles",
  "light",
@@ -3983,7 +3994,6 @@ dependencies = [
  "prefabs",
  "serde",
  "serde_json",
- "shaders",
  "skills",
  "test-case",
  "tracing",
@@ -4393,16 +4403,6 @@ dependencies = [
  "memchr",
  "ryu",
  "serde",
-]
-
-[[package]]
-name = "shaders"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "common",
- "macros",
- "mockall",
 ]
 
 [[package]]

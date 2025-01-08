@@ -45,12 +45,12 @@ use traits::{
 	shadows_aware_material::ShadowsAwareMaterial,
 };
 
-pub struct ShadersPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>(
+pub struct GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>(
 	PhantomData<(TPrefabs, TLoading, TInteractions, TBehaviors)>,
 );
 
 impl<TPrefabs, TLoading, TInteractions, TBehaviors>
-	ShadersPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
+	GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
 where
 	TPrefabs: Plugin + RegisterPrefab,
 	TLoading: Plugin + HandlesLoadTracking,
@@ -116,7 +116,7 @@ where
 }
 
 impl<TPrefabs, TLoading, TInteractions, TBehaviors> Plugin
-	for ShadersPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
+	for GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
 where
 	TPrefabs: Plugin + RegisterPrefab,
 	TLoading: Plugin + HandlesLoadTracking,
