@@ -1,6 +1,6 @@
 use crate::{
 	components::cam_orbit::{CamOrbit, CamOrbitCenter},
-	traits::{Orbit, Vec2Radians},
+	traits::orbit::{Orbit, Vec2Radians},
 };
 use bevy::prelude::*;
 use common::traits::try_insert_on::TryInsertOn;

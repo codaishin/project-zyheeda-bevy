@@ -7,7 +7,6 @@ mod systems;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
-	components::MainCamera,
 	effects::deal_damage::DealDamage,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	traits::{
@@ -34,7 +33,6 @@ use common::{
 	},
 };
 use components::{
-	cam_orbit::CamOrbit,
 	ground_target::GroundTarget,
 	movement::{velocity_based::VelocityBased, Movement},
 	set_position_and_rotation::SetPositionAndRotation,
@@ -55,9 +53,6 @@ use systems::{
 	movement::{
 		animate_movement::AnimateMovement,
 		execute_move_update::ExecuteMovement,
-		move_on_orbit::move_on_orbit,
-		move_with_target::move_with_target,
-		set_camera_to_orbit_player::SetCameraToOrbit,
 		set_player_movement::SetPlayerMovement,
 		trigger_event::trigger_move_input_event,
 	},
@@ -125,13 +120,7 @@ where
 					.chain()
 					.run_if(in_state(GameState::Play)),
 			)
-			.add_systems(
-				Update,
-				(move_on_orbit::<CamOrbit>, move_with_target::<CamOrbit>)
-					.run_if(in_state(GameState::Play)),
-			)
 			.add_systems(Update, update_cool_downs::<Virtual>)
-			.add_systems(Update, MainCamera::set_camera_to_orbit::<TPlayers::TPlayer>)
 			.add_systems(
 				Update,
 				(

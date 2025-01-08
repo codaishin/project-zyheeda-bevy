@@ -10,7 +10,7 @@ use common::{
 	attributes::health::Health,
 	components::MainCamera,
 	effects::deal_damage::DealDamage,
-	states::mouse_context::MouseContext,
+	states::{game_state::GameState, mouse_context::MouseContext},
 	tools::slot_key::SlotKey,
 	traits::{
 		animation::RegisterAnimations,
@@ -29,6 +29,7 @@ use common::{
 	},
 };
 use components::{
+	cam_orbit::CamOrbit,
 	player::Player,
 	player_movement::PlayerMovement,
 	skill_animation::SkillAnimation,
@@ -36,7 +37,10 @@ use components::{
 use resources::{cam_ray::CamRay, mouse_hover::MouseHover};
 use std::marker::PhantomData;
 use systems::{
+	move_on_orbit::move_on_orbit,
+	move_with_target::move_with_target,
 	set_cam_ray::set_cam_ray,
+	set_camera_to_orbit_player::SetCameraToOrbit,
 	set_mouse_hover::set_mouse_hover,
 	toggle_walk_run::player_toggle_walk_run,
 };
@@ -97,6 +101,12 @@ where
 				)
 					.chain(),
 			)
+			.add_systems(
+				Update,
+				(move_on_orbit::<CamOrbit>, move_with_target::<CamOrbit>)
+					.run_if(in_state(GameState::Play)),
+			)
+			.add_systems(Update, MainCamera::set_camera_to_orbit::<Player>)
 			.add_systems(Update, player_toggle_walk_run);
 	}
 }
