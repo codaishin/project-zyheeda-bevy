@@ -5,8 +5,8 @@ use common::{
 	traits::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,
+		handles_assets_for_children::{ChildAssetComponent, ChildAssetDefinition, ChildName},
 		iteration::IterFinite,
-		register_assets_for_children::ContainsAssetIdsForChildren,
 		try_insert_on::TryInsertOn,
 	},
 };
@@ -22,8 +22,9 @@ pub(crate) trait DispatchAssetComponents {
 	where
 		Self: Component
 			+ Sized
-			+ ContainsAssetIdsForChildren<TMarker>
+			+ ChildAssetDefinition<TMarker>
 			+ GetAsset<TKey = Self::TChildKey, TAsset = Self::TChildAsset>,
+		Self::TChildAsset: ChildAssetComponent<TMarker>,
 		Self::TKey: IterFinite,
 		TMarker: Sync + Send + 'static,
 	{
@@ -40,8 +41,9 @@ where
 	TCommands: TryInsertOn,
 	TAssets: GetRef<Handle<TComponent::TChildAsset>, TComponent::TChildAsset> + Resource,
 	TComponent: Component
-		+ ContainsAssetIdsForChildren<TMarker>
+		+ ChildAssetDefinition<TMarker>
 		+ GetAsset<TKey = TComponent::TChildKey, TAsset = TComponent::TChildAsset>,
+	TComponent::TChildAsset: ChildAssetComponent<TMarker>,
 	TComponent::TChildKey: IterFinite,
 	TMarker: Sync + Send + 'static,
 	TFilter: QueryFilter,
@@ -51,8 +53,8 @@ where
 	for (container, visualize) in &components {
 		for key in TComponent::TChildKey::iterator() {
 			let asset = container.get_asset(&key, assets.as_ref());
-			let bundle = TComponent::asset_component(asset);
-			let result = dispatch(&mut commands, visualize, key, bundle);
+			let component = TComponent::TChildAsset::component(asset);
+			let result = dispatch(&mut commands, visualize, key, component);
 			let Err(error) = result else {
 				continue;
 			};
@@ -71,9 +73,9 @@ fn dispatch<TCommands, TComponent, TMarker>(
 ) -> Result<(), Error>
 where
 	TCommands: TryInsertOn,
-	TComponent: ContainsAssetIdsForChildren<TMarker>,
+	TComponent: ChildAssetDefinition<TMarker>,
 {
-	let key = TComponent::child_name(&key);
+	let key = key.child_name();
 	let entity = children_lookup
 		.entities
 		.get(&Name::from(key))
@@ -102,6 +104,7 @@ mod tests {
 		test_tools::utils::new_handle,
 		traits::{
 			get_asset::GetAsset,
+			handles_assets_for_children::ChildAssetComponent,
 			iteration::{Iter, IterFinite},
 			mock::Mock,
 			nested_mock::NestedMocks,
@@ -161,22 +164,27 @@ mod tests {
 
 	struct _Marker;
 
-	impl ContainsAssetIdsForChildren<_Marker> for _Component {
-		type TChildKey = _Key;
-		type TChildAsset = _Asset;
-		type TChildFilter = ();
-		type TChildBundle = _Visualize;
-
-		fn child_name(key: &Self::TChildKey) -> &'static str {
-			match key {
+	impl ChildName<_Marker> for _Key {
+		fn child_name(&self) -> &'static str {
+			match self {
 				_Key::A => "a",
 				_Key::B => "b",
 			}
 		}
+	}
 
-		fn asset_component(_: Option<&Self::TChildAsset>) -> Self::TChildBundle {
+	impl ChildAssetComponent<_Marker> for _Asset {
+		type TComponent = _Visualize;
+
+		fn component(_: Option<&Self>) -> Self::TComponent {
 			_Visualize
 		}
+	}
+
+	impl ChildAssetDefinition<_Marker> for _Component {
+		type TChildKey = _Key;
+		type TChildFilter = ();
+		type TChildAsset = _Asset;
 	}
 
 	#[derive(Component, Debug, PartialEq)]

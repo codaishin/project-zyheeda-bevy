@@ -18,12 +18,12 @@ use common::{
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	tools::slot_key::{Side, SlotKey},
 	traits::{
+		handles_assets_for_children::HandlesAssetsForChildren,
 		handles_effect::HandlesAllEffects,
 		handles_lifetime::HandlesLifetime,
 		handles_orientation::HandlesOrientation,
 		handles_player::{ConfiguresPlayerSkillAnimations, HandlesPlayer},
 		handles_skill_behaviors::HandlesSkillBehaviors,
-		register_assets_for_children::RegisterAssetsForChildren,
 		register_custom_assets::{RegisterCustomAssets, RegisterCustomFolderAssets},
 		try_insert_on::TryInsertOn,
 	},
@@ -81,7 +81,7 @@ impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, 
 where
 	TLifeCycles: Plugin + HandlesLifetime,
 	TInteractions: Plugin + HandlesAllEffects,
-	TDispatchChildrenAssets: Plugin + RegisterAssetsForChildren,
+	TDispatchChildrenAssets: Plugin + HandlesAssetsForChildren,
 	TLoading: Plugin + RegisterCustomAssets + RegisterCustomFolderAssets,
 	TBehaviors: Plugin + HandlesSkillBehaviors + HandlesOrientation,
 	TPlayers: Plugin + HandlesPlayer + ConfiguresPlayerSkillAnimations,
@@ -106,9 +106,9 @@ where
 	}
 
 	fn skill_slot_load(&self, app: &mut App) {
-		TDispatchChildrenAssets::register_assets_for_children::<Slots, HandItemSlots>(app);
-		TDispatchChildrenAssets::register_assets_for_children::<Slots, ForearmItemSlots>(app);
-		TDispatchChildrenAssets::register_assets_for_children::<Slots, SubMeshEssenceSlots>(app);
+		TDispatchChildrenAssets::register_child_asset::<Slots, HandItemSlots>(app);
+		TDispatchChildrenAssets::register_child_asset::<Slots, ForearmItemSlots>(app);
+		TDispatchChildrenAssets::register_child_asset::<Slots, SubMeshEssenceSlots>(app);
 
 		app.add_systems(
 			PreUpdate,
@@ -231,7 +231,7 @@ impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, 
 where
 	TLifeCycles: Plugin + HandlesLifetime,
 	TInteractions: Plugin + HandlesAllEffects,
-	TDispatchChildrenAssets: Plugin + RegisterAssetsForChildren,
+	TDispatchChildrenAssets: Plugin + HandlesAssetsForChildren,
 	TLoading: Plugin + RegisterCustomAssets + RegisterCustomFolderAssets,
 	TBehaviors: Plugin + HandlesSkillBehaviors + HandlesOrientation,
 	TPlayers: Plugin + HandlesPlayer + ConfiguresPlayerSkillAnimations,
