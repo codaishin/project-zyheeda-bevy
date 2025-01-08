@@ -8,7 +8,6 @@ use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContext;
 use common::{
 	attributes::health::Health,
-	components::MainCamera,
 	effects::deal_damage::DealDamage,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	tools::slot_key::SlotKey,
@@ -30,6 +29,7 @@ use common::{
 };
 use components::{
 	cam_orbit::CamOrbit,
+	main_camera::MainCamera,
 	player::Player,
 	player_movement::PlayerMovement,
 	skill_animation::SkillAnimation,
@@ -42,6 +42,7 @@ use systems::{
 	set_cam_ray::set_cam_ray,
 	set_camera_to_orbit_player::SetCameraToOrbit,
 	set_mouse_hover::set_mouse_hover,
+	spawn_camera::spawn_camera,
 	toggle_walk_run::player_toggle_walk_run,
 };
 
@@ -89,6 +90,7 @@ where
 
 		app.init_state::<MouseContext>()
 			.init_resource::<CamRay>()
+			.add_systems(PostStartup, spawn_camera)
 			.add_systems(
 				Update,
 				SkillAnimation::system::<TAnimation::TAnimationDispatch>,
