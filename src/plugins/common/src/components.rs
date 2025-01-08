@@ -58,9 +58,6 @@ impl<T> OwnedBy<T> {
 	}
 }
 
-#[derive(Component)]
-pub struct MainCamera;
-
 #[derive(Component, Debug, PartialEq, Clone)]
 pub struct NoTarget;
 

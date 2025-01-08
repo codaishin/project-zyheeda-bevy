@@ -36,8 +36,7 @@ map_generation = { path = "src/plugins/map_generation" }
 menu = { path = "src/plugins/menu" }
 player = { path = "src/plugins/player" }
 prefabs = { path = "src/plugins/prefabs" }
-rendering = { path = "src/plugins/rendering" }
-shaders = { path = "src/plugins/shaders" }
+graphics = { path = "src/plugins/graphics" }
 skills = { path = "src/plugins/skills" }
 
 [profile.test]
@@ -85,8 +84,7 @@ map_generation.workspace = true
 menu.workspace = true
 player.workspace = true
 prefabs.workspace = true
-rendering.workspace = true
-shaders.workspace = true
+graphics.workspace = true
 skills.workspace = true
 
 [dev-dependencies]

@@ -1,9 +1,28 @@
-use super::accessors::get::{Getter, GetterRefOptional};
-use crate::tools::{movement_animation::MovementAnimation, slot_key::SlotKey, speed::Speed};
-use bevy::prelude::Component;
+use super::{
+	accessors::get::{Getter, GetterRefOptional},
+	intersect_at::IntersectAt,
+};
+use crate::tools::{
+	collider_info::ColliderInfo,
+	movement_animation::MovementAnimation,
+	slot_key::SlotKey,
+	speed::Speed,
+};
+use bevy::{
+	math::Ray3d,
+	prelude::{Component, Entity, Resource},
+};
 
 pub trait HandlesPlayer {
 	type TPlayer: Component;
+}
+
+pub trait HandlesPlayerCam {
+	type TCamRay: Resource + GetterRefOptional<Ray3d> + IntersectAt;
+}
+
+pub trait HandlesPlayerMouse {
+	type TMouseHover: Resource + GetterRefOptional<ColliderInfo<Entity>>;
 }
 
 pub trait ConfiguresPlayerMovement {

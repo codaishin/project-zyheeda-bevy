@@ -8,17 +8,24 @@ use bevy::{
 };
 use common::{
 	components::{ColliderRoot, Immobilized},
-	resources::MouseHover,
-	traits::{handles_orientation::Face, intersect_at::IntersectAt},
+	tools::collider_info::ColliderInfo,
+	traits::{
+		accessors::get::GetterRefOptional,
+		handles_orientation::Face,
+		intersect_at::IntersectAt,
+	},
 };
 
-pub(crate) fn execute_face<TCursor: IntersectAt + Resource>(
+pub(crate) fn execute_face<TMouseHover, TCursor>(
 	faces: In<Vec<(Entity, Face)>>,
 	mut transforms: Query<(Entity, &mut Transform, Option<&Immobilized>)>,
 	roots: Query<&ColliderRoot>,
 	cursor: Res<TCursor>,
-	hover: Res<MouseHover>,
-) {
+	hover: Res<TMouseHover>,
+) where
+	TMouseHover: Resource + GetterRefOptional<ColliderInfo<Entity>>,
+	TCursor: IntersectAt + Resource,
+{
 	let Some(target) = get_cursor_target(&transforms, &cursor, &hover) else {
 		return;
 	};
@@ -62,12 +69,16 @@ fn get_face_targets(
 		.collect()
 }
 
-fn get_cursor_target<TCursor: IntersectAt + Resource>(
+fn get_cursor_target<TMouseHover, TCursor>(
 	transforms: &Query<(Entity, &mut Transform, Option<&Immobilized>)>,
 	cursor: &Res<TCursor>,
-	hover: &Res<MouseHover>,
-) -> Option<(Option<Entity>, Vec3)> {
-	let Some(collider_info) = &hover.0 else {
+	hover: &Res<TMouseHover>,
+) -> Option<(Option<Entity>, Vec3)>
+where
+	TMouseHover: Resource + GetterRefOptional<ColliderInfo<Entity>>,
+	TCursor: IntersectAt + Resource,
+{
+	let Some(collider_info) = hover.get() else {
 		return cursor.intersect_at(0.).map(|t| (None, t));
 	};
 
@@ -97,7 +108,6 @@ mod tests {
 	};
 	use common::{
 		components::{ColliderRoot, Immobilized},
-		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
 		traits::nested_mock::NestedMocks,
 	};
@@ -109,9 +119,6 @@ mod tests {
 		mock: Mock_Cursor,
 	}
 
-	#[derive(Component)]
-	struct _Face(Face);
-
 	#[automock]
 	impl IntersectAt for _Cursor {
 		fn intersect_at(&self, height: f32) -> Option<Vec3> {
@@ -119,15 +126,30 @@ mod tests {
 		}
 	}
 
+	#[derive(Resource, Default)]
+	struct _MouseHover(Option<ColliderInfo<Entity>>);
+
+	impl GetterRefOptional<ColliderInfo<Entity>> for _MouseHover {
+		fn get(&self) -> Option<&ColliderInfo<Entity>> {
+			self.0.as_ref()
+		}
+	}
+
+	#[derive(Component)]
+	struct _Face(Face);
+
 	fn read_faces(query: Query<(Entity, &_Face)>) -> Vec<(Entity, Face)> {
 		query.iter().map(|(id, face)| (id, face.0)).collect()
 	}
 
 	fn setup(cursor: _Cursor) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, read_faces.pipe(execute_face::<_Cursor>));
+		app.add_systems(
+			Update,
+			read_faces.pipe(execute_face::<_MouseHover, _Cursor>),
+		);
 		app.insert_resource(cursor);
-		app.init_resource::<MouseHover>();
+		app.init_resource::<_MouseHover>();
 
 		app
 	}
@@ -199,7 +221,7 @@ mod tests {
 			.spawn(Transform::from_xyz(10., 11., 12.))
 			.id();
 		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
-		app.insert_resource(MouseHover(Some(ColliderInfo {
+		app.insert_resource(_MouseHover(Some(ColliderInfo {
 			collider,
 			root: Some(root),
 		})));
@@ -228,7 +250,7 @@ mod tests {
 			))
 			.id();
 		let collider = app.world_mut().spawn(ColliderRoot(agent)).id();
-		app.insert_resource(MouseHover(Some(ColliderInfo {
+		app.insert_resource(_MouseHover(Some(ColliderInfo {
 			collider,
 			root: Some(agent),
 		})));
@@ -257,7 +279,7 @@ mod tests {
 			.world_mut()
 			.spawn(Transform::from_xyz(10., 11., 12.))
 			.id();
-		app.insert_resource(MouseHover(Some(ColliderInfo {
+		app.insert_resource(_MouseHover(Some(ColliderInfo {
 			collider,
 			root: None,
 		})));
@@ -285,7 +307,7 @@ mod tests {
 				_Face(Face::Cursor),
 			))
 			.id();
-		app.insert_resource(MouseHover(Some(ColliderInfo {
+		app.insert_resource(_MouseHover(Some(ColliderInfo {
 			collider: agent,
 			root: None,
 		})));
@@ -420,7 +442,7 @@ mod tests {
 			.world_mut()
 			.spawn((Transform::from_xyz(10., 11., 12.), Immobilized))
 			.id();
-		app.insert_resource(MouseHover(Some(ColliderInfo {
+		app.insert_resource(_MouseHover(Some(ColliderInfo {
 			collider,
 			root: None,
 		})));

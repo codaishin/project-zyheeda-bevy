@@ -1,11 +1,7 @@
 mod systems;
 
-use bevy::{
-	core_pipeline::{bloom::Bloom, tonemapping::Tonemapping},
-	prelude::*,
-};
+use bevy::prelude::*;
 use common::{
-	components::MainCamera,
 	states::{game_state::GameState, transition_to_state},
 	traits::{
 		handles_game_states::HandlesGameStates,
@@ -39,24 +35,10 @@ where
 		TLoading::begin_loading_on(app, loading).when_done_set(play);
 
 		app.insert_state(start_menu)
-			.add_systems(PostStartup, spawn_camera)
 			.add_systems(OnEnter(new_game), transition_to_state(loading))
 			.add_systems(OnEnter(play), pause_virtual_time::<false>)
 			.add_systems(OnExit(play), pause_virtual_time::<true>);
 	}
-}
-
-fn spawn_camera(mut commands: Commands) {
-	commands.spawn((
-		MainCamera,
-		Camera3d::default(),
-		Camera {
-			hdr: true,
-			..default()
-		},
-		Tonemapping::TonyMcMapface,
-		Bloom::default(),
-	));
 }
 
 impl<TLoading> HandlesGameStates for GameStatePlugin<TLoading> {

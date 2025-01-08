@@ -139,9 +139,8 @@ mod tests {
 	use crate::{behaviors::spawn_on::SpawnOn, components::skill_spawners::SkillSpawners};
 	use common::{
 		components::Outdated,
-		resources::ColliderInfo,
 		simple_init,
-		tools::slot_key::Side,
+		tools::{collider_info::ColliderInfo, slot_key::Side},
 		traits::{
 			handles_effect::HandlesEffect,
 			handles_skill_behaviors::{Integrity, Motion, ProjectionOffset, Shape},

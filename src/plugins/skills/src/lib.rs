@@ -23,7 +23,12 @@ use common::{
 		handles_effect::HandlesAllEffects,
 		handles_lifetime::HandlesLifetime,
 		handles_orientation::HandlesOrientation,
-		handles_player::{ConfiguresPlayerSkillAnimations, HandlesPlayer},
+		handles_player::{
+			ConfiguresPlayerSkillAnimations,
+			HandlesPlayer,
+			HandlesPlayerCam,
+			HandlesPlayerMouse,
+		},
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		try_insert_on::TryInsertOn,
 	},
@@ -84,7 +89,11 @@ where
 	TDispatchChildrenAssets: Plugin + HandlesAssetsForChildren,
 	TLoading: Plugin + HandlesCustomAssets + HandlesCustomFolderAssets,
 	TBehaviors: Plugin + HandlesSkillBehaviors + HandlesOrientation,
-	TPlayers: Plugin + HandlesPlayer + ConfiguresPlayerSkillAnimations,
+	TPlayers: Plugin
+		+ HandlesPlayer
+		+ HandlesPlayerCam
+		+ HandlesPlayerMouse
+		+ ConfiguresPlayerSkillAnimations,
 {
 	pub fn depends_on(
 		_: &TLifeCycles,
@@ -131,6 +140,7 @@ where
 			TLifeCycles,
 			TInteractions,
 			TBehaviors,
+			TPlayers,
 		>;
 
 		app.init_resource::<KeyMap<SlotKey, KeyCode>>()
@@ -234,7 +244,11 @@ where
 	TDispatchChildrenAssets: Plugin + HandlesAssetsForChildren,
 	TLoading: Plugin + HandlesCustomAssets + HandlesCustomFolderAssets,
 	TBehaviors: Plugin + HandlesSkillBehaviors + HandlesOrientation,
-	TPlayers: Plugin + HandlesPlayer + ConfiguresPlayerSkillAnimations,
+	TPlayers: Plugin
+		+ HandlesPlayer
+		+ HandlesPlayerCam
+		+ HandlesPlayerMouse
+		+ ConfiguresPlayerSkillAnimations,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);

@@ -1,4 +1,7 @@
-use crate::traits::{MoveTogether, Orbit, Vec2Radians};
+use crate::traits::{
+	move_together::MoveTogether,
+	orbit::{Orbit, Vec2Radians},
+};
 use bevy::prelude::*;
 
 #[derive(Component)]

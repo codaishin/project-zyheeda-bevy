@@ -1,4 +1,4 @@
-use crate::traits::Orbit;
+use crate::traits::orbit::Orbit;
 use bevy::{input::mouse::MouseMotion, prelude::*};
 
 pub(crate) fn move_on_orbit<TOrbitComponent: Orbit + Component>(
@@ -22,7 +22,7 @@ pub(crate) fn move_on_orbit<TOrbitComponent: Orbit + Component>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::{Orbit, Vec2Radians};
+	use crate::traits::orbit::Vec2Radians;
 	use bevy::{ecs::event::Events, input::mouse::MouseMotion};
 	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;

@@ -1,4 +1,4 @@
-use crate::traits::MoveTogether;
+use crate::traits::move_together::MoveTogether;
 use bevy::prelude::*;
 
 pub(crate) fn move_with_target<TFollow: MoveTogether + Component>(

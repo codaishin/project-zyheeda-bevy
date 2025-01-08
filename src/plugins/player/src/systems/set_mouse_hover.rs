@@ -1,8 +1,6 @@
-use crate::{
-	components::{ColliderRoot, NoTarget},
-	resources::{CamRay, ColliderInfo, MouseHover},
-	traits::cast_ray::{CastRay, TimeOfImpact},
-};
+use std::ops::Deref;
+
+use crate::resources::{cam_ray::CamRay, mouse_hover::MouseHover};
 use bevy::{
 	ecs::{
 		entity::Entity,
@@ -11,6 +9,11 @@ use bevy::{
 	},
 	math::Ray3d,
 	prelude::Component,
+};
+use common::{
+	components::{ColliderRoot, NoTarget},
+	tools::collider_info::ColliderInfo,
+	traits::cast_ray::{CastRay, TimeOfImpact},
 };
 
 pub(crate) fn set_mouse_hover<TCastRay: CastRay<Ray3d> + Component>(
@@ -50,23 +53,28 @@ fn ray_cast<TCastRay: CastRay<Ray3d>>(
 	cam_ray: Option<Res<CamRay>>,
 	ray_caster: &TCastRay,
 ) -> Option<(Entity, TimeOfImpact)> {
-	ray_caster.cast_ray(&cam_ray?.0?)
+	let &CamRay(Some(cam_ray)) = cam_ray?.deref() else {
+		return None;
+	};
+	ray_caster.cast_ray(&cam_ray)
 }
 
 fn get_root(entity: Entity, roots: Query<&ColliderRoot>) -> Option<Entity> {
-	roots.get(entity).map(|r| r.0).ok()
+	roots.get(entity).map(|ColliderRoot(r)| *r).ok()
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::NoTarget, traits::cast_ray::TimeOfImpact};
 	use bevy::{
 		app::{App, Update},
 		ecs::entity::Entity,
 		math::{Ray3d, Vec3},
 	};
-	use common::traits::nested_mock::NestedMocks;
+	use common::{
+		components::NoTarget,
+		traits::{cast_ray::TimeOfImpact, nested_mock::NestedMocks},
+	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 

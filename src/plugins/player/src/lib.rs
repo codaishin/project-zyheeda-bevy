@@ -1,11 +1,15 @@
 pub mod components;
 
+mod resources;
 mod systems;
+mod traits;
 
 use bevy::prelude::*;
+use bevy_rapier3d::plugin::RapierContext;
 use common::{
 	attributes::health::Health,
 	effects::deal_damage::DealDamage,
+	states::{game_state::GameState, mouse_context::MouseContext},
 	tools::slot_key::SlotKey,
 	traits::{
 		animation::RegisterAnimations,
@@ -17,17 +21,30 @@ use common::{
 			ConfiguresPlayerMovement,
 			ConfiguresPlayerSkillAnimations,
 			HandlesPlayer,
+			HandlesPlayerCam,
+			HandlesPlayerMouse,
 		},
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 	},
 };
 use components::{
+	cam_orbit::CamOrbit,
+	main_camera::MainCamera,
 	player::Player,
 	player_movement::PlayerMovement,
 	skill_animation::SkillAnimation,
 };
+use resources::{cam_ray::CamRay, mouse_hover::MouseHover};
 use std::marker::PhantomData;
-use systems::toggle_walk_run::player_toggle_walk_run;
+use systems::{
+	move_on_orbit::move_on_orbit,
+	move_with_target::move_with_target,
+	set_cam_ray::set_cam_ray,
+	set_camera_to_orbit_player::SetCameraToOrbit,
+	set_mouse_hover::set_mouse_hover,
+	spawn_camera::spawn_camera,
+	toggle_walk_run::player_toggle_walk_run,
+};
 
 pub struct PlayerPlugin<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>(
 	PhantomData<(
@@ -71,10 +88,28 @@ where
 		TPrefabs::with_dependency::<(TInteractions, TLights, TBars)>()
 			.register_prefab::<Player>(app);
 
-		app.add_systems(Update, player_toggle_walk_run).add_systems(
-			Update,
-			SkillAnimation::system::<TAnimation::TAnimationDispatch>,
-		);
+		app.init_state::<MouseContext>()
+			.init_resource::<CamRay>()
+			.add_systems(PostStartup, spawn_camera)
+			.add_systems(
+				Update,
+				SkillAnimation::system::<TAnimation::TAnimationDispatch>,
+			)
+			.add_systems(
+				First,
+				(
+					set_cam_ray::<Camera, MainCamera>,
+					set_mouse_hover::<RapierContext>,
+				)
+					.chain(),
+			)
+			.add_systems(
+				Update,
+				(move_on_orbit::<CamOrbit>, move_with_target::<CamOrbit>)
+					.run_if(in_state(GameState::Play)),
+			)
+			.add_systems(Update, MainCamera::set_camera_to_orbit::<Player>)
+			.add_systems(Update, player_toggle_walk_run);
 	}
 }
 
@@ -82,6 +117,18 @@ impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars> HandlesPl
 	for PlayerPlugin<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
 {
 	type TPlayer = Player;
+}
+
+impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars> HandlesPlayerCam
+	for PlayerPlugin<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
+{
+	type TCamRay = CamRay;
+}
+
+impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars> HandlesPlayerMouse
+	for PlayerPlugin<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
+{
+	type TMouseHover = MouseHover;
 }
 
 impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars> ConfiguresPlayerMovement

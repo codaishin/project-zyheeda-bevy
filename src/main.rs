@@ -8,6 +8,7 @@ use common::CommonPlugin;
 use enemy::EnemyPlugin;
 use frame_limiter::FrameLimiterPlugin;
 use game_state::GameStatePlugin;
+use graphics::GraphicsPlugin;
 use interactions::InteractionsPlugin;
 use life_cycles::LifeCyclesPlugin;
 use light::LightPlugin;
@@ -16,8 +17,6 @@ use map_generation::MapGenerationPlugin;
 use menu::MenuPlugin;
 use player::PlayerPlugin;
 use prefabs::PrefabsPlugin;
-use rendering::RenderingPlugin;
-use shaders::ShadersPlugin;
 use skills::SkillsPlugin;
 
 fn main() -> AppExit {
@@ -74,9 +73,12 @@ fn prepare_game(app: &mut App) {
 		&behaviors_plugin,
 		&player_plugin,
 	);
-	let shaders_plugin =
-		ShadersPlugin::depends_on(&prefabs_plugin, &interactions_plugin, &behaviors_plugin);
-	let rendering_plugin = RenderingPlugin::depends_on(&loading_plugin);
+	let graphics_plugin = GraphicsPlugin::depends_on(
+		&prefabs_plugin,
+		&loading_plugin,
+		&interactions_plugin,
+		&behaviors_plugin,
+	);
 	let menu_plugin = MenuPlugin::depends_on(&loading_plugin, &player_plugin);
 
 	app.add_plugins(DefaultPlugins)
@@ -84,7 +86,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(CommonPlugin)
 		.add_plugins(life_cycles_plugin)
 		.add_plugins(prefabs_plugin)
-		.add_plugins(shaders_plugin)
+		.add_plugins(graphics_plugin)
 		.add_plugins(interactions_plugin)
 		.add_plugins(children_assets_dispatch_plugin)
 		.add_plugins(bars_plugin)
@@ -92,7 +94,6 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(light_plugin)
 		.add_plugins(player_plugin)
 		.add_plugins(enemy_plugin)
-		.add_plugins(rendering_plugin)
 		.add_plugins(loading_plugin)
 		.add_plugins(map_generation_plugin)
 		.add_plugins(menu_plugin)

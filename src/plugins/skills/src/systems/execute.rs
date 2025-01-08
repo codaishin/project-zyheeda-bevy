@@ -7,10 +7,12 @@ use bevy::prelude::*;
 use common::{
 	effects::deal_damage::DealDamage,
 	errors::Error,
-	resources::{CamRay, MouseHover},
+	tools::collider_info::ColliderInfo,
 	traits::{
+		accessors::get::GetterRefOptional,
 		handles_effect::HandlesEffect,
 		handles_lifetime::HandlesLifetime,
+		handles_player::{HandlesPlayerCam, HandlesPlayerMouse},
 		handles_skill_behaviors::HandlesSkillBehaviors,
 	},
 };
@@ -18,9 +20,9 @@ use common::{
 impl<T> ExecuteSkills for T {}
 
 pub(crate) trait ExecuteSkills {
-	fn execute_system<TLifetimes, TEffects, TSkillBehaviors>(
-		cam_ray: Res<CamRay>,
-		mouse_hover: Res<MouseHover>,
+	fn execute_system<TLifetimes, TEffects, TSkillBehaviors, TPlayers>(
+		cam_ray: Res<TPlayers::TCamRay>,
+		mouse_hover: Res<TPlayers::TMouseHover>,
 		mut commands: Commands,
 		mut agents: Query<(Entity, &mut Self, &SkillSpawners), Changed<Self>>,
 		transforms: Query<&GlobalTransform>,
@@ -34,6 +36,7 @@ pub(crate) trait ExecuteSkills {
 		TLifetimes: HandlesLifetime,
 		TEffects: HandlesEffect<DealDamage>,
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
+		TPlayers: HandlesPlayerCam + HandlesPlayerMouse,
 	{
 		agents
 			.iter_mut()
@@ -63,18 +66,21 @@ where
 	}
 }
 
-fn get_target(
-	cam_ray: &Res<CamRay>,
-	mouse_hover: &Res<MouseHover>,
+fn get_target<TCamRay, TMouseHover>(
+	cam_ray: &Res<TCamRay>,
+	mouse_hover: &Res<TMouseHover>,
 	transforms: &Query<&GlobalTransform>,
-) -> Option<SkillTarget> {
+) -> Option<SkillTarget>
+where
+	TCamRay: Resource + GetterRefOptional<Ray3d>,
+	TMouseHover: Resource + GetterRefOptional<ColliderInfo<Entity>>,
+{
 	let get_transform = |entity| transforms.get(entity).ok().cloned();
 
 	Some(SkillTarget {
-		ray: cam_ray.0?,
+		ray: cam_ray.get().cloned()?,
 		collision_info: mouse_hover
-			.0
-			.as_ref()
+			.get()
 			.and_then(|collider_info| collider_info.with_component(get_transform)),
 	})
 }
@@ -87,17 +93,54 @@ mod tests {
 	use common::{
 		components::Outdated,
 		errors::Level,
-		resources::ColliderInfo,
 		test_tools::utils::SingleThreadedApp,
-		tools::slot_key::{Side, SlotKey},
+		tools::{
+			collider_info::ColliderInfo,
+			slot_key::{Side, SlotKey},
+		},
 		traits::{
 			handles_skill_behaviors::{Integrity, Motion, ProjectionOffset, Shape},
+			intersect_at::IntersectAt,
 			nested_mock::NestedMocks,
 		},
 	};
 	use macros::NestedMocks;
 	use mockall::mock;
 	use std::{ops::DerefMut, time::Duration};
+
+	struct _Players;
+
+	impl HandlesPlayerCam for _Players {
+		type TCamRay = _CamRay;
+	}
+
+	impl HandlesPlayerMouse for _Players {
+		type TMouseHover = _MouseHover;
+	}
+
+	#[derive(Resource, Default)]
+	pub struct _CamRay(Option<Ray3d>);
+
+	impl GetterRefOptional<Ray3d> for _CamRay {
+		fn get(&self) -> Option<&Ray3d> {
+			self.0.as_ref()
+		}
+	}
+
+	impl IntersectAt for _CamRay {
+		fn intersect_at(&self, _: f32) -> Option<Vec3> {
+			panic!("should not be called")
+		}
+	}
+
+	#[derive(Resource, Default)]
+	pub struct _MouseHover(Option<ColliderInfo<Entity>>);
+
+	impl GetterRefOptional<ColliderInfo<Entity>> for _MouseHover {
+		fn get(&self) -> Option<&ColliderInfo<Entity>> {
+			self.0.as_ref()
+		}
+	}
 
 	#[derive(Clone, Copy)]
 	pub struct _Error(&'static str);
@@ -201,14 +244,14 @@ mod tests {
 			Vec3::new(1., 2., 3.),
 			Dir3::new_unchecked(Vec3::new(4., 5., 6.).normalize()),
 		);
-		app.world_mut().resource_mut::<CamRay>().0 = Some(cam_ray);
+		app.world_mut().resource_mut::<_CamRay>().0 = Some(cam_ray);
 
 		let collider_transform = GlobalTransform::from_xyz(10., 10., 10.);
 		let collider = app.world_mut().spawn(collider_transform).id();
 		let root_transform = GlobalTransform::from_xyz(11., 11., 11.);
 		let root = app.world_mut().spawn(root_transform).id();
 
-		app.world_mut().resource_mut::<MouseHover>().0 = Some(ColliderInfo {
+		app.world_mut().resource_mut::<_MouseHover>().0 = Some(ColliderInfo {
 			collider,
 			root: Some(root),
 		});
@@ -229,12 +272,16 @@ mod tests {
 	}
 
 	fn setup() -> App {
-		let execute_system =
-			_Executor::execute_system::<_HandlesLife, _HandlesEffects, _HandlesSkillBehaviors>;
+		let execute_system = _Executor::execute_system::<
+			_HandlesLife,
+			_HandlesEffects,
+			_HandlesSkillBehaviors,
+			_Players,
+		>;
 
 		let mut app = App::new().single_threaded(Update);
-		app.init_resource::<CamRay>();
-		app.init_resource::<MouseHover>();
+		app.init_resource::<_CamRay>();
+		app.init_resource::<_MouseHover>();
 		app.add_systems(
 			Update,
 			execute_system.pipe(|_: In<Vec<Result<(), Error>>>| {}),
@@ -349,7 +396,12 @@ mod tests {
 		app.update();
 
 		let errors = app.world_mut().run_system_once(
-			_Executor::execute_system::<_HandlesLife, _HandlesEffects, _HandlesSkillBehaviors>,
+			_Executor::execute_system::<
+				_HandlesLife,
+				_HandlesEffects,
+				_HandlesSkillBehaviors,
+				_Players,
+			>,
 		)?;
 
 		assert_eq!(
