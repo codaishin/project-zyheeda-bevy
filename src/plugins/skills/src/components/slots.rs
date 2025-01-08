@@ -7,7 +7,7 @@ use common::{
 	traits::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,
-		register_assets_for_children::ContainsAssetIdsForChildren,
+		handles_assets_for_children::{ChildAssetComponent, ChildAssetDefinition, ChildName},
 	},
 };
 use std::{collections::HashMap, fmt::Debug};
@@ -52,22 +52,21 @@ impl GetAsset for Slots {
 
 pub(crate) struct HandItemSlots;
 
-impl ContainsAssetIdsForChildren<HandItemSlots> for Slots {
-	type TChildKey = SlotKey;
-	type TChildFilter = ();
-	type TChildAsset = Item;
-	type TChildBundle = AssetModel;
-
-	fn child_name(key: &Self::TChildKey) -> &'static str {
-		match key {
+impl ChildName<HandItemSlots> for SlotKey {
+	fn child_name(&self) -> &'static str {
+		match self {
 			SlotKey::TopHand(Side::Left) => "top_hand_slot.L",
 			SlotKey::TopHand(Side::Right) => "top_hand_slot.R",
 			SlotKey::BottomHand(Side::Left) => "bottom_hand_slot.L",
 			SlotKey::BottomHand(Side::Right) => "bottom_hand_slot.R",
 		}
 	}
+}
 
-	fn asset_component(item: Option<&Self::TChildAsset>) -> Self::TChildBundle {
+impl ChildAssetComponent<HandItemSlots> for Item {
+	type TComponent = AssetModel;
+
+	fn component(item: Option<&Self>) -> Self::TComponent {
 		match item {
 			Some(Item {
 				model: ModelRender::Hand(asset_model),
@@ -78,24 +77,29 @@ impl ContainsAssetIdsForChildren<HandItemSlots> for Slots {
 	}
 }
 
-pub(crate) struct ForearmItemSlots;
-
-impl ContainsAssetIdsForChildren<ForearmItemSlots> for Slots {
+impl ChildAssetDefinition<HandItemSlots> for Slots {
 	type TChildKey = SlotKey;
 	type TChildFilter = ();
 	type TChildAsset = Item;
-	type TChildBundle = AssetModel;
+}
 
-	fn child_name(key: &Self::TChildKey) -> &'static str {
-		match key {
+pub(crate) struct ForearmItemSlots;
+
+impl ChildName<ForearmItemSlots> for SlotKey {
+	fn child_name(&self) -> &'static str {
+		match self {
 			SlotKey::TopHand(Side::Left) => "top_forearm.L",
 			SlotKey::TopHand(Side::Right) => "top_forearm.R",
 			SlotKey::BottomHand(Side::Left) => "bottom_forearm.L",
 			SlotKey::BottomHand(Side::Right) => "bottom_forearm.R",
 		}
 	}
+}
 
-	fn asset_component(item: Option<&Self::TChildAsset>) -> Self::TChildBundle {
+impl ChildAssetComponent<ForearmItemSlots> for Item {
+	type TComponent = AssetModel;
+
+	fn component(item: Option<&Self>) -> Self::TComponent {
 		match item {
 			Some(Item {
 				model: ModelRender::Forearm(asset_model),
@@ -106,29 +110,40 @@ impl ContainsAssetIdsForChildren<ForearmItemSlots> for Slots {
 	}
 }
 
+impl ChildAssetDefinition<ForearmItemSlots> for Slots {
+	type TChildKey = SlotKey;
+	type TChildFilter = ();
+	type TChildAsset = Item;
+}
+
 pub(crate) struct SubMeshEssenceSlots;
 
-impl ContainsAssetIdsForChildren<SubMeshEssenceSlots> for Slots {
-	type TChildKey = SlotKey;
-	type TChildFilter = With<Mesh3d>;
-	type TChildAsset = Item;
-	type TChildBundle = Essence;
-
-	fn child_name(key: &Self::TChildKey) -> &'static str {
-		match key {
+impl ChildName<SubMeshEssenceSlots> for SlotKey {
+	fn child_name(&self) -> &'static str {
+		match self {
 			SlotKey::TopHand(Side::Left) => "ArmTopLeftModel",
 			SlotKey::TopHand(Side::Right) => "ArmTopRightModel",
 			SlotKey::BottomHand(Side::Left) => "ArmBottomLeftModel",
 			SlotKey::BottomHand(Side::Right) => "ArmBottomRightModel",
 		}
 	}
+}
 
-	fn asset_component(item: Option<&Self::TChildAsset>) -> Self::TChildBundle {
+impl ChildAssetComponent<SubMeshEssenceSlots> for Item {
+	type TComponent = Essence;
+
+	fn component(item: Option<&Self>) -> Self::TComponent {
 		match item {
 			Some(Item { essence, .. }) => *essence,
 			_ => Essence::None,
 		}
 	}
+}
+
+impl ChildAssetDefinition<SubMeshEssenceSlots> for Slots {
+	type TChildKey = SlotKey;
+	type TChildFilter = With<Mesh3d>;
+	type TChildAsset = Item;
 }
 
 #[cfg(test)]

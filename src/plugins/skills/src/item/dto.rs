@@ -4,8 +4,8 @@ use bevy::reflect::TypePath;
 use common::{
 	components::essence::Essence,
 	traits::{
+		handles_custom_assets::{AssetFileExtensions, LoadFrom},
 		load_asset::LoadAsset,
-		register_custom_assets::{AssetFileExtensions, LoadFrom},
 	},
 };
 use serde::{Deserialize, Serialize};

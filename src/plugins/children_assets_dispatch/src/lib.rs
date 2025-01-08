@@ -12,9 +12,8 @@ use common::{
 	},
 	traits::{
 		get_asset::GetAsset,
+		handles_assets_for_children::{ChildAssetDefinition, HandlesAssetsForChildren},
 		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, InApp},
-		iteration::IterFinite,
-		register_assets_for_children::{ContainsAssetIdsForChildren, RegisterAssetsForChildren},
 	},
 };
 use components::children_lookup::ChildrenLookup;
@@ -38,34 +37,33 @@ where
 	fn build(&self, _: &mut App) {}
 }
 
-impl<TLoading> RegisterAssetsForChildren for ChildrenAssetsDispatchPlugin<TLoading>
+impl<TLoading> HandlesAssetsForChildren for ChildrenAssetsDispatchPlugin<TLoading>
 where
 	TLoading: Plugin + HandlesLoadTracking,
 {
-	fn register_assets_for_children<TParent, T>(app: &mut App)
+	fn register_child_asset<TParent, TMarker>(app: &mut App)
 	where
 		TParent: Component
-			+ ContainsAssetIdsForChildren<T>
+			+ ChildAssetDefinition<TMarker>
 			+ GetAsset<TKey = TParent::TChildKey, TAsset = TParent::TChildAsset>,
-		TParent::TChildKey: IterFinite,
-		T: Sync + Send + 'static,
+		TMarker: Sync + Send + 'static,
 	{
-		let on_prefab_instantiation = Labels::PREFAB_INSTANTIATION.label();
-		let all_children_present = ChildrenLookup::<TParent, T>::entities_loaded;
-		let insert_children_lookup = InsertOn::<TParent>::associated::<ChildrenLookup<TParent, T>>;
+		let all_children_present = ChildrenLookup::<TParent, TMarker>::entities_loaded;
+		let dispatch_asset_components =
+			TParent::dispatch_asset_components::<TMarker>.pipe(log_many);
+		let insert_children_lookup =
+			InsertOn::<TParent>::associated::<ChildrenLookup<TParent, TMarker>>;
 		let store_children_in_lookup =
-			ChildrenLookup::<TParent, T>::track_in_self_and_children::<Name>()
+			ChildrenLookup::<TParent, TMarker>::track_in_self_and_children::<Name>()
 				.filter::<TParent::TChildFilter>()
 				.system();
-		let dispatch_asset_components_to_children =
-			TParent::dispatch_asset_components::<T>.pipe(log_many);
 
-		TLoading::register_after_load_system(app, Update, dispatch_asset_components_to_children);
-		TLoading::register_load_tracking::<T, DependenciesProgress>()
+		TLoading::register_load_tracking::<TMarker, DependenciesProgress>()
 			.in_app(app, all_children_present);
+		TLoading::register_after_load_system(app, Update, dispatch_asset_components);
 
 		app.add_systems(
-			on_prefab_instantiation,
+			Labels::PREFAB_INSTANTIATION.label(),
 			(
 				insert_children_lookup(Configure::LeaveAsIs),
 				store_children_in_lookup,

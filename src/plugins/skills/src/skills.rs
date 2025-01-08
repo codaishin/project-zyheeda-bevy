@@ -18,11 +18,11 @@ use common::{
 	tools::slot_key::SlotKey,
 	traits::{
 		animation::Animation,
+		handles_custom_assets::AssetFolderPath,
 		handles_effect::HandlesAllEffects,
 		handles_lifetime::HandlesLifetime,
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		load_asset::Path,
-		register_custom_assets::AssetFolderPath,
 	},
 };
 use serde::{Deserialize, Serialize};

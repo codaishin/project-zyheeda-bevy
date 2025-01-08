@@ -1,9 +1,9 @@
 use bevy::prelude::{Component, Entity, Name, Query};
 use common::traits::{
 	accessors::get::GetRef,
+	handles_assets_for_children::{ChildAssetDefinition, ChildName},
 	handles_load_tracking::Loaded,
 	iteration::IterFinite,
-	register_assets_for_children::ContainsAssetIdsForChildren,
 	track::{IsTracking, Track, Untrack},
 };
 use std::{collections::HashMap, marker::PhantomData};
@@ -16,7 +16,7 @@ pub(crate) struct ChildrenLookup<TParent, TMarker> {
 
 impl<TParent, TMarker> ChildrenLookup<TParent, TMarker>
 where
-	TParent: ContainsAssetIdsForChildren<TMarker> + Sync + Send + 'static,
+	TParent: ChildAssetDefinition<TMarker> + Sync + Send + 'static,
 	TParent::TChildKey: IterFinite,
 	TMarker: Sync + Send + 'static,
 {
@@ -51,13 +51,13 @@ impl<TParent, TMarker> Default for ChildrenLookup<TParent, TMarker> {
 
 impl<TParent, TMarker> Track<Name> for ChildrenLookup<TParent, TMarker>
 where
-	TParent: ContainsAssetIdsForChildren<TMarker>,
+	TParent: ChildAssetDefinition<TMarker>,
 	TParent::TChildKey: IterFinite,
 {
 	fn track(&mut self, entity: Entity, name: &Name) {
 		let entity_keys = TParent::TChildKey::iterator();
 		let entity_not_valid = !entity_keys
-			.map(|key| TParent::child_name(&key))
+			.map(|key| key.child_name())
 			.any(|entity_name| entity_name == name.as_str());
 
 		if entity_not_valid {
@@ -83,10 +83,10 @@ impl<TContainer, TMarker> Untrack<Name> for ChildrenLookup<TContainer, TMarker> 
 impl<TContainer, TMarker> GetRef<TContainer::TChildKey, Entity>
 	for ChildrenLookup<TContainer, TMarker>
 where
-	TContainer: ContainsAssetIdsForChildren<TMarker>,
+	TContainer: ChildAssetDefinition<TMarker>,
 {
 	fn get(&self, key: &TContainer::TChildKey) -> Option<&Entity> {
-		self.entities.get(&TContainer::child_name(key).into())
+		self.entities.get(&Name::from(key.child_name()))
 	}
 }
 
@@ -97,7 +97,11 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::traits::{get_asset::GetAsset, iteration::Iter};
+	use common::traits::{
+		get_asset::GetAsset,
+		handles_assets_for_children::{ChildAssetComponent, ChildName},
+		iteration::Iter,
+	};
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _ItemContainer;
@@ -145,22 +149,33 @@ mod tests {
 		}
 	}
 
-	impl ContainsAssetIdsForChildren<_View> for _ItemContainer {
-		type TChildAsset = _Asset;
-		type TChildKey = _Key;
-		type TChildFilter = ();
-		type TChildBundle = ();
-
-		fn child_name(key: &Self::TChildKey) -> &'static str {
-			match key {
+	impl ChildName<_View> for _Key {
+		fn child_name(&self) -> &'static str {
+			match self {
 				_Key::A => "A",
 				_Key::B => "B",
 				_Key::C => "C",
 			}
 		}
-
-		fn asset_component(_: Option<&Self::TChildAsset>) -> Self::TChildBundle {}
 	}
+
+	impl ChildAssetComponent<_View> for _Asset {
+		type TComponent = _ChildAssetComponent;
+
+		fn component(_: Option<&Self>) -> Self::TComponent {
+			_ChildAssetComponent
+		}
+	}
+
+	impl ChildAssetDefinition<_View> for _ItemContainer {
+		type TChildKey = _Key;
+		type TChildFilter = ();
+
+		type TChildAsset = _Asset;
+	}
+
+	#[derive(Component)]
+	struct _ChildAssetComponent;
 
 	#[test]
 	fn track_name_if_contained_in_sub_model_names() {
