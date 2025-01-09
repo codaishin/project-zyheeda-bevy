@@ -1,6 +1,7 @@
 pub mod components;
 pub mod materials;
 
+pub(crate) mod resources;
 pub(crate) mod systems;
 pub(crate) mod traits;
 
@@ -8,6 +9,7 @@ use bevy::{
 	prelude::*,
 	render::{
 		render_resource::{AsBindGroup, PipelineCache},
+		view::RenderLayers,
 		RenderApp,
 	},
 };
@@ -22,27 +24,30 @@ use common::{
 	},
 	traits::{
 		handles_effect::{HandlesAllEffects, HandlesEffect},
+		handles_graphics::UiRenderLayer,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, InSubApp},
-		handles_player::WithMainCamera,
+		handles_player::{WithCamera, WithMainCamera},
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		prefab::RegisterPrefab,
 		thread_safe::ThreadSafe,
 	},
+	PlayerCameras,
 };
 use components::{
+	camera_labels::{FirstPass, FirstPassTexture, SecondPass, Ui},
 	effect_shaders::EffectShader,
 	effect_shaders_target::EffectShadersTarget,
-	main_camera::MainCamera,
 	material_override::MaterialOverride,
 };
 use materials::essence_material::EssenceMaterial;
+use resources::first_pass_image::FirstPassImage;
 use std::{hash::Hash, marker::PhantomData};
 use systems::{
 	add_child_effect_shader::add_child_effect_shader,
 	add_effect_shader::add_effect_shader,
 	instantiate_effect_shaders::instantiate_effect_shaders,
 	no_waiting_pipelines::no_waiting_pipelines,
-	spawn_camera::spawn_camera,
+	spawn_cameras::spawn_cameras,
 };
 use traits::{
 	get_effect_material::GetEffectMaterial,
@@ -68,13 +73,20 @@ where
 		_: &TInteractions,
 		_: &TBehaviors,
 		player_plugin: TPlayers,
-	) -> (Self, TPlayers::TWithMainCam<MainCamera>)
+	) -> (
+		Self,
+		PlayerCameras!(TPlayers, FirstPass, Ui, SecondPass, FirstPassTexture),
+	)
 	where
 		TPlayers: WithMainCamera,
 	{
 		(
 			Self(PhantomData),
-			player_plugin.with_main_camera::<MainCamera>(),
+			player_plugin
+				.with_main_camera::<FirstPass>()
+				.with_camera::<FirstPassTexture>()
+				.with_camera::<SecondPass>()
+				.with_camera::<Ui>(),
 		)
 	}
 
@@ -132,7 +144,7 @@ where
 	}
 
 	fn cameras(app: &mut App) {
-		app.add_systems(PostStartup, spawn_camera);
+		app.add_systems(PostStartup, FirstPassImage::instantiate.pipe(spawn_cameras));
 	}
 }
 
@@ -205,4 +217,12 @@ where
 			add_child_effect_shader::<TInteractions, TEffect>,
 		),
 	);
+}
+
+impl<TPrefabs, TLoading, TInteractions, TBehaviors> UiRenderLayer
+	for GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
+{
+	fn ui_render_layer() -> RenderLayers {
+		Ui::render_layers()
+	}
 }

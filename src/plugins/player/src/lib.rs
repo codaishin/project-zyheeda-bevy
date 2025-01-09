@@ -23,6 +23,7 @@ use common::{
 			HandlesPlayer,
 			HandlesPlayerCameras,
 			HandlesPlayerMouse,
+			WithCamera,
 			WithMainCamera,
 		},
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
@@ -42,21 +43,13 @@ use systems::{
 	move_with_target::move_with_target,
 	set_cam_ray::set_cam_ray,
 	set_mouse_hover::set_mouse_hover,
-	set_to_orbit::SetCameraToOrbit,
 	toggle_walk_run::player_toggle_walk_run,
 };
+use traits::{add_player_camera::AddPlayerCameras, main_camera::MainCamera};
 
-pub struct PlayerPlugin<
-	TMainCamera,
-	TGameStates,
-	TAnimation,
-	TPrefabs,
-	TInteractions,
-	TLights,
-	TBars,
->(
+pub struct PlayerPlugin<TCameras, TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>(
 	PhantomData<(
-		TMainCamera,
+		TCameras,
 		TGameStates,
 		TAnimation,
 		TPrefabs,
@@ -81,10 +74,10 @@ impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
 	}
 }
 
-impl<TMainCamera, TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars> Plugin
-	for PlayerPlugin<TMainCamera, TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
+impl<TCameras, TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars> Plugin
+	for PlayerPlugin<TCameras, TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
 where
-	TMainCamera: Component,
+	TCameras: ThreadSafe + MainCamera + AddPlayerCameras,
 	TGameStates: ThreadSafe + HandlesGameStates,
 	TAnimation: ThreadSafe + RegisterAnimations,
 	TPrefabs: ThreadSafe + RegisterPrefab,
@@ -97,6 +90,7 @@ where
 		TAnimation::register_animations::<Player>(app);
 		TPrefabs::with_dependency::<(TInteractions, TLights, TBars)>()
 			.register_prefab::<Player>(app);
+		TCameras::add_player_cameras(app);
 
 		app.init_state::<MouseContext>()
 			.init_resource::<CamRay>()
@@ -107,12 +101,11 @@ where
 			.add_systems(
 				First,
 				(
-					set_cam_ray::<Camera, TMainCamera>,
+					set_cam_ray::<Camera, TCameras::TMainCamera>,
 					set_mouse_hover::<RapierContext>,
 				)
 					.chain(),
 			)
-			.add_systems(Update, TMainCamera::set_to_orbit::<Player>)
 			.add_systems(
 				Update,
 				(
@@ -134,12 +127,40 @@ impl<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars> Handle
 impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars> WithMainCamera
 	for PlayerPlugin<(), TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
 {
-	type TWithMainCam<TMainCamera> =
-		PlayerPlugin<TMainCamera, TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>;
+	type TWithMainCam<TMainCamera>
+		= PlayerPlugin<(TMainCamera,), TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
+	where
+		TMainCamera: Component;
 
 	fn with_main_camera<TMainCamera>(self) -> Self::TWithMainCam<TMainCamera>
 	where
 		TMainCamera: Component,
+	{
+		PlayerPlugin(PhantomData)
+	}
+}
+
+impl<TCameras, TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars> WithCamera
+	for PlayerPlugin<TCameras, TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
+where
+	TCameras: MainCamera + AddPlayerCameras,
+{
+	type TWithCam<TNewCamera>
+		= PlayerPlugin<
+		(TCameras, TNewCamera),
+		TGameStates,
+		TAnimation,
+		TPrefabs,
+		TInteractions,
+		TLights,
+		TBars,
+	>
+	where
+		TNewCamera: Component;
+
+	fn with_camera<TNewCamera>(self) -> Self::TWithCam<TNewCamera>
+	where
+		TNewCamera: Component,
 	{
 		PlayerPlugin(PhantomData)
 	}

@@ -80,7 +80,7 @@ fn prepare_game(app: &mut App) {
 		&behaviors_plugin,
 		player_plugin,
 	);
-	let menu_plugin = MenuPlugin::depends_on(&loading_plugin, &player_plugin);
+	let menu_plugin = MenuPlugin::depends_on(&loading_plugin, &player_plugin, &graphics_plugin);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
