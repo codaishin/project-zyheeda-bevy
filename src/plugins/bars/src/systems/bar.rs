@@ -9,21 +9,25 @@ use bevy::{
 		query::Without,
 		system::{Commands, Query},
 	},
+	prelude::With,
 	transform::components::GlobalTransform,
 };
 
 #[allow(clippy::type_complexity)]
-pub(crate) fn bar<TSource: Component, TValue, TCamera: Component + GetScreenPosition>(
+pub(crate) fn bar<TSource, TValue, TCamera, TMainCameraLabel>(
 	get: fn(&TSource) -> &TValue,
 ) -> impl Fn(
 	Commands,
 	Query<(Entity, &GlobalTransform, &TSource, &mut Bar), Without<BarValues<TValue>>>,
 	Query<(&GlobalTransform, &TSource, &mut Bar, &mut BarValues<TValue>)>,
-	Query<(&TCamera, &GlobalTransform)>,
+	Query<(&TCamera, &GlobalTransform), With<TMainCameraLabel>>,
 )
 where
 	TValue: Sync + Send + 'static,
 	BarValues<TValue>: UIBarUpdate<TValue>,
+	TSource: Component,
+	TCamera: Component + GetScreenPosition,
+	TMainCameraLabel: Component,
 {
 	type NewBars<'a, 'b, 'c, TSource> = (Entity, &'a GlobalTransform, &'b TSource, &'c mut Bar);
 	type OldBars<'a, 'b, 'c, 'd, TSource, TValue> = (
@@ -36,7 +40,7 @@ where
 	move |commands: Commands,
 	      without_bar_values: Query<NewBars<TSource>, Without<BarValues<TValue>>>,
 	      with_bar_values: Query<OldBars<TSource, TValue>>,
-	      camera: Query<(&TCamera, &GlobalTransform)>| {
+	      camera: Query<(&TCamera, &GlobalTransform), With<TMainCameraLabel>>| {
 		let Ok((camera, camera_transform)) = camera.get_single() else {
 			return;
 		};
@@ -86,8 +90,9 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		math::{Vec2, Vec3},
+		prelude::Bundle,
 	};
-	use common::traits::nested_mock::NestedMocks;
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::{collections::VecDeque, ops::DerefMut};
@@ -118,6 +123,9 @@ mod tests {
 		max: u8,
 	}
 
+	#[derive(Component, Default)]
+	struct _MainCameraLabel;
+
 	impl UIBarUpdate<_Value> for BarValues<_Value> {
 		fn update(&mut self, value: &_Value) {
 			self.current = value.current as f32;
@@ -125,11 +133,14 @@ mod tests {
 		}
 	}
 
-	fn setup(camera: Option<(_Camera, GlobalTransform)>) -> App {
-		let mut app = App::new();
+	fn setup<TLabel>(camera: Option<(_Camera, GlobalTransform, TLabel)>) -> App
+	where
+		TLabel: Bundle + Default,
+	{
+		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			bar::<_Source, _Value, _Camera>(|_Source(value)| value),
+			bar::<_Source, _Value, _Camera, _MainCameraLabel>(|_Source(value)| value),
 		);
 
 		match camera {
@@ -140,6 +151,7 @@ mod tests {
 							.return_const(Vec2::default());
 					}),
 					GlobalTransform::default(),
+					TLabel::default(),
 				));
 			}
 			Some(camera) => {
@@ -152,7 +164,7 @@ mod tests {
 
 	#[test]
 	fn add_new_bar_values_when_new() {
-		let mut app = setup(None);
+		let mut app = setup::<_MainCameraLabel>(None);
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -181,6 +193,7 @@ mod tests {
 					.return_const(Vec2::default());
 			}),
 			camera_transform,
+			_MainCameraLabel,
 		)));
 
 		app.world_mut().spawn((
@@ -200,6 +213,7 @@ mod tests {
 					.return_const(Vec2::new(42., 24.));
 			}),
 			GlobalTransform::default(),
+			_MainCameraLabel,
 		)));
 
 		let agent = app
@@ -223,7 +237,7 @@ mod tests {
 
 	#[test]
 	fn set_bar_values_current_and_max() {
-		let mut app = setup(None);
+		let mut app = setup::<_MainCameraLabel>(None);
 
 		let agent = app
 			.world_mut()
@@ -256,6 +270,7 @@ mod tests {
 					.return_const(Vec2::default());
 			}),
 			camera_transform,
+			_MainCameraLabel,
 		)));
 
 		app.world_mut().spawn((
@@ -279,6 +294,7 @@ mod tests {
 					.returning(move |_, _| screen_positions.pop_front());
 			}),
 			GlobalTransform::default(),
+			_MainCameraLabel,
 		)));
 
 		let agent = app
@@ -302,8 +318,34 @@ mod tests {
 	}
 
 	#[test]
+	fn ignore_cameras_with_wrong_label() {
+		#[derive(Component, Default)]
+		struct _WrongLabel;
+
+		let camera_transform = GlobalTransform::from_xyz(4., 5., 6.);
+		let offset = Vec3::new(1., 2., 3.);
+		let mut app = setup(Some((
+			_Camera::new().with_mock(|mock| {
+				mock.expect_get_screen_position()
+					.never()
+					.return_const(Vec2::default());
+			}),
+			camera_transform,
+			_WrongLabel,
+		)));
+
+		app.world_mut().spawn((
+			GlobalTransform::from_xyz(5., 3., 9.),
+			Bar::new(offset, 0.),
+			_Source::default(),
+		));
+
+		app.update();
+	}
+
+	#[test]
 	fn update_bar_values_current_and_max() {
-		let mut app = setup(None);
+		let mut app = setup::<_MainCameraLabel>(None);
 
 		let agent = app
 			.world_mut()

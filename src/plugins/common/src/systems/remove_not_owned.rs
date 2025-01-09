@@ -1,12 +1,12 @@
-use crate::components::OwnedBy;
+use crate::components::UiNodeFor;
 use bevy::prelude::*;
 
 pub(crate) fn remove_not_owned<TOwner: Component>(
 	mut commands: Commands,
 	owners: Query<Entity, With<TOwner>>,
-	owned: Query<(Entity, &OwnedBy<TOwner>)>,
+	owned: Query<(Entity, &UiNodeFor<TOwner>)>,
 ) {
-	let not_owned = |(.., owned): &(Entity, &OwnedBy<TOwner>)| owners.get(owned.owner).is_err();
+	let not_owned = |(.., owned): &(Entity, &UiNodeFor<TOwner>)| owners.get(owned.owner).is_err();
 
 	for (id, ..) in owned.iter().filter(not_owned) {
 		remove(&mut commands, id);
@@ -41,7 +41,7 @@ mod tests {
 		let owner_without_owner_component = app.world_mut().spawn_empty().id();
 		let owned = app
 			.world_mut()
-			.spawn(OwnedBy::<_Owner>::with(owner_without_owner_component))
+			.spawn(UiNodeFor::<_Owner>::with(owner_without_owner_component))
 			.id();
 
 		app.update();
@@ -55,7 +55,7 @@ mod tests {
 		let owner_without_owner_component = app.world_mut().spawn_empty().id();
 		let owned = app
 			.world_mut()
-			.spawn(OwnedBy::<_Owner>::with(owner_without_owner_component))
+			.spawn(UiNodeFor::<_Owner>::with(owner_without_owner_component))
 			.id();
 		let child = app.world_mut().spawn_empty().set_parent(owned).id();
 
@@ -68,7 +68,7 @@ mod tests {
 	fn do_not_remove_when_owner_found() {
 		let mut app = setup();
 		let owner = app.world_mut().spawn(_Owner).id();
-		let owned = app.world_mut().spawn(OwnedBy::<_Owner>::with(owner)).id();
+		let owned = app.world_mut().spawn(UiNodeFor::<_Owner>::with(owner)).id();
 
 		app.update();
 
