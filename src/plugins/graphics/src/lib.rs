@@ -23,13 +23,16 @@ use common::{
 	traits::{
 		handles_effect::{HandlesAllEffects, HandlesEffect},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, InSubApp},
+		handles_player::WithMainCamera,
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		prefab::RegisterPrefab,
+		thread_safe::ThreadSafe,
 	},
 };
 use components::{
 	effect_shaders::EffectShader,
 	effect_shaders_target::EffectShadersTarget,
+	main_camera::MainCamera,
 	material_override::MaterialOverride,
 };
 use materials::essence_material::EssenceMaterial;
@@ -39,6 +42,7 @@ use systems::{
 	add_effect_shader::add_effect_shader,
 	instantiate_effect_shaders::instantiate_effect_shaders,
 	no_waiting_pipelines::no_waiting_pipelines,
+	spawn_camera::spawn_camera,
 };
 use traits::{
 	get_effect_material::GetEffectMaterial,
@@ -52,13 +56,26 @@ pub struct GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>(
 impl<TPrefabs, TLoading, TInteractions, TBehaviors>
 	GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
 where
-	TPrefabs: Plugin + RegisterPrefab,
-	TLoading: Plugin + HandlesLoadTracking,
-	TInteractions: Plugin + HandlesAllEffects,
-	TBehaviors: Plugin + HandlesSkillBehaviors,
+	TPrefabs: ThreadSafe + RegisterPrefab,
+	TLoading: ThreadSafe + HandlesLoadTracking,
+	TInteractions: ThreadSafe + HandlesAllEffects,
+	TBehaviors: ThreadSafe + HandlesSkillBehaviors,
 {
-	pub fn depends_on(_: &TPrefabs, _: &TLoading, _: &TInteractions, _: &TBehaviors) -> Self {
-		Self(PhantomData)
+	#[allow(clippy::type_complexity)]
+	pub fn depends_on<TPlayers>(
+		_: &TPrefabs,
+		_: &TLoading,
+		_: &TInteractions,
+		_: &TBehaviors,
+		player_plugin: TPlayers,
+	) -> (Self, TPlayers::TWithMainCam<MainCamera>)
+	where
+		TPlayers: WithMainCamera,
+	{
+		(
+			Self(PhantomData),
+			player_plugin.with_main_camera::<MainCamera>(),
+		)
 	}
 
 	fn track_render_pipeline_ready(app: &mut App) {
@@ -113,20 +130,25 @@ where
 				.chain(),
 		);
 	}
+
+	fn cameras(app: &mut App) {
+		app.add_systems(PostStartup, spawn_camera);
+	}
 }
 
 impl<TPrefabs, TLoading, TInteractions, TBehaviors> Plugin
 	for GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
 where
-	TPrefabs: Plugin + RegisterPrefab,
-	TLoading: Plugin + HandlesLoadTracking,
-	TInteractions: Plugin + HandlesAllEffects,
-	TBehaviors: Plugin + HandlesSkillBehaviors,
+	TPrefabs: ThreadSafe + RegisterPrefab,
+	TLoading: ThreadSafe + HandlesLoadTracking,
+	TInteractions: ThreadSafe + HandlesAllEffects,
+	TBehaviors: ThreadSafe + HandlesSkillBehaviors,
 {
 	fn build(&self, app: &mut App) {
 		Self::track_render_pipeline_ready(app);
 		Self::effect_shaders(app);
 		Self::essence_material(app);
+		Self::cameras(app);
 	}
 }
 

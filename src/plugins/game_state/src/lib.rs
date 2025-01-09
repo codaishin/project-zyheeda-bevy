@@ -6,6 +6,7 @@ use common::{
 	traits::{
 		handles_game_states::HandlesGameStates,
 		handles_load_tracking::{HandlesLoadTracking, OnLoadingDone},
+		thread_safe::ThreadSafe,
 	},
 };
 use std::marker::PhantomData;
@@ -15,7 +16,7 @@ pub struct GameStatePlugin<TLoading>(PhantomData<TLoading>);
 
 impl<TLoading> GameStatePlugin<TLoading>
 where
-	TLoading: Plugin + HandlesLoadTracking,
+	TLoading: ThreadSafe + HandlesLoadTracking,
 {
 	pub fn depends_on(_: &TLoading) -> Self {
 		GameStatePlugin(PhantomData)
@@ -24,7 +25,7 @@ where
 
 impl<TLoading> Plugin for GameStatePlugin<TLoading>
 where
-	TLoading: Plugin + HandlesLoadTracking,
+	TLoading: ThreadSafe + HandlesLoadTracking,
 {
 	fn build(&self, app: &mut App) {
 		let start_menu = GameState::StartMenu;

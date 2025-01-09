@@ -45,6 +45,7 @@ pub mod remove_resource;
 pub mod state_duration;
 pub mod states;
 pub mod swap_command;
+pub mod thread_safe;
 pub mod track;
 pub mod try_despawn_recursive;
 pub mod try_insert_on;

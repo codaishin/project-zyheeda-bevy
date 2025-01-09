@@ -1,21 +1,21 @@
 use crate::traits::orbit::Orbit;
 use bevy::{input::mouse::MouseMotion, prelude::*};
 
-pub(crate) fn move_on_orbit<TOrbitComponent: Orbit + Component>(
+pub(crate) fn move_on_orbit<TOrbit>(
 	mouse: Res<ButtonInput<MouseButton>>,
 	mut mouse_motion: EventReader<MouseMotion>,
-	mut query: Query<(&TOrbitComponent, &mut Transform)>,
-) {
+	mut query: Query<(&TOrbit, &mut Transform)>,
+) where
+	TOrbit: Orbit + Component,
+{
 	if !mouse.pressed(MouseButton::Right) {
 		return;
 	}
 
-	let Ok((orbit, mut transform)) = query.get_single_mut() else {
-		return;
-	};
-
 	for event in mouse_motion.read() {
-		orbit.orbit(&mut transform, event.delta);
+		for (orbit, mut transform) in &mut query {
+			orbit.orbit(&mut transform, event.delta);
+		}
 	}
 }
 
@@ -98,6 +98,45 @@ mod tests {
 			.send(MouseMotion {
 				delta: Vec2::new(3., 4.),
 			});
+
+		app.update();
+	}
+
+	#[test]
+	fn move_multiple_cameras_on_move_event() {
+		let mut app = setup_app();
+		app.world_mut().spawn((
+			_Orbit::new().with_mock(|mock| {
+				mock.expect_orbit()
+					.with(
+						eq(Transform::from_translation(Vec3::ZERO)),
+						eq(Vec2::new(3., 4.)),
+					)
+					.times(1)
+					.return_const(());
+			}),
+			Transform::from_translation(Vec3::ZERO),
+		));
+		app.world_mut().spawn((
+			_Orbit::new().with_mock(|mock| {
+				mock.expect_orbit()
+					.with(
+						eq(Transform::from_translation(Vec3::ZERO)),
+						eq(Vec2::new(3., 4.)),
+					)
+					.times(1)
+					.return_const(());
+			}),
+			Transform::from_translation(Vec3::ZERO),
+		));
+		app.world_mut()
+			.resource_mut::<Events<MouseMotion>>()
+			.send(MouseMotion {
+				delta: Vec2::new(3., 4.),
+			});
+		app.world_mut()
+			.resource_mut::<ButtonInput<MouseButton>>()
+			.press(MouseButton::Right);
 
 		app.update();
 	}

@@ -14,6 +14,7 @@ use common::{
 		get_asset::GetAsset,
 		handles_assets_for_children::{ChildAssetDefinition, HandlesAssetsForChildren},
 		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, InApp},
+		thread_safe::ThreadSafe,
 	},
 };
 use components::children_lookup::ChildrenLookup;
@@ -23,7 +24,7 @@ pub struct ChildrenAssetsDispatchPlugin<TLoading>(PhantomData<TLoading>);
 
 impl<TLoading> ChildrenAssetsDispatchPlugin<TLoading>
 where
-	TLoading: Plugin + HandlesLoadTracking,
+	TLoading: ThreadSafe + HandlesLoadTracking,
 {
 	pub fn depends_on(_: &TLoading) -> Self {
 		Self(PhantomData)
@@ -32,14 +33,14 @@ where
 
 impl<TLoading> Plugin for ChildrenAssetsDispatchPlugin<TLoading>
 where
-	TLoading: Plugin + HandlesLoadTracking,
+	TLoading: ThreadSafe + HandlesLoadTracking,
 {
 	fn build(&self, _: &mut App) {}
 }
 
 impl<TLoading> HandlesAssetsForChildren for ChildrenAssetsDispatchPlugin<TLoading>
 where
-	TLoading: Plugin + HandlesLoadTracking,
+	TLoading: ThreadSafe + HandlesLoadTracking,
 {
 	fn register_child_asset<TParent, TMarker>(app: &mut App)
 	where

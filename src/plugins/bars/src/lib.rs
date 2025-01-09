@@ -14,6 +14,7 @@ use common::{
 		handles_bars::HandlesBars,
 		handles_life::HandlesLife,
 		ownership_relation::OwnershipRelation,
+		thread_safe::ThreadSafe,
 	},
 };
 use components::Bar;
@@ -30,7 +31,7 @@ impl<TLifeCycle> BarsPlugin<TLifeCycle> {
 
 impl<TLifeCycle> Plugin for BarsPlugin<TLifeCycle>
 where
-	TLifeCycle: Plugin + HandlesLife,
+	TLifeCycle: ThreadSafe + HandlesLife,
 {
 	fn build(&self, app: &mut App) {
 		let get_health = TLifeCycle::TLife::get;

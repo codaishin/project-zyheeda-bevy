@@ -8,16 +8,21 @@ use crate::tools::{
 	slot_key::SlotKey,
 	speed::Speed,
 };
-use bevy::{
-	math::Ray3d,
-	prelude::{Component, Entity, Resource},
-};
+use bevy::{math::Ray3d, prelude::*};
 
 pub trait HandlesPlayer {
 	type TPlayer: Component;
 }
 
-pub trait HandlesPlayerCam {
+pub trait WithMainCamera {
+	type TWithMainCam<TMainCamera>;
+
+	fn with_main_camera<TMainCamera>(self) -> Self::TWithMainCam<TMainCamera>
+	where
+		TMainCamera: Component;
+}
+
+pub trait HandlesPlayerCameras {
 	type TCamRay: Resource + GetterRefOptional<Ray3d> + IntersectAt;
 }
 

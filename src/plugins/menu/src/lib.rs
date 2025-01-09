@@ -19,6 +19,7 @@ use common::{
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		handles_player::HandlesPlayer,
 		load_asset::Path,
+		thread_safe::ThreadSafe,
 	},
 };
 use components::{
@@ -182,8 +183,8 @@ impl<TLoading, TPlayers> MenuPlugin<TLoading, TPlayers> {
 
 impl<TLoading, TPlayers> MenuPlugin<TLoading, TPlayers>
 where
-	TLoading: Plugin + HandlesLoadTracking,
-	TPlayers: Plugin + HandlesPlayer,
+	TLoading: ThreadSafe + HandlesLoadTracking,
+	TPlayers: ThreadSafe + HandlesPlayer,
 {
 	fn resources(&self, app: &mut App) {
 		app.init_resource::<Shared<Path, Handle<Image>>>()
@@ -315,8 +316,8 @@ where
 
 impl<TLoading, TPlayers> Plugin for MenuPlugin<TLoading, TPlayers>
 where
-	TLoading: Plugin + HandlesLoadTracking,
-	TPlayers: Plugin + HandlesPlayer,
+	TLoading: ThreadSafe + HandlesLoadTracking,
+	TPlayers: ThreadSafe + HandlesPlayer,
 {
 	fn build(&self, app: &mut App) {
 		self.resources(app);

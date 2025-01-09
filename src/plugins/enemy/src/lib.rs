@@ -14,6 +14,7 @@ use common::{
 		handles_game_states::HandlesGameStates,
 		handles_interactions::HandlesInteractions,
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
+		thread_safe::ThreadSafe,
 	},
 };
 use components::{enemy::Enemy, void_beam::VoidBeam, void_sphere::VoidSphere};
@@ -35,13 +36,13 @@ impl<TGameStates, TPrefabs, TInteractions, TBars>
 impl<TGameStates, TPrefabs, TInteractions, TBars> Plugin
 	for EnemyPlugin<TGameStates, TPrefabs, TInteractions, TBars>
 where
-	TGameStates: Plugin + HandlesGameStates,
-	TPrefabs: Plugin + RegisterPrefab,
-	TInteractions: Plugin
+	TGameStates: ThreadSafe + HandlesGameStates,
+	TPrefabs: ThreadSafe + RegisterPrefab,
+	TInteractions: ThreadSafe
 		+ HandlesInteractions
 		+ HandlesEffect<DealDamage, TTarget = Health>
 		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
-	TBars: Plugin + HandlesBars,
+	TBars: ThreadSafe + HandlesBars,
 {
 	fn build(&self, app: &mut App) {
 		TGameStates::on_starting_new_game(app, VoidSphere::spawn);
