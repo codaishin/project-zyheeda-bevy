@@ -1,28 +1,31 @@
+use super::insert_recursively::InsertRecursively;
 use bevy::{
 	core_pipeline::{bloom::Bloom, tonemapping::Tonemapping},
 	prelude::*,
 	render::{camera::RenderTarget, view::RenderLayers},
 };
 
-#[derive(Component, Debug, PartialEq)]
-#[require(Camera3d, Camera(Self::camera), Tonemapping(Self::tonemapping))]
+#[derive(Component, Debug, PartialEq, Default)]
+#[require(Camera3d, Camera(Self::default), Tonemapping(Self::default))]
 pub struct FirstPass;
 
-impl FirstPass {
-	fn camera() -> Camera {
+impl From<FirstPass> for Camera {
+	fn from(_: FirstPass) -> Self {
 		Camera {
 			hdr: true,
 			..default()
 		}
 	}
+}
 
-	fn tonemapping() -> Tonemapping {
+impl From<FirstPass> for Tonemapping {
+	fn from(_: FirstPass) -> Self {
 		Tonemapping::None
 	}
 }
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Camera3d, Tonemapping(FirstPass::tonemapping))]
+#[require(Camera3d, Tonemapping(FirstPass::default))]
 pub struct FirstPassTexture {
 	_private: (),
 }
@@ -33,70 +36,88 @@ impl FirstPassTexture {
 	}
 
 	pub(crate) fn from_image(handle: Handle<Image>) -> (FirstPassTexture, Camera) {
-		let mut camera = FirstPass::camera();
+		let mut camera = Camera::from(FirstPass);
 		camera.target = RenderTarget::Image(handle);
 
 		(FirstPassTexture::new(), camera)
 	}
 }
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Default)]
 #[require(
 	Camera3d,
-	Camera(SecondPass::camera),
-	Tonemapping(Self::tonemapping),
+	Camera(Self::default),
+	Tonemapping(Self::default),
 	Bloom,
-	RenderLayers(Self::render_layers)
+	RenderLayers(Self::default)
 )]
 pub struct SecondPass;
 
 impl SecondPass {
 	const ORDER: usize = 1;
+}
 
-	pub(crate) fn render_layers() -> RenderLayers {
-		const { RenderLayers::layer(Self::ORDER) }
-	}
-
-	fn camera() -> Camera {
+impl From<SecondPass> for Camera {
+	fn from(_: SecondPass) -> Self {
 		Camera {
 			hdr: true,
-			order: Self::ORDER as isize,
+			order: SecondPass::ORDER as isize,
 			clear_color: ClearColorConfig::None,
 			..default()
 		}
 	}
+}
 
-	fn tonemapping() -> Tonemapping {
+impl From<SecondPass> for Tonemapping {
+	fn from(_: SecondPass) -> Self {
 		Tonemapping::TonyMcMapface
 	}
 }
 
-#[derive(Component, Debug, PartialEq)]
+impl From<SecondPass> for RenderLayers {
+	fn from(_: SecondPass) -> Self {
+		const { RenderLayers::layer(SecondPass::ORDER) }
+	}
+}
+
+impl From<SecondPass> for InsertRecursively<RenderLayers> {
+	fn from(_: SecondPass) -> Self {
+		const { InsertRecursively(RenderLayers::layer(SecondPass::ORDER)) }
+	}
+}
+
+#[derive(Component, Debug, PartialEq, Default)]
 #[require(
 	Camera3d,
-	Camera(Ui::camera),
-	Tonemapping(Self::tonemapping),
-	RenderLayers(Self::render_layers)
+	Camera(Ui::default),
+	Tonemapping(Self::default),
+	RenderLayers(Self::default)
 )]
 pub struct Ui;
 
 impl Ui {
 	const ORDER: usize = 2;
+}
 
-	pub(crate) fn render_layers() -> RenderLayers {
-		const { RenderLayers::layer(Self::ORDER) }
-	}
-
-	fn camera() -> Camera {
+impl From<Ui> for Camera {
+	fn from(_: Ui) -> Self {
 		Camera {
-			order: Self::ORDER as isize,
+			order: Ui::ORDER as isize,
 			hdr: true,
 			clear_color: ClearColorConfig::None,
 			..default()
 		}
 	}
+}
 
-	fn tonemapping() -> Tonemapping {
+impl From<Ui> for Tonemapping {
+	fn from(_: Ui) -> Self {
 		Tonemapping::None
+	}
+}
+
+impl From<Ui> for RenderLayers {
+	fn from(_: Ui) -> Self {
+		const { RenderLayers::layer(Ui::ORDER) }
 	}
 }

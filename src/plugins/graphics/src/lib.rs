@@ -37,6 +37,7 @@ use components::{
 	camera_labels::{FirstPass, FirstPassTexture, SecondPass, Ui},
 	effect_shaders::EffectShader,
 	effect_shaders_target::EffectShadersTarget,
+	insert_recursively::InsertRecursively,
 	material_override::MaterialOverride,
 };
 use materials::essence_material::EssenceMaterial;
@@ -125,6 +126,7 @@ where
 				>,
 				EffectShadersTarget::track_in_self_and_children::<Mesh3d>().system(),
 				instantiate_effect_shaders,
+				InsertRecursively::<RenderLayers>::apply,
 			),
 		);
 	}
@@ -223,7 +225,7 @@ impl<TPrefabs, TLoading, TInteractions, TBehaviors> UiRenderLayer
 	for GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
 {
 	fn ui_render_layer() -> RenderLayers {
-		Ui::render_layers()
+		RenderLayers::from(Ui)
 	}
 }
 
