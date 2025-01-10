@@ -41,7 +41,7 @@ use components::{
 	material_override::MaterialOverride,
 };
 use materials::essence_material::EssenceMaterial;
-use resources::first_pass_image::FirstPassImage;
+use resources::{first_pass_image::FirstPassImage, window_size::WindowSize};
 use std::{hash::Hash, marker::PhantomData};
 use systems::{
 	add_child_effect_shader::add_child_effect_shader,
@@ -147,7 +147,12 @@ where
 	}
 
 	fn cameras(app: &mut App) {
-		app.add_systems(PostStartup, FirstPassImage::instantiate.pipe(spawn_cameras));
+		app.init_resource::<WindowSize>()
+			.add_systems(PostStartup, FirstPassImage::instantiate.pipe(spawn_cameras))
+			.add_systems(
+				First,
+				(WindowSize::update, FirstPassImage::<Image>::update_size).chain(),
+			);
 	}
 }
 

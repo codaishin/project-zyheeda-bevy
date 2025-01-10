@@ -190,4 +190,16 @@ pub mod utils {
 			}
 		}
 	}
+
+	#[macro_export]
+	macro_rules! is_changed_resource {
+		($ty:ty, $result:expr) => {{
+			let result = $result.clone();
+			move |resource: Res<$ty>| {
+				*result.lock().unwrap() = resource.is_changed();
+			}
+		}};
+	}
+
+	pub use is_changed_resource;
 }
