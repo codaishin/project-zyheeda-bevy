@@ -127,7 +127,8 @@ where
 				EffectShadersTarget::track_in_self_and_children::<Mesh3d>().system(),
 				instantiate_effect_shaders,
 				InsertRecursively::<RenderLayers>::apply,
-			),
+			)
+				.chain(),
 		);
 	}
 
