@@ -20,18 +20,24 @@ use components::{enemy::Enemy, void_beam::VoidBeam, void_sphere::VoidSphere};
 use std::marker::PhantomData;
 use systems::void_sphere::ring_rotation::ring_rotation;
 
-pub struct EnemyPlugin<TGameStates, TPrefabs, TInteractions>(
-	PhantomData<(TGameStates, TPrefabs, TInteractions)>,
-);
+pub struct EnemyPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TGameStates, TPrefabs, TInteractions> EnemyPlugin<TGameStates, TPrefabs, TInteractions> {
+impl<TGameStates, TPrefabs, TInteractions> EnemyPlugin<(TGameStates, TPrefabs, TInteractions)>
+where
+	TGameStates: ThreadSafe + HandlesGameStates,
+	TPrefabs: ThreadSafe + RegisterPrefab,
+	TInteractions: ThreadSafe
+		+ HandlesInteractions
+		+ HandlesEffect<DealDamage, TTarget = Health>
+		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
+{
 	pub fn depends_on(_: &TGameStates, _: &TPrefabs, _: &TInteractions) -> Self {
 		Self(PhantomData)
 	}
 }
 
 impl<TGameStates, TPrefabs, TInteractions> Plugin
-	for EnemyPlugin<TGameStates, TPrefabs, TInteractions>
+	for EnemyPlugin<(TGameStates, TPrefabs, TInteractions)>
 where
 	TGameStates: ThreadSafe + HandlesGameStates,
 	TPrefabs: ThreadSafe + RegisterPrefab,
@@ -49,8 +55,6 @@ where
 	}
 }
 
-impl<TGameStates, TPrefabs, TInteractions> HandlesEnemies
-	for EnemyPlugin<TGameStates, TPrefabs, TInteractions>
-{
+impl<TDependencies> HandlesEnemies for EnemyPlugin<TDependencies> {
 	type TEnemy = Enemy;
 }

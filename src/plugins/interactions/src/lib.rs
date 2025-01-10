@@ -55,12 +55,11 @@ use systems::{
 };
 use traits::act_on::ActOn;
 
-pub struct InteractionsPlugin<TPrefabs, TLifeCyclePlugin>(
-	PhantomData<(TPrefabs, TLifeCyclePlugin)>,
-);
+pub struct InteractionsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TPrefabs, TLifeCyclePlugin> InteractionsPlugin<TPrefabs, TLifeCyclePlugin>
+impl<TPrefabs, TLifeCyclePlugin> InteractionsPlugin<(TPrefabs, TLifeCyclePlugin)>
 where
+	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLifeCyclePlugin: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
 	pub fn depends_on(_: &TPrefabs, _: &TLifeCyclePlugin) -> Self {
@@ -68,7 +67,7 @@ where
 	}
 }
 
-impl<TPrefabs, TLifeCyclePlugin> Plugin for InteractionsPlugin<TPrefabs, TLifeCyclePlugin>
+impl<TPrefabs, TLifeCyclePlugin> Plugin for InteractionsPlugin<(TPrefabs, TLifeCyclePlugin)>
 where
 	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLifeCyclePlugin: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
@@ -136,9 +135,7 @@ impl AddInteraction for App {
 	}
 }
 
-impl<TPrefabs, TLifeCyclePlugin> HandlesInteractions
-	for InteractionsPlugin<TPrefabs, TLifeCyclePlugin>
-{
+impl<TDependencies> HandlesInteractions for InteractionsPlugin<TDependencies> {
 	fn is_fragile_when_colliding_with(blockers: &[Blocker]) -> impl Bundle {
 		Is::<Fragile>::interacting_with(blockers)
 	}

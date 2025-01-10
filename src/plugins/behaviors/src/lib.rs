@@ -60,19 +60,28 @@ use systems::{
 	update_cool_downs::update_cool_downs,
 };
 
-pub struct BehaviorsPlugin<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies, TPlayer>(
-	PhantomData<(
+pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
+
+impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies, TPlayers>
+	BehaviorsPlugin<(
 		TAnimations,
 		TPrefabs,
 		TLifeCycles,
 		TInteractions,
 		TEnemies,
-		TPlayer,
-	)>,
-);
-
-impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies, TPlayer>
-	BehaviorsPlugin<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies, TPlayer>
+		TPlayers,
+	)>
+where
+	TAnimations: ThreadSafe + HasAnimationsDispatch,
+	TPrefabs: ThreadSafe + RegisterPrefab,
+	TLifeCycles: ThreadSafe + HandlesDestruction,
+	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
+	TEnemies: ThreadSafe + HandlesEnemies,
+	TPlayers: ThreadSafe
+		+ HandlesPlayer
+		+ HandlesPlayerCameras
+		+ HandlesPlayerMouse
+		+ ConfiguresPlayerMovement,
 {
 	pub fn depends_on(
 		_: &TAnimations,
@@ -80,26 +89,26 @@ impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies, TPlayer>
 		_: &TLifeCycles,
 		_: &TInteractions,
 		_: &TEnemies,
-		_: &TPlayer,
+		_: &TPlayers,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies, TPlayers> Plugin
-	for BehaviorsPlugin<
-		TAnimationsPlugin,
-		TPrefabsPlugin,
+impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies, TPlayers> Plugin
+	for BehaviorsPlugin<(
+		TAnimations,
+		TPrefabs,
 		TLifeCycles,
-		TInteractionsPlugin,
+		TInteractions,
 		TEnemies,
 		TPlayers,
-	>
+	)>
 where
-	TAnimationsPlugin: ThreadSafe + HasAnimationsDispatch,
-	TPrefabsPlugin: ThreadSafe + RegisterPrefab,
+	TAnimations: ThreadSafe + HasAnimationsDispatch,
+	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLifeCycles: ThreadSafe + HandlesDestruction,
-	TInteractionsPlugin: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
+	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
 	TEnemies: ThreadSafe + HandlesEnemies,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
@@ -108,9 +117,9 @@ where
 		+ ConfiguresPlayerMovement,
 {
 	fn build(&self, app: &mut App) {
-		TPrefabsPlugin::with_dependency::<(TInteractionsPlugin, TLifeCycles)>()
+		TPrefabs::with_dependency::<(TInteractions, TLifeCycles)>()
 			.register_prefab::<SkillContact>(app);
-		TPrefabsPlugin::with_dependency::<(TInteractionsPlugin, TLifeCycles)>()
+		TPrefabs::with_dependency::<(TInteractions, TLifeCycles)>()
 			.register_prefab::<SkillProjection>(app);
 
 		app.add_event::<MoveInputEvent>()
@@ -139,7 +148,7 @@ where
 					TPlayers::TPlayerMovement::set_movement,
 					TPlayers::TPlayerMovement::animate_movement::<
 						Movement<VelocityBased>,
-						TAnimationsPlugin::TAnimationDispatch,
+						TAnimations::TAnimationDispatch,
 					>,
 					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
 				),
@@ -151,7 +160,7 @@ where
 					TEnemies::TEnemy::chase,
 					TEnemies::TEnemy::animate_movement::<
 						Movement<VelocityBased>,
-						TAnimationsPlugin::TAnimationDispatch,
+						TAnimations::TAnimationDispatch,
 					>,
 					TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>,
 					TEnemies::TEnemy::attack,
@@ -169,17 +178,7 @@ where
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies, TPlayers>
-	HandlesSkillBehaviors
-	for BehaviorsPlugin<
-		TAnimationsPlugin,
-		TPrefabsPlugin,
-		TLifeCycles,
-		TInteractionsPlugin,
-		TEnemies,
-		TPlayers,
-	>
-{
+impl<TDependencies> HandlesSkillBehaviors for BehaviorsPlugin<TDependencies> {
 	type TSkillContact = SkillContact;
 	type TSkillProjection = SkillProjection;
 
@@ -196,17 +195,7 @@ impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemi
 	}
 }
 
-impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemies, TPlayers>
-	HandlesOrientation
-	for BehaviorsPlugin<
-		TAnimationsPlugin,
-		TPrefabsPlugin,
-		TLifeCycles,
-		TInteractionsPlugin,
-		TEnemies,
-		TPlayers,
-	>
-{
+impl<TDependencies> HandlesOrientation for BehaviorsPlugin<TDependencies> {
 	type TFaceTemporarily = OverrideFace;
 
 	fn temporarily(face: Face) -> Self::TFaceTemporarily {

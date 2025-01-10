@@ -18,7 +18,7 @@ use components::{
 };
 use std::marker::PhantomData;
 
-pub struct LightPlugin<TPrefabs>(PhantomData<TPrefabs>);
+pub struct LightPlugin<TDependencies>(PhantomData<TDependencies>);
 
 impl<TPrefabs> LightPlugin<TPrefabs>
 where
@@ -47,7 +47,7 @@ where
 	}
 }
 
-impl<TPrefabs> HandlesLights for LightPlugin<TPrefabs> {
+impl<TDependencies> HandlesLights for LightPlugin<TDependencies> {
 	type TResponsiveLightBundle = ResponsiveLight;
 	type TResponsiveLightTrigger = ResponsiveLightTrigger;
 

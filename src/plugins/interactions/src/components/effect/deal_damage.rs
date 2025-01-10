@@ -12,7 +12,7 @@ use common::{
 use std::time::Duration;
 
 impl<TPrefabs, TLifecyclePlugin> HandlesEffect<DealDamage>
-	for InteractionsPlugin<TPrefabs, TLifecyclePlugin>
+	for InteractionsPlugin<(TPrefabs, TLifecyclePlugin)>
 where
 	TLifecyclePlugin: HandlesLife,
 {

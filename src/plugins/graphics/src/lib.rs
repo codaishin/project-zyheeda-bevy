@@ -30,7 +30,7 @@ use common::{
 		prefab::RegisterPrefab,
 		thread_safe::ThreadSafe,
 	},
-	PlayerCameras,
+	WithCameras,
 };
 use components::{
 	camera_labels::{FirstPass, FirstPassTexture, SecondPass, Ui},
@@ -54,12 +54,10 @@ use traits::{
 	shadows_aware_material::ShadowsAwareMaterial,
 };
 
-pub struct GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>(
-	PhantomData<(TPrefabs, TLoading, TInteractions, TBehaviors)>,
-);
+pub struct GraphicsPlugin<TDependencies>(PhantomData<TDependencies>);
 
 impl<TPrefabs, TLoading, TInteractions, TBehaviors>
-	GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
+	GraphicsPlugin<(TPrefabs, TLoading, TInteractions, TBehaviors)>
 where
 	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLoading: ThreadSafe + HandlesLoadTracking,
@@ -75,7 +73,7 @@ where
 		player_plugin: TPlayers,
 	) -> (
 		Self,
-		PlayerCameras!(TPlayers, FirstPass, Ui, SecondPass, FirstPassTexture),
+		WithCameras!(TPlayers, FirstPass, Ui, SecondPass, FirstPassTexture),
 	)
 	where
 		TPlayers: WithMainCamera,
@@ -156,7 +154,7 @@ where
 }
 
 impl<TPrefabs, TLoading, TInteractions, TBehaviors> Plugin
-	for GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
+	for GraphicsPlugin<(TPrefabs, TLoading, TInteractions, TBehaviors)>
 where
 	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLoading: ThreadSafe + HandlesLoadTracking,
@@ -226,8 +224,6 @@ where
 	);
 }
 
-impl<TPrefabs, TLoading, TInteractions, TBehaviors> UiCamera
-	for GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
-{
+impl<TDependencies> UiCamera for GraphicsPlugin<TDependencies> {
 	type TUiCamera = Ui;
 }

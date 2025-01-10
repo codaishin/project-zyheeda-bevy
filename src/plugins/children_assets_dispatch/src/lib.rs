@@ -20,7 +20,7 @@ use common::{
 use components::children_lookup::ChildrenLookup;
 use std::marker::PhantomData;
 
-pub struct ChildrenAssetsDispatchPlugin<TLoading>(PhantomData<TLoading>);
+pub struct ChildrenAssetsDispatchPlugin<TDependencies>(PhantomData<TDependencies>);
 
 impl<TLoading> ChildrenAssetsDispatchPlugin<TLoading>
 where

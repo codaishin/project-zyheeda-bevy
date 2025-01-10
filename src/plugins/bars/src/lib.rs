@@ -26,12 +26,15 @@ use components::Bar;
 use std::marker::PhantomData;
 use systems::{bar::bar, render_bar::render_bar};
 
-pub struct BarsPlugin<TLifeCycle, TPlayers, TEnemies, TGraphics>(
-	PhantomData<(TLifeCycle, TPlayers, TEnemies, TGraphics)>,
-);
+pub struct BarsPlugin<TDependencies>(PhantomData<TDependencies>);
 
 impl<TLifeCycle, TPlayers, TEnemies, TGraphics>
-	BarsPlugin<TLifeCycle, TPlayers, TEnemies, TGraphics>
+	BarsPlugin<(TLifeCycle, TPlayers, TEnemies, TGraphics)>
+where
+	TLifeCycle: ThreadSafe + HandlesLife,
+	TPlayers: ThreadSafe + HandlesPlayer,
+	TEnemies: ThreadSafe + HandlesEnemies,
+	TGraphics: ThreadSafe + UiCamera,
 {
 	pub fn depends_on(_: &TLifeCycle, _: &TPlayers, _: &TEnemies, _: &TGraphics) -> Self {
 		Self(PhantomData)
@@ -39,7 +42,7 @@ impl<TLifeCycle, TPlayers, TEnemies, TGraphics>
 }
 
 impl<TLifeCycle, TPlayers, TEnemies, TGraphics> Plugin
-	for BarsPlugin<TLifeCycle, TPlayers, TEnemies, TGraphics>
+	for BarsPlugin<(TLifeCycle, TPlayers, TEnemies, TGraphics)>
 where
 	TLifeCycle: ThreadSafe + HandlesLife,
 	TPlayers: ThreadSafe + HandlesPlayer,
