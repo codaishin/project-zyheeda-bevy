@@ -1,8 +1,13 @@
 use crate::{
-	components::effect_shaders::EffectShader,
+	components::{camera_labels::SecondPass, effect_shaders::EffectShader},
 	traits::get_effect_material::GetEffectMaterial,
 };
-use bevy::{color::palettes::css::WHITE, ecs::system::EntityCommands, prelude::*};
+use bevy::{
+	color::palettes::css::WHITE,
+	ecs::system::EntityCommands,
+	prelude::*,
+	render::view::RenderLayers,
+};
 use common::{
 	effects::deal_damage::DealDamage,
 	errors::Error,
@@ -31,12 +36,15 @@ impl Prefab<()> for EffectShader<DealDamage> {
 		_: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		entity.with_children(|parent| {
-			parent.spawn(PointLight {
-				color: Color::from(WHITE),
-				intensity: 8000.,
-				shadows_enabled: true,
-				..default()
-			});
+			parent.spawn((
+				RenderLayers::from(SecondPass),
+				PointLight {
+					color: Color::from(WHITE),
+					intensity: 8000.,
+					shadows_enabled: true,
+					..default()
+				},
+			));
 		});
 
 		Ok(())

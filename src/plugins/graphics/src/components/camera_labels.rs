@@ -1,4 +1,3 @@
-use super::insert_recursively::InsertRecursively;
 use bevy::{
 	core_pipeline::{bloom::Bloom, tonemapping::Tonemapping},
 	prelude::*,
@@ -78,12 +77,6 @@ impl From<SecondPass> for Tonemapping {
 impl From<SecondPass> for RenderLayers {
 	fn from(_: SecondPass) -> Self {
 		const { RenderLayers::layer(SecondPass::ORDER) }
-	}
-}
-
-impl From<SecondPass> for InsertRecursively<RenderLayers> {
-	fn from(_: SecondPass) -> Self {
-		const { InsertRecursively(RenderLayers::layer(SecondPass::ORDER)) }
 	}
 }
 

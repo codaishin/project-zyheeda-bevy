@@ -9,7 +9,6 @@ use bevy::{
 	prelude::*,
 	render::{
 		render_resource::{AsBindGroup, PipelineCache},
-		view::RenderLayers,
 		RenderApp,
 	},
 };
@@ -37,7 +36,6 @@ use components::{
 	camera_labels::{FirstPass, FirstPassTexture, SecondPass, Ui},
 	effect_shaders::EffectShader,
 	effect_shaders_target::EffectShadersTarget,
-	insert_recursively::InsertRecursively,
 	material_override::MaterialOverride,
 };
 use materials::essence_material::EssenceMaterial;
@@ -46,6 +44,7 @@ use std::{hash::Hash, marker::PhantomData};
 use systems::{
 	add_child_effect_shader::add_child_effect_shader,
 	add_effect_shader::add_effect_shader,
+	insert_effect_shader_render_layers::insert_effect_shader_render_layers,
 	instantiate_effect_shaders::instantiate_effect_shaders,
 	no_waiting_pipelines::no_waiting_pipelines,
 	spawn_cameras::spawn_cameras,
@@ -126,7 +125,7 @@ where
 				>,
 				EffectShadersTarget::track_in_self_and_children::<Mesh3d>().system(),
 				instantiate_effect_shaders,
-				InsertRecursively::<RenderLayers>::apply,
+				insert_effect_shader_render_layers(SecondPass),
 			)
 				.chain(),
 		);
