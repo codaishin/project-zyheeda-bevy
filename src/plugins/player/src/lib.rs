@@ -13,7 +13,6 @@ use common::{
 	tools::slot_key::SlotKey,
 	traits::{
 		animation::RegisterAnimations,
-		handles_bars::HandlesBars,
 		handles_effect::HandlesEffect,
 		handles_game_states::HandlesGameStates,
 		handles_lights::HandlesLights,
@@ -21,15 +20,17 @@ use common::{
 			ConfiguresPlayerMovement,
 			ConfiguresPlayerSkillAnimations,
 			HandlesPlayer,
-			HandlesPlayerCam,
+			HandlesPlayerCameras,
 			HandlesPlayerMouse,
+			WithCamera,
+			WithMainCamera,
 		},
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
+		thread_safe::ThreadSafe,
 	},
 };
 use components::{
-	cam_orbit::CamOrbit,
-	main_camera::MainCamera,
+	orbit_player::OrbitPlayer,
 	player::Player,
 	player_movement::PlayerMovement,
 	skill_animation::SkillAnimation,
@@ -40,25 +41,24 @@ use systems::{
 	move_on_orbit::move_on_orbit,
 	move_with_target::move_with_target,
 	set_cam_ray::set_cam_ray,
-	set_camera_to_orbit_player::SetCameraToOrbit,
 	set_mouse_hover::set_mouse_hover,
-	spawn_camera::spawn_camera,
 	toggle_walk_run::player_toggle_walk_run,
 };
+use traits::{add_player_camera::AddPlayerCameras, main_camera::MainCamera};
 
-pub struct PlayerPlugin<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>(
+pub struct PlayerPlugin<TCameras, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>(
 	PhantomData<(
+		TCameras,
 		TGameStates,
 		TAnimation,
 		TPrefabs,
 		TInteractions,
 		TLights,
-		TBars,
 	)>,
 );
 
-impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
-	PlayerPlugin<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
+impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
+	PlayerPlugin<(), TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
 {
 	pub fn depends_on(
 		_: &TGameStates,
@@ -66,31 +66,29 @@ impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
 		_: &TPrefabs,
 		_: &TInteractions,
 		_: &TLights,
-		_: &TBars,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars> Plugin
-	for PlayerPlugin<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
+impl<TCameras, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> Plugin
+	for PlayerPlugin<TCameras, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
 where
-	TGameStates: Plugin + HandlesGameStates,
-	TAnimation: Plugin + RegisterAnimations,
-	TPrefabs: Plugin + RegisterPrefab,
-	TInteractions: Plugin + HandlesEffect<DealDamage, TTarget = Health>,
-	TLights: Plugin + HandlesLights,
-	TBars: Plugin + HandlesBars,
+	TCameras: ThreadSafe + MainCamera + AddPlayerCameras,
+	TGameStates: ThreadSafe + HandlesGameStates,
+	TAnimation: ThreadSafe + RegisterAnimations,
+	TPrefabs: ThreadSafe + RegisterPrefab,
+	TInteractions: ThreadSafe + HandlesEffect<DealDamage, TTarget = Health>,
+	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
 		TGameStates::on_starting_new_game(app, Player::spawn);
 		TAnimation::register_animations::<Player>(app);
-		TPrefabs::with_dependency::<(TInteractions, TLights, TBars)>()
-			.register_prefab::<Player>(app);
+		TPrefabs::with_dependency::<(TInteractions, TLights)>().register_prefab::<Player>(app);
+		TCameras::add_player_cameras(app);
 
 		app.init_state::<MouseContext>()
 			.init_resource::<CamRay>()
-			.add_systems(PostStartup, spawn_camera)
 			.add_systems(
 				Update,
 				SkillAnimation::system::<TAnimation::TAnimationDispatch>,
@@ -98,48 +96,83 @@ where
 			.add_systems(
 				First,
 				(
-					set_cam_ray::<Camera, MainCamera>,
+					set_cam_ray::<Camera, TCameras::TMainCamera>,
 					set_mouse_hover::<RapierContext>,
 				)
 					.chain(),
 			)
 			.add_systems(
 				Update,
-				(move_on_orbit::<CamOrbit>, move_with_target::<CamOrbit>)
+				(
+					move_on_orbit::<OrbitPlayer>,
+					move_with_target::<OrbitPlayer>,
+				)
 					.run_if(in_state(GameState::Play)),
 			)
-			.add_systems(Update, MainCamera::set_camera_to_orbit::<Player>)
 			.add_systems(Update, player_toggle_walk_run);
 	}
 }
 
-impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars> HandlesPlayer
-	for PlayerPlugin<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
+impl<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> HandlesPlayer
+	for PlayerPlugin<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
 {
 	type TPlayer = Player;
 }
 
-impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars> HandlesPlayerCam
-	for PlayerPlugin<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
+impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights> WithMainCamera
+	for PlayerPlugin<(), TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
+{
+	type TWithMainCam<TMainCamera>
+		= PlayerPlugin<(TMainCamera,), TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
+	where
+		TMainCamera: Component;
+
+	fn with_main_camera<TMainCamera>(self) -> Self::TWithMainCam<TMainCamera>
+	where
+		TMainCamera: Component,
+	{
+		PlayerPlugin(PhantomData)
+	}
+}
+
+impl<TCameras, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> WithCamera
+	for PlayerPlugin<TCameras, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
+where
+	TCameras: MainCamera + AddPlayerCameras,
+{
+	type TWithCam<TNewCamera>
+		= PlayerPlugin<(TCameras, TNewCamera), TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
+	where
+		TNewCamera: Component;
+
+	fn with_camera<TNewCamera>(self) -> Self::TWithCam<TNewCamera>
+	where
+		TNewCamera: Component,
+	{
+		PlayerPlugin(PhantomData)
+	}
+}
+
+impl<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> HandlesPlayerCameras
+	for PlayerPlugin<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
 {
 	type TCamRay = CamRay;
 }
 
-impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars> HandlesPlayerMouse
-	for PlayerPlugin<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
+impl<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> HandlesPlayerMouse
+	for PlayerPlugin<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
 {
 	type TMouseHover = MouseHover;
 }
 
-impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars> ConfiguresPlayerMovement
-	for PlayerPlugin<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
+impl<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> ConfiguresPlayerMovement
+	for PlayerPlugin<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
 {
 	type TPlayerMovement = PlayerMovement;
 }
 
-impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
-	ConfiguresPlayerSkillAnimations
-	for PlayerPlugin<TGameStates, TAnimation, TPrefabs, TInteractions, TLights, TBars>
+impl<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> ConfiguresPlayerSkillAnimations
+	for PlayerPlugin<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
 {
 	type TAnimationMarker = SkillAnimation;
 

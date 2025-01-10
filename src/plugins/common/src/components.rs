@@ -1,11 +1,13 @@
 pub mod essence;
 pub mod flip;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, render::view::RenderLayers};
 use bevy_rapier3d::prelude::*;
 use flip::FlipHorizontally;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
+
+use crate::traits::handles_graphics::StaticRenderLayers;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Swap<T1, T2>(pub T1, pub T2);
@@ -44,17 +46,24 @@ pub struct Outdated<TComponent: Component> {
 }
 
 #[derive(Component, Debug, PartialEq)]
-pub struct OwnedBy<TOwner> {
+pub struct UiNodeFor<T> {
 	pub owner: Entity,
-	owner_type: PhantomData<TOwner>,
+	owner_type: PhantomData<T>,
 }
 
-impl<T> OwnedBy<T> {
+impl<T> UiNodeFor<T> {
 	pub fn with(owner: Entity) -> Self {
 		Self {
 			owner,
 			owner_type: PhantomData,
 		}
+	}
+
+	pub fn set_render_layer<TUiCamera>(&self, render_layers: &mut RenderLayers)
+	where
+		TUiCamera: StaticRenderLayers,
+	{
+		*render_layers = TUiCamera::render_layers()
 	}
 }
 
@@ -85,5 +94,28 @@ pub struct Protected<TComponent: Component>(PhantomData<TComponent>);
 impl<TComponent: Component> Default for Protected<TComponent> {
 	fn default() -> Self {
 		Self(PhantomData)
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn ui_node_set_render_layer() {
+		struct _T;
+
+		impl StaticRenderLayers for _T {
+			fn render_layers() -> RenderLayers {
+				RenderLayers::layer(42)
+			}
+		}
+
+		let node = UiNodeFor::<()>::with(Entity::from_raw(100));
+		let mut render_layers = RenderLayers::default();
+
+		node.set_render_layer::<_T>(&mut render_layers);
+
+		assert_eq!(RenderLayers::layer(42), render_layers);
 	}
 }

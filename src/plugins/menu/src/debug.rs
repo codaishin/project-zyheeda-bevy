@@ -11,7 +11,11 @@ use crate::{
 #[cfg(debug_assertions)]
 use crate::{traits::insert_ui_content::InsertUiContent, AddUI};
 use bevy::prelude::*;
-use common::{states::game_state::GameState, tools::Index, traits::iteration::IterFinite};
+use common::{
+	states::game_state::GameState,
+	tools::Index,
+	traits::{handles_graphics::StaticRenderLayers, iteration::IterFinite},
+};
 use std::{fmt::Debug, marker::PhantomData, time::Duration};
 
 #[derive(Component)]
@@ -78,9 +82,12 @@ fn update_state_time<TState>(
 	run_time.1 = Some(*state.get());
 }
 
-pub fn setup_run_time_display(app: &mut App) {
+pub fn setup_run_time_display<TGraphics>(app: &mut App)
+where
+	TGraphics: StaticRenderLayers + 'static,
+{
 	for state in GameState::iterator() {
-		app.add_ui::<StateTime<GameState>>(state);
+		app.add_ui::<StateTime<GameState>, TGraphics>(state);
 	}
 	app.add_systems(Update, update_state_time::<GameState>);
 }

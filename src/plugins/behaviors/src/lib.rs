@@ -19,7 +19,7 @@ use common::{
 		handles_player::{
 			ConfiguresPlayerMovement,
 			HandlesPlayer,
-			HandlesPlayerCam,
+			HandlesPlayerCameras,
 			HandlesPlayerMouse,
 		},
 		handles_skill_behaviors::{
@@ -30,6 +30,7 @@ use common::{
 			Shape,
 		},
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
+		thread_safe::ThreadSafe,
 	},
 };
 use components::{
@@ -95,13 +96,16 @@ impl<TAnimationsPlugin, TPrefabsPlugin, TLifeCycles, TInteractionsPlugin, TEnemi
 		TPlayers,
 	>
 where
-	TAnimationsPlugin: Plugin + HasAnimationsDispatch,
-	TPrefabsPlugin: Plugin + RegisterPrefab,
-	TLifeCycles: Plugin + HandlesDestruction,
-	TInteractionsPlugin: Plugin + HandlesInteractions + HandlesEffect<DealDamage>,
-	TEnemies: Plugin + HandlesEnemies,
-	TPlayers:
-		Plugin + HandlesPlayer + HandlesPlayerCam + HandlesPlayerMouse + ConfiguresPlayerMovement,
+	TAnimationsPlugin: ThreadSafe + HasAnimationsDispatch,
+	TPrefabsPlugin: ThreadSafe + RegisterPrefab,
+	TLifeCycles: ThreadSafe + HandlesDestruction,
+	TInteractionsPlugin: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
+	TEnemies: ThreadSafe + HandlesEnemies,
+	TPlayers: ThreadSafe
+		+ HandlesPlayer
+		+ HandlesPlayerCameras
+		+ HandlesPlayerMouse
+		+ ConfiguresPlayerMovement,
 {
 	fn build(&self, app: &mut App) {
 		TPrefabsPlugin::with_dependency::<(TInteractionsPlugin, TLifeCycles)>()

@@ -18,6 +18,7 @@ use common::{
 		handles_life::HandlesLife,
 		handles_lifetime::HandlesLifetime,
 		prefab::RegisterPrefab,
+		thread_safe::ThreadSafe,
 	},
 };
 use components::{
@@ -60,7 +61,7 @@ pub struct InteractionsPlugin<TPrefabs, TLifeCyclePlugin>(
 
 impl<TPrefabs, TLifeCyclePlugin> InteractionsPlugin<TPrefabs, TLifeCyclePlugin>
 where
-	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime + HandlesLife,
+	TLifeCyclePlugin: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
 	pub fn depends_on(_: &TPrefabs, _: &TLifeCyclePlugin) -> Self {
 		Self(PhantomData)
@@ -69,8 +70,8 @@ where
 
 impl<TPrefabs, TLifeCyclePlugin> Plugin for InteractionsPlugin<TPrefabs, TLifeCyclePlugin>
 where
-	TPrefabs: Plugin + RegisterPrefab,
-	TLifeCyclePlugin: Plugin + HandlesDestruction + HandlesLifetime + HandlesLife,
+	TPrefabs: ThreadSafe + RegisterPrefab,
+	TLifeCyclePlugin: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
 	fn build(&self, app: &mut App) {
 		TPrefabs::register_prefab::<Effect<ForceShield>>(app);

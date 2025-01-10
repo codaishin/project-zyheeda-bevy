@@ -1,5 +1,5 @@
 use crate::{
-	components::cam_orbit::{CamOrbit, CamOrbitCenter},
+	components::orbit_player::{OrbitCenter, OrbitPlayer},
 	traits::orbit::{Orbit, Vec2Radians},
 };
 use bevy::prelude::*;
@@ -9,7 +9,7 @@ use std::f32::consts::PI;
 impl<T> SetCameraToOrbit for T {}
 
 pub(crate) trait SetCameraToOrbit {
-	fn set_camera_to_orbit<TPlayer>(
+	fn set_to_orbit<TPlayer>(
 		mut commands: Commands,
 		cameras: Query<Entity, With<Self>>,
 		players: Query<Entity, Added<TPlayer>>,
@@ -23,8 +23,8 @@ pub(crate) trait SetCameraToOrbit {
 
 		for entity in &cameras {
 			let mut transform = Transform::from_translation(Vec3::X);
-			let mut orbit = CamOrbit {
-				center: CamOrbitCenter::from(Vec3::ZERO).with_entity(player),
+			let mut orbit = OrbitPlayer {
+				center: OrbitCenter::from(Vec3::ZERO).with_entity(player),
 				distance: 15.,
 				sensitivity: 1.,
 			};

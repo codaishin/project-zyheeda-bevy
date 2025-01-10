@@ -13,7 +13,7 @@ use bevy::{
 	prelude::default,
 	ui::{BackgroundColor, Node, PositionType, Val},
 };
-use common::components::OwnedBy;
+use common::components::UiNodeFor;
 
 const BASE_DIMENSIONS: Vec2 = Vec2::new(100., 10.);
 
@@ -45,7 +45,7 @@ fn add_ui<T: Send + Sync + 'static>(
 	let scaled_dimension = BASE_DIMENSIONS * bar.scale;
 	let background = commands
 		.spawn((
-			OwnedBy::<Bar>::with(bar_id),
+			UiNodeFor::<Bar>::with(bar_id),
 			Node {
 				width: Val::Px(scaled_dimension.x),
 				height: Val::Px(scaled_dimension.y),
@@ -189,8 +189,8 @@ mod tests {
 		let background = app.world().entity(background);
 
 		assert_eq!(
-			Some(&OwnedBy::<Bar>::with(bar)),
-			background.get::<OwnedBy<Bar>>()
+			Some(&UiNodeFor::<Bar>::with(bar)),
+			background.get::<UiNodeFor<Bar>>()
 		);
 	}
 

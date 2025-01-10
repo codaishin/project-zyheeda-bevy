@@ -16,9 +16,11 @@ use common::{
 	systems::log::log_many,
 	tools::slot_key::SlotKey,
 	traits::{
+		handles_graphics::{StaticRenderLayers, UiCamera},
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		handles_player::HandlesPlayer,
 		load_asset::Path,
+		thread_safe::ThreadSafe,
 	},
 };
 use components::{
@@ -98,21 +100,23 @@ use visualization::unusable::Unusable;
 type SlotKeyMap = KeyMap<SlotKey, KeyCode>;
 
 trait AddUI<TState> {
-	fn add_ui<TComponent>(&mut self, on_state: TState) -> &mut Self
+	fn add_ui<TComponent, TGraphics>(&mut self, on_state: TState) -> &mut Self
 	where
-		TComponent: Component + LoadUi<AssetServer> + InsertUiContent;
+		TComponent: Component + LoadUi<AssetServer> + InsertUiContent,
+		TGraphics: StaticRenderLayers + 'static;
 }
 
 impl<TState> AddUI<TState> for App
 where
 	TState: States + Copy,
 {
-	fn add_ui<TComponent>(&mut self, on_state: TState) -> &mut Self
+	fn add_ui<TComponent, TGraphics>(&mut self, on_state: TState) -> &mut Self
 	where
 		TComponent: Component + LoadUi<AssetServer> + InsertUiContent,
+		TGraphics: StaticRenderLayers + 'static,
 	{
 		let spawn_component = (
-			spawn::<TComponent, AssetServer>,
+			spawn::<TComponent, AssetServer, TGraphics>,
 			update_children::<TComponent>,
 		)
 			.chain();
@@ -172,18 +176,19 @@ impl AddDropdown for App {
 	}
 }
 
-pub struct MenuPlugin<TLoading, TPlayers>(PhantomData<(TLoading, TPlayers)>);
+pub struct MenuPlugin<TLoading, TPlayers, TGraphics>(PhantomData<(TLoading, TPlayers, TGraphics)>);
 
-impl<TLoading, TPlayers> MenuPlugin<TLoading, TPlayers> {
-	pub fn depends_on(_: &TLoading, _: &TPlayers) -> Self {
+impl<TLoading, TPlayers, TGraphics> MenuPlugin<TLoading, TPlayers, TGraphics> {
+	pub fn depends_on(_: &TLoading, _: &TPlayers, _: &TGraphics) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TPlayers> MenuPlugin<TLoading, TPlayers>
+impl<TLoading, TPlayers, TGraphics> MenuPlugin<TLoading, TPlayers, TGraphics>
 where
-	TLoading: Plugin + HandlesLoadTracking,
-	TPlayers: Plugin + HandlesPlayer,
+	TLoading: ThreadSafe + HandlesLoadTracking,
+	TPlayers: ThreadSafe + HandlesPlayer,
+	TGraphics: ThreadSafe + UiCamera,
 {
 	fn resources(&self, app: &mut App) {
 		app.init_resource::<Shared<Path, Handle<Image>>>()
@@ -204,7 +209,7 @@ where
 		let start_menu = GameState::StartMenu;
 		let new_game = GameState::NewGame;
 
-		app.add_ui::<StartMenu>(start_menu)
+		app.add_ui::<StartMenu, TGraphics::TUiCamera>(start_menu)
 			.add_systems(Update, panel_colors::<StartMenuButton>)
 			.add_systems(Update, StartGame::on_release_set(new_game));
 	}
@@ -213,14 +218,14 @@ where
 		let load_assets = TLoading::processing_state::<AssetsProgress>();
 		let load_dependencies = TLoading::processing_state::<DependenciesProgress>();
 
-		app.add_ui::<LoadingScreen<AssetsProgress>>(load_assets)
-			.add_ui::<LoadingScreen<DependenciesProgress>>(load_dependencies);
+		app.add_ui::<LoadingScreen<AssetsProgress>, TGraphics::TUiCamera>(load_assets)
+			.add_ui::<LoadingScreen<DependenciesProgress>, TGraphics::TUiCamera>(load_dependencies);
 	}
 
 	fn ui_overlay(&self, app: &mut App) {
 		let play = GameState::Play;
 
-		app.add_ui::<UIOverlay>(play)
+		app.add_ui::<UIOverlay, TGraphics::TUiCamera>(play)
 			.add_systems(
 				Update,
 				(
@@ -249,7 +254,7 @@ where
 	fn combo_overview(&self, app: &mut App) {
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
 
-		app.add_ui::<ComboOverview>(combo_overview)
+		app.add_ui::<ComboOverview, TGraphics::TUiCamera>(combo_overview)
 			.add_dropdown::<SkillButton<DropdownItem<Vertical>>>()
 			.add_dropdown::<SkillButton<DropdownItem<Horizontal>>>()
 			.add_dropdown::<KeySelect<ReKeySkill>>()
@@ -280,7 +285,7 @@ where
 	fn inventory_screen(&self, app: &mut App) {
 		let inventory = GameState::IngameMenu(MenuState::Inventory);
 
-		app.add_ui::<InventoryScreen>(inventory)
+		app.add_ui::<InventoryScreen, TGraphics::TUiCamera>(inventory)
 			.add_systems(
 				Update,
 				(
@@ -313,10 +318,11 @@ where
 	}
 }
 
-impl<TLoading, TPlayers> Plugin for MenuPlugin<TLoading, TPlayers>
+impl<TLoading, TPlayers, TGraphics> Plugin for MenuPlugin<TLoading, TPlayers, TGraphics>
 where
-	TLoading: Plugin + HandlesLoadTracking,
-	TPlayers: Plugin + HandlesPlayer,
+	TLoading: ThreadSafe + HandlesLoadTracking,
+	TPlayers: ThreadSafe + HandlesPlayer,
+	TGraphics: ThreadSafe + UiCamera,
 {
 	fn build(&self, app: &mut App) {
 		self.resources(app);
@@ -331,7 +337,7 @@ where
 
 		#[cfg(debug_assertions)]
 		{
-			debug::setup_run_time_display(app);
+			debug::setup_run_time_display::<TGraphics::TUiCamera>(app);
 			debug::setup_dropdown_test(app);
 		}
 	}

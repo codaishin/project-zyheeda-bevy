@@ -26,10 +26,11 @@ use common::{
 		handles_player::{
 			ConfiguresPlayerSkillAnimations,
 			HandlesPlayer,
-			HandlesPlayerCam,
+			HandlesPlayerCameras,
 			HandlesPlayerMouse,
 		},
 		handles_skill_behaviors::HandlesSkillBehaviors,
+		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
 	},
 };
@@ -84,14 +85,14 @@ pub struct SkillsPlugin<
 impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, TPlayers>
 	SkillsPlugin<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, TPlayers>
 where
-	TLifeCycles: Plugin + HandlesLifetime,
-	TInteractions: Plugin + HandlesAllEffects,
-	TDispatchChildrenAssets: Plugin + HandlesAssetsForChildren,
-	TLoading: Plugin + HandlesCustomAssets + HandlesCustomFolderAssets,
-	TBehaviors: Plugin + HandlesSkillBehaviors + HandlesOrientation,
-	TPlayers: Plugin
+	TLifeCycles: ThreadSafe + HandlesLifetime,
+	TInteractions: ThreadSafe + HandlesAllEffects,
+	TDispatchChildrenAssets: ThreadSafe + HandlesAssetsForChildren,
+	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets,
+	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation,
+	TPlayers: ThreadSafe
 		+ HandlesPlayer
-		+ HandlesPlayerCam
+		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations,
 {
@@ -239,14 +240,14 @@ impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, 
 		TPlayers,
 	>
 where
-	TLifeCycles: Plugin + HandlesLifetime,
-	TInteractions: Plugin + HandlesAllEffects,
-	TDispatchChildrenAssets: Plugin + HandlesAssetsForChildren,
-	TLoading: Plugin + HandlesCustomAssets + HandlesCustomFolderAssets,
-	TBehaviors: Plugin + HandlesSkillBehaviors + HandlesOrientation,
-	TPlayers: Plugin
+	TLifeCycles: ThreadSafe + HandlesLifetime,
+	TInteractions: ThreadSafe + HandlesAllEffects,
+	TDispatchChildrenAssets: ThreadSafe + HandlesAssetsForChildren,
+	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets,
+	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation,
+	TPlayers: ThreadSafe
 		+ HandlesPlayer
-		+ HandlesPlayerCam
+		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations,
 {

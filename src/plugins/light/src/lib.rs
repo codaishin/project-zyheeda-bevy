@@ -10,6 +10,7 @@ use bevy_rapier3d::geometry::CollidingEntities;
 use common::traits::{
 	handles_lights::{HandlesLights, Responsive},
 	prefab::RegisterPrefab,
+	thread_safe::ThreadSafe,
 };
 use components::{
 	responsive_light::ResponsiveLight,
@@ -21,7 +22,7 @@ pub struct LightPlugin<TPrefabs>(PhantomData<TPrefabs>);
 
 impl<TPrefabs> LightPlugin<TPrefabs>
 where
-	TPrefabs: Plugin + RegisterPrefab,
+	TPrefabs: ThreadSafe + RegisterPrefab,
 {
 	pub fn depends_on(_: &TPrefabs) -> Self {
 		Self(PhantomData)
@@ -30,7 +31,7 @@ where
 
 impl<TPrefabs> Plugin for LightPlugin<TPrefabs>
 where
-	TPrefabs: Plugin + RegisterPrefab,
+	TPrefabs: ThreadSafe + RegisterPrefab,
 {
 	fn build(&self, app: &mut App) {
 		TPrefabs::register_prefab::<ResponsiveLight>(app);

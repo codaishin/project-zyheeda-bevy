@@ -45,6 +45,7 @@
 		"automock",
 		"beamer",
 		"beamers",
+		"Bgra",
 		"Blockable",
 		"Collidable",
 		"consts",
@@ -76,6 +77,7 @@
 		"timestep",
 		"tonemapping",
 		"trimesh",
+		"Unorm",
 		"wgsl",
 		"withf",
 		"zyheeda"

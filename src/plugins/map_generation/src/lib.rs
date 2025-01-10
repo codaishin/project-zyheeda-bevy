@@ -10,6 +10,7 @@ use common::{
 	traits::{
 		handles_lights::HandlesLights,
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
+		thread_safe::ThreadSafe,
 	},
 };
 use components::{Floating, Light, Wall, WallBack};
@@ -28,8 +29,8 @@ pub struct MapGenerationPlugin<TPrefabsPlugin, TLights>(PhantomData<(TPrefabsPlu
 
 impl<TPrefabs, TLights> MapGenerationPlugin<TPrefabs, TLights>
 where
-	TPrefabs: Plugin + RegisterPrefab,
-	TLights: Plugin + HandlesLights,
+	TPrefabs: ThreadSafe + RegisterPrefab,
+	TLights: ThreadSafe + HandlesLights,
 {
 	pub fn depends_on(_: &TPrefabs, _: &TLights) -> Self {
 		Self(PhantomData::<(TPrefabs, TLights)>)
@@ -38,8 +39,8 @@ where
 
 impl<TPrefabs, TLights> Plugin for MapGenerationPlugin<TPrefabs, TLights>
 where
-	TPrefabs: Plugin + RegisterPrefab,
-	TLights: Plugin + HandlesLights,
+	TPrefabs: ThreadSafe + RegisterPrefab,
+	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
 		let new_game = GameState::NewGame;

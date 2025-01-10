@@ -1,6 +1,7 @@
 pub mod components;
 pub mod materials;
 
+pub(crate) mod resources;
 pub(crate) mod systems;
 pub(crate) mod traits;
 
@@ -22,23 +23,31 @@ use common::{
 	},
 	traits::{
 		handles_effect::{HandlesAllEffects, HandlesEffect},
+		handles_graphics::UiCamera,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, InSubApp},
+		handles_player::{WithCamera, WithMainCamera},
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		prefab::RegisterPrefab,
+		thread_safe::ThreadSafe,
 	},
+	PlayerCameras,
 };
 use components::{
+	camera_labels::{FirstPass, FirstPassTexture, SecondPass, Ui},
 	effect_shaders::EffectShader,
 	effect_shaders_target::EffectShadersTarget,
 	material_override::MaterialOverride,
 };
 use materials::essence_material::EssenceMaterial;
+use resources::{first_pass_image::FirstPassImage, window_size::WindowSize};
 use std::{hash::Hash, marker::PhantomData};
 use systems::{
 	add_child_effect_shader::add_child_effect_shader,
 	add_effect_shader::add_effect_shader,
+	insert_effect_shader_render_layers::insert_effect_shader_render_layers,
 	instantiate_effect_shaders::instantiate_effect_shaders,
 	no_waiting_pipelines::no_waiting_pipelines,
+	spawn_cameras::spawn_cameras,
 };
 use traits::{
 	get_effect_material::GetEffectMaterial,
@@ -52,13 +61,33 @@ pub struct GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>(
 impl<TPrefabs, TLoading, TInteractions, TBehaviors>
 	GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
 where
-	TPrefabs: Plugin + RegisterPrefab,
-	TLoading: Plugin + HandlesLoadTracking,
-	TInteractions: Plugin + HandlesAllEffects,
-	TBehaviors: Plugin + HandlesSkillBehaviors,
+	TPrefabs: ThreadSafe + RegisterPrefab,
+	TLoading: ThreadSafe + HandlesLoadTracking,
+	TInteractions: ThreadSafe + HandlesAllEffects,
+	TBehaviors: ThreadSafe + HandlesSkillBehaviors,
 {
-	pub fn depends_on(_: &TPrefabs, _: &TLoading, _: &TInteractions, _: &TBehaviors) -> Self {
-		Self(PhantomData)
+	#[allow(clippy::type_complexity)]
+	pub fn depends_on<TPlayers>(
+		_: &TPrefabs,
+		_: &TLoading,
+		_: &TInteractions,
+		_: &TBehaviors,
+		player_plugin: TPlayers,
+	) -> (
+		Self,
+		PlayerCameras!(TPlayers, FirstPass, Ui, SecondPass, FirstPassTexture),
+	)
+	where
+		TPlayers: WithMainCamera,
+	{
+		(
+			Self(PhantomData),
+			player_plugin
+				.with_main_camera::<FirstPass>()
+				.with_camera::<FirstPassTexture>()
+				.with_camera::<SecondPass>()
+				.with_camera::<Ui>(),
+		)
 	}
 
 	fn track_render_pipeline_ready(app: &mut App) {
@@ -96,7 +125,9 @@ where
 				>,
 				EffectShadersTarget::track_in_self_and_children::<Mesh3d>().system(),
 				instantiate_effect_shaders,
-			),
+				insert_effect_shader_render_layers(SecondPass),
+			)
+				.chain(),
 		);
 	}
 
@@ -113,20 +144,30 @@ where
 				.chain(),
 		);
 	}
+
+	fn cameras(app: &mut App) {
+		app.init_resource::<WindowSize>()
+			.add_systems(PostStartup, FirstPassImage::instantiate.pipe(spawn_cameras))
+			.add_systems(
+				First,
+				(WindowSize::update, FirstPassImage::<Image>::update_size).chain(),
+			);
+	}
 }
 
 impl<TPrefabs, TLoading, TInteractions, TBehaviors> Plugin
 	for GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
 where
-	TPrefabs: Plugin + RegisterPrefab,
-	TLoading: Plugin + HandlesLoadTracking,
-	TInteractions: Plugin + HandlesAllEffects,
-	TBehaviors: Plugin + HandlesSkillBehaviors,
+	TPrefabs: ThreadSafe + RegisterPrefab,
+	TLoading: ThreadSafe + HandlesLoadTracking,
+	TInteractions: ThreadSafe + HandlesAllEffects,
+	TBehaviors: ThreadSafe + HandlesSkillBehaviors,
 {
 	fn build(&self, app: &mut App) {
 		Self::track_render_pipeline_ready(app);
 		Self::effect_shaders(app);
 		Self::essence_material(app);
+		Self::cameras(app);
 	}
 }
 
@@ -183,4 +224,10 @@ where
 			add_child_effect_shader::<TInteractions, TEffect>,
 		),
 	);
+}
+
+impl<TPrefabs, TLoading, TInteractions, TBehaviors> UiCamera
+	for GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
+{
+	type TUiCamera = Ui;
 }

@@ -27,7 +27,6 @@ use common::{
 	traits::{
 		cache::GetOrCreateTypeAsset,
 		clamp_zero_positive::ClampZeroPositive,
-		handles_bars::HandlesBars,
 		handles_effect::HandlesEffect,
 		handles_enemies::EnemyTarget,
 		prefab::{sphere, GetOrCreateAssets, Prefab},
@@ -98,11 +97,10 @@ struct VoidSphereCore;
 
 struct VoidSphereRing;
 
-impl<TInteractions, TBars> Prefab<(TInteractions, TBars)> for VoidSphere
+impl<TInteractions> Prefab<TInteractions> for VoidSphere
 where
 	TInteractions: HandlesEffect<DealDamage, TTarget = Health>
 		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
-	TBars: HandlesBars,
 {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
@@ -137,7 +135,6 @@ where
 			GravityScale(0.),
 			Health::new(5.).bundle_via::<TInteractions>(),
 			Affected::by::<Gravity>().bundle_via::<TInteractions>(),
-			TBars::new_bar(),
 		));
 		on.with_children(|parent| {
 			parent.spawn((

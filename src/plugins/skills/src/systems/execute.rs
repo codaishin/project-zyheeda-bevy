@@ -12,7 +12,7 @@ use common::{
 		accessors::get::GetterRefOptional,
 		handles_effect::HandlesEffect,
 		handles_lifetime::HandlesLifetime,
-		handles_player::{HandlesPlayerCam, HandlesPlayerMouse},
+		handles_player::{HandlesPlayerCameras, HandlesPlayerMouse},
 		handles_skill_behaviors::HandlesSkillBehaviors,
 	},
 };
@@ -36,7 +36,7 @@ pub(crate) trait ExecuteSkills {
 		TLifetimes: HandlesLifetime,
 		TEffects: HandlesEffect<DealDamage>,
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
-		TPlayers: HandlesPlayerCam + HandlesPlayerMouse,
+		TPlayers: HandlesPlayerCameras + HandlesPlayerMouse,
 	{
 		agents
 			.iter_mut()
@@ -110,7 +110,7 @@ mod tests {
 
 	struct _Players;
 
-	impl HandlesPlayerCam for _Players {
+	impl HandlesPlayerCameras for _Players {
 		type TCamRay = _CamRay;
 	}
 
