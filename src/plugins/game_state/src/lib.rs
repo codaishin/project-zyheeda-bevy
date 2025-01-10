@@ -12,7 +12,7 @@ use common::{
 use std::marker::PhantomData;
 use systems::pause_virtual_time::pause_virtual_time;
 
-pub struct GameStatePlugin<TLoading>(PhantomData<TLoading>);
+pub struct GameStatePlugin<TDependencies>(PhantomData<TDependencies>);
 
 impl<TLoading> GameStatePlugin<TLoading>
 where

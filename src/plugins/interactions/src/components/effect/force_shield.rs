@@ -12,7 +12,7 @@ use common::{
 };
 
 impl<TPrefabs, TLifecyclePlugin> HandlesEffect<ForceShield>
-	for InteractionsPlugin<TPrefabs, TLifecyclePlugin>
+	for InteractionsPlugin<(TPrefabs, TLifecyclePlugin)>
 {
 	type TTarget = ();
 	type TEffectComponent = Effect<ForceShield>;

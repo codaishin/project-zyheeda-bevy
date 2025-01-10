@@ -64,26 +64,17 @@ use systems::{
 	update_skill_combos::update_skill_combos,
 };
 
-pub struct SkillsPlugin<
-	TLifeCycles,
-	TInteractions,
-	TDispatchChildrenAssets,
-	TLoading,
-	TBehaviors,
-	TPlayers,
->(
-	PhantomData<(
+pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
+
+impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, TPlayers>
+	SkillsPlugin<(
 		TLifeCycles,
 		TInteractions,
 		TDispatchChildrenAssets,
 		TLoading,
 		TBehaviors,
 		TPlayers,
-	)>,
-);
-
-impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, TPlayers>
-	SkillsPlugin<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, TPlayers>
+	)>
 where
 	TLifeCycles: ThreadSafe + HandlesLifetime,
 	TInteractions: ThreadSafe + HandlesAllEffects,
@@ -231,14 +222,14 @@ where
 }
 
 impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, TPlayers> Plugin
-	for SkillsPlugin<
+	for SkillsPlugin<(
 		TLifeCycles,
 		TInteractions,
 		TDispatchChildrenAssets,
 		TLoading,
 		TBehaviors,
 		TPlayers,
-	>
+	)>
 where
 	TLifeCycles: ThreadSafe + HandlesLifetime,
 	TInteractions: ThreadSafe + HandlesAllEffects,

@@ -67,11 +67,11 @@ pub trait ConfiguresPlayerSkillAnimations {
 /// use std::marker::PhantomData;
 /// use bevy::prelude::Component;
 /// use common::{
-///   PlayerCameras,
+///   WithCameras,
 ///   traits::handles_player::{WithCamera, WithMainCamera}
 /// };
 ///
-/// type T = PlayerCameras!(Container, Cam<Main>, Cam<Other2>, Cam<Other1>);
+/// type T = WithCameras!(Container, Cam<Main>, Cam<Other2>, Cam<Other1>);
 /// let container: T = Container::new()
 ///   .with_main_camera::<Cam<Main>>()
 ///   .with_camera::<Cam<Other1>>()
@@ -112,16 +112,16 @@ pub trait ConfiguresPlayerSkillAnimations {
 ///   }
 /// }
 /// ```
-macro_rules! PlayerCameras {
+macro_rules! WithCameras {
 	($t_container:ty, $t_main_cam:ty) => {
 		<$t_container as WithMainCamera>::TWithMainCam<$t_main_cam>
 	};
 	($t_container:ty, $t_main_cam:ty, $t_other_cam:ty) => {
-		<PlayerCameras!($t_container, $t_main_cam) as WithCamera>::TWithCam<$t_other_cam>
+		<WithCameras!($t_container, $t_main_cam) as WithCamera>::TWithCam<$t_other_cam>
 	};
 	($t_container:ty, $t_main_cam:ty, $t_other_cam:ty, $($t_other_cams:ty),+) => {
-		<PlayerCameras!($t_container, $t_main_cam, $($t_other_cams),*) as WithCamera>::TWithCam<$t_other_cam>
+		<WithCameras!($t_container, $t_main_cam, $($t_other_cams),*) as WithCamera>::TWithCam<$t_other_cam>
 	};
 }
 
-pub use PlayerCameras;
+pub use WithCameras;

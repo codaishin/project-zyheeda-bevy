@@ -25,9 +25,9 @@ use systems::{
 };
 use traits::RegisterMapCell;
 
-pub struct MapGenerationPlugin<TPrefabsPlugin, TLights>(PhantomData<(TPrefabsPlugin, TLights)>);
+pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TPrefabs, TLights> MapGenerationPlugin<TPrefabs, TLights>
+impl<TPrefabs, TLights> MapGenerationPlugin<(TPrefabs, TLights)>
 where
 	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLights: ThreadSafe + HandlesLights,
@@ -37,7 +37,7 @@ where
 	}
 }
 
-impl<TPrefabs, TLights> Plugin for MapGenerationPlugin<TPrefabs, TLights>
+impl<TPrefabs, TLights> Plugin for MapGenerationPlugin<(TPrefabs, TLights)>
 where
 	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLights: ThreadSafe + HandlesLights,

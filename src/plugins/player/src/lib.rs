@@ -46,19 +46,16 @@ use systems::{
 };
 use traits::{add_player_camera::AddPlayerCameras, main_camera::MainCamera};
 
-pub struct PlayerPlugin<TCameras, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>(
-	PhantomData<(
-		TCameras,
-		TGameStates,
-		TAnimation,
-		TPrefabs,
-		TInteractions,
-		TLights,
-	)>,
-);
+pub struct PlayerPlugin<TDependencies>(PhantomData<TDependencies>);
 
 impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
-	PlayerPlugin<(), TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
+	PlayerPlugin<(TGameStates, TAnimation, TPrefabs, TInteractions, TLights)>
+where
+	TGameStates: ThreadSafe + HandlesGameStates,
+	TAnimation: ThreadSafe + RegisterAnimations,
+	TPrefabs: ThreadSafe + RegisterPrefab,
+	TInteractions: ThreadSafe + HandlesEffect<DealDamage, TTarget = Health>,
+	TLights: ThreadSafe + HandlesLights,
 {
 	pub fn depends_on(
 		_: &TGameStates,
@@ -72,7 +69,10 @@ impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
 }
 
 impl<TCameras, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> Plugin
-	for PlayerPlugin<TCameras, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
+	for PlayerPlugin<(
+		TCameras,
+		(TGameStates, TAnimation, TPrefabs, TInteractions, TLights),
+	)>
 where
 	TCameras: ThreadSafe + MainCamera + AddPlayerCameras,
 	TGameStates: ThreadSafe + HandlesGameStates,
@@ -113,17 +113,13 @@ where
 	}
 }
 
-impl<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> HandlesPlayer
-	for PlayerPlugin<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
-{
+impl<TDependencies> HandlesPlayer for PlayerPlugin<TDependencies> {
 	type TPlayer = Player;
 }
 
-impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights> WithMainCamera
-	for PlayerPlugin<(), TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
-{
+impl<TDependencies> WithMainCamera for PlayerPlugin<TDependencies> {
 	type TWithMainCam<TMainCamera>
-		= PlayerPlugin<(TMainCamera,), TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
+		= PlayerPlugin<((TMainCamera,), TDependencies)>
 	where
 		TMainCamera: Component;
 
@@ -135,13 +131,12 @@ impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights> WithMainCamera
 	}
 }
 
-impl<TCameras, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> WithCamera
-	for PlayerPlugin<TCameras, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
+impl<TCameras, TDependencies> WithCamera for PlayerPlugin<(TCameras, TDependencies)>
 where
 	TCameras: MainCamera + AddPlayerCameras,
 {
 	type TWithCam<TNewCamera>
-		= PlayerPlugin<(TCameras, TNewCamera), TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
+		= PlayerPlugin<((TCameras, TNewCamera), TDependencies)>
 	where
 		TNewCamera: Component;
 
@@ -153,27 +148,19 @@ where
 	}
 }
 
-impl<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> HandlesPlayerCameras
-	for PlayerPlugin<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
-{
+impl<TDependencies> HandlesPlayerCameras for PlayerPlugin<TDependencies> {
 	type TCamRay = CamRay;
 }
 
-impl<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> HandlesPlayerMouse
-	for PlayerPlugin<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
-{
+impl<TDependencies> HandlesPlayerMouse for PlayerPlugin<TDependencies> {
 	type TMouseHover = MouseHover;
 }
 
-impl<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> ConfiguresPlayerMovement
-	for PlayerPlugin<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
-{
+impl<TDependencies> ConfiguresPlayerMovement for PlayerPlugin<TDependencies> {
 	type TPlayerMovement = PlayerMovement;
 }
 
-impl<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> ConfiguresPlayerSkillAnimations
-	for PlayerPlugin<T, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
-{
+impl<TDependencies> ConfiguresPlayerSkillAnimations for PlayerPlugin<TDependencies> {
 	type TAnimationMarker = SkillAnimation;
 
 	fn start_skill_animation(slot_key: SlotKey) -> Self::TAnimationMarker {

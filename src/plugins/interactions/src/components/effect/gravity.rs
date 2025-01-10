@@ -13,7 +13,7 @@ use common::{
 use std::time::Duration;
 
 impl<TPrefabs, TLifecyclePlugin> HandlesEffect<Gravity>
-	for InteractionsPlugin<TPrefabs, TLifecyclePlugin>
+	for InteractionsPlugin<(TPrefabs, TLifecyclePlugin)>
 {
 	type TTarget = AffectedBy<Gravity>;
 	type TEffectComponent = Effect<Gravity>;

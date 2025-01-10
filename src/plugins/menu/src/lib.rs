@@ -176,15 +176,20 @@ impl AddDropdown for App {
 	}
 }
 
-pub struct MenuPlugin<TLoading, TPlayers, TGraphics>(PhantomData<(TLoading, TPlayers, TGraphics)>);
+pub struct MenuPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TPlayers, TGraphics> MenuPlugin<TLoading, TPlayers, TGraphics> {
+impl<TLoading, TPlayers, TGraphics> MenuPlugin<(TLoading, TPlayers, TGraphics)>
+where
+	TLoading: ThreadSafe + HandlesLoadTracking,
+	TPlayers: ThreadSafe + HandlesPlayer,
+	TGraphics: ThreadSafe + UiCamera,
+{
 	pub fn depends_on(_: &TLoading, _: &TPlayers, _: &TGraphics) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TPlayers, TGraphics> MenuPlugin<TLoading, TPlayers, TGraphics>
+impl<TLoading, TPlayers, TGraphics> MenuPlugin<(TLoading, TPlayers, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TPlayers: ThreadSafe + HandlesPlayer,
@@ -318,7 +323,7 @@ where
 	}
 }
 
-impl<TLoading, TPlayers, TGraphics> Plugin for MenuPlugin<TLoading, TPlayers, TGraphics>
+impl<TLoading, TPlayers, TGraphics> Plugin for MenuPlugin<(TLoading, TPlayers, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TPlayers: ThreadSafe + HandlesPlayer,
