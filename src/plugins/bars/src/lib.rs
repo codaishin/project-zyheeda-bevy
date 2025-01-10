@@ -15,7 +15,7 @@ use common::{
 	traits::{
 		accessors::get::GetterRef,
 		handles_enemies::HandlesEnemies,
-		handles_graphics::{MainCamera, UiRenderLayer},
+		handles_graphics::UiCamera,
 		handles_life::HandlesLife,
 		handles_player::HandlesPlayer,
 		ownership_relation::OwnershipRelation,
@@ -44,14 +44,15 @@ where
 	TLifeCycle: ThreadSafe + HandlesLife,
 	TPlayers: ThreadSafe + HandlesPlayer,
 	TEnemies: ThreadSafe + HandlesEnemies,
-	TGraphics: ThreadSafe + UiRenderLayer + MainCamera,
+	TGraphics: ThreadSafe + UiCamera,
 {
 	fn build(&self, app: &mut App) {
 		let get_health = TLifeCycle::TLife::get;
 		let update_life_bars =
-			bar::<TLifeCycle::TLife, Health, Camera, TGraphics::TMainCamera>(get_health);
+			bar::<TLifeCycle::TLife, Health, Camera, TGraphics::TUiCamera>(get_health);
 		let render_life_bars = render_bar::<Health>;
-		let config_render_layer = Configure::Apply(UiNodeFor::<Bar>::set_render_layer::<TGraphics>);
+		let config_render_layer =
+			Configure::Apply(UiNodeFor::<Bar>::set_render_layer::<TGraphics::TUiCamera>);
 
 		app.manage_ownership::<Bar>(Update)
 			.add_systems(

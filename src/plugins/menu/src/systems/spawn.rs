@@ -1,16 +1,16 @@
 use crate::traits::LoadUi;
 use bevy::prelude::*;
-use common::traits::{handles_graphics::UiRenderLayer, load_asset::LoadAsset};
+use common::traits::{handles_graphics::StaticRenderLayers, load_asset::LoadAsset};
 
 pub fn spawn<TComponent, TServer, TGraphics>(mut commands: Commands, mut images: ResMut<TServer>)
 where
 	TComponent: LoadUi<TServer> + Component,
 	TServer: Resource + LoadAsset,
-	TGraphics: UiRenderLayer,
+	TGraphics: StaticRenderLayers,
 {
 	let component = TComponent::load_ui(images.as_mut());
 
-	commands.spawn((component, TGraphics::ui_render_layer()));
+	commands.spawn((component, TGraphics::render_layers()));
 }
 
 #[cfg(test)]
@@ -42,8 +42,8 @@ mod tests {
 
 	struct _Graphics;
 
-	impl UiRenderLayer for _Graphics {
-		fn ui_render_layer() -> RenderLayers {
+	impl StaticRenderLayers for _Graphics {
+		fn render_layers() -> RenderLayers {
 			RenderLayers::layer(11)
 		}
 	}

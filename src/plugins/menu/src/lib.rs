@@ -16,7 +16,7 @@ use common::{
 	systems::log::log_many,
 	tools::slot_key::SlotKey,
 	traits::{
-		handles_graphics::UiRenderLayer,
+		handles_graphics::{StaticRenderLayers, UiCamera},
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		handles_player::HandlesPlayer,
 		load_asset::Path,
@@ -103,7 +103,7 @@ trait AddUI<TState> {
 	fn add_ui<TComponent, TGraphics>(&mut self, on_state: TState) -> &mut Self
 	where
 		TComponent: Component + LoadUi<AssetServer> + InsertUiContent,
-		TGraphics: UiRenderLayer + 'static;
+		TGraphics: StaticRenderLayers + 'static;
 }
 
 impl<TState> AddUI<TState> for App
@@ -113,7 +113,7 @@ where
 	fn add_ui<TComponent, TGraphics>(&mut self, on_state: TState) -> &mut Self
 	where
 		TComponent: Component + LoadUi<AssetServer> + InsertUiContent,
-		TGraphics: UiRenderLayer + 'static,
+		TGraphics: StaticRenderLayers + 'static,
 	{
 		let spawn_component = (
 			spawn::<TComponent, AssetServer, TGraphics>,
@@ -188,7 +188,7 @@ impl<TLoading, TPlayers, TGraphics> MenuPlugin<TLoading, TPlayers, TGraphics>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TPlayers: ThreadSafe + HandlesPlayer,
-	TGraphics: ThreadSafe + UiRenderLayer,
+	TGraphics: ThreadSafe + UiCamera,
 {
 	fn resources(&self, app: &mut App) {
 		app.init_resource::<Shared<Path, Handle<Image>>>()
@@ -209,7 +209,7 @@ where
 		let start_menu = GameState::StartMenu;
 		let new_game = GameState::NewGame;
 
-		app.add_ui::<StartMenu, TGraphics>(start_menu)
+		app.add_ui::<StartMenu, TGraphics::TUiCamera>(start_menu)
 			.add_systems(Update, panel_colors::<StartMenuButton>)
 			.add_systems(Update, StartGame::on_release_set(new_game));
 	}
@@ -218,14 +218,14 @@ where
 		let load_assets = TLoading::processing_state::<AssetsProgress>();
 		let load_dependencies = TLoading::processing_state::<DependenciesProgress>();
 
-		app.add_ui::<LoadingScreen<AssetsProgress>, TGraphics>(load_assets)
-			.add_ui::<LoadingScreen<DependenciesProgress>, TGraphics>(load_dependencies);
+		app.add_ui::<LoadingScreen<AssetsProgress>, TGraphics::TUiCamera>(load_assets)
+			.add_ui::<LoadingScreen<DependenciesProgress>, TGraphics::TUiCamera>(load_dependencies);
 	}
 
 	fn ui_overlay(&self, app: &mut App) {
 		let play = GameState::Play;
 
-		app.add_ui::<UIOverlay, TGraphics>(play)
+		app.add_ui::<UIOverlay, TGraphics::TUiCamera>(play)
 			.add_systems(
 				Update,
 				(
@@ -254,7 +254,7 @@ where
 	fn combo_overview(&self, app: &mut App) {
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
 
-		app.add_ui::<ComboOverview, TGraphics>(combo_overview)
+		app.add_ui::<ComboOverview, TGraphics::TUiCamera>(combo_overview)
 			.add_dropdown::<SkillButton<DropdownItem<Vertical>>>()
 			.add_dropdown::<SkillButton<DropdownItem<Horizontal>>>()
 			.add_dropdown::<KeySelect<ReKeySkill>>()
@@ -285,7 +285,7 @@ where
 	fn inventory_screen(&self, app: &mut App) {
 		let inventory = GameState::IngameMenu(MenuState::Inventory);
 
-		app.add_ui::<InventoryScreen, TGraphics>(inventory)
+		app.add_ui::<InventoryScreen, TGraphics::TUiCamera>(inventory)
 			.add_systems(
 				Update,
 				(
@@ -322,7 +322,7 @@ impl<TLoading, TPlayers, TGraphics> Plugin for MenuPlugin<TLoading, TPlayers, TG
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TPlayers: ThreadSafe + HandlesPlayer,
-	TGraphics: ThreadSafe + UiRenderLayer,
+	TGraphics: ThreadSafe + UiCamera,
 {
 	fn build(&self, app: &mut App) {
 		self.resources(app);
@@ -337,7 +337,7 @@ where
 
 		#[cfg(debug_assertions)]
 		{
-			debug::setup_run_time_display::<TGraphics>(app);
+			debug::setup_run_time_display::<TGraphics::TUiCamera>(app);
 			debug::setup_dropdown_test(app);
 		}
 	}

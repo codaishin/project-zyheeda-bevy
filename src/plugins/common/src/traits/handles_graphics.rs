@@ -1,9 +1,9 @@
 use bevy::{prelude::Component, render::view::RenderLayers};
 
-pub trait UiRenderLayer {
-	fn ui_render_layer() -> RenderLayers;
+pub trait StaticRenderLayers {
+	fn render_layers() -> RenderLayers;
 }
 
-pub trait MainCamera {
-	type TMainCamera: Component;
+pub trait UiCamera {
+	type TUiCamera: Component + StaticRenderLayers;
 }

@@ -7,7 +7,7 @@ use flip::FlipHorizontally;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
-use crate::traits::handles_graphics::UiRenderLayer;
+use crate::traits::handles_graphics::StaticRenderLayers;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Swap<T1, T2>(pub T1, pub T2);
@@ -59,11 +59,11 @@ impl<T> UiNodeFor<T> {
 		}
 	}
 
-	pub fn set_render_layer<TUiRenderLayers>(&self, render_layers: &mut RenderLayers)
+	pub fn set_render_layer<TUiCamera>(&self, render_layers: &mut RenderLayers)
 	where
-		TUiRenderLayers: UiRenderLayer,
+		TUiCamera: StaticRenderLayers,
 	{
-		*render_layers = TUiRenderLayers::ui_render_layer()
+		*render_layers = TUiCamera::render_layers()
 	}
 }
 
@@ -105,8 +105,8 @@ mod tests {
 	fn ui_node_set_render_layer() {
 		struct _T;
 
-		impl UiRenderLayer for _T {
-			fn ui_render_layer() -> RenderLayers {
+		impl StaticRenderLayers for _T {
+			fn render_layers() -> RenderLayers {
 				RenderLayers::layer(42)
 			}
 		}

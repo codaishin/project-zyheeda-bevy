@@ -4,6 +4,7 @@ use bevy::{
 	prelude::*,
 	render::{camera::RenderTarget, view::RenderLayers},
 };
+use common::traits::handles_graphics::StaticRenderLayers;
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(Camera3d, Camera(Self::default), Tonemapping(Self::default))]
@@ -119,5 +120,11 @@ impl From<Ui> for Tonemapping {
 impl From<Ui> for RenderLayers {
 	fn from(_: Ui) -> Self {
 		const { RenderLayers::layer(Ui::ORDER) }
+	}
+}
+
+impl StaticRenderLayers for Ui {
+	fn render_layers() -> RenderLayers {
+		RenderLayers::from(Ui)
 	}
 }

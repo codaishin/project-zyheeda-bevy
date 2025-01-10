@@ -24,7 +24,7 @@ use common::{
 	},
 	traits::{
 		handles_effect::{HandlesAllEffects, HandlesEffect},
-		handles_graphics::{MainCamera, UiRenderLayer},
+		handles_graphics::UiCamera,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, InSubApp},
 		handles_player::{WithCamera, WithMainCamera},
 		handles_skill_behaviors::HandlesSkillBehaviors,
@@ -227,16 +227,8 @@ where
 	);
 }
 
-impl<TPrefabs, TLoading, TInteractions, TBehaviors> UiRenderLayer
+impl<TPrefabs, TLoading, TInteractions, TBehaviors> UiCamera
 	for GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
 {
-	fn ui_render_layer() -> RenderLayers {
-		RenderLayers::from(Ui)
-	}
-}
-
-impl<TPrefabs, TLoading, TInteractions, TBehaviors> MainCamera
-	for GraphicsPlugin<TPrefabs, TLoading, TInteractions, TBehaviors>
-{
-	type TMainCamera = FirstPass;
+	type TUiCamera = Ui;
 }

@@ -14,7 +14,7 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
 	tools::Index,
-	traits::{handles_graphics::UiRenderLayer, iteration::IterFinite},
+	traits::{handles_graphics::StaticRenderLayers, iteration::IterFinite},
 };
 use std::{fmt::Debug, marker::PhantomData, time::Duration};
 
@@ -84,7 +84,7 @@ fn update_state_time<TState>(
 
 pub fn setup_run_time_display<TGraphics>(app: &mut App)
 where
-	TGraphics: UiRenderLayer + 'static,
+	TGraphics: StaticRenderLayers + 'static,
 {
 	for state in GameState::iterator() {
 		app.add_ui::<StateTime<GameState>, TGraphics>(state);
