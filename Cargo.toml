@@ -21,6 +21,7 @@ test-case = "3.3.1"
 animations = { path = "src/plugins/animations" }
 bars = { path = "src/plugins/bars" }
 behaviors = { path = "src/plugins/behaviors" }
+camera_control = { path = "src/plugins/camera_control" }
 common = { path = "src/plugins/common" }
 enemy = { path = "src/plugins/enemy" }
 frame_limiter = { path = "src/plugins/frame_limiter" }
@@ -70,6 +71,7 @@ uuid.workspace = true
 animations.workspace = true
 bars.workspace = true
 behaviors.workspace = true
+camera_control.workspace = true
 common.workspace = true
 enemy.workspace = true
 frame_limiter.workspace = true

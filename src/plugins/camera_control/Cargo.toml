@@ -1,0 +1,21 @@
+[package]
+name = "camera_control"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# external
+bevy.workspace = true
+bevy_rapier3d.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+
+# itnernal
+common.workspace = true
+
+[dev-dependencies]
+# external
+mockall.workspace = true
+
+# internal
+macros.workspace = true
