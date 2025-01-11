@@ -23,17 +23,15 @@ use common::{
 	},
 	traits::{
 		handles_effect::{HandlesAllEffects, HandlesEffect},
-		handles_graphics::UiCamera,
+		handles_graphics::{FirstPassCamera, UiCamera, WorldCameras},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, InSubApp},
-		handles_player::{WithCamera, WithMainCamera},
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		prefab::RegisterPrefab,
 		thread_safe::ThreadSafe,
 	},
-	WithCameras,
 };
 use components::{
-	camera_labels::{FirstPass, FirstPassTexture, SecondPass, Ui},
+	camera_labels::{FirstPass, PlayerCamera, SecondPass, Ui},
 	effect_shaders::EffectShader,
 	effect_shaders_target::EffectShadersTarget,
 	material_override::MaterialOverride,
@@ -65,27 +63,8 @@ where
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors,
 {
 	#[allow(clippy::type_complexity)]
-	pub fn depends_on<TPlayers>(
-		_: &TPrefabs,
-		_: &TLoading,
-		_: &TInteractions,
-		_: &TBehaviors,
-		player_plugin: TPlayers,
-	) -> (
-		Self,
-		WithCameras!(TPlayers, FirstPass, Ui, SecondPass, FirstPassTexture),
-	)
-	where
-		TPlayers: WithMainCamera,
-	{
-		(
-			Self(PhantomData),
-			player_plugin
-				.with_main_camera::<FirstPass>()
-				.with_camera::<FirstPassTexture>()
-				.with_camera::<SecondPass>()
-				.with_camera::<Ui>(),
-		)
+	pub fn depends_on(_: &TPrefabs, _: &TLoading, _: &TInteractions, _: &TBehaviors) -> Self {
+		Self(PhantomData)
 	}
 
 	fn track_render_pipeline_ready(app: &mut App) {
@@ -226,4 +205,12 @@ where
 
 impl<TDependencies> UiCamera for GraphicsPlugin<TDependencies> {
 	type TUiCamera = Ui;
+}
+
+impl<TDependencies> FirstPassCamera for GraphicsPlugin<TDependencies> {
+	type TFirstPassCamera = FirstPass;
+}
+
+impl<TDependencies> WorldCameras for GraphicsPlugin<TDependencies> {
+	type TWorldCameras = PlayerCamera;
 }

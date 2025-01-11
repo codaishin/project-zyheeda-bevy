@@ -7,3 +7,11 @@ pub trait StaticRenderLayers {
 pub trait UiCamera {
 	type TUiCamera: Component + StaticRenderLayers;
 }
+
+pub trait FirstPassCamera {
+	type TFirstPassCamera: Component;
+}
+
+pub trait WorldCameras {
+	type TWorldCameras: Component;
+}

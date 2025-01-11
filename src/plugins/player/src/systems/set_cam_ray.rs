@@ -15,7 +15,9 @@ pub(crate) fn set_cam_ray<TCamera: GetCamRay + Component, TLabel: Component>(
 	camera: Query<(&TCamera, &GlobalTransform), With<TLabel>>,
 	window: Query<&Window>,
 ) {
-	let (camera, camera_transform) = camera.single();
+	let Ok((camera, camera_transform)) = camera.get_single() else {
+		return;
+	};
 	let window = window.single();
 
 	commands.insert_resource(CamRay(camera.get_ray(camera_transform, window)));
@@ -124,6 +126,14 @@ mod tests {
 		}));
 		app.world_mut()
 			.spawn((_Camera::new(), GlobalTransform::default()));
+
+		app.update();
+	}
+
+	#[test]
+	fn no_panic_when_no_camera_present() {
+		let mut app = App::new();
+		app.add_systems(Update, set_cam_ray::<_Camera, _Label>);
 
 		app.update();
 	}
