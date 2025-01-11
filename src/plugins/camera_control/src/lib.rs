@@ -8,7 +8,7 @@ use common::{
 	states::game_state::GameState,
 	systems::insert_associated::{Configure, InsertAssociated, InsertOn},
 	traits::{
-		handles_graphics::{FirstPassCamera, PlayerCameras},
+		handles_graphics::{FirstPassCamera, WorldCameras},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
 		thread_safe::ThreadSafe,
 	},
@@ -26,7 +26,7 @@ pub struct CameraControlPlugin<TDependencies>(PhantomData<TDependencies>);
 impl<TPlayers, TGraphics> CameraControlPlugin<(TPlayers, TGraphics)>
 where
 	TPlayers: ThreadSafe + HandlesPlayer + PlayerMainCamera,
-	TGraphics: ThreadSafe + PlayerCameras + FirstPassCamera,
+	TGraphics: ThreadSafe + WorldCameras + FirstPassCamera,
 {
 	pub fn depends_on(_: &TPlayers, _: &TGraphics) -> Self {
 		Self(PhantomData)
@@ -36,12 +36,12 @@ where
 impl<TPlayers, TGraphics> Plugin for CameraControlPlugin<(TPlayers, TGraphics)>
 where
 	TPlayers: ThreadSafe + HandlesPlayer + PlayerMainCamera,
-	TGraphics: ThreadSafe + PlayerCameras + FirstPassCamera,
+	TGraphics: ThreadSafe + WorldCameras + FirstPassCamera,
 {
 	fn build(&self, app: &mut App) {
 		app.add_systems(
 			Update,
-			TGraphics::TPlayerCameras::set_to_orbit::<TPlayers::TPlayer>,
+			TGraphics::TWorldCameras::set_to_orbit::<TPlayers::TPlayer>,
 		)
 		.add_systems(
 			Update,

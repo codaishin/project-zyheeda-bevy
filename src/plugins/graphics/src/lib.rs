@@ -23,7 +23,7 @@ use common::{
 	},
 	traits::{
 		handles_effect::{HandlesAllEffects, HandlesEffect},
-		handles_graphics::{FirstPassCamera, PlayerCameras, UiCamera},
+		handles_graphics::{FirstPassCamera, UiCamera, WorldCameras},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, InSubApp},
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		prefab::RegisterPrefab,
@@ -211,6 +211,6 @@ impl<TDependencies> FirstPassCamera for GraphicsPlugin<TDependencies> {
 	type TFirstPassCamera = FirstPass;
 }
 
-impl<TDependencies> PlayerCameras for GraphicsPlugin<TDependencies> {
-	type TPlayerCameras = PlayerCamera;
+impl<TDependencies> WorldCameras for GraphicsPlugin<TDependencies> {
+	type TWorldCameras = PlayerCamera;
 }

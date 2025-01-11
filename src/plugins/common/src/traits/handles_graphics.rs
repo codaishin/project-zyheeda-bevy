@@ -12,6 +12,6 @@ pub trait FirstPassCamera {
 	type TFirstPassCamera: Component;
 }
 
-pub trait PlayerCameras {
-	type TPlayerCameras: Component;
+pub trait WorldCameras {
+	type TWorldCameras: Component;
 }
