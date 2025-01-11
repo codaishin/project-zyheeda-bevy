@@ -23,7 +23,7 @@ use common::{
 	},
 	traits::{
 		handles_effect::{HandlesAllEffects, HandlesEffect},
-		handles_graphics::{PlayerCameras, UiCamera},
+		handles_graphics::{FirstPassCamera, PlayerCameras, UiCamera},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, InSubApp},
 		handles_player::{WithCamera, WithMainCamera},
 		handles_skill_behaviors::HandlesSkillBehaviors,
@@ -226,6 +226,10 @@ where
 
 impl<TDependencies> UiCamera for GraphicsPlugin<TDependencies> {
 	type TUiCamera = Ui;
+}
+
+impl<TDependencies> FirstPassCamera for GraphicsPlugin<TDependencies> {
+	type TFirstPassCamera = FirstPass;
 }
 
 impl<TDependencies> PlayerCameras for GraphicsPlugin<TDependencies> {
