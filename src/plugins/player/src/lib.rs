@@ -22,6 +22,7 @@ use common::{
 			HandlesPlayer,
 			HandlesPlayerCameras,
 			HandlesPlayerMouse,
+			PlayerMainCamera,
 			WithCamera,
 			WithMainCamera,
 		},
@@ -32,6 +33,7 @@ use common::{
 use components::{
 	orbit_player::OrbitPlayer,
 	player::Player,
+	player_camera::PlayerCamera,
 	player_movement::PlayerMovement,
 	skill_animation::SkillAnimation,
 };
@@ -170,4 +172,8 @@ impl<TDependencies> ConfiguresPlayerSkillAnimations for PlayerPlugin<TDependenci
 	fn stop_skill_animation() -> Self::TAnimationMarker {
 		SkillAnimation::Stop
 	}
+}
+
+impl<TDependencies> PlayerMainCamera for PlayerPlugin<TDependencies> {
+	type TPlayerMainCamera = PlayerCamera;
 }

@@ -34,6 +34,10 @@ pub trait WithCamera {
 		TCamera: Component;
 }
 
+pub trait PlayerMainCamera {
+	type TPlayerMainCamera: Component;
+}
+
 pub trait HandlesPlayerCameras {
 	type TCamRay: Resource + GetterRefOptional<Ray3d> + IntersectAt;
 }
