@@ -8,6 +8,6 @@ pub trait UiCamera {
 	type TUiCamera: Component + StaticRenderLayers;
 }
 
-pub trait InstantiatesCameras {
-	type TCamera: Component;
+pub trait PlayerCameras {
+	type TPlayerCamera: Component;
 }

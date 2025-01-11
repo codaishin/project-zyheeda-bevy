@@ -23,7 +23,7 @@ use common::{
 	},
 	traits::{
 		handles_effect::{HandlesAllEffects, HandlesEffect},
-		handles_graphics::UiCamera,
+		handles_graphics::{PlayerCameras, UiCamera},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, InSubApp},
 		handles_player::{WithCamera, WithMainCamera},
 		handles_skill_behaviors::HandlesSkillBehaviors,
@@ -33,7 +33,7 @@ use common::{
 	WithCameras,
 };
 use components::{
-	camera_labels::{FirstPass, FirstPassTexture, SecondPass, Ui},
+	camera_labels::{FirstPass, FirstPassTexture, PlayerCamera, SecondPass, Ui},
 	effect_shaders::EffectShader,
 	effect_shaders_target::EffectShadersTarget,
 	material_override::MaterialOverride,
@@ -226,4 +226,8 @@ where
 
 impl<TDependencies> UiCamera for GraphicsPlugin<TDependencies> {
 	type TUiCamera = Ui;
+}
+
+impl<TDependencies> PlayerCameras for GraphicsPlugin<TDependencies> {
+	type TPlayerCamera = PlayerCamera;
 }

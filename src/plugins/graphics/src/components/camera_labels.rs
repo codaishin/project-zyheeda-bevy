@@ -6,7 +6,11 @@ use bevy::{
 use common::traits::handles_graphics::StaticRenderLayers;
 
 #[derive(Component, Debug, PartialEq, Default)]
-#[require(Camera3d, Camera(Self::default), Tonemapping(Self::default))]
+#[require(Camera3d)]
+pub struct PlayerCamera;
+
+#[derive(Component, Debug, PartialEq, Default)]
+#[require(PlayerCamera, Camera(Self::default), Tonemapping(Self::default))]
 pub struct FirstPass;
 
 impl From<FirstPass> for Camera {
@@ -25,7 +29,7 @@ impl From<FirstPass> for Tonemapping {
 }
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Camera3d, Tonemapping(FirstPass::default))]
+#[require(PlayerCamera, Tonemapping(FirstPass::default))]
 pub struct FirstPassTexture {
 	_private: (),
 }
@@ -45,7 +49,7 @@ impl FirstPassTexture {
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(
-	Camera3d,
+	PlayerCamera,
 	Camera(Self::default),
 	Tonemapping(Self::default),
 	Bloom,
@@ -82,7 +86,7 @@ impl From<SecondPass> for RenderLayers {
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(
-	Camera3d,
+	PlayerCamera,
 	Camera(Ui::default),
 	Tonemapping(Self::default),
 	RenderLayers(Self::default)
