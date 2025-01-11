@@ -3,6 +3,7 @@ use bars::BarsPlugin;
 use behaviors::BehaviorsPlugin;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
+use camera_control::CameraControlPlugin;
 use children_assets_dispatch::ChildrenAssetsDispatchPlugin;
 use common::CommonPlugin;
 use enemy::EnemyPlugin;
@@ -67,12 +68,11 @@ fn prepare_game(app: &mut App) {
 		&behaviors_plugin,
 		&player_plugin,
 	);
-	let (graphics_plugin, player_plugin) = GraphicsPlugin::depends_on(
+	let graphics_plugin = GraphicsPlugin::depends_on(
 		&prefabs_plugin,
 		&loading_plugin,
 		&interactions_plugin,
 		&behaviors_plugin,
-		player_plugin,
 	);
 	let menu_plugin = MenuPlugin::depends_on(&loading_plugin, &player_plugin, &graphics_plugin);
 	let bars_plugin = BarsPlugin::depends_on(
@@ -81,6 +81,7 @@ fn prepare_game(app: &mut App) {
 		&enemy_plugin,
 		&graphics_plugin,
 	);
+	let camera_control_plugin = CameraControlPlugin::depends_on(&player_plugin, &graphics_plugin);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
@@ -101,6 +102,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(skills_plugin)
 		.add_plugins(behaviors_plugin)
 		.add_plugins(game_state_plugin)
+		.add_plugins(camera_control_plugin)
 		.add_plugins(FrameLimiterPlugin { target_fps: 60 })
 		.insert_resource(ClearColor(Color::BLACK));
 }

@@ -1,4 +1,4 @@
 use bevy::prelude::*;
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Default)]
 pub struct PlayerCamera;

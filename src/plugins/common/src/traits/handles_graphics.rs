@@ -13,5 +13,5 @@ pub trait FirstPassCamera {
 }
 
 pub trait PlayerCameras {
-	type TPlayerCamera: Component;
+	type TPlayerCameras: Component;
 }
