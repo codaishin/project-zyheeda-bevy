@@ -9,16 +9,26 @@ use common::traits::handles_graphics::StaticRenderLayers;
 #[require(Camera3d)]
 pub struct PlayerCamera;
 
-#[derive(Component, Debug, PartialEq, Default)]
-#[require(PlayerCamera, Camera(Self::default), Tonemapping(Self::default))]
-pub struct FirstPass;
+#[derive(Component, Debug, PartialEq)]
+#[require(PlayerCamera, Tonemapping(Self::new), Bloom)]
+pub struct FirstPass {
+	_private: (),
+}
 
-impl From<FirstPass> for Camera {
-	fn from(_: FirstPass) -> Self {
-		Camera {
-			hdr: true,
-			..default()
-		}
+impl FirstPass {
+	fn new() -> Self {
+		FirstPass { _private: () }
+	}
+
+	pub(crate) fn with_target_image(handle: Handle<Image>) -> (FirstPass, Camera) {
+		(
+			FirstPass::new(),
+			Camera {
+				hdr: true,
+				target: RenderTarget::Image(handle),
+				..default()
+			},
+		)
 	}
 }
 
@@ -28,37 +38,22 @@ impl From<FirstPass> for Tonemapping {
 	}
 }
 
-#[derive(Component, Debug, PartialEq)]
-#[require(PlayerCamera, Tonemapping(FirstPass::default))]
-pub struct FirstPassTexture {
-	_private: (),
-}
-
-impl FirstPassTexture {
-	fn new() -> Self {
-		FirstPassTexture { _private: () }
-	}
-
-	pub(crate) fn from_image(handle: Handle<Image>) -> (FirstPassTexture, Camera) {
-		let mut camera = Camera::from(FirstPass);
-		camera.target = RenderTarget::Image(handle);
-
-		(FirstPassTexture::new(), camera)
-	}
-}
-
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(
 	PlayerCamera,
 	Camera(Self::default),
 	Tonemapping(Self::default),
 	Bloom,
-	RenderLayers(Self::default)
+	RenderLayers(Self::camera_render_layers)
 )]
 pub struct SecondPass;
 
 impl SecondPass {
 	const ORDER: usize = 1;
+
+	fn camera_render_layers() -> RenderLayers {
+		RenderLayers::from_layers(&[0, Self::ORDER])
+	}
 }
 
 impl From<SecondPass> for Camera {
@@ -66,7 +61,6 @@ impl From<SecondPass> for Camera {
 		Camera {
 			hdr: true,
 			order: SecondPass::ORDER as isize,
-			clear_color: ClearColorConfig::None,
 			..default()
 		}
 	}
