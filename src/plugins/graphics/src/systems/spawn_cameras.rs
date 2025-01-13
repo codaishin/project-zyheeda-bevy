@@ -1,5 +1,5 @@
 use crate::{
-	components::camera_labels::{FirstPass, FirstPassTexture, SecondPass, Ui},
+	components::camera_labels::{FirstPass, SecondPass, Ui},
 	resources::first_pass_image::FirstPassImage,
 };
 use bevy::prelude::*;
@@ -8,13 +8,7 @@ pub(crate) fn spawn_cameras(In(first_pass_image): In<FirstPassImage>, mut comman
 	commands.spawn((
 		#[cfg(debug_assertions)]
 		Name::from("First Pass Camera"),
-		FirstPass,
-	));
-
-	commands.spawn((
-		#[cfg(debug_assertions)]
-		Name::from("First Pass Texture Camera"),
-		FirstPassTexture::from_image(first_pass_image.handle.clone()),
+		FirstPass::with_target_image(first_pass_image.handle.clone()),
 	));
 
 	commands.spawn((
