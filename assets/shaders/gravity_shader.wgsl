@@ -29,7 +29,9 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     let fresnel = fresnel(mesh, 0.2);
     let pulse = pulse_inwards(pulse_params, fresnel);
     let uv = offset_uv_position(mesh, pulse);
-    return textureSample(first_pass_texture, first_pass_sampler, uv);
+    let color = textureSample(first_pass_texture, first_pass_sampler, uv);
+
+    return vec4(color.rgb, 0.5);
 }
 
 fn pulse_inwards(params: PulseParams, value: f32) -> f32 {

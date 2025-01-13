@@ -16,7 +16,7 @@ impl From<Handle<Image>> for GravityMaterial {
 	fn from(first_pass: Handle<Image>) -> Self {
 		Self {
 			first_pass,
-			alpha_mode: AlphaMode::Opaque,
+			alpha_mode: AlphaMode::Blend,
 		}
 	}
 }
