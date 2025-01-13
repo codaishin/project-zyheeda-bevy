@@ -1,14 +1,18 @@
 use crate::{
 	components::effect_shaders_target::{EffectShaderHandle, EffectShadersTarget},
+	resources::first_pass_image,
 	traits::get_effect_material::GetEffectMaterial,
 };
 use bevy::prelude::*;
 use common::traits::handles_effect::HandlesEffect;
 
+use self::first_pass_image::FirstPassImage;
+
 #[allow(clippy::type_complexity)]
 pub(crate) fn add_child_effect_shader<TInteractions, TEffect>(
 	mut materials: ResMut<Assets<TEffect::TMaterial>>,
 	mut effect_shaders_targets: Query<&mut EffectShadersTarget>,
+	first_pass_image: Res<FirstPassImage>,
 	effect_shaders: Query<
 		Entity,
 		(
@@ -26,7 +30,7 @@ pub(crate) fn add_child_effect_shader<TInteractions, TEffect>(
 			let Ok(mut shaders) = effect_shaders_targets.get_mut(parent) else {
 				continue;
 			};
-			let handle = materials.add(TEffect::get_effect_material());
+			let handle = materials.add(TEffect::get_effect_material(&first_pass_image.handle));
 			shaders.shaders.insert(EffectShaderHandle::from(handle));
 
 			/* This hurts my soul, but we cannot move `effect_shaders_targets` into a lambda for
@@ -43,10 +47,12 @@ mod tests {
 	use super::*;
 	use crate::components::effect_shaders_target::EffectShadersTarget;
 	use bevy::{asset::UntypedAssetId, render::render_resource::AsBindGroup};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::test_tools::utils::{new_handle, SingleThreadedApp};
 
-	#[derive(Asset, TypePath, Clone, AsBindGroup)]
-	pub struct _Material {}
+	#[derive(Asset, TypePath, Clone, AsBindGroup, Debug, PartialEq)]
+	pub struct _Material {
+		first_pass: Handle<Image>,
+	}
 
 	impl Material for _Material {}
 
@@ -58,8 +64,10 @@ mod tests {
 	impl GetEffectMaterial for _Effect {
 		type TMaterial = _Material;
 
-		fn get_effect_material() -> Self::TMaterial {
-			_Material {}
+		fn get_effect_material(first_pass: &Handle<Image>) -> Self::TMaterial {
+			_Material {
+				first_pass: first_pass.clone(),
+			}
 		}
 	}
 
@@ -76,9 +84,10 @@ mod tests {
 		fn attribute(_: Self::TTarget) -> impl Bundle {}
 	}
 
-	fn setup() -> App {
+	fn setup(first_pass: Handle<Image>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<Assets<_Material>>();
+		app.insert_resource(FirstPassImage { handle: first_pass });
 		app.add_systems(Update, add_child_effect_shader::<_HandlesEffects, _Effect>);
 
 		app
@@ -101,7 +110,7 @@ mod tests {
 
 	#[test]
 	fn add_child_effect_shader_to_effect_shaders() {
-		let mut app = setup();
+		let mut app = setup(new_handle::<Image>());
 		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
 		app.world_mut().spawn(_EffectComponent).set_parent(shaders);
 
@@ -121,7 +130,7 @@ mod tests {
 
 	#[test]
 	fn do_not_add_child_effect_shader_to_effect_shaders_when_child_has_effect_shaders() {
-		let mut app = setup();
+		let mut app = setup(new_handle::<Image>());
 		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
 		app.world_mut()
 			.spawn((EffectShadersTarget::default(), _EffectComponent))
@@ -139,7 +148,7 @@ mod tests {
 
 	#[test]
 	fn add_deep_child_effect_shader_to_effect_shaders() {
-		let mut app = setup();
+		let mut app = setup(new_handle::<Image>());
 		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
 		let child = app.world_mut().spawn_empty().set_parent(shaders).id();
 		app.world_mut().spawn(_EffectComponent).set_parent(child);
@@ -160,7 +169,7 @@ mod tests {
 
 	#[test]
 	fn add_child_effect_shader_to_effect_shaders_only_once() {
-		let mut app = setup();
+		let mut app = setup(new_handle::<Image>());
 		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
 		app.world_mut().spawn(_EffectComponent).set_parent(shaders);
 
@@ -181,7 +190,7 @@ mod tests {
 
 	#[test]
 	fn only_add_effect_shader_to_effect_shaders_component_in_closest_parent() {
-		let mut app = setup();
+		let mut app = setup(new_handle::<Image>());
 		let parent = app.world_mut().spawn(EffectShadersTarget::default()).id();
 		let child = app
 			.world_mut()
@@ -211,5 +220,19 @@ mod tests {
 				shader_effect_ids(child_shaders)
 			)
 		);
+	}
+
+	#[test]
+	fn assign_first_pass_image_handle() {
+		let first_pass = new_handle::<Image>();
+		let mut app = setup(first_pass.clone());
+		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
+		app.world_mut().spawn(_EffectComponent).set_parent(shaders);
+
+		app.update();
+
+		let materials = app.world().resource::<Assets<_Material>>();
+		let material = materials.get(materials.ids().next().unwrap());
+		assert_eq!(Some(&_Material { first_pass }), material);
 	}
 }
