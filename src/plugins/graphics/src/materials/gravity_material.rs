@@ -6,15 +6,16 @@ use bevy::{
 
 #[derive(Asset, TypePath, AsBindGroup, Clone, Default)]
 pub struct GravityMaterial {
-	#[uniform(0)]
-	pub color: LinearRgba,
+	#[texture(0)]
+	#[sampler(1)]
+	pub first_pass: Handle<Image>,
 	pub alpha_mode: AlphaMode,
 }
 
-impl From<Srgba> for GravityMaterial {
-	fn from(color: Srgba) -> Self {
+impl From<Handle<Image>> for GravityMaterial {
+	fn from(first_pass: Handle<Image>) -> Self {
 		Self {
-			color: color.into(),
+			first_pass,
 			alpha_mode: AlphaMode::Blend,
 		}
 	}
