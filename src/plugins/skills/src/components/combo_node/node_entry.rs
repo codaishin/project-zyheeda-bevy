@@ -20,7 +20,7 @@ impl<'a, T: Iterator<Item = &'a SlotKey>> Iterator for Iter<'a, T> {
 	}
 }
 
-impl<'a, TSkill> FollowupKeys for NodeEntry<'a, TSkill> {
+impl<TSkill> FollowupKeys for NodeEntry<'_, TSkill> {
 	type TItem = SlotKey;
 
 	fn followup_keys(&self) -> impl Iterator<Item = Self::TItem> {
