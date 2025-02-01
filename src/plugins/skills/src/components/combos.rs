@@ -222,7 +222,7 @@ mod tests {
 
 	struct _ComboNode<'a>(Vec<Combo<'a>>);
 
-	impl<'a> GetCombosOrdered for _ComboNode<'a> {
+	impl GetCombosOrdered for _ComboNode<'_> {
 		fn combos_ordered(&self) -> impl Iterator<Item = Combo> {
 			self.0.iter().cloned()
 		}
