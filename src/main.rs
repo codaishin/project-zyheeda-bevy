@@ -16,6 +16,7 @@ use light::LightPlugin;
 use loading::LoadingPlugin;
 use map_generation::MapGenerationPlugin;
 use menu::MenuPlugin;
+use path_finding::PathFindingPlugin;
 use player::PlayerPlugin;
 use prefabs::PrefabsPlugin;
 use skills::SkillsPlugin;
@@ -38,6 +39,7 @@ fn prepare_game(app: &mut App) {
 	let animations_plugin = AnimationsPlugin;
 	let prefabs_plugin = PrefabsPlugin;
 	let loading_plugin = LoadingPlugin;
+	let path_finding_plugin = PathFindingPlugin;
 	let game_state_plugin = GameStatePlugin::depends_on(&loading_plugin);
 	let light_plugin = LightPlugin::depends_on(&prefabs_plugin);
 	let children_assets_dispatch_plugin = ChildrenAssetsDispatchPlugin::depends_on(&loading_plugin);
@@ -99,6 +101,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(enemy_plugin)
 		.add_plugins(loading_plugin)
 		.add_plugins(map_generation_plugin)
+		.add_plugins(path_finding_plugin)
 		.add_plugins(menu_plugin)
 		.add_plugins(skills_plugin)
 		.add_plugins(behaviors_plugin)
