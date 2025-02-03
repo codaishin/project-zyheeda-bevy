@@ -5,48 +5,65 @@ use crate::components::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::slot_key::SlotKey,
-	traits::{accessors::get::GetRef, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
+	tools::{item_type::ItemType, slot_key::SlotKey},
+	traits::{
+		accessors::get::{GetField, Getter},
+		handles_equipment::SingleAccess,
+		thread_safe::ThreadSafe,
+		try_insert_on::TryInsertOn,
+		try_remove_from::TryRemoveFrom,
+	},
 };
-use skills::{item::Item, skills::Skill};
+use skills::skills::Skill;
 
-pub(crate) fn insert_skill_select_dropdown<
-	TPlayer: Component,
-	TEquipment: GetRef<SlotKey, Handle<Item>> + Component,
-	TLayout: Sync + Send + 'static,
->(
-	mut commands: Commands,
-	dropdown_commands: Query<(Entity, &SkillSelectDropdownInsertCommand<SlotKey, TLayout>)>,
-	slots: Query<&TEquipment, With<TPlayer>>,
-	items: Res<Assets<Item>>,
-	skills: Res<Assets<Skill>>,
-) {
-	let Ok(slots) = slots.get_single() else {
-		return;
-	};
+impl<T> InsertSkillSelectDropdown for T {}
 
-	for (entity, command) in &dropdown_commands {
-		if let Some(items) = compatible_skills(command, slots, &items, &skills) {
-			commands.try_insert_on(entity, Dropdown { items });
+pub(crate) trait InsertSkillSelectDropdown {
+	fn insert_skill_select_dropdown<TPlayer, TLayout>(
+		mut commands: Commands,
+		dropdown_commands: Query<(Entity, &SkillSelectDropdownInsertCommand<SlotKey, TLayout>)>,
+		slots: Query<&Self, With<TPlayer>>,
+		items: Res<Assets<Self::TItem>>,
+		skills: Res<Assets<Skill>>,
+	) where
+		Self: SingleAccess<TKey = SlotKey> + Component + Sized,
+		Self::TItem: Getter<ItemType>,
+		TPlayer: Component,
+		TLayout: ThreadSafe,
+	{
+		let Ok(slots) = slots.get_single() else {
+			return;
+		};
+
+		for (entity, command) in &dropdown_commands {
+			if let Some(items) = compatible_skills(command, slots, &items, &skills) {
+				commands.try_insert_on(entity, Dropdown { items });
+			}
+			commands.try_remove_from::<SkillSelectDropdownInsertCommand<SlotKey, TLayout>>(entity);
 		}
-		commands.try_remove_from::<SkillSelectDropdownInsertCommand<SlotKey, TLayout>>(entity);
 	}
 }
 
-fn compatible_skills<TEquipment: GetRef<SlotKey, Handle<Item>>, TLayout: Sync + Send + 'static>(
+fn compatible_skills<TSlots, TLayout>(
 	command: &SkillSelectDropdownInsertCommand<SlotKey, TLayout>,
-	slots: &TEquipment,
-	items: &Assets<Item>,
+	slots: &TSlots,
+	items: &Assets<TSlots::TItem>,
 	skills: &Assets<Skill>,
-) -> Option<Vec<SkillButton<DropdownItem<TLayout>>>> {
+) -> Option<Vec<SkillButton<DropdownItem<TLayout>>>>
+where
+	TSlots: SingleAccess<TKey = SlotKey>,
+	TSlots::TItem: Getter<ItemType>,
+	TLayout: ThreadSafe,
+{
 	let key = command.key_path.last()?;
-	let item = slots.get(key).and_then(|item| items.get(item))?;
+	let item = slots.single_access(key).and_then(|item| items.get(item))?;
+	let item_type = ItemType::get_field(item);
 
 	let mut seen = Vec::new();
 	let skills = skills
 		.iter()
 		.filter(|(_, skill)| {
-			if !skill.is_usable_with.contains(&item.item_type) {
+			if !skill.is_usable_with.contains(&item_type) {
 				return false;
 			}
 			if seen.contains(skill) {
@@ -87,19 +104,31 @@ mod tests {
 		Ok,
 	}
 
-	#[derive(Component)]
-	struct _Equipment(HashMap<SlotKey, Handle<Item>>);
+	#[derive(Asset, TypePath, Debug, PartialEq)]
+	struct _Item(ItemType);
 
-	impl GetRef<SlotKey, Handle<Item>> for _Equipment {
-		fn get(&self, key: &SlotKey) -> Option<&Handle<Item>> {
+	impl Getter<ItemType> for _Item {
+		fn get(&self) -> ItemType {
+			self.0
+		}
+	}
+
+	#[derive(Component)]
+	struct _Slots(HashMap<SlotKey, Handle<_Item>>);
+
+	impl SingleAccess for _Slots {
+		type TKey = SlotKey;
+		type TItem = _Item;
+
+		fn single_access(&self, key: &Self::TKey) -> Option<&Handle<Self::TItem>> {
 			self.0.get(key)
 		}
 	}
 
 	fn setup_skills_and_equipment<const S: usize, const E: usize>(
 		skills: [Skill; S],
-		equipment: [(SlotKey, Item); E],
-	) -> (_Equipment, Assets<Item>, Assets<Skill>) {
+		equipment: [(SlotKey, _Item); E],
+	) -> (_Slots, Assets<_Item>, Assets<Skill>) {
 		let mut item_assets = Assets::default();
 		let mut skill_assets = Assets::default();
 
@@ -112,21 +141,21 @@ mod tests {
 			.map(|(key, item)| (key, item_assets.add(item)))
 			.collect();
 
-		(_Equipment(equipment), item_assets, skill_assets)
+		(_Slots(equipment), item_assets, skill_assets)
 	}
 
 	fn setup_app<const S: usize, const E: usize>(
 		agent: impl Component,
 		skills: [Skill; S],
-		equipment: [(SlotKey, Item); E],
+		slots: [(SlotKey, _Item); E],
 	) -> App {
-		let (equipment, items, skills) = setup_skills_and_equipment(skills, equipment);
+		let (equipment, items, skills) = setup_skills_and_equipment(skills, slots);
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(items);
 		app.insert_resource(skills);
 		app.add_systems(
 			Update,
-			insert_skill_select_dropdown::<_Player, _Equipment, _Layout>,
+			_Slots::insert_skill_select_dropdown::<_Player, _Layout>,
 		);
 		app.world_mut().spawn((agent, equipment));
 
@@ -159,13 +188,7 @@ mod tests {
 					..default()
 				},
 			],
-			[(
-				SlotKey::BottomHand(Side::Right),
-				Item {
-					item_type: ItemType::Pistol,
-					..default()
-				},
-			)],
+			[(SlotKey::BottomHand(Side::Right), _Item(ItemType::Pistol))],
 		);
 		let dropdown = app
 			.world_mut()
@@ -231,13 +254,7 @@ mod tests {
 					..default()
 				},
 			],
-			[(
-				SlotKey::BottomHand(Side::Right),
-				Item {
-					item_type: ItemType::Pistol,
-					..default()
-				},
-			)],
+			[(SlotKey::BottomHand(Side::Right), _Item(ItemType::Pistol))],
 		);
 		let dropdown = app
 			.world_mut()
@@ -300,13 +317,7 @@ mod tests {
 					..default()
 				},
 			],
-			[(
-				SlotKey::BottomHand(Side::Right),
-				Item {
-					item_type: ItemType::Pistol,
-					..default()
-				},
-			)],
+			[(SlotKey::BottomHand(Side::Right), _Item(ItemType::Pistol))],
 		);
 		let dropdown = app
 			.world_mut()
@@ -330,13 +341,7 @@ mod tests {
 		let mut app = setup_app(
 			_Player,
 			[],
-			[(
-				SlotKey::BottomHand(Side::Right),
-				Item {
-					item_type: ItemType::Pistol,
-					..default()
-				},
-			)],
+			[(SlotKey::BottomHand(Side::Right), _Item(ItemType::Pistol))],
 		);
 		let dropdown = app
 			.world_mut()

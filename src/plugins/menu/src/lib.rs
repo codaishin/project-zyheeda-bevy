@@ -11,6 +11,7 @@ mod debug;
 
 use crate::systems::{
 	combos::visualize_invalid_skill::VisualizeInvalidSkill,
+	dropdown::insert_skill_select_dropdown::InsertSkillSelectDropdown,
 	items::swap::inventory_items::SwapInventoryItems,
 	update_panels::container_states::SetContainerPanels,
 };
@@ -48,7 +49,7 @@ use components::{
 };
 use events::DropdownEvent;
 use skills::{
-	components::{combos::Combos, combos_time_out::CombosTimeOut, queue::Queue, slots::Slots},
+	components::{combos::Combos, combos_time_out::CombosTimeOut, queue::Queue},
 	skills::Skill,
 };
 use std::{marker::PhantomData, time::Duration};
@@ -68,7 +69,6 @@ use systems::{
 		detect_focus_change::dropdown_detect_focus_change,
 		events::dropdown_events,
 		insert_key_select_dropdown::insert_key_select_dropdown,
-		insert_skill_select_dropdown::insert_skill_select_dropdown,
 		spawn_focused::dropdown_spawn_focused,
 		track_child_dropdowns::dropdown_track_child_dropdowns,
 	},
@@ -276,8 +276,8 @@ where
 				Update,
 				(
 					TEquipment::TSlots::visualize_invalid_skill::<TPlayers::TPlayer, Unusable>,
-					insert_skill_select_dropdown::<TPlayers::TPlayer, Slots, Vertical>,
-					insert_skill_select_dropdown::<TPlayers::TPlayer, Slots, Horizontal>,
+					TEquipment::TSlots::insert_skill_select_dropdown::<TPlayers::TPlayer, Vertical>,
+					TEquipment::TSlots::insert_skill_select_dropdown::<TPlayers::TPlayer, Horizontal>,
 					insert_key_select_dropdown::<TPlayers::TPlayer, Combos, AppendSkillCommand>,
 					update_combos_view_delete_skill::<TPlayers::TPlayer, Combos>,
 					update_combo_skills::<TPlayers::TPlayer, Combos, Vertical>,
