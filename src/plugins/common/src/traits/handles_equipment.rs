@@ -1,20 +1,20 @@
 use super::accessors::get::Getter;
-use crate::tools::{inventory_key::InventoryKey, slot_key::SlotKey};
+use crate::tools::{inventory_key::InventoryKey, item_type::ItemType, slot_key::SlotKey};
 use bevy::prelude::*;
 
 pub trait HandlesEquipment {
-	type TItem: Asset + Getter<ItemName>;
+	type TItem: Asset + Getter<ItemName> + Getter<ItemType>;
 	type TInventory: Component
-		+ ContinuousAccessMut<TItem = Handle<Self::TItem>>
+		+ ContinuousAccessMut<TItemHandle = Handle<Self::TItem>>
 		+ SingleAccess<TItem = Self::TItem, TKey = InventoryKey>;
 
 	type TSlots: Component + SingleAccess<TItem = Self::TItem, TKey = SlotKey>;
 }
 
 pub trait ContinuousAccessMut {
-	type TItem: Clone;
+	type TItemHandle: Clone;
 
-	fn continuous_access_mut(&mut self) -> &mut Vec<Option<Self::TItem>>;
+	fn continuous_access_mut(&mut self) -> &mut Vec<Option<Self::TItemHandle>>;
 }
 
 pub trait SingleAccess {

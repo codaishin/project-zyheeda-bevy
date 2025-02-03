@@ -12,7 +12,7 @@ pub trait SwapInventoryItems {
 	fn swap_items(mut commands: Commands, mut items_to_swap: Query<ItemsToSwap<Self>>)
 	where
 		Self: Component + ContinuousAccessMut + Sized,
-		Self::TItem: Clone,
+		Self::TItemHandle: Clone,
 	{
 		for (agent, mut inventory, swaps) in &mut items_to_swap {
 			for swap in &swaps.0 {
@@ -33,7 +33,7 @@ type ItemsToSwap<'a, TInventory> = (
 fn do_swap<TInventory>(inventory: &mut Mut<TInventory>, swap: &Swap<InventoryKey, InventoryKey>)
 where
 	TInventory: Component + ContinuousAccessMut,
-	TInventory::TItem: Clone,
+	TInventory::TItemHandle: Clone,
 {
 	let items = inventory.continuous_access_mut();
 	fill_to(items, max(swap.0 .0, swap.1 .0));
@@ -63,9 +63,9 @@ mod tests {
 	struct _Inventory(Vec<Option<_Item>>);
 
 	impl ContinuousAccessMut for _Inventory {
-		type TItem = _Item;
+		type TItemHandle = _Item;
 
-		fn continuous_access_mut(&mut self) -> &mut Vec<Option<Self::TItem>> {
+		fn continuous_access_mut(&mut self) -> &mut Vec<Option<Self::TItemHandle>> {
 			&mut self.0
 		}
 	}

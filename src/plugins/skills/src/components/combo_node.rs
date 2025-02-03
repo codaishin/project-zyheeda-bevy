@@ -2,13 +2,13 @@ pub mod node_entry;
 pub mod node_entry_mut;
 
 use crate::{
-	item::item_type::SkillItemType,
 	skills::Skill,
 	traits::{Combo, GetCombosOrdered, GetNode, GetNodeMut, PeekNext, RootKeys},
 };
 use bevy::ecs::component::Component;
 use common::{
 	tools::{
+		item_type::ItemType,
 		ordered_hash_map::{Entry, OrderedHashMap},
 		slot_key::SlotKey,
 	},
@@ -166,11 +166,7 @@ impl<TKey: Iterate<SlotKey>> TryInsert<TKey, Skill> for ComboNode {
 }
 
 impl PeekNext<(Skill, ComboNode)> for ComboNode {
-	fn peek_next(
-		&self,
-		trigger: &SlotKey,
-		item_type: &SkillItemType,
-	) -> Option<(Skill, ComboNode)> {
+	fn peek_next(&self, trigger: &SlotKey, item_type: &ItemType) -> Option<(Skill, ComboNode)> {
 		let ComboNode(tree) = self;
 		let (skill, combo) = tree.get(trigger)?;
 
@@ -233,7 +229,6 @@ fn append_followups<'a>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::SkillItemType;
 	use bevy::prelude::default;
 	use common::tools::slot_key::Side;
 	use std::collections::HashSet;
@@ -245,7 +240,7 @@ mod tests {
 			(
 				Skill {
 					name: "first".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Pistol]),
+					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(
@@ -261,13 +256,13 @@ mod tests {
 			),
 		)]));
 
-		let next = node.peek_next(&SlotKey::BottomHand(Side::Right), &SkillItemType::Pistol);
+		let next = node.peek_next(&SlotKey::BottomHand(Side::Right), &ItemType::Pistol);
 
 		assert_eq!(
 			Some((
 				Skill {
 					name: "first".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Pistol]),
+					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(
@@ -292,7 +287,7 @@ mod tests {
 			(
 				Skill {
 					name: "first".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Bracer]),
+					is_usable_with: HashSet::from([ItemType::Bracer]),
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(
@@ -308,7 +303,7 @@ mod tests {
 			),
 		)]));
 
-		let next = node.peek_next(&SlotKey::BottomHand(Side::Right), &SkillItemType::Pistol);
+		let next = node.peek_next(&SlotKey::BottomHand(Side::Right), &ItemType::Pistol);
 
 		assert_eq!(None as Option<(Skill, ComboNode)>, next)
 	}

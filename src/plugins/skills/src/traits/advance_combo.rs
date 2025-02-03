@@ -1,12 +1,12 @@
 use super::{AdvanceCombo, PeekNext, SetNextCombo};
-use crate::{components::combo_node::ComboNode, item::item_type::SkillItemType, skills::Skill};
-use common::tools::slot_key::SlotKey;
+use crate::{components::combo_node::ComboNode, skills::Skill};
+use common::tools::{item_type::ItemType, slot_key::SlotKey};
 
 impl<T> AdvanceCombo for T
 where
 	T: PeekNext<(Skill, ComboNode)> + SetNextCombo<Option<ComboNode>>,
 {
-	fn advance_combo(&mut self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill> {
+	fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill> {
 		let Some((skill, next_combo)) = self.peek_next(trigger, item_type) else {
 			self.set_next_combo(None);
 			return None;
@@ -27,7 +27,7 @@ mod tests {
 	mock! {
 		_Combos {}
 		impl PeekNext<(Skill, ComboNode)> for _Combos {
-			fn peek_next(&self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<(Skill, ComboNode)>;
+			fn peek_next(&self, trigger: &SlotKey, item_type: &ItemType) -> Option<(Skill, ComboNode)>;
 		}
 		impl SetNextCombo<Option<ComboNode>> for _Combos {
 			fn set_next_combo(&mut self, value: Option<ComboNode>);
@@ -53,10 +53,7 @@ mod tests {
 	fn call_set_next_combo_with_next_when_peek_was_some() {
 		let mut combos = Mock_Combos::new_mock(|mock| {
 			mock.expect_peek_next()
-				.with(
-					eq(SlotKey::BottomHand(Side::Right)),
-					eq(SkillItemType::Pistol),
-				)
+				.with(eq(SlotKey::BottomHand(Side::Right)), eq(ItemType::Pistol))
 				.return_const((Skill::default(), node()));
 			mock.expect_set_next_combo()
 				.times(1)
@@ -64,7 +61,7 @@ mod tests {
 				.return_const(());
 		});
 
-		combos.advance_combo(&SlotKey::BottomHand(Side::Right), &SkillItemType::Pistol);
+		combos.advance_combo(&SlotKey::BottomHand(Side::Right), &ItemType::Pistol);
 	}
 
 	#[test]
@@ -80,7 +77,7 @@ mod tests {
 			mock.expect_set_next_combo().return_const(());
 		});
 
-		let skill = combos.advance_combo(&SlotKey::default(), &SkillItemType::default());
+		let skill = combos.advance_combo(&SlotKey::default(), &ItemType::default());
 
 		assert_eq!(
 			Some(Skill {
@@ -101,7 +98,7 @@ mod tests {
 				.return_const(());
 		});
 
-		combos.advance_combo(&SlotKey::default(), &SkillItemType::default());
+		combos.advance_combo(&SlotKey::default(), &ItemType::default());
 	}
 
 	#[test]
@@ -111,7 +108,7 @@ mod tests {
 			mock.expect_set_next_combo().return_const(());
 		});
 
-		let skill = combos.advance_combo(&SlotKey::default(), &SkillItemType::default());
+		let skill = combos.advance_combo(&SlotKey::default(), &ItemType::default());
 
 		assert_eq!(None, skill);
 	}
@@ -123,15 +120,12 @@ mod tests {
 				.times(1)
 				.with(
 					eq(SlotKey::BottomHand(Side::Left)),
-					eq(SkillItemType::ForceEssence),
+					eq(ItemType::ForceEssence),
 				)
 				.return_const(None);
 			mock.expect_set_next_combo().return_const(());
 		});
 
-		combos.advance_combo(
-			&SlotKey::BottomHand(Side::Left),
-			&SkillItemType::ForceEssence,
-		);
+		combos.advance_combo(&SlotKey::BottomHand(Side::Left), &ItemType::ForceEssence);
 	}
 }

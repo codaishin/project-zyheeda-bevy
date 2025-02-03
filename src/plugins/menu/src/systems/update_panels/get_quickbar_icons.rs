@@ -94,16 +94,15 @@ mod tests {
 	use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		tools::slot_key::{Side, SlotKey},
+		tools::{
+			item_type::ItemType,
+			slot_key::{Side, SlotKey},
+		},
 		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
-	use skills::{
-		components::slots::Slots,
-		item::{item_type::SkillItemType, Item},
-		skills::Activation,
-	};
+	use skills::{components::slots::Slots, item::Item, skills::Activation};
 	use std::collections::HashMap;
 	use uuid::Uuid;
 
@@ -129,7 +128,7 @@ mod tests {
 
 	#[automock]
 	impl PeekNext<Skill> for _Combos {
-		fn peek_next(&self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill> {
+		fn peek_next(&self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill> {
 			self.mock.peek_next(trigger, item_type)
 		}
 	}
@@ -182,7 +181,7 @@ mod tests {
 	fn return_combo_skill_icon_when_no_skill_active_and_combo_not_timed_out() {
 		let (slots, items, skills) = setup_slots([(
 			SlotKey::BottomHand(Side::Right),
-			SkillItemType::Pistol,
+			ItemType::Pistol,
 			Skill {
 				icon: Some(get_handle("item skill")),
 				..default()
@@ -216,7 +215,7 @@ mod tests {
 	}
 
 	fn setup_slots<const N: usize>(
-		skills: [(SlotKey, SkillItemType, Skill); N],
+		skills: [(SlotKey, ItemType, Skill); N],
 	) -> (Slots, Assets<Item>, Assets<Skill>) {
 		let mut slots = HashMap::new();
 		let mut skill_assets = Assets::default();
@@ -240,7 +239,7 @@ mod tests {
 	fn peek_combo_with_correct_arguments() {
 		let (slots, items, skills) = setup_slots([(
 			SlotKey::BottomHand(Side::Left),
-			SkillItemType::ForceEssence,
+			ItemType::ForceEssence,
 			Skill {
 				icon: Some(get_handle("item skill")),
 				..default()
@@ -256,7 +255,7 @@ mod tests {
 					.times(1)
 					.with(
 						eq(SlotKey::BottomHand(Side::Left)),
-						eq(SkillItemType::ForceEssence),
+						eq(ItemType::ForceEssence),
 					)
 					.return_const(None);
 			}),
@@ -274,7 +273,7 @@ mod tests {
 	fn return_item_skill_icon_when_no_skill_active_and_combo_timed_out() {
 		let (slots, items, skills) = setup_slots([(
 			SlotKey::BottomHand(Side::Right),
-			SkillItemType::Pistol,
+			ItemType::Pistol,
 			Skill {
 				icon: Some(get_handle("item skill")),
 				..default()
@@ -311,7 +310,7 @@ mod tests {
 	fn return_item_skill_icon_when_no_skill_active_and_combo_empty_but_not_timed_out() {
 		let (slots, items, skills) = setup_slots([(
 			SlotKey::BottomHand(Side::Right),
-			SkillItemType::Pistol,
+			ItemType::Pistol,
 			Skill {
 				icon: Some(get_handle("item skill")),
 				..default()
@@ -345,7 +344,7 @@ mod tests {
 	fn return_active_skill_icon_when_skill_active() {
 		let (slots, items, skills) = setup_slots([(
 			SlotKey::BottomHand(Side::Right),
-			SkillItemType::Pistol,
+			ItemType::Pistol,
 			Skill {
 				icon: Some(get_handle("item skill")),
 				..default()
@@ -389,7 +388,7 @@ mod tests {
 	fn return_item_skill_icon_when_skill_active_for_other_slot() {
 		let (slots, items, skills) = setup_slots([(
 			SlotKey::BottomHand(Side::Right),
-			SkillItemType::Pistol,
+			ItemType::Pistol,
 			Skill {
 				icon: Some(get_handle("item skill")),
 				..default()
@@ -433,7 +432,7 @@ mod tests {
 	fn return_item_skill_icon_when_no_skill_active_and_no_combo_components_present() {
 		let (slots, items, skills) = setup_slots([(
 			SlotKey::BottomHand(Side::Right),
-			SkillItemType::Pistol,
+			ItemType::Pistol,
 			Skill {
 				icon: Some(get_handle("item skill")),
 				..default()

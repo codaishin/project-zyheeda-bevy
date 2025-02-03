@@ -1,9 +1,9 @@
 pub(crate) mod run_skill_behavior;
 
 use super::{AnimationStrategy, Skill};
-use crate::SkillItemType;
 use common::{
 	dto::duration::DurationDto,
+	tools::item_type::ItemType,
 	traits::{
 		handles_custom_assets::{AssetFileExtensions, LoadFrom},
 		load_asset::{LoadAsset, Path},
@@ -19,7 +19,7 @@ pub(crate) struct SkillDto {
 	cast_time: DurationDto,
 	animation: AnimationStrategy,
 	behavior: RunSkillBehaviorDto,
-	is_usable_with: HashSet<SkillItemType>,
+	is_usable_with: HashSet<ItemType>,
 	icon: Option<Path>,
 }
 

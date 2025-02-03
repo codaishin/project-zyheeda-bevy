@@ -3,47 +3,62 @@ use crate::{
 	traits::InsertContentOn,
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use common::{tools::slot_key::SlotKey, traits::accessors::get::GetRef};
-use skills::item::Item;
+use common::{
+	tools::{item_type::ItemType, slot_key::SlotKey},
+	traits::{
+		accessors::get::{GetField, Getter},
+		handles_equipment::SingleAccess,
+	},
+};
 
-pub(crate) fn visualize_invalid_skill<
-	TAgent: Component,
-	TSlots: Component + GetRef<SlotKey, Handle<Item>>,
-	TVisualization: InsertContentOn,
->(
-	mut commands: Commands,
-	descriptors: Query<
-		(Entity, &SkillButton<DropdownTrigger>),
-		Added<SkillButton<DropdownTrigger>>,
-	>,
-	agents: Query<&TSlots, With<TAgent>>,
-	items: Res<Assets<Item>>,
-) {
-	let Ok(agent) = agents.get_single() else {
-		return;
-	};
+impl<T> VisualizeInvalidSkill for T {}
 
-	let visualize = TVisualization::insert_content_on;
+pub(crate) trait VisualizeInvalidSkill {
+	fn visualize_invalid_skill<TAgent, TVisualization>(
+		mut commands: Commands,
+		descriptors: Query<
+			(Entity, &SkillButton<DropdownTrigger>),
+			Added<SkillButton<DropdownTrigger>>,
+		>,
+		agents: Query<&Self, With<TAgent>>,
+		items: Res<Assets<Self::TItem>>,
+	) where
+		Self: Component + SingleAccess<TKey = SlotKey> + Sized,
+		Self::TItem: Asset + Getter<ItemType>,
+		TAgent: Component,
+		TVisualization: InsertContentOn,
+	{
+		let Ok(agent) = agents.get_single() else {
+			return;
+		};
 
-	for descriptor in &descriptors {
-		visualize_unusable(&mut commands, descriptor, agent, &items, visualize);
+		let visualize = TVisualization::insert_content_on;
+
+		for descriptor in &descriptors {
+			visualize_unusable(&mut commands, descriptor, agent, &items, visualize);
+		}
 	}
 }
 
-fn visualize_unusable<TSlots: GetRef<SlotKey, Handle<Item>>>(
+fn visualize_unusable<TSlots>(
 	commands: &mut Commands,
 	(entity, descriptor): (Entity, &SkillButton<DropdownTrigger>),
-	agent: &TSlots,
-	items: &Assets<Item>,
+	slots: &TSlots,
+	items: &Assets<TSlots::TItem>,
 	visualize: fn(&mut EntityCommands),
-) -> Option<()> {
+) -> Option<()>
+where
+	TSlots: SingleAccess<TKey = SlotKey>,
+	TSlots::TItem: Getter<ItemType>,
+{
 	let item = descriptor
 		.key_path
 		.last()
-		.and_then(|key| agent.get(key))
+		.and_then(|key| slots.single_access(key))
 		.and_then(|item| items.get(item))?;
 
-	if descriptor.skill.is_usable_with.contains(&item.item_type) {
+	let item_type = ItemType::get_field(item);
+	if descriptor.skill.is_usable_with.contains(&item_type) {
 		return None;
 	}
 
@@ -64,23 +79,35 @@ mod tests {
 		utils::default,
 	};
 	use common::{test_tools::utils::SingleThreadedApp, tools::slot_key::Side};
-	use skills::{item::item_type::SkillItemType, skills::Skill};
+	use skills::skills::Skill;
 	use std::collections::{HashMap, HashSet};
 
 	#[derive(Component)]
 	struct _Agent;
 
-	#[derive(Component)]
-	struct _Slots(HashMap<SlotKey, Handle<Item>>);
+	#[derive(Asset, TypePath)]
+	struct _Item(ItemType);
 
-	impl<const N: usize> From<[(SlotKey, Handle<Item>); N]> for _Slots {
-		fn from(value: [(SlotKey, Handle<Item>); N]) -> Self {
+	impl Getter<ItemType> for _Item {
+		fn get(&self) -> ItemType {
+			self.0
+		}
+	}
+
+	#[derive(Component)]
+	struct _Slots(HashMap<SlotKey, Handle<_Item>>);
+
+	impl<const N: usize> From<[(SlotKey, Handle<_Item>); N]> for _Slots {
+		fn from(value: [(SlotKey, Handle<_Item>); N]) -> Self {
 			Self(HashMap::from(value))
 		}
 	}
 
-	impl GetRef<SlotKey, Handle<Item>> for _Slots {
-		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Handle<Item>> {
+	impl SingleAccess for _Slots {
+		type TKey = SlotKey;
+		type TItem = _Item;
+
+		fn single_access(&self, key: &Self::TKey) -> Option<&Handle<Self::TItem>> {
 			self.0.get(key)
 		}
 	}
@@ -94,7 +121,7 @@ mod tests {
 		}
 	}
 
-	fn setup_slots<const N: usize>(slots: [(SlotKey, Item); N]) -> (_Slots, Assets<Item>) {
+	fn setup_slots<const N: usize>(slots: [(SlotKey, _Item); N]) -> (_Slots, Assets<_Item>) {
 		let mut items = Assets::default();
 		let slots = slots
 			.into_iter()
@@ -106,7 +133,7 @@ mod tests {
 
 	fn setup_app_and_slots_on<const N: usize>(
 		agent: impl Component,
-		slots: [(SlotKey, Item); N],
+		slots: [(SlotKey, _Item); N],
 	) -> App {
 		let (slots, items) = setup_slots(slots);
 		let mut app = App::new().single_threaded(Update);
@@ -114,7 +141,7 @@ mod tests {
 		app.world_mut().spawn((agent, slots));
 		app.add_systems(
 			Update,
-			visualize_invalid_skill::<_Agent, _Slots, _Visualization>,
+			_Slots::visualize_invalid_skill::<_Agent, _Visualization>,
 		);
 
 		app
@@ -124,19 +151,13 @@ mod tests {
 	fn visualize_unusable() {
 		let mut app = setup_app_and_slots_on(
 			_Agent,
-			[(
-				SlotKey::BottomHand(Side::Right),
-				Item {
-					item_type: SkillItemType::Pistol,
-					..default()
-				},
-			)],
+			[(SlotKey::BottomHand(Side::Right), _Item(ItemType::Pistol))],
 		);
 		let skill = app
 			.world_mut()
 			.spawn(SkillButton::<DropdownTrigger>::new(
 				Skill {
-					is_usable_with: HashSet::from([SkillItemType::Bracer]),
+					is_usable_with: HashSet::from([ItemType::Bracer]),
 					..default()
 				},
 				vec![
@@ -156,19 +177,13 @@ mod tests {
 	fn do_not_visualize_usable() {
 		let mut app = setup_app_and_slots_on(
 			_Agent,
-			[(
-				SlotKey::BottomHand(Side::Right),
-				Item {
-					item_type: SkillItemType::Pistol,
-					..default()
-				},
-			)],
+			[(SlotKey::BottomHand(Side::Right), _Item(ItemType::Pistol))],
 		);
 		let skill = app
 			.world_mut()
 			.spawn(SkillButton::<DropdownTrigger>::new(
 				Skill {
-					is_usable_with: HashSet::from([SkillItemType::Pistol]),
+					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
 				vec![
@@ -191,19 +206,13 @@ mod tests {
 
 		let mut app = setup_app_and_slots_on(
 			_NonAgent,
-			[(
-				SlotKey::BottomHand(Side::Right),
-				Item {
-					item_type: SkillItemType::Bracer,
-					..default()
-				},
-			)],
+			[(SlotKey::BottomHand(Side::Right), _Item(ItemType::Bracer))],
 		);
 		let skill = app
 			.world_mut()
 			.spawn(SkillButton::<DropdownTrigger>::new(
 				Skill {
-					is_usable_with: HashSet::from([SkillItemType::Pistol]),
+					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
 				vec![
@@ -223,19 +232,13 @@ mod tests {
 	fn do_not_visualize_when_not_added() {
 		let mut app = setup_app_and_slots_on(
 			_Agent,
-			[(
-				SlotKey::BottomHand(Side::Right),
-				Item {
-					item_type: SkillItemType::Bracer,
-					..default()
-				},
-			)],
+			[(SlotKey::BottomHand(Side::Right), _Item(ItemType::Bracer))],
 		);
 		let skill = app
 			.world_mut()
 			.spawn(SkillButton::<DropdownTrigger>::new(
 				Skill {
-					is_usable_with: HashSet::from([SkillItemType::Pistol]),
+					is_usable_with: HashSet::from([ItemType::Pistol]),
 					..default()
 				},
 				vec![

@@ -46,7 +46,7 @@ use components::{
 	skill_spawners::SkillSpawners,
 	slots::{ForearmItemSlots, HandItemSlots, Slots, SubMeshEssenceSlots},
 };
-use item::{dto::ItemDto, item_type::SkillItemType, Item};
+use item::{dto::ItemDto, Item};
 use macros::item_asset;
 use skills::{dto::SkillDto, QueuedSkill, RunSkillBehavior, Skill};
 use std::{marker::PhantomData, time::Duration};

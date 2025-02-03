@@ -1,6 +1,5 @@
 use super::combo_node::ComboNode;
 use crate::{
-	item::item_type::SkillItemType,
 	skills::Skill,
 	traits::{
 		Combo,
@@ -16,7 +15,10 @@ use crate::{
 	},
 };
 use bevy::ecs::component::Component;
-use common::{tools::slot_key::SlotKey, traits::iterate::Iterate};
+use common::{
+	tools::{item_type::ItemType, slot_key::SlotKey},
+	traits::iterate::Iterate,
+};
 
 #[derive(Component, PartialEq, Debug)]
 pub struct Combos<TComboNode = ComboNode> {
@@ -58,11 +60,7 @@ impl<TComboNode> PeekNext<(Skill, TComboNode)> for Combos<TComboNode>
 where
 	TComboNode: PeekNext<(Skill, TComboNode)>,
 {
-	fn peek_next(
-		&self,
-		trigger: &SlotKey,
-		item_type: &SkillItemType,
-	) -> Option<(Skill, TComboNode)> {
+	fn peek_next(&self, trigger: &SlotKey, item_type: &ItemType) -> Option<(Skill, TComboNode)> {
 		let Combos { config, current } = self;
 
 		current
@@ -145,7 +143,7 @@ mod tests {
 	mock! {
 		_Next {}
 		impl PeekNext<(Skill, Self)> for _Next {
-			fn peek_next(&self, _trigger: &SlotKey, _item_type: &SkillItemType) -> Option<(Skill, Self)>;
+			fn peek_next(&self, _trigger: &SlotKey, _item_type: &ItemType) -> Option<(Skill, Self)>;
 		}
 	}
 
@@ -153,7 +151,7 @@ mod tests {
 
 	#[test]
 	fn call_next_with_correct_args() {
-		let item_type = SkillItemType::ForceEssence;
+		let item_type = ItemType::ForceEssence;
 		let trigger = SlotKey::BottomHand(Side::Left);
 		let combos = Combos::new(Mock_Next::new_mock(|mock| {
 			mock.expect_peek_next()
@@ -180,7 +178,7 @@ mod tests {
 		}));
 
 		let skill = combos
-			.peek_next(&SlotKey::default(), &SkillItemType::default())
+			.peek_next(&SlotKey::default(), &ItemType::default())
 			.map(|(skill, _)| skill);
 
 		assert_eq!(
@@ -199,14 +197,14 @@ mod tests {
 		});
 		let next = Mock_Next::new_mock(|mock| {
 			mock.expect_peek_next()
-				.with(eq(SlotKey::TopHand(Side::Left)), eq(SkillItemType::Pistol))
+				.with(eq(SlotKey::TopHand(Side::Left)), eq(ItemType::Pistol))
 				.times(1)
 				.returning(|_, _| Some((Skill::default(), Mock_Next::default())));
 		});
 		let mut combos = Combos::new(first);
 		combos.set_next_combo(Some(next));
 
-		combos.peek_next(&SlotKey::TopHand(Side::Left), &SkillItemType::Pistol);
+		combos.peek_next(&SlotKey::TopHand(Side::Left), &ItemType::Pistol);
 	}
 
 	#[test]
@@ -220,7 +218,7 @@ mod tests {
 		let mut combos = Combos::new(first);
 		combos.set_next_combo(Some(next));
 
-		combos.peek_next(&SlotKey::default(), &SkillItemType::default());
+		combos.peek_next(&SlotKey::default(), &ItemType::default());
 	}
 
 	struct _ComboNode<'a>(Vec<Combo<'a>>);

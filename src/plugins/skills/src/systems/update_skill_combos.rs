@@ -51,15 +51,14 @@ fn update_skill_with_advanced_combo<TCombos>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::slots::Slots,
-		item::{item_type::SkillItemType, Item},
-		skills::Skill,
-	};
+	use crate::{components::slots::Slots, item::Item, skills::Skill};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		test_tools::utils::Changed,
-		tools::slot_key::{Side, SlotKey},
+		tools::{
+			item_type::ItemType,
+			slot_key::{Side, SlotKey},
+		},
 		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;
@@ -74,12 +73,12 @@ mod tests {
 	mock! {
 		_Combos {}
 		impl AdvanceCombo for _Combos {
-			fn advance_combo(&mut self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill> {}
+			fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill> {}
 		}
 	}
 
 	impl AdvanceCombo for _Combos {
-		fn advance_combo(&mut self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill> {
+		fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill> {
 			self.mock.advance_combo(trigger, item_type)
 		}
 	}
@@ -132,14 +131,14 @@ mod tests {
 			(
 				SlotKey::BottomHand(Side::Right),
 				Some(Item {
-					item_type: SkillItemType::ForceEssence,
+					item_type: ItemType::ForceEssence,
 					..default()
 				}),
 			),
 			(
 				SlotKey::BottomHand(Side::Left),
 				Some(Item {
-					item_type: SkillItemType::Pistol,
+					item_type: ItemType::Pistol,
 					..default()
 				}),
 			),
@@ -151,15 +150,12 @@ mod tests {
 					.times(1)
 					.with(
 						eq(SlotKey::BottomHand(Side::Right)),
-						eq(SkillItemType::ForceEssence),
+						eq(ItemType::ForceEssence),
 					)
 					.return_const(Skill::default());
 				mock.expect_advance_combo()
 					.times(1)
-					.with(
-						eq(SlotKey::BottomHand(Side::Left)),
-						eq(SkillItemType::Pistol),
-					)
+					.with(eq(SlotKey::BottomHand(Side::Left)), eq(ItemType::Pistol))
 					.return_const(Skill::default());
 			}),
 			_Queue {

@@ -1,8 +1,9 @@
 use super::Item;
-use crate::{components::model_render::ModelRender, item::item_type::SkillItemType};
+use crate::components::model_render::ModelRender;
 use bevy::reflect::TypePath;
 use common::{
 	components::essence::Essence,
+	tools::item_type::ItemType,
 	traits::{
 		handles_custom_assets::{AssetFileExtensions, LoadFrom},
 		load_asset::LoadAsset,
@@ -18,7 +19,7 @@ pub(crate) struct ItemDto {
 	model: ModelRender,
 	essence: Essence,
 	skill: Option<SkillPath>,
-	item_type: SkillItemType,
+	item_type: ItemType,
 }
 
 impl LoadFrom<ItemDto> for Item {

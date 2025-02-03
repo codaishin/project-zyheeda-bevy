@@ -10,12 +10,11 @@ use crate::{
 		SkillSpawner,
 	},
 	components::SkillTarget,
-	item::item_type::SkillItemType,
 	traits::{spawn_skill_behavior::SpawnSkillBehavior, Matches, Prime},
 };
 use bevy::prelude::*;
 use common::{
-	tools::slot_key::SlotKey,
+	tools::{item_type::ItemType, slot_key::SlotKey},
 	traits::{
 		animation::Animation,
 		handles_custom_assets::AssetFolderPath,
@@ -54,7 +53,7 @@ pub struct Skill {
 	pub cast_time: Duration,
 	pub animation: AnimationStrategy,
 	pub behavior: RunSkillBehavior,
-	pub is_usable_with: HashSet<SkillItemType>,
+	pub is_usable_with: HashSet<ItemType>,
 	pub icon: Option<Handle<Image>>,
 }
 

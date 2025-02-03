@@ -18,9 +18,9 @@ impl Inventory {
 }
 
 impl ContinuousAccessMut for Inventory {
-	type TItem = Handle<Item>;
+	type TItemHandle = Handle<Item>;
 
-	fn continuous_access_mut(&mut self) -> &mut Vec<Option<Self::TItem>> {
+	fn continuous_access_mut(&mut self) -> &mut Vec<Option<Self::TItemHandle>> {
 		&mut self.0
 	}
 }

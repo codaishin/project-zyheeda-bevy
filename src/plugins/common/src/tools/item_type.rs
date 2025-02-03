@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Hash, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
-pub enum SkillItemType {
+pub enum ItemType {
 	#[default]
 	Pistol,
 	Bracer,

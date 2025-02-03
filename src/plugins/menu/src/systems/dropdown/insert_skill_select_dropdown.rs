@@ -68,8 +68,10 @@ fn compatible_skills<TEquipment: GetRef<SlotKey, Handle<Item>>, TLayout: Sync + 
 mod tests {
 	use super::*;
 	use crate::components::dropdown::Dropdown;
-	use common::{test_tools::utils::SingleThreadedApp, tools::slot_key::Side};
-	use skills::item::item_type::SkillItemType;
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		tools::{item_type::ItemType, slot_key::Side},
+	};
 	use std::collections::{HashMap, HashSet};
 	use uuid::Uuid;
 
@@ -146,13 +148,13 @@ mod tests {
 			[
 				Skill {
 					name: "skill a".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Pistol]),
+					is_usable_with: HashSet::from([ItemType::Pistol]),
 					icon: Some(image_a.clone()),
 					..default()
 				},
 				Skill {
 					name: "skill b".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
+					is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
 					icon: Some(image_b.clone()),
 					..default()
 				},
@@ -160,7 +162,7 @@ mod tests {
 			[(
 				SlotKey::BottomHand(Side::Right),
 				Item {
-					item_type: SkillItemType::Pistol,
+					item_type: ItemType::Pistol,
 					..default()
 				},
 			)],
@@ -182,7 +184,7 @@ mod tests {
 					SkillButton::<DropdownItem<_Layout>>::new(
 						Skill {
 							name: "skill a".to_owned(),
-							is_usable_with: HashSet::from([SkillItemType::Pistol]),
+							is_usable_with: HashSet::from([ItemType::Pistol]),
 							icon: Some(image_a.clone()),
 							..default()
 						},
@@ -191,10 +193,7 @@ mod tests {
 					SkillButton::<DropdownItem<_Layout>>::new(
 						Skill {
 							name: "skill b".to_owned(),
-							is_usable_with: HashSet::from([
-								SkillItemType::Pistol,
-								SkillItemType::Bracer
-							]),
+							is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
 							icon: Some(image_b.clone()),
 							..default()
 						},
@@ -215,19 +214,19 @@ mod tests {
 			[
 				Skill {
 					name: "skill a".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Pistol]),
+					is_usable_with: HashSet::from([ItemType::Pistol]),
 					icon: Some(image_a.clone()),
 					..default()
 				},
 				Skill {
 					name: "skill b".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
+					is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
 					icon: Some(image_b.clone()),
 					..default()
 				},
 				Skill {
 					name: "skill b".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
+					is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
 					icon: Some(image_b.clone()),
 					..default()
 				},
@@ -235,7 +234,7 @@ mod tests {
 			[(
 				SlotKey::BottomHand(Side::Right),
 				Item {
-					item_type: SkillItemType::Pistol,
+					item_type: ItemType::Pistol,
 					..default()
 				},
 			)],
@@ -257,7 +256,7 @@ mod tests {
 					SkillButton::<DropdownItem<_Layout>>::new(
 						Skill {
 							name: "skill a".to_owned(),
-							is_usable_with: HashSet::from([SkillItemType::Pistol]),
+							is_usable_with: HashSet::from([ItemType::Pistol]),
 							icon: Some(image_a.clone()),
 							..default()
 						},
@@ -266,10 +265,7 @@ mod tests {
 					SkillButton::<DropdownItem<_Layout>>::new(
 						Skill {
 							name: "skill b".to_owned(),
-							is_usable_with: HashSet::from([
-								SkillItemType::Pistol,
-								SkillItemType::Bracer
-							]),
+							is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
 							icon: Some(image_b.clone()),
 							..default()
 						},
@@ -293,13 +289,13 @@ mod tests {
 			[
 				Skill {
 					name: "skill a".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Pistol]),
+					is_usable_with: HashSet::from([ItemType::Pistol]),
 					icon: Some(image_a.clone()),
 					..default()
 				},
 				Skill {
 					name: "skill b".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Pistol, SkillItemType::Bracer]),
+					is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
 					icon: Some(image_b.clone()),
 					..default()
 				},
@@ -307,7 +303,7 @@ mod tests {
 			[(
 				SlotKey::BottomHand(Side::Right),
 				Item {
-					item_type: SkillItemType::Pistol,
+					item_type: ItemType::Pistol,
 					..default()
 				},
 			)],
@@ -337,7 +333,7 @@ mod tests {
 			[(
 				SlotKey::BottomHand(Side::Right),
 				Item {
-					item_type: SkillItemType::Pistol,
+					item_type: ItemType::Pistol,
 					..default()
 				},
 			)],

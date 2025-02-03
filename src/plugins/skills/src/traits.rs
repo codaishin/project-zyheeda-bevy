@@ -11,11 +11,10 @@ pub(crate) mod swap_commands;
 use crate::{
 	behaviors::SkillCaster,
 	components::{skill_spawners::SkillSpawners, SkillTarget},
-	item::item_type::SkillItemType,
 	skills::{AnimationStrategy, RunSkillBehavior, Skill},
 };
 use common::{
-	tools::slot_key::SlotKey,
+	tools::{item_type::ItemType, slot_key::SlotKey},
 	traits::{map_value::TryMapBackwards, state_duration::StateUpdate},
 };
 use std::hash::Hash;
@@ -61,11 +60,11 @@ pub trait IsTimedOut {
 }
 
 pub trait PeekNext<TNext> {
-	fn peek_next(&self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<TNext>;
+	fn peek_next(&self, trigger: &SlotKey, item_type: &ItemType) -> Option<TNext>;
 }
 
 pub(crate) trait AdvanceCombo {
-	fn advance_combo(&mut self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill>;
+	fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill>;
 }
 
 pub(crate) trait SetNextCombo<TCombo> {

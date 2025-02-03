@@ -10,6 +10,7 @@ mod visualization;
 mod debug;
 
 use crate::systems::{
+	combos::visualize_invalid_skill::VisualizeInvalidSkill,
 	items::swap::inventory_items::SwapInventoryItems,
 	update_panels::container_states::SetContainerPanels,
 };
@@ -58,7 +59,6 @@ use systems::{
 		update_combo_skills::update_combo_skills,
 		update_combos_view::update_combos_view,
 		update_combos_view_delete_skill::update_combos_view_delete_skill,
-		visualize_invalid_skill::visualize_invalid_skill,
 	},
 	conditions::{added::added, changed::changed, either::either},
 	dad::{drag::drag, drop::drop},
@@ -275,7 +275,7 @@ where
 			.add_systems(
 				Update,
 				(
-					visualize_invalid_skill::<TPlayers::TPlayer, Slots, Unusable>,
+					TEquipment::TSlots::visualize_invalid_skill::<TPlayers::TPlayer, Unusable>,
 					insert_skill_select_dropdown::<TPlayers::TPlayer, Slots, Vertical>,
 					insert_skill_select_dropdown::<TPlayers::TPlayer, Slots, Horizontal>,
 					insert_key_select_dropdown::<TPlayers::TPlayer, Combos, AppendSkillCommand>,
