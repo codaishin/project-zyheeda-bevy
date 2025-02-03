@@ -23,6 +23,7 @@ use common::{
 		handles_assets_for_children::HandlesAssetsForChildren,
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_effect::HandlesAllEffects,
+		handles_equipment::HandlesEquipment,
 		handles_lifetime::HandlesLifetime,
 		handles_orientation::HandlesOrientation,
 		handles_player::{
@@ -249,4 +250,10 @@ where
 		self.skill_slot_load(app);
 		self.skill_execution(app);
 	}
+}
+
+impl<T> HandlesEquipment for SkillsPlugin<T> {
+	type TItem = Item;
+	type TInventory = Inventory;
+	type TSlots = Slots;
 }

@@ -8,6 +8,7 @@ use common::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,
 		handles_assets_for_children::{ChildAssetComponent, ChildAssetDefinition, ChildName},
+		handles_equipment::SingleAccess,
 	},
 };
 use std::{collections::HashMap, fmt::Debug};
@@ -24,6 +25,16 @@ impl Slots {
 impl Default for Slots {
 	fn default() -> Self {
 		Self::new([])
+	}
+}
+
+impl SingleAccess for Slots {
+	type TKey = SlotKey;
+	type TItem = Item;
+
+	fn single_access(&self, key: &Self::TKey) -> Option<&Handle<Self::TItem>> {
+		let item = self.0.get(key)?;
+		item.as_ref()
 	}
 }
 

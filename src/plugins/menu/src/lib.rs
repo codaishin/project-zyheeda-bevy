@@ -9,6 +9,10 @@ mod visualization;
 #[cfg(debug_assertions)]
 mod debug;
 
+use crate::systems::{
+	items::swap::inventory_items::SwapInventoryItems,
+	update_panels::container_states::SetContainerPanels,
+};
 use bevy::prelude::*;
 use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
@@ -16,6 +20,7 @@ use common::{
 	systems::log::log_many,
 	tools::{inventory_key::InventoryKey, slot_key::SlotKey},
 	traits::{
+		handles_equipment::HandlesEquipment,
 		handles_graphics::{StaticRenderLayers, UiCamera},
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		handles_player::HandlesPlayer,
@@ -42,13 +47,7 @@ use components::{
 };
 use events::DropdownEvent;
 use skills::{
-	components::{
-		combos::Combos,
-		combos_time_out::CombosTimeOut,
-		inventory::Inventory,
-		queue::Queue,
-		slots::Slots,
-	},
+	components::{combos::Combos, combos_time_out::CombosTimeOut, queue::Queue, slots::Slots},
 	skills::Skill,
 };
 use std::{marker::PhantomData, time::Duration};
@@ -75,7 +74,7 @@ use systems::{
 	},
 	image_color::image_color,
 	insert_key_code_text::insert_key_code_text,
-	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
+	items::swap::equipped_items::swap_equipped_items,
 	map_pressed_key_select::map_pressed_key_select,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	on_release_set::OnReleaseSet,
@@ -87,7 +86,6 @@ use systems::{
 	update_panels::{
 		activity_colors_override::panel_activity_colors_override,
 		colors::panel_colors,
-		container_states::panel_container_states,
 		get_quickbar_icons::get_quickbar_icons,
 		set_quickbar_icons::set_quickbar_icons,
 		update_label_text::update_label_text,
@@ -177,22 +175,26 @@ impl AddDropdown for App {
 
 pub struct MenuPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TPlayers, TGraphics> MenuPlugin<(TLoading, TPlayers, TGraphics)>
+impl<TLoading, TPlayers, TGraphics, TEquipment>
+	MenuPlugin<(TLoading, TPlayers, TGraphics, TEquipment)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TPlayers: ThreadSafe + HandlesPlayer,
 	TGraphics: ThreadSafe + UiCamera,
+	TEquipment: ThreadSafe + HandlesEquipment,
 {
-	pub fn depends_on(_: &TLoading, _: &TPlayers, _: &TGraphics) -> Self {
+	pub fn depends_on(_: &TLoading, _: &TPlayers, _: &TGraphics, _: &TEquipment) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TPlayers, TGraphics> MenuPlugin<(TLoading, TPlayers, TGraphics)>
+impl<TLoading, TPlayers, TGraphics, TEquipment>
+	MenuPlugin<(TLoading, TPlayers, TGraphics, TEquipment)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TPlayers: ThreadSafe + HandlesPlayer,
 	TGraphics: ThreadSafe + UiCamera,
+	TEquipment: ThreadSafe + HandlesEquipment,
 {
 	fn resources(&self, app: &mut App) {
 		app.init_resource::<Shared<Path, Handle<Image>>>()
@@ -293,9 +295,9 @@ where
 			.add_systems(
 				Update,
 				(
+					TEquipment::TInventory::set_container_panels::<InventoryPanel, InventoryKey>,
+					TEquipment::TSlots::set_container_panels::<InventoryPanel, SlotKey>,
 					panel_colors::<InventoryPanel>,
-					panel_container_states::<InventoryPanel, InventoryKey, Inventory>,
-					panel_container_states::<InventoryPanel, SlotKey, Slots>,
 					drag::<TPlayers::TPlayer, InventoryKey>,
 					drag::<TPlayers::TPlayer, SlotKey>,
 					drop::<TPlayers::TPlayer, InventoryKey, InventoryKey>,
@@ -307,7 +309,10 @@ where
 			)
 			.add_systems(
 				Update,
-				(swap_equipped_items.pipe(log_many), swap_inventory_items),
+				(
+					swap_equipped_items.pipe(log_many),
+					TEquipment::TInventory::swap_items,
+				),
 			);
 	}
 
@@ -322,11 +327,13 @@ where
 	}
 }
 
-impl<TLoading, TPlayers, TGraphics> Plugin for MenuPlugin<(TLoading, TPlayers, TGraphics)>
+impl<TLoading, TPlayers, TGraphics, TEquipment> Plugin
+	for MenuPlugin<(TLoading, TPlayers, TGraphics, TEquipment)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TPlayers: ThreadSafe + HandlesPlayer,
 	TGraphics: ThreadSafe + UiCamera,
+	TEquipment: ThreadSafe + HandlesEquipment,
 {
 	fn build(&self, app: &mut App) {
 		self.resources(app);

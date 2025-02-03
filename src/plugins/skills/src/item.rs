@@ -4,7 +4,10 @@ pub(crate) mod dto;
 
 use crate::{components::model_render::ModelRender, skills::Skill};
 use bevy::prelude::*;
-use common::components::essence::Essence;
+use common::{
+	components::essence::Essence,
+	traits::{accessors::get::Getter, handles_equipment::ItemName},
+};
 use item_type::SkillItemType;
 
 #[derive(Debug, PartialEq, Default, Clone, Asset, TypePath)]
@@ -22,5 +25,11 @@ impl Item {
 			name: name.to_owned(),
 			..default()
 		}
+	}
+}
+
+impl Getter<ItemName> for Item {
+	fn get(&self) -> ItemName {
+		ItemName(self.name.clone())
 	}
 }

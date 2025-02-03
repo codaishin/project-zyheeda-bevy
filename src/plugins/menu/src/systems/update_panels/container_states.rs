@@ -1,41 +1,53 @@
-use std::fmt::Debug;
-
 use crate::{components::KeyedPanel, tools::PanelState};
 use bevy::{hierarchy::Parent, prelude::*};
-use common::traits::accessors::{get::GetRef, set::Setter};
-use skills::item::Item;
+use common::traits::{
+	accessors::{
+		get::{GetField, Getter},
+		set::Setter,
+	},
+	handles_equipment::{ItemName, SingleAccess},
+};
+use std::fmt::Debug;
 
-pub fn panel_container_states<TPanel, TKey, TContainer>(
-	containers: Query<&TContainer>,
-	mut texts: Query<(&Parent, &mut Text)>,
-	mut panels: Query<(Entity, &KeyedPanel<TKey>, &mut TPanel)>,
-	items: Res<Assets<Item>>,
-) where
-	TPanel: Component + Setter<PanelState>,
-	TKey: Debug + Copy + Send + Sync + 'static,
-	TContainer: Component + GetRef<TKey, Handle<Item>>,
-{
-	let container = containers.single();
+impl<T> SetContainerPanels for T {}
 
-	for (entity, KeyedPanel(key), mut panel) in &mut panels {
-		let (state, label) = match get_item(container, key, &items) {
-			Some(item) => (PanelState::Filled, item.name.clone()),
-			None => (PanelState::Empty, "<Empty>".to_owned()),
-		};
-		panel.set(state);
-		set_label(&mut texts, entity, label);
+pub trait SetContainerPanels {
+	fn set_container_panels<TPanel, TKey>(
+		containers: Query<&Self>,
+		mut texts: Query<(&Parent, &mut Text)>,
+		mut panels: Query<(Entity, &KeyedPanel<TKey>, &mut TPanel)>,
+		items: Res<Assets<Self::TItem>>,
+	) where
+		Self: Component + SingleAccess<TKey = TKey> + Sized,
+		Self::TItem: Asset + Getter<ItemName>,
+		TPanel: Component + Setter<PanelState>,
+		TKey: Debug + Copy + Send + Sync + 'static,
+	{
+		let container = containers.single();
+
+		for (entity, KeyedPanel(key), mut panel) in &mut panels {
+			let (state, ItemName(label)) = match get_item(container, key, &items) {
+				Some(item) => (PanelState::Filled, ItemName::get_field(item)),
+				None => (PanelState::Empty, ItemName("<Empty>".to_owned())),
+			};
+			panel.set(state);
+			set_label(&mut texts, entity, label);
+		}
 	}
 }
 
 fn get_item<'a, TContainer, TKey>(
 	container: &'a TContainer,
 	key: &TKey,
-	items: &'a Assets<Item>,
-) -> Option<&'a Item>
+	items: &'a Assets<TContainer::TItem>,
+) -> Option<&'a TContainer::TItem>
 where
-	TContainer: GetRef<TKey, Handle<Item>>,
+	TContainer: SingleAccess<TKey = TKey>,
+	TContainer::TItem: Asset,
 {
-	container.get(key).and_then(|item| items.get(item))
+	container
+		.single_access(key)
+		.and_then(|handle| items.get(handle))
 }
 
 fn set_label(texts: &mut Query<(&Parent, &mut Text)>, entity: Entity, label: String) {
@@ -56,11 +68,26 @@ mod tests {
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
 
-	#[derive(Component)]
-	struct _Container(HashMap<usize, Handle<Item>>);
+	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+	struct _Key(usize);
 
-	impl GetRef<usize, Handle<Item>> for _Container {
-		fn get(&self, key: &usize) -> Option<&Handle<Item>> {
+	#[derive(Asset, TypePath, Debug, PartialEq)]
+	struct _Item(&'static str);
+
+	impl Getter<ItemName> for _Item {
+		fn get(&self) -> ItemName {
+			ItemName(self.0.to_owned())
+		}
+	}
+
+	#[derive(Component)]
+	struct _Container(HashMap<_Key, Handle<_Item>>);
+
+	impl SingleAccess for _Container {
+		type TKey = _Key;
+		type TItem = _Item;
+
+		fn single_access(&self, key: &Self::TKey) -> Option<&Handle<Self::TItem>> {
 			self.0.get(key)
 		}
 	}
@@ -77,7 +104,7 @@ mod tests {
 		}
 	}
 
-	fn setup_container<const N: usize>(items: [(usize, Item); N]) -> (_Container, Assets<Item>) {
+	fn setup_container<const N: usize>(items: [(_Key, _Item); N]) -> (_Container, Assets<_Item>) {
 		let mut item_assets = Assets::default();
 		let mut container = HashMap::default();
 
@@ -89,7 +116,7 @@ mod tests {
 		(_Container(container), item_assets)
 	}
 
-	fn setup_app<const N: usize>(items: [(usize, Item); N]) -> App {
+	fn setup_app<const N: usize>(items: [(_Key, _Item); N]) -> App {
 		let (container, items) = setup_container(items);
 		let mut app = App::new();
 		app.insert_resource(items);
@@ -104,7 +131,7 @@ mod tests {
 		let panel = app
 			.world_mut()
 			.spawn((
-				KeyedPanel(42_usize),
+				KeyedPanel(_Key(42)),
 				_Panel::new().with_mock(|mock| {
 					mock.expect_set()
 						.times(1)
@@ -116,7 +143,7 @@ mod tests {
 		let text = app.world_mut().spawn(Text::new("")).set_parent(panel).id();
 
 		app.world_mut()
-			.run_system_once(panel_container_states::<_Panel, usize, _Container>)?;
+			.run_system_once(_Container::set_container_panels::<_Panel, _Key>)?;
 
 		assert_eq!(
 			Some("<Empty>"),
@@ -130,11 +157,11 @@ mod tests {
 
 	#[test]
 	fn set_filled() -> Result<(), RunSystemError> {
-		let mut app = setup_app([(42, Item::named("my item"))]);
+		let mut app = setup_app([(_Key(42), _Item("my item"))]);
 		let panel = app
 			.world_mut()
 			.spawn((
-				KeyedPanel(42_usize),
+				KeyedPanel(_Key(42)),
 				_Panel::new().with_mock(|mock| {
 					mock.expect_set()
 						.times(1)
@@ -146,7 +173,7 @@ mod tests {
 		let text = app.world_mut().spawn(Text::new("")).set_parent(panel).id();
 
 		app.world_mut()
-			.run_system_once(panel_container_states::<_Panel, usize, _Container>)?;
+			.run_system_once(_Container::set_container_panels::<_Panel, _Key>)?;
 
 		assert_eq!(
 			Some("my item"),
@@ -160,11 +187,11 @@ mod tests {
 
 	#[test]
 	fn set_empty_when_item_cannot_be_retrieved() -> Result<(), RunSystemError> {
-		let mut app = setup_app([(42, Item::named("my item"))]);
+		let mut app = setup_app([(_Key(42), _Item("my item"))]);
 		let panel = app
 			.world_mut()
 			.spawn((
-				KeyedPanel(42_usize),
+				KeyedPanel(_Key(42)),
 				_Panel::new().with_mock(|mock| {
 					mock.expect_set()
 						.times(1)
@@ -174,11 +201,11 @@ mod tests {
 			))
 			.id();
 		let text = app.world_mut().spawn(Text::new("")).set_parent(panel).id();
-		let mut items = app.world_mut().resource_mut::<Assets<Item>>();
+		let mut items = app.world_mut().resource_mut::<Assets<_Item>>();
 		*items = Assets::default();
 
 		app.world_mut()
-			.run_system_once(panel_container_states::<_Panel, usize, _Container>)?;
+			.run_system_once(_Container::set_container_panels::<_Panel, _Key>)?;
 
 		assert_eq!(
 			Some("<Empty>"),
@@ -194,23 +221,23 @@ mod tests {
 	fn still_set_state_when_no_children() -> Result<(), RunSystemError> {
 		let mut app = setup_app([]);
 		app.world_mut().spawn((
-			KeyedPanel(42_usize),
+			KeyedPanel(_Key(42)),
 			_Panel::new().with_mock(|mock| {
 				mock.expect_set().times(1).return_const(());
 			}),
 		));
 
 		app.world_mut()
-			.run_system_once(panel_container_states::<_Panel, usize, _Container>)
+			.run_system_once(_Container::set_container_panels::<_Panel, _Key>)
 	}
 
 	#[test]
 	fn set_when_text_not_first_child() -> Result<(), RunSystemError> {
-		let mut app = setup_app([(42, Item::named("my item"))]);
+		let mut app = setup_app([(_Key(42), _Item("my item"))]);
 		let panel = app
 			.world_mut()
 			.spawn((
-				KeyedPanel(42_usize),
+				KeyedPanel(_Key(42)),
 				_Panel::new().with_mock(|mock| {
 					mock.expect_set()
 						.times(1)
@@ -223,7 +250,7 @@ mod tests {
 		let text = app.world_mut().spawn(Text::new("")).set_parent(panel).id();
 
 		app.world_mut()
-			.run_system_once(panel_container_states::<_Panel, usize, _Container>)?;
+			.run_system_once(_Container::set_container_panels::<_Panel, _Key>)?;
 
 		assert_eq!(
 			Some("my item"),

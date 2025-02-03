@@ -2,15 +2,36 @@ use crate::item::Item;
 use bevy::{asset::Handle, ecs::component::Component};
 use common::{
 	tools::inventory_key::InventoryKey,
-	traits::accessors::get::{GetMut, GetRef},
+	traits::{
+		accessors::get::{GetMut, GetRef},
+		handles_equipment::{ContinuousAccessMut, SingleAccess},
+	},
 };
 
 #[derive(Component, Debug, PartialEq)]
-pub struct Inventory(pub Vec<Option<Handle<Item>>>);
+pub struct Inventory(pub(crate) Vec<Option<Handle<Item>>>);
 
 impl Inventory {
 	pub fn new<const N: usize>(items: [Option<Handle<Item>>; N]) -> Self {
 		Self(Vec::from(items))
+	}
+}
+
+impl ContinuousAccessMut for Inventory {
+	type TItem = Handle<Item>;
+
+	fn continuous_access_mut(&mut self) -> &mut Vec<Option<Self::TItem>> {
+		&mut self.0
+	}
+}
+
+impl SingleAccess for Inventory {
+	type TKey = InventoryKey;
+	type TItem = Item;
+
+	fn single_access(&self, InventoryKey(index): &Self::TKey) -> Option<&Handle<Self::TItem>> {
+		let item = self.0.get(*index)?;
+		item.as_ref()
 	}
 }
 
