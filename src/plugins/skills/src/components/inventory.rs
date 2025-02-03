@@ -1,11 +1,18 @@
-use crate::{inventory_key::InventoryKey, item::Item};
-use bevy::asset::Handle;
+use crate::item::Item;
+use bevy::{asset::Handle, ecs::component::Component};
 use common::{
-	components::Collection,
+	tools::inventory_key::InventoryKey,
 	traits::accessors::get::{GetMut, GetRef},
 };
 
-pub type Inventory = Collection<Option<Handle<Item>>>;
+#[derive(Component, Debug, PartialEq)]
+pub struct Inventory(pub Vec<Option<Handle<Item>>>);
+
+impl Inventory {
+	pub fn new<const N: usize>(items: [Option<Handle<Item>>; N]) -> Self {
+		Self(Vec::from(items))
+	}
+}
 
 impl GetRef<InventoryKey, Handle<Item>> for Inventory {
 	fn get(&self, key: &InventoryKey) -> Option<&Handle<Item>> {

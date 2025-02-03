@@ -1,8 +1,8 @@
-use crate::{inventory_key::InventoryKey, item::Item};
+use crate::item::Item;
 use bevy::asset::Handle;
 use common::{
 	components::{Collection, Swap},
-	tools::slot_key::SlotKey,
+	tools::{inventory_key::InventoryKey, slot_key::SlotKey},
 	traits::{
 		accessors::get::GetMut,
 		swap_command::{SwapCommands, SwapError, SwapIn, SwapResult, SwappedOut},

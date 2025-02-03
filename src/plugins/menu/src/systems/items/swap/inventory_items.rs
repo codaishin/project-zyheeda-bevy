@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 use common::{
 	components::{Collection, Swap},
+	tools::inventory_key::InventoryKey,
 	traits::try_remove_from::TryRemoveFrom,
 };
-use skills::{components::inventory::Inventory, inventory_key::InventoryKey, item::Item};
+use skills::{components::inventory::Inventory, item::Item};
 use std::cmp::max;
 
 type ItemsToSwap<'a> = (
@@ -22,10 +23,7 @@ pub fn swap_inventory_items(mut commands: Commands, mut items_to_swap: Query<Ite
 	}
 }
 
-fn do_swap(
-	inventory: &mut Mut<Collection<Option<Handle<Item>>>>,
-	swap: &Swap<InventoryKey, InventoryKey>,
-) {
+fn do_swap(inventory: &mut Mut<Inventory>, swap: &Swap<InventoryKey, InventoryKey>) {
 	fill_to(&mut inventory.0, max(swap.0 .0, swap.1 .0));
 	inventory.0.swap(swap.0 .0, swap.1 .0);
 }

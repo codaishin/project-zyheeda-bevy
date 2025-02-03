@@ -1,5 +1,4 @@
 pub mod components;
-pub mod inventory_key;
 pub mod item;
 pub mod resources;
 pub mod skills;
@@ -16,7 +15,10 @@ use common::{
 	resources::key_map::KeyMap,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
-	tools::slot_key::{Side, SlotKey},
+	tools::{
+		inventory_key::InventoryKey,
+		slot_key::{Side, SlotKey},
+	},
 	traits::{
 		handles_assets_for_children::HandlesAssetsForChildren,
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
@@ -43,7 +45,6 @@ use components::{
 	skill_spawners::SkillSpawners,
 	slots::{ForearmItemSlots, HandItemSlots, Slots, SubMeshEssenceSlots},
 };
-use inventory_key::InventoryKey;
 use item::{dto::ItemDto, item_type::SkillItemType, Item};
 use macros::item_asset;
 use skills::{dto::SkillDto, QueuedSkill, RunSkillBehavior, Skill};

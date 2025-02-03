@@ -14,7 +14,7 @@ use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
 	states::{game_state::GameState, menu_state::MenuState},
 	systems::log::log_many,
-	tools::slot_key::SlotKey,
+	tools::{inventory_key::InventoryKey, slot_key::SlotKey},
 	traits::{
 		handles_graphics::{StaticRenderLayers, UiCamera},
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
@@ -49,7 +49,6 @@ use skills::{
 		queue::Queue,
 		slots::Slots,
 	},
-	inventory_key::InventoryKey,
 	skills::Skill,
 };
 use std::{marker::PhantomData, time::Duration};
