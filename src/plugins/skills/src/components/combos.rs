@@ -80,7 +80,7 @@ impl<TNode: GetCombosOrdered> GetCombosOrdered for Combos<TNode> {
 
 impl<TNode, TKey> UpdateConfig<TKey, Option<Skill>> for Combos<TNode>
 where
-	for<'a> TNode: GetNodeMut<'a, TKey, TNode: Insert<Option<Skill>>>,
+	for<'a> TNode: GetNodeMut<TKey, TNode<'a>: Insert<Option<Skill>>>,
 	TKey: Iterate<SlotKey>,
 {
 	fn update_config(&mut self, key_path: &TKey, skill: Option<Skill>) {
@@ -96,7 +96,7 @@ where
 
 impl<TNode, TKey> UpdateConfig<TKey, SlotKey> for Combos<TNode>
 where
-	for<'a> TNode: GetNodeMut<'a, TKey, TNode: ReKey<SlotKey>>,
+	for<'a> TNode: GetNodeMut<TKey, TNode<'a>: ReKey<SlotKey>>,
 	TKey: Iterate<SlotKey>,
 {
 	fn update_config(&mut self, key_path: &TKey, key: SlotKey) {
@@ -110,10 +110,13 @@ where
 	}
 }
 
-impl<'a, TNode: GetNode<'a, TKey>, TKey: Iterate<SlotKey>> GetNode<'a, TKey> for Combos<TNode> {
-	type TNode = TNode::TNode;
+impl<TNode: GetNode<TKey>, TKey: Iterate<SlotKey>> GetNode<TKey> for Combos<TNode> {
+	type TNode<'a>
+		= TNode::TNode<'a>
+	where
+		Self: 'a;
 
-	fn node(&'a self, key: &TKey) -> Option<Self::TNode> {
+	fn node<'a>(&'a self, key: &TKey) -> Option<Self::TNode<'a>> {
 		self.config.node(key)
 	}
 }
@@ -252,19 +255,19 @@ mod tests {
 		entry: Option<_Entry>,
 	}
 
-	impl<'a> GetNodeMut<'a, Vec<SlotKey>> for _Node {
-		type TNode = &'a mut _Entry;
+	impl GetNodeMut<Vec<SlotKey>> for _Node {
+		type TNode<'a> = &'a mut _Entry;
 
-		fn node_mut(&'a mut self, key: &Vec<SlotKey>) -> Option<Self::TNode> {
+		fn node_mut<'a>(&'a mut self, key: &Vec<SlotKey>) -> Option<Self::TNode<'a>> {
 			self.call_args.get_mut().push(key.clone());
 			self.entry.as_mut()
 		}
 	}
 
-	impl<'a> GetNode<'a, Vec<SlotKey>> for _Node {
-		type TNode = &'a _Entry;
+	impl GetNode<Vec<SlotKey>> for _Node {
+		type TNode<'a> = &'a _Entry;
 
-		fn node(&'a self, key: &Vec<SlotKey>) -> Option<Self::TNode> {
+		fn node<'a>(&'a self, key: &Vec<SlotKey>) -> Option<Self::TNode<'a>> {
 			self.call_args.borrow_mut().push(key.clone());
 			self.entry.as_ref()
 		}

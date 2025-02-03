@@ -76,14 +76,16 @@ pub struct NodeEntry<'a, TSkill> {
 	tree: &'a OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
 }
 
-impl<'a, TKey, TSkill> GetNodeMut<'a, TKey> for ComboNode<TSkill>
+impl<TKey, TSkill> GetNodeMut<TKey> for ComboNode<TSkill>
 where
 	TKey: Iterate<SlotKey>,
-	TSkill: 'a,
 {
-	type TNode = NodeEntryMut<'a, TSkill>;
+	type TNode<'a>
+		= NodeEntryMut<'a, TSkill>
+	where
+		Self: 'a;
 
-	fn node_mut(&'a mut self, slot_key_path: &TKey) -> Option<Self::TNode> {
+	fn node_mut<'a>(&'a mut self, slot_key_path: &TKey) -> Option<Self::TNode<'a>> {
 		let mut slot_key_path = slot_key_path.iterate();
 		let mut key = *slot_key_path.next()?;
 		let mut tree = &mut self.0;
@@ -98,14 +100,16 @@ where
 	}
 }
 
-impl<'a, TKey, TSkill> GetNode<'a, TKey> for ComboNode<TSkill>
+impl<TKey, TSkill> GetNode<TKey> for ComboNode<TSkill>
 where
 	TKey: Iterate<SlotKey>,
-	TSkill: 'a,
 {
-	type TNode = NodeEntry<'a, TSkill>;
+	type TNode<'a>
+		= NodeEntry<'a, TSkill>
+	where
+		Self: 'a;
 
-	fn node(&'a self, slot_key_path: &TKey) -> Option<Self::TNode> {
+	fn node<'a>(&'a self, slot_key_path: &TKey) -> Option<Self::TNode<'a>> {
 		let mut slot_key_path = slot_key_path.iterate();
 		let mut key = *slot_key_path.next()?;
 		let mut tree = &self.0;

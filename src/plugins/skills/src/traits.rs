@@ -78,14 +78,18 @@ pub trait GetCombosOrdered {
 	fn combos_ordered(&self) -> impl Iterator<Item = Combo>;
 }
 
-pub trait GetNode<'a, TKey> {
-	type TNode;
-	fn node(&'a self, key: &TKey) -> Option<Self::TNode>;
+pub trait GetNode<TKey> {
+	type TNode<'a>
+	where
+		Self: 'a;
+	fn node<'a>(&'a self, key: &TKey) -> Option<Self::TNode<'a>>;
 }
 
-pub trait GetNodeMut<'a, TKey> {
-	type TNode;
-	fn node_mut(&'a mut self, key: &TKey) -> Option<Self::TNode>;
+pub trait GetNodeMut<TKey> {
+	type TNode<'a>
+	where
+		Self: 'a;
+	fn node_mut<'a>(&'a mut self, key: &TKey) -> Option<Self::TNode<'a>>;
 }
 
 pub trait RootKeys {

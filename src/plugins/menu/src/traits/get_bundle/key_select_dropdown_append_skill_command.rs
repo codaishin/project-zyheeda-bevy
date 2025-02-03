@@ -18,7 +18,7 @@ type Source<'a, TKey, TCombos> = (
 impl<'a, TKey, TCombos> GetComponent for Source<'a, TKey, TCombos>
 where
 	TKey: IterFinite + PartialEq + Send + Sync + 'static,
-	TCombos: GetNode<'a, Vec<TKey>, TNode: FollowupKeys<TItem = TKey>> + RootKeys<TItem = TKey>,
+	TCombos: GetNode<Vec<TKey>, TNode<'a>: FollowupKeys<TItem = TKey>> + RootKeys<TItem = TKey>,
 {
 	type TComponent = Dropdown<KeySelect<AppendSkill<TKey>, TKey>>;
 
@@ -90,10 +90,10 @@ mod tests {
 
 	macro_rules! impl_no_entry {
 		($ident:ident) => {
-			impl<'a> GetNode<'a, Vec<_Key>> for $ident {
-				type TNode = _Entry;
+			impl GetNode<Vec<_Key>> for $ident {
+				type TNode<'a> = _Entry;
 
-				fn node(&'a self, _: &Vec<_Key>) -> Option<Self::TNode> {
+				fn node<'a>(&'a self, _: &Vec<_Key>) -> Option<Self::TNode<'a>> {
 					Some(_Entry {
 						follow_up_keys: vec![],
 					})
@@ -120,10 +120,10 @@ mod tests {
 
 		impl_empty_root_keys!(_Combos);
 
-		impl<'a> GetNode<'a, Vec<_Key>> for _Combos {
-			type TNode = _Entry;
+		impl GetNode<Vec<_Key>> for _Combos {
+			type TNode<'a> = _Entry;
 
-			fn node(&'a self, _: &Vec<_Key>) -> Option<Self::TNode> {
+			fn node<'a>(&'a self, _: &Vec<_Key>) -> Option<Self::TNode<'a>> {
 				Some(_Entry {
 					follow_up_keys: vec![],
 				})
@@ -165,10 +165,10 @@ mod tests {
 
 		impl_empty_root_keys!(_Combos);
 
-		impl<'a> GetNode<'a, Vec<_Key>> for _Combos {
-			type TNode = _Entry;
+		impl GetNode<Vec<_Key>> for _Combos {
+			type TNode<'a> = _Entry;
 
-			fn node(&'a self, _: &Vec<_Key>) -> Option<Self::TNode> {
+			fn node<'a>(&'a self, _: &Vec<_Key>) -> Option<Self::TNode<'a>> {
 				Some(_Entry {
 					follow_up_keys: vec![_Key::A],
 				})
@@ -209,10 +209,10 @@ mod tests {
 
 		static mut KEY_PATHS: Vec<Vec<_Key>> = vec![];
 
-		impl<'a> GetNode<'a, Vec<_Key>> for _Combos {
-			type TNode = _Entry;
+		impl GetNode<Vec<_Key>> for _Combos {
+			type TNode<'a> = _Entry;
 
-			fn node(&'a self, key_path: &Vec<_Key>) -> Option<Self::TNode> {
+			fn node<'a>(&'a self, key_path: &Vec<_Key>) -> Option<Self::TNode<'a>> {
 				unsafe { KEY_PATHS.push(key_path.clone()) }
 				None
 			}
@@ -238,10 +238,10 @@ mod tests {
 
 		impl_empty_root_keys!(_Combos);
 
-		impl<'a> GetNode<'a, Vec<_Key>> for _Combos {
-			type TNode = _Entry;
+		impl GetNode<Vec<_Key>> for _Combos {
+			type TNode<'a> = _Entry;
 
-			fn node(&'a self, _: &Vec<_Key>) -> Option<Self::TNode> {
+			fn node<'a>(&'a self, _: &Vec<_Key>) -> Option<Self::TNode<'a>> {
 				Some(_Entry {
 					follow_up_keys: _Key::iterator().collect(),
 				})
