@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use super::combo_node::ComboNode;
 use crate::{
 	skills::Skill,
@@ -17,7 +19,7 @@ use crate::{
 use bevy::ecs::component::Component;
 use common::{
 	tools::{item_type::ItemType, slot_key::SlotKey},
-	traits::iterate::Iterate,
+	traits::{handles_equipment::GetFollowupKeys, iterate::Iterate},
 };
 
 #[derive(Component, PartialEq, Debug)]
@@ -127,6 +129,20 @@ impl<TNode: RootKeys> RootKeys for Combos<TNode> {
 	}
 }
 
+impl<TNode> GetFollowupKeys for Combos<TNode>
+where
+	TNode: GetFollowupKeys,
+{
+	type TKey = TNode::TKey;
+
+	fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>
+	where
+		T: Into<VecDeque<Self::TKey>>,
+	{
+		self.config.followup_keys(after)
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -138,7 +154,7 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
-	use std::cell::RefCell;
+	use std::{cell::RefCell, collections::VecDeque};
 
 	mock! {
 		_Next {}
@@ -524,5 +540,29 @@ mod tests {
 		let combos = Combos::new(_Node);
 
 		assert_eq!(vec![_Key], combos.root_keys().collect::<Vec<_>>());
+	}
+
+	#[test]
+	fn get_followup_keys() {
+		#[derive(Debug, PartialEq)]
+		struct _Key;
+
+		struct _Node;
+
+		impl GetFollowupKeys for _Node {
+			type TKey = _Key;
+
+			fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>
+			where
+				T: Into<VecDeque<Self::TKey>>,
+			{
+				assert_eq!(VecDeque::from([_Key]), after.into());
+				Some(vec![_Key])
+			}
+		}
+
+		let combos = Combos::new(_Node);
+
+		assert_eq!(Some(vec![_Key]), combos.followup_keys(vec![_Key]));
 	}
 }

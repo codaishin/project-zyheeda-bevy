@@ -1,6 +1,8 @@
 pub mod node_entry;
 pub mod node_entry_mut;
 
+use std::collections::VecDeque;
+
 use crate::{
 	skills::Skill,
 	traits::{Combo, GetCombosOrdered, GetNode, GetNodeMut, PeekNext, RootKeys},
@@ -14,6 +16,7 @@ use common::{
 	},
 	traits::{
 		accessors::get::{GetMut, GetRef},
+		handles_equipment::GetFollowupKeys,
 		insert::TryInsert,
 		iterate::Iterate,
 	},
@@ -181,6 +184,29 @@ impl PeekNext<(Skill, ComboNode)> for ComboNode {
 impl GetCombosOrdered for ComboNode {
 	fn combos_ordered(&self) -> impl Iterator<Item = Combo> {
 		combos(self, vec![])
+	}
+}
+
+impl GetFollowupKeys for ComboNode {
+	type TKey = SlotKey;
+
+	fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>
+	where
+		T: Into<VecDeque<Self::TKey>>,
+	{
+		if self.0.is_empty() {
+			return Some(vec![]);
+		}
+
+		let mut after: VecDeque<Self::TKey> = after.into();
+
+		let Some(key) = after.pop_front() else {
+			return Some(self.0.keys().copied().collect());
+		};
+
+		let (_, next) = self.0.get(&key)?;
+
+		next.followup_keys(after)
 	}
 }
 
@@ -1345,5 +1371,98 @@ mod tests {
 			],
 			combos.combos_ordered().collect::<Vec<_>>()
 		)
+	}
+
+	#[test]
+	fn get_followup_keys_of_empty_path() {
+		let node = ComboNode::new([
+			(
+				SlotKey::TopHand(Side::Right),
+				(Skill::default(), ComboNode::default()),
+			),
+			(
+				SlotKey::TopHand(Side::Left),
+				(Skill::default(), ComboNode::default()),
+			),
+		]);
+
+		let followup_keys = node.followup_keys(vec![]);
+
+		assert_eq!(
+			Some(vec![
+				SlotKey::TopHand(Side::Right),
+				SlotKey::TopHand(Side::Left)
+			]),
+			followup_keys
+		);
+	}
+
+	#[test]
+	fn get_followup_keys_empty_if_combo_empty() {
+		let node = ComboNode::default();
+
+		let followup_keys = node.followup_keys(vec![]);
+
+		assert_eq!(Some(vec![]), followup_keys);
+	}
+
+	#[test]
+	fn get_followup_keys_of_target_path() {
+		let node = ComboNode::new([(
+			SlotKey::TopHand(Side::Left),
+			(
+				Skill::default(),
+				ComboNode::new([(
+					SlotKey::BottomHand(Side::Left),
+					(
+						Skill::default(),
+						ComboNode::new([
+							(
+								SlotKey::BottomHand(Side::Right),
+								(Skill::default(), ComboNode::default()),
+							),
+							(
+								SlotKey::BottomHand(Side::Left),
+								(Skill::default(), ComboNode::default()),
+							),
+						]),
+					),
+				)]),
+			),
+		)]);
+
+		let followup_keys = node.followup_keys(vec![
+			SlotKey::TopHand(Side::Left),
+			SlotKey::BottomHand(Side::Left),
+		]);
+
+		assert_eq!(
+			Some(vec![
+				SlotKey::BottomHand(Side::Right),
+				SlotKey::BottomHand(Side::Left)
+			]),
+			followup_keys
+		);
+	}
+
+	#[test]
+	fn get_followup_keys_none_of_invalid_target_path() {
+		let node = ComboNode::new([(
+			SlotKey::TopHand(Side::Left),
+			(
+				Skill::default(),
+				ComboNode::new([(
+					SlotKey::BottomHand(Side::Left),
+					(Skill::default(), ComboNode::default()),
+				)]),
+			),
+		)]);
+
+		let followup_keys = node.followup_keys(vec![
+			SlotKey::TopHand(Side::Left),
+			SlotKey::BottomHand(Side::Right),
+		]);
+
+		assert_eq!(None, followup_keys);
 	}
 }
