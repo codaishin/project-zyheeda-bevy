@@ -137,7 +137,7 @@ where
 
 	fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>
 	where
-		T: Into<VecDeque<Self::TKey>>,
+		T: Into<VecDeque<Self::TKey>> + 'static,
 	{
 		self.config.followup_keys(after)
 	}

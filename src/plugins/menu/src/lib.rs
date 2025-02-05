@@ -11,7 +11,10 @@ mod debug;
 
 use crate::systems::{
 	combos::visualize_invalid_skill::VisualizeInvalidSkill,
-	dropdown::insert_skill_select_dropdown::InsertSkillSelectDropdown,
+	dropdown::{
+		insert_key_select_dropdown::InsertKeySelectDropdown,
+		select_compatible_skill::InsertSkillSelectDropdown,
+	},
 	items::swap::inventory_items::SwapInventoryItems,
 	update_panels::container_states::SetContainerPanels,
 };
@@ -37,6 +40,7 @@ use components::{
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
 	key_select::{AppendSkill, KeySelect, ReKeySkill},
+	key_select_dropdown_command::AppendSkillCommand,
 	loading_screen::LoadingScreen,
 	quickbar_panel::QuickbarPanel,
 	skill_button::{DropdownItem, Horizontal, SkillButton, Vertical},
@@ -45,7 +49,6 @@ use components::{
 	start_menu_button::StartMenuButton,
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl, TooltipUiConfig},
 	ui_overlay::UIOverlay,
-	AppendSkillCommand,
 };
 use events::DropdownEvent;
 use skills::{
@@ -68,7 +71,6 @@ use systems::{
 		despawn_when_no_children_pressed::dropdown_despawn_when_no_children_pressed,
 		detect_focus_change::dropdown_detect_focus_change,
 		events::dropdown_events,
-		insert_key_select_dropdown::insert_key_select_dropdown,
 		spawn_focused::dropdown_spawn_focused,
 		track_child_dropdowns::dropdown_track_child_dropdowns,
 	},
@@ -276,9 +278,12 @@ where
 				Update,
 				(
 					TEquipment::TSlots::visualize_invalid_skill::<TPlayers::TPlayer, Unusable>,
-					TEquipment::TSlots::insert_skill_select_dropdown::<TPlayers::TPlayer, Vertical>,
-					TEquipment::TSlots::insert_skill_select_dropdown::<TPlayers::TPlayer, Horizontal>,
-					insert_key_select_dropdown::<TPlayers::TPlayer, Combos, AppendSkillCommand>,
+					TEquipment::TSlots::select_compatible_skill::<TPlayers::TPlayer, Vertical>,
+					TEquipment::TSlots::select_compatible_skill::<TPlayers::TPlayer, Horizontal>,
+					TEquipment::TCombos::insert_key_select_dropdown::<
+						TPlayers::TPlayer,
+						AppendSkillCommand,
+					>,
 					update_combos_view_delete_skill::<TPlayers::TPlayer, Combos>,
 					update_combo_skills::<TPlayers::TPlayer, Combos, Vertical>,
 					update_combo_skills::<TPlayers::TPlayer, Combos, Horizontal>,

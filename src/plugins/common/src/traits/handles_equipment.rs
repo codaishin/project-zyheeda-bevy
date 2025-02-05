@@ -12,7 +12,7 @@ pub trait HandlesEquipment {
 
 	type TSlots: Component + SingleAccess<TItem = Self::TItem, TKey = SlotKey>;
 
-	type TCombos: Component + GetFollowupKeys;
+	type TCombos: Component + GetFollowupKeys<TKey = SlotKey>;
 }
 
 pub struct ItemName(pub String);
@@ -35,5 +35,5 @@ pub trait GetFollowupKeys {
 
 	fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>
 	where
-		T: Into<VecDeque<Self::TKey>>;
+		T: Into<VecDeque<Self::TKey>> + 'static;
 }

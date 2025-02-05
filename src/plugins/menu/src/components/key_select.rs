@@ -39,10 +39,10 @@ pub(crate) struct KeySelect<TExtra, TKey = SlotKey> {
 impl<TExtra> InsertUiContent for KeySelect<TExtra>
 where
 	TExtra: GetKey<SlotKey>,
-	KeySelect<TExtra>: GetComponent,
+	KeySelect<TExtra>: GetComponent<TInput = ()>,
 {
 	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
-		let Some(component) = self.component() else {
+		let Some(component) = self.component(()) else {
 			return;
 		};
 		let Some(key) = self.extra.get_key(&self.key_path) else {
@@ -59,16 +59,18 @@ where
 
 impl GetComponent for KeySelect<ReKeySkill> {
 	type TComponent = KeySelect<ReKeySkill>;
+	type TInput = ();
 
-	fn component(&self) -> Option<Self::TComponent> {
+	fn component(&self, _: ()) -> Option<Self::TComponent> {
 		Some(self.clone())
 	}
 }
 
 impl<TKey: Copy + Sync + Send + 'static> GetComponent for KeySelect<AppendSkill<TKey>, TKey> {
 	type TComponent = SkillSelectDropdownInsertCommand<TKey, Horizontal>;
+	type TInput = ();
 
-	fn component(&self) -> Option<Self::TComponent> {
+	fn component(&self, _: ()) -> Option<Self::TComponent> {
 		Some(SkillSelectDropdownInsertCommand::new(
 			[self.key_path.clone(), vec![self.extra.on]].concat(),
 		))
@@ -97,7 +99,7 @@ mod tests {
 			Some(SkillSelectDropdownInsertCommand::<_Key, Horizontal>::new(
 				vec![_Key::A, _Key::B, _Key::C]
 			)),
-			select.component()
+			select.component(())
 		)
 	}
 }

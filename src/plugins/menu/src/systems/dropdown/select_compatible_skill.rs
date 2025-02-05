@@ -19,7 +19,7 @@ use skills::skills::Skill;
 impl<T> InsertSkillSelectDropdown for T {}
 
 pub(crate) trait InsertSkillSelectDropdown {
-	fn insert_skill_select_dropdown<TPlayer, TLayout>(
+	fn select_compatible_skill<TPlayer, TLayout>(
 		mut commands: Commands,
 		dropdown_commands: Query<(Entity, &SkillSelectDropdownInsertCommand<SlotKey, TLayout>)>,
 		slots: Query<&Self, With<TPlayer>>,
@@ -153,10 +153,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(items);
 		app.insert_resource(skills);
-		app.add_systems(
-			Update,
-			_Slots::insert_skill_select_dropdown::<_Player, _Layout>,
-		);
+		app.add_systems(Update, _Slots::select_compatible_skill::<_Player, _Layout>);
 		app.world_mut().spawn((agent, equipment));
 
 		app

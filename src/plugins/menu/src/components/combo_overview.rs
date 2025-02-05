@@ -1,9 +1,8 @@
 use super::{
 	key_code_text_insert_command::KeyCodeTextInsertCommand,
+	key_select_dropdown_command::{AppendSkillCommand, KeySelectDropdownInsertCommand},
 	skill_button::{DropdownTrigger, SkillButton, Vertical},
-	AppendSkillCommand,
 	DeleteSkill,
-	KeySelectDropdownInsertCommand,
 	SkillSelectDropdownInsertCommand,
 };
 use crate::{
