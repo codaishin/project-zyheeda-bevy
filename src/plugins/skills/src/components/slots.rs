@@ -8,7 +8,7 @@ use common::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,
 		handles_assets_for_children::{ChildAssetComponent, ChildAssetDefinition, ChildName},
-		handles_equipment::SingleAccess,
+		handles_equipment::{KeyOutOfBounds, SingleAccess, UpdateConfig},
 	},
 };
 use std::{collections::HashMap, fmt::Debug};
@@ -32,9 +32,21 @@ impl SingleAccess for Slots {
 	type TKey = SlotKey;
 	type TItem = Item;
 
-	fn single_access(&self, key: &Self::TKey) -> Option<&Handle<Self::TItem>> {
-		let item = self.0.get(key)?;
-		item.as_ref()
+	fn single_access(
+		&self,
+		key: &Self::TKey,
+	) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
+		let Some(item) = self.0.get(key) else {
+			return Err(KeyOutOfBounds);
+		};
+
+		Ok(item)
+	}
+}
+
+impl UpdateConfig<SlotKey, Option<Handle<Item>>> for Slots {
+	fn update_config(&mut self, key: &SlotKey, value: Option<Handle<Item>>) {
+		self.0.insert(*key, value);
 	}
 }
 

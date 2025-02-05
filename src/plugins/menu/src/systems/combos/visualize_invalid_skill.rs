@@ -58,7 +58,8 @@ where
 	let item = descriptor
 		.key_path
 		.last()
-		.and_then(|key| slots.single_access(key))
+		.and_then(|key| slots.single_access(key).ok())
+		.and_then(|item| item.as_ref())
 		.and_then(|item| items.get(item))?;
 
 	let item_type = ItemType::get_field(item);
@@ -80,7 +81,7 @@ mod tests {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::slot_key::Side,
-		traits::accessors::get::GetterRef,
+		traits::{accessors::get::GetterRef, handles_equipment::KeyOutOfBounds},
 	};
 	use std::collections::{HashMap, HashSet};
 
@@ -106,10 +107,10 @@ mod tests {
 	}
 
 	#[derive(Component)]
-	struct _Slots(HashMap<SlotKey, Handle<_Item>>);
+	struct _Slots(HashMap<SlotKey, Option<Handle<_Item>>>);
 
-	impl<const N: usize> From<[(SlotKey, Handle<_Item>); N]> for _Slots {
-		fn from(value: [(SlotKey, Handle<_Item>); N]) -> Self {
+	impl<const N: usize> From<[(SlotKey, Option<Handle<_Item>>); N]> for _Slots {
+		fn from(value: [(SlotKey, Option<Handle<_Item>>); N]) -> Self {
 			Self(HashMap::from(value))
 		}
 	}
@@ -118,8 +119,15 @@ mod tests {
 		type TKey = SlotKey;
 		type TItem = _Item;
 
-		fn single_access(&self, key: &Self::TKey) -> Option<&Handle<Self::TItem>> {
-			self.0.get(key)
+		fn single_access(
+			&self,
+			key: &Self::TKey,
+		) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
+			let Some(item) = self.0.get(key) else {
+				return Err(KeyOutOfBounds);
+			};
+
+			Ok(item)
 		}
 	}
 
@@ -136,7 +144,7 @@ mod tests {
 		let mut items = Assets::default();
 		let slots = slots
 			.into_iter()
-			.map(|(key, item)| (key, items.add(item)))
+			.map(|(key, item)| (key, Some(items.add(item))))
 			.collect();
 
 		(_Slots(slots), items)

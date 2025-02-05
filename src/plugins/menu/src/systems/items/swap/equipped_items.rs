@@ -3,20 +3,22 @@ use common::{
 	components::{Collection, Swap},
 	errors::{Error, Level},
 	tools::slot_key::SlotKey,
-	traits::try_remove_from::TryRemoveFrom,
+	traits::{
+		handles_equipment::{KeyOutOfBounds, SingleAccess, UpdateConfig},
+		try_remove_from::TryRemoveFrom,
+	},
 };
-use skills::components::slots::Slots;
 
-type SlotsToSwap<'a> = (
-	Entity,
-	&'a mut Slots,
-	&'a Collection<Swap<SlotKey, SlotKey>>,
-);
-
-pub fn swap_equipped_items(
+#[allow(clippy::type_complexity)]
+pub fn swap_equipped_items<TSlots>(
 	mut commands: Commands,
-	mut slots_to_swap: Query<SlotsToSwap>,
-) -> Vec<Result<(), Error>> {
+	mut slots_to_swap: Query<(Entity, &mut TSlots, &Collection<Swap<SlotKey, SlotKey>>)>,
+) -> Vec<Result<(), Error>>
+where
+	TSlots: Component
+		+ SingleAccess<TKey = SlotKey>
+		+ UpdateConfig<SlotKey, Option<Handle<TSlots::TItem>>>,
+{
 	let mut results = vec![];
 
 	for (agent, mut slots, swaps) in &mut slots_to_swap {
@@ -36,22 +38,27 @@ pub fn swap_equipped_items(
 	results
 }
 
-fn do_swap(swap: &Swap<SlotKey, SlotKey>, slots: &mut Mut<Slots>) -> [Result<(), Error>; 2] {
+fn do_swap<TSlots>(swap: &Swap<SlotKey, SlotKey>, slots: &mut Mut<TSlots>) -> [Result<(), Error>; 2]
+where
+	TSlots: SingleAccess<TKey = SlotKey> + UpdateConfig<SlotKey, Option<Handle<TSlots::TItem>>>,
+{
 	let slot_results = [
-		slots.0.get(&swap.0).cloned().ok_or(no_slot(swap.0)),
-		slots.0.get(&swap.1).cloned().ok_or(no_slot(swap.1)),
+		slots
+			.single_access(&swap.0)
+			.cloned()
+			.map_err(no_slot(swap.0)),
+		slots
+			.single_access(&swap.1)
+			.cloned()
+			.map_err(no_slot(swap.1)),
 	];
 
 	let [Ok(slot0), Ok(slot1)] = slot_results else {
 		return slot_results.map(drop_ok);
 	};
 
-	if let Some(slot) = slots.0.get_mut(&swap.0) {
-		*slot = slot1;
-	}
-	if let Some(slot) = slots.0.get_mut(&swap.1) {
-		*slot = slot0;
-	}
+	slots.update_config(&swap.0, slot1);
+	slots.update_config(&swap.1, slot0);
 
 	[Ok(()), Ok(())]
 }
@@ -63,8 +70,8 @@ fn drop_ok<V>(result: Result<V, Error>) -> Result<(), Error> {
 	}
 }
 
-fn no_slot(slot_key: SlotKey) -> Error {
-	Error {
+fn no_slot(slot_key: SlotKey) -> impl Fn(KeyOutOfBounds) -> Error {
+	move |_| Error {
 		msg: format!("{:?}: Slot not found", slot_key),
 		lvl: Level::Error,
 	}
@@ -75,6 +82,41 @@ mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{test_tools::utils::new_handle, tools::slot_key::Side};
+	use std::collections::HashMap;
+
+	#[derive(Asset, TypePath, Debug, PartialEq)]
+	struct _Skill(&'static str);
+
+	#[derive(Component, Debug, PartialEq)]
+	struct _Slots(HashMap<SlotKey, Option<Handle<_Skill>>>);
+
+	impl _Slots {
+		fn new<const N: usize>(skills: [(SlotKey, Option<Handle<_Skill>>); N]) -> Self {
+			Self(HashMap::from(skills))
+		}
+	}
+
+	impl SingleAccess for _Slots {
+		type TKey = SlotKey;
+		type TItem = _Skill;
+
+		fn single_access(
+			&self,
+			key: &Self::TKey,
+		) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
+			let Some(item) = self.0.get(key) else {
+				return Err(KeyOutOfBounds);
+			};
+
+			Ok(item)
+		}
+	}
+
+	impl UpdateConfig<SlotKey, Option<Handle<_Skill>>> for _Slots {
+		fn update_config(&mut self, key: &SlotKey, value: Option<Handle<_Skill>>) {
+			self.0.insert(*key, value);
+		}
+	}
 
 	#[derive(Clone)]
 	struct _Mount {
@@ -94,7 +136,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots::new([
+				_Slots::new([
 					(SlotKey::BottomHand(Side::Left), Some(left_item.clone())),
 					(SlotKey::BottomHand(Side::Right), Some(right_item.clone())),
 				]),
@@ -108,12 +150,14 @@ mod tests {
 			))
 			.id();
 
-		let errors = app.world_mut().run_system_once(swap_equipped_items)?;
+		let errors = app
+			.world_mut()
+			.run_system_once(swap_equipped_items::<_Slots>)?;
 
-		let slots = app.world().entity(agent).get::<Slots>();
+		let slots = app.world().entity(agent).get::<_Slots>();
 		assert_eq!(
 			(
-				Some(&Slots::new([
+				Some(&_Slots::new([
 					(SlotKey::BottomHand(Side::Left), Some(right_item.clone())),
 					(SlotKey::BottomHand(Side::Right), Some(left_item.clone())),
 				])),
@@ -130,12 +174,13 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Slots([].into()),
+				_Slots([].into()),
 				Collection::<Swap<SlotKey, SlotKey>>([].into()),
 			))
 			.id();
 
-		app.world_mut().run_system_once(swap_equipped_items)?;
+		app.world_mut()
+			.run_system_once(swap_equipped_items::<_Slots>)?;
 
 		let agent = app.world().entity(agent);
 		assert!(!agent.contains::<Collection<Swap<SlotKey, SlotKey>>>());
@@ -146,7 +191,7 @@ mod tests {
 	fn log_slot_errors() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut().spawn((
-			Slots([].into()),
+			_Slots([].into()),
 			Collection(
 				[Swap(
 					SlotKey::BottomHand(Side::Left),
@@ -156,12 +201,14 @@ mod tests {
 			),
 		));
 
-		let errors = app.world_mut().run_system_once(swap_equipped_items)?;
+		let errors = app
+			.world_mut()
+			.run_system_once(swap_equipped_items::<_Slots>)?;
 
 		assert_eq!(
 			vec![
-				Err(no_slot(SlotKey::BottomHand(Side::Left))),
-				Err(no_slot(SlotKey::BottomHand(Side::Right))),
+				Err(no_slot(SlotKey::BottomHand(Side::Left))(KeyOutOfBounds)),
+				Err(no_slot(SlotKey::BottomHand(Side::Right))(KeyOutOfBounds)),
 			],
 			errors
 		);

@@ -57,7 +57,11 @@ where
 	TSkill: Asset + PartialEq + Clone + GetterRef<CompatibleItems>,
 {
 	let key = command.key_path.last()?;
-	let item = slots.single_access(key).and_then(|item| items.get(item))?;
+	let item = slots
+		.single_access(key)
+		.ok()
+		.and_then(|handle| handle.as_ref())
+		.and_then(|handle| items.get(handle))?;
 	let item_type = ItemType::get_field(item);
 
 	let mut seen = Vec::new();
@@ -93,6 +97,7 @@ mod tests {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::{item_type::ItemType, slot_key::Side},
+		traits::handles_equipment::KeyOutOfBounds,
 	};
 	use std::collections::{HashMap, HashSet};
 
@@ -127,14 +132,21 @@ mod tests {
 	}
 
 	#[derive(Component)]
-	struct _Slots(HashMap<SlotKey, Handle<_Item>>);
+	struct _Slots(HashMap<SlotKey, Option<Handle<_Item>>>);
 
 	impl SingleAccess for _Slots {
 		type TKey = SlotKey;
 		type TItem = _Item;
 
-		fn single_access(&self, key: &Self::TKey) -> Option<&Handle<Self::TItem>> {
-			self.0.get(key)
+		fn single_access(
+			&self,
+			key: &Self::TKey,
+		) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
+			let Some(item) = self.0.get(key) else {
+				return Err(KeyOutOfBounds);
+			};
+
+			Ok(item)
 		}
 	}
 
@@ -151,7 +163,7 @@ mod tests {
 
 		let equipment = equipment
 			.into_iter()
-			.map(|(key, item)| (key, item_assets.add(item)))
+			.map(|(key, item)| (key, Some(item_assets.add(item))))
 			.collect();
 
 		(_Slots(equipment), item_assets, skill_assets)

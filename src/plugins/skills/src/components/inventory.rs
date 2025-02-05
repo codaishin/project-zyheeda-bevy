@@ -4,7 +4,7 @@ use common::{
 	tools::inventory_key::InventoryKey,
 	traits::{
 		accessors::get::{GetMut, GetRef},
-		handles_equipment::{ContinuousAccessMut, SingleAccess},
+		handles_equipment::{ContinuousAccessMut, KeyOutOfBounds, SingleAccess},
 	},
 };
 
@@ -29,9 +29,15 @@ impl SingleAccess for Inventory {
 	type TKey = InventoryKey;
 	type TItem = Item;
 
-	fn single_access(&self, InventoryKey(index): &Self::TKey) -> Option<&Handle<Self::TItem>> {
-		let item = self.0.get(*index)?;
-		item.as_ref()
+	fn single_access(
+		&self,
+		InventoryKey(index): &Self::TKey,
+	) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
+		let Some(item) = self.0.get(*index) else {
+			return Err(KeyOutOfBounds);
+		};
+
+		Ok(item)
 	}
 }
 

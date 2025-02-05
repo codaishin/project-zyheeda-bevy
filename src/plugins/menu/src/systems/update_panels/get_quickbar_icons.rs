@@ -74,8 +74,11 @@ where
 		if timed_out?.is_timed_out() {
 			return None;
 		}
-		let item_handle = slots.single_access(&panel.key)?;
-		let item = items.get(item_handle.id())?;
+		let item = slots
+			.single_access(&panel.key)
+			.ok()
+			.and_then(|handle| handle.as_ref())
+			.and_then(|handle| items.get(handle))?;
 		let next_combo = combos?.peek_next(&panel.key, &item.get())?;
 		let icon = Option::<Handle<Image>>::get_field_ref(&next_combo);
 
@@ -95,8 +98,11 @@ where
 	TSkill: Asset + GetterRef<Option<Handle<Image>>>,
 {
 	|| {
-		slots
-			.single_access(&panel.key)
+		let Ok(slot) = slots.single_access(&panel.key) else {
+			return None;
+		};
+
+		slot.as_ref()
 			.and_then(|item| items.get(item))
 			.and_then(|item| Option::<Handle<TSkill>>::get_field_ref(item).as_ref())
 			.and_then(|skill| skills.get(skill))
@@ -114,7 +120,7 @@ mod tests {
 			item_type::ItemType,
 			slot_key::{Side, SlotKey},
 		},
-		traits::nested_mock::NestedMocks,
+		traits::{handles_equipment::KeyOutOfBounds, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -203,14 +209,21 @@ mod tests {
 	}
 
 	#[derive(Component)]
-	struct _Slots(HashMap<SlotKey, Handle<_Item>>);
+	struct _Slots(HashMap<SlotKey, Option<Handle<_Item>>>);
 
 	impl SingleAccess for _Slots {
 		type TKey = SlotKey;
 		type TItem = _Item;
 
-		fn single_access(&self, key: &Self::TKey) -> Option<&Handle<Self::TItem>> {
-			self.0.get(key)
+		fn single_access(
+			&self,
+			key: &Self::TKey,
+		) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
+			let Some(item) = self.0.get(key) else {
+				return Err(KeyOutOfBounds);
+			};
+
+			Ok(item)
 		}
 	}
 
@@ -296,7 +309,7 @@ mod tests {
 				skill: Some(skill),
 			};
 			let item = item_assets.add(item);
-			slots.insert(slot_key, item);
+			slots.insert(slot_key, Some(item));
 		}
 
 		(_Slots(slots), item_assets, skill_assets)

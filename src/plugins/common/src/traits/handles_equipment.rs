@@ -15,7 +15,9 @@ pub trait HandlesEquipment {
 		+ ContinuousAccessMut<TItemHandle = Handle<Self::TItem>>
 		+ SingleAccess<TItem = Self::TItem, TKey = InventoryKey>;
 
-	type TSlots: Component + SingleAccess<TItem = Self::TItem, TKey = SlotKey>;
+	type TSlots: Component
+		+ SingleAccess<TItem = Self::TItem, TKey = SlotKey>
+		+ UpdateConfig<SlotKey, Option<Handle<Self::TItem>>>;
 
 	type TSkill: Asset
 		+ GetterRef<Option<Handle<Image>>>
@@ -58,8 +60,13 @@ pub trait SingleAccess {
 	type TKey;
 	type TItem: Asset;
 
-	fn single_access(&self, key: &Self::TKey) -> Option<&Handle<Self::TItem>>;
+	fn single_access(
+		&self,
+		key: &Self::TKey,
+	) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds>;
 }
+
+pub struct KeyOutOfBounds;
 
 pub trait UpdateConfig<TKey, TValue> {
 	fn update_config(&mut self, key: &TKey, value: TValue);

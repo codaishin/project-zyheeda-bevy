@@ -47,6 +47,8 @@ where
 {
 	container
 		.single_access(key)
+		.ok()
+		.and_then(|handle| handle.as_ref())
 		.and_then(|handle| items.get(handle))
 }
 
@@ -63,7 +65,7 @@ fn set_label(texts: &mut Query<(&Parent, &mut Text)>, entity: Entity, label: Str
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::traits::nested_mock::NestedMocks;
+	use common::traits::{handles_equipment::KeyOutOfBounds, nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
@@ -81,14 +83,21 @@ mod tests {
 	}
 
 	#[derive(Component)]
-	struct _Container(HashMap<_Key, Handle<_Item>>);
+	struct _Container(HashMap<_Key, Option<Handle<_Item>>>);
 
 	impl SingleAccess for _Container {
 		type TKey = _Key;
 		type TItem = _Item;
 
-		fn single_access(&self, key: &Self::TKey) -> Option<&Handle<Self::TItem>> {
-			self.0.get(key)
+		fn single_access(
+			&self,
+			key: &Self::TKey,
+		) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
+			let Some(item) = self.0.get(key) else {
+				return Err(KeyOutOfBounds);
+			};
+
+			Ok(item)
 		}
 	}
 
@@ -110,7 +119,7 @@ mod tests {
 
 		for (key, item) in items {
 			let item = item_assets.add(item);
-			container.insert(key, item);
+			container.insert(key, Some(item));
 		}
 
 		(_Container(container), item_assets)

@@ -345,7 +345,7 @@ where
 			.add_systems(
 				Update,
 				(
-					swap_equipped_items.pipe(log_many),
+					swap_equipped_items::<TEquipment::TSlots>.pipe(log_many),
 					TEquipment::TInventory::swap_items,
 				),
 			);
