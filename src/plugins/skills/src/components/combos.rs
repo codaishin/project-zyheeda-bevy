@@ -3,23 +3,15 @@ use std::collections::VecDeque;
 use super::combo_node::ComboNode;
 use crate::{
 	skills::Skill,
-	traits::{
-		Combo,
-		GetCombosOrdered,
-		GetNode,
-		GetNodeMut,
-		Insert,
-		PeekNext,
-		ReKey,
-		RootKeys,
-		SetNextCombo,
-		UpdateConfig,
-	},
+	traits::{GetNode, GetNodeMut, Insert, PeekNext, ReKey, RootKeys, SetNextCombo},
 };
 use bevy::ecs::component::Component;
 use common::{
 	tools::{item_type::ItemType, slot_key::SlotKey},
-	traits::{handles_equipment::GetFollowupKeys, iterate::Iterate},
+	traits::{
+		handles_equipment::{Combo, GetCombosOrdered, GetFollowupKeys, UpdateConfig},
+		iterate::Iterate,
+	},
 };
 
 #[derive(Component, PartialEq, Debug)]
@@ -72,8 +64,11 @@ where
 	}
 }
 
-impl<TNode: GetCombosOrdered> GetCombosOrdered for Combos<TNode> {
-	fn combos_ordered(&self) -> impl Iterator<Item = Combo> {
+impl<TNode: GetCombosOrdered<Skill>> GetCombosOrdered<Skill> for Combos<TNode> {
+	fn combos_ordered<'a>(&'a self) -> impl Iterator<Item = Combo<'a, Skill>>
+	where
+		Skill: 'a,
+	{
 		self.config.combos_ordered()
 	}
 }
@@ -237,10 +232,13 @@ mod tests {
 		combos.peek_next(&SlotKey::default(), &ItemType::default());
 	}
 
-	struct _ComboNode<'a>(Vec<Combo<'a>>);
+	struct _ComboNode<'a>(Vec<Combo<'a, Skill>>);
 
-	impl GetCombosOrdered for _ComboNode<'_> {
-		fn combos_ordered(&self) -> impl Iterator<Item = Combo> {
+	impl GetCombosOrdered<Skill> for _ComboNode<'_> {
+		fn combos_ordered<'a>(&'a self) -> impl Iterator<Item = Combo<'a, Skill>>
+		where
+			Skill: 'a,
+		{
 			self.0.iter().cloned()
 		}
 	}

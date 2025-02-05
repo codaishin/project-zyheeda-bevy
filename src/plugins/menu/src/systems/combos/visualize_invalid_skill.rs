@@ -6,19 +6,21 @@ use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{
 	tools::{item_type::ItemType, slot_key::SlotKey},
 	traits::{
-		accessors::get::{GetField, Getter},
-		handles_equipment::SingleAccess,
+		accessors::get::{GetField, GetFieldRef, Getter, GetterRef},
+		handles_equipment::{CompatibleItems, SingleAccess},
+		thread_safe::ThreadSafe,
 	},
 };
 
 impl<T> VisualizeInvalidSkill for T {}
 
+#[allow(clippy::type_complexity)]
 pub(crate) trait VisualizeInvalidSkill {
-	fn visualize_invalid_skill<TAgent, TVisualization>(
+	fn visualize_invalid_skill<TAgent, TVisualization, TSkill>(
 		mut commands: Commands,
 		descriptors: Query<
-			(Entity, &SkillButton<DropdownTrigger>),
-			Added<SkillButton<DropdownTrigger>>,
+			(Entity, &SkillButton<DropdownTrigger, TSkill>),
+			Added<SkillButton<DropdownTrigger, TSkill>>,
 		>,
 		agents: Query<&Self, With<TAgent>>,
 		items: Res<Assets<Self::TItem>>,
@@ -27,6 +29,7 @@ pub(crate) trait VisualizeInvalidSkill {
 		Self::TItem: Asset + Getter<ItemType>,
 		TAgent: Component,
 		TVisualization: InsertContentOn,
+		TSkill: ThreadSafe + GetterRef<CompatibleItems>,
 	{
 		let Ok(agent) = agents.get_single() else {
 			return;
@@ -40,9 +43,9 @@ pub(crate) trait VisualizeInvalidSkill {
 	}
 }
 
-fn visualize_unusable<TSlots>(
+fn visualize_unusable<TSlots, TSkill>(
 	commands: &mut Commands,
-	(entity, descriptor): (Entity, &SkillButton<DropdownTrigger>),
+	(entity, descriptor): (Entity, &SkillButton<DropdownTrigger, TSkill>),
 	slots: &TSlots,
 	items: &Assets<TSlots::TItem>,
 	visualize: fn(&mut EntityCommands),
@@ -50,6 +53,7 @@ fn visualize_unusable<TSlots>(
 where
 	TSlots: SingleAccess<TKey = SlotKey>,
 	TSlots::TItem: Getter<ItemType>,
+	TSkill: GetterRef<CompatibleItems>,
 {
 	let item = descriptor
 		.key_path
@@ -58,7 +62,8 @@ where
 		.and_then(|item| items.get(item))?;
 
 	let item_type = ItemType::get_field(item);
-	if descriptor.skill.is_usable_with.contains(&item_type) {
+	let CompatibleItems(is_usable_with) = CompatibleItems::get_field_ref(&descriptor.skill);
+	if is_usable_with.contains(&item_type) {
 		return None;
 	}
 
@@ -72,18 +77,24 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		ecs::system::EntityCommands,
-		prelude::Component,
-		utils::default,
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		tools::slot_key::Side,
+		traits::accessors::get::GetterRef,
 	};
-	use common::{test_tools::utils::SingleThreadedApp, tools::slot_key::Side};
-	use skills::skills::Skill;
 	use std::collections::{HashMap, HashSet};
 
 	#[derive(Component)]
 	struct _Agent;
+
+	#[derive(Debug, PartialEq)]
+	struct _Skill(CompatibleItems);
+
+	impl GetterRef<CompatibleItems> for _Skill {
+		fn get(&self) -> &CompatibleItems {
+			&self.0
+		}
+	}
 
 	#[derive(Asset, TypePath)]
 	struct _Item(ItemType);
@@ -141,7 +152,7 @@ mod tests {
 		app.world_mut().spawn((agent, slots));
 		app.add_systems(
 			Update,
-			_Slots::visualize_invalid_skill::<_Agent, _Visualization>,
+			_Slots::visualize_invalid_skill::<_Agent, _Visualization, _Skill>,
 		);
 
 		app
@@ -155,11 +166,8 @@ mod tests {
 		);
 		let skill = app
 			.world_mut()
-			.spawn(SkillButton::<DropdownTrigger>::new(
-				Skill {
-					is_usable_with: HashSet::from([ItemType::Bracer]),
-					..default()
-				},
+			.spawn(SkillButton::<DropdownTrigger, _Skill>::new(
+				_Skill(CompatibleItems(HashSet::from([ItemType::Bracer]))),
 				vec![
 					SlotKey::BottomHand(Side::Left),
 					SlotKey::BottomHand(Side::Right),
@@ -181,11 +189,8 @@ mod tests {
 		);
 		let skill = app
 			.world_mut()
-			.spawn(SkillButton::<DropdownTrigger>::new(
-				Skill {
-					is_usable_with: HashSet::from([ItemType::Pistol]),
-					..default()
-				},
+			.spawn(SkillButton::<DropdownTrigger, _Skill>::new(
+				_Skill(CompatibleItems(HashSet::from([ItemType::Pistol]))),
 				vec![
 					SlotKey::BottomHand(Side::Left),
 					SlotKey::BottomHand(Side::Right),
@@ -210,11 +215,8 @@ mod tests {
 		);
 		let skill = app
 			.world_mut()
-			.spawn(SkillButton::<DropdownTrigger>::new(
-				Skill {
-					is_usable_with: HashSet::from([ItemType::Pistol]),
-					..default()
-				},
+			.spawn(SkillButton::<DropdownTrigger, _Skill>::new(
+				_Skill(CompatibleItems(HashSet::from([ItemType::Pistol]))),
 				vec![
 					SlotKey::BottomHand(Side::Left),
 					SlotKey::BottomHand(Side::Right),
@@ -236,11 +238,8 @@ mod tests {
 		);
 		let skill = app
 			.world_mut()
-			.spawn(SkillButton::<DropdownTrigger>::new(
-				Skill {
-					is_usable_with: HashSet::from([ItemType::Pistol]),
-					..default()
-				},
+			.spawn(SkillButton::<DropdownTrigger, _Skill>::new(
+				_Skill(CompatibleItems(HashSet::from([ItemType::Pistol]))),
 				vec![
 					SlotKey::BottomHand(Side::Left),
 					SlotKey::BottomHand(Side::Right),

@@ -6,6 +6,7 @@ use common::{
 	tools::item_type::ItemType,
 	traits::{
 		handles_custom_assets::{AssetFileExtensions, LoadFrom},
+		handles_equipment::CompatibleItems,
 		load_asset::{LoadAsset, Path},
 	},
 };
@@ -39,7 +40,7 @@ impl LoadFrom<SkillDto> for Skill {
 			cast_time: Duration::from(skill_data.cast_time),
 			animation: skill_data.animation,
 			behavior: skill_data.behavior.into(),
-			is_usable_with: skill_data.is_usable_with,
+			compatible_items: CompatibleItems(skill_data.is_usable_with),
 			icon: skill_data.icon.map(|icon| asset_server.load_asset(icon)),
 		}
 	}

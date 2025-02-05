@@ -5,7 +5,7 @@ use std::collections::VecDeque;
 
 use crate::{
 	skills::Skill,
-	traits::{Combo, GetCombosOrdered, GetNode, GetNodeMut, PeekNext, RootKeys},
+	traits::{GetNode, GetNodeMut, PeekNext, RootKeys},
 };
 use bevy::ecs::component::Component;
 use common::{
@@ -16,7 +16,7 @@ use common::{
 	},
 	traits::{
 		accessors::get::{GetMut, GetRef},
-		handles_equipment::GetFollowupKeys,
+		handles_equipment::{Combo, CompatibleItems, GetCombosOrdered, GetFollowupKeys},
 		insert::TryInsert,
 		iterate::Iterate,
 	},
@@ -172,8 +172,9 @@ impl PeekNext<(Skill, ComboNode)> for ComboNode {
 	fn peek_next(&self, trigger: &SlotKey, item_type: &ItemType) -> Option<(Skill, ComboNode)> {
 		let ComboNode(tree) = self;
 		let (skill, combo) = tree.get(trigger)?;
+		let CompatibleItems(is_usable_with) = &skill.compatible_items;
 
-		if !skill.is_usable_with.contains(item_type) {
+		if !is_usable_with.contains(item_type) {
 			return None;
 		}
 
@@ -181,8 +182,11 @@ impl PeekNext<(Skill, ComboNode)> for ComboNode {
 	}
 }
 
-impl GetCombosOrdered for ComboNode {
-	fn combos_ordered(&self) -> impl Iterator<Item = Combo> {
+impl GetCombosOrdered<Skill> for ComboNode {
+	fn combos_ordered<'a>(&'a self) -> impl Iterator<Item = Combo<'a, Skill>>
+	where
+		Skill: 'a,
+	{
 		combos(self, vec![])
 	}
 }
@@ -210,7 +214,7 @@ impl GetFollowupKeys for ComboNode {
 	}
 }
 
-fn combos(combo_node: &ComboNode, key_path: Vec<SlotKey>) -> impl Iterator<Item = Combo> {
+fn combos(combo_node: &ComboNode, key_path: Vec<SlotKey>) -> impl Iterator<Item = Combo<Skill>> {
 	combo_node
 		.0
 		.iter()
@@ -230,7 +234,7 @@ fn build_path<'a>(
 
 fn append_followup_combo_steps<'a>(
 	(key_path, skill, child_node): (Vec<SlotKey>, &'a Skill, &'a ComboNode),
-) -> Vec<Combo<'a>> {
+) -> Vec<Combo<'a, Skill>> {
 	let combo_step_key_path = key_path.clone();
 	let followup_combo_steps = combos(child_node, combo_step_key_path).collect();
 	append_followups((key_path, skill), followup_combo_steps)
@@ -238,8 +242,8 @@ fn append_followup_combo_steps<'a>(
 
 fn append_followups<'a>(
 	combo_step: (Vec<SlotKey>, &'a Skill),
-	followups: Vec<Combo<'a>>,
-) -> Vec<Combo<'a>> {
+	followups: Vec<Combo<'a, Skill>>,
+) -> Vec<Combo<'a, Skill>> {
 	let combo_steps = vec![combo_step];
 
 	if followups.is_empty() {
@@ -266,7 +270,7 @@ mod tests {
 			(
 				Skill {
 					name: "first".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Pistol]),
+					compatible_items: CompatibleItems(HashSet::from([ItemType::Pistol])),
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(
@@ -288,7 +292,7 @@ mod tests {
 			Some((
 				Skill {
 					name: "first".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Pistol]),
+					compatible_items: CompatibleItems(HashSet::from([ItemType::Pistol])),
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(
@@ -313,7 +317,7 @@ mod tests {
 			(
 				Skill {
 					name: "first".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Bracer]),
+					compatible_items: CompatibleItems(HashSet::from([ItemType::Bracer])),
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(

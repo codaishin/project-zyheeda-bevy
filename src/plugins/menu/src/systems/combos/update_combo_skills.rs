@@ -1,18 +1,18 @@
 use crate::components::skill_button::{DropdownItem, SkillButton};
-use bevy::{
-	prelude::{Component, Query, With},
-	ui::Interaction,
+use bevy::{prelude::*, ui::Interaction};
+use common::{
+	tools::slot_key::SlotKey,
+	traits::{handles_equipment::UpdateConfig, thread_safe::ThreadSafe},
 };
-use common::tools::slot_key::SlotKey;
-use skills::{skills::Skill, traits::UpdateConfig};
 
-pub(crate) fn update_combo_skills<TAgent, TCombos, TLayout>(
+pub(crate) fn update_combo_skills<TAgent, TCombos, TLayout, TSkill>(
 	mut agents: Query<&mut TCombos, With<TAgent>>,
-	skill_selects: Query<(&SkillButton<DropdownItem<TLayout>>, &Interaction)>,
+	skill_selects: Query<(&SkillButton<DropdownItem<TLayout>, TSkill>, &Interaction)>,
 ) where
 	TLayout: Sync + Send + 'static,
 	TAgent: Component,
-	TCombos: Component + UpdateConfig<Vec<SlotKey>, Option<Skill>>,
+	TCombos: Component + UpdateConfig<Vec<SlotKey>, Option<TSkill>>,
+	TSkill: ThreadSafe + Clone,
 {
 	let Ok(mut combos) = agents.get_single_mut() else {
 		return;
@@ -33,10 +33,6 @@ fn pressed<T>((.., interaction): &(&T, &Interaction)) -> bool {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		utils::default,
-	};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::slot_key::Side,
@@ -44,7 +40,9 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
-	use skills::skills::Skill;
+
+	#[derive(Debug, PartialEq, Clone)]
+	struct _Skill;
 
 	struct _Layout;
 
@@ -65,15 +63,18 @@ mod tests {
 	}
 
 	#[automock]
-	impl UpdateConfig<Vec<SlotKey>, Option<Skill>> for _Combos {
-		fn update_config(&mut self, key: &Vec<SlotKey>, skill: Option<Skill>) {
+	impl UpdateConfig<Vec<SlotKey>, Option<_Skill>> for _Combos {
+		fn update_config(&mut self, key: &Vec<SlotKey>, skill: Option<_Skill>) {
 			self.mock.update_config(key, skill)
 		}
 	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, update_combo_skills::<_Agent, _Combos, _Layout>);
+		app.add_systems(
+			Update,
+			update_combo_skills::<_Agent, _Combos, _Layout, _Skill>,
+		);
 
 		app
 	}
@@ -86,22 +87,13 @@ mod tests {
 			_Combos::new().with_mock(|mock| {
 				mock.expect_update_config()
 					.times(1)
-					.with(
-						eq(vec![SlotKey::BottomHand(Side::Left)]),
-						eq(Some(Skill {
-							name: "my skill".to_owned(),
-							..default()
-						})),
-					)
+					.with(eq(vec![SlotKey::BottomHand(Side::Left)]), eq(Some(_Skill)))
 					.return_const(());
 			}),
 		));
 		app.world_mut().spawn((
-			SkillButton::<DropdownItem<_Layout>>::new(
-				Skill {
-					name: "my skill".to_owned(),
-					..default()
-				},
+			SkillButton::<DropdownItem<_Layout>, _Skill>::new(
+				_Skill,
 				vec![SlotKey::BottomHand(Side::Left)],
 			),
 			Interaction::Pressed,
@@ -115,15 +107,15 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((_Agent, _Combos::default()));
 		app.world_mut().spawn((
-			SkillButton::<DropdownItem<_Layout>>::new(
-				Skill::default(),
+			SkillButton::<DropdownItem<_Layout>, _Skill>::new(
+				_Skill,
 				vec![SlotKey::BottomHand(Side::Left)],
 			),
 			Interaction::Hovered,
 		));
 		app.world_mut().spawn((
-			SkillButton::<DropdownItem<_Layout>>::new(
-				Skill::default(),
+			SkillButton::<DropdownItem<_Layout>, _Skill>::new(
+				_Skill,
 				vec![SlotKey::BottomHand(Side::Left)],
 			),
 			Interaction::None,
@@ -137,8 +129,8 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn(_Combos::default());
 		app.world_mut().spawn((
-			SkillButton::<DropdownItem<_Layout>>::new(
-				Skill::default(),
+			SkillButton::<DropdownItem<_Layout>, _Skill>::new(
+				_Skill,
 				vec![SlotKey::BottomHand(Side::Left)],
 			),
 			Interaction::Pressed,

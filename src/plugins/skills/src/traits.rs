@@ -71,12 +71,6 @@ pub(crate) trait SetNextCombo<TCombo> {
 	fn set_next_combo(&mut self, value: TCombo);
 }
 
-pub type Combo<'a> = Vec<(Vec<SlotKey>, &'a Skill)>;
-
-pub trait GetCombosOrdered {
-	fn combos_ordered(&self) -> impl Iterator<Item = Combo>;
-}
-
 pub trait GetNode<TKey> {
 	type TNode<'a>
 	where
@@ -107,10 +101,6 @@ pub trait Insert<T> {
 
 pub trait ReKey<TKey> {
 	fn re_key(&mut self, key: TKey);
-}
-
-pub trait UpdateConfig<TKey, TValue> {
-	fn update_config(&mut self, key: &TKey, value: TValue);
 }
 
 pub(crate) trait GetAnimationStrategy {

@@ -1,18 +1,14 @@
 use crate::components::DeleteSkill;
-use bevy::{
-	prelude::{Component, Query, With},
-	ui::Interaction,
-};
-use common::tools::slot_key::SlotKey;
-use skills::{skills::Skill, traits::UpdateConfig};
+use bevy::{prelude::*, ui::Interaction};
+use common::{tools::slot_key::SlotKey, traits::handles_equipment::UpdateConfig};
 
-pub(crate) fn update_combos_view_delete_skill<
-	TAgent: Component,
-	TCombos: Component + UpdateConfig<Vec<SlotKey>, Option<Skill>>,
->(
+pub(crate) fn update_combos_view_delete_skill<TAgent, TCombos, TSkill>(
 	deletes: Query<(&DeleteSkill, &Interaction)>,
 	mut agents: Query<&mut TCombos, With<TAgent>>,
-) {
+) where
+	TAgent: Component,
+	TCombos: Component + UpdateConfig<Vec<SlotKey>, Option<TSkill>>,
+{
 	let Ok(mut combos) = agents.get_single_mut() else {
 		return;
 	};
@@ -29,10 +25,6 @@ fn pressed((.., interaction): &(&DeleteSkill, &Interaction)) -> bool {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		prelude::Component,
-	};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::slot_key::Side,
@@ -40,10 +32,12 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
-	use skills::{skills::Skill, traits::UpdateConfig};
 
 	#[derive(Component)]
 	struct _Agent;
+
+	#[derive(Debug, PartialEq)]
+	struct _Skill;
 
 	#[derive(Component, NestedMocks)]
 	struct _Combos {
@@ -59,15 +53,18 @@ mod tests {
 	}
 
 	#[automock]
-	impl UpdateConfig<Vec<SlotKey>, Option<Skill>> for _Combos {
-		fn update_config(&mut self, key: &Vec<SlotKey>, value: Option<Skill>) {
+	impl UpdateConfig<Vec<SlotKey>, Option<_Skill>> for _Combos {
+		fn update_config(&mut self, key: &Vec<SlotKey>, value: Option<_Skill>) {
 			self.mock.update_config(key, value)
 		}
 	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, update_combos_view_delete_skill::<_Agent, _Combos>);
+		app.add_systems(
+			Update,
+			update_combos_view_delete_skill::<_Agent, _Combos, _Skill>,
+		);
 
 		app
 	}

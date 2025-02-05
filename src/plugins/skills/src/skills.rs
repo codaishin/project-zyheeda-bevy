@@ -14,11 +14,13 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::{item_type::ItemType, slot_key::SlotKey},
+	tools::slot_key::SlotKey,
 	traits::{
+		accessors::get::{Getter, GetterRef},
 		animation::Animation,
 		handles_custom_assets::AssetFolderPath,
 		handles_effect::HandlesAllEffects,
+		handles_equipment::{CompatibleItems, SkillDescription},
 		handles_lifetime::HandlesLifetime,
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		load_asset::Path,
@@ -26,7 +28,6 @@ use common::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-	collections::HashSet,
 	fmt::{Display, Formatter, Result as FmtResult},
 	time::Duration,
 };
@@ -53,7 +54,7 @@ pub struct Skill {
 	pub cast_time: Duration,
 	pub animation: AnimationStrategy,
 	pub behavior: RunSkillBehavior,
-	pub is_usable_with: HashSet<ItemType>,
+	pub compatible_items: CompatibleItems,
 	pub icon: Option<Handle<Image>>,
 }
 
@@ -69,6 +70,24 @@ impl Display for Skill {
 impl AssetFolderPath for Skill {
 	fn asset_folder_path() -> Path {
 		Path::from("skills")
+	}
+}
+
+impl Getter<SkillDescription> for Skill {
+	fn get(&self) -> SkillDescription {
+		SkillDescription(self.name.clone())
+	}
+}
+
+impl GetterRef<Option<Handle<Image>>> for Skill {
+	fn get(&self) -> &Option<Handle<Image>> {
+		&self.icon
+	}
+}
+
+impl GetterRef<CompatibleItems> for Skill {
+	fn get(&self) -> &CompatibleItems {
+		&self.compatible_items
 	}
 }
 

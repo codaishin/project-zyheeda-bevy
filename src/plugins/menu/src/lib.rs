@@ -25,7 +25,7 @@ use common::{
 	systems::log::log_many,
 	tools::{inventory_key::InventoryKey, slot_key::SlotKey},
 	traits::{
-		handles_equipment::HandlesEquipment,
+		handles_equipment::{HandlesEquipment, SkillDescription},
 		handles_graphics::{StaticRenderLayers, UiCamera},
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		handles_player::HandlesPlayer,
@@ -51,10 +51,7 @@ use components::{
 	ui_overlay::UIOverlay,
 };
 use events::DropdownEvent;
-use skills::{
-	components::{combos::Combos, combos_time_out::CombosTimeOut, queue::Queue},
-	skills::Skill,
-};
+use skills::components::{combos::Combos, combos_time_out::CombosTimeOut, queue::Queue};
 use std::{marker::PhantomData, time::Duration};
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
@@ -262,28 +259,62 @@ where
 	fn combo_overview(&self, app: &mut App) {
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
 
-		app.add_ui::<ComboOverview, TGraphics::TUiCamera>(combo_overview)
-			.add_dropdown::<SkillButton<DropdownItem<Vertical>>>()
-			.add_dropdown::<SkillButton<DropdownItem<Horizontal>>>()
+		app.add_ui::<ComboOverview<TEquipment::TSkill>, TGraphics::TUiCamera>(combo_overview)
+			.add_dropdown::<SkillButton<DropdownItem<Vertical>, TEquipment::TSkill>>()
+			.add_dropdown::<SkillButton<DropdownItem<Horizontal>, TEquipment::TSkill>>()
 			.add_dropdown::<KeySelect<ReKeySkill>>()
 			.add_dropdown::<KeySelect<AppendSkill>>()
-			.add_tooltip::<Skill>()
+			.add_tooltip::<SkillDescription>()
 			.add_systems(
 				Update,
-				update_combos_view::<TPlayers::TPlayer, Combos, ComboOverview>
-					.run_if(either(added::<ComboOverview>).or(changed::<TPlayers::TPlayer, Combos>))
+				update_combos_view::<
+					TPlayers::TPlayer,
+					TEquipment::TCombos,
+					ComboOverview<TEquipment::TSkill>,
+					TEquipment::TSkill,
+				>
+					.run_if(
+						either(added::<ComboOverview<TEquipment::TSkill>>)
+							.or(changed::<TPlayers::TPlayer, Combos>),
+					)
 					.run_if(in_state(combo_overview)),
 			)
 			.add_systems(
 				Update,
 				(
-					TEquipment::TSlots::visualize_invalid_skill::<TPlayers::TPlayer, Unusable>,
-					TEquipment::TSlots::select_compatible_skill::<TPlayers::TPlayer, Vertical>,
-					TEquipment::TSlots::select_compatible_skill::<TPlayers::TPlayer, Horizontal>,
+					TEquipment::TSlots::visualize_invalid_skill::<
+						TPlayers::TPlayer,
+						Unusable,
+						TEquipment::TSkill,
+					>,
+					TEquipment::TSlots::select_compatible_skill::<
+						TPlayers::TPlayer,
+						Vertical,
+						TEquipment::TSkill,
+					>,
+					TEquipment::TSlots::select_compatible_skill::<
+						TPlayers::TPlayer,
+						Horizontal,
+						TEquipment::TSkill,
+					>,
 					TEquipment::TCombos::select_successor_key::<TPlayers::TPlayer>,
-					update_combos_view_delete_skill::<TPlayers::TPlayer, Combos>,
-					update_combo_skills::<TPlayers::TPlayer, Combos, Vertical>,
-					update_combo_skills::<TPlayers::TPlayer, Combos, Horizontal>,
+					update_combos_view_delete_skill::<
+						TPlayers::TPlayer,
+						TEquipment::TCombos,
+						TEquipment::TSkill,
+					>,
+					update_combo_skills::<
+						TPlayers::TPlayer,
+						TEquipment::TCombos,
+						Vertical,
+						TEquipment::TSkill,
+					>,
+					update_combo_skills::<
+						TPlayers::TPlayer,
+						TEquipment::TCombos,
+						Horizontal,
+						TEquipment::TSkill,
+					>,
 					map_pressed_key_select.pipe(update_combo_keys::<TPlayers::TPlayer, Combos>),
 				)
 					.run_if(in_state(combo_overview)),

@@ -11,8 +11,8 @@ use bevy::{ecs::system::EntityCommands, prelude::*};
 use combo_tree_layout::ComboTreeLayout;
 use common::traits::load_asset::LoadAsset;
 
-pub(crate) trait UpdateCombosView {
-	fn update_combos_view(&mut self, combos: ComboTreeLayout);
+pub(crate) trait UpdateCombosView<TSkill> {
+	fn update_combos_view(&mut self, combos: ComboTreeLayout<TSkill>);
 }
 
 pub(crate) trait LoadUi<TAssetServer: LoadAsset> {

@@ -257,4 +257,5 @@ impl<T> HandlesEquipment for SkillsPlugin<T> {
 	type TInventory = Inventory;
 	type TSlots = Slots;
 	type TCombos = Combos;
+	type TSkill = Skill;
 }

@@ -7,29 +7,29 @@ use bevy::prelude::*;
 use common::{
 	tools::{item_type::ItemType, slot_key::SlotKey},
 	traits::{
-		accessors::get::{GetField, Getter},
-		handles_equipment::SingleAccess,
+		accessors::get::{GetField, GetFieldRef, Getter, GetterRef},
+		handles_equipment::{CompatibleItems, SingleAccess},
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
 		try_remove_from::TryRemoveFrom,
 	},
 };
-use skills::skills::Skill;
 
 impl<T> SelectCompatibleSkill for T {}
 
 pub(crate) trait SelectCompatibleSkill {
-	fn select_compatible_skill<TPlayer, TLayout>(
+	fn select_compatible_skill<TPlayer, TLayout, TSkill>(
 		mut commands: Commands,
 		dropdown_commands: Query<(Entity, &SkillSelectDropdownInsertCommand<SlotKey, TLayout>)>,
 		slots: Query<&Self, With<TPlayer>>,
 		items: Res<Assets<Self::TItem>>,
-		skills: Res<Assets<Skill>>,
+		skills: Res<Assets<TSkill>>,
 	) where
 		Self: SingleAccess<TKey = SlotKey> + Component + Sized,
 		Self::TItem: Getter<ItemType>,
 		TPlayer: Component,
 		TLayout: ThreadSafe,
+		TSkill: Asset + PartialEq + Clone + GetterRef<CompatibleItems>,
 	{
 		let Ok(slots) = slots.get_single() else {
 			return;
@@ -44,16 +44,17 @@ pub(crate) trait SelectCompatibleSkill {
 	}
 }
 
-fn compatible_skills<TSlots, TLayout>(
+fn compatible_skills<TSlots, TLayout, TSkill>(
 	command: &SkillSelectDropdownInsertCommand<SlotKey, TLayout>,
 	slots: &TSlots,
 	items: &Assets<TSlots::TItem>,
-	skills: &Assets<Skill>,
-) -> Option<Vec<SkillButton<DropdownItem<TLayout>>>>
+	skills: &Assets<TSkill>,
+) -> Option<Vec<SkillButton<DropdownItem<TLayout>, TSkill>>>
 where
 	TSlots: SingleAccess<TKey = SlotKey>,
 	TSlots::TItem: Getter<ItemType>,
 	TLayout: ThreadSafe,
+	TSkill: Asset + PartialEq + Clone + GetterRef<CompatibleItems>,
 {
 	let key = command.key_path.last()?;
 	let item = slots.single_access(key).and_then(|item| items.get(item))?;
@@ -63,7 +64,8 @@ where
 	let skills = skills
 		.iter()
 		.filter(|(_, skill)| {
-			if !skill.is_usable_with.contains(&item_type) {
+			let CompatibleItems(is_usable_with) = CompatibleItems::get_field_ref(*skill);
+			if !is_usable_with.contains(&item_type) {
 				return false;
 			}
 			if seen.contains(skill) {
@@ -74,7 +76,10 @@ where
 			true
 		})
 		.map(|(_, skill)| {
-			SkillButton::<DropdownItem<TLayout>>::new(skill.clone(), command.key_path.clone())
+			SkillButton::<DropdownItem<TLayout>, TSkill>::new(
+				skill.clone(),
+				command.key_path.clone(),
+			)
 		})
 		.collect::<Vec<_>>();
 
@@ -90,7 +95,15 @@ mod tests {
 		tools::{item_type::ItemType, slot_key::Side},
 	};
 	use std::collections::{HashMap, HashSet};
-	use uuid::Uuid;
+
+	#[derive(Asset, TypePath, Debug, PartialEq, Clone)]
+	struct _Skill(CompatibleItems);
+
+	impl GetterRef<CompatibleItems> for _Skill {
+		fn get(&self) -> &CompatibleItems {
+			&self.0
+		}
+	}
 
 	#[derive(Component)]
 	struct _Player;
@@ -126,9 +139,9 @@ mod tests {
 	}
 
 	fn setup_skills_and_equipment<const S: usize, const E: usize>(
-		skills: [Skill; S],
+		skills: [_Skill; S],
 		equipment: [(SlotKey, _Item); E],
-	) -> (_Slots, Assets<_Item>, Assets<Skill>) {
+	) -> (_Slots, Assets<_Item>, Assets<_Skill>) {
 		let mut item_assets = Assets::default();
 		let mut skill_assets = Assets::default();
 
@@ -146,44 +159,32 @@ mod tests {
 
 	fn setup_app<const S: usize, const E: usize>(
 		agent: impl Component,
-		skills: [Skill; S],
+		skills: [_Skill; S],
 		slots: [(SlotKey, _Item); E],
 	) -> App {
 		let (equipment, items, skills) = setup_skills_and_equipment(skills, slots);
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(items);
 		app.insert_resource(skills);
-		app.add_systems(Update, _Slots::select_compatible_skill::<_Player, _Layout>);
+		app.add_systems(
+			Update,
+			_Slots::select_compatible_skill::<_Player, _Layout, _Skill>,
+		);
 		app.world_mut().spawn((agent, equipment));
 
 		app
 	}
 
-	fn new_handle<T: Asset>() -> Handle<T> {
-		Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		})
-	}
-
 	#[test]
 	fn list_compatible_skills() {
-		let image_a = new_handle();
-		let image_b = new_handle();
 		let mut app = setup_app(
 			_Player,
 			[
-				Skill {
-					name: "skill a".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Pistol]),
-					icon: Some(image_a.clone()),
-					..default()
-				},
-				Skill {
-					name: "skill b".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
-					icon: Some(image_b.clone()),
-					..default()
-				},
+				_Skill(CompatibleItems(HashSet::from([ItemType::Pistol]))),
+				_Skill(CompatibleItems(HashSet::from([
+					ItemType::Pistol,
+					ItemType::Bracer,
+				]))),
 			],
 			[(SlotKey::BottomHand(Side::Right), _Item(ItemType::Pistol))],
 		);
@@ -201,55 +202,37 @@ mod tests {
 		assert_eq!(
 			Some(&Dropdown {
 				items: vec![
-					SkillButton::<DropdownItem<_Layout>>::new(
-						Skill {
-							name: "skill a".to_owned(),
-							is_usable_with: HashSet::from([ItemType::Pistol]),
-							icon: Some(image_a.clone()),
-							..default()
-						},
+					SkillButton::<DropdownItem<_Layout>, _Skill>::new(
+						_Skill(CompatibleItems(HashSet::from([ItemType::Pistol]),)),
 						vec![SlotKey::BottomHand(Side::Right)],
 					),
-					SkillButton::<DropdownItem<_Layout>>::new(
-						Skill {
-							name: "skill b".to_owned(),
-							is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
-							icon: Some(image_b.clone()),
-							..default()
-						},
+					SkillButton::<DropdownItem<_Layout>, _Skill>::new(
+						_Skill(CompatibleItems(HashSet::from([
+							ItemType::Pistol,
+							ItemType::Bracer
+						]),)),
 						vec![SlotKey::BottomHand(Side::Right)],
 					)
 				]
 			}),
-			dropdown.get::<Dropdown<SkillButton<DropdownItem<_Layout>>>>()
+			dropdown.get::<Dropdown<SkillButton<DropdownItem<_Layout>, _Skill>>>()
 		)
 	}
 
 	#[test]
 	fn list_unique_skills() {
-		let image_a = new_handle();
-		let image_b = new_handle();
 		let mut app = setup_app(
 			_Player,
 			[
-				Skill {
-					name: "skill a".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Pistol]),
-					icon: Some(image_a.clone()),
-					..default()
-				},
-				Skill {
-					name: "skill b".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
-					icon: Some(image_b.clone()),
-					..default()
-				},
-				Skill {
-					name: "skill b".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
-					icon: Some(image_b.clone()),
-					..default()
-				},
+				_Skill(CompatibleItems(HashSet::from([ItemType::Pistol]))),
+				_Skill(CompatibleItems(HashSet::from([
+					ItemType::Pistol,
+					ItemType::Bracer,
+				]))),
+				_Skill(CompatibleItems(HashSet::from([
+					ItemType::Pistol,
+					ItemType::Bracer,
+				]))),
 			],
 			[(SlotKey::BottomHand(Side::Right), _Item(ItemType::Pistol))],
 		);
@@ -267,27 +250,20 @@ mod tests {
 		assert_eq!(
 			Some(&Dropdown {
 				items: vec![
-					SkillButton::<DropdownItem<_Layout>>::new(
-						Skill {
-							name: "skill a".to_owned(),
-							is_usable_with: HashSet::from([ItemType::Pistol]),
-							icon: Some(image_a.clone()),
-							..default()
-						},
+					SkillButton::<DropdownItem<_Layout>, _Skill>::new(
+						_Skill(CompatibleItems(HashSet::from([ItemType::Pistol]),)),
 						vec![SlotKey::BottomHand(Side::Right)],
 					),
-					SkillButton::<DropdownItem<_Layout>>::new(
-						Skill {
-							name: "skill b".to_owned(),
-							is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
-							icon: Some(image_b.clone()),
-							..default()
-						},
+					SkillButton::<DropdownItem<_Layout>, _Skill>::new(
+						_Skill(CompatibleItems(HashSet::from([
+							ItemType::Pistol,
+							ItemType::Bracer
+						]),)),
 						vec![SlotKey::BottomHand(Side::Right)],
 					)
 				]
 			}),
-			dropdown.get::<Dropdown<SkillButton<DropdownItem<_Layout>>>>()
+			dropdown.get::<Dropdown<SkillButton<DropdownItem<_Layout>, _Skill>>>()
 		)
 	}
 
@@ -296,23 +272,14 @@ mod tests {
 		#[derive(Component)]
 		struct _NonPlayer;
 
-		let image_a = new_handle();
-		let image_b = new_handle();
 		let mut app = setup_app(
 			_NonPlayer,
 			[
-				Skill {
-					name: "skill a".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Pistol]),
-					icon: Some(image_a.clone()),
-					..default()
-				},
-				Skill {
-					name: "skill b".to_owned(),
-					is_usable_with: HashSet::from([ItemType::Pistol, ItemType::Bracer]),
-					icon: Some(image_b.clone()),
-					..default()
-				},
+				_Skill(CompatibleItems(HashSet::from([ItemType::Pistol]))),
+				_Skill(CompatibleItems(HashSet::from([
+					ItemType::Pistol,
+					ItemType::Bracer,
+				]))),
 			],
 			[(SlotKey::BottomHand(Side::Right), _Item(ItemType::Pistol))],
 		);
@@ -329,7 +296,7 @@ mod tests {
 
 		assert_eq!(
 			None,
-			dropdown.get::<Dropdown<SkillButton<DropdownItem<_Layout>>>>()
+			dropdown.get::<Dropdown<SkillButton<DropdownItem<_Layout>, _Skill>>>()
 		);
 	}
 
