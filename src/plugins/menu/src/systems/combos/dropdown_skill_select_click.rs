@@ -2,7 +2,7 @@ use crate::components::skill_button::{DropdownItem, SkillButton};
 use bevy::{prelude::*, ui::Interaction};
 use common::{
 	tools::slot_key::SlotKey,
-	traits::{handles_equipment::UpdateConfig, thread_safe::ThreadSafe},
+	traits::{handles_equipment::WriteItem, thread_safe::ThreadSafe},
 };
 
 impl<T> DropdownSkillSelectClick for T {}
@@ -14,7 +14,7 @@ pub(crate) trait DropdownSkillSelectClick {
 	) where
 		Self: ThreadSafe + Sized,
 		TAgent: Component,
-		TCombos: Component + UpdateConfig<Vec<SlotKey>, Option<TSkill>>,
+		TCombos: Component + WriteItem<Vec<SlotKey>, Option<TSkill>>,
 		TSkill: ThreadSafe + Clone,
 	{
 		let Ok(mut combos) = agents.get_single_mut() else {
@@ -22,7 +22,7 @@ pub(crate) trait DropdownSkillSelectClick {
 		};
 
 		for (skill_descriptor, ..) in skill_selects.iter().filter(pressed) {
-			combos.update_config(
+			combos.write_item(
 				&skill_descriptor.key_path,
 				Some(skill_descriptor.skill.clone()),
 			);
@@ -61,15 +61,15 @@ mod tests {
 	impl Default for _Combos {
 		fn default() -> Self {
 			Self::new().with_mock(|mock| {
-				mock.expect_update_config().return_const(());
+				mock.expect_write_item().return_const(());
 			})
 		}
 	}
 
 	#[automock]
-	impl UpdateConfig<Vec<SlotKey>, Option<_Skill>> for _Combos {
-		fn update_config(&mut self, key: &Vec<SlotKey>, skill: Option<_Skill>) {
-			self.mock.update_config(key, skill)
+	impl WriteItem<Vec<SlotKey>, Option<_Skill>> for _Combos {
+		fn write_item(&mut self, key: &Vec<SlotKey>, skill: Option<_Skill>) {
+			self.mock.write_item(key, skill)
 		}
 	}
 
@@ -89,7 +89,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Combos::new().with_mock(|mock| {
-				mock.expect_update_config()
+				mock.expect_write_item()
 					.times(1)
 					.with(eq(vec![SlotKey::BottomHand(Side::Left)]), eq(Some(_Skill)))
 					.return_const(());

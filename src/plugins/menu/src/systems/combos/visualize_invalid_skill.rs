@@ -7,7 +7,7 @@ use common::{
 	tools::{item_type::ItemType, slot_key::SlotKey},
 	traits::{
 		accessors::get::{GetField, GetFieldRef, Getter, GetterRef},
-		handles_equipment::{CompatibleItems, SingleAccess},
+		handles_equipment::{CompatibleItems, ItemAsset},
 		thread_safe::ThreadSafe,
 	},
 };
@@ -26,7 +26,7 @@ pub(crate) trait VisualizeInvalidSkill {
 		items: Res<Assets<TSlots::TItem>>,
 	) where
 		Self: InsertContentOn + Sized,
-		TSlots: Component + SingleAccess<TKey = SlotKey>,
+		TSlots: Component + ItemAsset<TKey = SlotKey>,
 		TSlots::TItem: Asset + Getter<ItemType>,
 		TAgent: Component,
 		TSkill: ThreadSafe + GetterRef<CompatibleItems>,
@@ -51,14 +51,14 @@ fn visualize_unusable<TSlots, TSkill>(
 	visualize: fn(&mut EntityCommands),
 ) -> Option<()>
 where
-	TSlots: SingleAccess<TKey = SlotKey>,
+	TSlots: ItemAsset<TKey = SlotKey>,
 	TSlots::TItem: Getter<ItemType>,
 	TSkill: GetterRef<CompatibleItems>,
 {
 	let item = descriptor
 		.key_path
 		.last()
-		.and_then(|key| slots.single_access(key).ok())
+		.and_then(|key| slots.item_asset(key).ok())
 		.and_then(|item| item.as_ref())
 		.and_then(|item| items.get(item))?;
 
@@ -115,11 +115,11 @@ mod tests {
 		}
 	}
 
-	impl SingleAccess for _Slots {
+	impl ItemAsset for _Slots {
 		type TKey = SlotKey;
 		type TItem = _Item;
 
-		fn single_access(
+		fn item_asset(
 			&self,
 			key: &Self::TKey,
 		) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {

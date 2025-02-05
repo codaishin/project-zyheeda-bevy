@@ -4,7 +4,7 @@ use common::{
 	errors::{Error, Level},
 	tools::slot_key::SlotKey,
 	traits::{
-		handles_equipment::{KeyOutOfBounds, SingleAccess, UpdateConfig},
+		handles_equipment::{ItemAsset, KeyOutOfBounds, WriteItem},
 		try_remove_from::TryRemoveFrom,
 	},
 };
@@ -15,9 +15,8 @@ pub fn swap_equipped_items<TSlots>(
 	mut slots_to_swap: Query<(Entity, &mut TSlots, &Collection<Swap<SlotKey, SlotKey>>)>,
 ) -> Vec<Result<(), Error>>
 where
-	TSlots: Component
-		+ SingleAccess<TKey = SlotKey>
-		+ UpdateConfig<SlotKey, Option<Handle<TSlots::TItem>>>,
+	TSlots:
+		Component + ItemAsset<TKey = SlotKey> + WriteItem<SlotKey, Option<Handle<TSlots::TItem>>>,
 {
 	let mut results = vec![];
 
@@ -40,15 +39,15 @@ where
 
 fn do_swap<TSlots>(swap: &Swap<SlotKey, SlotKey>, slots: &mut Mut<TSlots>) -> [Result<(), Error>; 2]
 where
-	TSlots: SingleAccess<TKey = SlotKey> + UpdateConfig<SlotKey, Option<Handle<TSlots::TItem>>>,
+	TSlots: ItemAsset<TKey = SlotKey> + WriteItem<SlotKey, Option<Handle<TSlots::TItem>>>,
 {
 	let slot_results = [
 		slots
-			.single_access(&swap.0)
+			.item_asset(&swap.0)
 			.cloned()
 			.map_err(no_slot(swap.0)),
 		slots
-			.single_access(&swap.1)
+			.item_asset(&swap.1)
 			.cloned()
 			.map_err(no_slot(swap.1)),
 	];
@@ -57,8 +56,8 @@ where
 		return slot_results.map(drop_ok);
 	};
 
-	slots.update_config(&swap.0, slot1);
-	slots.update_config(&swap.1, slot0);
+	slots.write_item(&swap.0, slot1);
+	slots.write_item(&swap.1, slot0);
 
 	[Ok(()), Ok(())]
 }
@@ -96,11 +95,11 @@ mod tests {
 		}
 	}
 
-	impl SingleAccess for _Slots {
+	impl ItemAsset for _Slots {
 		type TKey = SlotKey;
 		type TItem = _Skill;
 
-		fn single_access(
+		fn item_asset(
 			&self,
 			key: &Self::TKey,
 		) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
@@ -112,8 +111,8 @@ mod tests {
 		}
 	}
 
-	impl UpdateConfig<SlotKey, Option<Handle<_Skill>>> for _Slots {
-		fn update_config(&mut self, key: &SlotKey, value: Option<Handle<_Skill>>) {
+	impl WriteItem<SlotKey, Option<Handle<_Skill>>> for _Slots {
+		fn write_item(&mut self, key: &SlotKey, value: Option<Handle<_Skill>>) {
 			self.0.insert(*key, value);
 		}
 	}

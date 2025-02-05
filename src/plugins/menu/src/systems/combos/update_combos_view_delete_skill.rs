@@ -1,20 +1,20 @@
 use crate::components::DeleteSkill;
 use bevy::{prelude::*, ui::Interaction};
-use common::{tools::slot_key::SlotKey, traits::handles_equipment::UpdateConfig};
+use common::{tools::slot_key::SlotKey, traits::handles_equipment::WriteItem};
 
 pub(crate) fn update_combos_view_delete_skill<TAgent, TSkill, TCombos>(
 	deletes: Query<(&DeleteSkill, &Interaction)>,
 	mut agents: Query<&mut TCombos, With<TAgent>>,
 ) where
 	TAgent: Component,
-	TCombos: Component + UpdateConfig<Vec<SlotKey>, Option<TSkill>>,
+	TCombos: Component + WriteItem<Vec<SlotKey>, Option<TSkill>>,
 {
 	let Ok(mut combos) = agents.get_single_mut() else {
 		return;
 	};
 
 	for (delete, _) in deletes.iter().filter(pressed) {
-		combos.update_config(&delete.key_path, None);
+		combos.write_item(&delete.key_path, None);
 	}
 }
 
@@ -47,15 +47,15 @@ mod tests {
 	impl Default for _Combos {
 		fn default() -> Self {
 			Self::new().with_mock(|mock| {
-				mock.expect_update_config().return_const(());
+				mock.expect_write_item().return_const(());
 			})
 		}
 	}
 
 	#[automock]
-	impl UpdateConfig<Vec<SlotKey>, Option<_Skill>> for _Combos {
-		fn update_config(&mut self, key: &Vec<SlotKey>, value: Option<_Skill>) {
-			self.mock.update_config(key, value)
+	impl WriteItem<Vec<SlotKey>, Option<_Skill>> for _Combos {
+		fn write_item(&mut self, key: &Vec<SlotKey>, value: Option<_Skill>) {
+			self.mock.write_item(key, value)
 		}
 	}
 
@@ -84,7 +84,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Combos::new().with_mock(|mock| {
-				mock.expect_update_config()
+				mock.expect_write_item()
 					.times(1)
 					.with(
 						eq(vec![

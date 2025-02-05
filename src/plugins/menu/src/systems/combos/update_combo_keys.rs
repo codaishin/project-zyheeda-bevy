@@ -1,13 +1,13 @@
 use crate::components::key_select::{KeySelect, ReKeySkill};
 use bevy::prelude::{Component, In, Query, With};
-use common::{tools::slot_key::SlotKey, traits::handles_equipment::UpdateConfig};
+use common::{tools::slot_key::SlotKey, traits::handles_equipment::WriteItem};
 
 pub(crate) fn update_combo_keys<TAgent, TCombos>(
 	key_select: In<Option<KeySelect<ReKeySkill<SlotKey>, SlotKey>>>,
 	mut agents: Query<&mut TCombos, With<TAgent>>,
 ) where
 	TAgent: Component,
-	TCombos: Component + UpdateConfig<Vec<SlotKey>, SlotKey>,
+	TCombos: Component + WriteItem<Vec<SlotKey>, SlotKey>,
 {
 	let Some(key_select) = key_select.0 else {
 		return;
@@ -16,7 +16,7 @@ pub(crate) fn update_combo_keys<TAgent, TCombos>(
 		return;
 	};
 
-	agent.update_config(&key_select.key_path, key_select.extra.to);
+	agent.write_item(&key_select.key_path, key_select.extra.to);
 }
 
 #[cfg(test)]
@@ -45,15 +45,15 @@ mod test {
 	impl Default for _Combos {
 		fn default() -> Self {
 			Self::new().with_mock(|mock| {
-				mock.expect_update_config().never().return_const(());
+				mock.expect_write_item().never().return_const(());
 			})
 		}
 	}
 
 	#[automock]
-	impl UpdateConfig<Vec<SlotKey>, SlotKey> for _Combos {
-		fn update_config(&mut self, key: &Vec<SlotKey>, value: SlotKey) {
-			self.mock.update_config(key, value)
+	impl WriteItem<Vec<SlotKey>, SlotKey> for _Combos {
+		fn write_item(&mut self, key: &Vec<SlotKey>, value: SlotKey) {
+			self.mock.write_item(key, value)
 		}
 	}
 
@@ -82,7 +82,7 @@ mod test {
 		app.world_mut().spawn((
 			_Agent,
 			_Combos::new().with_mock(|mock| {
-				mock.expect_update_config()
+				mock.expect_write_item()
 					.times(1)
 					.with(
 						eq(vec![

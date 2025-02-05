@@ -17,7 +17,7 @@ use bevy::ecs::component::Component;
 use common::{
 	tools::{item_type::ItemType, slot_key::SlotKey},
 	traits::{
-		handles_equipment::{Combo, GetCombosOrdered, GetFollowupKeys, PeekNext, UpdateConfig},
+		handles_equipment::{Combo, FollowupKeys, GetCombosOrdered, PeekNext, WriteItem},
 		iterate::Iterate,
 	},
 };
@@ -100,12 +100,12 @@ impl<TNode: GetCombosOrdered<Skill>> GetCombosOrdered<Skill> for Combos<TNode> {
 	}
 }
 
-impl<TNode, TKey> UpdateConfig<TKey, Option<Skill>> for Combos<TNode>
+impl<TNode, TKey> WriteItem<TKey, Option<Skill>> for Combos<TNode>
 where
 	for<'a> TNode: GetNodeMut<TKey, TNode<'a>: Insert<Option<Skill>>>,
 	TKey: Iterate<SlotKey>,
 {
-	fn update_config(&mut self, key_path: &TKey, skill: Option<Skill>) {
+	fn write_item(&mut self, key_path: &TKey, skill: Option<Skill>) {
 		self.current = None;
 
 		let Some(mut entry) = self.config.node_mut(key_path) else {
@@ -116,12 +116,12 @@ where
 	}
 }
 
-impl<TNode, TKey> UpdateConfig<TKey, SlotKey> for Combos<TNode>
+impl<TNode, TKey> WriteItem<TKey, SlotKey> for Combos<TNode>
 where
 	for<'a> TNode: GetNodeMut<TKey, TNode<'a>: ReKey<SlotKey>>,
 	TKey: Iterate<SlotKey>,
 {
-	fn update_config(&mut self, key_path: &TKey, key: SlotKey) {
+	fn write_item(&mut self, key_path: &TKey, key: SlotKey) {
 		self.current = None;
 
 		let Some(mut entry) = self.config.node_mut(key_path) else {
@@ -151,9 +151,9 @@ impl<TNode: RootKeys> RootKeys for Combos<TNode> {
 	}
 }
 
-impl<TNode> GetFollowupKeys for Combos<TNode>
+impl<TNode> FollowupKeys for Combos<TNode>
 where
-	TNode: GetFollowupKeys,
+	TNode: FollowupKeys,
 {
 	type TKey = TNode::TKey;
 
@@ -355,7 +355,7 @@ mod tests {
 			..default()
 		});
 
-		combos.update_config(
+		combos.write_item(
 			&vec![
 				SlotKey::BottomHand(Side::Right),
 				SlotKey::BottomHand(Side::Left),
@@ -390,7 +390,7 @@ mod tests {
 			..default()
 		});
 
-		combos.update_config(
+		combos.write_item(
 			&vec![SlotKey::BottomHand(Side::Right)],
 			Some(Skill {
 				name: "my skill".to_owned(),
@@ -411,7 +411,7 @@ mod tests {
 			current: Some(_Node::default()),
 		};
 
-		combos.update_config(
+		combos.write_item(
 			&vec![SlotKey::BottomHand(Side::Right)],
 			Some(Skill {
 				name: "my skill".to_owned(),
@@ -432,7 +432,7 @@ mod tests {
 			current: Some(_Node::default()),
 		};
 
-		combos.update_config(
+		combos.write_item(
 			&vec![SlotKey::BottomHand(Side::Right)],
 			Some(Skill {
 				name: "my skill".to_owned(),
@@ -452,7 +452,7 @@ mod tests {
 			..default()
 		});
 
-		combos.update_config(
+		combos.write_item(
 			&vec![
 				SlotKey::BottomHand(Side::Right),
 				SlotKey::BottomHand(Side::Left),
@@ -481,7 +481,7 @@ mod tests {
 			..default()
 		});
 
-		combos.update_config(
+		combos.write_item(
 			&vec![SlotKey::BottomHand(Side::Right)],
 			SlotKey::BottomHand(Side::Left),
 		);
@@ -499,7 +499,7 @@ mod tests {
 			current: Some(_Node::default()),
 		};
 
-		combos.update_config(
+		combos.write_item(
 			&vec![SlotKey::BottomHand(Side::Right)],
 			SlotKey::BottomHand(Side::Left),
 		);
@@ -517,7 +517,7 @@ mod tests {
 			current: Some(_Node::default()),
 		};
 
-		combos.update_config(
+		combos.write_item(
 			&vec![SlotKey::BottomHand(Side::Right)],
 			SlotKey::BottomHand(Side::Left),
 		);
@@ -581,7 +581,7 @@ mod tests {
 
 		struct _Node;
 
-		impl GetFollowupKeys for _Node {
+		impl FollowupKeys for _Node {
 			type TKey = _Key;
 
 			fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>

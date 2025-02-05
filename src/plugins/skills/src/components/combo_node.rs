@@ -16,7 +16,7 @@ use common::{
 	},
 	traits::{
 		accessors::get::{GetMut, GetRef},
-		handles_equipment::{Combo, CompatibleItems, GetCombosOrdered, GetFollowupKeys},
+		handles_equipment::{Combo, CompatibleItems, FollowupKeys, GetCombosOrdered},
 		insert::TryInsert,
 		iterate::Iterate,
 	},
@@ -199,7 +199,7 @@ impl GetCombosOrdered<Skill> for ComboNode {
 	}
 }
 
-impl GetFollowupKeys for ComboNode {
+impl FollowupKeys for ComboNode {
 	type TKey = SlotKey;
 
 	fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>

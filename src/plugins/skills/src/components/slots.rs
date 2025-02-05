@@ -8,7 +8,7 @@ use common::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,
 		handles_assets_for_children::{ChildAssetComponent, ChildAssetDefinition, ChildName},
-		handles_equipment::{KeyOutOfBounds, SingleAccess, UpdateConfig},
+		handles_equipment::{ItemAsset, KeyOutOfBounds, WriteItem},
 	},
 };
 use std::{collections::HashMap, fmt::Debug};
@@ -28,11 +28,11 @@ impl Default for Slots {
 	}
 }
 
-impl SingleAccess for Slots {
+impl ItemAsset for Slots {
 	type TKey = SlotKey;
 	type TItem = Item;
 
-	fn single_access(
+	fn item_asset(
 		&self,
 		key: &Self::TKey,
 	) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
@@ -44,8 +44,8 @@ impl SingleAccess for Slots {
 	}
 }
 
-impl UpdateConfig<SlotKey, Option<Handle<Item>>> for Slots {
-	fn update_config(&mut self, key: &SlotKey, value: Option<Handle<Item>>) {
+impl WriteItem<SlotKey, Option<Handle<Item>>> for Slots {
+	fn write_item(&mut self, key: &SlotKey, value: Option<Handle<Item>>) {
 		self.0.insert(*key, value);
 	}
 }

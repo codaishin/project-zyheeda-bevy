@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use common::{
 	components::{Collection, Swap},
 	tools::inventory_key::InventoryKey,
-	traits::{handles_equipment::ContinuousAccessMut, try_remove_from::TryRemoveFrom},
+	traits::{handles_equipment::ItemAssetBufferMut, try_remove_from::TryRemoveFrom},
 };
 use std::cmp::max;
 
@@ -11,7 +11,7 @@ impl<T> SwapInventoryItems for T {}
 pub trait SwapInventoryItems {
 	fn swap_items(mut commands: Commands, mut items_to_swap: Query<ItemsToSwap<Self>>)
 	where
-		Self: Component + ContinuousAccessMut + Sized,
+		Self: Component + ItemAssetBufferMut + Sized,
 		Self::TItemHandle: Clone,
 	{
 		for (agent, mut inventory, swaps) in &mut items_to_swap {
@@ -32,10 +32,10 @@ type ItemsToSwap<'a, TInventory> = (
 
 fn do_swap<TInventory>(inventory: &mut Mut<TInventory>, swap: &Swap<InventoryKey, InventoryKey>)
 where
-	TInventory: Component + ContinuousAccessMut,
+	TInventory: Component + ItemAssetBufferMut,
 	TInventory::TItemHandle: Clone,
 {
-	let items = inventory.continuous_access_mut();
+	let items = inventory.buffer_mut();
 	fill_to(items, max(swap.0 .0, swap.1 .0));
 	items.swap(swap.0 .0, swap.1 .0);
 }
@@ -62,10 +62,10 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Inventory(Vec<Option<_Item>>);
 
-	impl ContinuousAccessMut for _Inventory {
+	impl ItemAssetBufferMut for _Inventory {
 		type TItemHandle = _Item;
 
-		fn continuous_access_mut(&mut self) -> &mut Vec<Option<Self::TItemHandle>> {
+		fn buffer_mut(&mut self) -> &mut Vec<Option<Self::TItemHandle>> {
 			&mut self.0
 		}
 	}

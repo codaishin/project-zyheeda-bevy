@@ -8,7 +8,7 @@ use common::{
 	tools::{item_type::ItemType, slot_key::SlotKey},
 	traits::{
 		accessors::get::{GetField, GetFieldRef, Getter, GetterRef},
-		handles_equipment::{CompatibleItems, SingleAccess},
+		handles_equipment::{CompatibleItems, ItemAsset},
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
 		try_remove_from::TryRemoveFrom,
@@ -26,7 +26,7 @@ pub(crate) trait DropdownSkillSelectInsert {
 		skills: Res<Assets<TSkill>>,
 	) where
 		Self: ThreadSafe + Sized,
-		TSlots: SingleAccess<TKey = SlotKey> + Component,
+		TSlots: ItemAsset<TKey = SlotKey> + Component,
 		TSlots::TItem: Getter<ItemType>,
 		TPlayer: Component,
 		TSkill: Asset + PartialEq + Clone + GetterRef<CompatibleItems>,
@@ -51,14 +51,14 @@ fn compatible_skills<TSlots, TLayout, TSkill>(
 	skills: &Assets<TSkill>,
 ) -> Option<Vec<SkillButton<DropdownItem<TLayout>, TSkill>>>
 where
-	TSlots: SingleAccess<TKey = SlotKey>,
+	TSlots: ItemAsset<TKey = SlotKey>,
 	TSlots::TItem: Getter<ItemType>,
 	TLayout: ThreadSafe,
 	TSkill: Asset + PartialEq + Clone + GetterRef<CompatibleItems>,
 {
 	let key = command.key_path.last()?;
 	let item = slots
-		.single_access(key)
+		.item_asset(key)
 		.ok()
 		.and_then(|handle| handle.as_ref())
 		.and_then(|handle| items.get(handle))?;
@@ -134,11 +134,11 @@ mod tests {
 	#[derive(Component)]
 	struct _Slots(HashMap<SlotKey, Option<Handle<_Item>>>);
 
-	impl SingleAccess for _Slots {
+	impl ItemAsset for _Slots {
 		type TKey = SlotKey;
 		type TItem = _Item;
 
-		fn single_access(
+		fn item_asset(
 			&self,
 			key: &Self::TKey,
 		) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {

@@ -4,7 +4,7 @@ use common::{
 	tools::inventory_key::InventoryKey,
 	traits::{
 		accessors::get::{GetMut, GetRef},
-		handles_equipment::{ContinuousAccessMut, KeyOutOfBounds, SingleAccess},
+		handles_equipment::{ItemAsset, ItemAssetBufferMut, KeyOutOfBounds},
 	},
 };
 
@@ -17,19 +17,19 @@ impl Inventory {
 	}
 }
 
-impl ContinuousAccessMut for Inventory {
+impl ItemAssetBufferMut for Inventory {
 	type TItemHandle = Handle<Item>;
 
-	fn continuous_access_mut(&mut self) -> &mut Vec<Option<Self::TItemHandle>> {
+	fn buffer_mut(&mut self) -> &mut Vec<Option<Self::TItemHandle>> {
 		&mut self.0
 	}
 }
 
-impl SingleAccess for Inventory {
+impl ItemAsset for Inventory {
 	type TKey = InventoryKey;
 	type TItem = Item;
 
-	fn single_access(
+	fn item_asset(
 		&self,
 		InventoryKey(index): &Self::TKey,
 	) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {

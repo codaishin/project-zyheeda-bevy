@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use common::{
 	tools::slot_key::SlotKey,
 	traits::{
-		handles_equipment::GetFollowupKeys,
+		handles_equipment::FollowupKeys,
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
 		try_remove_from::TryRemoveFrom,
@@ -19,7 +19,7 @@ pub(crate) fn select_successor_key<TAgent, TCombos>(
 	agents: Query<&TCombos, With<TAgent>>,
 	dropdown_commands: Query<(Entity, &KeySelectDropdownCommand<AppendSkillCommand>)>,
 ) where
-	TCombos: Component + GetFollowupKeys<TKey = SlotKey>,
+	TCombos: Component + FollowupKeys<TKey = SlotKey>,
 	TAgent: Component,
 	KeySelectDropdownCommand<AppendSkillCommand>:
 		ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
@@ -32,7 +32,7 @@ fn _select_successor_key<TAgent, TCombos, TExtra>(
 	agents: Query<&TCombos, With<TAgent>>,
 	dropdown_commands: Query<(Entity, &KeySelectDropdownCommand<TExtra>)>,
 ) where
-	TCombos: Component + GetFollowupKeys<TKey = SlotKey> + Sized,
+	TCombos: Component + FollowupKeys<TKey = SlotKey> + Sized,
 	TAgent: Component,
 	KeySelectDropdownCommand<TExtra>: ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
 {
@@ -95,7 +95,7 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetFollowupKeys for _Combos {
+	impl FollowupKeys for _Combos {
 		type TKey = SlotKey;
 
 		fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>

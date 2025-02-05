@@ -5,7 +5,7 @@ use common::traits::{
 		get::{GetField, Getter},
 		set::Setter,
 	},
-	handles_equipment::{ItemName, SingleAccess},
+	handles_equipment::{ItemAsset, ItemName},
 };
 use std::fmt::Debug;
 
@@ -18,7 +18,7 @@ pub trait SetContainerPanels {
 		mut panels: Query<(Entity, &KeyedPanel<TKey>, &mut TPanel)>,
 		items: Res<Assets<Self::TItem>>,
 	) where
-		Self: Component + SingleAccess<TKey = TKey> + Sized,
+		Self: Component + ItemAsset<TKey = TKey> + Sized,
 		Self::TItem: Asset + Getter<ItemName>,
 		TPanel: Component + Setter<PanelState>,
 		TKey: Debug + Copy + Send + Sync + 'static,
@@ -42,11 +42,11 @@ fn get_item<'a, TContainer, TKey>(
 	items: &'a Assets<TContainer::TItem>,
 ) -> Option<&'a TContainer::TItem>
 where
-	TContainer: SingleAccess<TKey = TKey>,
+	TContainer: ItemAsset<TKey = TKey>,
 	TContainer::TItem: Asset,
 {
 	container
-		.single_access(key)
+		.item_asset(key)
 		.ok()
 		.and_then(|handle| handle.as_ref())
 		.and_then(|handle| items.get(handle))
@@ -85,11 +85,11 @@ mod tests {
 	#[derive(Component)]
 	struct _Container(HashMap<_Key, Option<Handle<_Item>>>);
 
-	impl SingleAccess for _Container {
+	impl ItemAsset for _Container {
 		type TKey = _Key;
 		type TItem = _Item;
 
-		fn single_access(
+		fn item_asset(
 			&self,
 			key: &Self::TKey,
 		) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
