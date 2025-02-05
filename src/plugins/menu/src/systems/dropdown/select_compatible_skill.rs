@@ -16,9 +16,9 @@ use common::{
 };
 use skills::skills::Skill;
 
-impl<T> InsertSkillSelectDropdown for T {}
+impl<T> SelectCompatibleSkill for T {}
 
-pub(crate) trait InsertSkillSelectDropdown {
+pub(crate) trait SelectCompatibleSkill {
 	fn select_compatible_skill<TPlayer, TLayout>(
 		mut commands: Commands,
 		dropdown_commands: Query<(Entity, &SkillSelectDropdownInsertCommand<SlotKey, TLayout>)>,

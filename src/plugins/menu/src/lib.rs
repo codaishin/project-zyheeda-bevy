@@ -12,8 +12,8 @@ mod debug;
 use crate::systems::{
 	combos::visualize_invalid_skill::VisualizeInvalidSkill,
 	dropdown::{
-		insert_key_select_dropdown::InsertKeySelectDropdown,
-		select_compatible_skill::InsertSkillSelectDropdown,
+		select_compatible_skill::SelectCompatibleSkill,
+		select_successor_key::SelectSuccessorKey,
 	},
 	items::swap::inventory_items::SwapInventoryItems,
 	update_panels::container_states::SetContainerPanels,
@@ -280,10 +280,7 @@ where
 					TEquipment::TSlots::visualize_invalid_skill::<TPlayers::TPlayer, Unusable>,
 					TEquipment::TSlots::select_compatible_skill::<TPlayers::TPlayer, Vertical>,
 					TEquipment::TSlots::select_compatible_skill::<TPlayers::TPlayer, Horizontal>,
-					TEquipment::TCombos::insert_key_select_dropdown::<
-						TPlayers::TPlayer,
-						AppendSkillCommand,
-					>,
+					TEquipment::TCombos::select_successor_key::<TPlayers::TPlayer>,
 					update_combos_view_delete_skill::<TPlayers::TPlayer, Combos>,
 					update_combo_skills::<TPlayers::TPlayer, Combos, Vertical>,
 					update_combo_skills::<TPlayers::TPlayer, Combos, Horizontal>,

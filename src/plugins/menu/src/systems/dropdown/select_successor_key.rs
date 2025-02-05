@@ -1,6 +1,7 @@
 use crate::{
 	components::key_select_dropdown_command::{ExcludeKeys, KeySelectDropdownInsertCommand},
 	traits::GetComponent,
+	AppendSkillCommand,
 };
 use bevy::prelude::*;
 use common::{
@@ -13,35 +14,47 @@ use common::{
 	},
 };
 
-impl<T> InsertKeySelectDropdown for T {}
+impl<T> SelectSuccessorKey for T {}
 
-pub(crate) trait InsertKeySelectDropdown {
-	fn insert_key_select_dropdown<TAgent, TExtra>(
-		mut commands: Commands,
+pub(crate) trait SelectSuccessorKey {
+	fn select_successor_key<TAgent>(
+		commands: Commands,
 		agents: Query<&Self, With<TAgent>>,
-		insert_commands: Query<(Entity, &InsertCommand<TExtra>)>,
+		insert_commands: Query<(Entity, &InsertCommand<AppendSkillCommand>)>,
 	) where
 		Self: Component + GetFollowupKeys<TKey = SlotKey> + Sized,
 		TAgent: Component,
-		InsertCommand<TExtra>: ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
+		InsertCommand<AppendSkillCommand>: ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
 	{
-		let Ok(combos) = agents.get_single() else {
-			return;
+		select_compatible_key(commands, agents, insert_commands);
+	}
+}
+
+fn select_compatible_key<TAgent, TCombos, TExtra>(
+	mut commands: Commands,
+	agents: Query<&TCombos, With<TAgent>>,
+	insert_commands: Query<(Entity, &InsertCommand<TExtra>)>,
+) where
+	TCombos: Component + GetFollowupKeys<TKey = SlotKey> + Sized,
+	TAgent: Component,
+	InsertCommand<TExtra>: ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
+{
+	let Ok(combos) = agents.get_single() else {
+		return;
+	};
+
+	for (entity, insert_command) in &insert_commands {
+		let Some(followup_keys) = combos.followup_keys(insert_command.key_path.clone()) else {
+			despawn(&mut commands, entity);
+			continue;
+		};
+		let Some(component) = insert_command.component(ExcludeKeys(followup_keys)) else {
+			despawn(&mut commands, entity);
+			continue;
 		};
 
-		for (entity, insert_command) in &insert_commands {
-			let Some(followup_keys) = combos.followup_keys(insert_command.key_path.clone()) else {
-				despawn(&mut commands, entity);
-				continue;
-			};
-			let Some(component) = insert_command.component(ExcludeKeys(followup_keys)) else {
-				despawn(&mut commands, entity);
-				continue;
-			};
-
-			commands.try_insert_on(entity, component);
-			commands.try_remove_from::<InsertCommand<TExtra>>(entity);
-		}
+		commands.try_insert_on(entity, component);
+		commands.try_remove_from::<InsertCommand<TExtra>>(entity);
 	}
 }
 
@@ -121,10 +134,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(
-			Update,
-			_Combos::insert_key_select_dropdown::<_Agent, _Extra>,
-		);
+		app.add_systems(Update, select_compatible_key::<_Agent, _Combos, _Extra>);
 
 		app
 	}
