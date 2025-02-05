@@ -32,10 +32,7 @@ impl ItemAsset for Slots {
 	type TKey = SlotKey;
 	type TItem = Item;
 
-	fn item_asset(
-		&self,
-		key: &Self::TKey,
-	) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
+	fn item_asset(&self, key: &Self::TKey) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
 		let Some(item) = self.0.get(key) else {
 			return Err(KeyOutOfBounds);
 		};

@@ -42,14 +42,8 @@ where
 	TSlots: ItemAsset<TKey = SlotKey> + WriteItem<SlotKey, Option<Handle<TSlots::TItem>>>,
 {
 	let slot_results = [
-		slots
-			.item_asset(&swap.0)
-			.cloned()
-			.map_err(no_slot(swap.0)),
-		slots
-			.item_asset(&swap.1)
-			.cloned()
-			.map_err(no_slot(swap.1)),
+		slots.item_asset(&swap.0).cloned().map_err(no_slot(swap.0)),
+		slots.item_asset(&swap.1).cloned().map_err(no_slot(swap.1)),
 	];
 
 	let [Ok(slot0), Ok(slot1)] = slot_results else {
