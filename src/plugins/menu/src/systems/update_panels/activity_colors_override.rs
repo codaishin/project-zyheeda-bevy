@@ -2,41 +2,34 @@ use crate::{
 	components::ColorOverride,
 	traits::colors::{HasActiveColor, HasPanelColors, HasQueuedColor},
 };
-use bevy::{
-	color::Color,
-	ecs::{
-		component::Component,
-		entity::Entity,
-		query::{QuerySingleError, With},
-		system::{Commands, EntityCommands, Query, Res, Resource},
-		world::Mut,
-	},
-	input::keyboard::KeyCode,
-	state::state::State,
-	ui::BackgroundColor,
-};
+use bevy::{ecs::query::QuerySingleError, prelude::*};
 use common::{
 	states::mouse_context::MouseContext,
 	tools::slot_key::SlotKey,
-	traits::{accessors::get::GetterRef, iterate::Iterate, map_value::TryMapBackwards},
+	traits::{
+		accessors::get::{GetField, Getter, GetterRef},
+		handles_equipment::IterateQueue,
+		iterate::Iterate,
+		map_value::TryMapBackwards,
+	},
 };
-use skills::skills::QueuedSkill;
 
-pub fn panel_activity_colors_override<
-	TPlayer: Component,
-	TMap: Resource + TryMapBackwards<KeyCode, SlotKey>,
-	TQueue: Component + Iterate<QueuedSkill>,
-	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetterRef<SlotKey> + Component,
->(
+pub fn panel_activity_colors_override<TPlayer, TMap, TQueue, TPanel>(
 	mut commands: Commands,
 	mut buttons: Query<(Entity, &mut BackgroundColor, &TPanel)>,
 	player: Query<&TQueue, With<TPlayer>>,
 	key_map: Res<TMap>,
 	mouse_context: Res<State<MouseContext>>,
-) {
+) where
+	TPlayer: Component,
+	TMap: Resource + TryMapBackwards<KeyCode, SlotKey>,
+	TQueue: Component + IterateQueue,
+	TQueue::TItem: Getter<SlotKey>,
+	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetterRef<SlotKey> + Component,
+{
 	let player_slots = &player
 		.get_single()
-		.map(|queue| queue.iterate().map(|s| s.slot_key).collect::<Vec<_>>());
+		.map(|queue| queue.iterate().map(SlotKey::get_field).collect::<Vec<_>>());
 	let primed_slots = match mouse_context.get() {
 		MouseContext::Primed(key) => key_map.try_map_backwards(*key),
 		_ => None,
@@ -93,19 +86,8 @@ fn update_color_override(
 mod tests {
 	use super::*;
 	use crate::traits::colors::PanelColors;
-	use bevy::{
-		app::{App, Update},
-		color::Color,
-		ecs::bundle::Bundle,
-		input::keyboard::KeyCode,
-		state::{
-			app::{AppExtStates, StatesPlugin},
-			state::NextState,
-		},
-		utils::default,
-	};
+	use bevy::state::app::StatesPlugin;
 	use common::tools::slot_key::Side;
-	use skills::skills::QueuedSkill;
 
 	#[derive(Component)]
 	struct _Player;
@@ -137,16 +119,23 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, Default)]
-	struct _Queue {
-		queued: Vec<QueuedSkill>,
+	struct _QueuedSkill(SlotKey);
+
+	impl Getter<SlotKey> for _QueuedSkill {
+		fn get(&self) -> SlotKey {
+			self.0
+		}
 	}
 
-	impl Iterate<QueuedSkill> for _Queue {
-		fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a QueuedSkill>
-		where
-			QueuedSkill: 'a,
-		{
+	#[derive(Component, Default)]
+	struct _Queue {
+		queued: Vec<_QueuedSkill>,
+	}
+
+	impl IterateQueue for _Queue {
+		type TItem = _QueuedSkill;
+
+		fn iterate(&self) -> impl Iterator<Item = &Self::TItem> {
 			self.queued.iterate()
 		}
 	}
@@ -192,10 +181,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Player,
 			_Queue {
-				queued: vec![QueuedSkill {
-					slot_key: SlotKey::BottomHand(Side::Right),
-					..default()
-				}],
+				queued: vec![_QueuedSkill(SlotKey::BottomHand(Side::Right))],
 			},
 		));
 
@@ -222,10 +208,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Player,
 			_Queue {
-				queued: vec![QueuedSkill {
-					slot_key: SlotKey::BottomHand(Side::Left),
-					..default()
-				}],
+				queued: vec![_QueuedSkill(SlotKey::BottomHand(Side::Left))],
 			},
 		));
 
@@ -303,14 +286,8 @@ mod tests {
 			_Player,
 			_Queue {
 				queued: vec![
-					QueuedSkill {
-						slot_key: SlotKey::BottomHand(Side::Left),
-						..default()
-					},
-					QueuedSkill {
-						slot_key: SlotKey::BottomHand(Side::Right),
-						..default()
-					},
+					_QueuedSkill(SlotKey::BottomHand(Side::Left)),
+					_QueuedSkill(SlotKey::BottomHand(Side::Right)),
 				],
 			},
 		));

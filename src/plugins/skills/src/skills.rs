@@ -106,6 +106,18 @@ pub struct QueuedSkill {
 	pub mode: Activation,
 }
 
+impl Getter<SlotKey> for QueuedSkill {
+	fn get(&self) -> SlotKey {
+		self.slot_key
+	}
+}
+
+impl GetterRef<Option<Handle<Image>>> for QueuedSkill {
+	fn get(&self) -> &Option<Handle<Image>> {
+		&self.skill.icon
+	}
+}
+
 impl Prime for QueuedSkill {
 	fn prime(&mut self) {
 		if self.mode != Activation::Waiting {

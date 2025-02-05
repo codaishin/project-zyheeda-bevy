@@ -258,4 +258,7 @@ impl<T> HandlesEquipment for SkillsPlugin<T> {
 	type TSlots = Slots;
 	type TCombos = Combos;
 	type TSkill = Skill;
+	type TQueue = Queue;
+	type TQueuedSkill = QueuedSkill;
+	type TCombosTimeOut = CombosTimeOut;
 }

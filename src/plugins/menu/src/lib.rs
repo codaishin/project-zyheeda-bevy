@@ -48,14 +48,13 @@ use components::{
 	ui_overlay::UIOverlay,
 };
 use events::DropdownEvent;
-use skills::components::{combos::Combos, combos_time_out::CombosTimeOut, queue::Queue};
 use std::{marker::PhantomData, time::Duration};
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
 	combos::{
 		dropdown_skill_select_click::DropdownSkillSelectClick,
 		update_combo_keys::update_combo_keys,
-		update_combos_view::update_combos_view,
+		update_combos_view::UpdateComboOverview,
 		update_combos_view_delete_skill::update_combos_view_delete_skill,
 	},
 	conditions::{added::added, changed::changed, either::either},
@@ -232,14 +231,20 @@ where
 			.add_systems(
 				Update,
 				(
-					get_quickbar_icons::<TPlayers::TPlayer, Queue, Combos, CombosTimeOut>
+					get_quickbar_icons::<
+						TPlayers::TPlayer,
+						TEquipment::TSlots,
+						TEquipment::TQueue,
+						TEquipment::TCombos,
+						TEquipment::TCombosTimeOut,
+					>
 						.pipe(set_quickbar_icons),
 					update_label_text::<SlotKeyMap, LanguageServer, QuickbarPanel>,
 					panel_colors::<QuickbarPanel>,
 					panel_activity_colors_override::<
 						TPlayers::TPlayer,
 						SlotKeyMap,
-						Queue,
+						TEquipment::TQueue,
 						QuickbarPanel,
 					>,
 				)
@@ -265,15 +270,14 @@ where
 			.add_tooltip::<SkillDescription>()
 			.add_systems(
 				Update,
-				update_combos_view::<
+				ComboOverview::<TEquipment::TSkill>::update_combos_overview::<
 					TPlayers::TPlayer,
 					TEquipment::TCombos,
-					ComboOverview<TEquipment::TSkill>,
 					TEquipment::TSkill,
 				>
 					.run_if(
 						either(added::<ComboOverview<TEquipment::TSkill>>)
-							.or(changed::<TPlayers::TPlayer, Combos>),
+							.or(changed::<TPlayers::TPlayer, TEquipment::TCombos>),
 					)
 					.run_if(in_state(combo_overview)),
 			)

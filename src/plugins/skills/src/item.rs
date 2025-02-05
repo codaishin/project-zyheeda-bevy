@@ -5,7 +5,10 @@ use bevy::prelude::*;
 use common::{
 	components::essence::Essence,
 	tools::item_type::ItemType,
-	traits::{accessors::get::Getter, handles_equipment::ItemName},
+	traits::{
+		accessors::get::{Getter, GetterRef},
+		handles_equipment::ItemName,
+	},
 };
 
 #[derive(Debug, PartialEq, Default, Clone, Asset, TypePath)]
@@ -35,5 +38,11 @@ impl Getter<ItemName> for Item {
 impl Getter<ItemType> for Item {
 	fn get(&self) -> ItemType {
 		self.item_type
+	}
+}
+
+impl GetterRef<Option<Handle<Skill>>> for Item {
+	fn get(&self) -> &Option<Handle<Skill>> {
+		&self.skill
 	}
 }

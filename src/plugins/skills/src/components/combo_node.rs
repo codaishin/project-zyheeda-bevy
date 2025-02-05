@@ -5,7 +5,7 @@ use std::collections::VecDeque;
 
 use crate::{
 	skills::Skill,
-	traits::{GetNode, GetNodeMut, PeekNext, RootKeys},
+	traits::{peek_next_recursive::PeekNextRecursive, GetNode, GetNodeMut, RootKeys},
 };
 use bevy::ecs::component::Component;
 use common::{
@@ -168,8 +168,16 @@ impl<TKey: Iterate<SlotKey>> TryInsert<TKey, Skill> for ComboNode {
 	}
 }
 
-impl PeekNext<(Skill, ComboNode)> for ComboNode {
-	fn peek_next(&self, trigger: &SlotKey, item_type: &ItemType) -> Option<(Skill, ComboNode)> {
+impl PeekNextRecursive for ComboNode {
+	type TNext = Skill;
+
+	type TRecursiveNode = Self;
+
+	fn peek_next_recursive(
+		&self,
+		trigger: &SlotKey,
+		item_type: &ItemType,
+	) -> Option<(Self::TNext, Self::TRecursiveNode)> {
 		let ComboNode(tree) = self;
 		let (skill, combo) = tree.get(trigger)?;
 		let CompatibleItems(is_usable_with) = &skill.compatible_items;
@@ -286,7 +294,7 @@ mod tests {
 			),
 		)]));
 
-		let next = node.peek_next(&SlotKey::BottomHand(Side::Right), &ItemType::Pistol);
+		let next = node.peek_next_recursive(&SlotKey::BottomHand(Side::Right), &ItemType::Pistol);
 
 		assert_eq!(
 			Some((
@@ -333,7 +341,7 @@ mod tests {
 			),
 		)]));
 
-		let next = node.peek_next(&SlotKey::BottomHand(Side::Right), &ItemType::Pistol);
+		let next = node.peek_next_recursive(&SlotKey::BottomHand(Side::Right), &ItemType::Pistol);
 
 		assert_eq!(None as Option<(Skill, ComboNode)>, next)
 	}

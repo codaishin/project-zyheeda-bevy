@@ -1,6 +1,6 @@
-use crate::traits::{Flush, IsTimedOut};
+use crate::traits::Flush;
 use bevy::ecs::component::Component;
-use common::traits::update_cumulative::CumulativeUpdate;
+use common::traits::{handles_equipment::IsTimedOut, update_cumulative::CumulativeUpdate};
 use std::time::Duration;
 
 #[derive(Component)]

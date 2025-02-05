@@ -3,13 +3,21 @@ use std::collections::VecDeque;
 use super::combo_node::ComboNode;
 use crate::{
 	skills::Skill,
-	traits::{GetNode, GetNodeMut, Insert, PeekNext, ReKey, RootKeys, SetNextCombo},
+	traits::{
+		peek_next_recursive::PeekNextRecursive,
+		GetNode,
+		GetNodeMut,
+		Insert,
+		ReKey,
+		RootKeys,
+		SetNextCombo,
+	},
 };
 use bevy::ecs::component::Component;
 use common::{
 	tools::{item_type::ItemType, slot_key::SlotKey},
 	traits::{
-		handles_equipment::{Combo, GetCombosOrdered, GetFollowupKeys, UpdateConfig},
+		handles_equipment::{Combo, GetCombosOrdered, GetFollowupKeys, PeekNext, UpdateConfig},
 		iterate::Iterate,
 	},
 };
@@ -50,17 +58,36 @@ impl<TComboNode> SetNextCombo<Option<TComboNode>> for Combos<TComboNode> {
 	}
 }
 
-impl<TComboNode> PeekNext<(Skill, TComboNode)> for Combos<TComboNode>
+impl<TComboNode> PeekNextRecursive for Combos<TComboNode>
 where
-	TComboNode: PeekNext<(Skill, TComboNode)>,
+	TComboNode: PeekNextRecursive<TNext = Skill, TRecursiveNode = TComboNode>,
 {
-	fn peek_next(&self, trigger: &SlotKey, item_type: &ItemType) -> Option<(Skill, TComboNode)> {
+	type TNext = Skill;
+	type TRecursiveNode = TComboNode;
+
+	fn peek_next_recursive(
+		&self,
+		trigger: &SlotKey,
+		item_type: &ItemType,
+	) -> Option<(Self::TNext, Self::TRecursiveNode)> {
 		let Combos { config, current } = self;
 
 		current
 			.as_ref()
-			.and_then(|current| current.peek_next(trigger, item_type))
-			.or_else(|| config.peek_next(trigger, item_type))
+			.and_then(|current| current.peek_next_recursive(trigger, item_type))
+			.or_else(|| config.peek_next_recursive(trigger, item_type))
+	}
+}
+
+impl<TComboNode> PeekNext for Combos<TComboNode>
+where
+	Self: PeekNextRecursive<TNext = Skill, TRecursiveNode = TComboNode>,
+{
+	type TNext = Skill;
+
+	fn peek_next(&self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill> {
+		self.peek_next_recursive(trigger, item_type)
+			.map(|(skill, _)| skill)
 	}
 }
 
@@ -153,8 +180,11 @@ mod tests {
 
 	mock! {
 		_Next {}
-		impl PeekNext<(Skill, Self)> for _Next {
-			fn peek_next(&self, _trigger: &SlotKey, _item_type: &ItemType) -> Option<(Skill, Self)>;
+		impl PeekNextRecursive for _Next {
+			type TNext = Skill;
+			type TRecursiveNode = Self;
+
+			fn peek_next_recursive(&self, _trigger: &SlotKey, _item_type: &ItemType) -> Option<(Skill, Self)>;
 		}
 	}
 
@@ -165,19 +195,19 @@ mod tests {
 		let item_type = ItemType::ForceEssence;
 		let trigger = SlotKey::BottomHand(Side::Left);
 		let combos = Combos::new(Mock_Next::new_mock(|mock| {
-			mock.expect_peek_next()
+			mock.expect_peek_next_recursive()
 				.times(1)
 				.with(eq(trigger), eq(item_type))
 				.returning(|_, _| None);
 		}));
 
-		combos.peek_next(&trigger, &item_type);
+		combos.peek_next_recursive(&trigger, &item_type);
 	}
 
 	#[test]
 	fn return_skill() {
 		let combos = Combos::new(Mock_Next::new_mock(|mock| {
-			mock.expect_peek_next().returning(|_, _| {
+			mock.expect_peek_next_recursive().returning(|_, _| {
 				Some((
 					Skill {
 						name: "my skill".to_owned(),
@@ -189,7 +219,7 @@ mod tests {
 		}));
 
 		let skill = combos
-			.peek_next(&SlotKey::default(), &ItemType::default())
+			.peek_next_recursive(&SlotKey::default(), &ItemType::default())
 			.map(|(skill, _)| skill);
 
 		assert_eq!(
@@ -204,10 +234,12 @@ mod tests {
 	#[test]
 	fn use_combo_used_in_set_next_combo() {
 		let first = Mock_Next::new_mock(|mock| {
-			mock.expect_peek_next().never().returning(|_, _| None);
+			mock.expect_peek_next_recursive()
+				.never()
+				.returning(|_, _| None);
 		});
 		let next = Mock_Next::new_mock(|mock| {
-			mock.expect_peek_next()
+			mock.expect_peek_next_recursive()
 				.with(eq(SlotKey::TopHand(Side::Left)), eq(ItemType::Pistol))
 				.times(1)
 				.returning(|_, _| Some((Skill::default(), Mock_Next::default())));
@@ -215,21 +247,23 @@ mod tests {
 		let mut combos = Combos::new(first);
 		combos.set_next_combo(Some(next));
 
-		combos.peek_next(&SlotKey::TopHand(Side::Left), &ItemType::Pistol);
+		combos.peek_next_recursive(&SlotKey::TopHand(Side::Left), &ItemType::Pistol);
 	}
 
 	#[test]
 	fn use_original_when_next_combo_returns_none() {
 		let first = Mock_Next::new_mock(|mock| {
-			mock.expect_peek_next().times(1).returning(|_, _| None);
+			mock.expect_peek_next_recursive()
+				.times(1)
+				.returning(|_, _| None);
 		});
 		let next = Mock_Next::new_mock(|mock| {
-			mock.expect_peek_next().returning(|_, _| None);
+			mock.expect_peek_next_recursive().returning(|_, _| None);
 		});
 		let mut combos = Combos::new(first);
 		combos.set_next_combo(Some(next));
 
-		combos.peek_next(&SlotKey::default(), &ItemType::default());
+		combos.peek_next_recursive(&SlotKey::default(), &ItemType::default());
 	}
 
 	struct _ComboNode<'a>(Vec<Combo<'a, Skill>>);

@@ -1,7 +1,7 @@
 pub(crate) mod advance_combo;
 pub(crate) mod bevy_input;
 pub(crate) mod flush;
-pub(crate) mod peek_next;
+pub(crate) mod peek_next_recursive;
 pub(crate) mod skill_builder;
 pub(crate) mod skill_state;
 pub(crate) mod spawn_skill_behavior;
@@ -53,14 +53,6 @@ pub(crate) trait GetActiveSkill<TSkillState: Clone> {
 		&mut self,
 	) -> Option<impl GetSkillBehavior + GetAnimationStrategy + StateUpdate<TSkillState>>;
 	fn clear_active(&mut self);
-}
-
-pub trait IsTimedOut {
-	fn is_timed_out(&self) -> bool;
-}
-
-pub trait PeekNext<TNext> {
-	fn peek_next(&self, trigger: &SlotKey, item_type: &ItemType) -> Option<TNext>;
 }
 
 pub(crate) trait AdvanceCombo {

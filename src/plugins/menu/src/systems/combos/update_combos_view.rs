@@ -2,24 +2,28 @@ use crate::traits::{combo_tree_layout::GetComboTreeLayout, UpdateCombosView};
 use bevy::prelude::*;
 use common::traits::thread_safe::ThreadSafe;
 
-pub(crate) fn update_combos_view<TAgent, TCombos, TComboOverview, TSkill>(
-	agents: Query<&TCombos, With<TAgent>>,
-	mut combo_overviews: Query<&mut TComboOverview>,
-) where
-	TAgent: Component,
-	TCombos: Component + GetComboTreeLayout<TSkill>,
-	TComboOverview: Component + UpdateCombosView<TSkill>,
-	TSkill: ThreadSafe,
-{
-	let Ok(combos) = agents.get_single() else {
-		return;
-	};
+impl<T> UpdateComboOverview for T {}
 
-	let Ok(mut combo_overview) = combo_overviews.get_single_mut() else {
-		return;
-	};
+pub(crate) trait UpdateComboOverview {
+	fn update_combos_overview<TAgent, TCombos, TSkill>(
+		agents: Query<&TCombos, With<TAgent>>,
+		mut combo_overviews: Query<&mut Self>,
+	) where
+		Self: Component + UpdateCombosView<TSkill> + Sized,
+		TAgent: Component,
+		TCombos: Component + GetComboTreeLayout<TSkill>,
+		TSkill: ThreadSafe,
+	{
+		let Ok(combos) = agents.get_single() else {
+			return;
+		};
 
-	combo_overview.update_combos_view(combos.combo_tree_layout());
+		let Ok(mut combo_overview) = combo_overviews.get_single_mut() else {
+			return;
+		};
+
+		combo_overview.update_combos_view(combos.combo_tree_layout());
+	}
 }
 
 #[cfg(test)]
@@ -61,7 +65,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			update_combos_view::<_Agent, _Combos, _ComboOverview, _Skill>,
+			_ComboOverview::update_combos_overview::<_Agent, _Combos, _Skill>,
 		);
 
 		app

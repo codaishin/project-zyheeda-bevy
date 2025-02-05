@@ -7,7 +7,10 @@ use bevy::prelude::*;
 use std::collections::{HashSet, VecDeque};
 
 pub trait HandlesEquipment {
-	type TItem: Asset + Getter<ItemName> + Getter<ItemType>;
+	type TItem: Asset
+		+ Getter<ItemName>
+		+ Getter<ItemType>
+		+ GetterRef<Option<Handle<Self::TSkill>>>;
 	type TInventory: Component
 		+ ContinuousAccessMut<TItemHandle = Handle<Self::TItem>>
 		+ SingleAccess<TItem = Self::TItem, TKey = InventoryKey>;
@@ -22,11 +25,18 @@ pub trait HandlesEquipment {
 		+ PartialEq
 		+ ThreadSafe;
 
+	type TQueuedSkill: Getter<SlotKey> + GetterRef<Option<Handle<Image>>>;
+
+	type TCombosTimeOut: Component + IsTimedOut;
+
 	type TCombos: Component
 		+ GetFollowupKeys<TKey = SlotKey>
 		+ GetCombosOrdered<Self::TSkill>
 		+ UpdateConfig<Vec<SlotKey>, Option<Self::TSkill>>
-		+ UpdateConfig<Vec<SlotKey>, SlotKey>;
+		+ UpdateConfig<Vec<SlotKey>, SlotKey>
+		+ PeekNext<TNext = Self::TSkill>;
+
+	type TQueue: Component + IterateQueue<TItem = Self::TQueuedSkill>;
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
@@ -69,4 +79,20 @@ pub trait GetCombosOrdered<TSkill> {
 	fn combos_ordered<'a>(&'a self) -> impl Iterator<Item = Combo<'a, TSkill>>
 	where
 		TSkill: 'a;
+}
+
+pub trait PeekNext {
+	type TNext;
+
+	fn peek_next(&self, trigger: &SlotKey, item_type: &ItemType) -> Option<Self::TNext>;
+}
+
+pub trait IterateQueue {
+	type TItem;
+
+	fn iterate(&self) -> impl Iterator<Item = &Self::TItem>;
+}
+
+pub trait IsTimedOut {
+	fn is_timed_out(&self) -> bool;
 }
