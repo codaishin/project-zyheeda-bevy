@@ -57,7 +57,7 @@ use systems::{
 		update_combos_view::UpdateComboOverview,
 		update_combos_view_delete_skill::update_combos_view_delete_skill,
 	},
-	conditions::{added::added, changed::changed, either::either},
+	conditions::{added::added, changed::changed},
 	dad::{drag::drag, drop::drop},
 	despawn::despawn,
 	dropdown::{
@@ -276,10 +276,11 @@ where
 					TEquipment::TSkill,
 				>
 					.run_if(
-						either(added::<ComboOverview<TEquipment::TSkill>>)
-							.or(changed::<TPlayers::TPlayer, TEquipment::TCombos>),
-					)
-					.run_if(in_state(combo_overview)),
+						in_state(combo_overview).and(
+							added::<ComboOverview<TEquipment::TSkill>>
+								.or(changed::<TPlayers::TPlayer, TEquipment::TCombos>),
+						),
+					),
 			)
 			.add_systems(
 				Update,
