@@ -5,24 +5,28 @@ use common::{
 	traits::{handles_equipment::UpdateConfig, thread_safe::ThreadSafe},
 };
 
-pub(crate) fn update_combo_skills<TAgent, TCombos, TLayout, TSkill>(
-	mut agents: Query<&mut TCombos, With<TAgent>>,
-	skill_selects: Query<(&SkillButton<DropdownItem<TLayout>, TSkill>, &Interaction)>,
-) where
-	TLayout: Sync + Send + 'static,
-	TAgent: Component,
-	TCombos: Component + UpdateConfig<Vec<SlotKey>, Option<TSkill>>,
-	TSkill: ThreadSafe + Clone,
-{
-	let Ok(mut combos) = agents.get_single_mut() else {
-		return;
-	};
+impl<T> DropdownSkillSelectClick for T {}
 
-	for (skill_descriptor, ..) in skill_selects.iter().filter(pressed) {
-		combos.update_config(
-			&skill_descriptor.key_path,
-			Some(skill_descriptor.skill.clone()),
-		);
+pub(crate) trait DropdownSkillSelectClick {
+	fn dropdown_skill_select_click<TAgent, TSkill, TCombos>(
+		mut agents: Query<&mut TCombos, With<TAgent>>,
+		skill_selects: Query<(&SkillButton<DropdownItem<Self>, TSkill>, &Interaction)>,
+	) where
+		Self: ThreadSafe + Sized,
+		TAgent: Component,
+		TCombos: Component + UpdateConfig<Vec<SlotKey>, Option<TSkill>>,
+		TSkill: ThreadSafe + Clone,
+	{
+		let Ok(mut combos) = agents.get_single_mut() else {
+			return;
+		};
+
+		for (skill_descriptor, ..) in skill_selects.iter().filter(pressed) {
+			combos.update_config(
+				&skill_descriptor.key_path,
+				Some(skill_descriptor.skill.clone()),
+			);
+		}
 	}
 }
 
@@ -73,7 +77,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			update_combo_skills::<_Agent, _Combos, _Layout, _Skill>,
+			_Layout::dropdown_skill_select_click::<_Agent, _Skill, _Combos>,
 		);
 
 		app

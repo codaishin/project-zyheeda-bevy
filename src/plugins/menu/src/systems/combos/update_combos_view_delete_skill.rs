@@ -2,7 +2,7 @@ use crate::components::DeleteSkill;
 use bevy::{prelude::*, ui::Interaction};
 use common::{tools::slot_key::SlotKey, traits::handles_equipment::UpdateConfig};
 
-pub(crate) fn update_combos_view_delete_skill<TAgent, TCombos, TSkill>(
+pub(crate) fn update_combos_view_delete_skill<TAgent, TSkill, TCombos>(
 	deletes: Query<(&DeleteSkill, &Interaction)>,
 	mut agents: Query<&mut TCombos, With<TAgent>>,
 ) where
@@ -63,7 +63,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			update_combos_view_delete_skill::<_Agent, _Combos, _Skill>,
+			update_combos_view_delete_skill::<_Agent, _Skill, _Combos>,
 		);
 
 		app

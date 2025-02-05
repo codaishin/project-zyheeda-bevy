@@ -15,20 +15,20 @@ use common::{
 	},
 };
 
-impl<T> SelectCompatibleSkill for T {}
+impl<T> DropdownSkillSelectInsert for T {}
 
-pub(crate) trait SelectCompatibleSkill {
-	fn select_compatible_skill<TPlayer, TLayout, TSkill>(
+pub(crate) trait DropdownSkillSelectInsert {
+	fn dropdown_skill_select_insert<TPlayer, TSkill, TSlots>(
 		mut commands: Commands,
-		dropdown_commands: Query<(Entity, &SkillSelectDropdownInsertCommand<SlotKey, TLayout>)>,
-		slots: Query<&Self, With<TPlayer>>,
-		items: Res<Assets<Self::TItem>>,
+		dropdown_commands: Query<(Entity, &SkillSelectDropdownInsertCommand<SlotKey, Self>)>,
+		slots: Query<&TSlots, With<TPlayer>>,
+		items: Res<Assets<TSlots::TItem>>,
 		skills: Res<Assets<TSkill>>,
 	) where
-		Self: SingleAccess<TKey = SlotKey> + Component + Sized,
-		Self::TItem: Getter<ItemType>,
+		Self: ThreadSafe + Sized,
+		TSlots: SingleAccess<TKey = SlotKey> + Component,
+		TSlots::TItem: Getter<ItemType>,
 		TPlayer: Component,
-		TLayout: ThreadSafe,
 		TSkill: Asset + PartialEq + Clone + GetterRef<CompatibleItems>,
 	{
 		let Ok(slots) = slots.get_single() else {
@@ -39,7 +39,7 @@ pub(crate) trait SelectCompatibleSkill {
 			if let Some(items) = compatible_skills(command, slots, &items, &skills) {
 				commands.try_insert_on(entity, Dropdown { items });
 			}
-			commands.try_remove_from::<SkillSelectDropdownInsertCommand<SlotKey, TLayout>>(entity);
+			commands.try_remove_from::<SkillSelectDropdownInsertCommand<SlotKey, Self>>(entity);
 		}
 	}
 }
@@ -168,7 +168,7 @@ mod tests {
 		app.insert_resource(skills);
 		app.add_systems(
 			Update,
-			_Slots::select_compatible_skill::<_Player, _Layout, _Skill>,
+			_Layout::dropdown_skill_select_insert::<_Player, _Skill, _Slots>,
 		);
 		app.world_mut().spawn((agent, equipment));
 

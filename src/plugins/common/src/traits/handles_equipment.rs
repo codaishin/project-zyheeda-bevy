@@ -25,7 +25,8 @@ pub trait HandlesEquipment {
 	type TCombos: Component
 		+ GetFollowupKeys<TKey = SlotKey>
 		+ GetCombosOrdered<Self::TSkill>
-		+ UpdateConfig<Vec<SlotKey>, Option<Self::TSkill>>;
+		+ UpdateConfig<Vec<SlotKey>, Option<Self::TSkill>>
+		+ UpdateConfig<Vec<SlotKey>, SlotKey>;
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]

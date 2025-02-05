@@ -16,26 +16,26 @@ impl<T> VisualizeInvalidSkill for T {}
 
 #[allow(clippy::type_complexity)]
 pub(crate) trait VisualizeInvalidSkill {
-	fn visualize_invalid_skill<TAgent, TVisualization, TSkill>(
+	fn visualize_invalid_skill<TAgent, TSkill, TSlots>(
 		mut commands: Commands,
 		descriptors: Query<
 			(Entity, &SkillButton<DropdownTrigger, TSkill>),
 			Added<SkillButton<DropdownTrigger, TSkill>>,
 		>,
-		agents: Query<&Self, With<TAgent>>,
-		items: Res<Assets<Self::TItem>>,
+		agents: Query<&TSlots, With<TAgent>>,
+		items: Res<Assets<TSlots::TItem>>,
 	) where
-		Self: Component + SingleAccess<TKey = SlotKey> + Sized,
-		Self::TItem: Asset + Getter<ItemType>,
+		Self: InsertContentOn + Sized,
+		TSlots: Component + SingleAccess<TKey = SlotKey>,
+		TSlots::TItem: Asset + Getter<ItemType>,
 		TAgent: Component,
-		TVisualization: InsertContentOn,
 		TSkill: ThreadSafe + GetterRef<CompatibleItems>,
 	{
 		let Ok(agent) = agents.get_single() else {
 			return;
 		};
 
-		let visualize = TVisualization::insert_content_on;
+		let visualize = Self::insert_content_on;
 
 		for descriptor in &descriptors {
 			visualize_unusable(&mut commands, descriptor, agent, &items, visualize);
@@ -152,7 +152,7 @@ mod tests {
 		app.world_mut().spawn((agent, slots));
 		app.add_systems(
 			Update,
-			_Slots::visualize_invalid_skill::<_Agent, _Visualization, _Skill>,
+			_Visualization::visualize_invalid_skill::<_Agent, _Skill, _Slots>,
 		);
 
 		app

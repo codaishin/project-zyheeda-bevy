@@ -1,5 +1,5 @@
 use crate::{
-	components::key_select_dropdown_command::{ExcludeKeys, KeySelectDropdownInsertCommand},
+	components::key_select_dropdown_command::{ExcludeKeys, KeySelectDropdownCommand},
 	traits::GetComponent,
 	AppendSkillCommand,
 };
@@ -14,36 +14,33 @@ use common::{
 	},
 };
 
-impl<T> SelectSuccessorKey for T {}
-
-pub(crate) trait SelectSuccessorKey {
-	fn select_successor_key<TAgent>(
-		commands: Commands,
-		agents: Query<&Self, With<TAgent>>,
-		insert_commands: Query<(Entity, &InsertCommand<AppendSkillCommand>)>,
-	) where
-		Self: Component + GetFollowupKeys<TKey = SlotKey> + Sized,
-		TAgent: Component,
-		InsertCommand<AppendSkillCommand>: ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
-	{
-		select_compatible_key(commands, agents, insert_commands);
-	}
+pub(crate) fn select_successor_key<TAgent, TCombos>(
+	commands: Commands,
+	agents: Query<&TCombos, With<TAgent>>,
+	dropdown_commands: Query<(Entity, &KeySelectDropdownCommand<AppendSkillCommand>)>,
+) where
+	TCombos: Component + GetFollowupKeys<TKey = SlotKey>,
+	TAgent: Component,
+	KeySelectDropdownCommand<AppendSkillCommand>:
+		ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
+{
+	_select_successor_key(commands, agents, dropdown_commands);
 }
 
-fn select_compatible_key<TAgent, TCombos, TExtra>(
+fn _select_successor_key<TAgent, TCombos, TExtra>(
 	mut commands: Commands,
 	agents: Query<&TCombos, With<TAgent>>,
-	insert_commands: Query<(Entity, &InsertCommand<TExtra>)>,
+	dropdown_commands: Query<(Entity, &KeySelectDropdownCommand<TExtra>)>,
 ) where
 	TCombos: Component + GetFollowupKeys<TKey = SlotKey> + Sized,
 	TAgent: Component,
-	InsertCommand<TExtra>: ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
+	KeySelectDropdownCommand<TExtra>: ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
 {
 	let Ok(combos) = agents.get_single() else {
 		return;
 	};
 
-	for (entity, insert_command) in &insert_commands {
+	for (entity, insert_command) in &dropdown_commands {
 		let Some(followup_keys) = combos.followup_keys(insert_command.key_path.clone()) else {
 			despawn(&mut commands, entity);
 			continue;
@@ -54,11 +51,9 @@ fn select_compatible_key<TAgent, TCombos, TExtra>(
 		};
 
 		commands.try_insert_on(entity, component);
-		commands.try_remove_from::<InsertCommand<TExtra>>(entity);
+		commands.try_remove_from::<KeySelectDropdownCommand<TExtra>>(entity);
 	}
 }
-
-type InsertCommand<TExtra> = KeySelectDropdownInsertCommand<TExtra>;
 
 fn despawn(commands: &mut Commands, entity: Entity) {
 	let Some(entity) = commands.get_entity(entity) else {
@@ -117,7 +112,7 @@ mod tests {
 		None,
 	}
 
-	impl GetComponent for InsertCommand<_Extra> {
+	impl GetComponent for KeySelectDropdownCommand<_Extra> {
 		type TComponent = _Component;
 		type TInput = ExcludeKeys<SlotKey>;
 
@@ -134,7 +129,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, select_compatible_key::<_Agent, _Combos, _Extra>);
+		app.add_systems(Update, _select_successor_key::<_Agent, _Combos, _Extra>);
 
 		app
 	}
@@ -148,7 +143,7 @@ mod tests {
 		];
 		let entity = app
 			.world_mut()
-			.spawn(InsertCommand {
+			.spawn(KeySelectDropdownCommand {
 				extra: _Extra::Some,
 				key_path: key_path.clone(),
 			})
@@ -177,9 +172,9 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(InsertCommand {
+			.spawn(KeySelectDropdownCommand {
 				extra: _Extra::Some,
-				key_path: vec![],
+				key_path: vec![] as Vec<SlotKey>,
 			})
 			.id();
 		app.world_mut().spawn(_Combos::default());
@@ -196,9 +191,9 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(InsertCommand {
+			.spawn(KeySelectDropdownCommand {
 				extra: _Extra::Some,
-				key_path: vec![],
+				key_path: vec![] as Vec<SlotKey>,
 			})
 			.id();
 		app.world_mut().spawn((_Agent, _Combos::default()));
@@ -207,7 +202,7 @@ mod tests {
 
 		let entity = app.world().entity(entity);
 
-		assert_eq!(None, entity.get::<InsertCommand<_Extra>>())
+		assert_eq!(None, entity.get::<KeySelectDropdownCommand<_Extra>>())
 	}
 
 	#[test]
@@ -215,9 +210,9 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(InsertCommand {
+			.spawn(KeySelectDropdownCommand {
 				extra: _Extra::Some,
-				key_path: vec![],
+				key_path: vec![] as Vec<SlotKey>,
 			})
 			.id();
 		app.world_mut().spawn((
@@ -239,9 +234,9 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(InsertCommand {
+			.spawn(KeySelectDropdownCommand {
 				extra: _Extra::Some,
-				key_path: vec![],
+				key_path: vec![] as Vec<SlotKey>,
 			})
 			.id();
 		let child = app.world_mut().spawn_empty().set_parent(entity).id();
@@ -264,9 +259,9 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(InsertCommand {
+			.spawn(KeySelectDropdownCommand {
 				extra: _Extra::None,
-				key_path: vec![],
+				key_path: vec![] as Vec<SlotKey>,
 			})
 			.id();
 		app.world_mut().spawn((_Agent, _Combos::default()));
@@ -283,9 +278,9 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(InsertCommand {
+			.spawn(KeySelectDropdownCommand {
 				extra: _Extra::None,
-				key_path: vec![],
+				key_path: vec![] as Vec<SlotKey>,
 			})
 			.id();
 		let child = app.world_mut().spawn_empty().set_parent(entity).id();

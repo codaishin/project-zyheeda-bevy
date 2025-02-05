@@ -11,10 +11,7 @@ mod debug;
 
 use crate::systems::{
 	combos::visualize_invalid_skill::VisualizeInvalidSkill,
-	dropdown::{
-		select_compatible_skill::SelectCompatibleSkill,
-		select_successor_key::SelectSuccessorKey,
-	},
+	dropdown::dropdown_skill_select_insert::DropdownSkillSelectInsert,
 	items::swap::inventory_items::SwapInventoryItems,
 	update_panels::container_states::SetContainerPanels,
 };
@@ -56,8 +53,8 @@ use std::{marker::PhantomData, time::Duration};
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
 	combos::{
+		dropdown_skill_select_click::DropdownSkillSelectClick,
 		update_combo_keys::update_combo_keys,
-		update_combo_skills::update_combo_skills,
 		update_combos_view::update_combos_view,
 		update_combos_view_delete_skill::update_combos_view_delete_skill,
 	},
@@ -68,6 +65,7 @@ use systems::{
 		despawn_when_no_children_pressed::dropdown_despawn_when_no_children_pressed,
 		detect_focus_change::dropdown_detect_focus_change,
 		events::dropdown_events,
+		select_successor_key::select_successor_key,
 		spawn_focused::dropdown_spawn_focused,
 		track_child_dropdowns::dropdown_track_child_dropdowns,
 	},
@@ -282,40 +280,39 @@ where
 			.add_systems(
 				Update,
 				(
-					TEquipment::TSlots::visualize_invalid_skill::<
+					Unusable::visualize_invalid_skill::<
 						TPlayers::TPlayer,
-						Unusable,
 						TEquipment::TSkill,
+						TEquipment::TSlots,
 					>,
-					TEquipment::TSlots::select_compatible_skill::<
+					Vertical::dropdown_skill_select_insert::<
 						TPlayers::TPlayer,
-						Vertical,
 						TEquipment::TSkill,
+						TEquipment::TSlots,
 					>,
-					TEquipment::TSlots::select_compatible_skill::<
+					Vertical::dropdown_skill_select_click::<
 						TPlayers::TPlayer,
-						Horizontal,
 						TEquipment::TSkill,
+						TEquipment::TCombos,
 					>,
-					TEquipment::TCombos::select_successor_key::<TPlayers::TPlayer>,
+					Horizontal::dropdown_skill_select_insert::<
+						TPlayers::TPlayer,
+						TEquipment::TSkill,
+						TEquipment::TSlots,
+					>,
+					Horizontal::dropdown_skill_select_click::<
+						TPlayers::TPlayer,
+						TEquipment::TSkill,
+						TEquipment::TCombos,
+					>,
+					select_successor_key::<TPlayers::TPlayer, TEquipment::TCombos>,
 					update_combos_view_delete_skill::<
 						TPlayers::TPlayer,
-						TEquipment::TCombos,
 						TEquipment::TSkill,
-					>,
-					update_combo_skills::<
-						TPlayers::TPlayer,
 						TEquipment::TCombos,
-						Vertical,
-						TEquipment::TSkill,
 					>,
-					update_combo_skills::<
-						TPlayers::TPlayer,
-						TEquipment::TCombos,
-						Horizontal,
-						TEquipment::TSkill,
-					>,
-					map_pressed_key_select.pipe(update_combo_keys::<TPlayers::TPlayer, Combos>),
+					map_pressed_key_select
+						.pipe(update_combo_keys::<TPlayers::TPlayer, TEquipment::TCombos>),
 				)
 					.run_if(in_state(combo_overview)),
 			);

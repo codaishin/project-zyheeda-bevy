@@ -1,6 +1,6 @@
 use super::{
 	key_code_text_insert_command::KeyCodeTextInsertCommand,
-	key_select_dropdown_command::{AppendSkillCommand, KeySelectDropdownInsertCommand},
+	key_select_dropdown_command::{AppendSkillCommand, KeySelectDropdownCommand},
 	skill_button::{DropdownTrigger, SkillButton, Vertical},
 	DeleteSkill,
 	SkillSelectDropdownInsertCommand,
@@ -568,7 +568,7 @@ fn add_append_button(key_path: &[SlotKey], parent: &mut ChildBuilder) {
 			parent
 				.spawn((
 					ComboOverview::modify_button(),
-					KeySelectDropdownInsertCommand {
+					KeySelectDropdownCommand {
 						extra: AppendSkillCommand,
 						key_path: key_path.to_vec(),
 					},

@@ -6,12 +6,12 @@ use common::{
 };
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct KeySelectDropdownInsertCommand<TExtra, TKey = SlotKey> {
+pub(crate) struct KeySelectDropdownCommand<TExtra, TKey = SlotKey> {
 	pub(crate) extra: TExtra,
 	pub(crate) key_path: Vec<TKey>,
 }
 
-impl<TKey> GetComponent for KeySelectDropdownInsertCommand<AppendSkillCommand, TKey>
+impl<TKey> GetComponent for KeySelectDropdownCommand<AppendSkillCommand, TKey>
 where
 	TKey: ThreadSafe + IterFinite + PartialEq,
 {
@@ -71,7 +71,7 @@ mod tests {
 	#[test]
 	fn get_no_dropdown_when_all_keys_excluded() {
 		let keys = _Key::iterator().collect();
-		let command = KeySelectDropdownInsertCommand {
+		let command = KeySelectDropdownCommand {
 			extra: AppendSkillCommand,
 			key_path: vec![_Key::A],
 		};
@@ -82,7 +82,7 @@ mod tests {
 	#[test]
 	fn get_dropdown_dropdown_with_remaining_keys() {
 		let keys = vec![_Key::B];
-		let command = KeySelectDropdownInsertCommand {
+		let command = KeySelectDropdownCommand {
 			extra: AppendSkillCommand,
 			key_path: vec![_Key::A],
 		};
