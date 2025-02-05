@@ -9,13 +9,20 @@ mod visualization;
 #[cfg(debug_assertions)]
 mod debug;
 
+use crate::systems::{
+	combos::visualize_invalid_skill::VisualizeInvalidSkill,
+	dropdown::dropdown_skill_select_insert::DropdownSkillSelectInsert,
+	items::swap::inventory_items::SwapInventoryItems,
+	update_panels::container_states::SetContainerPanels,
+};
 use bevy::prelude::*;
 use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
 	states::{game_state::GameState, menu_state::MenuState},
 	systems::log::log_many,
-	tools::slot_key::SlotKey,
+	tools::{inventory_key::InventoryKey, slot_key::SlotKey},
 	traits::{
+		handles_equipment::{HandlesEquipment, SkillDescription},
 		handles_graphics::{StaticRenderLayers, UiCamera},
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		handles_player::HandlesPlayer,
@@ -30,6 +37,7 @@ use components::{
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
 	key_select::{AppendSkill, KeySelect, ReKeySkill},
+	key_select_dropdown_command::AppendSkillCommand,
 	loading_screen::LoadingScreen,
 	quickbar_panel::QuickbarPanel,
 	skill_button::{DropdownItem, Horizontal, SkillButton, Vertical},
@@ -38,45 +46,31 @@ use components::{
 	start_menu_button::StartMenuButton,
 	tooltip::{Tooltip, TooltipUI, TooltipUIControl, TooltipUiConfig},
 	ui_overlay::UIOverlay,
-	AppendSkillCommand,
 };
 use events::DropdownEvent;
-use skills::{
-	components::{
-		combos::Combos,
-		combos_time_out::CombosTimeOut,
-		inventory::Inventory,
-		queue::Queue,
-		slots::Slots,
-	},
-	inventory_key::InventoryKey,
-	skills::Skill,
-};
 use std::{marker::PhantomData, time::Duration};
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
 	combos::{
+		dropdown_skill_select_click::DropdownSkillSelectClick,
 		update_combo_keys::update_combo_keys,
-		update_combo_skills::update_combo_skills,
-		update_combos_view::update_combos_view,
+		update_combos_view::UpdateComboOverview,
 		update_combos_view_delete_skill::update_combos_view_delete_skill,
-		visualize_invalid_skill::visualize_invalid_skill,
 	},
-	conditions::{added::added, changed::changed, either::either},
+	conditions::{added::added, changed::changed},
 	dad::{drag::drag, drop::drop},
 	despawn::despawn,
 	dropdown::{
 		despawn_when_no_children_pressed::dropdown_despawn_when_no_children_pressed,
 		detect_focus_change::dropdown_detect_focus_change,
 		events::dropdown_events,
-		insert_key_select_dropdown::insert_key_select_dropdown,
-		insert_skill_select_dropdown::insert_skill_select_dropdown,
+		select_successor_key::select_successor_key,
 		spawn_focused::dropdown_spawn_focused,
 		track_child_dropdowns::dropdown_track_child_dropdowns,
 	},
 	image_color::image_color,
 	insert_key_code_text::insert_key_code_text,
-	items::swap::{equipped_items::swap_equipped_items, inventory_items::swap_inventory_items},
+	items::swap::equipped_items::swap_equipped_items,
 	map_pressed_key_select::map_pressed_key_select,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	on_release_set::OnReleaseSet,
@@ -88,7 +82,6 @@ use systems::{
 	update_panels::{
 		activity_colors_override::panel_activity_colors_override,
 		colors::panel_colors,
-		container_states::panel_container_states,
 		get_quickbar_icons::get_quickbar_icons,
 		set_quickbar_icons::set_quickbar_icons,
 		update_label_text::update_label_text,
@@ -178,22 +171,26 @@ impl AddDropdown for App {
 
 pub struct MenuPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TPlayers, TGraphics> MenuPlugin<(TLoading, TPlayers, TGraphics)>
+impl<TLoading, TPlayers, TGraphics, TEquipment>
+	MenuPlugin<(TLoading, TPlayers, TGraphics, TEquipment)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TPlayers: ThreadSafe + HandlesPlayer,
 	TGraphics: ThreadSafe + UiCamera,
+	TEquipment: ThreadSafe + HandlesEquipment,
 {
-	pub fn depends_on(_: &TLoading, _: &TPlayers, _: &TGraphics) -> Self {
+	pub fn depends_on(_: &TLoading, _: &TPlayers, _: &TGraphics, _: &TEquipment) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TPlayers, TGraphics> MenuPlugin<(TLoading, TPlayers, TGraphics)>
+impl<TLoading, TPlayers, TGraphics, TEquipment>
+	MenuPlugin<(TLoading, TPlayers, TGraphics, TEquipment)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TPlayers: ThreadSafe + HandlesPlayer,
 	TGraphics: ThreadSafe + UiCamera,
+	TEquipment: ThreadSafe + HandlesEquipment,
 {
 	fn resources(&self, app: &mut App) {
 		app.init_resource::<Shared<Path, Handle<Image>>>()
@@ -234,14 +231,20 @@ where
 			.add_systems(
 				Update,
 				(
-					get_quickbar_icons::<TPlayers::TPlayer, Queue, Combos, CombosTimeOut>
+					get_quickbar_icons::<
+						TPlayers::TPlayer,
+						TEquipment::TSlots,
+						TEquipment::TQueue,
+						TEquipment::TCombos,
+						TEquipment::TCombosTimeOut,
+					>
 						.pipe(set_quickbar_icons),
 					update_label_text::<SlotKeyMap, LanguageServer, QuickbarPanel>,
 					panel_colors::<QuickbarPanel>,
 					panel_activity_colors_override::<
 						TPlayers::TPlayer,
 						SlotKeyMap,
-						Queue,
+						TEquipment::TQueue,
 						QuickbarPanel,
 					>,
 				)
@@ -259,29 +262,62 @@ where
 	fn combo_overview(&self, app: &mut App) {
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
 
-		app.add_ui::<ComboOverview, TGraphics::TUiCamera>(combo_overview)
-			.add_dropdown::<SkillButton<DropdownItem<Vertical>>>()
-			.add_dropdown::<SkillButton<DropdownItem<Horizontal>>>()
+		app.add_ui::<ComboOverview<TEquipment::TSkill>, TGraphics::TUiCamera>(combo_overview)
+			.add_dropdown::<SkillButton<DropdownItem<Vertical>, TEquipment::TSkill>>()
+			.add_dropdown::<SkillButton<DropdownItem<Horizontal>, TEquipment::TSkill>>()
 			.add_dropdown::<KeySelect<ReKeySkill>>()
 			.add_dropdown::<KeySelect<AppendSkill>>()
-			.add_tooltip::<Skill>()
+			.add_tooltip::<SkillDescription>()
 			.add_systems(
 				Update,
-				update_combos_view::<TPlayers::TPlayer, Combos, ComboOverview>
-					.run_if(either(added::<ComboOverview>).or(changed::<TPlayers::TPlayer, Combos>))
-					.run_if(in_state(combo_overview)),
+				ComboOverview::<TEquipment::TSkill>::update_combos_overview::<
+					TPlayers::TPlayer,
+					TEquipment::TCombos,
+					TEquipment::TSkill,
+				>
+					.run_if(
+						in_state(combo_overview).and(
+							added::<ComboOverview<TEquipment::TSkill>>
+								.or(changed::<TPlayers::TPlayer, TEquipment::TCombos>),
+						),
+					),
 			)
 			.add_systems(
 				Update,
 				(
-					visualize_invalid_skill::<TPlayers::TPlayer, Slots, Unusable>,
-					insert_skill_select_dropdown::<TPlayers::TPlayer, Slots, Vertical>,
-					insert_skill_select_dropdown::<TPlayers::TPlayer, Slots, Horizontal>,
-					insert_key_select_dropdown::<TPlayers::TPlayer, Combos, AppendSkillCommand>,
-					update_combos_view_delete_skill::<TPlayers::TPlayer, Combos>,
-					update_combo_skills::<TPlayers::TPlayer, Combos, Vertical>,
-					update_combo_skills::<TPlayers::TPlayer, Combos, Horizontal>,
-					map_pressed_key_select.pipe(update_combo_keys::<TPlayers::TPlayer, Combos>),
+					Unusable::visualize_invalid_skill::<
+						TPlayers::TPlayer,
+						TEquipment::TSkill,
+						TEquipment::TSlots,
+					>,
+					Vertical::dropdown_skill_select_insert::<
+						TPlayers::TPlayer,
+						TEquipment::TSkill,
+						TEquipment::TSlots,
+					>,
+					Vertical::dropdown_skill_select_click::<
+						TPlayers::TPlayer,
+						TEquipment::TSkill,
+						TEquipment::TCombos,
+					>,
+					Horizontal::dropdown_skill_select_insert::<
+						TPlayers::TPlayer,
+						TEquipment::TSkill,
+						TEquipment::TSlots,
+					>,
+					Horizontal::dropdown_skill_select_click::<
+						TPlayers::TPlayer,
+						TEquipment::TSkill,
+						TEquipment::TCombos,
+					>,
+					select_successor_key::<TPlayers::TPlayer, TEquipment::TCombos>,
+					update_combos_view_delete_skill::<
+						TPlayers::TPlayer,
+						TEquipment::TSkill,
+						TEquipment::TCombos,
+					>,
+					map_pressed_key_select
+						.pipe(update_combo_keys::<TPlayers::TPlayer, TEquipment::TCombos>),
 				)
 					.run_if(in_state(combo_overview)),
 			);
@@ -294,9 +330,9 @@ where
 			.add_systems(
 				Update,
 				(
+					TEquipment::TInventory::set_container_panels::<InventoryPanel, InventoryKey>,
+					TEquipment::TSlots::set_container_panels::<InventoryPanel, SlotKey>,
 					panel_colors::<InventoryPanel>,
-					panel_container_states::<InventoryPanel, InventoryKey, Inventory>,
-					panel_container_states::<InventoryPanel, SlotKey, Slots>,
 					drag::<TPlayers::TPlayer, InventoryKey>,
 					drag::<TPlayers::TPlayer, SlotKey>,
 					drop::<TPlayers::TPlayer, InventoryKey, InventoryKey>,
@@ -308,7 +344,10 @@ where
 			)
 			.add_systems(
 				Update,
-				(swap_equipped_items.pipe(log_many), swap_inventory_items),
+				(
+					swap_equipped_items::<TEquipment::TSlots>.pipe(log_many),
+					TEquipment::TInventory::swap_items,
+				),
 			);
 	}
 
@@ -323,11 +362,13 @@ where
 	}
 }
 
-impl<TLoading, TPlayers, TGraphics> Plugin for MenuPlugin<(TLoading, TPlayers, TGraphics)>
+impl<TLoading, TPlayers, TGraphics, TEquipment> Plugin
+	for MenuPlugin<(TLoading, TPlayers, TGraphics, TEquipment)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TPlayers: ThreadSafe + HandlesPlayer,
 	TGraphics: ThreadSafe + UiCamera,
+	TEquipment: ThreadSafe + HandlesEquipment,
 {
 	fn build(&self, app: &mut App) {
 		self.resources(app);

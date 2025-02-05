@@ -8,6 +8,7 @@ use common::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,
 		handles_assets_for_children::{ChildAssetComponent, ChildAssetDefinition, ChildName},
+		handles_equipment::{ItemAsset, KeyOutOfBounds, WriteItem},
 	},
 };
 use std::{collections::HashMap, fmt::Debug};
@@ -24,6 +25,25 @@ impl Slots {
 impl Default for Slots {
 	fn default() -> Self {
 		Self::new([])
+	}
+}
+
+impl ItemAsset for Slots {
+	type TKey = SlotKey;
+	type TItem = Item;
+
+	fn item_asset(&self, key: &Self::TKey) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
+		let Some(item) = self.0.get(key) else {
+			return Err(KeyOutOfBounds);
+		};
+
+		Ok(item)
+	}
+}
+
+impl WriteItem<SlotKey, Option<Handle<Item>>> for Slots {
+	fn write_item(&mut self, key: &SlotKey, value: Option<Handle<Item>>) {
+		self.0.insert(*key, value);
 	}
 }
 

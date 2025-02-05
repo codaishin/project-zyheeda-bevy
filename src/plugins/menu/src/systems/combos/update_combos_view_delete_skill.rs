@@ -1,24 +1,20 @@
 use crate::components::DeleteSkill;
-use bevy::{
-	prelude::{Component, Query, With},
-	ui::Interaction,
-};
-use common::tools::slot_key::SlotKey;
-use skills::{skills::Skill, traits::UpdateConfig};
+use bevy::{prelude::*, ui::Interaction};
+use common::{tools::slot_key::SlotKey, traits::handles_equipment::WriteItem};
 
-pub(crate) fn update_combos_view_delete_skill<
-	TAgent: Component,
-	TCombos: Component + UpdateConfig<Vec<SlotKey>, Option<Skill>>,
->(
+pub(crate) fn update_combos_view_delete_skill<TAgent, TSkill, TCombos>(
 	deletes: Query<(&DeleteSkill, &Interaction)>,
 	mut agents: Query<&mut TCombos, With<TAgent>>,
-) {
+) where
+	TAgent: Component,
+	TCombos: Component + WriteItem<Vec<SlotKey>, Option<TSkill>>,
+{
 	let Ok(mut combos) = agents.get_single_mut() else {
 		return;
 	};
 
 	for (delete, _) in deletes.iter().filter(pressed) {
-		combos.update_config(&delete.key_path, None);
+		combos.write_item(&delete.key_path, None);
 	}
 }
 
@@ -29,10 +25,6 @@ fn pressed((.., interaction): &(&DeleteSkill, &Interaction)) -> bool {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		prelude::Component,
-	};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::slot_key::Side,
@@ -40,10 +32,12 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
-	use skills::{skills::Skill, traits::UpdateConfig};
 
 	#[derive(Component)]
 	struct _Agent;
+
+	#[derive(Debug, PartialEq)]
+	struct _Skill;
 
 	#[derive(Component, NestedMocks)]
 	struct _Combos {
@@ -53,21 +47,24 @@ mod tests {
 	impl Default for _Combos {
 		fn default() -> Self {
 			Self::new().with_mock(|mock| {
-				mock.expect_update_config().return_const(());
+				mock.expect_write_item().return_const(());
 			})
 		}
 	}
 
 	#[automock]
-	impl UpdateConfig<Vec<SlotKey>, Option<Skill>> for _Combos {
-		fn update_config(&mut self, key: &Vec<SlotKey>, value: Option<Skill>) {
-			self.mock.update_config(key, value)
+	impl WriteItem<Vec<SlotKey>, Option<_Skill>> for _Combos {
+		fn write_item(&mut self, key: &Vec<SlotKey>, value: Option<_Skill>) {
+			self.mock.write_item(key, value)
 		}
 	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, update_combos_view_delete_skill::<_Agent, _Combos>);
+		app.add_systems(
+			Update,
+			update_combos_view_delete_skill::<_Agent, _Skill, _Combos>,
+		);
 
 		app
 	}
@@ -87,7 +84,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Combos::new().with_mock(|mock| {
-				mock.expect_update_config()
+				mock.expect_write_item()
 					.times(1)
 					.with(
 						eq(vec![

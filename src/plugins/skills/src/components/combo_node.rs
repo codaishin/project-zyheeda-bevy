@@ -1,19 +1,22 @@
 pub mod node_entry;
 pub mod node_entry_mut;
 
+use std::collections::VecDeque;
+
 use crate::{
-	item::item_type::SkillItemType,
 	skills::Skill,
-	traits::{Combo, GetCombosOrdered, GetNode, GetNodeMut, PeekNext, RootKeys},
+	traits::{peek_next_recursive::PeekNextRecursive, GetNode, GetNodeMut, RootKeys},
 };
 use bevy::ecs::component::Component;
 use common::{
 	tools::{
+		item_type::ItemType,
 		ordered_hash_map::{Entry, OrderedHashMap},
 		slot_key::SlotKey,
 	},
 	traits::{
 		accessors::get::{GetMut, GetRef},
+		handles_equipment::{Combo, CompatibleItems, FollowupKeys, GetCombosOrdered},
 		insert::TryInsert,
 		iterate::Iterate,
 	},
@@ -76,14 +79,16 @@ pub struct NodeEntry<'a, TSkill> {
 	tree: &'a OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
 }
 
-impl<'a, TKey, TSkill> GetNodeMut<'a, TKey> for ComboNode<TSkill>
+impl<TKey, TSkill> GetNodeMut<TKey> for ComboNode<TSkill>
 where
 	TKey: Iterate<SlotKey>,
-	TSkill: 'a,
 {
-	type TNode = NodeEntryMut<'a, TSkill>;
+	type TNode<'a>
+		= NodeEntryMut<'a, TSkill>
+	where
+		Self: 'a;
 
-	fn node_mut(&'a mut self, slot_key_path: &TKey) -> Option<Self::TNode> {
+	fn node_mut<'a>(&'a mut self, slot_key_path: &TKey) -> Option<Self::TNode<'a>> {
 		let mut slot_key_path = slot_key_path.iterate();
 		let mut key = *slot_key_path.next()?;
 		let mut tree = &mut self.0;
@@ -98,14 +103,16 @@ where
 	}
 }
 
-impl<'a, TKey, TSkill> GetNode<'a, TKey> for ComboNode<TSkill>
+impl<TKey, TSkill> GetNode<TKey> for ComboNode<TSkill>
 where
 	TKey: Iterate<SlotKey>,
-	TSkill: 'a,
 {
-	type TNode = NodeEntry<'a, TSkill>;
+	type TNode<'a>
+		= NodeEntry<'a, TSkill>
+	where
+		Self: 'a;
 
-	fn node(&'a self, slot_key_path: &TKey) -> Option<Self::TNode> {
+	fn node<'a>(&'a self, slot_key_path: &TKey) -> Option<Self::TNode<'a>> {
 		let mut slot_key_path = slot_key_path.iterate();
 		let mut key = *slot_key_path.next()?;
 		let mut tree = &self.0;
@@ -161,16 +168,21 @@ impl<TKey: Iterate<SlotKey>> TryInsert<TKey, Skill> for ComboNode {
 	}
 }
 
-impl PeekNext<(Skill, ComboNode)> for ComboNode {
-	fn peek_next(
+impl PeekNextRecursive for ComboNode {
+	type TNext = Skill;
+
+	type TRecursiveNode = Self;
+
+	fn peek_next_recursive(
 		&self,
 		trigger: &SlotKey,
-		item_type: &SkillItemType,
-	) -> Option<(Skill, ComboNode)> {
+		item_type: &ItemType,
+	) -> Option<(Self::TNext, Self::TRecursiveNode)> {
 		let ComboNode(tree) = self;
 		let (skill, combo) = tree.get(trigger)?;
+		let CompatibleItems(is_usable_with) = &skill.compatible_items;
 
-		if !skill.is_usable_with.contains(item_type) {
+		if !is_usable_with.contains(item_type) {
 			return None;
 		}
 
@@ -178,13 +190,39 @@ impl PeekNext<(Skill, ComboNode)> for ComboNode {
 	}
 }
 
-impl GetCombosOrdered for ComboNode {
-	fn combos_ordered(&self) -> impl Iterator<Item = Combo> {
+impl GetCombosOrdered<Skill> for ComboNode {
+	fn combos_ordered<'a>(&'a self) -> impl Iterator<Item = Combo<'a, Skill>>
+	where
+		Skill: 'a,
+	{
 		combos(self, vec![])
 	}
 }
 
-fn combos(combo_node: &ComboNode, key_path: Vec<SlotKey>) -> impl Iterator<Item = Combo> {
+impl FollowupKeys for ComboNode {
+	type TKey = SlotKey;
+
+	fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>
+	where
+		T: Into<VecDeque<Self::TKey>>,
+	{
+		if self.0.is_empty() {
+			return Some(vec![]);
+		}
+
+		let mut after: VecDeque<Self::TKey> = after.into();
+
+		let Some(key) = after.pop_front() else {
+			return Some(self.0.keys().copied().collect());
+		};
+
+		let (_, next) = self.0.get(&key)?;
+
+		next.followup_keys(after)
+	}
+}
+
+fn combos(combo_node: &ComboNode, key_path: Vec<SlotKey>) -> impl Iterator<Item = Combo<Skill>> {
 	combo_node
 		.0
 		.iter()
@@ -204,7 +242,7 @@ fn build_path<'a>(
 
 fn append_followup_combo_steps<'a>(
 	(key_path, skill, child_node): (Vec<SlotKey>, &'a Skill, &'a ComboNode),
-) -> Vec<Combo<'a>> {
+) -> Vec<Combo<'a, Skill>> {
 	let combo_step_key_path = key_path.clone();
 	let followup_combo_steps = combos(child_node, combo_step_key_path).collect();
 	append_followups((key_path, skill), followup_combo_steps)
@@ -212,8 +250,8 @@ fn append_followup_combo_steps<'a>(
 
 fn append_followups<'a>(
 	combo_step: (Vec<SlotKey>, &'a Skill),
-	followups: Vec<Combo<'a>>,
-) -> Vec<Combo<'a>> {
+	followups: Vec<Combo<'a, Skill>>,
+) -> Vec<Combo<'a, Skill>> {
 	let combo_steps = vec![combo_step];
 
 	if followups.is_empty() {
@@ -229,7 +267,6 @@ fn append_followups<'a>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::SkillItemType;
 	use bevy::prelude::default;
 	use common::tools::slot_key::Side;
 	use std::collections::HashSet;
@@ -241,7 +278,7 @@ mod tests {
 			(
 				Skill {
 					name: "first".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Pistol]),
+					compatible_items: CompatibleItems(HashSet::from([ItemType::Pistol])),
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(
@@ -257,13 +294,13 @@ mod tests {
 			),
 		)]));
 
-		let next = node.peek_next(&SlotKey::BottomHand(Side::Right), &SkillItemType::Pistol);
+		let next = node.peek_next_recursive(&SlotKey::BottomHand(Side::Right), &ItemType::Pistol);
 
 		assert_eq!(
 			Some((
 				Skill {
 					name: "first".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Pistol]),
+					compatible_items: CompatibleItems(HashSet::from([ItemType::Pistol])),
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(
@@ -288,7 +325,7 @@ mod tests {
 			(
 				Skill {
 					name: "first".to_owned(),
-					is_usable_with: HashSet::from([SkillItemType::Bracer]),
+					compatible_items: CompatibleItems(HashSet::from([ItemType::Bracer])),
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(
@@ -304,7 +341,7 @@ mod tests {
 			),
 		)]));
 
-		let next = node.peek_next(&SlotKey::BottomHand(Side::Right), &SkillItemType::Pistol);
+		let next = node.peek_next_recursive(&SlotKey::BottomHand(Side::Right), &ItemType::Pistol);
 
 		assert_eq!(None as Option<(Skill, ComboNode)>, next)
 	}
@@ -1346,5 +1383,98 @@ mod tests {
 			],
 			combos.combos_ordered().collect::<Vec<_>>()
 		)
+	}
+
+	#[test]
+	fn get_followup_keys_of_empty_path() {
+		let node = ComboNode::new([
+			(
+				SlotKey::TopHand(Side::Right),
+				(Skill::default(), ComboNode::default()),
+			),
+			(
+				SlotKey::TopHand(Side::Left),
+				(Skill::default(), ComboNode::default()),
+			),
+		]);
+
+		let followup_keys = node.followup_keys(vec![]);
+
+		assert_eq!(
+			Some(vec![
+				SlotKey::TopHand(Side::Right),
+				SlotKey::TopHand(Side::Left)
+			]),
+			followup_keys
+		);
+	}
+
+	#[test]
+	fn get_followup_keys_empty_if_combo_empty() {
+		let node = ComboNode::default();
+
+		let followup_keys = node.followup_keys(vec![]);
+
+		assert_eq!(Some(vec![]), followup_keys);
+	}
+
+	#[test]
+	fn get_followup_keys_of_target_path() {
+		let node = ComboNode::new([(
+			SlotKey::TopHand(Side::Left),
+			(
+				Skill::default(),
+				ComboNode::new([(
+					SlotKey::BottomHand(Side::Left),
+					(
+						Skill::default(),
+						ComboNode::new([
+							(
+								SlotKey::BottomHand(Side::Right),
+								(Skill::default(), ComboNode::default()),
+							),
+							(
+								SlotKey::BottomHand(Side::Left),
+								(Skill::default(), ComboNode::default()),
+							),
+						]),
+					),
+				)]),
+			),
+		)]);
+
+		let followup_keys = node.followup_keys(vec![
+			SlotKey::TopHand(Side::Left),
+			SlotKey::BottomHand(Side::Left),
+		]);
+
+		assert_eq!(
+			Some(vec![
+				SlotKey::BottomHand(Side::Right),
+				SlotKey::BottomHand(Side::Left)
+			]),
+			followup_keys
+		);
+	}
+
+	#[test]
+	fn get_followup_keys_none_of_invalid_target_path() {
+		let node = ComboNode::new([(
+			SlotKey::TopHand(Side::Left),
+			(
+				Skill::default(),
+				ComboNode::new([(
+					SlotKey::BottomHand(Side::Left),
+					(Skill::default(), ComboNode::default()),
+				)]),
+			),
+		)]);
+
+		let followup_keys = node.followup_keys(vec![
+			SlotKey::TopHand(Side::Left),
+			SlotKey::BottomHand(Side::Right),
+		]);
+
+		assert_eq!(None, followup_keys);
 	}
 }

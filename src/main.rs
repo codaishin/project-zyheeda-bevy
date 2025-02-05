@@ -74,7 +74,12 @@ fn prepare_game(app: &mut App) {
 		&interactions_plugin,
 		&behaviors_plugin,
 	);
-	let menu_plugin = MenuPlugin::depends_on(&loading_plugin, &player_plugin, &graphics_plugin);
+	let menu_plugin = MenuPlugin::depends_on(
+		&loading_plugin,
+		&player_plugin,
+		&graphics_plugin,
+		&skills_plugin,
+	);
 	let bars_plugin = BarsPlugin::depends_on(
 		&life_cycles_plugin,
 		&player_plugin,

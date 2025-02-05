@@ -9,7 +9,7 @@ use crate::{
 };
 use bevy::prelude::*;
 
-impl GetRootNode for Dropdown<SkillButton<DropdownItem<Vertical>>> {
+impl<TSkill> GetRootNode for Dropdown<SkillButton<DropdownItem<Vertical>, TSkill>> {
 	fn root_node(&self) -> Node {
 		Node {
 			position_type: PositionType::Absolute,
@@ -20,13 +20,13 @@ impl GetRootNode for Dropdown<SkillButton<DropdownItem<Vertical>>> {
 	}
 }
 
-impl GetLayout for Dropdown<SkillButton<DropdownItem<Vertical>>> {
+impl<TSkill> GetLayout for Dropdown<SkillButton<DropdownItem<Vertical>, TSkill>> {
 	fn layout(&self) -> Layout {
 		Layout::SINGLE_COLUMN
 	}
 }
 
-impl GetRootNode for Dropdown<SkillButton<DropdownItem<Horizontal>>> {
+impl<TSkill> GetRootNode for Dropdown<SkillButton<DropdownItem<Horizontal>, TSkill>> {
 	fn root_node(&self) -> Node {
 		Node {
 			position_type: PositionType::Absolute,
@@ -37,7 +37,7 @@ impl GetRootNode for Dropdown<SkillButton<DropdownItem<Horizontal>>> {
 	}
 }
 
-impl GetLayout for Dropdown<SkillButton<DropdownItem<Horizontal>>> {
+impl<TSkill> GetLayout for Dropdown<SkillButton<DropdownItem<Horizontal>, TSkill>> {
 	fn layout(&self) -> Layout {
 		Layout::SINGLE_ROW
 	}

@@ -1,33 +1,41 @@
 use crate::traits::{combo_tree_layout::GetComboTreeLayout, UpdateCombosView};
-use bevy::prelude::{Component, Query, With};
+use bevy::prelude::*;
+use common::traits::thread_safe::ThreadSafe;
 
-pub(crate) fn update_combos_view<TAgent, TCombos, TComboOverview>(
-	agents: Query<&TCombos, With<TAgent>>,
-	mut combo_overviews: Query<&mut TComboOverview>,
-) where
-	TAgent: Component,
-	TCombos: Component + GetComboTreeLayout,
-	TComboOverview: Component + UpdateCombosView,
-{
-	let Ok(combos) = agents.get_single() else {
-		return;
-	};
+impl<T> UpdateComboOverview for T {}
 
-	let Ok(mut combo_overview) = combo_overviews.get_single_mut() else {
-		return;
-	};
+pub(crate) trait UpdateComboOverview {
+	fn update_combos_overview<TAgent, TCombos, TSkill>(
+		agents: Query<&TCombos, With<TAgent>>,
+		mut combo_overviews: Query<&mut Self>,
+	) where
+		Self: Component + UpdateCombosView<TSkill> + Sized,
+		TAgent: Component,
+		TCombos: Component + GetComboTreeLayout<TSkill>,
+		TSkill: ThreadSafe,
+	{
+		let Ok(combos) = agents.get_single() else {
+			return;
+		};
 
-	combo_overview.update_combos_view(combos.combo_tree_layout());
+		let Ok(mut combo_overview) = combo_overviews.get_single_mut() else {
+			return;
+		};
+
+		combo_overview.update_combos_view(combos.combo_tree_layout());
+	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use crate::traits::combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol};
-	use bevy::app::{App, Update};
 	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+
+	#[derive(Debug, PartialEq, Clone)]
+	struct _Skill;
 
 	#[derive(Component)]
 	struct _Agent;
@@ -38,17 +46,17 @@ mod tests {
 	}
 
 	#[automock]
-	impl UpdateCombosView for _ComboOverview {
-		fn update_combos_view(&mut self, combos: ComboTreeLayout) {
+	impl UpdateCombosView<_Skill> for _ComboOverview {
+		fn update_combos_view(&mut self, combos: ComboTreeLayout<_Skill>) {
 			self.mock.update_combos_view(combos)
 		}
 	}
 
 	#[derive(Component)]
-	struct _Combos(ComboTreeLayout);
+	struct _Combos(ComboTreeLayout<_Skill>);
 
-	impl GetComboTreeLayout for _Combos {
-		fn combo_tree_layout(&self) -> ComboTreeLayout {
+	impl GetComboTreeLayout<_Skill> for _Combos {
+		fn combo_tree_layout(&self) -> ComboTreeLayout<_Skill> {
 			self.0.clone()
 		}
 	}
@@ -57,7 +65,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			update_combos_view::<_Agent, _Combos, _ComboOverview>,
+			_ComboOverview::update_combos_overview::<_Agent, _Combos, _Skill>,
 		);
 
 		app

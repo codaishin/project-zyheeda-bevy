@@ -15,6 +15,7 @@ pub mod handles_custom_assets;
 pub mod handles_destruction;
 pub mod handles_effect;
 pub mod handles_enemies;
+pub mod handles_equipment;
 pub mod handles_game_states;
 pub mod handles_graphics;
 pub mod handles_interactions;

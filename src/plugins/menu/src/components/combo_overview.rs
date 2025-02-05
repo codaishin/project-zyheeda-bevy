@@ -1,9 +1,8 @@
 use super::{
 	key_code_text_insert_command::KeyCodeTextInsertCommand,
+	key_select_dropdown_command::{AppendSkillCommand, KeySelectDropdownCommand},
 	skill_button::{DropdownTrigger, SkillButton, Vertical},
-	AppendSkillCommand,
 	DeleteSkill,
-	KeySelectDropdownInsertCommand,
 	SkillSelectDropdownInsertCommand,
 };
 use crate::{
@@ -19,15 +18,33 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::slot_key::SlotKey,
-	traits::load_asset::{LoadAsset, Path},
+	traits::{
+		accessors::get::{GetFieldRef, GetterRef},
+		load_asset::{LoadAsset, Path},
+		thread_safe::ThreadSafe,
+	},
 };
-use skills::skills::Skill;
 
-#[derive(Component, Default, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq)]
 #[require(Node(full_screen), BackgroundColor(gray), Name(|| "Combo Overview"))]
-pub(crate) struct ComboOverview {
+pub(crate) struct ComboOverview<TSkill>
+where
+	TSkill: ThreadSafe,
+{
 	new_skill_icon: Handle<Image>,
-	layout: ComboTreeLayout,
+	layout: ComboTreeLayout<TSkill>,
+}
+
+impl<TSKill> Default for ComboOverview<TSKill>
+where
+	TSKill: ThreadSafe,
+{
+	fn default() -> Self {
+		Self {
+			new_skill_icon: Default::default(),
+			layout: Default::default(),
+		}
+	}
 }
 
 fn full_screen() -> Node {
@@ -43,9 +60,10 @@ fn gray() -> BackgroundColor {
 	BackgroundColor(Color::srgba(0.5, 0.5, 0.5, 0.5))
 }
 
-impl<TAssetServer> LoadUi<TAssetServer> for ComboOverview
+impl<TAssetServer, TSKill> LoadUi<TAssetServer> for ComboOverview<TSKill>
 where
 	TAssetServer: LoadAsset,
+	TSKill: ThreadSafe,
 {
 	fn load_ui(images: &mut TAssetServer) -> Self {
 		ComboOverview {
@@ -55,7 +73,7 @@ where
 	}
 }
 
-impl ComboOverview {
+impl ComboOverview<()> {
 	pub const BUTTON_FONT_SIZE: f32 = 15.;
 	pub const SKILL_ICON_MARGIN: Pixel = Pixel(15.);
 	pub const MODIFY_BUTTON_OFFSET: Pixel = Pixel(-12.0);
@@ -286,13 +304,19 @@ impl From<Option<Handle<Image>>> for SkillButtonIcon {
 	}
 }
 
-impl UpdateCombosView for ComboOverview {
-	fn update_combos_view(&mut self, combos: ComboTreeLayout) {
+impl<TSkill> UpdateCombosView<TSkill> for ComboOverview<TSkill>
+where
+	TSkill: ThreadSafe,
+{
+	fn update_combos_view(&mut self, combos: ComboTreeLayout<TSkill>) {
 		self.layout = combos
 	}
 }
 
-impl InsertUiContent for ComboOverview {
+impl<TSkill> InsertUiContent for ComboOverview<TSkill>
+where
+	TSkill: GetterRef<Option<Handle<Image>>> + Clone + ThreadSafe,
+{
 	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		add_title(parent, "Combos");
 		if self.layout.is_empty() {
@@ -362,7 +386,10 @@ fn add_combo_starter(
 		});
 }
 
-fn add_combo_list(parent: &mut ChildBuilder, combo_overview: &ComboOverview) {
+fn add_combo_list<TSkill>(parent: &mut ChildBuilder, combo_overview: &ComboOverview<TSkill>)
+where
+	TSkill: GetterRef<Option<Handle<Image>>> + Clone + ThreadSafe,
+{
 	parent
 		.spawn(Node {
 			flex_direction: FlexDirection::Column,
@@ -377,12 +404,14 @@ fn add_combo_list(parent: &mut ChildBuilder, combo_overview: &ComboOverview) {
 		});
 }
 
-fn add_combo(
+fn add_combo<TSkill>(
 	parent: &mut ChildBuilder,
-	combo: &[ComboTreeElement],
+	combo: &[ComboTreeElement<TSkill>],
 	local_z: i32,
 	new_skill_icon: &Handle<Image>,
-) {
+) where
+	TSkill: GetterRef<Option<Handle<Image>>> + Clone + ThreadSafe,
+{
 	parent
 		.spawn((
 			#[cfg(debug_assertions)]
@@ -455,13 +484,16 @@ fn add_empty(parent: &mut ChildBuilder, add_backs: &[fn(&mut ChildBuilder)]) {
 		});
 }
 
-fn add_skill(
+fn add_skill<TSkill>(
 	parent: &mut ChildBuilder,
 	key_path: &[SlotKey],
-	skill: &Skill,
+	skill: &TSkill,
 	add_fronts: &[fn(&[SlotKey], &mut ChildBuilder)],
 	add_backs: &[fn(&mut ChildBuilder)],
-) {
+) where
+	TSkill: GetterRef<Option<Handle<Image>>> + Clone + ThreadSafe,
+{
+	let icon = Option::<Handle<Image>>::get_field_ref(skill);
 	parent
 		.spawn((
 			#[cfg(debug_assertions)]
@@ -469,7 +501,8 @@ fn add_skill(
 			ComboOverview::skill_node(),
 		))
 		.with_children(|parent| {
-			let button = SkillButton::<DropdownTrigger>::new(skill.clone(), key_path.to_vec());
+			let button =
+				SkillButton::<DropdownTrigger, TSkill>::new(skill.clone(), key_path.to_vec());
 
 			for add_back in add_backs {
 				add_back(parent);
@@ -477,7 +510,7 @@ fn add_skill(
 			parent
 				.spawn((
 					button,
-					ComboOverview::skill_button(skill.icon.clone()),
+					ComboOverview::skill_button(icon.clone()),
 					SkillSelectDropdownInsertCommand::<SlotKey, Vertical>::new(key_path.to_vec()),
 				))
 				.with_children(|parent| {
@@ -535,7 +568,7 @@ fn add_append_button(key_path: &[SlotKey], parent: &mut ChildBuilder) {
 			parent
 				.spawn((
 					ComboOverview::modify_button(),
-					KeySelectDropdownInsertCommand {
+					KeySelectDropdownCommand {
 						extra: AppendSkillCommand,
 						key_path: key_path.to_vec(),
 					},
@@ -570,19 +603,15 @@ mod tests {
 	use bevy::asset::{Asset, AssetId, AssetPath};
 	use common::{simple_init, tools::slot_key::Side, traits::mock::Mock};
 	use mockall::{mock, predicate::eq};
-	use skills::skills::Skill;
 	use uuid::Uuid;
+
+	#[derive(Debug, PartialEq, Clone)]
+	struct _Skill;
 
 	#[test]
 	fn update_combos() {
 		let combos = vec![vec![ComboTreeElement::Leaf {
-			skill: Skill {
-				name: "my skill".to_owned(),
-				icon: Some(Handle::Weak(AssetId::Uuid {
-					uuid: Uuid::new_v4(),
-				})),
-				..default()
-			},
+			skill: _Skill,
 			key_path: vec![SlotKey::BottomHand(Side::Right)],
 		}]];
 		let mut combo_overview = ComboOverview::default();
@@ -612,7 +641,7 @@ mod tests {
 			mock.expect_load_asset::<Image, Path>()
 				.return_const(handle.clone());
 		});
-		let combos = ComboOverview::load_ui(&mut server);
+		let combos = ComboOverview::<_Skill>::load_ui(&mut server);
 
 		assert_eq!(
 			ComboOverview {
@@ -631,6 +660,6 @@ mod tests {
 				.with(eq(Path::from("icons/empty.png")))
 				.return_const(Handle::default());
 		});
-		_ = ComboOverview::load_ui(&mut server);
+		_ = ComboOverview::<_Skill>::load_ui(&mut server);
 	}
 }

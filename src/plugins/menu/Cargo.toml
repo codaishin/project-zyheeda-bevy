@@ -12,7 +12,6 @@ uuid.workspace = true
 
 # internal
 common.workspace = true
-skills.workspace = true
 
 [dev-dependencies]
 # external

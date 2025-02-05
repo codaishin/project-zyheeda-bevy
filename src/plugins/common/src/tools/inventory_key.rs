@@ -1,4 +1,4 @@
-use common::traits::iteration::{Infinite, IterInfinite};
+use crate::traits::iteration::{Infinite, IterInfinite};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct InventoryKey(pub usize);

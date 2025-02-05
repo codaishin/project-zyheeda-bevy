@@ -1,7 +1,7 @@
 pub(crate) mod advance_combo;
 pub(crate) mod bevy_input;
 pub(crate) mod flush;
-pub(crate) mod peek_next;
+pub(crate) mod peek_next_recursive;
 pub(crate) mod skill_builder;
 pub(crate) mod skill_state;
 pub(crate) mod spawn_skill_behavior;
@@ -11,11 +11,10 @@ pub(crate) mod swap_commands;
 use crate::{
 	behaviors::SkillCaster,
 	components::{skill_spawners::SkillSpawners, SkillTarget},
-	item::item_type::SkillItemType,
 	skills::{AnimationStrategy, RunSkillBehavior, Skill},
 };
 use common::{
-	tools::slot_key::SlotKey,
+	tools::{item_type::ItemType, slot_key::SlotKey},
 	traits::{map_value::TryMapBackwards, state_duration::StateUpdate},
 };
 use std::hash::Hash;
@@ -56,36 +55,26 @@ pub(crate) trait GetActiveSkill<TSkillState: Clone> {
 	fn clear_active(&mut self);
 }
 
-pub trait IsTimedOut {
-	fn is_timed_out(&self) -> bool;
-}
-
-pub trait PeekNext<TNext> {
-	fn peek_next(&self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<TNext>;
-}
-
 pub(crate) trait AdvanceCombo {
-	fn advance_combo(&mut self, trigger: &SlotKey, item_type: &SkillItemType) -> Option<Skill>;
+	fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill>;
 }
 
 pub(crate) trait SetNextCombo<TCombo> {
 	fn set_next_combo(&mut self, value: TCombo);
 }
 
-pub type Combo<'a> = Vec<(Vec<SlotKey>, &'a Skill)>;
-
-pub trait GetCombosOrdered {
-	fn combos_ordered(&self) -> impl Iterator<Item = Combo>;
+pub trait GetNode<TKey> {
+	type TNode<'a>
+	where
+		Self: 'a;
+	fn node<'a>(&'a self, key: &TKey) -> Option<Self::TNode<'a>>;
 }
 
-pub trait GetNode<'a, TKey> {
-	type TNode;
-	fn node(&'a self, key: &TKey) -> Option<Self::TNode>;
-}
-
-pub trait GetNodeMut<'a, TKey> {
-	type TNode;
-	fn node_mut(&'a mut self, key: &TKey) -> Option<Self::TNode>;
+pub trait GetNodeMut<TKey> {
+	type TNode<'a>
+	where
+		Self: 'a;
+	fn node_mut<'a>(&'a mut self, key: &TKey) -> Option<Self::TNode<'a>>;
 }
 
 pub trait RootKeys {
@@ -104,10 +93,6 @@ pub trait Insert<T> {
 
 pub trait ReKey<TKey> {
 	fn re_key(&mut self, key: TKey);
-}
-
-pub trait UpdateConfig<TKey, TValue> {
-	fn update_config(&mut self, key: &TKey, value: TValue);
 }
 
 pub(crate) trait GetAnimationStrategy {

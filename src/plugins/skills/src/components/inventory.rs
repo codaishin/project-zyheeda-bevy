@@ -1,11 +1,45 @@
-use crate::{inventory_key::InventoryKey, item::Item};
-use bevy::asset::Handle;
+use crate::item::Item;
+use bevy::{asset::Handle, ecs::component::Component};
 use common::{
-	components::Collection,
-	traits::accessors::get::{GetMut, GetRef},
+	tools::inventory_key::InventoryKey,
+	traits::{
+		accessors::get::{GetMut, GetRef},
+		handles_equipment::{ItemAsset, ItemAssetBufferMut, KeyOutOfBounds},
+	},
 };
 
-pub type Inventory = Collection<Option<Handle<Item>>>;
+#[derive(Component, Debug, PartialEq)]
+pub struct Inventory(pub(crate) Vec<Option<Handle<Item>>>);
+
+impl Inventory {
+	pub fn new<const N: usize>(items: [Option<Handle<Item>>; N]) -> Self {
+		Self(Vec::from(items))
+	}
+}
+
+impl ItemAssetBufferMut for Inventory {
+	type TItemHandle = Handle<Item>;
+
+	fn buffer_mut(&mut self) -> &mut Vec<Option<Self::TItemHandle>> {
+		&mut self.0
+	}
+}
+
+impl ItemAsset for Inventory {
+	type TKey = InventoryKey;
+	type TItem = Item;
+
+	fn item_asset(
+		&self,
+		InventoryKey(index): &Self::TKey,
+	) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
+		let Some(item) = self.0.get(*index) else {
+			return Err(KeyOutOfBounds);
+		};
+
+		Ok(item)
+	}
+}
 
 impl GetRef<InventoryKey, Handle<Item>> for Inventory {
 	fn get(&self, key: &InventoryKey) -> Option<&Handle<Item>> {

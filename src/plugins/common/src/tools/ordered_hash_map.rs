@@ -76,6 +76,10 @@ where
 	pub fn values(&self) -> impl Iterator<Item = &TValue> {
 		self.order.iter().filter_map(|key| self.map.get(key))
 	}
+
+	pub fn is_empty(&self) -> bool {
+		self.map.is_empty()
+	}
 }
 
 impl<TKey, TValue> Default for OrderedHashMap<TKey, TValue>
@@ -503,5 +507,13 @@ mod tests {
 				(order, map),
 			)
 		})
+	}
+
+	#[test]
+	fn is_empty() {
+		let filled = OrderedHashMap::from([(32, 32)]);
+		let empty = OrderedHashMap::<u32, u32>::from([]);
+
+		assert_eq!((false, true), (filled.is_empty(), empty.is_empty()));
 	}
 }

@@ -1,9 +1,9 @@
-use crate::{
-	skills::QueuedSkill,
-	traits::{Flush, IsTimedOut},
-};
+use crate::traits::Flush;
 use bevy::prelude::*;
-use common::traits::{iterate::Iterate, update_cumulative::CumulativeUpdate};
+use common::traits::{
+	handles_equipment::{IsTimedOut, IterateQueue},
+	update_cumulative::CumulativeUpdate,
+};
 use std::time::Duration;
 
 pub(crate) fn flush_skill_combos<TCombos, TComboTimeout, TTime, TQueue>(
@@ -13,7 +13,7 @@ pub(crate) fn flush_skill_combos<TCombos, TComboTimeout, TTime, TQueue>(
 	TCombos: Flush + Component,
 	TComboTimeout: CumulativeUpdate<Duration> + IsTimedOut + Flush + Component,
 	TTime: Default + Sync + Send + 'static,
-	TQueue: Iterate<QueuedSkill> + Component,
+	TQueue: IterateQueue + Component,
 {
 	let delta = time.delta();
 
@@ -27,7 +27,7 @@ pub(crate) fn flush_skill_combos<TCombos, TComboTimeout, TTime, TQueue>(
 	}
 }
 
-fn skills_queued<TQueue: Iterate<QueuedSkill>>(queue: &TQueue) -> bool {
+fn skills_queued<TQueue: IterateQueue>(queue: &TQueue) -> bool {
 	queue.iterate().next().is_some()
 }
 
@@ -51,6 +51,7 @@ fn flush_when_timed_out<
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::skills::QueuedSkill;
 	use common::{
 		test_tools::utils::{SingleThreadedApp, TickTime},
 		traits::nested_mock::NestedMocks,
@@ -117,11 +118,10 @@ mod tests {
 		skills: Vec<QueuedSkill>,
 	}
 
-	impl Iterate<QueuedSkill> for _Queue {
-		fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a QueuedSkill>
-		where
-			QueuedSkill: 'a,
-		{
+	impl IterateQueue for _Queue {
+		type TItem = QueuedSkill;
+
+		fn iterate(&self) -> impl Iterator<Item = &Self::TItem> {
 			self.skills.iter()
 		}
 	}
