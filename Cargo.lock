@@ -3100,7 +3100,6 @@ dependencies = [
  "common",
  "macros",
  "mockall",
- "skills",
  "tracing",
  "uuid",
 ]

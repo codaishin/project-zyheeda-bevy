@@ -603,22 +603,15 @@ mod tests {
 	use bevy::asset::{Asset, AssetId, AssetPath};
 	use common::{simple_init, tools::slot_key::Side, traits::mock::Mock};
 	use mockall::{mock, predicate::eq};
-	use skills::skills::Skill;
 	use uuid::Uuid;
 
-	#[derive(Debug, PartialEq)]
+	#[derive(Debug, PartialEq, Clone)]
 	struct _Skill;
 
 	#[test]
 	fn update_combos() {
 		let combos = vec![vec![ComboTreeElement::Leaf {
-			skill: Skill {
-				name: "my skill".to_owned(),
-				icon: Some(Handle::Weak(AssetId::Uuid {
-					uuid: Uuid::new_v4(),
-				})),
-				..default()
-			},
+			skill: _Skill,
 			key_path: vec![SlotKey::BottomHand(Side::Right)],
 		}]];
 		let mut combo_overview = ComboOverview::default();
