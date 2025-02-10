@@ -22,7 +22,7 @@ use common::{
 	systems::log::log_many,
 	tools::{inventory_key::InventoryKey, slot_key::SlotKey},
 	traits::{
-		handles_equipment::{HandlesEquipment, SkillDescription},
+		handles_equipment::{GetCombosOrdered, HandlesEquipment, SkillDescription},
 		handles_graphics::{StaticRenderLayers, UiCamera},
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		handles_player::HandlesPlayer,
@@ -271,13 +271,13 @@ where
 					TPlayers::TPlayer,
 					TEquipment::TCombos,
 					TEquipment::TSkill,
-				>
-					.run_if(
-						in_state(combo_overview).and(
-							added::<ComboOverview<TEquipment::TSkill>>
-								.or(changed::<TPlayers::TPlayer, TEquipment::TCombos>),
-						),
+				>(TEquipment::TCombos::combos_ordered)
+				.run_if(
+					in_state(combo_overview).and(
+						added::<ComboOverview<TEquipment::TSkill>>
+							.or(changed::<TPlayers::TPlayer, TEquipment::TCombos>),
 					),
+				),
 			)
 			.add_systems(
 				Update,

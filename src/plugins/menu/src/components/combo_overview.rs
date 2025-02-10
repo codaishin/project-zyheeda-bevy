@@ -8,8 +8,8 @@ use super::{
 use crate::{
 	tools::{Dimensions, Pixel},
 	traits::{
+		build_combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol},
 		colors::DEFAULT_PANEL_COLORS,
-		combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol},
 		insert_ui_content::InsertUiContent,
 		LoadUi,
 		UpdateCombosView,
@@ -659,7 +659,7 @@ fn add_delete_button(key_path: &[SlotKey], parent: &mut ChildBuilder) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::combo_tree_layout::ComboTreeElement;
+	use crate::traits::build_combo_tree_layout::ComboTreeElement;
 	use bevy::asset::{Asset, AssetId, AssetPath};
 	use common::{simple_init, tools::slot_key::Side, traits::mock::Mock};
 	use mockall::{mock, predicate::eq};

@@ -1,4 +1,4 @@
-use common::{tools::slot_key::SlotKey, traits::handles_equipment::GetCombosOrdered};
+use common::{tools::slot_key::SlotKey, traits::handles_equipment::Combo};
 use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -24,23 +24,22 @@ pub(crate) enum ComboTreeElement<TSkill> {
 
 pub type ComboTreeLayout<TSkill> = Vec<Vec<ComboTreeElement<TSkill>>>;
 
-pub(crate) trait GetComboTreeLayout<TSkill> {
-	fn combo_tree_layout(&self) -> ComboTreeLayout<TSkill>;
+pub(crate) trait BuildComboTreeLayout<TSkill> {
+	fn build_combo_tree_layout(self) -> ComboTreeLayout<TSkill>;
 }
 
-impl<T, TSkill> GetComboTreeLayout<TSkill> for T
+impl<TSkill> BuildComboTreeLayout<TSkill> for Vec<Combo<TSkill>>
 where
-	T: GetCombosOrdered<TSkill>,
 	TSkill: Clone + PartialEq,
 {
-	fn combo_tree_layout(&self) -> ComboTreeLayout<TSkill> {
+	fn build_combo_tree_layout(self) -> ComboTreeLayout<TSkill> {
 		let mut get_first_symbol = get_first_symbol(HasRoot::False);
 		let mut encountered = HashSet::new();
 		let mut layouts = Vec::new();
 
-		for mut combo in self.combos_ordered().filter(|combo| !combo.is_empty()) {
+		for mut combo in self.into_iter().filter(|combo| !combo.is_empty()) {
 			let first = ComboTreeElement::Symbol(get_first_symbol());
-			let last = drain_as_leaf(&mut combo);
+			let last = drain(&mut combo);
 			let mut layout = Vec::new();
 
 			adjust_connections(&mut layouts, &mut layout, &first);
@@ -61,14 +60,11 @@ where
 	}
 }
 
-fn drain_as_leaf<TSkill>(combo: &mut Vec<(Vec<SlotKey>, &TSkill)>) -> ComboTreeElement<TSkill>
-where
-	TSkill: Clone,
-{
+fn drain<TSkill>(combo: &mut Vec<(Vec<SlotKey>, TSkill)>) -> ComboTreeElement<TSkill> {
 	let leaf = combo.remove(combo.len() - 1);
 	ComboTreeElement::Leaf {
 		key_path: leaf.0,
-		skill: leaf.1.clone(),
+		skill: leaf.1,
 	}
 }
 
@@ -110,22 +106,16 @@ fn adjust_connections<TSkill>(
 
 fn layout_element<TSkill>(
 	key_path: Vec<SlotKey>,
-	skill: &TSkill,
+	skill: TSkill,
 	encountered: &mut HashSet<Vec<SlotKey>>,
-) -> ComboTreeElement<TSkill>
-where
-	TSkill: Clone,
-{
+) -> ComboTreeElement<TSkill> {
 	if encountered.contains(&key_path) {
 		return ComboTreeElement::Symbol(Symbol::Corner);
 	}
 
 	encountered.insert(key_path.clone());
 
-	ComboTreeElement::Node {
-		key_path,
-		skill: skill.clone(),
-	}
+	ComboTreeElement::Node { key_path, skill }
 }
 
 fn replace_symbols_at<TSkill>(
@@ -155,19 +145,11 @@ mod tests {
 	#[derive(Debug, PartialEq, Clone)]
 	struct _Skill;
 
-	struct _Combos(Vec<Vec<(Vec<SlotKey>, _Skill)>>);
+	struct _Combos(Vec<Combo<_Skill>>);
 
-	impl GetCombosOrdered<_Skill> for _Combos {
-		fn combos_ordered<'a>(&'a self) -> impl Iterator<Item = Combo<'a, _Skill>>
-		where
-			_Skill: 'a,
-		{
-			self.0.iter().map(|combo| {
-				combo
-					.iter()
-					.map(|(key_path, skill)| (key_path.clone(), skill))
-					.collect()
-			})
+	impl _Combos {
+		fn combos(&self) -> Vec<Combo<_Skill>> {
+			self.0.clone()
 		}
 	}
 
@@ -187,7 +169,7 @@ mod tests {
 					skill: _Skill
 				}
 			]],
-			combos.combo_tree_layout()
+			combos.combos().build_combo_tree_layout()
 		);
 	}
 
@@ -223,7 +205,7 @@ mod tests {
 					skill: _Skill
 				}
 			]],
-			combos.combo_tree_layout()
+			combos.combos().build_combo_tree_layout()
 		);
 	}
 
@@ -256,7 +238,7 @@ mod tests {
 					}
 				]
 			],
-			combos.combo_tree_layout()
+			combos.combos().build_combo_tree_layout()
 		);
 	}
 
@@ -318,7 +300,7 @@ mod tests {
 					},
 				]
 			],
-			combos.combo_tree_layout()
+			combos.combos().build_combo_tree_layout()
 		);
 	}
 
@@ -389,7 +371,7 @@ mod tests {
 					},
 				],
 			],
-			combos.combo_tree_layout()
+			combos.combos().build_combo_tree_layout()
 		);
 	}
 
@@ -508,7 +490,7 @@ mod tests {
 					},
 				],
 			],
-			combos.combo_tree_layout()
+			combos.combos().build_combo_tree_layout()
 		);
 	}
 
@@ -618,7 +600,7 @@ mod tests {
 					},
 				],
 			],
-			combos.combo_tree_layout()
+			combos.combos().build_combo_tree_layout()
 		);
 	}
 
@@ -807,7 +789,7 @@ mod tests {
 					},
 				]
 			],
-			combos.combo_tree_layout()
+			combos.combos().build_combo_tree_layout()
 		);
 	}
 
@@ -880,7 +862,7 @@ mod tests {
 					},
 				],
 			],
-			combos.combo_tree_layout()
+			combos.combos().build_combo_tree_layout()
 		);
 	}
 }

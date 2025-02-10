@@ -1,5 +1,5 @@
+pub(crate) mod build_combo_tree_layout;
 pub(crate) mod colors;
-pub(crate) mod combo_tree_layout;
 pub(crate) mod insert_ui_content;
 pub(crate) mod is_released;
 pub(crate) mod tooltip_ui_control;
@@ -8,7 +8,7 @@ pub mod reacts_to_menu_hotkeys;
 
 use crate::tools::Layout;
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use combo_tree_layout::ComboTreeLayout;
+use build_combo_tree_layout::ComboTreeLayout;
 use common::traits::load_asset::LoadAsset;
 
 pub(crate) trait UpdateCombosView<TSkill> {

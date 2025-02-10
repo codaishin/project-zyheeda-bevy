@@ -1,35 +1,38 @@
-use crate::traits::{combo_tree_layout::GetComboTreeLayout, UpdateCombosView};
+use crate::traits::{build_combo_tree_layout::BuildComboTreeLayout, UpdateCombosView};
 use bevy::prelude::*;
 use common::traits::thread_safe::ThreadSafe;
 
-impl<T> UpdateComboOverview for T {}
+impl<T, TLayoutBuilder> UpdateComboOverview<TLayoutBuilder> for T {}
 
-pub(crate) trait UpdateComboOverview {
+pub(crate) trait UpdateComboOverview<TLayoutBuilder> {
 	fn update_combos_overview<TAgent, TCombos, TSkill>(
-		agents: Query<&TCombos, With<TAgent>>,
-		mut combo_overviews: Query<&mut Self>,
-	) where
+		get_layout_builder: impl Fn(&TCombos) -> TLayoutBuilder,
+	) -> impl Fn(Query<&TCombos, With<TAgent>>, Query<&mut Self>)
+	where
 		Self: Component + UpdateCombosView<TSkill> + Sized,
 		TAgent: Component,
-		TCombos: Component + GetComboTreeLayout<TSkill>,
+		TCombos: Component,
 		TSkill: ThreadSafe,
+		TLayoutBuilder: BuildComboTreeLayout<TSkill>,
 	{
-		let Ok(combos) = agents.get_single() else {
-			return;
-		};
+		move |combos: Query<&TCombos, With<TAgent>>, mut combo_overviews: Query<&mut Self>| {
+			let Ok(layout_builder) = combos.get_single().map(&get_layout_builder) else {
+				return;
+			};
 
-		let Ok(mut combo_overview) = combo_overviews.get_single_mut() else {
-			return;
-		};
+			let Ok(mut combo_overview) = combo_overviews.get_single_mut() else {
+				return;
+			};
 
-		combo_overview.update_combos_view(combos.combo_tree_layout());
+			combo_overview.update_combos_view(layout_builder.build_combo_tree_layout());
+		}
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol};
+	use crate::traits::build_combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol};
 	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -52,12 +55,12 @@ mod tests {
 		}
 	}
 
-	#[derive(Component)]
+	#[derive(Component, Clone)]
 	struct _Combos(ComboTreeLayout<_Skill>);
 
-	impl GetComboTreeLayout<_Skill> for _Combos {
-		fn combo_tree_layout(&self) -> ComboTreeLayout<_Skill> {
-			self.0.clone()
+	impl BuildComboTreeLayout<_Skill> for _Combos {
+		fn build_combo_tree_layout(self) -> ComboTreeLayout<_Skill> {
+			self.0
 		}
 	}
 
@@ -65,7 +68,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			_ComboOverview::update_combos_overview::<_Agent, _Combos, _Skill>,
+			_ComboOverview::update_combos_overview::<_Agent, _Combos, _Skill>(_Combos::clone),
 		);
 
 		app

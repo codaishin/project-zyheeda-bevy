@@ -74,12 +74,11 @@ pub trait FollowupKeys {
 }
 
 pub trait GetCombosOrdered<TSkill> {
-	fn combos_ordered<'a>(&'a self) -> impl Iterator<Item = Combo<'a, TSkill>>
-	where
-		TSkill: 'a;
+	fn combos_ordered(&self) -> Vec<Combo<TSkill>>;
 }
 
-pub type Combo<'a, TSkill> = Vec<(Vec<SlotKey>, &'a TSkill)>;
+pub type Combo<TSkill> = Vec<(ComboKeys, TSkill)>;
+pub type ComboKeys = Vec<SlotKey>;
 
 pub trait PeekNext {
 	type TNext;

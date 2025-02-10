@@ -92,10 +92,7 @@ where
 }
 
 impl<TNode: GetCombosOrdered<Skill>> GetCombosOrdered<Skill> for Combos<TNode> {
-	fn combos_ordered<'a>(&'a self) -> impl Iterator<Item = Combo<'a, Skill>>
-	where
-		Skill: 'a,
-	{
+	fn combos_ordered(&self) -> Vec<Combo<Skill>> {
 		self.config.combos_ordered()
 	}
 }
@@ -266,14 +263,11 @@ mod tests {
 		combos.peek_next_recursive(&SlotKey::default(), &ItemType::default());
 	}
 
-	struct _ComboNode<'a>(Vec<Combo<'a, Skill>>);
+	struct _ComboNode(Vec<Combo<Skill>>);
 
-	impl GetCombosOrdered<Skill> for _ComboNode<'_> {
-		fn combos_ordered<'a>(&'a self) -> impl Iterator<Item = Combo<'a, Skill>>
-		where
-			Skill: 'a,
-		{
-			self.0.iter().cloned()
+	impl GetCombosOrdered<Skill> for _ComboNode {
+		fn combos_ordered(&self) -> Vec<Combo<Skill>> {
+			self.0.clone()
 		}
 	}
 
@@ -288,11 +282,11 @@ mod tests {
 				SlotKey::BottomHand(Side::Left),
 				SlotKey::BottomHand(Side::Right),
 			],
-			&skill,
+			skill,
 		)]];
 		let combos = Combos::new(_ComboNode(combos_vec.clone()));
 
-		assert_eq!(combos_vec, combos.combos_ordered().collect::<Vec<_>>())
+		assert_eq!(combos_vec, combos.combos_ordered())
 	}
 
 	#[derive(Default)]
