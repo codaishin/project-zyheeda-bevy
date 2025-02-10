@@ -1,4 +1,4 @@
-pub(crate) mod skill;
+pub(crate) mod skill_description;
 
 use super::GlobalZIndexTop;
 use crate::traits::{
