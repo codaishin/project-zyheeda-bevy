@@ -8,17 +8,6 @@ use bevy::prelude::*;
 use common::tools::slot_key::SlotKey;
 
 #[derive(Debug, PartialEq, Clone)]
-pub(crate) struct ReKeySkill<TKey = SlotKey> {
-	pub(crate) to: TKey,
-}
-
-impl GetKey<SlotKey> for ReKeySkill {
-	fn get_key<'a>(&'a self, _: &'a [SlotKey]) -> Option<&'a SlotKey> {
-		Some(&self.to)
-	}
-}
-
-#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct AppendSkill<TKey = SlotKey> {
 	pub(crate) on: TKey,
 }
@@ -54,15 +43,6 @@ where
 			.with_children(|parent| {
 				parent.spawn(ComboOverview::skill_key_text(*key));
 			});
-	}
-}
-
-impl GetComponent for KeySelect<ReKeySkill> {
-	type TComponent = KeySelect<ReKeySkill>;
-	type TInput = ();
-
-	fn component(&self, _: ()) -> Option<Self::TComponent> {
-		Some(self.clone())
 	}
 }
 

@@ -7,7 +7,6 @@ pub(crate) mod dropdown;
 pub(crate) mod image_color;
 pub(crate) mod insert_key_code_text;
 pub(crate) mod items;
-pub(crate) mod map_pressed_key_select;
 pub(crate) mod mouse_context;
 pub(crate) mod on_release_set;
 pub(crate) mod set_state_from_input;

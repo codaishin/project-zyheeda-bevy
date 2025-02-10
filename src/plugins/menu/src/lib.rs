@@ -36,7 +36,7 @@ use components::{
 	dropdown::Dropdown,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
-	key_select::{AppendSkill, KeySelect, ReKeySkill},
+	key_select::{AppendSkill, KeySelect},
 	key_select_dropdown_command::AppendSkillCommand,
 	loading_screen::LoadingScreen,
 	quickbar_panel::QuickbarPanel,
@@ -53,7 +53,6 @@ use systems::{
 	adjust_global_z_index::adjust_global_z_index,
 	combos::{
 		dropdown_skill_select_click::DropdownSkillSelectClick,
-		update_combo_keys::update_combo_keys,
 		update_combos_view::UpdateComboOverview,
 		update_combos_view_delete_skill::update_combos_view_delete_skill,
 	},
@@ -71,7 +70,6 @@ use systems::{
 	image_color::image_color,
 	insert_key_code_text::insert_key_code_text,
 	items::swap::equipped_items::swap_equipped_items,
-	map_pressed_key_select::map_pressed_key_select,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	on_release_set::OnReleaseSet,
 	set_state_from_input::set_state_from_input,
@@ -265,7 +263,6 @@ where
 		app.add_ui::<ComboOverview<TEquipment::TSkill>, TGraphics::TUiCamera>(combo_overview)
 			.add_dropdown::<SkillButton<DropdownItem<Vertical>, TEquipment::TSkill>>()
 			.add_dropdown::<SkillButton<DropdownItem<Horizontal>, TEquipment::TSkill>>()
-			.add_dropdown::<KeySelect<ReKeySkill>>()
 			.add_dropdown::<KeySelect<AppendSkill>>()
 			.add_tooltip::<SkillDescription>()
 			.add_systems(
@@ -316,8 +313,6 @@ where
 						TEquipment::TSkill,
 						TEquipment::TCombos,
 					>,
-					map_pressed_key_select
-						.pipe(update_combo_keys::<TPlayers::TPlayer, TEquipment::TCombos>),
 				)
 					.run_if(in_state(combo_overview)),
 			);
