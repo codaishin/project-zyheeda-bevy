@@ -626,6 +626,7 @@ fn add_append_button(key_path: &[SlotKey], parent: &mut ChildBuilder) {
 			parent
 				.spawn((
 					ComboOverview::modify_button(),
+					Tooltip::new("Add Skill to combo"), // FIXME: Language support
 					KeySelectDropdownCommand {
 						extra: AppendSkillCommand,
 						key_path: key_path.to_vec(),
@@ -644,6 +645,7 @@ fn add_delete_button(key_path: &[SlotKey], parent: &mut ChildBuilder) {
 			parent
 				.spawn((
 					ComboOverview::modify_button(),
+					Tooltip::new("Delete skill from combo"), // FIXME: Language support
 					DeleteSkill {
 						key_path: key_path.to_vec(),
 					},

@@ -347,7 +347,8 @@ where
 	}
 
 	fn general_systems(&self, app: &mut App) {
-		app.add_systems(Update, image_color)
+		app.add_tooltip::<&'static str>()
+			.add_systems(Update, image_color)
 			.add_systems(Update, adjust_global_z_index)
 			.add_systems(
 				Update,
