@@ -18,17 +18,17 @@ impl<T> DropdownSkillSelectInsert for T {}
 
 pub(crate) trait DropdownSkillSelectInsert {
 	fn dropdown_skill_select_insert<TSkill, TIsCompatible>(
-		In(compatible): In<TIsCompatible>,
 		mut commands: Commands,
 		dropdown_commands: Query<(Entity, &SkillSelectDropdownInsertCommand<SlotKey, Self>)>,
 		skills: Res<Assets<TSkill>>,
+		compatible: Res<TIsCompatible>,
 	) where
 		Self: ThreadSafe + Sized,
 		TSkill: Asset + PartialEq + Clone,
-		TIsCompatible: IsCompatible<TSkill>,
+		TIsCompatible: IsCompatible<TSkill> + Resource,
 	{
 		for (entity, command) in &dropdown_commands {
-			if let Some(items) = compatible_skills(command, &compatible, &skills) {
+			if let Some(items) = compatible_skills(command, compatible.as_ref(), &skills) {
 				commands.try_insert_on(entity, Dropdown { items });
 			}
 			commands.try_remove_from::<SkillSelectDropdownInsertCommand<SlotKey, Self>>(entity);
@@ -78,14 +78,13 @@ where
 mod tests {
 	use super::*;
 	use crate::components::dropdown::Dropdown;
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
-		simple_init,
 		test_tools::utils::SingleThreadedApp,
 		tools::slot_key::Side,
-		traits::mock::Mock,
+		traits::nested_mock::NestedMocks,
 	};
-	use mockall::{mock, predicate::eq};
+	use macros::NestedMocks;
+	use mockall::{automock, predicate::eq};
 
 	#[derive(Asset, TypePath, Debug, PartialEq, Clone)]
 	struct _Skill(&'static str);
@@ -93,14 +92,17 @@ mod tests {
 	#[derive(Debug, PartialEq)]
 	struct _Layout;
 
-	mock! {
-		_Compatible {}
-		impl IsCompatible<_Skill> for _Compatible {
-			fn is_compatible(&self, key: &SlotKey, skill: &_Skill) -> bool;
-		}
+	#[derive(Resource, NestedMocks)]
+	struct _Compatible {
+		mock: Mock_Compatible,
 	}
 
-	simple_init!(Mock_Compatible);
+	#[automock]
+	impl IsCompatible<_Skill> for _Compatible {
+		fn is_compatible(&self, key: &SlotKey, skill: &_Skill) -> bool {
+			self.mock.is_compatible(key, skill)
+		}
+	}
 
 	#[derive(Debug, PartialEq, Clone)]
 	enum _DropdownKey {
@@ -108,7 +110,7 @@ mod tests {
 		Ok,
 	}
 
-	fn setup<const N: usize>(skills: [_Skill; N]) -> App {
+	fn setup<const N: usize>(skills: [_Skill; N], compatible: _Compatible) -> App {
 		let mut app = App::new().single_threaded(Update);
 		let mut skill_assets = Assets::<_Skill>::default();
 
@@ -116,19 +118,26 @@ mod tests {
 			skill_assets.add(skill);
 		}
 
+		app.add_systems(
+			Update,
+			_Layout::dropdown_skill_select_insert::<_Skill, _Compatible>,
+		);
+		app.insert_resource(compatible);
 		app.insert_resource(skill_assets);
 
 		app
 	}
 
 	#[test]
-	fn list_compatible_skills() -> Result<(), RunSystemError> {
-		let mut app = setup([_Skill("my skill")]);
-		let compatible = Mock_Compatible::new_mock(|mock| {
-			mock.expect_is_compatible()
-				.with(eq(SlotKey::BottomHand(Side::Right)), eq(_Skill("my skill")))
-				.return_const(true);
-		});
+	fn list_compatible_skills() {
+		let mut app = setup(
+			[_Skill("my skill")],
+			_Compatible::new().with_mock(|mock| {
+				mock.expect_is_compatible()
+					.with(eq(SlotKey::BottomHand(Side::Right)), eq(_Skill("my skill")))
+					.return_const(true);
+			}),
+		);
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(
@@ -136,12 +145,7 @@ mod tests {
 			))
 			.id();
 
-		app.world_mut().run_system_once_with(
-			compatible,
-			_Layout::dropdown_skill_select_insert::<_Skill, Mock_Compatible>,
-		)?;
-
-		let dropdown = app.world().entity(dropdown);
+		app.update();
 
 		assert_eq!(
 			Some(&Dropdown {
@@ -150,19 +154,22 @@ mod tests {
 					vec![SlotKey::BottomHand(Side::Right)],
 				)]
 			}),
-			dropdown.get::<Dropdown<SkillButton<DropdownItem<_Layout>, _Skill>>>()
+			app.world()
+				.entity(dropdown)
+				.get::<Dropdown<SkillButton<DropdownItem<_Layout>, _Skill>>>()
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn do_not_list_incompatible_skills() -> Result<(), RunSystemError> {
-		let mut app = setup([_Skill("my skill")]);
-		let compatible = Mock_Compatible::new_mock(|mock| {
-			mock.expect_is_compatible()
-				.with(eq(SlotKey::BottomHand(Side::Right)), eq(_Skill("my skill")))
-				.return_const(false);
-		});
+	fn do_not_list_incompatible_skills() {
+		let mut app = setup(
+			[_Skill("my skill")],
+			_Compatible::new().with_mock(|mock| {
+				mock.expect_is_compatible()
+					.with(eq(SlotKey::BottomHand(Side::Right)), eq(_Skill("my skill")))
+					.return_const(false);
+			}),
+		);
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(
@@ -170,28 +177,26 @@ mod tests {
 			))
 			.id();
 
-		app.world_mut().run_system_once_with(
-			compatible,
-			_Layout::dropdown_skill_select_insert::<_Skill, Mock_Compatible>,
-		)?;
-
-		let dropdown = app.world().entity(dropdown);
+		app.update();
 
 		assert_eq!(
 			Some(&Dropdown { items: vec![] }),
-			dropdown.get::<Dropdown<SkillButton<DropdownItem<_Layout>, _Skill>>>()
+			app.world()
+				.entity(dropdown)
+				.get::<Dropdown<SkillButton<DropdownItem<_Layout>, _Skill>>>()
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn list_unique_skills() -> Result<(), RunSystemError> {
-		let mut app = setup([_Skill("my skill"), _Skill("my skill")]);
-		let compatible = Mock_Compatible::new_mock(|mock| {
-			mock.expect_is_compatible()
-				.with(eq(SlotKey::BottomHand(Side::Right)), eq(_Skill("my skill")))
-				.return_const(true);
-		});
+	fn list_unique_skills() {
+		let mut app = setup(
+			[_Skill("my skill"), _Skill("my skill")],
+			_Compatible::new().with_mock(|mock| {
+				mock.expect_is_compatible()
+					.with(eq(SlotKey::BottomHand(Side::Right)), eq(_Skill("my skill")))
+					.return_const(true);
+			}),
+		);
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(
@@ -199,12 +204,7 @@ mod tests {
 			))
 			.id();
 
-		app.world_mut().run_system_once_with(
-			compatible,
-			_Layout::dropdown_skill_select_insert::<_Skill, Mock_Compatible>,
-		)?;
-
-		let dropdown = app.world().entity(dropdown);
+		app.update();
 
 		assert_eq!(
 			Some(&Dropdown {
@@ -213,19 +213,22 @@ mod tests {
 					vec![SlotKey::BottomHand(Side::Right)],
 				)]
 			}),
-			dropdown.get::<Dropdown<SkillButton<DropdownItem<_Layout>, _Skill>>>()
+			app.world()
+				.entity(dropdown)
+				.get::<Dropdown<SkillButton<DropdownItem<_Layout>, _Skill>>>()
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn remove_command() -> Result<(), RunSystemError> {
-		let mut app = setup([_Skill("my skill"), _Skill("my skill")]);
-		let compatible = Mock_Compatible::new_mock(|mock| {
-			mock.expect_is_compatible()
-				.with(eq(SlotKey::BottomHand(Side::Right)), eq(_Skill("my skill")))
-				.return_const(true);
-		});
+	fn remove_command() {
+		let mut app = setup(
+			[_Skill("my skill"), _Skill("my skill")],
+			_Compatible::new().with_mock(|mock| {
+				mock.expect_is_compatible()
+					.with(eq(SlotKey::BottomHand(Side::Right)), eq(_Skill("my skill")))
+					.return_const(true);
+			}),
+		);
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(
@@ -233,17 +236,13 @@ mod tests {
 			))
 			.id();
 
-		app.world_mut().run_system_once_with(
-			compatible,
-			_Layout::dropdown_skill_select_insert::<_Skill, Mock_Compatible>,
-		)?;
-
-		let dropdown = app.world().entity(dropdown);
+		app.update();
 
 		assert_eq!(
 			None,
-			dropdown.get::<SkillSelectDropdownInsertCommand<_Skill, _Layout>>()
+			app.world()
+				.entity(dropdown)
+				.get::<SkillSelectDropdownInsertCommand<_Skill, _Layout>>()
 		);
-		Ok(())
 	}
 }

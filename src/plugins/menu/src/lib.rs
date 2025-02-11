@@ -2,6 +2,7 @@ pub mod traits;
 
 mod components;
 mod events;
+mod resources;
 mod systems;
 mod tools;
 mod visualization;
@@ -51,7 +52,8 @@ use components::{
 	ui_overlay::UIOverlay,
 };
 use events::DropdownEvent;
-use std::{collections::HashMap, marker::PhantomData, time::Duration};
+use resources::equipment_info::EquipmentInfo;
+use std::{marker::PhantomData, time::Duration};
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
 	combos::{
@@ -262,55 +264,57 @@ where
 
 	// BEGIN: Temporary proof of concept
 	// This system needs to be moved into the future menu plugin interface
-	fn register_compatibility_check<TSystem, TIsCompatible, TMarker>(
+	fn register_combo_menu<TSystem, TIsCompatible, TMarker>(
 		app: &mut App,
 		get_compatibility_checker: TSystem,
 	) where
-		TSystem: IntoSystem<(), TIsCompatible, TMarker> + Copy,
-		TIsCompatible: IsCompatible<TEquipment::TSkill> + 'static,
+		TSystem: IntoSystem<(), Option<TIsCompatible>, TMarker> + Copy,
+		TIsCompatible: IsCompatible<TEquipment::TSkill> + 'static + ThreadSafe,
 	{
 		app.add_systems(
 			Update,
 			(
-				get_compatibility_checker
-					.pipe(Unusable::visualize_invalid_skill::<TEquipment::TSkill, TIsCompatible>),
-				get_compatibility_checker.pipe(
-					Vertical::dropdown_skill_select_insert::<TEquipment::TSkill, TIsCompatible>,
-				),
-				get_compatibility_checker.pipe(
-					Horizontal::dropdown_skill_select_insert::<TEquipment::TSkill, TIsCompatible>,
-				),
+				get_compatibility_checker.pipe(EquipmentInfo::update),
+				Unusable::visualize_invalid_skill::<TEquipment::TSkill, EquipmentInfo<TIsCompatible>>,
+				Vertical::dropdown_skill_select_insert::<
+					TEquipment::TSkill,
+					EquipmentInfo<TIsCompatible>,
+				>,
+				Horizontal::dropdown_skill_select_insert::<
+					TEquipment::TSkill,
+					EquipmentInfo<TIsCompatible>,
+				>,
 			)
+				.chain()
 				.run_if(in_state(GameState::IngameMenu(MenuState::ComboOverview))),
 		);
 	}
 
 	// This system needs to move to the skills plugin
+	#[allow(clippy::type_complexity)]
 	fn get_compatible_items(
-		slots: Query<&TEquipment::TSlots, With<TPlayers::TPlayer>>,
+		slots: Query<&TEquipment::TSlots, (With<TPlayers::TPlayer>, Changed<TEquipment::TSlots>)>,
 		items: Res<Assets<TEquipment::TItem>>,
-	) -> CompatibilityChecker {
-		let map = match slots.get_single() {
-			Err(_) => HashMap::default(),
-			Ok(slots) => SlotKey::iterator()
-				.filter_map(|key| {
-					let Ok(Some(item)) = slots.item_asset(&key) else {
-						return None;
-					};
-					let item = items.get(item)?;
-					Some((key, ItemType::get_field(item)))
-				})
-				.collect(),
-		};
+	) -> Option<CompatibilityChecker> {
+		let slots = slots.get_single().ok()?;
+		let map = SlotKey::iterator()
+			.filter_map(|key| {
+				let Ok(Some(item)) = slots.item_asset(&key) else {
+					return None;
+				};
+				let item = items.get(item)?;
+				Some((key, ItemType::get_field(item)))
+			})
+			.collect();
 
-		CompatibilityChecker(map)
+		Some(CompatibilityChecker(map))
 	}
 	// END: Temporary proof of concept
 
 	fn combo_overview(&self, app: &mut App) {
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
 
-		Self::register_compatibility_check(app, Self::get_compatible_items);
+		Self::register_combo_menu(app, Self::get_compatible_items);
 
 		app.add_ui::<ComboOverview<TEquipment::TSkill>, TGraphics::TUiCamera>(combo_overview)
 			.add_dropdown::<SkillButton<DropdownItem<Vertical>, TEquipment::TSkill>>()
