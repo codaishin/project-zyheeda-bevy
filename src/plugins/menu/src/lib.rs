@@ -20,12 +20,15 @@ use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
 	states::{game_state::GameState, menu_state::MenuState},
 	systems::log::log_many,
-	tools::{inventory_key::InventoryKey, slot_key::SlotKey},
+	tools::{inventory_key::InventoryKey, item_type::ItemType, slot_key::SlotKey},
 	traits::{
-		handles_equipment::{GetCombosOrdered, HandlesEquipment, SkillDescription},
+		accessors::get::GetField,
+		handles_combo_menu::{CompatibilityChecker, IsCompatible},
+		handles_equipment::{GetCombosOrdered, HandlesEquipment, ItemAsset, SkillDescription},
 		handles_graphics::{StaticRenderLayers, UiCamera},
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		handles_player::HandlesPlayer,
+		iteration::IterFinite,
 		load_asset::Path,
 		thread_safe::ThreadSafe,
 	},
@@ -48,7 +51,7 @@ use components::{
 	ui_overlay::UIOverlay,
 };
 use events::DropdownEvent;
-use std::{marker::PhantomData, time::Duration};
+use std::{collections::HashMap, marker::PhantomData, time::Duration};
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
 	combos::{
@@ -257,8 +260,49 @@ where
 			);
 	}
 
+	// BEGIN: Temporary proof of concept
+	// This system needs to be moved into the future menu plugin interface
+	fn register_compatibility_check<TSystem, TIsCompatible, TMarker>(
+		app: &mut App,
+		get_compatibility_checker: TSystem,
+	) where
+		TSystem: IntoSystem<(), TIsCompatible, TMarker>,
+		TIsCompatible: IsCompatible<TEquipment::TSkill> + 'static,
+	{
+		app.add_systems(
+			Update,
+			get_compatibility_checker
+				.pipe(Unusable::visualize_invalid_skill::<TEquipment::TSkill, TIsCompatible>)
+				.run_if(in_state(GameState::IngameMenu(MenuState::ComboOverview))),
+		);
+	}
+
+	// This system needs to move to the skills plugin
+	fn get_compatible_items(
+		slots: Query<&TEquipment::TSlots, With<TPlayers::TPlayer>>,
+		items: Res<Assets<TEquipment::TItem>>,
+	) -> CompatibilityChecker {
+		let map = match slots.get_single() {
+			Err(_) => HashMap::default(),
+			Ok(slots) => SlotKey::iterator()
+				.filter_map(|key| {
+					let Ok(Some(item)) = slots.item_asset(&key) else {
+						return None;
+					};
+					let item = items.get(item)?;
+					Some((key, ItemType::get_field(item)))
+				})
+				.collect(),
+		};
+
+		CompatibilityChecker(map)
+	}
+	// END: Temporary proof of concept
+
 	fn combo_overview(&self, app: &mut App) {
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
+
+		Self::register_compatibility_check(app, Self::get_compatible_items);
 
 		app.add_ui::<ComboOverview<TEquipment::TSkill>, TGraphics::TUiCamera>(combo_overview)
 			.add_dropdown::<SkillButton<DropdownItem<Vertical>, TEquipment::TSkill>>()
@@ -282,11 +326,6 @@ where
 			.add_systems(
 				Update,
 				(
-					Unusable::visualize_invalid_skill::<
-						TPlayers::TPlayer,
-						TEquipment::TSkill,
-						TEquipment::TSlots,
-					>,
 					Vertical::dropdown_skill_select_insert::<
 						TPlayers::TPlayer,
 						TEquipment::TSkill,

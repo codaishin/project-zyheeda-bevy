@@ -11,6 +11,7 @@ pub mod get_handle_from_path;
 pub mod get_ray;
 pub mod get_ui_text;
 pub mod handles_assets_for_children;
+pub mod handles_combo_menu;
 pub mod handles_custom_assets;
 pub mod handles_destruction;
 pub mod handles_effect;
