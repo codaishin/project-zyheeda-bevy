@@ -1,3 +1,5 @@
+use std::{collections::HashSet, hash::Hash};
+
 use crate::{traits::GetComponent, AppendSkill, Dropdown, KeySelect};
 use bevy::prelude::*;
 use common::{
@@ -13,7 +15,7 @@ pub(crate) struct KeySelectDropdownCommand<TExtra, TKey = SlotKey> {
 
 impl<TKey> GetComponent for KeySelectDropdownCommand<AppendSkillCommand, TKey>
 where
-	TKey: ThreadSafe + IterFinite + PartialEq,
+	TKey: ThreadSafe + IterFinite + PartialEq + Eq + Hash,
 {
 	type TComponent = Dropdown<KeySelect<AppendSkill<TKey>, TKey>>;
 	type TInput = ExcludeKeys<TKey>;
@@ -39,14 +41,16 @@ where
 pub(crate) struct AppendSkillCommand;
 
 #[derive(Debug, PartialEq, Clone)]
-pub(crate) struct ExcludeKeys<TKey>(pub Vec<TKey>);
+pub(crate) struct ExcludeKeys<TKey>(pub HashSet<TKey>)
+where
+	TKey: Eq + Hash;
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use common::traits::iteration::Iter;
 
-	#[derive(Debug, PartialEq, Clone, Copy)]
+	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	enum _Key {
 		A,
 		B,
@@ -81,7 +85,7 @@ mod tests {
 
 	#[test]
 	fn get_dropdown_dropdown_with_remaining_keys() {
-		let keys = vec![_Key::B];
+		let keys = HashSet::from([_Key::B]);
 		let command = KeySelectDropdownCommand {
 			extra: AppendSkillCommand,
 			key_path: vec![_Key::A],

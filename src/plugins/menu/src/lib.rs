@@ -24,7 +24,7 @@ use common::{
 	tools::{inventory_key::InventoryKey, item_type::ItemType, slot_key::SlotKey},
 	traits::{
 		accessors::get::GetField,
-		handles_combo_menu::{CompatibilityChecker, IsCompatible},
+		handles_combo_menu::{EquipmentDescriptor, IsCompatible, NextKeys},
 		handles_equipment::{
 			Combo,
 			GetCombosOrdered,
@@ -271,30 +271,34 @@ where
 
 	// BEGIN: Temporary proof of concept
 	// This system needs to be moved into the future menu plugin interface
-	fn register_combo_menu<TGetCompatibilityChecker, TWriteCombos, TIsCompatible, M1, M2>(
+	fn register_combo_menu<TGetEquipmentInfo, TUpdateCombos, TEquipmentInfo, M1, M2>(
 		app: &mut App,
-		get_compatibility_checker: TGetCompatibilityChecker,
-		write_combos: TWriteCombos,
+		get_equipment_info: TGetEquipmentInfo,
+		update_combos: TUpdateCombos,
 	) where
-		TGetCompatibilityChecker: IntoSystem<(), Option<TIsCompatible>, M1>,
-		TWriteCombos: IntoSystem<In<Combo<Option<TEquipment::TSkill>>>, (), M2> + Copy,
-		TIsCompatible: IsCompatible<TEquipment::TSkill> + 'static + ThreadSafe,
+		TGetEquipmentInfo: IntoSystem<(), Option<TEquipmentInfo>, M1>,
+		TUpdateCombos: IntoSystem<In<Combo<Option<TEquipment::TSkill>>>, (), M2> + Copy,
+		TEquipmentInfo: IsCompatible<TEquipment::TSkill> + NextKeys + 'static + ThreadSafe,
 	{
 		app.add_systems(
 			Update,
 			(
-				Vertical::dropdown_skill_select_click::<TEquipment::TSkill>.pipe(write_combos),
-				Horizontal::dropdown_skill_select_click::<TEquipment::TSkill>.pipe(write_combos),
+				Vertical::dropdown_skill_select_click::<TEquipment::TSkill>.pipe(update_combos),
+				Horizontal::dropdown_skill_select_click::<TEquipment::TSkill>.pipe(update_combos),
 				Vertical::dropdown_skill_select_insert::<
 					TEquipment::TSkill,
-					EquipmentInfo<TIsCompatible>,
+					EquipmentInfo<TEquipmentInfo>,
 				>,
 				Horizontal::dropdown_skill_select_insert::<
 					TEquipment::TSkill,
-					EquipmentInfo<TIsCompatible>,
+					EquipmentInfo<TEquipmentInfo>,
 				>,
-				Unusable::visualize_invalid_skill::<TEquipment::TSkill, EquipmentInfo<TIsCompatible>>,
-				get_compatibility_checker.pipe(EquipmentInfo::update),
+				Unusable::visualize_invalid_skill::<
+					TEquipment::TSkill,
+					EquipmentInfo<TEquipmentInfo>,
+				>,
+				select_successor_key::<EquipmentInfo<TEquipmentInfo>>,
+				get_equipment_info.pipe(EquipmentInfo::update),
 			)
 				.chain()
 				.run_if(in_state(GameState::IngameMenu(MenuState::ComboOverview))),
@@ -303,12 +307,19 @@ where
 
 	// This system needs to move to the skills plugin
 	#[allow(clippy::type_complexity)]
-	fn get_compatible_items(
-		slots: Query<&TEquipment::TSlots, (With<TPlayers::TPlayer>, Changed<TEquipment::TSlots>)>,
+	fn get_equipment_info(
+		slots: Query<Ref<TEquipment::TSlots>, With<TPlayers::TPlayer>>,
+		combos: Query<Ref<TEquipment::TCombos>, With<TPlayers::TPlayer>>,
 		items: Res<Assets<TEquipment::TItem>>,
-	) -> Option<CompatibilityChecker> {
+	) -> Option<EquipmentDescriptor> {
 		let slots = slots.get_single().ok()?;
-		let map = SlotKey::iterator()
+		let combos = combos.get_single().ok()?;
+
+		if !slots.is_changed() && !combos.is_changed() {
+			return None;
+		}
+
+		let item_types = SlotKey::iterator()
 			.filter_map(|key| {
 				let Ok(Some(item)) = slots.item_asset(&key) else {
 					return None;
@@ -317,12 +328,18 @@ where
 				Some((key, ItemType::get_field(item)))
 			})
 			.collect();
+		let combos = combos
+			.combos_ordered()
+			.iter()
+			.flat_map(|combo| combo.iter())
+			.map(|(combo_keys, ..)| combo_keys.clone())
+			.collect();
 
-		Some(CompatibilityChecker(map))
+		Some(EquipmentDescriptor { item_types, combos })
 	}
 
 	// This system needs to move to the skills plugin
-	fn write_combos(
+	fn update_combos(
 		In(updated_combos): In<Combo<Option<TEquipment::TSkill>>>,
 		mut combos: Query<&mut TEquipment::TCombos, With<TPlayers::TPlayer>>,
 	) {
@@ -339,7 +356,7 @@ where
 	fn combo_overview(&self, app: &mut App) {
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
 
-		Self::register_combo_menu(app, Self::get_compatible_items, Self::write_combos);
+		Self::register_combo_menu(app, Self::get_equipment_info, Self::update_combos);
 
 		app.add_ui::<ComboOverview<TEquipment::TSkill>, TGraphics::TUiCamera>(combo_overview)
 			.add_dropdown::<SkillButton<DropdownItem<Vertical>, TEquipment::TSkill>>()
@@ -362,14 +379,11 @@ where
 			)
 			.add_systems(
 				Update,
-				(
-					select_successor_key::<TPlayers::TPlayer, TEquipment::TCombos>,
-					update_combos_view_delete_skill::<
-						TPlayers::TPlayer,
-						TEquipment::TSkill,
-						TEquipment::TCombos,
-					>,
-				)
+				update_combos_view_delete_skill::<
+					TPlayers::TPlayer,
+					TEquipment::TSkill,
+					TEquipment::TCombos,
+				>
 					.run_if(in_state(combo_overview)),
 			);
 	}

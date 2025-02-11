@@ -3,25 +3,51 @@ use super::{
 	handles_equipment::CompatibleItems,
 };
 use crate::tools::{item_type::ItemType, slot_key::SlotKey};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub trait IsCompatible<TSkill> {
 	fn is_compatible(&self, key: &SlotKey, skill: &TSkill) -> bool;
 }
 
-pub struct CompatibilityChecker(pub HashMap<SlotKey, ItemType>);
+pub trait NextKeys {
+	fn next_keys(&self, combo_keys: &[SlotKey]) -> HashSet<SlotKey>;
+}
 
-impl<TSkill> IsCompatible<TSkill> for CompatibilityChecker
+// This should go later into the skills plugin
+pub struct EquipmentDescriptor {
+	pub item_types: HashMap<SlotKey, ItemType>,
+	pub combos: HashSet<Vec<SlotKey>>,
+}
+
+impl<TSkill> IsCompatible<TSkill> for EquipmentDescriptor
 where
 	TSkill: GetterRef<CompatibleItems>,
 {
 	fn is_compatible(&self, key: &SlotKey, skill: &TSkill) -> bool {
-		let CompatibleItems(items) = CompatibleItems::get_field_ref(skill);
+		let CompatibleItems(compatible_items) = CompatibleItems::get_field_ref(skill);
 
-		let Some(key_item) = self.0.get(key) else {
+		let Some(item_type) = self.item_types.get(key) else {
 			return false;
 		};
 
-		items.contains(key_item)
+		compatible_items.contains(item_type)
+	}
+}
+
+impl NextKeys for EquipmentDescriptor {
+	fn next_keys(&self, combo_keys: &[SlotKey]) -> HashSet<SlotKey> {
+		let mut next_keys = HashSet::default();
+
+		for combo in self.combos.iter() {
+			if !combo.starts_with(combo_keys) {
+				continue;
+			}
+			let Some(next) = combo.get(combo_keys.len()) else {
+				continue;
+			};
+			next_keys.insert(*next);
+		}
+
+		next_keys
 	}
 }

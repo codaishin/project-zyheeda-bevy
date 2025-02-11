@@ -7,45 +7,36 @@ use bevy::prelude::*;
 use common::{
 	tools::slot_key::SlotKey,
 	traits::{
-		handles_equipment::FollowupKeys,
+		handles_combo_menu::NextKeys,
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
 		try_remove_from::TryRemoveFrom,
 	},
 };
 
-pub(crate) fn select_successor_key<TAgent, TCombos>(
+pub(crate) fn select_successor_key<TNextKeys>(
 	commands: Commands,
-	agents: Query<&TCombos, With<TAgent>>,
+	next_keys: Res<TNextKeys>,
 	dropdown_commands: Query<(Entity, &KeySelectDropdownCommand<AppendSkillCommand>)>,
 ) where
-	TCombos: Component + FollowupKeys<TKey = SlotKey>,
-	TAgent: Component,
+	TNextKeys: Resource + NextKeys,
 	KeySelectDropdownCommand<AppendSkillCommand>:
 		ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
 {
-	_select_successor_key(commands, agents, dropdown_commands);
+	_select_successor_key(commands, next_keys, dropdown_commands);
 }
 
-fn _select_successor_key<TAgent, TCombos, TExtra>(
+fn _select_successor_key<TNextKeys, TExtra>(
 	mut commands: Commands,
-	agents: Query<&TCombos, With<TAgent>>,
+	next_keys: Res<TNextKeys>,
 	dropdown_commands: Query<(Entity, &KeySelectDropdownCommand<TExtra>)>,
 ) where
-	TCombos: Component + FollowupKeys<TKey = SlotKey> + Sized,
-	TAgent: Component,
+	TNextKeys: Resource + NextKeys,
 	KeySelectDropdownCommand<TExtra>: ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
 {
-	let Ok(combos) = agents.get_single() else {
-		return;
-	};
-
 	for (entity, insert_command) in &dropdown_commands {
-		let Some(followup_keys) = combos.followup_keys(insert_command.key_path.clone()) else {
-			despawn(&mut commands, entity);
-			continue;
-		};
-		let Some(component) = insert_command.component(ExcludeKeys(followup_keys)) else {
+		let next_keys = next_keys.next_keys(&insert_command.key_path);
+		let Some(component) = insert_command.component(ExcludeKeys(next_keys)) else {
 			despawn(&mut commands, entity);
 			continue;
 		};
@@ -74,35 +65,26 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
-	use std::collections::VecDeque;
+	use std::collections::HashSet;
 
-	#[derive(Component)]
-	struct _Agent;
-
-	#[derive(Component, NestedMocks)]
-	struct _Combos {
-		mock: Mock_Combos,
+	#[derive(Resource, NestedMocks)]
+	struct _NextKeys {
+		mock: Mock_NextKeys,
 	}
 
-	impl Default for _Combos {
+	impl Default for _NextKeys {
 		fn default() -> Self {
-			let mut mock = Mock_Combos::default();
-			mock.expect_followup_keys::<Vec<_>>()
-				.return_const(Some(vec![]));
+			let mut mock = Mock_NextKeys::default();
+			mock.expect_next_keys().return_const(HashSet::default());
 
 			Self { mock }
 		}
 	}
 
 	#[automock]
-	impl FollowupKeys for _Combos {
-		type TKey = SlotKey;
-
-		fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>
-		where
-			T: Into<VecDeque<SlotKey>> + 'static,
-		{
-			self.mock.followup_keys(after)
+	impl NextKeys for _NextKeys {
+		fn next_keys(&self, combo_keys: &[SlotKey]) -> std::collections::HashSet<SlotKey> {
+			self.mock.next_keys(combo_keys)
 		}
 	}
 
@@ -127,20 +109,25 @@ mod tests {
 	#[derive(Component, Debug, PartialEq, Clone)]
 	struct _Component(ExcludeKeys<SlotKey>);
 
-	fn setup() -> App {
+	fn setup(next_keys: _NextKeys) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, _select_successor_key::<_Agent, _Combos, _Extra>);
+		app.insert_resource(next_keys);
+		app.add_systems(Update, _select_successor_key::<_NextKeys, _Extra>);
 
 		app
 	}
 
 	#[test]
 	fn spawn_component() {
-		let mut app = setup();
 		let key_path = vec![
 			SlotKey::TopHand(Side::Left),
 			SlotKey::BottomHand(Side::Right),
 		];
+		let mut app = setup(_NextKeys::new().with_mock(|mock| {
+			mock.expect_next_keys()
+				.with(eq(key_path.clone()))
+				.return_const(HashSet::from([SlotKey::TopHand(Side::Left)]));
+		}));
 		let entity = app
 			.world_mut()
 			.spawn(KeySelectDropdownCommand {
@@ -148,47 +135,20 @@ mod tests {
 				key_path: key_path.clone(),
 			})
 			.id();
-		app.world_mut().spawn((
-			_Agent,
-			_Combos::new().with_mock(|mock| {
-				mock.expect_followup_keys::<Vec<_>>()
-					.with(eq(key_path.clone()))
-					.return_const(Some(vec![SlotKey::TopHand(Side::Left)]));
-			}),
-		));
 
 		app.update();
 
-		let entity = app.world().entity(entity);
-
 		assert_eq!(
-			Some(&_Component(ExcludeKeys(vec![SlotKey::TopHand(Side::Left)]))),
-			entity.get::<_Component>()
+			Some(&_Component(ExcludeKeys(HashSet::from([SlotKey::TopHand(
+				Side::Left
+			)])))),
+			app.world().entity(entity).get::<_Component>()
 		)
 	}
 
 	#[test]
-	fn do_nothing_if_agent_missing() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn(KeySelectDropdownCommand {
-				extra: _Extra::Some,
-				key_path: vec![] as Vec<SlotKey>,
-			})
-			.id();
-		app.world_mut().spawn(_Combos::default());
-
-		app.update();
-
-		let entity = app.world().entity(entity);
-
-		assert_eq!(None, entity.get::<_Component>())
-	}
-
-	#[test]
 	fn remove_insert_command() {
-		let mut app = setup();
+		let mut app = setup(_NextKeys::default());
 		let entity = app
 			.world_mut()
 			.spawn(KeySelectDropdownCommand {
@@ -196,67 +156,19 @@ mod tests {
 				key_path: vec![] as Vec<SlotKey>,
 			})
 			.id();
-		app.world_mut().spawn((_Agent, _Combos::default()));
-
 		app.update();
 
-		let entity = app.world().entity(entity);
-
-		assert_eq!(None, entity.get::<KeySelectDropdownCommand<_Extra>>())
-	}
-
-	#[test]
-	fn despawn_entity_if_followup_keys_is_none() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn(KeySelectDropdownCommand {
-				extra: _Extra::Some,
-				key_path: vec![] as Vec<SlotKey>,
-			})
-			.id();
-		app.world_mut().spawn((
-			_Agent,
-			_Combos::new().with_mock(|mock| {
-				mock.expect_followup_keys::<Vec<_>>().return_const(None);
-			}),
-		));
-
-		app.update();
-
-		let entity = app.world().get_entity(entity).map(|e| e.id()).ok();
-
-		assert_eq!(None, entity);
-	}
-
-	#[test]
-	fn despawn_entity_recursively_if_followup_keys_is_none() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn(KeySelectDropdownCommand {
-				extra: _Extra::Some,
-				key_path: vec![] as Vec<SlotKey>,
-			})
-			.id();
-		let child = app.world_mut().spawn_empty().set_parent(entity).id();
-		app.world_mut().spawn((
-			_Agent,
-			_Combos::new().with_mock(|mock| {
-				mock.expect_followup_keys::<Vec<_>>().return_const(None);
-			}),
-		));
-
-		app.update();
-
-		let child = app.world().get_entity(child).map(|e| e.id()).ok();
-
-		assert_eq!(None, child);
+		assert_eq!(
+			None,
+			app.world()
+				.entity(entity)
+				.get::<KeySelectDropdownCommand<_Extra>>()
+		)
 	}
 
 	#[test]
 	fn despawn_entity_if_bundle_is_none() {
-		let mut app = setup();
+		let mut app = setup(_NextKeys::default());
 		let entity = app
 			.world_mut()
 			.spawn(KeySelectDropdownCommand {
@@ -264,18 +176,16 @@ mod tests {
 				key_path: vec![] as Vec<SlotKey>,
 			})
 			.id();
-		app.world_mut().spawn((_Agent, _Combos::default()));
 
 		app.update();
 
 		let entity = app.world().get_entity(entity).map(|e| e.id()).ok();
-
 		assert_eq!(None, entity);
 	}
 
 	#[test]
 	fn despawn_entity_recursively_if_bundle_is_none() {
-		let mut app = setup();
+		let mut app = setup(_NextKeys::default());
 		let entity = app
 			.world_mut()
 			.spawn(KeySelectDropdownCommand {
@@ -284,12 +194,10 @@ mod tests {
 			})
 			.id();
 		let child = app.world_mut().spawn_empty().set_parent(entity).id();
-		app.world_mut().spawn((_Agent, _Combos::default()));
 
 		app.update();
 
 		let child = app.world().get_entity(child).map(|e| e.id()).ok();
-
 		assert_eq!(None, child);
 	}
 }

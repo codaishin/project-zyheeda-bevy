@@ -203,10 +203,6 @@ impl FollowupKeys for ComboNode {
 	where
 		T: Into<VecDeque<Self::TKey>>,
 	{
-		if self.0.is_empty() {
-			return Some(vec![]);
-		}
-
 		let mut after: VecDeque<Self::TKey> = after.into();
 
 		let Some(key) = after.pop_front() else {

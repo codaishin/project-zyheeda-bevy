@@ -1,7 +1,12 @@
+use std::collections::HashSet;
+
 use bevy::prelude::*;
 use common::{
 	tools::slot_key::SlotKey,
-	traits::{handles_combo_menu::IsCompatible, thread_safe::ThreadSafe},
+	traits::{
+		handles_combo_menu::{IsCompatible, NextKeys},
+		thread_safe::ThreadSafe,
+	},
 };
 
 #[derive(Resource, Debug, PartialEq)]
@@ -25,6 +30,15 @@ where
 {
 	fn is_compatible(&self, key: &SlotKey, skill: &TSkill) -> bool {
 		self.0.is_compatible(key, skill)
+	}
+}
+
+impl<TNextKeys> NextKeys for EquipmentInfo<TNextKeys>
+where
+	TNextKeys: NextKeys,
+{
+	fn next_keys(&self, combo_keys: &[SlotKey]) -> HashSet<SlotKey> {
+		self.0.next_keys(combo_keys)
 	}
 }
 
