@@ -266,13 +266,21 @@ where
 		app: &mut App,
 		get_compatibility_checker: TSystem,
 	) where
-		TSystem: IntoSystem<(), TIsCompatible, TMarker>,
+		TSystem: IntoSystem<(), TIsCompatible, TMarker> + Copy,
 		TIsCompatible: IsCompatible<TEquipment::TSkill> + 'static,
 	{
 		app.add_systems(
 			Update,
-			get_compatibility_checker
-				.pipe(Unusable::visualize_invalid_skill::<TEquipment::TSkill, TIsCompatible>)
+			(
+				get_compatibility_checker
+					.pipe(Unusable::visualize_invalid_skill::<TEquipment::TSkill, TIsCompatible>),
+				get_compatibility_checker.pipe(
+					Vertical::dropdown_skill_select_insert::<TEquipment::TSkill, TIsCompatible>,
+				),
+				get_compatibility_checker.pipe(
+					Horizontal::dropdown_skill_select_insert::<TEquipment::TSkill, TIsCompatible>,
+				),
+			)
 				.run_if(in_state(GameState::IngameMenu(MenuState::ComboOverview))),
 		);
 	}
@@ -326,20 +334,10 @@ where
 			.add_systems(
 				Update,
 				(
-					Vertical::dropdown_skill_select_insert::<
-						TPlayers::TPlayer,
-						TEquipment::TSkill,
-						TEquipment::TSlots,
-					>,
 					Vertical::dropdown_skill_select_click::<
 						TPlayers::TPlayer,
 						TEquipment::TSkill,
 						TEquipment::TCombos,
-					>,
-					Horizontal::dropdown_skill_select_insert::<
-						TPlayers::TPlayer,
-						TEquipment::TSkill,
-						TEquipment::TSlots,
 					>,
 					Horizontal::dropdown_skill_select_click::<
 						TPlayers::TPlayer,
