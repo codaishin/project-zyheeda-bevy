@@ -16,7 +16,8 @@ use common::{
 	},
 	traits::{
 		accessors::get::{GetMut, GetRef},
-		handles_equipment::{Combo, CompatibleItems, FollowupKeys, GetCombosOrdered},
+		handles_combo_menu::GetCombosOrdered,
+		handles_equipment::{Combo, CompatibleItems, FollowupKeys},
 		insert::TryInsert,
 		iterate::Iterate,
 	},

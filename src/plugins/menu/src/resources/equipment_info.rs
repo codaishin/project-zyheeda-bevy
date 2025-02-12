@@ -4,7 +4,8 @@ use bevy::prelude::*;
 use common::{
 	tools::slot_key::SlotKey,
 	traits::{
-		handles_combo_menu::{IsCompatible, NextKeys},
+		handles_combo_menu::{GetCombosOrdered, IsCompatible, NextKeys},
+		handles_equipment::Combo,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -39,6 +40,15 @@ where
 {
 	fn next_keys(&self, combo_keys: &[SlotKey]) -> HashSet<SlotKey> {
 		self.0.next_keys(combo_keys)
+	}
+}
+
+impl<TEquipmentInfo, TSkill> GetCombosOrdered<TSkill> for EquipmentInfo<TEquipmentInfo>
+where
+	TEquipmentInfo: GetCombosOrdered<TSkill>,
+{
+	fn combos_ordered(&self) -> Vec<Combo<TSkill>> {
+		self.0.combos_ordered()
 	}
 }
 

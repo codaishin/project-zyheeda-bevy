@@ -17,7 +17,8 @@ use bevy::ecs::component::Component;
 use common::{
 	tools::{item_type::ItemType, slot_key::SlotKey},
 	traits::{
-		handles_equipment::{Combo, FollowupKeys, GetCombosOrdered, PeekNext, WriteItem},
+		handles_combo_menu::GetCombosOrdered,
+		handles_equipment::{Combo, FollowupKeys, PeekNext, WriteItem},
 		iterate::Iterate,
 	},
 };

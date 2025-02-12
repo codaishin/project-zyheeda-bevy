@@ -1,5 +1,6 @@
 use super::{
 	accessors::get::{Getter, GetterRef},
+	handles_combo_menu::GetCombosOrdered,
 	thread_safe::ThreadSafe,
 };
 use crate::tools::{inventory_key::InventoryKey, item_type::ItemType, slot_key::SlotKey};
@@ -71,10 +72,6 @@ pub trait FollowupKeys {
 	fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>
 	where
 		T: Into<VecDeque<Self::TKey>> + 'static;
-}
-
-pub trait GetCombosOrdered<TSkill> {
-	fn combos_ordered(&self) -> Vec<Combo<TSkill>>;
 }
 
 pub type Combo<TSkill> = Vec<(ComboKeys, TSkill)>;
