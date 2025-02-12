@@ -5,6 +5,7 @@ pub mod inventory;
 pub mod model_render;
 pub mod queue;
 pub mod slots;
+pub mod swapper;
 
 pub(crate) mod skill_executer;
 pub(crate) mod skill_spawners;

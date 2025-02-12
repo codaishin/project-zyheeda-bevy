@@ -19,7 +19,9 @@ pub fn drag<TAgent: Component, TKey: Send + Sync + Copy + 'static>(
 		return;
 	};
 
-	let agent = agents.single();
+	let Ok(agent) = agents.get_single() else {
+		return;
+	};
 	commands.try_insert_on(agent, Dad(panel.0));
 }
 
