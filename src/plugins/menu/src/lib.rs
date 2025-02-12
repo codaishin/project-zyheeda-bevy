@@ -285,6 +285,7 @@ where
 			(
 				Vertical::dropdown_skill_select_click::<TEquipment::TSkill>.pipe(update_combos),
 				Horizontal::dropdown_skill_select_click::<TEquipment::TSkill>.pipe(update_combos),
+				update_combos_view_delete_skill::<TEquipment::TSkill>.pipe(update_combos),
 				Vertical::dropdown_skill_select_insert::<
 					TEquipment::TSkill,
 					EquipmentInfo<TEquipmentInfo>,
@@ -376,15 +377,6 @@ where
 							.or(changed::<TPlayers::TPlayer, TEquipment::TCombos>),
 					),
 				),
-			)
-			.add_systems(
-				Update,
-				update_combos_view_delete_skill::<
-					TPlayers::TPlayer,
-					TEquipment::TSkill,
-					TEquipment::TCombos,
-				>
-					.run_if(in_state(combo_overview)),
 			);
 	}
 
