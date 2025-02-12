@@ -89,9 +89,9 @@ impl ChildAssetComponent<HandItemSlots> for Item {
 	fn component(item: Option<&Self>) -> Self::TComponent {
 		match item {
 			Some(Item {
-				model: ModelRender::Hand(asset_model),
+				model: ModelRender::Hand(path),
 				..
-			}) => asset_model.clone(),
+			}) => AssetModel::Path(path.clone()),
 			_ => AssetModel::None,
 		}
 	}
@@ -122,9 +122,9 @@ impl ChildAssetComponent<ForearmItemSlots> for Item {
 	fn component(item: Option<&Self>) -> Self::TComponent {
 		match item {
 			Some(Item {
-				model: ModelRender::Forearm(asset_model),
+				model: ModelRender::Forearm(path),
 				..
-			}) => asset_model.clone(),
+			}) => AssetModel::Path(path.clone()),
 			_ => AssetModel::None,
 		}
 	}
