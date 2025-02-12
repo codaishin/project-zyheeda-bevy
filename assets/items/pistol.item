@@ -1,9 +1,7 @@
 {
 	"name": "Plasma Pistol",
 	"model": {
-		"Hand": {
-			"Path": "models/pistol.glb"
-		}
+		"Hand": "models/pistol.glb"
 	},
 	"essence": "None",
 	"skill": "skills/shoot_hand_gun.skill",
