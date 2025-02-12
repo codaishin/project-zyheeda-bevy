@@ -1,6 +1,6 @@
 use super::{
 	accessors::get::{GetFieldRef, GetterRef},
-	handles_equipment::CompatibleItems,
+	handles_equipment::{Combo, CompatibleItems},
 };
 use crate::tools::{item_type::ItemType, slot_key::SlotKey};
 use std::collections::{HashMap, HashSet};
@@ -13,13 +13,18 @@ pub trait NextKeys {
 	fn next_keys(&self, combo_keys: &[SlotKey]) -> HashSet<SlotKey>;
 }
 
-// This should go later into the skills plugin
-pub struct EquipmentDescriptor {
-	pub item_types: HashMap<SlotKey, ItemType>,
-	pub combos: HashSet<Vec<SlotKey>>,
+pub trait GetCombosOrdered<TSkill> {
+	fn combos_ordered(&self) -> Vec<Combo<TSkill>>;
 }
 
-impl<TSkill> IsCompatible<TSkill> for EquipmentDescriptor
+// This should go later into the skills plugin
+pub struct EquipmentDescriptor<TSkill> {
+	pub item_types: HashMap<SlotKey, ItemType>,
+	pub combo_keys: HashSet<Vec<SlotKey>>,
+	pub combos: Vec<Combo<TSkill>>,
+}
+
+impl<TSkill> IsCompatible<TSkill> for EquipmentDescriptor<TSkill>
 where
 	TSkill: GetterRef<CompatibleItems>,
 {
@@ -34,20 +39,22 @@ where
 	}
 }
 
-impl NextKeys for EquipmentDescriptor {
+impl<TSkill> NextKeys for EquipmentDescriptor<TSkill> {
 	fn next_keys(&self, combo_keys: &[SlotKey]) -> HashSet<SlotKey> {
-		let mut next_keys = HashSet::default();
+		self.combo_keys
+			.iter()
+			.filter(|combo| combo.starts_with(combo_keys))
+			.filter_map(|combo| combo.get(combo_keys.len()))
+			.cloned()
+			.collect()
+	}
+}
 
-		for combo in self.combos.iter() {
-			if !combo.starts_with(combo_keys) {
-				continue;
-			}
-			let Some(next) = combo.get(combo_keys.len()) else {
-				continue;
-			};
-			next_keys.insert(*next);
-		}
-
-		next_keys
+impl<TSkill> GetCombosOrdered<TSkill> for EquipmentDescriptor<TSkill>
+where
+	TSkill: Clone,
+{
+	fn combos_ordered(&self) -> Vec<Combo<TSkill>> {
+		self.combos.clone()
 	}
 }

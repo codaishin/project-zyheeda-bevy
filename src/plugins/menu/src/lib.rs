@@ -24,15 +24,8 @@ use common::{
 	tools::{inventory_key::InventoryKey, item_type::ItemType, slot_key::SlotKey},
 	traits::{
 		accessors::get::GetField,
-		handles_combo_menu::{EquipmentDescriptor, IsCompatible, NextKeys},
-		handles_equipment::{
-			Combo,
-			GetCombosOrdered,
-			HandlesEquipment,
-			ItemAsset,
-			SkillDescription,
-			WriteItem,
-		},
+		handles_combo_menu::{EquipmentDescriptor, GetCombosOrdered, IsCompatible, NextKeys},
+		handles_equipment::{Combo, HandlesEquipment, ItemAsset, SkillDescription, WriteItem},
 		handles_graphics::{StaticRenderLayers, UiCamera},
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		handles_player::HandlesPlayer,
@@ -68,7 +61,6 @@ use systems::{
 		update_combos_view::UpdateComboOverview,
 		update_combos_view_delete_skill::update_combos_view_delete_skill,
 	},
-	conditions::{added::added, changed::changed},
 	dad::{drag::drag, drop::drop},
 	despawn::despawn,
 	dropdown::{
@@ -278,9 +270,19 @@ where
 	) where
 		TGetEquipmentInfo: IntoSystem<(), Option<TEquipmentInfo>, M1>,
 		TUpdateCombos: IntoSystem<In<Combo<Option<TEquipment::TSkill>>>, (), M2> + Copy,
-		TEquipmentInfo: IsCompatible<TEquipment::TSkill> + NextKeys + 'static + ThreadSafe,
+		TEquipmentInfo: IsCompatible<TEquipment::TSkill>
+			+ NextKeys
+			+ GetCombosOrdered<TEquipment::TSkill>
+			+ ThreadSafe,
 	{
-		app.add_systems(
+		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
+
+		app.add_ui::<ComboOverview<TEquipment::TSkill>, TGraphics::TUiCamera>(
+			GameState::IngameMenu(MenuState::ComboOverview),
+		)
+		.add_dropdown::<SkillButton<DropdownItem<Vertical>, TEquipment::TSkill>>()
+		.add_dropdown::<SkillButton<DropdownItem<Horizontal>, TEquipment::TSkill>>()
+		.add_systems(
 			Update,
 			(
 				Vertical::dropdown_skill_select_click::<TEquipment::TSkill>.pipe(update_combos),
@@ -298,11 +300,15 @@ where
 					TEquipment::TSkill,
 					EquipmentInfo<TEquipmentInfo>,
 				>,
+				ComboOverview::<TEquipment::TSkill>::update_combos_overview::<
+					TEquipment::TSkill,
+					EquipmentInfo<TEquipmentInfo>,
+				>,
 				select_successor_key::<EquipmentInfo<TEquipmentInfo>>,
 				get_equipment_info.pipe(EquipmentInfo::update),
 			)
 				.chain()
-				.run_if(in_state(GameState::IngameMenu(MenuState::ComboOverview))),
+				.run_if(in_state(combo_overview)),
 		);
 	}
 
@@ -312,7 +318,7 @@ where
 		slots: Query<Ref<TEquipment::TSlots>, With<TPlayers::TPlayer>>,
 		combos: Query<Ref<TEquipment::TCombos>, With<TPlayers::TPlayer>>,
 		items: Res<Assets<TEquipment::TItem>>,
-	) -> Option<EquipmentDescriptor> {
+	) -> Option<EquipmentDescriptor<TEquipment::TSkill>> {
 		let slots = slots.get_single().ok()?;
 		let combos = combos.get_single().ok()?;
 
@@ -329,14 +335,19 @@ where
 				Some((key, ItemType::get_field(item)))
 			})
 			.collect();
-		let combos = combos
+		let combo_keys = combos
 			.combos_ordered()
 			.iter()
 			.flat_map(|combo| combo.iter())
 			.map(|(combo_keys, ..)| combo_keys.clone())
 			.collect();
+		let combos = combos.combos_ordered();
 
-		Some(EquipmentDescriptor { item_types, combos })
+		Some(EquipmentDescriptor {
+			item_types,
+			combo_keys,
+			combos,
+		})
 	}
 
 	// This system needs to move to the skills plugin
@@ -355,29 +366,10 @@ where
 	// END: Temporary proof of concept
 
 	fn combo_overview(&self, app: &mut App) {
-		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
-
 		Self::register_combo_menu(app, Self::get_equipment_info, Self::update_combos);
 
-		app.add_ui::<ComboOverview<TEquipment::TSkill>, TGraphics::TUiCamera>(combo_overview)
-			.add_dropdown::<SkillButton<DropdownItem<Vertical>, TEquipment::TSkill>>()
-			.add_dropdown::<SkillButton<DropdownItem<Horizontal>, TEquipment::TSkill>>()
-			.add_dropdown::<KeySelect<AppendSkill>>()
-			.add_tooltip::<SkillDescription>()
-			.add_systems(
-				Update,
-				ComboOverview::<TEquipment::TSkill>::update_combos_overview::<
-					TPlayers::TPlayer,
-					TEquipment::TCombos,
-					TEquipment::TSkill,
-				>(TEquipment::TCombos::combos_ordered)
-				.run_if(
-					in_state(combo_overview).and(
-						added::<ComboOverview<TEquipment::TSkill>>
-							.or(changed::<TPlayers::TPlayer, TEquipment::TCombos>),
-					),
-				),
-			);
+		app.add_dropdown::<KeySelect<AppendSkill>>()
+			.add_tooltip::<SkillDescription>();
 	}
 
 	fn inventory_screen(&self, app: &mut App) {
