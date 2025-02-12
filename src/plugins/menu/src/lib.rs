@@ -13,14 +13,12 @@ mod debug;
 use crate::systems::{
 	combos::visualize_invalid_skill::VisualizeInvalidSkill,
 	dropdown::dropdown_skill_select_insert::DropdownSkillSelectInsert,
-	items::swap::inventory_items::SwapInventoryItems,
 	update_panels::container_states::SetContainerPanels,
 };
 use bevy::prelude::*;
 use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
 	states::{game_state::GameState, menu_state::MenuState},
-	systems::log::log_many,
 	tools::{inventory_key::InventoryKey, item_type::ItemType, slot_key::SlotKey},
 	traits::{
 		accessors::get::GetField,
@@ -73,7 +71,6 @@ use systems::{
 	},
 	image_color::image_color,
 	insert_key_code_text::insert_key_code_text,
-	items::swap::equipped_items::swap_equipped_items,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	on_release_set::OnReleaseSet,
 	set_state_from_input::set_state_from_input,
@@ -382,21 +379,14 @@ where
 					TEquipment::TInventory::set_container_panels::<InventoryPanel, InventoryKey>,
 					TEquipment::TSlots::set_container_panels::<InventoryPanel, SlotKey>,
 					panel_colors::<InventoryPanel>,
-					drag::<TPlayers::TPlayer, InventoryKey>,
-					drag::<TPlayers::TPlayer, SlotKey>,
-					drop::<TPlayers::TPlayer, InventoryKey, InventoryKey>,
-					drop::<TPlayers::TPlayer, SlotKey, SlotKey>,
-					drop::<TPlayers::TPlayer, SlotKey, InventoryKey>,
-					drop::<TPlayers::TPlayer, InventoryKey, SlotKey>,
+					drag::<TEquipment::TSwap, InventoryKey>,
+					drag::<TEquipment::TSwap, SlotKey>,
+					drop::<TEquipment::TSwap, InventoryKey, InventoryKey>,
+					drop::<TEquipment::TSwap, InventoryKey, SlotKey>,
+					drop::<TEquipment::TSwap, SlotKey, SlotKey>,
+					drop::<TEquipment::TSwap, SlotKey, InventoryKey>,
 				)
 					.run_if(in_state(inventory)),
-			)
-			.add_systems(
-				Update,
-				(
-					swap_equipped_items::<TEquipment::TSlots>.pipe(log_many),
-					TEquipment::TInventory::swap_items,
-				),
 			);
 	}
 

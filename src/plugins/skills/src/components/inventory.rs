@@ -8,7 +8,7 @@ use common::{
 	},
 };
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Default)]
 pub struct Inventory(pub(crate) Vec<Option<Handle<Item>>>);
 
 impl Inventory {

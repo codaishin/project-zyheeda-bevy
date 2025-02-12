@@ -20,6 +20,7 @@ pub mod handles_equipment;
 pub mod handles_game_states;
 pub mod handles_graphics;
 pub mod handles_interactions;
+pub mod handles_inventory_menu;
 pub mod handles_life;
 pub mod handles_lifetime;
 pub mod handles_lights;

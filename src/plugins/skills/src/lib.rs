@@ -11,14 +11,10 @@ mod bundles;
 use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
-	components::{Collection, Swap},
 	resources::key_map::KeyMap,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
-	tools::{
-		inventory_key::InventoryKey,
-		slot_key::{Side, SlotKey},
-	},
+	tools::slot_key::{Side, SlotKey},
 	traits::{
 		handles_assets_for_children::HandlesAssetsForChildren,
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
@@ -45,6 +41,7 @@ use components::{
 	skill_executer::SkillExecuter,
 	skill_spawners::SkillSpawners,
 	slots::{ForearmItemSlots, HandItemSlots, Slots, SubMeshEssenceSlots},
+	swapper::Swapper,
 };
 use item::{dto::ItemDto, Item};
 use macros::item_asset;
@@ -53,7 +50,6 @@ use std::{marker::PhantomData, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,
 	enqueue::enqueue,
-	equip::equip_item,
 	execute::ExecuteSkills,
 	flush::flush,
 	flush_skill_combos::flush_skill_combos,
@@ -108,7 +104,7 @@ where
 		TLoading::register_custom_assets::<Item, ItemDto>(app);
 	}
 
-	fn skill_slot_load(&self, app: &mut App) {
+	fn loadout(&self, app: &mut App) {
 		TDispatchChildrenAssets::register_child_asset::<Slots, HandItemSlots>(app);
 		TDispatchChildrenAssets::register_child_asset::<Slots, ForearmItemSlots>(app);
 		TDispatchChildrenAssets::register_child_asset::<Slots, SubMeshEssenceSlots>(app);
@@ -118,15 +114,7 @@ where
 			SkillSpawners::track_in_self_and_children::<Name>().system(),
 		)
 		.add_systems(Update, Self::set_player_items)
-		.add_systems(
-			Update,
-			(
-				equip_item::<Inventory, InventoryKey, Collection<Swap<InventoryKey, SlotKey>>>
-					.pipe(log_many),
-				equip_item::<Inventory, InventoryKey, Collection<Swap<SlotKey, InventoryKey>>>
-					.pipe(log_many),
-			),
-		);
+		.add_systems(Update, Swapper::system);
 	}
 
 	fn skill_execution(&self, app: &mut App) {
@@ -180,6 +168,7 @@ where
 		commands.try_insert_on(
 			player,
 			(
+				Swapper::default(),
 				Self::get_inventory(asset_server),
 				Self::get_loadout(asset_server),
 				Self::get_combos(),
@@ -247,7 +236,7 @@ where
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);
 		self.item_load(app);
-		self.skill_slot_load(app);
+		self.loadout(app);
 		self.skill_execution(app);
 	}
 }
@@ -261,4 +250,5 @@ impl<T> HandlesEquipment for SkillsPlugin<T> {
 	type TQueue = Queue;
 	type TQueuedSkill = QueuedSkill;
 	type TCombosTimeOut = CombosTimeOut;
+	type TSwap = Swapper;
 }
