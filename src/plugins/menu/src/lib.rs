@@ -38,7 +38,7 @@ use common::{
 		handles_inventory_menu::{Descriptions, Descriptor, GetDescriptor},
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		handles_player::HandlesPlayer,
-		handles_quickbar::{ActiveSlotKey, ComboSlotKey},
+		handles_quickbar::{ActiveSlotKey, ComboSlotKey, QueuedSlotKey},
 		load_asset::Path,
 		thread_safe::ThreadSafe,
 	},
@@ -238,7 +238,8 @@ where
 		Self::register_quickbar_menu(
 			app,
 			Self::get_descriptors::<TEquipment::TSlots, TEquipment::TSkill>,
-			Self::active_skill_icon,
+			Self::active_skill_icons,
+			Self::queued_skill_icons,
 			Self::combo_skill_icons,
 		);
 
@@ -250,12 +251,6 @@ where
 				(
 					update_label_text::<SlotKeyMap, LanguageServer, QuickbarPanel>,
 					panel_colors::<QuickbarPanel>,
-					panel_activity_colors_override::<
-						TPlayers::TPlayer,
-						SlotKeyMap,
-						TEquipment::TQueue,
-						QuickbarPanel,
-					>,
 				)
 					.run_if(in_state(play)),
 			)
@@ -351,14 +346,16 @@ where
 	}
 
 	// This system needs to be moved into the future menu plugin interface
-	fn register_quickbar_menu<TSlots, TActiveSlots, TCombosSlots, M1, M2, M3>(
+	fn register_quickbar_menu<TSlots, TActiveSlots, TQueuedSlots, TCombosSlots, M1, M2, M3, M4>(
 		app: &mut App,
 		get_slot_labels: impl IntoSystem<(), Option<TSlots>, M1>,
 		get_active_slot_labels: impl IntoSystem<(), Option<TActiveSlots>, M2>,
-		get_combo_slot_labels: impl IntoSystem<(), Option<TCombosSlots>, M3>,
+		get_queued_slot_labels: impl IntoSystem<(), Option<TQueuedSlots>, M3>,
+		get_combo_slot_labels: impl IntoSystem<(), Option<TCombosSlots>, M4>,
 	) where
 		TSlots: GetDescriptor<SlotKey> + ThreadSafe,
 		TActiveSlots: GetDescriptor<ActiveSlotKey> + ThreadSafe,
+		TQueuedSlots: GetDescriptor<QueuedSlotKey> + ThreadSafe,
 		TCombosSlots: GetDescriptor<ComboSlotKey> + ThreadSafe,
 	{
 		let play = GameState::Play;
@@ -372,8 +369,15 @@ where
 					EquipmentInfo<TCombosSlots>,
 				>
 					.pipe(set_quickbar_icons),
+				panel_activity_colors_override::<
+					SlotKeyMap,
+					QuickbarPanel,
+					EquipmentInfo<TActiveSlots>,
+					EquipmentInfo<TQueuedSlots>,
+				>,
 				get_slot_labels.pipe(EquipmentInfo::update),
 				get_active_slot_labels.pipe(EquipmentInfo::update),
+				get_queued_slot_labels.pipe(EquipmentInfo::update),
 				get_combo_slot_labels.pipe(EquipmentInfo::update),
 			)
 				.chain()
@@ -445,10 +449,7 @@ where
 		TContainer::TItem: Asset + Getter<ItemName> + GetterRef<Option<Handle<TSkill>>>,
 		TSkill: Asset + GetterRef<Option<Handle<Image>>>,
 	{
-		let Ok(container) = containers.get_single() else {
-			return Some(Descriptions(HashMap::default()));
-		};
-
+		let container = containers.get_single().ok()?;
 		let map = container
 			.item_assets()
 			.filter_map(|(key, handle)| {
@@ -474,24 +475,43 @@ where
 	}
 
 	// This system needs to move to the skills plugin
-	fn active_skill_icon(
+	fn active_skill_icons(
 		queues: Query<&TEquipment::TQueue, With<TPlayers::TPlayer>>,
 	) -> Option<Descriptions<ActiveSlotKey>> {
-		let Ok(queue) = queues.get_single() else {
-			return Some(Descriptions(HashMap::default()));
-		};
-
+		let queue = queues.get_single().ok()?;
 		let Some(active) = queue.iterate().next() else {
 			return Some(Descriptions(HashMap::default()));
 		};
-
-		Some(Descriptions(HashMap::from([(
+		let map = HashMap::from([(
 			ActiveSlotKey(SlotKey::get_field(active)),
 			Descriptor {
 				icon: Option::<Handle<Image>>::get_field_ref(active).clone(),
 				..default()
 			},
-		)])))
+		)]);
+
+		Some(Descriptions(map))
+	}
+
+	fn queued_skill_icons(
+		queues: Query<&TEquipment::TQueue, With<TPlayers::TPlayer>>,
+	) -> Option<Descriptions<QueuedSlotKey>> {
+		let queue = queues.get_single().ok()?;
+		let map = queue
+			.iterate()
+			.skip(1)
+			.map(|skill| {
+				(
+					QueuedSlotKey(SlotKey::get_field(skill)),
+					Descriptor {
+						icon: Option::<Handle<Image>>::get_field_ref(skill).clone(),
+						..default()
+					},
+				)
+			})
+			.collect();
+
+		Some(Descriptions(map))
 	}
 
 	// This system needs to move to the skills plugin
@@ -507,14 +527,12 @@ where
 			With<TPlayers::TPlayer>,
 		>,
 	) -> Option<Descriptions<ComboSlotKey>> {
-		let Ok((slots, combos, time_out)) = slots.get_single() else {
-			return Some(Descriptions(HashMap::default()));
-		};
+		let (slots, combos, time_out) = slots.get_single().ok()?;
+		let combo_active = time_out
+			.map(|time_out| !time_out.is_timed_out())
+			.unwrap_or(true);
 
-		if time_out
-			.map(|time_out| time_out.is_timed_out())
-			.unwrap_or(false)
-		{
+		if !combo_active {
 			return Some(Descriptions(HashMap::default()));
 		}
 
