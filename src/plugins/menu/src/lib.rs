@@ -171,10 +171,13 @@ impl AddDropdown for App {
 			(
 				dropdown_events::<TItem>,
 				dropdown_track_child_dropdowns::<TItem>,
+			),
+		)
+		.add_systems(
+			Last,
 				dropdown_detect_focus_change::<TItem>
 					.pipe(dropdown_despawn_when_no_children_pressed::<TItem>)
 					.pipe(dropdown_spawn_focused::<TItem>),
-			),
 		)
 	}
 }
