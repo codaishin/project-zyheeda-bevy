@@ -1,23 +1,23 @@
-use std::collections::HashSet;
-
 use bevy::prelude::*;
 use common::{
 	tools::slot_key::SlotKey,
 	traits::{
 		handles_combo_menu::{GetCombosOrdered, IsCompatible, NextKeys},
 		handles_equipment::Combo,
+		handles_inventory_menu::{GetDescriptor, Descriptor},
 		thread_safe::ThreadSafe,
 	},
 };
+use std::collections::HashSet;
 
 #[derive(Resource, Debug, PartialEq)]
-pub(crate) struct EquipmentInfo<TIsCompatible>(TIsCompatible);
+pub(crate) struct EquipmentInfo<T>(T);
 
-impl<TIsCompatible> EquipmentInfo<TIsCompatible>
+impl<T> EquipmentInfo<T>
 where
-	TIsCompatible: ThreadSafe,
+	T: ThreadSafe,
 {
-	pub(crate) fn update(In(compatible): In<Option<TIsCompatible>>, mut commands: Commands) {
+	pub(crate) fn update(In(compatible): In<Option<T>>, mut commands: Commands) {
 		let Some(compatible) = compatible else {
 			return;
 		};
@@ -25,30 +25,39 @@ where
 	}
 }
 
-impl<TIsCompatible, TSkill> IsCompatible<TSkill> for EquipmentInfo<TIsCompatible>
+impl<T, TSkill> IsCompatible<TSkill> for EquipmentInfo<T>
 where
-	TIsCompatible: IsCompatible<TSkill>,
+	T: IsCompatible<TSkill>,
 {
 	fn is_compatible(&self, key: &SlotKey, skill: &TSkill) -> bool {
 		self.0.is_compatible(key, skill)
 	}
 }
 
-impl<TNextKeys> NextKeys for EquipmentInfo<TNextKeys>
+impl<T> NextKeys for EquipmentInfo<T>
 where
-	TNextKeys: NextKeys,
+	T: NextKeys,
 {
 	fn next_keys(&self, combo_keys: &[SlotKey]) -> HashSet<SlotKey> {
 		self.0.next_keys(combo_keys)
 	}
 }
 
-impl<TEquipmentInfo, TSkill> GetCombosOrdered<TSkill> for EquipmentInfo<TEquipmentInfo>
+impl<T, TSkill> GetCombosOrdered<TSkill> for EquipmentInfo<T>
 where
-	TEquipmentInfo: GetCombosOrdered<TSkill>,
+	T: GetCombosOrdered<TSkill>,
 {
 	fn combos_ordered(&self) -> Vec<Combo<TSkill>> {
 		self.0.combos_ordered()
+	}
+}
+
+impl<T, TKey> GetDescriptor<TKey> for EquipmentInfo<T>
+where
+	T: GetDescriptor<TKey>,
+{
+	fn get_descriptor(&self, key: TKey) -> Option<&Descriptor> {
+		self.0.get_descriptor(key)
 	}
 }
 

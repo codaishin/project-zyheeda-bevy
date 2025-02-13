@@ -4,7 +4,7 @@ use common::{
 	tools::inventory_key::InventoryKey,
 	traits::{
 		accessors::get::{GetMut, GetRef},
-		handles_equipment::{ItemAsset, ItemAssetBufferMut, KeyOutOfBounds},
+		handles_equipment::{ItemAssetBufferMut, ItemAssets},
 	},
 };
 
@@ -25,19 +25,15 @@ impl ItemAssetBufferMut for Inventory {
 	}
 }
 
-impl ItemAsset for Inventory {
+impl ItemAssets for Inventory {
 	type TKey = InventoryKey;
 	type TItem = Item;
 
-	fn item_asset(
-		&self,
-		InventoryKey(index): &Self::TKey,
-	) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
-		let Some(item) = self.0.get(*index) else {
-			return Err(KeyOutOfBounds);
-		};
-
-		Ok(item)
+	fn item_assets(&self) -> impl Iterator<Item = (Self::TKey, &Option<Handle<Self::TItem>>)> {
+		self.0
+			.iter()
+			.enumerate()
+			.map(|(i, item)| (InventoryKey(i), item))
 	}
 }
 

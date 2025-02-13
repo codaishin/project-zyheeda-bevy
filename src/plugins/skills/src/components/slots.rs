@@ -8,7 +8,7 @@ use common::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,
 		handles_assets_for_children::{ChildAssetComponent, ChildAssetDefinition, ChildName},
-		handles_equipment::{ItemAsset, KeyOutOfBounds, WriteItem},
+		handles_equipment::{ItemAssets, WriteItem},
 	},
 };
 use std::{collections::HashMap, fmt::Debug};
@@ -28,16 +28,12 @@ impl Default for Slots {
 	}
 }
 
-impl ItemAsset for Slots {
+impl ItemAssets for Slots {
 	type TKey = SlotKey;
 	type TItem = Item;
 
-	fn item_asset(&self, key: &Self::TKey) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
-		let Some(item) = self.0.get(key) else {
-			return Err(KeyOutOfBounds);
-		};
-
-		Ok(item)
+	fn item_assets(&self) -> impl Iterator<Item = (Self::TKey, &Option<Handle<Self::TItem>>)> {
+		self.0.iter().map(|(key, item)| (*key, item))
 	}
 }
 

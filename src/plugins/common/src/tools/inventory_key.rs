@@ -1,6 +1,6 @@
 use crate::traits::iteration::{Infinite, IterInfinite};
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct InventoryKey(pub usize);
 
 impl IterInfinite for InventoryKey {

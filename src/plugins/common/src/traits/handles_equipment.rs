@@ -21,8 +21,8 @@ pub trait HandlesEquipment {
 		+ GetterRef<Option<Handle<Self::TSkill>>>;
 	type TSkill: Asset
 		+ GetterRef<Option<Handle<Image>>>
-		+ GetterRef<CompatibleItems>
 		+ Getter<SkillDescription>
+		+ GetterRef<CompatibleItems>
 		+ Clone
 		+ PartialEq
 		+ ThreadSafe;
@@ -35,9 +35,9 @@ pub trait HandlesEquipment {
 
 	type TInventory: Component
 		+ ItemAssetBufferMut<TItemHandle = Handle<Self::TItem>>
-		+ ItemAsset<TItem = Self::TItem, TKey = InventoryKey>;
+		+ ItemAssets<TItem = Self::TItem, TKey = InventoryKey>;
 	type TSlots: Component
-		+ ItemAsset<TItem = Self::TItem, TKey = SlotKey>
+		+ ItemAssets<TItem = Self::TItem, TKey = SlotKey>
 		+ WriteItem<SlotKey, Option<Handle<Self::TItem>>>;
 	type TQueue: Component + IterateQueue<TItem = Self::TQueuedSkill>;
 	type TCombos: Component
@@ -59,11 +59,11 @@ pub trait ItemAssetBufferMut {
 	fn buffer_mut(&mut self) -> &mut Vec<Option<Self::TItemHandle>>;
 }
 
-pub trait ItemAsset {
+pub trait ItemAssets {
 	type TKey;
 	type TItem: Asset;
 
-	fn item_asset(&self, key: &Self::TKey) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds>;
+	fn item_assets(&self) -> impl Iterator<Item = (Self::TKey, &Option<Handle<Self::TItem>>)>;
 }
 
 pub struct KeyOutOfBounds;
