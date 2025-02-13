@@ -7,4 +7,4 @@ pub struct ActiveSlotKey(pub SlotKey);
 pub struct QueuedSlotKey(pub SlotKey);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct ComboSlotKey(pub SlotKey);
+pub struct ComboNextSlotKey(pub SlotKey);

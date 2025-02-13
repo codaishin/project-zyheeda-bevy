@@ -4,7 +4,7 @@ use common::{
 	tools::slot_key::SlotKey,
 	traits::{
 		handles_inventory_menu::GetDescriptor,
-		handles_quickbar::{ActiveSlotKey, ComboSlotKey},
+		handles_quickbar::{ActiveSlotKey, ComboNextSlotKey},
 	},
 };
 
@@ -18,11 +18,11 @@ pub(crate) fn get_quickbar_icons<TSlots, TActives, TCombos>(
 where
 	TSlots: Resource + GetDescriptor<SlotKey>,
 	TActives: Resource + GetDescriptor<ActiveSlotKey>,
-	TCombos: Resource + GetDescriptor<ComboSlotKey>,
+	TCombos: Resource + GetDescriptor<ComboNextSlotKey>,
 {
 	let get_icon_path = |(entity, panel): (Entity, &QuickbarPanel)| {
 		let icon = combo_skills
-			.get_descriptor(ComboSlotKey(panel.key))
+			.get_descriptor(ComboNextSlotKey(panel.key))
 			.or_else(|| active_skills.get_descriptor(ActiveSlotKey(panel.key)))
 			.or_else(|| slotted_skills.get_descriptor(panel.key))
 			.and_then(|skill| skill.icon.clone());
@@ -75,16 +75,16 @@ mod tests {
 	}
 
 	#[derive(Resource)]
-	struct _ComboSlotsIcons(HashMap<ComboSlotKey, Descriptor>);
+	struct _ComboSlotsIcons(HashMap<ComboNextSlotKey, Descriptor>);
 
-	impl GetDescriptor<ComboSlotKey> for _ComboSlotsIcons {
-		fn get_descriptor(&self, key: ComboSlotKey) -> Option<&Descriptor> {
+	impl GetDescriptor<ComboNextSlotKey> for _ComboSlotsIcons {
+		fn get_descriptor(&self, key: ComboNextSlotKey) -> Option<&Descriptor> {
 			self.0.get(&key)
 		}
 	}
 
-	impl<const N: usize> From<[(ComboSlotKey, Descriptor); N]> for _ComboSlotsIcons {
-		fn from(value: [(ComboSlotKey, Descriptor); N]) -> Self {
+	impl<const N: usize> From<[(ComboNextSlotKey, Descriptor); N]> for _ComboSlotsIcons {
+		fn from(value: [(ComboNextSlotKey, Descriptor); N]) -> Self {
 			Self(HashMap::from(value))
 		}
 	}
@@ -119,7 +119,7 @@ mod tests {
 			_SlotsIcons::from([]),
 			_ActiveSlotsIcons::from([]),
 			_ComboSlotsIcons::from([(
-				ComboSlotKey(key),
+				ComboNextSlotKey(key),
 				Descriptor {
 					icon: icon.clone(),
 					..default()

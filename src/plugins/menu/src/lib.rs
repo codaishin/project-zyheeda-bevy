@@ -38,7 +38,7 @@ use common::{
 		handles_inventory_menu::{Descriptions, Descriptor, GetDescriptor},
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		handles_player::HandlesPlayer,
-		handles_quickbar::{ActiveSlotKey, ComboSlotKey, QueuedSlotKey},
+		handles_quickbar::{ActiveSlotKey, ComboNextSlotKey, QueuedSlotKey},
 		load_asset::Path,
 		thread_safe::ThreadSafe,
 	},
@@ -175,9 +175,9 @@ impl AddDropdown for App {
 		)
 		.add_systems(
 			Last,
-				dropdown_detect_focus_change::<TItem>
-					.pipe(dropdown_despawn_when_no_children_pressed::<TItem>)
-					.pipe(dropdown_spawn_focused::<TItem>),
+			dropdown_detect_focus_change::<TItem>
+				.pipe(dropdown_despawn_when_no_children_pressed::<TItem>)
+				.pipe(dropdown_spawn_focused::<TItem>),
 		)
 	}
 }
@@ -243,7 +243,7 @@ where
 			Self::get_descriptors::<TEquipment::TSlots, TEquipment::TSkill>,
 			Self::active_skill_icons,
 			Self::queued_skill_icons,
-			Self::combo_skill_icons,
+			Self::combo_next_skill_icons,
 		);
 
 		let play = GameState::Play;
@@ -268,12 +268,11 @@ where
 
 	// BEGIN: Temporary proof of concept
 	// This system needs to be moved into the future menu plugin interface
-	fn register_combo_menu<TGetEquipmentInfo, TUpdateCombos, TEquipmentInfo, M1, M2>(
+	fn register_combo_menu<TUpdateCombos, TEquipmentInfo, M1, M2>(
 		app: &mut App,
-		get_equipment_info: TGetEquipmentInfo,
+		get_equipment_info: impl IntoSystem<(), Option<TEquipmentInfo>, M1>,
 		update_combos: TUpdateCombos,
 	) where
-		TGetEquipmentInfo: IntoSystem<(), Option<TEquipmentInfo>, M1>,
 		TUpdateCombos: IntoSystem<In<Combo<Option<TEquipment::TSkill>>>, (), M2> + Copy,
 		TEquipmentInfo: IsCompatible<TEquipment::TSkill>
 			+ NextKeys
@@ -290,9 +289,8 @@ where
 		.add_systems(
 			Update,
 			(
-				Vertical::dropdown_skill_select_click::<TEquipment::TSkill>.pipe(update_combos),
-				Horizontal::dropdown_skill_select_click::<TEquipment::TSkill>.pipe(update_combos),
-				update_combos_view_delete_skill::<TEquipment::TSkill>.pipe(update_combos),
+				get_equipment_info.pipe(EquipmentInfo::update),
+				select_successor_key::<EquipmentInfo<TEquipmentInfo>>,
 				Vertical::dropdown_skill_select_insert::<
 					TEquipment::TSkill,
 					EquipmentInfo<TEquipmentInfo>,
@@ -301,16 +299,17 @@ where
 					TEquipment::TSkill,
 					EquipmentInfo<TEquipmentInfo>,
 				>,
-				Unusable::visualize_invalid_skill::<
-					TEquipment::TSkill,
-					EquipmentInfo<TEquipmentInfo>,
-				>,
+				Vertical::dropdown_skill_select_click::<TEquipment::TSkill>.pipe(update_combos),
+				Horizontal::dropdown_skill_select_click::<TEquipment::TSkill>.pipe(update_combos),
+				update_combos_view_delete_skill::<TEquipment::TSkill>.pipe(update_combos),
 				ComboOverview::<TEquipment::TSkill>::update_combos_overview::<
 					TEquipment::TSkill,
 					EquipmentInfo<TEquipmentInfo>,
 				>,
-				select_successor_key::<EquipmentInfo<TEquipmentInfo>>,
-				get_equipment_info.pipe(EquipmentInfo::update),
+				Unusable::visualize_invalid_skill::<
+					TEquipment::TSkill,
+					EquipmentInfo<TEquipmentInfo>,
+				>,
 			)
 				.chain()
 				.run_if(in_state(combo_overview)),
@@ -331,6 +330,8 @@ where
 		app.add_systems(
 			Update,
 			(
+				get_inventor_labels.pipe(EquipmentInfo::update),
+				get_slot_labels.pipe(EquipmentInfo::update),
 				InventoryPanel::set_container_panels::<InventoryKey, EquipmentInfo<TInventory>>,
 				InventoryPanel::set_container_panels::<SlotKey, EquipmentInfo<TSlots>>,
 				panel_colors::<InventoryPanel>,
@@ -340,8 +341,6 @@ where
 				drop::<TEquipment::TSwap, InventoryKey, SlotKey>,
 				drop::<TEquipment::TSwap, SlotKey, SlotKey>,
 				drop::<TEquipment::TSwap, SlotKey, InventoryKey>,
-				get_inventor_labels.pipe(EquipmentInfo::update),
-				get_slot_labels.pipe(EquipmentInfo::update),
 			)
 				.chain()
 				.run_if(in_state(inventory)),
@@ -359,13 +358,17 @@ where
 		TSlots: GetDescriptor<SlotKey> + ThreadSafe,
 		TActiveSlots: GetDescriptor<ActiveSlotKey> + ThreadSafe,
 		TQueuedSlots: GetDescriptor<QueuedSlotKey> + ThreadSafe,
-		TCombosSlots: GetDescriptor<ComboSlotKey> + ThreadSafe,
+		TCombosSlots: GetDescriptor<ComboNextSlotKey> + ThreadSafe,
 	{
 		let play = GameState::Play;
 
 		app.add_systems(
 			Update,
 			(
+				get_slot_labels.pipe(EquipmentInfo::update),
+				get_active_slot_labels.pipe(EquipmentInfo::update),
+				get_queued_slot_labels.pipe(EquipmentInfo::update),
+				get_combo_slot_labels.pipe(EquipmentInfo::update),
 				get_quickbar_icons::<
 					EquipmentInfo<TSlots>,
 					EquipmentInfo<TActiveSlots>,
@@ -378,10 +381,6 @@ where
 					EquipmentInfo<TActiveSlots>,
 					EquipmentInfo<TQueuedSlots>,
 				>,
-				get_slot_labels.pipe(EquipmentInfo::update),
-				get_active_slot_labels.pipe(EquipmentInfo::update),
-				get_queued_slot_labels.pipe(EquipmentInfo::update),
-				get_combo_slot_labels.pipe(EquipmentInfo::update),
 			)
 				.chain()
 				.run_if(in_state(play)),
@@ -391,12 +390,10 @@ where
 	// This system needs to move to the skills plugin
 	#[allow(clippy::type_complexity)]
 	fn get_equipment_info(
-		slots: Query<Ref<TEquipment::TSlots>, With<TPlayers::TPlayer>>,
-		combos: Query<Ref<TEquipment::TCombos>, With<TPlayers::TPlayer>>,
+		slots: Query<(Ref<TEquipment::TSlots>, Ref<TEquipment::TCombos>), With<TPlayers::TPlayer>>,
 		items: Res<Assets<TEquipment::TItem>>,
 	) -> Option<EquipmentDescriptor<TEquipment::TSkill>> {
-		let slots = slots.get_single().ok()?;
-		let combos = combos.get_single().ok()?;
+		let (slots, combos) = slots.get_single().ok()?;
 
 		if !slots.is_changed() && !combos.is_changed() {
 			return None;
@@ -442,7 +439,7 @@ where
 
 	// This system needs to move to the skills plugin
 	fn get_descriptors<TContainer, TSkill>(
-		containers: Query<&TContainer, With<TPlayers::TPlayer>>,
+		containers: Query<&TContainer, (With<TPlayers::TPlayer>, Changed<TContainer>)>,
 		items: Res<Assets<TContainer::TItem>>,
 		skills: Res<Assets<TSkill>>,
 	) -> Option<Descriptions<TContainer::TKey>>
@@ -478,8 +475,9 @@ where
 	}
 
 	// This system needs to move to the skills plugin
+	#[allow(clippy::type_complexity)]
 	fn active_skill_icons(
-		queues: Query<&TEquipment::TQueue, With<TPlayers::TPlayer>>,
+		queues: Query<&TEquipment::TQueue, (With<TPlayers::TPlayer>, Changed<TEquipment::TQueue>)>,
 	) -> Option<Descriptions<ActiveSlotKey>> {
 		let queue = queues.get_single().ok()?;
 		let Some(active) = queue.iterate().next() else {
@@ -496,8 +494,10 @@ where
 		Some(Descriptions(map))
 	}
 
+	// This system needs to move to the skills plugin
+	#[allow(clippy::type_complexity)]
 	fn queued_skill_icons(
-		queues: Query<&TEquipment::TQueue, With<TPlayers::TPlayer>>,
+		queues: Query<&TEquipment::TQueue, (With<TPlayers::TPlayer>, Changed<TEquipment::TQueue>)>,
 	) -> Option<Descriptions<QueuedSlotKey>> {
 		let queue = queues.get_single().ok()?;
 		let map = queue
@@ -519,7 +519,7 @@ where
 
 	// This system needs to move to the skills plugin
 	#[allow(clippy::type_complexity)]
-	fn combo_skill_icons(
+	fn combo_next_skill_icons(
 		items: Res<Assets<TEquipment::TItem>>,
 		slots: Query<
 			(
@@ -527,9 +527,9 @@ where
 				&TEquipment::TCombos,
 				Option<&TEquipment::TCombosTimeOut>,
 			),
-			With<TPlayers::TPlayer>,
+			(With<TPlayers::TPlayer>, Changed<TEquipment::TCombos>),
 		>,
-	) -> Option<Descriptions<ComboSlotKey>> {
+	) -> Option<Descriptions<ComboNextSlotKey>> {
 		let (slots, combos, time_out) = slots.get_single().ok()?;
 		let combo_active = time_out
 			.map(|time_out| !time_out.is_timed_out())
@@ -548,7 +548,7 @@ where
 				let next_combo = combos.peek_next(&key, &item_type)?;
 
 				Some((
-					ComboSlotKey(key),
+					ComboNextSlotKey(key),
 					Descriptor {
 						icon: Option::<Handle<Image>>::get_field_ref(&next_combo).clone(),
 						..default()

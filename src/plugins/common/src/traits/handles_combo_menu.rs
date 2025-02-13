@@ -18,6 +18,7 @@ pub trait GetCombosOrdered<TSkill> {
 }
 
 // This should go later into the skills plugin
+#[derive(Debug, PartialEq)]
 pub struct EquipmentDescriptor<TSkill> {
 	pub item_types: HashMap<SlotKey, ItemType>,
 	pub combo_keys: HashSet<Vec<SlotKey>>,

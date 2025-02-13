@@ -4,24 +4,25 @@ use common::{
 	traits::{
 		handles_combo_menu::{GetCombosOrdered, IsCompatible, NextKeys},
 		handles_equipment::Combo,
-		handles_inventory_menu::{GetDescriptor, Descriptor},
+		handles_inventory_menu::{Descriptor, GetDescriptor},
 		thread_safe::ThreadSafe,
 	},
 };
 use std::collections::HashSet;
 
-#[derive(Resource, Debug, PartialEq)]
+#[derive(Resource, Debug, PartialEq, Default)]
 pub(crate) struct EquipmentInfo<T>(T);
 
 impl<T> EquipmentInfo<T>
 where
 	T: ThreadSafe,
 {
-	pub(crate) fn update(In(compatible): In<Option<T>>, mut commands: Commands) {
-		let Some(compatible) = compatible else {
+	pub(crate) fn update(In(values): In<Option<T>>, mut commands: Commands) {
+		let Some(values) = values else {
 			return;
 		};
-		commands.insert_resource(Self(compatible));
+
+		commands.insert_resource(Self(values));
 	}
 }
 

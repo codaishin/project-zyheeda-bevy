@@ -13,13 +13,13 @@ pub(crate) trait UpdateComboOverview {
 		TSkill: ThreadSafe,
 		TLayoutBuilder: Resource + BuildComboTreeLayout<TSkill>,
 	{
-		if !layout_builder.is_changed() {
-			return;
-		}
-
 		let Ok(mut combo_overview) = combo_overviews.get_single_mut() else {
 			return;
 		};
+
+		if !layout_builder.is_changed() && !combo_overview.is_added() {
+			return;
+		}
 
 		combo_overview.update_combos_view(layout_builder.build_combo_tree_layout());
 	}
@@ -27,13 +27,12 @@ pub(crate) trait UpdateComboOverview {
 
 #[cfg(test)]
 mod tests {
-	use std::ops::DerefMut;
-
 	use super::*;
 	use crate::traits::build_combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol};
 	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use std::ops::DerefMut;
 
 	#[derive(Debug, PartialEq, Clone)]
 	struct _Skill;
@@ -118,6 +117,21 @@ mod tests {
 
 		app.update();
 		app.world_mut().resource_mut::<_Combos>().deref_mut();
+		app.update();
+	}
+
+	#[test]
+	fn update_combos_after_combos_overview_added() {
+		let mut app = setup(_Combos(vec![vec![
+			ComboTreeElement::Symbol(Symbol::Root),
+			ComboTreeElement::Symbol(Symbol::Line),
+		]]));
+
+		app.update();
+		app.world_mut()
+			.spawn(_ComboOverview::new().with_mock(|mock| {
+				mock.expect_update_combos_view().times(1).return_const(());
+			}));
 		app.update();
 	}
 }
