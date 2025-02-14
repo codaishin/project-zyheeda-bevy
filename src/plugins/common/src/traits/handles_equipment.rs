@@ -21,12 +21,12 @@ pub trait HandlesEquipment {
 		+ GetterRef<Option<Handle<Self::TSkill>>>;
 	type TSkill: Asset
 		+ GetterRef<Option<Handle<Image>>>
-		+ Getter<SkillDescription>
+		+ Getter<Name>
 		+ GetterRef<CompatibleItems>
 		+ Clone
 		+ PartialEq
 		+ ThreadSafe;
-	type TQueuedSkill: Getter<SlotKey> + GetterRef<Option<Handle<Image>>>;
+	type TQueuedSkill: Getter<SlotKey> + GetterRef<Option<Handle<Image>>> + Getter<Name>;
 	type TSwap: Component
 		+ SwapKeys<InventoryKey, InventoryKey>
 		+ SwapKeys<InventoryKey, SlotKey>
@@ -101,6 +101,3 @@ pub trait IsTimedOut {
 
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct ItemName(pub String);
-
-#[derive(Debug, PartialEq, Clone, Default)]
-pub struct SkillDescription(pub String);

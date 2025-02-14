@@ -1,9 +1,8 @@
 use super::{Tooltip, TooltipUiConfig};
 use crate::traits::{colors::DEFAULT_PANEL_COLORS, insert_ui_content::InsertUiContent};
 use bevy::prelude::*;
-use common::traits::handles_equipment::SkillDescription;
 
-impl TooltipUiConfig for SkillDescription {
+impl TooltipUiConfig for Name {
 	fn node() -> Node {
 		Node {
 			top: Val::Px(-25.0),
@@ -17,10 +16,10 @@ impl TooltipUiConfig for SkillDescription {
 	}
 }
 
-impl InsertUiContent for Tooltip<SkillDescription> {
+impl InsertUiContent for Tooltip<Name> {
 	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		parent.spawn((
-			Text::new(&self.0 .0),
+			Text::new(&self.0),
 			TextFont {
 				font_size: 20.0,
 				..default()

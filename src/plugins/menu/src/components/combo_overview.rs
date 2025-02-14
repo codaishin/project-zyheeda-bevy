@@ -21,7 +21,6 @@ use common::{
 	tools::slot_key::SlotKey,
 	traits::{
 		accessors::get::{GetField, GetFieldRef, Getter, GetterRef},
-		handles_equipment::SkillDescription,
 		load_asset::{LoadAsset, Path},
 		thread_safe::ThreadSafe,
 	},
@@ -325,7 +324,7 @@ where
 
 impl<TSkill> InsertUiContent for ComboOverview<TSkill>
 where
-	TSkill: GetterRef<Option<Handle<Image>>> + Getter<SkillDescription> + Clone + ThreadSafe,
+	TSkill: GetterRef<Option<Handle<Image>>> + Getter<Name> + Clone + ThreadSafe,
 {
 	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		add_title(parent, "Combos");
@@ -381,7 +380,7 @@ fn add_empty_combo(parent: &mut ChildBuilder, icon: &Handle<Image>) {
 
 fn add_combo_list<TSkill>(parent: &mut ChildBuilder, combo_overview: &ComboOverview<TSkill>)
 where
-	TSkill: GetterRef<Option<Handle<Image>>> + Getter<SkillDescription> + Clone + ThreadSafe,
+	TSkill: GetterRef<Option<Handle<Image>>> + Getter<Name> + Clone + ThreadSafe,
 {
 	parent
 		.spawn(Node {
@@ -403,7 +402,7 @@ fn add_combo<TSkill>(
 	local_z: i32,
 	new_skill_icon: &Handle<Image>,
 ) where
-	TSkill: GetterRef<Option<Handle<Image>>> + Getter<SkillDescription> + Clone + ThreadSafe,
+	TSkill: GetterRef<Option<Handle<Image>>> + Getter<Name> + Clone + ThreadSafe,
 {
 	parent
 		.spawn((
@@ -484,7 +483,7 @@ impl AddPanel<'_, ()> {
 
 impl<TSkill> AddPanel<'_, TSkill>
 where
-	TSkill: GetterRef<Option<Handle<Image>>> + Getter<SkillDescription> + Clone + ThreadSafe,
+	TSkill: GetterRef<Option<Handle<Image>>> + Getter<Name> + Clone + ThreadSafe,
 {
 	fn spawn_as_child(self, parent: &mut ChildBuilder, icon: &Handle<Image>) {
 		match self {
@@ -528,7 +527,7 @@ where
 				parent
 					.spawn((
 						button,
-						Tooltip::new(SkillDescription::get_field(skill)),
+						Tooltip::new(Name::get_field(skill)),
 						ComboOverview::skill_button(icon.clone()),
 						SkillSelectDropdownInsertCommand::<SlotKey, Vertical>::new(
 							key_path.to_vec(),

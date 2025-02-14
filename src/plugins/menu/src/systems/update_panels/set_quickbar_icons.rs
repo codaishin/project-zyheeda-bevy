@@ -1,20 +1,26 @@
 use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
 use bevy::prelude::*;
-use common::traits::try_insert_on::TryInsertOn;
+use common::{
+	tools::slot_key::SlotKey,
+	traits::{
+		handles_inventory_menu::{GetDescriptor, QuickbarDescriptor},
+		try_insert_on::TryInsertOn,
+	},
+};
 
-pub(crate) fn set_quickbar_icons(
-	icon_paths: In<Vec<(Entity, Option<Handle<Image>>)>>,
+pub(crate) fn set_quickbar_icons<TDescriptors>(
 	mut commands: Commands,
-	mut panels: Query<&mut QuickbarPanel>,
-) {
-	for (entity, icon) in icon_paths.0 {
-		let Ok(mut panel) = panels.get_mut(entity) else {
-			continue;
-		};
-
-		let (state, image) = match icon {
-			Some(icon) => (PanelState::Filled, icon),
-			None => (PanelState::Empty, Handle::default()),
+	mut panels: Query<(Entity, &mut QuickbarPanel)>,
+	descriptors: Res<TDescriptors>,
+) where
+	TDescriptors: Resource + GetDescriptor<SlotKey, TItem = QuickbarDescriptor>,
+{
+	for (entity, mut panel) in &mut panels {
+		let (state, image) = match descriptors.get_descriptor(panel.key) {
+			Some(QuickbarDescriptor {
+				icon: Some(icon), ..
+			}) => (PanelState::Filled, icon.clone()),
+			_ => (PanelState::Empty, Handle::default()),
 		};
 
 		panel.state = state;
@@ -25,48 +31,60 @@ pub(crate) fn set_quickbar_icons(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::tools::PanelState;
-	use common::{test_tools::utils::SingleThreadedApp, tools::slot_key::SlotKey};
-	use uuid::Uuid;
+	use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
+	use common::{
+		test_tools::utils::{new_handle, SingleThreadedApp},
+		tools::slot_key::{Side, SlotKey},
+	};
+	use std::collections::HashMap;
 
 	#[derive(Resource)]
-	struct _Icons(Vec<(Entity, Option<Handle<Image>>)>);
+	struct _Cache(HashMap<SlotKey, QuickbarDescriptor>);
 
-	fn get_icons(data: Res<_Icons>) -> Vec<(Entity, Option<Handle<Image>>)> {
-		data.0.clone()
+	impl GetDescriptor<SlotKey> for _Cache {
+		type TItem = QuickbarDescriptor;
+
+		fn get_descriptor(&self, key: SlotKey) -> Option<&Self::TItem> {
+			self.0.get(&key)
+		}
 	}
 
-	fn setup() -> App {
+	impl<const N: usize> From<[(SlotKey, QuickbarDescriptor); N]> for _Cache {
+		fn from(value: [(SlotKey, QuickbarDescriptor); N]) -> Self {
+			Self(HashMap::from(value))
+		}
+	}
+
+	fn setup(cache: _Cache) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, get_icons.pipe(set_quickbar_icons));
+		app.insert_resource(cache);
+		app.add_systems(Update, set_quickbar_icons::<_Cache>);
 
 		app
 	}
 
-	fn arbitrary_key() -> SlotKey {
-		SlotKey::default()
-	}
-
 	#[test]
 	fn add_icon_image() {
-		let handle = Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
-
-		let mut app = setup();
+		let handle = new_handle();
+		let key = SlotKey::TopHand(Side::Right);
+		let mut app = setup(_Cache::from([(
+			key,
+			QuickbarDescriptor {
+				icon: Some(handle.clone()),
+				..default()
+			},
+		)]));
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {
 				state: PanelState::Empty,
-				key: arbitrary_key(),
+				key,
 			})
 			.id();
-		app.insert_resource(_Icons(vec![(panel, Some(handle.clone()))]));
 
 		app.update();
 
 		let panel = app.world().entity(panel);
-
 		assert_eq!(
 			(Some(&handle), Some(PanelState::Filled)),
 			(
@@ -78,26 +96,55 @@ mod tests {
 
 	#[test]
 	fn set_panel_empty_when_icon_handle_is_none() {
-		let mut app = setup();
+		let key = SlotKey::TopHand(Side::Right);
+		let mut app = setup(_Cache::from([(
+			key,
+			QuickbarDescriptor {
+				icon: None,
+				..default()
+			},
+		)]));
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {
 				state: PanelState::Filled,
-				key: arbitrary_key(),
+				key,
 			})
 			.id();
-		app.insert_resource(_Icons(vec![(panel, None)]));
 
 		app.update();
 
 		let panel = app.world().entity(panel);
-
 		assert_eq!(
 			(Some(&Handle::default()), Some(PanelState::Empty)),
 			(
 				panel.get::<ImageNode>().map(|image| &image.image),
 				panel.get::<QuickbarPanel>().map(|panel| panel.state)
 			)
-		);
+		)
+	}
+
+	#[test]
+	fn set_panel_empty_when_no_descriptor_for_key() {
+		let key = SlotKey::TopHand(Side::Right);
+		let mut app = setup(_Cache::from([]));
+		let panel = app
+			.world_mut()
+			.spawn(QuickbarPanel {
+				state: PanelState::Empty,
+				key,
+			})
+			.id();
+
+		app.update();
+
+		let panel = app.world().entity(panel);
+		assert_eq!(
+			(Some(&Handle::default()), Some(PanelState::Empty)),
+			(
+				panel.get::<ImageNode>().map(|image| &image.image),
+				panel.get::<QuickbarPanel>().map(|panel| panel.state)
+			)
+		)
 	}
 }

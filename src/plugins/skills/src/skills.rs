@@ -16,11 +16,11 @@ use bevy::prelude::*;
 use common::{
 	tools::slot_key::SlotKey,
 	traits::{
-		accessors::get::{Getter, GetterRef},
+		accessors::get::{GetField, Getter, GetterRef},
 		animation::Animation,
 		handles_custom_assets::AssetFolderPath,
 		handles_effect::HandlesAllEffects,
-		handles_equipment::{CompatibleItems, SkillDescription},
+		handles_equipment::CompatibleItems,
 		handles_lifetime::HandlesLifetime,
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		load_asset::Path,
@@ -73,9 +73,9 @@ impl AssetFolderPath for Skill {
 	}
 }
 
-impl Getter<SkillDescription> for Skill {
-	fn get(&self) -> SkillDescription {
-		SkillDescription(self.name.clone())
+impl Getter<Name> for Skill {
+	fn get(&self) -> Name {
+		Name::from(self.name.clone())
 	}
 }
 
@@ -109,6 +109,12 @@ pub struct QueuedSkill {
 impl Getter<SlotKey> for QueuedSkill {
 	fn get(&self) -> SlotKey {
 		self.slot_key
+	}
+}
+
+impl Getter<Name> for QueuedSkill {
+	fn get(&self) -> Name {
+		Name::get_field(&self.skill)
 	}
 }
 

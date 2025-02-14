@@ -5,7 +5,6 @@ use common::{
 	tools::slot_key::SlotKey,
 	traits::{
 		accessors::get::{GetField, GetFieldRef, Getter, GetterRef},
-		handles_equipment::SkillDescription,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -44,16 +43,16 @@ impl<T, TSkill> SkillButton<T, TSkill> {
 impl<T, TSkill> InsertUiContent for SkillButton<T, TSkill>
 where
 	T: Clone + ThreadSafe,
-	TSkill: GetterRef<Option<Handle<Image>>> + Getter<SkillDescription> + Clone + ThreadSafe,
+	TSkill: GetterRef<Option<Handle<Image>>> + Getter<Name> + Clone + ThreadSafe,
 {
 	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		let icon = Option::<Handle<Image>>::get_field_ref(&self.skill).clone();
-		let description = SkillDescription::get_field(&self.skill);
+		let name = Name::get_field(&self.skill);
 
 		parent.spawn((
 			self.clone(),
 			ComboOverview::skill_button(icon),
-			Tooltip::new(description),
+			Tooltip::new(name),
 		));
 	}
 }

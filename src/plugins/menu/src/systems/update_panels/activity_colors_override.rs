@@ -8,23 +8,20 @@ use common::{
 	tools::slot_key::SlotKey,
 	traits::{
 		accessors::get::{GetFieldRef, GetterRef},
-		handles_inventory_menu::GetDescriptor,
-		handles_quickbar::{ActiveSlotKey, QueuedSlotKey},
+		handles_inventory_menu::{GetDescriptor, QuickbarDescriptor, SkillExecution},
 		map_value::TryMapBackwards,
 	},
 };
 
-pub fn panel_activity_colors_override<TMap, TPanel, TActives, TQueued>(
+pub fn panel_activity_colors_override<TMap, TPanel, TDescriptors>(
 	mut commands: Commands,
 	mut buttons: Query<(Entity, &mut BackgroundColor, &TPanel)>,
 	key_map: Res<TMap>,
-	active_skills: Res<TActives>,
-	queued_skills: Res<TQueued>,
+	descriptors: Res<TDescriptors>,
 	mouse_context: Res<State<MouseContext>>,
 ) where
 	TMap: Resource + TryMapBackwards<KeyCode, SlotKey>,
-	TActives: Resource + GetDescriptor<ActiveSlotKey>,
-	TQueued: Resource + GetDescriptor<QueuedSlotKey>,
+	TDescriptors: Resource + GetDescriptor<SlotKey, TItem = QuickbarDescriptor>,
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetterRef<SlotKey> + Component,
 {
 	let primed_slot = match mouse_context.get() {
@@ -36,9 +33,8 @@ pub fn panel_activity_colors_override<TMap, TPanel, TActives, TQueued>(
 		let Some(entity) = commands.get_entity(entity) else {
 			continue;
 		};
-		let color = get_color::<TPanel, TActives, TQueued>(
-			&active_skills,
-			&queued_skills,
+		let color = get_color_override::<TPanel, TDescriptors>(
+			&descriptors,
 			primed_slot,
 			SlotKey::get_field_ref(panel),
 		);
@@ -46,22 +42,25 @@ pub fn panel_activity_colors_override<TMap, TPanel, TActives, TQueued>(
 	}
 }
 
-fn get_color<TPanel, TActives, TQueued>(
-	active: &TActives,
-	queued: &TQueued,
+fn get_color_override<TPanel, TDescriptors>(
+	descriptors: &TDescriptors,
 	primed_slot: Option<SlotKey>,
 	panel_key: &SlotKey,
 ) -> Option<Color>
 where
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor,
-	TActives: GetDescriptor<ActiveSlotKey>,
-	TQueued: GetDescriptor<QueuedSlotKey>,
+	TDescriptors: GetDescriptor<SlotKey, TItem = QuickbarDescriptor>,
 {
-	if active.get_descriptor(ActiveSlotKey(*panel_key)).is_some() {
+	let state = descriptors
+		.get_descriptor(*panel_key)
+		.map(|descriptor| descriptor.execution)
+		.unwrap_or_default();
+
+	if state == SkillExecution::Active {
 		return Some(TPanel::ACTIVE_COLOR);
 	}
 
-	if queued.get_descriptor(QueuedSlotKey(*panel_key)).is_some() {
+	if state == SkillExecution::Queued {
 		return Some(TPanel::QUEUED_COLOR);
 	}
 
@@ -90,16 +89,11 @@ fn update_color_override(
 
 #[cfg(test)]
 mod tests {
-	use std::collections::HashMap;
-
 	use super::*;
 	use crate::traits::colors::PanelColors;
 	use bevy::state::app::StatesPlugin;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		tools::slot_key::Side,
-		traits::handles_inventory_menu::Descriptor,
-	};
+	use common::{test_tools::utils::SingleThreadedApp, tools::slot_key::Side};
+	use std::collections::HashMap;
 
 	#[derive(Component)]
 	struct _Panel(pub SlotKey);
@@ -144,51 +138,33 @@ mod tests {
 	}
 
 	#[derive(Resource)]
-	struct _Active(HashMap<ActiveSlotKey, Descriptor>);
+	struct _Cache(HashMap<SlotKey, QuickbarDescriptor>);
 
-	impl GetDescriptor<ActiveSlotKey> for _Active {
-		fn get_descriptor(&self, key: ActiveSlotKey) -> Option<&Descriptor> {
+	impl GetDescriptor<SlotKey> for _Cache {
+		type TItem = QuickbarDescriptor;
+
+		fn get_descriptor(&self, key: SlotKey) -> Option<&QuickbarDescriptor> {
 			self.0.get(&key)
 		}
 	}
 
-	impl<const N: usize> From<[SlotKey; N]> for _Active {
-		fn from(value: [SlotKey; N]) -> Self {
-			Self(HashMap::from(
-				value.map(|key| (ActiveSlotKey(key), default())),
-			))
+	impl<const N: usize> From<[(SlotKey, QuickbarDescriptor); N]> for _Cache {
+		fn from(value: [(SlotKey, QuickbarDescriptor); N]) -> Self {
+			Self(HashMap::from(value))
 		}
 	}
 
-	#[derive(Resource)]
-	struct _Queued(HashMap<QueuedSlotKey, Descriptor>);
-
-	impl GetDescriptor<QueuedSlotKey> for _Queued {
-		fn get_descriptor(&self, key: QueuedSlotKey) -> Option<&Descriptor> {
-			self.0.get(&key)
-		}
-	}
-
-	impl<const N: usize> From<[SlotKey; N]> for _Queued {
-		fn from(value: [SlotKey; N]) -> Self {
-			Self(HashMap::from(
-				value.map(|key| (QueuedSlotKey(key), default())),
-			))
-		}
-	}
-
-	fn setup(key_map: _Map, active: _Active, queued: _Queued) -> App {
+	fn setup(key_map: _Map, cache: _Cache) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_systems(
 			Update,
-			panel_activity_colors_override::<_Map, _Panel, _Active, _Queued>,
+			panel_activity_colors_override::<_Map, _Panel, _Cache>,
 		);
 		app.add_plugins(StatesPlugin);
 		app.init_state::<MouseContext>();
 		app.insert_resource(key_map);
-		app.insert_resource(active);
-		app.insert_resource(queued);
+		app.insert_resource(cache);
 
 		app
 	}
@@ -197,8 +173,13 @@ mod tests {
 	fn set_to_active_when_matching_skill_active() {
 		let mut app = setup(
 			_Map::None,
-			_Active::from([SlotKey::BottomHand(Side::Right)]),
-			_Queued::from([]),
+			_Cache::from([(
+				SlotKey::BottomHand(Side::Right),
+				QuickbarDescriptor {
+					execution: SkillExecution::Active,
+					..default()
+				},
+			)]),
 		);
 		let panel = app
 			.world_mut()
@@ -220,11 +201,7 @@ mod tests {
 
 	#[test]
 	fn no_override_when_no_matching_skill_active() {
-		let mut app = setup(
-			_Map::None,
-			_Active::from([SlotKey::TopHand(Side::Right)]),
-			_Queued::from([]),
-		);
+		let mut app = setup(_Map::None, _Cache::from([]));
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -244,8 +221,17 @@ mod tests {
 	}
 
 	#[test]
-	fn no_override_when_no_skill_active() {
-		let mut app = setup(_Map::None, _Active::from([]), _Queued::from([]));
+	fn no_override_when_no_skill_not_active() {
+		let mut app = setup(
+			_Map::None,
+			_Cache::from([(
+				SlotKey::BottomHand(Side::Right),
+				QuickbarDescriptor {
+					execution: SkillExecution::None,
+					..default()
+				},
+			)]),
+		);
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -268,8 +254,7 @@ mod tests {
 	fn set_to_pressed_when_matching_key_primed_in_mouse_context() {
 		let mut app = setup(
 			_Map::Map(KeyCode::KeyQ, SlotKey::BottomHand(Side::Right)),
-			_Active::from([]),
-			_Queued::from([]),
+			_Cache::from([]),
 		);
 		let panel = app
 			.world_mut()
@@ -297,8 +282,13 @@ mod tests {
 	fn set_to_queued_when_matching_with_queued_skill() {
 		let mut app = setup(
 			_Map::None,
-			_Active::from([]),
-			_Queued::from([SlotKey::BottomHand(Side::Right)]),
+			_Cache::from([(
+				SlotKey::BottomHand(Side::Right),
+				QuickbarDescriptor {
+					execution: SkillExecution::Queued,
+					..default()
+				},
+			)]),
 		);
 		let panel = app
 			.world_mut()

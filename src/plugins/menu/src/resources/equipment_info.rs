@@ -4,7 +4,7 @@ use common::{
 	traits::{
 		handles_combo_menu::{GetCombosOrdered, IsCompatible, NextKeys},
 		handles_equipment::Combo,
-		handles_inventory_menu::{Descriptor, GetDescriptor},
+		handles_inventory_menu::GetDescriptor,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -57,7 +57,9 @@ impl<T, TKey> GetDescriptor<TKey> for EquipmentInfo<T>
 where
 	T: GetDescriptor<TKey>,
 {
-	fn get_descriptor(&self, key: TKey) -> Option<&Descriptor> {
+	type TItem = T::TItem;
+
+	fn get_descriptor(&self, key: TKey) -> Option<&Self::TItem> {
 		self.0.get_descriptor(key)
 	}
 }

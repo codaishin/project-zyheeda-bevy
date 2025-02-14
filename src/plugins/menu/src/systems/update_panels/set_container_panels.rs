@@ -1,7 +1,10 @@
 use crate::{components::KeyedPanel, tools::PanelState};
 use bevy::{hierarchy::Parent, prelude::*};
 use common::traits::{
-	accessors::set::Setter,
+	accessors::{
+		get::{GetField, Getter},
+		set::Setter,
+	},
 	handles_inventory_menu::GetDescriptor,
 	thread_safe::ThreadSafe,
 };
@@ -18,10 +21,11 @@ pub trait SetContainerPanels {
 		Self: Component + Setter<PanelState> + Sized,
 		TKey: Eq + Hash + Copy + ThreadSafe,
 		TEquipment: Resource + GetDescriptor<TKey>,
+		TEquipment::TItem: Getter<Name>,
 	{
 		for (entity, KeyedPanel(key), mut panel) in &mut panels {
 			let (state, label) = match items.get_descriptor(*key) {
-				Some(item) => (PanelState::Filled, item.name.clone()),
+				Some(item) => (PanelState::Filled, Name::get_field(item).to_string()),
 				None => (PanelState::Empty, "<Empty>".to_owned()),
 			};
 			panel.set(state);
@@ -46,7 +50,7 @@ mod tests {
 	use super::*;
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		traits::{handles_inventory_menu::Descriptor, nested_mock::NestedMocks},
+		traits::{handles_inventory_menu::InventoryDescriptor, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -55,10 +59,12 @@ mod tests {
 	struct _Key(usize);
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _ItemDescriptors(HashMap<_Key, Descriptor>);
+	struct _ItemDescriptors(HashMap<_Key, InventoryDescriptor>);
 
 	impl GetDescriptor<_Key> for _ItemDescriptors {
-		fn get_descriptor(&self, key: _Key) -> Option<&Descriptor> {
+		type TItem = InventoryDescriptor;
+
+		fn get_descriptor(&self, key: _Key) -> Option<&InventoryDescriptor> {
 			self.0.get(&key)
 		}
 	}
@@ -75,7 +81,7 @@ mod tests {
 		}
 	}
 
-	fn setup(descriptors: HashMap<_Key, Descriptor>) -> App {
+	fn setup(descriptors: HashMap<_Key, InventoryDescriptor>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(_ItemDescriptors(descriptors));
 		app.add_systems(
@@ -118,7 +124,7 @@ mod tests {
 	fn set_filled() {
 		let mut app = setup(HashMap::from([(
 			_Key(42),
-			Descriptor {
+			InventoryDescriptor {
 				name: "my item".to_owned(),
 				..default()
 			},
@@ -165,7 +171,7 @@ mod tests {
 	fn set_when_text_not_first_child() {
 		let mut app = setup(HashMap::from([(
 			_Key(42),
-			Descriptor {
+			InventoryDescriptor {
 				name: "my item".to_owned(),
 				..default()
 			},

@@ -31,14 +31,18 @@ use common::{
 			ItemName,
 			IterateQueue,
 			PeekNext,
-			SkillDescription,
 			WriteItem,
 		},
 		handles_graphics::{StaticRenderLayers, UiCamera},
-		handles_inventory_menu::{Descriptions, Descriptor, GetDescriptor},
+		handles_inventory_menu::{
+			Descriptions,
+			GetDescriptor,
+			InventoryDescriptor,
+			QuickbarDescriptor,
+			SkillExecution,
+		},
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		handles_player::HandlesPlayer,
-		handles_quickbar::{ActiveSlotKey, ComboNextSlotKey, QueuedSlotKey},
 		load_asset::Path,
 		thread_safe::ThreadSafe,
 	},
@@ -62,7 +66,7 @@ use components::{
 };
 use events::DropdownEvent;
 use resources::equipment_info::EquipmentInfo;
-use std::{collections::HashMap, hash::Hash, marker::PhantomData, time::Duration};
+use std::{hash::Hash, marker::PhantomData, time::Duration};
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
 	combos::{
@@ -92,7 +96,6 @@ use systems::{
 	update_panels::{
 		activity_colors_override::panel_activity_colors_override,
 		colors::panel_colors,
-		get_quickbar_icons::get_quickbar_icons,
 		set_quickbar_icons::set_quickbar_icons,
 		update_label_text::update_label_text,
 	},
@@ -238,13 +241,7 @@ where
 	}
 
 	fn ui_overlay(&self, app: &mut App) {
-		Self::register_quickbar_menu(
-			app,
-			Self::get_descriptors::<TEquipment::TSlots, TEquipment::TSkill>,
-			Self::active_skill_icons,
-			Self::queued_skill_icons,
-			Self::combo_next_skill_icons,
-		);
+		Self::register_quickbar_menu(app, Self::get_quickbar_descriptors);
 
 		let play = GameState::Play;
 
@@ -323,7 +320,9 @@ where
 		get_slot_labels: impl IntoSystem<(), Option<TSlots>, M2>,
 	) where
 		TInventory: GetDescriptor<InventoryKey> + ThreadSafe,
+		TInventory::TItem: Getter<Name>,
 		TSlots: GetDescriptor<SlotKey> + ThreadSafe,
+		TSlots::TItem: Getter<Name>,
 	{
 		let inventory = GameState::IngameMenu(MenuState::Inventory);
 
@@ -348,39 +347,20 @@ where
 	}
 
 	// This system needs to be moved into the future menu plugin interface
-	fn register_quickbar_menu<TSlots, TActiveSlots, TQueuedSlots, TCombosSlots, M1, M2, M3, M4>(
+	fn register_quickbar_menu<TCache, M>(
 		app: &mut App,
-		get_slot_labels: impl IntoSystem<(), Option<TSlots>, M1>,
-		get_active_slot_labels: impl IntoSystem<(), Option<TActiveSlots>, M2>,
-		get_queued_slot_labels: impl IntoSystem<(), Option<TQueuedSlots>, M3>,
-		get_combo_slot_labels: impl IntoSystem<(), Option<TCombosSlots>, M4>,
+		get_quickbar_cache: impl IntoSystem<(), Option<TCache>, M>,
 	) where
-		TSlots: GetDescriptor<SlotKey> + ThreadSafe,
-		TActiveSlots: GetDescriptor<ActiveSlotKey> + ThreadSafe,
-		TQueuedSlots: GetDescriptor<QueuedSlotKey> + ThreadSafe,
-		TCombosSlots: GetDescriptor<ComboNextSlotKey> + ThreadSafe,
+		TCache: GetDescriptor<SlotKey, TItem = QuickbarDescriptor> + ThreadSafe,
 	{
 		let play = GameState::Play;
 
 		app.add_systems(
 			Update,
 			(
-				get_slot_labels.pipe(EquipmentInfo::update),
-				get_active_slot_labels.pipe(EquipmentInfo::update),
-				get_queued_slot_labels.pipe(EquipmentInfo::update),
-				get_combo_slot_labels.pipe(EquipmentInfo::update),
-				get_quickbar_icons::<
-					EquipmentInfo<TSlots>,
-					EquipmentInfo<TActiveSlots>,
-					EquipmentInfo<TCombosSlots>,
-				>
-					.pipe(set_quickbar_icons),
-				panel_activity_colors_override::<
-					SlotKeyMap,
-					QuickbarPanel,
-					EquipmentInfo<TActiveSlots>,
-					EquipmentInfo<TQueuedSlots>,
-				>,
+				get_quickbar_cache.pipe(EquipmentInfo::update),
+				set_quickbar_icons::<EquipmentInfo<TCache>>,
+				panel_activity_colors_override::<SlotKeyMap, QuickbarPanel, EquipmentInfo<TCache>>,
 			)
 				.chain()
 				.run_if(in_state(play)),
@@ -442,7 +422,7 @@ where
 		containers: Query<&TContainer, (With<TPlayers::TPlayer>, Changed<TContainer>)>,
 		items: Res<Assets<TContainer::TItem>>,
 		skills: Res<Assets<TSkill>>,
-	) -> Option<Descriptions<TContainer::TKey>>
+	) -> Option<Descriptions<TContainer::TKey, InventoryDescriptor>>
 	where
 		TContainer: ItemAssets + Component,
 		TContainer::TKey: Eq + Hash + Copy,
@@ -463,7 +443,7 @@ where
 
 				Some((
 					key,
-					Descriptor {
+					InventoryDescriptor {
 						name,
 						icon: image.cloned(),
 					},
@@ -476,82 +456,76 @@ where
 
 	// This system needs to move to the skills plugin
 	#[allow(clippy::type_complexity)]
-	fn active_skill_icons(
-		queues: Query<&TEquipment::TQueue, (With<TPlayers::TPlayer>, Changed<TEquipment::TQueue>)>,
-	) -> Option<Descriptions<ActiveSlotKey>> {
-		let queue = queues.get_single().ok()?;
-		let Some(active) = queue.iterate().next() else {
-			return Some(Descriptions(HashMap::default()));
-		};
-		let map = HashMap::from([(
-			ActiveSlotKey(SlotKey::get_field(active)),
-			Descriptor {
-				icon: Option::<Handle<Image>>::get_field_ref(active).clone(),
-				..default()
-			},
-		)]);
-
-		Some(Descriptions(map))
-	}
-
-	// This system needs to move to the skills plugin
-	#[allow(clippy::type_complexity)]
-	fn queued_skill_icons(
-		queues: Query<&TEquipment::TQueue, (With<TPlayers::TPlayer>, Changed<TEquipment::TQueue>)>,
-	) -> Option<Descriptions<QueuedSlotKey>> {
-		let queue = queues.get_single().ok()?;
-		let map = queue
-			.iterate()
-			.skip(1)
-			.map(|skill| {
-				(
-					QueuedSlotKey(SlotKey::get_field(skill)),
-					Descriptor {
-						icon: Option::<Handle<Image>>::get_field_ref(skill).clone(),
-						..default()
-					},
-				)
-			})
-			.collect();
-
-		Some(Descriptions(map))
-	}
-
-	// This system needs to move to the skills plugin
-	#[allow(clippy::type_complexity)]
-	fn combo_next_skill_icons(
-		items: Res<Assets<TEquipment::TItem>>,
-		slots: Query<
+	fn get_quickbar_descriptors(
+		queues: Query<
 			(
-				&TEquipment::TSlots,
-				&TEquipment::TCombos,
+				Ref<TEquipment::TSlots>,
+				Ref<TEquipment::TQueue>,
+				Ref<TEquipment::TCombos>,
 				Option<&TEquipment::TCombosTimeOut>,
 			),
-			(With<TPlayers::TPlayer>, Changed<TEquipment::TCombos>),
+			With<TPlayers::TPlayer>,
 		>,
-	) -> Option<Descriptions<ComboNextSlotKey>> {
-		let (slots, combos, time_out) = slots.get_single().ok()?;
-		let combo_active = time_out
+		items: Res<Assets<TEquipment::TItem>>,
+		skills: Res<Assets<TEquipment::TSkill>>,
+	) -> Option<Descriptions<SlotKey, QuickbarDescriptor>> {
+		let (slots, queue, combos, combos_time_out) = queues.get_single().ok()?;
+
+		if !Self::any_true(&[slots.is_changed(), queue.is_changed(), combos.is_changed()]) {
+			return None;
+		}
+
+		let mut queue = queue.iterate();
+		let active = queue.next();
+		let queued_keys = queue.map(SlotKey::get_field).collect::<Vec<_>>();
+		let combo_active = combos_time_out
 			.map(|time_out| !time_out.is_timed_out())
 			.unwrap_or(true);
-
-		if !combo_active {
-			return Some(Descriptions(HashMap::default()));
-		}
 
 		let map = slots
 			.item_assets()
 			.filter_map(|(key, handle)| {
 				let handle = handle.as_ref()?;
 				let item = items.get(handle)?;
+				let handle = Option::<Handle<TEquipment::TSkill>>::get_field_ref(item).as_ref()?;
+				let skill = skills.get(handle)?;
 				let item_type = ItemType::get_field(item);
-				let next_combo = combos.peek_next(&key, &item_type)?;
+				let active = active.and_then(|skill| {
+					let active_key = SlotKey::get_field(skill);
+					if active_key != key {
+						return None;
+					}
+
+					Some((
+						Option::<Handle<Image>>::get_field_ref(skill).clone(),
+						Name::get_field(skill).to_string(),
+					))
+				});
+
+				let execution = match active {
+					Some(_) => SkillExecution::Active,
+					None if queued_keys.contains(&key) => SkillExecution::Queued,
+					_ => SkillExecution::None,
+				};
+
+				let (icon, name) = match (active, combos.peek_next(&key, &item_type)) {
+					(Some((active_icon, active_name)), _) => (active_icon, active_name),
+					(_, Some(next_combo_skill)) if combo_active => (
+						Option::<Handle<Image>>::get_field_ref(&next_combo_skill).clone(),
+						Name::get_field(&next_combo_skill).to_string(),
+					),
+					_ => (
+						Option::<Handle<Image>>::get_field_ref(skill).clone(),
+						Name::get_field(skill).to_string(),
+					),
+				};
 
 				Some((
-					ComboNextSlotKey(key),
-					Descriptor {
-						icon: Option::<Handle<Image>>::get_field_ref(&next_combo).clone(),
-						..default()
+					key,
+					QuickbarDescriptor {
+						name,
+						icon,
+						execution,
 					},
 				))
 			})
@@ -559,13 +533,17 @@ where
 
 		Some(Descriptions(map))
 	}
+
+	fn any_true(values: &[bool]) -> bool {
+		values.contains(&true)
+	}
 	// END: Temporary proof of concept
 
 	fn combo_overview(&self, app: &mut App) {
 		Self::register_combo_menu(app, Self::get_equipment_info, Self::update_combos);
 
 		app.add_dropdown::<KeySelect<AppendSkill>>()
-			.add_tooltip::<SkillDescription>();
+			.add_tooltip::<Name>();
 	}
 
 	fn inventory_screen(&self, app: &mut App) {

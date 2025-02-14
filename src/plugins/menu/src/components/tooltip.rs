@@ -1,4 +1,4 @@
-pub(crate) mod skill_description;
+pub(crate) mod name;
 pub(crate) mod string;
 
 use super::GlobalZIndexTop;
