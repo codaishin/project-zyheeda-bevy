@@ -1,9 +1,9 @@
 use crate::{
-	components::skill_button::{DropdownTrigger, SkillButton},
+	components::combo_skill_button::{ComboSkillButton, DropdownTrigger},
 	traits::InsertContentOn,
 };
 use bevy::prelude::*;
-use common::traits::{handles_combo_menu::IsCompatible, thread_safe::ThreadSafe};
+use common::traits::{handles_combo_menu::GetComboAbleSkills, thread_safe::ThreadSafe};
 
 impl<T> VisualizeInvalidSkill for T {}
 
@@ -14,8 +14,8 @@ pub(crate) trait VisualizeInvalidSkill {
 		compatible: Res<TCompatibleChecker>,
 	) where
 		Self: InsertContentOn + Sized,
-		TSkill: ThreadSafe,
-		TCompatibleChecker: IsCompatible<TSkill> + Resource,
+		TSkill: PartialEq + Clone + ThreadSafe,
+		TCompatibleChecker: GetComboAbleSkills<TSkill> + Resource,
 	{
 		let visualize = Self::insert_content_on;
 
@@ -23,7 +23,8 @@ pub(crate) trait VisualizeInvalidSkill {
 			let Some(key) = button.key_path.last() else {
 				continue;
 			};
-			if compatible.is_compatible(key, &button.skill) {
+			let compatible_skills = compatible.get_combo_able_skills(key);
+			if compatible_skills.contains(&button.descriptor) {
 				continue;
 			}
 			let Some(mut entity) = commands.get_entity(entity) else {
@@ -34,7 +35,7 @@ pub(crate) trait VisualizeInvalidSkill {
 	}
 }
 
-type Button<TSkill> = SkillButton<DropdownTrigger, TSkill>;
+type Button<TSkill> = ComboSkillButton<DropdownTrigger, TSkill>;
 
 #[cfg(test)]
 mod tests {
@@ -42,13 +43,13 @@ mod tests {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::slot_key::{Side, SlotKey},
-		traits::nested_mock::NestedMocks,
+		traits::{handles_combo_menu::ComboSkillDescriptor, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Debug, PartialEq)]
-	struct _Skill;
+	#[derive(Debug, PartialEq, Default, Clone)]
+	struct _Skill(&'static str);
 
 	#[derive(Resource, NestedMocks)]
 	struct _Compatible {
@@ -56,9 +57,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl IsCompatible<_Skill> for _Compatible {
-		fn is_compatible(&self, key: &SlotKey, skill: &_Skill) -> bool {
-			self.mock.is_compatible(key, skill)
+	impl GetComboAbleSkills<_Skill> for _Compatible {
+		fn get_combo_able_skills(&self, key: &SlotKey) -> Vec<ComboSkillDescriptor<_Skill>> {
+			self.mock.get_combo_able_skills(key)
 		}
 	}
 
@@ -85,14 +86,20 @@ mod tests {
 	#[test]
 	fn visualize_unusable() {
 		let mut app = setup(_Compatible::new().with_mock(|mock| {
-			mock.expect_is_compatible()
-				.with(eq(SlotKey::BottomHand(Side::Right)), eq(_Skill))
-				.return_const(false);
+			mock.expect_get_combo_able_skills()
+				.with(eq(SlotKey::BottomHand(Side::Right)))
+				.return_const(vec![ComboSkillDescriptor {
+					skill: _Skill("compatible"),
+					..default()
+				}]);
 		}));
 		let skill = app
 			.world_mut()
-			.spawn(SkillButton::<DropdownTrigger, _Skill>::new(
-				_Skill,
+			.spawn(ComboSkillButton::<DropdownTrigger, _Skill>::new(
+				ComboSkillDescriptor {
+					skill: _Skill("incompatible"),
+					..default()
+				},
 				vec![
 					SlotKey::BottomHand(Side::Left),
 					SlotKey::BottomHand(Side::Right),
@@ -109,14 +116,20 @@ mod tests {
 	#[test]
 	fn do_not_visualize_usable() {
 		let mut app = setup(_Compatible::new().with_mock(|mock| {
-			mock.expect_is_compatible()
-				.with(eq(SlotKey::BottomHand(Side::Right)), eq(_Skill))
-				.return_const(true);
+			mock.expect_get_combo_able_skills()
+				.with(eq(SlotKey::BottomHand(Side::Right)))
+				.return_const(vec![ComboSkillDescriptor {
+					skill: _Skill("compatible"),
+					..default()
+				}]);
 		}));
 		let skill = app
 			.world_mut()
-			.spawn(SkillButton::<DropdownTrigger, _Skill>::new(
-				_Skill,
+			.spawn(ComboSkillButton::<DropdownTrigger, _Skill>::new(
+				ComboSkillDescriptor {
+					skill: _Skill("compatible"),
+					..default()
+				},
 				vec![
 					SlotKey::BottomHand(Side::Left),
 					SlotKey::BottomHand(Side::Right),
@@ -133,14 +146,20 @@ mod tests {
 	#[test]
 	fn do_not_visualize_when_not_added() {
 		let mut app = setup(_Compatible::new().with_mock(|mock| {
-			mock.expect_is_compatible()
-				.with(eq(SlotKey::BottomHand(Side::Right)), eq(_Skill))
-				.return_const(true);
+			mock.expect_get_combo_able_skills()
+				.with(eq(SlotKey::BottomHand(Side::Right)))
+				.return_const(vec![ComboSkillDescriptor {
+					skill: _Skill("compatible"),
+					..default()
+				}]);
 		}));
 		let skill = app
 			.world_mut()
-			.spawn(SkillButton::<DropdownTrigger, _Skill>::new(
-				_Skill,
+			.spawn(ComboSkillButton::<DropdownTrigger, _Skill>::new(
+				ComboSkillDescriptor {
+					skill: _Skill("incompatible"),
+					..default()
+				},
 				vec![
 					SlotKey::BottomHand(Side::Left),
 					SlotKey::BottomHand(Side::Right),

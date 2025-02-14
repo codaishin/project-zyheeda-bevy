@@ -1,7 +1,7 @@
 use super::{
 	accessors::get::{Getter, GetterRef},
 	handles_combo_menu::GetCombosOrdered,
-	handles_inventory_menu::SwapKeys,
+	handles_loadout_menus::SwapValuesByKey,
 	thread_safe::ThreadSafe,
 };
 use crate::tools::{inventory_key::InventoryKey, item_type::ItemType, slot_key::SlotKey};
@@ -27,11 +27,7 @@ pub trait HandlesEquipment {
 		+ PartialEq
 		+ ThreadSafe;
 	type TQueuedSkill: Getter<SlotKey> + GetterRef<Option<Handle<Image>>> + Getter<Name>;
-	type TSwap: Component
-		+ SwapKeys<InventoryKey, InventoryKey>
-		+ SwapKeys<InventoryKey, SlotKey>
-		+ SwapKeys<SlotKey, SlotKey>
-		+ SwapKeys<SlotKey, InventoryKey>;
+	type TSwap: Component + SwapValuesByKey;
 
 	type TInventory: Component
 		+ ItemAssetBufferMut<TItemHandle = Handle<Self::TItem>>

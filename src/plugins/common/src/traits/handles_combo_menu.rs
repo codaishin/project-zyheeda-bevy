@@ -1,12 +1,33 @@
-use super::{
-	accessors::get::{GetFieldRef, GetterRef},
-	handles_equipment::{Combo, CompatibleItems},
-};
-use crate::tools::{item_type::ItemType, slot_key::SlotKey};
+use super::{handles_equipment::Combo, thread_safe::ThreadSafe};
+use crate::tools::slot_key::SlotKey;
+use bevy::prelude::*;
 use std::collections::{HashMap, HashSet};
 
-pub trait IsCompatible<TSkill> {
-	fn is_compatible(&self, key: &SlotKey, skill: &TSkill) -> bool;
+pub trait HandlesComboMenu {
+	fn combos_with_skill<TSkill>() -> impl ConfigureCombos<TSkill>
+	where
+		TSkill: PartialEq + Clone + ThreadSafe;
+}
+
+pub trait ConfigureCombos<TSkill>
+where
+	TSkill: PartialEq + Clone + ThreadSafe,
+{
+	fn configure<TUpdateCombos, TEquipment, M1, M2>(
+		&self,
+		app: &mut App,
+		get_equipment_info: impl IntoSystem<(), Option<TEquipment>, M1>,
+		update_combos: TUpdateCombos,
+	) where
+		TUpdateCombos: IntoSystem<In<Combo<Option<TSkill>>>, (), M2> + Copy,
+		TEquipment: GetCombosOrdered<TSkill> + GetComboAbleSkills<TSkill> + NextKeys + ThreadSafe;
+}
+
+pub trait GetComboAbleSkills<TSkill>
+where
+	TSkill: Clone,
+{
+	fn get_combo_able_skills(&self, key: &SlotKey) -> Vec<ComboSkillDescriptor<TSkill>>;
 }
 
 pub trait NextKeys {
@@ -14,29 +35,30 @@ pub trait NextKeys {
 }
 
 pub trait GetCombosOrdered<TSkill> {
-	fn combos_ordered(&self) -> Vec<Combo<TSkill>>;
+	fn combos_ordered(&self) -> Vec<Combo<ComboSkillDescriptor<TSkill>>>;
+}
+
+#[derive(Debug, PartialEq, Clone, Default)]
+pub struct ComboSkillDescriptor<TSkill> {
+	pub skill: TSkill,
+	pub icon: Option<Handle<Image>>,
+	pub name: String,
 }
 
 // This should go later into the skills plugin
 #[derive(Debug, PartialEq)]
 pub struct EquipmentDescriptor<TSkill> {
-	pub item_types: HashMap<SlotKey, ItemType>,
+	pub compatible_skills: HashMap<SlotKey, Vec<ComboSkillDescriptor<TSkill>>>,
 	pub combo_keys: HashSet<Vec<SlotKey>>,
-	pub combos: Vec<Combo<TSkill>>,
+	pub combos: Vec<Combo<ComboSkillDescriptor<TSkill>>>,
 }
 
-impl<TSkill> IsCompatible<TSkill> for EquipmentDescriptor<TSkill>
+impl<TSkill> GetComboAbleSkills<TSkill> for EquipmentDescriptor<TSkill>
 where
-	TSkill: GetterRef<CompatibleItems>,
+	TSkill: Clone,
 {
-	fn is_compatible(&self, key: &SlotKey, skill: &TSkill) -> bool {
-		let CompatibleItems(compatible_items) = CompatibleItems::get_field_ref(skill);
-
-		let Some(item_type) = self.item_types.get(key) else {
-			return false;
-		};
-
-		compatible_items.contains(item_type)
+	fn get_combo_able_skills(&self, key: &SlotKey) -> Vec<ComboSkillDescriptor<TSkill>> {
+		self.compatible_skills.get(key).cloned().unwrap_or_default()
 	}
 }
 
@@ -55,7 +77,7 @@ impl<TSkill> GetCombosOrdered<TSkill> for EquipmentDescriptor<TSkill>
 where
 	TSkill: Clone,
 {
-	fn combos_ordered(&self) -> Vec<Combo<TSkill>> {
+	fn combos_ordered(&self) -> Vec<Combo<ComboSkillDescriptor<TSkill>>> {
 		self.combos.clone()
 	}
 }

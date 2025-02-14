@@ -1,7 +1,7 @@
 use super::{
+	combo_skill_button::{ComboSkillButton, DropdownTrigger, Vertical},
 	key_code_text_insert_command::KeyCodeTextInsertCommand,
 	key_select_dropdown_command::{AppendSkillCommand, KeySelectDropdownCommand},
-	skill_button::{DropdownTrigger, SkillButton, Vertical},
 	DeleteSkill,
 	SkillSelectDropdownInsertCommand,
 };
@@ -20,7 +20,7 @@ use bevy::prelude::*;
 use common::{
 	tools::slot_key::SlotKey,
 	traits::{
-		accessors::get::{GetField, GetFieldRef, Getter, GetterRef},
+		handles_combo_menu::ComboSkillDescriptor,
 		load_asset::{LoadAsset, Path},
 		thread_safe::ThreadSafe,
 	},
@@ -324,7 +324,7 @@ where
 
 impl<TSkill> InsertUiContent for ComboOverview<TSkill>
 where
-	TSkill: GetterRef<Option<Handle<Image>>> + Getter<Name> + Clone + ThreadSafe,
+	TSkill: Clone + PartialEq + ThreadSafe,
 {
 	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		add_title(parent, "Combos");
@@ -380,7 +380,7 @@ fn add_empty_combo(parent: &mut ChildBuilder, icon: &Handle<Image>) {
 
 fn add_combo_list<TSkill>(parent: &mut ChildBuilder, combo_overview: &ComboOverview<TSkill>)
 where
-	TSkill: GetterRef<Option<Handle<Image>>> + Getter<Name> + Clone + ThreadSafe,
+	TSkill: Clone + PartialEq + ThreadSafe,
 {
 	parent
 		.spawn(Node {
@@ -402,7 +402,7 @@ fn add_combo<TSkill>(
 	local_z: i32,
 	new_skill_icon: &Handle<Image>,
 ) where
-	TSkill: GetterRef<Option<Handle<Image>>> + Getter<Name> + Clone + ThreadSafe,
+	TSkill: Clone + PartialEq + ThreadSafe,
 {
 	parent
 		.spawn((
@@ -430,7 +430,7 @@ enum AddPanel<'a, TSkill> {
 	},
 	Skill {
 		key_path: &'a [SlotKey],
-		skill: &'a TSkill,
+		descriptor: &'a ComboSkillDescriptor<TSkill>,
 		panel_overlay: PanelOverlay,
 		panel_background: PanelBackground,
 	},
@@ -483,7 +483,7 @@ impl AddPanel<'_, ()> {
 
 impl<TSkill> AddPanel<'_, TSkill>
 where
-	TSkill: GetterRef<Option<Handle<Image>>> + Getter<Name> + Clone + ThreadSafe,
+	TSkill: Clone + ThreadSafe,
 {
 	fn spawn_as_child(self, parent: &mut ChildBuilder, icon: &Handle<Image>) {
 		match self {
@@ -496,7 +496,7 @@ where
 			}
 			AddPanel::Skill {
 				key_path,
-				skill,
+				descriptor: skill,
 				panel_overlay,
 				panel_background,
 			} => AddPanel::skill(parent, key_path, skill, panel_overlay, panel_background),
@@ -506,11 +506,10 @@ where
 	fn skill(
 		parent: &mut ChildBuilder,
 		key_path: &[SlotKey],
-		skill: &TSkill,
+		descriptor: &ComboSkillDescriptor<TSkill>,
 		PanelOverlay(panel_overlay): PanelOverlay,
 		PanelBackground(panel_background): PanelBackground,
 	) {
-		let icon = Option::<Handle<Image>>::get_field_ref(skill);
 		parent
 			.spawn((
 				#[cfg(debug_assertions)]
@@ -518,8 +517,10 @@ where
 				ComboOverview::skill_node(),
 			))
 			.with_children(|parent| {
-				let button =
-					SkillButton::<DropdownTrigger, TSkill>::new(skill.clone(), key_path.to_vec());
+				let button = ComboSkillButton::<DropdownTrigger, TSkill>::new(
+					descriptor.clone(),
+					key_path.to_vec(),
+				);
 
 				for add_background in panel_background {
 					add_background(parent);
@@ -527,8 +528,8 @@ where
 				parent
 					.spawn((
 						button,
-						Tooltip::new(Name::get_field(skill)),
-						ComboOverview::skill_button(icon.clone()),
+						Tooltip::new(Name::from(descriptor.name.clone())),
+						ComboOverview::skill_button(descriptor.icon.clone()),
 						SkillSelectDropdownInsertCommand::<SlotKey, Vertical>::new(
 							key_path.to_vec(),
 						),
@@ -558,15 +559,21 @@ impl<'a, TSkill> From<&'a ComboTreeElement<TSkill>> for AddPanel<'a, TSkill> {
 				panel_overlay: PanelOverlay(&[add_append_button]),
 				panel_background: PanelBackground(&[add_horizontal_background_line]),
 			},
-			ComboTreeElement::Node { key_path, skill } => AddPanel::Skill {
+			ComboTreeElement::Node {
 				key_path,
-				skill,
+				descriptor: skill,
+			} => AddPanel::Skill {
+				key_path,
+				descriptor: skill,
 				panel_overlay: PanelOverlay(&[add_key, add_append_button, add_delete_button]),
 				panel_background: PanelBackground(&[add_horizontal_background_line]),
 			},
-			ComboTreeElement::Leaf { key_path, skill } => AddPanel::Skill {
+			ComboTreeElement::Leaf {
 				key_path,
-				skill,
+				descriptor: skill,
+			} => AddPanel::Skill {
+				key_path,
+				descriptor: skill,
 				panel_overlay: PanelOverlay(&[add_key, add_append_button, add_delete_button]),
 				panel_background: PanelBackground(&[]),
 			},
@@ -664,13 +671,16 @@ mod tests {
 	use mockall::{mock, predicate::eq};
 	use uuid::Uuid;
 
-	#[derive(Debug, PartialEq, Clone)]
+	#[derive(Debug, PartialEq, Default, Clone)]
 	struct _Skill;
 
 	#[test]
 	fn update_combos() {
 		let combos = vec![vec![ComboTreeElement::Leaf {
-			skill: _Skill,
+			descriptor: ComboSkillDescriptor {
+				skill: _Skill,
+				..default()
+			},
 			key_path: vec![SlotKey::BottomHand(Side::Right)],
 		}]];
 		let mut combo_overview = ComboOverview::default();

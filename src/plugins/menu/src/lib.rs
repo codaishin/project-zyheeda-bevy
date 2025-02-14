@@ -22,9 +22,18 @@ use common::{
 	tools::{inventory_key::InventoryKey, item_type::ItemType, slot_key::SlotKey},
 	traits::{
 		accessors::get::{GetField, GetFieldRef, Getter, GetterRef},
-		handles_combo_menu::{EquipmentDescriptor, GetCombosOrdered, IsCompatible, NextKeys},
+		handles_combo_menu::{
+			ComboSkillDescriptor,
+			ConfigureCombos,
+			EquipmentDescriptor,
+			GetComboAbleSkills,
+			GetCombosOrdered,
+			HandlesComboMenu,
+			NextKeys,
+		},
 		handles_equipment::{
 			Combo,
+			CompatibleItems,
 			HandlesEquipment,
 			IsTimedOut,
 			ItemAssets,
@@ -34,14 +43,17 @@ use common::{
 			WriteItem,
 		},
 		handles_graphics::{StaticRenderLayers, UiCamera},
-		handles_inventory_menu::{
+		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
+		handles_loadout_menus::{
+			ConfigureInventory,
 			Descriptions,
 			GetDescriptor,
+			HandlesLoadoutMenu,
 			InventoryDescriptor,
 			QuickbarDescriptor,
 			SkillExecution,
+			SwapValuesByKey,
 		},
-		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		handles_player::HandlesPlayer,
 		load_asset::Path,
 		thread_safe::ThreadSafe,
@@ -50,6 +62,7 @@ use common::{
 use components::{
 	button_interaction::ButtonInteraction,
 	combo_overview::ComboOverview,
+	combo_skill_button::{ComboSkillButton, DropdownItem, Horizontal, Vertical},
 	dropdown::Dropdown,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
@@ -57,7 +70,6 @@ use components::{
 	key_select_dropdown_command::AppendSkillCommand,
 	loading_screen::LoadingScreen,
 	quickbar_panel::QuickbarPanel,
-	skill_button::{DropdownItem, Horizontal, SkillButton, Vertical},
 	start_game::StartGame,
 	start_menu::StartMenu,
 	start_menu_button::StartMenuButton,
@@ -66,7 +78,12 @@ use components::{
 };
 use events::DropdownEvent;
 use resources::equipment_info::EquipmentInfo;
-use std::{hash::Hash, marker::PhantomData, time::Duration};
+use std::{
+	collections::{hash_map::Entry, HashMap, HashSet},
+	hash::Hash,
+	marker::PhantomData,
+	time::Duration,
+};
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
 	combos::{
@@ -241,7 +258,7 @@ where
 	}
 
 	fn ui_overlay(&self, app: &mut App) {
-		Self::register_quickbar_menu(app, Self::get_quickbar_descriptors);
+		Self::configure_quickbar_menu(app, Self::get_quickbar_descriptors);
 
 		let play = GameState::Play;
 
@@ -264,114 +281,12 @@ where
 	}
 
 	// BEGIN: Temporary proof of concept
-	// This system needs to be moved into the future menu plugin interface
-	fn register_combo_menu<TUpdateCombos, TEquipmentInfo, M1, M2>(
-		app: &mut App,
-		get_equipment_info: impl IntoSystem<(), Option<TEquipmentInfo>, M1>,
-		update_combos: TUpdateCombos,
-	) where
-		TUpdateCombos: IntoSystem<In<Combo<Option<TEquipment::TSkill>>>, (), M2> + Copy,
-		TEquipmentInfo: IsCompatible<TEquipment::TSkill>
-			+ NextKeys
-			+ GetCombosOrdered<TEquipment::TSkill>
-			+ ThreadSafe,
-	{
-		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
-
-		app.add_ui::<ComboOverview<TEquipment::TSkill>, TGraphics::TUiCamera>(
-			GameState::IngameMenu(MenuState::ComboOverview),
-		)
-		.add_dropdown::<SkillButton<DropdownItem<Vertical>, TEquipment::TSkill>>()
-		.add_dropdown::<SkillButton<DropdownItem<Horizontal>, TEquipment::TSkill>>()
-		.add_systems(
-			Update,
-			(
-				get_equipment_info.pipe(EquipmentInfo::update),
-				select_successor_key::<EquipmentInfo<TEquipmentInfo>>,
-				Vertical::dropdown_skill_select_insert::<
-					TEquipment::TSkill,
-					EquipmentInfo<TEquipmentInfo>,
-				>,
-				Horizontal::dropdown_skill_select_insert::<
-					TEquipment::TSkill,
-					EquipmentInfo<TEquipmentInfo>,
-				>,
-				Vertical::dropdown_skill_select_click::<TEquipment::TSkill>.pipe(update_combos),
-				Horizontal::dropdown_skill_select_click::<TEquipment::TSkill>.pipe(update_combos),
-				update_combos_view_delete_skill::<TEquipment::TSkill>.pipe(update_combos),
-				ComboOverview::<TEquipment::TSkill>::update_combos_overview::<
-					TEquipment::TSkill,
-					EquipmentInfo<TEquipmentInfo>,
-				>,
-				Unusable::visualize_invalid_skill::<
-					TEquipment::TSkill,
-					EquipmentInfo<TEquipmentInfo>,
-				>,
-			)
-				.chain()
-				.run_if(in_state(combo_overview)),
-		);
-	}
-
-	// This system needs to be moved into the future menu plugin interface
-	fn register_item_menu<TInventory, TSlots, M1, M2>(
-		app: &mut App,
-		get_inventor_labels: impl IntoSystem<(), Option<TInventory>, M1>,
-		get_slot_labels: impl IntoSystem<(), Option<TSlots>, M2>,
-	) where
-		TInventory: GetDescriptor<InventoryKey> + ThreadSafe,
-		TInventory::TItem: Getter<Name>,
-		TSlots: GetDescriptor<SlotKey> + ThreadSafe,
-		TSlots::TItem: Getter<Name>,
-	{
-		let inventory = GameState::IngameMenu(MenuState::Inventory);
-
-		app.add_systems(
-			Update,
-			(
-				get_inventor_labels.pipe(EquipmentInfo::update),
-				get_slot_labels.pipe(EquipmentInfo::update),
-				InventoryPanel::set_container_panels::<InventoryKey, EquipmentInfo<TInventory>>,
-				InventoryPanel::set_container_panels::<SlotKey, EquipmentInfo<TSlots>>,
-				panel_colors::<InventoryPanel>,
-				drag::<TEquipment::TSwap, InventoryKey>,
-				drag::<TEquipment::TSwap, SlotKey>,
-				drop::<TEquipment::TSwap, InventoryKey, InventoryKey>,
-				drop::<TEquipment::TSwap, InventoryKey, SlotKey>,
-				drop::<TEquipment::TSwap, SlotKey, SlotKey>,
-				drop::<TEquipment::TSwap, SlotKey, InventoryKey>,
-			)
-				.chain()
-				.run_if(in_state(inventory)),
-		);
-	}
-
-	// This system needs to be moved into the future menu plugin interface
-	fn register_quickbar_menu<TCache, M>(
-		app: &mut App,
-		get_quickbar_cache: impl IntoSystem<(), Option<TCache>, M>,
-	) where
-		TCache: GetDescriptor<SlotKey, TItem = QuickbarDescriptor> + ThreadSafe,
-	{
-		let play = GameState::Play;
-
-		app.add_systems(
-			Update,
-			(
-				get_quickbar_cache.pipe(EquipmentInfo::update),
-				set_quickbar_icons::<EquipmentInfo<TCache>>,
-				panel_activity_colors_override::<SlotKeyMap, QuickbarPanel, EquipmentInfo<TCache>>,
-			)
-				.chain()
-				.run_if(in_state(play)),
-		);
-	}
-
 	// This system needs to move to the skills plugin
 	#[allow(clippy::type_complexity)]
 	fn get_equipment_info(
 		slots: Query<(Ref<TEquipment::TSlots>, Ref<TEquipment::TCombos>), With<TPlayers::TPlayer>>,
 		items: Res<Assets<TEquipment::TItem>>,
+		skills: Res<Assets<TEquipment::TSkill>>,
 	) -> Option<EquipmentDescriptor<TEquipment::TSkill>> {
 		let (slots, combos) = slots.get_single().ok()?;
 
@@ -379,15 +294,58 @@ where
 			return None;
 		}
 
-		let item_types = slots
-			.item_assets()
-			.filter_map(|(key, handle)| {
-				let handle = handle.as_ref()?;
-				let item = items.get(handle)?;
-				Some((key, ItemType::get_field(item)))
-			})
-			.collect();
+		let mut compatible_skills =
+			HashMap::<SlotKey, Vec<ComboSkillDescriptor<TEquipment::TSkill>>>::default();
+		let mut compatible_map = HashMap::<ItemType, Vec<SlotKey>>::default();
+		let mut seen = vec![];
 
+		for (key, handle) in slots.item_assets() {
+			let Some(handle) = handle else {
+				continue;
+			};
+			let Some(item) = items.get(handle) else {
+				continue;
+			};
+			match compatible_map.entry(ItemType::get_field(item)) {
+				Entry::Occupied(mut occupied_entry) => {
+					occupied_entry.get_mut().push(key);
+				}
+				Entry::Vacant(vacant_entry) => {
+					vacant_entry.insert(vec![key]);
+				}
+			};
+		}
+
+		for (id, skill) in skills.iter() {
+			if seen.contains(&id) {
+				continue;
+			}
+			seen.push(id);
+			let CompatibleItems(item_types) = CompatibleItems::get_field_ref(skill);
+			let descriptor = ComboSkillDescriptor {
+				skill: skill.clone(),
+				name: Name::get_field(skill).to_string(),
+				icon: Option::<Handle<Image>>::get_field_ref(skill).clone(),
+			};
+			let keys = item_types
+				.iter()
+				.flat_map(|item_type| compatible_map.get(item_type).cloned().unwrap_or_default())
+				.collect::<HashSet<_>>();
+
+			for key in keys {
+				match compatible_skills.entry(key) {
+					Entry::Occupied(mut occupied_entry) => {
+						if occupied_entry.get().contains(&descriptor) {
+							continue;
+						}
+						occupied_entry.get_mut().push(descriptor.clone());
+					}
+					Entry::Vacant(vacant_entry) => {
+						vacant_entry.insert(vec![descriptor.clone()]);
+					}
+				}
+			}
+		}
 		let combo_keys = combos
 			.combos_ordered()
 			.iter()
@@ -397,7 +355,7 @@ where
 		let combos = combos.combos_ordered();
 
 		Some(EquipmentDescriptor {
-			item_types,
+			compatible_skills,
 			combo_keys,
 			combos,
 		})
@@ -540,14 +498,18 @@ where
 	// END: Temporary proof of concept
 
 	fn combo_overview(&self, app: &mut App) {
-		Self::register_combo_menu(app, Self::get_equipment_info, Self::update_combos);
+		Self::combos_with_skill::<TEquipment::TSkill>().configure(
+			app,
+			Self::get_equipment_info,
+			Self::update_combos,
+		);
 
 		app.add_dropdown::<KeySelect<AppendSkill>>()
 			.add_tooltip::<Name>();
 	}
 
 	fn inventory_screen(&self, app: &mut App) {
-		Self::register_item_menu(
+		Self::inventory_with_swapper::<TEquipment::TSwap>().configure(
 			app,
 			Self::get_descriptors::<TEquipment::TInventory, TEquipment::TSkill>,
 			Self::get_descriptors::<TEquipment::TSlots, TEquipment::TSkill>,
@@ -594,5 +556,129 @@ where
 			debug::setup_run_time_display::<TGraphics::TUiCamera>(app);
 			debug::setup_dropdown_test(app);
 		}
+	}
+}
+
+impl<TDependencies> HandlesLoadoutMenu for MenuPlugin<TDependencies> {
+	fn inventory_with_swapper<TSwap>() -> impl ConfigureInventory<TSwap>
+	where
+		TSwap: Component + SwapValuesByKey,
+	{
+		InventoryConfiguration
+	}
+
+	fn configure_quickbar_menu<TCache, TSystemMarker>(
+		app: &mut App,
+		get_quickbar_cache: impl IntoSystem<(), Option<TCache>, TSystemMarker>,
+	) where
+		TCache: GetDescriptor<SlotKey, TItem = QuickbarDescriptor> + ThreadSafe,
+	{
+		let play = GameState::Play;
+
+		app.add_systems(
+			Update,
+			(
+				get_quickbar_cache.pipe(EquipmentInfo::update),
+				set_quickbar_icons::<EquipmentInfo<TCache>>,
+				panel_activity_colors_override::<SlotKeyMap, QuickbarPanel, EquipmentInfo<TCache>>,
+			)
+				.chain()
+				.run_if(in_state(play)),
+		);
+	}
+}
+
+struct InventoryConfiguration;
+
+impl<TSwap> ConfigureInventory<TSwap> for InventoryConfiguration
+where
+	TSwap: Component + SwapValuesByKey,
+{
+	fn configure<TInventory, TSlots, M1, M2>(
+		&self,
+		app: &mut App,
+		get_inventor_descriptors: impl IntoSystem<(), Option<TInventory>, M1>,
+		get_slot_descriptors: impl IntoSystem<(), Option<TSlots>, M2>,
+	) where
+		TInventory: GetDescriptor<InventoryKey> + ThreadSafe,
+		TInventory::TItem: Getter<Name>,
+		TSlots: GetDescriptor<SlotKey> + ThreadSafe,
+		TSlots::TItem: Getter<Name>,
+	{
+		let inventory = GameState::IngameMenu(MenuState::Inventory);
+
+		app.add_systems(
+			Update,
+			(
+				get_inventor_descriptors.pipe(EquipmentInfo::update),
+				get_slot_descriptors.pipe(EquipmentInfo::update),
+				InventoryPanel::set_container_panels::<InventoryKey, EquipmentInfo<TInventory>>,
+				InventoryPanel::set_container_panels::<SlotKey, EquipmentInfo<TSlots>>,
+				panel_colors::<InventoryPanel>,
+				drag::<TSwap, InventoryKey>,
+				drag::<TSwap, SlotKey>,
+				drop::<TSwap, InventoryKey, InventoryKey>,
+				drop::<TSwap, InventoryKey, SlotKey>,
+				drop::<TSwap, SlotKey, SlotKey>,
+				drop::<TSwap, SlotKey, InventoryKey>,
+			)
+				.chain()
+				.run_if(in_state(inventory)),
+		);
+	}
+}
+
+impl<TLoading, TPlayers, TGraphics, TEquipment> HandlesComboMenu
+	for MenuPlugin<(TLoading, TPlayers, TGraphics, TEquipment)>
+where
+	TGraphics: ThreadSafe + UiCamera,
+{
+	fn combos_with_skill<TSkill>() -> impl ConfigureCombos<TSkill>
+	where
+		TSkill: PartialEq + Clone + ThreadSafe,
+	{
+		ComboConfiguration::<TGraphics>(PhantomData)
+	}
+}
+
+struct ComboConfiguration<TGraphics>(PhantomData<TGraphics>);
+
+impl<TGraphics, TSkill> ConfigureCombos<TSkill> for ComboConfiguration<TGraphics>
+where
+	TGraphics: ThreadSafe + UiCamera,
+	TSkill: Clone + PartialEq + ThreadSafe,
+{
+	fn configure<TUpdateCombos, TEquipment, M1, M2>(
+		&self,
+		app: &mut App,
+		get_equipment_info: impl IntoSystem<(), Option<TEquipment>, M1>,
+		update_combos: TUpdateCombos,
+	) where
+		TUpdateCombos: IntoSystem<In<Combo<Option<TSkill>>>, (), M2> + Copy,
+		TEquipment: GetComboAbleSkills<TSkill> + NextKeys + GetCombosOrdered<TSkill> + ThreadSafe,
+	{
+		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
+
+		app.add_ui::<ComboOverview<TSkill>, TGraphics::TUiCamera>(GameState::IngameMenu(
+			MenuState::ComboOverview,
+		))
+		.add_dropdown::<ComboSkillButton<DropdownItem<Vertical>, TSkill>>()
+		.add_dropdown::<ComboSkillButton<DropdownItem<Horizontal>, TSkill>>()
+		.add_systems(
+			Update,
+			(
+				get_equipment_info.pipe(EquipmentInfo::update),
+				select_successor_key::<EquipmentInfo<TEquipment>>,
+				Vertical::dropdown_skill_select_insert::<TSkill, EquipmentInfo<TEquipment>>,
+				Horizontal::dropdown_skill_select_insert::<TSkill, EquipmentInfo<TEquipment>>,
+				Vertical::dropdown_skill_select_click::<TSkill>.pipe(update_combos),
+				Horizontal::dropdown_skill_select_click::<TSkill>.pipe(update_combos),
+				update_combos_view_delete_skill::<TSkill>.pipe(update_combos),
+				ComboOverview::<TSkill>::update_combos_overview::<TSkill, EquipmentInfo<TEquipment>>,
+				Unusable::visualize_invalid_skill::<TSkill, EquipmentInfo<TEquipment>>,
+			)
+				.chain()
+				.run_if(in_state(combo_overview)),
+		);
 	}
 }

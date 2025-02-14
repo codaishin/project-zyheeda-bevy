@@ -1,4 +1,4 @@
-use crate::components::skill_button::{DropdownItem, SkillButton};
+use crate::components::combo_skill_button::{ComboSkillButton, DropdownItem};
 use bevy::{prelude::*, ui::Interaction};
 use common::traits::{handles_equipment::Combo, thread_safe::ThreadSafe};
 
@@ -6,7 +6,7 @@ impl<T> DropdownSkillSelectClick for T {}
 
 pub(crate) trait DropdownSkillSelectClick {
 	fn dropdown_skill_select_click<TSkill>(
-		skill_buttons: Query<(&SkillButton<DropdownItem<Self>, TSkill>, &Interaction)>,
+		skill_buttons: Query<(&ComboSkillButton<DropdownItem<Self>, TSkill>, &Interaction)>,
 	) -> Combo<Option<TSkill>>
 	where
 		Self: ThreadSafe + Sized,
@@ -15,7 +15,12 @@ pub(crate) trait DropdownSkillSelectClick {
 		skill_buttons
 			.iter()
 			.filter(pressed)
-			.map(|(button, ..)| (button.key_path.clone(), Some(button.skill.clone())))
+			.map(|(button, ..)| {
+				(
+					button.key_path.clone(),
+					Some(button.descriptor.skill.clone()),
+				)
+			})
 			.collect::<Vec<_>>()
 	}
 }
@@ -30,9 +35,10 @@ mod tests {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::slot_key::{Side, SlotKey},
+		traits::handles_combo_menu::ComboSkillDescriptor,
 	};
 
-	#[derive(Debug, PartialEq, Clone)]
+	#[derive(Debug, PartialEq, Default, Clone)]
 	struct _Skill;
 
 	struct _Layout;
@@ -51,8 +57,11 @@ mod tests {
 	fn update_skill() {
 		let mut app = setup(assert_combo);
 		app.world_mut().spawn((
-			SkillButton::<DropdownItem<_Layout>, _Skill>::new(
-				_Skill,
+			ComboSkillButton::<DropdownItem<_Layout>, _Skill>::new(
+				ComboSkillDescriptor {
+					skill: _Skill,
+					..default()
+				},
 				vec![SlotKey::BottomHand(Side::Left)],
 			),
 			Interaction::Pressed,
@@ -72,15 +81,21 @@ mod tests {
 	fn do_not_update_skill_when_interaction_not_pressed() {
 		let mut app = setup(assert_no_combo);
 		app.world_mut().spawn((
-			SkillButton::<DropdownItem<_Layout>, _Skill>::new(
-				_Skill,
+			ComboSkillButton::<DropdownItem<_Layout>, _Skill>::new(
+				ComboSkillDescriptor {
+					skill: _Skill,
+					..default()
+				},
 				vec![SlotKey::BottomHand(Side::Left)],
 			),
 			Interaction::Hovered,
 		));
 		app.world_mut().spawn((
-			SkillButton::<DropdownItem<_Layout>, _Skill>::new(
-				_Skill,
+			ComboSkillButton::<DropdownItem<_Layout>, _Skill>::new(
+				ComboSkillDescriptor {
+					skill: _Skill,
+					..default()
+				},
 				vec![SlotKey::BottomHand(Side::Left)],
 			),
 			Interaction::None,

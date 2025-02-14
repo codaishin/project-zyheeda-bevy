@@ -1,6 +1,6 @@
 use super::{
 	combo_overview::ComboOverview,
-	skill_button::Horizontal,
+	combo_skill_button::Horizontal,
 	SkillSelectDropdownInsertCommand,
 };
 use crate::traits::{insert_ui_content::InsertUiContent, GetComponent, GetKey};

@@ -2,9 +2,14 @@ use bevy::prelude::*;
 use common::{
 	tools::slot_key::SlotKey,
 	traits::{
-		handles_combo_menu::{GetCombosOrdered, IsCompatible, NextKeys},
+		handles_combo_menu::{
+			ComboSkillDescriptor,
+			GetComboAbleSkills,
+			GetCombosOrdered,
+			NextKeys,
+		},
 		handles_equipment::Combo,
-		handles_inventory_menu::GetDescriptor,
+		handles_loadout_menus::GetDescriptor,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -26,12 +31,13 @@ where
 	}
 }
 
-impl<T, TSkill> IsCompatible<TSkill> for EquipmentInfo<T>
+impl<T, TSkill> GetComboAbleSkills<TSkill> for EquipmentInfo<T>
 where
-	T: IsCompatible<TSkill>,
+	T: GetComboAbleSkills<TSkill>,
+	TSkill: Clone,
 {
-	fn is_compatible(&self, key: &SlotKey, skill: &TSkill) -> bool {
-		self.0.is_compatible(key, skill)
+	fn get_combo_able_skills(&self, key: &SlotKey) -> Vec<ComboSkillDescriptor<TSkill>> {
+		self.0.get_combo_able_skills(key)
 	}
 }
 
@@ -48,7 +54,7 @@ impl<T, TSkill> GetCombosOrdered<TSkill> for EquipmentInfo<T>
 where
 	T: GetCombosOrdered<TSkill>,
 {
-	fn combos_ordered(&self) -> Vec<Combo<TSkill>> {
+	fn combos_ordered(&self) -> Vec<Combo<ComboSkillDescriptor<TSkill>>> {
 		self.0.combos_ordered()
 	}
 }

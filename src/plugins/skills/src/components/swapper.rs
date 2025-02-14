@@ -4,19 +4,13 @@ use bevy::prelude::*;
 use bevy_rapier3d::na::max;
 use common::{
 	tools::{inventory_key::InventoryKey, slot_key::SlotKey},
-	traits::handles_inventory_menu::SwapKeys,
+	traits::handles_loadout_menus::{SwapKey, SwapValuesByKey},
 };
 use std::mem;
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub struct Swapper {
-	swaps: Vec<(Key, Key)>,
-}
-
-#[derive(Debug, PartialEq)]
-enum Key {
-	Inventory(usize),
-	Slot(SlotKey),
+	swaps: Vec<(SwapKey, SwapKey)>,
 }
 
 impl Swapper {
@@ -24,17 +18,18 @@ impl Swapper {
 		for (mut swaps, mut inventory, mut slots) in &mut swaps {
 			for swap in swaps.swaps.drain(..) {
 				match swap {
-					(Key::Inventory(a), Key::Inventory(b)) => {
+					(SwapKey::Inventory(InventoryKey(a)), SwapKey::Inventory(InventoryKey(b))) => {
 						fill_until(&mut inventory, max(a, b));
 						inventory.0.swap(a, b);
 					}
-					(Key::Slot(a), Key::Slot(b)) => {
+					(SwapKey::Slot(a), SwapKey::Slot(b)) => {
 						let item_a = slots.0.remove(&a).unwrap_or_default();
 						let item_b = slots.0.remove(&b).unwrap_or_default();
 						slots.0.insert(a, item_b);
 						slots.0.insert(b, item_a);
 					}
-					(Key::Slot(s), Key::Inventory(i)) | (Key::Inventory(i), Key::Slot(s)) => {
+					(SwapKey::Slot(s), SwapKey::Inventory(InventoryKey(i)))
+					| (SwapKey::Inventory(InventoryKey(i)), SwapKey::Slot(s)) => {
 						let item_a = get_or_default_mut(&mut slots, s);
 						let item_b = get_or_fill_mut(&mut inventory, i);
 						mem::swap(item_a, item_b);
@@ -62,27 +57,9 @@ fn fill_until(inventory: &mut Inventory, i: usize) {
 	inventory.0.resize(i + 1, None);
 }
 
-impl SwapKeys<InventoryKey, InventoryKey> for Swapper {
-	fn swap(&mut self, InventoryKey(a): InventoryKey, InventoryKey(b): InventoryKey) {
-		self.swaps.push((Key::Inventory(a), Key::Inventory(b)));
-	}
-}
-
-impl SwapKeys<InventoryKey, SlotKey> for Swapper {
-	fn swap(&mut self, InventoryKey(a): InventoryKey, b: SlotKey) {
-		self.swaps.push((Key::Inventory(a), Key::Slot(b)));
-	}
-}
-
-impl SwapKeys<SlotKey, SlotKey> for Swapper {
-	fn swap(&mut self, a: SlotKey, b: SlotKey) {
-		self.swaps.push((Key::Slot(a), Key::Slot(b)));
-	}
-}
-
-impl SwapKeys<SlotKey, InventoryKey> for Swapper {
-	fn swap(&mut self, a: SlotKey, InventoryKey(b): InventoryKey) {
-		self.swaps.push((Key::Slot(a), Key::Inventory(b)));
+impl SwapValuesByKey for Swapper {
+	fn swap(&mut self, a: SwapKey, b: SwapKey) {
+		self.swaps.push((a, b));
 	}
 }
 
@@ -120,7 +97,10 @@ mod tests {
 			.entity_mut(agent)
 			.get_mut::<Swapper>()
 			.unwrap()
-			.swap(InventoryKey(0), InventoryKey(1));
+			.swap(
+				SwapKey::Inventory(InventoryKey(0)),
+				SwapKey::Inventory(InventoryKey(1)),
+			);
 		app.update();
 
 		assert_eq!(
@@ -147,7 +127,10 @@ mod tests {
 			.entity_mut(agent)
 			.get_mut::<Swapper>()
 			.unwrap()
-			.swap(InventoryKey(0), InventoryKey(3));
+			.swap(
+				SwapKey::Inventory(InventoryKey(0)),
+				SwapKey::Inventory(InventoryKey(3)),
+			);
 		app.update();
 
 		assert_eq!(
@@ -174,7 +157,10 @@ mod tests {
 			.entity_mut(agent)
 			.get_mut::<Swapper>()
 			.unwrap()
-			.swap(InventoryKey(3), InventoryKey(0));
+			.swap(
+				SwapKey::Inventory(InventoryKey(3)),
+				SwapKey::Inventory(InventoryKey(0)),
+			);
 		app.update();
 
 		assert_eq!(
@@ -201,7 +187,10 @@ mod tests {
 			.entity_mut(agent)
 			.get_mut::<Swapper>()
 			.unwrap()
-			.swap(InventoryKey(0), InventoryKey(3));
+			.swap(
+				SwapKey::Inventory(InventoryKey(0)),
+				SwapKey::Inventory(InventoryKey(3)),
+			);
 		app.update();
 
 		assert_eq!(
@@ -228,7 +217,10 @@ mod tests {
 			.entity_mut(agent)
 			.get_mut::<Swapper>()
 			.unwrap()
-			.swap(InventoryKey(0), InventoryKey(1));
+			.swap(
+				SwapKey::Inventory(InventoryKey(0)),
+				SwapKey::Inventory(InventoryKey(1)),
+			);
 		app.update();
 
 		assert_eq!(
@@ -260,8 +252,8 @@ mod tests {
 			.get_mut::<Swapper>()
 			.unwrap()
 			.swap(
-				SlotKey::BottomHand(Side::Left),
-				SlotKey::BottomHand(Side::Right),
+				SwapKey::Slot(SlotKey::BottomHand(Side::Left)),
+				SwapKey::Slot(SlotKey::BottomHand(Side::Right)),
 			);
 		app.update();
 
@@ -293,8 +285,8 @@ mod tests {
 			.get_mut::<Swapper>()
 			.unwrap()
 			.swap(
-				SlotKey::BottomHand(Side::Left),
-				SlotKey::BottomHand(Side::Right),
+				SwapKey::Slot(SlotKey::BottomHand(Side::Left)),
+				SwapKey::Slot(SlotKey::BottomHand(Side::Right)),
 			);
 		app.update();
 
@@ -326,8 +318,8 @@ mod tests {
 			.get_mut::<Swapper>()
 			.unwrap()
 			.swap(
-				SlotKey::BottomHand(Side::Right),
-				SlotKey::BottomHand(Side::Left),
+				SwapKey::Slot(SlotKey::BottomHand(Side::Right)),
+				SwapKey::Slot(SlotKey::BottomHand(Side::Left)),
 			);
 		app.update();
 
@@ -359,7 +351,10 @@ mod tests {
 			.entity_mut(agent)
 			.get_mut::<Swapper>()
 			.unwrap()
-			.swap(SlotKey::BottomHand(Side::Left), InventoryKey(0));
+			.swap(
+				SwapKey::Slot(SlotKey::BottomHand(Side::Left)),
+				SwapKey::Inventory(InventoryKey(0)),
+			);
 		app.update();
 
 		assert_eq!(
@@ -392,7 +387,10 @@ mod tests {
 			.entity_mut(agent)
 			.get_mut::<Swapper>()
 			.unwrap()
-			.swap(SlotKey::BottomHand(Side::Left), InventoryKey(0));
+			.swap(
+				SwapKey::Slot(SlotKey::BottomHand(Side::Left)),
+				SwapKey::Inventory(InventoryKey(0)),
+			);
 		app.update();
 
 		assert_eq!(
@@ -427,7 +425,10 @@ mod tests {
 			.entity_mut(agent)
 			.get_mut::<Swapper>()
 			.unwrap()
-			.swap(SlotKey::BottomHand(Side::Left), InventoryKey(0));
+			.swap(
+				SwapKey::Slot(SlotKey::BottomHand(Side::Left)),
+				SwapKey::Inventory(InventoryKey(0)),
+			);
 		app.update();
 
 		assert_eq!(
@@ -461,7 +462,10 @@ mod tests {
 			.entity_mut(agent)
 			.get_mut::<Swapper>()
 			.unwrap()
-			.swap(InventoryKey(0), SlotKey::BottomHand(Side::Left));
+			.swap(
+				SwapKey::Inventory(InventoryKey(0)),
+				SwapKey::Slot(SlotKey::BottomHand(Side::Left)),
+			);
 		app.update();
 
 		assert_eq!(
@@ -493,7 +497,10 @@ mod tests {
 			.entity_mut(agent)
 			.get_mut::<Swapper>()
 			.unwrap()
-			.swap(InventoryKey(0), InventoryKey(1));
+			.swap(
+				SwapKey::Inventory(InventoryKey(0)),
+				SwapKey::Inventory(InventoryKey(1)),
+			);
 		app.update();
 
 		assert_eq!(

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::{
 	tools::slot_key::SlotKey,
 	traits::{
-		handles_inventory_menu::{GetDescriptor, QuickbarDescriptor},
+		handles_loadout_menus::{GetDescriptor, QuickbarDescriptor},
 		try_insert_on::TryInsertOn,
 	},
 };

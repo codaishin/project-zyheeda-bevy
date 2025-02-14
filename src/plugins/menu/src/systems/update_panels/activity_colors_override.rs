@@ -8,7 +8,7 @@ use common::{
 	tools::slot_key::SlotKey,
 	traits::{
 		accessors::get::{GetFieldRef, GetterRef},
-		handles_inventory_menu::{GetDescriptor, QuickbarDescriptor, SkillExecution},
+		handles_loadout_menus::{GetDescriptor, QuickbarDescriptor, SkillExecution},
 		map_value::TryMapBackwards,
 	},
 };

@@ -5,7 +5,7 @@ use common::traits::{
 		get::{GetField, Getter},
 		set::Setter,
 	},
-	handles_inventory_menu::GetDescriptor,
+	handles_loadout_menus::GetDescriptor,
 	thread_safe::ThreadSafe,
 };
 use std::hash::Hash;
@@ -50,7 +50,7 @@ mod tests {
 	use super::*;
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		traits::{handles_inventory_menu::InventoryDescriptor, nested_mock::NestedMocks},
+		traits::{handles_loadout_menus::InventoryDescriptor, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};

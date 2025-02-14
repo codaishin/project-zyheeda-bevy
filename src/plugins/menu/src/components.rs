@@ -1,5 +1,6 @@
 pub(crate) mod button_interaction;
 pub(crate) mod combo_overview;
+pub(crate) mod combo_skill_button;
 pub(crate) mod dropdown;
 pub(crate) mod inventory_panel;
 pub(crate) mod inventory_screen;
@@ -8,7 +9,6 @@ pub(crate) mod key_select;
 pub(crate) mod key_select_dropdown_command;
 pub(crate) mod loading_screen;
 pub(crate) mod quickbar_panel;
-pub(crate) mod skill_button;
 pub(crate) mod start_game;
 pub(crate) mod start_menu;
 pub(crate) mod start_menu_button;
@@ -16,8 +16,8 @@ pub(crate) mod tooltip;
 pub(crate) mod ui_overlay;
 
 use bevy::prelude::*;
+use combo_skill_button::Horizontal;
 use common::tools::slot_key::SlotKey;
-use skill_button::Horizontal;
 use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]

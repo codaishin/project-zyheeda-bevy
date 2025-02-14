@@ -1,12 +1,9 @@
-use super::{combo_overview::ComboOverview, tooltip::Tooltip};
+use super::combo_overview::ComboOverview;
 use crate::traits::insert_ui_content::InsertUiContent;
 use bevy::prelude::*;
 use common::{
 	tools::slot_key::SlotKey,
-	traits::{
-		accessors::get::{GetField, GetFieldRef, Getter, GetterRef},
-		thread_safe::ThreadSafe,
-	},
+	traits::{handles_combo_menu::ComboSkillDescriptor, thread_safe::ThreadSafe},
 };
 use std::marker::PhantomData;
 
@@ -24,35 +21,35 @@ pub(crate) struct DropdownItem<TLayout>(PhantomData<TLayout>);
 
 #[derive(Component, Debug, Default, PartialEq, Clone)]
 #[require(Node)]
-pub(crate) struct SkillButton<T, TSkill> {
+pub(crate) struct ComboSkillButton<T, TSkill> {
 	phantom_data: PhantomData<T>,
-	pub(crate) skill: TSkill,
+	pub(crate) descriptor: ComboSkillDescriptor<TSkill>,
 	pub(crate) key_path: Vec<SlotKey>,
 }
 
-impl<T, TSkill> SkillButton<T, TSkill> {
-	pub(crate) fn new(skill: TSkill, key_path: Vec<SlotKey>) -> SkillButton<T, TSkill> {
-		SkillButton {
+impl<T, TSkill> ComboSkillButton<T, TSkill> {
+	pub(crate) fn new(
+		descriptor: ComboSkillDescriptor<TSkill>,
+		key_path: Vec<SlotKey>,
+	) -> ComboSkillButton<T, TSkill> {
+		ComboSkillButton {
 			phantom_data: PhantomData,
-			skill,
+			descriptor,
 			key_path,
 		}
 	}
 }
 
-impl<T, TSkill> InsertUiContent for SkillButton<T, TSkill>
+impl<T, TSkill> InsertUiContent for ComboSkillButton<T, TSkill>
 where
 	T: Clone + ThreadSafe,
-	TSkill: GetterRef<Option<Handle<Image>>> + Getter<Name> + Clone + ThreadSafe,
+	TSkill: Clone + ThreadSafe,
 {
 	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
-		let icon = Option::<Handle<Image>>::get_field_ref(&self.skill).clone();
-		let name = Name::get_field(&self.skill);
-
 		parent.spawn((
 			self.clone(),
-			ComboOverview::skill_button(icon),
-			Tooltip::new(name),
+			ComboOverview::skill_button(self.descriptor.icon.clone()),
+			Name::from(self.descriptor.name.clone()),
 		));
 	}
 }
