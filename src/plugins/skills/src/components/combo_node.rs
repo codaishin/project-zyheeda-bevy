@@ -16,7 +16,7 @@ use common::{
 	},
 	traits::{
 		accessors::get::{GetMut, GetRef},
-		handles_combo_menu::{ComboSkillDescriptor, GetCombosOrdered},
+		handles_combo_menu::GetCombosOrdered,
 		handles_equipment::{Combo, CompatibleItems, FollowupKeys},
 		insert::TryInsert,
 		iterate::Iterate,
@@ -192,7 +192,7 @@ impl PeekNextRecursive for ComboNode {
 }
 
 impl GetCombosOrdered<Skill> for ComboNode {
-	fn combos_ordered(&self) -> Vec<Combo<ComboSkillDescriptor<Skill>>> {
+	fn combos_ordered(&self) -> Vec<Combo<Skill>> {
 		combos(self, vec![])
 	}
 }
@@ -216,10 +216,7 @@ impl FollowupKeys for ComboNode {
 	}
 }
 
-fn combos(
-	combo_node: &ComboNode,
-	key_path: Vec<SlotKey>,
-) -> Vec<Combo<ComboSkillDescriptor<Skill>>> {
+fn combos(combo_node: &ComboNode, key_path: Vec<SlotKey>) -> Vec<Combo<Skill>> {
 	combo_node
 		.0
 		.iter()
@@ -231,35 +228,25 @@ fn combos(
 #[allow(clippy::type_complexity)]
 fn build_path<'a>(
 	key_path: Vec<SlotKey>,
-) -> impl FnMut(
-	(&SlotKey, &'a (Skill, ComboNode)),
-) -> (Vec<SlotKey>, ComboSkillDescriptor<Skill>, &'a ComboNode) {
+) -> impl FnMut((&SlotKey, &'a (Skill, ComboNode))) -> (Vec<SlotKey>, &'a Skill, &'a ComboNode) {
 	move |(slot_key, (skill, child_node))| {
 		let key_path = [key_path.clone(), vec![*slot_key]].concat();
-		(
-			key_path,
-			ComboSkillDescriptor {
-				skill: skill.clone(),
-				name: skill.name.clone(),
-				icon: skill.icon.clone(),
-			},
-			child_node,
-		)
+		(key_path, skill, child_node)
 	}
 }
 
 fn append_followup_combo_steps(
-	(key_path, skill, child_node): (Vec<SlotKey>, ComboSkillDescriptor<Skill>, &ComboNode),
-) -> Vec<Combo<ComboSkillDescriptor<Skill>>> {
+	(key_path, skill, child_node): (Vec<SlotKey>, &Skill, &ComboNode),
+) -> Vec<Combo<Skill>> {
 	let followup_combo_steps = combos(child_node, key_path.clone());
 	append_followups((key_path, skill), followup_combo_steps)
 }
 
 fn append_followups(
-	combo_step: (Vec<SlotKey>, ComboSkillDescriptor<Skill>),
-	followups: Vec<Combo<ComboSkillDescriptor<Skill>>>,
-) -> Vec<Combo<ComboSkillDescriptor<Skill>>> {
-	let combo_steps = vec![combo_step];
+	(combo_path, skill): (Vec<SlotKey>, &Skill),
+	followups: Vec<Combo<Skill>>,
+) -> Vec<Combo<Skill>> {
+	let combo_steps = vec![(combo_path, skill.clone())];
 
 	if followups.is_empty() {
 		return vec![combo_steps];
@@ -275,7 +262,7 @@ fn append_followups(
 mod tests {
 	use super::*;
 	use bevy::prelude::default;
-	use common::{test_tools::utils::new_handle, tools::slot_key::Side};
+	use common::tools::slot_key::Side;
 	use std::collections::HashSet;
 
 	#[test]
@@ -978,13 +965,11 @@ mod tests {
 
 	#[test]
 	fn get_single_single_combo_with_single_skill() {
-		let icon = new_handle();
 		let combos = ComboNode::new([(
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
 					name: "some skill".to_owned(),
-					icon: Some(icon.clone()),
 					..default()
 				},
 				ComboNode::default(),
@@ -994,14 +979,9 @@ mod tests {
 		assert_eq!(
 			vec![vec![(
 				vec![SlotKey::BottomHand(Side::Right)],
-				ComboSkillDescriptor {
-					skill: Skill {
-						name: "some skill".to_owned(),
-						icon: Some(icon.clone()),
-						..default()
-					},
+				Skill {
 					name: "some skill".to_owned(),
-					icon: Some(icon),
+					..default()
 				}
 			)]],
 			combos.combos_ordered()
@@ -1037,25 +1017,17 @@ mod tests {
 			vec![
 				vec![(
 					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: Skill {
-							name: "some right skill".to_owned(),
-							..default()
-						},
+					Skill {
 						name: "some right skill".to_owned(),
 						..default()
-					}
+					},
 				)],
 				vec![(
 					vec![SlotKey::BottomHand(Side::Left)],
-					ComboSkillDescriptor {
-						skill: Skill {
-							name: "some left skill".to_owned(),
-							..default()
-						},
+					Skill {
 						name: "some left skill".to_owned(),
 						..default()
-					}
+					},
 				)]
 			],
 			combos.combos_ordered()
@@ -1088,28 +1060,20 @@ mod tests {
 			vec![vec![
 				(
 					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: Skill {
-							name: "some skill".to_owned(),
-							..default()
-						},
+					Skill {
 						name: "some skill".to_owned(),
 						..default()
-					}
+					},
 				),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Left)
 					],
-					ComboSkillDescriptor {
-						skill: Skill {
-							name: "some child skill".to_owned(),
-							..default()
-						},
+					Skill {
 						name: "some child skill".to_owned(),
 						..default()
-					}
+					},
 				)
 			]],
 			combos.combos_ordered()
@@ -1155,55 +1119,39 @@ mod tests {
 				vec![
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some right child skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some right child skill".to_owned(),
 							..default()
-						}
+						},
 					)
 				],
 				vec![
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Left)
 						],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some left child skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some left child skill".to_owned(),
 							..default()
-						}
+						},
 					)
 				]
 			],
@@ -1259,28 +1207,20 @@ mod tests {
 				vec![
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some child skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some child skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
@@ -1288,41 +1228,29 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right),
 						],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some right child skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some right child skill".to_owned(),
 							..default()
-						}
+						},
 					)
 				],
 				vec![
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some child skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some child skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
@@ -1330,14 +1258,10 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Left),
 						],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some left child skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some left child skill".to_owned(),
 							..default()
-						}
+						},
 					)
 				]
 			],
@@ -1393,28 +1317,20 @@ mod tests {
 				vec![
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some child skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some child skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
@@ -1422,41 +1338,29 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Left),
 						],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some left child skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some left child skill".to_owned(),
 							..default()
-						}
+						},
 					)
 				],
 				vec![
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some child skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some child skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
@@ -1464,14 +1368,10 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right),
 						],
-						ComboSkillDescriptor {
-							skill: Skill {
-								name: "some right child skill".to_owned(),
-								..default()
-							},
+						Skill {
 							name: "some right child skill".to_owned(),
 							..default()
-						}
+						},
 					)
 				]
 			],

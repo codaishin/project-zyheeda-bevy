@@ -7,7 +7,8 @@ use common::{
 	tools::item_type::ItemType,
 	traits::{
 		accessors::get::{Getter, GetterRef},
-		handles_equipment::ItemName,
+		handles_combo_menu::InspectAble,
+		handles_loadout_menus::ItemDescription,
 	},
 };
 
@@ -29,9 +30,11 @@ impl Item {
 	}
 }
 
-impl Getter<ItemName> for Item {
-	fn get(&self) -> ItemName {
-		ItemName(self.name.clone())
+impl InspectAble<ItemDescription> for Item {
+	fn get_inspect_able_field(
+		&self,
+	) -> <ItemDescription as common::traits::handles_combo_menu::InspectMarker>::TFieldRef<'_> {
+		self.name.clone()
 	}
 }
 

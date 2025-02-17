@@ -2,14 +2,9 @@ use bevy::prelude::*;
 use common::{
 	tools::slot_key::SlotKey,
 	traits::{
-		handles_combo_menu::{
-			ComboSkillDescriptor,
-			GetComboAbleSkills,
-			GetCombosOrdered,
-			NextKeys,
-		},
+		handles_combo_menu::{GetComboAbleSkills, GetCombosOrdered, NextKeys},
 		handles_equipment::Combo,
-		handles_loadout_menus::GetDescriptor,
+		handles_loadout_menus::GetItem,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -36,7 +31,7 @@ where
 	T: GetComboAbleSkills<TSkill>,
 	TSkill: Clone,
 {
-	fn get_combo_able_skills(&self, key: &SlotKey) -> Vec<ComboSkillDescriptor<TSkill>> {
+	fn get_combo_able_skills(&self, key: &SlotKey) -> Vec<TSkill> {
 		self.0.get_combo_able_skills(key)
 	}
 }
@@ -54,19 +49,19 @@ impl<T, TSkill> GetCombosOrdered<TSkill> for EquipmentInfo<T>
 where
 	T: GetCombosOrdered<TSkill>,
 {
-	fn combos_ordered(&self) -> Vec<Combo<ComboSkillDescriptor<TSkill>>> {
+	fn combos_ordered(&self) -> Vec<Combo<TSkill>> {
 		self.0.combos_ordered()
 	}
 }
 
-impl<T, TKey> GetDescriptor<TKey> for EquipmentInfo<T>
+impl<T, TKey> GetItem<TKey> for EquipmentInfo<T>
 where
-	T: GetDescriptor<TKey>,
+	T: GetItem<TKey>,
 {
 	type TItem = T::TItem;
 
-	fn get_descriptor(&self, key: TKey) -> Option<&Self::TItem> {
-		self.0.get_descriptor(key)
+	fn get_item(&self, key: TKey) -> Option<&Self::TItem> {
+		self.0.get_item(key)
 	}
 }
 

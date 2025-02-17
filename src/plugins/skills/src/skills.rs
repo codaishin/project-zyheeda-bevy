@@ -16,8 +16,9 @@ use bevy::prelude::*;
 use common::{
 	tools::slot_key::SlotKey,
 	traits::{
-		accessors::get::{GetField, Getter, GetterRef},
+		accessors::get::{Getter, GetterRef},
 		animation::Animation,
+		handles_combo_menu::{SkillDescription, SkillIcon, InspectAble},
 		handles_custom_assets::AssetFolderPath,
 		handles_effect::HandlesAllEffects,
 		handles_equipment::CompatibleItems,
@@ -73,9 +74,15 @@ impl AssetFolderPath for Skill {
 	}
 }
 
-impl Getter<Name> for Skill {
-	fn get(&self) -> Name {
-		Name::from(self.name.clone())
+impl InspectAble<SkillDescription> for Skill {
+	fn get_inspect_able_field(&self) -> String {
+		self.name.clone()
+	}
+}
+
+impl InspectAble<SkillIcon> for Skill {
+	fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
+		&self.icon
 	}
 }
 
@@ -112,14 +119,14 @@ impl Getter<SlotKey> for QueuedSkill {
 	}
 }
 
-impl Getter<Name> for QueuedSkill {
-	fn get(&self) -> Name {
-		Name::get_field(&self.skill)
+impl InspectAble<SkillDescription> for QueuedSkill {
+	fn get_inspect_able_field(&self) -> String {
+		self.skill.name.clone()
 	}
 }
 
-impl GetterRef<Option<Handle<Image>>> for QueuedSkill {
-	fn get(&self) -> &Option<Handle<Image>> {
+impl InspectAble<SkillIcon> for QueuedSkill {
+	fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
 		&self.skill.icon
 	}
 }

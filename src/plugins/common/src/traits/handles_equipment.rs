@@ -1,7 +1,7 @@
 use super::{
 	accessors::get::{Getter, GetterRef},
-	handles_combo_menu::GetCombosOrdered,
-	handles_loadout_menus::SwapValuesByKey,
+	handles_combo_menu::{GetCombosOrdered, InspectAble, SkillDescription, SkillIcon},
+	handles_loadout_menus::{ItemDescription, SwapValuesByKey},
 	thread_safe::ThreadSafe,
 };
 use crate::tools::{inventory_key::InventoryKey, item_type::ItemType, slot_key::SlotKey};
@@ -16,17 +16,17 @@ use std::collections::{HashSet, VecDeque};
  */
 pub trait HandlesEquipment {
 	type TItem: Asset
-		+ Getter<ItemName>
-		+ Getter<ItemType>
-		+ GetterRef<Option<Handle<Self::TSkill>>>;
+		+ InspectAble<ItemDescription>
+		+ GetterRef<Option<Handle<Self::TSkill>>>
+		+ Getter<ItemType>;
 	type TSkill: Asset
-		+ GetterRef<Option<Handle<Image>>>
-		+ Getter<Name>
+		+ InspectAble<SkillIcon>
+		+ InspectAble<SkillDescription>
 		+ GetterRef<CompatibleItems>
 		+ Clone
 		+ PartialEq
 		+ ThreadSafe;
-	type TQueuedSkill: Getter<SlotKey> + GetterRef<Option<Handle<Image>>> + Getter<Name>;
+	type TQueuedSkill: Getter<SlotKey> + InspectAble<SkillIcon> + InspectAble<SkillDescription>;
 	type TSwap: Component + SwapValuesByKey;
 
 	type TInventory: Component
@@ -94,6 +94,3 @@ pub trait IterateQueue {
 pub trait IsTimedOut {
 	fn is_timed_out(&self) -> bool;
 }
-
-#[derive(Debug, PartialEq, Clone, Default)]
-pub struct ItemName(pub String);

@@ -21,15 +21,18 @@ use common::{
 	states::{game_state::GameState, menu_state::MenuState},
 	tools::{inventory_key::InventoryKey, item_type::ItemType, slot_key::SlotKey},
 	traits::{
-		accessors::get::{GetField, GetFieldRef, Getter, GetterRef},
+		accessors::get::{GetField, GetFieldRef, GetterRef},
 		handles_combo_menu::{
-			ComboSkillDescriptor,
 			ConfigureCombos,
 			EquipmentDescriptor,
 			GetComboAbleSkills,
 			GetCombosOrdered,
 			HandlesComboMenu,
+			InspectAble,
+			InspectField,
 			NextKeys,
+			SkillDescription,
+			SkillIcon,
 		},
 		handles_equipment::{
 			Combo,
@@ -37,7 +40,6 @@ use common::{
 			HandlesEquipment,
 			IsTimedOut,
 			ItemAssets,
-			ItemName,
 			IterateQueue,
 			PeekNext,
 			WriteItem,
@@ -45,12 +47,13 @@ use common::{
 		handles_graphics::{StaticRenderLayers, UiCamera},
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		handles_loadout_menus::{
+			Cache,
 			ConfigureInventory,
-			Descriptions,
-			GetDescriptor,
+			GetItem,
 			HandlesLoadoutMenu,
-			InventoryDescriptor,
-			QuickbarDescriptor,
+			InventoryItem,
+			ItemDescription,
+			QuickbarItem,
 			SkillExecution,
 			SwapValuesByKey,
 		},
@@ -294,8 +297,7 @@ where
 			return None;
 		}
 
-		let mut compatible_skills =
-			HashMap::<SlotKey, Vec<ComboSkillDescriptor<TEquipment::TSkill>>>::default();
+		let mut compatible_skills = HashMap::<SlotKey, Vec<TEquipment::TSkill>>::default();
 		let mut compatible_map = HashMap::<ItemType, Vec<SlotKey>>::default();
 		let mut seen = vec![];
 
@@ -322,11 +324,6 @@ where
 			}
 			seen.push(id);
 			let CompatibleItems(item_types) = CompatibleItems::get_field_ref(skill);
-			let descriptor = ComboSkillDescriptor {
-				skill: skill.clone(),
-				name: Name::get_field(skill).to_string(),
-				icon: Option::<Handle<Image>>::get_field_ref(skill).clone(),
-			};
 			let keys = item_types
 				.iter()
 				.flat_map(|item_type| compatible_map.get(item_type).cloned().unwrap_or_default())
@@ -335,13 +332,13 @@ where
 			for key in keys {
 				match compatible_skills.entry(key) {
 					Entry::Occupied(mut occupied_entry) => {
-						if occupied_entry.get().contains(&descriptor) {
+						if occupied_entry.get().contains(skill) {
 							continue;
 						}
-						occupied_entry.get_mut().push(descriptor.clone());
+						occupied_entry.get_mut().push(skill.clone());
 					}
 					Entry::Vacant(vacant_entry) => {
-						vacant_entry.insert(vec![descriptor.clone()]);
+						vacant_entry.insert(vec![skill.clone()]);
 					}
 				}
 			}
@@ -380,12 +377,12 @@ where
 		containers: Query<&TContainer, (With<TPlayers::TPlayer>, Changed<TContainer>)>,
 		items: Res<Assets<TContainer::TItem>>,
 		skills: Res<Assets<TSkill>>,
-	) -> Option<Descriptions<TContainer::TKey, InventoryDescriptor>>
+	) -> Option<Cache<TContainer::TKey, InventoryItem>>
 	where
 		TContainer: ItemAssets + Component,
 		TContainer::TKey: Eq + Hash + Copy,
-		TContainer::TItem: Asset + Getter<ItemName> + GetterRef<Option<Handle<TSkill>>>,
-		TSkill: Asset + GetterRef<Option<Handle<Image>>>,
+		TContainer::TItem: Asset + InspectAble<ItemDescription> + GetterRef<Option<Handle<TSkill>>>,
+		TSkill: Asset + InspectAble<SkillIcon>,
 	{
 		let container = containers.get_single().ok()?;
 		let map = container
@@ -396,20 +393,20 @@ where
 				let skill_handle = Option::<Handle<TSkill>>::get_field_ref(item).as_ref();
 				let image = skill_handle
 					.and_then(|handle| skills.get(handle))
-					.and_then(|skill| Option::<Handle<Image>>::get_field_ref(skill).as_ref());
-				let ItemName(name) = ItemName::get_field(item);
+					.and_then(|skill| SkillIcon::inspect_field(skill).as_ref());
+				let name = ItemDescription::inspect_field(item);
 
 				Some((
 					key,
-					InventoryDescriptor {
+					InventoryItem {
 						name,
-						icon: image.cloned(),
+						skill_icon: image.cloned(),
 					},
 				))
 			})
 			.collect();
 
-		Some(Descriptions(map))
+		Some(Cache(map))
 	}
 
 	// This system needs to move to the skills plugin
@@ -426,7 +423,7 @@ where
 		>,
 		items: Res<Assets<TEquipment::TItem>>,
 		skills: Res<Assets<TEquipment::TSkill>>,
-	) -> Option<Descriptions<SlotKey, QuickbarDescriptor>> {
+	) -> Option<Cache<SlotKey, QuickbarItem>> {
 		let (slots, queue, combos, combos_time_out) = queues.get_single().ok()?;
 
 		if !Self::any_true(&[slots.is_changed(), queue.is_changed(), combos.is_changed()]) {
@@ -455,8 +452,8 @@ where
 					}
 
 					Some((
-						Option::<Handle<Image>>::get_field_ref(skill).clone(),
-						Name::get_field(skill).to_string(),
+						SkillIcon::inspect_field(skill).clone(),
+						SkillDescription::inspect_field(skill),
 					))
 				});
 
@@ -469,18 +466,18 @@ where
 				let (icon, name) = match (active, combos.peek_next(&key, &item_type)) {
 					(Some((active_icon, active_name)), _) => (active_icon, active_name),
 					(_, Some(next_combo_skill)) if combo_active => (
-						Option::<Handle<Image>>::get_field_ref(&next_combo_skill).clone(),
-						Name::get_field(&next_combo_skill).to_string(),
+						SkillIcon::inspect_field(&next_combo_skill).clone(),
+						SkillDescription::inspect_field(&next_combo_skill),
 					),
 					_ => (
-						Option::<Handle<Image>>::get_field_ref(skill).clone(),
-						Name::get_field(skill).to_string(),
+						SkillIcon::inspect_field(skill).clone(),
+						SkillDescription::inspect_field(skill),
 					),
 				};
 
 				Some((
 					key,
-					QuickbarDescriptor {
+					QuickbarItem {
 						name,
 						icon,
 						execution,
@@ -489,7 +486,7 @@ where
 			})
 			.collect();
 
-		Some(Descriptions(map))
+		Some(Cache(map))
 	}
 
 	fn any_true(values: &[bool]) -> bool {
@@ -504,8 +501,7 @@ where
 			Self::update_combos,
 		);
 
-		app.add_dropdown::<KeySelect<AppendSkill>>()
-			.add_tooltip::<Name>();
+		app.add_dropdown::<KeySelect<AppendSkill>>();
 	}
 
 	fn inventory_screen(&self, app: &mut App) {
@@ -522,6 +518,7 @@ where
 
 	fn general_systems(&self, app: &mut App) {
 		app.add_tooltip::<&'static str>()
+			.add_tooltip::<String>()
 			.add_systems(Update, image_color)
 			.add_systems(Update, adjust_global_z_index)
 			.add_systems(
@@ -567,11 +564,13 @@ impl<TDependencies> HandlesLoadoutMenu for MenuPlugin<TDependencies> {
 		InventoryConfiguration
 	}
 
-	fn configure_quickbar_menu<TCache, TSystemMarker>(
+	fn configure_quickbar_menu<TContainer, TSystemMarker>(
 		app: &mut App,
-		get_quickbar_cache: impl IntoSystem<(), Option<TCache>, TSystemMarker>,
+		get_quickbar_cache: impl IntoSystem<(), Option<TContainer>, TSystemMarker>,
 	) where
-		TCache: GetDescriptor<SlotKey, TItem = QuickbarDescriptor> + ThreadSafe,
+		TContainer: GetItem<SlotKey> + ThreadSafe,
+		TContainer::TItem:
+			InspectAble<ItemDescription> + InspectAble<SkillIcon> + InspectAble<SkillExecution>,
 	{
 		let play = GameState::Play;
 
@@ -579,8 +578,12 @@ impl<TDependencies> HandlesLoadoutMenu for MenuPlugin<TDependencies> {
 			Update,
 			(
 				get_quickbar_cache.pipe(EquipmentInfo::update),
-				set_quickbar_icons::<EquipmentInfo<TCache>>,
-				panel_activity_colors_override::<SlotKeyMap, QuickbarPanel, EquipmentInfo<TCache>>,
+				set_quickbar_icons::<EquipmentInfo<TContainer>>,
+				panel_activity_colors_override::<
+					SlotKeyMap,
+					QuickbarPanel,
+					EquipmentInfo<TContainer>,
+				>,
 			)
 				.chain()
 				.run_if(in_state(play)),
@@ -600,10 +603,10 @@ where
 		get_inventor_descriptors: impl IntoSystem<(), Option<TInventory>, M1>,
 		get_slot_descriptors: impl IntoSystem<(), Option<TSlots>, M2>,
 	) where
-		TInventory: GetDescriptor<InventoryKey> + ThreadSafe,
-		TInventory::TItem: Getter<Name>,
-		TSlots: GetDescriptor<SlotKey> + ThreadSafe,
-		TSlots::TItem: Getter<Name>,
+		TInventory: GetItem<InventoryKey> + ThreadSafe,
+		TInventory::TItem: InspectAble<ItemDescription>,
+		TSlots: GetItem<SlotKey> + ThreadSafe,
+		TSlots::TItem: InspectAble<ItemDescription>,
 	{
 		let inventory = GameState::IngameMenu(MenuState::Inventory);
 
@@ -635,7 +638,8 @@ where
 {
 	fn combos_with_skill<TSkill>() -> impl ConfigureCombos<TSkill>
 	where
-		TSkill: PartialEq + Clone + ThreadSafe,
+		TSkill:
+			InspectAble<SkillDescription> + InspectAble<SkillIcon> + PartialEq + Clone + ThreadSafe,
 	{
 		ComboConfiguration::<TGraphics>(PhantomData)
 	}
@@ -646,7 +650,7 @@ struct ComboConfiguration<TGraphics>(PhantomData<TGraphics>);
 impl<TGraphics, TSkill> ConfigureCombos<TSkill> for ComboConfiguration<TGraphics>
 where
 	TGraphics: ThreadSafe + UiCamera,
-	TSkill: Clone + PartialEq + ThreadSafe,
+	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
 {
 	fn configure<TUpdateCombos, TEquipment, M1, M2>(
 		&self,

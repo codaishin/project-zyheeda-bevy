@@ -3,24 +3,28 @@ use bevy::prelude::*;
 use common::{
 	tools::slot_key::SlotKey,
 	traits::{
-		handles_loadout_menus::{GetDescriptor, QuickbarDescriptor},
+		handles_combo_menu::{InspectAble, InspectField, SkillIcon},
+		handles_loadout_menus::GetItem,
 		try_insert_on::TryInsertOn,
 	},
 };
 
-pub(crate) fn set_quickbar_icons<TDescriptors>(
+pub(crate) fn set_quickbar_icons<TContainer>(
 	mut commands: Commands,
 	mut panels: Query<(Entity, &mut QuickbarPanel)>,
-	descriptors: Res<TDescriptors>,
+	containers: Res<TContainer>,
 ) where
-	TDescriptors: Resource + GetDescriptor<SlotKey, TItem = QuickbarDescriptor>,
+	TContainer: Resource + GetItem<SlotKey>,
+	TContainer::TItem: InspectAble<SkillIcon>,
 {
 	for (entity, mut panel) in &mut panels {
-		let (state, image) = match descriptors.get_descriptor(panel.key) {
-			Some(QuickbarDescriptor {
-				icon: Some(icon), ..
-			}) => (PanelState::Filled, icon.clone()),
-			_ => (PanelState::Empty, Handle::default()),
+		let (state, image) = match containers.get_item(panel.key) {
+			Some(item) => (PanelState::Filled, SkillIcon::inspect_field(item).clone()),
+			_ => (PanelState::Empty, None),
+		};
+		let (state, image) = match image {
+			Some(image) => (state, image),
+			None => (PanelState::Empty, default()),
 		};
 
 		panel.state = state;
@@ -38,19 +42,27 @@ mod tests {
 	};
 	use std::collections::HashMap;
 
+	struct _Item(Option<Handle<Image>>);
+
+	impl InspectAble<SkillIcon> for _Item {
+		fn get_inspect_able_field(&self) -> &'_ Option<Handle<Image>> {
+			&self.0
+		}
+	}
+
 	#[derive(Resource)]
-	struct _Cache(HashMap<SlotKey, QuickbarDescriptor>);
+	struct _Cache(HashMap<SlotKey, _Item>);
 
-	impl GetDescriptor<SlotKey> for _Cache {
-		type TItem = QuickbarDescriptor;
+	impl GetItem<SlotKey> for _Cache {
+		type TItem = _Item;
 
-		fn get_descriptor(&self, key: SlotKey) -> Option<&Self::TItem> {
+		fn get_item(&self, key: SlotKey) -> Option<&Self::TItem> {
 			self.0.get(&key)
 		}
 	}
 
-	impl<const N: usize> From<[(SlotKey, QuickbarDescriptor); N]> for _Cache {
-		fn from(value: [(SlotKey, QuickbarDescriptor); N]) -> Self {
+	impl<const N: usize> From<[(SlotKey, _Item); N]> for _Cache {
+		fn from(value: [(SlotKey, _Item); N]) -> Self {
 			Self(HashMap::from(value))
 		}
 	}
@@ -67,13 +79,7 @@ mod tests {
 	fn add_icon_image() {
 		let handle = new_handle();
 		let key = SlotKey::TopHand(Side::Right);
-		let mut app = setup(_Cache::from([(
-			key,
-			QuickbarDescriptor {
-				icon: Some(handle.clone()),
-				..default()
-			},
-		)]));
+		let mut app = setup(_Cache::from([(key, _Item(Some(handle.clone())))]));
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {
@@ -97,13 +103,7 @@ mod tests {
 	#[test]
 	fn set_panel_empty_when_icon_handle_is_none() {
 		let key = SlotKey::TopHand(Side::Right);
-		let mut app = setup(_Cache::from([(
-			key,
-			QuickbarDescriptor {
-				icon: None,
-				..default()
-			},
-		)]));
+		let mut app = setup(_Cache::from([(key, _Item(None))]));
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {

@@ -1,11 +1,9 @@
 use crate::{components::KeyedPanel, tools::PanelState};
 use bevy::{hierarchy::Parent, prelude::*};
 use common::traits::{
-	accessors::{
-		get::{GetField, Getter},
-		set::Setter,
-	},
-	handles_loadout_menus::GetDescriptor,
+	accessors::set::Setter,
+	handles_combo_menu::{InspectAble, InspectField},
+	handles_loadout_menus::{GetItem, ItemDescription},
 	thread_safe::ThreadSafe,
 };
 use std::hash::Hash;
@@ -20,12 +18,12 @@ pub trait SetContainerPanels {
 	) where
 		Self: Component + Setter<PanelState> + Sized,
 		TKey: Eq + Hash + Copy + ThreadSafe,
-		TEquipment: Resource + GetDescriptor<TKey>,
-		TEquipment::TItem: Getter<Name>,
+		TEquipment: Resource + GetItem<TKey>,
+		TEquipment::TItem: InspectAble<ItemDescription>,
 	{
 		for (entity, KeyedPanel(key), mut panel) in &mut panels {
-			let (state, label) = match items.get_descriptor(*key) {
-				Some(item) => (PanelState::Filled, Name::get_field(item).to_string()),
+			let (state, label) = match items.get_item(*key) {
+				Some(item) => (PanelState::Filled, ItemDescription::inspect_field(item)),
 				None => (PanelState::Empty, "<Empty>".to_owned()),
 			};
 			panel.set(state);
@@ -48,23 +46,29 @@ mod tests {
 	use std::collections::HashMap;
 
 	use super::*;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{handles_loadout_menus::InventoryDescriptor, nested_mock::NestedMocks},
-	};
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
 	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	struct _Key(usize);
 
+	#[derive(Debug, PartialEq)]
+	struct _Item(&'static str);
+
+	impl InspectAble<ItemDescription> for _Item {
+		fn get_inspect_able_field(&self) -> String {
+			self.0.to_owned()
+		}
+	}
+
 	#[derive(Resource, Debug, PartialEq)]
-	struct _ItemDescriptors(HashMap<_Key, InventoryDescriptor>);
+	struct _ItemDescriptors(HashMap<_Key, _Item>);
 
-	impl GetDescriptor<_Key> for _ItemDescriptors {
-		type TItem = InventoryDescriptor;
+	impl GetItem<_Key> for _ItemDescriptors {
+		type TItem = _Item;
 
-		fn get_descriptor(&self, key: _Key) -> Option<&InventoryDescriptor> {
+		fn get_item(&self, key: _Key) -> Option<&_Item> {
 			self.0.get(&key)
 		}
 	}
@@ -81,7 +85,7 @@ mod tests {
 		}
 	}
 
-	fn setup(descriptors: HashMap<_Key, InventoryDescriptor>) -> App {
+	fn setup(descriptors: HashMap<_Key, _Item>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(_ItemDescriptors(descriptors));
 		app.add_systems(
@@ -122,13 +126,7 @@ mod tests {
 
 	#[test]
 	fn set_filled() {
-		let mut app = setup(HashMap::from([(
-			_Key(42),
-			InventoryDescriptor {
-				name: "my item".to_owned(),
-				..default()
-			},
-		)]));
+		let mut app = setup(HashMap::from([(_Key(42), _Item("my item"))]));
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -169,13 +167,7 @@ mod tests {
 
 	#[test]
 	fn set_when_text_not_first_child() {
-		let mut app = setup(HashMap::from([(
-			_Key(42),
-			InventoryDescriptor {
-				name: "my item".to_owned(),
-				..default()
-			},
-		)]));
+		let mut app = setup(HashMap::from([(_Key(42), _Item("my item"))]));
 		let panel = app
 			.world_mut()
 			.spawn((

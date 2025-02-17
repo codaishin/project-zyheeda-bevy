@@ -24,7 +24,7 @@ pub(crate) trait VisualizeInvalidSkill {
 				continue;
 			};
 			let compatible_skills = compatible.get_combo_able_skills(key);
-			if compatible_skills.contains(&button.descriptor) {
+			if compatible_skills.contains(&button.skill) {
 				continue;
 			}
 			let Some(mut entity) = commands.get_entity(entity) else {
@@ -43,7 +43,7 @@ mod tests {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::slot_key::{Side, SlotKey},
-		traits::{handles_combo_menu::ComboSkillDescriptor, nested_mock::NestedMocks},
+		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -58,7 +58,7 @@ mod tests {
 
 	#[automock]
 	impl GetComboAbleSkills<_Skill> for _Compatible {
-		fn get_combo_able_skills(&self, key: &SlotKey) -> Vec<ComboSkillDescriptor<_Skill>> {
+		fn get_combo_able_skills(&self, key: &SlotKey) -> Vec<_Skill> {
 			self.mock.get_combo_able_skills(key)
 		}
 	}
@@ -88,18 +88,12 @@ mod tests {
 		let mut app = setup(_Compatible::new().with_mock(|mock| {
 			mock.expect_get_combo_able_skills()
 				.with(eq(SlotKey::BottomHand(Side::Right)))
-				.return_const(vec![ComboSkillDescriptor {
-					skill: _Skill("compatible"),
-					..default()
-				}]);
+				.return_const(vec![_Skill("compatible")]);
 		}));
 		let skill = app
 			.world_mut()
 			.spawn(ComboSkillButton::<DropdownTrigger, _Skill>::new(
-				ComboSkillDescriptor {
-					skill: _Skill("incompatible"),
-					..default()
-				},
+				_Skill("incompatible"),
 				vec![
 					SlotKey::BottomHand(Side::Left),
 					SlotKey::BottomHand(Side::Right),
@@ -118,18 +112,12 @@ mod tests {
 		let mut app = setup(_Compatible::new().with_mock(|mock| {
 			mock.expect_get_combo_able_skills()
 				.with(eq(SlotKey::BottomHand(Side::Right)))
-				.return_const(vec![ComboSkillDescriptor {
-					skill: _Skill("compatible"),
-					..default()
-				}]);
+				.return_const(vec![_Skill("compatible")]);
 		}));
 		let skill = app
 			.world_mut()
 			.spawn(ComboSkillButton::<DropdownTrigger, _Skill>::new(
-				ComboSkillDescriptor {
-					skill: _Skill("compatible"),
-					..default()
-				},
+				_Skill("compatible"),
 				vec![
 					SlotKey::BottomHand(Side::Left),
 					SlotKey::BottomHand(Side::Right),
@@ -148,18 +136,12 @@ mod tests {
 		let mut app = setup(_Compatible::new().with_mock(|mock| {
 			mock.expect_get_combo_able_skills()
 				.with(eq(SlotKey::BottomHand(Side::Right)))
-				.return_const(vec![ComboSkillDescriptor {
-					skill: _Skill("compatible"),
-					..default()
-				}]);
+				.return_const(vec![_Skill("compatible")]);
 		}));
 		let skill = app
 			.world_mut()
 			.spawn(ComboSkillButton::<DropdownTrigger, _Skill>::new(
-				ComboSkillDescriptor {
-					skill: _Skill("incompatible"),
-					..default()
-				},
+				_Skill("incompatible"),
 				vec![
 					SlotKey::BottomHand(Side::Left),
 					SlotKey::BottomHand(Side::Right),

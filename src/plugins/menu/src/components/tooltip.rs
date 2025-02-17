@@ -1,4 +1,3 @@
-pub(crate) mod name;
 pub(crate) mod string;
 
 use super::GlobalZIndexTop;

@@ -15,12 +15,7 @@ pub(crate) trait DropdownSkillSelectClick {
 		skill_buttons
 			.iter()
 			.filter(pressed)
-			.map(|(button, ..)| {
-				(
-					button.key_path.clone(),
-					Some(button.descriptor.skill.clone()),
-				)
-			})
+			.map(|(button, ..)| (button.key_path.clone(), Some(button.skill.clone())))
 			.collect::<Vec<_>>()
 	}
 }
@@ -35,7 +30,6 @@ mod tests {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::slot_key::{Side, SlotKey},
-		traits::handles_combo_menu::ComboSkillDescriptor,
 	};
 
 	#[derive(Debug, PartialEq, Default, Clone)]
@@ -58,10 +52,7 @@ mod tests {
 		let mut app = setup(assert_combo);
 		app.world_mut().spawn((
 			ComboSkillButton::<DropdownItem<_Layout>, _Skill>::new(
-				ComboSkillDescriptor {
-					skill: _Skill,
-					..default()
-				},
+				_Skill,
 				vec![SlotKey::BottomHand(Side::Left)],
 			),
 			Interaction::Pressed,
@@ -82,20 +73,14 @@ mod tests {
 		let mut app = setup(assert_no_combo);
 		app.world_mut().spawn((
 			ComboSkillButton::<DropdownItem<_Layout>, _Skill>::new(
-				ComboSkillDescriptor {
-					skill: _Skill,
-					..default()
-				},
+				_Skill,
 				vec![SlotKey::BottomHand(Side::Left)],
 			),
 			Interaction::Hovered,
 		));
 		app.world_mut().spawn((
 			ComboSkillButton::<DropdownItem<_Layout>, _Skill>::new(
-				ComboSkillDescriptor {
-					skill: _Skill,
-					..default()
-				},
+				_Skill,
 				vec![SlotKey::BottomHand(Side::Left)],
 			),
 			Interaction::None,

@@ -1,6 +1,6 @@
 use common::{
 	tools::slot_key::SlotKey,
-	traits::handles_combo_menu::{ComboSkillDescriptor, GetCombosOrdered},
+	traits::handles_combo_menu::{SkillDescription, GetCombosOrdered, SkillIcon, InspectAble},
 };
 use std::collections::HashSet;
 
@@ -16,11 +16,11 @@ pub(crate) enum Symbol {
 pub(crate) enum ComboTreeElement<TSkill> {
 	Node {
 		key_path: Vec<SlotKey>,
-		descriptor: ComboSkillDescriptor<TSkill>,
+		skill: TSkill,
 	},
 	Leaf {
 		key_path: Vec<SlotKey>,
-		descriptor: ComboSkillDescriptor<TSkill>,
+		skill: TSkill,
 	},
 	Symbol(Symbol),
 }
@@ -34,7 +34,7 @@ pub(crate) trait BuildComboTreeLayout<TSkill> {
 impl<T, TSkill> BuildComboTreeLayout<TSkill> for T
 where
 	T: GetCombosOrdered<TSkill>,
-	TSkill: Clone + PartialEq,
+	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + PartialEq,
 {
 	fn build_combo_tree_layout(&self) -> ComboTreeLayout<TSkill> {
 		let mut get_first_symbol = get_first_symbol(HasRoot::False);
@@ -65,13 +65,11 @@ where
 	}
 }
 
-fn drain<TSkill>(
-	combo: &mut Vec<(Vec<SlotKey>, ComboSkillDescriptor<TSkill>)>,
-) -> ComboTreeElement<TSkill> {
+fn drain<TSkill>(combo: &mut Vec<(Vec<SlotKey>, TSkill)>) -> ComboTreeElement<TSkill> {
 	let leaf = combo.remove(combo.len() - 1);
 	ComboTreeElement::Leaf {
 		key_path: leaf.0,
-		descriptor: leaf.1,
+		skill: leaf.1,
 	}
 }
 
@@ -113,7 +111,7 @@ fn adjust_connections<TSkill>(
 
 fn layout_element<TSkill>(
 	key_path: Vec<SlotKey>,
-	skill: ComboSkillDescriptor<TSkill>,
+	skill: TSkill,
 	encountered: &mut HashSet<Vec<SlotKey>>,
 ) -> ComboTreeElement<TSkill> {
 	if encountered.contains(&key_path) {
@@ -124,7 +122,7 @@ fn layout_element<TSkill>(
 
 	ComboTreeElement::Node {
 		key_path: key_path.clone(),
-		descriptor: skill,
+		skill,
 	}
 }
 
@@ -150,16 +148,28 @@ fn replace_symbols_at<TSkill>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::utils::default;
+	use bevy::prelude::*;
 	use common::{tools::slot_key::Side, traits::handles_equipment::Combo};
 
 	#[derive(Debug, PartialEq, Default, Clone)]
-	struct _Skill;
+	struct _Skill(Option<Handle<Image>>);
 
-	struct _Combos(Vec<Combo<ComboSkillDescriptor<_Skill>>>);
+	impl InspectAble<SkillDescription> for _Skill {
+		fn get_inspect_able_field(&self) -> String {
+			default()
+		}
+	}
+
+	impl InspectAble<SkillIcon> for _Skill {
+		fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
+			&self.0
+		}
+	}
+
+	struct _Combos(Vec<Combo<_Skill>>);
 
 	impl GetCombosOrdered<_Skill> for _Combos {
-		fn combos_ordered(&self) -> Vec<Combo<ComboSkillDescriptor<_Skill>>> {
+		fn combos_ordered(&self) -> Vec<Combo<_Skill>> {
 			self.0.clone()
 		}
 	}
@@ -172,10 +182,7 @@ mod tests {
 	fn get_tree_leaf() {
 		let combos = _Combos(vec![vec![(
 			vec![SlotKey::BottomHand(Side::Right)],
-			ComboSkillDescriptor {
-				skill: _Skill,
-				..default()
-			},
+			_Skill(None),
 		)]]);
 
 		assert_eq!(
@@ -183,10 +190,7 @@ mod tests {
 				ComboTreeElement::Symbol(Symbol::Root),
 				ComboTreeElement::Leaf {
 					key_path: vec![SlotKey::BottomHand(Side::Right)],
-					descriptor: ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					}
+					skill: _Skill(None)
 				}
 			]],
 			combos.build_combo_tree_layout()
@@ -200,22 +204,13 @@ mod tests {
 	/// ```
 	fn get_tree_node_and_leaf() {
 		let combos = _Combos(vec![vec![
-			(
-				vec![SlotKey::BottomHand(Side::Right)],
-				ComboSkillDescriptor {
-					skill: _Skill,
-					..default()
-				},
-			),
+			(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 			(
 				vec![
 					SlotKey::BottomHand(Side::Right),
 					SlotKey::BottomHand(Side::Right),
 				],
-				ComboSkillDescriptor {
-					skill: _Skill,
-					..default()
-				},
+				_Skill(None),
 			),
 		]]);
 
@@ -224,20 +219,14 @@ mod tests {
 				ComboTreeElement::Symbol(Symbol::Root),
 				ComboTreeElement::Node {
 					key_path: vec![SlotKey::BottomHand(Side::Right)],
-					descriptor: ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					}
+					skill: _Skill(None)
 				},
 				ComboTreeElement::Leaf {
 					key_path: vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Right)
 					],
-					descriptor: ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					}
+					skill: _Skill(None)
 				}
 			]],
 			combos.build_combo_tree_layout()
@@ -252,20 +241,8 @@ mod tests {
 	/// ```
 	fn layout_two_combos_with_one_skill() {
 		let combos = _Combos(vec![
-			vec![(
-				vec![SlotKey::BottomHand(Side::Right)],
-				ComboSkillDescriptor {
-					skill: _Skill,
-					..default()
-				},
-			)],
-			vec![(
-				vec![SlotKey::BottomHand(Side::Left)],
-				ComboSkillDescriptor {
-					skill: _Skill,
-					..default()
-				},
-			)],
+			vec![(vec![SlotKey::BottomHand(Side::Right)], _Skill(None))],
+			vec![(vec![SlotKey::BottomHand(Side::Left)], _Skill(None))],
 		]);
 
 		assert_eq!(
@@ -274,20 +251,14 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Root),
 					ComboTreeElement::Leaf {
 						key_path: vec![SlotKey::BottomHand(Side::Right)],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					}
 				],
 				vec![
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
 						key_path: vec![SlotKey::BottomHand(Side::Left)],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					}
 				]
 			],
@@ -304,41 +275,23 @@ mod tests {
 	fn layout_two_combos_with_two_skills_where_one_matches() {
 		let combos = _Combos(vec![
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Right),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 			],
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Left),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 			],
 		]);
@@ -349,20 +302,14 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Root),
 					ComboTreeElement::Node {
 						key_path: vec![SlotKey::BottomHand(Side::Right)],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 					ComboTreeElement::Leaf {
 						key_path: vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 				vec![
@@ -373,10 +320,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Left)
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				]
 			],
@@ -394,50 +338,26 @@ mod tests {
 	fn layout_three_combos_with_complex_setup() {
 		let combos = _Combos(vec![
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Right),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 			],
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Left),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 			],
-			vec![(
-				vec![SlotKey::BottomHand(Side::Left)],
-				ComboSkillDescriptor {
-					skill: _Skill,
-					..default()
-				},
-			)],
+			vec![(vec![SlotKey::BottomHand(Side::Left)], _Skill(None))],
 		]);
 
 		assert_eq!(
@@ -446,20 +366,14 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Root),
 					ComboTreeElement::Node {
 						key_path: vec![SlotKey::BottomHand(Side::Right)],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 					ComboTreeElement::Leaf {
 						key_path: vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right),
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 				vec![
@@ -470,20 +384,14 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Left)
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 				vec![
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
 						key_path: vec![SlotKey::BottomHand(Side::Left)],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 			],
@@ -502,22 +410,13 @@ mod tests {
 	fn layout_three_combos_with_complex_setup_2() {
 		let combos = _Combos(vec![
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Right),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 				(
 					vec![
@@ -525,29 +424,17 @@ mod tests {
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Right),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 			],
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Right),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 				(
 					vec![
@@ -555,38 +442,20 @@ mod tests {
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Left),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 			],
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Left),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 			],
-			vec![(
-				vec![SlotKey::BottomHand(Side::Left)],
-				ComboSkillDescriptor {
-					skill: _Skill,
-					..default()
-				},
-			)],
+			vec![(vec![SlotKey::BottomHand(Side::Left)], _Skill(None))],
 		]);
 
 		assert_eq!(
@@ -595,20 +464,14 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Root),
 					ComboTreeElement::Node {
 						key_path: vec![SlotKey::BottomHand(Side::Right)],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 					ComboTreeElement::Node {
 						key_path: vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 					ComboTreeElement::Leaf {
 						key_path: vec![
@@ -616,10 +479,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 				vec![
@@ -632,10 +492,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Left)
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 				vec![
@@ -646,20 +503,14 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Left)
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 				vec![
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
 						key_path: vec![SlotKey::BottomHand(Side::Left)],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 			],
@@ -677,22 +528,13 @@ mod tests {
 	fn layout_three_combos_with_complex_setup_3() {
 		let combos = _Combos(vec![
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Right),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 				(
 					vec![
@@ -700,29 +542,17 @@ mod tests {
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Right),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 			],
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Right),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 				(
 					vec![
@@ -730,29 +560,17 @@ mod tests {
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Left),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 			],
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Left),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 			],
 		]);
@@ -763,20 +581,14 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Root),
 					ComboTreeElement::Node {
 						key_path: vec![SlotKey::BottomHand(Side::Right)],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 					ComboTreeElement::Node {
 						key_path: vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 					ComboTreeElement::Leaf {
 						key_path: vec![
@@ -784,10 +596,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 				vec![
@@ -800,10 +609,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Left)
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 				vec![
@@ -814,10 +620,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Left)
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 			],
@@ -836,22 +639,13 @@ mod tests {
 	fn layout_three_combos_with_complex_setup_4() {
 		let combos = _Combos(vec![
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Right),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 				(
 					vec![
@@ -859,10 +653,7 @@ mod tests {
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Right),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 				(
 					vec![
@@ -871,29 +662,17 @@ mod tests {
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Right),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 			],
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Right),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 				(
 					vec![
@@ -901,10 +680,7 @@ mod tests {
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Left),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 				(
 					vec![
@@ -913,29 +689,17 @@ mod tests {
 						SlotKey::BottomHand(Side::Left),
 						SlotKey::BottomHand(Side::Right),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 			],
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Right),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 				(
 					vec![
@@ -943,10 +707,7 @@ mod tests {
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Left),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 				(
 					vec![
@@ -955,29 +716,17 @@ mod tests {
 						SlotKey::BottomHand(Side::Left),
 						SlotKey::BottomHand(Side::Left),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 			],
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Left),
 					],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
+					_Skill(None),
 				),
 			],
 		]);
@@ -988,20 +737,14 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Root),
 					ComboTreeElement::Node {
 						key_path: vec![SlotKey::BottomHand(Side::Right)],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 					ComboTreeElement::Node {
 						key_path: vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 					ComboTreeElement::Node {
 						key_path: vec![
@@ -1009,10 +752,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right),
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 					ComboTreeElement::Leaf {
 						key_path: vec![
@@ -1021,10 +761,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right),
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 				vec![
@@ -1037,10 +774,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Left),
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 					ComboTreeElement::Leaf {
 						key_path: vec![
@@ -1049,10 +783,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Left),
 							SlotKey::BottomHand(Side::Right),
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 				vec![
@@ -1067,10 +798,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Left),
 							SlotKey::BottomHand(Side::Left),
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 				vec![
@@ -1081,10 +809,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Left),
 						],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				]
 			],
@@ -1103,68 +828,20 @@ mod tests {
 	fn layout_combos_with_no_broken_lines() {
 		let combos = _Combos(vec![
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Left)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
-				(
-					vec![SlotKey::BottomHand(Side::Left)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Left)], _Skill(None)),
+				(vec![SlotKey::BottomHand(Side::Left)], _Skill(None)),
 			],
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Left)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Left)], _Skill(None)),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 			],
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
 			],
 			vec![
-				(
-					vec![SlotKey::BottomHand(Side::Right)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
-				(
-					vec![SlotKey::BottomHand(Side::Left)],
-					ComboSkillDescriptor {
-						skill: _Skill,
-						..default()
-					},
-				),
+				(vec![SlotKey::BottomHand(Side::Right)], _Skill(None)),
+				(vec![SlotKey::BottomHand(Side::Left)], _Skill(None)),
 			],
 		]);
 
@@ -1174,17 +851,11 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Root),
 					ComboTreeElement::Node {
 						key_path: vec![SlotKey::BottomHand(Side::Left)],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 					ComboTreeElement::Leaf {
 						key_path: vec![SlotKey::BottomHand(Side::Left)],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 				vec![
@@ -1192,27 +863,18 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
 						key_path: vec![SlotKey::BottomHand(Side::Right)],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 				vec![
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Node {
 						key_path: vec![SlotKey::BottomHand(Side::Right)],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 					ComboTreeElement::Leaf {
 						key_path: vec![SlotKey::BottomHand(Side::Right)],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 				vec![
@@ -1220,10 +882,7 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
 						key_path: vec![SlotKey::BottomHand(Side::Left)],
-						descriptor: ComboSkillDescriptor {
-							skill: _Skill,
-							..default()
-						}
+						skill: _Skill(None)
 					},
 				],
 			],

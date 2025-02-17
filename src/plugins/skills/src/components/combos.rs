@@ -17,7 +17,7 @@ use bevy::ecs::component::Component;
 use common::{
 	tools::{item_type::ItemType, slot_key::SlotKey},
 	traits::{
-		handles_combo_menu::{ComboSkillDescriptor, GetCombosOrdered},
+		handles_combo_menu::GetCombosOrdered,
 		handles_equipment::{Combo, FollowupKeys, PeekNext, WriteItem},
 		iterate::Iterate,
 	},
@@ -93,7 +93,7 @@ where
 }
 
 impl<TNode: GetCombosOrdered<Skill>> GetCombosOrdered<Skill> for Combos<TNode> {
-	fn combos_ordered(&self) -> Vec<Combo<ComboSkillDescriptor<Skill>>> {
+	fn combos_ordered(&self) -> Vec<Combo<Skill>> {
 		self.config.combos_ordered()
 	}
 }
@@ -264,17 +264,17 @@ mod tests {
 		combos.peek_next_recursive(&SlotKey::default(), &ItemType::default());
 	}
 
-	struct _ComboNode(Vec<Combo<ComboSkillDescriptor<Skill>>>);
+	struct _ComboNode(Vec<Combo<Skill>>);
 
 	impl GetCombosOrdered<Skill> for _ComboNode {
-		fn combos_ordered(&self) -> Vec<Combo<ComboSkillDescriptor<Skill>>> {
+		fn combos_ordered(&self) -> Vec<Combo<Skill>> {
 			self.0.clone()
 		}
 	}
 
 	#[test]
 	fn get_combos_from_config() {
-		let skill = ComboSkillDescriptor::<Skill> {
+		let skill = Skill {
 			name: "my skill".to_owned(),
 			..default()
 		};

@@ -8,20 +8,22 @@ use common::{
 	tools::slot_key::SlotKey,
 	traits::{
 		accessors::get::{GetFieldRef, GetterRef},
-		handles_loadout_menus::{GetDescriptor, QuickbarDescriptor, SkillExecution},
+		handles_combo_menu::{InspectAble, InspectField},
+		handles_loadout_menus::{GetItem, SkillExecution},
 		map_value::TryMapBackwards,
 	},
 };
 
-pub fn panel_activity_colors_override<TMap, TPanel, TDescriptors>(
+pub fn panel_activity_colors_override<TMap, TPanel, TContainer>(
 	mut commands: Commands,
 	mut buttons: Query<(Entity, &mut BackgroundColor, &TPanel)>,
 	key_map: Res<TMap>,
-	descriptors: Res<TDescriptors>,
+	container: Res<TContainer>,
 	mouse_context: Res<State<MouseContext>>,
 ) where
 	TMap: Resource + TryMapBackwards<KeyCode, SlotKey>,
-	TDescriptors: Resource + GetDescriptor<SlotKey, TItem = QuickbarDescriptor>,
+	TContainer: Resource + GetItem<SlotKey>,
+	TContainer::TItem: InspectAble<SkillExecution>,
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetterRef<SlotKey> + Component,
 {
 	let primed_slot = match mouse_context.get() {
@@ -33,8 +35,8 @@ pub fn panel_activity_colors_override<TMap, TPanel, TDescriptors>(
 		let Some(entity) = commands.get_entity(entity) else {
 			continue;
 		};
-		let color = get_color_override::<TPanel, TDescriptors>(
-			&descriptors,
+		let color = get_color_override::<TPanel, TContainer>(
+			&container,
 			primed_slot,
 			SlotKey::get_field_ref(panel),
 		);
@@ -42,18 +44,20 @@ pub fn panel_activity_colors_override<TMap, TPanel, TDescriptors>(
 	}
 }
 
-fn get_color_override<TPanel, TDescriptors>(
-	descriptors: &TDescriptors,
+fn get_color_override<TPanel, TContainer>(
+	container: &TContainer,
 	primed_slot: Option<SlotKey>,
 	panel_key: &SlotKey,
 ) -> Option<Color>
 where
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor,
-	TDescriptors: GetDescriptor<SlotKey, TItem = QuickbarDescriptor>,
+	TContainer: GetItem<SlotKey>,
+	TContainer::TItem: InspectAble<SkillExecution>,
 {
-	let state = descriptors
-		.get_descriptor(*panel_key)
-		.map(|descriptor| descriptor.execution)
+	let state = container
+		.get_item(*panel_key)
+		.map(SkillExecution::inspect_field)
+		.copied()
 		.unwrap_or_default();
 
 	if state == SkillExecution::Active {
@@ -138,19 +142,27 @@ mod tests {
 	}
 
 	#[derive(Resource)]
-	struct _Cache(HashMap<SlotKey, QuickbarDescriptor>);
+	struct _Cache(HashMap<SlotKey, _Item>);
 
-	impl GetDescriptor<SlotKey> for _Cache {
-		type TItem = QuickbarDescriptor;
+	impl GetItem<SlotKey> for _Cache {
+		type TItem = _Item;
 
-		fn get_descriptor(&self, key: SlotKey) -> Option<&QuickbarDescriptor> {
+		fn get_item(&self, key: SlotKey) -> Option<&_Item> {
 			self.0.get(&key)
 		}
 	}
 
-	impl<const N: usize> From<[(SlotKey, QuickbarDescriptor); N]> for _Cache {
-		fn from(value: [(SlotKey, QuickbarDescriptor); N]) -> Self {
+	impl<const N: usize> From<[(SlotKey, _Item); N]> for _Cache {
+		fn from(value: [(SlotKey, _Item); N]) -> Self {
 			Self(HashMap::from(value))
+		}
+	}
+
+	struct _Item(SkillExecution);
+
+	impl InspectAble<SkillExecution> for _Item {
+		fn get_inspect_able_field(&self) -> &SkillExecution {
+			&self.0
 		}
 	}
 
@@ -175,10 +187,7 @@ mod tests {
 			_Map::None,
 			_Cache::from([(
 				SlotKey::BottomHand(Side::Right),
-				QuickbarDescriptor {
-					execution: SkillExecution::Active,
-					..default()
-				},
+				_Item(SkillExecution::Active),
 			)]),
 		);
 		let panel = app
@@ -226,10 +235,7 @@ mod tests {
 			_Map::None,
 			_Cache::from([(
 				SlotKey::BottomHand(Side::Right),
-				QuickbarDescriptor {
-					execution: SkillExecution::None,
-					..default()
-				},
+				_Item(SkillExecution::None),
 			)]),
 		);
 		let panel = app
@@ -284,10 +290,7 @@ mod tests {
 			_Map::None,
 			_Cache::from([(
 				SlotKey::BottomHand(Side::Right),
-				QuickbarDescriptor {
-					execution: SkillExecution::Queued,
-					..default()
-				},
+				_Item(SkillExecution::Queued),
 			)]),
 		);
 		let panel = app

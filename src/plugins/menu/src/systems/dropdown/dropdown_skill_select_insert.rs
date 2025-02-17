@@ -66,7 +66,7 @@ mod tests {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::slot_key::Side,
-		traits::{handles_combo_menu::ComboSkillDescriptor, nested_mock::NestedMocks},
+		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -84,7 +84,7 @@ mod tests {
 
 	#[automock]
 	impl GetComboAbleSkills<_Skill> for _ComboAbleSkills {
-		fn get_combo_able_skills(&self, key: &SlotKey) -> Vec<ComboSkillDescriptor<_Skill>> {
+		fn get_combo_able_skills(&self, key: &SlotKey) -> Vec<_Skill> {
 			self.mock.get_combo_able_skills(key)
 		}
 	}
@@ -112,10 +112,7 @@ mod tests {
 		let mut app = setup(_ComboAbleSkills::new().with_mock(|mock| {
 			mock.expect_get_combo_able_skills()
 				.with(eq(SlotKey::BottomHand(Side::Right)))
-				.return_const(vec![ComboSkillDescriptor {
-					skill: _Skill("my skill"),
-					..default()
-				}]);
+				.return_const(vec![_Skill("my skill")]);
 		}));
 		let dropdown = app
 			.world_mut()
@@ -129,10 +126,7 @@ mod tests {
 		assert_eq!(
 			Some(&Dropdown {
 				items: vec![ComboSkillButton::<DropdownItem<_Layout>, _Skill>::new(
-					ComboSkillDescriptor {
-						skill: _Skill("my skill"),
-						..default()
-					},
+					_Skill("my skill"),
 					vec![SlotKey::BottomHand(Side::Right)],
 				)]
 			}),
