@@ -4,10 +4,10 @@ use super::{
 };
 use crate::tools::{inventory_key::InventoryKey, slot_key::SlotKey};
 use bevy::prelude::*;
-use std::{collections::HashMap, hash::Hash};
+use std::hash::Hash;
 
 pub trait HandlesLoadoutMenu {
-	fn inventory_with_swapper<TSwap>() -> impl ConfigureInventory<TSwap>
+	fn loadout_with_swapper<TSwap>() -> impl ConfigureInventory<TSwap>
 	where
 		TSwap: Component + SwapValuesByKey;
 
@@ -71,64 +71,6 @@ pub enum SkillExecution {
 
 impl InspectMarker for SkillExecution {
 	type TFieldRef<'a> = &'a SkillExecution;
-}
-
-// Needs to be moved to skills plugin
-#[derive(Debug, PartialEq)]
-pub struct Cache<TKey, TItem>(pub HashMap<TKey, TItem>)
-where
-	TKey: Eq + Hash;
-
-impl<TKey, TItem> GetItem<TKey> for Cache<TKey, TItem>
-where
-	TKey: Eq + Hash,
-{
-	type TItem = TItem;
-
-	fn get_item(&self, key: TKey) -> Option<&TItem> {
-		self.0.get(&key)
-	}
-}
-
-pub struct QuickbarItem {
-	pub name: String,
-	pub icon: Option<Handle<Image>>,
-	pub execution: SkillExecution,
-}
-
-impl InspectAble<ItemDescription> for QuickbarItem {
-	fn get_inspect_able_field(&self) -> String {
-		self.name.clone()
-	}
-}
-
-impl InspectAble<SkillIcon> for QuickbarItem {
-	fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
-		&self.icon
-	}
-}
-
-impl InspectAble<SkillExecution> for QuickbarItem {
-	fn get_inspect_able_field(&self) -> &SkillExecution {
-		&self.execution
-	}
-}
-
-pub struct InventoryItem {
-	pub name: String,
-	pub skill_icon: Option<Handle<Image>>,
-}
-
-impl InspectAble<ItemDescription> for InventoryItem {
-	fn get_inspect_able_field(&self) -> String {
-		self.name.clone()
-	}
-}
-
-impl InspectAble<SkillIcon> for InventoryItem {
-	fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
-		&self.skill_icon
-	}
 }
 
 #[derive(Debug, PartialEq)]
