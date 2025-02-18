@@ -3,8 +3,8 @@ use crate::item::Item;
 use bevy::prelude::*;
 use bevy_rapier3d::na::max;
 use common::{
-	tools::{inventory_key::InventoryKey, slot_key::SlotKey},
-	traits::handles_loadout_menus::{SwapKey, SwapValuesByKey},
+	tools::{inventory_key::InventoryKey, slot_key::SlotKey, swap_key::SwapKey},
+	traits::handles_loadout_menu::SwapValuesByKey,
 };
 use std::mem;
 

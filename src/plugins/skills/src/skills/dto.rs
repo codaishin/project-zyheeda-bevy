@@ -3,10 +3,9 @@ pub(crate) mod run_skill_behavior;
 use super::{AnimationStrategy, Skill};
 use common::{
 	dto::duration::DurationDto,
-	tools::item_type::ItemType,
+	tools::item_type::{CompatibleItems, ItemType},
 	traits::{
 		handles_custom_assets::{AssetFileExtensions, LoadFrom},
-		handles_equipment::CompatibleItems,
 		load_asset::{LoadAsset, Path},
 	},
 };

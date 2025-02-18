@@ -1,10 +1,13 @@
-use super::{
-	handles_combo_menu::{InspectAble, InspectMarker, SkillIcon},
-	thread_safe::ThreadSafe,
+use super::{inspect_able::InspectAble, thread_safe::ThreadSafe};
+use crate::tools::{
+	inventory_key::InventoryKey,
+	item_description::ItemDescription,
+	skill_execution::SkillExecution,
+	skill_icon::SkillIcon,
+	slot_key::SlotKey,
+	swap_key::SwapKey,
 };
-use crate::tools::{inventory_key::InventoryKey, slot_key::SlotKey};
 use bevy::prelude::*;
-use std::hash::Hash;
 
 pub trait HandlesLoadoutMenu {
 	fn loadout_with_swapper<TSwap>() -> impl ConfigureInventory<TSwap>
@@ -41,41 +44,4 @@ pub trait GetItem<TKey> {
 	type TItem;
 
 	fn get_item(&self, key: TKey) -> Option<&Self::TItem>;
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum SwapKey {
-	Inventory(InventoryKey),
-	Slot(SlotKey),
-}
-
-impl From<InventoryKey> for SwapKey {
-	fn from(key: InventoryKey) -> Self {
-		Self::Inventory(key)
-	}
-}
-
-impl From<SlotKey> for SwapKey {
-	fn from(key: SlotKey) -> Self {
-		Self::Slot(key)
-	}
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
-pub enum SkillExecution {
-	#[default]
-	None,
-	Active,
-	Queued,
-}
-
-impl InspectMarker for SkillExecution {
-	type TFieldRef<'a> = &'a SkillExecution;
-}
-
-#[derive(Debug, PartialEq)]
-pub struct ItemDescription;
-
-impl InspectMarker for ItemDescription {
-	type TFieldRef<'a> = String;
 }

@@ -2,8 +2,10 @@ pub mod array;
 pub mod slice;
 pub mod vec;
 
-pub trait Iterate<TItem> {
-	fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a TItem>
+pub trait Iterate {
+	type TItem<'a>
 	where
-		TItem: 'a;
+		Self: 'a;
+
+	fn iterate(&self) -> impl Iterator<Item = Self::TItem<'_>>;
 }

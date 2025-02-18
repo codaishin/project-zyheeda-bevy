@@ -1,6 +1,6 @@
 use crate::components::DeleteSkill;
 use bevy::{prelude::*, ui::Interaction};
-use common::traits::handles_equipment::Combo;
+use common::tools::slot_key::Combo;
 
 pub(crate) fn update_combos_view_delete_skill<TSkill>(
 	deletes: Query<(&DeleteSkill, &Interaction)>,

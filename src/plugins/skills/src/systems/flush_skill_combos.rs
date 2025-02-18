@@ -1,9 +1,9 @@
-use crate::traits::Flush;
-use bevy::prelude::*;
-use common::traits::{
-	handles_equipment::{IsTimedOut, IterateQueue},
-	update_cumulative::CumulativeUpdate,
+use crate::{
+	skills::QueuedSkill,
+	traits::{is_timed_out::IsTimedOut, Flush},
 };
+use bevy::prelude::*;
+use common::traits::{iterate::Iterate, update_cumulative::CumulativeUpdate};
 use std::time::Duration;
 
 pub(crate) fn flush_skill_combos<TCombos, TComboTimeout, TTime, TQueue>(
@@ -13,7 +13,7 @@ pub(crate) fn flush_skill_combos<TCombos, TComboTimeout, TTime, TQueue>(
 	TCombos: Flush + Component,
 	TComboTimeout: CumulativeUpdate<Duration> + IsTimedOut + Flush + Component,
 	TTime: Default + Sync + Send + 'static,
-	TQueue: IterateQueue + Component,
+	for<'a> TQueue: Iterate<TItem<'a> = &'a QueuedSkill> + Component + 'a,
 {
 	let delta = time.delta();
 
@@ -27,7 +27,10 @@ pub(crate) fn flush_skill_combos<TCombos, TComboTimeout, TTime, TQueue>(
 	}
 }
 
-fn skills_queued<TQueue: IterateQueue>(queue: &TQueue) -> bool {
+fn skills_queued<TQueue>(queue: &TQueue) -> bool
+where
+	for<'a> TQueue: Iterate<TItem<'a> = &'a QueuedSkill>,
+{
 	queue.iterate().next().is_some()
 }
 
@@ -118,10 +121,13 @@ mod tests {
 		skills: Vec<QueuedSkill>,
 	}
 
-	impl IterateQueue for _Queue {
-		type TItem = QueuedSkill;
+	impl Iterate for _Queue {
+		type TItem<'a>
+			= &'a QueuedSkill
+		where
+			Self: 'a;
 
-		fn iterate(&self) -> impl Iterator<Item = &Self::TItem> {
+		fn iterate(&self) -> impl Iterator<Item = Self::TItem<'_>> {
 			self.skills.iter()
 		}
 	}

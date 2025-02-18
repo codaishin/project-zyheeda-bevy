@@ -8,7 +8,7 @@ use common::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,
 		handles_assets_for_children::{ChildAssetComponent, ChildAssetDefinition, ChildName},
-		handles_equipment::{ItemAssets, WriteItem},
+		iterate::Iterate,
 	},
 };
 use std::{collections::HashMap, fmt::Debug};
@@ -28,25 +28,21 @@ impl Default for Slots {
 	}
 }
 
-impl ItemAssets for Slots {
-	type TKey = SlotKey;
-	type TItem = Item;
-
-	fn item_assets(&self) -> impl Iterator<Item = (Self::TKey, &Option<Handle<Self::TItem>>)> {
-		self.0.iter().map(|(key, item)| (*key, item))
-	}
-}
-
-impl WriteItem<SlotKey, Option<Handle<Item>>> for Slots {
-	fn write_item(&mut self, key: &SlotKey, value: Option<Handle<Item>>) {
-		self.0.insert(*key, value);
-	}
-}
-
 impl GetRef<SlotKey, Handle<Item>> for Slots {
 	fn get(&self, key: &SlotKey) -> Option<&Handle<Item>> {
 		let slot = self.0.get(key)?;
 		slot.as_ref()
+	}
+}
+
+impl Iterate for Slots {
+	type TItem<'a>
+		= (SlotKey, &'a Option<Handle<Item>>)
+	where
+		Self: 'a;
+
+	fn iterate(&self) -> impl Iterator<Item = Self::TItem<'_>> {
+		self.0.iter().map(|(key, item)| (*key, item))
 	}
 }
 

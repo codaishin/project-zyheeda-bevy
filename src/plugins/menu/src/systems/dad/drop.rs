@@ -8,10 +8,13 @@ use bevy::{
 	prelude::{Entity, MouseButton, Res},
 	ui::Interaction,
 };
-use common::traits::{
-	handles_loadout_menus::{SwapKey, SwapValuesByKey},
-	thread_safe::ThreadSafe,
-	try_remove_from::TryRemoveFrom,
+use common::{
+	tools::swap_key::SwapKey,
+	traits::{
+		handles_loadout_menu::SwapValuesByKey,
+		thread_safe::ThreadSafe,
+		try_remove_from::TryRemoveFrom,
+	},
 };
 
 pub fn drop<TAgent, TKeyDad, TKeyKeyedPanel>(

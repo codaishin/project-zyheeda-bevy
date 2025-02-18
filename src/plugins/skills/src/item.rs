@@ -4,11 +4,10 @@ use crate::{components::model_render::ModelRender, skills::Skill};
 use bevy::prelude::*;
 use common::{
 	components::essence::Essence,
-	tools::item_type::ItemType,
+	tools::{item_description::ItemDescription, item_type::ItemType},
 	traits::{
 		accessors::get::{Getter, GetterRef},
-		handles_combo_menu::InspectAble,
-		handles_loadout_menus::ItemDescription,
+		inspect_able::InspectAble,
 	},
 };
 
@@ -31,9 +30,7 @@ impl Item {
 }
 
 impl InspectAble<ItemDescription> for Item {
-	fn get_inspect_able_field(
-		&self,
-	) -> <ItemDescription as common::traits::handles_combo_menu::InspectMarker>::TFieldRef<'_> {
+	fn get_inspect_able_field(&self) -> String {
 		self.name.clone()
 	}
 }

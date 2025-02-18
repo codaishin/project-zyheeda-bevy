@@ -1,6 +1,6 @@
 use crate::components::combo_skill_button::{ComboSkillButton, DropdownItem};
 use bevy::{prelude::*, ui::Interaction};
-use common::traits::{handles_equipment::Combo, thread_safe::ThreadSafe};
+use common::{tools::slot_key::Combo, traits::thread_safe::ThreadSafe};
 
 impl<T> DropdownSkillSelectClick for T {}
 

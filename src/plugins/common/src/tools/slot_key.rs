@@ -70,6 +70,8 @@ pub enum Side {
 	Left,
 }
 
+pub type Combo<TSkill> = Vec<(Vec<SlotKey>, TSkill)>;
+
 #[cfg(test)]
 mod tests {
 	use super::*;

@@ -1,10 +1,13 @@
 use crate::{components::KeyedPanel, tools::PanelState};
 use bevy::{hierarchy::Parent, prelude::*};
-use common::traits::{
-	accessors::set::Setter,
-	handles_combo_menu::{InspectAble, InspectField},
-	handles_loadout_menus::{GetItem, ItemDescription},
-	thread_safe::ThreadSafe,
+use common::{
+	tools::item_description::ItemDescription,
+	traits::{
+		accessors::set::Setter,
+		handles_loadout_menu::GetItem,
+		inspect_able::{InspectAble, InspectField},
+		thread_safe::ThreadSafe,
+	},
 };
 use std::hash::Hash;
 

@@ -1,27 +1,27 @@
-use std::collections::VecDeque;
-
 use super::combo_node::ComboNode;
 use crate::{
 	skills::Skill,
 	traits::{
+		follow_up_keys::FollowupKeys,
+		peek_next::PeekNext,
 		peek_next_recursive::PeekNextRecursive,
+		write_item::WriteItem,
 		GetNode,
 		GetNodeMut,
 		Insert,
 		ReKey,
-		RootKeys,
 		SetNextCombo,
 	},
 };
 use bevy::ecs::component::Component;
 use common::{
-	tools::{item_type::ItemType, slot_key::SlotKey},
-	traits::{
-		handles_combo_menu::GetCombosOrdered,
-		handles_equipment::{Combo, FollowupKeys, PeekNext, WriteItem},
-		iterate::Iterate,
+	tools::{
+		item_type::ItemType,
+		slot_key::{Combo, SlotKey},
 	},
+	traits::{handles_combo_menu::GetCombosOrdered, iterate::Iterate},
 };
+use std::collections::VecDeque;
 
 #[derive(Component, PartialEq, Debug)]
 pub struct Combos<TComboNode = ComboNode> {
@@ -101,7 +101,7 @@ impl<TNode: GetCombosOrdered<Skill>> GetCombosOrdered<Skill> for Combos<TNode> {
 impl<TNode, TKey> WriteItem<TKey, Option<Skill>> for Combos<TNode>
 where
 	for<'a> TNode: GetNodeMut<TKey, TNode<'a>: Insert<Option<Skill>>>,
-	TKey: Iterate<SlotKey>,
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
 {
 	fn write_item(&mut self, key_path: &TKey, skill: Option<Skill>) {
 		self.current = None;
@@ -117,7 +117,7 @@ where
 impl<TNode, TKey> WriteItem<TKey, SlotKey> for Combos<TNode>
 where
 	for<'a> TNode: GetNodeMut<TKey, TNode<'a>: ReKey<SlotKey>>,
-	TKey: Iterate<SlotKey>,
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
 {
 	fn write_item(&mut self, key_path: &TKey, key: SlotKey) {
 		self.current = None;
@@ -130,7 +130,11 @@ where
 	}
 }
 
-impl<TNode: GetNode<TKey>, TKey: Iterate<SlotKey>> GetNode<TKey> for Combos<TNode> {
+impl<TNode, TKey> GetNode<TKey> for Combos<TNode>
+where
+	TNode: GetNode<TKey>,
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+{
 	type TNode<'a>
 		= TNode::TNode<'a>
 	where
@@ -141,23 +145,13 @@ impl<TNode: GetNode<TKey>, TKey: Iterate<SlotKey>> GetNode<TKey> for Combos<TNod
 	}
 }
 
-impl<TNode: RootKeys> RootKeys for Combos<TNode> {
-	type TItem = TNode::TItem;
-
-	fn root_keys(&self) -> impl Iterator<Item = Self::TItem> {
-		self.config.root_keys()
-	}
-}
-
 impl<TNode> FollowupKeys for Combos<TNode>
 where
 	TNode: FollowupKeys,
 {
-	type TKey = TNode::TKey;
-
-	fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>
+	fn followup_keys<T>(&self, after: T) -> Option<Vec<SlotKey>>
 	where
-		T: Into<VecDeque<Self::TKey>> + 'static,
+		T: Into<VecDeque<SlotKey>>,
 	{
 		self.config.followup_keys(after)
 	}
@@ -550,46 +544,24 @@ mod tests {
 	}
 
 	#[test]
-	fn get_root_keys() {
-		#[derive(Debug, PartialEq)]
-		struct _Key;
-
-		struct _Node;
-
-		impl RootKeys for _Node {
-			type TItem = _Key;
-
-			fn root_keys(&self) -> impl Iterator<Item = Self::TItem> {
-				vec![_Key].into_iter()
-			}
-		}
-
-		let combos = Combos::new(_Node);
-
-		assert_eq!(vec![_Key], combos.root_keys().collect::<Vec<_>>());
-	}
-
-	#[test]
 	fn get_followup_keys() {
-		#[derive(Debug, PartialEq)]
-		struct _Key;
-
 		struct _Node;
 
 		impl FollowupKeys for _Node {
-			type TKey = _Key;
-
-			fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>
+			fn followup_keys<T>(&self, after: T) -> Option<Vec<SlotKey>>
 			where
-				T: Into<VecDeque<Self::TKey>>,
+				T: Into<VecDeque<SlotKey>>,
 			{
-				assert_eq!(VecDeque::from([_Key]), after.into());
-				Some(vec![_Key])
+				assert_eq!(VecDeque::from([SlotKey::TopHand(Side::Left)]), after.into());
+				Some(vec![SlotKey::TopHand(Side::Right)])
 			}
 		}
 
 		let combos = Combos::new(_Node);
 
-		assert_eq!(Some(vec![_Key]), combos.followup_keys(vec![_Key]));
+		assert_eq!(
+			Some(vec![SlotKey::TopHand(Side::Right)]),
+			combos.followup_keys(vec![SlotKey::TopHand(Side::Left)])
+		);
 	}
 }

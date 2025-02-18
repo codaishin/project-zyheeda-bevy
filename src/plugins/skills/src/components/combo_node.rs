@@ -1,27 +1,29 @@
-pub mod node_entry;
 pub mod node_entry_mut;
-
-use std::collections::VecDeque;
 
 use crate::{
 	skills::Skill,
-	traits::{peek_next_recursive::PeekNextRecursive, GetNode, GetNodeMut, RootKeys},
+	traits::{
+		follow_up_keys::FollowupKeys,
+		peek_next_recursive::PeekNextRecursive,
+		GetNode,
+		GetNodeMut,
+	},
 };
 use bevy::ecs::component::Component;
 use common::{
 	tools::{
-		item_type::ItemType,
+		item_type::{CompatibleItems, ItemType},
 		ordered_hash_map::{Entry, OrderedHashMap},
-		slot_key::SlotKey,
+		slot_key::{Combo, SlotKey},
 	},
 	traits::{
 		accessors::get::{GetMut, GetRef},
 		handles_combo_menu::GetCombosOrdered,
-		handles_equipment::{Combo, CompatibleItems, FollowupKeys},
 		insert::TryInsert,
 		iterate::Iterate,
 	},
 };
+use std::collections::VecDeque;
 
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct ComboNode<TSkill = Skill>(OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>);
@@ -38,7 +40,10 @@ impl<TSkill> Default for ComboNode<TSkill> {
 	}
 }
 
-impl<TKey: Iterate<SlotKey>> GetRef<TKey, Skill> for ComboNode {
+impl<TKey> GetRef<TKey, Skill> for ComboNode
+where
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+{
 	fn get(&self, slot_key_path: &TKey) -> Option<&Skill> {
 		let mut value = None;
 		let mut combo_map = &self.0;
@@ -53,7 +58,10 @@ impl<TKey: Iterate<SlotKey>> GetRef<TKey, Skill> for ComboNode {
 	}
 }
 
-impl<TKey: Iterate<SlotKey>> GetMut<TKey, Skill> for ComboNode {
+impl<TKey> GetMut<TKey, Skill> for ComboNode
+where
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+{
 	fn get_mut(&mut self, slot_key_path: &TKey) -> Option<&mut Skill> {
 		let mut value = None;
 		let mut combo_map = &mut self.0;
@@ -82,7 +90,7 @@ pub struct NodeEntry<'a, TSkill> {
 
 impl<TKey, TSkill> GetNodeMut<TKey> for ComboNode<TSkill>
 where
-	TKey: Iterate<SlotKey>,
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
 {
 	type TNode<'a>
 		= NodeEntryMut<'a, TSkill>
@@ -106,7 +114,7 @@ where
 
 impl<TKey, TSkill> GetNode<TKey> for ComboNode<TSkill>
 where
-	TKey: Iterate<SlotKey>,
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
 {
 	type TNode<'a>
 		= NodeEntry<'a, TSkill>
@@ -128,21 +136,16 @@ where
 	}
 }
 
-impl RootKeys for ComboNode {
-	type TItem = SlotKey;
-
-	fn root_keys(&self) -> impl Iterator<Item = Self::TItem> {
-		self.0.keys().cloned()
-	}
-}
-
 #[derive(Debug, PartialEq)]
 pub enum SlotKeyPathError {
 	IsEmpty,
 	IsInvalid,
 }
 
-impl<TKey: Iterate<SlotKey>> TryInsert<TKey, Skill> for ComboNode {
+impl<TKey> TryInsert<TKey, Skill> for ComboNode
+where
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+{
 	type Error = SlotKeyPathError;
 
 	fn try_insert(&mut self, slot_key_path: TKey, value: Skill) -> Result<(), Self::Error> {
@@ -198,13 +201,11 @@ impl GetCombosOrdered<Skill> for ComboNode {
 }
 
 impl FollowupKeys for ComboNode {
-	type TKey = SlotKey;
-
-	fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>
+	fn followup_keys<T>(&self, after: T) -> Option<Vec<SlotKey>>
 	where
-		T: Into<VecDeque<Self::TKey>>,
+		T: Into<VecDeque<SlotKey>>,
 	{
-		let mut after: VecDeque<Self::TKey> = after.into();
+		let mut after: VecDeque<SlotKey> = after.into();
 
 		let Some(key) = after.pop_front() else {
 			return Some(self.0.keys().copied().collect());
@@ -938,29 +939,6 @@ mod tests {
 			}),
 			entry,
 		)
-	}
-
-	#[test]
-	fn get_root_keys() {
-		let combos = ComboNode::new([(
-			SlotKey::BottomHand(Side::Right),
-			(Skill::default(), ComboNode::default()),
-		)]);
-
-		assert_eq!(
-			vec![SlotKey::BottomHand(Side::Right)],
-			combos.root_keys().collect::<Vec<_>>()
-		);
-	}
-
-	#[test]
-	fn get_root_keys_empty() {
-		let combos = ComboNode::new([]);
-
-		assert_eq!(
-			vec![] as Vec<SlotKey>,
-			combos.root_keys().collect::<Vec<_>>()
-		);
 	}
 
 	#[test]

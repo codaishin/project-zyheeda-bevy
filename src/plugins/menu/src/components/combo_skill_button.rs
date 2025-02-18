@@ -2,9 +2,9 @@ use super::combo_overview::ComboOverview;
 use crate::{traits::insert_ui_content::InsertUiContent, Tooltip};
 use bevy::prelude::*;
 use common::{
-	tools::slot_key::SlotKey,
+	tools::{skill_description::SkillDescription, skill_icon::SkillIcon, slot_key::SlotKey},
 	traits::{
-		handles_combo_menu::{InspectAble, InspectField, SkillDescription, SkillIcon},
+		inspect_able::{InspectAble, InspectField},
 		thread_safe::ThreadSafe,
 	},
 };

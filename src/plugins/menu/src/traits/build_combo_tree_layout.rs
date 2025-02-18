@@ -1,6 +1,6 @@
 use common::{
-	tools::slot_key::SlotKey,
-	traits::handles_combo_menu::{SkillDescription, GetCombosOrdered, SkillIcon, InspectAble},
+	tools::{skill_description::SkillDescription, skill_icon::SkillIcon, slot_key::SlotKey},
+	traits::{handles_combo_menu::GetCombosOrdered, inspect_able::InspectAble},
 };
 use std::collections::HashSet;
 
@@ -149,7 +149,7 @@ fn replace_symbols_at<TSkill>(
 mod tests {
 	use super::*;
 	use bevy::prelude::*;
-	use common::{tools::slot_key::Side, traits::handles_equipment::Combo};
+	use common::tools::slot_key::{Combo, Side};
 
 	#[derive(Debug, PartialEq, Default, Clone)]
 	struct _Skill(Option<Handle<Image>>);

@@ -1,5 +1,9 @@
-use super::{handles_equipment::Combo, thread_safe::ThreadSafe};
-use crate::tools::slot_key::SlotKey;
+use super::{inspect_able::InspectAble, thread_safe::ThreadSafe};
+use crate::tools::{
+	skill_description::SkillDescription,
+	skill_icon::SkillIcon,
+	slot_key::{Combo, SlotKey},
+};
 use bevy::prelude::*;
 use std::collections::HashSet;
 
@@ -38,43 +42,4 @@ pub trait NextKeys {
 
 pub trait GetCombosOrdered<TSkill> {
 	fn combos_ordered(&self) -> Vec<Combo<TSkill>>;
-}
-
-pub trait InspectAble<TField>
-where
-	TField: InspectMarker,
-{
-	fn get_inspect_able_field(&self) -> TField::TFieldRef<'_>;
-}
-
-pub trait InspectField<TSource>: InspectMarker {
-	fn inspect_field(source: &TSource) -> Self::TFieldRef<'_>;
-}
-
-pub trait InspectMarker {
-	type TFieldRef<'a>;
-}
-
-impl<TSource, T> InspectField<TSource> for T
-where
-	T: InspectMarker,
-	TSource: InspectAble<T>,
-{
-	fn inspect_field(source: &TSource) -> Self::TFieldRef<'_> {
-		source.get_inspect_able_field()
-	}
-}
-
-#[derive(Debug, PartialEq)]
-pub struct SkillDescription;
-
-impl InspectMarker for SkillDescription {
-	type TFieldRef<'a> = String;
-}
-
-#[derive(Debug, PartialEq)]
-pub struct SkillIcon;
-
-impl InspectMarker for SkillIcon {
-	type TFieldRef<'a> = &'a Option<Handle<Image>>;
 }

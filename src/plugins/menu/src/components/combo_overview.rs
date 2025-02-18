@@ -18,9 +18,9 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::slot_key::SlotKey,
+	tools::{skill_description::SkillDescription, skill_icon::SkillIcon, slot_key::SlotKey},
 	traits::{
-		handles_combo_menu::{SkillDescription, SkillIcon, InspectAble, InspectField},
+		inspect_able::{InspectAble, InspectField},
 		load_asset::{LoadAsset, Path},
 		thread_safe::ThreadSafe,
 	},

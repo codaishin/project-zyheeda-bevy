@@ -1,10 +1,10 @@
 use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
 use bevy::prelude::*;
 use common::{
-	tools::slot_key::SlotKey,
+	tools::{skill_icon::SkillIcon, slot_key::SlotKey},
 	traits::{
-		handles_combo_menu::{InspectAble, InspectField, SkillIcon},
-		handles_loadout_menus::GetItem,
+		handles_loadout_menu::GetItem,
+		inspect_able::{InspectAble, InspectField},
 		try_insert_on::TryInsertOn,
 	},
 };

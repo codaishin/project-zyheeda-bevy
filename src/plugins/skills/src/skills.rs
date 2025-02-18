@@ -14,16 +14,20 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::slot_key::SlotKey,
+	tools::{
+		item_type::CompatibleItems,
+		skill_description::SkillDescription,
+		skill_icon::SkillIcon,
+		slot_key::SlotKey,
+	},
 	traits::{
 		accessors::get::{Getter, GetterRef},
 		animation::Animation,
-		handles_combo_menu::{SkillDescription, SkillIcon, InspectAble},
 		handles_custom_assets::AssetFolderPath,
 		handles_effect::HandlesAllEffects,
-		handles_equipment::CompatibleItems,
 		handles_lifetime::HandlesLifetime,
 		handles_skill_behaviors::HandlesSkillBehaviors,
+		inspect_able::InspectAble,
 		load_asset::Path,
 	},
 };

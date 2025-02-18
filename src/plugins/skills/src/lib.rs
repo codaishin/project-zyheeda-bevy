@@ -15,8 +15,12 @@ use common::{
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	tools::{
-		item_type::ItemType,
-		slot_key::{Side, SlotKey},
+		inventory_key::InventoryKey,
+		item_description::ItemDescription,
+		item_type::{CompatibleItems, ItemType},
+		skill_execution::SkillExecution,
+		skill_icon::SkillIcon,
+		slot_key::{Combo, Side, SlotKey},
 	},
 	traits::{
 		handles_assets_for_children::HandlesAssetsForChildren,
@@ -25,30 +29,12 @@ use common::{
 			GetComboAbleSkills,
 			GetCombosOrdered,
 			HandlesComboMenu,
-			InspectAble,
 			NextKeys,
-			SkillIcon,
 		},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_effect::HandlesAllEffects,
-		handles_equipment::{
-			Combo,
-			CompatibleItems,
-			HandlesEquipment,
-			IsTimedOut,
-			ItemAssets,
-			IterateQueue,
-			PeekNext,
-			WriteItem,
-		},
 		handles_lifetime::HandlesLifetime,
-		handles_loadout_menus::{
-			ConfigureInventory,
-			GetItem,
-			HandlesLoadoutMenu,
-			ItemDescription,
-			SkillExecution,
-		},
+		handles_loadout_menu::{ConfigureInventory, GetItem, HandlesLoadoutMenu},
 		handles_orientation::HandlesOrientation,
 		handles_player::{
 			ConfiguresPlayerSkillAnimations,
@@ -57,6 +43,8 @@ use common::{
 			HandlesPlayerMouse,
 		},
 		handles_skill_behaviors::HandlesSkillBehaviors,
+		inspect_able::InspectAble,
+		iterate::Iterate,
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
 	},
@@ -94,6 +82,7 @@ use systems::{
 	},
 	update_skill_combos::update_skill_combos,
 };
+use traits::{is_timed_out::IsTimedOut, peek_next::PeekNext, write_item::WriteItem};
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -258,8 +247,8 @@ where
 	fn config_menus(&self, app: &mut App) {
 		TMenu::loadout_with_swapper::<Swapper>().configure(
 			app,
-			Self::get_descriptors::<Inventory>,
-			Self::get_descriptors::<Slots>,
+			Self::get_descriptors::<Inventory, InventoryKey>,
+			Self::get_descriptors::<Slots, SlotKey>,
 		);
 		TMenu::configure_quickbar_menu(app, Self::get_quickbar_descriptors);
 		TMenu::combos_with_skill::<Skill>().configure(
@@ -286,7 +275,7 @@ where
 		let mut compatible_map = HashMap::<ItemType, Vec<SlotKey>>::default();
 		let mut seen = vec![];
 
-		for (key, handle) in slots.item_assets() {
+		for (key, handle) in slots.iterate() {
 			let Some(handle) = handle else {
 				continue;
 			};
@@ -356,18 +345,18 @@ where
 		}
 	}
 
-	fn get_descriptors<TContainer>(
+	fn get_descriptors<TContainer, TKey>(
 		containers: Query<&TContainer, (With<TPlayers::TPlayer>, Changed<TContainer>)>,
 		items: Res<Assets<Item>>,
 		skills: Res<Assets<Skill>>,
-	) -> Option<Cache<TContainer::TKey, InventoryItem>>
+	) -> Option<Cache<TKey, InventoryItem>>
 	where
-		TContainer: ItemAssets<TItem = Item> + Component,
-		TContainer::TKey: Eq + Hash + Copy,
+		for<'a> TContainer: Iterate<TItem<'a> = (TKey, &'a Option<Handle<Item>>)> + Component,
+		TKey: Eq + Hash + Copy,
 	{
 		let container = containers.get_single().ok()?;
 		let map = container
-			.item_assets()
+			.iterate()
 			.filter_map(|(key, handle)| {
 				let handle = handle.as_ref()?;
 				let item = items.get(handle)?;
@@ -413,7 +402,7 @@ where
 			.unwrap_or(true);
 
 		let map = slots
-			.item_assets()
+			.iterate()
 			.filter_map(|(key, handle)| {
 				let handle = handle.as_ref()?;
 				let item = items.get(handle)?;
@@ -495,18 +484,6 @@ where
 		self.skill_execution(app);
 		self.config_menus(app);
 	}
-}
-
-impl<T> HandlesEquipment for SkillsPlugin<T> {
-	type TItem = Item;
-	type TInventory = Inventory;
-	type TSlots = Slots;
-	type TCombos = Combos;
-	type TSkill = Skill;
-	type TQueue = Queue;
-	type TQueuedSkill = QueuedSkill;
-	type TCombosTimeOut = CombosTimeOut;
-	type TSwap = Swapper;
 }
 
 // FIXME: NEEDS CLEANUP

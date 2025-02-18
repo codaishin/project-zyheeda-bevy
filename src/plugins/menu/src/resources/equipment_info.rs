@@ -1,10 +1,9 @@
 use bevy::prelude::*;
 use common::{
-	tools::slot_key::SlotKey,
+	tools::slot_key::{Combo, SlotKey},
 	traits::{
 		handles_combo_menu::{GetComboAbleSkills, GetCombosOrdered, NextKeys},
-		handles_equipment::Combo,
-		handles_loadout_menus::GetItem,
+		handles_loadout_menu::GetItem,
 		thread_safe::ThreadSafe,
 	},
 };

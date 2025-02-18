@@ -5,11 +5,11 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	states::mouse_context::MouseContext,
-	tools::slot_key::SlotKey,
+	tools::{skill_execution::SkillExecution, slot_key::SlotKey},
 	traits::{
 		accessors::get::{GetFieldRef, GetterRef},
-		handles_combo_menu::{InspectAble, InspectField},
-		handles_loadout_menus::{GetItem, SkillExecution},
+		handles_loadout_menu::GetItem,
+		inspect_able::{InspectAble, InspectField},
 		map_value::TryMapBackwards,
 	},
 };
