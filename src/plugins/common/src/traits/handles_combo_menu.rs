@@ -1,5 +1,6 @@
 use super::{inspect_able::InspectAble, thread_safe::ThreadSafe};
 use crate::tools::{
+	change::Change,
 	skill_description::SkillDescription,
 	skill_icon::SkillIcon,
 	slot_key::{Combo, SlotKey},
@@ -19,14 +20,14 @@ where
 	for<'a> TSkill:
 		InspectAble<SkillDescription> + InspectAble<SkillIcon> + PartialEq + Clone + ThreadSafe,
 {
-	fn configure<TUpdateCombos, TEquipment, M1, M2>(
+	fn configure<TUpdateCombos, TCombos, M1, M2>(
 		&self,
 		app: &mut App,
-		get_equipment_info: impl IntoSystem<(), Option<TEquipment>, M1>,
+		get_changed_combos: impl IntoSystem<(), Change<TCombos>, M1>,
 		update_combos: TUpdateCombos,
 	) where
 		TUpdateCombos: IntoSystem<In<Combo<Option<TSkill>>>, (), M2> + Copy,
-		TEquipment: GetCombosOrdered<TSkill> + GetComboAbleSkills<TSkill> + NextKeys + ThreadSafe;
+		TCombos: GetCombosOrdered<TSkill> + GetComboAbleSkills<TSkill> + NextKeys + ThreadSafe;
 }
 
 pub trait GetComboAbleSkills<TSkill>

@@ -7,6 +7,7 @@ pub mod traits;
 
 mod behaviors;
 mod bundles;
+mod tools;
 
 use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
@@ -15,22 +16,16 @@ use common::{
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	tools::{
+		change::Change,
 		inventory_key::InventoryKey,
 		item_description::ItemDescription,
-		item_type::{CompatibleItems, ItemType},
 		skill_execution::SkillExecution,
 		skill_icon::SkillIcon,
 		slot_key::{Combo, Side, SlotKey},
 	},
 	traits::{
 		handles_assets_for_children::HandlesAssetsForChildren,
-		handles_combo_menu::{
-			ConfigureCombos,
-			GetComboAbleSkills,
-			GetCombosOrdered,
-			HandlesComboMenu,
-			NextKeys,
-		},
+		handles_combo_menu::{ConfigureCombos, HandlesComboMenu},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_effect::HandlesAllEffects,
 		handles_lifetime::HandlesLifetime,
@@ -62,12 +57,7 @@ use components::{
 use item::{dto::ItemDto, Item};
 use macros::item_asset;
 use skills::{dto::SkillDto, QueuedSkill, RunSkillBehavior, Skill};
-use std::{
-	collections::{hash_map::Entry, HashMap, HashSet},
-	hash::Hash,
-	marker::PhantomData,
-	time::Duration,
-};
+use std::{collections::HashMap, hash::Hash, marker::PhantomData, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,
 	enqueue::enqueue,
@@ -82,6 +72,7 @@ use systems::{
 	},
 	update_skill_combos::update_skill_combos,
 };
+use tools::combo_descriptor::ComboDescriptor;
 use traits::{is_timed_out::IsTimedOut, peek_next::PeekNext, write_item::WriteItem};
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
@@ -253,84 +244,12 @@ where
 		TMenu::configure_quickbar_menu(app, Self::get_quickbar_descriptors);
 		TMenu::combos_with_skill::<Skill>().configure(
 			app,
-			Self::get_equipment_info,
+			ComboDescriptor::get_updated::<TPlayers::TPlayer>,
 			Self::update_combos,
 		);
 	}
 
 	// FIXME: NEEDS CLEANING UP
-	#[allow(clippy::type_complexity)]
-	fn get_equipment_info(
-		slots: Query<(Ref<Slots>, Ref<Combos>), With<TPlayers::TPlayer>>,
-		items: Res<Assets<Item>>,
-		skills: Res<Assets<Skill>>,
-	) -> Option<EquipmentDescriptor> {
-		let (slots, combos) = slots.get_single().ok()?;
-
-		if !slots.is_changed() && !combos.is_changed() {
-			return None;
-		}
-
-		let mut compatible_skills = HashMap::<SlotKey, Vec<Skill>>::default();
-		let mut compatible_map = HashMap::<ItemType, Vec<SlotKey>>::default();
-		let mut seen = vec![];
-
-		for (key, handle) in slots.iterate() {
-			let Some(handle) = handle else {
-				continue;
-			};
-			let Some(item) = items.get(handle) else {
-				continue;
-			};
-			match compatible_map.entry(item.item_type) {
-				Entry::Occupied(mut occupied_entry) => {
-					occupied_entry.get_mut().push(key);
-				}
-				Entry::Vacant(vacant_entry) => {
-					vacant_entry.insert(vec![key]);
-				}
-			};
-		}
-
-		for (id, skill) in skills.iter() {
-			if seen.contains(&id) {
-				continue;
-			}
-			seen.push(id);
-			let CompatibleItems(item_types) = &skill.compatible_items;
-			let keys = item_types
-				.iter()
-				.flat_map(|item_type| compatible_map.get(item_type).cloned().unwrap_or_default())
-				.collect::<HashSet<_>>();
-
-			for key in keys {
-				match compatible_skills.entry(key) {
-					Entry::Occupied(mut occupied_entry) => {
-						if occupied_entry.get().contains(skill) {
-							continue;
-						}
-						occupied_entry.get_mut().push(skill.clone());
-					}
-					Entry::Vacant(vacant_entry) => {
-						vacant_entry.insert(vec![skill.clone()]);
-					}
-				}
-			}
-		}
-		let combo_keys = combos
-			.combos_ordered()
-			.iter()
-			.flat_map(|combo| combo.iter())
-			.map(|(combo_keys, ..)| combo_keys.clone())
-			.collect();
-		let combos = combos.combos_ordered();
-
-		Some(EquipmentDescriptor {
-			compatible_skills,
-			combo_keys,
-			combos,
-		})
-	}
 
 	fn update_combos(
 		In(updated_combos): In<Combo<Option<Skill>>>,
@@ -349,12 +268,15 @@ where
 		containers: Query<&TContainer, (With<TPlayers::TPlayer>, Changed<TContainer>)>,
 		items: Res<Assets<Item>>,
 		skills: Res<Assets<Skill>>,
-	) -> Option<Cache<TKey, InventoryItem>>
+	) -> Change<Cache<TKey, InventoryItem>>
 	where
 		for<'a> TContainer: Iterate<TItem<'a> = (TKey, &'a Option<Handle<Item>>)> + Component,
 		TKey: Eq + Hash + Copy,
 	{
-		let container = containers.get_single().ok()?;
+		let Ok(container) = containers.get_single() else {
+			return Change::None;
+		};
+
 		let map = container
 			.iterate()
 			.filter_map(|(key, handle)| {
@@ -376,7 +298,7 @@ where
 			})
 			.collect();
 
-		Some(Cache(map))
+		Change::Some(Cache(map))
 	}
 
 	#[allow(clippy::type_complexity)]
@@ -387,11 +309,13 @@ where
 		>,
 		items: Res<Assets<Item>>,
 		skills: Res<Assets<Skill>>,
-	) -> Option<Cache<SlotKey, QuickbarItem>> {
-		let (slots, queue, combos, combos_time_out) = queues.get_single().ok()?;
+	) -> Change<Cache<SlotKey, QuickbarItem>> {
+		let Ok((slots, queue, combos, combos_time_out)) = queues.get_single() else {
+			return Change::None;
+		};
 
 		if !Self::any_true(&[slots.is_changed(), queue.is_changed(), combos.is_changed()]) {
-			return None;
+			return Change::None;
 		}
 
 		let mut queue = queue.iterate();
@@ -438,7 +362,7 @@ where
 			})
 			.collect();
 
-		Some(Cache(map))
+		Change::Some(Cache(map))
 	}
 
 	fn any_true(values: &[bool]) -> bool {
@@ -541,35 +465,5 @@ impl InspectAble<ItemDescription> for InventoryItem {
 impl InspectAble<SkillIcon> for InventoryItem {
 	fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
 		&self.skill_icon
-	}
-}
-
-#[derive(Debug, PartialEq)]
-pub struct EquipmentDescriptor {
-	pub compatible_skills: HashMap<SlotKey, Vec<Skill>>,
-	pub combo_keys: HashSet<Vec<SlotKey>>,
-	pub combos: Vec<Combo<Skill>>,
-}
-
-impl GetComboAbleSkills<Skill> for EquipmentDescriptor {
-	fn get_combo_able_skills(&self, key: &SlotKey) -> Vec<Skill> {
-		self.compatible_skills.get(key).cloned().unwrap_or_default()
-	}
-}
-
-impl NextKeys for EquipmentDescriptor {
-	fn next_keys(&self, combo_keys: &[SlotKey]) -> HashSet<SlotKey> {
-		self.combo_keys
-			.iter()
-			.filter(|combo| combo.starts_with(combo_keys))
-			.filter_map(|combo| combo.get(combo_keys.len()))
-			.cloned()
-			.collect()
-	}
-}
-
-impl GetCombosOrdered<Skill> for EquipmentDescriptor {
-	fn combos_ordered(&self) -> Vec<Combo<Skill>> {
-		self.combos.clone()
 	}
 }

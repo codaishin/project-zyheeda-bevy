@@ -1,5 +1,6 @@
 pub mod aggro_range;
 pub mod attack_range;
+pub mod change;
 pub mod collider_info;
 pub mod inventory_key;
 pub mod item_description;

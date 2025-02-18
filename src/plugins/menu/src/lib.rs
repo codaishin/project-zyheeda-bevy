@@ -20,6 +20,7 @@ use common::{
 	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
 	states::{game_state::GameState, menu_state::MenuState},
 	tools::{
+		change::Change,
 		inventory_key::InventoryKey,
 		item_description::ItemDescription,
 		skill_description::SkillDescription,
@@ -312,7 +313,7 @@ impl<TDependencies> HandlesLoadoutMenu for MenuPlugin<TDependencies> {
 
 	fn configure_quickbar_menu<TContainer, TSystemMarker>(
 		app: &mut App,
-		get_quickbar_cache: impl IntoSystem<(), Option<TContainer>, TSystemMarker>,
+		get_changed_quickbar: impl IntoSystem<(), Change<TContainer>, TSystemMarker>,
 	) where
 		TContainer: GetItem<SlotKey> + ThreadSafe,
 		TContainer::TItem:
@@ -323,7 +324,7 @@ impl<TDependencies> HandlesLoadoutMenu for MenuPlugin<TDependencies> {
 		app.add_systems(
 			Update,
 			(
-				get_quickbar_cache.pipe(EquipmentInfo::update),
+				get_changed_quickbar.pipe(EquipmentInfo::update),
 				set_quickbar_icons::<EquipmentInfo<TContainer>>,
 				panel_activity_colors_override::<
 					SlotKeyMap,
@@ -343,11 +344,11 @@ impl<TSwap> ConfigureInventory<TSwap> for InventoryConfiguration
 where
 	TSwap: Component + SwapValuesByKey,
 {
-	fn configure<TInventory, TSlots, M1, M2>(
+	fn configure<TInventory, TSlots, TSystemMarker1, TSystemMarker2>(
 		&self,
 		app: &mut App,
-		get_inventor_descriptors: impl IntoSystem<(), Option<TInventory>, M1>,
-		get_slot_descriptors: impl IntoSystem<(), Option<TSlots>, M2>,
+		get_changed_inventory: impl IntoSystem<(), Change<TInventory>, TSystemMarker1>,
+		get_changed_slots: impl IntoSystem<(), Change<TSlots>, TSystemMarker2>,
 	) where
 		TInventory: GetItem<InventoryKey> + ThreadSafe,
 		TInventory::TItem: InspectAble<ItemDescription>,
@@ -359,8 +360,8 @@ where
 		app.add_systems(
 			Update,
 			(
-				get_inventor_descriptors.pipe(EquipmentInfo::update),
-				get_slot_descriptors.pipe(EquipmentInfo::update),
+				get_changed_inventory.pipe(EquipmentInfo::update),
+				get_changed_slots.pipe(EquipmentInfo::update),
 				InventoryPanel::set_container_panels::<InventoryKey, EquipmentInfo<TInventory>>,
 				InventoryPanel::set_container_panels::<SlotKey, EquipmentInfo<TSlots>>,
 				panel_colors::<InventoryPanel>,
@@ -400,7 +401,7 @@ where
 	fn configure<TUpdateCombos, TEquipment, M1, M2>(
 		&self,
 		app: &mut App,
-		get_equipment_info: impl IntoSystem<(), Option<TEquipment>, M1>,
+		get_changed_combos: impl IntoSystem<(), Change<TEquipment>, M1>,
 		update_combos: TUpdateCombos,
 	) where
 		TUpdateCombos: IntoSystem<In<Combo<Option<TSkill>>>, (), M2> + Copy,
@@ -416,7 +417,7 @@ where
 		.add_systems(
 			Update,
 			(
-				get_equipment_info.pipe(EquipmentInfo::update),
+				get_changed_combos.pipe(EquipmentInfo::update),
 				select_successor_key::<EquipmentInfo<TEquipment>>,
 				Vertical::dropdown_skill_select_insert::<TSkill, EquipmentInfo<TEquipment>>,
 				Horizontal::dropdown_skill_select_insert::<TSkill, EquipmentInfo<TEquipment>>,

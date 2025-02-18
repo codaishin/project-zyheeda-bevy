@@ -1,5 +1,6 @@
 use super::{inspect_able::InspectAble, thread_safe::ThreadSafe};
 use crate::tools::{
+	change::Change,
 	inventory_key::InventoryKey,
 	item_description::ItemDescription,
 	skill_execution::SkillExecution,
@@ -14,12 +15,12 @@ pub trait HandlesLoadoutMenu {
 	where
 		TSwap: Component + SwapValuesByKey;
 
-	fn configure_quickbar_menu<TContainer, TSystemMarker>(
+	fn configure_quickbar_menu<TQuickbar, TSystemMarker>(
 		app: &mut App,
-		get_quickbar_cache: impl IntoSystem<(), Option<TContainer>, TSystemMarker>,
+		get_changed_quickbar: impl IntoSystem<(), Change<TQuickbar>, TSystemMarker>,
 	) where
-		TContainer: GetItem<SlotKey> + ThreadSafe,
-		TContainer::TItem:
+		TQuickbar: GetItem<SlotKey> + ThreadSafe,
+		TQuickbar::TItem:
 			InspectAble<ItemDescription> + InspectAble<SkillIcon> + InspectAble<SkillExecution>;
 }
 
@@ -27,8 +28,8 @@ pub trait ConfigureInventory<TSwap> {
 	fn configure<TInventory, TSlots, TSystemMarker1, TSystemMarker2>(
 		&self,
 		app: &mut App,
-		get_inventor_descriptors: impl IntoSystem<(), Option<TInventory>, TSystemMarker1>,
-		get_slot_descriptors: impl IntoSystem<(), Option<TSlots>, TSystemMarker2>,
+		get_changed_inventory: impl IntoSystem<(), Change<TInventory>, TSystemMarker1>,
+		get_changed_slots: impl IntoSystem<(), Change<TSlots>, TSystemMarker2>,
 	) where
 		TInventory: GetItem<InventoryKey> + ThreadSafe,
 		TInventory::TItem: InspectAble<ItemDescription>,

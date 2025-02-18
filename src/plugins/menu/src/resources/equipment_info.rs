@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 use common::{
-	tools::slot_key::{Combo, SlotKey},
+	tools::{
+		change::Change,
+		slot_key::{Combo, SlotKey},
+	},
 	traits::{
 		handles_combo_menu::{GetComboAbleSkills, GetCombosOrdered, NextKeys},
 		handles_loadout_menu::GetItem,
@@ -16,8 +19,8 @@ impl<T> EquipmentInfo<T>
 where
 	T: ThreadSafe,
 {
-	pub(crate) fn update(In(values): In<Option<T>>, mut commands: Commands) {
-		let Some(values) = values else {
+	pub(crate) fn update(In(values): In<Change<T>>, mut commands: Commands) {
+		let Change::Some(values) = values else {
 			return;
 		};
 
@@ -82,7 +85,7 @@ mod tests {
 		let mut app = setup();
 
 		app.world_mut()
-			.run_system_once_with(Some(_Compatible), EquipmentInfo::update)?;
+			.run_system_once_with(Change::Some(_Compatible), EquipmentInfo::update)?;
 
 		assert_eq!(
 			Some(&EquipmentInfo(_Compatible)),
