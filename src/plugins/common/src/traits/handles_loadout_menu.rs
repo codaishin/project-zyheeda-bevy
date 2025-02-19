@@ -3,6 +3,7 @@ use crate::tools::{
 	change::Change,
 	inventory_key::InventoryKey,
 	item_description::ItemDescription,
+	skill_description::SkillDescription,
 	skill_execution::SkillExecution,
 	skill_icon::SkillIcon,
 	slot_key::SlotKey,
@@ -21,7 +22,7 @@ pub trait HandlesLoadoutMenu {
 	) where
 		TQuickbar: GetItem<SlotKey> + ThreadSafe,
 		TQuickbar::TItem:
-			InspectAble<ItemDescription> + InspectAble<SkillIcon> + InspectAble<SkillExecution>;
+			InspectAble<SkillDescription> + InspectAble<SkillIcon> + InspectAble<SkillExecution>;
 }
 
 pub trait ConfigureInventory<TSwap> {

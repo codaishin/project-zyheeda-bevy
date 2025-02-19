@@ -173,15 +173,21 @@ where
 }
 
 impl PeekNextRecursive for ComboNode {
-	type TNext = Skill;
+	type TNext<'a>
+		= &'a Skill
+	where
+		Self: 'a;
 
-	type TRecursiveNode = Self;
+	type TRecursiveNode<'a>
+		= &'a Self
+	where
+		Self: 'a;
 
-	fn peek_next_recursive(
-		&self,
+	fn peek_next_recursive<'a>(
+		&'a self,
 		trigger: &SlotKey,
 		item_type: &ItemType,
-	) -> Option<(Self::TNext, Self::TRecursiveNode)> {
+	) -> Option<(Self::TNext<'a>, Self::TRecursiveNode<'a>)> {
 		let ComboNode(tree) = self;
 		let (skill, combo) = tree.get(trigger)?;
 		let CompatibleItems(is_usable_with) = &skill.compatible_items;
@@ -190,7 +196,7 @@ impl PeekNextRecursive for ComboNode {
 			return None;
 		}
 
-		Some((skill.clone(), combo.clone()))
+		Some((skill, combo))
 	}
 }
 
@@ -293,12 +299,12 @@ mod tests {
 
 		assert_eq!(
 			Some((
-				Skill {
+				&Skill {
 					name: "first".to_owned(),
 					compatible_items: CompatibleItems(HashSet::from([ItemType::Pistol])),
 					..default()
 				},
-				ComboNode(OrderedHashMap::from([(
+				&ComboNode(OrderedHashMap::from([(
 					SlotKey::BottomHand(Side::Right),
 					(
 						Skill {
@@ -338,7 +344,7 @@ mod tests {
 
 		let next = node.peek_next_recursive(&SlotKey::BottomHand(Side::Right), &ItemType::Pistol);
 
-		assert_eq!(None as Option<(Skill, ComboNode)>, next)
+		assert_eq!(None as Option<(&Skill, &ComboNode)>, next)
 	}
 
 	#[test]

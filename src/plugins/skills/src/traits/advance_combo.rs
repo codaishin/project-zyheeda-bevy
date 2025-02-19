@@ -4,16 +4,19 @@ use common::tools::{item_type::ItemType, slot_key::SlotKey};
 
 impl<T> AdvanceCombo for T
 where
-	T: PeekNextRecursive<TNext = Skill, TRecursiveNode = ComboNode>
-		+ SetNextCombo<Option<ComboNode>>,
+	for<'a> T: PeekNextRecursive<TNext<'a> = &'a Skill, TRecursiveNode<'a> = &'a ComboNode>
+		+ SetNextCombo<Option<ComboNode>>
+		+ 'a,
 {
 	fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill> {
 		let Some((skill, next_combo)) = self.peek_next_recursive(trigger, item_type) else {
 			self.set_next_combo(None);
 			return None;
 		};
+		let next = next_combo.clone();
+		let skill = skill.clone();
 
-		self.set_next_combo(Some(next_combo));
+		self.set_next_combo(Some(next));
 		Some(skill)
 	}
 }
@@ -22,19 +25,52 @@ where
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::{simple_init, tools::slot_key::Side, traits::mock::Mock};
-	use mockall::{mock, predicate::eq};
+	use common::{simple_init, tools::slot_key::Side};
+	use mockall::{automock, predicate::eq};
+	use std::collections::HashMap;
 
-	mock! {
-		_Combos {}
-		impl PeekNextRecursive for _Combos {
-			type TNext = Skill;
-			type TRecursiveNode = ComboNode;
+	struct _Combos {
+		lookup: HashMap<(SlotKey, ItemType), Skill>,
+		mock: Mock_Combos,
+		node: ComboNode,
+	}
 
-			fn peek_next_recursive(&self, trigger: &SlotKey, item_type: &ItemType) -> Option<(Skill, ComboNode)>;
+	impl _Combos {
+		fn new<const N: usize>(
+			node: ComboNode,
+			lookup: [((SlotKey, ItemType), Skill); N],
+			setup_mock: impl Fn(&mut Mock_Combos),
+		) -> Self {
+			let mut mock = Mock_Combos::default();
+			setup_mock(&mut mock);
+
+			Self {
+				lookup: HashMap::from(lookup),
+				mock,
+				node,
+			}
 		}
-		impl SetNextCombo<Option<ComboNode>> for _Combos {
-			fn set_next_combo(&mut self, value: Option<ComboNode>);
+	}
+
+	impl PeekNextRecursive for _Combos {
+		type TNext<'a> = &'a Skill;
+		type TRecursiveNode<'a> = &'a ComboNode;
+
+		fn peek_next_recursive<'a>(
+			&'a self,
+			trigger: &SlotKey,
+			item_type: &ItemType,
+		) -> Option<(&'a Skill, &'a ComboNode)> {
+			let skill = self.lookup.get(&(*trigger, *item_type))?;
+
+			Some((skill, &self.node))
+		}
+	}
+
+	#[automock]
+	impl SetNextCombo<Option<ComboNode>> for _Combos {
+		fn set_next_combo(&mut self, value: Option<ComboNode>) {
+			self.mock.set_next_combo(value);
 		}
 	}
 
@@ -55,31 +91,38 @@ mod tests {
 
 	#[test]
 	fn call_set_next_combo_with_next_when_peek_was_some() {
-		let mut combos = Mock_Combos::new_mock(|mock| {
-			mock.expect_peek_next_recursive()
-				.with(eq(SlotKey::BottomHand(Side::Right)), eq(ItemType::Pistol))
-				.return_const((Skill::default(), node()));
-			mock.expect_set_next_combo()
-				.times(1)
-				.with(eq(Some(node())))
-				.return_const(());
-		});
+		let mut combos = _Combos::new(
+			node(),
+			[(
+				(SlotKey::BottomHand(Side::Right), ItemType::Pistol),
+				Skill::default(),
+			)],
+			|mock| {
+				mock.expect_set_next_combo()
+					.times(1)
+					.with(eq(Some(node())))
+					.return_const(());
+			},
+		);
 
 		combos.advance_combo(&SlotKey::BottomHand(Side::Right), &ItemType::Pistol);
 	}
 
 	#[test]
 	fn return_skill_when_peek_next_was_some() {
-		let mut combos = Mock_Combos::new_mock(|mock| {
-			mock.expect_peek_next_recursive().return_const((
+		let mut combos = _Combos::new(
+			node(),
+			[(
+				(SlotKey::default(), ItemType::default()),
 				Skill {
 					name: "return this".to_owned(),
 					..default()
 				},
-				node(),
-			));
-			mock.expect_set_next_combo().return_const(());
-		});
+			)],
+			|mock| {
+				mock.expect_set_next_combo().return_const(());
+			},
+		);
 
 		let skill = combos.advance_combo(&SlotKey::default(), &ItemType::default());
 
@@ -94,8 +137,7 @@ mod tests {
 
 	#[test]
 	fn call_set_next_combo_with_none_when_peek_was_none() {
-		let mut combos = Mock_Combos::new_mock(|mock| {
-			mock.expect_peek_next_recursive().return_const(None);
+		let mut combos = _Combos::new(node(), [], |mock| {
 			mock.expect_set_next_combo()
 				.times(1)
 				.with(eq(None))
@@ -107,29 +149,12 @@ mod tests {
 
 	#[test]
 	fn return_none_when_peek_next_was_none() {
-		let mut combos = Mock_Combos::new_mock(|mock| {
-			mock.expect_peek_next_recursive().return_const(None);
+		let mut combos = _Combos::new(node(), [], |mock| {
 			mock.expect_set_next_combo().return_const(());
 		});
 
 		let skill = combos.advance_combo(&SlotKey::default(), &ItemType::default());
 
 		assert_eq!(None, skill);
-	}
-
-	#[test]
-	fn call_peek_next_with_correct_args() {
-		let mut combos = Mock_Combos::new_mock(|mock| {
-			mock.expect_peek_next_recursive()
-				.times(1)
-				.with(
-					eq(SlotKey::BottomHand(Side::Left)),
-					eq(ItemType::ForceEssence),
-				)
-				.return_const(None);
-			mock.expect_set_next_combo().return_const(());
-		});
-
-		combos.advance_combo(&SlotKey::BottomHand(Side::Left), &ItemType::ForceEssence);
 	}
 }

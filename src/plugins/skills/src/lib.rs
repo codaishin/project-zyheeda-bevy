@@ -15,11 +15,7 @@ use common::{
 	resources::key_map::KeyMap,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
-	tools::{
-		change::Change,
-		skill_execution::SkillExecution,
-		slot_key::{Side, SlotKey},
-	},
+	tools::slot_key::{Side, SlotKey},
 	traits::{
 		handles_assets_for_children::HandlesAssetsForChildren,
 		handles_combo_menu::{ConfigureCombos, HandlesComboMenu},
@@ -35,7 +31,6 @@ use common::{
 			HandlesPlayerMouse,
 		},
 		handles_skill_behaviors::HandlesSkillBehaviors,
-		iterate::Iterate,
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
 	},
@@ -69,9 +64,9 @@ use systems::{
 		release::release_triggered_mouse_context,
 		trigger_primed::trigger_primed_mouse_context,
 	},
+	quickbar_descriptor::get_quickbar_descriptors_for,
 };
-use tools::{cache::Cache, combo_descriptor::ComboDescriptor, quickbar_item::QuickbarItem};
-use traits::{is_timed_out::IsTimedOut, peek_next::PeekNext};
+use tools::combo_descriptor::ComboDescriptor;
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -239,82 +234,15 @@ where
 			Inventory::describe_loadout_for::<TPlayers::TPlayer>,
 			Slots::describe_loadout_for::<TPlayers::TPlayer>,
 		);
-		TMenu::configure_quickbar_menu(app, Self::get_quickbar_descriptors);
+		TMenu::configure_quickbar_menu(
+			app,
+			get_quickbar_descriptors_for::<TPlayers::TPlayer, Slots, Queue, Combos>,
+		);
 		TMenu::combos_with_skill::<Skill>().configure(
 			app,
 			ComboDescriptor::describe_combos_for::<TPlayers::TPlayer>,
 			Combos::<ComboNode>::update_for::<TPlayers::TPlayer>,
 		);
-	}
-
-	// FIXME: NEEDS CLEANING UP
-
-	#[allow(clippy::type_complexity)]
-	fn get_quickbar_descriptors(
-		queues: Query<
-			(Ref<Slots>, Ref<Queue>, Ref<Combos>, Option<&CombosTimeOut>),
-			With<TPlayers::TPlayer>,
-		>,
-		items: Res<Assets<Item>>,
-		skills: Res<Assets<Skill>>,
-	) -> Change<Cache<SlotKey, QuickbarItem>> {
-		let Ok((slots, queue, combos, combos_time_out)) = queues.get_single() else {
-			return Change::None;
-		};
-
-		if !Self::any_true(&[slots.is_changed(), queue.is_changed(), combos.is_changed()]) {
-			return Change::None;
-		}
-
-		let mut queue = queue.iterate();
-		let active = queue.next();
-		let queued_keys = queue.map(|skill| skill.slot_key).collect::<Vec<_>>();
-		let combo_active = combos_time_out
-			.map(|time_out| !time_out.is_timed_out())
-			.unwrap_or(true);
-
-		let map = slots
-			.iterate()
-			.filter_map(|(key, handle)| {
-				let handle = handle.as_ref()?;
-				let item = items.get(handle)?;
-				let skill = skills.get(item.skill.as_ref()?)?;
-				let active = active.and_then(|skill| {
-					if skill.slot_key != key {
-						return None;
-					}
-
-					Some((skill.skill.icon.clone(), skill.skill.name.clone()))
-				});
-
-				let execution = match active {
-					Some(_) => SkillExecution::Active,
-					None if queued_keys.contains(&key) => SkillExecution::Queued,
-					_ => SkillExecution::None,
-				};
-
-				let (icon, name) = match (active, combos.peek_next(&key, &item.item_type)) {
-					(Some((active_icon, active_name)), _) => (active_icon, active_name),
-					(_, Some(next)) if combo_active => (next.icon.clone(), next.name.clone()),
-					_ => (skill.icon.clone(), skill.name.clone()),
-				};
-
-				Some((
-					key,
-					QuickbarItem {
-						name,
-						icon,
-						execution,
-					},
-				))
-			})
-			.collect();
-
-		Change::Some(Cache(map))
-	}
-
-	fn any_true(values: &[bool]) -> bool {
-		values.contains(&true)
 	}
 }
 

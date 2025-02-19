@@ -1,28 +1,29 @@
 use bevy::prelude::*;
 use common::{
 	tools::{
-		item_description::ItemDescription,
+		skill_description::SkillDescription,
 		skill_execution::SkillExecution,
 		skill_icon::SkillIcon,
 	},
 	traits::inspect_able::InspectAble,
 };
 
+#[derive(Debug, PartialEq, Default)]
 pub struct QuickbarItem {
-	pub name: String,
-	pub icon: Option<Handle<Image>>,
+	pub skill_name: String,
+	pub skill_icon: Option<Handle<Image>>,
 	pub execution: SkillExecution,
 }
 
-impl InspectAble<ItemDescription> for QuickbarItem {
+impl InspectAble<SkillDescription> for QuickbarItem {
 	fn get_inspect_able_field(&self) -> String {
-		self.name.clone()
+		self.skill_name.clone()
 	}
 }
 
 impl InspectAble<SkillIcon> for QuickbarItem {
 	fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
-		&self.icon
+		&self.skill_icon
 	}
 }
 

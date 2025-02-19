@@ -317,7 +317,7 @@ impl<TDependencies> HandlesLoadoutMenu for MenuPlugin<TDependencies> {
 	) where
 		TContainer: GetItem<SlotKey> + ThreadSafe,
 		TContainer::TItem:
-			InspectAble<ItemDescription> + InspectAble<SkillIcon> + InspectAble<SkillExecution>,
+			InspectAble<SkillDescription> + InspectAble<SkillIcon> + InspectAble<SkillExecution>,
 	{
 		let play = GameState::Play;
 
