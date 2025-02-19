@@ -39,10 +39,9 @@ where
 
 	let combos = combos.as_ref();
 	let mut queue = queue.iterate();
-	let active = queue.next().map(|q| (q.slot_key, &q.skill));
-	let queued = queue
-		.map(|q| (q.slot_key, &q.skill))
-		.collect::<HashMap<_, _>>();
+	let active = queue.next().map(get_key_and_skill);
+	let queued = queue.map(get_key_and_skill);
+	let queued = collect_without_duplicates(queued);
 
 	let map = slots
 		.iterate()
@@ -63,6 +62,25 @@ where
 		.collect();
 
 	Change::Some(Cache(map))
+}
+
+fn get_key_and_skill(skill: &QueuedSkill) -> (SlotKey, &'_ Skill) {
+	(skill.slot_key, &skill.skill)
+}
+
+fn collect_without_duplicates<'a>(
+	items: impl Iterator<Item = (SlotKey, &'a Skill)>,
+) -> HashMap<SlotKey, &'a Skill> {
+	let mut map = HashMap::default();
+
+	for (key, item) in items {
+		if map.contains_key(&key) {
+			continue;
+		}
+		map.insert(key, item);
+	}
+
+	map
 }
 
 fn select_skill<'a>(
@@ -327,6 +345,59 @@ mod tests {
 					skill_name: "my queued skill".to_owned(),
 					skill_icon: icon,
 					execution: SkillExecution::Queued,
+				}
+			)]))))),
+			app.world().get_resource::<_Result>()
+		);
+	}
+
+	#[test]
+	fn return_first_queued() {
+		let mut app = setup();
+		let slots = _Slots::new(
+			&mut app,
+			SlotKey::TopHand(Side::Left),
+			ItemType::Bracer,
+			"my skill",
+			None,
+		);
+		app.world_mut().spawn((
+			_Agent,
+			slots,
+			_Queue(vec![
+				QueuedSkill {
+					slot_key: SlotKey::TopHand(Side::Right),
+					..default()
+				},
+				QueuedSkill {
+					slot_key: SlotKey::TopHand(Side::Left),
+					skill: Skill {
+						name: "my queued skill".to_owned(),
+						..default()
+					},
+					..default()
+				},
+				QueuedSkill {
+					slot_key: SlotKey::TopHand(Side::Left),
+					skill: Skill {
+						name: "my other queued skill".to_owned(),
+						..default()
+					},
+					..default()
+				},
+			]),
+			_NextComboSkills::default(),
+		));
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Result(Change::Some(Cache(HashMap::from([(
+				SlotKey::TopHand(Side::Left),
+				QuickbarItem {
+					skill_name: "my queued skill".to_owned(),
+					execution: SkillExecution::Queued,
+					..default()
 				}
 			)]))))),
 			app.world().get_resource::<_Result>()
