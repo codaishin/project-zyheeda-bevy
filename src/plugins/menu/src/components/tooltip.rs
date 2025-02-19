@@ -1,4 +1,4 @@
-pub(crate) mod skill;
+pub(crate) mod string;
 
 use super::GlobalZIndexTop;
 use crate::traits::{
@@ -287,8 +287,6 @@ mod tests {
 
 		assert_eq!(0, children.count());
 	}
-
-	impl TooltipUiConfig for &'static str {}
 
 	#[test]
 	fn despawn_outdated() {

@@ -4,10 +4,10 @@ use crate::{components::model_render::ModelRender, skills::Skill};
 use bevy::prelude::*;
 use common::{
 	components::essence::Essence,
-	tools::item_type::ItemType,
+	tools::{item_description::ItemDescription, item_type::ItemType},
 	traits::{
 		accessors::get::{Getter, GetterRef},
-		handles_equipment::ItemName,
+		inspect_able::InspectAble,
 	},
 };
 
@@ -29,9 +29,9 @@ impl Item {
 	}
 }
 
-impl Getter<ItemName> for Item {
-	fn get(&self) -> ItemName {
-		ItemName(self.name.clone())
+impl InspectAble<ItemDescription> for Item {
+	fn get_inspect_able_field(&self) -> String {
+		self.name.clone()
 	}
 }
 

@@ -1,26 +1,29 @@
-pub mod node_entry;
 pub mod node_entry_mut;
-
-use std::collections::VecDeque;
 
 use crate::{
 	skills::Skill,
-	traits::{peek_next_recursive::PeekNextRecursive, GetNode, GetNodeMut, RootKeys},
+	traits::{
+		follow_up_keys::FollowupKeys,
+		peek_next_recursive::PeekNextRecursive,
+		GetNode,
+		GetNodeMut,
+	},
 };
 use bevy::ecs::component::Component;
 use common::{
 	tools::{
-		item_type::ItemType,
+		item_type::{CompatibleItems, ItemType},
 		ordered_hash_map::{Entry, OrderedHashMap},
-		slot_key::SlotKey,
+		slot_key::{Combo, SlotKey},
 	},
 	traits::{
 		accessors::get::{GetMut, GetRef},
-		handles_equipment::{Combo, CompatibleItems, FollowupKeys, GetCombosOrdered},
+		handles_combo_menu::GetCombosOrdered,
 		insert::TryInsert,
 		iterate::Iterate,
 	},
 };
+use std::collections::VecDeque;
 
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct ComboNode<TSkill = Skill>(OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>);
@@ -37,7 +40,10 @@ impl<TSkill> Default for ComboNode<TSkill> {
 	}
 }
 
-impl<TKey: Iterate<SlotKey>> GetRef<TKey, Skill> for ComboNode {
+impl<TKey> GetRef<TKey, Skill> for ComboNode
+where
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+{
 	fn get(&self, slot_key_path: &TKey) -> Option<&Skill> {
 		let mut value = None;
 		let mut combo_map = &self.0;
@@ -52,7 +58,10 @@ impl<TKey: Iterate<SlotKey>> GetRef<TKey, Skill> for ComboNode {
 	}
 }
 
-impl<TKey: Iterate<SlotKey>> GetMut<TKey, Skill> for ComboNode {
+impl<TKey> GetMut<TKey, Skill> for ComboNode
+where
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+{
 	fn get_mut(&mut self, slot_key_path: &TKey) -> Option<&mut Skill> {
 		let mut value = None;
 		let mut combo_map = &mut self.0;
@@ -81,7 +90,7 @@ pub struct NodeEntry<'a, TSkill> {
 
 impl<TKey, TSkill> GetNodeMut<TKey> for ComboNode<TSkill>
 where
-	TKey: Iterate<SlotKey>,
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
 {
 	type TNode<'a>
 		= NodeEntryMut<'a, TSkill>
@@ -105,7 +114,7 @@ where
 
 impl<TKey, TSkill> GetNode<TKey> for ComboNode<TSkill>
 where
-	TKey: Iterate<SlotKey>,
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
 {
 	type TNode<'a>
 		= NodeEntry<'a, TSkill>
@@ -127,21 +136,16 @@ where
 	}
 }
 
-impl RootKeys for ComboNode {
-	type TItem = SlotKey;
-
-	fn root_keys(&self) -> impl Iterator<Item = Self::TItem> {
-		self.0.keys().cloned()
-	}
-}
-
 #[derive(Debug, PartialEq)]
 pub enum SlotKeyPathError {
 	IsEmpty,
 	IsInvalid,
 }
 
-impl<TKey: Iterate<SlotKey>> TryInsert<TKey, Skill> for ComboNode {
+impl<TKey> TryInsert<TKey, Skill> for ComboNode
+where
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+{
 	type Error = SlotKeyPathError;
 
 	fn try_insert(&mut self, slot_key_path: TKey, value: Skill) -> Result<(), Self::Error> {
@@ -169,15 +173,21 @@ impl<TKey: Iterate<SlotKey>> TryInsert<TKey, Skill> for ComboNode {
 }
 
 impl PeekNextRecursive for ComboNode {
-	type TNext = Skill;
+	type TNext<'a>
+		= &'a Skill
+	where
+		Self: 'a;
 
-	type TRecursiveNode = Self;
+	type TRecursiveNode<'a>
+		= &'a Self
+	where
+		Self: 'a;
 
-	fn peek_next_recursive(
-		&self,
+	fn peek_next_recursive<'a>(
+		&'a self,
 		trigger: &SlotKey,
 		item_type: &ItemType,
-	) -> Option<(Self::TNext, Self::TRecursiveNode)> {
+	) -> Option<(Self::TNext<'a>, Self::TRecursiveNode<'a>)> {
 		let ComboNode(tree) = self;
 		let (skill, combo) = tree.get(trigger)?;
 		let CompatibleItems(is_usable_with) = &skill.compatible_items;
@@ -186,31 +196,22 @@ impl PeekNextRecursive for ComboNode {
 			return None;
 		}
 
-		Some((skill.clone(), combo.clone()))
+		Some((skill, combo))
 	}
 }
 
 impl GetCombosOrdered<Skill> for ComboNode {
-	fn combos_ordered<'a>(&'a self) -> impl Iterator<Item = Combo<'a, Skill>>
-	where
-		Skill: 'a,
-	{
+	fn combos_ordered(&self) -> Vec<Combo<Skill>> {
 		combos(self, vec![])
 	}
 }
 
 impl FollowupKeys for ComboNode {
-	type TKey = SlotKey;
-
-	fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>
+	fn followup_keys<T>(&self, after: T) -> Option<Vec<SlotKey>>
 	where
-		T: Into<VecDeque<Self::TKey>>,
+		T: Into<VecDeque<SlotKey>>,
 	{
-		if self.0.is_empty() {
-			return Some(vec![]);
-		}
-
-		let mut after: VecDeque<Self::TKey> = after.into();
+		let mut after: VecDeque<SlotKey> = after.into();
 
 		let Some(key) = after.pop_front() else {
 			return Some(self.0.keys().copied().collect());
@@ -222,12 +223,13 @@ impl FollowupKeys for ComboNode {
 	}
 }
 
-fn combos(combo_node: &ComboNode, key_path: Vec<SlotKey>) -> impl Iterator<Item = Combo<Skill>> {
+fn combos(combo_node: &ComboNode, key_path: Vec<SlotKey>) -> Vec<Combo<Skill>> {
 	combo_node
 		.0
 		.iter()
 		.map(build_path(key_path))
 		.flat_map(append_followup_combo_steps)
+		.collect()
 }
 
 #[allow(clippy::type_complexity)]
@@ -240,19 +242,18 @@ fn build_path<'a>(
 	}
 }
 
-fn append_followup_combo_steps<'a>(
-	(key_path, skill, child_node): (Vec<SlotKey>, &'a Skill, &'a ComboNode),
-) -> Vec<Combo<'a, Skill>> {
-	let combo_step_key_path = key_path.clone();
-	let followup_combo_steps = combos(child_node, combo_step_key_path).collect();
+fn append_followup_combo_steps(
+	(key_path, skill, child_node): (Vec<SlotKey>, &Skill, &ComboNode),
+) -> Vec<Combo<Skill>> {
+	let followup_combo_steps = combos(child_node, key_path.clone());
 	append_followups((key_path, skill), followup_combo_steps)
 }
 
-fn append_followups<'a>(
-	combo_step: (Vec<SlotKey>, &'a Skill),
-	followups: Vec<Combo<'a, Skill>>,
-) -> Vec<Combo<'a, Skill>> {
-	let combo_steps = vec![combo_step];
+fn append_followups(
+	(combo_path, skill): (Vec<SlotKey>, &Skill),
+	followups: Vec<Combo<Skill>>,
+) -> Vec<Combo<Skill>> {
+	let combo_steps = vec![(combo_path, skill.clone())];
 
 	if followups.is_empty() {
 		return vec![combo_steps];
@@ -298,12 +299,12 @@ mod tests {
 
 		assert_eq!(
 			Some((
-				Skill {
+				&Skill {
 					name: "first".to_owned(),
 					compatible_items: CompatibleItems(HashSet::from([ItemType::Pistol])),
 					..default()
 				},
-				ComboNode(OrderedHashMap::from([(
+				&ComboNode(OrderedHashMap::from([(
 					SlotKey::BottomHand(Side::Right),
 					(
 						Skill {
@@ -343,7 +344,7 @@ mod tests {
 
 		let next = node.peek_next_recursive(&SlotKey::BottomHand(Side::Right), &ItemType::Pistol);
 
-		assert_eq!(None as Option<(Skill, ComboNode)>, next)
+		assert_eq!(None as Option<(&Skill, &ComboNode)>, next)
 	}
 
 	#[test]
@@ -947,29 +948,6 @@ mod tests {
 	}
 
 	#[test]
-	fn get_root_keys() {
-		let combos = ComboNode::new([(
-			SlotKey::BottomHand(Side::Right),
-			(Skill::default(), ComboNode::default()),
-		)]);
-
-		assert_eq!(
-			vec![SlotKey::BottomHand(Side::Right)],
-			combos.root_keys().collect::<Vec<_>>()
-		);
-	}
-
-	#[test]
-	fn get_root_keys_empty() {
-		let combos = ComboNode::new([]);
-
-		assert_eq!(
-			vec![] as Vec<SlotKey>,
-			combos.root_keys().collect::<Vec<_>>()
-		);
-	}
-
-	#[test]
 	fn get_single_single_combo_with_single_skill() {
 		let combos = ComboNode::new([(
 			SlotKey::BottomHand(Side::Right),
@@ -985,12 +963,12 @@ mod tests {
 		assert_eq!(
 			vec![vec![(
 				vec![SlotKey::BottomHand(Side::Right)],
-				&Skill {
+				Skill {
 					name: "some skill".to_owned(),
 					..default()
 				}
 			)]],
-			combos.combos_ordered().collect::<Vec<_>>()
+			combos.combos_ordered()
 		)
 	}
 
@@ -1023,20 +1001,20 @@ mod tests {
 			vec![
 				vec![(
 					vec![SlotKey::BottomHand(Side::Right)],
-					&Skill {
+					Skill {
 						name: "some right skill".to_owned(),
 						..default()
-					}
+					},
 				)],
 				vec![(
 					vec![SlotKey::BottomHand(Side::Left)],
-					&Skill {
+					Skill {
 						name: "some left skill".to_owned(),
 						..default()
-					}
+					},
 				)]
 			],
-			combos.combos_ordered().collect::<Vec<_>>()
+			combos.combos_ordered()
 		)
 	}
 
@@ -1066,23 +1044,23 @@ mod tests {
 			vec![vec![
 				(
 					vec![SlotKey::BottomHand(Side::Right)],
-					&Skill {
+					Skill {
 						name: "some skill".to_owned(),
 						..default()
-					}
+					},
 				),
 				(
 					vec![
 						SlotKey::BottomHand(Side::Right),
 						SlotKey::BottomHand(Side::Left)
 					],
-					&Skill {
+					Skill {
 						name: "some child skill".to_owned(),
 						..default()
-					}
+					},
 				)
 			]],
-			combos.combos_ordered().collect::<Vec<_>>()
+			combos.combos_ordered()
 		)
 	}
 
@@ -1125,43 +1103,43 @@ mod tests {
 				vec![
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
-						&Skill {
+						Skill {
 							name: "some skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						&Skill {
+						Skill {
 							name: "some right child skill".to_owned(),
 							..default()
-						}
+						},
 					)
 				],
 				vec![
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
-						&Skill {
+						Skill {
 							name: "some skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Left)
 						],
-						&Skill {
+						Skill {
 							name: "some left child skill".to_owned(),
 							..default()
-						}
+						},
 					)
 				]
 			],
-			combos.combos_ordered().collect::<Vec<_>>()
+			combos.combos_ordered()
 		)
 	}
 
@@ -1213,20 +1191,20 @@ mod tests {
 				vec![
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
-						&Skill {
+						Skill {
 							name: "some skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						&Skill {
+						Skill {
 							name: "some child skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
@@ -1234,29 +1212,29 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right),
 						],
-						&Skill {
+						Skill {
 							name: "some right child skill".to_owned(),
 							..default()
-						}
+						},
 					)
 				],
 				vec![
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
-						&Skill {
+						Skill {
 							name: "some skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						&Skill {
+						Skill {
 							name: "some child skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
@@ -1264,14 +1242,14 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Left),
 						],
-						&Skill {
+						Skill {
 							name: "some left child skill".to_owned(),
 							..default()
-						}
+						},
 					)
 				]
 			],
-			combos.combos_ordered().collect::<Vec<_>>()
+			combos.combos_ordered()
 		)
 	}
 
@@ -1323,20 +1301,20 @@ mod tests {
 				vec![
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
-						&Skill {
+						Skill {
 							name: "some skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						&Skill {
+						Skill {
 							name: "some child skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
@@ -1344,29 +1322,29 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Left),
 						],
-						&Skill {
+						Skill {
 							name: "some left child skill".to_owned(),
 							..default()
-						}
+						},
 					)
 				],
 				vec![
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
-						&Skill {
+						Skill {
 							name: "some skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right)
 						],
-						&Skill {
+						Skill {
 							name: "some child skill".to_owned(),
 							..default()
-						}
+						},
 					),
 					(
 						vec![
@@ -1374,14 +1352,14 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							SlotKey::BottomHand(Side::Right),
 						],
-						&Skill {
+						Skill {
 							name: "some right child skill".to_owned(),
 							..default()
-						}
+						},
 					)
 				]
 			],
-			combos.combos_ordered().collect::<Vec<_>>()
+			combos.combos_ordered()
 		)
 	}
 

@@ -1,26 +1,27 @@
-use std::collections::VecDeque;
-
 use super::combo_node::ComboNode;
 use crate::{
 	skills::Skill,
 	traits::{
+		follow_up_keys::FollowupKeys,
+		peek_next::PeekNext,
 		peek_next_recursive::PeekNextRecursive,
+		write_item::WriteItem,
 		GetNode,
 		GetNodeMut,
 		Insert,
 		ReKey,
-		RootKeys,
 		SetNextCombo,
 	},
 };
 use bevy::ecs::component::Component;
 use common::{
-	tools::{item_type::ItemType, slot_key::SlotKey},
-	traits::{
-		handles_equipment::{Combo, FollowupKeys, GetCombosOrdered, PeekNext, WriteItem},
-		iterate::Iterate,
+	tools::{
+		item_type::ItemType,
+		slot_key::{Combo, SlotKey},
 	},
+	traits::{handles_combo_menu::GetCombosOrdered, iterate::Iterate},
 };
+use std::collections::VecDeque;
 
 #[derive(Component, PartialEq, Debug)]
 pub struct Combos<TComboNode = ComboNode> {
@@ -60,16 +61,23 @@ impl<TComboNode> SetNextCombo<Option<TComboNode>> for Combos<TComboNode> {
 
 impl<TComboNode> PeekNextRecursive for Combos<TComboNode>
 where
-	TComboNode: PeekNextRecursive<TNext = Skill, TRecursiveNode = TComboNode>,
+	for<'a> TComboNode:
+		PeekNextRecursive<TNext<'a> = &'a Skill, TRecursiveNode<'a> = &'a TComboNode> + 'a,
 {
-	type TNext = Skill;
-	type TRecursiveNode = TComboNode;
+	type TNext<'a>
+		= &'a Skill
+	where
+		Self: 'a;
+	type TRecursiveNode<'a>
+		= &'a TComboNode
+	where
+		Self: 'a;
 
-	fn peek_next_recursive(
-		&self,
+	fn peek_next_recursive<'a>(
+		&'a self,
 		trigger: &SlotKey,
 		item_type: &ItemType,
-	) -> Option<(Self::TNext, Self::TRecursiveNode)> {
+	) -> Option<(Self::TNext<'a>, Self::TRecursiveNode<'a>)> {
 		let Combos { config, current } = self;
 
 		current
@@ -79,23 +87,21 @@ where
 	}
 }
 
-impl<TComboNode> PeekNext for Combos<TComboNode>
+impl<'a, TComboNode> PeekNext<'a> for Combos<TComboNode>
 where
-	Self: PeekNextRecursive<TNext = Skill, TRecursiveNode = TComboNode>,
+	Self: PeekNextRecursive<TNext<'a> = &'a Skill, TRecursiveNode<'a> = &'a TComboNode>,
+	TComboNode: 'a,
 {
 	type TNext = Skill;
 
-	fn peek_next(&self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill> {
+	fn peek_next(&'a self, trigger: &SlotKey, item_type: &ItemType) -> Option<&'a Skill> {
 		self.peek_next_recursive(trigger, item_type)
 			.map(|(skill, _)| skill)
 	}
 }
 
 impl<TNode: GetCombosOrdered<Skill>> GetCombosOrdered<Skill> for Combos<TNode> {
-	fn combos_ordered<'a>(&'a self) -> impl Iterator<Item = Combo<'a, Skill>>
-	where
-		Skill: 'a,
-	{
+	fn combos_ordered(&self) -> Vec<Combo<Skill>> {
 		self.config.combos_ordered()
 	}
 }
@@ -103,7 +109,7 @@ impl<TNode: GetCombosOrdered<Skill>> GetCombosOrdered<Skill> for Combos<TNode> {
 impl<TNode, TKey> WriteItem<TKey, Option<Skill>> for Combos<TNode>
 where
 	for<'a> TNode: GetNodeMut<TKey, TNode<'a>: Insert<Option<Skill>>>,
-	TKey: Iterate<SlotKey>,
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
 {
 	fn write_item(&mut self, key_path: &TKey, skill: Option<Skill>) {
 		self.current = None;
@@ -119,7 +125,7 @@ where
 impl<TNode, TKey> WriteItem<TKey, SlotKey> for Combos<TNode>
 where
 	for<'a> TNode: GetNodeMut<TKey, TNode<'a>: ReKey<SlotKey>>,
-	TKey: Iterate<SlotKey>,
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
 {
 	fn write_item(&mut self, key_path: &TKey, key: SlotKey) {
 		self.current = None;
@@ -132,7 +138,11 @@ where
 	}
 }
 
-impl<TNode: GetNode<TKey>, TKey: Iterate<SlotKey>> GetNode<TKey> for Combos<TNode> {
+impl<TNode, TKey> GetNode<TKey> for Combos<TNode>
+where
+	TNode: GetNode<TKey>,
+	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+{
 	type TNode<'a>
 		= TNode::TNode<'a>
 	where
@@ -143,23 +153,13 @@ impl<TNode: GetNode<TKey>, TKey: Iterate<SlotKey>> GetNode<TKey> for Combos<TNod
 	}
 }
 
-impl<TNode: RootKeys> RootKeys for Combos<TNode> {
-	type TItem = TNode::TItem;
-
-	fn root_keys(&self) -> impl Iterator<Item = Self::TItem> {
-		self.config.root_keys()
-	}
-}
-
 impl<TNode> FollowupKeys for Combos<TNode>
 where
 	TNode: FollowupKeys,
 {
-	type TKey = TNode::TKey;
-
-	fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>
+	fn followup_keys<T>(&self, after: T) -> Option<Vec<SlotKey>>
 	where
-		T: Into<VecDeque<Self::TKey>> + 'static,
+		T: Into<VecDeque<SlotKey>>,
 	{
 		self.config.followup_keys(after)
 	}
@@ -169,61 +169,56 @@ where
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::{
-		simple_init,
-		tools::slot_key::Side,
-		traits::{mock::Mock, nested_mock::NestedMocks},
-	};
+	use common::{tools::slot_key::Side, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
-	use std::{cell::RefCell, collections::VecDeque};
+	use std::{
+		cell::RefCell,
+		collections::{HashMap, VecDeque},
+	};
 
-	mock! {
-		_Next {}
-		impl PeekNextRecursive for _Next {
-			type TNext = Skill;
-			type TRecursiveNode = Self;
+	#[derive(Default)]
+	struct _Next(HashMap<(SlotKey, ItemType), Skill>);
 
-			fn peek_next_recursive(&self, _trigger: &SlotKey, _item_type: &ItemType) -> Option<(Skill, Self)>;
+	impl PeekNextRecursive for _Next {
+		type TNext<'a>
+			= &'a Skill
+		where
+			Self: 'a;
+		type TRecursiveNode<'a>
+			= &'a Self
+		where
+			Self: 'a;
+
+		fn peek_next_recursive<'a>(
+			&'a self,
+			trigger: &SlotKey,
+			item_type: &ItemType,
+		) -> Option<(&'a Skill, &'a Self)> {
+			let skill = self.0.get(&(*trigger, *item_type))?;
+
+			Some((skill, self))
 		}
-	}
-
-	simple_init!(Mock_Next);
-
-	#[test]
-	fn call_next_with_correct_args() {
-		let item_type = ItemType::ForceEssence;
-		let trigger = SlotKey::BottomHand(Side::Left);
-		let combos = Combos::new(Mock_Next::new_mock(|mock| {
-			mock.expect_peek_next_recursive()
-				.times(1)
-				.with(eq(trigger), eq(item_type))
-				.returning(|_, _| None);
-		}));
-
-		combos.peek_next_recursive(&trigger, &item_type);
 	}
 
 	#[test]
 	fn return_skill() {
-		let combos = Combos::new(Mock_Next::new_mock(|mock| {
-			mock.expect_peek_next_recursive().returning(|_, _| {
-				Some((
-					Skill {
-						name: "my skill".to_owned(),
-						..default()
-					},
-					Mock_Next::default(),
-				))
-			});
-		}));
+		let trigger = SlotKey::BottomHand(Side::Left);
+		let item_type = ItemType::ForceEssence;
+		let combos = Combos::new(_Next(HashMap::from([(
+			(trigger, item_type),
+			Skill {
+				name: "my skill".to_owned(),
+				..default()
+			},
+		)])));
 
 		let skill = combos
-			.peek_next_recursive(&SlotKey::default(), &ItemType::default())
+			.peek_next_recursive(&trigger, &item_type)
 			.map(|(skill, _)| skill);
 
 		assert_eq!(
-			Some(Skill {
+			Some(&Skill {
 				name: "my skill".to_owned(),
 				..default()
 			}),
@@ -233,47 +228,65 @@ mod tests {
 
 	#[test]
 	fn use_combo_used_in_set_next_combo() {
-		let first = Mock_Next::new_mock(|mock| {
-			mock.expect_peek_next_recursive()
-				.never()
-				.returning(|_, _| None);
-		});
-		let next = Mock_Next::new_mock(|mock| {
-			mock.expect_peek_next_recursive()
-				.with(eq(SlotKey::TopHand(Side::Left)), eq(ItemType::Pistol))
-				.times(1)
-				.returning(|_, _| Some((Skill::default(), Mock_Next::default())));
-		});
+		let trigger = SlotKey::BottomHand(Side::Left);
+		let item_type = ItemType::ForceEssence;
+		let first = _Next::default();
+		let next = _Next(HashMap::from([(
+			(trigger, item_type),
+			Skill {
+				name: "my skill".to_owned(),
+				..default()
+			},
+		)]));
 		let mut combos = Combos::new(first);
 		combos.set_next_combo(Some(next));
 
-		combos.peek_next_recursive(&SlotKey::TopHand(Side::Left), &ItemType::Pistol);
+		let skill = combos
+			.peek_next_recursive(&trigger, &item_type)
+			.map(|(skill, _)| skill);
+
+		assert_eq!(
+			Some(&Skill {
+				name: "my skill".to_owned(),
+				..default()
+			}),
+			skill
+		);
 	}
 
 	#[test]
 	fn use_original_when_next_combo_returns_none() {
-		let first = Mock_Next::new_mock(|mock| {
-			mock.expect_peek_next_recursive()
-				.times(1)
-				.returning(|_, _| None);
-		});
-		let next = Mock_Next::new_mock(|mock| {
-			mock.expect_peek_next_recursive().returning(|_, _| None);
-		});
+		let trigger = SlotKey::BottomHand(Side::Left);
+		let item_type = ItemType::ForceEssence;
+		let first = _Next(HashMap::from([(
+			(trigger, item_type),
+			Skill {
+				name: "my skill".to_owned(),
+				..default()
+			},
+		)]));
+		let next = _Next::default();
 		let mut combos = Combos::new(first);
 		combos.set_next_combo(Some(next));
 
-		combos.peek_next_recursive(&SlotKey::default(), &ItemType::default());
+		let skill = combos
+			.peek_next_recursive(&trigger, &item_type)
+			.map(|(skill, _)| skill);
+
+		assert_eq!(
+			Some(&Skill {
+				name: "my skill".to_owned(),
+				..default()
+			}),
+			skill
+		);
 	}
 
-	struct _ComboNode<'a>(Vec<Combo<'a, Skill>>);
+	struct _ComboNode(Vec<Combo<Skill>>);
 
-	impl GetCombosOrdered<Skill> for _ComboNode<'_> {
-		fn combos_ordered<'a>(&'a self) -> impl Iterator<Item = Combo<'a, Skill>>
-		where
-			Skill: 'a,
-		{
-			self.0.iter().cloned()
+	impl GetCombosOrdered<Skill> for _ComboNode {
+		fn combos_ordered(&self) -> Vec<Combo<Skill>> {
+			self.0.clone()
 		}
 	}
 
@@ -288,11 +301,11 @@ mod tests {
 				SlotKey::BottomHand(Side::Left),
 				SlotKey::BottomHand(Side::Right),
 			],
-			&skill,
+			skill,
 		)]];
 		let combos = Combos::new(_ComboNode(combos_vec.clone()));
 
-		assert_eq!(combos_vec, combos.combos_ordered().collect::<Vec<_>>())
+		assert_eq!(combos_vec, combos.combos_ordered())
 	}
 
 	#[derive(Default)]
@@ -555,46 +568,24 @@ mod tests {
 	}
 
 	#[test]
-	fn get_root_keys() {
-		#[derive(Debug, PartialEq)]
-		struct _Key;
-
-		struct _Node;
-
-		impl RootKeys for _Node {
-			type TItem = _Key;
-
-			fn root_keys(&self) -> impl Iterator<Item = Self::TItem> {
-				vec![_Key].into_iter()
-			}
-		}
-
-		let combos = Combos::new(_Node);
-
-		assert_eq!(vec![_Key], combos.root_keys().collect::<Vec<_>>());
-	}
-
-	#[test]
 	fn get_followup_keys() {
-		#[derive(Debug, PartialEq)]
-		struct _Key;
-
 		struct _Node;
 
 		impl FollowupKeys for _Node {
-			type TKey = _Key;
-
-			fn followup_keys<T>(&self, after: T) -> Option<Vec<Self::TKey>>
+			fn followup_keys<T>(&self, after: T) -> Option<Vec<SlotKey>>
 			where
-				T: Into<VecDeque<Self::TKey>>,
+				T: Into<VecDeque<SlotKey>>,
 			{
-				assert_eq!(VecDeque::from([_Key]), after.into());
-				Some(vec![_Key])
+				assert_eq!(VecDeque::from([SlotKey::TopHand(Side::Left)]), after.into());
+				Some(vec![SlotKey::TopHand(Side::Right)])
 			}
 		}
 
 		let combos = Combos::new(_Node);
 
-		assert_eq!(Some(vec![_Key]), combos.followup_keys(vec![_Key]));
+		assert_eq!(
+			Some(vec![SlotKey::TopHand(Side::Right)]),
+			combos.followup_keys(vec![SlotKey::TopHand(Side::Left)])
+		);
 	}
 }

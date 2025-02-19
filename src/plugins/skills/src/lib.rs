@@ -7,24 +7,22 @@ pub mod traits;
 
 mod behaviors;
 mod bundles;
+mod tools;
 
 use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
-	components::{Collection, Swap},
 	resources::key_map::KeyMap,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
-	tools::{
-		inventory_key::InventoryKey,
-		slot_key::{Side, SlotKey},
-	},
+	tools::slot_key::{Side, SlotKey},
 	traits::{
 		handles_assets_for_children::HandlesAssetsForChildren,
+		handles_combo_menu::{ConfigureCombos, HandlesComboMenu},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_effect::HandlesAllEffects,
-		handles_equipment::HandlesEquipment,
 		handles_lifetime::HandlesLifetime,
+		handles_loadout_menu::{ConfigureInventory, HandlesLoadoutMenu},
 		handles_orientation::HandlesOrientation,
 		handles_player::{
 			ConfiguresPlayerSkillAnimations,
@@ -38,6 +36,7 @@ use common::{
 	},
 };
 use components::{
+	combo_node::ComboNode,
 	combos::Combos,
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
@@ -45,6 +44,7 @@ use components::{
 	skill_executer::SkillExecuter,
 	skill_spawners::SkillSpawners,
 	slots::{ForearmItemSlots, HandItemSlots, Slots, SubMeshEssenceSlots},
+	swapper::Swapper,
 };
 use item::{dto::ItemDto, Item};
 use macros::item_asset;
@@ -52,23 +52,33 @@ use skills::{dto::SkillDto, QueuedSkill, RunSkillBehavior, Skill};
 use std::{marker::PhantomData, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,
+	combos::{queue_update::ComboQueueUpdate, update::UpdateCombos},
 	enqueue::enqueue,
-	equip::equip_item,
 	execute::ExecuteSkills,
 	flush::flush,
 	flush_skill_combos::flush_skill_combos,
 	get_inputs::get_inputs,
+	loadout_descriptor::LoadoutDescriptor,
 	mouse_context::{
 		advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
 		release::release_triggered_mouse_context,
 		trigger_primed::trigger_primed_mouse_context,
 	},
-	update_skill_combos::update_skill_combos,
+	quickbar_descriptor::get_quickbar_descriptors_for,
 };
+use tools::combo_descriptor::ComboDescriptor;
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, TPlayers>
+impl<
+		TLifeCycles,
+		TInteractions,
+		TDispatchChildrenAssets,
+		TLoading,
+		TBehaviors,
+		TPlayers,
+		TMenu,
+	>
 	SkillsPlugin<(
 		TLifeCycles,
 		TInteractions,
@@ -76,6 +86,7 @@ impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, 
 		TLoading,
 		TBehaviors,
 		TPlayers,
+		TMenu,
 	)>
 where
 	TLifeCycles: ThreadSafe + HandlesLifetime,
@@ -88,6 +99,7 @@ where
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations,
+	TMenu: ThreadSafe + HandlesLoadoutMenu + HandlesComboMenu,
 {
 	pub fn depends_on(
 		_: &TLifeCycles,
@@ -96,6 +108,7 @@ where
 		_: &TLoading,
 		_: &TBehaviors,
 		_: &TPlayers,
+		_: &TMenu,
 	) -> Self {
 		Self(PhantomData)
 	}
@@ -108,7 +121,7 @@ where
 		TLoading::register_custom_assets::<Item, ItemDto>(app);
 	}
 
-	fn skill_slot_load(&self, app: &mut App) {
+	fn loadout(&self, app: &mut App) {
 		TDispatchChildrenAssets::register_child_asset::<Slots, HandItemSlots>(app);
 		TDispatchChildrenAssets::register_child_asset::<Slots, ForearmItemSlots>(app);
 		TDispatchChildrenAssets::register_child_asset::<Slots, SubMeshEssenceSlots>(app);
@@ -118,15 +131,7 @@ where
 			SkillSpawners::track_in_self_and_children::<Name>().system(),
 		)
 		.add_systems(Update, Self::set_player_items)
-		.add_systems(
-			Update,
-			(
-				equip_item::<Inventory, InventoryKey, Collection<Swap<InventoryKey, SlotKey>>>
-					.pipe(log_many),
-				equip_item::<Inventory, InventoryKey, Collection<Swap<SlotKey, InventoryKey>>>
-					.pipe(log_many),
-			),
-		);
+		.add_systems(Update, Swapper::system);
 	}
 
 	fn skill_execution(&self, app: &mut App) {
@@ -147,7 +152,7 @@ where
 						State<MouseContext<KeyCode>>,
 					>
 						.pipe(enqueue::<Slots, Queue, QueuedSkill>),
-					update_skill_combos::<Combos, Queue>,
+					Combos::update::<Queue>,
 					flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 					advance_active_skill::<Queue, TPlayers, TBehaviors, SkillExecuter, Virtual>,
 					execute_skill.pipe(log_many),
@@ -180,6 +185,7 @@ where
 		commands.try_insert_on(
 			player,
 			(
+				Swapper::default(),
 				Self::get_inventory(asset_server),
 				Self::get_loadout(asset_server),
 				Self::get_combos(),
@@ -221,9 +227,34 @@ where
 
 		ComboBundle::with_timeout(timeout)
 	}
+
+	fn config_menus(&self, app: &mut App) {
+		TMenu::loadout_with_swapper::<Swapper>().configure(
+			app,
+			Inventory::describe_loadout_for::<TPlayers::TPlayer>,
+			Slots::describe_loadout_for::<TPlayers::TPlayer>,
+		);
+		TMenu::configure_quickbar_menu(
+			app,
+			get_quickbar_descriptors_for::<TPlayers::TPlayer, Slots, Queue, Combos>,
+		);
+		TMenu::combos_with_skill::<Skill>().configure(
+			app,
+			ComboDescriptor::describe_combos_for::<TPlayers::TPlayer>,
+			Combos::<ComboNode>::update_for::<TPlayers::TPlayer>,
+		);
+	}
 }
 
-impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, TPlayers> Plugin
+impl<
+		TLifeCycles,
+		TInteractions,
+		TDispatchChildrenAssets,
+		TLoading,
+		TBehaviors,
+		TPlayers,
+		TMenu,
+	> Plugin
 	for SkillsPlugin<(
 		TLifeCycles,
 		TInteractions,
@@ -231,6 +262,7 @@ impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, 
 		TLoading,
 		TBehaviors,
 		TPlayers,
+		TMenu,
 	)>
 where
 	TLifeCycles: ThreadSafe + HandlesLifetime,
@@ -243,22 +275,13 @@ where
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations,
+	TMenu: ThreadSafe + HandlesLoadoutMenu + HandlesComboMenu,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);
 		self.item_load(app);
-		self.skill_slot_load(app);
+		self.loadout(app);
 		self.skill_execution(app);
+		self.config_menus(app);
 	}
-}
-
-impl<T> HandlesEquipment for SkillsPlugin<T> {
-	type TItem = Item;
-	type TInventory = Inventory;
-	type TSlots = Slots;
-	type TCombos = Combos;
-	type TSkill = Skill;
-	type TQueue = Queue;
-	type TQueuedSkill = QueuedSkill;
-	type TCombosTimeOut = CombosTimeOut;
 }

@@ -60,6 +60,13 @@ fn prepare_game(app: &mut App) {
 		&enemy_plugin,
 		&player_plugin,
 	);
+	let graphics_plugin = GraphicsPlugin::depends_on(
+		&prefabs_plugin,
+		&loading_plugin,
+		&interactions_plugin,
+		&behaviors_plugin,
+	);
+	let menu_plugin = MenuPlugin::depends_on(&loading_plugin, &graphics_plugin);
 	let skills_plugin = SkillsPlugin::depends_on(
 		&life_cycles_plugin,
 		&interactions_plugin,
@@ -67,18 +74,7 @@ fn prepare_game(app: &mut App) {
 		&loading_plugin,
 		&behaviors_plugin,
 		&player_plugin,
-	);
-	let graphics_plugin = GraphicsPlugin::depends_on(
-		&prefabs_plugin,
-		&loading_plugin,
-		&interactions_plugin,
-		&behaviors_plugin,
-	);
-	let menu_plugin = MenuPlugin::depends_on(
-		&loading_plugin,
-		&player_plugin,
-		&graphics_plugin,
-		&skills_plugin,
+		&menu_plugin,
 	);
 	let bars_plugin = BarsPlugin::depends_on(
 		&life_cycles_plugin,

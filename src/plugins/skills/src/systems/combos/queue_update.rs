@@ -7,19 +7,21 @@ use crate::{
 use bevy::prelude::*;
 use common::traits::accessors::get::GetRef;
 
-pub(crate) fn update_skill_combos<TCombos, TQueue>(
-	mut agents: Query<(&mut TCombos, &mut TQueue, &Slots)>,
-	items: Res<Assets<Item>>,
-) where
-	TCombos: AdvanceCombo + Component,
-	TQueue: IterAddedMut<QueuedSkill> + Component,
-{
-	for (mut combos, mut queue, slots) in &mut agents {
-		if queue.added_none() {
-			continue;
-		}
-		for skill in queue.iter_added_mut() {
-			update_skill_with_advanced_combo(&mut combos, skill, slots, &items);
+impl<T> ComboQueueUpdate for T {}
+
+pub(crate) trait ComboQueueUpdate {
+	fn update<TQueue>(mut agents: Query<(&mut Self, &mut TQueue, &Slots)>, items: Res<Assets<Item>>)
+	where
+		Self: AdvanceCombo + Component + Sized,
+		TQueue: IterAddedMut<QueuedSkill> + Component,
+	{
+		for (mut combos, mut queue, slots) in &mut agents {
+			if queue.added_none() {
+				continue;
+			}
+			for skill in queue.iter_added_mut() {
+				update_skill_with_advanced_combo(&mut combos, skill, slots, &items);
+			}
 		}
 	}
 }
@@ -173,8 +175,7 @@ mod tests {
 			slots,
 		));
 
-		app.world_mut()
-			.run_system_once(update_skill_combos::<_Combos, _Queue>)
+		app.world_mut().run_system_once(_Combos::update::<_Queue>)
 	}
 
 	#[test]
@@ -203,8 +204,7 @@ mod tests {
 			))
 			.id();
 
-		app.world_mut()
-			.run_system_once(update_skill_combos::<_Combos, _Queue>)?;
+		app.world_mut().run_system_once(_Combos::update::<_Queue>)?;
 
 		let agent = app.world().entity(agent);
 
@@ -238,7 +238,7 @@ mod tests {
 			))
 			.id();
 
-		app.add_systems(Update, update_skill_combos::<_Combos, _Queue>);
+		app.add_systems(Update, _Combos::update::<_Queue>);
 		app.add_systems(PostUpdate, Changed::<_Queue>::detect);
 		app.update(); // changed always true, because target was just added
 		app.update();

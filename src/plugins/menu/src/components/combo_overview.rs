@@ -1,38 +1,61 @@
 use super::{
+	combo_skill_button::{ComboSkillButton, DropdownTrigger, Vertical},
 	key_code_text_insert_command::KeyCodeTextInsertCommand,
 	key_select_dropdown_command::{AppendSkillCommand, KeySelectDropdownCommand},
-	skill_button::{DropdownTrigger, SkillButton, Vertical},
 	DeleteSkill,
 	SkillSelectDropdownInsertCommand,
 };
 use crate::{
 	tools::{Dimensions, Pixel},
 	traits::{
+		build_combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol},
 		colors::DEFAULT_PANEL_COLORS,
-		combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol},
 		insert_ui_content::InsertUiContent,
 		LoadUi,
 		UpdateCombosView,
 	},
+	Tooltip,
 };
 use bevy::prelude::*;
 use common::{
-	tools::slot_key::SlotKey,
+	tools::{skill_description::SkillDescription, skill_icon::SkillIcon, slot_key::SlotKey},
 	traits::{
-		accessors::get::{GetFieldRef, GetterRef},
+		inspect_able::{InspectAble, InspectField},
 		load_asset::{LoadAsset, Path},
 		thread_safe::ThreadSafe,
 	},
 };
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Node(full_screen), BackgroundColor(gray), Name(|| "Combo Overview"))]
+#[require(Name(Self::name), Node(Self::style), BackgroundColor(Self::color))]
 pub(crate) struct ComboOverview<TSkill>
 where
 	TSkill: ThreadSafe,
 {
 	new_skill_icon: Handle<Image>,
 	layout: ComboTreeLayout<TSkill>,
+}
+
+impl<TSkill> ComboOverview<TSkill>
+where
+	TSkill: ThreadSafe,
+{
+	fn style() -> Node {
+		Node {
+			width: Val::Vw(100.),
+			height: Val::Vh(100.),
+			flex_direction: FlexDirection::Column,
+			..default()
+		}
+	}
+
+	fn color() -> Color {
+		Color::srgba(0.5, 0.5, 0.5, 0.5)
+	}
+
+	fn name() -> &'static str {
+		"Combo Overview"
+	}
 }
 
 impl<TSKill> Default for ComboOverview<TSKill>
@@ -45,19 +68,6 @@ where
 			layout: Default::default(),
 		}
 	}
-}
-
-fn full_screen() -> Node {
-	Node {
-		width: Val::Vw(100.),
-		height: Val::Vh(100.),
-		flex_direction: FlexDirection::Column,
-		..default()
-	}
-}
-
-fn gray() -> BackgroundColor {
-	BackgroundColor(Color::srgba(0.5, 0.5, 0.5, 0.5))
 }
 
 impl<TAssetServer, TSKill> LoadUi<TAssetServer> for ComboOverview<TSKill>
@@ -101,9 +111,9 @@ impl ComboOverview<()> {
 		}
 	}
 
-	pub(crate) fn skill_button<T>(icon: T) -> (Button, Node, ImageNode, BackgroundColor)
+	pub(crate) fn skill_button<TIcon>(icon: TIcon) -> (Button, Node, ImageNode, BackgroundColor)
 	where
-		SkillButtonIcon: From<T>,
+		SkillButtonIcon: From<TIcon>,
 	{
 		let node = Node {
 			width: Val::from(Self::SKILL_BUTTON_DIMENSIONS.width),
@@ -213,45 +223,44 @@ impl ComboOverview<()> {
 	}
 
 	pub(crate) fn row_line() -> (Node, BorderColor) {
+		let width = Self::SKILL_BUTTON_DIMENSIONS.width_outer() + Self::SKILL_ICON_MARGIN * 2.;
+		let height = Self::SKILL_BUTTON_DIMENSIONS.height_outer() + Self::SKILL_ICON_MARGIN * 2.;
+
 		(
 			Node {
-				width: Val::from(
-					Self::SKILL_BUTTON_DIMENSIONS.width_outer() + Self::SKILL_ICON_MARGIN * 2.,
-				),
-				height: Val::from(
-					Self::SKILL_BUTTON_DIMENSIONS.height_outer() + Self::SKILL_ICON_MARGIN * 2.,
-				),
+				width: Val::from(width),
+				height: Val::from(height),
 				border: UiRect::bottom(Val::from(Self::SYMBOL_WIDTH)),
 				..default()
 			},
-			DEFAULT_PANEL_COLORS.filled.into(),
+			BorderColor::from(DEFAULT_PANEL_COLORS.filled),
 		)
 	}
 
 	pub(crate) fn column_line() -> (Node, BorderColor) {
+		let width = ComboOverview::SKILL_BUTTON_DIMENSIONS.width_outer();
+		let height = ComboOverview::SKILL_BUTTON_DIMENSIONS.height_outer() * 1.5
+			+ ComboOverview::SKILL_ICON_MARGIN * 3.;
+
 		(
 			Node {
-				width: Val::from(ComboOverview::SKILL_BUTTON_DIMENSIONS.width_outer()),
-				height: Val::from(
-					ComboOverview::SKILL_BUTTON_DIMENSIONS.height_outer() * 1.5
-						+ ComboOverview::SKILL_ICON_MARGIN * 3.,
-				),
+				width: Val::from(width),
+				height: Val::from(height),
 				border: UiRect::left(Val::from(ComboOverview::SYMBOL_WIDTH)),
 				..default()
 			},
-			DEFAULT_PANEL_COLORS.filled.into(),
+			BorderColor::from(DEFAULT_PANEL_COLORS.filled),
 		)
 	}
 
 	pub(crate) fn row_corner() -> (Node, BorderColor) {
+		let width = Self::SKILL_BUTTON_DIMENSIONS.width + ComboOverview::SKILL_ICON_MARGIN * 3.;
+		let height = Self::SKILL_BUTTON_DIMENSIONS.height + ComboOverview::SKILL_ICON_MARGIN * 3.;
+
 		(
 			Node {
-				width: Val::from(
-					Self::SKILL_BUTTON_DIMENSIONS.width + ComboOverview::SKILL_ICON_MARGIN * 3.,
-				),
-				height: Val::from(
-					Self::SKILL_BUTTON_DIMENSIONS.height + ComboOverview::SKILL_ICON_MARGIN * 3.,
-				),
+				width: Val::from(width),
+				height: Val::from(height),
 				border: UiRect {
 					left: Val::from(Self::SYMBOL_WIDTH),
 					bottom: Val::from(Self::SYMBOL_WIDTH),
@@ -259,7 +268,7 @@ impl ComboOverview<()> {
 				},
 				..default()
 			},
-			DEFAULT_PANEL_COLORS.filled.into(),
+			BorderColor::from(DEFAULT_PANEL_COLORS.filled),
 		)
 	}
 
@@ -315,7 +324,7 @@ where
 
 impl<TSkill> InsertUiContent for ComboOverview<TSkill>
 where
-	TSkill: GetterRef<Option<Handle<Image>>> + Clone + ThreadSafe,
+	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
 {
 	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
 		add_title(parent, "Combos");
@@ -359,36 +368,19 @@ fn add_empty_combo(parent: &mut ChildBuilder, icon: &Handle<Image>) {
 					..default()
 				})
 				.with_children(|parent| {
-					add_combo_starter(parent, icon, &[add_append_button], &[]);
-				});
-		});
-}
-
-fn add_combo_starter(
-	parent: &mut ChildBuilder,
-	icon: &Handle<Image>,
-	add_fronts: &[fn(&[SlotKey], &mut ChildBuilder)],
-	add_backs: &[fn(&mut ChildBuilder)],
-) {
-	parent
-		.spawn(ComboOverview::skill_node())
-		.with_children(|parent| {
-			for add_back in add_backs {
-				add_back(parent);
-			}
-			parent
-				.spawn(ComboOverview::skill_button(icon.clone()))
-				.with_children(|parent| {
-					for add_front in add_fronts {
-						add_front(&[], parent);
-					}
+					AddPanel::start_combo(
+						parent,
+						icon,
+						PanelOverlay(&[add_append_button]),
+						PanelBackground(&[]),
+					);
 				});
 		});
 }
 
 fn add_combo_list<TSkill>(parent: &mut ChildBuilder, combo_overview: &ComboOverview<TSkill>)
 where
-	TSkill: GetterRef<Option<Handle<Image>>> + Clone + ThreadSafe,
+	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
 {
 	parent
 		.spawn(Node {
@@ -410,7 +402,7 @@ fn add_combo<TSkill>(
 	local_z: i32,
 	new_skill_icon: &Handle<Image>,
 ) where
-	TSkill: GetterRef<Option<Handle<Image>>> + Clone + ThreadSafe,
+	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
 {
 	parent
 		.spawn((
@@ -425,101 +417,167 @@ fn add_combo<TSkill>(
 		))
 		.with_children(|parent| {
 			for element in combo {
-				match element {
-					ComboTreeElement::Node { key_path, skill } => {
-						add_skill(
-							parent,
-							key_path,
-							skill,
-							&[add_key, add_append_button, add_delete_button],
-							&[add_horizontal_background_line],
-						);
-					}
-					ComboTreeElement::Leaf { key_path, skill } => {
-						add_skill(
-							parent,
-							key_path,
-							skill,
-							&[add_key, add_append_button, add_delete_button],
-							&[],
-						);
-					}
-					ComboTreeElement::Symbol(Symbol::Empty) => {
-						add_empty(parent, &[]);
-					}
-					ComboTreeElement::Symbol(Symbol::Root) => {
-						add_combo_starter(
-							parent,
-							new_skill_icon,
-							&[add_append_button],
-							&[add_horizontal_background_line],
-						);
-					}
-					ComboTreeElement::Symbol(Symbol::Line) => {
-						add_empty(parent, &[add_vertical_background_line]);
-					}
-					ComboTreeElement::Symbol(Symbol::Corner) => {
-						add_empty(parent, &[add_background_corner]);
-					}
+				let panel = AddPanel::from(element);
+				panel.spawn_as_child(parent, new_skill_icon);
+			}
+		});
+}
+
+enum AddPanel<'a, TSkill> {
+	StartCombo {
+		panel_overlay: PanelOverlay,
+		panel_background: PanelBackground,
+	},
+	Skill {
+		key_path: &'a [SlotKey],
+		skill: &'a TSkill,
+		panel_overlay: PanelOverlay,
+		panel_background: PanelBackground,
+	},
+	Empty {
+		panel_background: PanelBackground,
+	},
+}
+
+impl AddPanel<'_, ()> {
+	fn start_combo(
+		parent: &mut ChildBuilder,
+		icon: &Handle<Image>,
+		PanelOverlay(panel_overlays): PanelOverlay,
+		PanelBackground(panel_backgrounds): PanelBackground,
+	) {
+		parent
+			.spawn(ComboOverview::skill_node())
+			.with_children(|parent| {
+				for add_background in panel_backgrounds {
+					add_background(parent);
 				}
-			}
-		});
+				parent
+					.spawn(ComboOverview::skill_button(icon.clone()))
+					.with_children(|parent| {
+						for add_overlay in panel_overlays {
+							add_overlay(&[], parent);
+						}
+					});
+			});
+	}
+
+	fn empty(parent: &mut ChildBuilder, PanelBackground(panel_background): PanelBackground) {
+		parent
+			.spawn((
+				#[cfg(debug_assertions)]
+				Name::from("Empty"),
+				ComboOverview::skill_node(),
+			))
+			.with_children(|parent| {
+				for add_back in panel_background {
+					add_back(parent);
+				}
+				parent.spawn((
+					Name::from("Empty Button"),
+					ComboOverview::skill_button(SkillButtonIcon::Transparent),
+				));
+			});
+	}
 }
 
-fn add_empty(parent: &mut ChildBuilder, add_backs: &[fn(&mut ChildBuilder)]) {
-	parent
-		.spawn((
-			#[cfg(debug_assertions)]
-			Name::from("Empty"),
-			ComboOverview::skill_node(),
-		))
-		.with_children(|parent| {
-			for add_back in add_backs {
-				add_back(parent);
-			}
-			parent.spawn((
-				Name::from("Empty Button"),
-				ComboOverview::skill_button(SkillButtonIcon::Transparent),
-			));
-		});
-}
-
-fn add_skill<TSkill>(
-	parent: &mut ChildBuilder,
-	key_path: &[SlotKey],
-	skill: &TSkill,
-	add_fronts: &[fn(&[SlotKey], &mut ChildBuilder)],
-	add_backs: &[fn(&mut ChildBuilder)],
-) where
-	TSkill: GetterRef<Option<Handle<Image>>> + Clone + ThreadSafe,
+impl<TSkill> AddPanel<'_, TSkill>
+where
+	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + ThreadSafe,
 {
-	let icon = Option::<Handle<Image>>::get_field_ref(skill);
-	parent
-		.spawn((
-			#[cfg(debug_assertions)]
-			Name::from("Skill"),
-			ComboOverview::skill_node(),
-		))
-		.with_children(|parent| {
-			let button =
-				SkillButton::<DropdownTrigger, TSkill>::new(skill.clone(), key_path.to_vec());
-
-			for add_back in add_backs {
-				add_back(parent);
+	fn spawn_as_child(self, parent: &mut ChildBuilder, icon: &Handle<Image>) {
+		match self {
+			AddPanel::Empty { panel_background } => AddPanel::empty(parent, panel_background),
+			AddPanel::StartCombo {
+				panel_overlay,
+				panel_background,
+			} => {
+				AddPanel::start_combo(parent, icon, panel_overlay, panel_background);
 			}
-			parent
-				.spawn((
-					button,
-					ComboOverview::skill_button(icon.clone()),
-					SkillSelectDropdownInsertCommand::<SlotKey, Vertical>::new(key_path.to_vec()),
-				))
-				.with_children(|parent| {
-					for add_front in add_fronts {
-						add_front(key_path, parent);
-					}
-				});
-		});
+			AddPanel::Skill {
+				key_path,
+				skill,
+				panel_overlay,
+				panel_background,
+			} => AddPanel::skill(parent, key_path, skill, panel_overlay, panel_background),
+		}
+	}
+
+	fn skill(
+		parent: &mut ChildBuilder,
+		key_path: &[SlotKey],
+		skill: &TSkill,
+		PanelOverlay(panel_overlay): PanelOverlay,
+		PanelBackground(panel_background): PanelBackground,
+	) {
+		parent
+			.spawn((
+				#[cfg(debug_assertions)]
+				Name::from("Skill"),
+				ComboOverview::skill_node(),
+			))
+			.with_children(|parent| {
+				let button = ComboSkillButton::<DropdownTrigger, TSkill>::new(
+					skill.clone(),
+					key_path.to_vec(),
+				);
+
+				for add_background in panel_background {
+					add_background(parent);
+				}
+				parent
+					.spawn((
+						button,
+						Tooltip::new(SkillDescription::inspect_field(skill)),
+						ComboOverview::skill_button(SkillIcon::inspect_field(skill).clone()),
+						SkillSelectDropdownInsertCommand::<SlotKey, Vertical>::new(
+							key_path.to_vec(),
+						),
+					))
+					.with_children(|parent| {
+						for add_overlay in panel_overlay {
+							add_overlay(key_path, parent);
+						}
+					});
+			});
+	}
 }
+
+impl<'a, TSkill> From<&'a ComboTreeElement<TSkill>> for AddPanel<'a, TSkill> {
+	fn from(element: &'a ComboTreeElement<TSkill>) -> Self {
+		match element {
+			ComboTreeElement::Symbol(Symbol::Empty) => AddPanel::Empty {
+				panel_background: PanelBackground(&[]),
+			},
+			ComboTreeElement::Symbol(Symbol::Line) => AddPanel::Empty {
+				panel_background: PanelBackground(&[add_vertical_background_line]),
+			},
+			ComboTreeElement::Symbol(Symbol::Corner) => AddPanel::Empty {
+				panel_background: PanelBackground(&[add_background_corner]),
+			},
+			ComboTreeElement::Symbol(Symbol::Root) => AddPanel::StartCombo {
+				panel_overlay: PanelOverlay(&[add_append_button]),
+				panel_background: PanelBackground(&[add_horizontal_background_line]),
+			},
+			ComboTreeElement::Node { key_path, skill } => AddPanel::Skill {
+				key_path,
+				skill,
+				panel_overlay: PanelOverlay(&[add_key, add_append_button, add_delete_button]),
+				panel_background: PanelBackground(&[add_horizontal_background_line]),
+			},
+			ComboTreeElement::Leaf { key_path, skill } => AddPanel::Skill {
+				key_path,
+				skill,
+				panel_overlay: PanelOverlay(&[add_key, add_append_button, add_delete_button]),
+				panel_background: PanelBackground(&[]),
+			},
+		}
+	}
+}
+
+struct PanelOverlay(&'static [fn(&[SlotKey], &mut ChildBuilder)]);
+
+struct PanelBackground(&'static [fn(&mut ChildBuilder)]);
 
 fn add_vertical_background_line(parent: &mut ChildBuilder) {
 	parent
@@ -568,6 +626,7 @@ fn add_append_button(key_path: &[SlotKey], parent: &mut ChildBuilder) {
 			parent
 				.spawn((
 					ComboOverview::modify_button(),
+					Tooltip::new("Add Skill to combo"), // FIXME: Language support
 					KeySelectDropdownCommand {
 						extra: AppendSkillCommand,
 						key_path: key_path.to_vec(),
@@ -586,6 +645,7 @@ fn add_delete_button(key_path: &[SlotKey], parent: &mut ChildBuilder) {
 			parent
 				.spawn((
 					ComboOverview::modify_button(),
+					Tooltip::new("Delete skill from combo"), // FIXME: Language support
 					DeleteSkill {
 						key_path: key_path.to_vec(),
 					},
@@ -599,13 +659,13 @@ fn add_delete_button(key_path: &[SlotKey], parent: &mut ChildBuilder) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::combo_tree_layout::ComboTreeElement;
+	use crate::traits::build_combo_tree_layout::ComboTreeElement;
 	use bevy::asset::{Asset, AssetId, AssetPath};
 	use common::{simple_init, tools::slot_key::Side, traits::mock::Mock};
 	use mockall::{mock, predicate::eq};
 	use uuid::Uuid;
 
-	#[derive(Debug, PartialEq, Clone)]
+	#[derive(Debug, PartialEq, Default, Clone)]
 	struct _Skill;
 
 	#[test]

@@ -2,14 +2,14 @@ use super::Dropdown;
 use crate::{
 	components::{
 		combo_overview::ComboOverview,
-		skill_button::{DropdownItem, Horizontal, SkillButton, Vertical},
+		combo_skill_button::{ComboSkillButton, DropdownItem, Horizontal, Vertical},
 	},
 	tools::Layout,
 	traits::{GetLayout, GetRootNode},
 };
 use bevy::prelude::*;
 
-impl<TSkill> GetRootNode for Dropdown<SkillButton<DropdownItem<Vertical>, TSkill>> {
+impl<TSkill> GetRootNode for Dropdown<ComboSkillButton<DropdownItem<Vertical>, TSkill>> {
 	fn root_node(&self) -> Node {
 		Node {
 			position_type: PositionType::Absolute,
@@ -20,13 +20,13 @@ impl<TSkill> GetRootNode for Dropdown<SkillButton<DropdownItem<Vertical>, TSkill
 	}
 }
 
-impl<TSkill> GetLayout for Dropdown<SkillButton<DropdownItem<Vertical>, TSkill>> {
+impl<TSkill> GetLayout for Dropdown<ComboSkillButton<DropdownItem<Vertical>, TSkill>> {
 	fn layout(&self) -> Layout {
 		Layout::SINGLE_COLUMN
 	}
 }
 
-impl<TSkill> GetRootNode for Dropdown<SkillButton<DropdownItem<Horizontal>, TSkill>> {
+impl<TSkill> GetRootNode for Dropdown<ComboSkillButton<DropdownItem<Horizontal>, TSkill>> {
 	fn root_node(&self) -> Node {
 		Node {
 			position_type: PositionType::Absolute,
@@ -37,7 +37,7 @@ impl<TSkill> GetRootNode for Dropdown<SkillButton<DropdownItem<Horizontal>, TSki
 	}
 }
 
-impl<TSkill> GetLayout for Dropdown<SkillButton<DropdownItem<Horizontal>, TSkill>> {
+impl<TSkill> GetLayout for Dropdown<ComboSkillButton<DropdownItem<Horizontal>, TSkill>> {
 	fn layout(&self) -> Layout {
 		Layout::SINGLE_ROW
 	}

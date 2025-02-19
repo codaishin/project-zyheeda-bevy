@@ -14,15 +14,20 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::slot_key::SlotKey,
+	tools::{
+		item_type::CompatibleItems,
+		skill_description::SkillDescription,
+		skill_icon::SkillIcon,
+		slot_key::SlotKey,
+	},
 	traits::{
 		accessors::get::{Getter, GetterRef},
 		animation::Animation,
 		handles_custom_assets::AssetFolderPath,
 		handles_effect::HandlesAllEffects,
-		handles_equipment::{CompatibleItems, SkillDescription},
 		handles_lifetime::HandlesLifetime,
 		handles_skill_behaviors::HandlesSkillBehaviors,
+		inspect_able::InspectAble,
 		load_asset::Path,
 	},
 };
@@ -73,9 +78,15 @@ impl AssetFolderPath for Skill {
 	}
 }
 
-impl Getter<SkillDescription> for Skill {
-	fn get(&self) -> SkillDescription {
-		SkillDescription(self.name.clone())
+impl InspectAble<SkillDescription> for Skill {
+	fn get_inspect_able_field(&self) -> String {
+		self.name.clone()
+	}
+}
+
+impl InspectAble<SkillIcon> for Skill {
+	fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
+		&self.icon
 	}
 }
 
@@ -112,8 +123,14 @@ impl Getter<SlotKey> for QueuedSkill {
 	}
 }
 
-impl GetterRef<Option<Handle<Image>>> for QueuedSkill {
-	fn get(&self) -> &Option<Handle<Image>> {
+impl InspectAble<SkillDescription> for QueuedSkill {
+	fn get_inspect_able_field(&self) -> String {
+		self.skill.name.clone()
+	}
+}
+
+impl InspectAble<SkillIcon> for QueuedSkill {
+	fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
 		&self.skill.icon
 	}
 }

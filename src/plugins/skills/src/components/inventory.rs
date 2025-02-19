@@ -1,43 +1,19 @@
-use crate::item::Item;
+use crate::{item::Item, traits::loadout_key::LoadoutKey};
 use bevy::{asset::Handle, ecs::component::Component};
 use common::{
 	tools::inventory_key::InventoryKey,
 	traits::{
 		accessors::get::{GetMut, GetRef},
-		handles_equipment::{ItemAsset, ItemAssetBufferMut, KeyOutOfBounds},
+		iterate::Iterate,
 	},
 };
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Default)]
 pub struct Inventory(pub(crate) Vec<Option<Handle<Item>>>);
 
 impl Inventory {
 	pub fn new<const N: usize>(items: [Option<Handle<Item>>; N]) -> Self {
 		Self(Vec::from(items))
-	}
-}
-
-impl ItemAssetBufferMut for Inventory {
-	type TItemHandle = Handle<Item>;
-
-	fn buffer_mut(&mut self) -> &mut Vec<Option<Self::TItemHandle>> {
-		&mut self.0
-	}
-}
-
-impl ItemAsset for Inventory {
-	type TKey = InventoryKey;
-	type TItem = Item;
-
-	fn item_asset(
-		&self,
-		InventoryKey(index): &Self::TKey,
-	) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
-		let Some(item) = self.0.get(*index) else {
-			return Err(KeyOutOfBounds);
-		};
-
-		Ok(item)
 	}
 }
 
@@ -64,6 +40,24 @@ fn fill(inventory: &mut Vec<Option<Handle<Item>>>, inventory_key: usize) {
 	let fill_len = inventory_key - inventory.len() + 1;
 	for _ in 0..fill_len {
 		inventory.push(None);
+	}
+}
+
+impl LoadoutKey for Inventory {
+	type TKey = InventoryKey;
+}
+
+impl Iterate for Inventory {
+	type TItem<'a>
+		= (InventoryKey, &'a Option<Handle<Item>>)
+	where
+		Self: 'a;
+
+	fn iterate(&self) -> impl Iterator<Item = Self::TItem<'_>> {
+		self.0
+			.iter()
+			.enumerate()
+			.map(|(i, item)| (InventoryKey(i), item))
 	}
 }
 

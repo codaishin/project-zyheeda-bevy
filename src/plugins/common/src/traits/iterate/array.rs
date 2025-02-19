@@ -1,10 +1,12 @@
 use super::Iterate;
 
-impl<TItem, const N: usize> Iterate<TItem> for [TItem; N] {
-	fn iterate<'a>(&'a self) -> impl DoubleEndedIterator<Item = &'a TItem>
+impl<TItem, const N: usize> Iterate for [TItem; N] {
+	type TItem<'a>
+		= &'a TItem
 	where
-		TItem: 'a,
-	{
+		Self: 'a;
+
+	fn iterate(&self) -> impl Iterator<Item = Self::TItem<'_>> {
 		self.iter()
 	}
 }

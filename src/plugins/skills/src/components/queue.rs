@@ -13,7 +13,7 @@ use crate::{
 use bevy::{ecs::component::Component, prelude::*};
 use common::{
 	tools::slot_key::SlotKey,
-	traits::{handles_equipment::IterateQueue, state_duration::StateDuration},
+	traits::{iterate::Iterate, state_duration::StateDuration},
 };
 use std::{collections::VecDeque, time::Duration};
 
@@ -44,10 +44,13 @@ impl Queue {
 	}
 }
 
-impl IterateQueue for Queue {
-	type TItem = QueuedSkill;
+impl Iterate for Queue {
+	type TItem<'a>
+		= &'a QueuedSkill
+	where
+		Self: 'a;
 
-	fn iterate(&self) -> impl Iterator<Item = &Self::TItem> {
+	fn iterate(&self) -> impl Iterator<Item = Self::TItem<'_>> {
 		self.queue.iter()
 	}
 }

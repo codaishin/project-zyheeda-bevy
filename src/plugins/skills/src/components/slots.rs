@@ -1,5 +1,5 @@
 use super::model_render::ModelRender;
-use crate::item::Item;
+use crate::{item::Item, traits::loadout_key::LoadoutKey};
 use bevy::{asset::Handle, prelude::*};
 use common::{
 	components::{essence::Essence, AssetModel},
@@ -8,7 +8,7 @@ use common::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,
 		handles_assets_for_children::{ChildAssetComponent, ChildAssetDefinition, ChildName},
-		handles_equipment::{ItemAsset, KeyOutOfBounds, WriteItem},
+		iterate::Iterate,
 	},
 };
 use std::{collections::HashMap, fmt::Debug};
@@ -28,29 +28,25 @@ impl Default for Slots {
 	}
 }
 
-impl ItemAsset for Slots {
-	type TKey = SlotKey;
-	type TItem = Item;
-
-	fn item_asset(&self, key: &Self::TKey) -> Result<&Option<Handle<Self::TItem>>, KeyOutOfBounds> {
-		let Some(item) = self.0.get(key) else {
-			return Err(KeyOutOfBounds);
-		};
-
-		Ok(item)
-	}
-}
-
-impl WriteItem<SlotKey, Option<Handle<Item>>> for Slots {
-	fn write_item(&mut self, key: &SlotKey, value: Option<Handle<Item>>) {
-		self.0.insert(*key, value);
-	}
-}
-
 impl GetRef<SlotKey, Handle<Item>> for Slots {
 	fn get(&self, key: &SlotKey) -> Option<&Handle<Item>> {
 		let slot = self.0.get(key)?;
 		slot.as_ref()
+	}
+}
+
+impl LoadoutKey for Slots {
+	type TKey = SlotKey;
+}
+
+impl Iterate for Slots {
+	type TItem<'a>
+		= (SlotKey, &'a Option<Handle<Item>>)
+	where
+		Self: 'a;
+
+	fn iterate(&self) -> impl Iterator<Item = Self::TItem<'_>> {
+		self.0.iter().map(|(key, item)| (*key, item))
 	}
 }
 
@@ -89,9 +85,9 @@ impl ChildAssetComponent<HandItemSlots> for Item {
 	fn component(item: Option<&Self>) -> Self::TComponent {
 		match item {
 			Some(Item {
-				model: ModelRender::Hand(asset_model),
+				model: ModelRender::Hand(path),
 				..
-			}) => asset_model.clone(),
+			}) => AssetModel::Path(path.clone()),
 			_ => AssetModel::None,
 		}
 	}
@@ -122,9 +118,9 @@ impl ChildAssetComponent<ForearmItemSlots> for Item {
 	fn component(item: Option<&Self>) -> Self::TComponent {
 		match item {
 			Some(Item {
-				model: ModelRender::Forearm(asset_model),
+				model: ModelRender::Forearm(path),
 				..
-			}) => asset_model.clone(),
+			}) => AssetModel::Path(path.clone()),
 			_ => AssetModel::None,
 		}
 	}
