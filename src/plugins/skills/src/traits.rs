@@ -3,6 +3,7 @@ pub(crate) mod bevy_input;
 pub(crate) mod flush;
 pub(crate) mod follow_up_keys;
 pub(crate) mod is_timed_out;
+pub(crate) mod loadout_key;
 pub(crate) mod peek_next;
 pub(crate) mod peek_next_recursive;
 pub(crate) mod skill_builder;

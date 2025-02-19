@@ -1,5 +1,5 @@
 use super::model_render::ModelRender;
-use crate::item::Item;
+use crate::{item::Item, traits::loadout_key::LoadoutKey};
 use bevy::{asset::Handle, prelude::*};
 use common::{
 	components::{essence::Essence, AssetModel},
@@ -33,6 +33,10 @@ impl GetRef<SlotKey, Handle<Item>> for Slots {
 		let slot = self.0.get(key)?;
 		slot.as_ref()
 	}
+}
+
+impl LoadoutKey for Slots {
+	type TKey = SlotKey;
 }
 
 impl Iterate for Slots {

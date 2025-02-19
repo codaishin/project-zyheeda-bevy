@@ -17,7 +17,6 @@ use common::{
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	tools::{
 		change::Change,
-		inventory_key::InventoryKey,
 		skill_execution::SkillExecution,
 		slot_key::{Side, SlotKey},
 	},
@@ -55,7 +54,7 @@ use components::{
 use item::{dto::ItemDto, Item};
 use macros::item_asset;
 use skills::{dto::SkillDto, QueuedSkill, RunSkillBehavior, Skill};
-use std::{hash::Hash, marker::PhantomData, time::Duration};
+use std::{marker::PhantomData, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,
 	combos::{queue_update::ComboQueueUpdate, update::UpdateCombos},
@@ -64,18 +63,14 @@ use systems::{
 	flush::flush,
 	flush_skill_combos::flush_skill_combos,
 	get_inputs::get_inputs,
+	loadout_descriptor::LoadoutDescriptor,
 	mouse_context::{
 		advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
 		release::release_triggered_mouse_context,
 		trigger_primed::trigger_primed_mouse_context,
 	},
 };
-use tools::{
-	cache::Cache,
-	combo_descriptor::ComboDescriptor,
-	inventory_item::InventoryItem,
-	quickbar_item::QuickbarItem,
-};
+use tools::{cache::Cache, combo_descriptor::ComboDescriptor, quickbar_item::QuickbarItem};
 use traits::{is_timed_out::IsTimedOut, peek_next::PeekNext};
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
@@ -241,54 +236,18 @@ where
 	fn config_menus(&self, app: &mut App) {
 		TMenu::loadout_with_swapper::<Swapper>().configure(
 			app,
-			Self::get_descriptors::<Inventory, InventoryKey>,
-			Self::get_descriptors::<Slots, SlotKey>,
+			Inventory::describe_loadout_for::<TPlayers::TPlayer>,
+			Slots::describe_loadout_for::<TPlayers::TPlayer>,
 		);
 		TMenu::configure_quickbar_menu(app, Self::get_quickbar_descriptors);
 		TMenu::combos_with_skill::<Skill>().configure(
 			app,
-			ComboDescriptor::get_updated::<TPlayers::TPlayer>,
+			ComboDescriptor::describe_combos_for::<TPlayers::TPlayer>,
 			Combos::<ComboNode>::update_for::<TPlayers::TPlayer>,
 		);
 	}
 
 	// FIXME: NEEDS CLEANING UP
-	fn get_descriptors<TContainer, TKey>(
-		containers: Query<&TContainer, (With<TPlayers::TPlayer>, Changed<TContainer>)>,
-		items: Res<Assets<Item>>,
-		skills: Res<Assets<Skill>>,
-	) -> Change<Cache<TKey, InventoryItem>>
-	where
-		for<'a> TContainer: Iterate<TItem<'a> = (TKey, &'a Option<Handle<Item>>)> + Component,
-		TKey: Eq + Hash + Copy,
-	{
-		let Ok(container) = containers.get_single() else {
-			return Change::None;
-		};
-
-		let map = container
-			.iterate()
-			.filter_map(|(key, handle)| {
-				let handle = handle.as_ref()?;
-				let item = items.get(handle)?;
-				let image = item
-					.skill
-					.as_ref()
-					.and_then(|handle| skills.get(handle))
-					.and_then(|skill| skill.icon.clone());
-
-				Some((
-					key,
-					InventoryItem {
-						name: item.name.clone(),
-						skill_icon: image.clone(),
-					},
-				))
-			})
-			.collect();
-
-		Change::Some(Cache(map))
-	}
 
 	#[allow(clippy::type_complexity)]
 	fn get_quickbar_descriptors(

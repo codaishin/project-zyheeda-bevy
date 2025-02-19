@@ -5,4 +5,5 @@ pub(crate) mod execute;
 pub(crate) mod flush;
 pub(crate) mod flush_skill_combos;
 pub(crate) mod get_inputs;
+pub(crate) mod loadout_descriptor;
 pub(crate) mod mouse_context;

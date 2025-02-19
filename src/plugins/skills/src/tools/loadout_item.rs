@@ -4,18 +4,19 @@ use common::{
 	traits::inspect_able::InspectAble,
 };
 
-pub struct InventoryItem {
+#[derive(Debug, PartialEq)]
+pub struct LoadoutItem {
 	pub name: String,
 	pub skill_icon: Option<Handle<Image>>,
 }
 
-impl InspectAble<ItemDescription> for InventoryItem {
+impl InspectAble<ItemDescription> for LoadoutItem {
 	fn get_inspect_able_field(&self) -> String {
 		self.name.clone()
 	}
 }
 
-impl InspectAble<SkillIcon> for InventoryItem {
+impl InspectAble<SkillIcon> for LoadoutItem {
 	fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
 		&self.skill_icon
 	}

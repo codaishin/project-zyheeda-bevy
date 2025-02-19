@@ -25,7 +25,7 @@ pub struct ComboDescriptor {
 
 impl ComboDescriptor {
 	#[allow(clippy::type_complexity)]
-	pub(crate) fn get_updated<TPlayer>(
+	pub(crate) fn describe_combos_for<TPlayer>(
 		slots: Query<(Ref<Slots>, Ref<Combos>), With<TPlayer>>,
 		items: Res<Assets<Item>>,
 		skills: Res<Assets<Skill>>,
@@ -204,7 +204,7 @@ mod tests {
 
 		let equipment = app
 			.world_mut()
-			.run_system_once(ComboDescriptor::get_updated::<_Player>)?
+			.run_system_once(ComboDescriptor::describe_combos_for::<_Player>)?
 			.expect("could not produce equipment descriptor");
 
 		assert_eq!(
@@ -256,7 +256,7 @@ mod tests {
 
 		let equipment = app
 			.world_mut()
-			.run_system_once(ComboDescriptor::get_updated::<_Player>)?
+			.run_system_once(ComboDescriptor::describe_combos_for::<_Player>)?
 			.expect("could not produce equipment descriptor");
 
 		assert_eq!(
@@ -312,7 +312,7 @@ mod tests {
 
 		let equipment = app
 			.world_mut()
-			.run_system_once(ComboDescriptor::get_updated::<_Player>)?
+			.run_system_once(ComboDescriptor::describe_combos_for::<_Player>)?
 			.expect("could not produce equipment descriptor");
 
 		assert_eq!(
@@ -376,7 +376,7 @@ mod tests {
 		app.init_resource::<_Res>();
 		app.add_systems(
 			Update,
-			ComboDescriptor::get_updated::<_Player>.pipe(_Res::update),
+			ComboDescriptor::describe_combos_for::<_Player>.pipe(_Res::update),
 		);
 
 		app.update();
@@ -391,7 +391,7 @@ mod tests {
 		app.init_resource::<_Res>();
 		app.add_systems(
 			Update,
-			ComboDescriptor::get_updated::<_Player>.pipe(_Res::update),
+			ComboDescriptor::describe_combos_for::<_Player>.pipe(_Res::update),
 		);
 
 		app.update();
@@ -410,7 +410,7 @@ mod tests {
 		app.init_resource::<_Res>();
 		app.add_systems(
 			Update,
-			ComboDescriptor::get_updated::<_Player>.pipe(_Res::update),
+			ComboDescriptor::describe_combos_for::<_Player>.pipe(_Res::update),
 		);
 
 		app.update();
