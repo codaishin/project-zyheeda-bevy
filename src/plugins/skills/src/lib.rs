@@ -21,7 +21,7 @@ use common::{
 		item_description::ItemDescription,
 		skill_execution::SkillExecution,
 		skill_icon::SkillIcon,
-		slot_key::{Combo, Side, SlotKey},
+		slot_key::{Side, SlotKey},
 	},
 	traits::{
 		handles_assets_for_children::HandlesAssetsForChildren,
@@ -45,6 +45,7 @@ use common::{
 	},
 };
 use components::{
+	combo_node::ComboNode,
 	combos::Combos,
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
@@ -60,6 +61,7 @@ use skills::{dto::SkillDto, QueuedSkill, RunSkillBehavior, Skill};
 use std::{collections::HashMap, hash::Hash, marker::PhantomData, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,
+	combos::{queue_update::ComboQueueUpdate, update::UpdateCombos},
 	enqueue::enqueue,
 	execute::ExecuteSkills,
 	flush::flush,
@@ -70,10 +72,9 @@ use systems::{
 		release::release_triggered_mouse_context,
 		trigger_primed::trigger_primed_mouse_context,
 	},
-	update_skill_combos::update_skill_combos,
 };
 use tools::combo_descriptor::ComboDescriptor;
-use traits::{is_timed_out::IsTimedOut, peek_next::PeekNext, write_item::WriteItem};
+use traits::{is_timed_out::IsTimedOut, peek_next::PeekNext};
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -159,7 +160,7 @@ where
 						State<MouseContext<KeyCode>>,
 					>
 						.pipe(enqueue::<Slots, Queue, QueuedSkill>),
-					update_skill_combos::<Combos, Queue>,
+					Combos::update::<Queue>,
 					flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 					advance_active_skill::<Queue, TPlayers, TBehaviors, SkillExecuter, Virtual>,
 					execute_skill.pipe(log_many),
@@ -245,25 +246,11 @@ where
 		TMenu::combos_with_skill::<Skill>().configure(
 			app,
 			ComboDescriptor::get_updated::<TPlayers::TPlayer>,
-			Self::update_combos,
+			Combos::<ComboNode>::update_for::<TPlayers::TPlayer>,
 		);
 	}
 
 	// FIXME: NEEDS CLEANING UP
-
-	fn update_combos(
-		In(updated_combos): In<Combo<Option<Skill>>>,
-		mut combos: Query<&mut Combos, With<TPlayers::TPlayer>>,
-	) {
-		let Ok(mut combos) = combos.get_single_mut() else {
-			return;
-		};
-
-		for (combo_keys, skill) in updated_combos {
-			combos.write_item(&combo_keys, skill);
-		}
-	}
-
 	fn get_descriptors<TContainer, TKey>(
 		containers: Query<&TContainer, (With<TPlayers::TPlayer>, Changed<TContainer>)>,
 		items: Res<Assets<Item>>,
