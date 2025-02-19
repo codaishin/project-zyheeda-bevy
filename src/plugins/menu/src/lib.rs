@@ -39,7 +39,6 @@ use common::{
 		handles_graphics::{StaticRenderLayers, UiCamera},
 		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
 		handles_loadout_menu::{ConfigureInventory, GetItem, HandlesLoadoutMenu, SwapValuesByKey},
-		handles_player::HandlesPlayer,
 		inspect_able::InspectAble,
 		load_asset::Path,
 		thread_safe::ThreadSafe,
@@ -185,21 +184,19 @@ impl AddDropdown for App {
 
 pub struct MenuPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TPlayers, TGraphics> MenuPlugin<(TLoading, TPlayers, TGraphics)>
+impl<TLoading, TGraphics> MenuPlugin<(TLoading, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
-	TPlayers: ThreadSafe + HandlesPlayer,
 	TGraphics: ThreadSafe + UiCamera,
 {
-	pub fn depends_on(_: &TLoading, _: &TPlayers, _: &TGraphics) -> Self {
+	pub fn depends_on(_: &TLoading, _: &TGraphics) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TPlayers, TGraphics> MenuPlugin<(TLoading, TPlayers, TGraphics)>
+impl<TLoading, TGraphics> MenuPlugin<(TLoading, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
-	TPlayers: ThreadSafe + HandlesPlayer,
 	TGraphics: ThreadSafe + UiCamera,
 {
 	fn resources(&self, app: &mut App) {
@@ -278,10 +275,9 @@ where
 	}
 }
 
-impl<TLoading, TPlayers, TGraphics> Plugin for MenuPlugin<(TLoading, TPlayers, TGraphics)>
+impl<TLoading, TGraphics> Plugin for MenuPlugin<(TLoading, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
-	TPlayers: ThreadSafe + HandlesPlayer,
 	TGraphics: ThreadSafe + UiCamera,
 {
 	fn build(&self, app: &mut App) {
@@ -378,7 +374,7 @@ where
 	}
 }
 
-impl<TLoading, TPlayers, TGraphics> HandlesComboMenu for MenuPlugin<(TLoading, TPlayers, TGraphics)>
+impl<TLoading, TGraphics> HandlesComboMenu for MenuPlugin<(TLoading, TGraphics)>
 where
 	TGraphics: ThreadSafe + UiCamera,
 {
