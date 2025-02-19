@@ -18,9 +18,7 @@ use common::{
 	tools::{
 		change::Change,
 		inventory_key::InventoryKey,
-		item_description::ItemDescription,
 		skill_execution::SkillExecution,
-		skill_icon::SkillIcon,
 		slot_key::{Side, SlotKey},
 	},
 	traits::{
@@ -29,7 +27,7 @@ use common::{
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_effect::HandlesAllEffects,
 		handles_lifetime::HandlesLifetime,
-		handles_loadout_menu::{ConfigureInventory, GetItem, HandlesLoadoutMenu},
+		handles_loadout_menu::{ConfigureInventory, HandlesLoadoutMenu},
 		handles_orientation::HandlesOrientation,
 		handles_player::{
 			ConfiguresPlayerSkillAnimations,
@@ -38,7 +36,6 @@ use common::{
 			HandlesPlayerMouse,
 		},
 		handles_skill_behaviors::HandlesSkillBehaviors,
-		inspect_able::InspectAble,
 		iterate::Iterate,
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
@@ -58,7 +55,7 @@ use components::{
 use item::{dto::ItemDto, Item};
 use macros::item_asset;
 use skills::{dto::SkillDto, QueuedSkill, RunSkillBehavior, Skill};
-use std::{collections::HashMap, hash::Hash, marker::PhantomData, time::Duration};
+use std::{hash::Hash, marker::PhantomData, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,
 	combos::{queue_update::ComboQueueUpdate, update::UpdateCombos},
@@ -73,7 +70,12 @@ use systems::{
 		trigger_primed::trigger_primed_mouse_context,
 	},
 };
-use tools::combo_descriptor::ComboDescriptor;
+use tools::{
+	cache::Cache,
+	combo_descriptor::ComboDescriptor,
+	inventory_item::InventoryItem,
+	quickbar_item::QuickbarItem,
+};
 use traits::{is_timed_out::IsTimedOut, peek_next::PeekNext};
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
@@ -394,63 +396,5 @@ where
 		self.loadout(app);
 		self.skill_execution(app);
 		self.config_menus(app);
-	}
-}
-
-// FIXME: NEEDS CLEANUP
-#[derive(Debug, PartialEq)]
-pub struct Cache<TKey, TItem>(pub HashMap<TKey, TItem>)
-where
-	TKey: Eq + Hash;
-
-impl<TKey, TItem> GetItem<TKey> for Cache<TKey, TItem>
-where
-	TKey: Eq + Hash,
-{
-	type TItem = TItem;
-
-	fn get_item(&self, key: TKey) -> Option<&TItem> {
-		self.0.get(&key)
-	}
-}
-
-pub struct QuickbarItem {
-	pub name: String,
-	pub icon: Option<Handle<Image>>,
-	pub execution: SkillExecution,
-}
-
-impl InspectAble<ItemDescription> for QuickbarItem {
-	fn get_inspect_able_field(&self) -> String {
-		self.name.clone()
-	}
-}
-
-impl InspectAble<SkillIcon> for QuickbarItem {
-	fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
-		&self.icon
-	}
-}
-
-impl InspectAble<SkillExecution> for QuickbarItem {
-	fn get_inspect_able_field(&self) -> &SkillExecution {
-		&self.execution
-	}
-}
-
-pub struct InventoryItem {
-	pub name: String,
-	pub skill_icon: Option<Handle<Image>>,
-}
-
-impl InspectAble<ItemDescription> for InventoryItem {
-	fn get_inspect_able_field(&self) -> String {
-		self.name.clone()
-	}
-}
-
-impl InspectAble<SkillIcon> for InventoryItem {
-	fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
-		&self.skill_icon
 	}
 }
