@@ -1,6 +1,7 @@
 pub mod accessors;
 pub mod add_asset;
 pub mod animation;
+pub mod asset_marker;
 pub mod cache;
 pub mod cast_ray;
 pub mod clamp_zero_positive;

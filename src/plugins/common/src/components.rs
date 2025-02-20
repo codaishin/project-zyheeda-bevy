@@ -1,3 +1,4 @@
+pub mod asset_component;
 pub mod essence;
 pub mod flip;
 
