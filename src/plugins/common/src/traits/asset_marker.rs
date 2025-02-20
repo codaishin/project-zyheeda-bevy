@@ -1,21 +1,34 @@
 use bevy::prelude::*;
 
-pub trait AssetMarker: internal::AssetMarker {}
+pub trait AssetMarker: internal::AssetMarker {
+	type TComponent: Component;
 
-impl<T> AssetMarker for T where T: internal::AssetMarker {}
+	fn component(handle: Handle<Self>) -> Self::TComponent;
+}
+
+impl<T> AssetMarker for T
+where
+	T: internal::AssetMarker,
+{
+	type TComponent = T::TWrapper;
+
+	fn component(handle: Handle<Self>) -> Self::TComponent {
+		Self::wrap(handle)
+	}
+}
 
 impl internal::AssetMarker for Mesh {
-	type TComponent = Mesh3d;
+	type TWrapper = Mesh3d;
 
-	fn wrap(handle: Handle<Self>) -> Self::TComponent {
+	fn wrap(handle: Handle<Self>) -> Self::TWrapper {
 		Mesh3d(handle)
 	}
 }
 
 impl internal::AssetMarker for StandardMaterial {
-	type TComponent = MeshMaterial3d<StandardMaterial>;
+	type TWrapper = MeshMaterial3d<StandardMaterial>;
 
-	fn wrap(handle: Handle<Self>) -> Self::TComponent {
+	fn wrap(handle: Handle<Self>) -> Self::TWrapper {
 		MeshMaterial3d(handle)
 	}
 }
@@ -24,8 +37,8 @@ pub(crate) mod internal {
 	use super::*;
 
 	pub trait AssetMarker: Asset + Sized {
-		type TComponent: Component;
+		type TWrapper: Component;
 
-		fn wrap(handle: Handle<Self>) -> Self::TComponent;
+		fn wrap(handle: Handle<Self>) -> Self::TWrapper;
 	}
 }
