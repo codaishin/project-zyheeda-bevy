@@ -2,7 +2,7 @@ use crate::traits::insert_attack::InsertAttack;
 use bevy::{ecs::system::EntityCommands, pbr::NotShadowCaster, prelude::*};
 use common::{
 	blocker::Blocker,
-	components::asset_component::{AssetComponent, AssetComponentFromSource},
+	components::insert_asset::{InsertAsset, InsertAssetFromSource},
 	effects::deal_damage::DealDamage,
 	errors::Error,
 	tools::Units,
@@ -79,8 +79,8 @@ where
 #[require(
 	Visibility,
 	Transform(Self::transform),
-	AssetComponent<Mesh>(Self::model),
-	AssetComponentFromSource<StandardMaterial, Self>(Self::material),
+	InsertAsset<Mesh>(Self::model),
+	InsertAssetFromSource<StandardMaterial, Self>(Self::material),
 	NotShadowCaster,
 )]
 pub(crate) struct VoidBeamModel {
@@ -93,8 +93,8 @@ impl VoidBeamModel {
 		Transform::from_rotation(Quat::from_rotation_x(PI / 2.))
 	}
 
-	fn model() -> AssetComponent<Mesh> {
-		AssetComponent::shared::<Self>(|| {
+	fn model() -> InsertAsset<Mesh> {
+		InsertAsset::shared::<Self>(|| {
 			Mesh::from(Cylinder {
 				radius: 0.01,
 				half_height: 0.5,
@@ -102,8 +102,8 @@ impl VoidBeamModel {
 		})
 	}
 
-	fn material() -> AssetComponentFromSource<StandardMaterial, Self> {
-		AssetComponentFromSource::shared(|model| StandardMaterial {
+	fn material() -> InsertAssetFromSource<StandardMaterial, Self> {
+		InsertAssetFromSource::shared(|model| StandardMaterial {
 			base_color: model.color,
 			emissive: model.emissive,
 			alpha_mode: AlphaMode::Add,

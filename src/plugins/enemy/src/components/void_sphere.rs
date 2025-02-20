@@ -20,7 +20,7 @@ use common::{
 		health::Health,
 	},
 	blocker::Blocker,
-	components::{asset_component::AssetComponent, ColliderRoot, GroundOffset},
+	components::{insert_asset::InsertAsset, ColliderRoot, GroundOffset},
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	errors::Error,
 	tools::{Units, UnitsPerSecond},
@@ -135,42 +135,42 @@ pub enum VoidSpherePart {
 
 #[derive(Component)]
 #[require(
-	AssetComponent<StandardMaterial> (Self::material),
-	AssetComponent<Mesh> (Self::mesh),
+	InsertAsset<StandardMaterial>(Self::material),
+	InsertAsset<Mesh>(Self::mesh),
 )]
 struct VoidSphereCore;
 
 impl VoidSphereCore {
-	fn material() -> AssetComponent<StandardMaterial> {
-		AssetComponent::shared::<Self>(|| StandardMaterial {
+	fn material() -> InsertAsset<StandardMaterial> {
+		InsertAsset::shared::<Self>(|| StandardMaterial {
 			base_color: Color::BLACK,
 			metallic: 1.,
 			..default()
 		})
 	}
 
-	fn mesh() -> AssetComponent<Mesh> {
-		AssetComponent::shared::<Self>(|| sphere(VOID_SPHERE_INNER_RADIUS))
+	fn mesh() -> InsertAsset<Mesh> {
+		InsertAsset::shared::<Self>(|| sphere(VOID_SPHERE_INNER_RADIUS))
 	}
 }
 
 #[derive(Component)]
 #[require(
-	AssetComponent<StandardMaterial> (Self::material),
-	AssetComponent<Mesh> (Self::mesh),
+	InsertAsset<StandardMaterial>(Self::material),
+	InsertAsset<Mesh>(Self::mesh),
 )]
 struct VoidSphereRing;
 
 impl VoidSphereRing {
-	fn material() -> AssetComponent<StandardMaterial> {
-		AssetComponent::shared::<Self>(|| StandardMaterial {
+	fn material() -> InsertAsset<StandardMaterial> {
+		InsertAsset::shared::<Self>(|| StandardMaterial {
 			emissive: LinearRgba::new(23.0, 23.0, 23.0, 1.),
 			..default()
 		})
 	}
 
-	fn mesh() -> AssetComponent<Mesh> {
-		AssetComponent::shared::<Self>(|| {
+	fn mesh() -> InsertAsset<Mesh> {
+		InsertAsset::shared::<Self>(|| {
 			Mesh::from(Torus {
 				major_radius: VOID_SPHERE_TORUS_RADIUS,
 				minor_radius: VOID_SPHERE_TORUS_RING_RADIUS,

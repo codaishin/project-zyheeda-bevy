@@ -6,7 +6,7 @@ mod traits;
 use bevy::prelude::*;
 use common::{
 	attributes::{affected_by::AffectedBy, health::Health},
-	components::asset_component::AssetComponentFromSource,
+	components::insert_asset::InsertAssetFromSource,
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	traits::{
 		handles_effect::HandlesEffect,
@@ -58,7 +58,7 @@ where
 
 		app.add_systems(
 			Update,
-			AssetComponentFromSource::<StandardMaterial, VoidBeamModel>::add_asset,
+			InsertAssetFromSource::<StandardMaterial, VoidBeamModel>::system,
 		)
 		.add_systems(Update, ring_rotation);
 	}

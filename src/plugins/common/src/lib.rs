@@ -13,7 +13,7 @@ pub mod tools;
 pub mod traits;
 
 use bevy::prelude::*;
-use components::{asset_component::AssetComponent, flip::FlipHorizontally};
+use components::{flip::FlipHorizontally, insert_asset::InsertAsset};
 use labels::Labels;
 use resources::language_server::LanguageServer;
 use systems::load_asset_model::load_asset_model;
@@ -28,8 +28,8 @@ impl Plugin for CommonPlugin {
 			.add_systems(
 				Labels::PREFAB_INSTANTIATION.label(),
 				(
-					AssetComponent::<Mesh>::add_asset,
-					AssetComponent::<StandardMaterial>::add_asset,
+					InsertAsset::<Mesh>::system,
+					InsertAsset::<StandardMaterial>::system,
 				),
 			);
 	}

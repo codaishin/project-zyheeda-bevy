@@ -5,7 +5,7 @@ use super::{
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::{ActiveEvents, Collider, CollidingEntities, Sensor};
 use common::{
-	components::asset_component::AssetComponent,
+	components::insert_asset::InsertAsset,
 	errors::Error,
 	tools::{Intensity, IntensityChangePerSecond, Units},
 	traits::{
@@ -137,7 +137,7 @@ fn increase(
 		commands.try_insert_on(light.light, Visibility::Visible);
 		commands.try_insert_on(
 			light.model,
-			AssetComponent::shared_id(light.light_on_material, light.marker_on),
+			InsertAsset::shared_id(light.light_on_material, light.marker_on),
 		);
 	}
 
@@ -172,7 +172,7 @@ fn decrease(
 	target_light.intensity = 0.;
 	commands.try_insert_on(
 		light.model,
-		AssetComponent::shared_id(light.light_off_material, light.marker_off),
+		InsertAsset::shared_id(light.light_off_material, light.marker_off),
 	);
 	commands.try_insert_on(light.light, Visibility::Hidden);
 
@@ -528,8 +528,8 @@ mod test_apply_change {
 		let model = app.world().entity(model);
 
 		assert_eq!(
-			Some(&AssetComponent::shared::<_MarkerOn>(light_on_material)),
-			model.get::<AssetComponent<StandardMaterial>>()
+			Some(&InsertAsset::shared::<_MarkerOn>(light_on_material)),
+			model.get::<InsertAsset<StandardMaterial>>()
 		);
 	}
 
@@ -741,8 +741,8 @@ mod test_apply_change {
 		let model = app.world().entity(model);
 
 		assert_eq!(
-			Some(&AssetComponent::shared::<_MarkerOff>(light_off_material)),
-			model.get::<AssetComponent<StandardMaterial>>()
+			Some(&InsertAsset::shared::<_MarkerOff>(light_off_material)),
+			model.get::<InsertAsset<StandardMaterial>>()
 		);
 	}
 
@@ -815,8 +815,8 @@ mod test_apply_change {
 		let model = app.world().entity(model);
 
 		assert_eq!(
-			Some(&AssetComponent::shared::<_MarkerOff>(light_off_material)),
-			model.get::<AssetComponent<StandardMaterial>>()
+			Some(&InsertAsset::shared::<_MarkerOff>(light_off_material)),
+			model.get::<InsertAsset<StandardMaterial>>()
 		);
 	}
 

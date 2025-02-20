@@ -1,6 +1,6 @@
-pub mod asset_component;
 pub mod essence;
 pub mod flip;
+pub mod insert_asset;
 
 use bevy::{prelude::*, render::view::RenderLayers};
 use bevy_rapier3d::prelude::*;

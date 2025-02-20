@@ -11,7 +11,7 @@ use std::{any::TypeId, collections::HashMap};
 ///
 /// This is a command like component and will be removed from
 /// the [`Entity`] after the corresponding asset has been added.
-pub struct AssetComponent<TAsset>
+pub struct InsertAsset<TAsset>
 where
 	TAsset: AssetMarker,
 {
@@ -19,7 +19,7 @@ where
 	shared: Option<TypeId>,
 }
 
-impl<TAsset> PartialEq for AssetComponent<TAsset>
+impl<TAsset> PartialEq for InsertAsset<TAsset>
 where
 	TAsset: AssetMarker,
 {
@@ -28,7 +28,7 @@ where
 	}
 }
 
-impl<TAsset> AssetComponent<TAsset>
+impl<TAsset> InsertAsset<TAsset>
 where
 	TAsset: AssetMarker,
 {
@@ -80,7 +80,7 @@ where
 		}
 	}
 
-	pub(crate) fn add_asset(
+	pub(crate) fn system(
 		mut commands: Commands,
 		mut caches: Local<HashMap<TypeId, Handle<TAsset>>>,
 		mut assets: ResMut<Assets<TAsset>>,
@@ -125,7 +125,7 @@ where
 ///
 /// This is a command like component and will be removed from
 /// the [`Entity`] after the corresponding asset has been added.
-pub struct AssetComponentFromSource<TAsset, TSource>
+pub struct InsertAssetFromSource<TAsset, TSource>
 where
 	TAsset: AssetMarker,
 	TSource: Component,
@@ -134,7 +134,7 @@ where
 	shared: Option<TypeId>,
 }
 
-impl<TAsset, TSource> AssetComponentFromSource<TAsset, TSource>
+impl<TAsset, TSource> InsertAssetFromSource<TAsset, TSource>
 where
 	TAsset: AssetMarker,
 	TSource: Component + 'static,
@@ -145,7 +145,7 @@ where
 	/// and adds the asset handle via [`AssetMarker::component`] to the [`Entity`].
 	///
 	/// <div class="warning">
-	///   Only works, if [`Self::add_asset`] system has been registered
+	///   Only works, if [`Self::system`] has been registered
 	/// </div>
 	pub fn unique(new_asset: fn(&TSource) -> TAsset) -> Self {
 		Self {
@@ -163,7 +163,7 @@ where
 	/// instead and no new asset will be created.
 	///
 	/// <div class="warning">
-	///   Only works, if [`Self::add_asset`] system has been registered
+	///   Only works, if [`Self::system`] has been registered
 	/// </div>
 	pub fn shared(new_asset: fn(&TSource) -> TAsset) -> Self {
 		Self {
@@ -172,7 +172,7 @@ where
 		}
 	}
 
-	pub fn add_asset(
+	pub fn system(
 		mut commands: Commands,
 		mut caches: Local<HashMap<TypeId, Handle<TAsset>>>,
 		mut assets: ResMut<Assets<TAsset>>,
@@ -237,7 +237,7 @@ mod test_add_asset {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<Assets<_Asset>>();
-		app.add_systems(Update, AssetComponent::<_Asset>::add_asset);
+		app.add_systems(Update, InsertAsset::<_Asset>::system);
 
 		app
 	}
@@ -245,8 +245,7 @@ mod test_add_asset {
 	#[test]
 	fn add_asset_to_assets() {
 		let mut app = setup();
-		app.world_mut()
-			.spawn(AssetComponent::unique(_Asset::default));
+		app.world_mut().spawn(InsertAsset::unique(_Asset::default));
 
 		app.update();
 
@@ -258,7 +257,7 @@ mod test_add_asset {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(AssetComponent::unique(_Asset::default))
+			.spawn(InsertAsset::unique(_Asset::default))
 			.id();
 
 		app.update();
@@ -279,11 +278,11 @@ mod test_add_asset {
 		let mut app = setup();
 		let entity_a = app
 			.world_mut()
-			.spawn(AssetComponent::shared::<_Marker>(_Asset::default))
+			.spawn(InsertAsset::shared::<_Marker>(_Asset::default))
 			.id();
 		let entity_b = app
 			.world_mut()
-			.spawn(AssetComponent::shared::<_Marker>(_Asset::default))
+			.spawn(InsertAsset::shared::<_Marker>(_Asset::default))
 			.id();
 
 		app.update();
@@ -300,11 +299,11 @@ mod test_add_asset {
 		let mut app = setup();
 		let a = app
 			.world_mut()
-			.spawn(AssetComponent::shared::<_Marker>(_Asset::default))
+			.spawn(InsertAsset::shared::<_Marker>(_Asset::default))
 			.id();
 		let b = app
 			.world_mut()
-			.spawn(AssetComponent::shared::<_Marker>(_Asset::default))
+			.spawn(InsertAsset::shared::<_Marker>(_Asset::default))
 			.id();
 
 		app.update();
@@ -328,11 +327,11 @@ mod test_add_asset {
 		let mut app = setup();
 		let entity_a = app
 			.world_mut()
-			.spawn(AssetComponent::unique(_Asset::default))
+			.spawn(InsertAsset::unique(_Asset::default))
 			.id();
 		let entity_b = app
 			.world_mut()
-			.spawn(AssetComponent::unique(_Asset::default))
+			.spawn(InsertAsset::unique(_Asset::default))
 			.id();
 
 		app.update();
@@ -347,15 +346,14 @@ mod test_add_asset {
 		struct _Marker;
 
 		let mut app = setup();
-		app.world_mut()
-			.spawn(AssetComponent::unique(_Asset::default));
+		app.world_mut().spawn(InsertAsset::unique(_Asset::default));
 		let entity_a = app
 			.world_mut()
-			.spawn(AssetComponent::shared::<_Marker>(_Asset::default))
+			.spawn(InsertAsset::shared::<_Marker>(_Asset::default))
 			.id();
 		let entity_b = app
 			.world_mut()
-			.spawn(AssetComponent::shared::<_Marker>(_Asset::default))
+			.spawn(InsertAsset::shared::<_Marker>(_Asset::default))
 			.id();
 
 		app.update();
@@ -370,16 +368,12 @@ mod test_add_asset {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(AssetComponent::unique(_Asset::default))
+			.spawn(InsertAsset::unique(_Asset::default))
 			.id();
 
 		app.update();
 
-		assert!({
-			!app.world()
-				.entity(entity)
-				.contains::<AssetComponent<_Asset>>()
-		});
+		assert!({ !app.world().entity(entity).contains::<InsertAsset<_Asset>>() });
 	}
 }
 
@@ -416,10 +410,7 @@ mod test_add_asset_from_source {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<Assets<_Asset>>();
-		app.add_systems(
-			Update,
-			AssetComponentFromSource::<_Asset, _Source>::add_asset,
-		);
+		app.add_systems(Update, InsertAssetFromSource::<_Asset, _Source>::system);
 
 		app
 	}
@@ -427,10 +418,8 @@ mod test_add_asset_from_source {
 	#[test]
 	fn add_asset_to_assets() {
 		let mut app = setup();
-		app.world_mut().spawn((
-			AssetComponentFromSource::unique(_Asset::from_source),
-			_Source,
-		));
+		app.world_mut()
+			.spawn((InsertAssetFromSource::unique(_Asset::from_source), _Source));
 
 		app.update();
 
@@ -442,10 +431,7 @@ mod test_add_asset_from_source {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((
-				AssetComponentFromSource::unique(_Asset::from_source),
-				_Source,
-			))
+			.spawn((InsertAssetFromSource::unique(_Asset::from_source), _Source))
 			.id();
 
 		app.update();
@@ -464,17 +450,11 @@ mod test_add_asset_from_source {
 		let mut app = setup();
 		let entity_a = app
 			.world_mut()
-			.spawn((
-				AssetComponentFromSource::shared(_Asset::from_source),
-				_Source,
-			))
+			.spawn((InsertAssetFromSource::shared(_Asset::from_source), _Source))
 			.id();
 		let entity_b = app
 			.world_mut()
-			.spawn((
-				AssetComponentFromSource::shared(_Asset::from_source),
-				_Source,
-			))
+			.spawn((InsertAssetFromSource::shared(_Asset::from_source), _Source))
 			.id();
 
 		app.update();
@@ -489,17 +469,11 @@ mod test_add_asset_from_source {
 		let mut app = setup();
 		let a = app
 			.world_mut()
-			.spawn((
-				AssetComponentFromSource::shared(_Asset::from_source),
-				_Source,
-			))
+			.spawn((InsertAssetFromSource::shared(_Asset::from_source), _Source))
 			.id();
 		let b = app
 			.world_mut()
-			.spawn((
-				AssetComponentFromSource::shared(_Asset::from_source),
-				_Source,
-			))
+			.spawn((InsertAssetFromSource::shared(_Asset::from_source), _Source))
 			.id();
 
 		app.update();
@@ -523,17 +497,11 @@ mod test_add_asset_from_source {
 		let mut app = setup();
 		let entity_a = app
 			.world_mut()
-			.spawn((
-				AssetComponentFromSource::unique(_Asset::from_source),
-				_Source,
-			))
+			.spawn((InsertAssetFromSource::unique(_Asset::from_source), _Source))
 			.id();
 		let entity_b = app
 			.world_mut()
-			.spawn((
-				AssetComponentFromSource::unique(_Asset::from_source),
-				_Source,
-			))
+			.spawn((InsertAssetFromSource::unique(_Asset::from_source), _Source))
 			.id();
 
 		app.update();
@@ -546,23 +514,15 @@ mod test_add_asset_from_source {
 	#[test]
 	fn insert_correct_shared_when_unique_intermixed() {
 		let mut app = setup();
-		app.world_mut().spawn((
-			AssetComponentFromSource::unique(_Asset::from_source),
-			_Source,
-		));
+		app.world_mut()
+			.spawn((InsertAssetFromSource::unique(_Asset::from_source), _Source));
 		let entity_a = app
 			.world_mut()
-			.spawn((
-				AssetComponentFromSource::shared(_Asset::from_source),
-				_Source,
-			))
+			.spawn((InsertAssetFromSource::shared(_Asset::from_source), _Source))
 			.id();
 		let entity_b = app
 			.world_mut()
-			.spawn((
-				AssetComponentFromSource::shared(_Asset::from_source),
-				_Source,
-			))
+			.spawn((InsertAssetFromSource::shared(_Asset::from_source), _Source))
 			.id();
 
 		app.update();
@@ -577,18 +537,11 @@ mod test_add_asset_from_source {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((
-				AssetComponentFromSource::unique(_Asset::from_source),
-				_Source,
-			))
+			.spawn((InsertAssetFromSource::unique(_Asset::from_source), _Source))
 			.id();
 
 		app.update();
 
-		assert!({
-			!app.world()
-				.entity(entity)
-				.contains::<AssetComponent<_Asset>>()
-		});
+		assert!({ !app.world().entity(entity).contains::<InsertAsset<_Asset>>() });
 	}
 }

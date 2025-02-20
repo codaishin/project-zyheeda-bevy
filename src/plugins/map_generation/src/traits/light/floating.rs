@@ -1,7 +1,7 @@
 use crate::components::{Floating, Light};
 use bevy::{pbr::NotShadowCaster, prelude::*};
 use common::{
-	components::asset_component::AssetComponent,
+	components::insert_asset::InsertAsset,
 	errors::Error,
 	traits::prefab::{sphere, Prefab},
 };
@@ -31,8 +31,8 @@ impl Prefab<()> for Light<Floating> {
 #[require(
 	Visibility,
 	Transform(Self::transform),
-	AssetComponent<Mesh>(Self::mesh),
-	AssetComponent<StandardMaterial>(Self::material),
+	InsertAsset<Mesh>(Self::mesh),
+	InsertAsset<StandardMaterial>(Self::material),
 	NotShadowCaster,
 )]
 pub(crate) struct FloatingLightModel;
@@ -42,12 +42,12 @@ impl FloatingLightModel {
 		Transform::from_xyz(0., 1.8, 0.)
 	}
 
-	fn mesh() -> AssetComponent<Mesh> {
-		AssetComponent::shared::<Self>(|| sphere(0.1))
+	fn mesh() -> InsertAsset<Mesh> {
+		InsertAsset::shared::<Self>(|| sphere(0.1))
 	}
 
-	fn material() -> AssetComponent<StandardMaterial> {
-		AssetComponent::shared::<Self>(|| StandardMaterial {
+	fn material() -> InsertAsset<StandardMaterial> {
+		InsertAsset::shared::<Self>(|| StandardMaterial {
 			base_color: Color::WHITE,
 			emissive: Color::linear_rgb(230.0, 230.0, 230.0).into(),
 			..default()
