@@ -59,18 +59,18 @@ impl ResponsiveLight {
 		}
 	}
 
-	pub(crate) fn for_target<TMarker>(data: Responsive) -> Self
+	pub(crate) fn for_driver<TDriver>(data: Responsive) -> Self
 	where
-		TMarker: 'static,
+		TDriver: 'static,
 	{
 		ResponsiveLight {
 			model: data.model,
 			light: data.light,
 			range: data.range,
 			light_on_material: data.light_on_material,
-			marker_on: TypeId::of::<(TMarker, LightOn)>(),
+			marker_on: TypeId::of::<(TDriver, LightOn)>(),
 			light_off_material: data.light_off_material,
-			marker_off: TypeId::of::<(TMarker, LightOff)>(),
+			marker_off: TypeId::of::<(TDriver, LightOff)>(),
 			max: data.max,
 			change: data.change,
 		}

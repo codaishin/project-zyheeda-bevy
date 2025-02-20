@@ -48,15 +48,18 @@ where
 	/// Uses `new_asset` to create an asset and adds the asset handle via [`AssetMarker::component`]
 	/// to the [`Entity`].
 	///
-	/// If a shared asset for `TSource` has already been created, that asset's handle will be used
+	/// If a shared asset for `TDriver` already exists, that asset's handle will be used
 	/// instead as input for [`AssetMarker::component`] and no new asset will be created.
-	pub fn shared<TSharedMarker>(new_asset: fn() -> TAsset) -> Self
+	///
+	/// `TDriver` can be any type, but is usually the component, which "drives" the insertion
+	/// of this component, for instance via a `require` attribute.
+	pub fn shared<TDriver>(new_asset: fn() -> TAsset) -> Self
 	where
-		TSharedMarker: 'static,
+		TDriver: 'static,
 	{
 		Self {
 			new_asset,
-			shared: Some(TypeId::of::<TSharedMarker>()),
+			shared: Some(TypeId::of::<TDriver>()),
 		}
 	}
 
@@ -65,8 +68,11 @@ where
 	/// Uses `new_asset` to create an asset and adds the asset handle via [`AssetMarker::component`]
 	/// to the [`Entity`].
 	///
-	/// If a shared asset for `TSource` has already been created, that asset's handle will be used
+	/// If a shared asset for `type_id` already exists, that asset's handle will be used
 	/// instead as input for [`AssetMarker::component`] and no new asset will be created.
+	///
+	/// `TypeId` can be any type, but is usually the id of a  component, which "drives" the insertion
+	/// of this component, for instance via a `require` attribute.
 	pub fn shared_id(new_asset: fn() -> TAsset, type_id: TypeId) -> Self {
 		Self {
 			new_asset,
@@ -139,7 +145,7 @@ where
 	/// and adds the asset handle via [`AssetMarker::component`] to the [`Entity`].
 	///
 	/// <div class="warning">
-	///   Only works, if [`Self::add_asset_from_source`] system has been registered
+	///   Only works, if [`Self::add_asset`] system has been registered
 	/// </div>
 	pub fn unique(new_asset: fn(&TSource) -> TAsset) -> Self {
 		Self {

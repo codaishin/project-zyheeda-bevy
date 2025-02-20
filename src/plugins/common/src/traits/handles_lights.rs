@@ -6,11 +6,11 @@ pub trait HandlesLights {
 	type TResponsiveLightTrigger: Bundle;
 
 	fn responsive_light_trigger() -> Self::TResponsiveLightTrigger;
-	fn responsive_light_bundle<TMarker>(
+	fn responsive_light_bundle<TDriver>(
 		responsive_light: Responsive,
 	) -> Self::TResponsiveLightBundle
 	where
-		TMarker: 'static;
+		TDriver: 'static;
 }
 
 #[derive(Debug, PartialEq, Clone)]
