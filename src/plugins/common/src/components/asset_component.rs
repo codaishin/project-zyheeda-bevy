@@ -76,12 +76,12 @@ where
 
 	pub(crate) fn add_asset(
 		mut commands: Commands,
-		mut shares: Local<HashMap<TypeId, AssetId<TAsset>>>,
+		mut caches: Local<HashMap<TypeId, Handle<TAsset>>>,
 		mut assets: ResMut<Assets<TAsset>>,
 		components: Query<(Entity, &Self)>,
 	) {
 		for (entity, component) in &components {
-			let handle = component.get_handle(&mut shares, &mut assets);
+			let handle = component.get_handle(&mut caches, &mut assets);
 
 			commands.try_insert_on(entity, TAsset::component(handle));
 			commands.try_remove_from::<Self>(entity);
@@ -90,7 +90,7 @@ where
 
 	fn get_handle(
 		&self,
-		shares: &mut HashMap<TypeId, AssetId<TAsset>>,
+		caches: &mut HashMap<TypeId, Handle<TAsset>>,
 		assets: &mut Assets<TAsset>,
 	) -> Handle<TAsset>
 	where
@@ -100,17 +100,13 @@ where
 			return assets.add(self.create_asset());
 		};
 
-		let Some(id) = shares.get(&shared_id) else {
+		let Some(handle) = caches.get(&shared_id) else {
 			let handle = assets.add(self.create_asset());
-			shares.insert(shared_id, handle.id());
+			caches.insert(shared_id, handle.clone());
 			return handle;
 		};
 
-		let Some(handle) = assets.get_strong_handle(*id) else {
-			return assets.add(self.create_asset());
-		};
-
-		handle
+		handle.clone()
 	}
 
 	fn create_asset(&self) -> TAsset {
@@ -172,12 +168,12 @@ where
 
 	pub fn add_asset(
 		mut commands: Commands,
-		mut shares: Local<HashMap<TypeId, AssetId<TAsset>>>,
+		mut caches: Local<HashMap<TypeId, Handle<TAsset>>>,
 		mut assets: ResMut<Assets<TAsset>>,
 		components: Query<(Entity, &Self, &TSource)>,
 	) {
 		for (entity, component, source) in &components {
-			let handle = component.get_handle_from_source(&mut shares, &mut assets, source);
+			let handle = component.get_handle_from_source(&mut caches, &mut assets, source);
 
 			commands.try_insert_on(entity, TAsset::component(handle));
 			commands.try_remove_from::<Self>(entity);
@@ -186,7 +182,7 @@ where
 
 	fn get_handle_from_source(
 		&self,
-		shares: &mut HashMap<TypeId, AssetId<TAsset>>,
+		caches: &mut HashMap<TypeId, Handle<TAsset>>,
 		assets: &mut Assets<TAsset>,
 		source: &TSource,
 	) -> Handle<TAsset>
@@ -197,17 +193,13 @@ where
 			return assets.add(self.create_asset_from(source));
 		};
 
-		let Some(id) = shares.get(&shared_id) else {
+		let Some(handle) = caches.get(&shared_id) else {
 			let handle = assets.add(self.create_asset_from(source));
-			shares.insert(shared_id, handle.id());
+			caches.insert(shared_id, handle.clone());
 			return handle;
 		};
 
-		let Some(handle) = assets.get_strong_handle(*id) else {
-			return assets.add(self.create_asset_from(source));
-		};
-
-		handle
+		handle.clone()
 	}
 
 	fn create_asset_from(&self, source: &TSource) -> TAsset {
@@ -217,6 +209,8 @@ where
 
 #[cfg(test)]
 mod test_add_asset {
+	use std::sync::Arc;
+
 	use super::*;
 	use crate::{test_tools::utils::SingleThreadedApp, traits::asset_marker::internal};
 
@@ -233,12 +227,6 @@ mod test_add_asset {
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Wrapper(Handle<_Asset>);
-
-	impl From<&_Wrapper> for AssetId<_Asset> {
-		fn from(component: &_Wrapper) -> Self {
-			component.0.id()
-		}
-	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -269,14 +257,12 @@ mod test_add_asset {
 
 		app.update();
 
-		let assets = app.world().resource::<Assets<_Asset>>();
-		let id = assets.iter().next().unwrap().0;
+		let mut assets = app.world_mut().resource_mut::<Assets<_Asset>>();
+		let id = assets.ids().next().unwrap();
+		let handle = assets.get_strong_handle(id).unwrap();
 		assert_eq!(
-			Some(id),
-			app.world()
-				.entity(entity)
-				.get::<_Wrapper>()
-				.map(AssetId::<_Asset>::from)
+			Some(&_Wrapper(handle)),
+			app.world().entity(entity).get::<_Wrapper>()
 		);
 	}
 
@@ -296,17 +282,39 @@ mod test_add_asset {
 
 		app.update();
 
-		let id_a = app
-			.world()
-			.entity(entity_b)
-			.get::<_Wrapper>()
-			.map(AssetId::<_Asset>::from);
-		let id_b = app
-			.world()
-			.entity(entity_a)
-			.get::<_Wrapper>()
-			.map(AssetId::<_Asset>::from);
-		assert!(id_a == id_b);
+		let wrapper_a = app.world().entity(entity_b).get::<_Wrapper>();
+		let wrapper_b = app.world().entity(entity_a).get::<_Wrapper>();
+		assert!(wrapper_a == wrapper_b);
+	}
+
+	#[test]
+	fn insert_shared_with_proper_ref_count() {
+		struct _Marker;
+
+		let mut app = setup();
+		let a = app
+			.world_mut()
+			.spawn(AssetComponent::shared::<_Marker>(_Asset::default))
+			.id();
+		let b = app
+			.world_mut()
+			.spawn(AssetComponent::shared::<_Marker>(_Asset::default))
+			.id();
+
+		app.update();
+
+		let Handle::Strong(a) = &app.world().entity(a).get::<_Wrapper>().unwrap().0 else {
+			panic!("expected a strong handle");
+		};
+		let a = Arc::strong_count(a);
+		let Handle::Strong(b) = &app.world().entity(b).get::<_Wrapper>().unwrap().0 else {
+			panic!("expected a strong handle");
+		};
+		let b = Arc::strong_count(b);
+		assert!(
+			a >= 2 && b >= 2,
+			"Counts a: {a} vs expected >= 2, Counts b: {b} vs expected >= 2",
+		);
 	}
 
 	#[test]
@@ -323,17 +331,9 @@ mod test_add_asset {
 
 		app.update();
 
-		let id_a = app
-			.world()
-			.entity(entity_b)
-			.get::<_Wrapper>()
-			.map(AssetId::<_Asset>::from);
-		let id_b = app
-			.world()
-			.entity(entity_a)
-			.get::<_Wrapper>()
-			.map(AssetId::<_Asset>::from);
-		assert!(id_a != id_b);
+		let wrapper_a = app.world().entity(entity_b).get::<_Wrapper>();
+		let wrapper_b = app.world().entity(entity_a).get::<_Wrapper>();
+		assert!(wrapper_a != wrapper_b);
 	}
 
 	#[test]
@@ -354,39 +354,9 @@ mod test_add_asset {
 
 		app.update();
 
-		let id_a = app
-			.world()
-			.entity(entity_b)
-			.get::<_Wrapper>()
-			.map(AssetId::<_Asset>::from);
-		let id_b = app
-			.world()
-			.entity(entity_a)
-			.get::<_Wrapper>()
-			.map(AssetId::<_Asset>::from);
-		assert!(id_a == id_b);
-	}
-
-	#[test]
-	fn insert_new_when_previous_shared_handle_missing() {
-		struct _Marker;
-
-		let mut app = setup();
-		app.world_mut()
-			.spawn(AssetComponent::shared::<_Marker>(_Asset::default));
-
-		app.update();
-		let mut assets = app.world_mut().resource_mut::<Assets<_Asset>>();
-		let id = assets.ids().next().unwrap();
-		assets.remove(id);
-		app.update();
-		let entity_b = app
-			.world_mut()
-			.spawn(AssetComponent::shared::<_Marker>(_Asset::default))
-			.id();
-		app.update();
-
-		assert!(app.world().entity(entity_b).contains::<_Wrapper>());
+		let wrapper_a = app.world().entity(entity_b).get::<_Wrapper>();
+		let wrapper_b = app.world().entity(entity_a).get::<_Wrapper>();
+		assert!(wrapper_a == wrapper_b);
 	}
 
 	#[test]
@@ -409,6 +379,8 @@ mod test_add_asset {
 
 #[cfg(test)]
 mod test_add_asset_from_source {
+	use std::sync::Arc;
+
 	use super::*;
 	use crate::{test_tools::utils::SingleThreadedApp, traits::asset_marker::internal};
 
@@ -434,12 +406,6 @@ mod test_add_asset_from_source {
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Wrapper(Handle<_Asset>);
-
-	impl From<&_Wrapper> for AssetId<_Asset> {
-		fn from(component: &_Wrapper) -> Self {
-			component.0.id()
-		}
-	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -478,14 +444,12 @@ mod test_add_asset_from_source {
 
 		app.update();
 
-		let assets = app.world().resource::<Assets<_Asset>>();
-		let id = assets.iter().next().unwrap().0;
+		let mut assets = app.world_mut().resource_mut::<Assets<_Asset>>();
+		let id = assets.ids().next().unwrap();
+		let handle = assets.get_strong_handle(id).unwrap();
 		assert_eq!(
-			Some(id),
-			app.world()
-				.entity(entity)
-				.get::<_Wrapper>()
-				.map(AssetId::<_Asset>::from)
+			Some(&_Wrapper(handle)),
+			app.world().entity(entity).get::<_Wrapper>()
 		);
 	}
 
@@ -509,17 +473,43 @@ mod test_add_asset_from_source {
 
 		app.update();
 
-		let id_a = app
-			.world()
-			.entity(entity_b)
-			.get::<_Wrapper>()
-			.map(AssetId::<_Asset>::from);
-		let id_b = app
-			.world()
-			.entity(entity_a)
-			.get::<_Wrapper>()
-			.map(AssetId::<_Asset>::from);
-		assert!(id_a == id_b);
+		let handle_a = app.world().entity(entity_b).get::<_Wrapper>();
+		let handle_b = app.world().entity(entity_a).get::<_Wrapper>();
+		assert!(handle_a == handle_b);
+	}
+
+	#[test]
+	fn insert_shared_with_proper_ref_count() {
+		let mut app = setup();
+		let a = app
+			.world_mut()
+			.spawn((
+				AssetComponentFromSource::shared(_Asset::from_source),
+				_Source,
+			))
+			.id();
+		let b = app
+			.world_mut()
+			.spawn((
+				AssetComponentFromSource::shared(_Asset::from_source),
+				_Source,
+			))
+			.id();
+
+		app.update();
+
+		let Handle::Strong(a) = &app.world().entity(a).get::<_Wrapper>().unwrap().0 else {
+			panic!("expected a strong handle");
+		};
+		let a = Arc::strong_count(a);
+		let Handle::Strong(b) = &app.world().entity(b).get::<_Wrapper>().unwrap().0 else {
+			panic!("expected a strong handle");
+		};
+		let b = Arc::strong_count(b);
+		assert!(
+			a >= 2 && b >= 2,
+			"Counts a: {a} vs expected >= 2, Counts b: {b} vs expected >= 2",
+		);
 	}
 
 	#[test]
@@ -542,17 +532,9 @@ mod test_add_asset_from_source {
 
 		app.update();
 
-		let id_a = app
-			.world()
-			.entity(entity_b)
-			.get::<_Wrapper>()
-			.map(AssetId::<_Asset>::from);
-		let id_b = app
-			.world()
-			.entity(entity_a)
-			.get::<_Wrapper>()
-			.map(AssetId::<_Asset>::from);
-		assert!(id_a != id_b);
+		let handle_a = app.world().entity(entity_b).get::<_Wrapper>();
+		let handle_b = app.world().entity(entity_a).get::<_Wrapper>();
+		assert!(handle_a != handle_b);
 	}
 
 	#[test]
@@ -579,42 +561,9 @@ mod test_add_asset_from_source {
 
 		app.update();
 
-		let id_a = app
-			.world()
-			.entity(entity_b)
-			.get::<_Wrapper>()
-			.map(AssetId::<_Asset>::from);
-		let id_b = app
-			.world()
-			.entity(entity_a)
-			.get::<_Wrapper>()
-			.map(AssetId::<_Asset>::from);
-		assert!(id_a == id_b);
-	}
-
-	#[test]
-	fn insert_new_when_previous_shared_handle_missing() {
-		let mut app = setup();
-		app.world_mut().spawn((
-			AssetComponentFromSource::shared(_Asset::from_source),
-			_Source,
-		));
-
-		app.update();
-		let mut assets = app.world_mut().resource_mut::<Assets<_Asset>>();
-		let id = assets.ids().next().unwrap();
-		assets.remove(id);
-		app.update();
-		let entity_b = app
-			.world_mut()
-			.spawn((
-				AssetComponentFromSource::shared(_Asset::from_source),
-				_Source,
-			))
-			.id();
-		app.update();
-
-		assert!(app.world().entity(entity_b).contains::<_Wrapper>());
+		let handle_a = app.world().entity(entity_b).get::<_Wrapper>();
+		let handle_b = app.world().entity(entity_a).get::<_Wrapper>();
+		assert!(handle_a == handle_b);
 	}
 
 	#[test]
