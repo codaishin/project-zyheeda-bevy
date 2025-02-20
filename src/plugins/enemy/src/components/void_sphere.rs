@@ -20,16 +20,15 @@ use common::{
 		health::Health,
 	},
 	blocker::Blocker,
-	components::{ColliderRoot, GroundOffset},
+	components::{asset_component::AssetComponent, ColliderRoot, GroundOffset},
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	errors::Error,
 	tools::{Units, UnitsPerSecond},
 	traits::{
-		cache::GetOrCreateTypeAsset,
 		clamp_zero_positive::ClampZeroPositive,
 		handles_effect::HandlesEffect,
 		handles_enemies::EnemyTarget,
-		prefab::{sphere, GetOrCreateAssets, Prefab},
+		prefab::{sphere, Prefab},
 	},
 };
 use std::{f32::consts::PI, sync::Arc, time::Duration};
@@ -79,51 +78,18 @@ impl VoidSphere {
 	}
 }
 
-#[derive(Component, Clone)]
-#[require(Mesh3d, MeshMaterial3d<StandardMaterial>, NotShadowCaster)]
-pub enum VoidSpherePart {
-	Core,
-	RingA(UnitsPerSecond),
-	RingB(UnitsPerSecond),
-}
-
 const VOID_SPHERE_INNER_RADIUS: f32 = 0.3;
 const VOID_SPHERE_OUTER_RADIUS: f32 = 0.4;
 const VOID_SPHERE_TORUS_RADIUS: f32 = 0.35;
 const VOID_SPHERE_TORUS_RING_RADIUS: f32 = VOID_SPHERE_OUTER_RADIUS - VOID_SPHERE_TORUS_RADIUS;
 const VOID_SPHERE_GROUND_OFFSET: Vec3 = Vec3::new(0., 1.2, 0.);
 
-struct VoidSphereCore;
-
-struct VoidSphereRing;
-
 impl<TInteractions> Prefab<TInteractions> for VoidSphere
 where
 	TInteractions: HandlesEffect<DealDamage, TTarget = Health>
 		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
 {
-	fn instantiate_on<TAfterInstantiation>(
-		&self,
-		on: &mut EntityCommands,
-		mut assets: impl GetOrCreateAssets,
-	) -> Result<(), Error> {
-		let core_material = assets.get_or_create_for::<VoidSphereCore>(|| StandardMaterial {
-			base_color: Color::BLACK,
-			metallic: 1.,
-			..default()
-		});
-		let core_mesh =
-			assets.get_or_create_for::<VoidSphereCore>(|| sphere(VOID_SPHERE_INNER_RADIUS));
-		let ring_material = assets.get_or_create_for::<VoidSphereRing>(|| StandardMaterial {
-			emissive: LinearRgba::new(23.0, 23.0, 23.0, 1.),
-			..default()
-		});
-		let ring_mesh = assets.get_or_create_for::<VoidSphereRing>(|| {
-			Mesh::from(Torus {
-				major_radius: VOID_SPHERE_TORUS_RADIUS,
-				minor_radius: VOID_SPHERE_TORUS_RING_RADIUS,
-			})
-		});
+	fn instantiate_on<TAfterInstantiation>(&self, on: &mut EntityCommands) -> Result<(), Error> {
 		let transform = Transform::from_translation(VOID_SPHERE_GROUND_OFFSET);
 		let mut transform_2nd_ring = transform;
 		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
@@ -137,22 +103,15 @@ where
 			Affected::by::<Gravity>().bundle_via::<TInteractions>(),
 		));
 		on.with_children(|parent| {
-			parent.spawn((
-				VoidSpherePart::Core,
-				Mesh3d(core_mesh),
-				MeshMaterial3d(core_material),
-				transform,
-			));
+			parent.spawn((VoidSpherePart::Core, VoidSphereCore, transform));
 			parent.spawn((
 				VoidSpherePart::RingA(UnitsPerSecond::new(PI / 50.)),
-				Mesh3d(ring_mesh.clone()),
-				MeshMaterial3d(ring_material.clone()),
+				VoidSphereRing,
 				transform,
 			));
 			parent.spawn((
 				VoidSpherePart::RingB(UnitsPerSecond::new(PI / 75.)),
-				Mesh3d(ring_mesh),
-				MeshMaterial3d(ring_material),
+				VoidSphereRing,
 				transform_2nd_ring,
 			));
 			parent.spawn((
@@ -163,5 +122,59 @@ where
 		});
 
 		Ok(())
+	}
+}
+
+#[derive(Component, Clone)]
+#[require(Mesh3d, MeshMaterial3d<StandardMaterial>, NotShadowCaster)]
+pub enum VoidSpherePart {
+	Core,
+	RingA(UnitsPerSecond),
+	RingB(UnitsPerSecond),
+}
+
+#[derive(Component)]
+#[require(
+	AssetComponent<StandardMaterial> (Self::material),
+	AssetComponent<Mesh> (Self::mesh),
+)]
+struct VoidSphereCore;
+
+impl VoidSphereCore {
+	fn material() -> AssetComponent<StandardMaterial> {
+		AssetComponent::shared::<Self>(|| StandardMaterial {
+			base_color: Color::BLACK,
+			metallic: 1.,
+			..default()
+		})
+	}
+
+	fn mesh() -> AssetComponent<Mesh> {
+		AssetComponent::shared::<Self>(|| sphere(VOID_SPHERE_INNER_RADIUS))
+	}
+}
+
+#[derive(Component)]
+#[require(
+	AssetComponent<StandardMaterial> (Self::material),
+	AssetComponent<Mesh> (Self::mesh),
+)]
+struct VoidSphereRing;
+
+impl VoidSphereRing {
+	fn material() -> AssetComponent<StandardMaterial> {
+		AssetComponent::shared::<Self>(|| StandardMaterial {
+			emissive: LinearRgba::new(23.0, 23.0, 23.0, 1.),
+			..default()
+		})
+	}
+
+	fn mesh() -> AssetComponent<Mesh> {
+		AssetComponent::shared::<Self>(|| {
+			Mesh::from(Torus {
+				major_radius: VOID_SPHERE_TORUS_RADIUS,
+				minor_radius: VOID_SPHERE_TORUS_RING_RADIUS,
+			})
+		})
 	}
 }

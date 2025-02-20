@@ -25,7 +25,7 @@ use common::{
 		handles_effect::HandlesEffect,
 		handles_lights::HandlesLights,
 		load_asset::Path,
-		prefab::{GetOrCreateAssets, Prefab},
+		prefab::Prefab,
 	},
 };
 
@@ -121,7 +121,6 @@ where
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
-		_: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		entity
 			.insert((

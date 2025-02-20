@@ -5,25 +5,28 @@ use super::{
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::{ActiveEvents, Collider, CollidingEntities, Sensor};
 use common::{
+	components::asset_component::AssetComponent,
 	errors::Error,
 	tools::{Intensity, IntensityChangePerSecond, Units},
 	traits::{
 		handles_lights::Responsive,
 		has_collisions::HasCollisions,
-		prefab::{GetOrCreateAssets, Prefab},
+		prefab::Prefab,
 		try_insert_on::TryInsertOn,
 		try_remove_from::TryRemoveFrom,
 	},
 };
-use std::{ops::Deref, time::Duration};
+use std::{any::TypeId, ops::Deref, time::Duration};
 
 #[derive(Component, Debug, PartialEq, Clone)]
 pub struct ResponsiveLight {
 	pub model: Entity,
 	pub light: Entity,
 	pub range: Units,
-	pub light_on_material: Handle<StandardMaterial>,
-	pub light_off_material: Handle<StandardMaterial>,
+	pub light_on_material: fn() -> StandardMaterial,
+	pub marker_on: TypeId,
+	pub light_off_material: fn() -> StandardMaterial,
+	pub marker_off: TypeId,
 	pub max: Intensity,
 	pub change: IntensityChangePerSecond,
 }
@@ -55,16 +58,19 @@ impl ResponsiveLight {
 			remove_change_component(&mut commands, state, id);
 		}
 	}
-}
 
-impl From<Responsive> for ResponsiveLight {
-	fn from(data: Responsive) -> Self {
+	pub(crate) fn for_target<TMarker>(data: Responsive) -> Self
+	where
+		TMarker: 'static,
+	{
 		ResponsiveLight {
 			model: data.model,
 			light: data.light,
 			range: data.range,
 			light_on_material: data.light_on_material,
+			marker_on: TypeId::of::<(TMarker, LightOn)>(),
 			light_off_material: data.light_off_material,
+			marker_off: TypeId::of::<(TMarker, LightOff)>(),
 			max: data.max,
 			change: data.change,
 		}
@@ -75,7 +81,6 @@ impl Prefab<()> for ResponsiveLight {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
-		_: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		entity.try_insert((
 			Transform::default(),
@@ -88,6 +93,10 @@ impl Prefab<()> for ResponsiveLight {
 		Ok(())
 	}
 }
+
+struct LightOn;
+
+struct LightOff;
 
 #[derive(PartialEq)]
 enum State {
@@ -126,7 +135,10 @@ fn increase(
 
 	if target_light.intensity == 0. {
 		commands.try_insert_on(light.light, Visibility::Visible);
-		commands.try_insert_on(light.model, MeshMaterial3d(light.light_on_material.clone()));
+		commands.try_insert_on(
+			light.model,
+			AssetComponent::shared_id(light.light_on_material, light.marker_on),
+		);
 	}
 
 	let change = *light.change.deref() * delta.as_secs_f32();
@@ -160,7 +172,7 @@ fn decrease(
 	target_light.intensity = 0.;
 	commands.try_insert_on(
 		light.model,
-		MeshMaterial3d(light.light_off_material.clone()),
+		AssetComponent::shared_id(light.light_off_material, light.marker_off),
 	);
 	commands.try_insert_on(light.light, Visibility::Hidden);
 
@@ -187,7 +199,6 @@ mod test_detect_change {
 		tools::{Intensity, IntensityChangePerSecond, Units},
 		traits::clamp_zero_positive::ClampZeroPositive,
 	};
-	use uuid::Uuid;
 
 	#[derive(Component)]
 	struct _Collisions(Vec<Entity>);
@@ -205,16 +216,27 @@ mod test_detect_change {
 		app
 	}
 
-	fn new_handle<T: Asset>() -> Handle<T> {
-		Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		})
+	fn light_on_material() -> StandardMaterial {
+		StandardMaterial {
+			base_color: Color::WHITE,
+			..default()
+		}
 	}
+
+	fn light_off_material() -> StandardMaterial {
+		StandardMaterial {
+			base_color: Color::BLACK,
+			..default()
+		}
+	}
+
+	struct _MarkerOn;
+
+	struct _MarkerOff;
 
 	#[test]
 	fn apply_on() {
 		let mut app = setup();
-		let light_on_material = new_handle();
 		let trigger = app.world_mut().spawn(ResponsiveLightTrigger).id();
 		let model = app.world_mut().spawn_empty().id();
 		let light = app.world_mut().spawn_empty().id();
@@ -222,10 +244,12 @@ mod test_detect_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: light_on_material.clone(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(11.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 
 		let entity = app
@@ -244,17 +268,18 @@ mod test_detect_change {
 	#[test]
 	fn apply_off() {
 		let mut app = setup();
-		let light_off_material = new_handle();
 		let model = app.world_mut().spawn_empty().id();
 		let light = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: light_off_material.clone(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(11.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 
 		let entity = app
@@ -280,13 +305,24 @@ mod test_apply_change {
 		traits::clamp_zero_positive::ClampZeroPositive,
 	};
 	use std::time::Duration;
-	use uuid::Uuid;
 
-	fn new_handle<T: Asset>() -> Handle<T> {
-		Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		})
+	fn light_on_material() -> StandardMaterial {
+		StandardMaterial {
+			base_color: Color::WHITE,
+			..default()
+		}
 	}
+
+	fn light_off_material() -> StandardMaterial {
+		StandardMaterial {
+			base_color: Color::BLACK,
+			..default()
+		}
+	}
+
+	struct _MarkerOn;
+
+	struct _MarkerOff;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -311,10 +347,12 @@ mod test_apply_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(11.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		app.world_mut()
 			.spawn(ResponsiveLightChange::Increase(responsive));
@@ -342,10 +380,12 @@ mod test_apply_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(11.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		app.world_mut()
 			.spawn(ResponsiveLightChange::Increase(responsive));
@@ -373,10 +413,12 @@ mod test_apply_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(200.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		app.world_mut()
 			.spawn(ResponsiveLightChange::Increase(responsive));
@@ -404,10 +446,12 @@ mod test_apply_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(11.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		app.world_mut()
 			.spawn(ResponsiveLightChange::Increase(responsive));
@@ -435,10 +479,12 @@ mod test_apply_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(11.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		app.world_mut()
 			.spawn(ResponsiveLightChange::Increase(responsive));
@@ -461,16 +507,17 @@ mod test_apply_change {
 				..default()
 			})
 			.id();
-		let light_on_material = new_handle();
 		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: light_on_material.clone(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(11.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		app.world_mut()
 			.spawn(ResponsiveLightChange::Increase(responsive));
@@ -481,10 +528,8 @@ mod test_apply_change {
 		let model = app.world().entity(model);
 
 		assert_eq!(
-			Some(&light_on_material),
-			model
-				.get::<MeshMaterial3d<StandardMaterial>>()
-				.map(|m| &m.0)
+			Some(&AssetComponent::shared::<_MarkerOn>(light_on_material)),
+			model.get::<AssetComponent<StandardMaterial>>()
 		);
 	}
 
@@ -503,10 +548,12 @@ mod test_apply_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(11.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		app.world_mut()
 			.spawn(ResponsiveLightChange::Increase(responsive));
@@ -539,10 +586,12 @@ mod test_apply_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(58.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		let responsive = app
 			.world_mut()
@@ -572,10 +621,12 @@ mod test_apply_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(57.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		let responsive_entity = app
 			.world_mut()
@@ -608,10 +659,12 @@ mod test_apply_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(11.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		app.world_mut()
 			.spawn(ResponsiveLightChange::Decrease(responsive));
@@ -639,10 +692,12 @@ mod test_apply_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(11.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		app.world_mut()
 			.spawn(ResponsiveLightChange::Decrease(responsive));
@@ -665,16 +720,17 @@ mod test_apply_change {
 				..default()
 			})
 			.id();
-		let light_off_material = new_handle();
 		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: light_off_material.clone(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(42.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		app.world_mut()
 			.spawn(ResponsiveLightChange::Decrease(responsive));
@@ -685,10 +741,8 @@ mod test_apply_change {
 		let model = app.world().entity(model);
 
 		assert_eq!(
-			Some(&light_off_material),
-			model
-				.get::<MeshMaterial3d<StandardMaterial>>()
-				.map(|m| &m.0)
+			Some(&AssetComponent::shared::<_MarkerOff>(light_off_material)),
+			model.get::<AssetComponent<StandardMaterial>>()
 		);
 	}
 
@@ -702,16 +756,17 @@ mod test_apply_change {
 				..default()
 			})
 			.id();
-		let light_off_material = new_handle();
 		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: light_off_material.clone(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(41.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		app.world_mut()
 			.spawn(ResponsiveLightChange::Decrease(responsive));
@@ -739,16 +794,17 @@ mod test_apply_change {
 				..default()
 			})
 			.id();
-		let light_off_material = new_handle();
 		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: light_off_material.clone(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(43.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		app.world_mut()
 			.spawn(ResponsiveLightChange::Decrease(responsive));
@@ -759,10 +815,8 @@ mod test_apply_change {
 		let model = app.world().entity(model);
 
 		assert_eq!(
-			Some(&light_off_material),
-			model
-				.get::<MeshMaterial3d<StandardMaterial>>()
-				.map(|m| &m.0)
+			Some(&AssetComponent::shared::<_MarkerOff>(light_off_material)),
+			model.get::<AssetComponent<StandardMaterial>>()
 		);
 	}
 
@@ -781,10 +835,12 @@ mod test_apply_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(43.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		app.world_mut()
 			.spawn(ResponsiveLightChange::Decrease(responsive));
@@ -812,10 +868,12 @@ mod test_apply_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(42.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		let responsive = app
 			.world_mut()
@@ -845,10 +903,12 @@ mod test_apply_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(41.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		let responsive_entity = app
 			.world_mut()
@@ -881,10 +941,12 @@ mod test_apply_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(42.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		app.world_mut()
 			.spawn(ResponsiveLightChange::Decrease(responsive));
@@ -912,10 +974,12 @@ mod test_apply_change {
 			model,
 			light,
 			range: Units::new(0.),
-			light_on_material: new_handle(),
-			light_off_material: new_handle(),
+			light_on_material,
+			light_off_material,
 			max: Intensity::new(100.),
 			change: IntensityChangePerSecond::new(41.),
+			marker_on: TypeId::of::<_MarkerOn>(),
+			marker_off: TypeId::of::<_MarkerOff>(),
 		};
 		app.world_mut()
 			.spawn(ResponsiveLightChange::Decrease(responsive));

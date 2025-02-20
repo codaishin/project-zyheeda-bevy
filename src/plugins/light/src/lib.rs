@@ -51,8 +51,13 @@ impl<TDependencies> HandlesLights for LightPlugin<TDependencies> {
 	type TResponsiveLightBundle = ResponsiveLight;
 	type TResponsiveLightTrigger = ResponsiveLightTrigger;
 
-	fn responsive_light_bundle(responsive_light: Responsive) -> Self::TResponsiveLightBundle {
-		ResponsiveLight::from(responsive_light)
+	fn responsive_light_bundle<TComponent>(
+		responsive_data: Responsive,
+	) -> Self::TResponsiveLightBundle
+	where
+		TComponent: 'static,
+	{
+		ResponsiveLight::for_target::<TComponent>(responsive_data)
 	}
 
 	fn responsive_light_trigger() -> Self::TResponsiveLightTrigger {

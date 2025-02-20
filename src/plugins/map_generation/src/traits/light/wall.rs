@@ -7,10 +7,9 @@ use common::{
 	errors::Error,
 	tools::{Intensity, IntensityChangePerSecond, Units},
 	traits::{
-		cache::GetOrCreateTypeAsset,
 		clamp_zero_positive::ClampZeroPositive,
 		handles_lights::{HandlesLights, Responsive},
-		prefab::{GetOrCreateAssets, Prefab},
+		prefab::Prefab,
 	},
 };
 
@@ -29,10 +28,6 @@ impl ExtraComponentsDefinition for Light<Wall> {
 	}
 }
 
-struct WallLightOn;
-
-struct WallLightOff;
-
 impl<TLights> Prefab<TLights> for Light<Wall>
 where
 	TLights: HandlesLights,
@@ -40,18 +35,8 @@ where
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
-		mut assets: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		let model = entity.id();
-		let light_on_material = assets.get_or_create_for::<WallLightOn>(|| StandardMaterial {
-			base_color: Color::WHITE,
-			emissive: Color::linear_rgb(140.0, 140.0, 140.0).into(),
-			..default()
-		});
-		let light_off_material = assets.get_or_create_for::<WallLightOff>(|| StandardMaterial {
-			base_color: Color::BLACK,
-			..default()
-		});
 
 		entity.with_children(|parent| {
 			let light = parent
@@ -64,18 +49,23 @@ where
 					Visibility::Hidden,
 				))
 				.id();
-			parent.spawn(TLights::responsive_light_bundle(Responsive {
+			parent.spawn(TLights::responsive_light_bundle::<Self>(Responsive {
 				model,
 				light,
 				range: Units::new(3.5),
-				light_on_material,
-				light_off_material: light_off_material.clone(),
+				light_on_material: || StandardMaterial {
+					base_color: Color::WHITE,
+					emissive: Color::linear_rgb(140.0, 140.0, 140.0).into(),
+					..default()
+				},
+				light_off_material: || StandardMaterial {
+					base_color: Color::BLACK,
+					..default()
+				},
 				max: Intensity::new(8000.),
 				change: IntensityChangePerSecond::new(4000.),
 			}));
 		});
-
-		entity.try_insert(MeshMaterial3d(light_off_material));
 
 		Ok(())
 	}

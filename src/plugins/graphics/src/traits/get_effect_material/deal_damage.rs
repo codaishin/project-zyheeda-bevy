@@ -8,11 +8,7 @@ use bevy::{
 	prelude::*,
 	render::view::RenderLayers,
 };
-use common::{
-	effects::deal_damage::DealDamage,
-	errors::Error,
-	traits::prefab::{GetOrCreateAssets, Prefab},
-};
+use common::{effects::deal_damage::DealDamage, errors::Error, traits::prefab::Prefab};
 
 impl GetEffectMaterial for DealDamage {
 	type TMaterial = StandardMaterial;
@@ -33,7 +29,6 @@ impl Prefab<()> for EffectShader<DealDamage> {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
-		_: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		entity.with_children(|parent| {
 			parent.spawn((

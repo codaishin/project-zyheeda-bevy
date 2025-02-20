@@ -22,14 +22,11 @@ use macros::ClampZeroPositive;
 use serde::{Deserialize, Serialize};
 use std::{
 	fmt::{Debug, Formatter, Result},
-	marker::PhantomData,
 	ops::{Deref, DerefMut},
 };
 
 ///Serves as a struct to implement static traits on
 pub struct Tools;
-
-pub struct Factory<T>(PhantomData<T>);
 
 #[derive(Debug, PartialEq)]
 pub struct This<'a, T: Debug + PartialEq>(pub &'a mut T);

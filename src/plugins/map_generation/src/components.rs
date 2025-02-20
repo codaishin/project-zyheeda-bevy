@@ -1,11 +1,6 @@
-use std::marker::PhantomData;
-
 use crate::map::Map;
-use bevy::{
-	asset::Handle,
-	ecs::{component::Component, system::Resource},
-	reflect::TypePath,
-};
+use bevy::prelude::*;
+use std::marker::PhantomData;
 
 pub(crate) struct Wall;
 
@@ -23,6 +18,7 @@ pub(crate) struct LoadLevelCommand<TCell: TypePath + Send + Sync>(pub Handle<Map
 pub(crate) struct Floating;
 
 #[derive(Component, Clone)]
+#[require(Visibility)]
 pub(crate) struct Light<T>(PhantomData<T>);
 
 impl<T> Default for Light<T> {
