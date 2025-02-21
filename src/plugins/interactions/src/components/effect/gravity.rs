@@ -1,4 +1,3 @@
-use super::Effect;
 use crate::{
 	components::gravity_affected::{GravityAffected, GravityPull},
 	traits::act_on::ActOn,
@@ -12,14 +11,15 @@ use common::{
 };
 use std::time::Duration;
 
-impl<TPrefabs, TLifecyclePlugin> HandlesEffect<Gravity>
-	for InteractionsPlugin<(TPrefabs, TLifecyclePlugin)>
-{
+#[derive(Component, Debug, PartialEq, Clone)]
+pub struct GravityEffect(pub(crate) Gravity);
+
+impl<TLifecyclePlugin> HandlesEffect<Gravity> for InteractionsPlugin<TLifecyclePlugin> {
 	type TTarget = AffectedBy<Gravity>;
-	type TEffectComponent = Effect<Gravity>;
+	type TEffectComponent = GravityEffect;
 
 	fn effect(effect: Gravity) -> Self::TEffectComponent {
-		Effect(effect)
+		GravityEffect(effect)
 	}
 
 	fn attribute(_: Self::TTarget) -> impl Bundle {
@@ -27,14 +27,14 @@ impl<TPrefabs, TLifecyclePlugin> HandlesEffect<Gravity>
 	}
 }
 
-impl ActOn<GravityAffected> for Effect<Gravity> {
+impl ActOn<GravityAffected> for GravityEffect {
 	fn act(
 		&mut self,
 		self_entity: Entity,
 		target: &mut GravityAffected,
 		_: Duration,
 	) -> EffectApplies {
-		let Effect(gravity) = self;
+		let Self(gravity) = self;
 
 		target.push(GravityPull {
 			strength: gravity.strength,
@@ -53,7 +53,7 @@ mod tests {
 
 	#[test]
 	fn proper_action_type() {
-		let mut gravity = Effect(Gravity {
+		let mut gravity = GravityEffect(Gravity {
 			strength: UnitsPerSecond::new(42.),
 			effect_applies: EffectApplies::Once,
 		});
@@ -69,7 +69,7 @@ mod tests {
 
 	#[test]
 	fn add_gravity_pull() {
-		let mut gravity = Effect(Gravity {
+		let mut gravity = GravityEffect(Gravity {
 			strength: UnitsPerSecond::new(42.),
 			..default()
 		});

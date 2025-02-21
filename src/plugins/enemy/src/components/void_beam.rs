@@ -2,7 +2,10 @@ use crate::traits::insert_attack::InsertAttack;
 use bevy::{ecs::system::EntityCommands, pbr::NotShadowCaster, prelude::*};
 use common::{
 	blocker::Blocker,
-	components::insert_asset::{InsertAsset, InsertAssetFromSource},
+	components::{
+		insert_asset::{InsertAsset, InsertAssetFromSource},
+		spawn_children::SpawnChildrenFromParent,
+	},
 	effects::deal_damage::DealDamage,
 	errors::Error,
 	tools::Units,
@@ -10,16 +13,28 @@ use common::{
 		handles_effect::HandlesEffect,
 		handles_enemies::{Attacker, Target},
 		handles_interactions::{BeamParameters, HandlesInteractions},
-		prefab::{AfterInstantiation, Prefab},
+		prefab::Prefab,
 	},
 };
 use std::{f32::consts::PI, time::Duration};
 
 #[derive(Component, Debug, PartialEq)]
+#[require(SpawnChildrenFromParent<Self>(Self::model))]
 pub(crate) struct VoidBeam {
 	attack: VoidBeamAttack,
 	attacker: Entity,
 	target: Entity,
+}
+
+impl VoidBeam {
+	fn model() -> SpawnChildrenFromParent<Self> {
+		SpawnChildrenFromParent(|entity, beam| {
+			entity.spawn(VoidBeamModel {
+				color: beam.attack.color,
+				emissive: beam.attack.emissive,
+			});
+		})
+	}
 }
 
 #[derive(Default, Clone, Copy, Debug, PartialEq)]
@@ -53,22 +68,11 @@ impl<TInteractions> Prefab<TInteractions> for VoidBeam
 where
 	TInteractions: HandlesInteractions + HandlesEffect<DealDamage>,
 {
-	fn instantiate_on<TAfterInstantiation>(&self, entity: &mut EntityCommands) -> Result<(), Error>
-	where
-		TAfterInstantiation: AfterInstantiation,
-	{
-		let model = VoidBeamModel {
-			color: self.attack.color,
-			emissive: self.attack.emissive,
-		};
-
+	fn instantiate_on(&self, entity: &mut EntityCommands) -> Result<(), Error> {
 		entity.try_insert((
 			TInteractions::beam_from(self),
 			TInteractions::is_ray_interrupted_by(&[Blocker::Physical, Blocker::Force]),
 			TInteractions::effect(DealDamage::once_per_second(self.attack.damage)),
-			TAfterInstantiation::spawn(move |parent: &mut ChildBuilder| {
-				parent.spawn(model);
-			}),
 		));
 
 		Ok(())

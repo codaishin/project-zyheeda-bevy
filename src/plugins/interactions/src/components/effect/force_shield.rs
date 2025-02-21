@@ -1,33 +1,28 @@
-use super::Effect;
 use crate::InteractionsPlugin;
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::prelude::*;
 use common::{
-	blocker::Blocker,
+	blocker::{Blocker, BlockerInsertCommand},
 	effects::force_shield::ForceShield,
-	errors::Error,
-	traits::{handles_effect::HandlesEffect, prefab::Prefab},
+	traits::handles_effect::HandlesEffect,
 };
 
-impl<TPrefabs, TLifecyclePlugin> HandlesEffect<ForceShield>
-	for InteractionsPlugin<(TPrefabs, TLifecyclePlugin)>
-{
+#[derive(Component, Debug, PartialEq)]
+#[require(BlockerInsertCommand(Self::blockers))]
+pub struct ForceShieldEffect(pub(crate) ForceShield);
+
+impl ForceShieldEffect {
+	fn blockers() -> BlockerInsertCommand {
+		Blocker::insert([Blocker::Force])
+	}
+}
+
+impl<TLifecyclePlugin> HandlesEffect<ForceShield> for InteractionsPlugin<TLifecyclePlugin> {
 	type TTarget = ();
-	type TEffectComponent = Effect<ForceShield>;
+	type TEffectComponent = ForceShieldEffect;
 
 	fn effect(effect: ForceShield) -> Self::TEffectComponent {
-		Effect(effect)
+		ForceShieldEffect(effect)
 	}
 
 	fn attribute(_: Self::TTarget) -> impl Bundle {}
-}
-
-impl Prefab<()> for Effect<ForceShield> {
-	fn instantiate_on<TAfterInstantiation>(
-		&self,
-		entity: &mut EntityCommands,
-	) -> Result<(), Error> {
-		entity.try_insert(Blocker::insert([Blocker::Force]));
-
-		Ok(())
-	}
 }

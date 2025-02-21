@@ -1,4 +1,3 @@
-mod components;
 mod systems;
 
 use bevy::prelude::*;
@@ -9,15 +8,14 @@ use common::{
 	traits::prefab::{Prefab, RegisterPrefab, RegisterPrefabWithDependency},
 };
 use std::{any::TypeId, marker::PhantomData};
-use systems::{instantiate::instantiate, instantiate_children::instantiate_children};
+use systems::instantiate::instantiate;
 
 pub struct PrefabsPlugin;
 
 impl Plugin for PrefabsPlugin {
 	fn build(&self, app: &mut App) {
 		app.init_resource::<Shared<TypeId, Handle<Mesh>>>()
-			.init_resource::<Shared<TypeId, Handle<StandardMaterial>>>()
-			.add_systems(Labels::PREFAB_INSTANTIATION.label(), instantiate_children);
+			.init_resource::<Shared<TypeId, Handle<StandardMaterial>>>();
 	}
 }
 

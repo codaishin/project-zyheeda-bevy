@@ -1,4 +1,3 @@
-use crate::components::SpawnAfterInstantiation;
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
@@ -19,7 +18,7 @@ where
 				lvl: Level::Error,
 			});
 		};
-		agent.instantiate_on::<SpawnAfterInstantiation>(&mut entity)
+		agent.instantiate_on(&mut entity)
 	};
 
 	agents.iter().map(instantiate).collect()
@@ -28,33 +27,24 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		errors::Level,
 		systems::log::test_tools::{fake_log_error_lazy_many, FakeErrorLogMany},
-		traits::prefab::AfterInstantiation,
 	};
 	use std::marker::PhantomData;
+
 	#[derive(Component)]
 	struct _Agent;
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _Child;
+	struct _Component;
 
 	#[derive(Component)]
 	struct _Result<TAsset: Asset>(Handle<TAsset>);
 
 	impl Prefab<()> for _Agent {
-		fn instantiate_on<TAfterInstantiation>(
-			&self,
-			entity: &mut EntityCommands,
-		) -> Result<(), Error>
-		where
-			TAfterInstantiation: AfterInstantiation,
-		{
-			entity.try_insert((TAfterInstantiation::spawn(|parent| {
-				parent.spawn(_Child);
-			}),));
+		fn instantiate_on(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+			entity.try_insert(_Component);
 			Ok(())
 		}
 	}
@@ -63,7 +53,7 @@ mod tests {
 	struct _AgentWithInstantiationError;
 
 	impl Prefab<()> for _AgentWithInstantiationError {
-		fn instantiate_on<TAfterInstantiation>(&self, _: &mut EntityCommands) -> Result<(), Error> {
+		fn instantiate_on(&self, _: &mut EntityCommands) -> Result<(), Error> {
 			Err(Error {
 				msg: "AAA".to_owned(),
 				lvl: Level::Warning,
@@ -104,43 +94,14 @@ mod tests {
 		(app, logger)
 	}
 
-	fn children(app: &App, entity: Entity) -> impl Iterator<Item = EntityRef> {
-		app.world().iter_entities().filter(move |child| {
-			child
-				.get::<Parent>()
-				.map(|parent| parent.get() == entity)
-				.unwrap_or(false)
-		})
-	}
-
 	#[test]
-	fn add_spawn_after_instantiation_component() -> Result<(), RunSystemError> {
+	fn insert_component() {
 		let (mut app, ..) = setup::<_Agent>();
 		let agent = app.world_mut().spawn(_Agent).id();
 
 		app.update();
-		let after_instantiation = app
-			.world()
-			.entity(agent)
-			.get::<SpawnAfterInstantiation>()
-			.unwrap()
-			.clone();
-		// Can't compare `SpawnAfterInstantiation` directly (Arc<dyn Fn(..)>), so we apply the spawn
-		// function to see that the configured child is spawned correctly
-		app.world_mut()
-			.run_system_once(move |mut commands: Commands| {
-				let mut entity = commands.entity(agent);
-				let spawn_on = after_instantiation.spawn.clone();
-				entity.with_children(|parent| spawn_on(parent));
-			})?;
 
-		assert_eq!(
-			vec![&_Child],
-			children(&app, agent)
-				.filter_map(|child| child.get::<_Child>())
-				.collect::<Vec<_>>()
-		);
-		Ok(())
+		assert!(app.world().entity(agent).contains::<_Component>());
 	}
 
 	#[test]

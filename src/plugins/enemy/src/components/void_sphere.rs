@@ -1,8 +1,6 @@
 use super::{enemy::Enemy, void_beam::VoidBeamAttack};
 use bevy::{
 	color::{Color, LinearRgba},
-	ecs::system::EntityCommands,
-	hierarchy::BuildChildren,
 	math::{primitives::Torus, Dir3, Vec3},
 	pbr::{NotShadowCaster, StandardMaterial},
 	prelude::*,
@@ -15,12 +13,18 @@ use bevy_rapier3d::{
 	geometry::Collider,
 };
 use common::{
+	self,
 	attributes::{
 		affected_by::{Affected, AffectedBy},
 		health::Health,
 	},
-	blocker::Blocker,
-	components::{insert_asset::InsertAsset, ColliderRoot, GroundOffset},
+	blocker::{Blocker, BlockerInsertCommand},
+	components::{
+		insert_asset::InsertAsset,
+		spawn_children::SpawnChildren,
+		ColliderRoot,
+		GroundOffset,
+	},
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	errors::Error,
 	tools::{Units, UnitsPerSecond},
@@ -34,10 +38,58 @@ use common::{
 use std::{f32::consts::PI, sync::Arc, time::Duration};
 
 #[derive(Component)]
-#[require(Enemy(VoidSphere::as_enemy))]
+#[require(
+	Enemy(VoidSphere::as_enemy),
+	BlockerInsertCommand(Self::blockers),
+	GroundOffset(Self::ground_offset),
+	RigidBody(Self::rigid_body),
+	GravityScale(Self::gravity_scale),
+	SpawnChildren(Self::void_sphere_parts)
+)]
 pub struct VoidSphere;
 
 impl VoidSphere {
+	const fn ground_offset() -> Vec3 {
+		Vec3::new(0., 1.2, 0.)
+	}
+
+	fn blockers() -> BlockerInsertCommand {
+		Blocker::insert([Blocker::Physical])
+	}
+
+	fn rigid_body() -> RigidBody {
+		RigidBody::Dynamic
+	}
+
+	fn gravity_scale() -> GravityScale {
+		GravityScale(0.)
+	}
+
+	fn void_sphere_parts() -> SpawnChildren {
+		SpawnChildren(|parent| {
+			let transform = Transform::from_translation(Self::ground_offset());
+			let mut transform_2nd_ring = transform;
+			transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
+
+			parent.spawn((VoidSpherePart::Core, VoidSphereCore, transform));
+			parent.spawn((
+				VoidSpherePart::RingA(UnitsPerSecond::new(PI / 50.)),
+				VoidSphereRing,
+				transform,
+			));
+			parent.spawn((
+				VoidSpherePart::RingB(UnitsPerSecond::new(PI / 75.)),
+				VoidSphereRing,
+				transform_2nd_ring,
+			));
+			parent.spawn((
+				ColliderRoot(parent.parent_entity()),
+				Collider::ball(VOID_SPHERE_OUTER_RADIUS),
+				transform,
+			));
+		})
+	}
+
 	fn as_enemy() -> Enemy {
 		let attack_range = Units::new(5.);
 
@@ -78,52 +130,25 @@ impl VoidSphere {
 	}
 }
 
-const VOID_SPHERE_INNER_RADIUS: f32 = 0.3;
-const VOID_SPHERE_OUTER_RADIUS: f32 = 0.4;
-const VOID_SPHERE_TORUS_RADIUS: f32 = 0.35;
-const VOID_SPHERE_TORUS_RING_RADIUS: f32 = VOID_SPHERE_OUTER_RADIUS - VOID_SPHERE_TORUS_RADIUS;
-const VOID_SPHERE_GROUND_OFFSET: Vec3 = Vec3::new(0., 1.2, 0.);
-
 impl<TInteractions> Prefab<TInteractions> for VoidSphere
 where
 	TInteractions: HandlesEffect<DealDamage, TTarget = Health>
 		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
 {
-	fn instantiate_on<TAfterInstantiation>(&self, on: &mut EntityCommands) -> Result<(), Error> {
-		let transform = Transform::from_translation(VOID_SPHERE_GROUND_OFFSET);
-		let mut transform_2nd_ring = transform;
-		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
-
+	fn instantiate_on(&self, on: &mut EntityCommands) -> Result<(), Error> {
 		on.try_insert((
-			Blocker::insert([Blocker::Physical]),
-			GroundOffset(VOID_SPHERE_GROUND_OFFSET),
-			RigidBody::Dynamic,
-			GravityScale(0.),
 			Health::new(5.).bundle_via::<TInteractions>(),
 			Affected::by::<Gravity>().bundle_via::<TInteractions>(),
 		));
-		on.with_children(|parent| {
-			parent.spawn((VoidSpherePart::Core, VoidSphereCore, transform));
-			parent.spawn((
-				VoidSpherePart::RingA(UnitsPerSecond::new(PI / 50.)),
-				VoidSphereRing,
-				transform,
-			));
-			parent.spawn((
-				VoidSpherePart::RingB(UnitsPerSecond::new(PI / 75.)),
-				VoidSphereRing,
-				transform_2nd_ring,
-			));
-			parent.spawn((
-				ColliderRoot(parent.parent_entity()),
-				Collider::ball(VOID_SPHERE_OUTER_RADIUS),
-				transform,
-			));
-		});
 
 		Ok(())
 	}
 }
+
+const VOID_SPHERE_INNER_RADIUS: f32 = 0.3;
+const VOID_SPHERE_OUTER_RADIUS: f32 = 0.4;
+const VOID_SPHERE_TORUS_RADIUS: f32 = 0.35;
+const VOID_SPHERE_TORUS_RING_RADIUS: f32 = VOID_SPHERE_OUTER_RADIUS - VOID_SPHERE_TORUS_RADIUS;
 
 #[derive(Component, Clone)]
 #[require(Mesh3d, MeshMaterial3d<StandardMaterial>, NotShadowCaster)]

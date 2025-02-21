@@ -1,3 +1,5 @@
+pub(crate) mod damage_effect_shaders;
+
 use bevy::prelude::Component;
 use std::marker::PhantomData;
 

@@ -1,6 +1,7 @@
 pub mod essence;
 pub mod flip;
 pub mod insert_asset;
+pub mod spawn_children;
 
 use bevy::{prelude::*, render::view::RenderLayers};
 use bevy_rapier3d::prelude::*;
@@ -12,6 +13,12 @@ use crate::traits::handles_graphics::StaticRenderLayers;
 
 #[derive(Component)]
 pub struct GroundOffset(pub Vec3);
+
+impl From<Vec3> for GroundOffset {
+	fn from(value: Vec3) -> Self {
+		GroundOffset(value)
+	}
+}
 
 #[derive(Component, Debug, PartialEq)]
 pub struct Immobilized;

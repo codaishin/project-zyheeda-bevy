@@ -15,11 +15,13 @@ use bevy::{
 	reflect::TypePath,
 	transform::components::Transform,
 };
-use common::traits::load_asset::Path;
+use common::traits::{handles_lights::HandlesLights, load_asset::Path, thread_safe::ThreadSafe};
 
 pub(crate) trait ExtraComponentsDefinition {
 	fn target_names() -> Vec<String>;
-	fn insert_bundle(entity: &mut EntityCommands);
+	fn insert_bundle<TLights>(entity: &mut EntityCommands)
+	where
+		TLights: HandlesLights + ThreadSafe;
 }
 
 pub(crate) trait CellDistance {

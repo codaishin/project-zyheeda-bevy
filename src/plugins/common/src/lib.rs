@@ -13,7 +13,11 @@ pub mod tools;
 pub mod traits;
 
 use bevy::prelude::*;
-use components::{flip::FlipHorizontally, insert_asset::InsertAsset};
+use components::{
+	flip::FlipHorizontally,
+	insert_asset::InsertAsset,
+	spawn_children::SpawnChildren,
+};
 use labels::Labels;
 use resources::language_server::LanguageServer;
 use systems::load_asset_model::load_asset_model;
@@ -22,15 +26,18 @@ pub struct CommonPlugin;
 
 impl Plugin for CommonPlugin {
 	fn build(&self, app: &mut App) {
+		let on_instantiate = || Labels::PREFAB_INSTANTIATION.label();
+
 		app.init_resource::<LanguageServer>()
 			.add_systems(First, load_asset_model::<AssetServer>)
 			.add_systems(Update, FlipHorizontally::system)
 			.add_systems(
-				Labels::PREFAB_INSTANTIATION.label(),
+				on_instantiate(),
 				(
 					InsertAsset::<Mesh>::system,
 					InsertAsset::<StandardMaterial>::system,
 				),
-			);
+			)
+			.add_systems(on_instantiate(), SpawnChildren::system);
 	}
 }

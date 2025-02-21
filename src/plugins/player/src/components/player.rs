@@ -3,8 +3,8 @@ use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
 	attributes::health::Health,
-	blocker::Blocker,
-	components::{AssetModel, ColliderRoot, GroundOffset},
+	blocker::{Blocker, BlockerInsertCommand},
+	components::{flip::FlipHorizontally, AssetModel, ColliderRoot, GroundOffset},
 	effects::deal_damage::DealDamage,
 	errors::Error,
 	tools::{
@@ -30,11 +30,55 @@ use common::{
 };
 
 #[derive(Component, Default, Debug, PartialEq)]
-#[require(PlayerMovement(Player::movement), Transform, Visibility)]
+#[require(
+	PlayerMovement(Player::movement),
+	Transform,
+	Visibility,
+	Name(Self::name),
+	AssetModel(Self::model),
+	FlipHorizontally(Self::flip_metarig),
+	GroundOffset(Self::offset),
+	BlockerInsertCommand(Self::blocker),
+	RigidBody(Self::rigid_body),
+	LockedAxes(Self::locked_axes),
+	GravityScale(Self::gravity_scale)
+)]
 pub struct Player;
 
 impl Player {
 	const MODEL_PATH: &'static str = "models/player.glb";
+
+	fn name() -> Name {
+		Name::from("Player")
+	}
+
+	fn model() -> AssetModel {
+		AssetModel::path(Player::MODEL_PATH)
+	}
+
+	fn flip_metarig() -> FlipHorizontally {
+		FlipHorizontally::with(Name::from("metarig"))
+	}
+
+	fn offset() -> GroundOffset {
+		GroundOffset(Vec3::Y)
+	}
+
+	fn blocker() -> BlockerInsertCommand {
+		Blocker::insert([Blocker::Physical])
+	}
+
+	fn rigid_body() -> RigidBody {
+		RigidBody::Dynamic
+	}
+
+	fn locked_axes() -> LockedAxes {
+		LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y
+	}
+
+	fn gravity_scale() -> GravityScale {
+		GravityScale(0.)
+	}
 
 	pub fn animation_path(animation_name: &str) -> Path {
 		Path::from(Self::MODEL_PATH.to_owned() + "#" + animation_name)
@@ -118,28 +162,15 @@ where
 	TInteractions: HandlesEffect<DealDamage, TTarget = Health>,
 	TLights: HandlesLights,
 {
-	fn instantiate_on<TAfterInstantiation>(
-		&self,
-		entity: &mut EntityCommands,
-	) -> Result<(), Error> {
+	fn instantiate_on(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+		let root = entity.id();
 		entity
-			.insert((
-				Name::from("Player"),
-				AssetModel::path(Player::MODEL_PATH).flip_on(Name::from("metarig")),
-				Health::new(100.).bundle_via::<TInteractions>(),
-				GroundOffset(Vec3::Y),
-				Blocker::insert([Blocker::Physical]),
-				RigidBody::Dynamic,
-				GravityScale(0.),
-				LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y,
-			))
-			.with_children(|parent| {
-				parent.spawn((
-					TLights::responsive_light_trigger(),
-					Collider::capsule(Vec3::new(0.0, 0.2, -0.05), Vec3::new(0.0, 1.4, -0.05), 0.2),
-					ColliderRoot(parent.parent_entity()),
-				));
-			});
+			.insert(Health::new(100.).bundle_via::<TInteractions>())
+			.with_child((
+				TLights::responsive_light_trigger(),
+				Collider::capsule(Vec3::new(0.0, 0.2, -0.05), Vec3::new(0.0, 1.4, -0.05), 0.2),
+				ColliderRoot(root),
+			));
 
 		Ok(())
 	}
