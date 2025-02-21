@@ -41,7 +41,7 @@ fn prepare_game(app: &mut App) {
 	let game_state_plugin = GameStatePlugin::depends_on(&loading_plugin);
 	let light_plugin = LightPlugin::depends_on(&prefabs_plugin);
 	let children_assets_dispatch_plugin = ChildrenAssetsDispatchPlugin::depends_on(&loading_plugin);
-	let interactions_plugin = InteractionsPlugin::depends_on(&prefabs_plugin, &life_cycles_plugin);
+	let interactions_plugin = InteractionsPlugin::depends_on(&life_cycles_plugin);
 	let enemy_plugin =
 		EnemyPlugin::depends_on(&game_state_plugin, &prefabs_plugin, &interactions_plugin);
 	let map_generation_plugin = MapGenerationPlugin::depends_on(&prefabs_plugin, &light_plugin);

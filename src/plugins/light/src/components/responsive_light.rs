@@ -19,6 +19,12 @@ use common::{
 use std::{any::TypeId, ops::Deref, time::Duration};
 
 #[derive(Component, Debug, PartialEq, Clone)]
+#[require(
+	Transform,
+	Sensor,
+	ActiveEvents(Self::active_events),
+	CollidingEntities
+)]
 pub struct ResponsiveLight {
 	pub model: Entity,
 	pub light: Entity,
@@ -32,6 +38,10 @@ pub struct ResponsiveLight {
 }
 
 impl ResponsiveLight {
+	fn active_events() -> ActiveEvents {
+		ActiveEvents::COLLISION_EVENTS
+	}
+
 	pub(crate) fn detect_change<TColliderCollection: HasCollisions + Component>(
 		mut commands: Commands,
 		responsive_lights: Query<
@@ -78,17 +88,8 @@ impl ResponsiveLight {
 }
 
 impl Prefab<()> for ResponsiveLight {
-	fn instantiate_on<TAfterInstantiation>(
-		&self,
-		entity: &mut EntityCommands,
-	) -> Result<(), Error> {
-		entity.try_insert((
-			Transform::default(),
-			Collider::ball(*self.range.deref()),
-			Sensor,
-			ActiveEvents::COLLISION_EVENTS,
-			CollidingEntities::default(),
-		));
+	fn instantiate_on(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+		entity.try_insert(Collider::ball(*self.range.deref()));
 
 		Ok(())
 	}

@@ -10,14 +10,12 @@ use bevy_rapier3d::plugin::RapierContext;
 use common::{
 	self,
 	blocker::{Blocker, BlockerInsertCommand},
-	effects::{deal_damage::DealDamage, force_shield::ForceShield, gravity::Gravity},
 	labels::Labels,
 	traits::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::{BeamParameters, HandlesInteractions},
 		handles_life::HandlesLife,
 		handles_lifetime::HandlesLifetime,
-		prefab::RegisterPrefab,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -25,7 +23,7 @@ use components::{
 	acted_on_targets::ActedOnTargets,
 	beam::{Beam, BeamCommand},
 	blockers::ApplyBlockerInsertion,
-	effect::Effect,
+	effect::{deal_damage::DealDamageEffect, gravity::GravityEffect},
 	gravity_affected::GravityAffected,
 	interacting_entities::InteractingEntities,
 	is::{Fragile, InterruptableRay, Is},
@@ -57,24 +55,20 @@ use traits::act_on::ActOn;
 
 pub struct InteractionsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TPrefabs, TLifeCyclePlugin> InteractionsPlugin<(TPrefabs, TLifeCyclePlugin)>
+impl<TLifeCyclePlugin> InteractionsPlugin<TLifeCyclePlugin>
 where
-	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLifeCyclePlugin: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
-	pub fn depends_on(_: &TPrefabs, _: &TLifeCyclePlugin) -> Self {
+	pub fn depends_on(_: &TLifeCyclePlugin) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TPrefabs, TLifeCyclePlugin> Plugin for InteractionsPlugin<(TPrefabs, TLifeCyclePlugin)>
+impl<TLifeCyclePlugin> Plugin for InteractionsPlugin<TLifeCyclePlugin>
 where
-	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLifeCyclePlugin: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
 	fn build(&self, app: &mut App) {
-		TPrefabs::register_prefab::<Effect<ForceShield>>(app);
-
 		let processing_label = Labels::PROCESSING.label();
 		let processing_delta = Labels::PROCESSING.delta();
 
@@ -82,8 +76,8 @@ where
 			.add_event::<InteractionEvent<Ray>>()
 			.init_resource::<TrackInteractionDuplicates>()
 			.init_resource::<TrackRayInteractions>()
-			.add_interaction::<Effect<DealDamage>, TLifeCyclePlugin::TLife>()
-			.add_interaction::<Effect<Gravity>, GravityAffected>()
+			.add_interaction::<DealDamageEffect, TLifeCyclePlugin::TLife>()
+			.add_interaction::<GravityEffect, GravityAffected>()
 			.add_systems(processing_label.clone(), BlockerInsertCommand::apply)
 			.add_systems(
 				processing_label.clone(),

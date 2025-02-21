@@ -1,8 +1,5 @@
-use super::{map::MapWindow, CellDistance, SourcePath, Spawn};
-use crate::{
-	components::{Floating, Light},
-	map::LightCell,
-};
+use super::{light::floating::FloatingLight, map::MapWindow, CellDistance, SourcePath, Spawn};
+use crate::map::LightCell;
 use bevy::prelude::*;
 use common::traits::load_asset::Path;
 
@@ -27,7 +24,7 @@ impl Spawn for LightCell {
 		let LightCell::Floating = self else {
 			return;
 		};
-		commands.spawn((Light::<Floating>::default(), at));
+		commands.spawn((FloatingLight, at));
 	}
 }
 

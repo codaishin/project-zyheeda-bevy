@@ -32,7 +32,7 @@ use common::{
 };
 use components::{
 	camera_labels::{FirstPass, PlayerCamera, SecondPass, Ui},
-	effect_shaders::EffectShader,
+	effect_shaders::{damage_effect_shaders::DamageEffectShaders, EffectShader},
 	effect_shaders_target::EffectShadersTarget,
 	material_override::MaterialOverride,
 };
@@ -77,8 +77,6 @@ where
 	}
 
 	fn effect_shaders(app: &mut App) {
-		TPrefabs::register_prefab::<EffectShader<DealDamage>>(app);
-
 		register_custom_effect_shader::<TInteractions, ForceShield>(app);
 		register_custom_effect_shader::<TInteractions, Gravity>(app);
 		register_effect_shader::<TInteractions, DealDamage>(app);
@@ -90,6 +88,9 @@ where
 					Configure::LeaveAsIs,
 				),
 				InsertOn::<TBehaviors::TSkillProjection>::associated::<EffectShadersTarget>(
+					Configure::LeaveAsIs,
+				),
+				InsertOn::<EffectShader<DealDamage>>::associated::<DamageEffectShaders>(
 					Configure::LeaveAsIs,
 				),
 			),

@@ -1,15 +1,8 @@
+use crate::errors::Error;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 
-use crate::errors::Error;
-
-pub trait AfterInstantiation {
-	fn spawn(spawn_fn: impl Fn(&mut ChildBuilder) + Sync + Send + 'static) -> impl Bundle;
-}
-
 pub trait Prefab<TDependency> {
-	fn instantiate_on<TAfterInstantiation>(&self, entity: &mut EntityCommands) -> Result<(), Error>
-	where
-		TAfterInstantiation: AfterInstantiation;
+	fn instantiate_on(&self, entity: &mut EntityCommands) -> Result<(), Error>;
 }
 
 pub trait RegisterPrefabWithDependency<TDependency>

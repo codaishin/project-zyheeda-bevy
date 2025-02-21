@@ -1,4 +1,3 @@
-use super::Effect;
 use crate::{traits::act_on::ActOn, InteractionsPlugin};
 use bevy::prelude::*;
 use common::{
@@ -11,16 +10,18 @@ use common::{
 };
 use std::time::Duration;
 
-impl<TPrefabs, TLifecyclePlugin> HandlesEffect<DealDamage>
-	for InteractionsPlugin<(TPrefabs, TLifecyclePlugin)>
+#[derive(Component, Debug, PartialEq, Clone)]
+pub struct DealDamageEffect(pub(crate) DealDamage);
+
+impl<TLifecyclePlugin> HandlesEffect<DealDamage> for InteractionsPlugin<TLifecyclePlugin>
 where
 	TLifecyclePlugin: HandlesLife,
 {
 	type TTarget = Health;
-	type TEffectComponent = Effect<DealDamage>;
+	type TEffectComponent = DealDamageEffect;
 
 	fn effect(effect: DealDamage) -> Self::TEffectComponent {
-		Effect(effect)
+		DealDamageEffect(effect)
 	}
 
 	fn attribute(health: Self::TTarget) -> impl Bundle {
@@ -28,12 +29,12 @@ where
 	}
 }
 
-impl<TLife> ActOn<TLife> for Effect<DealDamage>
+impl<TLife> ActOn<TLife> for DealDamageEffect
 where
 	TLife: ChangeLife,
 {
 	fn act(&mut self, _: Entity, life: &mut TLife, delta: Duration) -> EffectApplies {
-		let Effect(DealDamage(damage, apply_method)) = *self;
+		let Self(DealDamage(damage, apply_method)) = *self;
 
 		let change = match apply_method {
 			EffectApplies::Always => -damage * delta.as_secs_f32(),
@@ -62,7 +63,7 @@ mod tests {
 
 	#[test]
 	fn deal_damage_once() {
-		let mut damage = Effect(DealDamage::once(42.));
+		let mut damage = DealDamageEffect(DealDamage::once(42.));
 		let mut life = Mock_Life::new_mock(|mock| {
 			mock.expect_change_by()
 				.times(1)
@@ -75,7 +76,7 @@ mod tests {
 
 	#[test]
 	fn action_type_once() {
-		let mut damage = Effect(DealDamage::once(42.));
+		let mut damage = DealDamageEffect(DealDamage::once(42.));
 		let mut life = Mock_Life::new_mock(|mock| {
 			mock.expect_change_by().return_const(());
 		});
@@ -87,7 +88,7 @@ mod tests {
 
 	#[test]
 	fn deal_damage_once_per_target() {
-		let mut damage = Effect(DealDamage::once_per_target(42.));
+		let mut damage = DealDamageEffect(DealDamage::once_per_target(42.));
 		let mut life = Mock_Life::new_mock(|mock| {
 			mock.expect_change_by()
 				.times(1)
@@ -100,7 +101,7 @@ mod tests {
 
 	#[test]
 	fn action_type_once_per_target() {
-		let mut damage = Effect(DealDamage::once_per_target(42.));
+		let mut damage = DealDamageEffect(DealDamage::once_per_target(42.));
 		let mut life = Mock_Life::new_mock(|mock| {
 			mock.expect_change_by().return_const(());
 		});
@@ -112,7 +113,7 @@ mod tests {
 
 	#[test]
 	fn deal_damage_over_time_scaled_by_delta() {
-		let mut damage = Effect(DealDamage::once_per_second(42.));
+		let mut damage = DealDamageEffect(DealDamage::once_per_second(42.));
 		let mut life = Mock_Life::new_mock(|mock| {
 			mock.expect_change_by()
 				.times(1)
@@ -125,7 +126,7 @@ mod tests {
 
 	#[test]
 	fn action_type_always() {
-		let mut damage = Effect(DealDamage::once_per_second(42.));
+		let mut damage = DealDamageEffect(DealDamage::once_per_second(42.));
 		let mut life = Mock_Life::new_mock(|mock| {
 			mock.expect_change_by().return_const(());
 		});

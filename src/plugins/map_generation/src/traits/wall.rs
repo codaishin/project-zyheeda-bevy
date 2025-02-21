@@ -14,7 +14,7 @@ impl ExtraComponentsDefinition for Wall {
 		]
 	}
 
-	fn insert_bundle(entity: &mut EntityCommands) {
+	fn insert_bundle<TLights>(entity: &mut EntityCommands) {
 		entity.try_insert((
 			Blocker::insert([Blocker::Physical]),
 			Collider::cuboid(1., 1., 0.05),
@@ -33,7 +33,7 @@ impl ExtraComponentsDefinition for WallBack {
 		]
 	}
 
-	fn insert_bundle(entity: &mut EntityCommands) {
+	fn insert_bundle<TLights>(entity: &mut EntityCommands) {
 		entity.try_insert(Unlit);
 	}
 }
