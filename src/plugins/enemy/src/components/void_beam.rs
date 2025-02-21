@@ -1,20 +1,19 @@
+use crate::traits::insert_attack::InsertAttack;
 use bevy::{ecs::system::EntityCommands, pbr::NotShadowCaster, prelude::*};
 use common::{
 	blocker::Blocker,
+	components::insert_asset::{InsertAsset, InsertAssetFromSource},
 	effects::deal_damage::DealDamage,
 	errors::Error,
 	tools::Units,
 	traits::{
-		cache::GetOrCreateTypeAsset,
 		handles_effect::HandlesEffect,
 		handles_enemies::{Attacker, Target},
 		handles_interactions::{BeamParameters, HandlesInteractions},
-		prefab::{AfterInstantiation, GetOrCreateAssets, Prefab},
+		prefab::{AfterInstantiation, Prefab},
 	},
 };
 use std::{f32::consts::PI, time::Duration};
-
-use crate::traits::insert_attack::InsertAttack;
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct VoidBeam {
@@ -54,42 +53,62 @@ impl<TInteractions> Prefab<TInteractions> for VoidBeam
 where
 	TInteractions: HandlesInteractions + HandlesEffect<DealDamage>,
 {
-	fn instantiate_on<TAfterInstantiation>(
-		&self,
-		entity: &mut EntityCommands,
-		mut assets: impl GetOrCreateAssets,
-	) -> Result<(), Error>
+	fn instantiate_on<TAfterInstantiation>(&self, entity: &mut EntityCommands) -> Result<(), Error>
 	where
 		TAfterInstantiation: AfterInstantiation,
 	{
-		let mesh = assets.get_or_create_for::<VoidBeam>(|| {
-			Mesh::from(Cylinder {
-				radius: 0.01,
-				half_height: 0.5,
-			})
-		});
-		let material = assets.get_or_create_for::<VoidBeam>(|| StandardMaterial {
-			base_color: self.attack.color,
+		let model = VoidBeamModel {
+			color: self.attack.color,
 			emissive: self.attack.emissive,
-			alpha_mode: AlphaMode::Add,
-			..default()
-		});
+		};
 
 		entity.try_insert((
 			TInteractions::beam_from(self),
 			TInteractions::is_ray_interrupted_by(&[Blocker::Physical, Blocker::Force]),
 			TInteractions::effect(DealDamage::once_per_second(self.attack.damage)),
 			TAfterInstantiation::spawn(move |parent: &mut ChildBuilder| {
-				parent.spawn((
-					Mesh3d(mesh.clone()),
-					MeshMaterial3d(material.clone()),
-					Transform::from_rotation(Quat::from_rotation_x(PI / 2.)),
-					NotShadowCaster,
-				));
+				parent.spawn(model);
 			}),
 		));
 
 		Ok(())
+	}
+}
+
+#[derive(Component, Debug, PartialEq, Clone, Copy)]
+#[require(
+	Visibility,
+	Transform(Self::transform),
+	InsertAsset<Mesh>(Self::model),
+	InsertAssetFromSource<StandardMaterial, Self>(Self::material),
+	NotShadowCaster,
+)]
+pub(crate) struct VoidBeamModel {
+	pub color: Color,
+	pub emissive: LinearRgba,
+}
+
+impl VoidBeamModel {
+	fn transform() -> Transform {
+		Transform::from_rotation(Quat::from_rotation_x(PI / 2.))
+	}
+
+	fn model() -> InsertAsset<Mesh> {
+		InsertAsset::shared::<Self>(|| {
+			Mesh::from(Cylinder {
+				radius: 0.01,
+				half_height: 0.5,
+			})
+		})
+	}
+
+	fn material() -> InsertAssetFromSource<StandardMaterial, Self> {
+		InsertAssetFromSource::shared(|model| StandardMaterial {
+			base_color: model.color,
+			emissive: model.emissive,
+			alpha_mode: AlphaMode::Add,
+			..default()
+		})
 	}
 }
 

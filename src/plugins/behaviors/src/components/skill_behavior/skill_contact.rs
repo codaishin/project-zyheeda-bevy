@@ -6,7 +6,7 @@ use common::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
 		handles_skill_behaviors::{Integrity, Motion, Shape},
-		prefab::{GetOrCreateAssets, Prefab},
+		prefab::Prefab,
 	},
 };
 
@@ -25,15 +25,12 @@ where
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
-		_: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		self.shape
 			.prefab::<TInteractions, TLifeCycles>(entity, Vec3::ZERO)?;
 		self.motion
 			.prefab::<TInteractions, TLifeCycles>(entity, ())?;
 		self.integrity
-			.prefab::<TInteractions, TLifeCycles>(entity, ())?;
-
-		Ok(())
+			.prefab::<TInteractions, TLifeCycles>(entity, ())
 	}
 }

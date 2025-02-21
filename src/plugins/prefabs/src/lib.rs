@@ -6,11 +6,7 @@ use common::{
 	labels::Labels,
 	resources::Shared,
 	systems::log::log_many,
-	tools::Factory,
-	traits::{
-		cache::get_or_create_asset::CreateAssetCache,
-		prefab::{Prefab, RegisterPrefab, RegisterPrefabWithDependency},
-	},
+	traits::prefab::{Prefab, RegisterPrefab, RegisterPrefabWithDependency},
 };
 use std::{any::TypeId, marker::PhantomData};
 use systems::{instantiate::instantiate, instantiate_children::instantiate_children};
@@ -33,15 +29,7 @@ impl<TDependency> PrefabsManager<TDependency> {
 		TDependency: 'static,
 		TPrefab: Prefab<TDependency> + Component,
 	{
-		let instantiate_system = instantiate::<
-			TPrefab,
-			Assets<Mesh>,
-			Assets<StandardMaterial>,
-			Shared<TypeId, Handle<Mesh>>,
-			Shared<TypeId, Handle<StandardMaterial>>,
-			Factory<CreateAssetCache>,
-			TDependency,
-		>;
+		let instantiate_system = instantiate::<TPrefab, TDependency>;
 		app.add_systems(
 			Labels::PREFAB_INSTANTIATION.label(),
 			instantiate_system.pipe(log_many),

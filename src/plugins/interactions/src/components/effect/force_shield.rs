@@ -5,10 +5,7 @@ use common::{
 	blocker::Blocker,
 	effects::force_shield::ForceShield,
 	errors::Error,
-	traits::{
-		handles_effect::HandlesEffect,
-		prefab::{GetOrCreateAssets, Prefab},
-	},
+	traits::{handles_effect::HandlesEffect, prefab::Prefab},
 };
 
 impl<TPrefabs, TLifecyclePlugin> HandlesEffect<ForceShield>
@@ -28,7 +25,6 @@ impl Prefab<()> for Effect<ForceShield> {
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
-		_: impl GetOrCreateAssets,
 	) -> Result<(), Error> {
 		entity.try_insert(Blocker::insert([Blocker::Force]));
 

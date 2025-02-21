@@ -6,7 +6,7 @@ use common::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
 		handles_skill_behaviors::{ProjectionOffset, Shape},
-		prefab::{AfterInstantiation, GetOrCreateAssets, Prefab},
+		prefab::Prefab,
 	},
 };
 
@@ -24,11 +24,7 @@ where
 	fn instantiate_on<TAfterInstantiation>(
 		&self,
 		entity: &mut EntityCommands,
-		_: impl GetOrCreateAssets,
-	) -> Result<(), Error>
-	where
-		TAfterInstantiation: AfterInstantiation,
-	{
+	) -> Result<(), Error> {
 		let offset = match self.offset {
 			Some(ProjectionOffset(offset)) => offset,
 			_ => Vec3::ZERO,
