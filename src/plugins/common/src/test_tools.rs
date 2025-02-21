@@ -74,7 +74,7 @@ pub mod utils {
 				(left_val, right_val, tolerance_val) => {
 					assert!(
 						$crate::test_tools::utils::approx_equal(left_val, right_val, tolerance_val),
-						"approx equal failed:\n     left: {}\n    right: {}\ntolerance: {}\n",
+						"approx equal failed:\n    left: {}\n    right: {}\ntolerance: {}\n",
 						format!("\x1b[31m{:?}\x1b[0m", left_val),
 						format!("\x1b[31m{:?}\x1b[0m", right_val),
 						format!("\x1b[33m{:?}\x1b[0m", tolerance_val),
@@ -86,37 +86,38 @@ pub mod utils {
 
 	pub use assert_eq_approx;
 
-	pub trait GetImmediateChildren
-	where
-		Self: Copy,
-	{
-		fn get_immediate_children(entity: &Entity, app: &App) -> Vec<Self>;
+	#[macro_export]
+	macro_rules! get_children {
+		($app:expr, $parent:expr) => {
+			$app.world().iter_entities().filter(|entity| {
+				entity
+					.get::<bevy::prelude::Parent>()
+					.map(|p| p.get() == $parent)
+					.unwrap_or(false)
+			})
+		};
 	}
 
-	impl GetImmediateChildren for Entity {
-		fn get_immediate_children(entity: &Entity, app: &App) -> Vec<Self> {
-			match app.world().entity(*entity).get::<Children>() {
-				None => vec![],
-				Some(children) => children.iter().cloned().collect(),
-			}
-		}
+	pub use get_children;
+
+	#[macro_export]
+	macro_rules! assert_count {
+		($count:literal, $iterator:expr) => {{
+			let vec = $iterator.collect::<Vec<_>>();
+			let vec_len = vec.len();
+			let Ok(array) = <[_; $count]>::try_from(vec) else {
+				panic!(
+					"assert count failed:\n    expected: {}\n    actual: {}\n",
+					format!("\x1b[32m{:?}\x1b[0m", $count),
+					format!("\x1b[31m{:?}\x1b[0m", vec_len),
+				);
+			};
+
+			array
+		}};
 	}
 
-	pub trait GetImmediateChildComponents
-	where
-		Self: Component,
-	{
-		fn get_immediate_children<'a>(entity: &Entity, app: &'a App) -> Vec<&'a Self>;
-	}
-
-	impl<TComponent: Component> GetImmediateChildComponents for TComponent {
-		fn get_immediate_children<'a>(entity: &Entity, app: &'a App) -> Vec<&'a Self> {
-			Entity::get_immediate_children(entity, app)
-				.iter()
-				.filter_map(|entity| app.world().entity(*entity).get::<TComponent>())
-				.collect()
-		}
-	}
+	pub use assert_count;
 
 	pub trait TickTime {
 		fn tick_time(&mut self, delta: Duration);
