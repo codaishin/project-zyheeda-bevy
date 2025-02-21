@@ -24,7 +24,7 @@ where
 	TAsset: AssetMarker,
 {
 	fn eq(&self, other: &Self) -> bool {
-		self.new_asset == other.new_asset && self.shared == other.shared
+		std::ptr::fn_addr_eq(self.new_asset, other.new_asset) && self.shared == other.shared
 	}
 }
 
@@ -120,7 +120,7 @@ where
 	}
 }
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug)]
 /// Defines an asset that should be added to an [`Entity`]
 ///
 /// This is a command like component and will be removed from
@@ -132,6 +132,16 @@ where
 {
 	new_asset: fn(&TSource) -> TAsset,
 	shared: Option<TypeId>,
+}
+
+impl<TAsset, TSource> PartialEq for InsertAssetFromSource<TAsset, TSource>
+where
+	TAsset: AssetMarker,
+	TSource: Component,
+{
+	fn eq(&self, other: &Self) -> bool {
+		std::ptr::fn_addr_eq(self.new_asset, other.new_asset) && self.shared == other.shared
+	}
 }
 
 impl<TAsset, TSource> InsertAssetFromSource<TAsset, TSource>
