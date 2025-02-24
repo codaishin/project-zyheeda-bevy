@@ -19,8 +19,18 @@ pub enum MaterialOverride {
 }
 
 impl MaterialOverride {
-	pub(crate) fn configure(essence: &Essence, material: &mut MaterialOverride) {
-		*material = match essence {
+	pub(crate) fn apply_material_exclusivity(
+		commands: Commands,
+		assets: ResMut<Assets<EssenceMaterial>>,
+		essence_renders: Query<MaterialComponents>,
+	) {
+		apply_material_exclusivity(commands, assets, essence_renders);
+	}
+}
+
+impl From<&Essence> for MaterialOverride {
+	fn from(essence: &Essence) -> Self {
+		match essence {
 			Essence::None => MaterialOverride::None,
 			Essence::Force => MaterialOverride::Material(EssenceMaterial {
 				texture_color: CYAN_100.into(),
@@ -29,16 +39,6 @@ impl MaterialOverride {
 				..default()
 			}),
 		}
-	}
-}
-
-impl MaterialOverride {
-	pub(crate) fn apply_material_exclusivity(
-		commands: Commands,
-		assets: ResMut<Assets<EssenceMaterial>>,
-		essence_renders: Query<MaterialComponents>,
-	) {
-		apply_material_exclusivity(commands, assets, essence_renders);
 	}
 }
 

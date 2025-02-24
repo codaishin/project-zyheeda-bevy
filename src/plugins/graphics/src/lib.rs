@@ -17,7 +17,7 @@ use common::{
 	effects::{deal_damage::DealDamage, force_shield::ForceShield, gravity::Gravity},
 	labels::Labels,
 	systems::{
-		insert_associated::{Configure, InsertAssociated, InsertOn},
+		insert_required::{InsertOn, InsertRequired},
 		remove_components::Remove,
 		track_components::TrackComponentInSelfAndChildren,
 	},
@@ -84,15 +84,10 @@ where
 		app.add_systems(
 			Labels::PREFAB_INSTANTIATION.label(),
 			(
-				InsertOn::<TBehaviors::TSkillContact>::associated::<EffectShadersTarget>(
-					Configure::LeaveAsIs,
-				),
-				InsertOn::<TBehaviors::TSkillProjection>::associated::<EffectShadersTarget>(
-					Configure::LeaveAsIs,
-				),
-				InsertOn::<EffectShader<DealDamage>>::associated::<DamageEffectShaders>(
-					Configure::LeaveAsIs,
-				),
+				InsertOn::<TBehaviors::TSkillContact>::required::<EffectShadersTarget>().default(),
+				InsertOn::<TBehaviors::TSkillProjection>::required::<EffectShadersTarget>()
+					.default(),
+				InsertOn::<EffectShader<DealDamage>>::required::<DamageEffectShaders>().default(),
 			),
 		)
 		.add_systems(
@@ -111,12 +106,12 @@ where
 
 	fn essence_material(app: &mut App) {
 		type InsertOnMeshWithEssence = InsertOn<Essence, With<Mesh3d>, Changed<Essence>>;
-		let configure_material = Configure::Apply(MaterialOverride::configure);
 
 		app.register_shader::<EssenceMaterial>().add_systems(
 			Update,
 			(
-				InsertOnMeshWithEssence::associated::<MaterialOverride>(configure_material),
+				InsertOnMeshWithEssence::required::<MaterialOverride>()
+					.value(|essence| MaterialOverride::from(essence)),
 				MaterialOverride::apply_material_exclusivity,
 			)
 				.chain(),
@@ -191,9 +186,7 @@ where
 {
 	app.add_systems(
 		Labels::PREFAB_INSTANTIATION.label(),
-		InsertOn::<TInteractions::TEffectComponent>::associated::<EffectShader<TEffect>>(
-			Configure::LeaveAsIs,
-		),
+		InsertOn::<TInteractions::TEffectComponent>::required::<EffectShader<TEffect>>().default(),
 	);
 	app.add_systems(
 		Update,

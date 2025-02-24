@@ -55,11 +55,11 @@ impl<T> UiNodeFor<T> {
 		}
 	}
 
-	pub fn set_render_layer<TUiCamera>(&self, render_layers: &mut RenderLayers)
+	pub fn render_layer<TUiCamera>(&self) -> RenderLayers
 	where
 		TUiCamera: StaticRenderLayers,
 	{
-		*render_layers = TUiCamera::render_layers()
+		TUiCamera::render_layers()
 	}
 }
 
@@ -108,10 +108,7 @@ mod tests {
 		}
 
 		let node = UiNodeFor::<()>::with(Entity::from_raw(100));
-		let mut render_layers = RenderLayers::default();
 
-		node.set_render_layer::<_T>(&mut render_layers);
-
-		assert_eq!(RenderLayers::layer(42), render_layers);
+		assert_eq!(RenderLayers::layer(42), node.render_layer::<_T>());
 	}
 }

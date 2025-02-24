@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	labels::Labels,
 	states::game_state::GameState,
-	systems::insert_associated::{Configure, InsertAssociated, InsertOn},
+	systems::insert_required::{InsertOn, InsertRequired},
 	traits::{
 		handles_graphics::{FirstPassCamera, WorldCameras},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
@@ -53,9 +53,8 @@ where
 		)
 		.add_systems(
 			Labels::PREFAB_INSTANTIATION.label(),
-			InsertOn::<TGraphics::TFirstPassCamera>::associated::<TPlayers::TPlayerMainCamera>(
-				Configure::LeaveAsIs,
-			),
+			InsertOn::<TGraphics::TFirstPassCamera>::required::<TPlayers::TPlayerMainCamera>()
+				.default(),
 		);
 	}
 }
