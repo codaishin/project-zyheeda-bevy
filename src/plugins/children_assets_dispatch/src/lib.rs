@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	labels::Labels,
 	systems::{
-		insert_associated::{Configure, InsertAssociated, InsertOn},
+		insert_required::{InsertOn, InsertRequired},
 		log::log_many,
 		track_components::TrackComponentInSelfAndChildren,
 	},
@@ -53,7 +53,7 @@ where
 		let dispatch_asset_components =
 			TParent::dispatch_asset_components::<TMarker>.pipe(log_many);
 		let insert_children_lookup =
-			InsertOn::<TParent>::associated::<ChildrenLookup<TParent, TMarker>>;
+			InsertOn::<TParent>::required::<ChildrenLookup<TParent, TMarker>>().default();
 		let store_children_in_lookup =
 			ChildrenLookup::<TParent, TMarker>::track_in_self_and_children::<Name>()
 				.filter::<TParent::TChildFilter>()
@@ -65,11 +65,7 @@ where
 
 		app.add_systems(
 			Labels::PREFAB_INSTANTIATION.label(),
-			(
-				insert_children_lookup(Configure::LeaveAsIs),
-				store_children_in_lookup,
-			)
-				.chain(),
+			(insert_children_lookup, store_children_in_lookup).chain(),
 		);
 	}
 }
