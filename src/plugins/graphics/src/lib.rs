@@ -15,7 +15,6 @@ use bevy::{
 use common::{
 	components::essence::Essence,
 	effects::{deal_damage::DealDamage, force_shield::ForceShield, gravity::Gravity},
-	labels::Labels,
 	systems::{
 		insert_required::{InsertOn, InsertRequired},
 		remove_components::Remove,
@@ -81,16 +80,10 @@ where
 		register_custom_effect_shader::<TInteractions, Gravity>(app);
 		register_effect_shader::<TInteractions, DealDamage>(app);
 
+		app.register_required_components::<TBehaviors::TSkillContact, EffectShadersTarget>()
+			.register_required_components::<TBehaviors::TSkillProjection, EffectShadersTarget>()
+			.register_required_components::<EffectShader<DealDamage>, DamageEffectShaders>();
 		app.add_systems(
-			Labels::PREFAB_INSTANTIATION.label(),
-			(
-				InsertOn::<TBehaviors::TSkillContact>::required::<EffectShadersTarget>().default(),
-				InsertOn::<TBehaviors::TSkillProjection>::required::<EffectShadersTarget>()
-					.default(),
-				InsertOn::<EffectShader<DealDamage>>::required::<DamageEffectShaders>().default(),
-			),
-		)
-		.add_systems(
 			PostUpdate,
 			(
 				EffectShadersTarget::remove_from_self_and_children::<
@@ -110,8 +103,9 @@ where
 		app.register_shader::<EssenceMaterial>().add_systems(
 			Update,
 			(
-				InsertOnMeshWithEssence::required::<MaterialOverride>()
-					.value(|essence| MaterialOverride::from(essence)),
+				InsertOnMeshWithEssence::required::<MaterialOverride>(|essence| {
+					MaterialOverride::from(essence)
+				}),
 				MaterialOverride::apply_material_exclusivity,
 			)
 				.chain(),
@@ -184,10 +178,7 @@ where
 	TInteractions: HandlesEffect<TEffect> + 'static,
 	TEffect: GetEffectMaterial + Sync + Send + 'static,
 {
-	app.add_systems(
-		Labels::PREFAB_INSTANTIATION.label(),
-		InsertOn::<TInteractions::TEffectComponent>::required::<EffectShader<TEffect>>().default(),
-	);
+	app.register_required_components::<TInteractions::TEffectComponent, EffectShader<TEffect>>();
 	app.add_systems(
 		Update,
 		(

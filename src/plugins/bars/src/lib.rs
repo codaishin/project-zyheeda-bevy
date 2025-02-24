@@ -56,14 +56,12 @@ where
 		let render_life_bars = render_bar::<Health>;
 		let render_layer = UiNodeFor::<Bar>::render_layer::<TGraphics::TUiCamera>;
 
+		app.register_required_components::<TPlayers::TPlayer, Bar>()
+			.register_required_components::<TEnemies::TEnemy, Bar>();
 		app.manage_ownership::<Bar>(Update)
 			.add_systems(
 				Labels::PREFAB_INSTANTIATION.label(),
-				(
-					InsertOn::<TPlayers::TPlayer>::required::<Bar>().default(),
-					InsertOn::<TEnemies::TEnemy>::required::<Bar>().default(),
-					InsertOn::<UiNodeFor<Bar>>::required::<RenderLayers>().value(render_layer),
-				),
+				InsertOn::<UiNodeFor<Bar>>::required::<RenderLayers>(render_layer),
 			)
 			.add_systems(Update, (update_life_bars, render_life_bars).chain());
 	}

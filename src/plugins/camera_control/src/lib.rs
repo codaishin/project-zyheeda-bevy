@@ -4,9 +4,7 @@ mod traits;
 
 use bevy::prelude::*;
 use common::{
-	labels::Labels,
 	states::game_state::GameState,
-	systems::insert_required::{InsertOn, InsertRequired},
 	traits::{
 		handles_graphics::{FirstPassCamera, WorldCameras},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
@@ -39,6 +37,7 @@ where
 	TGraphics: ThreadSafe + WorldCameras + FirstPassCamera,
 {
 	fn build(&self, app: &mut App) {
+		app.register_required_components::<TGraphics::TFirstPassCamera, TPlayers::TPlayerMainCamera>();
 		app.add_systems(
 			Update,
 			TGraphics::TWorldCameras::set_to_orbit::<TPlayers::TPlayer>,
@@ -50,11 +49,6 @@ where
 				move_with_target::<OrbitPlayer>,
 			)
 				.run_if(in_state(GameState::Play)),
-		)
-		.add_systems(
-			Labels::PREFAB_INSTANTIATION.label(),
-			InsertOn::<TGraphics::TFirstPassCamera>::required::<TPlayers::TPlayerMainCamera>()
-				.default(),
 		);
 	}
 }

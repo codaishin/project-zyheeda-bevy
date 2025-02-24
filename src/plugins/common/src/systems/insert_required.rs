@@ -15,9 +15,11 @@ where
 	(TFilter1, TFilter2): QueryFilter,
 {
 	#[allow(clippy::type_complexity)]
-	fn required<TRequired>() -> InsertRequiredSystem<TComponent, TRequired, TFilter1, TFilter2>
+	fn required<TRequired>(
+		constructor: impl Fn(&TComponent) -> TRequired + ThreadSafe,
+	) -> impl Fn(Commands, Query<(Entity, &TComponent), (TFilter1, TFilter2)>)
 	where
-		TRequired: Component + Default;
+		TRequired: Component;
 }
 
 impl<TComponent, TFilter1, TFilter2> InsertRequired<TComponent, TFilter1, TFilter2>
@@ -26,55 +28,18 @@ where
 	TComponent: Component,
 	(TFilter1, TFilter2): QueryFilter,
 {
-	fn required<TRequired>() -> InsertRequiredSystem<TComponent, TRequired, TFilter1, TFilter2>
+	fn required<TRequired>(
+		constructor: impl Fn(&TComponent) -> TRequired + ThreadSafe,
+	) -> impl Fn(Commands, Query<(Entity, &TComponent), (TFilter1, TFilter2)>)
 	where
 		TRequired: Component,
 	{
-		InsertRequiredSystem(PhantomData)
-	}
-}
-
-pub struct InsertRequiredSystem<TComponent, TRequired, TFilter1, TFilter2>(
-	PhantomData<(TComponent, TRequired, TFilter1, TFilter2)>,
-);
-
-impl<TComponent, TRequired, TFilter1, TFilter2>
-	InsertRequiredSystem<TComponent, TRequired, TFilter1, TFilter2>
-where
-	TComponent: Component,
-	TRequired: Component,
-	(TFilter1, TFilter2): QueryFilter,
-{
-	#[allow(clippy::type_complexity)]
-	pub fn default(self) -> impl Fn(Commands, Query<(Entity, &TComponent), (TFilter1, TFilter2)>)
-	where
-		TRequired: Default,
-	{
-		insert_required_system(|_| TRequired::default())
-	}
-
-	#[allow(clippy::type_complexity)]
-	pub fn value(
-		self,
-		constructor: impl Fn(&TComponent) -> TRequired + ThreadSafe,
-	) -> impl Fn(Commands, Query<(Entity, &TComponent), (TFilter1, TFilter2)>) {
-		insert_required_system(constructor)
-	}
-}
-
-#[allow(clippy::type_complexity)]
-fn insert_required_system<TComponent, TRequired, TFilter1, TFilter2>(
-	get_required: impl Fn(&TComponent) -> TRequired + ThreadSafe,
-) -> impl Fn(Commands, Query<(Entity, &TComponent), (TFilter1, TFilter2)>)
-where
-	TComponent: Component,
-	TRequired: Component,
-	(TFilter1, TFilter2): QueryFilter,
-{
-	move |mut commands: Commands, entities: Query<(Entity, &TComponent), (TFilter1, TFilter2)>| {
-		for (entity, component) in &entities {
-			let required = get_required(component);
-			commands.try_insert_on(entity, required);
+		move |mut commands: Commands,
+		      entities: Query<(Entity, &TComponent), (TFilter1, TFilter2)>| {
+			for (entity, component) in &entities {
+				let required = constructor(component);
+				commands.try_insert_on(entity, required);
+			}
 		}
 	}
 }
@@ -91,16 +56,14 @@ mod tests {
 	#[derive(Component, Debug, PartialEq, Default)]
 	struct _Required(&'static str);
 
-	fn setup<TFilter1, TFilter2>(
-		get_required: impl Fn(&_Component) -> _Required + ThreadSafe,
-	) -> App
+	fn setup<TFilter1, TFilter2>(constructor: impl Fn(&_Component) -> _Required + ThreadSafe) -> App
 	where
 		(TFilter1, TFilter2): QueryFilter + 'static,
 	{
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			insert_required_system::<_Component, _Required, TFilter1, TFilter2>(get_required),
+			InsertOn::<_Component, TFilter1, TFilter2>::required::<_Required>(constructor),
 		);
 
 		app

@@ -5,11 +5,7 @@ use crate::systems::dispatch_asset_components::DispatchAssetComponents;
 use bevy::prelude::*;
 use common::{
 	labels::Labels,
-	systems::{
-		insert_required::{InsertOn, InsertRequired},
-		log::log_many,
-		track_components::TrackComponentInSelfAndChildren,
-	},
+	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	traits::{
 		get_asset::GetAsset,
 		handles_assets_for_children::{ChildAssetDefinition, HandlesAssetsForChildren},
@@ -52,8 +48,6 @@ where
 		let all_children_present = ChildrenLookup::<TParent, TMarker>::entities_loaded;
 		let dispatch_asset_components =
 			TParent::dispatch_asset_components::<TMarker>.pipe(log_many);
-		let insert_children_lookup =
-			InsertOn::<TParent>::required::<ChildrenLookup<TParent, TMarker>>().default();
 		let store_children_in_lookup =
 			ChildrenLookup::<TParent, TMarker>::track_in_self_and_children::<Name>()
 				.filter::<TParent::TChildFilter>()
@@ -63,9 +57,10 @@ where
 			.in_app(app, all_children_present);
 		TLoading::register_after_load_system(app, Update, dispatch_asset_components);
 
+		app.register_required_components::<TParent, ChildrenLookup<TParent, TMarker>>();
 		app.add_systems(
 			Labels::PREFAB_INSTANTIATION.label(),
-			(insert_children_lookup, store_children_in_lookup).chain(),
+			store_children_in_lookup,
 		);
 	}
 }

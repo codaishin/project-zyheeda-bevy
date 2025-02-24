@@ -11,6 +11,7 @@ use crate::systems::{
 };
 use bevy::prelude::*;
 use common::{
+	labels::Labels,
 	systems::{
 		insert_required::{InsertOn, InsertRequired},
 		track_components::TrackComponentInSelfAndChildren,
@@ -44,9 +45,9 @@ impl RegisterAnimations for AnimationsPlugin {
 			TAgent::init_animation_clips::<AnimationGraph, AssetServer>,
 		)
 		.add_systems(
-			Update,
+			Labels::PREFAB_INSTANTIATION.label(),
 			(
-				InsertOn::<TAgent>::required::<AnimationDispatch>().value(dispatch),
+				InsertOn::<TAgent>::required::<AnimationDispatch>(dispatch),
 				TAgent::init_animation_graph_and_transitions::<AnimationDispatch>,
 			),
 		);
