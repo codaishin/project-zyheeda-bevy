@@ -46,10 +46,10 @@ fn empty_cell() -> Result<Path, CellIsEmpty> {
 	Err(CellIsEmpty)
 }
 
-impl From<MapCell> for Dir3 {
-	fn from(value: MapCell) -> Self {
+impl From<&MapCell> for Dir3 {
+	fn from(value: &MapCell) -> Self {
 		match value {
-			MapCell::Corridor(direction, _) => direction,
+			MapCell::Corridor(direction, _) => *direction,
 			MapCell::Empty => Dir3::NEG_Z,
 		}
 	}

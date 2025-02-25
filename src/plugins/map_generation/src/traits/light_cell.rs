@@ -9,8 +9,8 @@ impl SourcePath for LightCell {
 	}
 }
 
-impl From<LightCell> for Dir3 {
-	fn from(_: LightCell) -> Dir3 {
+impl From<&LightCell> for Dir3 {
+	fn from(_: &LightCell) -> Dir3 {
 		Dir3::NEG_Z
 	}
 }

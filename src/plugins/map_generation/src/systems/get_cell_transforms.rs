@@ -13,7 +13,7 @@ pub(crate) fn get_cell_transforms<TCell: CellDistance + TypePath + Sync + Send +
 	load_level_cmd: Option<Res<LoadLevelCommand<TCell>>>,
 ) -> Vec<(Transform, TCell)>
 where
-	Dir3: From<TCell>,
+	for<'a> Dir3: From<&'a TCell>,
 {
 	let Some(cells) = get_map_cells(load_level_cmd, maps) else {
 		return vec![];
@@ -51,9 +51,9 @@ fn get_map_cells<TCell: TypePath + Sync + Send + Clone>(
 
 fn transform<TCell: Clone>(cell: &TCell, position: Vec3) -> Transform
 where
-	Dir3: From<TCell>,
+	for<'a> Dir3: From<&'a TCell>,
 {
-	let direction = Vec3::from(Dir3::from(cell.clone()));
+	let direction = Dir3::from(cell);
 
 	Transform::from_translation(position).looking_to(direction, Vec3::Y)
 }
@@ -82,8 +82,8 @@ mod tests {
 	#[derive(Clone, Debug, PartialEq, TypePath)]
 	struct _Cell(Dir3);
 
-	impl From<_Cell> for Dir3 {
-		fn from(value: _Cell) -> Self {
+	impl From<&_Cell> for Dir3 {
+		fn from(value: &_Cell) -> Self {
 			value.0
 		}
 	}
