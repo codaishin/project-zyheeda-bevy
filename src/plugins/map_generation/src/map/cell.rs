@@ -1,14 +1,30 @@
-use super::{
-	map::{MapWindow, Neighbors, Tile},
-	CellDistance,
-	SourcePath,
-};
+use super::Shape;
 use crate::{
 	components::Corridor,
-	map::{MapCell, Shape},
+	traits::{
+		is_walkable::IsWalkable,
+		map::{MapWindow, Neighbors, Tile},
+		CellDistance,
+		SourcePath,
+	},
 };
-use bevy::math::Dir3;
+use bevy::{math::Dir3, prelude::*};
 use common::traits::load_asset::Path;
+
+#[derive(Debug, PartialEq, Clone, Copy, TypePath)]
+pub(crate) enum MapCell {
+	Corridor(Dir3, Shape),
+	Empty,
+}
+
+impl IsWalkable for MapCell {
+	fn is_walkable(&self) -> bool {
+		match self {
+			MapCell::Corridor(..) => true,
+			MapCell::Empty => false,
+		}
+	}
+}
 
 impl SourcePath for MapCell {
 	fn source_path() -> Path {
@@ -18,10 +34,10 @@ impl SourcePath for MapCell {
 
 pub struct CellIsEmpty;
 
-impl TryFrom<MapCell> for Path {
+impl TryFrom<&MapCell> for Path {
 	type Error = CellIsEmpty;
 
-	fn try_from(value: MapCell) -> Result<Self, Self::Error> {
+	fn try_from(value: &MapCell) -> Result<Self, Self::Error> {
 		match value {
 			MapCell::Corridor(_, Shape::Single) => corridor("single"),
 			MapCell::Corridor(_, Shape::End) => corridor("end"),
@@ -46,10 +62,10 @@ fn empty_cell() -> Result<Path, CellIsEmpty> {
 	Err(CellIsEmpty)
 }
 
-impl From<MapCell> for Dir3 {
-	fn from(value: MapCell) -> Self {
+impl From<&MapCell> for Dir3 {
+	fn from(value: &MapCell) -> Self {
 		match value {
-			MapCell::Corridor(direction, _) => direction,
+			MapCell::Corridor(direction, _) => *direction,
 			MapCell::Empty => Dir3::NEG_Z,
 		}
 	}
@@ -440,5 +456,12 @@ mod tests {
 			MapCell::Corridor(Dir3::NEG_Z, Shape::Cross4),
 			MapCell::from(cross)
 		);
+	}
+
+	#[test]
+	fn is_walkable() {
+		let cells = [MapCell::Empty, MapCell::Corridor(Dir3::Z, Shape::Straight)];
+
+		assert_eq!([false, true], cells.map(|c| c.is_walkable()));
 	}
 }

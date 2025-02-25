@@ -1,8 +1,8 @@
 pub(crate) mod app;
+pub(crate) mod is_walkable;
 pub(crate) mod light;
 pub(crate) mod light_cell;
 pub(crate) mod map;
-pub(crate) mod map_cell;
 pub(crate) mod wall;
 
 use self::map::MapWindow;

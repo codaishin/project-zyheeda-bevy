@@ -1,22 +1,27 @@
 mod components;
 mod map;
 mod map_loader;
+mod resources;
 mod systems;
 mod traits;
 
 use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
-	traits::{handles_lights::HandlesLights, prefab::RegisterPrefab, thread_safe::ThreadSafe},
+	traits::{
+		handles_lights::HandlesLights,
+		handles_map_generation::HandlesMapGeneration,
+		prefab::RegisterPrefab,
+		thread_safe::ThreadSafe,
+	},
 };
-use components::{Wall, WallBack};
-use map::{LightCell, MapCell};
+use components::{level::Level, Wall, WallBack};
+use map::{cell::MapCell, LightCell};
+use resources::load_level::LoadLevel;
 use std::marker::PhantomData;
 use systems::{
 	apply_extra_components::ApplyExtraComponents,
-	get_cell_transforms::get_cell_transforms,
 	spawn_procedural::spawn_procedural,
-	spawn_scene::spawn_scene,
 	unlit_material::unlit_material,
 };
 use traits::{light::wall::WallLight, RegisterMapCell};
@@ -46,8 +51,8 @@ where
 			.add_systems(
 				Update,
 				(
-					get_cell_transforms::<MapCell>.pipe(spawn_scene::<MapCell, AssetServer>),
-					get_cell_transforms::<LightCell>.pipe(spawn_procedural),
+					LoadLevel::<MapCell>::cell_transforms.pipe(Level::spawn::<MapCell>),
+					LoadLevel::<LightCell>::cell_transforms.pipe(spawn_procedural),
 				),
 			)
 			.add_systems(
@@ -60,4 +65,8 @@ where
 			)
 			.add_systems(Update, unlit_material);
 	}
+}
+
+impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> {
+	type TMap = Level;
 }
