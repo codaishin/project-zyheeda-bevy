@@ -9,14 +9,13 @@ use common::{
 	states::game_state::GameState,
 	traits::{handles_lights::HandlesLights, prefab::RegisterPrefab, thread_safe::ThreadSafe},
 };
-use components::{Wall, WallBack};
+use components::{level::Level, Wall, WallBack};
 use map::{LightCell, MapCell};
 use std::marker::PhantomData;
 use systems::{
 	apply_extra_components::ApplyExtraComponents,
 	get_cell_transforms::get_cell_transforms,
 	spawn_procedural::spawn_procedural,
-	spawn_scene::spawn_scene,
 	unlit_material::unlit_material,
 };
 use traits::{light::wall::WallLight, RegisterMapCell};
@@ -46,7 +45,7 @@ where
 			.add_systems(
 				Update,
 				(
-					get_cell_transforms::<MapCell>.pipe(spawn_scene::<MapCell, AssetServer>),
+					get_cell_transforms::<MapCell>.pipe(Level::spawn::<MapCell>),
 					get_cell_transforms::<LightCell>.pipe(spawn_procedural),
 				),
 			)

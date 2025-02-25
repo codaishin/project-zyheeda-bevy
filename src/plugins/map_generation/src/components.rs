@@ -1,3 +1,5 @@
+pub(crate) mod level;
+
 use crate::map::Map;
 use bevy::prelude::*;
 

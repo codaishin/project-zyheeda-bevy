@@ -18,10 +18,10 @@ impl SourcePath for MapCell {
 
 pub struct CellIsEmpty;
 
-impl TryFrom<MapCell> for Path {
+impl TryFrom<&MapCell> for Path {
 	type Error = CellIsEmpty;
 
-	fn try_from(value: MapCell) -> Result<Self, Self::Error> {
+	fn try_from(value: &MapCell) -> Result<Self, Self::Error> {
 		match value {
 			MapCell::Corridor(_, Shape::Single) => corridor("single"),
 			MapCell::Corridor(_, Shape::End) => corridor("end"),
