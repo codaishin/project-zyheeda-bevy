@@ -8,10 +8,15 @@ mod traits;
 use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
-	traits::{handles_lights::HandlesLights, prefab::RegisterPrefab, thread_safe::ThreadSafe},
+	traits::{
+		handles_lights::HandlesLights,
+		handles_map_generation::HandlesMapGeneration,
+		prefab::RegisterPrefab,
+		thread_safe::ThreadSafe,
+	},
 };
 use components::{level::Level, Wall, WallBack};
-use map::{LightCell, MapCell};
+use map::{cell::MapCell, LightCell};
 use resources::load_level::LoadLevel;
 use std::marker::PhantomData;
 use systems::{
@@ -60,4 +65,8 @@ where
 			)
 			.add_systems(Update, unlit_material);
 	}
+}
+
+impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> {
+	type TMap = Level;
 }

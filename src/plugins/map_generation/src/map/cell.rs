@@ -1,14 +1,30 @@
-use super::{
-	map::{MapWindow, Neighbors, Tile},
-	CellDistance,
-	SourcePath,
-};
+use super::Shape;
 use crate::{
 	components::Corridor,
-	map::{MapCell, Shape},
+	traits::{
+		is_walkable::IsWalkable,
+		map::{MapWindow, Neighbors, Tile},
+		CellDistance,
+		SourcePath,
+	},
 };
-use bevy::math::Dir3;
+use bevy::{math::Dir3, prelude::*};
 use common::traits::load_asset::Path;
+
+#[derive(Debug, PartialEq, Clone, Copy, TypePath)]
+pub(crate) enum MapCell {
+	Corridor(Dir3, Shape),
+	Empty,
+}
+
+impl IsWalkable for MapCell {
+	fn is_walkable(&self) -> bool {
+		match self {
+			MapCell::Corridor(..) => true,
+			MapCell::Empty => false,
+		}
+	}
+}
 
 impl SourcePath for MapCell {
 	fn source_path() -> Path {
@@ -440,5 +456,12 @@ mod tests {
 			MapCell::Corridor(Dir3::NEG_Z, Shape::Cross4),
 			MapCell::from(cross)
 		);
+	}
+
+	#[test]
+	fn is_walkable() {
+		let cells = [MapCell::Empty, MapCell::Corridor(Dir3::Z, Shape::Straight)];
+
+		assert_eq!([false, true], cells.map(|c| c.is_walkable()));
 	}
 }

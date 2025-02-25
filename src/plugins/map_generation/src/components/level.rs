@@ -1,10 +1,14 @@
 use bevy::prelude::*;
-use common::traits::load_asset::{LoadAsset, Path};
+use common::traits::{
+	handles_map_generation::NavCell,
+	iterate::Iterate,
+	load_asset::{LoadAsset, Path},
+};
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(Name(Self::name), Transform, Visibility)]
-pub(crate) struct Level {
-	cells: Vec<Vec3>,
+pub struct Level {
+	cells: Vec<NavCell>,
 }
 
 impl Level {
@@ -19,9 +23,21 @@ impl Level {
 		level_cache: Local<Option<Entity>>,
 		levels: Query<&mut Level>,
 	) where
+		TCell: IsWalkable,
 		for<'a> Path: TryFrom<&'a TCell>,
 	{
 		spawn(cells, commands, load_asset, level_cache, levels);
+	}
+}
+
+impl Iterate for Level {
+	type TItem<'a>
+		= &'a NavCell
+	where
+		Self: 'a;
+
+	fn iterate(&self) -> impl Iterator<Item = &'_ NavCell> {
+		self.cells.iter()
 	}
 }
 
@@ -32,6 +48,7 @@ pub(crate) fn spawn<TCell, TAsset>(
 	mut level_cache: Local<Option<Entity>>,
 	mut levels: Query<&mut Level>,
 ) where
+	TCell: IsWalkable,
 	TAsset: LoadAsset + Resource,
 	for<'a> Path: TryFrom<&'a TCell>,
 {
@@ -45,11 +62,13 @@ pub(crate) fn spawn<TCell, TAsset>(
 	update_level_cells!(levels, level, level_id, cells);
 }
 
-fn with_cell_path<TCell>((transform, cell): &(Transform, TCell)) -> Option<(Transform, Path)>
+fn with_cell_path<TCell>((transform, cell): &(Transform, TCell)) -> Option<(Transform, Path, bool)>
 where
+	TCell: IsWalkable,
 	for<'a> Path: TryFrom<&'a TCell>,
 {
-	Some((*transform, Path::try_from(cell).ok()?))
+	let is_walkable = cell.is_walkable();
+	Some((*transform, Path::try_from(cell).ok()?, is_walkable))
 }
 
 macro_rules! spawn_cells {
@@ -57,9 +76,12 @@ macro_rules! spawn_cells {
 		$cells
 			.iter()
 			.filter_map(with_cell_path)
-			.map(|(transform, path)| {
+			.map(|(transform, path, is_walkable)| {
 				let scene = $load_asset.load_asset(path);
-				let cell = transform.translation;
+				let cell = NavCell {
+					translation: transform.translation,
+					is_walkable,
+				};
 				$level.with_child((SceneRoot(scene), transform));
 				cell
 			})
@@ -95,6 +117,8 @@ macro_rules! update_level_cells {
 
 use update_level_cells;
 
+use crate::traits::is_walkable::IsWalkable;
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -108,14 +132,23 @@ mod tests {
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Clone)]
-	struct _Cell(Option<Path>);
+	#[derive(Clone, Default)]
+	struct _Cell {
+		path: Option<Path>,
+		is_walkable: bool,
+	}
+
+	impl IsWalkable for _Cell {
+		fn is_walkable(&self) -> bool {
+			self.is_walkable
+		}
+	}
 
 	impl TryFrom<&_Cell> for Path {
 		type Error = ();
 
 		fn try_from(value: &_Cell) -> Result<Self, Self::Error> {
-			match &value.0 {
+			match &value.path {
 				Some(path) => Ok(path.clone()),
 				None => Err(()),
 			}
@@ -154,7 +187,10 @@ mod tests {
 		let mut app = setup(
 			vec![(
 				Transform::from_xyz(1., 2., 3.),
-				_Cell(Some(Path::from("A"))),
+				_Cell {
+					path: Some(Path::from("A")),
+					..default()
+				},
 			)],
 			_LoadScene::new().with_mock(|mock| {
 				mock.expect_load_asset()
@@ -180,7 +216,13 @@ mod tests {
 	#[test]
 	fn spawn_scene_as_child_of_level() {
 		let mut app = setup(
-			vec![(Transform::default(), _Cell(Some(Path::from("A"))))],
+			vec![(
+				Transform::default(),
+				_Cell {
+					path: Some(Path::from("A")),
+					..default()
+				},
+			)],
 			_LoadScene::new().with_mock(|mock| {
 				mock.expect_load_asset::<Scene, Path>()
 					.return_const(new_handle());
@@ -201,7 +243,13 @@ mod tests {
 	#[test]
 	fn reuse_same_level_in_subsequent_updates() {
 		let mut app = setup(
-			vec![(Transform::default(), _Cell(Some(Path::from("A"))))],
+			vec![(
+				Transform::default(),
+				_Cell {
+					path: Some(Path::from("A")),
+					..default()
+				},
+			)],
 			_LoadScene::new().with_mock(|mock| {
 				mock.expect_load_asset::<Scene, Path>()
 					.return_const(new_handle());
@@ -221,12 +269,24 @@ mod tests {
 	}
 
 	#[test]
-	fn store_cell_transform_in_level() {
+	fn store_nav_cell_in_level() {
 		let mut app = setup(
-			vec![(
-				Transform::from_xyz(1., 2., 3.),
-				_Cell(Some(Path::from("A"))),
-			)],
+			vec![
+				(
+					Transform::from_xyz(1., 2., 3.),
+					_Cell {
+						path: Some(Path::from("A")),
+						is_walkable: false,
+					},
+				),
+				(
+					Transform::from_xyz(3., 4., 5.),
+					_Cell {
+						path: Some(Path::from("A")),
+						is_walkable: true,
+					},
+				),
+			],
 			_LoadScene::new().with_mock(|mock| {
 				mock.expect_load_asset::<Scene, Path>()
 					.return_const(new_handle());
@@ -239,7 +299,16 @@ mod tests {
 		let [level] = assert_count!(1, levels);
 		assert_eq!(
 			&Level {
-				cells: vec![Vec3::new(1., 2., 3.)]
+				cells: vec![
+					NavCell {
+						translation: Vec3::new(1., 2., 3.),
+						is_walkable: false
+					},
+					NavCell {
+						translation: Vec3::new(3., 4., 5.),
+						is_walkable: true
+					}
+				]
 			},
 			level
 		);
@@ -250,7 +319,10 @@ mod tests {
 		let mut app = setup(
 			vec![(
 				Transform::from_xyz(1., 2., 3.),
-				_Cell(Some(Path::from("A"))),
+				_Cell {
+					path: Some(Path::from("A")),
+					..default()
+				},
 			)],
 			_LoadScene::new().with_mock(|mock| {
 				mock.expect_load_asset::<Scene, Path>()
@@ -265,7 +337,16 @@ mod tests {
 		let [level] = assert_count!(1, levels);
 		assert_eq!(
 			&Level {
-				cells: vec![Vec3::new(1., 2., 3.), Vec3::new(1., 2., 3.)]
+				cells: vec![
+					NavCell {
+						translation: Vec3::new(1., 2., 3.),
+						is_walkable: false
+					},
+					NavCell {
+						translation: Vec3::new(1., 2., 3.),
+						is_walkable: false
+					}
+				]
 			},
 			level
 		);
