@@ -1,3 +1,4 @@
+use crate::traits::is_walkable::IsWalkable;
 use bevy::prelude::*;
 use common::traits::{
 	handles_map_generation::NavCell,
@@ -87,7 +88,6 @@ macro_rules! spawn_cells {
 			})
 	};
 }
-
 use spawn_cells;
 
 macro_rules! get_or_new {
@@ -98,7 +98,6 @@ macro_rules! get_or_new {
 		}
 	};
 }
-
 use get_or_new;
 
 macro_rules! update_level_cells {
@@ -114,10 +113,7 @@ macro_rules! update_level_cells {
 		}
 	};
 }
-
 use update_level_cells;
-
-use crate::traits::is_walkable::IsWalkable;
 
 #[cfg(test)]
 mod tests {
