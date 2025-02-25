@@ -1,6 +1,7 @@
 mod components;
 mod map;
 mod map_loader;
+mod resources;
 mod systems;
 mod traits;
 
@@ -11,10 +12,10 @@ use common::{
 };
 use components::{level::Level, Wall, WallBack};
 use map::{LightCell, MapCell};
+use resources::load_level::LoadLevel;
 use std::marker::PhantomData;
 use systems::{
 	apply_extra_components::ApplyExtraComponents,
-	get_cell_transforms::get_cell_transforms,
 	spawn_procedural::spawn_procedural,
 	unlit_material::unlit_material,
 };
@@ -45,8 +46,8 @@ where
 			.add_systems(
 				Update,
 				(
-					get_cell_transforms::<MapCell>.pipe(Level::spawn::<MapCell>),
-					get_cell_transforms::<LightCell>.pipe(spawn_procedural),
+					LoadLevel::<MapCell>::cell_transforms.pipe(Level::spawn::<MapCell>),
+					LoadLevel::<LightCell>::cell_transforms.pipe(spawn_procedural),
 				),
 			)
 			.add_systems(
