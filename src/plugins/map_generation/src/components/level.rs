@@ -53,6 +53,10 @@ pub(crate) fn spawn<TCell, TAsset>(
 	TAsset: LoadAsset + Resource,
 	for<'a> Path: TryFrom<&'a TCell>,
 {
+	if cells.is_empty() {
+		return;
+	}
+
 	let mut level = match *level_cache {
 		Some(level) => get_or_new!(commands, level),
 		None => commands.spawn(Level::default()),
@@ -346,5 +350,21 @@ mod tests {
 			},
 			level
 		);
+	}
+
+	#[test]
+	fn do_nothing_if_cells_empty() {
+		let mut app = setup(
+			vec![],
+			_LoadScene::new().with_mock(|mock| {
+				mock.expect_load_asset::<Scene, Path>()
+					.return_const(new_handle());
+			}),
+		);
+
+		app.update();
+
+		let levels = app.world().iter_entities().filter_map(|e| e.get::<Level>());
+		assert_count!(0, levels);
 	}
 }
