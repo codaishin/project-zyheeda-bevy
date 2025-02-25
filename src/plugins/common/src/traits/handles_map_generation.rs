@@ -8,7 +8,7 @@ where
 	type TMap;
 }
 
-#[derive(Component, Debug, PartialEq, Default)]
+#[derive(Component, Debug, PartialEq, Default, Clone, Copy)]
 pub struct NavCell {
 	pub translation: Vec3,
 	pub is_walkable: bool,

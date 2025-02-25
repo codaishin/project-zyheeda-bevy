@@ -22,5 +22,6 @@ where
 {
 	fn build(&self, app: &mut App) {
 		app.register_required_components::<TMaps::TMap, NavGrid>();
+		app.add_systems(Update, NavGrid::update_from::<TMaps::TMap>);
 	}
 }
