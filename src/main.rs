@@ -39,7 +39,6 @@ fn prepare_game(app: &mut App) {
 	let animations_plugin = AnimationsPlugin;
 	let prefabs_plugin = PrefabsPlugin;
 	let loading_plugin = LoadingPlugin;
-	let path_finding_plugin = PathFindingPlugin;
 	let game_state_plugin = GameStatePlugin::depends_on(&loading_plugin);
 	let light_plugin = LightPlugin::depends_on(&prefabs_plugin);
 	let children_assets_dispatch_plugin = ChildrenAssetsDispatchPlugin::depends_on(&loading_plugin);
@@ -47,6 +46,7 @@ fn prepare_game(app: &mut App) {
 	let enemy_plugin =
 		EnemyPlugin::depends_on(&game_state_plugin, &prefabs_plugin, &interactions_plugin);
 	let map_generation_plugin = MapGenerationPlugin::depends_on(&prefabs_plugin, &light_plugin);
+	let path_finding_plugin = PathFindingPlugin::depends_on(&map_generation_plugin);
 	let player_plugin = PlayerPlugin::depends_on(
 		&game_state_plugin,
 		&animations_plugin,
