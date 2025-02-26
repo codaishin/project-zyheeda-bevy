@@ -1,6 +1,7 @@
 use crate::{
 	components::nav_grid::NavGridData,
 	tools::{
+		back_iterator::BackIterator,
 		closed_list::ClosedList,
 		g_scores::GScores,
 		line_wide::LineWide,
@@ -57,9 +58,9 @@ impl ThetaStar {
 		LineWide::new(a, b).all(|n| !self.grid.obstacles.contains(&n))
 	}
 
-	fn vertex(
+	fn vertex<TIterator>(
 		&self,
-		closed: &ClosedList,
+		closed: &ClosedList<TIterator>,
 		g_scores: &GScores,
 		current: NavGridNode,
 		neighbor: NavGridNode,
@@ -112,7 +113,7 @@ impl ComputePath for ThetaStar {
 		let dist_f = |a, b| self.distance(a, b);
 		let los_f = |a, b| self.los(a, b);
 		let mut open = OpenList::new(start, end, &dist_f);
-		let mut closed = ClosedList::new(start);
+		let mut closed = ClosedList::<BackIterator>::new(start);
 		let mut g_scores = GScores::new(start);
 
 		while let Some(current) = open.pop_lowest_f() {

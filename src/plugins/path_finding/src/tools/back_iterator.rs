@@ -1,19 +1,12 @@
 use super::{closed_list::ClosedList, nav_grid_node::NavGridNode};
 
 #[derive(Debug, Clone)]
-pub(crate) struct PathIterator {
-	list: ClosedList,
+pub(crate) struct BackIterator {
+	list: ClosedList<BackIterator>,
 	next: Option<NavGridNode>,
 }
 
-impl PathIterator {
-	pub(crate) fn new(list: ClosedList, end: NavGridNode) -> Self {
-		Self {
-			list,
-			next: Some(end),
-		}
-	}
-
+impl BackIterator {
 	fn parent(&self, node: &NavGridNode) -> Option<&NavGridNode> {
 		if node == self.list.start() {
 			return None;
@@ -22,18 +15,27 @@ impl PathIterator {
 		self.list.parent(node)
 	}
 
-	pub(crate) fn remove_redundant_nodes<T>(self, line_of_sight: T) -> CleanedPathIterator<T>
+	pub(crate) fn remove_redundant_nodes<T>(self, line_of_sight: T) -> CleanedBackIterator<T>
 	where
 		T: Fn(NavGridNode, NavGridNode) -> bool + Clone,
 	{
-		CleanedPathIterator {
+		CleanedBackIterator {
 			los: line_of_sight,
 			iterator: self,
 		}
 	}
 }
 
-impl Iterator for PathIterator {
+impl From<(ClosedList<Self>, NavGridNode)> for BackIterator {
+	fn from((list, end): (ClosedList<Self>, NavGridNode)) -> Self {
+		Self {
+			list,
+			next: Some(end),
+		}
+	}
+}
+
+impl Iterator for BackIterator {
 	type Item = NavGridNode;
 
 	fn next(&mut self) -> Option<Self::Item> {
@@ -46,15 +48,15 @@ impl Iterator for PathIterator {
 }
 
 #[derive(Debug, Clone)]
-pub struct CleanedPathIterator<T>
+pub struct CleanedBackIterator<T>
 where
 	T: Fn(NavGridNode, NavGridNode) -> bool + Clone,
 {
 	los: T,
-	iterator: PathIterator,
+	iterator: BackIterator,
 }
 
-impl<T> CleanedPathIterator<T>
+impl<T> CleanedBackIterator<T>
 where
 	T: Fn(NavGridNode, NavGridNode) -> bool + Clone,
 {
@@ -183,7 +185,7 @@ where
 	}
 }
 
-impl<T> Iterator for CleanedPathIterator<T>
+impl<T> Iterator for CleanedBackIterator<T>
 where
 	T: Fn(NavGridNode, NavGridNode) -> bool + Clone,
 {
