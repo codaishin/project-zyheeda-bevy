@@ -5,6 +5,7 @@ pub mod asset_marker;
 pub mod cast_ray;
 pub mod clamp_zero_positive;
 pub mod clear;
+pub mod collect_reversed;
 pub mod get_asset;
 pub mod get_asset_path;
 pub mod get_handle_from_path;
