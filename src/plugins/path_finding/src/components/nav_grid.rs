@@ -10,6 +10,7 @@ use std::collections::HashSet;
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub struct NavGrid<TMethod> {
+	pub(crate) cells: Vec<NavCell>,
 	pub(crate) method: TMethod,
 }
 
@@ -26,8 +27,10 @@ impl<TMethod> NavGrid<TMethod> {
 				max: NavGridNode::MIN,
 				obstacles: HashSet::default(),
 			};
+			let mut cells = vec![];
 
 			for cell in map.iterate() {
+				cells.push(*cell);
 				empty = false;
 
 				let node = NavGridNode::from(cell);
@@ -53,6 +56,7 @@ impl<TMethod> NavGrid<TMethod> {
 			}
 
 			*nav_grid = Self {
+				cells,
 				method: TMethod::from(grid),
 			}
 		}
@@ -134,6 +138,16 @@ mod tests {
 
 		assert_eq!(
 			Some(&NavGrid {
+				cells: vec![
+					NavCell {
+						translation: Vec3::new(1., 0., 2.),
+						is_walkable: true,
+					},
+					NavCell {
+						translation: Vec3::new(2., 0., 1.),
+						is_walkable: false,
+					},
+				],
 				method: _Method(NavGridData {
 					min: NavGridNode { x: 1, y: 1 },
 					max: NavGridNode { x: 2, y: 2 },
@@ -159,9 +173,9 @@ mod tests {
 			.id();
 
 		app.update();
-		app.world_mut().entity_mut(entity).insert(NavGrid {
-			method: _Method::default(),
-		});
+		app.world_mut()
+			.entity_mut(entity)
+			.insert(NavGrid::<_Method>::default());
 		app.update();
 
 		assert_eq!(
@@ -187,15 +201,17 @@ mod tests {
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.insert(NavGrid {
-				method: _Method::default(),
-			})
+			.insert(NavGrid::<_Method>::default())
 			.get_mut::<_Map>()
 			.as_deref_mut();
 		app.update();
 
 		assert_eq!(
 			Some(&NavGrid {
+				cells: vec![NavCell {
+					translation: Vec3::new(1., 2., 3.),
+					is_walkable: false,
+				}],
 				method: _Method(NavGridData {
 					min: NavGridNode { x: 1, y: 3 },
 					max: NavGridNode { x: 1, y: 3 },
@@ -218,6 +234,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&NavGrid {
+				cells: vec![],
 				method: _Method(NavGridData {
 					min: NavGridNode { x: 0, y: 0 },
 					max: NavGridNode { x: 0, y: 0 },
