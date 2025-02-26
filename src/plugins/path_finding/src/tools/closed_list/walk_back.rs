@@ -8,6 +8,13 @@ pub(crate) struct WalkBack {
 }
 
 impl ClosedList {
+	/// Creates an iterator of [`NavGridNode`]s representing a path
+	/// in reversed order.
+	///
+	/// <div class="warning">
+	///   If there is no parent for the node stored in the closed list,
+	///   the iterator will only contain this one node.
+	/// </div>
 	pub(crate) fn walk_back_from(self, node: NavGridNode) -> WalkBack {
 		WalkBack {
 			list: self,
