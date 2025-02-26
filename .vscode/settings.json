@@ -47,6 +47,7 @@
 		"beamers",
 		"Bgra",
 		"Blockable",
+		"Bresenham",
 		"Collidable",
 		"consts",
 		"Deque",
