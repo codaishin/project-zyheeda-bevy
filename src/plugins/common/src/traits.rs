@@ -26,6 +26,7 @@ pub mod handles_load_tracking;
 pub mod handles_loadout_menu;
 pub mod handles_map_generation;
 pub mod handles_orientation;
+pub mod handles_path_finding;
 pub mod handles_player;
 pub mod handles_skill_behaviors;
 pub mod has_collisions;
