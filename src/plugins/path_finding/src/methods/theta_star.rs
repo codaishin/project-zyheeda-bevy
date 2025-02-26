@@ -1,8 +1,7 @@
 use crate::{
 	components::nav_grid::NavGridData,
 	tools::{
-		back_iterator::BackIterator,
-		closed_list::ClosedList,
+		closed_list::{walk_without_redundant::WithoutRedundantNodes, ClosedList},
 		g_scores::GScores,
 		line_wide::LineWide,
 		nav_grid_node::NavGridNode,
@@ -10,7 +9,7 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use common::traits::handles_path_finding::ComputePath;
+use common::traits::{collect_reversed::CollectReversed, handles_path_finding::ComputePath};
 
 pub struct ThetaStar {
 	sqrt_2: f32,
@@ -58,9 +57,9 @@ impl ThetaStar {
 		LineWide::new(a, b).all(|n| !self.grid.obstacles.contains(&n))
 	}
 
-	fn vertex<TIterator>(
+	fn vertex(
 		&self,
-		closed: &ClosedList<TIterator>,
+		closed: &ClosedList,
 		g_scores: &GScores,
 		current: NavGridNode,
 		neighbor: NavGridNode,
@@ -113,15 +112,16 @@ impl ComputePath for ThetaStar {
 		let dist_f = |a, b| self.distance(a, b);
 		let los_f = |a, b| self.los(a, b);
 		let mut open = OpenList::new(start, end, &dist_f);
-		let mut closed = ClosedList::<BackIterator>::new(start);
+		let mut closed = ClosedList::new(start);
 		let mut g_scores = GScores::new(start);
 
 		while let Some(current) = open.pop_lowest_f() {
 			if current == end {
 				return closed
-					.iter_back_from(current)
-					.remove_redundant_nodes(los_f)
-					.collect_with_optimized_node_positions::<Vec3>();
+					.walk_back_from(current)
+					.without_redundant_nodes(los_f)
+					.map(Vec3::from)
+					.collect_reversed();
 			}
 
 			for neighbor in self.neighbors(&current) {

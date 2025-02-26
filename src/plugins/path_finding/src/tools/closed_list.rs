@@ -1,17 +1,18 @@
+pub(crate) mod walk_back;
+pub(crate) mod walk_without_redundant;
+
 use super::nav_grid_node::NavGridNode;
-use std::{collections::HashMap, marker::PhantomData};
+use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Default, Clone)]
-pub(crate) struct ClosedList<TIterator> {
+pub(crate) struct ClosedList {
 	start: NavGridNode,
 	parents: HashMap<NavGridNode, NavGridNode>,
-	_i: PhantomData<TIterator>,
 }
 
-impl<TIterator> ClosedList<TIterator> {
+impl ClosedList {
 	pub(crate) fn new(start: NavGridNode) -> Self {
 		Self {
-			_i: PhantomData,
 			start,
 			parents: HashMap::from([(start, start)]),
 		}
@@ -30,32 +31,14 @@ impl<TIterator> ClosedList<TIterator> {
 	}
 }
 
-impl<TIterator> ClosedList<TIterator>
-where
-	TIterator: From<(Self, NavGridNode)>,
-{
-	pub(crate) fn iter_back_from(self, node: NavGridNode) -> TIterator {
-		TIterator::from((self, node))
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
 
-	#[derive(Debug, PartialEq)]
-	struct _Iter(ClosedList<_Iter>, NavGridNode);
-
-	impl From<(ClosedList<_Iter>, NavGridNode)> for _Iter {
-		fn from((list, node): (ClosedList<_Iter>, NavGridNode)) -> Self {
-			Self(list, node)
-		}
-	}
-
 	#[test]
 	fn start() {
 		let start = NavGridNode { x: 1, y: 2 };
-		let list = ClosedList::<_Iter>::new(start);
+		let list = ClosedList::new(start);
 
 		assert_eq!(&start, list.start());
 	}
@@ -64,21 +47,10 @@ mod tests {
 	fn parent() {
 		let node = NavGridNode { x: 1, y: 2 };
 		let parent = NavGridNode { x: 3, y: 4 };
-		let mut list = ClosedList::<_Iter>::new(NavGridNode::default());
+		let mut list = ClosedList::new(NavGridNode::default());
 
 		list.insert(node, parent);
 
 		assert_eq!(Some(&parent), list.parent(&node));
-	}
-
-	#[test]
-	fn iterate() {
-		let node = NavGridNode { x: 1, y: 2 };
-		let start = NavGridNode { x: 5, y: 11 };
-		let list = ClosedList::<_Iter>::new(start);
-
-		let iter = list.iter_back_from(node);
-
-		assert_eq!(_Iter(ClosedList::<_Iter>::new(start), node), iter);
 	}
 }

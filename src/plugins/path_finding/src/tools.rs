@@ -1,4 +1,3 @@
-pub(crate) mod back_iterator;
 pub(crate) mod closed_list;
 pub(crate) mod g_scores;
 pub(crate) mod line_wide;
