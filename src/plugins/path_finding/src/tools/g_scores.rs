@@ -16,3 +16,26 @@ impl GScores {
 		self.0.get(node).cloned().unwrap_or(f32::INFINITY)
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn new() {
+		let start = NavGridNode { x: 1, y: 2 };
+		let scores = GScores::new(start);
+
+		assert_eq!(0., scores.get(&start));
+	}
+
+	#[test]
+	fn insert() {
+		let node = NavGridNode { x: 1, y: 2 };
+		let mut scores = GScores::new(NavGridNode::default());
+
+		scores.insert(node, 42.);
+
+		assert_eq!(42., scores.get(&node));
+	}
+}
