@@ -15,7 +15,7 @@ impl PathIterator {
 	}
 
 	fn parent(&self, node: &NavGridNode) -> Option<&NavGridNode> {
-		if node == &self.list.start {
+		if node == self.list.start() {
 			return None;
 		}
 

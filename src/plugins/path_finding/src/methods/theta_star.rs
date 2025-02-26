@@ -118,7 +118,7 @@ impl ComputePath for ThetaStar {
 		while let Some(current) = open.pop_lowest_f() {
 			if current == end {
 				return closed
-					.construct_path_from(current)
+					.iter_back_from(current)
 					.remove_redundant_nodes(los_f)
 					.collect_with_optimized_node_positions::<Vec3>();
 			}
