@@ -1,4 +1,4 @@
-use crate::tools::nav_grid_node::NavGridNode;
+use crate::{tools::nav_grid_node::NavGridNode, traits::compute_path_lazy::ComputePathLazy};
 use bevy::prelude::*;
 use common::{
 	tools::grid_cell_distance::GridCellDistance,
@@ -68,36 +68,45 @@ impl<TMethod> NavGrid<TMethod> {
 		}
 	}
 
-	fn get_grid_positions(&self, start: Vec3, end: Vec3) -> (Vec3, Vec3) {
-		(
-			Vec3::new(start.x.round(), start.y.round(), start.z.round()),
-			Vec3::new(end.x.round(), end.y.round(), end.z.round()),
-		)
+	fn nav_grid_node(&self, mut value: Vec3) -> NavGridNode {
+		value /= self.cell_distance;
+
+		NavGridNode {
+			x: value.x.round() as i32,
+			y: value.z.round() as i32,
+		}
 	}
 
-	fn replace(item: Option<&mut Vec3>, replace: Vec3, compare: &Vec3) {
-		let Some(item) = item else {
+	fn replace(path_item: Option<&mut Vec3>, replace: Vec3) {
+		let Some(path_item) = path_item else {
+			return;
+		};
+		let replace_rounded = Vec3::new(replace.x.round(), replace.y.round(), replace.z.round());
+
+		if path_item != &replace_rounded {
 			return;
 		};
 
-		if item != compare {
-			return;
-		};
-
-		*item = replace;
+		*path_item = replace;
 	}
 }
 
 impl<TMethod> ComputePath for NavGrid<TMethod>
 where
-	TMethod: ComputePath,
+	TMethod: ComputePathLazy,
 {
 	fn compute_path(&self, start: Vec3, end: Vec3) -> Vec<Vec3> {
-		let (start_on_grid, end_on_grid) = self.get_grid_positions(start, end);
-		let mut path = self.method.compute_path(start_on_grid, end_on_grid);
+		let start_node = self.nav_grid_node(start);
+		let end_node = self.nav_grid_node(end);
+		let mut path = self
+			.method
+			.compute_path(start_node, end_node)
+			.map(Vec3::from)
+			.map(|v| v * self.cell_distance)
+			.collect::<Vec<_>>();
 
-		Self::replace(path.first_mut(), start, &start_on_grid);
-		Self::replace(path.last_mut(), end, &end_on_grid);
+		Self::replace(path.first_mut(), start);
+		Self::replace(path.last_mut(), end);
 
 		path
 	}
@@ -121,8 +130,8 @@ mod tests {
 
 	mock! {
 		_Method {}
-		impl ComputePath for _Method {
-			fn compute_path(&self, start: Vec3, end: Vec3) -> Vec<Vec3>;
+		impl ComputePathLazy for _Method {
+			fn compute_path(&self, start: NavGridNode, end: NavGridNode) -> impl Iterator<Item = NavGridNode>;
 		}
 	}
 
@@ -315,8 +324,11 @@ mod tests {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.times(1)
-					.with(eq(start), eq(end))
-					.return_const(vec![]);
+					.with(
+						eq(NavGridNode { x: 1, y: 1 }),
+						eq(NavGridNode { x: 2, y: 2 }),
+					)
+					.returning(|_, _| Box::new([].into_iter()));
 			}),
 			cell_distance: 1.,
 			cells: vec![],
@@ -328,86 +340,98 @@ mod tests {
 	#[test]
 	fn return_computed_path() {
 		let path = [
-			Vec3::new(1., 1., 1.),
-			Vec3::new(2., 1., 1.),
-			Vec3::new(3., 1., 1.),
+			NavGridNode { x: 1, y: 1 },
+			NavGridNode { x: 2, y: 2 },
+			NavGridNode { x: 3, y: 3 },
 		];
 		let grid = NavGrid {
 			method: Mock_Method::new_mock(|mock| {
-				mock.expect_compute_path().return_const(path);
+				mock.expect_compute_path()
+					.returning(move |_, _| Box::new(path.into_iter()));
 			}),
 			cell_distance: 1.,
 			cells: vec![],
 		};
 
-		let computed_path = grid.compute_path(path[0], path[2]);
+		let computed_path = grid.compute_path(Vec3::new(1., 0., 1.), Vec3::new(3., 0., 3.));
 
-		assert_eq!(Vec::from(path), computed_path);
+		assert_eq!(
+			Vec::from(path.map(|n| Vec3::new(n.x as f32, 0., n.y as f32))),
+			computed_path
+		);
 	}
 
 	#[test]
 	fn call_compute_path_with_start_rounded() {
-		let start = Vec3::new(1., 1., 1.);
-		let end = Vec3::new(2., 2., 2.);
 		let grid = NavGrid {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.times(1)
-					.with(eq(start), eq(end))
-					.return_const(vec![]);
+					.with(
+						eq(NavGridNode { x: 1, y: 1 }),
+						eq(NavGridNode { x: 2, y: 2 }),
+					)
+					.returning(|_, _| Box::new([].into_iter()));
 			}),
 			cell_distance: 1.,
 			cells: vec![],
 		};
 
-		grid.compute_path(Vec3::new(0.9, 1., 1.3), end);
+		grid.compute_path(Vec3::new(0.9, 0., 1.3), Vec3::new(2., 0., 2.));
 	}
 
 	#[test]
 	fn call_compute_path_with_end_rounded() {
-		let start = Vec3::new(1., 1., 1.);
-		let end = Vec3::new(2., 2., 2.);
 		let grid = NavGrid {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.times(1)
-					.with(eq(start), eq(end))
-					.return_const(vec![]);
+					.with(
+						eq(NavGridNode { x: 1, y: 1 }),
+						eq(NavGridNode { x: 2, y: 2 }),
+					)
+					.returning(|_, _| Box::new([].into_iter()));
 			}),
 			cell_distance: 1.,
 			cells: vec![],
 		};
 
-		grid.compute_path(start, Vec3::new(1.9, 2., 2.2));
+		grid.compute_path(Vec3::new(1., 0., 1.), Vec3::new(1.9, 0., 2.2));
 	}
 
 	#[test]
 	fn replace_start_and_end_with_called_start_and_end() {
-		let start = Vec3::new(1., 1., 1.);
-		let end = Vec3::new(2., 2., 2.);
 		let grid = NavGrid {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.times(1)
-					.with(eq(start), eq(end))
-					.return_const(vec![
-						start,
-						Vec3::new(10., 1., 11.),
-						Vec3::new(4., 1., 5.),
-						end,
-					]);
+					.with(
+						eq(NavGridNode { x: 1, y: 1 }),
+						eq(NavGridNode { x: 2, y: 2 }),
+					)
+					.returning(|_, _| {
+						Box::new(
+							[
+								NavGridNode { x: 1, y: 1 },
+								NavGridNode { x: 10, y: 11 },
+								NavGridNode { x: 4, y: 5 },
+								NavGridNode { x: 2, y: 2 },
+							]
+							.into_iter(),
+						)
+					});
 			}),
 			cell_distance: 1.,
 			cells: vec![],
 		};
 
-		let path = grid.compute_path(Vec3::new(0.8, 1., 1.3), Vec3::new(2.1, 2., 1.9));
+		let path = grid.compute_path(Vec3::new(0.8, 0., 1.3), Vec3::new(2.1, 0., 1.9));
 		assert_eq!(
 			vec![
-				Vec3::new(0.8, 1., 1.3),
-				Vec3::new(10., 1., 11.),
-				Vec3::new(4., 1., 5.),
-				Vec3::new(2.1, 2., 1.9)
+				Vec3::new(0.8, 0., 1.3),
+				Vec3::new(10., 0., 11.),
+				Vec3::new(4., 0., 5.),
+				Vec3::new(2.1, 0., 1.9)
 			],
 			path,
 		);
@@ -415,25 +439,35 @@ mod tests {
 
 	#[test]
 	fn do_not_replace_start_with_called_start_if_path_omitted_start() {
-		let start = Vec3::new(1., 1., 1.);
-		let end = Vec3::new(2., 2., 2.);
 		let grid = NavGrid {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.times(1)
-					.with(eq(start), eq(end))
-					.return_const(vec![Vec3::new(10., 1., 11.), Vec3::new(4., 1., 5.), end]);
+					.with(
+						eq(NavGridNode { x: 1, y: 1 }),
+						eq(NavGridNode { x: 2, y: 2 }),
+					)
+					.returning(|_, _| {
+						Box::new(
+							[
+								NavGridNode { x: 10, y: 11 },
+								NavGridNode { x: 4, y: 5 },
+								NavGridNode { x: 2, y: 2 },
+							]
+							.into_iter(),
+						)
+					});
 			}),
 			cell_distance: 1.,
 			cells: vec![],
 		};
 
-		let path = grid.compute_path(Vec3::new(1.1, 1., 1.3), Vec3::new(2.1, 2., 1.9));
+		let path = grid.compute_path(Vec3::new(1.1, 0., 1.3), Vec3::new(2.1, 0., 1.9));
 		assert_eq!(
 			vec![
-				Vec3::new(10., 1., 11.),
-				Vec3::new(4., 1., 5.),
-				Vec3::new(2.1, 2., 1.9)
+				Vec3::new(10., 0., 11.),
+				Vec3::new(4., 0., 5.),
+				Vec3::new(2.1, 0., 1.9)
 			],
 			path,
 		);
@@ -441,25 +475,111 @@ mod tests {
 
 	#[test]
 	fn do_not_replace_end_with_called_end_if_path_omitted_end() {
-		let start = Vec3::new(1., 1., 1.);
-		let end = Vec3::new(2., 2., 2.);
 		let grid = NavGrid {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.times(1)
-					.with(eq(start), eq(end))
-					.return_const(vec![start, Vec3::new(10., 1., 11.), Vec3::new(4., 1., 5.)]);
+					.with(
+						eq(NavGridNode { x: 1, y: 1 }),
+						eq(NavGridNode { x: 2, y: 2 }),
+					)
+					.returning(|_, _| {
+						Box::new(
+							[
+								NavGridNode { x: 1, y: 1 },
+								NavGridNode { x: 10, y: 11 },
+								NavGridNode { x: 4, y: 5 },
+							]
+							.into_iter(),
+						)
+					});
 			}),
 			cell_distance: 1.,
 			cells: vec![],
 		};
 
-		let path = grid.compute_path(Vec3::new(1.1, 1., 1.3), Vec3::new(2.1, 2., 1.9));
+		let path = grid.compute_path(Vec3::new(1.1, 0., 1.3), Vec3::new(2.1, 0., 1.9));
 		assert_eq!(
 			vec![
-				Vec3::new(1.1, 1., 1.3),
-				Vec3::new(10., 1., 11.),
-				Vec3::new(4., 1., 5.),
+				Vec3::new(1.1, 0., 1.3),
+				Vec3::new(10., 0., 11.),
+				Vec3::new(4., 0., 5.),
+			],
+			path,
+		);
+	}
+
+	#[test]
+	fn call_compute_path_with_start_end_rounded_scaled() {
+		let grid = NavGrid {
+			method: Mock_Method::new_mock(|mock| {
+				mock.expect_compute_path()
+					.times(1)
+					.with(
+						eq(NavGridNode { x: 1, y: 1 }),
+						eq(NavGridNode { x: 2, y: 2 }),
+					)
+					.returning(|_, _| Box::new([].into_iter()));
+			}),
+			cell_distance: 2.,
+			cells: vec![],
+		};
+
+		grid.compute_path(Vec3::new(1.9, 0., 2.3), Vec3::new(3.9, 0., 4.3));
+	}
+
+	#[test]
+	fn call_compute_path_with_start_end_scaled_before_rounded() {
+		let grid = NavGrid {
+			method: Mock_Method::new_mock(|mock| {
+				mock.expect_compute_path()
+					.times(1)
+					.with(
+						eq(NavGridNode { x: 1, y: 1 }),
+						eq(NavGridNode { x: 2, y: 2 }),
+					)
+					.returning(|_, _| Box::new([].into_iter()));
+			}),
+			cell_distance: 0.5,
+			cells: vec![],
+		};
+
+		grid.compute_path(Vec3::new(0.4, 0.5, 0.6), Vec3::new(0.9, 1., 1.1));
+	}
+
+	#[test]
+	fn return_path_scaled_back_via_grid_distance() {
+		let grid = NavGrid {
+			method: Mock_Method::new_mock(|mock| {
+				mock.expect_compute_path()
+					.times(1)
+					.with(
+						eq(NavGridNode { x: 1, y: 1 }),
+						eq(NavGridNode { x: 2, y: 2 }),
+					)
+					.returning(|_, _| {
+						Box::new(
+							[
+								NavGridNode { x: 1, y: 1 },
+								NavGridNode { x: 10, y: 11 },
+								NavGridNode { x: 4, y: 5 },
+								NavGridNode { x: 2, y: 2 },
+							]
+							.into_iter(),
+						)
+					});
+			}),
+			cell_distance: 2.,
+			cells: vec![],
+		};
+
+		let path = grid.compute_path(Vec3::new(1.9, 0., 2.3), Vec3::new(3.9, 0., 4.3));
+		assert_eq!(
+			vec![
+				Vec3::new(1.9, 0., 2.3),
+				Vec3::new(20., 0., 22.),
+				Vec3::new(8., 0., 10.),
+				Vec3::new(3.9, 0., 4.3)
 			],
 			path,
 		);

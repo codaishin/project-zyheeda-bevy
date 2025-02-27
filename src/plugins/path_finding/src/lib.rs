@@ -1,5 +1,6 @@
 mod methods;
 mod tools;
+mod traits;
 
 pub mod components;
 
