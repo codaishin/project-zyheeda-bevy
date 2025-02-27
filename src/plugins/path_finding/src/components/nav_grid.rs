@@ -1,23 +1,28 @@
 use crate::tools::nav_grid_node::NavGridNode;
 use bevy::prelude::*;
-use common::traits::{
-	handles_map_generation::NavCell,
-	handles_path_finding::ComputePath,
-	iterate::Iterate,
-	thread_safe::ThreadSafe,
+use common::{
+	tools::grid_cell_distance::GridCellDistance,
+	traits::{
+		handles_map_generation::NavCell,
+		handles_path_finding::ComputePath,
+		inspect_able::{InspectAble, InspectField},
+		iterate::Iterate,
+		thread_safe::ThreadSafe,
+	},
 };
 use std::collections::HashSet;
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub struct NavGrid<TMethod> {
 	pub(crate) cells: Vec<NavCell>,
+	pub(crate) cell_distance: f32,
 	pub(crate) method: TMethod,
 }
 
 impl<TMethod> NavGrid<TMethod> {
 	pub(crate) fn update_from<TMap>(mut maps: Query<(&TMap, &mut Self), Changed<TMap>>)
 	where
-		for<'a> TMap: Component + Iterate<TItem<'a> = &'a NavCell>,
+		for<'a> TMap: Component + Iterate<TItem<'a> = &'a NavCell> + InspectAble<GridCellDistance>,
 		TMethod: ThreadSafe + From<NavGridData>,
 	{
 		for (map, mut nav_grid) in &mut maps {
@@ -57,29 +62,17 @@ impl<TMethod> NavGrid<TMethod> {
 
 			*nav_grid = Self {
 				cells,
+				cell_distance: GridCellDistance::inspect_field(map),
 				method: TMethod::from(grid),
 			}
 		}
 	}
 
 	fn get_grid_positions(&self, start: Vec3, end: Vec3) -> (Vec3, Vec3) {
-		let mut start_on_grid = (start, f32::INFINITY);
-		let mut end_on_grid = (end, f32::INFINITY);
-
-		for NavCell { translation, .. } in &self.cells {
-			let dist_start = (translation - start).length();
-			let dist_end = (translation - end).length();
-
-			if dist_start < start_on_grid.1 {
-				start_on_grid = (*translation, dist_start);
-			}
-
-			if dist_end < end_on_grid.1 {
-				end_on_grid = (*translation, dist_end);
-			}
-		}
-
-		(start_on_grid.0, end_on_grid.0)
+		(
+			Vec3::new(start.x.round(), start.y.round(), start.z.round()),
+			Vec3::new(end.x.round(), end.y.round(), end.z.round()),
+		)
 	}
 
 	fn replace(item: Option<&mut Vec3>, replace: Vec3, compare: &Vec3) {
@@ -123,9 +116,6 @@ mod tests {
 	use common::{simple_init, test_tools::utils::SingleThreadedApp, traits::mock::Mock};
 	use mockall::{mock, predicate::eq};
 
-	#[derive(Component)]
-	struct _Map(Vec<NavCell>);
-
 	#[derive(Debug, PartialEq, Default)]
 	struct _Method(NavGridData);
 
@@ -144,6 +134,12 @@ mod tests {
 		}
 	}
 
+	#[derive(Component, Default)]
+	struct _Map {
+		cells: Vec<NavCell>,
+		cell_distance: f32,
+	}
+
 	impl Iterate for _Map {
 		type TItem<'a>
 			= &'a NavCell
@@ -151,7 +147,13 @@ mod tests {
 			Self: 'a;
 
 		fn iterate(&self) -> impl Iterator<Item = &'_ NavCell> {
-			self.0.iter()
+			self.cells.iter()
+		}
+	}
+
+	impl InspectAble<GridCellDistance> for _Map {
+		fn get_inspect_able_field(&self) -> f32 {
+			self.cell_distance
 		}
 	}
 
@@ -169,16 +171,19 @@ mod tests {
 			.world_mut()
 			.spawn((
 				NavGrid::<_Method>::default(),
-				_Map(vec![
-					NavCell {
-						translation: Vec3::new(1., 0., 2.),
-						is_walkable: true,
-					},
-					NavCell {
-						translation: Vec3::new(2., 0., 1.),
-						is_walkable: false,
-					},
-				]),
+				_Map {
+					cells: vec![
+						NavCell {
+							translation: Vec3::new(1., 0., 2.),
+							is_walkable: true,
+						},
+						NavCell {
+							translation: Vec3::new(2., 0., 1.),
+							is_walkable: false,
+						},
+					],
+					cell_distance: 11.,
+				},
 			))
 			.id();
 
@@ -196,6 +201,7 @@ mod tests {
 						is_walkable: false,
 					},
 				],
+				cell_distance: 11.,
 				method: _Method(NavGridData {
 					min: NavGridNode { x: 1, y: 1 },
 					max: NavGridNode { x: 2, y: 2 },
@@ -213,10 +219,13 @@ mod tests {
 			.world_mut()
 			.spawn((
 				NavGrid::<_Method>::default(),
-				_Map(vec![NavCell {
-					translation: Vec3::new(1., 2., 3.),
-					..default()
-				}]),
+				_Map {
+					cells: vec![NavCell {
+						translation: Vec3::new(1., 2., 3.),
+						..default()
+					}],
+					cell_distance: 42.,
+				},
 			))
 			.id();
 
@@ -239,10 +248,13 @@ mod tests {
 			.world_mut()
 			.spawn((
 				NavGrid::<_Method>::default(),
-				_Map(vec![NavCell {
-					translation: Vec3::new(1., 2., 3.),
-					is_walkable: false,
-				}]),
+				_Map {
+					cells: vec![NavCell {
+						translation: Vec3::new(1., 2., 3.),
+						is_walkable: false,
+					}],
+					cell_distance: 521.,
+				},
 			))
 			.id();
 
@@ -260,6 +272,7 @@ mod tests {
 					translation: Vec3::new(1., 2., 3.),
 					is_walkable: false,
 				}],
+				cell_distance: 521.,
 				method: _Method(NavGridData {
 					min: NavGridNode { x: 1, y: 3 },
 					max: NavGridNode { x: 1, y: 3 },
@@ -275,7 +288,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((NavGrid::<_Method>::default(), _Map(vec![])))
+			.spawn((NavGrid::<_Method>::default(), _Map::default()))
 			.id();
 
 		app.update();
@@ -283,6 +296,7 @@ mod tests {
 		assert_eq!(
 			Some(&NavGrid {
 				cells: vec![],
+				cell_distance: 0.,
 				method: _Method(NavGridData {
 					min: NavGridNode { x: 0, y: 0 },
 					max: NavGridNode { x: 0, y: 0 },
@@ -304,16 +318,8 @@ mod tests {
 					.with(eq(start), eq(end))
 					.return_const(vec![]);
 			}),
-			cells: vec![
-				NavCell {
-					translation: start,
-					is_walkable: false,
-				},
-				NavCell {
-					translation: end,
-					is_walkable: false,
-				},
-			],
+			cell_distance: 1.,
+			cells: vec![],
 		};
 
 		grid.compute_path(start, end);
@@ -330,6 +336,7 @@ mod tests {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path().return_const(path);
 			}),
+			cell_distance: 1.,
 			cells: vec![],
 		};
 
@@ -339,7 +346,7 @@ mod tests {
 	}
 
 	#[test]
-	fn call_compute_path_with_closest_to_start() {
+	fn call_compute_path_with_start_rounded() {
 		let start = Vec3::new(1., 1., 1.);
 		let end = Vec3::new(2., 2., 2.);
 		let grid = NavGrid {
@@ -349,23 +356,15 @@ mod tests {
 					.with(eq(start), eq(end))
 					.return_const(vec![]);
 			}),
-			cells: vec![
-				NavCell {
-					translation: start,
-					is_walkable: false,
-				},
-				NavCell {
-					translation: end,
-					is_walkable: false,
-				},
-			],
+			cell_distance: 1.,
+			cells: vec![],
 		};
 
-		grid.compute_path(Vec3::new(1.1, 1., 1.3), end);
+		grid.compute_path(Vec3::new(0.9, 1., 1.3), end);
 	}
 
 	#[test]
-	fn call_compute_path_with_closest_to_end() {
+	fn call_compute_path_with_end_rounded() {
 		let start = Vec3::new(1., 1., 1.);
 		let end = Vec3::new(2., 2., 2.);
 		let grid = NavGrid {
@@ -375,16 +374,8 @@ mod tests {
 					.with(eq(start), eq(end))
 					.return_const(vec![]);
 			}),
-			cells: vec![
-				NavCell {
-					translation: start,
-					is_walkable: false,
-				},
-				NavCell {
-					translation: end,
-					is_walkable: false,
-				},
-			],
+			cell_distance: 1.,
+			cells: vec![],
 		};
 
 		grid.compute_path(start, Vec3::new(1.9, 2., 2.2));
@@ -406,25 +397,17 @@ mod tests {
 						end,
 					]);
 			}),
-			cells: vec![
-				NavCell {
-					translation: start,
-					is_walkable: false,
-				},
-				NavCell {
-					translation: end,
-					is_walkable: false,
-				},
-			],
+			cell_distance: 1.,
+			cells: vec![],
 		};
 
-		let path = grid.compute_path(Vec3::new(1.1, 1., 1.3), Vec3::new(2.1, 1., 1.9));
+		let path = grid.compute_path(Vec3::new(0.8, 1., 1.3), Vec3::new(2.1, 2., 1.9));
 		assert_eq!(
 			vec![
-				Vec3::new(1.1, 1., 1.3),
+				Vec3::new(0.8, 1., 1.3),
 				Vec3::new(10., 1., 11.),
 				Vec3::new(4., 1., 5.),
-				Vec3::new(2.1, 1., 1.9)
+				Vec3::new(2.1, 2., 1.9)
 			],
 			path,
 		);
@@ -441,24 +424,16 @@ mod tests {
 					.with(eq(start), eq(end))
 					.return_const(vec![Vec3::new(10., 1., 11.), Vec3::new(4., 1., 5.), end]);
 			}),
-			cells: vec![
-				NavCell {
-					translation: start,
-					is_walkable: false,
-				},
-				NavCell {
-					translation: end,
-					is_walkable: false,
-				},
-			],
+			cell_distance: 1.,
+			cells: vec![],
 		};
 
-		let path = grid.compute_path(Vec3::new(1.1, 1., 1.3), Vec3::new(2.1, 1., 1.9));
+		let path = grid.compute_path(Vec3::new(1.1, 1., 1.3), Vec3::new(2.1, 2., 1.9));
 		assert_eq!(
 			vec![
 				Vec3::new(10., 1., 11.),
 				Vec3::new(4., 1., 5.),
-				Vec3::new(2.1, 1., 1.9)
+				Vec3::new(2.1, 2., 1.9)
 			],
 			path,
 		);
@@ -475,19 +450,11 @@ mod tests {
 					.with(eq(start), eq(end))
 					.return_const(vec![start, Vec3::new(10., 1., 11.), Vec3::new(4., 1., 5.)]);
 			}),
-			cells: vec![
-				NavCell {
-					translation: start,
-					is_walkable: false,
-				},
-				NavCell {
-					translation: end,
-					is_walkable: false,
-				},
-			],
+			cell_distance: 1.,
+			cells: vec![],
 		};
 
-		let path = grid.compute_path(Vec3::new(1.1, 1., 1.3), Vec3::new(2.1, 1., 1.9));
+		let path = grid.compute_path(Vec3::new(1.1, 1., 1.3), Vec3::new(2.1, 2., 1.9));
 		assert_eq!(
 			vec![
 				Vec3::new(1.1, 1., 1.3),
