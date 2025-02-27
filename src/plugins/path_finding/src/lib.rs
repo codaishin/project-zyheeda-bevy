@@ -5,10 +5,13 @@ mod traits;
 pub mod components;
 
 use bevy::prelude::*;
-use common::traits::{
-	handles_map_generation::HandlesMapGeneration,
-	handles_path_finding::HandlesPathFinding,
-	thread_safe::ThreadSafe,
+use common::{
+	systems::log::log_many,
+	traits::{
+		handles_map_generation::HandlesMapGeneration,
+		handles_path_finding::HandlesPathFinding,
+		thread_safe::ThreadSafe,
+	},
 };
 use components::nav_grid::NavGrid;
 use methods::theta_star::ThetaStar;
@@ -33,7 +36,7 @@ where
 {
 	fn build(&self, app: &mut App) {
 		app.register_required_components::<TMaps::TMap, TNavGrid>();
-		app.add_systems(Update, TNavGrid::update_from::<TMaps::TMap>);
+		app.add_systems(Update, TNavGrid::update_from::<TMaps::TMap>.pipe(log_many));
 	}
 }
 
