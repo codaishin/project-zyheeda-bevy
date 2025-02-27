@@ -1,4 +1,5 @@
 mod components;
+mod graph;
 mod map;
 mod map_loader;
 mod resources;
