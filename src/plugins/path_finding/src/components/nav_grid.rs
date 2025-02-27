@@ -25,6 +25,7 @@ impl<TMethod> NavGrid<TMethod> {
 		TMethod: ThreadSafe + From<NavGridData>,
 	{
 		for (map, mut nav_grid) in &mut maps {
+			let cell_distance = GridCellDistance::inspect_field(map);
 			let mut empty = true;
 			let mut grid = NavGridData {
 				min: NavGridNode::MAX,
@@ -33,9 +34,14 @@ impl<TMethod> NavGrid<TMethod> {
 			};
 
 			for cell in map.iterate() {
+				let translation = cell.translation / cell_distance;
+				let node = NavGridNode {
+					x: translation.x as i32,
+					y: translation.z as i32,
+				};
+
 				empty = false;
 
-				let node = NavGridNode::from(cell);
 				if !cell.is_walkable {
 					grid.obstacles.insert(node);
 				}
@@ -58,7 +64,7 @@ impl<TMethod> NavGrid<TMethod> {
 			}
 
 			*nav_grid = Self {
-				cell_distance: GridCellDistance::inspect_field(map),
+				cell_distance,
 				method: TMethod::from(grid),
 			}
 		}
@@ -103,8 +109,7 @@ where
 		let mut path = self
 			.method
 			.compute_path(start_node, end_node)
-			.map(Vec3::from)
-			.map(|v| v * self.cell_distance)
+			.map(|n| Vec3::new(n.x as f32, 0., n.y as f32) * self.cell_distance)
 			.collect::<Vec<_>>();
 
 		Self::replace(path.first_mut(), start);
@@ -188,15 +193,15 @@ mod tests {
 				_Map {
 					cells: vec![
 						NavCell {
-							translation: Vec3::new(1., 0., 2.),
+							translation: Vec3::new(2., 0., 4.),
 							is_walkable: true,
 						},
 						NavCell {
-							translation: Vec3::new(2., 0., 1.),
+							translation: Vec3::new(4., 0., 2.),
 							is_walkable: false,
 						},
 					],
-					cell_distance: 11.,
+					cell_distance: 2.,
 				},
 			))
 			.id();
@@ -205,7 +210,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&NavGrid {
-				cell_distance: 11.,
+				cell_distance: 2.,
 				method: _Method(NavGridData {
 					min: NavGridNode { x: 1, y: 1 },
 					max: NavGridNode { x: 2, y: 2 },
@@ -228,7 +233,7 @@ mod tests {
 						translation: Vec3::new(1., 2., 3.),
 						..default()
 					}],
-					cell_distance: 42.,
+					cell_distance: 1.,
 				},
 			))
 			.id();
@@ -257,7 +262,7 @@ mod tests {
 						translation: Vec3::new(1., 2., 3.),
 						is_walkable: false,
 					}],
-					cell_distance: 521.,
+					cell_distance: 1.,
 				},
 			))
 			.id();
@@ -272,7 +277,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&NavGrid {
-				cell_distance: 521.,
+				cell_distance: 1.,
 				method: _Method(NavGridData {
 					min: NavGridNode { x: 1, y: 3 },
 					max: NavGridNode { x: 1, y: 3 },
