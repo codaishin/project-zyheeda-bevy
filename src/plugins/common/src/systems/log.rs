@@ -9,16 +9,24 @@ fn output(error: Error) {
 	}
 }
 
-pub fn log(result: In<Result<(), Error>>) {
+pub fn log<TError>(result: In<Result<(), TError>>)
+where
+	Error: From<TError>,
+{
 	let Err(error) = result.0 else {
 		return;
 	};
+	let error = Error::from(error);
 
 	output(error);
 }
 
-pub fn log_many(results: In<Vec<Result<(), Error>>>) {
-	for error in results.0.iter().filter_map(|result| result.clone().err()) {
+pub fn log_many<TError>(results: In<Vec<Result<(), TError>>>)
+where
+	Error: From<TError>,
+{
+	for error in results.0.into_iter().filter_map(|result| result.err()) {
+		let error = Error::from(error);
 		output(error);
 	}
 }

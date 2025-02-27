@@ -1,6 +1,7 @@
 use crate::{tools::nav_grid_node::NavGridNode, traits::compute_path_lazy::ComputePathLazy};
 use bevy::prelude::*;
 use common::{
+	errors::{Error, Level},
 	tools::grid_cell_distance::GridCellDistance,
 	traits::{
 		handles_map_generation::NavCell,
@@ -19,12 +20,22 @@ pub struct NavGrid<TMethod> {
 }
 
 impl<TMethod> NavGrid<TMethod> {
-	pub(crate) fn update_from<TMap>(mut maps: Query<(&TMap, &mut Self), Changed<TMap>>)
+	pub(crate) fn update_from<TMap>(
+		mut maps: Query<(&TMap, &mut Self), Changed<TMap>>,
+	) -> Vec<Result<(), NavGridError>>
 	where
 		for<'a> TMap: Component + Iterate<TItem<'a> = &'a NavCell> + InspectAble<GridCellDistance>,
 		TMethod: ThreadSafe + From<NavGridData>,
 	{
+		let mut results = vec![];
+
 		for (map, mut nav_grid) in &mut maps {
+			let cell_distance = GridCellDistance::inspect_field(map);
+			if cell_distance == 0. {
+				results.push(Err(NavGridError::CellDistanceZero));
+				continue;
+			}
+
 			let mut empty = true;
 			let mut grid = NavGridData {
 				min: NavGridNode::MAX,
@@ -33,9 +44,14 @@ impl<TMethod> NavGrid<TMethod> {
 			};
 
 			for cell in map.iterate() {
+				let translation = cell.translation / cell_distance;
+				let node = NavGridNode {
+					x: translation.x as i32,
+					y: translation.z as i32,
+				};
+
 				empty = false;
 
-				let node = NavGridNode::from(cell);
 				if !cell.is_walkable {
 					grid.obstacles.insert(node);
 				}
@@ -54,19 +70,22 @@ impl<TMethod> NavGrid<TMethod> {
 			}
 
 			if empty {
-				grid = NavGridData::default();
+				results.push(Err(NavGridError::Empty));
+				continue;
 			}
 
 			*nav_grid = Self {
-				cell_distance: GridCellDistance::inspect_field(map),
+				cell_distance,
 				method: TMethod::from(grid),
 			}
 		}
+
+		results
 	}
 
-	fn nav_grid_node(&self, mut value: Vec3) -> Result<NavGridNode, CellDistanceZero> {
+	fn nav_grid_node(&self, mut value: Vec3) -> Result<NavGridNode, NavGridError> {
 		if self.cell_distance == 0. {
-			return Err(CellDistanceZero);
+			return Err(NavGridError::CellDistanceZero);
 		}
 
 		value /= self.cell_distance;
@@ -95,7 +114,7 @@ impl<TMethod> ComputePath for NavGrid<TMethod>
 where
 	TMethod: ComputePathLazy,
 {
-	type TError = CellDistanceZero;
+	type TError = NavGridError;
 
 	fn compute_path(&self, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, Self::TError> {
 		let start_node = self.nav_grid_node(start)?;
@@ -103,8 +122,7 @@ where
 		let mut path = self
 			.method
 			.compute_path(start_node, end_node)
-			.map(Vec3::from)
-			.map(|v| v * self.cell_distance)
+			.map(|n| Vec3::new(n.x as f32, 0., n.y as f32) * self.cell_distance)
 			.collect::<Vec<_>>();
 
 		Self::replace(path.first_mut(), start);
@@ -115,7 +133,25 @@ where
 }
 
 #[derive(Debug, PartialEq)]
-pub struct CellDistanceZero;
+pub enum NavGridError {
+	Empty,
+	CellDistanceZero,
+}
+
+impl From<NavGridError> for Error {
+	fn from(error: NavGridError) -> Self {
+		match error {
+			NavGridError::Empty => Error {
+				msg: "Source map is empty".to_owned(),
+				lvl: Level::Error,
+			},
+			NavGridError::CellDistanceZero => Error {
+				msg: "`NavMap` cell distance is zero".to_owned(),
+				lvl: Level::Error,
+			},
+		}
+	}
+}
 
 #[derive(Debug, PartialEq, Default)]
 pub(crate) struct NavGridData {
@@ -171,9 +207,17 @@ mod tests {
 		}
 	}
 
+	#[derive(Resource, Debug, PartialEq)]
+	struct _Results(Vec<Result<(), NavGridError>>);
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, NavGrid::<_Method>::update_from::<_Map>);
+		app.add_systems(
+			Update,
+			NavGrid::<_Method>::update_from::<_Map>.pipe(|In(results), mut commands: Commands| {
+				commands.insert_resource(_Results(results));
+			}),
+		);
 
 		app
 	}
@@ -188,15 +232,15 @@ mod tests {
 				_Map {
 					cells: vec![
 						NavCell {
-							translation: Vec3::new(1., 0., 2.),
+							translation: Vec3::new(2., 0., 4.),
 							is_walkable: true,
 						},
 						NavCell {
-							translation: Vec3::new(2., 0., 1.),
+							translation: Vec3::new(4., 0., 2.),
 							is_walkable: false,
 						},
 					],
-					cell_distance: 11.,
+					cell_distance: 2.,
 				},
 			))
 			.id();
@@ -205,7 +249,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&NavGrid {
-				cell_distance: 11.,
+				cell_distance: 2.,
 				method: _Method(NavGridData {
 					min: NavGridNode { x: 1, y: 1 },
 					max: NavGridNode { x: 2, y: 2 },
@@ -214,6 +258,37 @@ mod tests {
 			}),
 			app.world().entity(entity).get::<NavGrid<_Method>>(),
 		);
+	}
+
+	#[test]
+	fn return_error_when_cell_distance_zero() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((
+				NavGrid::<_Method>::default(),
+				_Map {
+					cells: vec![NavCell {
+						translation: Vec3::new(1., 2., 3.),
+						..default()
+					}],
+					cell_distance: 0.,
+				},
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			(
+				Some(&NavGrid::<_Method>::default()),
+				Some(&_Results(vec![Err(NavGridError::CellDistanceZero)]))
+			),
+			(
+				app.world().entity(entity).get::<NavGrid<_Method>>(),
+				app.world().get_resource::<_Results>(),
+			)
+		)
 	}
 
 	#[test]
@@ -228,7 +303,7 @@ mod tests {
 						translation: Vec3::new(1., 2., 3.),
 						..default()
 					}],
-					cell_distance: 42.,
+					cell_distance: 1.,
 				},
 			))
 			.id();
@@ -257,7 +332,7 @@ mod tests {
 						translation: Vec3::new(1., 2., 3.),
 						is_walkable: false,
 					}],
-					cell_distance: 521.,
+					cell_distance: 1.,
 				},
 			))
 			.id();
@@ -272,7 +347,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&NavGrid {
-				cell_distance: 521.,
+				cell_distance: 1.,
 				method: _Method(NavGridData {
 					min: NavGridNode { x: 1, y: 3 },
 					max: NavGridNode { x: 1, y: 3 },
@@ -284,25 +359,30 @@ mod tests {
 	}
 
 	#[test]
-	fn grid_0_0_if_map_empty() {
+	fn map_empty_error() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((NavGrid::<_Method>::default(), _Map::default()))
+			.spawn((
+				NavGrid::<_Method>::default(),
+				_Map {
+					cells: vec![],
+					cell_distance: 1.,
+				},
+			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&NavGrid {
-				cell_distance: 0.,
-				method: _Method(NavGridData {
-					min: NavGridNode { x: 0, y: 0 },
-					max: NavGridNode { x: 0, y: 0 },
-					obstacles: HashSet::from([]),
-				})
-			}),
-			app.world().entity(entity).get::<NavGrid<_Method>>(),
+			(
+				Some(&NavGrid::<_Method>::default()),
+				Some(&_Results(vec![Err(NavGridError::Empty)]))
+			),
+			(
+				app.world().entity(entity).get::<NavGrid<_Method>>(),
+				app.world().get_resource::<_Results>(),
+			)
 		);
 	}
 
@@ -578,6 +658,6 @@ mod tests {
 		};
 
 		let path = grid.compute_path(Vec3::new(1.9, 0., 2.3), Vec3::new(3.9, 0., 4.3));
-		assert_eq!(Err(CellDistanceZero), path,);
+		assert_eq!(Err(NavGridError::CellDistanceZero), path,);
 	}
 }

@@ -1,8 +1,5 @@
 use std::ops::{Add, AddAssign, Sub};
 
-use bevy::math::Vec3;
-use common::traits::handles_map_generation::NavCell;
-
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Clone, Copy)]
 pub struct NavGridNode {
 	pub(crate) x: i32,
@@ -18,40 +15,6 @@ impl NavGridNode {
 		x: i32::MIN,
 		y: i32::MIN,
 	};
-}
-
-impl From<Vec3> for NavGridNode {
-	fn from(Vec3 { x, z, .. }: Vec3) -> Self {
-		Self {
-			x: x as i32,
-			y: z as i32,
-		}
-	}
-}
-
-impl From<NavGridNode> for Vec3 {
-	fn from(NavGridNode { x, y }: NavGridNode) -> Self {
-		Vec3 {
-			x: x as f32,
-			y: 0.,
-			z: y as f32,
-		}
-	}
-}
-
-impl From<NavCell> for NavGridNode {
-	fn from(cell: NavCell) -> Self {
-		Self::from(&cell)
-	}
-}
-
-impl From<&NavCell> for NavGridNode {
-	fn from(NavCell { translation, .. }: &NavCell) -> Self {
-		Self {
-			x: translation.x as i32,
-			y: translation.z as i32,
-		}
-	}
 }
 
 impl Add for NavGridNode {
