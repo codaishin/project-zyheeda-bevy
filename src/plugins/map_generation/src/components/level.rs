@@ -1,15 +1,20 @@
-use crate::traits::is_walkable::IsWalkable;
+use crate::traits::{is_walkable::IsWalkable, GridCellDistanceDefinition};
 use bevy::prelude::*;
-use common::traits::{
-	handles_map_generation::NavCell,
-	iterate::Iterate,
-	load_asset::{LoadAsset, Path},
+use common::{
+	tools::grid_cell_distance::GridCellDistance,
+	traits::{
+		handles_map_generation::NavCell,
+		inspect_able::InspectAble,
+		iterate::Iterate,
+		load_asset::{LoadAsset, Path},
+	},
 };
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(Name(Self::name), Transform, Visibility)]
 pub struct Level {
 	cells: Vec<NavCell>,
+	grid_cell_distance: f32,
 }
 
 impl Level {
@@ -24,7 +29,7 @@ impl Level {
 		level_cache: Local<Option<Entity>>,
 		levels: Query<&mut Level>,
 	) where
-		TCell: IsWalkable,
+		TCell: IsWalkable + GridCellDistanceDefinition,
 		for<'a> Path: TryFrom<&'a TCell>,
 	{
 		spawn(cells, commands, load_asset, level_cache, levels);
@@ -42,6 +47,12 @@ impl Iterate for Level {
 	}
 }
 
+impl InspectAble<GridCellDistance> for Level {
+	fn get_inspect_able_field(&self) -> f32 {
+		self.grid_cell_distance
+	}
+}
+
 pub(crate) fn spawn<TCell, TAsset>(
 	In(cells): In<Vec<(Transform, TCell)>>,
 	mut commands: Commands,
@@ -49,7 +60,7 @@ pub(crate) fn spawn<TCell, TAsset>(
 	mut level_cache: Local<Option<Entity>>,
 	mut levels: Query<&mut Level>,
 ) where
-	TCell: IsWalkable,
+	TCell: IsWalkable + GridCellDistanceDefinition,
 	TAsset: LoadAsset + Resource,
 	for<'a> Path: TryFrom<&'a TCell>,
 {
@@ -64,7 +75,7 @@ pub(crate) fn spawn<TCell, TAsset>(
 	let level_id = level.id();
 	let cells = spawn_cells!(cells, level, load_asset);
 	*level_cache = Some(level_id);
-	update_level_cells!(levels, level, level_id, cells);
+	update_level_cells!(levels, level, level_id, cells, TCell);
 }
 
 fn with_cell_path<TCell>((transform, cell): &(Transform, TCell)) -> Option<(Transform, Path, bool)>
@@ -105,14 +116,17 @@ macro_rules! get_or_new {
 use get_or_new;
 
 macro_rules! update_level_cells {
-	($levels:expr, $level:expr, $level_id:expr, $cells:expr) => {
+	($levels:expr, $level:expr, $level_id:expr, $cells:expr, $cell_ty:ty) => {
 		match $levels.get_mut($level_id) {
 			Ok(mut level) => {
 				level.cells.extend($cells);
 			}
 			Err(_) => {
 				let cells = $cells.collect();
-				$level.insert(Level { cells });
+				$level.insert(Level {
+					cells,
+					grid_cell_distance: <$cell_ty>::CELL_DISTANCE,
+				});
 			}
 		}
 	};
@@ -127,7 +141,12 @@ mod tests {
 		assert_count,
 		get_children,
 		test_tools::utils::{new_handle, SingleThreadedApp},
-		traits::{load_asset::Path, nested_mock::NestedMocks},
+		traits::{
+			inspect_able::InspectField,
+			load_asset::Path,
+			nested_mock::NestedMocks,
+			thread_safe::ThreadSafe,
+		},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -136,6 +155,10 @@ mod tests {
 	struct _Cell {
 		path: Option<Path>,
 		is_walkable: bool,
+	}
+
+	impl GridCellDistanceDefinition for _Cell {
+		const CELL_DISTANCE: f32 = 0.;
 	}
 
 	impl IsWalkable for _Cell {
@@ -148,6 +171,33 @@ mod tests {
 		type Error = ();
 
 		fn try_from(value: &_Cell) -> Result<Self, Self::Error> {
+			match &value.path {
+				Some(path) => Ok(path.clone()),
+				None => Err(()),
+			}
+		}
+	}
+
+	#[derive(Clone, Default)]
+	struct _CellWithDistance {
+		path: Option<Path>,
+		is_walkable: bool,
+	}
+
+	impl GridCellDistanceDefinition for _CellWithDistance {
+		const CELL_DISTANCE: f32 = 11.;
+	}
+
+	impl IsWalkable for _CellWithDistance {
+		fn is_walkable(&self) -> bool {
+			self.is_walkable
+		}
+	}
+
+	impl TryFrom<&_CellWithDistance> for Path {
+		type Error = ();
+
+		fn try_from(value: &_CellWithDistance) -> Result<Self, Self::Error> {
 			match &value.path {
 				Some(path) => Ok(path.clone()),
 				None => Err(()),
@@ -171,12 +221,16 @@ mod tests {
 		}
 	}
 
-	fn setup(cells: Vec<(Transform, _Cell)>, load_scene: _LoadScene) -> App {
+	fn setup<TCell>(cells: Vec<(Transform, TCell)>, load_scene: _LoadScene) -> App
+	where
+		TCell: Clone + IsWalkable + GridCellDistanceDefinition + ThreadSafe,
+		for<'a> Path: TryFrom<&'a TCell>,
+	{
 		let mut app = App::new().single_threaded(Update);
 		let return_cells = move || cells.clone();
 
 		app.insert_resource(load_scene);
-		app.add_systems(Update, (return_cells).pipe(spawn::<_Cell, _LoadScene>));
+		app.add_systems(Update, (return_cells).pipe(spawn::<TCell, _LoadScene>));
 
 		app
 	}
@@ -308,7 +362,8 @@ mod tests {
 						translation: Vec3::new(3., 4., 5.),
 						is_walkable: true
 					}
-				]
+				],
+				grid_cell_distance: 0.
 			},
 			level
 		);
@@ -346,7 +401,8 @@ mod tests {
 						translation: Vec3::new(1., 2., 3.),
 						is_walkable: false
 					}
-				]
+				],
+				grid_cell_distance: 0.
 			},
 			level
 		);
@@ -354,7 +410,7 @@ mod tests {
 
 	#[test]
 	fn do_nothing_if_cells_empty() {
-		let mut app = setup(
+		let mut app = setup::<_Cell>(
 			vec![],
 			_LoadScene::new().with_mock(|mock| {
 				mock.expect_load_asset::<Scene, Path>()
@@ -366,5 +422,28 @@ mod tests {
 
 		let levels = app.world().iter_entities().filter_map(|e| e.get::<Level>());
 		assert_count!(0, levels);
+	}
+
+	#[test]
+	fn get_grid_cell_distance() {
+		let mut app = setup(
+			vec![(
+				Transform::default(),
+				_CellWithDistance {
+					path: Some(Path::from("my/path")),
+					is_walkable: true,
+				},
+			)],
+			_LoadScene::new().with_mock(|mock| {
+				mock.expect_load_asset::<Scene, Path>()
+					.return_const(new_handle());
+			}),
+		);
+
+		app.update();
+
+		let levels = app.world().iter_entities().filter_map(|e| e.get::<Level>());
+		let [level] = assert_count!(1, levels);
+		assert_eq!(11., GridCellDistance::inspect_field(level));
 	}
 }

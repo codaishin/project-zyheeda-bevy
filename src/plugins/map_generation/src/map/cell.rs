@@ -4,7 +4,7 @@ use crate::{
 	traits::{
 		is_walkable::IsWalkable,
 		map::{MapWindow, Neighbors, Tile},
-		CellDistance,
+		GridCellDistanceDefinition,
 		SourcePath,
 	},
 };
@@ -71,7 +71,7 @@ impl From<&MapCell> for Dir3 {
 	}
 }
 
-impl CellDistance for MapCell {
+impl GridCellDistanceDefinition for MapCell {
 	const CELL_DISTANCE: f32 = 2.;
 }
 

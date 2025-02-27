@@ -1,6 +1,6 @@
 use crate::{
 	map::Map,
-	traits::{CellDistance, SourcePath},
+	traits::{GridCellDistanceDefinition, SourcePath},
 };
 use bevy::prelude::*;
 use common::traits::{load_asset::LoadAsset, thread_safe::ThreadSafe};
@@ -27,7 +27,7 @@ where
 		load_level_cmd: Option<Res<LoadLevel<TCell>>>,
 	) -> Vec<(Transform, TCell)>
 	where
-		TCell: CellDistance + Clone,
+		TCell: GridCellDistanceDefinition + Clone,
 		for<'a> Dir3: From<&'a TCell>,
 	{
 		let Some(cells) = get_map_cells(load_level_cmd, maps) else {
@@ -71,7 +71,7 @@ fn get_map_cells<TCell>(
 	maps: Res<Assets<Map<TCell>>>,
 ) -> Option<Vec<Vec<TCell>>>
 where
-	TCell: CellDistance + TypePath + ThreadSafe + Clone,
+	TCell: GridCellDistanceDefinition + TypePath + ThreadSafe + Clone,
 {
 	let map_handle = &load_level_cmd?.0;
 	let map = maps.get(map_handle)?;
@@ -183,7 +183,7 @@ mod test_transforms {
 		}
 	}
 
-	impl CellDistance for _Cell {
+	impl GridCellDistanceDefinition for _Cell {
 		const CELL_DISTANCE: f32 = 4.;
 	}
 
