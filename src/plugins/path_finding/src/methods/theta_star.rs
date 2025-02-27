@@ -9,7 +9,7 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use common::traits::{collect_reversed::CollectReversed, handles_path_finding::ComputePath};
+use common::traits::handles_path_finding::ComputePath;
 
 pub struct ThetaStar {
 	sqrt_2: f32,
@@ -111,17 +111,18 @@ impl ComputePath for ThetaStar {
 		let end = NavGridNode::from(end);
 		let dist_f = |a, b| self.distance(a, b);
 		let los_f = |a, b| self.los(a, b);
-		let mut open = OpenList::new(start, end, &dist_f);
-		let mut closed = ClosedList::new(start);
-		let mut g_scores = GScores::new(start);
+		let mut open = OpenList::new(end, start, &dist_f);
+		let mut closed = ClosedList::new(end);
+		let mut g_scores = GScores::new(end);
 
 		while let Some(current) = open.pop_lowest_f() {
-			if current == end {
+			if current == start {
 				return closed
 					.walk_back_from(current)
 					.without_redundant_nodes(los_f)
+					.skip(1)
 					.map(Vec3::from)
-					.collect_reversed();
+					.collect();
 			}
 
 			for neighbor in self.neighbors(&current) {
