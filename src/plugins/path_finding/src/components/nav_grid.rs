@@ -64,13 +64,17 @@ impl<TMethod> NavGrid<TMethod> {
 		}
 	}
 
-	fn nav_grid_node(&self, mut value: Vec3) -> NavGridNode {
+	fn nav_grid_node(&self, mut value: Vec3) -> Result<NavGridNode, CellDistanceZero> {
+		if self.cell_distance == 0. {
+			return Err(CellDistanceZero);
+		}
+
 		value /= self.cell_distance;
 
-		NavGridNode {
+		Ok(NavGridNode {
 			x: value.x.round() as i32,
 			y: value.z.round() as i32,
-		}
+		})
 	}
 
 	fn replace(path_item: Option<&mut Vec3>, replace: Vec3) {
@@ -91,9 +95,11 @@ impl<TMethod> ComputePath for NavGrid<TMethod>
 where
 	TMethod: ComputePathLazy,
 {
-	fn compute_path(&self, start: Vec3, end: Vec3) -> Vec<Vec3> {
-		let start_node = self.nav_grid_node(start);
-		let end_node = self.nav_grid_node(end);
+	type TError = CellDistanceZero;
+
+	fn compute_path(&self, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, Self::TError> {
+		let start_node = self.nav_grid_node(start)?;
+		let end_node = self.nav_grid_node(end)?;
 		let mut path = self
 			.method
 			.compute_path(start_node, end_node)
@@ -104,9 +110,12 @@ where
 		Self::replace(path.first_mut(), start);
 		Self::replace(path.last_mut(), end);
 
-		path
+		Ok(path)
 	}
 }
+
+#[derive(Debug, PartialEq)]
+pub struct CellDistanceZero;
 
 #[derive(Debug, PartialEq, Default)]
 pub(crate) struct NavGridData {
@@ -314,7 +323,7 @@ mod tests {
 			cell_distance: 1.,
 		};
 
-		grid.compute_path(start, end);
+		_ = grid.compute_path(start, end);
 	}
 
 	#[test]
@@ -335,7 +344,9 @@ mod tests {
 		let computed_path = grid.compute_path(Vec3::new(1., 0., 1.), Vec3::new(3., 0., 3.));
 
 		assert_eq!(
-			Vec::from(path.map(|n| Vec3::new(n.x as f32, 0., n.y as f32))),
+			Ok(Vec::from(
+				path.map(|n| Vec3::new(n.x as f32, 0., n.y as f32))
+			)),
 			computed_path
 		);
 	}
@@ -355,7 +366,7 @@ mod tests {
 			cell_distance: 1.,
 		};
 
-		grid.compute_path(Vec3::new(0.9, 0., 1.3), Vec3::new(2., 0., 2.));
+		_ = grid.compute_path(Vec3::new(0.9, 0., 1.3), Vec3::new(2., 0., 2.));
 	}
 
 	#[test]
@@ -373,7 +384,7 @@ mod tests {
 			cell_distance: 1.,
 		};
 
-		grid.compute_path(Vec3::new(1., 0., 1.), Vec3::new(1.9, 0., 2.2));
+		_ = grid.compute_path(Vec3::new(1., 0., 1.), Vec3::new(1.9, 0., 2.2));
 	}
 
 	#[test]
@@ -403,12 +414,12 @@ mod tests {
 
 		let path = grid.compute_path(Vec3::new(0.8, 0., 1.3), Vec3::new(2.1, 0., 1.9));
 		assert_eq!(
-			vec![
+			Ok(vec![
 				Vec3::new(0.8, 0., 1.3),
 				Vec3::new(10., 0., 11.),
 				Vec3::new(4., 0., 5.),
 				Vec3::new(2.1, 0., 1.9)
-			],
+			]),
 			path,
 		);
 	}
@@ -439,11 +450,11 @@ mod tests {
 
 		let path = grid.compute_path(Vec3::new(1.1, 0., 1.3), Vec3::new(2.1, 0., 1.9));
 		assert_eq!(
-			vec![
+			Ok(vec![
 				Vec3::new(10., 0., 11.),
 				Vec3::new(4., 0., 5.),
 				Vec3::new(2.1, 0., 1.9)
-			],
+			]),
 			path,
 		);
 	}
@@ -474,11 +485,11 @@ mod tests {
 
 		let path = grid.compute_path(Vec3::new(1.1, 0., 1.3), Vec3::new(2.1, 0., 1.9));
 		assert_eq!(
-			vec![
+			Ok(vec![
 				Vec3::new(1.1, 0., 1.3),
 				Vec3::new(10., 0., 11.),
 				Vec3::new(4., 0., 5.),
-			],
+			]),
 			path,
 		);
 	}
@@ -498,7 +509,7 @@ mod tests {
 			cell_distance: 2.,
 		};
 
-		grid.compute_path(Vec3::new(1.9, 0., 2.3), Vec3::new(3.9, 0., 4.3));
+		_ = grid.compute_path(Vec3::new(1.9, 0., 2.3), Vec3::new(3.9, 0., 4.3));
 	}
 
 	#[test]
@@ -516,7 +527,7 @@ mod tests {
 			cell_distance: 0.5,
 		};
 
-		grid.compute_path(Vec3::new(0.4, 0.5, 0.6), Vec3::new(0.9, 1., 1.1));
+		_ = grid.compute_path(Vec3::new(0.4, 0.5, 0.6), Vec3::new(0.9, 1., 1.1));
 	}
 
 	#[test]
@@ -546,13 +557,27 @@ mod tests {
 
 		let path = grid.compute_path(Vec3::new(1.9, 0., 2.3), Vec3::new(3.9, 0., 4.3));
 		assert_eq!(
-			vec![
+			Ok(vec![
 				Vec3::new(1.9, 0., 2.3),
 				Vec3::new(20., 0., 22.),
 				Vec3::new(8., 0., 10.),
 				Vec3::new(3.9, 0., 4.3)
-			],
+			]),
 			path,
 		);
+	}
+
+	#[test]
+	fn return_cell_distance_zero_error() {
+		let grid = NavGrid {
+			method: Mock_Method::new_mock(|mock| {
+				mock.expect_compute_path()
+					.returning(|_, _| Box::new([].into_iter()));
+			}),
+			cell_distance: 0.,
+		};
+
+		let path = grid.compute_path(Vec3::new(1.9, 0., 2.3), Vec3::new(3.9, 0., 4.3));
+		assert_eq!(Err(CellDistanceZero), path,);
 	}
 }
