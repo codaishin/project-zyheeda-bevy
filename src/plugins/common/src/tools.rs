@@ -2,6 +2,7 @@ pub mod aggro_range;
 pub mod attack_range;
 pub mod change;
 pub mod collider_info;
+pub mod grid_cell_distance;
 pub mod inventory_key;
 pub mod item_description;
 pub mod item_type;

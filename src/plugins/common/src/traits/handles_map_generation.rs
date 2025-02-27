@@ -1,9 +1,11 @@
-use super::iterate::Iterate;
+use super::{inspect_able::InspectAble, iterate::Iterate};
+use crate::tools::grid_cell_distance::GridCellDistance;
 use bevy::prelude::*;
 
 pub trait HandlesMapGeneration
 where
-	for<'a> Self::TMap: Component + Iterate<TItem<'a> = &'a NavCell>,
+	for<'a> Self::TMap:
+		Component + Iterate<TItem<'a> = &'a NavCell> + InspectAble<GridCellDistance>,
 {
 	type TMap;
 }

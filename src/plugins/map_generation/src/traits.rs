@@ -24,7 +24,7 @@ pub(crate) trait ExtraComponentsDefinition {
 		TLights: HandlesLights + ThreadSafe;
 }
 
-pub(crate) trait CellDistance {
+pub(crate) trait GridCellDistanceDefinition {
 	const CELL_DISTANCE: f32;
 }
 

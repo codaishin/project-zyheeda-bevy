@@ -1,4 +1,10 @@
-use super::{light::floating::FloatingLight, map::MapWindow, CellDistance, SourcePath, Spawn};
+use super::{
+	light::floating::FloatingLight,
+	map::MapWindow,
+	GridCellDistanceDefinition,
+	SourcePath,
+	Spawn,
+};
 use crate::map::LightCell;
 use bevy::prelude::*;
 use common::traits::load_asset::Path;
@@ -15,7 +21,7 @@ impl From<&LightCell> for Dir3 {
 	}
 }
 
-impl CellDistance for LightCell {
+impl GridCellDistanceDefinition for LightCell {
 	const CELL_DISTANCE: f32 = 2.;
 }
 

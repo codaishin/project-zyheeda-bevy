@@ -7,9 +7,9 @@ use crate::{
 		nav_grid_node::NavGridNode,
 		open_list::OpenList,
 	},
+	traits::compute_path_lazy::ComputePathLazy,
 };
 use bevy::prelude::*;
-use common::traits::handles_path_finding::ComputePath;
 
 pub struct ThetaStar {
 	sqrt_2: f32,
@@ -105,10 +105,12 @@ impl From<NavGridData> for ThetaStar {
 	}
 }
 
-impl ComputePath for ThetaStar {
-	fn compute_path(&self, start: Vec3, end: Vec3) -> Vec<Vec3> {
-		let start = NavGridNode::from(start);
-		let end = NavGridNode::from(end);
+impl ComputePathLazy for ThetaStar {
+	fn compute_path(
+		&self,
+		start: NavGridNode,
+		end: NavGridNode,
+	) -> impl Iterator<Item = NavGridNode> {
 		let dist_f = |a, b| self.distance(a, b);
 		let los_f = |a, b| self.los(a, b);
 		let mut open = OpenList::new(end, start, &dist_f);
@@ -117,12 +119,11 @@ impl ComputePath for ThetaStar {
 
 		while let Some(current) = open.pop_lowest_f() {
 			if current == start {
-				return closed
+				let path = closed
 					.walk_back_from(current)
 					.without_redundant_nodes(los_f)
-					.skip(1)
-					.map(Vec3::from)
-					.collect();
+					.skip(1);
+				return IterPath::Some(path);
 			}
 
 			for neighbor in self.neighbors(&current) {
@@ -140,6 +141,25 @@ impl ComputePath for ThetaStar {
 			}
 		}
 
-		vec![]
+		IterPath::None
+	}
+}
+
+enum IterPath<T> {
+	Some(T),
+	None,
+}
+
+impl<T> Iterator for IterPath<T>
+where
+	T: Iterator,
+{
+	type Item = T::Item;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		match self {
+			IterPath::Some(iter) => iter.next(),
+			IterPath::None => None,
+		}
 	}
 }
