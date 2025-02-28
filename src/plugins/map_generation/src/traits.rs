@@ -1,5 +1,7 @@
 pub(crate) mod app;
+pub(crate) mod grid_start;
 pub(crate) mod is_walkable;
+pub(crate) mod key_mapper;
 pub(crate) mod light;
 pub(crate) mod light_cell;
 pub(crate) mod map;

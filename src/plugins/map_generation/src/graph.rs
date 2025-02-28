@@ -1,18 +1,23 @@
+pub(crate) mod grid_context;
+
+use crate::traits::key_mapper::KeyMapper;
 use bevy::prelude::*;
+use grid_context::GridContext;
 use std::collections::{HashMap, HashSet};
 
-type TGetKeyFn = fn(&HashMap<(i32, i32), Vec3>, Vec3) -> Option<(i32, i32)>;
-
 #[derive(Debug, PartialEq, Clone)]
-pub struct Graph {
-	pub(crate) translations: HashMap<(i32, i32), Vec3>,
+pub struct Graph<TValue = Vec3, TKeyMapper = GridContext> {
+	pub(crate) translations: HashMap<(i32, i32), TValue>,
 	pub(crate) obstacles: HashSet<(i32, i32)>,
-	pub(crate) get_key: TGetKeyFn,
+	pub(crate) key_mapper: TKeyMapper,
 }
 
-impl Graph {
+impl<TKeyMapper> Graph<Vec3, TKeyMapper>
+where
+	TKeyMapper: KeyMapper,
+{
 	pub(crate) fn get_node(&self, translation: Vec3) -> Option<GraphNode> {
-		let key = (self.get_key)(&self.translations, translation)?;
+		let key = self.key_mapper.key_for(translation);
 		let translation = *self.translations.get(&key)?;
 		let obstacle = self.obstacles.contains(&key);
 
@@ -62,13 +67,26 @@ pub struct GraphNode {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use common::{simple_init, traits::mock::Mock};
+	use mockall::{mock, predicate::eq};
+
+	mock! {
+		_Mapper {}
+		impl KeyMapper for _Mapper {
+			fn key_for(&self, translation: Vec3) -> (i32, i32);
+		}
+	}
+
+	simple_init!(Mock_Mapper);
 
 	#[test]
 	fn gat_matching_node() {
 		let graph = Graph {
 			translations: HashMap::from([((1, 2), Vec3::new(1., 2., 3.))]),
 			obstacles: default(),
-			get_key: |_, _| Some((1, 2)),
+			key_mapper: Mock_Mapper::new_mock(|mock| {
+				mock.expect_key_for().return_const((1, 2));
+			}),
 		};
 
 		let node = graph.get_node(Vec3::default());
@@ -88,16 +106,12 @@ mod tests {
 		let graph = Graph {
 			translations: HashMap::from([((1, 2), Vec3::new(1., 2., 3.))]),
 			obstacles: default(),
-			get_key: |map, vec| {
-				assert_eq!(
-					(
-						&HashMap::from([((1, 2), Vec3::new(1., 2., 3.))]),
-						Vec3::new(7., 8., 9.)
-					),
-					(map, vec)
-				);
-				None
-			},
+			key_mapper: Mock_Mapper::new_mock(|mock| {
+				mock.expect_key_for()
+					.times(1)
+					.with(eq(Vec3::new(7., 8., 9.)))
+					.return_const((0, 0));
+			}),
 		};
 
 		graph.get_node(Vec3::new(7., 8., 9.));
@@ -108,7 +122,9 @@ mod tests {
 		let graph = Graph {
 			translations: HashMap::from([((1, 2), Vec3::default())]),
 			obstacles: HashSet::from([(1, 2)]),
-			get_key: |_, _| Some((1, 2)),
+			key_mapper: Mock_Mapper::new_mock(|mock| {
+				mock.expect_key_for().return_const((1, 2));
+			}),
 		};
 
 		let node = graph.get_node(Vec3::default());
@@ -140,7 +156,9 @@ mod tests {
 				((1, 4), Vec3::new(-1., 1., 1.)),
 			]),
 			obstacles: HashSet::from([(1, 2), (3, 1)]),
-			get_key: |_, _| Some((2, 2)),
+			key_mapper: Mock_Mapper::new_mock(|mock| {
+				mock.expect_key_for().return_const((2, 2));
+			}),
 		};
 
 		let node = graph.get_node(Vec3::default()).expect("NO NODE RETURNED");
