@@ -45,10 +45,10 @@ where
 		for cell_line in cells {
 			for cell in cell_line {
 				transforms_and_cells.push((transform(&cell, position), cell));
-				position.x -= TCell::CELL_DISTANCE;
+				position.x -= TCell::CELL_DISTANCE as f32;
 			}
 			position.x = start_x;
-			position.z -= TCell::CELL_DISTANCE;
+			position.z -= TCell::CELL_DISTANCE as f32;
 		}
 
 		transforms_and_cells
@@ -88,12 +88,16 @@ where
 	Transform::from_translation(position).looking_to(direction, Vec3::Y)
 }
 
-fn get_start_x_z<T>(cells: &[Vec<T>], cell_distance: f32) -> Option<(f32, f32)> {
-	let max_x = cells.iter().map(|line| line.len()).max()? as f32 * cell_distance;
-	let max_z = cells.len() as f32 * cell_distance;
-	let start_x = (max_x - cell_distance) / 2.;
-	let start_z = (max_z - cell_distance) / 2.;
+fn get_start_x_z<T>(cells: &[Vec<T>], cell_distance: u8) -> Option<(f32, f32)> {
+	let count_x = cells.iter().map(|line| line.len()).max()?;
+	let count_z = cells.len();
+	let start_x = get_start(count_x, cell_distance);
+	let start_z = get_start(count_z, cell_distance);
 	Some((start_x, start_z))
+}
+
+fn get_start(count: usize, cell_distance: u8) -> f32 {
+	((count as u8 * cell_distance) - cell_distance) as f32 / 2.
 }
 
 #[cfg(test)]
@@ -184,7 +188,7 @@ mod test_transforms {
 	}
 
 	impl GridCellDistanceDefinition for _Cell {
-		const CELL_DISTANCE: f32 = 4.;
+		const CELL_DISTANCE: u8 = 4;
 	}
 
 	#[derive(Resource, Default)]

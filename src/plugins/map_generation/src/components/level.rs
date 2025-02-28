@@ -14,7 +14,7 @@ use common::{
 #[require(Name(Self::name), Transform, Visibility)]
 pub struct Level {
 	cells: Vec<NavCell>,
-	grid_cell_distance: f32,
+	grid_cell_distance: u8,
 }
 
 impl Level {
@@ -49,7 +49,7 @@ impl Iterate for Level {
 
 impl InspectAble<GridCellDistance> for Level {
 	fn get_inspect_able_field(&self) -> f32 {
-		self.grid_cell_distance
+		self.grid_cell_distance as f32
 	}
 }
 
@@ -158,7 +158,7 @@ mod tests {
 	}
 
 	impl GridCellDistanceDefinition for _Cell {
-		const CELL_DISTANCE: f32 = 0.;
+		const CELL_DISTANCE: u8 = 0;
 	}
 
 	impl IsWalkable for _Cell {
@@ -185,7 +185,7 @@ mod tests {
 	}
 
 	impl GridCellDistanceDefinition for _CellWithDistance {
-		const CELL_DISTANCE: f32 = 11.;
+		const CELL_DISTANCE: u8 = 11;
 	}
 
 	impl IsWalkable for _CellWithDistance {
@@ -363,7 +363,7 @@ mod tests {
 						is_walkable: true
 					}
 				],
-				grid_cell_distance: 0.
+				grid_cell_distance: 0
 			},
 			level
 		);
@@ -402,7 +402,7 @@ mod tests {
 						is_walkable: false
 					}
 				],
-				grid_cell_distance: 0.
+				grid_cell_distance: 0
 			},
 			level
 		);

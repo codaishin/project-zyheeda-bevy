@@ -25,7 +25,7 @@ pub(crate) trait ExtraComponentsDefinition {
 }
 
 pub(crate) trait GridCellDistanceDefinition {
-	const CELL_DISTANCE: f32;
+	const CELL_DISTANCE: u8;
 }
 
 pub(crate) trait Spawn {
