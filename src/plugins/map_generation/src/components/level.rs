@@ -1,4 +1,4 @@
-use crate::traits::{is_walkable::IsWalkable, GridCellDistanceDefinition};
+use crate::traits::{GridCellDistanceDefinition, is_walkable::IsWalkable};
 use bevy::prelude::*;
 use common::{
 	tools::grid_cell_distance::GridCellDistance,
@@ -140,7 +140,7 @@ mod tests {
 	use common::{
 		assert_count,
 		get_children,
-		test_tools::utils::{new_handle, SingleThreadedApp},
+		test_tools::utils::{SingleThreadedApp, new_handle},
 		traits::{
 			inspect_able::InspectField,
 			load_asset::Path,

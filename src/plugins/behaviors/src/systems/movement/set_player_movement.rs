@@ -1,5 +1,5 @@
 use crate::{
-	components::movement::{velocity_based::VelocityBased, Movement},
+	components::movement::{Movement, velocity_based::VelocityBased},
 	events::MoveInputEvent,
 };
 use bevy::prelude::*;

@@ -1,4 +1,4 @@
-use crate::{traits::AnimationPlayersWithoutTransitions, AnimationData};
+use crate::{AnimationData, traits::AnimationPlayersWithoutTransitions};
 use bevy::prelude::*;
 use common::traits::try_insert_on::TryInsertOn;
 

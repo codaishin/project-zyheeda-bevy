@@ -1,11 +1,11 @@
 use crate::{
 	tools::PanelState,
 	traits::colors::{
+		DEFAULT_PANEL_COLORS,
 		HasActiveColor,
 		HasPanelColors,
 		HasQueuedColor,
 		PanelColors,
-		DEFAULT_PANEL_COLORS,
 	},
 };
 use bevy::{color::Color, ecs::component::Component};

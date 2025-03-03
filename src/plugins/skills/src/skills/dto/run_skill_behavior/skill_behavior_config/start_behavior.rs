@@ -1,8 +1,8 @@
 use crate::behaviors::start_behavior::{
+	SkillBehavior,
 	deal_damage::StartDealingDamage,
 	force_shield::StartForceShield,
 	gravity::StartGravity,
-	SkillBehavior,
 };
 use serde::{Deserialize, Serialize};
 

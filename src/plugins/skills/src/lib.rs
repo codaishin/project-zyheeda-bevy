@@ -46,9 +46,9 @@ use components::{
 	slots::{ForearmItemSlots, HandItemSlots, Slots, SubMeshEssenceSlots},
 	swapper::Swapper,
 };
-use item::{dto::ItemDto, Item};
+use item::{Item, dto::ItemDto};
 use macros::item_asset;
-use skills::{dto::SkillDto, QueuedSkill, RunSkillBehavior, Skill};
+use skills::{QueuedSkill, RunSkillBehavior, Skill, dto::SkillDto};
 use std::{marker::PhantomData, time::Duration};
 use systems::{
 	advance_active_skill::advance_active_skill,
@@ -70,15 +70,7 @@ use tools::combo_descriptor::ComboDescriptor;
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<
-		TLifeCycles,
-		TInteractions,
-		TDispatchChildrenAssets,
-		TLoading,
-		TBehaviors,
-		TPlayers,
-		TMenu,
-	>
+impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, TPlayers, TMenu>
 	SkillsPlugin<(
 		TLifeCycles,
 		TInteractions,
@@ -246,15 +238,8 @@ where
 	}
 }
 
-impl<
-		TLifeCycles,
-		TInteractions,
-		TDispatchChildrenAssets,
-		TLoading,
-		TBehaviors,
-		TPlayers,
-		TMenu,
-	> Plugin
+impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, TPlayers, TMenu>
+	Plugin
 	for SkillsPlugin<(
 		TLifeCycles,
 		TInteractions,

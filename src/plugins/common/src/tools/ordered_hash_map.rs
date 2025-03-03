@@ -1,12 +1,12 @@
 use bevy::prelude::default;
 use std::{
 	collections::{
+		HashMap,
 		hash_map::{
 			Entry as HashMapEntry,
 			OccupiedEntry as HashMapOccupiedEntry,
 			VacantEntry as HashMapVacantEntry,
 		},
-		HashMap,
 	},
 	hash::Hash,
 };

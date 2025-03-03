@@ -67,7 +67,7 @@ impl SwapValuesByKey for Swapper {
 mod tests {
 	use super::*;
 	use common::{
-		test_tools::utils::{new_handle, SingleThreadedApp},
+		test_tools::utils::{SingleThreadedApp, new_handle},
 		tools::slot_key::Side,
 	};
 

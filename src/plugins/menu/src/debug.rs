@@ -1,15 +1,15 @@
 use crate::{
+	AddDropdown,
+	AddTooltip,
 	components::{
 		dropdown::Dropdown,
 		tooltip::{Tooltip, TooltipUiConfig},
 	},
 	tools::Layout,
 	traits::{GetLayout, GetRootNode, LoadUi},
-	AddDropdown,
-	AddTooltip,
 };
 #[cfg(debug_assertions)]
-use crate::{traits::insert_ui_content::InsertUiContent, AddUI};
+use crate::{AddUI, traits::insert_ui_content::InsertUiContent};
 use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,

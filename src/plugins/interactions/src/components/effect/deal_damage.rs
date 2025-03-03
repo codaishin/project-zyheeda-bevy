@@ -1,8 +1,8 @@
-use crate::{traits::act_on::ActOn, InteractionsPlugin};
+use crate::{InteractionsPlugin, traits::act_on::ActOn};
 use bevy::prelude::*;
 use common::{
 	attributes::health::Health,
-	effects::{deal_damage::DealDamage, EffectApplies},
+	effects::{EffectApplies, deal_damage::DealDamage},
 	traits::{
 		handles_effect::HandlesEffect,
 		handles_life::{ChangeLife, HandlesLife},

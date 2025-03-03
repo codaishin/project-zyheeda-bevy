@@ -1,6 +1,6 @@
 use crate::{
 	tools::PanelState,
-	traits::colors::{HasPanelColors, PanelColors, DEFAULT_PANEL_COLORS},
+	traits::colors::{DEFAULT_PANEL_COLORS, HasPanelColors, PanelColors},
 };
 use bevy::ecs::component::Component;
 use common::traits::accessors::{get::GetterRef, set::Setter};

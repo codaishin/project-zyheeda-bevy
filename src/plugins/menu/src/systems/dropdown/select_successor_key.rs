@@ -1,7 +1,7 @@
 use crate::{
+	AppendSkillCommand,
 	components::key_select_dropdown_command::{ExcludeKeys, KeySelectDropdownCommand},
 	traits::GetComponent,
-	AppendSkillCommand,
 };
 use bevy::prelude::*;
 use common::{

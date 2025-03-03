@@ -146,8 +146,8 @@ mod tests {
 	}
 
 	#[test]
-	fn add_forced_movement_for_single_pull_and_put_gravity_center_at_zero_elevation(
-	) -> Result<(), RunSystemError> {
+	fn add_forced_movement_for_single_pull_and_put_gravity_center_at_zero_elevation()
+	-> Result<(), RunSystemError> {
 		let mut app = setup();
 		let towards = app
 			.world_mut()
@@ -312,8 +312,8 @@ mod tests {
 	}
 
 	#[test]
-	fn use_direction_length_divided_by_delta_when_pull_times_delta_exceed_direction_length(
-	) -> Result<(), RunSystemError> {
+	fn use_direction_length_divided_by_delta_when_pull_times_delta_exceed_direction_length()
+	-> Result<(), RunSystemError> {
 		let mut app = setup();
 		let delta = Duration::from_millis(501);
 		let towards = app
@@ -350,8 +350,8 @@ mod tests {
 	}
 
 	#[test]
-	fn use_pull_strength_when_pull_times_delta_do_not_exceed_direction_length(
-	) -> Result<(), RunSystemError> {
+	fn use_pull_strength_when_pull_times_delta_do_not_exceed_direction_length()
+	-> Result<(), RunSystemError> {
 		let mut app = setup();
 		let towards = app
 			.world_mut()

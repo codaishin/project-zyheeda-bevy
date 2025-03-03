@@ -1,5 +1,5 @@
-use super::{map::MapWindow, RegisterMapCell, SourcePath};
-use crate::{map::Map, map_loader::TextLoader, LoadLevel};
+use super::{RegisterMapCell, SourcePath, map::MapWindow};
+use crate::{LoadLevel, map::Map, map_loader::TextLoader};
 use bevy::{app::App, asset::AssetApp, ecs::schedule::ScheduleLabel, reflect::TypePath};
 
 impl RegisterMapCell for App {

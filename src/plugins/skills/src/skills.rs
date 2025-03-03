@@ -3,14 +3,14 @@ pub(crate) mod lifetime_definition;
 
 use crate::{
 	behaviors::{
-		build_skill_shape::{BuildSkillShape, OnSkillStop},
-		spawn_on::SpawnOn,
 		SkillBehaviorConfig,
 		SkillCaster,
 		SkillSpawner,
+		build_skill_shape::{BuildSkillShape, OnSkillStop},
+		spawn_on::SpawnOn,
 	},
 	components::SkillTarget,
-	traits::{spawn_skill_behavior::SpawnSkillBehavior, Matches, Prime},
+	traits::{Matches, Prime, spawn_skill_behavior::SpawnSkillBehavior},
 };
 use bevy::prelude::*;
 use common::{

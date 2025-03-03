@@ -91,8 +91,8 @@ mod tests {
 	}
 
 	#[test]
-	fn send_event_for_each_target_collision_using_collider_root_reference(
-	) -> Result<(), RunSystemError> {
+	fn send_event_for_each_target_collision_using_collider_root_reference()
+	-> Result<(), RunSystemError> {
 		let mut app = setup();
 
 		let collider_a = app

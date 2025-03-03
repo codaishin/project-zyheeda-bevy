@@ -1,7 +1,7 @@
 use crate::behaviors::{SkillCaster, SkillSpawner, SkillTarget};
 use bevy::ecs::system::EntityCommands;
 use common::{
-	effects::{gravity::Gravity, EffectApplies},
+	effects::{EffectApplies, gravity::Gravity},
 	tools::UnitsPerSecond,
 	traits::handles_effect::HandlesEffect,
 };

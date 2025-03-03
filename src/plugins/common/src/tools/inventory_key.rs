@@ -9,7 +9,7 @@ impl IterInfinite for InventoryKey {
 	}
 
 	fn next_infinite(current: &Infinite<Self>) -> Self {
-		InventoryKey(current.0 .0 + 1)
+		InventoryKey(current.0.0 + 1)
 	}
 }
 

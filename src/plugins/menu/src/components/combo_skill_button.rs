@@ -1,5 +1,5 @@
 use super::combo_overview::ComboOverview;
-use crate::{traits::insert_ui_content::InsertUiContent, Tooltip};
+use crate::{Tooltip, traits::insert_ui_content::InsertUiContent};
 use bevy::prelude::*;
 use common::{
 	tools::{skill_description::SkillDescription, skill_icon::SkillIcon, slot_key::SlotKey},

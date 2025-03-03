@@ -1,5 +1,5 @@
 use crate::{
-	behaviors::{build_skill_shape::OnSkillStop, SkillCaster, SkillSpawner},
+	behaviors::{SkillCaster, SkillSpawner, build_skill_shape::OnSkillStop},
 	components::SkillTarget,
 	skills::lifetime_definition::LifeTimeDefinition,
 };

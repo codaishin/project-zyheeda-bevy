@@ -4,7 +4,7 @@ use crate::{
 };
 use bevy::prelude::{Entity, Resource};
 use common::components::ColliderRoot;
-use std::collections::{hash_map::Entry, HashMap, HashSet};
+use std::collections::{HashMap, HashSet, hash_map::Entry};
 
 #[derive(Resource, Default)]
 pub(crate) struct TrackRayInteractions(HashMap<(Entity, Entity), Refreshed>);

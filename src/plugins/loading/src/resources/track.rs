@@ -1,7 +1,7 @@
 use bevy::{prelude::*, render::MainWorld, state::state::FreelyMutableState};
 use common::traits::handles_load_tracking::Loaded;
 use std::{
-	any::{type_name, TypeId},
+	any::{TypeId, type_name},
 	collections::HashMap,
 	marker::PhantomData,
 };

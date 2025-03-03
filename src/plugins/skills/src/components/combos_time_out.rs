@@ -1,4 +1,4 @@
-use crate::traits::{is_timed_out::IsTimedOut, Flush};
+use crate::traits::{Flush, is_timed_out::IsTimedOut};
 use bevy::ecs::component::Component;
 use common::traits::update_cumulative::CumulativeUpdate;
 use std::time::Duration;

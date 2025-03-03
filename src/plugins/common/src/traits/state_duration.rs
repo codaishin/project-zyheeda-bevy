@@ -91,9 +91,9 @@ impl Sub for _SafeDuration {
 }
 
 impl<
-		TStateDuration: StateDuration<TStateKey>,
-		TStateKey: IterFinite + Copy + Clone + Eq + Hash + 'static,
-	> StateUpdate<TStateKey> for TStateDuration
+	TStateDuration: StateDuration<TStateKey>,
+	TStateKey: IterFinite + Copy + Clone + Eq + Hash + 'static,
+> StateUpdate<TStateKey> for TStateDuration
 {
 	fn update_state(&mut self, delta: Duration) -> HashSet<StateMeta<TStateKey>> {
 		let state_keys = TStateKey::iterator();

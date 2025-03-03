@@ -1,6 +1,6 @@
 use bevy::prelude::Component;
 use common::{
-	tools::{movement_animation::MovementAnimation, speed::Speed, UnitsPerSecond},
+	tools::{UnitsPerSecond, movement_animation::MovementAnimation, speed::Speed},
 	traits::{
 		accessors::get::{Getter, GetterRefOptional},
 		animation::{Animation, PlayMode},

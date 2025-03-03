@@ -47,7 +47,7 @@ mod tests {
 	use super::*;
 	use crate::components::effect_shaders_target::EffectShadersTarget;
 	use bevy::{asset::UntypedAssetId, render::render_resource::AsBindGroup};
-	use common::test_tools::utils::{new_handle, SingleThreadedApp};
+	use common::test_tools::utils::{SingleThreadedApp, new_handle};
 
 	#[derive(Asset, TypePath, Clone, AsBindGroup, Debug, PartialEq)]
 	pub struct _Material {

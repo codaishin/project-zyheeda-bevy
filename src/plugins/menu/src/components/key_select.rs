@@ -1,9 +1,9 @@
 use super::{
+	SkillSelectDropdownInsertCommand,
 	combo_overview::ComboOverview,
 	combo_skill_button::Horizontal,
-	SkillSelectDropdownInsertCommand,
 };
-use crate::traits::{insert_ui_content::InsertUiContent, GetComponent, GetKey};
+use crate::traits::{GetComponent, GetKey, insert_ui_content::InsertUiContent};
 use bevy::prelude::*;
 use common::tools::slot_key::SlotKey;
 

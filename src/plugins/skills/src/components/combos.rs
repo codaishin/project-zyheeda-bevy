@@ -2,15 +2,15 @@ use super::combo_node::ComboNode;
 use crate::{
 	skills::Skill,
 	traits::{
-		follow_up_keys::FollowupKeys,
-		peek_next::PeekNext,
-		peek_next_recursive::PeekNextRecursive,
-		write_item::WriteItem,
 		GetNode,
 		GetNodeMut,
 		Insert,
 		ReKey,
 		SetNextCombo,
+		follow_up_keys::FollowupKeys,
+		peek_next::PeekNext,
+		peek_next_recursive::PeekNextRecursive,
+		write_item::WriteItem,
 	},
 };
 use bevy::ecs::component::Component;

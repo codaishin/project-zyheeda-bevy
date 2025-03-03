@@ -37,7 +37,7 @@ mod tests {
 	use super::*;
 	use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
 	use common::{
-		test_tools::utils::{new_handle, SingleThreadedApp},
+		test_tools::utils::{SingleThreadedApp, new_handle},
 		tools::slot_key::{Side, SlotKey},
 	};
 	use std::collections::HashMap;

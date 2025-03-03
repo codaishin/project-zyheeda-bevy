@@ -587,8 +587,8 @@ mod test_queue_active_skill {
 	use super::*;
 	use crate::{
 		behaviors::{
-			build_skill_shape::{BuildSkillShape, OnSkillStop},
 			SkillBehaviorConfig,
+			build_skill_shape::{BuildSkillShape, OnSkillStop},
 		},
 		skills::{AnimationStrategy, RunSkillBehavior},
 		traits::skill_builder::SkillShape,

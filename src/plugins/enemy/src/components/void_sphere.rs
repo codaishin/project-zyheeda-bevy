@@ -1,7 +1,7 @@
 use super::{enemy::Enemy, void_beam::VoidBeamAttack};
 use bevy::{
 	color::{Color, LinearRgba},
-	math::{primitives::Torus, Dir3, Vec3},
+	math::{Dir3, Vec3, primitives::Torus},
 	pbr::{NotShadowCaster, StandardMaterial},
 	prelude::*,
 	render::mesh::Mesh,
@@ -20,10 +20,10 @@ use common::{
 	},
 	blocker::{Blocker, BlockerInsertCommand},
 	components::{
-		insert_asset::InsertAsset,
-		spawn_children::SpawnChildren,
 		ColliderRoot,
 		GroundOffset,
+		insert_asset::InsertAsset,
+		spawn_children::SpawnChildren,
 	},
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	errors::Error,
@@ -32,7 +32,7 @@ use common::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_effect::HandlesEffect,
 		handles_enemies::EnemyTarget,
-		prefab::{sphere, Prefab},
+		prefab::{Prefab, sphere},
 	},
 };
 use std::{f32::consts::PI, sync::Arc, time::Duration};

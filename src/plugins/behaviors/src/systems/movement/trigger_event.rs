@@ -4,7 +4,7 @@ use bevy::{
 		event::EventWriter,
 		system::{Res, Resource},
 	},
-	input::{mouse::MouseButton, ButtonInput},
+	input::{ButtonInput, mouse::MouseButton},
 };
 use common::traits::intersect_at::IntersectAt;
 

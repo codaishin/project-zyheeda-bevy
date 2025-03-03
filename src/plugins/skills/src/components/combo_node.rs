@@ -3,10 +3,10 @@ pub mod node_entry_mut;
 use crate::{
 	skills::Skill,
 	traits::{
-		follow_up_keys::FollowupKeys,
-		peek_next_recursive::PeekNextRecursive,
 		GetNode,
 		GetNodeMut,
+		follow_up_keys::FollowupKeys,
+		peek_next_recursive::PeekNextRecursive,
 	},
 };
 use bevy::ecs::component::Component;

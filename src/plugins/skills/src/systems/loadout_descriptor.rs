@@ -54,7 +54,7 @@ pub(crate) trait LoadoutDescriptor {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::test_tools::utils::{new_handle, SingleThreadedApp};
+	use common::test_tools::utils::{SingleThreadedApp, new_handle};
 	use std::collections::HashMap;
 
 	#[derive(Component)]

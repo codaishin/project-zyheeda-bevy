@@ -34,7 +34,7 @@ mod tests {
 		traits::{cast_ray::TimeOfImpact, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;
-	use mockall::{mock, predicate::eq, Sequence};
+	use mockall::{Sequence, mock, predicate::eq};
 
 	#[derive(Resource, NestedMocks)]
 	struct _Tracker {
@@ -93,7 +93,7 @@ mod tests {
 		let mut app = setup(_Tracker::new().with_mock(|mock| {
 			mock.expect_track().return_const(TrackState::Changed);
 			mock.expect_flush().return_const(vec![
-				InteractionEvent::of(a).collision(Collision::Started(b))
+				InteractionEvent::of(a).collision(Collision::Started(b)),
 			]);
 		}));
 

@@ -14,7 +14,7 @@ pub(crate) mod write_item;
 
 use crate::{
 	behaviors::SkillCaster,
-	components::{skill_spawners::SkillSpawners, SkillTarget},
+	components::{SkillTarget, skill_spawners::SkillSpawners},
 	skills::{AnimationStrategy, RunSkillBehavior, Skill},
 };
 use common::{

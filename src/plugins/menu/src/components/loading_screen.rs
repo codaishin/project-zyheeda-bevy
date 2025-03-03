@@ -1,4 +1,4 @@
-use crate::traits::{insert_ui_content::InsertUiContent, LoadUi};
+use crate::traits::{LoadUi, insert_ui_content::InsertUiContent};
 use bevy::prelude::*;
 use common::traits::handles_load_tracking::{AssetsProgress, DependenciesProgress, Progress};
 use std::marker::PhantomData;

@@ -1,6 +1,6 @@
 use bevy::{
 	ecs::system::{Res, ResMut},
-	input::{keyboard::KeyCode, ButtonInput},
+	input::{ButtonInput, keyboard::KeyCode},
 	state::state::{FreelyMutableState, NextState, State, States},
 };
 use common::traits::{iteration::IterFinite, states::PlayState};

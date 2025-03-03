@@ -273,8 +273,8 @@ mod tests {
 	}
 
 	#[test]
-	fn do_not_track_target_entity_of_child_when_track_component_on_child(
-	) -> Result<(), RunSystemError> {
+	fn do_not_track_target_entity_of_child_when_track_component_on_child()
+	-> Result<(), RunSystemError> {
 		let mut app = setup();
 		let parent = app.world_mut().spawn_empty().id();
 		let child = app.world_mut().spawn(_Target).set_parent(parent).id();

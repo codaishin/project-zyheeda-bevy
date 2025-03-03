@@ -177,8 +177,8 @@ mod tests {
 	use super::*;
 	use crate::{
 		behaviors::{
-			build_skill_shape::{BuildSkillShape, OnSkillStop},
 			SkillBehaviorConfig,
+			build_skill_shape::{BuildSkillShape, OnSkillStop},
 		},
 		traits::skill_builder::SkillShape,
 	};

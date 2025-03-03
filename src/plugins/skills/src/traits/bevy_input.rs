@@ -1,5 +1,5 @@
 use super::{InputState, ShouldEnqueue};
-use bevy::input::{keyboard::KeyCode, ButtonInput};
+use bevy::input::{ButtonInput, keyboard::KeyCode};
 use common::{tools::slot_key::SlotKey, traits::map_value::TryMapBackwards};
 use std::hash::Hash;
 

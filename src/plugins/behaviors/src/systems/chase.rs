@@ -1,6 +1,6 @@
 use crate::components::{
-	movement::{velocity_based::VelocityBased, Movement},
 	Chase,
+	movement::{Movement, velocity_based::VelocityBased},
 };
 use bevy::prelude::*;
 use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};

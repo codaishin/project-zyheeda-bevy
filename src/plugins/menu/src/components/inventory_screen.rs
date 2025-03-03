@@ -1,7 +1,7 @@
-use super::{inventory_panel::InventoryPanel, KeyedPanel};
+use super::{KeyedPanel, inventory_panel::InventoryPanel};
 use crate::{
 	tools::PanelState,
-	traits::{colors::HasPanelColors, insert_ui_content::InsertUiContent, LoadUi},
+	traits::{LoadUi, colors::HasPanelColors, insert_ui_content::InsertUiContent},
 };
 use bevy::prelude::*;
 use common::{

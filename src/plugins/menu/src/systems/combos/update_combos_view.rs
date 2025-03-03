@@ -1,4 +1,4 @@
-use crate::traits::{build_combo_tree_layout::BuildComboTreeLayout, UpdateCombosView};
+use crate::traits::{UpdateCombosView, build_combo_tree_layout::BuildComboTreeLayout};
 use bevy::prelude::*;
 use common::traits::thread_safe::ThreadSafe;
 

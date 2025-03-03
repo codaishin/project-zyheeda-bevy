@@ -9,7 +9,7 @@ use bevy::prelude::{Entity, Resource};
 use common::components::ColliderRoot;
 use interactions_count::{InteractionsCount, RemainingInteractions};
 use sorted_entities::SortedEntities;
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{HashMap, hash_map::Entry};
 
 #[derive(Resource, Debug, PartialEq, Default)]
 pub(crate) struct TrackInteractionDuplicates(HashMap<SortedEntities, InteractionsCount>);

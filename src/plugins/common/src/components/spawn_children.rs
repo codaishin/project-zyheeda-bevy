@@ -152,9 +152,10 @@ mod test_spawn_children_from_parent {
 
 		app.update();
 
-		assert!(!app
-			.world()
-			.entity(entity)
-			.contains::<SpawnChildrenFromParent<_Parent>>());
+		assert!(
+			!app.world()
+				.entity(entity)
+				.contains::<SpawnChildrenFromParent<_Parent>>()
+		);
 	}
 }

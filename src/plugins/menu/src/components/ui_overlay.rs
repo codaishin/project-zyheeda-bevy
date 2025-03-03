@@ -1,7 +1,7 @@
-use super::{quickbar_panel::QuickbarPanel, Label, Quickbar};
+use super::{Label, Quickbar, quickbar_panel::QuickbarPanel};
 use crate::{
 	tools::PanelState,
-	traits::{colors::HasPanelColors, insert_ui_content::InsertUiContent, LoadUi},
+	traits::{LoadUi, colors::HasPanelColors, insert_ui_content::InsertUiContent},
 };
 use bevy::prelude::*;
 use common::{tools::slot_key::SlotKey, traits::iteration::IterFinite};

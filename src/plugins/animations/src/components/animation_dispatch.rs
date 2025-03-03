@@ -10,7 +10,7 @@ use common::traits::{
 	track::{IsTracking, Track, Untrack},
 };
 use std::{
-	collections::{hash_set::Iter, HashSet},
+	collections::{HashSet, hash_set::Iter},
 	fmt::Debug,
 	iter::Cloned,
 	mem,
