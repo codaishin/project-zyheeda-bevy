@@ -1,24 +1,25 @@
-use crate::tools::nav_grid_node::NavGridNode;
-
-pub(crate) struct WalkWithoutRedundant<TLos, TIterator> {
+pub(crate) struct WalkWithoutRedundant<TLos, TIterator>
+where
+	TIterator: Iterator,
+{
 	los: TLos,
 	iterator: TIterator,
-	next_override: Option<NavGridNode>,
+	next_override: Option<TIterator::Item>,
 }
 
-pub(crate) trait WithoutRedundantNodes: Iterator<Item = NavGridNode> + Sized {
+pub(crate) trait WithoutRedundantNodes: Iterator + Sized {
 	fn without_redundant_nodes<TLos>(self, los: TLos) -> WalkWithoutRedundant<TLos, Self>
 	where
-		TLos: Fn(NavGridNode, NavGridNode) -> bool;
+		TLos: Fn(&Self::Item, &Self::Item) -> bool;
 }
 
 impl<TIterator> WithoutRedundantNodes for TIterator
 where
-	Self: Iterator<Item = NavGridNode> + Sized,
+	Self: Iterator + Sized,
 {
 	fn without_redundant_nodes<TLos>(self, los: TLos) -> WalkWithoutRedundant<TLos, Self>
 	where
-		TLos: Fn(NavGridNode, NavGridNode) -> bool,
+		TLos: Fn(&Self::Item, &Self::Item) -> bool,
 	{
 		WalkWithoutRedundant {
 			los,
@@ -30,10 +31,11 @@ where
 
 impl<TLos, TIterator> Iterator for WalkWithoutRedundant<TLos, TIterator>
 where
-	TLos: Fn(NavGridNode, NavGridNode) -> bool,
-	TIterator: Iterator<Item = NavGridNode>,
+	TLos: Fn(&TIterator::Item, &TIterator::Item) -> bool,
+	TIterator: Iterator,
+	TIterator::Item: Copy,
 {
-	type Item = NavGridNode;
+	type Item = TIterator::Item;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		if let Some(next) = self.next_override.take() {
@@ -44,7 +46,7 @@ where
 
 		for next in self.iterator.by_ref() {
 			self.next_override = Some(next);
-			if !(self.los)(current, next) {
+			if !(self.los)(&current, &next) {
 				break;
 			}
 		}
@@ -60,7 +62,7 @@ mod tests {
 
 	#[automock]
 	trait _LosF {
-		fn call(&self, a: NavGridNode, b: NavGridNode) -> bool;
+		fn call(&self, a: &u8, b: &u8) -> bool;
 	}
 
 	macro_rules! new_los_f {
@@ -73,32 +75,34 @@ mod tests {
 
 	#[test]
 	fn iter_all_nodes() {
-		let a = NavGridNode { x: 1, y: 2 };
-		let b = NavGridNode { x: 2, y: 2 };
-		let c = NavGridNode { x: 3, y: 2 };
+		let a = 1;
+		let b = 2;
+		let c = 3;
 		let iter = vec![a, b, c].into_iter();
-		let los = new_los_f!(|mock: &mut Mock_LosF| {
-			mock.expect_call().return_const(false);
-		});
 
-		let nodes = iter.without_redundant_nodes(los).collect::<Vec<_>>();
+		let nodes = iter
+			.without_redundant_nodes(new_los_f!(|mock: &mut Mock_LosF| {
+				mock.expect_call().return_const(false);
+			}))
+			.collect::<Vec<_>>();
 
 		assert_eq!(vec![a, b, c], nodes);
 	}
 
 	#[test]
 	fn skip_redundant_node() {
-		let a = NavGridNode { x: 1, y: 2 };
-		let b = NavGridNode { x: 2, y: 2 };
-		let c = NavGridNode { x: 3, y: 2 };
+		let a = 1;
+		let b = 2;
+		let c = 3;
 		let iter = vec![a, b, c].into_iter();
-		let los = new_los_f!(|mock: &mut Mock_LosF| {
-			mock.expect_call().with(eq(a), eq(b)).return_const(true);
-			mock.expect_call().with(eq(a), eq(c)).return_const(true);
-			mock.expect_call().return_const(false);
-		});
 
-		let nodes = iter.without_redundant_nodes(los).collect::<Vec<_>>();
+		let nodes = iter
+			.without_redundant_nodes(new_los_f!(|mock: &mut Mock_LosF| {
+				mock.expect_call().with(eq(a), eq(b)).return_const(true);
+				mock.expect_call().with(eq(a), eq(c)).return_const(true);
+				mock.expect_call().return_const(false);
+			}))
+			.collect::<Vec<_>>();
 
 		assert_eq!(vec![a, c], nodes);
 	}

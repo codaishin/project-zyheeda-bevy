@@ -1,4 +1,4 @@
-use super::nav_grid_node::NavGridNode;
+use crate::grid_graph::GridGraphNode;
 use std::ops::RangeInclusive;
 
 /// This adds all nodes to the graph, that would
@@ -17,7 +17,7 @@ pub struct LineWide {
 }
 
 impl LineWide {
-	pub(crate) fn new(start: NavGridNode, end: NavGridNode) -> Self {
+	pub(crate) fn new(start: &GridGraphNode, end: &GridGraphNode) -> Self {
 		let (low, high, new_node) = Self::normalize_layout(start, end);
 		let (i_low, d_low) = match low.1 > low.0 {
 			true => (1, low.1 - low.0),
@@ -52,22 +52,32 @@ impl LineWide {
 		}
 	}
 
-	fn normalize_layout(start: NavGridNode, end: NavGridNode) -> (Low, High, NewNodeFn) {
-		let dx = (end.x - start.x).abs();
-		let dy = (end.y - start.y).abs();
-		let is_low = dx > dy;
+	fn normalize_layout(start: &GridGraphNode, end: &GridGraphNode) -> (Low, High, NewNodeFn) {
+		let dx = (end.x() - start.x()).abs();
+		let dz = (end.z() - start.z()).abs();
+		let is_low = dx > dz;
 
 		match is_low {
-			true if start.x < end.x => (Low(start.y, end.y), High(start.x, end.x), Low::node),
-			true => (Low(end.y, start.y), High(end.x, start.x), Low::node),
-			false if start.y < end.y => (Low(start.x, end.x), High(start.y, end.y), High::node),
-			false => (Low(end.x, start.x), High(end.y, start.y), High::node),
+			true if start.x() < end.x() => {
+				(Low(start.z(), end.z()), High(start.x(), end.x()), Low::node)
+			}
+			true => (Low(end.z(), start.z()), High(end.x(), start.x()), Low::node),
+			false if start.z() < end.z() => (
+				Low(start.x(), end.x()),
+				High(start.z(), end.z()),
+				High::node,
+			),
+			false => (
+				Low(end.x(), start.x()),
+				High(end.z(), start.z()),
+				High::node,
+			),
 		}
 	}
 }
 
 impl Iterator for LineWide {
-	type Item = NavGridNode;
+	type Item = LineNode;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		match &mut self.orientation {
@@ -120,24 +130,30 @@ struct Line {
 	low_start: i32,
 	low_end: i32,
 	step: Step,
-	additional_nodes: [Option<NavGridNode>; 3],
+	additional_nodes: [Option<LineNode>; 3],
 }
 
-type NewNodeFn = fn(i32, i32) -> NavGridNode;
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct LineNode {
+	pub(crate) x: i32,
+	pub(crate) z: i32,
+}
+
+type NewNodeFn = fn(i32, i32) -> LineNode;
 
 struct Low(i32, i32);
 
 impl Low {
-	fn node(x: i32, y: i32) -> NavGridNode {
-		NavGridNode { x: y, y: x }
+	fn node(x: i32, z: i32) -> LineNode {
+		LineNode { x: z, z: x }
 	}
 }
 
 struct High(i32, i32);
 
 impl High {
-	fn node(x: i32, y: i32) -> NavGridNode {
-		NavGridNode { x, y }
+	fn node(x: i32, z: i32) -> LineNode {
+		LineNode { x, z }
 	}
 }
 

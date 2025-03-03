@@ -1,20 +1,14 @@
-use crate::traits::{GridCellDistanceDefinition, is_walkable::IsWalkable};
-use bevy::prelude::*;
-use common::{
-	tools::grid_cell_distance::GridCellDistance,
-	traits::{
-		handles_map_generation::NavCell,
-		inspect_able::InspectAble,
-		iterate::Iterate,
-		load_asset::{LoadAsset, Path},
-	},
+use crate::{
+	grid_graph::{GridGraph, Obstacles},
+	traits::{GridCellDistanceDefinition, is_walkable::IsWalkable},
 };
+use bevy::prelude::*;
+use common::traits::load_asset::{LoadAsset, Path};
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(Name(Self::name), Transform, Visibility)]
 pub struct Level {
-	cells: Vec<NavCell>,
-	grid_cell_distance: f32,
+	graph: GridGraph,
 }
 
 impl Level {
@@ -23,7 +17,7 @@ impl Level {
 	}
 
 	pub(crate) fn spawn<TCell>(
-		cells: In<Vec<(Transform, TCell)>>,
+		graph: In<Option<GridGraph<(Transform, TCell), ()>>>,
 		commands: Commands,
 		load_asset: ResMut<AssetServer>,
 		level_cache: Local<Option<Entity>>,
@@ -32,29 +26,18 @@ impl Level {
 		TCell: IsWalkable + GridCellDistanceDefinition,
 		for<'a> Path: TryFrom<&'a TCell>,
 	{
-		spawn(cells, commands, load_asset, level_cache, levels);
+		spawn(graph, commands, load_asset, level_cache, levels);
 	}
 }
 
-impl Iterate for Level {
-	type TItem<'a>
-		= &'a NavCell
-	where
-		Self: 'a;
-
-	fn iterate(&self) -> impl Iterator<Item = &'_ NavCell> {
-		self.cells.iter()
-	}
-}
-
-impl InspectAble<GridCellDistance> for Level {
-	fn get_inspect_able_field(&self) -> f32 {
-		self.grid_cell_distance
+impl From<&Level> for GridGraph {
+	fn from(value: &Level) -> Self {
+		value.graph.clone()
 	}
 }
 
 pub(crate) fn spawn<TCell, TAsset>(
-	In(cells): In<Vec<(Transform, TCell)>>,
+	In(graph): In<Option<GridGraph<(Transform, TCell), ()>>>,
 	mut commands: Commands,
 	mut load_asset: ResMut<TAsset>,
 	mut level_cache: Local<Option<Entity>>,
@@ -64,46 +47,60 @@ pub(crate) fn spawn<TCell, TAsset>(
 	TAsset: LoadAsset + Resource,
 	for<'a> Path: TryFrom<&'a TCell>,
 {
-	if cells.is_empty() {
+	let Some(graph) = graph else {
+		return;
+	};
+
+	if graph.nodes.is_empty() {
 		return;
 	}
 
-	let mut level = match *level_cache {
+	let mut lvl_entity = match *level_cache {
 		Some(level) => get_or_new!(commands, level),
 		None => commands.spawn(Level::default()),
 	};
-	let level_id = level.id();
-	let cells = spawn_cells!(cells, level, load_asset);
-	*level_cache = Some(level_id);
-	update_level_cells!(levels, level, level_id, cells, TCell);
+	let lvl_id = lvl_entity.id();
+	let graph = apply_graph!(graph, lvl_entity, load_asset);
+	*level_cache = Some(lvl_id);
+	update_level_graph!(levels, lvl_entity, lvl_id, graph, TCell);
 }
 
-fn with_cell_path<TCell>((transform, cell): &(Transform, TCell)) -> Option<(Transform, Path, bool)>
+type Key = (i32, i32);
+
+fn with_cell_path<TCell>(
+	(key, (transform, cell)): (Key, (Transform, TCell)),
+) -> Option<(Key, (Transform, Path, bool))>
 where
 	TCell: IsWalkable,
 	for<'a> Path: TryFrom<&'a TCell>,
 {
 	let is_walkable = cell.is_walkable();
-	Some((*transform, Path::try_from(cell).ok()?, is_walkable))
+	Some((key, (transform, Path::try_from(&cell).ok()?, is_walkable)))
 }
 
-macro_rules! spawn_cells {
-	($cells:expr, $level:expr, $load_asset:expr) => {
-		$cells
-			.iter()
-			.filter_map(with_cell_path)
-			.map(|(transform, path, is_walkable)| {
-				let scene = $load_asset.load_asset(path);
-				let cell = NavCell {
-					translation: transform.translation,
-					is_walkable,
-				};
-				$level.with_child((SceneRoot(scene), transform));
-				cell
-			})
-	};
+macro_rules! apply_graph {
+	($graph:expr, $level:expr, $load_asset:expr) => {{
+		let mut new_graph = GridGraph::<Vec3, Obstacles> {
+			context: $graph.context,
+			..default()
+		};
+		let nodes = $graph.nodes.into_iter().filter_map(with_cell_path);
+
+		for (key, (transform, path, is_walkable)) in nodes {
+			let scene = $load_asset.load_asset(path);
+
+			new_graph.nodes.insert(key, transform.translation);
+			if !is_walkable {
+				new_graph.extra.obstacles.insert(key);
+			}
+
+			$level.with_child((SceneRoot(scene), transform));
+		}
+
+		new_graph
+	}};
 }
-use spawn_cells;
+use apply_graph;
 
 macro_rules! get_or_new {
 	($commands:expr, $entity:expr) => {
@@ -115,41 +112,35 @@ macro_rules! get_or_new {
 }
 use get_or_new;
 
-macro_rules! update_level_cells {
-	($levels:expr, $level:expr, $level_id:expr, $cells:expr, $cell_ty:ty) => {
+macro_rules! update_level_graph {
+	($levels:expr, $level:expr, $level_id:expr, $graph:expr, $cell_ty:ty) => {
 		match $levels.get_mut($level_id) {
 			Ok(mut level) => {
-				level.cells.extend($cells);
+				*level = Level { graph: $graph };
 			}
 			Err(_) => {
-				let cells = $cells.collect();
-				$level.insert(Level {
-					cells,
-					grid_cell_distance: <$cell_ty>::CELL_DISTANCE,
-				});
+				$level.insert(Level { graph: $graph });
 			}
 		}
 	};
 }
-use update_level_cells;
+use update_level_graph;
 
 #[cfg(test)]
 mod tests {
+	use crate::grid_graph::grid_context::{GridContext, GridDefinition, GridDefinitionError};
+
 	use super::*;
 	use bevy::asset::AssetPath;
 	use common::{
 		assert_count,
 		get_children,
 		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::{
-			inspect_able::InspectField,
-			load_asset::Path,
-			nested_mock::NestedMocks,
-			thread_safe::ThreadSafe,
-		},
+		traits::{load_asset::Path, nested_mock::NestedMocks, thread_safe::ThreadSafe},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use std::collections::{HashMap, HashSet};
 
 	#[derive(Clone, Default)]
 	struct _Cell {
@@ -158,7 +149,7 @@ mod tests {
 	}
 
 	impl GridCellDistanceDefinition for _Cell {
-		const CELL_DISTANCE: f32 = 0.;
+		const CELL_DISTANCE: u8 = 0;
 	}
 
 	impl IsWalkable for _Cell {
@@ -185,7 +176,7 @@ mod tests {
 	}
 
 	impl GridCellDistanceDefinition for _CellWithDistance {
-		const CELL_DISTANCE: f32 = 11.;
+		const CELL_DISTANCE: u8 = 11;
 	}
 
 	impl IsWalkable for _CellWithDistance {
@@ -221,16 +212,16 @@ mod tests {
 		}
 	}
 
-	fn setup<TCell>(cells: Vec<(Transform, TCell)>, load_scene: _LoadScene) -> App
+	fn setup<TCell>(graph: Option<GridGraph<(Transform, TCell), ()>>, load_scene: _LoadScene) -> App
 	where
 		TCell: Clone + IsWalkable + GridCellDistanceDefinition + ThreadSafe,
 		for<'a> Path: TryFrom<&'a TCell>,
 	{
 		let mut app = App::new().single_threaded(Update);
-		let return_cells = move || cells.clone();
+		let return_graph = move || graph.clone();
 
 		app.insert_resource(load_scene);
-		app.add_systems(Update, (return_cells).pipe(spawn::<TCell, _LoadScene>));
+		app.add_systems(Update, (return_graph).pipe(spawn::<TCell, _LoadScene>));
 
 		app
 	}
@@ -239,13 +230,19 @@ mod tests {
 	fn spawn_scene_with_transform() {
 		let scene = new_handle();
 		let mut app = setup(
-			vec![(
-				Transform::from_xyz(1., 2., 3.),
-				_Cell {
-					path: Some(Path::from("A")),
-					..default()
-				},
-			)],
+			Some(GridGraph {
+				nodes: HashMap::from([(
+					(0, 0),
+					(
+						Transform::from_xyz(1., 2., 3.),
+						_Cell {
+							path: Some(Path::from("A")),
+							..default()
+						},
+					),
+				)]),
+				..default()
+			}),
 			_LoadScene::new().with_mock(|mock| {
 				mock.expect_load_asset()
 					.times(1)
@@ -270,13 +267,19 @@ mod tests {
 	#[test]
 	fn spawn_scene_as_child_of_level() {
 		let mut app = setup(
-			vec![(
-				Transform::default(),
-				_Cell {
-					path: Some(Path::from("A")),
-					..default()
-				},
-			)],
+			Some(GridGraph {
+				nodes: HashMap::from([(
+					(0, 0),
+					(
+						Transform::default(),
+						_Cell {
+							path: Some(Path::from("A")),
+							..default()
+						},
+					),
+				)]),
+				..default()
+			}),
 			_LoadScene::new().with_mock(|mock| {
 				mock.expect_load_asset::<Scene, Path>()
 					.return_const(new_handle());
@@ -297,13 +300,19 @@ mod tests {
 	#[test]
 	fn reuse_same_level_in_subsequent_updates() {
 		let mut app = setup(
-			vec![(
-				Transform::default(),
-				_Cell {
-					path: Some(Path::from("A")),
-					..default()
-				},
-			)],
+			Some(GridGraph {
+				nodes: HashMap::from([(
+					(0, 0),
+					(
+						Transform::default(),
+						_Cell {
+							path: Some(Path::from("A")),
+							..default()
+						},
+					),
+				)]),
+				..default()
+			}),
 			_LoadScene::new().with_mock(|mock| {
 				mock.expect_load_asset::<Scene, Path>()
 					.return_const(new_handle());
@@ -323,24 +332,39 @@ mod tests {
 	}
 
 	#[test]
-	fn store_nav_cell_in_level() {
+	fn store_graph_in_level() -> Result<(), GridDefinitionError> {
+		let context = GridContext::try_from(GridDefinition {
+			cell_count_x: 2,
+			cell_count_z: 1,
+			cell_distance: 42,
+		})?;
 		let mut app = setup(
-			vec![
-				(
-					Transform::from_xyz(1., 2., 3.),
-					_Cell {
-						path: Some(Path::from("A")),
-						is_walkable: false,
-					},
-				),
-				(
-					Transform::from_xyz(3., 4., 5.),
-					_Cell {
-						path: Some(Path::from("A")),
-						is_walkable: true,
-					},
-				),
-			],
+			Some(GridGraph {
+				nodes: HashMap::from([
+					(
+						(0, 0),
+						(
+							Transform::from_xyz(1., 2., 3.),
+							_Cell {
+								path: Some(Path::from("A")),
+								is_walkable: true,
+							},
+						),
+					),
+					(
+						(1, 0),
+						(
+							Transform::from_xyz(3., 4., 5.),
+							_Cell {
+								path: Some(Path::from("A")),
+								is_walkable: false,
+							},
+						),
+					),
+				]),
+				context,
+				..default()
+			}),
 			_LoadScene::new().with_mock(|mock| {
 				mock.expect_load_asset::<Scene, Path>()
 					.return_const(new_handle());
@@ -353,65 +377,35 @@ mod tests {
 		let [level] = assert_count!(1, levels);
 		assert_eq!(
 			&Level {
-				cells: vec![
-					NavCell {
-						translation: Vec3::new(1., 2., 3.),
-						is_walkable: false
+				graph: GridGraph {
+					nodes: HashMap::from([
+						((0, 0), Vec3::new(1., 2., 3.)),
+						((1, 0), Vec3::new(3., 4., 5.),),
+					]),
+					extra: Obstacles {
+						obstacles: HashSet::from([(1, 0)]),
 					},
-					NavCell {
-						translation: Vec3::new(3., 4., 5.),
-						is_walkable: true
-					}
-				],
-				grid_cell_distance: 0.
+					context,
+				}
 			},
 			level
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn store_cell_transform_in_level_on_update() {
+	fn do_nothing_if_grid_empty() -> Result<(), GridDefinitionError> {
+		let context = GridContext::try_from(GridDefinition {
+			cell_count_x: 2,
+			cell_count_z: 1,
+			cell_distance: 42,
+		})?;
 		let mut app = setup(
-			vec![(
-				Transform::from_xyz(1., 2., 3.),
-				_Cell {
-					path: Some(Path::from("A")),
-					..default()
-				},
-			)],
-			_LoadScene::new().with_mock(|mock| {
-				mock.expect_load_asset::<Scene, Path>()
-					.return_const(new_handle());
+			Some(GridGraph::<(Transform, _Cell), ()> {
+				nodes: HashMap::from([]),
+				context,
+				..default()
 			}),
-		);
-
-		app.update();
-		app.update();
-
-		let levels = app.world().iter_entities().filter_map(|e| e.get::<Level>());
-		let [level] = assert_count!(1, levels);
-		assert_eq!(
-			&Level {
-				cells: vec![
-					NavCell {
-						translation: Vec3::new(1., 2., 3.),
-						is_walkable: false
-					},
-					NavCell {
-						translation: Vec3::new(1., 2., 3.),
-						is_walkable: false
-					}
-				],
-				grid_cell_distance: 0.
-			},
-			level
-		);
-	}
-
-	#[test]
-	fn do_nothing_if_cells_empty() {
-		let mut app = setup::<_Cell>(
-			vec![],
 			_LoadScene::new().with_mock(|mock| {
 				mock.expect_load_asset::<Scene, Path>()
 					.return_const(new_handle());
@@ -422,18 +416,13 @@ mod tests {
 
 		let levels = app.world().iter_entities().filter_map(|e| e.get::<Level>());
 		assert_count!(0, levels);
+		Ok(())
 	}
 
 	#[test]
-	fn get_grid_cell_distance() {
+	fn do_nothing_if_grid_none() {
 		let mut app = setup(
-			vec![(
-				Transform::default(),
-				_CellWithDistance {
-					path: Some(Path::from("my/path")),
-					is_walkable: true,
-				},
-			)],
+			None as Option<GridGraph<(Transform, _Cell), ()>>,
 			_LoadScene::new().with_mock(|mock| {
 				mock.expect_load_asset::<Scene, Path>()
 					.return_const(new_handle());
@@ -443,7 +432,6 @@ mod tests {
 		app.update();
 
 		let levels = app.world().iter_entities().filter_map(|e| e.get::<Level>());
-		let [level] = assert_count!(1, levels);
-		assert_eq!(11., GridCellDistance::inspect_field(level));
+		assert_count!(0, levels);
 	}
 }

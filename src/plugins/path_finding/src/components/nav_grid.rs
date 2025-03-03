@@ -1,101 +1,17 @@
-use crate::{tools::nav_grid_node::NavGridNode, traits::compute_path_lazy::ComputePathLazy};
+use crate::traits::compute_path_lazy::ComputePathLazy;
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
-	tools::grid_cell_distance::GridCellDistance,
-	traits::{
-		handles_map_generation::NavCell,
-		handles_path_finding::ComputePath,
-		inspect_able::{InspectAble, InspectField},
-		iterate::Iterate,
-		thread_safe::ThreadSafe,
-	},
+	traits::{handles_map_generation::Graph, handles_path_finding::ComputePath},
 };
-use std::collections::HashSet;
 
 #[derive(Component, Debug, PartialEq, Default)]
-pub struct NavGrid<TMethod> {
-	pub(crate) cell_distance: f32,
+pub struct NavGrid<TMethod, TGraph> {
+	pub(crate) graph: TGraph,
 	pub(crate) method: TMethod,
 }
 
-impl<TMethod> NavGrid<TMethod> {
-	pub(crate) fn update_from<TMap>(
-		mut maps: Query<(&TMap, &mut Self), Changed<TMap>>,
-	) -> Vec<Result<(), NavGridError>>
-	where
-		for<'a> TMap: Component + Iterate<TItem<'a> = &'a NavCell> + InspectAble<GridCellDistance>,
-		TMethod: ThreadSafe + From<NavGridData>,
-	{
-		let mut results = vec![];
-
-		for (map, mut nav_grid) in &mut maps {
-			let cell_distance = GridCellDistance::inspect_field(map);
-			if cell_distance == 0. {
-				results.push(Err(NavGridError::CellDistanceZero));
-				continue;
-			}
-
-			let mut empty = true;
-			let mut grid = NavGridData {
-				min: NavGridNode::MAX,
-				max: NavGridNode::MIN,
-				obstacles: HashSet::default(),
-			};
-
-			for cell in map.iterate() {
-				let translation = cell.translation / cell_distance;
-				let node = NavGridNode {
-					x: translation.x as i32,
-					y: translation.z as i32,
-				};
-
-				empty = false;
-
-				if !cell.is_walkable {
-					grid.obstacles.insert(node);
-				}
-				if node.x < grid.min.x {
-					grid.min.x = node.x;
-				}
-				if node.x > grid.max.x {
-					grid.max.x = node.x;
-				}
-				if node.y < grid.min.y {
-					grid.min.y = node.y
-				}
-				if node.y > grid.max.y {
-					grid.max.y = node.y;
-				}
-			}
-
-			if empty {
-				results.push(Err(NavGridError::Empty));
-				continue;
-			}
-
-			*nav_grid = Self {
-				cell_distance,
-				method: TMethod::from(grid),
-			}
-		}
-
-		results
-	}
-
-	fn nav_grid_node(&self, mut value: Vec3) -> Result<NavGridNode, NavGridError> {
-		if self.cell_distance == 0. {
-			return Err(NavGridError::CellDistanceZero);
-		}
-
-		value /= self.cell_distance;
-
-		Ok(NavGridNode {
-			x: value.x.round() as i32,
-			y: value.z.round() as i32,
-		})
-	}
-
+impl<TMethod, TGraph> NavGrid<TMethod, TGraph> {
 	fn replace(path_item: Option<&mut Vec3>, replace: Vec3) {
 		let Some(path_item) = path_item else {
 			return;
@@ -110,25 +26,24 @@ impl<TMethod> NavGrid<TMethod> {
 	}
 }
 
-impl<TMethod> ComputePath for NavGrid<TMethod>
+impl<TMethod, TGraph> ComputePath for NavGrid<TMethod, TGraph>
 where
-	TMethod: ComputePathLazy,
+	TMethod: ComputePathLazy<TGraph>,
+	TGraph: Graph,
 {
-	type TError = NavGridError;
-
-	fn compute_path(&self, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, Self::TError> {
-		let start_node = self.nav_grid_node(start)?;
-		let end_node = self.nav_grid_node(end)?;
+	fn compute_path(&self, start: Vec3, end: Vec3) -> Option<Vec<Vec3>> {
+		let start_node = self.graph.node(start)?;
+		let end_node = self.graph.node(end)?;
 		let mut path = self
 			.method
-			.compute_path(start_node, end_node)
-			.map(|n| Vec3::new(n.x as f32, 0., n.y as f32) * self.cell_distance)
+			.compute_path(&self.graph, start_node, end_node)
+			.map(|n| self.graph.translation(&n))
 			.collect::<Vec<_>>();
 
 		Self::replace(path.first_mut(), start);
 		Self::replace(path.last_mut(), end);
 
-		Ok(path)
+		Some(path)
 	}
 }
 
@@ -153,237 +68,81 @@ impl From<NavGridError> for Error {
 	}
 }
 
-#[derive(Debug, PartialEq, Default)]
-pub(crate) struct NavGridData {
-	pub(crate) min: NavGridNode,
-	pub(crate) max: NavGridNode,
-	pub(crate) obstacles: HashSet<NavGridNode>,
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{simple_init, test_tools::utils::SingleThreadedApp, traits::mock::Mock};
+	use common::{
+		simple_init,
+		traits::{
+			handles_map_generation::{
+				GraphLineOfSight,
+				GraphNode,
+				GraphObstacle,
+				GraphSuccessors,
+				GraphTranslation,
+			},
+			mock::Mock,
+		},
+	};
 	use mockall::{mock, predicate::eq};
-
-	#[derive(Debug, PartialEq, Default)]
-	struct _Method(NavGridData);
 
 	mock! {
 		_Method {}
-		impl ComputePathLazy for _Method {
-			fn compute_path(&self, start: NavGridNode, end: NavGridNode) -> impl Iterator<Item = NavGridNode>;
+		impl ComputePathLazy<_Graph> for _Method {
+			fn compute_path(
+				&self,
+				graph: & _Graph,
+				start: _Node,
+				end: _Node,
+			) -> impl Iterator<Item = _Node>;
 		}
 	}
 
 	simple_init!(Mock_Method);
 
-	impl From<NavGridData> for _Method {
-		fn from(data: NavGridData) -> Self {
-			Self(data)
+	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+	struct _Node(u8, u8, u8);
+
+	#[derive(Debug, PartialEq)]
+	struct _Graph;
+
+	impl Graph for _Graph {
+		type TNode = _Node;
+	}
+
+	impl GraphNode for _Graph {
+		type TNNode = _Node;
+		fn node(&self, Vec3 { x, y, z }: Vec3) -> Option<_Node> {
+			Some(_Node(x.round() as u8, y.round() as u8, z.round() as u8))
 		}
 	}
 
-	#[derive(Component, Default)]
-	struct _Map {
-		cells: Vec<NavCell>,
-		cell_distance: f32,
-	}
-
-	impl Iterate for _Map {
-		type TItem<'a>
-			= &'a NavCell
-		where
-			Self: 'a;
-
-		fn iterate(&self) -> impl Iterator<Item = &'_ NavCell> {
-			self.cells.iter()
+	impl GraphTranslation for _Graph {
+		type TTNode = _Node;
+		fn translation(&self, _Node(x, y, z): &_Node) -> Vec3 {
+			Vec3::new(*x as f32, *y as f32, *z as f32)
 		}
 	}
 
-	impl InspectAble<GridCellDistance> for _Map {
-		fn get_inspect_able_field(&self) -> f32 {
-			self.cell_distance
+	impl GraphSuccessors for _Graph {
+		type TSNode = _Node;
+		fn successors(&self, _: &_Node) -> impl Iterator<Item = _Node> {
+			[].into_iter()
 		}
 	}
 
-	#[derive(Resource, Debug, PartialEq)]
-	struct _Results(Vec<Result<(), NavGridError>>);
-
-	fn setup() -> App {
-		let mut app = App::new().single_threaded(Update);
-		app.add_systems(
-			Update,
-			NavGrid::<_Method>::update_from::<_Map>.pipe(|In(results), mut commands: Commands| {
-				commands.insert_resource(_Results(results));
-			}),
-		);
-
-		app
+	impl GraphLineOfSight for _Graph {
+		type TLNode = _Node;
+		fn line_of_sight(&self, _: &_Node, _: &_Node) -> bool {
+			todo!()
+		}
 	}
 
-	#[test]
-	fn do_update() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				NavGrid::<_Method>::default(),
-				_Map {
-					cells: vec![
-						NavCell {
-							translation: Vec3::new(2., 0., 4.),
-							is_walkable: true,
-						},
-						NavCell {
-							translation: Vec3::new(4., 0., 2.),
-							is_walkable: false,
-						},
-					],
-					cell_distance: 2.,
-				},
-			))
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&NavGrid {
-				cell_distance: 2.,
-				method: _Method(NavGridData {
-					min: NavGridNode { x: 1, y: 1 },
-					max: NavGridNode { x: 2, y: 2 },
-					obstacles: HashSet::from([NavGridNode { x: 2, y: 1 }]),
-				})
-			}),
-			app.world().entity(entity).get::<NavGrid<_Method>>(),
-		);
-	}
-
-	#[test]
-	fn return_error_when_cell_distance_zero() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				NavGrid::<_Method>::default(),
-				_Map {
-					cells: vec![NavCell {
-						translation: Vec3::new(1., 2., 3.),
-						..default()
-					}],
-					cell_distance: 0.,
-				},
-			))
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			(
-				Some(&NavGrid::<_Method>::default()),
-				Some(&_Results(vec![Err(NavGridError::CellDistanceZero)]))
-			),
-			(
-				app.world().entity(entity).get::<NavGrid<_Method>>(),
-				app.world().get_resource::<_Results>(),
-			)
-		)
-	}
-
-	#[test]
-	fn no_update_if_map_unchanged() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				NavGrid::<_Method>::default(),
-				_Map {
-					cells: vec![NavCell {
-						translation: Vec3::new(1., 2., 3.),
-						..default()
-					}],
-					cell_distance: 1.,
-				},
-			))
-			.id();
-
-		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(NavGrid::<_Method>::default());
-		app.update();
-
-		assert_eq!(
-			Some(&NavGrid::<_Method>::default()),
-			app.world().entity(entity).get::<NavGrid<_Method>>(),
-		);
-	}
-
-	#[test]
-	fn update_again_if_map_changed() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				NavGrid::<_Method>::default(),
-				_Map {
-					cells: vec![NavCell {
-						translation: Vec3::new(1., 2., 3.),
-						is_walkable: false,
-					}],
-					cell_distance: 1.,
-				},
-			))
-			.id();
-
-		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(NavGrid::<_Method>::default())
-			.get_mut::<_Map>()
-			.as_deref_mut();
-		app.update();
-
-		assert_eq!(
-			Some(&NavGrid {
-				cell_distance: 1.,
-				method: _Method(NavGridData {
-					min: NavGridNode { x: 1, y: 3 },
-					max: NavGridNode { x: 1, y: 3 },
-					obstacles: HashSet::from([NavGridNode { x: 1, y: 3 }]),
-				})
-			}),
-			app.world().entity(entity).get::<NavGrid<_Method>>(),
-		);
-	}
-
-	#[test]
-	fn map_empty_error() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				NavGrid::<_Method>::default(),
-				_Map {
-					cells: vec![],
-					cell_distance: 1.,
-				},
-			))
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			(
-				Some(&NavGrid::<_Method>::default()),
-				Some(&_Results(vec![Err(NavGridError::Empty)]))
-			),
-			(
-				app.world().entity(entity).get::<NavGrid<_Method>>(),
-				app.world().get_resource::<_Results>(),
-			)
-		);
+	impl GraphObstacle for _Graph {
+		type TONode = _Node;
+		fn is_obstacle(&self, _: &_Node) -> bool {
+			todo!()
+		}
 	}
 
 	#[test]
@@ -394,13 +153,10 @@ mod tests {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.times(1)
-					.with(
-						eq(NavGridNode { x: 1, y: 1 }),
-						eq(NavGridNode { x: 2, y: 2 }),
-					)
-					.returning(|_, _| Box::new([].into_iter()));
+					.with(eq(_Graph), eq(_Node(1, 1, 1)), eq(_Node(2, 2, 2)))
+					.returning(|_, _, _| Box::new([].into_iter()));
 			}),
-			cell_distance: 1.,
+			graph: _Graph,
 		};
 
 		_ = grid.compute_path(start, end);
@@ -408,63 +164,23 @@ mod tests {
 
 	#[test]
 	fn return_computed_path() {
-		let path = [
-			NavGridNode { x: 1, y: 1 },
-			NavGridNode { x: 2, y: 2 },
-			NavGridNode { x: 3, y: 3 },
-		];
+		let path = [_Node(1, 1, 1), _Node(2, 2, 2), _Node(3, 3, 3)];
 		let grid = NavGrid {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
-					.returning(move |_, _| Box::new(path.into_iter()));
+					.returning(move |_, _, _| Box::new(path.into_iter()));
 			}),
-			cell_distance: 1.,
+			graph: _Graph,
 		};
 
 		let computed_path = grid.compute_path(Vec3::new(1., 0., 1.), Vec3::new(3., 0., 3.));
 
 		assert_eq!(
-			Ok(Vec::from(
-				path.map(|n| Vec3::new(n.x as f32, 0., n.y as f32))
-			)),
+			Some(Vec::from(path.map(|_Node(x, y, z)| Vec3::new(
+				x as f32, y as f32, z as f32
+			)))),
 			computed_path
 		);
-	}
-
-	#[test]
-	fn call_compute_path_with_start_rounded() {
-		let grid = NavGrid {
-			method: Mock_Method::new_mock(|mock| {
-				mock.expect_compute_path()
-					.times(1)
-					.with(
-						eq(NavGridNode { x: 1, y: 1 }),
-						eq(NavGridNode { x: 2, y: 2 }),
-					)
-					.returning(|_, _| Box::new([].into_iter()));
-			}),
-			cell_distance: 1.,
-		};
-
-		_ = grid.compute_path(Vec3::new(0.9, 0., 1.3), Vec3::new(2., 0., 2.));
-	}
-
-	#[test]
-	fn call_compute_path_with_end_rounded() {
-		let grid = NavGrid {
-			method: Mock_Method::new_mock(|mock| {
-				mock.expect_compute_path()
-					.times(1)
-					.with(
-						eq(NavGridNode { x: 1, y: 1 }),
-						eq(NavGridNode { x: 2, y: 2 }),
-					)
-					.returning(|_, _| Box::new([].into_iter()));
-			}),
-			cell_distance: 1.,
-		};
-
-		_ = grid.compute_path(Vec3::new(1., 0., 1.), Vec3::new(1.9, 0., 2.2));
 	}
 
 	#[test]
@@ -473,32 +189,29 @@ mod tests {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.times(1)
-					.with(
-						eq(NavGridNode { x: 1, y: 1 }),
-						eq(NavGridNode { x: 2, y: 2 }),
-					)
-					.returning(|_, _| {
+					.with(eq(_Graph), eq(_Node(1, 1, 1)), eq(_Node(2, 2, 2)))
+					.returning(|_, _, _| {
 						Box::new(
 							[
-								NavGridNode { x: 1, y: 1 },
-								NavGridNode { x: 10, y: 11 },
-								NavGridNode { x: 4, y: 5 },
-								NavGridNode { x: 2, y: 2 },
+								_Node(1, 1, 1),
+								_Node(10, 10, 10),
+								_Node(4, 4, 4),
+								_Node(2, 2, 2),
 							]
 							.into_iter(),
 						)
 					});
 			}),
-			cell_distance: 1.,
+			graph: _Graph,
 		};
 
-		let path = grid.compute_path(Vec3::new(0.8, 0., 1.3), Vec3::new(2.1, 0., 1.9));
+		let path = grid.compute_path(Vec3::new(0.8, 1., 1.3), Vec3::new(2.1, 2., 1.9));
 		assert_eq!(
-			Ok(vec![
-				Vec3::new(0.8, 0., 1.3),
-				Vec3::new(10., 0., 11.),
-				Vec3::new(4., 0., 5.),
-				Vec3::new(2.1, 0., 1.9)
+			Some(vec![
+				Vec3::new(0.8, 1., 1.3),
+				Vec3::new(10., 10., 10.),
+				Vec3::new(4., 4., 4.),
+				Vec3::new(2.1, 2., 1.9)
 			]),
 			path,
 		);
@@ -510,30 +223,20 @@ mod tests {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.times(1)
-					.with(
-						eq(NavGridNode { x: 1, y: 1 }),
-						eq(NavGridNode { x: 2, y: 2 }),
-					)
-					.returning(|_, _| {
-						Box::new(
-							[
-								NavGridNode { x: 10, y: 11 },
-								NavGridNode { x: 4, y: 5 },
-								NavGridNode { x: 2, y: 2 },
-							]
-							.into_iter(),
-						)
+					.with(eq(_Graph), eq(_Node(1, 1, 1)), eq(_Node(2, 2, 2)))
+					.returning(|_, _, _| {
+						Box::new([_Node(10, 10, 10), _Node(4, 4, 4), _Node(2, 2, 2)].into_iter())
 					});
 			}),
-			cell_distance: 1.,
+			graph: _Graph,
 		};
 
-		let path = grid.compute_path(Vec3::new(1.1, 0., 1.3), Vec3::new(2.1, 0., 1.9));
+		let path = grid.compute_path(Vec3::new(0.8, 1., 1.3), Vec3::new(2.1, 2., 1.9));
 		assert_eq!(
-			Ok(vec![
-				Vec3::new(10., 0., 11.),
-				Vec3::new(4., 0., 5.),
-				Vec3::new(2.1, 0., 1.9)
+			Some(vec![
+				Vec3::new(10., 10., 10.),
+				Vec3::new(4., 4., 4.),
+				Vec3::new(2.1, 2., 1.9)
 			]),
 			path,
 		);
@@ -545,119 +248,22 @@ mod tests {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.times(1)
-					.with(
-						eq(NavGridNode { x: 1, y: 1 }),
-						eq(NavGridNode { x: 2, y: 2 }),
-					)
-					.returning(|_, _| {
-						Box::new(
-							[
-								NavGridNode { x: 1, y: 1 },
-								NavGridNode { x: 10, y: 11 },
-								NavGridNode { x: 4, y: 5 },
-							]
-							.into_iter(),
-						)
+					.with(eq(_Graph), eq(_Node(1, 1, 1)), eq(_Node(2, 2, 2)))
+					.returning(|_, _, _| {
+						Box::new([_Node(1, 1, 1), _Node(10, 10, 10), _Node(4, 4, 4)].into_iter())
 					});
 			}),
-			cell_distance: 1.,
+			graph: _Graph,
 		};
 
-		let path = grid.compute_path(Vec3::new(1.1, 0., 1.3), Vec3::new(2.1, 0., 1.9));
+		let path = grid.compute_path(Vec3::new(0.8, 1., 1.3), Vec3::new(2.1, 2., 1.9));
 		assert_eq!(
-			Ok(vec![
-				Vec3::new(1.1, 0., 1.3),
-				Vec3::new(10., 0., 11.),
-				Vec3::new(4., 0., 5.),
+			Some(vec![
+				Vec3::new(0.8, 1., 1.3),
+				Vec3::new(10., 10., 10.),
+				Vec3::new(4., 4., 4.),
 			]),
 			path,
 		);
-	}
-
-	#[test]
-	fn call_compute_path_with_start_end_rounded_scaled() {
-		let grid = NavGrid {
-			method: Mock_Method::new_mock(|mock| {
-				mock.expect_compute_path()
-					.times(1)
-					.with(
-						eq(NavGridNode { x: 1, y: 1 }),
-						eq(NavGridNode { x: 2, y: 2 }),
-					)
-					.returning(|_, _| Box::new([].into_iter()));
-			}),
-			cell_distance: 2.,
-		};
-
-		_ = grid.compute_path(Vec3::new(1.9, 0., 2.3), Vec3::new(3.9, 0., 4.3));
-	}
-
-	#[test]
-	fn call_compute_path_with_start_end_scaled_before_rounded() {
-		let grid = NavGrid {
-			method: Mock_Method::new_mock(|mock| {
-				mock.expect_compute_path()
-					.times(1)
-					.with(
-						eq(NavGridNode { x: 1, y: 1 }),
-						eq(NavGridNode { x: 2, y: 2 }),
-					)
-					.returning(|_, _| Box::new([].into_iter()));
-			}),
-			cell_distance: 0.5,
-		};
-
-		_ = grid.compute_path(Vec3::new(0.4, 0.5, 0.6), Vec3::new(0.9, 1., 1.1));
-	}
-
-	#[test]
-	fn return_path_scaled_back_via_grid_distance() {
-		let grid = NavGrid {
-			method: Mock_Method::new_mock(|mock| {
-				mock.expect_compute_path()
-					.times(1)
-					.with(
-						eq(NavGridNode { x: 1, y: 1 }),
-						eq(NavGridNode { x: 2, y: 2 }),
-					)
-					.returning(|_, _| {
-						Box::new(
-							[
-								NavGridNode { x: 1, y: 1 },
-								NavGridNode { x: 10, y: 11 },
-								NavGridNode { x: 4, y: 5 },
-								NavGridNode { x: 2, y: 2 },
-							]
-							.into_iter(),
-						)
-					});
-			}),
-			cell_distance: 2.,
-		};
-
-		let path = grid.compute_path(Vec3::new(1.9, 0., 2.3), Vec3::new(3.9, 0., 4.3));
-		assert_eq!(
-			Ok(vec![
-				Vec3::new(1.9, 0., 2.3),
-				Vec3::new(20., 0., 22.),
-				Vec3::new(8., 0., 10.),
-				Vec3::new(3.9, 0., 4.3)
-			]),
-			path,
-		);
-	}
-
-	#[test]
-	fn return_cell_distance_zero_error() {
-		let grid = NavGrid {
-			method: Mock_Method::new_mock(|mock| {
-				mock.expect_compute_path()
-					.returning(|_, _| Box::new([].into_iter()));
-			}),
-			cell_distance: 0.,
-		};
-
-		let path = grid.compute_path(Vec3::new(1.9, 0., 2.3), Vec3::new(3.9, 0., 4.3));
-		assert_eq!(Err(NavGridError::CellDistanceZero), path,);
 	}
 }
