@@ -2,10 +2,10 @@ use super::Shape;
 use crate::{
 	components::Corridor,
 	traits::{
-		is_walkable::IsWalkable,
-		map::{MapWindow, Neighbors, Tile},
 		GridCellDistanceDefinition,
 		SourcePath,
+		is_walkable::IsWalkable,
+		map::{MapWindow, Neighbors, Tile},
 	},
 };
 use bevy::{math::Dir3, prelude::*};

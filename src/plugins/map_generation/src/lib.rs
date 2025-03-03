@@ -15,8 +15,8 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use components::{level::Level, Wall, WallBack};
-use map::{cell::MapCell, LightCell};
+use components::{Wall, WallBack, level::Level};
+use map::{LightCell, cell::MapCell};
 use resources::load_level::LoadLevel;
 use std::marker::PhantomData;
 use systems::{
@@ -24,7 +24,7 @@ use systems::{
 	spawn_procedural::spawn_procedural,
 	unlit_material::unlit_material,
 };
-use traits::{light::wall::WallLight, RegisterMapCell};
+use traits::{RegisterMapCell, light::wall::WallLight};
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 

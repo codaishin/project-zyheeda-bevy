@@ -1,8 +1,8 @@
 use crate::behaviors::build_skill_shape::{
+	BuildSkillShape,
 	spawn_ground_target::SpawnGroundTargetedAoe,
 	spawn_projectile::SpawnProjectile,
 	spawn_shield::SpawnShield,
-	BuildSkillShape,
 };
 use common::dto::duration::DurationDto;
 use serde::{Deserialize, Serialize};

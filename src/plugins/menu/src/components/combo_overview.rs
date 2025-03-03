@@ -1,20 +1,20 @@
 use super::{
+	DeleteSkill,
+	SkillSelectDropdownInsertCommand,
 	combo_skill_button::{ComboSkillButton, DropdownTrigger, Vertical},
 	key_code_text_insert_command::KeyCodeTextInsertCommand,
 	key_select_dropdown_command::{AppendSkillCommand, KeySelectDropdownCommand},
-	DeleteSkill,
-	SkillSelectDropdownInsertCommand,
 };
 use crate::{
+	Tooltip,
 	tools::{Dimensions, Pixel},
 	traits::{
+		LoadUi,
+		UpdateCombosView,
 		build_combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol},
 		colors::DEFAULT_PANEL_COLORS,
 		insert_ui_content::InsertUiContent,
-		LoadUi,
-		UpdateCombosView,
 	},
-	Tooltip,
 };
 use bevy::prelude::*;
 use common::{

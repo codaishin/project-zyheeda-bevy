@@ -1,9 +1,9 @@
 use super::{
-	light::floating::FloatingLight,
-	map::MapWindow,
 	GridCellDistanceDefinition,
 	SourcePath,
 	Spawn,
+	light::floating::FloatingLight,
+	map::MapWindow,
 };
 use crate::map::LightCell;
 use bevy::prelude::*;

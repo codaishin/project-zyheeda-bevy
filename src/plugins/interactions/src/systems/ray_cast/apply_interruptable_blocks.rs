@@ -126,8 +126,8 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_blocked_hits_from_ray_cast_result_when_using_collider_root(
-	) -> Result<(), RunSystemError> {
+	fn remove_blocked_hits_from_ray_cast_result_when_using_collider_root()
+	-> Result<(), RunSystemError> {
 		let mut app = setup();
 		let close = app.world_mut().spawn_empty().id();
 		let root = app

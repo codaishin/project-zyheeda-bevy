@@ -1,4 +1,4 @@
-use super::{peek_next_recursive::PeekNextRecursive, AdvanceCombo, SetNextCombo};
+use super::{AdvanceCombo, SetNextCombo, peek_next_recursive::PeekNextRecursive};
 use crate::{components::combo_node::ComboNode, skills::Skill};
 use common::tools::{item_type::ItemType, slot_key::SlotKey};
 

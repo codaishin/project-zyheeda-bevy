@@ -1,4 +1,4 @@
-use bevy::prelude::{default, Component, Entity};
+use bevy::prelude::{Component, Entity, default};
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 #[derive(Component)]

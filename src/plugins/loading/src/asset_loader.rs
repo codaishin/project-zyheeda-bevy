@@ -1,5 +1,5 @@
 use crate::folder_asset_loader::{LoadError, ReadError};
-use bevy::asset::{io::Reader, Asset, AssetLoader, LoadContext};
+use bevy::asset::{Asset, AssetLoader, LoadContext, io::Reader};
 use common::traits::handles_custom_assets::{AssetFileExtensions, LoadFrom};
 use serde::Deserialize;
 use std::{marker::PhantomData, str::from_utf8};

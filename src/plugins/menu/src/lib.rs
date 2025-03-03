@@ -17,7 +17,7 @@ use crate::systems::{
 };
 use bevy::prelude::*;
 use common::{
-	resources::{key_map::KeyMap, language_server::LanguageServer, Shared},
+	resources::{Shared, key_map::KeyMap, language_server::LanguageServer},
 	states::{game_state::GameState, menu_state::MenuState},
 	tools::{
 		change::Change,
@@ -97,7 +97,7 @@ use systems::{
 		update_label_text::update_label_text,
 	},
 };
-use traits::{insert_ui_content::InsertUiContent, GetLayout, GetRootNode, LoadUi};
+use traits::{GetLayout, GetRootNode, LoadUi, insert_ui_content::InsertUiContent};
 use visualization::unusable::Unusable;
 
 type SlotKeyMap = KeyMap<SlotKey, KeyCode>;

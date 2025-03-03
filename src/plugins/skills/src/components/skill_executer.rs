@@ -1,8 +1,8 @@
-use super::{skill_spawners::SkillSpawners, SkillTarget};
+use super::{SkillTarget, skill_spawners::SkillSpawners};
 use crate::{
-	behaviors::{build_skill_shape::OnSkillStop, spawn_on::SpawnOn, SkillCaster, SkillSpawner},
+	behaviors::{SkillCaster, SkillSpawner, build_skill_shape::OnSkillStop, spawn_on::SpawnOn},
 	skills::RunSkillBehavior,
-	traits::{spawn_skill_behavior::SpawnSkillBehavior, Execute, Flush, Schedule},
+	traits::{Execute, Flush, Schedule, spawn_skill_behavior::SpawnSkillBehavior},
 };
 use bevy::prelude::*;
 use common::{

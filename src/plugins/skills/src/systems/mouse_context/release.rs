@@ -1,6 +1,6 @@
 use bevy::{
 	ecs::system::{Res, ResMut},
-	input::{mouse::MouseButton, ButtonInput},
+	input::{ButtonInput, mouse::MouseButton},
 	state::state::{NextState, State},
 };
 use common::states::mouse_context::MouseContext;
@@ -23,7 +23,7 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
+		input::{ButtonInput, keyboard::KeyCode, mouse::MouseButton},
 		state::app::{AppExtStates, StatesPlugin},
 	};
 

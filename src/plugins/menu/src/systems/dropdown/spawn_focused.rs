@@ -1,10 +1,10 @@
 use crate::{
 	components::{
-		dropdown::{Dropdown, DropdownUI},
 		GlobalZIndexTop,
+		dropdown::{Dropdown, DropdownUI},
 	},
 	tools::Layout,
-	traits::{insert_ui_content::InsertUiContent, GetLayout, GetRootNode},
+	traits::{GetLayout, GetRootNode, insert_ui_content::InsertUiContent},
 };
 use bevy::prelude::*;
 use common::tools::Focus;

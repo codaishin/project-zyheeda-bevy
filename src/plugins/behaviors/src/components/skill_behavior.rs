@@ -2,12 +2,12 @@ pub mod skill_contact;
 pub mod skill_projection;
 
 use super::{
+	Always,
+	Once,
 	ground_target::GroundTarget,
 	set_position_and_rotation::SetPositionAndRotation,
 	set_to_move_forward::SetVelocityForward,
 	when_traveled_insert::WhenTraveled,
-	Always,
-	Once,
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::*;

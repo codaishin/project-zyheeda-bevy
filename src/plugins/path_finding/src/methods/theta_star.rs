@@ -1,7 +1,7 @@
 use crate::{
 	components::nav_grid::NavGridData,
 	tools::{
-		closed_list::{walk_without_redundant::WithoutRedundantNodes, ClosedList},
+		closed_list::{ClosedList, walk_without_redundant::WithoutRedundantNodes},
 		g_scores::GScores,
 		line_wide::LineWide,
 		nav_grid_node::NavGridNode,

@@ -3,7 +3,7 @@ use common::traits::accessors::get::GetterRef;
 
 use crate::{
 	tools::PanelState,
-	traits::colors::{HasPanelColors, PanelColors, DEFAULT_PANEL_COLORS},
+	traits::colors::{DEFAULT_PANEL_COLORS, HasPanelColors, PanelColors},
 };
 
 #[derive(Component, Debug, PartialEq)]

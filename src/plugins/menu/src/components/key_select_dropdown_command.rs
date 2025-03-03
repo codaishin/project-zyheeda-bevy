@@ -1,6 +1,6 @@
 use std::{collections::HashSet, hash::Hash};
 
-use crate::{traits::GetComponent, AppendSkill, Dropdown, KeySelect};
+use crate::{AppendSkill, Dropdown, KeySelect, traits::GetComponent};
 use bevy::prelude::*;
 use common::{
 	tools::slot_key::SlotKey,

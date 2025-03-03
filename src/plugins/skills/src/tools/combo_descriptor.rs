@@ -15,7 +15,7 @@ use common::{
 		iteration::IterFinite,
 	},
 };
-use std::collections::{hash_map::Entry, HashMap, HashSet};
+use std::collections::{HashMap, HashSet, hash_map::Entry};
 
 #[derive(Debug, PartialEq)]
 pub struct ComboDescriptor {

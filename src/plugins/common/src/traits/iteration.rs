@@ -81,7 +81,7 @@ mod tests {
 		}
 
 		fn next_infinite(current: &Infinite<Self>) -> Self {
-			_MyType(current.0 .0 + 1)
+			_MyType(current.0.0 + 1)
 		}
 	}
 

@@ -61,7 +61,7 @@ mod tests {
 	use bevy::render::render_resource::AsBindGroup;
 	use common::{
 		components::Protected,
-		test_tools::utils::{new_handle, SingleThreadedApp},
+		test_tools::utils::{SingleThreadedApp, new_handle},
 	};
 	use std::collections::HashSet;
 

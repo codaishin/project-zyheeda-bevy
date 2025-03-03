@@ -8,8 +8,8 @@ pub(crate) mod traits;
 use bevy::{
 	prelude::*,
 	render::{
-		render_resource::{AsBindGroup, PipelineCache},
 		RenderApp,
+		render_resource::{AsBindGroup, PipelineCache},
 	},
 };
 use common::{
@@ -31,7 +31,7 @@ use common::{
 };
 use components::{
 	camera_labels::{FirstPass, PlayerCamera, SecondPass, Ui},
-	effect_shaders::{damage_effect_shaders::DamageEffectShaders, EffectShader},
+	effect_shaders::{EffectShader, damage_effect_shaders::DamageEffectShaders},
 	effect_shaders_target::EffectShadersTarget,
 	material_override::MaterialOverride,
 };

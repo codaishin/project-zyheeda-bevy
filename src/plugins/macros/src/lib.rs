@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse, parse_macro_input, Data, DeriveInput, Fields, Ident, Type};
+use syn::{Data, DeriveInput, Fields, Ident, Type, parse, parse_macro_input};
 
 #[proc_macro_derive(ClampZeroPositive)]
 pub fn clamp_zero_positive_derive(input: TokenStream) -> TokenStream {

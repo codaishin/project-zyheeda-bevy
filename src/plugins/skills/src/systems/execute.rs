@@ -1,6 +1,6 @@
 use crate::{
 	behaviors::SkillCaster,
-	components::{skill_spawners::SkillSpawners, SkillTarget},
+	components::{SkillTarget, skill_spawners::SkillSpawners},
 	traits::Execute,
 };
 use bevy::prelude::*;

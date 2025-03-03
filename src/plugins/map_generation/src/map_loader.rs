@@ -1,10 +1,10 @@
-use bevy::asset::{io::Reader, Asset, AssetLoader, LoadContext};
+use bevy::asset::{Asset, AssetLoader, LoadContext, io::Reader};
 use std::{
 	error::Error,
 	fmt::{Display, Formatter, Result as FmtResult},
 	io::Error as IOError,
 	marker::PhantomData,
-	str::{from_utf8, Utf8Error},
+	str::{Utf8Error, from_utf8},
 };
 
 pub struct TextLoader<TParser> {

@@ -140,7 +140,7 @@ fn any_true(values: &[bool]) -> bool {
 mod tests {
 	use super::*;
 	use common::{
-		test_tools::utils::{new_handle, SingleThreadedApp},
+		test_tools::utils::{SingleThreadedApp, new_handle},
 		tools::{item_type::ItemType, slot_key::Side},
 	};
 	use std::collections::HashMap;

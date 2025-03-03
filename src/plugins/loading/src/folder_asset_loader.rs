@@ -1,5 +1,5 @@
 use bevy::{
-	asset::{io::Reader, Asset, AssetLoader, LoadContext},
+	asset::{Asset, AssetLoader, LoadContext, io::Reader},
 	reflect::TypePath,
 };
 use common::traits::handles_custom_assets::{AssetFileExtensions, LoadFrom};
@@ -10,7 +10,7 @@ use std::{
 	fmt::{Display, Formatter, Result as FmtResult},
 	io::Error as IOError,
 	marker::PhantomData,
-	str::{from_utf8, Utf8Error},
+	str::{Utf8Error, from_utf8},
 };
 
 /// Generic asset loader that always returns `Ok`. Errors are stored within the `Ok`

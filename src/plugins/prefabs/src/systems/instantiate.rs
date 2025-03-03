@@ -29,7 +29,7 @@ mod tests {
 	use super::*;
 	use common::{
 		errors::Level,
-		systems::log::test_tools::{fake_log_error_lazy_many, FakeErrorLogMany},
+		systems::log::test_tools::{FakeErrorLogMany, fake_log_error_lazy_many},
 	};
 	use std::marker::PhantomData;
 

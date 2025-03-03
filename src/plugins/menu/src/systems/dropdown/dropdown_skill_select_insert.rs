@@ -1,7 +1,7 @@
 use crate::components::{
+	SkillSelectDropdownInsertCommand,
 	combo_skill_button::{ComboSkillButton, DropdownItem},
 	dropdown::Dropdown,
-	SkillSelectDropdownInsertCommand,
 };
 use bevy::prelude::*;
 use common::{

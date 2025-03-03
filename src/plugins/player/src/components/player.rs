@@ -4,12 +4,12 @@ use bevy_rapier3d::prelude::*;
 use common::{
 	attributes::health::Health,
 	blocker::{Blocker, BlockerInsertCommand},
-	components::{flip::FlipHorizontally, AssetModel, ColliderRoot, GroundOffset},
+	components::{AssetModel, ColliderRoot, GroundOffset, flip::FlipHorizontally},
 	effects::deal_damage::DealDamage,
 	errors::Error,
 	tools::{
-		slot_key::{Side, SlotKey},
 		UnitsPerSecond,
+		slot_key::{Side, SlotKey},
 	},
 	traits::{
 		animation::{

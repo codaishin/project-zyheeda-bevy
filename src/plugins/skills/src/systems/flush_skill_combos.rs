@@ -1,6 +1,6 @@
 use crate::{
 	skills::QueuedSkill,
-	traits::{is_timed_out::IsTimedOut, Flush},
+	traits::{Flush, is_timed_out::IsTimedOut},
 };
 use bevy::prelude::*;
 use common::traits::{iterate::Iterate, update_cumulative::CumulativeUpdate};
@@ -60,7 +60,7 @@ mod tests {
 		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;
-	use mockall::{mock, predicate::eq, Sequence};
+	use mockall::{Sequence, mock, predicate::eq};
 
 	#[derive(Component, NestedMocks)]
 	struct _Timeout {

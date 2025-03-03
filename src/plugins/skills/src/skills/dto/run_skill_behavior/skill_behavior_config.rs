@@ -2,10 +2,10 @@ pub(crate) mod shape;
 pub(crate) mod start_behavior;
 
 use crate::behaviors::{
+	SkillBehaviorConfig,
 	build_skill_shape::BuildSkillShape,
 	spawn_on::SpawnOn,
 	start_behavior::SkillBehavior,
-	SkillBehaviorConfig,
 };
 use serde::{Deserialize, Serialize};
 use shape::SkillShapeDto;

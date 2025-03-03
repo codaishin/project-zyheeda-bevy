@@ -1,12 +1,12 @@
 use crate::{
+	InteractionsPlugin,
 	components::gravity_affected::{GravityAffected, GravityPull},
 	traits::act_on::ActOn,
-	InteractionsPlugin,
 };
 use bevy::prelude::*;
 use common::{
 	attributes::affected_by::AffectedBy,
-	effects::{gravity::Gravity, EffectApplies},
+	effects::{EffectApplies, gravity::Gravity},
 	traits::handles_effect::HandlesEffect,
 };
 use std::time::Duration;

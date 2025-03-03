@@ -34,15 +34,15 @@ use common::{
 	},
 };
 use components::{
+	Always,
+	Once,
+	OverrideFace,
 	ground_target::GroundTarget,
-	movement::{velocity_based::VelocityBased, Movement},
+	movement::{Movement, velocity_based::VelocityBased},
 	set_position_and_rotation::SetPositionAndRotation,
 	set_to_move_forward::SetVelocityForward,
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	when_traveled_insert::InsertAfterDistanceTraveled,
-	Always,
-	Once,
-	OverrideFace,
 };
 use events::MoveInputEvent;
 use std::marker::PhantomData;

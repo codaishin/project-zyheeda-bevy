@@ -95,7 +95,7 @@ mod tests {
 	};
 	use common::{
 		simple_init,
-		test_tools::utils::{new_handle, SingleThreadedApp},
+		test_tools::utils::{SingleThreadedApp, new_handle},
 		tools::slot_key::Side,
 		traits::{mock::Mock, nested_mock::NestedMocks},
 	};

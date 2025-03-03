@@ -1,5 +1,5 @@
 use super::{start_game::StartGame, start_menu_button::StartMenuButton};
-use crate::traits::{colors::DEFAULT_PANEL_COLORS, insert_ui_content::InsertUiContent, LoadUi};
+use crate::traits::{LoadUi, colors::DEFAULT_PANEL_COLORS, insert_ui_content::InsertUiContent};
 use bevy::prelude::*;
 
 #[derive(Component)]
