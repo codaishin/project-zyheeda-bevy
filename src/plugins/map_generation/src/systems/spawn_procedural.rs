@@ -4,11 +4,16 @@ use bevy::{
 	transform::components::Transform,
 };
 
-pub(crate) fn spawn_procedural<TCell: Spawn>(
-	cells: In<Vec<(Transform, TCell)>>,
-	mut commands: Commands,
-) {
-	for (transform, cell) in cells.0 {
+pub(crate) fn spawn_procedural<TGraph, TCell>(In(graph): In<Option<TGraph>>, mut commands: Commands)
+where
+	TGraph: IntoIterator<Item = (Transform, TCell)>,
+	TCell: Spawn,
+{
+	let Some(graph) = graph else {
+		return;
+	};
+
+	for (transform, cell) in graph.into_iter() {
 		cell.spawn(&mut commands, transform);
 	}
 }
@@ -34,11 +39,11 @@ mod tests {
 		}
 	}
 
-	fn setup(cells: Vec<(Transform, _Cell)>) -> App {
+	fn setup(cells: Option<Vec<(Transform, _Cell)>>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			(move || cells.clone()).pipe(spawn_procedural::<_Cell>),
+			(move || cells.clone()).pipe(spawn_procedural::<Vec<(Transform, _Cell)>, _Cell>),
 		);
 
 		app
@@ -46,7 +51,7 @@ mod tests {
 
 	#[test]
 	fn spawn() {
-		let mut app = setup(vec![(Transform::from_xyz(1., 2., 3.), _Cell)]);
+		let mut app = setup(Some(vec![(Transform::from_xyz(1., 2., 3.), _Cell)]));
 		app.update();
 
 		let spawned = app

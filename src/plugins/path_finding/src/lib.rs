@@ -6,7 +6,8 @@ pub mod components;
 
 use bevy::prelude::*;
 use common::{
-	systems::log::log_many,
+	labels::Labels,
+	systems::insert_required::{InsertOn, InsertRequired},
 	traits::{
 		handles_map_generation::HandlesMapGeneration,
 		handles_path_finding::HandlesPathFinding,
@@ -17,7 +18,7 @@ use components::nav_grid::NavGrid;
 use methods::theta_star::ThetaStar;
 use std::marker::PhantomData;
 
-type TNavGrid = NavGrid<ThetaStar>;
+type GraphedNavGrid<TGraph> = NavGrid<ThetaStar, TGraph>;
 
 pub struct PathFindingPlugin<TMap>(PhantomData<TMap>);
 
@@ -35,11 +36,19 @@ where
 	TMaps: HandlesMapGeneration + ThreadSafe,
 {
 	fn build(&self, app: &mut App) {
-		app.register_required_components::<TMaps::TMap, TNavGrid>();
-		app.add_systems(Update, TNavGrid::update_from::<TMaps::TMap>.pipe(log_many));
+		app.add_systems(
+			Labels::PREFAB_INSTANTIATION.label(),
+			InsertOn::<TMaps::TMap>::required(|map| NavGrid {
+				graph: TMaps::TGraph::from(map),
+				method: ThetaStar::default(),
+			}),
+		);
 	}
 }
 
-impl<TDependencies> HandlesPathFinding for PathFindingPlugin<TDependencies> {
-	type TComputePath = TNavGrid;
+impl<TMaps> HandlesPathFinding for PathFindingPlugin<TMaps>
+where
+	TMaps: HandlesMapGeneration + ThreadSafe,
+{
+	type TComputePath = GraphedNavGrid<TMaps::TGraph>;
 }

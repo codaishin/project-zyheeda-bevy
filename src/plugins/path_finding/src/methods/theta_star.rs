@@ -1,89 +1,78 @@
 use crate::{
-	components::nav_grid::NavGridData,
 	tools::{
 		closed_list::{ClosedList, walk_without_redundant::WithoutRedundantNodes},
 		g_scores::GScores,
-		line_wide::LineWide,
-		nav_grid_node::NavGridNode,
 		open_list::OpenList,
 	},
 	traits::compute_path_lazy::ComputePathLazy,
 };
-use bevy::prelude::*;
+use common::traits::handles_map_generation::{
+	GraphLineOfSight,
+	GraphObstacle,
+	GraphSuccessors,
+	GraphTranslation,
+};
+use std::hash::Hash;
 
 pub struct ThetaStar {
 	sqrt_2: f32,
-	grid: NavGridData,
 }
 
 impl ThetaStar {
-	const NEIGHBORS: &'static [(i32, i32)] = &[
-		(-1, -1),
-		(-1, 0),
-		(-1, 1),
-		(0, -1),
-		(0, 1),
-		(1, -1),
-		(1, 0),
-		(1, 1),
-	];
-
-	fn neighbors<'a>(&'a self, center: &'a NavGridNode) -> impl Iterator<Item = NavGridNode> + 'a {
-		Self::NEIGHBORS
-			.iter()
-			.map(|(x, y)| NavGridNode {
-				x: center.x + x,
-				y: center.y + y,
-			})
-			.filter(|NavGridNode { x, y, .. }| {
-				x <= &self.grid.max.x
-					&& x >= &self.grid.min.x
-					&& y <= &self.grid.max.y
-					&& y >= &self.grid.min.y
-			})
-	}
-
-	fn distance(&self, a: NavGridNode, b: NavGridNode) -> f32 {
-		let d_x = a.x.abs_diff(b.x) as f32;
-		let d_y = a.y.abs_diff(b.y) as f32;
-		let (long, short) = match d_x > d_y {
-			true => (d_x, d_y),
-			false => (d_y, d_x),
+	fn distance<TGraph>(&self, graph: &TGraph, a: &TGraph::TTNode, b: &TGraph::TTNode) -> f32
+	where
+		TGraph: GraphTranslation,
+	{
+		let a = graph.translation(a);
+		let b = graph.translation(b);
+		let d_x = (a.x - b.x).abs();
+		let d_z = (a.z - b.z).abs();
+		let (long, short) = match d_x > d_z {
+			true => (d_x, d_z),
+			false => (d_z, d_x),
 		};
 		self.sqrt_2 * short + (long - short)
 	}
 
-	fn los(&self, a: NavGridNode, b: NavGridNode) -> bool {
-		LineWide::new(a, b).all(|n| !self.grid.obstacles.contains(&n))
-	}
-
-	fn vertex(
+	fn vertex<TGraph>(
 		&self,
-		closed: &ClosedList,
-		g_scores: &GScores,
-		current: NavGridNode,
-		neighbor: NavGridNode,
-	) -> Option<(NavGridNode, f32)> {
-		match closed.parent(&current) {
-			Some(parent) if self.los(*parent, neighbor) => self.relax(g_scores, *parent, neighbor),
-			_ if self.los(current, neighbor) => self.relax(g_scores, current, neighbor),
+		graph: &TGraph,
+		closed: &ClosedList<TGraph::TLNode>,
+		g_scores: &GScores<TGraph::TLNode>,
+		current: &TGraph::TLNode,
+		neighbor: &TGraph::TLNode,
+	) -> Option<(TGraph::TLNode, f32)>
+	where
+		TGraph: GraphLineOfSight + GraphTranslation<TTNode = TGraph::TLNode>,
+		TGraph::TLNode: Eq + Hash + Copy,
+	{
+		let los = |a, b| graph.line_of_sight(a, b);
+
+		match closed.parent(current) {
+			Some(parent) if los(parent, neighbor) => self.relax(graph, g_scores, parent, neighbor),
+			_ if los(current, neighbor) => self.relax(graph, g_scores, current, neighbor),
 			_ => None,
 		}
 	}
 
-	fn relax(
+	fn relax<TGraph>(
 		&self,
-		g_scores: &GScores,
-		current: NavGridNode,
-		neighbor: NavGridNode,
-	) -> Option<(NavGridNode, f32)> {
-		let g = g_scores.get(&current) + self.distance(current, neighbor);
+		graph: &TGraph,
+		g_scores: &GScores<TGraph::TTNode>,
+		current: &TGraph::TTNode,
+		neighbor: &TGraph::TTNode,
+	) -> Option<(TGraph::TTNode, f32)>
+	where
+		TGraph: GraphTranslation,
+		TGraph::TTNode: Eq + Hash + Copy,
+	{
+		let g = g_scores.get(current) + self.distance(graph, current, neighbor);
 
-		if g >= g_scores.get(&neighbor) {
+		if g >= g_scores.get(neighbor) {
 			return None;
 		}
 
-		Some((current, g))
+		Some((*current, g))
 	}
 }
 
@@ -91,29 +80,25 @@ impl Default for ThetaStar {
 	fn default() -> Self {
 		Self {
 			sqrt_2: f32::sqrt(2.),
-			grid: default(),
 		}
 	}
 }
 
-impl From<NavGridData> for ThetaStar {
-	fn from(grid: NavGridData) -> Self {
-		Self {
-			sqrt_2: f32::sqrt(2.),
-			grid,
-		}
-	}
-}
-
-impl ComputePathLazy for ThetaStar {
+impl<TGraph> ComputePathLazy<TGraph> for ThetaStar
+where
+	TGraph::TSNode: Eq + Hash + Copy,
+	TGraph: GraphSuccessors
+		+ GraphLineOfSight<TLNode = TGraph::TSNode>
+		+ GraphObstacle<TONode = TGraph::TSNode>
+		+ GraphTranslation<TTNode = TGraph::TSNode>,
+{
 	fn compute_path(
 		&self,
-		start: NavGridNode,
-		end: NavGridNode,
-	) -> impl Iterator<Item = NavGridNode> {
-		let dist_f = |a, b| self.distance(a, b);
-		let los_f = |a, b| self.los(a, b);
-		let mut open = OpenList::new(end, start, &dist_f);
+		graph: &TGraph,
+		start: TGraph::TSNode,
+		end: TGraph::TSNode,
+	) -> impl Iterator<Item = TGraph::TSNode> {
+		let mut open = OpenList::new(end, start, |a, b| self.distance(graph, a, b));
 		let mut closed = ClosedList::new(end);
 		let mut g_scores = GScores::new(end);
 
@@ -121,17 +106,19 @@ impl ComputePathLazy for ThetaStar {
 			if current == start {
 				let path = closed
 					.walk_back_from(current)
-					.without_redundant_nodes(los_f)
+					.without_redundant_nodes(|a, b| graph.line_of_sight(a, b))
 					.skip(1);
 				return IterPath::Some(path);
 			}
 
-			for neighbor in self.neighbors(&current) {
-				if self.grid.obstacles.contains(&neighbor) {
+			for neighbor in graph.successors(&current) {
+				if graph.is_obstacle(&neighbor) {
 					continue;
 				}
 
-				let Some((current, g)) = self.vertex(&closed, &g_scores, current, neighbor) else {
+				let current = self.vertex(graph, &closed, &g_scores, &current, &neighbor);
+
+				let Some((current, g)) = current else {
 					continue;
 				};
 

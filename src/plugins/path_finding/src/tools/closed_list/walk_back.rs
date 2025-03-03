@@ -1,13 +1,19 @@
 use super::ClosedList;
-use crate::tools::nav_grid_node::NavGridNode;
+use std::hash::Hash;
 
 #[derive(Debug, Clone)]
-pub(crate) struct WalkBack {
-	list: ClosedList,
-	next: Option<NavGridNode>,
+pub(crate) struct WalkBack<TNode>
+where
+	TNode: Eq + Hash + Copy,
+{
+	list: ClosedList<TNode>,
+	next: Option<TNode>,
 }
 
-impl ClosedList {
+impl<TNode> ClosedList<TNode>
+where
+	TNode: Eq + Hash + Copy,
+{
 	/// Creates an iterator of [`NavGridNode`]s representing a path
 	/// in reversed order.
 	///
@@ -15,7 +21,7 @@ impl ClosedList {
 	///   If there is no parent for the node stored in the closed list,
 	///   the iterator will only contain this one node.
 	/// </div>
-	pub(crate) fn walk_back_from(self, node: NavGridNode) -> WalkBack {
+	pub(crate) fn walk_back_from(self, node: TNode) -> WalkBack<TNode> {
 		WalkBack {
 			list: self,
 			next: Some(node),
@@ -23,8 +29,11 @@ impl ClosedList {
 	}
 }
 
-impl WalkBack {
-	fn parent(&self, node: &NavGridNode) -> Option<&NavGridNode> {
+impl<TNode> WalkBack<TNode>
+where
+	TNode: Eq + Hash + Copy,
+{
+	fn parent(&self, node: &TNode) -> Option<&TNode> {
 		if node == self.list.start() {
 			return None;
 		}
@@ -33,8 +42,11 @@ impl WalkBack {
 	}
 }
 
-impl Iterator for WalkBack {
-	type Item = NavGridNode;
+impl<TNode> Iterator for WalkBack<TNode>
+where
+	TNode: Eq + Hash + Copy,
+{
+	type Item = TNode;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		let current = self.next?;
@@ -51,9 +63,9 @@ mod tests {
 
 	#[test]
 	fn iterate_backwards() {
-		let a = NavGridNode { x: 1, y: 2 };
-		let b = NavGridNode { x: 2, y: 2 };
-		let c = NavGridNode { x: 3, y: 2 };
+		let a = 1;
+		let b = 2;
+		let c = 3;
 		let mut list = ClosedList::new(a);
 		list.insert(b, a);
 		list.insert(c, b);

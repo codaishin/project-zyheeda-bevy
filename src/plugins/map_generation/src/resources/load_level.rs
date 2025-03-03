@@ -1,9 +1,14 @@
 use crate::{
+	grid_graph::{
+		GridGraph,
+		grid_context::{GridContext, GridDefinition},
+	},
 	map::Map,
-	traits::{GridCellDistanceDefinition, SourcePath},
+	traits::{GridCellDistanceDefinition, SourcePath, grid_start::GridStart},
 };
 use bevy::prelude::*;
 use common::traits::{load_asset::LoadAsset, thread_safe::ThreadSafe};
+use std::collections::HashMap;
 
 #[derive(Resource, Debug, PartialEq)]
 pub(crate) struct LoadLevel<TCell>(pub Handle<Map<TCell>>)
@@ -21,37 +26,49 @@ where
 		begin_level_load::<AssetServer, TCell>(commands, map_loader);
 	}
 
-	pub(crate) fn cell_transforms(
+	pub(crate) fn graph(
 		mut commands: Commands,
 		maps: Res<Assets<Map<TCell>>>,
 		load_level_cmd: Option<Res<LoadLevel<TCell>>>,
-	) -> Vec<(Transform, TCell)>
+	) -> Option<GridGraph<(Transform, TCell), ()>>
 	where
 		TCell: GridCellDistanceDefinition + Clone,
 		for<'a> Dir3: From<&'a TCell>,
 	{
-		let Some(cells) = get_map_cells(load_level_cmd, maps) else {
-			return vec![];
+		let cells = get_map_cells(load_level_cmd, maps)?;
+		let (cell_count_x, cell_count_z) = get_cell_counts(&cells)?;
+		let grid_definition = GridDefinition {
+			cell_count_x,
+			cell_count_z,
+			cell_distance: TCell::CELL_DISTANCE,
 		};
-		let Some((start_x, start_z)) = get_start_x_z(&cells, TCell::CELL_DISTANCE) else {
-			return vec![];
+		let Ok(context) = GridContext::try_from(grid_definition) else {
+			return None;
+		};
+		let mut graph = GridGraph {
+			nodes: HashMap::default(),
+			extra: (),
+			context,
 		};
 
 		commands.remove_resource::<LoadLevel<TCell>>();
 
-		let mut position = Vec3::new(start_x, 0., start_z);
-		let mut transforms_and_cells = vec![];
+		let min = context.grid_min();
+		let mut position = min;
+		let cell_distance = TCell::CELL_DISTANCE as f32;
 
-		for cell_line in cells {
-			for cell in cell_line {
-				transforms_and_cells.push((transform(&cell, position), cell));
-				position.x -= TCell::CELL_DISTANCE as f32;
+		for (z, cell_line) in cells.into_iter().enumerate() {
+			for (x, cell) in cell_line.into_iter().enumerate() {
+				graph
+					.nodes
+					.insert((x as i32, z as i32), (transform(&cell, position), cell));
+				position.x += cell_distance;
 			}
-			position.x = start_x;
-			position.z -= TCell::CELL_DISTANCE as f32;
+			position.x = min.x;
+			position.z += cell_distance;
 		}
 
-		transforms_and_cells
+		Some(graph)
 	}
 }
 
@@ -88,16 +105,11 @@ where
 	Transform::from_translation(position).looking_to(direction, Vec3::Y)
 }
 
-fn get_start_x_z<T>(cells: &[Vec<T>], cell_distance: u8) -> Option<(f32, f32)> {
+fn get_cell_counts<T>(cells: &[Vec<T>]) -> Option<(usize, usize)> {
 	let count_x = cells.iter().map(|line| line.len()).max()?;
 	let count_z = cells.len();
-	let start_x = get_start(count_x, cell_distance);
-	let start_z = get_start(count_z, cell_distance);
-	Some((start_x, start_z))
-}
 
-fn get_start(count: usize, cell_distance: u8) -> f32 {
-	((count as u8 * cell_distance) - cell_distance) as f32 / 2.
+	Some((count_x, count_z))
 }
 
 #[cfg(test)]
@@ -166,17 +178,16 @@ mod test_begin_level_load {
 }
 
 #[cfg(test)]
-mod test_transforms {
+mod test_get_graph {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		asset::{Asset, AssetId, Handle},
-		ecs::system::{In, IntoSystem, Resource},
+		asset::Handle,
+		ecs::system::{RunSystemError, RunSystemOnce},
 		reflect::TypePath,
 		transform::components::Transform,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
-	use uuid::Uuid;
+	use common::test_tools::utils::{SingleThreadedApp, new_handle};
 
 	#[derive(Clone, Debug, PartialEq, TypePath)]
 	struct _Cell(Dir3);
@@ -191,29 +202,11 @@ mod test_transforms {
 		const CELL_DISTANCE: u8 = 4;
 	}
 
-	#[derive(Resource, Default)]
-	struct _CellsResult(Vec<(Transform, _Cell)>);
-
-	fn store_result(result: In<Vec<(Transform, _Cell)>>, mut commands: Commands) {
-		commands.insert_resource(_CellsResult(result.0));
-	}
-
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(
-			Update,
-			LoadLevel::<_Cell>::cell_transforms.pipe(store_result),
-		);
 		app.init_resource::<Assets<Map<_Cell>>>();
-		app.init_resource::<_CellsResult>();
 
 		app
-	}
-
-	fn new_handle<TAsset: Asset>() -> Handle<TAsset> {
-		Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		})
 	}
 
 	fn add_map(app: &mut App, cells: Vec<Vec<_Cell>>) -> Handle<Map<_Cell>> {
@@ -224,56 +217,84 @@ mod test_transforms {
 		handle
 	}
 
+	fn get_context<TCell>(cell_count_x: usize, cell_count_z: usize) -> GridContext
+	where
+		TCell: GridCellDistanceDefinition,
+	{
+		let grid_definition = GridDefinition {
+			cell_count_x,
+			cell_count_z,
+			cell_distance: TCell::CELL_DISTANCE,
+		};
+		GridContext::try_from(grid_definition).expect("FAULTY")
+	}
+
 	#[test]
-	fn remove_level_load_command() {
+	fn remove_level_load_command() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let map_handle = add_map(&mut app, vec![vec![_Cell(Dir3::NEG_Z)]]);
 		app.world_mut().insert_resource(LoadLevel(map_handle));
 
-		app.update();
+		app.world_mut().run_system_once(LoadLevel::<_Cell>::graph)?;
 
 		let cmd = app.world().get_resource::<LoadLevel<Map<_Cell>>>();
 
 		assert_eq!(None, cmd);
+		Ok(())
 	}
 
 	#[test]
-	fn pass_transform() {
+	fn pass_transform() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let map_handle = add_map(&mut app, vec![vec![_Cell(Dir3::NEG_Z)]]);
 		app.world_mut().insert_resource(LoadLevel(map_handle));
 
-		app.update();
-
-		let result = app.world().resource::<_CellsResult>();
+		let result = app.world_mut().run_system_once(LoadLevel::<_Cell>::graph)?;
 
 		assert_eq!(
-			vec![(Transform::from_xyz(0., 0., 0.), _Cell(Dir3::NEG_Z))],
-			result.0
+			Some(GridGraph {
+				nodes: HashMap::from([(
+					(0, 0),
+					(Transform::from_xyz(0., 0., 0.), _Cell(Dir3::NEG_Z))
+				)]),
+				extra: (),
+				context: get_context::<_Cell>(1, 1),
+			}),
+			result
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn add_scene_handle_with_transform_with_distance_on_x() {
+	fn add_scene_handle_with_transform_with_distance_on_x() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let map_handle = add_map(&mut app, vec![vec![_Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z)]]);
 		app.world_mut().insert_resource(LoadLevel(map_handle));
 
-		app.update();
-
-		let result = app.world().resource::<_CellsResult>();
+		let result = app.world_mut().run_system_once(LoadLevel::<_Cell>::graph)?;
 
 		assert_eq!(
-			vec![
-				(Transform::from_xyz(2., 0., 0.), _Cell(Dir3::NEG_Z)),
-				(Transform::from_xyz(-2., 0., 0.), _Cell(Dir3::NEG_Z))
-			],
-			result.0
+			Some(GridGraph {
+				nodes: HashMap::from([
+					(
+						(0, 0),
+						(Transform::from_xyz(-2., 0., 0.), _Cell(Dir3::NEG_Z))
+					),
+					(
+						(1, 0),
+						(Transform::from_xyz(2., 0., 0.), _Cell(Dir3::NEG_Z))
+					)
+				]),
+				extra: (),
+				context: get_context::<_Cell>(2, 1),
+			}),
+			result
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn add_scene_handle_with_transform_with_distance_on_z() {
+	fn add_scene_handle_with_transform_with_distance_on_z() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let map_handle = add_map(
 			&mut app,
@@ -281,41 +302,56 @@ mod test_transforms {
 		);
 		app.world_mut().insert_resource(LoadLevel(map_handle));
 
-		app.update();
-
-		let result = app.world().resource::<_CellsResult>();
+		let result = app.world_mut().run_system_once(LoadLevel::<_Cell>::graph)?;
 
 		assert_eq!(
-			vec![
-				(Transform::from_xyz(0., 0., 2.), _Cell(Dir3::NEG_Z)),
-				(Transform::from_xyz(0., 0., -2.), _Cell(Dir3::NEG_Z))
-			],
-			result.0
+			Some(GridGraph {
+				nodes: HashMap::from([
+					(
+						(0, 0),
+						(Transform::from_xyz(0., 0., -2.), _Cell(Dir3::NEG_Z))
+					),
+					(
+						(0, 1),
+						(Transform::from_xyz(0., 0., 2.), _Cell(Dir3::NEG_Z))
+					)
+				]),
+				extra: (),
+				context: get_context::<_Cell>(1, 2),
+			}),
+			result
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn add_scene_handle_with_transform_direction() {
+	fn add_scene_handle_with_transform_direction() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let direction = Dir3::new(Vec3::new(2., 3., 5.)).unwrap();
 		let map_handle = add_map(&mut app, vec![vec![_Cell(direction)]]);
 		app.world_mut().insert_resource(LoadLevel(map_handle));
 
-		app.update();
-
-		let result = app.world().resource::<_CellsResult>();
+		let result = app.world_mut().run_system_once(LoadLevel::<_Cell>::graph)?;
 
 		assert_eq!(
-			vec![(
-				Transform::from_xyz(0., 0., 0.).looking_to(direction, Vec3::Y),
-				_Cell(direction)
-			),],
-			result.0
+			Some(GridGraph {
+				nodes: HashMap::from([(
+					(0, 0),
+					(
+						Transform::from_xyz(0., 0., 0.).looking_to(direction, Vec3::Y),
+						_Cell(direction)
+					)
+				),]),
+				extra: (),
+				context: get_context::<_Cell>(1, 1),
+			}),
+			result
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn center_map() {
+	fn center_map() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let map_handle = add_map(
 			&mut app,
@@ -327,28 +363,58 @@ mod test_transforms {
 		);
 		app.world_mut().insert_resource(LoadLevel(map_handle));
 
-		app.update();
-
-		let result = app.world().resource::<_CellsResult>();
+		let result = app.world_mut().run_system_once(LoadLevel::<_Cell>::graph)?;
 
 		assert_eq!(
-			vec![
-				(Transform::from_xyz(4., 0., 4.), _Cell(Dir3::NEG_Z)),
-				(Transform::from_xyz(0., 0., 4.), _Cell(Dir3::NEG_Z)),
-				(Transform::from_xyz(-4., 0., 4.), _Cell(Dir3::NEG_Z)),
-				(Transform::from_xyz(4., 0., 0.), _Cell(Dir3::NEG_Z)),
-				(Transform::from_xyz(0., 0., 0.), _Cell(Dir3::NEG_Z)),
-				(Transform::from_xyz(-4., 0., 0.), _Cell(Dir3::NEG_Z)),
-				(Transform::from_xyz(4., 0., -4.), _Cell(Dir3::NEG_Z)),
-				(Transform::from_xyz(0., 0., -4.), _Cell(Dir3::NEG_Z)),
-				(Transform::from_xyz(-4., 0., -4.), _Cell(Dir3::NEG_Z)),
-			],
-			result.0
+			Some(GridGraph {
+				nodes: HashMap::from([
+					(
+						(0, 0),
+						(Transform::from_xyz(-4., 0., -4.), _Cell(Dir3::NEG_Z)),
+					),
+					(
+						(1, 0),
+						(Transform::from_xyz(0., 0., -4.), _Cell(Dir3::NEG_Z)),
+					),
+					(
+						(2, 0),
+						(Transform::from_xyz(4., 0., -4.), _Cell(Dir3::NEG_Z)),
+					),
+					(
+						(0, 1),
+						(Transform::from_xyz(-4., 0., 0.), _Cell(Dir3::NEG_Z)),
+					),
+					(
+						(1, 1),
+						(Transform::from_xyz(0., 0., 0.), _Cell(Dir3::NEG_Z)),
+					),
+					(
+						(2, 1),
+						(Transform::from_xyz(4., 0., 0.), _Cell(Dir3::NEG_Z)),
+					),
+					(
+						(0, 2),
+						(Transform::from_xyz(-4., 0., 4.), _Cell(Dir3::NEG_Z)),
+					),
+					(
+						(1, 2),
+						(Transform::from_xyz(0., 0., 4.), _Cell(Dir3::NEG_Z)),
+					),
+					(
+						(2, 2),
+						(Transform::from_xyz(4., 0., 4.), _Cell(Dir3::NEG_Z)),
+					),
+				]),
+				extra: (),
+				context: get_context::<_Cell>(3, 3),
+			}),
+			result
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn center_map_with_uneven_row_lengths() {
+	fn center_map_with_different_row_lengths() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let map_handle = add_map(
 			&mut app,
@@ -360,20 +426,41 @@ mod test_transforms {
 		);
 		app.world_mut().insert_resource(LoadLevel(map_handle));
 
-		app.update();
-
-		let result = app.world().resource::<_CellsResult>();
+		let result = app.world_mut().run_system_once(LoadLevel::<_Cell>::graph)?;
 
 		assert_eq!(
-			vec![
-				(Transform::from_xyz(4., 0., 4.), _Cell(Dir3::NEG_Z)),
-				(Transform::from_xyz(0., 0., 4.), _Cell(Dir3::NEG_Z)),
-				(Transform::from_xyz(4., 0., 0.), _Cell(Dir3::NEG_Z)),
-				(Transform::from_xyz(0., 0., 0.), _Cell(Dir3::NEG_Z)),
-				(Transform::from_xyz(-4., 0., 0.), _Cell(Dir3::NEG_Z)),
-				(Transform::from_xyz(4., 0., -4.), _Cell(Dir3::NEG_Z)),
-			],
-			result.0
+			Some(GridGraph {
+				nodes: HashMap::from([
+					(
+						(0, 0),
+						(Transform::from_xyz(-4., 0., -4.), _Cell(Dir3::NEG_Z)),
+					),
+					(
+						(1, 0),
+						(Transform::from_xyz(0., 0., -4.), _Cell(Dir3::NEG_Z)),
+					),
+					(
+						(0, 1),
+						(Transform::from_xyz(-4., 0., 0.), _Cell(Dir3::NEG_Z)),
+					),
+					(
+						(1, 1),
+						(Transform::from_xyz(0., 0., 0.), _Cell(Dir3::NEG_Z)),
+					),
+					(
+						(2, 1),
+						(Transform::from_xyz(4., 0., 0.), _Cell(Dir3::NEG_Z)),
+					),
+					(
+						(0, 2),
+						(Transform::from_xyz(-4., 0., 4.), _Cell(Dir3::NEG_Z)),
+					),
+				]),
+				extra: (),
+				context: get_context::<_Cell>(3, 3),
+			}),
+			result
 		);
+		Ok(())
 	}
 }

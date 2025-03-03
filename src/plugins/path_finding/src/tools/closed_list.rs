@@ -1,32 +1,37 @@
 pub(crate) mod walk_back;
 pub(crate) mod walk_without_redundant;
 
-use super::nav_grid_node::NavGridNode;
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash};
 
 #[derive(Debug, PartialEq, Default, Clone)]
-pub(crate) struct ClosedList {
-	start: NavGridNode,
-	parents: HashMap<NavGridNode, NavGridNode>,
+pub(crate) struct ClosedList<TNode>
+where
+	TNode: Eq + Hash + Copy,
+{
+	start: TNode,
+	parents: HashMap<TNode, TNode>,
 }
 
-impl ClosedList {
-	pub(crate) fn new(start: NavGridNode) -> Self {
+impl<TNode> ClosedList<TNode>
+where
+	TNode: Eq + Hash + Copy,
+{
+	pub(crate) fn new(start: TNode) -> Self {
 		Self {
 			start,
 			parents: HashMap::from([(start, start)]),
 		}
 	}
 
-	pub(crate) fn start(&self) -> &NavGridNode {
+	pub(crate) fn start(&self) -> &TNode {
 		&self.start
 	}
 
-	pub(crate) fn insert(&mut self, node: NavGridNode, comes_from: NavGridNode) {
+	pub(crate) fn insert(&mut self, node: TNode, comes_from: TNode) {
 		self.parents.insert(node, comes_from);
 	}
 
-	pub(crate) fn parent(&self, node: &NavGridNode) -> Option<&NavGridNode> {
+	pub(crate) fn parent(&self, node: &TNode) -> Option<&TNode> {
 		self.parents.get(node)
 	}
 }
@@ -37,7 +42,7 @@ mod tests {
 
 	#[test]
 	fn start() {
-		let start = NavGridNode { x: 1, y: 2 };
+		let start = "start";
 		let list = ClosedList::new(start);
 
 		assert_eq!(&start, list.start());
@@ -45,9 +50,9 @@ mod tests {
 
 	#[test]
 	fn parent() {
-		let node = NavGridNode { x: 1, y: 2 };
-		let parent = NavGridNode { x: 3, y: 4 };
-		let mut list = ClosedList::new(NavGridNode::default());
+		let node = "node";
+		let parent = "parent";
+		let mut list = ClosedList::new("start");
 
 		list.insert(node, parent);
 

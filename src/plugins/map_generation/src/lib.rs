@@ -1,5 +1,6 @@
 mod components;
-mod graph;
+mod grid_graph;
+mod line_wide;
 mod map;
 mod map_loader;
 mod resources;
@@ -17,6 +18,7 @@ use common::{
 	},
 };
 use components::{Wall, WallBack, level::Level};
+use grid_graph::GridGraph;
 use map::{LightCell, cell::MapCell};
 use resources::load_level::LoadLevel;
 use std::marker::PhantomData;
@@ -52,8 +54,8 @@ where
 			.add_systems(
 				Update,
 				(
-					LoadLevel::<MapCell>::cell_transforms.pipe(Level::spawn::<MapCell>),
-					LoadLevel::<LightCell>::cell_transforms.pipe(spawn_procedural),
+					LoadLevel::<MapCell>::graph.pipe(Level::spawn::<MapCell>),
+					LoadLevel::<LightCell>::graph.pipe(spawn_procedural),
 				),
 			)
 			.add_systems(
@@ -70,4 +72,5 @@ where
 
 impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> {
 	type TMap = Level;
+	type TGraph = GridGraph;
 }

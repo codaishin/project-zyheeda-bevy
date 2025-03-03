@@ -3,7 +3,17 @@ use bevy::prelude::*;
 use common::errors::{Error, Level};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) struct GridContext(GridDefinition);
+pub struct GridContext(GridDefinition);
+
+impl Default for GridContext {
+	fn default() -> Self {
+		Self(GridDefinition {
+			cell_count_x: 1,
+			cell_count_z: 1,
+			cell_distance: 1,
+		})
+	}
+}
 
 impl TryFrom<GridDefinition> for GridContext {
 	type Error = GridDefinitionError;
@@ -22,11 +32,11 @@ impl TryFrom<GridDefinition> for GridContext {
 }
 
 impl GridStart for GridContext {
-	fn grid_start(&self) -> Vec3 {
+	fn grid_min(&self) -> Vec3 {
 		let Self(d) = self;
 		let cell_distance = d.cell_distance as usize;
-		let x = ((d.cell_count_x * cell_distance) - cell_distance) as f32 / 2.;
-		let z = ((d.cell_count_z * cell_distance) - cell_distance) as f32 / 2.;
+		let x = ((d.cell_count_x - 1) * cell_distance) as f32 / 2.;
+		let z = ((d.cell_count_z - 1) * cell_distance) as f32 / 2.;
 
 		Vec3::new(-x, 0., -z)
 	}
@@ -34,7 +44,7 @@ impl GridStart for GridContext {
 
 impl KeyMapper for GridContext {
 	fn key_for(&self, translation: Vec3) -> (i32, i32) {
-		let start = self.grid_start();
+		let start = self.grid_min();
 		let cell_distance = self.0.cell_distance as f32;
 		let Vec3 { x, z, .. } = translation - start;
 
@@ -138,7 +148,7 @@ mod tests {
 			cell_distance: 1,
 		})?;
 
-		let start = context.grid_start();
+		let start = context.grid_min();
 
 		assert_eq!(Vec3::default(), start);
 		Ok(())
@@ -148,7 +158,7 @@ mod tests {
 	#[test_case(3, 3, 1, Vec3::new(-1., 0., -1.); "grid 3 by 3 with distance 1")]
 	#[test_case(2, 2, 2, Vec3::new(-1., 0., -1.); "grid 2 by 2 with distance 2")]
 	#[test_case(3, 3, 2, Vec3::new(-2., 0., -2.); "grid 3 by 3 with distance 2")]
-	fn get_start(
+	fn get_min(
 		cell_count_x: usize,
 		cell_count_z: usize,
 		cell_distance: u8,
@@ -160,9 +170,9 @@ mod tests {
 			cell_distance,
 		})?;
 
-		let start = context.grid_start();
+		let min = context.grid_min();
 
-		assert_eq!(result, start);
+		assert_eq!(result, min);
 		Ok(())
 	}
 

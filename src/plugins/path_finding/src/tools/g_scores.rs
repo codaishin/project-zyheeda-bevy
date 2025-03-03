@@ -1,18 +1,22 @@
-use super::nav_grid_node::NavGridNode;
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash};
 
-pub(crate) struct GScores(HashMap<NavGridNode, f32>);
+pub(crate) struct GScores<TNode>(HashMap<TNode, f32>)
+where
+	TNode: Eq + Hash;
 
-impl GScores {
-	pub(crate) fn new(start: NavGridNode) -> Self {
+impl<TNode> GScores<TNode>
+where
+	TNode: Eq + Hash,
+{
+	pub(crate) fn new(start: TNode) -> Self {
 		Self(HashMap::from([(start, 0.)]))
 	}
 
-	pub(crate) fn insert(&mut self, node: NavGridNode, score: f32) {
+	pub(crate) fn insert(&mut self, node: TNode, score: f32) {
 		self.0.insert(node, score);
 	}
 
-	pub(crate) fn get(&self, node: &NavGridNode) -> f32 {
+	pub(crate) fn get(&self, node: &TNode) -> f32 {
 		self.0.get(node).cloned().unwrap_or(f32::INFINITY)
 	}
 }
@@ -23,7 +27,7 @@ mod tests {
 
 	#[test]
 	fn new() {
-		let start = NavGridNode { x: 1, y: 2 };
+		let start = "start";
 		let scores = GScores::new(start);
 
 		assert_eq!(0., scores.get(&start));
@@ -31,8 +35,8 @@ mod tests {
 
 	#[test]
 	fn insert() {
-		let node = NavGridNode { x: 1, y: 2 };
-		let mut scores = GScores::new(NavGridNode::default());
+		let node = "node";
+		let mut scores = GScores::new("start");
 
 		scores.insert(node, 42.);
 
