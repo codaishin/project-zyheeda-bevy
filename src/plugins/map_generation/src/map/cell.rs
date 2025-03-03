@@ -88,7 +88,7 @@ impl From<MapWindow> for MapCell {
 						right: Tile::Occupied,
 						left: Tile::Occupied,
 					},
-			} => MapCell::Corridor(Dir3::NEG_Z, Shape::Cross4),
+			} => MapCell::Corridor(Dir3::Z, Shape::Cross4),
 			// T
 			MapWindow {
 				focus: 'c',
@@ -99,22 +99,12 @@ impl From<MapWindow> for MapCell {
 						left: Tile::Occupied,
 						..
 					},
-			} => MapCell::Corridor(Dir3::X, Shape::Cross3),
+			} => MapCell::Corridor(Dir3::NEG_X, Shape::Cross3),
 			MapWindow {
 				focus: 'c',
 				neighbors:
 					Neighbors {
 						up: Tile::Occupied,
-						left: Tile::Occupied,
-						right: Tile::Occupied,
-						..
-					},
-			} => MapCell::Corridor(Dir3::Z, Shape::Cross3),
-			MapWindow {
-				focus: 'c',
-				neighbors:
-					Neighbors {
-						down: Tile::Occupied,
 						left: Tile::Occupied,
 						right: Tile::Occupied,
 						..
@@ -124,12 +114,22 @@ impl From<MapWindow> for MapCell {
 				focus: 'c',
 				neighbors:
 					Neighbors {
+						down: Tile::Occupied,
+						left: Tile::Occupied,
+						right: Tile::Occupied,
+						..
+					},
+			} => MapCell::Corridor(Dir3::Z, Shape::Cross3),
+			MapWindow {
+				focus: 'c',
+				neighbors:
+					Neighbors {
 						up: Tile::Occupied,
 						down: Tile::Occupied,
 						right: Tile::Occupied,
 						..
 					},
-			} => MapCell::Corridor(Dir3::NEG_X, Shape::Cross3),
+			} => MapCell::Corridor(Dir3::X, Shape::Cross3),
 			// Corners
 			MapWindow {
 				focus: 'c',
@@ -139,7 +139,7 @@ impl From<MapWindow> for MapCell {
 						left: Tile::Occupied,
 						..
 					},
-			} => MapCell::Corridor(Dir3::X, Shape::Cross2),
+			} => MapCell::Corridor(Dir3::NEG_X, Shape::Cross2),
 			MapWindow {
 				focus: 'c',
 				neighbors:
@@ -148,7 +148,7 @@ impl From<MapWindow> for MapCell {
 						right: Tile::Occupied,
 						..
 					},
-			} => MapCell::Corridor(Dir3::Z, Shape::Cross2),
+			} => MapCell::Corridor(Dir3::NEG_Z, Shape::Cross2),
 			MapWindow {
 				focus: 'c',
 				neighbors:
@@ -157,7 +157,7 @@ impl From<MapWindow> for MapCell {
 						left: Tile::Occupied,
 						..
 					},
-			} => MapCell::Corridor(Dir3::NEG_Z, Shape::Cross2),
+			} => MapCell::Corridor(Dir3::Z, Shape::Cross2),
 			MapWindow {
 				focus: 'c',
 				neighbors:
@@ -166,7 +166,7 @@ impl From<MapWindow> for MapCell {
 						right: Tile::Occupied,
 						..
 					},
-			} => MapCell::Corridor(Dir3::NEG_X, Shape::Cross2),
+			} => MapCell::Corridor(Dir3::X, Shape::Cross2),
 			// Straights
 			MapWindow {
 				focus: 'c',
@@ -176,7 +176,7 @@ impl From<MapWindow> for MapCell {
 						left: Tile::Occupied,
 						..
 					},
-			} => MapCell::Corridor(Dir3::NEG_X, Shape::Straight),
+			} => MapCell::Corridor(Dir3::X, Shape::Straight),
 			MapWindow {
 				focus: 'c',
 				neighbors:
@@ -185,7 +185,7 @@ impl From<MapWindow> for MapCell {
 						down: Tile::Occupied,
 						..
 					},
-			} => MapCell::Corridor(Dir3::NEG_Z, Shape::Straight),
+			} => MapCell::Corridor(Dir3::Z, Shape::Straight),
 			// Ends
 			MapWindow {
 				focus: 'c',
@@ -193,29 +193,29 @@ impl From<MapWindow> for MapCell {
 					right: Tile::Occupied,
 					..
 				},
-			} => MapCell::Corridor(Dir3::NEG_X, Shape::End),
+			} => MapCell::Corridor(Dir3::X, Shape::End),
 			MapWindow {
 				focus: 'c',
 				neighbors: Neighbors {
 					left: Tile::Occupied,
 					..
 				},
-			} => MapCell::Corridor(Dir3::X, Shape::End),
+			} => MapCell::Corridor(Dir3::NEG_X, Shape::End),
 			MapWindow {
 				focus: 'c',
 				neighbors: Neighbors {
 					up: Tile::Occupied, ..
 				},
-			} => MapCell::Corridor(Dir3::Z, Shape::End),
+			} => MapCell::Corridor(Dir3::NEG_Z, Shape::End),
 			MapWindow {
 				focus: 'c',
 				neighbors: Neighbors {
 					down: Tile::Occupied,
 					..
 				},
-			} => MapCell::Corridor(Dir3::NEG_Z, Shape::End),
+			} => MapCell::Corridor(Dir3::Z, Shape::End),
 			// Single
-			MapWindow { focus: 'c', .. } => MapCell::Corridor(Dir3::NEG_Z, Shape::Single),
+			MapWindow { focus: 'c', .. } => MapCell::Corridor(Dir3::Z, Shape::Single),
 			// None
 			_ => MapCell::Empty,
 		}
@@ -247,10 +247,7 @@ mod tests {
 			},
 		};
 
-		assert_eq!(
-			MapCell::Corridor(Dir3::NEG_X, Shape::End),
-			MapCell::from(cross)
-		);
+		assert_eq!(MapCell::Corridor(Dir3::X, Shape::End), MapCell::from(cross));
 	}
 
 	#[test]
@@ -263,7 +260,10 @@ mod tests {
 			},
 		};
 
-		assert_eq!(MapCell::Corridor(Dir3::X, Shape::End), MapCell::from(cross));
+		assert_eq!(
+			MapCell::Corridor(Dir3::NEG_X, Shape::End),
+			MapCell::from(cross)
+		);
 	}
 
 	#[test]
@@ -278,7 +278,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			MapCell::Corridor(Dir3::NEG_X, Shape::Straight),
+			MapCell::Corridor(Dir3::X, Shape::Straight),
 			MapCell::from(cross)
 		);
 	}
@@ -295,7 +295,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			MapCell::Corridor(Dir3::NEG_X, Shape::Straight),
+			MapCell::Corridor(Dir3::X, Shape::Straight),
 			MapCell::from(cross)
 		);
 	}
@@ -312,7 +312,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			MapCell::Corridor(Dir3::NEG_X, Shape::Cross2),
+			MapCell::Corridor(Dir3::X, Shape::Cross2),
 			MapCell::from(cross)
 		);
 	}
@@ -329,7 +329,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			MapCell::Corridor(Dir3::NEG_Z, Shape::Cross2),
+			MapCell::Corridor(Dir3::Z, Shape::Cross2),
 			MapCell::from(cross)
 		);
 	}
@@ -346,7 +346,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			MapCell::Corridor(Dir3::Z, Shape::Cross2),
+			MapCell::Corridor(Dir3::NEG_Z, Shape::Cross2),
 			MapCell::from(cross)
 		);
 	}
@@ -363,7 +363,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			MapCell::Corridor(Dir3::X, Shape::Cross2),
+			MapCell::Corridor(Dir3::NEG_X, Shape::Cross2),
 			MapCell::from(cross)
 		);
 	}
@@ -381,7 +381,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			MapCell::Corridor(Dir3::NEG_Z, Shape::Cross3),
+			MapCell::Corridor(Dir3::Z, Shape::Cross3),
 			MapCell::from(cross)
 		);
 	}
@@ -399,7 +399,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			MapCell::Corridor(Dir3::Z, Shape::Cross3),
+			MapCell::Corridor(Dir3::NEG_Z, Shape::Cross3),
 			MapCell::from(cross)
 		);
 	}
@@ -417,7 +417,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			MapCell::Corridor(Dir3::NEG_X, Shape::Cross3),
+			MapCell::Corridor(Dir3::X, Shape::Cross3),
 			MapCell::from(cross)
 		);
 	}
@@ -435,7 +435,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			MapCell::Corridor(Dir3::X, Shape::Cross3),
+			MapCell::Corridor(Dir3::NEG_X, Shape::Cross3),
 			MapCell::from(cross)
 		);
 	}
@@ -453,7 +453,7 @@ mod tests {
 		};
 
 		assert_eq!(
-			MapCell::Corridor(Dir3::NEG_Z, Shape::Cross4),
+			MapCell::Corridor(Dir3::Z, Shape::Cross4),
 			MapCell::from(cross)
 		);
 	}
