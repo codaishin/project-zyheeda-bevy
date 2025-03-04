@@ -100,7 +100,7 @@ where
 
 		while let Some(current) = open.pop_lowest_f() {
 			if current == start {
-				return IterPath::Some(closed.walk_back_from(current).skip(1));
+				return IterPath::Some(closed.walk_back_from(current));
 			}
 
 			for neighbor in graph.successors(&current) {
