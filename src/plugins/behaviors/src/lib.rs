@@ -163,7 +163,7 @@ where
 			.add_systems(
 				Update,
 				(
-					TPlayers::TPlayerMovement::set_movement,
+					TPlayers::TPlayerMovement::set::<Movement<AlongPath<VelocityBased>>>,
 					TPlayers::TPlayerMovement::execute_movement::<Movement<AlongPath<VelocityBased>>>,
 					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
 					TPlayers::TPlayerMovement::animate_movement::<

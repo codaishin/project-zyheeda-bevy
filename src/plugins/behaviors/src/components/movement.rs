@@ -68,6 +68,12 @@ impl<TMovement> ApproxEqual<f32> for Movement<TMovement> {
 	}
 }
 
+impl<TMovement> From<Vec3> for Movement<TMovement> {
+	fn from(target: Vec3) -> Self {
+		Self::to(target)
+	}
+}
+
 pub(crate) trait OnMovementRemoved {
 	type TConstraint: QueryFilter;
 
