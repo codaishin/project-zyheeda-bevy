@@ -34,6 +34,11 @@ where
 	fn compute_path(&self, start: Vec3, end: Vec3) -> Option<Vec<Vec3>> {
 		let start_node = self.graph.node(start)?;
 		let end_node = self.graph.node(end)?;
+
+		if start_node == end_node {
+			return Some(vec![start, end]);
+		}
+
 		let mut path = self
 			.method
 			.compute_path(&self.graph, start_node, end_node)
@@ -214,6 +219,24 @@ mod tests {
 				Vec3::new(2.1, 2., 1.9)
 			]),
 			path,
+		);
+	}
+
+	#[test]
+	fn no_computation_when_start_and_end_on_same_node() {
+		let grid = NavGrid {
+			method: Mock_Method::new_mock(|mock| {
+				mock.expect_compute_path()
+					.never()
+					.returning(|_, _, _| Box::new([].into_iter()));
+			}),
+			graph: _Graph,
+		};
+
+		let path = grid.compute_path(Vec3::new(0.8, 1., 1.3), Vec3::new(1.1, 1., 0.9));
+		assert_eq!(
+			Some(vec![Vec3::new(0.8, 1., 1.3), Vec3::new(1.1, 1., 0.9)]),
+			path
 		);
 	}
 

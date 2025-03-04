@@ -1,5 +1,4 @@
 pub(crate) mod walk_back;
-pub(crate) mod walk_without_redundant;
 
 use std::{collections::HashMap, hash::Hash};
 

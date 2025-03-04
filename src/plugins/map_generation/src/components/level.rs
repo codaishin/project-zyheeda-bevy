@@ -65,36 +65,23 @@ pub(crate) fn spawn<TCell, TAsset>(
 	update_level_graph!(levels, lvl_entity, lvl_id, graph, TCell);
 }
 
-type Key = (i32, i32);
-
-fn with_cell_path<TCell>(
-	(key, (transform, cell)): (Key, (Transform, TCell)),
-) -> Option<(Key, (Transform, Path, bool))>
-where
-	TCell: IsWalkable,
-	for<'a> Path: TryFrom<&'a TCell>,
-{
-	let is_walkable = cell.is_walkable();
-	Some((key, (transform, Path::try_from(&cell).ok()?, is_walkable)))
-}
-
 macro_rules! apply_graph {
 	($graph:expr, $level:expr, $load_asset:expr) => {{
 		let mut new_graph = GridGraph::<Vec3, Obstacles> {
 			context: $graph.context,
 			..default()
 		};
-		let nodes = $graph.nodes.into_iter().filter_map(with_cell_path);
 
-		for (key, (transform, path, is_walkable)) in nodes {
-			let scene = $load_asset.load_asset(path);
-
+		for (key, (transform, cell)) in $graph.nodes {
 			new_graph.nodes.insert(key, transform.translation);
-			if !is_walkable {
+			if !cell.is_walkable() {
 				new_graph.extra.obstacles.insert(key);
 			}
 
-			$level.with_child((SceneRoot(scene), transform));
+			if let Ok(path) = Path::try_from(&cell) {
+				let scene = $load_asset.load_asset(path);
+				$level.with_child((SceneRoot(scene), transform));
+			}
 		}
 
 		new_graph
@@ -128,9 +115,8 @@ use update_level_graph;
 
 #[cfg(test)]
 mod tests {
-	use crate::grid_graph::grid_context::{GridContext, GridDefinition, GridDefinitionError};
-
 	use super::*;
+	use crate::grid_graph::grid_context::{GridContext, GridDefinition, GridDefinitionError};
 	use bevy::asset::AssetPath;
 	use common::{
 		assert_count,
@@ -357,6 +343,68 @@ mod tests {
 							Transform::from_xyz(3., 4., 5.),
 							_Cell {
 								path: Some(Path::from("A")),
+								is_walkable: false,
+							},
+						),
+					),
+				]),
+				context,
+				..default()
+			}),
+			_LoadScene::new().with_mock(|mock| {
+				mock.expect_load_asset::<Scene, Path>()
+					.return_const(new_handle());
+			}),
+		);
+
+		app.update();
+
+		let levels = app.world().iter_entities().filter_map(|e| e.get::<Level>());
+		let [level] = assert_count!(1, levels);
+		assert_eq!(
+			&Level {
+				graph: GridGraph {
+					nodes: HashMap::from([
+						((0, 0), Vec3::new(1., 2., 3.)),
+						((1, 0), Vec3::new(3., 4., 5.),),
+					]),
+					extra: Obstacles {
+						obstacles: HashSet::from([(1, 0)]),
+					},
+					context,
+				}
+			},
+			level
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn store_graph_cells_with_no_scene_path_in_level() -> Result<(), GridDefinitionError> {
+		let context = GridContext::try_from(GridDefinition {
+			cell_count_x: 2,
+			cell_count_z: 1,
+			cell_distance: 42,
+		})?;
+		let mut app = setup(
+			Some(GridGraph {
+				nodes: HashMap::from([
+					(
+						(0, 0),
+						(
+							Transform::from_xyz(1., 2., 3.),
+							_Cell {
+								path: None,
+								is_walkable: true,
+							},
+						),
+					),
+					(
+						(1, 0),
+						(
+							Transform::from_xyz(3., 4., 5.),
+							_Cell {
+								path: None,
 								is_walkable: false,
 							},
 						),

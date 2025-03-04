@@ -22,9 +22,9 @@ impl<TMoveMethod> AlongPath<TMoveMethod>
 where
 	TMoveMethod: ThreadSafe,
 {
-	pub(crate) fn with_path(path: Vec<Vec3>) -> Self {
+	pub(crate) fn with_path(path: &[Vec3]) -> Self {
 		Self {
-			path: VecDeque::from(path),
+			path: VecDeque::from_iter(path.iter().copied()),
 			_m: PhantomData,
 		}
 	}
@@ -50,6 +50,10 @@ where
 			let end = movement.target;
 			let Some(path) = computer.compute_path(start, end) else {
 				continue;
+			};
+			let path = match path.as_slice() {
+				[_, without_start @ ..] => without_start,
+				empty => empty,
 			};
 
 			commands.try_insert_on(entity, Self::with_path(path));
@@ -112,7 +116,7 @@ mod test_new_path {
 	}
 
 	#[test]
-	fn fill_path() {
+	fn set_path_ignoring_first() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
@@ -133,11 +137,25 @@ mod test_new_path {
 
 		assert_eq!(
 			Some(&AlongPath::<_MoveMethod> {
-				path: VecDeque::from([Vec3::splat(1.), Vec3::splat(2.), Vec3::splat(3.)]),
+				path: VecDeque::from([Vec3::splat(2.), Vec3::splat(3.)]),
 				_m: PhantomData,
 			}),
 			app.world().entity(entity).get::<AlongPath<_MoveMethod>>()
 		);
+	}
+
+	#[test]
+	fn no_panic_if_path_len_zero() {
+		let mut app = setup();
+		app.world_mut().spawn((
+			Movement::<AlongPath<_MoveMethod>>::to(Vec3::default()),
+			GlobalTransform::default(),
+		));
+		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
+			mock.expect_compute_path().return_const(Some(vec![]));
+		}));
+
+		app.update();
 	}
 
 	#[test]
@@ -260,16 +278,13 @@ mod test_movement {
 	#[test]
 	fn insert_movement_from_path() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let end = Vec3::new(1., 2., 3.);
+		let wp = Vec3::new(1., 2., 3.);
 		let entity = app
 			.world_mut()
-			.spawn((
-				GlobalTransform::default(),
-				AlongPath::<_MoveMethod> {
-					path: VecDeque::from([end, Vec3::default()]),
-					_m: PhantomData,
-				},
-			))
+			.spawn(AlongPath::<_MoveMethod> {
+				path: VecDeque::from([wp, Vec3::default()]),
+				_m: PhantomData,
+			})
 			.id();
 
 		app.world_mut()
@@ -279,7 +294,7 @@ mod test_movement {
 			}))?;
 
 		assert_eq!(
-			Some(&Movement::<_MoveMethod>::to(end)),
+			Some(&Movement::<_MoveMethod>::to(wp)),
 			app.world().entity(entity).get::<Movement<_MoveMethod>>()
 		);
 		Ok(())
@@ -291,13 +306,10 @@ mod test_movement {
 		let other = Vec3::new(1., 2., 3.);
 		let entity = app
 			.world_mut()
-			.spawn((
-				GlobalTransform::default(),
-				AlongPath::<_MoveMethod> {
-					path: VecDeque::from([Vec3::default(), other]),
-					_m: PhantomData,
-				},
-			))
+			.spawn(AlongPath::<_MoveMethod> {
+				path: VecDeque::from([Vec3::new(-1., -2., -3.), other]),
+				_m: PhantomData,
+			})
 			.id();
 
 		app.world_mut()
@@ -319,14 +331,11 @@ mod test_movement {
 	#[test]
 	fn is_not_done_when_path_can_be_dequeued() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let end = Vec3::new(1., 2., 3.);
-		app.world_mut().spawn((
-			GlobalTransform::default(),
-			AlongPath::<_MoveMethod> {
-				path: VecDeque::from([end]),
-				_m: PhantomData,
-			},
-		));
+		let wp = Vec3::new(1., 2., 3.);
+		app.world_mut().spawn(AlongPath::<_MoveMethod> {
+			path: VecDeque::from([wp]),
+			_m: PhantomData,
+		});
 
 		let is_done = app
 			.world_mut()
@@ -342,13 +351,10 @@ mod test_movement {
 	#[test]
 	fn is_done_when_path_can_not_be_dequeued() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		app.world_mut().spawn((
-			GlobalTransform::default(),
-			AlongPath::<_MoveMethod> {
-				path: VecDeque::from([]),
-				_m: PhantomData,
-			},
-		));
+		app.world_mut().spawn(AlongPath::<_MoveMethod> {
+			path: VecDeque::from([]),
+			_m: PhantomData,
+		});
 
 		let is_done = app
 			.world_mut()
@@ -366,13 +372,10 @@ mod test_movement {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((
-				GlobalTransform::default(),
-				AlongPath::<_MoveMethod> {
-					path: VecDeque::from([]),
-					_m: PhantomData,
-				},
-			))
+			.spawn(AlongPath::<_MoveMethod> {
+				path: VecDeque::from([]),
+				_m: PhantomData,
+			})
 			.id();
 
 		app.world_mut()
