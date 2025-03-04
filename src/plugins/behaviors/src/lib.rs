@@ -8,9 +8,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
 	effects::deal_damage::DealDamage,
-	labels::Labels,
 	states::{game_state::GameState, mouse_context::MouseContext},
-	systems::insert_required::{InsertOn, InsertRequired},
 	traits::{
 		animation::HasAnimationsDispatch,
 		handles_destruction::HandlesDestruction,
@@ -143,16 +141,6 @@ where
 			)
 			.add_systems(Update, update_cool_downs::<Virtual>)
 			.add_systems(
-				Labels::PREFAB_INSTANTIATION.label(),
-				(
-					InsertOn::<Movement<AlongPath<VelocityBased>>>::required(
-						|Movement { target, .. }| AlongPath::<VelocityBased>::to(*target),
-					),
-					AlongPath::<VelocityBased>::set_path::<TPathFinding::TComputePath>,
-				)
-					.chain(),
-			)
-			.add_systems(
 				Update,
 				(
 					Movement::<VelocityBased>::set_faces,
@@ -164,6 +152,7 @@ where
 				Update,
 				(
 					TPlayers::TPlayerMovement::set::<Movement<AlongPath<VelocityBased>>>,
+					AlongPath::<VelocityBased>::new_path::<TPathFinding::TComputePath>,
 					TPlayers::TPlayerMovement::execute_movement::<Movement<AlongPath<VelocityBased>>>,
 					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
 					TPlayers::TPlayerMovement::animate_movement::<

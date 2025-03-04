@@ -14,6 +14,7 @@ use common::{
 use std::marker::PhantomData;
 
 #[derive(Component, Clone, PartialEq, Debug, Default)]
+#[require(GlobalTransform)]
 pub(crate) struct Movement<TMovement> {
 	pub(crate) target: Vec3,
 	phantom_data: PhantomData<TMovement>,
@@ -34,12 +35,12 @@ impl<TMovement> Movement<TMovement> {
 	) where
 		TMovement: Sync + Send + 'static,
 	{
-		for (entity, movement) in &changed {
-			commands.try_insert_on(entity, SetFace(Face::Translation(movement.target)));
-		}
-
 		for entity in removed.read() {
 			commands.try_remove_from::<SetFace>(entity);
+		}
+
+		for (entity, movement) in &changed {
+			commands.try_insert_on(entity, SetFace(Face::Translation(movement.target)));
 		}
 	}
 
@@ -158,6 +159,27 @@ mod tests {
 		app.update();
 
 		assert_eq!(None, app.world().entity(entity).get::<SetFace>());
+	}
+
+	#[test]
+	fn when_movement_inserted_after_removal_in_same_frame_add_face() {
+		let mut app = setup(Movement::<_T>::set_faces);
+		let entity = app
+			.world_mut()
+			.spawn((Movement::<_T>::to(default()), SetFace(Face::Cursor)))
+			.id();
+
+		app.update();
+		app.world_mut()
+			.entity_mut(entity)
+			.remove::<Movement<_T>>()
+			.insert(Movement::<_T>::to(default()));
+		app.update();
+
+		assert_eq!(
+			Some(&SetFace(Face::Translation(Vec3::default()))),
+			app.world().entity(entity).get::<SetFace>()
+		);
 	}
 
 	impl OnMovementRemoved for Movement<_T> {

@@ -3,14 +3,17 @@ use crate::traits::{IsDone, MovementUpdate};
 use bevy::{ecs::query::QueryItem, prelude::*};
 use common::{
 	tools::UnitsPerSecond,
-	traits::{handles_path_finding::ComputePath, thread_safe::ThreadSafe},
+	traits::{
+		handles_path_finding::ComputePath,
+		thread_safe::ThreadSafe,
+		try_insert_on::TryInsertOn,
+		try_remove_from::TryRemoveFrom,
+	},
 };
 use std::{collections::VecDeque, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq, Default)]
-#[require(GlobalTransform)]
 pub(crate) struct AlongPath<TMoveMethod> {
-	end: Vec3,
 	path: VecDeque<Vec3>,
 	_m: PhantomData<TMoveMethod>,
 }
@@ -19,31 +22,38 @@ impl<TMoveMethod> AlongPath<TMoveMethod>
 where
 	TMoveMethod: ThreadSafe,
 {
-	pub(crate) fn to(end: Vec3) -> Self {
+	pub(crate) fn with_path(path: Vec<Vec3>) -> Self {
 		Self {
-			end,
-			path: VecDeque::from([]),
+			path: VecDeque::from(path),
 			_m: PhantomData,
 		}
 	}
 
-	pub(crate) fn set_path<TComputer>(
+	#[allow(clippy::type_complexity)]
+	pub(crate) fn new_path<TComputer>(
+		mut commands: Commands,
+		mut movements: Query<(Entity, &GlobalTransform, &Movement<Self>), Changed<Movement<Self>>>,
 		computers: Query<&TComputer>,
-		mut paths: Query<(&mut Self, &GlobalTransform), Changed<Self>>,
 	) where
 		TComputer: Component + ComputePath,
 	{
+		if movements.is_empty() {
+			return;
+		}
+
 		let Ok(computer) = computers.get_single() else {
 			return;
 		};
 
-		for (mut path, transform) in &mut paths {
+		for (entity, transform, movement) in &mut movements {
 			let start = transform.translation();
-			let end = path.end;
-			let Some(computed_path) = computer.compute_path(start, end) else {
+			let end = movement.target;
+			let Some(path) = computer.compute_path(start, end) else {
 				continue;
 			};
-			path.path = VecDeque::from(computed_path);
+
+			commands.try_insert_on(entity, Self::with_path(path));
+			commands.try_remove_from::<Movement<TMoveMethod>>(entity);
 		}
 	}
 }
@@ -73,7 +83,7 @@ where
 }
 
 #[cfg(test)]
-mod test_path_building {
+mod test_new_path {
 	use super::*;
 	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
@@ -96,7 +106,7 @@ mod test_path_building {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, AlongPath::<_MoveMethod>::set_path::<_ComputePath>);
+		app.add_systems(Update, AlongPath::<_MoveMethod>::new_path::<_ComputePath>);
 
 		app
 	}
@@ -106,7 +116,10 @@ mod test_path_building {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(AlongPath::<_MoveMethod>::to(Vec3::default()))
+			.spawn((
+				Movement::<AlongPath<_MoveMethod>>::to(Vec3::default()),
+				GlobalTransform::default(),
+			))
 			.id();
 		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
 			mock.expect_compute_path().return_const(Some(vec![
@@ -120,7 +133,6 @@ mod test_path_building {
 
 		assert_eq!(
 			Some(&AlongPath::<_MoveMethod> {
-				end: Vec3::default(),
 				path: VecDeque::from([Vec3::splat(1.), Vec3::splat(2.), Vec3::splat(3.)]),
 				_m: PhantomData,
 			}),
@@ -129,10 +141,37 @@ mod test_path_building {
 	}
 
 	#[test]
+	fn remove_present_movement() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((
+				Movement::<AlongPath<_MoveMethod>>::to(Vec3::default()),
+				GlobalTransform::default(),
+				Movement::<_MoveMethod>::to(Vec3::default()),
+			))
+			.id();
+		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
+			mock.expect_compute_path().return_const(Some(vec![
+				Vec3::splat(1.),
+				Vec3::splat(2.),
+				Vec3::splat(3.),
+			]));
+		}));
+
+		app.update();
+
+		assert_eq!(
+			None,
+			app.world().entity(entity).get::<Movement::<_MoveMethod>>()
+		);
+	}
+
+	#[test]
 	fn compute_path_correctly() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			AlongPath::<_MoveMethod>::to(Vec3::new(4., 5., 6.)),
+			Movement::<AlongPath<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
 			GlobalTransform::from_xyz(1., 2., 3.),
 		));
 
@@ -150,7 +189,7 @@ mod test_path_building {
 	fn do_nothing_if_not_changed() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			AlongPath::<_MoveMethod>::to(Vec3::new(4., 5., 6.)),
+			Movement::<AlongPath<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
 			GlobalTransform::from_xyz(1., 2., 3.),
 		));
 
@@ -163,12 +202,12 @@ mod test_path_building {
 	}
 
 	#[test]
-	fn compute_again_if_mutably_dereferenced() {
+	fn compute_again_if_movement_mutably_dereferenced() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
 			.spawn((
-				AlongPath::<_MoveMethod>::to(Vec3::new(4., 5., 6.)),
+				Movement::<AlongPath<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
 				GlobalTransform::from_xyz(1., 2., 3.),
 			))
 			.id();
@@ -180,7 +219,7 @@ mod test_path_building {
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.get_mut::<AlongPath<_MoveMethod>>()
+			.get_mut::<Movement<AlongPath<_MoveMethod>>>()
 			.as_deref_mut();
 		app.update();
 	}
@@ -227,7 +266,6 @@ mod test_movement {
 			.spawn((
 				GlobalTransform::default(),
 				AlongPath::<_MoveMethod> {
-					end: Vec3::default(),
 					path: VecDeque::from([end, Vec3::default()]),
 					_m: PhantomData,
 				},
@@ -256,7 +294,6 @@ mod test_movement {
 			.spawn((
 				GlobalTransform::default(),
 				AlongPath::<_MoveMethod> {
-					end: Vec3::default(),
 					path: VecDeque::from([Vec3::default(), other]),
 					_m: PhantomData,
 				},
@@ -271,7 +308,6 @@ mod test_movement {
 
 		assert_eq!(
 			Some(&AlongPath::<_MoveMethod> {
-				end: Vec3::default(),
 				path: VecDeque::from([other]),
 				_m: PhantomData,
 			}),
@@ -287,7 +323,6 @@ mod test_movement {
 		app.world_mut().spawn((
 			GlobalTransform::default(),
 			AlongPath::<_MoveMethod> {
-				end: Vec3::default(),
 				path: VecDeque::from([end]),
 				_m: PhantomData,
 			},
@@ -310,7 +345,6 @@ mod test_movement {
 		app.world_mut().spawn((
 			GlobalTransform::default(),
 			AlongPath::<_MoveMethod> {
-				end: Vec3::default(),
 				path: VecDeque::from([]),
 				_m: PhantomData,
 			},
@@ -335,7 +369,6 @@ mod test_movement {
 			.spawn((
 				GlobalTransform::default(),
 				AlongPath::<_MoveMethod> {
-					end: Vec3::default(),
 					path: VecDeque::from([]),
 					_m: PhantomData,
 				},
