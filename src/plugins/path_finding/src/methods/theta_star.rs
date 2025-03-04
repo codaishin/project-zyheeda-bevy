@@ -1,9 +1,5 @@
 use crate::{
-	tools::{
-		closed_list::{ClosedList, walk_without_redundant::WithoutRedundantNodes},
-		g_scores::GScores,
-		open_list::OpenList,
-	},
+	tools::{closed_list::ClosedList, g_scores::GScores, open_list::OpenList},
 	traits::compute_path_lazy::ComputePathLazy,
 };
 use common::traits::handles_map_generation::{
@@ -104,11 +100,7 @@ where
 
 		while let Some(current) = open.pop_lowest_f() {
 			if current == start {
-				let path = closed
-					.walk_back_from(current)
-					.without_redundant_nodes(|a, b| graph.line_of_sight(a, b))
-					.skip(1);
-				return IterPath::Some(path);
+				return IterPath::Some(closed.walk_back_from(current).skip(1));
 			}
 
 			for neighbor in graph.successors(&current) {
