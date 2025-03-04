@@ -62,6 +62,7 @@ where
 		_: UnitsPerSecond,
 	) -> IsDone {
 		let Some(target) = path.path.pop_front() else {
+			agent.remove::<AlongPath<TMoveMethod>>();
 			return IsDone(true);
 		};
 
@@ -323,6 +324,34 @@ mod test_movement {
 			}))?;
 
 		assert_eq!(IsDone(true), is_done);
+		Ok(())
+	}
+
+	#[test]
+	fn remove_path_when_done() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::default(),
+				AlongPath::<_MoveMethod> {
+					end: Vec3::default(),
+					path: VecDeque::from([]),
+					_m: PhantomData,
+				},
+			))
+			.id();
+
+		app.world_mut()
+			.run_system_once(system(|entity, components| {
+				let movement = Movement::<AlongPath<_MoveMethod>>::default();
+				movement.update(entity, components, UnitsPerSecond::new(42.))
+			}))?;
+
+		assert_eq!(
+			None,
+			app.world().entity(entity).get::<AlongPath<_MoveMethod>>()
+		);
 		Ok(())
 	}
 }
