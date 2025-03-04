@@ -8,7 +8,9 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
 	effects::deal_damage::DealDamage,
+	labels::Labels,
 	states::{game_state::GameState, mouse_context::MouseContext},
+	systems::insert_required::{InsertOn, InsertRequired},
 	traits::{
 		animation::HasAnimationsDispatch,
 		handles_destruction::HandlesDestruction,
@@ -16,6 +18,7 @@ use common::{
 		handles_enemies::HandlesEnemies,
 		handles_interactions::HandlesInteractions,
 		handles_orientation::{Face, HandlesOrientation},
+		handles_path_finding::HandlesPathFinding,
 		handles_player::{
 			ConfiguresPlayerMovement,
 			HandlesPlayer,
@@ -38,7 +41,7 @@ use components::{
 	Once,
 	OverrideFace,
 	ground_target::GroundTarget,
-	movement::{Movement, velocity_based::VelocityBased},
+	movement::{Movement, along_path::AlongPath, velocity_based::VelocityBased},
 	set_position_and_rotation::SetPositionAndRotation,
 	set_to_move_forward::SetVelocityForward,
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
@@ -62,12 +65,13 @@ use systems::{
 
 pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies, TPlayers>
+impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers>
 	BehaviorsPlugin<(
 		TAnimations,
 		TPrefabs,
 		TLifeCycles,
 		TInteractions,
+		TPathFinding,
 		TEnemies,
 		TPlayers,
 	)>
@@ -76,6 +80,7 @@ where
 	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLifeCycles: ThreadSafe + HandlesDestruction,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
+	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TEnemies: ThreadSafe + HandlesEnemies,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
@@ -88,6 +93,7 @@ where
 		_: &TPrefabs,
 		_: &TLifeCycles,
 		_: &TInteractions,
+		_: &TPathFinding,
 		_: &TEnemies,
 		_: &TPlayers,
 	) -> Self {
@@ -95,12 +101,13 @@ where
 	}
 }
 
-impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies, TPlayers> Plugin
+impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers> Plugin
 	for BehaviorsPlugin<(
 		TAnimations,
 		TPrefabs,
 		TLifeCycles,
 		TInteractions,
+		TPathFinding,
 		TEnemies,
 		TPlayers,
 	)>
@@ -109,6 +116,7 @@ where
 	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLifeCycles: ThreadSafe + HandlesDestruction,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
+	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TEnemies: ThreadSafe + HandlesEnemies,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
@@ -134,6 +142,16 @@ where
 					.run_if(in_state(GameState::Play)),
 			)
 			.add_systems(Update, update_cool_downs::<Virtual>)
+			.add_systems(
+				Labels::PREFAB_INSTANTIATION.label(),
+				(
+					InsertOn::<Movement<AlongPath<VelocityBased>>>::required(
+						|Movement { target, .. }| AlongPath::<VelocityBased>::to(*target),
+					),
+					AlongPath::<VelocityBased>::set_path::<TPathFinding::TComputePath>,
+				)
+					.chain(),
+			)
 			.add_systems(
 				Update,
 				(

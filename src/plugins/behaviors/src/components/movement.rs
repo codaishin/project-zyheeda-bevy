@@ -1,3 +1,4 @@
+pub(crate) mod along_path;
 pub(crate) mod velocity_based;
 
 use super::SetFace;

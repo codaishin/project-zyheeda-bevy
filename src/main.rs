@@ -59,6 +59,7 @@ fn prepare_game(app: &mut App) {
 		&prefabs_plugin,
 		&life_cycles_plugin,
 		&interactions_plugin,
+		&path_finding_plugin,
 		&enemy_plugin,
 		&player_plugin,
 	);
