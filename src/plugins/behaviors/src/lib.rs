@@ -155,7 +155,7 @@ where
 			.add_systems(
 				Update,
 				(
-					Movement::<VelocityBased>::update,
+					Movement::<VelocityBased>::set_faces,
 					Movement::<VelocityBased>::cleanup,
 				)
 					.chain(),
@@ -164,12 +164,14 @@ where
 				Update,
 				(
 					TPlayers::TPlayerMovement::set_movement,
+					TPlayers::TPlayerMovement::execute_movement::<Movement<AlongPath<VelocityBased>>>,
+					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
 					TPlayers::TPlayerMovement::animate_movement::<
 						Movement<VelocityBased>,
 						TAnimations::TAnimationDispatch,
 					>,
-					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
-				),
+				)
+					.chain(),
 			)
 			.add_systems(
 				Update,

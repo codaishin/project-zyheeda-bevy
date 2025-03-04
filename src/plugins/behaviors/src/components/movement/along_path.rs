@@ -1,8 +1,13 @@
-use bevy::prelude::*;
-use common::traits::{handles_path_finding::ComputePath, thread_safe::ThreadSafe};
+use super::Movement;
+use crate::traits::{IsDone, MovementUpdate};
+use bevy::{ecs::query::QueryItem, prelude::*};
+use common::{
+	tools::UnitsPerSecond,
+	traits::{handles_path_finding::ComputePath, thread_safe::ThreadSafe},
+};
 use std::{collections::VecDeque, marker::PhantomData};
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Default)]
 #[require(GlobalTransform)]
 pub(crate) struct AlongPath<TMoveMethod> {
 	end: Vec3,
@@ -43,8 +48,31 @@ where
 	}
 }
 
+impl<TMoveMethod> MovementUpdate for Movement<AlongPath<TMoveMethod>>
+where
+	TMoveMethod: ThreadSafe,
+{
+	type TComponents<'a> = &'a mut AlongPath<TMoveMethod>;
+	type TConstraint = Without<Movement<TMoveMethod>>;
+
+	fn update(
+		&self,
+		agent: &mut EntityCommands,
+		mut path: QueryItem<Self::TComponents<'_>>,
+		_: UnitsPerSecond,
+	) -> IsDone {
+		let Some(target) = path.path.pop_front() else {
+			return IsDone(true);
+		};
+
+		agent.try_insert(Movement::<TMoveMethod>::to(target));
+
+		IsDone(false)
+	}
+}
+
 #[cfg(test)]
-mod tests {
+mod test_path_building {
 	use super::*;
 	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
@@ -154,5 +182,147 @@ mod tests {
 			.get_mut::<AlongPath<_MoveMethod>>()
 			.as_deref_mut();
 		app.update();
+	}
+}
+
+#[cfg(test)]
+mod test_movement {
+	use super::*;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		traits::clamp_zero_positive::ClampZeroPositive,
+	};
+
+	#[derive(Debug, PartialEq, Default)]
+	struct _MoveMethod;
+
+	fn system(
+		func: impl Fn(&mut EntityCommands, QueryItem<&mut AlongPath<_MoveMethod>>) -> IsDone,
+	) -> impl Fn(Commands, Query<(Entity, &mut AlongPath<_MoveMethod>)>) -> IsDone {
+		move |mut commands, mut query| {
+			let Ok((entity, path)) = query.get_single_mut() else {
+				return IsDone(false);
+			};
+
+			let Some(mut entity) = commands.get_entity(entity) else {
+				return IsDone(false);
+			};
+
+			func(&mut entity, path)
+		}
+	}
+
+	fn setup() -> App {
+		App::new().single_threaded(Update)
+	}
+
+	#[test]
+	fn insert_movement_from_path() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let end = Vec3::new(1., 2., 3.);
+		let entity = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::default(),
+				AlongPath::<_MoveMethod> {
+					end: Vec3::default(),
+					path: VecDeque::from([end, Vec3::default()]),
+					_m: PhantomData,
+				},
+			))
+			.id();
+
+		app.world_mut()
+			.run_system_once(system(move |entity, components| {
+				let movement = Movement::<AlongPath<_MoveMethod>>::default();
+				movement.update(entity, components, UnitsPerSecond::new(42.))
+			}))?;
+
+		assert_eq!(
+			Some(&Movement::<_MoveMethod>::to(end)),
+			app.world().entity(entity).get::<Movement<_MoveMethod>>()
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn dequeue_path() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let other = Vec3::new(1., 2., 3.);
+		let entity = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::default(),
+				AlongPath::<_MoveMethod> {
+					end: Vec3::default(),
+					path: VecDeque::from([Vec3::default(), other]),
+					_m: PhantomData,
+				},
+			))
+			.id();
+
+		app.world_mut()
+			.run_system_once(system(move |entity, components| {
+				let movement = Movement::<AlongPath<_MoveMethod>>::default();
+				movement.update(entity, components, UnitsPerSecond::new(42.))
+			}))?;
+
+		assert_eq!(
+			Some(&AlongPath::<_MoveMethod> {
+				end: Vec3::default(),
+				path: VecDeque::from([other]),
+				_m: PhantomData,
+			}),
+			app.world().entity(entity).get::<AlongPath<_MoveMethod>>()
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn is_not_done_when_path_can_be_dequeued() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let end = Vec3::new(1., 2., 3.);
+		app.world_mut().spawn((
+			GlobalTransform::default(),
+			AlongPath::<_MoveMethod> {
+				end: Vec3::default(),
+				path: VecDeque::from([end]),
+				_m: PhantomData,
+			},
+		));
+
+		let is_done = app
+			.world_mut()
+			.run_system_once(system(|entity, components| {
+				let movement = Movement::<AlongPath<_MoveMethod>>::default();
+				movement.update(entity, components, UnitsPerSecond::new(42.))
+			}))?;
+
+		assert_eq!(IsDone(false), is_done);
+		Ok(())
+	}
+
+	#[test]
+	fn is_done_when_path_can_not_be_dequeued() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		app.world_mut().spawn((
+			GlobalTransform::default(),
+			AlongPath::<_MoveMethod> {
+				end: Vec3::default(),
+				path: VecDeque::from([]),
+				_m: PhantomData,
+			},
+		));
+
+		let is_done = app
+			.world_mut()
+			.run_system_once(system(|entity, components| {
+				let movement = Movement::<AlongPath<_MoveMethod>>::default();
+				movement.update(entity, components, UnitsPerSecond::new(42.))
+			}))?;
+
+		assert_eq!(IsDone(true), is_done);
+		Ok(())
 	}
 }

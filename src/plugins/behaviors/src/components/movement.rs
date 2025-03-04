@@ -27,7 +27,7 @@ impl<TMovement> Movement<TMovement> {
 		}
 	}
 
-	pub(crate) fn update(
+	pub(crate) fn set_faces(
 		mut commands: Commands,
 		mut removed: RemovedComponents<Self>,
 		changed: Query<(Entity, &Self), Changed<Self>>,
@@ -90,7 +90,7 @@ mod tests {
 
 	#[test]
 	fn set_to_face_translation_on_update() {
-		let mut app = setup(Movement::<_T>::update);
+		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
 			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
@@ -106,7 +106,7 @@ mod tests {
 
 	#[test]
 	fn do_not_set_to_face_translation_on_update_when_not_added() {
-		let mut app = setup(Movement::<_T>::update);
+		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
 			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
@@ -121,7 +121,7 @@ mod tests {
 
 	#[test]
 	fn set_to_face_translation_on_update_when_changed() {
-		let mut app = setup(Movement::<_T>::update);
+		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
 			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
@@ -141,7 +141,7 @@ mod tests {
 
 	#[test]
 	fn remove_set_face_on_update_when_removed() {
-		let mut app = setup(Movement::<_T>::update);
+		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
 			.spawn((Movement::<_T>::to(default()), SetFace(Face::Cursor)))
