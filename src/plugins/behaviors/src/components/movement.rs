@@ -1,3 +1,4 @@
+pub(crate) mod along_path;
 pub(crate) mod velocity_based;
 
 use super::SetFace;
@@ -13,6 +14,7 @@ use common::{
 use std::marker::PhantomData;
 
 #[derive(Component, Clone, PartialEq, Debug, Default)]
+#[require(GlobalTransform)]
 pub(crate) struct Movement<TMovement> {
 	pub(crate) target: Vec3,
 	phantom_data: PhantomData<TMovement>,
@@ -26,19 +28,19 @@ impl<TMovement> Movement<TMovement> {
 		}
 	}
 
-	pub(crate) fn update(
+	pub(crate) fn set_faces(
 		mut commands: Commands,
 		mut removed: RemovedComponents<Self>,
 		changed: Query<(Entity, &Self), Changed<Self>>,
 	) where
 		TMovement: Sync + Send + 'static,
 	{
-		for (entity, movement) in &changed {
-			commands.try_insert_on(entity, SetFace(Face::Translation(movement.target)));
-		}
-
 		for entity in removed.read() {
 			commands.try_remove_from::<SetFace>(entity);
+		}
+
+		for (entity, movement) in &changed {
+			commands.try_insert_on(entity, SetFace(Face::Translation(movement.target)));
 		}
 	}
 
@@ -67,6 +69,12 @@ impl<TMovement> ApproxEqual<f32> for Movement<TMovement> {
 	}
 }
 
+impl<TMovement> From<Vec3> for Movement<TMovement> {
+	fn from(target: Vec3) -> Self {
+		Self::to(target)
+	}
+}
+
 pub(crate) trait OnMovementRemoved {
 	type TConstraint: QueryFilter;
 
@@ -89,7 +97,7 @@ mod tests {
 
 	#[test]
 	fn set_to_face_translation_on_update() {
-		let mut app = setup(Movement::<_T>::update);
+		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
 			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
@@ -105,7 +113,7 @@ mod tests {
 
 	#[test]
 	fn do_not_set_to_face_translation_on_update_when_not_added() {
-		let mut app = setup(Movement::<_T>::update);
+		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
 			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
@@ -120,7 +128,7 @@ mod tests {
 
 	#[test]
 	fn set_to_face_translation_on_update_when_changed() {
-		let mut app = setup(Movement::<_T>::update);
+		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
 			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
@@ -140,7 +148,7 @@ mod tests {
 
 	#[test]
 	fn remove_set_face_on_update_when_removed() {
-		let mut app = setup(Movement::<_T>::update);
+		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
 			.spawn((Movement::<_T>::to(default()), SetFace(Face::Cursor)))
@@ -151,6 +159,27 @@ mod tests {
 		app.update();
 
 		assert_eq!(None, app.world().entity(entity).get::<SetFace>());
+	}
+
+	#[test]
+	fn when_movement_inserted_after_removal_in_same_frame_add_face() {
+		let mut app = setup(Movement::<_T>::set_faces);
+		let entity = app
+			.world_mut()
+			.spawn((Movement::<_T>::to(default()), SetFace(Face::Cursor)))
+			.id();
+
+		app.update();
+		app.world_mut()
+			.entity_mut(entity)
+			.remove::<Movement<_T>>()
+			.insert(Movement::<_T>::to(default()));
+		app.update();
+
+		assert_eq!(
+			Some(&SetFace(Face::Translation(Vec3::default()))),
+			app.world().entity(entity).get::<SetFace>()
+		);
 	}
 
 	impl OnMovementRemoved for Movement<_T> {

@@ -16,6 +16,7 @@ use common::{
 		handles_enemies::HandlesEnemies,
 		handles_interactions::HandlesInteractions,
 		handles_orientation::{Face, HandlesOrientation},
+		handles_path_finding::HandlesPathFinding,
 		handles_player::{
 			ConfiguresPlayerMovement,
 			HandlesPlayer,
@@ -38,7 +39,7 @@ use components::{
 	Once,
 	OverrideFace,
 	ground_target::GroundTarget,
-	movement::{Movement, velocity_based::VelocityBased},
+	movement::{Movement, along_path::AlongPath, velocity_based::VelocityBased},
 	set_position_and_rotation::SetPositionAndRotation,
 	set_to_move_forward::SetVelocityForward,
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
@@ -62,12 +63,13 @@ use systems::{
 
 pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies, TPlayers>
+impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers>
 	BehaviorsPlugin<(
 		TAnimations,
 		TPrefabs,
 		TLifeCycles,
 		TInteractions,
+		TPathFinding,
 		TEnemies,
 		TPlayers,
 	)>
@@ -76,6 +78,7 @@ where
 	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLifeCycles: ThreadSafe + HandlesDestruction,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
+	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TEnemies: ThreadSafe + HandlesEnemies,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
@@ -88,6 +91,7 @@ where
 		_: &TPrefabs,
 		_: &TLifeCycles,
 		_: &TInteractions,
+		_: &TPathFinding,
 		_: &TEnemies,
 		_: &TPlayers,
 	) -> Self {
@@ -95,12 +99,13 @@ where
 	}
 }
 
-impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TEnemies, TPlayers> Plugin
+impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers> Plugin
 	for BehaviorsPlugin<(
 		TAnimations,
 		TPrefabs,
 		TLifeCycles,
 		TInteractions,
+		TPathFinding,
 		TEnemies,
 		TPlayers,
 	)>
@@ -109,6 +114,7 @@ where
 	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLifeCycles: ThreadSafe + HandlesDestruction,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
+	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TEnemies: ThreadSafe + HandlesEnemies,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
@@ -137,7 +143,7 @@ where
 			.add_systems(
 				Update,
 				(
-					Movement::<VelocityBased>::update,
+					Movement::<VelocityBased>::set_faces,
 					Movement::<VelocityBased>::cleanup,
 				)
 					.chain(),
@@ -145,13 +151,16 @@ where
 			.add_systems(
 				Update,
 				(
-					TPlayers::TPlayerMovement::set_movement,
+					TPlayers::TPlayerMovement::set::<Movement<AlongPath<VelocityBased>>>,
+					AlongPath::<VelocityBased>::new_path::<TPathFinding::TComputePath>,
+					TPlayers::TPlayerMovement::execute_movement::<Movement<AlongPath<VelocityBased>>>,
+					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
 					TPlayers::TPlayerMovement::animate_movement::<
 						Movement<VelocityBased>,
 						TAnimations::TAnimationDispatch,
 					>,
-					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
-				),
+				)
+					.chain(),
 			)
 			.add_systems(
 				Update,

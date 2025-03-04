@@ -1,18 +1,16 @@
-use crate::{
-	components::movement::{Movement, velocity_based::VelocityBased},
-	events::MoveInputEvent,
-};
+use crate::events::MoveInputEvent;
 use bevy::prelude::*;
 
 impl<T> SetPlayerMovement for T {}
 
 pub trait SetPlayerMovement {
-	fn set_movement(
+	fn set<TMovement>(
 		mut commands: Commands,
 		mut move_input_events: EventReader<MoveInputEvent>,
 		players: Query<Entity, With<Self>>,
 	) where
 		Self: Component + Sized,
+		TMovement: Component + From<Vec3>,
 	{
 		let Ok(player) = players.get_single() else {
 			return;
@@ -23,7 +21,7 @@ pub trait SetPlayerMovement {
 
 		for event in move_input_events.read() {
 			let target = event.0;
-			player.try_insert(Movement::<VelocityBased>::to(target));
+			player.try_insert(TMovement::from(target));
 		}
 	}
 }
@@ -33,12 +31,21 @@ mod tests {
 	use super::*;
 	use common::test_tools::utils::SingleThreadedApp;
 
+	#[derive(Component, Debug, PartialEq)]
+	struct _Movement(Vec3);
+
+	impl From<Vec3> for _Movement {
+		fn from(target: Vec3) -> Self {
+			Self(target)
+		}
+	}
+
 	#[derive(Component)]
 	struct _Player;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, _Player::set_movement);
+		app.add_systems(Update, _Player::set::<_Movement>);
 		app.add_event::<MoveInputEvent>();
 
 		app
@@ -54,8 +61,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Movement::<VelocityBased>::to(Vec3::new(1., 2., 3.))),
-			app.world().entity(player).get::<Movement<VelocityBased>>(),
+			Some(&_Movement(Vec3::new(1., 2., 3.))),
+			app.world().entity(player).get::<_Movement>(),
 		);
 	}
 }
