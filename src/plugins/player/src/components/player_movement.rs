@@ -1,6 +1,11 @@
 use bevy::prelude::Component;
 use common::{
-	tools::{UnitsPerSecond, movement_animation::MovementAnimation, speed::Speed},
+	tools::{
+		UnitsPerSecond,
+		collider_radius::ColliderRadius,
+		movement_animation::MovementAnimation,
+		speed::Speed,
+	},
 	traits::{
 		accessors::get::{Getter, GetterRefOptional},
 		animation::{Animation, PlayMode},
@@ -10,6 +15,7 @@ use common::{
 
 #[derive(Component, Clone, Debug, PartialEq, Default)]
 pub struct PlayerMovement {
+	pub(crate) collider_radius: ColliderRadius,
 	pub(crate) mode: MovementMode,
 	pub(crate) fast: Config,
 	pub(crate) slow: Config,
@@ -43,6 +49,12 @@ impl Getter<Speed> for PlayerMovement {
 			MovementMode::Fast => self.fast.speed,
 			MovementMode::Slow => self.slow.speed,
 		}
+	}
+}
+
+impl Getter<ColliderRadius> for PlayerMovement {
+	fn get(&self) -> ColliderRadius {
+		self.collider_radius
 	}
 }
 

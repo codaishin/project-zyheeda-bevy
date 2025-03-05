@@ -4,6 +4,7 @@ use super::{
 };
 use crate::tools::{
 	collider_info::ColliderInfo,
+	collider_radius::ColliderRadius,
 	movement_animation::MovementAnimation,
 	slot_key::SlotKey,
 	speed::Speed,
@@ -27,7 +28,10 @@ pub trait HandlesPlayerMouse {
 }
 
 pub trait ConfiguresPlayerMovement {
-	type TPlayerMovement: Component + Getter<Speed> + GetterRefOptional<MovementAnimation>;
+	type TPlayerMovement: Component
+		+ Getter<Speed>
+		+ Getter<ColliderRadius>
+		+ GetterRefOptional<MovementAnimation>;
 }
 
 pub trait ConfiguresPlayerSkillAnimations {
