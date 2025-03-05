@@ -20,20 +20,20 @@ use std::{
 };
 
 #[derive(Debug, PartialEq, Default, Clone)]
-pub struct GridGraph<TValue = Vec3, TExtra = Obstacles, TGridContext = GridContext> {
+pub struct GridGraph<TValue = Cell<Vec3>, TExtra = Obstacles, TGridContext = GridContext> {
 	pub(crate) nodes: HashMap<(i32, i32), TValue>,
 	pub(crate) extra: TExtra,
 	pub(crate) context: TGridContext,
 }
 
-impl<TGridContext> Graph for GridGraph<Vec3, Obstacles, TGridContext>
+impl<TGridContext> Graph for GridGraph<Cell<Vec3>, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
 	type TNode = GridGraphNode;
 }
 
-impl<TGridContext> GraphNode for GridGraph<Vec3, Obstacles, TGridContext>
+impl<TGridContext> GraphNode for GridGraph<Cell<Vec3>, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -50,7 +50,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphSuccessors for GridGraph<Vec3, Obstacles, TGridContext>
+impl<TGridContext> GraphSuccessors for GridGraph<Cell<Vec3>, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -69,7 +69,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphLineOfSight for GridGraph<Vec3, Obstacles, TGridContext>
+impl<TGridContext> GraphLineOfSight for GridGraph<Cell<Vec3>, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -80,14 +80,14 @@ where
 	}
 }
 
-impl<TGridContext> GraphTranslation for GridGraph<Vec3, Obstacles, TGridContext>
+impl<TGridContext> GraphTranslation for GridGraph<Cell<Vec3>, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
 	type TTNode = GridGraphNode;
 
 	fn translation(&self, GridGraphNode { key }: &Self::TTNode) -> Vec3 {
-		match self.nodes.get(key).copied() {
+		match self.nodes.get(key).map(|n| n.value) {
 			Some(translation) => translation,
 			None => unreachable!(
 				"Tried retrieving translation of an invalid node, should not have happened. \
@@ -97,7 +97,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphObstacle for GridGraph<Vec3, Obstacles, TGridContext>
+impl<TGridContext> GraphObstacle for GridGraph<Cell<Vec3>, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -110,7 +110,6 @@ where
 
 impl<TValue, TExtra> IntoIterator for GridGraph<TValue, TExtra> {
 	type Item = TValue;
-
 	type IntoIter = Iter<TValue>;
 
 	fn into_iter(self) -> Self::IntoIter {
@@ -128,10 +127,33 @@ impl<TValue> Iterator for Iter<TValue> {
 	type Item = TValue;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		let (.., value) = self.it.next()?;
+		let (.., next) = self.it.next()?;
 
-		Some(value)
+		Some(next)
 	}
+}
+
+#[derive(Debug, PartialEq, Default, Clone)]
+pub struct Cell<TValue> {
+	pub(crate) value: TValue,
+	pub(crate) obstacle_quadrants: HashSet<Quadrant>,
+}
+
+impl<TValue> Cell<TValue> {
+	pub(crate) fn not_bordering_obstacles(value: TValue) -> Self {
+		Self {
+			value,
+			obstacle_quadrants: HashSet::from([]),
+		}
+	}
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub(crate) enum Quadrant {
+	NegXNegZ,
+	NegXPosZ,
+	PosXNegZ,
+	PosXPosZ,
 }
 
 const NEIGHBORS: &[(i32, i32)] = &[
@@ -197,7 +219,13 @@ mod tests {
 	#[test]
 	fn gat_matching_node() {
 		let graph = GridGraph {
-			nodes: HashMap::from([((1, 2), Vec3::new(1., 2., 3.))]),
+			nodes: HashMap::from([(
+				(1, 2),
+				Cell {
+					value: Vec3::new(1., 2., 3.),
+					..default()
+				},
+			)]),
 			extra: default(),
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for().return_const((1, 2));
@@ -212,7 +240,13 @@ mod tests {
 	#[test]
 	fn gat_matching_node_none() {
 		let graph = GridGraph {
-			nodes: HashMap::from([((1, 2), Vec3::new(1., 2., 3.))]),
+			nodes: HashMap::from([(
+				(1, 2),
+				Cell {
+					value: Vec3::new(1., 2., 3.),
+					..default()
+				},
+			)]),
 			extra: default(),
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for().return_const((1, 3));
@@ -227,7 +261,13 @@ mod tests {
 	#[test]
 	fn supply_key_getter_with_proper_arguments() {
 		let graph = GridGraph {
-			nodes: HashMap::from([((1, 2), Vec3::new(1., 2., 3.))]),
+			nodes: HashMap::from([(
+				(1, 2),
+				Cell {
+					value: Vec3::new(1., 2., 3.),
+					..default()
+				},
+			)]),
 			extra: default(),
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
@@ -243,7 +283,13 @@ mod tests {
 	#[test]
 	fn node_is_obstacle() {
 		let graph = GridGraph {
-			nodes: HashMap::from([((1, 2), Vec3::default())]),
+			nodes: HashMap::from([(
+				(1, 2),
+				Cell {
+					value: Vec3::default(),
+					..default()
+				},
+			)]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(1, 2)]),
 			},
@@ -262,16 +308,16 @@ mod tests {
 	fn get_neighbors() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Vec3::default()),
-				((1, 2), Vec3::default()),
-				((1, 3), Vec3::default()),
-				((2, 1), Vec3::default()),
-				((2, 2), Vec3::default()),
-				((2, 3), Vec3::default()),
-				((3, 1), Vec3::default()),
-				((3, 3), Vec3::default()),
-				((3, 4), Vec3::default()),
-				((1, 4), Vec3::default()),
+				((1, 1), Cell::<Vec3>::default()),
+				((1, 2), Cell::<Vec3>::default()),
+				((1, 3), Cell::<Vec3>::default()),
+				((2, 1), Cell::<Vec3>::default()),
+				((2, 2), Cell::<Vec3>::default()),
+				((2, 3), Cell::<Vec3>::default()),
+				((3, 1), Cell::<Vec3>::default()),
+				((3, 3), Cell::<Vec3>::default()),
+				((3, 4), Cell::<Vec3>::default()),
+				((1, 4), Cell::<Vec3>::default()),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(1, 2), (3, 1)]),

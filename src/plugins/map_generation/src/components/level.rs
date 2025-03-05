@@ -1,5 +1,5 @@
 use crate::{
-	grid_graph::{GridGraph, Obstacles},
+	grid_graph::{Cell, GridGraph, Obstacles},
 	traits::{GridCellDistanceDefinition, is_walkable::IsWalkable},
 };
 use bevy::prelude::*;
@@ -67,13 +67,14 @@ pub(crate) fn spawn<TCell, TAsset>(
 
 macro_rules! apply_graph {
 	($graph:expr, $level:expr, $load_asset:expr) => {{
-		let mut new_graph = GridGraph::<Vec3, Obstacles> {
+		let mut new_graph = GridGraph::<Cell<Vec3>, Obstacles> {
 			context: $graph.context,
 			..default()
 		};
 
 		for (key, (transform, cell)) in $graph.nodes {
-			new_graph.nodes.insert(key, transform.translation);
+			let node = Cell::not_bordering_obstacles(transform.translation);
+			new_graph.nodes.insert(key, node);
 			if !cell.is_walkable() {
 				new_graph.extra.obstacles.insert(key);
 			}
@@ -365,8 +366,11 @@ mod tests {
 			&Level {
 				graph: GridGraph {
 					nodes: HashMap::from([
-						((0, 0), Vec3::new(1., 2., 3.)),
-						((1, 0), Vec3::new(3., 4., 5.),),
+						((0, 0), Cell::not_bordering_obstacles(Vec3::new(1., 2., 3.))),
+						(
+							(1, 0),
+							Cell::not_bordering_obstacles(Vec3::new(3., 4., 5.),)
+						),
 					]),
 					extra: Obstacles {
 						obstacles: HashSet::from([(1, 0)]),
@@ -427,8 +431,8 @@ mod tests {
 			&Level {
 				graph: GridGraph {
 					nodes: HashMap::from([
-						((0, 0), Vec3::new(1., 2., 3.)),
-						((1, 0), Vec3::new(3., 4., 5.),),
+						((0, 0), Cell::not_bordering_obstacles(Vec3::new(1., 2., 3.))),
+						((1, 0), Cell::not_bordering_obstacles(Vec3::new(3., 4., 5.)),),
 					]),
 					extra: Obstacles {
 						obstacles: HashSet::from([(1, 0)]),
