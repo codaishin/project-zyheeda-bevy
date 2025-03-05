@@ -52,8 +52,8 @@ where
 				continue;
 			};
 			let path = match path.as_slice() {
-				[_, without_start @ ..] => without_start,
-				empty => empty,
+				[first, rest @ ..] if first == &start => rest,
+				path => path,
 			};
 
 			commands.try_insert_on(entity, Self::with_path(path));
@@ -116,13 +116,42 @@ mod test_new_path {
 	}
 
 	#[test]
-	fn set_path_ignoring_first() {
+	fn set_path() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
 			.spawn((
 				Movement::<AlongPath<_MoveMethod>>::to(Vec3::default()),
 				GlobalTransform::default(),
+			))
+			.id();
+		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
+			mock.expect_compute_path().return_const(Some(vec![
+				Vec3::splat(1.),
+				Vec3::splat(2.),
+				Vec3::splat(3.),
+			]));
+		}));
+
+		app.update();
+
+		assert_eq!(
+			Some(&AlongPath::<_MoveMethod> {
+				path: VecDeque::from([Vec3::splat(1.), Vec3::splat(2.), Vec3::splat(3.)]),
+				_m: PhantomData,
+			}),
+			app.world().entity(entity).get::<AlongPath<_MoveMethod>>()
+		);
+	}
+
+	#[test]
+	fn set_path_ignoring_first_when_matching_translation() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((
+				Movement::<AlongPath<_MoveMethod>>::to(Vec3::default()),
+				GlobalTransform::from_translation(Vec3::splat(1.)),
 			))
 			.id();
 		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
