@@ -11,10 +11,10 @@ impl From<Units> for ColliderRadius {
 }
 
 impl Deref for ColliderRadius {
-	type Target = f32;
+	type Target = Units;
 
 	fn deref(&self) -> &Self::Target {
-		let ColliderRadius(Units(radius)) = self;
+		let ColliderRadius(radius) = self;
 		radius
 	}
 }

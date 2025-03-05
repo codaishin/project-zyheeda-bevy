@@ -178,7 +178,7 @@ where
 				Collider::capsule(
 					Vec3::new(0.0, 0.2, -0.05),
 					Vec3::new(0.0, 1.4, -0.05),
-					*Self::collider_radius(),
+					**Self::collider_radius(),
 				),
 				ColliderRoot(root),
 			));
