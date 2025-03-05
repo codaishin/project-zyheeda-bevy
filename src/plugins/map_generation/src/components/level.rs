@@ -1,9 +1,10 @@
 use crate::{
-	grid_graph::{Cell, GridGraph, Obstacles},
+	grid_graph::{GridCell, GridGraph, NEIGHBORS, Obstacles, Quadrant},
 	traits::{GridCellDistanceDefinition, is_walkable::IsWalkable},
 };
 use bevy::prelude::*;
 use common::traits::load_asset::{LoadAsset, Path};
+use std::collections::HashSet;
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(Name(Self::name), Transform, Visibility)]
@@ -67,17 +68,26 @@ pub(crate) fn spawn<TCell, TAsset>(
 
 macro_rules! apply_graph {
 	($graph:expr, $level:expr, $load_asset:expr) => {{
-		let mut new_graph = GridGraph::<Cell<Vec3>, Obstacles> {
+		let obstacles = get_obstacles(&$graph);
+		let mut new_graph = GridGraph::<GridCell<Vec3>, Obstacles> {
 			context: $graph.context,
+			extra: Obstacles { obstacles },
 			..default()
 		};
 
 		for (key, (transform, cell)) in $graph.nodes {
-			let node = Cell::not_bordering_obstacles(transform.translation);
-			new_graph.nodes.insert(key, node);
-			if !cell.is_walkable() {
-				new_graph.extra.obstacles.insert(key);
+			let mut obstacle_quadrants = HashSet::from([]);
+
+			for (dir_x, dir_z) in obstacle_neighbors(&new_graph.extra.obstacles, &key) {
+				obstacle_quadrants.extend(Quadrant::from_direction(dir_x, dir_z));
 			}
+
+			let node = GridCell {
+				value: transform.translation,
+				obstacle_quadrants,
+			};
+
+			new_graph.nodes.insert(key, node);
 
 			if let Ok(path) = Path::try_from(&cell) {
 				let scene = $load_asset.load_asset(path);
@@ -114,10 +124,36 @@ macro_rules! update_level_graph {
 }
 use update_level_graph;
 
+fn get_obstacles<TCell, TExtra>(
+	graph: &GridGraph<(Transform, TCell), TExtra>,
+) -> HashSet<(i32, i32)>
+where
+	TCell: IsWalkable,
+{
+	graph
+		.nodes
+		.iter()
+		.filter(|(_, (_, cell))| !cell.is_walkable())
+		.map(|(key, _)| *key)
+		.collect()
+}
+
+fn obstacle_neighbors(
+	obstacles: &HashSet<(i32, i32)>,
+	(x, z): &(i32, i32),
+) -> impl Iterator<Item = (i32, i32)> {
+	NEIGHBORS
+		.into_iter()
+		.filter(move |(dir_x, dir_z)| obstacles.contains(&(x + dir_x, z + dir_z)))
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::grid_graph::grid_context::{GridContext, GridDefinition, GridDefinitionError};
+	use crate::grid_graph::{
+		Quadrant,
+		grid_context::{GridContext, GridDefinition, GridDefinitionError},
+	};
 	use bevy::asset::AssetPath;
 	use common::{
 		assert_count,
@@ -344,7 +380,7 @@ mod tests {
 							Transform::from_xyz(3., 4., 5.),
 							_Cell {
 								path: Some(Path::from("A")),
-								is_walkable: false,
+								is_walkable: true,
 							},
 						),
 					),
@@ -366,14 +402,11 @@ mod tests {
 			&Level {
 				graph: GridGraph {
 					nodes: HashMap::from([
-						((0, 0), Cell::not_bordering_obstacles(Vec3::new(1., 2., 3.))),
-						(
-							(1, 0),
-							Cell::not_bordering_obstacles(Vec3::new(3., 4., 5.),)
-						),
+						((0, 0), GridCell::new(Vec3::new(1., 2., 3.))),
+						((1, 0), GridCell::new(Vec3::new(3., 4., 5.),)),
 					]),
 					extra: Obstacles {
-						obstacles: HashSet::from([(1, 0)]),
+						obstacles: HashSet::from([]),
 					},
 					context,
 				}
@@ -409,7 +442,7 @@ mod tests {
 							Transform::from_xyz(3., 4., 5.),
 							_Cell {
 								path: None,
-								is_walkable: false,
+								is_walkable: true,
 							},
 						),
 					),
@@ -431,11 +464,83 @@ mod tests {
 			&Level {
 				graph: GridGraph {
 					nodes: HashMap::from([
-						((0, 0), Cell::not_bordering_obstacles(Vec3::new(1., 2., 3.))),
-						((1, 0), Cell::not_bordering_obstacles(Vec3::new(3., 4., 5.)),),
+						((0, 0), GridCell::new(Vec3::new(1., 2., 3.))),
+						((1, 0), GridCell::new(Vec3::new(3., 4., 5.)),),
 					]),
 					extra: Obstacles {
-						obstacles: HashSet::from([(1, 0)]),
+						obstacles: HashSet::from([]),
+					},
+					context,
+				}
+			},
+			level
+		);
+		Ok(())
+	}
+
+	fn walkable(is_walkable: bool) -> (Transform, _Cell) {
+		(
+			Transform::default(),
+			_Cell {
+				path: None,
+				is_walkable,
+			},
+		)
+	}
+
+	fn obstacles<const N: usize>(obstacles: [Quadrant; N]) -> GridCell<Vec3> {
+		GridCell::default().bordering_obstacles(obstacles)
+	}
+
+	#[test]
+	fn store_quadrant_info_about_bordering_obstacles() -> Result<(), GridDefinitionError> {
+		let context = GridContext::try_from(GridDefinition {
+			cell_count_x: 3,
+			cell_count_z: 3,
+			cell_distance: 42,
+		})?;
+		let mut app = setup(
+			Some(GridGraph {
+				nodes: HashMap::from([
+					((0, 0), walkable(true)),
+					((0, 1), walkable(true)),
+					((0, 2), walkable(true)),
+					((1, 0), walkable(true)),
+					((1, 1), walkable(false)),
+					((1, 2), walkable(true)),
+					((2, 0), walkable(true)),
+					((2, 1), walkable(true)),
+					((2, 2), walkable(true)),
+				]),
+				context,
+				..default()
+			}),
+			_LoadScene::new().with_mock(|mock| {
+				mock.expect_load_asset::<Scene, Path>()
+					.return_const(new_handle());
+			}),
+		);
+
+		app.update();
+
+		let levels = app.world().iter_entities().filter_map(|e| e.get::<Level>());
+		let [level] = assert_count!(1, levels);
+		assert_eq!(
+			&Level {
+				graph: GridGraph {
+					nodes: HashMap::from([
+						((0, 0), obstacles([Quadrant::PosXPosZ])),
+						((0, 1), obstacles([Quadrant::PosXPosZ, Quadrant::PosXNegZ])),
+						((0, 2), obstacles([Quadrant::PosXNegZ])),
+						((1, 0), obstacles([Quadrant::NegXPosZ, Quadrant::PosXPosZ])),
+						((1, 1), obstacles([])),
+						((1, 2), obstacles([Quadrant::NegXNegZ, Quadrant::PosXNegZ])),
+						((2, 0), obstacles([Quadrant::NegXPosZ])),
+						((2, 1), obstacles([Quadrant::NegXPosZ, Quadrant::NegXNegZ])),
+						((2, 2), obstacles([Quadrant::NegXNegZ])),
+					]),
+					extra: Obstacles {
+						obstacles: HashSet::from([(1, 1)]),
 					},
 					context,
 				}

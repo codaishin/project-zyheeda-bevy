@@ -20,20 +20,20 @@ use std::{
 };
 
 #[derive(Debug, PartialEq, Default, Clone)]
-pub struct GridGraph<TValue = Cell<Vec3>, TExtra = Obstacles, TGridContext = GridContext> {
+pub struct GridGraph<TValue = GridCell<Vec3>, TExtra = Obstacles, TGridContext = GridContext> {
 	pub(crate) nodes: HashMap<(i32, i32), TValue>,
 	pub(crate) extra: TExtra,
 	pub(crate) context: TGridContext,
 }
 
-impl<TGridContext> Graph for GridGraph<Cell<Vec3>, Obstacles, TGridContext>
+impl<TGridContext> Graph for GridGraph<GridCell<Vec3>, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
 	type TNode = GridGraphNode;
 }
 
-impl<TGridContext> GraphNode for GridGraph<Cell<Vec3>, Obstacles, TGridContext>
+impl<TGridContext> GraphNode for GridGraph<GridCell<Vec3>, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -50,7 +50,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphSuccessors for GridGraph<Cell<Vec3>, Obstacles, TGridContext>
+impl<TGridContext> GraphSuccessors for GridGraph<GridCell<Vec3>, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -69,7 +69,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphLineOfSight for GridGraph<Cell<Vec3>, Obstacles, TGridContext>
+impl<TGridContext> GraphLineOfSight for GridGraph<GridCell<Vec3>, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -80,7 +80,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphTranslation for GridGraph<Cell<Vec3>, Obstacles, TGridContext>
+impl<TGridContext> GraphTranslation for GridGraph<GridCell<Vec3>, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -97,7 +97,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphObstacle for GridGraph<Cell<Vec3>, Obstacles, TGridContext>
+impl<TGridContext> GraphObstacle for GridGraph<GridCell<Vec3>, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -134,17 +134,25 @@ impl<TValue> Iterator for Iter<TValue> {
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]
-pub struct Cell<TValue> {
+pub struct GridCell<TValue> {
 	pub(crate) value: TValue,
 	pub(crate) obstacle_quadrants: HashSet<Quadrant>,
 }
 
-impl<TValue> Cell<TValue> {
-	pub(crate) fn not_bordering_obstacles(value: TValue) -> Self {
+impl<TValue> GridCell<TValue> {
+	#[cfg(test)]
+	pub(crate) fn new(value: TValue) -> Self {
 		Self {
 			value,
 			obstacle_quadrants: HashSet::from([]),
 		}
+	}
+
+	#[cfg(test)]
+	pub(crate) fn bordering_obstacles<const N: usize>(mut self, obstacles: [Quadrant; N]) -> Self {
+		self.obstacle_quadrants = HashSet::from(obstacles);
+
+		self
 	}
 }
 
@@ -156,7 +164,23 @@ pub(crate) enum Quadrant {
 	PosXPosZ,
 }
 
-const NEIGHBORS: &[(i32, i32)] = &[
+impl Quadrant {
+	pub(crate) fn from_direction(x: i32, z: i32) -> HashSet<Quadrant> {
+		match (x, z) {
+			(x, z) if x < 0 && z < 0 => HashSet::from([Quadrant::NegXNegZ]),
+			(x, z) if x < 0 && z > 0 => HashSet::from([Quadrant::NegXPosZ]),
+			(x, z) if x > 0 && z < 0 => HashSet::from([Quadrant::PosXNegZ]),
+			(x, z) if x > 0 && z > 0 => HashSet::from([Quadrant::PosXPosZ]),
+			(x, _) if x < 0 => HashSet::from([Quadrant::NegXNegZ, Quadrant::NegXPosZ]),
+			(x, _) if x > 0 => HashSet::from([Quadrant::PosXNegZ, Quadrant::PosXPosZ]),
+			(_, z) if z < 0 => HashSet::from([Quadrant::NegXNegZ, Quadrant::PosXNegZ]),
+			(_, z) if z > 0 => HashSet::from([Quadrant::NegXPosZ, Quadrant::PosXPosZ]),
+			_ => HashSet::new(),
+		}
+	}
+}
+
+pub(crate) const NEIGHBORS: [(i32, i32); 8] = [
 	(-1, -1),
 	(-1, 0),
 	(-1, 1),
@@ -221,7 +245,7 @@ mod tests {
 		let graph = GridGraph {
 			nodes: HashMap::from([(
 				(1, 2),
-				Cell {
+				GridCell {
 					value: Vec3::new(1., 2., 3.),
 					..default()
 				},
@@ -242,7 +266,7 @@ mod tests {
 		let graph = GridGraph {
 			nodes: HashMap::from([(
 				(1, 2),
-				Cell {
+				GridCell {
 					value: Vec3::new(1., 2., 3.),
 					..default()
 				},
@@ -263,7 +287,7 @@ mod tests {
 		let graph = GridGraph {
 			nodes: HashMap::from([(
 				(1, 2),
-				Cell {
+				GridCell {
 					value: Vec3::new(1., 2., 3.),
 					..default()
 				},
@@ -285,7 +309,7 @@ mod tests {
 		let graph = GridGraph {
 			nodes: HashMap::from([(
 				(1, 2),
-				Cell {
+				GridCell {
 					value: Vec3::default(),
 					..default()
 				},
@@ -308,16 +332,16 @@ mod tests {
 	fn get_neighbors() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Cell::<Vec3>::default()),
-				((1, 2), Cell::<Vec3>::default()),
-				((1, 3), Cell::<Vec3>::default()),
-				((2, 1), Cell::<Vec3>::default()),
-				((2, 2), Cell::<Vec3>::default()),
-				((2, 3), Cell::<Vec3>::default()),
-				((3, 1), Cell::<Vec3>::default()),
-				((3, 3), Cell::<Vec3>::default()),
-				((3, 4), Cell::<Vec3>::default()),
-				((1, 4), Cell::<Vec3>::default()),
+				((1, 1), GridCell::<Vec3>::default()),
+				((1, 2), GridCell::<Vec3>::default()),
+				((1, 3), GridCell::<Vec3>::default()),
+				((2, 1), GridCell::<Vec3>::default()),
+				((2, 2), GridCell::<Vec3>::default()),
+				((2, 3), GridCell::<Vec3>::default()),
+				((3, 1), GridCell::<Vec3>::default()),
+				((3, 3), GridCell::<Vec3>::default()),
+				((3, 4), GridCell::<Vec3>::default()),
+				((1, 4), GridCell::<Vec3>::default()),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(1, 2), (3, 1)]),
