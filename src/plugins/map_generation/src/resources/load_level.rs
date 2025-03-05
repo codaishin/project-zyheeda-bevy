@@ -4,7 +4,7 @@ use crate::{
 		grid_context::{GridContext, GridDefinition},
 	},
 	map::Map,
-	traits::{GridCellDistanceDefinition, SourcePath, grid_start::GridStart},
+	traits::{GridCellDistanceDefinition, SourcePath, grid_min::GridMin},
 };
 use bevy::prelude::*;
 use common::traits::{load_asset::LoadAsset, thread_safe::ThreadSafe};
@@ -46,7 +46,7 @@ where
 			return None;
 		};
 		let mut graph = GridGraph {
-			nodes: HashMap::default(),
+			cells: HashMap::default(),
 			extra: (),
 			context,
 		};
@@ -60,7 +60,7 @@ where
 		for (z, cell_line) in cells.into_iter().enumerate() {
 			for (x, cell) in cell_line.into_iter().enumerate() {
 				graph
-					.nodes
+					.cells
 					.insert((x as i32, z as i32), (transform(&cell, position), cell));
 				position.x += cell_distance;
 			}
@@ -253,7 +253,7 @@ mod test_get_graph {
 
 		assert_eq!(
 			Some(GridGraph {
-				nodes: HashMap::from([(
+				cells: HashMap::from([(
 					(0, 0),
 					(Transform::from_xyz(0., 0., 0.), _Cell(Dir3::NEG_Z))
 				)]),
@@ -275,7 +275,7 @@ mod test_get_graph {
 
 		assert_eq!(
 			Some(GridGraph {
-				nodes: HashMap::from([
+				cells: HashMap::from([
 					(
 						(0, 0),
 						(Transform::from_xyz(-2., 0., 0.), _Cell(Dir3::NEG_Z))
@@ -306,7 +306,7 @@ mod test_get_graph {
 
 		assert_eq!(
 			Some(GridGraph {
-				nodes: HashMap::from([
+				cells: HashMap::from([
 					(
 						(0, 0),
 						(Transform::from_xyz(0., 0., -2.), _Cell(Dir3::NEG_Z))
@@ -335,7 +335,7 @@ mod test_get_graph {
 
 		assert_eq!(
 			Some(GridGraph {
-				nodes: HashMap::from([(
+				cells: HashMap::from([(
 					(0, 0),
 					(
 						Transform::from_xyz(0., 0., 0.).looking_to(direction, Vec3::Y),
@@ -367,7 +367,7 @@ mod test_get_graph {
 
 		assert_eq!(
 			Some(GridGraph {
-				nodes: HashMap::from([
+				cells: HashMap::from([
 					(
 						(0, 0),
 						(Transform::from_xyz(-4., 0., -4.), _Cell(Dir3::NEG_Z)),
@@ -430,7 +430,7 @@ mod test_get_graph {
 
 		assert_eq!(
 			Some(GridGraph {
-				nodes: HashMap::from([
+				cells: HashMap::from([
 					(
 						(0, 0),
 						(Transform::from_xyz(-4., 0., -4.), _Cell(Dir3::NEG_Z)),

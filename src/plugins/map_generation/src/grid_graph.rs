@@ -2,16 +2,20 @@ pub(crate) mod grid_context;
 
 use crate::{
 	line_wide::{LineNode, LineWide},
-	traits::key_mapper::KeyMapper,
+	traits::{grid_cell_distance::GridCellDistance, key_mapper::KeyMapper},
 };
 use bevy::prelude::*;
-use common::traits::handles_map_generation::{
-	Graph,
-	GraphLineOfSight,
-	GraphNode,
-	GraphObstacle,
-	GraphSuccessors,
-	GraphTranslation,
+use common::{
+	tools::Units,
+	traits::handles_map_generation::{
+		Graph,
+		GraphClamp,
+		GraphLineOfSight,
+		GraphNode,
+		GraphObstacle,
+		GraphSuccessors,
+		GraphTranslation,
+	},
 };
 use grid_context::GridContext;
 use std::{
@@ -20,20 +24,20 @@ use std::{
 };
 
 #[derive(Debug, PartialEq, Default, Clone)]
-pub struct GridGraph<TValue = GridCell<Vec3>, TExtra = Obstacles, TGridContext = GridContext> {
-	pub(crate) nodes: HashMap<(i32, i32), TValue>,
+pub struct GridGraph<TValue = GridCell, TExtra = Obstacles, TGridContext = GridContext> {
+	pub(crate) cells: HashMap<(i32, i32), TValue>,
 	pub(crate) extra: TExtra,
 	pub(crate) context: TGridContext,
 }
 
-impl<TGridContext> Graph for GridGraph<GridCell<Vec3>, Obstacles, TGridContext>
+impl<TGridContext> Graph for GridGraph<GridCell, Obstacles, TGridContext>
 where
-	TGridContext: KeyMapper,
+	TGridContext: KeyMapper + GridCellDistance,
 {
 	type TNode = GridGraphNode;
 }
 
-impl<TGridContext> GraphNode for GridGraph<GridCell<Vec3>, Obstacles, TGridContext>
+impl<TGridContext> GraphNode for GridGraph<GridCell, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -42,7 +46,7 @@ where
 	fn node(&self, translation: Vec3) -> Option<Self::TNNode> {
 		let key = self.context.key_for(translation);
 
-		if !self.nodes.contains_key(&key) {
+		if !self.cells.contains_key(&key) {
 			return None;
 		}
 
@@ -50,7 +54,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphSuccessors for GridGraph<GridCell<Vec3>, Obstacles, TGridContext>
+impl<TGridContext> GraphSuccessors for GridGraph<GridCell, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -60,7 +64,7 @@ where
 		NEIGHBORS.iter().filter_map(|(i, j)| {
 			let key = (node.key.0 + i, node.key.1 + j);
 
-			if !self.nodes.contains_key(&key) {
+			if !self.cells.contains_key(&key) {
 				return None;
 			}
 
@@ -69,7 +73,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphLineOfSight for GridGraph<GridCell<Vec3>, Obstacles, TGridContext>
+impl<TGridContext> GraphLineOfSight for GridGraph<GridCell, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -80,14 +84,14 @@ where
 	}
 }
 
-impl<TGridContext> GraphTranslation for GridGraph<GridCell<Vec3>, Obstacles, TGridContext>
+impl<TGridContext> GraphTranslation for GridGraph<GridCell, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
 	type TTNode = GridGraphNode;
 
 	fn translation(&self, GridGraphNode { key }: &Self::TTNode) -> Vec3 {
-		match self.nodes.get(key).map(|n| n.value) {
+		match self.cells.get(key).map(|n| n.value) {
 			Some(translation) => translation,
 			None => unreachable!(
 				"Tried retrieving translation of an invalid node, should not have happened. \
@@ -97,7 +101,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphObstacle for GridGraph<GridCell<Vec3>, Obstacles, TGridContext>
+impl<TGridContext> GraphObstacle for GridGraph<GridCell, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -108,13 +112,39 @@ where
 	}
 }
 
+impl<TGridContext> GraphClamp for GridGraph<GridCell, Obstacles, TGridContext>
+where
+	TGridContext: KeyMapper + GridCellDistance,
+{
+	fn clamp(&self, translation: Vec3, agent_radius: Units) -> Option<Vec3> {
+		let key = self.context.key_for(translation);
+		let cell = self.cells.get(&key)?;
+		let center = cell.value;
+		let mut offset = translation - center;
+		let signum_x = signum(offset.x);
+		let signum_z = signum(offset.z);
+		let quadrants = Quadrant::from_direction(signum_x as i32, signum_z as i32);
+
+		if !cell.borders_obstacles(&quadrants) {
+			return Some(translation);
+		}
+
+		let max_offset = self.context.grid_cell_distance() as f32 / 2. - *agent_radius;
+
+		offset.x = f32::min(max_offset, offset.x.abs()) * signum_x;
+		offset.z = f32::min(max_offset, offset.z.abs()) * signum_z;
+
+		Some(center + offset)
+	}
+}
+
 impl<TValue, TExtra> IntoIterator for GridGraph<TValue, TExtra> {
 	type Item = TValue;
 	type IntoIter = Iter<TValue>;
 
 	fn into_iter(self) -> Self::IntoIter {
 		Iter {
-			it: self.nodes.into_iter(),
+			it: self.cells.into_iter(),
 		}
 	}
 }
@@ -134,21 +164,28 @@ impl<TValue> Iterator for Iter<TValue> {
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]
-pub struct GridCell<TValue> {
+pub struct GridCell<TValue = Vec3> {
 	pub(crate) value: TValue,
 	pub(crate) obstacle_quadrants: HashSet<Quadrant>,
 }
 
+impl GridCell {
+	pub(crate) fn borders_obstacles(&self, quadrants: &HashSet<Quadrant>) -> bool {
+		self.obstacle_quadrants
+			.intersection(quadrants)
+			.next()
+			.is_some()
+	}
+}
+
+#[cfg(test)]
 impl<TValue> GridCell<TValue> {
-	#[cfg(test)]
 	pub(crate) fn new(value: TValue) -> Self {
 		Self {
 			value,
 			obstacle_quadrants: HashSet::from([]),
 		}
 	}
-
-	#[cfg(test)]
 	pub(crate) fn bordering_obstacles<const N: usize>(mut self, obstacles: [Quadrant; N]) -> Self {
 		self.obstacle_quadrants = HashSet::from(obstacles);
 
@@ -225,16 +262,31 @@ pub struct Obstacles {
 	pub(crate) obstacles: HashSet<(i32, i32)>,
 }
 
+fn signum(v: f32) -> f32 {
+	if v == 0. {
+		return 0.;
+	}
+
+	v.signum()
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{simple_init, traits::mock::Mock};
+	use common::{
+		simple_init,
+		traits::{clamp_zero_positive::ClampZeroPositive, mock::Mock},
+	};
 	use mockall::{mock, predicate::eq};
+	use test_case::test_case;
 
 	mock! {
 		_Mapper {}
 		impl KeyMapper for _Mapper {
 			fn key_for(&self, translation: Vec3) -> (i32, i32);
+		}
+		impl GridCellDistance for _Mapper {
+				fn grid_cell_distance(&self) -> u8;
 		}
 	}
 
@@ -243,7 +295,7 @@ mod tests {
 	#[test]
 	fn gat_matching_node() {
 		let graph = GridGraph {
-			nodes: HashMap::from([(
+			cells: HashMap::from([(
 				(1, 2),
 				GridCell {
 					value: Vec3::new(1., 2., 3.),
@@ -262,9 +314,9 @@ mod tests {
 	}
 
 	#[test]
-	fn gat_matching_node_none() {
+	fn get_matching_node_none() {
 		let graph = GridGraph {
-			nodes: HashMap::from([(
+			cells: HashMap::from([(
 				(1, 2),
 				GridCell {
 					value: Vec3::new(1., 2., 3.),
@@ -285,7 +337,7 @@ mod tests {
 	#[test]
 	fn supply_key_getter_with_proper_arguments() {
 		let graph = GridGraph {
-			nodes: HashMap::from([(
+			cells: HashMap::from([(
 				(1, 2),
 				GridCell {
 					value: Vec3::new(1., 2., 3.),
@@ -307,13 +359,7 @@ mod tests {
 	#[test]
 	fn node_is_obstacle() {
 		let graph = GridGraph {
-			nodes: HashMap::from([(
-				(1, 2),
-				GridCell {
-					value: Vec3::default(),
-					..default()
-				},
-			)]),
+			cells: HashMap::from([((1, 2), GridCell::default())]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(1, 2)]),
 			},
@@ -331,17 +377,17 @@ mod tests {
 	#[test]
 	fn get_neighbors() {
 		let graph = GridGraph {
-			nodes: HashMap::from([
-				((1, 1), GridCell::<Vec3>::default()),
-				((1, 2), GridCell::<Vec3>::default()),
-				((1, 3), GridCell::<Vec3>::default()),
-				((2, 1), GridCell::<Vec3>::default()),
-				((2, 2), GridCell::<Vec3>::default()),
-				((2, 3), GridCell::<Vec3>::default()),
-				((3, 1), GridCell::<Vec3>::default()),
-				((3, 3), GridCell::<Vec3>::default()),
-				((3, 4), GridCell::<Vec3>::default()),
-				((1, 4), GridCell::<Vec3>::default()),
+			cells: HashMap::from([
+				((1, 1), GridCell::default()),
+				((1, 2), GridCell::default()),
+				((1, 3), GridCell::default()),
+				((2, 1), GridCell::default()),
+				((2, 2), GridCell::default()),
+				((2, 3), GridCell::default()),
+				((3, 1), GridCell::default()),
+				((3, 3), GridCell::default()),
+				((3, 4), GridCell::default()),
+				((1, 4), GridCell::default()),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(1, 2), (3, 1)]),
@@ -366,5 +412,48 @@ mod tests {
 			],
 			successors.collect::<Vec<_>>()
 		);
+	}
+
+	fn cell<const N: usize>(x: f32, z: f32, obstacles: [Quadrant; N]) -> GridCell {
+		GridCell {
+			value: Vec3::new(x, 0., z),
+			obstacle_quadrants: HashSet::from(obstacles),
+		}
+	}
+
+	fn vec3(x: f32, z: f32) -> Vec3 {
+		Vec3::new(x, 0., z)
+	}
+
+	#[test_case(cell(0., 0., []), 1, vec3(0.0, 0.0), 0.1, vec3(0.0, 0.0); "matching cell")]
+	#[test_case(cell(0., 0., []), 1, vec3(1.3, 1.2), 0.1, vec3(1.3, 1.2); "no obstacle")]
+	#[test_case(cell(1., 2., [Quadrant::PosXPosZ]), 1, vec3(1.4, 2.0), 0.4, vec3(1.1, 2.0); "limited x")]
+	#[test_case(cell(1., 2., [Quadrant::NegXPosZ]), 1, vec3(1.4, 2.0), 0.4, vec3(1.4, 2.0); "not limited x")]
+	#[test_case(cell(1., 2., [Quadrant::PosXPosZ]), 1, vec3(1.0, 2.4), 0.4, vec3(1.0, 2.1); "limited z")]
+	#[test_case(cell(1., 2., [Quadrant::PosXNegZ]), 1, vec3(1.0, 2.4), 0.4, vec3(1.0, 2.4); "not limited z")]
+	#[test_case(cell(1., 2., [Quadrant::NegXNegZ]), 1, vec3(0.7, 2.0), 0.4, vec3(0.9, 2.0); "limited neg x")]
+	#[test_case(cell(1., 2., [Quadrant::NegXNegZ]), 1, vec3(1.0, 1.7), 0.4, vec3(1.0, 1.9); "limited neg z")]
+	#[test_case(cell(1., 2., [Quadrant::PosXPosZ]), 2, vec3(1.9, 2.0), 0.4, vec3(1.6, 2.0); "limited x with cell distance 2")]
+	fn clamp_translation(
+		cell: GridCell,
+		cell_distance: u8,
+		translation: Vec3,
+		radius: f32,
+		expected_result: Vec3,
+	) {
+		let graph = GridGraph {
+			cells: HashMap::from([((0, 0), cell)]),
+			extra: default(),
+			context: Mock_Mapper::new_mock(|mock| {
+				mock.expect_key_for()
+					.with(eq(translation))
+					.return_const((0, 0));
+				mock.expect_grid_cell_distance().return_const(cell_distance);
+			}),
+		};
+
+		let result = graph.clamp(translation, Units::new(radius));
+
+		assert_eq!(Some(expected_result), result);
 	}
 }

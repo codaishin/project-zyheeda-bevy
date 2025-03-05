@@ -64,8 +64,10 @@ mod tests {
 	use super::*;
 	use common::{
 		simple_init,
+		tools::Units,
 		traits::{
 			handles_map_generation::{
+				GraphClamp,
 				GraphLineOfSight,
 				GraphNode,
 				GraphObstacle,
@@ -136,6 +138,12 @@ mod tests {
 		}
 	}
 
+	impl GraphClamp for _Graph {
+		fn clamp(&self, translation: Vec3, agent_radius: Units) -> Option<Vec3> {
+			todo!()
+		}
+	}
+
 	impl GraphLineOfSight for _Graph {
 		type TLNode = _Node;
 		fn line_of_sight(&self, _: &_Node, _: &_Node) -> bool {
@@ -179,6 +187,12 @@ mod tests {
 		type TSNode = _Node;
 		fn successors(&self, _: &_Node) -> impl Iterator<Item = _Node> {
 			[].into_iter()
+		}
+	}
+
+	impl GraphClamp for _Graph2 {
+		fn clamp(&self, translation: Vec3, agent_radius: Units) -> Option<Vec3> {
+			todo!()
 		}
 	}
 

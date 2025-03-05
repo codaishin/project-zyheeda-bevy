@@ -1,4 +1,8 @@
-use crate::traits::{grid_start::GridStart, key_mapper::KeyMapper};
+use crate::traits::{
+	grid_cell_distance::GridCellDistance,
+	grid_min::GridMin,
+	key_mapper::KeyMapper,
+};
 use bevy::prelude::*;
 use common::errors::{Error, Level};
 
@@ -31,7 +35,7 @@ impl TryFrom<GridDefinition> for GridContext {
 	}
 }
 
-impl GridStart for GridContext {
+impl GridMin for GridContext {
 	fn grid_min(&self) -> Vec3 {
 		let Self(d) = self;
 		let cell_distance = d.cell_distance as usize;
@@ -39,6 +43,13 @@ impl GridStart for GridContext {
 		let z = ((d.cell_count_z - 1) * cell_distance) as f32 / 2.;
 
 		Vec3::new(-x, 0., -z)
+	}
+}
+
+impl GridCellDistance for GridContext {
+	fn grid_cell_distance(&self) -> u8 {
+		let Self(d) = self;
+		d.cell_distance
 	}
 }
 
@@ -212,6 +223,20 @@ mod tests {
 		let key = context.key_for(target);
 
 		assert_eq!(result, key);
+		Ok(())
+	}
+
+	#[test]
+	fn get_grid_cell_distance() -> Result<(), GridDefinitionError> {
+		let definition = GridDefinition {
+			cell_count_x: 1,
+			cell_count_z: 1,
+			cell_distance: 42,
+		};
+
+		let context = GridContext::try_from(definition)?;
+
+		assert_eq!(42, context.grid_cell_distance());
 		Ok(())
 	}
 }

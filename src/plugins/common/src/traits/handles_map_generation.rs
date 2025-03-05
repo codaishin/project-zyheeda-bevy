@@ -1,3 +1,5 @@
+use crate::tools::Units;
+
 use super::thread_safe::ThreadSafe;
 use bevy::prelude::*;
 use std::hash::Hash;
@@ -17,6 +19,7 @@ pub trait Graph:
 	+ GraphLineOfSight<TLNode = Self::TNode>
 	+ GraphObstacle<TONode = Self::TNode>
 	+ GraphTranslation<TTNode = Self::TNode>
+	+ GraphClamp
 {
 	type TNode: Eq + Hash + Copy;
 }
@@ -49,4 +52,8 @@ pub trait GraphTranslation {
 	type TTNode;
 
 	fn translation(&self, node: &Self::TTNode) -> Vec3;
+}
+
+pub trait GraphClamp {
+	fn clamp(&self, translation: Vec3, agent_radius: Units) -> Option<Vec3>;
 }

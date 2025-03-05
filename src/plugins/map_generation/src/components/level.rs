@@ -52,7 +52,7 @@ pub(crate) fn spawn<TCell, TAsset>(
 		return;
 	};
 
-	if graph.nodes.is_empty() {
+	if graph.cells.is_empty() {
 		return;
 	}
 
@@ -69,25 +69,24 @@ pub(crate) fn spawn<TCell, TAsset>(
 macro_rules! apply_graph {
 	($graph:expr, $level:expr, $load_asset:expr) => {{
 		let obstacles = get_obstacles(&$graph);
-		let mut new_graph = GridGraph::<GridCell<Vec3>, Obstacles> {
+		let mut new_graph = GridGraph::<GridCell, Obstacles> {
 			context: $graph.context,
 			extra: Obstacles { obstacles },
 			..default()
 		};
 
-		for (key, (transform, cell)) in $graph.nodes {
+		for (key, (transform, cell)) in $graph.cells {
 			let mut obstacle_quadrants = HashSet::from([]);
 
 			for (dir_x, dir_z) in obstacle_neighbors(&new_graph.extra.obstacles, &key) {
 				obstacle_quadrants.extend(Quadrant::from_direction(dir_x, dir_z));
 			}
 
-			let node = GridCell {
+			let grid_cell = GridCell {
 				value: transform.translation,
 				obstacle_quadrants,
 			};
-
-			new_graph.nodes.insert(key, node);
+			new_graph.cells.insert(key, grid_cell);
 
 			if let Ok(path) = Path::try_from(&cell) {
 				let scene = $load_asset.load_asset(path);
@@ -131,7 +130,7 @@ where
 	TCell: IsWalkable,
 {
 	graph
-		.nodes
+		.cells
 		.iter()
 		.filter(|(_, (_, cell))| !cell.is_walkable())
 		.map(|(key, _)| *key)
@@ -254,7 +253,7 @@ mod tests {
 		let scene = new_handle();
 		let mut app = setup(
 			Some(GridGraph {
-				nodes: HashMap::from([(
+				cells: HashMap::from([(
 					(0, 0),
 					(
 						Transform::from_xyz(1., 2., 3.),
@@ -291,7 +290,7 @@ mod tests {
 	fn spawn_scene_as_child_of_level() {
 		let mut app = setup(
 			Some(GridGraph {
-				nodes: HashMap::from([(
+				cells: HashMap::from([(
 					(0, 0),
 					(
 						Transform::default(),
@@ -324,7 +323,7 @@ mod tests {
 	fn reuse_same_level_in_subsequent_updates() {
 		let mut app = setup(
 			Some(GridGraph {
-				nodes: HashMap::from([(
+				cells: HashMap::from([(
 					(0, 0),
 					(
 						Transform::default(),
@@ -363,7 +362,7 @@ mod tests {
 		})?;
 		let mut app = setup(
 			Some(GridGraph {
-				nodes: HashMap::from([
+				cells: HashMap::from([
 					(
 						(0, 0),
 						(
@@ -401,7 +400,7 @@ mod tests {
 		assert_eq!(
 			&Level {
 				graph: GridGraph {
-					nodes: HashMap::from([
+					cells: HashMap::from([
 						((0, 0), GridCell::new(Vec3::new(1., 2., 3.))),
 						((1, 0), GridCell::new(Vec3::new(3., 4., 5.),)),
 					]),
@@ -425,7 +424,7 @@ mod tests {
 		})?;
 		let mut app = setup(
 			Some(GridGraph {
-				nodes: HashMap::from([
+				cells: HashMap::from([
 					(
 						(0, 0),
 						(
@@ -463,7 +462,7 @@ mod tests {
 		assert_eq!(
 			&Level {
 				graph: GridGraph {
-					nodes: HashMap::from([
+					cells: HashMap::from([
 						((0, 0), GridCell::new(Vec3::new(1., 2., 3.))),
 						((1, 0), GridCell::new(Vec3::new(3., 4., 5.)),),
 					]),
@@ -488,7 +487,7 @@ mod tests {
 		)
 	}
 
-	fn obstacles<const N: usize>(obstacles: [Quadrant; N]) -> GridCell<Vec3> {
+	fn obstacles<const N: usize>(obstacles: [Quadrant; N]) -> GridCell {
 		GridCell::default().bordering_obstacles(obstacles)
 	}
 
@@ -501,7 +500,7 @@ mod tests {
 		})?;
 		let mut app = setup(
 			Some(GridGraph {
-				nodes: HashMap::from([
+				cells: HashMap::from([
 					((0, 0), walkable(true)),
 					((0, 1), walkable(true)),
 					((0, 2), walkable(true)),
@@ -528,7 +527,7 @@ mod tests {
 		assert_eq!(
 			&Level {
 				graph: GridGraph {
-					nodes: HashMap::from([
+					cells: HashMap::from([
 						((0, 0), obstacles([Quadrant::PosXPosZ])),
 						((0, 1), obstacles([Quadrant::PosXPosZ, Quadrant::PosXNegZ])),
 						((0, 2), obstacles([Quadrant::PosXNegZ])),
@@ -559,7 +558,7 @@ mod tests {
 		})?;
 		let mut app = setup(
 			Some(GridGraph::<(Transform, _Cell), ()> {
-				nodes: HashMap::from([]),
+				cells: HashMap::from([]),
 				context,
 				..default()
 			}),
