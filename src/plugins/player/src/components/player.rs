@@ -8,7 +8,9 @@ use common::{
 	effects::deal_damage::DealDamage,
 	errors::Error,
 	tools::{
+		Units,
 		UnitsPerSecond,
+		collider_radius::ColliderRadius,
 		slot_key::{Side, SlotKey},
 	},
 	traits::{
@@ -47,6 +49,10 @@ pub struct Player;
 
 impl Player {
 	const MODEL_PATH: &'static str = "models/player.glb";
+
+	fn collider_radius() -> ColliderRadius {
+		ColliderRadius(Units::new(0.2))
+	}
 
 	fn name() -> Name {
 		Name::from("Player")
@@ -104,6 +110,7 @@ impl Player {
 	fn movement() -> PlayerMovement {
 		PlayerMovement {
 			mode: MovementMode::Fast,
+			collider_radius: Self::collider_radius(),
 			fast: Config {
 				speed: UnitsPerSecond::new(1.5).into(),
 				animation: Animation::new(Self::animation_path("Animation3"), PlayMode::Repeat)
@@ -168,7 +175,11 @@ where
 			.insert(Health::new(100.).bundle_via::<TInteractions>())
 			.with_child((
 				TLights::responsive_light_trigger(),
-				Collider::capsule(Vec3::new(0.0, 0.2, -0.05), Vec3::new(0.0, 1.4, -0.05), 0.2),
+				Collider::capsule(
+					Vec3::new(0.0, 0.2, -0.05),
+					Vec3::new(0.0, 1.4, -0.05),
+					**Self::collider_radius(),
+				),
 				ColliderRoot(root),
 			));
 

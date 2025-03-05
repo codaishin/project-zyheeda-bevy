@@ -2,6 +2,7 @@ use crate::traits::compute_path_lazy::ComputePathLazy;
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
+	tools::Units,
 	traits::{handles_map_generation::Graph, handles_path_finding::ComputePath},
 };
 
@@ -16,7 +17,7 @@ where
 	TMethod: ComputePathLazy<TGraph>,
 	TGraph: Graph,
 {
-	fn compute_path(&self, start: Vec3, end: Vec3) -> Option<Vec<Vec3>> {
+	fn compute_path(&self, start: Vec3, end: Vec3, _: Units) -> Option<Vec<Vec3>> {
 		let start_node = self.graph.node(start)?;
 		let end_node = self.graph.node(end)?;
 
@@ -27,10 +28,10 @@ where
 		let path = self
 			.method
 			.compute_path(&self.graph, start_node, end_node)
-			.map(|n| match n {
-				n if n == start_node => start,
-				n if n == end_node => end,
-				n => self.graph.translation(&n),
+			.map(|node| match node {
+				node if node == start_node => start,
+				node if node == end_node => end,
+				node => self.graph.translation(&node),
 			})
 			.collect::<Vec<_>>();
 
@@ -65,6 +66,7 @@ mod tests {
 	use common::{
 		simple_init,
 		traits::{
+			clamp_zero_positive::ClampZeroPositive,
 			handles_map_generation::{
 				GraphLineOfSight,
 				GraphNode,
@@ -93,10 +95,10 @@ mod tests {
 
 	mock! {
 		_Method2 {}
-		impl ComputePathLazy<_Graph2> for _Method2 {
+		impl ComputePathLazy<Mock_Graph> for _Method2 {
 			fn compute_path(
 				&self,
-				graph: & _Graph2,
+				graph: & Mock_Graph,
 				start: _Node,
 				end: _Node,
 			) -> impl Iterator<Item = _Node>;
@@ -150,51 +152,35 @@ mod tests {
 		}
 	}
 
-	#[derive(Debug, PartialEq)]
-	struct _Graph2;
+	mock! {
+		_Graph {}
+		impl GraphNode for _Graph {
+			type TNNode = _Node;
+			fn node(&self, translation: Vec3) -> Option<_Node>;
+		}
+		impl GraphTranslation for _Graph {
+			type TTNode = _Node;
+			fn translation(&self, node: &_Node) -> Vec3;
+		}
+		impl GraphSuccessors for _Graph {
+			type TSNode = _Node;
+			fn successors(&self, node: &_Node) -> impl Iterator<Item = _Node>;
+		}
+		impl GraphLineOfSight for _Graph {
+			type TLNode = _Node;
+			fn line_of_sight(&self, a: &_Node, b: &_Node) -> bool;
+		}
+		impl GraphObstacle for _Graph {
+			type TONode = _Node;
+			fn is_obstacle(&self, node: &_Node) -> bool;
+		}
+	}
 
-	impl Graph for _Graph2 {
+	impl Graph for Mock_Graph {
 		type TNode = _Node;
 	}
 
-	impl GraphNode for _Graph2 {
-		type TNNode = _Node;
-		fn node(&self, Vec3 { x, y, z }: Vec3) -> Option<_Node> {
-			Some(_Node(
-				(x - 0.5).round() as u8,
-				(y - 0.5).round() as u8,
-				(z - 0.5).round() as u8,
-			))
-		}
-	}
-
-	impl GraphTranslation for _Graph2 {
-		type TTNode = _Node;
-		fn translation(&self, _Node(x, y, z): &_Node) -> Vec3 {
-			Vec3::new(*x as f32 + 0.5, *y as f32 + 0.5, *z as f32 + 0.5)
-		}
-	}
-
-	impl GraphSuccessors for _Graph2 {
-		type TSNode = _Node;
-		fn successors(&self, _: &_Node) -> impl Iterator<Item = _Node> {
-			[].into_iter()
-		}
-	}
-
-	impl GraphLineOfSight for _Graph2 {
-		type TLNode = _Node;
-		fn line_of_sight(&self, _: &_Node, _: &_Node) -> bool {
-			todo!()
-		}
-	}
-
-	impl GraphObstacle for _Graph2 {
-		type TONode = _Node;
-		fn is_obstacle(&self, _: &_Node) -> bool {
-			todo!()
-		}
-	}
+	simple_init!(Mock_Graph);
 
 	#[test]
 	fn call_compute_path_with_start_and_end() {
@@ -210,7 +196,7 @@ mod tests {
 			graph: _Graph,
 		};
 
-		_ = grid.compute_path(start, end);
+		_ = grid.compute_path(start, end, Units::new(0.1));
 	}
 
 	#[test]
@@ -224,7 +210,11 @@ mod tests {
 			graph: _Graph,
 		};
 
-		let computed_path = grid.compute_path(Vec3::new(1., 0., 1.), Vec3::new(3., 0., 3.));
+		let computed_path = grid.compute_path(
+			Vec3::new(1., 0., 1.),
+			Vec3::new(3., 0., 3.),
+			Units::new(0.1),
+		);
 
 		assert_eq!(
 			Some(Vec::from(path.map(|_Node(x, y, z)| Vec3::new(
@@ -245,7 +235,11 @@ mod tests {
 			graph: _Graph,
 		};
 
-		let path = grid.compute_path(Vec3::new(0.8, 1., 1.3), Vec3::new(1.1, 1., 0.9));
+		let path = grid.compute_path(
+			Vec3::new(0.8, 1., 1.3),
+			Vec3::new(1.1, 1., 0.9),
+			Units::new(0.1),
+		);
 		assert_eq!(
 			Some(vec![Vec3::new(0.8, 1., 1.3), Vec3::new(1.1, 1., 0.9)]),
 			path
@@ -255,26 +249,36 @@ mod tests {
 	#[test]
 	fn replace_start_and_end_with_called_start_and_end() {
 		let grid = NavGrid {
-			method: Mock_Method::new_mock(|mock| {
-				mock.expect_compute_path()
-					.times(1)
-					.with(eq(_Graph), eq(_Node(1, 1, 1)), eq(_Node(2, 2, 2)))
-					.returning(|_, _, _| {
-						Box::new(
-							[
-								_Node(1, 1, 1),
-								_Node(10, 10, 10),
-								_Node(4, 4, 4),
-								_Node(2, 2, 2),
-							]
-							.into_iter(),
-						)
-					});
+			method: Mock_Method2::new_mock(|mock| {
+				mock.expect_compute_path().returning(|_, _, _| {
+					Box::new(
+						[
+							_Node(1, 1, 1),
+							_Node(10, 10, 10),
+							_Node(4, 4, 4),
+							_Node(2, 2, 2),
+						]
+						.into_iter(),
+					)
+				});
 			}),
-			graph: _Graph,
+			graph: Mock_Graph::new_mock(|mock| {
+				mock.expect_node()
+					.with(eq(Vec3::new(0.8, 1., 1.3)))
+					.return_const(Some(_Node(1, 1, 1)));
+				mock.expect_node()
+					.with(eq(Vec3::new(2.1, 2., 1.9)))
+					.return_const(Some(_Node(2, 2, 2)));
+				mock.expect_translation()
+					.returning(|_Node(x, y, z)| Vec3::new(*x as f32, *y as f32, *z as f32));
+			}),
 		};
 
-		let path = grid.compute_path(Vec3::new(0.8, 1., 1.3), Vec3::new(2.1, 2., 1.9));
+		let path = grid.compute_path(
+			Vec3::new(0.8, 1., 1.3),
+			Vec3::new(2.1, 2., 1.9),
+			Units::new(0.1),
+		);
 		assert_eq!(
 			Some(vec![
 				Vec3::new(0.8, 1., 1.3),
@@ -289,18 +293,28 @@ mod tests {
 	#[test]
 	fn do_not_replace_start_with_called_start_if_path_omitted_start() {
 		let grid = NavGrid {
-			method: Mock_Method::new_mock(|mock| {
-				mock.expect_compute_path()
-					.times(1)
-					.with(eq(_Graph), eq(_Node(1, 1, 1)), eq(_Node(2, 2, 2)))
-					.returning(|_, _, _| {
-						Box::new([_Node(10, 10, 10), _Node(4, 4, 4), _Node(2, 2, 2)].into_iter())
-					});
+			method: Mock_Method2::new_mock(|mock| {
+				mock.expect_compute_path().returning(|_, _, _| {
+					Box::new([_Node(10, 10, 10), _Node(4, 4, 4), _Node(2, 2, 2)].into_iter())
+				});
 			}),
-			graph: _Graph,
+			graph: Mock_Graph::new_mock(|mock| {
+				mock.expect_node()
+					.with(eq(Vec3::new(0.8, 1., 1.3)))
+					.return_const(Some(_Node(1, 1, 1)));
+				mock.expect_node()
+					.with(eq(Vec3::new(2.1, 2., 1.9)))
+					.return_const(Some(_Node(2, 2, 2)));
+				mock.expect_translation()
+					.returning(|_Node(x, y, z)| Vec3::new(*x as f32, *y as f32, *z as f32));
+			}),
 		};
 
-		let path = grid.compute_path(Vec3::new(0.8, 1., 1.3), Vec3::new(2.1, 2., 1.9));
+		let path = grid.compute_path(
+			Vec3::new(0.8, 1., 1.3),
+			Vec3::new(2.1, 2., 1.9),
+			Units::new(0.1),
+		);
 		assert_eq!(
 			Some(vec![
 				Vec3::new(10., 10., 10.),
@@ -314,18 +328,28 @@ mod tests {
 	#[test]
 	fn do_not_replace_end_with_called_end_if_path_omitted_end() {
 		let grid = NavGrid {
-			method: Mock_Method::new_mock(|mock| {
-				mock.expect_compute_path()
-					.times(1)
-					.with(eq(_Graph), eq(_Node(1, 1, 1)), eq(_Node(2, 2, 2)))
-					.returning(|_, _, _| {
-						Box::new([_Node(1, 1, 1), _Node(10, 10, 10), _Node(4, 4, 4)].into_iter())
-					});
+			method: Mock_Method2::new_mock(|mock| {
+				mock.expect_compute_path().returning(|_, _, _| {
+					Box::new([_Node(1, 1, 1), _Node(10, 10, 10), _Node(4, 4, 4)].into_iter())
+				});
 			}),
-			graph: _Graph,
+			graph: Mock_Graph::new_mock(|mock| {
+				mock.expect_node()
+					.with(eq(Vec3::new(0.8, 1., 1.3)))
+					.return_const(Some(_Node(1, 1, 1)));
+				mock.expect_node()
+					.with(eq(Vec3::new(2.1, 2., 1.9)))
+					.return_const(Some(_Node(2, 2, 2)));
+				mock.expect_translation()
+					.returning(|_Node(x, y, z)| Vec3::new(*x as f32, *y as f32, *z as f32));
+			}),
 		};
 
-		let path = grid.compute_path(Vec3::new(0.8, 1., 1.3), Vec3::new(2.1, 2., 1.9));
+		let path = grid.compute_path(
+			Vec3::new(0.8, 1., 1.3),
+			Vec3::new(2.1, 2., 1.9),
+			Units::new(0.1),
+		);
 		assert_eq!(
 			Some(vec![
 				Vec3::new(0.8, 1., 1.3),
@@ -337,34 +361,45 @@ mod tests {
 	}
 
 	#[test]
-	fn replace_start_and_end_with_called_start_and_end_for_different_graph() {
+	fn replace_start_and_end_with_called_start_and_end_with_different_grid_mapping() {
 		let grid = NavGrid {
 			method: Mock_Method2::new_mock(|mock| {
-				mock.expect_compute_path()
-					.times(1)
-					.with(eq(_Graph2), eq(_Node(1, 1, 1)), eq(_Node(2, 2, 2)))
-					.returning(|_, _, _| {
-						Box::new(
-							[
-								_Node(1, 1, 1),
-								_Node(10, 10, 10),
-								_Node(4, 4, 4),
-								_Node(2, 2, 2),
-							]
-							.into_iter(),
-						)
-					});
+				mock.expect_compute_path().returning(|_, _, _| {
+					Box::new(
+						[
+							_Node(1, 1, 1),
+							_Node(10, 10, 10),
+							_Node(4, 4, 4),
+							_Node(2, 2, 2),
+						]
+						.into_iter(),
+					)
+				});
 			}),
-			graph: _Graph2,
+			graph: Mock_Graph::new_mock(|mock| {
+				mock.expect_node()
+					.with(eq(Vec3::new(0.8, 1., 1.3)))
+					.return_const(Some(_Node(1, 1, 1)));
+				mock.expect_node()
+					.with(eq(Vec3::new(2.1, 2., 1.9)))
+					.return_const(Some(_Node(2, 2, 2)));
+				mock.expect_translation().returning(|_Node(x, y, z)| {
+					Vec3::new(*x as f32 + 0.5, *y as f32 + 0.5, *z as f32 + 0.5)
+				});
+			}),
 		};
 
-		let path = grid.compute_path(Vec3::new(1.3, 1., 1.7), Vec3::new(2.9, 2., 2.4));
+		let path = grid.compute_path(
+			Vec3::new(0.8, 1., 1.3),
+			Vec3::new(2.1, 2., 1.9),
+			Units::new(0.1),
+		);
 		assert_eq!(
 			Some(vec![
-				Vec3::new(1.3, 1., 1.7),
+				Vec3::new(0.8, 1., 1.3),
 				Vec3::new(10.5, 10.5, 10.5),
 				Vec3::new(4.5, 4.5, 4.5),
-				Vec3::new(2.9, 2., 2.4),
+				Vec3::new(2.1, 2., 1.9)
 			]),
 			path,
 		);
