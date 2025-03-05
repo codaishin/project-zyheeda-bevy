@@ -11,21 +11,6 @@ pub struct NavGrid<TMethod, TGraph> {
 	pub(crate) method: TMethod,
 }
 
-impl<TMethod, TGraph> NavGrid<TMethod, TGraph> {
-	fn replace(path_item: Option<&mut Vec3>, replace: Vec3) {
-		let Some(path_item) = path_item else {
-			return;
-		};
-		let replace_rounded = Vec3::new(replace.x.round(), replace.y.round(), replace.z.round());
-
-		if path_item != &replace_rounded {
-			return;
-		};
-
-		*path_item = replace;
-	}
-}
-
 impl<TMethod, TGraph> ComputePath for NavGrid<TMethod, TGraph>
 where
 	TMethod: ComputePathLazy<TGraph>,
@@ -39,14 +24,15 @@ where
 			return Some(vec![start, end]);
 		}
 
-		let mut path = self
+		let path = self
 			.method
 			.compute_path(&self.graph, start_node, end_node)
-			.map(|n| self.graph.translation(&n))
+			.map(|n| match n {
+				n if n == start_node => start,
+				n if n == end_node => end,
+				n => self.graph.translation(&n),
+			})
 			.collect::<Vec<_>>();
-
-		Self::replace(path.first_mut(), start);
-		Self::replace(path.last_mut(), end);
 
 		Some(path)
 	}
@@ -105,6 +91,20 @@ mod tests {
 
 	simple_init!(Mock_Method);
 
+	mock! {
+		_Method2 {}
+		impl ComputePathLazy<_Graph2> for _Method2 {
+			fn compute_path(
+				&self,
+				graph: & _Graph2,
+				start: _Node,
+				end: _Node,
+			) -> impl Iterator<Item = _Node>;
+		}
+	}
+
+	simple_init!(Mock_Method2);
+
 	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	struct _Node(u8, u8, u8);
 
@@ -150,6 +150,52 @@ mod tests {
 		}
 	}
 
+	#[derive(Debug, PartialEq)]
+	struct _Graph2;
+
+	impl Graph for _Graph2 {
+		type TNode = _Node;
+	}
+
+	impl GraphNode for _Graph2 {
+		type TNNode = _Node;
+		fn node(&self, Vec3 { x, y, z }: Vec3) -> Option<_Node> {
+			Some(_Node(
+				(x - 0.5).round() as u8,
+				(y - 0.5).round() as u8,
+				(z - 0.5).round() as u8,
+			))
+		}
+	}
+
+	impl GraphTranslation for _Graph2 {
+		type TTNode = _Node;
+		fn translation(&self, _Node(x, y, z): &_Node) -> Vec3 {
+			Vec3::new(*x as f32 + 0.5, *y as f32 + 0.5, *z as f32 + 0.5)
+		}
+	}
+
+	impl GraphSuccessors for _Graph2 {
+		type TSNode = _Node;
+		fn successors(&self, _: &_Node) -> impl Iterator<Item = _Node> {
+			[].into_iter()
+		}
+	}
+
+	impl GraphLineOfSight for _Graph2 {
+		type TLNode = _Node;
+		fn line_of_sight(&self, _: &_Node, _: &_Node) -> bool {
+			todo!()
+		}
+	}
+
+	impl GraphObstacle for _Graph2 {
+		type TONode = _Node;
+		fn is_obstacle(&self, _: &_Node) -> bool {
+			todo!()
+		}
+	}
+
 	#[test]
 	fn call_compute_path_with_start_and_end() {
 		let start = Vec3::new(1., 1., 1.);
@@ -189,6 +235,24 @@ mod tests {
 	}
 
 	#[test]
+	fn no_computation_when_start_and_end_on_same_node() {
+		let grid = NavGrid {
+			method: Mock_Method::new_mock(|mock| {
+				mock.expect_compute_path()
+					.never()
+					.returning(|_, _, _| Box::new([].into_iter()));
+			}),
+			graph: _Graph,
+		};
+
+		let path = grid.compute_path(Vec3::new(0.8, 1., 1.3), Vec3::new(1.1, 1., 0.9));
+		assert_eq!(
+			Some(vec![Vec3::new(0.8, 1., 1.3), Vec3::new(1.1, 1., 0.9)]),
+			path
+		);
+	}
+
+	#[test]
 	fn replace_start_and_end_with_called_start_and_end() {
 		let grid = NavGrid {
 			method: Mock_Method::new_mock(|mock| {
@@ -219,24 +283,6 @@ mod tests {
 				Vec3::new(2.1, 2., 1.9)
 			]),
 			path,
-		);
-	}
-
-	#[test]
-	fn no_computation_when_start_and_end_on_same_node() {
-		let grid = NavGrid {
-			method: Mock_Method::new_mock(|mock| {
-				mock.expect_compute_path()
-					.never()
-					.returning(|_, _, _| Box::new([].into_iter()));
-			}),
-			graph: _Graph,
-		};
-
-		let path = grid.compute_path(Vec3::new(0.8, 1., 1.3), Vec3::new(1.1, 1., 0.9));
-		assert_eq!(
-			Some(vec![Vec3::new(0.8, 1., 1.3), Vec3::new(1.1, 1., 0.9)]),
-			path
 		);
 	}
 
@@ -285,6 +331,40 @@ mod tests {
 				Vec3::new(0.8, 1., 1.3),
 				Vec3::new(10., 10., 10.),
 				Vec3::new(4., 4., 4.),
+			]),
+			path,
+		);
+	}
+
+	#[test]
+	fn replace_start_and_end_with_called_start_and_end_for_different_graph() {
+		let grid = NavGrid {
+			method: Mock_Method2::new_mock(|mock| {
+				mock.expect_compute_path()
+					.times(1)
+					.with(eq(_Graph2), eq(_Node(1, 1, 1)), eq(_Node(2, 2, 2)))
+					.returning(|_, _, _| {
+						Box::new(
+							[
+								_Node(1, 1, 1),
+								_Node(10, 10, 10),
+								_Node(4, 4, 4),
+								_Node(2, 2, 2),
+							]
+							.into_iter(),
+						)
+					});
+			}),
+			graph: _Graph2,
+		};
+
+		let path = grid.compute_path(Vec3::new(1.3, 1., 1.7), Vec3::new(2.9, 2., 2.4));
+		assert_eq!(
+			Some(vec![
+				Vec3::new(1.3, 1., 1.7),
+				Vec3::new(10.5, 10.5, 10.5),
+				Vec3::new(4.5, 4.5, 4.5),
+				Vec3::new(2.9, 2., 2.4),
 			]),
 			path,
 		);
