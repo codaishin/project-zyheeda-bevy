@@ -6,7 +6,7 @@ use common::traits::handles_map_generation::{
 };
 use std::hash::Hash;
 
-pub(crate) trait ComputePathLazy<TGraph>
+pub trait ComputePathLazy<TGraph>
 where
 	TGraph::TSNode: Eq + Hash + Copy,
 	TGraph: GraphSuccessors

@@ -2,8 +2,9 @@ use super::Movement;
 use crate::traits::{IsDone, MovementUpdate};
 use bevy::{ecs::query::QueryItem, prelude::*};
 use common::{
-	tools::UnitsPerSecond,
+	tools::{Units, UnitsPerSecond},
 	traits::{
+		clamp_zero_positive::ClampZeroPositive,
 		handles_path_finding::ComputePath,
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
@@ -48,7 +49,7 @@ where
 		for (entity, transform, movement) in &mut movements {
 			let start = transform.translation();
 			let end = movement.target;
-			let Some(path) = computer.compute_path(start, end) else {
+			let Some(path) = computer.compute_path(start, end, Units::new(0.1)) else {
 				continue;
 			};
 			let path = match path.as_slice() {
@@ -103,8 +104,8 @@ mod test_new_path {
 
 	#[automock]
 	impl ComputePath for _ComputePath {
-		fn compute_path(&self, start: Vec3, end: Vec3) -> Option<Vec<Vec3>> {
-			self.mock.compute_path(start, end)
+		fn compute_path(&self, start: Vec3, end: Vec3, agent_radius: Units) -> Option<Vec<Vec3>> {
+			self.mock.compute_path(start, end, agent_radius)
 		}
 	}
 
@@ -225,7 +226,11 @@ mod test_new_path {
 		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
 			mock.expect_compute_path()
 				.times(1)
-				.with(eq(Vec3::new(1., 2., 3.)), eq(Vec3::new(4., 5., 6.)))
+				.with(
+					eq(Vec3::new(1., 2., 3.)),
+					eq(Vec3::new(4., 5., 6.)),
+					eq(Units::new(50000.)),
+				)
 				.return_const(None);
 		}));
 
