@@ -7,12 +7,12 @@ use common::{
 };
 
 #[derive(Component, Debug, PartialEq, Default)]
-pub struct NavGrid<TMethod, TGraph> {
+pub struct Navigation<TMethod, TGraph> {
 	pub(crate) graph: TGraph,
 	pub(crate) method: TMethod,
 }
 
-impl<TMethod, TGraph> ComputePath for NavGrid<TMethod, TGraph>
+impl<TMethod, TGraph> ComputePath for Navigation<TMethod, TGraph>
 where
 	TMethod: ComputePathLazy<TGraph>,
 	TGraph: Graph,
@@ -69,10 +69,12 @@ mod tests {
 			clamp_zero_positive::ClampZeroPositive,
 			handles_map_generation::{
 				GraphLineOfSight,
+				GraphNaivePath,
 				GraphNode,
 				GraphObstacle,
 				GraphSuccessors,
 				GraphTranslation,
+				NaivePath,
 			},
 			mock::Mock,
 		},
@@ -152,6 +154,14 @@ mod tests {
 		}
 	}
 
+	impl GraphNaivePath for _Graph {
+		type TNNode = _Node;
+
+		fn naive_path(&self, _: Vec3, _: &Self::TNNode, _: Units) -> NaivePath {
+			todo!()
+		}
+	}
+
 	mock! {
 		_Graph {}
 		impl GraphNode for _Graph {
@@ -174,6 +184,10 @@ mod tests {
 			type TONode = _Node;
 			fn is_obstacle(&self, node: &_Node) -> bool;
 		}
+		impl GraphNaivePath for _Graph {
+			type TNNode = _Node;
+			fn naive_path(&self, origin: Vec3, to: &_Node, width: Units) -> NaivePath;
+		}
 	}
 
 	impl Graph for Mock_Graph {
@@ -186,7 +200,7 @@ mod tests {
 	fn call_compute_path_with_start_and_end() {
 		let start = Vec3::new(1., 1., 1.);
 		let end = Vec3::new(2., 2., 2.);
-		let grid = NavGrid {
+		let grid = Navigation {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.times(1)
@@ -202,7 +216,7 @@ mod tests {
 	#[test]
 	fn return_computed_path() {
 		let path = [_Node(1, 1, 1), _Node(2, 2, 2), _Node(3, 3, 3)];
-		let grid = NavGrid {
+		let grid = Navigation {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.returning(move |_, _, _| Box::new(path.into_iter()));
@@ -226,7 +240,7 @@ mod tests {
 
 	#[test]
 	fn no_computation_when_start_and_end_on_same_node() {
-		let grid = NavGrid {
+		let grid = Navigation {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.never()
@@ -248,7 +262,7 @@ mod tests {
 
 	#[test]
 	fn replace_start_and_end_with_called_start_and_end() {
-		let grid = NavGrid {
+		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
 				mock.expect_compute_path().returning(|_, _, _| {
 					Box::new(
@@ -292,7 +306,7 @@ mod tests {
 
 	#[test]
 	fn do_not_replace_start_with_called_start_if_path_omitted_start() {
-		let grid = NavGrid {
+		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
 				mock.expect_compute_path().returning(|_, _, _| {
 					Box::new([_Node(10, 10, 10), _Node(4, 4, 4), _Node(2, 2, 2)].into_iter())
@@ -327,7 +341,7 @@ mod tests {
 
 	#[test]
 	fn do_not_replace_end_with_called_end_if_path_omitted_end() {
-		let grid = NavGrid {
+		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
 				mock.expect_compute_path().returning(|_, _, _| {
 					Box::new([_Node(1, 1, 1), _Node(10, 10, 10), _Node(4, 4, 4)].into_iter())
@@ -362,7 +376,7 @@ mod tests {
 
 	#[test]
 	fn replace_start_and_end_with_called_start_and_end_with_different_grid_mapping() {
-		let grid = NavGrid {
+		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
 				mock.expect_compute_path().returning(|_, _, _| {
 					Box::new(

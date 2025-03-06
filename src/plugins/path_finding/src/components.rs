@@ -1,1 +1,1 @@
-pub(crate) mod nav_grid;
+pub(crate) mod navigation;
