@@ -14,11 +14,9 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use components::nav_grid::NavGrid;
+use components::navigation::Navigation;
 use methods::theta_star::ThetaStar;
 use std::marker::PhantomData;
-
-type GraphedNavGrid<TGraph> = NavGrid<ThetaStar, TGraph>;
 
 pub struct PathFindingPlugin<TMap>(PhantomData<TMap>);
 
@@ -38,7 +36,7 @@ where
 	fn build(&self, app: &mut App) {
 		app.add_systems(
 			Labels::PREFAB_INSTANTIATION.label(),
-			InsertOn::<TMaps::TMap>::required(|map| NavGrid {
+			InsertOn::<TMaps::TMap>::required(|map| Navigation {
 				graph: TMaps::TGraph::from(map),
 				method: ThetaStar::default(),
 			}),
@@ -50,5 +48,5 @@ impl<TMaps> HandlesPathFinding for PathFindingPlugin<TMaps>
 where
 	TMaps: HandlesMapGeneration + ThreadSafe,
 {
-	type TComputePath = GraphedNavGrid<TMaps::TGraph>;
+	type TComputePath = Navigation<ThetaStar, TMaps::TGraph>;
 }

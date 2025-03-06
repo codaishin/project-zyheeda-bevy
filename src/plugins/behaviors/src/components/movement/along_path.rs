@@ -1,21 +1,13 @@
 use super::Movement;
 use crate::traits::{IsDone, MovementUpdate};
 use bevy::{ecs::query::QueryItem, prelude::*};
-use common::{
-	tools::UnitsPerSecond,
-	traits::{
-		handles_path_finding::ComputePath,
-		thread_safe::ThreadSafe,
-		try_insert_on::TryInsertOn,
-		try_remove_from::TryRemoveFrom,
-	},
-};
+use common::{tools::UnitsPerSecond, traits::thread_safe::ThreadSafe};
 use std::{collections::VecDeque, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub(crate) struct AlongPath<TMoveMethod> {
-	path: VecDeque<Vec3>,
-	_m: PhantomData<TMoveMethod>,
+	pub(crate) path: VecDeque<Vec3>,
+	pub(crate) _m: PhantomData<TMoveMethod>,
 }
 
 impl<TMoveMethod> AlongPath<TMoveMethod>
@@ -26,38 +18,6 @@ where
 		Self {
 			path: VecDeque::from_iter(path.iter().copied()),
 			_m: PhantomData,
-		}
-	}
-
-	#[allow(clippy::type_complexity)]
-	pub(crate) fn new_path<TComputer>(
-		mut commands: Commands,
-		mut movements: Query<(Entity, &GlobalTransform, &Movement<Self>), Changed<Movement<Self>>>,
-		computers: Query<&TComputer>,
-	) where
-		TComputer: Component + ComputePath,
-	{
-		if movements.is_empty() {
-			return;
-		}
-
-		let Ok(computer) = computers.get_single() else {
-			return;
-		};
-
-		for (entity, transform, movement) in &mut movements {
-			let start = transform.translation();
-			let end = movement.target;
-			let Some(path) = computer.compute_path(start, end) else {
-				continue;
-			};
-			let path = match path.as_slice() {
-				[first, rest @ ..] if first == &start => rest,
-				path => path,
-			};
-
-			commands.try_insert_on(entity, Self::with_path(path));
-			commands.try_remove_from::<Movement<TMoveMethod>>(entity);
 		}
 	}
 }
@@ -87,193 +47,7 @@ where
 }
 
 #[cfg(test)]
-mod test_new_path {
-	use super::*;
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
-
-	#[derive(Debug, PartialEq)]
-	struct _MoveMethod;
-
-	#[derive(Component, NestedMocks)]
-	struct _ComputePath {
-		mock: Mock_ComputePath,
-	}
-
-	#[automock]
-	impl ComputePath for _ComputePath {
-		fn compute_path(&self, start: Vec3, end: Vec3) -> Option<Vec<Vec3>> {
-			self.mock.compute_path(start, end)
-		}
-	}
-
-	fn setup() -> App {
-		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, AlongPath::<_MoveMethod>::new_path::<_ComputePath>);
-
-		app
-	}
-
-	#[test]
-	fn set_path() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				Movement::<AlongPath<_MoveMethod>>::to(Vec3::default()),
-				GlobalTransform::default(),
-			))
-			.id();
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path().return_const(Some(vec![
-				Vec3::splat(1.),
-				Vec3::splat(2.),
-				Vec3::splat(3.),
-			]));
-		}));
-
-		app.update();
-
-		assert_eq!(
-			Some(&AlongPath::<_MoveMethod> {
-				path: VecDeque::from([Vec3::splat(1.), Vec3::splat(2.), Vec3::splat(3.)]),
-				_m: PhantomData,
-			}),
-			app.world().entity(entity).get::<AlongPath<_MoveMethod>>()
-		);
-	}
-
-	#[test]
-	fn set_path_ignoring_first_when_matching_translation() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				Movement::<AlongPath<_MoveMethod>>::to(Vec3::default()),
-				GlobalTransform::from_translation(Vec3::splat(1.)),
-			))
-			.id();
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path().return_const(Some(vec![
-				Vec3::splat(1.),
-				Vec3::splat(2.),
-				Vec3::splat(3.),
-			]));
-		}));
-
-		app.update();
-
-		assert_eq!(
-			Some(&AlongPath::<_MoveMethod> {
-				path: VecDeque::from([Vec3::splat(2.), Vec3::splat(3.)]),
-				_m: PhantomData,
-			}),
-			app.world().entity(entity).get::<AlongPath<_MoveMethod>>()
-		);
-	}
-
-	#[test]
-	fn no_panic_if_path_len_zero() {
-		let mut app = setup();
-		app.world_mut().spawn((
-			Movement::<AlongPath<_MoveMethod>>::to(Vec3::default()),
-			GlobalTransform::default(),
-		));
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path().return_const(Some(vec![]));
-		}));
-
-		app.update();
-	}
-
-	#[test]
-	fn remove_present_movement() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				Movement::<AlongPath<_MoveMethod>>::to(Vec3::default()),
-				GlobalTransform::default(),
-				Movement::<_MoveMethod>::to(Vec3::default()),
-			))
-			.id();
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path().return_const(Some(vec![
-				Vec3::splat(1.),
-				Vec3::splat(2.),
-				Vec3::splat(3.),
-			]));
-		}));
-
-		app.update();
-
-		assert_eq!(
-			None,
-			app.world().entity(entity).get::<Movement::<_MoveMethod>>()
-		);
-	}
-
-	#[test]
-	fn compute_path_correctly() {
-		let mut app = setup();
-		app.world_mut().spawn((
-			Movement::<AlongPath<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
-			GlobalTransform::from_xyz(1., 2., 3.),
-		));
-
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path()
-				.times(1)
-				.with(eq(Vec3::new(1., 2., 3.)), eq(Vec3::new(4., 5., 6.)))
-				.return_const(None);
-		}));
-
-		app.update();
-	}
-
-	#[test]
-	fn do_nothing_if_not_changed() {
-		let mut app = setup();
-		app.world_mut().spawn((
-			Movement::<AlongPath<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
-			GlobalTransform::from_xyz(1., 2., 3.),
-		));
-
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path().times(1).return_const(None);
-		}));
-
-		app.update();
-		app.update();
-	}
-
-	#[test]
-	fn compute_again_if_movement_mutably_dereferenced() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				Movement::<AlongPath<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
-				GlobalTransform::from_xyz(1., 2., 3.),
-			))
-			.id();
-
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path().times(2).return_const(None);
-		}));
-
-		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.get_mut::<Movement<AlongPath<_MoveMethod>>>()
-			.as_deref_mut();
-		app.update();
-	}
-}
-
-#[cfg(test)]
-mod test_movement {
+mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{

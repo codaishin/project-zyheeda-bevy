@@ -4,6 +4,7 @@ pub mod traits;
 
 mod systems;
 
+use crate::systems::movement::path::MovementPath;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
@@ -152,7 +153,7 @@ where
 				Update,
 				(
 					TPlayers::TPlayerMovement::set::<Movement<AlongPath<VelocityBased>>>,
-					AlongPath::<VelocityBased>::new_path::<TPathFinding::TComputePath>,
+					TPlayers::TPlayerMovement::path::<VelocityBased, TPathFinding::TComputePath>,
 					TPlayers::TPlayerMovement::execute_movement::<Movement<AlongPath<VelocityBased>>>,
 					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
 					TPlayers::TPlayerMovement::animate_movement::<
