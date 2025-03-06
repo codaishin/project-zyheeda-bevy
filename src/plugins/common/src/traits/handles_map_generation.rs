@@ -65,7 +65,7 @@ pub trait GraphNaivePath {
 	fn naive_path(&self, origin: Vec3, to: &Self::TNNode, half_width: Units) -> NaivePath;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum NaivePath {
 	Ok,
 	CannotCompute,
