@@ -22,7 +22,7 @@ impl From<&LightCell> for Dir3 {
 }
 
 impl GridCellDistanceDefinition for LightCell {
-	const CELL_DISTANCE: u8 = 2;
+	const CELL_DISTANCE: f32 = 2.;
 }
 
 impl Spawn for LightCell {

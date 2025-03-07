@@ -1,4 +1,5 @@
 pub(crate) mod grid_context;
+pub(crate) mod subdivide;
 
 use crate::{
 	line_wide::{LineNode, LineWide},

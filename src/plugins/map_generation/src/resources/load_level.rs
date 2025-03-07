@@ -55,17 +55,16 @@ where
 
 		let min = context.grid_min();
 		let mut position = min;
-		let cell_distance = TCell::CELL_DISTANCE as f32;
 
 		for (z, cell_line) in cells.into_iter().enumerate() {
 			for (x, cell) in cell_line.into_iter().enumerate() {
 				graph
 					.nodes
 					.insert((x as i32, z as i32), (transform(&cell, position), cell));
-				position.x += cell_distance;
+				position.x += TCell::CELL_DISTANCE;
 			}
 			position.x = min.x;
-			position.z += cell_distance;
+			position.z += TCell::CELL_DISTANCE;
 		}
 
 		Some(graph)
@@ -199,7 +198,7 @@ mod test_get_graph {
 	}
 
 	impl GridCellDistanceDefinition for _Cell {
-		const CELL_DISTANCE: u8 = 4;
+		const CELL_DISTANCE: f32 = 4.;
 	}
 
 	fn setup() -> App {

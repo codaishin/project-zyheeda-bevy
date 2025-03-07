@@ -5,6 +5,7 @@ pub(crate) mod key_mapper;
 pub(crate) mod light;
 pub(crate) mod light_cell;
 pub(crate) mod map;
+pub(crate) mod to_subdivided;
 pub(crate) mod wall;
 
 use self::map::MapWindow;
@@ -27,7 +28,7 @@ pub(crate) trait ExtraComponentsDefinition {
 }
 
 pub(crate) trait GridCellDistanceDefinition {
-	const CELL_DISTANCE: u8;
+	const CELL_DISTANCE: f32;
 }
 
 pub(crate) trait Spawn {
