@@ -36,9 +36,8 @@ impl TryFrom<GridDefinition> for GridContext {
 impl GridStart for GridContext {
 	fn grid_min(&self) -> Vec3 {
 		let Self(d) = self;
-		let cell_distance = d.cell_distance as usize;
-		let x = ((d.cell_count_x - 1) * cell_distance) as f32 / 2.;
-		let z = ((d.cell_count_z - 1) * cell_distance) as f32 / 2.;
+		let x = ((d.cell_count_x - 1) as f32 * d.cell_distance) / 2.;
+		let z = ((d.cell_count_z - 1) as f32 * d.cell_distance) / 2.;
 
 		Vec3::new(-x, 0., -z)
 	}
@@ -227,6 +226,7 @@ mod tests {
 	#[test_case(3, 3, 1., Vec3::new(-1., 0., -1.); "grid 3 by 3 with distance 1")]
 	#[test_case(2, 2, 2., Vec3::new(-1., 0., -1.); "grid 2 by 2 with distance 2")]
 	#[test_case(3, 3, 2., Vec3::new(-2., 0., -2.); "grid 3 by 3 with distance 2")]
+	#[test_case(3, 6, 10. / 3., Vec3::new(-10. / 3., 0., -5. -10. / 3.); "grid 3 by 6 with distance ten third")]
 	fn get_min(
 		cell_count_x: usize,
 		cell_count_z: usize,
