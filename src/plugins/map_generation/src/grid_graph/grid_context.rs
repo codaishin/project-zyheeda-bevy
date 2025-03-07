@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::errors::{Error, Level};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct GridContext(GridDefinition);
+pub struct GridContext(pub(super) GridDefinition);
 
 impl Default for GridContext {
 	fn default() -> Self {
