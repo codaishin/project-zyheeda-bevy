@@ -10,7 +10,7 @@ impl Default for GridContext {
 		Self(GridDefinition {
 			cell_count_x: 1,
 			cell_count_z: 1,
-			cell_distance: 1,
+			cell_distance: 1.,
 		})
 	}
 }
@@ -23,11 +23,13 @@ impl TryFrom<GridDefinition> for GridContext {
 			return Err(GridDefinitionError::CellCountZero);
 		}
 
-		if config.cell_distance == 0 {
-			return Err(GridDefinitionError::CellDistanceZero);
+		match config.cell_distance {
+			0. => Err(GridDefinitionError::CellDistanceZero),
+			d if d < 0. => Err(GridDefinitionError::CellDistanceNegative),
+			d if d.is_infinite() => Err(GridDefinitionError::CellDistanceInfinite),
+			d if d.is_nan() => Err(GridDefinitionError::CellDistanceNaN),
+			_ => Ok(Self(config)),
 		}
-
-		Ok(Self(config))
 	}
 }
 
@@ -44,13 +46,13 @@ impl GridStart for GridContext {
 
 impl KeyMapper for GridContext {
 	fn key_for(&self, translation: Vec3) -> (i32, i32) {
+		let Self(definition) = self;
 		let start = self.grid_min();
-		let cell_distance = self.0.cell_distance as f32;
 		let Vec3 { x, z, .. } = translation - start;
 
 		(
-			(x / cell_distance).round() as i32,
-			(z / cell_distance).round() as i32,
+			(x / definition.cell_distance).round() as i32,
+			(z / definition.cell_distance).round() as i32,
 		)
 	}
 }
@@ -59,13 +61,16 @@ impl KeyMapper for GridContext {
 pub(crate) struct GridDefinition {
 	pub(crate) cell_count_x: usize,
 	pub(crate) cell_count_z: usize,
-	pub(crate) cell_distance: u8,
+	pub(crate) cell_distance: f32,
 }
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum GridDefinitionError {
 	CellCountZero,
 	CellDistanceZero,
+	CellDistanceNegative,
+	CellDistanceNaN,
+	CellDistanceInfinite,
 }
 
 impl From<GridDefinitionError> for Error {
@@ -77,6 +82,18 @@ impl From<GridDefinitionError> for Error {
 			},
 			GridDefinitionError::CellDistanceZero => Error {
 				msg: "Grid cell distance is zero".to_owned(),
+				lvl: Level::Error,
+			},
+			GridDefinitionError::CellDistanceNegative => Error {
+				msg: "Grid cell distance is negative".to_owned(),
+				lvl: Level::Error,
+			},
+			GridDefinitionError::CellDistanceNaN => Error {
+				msg: "Grid cell distance is NaN".to_owned(),
+				lvl: Level::Error,
+			},
+			GridDefinitionError::CellDistanceInfinite => Error {
+				msg: "Grid cell distance is infinite".to_owned(),
 				lvl: Level::Error,
 			},
 		}
@@ -93,7 +110,7 @@ mod tests {
 		let definition = GridDefinition {
 			cell_count_x: 1,
 			cell_count_z: 1,
-			cell_distance: 1,
+			cell_distance: 1.,
 		};
 
 		let context = GridContext::try_from(definition);
@@ -106,7 +123,7 @@ mod tests {
 		let definition = GridDefinition {
 			cell_count_x: 0,
 			cell_count_z: 1,
-			cell_distance: 1,
+			cell_distance: 1.,
 		};
 
 		let context = GridContext::try_from(definition);
@@ -119,7 +136,7 @@ mod tests {
 		let definition = GridDefinition {
 			cell_count_x: 1,
 			cell_count_z: 0,
-			cell_distance: 1,
+			cell_distance: 1.,
 		};
 
 		let context = GridContext::try_from(definition);
@@ -128,11 +145,11 @@ mod tests {
 	}
 
 	#[test]
-	fn from_definition_no_distance_when() {
+	fn from_definition_no_distance() {
 		let definition = GridDefinition {
 			cell_count_x: 1,
 			cell_count_z: 1,
-			cell_distance: 0,
+			cell_distance: 0.,
 		};
 
 		let context = GridContext::try_from(definition);
@@ -141,11 +158,63 @@ mod tests {
 	}
 
 	#[test]
+	fn from_definition_distance_not_a_number() {
+		let definition = GridDefinition {
+			cell_count_x: 1,
+			cell_count_z: 1,
+			cell_distance: f32::NAN,
+		};
+
+		let context = GridContext::try_from(definition);
+
+		assert_eq!(Err(GridDefinitionError::CellDistanceNaN), context)
+	}
+
+	#[test]
+	fn from_definition_distance_negative() {
+		let definition = GridDefinition {
+			cell_count_x: 1,
+			cell_count_z: 1,
+			cell_distance: -1.,
+		};
+
+		let context = GridContext::try_from(definition);
+
+		assert_eq!(Err(GridDefinitionError::CellDistanceNegative), context)
+	}
+
+	#[test]
+	fn from_definition_distance_infinite() {
+		let definition = GridDefinition {
+			cell_count_x: 1,
+			cell_count_z: 1,
+			cell_distance: f32::INFINITY,
+		};
+
+		let context = GridContext::try_from(definition);
+
+		assert_eq!(Err(GridDefinitionError::CellDistanceInfinite), context)
+	}
+
+	#[test]
+	fn from_definition_distance_neg_infinite() {
+		let definition = GridDefinition {
+			cell_count_x: 1,
+			cell_count_z: 1,
+			cell_distance: f32::NEG_INFINITY,
+		};
+
+		let context = GridContext::try_from(definition);
+
+		assert_eq!(Err(GridDefinitionError::CellDistanceNegative), context)
+	}
+
+	#[test]
 	fn get_start_1_1() -> Result<(), GridDefinitionError> {
 		let context = GridContext::try_from(GridDefinition {
 			cell_count_x: 1,
 			cell_count_z: 1,
-			cell_distance: 1,
+			cell_distance: 1.,
 		})?;
 
 		let start = context.grid_min();
@@ -154,14 +223,14 @@ mod tests {
 		Ok(())
 	}
 
-	#[test_case(2, 2, 1, Vec3::new(-0.5, 0., -0.5); "grid 2 by 2 with distance 1")]
-	#[test_case(3, 3, 1, Vec3::new(-1., 0., -1.); "grid 3 by 3 with distance 1")]
-	#[test_case(2, 2, 2, Vec3::new(-1., 0., -1.); "grid 2 by 2 with distance 2")]
-	#[test_case(3, 3, 2, Vec3::new(-2., 0., -2.); "grid 3 by 3 with distance 2")]
+	#[test_case(2, 2, 1., Vec3::new(-0.5, 0., -0.5); "grid 2 by 2 with distance 1")]
+	#[test_case(3, 3, 1., Vec3::new(-1., 0., -1.); "grid 3 by 3 with distance 1")]
+	#[test_case(2, 2, 2., Vec3::new(-1., 0., -1.); "grid 2 by 2 with distance 2")]
+	#[test_case(3, 3, 2., Vec3::new(-2., 0., -2.); "grid 3 by 3 with distance 2")]
 	fn get_min(
 		cell_count_x: usize,
 		cell_count_z: usize,
-		cell_distance: u8,
+		cell_distance: f32,
 		result: Vec3,
 	) -> Result<(), GridDefinitionError> {
 		let context = GridContext::try_from(GridDefinition {
@@ -181,7 +250,7 @@ mod tests {
 		let context = GridContext::try_from(GridDefinition {
 			cell_count_x: 1,
 			cell_count_z: 1,
-			cell_distance: 1,
+			cell_distance: 1.,
 		})?;
 
 		let key = context.key_for(Vec3::ZERO);
@@ -190,16 +259,16 @@ mod tests {
 		Ok(())
 	}
 
-	#[test_case(2, 2, 1, Vec3::new(0.5, 0., -1.5), (1, -1); "grid 2 by 2 with distance 1")]
-	#[test_case(3, 3, 1, Vec3::new(0., 0., 1.), (1, 2); "grid 3 by 3 with distance 1")]
-	#[test_case(2, 2, 2, Vec3::new(1., 0., -3.), (1, -1); "grid 2 by 2 with distance 2")]
-	#[test_case(3, 3, 2, Vec3::new(0., 0., 2.), (1, 2); "grid 3 by 3 with distance 2")]
-	#[test_case(2, 2, 1, Vec3::new(0.4, 0., -1.4), (1, -1); "grid 2 by 2 with distance 1 rounded")]
-	#[test_case(2, 2, 2, Vec3::new(0.8, 0., -2.8), (1, -1); "grid 2 by 2 with distance 2 rounded")]
+	#[test_case(2, 2, 1., Vec3::new(0.5, 0., -1.5), (1, -1); "grid 2 by 2 with distance 1")]
+	#[test_case(3, 3, 1., Vec3::new(0., 0., 1.), (1, 2); "grid 3 by 3 with distance 1")]
+	#[test_case(2, 2, 2., Vec3::new(1., 0., -3.), (1, -1); "grid 2 by 2 with distance 2")]
+	#[test_case(3, 3, 2., Vec3::new(0., 0., 2.), (1, 2); "grid 3 by 3 with distance 2")]
+	#[test_case(2, 2, 1., Vec3::new(0.4, 0., -1.4), (1, -1); "grid 2 by 2 with distance 1 rounded")]
+	#[test_case(2, 2, 2., Vec3::new(0.8, 0., -2.8), (1, -1); "grid 2 by 2 with distance 2 rounded")]
 	fn get_key(
 		cell_count_x: usize,
 		cell_count_z: usize,
-		cell_distance: u8,
+		cell_distance: f32,
 		target: Vec3,
 		result: (i32, i32),
 	) -> Result<(), GridDefinitionError> {

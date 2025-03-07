@@ -135,7 +135,7 @@ mod tests {
 	}
 
 	impl GridCellDistanceDefinition for _Cell {
-		const CELL_DISTANCE: u8 = 0;
+		const CELL_DISTANCE: f32 = 0.;
 	}
 
 	impl IsWalkable for _Cell {
@@ -162,7 +162,7 @@ mod tests {
 	}
 
 	impl GridCellDistanceDefinition for _CellWithDistance {
-		const CELL_DISTANCE: u8 = 11;
+		const CELL_DISTANCE: f32 = 11.;
 	}
 
 	impl IsWalkable for _CellWithDistance {
@@ -322,7 +322,7 @@ mod tests {
 		let context = GridContext::try_from(GridDefinition {
 			cell_count_x: 2,
 			cell_count_z: 1,
-			cell_distance: 42,
+			cell_distance: 42.,
 		})?;
 		let mut app = setup(
 			Some(GridGraph {
@@ -384,7 +384,7 @@ mod tests {
 		let context = GridContext::try_from(GridDefinition {
 			cell_count_x: 2,
 			cell_count_z: 1,
-			cell_distance: 42,
+			cell_distance: 42.,
 		})?;
 		let mut app = setup(
 			Some(GridGraph {
@@ -446,7 +446,7 @@ mod tests {
 		let context = GridContext::try_from(GridDefinition {
 			cell_count_x: 2,
 			cell_count_z: 1,
-			cell_distance: 42,
+			cell_distance: 42.,
 		})?;
 		let mut app = setup(
 			Some(GridGraph::<(Transform, _Cell), ()> {

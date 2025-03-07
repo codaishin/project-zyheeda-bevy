@@ -72,7 +72,7 @@ impl From<&MapCell> for Dir3 {
 }
 
 impl GridCellDistanceDefinition for MapCell {
-	const CELL_DISTANCE: u8 = 2;
+	const CELL_DISTANCE: f32 = 2.;
 }
 
 impl From<MapWindow> for MapCell {
