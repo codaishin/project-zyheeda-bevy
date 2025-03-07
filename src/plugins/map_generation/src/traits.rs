@@ -5,6 +5,7 @@ pub(crate) mod key_mapper;
 pub(crate) mod light;
 pub(crate) mod light_cell;
 pub(crate) mod map;
+pub(crate) mod to_subdivided;
 pub(crate) mod wall;
 
 use self::map::MapWindow;

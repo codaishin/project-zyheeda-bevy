@@ -58,6 +58,7 @@ where
 					LoadLevel::<LightCell>::graph.pipe(spawn_procedural),
 				),
 			)
+			.add_systems(Update, Level::<2>::insert)
 			.add_systems(
 				Update,
 				(
@@ -71,6 +72,6 @@ where
 }
 
 impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> {
-	type TMap = Level;
+	type TMap = Level<2>;
 	type TGraph = GridGraph;
 }
