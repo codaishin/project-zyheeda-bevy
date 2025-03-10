@@ -7,7 +7,7 @@ use bevy_rapier3d::{math::Real, prelude::RayIntersection};
 pub struct TimeOfImpact(pub Real);
 
 pub trait CastRay<TRayData> {
-	fn cast_ray(&self, ray: &TRayData) -> Option<(Entity, TimeOfImpact)>;
+	fn cast_ray(&self, ray_data: &TRayData) -> Option<(Entity, TimeOfImpact)>;
 }
 
 pub trait CastRayContinuously<TRayData> {
