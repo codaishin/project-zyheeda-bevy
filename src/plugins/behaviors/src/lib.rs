@@ -147,6 +147,7 @@ where
 				(
 					Movement::<VelocityBased>::set_faces,
 					Movement::<VelocityBased>::cleanup,
+					AlongPath::<VelocityBased>::cleanup,
 				)
 					.chain(),
 			)
