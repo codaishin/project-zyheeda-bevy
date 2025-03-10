@@ -1,7 +1,10 @@
 use super::Movement;
 use crate::traits::{IsDone, MovementUpdate};
 use bevy::{ecs::query::QueryItem, prelude::*};
-use common::{tools::UnitsPerSecond, traits::thread_safe::ThreadSafe};
+use common::{
+	tools::UnitsPerSecond,
+	traits::{thread_safe::ThreadSafe, try_remove_from::TryRemoveFrom},
+};
 use std::{collections::VecDeque, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq, Default)]
@@ -18,6 +21,15 @@ where
 		Self {
 			path: VecDeque::from_iter(path.iter().copied()),
 			_m: PhantomData,
+		}
+	}
+
+	pub(crate) fn cleanup(
+		mut commands: Commands,
+		mut removed_paths: RemovedComponents<Movement<Self>>,
+	) {
+		for entity in removed_paths.read() {
+			commands.try_remove_from::<Movement<TMoveMethod>>(entity);
 		}
 	}
 }
@@ -47,7 +59,7 @@ where
 }
 
 #[cfg(test)]
-mod tests {
+mod test_with_path {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
@@ -192,5 +204,63 @@ mod tests {
 			app.world().entity(entity).get::<AlongPath<_MoveMethod>>()
 		);
 		Ok(())
+	}
+}
+
+#[cfg(test)]
+mod test_cleanup {
+	use super::*;
+	use common::test_tools::utils::SingleThreadedApp;
+
+	#[derive(Debug, PartialEq)]
+	struct _Movement;
+
+	fn setup() -> App {
+		let mut app = App::new().single_threaded(Update);
+		app.add_systems(Update, AlongPath::<_Movement>::cleanup);
+
+		app
+	}
+
+	#[test]
+	fn remove_movement_when_path_removed() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((
+				Movement::<AlongPath<_Movement>>::to(Vec3::default()),
+				Movement::<_Movement>::to(Vec3::default()),
+			))
+			.id();
+
+		app.update();
+		app.world_mut()
+			.entity_mut(entity)
+			.remove::<Movement<AlongPath<_Movement>>>();
+		app.update();
+
+		assert_eq!(
+			None,
+			app.world().entity(entity).get::<Movement<_Movement>>()
+		);
+	}
+	#[test]
+	fn do_not_remove_movement_when_path_not_removed() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((
+				Movement::<AlongPath<_Movement>>::to(Vec3::default()),
+				Movement::<_Movement>::to(Vec3::default()),
+			))
+			.id();
+
+		app.update();
+		app.update();
+
+		assert_eq!(
+			Some(&Movement::<_Movement>::to(Vec3::default())),
+			app.world().entity(entity).get::<Movement<_Movement>>()
+		);
 	}
 }

@@ -10,6 +10,7 @@ use bevy_rapier3d::prelude::Velocity;
 use common::{
 	effects::deal_damage::DealDamage,
 	states::{game_state::GameState, mouse_context::MouseContext},
+	systems::log::log_many,
 	traits::{
 		animation::HasAnimationsDispatch,
 		handles_destruction::HandlesDestruction,
@@ -146,6 +147,7 @@ where
 				(
 					Movement::<VelocityBased>::set_faces,
 					Movement::<VelocityBased>::cleanup,
+					AlongPath::<VelocityBased>::cleanup,
 				)
 					.chain(),
 			)
@@ -166,14 +168,16 @@ where
 			.add_systems(
 				Update,
 				(
-					TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>,
-					TEnemies::TEnemy::chase,
+					TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(log_many),
+					TEnemies::TEnemy::attack,
+					TEnemies::TEnemy::chase::<AlongPath<VelocityBased>>,
+					TEnemies::TEnemy::path::<VelocityBased, TPathFinding::TComputePath>,
+					TEnemies::TEnemy::execute_movement::<Movement<AlongPath<VelocityBased>>>,
+					TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>,
 					TEnemies::TEnemy::animate_movement::<
 						Movement<VelocityBased>,
 						TAnimations::TAnimationDispatch,
 					>,
-					TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>,
-					TEnemies::TEnemy::attack,
 				)
 					.chain(),
 			)
