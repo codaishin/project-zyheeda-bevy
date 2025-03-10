@@ -3,7 +3,11 @@ use bevy::{math::InvalidDirectionError, prelude::*};
 use bevy_rapier3d::plugin::RapierContext;
 use common::{
 	components::GroundOffset,
-	tools::{aggro_range::AggroRange, attack_range::AttackRange},
+	tools::{
+		aggro_range::AggroRange,
+		attack_range::AttackRange,
+		exclude_rigid_body::ExcludeRigidBody,
+	},
 	traits::{accessors::get::Getter, cast_ray::CastRay, handles_enemies::EnemyTarget},
 };
 
@@ -41,7 +45,7 @@ fn select_behavior<TAgent, TPlayer, TCasteRay>(
 where
 	TAgent: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
 	TPlayer: Component,
-	TCasteRay: Component + CastRay<Ray3d>,
+	TCasteRay: Component + CastRay<(Ray3d, ExcludeRigidBody)>,
 {
 	let player = players.get_single().ok();
 	let context = contexts.get_single().ok();
@@ -67,7 +71,15 @@ where
 			None => target_transform.translation(),
 		};
 
-		match strategy(agent, translation, target, target_translation, context) {
+		let strategy = get_strategy(
+			entity.id(),
+			agent,
+			translation,
+			target,
+			target_translation,
+			context,
+		);
+		match strategy {
 			Err(error) => results.push(Err(error)),
 			Ok(Behavior::Attack) => {
 				entity.try_insert(Attack(target));
@@ -87,8 +99,9 @@ where
 	results
 }
 
-fn strategy<TAgent, TContext>(
-	enemy: &TAgent,
+fn get_strategy<TAgent, TContext>(
+	enemy: Entity,
+	enemy_agent: &TAgent,
 	enemy_translation: Vec3,
 	target: Entity,
 	target_translation: Vec3,
@@ -96,15 +109,15 @@ fn strategy<TAgent, TContext>(
 ) -> Result<Behavior, InvalidDirectionError>
 where
 	TAgent: Getter<AggroRange> + Getter<AttackRange>,
-	TContext: CastRay<Ray3d>,
+	TContext: CastRay<(Ray3d, ExcludeRigidBody)>,
 {
 	let direction = target_translation - enemy_translation;
 	let distance = direction.length();
 
-	if distance > aggro_range(enemy) {
+	if distance > aggro_range(enemy_agent) {
 		return Ok(Behavior::Idle);
 	}
-	if distance > attack_range(enemy) {
+	if distance > attack_range(enemy_agent) {
 		return Ok(Behavior::Chase);
 	}
 	let Some(context) = context else {
@@ -116,10 +129,15 @@ where
 		direction: Dir3::new(direction)?,
 	};
 
-	match context.cast_ray(&ray) {
-		Some((hit, ..)) if hit == target => Ok(Behavior::Attack),
-		_ => Ok(Behavior::Chase),
+	let Some((hit, ..)) = context.cast_ray(&(ray, ExcludeRigidBody(enemy))) else {
+		return Ok(Behavior::Chase);
+	};
+
+	if hit != target {
+		return Ok(Behavior::Chase);
 	}
+
+	Ok(Behavior::Attack)
 }
 
 fn aggro_range<TAgent>(agent: &TAgent) -> f32
@@ -187,9 +205,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl CastRay<Ray3d> for _Context {
-		fn cast_ray(&self, ray: &Ray3d) -> Option<(Entity, TimeOfImpact)> {
-			self.mock.cast_ray(ray)
+	impl CastRay<(Ray3d, ExcludeRigidBody)> for _Context {
+		fn cast_ray(&self, ray_data: &(Ray3d, ExcludeRigidBody)) -> Option<(Entity, TimeOfImpact)> {
+			self.mock.cast_ray(ray_data)
 		}
 	}
 
@@ -494,23 +512,29 @@ mod tests {
 			.world_mut()
 			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
 			.id();
-		app.world_mut().spawn((
-			GlobalTransform::from_xyz(0., 0., 1.),
-			Chase(player),
-			_Enemy {
-				attack_range: Units::new(10.).into(),
-				aggro_range: Units::new(10.).into(),
-				target: EnemyTarget::Player,
-			},
-		));
+		let enemy = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::from_xyz(0., 0., 1.),
+				Chase(player),
+				_Enemy {
+					attack_range: Units::new(10.).into(),
+					aggro_range: Units::new(10.).into(),
+					target: EnemyTarget::Player,
+				},
+			))
+			.id();
 		app.world_mut().spawn(_Context::new().with_mock(|mock| {
 			let direction = Dir3::new(Vec3::new(1., 0., -1.)).expect("TEST DIR INVALID");
 			mock.expect_cast_ray()
 				.times(1)
-				.with(eq(Ray3d {
-					origin: Vec3::new(0., 0., 1.),
-					direction,
-				}))
+				.with(eq((
+					Ray3d {
+						origin: Vec3::new(0., 0., 1.),
+						direction,
+					},
+					ExcludeRigidBody(enemy),
+				)))
 				.return_const(None);
 		}));
 
@@ -530,24 +554,30 @@ mod tests {
 				GroundOffset(Vec3::new(0., 0.5, 0.)),
 			))
 			.id();
-		app.world_mut().spawn((
-			GlobalTransform::from_xyz(0., 0., 1.),
-			Chase(player),
-			_Enemy {
-				attack_range: Units::new(10.).into(),
-				aggro_range: Units::new(10.).into(),
-				target: EnemyTarget::Player,
-			},
-			GroundOffset(Vec3::new(0., 1., 0.)),
-		));
+		let enemy = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::from_xyz(0., 0., 1.),
+				Chase(player),
+				_Enemy {
+					attack_range: Units::new(10.).into(),
+					aggro_range: Units::new(10.).into(),
+					target: EnemyTarget::Player,
+				},
+				GroundOffset(Vec3::new(0., 1., 0.)),
+			))
+			.id();
 		app.world_mut().spawn(_Context::new().with_mock(|mock| {
 			let direction = Dir3::new(Vec3::new(1., -0.5, -1.)).expect("TEST DIR INVALID");
 			mock.expect_cast_ray()
 				.times(1)
-				.with(eq(Ray3d {
-					origin: Vec3::new(0., 1., 1.),
-					direction,
-				}))
+				.with(eq((
+					Ray3d {
+						origin: Vec3::new(0., 1., 1.),
+						direction,
+					},
+					ExcludeRigidBody(enemy),
+				)))
 				.return_const(None);
 		}));
 
