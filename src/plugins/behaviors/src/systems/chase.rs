@@ -1,30 +1,35 @@
-use crate::components::{
-	Chase,
-	movement::{Movement, velocity_based::VelocityBased},
-};
+use crate::components::{Chase, movement::Movement};
 use bevy::prelude::*;
-use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
+use common::traits::{
+	thread_safe::ThreadSafe,
+	try_insert_on::TryInsertOn,
+	try_remove_from::TryRemoveFrom,
+};
 
 impl<T> ChaseSystem for T {}
 
 pub(crate) trait ChaseSystem {
-	fn chase(
+	fn chase<TMovementMethod>(
 		mut commands: Commands,
 		chasers: Query<(Entity, &Chase), With<Self>>,
 		mut removed_chasers: RemovedComponents<Chase>,
 		transforms: Query<&GlobalTransform>,
 	) where
 		Self: Component + Sized,
+		TMovementMethod: ThreadSafe,
 	{
 		for entity in removed_chasers.read() {
-			commands.try_remove_from::<Movement<VelocityBased>>(entity);
+			commands.try_remove_from::<Movement<TMovementMethod>>(entity);
 		}
 
 		for (entity, Chase(target)) in &chasers {
 			let Ok(target) = transforms.get(*target) else {
 				continue;
 			};
-			commands.try_insert_on(entity, Movement::<VelocityBased>::to(target.translation()));
+			commands.try_insert_on(
+				entity,
+				Movement::<TMovementMethod>::to(target.translation()),
+			);
 		}
 	}
 }
@@ -36,9 +41,12 @@ mod tests {
 	#[derive(Component)]
 	struct _Agent;
 
+	#[derive(Debug, PartialEq)]
+	struct _MovementMethod;
+
 	fn setup(target_position: Vec3) -> (App, Entity) {
 		let mut app = App::new();
-		app.add_systems(Update, _Agent::chase);
+		app.add_systems(Update, _Agent::chase::<_MovementMethod>);
 		let target = app
 			.world_mut()
 			.spawn(GlobalTransform::from_translation(target_position))
@@ -59,8 +67,10 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Movement::<VelocityBased>::to(target_position)),
-			app.world().entity(chaser).get::<Movement<VelocityBased>>()
+			Some(&Movement::<_MovementMethod>::to(target_position)),
+			app.world()
+				.entity(chaser)
+				.get::<Movement<_MovementMethod>>()
 		);
 	}
 
@@ -78,7 +88,9 @@ mod tests {
 
 		assert_eq!(
 			None,
-			app.world().entity(chaser).get::<Movement<VelocityBased>>()
+			app.world()
+				.entity(chaser)
+				.get::<Movement<_MovementMethod>>()
 		);
 	}
 }

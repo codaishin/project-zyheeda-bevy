@@ -167,13 +167,15 @@ where
 				Update,
 				(
 					TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>,
-					TEnemies::TEnemy::chase,
+					TEnemies::TEnemy::attack,
+					TEnemies::TEnemy::chase::<AlongPath<VelocityBased>>,
+					TEnemies::TEnemy::path::<VelocityBased, TPathFinding::TComputePath>,
+					TEnemies::TEnemy::execute_movement::<Movement<AlongPath<VelocityBased>>>,
+					TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>,
 					TEnemies::TEnemy::animate_movement::<
 						Movement<VelocityBased>,
 						TAnimations::TAnimationDispatch,
 					>,
-					TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>,
-					TEnemies::TEnemy::attack,
 				)
 					.chain(),
 			)
