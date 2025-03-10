@@ -2,7 +2,7 @@ use crate::components::{Attack, Chase};
 use bevy::{math::InvalidDirectionError, prelude::*};
 use bevy_rapier3d::plugin::RapierContext;
 use common::{
-	components::GroundOffset,
+	components::{ColliderRoot, GroundOffset},
 	tools::{
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
@@ -20,12 +20,13 @@ pub(crate) trait SelectBehavior {
 		agents: Query<(Entity, &GlobalTransform, Option<&GroundOffset>, &Self)>,
 		players: Query<(Entity, &GlobalTransform, Option<&GroundOffset>), With<TPlayer>>,
 		all: Query<(Entity, &GlobalTransform, Option<&GroundOffset>)>,
+		colliders: Query<&ColliderRoot>,
 	) -> Vec<Result<(), InvalidDirectionError>>
 	where
 		Self: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
 		TPlayer: Component,
 	{
-		select_behavior(commands, ctx, agents, players, all)
+		select_behavior(commands, ctx, agents, players, all, colliders)
 	}
 }
 
@@ -41,6 +42,7 @@ fn select_behavior<TAgent, TPlayer, TCasteRay>(
 	agents: Query<(Entity, &GlobalTransform, Option<&GroundOffset>, &TAgent)>,
 	players: Query<(Entity, &GlobalTransform, Option<&GroundOffset>), With<TPlayer>>,
 	all: Query<(Entity, &GlobalTransform, Option<&GroundOffset>)>,
+	colliders: Query<&ColliderRoot>,
 ) -> Vec<Result<(), InvalidDirectionError>>
 where
 	TAgent: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
@@ -78,6 +80,7 @@ where
 			target,
 			target_translation,
 			context,
+			&colliders,
 		);
 		match strategy {
 			Err(error) => results.push(Err(error)),
@@ -106,6 +109,7 @@ fn get_strategy<TAgent, TContext>(
 	target: Entity,
 	target_translation: Vec3,
 	context: Option<&TContext>,
+	colliders: &Query<&ColliderRoot>,
 ) -> Result<Behavior, InvalidDirectionError>
 where
 	TAgent: Getter<AggroRange> + Getter<AttackRange>,
@@ -129,15 +133,10 @@ where
 		direction: Dir3::new(direction)?,
 	};
 
-	let Some((hit, ..)) = context.cast_ray(&(ray, ExcludeRigidBody(enemy))) else {
-		return Ok(Behavior::Chase);
-	};
-
-	if hit != target {
-		return Ok(Behavior::Chase);
+	match context.cast_ray(&(ray, ExcludeRigidBody(enemy))) {
+		Some((hit, ..)) if hit_target(target, hit, colliders) => Ok(Behavior::Attack),
+		_ => Ok(Behavior::Chase),
 	}
-
-	Ok(Behavior::Attack)
 }
 
 fn aggro_range<TAgent>(agent: &TAgent) -> f32
@@ -154,12 +153,23 @@ where
 	**agent.get()
 }
 
+fn hit_target(target: Entity, hit: Entity, colliders: &Query<&ColliderRoot>) -> bool {
+	if hit == target {
+		return true;
+	}
+
+	colliders
+		.get(hit)
+		.map(|ColliderRoot(root)| root == &target)
+		.unwrap_or(false)
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
-		components::GroundOffset,
+		components::{ColliderRoot, GroundOffset},
 		test_tools::utils::SingleThreadedApp,
 		tools::Units,
 		traits::{
@@ -611,6 +621,44 @@ mod tests {
 			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
 
 		assert_eq!(vec![Err(InvalidDirectionError::NaN)], errors);
+		Ok(())
+	}
+
+	#[test]
+	fn attack_player_when_in_attack_range_with_los_via_collider_root() -> Result<(), RunSystemError>
+	{
+		let mut app = setup();
+		let player = app
+			.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
+			.id();
+		let player_collider = app.world_mut().spawn(ColliderRoot(player)).id();
+		let enemy = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::from_xyz(1., 0., 0.5),
+				Chase(player),
+				_Enemy {
+					attack_range: Units::new(1.).into(),
+					aggro_range: Units::new(2.).into(),
+					target: EnemyTarget::Player,
+				},
+			))
+			.id();
+		app.world_mut().spawn(_Context::new().with_mock(|mock| {
+			let arbitrary_toi = TimeOfImpact(42.);
+			mock.expect_cast_ray()
+				.return_const(Some((player_collider, arbitrary_toi)));
+		}));
+
+		app.world_mut()
+			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
+
+		let enemy = app.world().entity(enemy);
+		assert_eq!(
+			(None, Some(&Attack(player)),),
+			(enemy.get::<Chase>(), enemy.get::<Attack>())
+		);
 		Ok(())
 	}
 }
