@@ -2,6 +2,7 @@ use crate::components::{Attack, Chase};
 use bevy::{math::InvalidDirectionError, prelude::*};
 use bevy_rapier3d::plugin::RapierContext;
 use common::{
+	components::GroundOffset,
 	tools::{aggro_range::AggroRange, attack_range::AttackRange},
 	traits::{accessors::get::Getter, cast_ray::CastRay, handles_enemies::EnemyTarget},
 };
@@ -12,9 +13,9 @@ pub(crate) trait SelectBehavior {
 	fn select_behavior<TPlayer>(
 		commands: Commands,
 		ctx: Query<&RapierContext>,
-		agents: Query<(Entity, &GlobalTransform, &Self)>,
-		players: Query<(Entity, &GlobalTransform), With<TPlayer>>,
-		all: Query<(Entity, &GlobalTransform)>,
+		agents: Query<(Entity, &GlobalTransform, Option<&GroundOffset>, &Self)>,
+		players: Query<(Entity, &GlobalTransform, Option<&GroundOffset>), With<TPlayer>>,
+		all: Query<(Entity, &GlobalTransform, Option<&GroundOffset>)>,
 	) -> Vec<Result<(), InvalidDirectionError>>
 	where
 		Self: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
@@ -33,9 +34,9 @@ enum Behavior {
 fn select_behavior<TAgent, TPlayer, TCasteRay>(
 	mut commands: Commands,
 	contexts: Query<&TCasteRay>,
-	agents: Query<(Entity, &GlobalTransform, &TAgent)>,
-	players: Query<(Entity, &GlobalTransform), With<TPlayer>>,
-	all: Query<(Entity, &GlobalTransform)>,
+	agents: Query<(Entity, &GlobalTransform, Option<&GroundOffset>, &TAgent)>,
+	players: Query<(Entity, &GlobalTransform, Option<&GroundOffset>), With<TPlayer>>,
+	all: Query<(Entity, &GlobalTransform, Option<&GroundOffset>)>,
 ) -> Vec<Result<(), InvalidDirectionError>>
 where
 	TAgent: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
@@ -46,19 +47,27 @@ where
 	let context = contexts.get_single().ok();
 	let mut results = vec![];
 
-	for (entity, transform, agent) in &agents {
+	for (entity, transform, ground_offset, agent) in &agents {
 		let target = match agent.get() {
 			EnemyTarget::Player => player,
 			EnemyTarget::Entity(entity) => all.get(entity).ok(),
 		};
-		let Some((target, target_transform)) = target else {
+		let Some((target, target_transform, target_ground_offset)) = target else {
 			continue;
 		};
 		let Some(mut entity) = commands.get_entity(entity) else {
 			continue;
 		};
+		let translation = match ground_offset {
+			Some(GroundOffset(ground_offset)) => transform.translation() + ground_offset,
+			None => transform.translation(),
+		};
+		let target_translation = match target_ground_offset {
+			Some(GroundOffset(ground_offset)) => target_transform.translation() + ground_offset,
+			None => target_transform.translation(),
+		};
 
-		match strategy(agent, transform, target, target_transform, context) {
+		match strategy(agent, translation, target, target_translation, context) {
 			Err(error) => results.push(Err(error)),
 			Ok(Behavior::Attack) => {
 				entity.try_insert(Attack(target));
@@ -80,17 +89,15 @@ where
 
 fn strategy<TAgent, TContext>(
 	enemy: &TAgent,
-	enemy_transform: &GlobalTransform,
+	enemy_translation: Vec3,
 	target: Entity,
-	target_transform: &GlobalTransform,
+	target_translation: Vec3,
 	context: Option<&TContext>,
 ) -> Result<Behavior, InvalidDirectionError>
 where
 	TAgent: Getter<AggroRange> + Getter<AttackRange>,
 	TContext: CastRay<Ray3d>,
 {
-	let enemy_translation = enemy_transform.translation();
-	let target_translation = target_transform.translation();
 	let direction = target_translation - enemy_translation;
 	let distance = direction.length();
 
@@ -134,6 +141,7 @@ mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
+		components::GroundOffset,
 		test_tools::utils::SingleThreadedApp,
 		tools::Units,
 		traits::{
@@ -501,6 +509,43 @@ mod tests {
 				.times(1)
 				.with(eq(Ray3d {
 					origin: Vec3::new(0., 0., 1.),
+					direction,
+				}))
+				.return_const(None);
+		}));
+
+		app.world_mut()
+			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
+		Ok(())
+	}
+
+	#[test]
+	fn los_check_to_player_with_proper_ray_using_offsets() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let player = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::from_xyz(1., 0., 0.),
+				_Player,
+				GroundOffset(Vec3::new(0., 0.5, 0.)),
+			))
+			.id();
+		app.world_mut().spawn((
+			GlobalTransform::from_xyz(0., 0., 1.),
+			Chase(player),
+			_Enemy {
+				attack_range: Units::new(10.).into(),
+				aggro_range: Units::new(10.).into(),
+				target: EnemyTarget::Player,
+			},
+			GroundOffset(Vec3::new(0., 1., 0.)),
+		));
+		app.world_mut().spawn(_Context::new().with_mock(|mock| {
+			let direction = Dir3::new(Vec3::new(1., -0.5, -1.)).expect("TEST DIR INVALID");
+			mock.expect_cast_ray()
+				.times(1)
+				.with(eq(Ray3d {
+					origin: Vec3::new(0., 1., 1.),
 					direction,
 				}))
 				.return_const(None);
