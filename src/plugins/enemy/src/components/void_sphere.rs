@@ -27,7 +27,7 @@ use common::{
 	},
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	errors::Error,
-	tools::{Units, UnitsPerSecond},
+	tools::{Units, UnitsPerSecond, collider_radius::ColliderRadius},
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_effect::HandlesEffect,
@@ -49,6 +49,10 @@ use std::{f32::consts::PI, sync::Arc, time::Duration};
 pub struct VoidSphere;
 
 impl VoidSphere {
+	fn collider_radius() -> ColliderRadius {
+		ColliderRadius(Units::new(VOID_SPHERE_OUTER_RADIUS))
+	}
+
 	const fn ground_offset() -> Vec3 {
 		Vec3::new(0., 1.2, 0.)
 	}
@@ -107,6 +111,7 @@ impl VoidSphere {
 				range: attack_range,
 			}),
 			cool_down: Duration::from_secs(5),
+			collider_radius: Self::collider_radius(),
 		}
 	}
 

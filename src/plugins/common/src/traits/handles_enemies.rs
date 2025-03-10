@@ -2,6 +2,7 @@ use super::accessors::get::{Getter, GetterRefOptional};
 use crate::tools::{
 	aggro_range::AggroRange,
 	attack_range::AttackRange,
+	collider_radius::ColliderRadius,
 	movement_animation::MovementAnimation,
 	speed::Speed,
 };
@@ -15,6 +16,7 @@ pub trait HandlesEnemies {
 		+ Getter<EnemyTarget>
 		+ Getter<AggroRange>
 		+ Getter<AttackRange>
+		+ Getter<ColliderRadius>
 		+ EnemyAttack;
 }
 

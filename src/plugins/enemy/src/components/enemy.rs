@@ -2,13 +2,16 @@ use crate::traits::insert_attack::InsertAttack;
 use bevy::prelude::*;
 use common::{
 	tools::{
+		Units,
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
+		collider_radius::ColliderRadius,
 		movement_animation::MovementAnimation,
 		speed::Speed,
 	},
 	traits::{
 		accessors::get::{Getter, GetterRefOptional},
+		clamp_zero_positive::ClampZeroPositive,
 		handles_enemies::{Attacker, EnemyAttack, EnemyTarget, Target},
 	},
 };
@@ -23,6 +26,7 @@ pub struct Enemy {
 	pub(crate) target: EnemyTarget,
 	pub(crate) attack: Arc<dyn InsertAttack + Sync + Send + 'static>,
 	pub(crate) cool_down: Duration,
+	pub(crate) collider_radius: ColliderRadius,
 }
 
 impl Default for Enemy {
@@ -35,6 +39,7 @@ impl Default for Enemy {
 			target: Default::default(),
 			attack: Arc::new(NoAttack),
 			cool_down: Default::default(),
+			collider_radius: ColliderRadius(Units::new(1.)),
 		}
 	}
 }
@@ -66,6 +71,12 @@ impl Getter<AttackRange> for Enemy {
 impl Getter<EnemyTarget> for Enemy {
 	fn get(&self) -> EnemyTarget {
 		self.target
+	}
+}
+
+impl Getter<ColliderRadius> for Enemy {
+	fn get(&self) -> ColliderRadius {
+		self.collider_radius
 	}
 }
 
