@@ -12,11 +12,5 @@ pub(crate) enum Shape {
 	Cross4,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, TypePath)]
-pub(crate) enum LightCell {
-	Floating,
-	Empty,
-}
-
 #[derive(TypePath, Asset, Debug, PartialEq)]
 pub(crate) struct Map<TCell: TypePath + Sync + Send>(pub Vec<Vec<TCell>>);

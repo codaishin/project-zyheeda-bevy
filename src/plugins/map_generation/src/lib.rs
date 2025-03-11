@@ -19,14 +19,10 @@ use common::{
 };
 use components::{Wall, WallBack, level::Level};
 use grid_graph::GridGraph;
-use map::{LightCell, cell::MapCell};
+use map::cell::MapCell;
 use resources::load_level::LoadLevel;
 use std::marker::PhantomData;
-use systems::{
-	apply_extra_components::ApplyExtraComponents,
-	spawn_procedural::spawn_procedural,
-	unlit_material::unlit_material,
-};
+use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
 use traits::{RegisterMapCell, light::wall::WallLight};
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
@@ -50,13 +46,9 @@ where
 		let new_game = GameState::NewGame;
 
 		app.register_map_cell::<MapCell>(OnEnter(new_game))
-			.register_map_cell::<LightCell>(OnEnter(new_game))
 			.add_systems(
 				Update,
-				(
-					LoadLevel::<MapCell>::graph.pipe(Level::spawn::<MapCell>),
-					LoadLevel::<LightCell>::graph.pipe(spawn_procedural),
-				),
+				LoadLevel::<MapCell>::graph.pipe(Level::spawn::<MapCell>),
 			)
 			.add_systems(Update, Level::<1>::insert)
 			.add_systems(
