@@ -1,7 +1,7 @@
 use super::Shape;
 use crate::{
 	components::Corridor,
-	tools::Paths,
+	tools::model_data::ModelData,
 	traits::{
 		GridCellDistanceDefinition,
 		SourcePath,
@@ -33,33 +33,27 @@ impl SourcePath for MapCell {
 	}
 }
 
-impl From<&MapCell> for Paths {
+impl From<&MapCell> for ModelData {
 	fn from(value: &MapCell) -> Self {
 		match value {
-			MapCell::Corridor(_, Shape::Single) => corridor(["single"]),
-			MapCell::Corridor(_, Shape::End) => corridor(["end"]),
-			MapCell::Corridor(_, Shape::Straight) => corridor(["straight"]),
-			MapCell::Corridor(_, Shape::Cross2) => corridor(["corner"]),
-			MapCell::Corridor(_, Shape::Cross3) => corridor(["t"]),
-			MapCell::Corridor(_, Shape::Cross4) => corridor(["cross"]),
+			MapCell::Corridor(dir, Shape::Single) => corridor([(dir, "single")]),
+			MapCell::Corridor(dir, Shape::End) => corridor([(dir, "end")]),
+			MapCell::Corridor(dir, Shape::Straight) => corridor([(dir, "straight")]),
+			MapCell::Corridor(dir, Shape::Cross2) => corridor([(dir, "corner")]),
+			MapCell::Corridor(dir, Shape::Cross3) => corridor([(dir, "t")]),
+			MapCell::Corridor(dir, Shape::Cross4) => corridor([(dir, "cross")]),
 			MapCell::Empty => corridor([]),
 		}
 	}
 }
 
-fn corridor<const N: usize>(suffixes: [&str; N]) -> Paths {
-	Paths::from(
-		suffixes.map(|suffix| format!("{}{}.glb#Scene0", Corridor::MODEL_PATH_PREFIX, suffix)),
-	)
-}
-
-impl From<&MapCell> for Dir3 {
-	fn from(value: &MapCell) -> Self {
-		match value {
-			MapCell::Corridor(direction, _) => *direction,
-			MapCell::Empty => Dir3::NEG_Z,
-		}
-	}
+fn corridor<const N: usize>(suffixes: [(&Dir3, &str); N]) -> ModelData {
+	ModelData::from(suffixes.map(|(dir, suffix)| {
+		(
+			format!("{}{}.glb#Scene0", Corridor::MODEL_PATH_PREFIX, suffix),
+			*dir,
+		)
+	}))
 }
 
 impl GridCellDistanceDefinition for MapCell {
