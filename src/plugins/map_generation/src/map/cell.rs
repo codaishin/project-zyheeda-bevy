@@ -1,6 +1,7 @@
 use super::Shape;
 use crate::{
 	components::Corridor,
+	tools::Paths,
 	traits::{
 		GridCellDistanceDefinition,
 		SourcePath,
@@ -32,34 +33,24 @@ impl SourcePath for MapCell {
 	}
 }
 
-pub struct CellIsEmpty;
-
-impl TryFrom<&MapCell> for Path {
-	type Error = CellIsEmpty;
-
-	fn try_from(value: &MapCell) -> Result<Self, Self::Error> {
+impl From<&MapCell> for Paths {
+	fn from(value: &MapCell) -> Self {
 		match value {
-			MapCell::Corridor(_, Shape::Single) => corridor("single"),
-			MapCell::Corridor(_, Shape::End) => corridor("end"),
-			MapCell::Corridor(_, Shape::Straight) => corridor("straight"),
-			MapCell::Corridor(_, Shape::Cross2) => corridor("corner"),
-			MapCell::Corridor(_, Shape::Cross3) => corridor("t"),
-			MapCell::Corridor(_, Shape::Cross4) => corridor("cross"),
-			MapCell::Empty => empty_cell(),
+			MapCell::Corridor(_, Shape::Single) => corridor(["single"]),
+			MapCell::Corridor(_, Shape::End) => corridor(["end"]),
+			MapCell::Corridor(_, Shape::Straight) => corridor(["straight"]),
+			MapCell::Corridor(_, Shape::Cross2) => corridor(["corner"]),
+			MapCell::Corridor(_, Shape::Cross3) => corridor(["t"]),
+			MapCell::Corridor(_, Shape::Cross4) => corridor(["cross"]),
+			MapCell::Empty => corridor([]),
 		}
 	}
 }
 
-fn corridor(suffix: &'static str) -> Result<Path, CellIsEmpty> {
-	Ok(Path::from(format!(
-		"{}{}.glb#Scene0",
-		Corridor::MODEL_PATH_PREFIX,
-		suffix
-	)))
-}
-
-fn empty_cell() -> Result<Path, CellIsEmpty> {
-	Err(CellIsEmpty)
+fn corridor<const N: usize>(suffixes: [&str; N]) -> Paths {
+	Paths::from(
+		suffixes.map(|suffix| format!("{}{}.glb#Scene0", Corridor::MODEL_PATH_PREFIX, suffix)),
+	)
 }
 
 impl From<&MapCell> for Dir3 {

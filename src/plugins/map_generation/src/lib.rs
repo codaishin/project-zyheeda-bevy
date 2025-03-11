@@ -5,6 +5,7 @@ mod map;
 mod map_loader;
 mod resources;
 mod systems;
+mod tools;
 mod traits;
 
 use bevy::prelude::*;

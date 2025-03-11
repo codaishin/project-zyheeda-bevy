@@ -1,13 +1,10 @@
 use crate::{
 	grid_graph::{GridGraph, Obstacles},
+	tools::Paths,
 	traits::{GridCellDistanceDefinition, is_walkable::IsWalkable, to_subdivided::ToSubdivided},
 };
 use bevy::prelude::*;
-use common::traits::{
-	load_asset::{LoadAsset, Path},
-	thread_safe::ThreadSafe,
-	try_insert_on::TryInsertOn,
-};
+use common::traits::{load_asset::LoadAsset, thread_safe::ThreadSafe, try_insert_on::TryInsertOn};
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Name(Self::name), Transform, Visibility)]
@@ -27,7 +24,7 @@ impl Level {
 		levels: Query<&mut Level>,
 	) where
 		TCell: IsWalkable + GridCellDistanceDefinition,
-		for<'a> Path: TryFrom<&'a TCell>,
+		for<'a> Paths: From<&'a TCell>,
 	{
 		spawn(graph, commands, load_asset, level_cache, levels);
 	}
@@ -77,7 +74,7 @@ pub(crate) fn spawn<TCell, TAsset>(
 ) where
 	TCell: IsWalkable + GridCellDistanceDefinition,
 	TAsset: LoadAsset + Resource,
-	for<'a> Path: TryFrom<&'a TCell>,
+	for<'a> Paths: From<&'a TCell>,
 {
 	let Some(graph) = graph else {
 		return;
@@ -110,7 +107,7 @@ macro_rules! apply_graph {
 				new_graph.extra.obstacles.insert(key);
 			}
 
-			if let Ok(path) = Path::try_from(&cell) {
+			for path in Paths::from(&cell) {
 				let scene = $load_asset.load_asset(path);
 				$level.with_child((SceneRoot(scene), transform));
 			}
@@ -162,7 +159,7 @@ mod tests {
 
 	#[derive(Clone, Default)]
 	struct _Cell {
-		path: Option<Path>,
+		paths: Paths,
 		is_walkable: bool,
 	}
 
@@ -176,14 +173,9 @@ mod tests {
 		}
 	}
 
-	impl TryFrom<&_Cell> for Path {
-		type Error = ();
-
-		fn try_from(value: &_Cell) -> Result<Self, Self::Error> {
-			match &value.path {
-				Some(path) => Ok(path.clone()),
-				None => Err(()),
-			}
+	impl From<&_Cell> for Paths {
+		fn from(value: &_Cell) -> Self {
+			value.paths.clone()
 		}
 	}
 
@@ -233,7 +225,7 @@ mod tests {
 	fn setup<TCell>(graph: Option<GridGraph<(Transform, TCell), ()>>, load_scene: _LoadScene) -> App
 	where
 		TCell: Clone + IsWalkable + GridCellDistanceDefinition + ThreadSafe,
-		for<'a> Path: TryFrom<&'a TCell>,
+		for<'a> Paths: From<&'a TCell>,
 	{
 		let mut app = App::new().single_threaded(Update);
 		let return_graph = move || graph.clone();
@@ -254,7 +246,7 @@ mod tests {
 					(
 						Transform::from_xyz(1., 2., 3.),
 						_Cell {
-							path: Some(Path::from("A")),
+							paths: Paths::from(["A"]),
 							..default()
 						},
 					),
@@ -291,7 +283,7 @@ mod tests {
 					(
 						Transform::default(),
 						_Cell {
-							path: Some(Path::from("A")),
+							paths: Paths::from(["A"]),
 							..default()
 						},
 					),
@@ -324,7 +316,7 @@ mod tests {
 					(
 						Transform::default(),
 						_Cell {
-							path: Some(Path::from("A")),
+							paths: Paths::from(["A"]),
 							..default()
 						},
 					),
@@ -364,7 +356,7 @@ mod tests {
 						(
 							Transform::from_xyz(1., 2., 3.),
 							_Cell {
-								path: Some(Path::from("A")),
+								paths: Paths::from(["A"]),
 								is_walkable: true,
 							},
 						),
@@ -374,7 +366,7 @@ mod tests {
 						(
 							Transform::from_xyz(3., 4., 5.),
 							_Cell {
-								path: Some(Path::from("A")),
+								paths: Paths::from(["A"]),
 								is_walkable: false,
 							},
 						),
@@ -426,7 +418,7 @@ mod tests {
 						(
 							Transform::from_xyz(1., 2., 3.),
 							_Cell {
-								path: None,
+								paths: Paths::default(),
 								is_walkable: true,
 							},
 						),
@@ -436,7 +428,7 @@ mod tests {
 						(
 							Transform::from_xyz(3., 4., 5.),
 							_Cell {
-								path: None,
+								paths: Paths::default(),
 								is_walkable: false,
 							},
 						),
