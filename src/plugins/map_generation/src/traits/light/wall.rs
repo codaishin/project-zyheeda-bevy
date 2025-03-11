@@ -15,12 +15,7 @@ pub(crate) struct WallLight;
 
 impl ExtraComponentsDefinition for WallLight {
 	fn target_names() -> Vec<String> {
-		vec![
-			"LightNZData".to_owned(),
-			"LightNXData".to_owned(),
-			"LightPZData".to_owned(),
-			"LightPXData".to_owned(),
-		]
+		vec!["LightData".to_owned()]
 	}
 
 	fn insert_bundle<TLights>(entity: &mut EntityCommands)
