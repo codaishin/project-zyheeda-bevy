@@ -68,10 +68,10 @@ impl From<MapWindow> for MapCell {
 				focus: 'c',
 				neighbors:
 					Neighbors {
-						up: Tile::Occupied,
-						down: Tile::Occupied,
-						right: Tile::Occupied,
-						left: Tile::Occupied,
+						up: Tile::Walkable,
+						down: Tile::Walkable,
+						right: Tile::Walkable,
+						left: Tile::Walkable,
 					},
 			} => MapCell::Corridor(Dir3::Z, Shape::Cross4),
 			// T
@@ -79,9 +79,9 @@ impl From<MapWindow> for MapCell {
 				focus: 'c',
 				neighbors:
 					Neighbors {
-						up: Tile::Occupied,
-						down: Tile::Occupied,
-						left: Tile::Occupied,
+						up: Tile::Walkable,
+						down: Tile::Walkable,
+						left: Tile::Walkable,
 						..
 					},
 			} => MapCell::Corridor(Dir3::NEG_X, Shape::Cross3),
@@ -89,9 +89,9 @@ impl From<MapWindow> for MapCell {
 				focus: 'c',
 				neighbors:
 					Neighbors {
-						up: Tile::Occupied,
-						left: Tile::Occupied,
-						right: Tile::Occupied,
+						up: Tile::Walkable,
+						left: Tile::Walkable,
+						right: Tile::Walkable,
 						..
 					},
 			} => MapCell::Corridor(Dir3::NEG_Z, Shape::Cross3),
@@ -99,9 +99,9 @@ impl From<MapWindow> for MapCell {
 				focus: 'c',
 				neighbors:
 					Neighbors {
-						down: Tile::Occupied,
-						left: Tile::Occupied,
-						right: Tile::Occupied,
+						down: Tile::Walkable,
+						left: Tile::Walkable,
+						right: Tile::Walkable,
 						..
 					},
 			} => MapCell::Corridor(Dir3::Z, Shape::Cross3),
@@ -109,9 +109,9 @@ impl From<MapWindow> for MapCell {
 				focus: 'c',
 				neighbors:
 					Neighbors {
-						up: Tile::Occupied,
-						down: Tile::Occupied,
-						right: Tile::Occupied,
+						up: Tile::Walkable,
+						down: Tile::Walkable,
+						right: Tile::Walkable,
 						..
 					},
 			} => MapCell::Corridor(Dir3::X, Shape::Cross3),
@@ -120,8 +120,8 @@ impl From<MapWindow> for MapCell {
 				focus: 'c',
 				neighbors:
 					Neighbors {
-						up: Tile::Occupied,
-						left: Tile::Occupied,
+						up: Tile::Walkable,
+						left: Tile::Walkable,
 						..
 					},
 			} => MapCell::Corridor(Dir3::NEG_X, Shape::Cross2),
@@ -129,8 +129,8 @@ impl From<MapWindow> for MapCell {
 				focus: 'c',
 				neighbors:
 					Neighbors {
-						up: Tile::Occupied,
-						right: Tile::Occupied,
+						up: Tile::Walkable,
+						right: Tile::Walkable,
 						..
 					},
 			} => MapCell::Corridor(Dir3::NEG_Z, Shape::Cross2),
@@ -138,8 +138,8 @@ impl From<MapWindow> for MapCell {
 				focus: 'c',
 				neighbors:
 					Neighbors {
-						down: Tile::Occupied,
-						left: Tile::Occupied,
+						down: Tile::Walkable,
+						left: Tile::Walkable,
 						..
 					},
 			} => MapCell::Corridor(Dir3::Z, Shape::Cross2),
@@ -147,8 +147,8 @@ impl From<MapWindow> for MapCell {
 				focus: 'c',
 				neighbors:
 					Neighbors {
-						down: Tile::Occupied,
-						right: Tile::Occupied,
+						down: Tile::Walkable,
+						right: Tile::Walkable,
 						..
 					},
 			} => MapCell::Corridor(Dir3::X, Shape::Cross2),
@@ -157,8 +157,8 @@ impl From<MapWindow> for MapCell {
 				focus: 'c',
 				neighbors:
 					Neighbors {
-						right: Tile::Occupied,
-						left: Tile::Occupied,
+						right: Tile::Walkable,
+						left: Tile::Walkable,
 						..
 					},
 			} => MapCell::Corridor(Dir3::X, Shape::Straight),
@@ -166,8 +166,8 @@ impl From<MapWindow> for MapCell {
 				focus: 'c',
 				neighbors:
 					Neighbors {
-						up: Tile::Occupied,
-						down: Tile::Occupied,
+						up: Tile::Walkable,
+						down: Tile::Walkable,
 						..
 					},
 			} => MapCell::Corridor(Dir3::Z, Shape::Straight),
@@ -175,27 +175,27 @@ impl From<MapWindow> for MapCell {
 			MapWindow {
 				focus: 'c',
 				neighbors: Neighbors {
-					right: Tile::Occupied,
+					right: Tile::Walkable,
 					..
 				},
 			} => MapCell::Corridor(Dir3::X, Shape::End),
 			MapWindow {
 				focus: 'c',
 				neighbors: Neighbors {
-					left: Tile::Occupied,
+					left: Tile::Walkable,
 					..
 				},
 			} => MapCell::Corridor(Dir3::NEG_X, Shape::End),
 			MapWindow {
 				focus: 'c',
 				neighbors: Neighbors {
-					up: Tile::Occupied, ..
+					up: Tile::Walkable, ..
 				},
 			} => MapCell::Corridor(Dir3::NEG_Z, Shape::End),
 			MapWindow {
 				focus: 'c',
 				neighbors: Neighbors {
-					down: Tile::Occupied,
+					down: Tile::Walkable,
 					..
 				},
 			} => MapCell::Corridor(Dir3::Z, Shape::End),
@@ -227,7 +227,7 @@ mod tests {
 		let cross = MapWindow {
 			focus: 'c',
 			neighbors: Neighbors {
-				right: Tile::Occupied,
+				right: Tile::Walkable,
 				..default()
 			},
 		};
@@ -240,7 +240,7 @@ mod tests {
 		let cross = MapWindow {
 			focus: 'c',
 			neighbors: Neighbors {
-				left: Tile::Occupied,
+				left: Tile::Walkable,
 				..default()
 			},
 		};
@@ -256,8 +256,8 @@ mod tests {
 		let cross = MapWindow {
 			focus: 'c',
 			neighbors: Neighbors {
-				left: Tile::Occupied,
-				right: Tile::Occupied,
+				left: Tile::Walkable,
+				right: Tile::Walkable,
 				..default()
 			},
 		};
@@ -273,8 +273,8 @@ mod tests {
 		let cross = MapWindow {
 			focus: 'c',
 			neighbors: Neighbors {
-				left: Tile::Occupied,
-				right: Tile::Occupied,
+				left: Tile::Walkable,
+				right: Tile::Walkable,
 				..default()
 			},
 		};
@@ -290,8 +290,8 @@ mod tests {
 		let cross = MapWindow {
 			focus: 'c',
 			neighbors: Neighbors {
-				down: Tile::Occupied,
-				right: Tile::Occupied,
+				down: Tile::Walkable,
+				right: Tile::Walkable,
 				..default()
 			},
 		};
@@ -307,8 +307,8 @@ mod tests {
 		let cross = MapWindow {
 			focus: 'c',
 			neighbors: Neighbors {
-				down: Tile::Occupied,
-				left: Tile::Occupied,
+				down: Tile::Walkable,
+				left: Tile::Walkable,
 				..default()
 			},
 		};
@@ -324,8 +324,8 @@ mod tests {
 		let cross = MapWindow {
 			focus: 'c',
 			neighbors: Neighbors {
-				right: Tile::Occupied,
-				up: Tile::Occupied,
+				right: Tile::Walkable,
+				up: Tile::Walkable,
 				..default()
 			},
 		};
@@ -341,8 +341,8 @@ mod tests {
 		let cross = MapWindow {
 			focus: 'c',
 			neighbors: Neighbors {
-				left: Tile::Occupied,
-				up: Tile::Occupied,
+				left: Tile::Walkable,
+				up: Tile::Walkable,
 				..default()
 			},
 		};
@@ -358,9 +358,9 @@ mod tests {
 		let cross = MapWindow {
 			focus: 'c',
 			neighbors: Neighbors {
-				left: Tile::Occupied,
-				right: Tile::Occupied,
-				down: Tile::Occupied,
+				left: Tile::Walkable,
+				right: Tile::Walkable,
+				down: Tile::Walkable,
 				..default()
 			},
 		};
@@ -376,9 +376,9 @@ mod tests {
 		let cross = MapWindow {
 			focus: 'c',
 			neighbors: Neighbors {
-				left: Tile::Occupied,
-				right: Tile::Occupied,
-				up: Tile::Occupied,
+				left: Tile::Walkable,
+				right: Tile::Walkable,
+				up: Tile::Walkable,
 				..default()
 			},
 		};
@@ -394,9 +394,9 @@ mod tests {
 		let cross = MapWindow {
 			focus: 'c',
 			neighbors: Neighbors {
-				down: Tile::Occupied,
-				right: Tile::Occupied,
-				up: Tile::Occupied,
+				down: Tile::Walkable,
+				right: Tile::Walkable,
+				up: Tile::Walkable,
 				..default()
 			},
 		};
@@ -412,9 +412,9 @@ mod tests {
 		let cross = MapWindow {
 			focus: 'c',
 			neighbors: Neighbors {
-				down: Tile::Occupied,
-				left: Tile::Occupied,
-				up: Tile::Occupied,
+				down: Tile::Walkable,
+				left: Tile::Walkable,
+				up: Tile::Walkable,
 				..default()
 			},
 		};
@@ -430,10 +430,10 @@ mod tests {
 		let cross = MapWindow {
 			focus: 'c',
 			neighbors: Neighbors {
-				up: Tile::Occupied,
-				down: Tile::Occupied,
-				left: Tile::Occupied,
-				right: Tile::Occupied,
+				up: Tile::Walkable,
+				down: Tile::Walkable,
+				left: Tile::Walkable,
+				right: Tile::Walkable,
 			},
 		};
 

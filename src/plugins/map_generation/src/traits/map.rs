@@ -1,5 +1,6 @@
 use crate::map::Map;
-use bevy::reflect::TypePath;
+use bevy::{math::Dir3, reflect::TypePath};
+use std::ops::Index;
 
 impl<TCell: From<MapWindow> + TypePath + Sync + Send> From<String> for Map<TCell> {
 	fn from(value: String) -> Self {
@@ -25,6 +26,38 @@ pub(crate) struct Neighbors {
 	pub down: Tile,
 	pub left: Tile,
 	pub right: Tile,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub(crate) enum NeighborDirection {
+	X,
+	NegX,
+	Z,
+	NegZ,
+}
+
+impl Index<NeighborDirection> for Neighbors {
+	type Output = Tile;
+
+	fn index(&self, index: NeighborDirection) -> &Self::Output {
+		match index {
+			NeighborDirection::X => &self.right,
+			NeighborDirection::NegX => &self.left,
+			NeighborDirection::Z => &self.down,
+			NeighborDirection::NegZ => &self.up,
+		}
+	}
+}
+
+impl From<NeighborDirection> for Dir3 {
+	fn from(dir: NeighborDirection) -> Self {
+		match dir {
+			NeighborDirection::X => Dir3::X,
+			NeighborDirection::NegX => Dir3::NEG_X,
+			NeighborDirection::Z => Dir3::Z,
+			NeighborDirection::NegZ => Dir3::NEG_Z,
+		}
+	}
 }
 
 #[derive(Default, Debug, PartialEq)]
@@ -81,18 +114,18 @@ fn non_empty(line: &str) -> bool {
 	!line.is_empty()
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub(crate) enum Tile {
 	#[default]
-	Empty,
-	Occupied,
+	NotWalkable,
+	Walkable,
 }
 
 impl<'a> From<Option<&'a char>> for Tile {
 	fn from(value: Option<&'a char>) -> Self {
 		match value {
-			None | Some('x') => Tile::Empty,
-			_ => Tile::Occupied,
+			Some('c') => Tile::Walkable,
+			_ => Tile::NotWalkable,
 		}
 	}
 }
@@ -169,14 +202,14 @@ mod tests {
 				_Cell(MapWindow {
 					focus: 'c',
 					neighbors: Neighbors {
-						right: Tile::Empty,
+						right: Tile::NotWalkable,
 						..default()
 					}
 				}),
 				_Cell(MapWindow {
 					focus: 'x',
 					neighbors: Neighbors {
-						left: Tile::Occupied,
+						left: Tile::Walkable,
 						..default()
 					}
 				})
@@ -195,14 +228,14 @@ mod tests {
 				_Cell(MapWindow {
 					focus: 'x',
 					neighbors: Neighbors {
-						right: Tile::Occupied,
+						right: Tile::Walkable,
 						..default()
 					}
 				}),
 				_Cell(MapWindow {
 					focus: 'c',
 					neighbors: Neighbors {
-						left: Tile::Empty,
+						left: Tile::NotWalkable,
 						..default()
 					}
 				})
@@ -227,25 +260,18 @@ mod tests {
 					_Cell(MapWindow {
 						focus: 'x',
 						neighbors: Neighbors {
-							down: Tile::Occupied,
-							right: Tile::Occupied,
+							right: Tile::Walkable,
 							..default()
 						}
 					}),
 					_Cell(MapWindow {
 						focus: 'c',
-						neighbors: Neighbors {
-							down: Tile::Occupied,
-							left: Tile::Empty,
-							right: Tile::Occupied,
-							..default()
-						}
+						neighbors: Neighbors::default()
 					}),
 					_Cell(MapWindow {
 						focus: 't',
 						neighbors: Neighbors {
-							down: Tile::Occupied,
-							left: Tile::Occupied,
+							left: Tile::Walkable,
 							..default()
 						}
 					}),
@@ -253,61 +279,73 @@ mod tests {
 				vec![
 					_Cell(MapWindow {
 						focus: 'e',
-						neighbors: Neighbors {
-							up: Tile::Empty,
-							down: Tile::Occupied,
-							right: Tile::Occupied,
-							..default()
-						}
+						neighbors: Neighbors::default()
 					}),
 					_Cell(MapWindow {
 						focus: 'r',
 						neighbors: Neighbors {
-							up: Tile::Occupied,
-							down: Tile::Occupied,
-							left: Tile::Occupied,
-							right: Tile::Occupied,
+							up: Tile::Walkable,
+							..default()
 						}
 					}),
 					_Cell(MapWindow {
 						focus: 'j',
-						neighbors: Neighbors {
-							up: Tile::Occupied,
-							down: Tile::Occupied,
-							left: Tile::Occupied,
-							..default()
-						}
+						neighbors: Neighbors::default()
 					}),
 				],
 				vec![
 					_Cell(MapWindow {
 						focus: 'l',
-						neighbors: Neighbors {
-							up: Tile::Occupied,
-							right: Tile::Occupied,
-							..default()
-						}
+						neighbors: Neighbors::default()
 					}),
 					_Cell(MapWindow {
 						focus: 'p',
-						neighbors: Neighbors {
-							up: Tile::Occupied,
-							right: Tile::Occupied,
-							left: Tile::Occupied,
-							..default()
-						}
+						neighbors: Neighbors::default()
 					}),
 					_Cell(MapWindow {
 						focus: 'n',
-						neighbors: Neighbors {
-							up: Tile::Occupied,
-							left: Tile::Occupied,
-							..default()
-						}
+						neighbors: Neighbors::default()
 					}),
 				]
 			]),
 			map
+		);
+	}
+
+	#[test]
+	fn neighbors() {
+		let neighbors = Neighbors {
+			up: Tile::Walkable,
+			left: Tile::Walkable,
+			..default()
+		};
+
+		assert_eq!(
+			[
+				Tile::Walkable,
+				Tile::Walkable,
+				Tile::NotWalkable,
+				Tile::NotWalkable,
+			],
+			[
+				neighbors[NeighborDirection::NegZ],
+				neighbors[NeighborDirection::NegX],
+				neighbors[NeighborDirection::Z],
+				neighbors[NeighborDirection::X],
+			]
+		);
+	}
+
+	#[test]
+	fn dir3_from_neighbor_direction() {
+		assert_eq!(
+			[Dir3::NEG_Z, Dir3::NEG_X, Dir3::Z, Dir3::X],
+			[
+				Dir3::from(NeighborDirection::NegZ),
+				Dir3::from(NeighborDirection::NegX),
+				Dir3::from(NeighborDirection::Z),
+				Dir3::from(NeighborDirection::X),
+			]
 		);
 	}
 }
