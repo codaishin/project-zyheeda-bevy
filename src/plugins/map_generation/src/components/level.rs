@@ -246,7 +246,7 @@ mod tests {
 					(
 						Transform::from_xyz(1., 2., 3.),
 						_Cell {
-							model_data: ModelData::from([("A", Dir3::NEG_Z)]),
+							model_data: ModelData::from_iter([("A", Dir3::NEG_Z)]),
 							..default()
 						},
 					),
@@ -284,7 +284,7 @@ mod tests {
 					(
 						Transform::from_xyz(1., 2., 3.),
 						_Cell {
-							model_data: ModelData::from([("A", Dir3::Z)]),
+							model_data: ModelData::from_iter([("A", Dir3::Z)]),
 							..default()
 						},
 					),
@@ -324,7 +324,7 @@ mod tests {
 					(
 						Transform::default(),
 						_Cell {
-							model_data: ModelData::from([("A", Dir3::NEG_Z)]),
+							model_data: ModelData::from_iter([("A", Dir3::NEG_Z)]),
 							..default()
 						},
 					),
@@ -357,7 +357,7 @@ mod tests {
 					(
 						Transform::default(),
 						_Cell {
-							model_data: ModelData::from([("A", Dir3::NEG_Z)]),
+							model_data: ModelData::from_iter([("A", Dir3::NEG_Z)]),
 							..default()
 						},
 					),
@@ -397,7 +397,7 @@ mod tests {
 						(
 							Transform::from_xyz(1., 2., 3.),
 							_Cell {
-								model_data: ModelData::from([("A", Dir3::NEG_Z)]),
+								model_data: ModelData::from_iter([("A", Dir3::NEG_Z)]),
 								is_walkable: true,
 							},
 						),
@@ -407,7 +407,7 @@ mod tests {
 						(
 							Transform::from_xyz(3., 4., 5.),
 							_Cell {
-								model_data: ModelData::from([("A", Dir3::NEG_Z)]),
+								model_data: ModelData::from_iter([("A", Dir3::NEG_Z)]),
 								is_walkable: false,
 							},
 						),

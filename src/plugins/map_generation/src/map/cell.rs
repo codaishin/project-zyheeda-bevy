@@ -48,7 +48,7 @@ impl From<&MapCell> for ModelData {
 }
 
 fn corridor<const N: usize>(suffixes: [(&Dir3, &str); N]) -> ModelData {
-	ModelData::from(suffixes.map(|(dir, suffix)| {
+	ModelData::from_iter(suffixes.map(|(dir, suffix)| {
 		(
 			format!("{}{}.glb#Scene0", Corridor::MODEL_PATH_PREFIX, suffix),
 			*dir,

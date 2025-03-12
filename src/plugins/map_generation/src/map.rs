@@ -1,4 +1,5 @@
 pub(crate) mod cell;
+pub(crate) mod cell2;
 
 use bevy::{asset::Asset, reflect::TypePath};
 
