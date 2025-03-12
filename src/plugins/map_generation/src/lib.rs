@@ -20,7 +20,7 @@ use common::{
 };
 use components::{Wall, WallBack, level::Level};
 use grid_graph::GridGraph;
-use map::cell::MapCell;
+use map::cell2::MapCell2;
 use resources::load_level::LoadLevel;
 use std::marker::PhantomData;
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
@@ -46,10 +46,10 @@ where
 	fn build(&self, app: &mut App) {
 		let new_game = GameState::NewGame;
 
-		app.register_map_cell::<MapCell>(OnEnter(new_game))
+		app.register_map_cell::<MapCell2>(OnEnter(new_game))
 			.add_systems(
 				Update,
-				LoadLevel::<MapCell>::graph.pipe(Level::spawn::<MapCell>),
+				LoadLevel::<MapCell2>::graph.pipe(Level::spawn::<MapCell2>),
 			)
 			.add_systems(Update, Level::<1>::insert)
 			.add_systems(
