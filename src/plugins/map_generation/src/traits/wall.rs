@@ -6,12 +6,7 @@ use common::{blocker::Blocker, components::NoTarget};
 
 impl ExtraComponentsDefinition for Wall {
 	fn target_names() -> Vec<String> {
-		vec![
-			"WallNZData".to_owned(),
-			"WallNXData".to_owned(),
-			"WallPZData".to_owned(),
-			"WallPXData".to_owned(),
-		]
+		vec!["HalfWallData".to_owned(), "WallCornerData".to_owned()]
 	}
 
 	fn insert_bundle<TLights>(entity: &mut EntityCommands) {
@@ -26,10 +21,10 @@ impl ExtraComponentsDefinition for Wall {
 impl ExtraComponentsDefinition for WallBack {
 	fn target_names() -> Vec<String> {
 		vec![
-			"WallNZBackData".to_owned(),
-			"WallPZBackData".to_owned(),
-			"WallNXBackData".to_owned(),
-			"WallPXBackData".to_owned(),
+			"WallFloorData".to_owned(),
+			"HalfWallBackData".to_owned(),
+			"HalfWallRotatedBackData".to_owned(),
+			"WallCornerBackData".to_owned(),
 		]
 	}
 

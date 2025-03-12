@@ -33,7 +33,6 @@ where
 	) -> Option<GridGraph<(Transform, TCell), ()>>
 	where
 		TCell: GridCellDistanceDefinition + Clone,
-		for<'a> Dir3: From<&'a TCell>,
 	{
 		let cells = get_map_cells(load_level_cmd, maps)?;
 		let (cell_count_x, cell_count_z) = get_cell_counts(&cells)?;
@@ -58,9 +57,10 @@ where
 
 		for (z, cell_line) in cells.into_iter().enumerate() {
 			for (x, cell) in cell_line.into_iter().enumerate() {
-				graph
-					.nodes
-					.insert((x as i32, z as i32), (transform(&cell, position), cell));
+				graph.nodes.insert(
+					(x as i32, z as i32),
+					(Transform::from_translation(position), cell),
+				);
 				position.x += TCell::CELL_DISTANCE;
 			}
 			position.x = min.x;
@@ -93,15 +93,6 @@ where
 	let map = maps.get(map_handle)?;
 
 	Some(map.0.clone())
-}
-
-fn transform<TCell>(cell: &TCell, position: Vec3) -> Transform
-where
-	for<'a> Dir3: From<&'a TCell>,
-{
-	let direction = Dir3::from(cell);
-
-	Transform::from_translation(position).looking_to(direction, Vec3::Y)
 }
 
 fn get_cell_counts<T>(cells: &[Vec<T>]) -> Option<(usize, usize)> {
@@ -189,13 +180,7 @@ mod test_get_graph {
 	use common::test_tools::utils::{SingleThreadedApp, new_handle};
 
 	#[derive(Clone, Debug, PartialEq, TypePath)]
-	struct _Cell(Dir3);
-
-	impl From<&_Cell> for Dir3 {
-		fn from(value: &_Cell) -> Self {
-			value.0
-		}
-	}
+	struct _Cell;
 
 	impl GridCellDistanceDefinition for _Cell {
 		const CELL_DISTANCE: f32 = 4.;
@@ -231,7 +216,7 @@ mod test_get_graph {
 	#[test]
 	fn remove_level_load_command() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let map_handle = add_map(&mut app, vec![vec![_Cell(Dir3::NEG_Z)]]);
+		let map_handle = add_map(&mut app, vec![vec![_Cell]]);
 		app.world_mut().insert_resource(LoadLevel(map_handle));
 
 		app.world_mut().run_system_once(LoadLevel::<_Cell>::graph)?;
@@ -245,17 +230,14 @@ mod test_get_graph {
 	#[test]
 	fn pass_transform() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let map_handle = add_map(&mut app, vec![vec![_Cell(Dir3::NEG_Z)]]);
+		let map_handle = add_map(&mut app, vec![vec![_Cell]]);
 		app.world_mut().insert_resource(LoadLevel(map_handle));
 
 		let result = app.world_mut().run_system_once(LoadLevel::<_Cell>::graph)?;
 
 		assert_eq!(
 			Some(GridGraph {
-				nodes: HashMap::from([(
-					(0, 0),
-					(Transform::from_xyz(0., 0., 0.), _Cell(Dir3::NEG_Z))
-				)]),
+				nodes: HashMap::from([((0, 0), (Transform::from_xyz(0., 0., 0.), _Cell))]),
 				extra: (),
 				context: get_context::<_Cell>(1, 1),
 			}),
@@ -267,7 +249,7 @@ mod test_get_graph {
 	#[test]
 	fn add_scene_handle_with_transform_with_distance_on_x() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let map_handle = add_map(&mut app, vec![vec![_Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z)]]);
+		let map_handle = add_map(&mut app, vec![vec![_Cell, _Cell]]);
 		app.world_mut().insert_resource(LoadLevel(map_handle));
 
 		let result = app.world_mut().run_system_once(LoadLevel::<_Cell>::graph)?;
@@ -275,14 +257,8 @@ mod test_get_graph {
 		assert_eq!(
 			Some(GridGraph {
 				nodes: HashMap::from([
-					(
-						(0, 0),
-						(Transform::from_xyz(-2., 0., 0.), _Cell(Dir3::NEG_Z))
-					),
-					(
-						(1, 0),
-						(Transform::from_xyz(2., 0., 0.), _Cell(Dir3::NEG_Z))
-					)
+					((0, 0), (Transform::from_xyz(-2., 0., 0.), _Cell)),
+					((1, 0), (Transform::from_xyz(2., 0., 0.), _Cell))
 				]),
 				extra: (),
 				context: get_context::<_Cell>(2, 1),
@@ -295,10 +271,7 @@ mod test_get_graph {
 	#[test]
 	fn add_scene_handle_with_transform_with_distance_on_z() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let map_handle = add_map(
-			&mut app,
-			vec![vec![_Cell(Dir3::NEG_Z)], vec![_Cell(Dir3::NEG_Z)]],
-		);
+		let map_handle = add_map(&mut app, vec![vec![_Cell], vec![_Cell]]);
 		app.world_mut().insert_resource(LoadLevel(map_handle));
 
 		let result = app.world_mut().run_system_once(LoadLevel::<_Cell>::graph)?;
@@ -306,43 +279,11 @@ mod test_get_graph {
 		assert_eq!(
 			Some(GridGraph {
 				nodes: HashMap::from([
-					(
-						(0, 0),
-						(Transform::from_xyz(0., 0., -2.), _Cell(Dir3::NEG_Z))
-					),
-					(
-						(0, 1),
-						(Transform::from_xyz(0., 0., 2.), _Cell(Dir3::NEG_Z))
-					)
+					((0, 0), (Transform::from_xyz(0., 0., -2.), _Cell)),
+					((0, 1), (Transform::from_xyz(0., 0., 2.), _Cell))
 				]),
 				extra: (),
 				context: get_context::<_Cell>(1, 2),
-			}),
-			result
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn add_scene_handle_with_transform_direction() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let direction = Dir3::new(Vec3::new(2., 3., 5.)).unwrap();
-		let map_handle = add_map(&mut app, vec![vec![_Cell(direction)]]);
-		app.world_mut().insert_resource(LoadLevel(map_handle));
-
-		let result = app.world_mut().run_system_once(LoadLevel::<_Cell>::graph)?;
-
-		assert_eq!(
-			Some(GridGraph {
-				nodes: HashMap::from([(
-					(0, 0),
-					(
-						Transform::from_xyz(0., 0., 0.).looking_to(direction, Vec3::Y),
-						_Cell(direction)
-					)
-				),]),
-				extra: (),
-				context: get_context::<_Cell>(1, 1),
 			}),
 			result
 		);
@@ -355,9 +296,9 @@ mod test_get_graph {
 		let map_handle = add_map(
 			&mut app,
 			vec![
-				vec![_Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z)],
-				vec![_Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z)],
-				vec![_Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z)],
+				vec![_Cell, _Cell, _Cell],
+				vec![_Cell, _Cell, _Cell],
+				vec![_Cell, _Cell, _Cell],
 			],
 		);
 		app.world_mut().insert_resource(LoadLevel(map_handle));
@@ -367,42 +308,15 @@ mod test_get_graph {
 		assert_eq!(
 			Some(GridGraph {
 				nodes: HashMap::from([
-					(
-						(0, 0),
-						(Transform::from_xyz(-4., 0., -4.), _Cell(Dir3::NEG_Z)),
-					),
-					(
-						(1, 0),
-						(Transform::from_xyz(0., 0., -4.), _Cell(Dir3::NEG_Z)),
-					),
-					(
-						(2, 0),
-						(Transform::from_xyz(4., 0., -4.), _Cell(Dir3::NEG_Z)),
-					),
-					(
-						(0, 1),
-						(Transform::from_xyz(-4., 0., 0.), _Cell(Dir3::NEG_Z)),
-					),
-					(
-						(1, 1),
-						(Transform::from_xyz(0., 0., 0.), _Cell(Dir3::NEG_Z)),
-					),
-					(
-						(2, 1),
-						(Transform::from_xyz(4., 0., 0.), _Cell(Dir3::NEG_Z)),
-					),
-					(
-						(0, 2),
-						(Transform::from_xyz(-4., 0., 4.), _Cell(Dir3::NEG_Z)),
-					),
-					(
-						(1, 2),
-						(Transform::from_xyz(0., 0., 4.), _Cell(Dir3::NEG_Z)),
-					),
-					(
-						(2, 2),
-						(Transform::from_xyz(4., 0., 4.), _Cell(Dir3::NEG_Z)),
-					),
+					((0, 0), (Transform::from_xyz(-4., 0., -4.), _Cell),),
+					((1, 0), (Transform::from_xyz(0., 0., -4.), _Cell),),
+					((2, 0), (Transform::from_xyz(4., 0., -4.), _Cell),),
+					((0, 1), (Transform::from_xyz(-4., 0., 0.), _Cell),),
+					((1, 1), (Transform::from_xyz(0., 0., 0.), _Cell),),
+					((2, 1), (Transform::from_xyz(4., 0., 0.), _Cell),),
+					((0, 2), (Transform::from_xyz(-4., 0., 4.), _Cell),),
+					((1, 2), (Transform::from_xyz(0., 0., 4.), _Cell),),
+					((2, 2), (Transform::from_xyz(4., 0., 4.), _Cell),),
 				]),
 				extra: (),
 				context: get_context::<_Cell>(3, 3),
@@ -417,11 +331,7 @@ mod test_get_graph {
 		let mut app = setup();
 		let map_handle = add_map(
 			&mut app,
-			vec![
-				vec![_Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z)],
-				vec![_Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z), _Cell(Dir3::NEG_Z)],
-				vec![_Cell(Dir3::NEG_Z)],
-			],
+			vec![vec![_Cell, _Cell], vec![_Cell, _Cell, _Cell], vec![_Cell]],
 		);
 		app.world_mut().insert_resource(LoadLevel(map_handle));
 
@@ -430,30 +340,12 @@ mod test_get_graph {
 		assert_eq!(
 			Some(GridGraph {
 				nodes: HashMap::from([
-					(
-						(0, 0),
-						(Transform::from_xyz(-4., 0., -4.), _Cell(Dir3::NEG_Z)),
-					),
-					(
-						(1, 0),
-						(Transform::from_xyz(0., 0., -4.), _Cell(Dir3::NEG_Z)),
-					),
-					(
-						(0, 1),
-						(Transform::from_xyz(-4., 0., 0.), _Cell(Dir3::NEG_Z)),
-					),
-					(
-						(1, 1),
-						(Transform::from_xyz(0., 0., 0.), _Cell(Dir3::NEG_Z)),
-					),
-					(
-						(2, 1),
-						(Transform::from_xyz(4., 0., 0.), _Cell(Dir3::NEG_Z)),
-					),
-					(
-						(0, 2),
-						(Transform::from_xyz(-4., 0., 4.), _Cell(Dir3::NEG_Z)),
-					),
+					((0, 0), (Transform::from_xyz(-4., 0., -4.), _Cell),),
+					((1, 0), (Transform::from_xyz(0., 0., -4.), _Cell),),
+					((0, 1), (Transform::from_xyz(-4., 0., 0.), _Cell),),
+					((1, 1), (Transform::from_xyz(0., 0., 0.), _Cell),),
+					((2, 1), (Transform::from_xyz(4., 0., 0.), _Cell),),
+					((0, 2), (Transform::from_xyz(-4., 0., 4.), _Cell),),
 				]),
 				extra: (),
 				context: get_context::<_Cell>(3, 3),

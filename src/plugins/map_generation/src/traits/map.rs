@@ -1,5 +1,6 @@
 use crate::map::Map;
-use bevy::reflect::TypePath;
+use bevy::{math::Dir3, reflect::TypePath};
+use std::ops::{Index, IndexMut};
 
 impl<TCell: From<MapWindow> + TypePath + Sync + Send> From<String> for Map<TCell> {
 	fn from(value: String) -> Self {
@@ -25,6 +26,87 @@ pub(crate) struct Neighbors {
 	pub down: Tile,
 	pub left: Tile,
 	pub right: Tile,
+}
+
+#[cfg(test)]
+impl Neighbors {
+	pub(crate) fn with(mut self, direction: Direction, tile: Tile) -> Self {
+		self[direction] = tile;
+
+		self
+	}
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub(crate) enum Direction {
+	X,
+	NegX,
+	Z,
+	NegZ,
+}
+
+impl Direction {
+	pub(crate) const fn rotated_right(self, times: u8) -> Self {
+		if times == 0 {
+			return self;
+		}
+
+		if times > 1 {
+			return self.rotated_right(1).rotated_right(times - 1);
+		}
+
+		match self {
+			Direction::NegZ => Direction::NegX,
+			Direction::NegX => Direction::Z,
+			Direction::Z => Direction::X,
+			Direction::X => Direction::NegZ,
+		}
+	}
+
+	#[cfg(test)]
+	pub(crate) const fn rotated_left(self) -> Self {
+		match self {
+			Direction::NegZ => Direction::X,
+			Direction::NegX => Direction::NegZ,
+			Direction::Z => Direction::NegX,
+			Direction::X => Direction::Z,
+		}
+	}
+}
+
+impl Index<Direction> for Neighbors {
+	type Output = Tile;
+
+	fn index(&self, index: Direction) -> &Self::Output {
+		match index {
+			Direction::X => &self.right,
+			Direction::NegX => &self.left,
+			Direction::Z => &self.down,
+			Direction::NegZ => &self.up,
+		}
+	}
+}
+
+impl IndexMut<Direction> for Neighbors {
+	fn index_mut(&mut self, index: Direction) -> &mut Self::Output {
+		match index {
+			Direction::X => &mut self.right,
+			Direction::NegX => &mut self.left,
+			Direction::Z => &mut self.down,
+			Direction::NegZ => &mut self.up,
+		}
+	}
+}
+
+impl From<Direction> for Dir3 {
+	fn from(dir: Direction) -> Self {
+		match dir {
+			Direction::X => Dir3::X,
+			Direction::NegX => Dir3::NEG_X,
+			Direction::Z => Dir3::Z,
+			Direction::NegZ => Dir3::NEG_Z,
+		}
+	}
 }
 
 #[derive(Default, Debug, PartialEq)]
@@ -81,18 +163,18 @@ fn non_empty(line: &str) -> bool {
 	!line.is_empty()
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub(crate) enum Tile {
 	#[default]
-	Empty,
-	Occupied,
+	NotWalkable,
+	Walkable,
 }
 
 impl<'a> From<Option<&'a char>> for Tile {
 	fn from(value: Option<&'a char>) -> Self {
 		match value {
-			None | Some('x') => Tile::Empty,
-			_ => Tile::Occupied,
+			Some('c') => Tile::Walkable,
+			_ => Tile::NotWalkable,
 		}
 	}
 }
@@ -135,6 +217,7 @@ impl MapWindow {
 mod tests {
 	use super::*;
 	use bevy::utils::default;
+	use test_case::test_case;
 
 	#[derive(TypePath, Debug, PartialEq)]
 	struct _Cell(MapWindow);
@@ -169,14 +252,14 @@ mod tests {
 				_Cell(MapWindow {
 					focus: 'c',
 					neighbors: Neighbors {
-						right: Tile::Empty,
+						right: Tile::NotWalkable,
 						..default()
 					}
 				}),
 				_Cell(MapWindow {
 					focus: 'x',
 					neighbors: Neighbors {
-						left: Tile::Occupied,
+						left: Tile::Walkable,
 						..default()
 					}
 				})
@@ -195,14 +278,14 @@ mod tests {
 				_Cell(MapWindow {
 					focus: 'x',
 					neighbors: Neighbors {
-						right: Tile::Occupied,
+						right: Tile::Walkable,
 						..default()
 					}
 				}),
 				_Cell(MapWindow {
 					focus: 'c',
 					neighbors: Neighbors {
-						left: Tile::Empty,
+						left: Tile::NotWalkable,
 						..default()
 					}
 				})
@@ -227,25 +310,18 @@ mod tests {
 					_Cell(MapWindow {
 						focus: 'x',
 						neighbors: Neighbors {
-							down: Tile::Occupied,
-							right: Tile::Occupied,
+							right: Tile::Walkable,
 							..default()
 						}
 					}),
 					_Cell(MapWindow {
 						focus: 'c',
-						neighbors: Neighbors {
-							down: Tile::Occupied,
-							left: Tile::Empty,
-							right: Tile::Occupied,
-							..default()
-						}
+						neighbors: Neighbors::default()
 					}),
 					_Cell(MapWindow {
 						focus: 't',
 						neighbors: Neighbors {
-							down: Tile::Occupied,
-							left: Tile::Occupied,
+							left: Tile::Walkable,
 							..default()
 						}
 					}),
@@ -253,61 +329,116 @@ mod tests {
 				vec![
 					_Cell(MapWindow {
 						focus: 'e',
-						neighbors: Neighbors {
-							up: Tile::Empty,
-							down: Tile::Occupied,
-							right: Tile::Occupied,
-							..default()
-						}
+						neighbors: Neighbors::default()
 					}),
 					_Cell(MapWindow {
 						focus: 'r',
 						neighbors: Neighbors {
-							up: Tile::Occupied,
-							down: Tile::Occupied,
-							left: Tile::Occupied,
-							right: Tile::Occupied,
+							up: Tile::Walkable,
+							..default()
 						}
 					}),
 					_Cell(MapWindow {
 						focus: 'j',
-						neighbors: Neighbors {
-							up: Tile::Occupied,
-							down: Tile::Occupied,
-							left: Tile::Occupied,
-							..default()
-						}
+						neighbors: Neighbors::default()
 					}),
 				],
 				vec![
 					_Cell(MapWindow {
 						focus: 'l',
-						neighbors: Neighbors {
-							up: Tile::Occupied,
-							right: Tile::Occupied,
-							..default()
-						}
+						neighbors: Neighbors::default()
 					}),
 					_Cell(MapWindow {
 						focus: 'p',
-						neighbors: Neighbors {
-							up: Tile::Occupied,
-							right: Tile::Occupied,
-							left: Tile::Occupied,
-							..default()
-						}
+						neighbors: Neighbors::default()
 					}),
 					_Cell(MapWindow {
 						focus: 'n',
-						neighbors: Neighbors {
-							up: Tile::Occupied,
-							left: Tile::Occupied,
-							..default()
-						}
+						neighbors: Neighbors::default()
 					}),
 				]
 			]),
 			map
 		);
+	}
+
+	#[test]
+	fn neighbors_index() {
+		let neighbors = Neighbors {
+			up: Tile::Walkable,
+			left: Tile::Walkable,
+			..default()
+		};
+
+		assert_eq!(
+			[
+				Tile::Walkable,
+				Tile::Walkable,
+				Tile::NotWalkable,
+				Tile::NotWalkable,
+			],
+			[
+				neighbors[Direction::NegZ],
+				neighbors[Direction::NegX],
+				neighbors[Direction::Z],
+				neighbors[Direction::X],
+			]
+		);
+	}
+
+	#[test]
+	fn neighbors_index_mut() {
+		let mut neighbors = Neighbors {
+			up: Tile::Walkable,
+			left: Tile::Walkable,
+			..default()
+		};
+
+		neighbors[Direction::NegZ] = Tile::NotWalkable;
+		neighbors[Direction::NegX] = Tile::NotWalkable;
+		neighbors[Direction::Z] = Tile::Walkable;
+		neighbors[Direction::X] = Tile::Walkable;
+
+		assert_eq!(
+			[
+				Tile::NotWalkable,
+				Tile::NotWalkable,
+				Tile::Walkable,
+				Tile::Walkable,
+			],
+			[
+				neighbors[Direction::NegZ],
+				neighbors[Direction::NegX],
+				neighbors[Direction::Z],
+				neighbors[Direction::X],
+			]
+		);
+	}
+
+	#[test_case(Direction::NegZ, Dir3::NEG_Z; "neg z")]
+	#[test_case(Direction::NegX, Dir3::NEG_X; "neg x")]
+	#[test_case(Direction::Z, Dir3::Z; "z")]
+	#[test_case(Direction::X, Dir3::X; "x")]
+	fn dir3_from_direction(value: Direction, result: Dir3) {
+		assert_eq!(result, Dir3::from(value));
+	}
+
+	#[test_case(Direction::NegZ, Direction::NegX, 1; "neg z once")]
+	#[test_case(Direction::NegX, Direction::Z, 1; "neg x once")]
+	#[test_case(Direction::Z, Direction::X, 1; "z once")]
+	#[test_case(Direction::X, Direction::NegZ, 1; "x once")]
+	#[test_case(Direction::NegZ, Direction::NegZ, 0; "neg z zero")]
+	#[test_case(Direction::NegZ, Direction::Z, 2; "neg z twice")]
+	#[test_case(Direction::NegZ, Direction::X, 3; "neg z thrice")]
+	fn rotate_right(value: Direction, result: Direction, times: u8) {
+		assert_eq!(result, value.rotated_right(times));
+	}
+
+	#[test_case(Direction::NegZ, Direction::X; "neg z")]
+	#[test_case(Direction::NegX, Direction::NegZ; "neg x")]
+	#[test_case(Direction::Z, Direction::NegX; "z")]
+	#[test_case(Direction::X, Direction::Z; "x")]
+	fn rotate_left(value: Direction, result: Direction) {
+		assert_eq!(result, value.rotated_left());
 	}
 }

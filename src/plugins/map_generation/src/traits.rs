@@ -3,7 +3,6 @@ pub(crate) mod grid_start;
 pub(crate) mod is_walkable;
 pub(crate) mod key_mapper;
 pub(crate) mod light;
-pub(crate) mod light_cell;
 pub(crate) mod map;
 pub(crate) mod to_subdivided;
 pub(crate) mod wall;
@@ -11,12 +10,8 @@ pub(crate) mod wall;
 use self::map::MapWindow;
 use bevy::{
 	app::App,
-	ecs::{
-		schedule::ScheduleLabel,
-		system::{Commands, EntityCommands},
-	},
+	ecs::{schedule::ScheduleLabel, system::EntityCommands},
 	reflect::TypePath,
-	transform::components::Transform,
 };
 use common::traits::{handles_lights::HandlesLights, load_asset::Path, thread_safe::ThreadSafe};
 
@@ -29,10 +24,6 @@ pub(crate) trait ExtraComponentsDefinition {
 
 pub(crate) trait GridCellDistanceDefinition {
 	const CELL_DISTANCE: f32;
-}
-
-pub(crate) trait Spawn {
-	fn spawn(&self, commands: &mut Commands, at: Transform);
 }
 
 pub trait SourcePath {

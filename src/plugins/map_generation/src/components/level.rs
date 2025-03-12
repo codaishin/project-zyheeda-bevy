@@ -1,13 +1,10 @@
 use crate::{
 	grid_graph::{GridGraph, Obstacles},
+	tools::model_data::ModelData,
 	traits::{GridCellDistanceDefinition, is_walkable::IsWalkable, to_subdivided::ToSubdivided},
 };
 use bevy::prelude::*;
-use common::traits::{
-	load_asset::{LoadAsset, Path},
-	thread_safe::ThreadSafe,
-	try_insert_on::TryInsertOn,
-};
+use common::traits::{load_asset::LoadAsset, thread_safe::ThreadSafe, try_insert_on::TryInsertOn};
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Name(Self::name), Transform, Visibility)]
@@ -27,7 +24,7 @@ impl Level {
 		levels: Query<&mut Level>,
 	) where
 		TCell: IsWalkable + GridCellDistanceDefinition,
-		for<'a> Path: TryFrom<&'a TCell>,
+		for<'a> ModelData: From<&'a TCell>,
 	{
 		spawn(graph, commands, load_asset, level_cache, levels);
 	}
@@ -77,7 +74,7 @@ pub(crate) fn spawn<TCell, TAsset>(
 ) where
 	TCell: IsWalkable + GridCellDistanceDefinition,
 	TAsset: LoadAsset + Resource,
-	for<'a> Path: TryFrom<&'a TCell>,
+	for<'a> ModelData: From<&'a TCell>,
 {
 	let Some(graph) = graph else {
 		return;
@@ -110,9 +107,9 @@ macro_rules! apply_graph {
 				new_graph.extra.obstacles.insert(key);
 			}
 
-			if let Ok(path) = Path::try_from(&cell) {
+			for (path, dir) in ModelData::from(&cell) {
 				let scene = $load_asset.load_asset(path);
-				$level.with_child((SceneRoot(scene), transform));
+				$level.with_child((SceneRoot(scene), transform.looking_to(dir, Vec3::Y)));
 			}
 		}
 
@@ -162,7 +159,7 @@ mod tests {
 
 	#[derive(Clone, Default)]
 	struct _Cell {
-		path: Option<Path>,
+		model_data: ModelData,
 		is_walkable: bool,
 	}
 
@@ -176,14 +173,9 @@ mod tests {
 		}
 	}
 
-	impl TryFrom<&_Cell> for Path {
-		type Error = ();
-
-		fn try_from(value: &_Cell) -> Result<Self, Self::Error> {
-			match &value.path {
-				Some(path) => Ok(path.clone()),
-				None => Err(()),
-			}
+	impl From<&_Cell> for ModelData {
+		fn from(value: &_Cell) -> Self {
+			value.model_data.clone()
 		}
 	}
 
@@ -233,7 +225,7 @@ mod tests {
 	fn setup<TCell>(graph: Option<GridGraph<(Transform, TCell), ()>>, load_scene: _LoadScene) -> App
 	where
 		TCell: Clone + IsWalkable + GridCellDistanceDefinition + ThreadSafe,
-		for<'a> Path: TryFrom<&'a TCell>,
+		for<'a> ModelData: From<&'a TCell>,
 	{
 		let mut app = App::new().single_threaded(Update);
 		let return_graph = move || graph.clone();
@@ -254,7 +246,7 @@ mod tests {
 					(
 						Transform::from_xyz(1., 2., 3.),
 						_Cell {
-							path: Some(Path::from("A")),
+							model_data: ModelData::from_iter([("A", Dir3::NEG_Z)]),
 							..default()
 						},
 					),
@@ -283,6 +275,47 @@ mod tests {
 	}
 
 	#[test]
+	fn spawn_scene_with_transform_and_look_direction() {
+		let scene = new_handle();
+		let mut app = setup(
+			Some(GridGraph {
+				nodes: HashMap::from([(
+					(0, 0),
+					(
+						Transform::from_xyz(1., 2., 3.),
+						_Cell {
+							model_data: ModelData::from_iter([("A", Dir3::Z)]),
+							..default()
+						},
+					),
+				)]),
+				..default()
+			}),
+			_LoadScene::new().with_mock(|mock| {
+				mock.expect_load_asset()
+					.times(1)
+					.with(eq(Path::from("A")))
+					.return_const(scene.clone());
+			}),
+		);
+
+		app.update();
+
+		let spawned = app
+			.world()
+			.iter_entities()
+			.filter_map(|e| Some((e.get::<SceneRoot>()?, e.get::<Transform>()?)));
+		let [spawned] = assert_count!(1, spawned);
+		assert_eq!(
+			(
+				&SceneRoot(scene),
+				&Transform::from_xyz(1., 2., 3.).looking_to(Dir3::Z, Vec3::Y)
+			),
+			spawned
+		);
+	}
+
+	#[test]
 	fn spawn_scene_as_child_of_level() {
 		let mut app = setup(
 			Some(GridGraph {
@@ -291,7 +324,7 @@ mod tests {
 					(
 						Transform::default(),
 						_Cell {
-							path: Some(Path::from("A")),
+							model_data: ModelData::from_iter([("A", Dir3::NEG_Z)]),
 							..default()
 						},
 					),
@@ -324,7 +357,7 @@ mod tests {
 					(
 						Transform::default(),
 						_Cell {
-							path: Some(Path::from("A")),
+							model_data: ModelData::from_iter([("A", Dir3::NEG_Z)]),
 							..default()
 						},
 					),
@@ -364,7 +397,7 @@ mod tests {
 						(
 							Transform::from_xyz(1., 2., 3.),
 							_Cell {
-								path: Some(Path::from("A")),
+								model_data: ModelData::from_iter([("A", Dir3::NEG_Z)]),
 								is_walkable: true,
 							},
 						),
@@ -374,7 +407,7 @@ mod tests {
 						(
 							Transform::from_xyz(3., 4., 5.),
 							_Cell {
-								path: Some(Path::from("A")),
+								model_data: ModelData::from_iter([("A", Dir3::NEG_Z)]),
 								is_walkable: false,
 							},
 						),
@@ -426,7 +459,7 @@ mod tests {
 						(
 							Transform::from_xyz(1., 2., 3.),
 							_Cell {
-								path: None,
+								model_data: ModelData::default(),
 								is_walkable: true,
 							},
 						),
@@ -436,7 +469,7 @@ mod tests {
 						(
 							Transform::from_xyz(3., 4., 5.),
 							_Cell {
-								path: None,
+								model_data: ModelData::default(),
 								is_walkable: false,
 							},
 						),
