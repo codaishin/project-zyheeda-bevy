@@ -1,10 +1,9 @@
-use std::sync::{Arc, Mutex};
-
 use crate::{context::SaveContext, traits::execute_save::ExecuteSave};
 use bevy::prelude::*;
 use serde::Serialize;
+use std::sync::{Arc, Mutex};
 
-#[derive(Component, Debug, PartialEq, Default)]
+#[derive(Component, Debug, PartialEq)]
 pub struct Save<TSaveContext = SaveContext>
 where
 	TSaveContext: 'static,
@@ -16,7 +15,16 @@ impl<TSaveContext> Save<TSaveContext>
 where
 	TSaveContext: ExecuteSave,
 {
-	pub fn handling<TComponent>(mut self) -> Self
+	pub fn component<TComponent>() -> Self
+	where
+		TComponent: Component + Serialize + 'static,
+	{
+		Self {
+			handlers: vec![TSaveContext::execute_save::<TComponent>],
+		}
+	}
+
+	pub fn and_component<TComponent>(mut self) -> Self
 	where
 		TComponent: Component + Serialize + 'static,
 	{
@@ -55,9 +63,7 @@ mod test_adding_handlers {
 
 	#[test]
 	fn store_save_fn() {
-		let save = Save::default();
-
-		let save = save.handling::<_A>();
+		let save = Save::component::<_A>();
 
 		assert_eq!(
 			Save {
@@ -69,9 +75,7 @@ mod test_adding_handlers {
 
 	#[test]
 	fn store_save_fns() {
-		let save = Save::default();
-
-		let save = save.handling::<_A>().handling::<_B>();
+		let save = Save::component::<_A>().and_component::<_B>();
 
 		assert_eq!(
 			Save {
@@ -124,11 +128,7 @@ mod test_save {
 		let mut app = setup(context.clone());
 		let entity = app
 			.world_mut()
-			.spawn(
-				Save::<_SaveContext>::default()
-					.handling::<_A>()
-					.handling::<_B>(),
-			)
+			.spawn(Save::<_SaveContext>::component::<_A>().and_component::<_B>())
 			.id();
 
 		app.update();
