@@ -3,7 +3,13 @@ use std::{fs, io::Error};
 
 #[derive(Debug, PartialEq)]
 pub struct FileWriter {
-	pub(crate) destination: &'static str,
+	destination: &'static str,
+}
+
+impl FileWriter {
+	pub(crate) fn to_destination(destination: &'static str) -> Self {
+		Self { destination }
+	}
 }
 
 impl WriteToFile for FileWriter {
