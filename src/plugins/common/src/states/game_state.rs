@@ -13,6 +13,7 @@ pub enum GameState {
 	Loading,
 	NewGame,
 	Play,
+	Saving,
 	IngameMenu(MenuState),
 }
 
@@ -23,14 +24,12 @@ impl TryFrom<GameState> for KeyCode {
 	type Error = NoKeySet;
 
 	fn try_from(value: GameState) -> Result<Self, Self::Error> {
-		let GameState::IngameMenu(menu) = value else {
-			return Err(NoKeySet);
-		};
-
-		Ok(match menu {
-			MenuState::Inventory => KeyCode::KeyI,
-			MenuState::ComboOverview => KeyCode::KeyK,
-		})
+		match value {
+			GameState::Saving => Ok(KeyCode::F5),
+			GameState::IngameMenu(MenuState::Inventory) => Ok(KeyCode::KeyI),
+			GameState::IngameMenu(MenuState::ComboOverview) => Ok(KeyCode::KeyK),
+			_ => Err(NoKeySet),
+		}
 	}
 }
 
@@ -45,7 +44,8 @@ impl IterFinite for GameState {
 			GameState::StartMenu => Some(GameState::NewGame),
 			GameState::NewGame => Some(GameState::Loading),
 			GameState::Loading => Some(GameState::Play),
-			GameState::Play => Some(GameState::IngameMenu(MenuState::Inventory)),
+			GameState::Play => Some(GameState::Saving),
+			GameState::Saving => Some(GameState::IngameMenu(MenuState::Inventory)),
 			GameState::IngameMenu(MenuState::Inventory) => {
 				Some(GameState::IngameMenu(MenuState::ComboOverview))
 			}
@@ -73,6 +73,7 @@ mod tests {
 				GameState::NewGame,
 				GameState::Loading,
 				GameState::Play,
+				GameState::Saving,
 				GameState::IngameMenu(MenuState::Inventory),
 				GameState::IngameMenu(MenuState::ComboOverview)
 			],
@@ -89,8 +90,9 @@ mod tests {
 				Err(NoKeySet),
 				Err(NoKeySet),
 				Err(NoKeySet),
+				Ok(KeyCode::F5),
 				Ok(KeyCode::KeyI),
-				Ok(KeyCode::KeyK)
+				Ok(KeyCode::KeyK),
 			],
 			GameState::iterator()
 				.map(KeyCode::try_from)
