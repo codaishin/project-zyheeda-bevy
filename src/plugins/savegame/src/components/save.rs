@@ -1,4 +1,9 @@
-use crate::{context::SaveContext, traits::execute_save::ExecuteSave, writer::FileWriter};
+use crate::{
+	context::SaveContext,
+	errors::LockPoisonedError,
+	traits::execute_save::ExecuteSave,
+	writer::FileWriter,
+};
 use bevy::prelude::*;
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
@@ -33,10 +38,12 @@ where
 		self
 	}
 
-	pub fn save_system_via(context: Arc<Mutex<TSaveContext>>) -> impl Fn(&mut World) {
+	pub fn save_system_via(
+		context: Arc<Mutex<TSaveContext>>,
+	) -> impl Fn(&mut World) -> Result<(), LockPoisonedError> {
 		move |world| {
 			let Ok(mut context) = context.lock() else {
-				return;
+				return Err(LockPoisonedError);
 			};
 			let entities = world
 				.iter_entities()
@@ -47,6 +54,8 @@ where
 					handler(&mut context, entity);
 				}
 			}
+
+			Ok(())
 		}
 	}
 }
@@ -114,7 +123,7 @@ mod test_save {
 
 	fn setup(context: Arc<Mutex<_SaveContext>>) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, Save::save_system_via(context));
+		app.add_systems(Update, Save::save_system_via(context).pipe(|In(_)| {}));
 
 		app
 	}

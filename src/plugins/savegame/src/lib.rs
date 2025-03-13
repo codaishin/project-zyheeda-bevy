@@ -1,6 +1,7 @@
 pub mod components;
 
 mod context;
+mod errors;
 mod traits;
 mod writer;
 
@@ -23,7 +24,7 @@ impl Plugin for SavegamePlugin {
 		app.add_systems(
 			OnEnter(GameState::Saving),
 			(
-				Save::save_system_via(context.clone()),
+				Save::save_system_via(context.clone()).pipe(log),
 				SaveContext::flush_system(context).pipe(log),
 			)
 				.chain(),

@@ -1,4 +1,5 @@
 use crate::{
+	errors::{IoOrLockError, LockPoisonedError},
 	traits::{execute_save::ExecuteSave, write_to_file::WriteToFile},
 	writer::FileWriter,
 };
@@ -27,15 +28,20 @@ impl<TFileWriter> SaveContext<TFileWriter> {
 
 	pub(crate) fn flush_system(
 		context: Arc<Mutex<Self>>,
-	) -> impl Fn() -> Result<(), TFileWriter::TError>
+	) -> impl Fn() -> Result<(), IoOrLockError<TFileWriter::TError>>
 	where
 		TFileWriter: WriteToFile,
 	{
 		move || {
-			let Ok(mut context) = context.lock() else {
-				return Ok(());
+			let mut context = match context.lock() {
+				Err(_) => return Err(IoOrLockError::LockPoisoned(LockPoisonedError)),
+				Ok(context) => context,
 			};
-			context.flush()
+
+			match context.flush() {
+				Err(io_error) => Err(IoOrLockError::IoError(io_error)),
+				Ok(()) => Ok(()),
+			}
 		}
 	}
 
