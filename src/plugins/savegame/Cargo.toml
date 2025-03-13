@@ -7,6 +7,7 @@ edition.workspace = true
 # external
 bevy.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 uuid.workspace = true
 
 # internal
@@ -15,3 +16,4 @@ common.workspace = true
 [dev-dependencies]
 # external
 mockall.workspace = true
+macros.workspace = true

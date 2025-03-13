@@ -4368,8 +4368,10 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "common",
+ "macros",
  "mockall",
  "serde",
+ "serde_json",
  "uuid",
 ]
 
