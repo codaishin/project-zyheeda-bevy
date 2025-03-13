@@ -1,6 +1,6 @@
 use crate::{
 	errors::{IoOrLockError, LockPoisonedError},
-	traits::{execute_save::ExecuteSave, write_to_file::WriteToFile},
+	traits::{execute_save::BufferComponents, write_to_file::WriteToFile},
 	writer::FileWriter,
 };
 use bevy::prelude::*;
@@ -12,16 +12,21 @@ use std::{
 	sync::{Arc, Mutex},
 };
 
+type Buffer = HashMap<Entity, HashSet<ComponentString>>;
+type Handlers = Vec<fn(&mut Buffer, EntityRef)>;
+
 #[derive(Debug, PartialEq, Default)]
 pub struct SaveContext<TFileWriter = FileWriter> {
 	writer: TFileWriter,
-	buffer: HashMap<Entity, HashSet<ComponentString>>,
+	handlers: Handlers,
+	buffer: Buffer,
 }
 
 impl<TFileWriter> SaveContext<TFileWriter> {
 	pub(crate) fn new(writer: TFileWriter) -> Self {
 		Self {
 			writer,
+			handlers: vec![],
 			buffer: HashMap::default(),
 		}
 	}
@@ -45,6 +50,13 @@ impl<TFileWriter> SaveContext<TFileWriter> {
 		}
 	}
 
+	pub(crate) fn register_component<T>(&mut self)
+	where
+		T: Component + Serialize,
+	{
+		self.handlers.push(Self::handle::<T>);
+	}
+
 	fn flush(&mut self) -> Result<(), TFileWriter::TError>
 	where
 		TFileWriter: WriteToFile,
@@ -58,6 +70,28 @@ impl<TFileWriter> SaveContext<TFileWriter> {
 
 		self.writer.write(format!("[{entities}]"))
 	}
+
+	fn handle<T>(buffer: &mut HashMap<Entity, HashSet<ComponentString>>, entity: EntityRef)
+	where
+		T: Component + Serialize,
+	{
+		let Some(component) = entity.get::<T>() else {
+			return;
+		};
+		let component_str = ComponentString {
+			component_name: type_name::<T>(),
+			component_state: to_string(component).unwrap(),
+		};
+
+		match buffer.entry(entity.id()) {
+			Entry::Occupied(mut occupied_entry) => {
+				occupied_entry.get_mut().insert(component_str);
+			}
+			Entry::Vacant(vacant_entry) => {
+				vacant_entry.insert(HashSet::from([component_str]));
+			}
+		}
+	}
 }
 
 fn join_entity_components((_, component_strings): (Entity, HashSet<ComponentString>)) -> String {
@@ -70,29 +104,13 @@ fn join_entity_components((_, component_strings): (Entity, HashSet<ComponentStri
 	format!("[{components}]")
 }
 
-impl<TFileWriter> ExecuteSave for SaveContext<TFileWriter>
+impl<TFileWriter> BufferComponents for SaveContext<TFileWriter>
 where
 	TFileWriter: WriteToFile,
 {
-	fn buffer<T>(&mut self, entity: EntityRef)
-	where
-		T: Component + Serialize,
-	{
-		let Some(component) = entity.get::<T>() else {
-			return;
-		};
-		let component_str = ComponentString {
-			component_name: type_name::<T>(),
-			component_state: to_string(component).unwrap(),
-		};
-
-		match self.buffer.entry(entity.id()) {
-			Entry::Occupied(mut occupied_entry) => {
-				occupied_entry.get_mut().insert(component_str);
-			}
-			Entry::Vacant(vacant_entry) => {
-				vacant_entry.insert(HashSet::from([component_str]));
-			}
+	fn buffer_components(&mut self, entity: EntityRef) {
+		for handler in &self.handlers {
+			handler(&mut self.buffer, entity);
 		}
 	}
 }
@@ -141,6 +159,7 @@ mod test_flush {
 					.with(eq(format!("[[{}]]", to_string(&string_a).unwrap())))
 					.return_const(Ok(()));
 			}),
+			handlers: vec![],
 		}));
 		let mut app = setup();
 
@@ -199,6 +218,7 @@ mod test_flush {
 					})
 					.return_const(Ok(()));
 			}),
+			handlers: vec![],
 		}));
 		let mut app = setup();
 
@@ -257,6 +277,7 @@ mod test_flush {
 					})
 					.return_const(Ok(()));
 			}),
+			handlers: vec![],
 		}));
 		let mut app = setup();
 
@@ -279,6 +300,7 @@ mod test_flush {
 			writer: Mock_Writer::new_mock(|mock| {
 				mock.expect_write().return_const(Ok(()));
 			}),
+			handlers: vec![],
 		}));
 		let mut app = setup();
 
@@ -301,15 +323,13 @@ mod test_buffer {
 	use serde::Serialize;
 	use std::any::type_name;
 
-	struct _ShouldNotHaveBeenCalled;
-
 	struct _Writer;
 
 	impl WriteToFile for _Writer {
-		type TError = _ShouldNotHaveBeenCalled;
+		type TError = ();
 
 		fn write(&self, _: String) -> Result<(), Self::TError> {
-			Err(_ShouldNotHaveBeenCalled)
+			panic!("SHOULD NOT BE CALLED");
 		}
 	}
 
@@ -330,11 +350,11 @@ mod test_buffer {
 	#[test]
 	fn serialize_component() {
 		let mut app = setup();
-		let mut context = SaveContext::new(_Writer);
+		let mut buffer = HashMap::default();
 		let entity = app.world_mut().spawn(_A { value: 42 }).id();
 		let entity = app.world().entity(entity);
 
-		context.buffer::<_A>(entity);
+		SaveContext::<_Writer>::handle::<_A>(&mut buffer, entity);
 
 		assert_eq!(
 			HashMap::from([(
@@ -344,19 +364,19 @@ mod test_buffer {
 					component_state: to_string(&_A { value: 42 }).unwrap()
 				}])
 			)]),
-			context.buffer
+			buffer
 		);
 	}
 
 	#[test]
 	fn serialize_multiple_components() {
 		let mut app = setup();
-		let mut context = SaveContext::new(_Writer);
+		let mut buffer = HashMap::default();
 		let entity = app.world_mut().spawn((_A { value: 42 }, _B { v: 11 })).id();
 		let entity = app.world().entity(entity);
 
-		context.buffer::<_A>(entity);
-		context.buffer::<_B>(entity);
+		SaveContext::<_Writer>::handle::<_A>(&mut buffer, entity);
+		SaveContext::<_Writer>::handle::<_B>(&mut buffer, entity);
 
 		assert_eq!(
 			HashMap::from([(
@@ -372,7 +392,72 @@ mod test_buffer {
 					}
 				])
 			)]),
-			context.buffer
+			buffer
 		);
+	}
+}
+
+#[cfg(test)]
+mod test_registration {
+	use super::*;
+
+	struct _Writer;
+
+	impl WriteToFile for _Writer {
+		type TError = ();
+
+		fn write(&self, _: String) -> Result<(), Self::TError> {
+			panic!("SHOULD NOT BE CALLED");
+		}
+	}
+
+	#[derive(Component, Serialize)]
+	struct _A;
+
+	#[derive(Component, Serialize)]
+	struct _B;
+
+	#[test]
+	fn register_component() {
+		let mut context = SaveContext {
+			writer: _Writer,
+			handlers: vec![],
+			buffer: HashMap::default(),
+		};
+
+		context.register_component::<_A>();
+
+		assert_eq!(
+			vec![SaveContext::<_Writer>::handle::<_A> as usize],
+			context
+				.handlers
+				.into_iter()
+				.map(|h| h as usize)
+				.collect::<Vec<_>>()
+		)
+	}
+
+	#[test]
+	fn register_components() {
+		let mut context = SaveContext {
+			writer: _Writer,
+			handlers: vec![],
+			buffer: HashMap::default(),
+		};
+
+		context.register_component::<_A>();
+		context.register_component::<_B>();
+
+		assert_eq!(
+			vec![
+				SaveContext::<_Writer>::handle::<_A> as usize,
+				SaveContext::<_Writer>::handle::<_B> as usize
+			],
+			context
+				.handlers
+				.into_iter()
+				.map(|h| h as usize)
+				.collect::<Vec<_>>()
+		)
 	}
 }

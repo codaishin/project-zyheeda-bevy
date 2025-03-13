@@ -2,12 +2,13 @@ pub mod components;
 
 mod context;
 mod errors;
+mod systems;
 mod traits;
 mod writer;
 
+use crate::systems::buffer::BufferSystem;
 use bevy::prelude::*;
 use common::{states::game_state::GameState, systems::log::log};
-use components::save::Save;
 use context::SaveContext;
 use std::sync::{Arc, Mutex};
 use writer::FileWriter;
@@ -24,7 +25,7 @@ impl Plugin for SavegamePlugin {
 		app.add_systems(
 			OnEnter(GameState::Saving),
 			(
-				Save::save_system_via(context.clone()).pipe(log),
+				SaveContext::buffer_system(context.clone()).pipe(log),
 				SaveContext::flush_system(context).pipe(log),
 			)
 				.chain(),
