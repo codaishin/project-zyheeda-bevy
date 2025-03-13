@@ -1,3 +1,7 @@
+pub mod components;
+
+mod resources;
+
 use bevy::prelude::*;
 
 pub struct SavegamePlugin;
