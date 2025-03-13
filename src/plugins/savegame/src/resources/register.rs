@@ -86,6 +86,7 @@ mod test_update_context {
 	use crate::{context::Buffer, writer::FileWriter};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::test_tools::utils::SingleThreadedApp;
+	use serde_json::Error;
 
 	fn setup(handlers: Handlers) -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -96,8 +97,12 @@ mod test_update_context {
 
 	#[test]
 	fn update_context() -> Result<(), RunSystemError> {
-		fn a(_: &mut Buffer, _: EntityRef) {}
-		fn b(_: &mut Buffer, _: EntityRef) {}
+		fn a(_: &mut Buffer, _: EntityRef) -> Result<(), Error> {
+			Ok(())
+		}
+		fn b(_: &mut Buffer, _: EntityRef) -> Result<(), Error> {
+			Err(serde::de::Error::custom("Let me break everything"))
+		}
 
 		let mut app = setup(vec![a, b]);
 		let context = Arc::new(Mutex::new(SaveContext::new(FileWriter::to_destination(""))));

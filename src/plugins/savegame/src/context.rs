@@ -1,11 +1,11 @@
 use crate::{
-	errors::{IoOrLockError, LockPoisonedError},
+	errors::{EntitySerializationErrors, IoOrLockError, LockPoisonedError},
 	traits::{execute_save::BufferComponents, write_to_file::WriteToFile},
 	writer::FileWriter,
 };
 use bevy::prelude::*;
 use serde::Serialize;
-use serde_json::to_string;
+use serde_json::{Error, to_string};
 use std::{
 	any::type_name,
 	collections::{HashMap, HashSet, hash_map::Entry},
@@ -13,7 +13,7 @@ use std::{
 };
 
 pub(crate) type Buffer = HashMap<Entity, HashSet<ComponentString>>;
-pub(crate) type Handlers = Vec<fn(&mut Buffer, EntityRef)>;
+pub(crate) type Handlers = Vec<fn(&mut Buffer, EntityRef) -> Result<(), Error>>;
 
 #[derive(Debug, PartialEq, Default)]
 pub struct SaveContext<TFileWriter = FileWriter> {
@@ -26,15 +26,16 @@ impl SaveContext {
 	pub(crate) fn handle<T>(
 		buffer: &mut HashMap<Entity, HashSet<ComponentString>>,
 		entity: EntityRef,
-	) where
+	) -> Result<(), Error>
+	where
 		T: Component + Serialize,
 	{
 		let Some(component) = entity.get::<T>() else {
-			return;
+			return Ok(());
 		};
 		let component_str = ComponentString {
 			component_name: type_name::<T>(),
-			component_state: to_string(component).unwrap(),
+			component_state: to_string(component)?,
 		};
 
 		match buffer.entry(entity.id()) {
@@ -44,7 +45,8 @@ impl SaveContext {
 			Entry::Vacant(vacant_entry) => {
 				vacant_entry.insert(HashSet::from([component_str]));
 			}
-		}
+		};
+		Ok(())
 	}
 }
 
@@ -101,13 +103,20 @@ fn join_entity_components((_, component_strings): (Entity, HashSet<ComponentStri
 	format!("[{components}]")
 }
 
-impl<TFileWriter> BufferComponents for SaveContext<TFileWriter>
-where
-	TFileWriter: WriteToFile,
-{
-	fn buffer_components(&mut self, entity: EntityRef) {
-		for handler in &self.handlers {
-			handler(&mut self.buffer, entity);
+impl BufferComponents for SaveContext {
+	fn buffer_components(&mut self, entity: EntityRef) -> Result<(), EntitySerializationErrors> {
+		let errors = self
+			.handlers
+			.iter()
+			.filter_map(|handler| match handler(&mut self.buffer, entity) {
+				Ok(()) => None,
+				Err(err) => Some(err),
+			})
+			.collect::<Vec<_>>();
+
+		match errors.as_slice() {
+			[] => Ok(()),
+			_ => Err(EntitySerializationErrors(errors)),
 		}
 	}
 }
@@ -316,6 +325,91 @@ mod test_flush {
 #[cfg(test)]
 mod test_buffer {
 	use super::*;
+	use common::{simple_init, traits::mock::Mock};
+	use mockall::{automock, predicate::eq};
+
+	#[automock]
+	trait _Call {
+		fn call(&self, buffer: &mut Buffer, entity: Entity) -> Result<(), Error>;
+	}
+
+	simple_init!(Mock_Call);
+
+	fn setup() -> App {
+		App::new()
+	}
+
+	#[test]
+	fn buffer() {
+		fn get_buffer() -> Buffer {
+			HashMap::from([(
+				Entity::from_raw(42),
+				HashSet::from([ComponentString {
+					component_name: "name",
+					component_state: "state".to_owned(),
+				}]),
+			)])
+		}
+
+		let mut app = setup();
+		let entity = app.world_mut().spawn_empty().id();
+		let entity = app.world().entity(entity);
+		let mut context = SaveContext::new(FileWriter::to_destination(""));
+		context.buffer = get_buffer();
+		context.handlers = vec![|b, e| {
+			Mock_Call::new_mock(|mock| {
+				mock.expect_call()
+					.times(1)
+					.with(eq(get_buffer()), eq(Entity::from_raw(0)))
+					.returning(|_, _| Ok(()));
+			})
+			.call(b, e.id())
+		}];
+
+		let result = context.buffer_components(entity);
+
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn buffer_error() {
+		let mut app = setup();
+		let entity = app.world_mut().spawn_empty().id();
+		let entity = app.world().entity(entity);
+		let mut context = SaveContext::new(FileWriter::to_destination(""));
+		context.handlers = vec![
+			|b, e| {
+				Mock_Call::new_mock(|mock| {
+					mock.expect_call()
+						.returning(|_, _| Err(serde::ser::Error::custom("NOPE, U LOSE")));
+				})
+				.call(b, e.id())
+			},
+			|b, e| {
+				Mock_Call::new_mock(|mock| {
+					mock.expect_call()
+						.returning(|_, _| Err(serde::ser::Error::custom("NOPE, U LOSE AGAIN")));
+				})
+				.call(b, e.id())
+			},
+		];
+
+		let result = context.buffer_components(entity);
+
+		assert_eq!(
+			Err("NOPE, U LOSE|NOPE, U LOSE AGAIN".to_owned()),
+			result.map_err(|EntitySerializationErrors(errors)| errors
+				.iter()
+				.map(|error| error.to_string())
+				.collect::<Vec<_>>()
+				.join("|"))
+		);
+	}
+}
+
+#[cfg(test)]
+mod test_handle {
+	use super::*;
 	use common::test_tools::utils::SingleThreadedApp;
 	use serde::Serialize;
 	use std::any::type_name;
@@ -340,6 +434,18 @@ mod test_buffer {
 		v: i32,
 	}
 
+	#[derive(Component)]
+	struct _Fail;
+
+	impl Serialize for _Fail {
+		fn serialize<S>(&self, _: S) -> Result<S::Ok, S::Error>
+		where
+			S: serde::Serializer,
+		{
+			Err(serde::ser::Error::custom("Fool! I refuse serialization"))
+		}
+	}
+
 	fn setup() -> App {
 		App::new().single_threaded(Update)
 	}
@@ -351,7 +457,7 @@ mod test_buffer {
 		let entity = app.world_mut().spawn(_A { value: 42 }).id();
 		let entity = app.world().entity(entity);
 
-		SaveContext::handle::<_A>(&mut buffer, entity);
+		_ = SaveContext::handle::<_A>(&mut buffer, entity);
 
 		assert_eq!(
 			HashMap::from([(
@@ -372,8 +478,8 @@ mod test_buffer {
 		let entity = app.world_mut().spawn((_A { value: 42 }, _B { v: 11 })).id();
 		let entity = app.world().entity(entity);
 
-		SaveContext::handle::<_A>(&mut buffer, entity);
-		SaveContext::handle::<_B>(&mut buffer, entity);
+		_ = SaveContext::handle::<_A>(&mut buffer, entity);
+		_ = SaveContext::handle::<_B>(&mut buffer, entity);
 
 		assert_eq!(
 			HashMap::from([(
@@ -390,6 +496,33 @@ mod test_buffer {
 				])
 			)]),
 			buffer
+		);
+	}
+
+	#[test]
+	fn ok() {
+		let mut app = setup();
+		let mut buffer = HashMap::default();
+		let entity = app.world_mut().spawn(_A { value: 42 }).id();
+		let entity = app.world().entity(entity);
+
+		let result = SaveContext::handle::<_A>(&mut buffer, entity);
+
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn error() {
+		let mut app = setup();
+		let mut buffer = HashMap::default();
+		let entity = app.world_mut().spawn(_Fail).id();
+		let entity = app.world().entity(entity);
+
+		let result = SaveContext::handle::<_Fail>(&mut buffer, entity);
+
+		assert_eq!(
+			Err("Fool! I refuse serialization".to_owned()),
+			result.map_err(|e| e.to_string())
 		);
 	}
 }
