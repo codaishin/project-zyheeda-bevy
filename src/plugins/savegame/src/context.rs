@@ -25,19 +25,21 @@ impl<TFileWriter> SaveContext<TFileWriter> {
 		}
 	}
 
-	pub(crate) fn flush_system(context: Arc<Mutex<Self>>) -> impl Fn()
+	pub(crate) fn flush_system(
+		context: Arc<Mutex<Self>>,
+	) -> impl Fn() -> Result<(), TFileWriter::TError>
 	where
 		TFileWriter: WriteToFile,
 	{
 		move || {
 			let Ok(mut context) = context.lock() else {
-				return;
+				return Ok(());
 			};
-			context.flush();
+			context.flush()
 		}
 	}
 
-	fn flush(&mut self)
+	fn flush(&mut self) -> Result<(), TFileWriter::TError>
 	where
 		TFileWriter: WriteToFile,
 	{
@@ -48,7 +50,7 @@ impl<TFileWriter> SaveContext<TFileWriter> {
 			.collect::<Vec<_>>()
 			.join(",");
 
-		self.writer.write(format!("[{entities}]"));
+		self.writer.write(format!("[{entities}]"))
 	}
 }
 
@@ -98,27 +100,29 @@ struct ComponentString {
 #[cfg(test)]
 mod test_flush {
 	use super::*;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{simple_init, test_tools::utils::SingleThreadedApp, traits::mock::Mock};
 	use mockall::{mock, predicate::eq};
+
+	#[derive(Debug, PartialEq, Clone)]
+	struct _Error;
 
 	mock! {
 	  _Writer {}
 		impl WriteToFile for _Writer {
-			fn write(&self, string: String);
+			type TError = _Error;
+			fn write(&self, string: String) -> Result<(), _Error>;
 		}
 	}
 
 	simple_init!(Mock_Writer);
 
-	fn setup(context: Arc<Mutex<SaveContext<Mock_Writer>>>) -> App {
-		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, SaveContext::flush_system(context));
-
-		app
+	fn setup() -> App {
+		App::new().single_threaded(Update)
 	}
 
 	#[test]
-	fn write_on_flush() {
+	fn write_on_flush() -> Result<(), RunSystemError> {
 		let string_a = ComponentString {
 			component_name: "A",
 			component_state: r#"{"value": 32}"#.to_owned(),
@@ -129,16 +133,19 @@ mod test_flush {
 				mock.expect_write()
 					.times(1)
 					.with(eq(format!("[[{}]]", to_string(&string_a).unwrap())))
-					.return_const(());
+					.return_const(Ok(()));
 			}),
 		}));
-		let mut app = setup(context);
+		let mut app = setup();
 
-		app.update();
+		_ = app
+			.world_mut()
+			.run_system_once(SaveContext::flush_system(context))?;
+		Ok(())
 	}
 
 	#[test]
-	fn write_multiple_components_per_entity_on_flush() {
+	fn write_multiple_components_per_entity_on_flush() -> Result<(), RunSystemError> {
 		let string_a = ComponentString {
 			component_name: "A",
 			component_state: r#"{"value": 32}"#.to_owned(),
@@ -184,16 +191,19 @@ mod test_flush {
 						);
 						v == &a_b || v == &b_a
 					})
-					.return_const(());
+					.return_const(Ok(()));
 			}),
 		}));
-		let mut app = setup(context);
+		let mut app = setup();
 
-		app.update();
+		_ = app
+			.world_mut()
+			.run_system_once(SaveContext::flush_system(context))?;
+		Ok(())
 	}
 
 	#[test]
-	fn write_multiple_entities_on_flush() {
+	fn write_multiple_entities_on_flush() -> Result<(), RunSystemError> {
 		let string_a = ComponentString {
 			component_name: "A",
 			component_state: r#"{"value": 32}"#.to_owned(),
@@ -239,16 +249,19 @@ mod test_flush {
 						);
 						v == &a_b || v == &b_a
 					})
-					.return_const(());
+					.return_const(Ok(()));
 			}),
 		}));
-		let mut app = setup(context);
+		let mut app = setup();
 
-		app.update();
+		_ = app
+			.world_mut()
+			.run_system_once(SaveContext::flush_system(context))?;
+		Ok(())
 	}
 
 	#[test]
-	fn clear_buffer_on_flush() {
+	fn clear_buffer_on_flush() -> Result<(), RunSystemError> {
 		let context = Arc::new(Mutex::new(SaveContext {
 			buffer: HashMap::from([(
 				Entity::from_raw(32),
@@ -258,32 +271,40 @@ mod test_flush {
 				}]),
 			)]),
 			writer: Mock_Writer::new_mock(|mock| {
-				mock.expect_write().return_const(());
+				mock.expect_write().return_const(Ok(()));
 			}),
 		}));
-		let mut app = setup(context.clone());
+		let mut app = setup();
 
-		app.update();
+		_ = app
+			.world_mut()
+			.run_system_once(SaveContext::flush_system(context.clone()))?;
 
 		assert_eq!(
 			HashMap::default(),
 			context.lock().expect("COULD NOT LOCK CONTEXT").buffer
-		)
+		);
+		Ok(())
 	}
 }
 
 #[cfg(test)]
 mod test_buffer {
-	use std::any::type_name;
-
 	use super::*;
 	use common::test_tools::utils::SingleThreadedApp;
 	use serde::Serialize;
+	use std::any::type_name;
+
+	struct _ShouldNotHaveBeenCalled;
 
 	struct _Writer;
 
 	impl WriteToFile for _Writer {
-		fn write(&self, _: String) {}
+		type TError = _ShouldNotHaveBeenCalled;
+
+		fn write(&self, _: String) -> Result<(), Self::TError> {
+			Err(_ShouldNotHaveBeenCalled)
+		}
 	}
 
 	#[derive(Component, Serialize)]

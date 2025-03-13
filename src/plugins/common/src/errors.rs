@@ -1,4 +1,5 @@
 use bevy::math::InvalidDirectionError;
+use std::io::Error as IoError;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Level {
@@ -27,6 +28,15 @@ impl From<InvalidDirectionError> for Error {
 				msg: "Encountered NaN length direction".to_owned(),
 				lvl: Level::Error,
 			},
+		}
+	}
+}
+
+impl From<IoError> for Error {
+	fn from(value: IoError) -> Self {
+		Self {
+			msg: value.to_string(),
+			lvl: Level::Error,
 		}
 	}
 }
