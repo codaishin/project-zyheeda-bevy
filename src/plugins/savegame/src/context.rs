@@ -5,7 +5,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use serde::Serialize;
-use serde_json::{Error, to_string};
+use serde_json::{Error, Value, from_str, to_string};
 use std::{
 	any::type_name,
 	collections::{HashMap, HashSet, hash_map::Entry},
@@ -35,7 +35,7 @@ impl SaveContext {
 		};
 		let component_str = ComponentString {
 			component_name: type_name::<T>(),
-			component_state: to_string(component)?,
+			component_state: from_str(&to_string(component)?)?,
 		};
 
 		match buffer.entry(entity.id()) {
@@ -88,7 +88,6 @@ impl<TFileWriter> SaveContext<TFileWriter> {
 			.map(join_entity_components)
 			.collect::<Vec<_>>()
 			.join(",");
-
 		self.writer.write(format!("[{entities}]"))
 	}
 }
@@ -96,7 +95,7 @@ impl<TFileWriter> SaveContext<TFileWriter> {
 fn join_entity_components((_, component_strings): (Entity, HashSet<ComponentString>)) -> String {
 	let components = component_strings
 		.iter()
-		.filter_map(|v| to_string(&v).ok())
+		.map(ComponentString::to_json_string)
 		.collect::<Vec<_>>()
 		.join(",");
 
@@ -124,7 +123,19 @@ impl BufferComponents for SaveContext {
 #[derive(Debug, PartialEq, Eq, Hash, Serialize, Clone)]
 pub(crate) struct ComponentString {
 	component_name: &'static str,
-	component_state: String,
+	component_state: Value,
+}
+
+impl ComponentString {
+	/// Manually create json string to omit the possible error of `to_string`
+	/// of `serde_json`. We can safely assume that this won't fail, because both
+	/// the component name and the component state are valid.
+	fn to_json_string(&self) -> String {
+		format!(
+			"{{\"component_name\":\"{}\",\"component_state\":{}}}",
+			self.component_name, self.component_state
+		)
+	}
 }
 
 #[cfg(test)]
@@ -155,7 +166,7 @@ mod test_flush {
 	fn write_on_flush() -> Result<(), RunSystemError> {
 		let string_a = ComponentString {
 			component_name: "A",
-			component_state: r#"{"value": 32}"#.to_owned(),
+			component_state: from_str(r#"{"value": 32}"#).unwrap(),
 		};
 		let context = Arc::new(Mutex::new(SaveContext {
 			buffer: HashMap::from([(Entity::from_raw(11), HashSet::from([string_a.clone()]))]),
@@ -179,11 +190,11 @@ mod test_flush {
 	fn write_multiple_components_per_entity_on_flush() -> Result<(), RunSystemError> {
 		let string_a = ComponentString {
 			component_name: "A",
-			component_state: r#"{"value": 32}"#.to_owned(),
+			component_state: from_str(r#"{"value": 32}"#).unwrap(),
 		};
 		let string_b = ComponentString {
 			component_name: "B",
-			component_state: r#"{"v": 42}"#.to_owned(),
+			component_state: from_str(r#"{"v": 42}"#).unwrap(),
 		};
 		let context = Arc::new(Mutex::new(SaveContext {
 			buffer: HashMap::from([(
@@ -198,12 +209,12 @@ mod test_flush {
 							"[[{},{}]]",
 							to_string(&ComponentString {
 								component_name: "A",
-								component_state: r#"{"value": 32}"#.to_owned(),
+								component_state: from_str(r#"{"value": 32}"#).unwrap(),
 							})
 							.unwrap(),
 							to_string(&ComponentString {
 								component_name: "B",
-								component_state: r#"{"v": 42}"#.to_owned(),
+								component_state: from_str(r#"{"v": 42}"#).unwrap(),
 							})
 							.unwrap(),
 						);
@@ -211,12 +222,12 @@ mod test_flush {
 							"[[{},{}]]",
 							to_string(&ComponentString {
 								component_name: "B",
-								component_state: r#"{"v": 42}"#.to_owned(),
+								component_state: from_str(r#"{"v": 42}"#).unwrap(),
 							})
 							.unwrap(),
 							to_string(&ComponentString {
 								component_name: "A",
-								component_state: r#"{"value": 32}"#.to_owned(),
+								component_state: from_str(r#"{"value": 32}"#).unwrap(),
 							})
 							.unwrap(),
 						);
@@ -238,11 +249,11 @@ mod test_flush {
 	fn write_multiple_entities_on_flush() -> Result<(), RunSystemError> {
 		let string_a = ComponentString {
 			component_name: "A",
-			component_state: r#"{"value": 32}"#.to_owned(),
+			component_state: from_str(r#"{"value": 32}"#).unwrap(),
 		};
 		let string_b = ComponentString {
 			component_name: "B",
-			component_state: r#"{"v": 42}"#.to_owned(),
+			component_state: from_str(r#"{"v": 42}"#).unwrap(),
 		};
 		let context = Arc::new(Mutex::new(SaveContext {
 			buffer: HashMap::from([
@@ -257,12 +268,12 @@ mod test_flush {
 							"[[{}],[{}]]",
 							to_string(&ComponentString {
 								component_name: "A",
-								component_state: r#"{"value": 32}"#.to_owned(),
+								component_state: from_str(r#"{"value": 32}"#).unwrap(),
 							})
 							.unwrap(),
 							to_string(&ComponentString {
 								component_name: "B",
-								component_state: r#"{"v": 42}"#.to_owned(),
+								component_state: from_str(r#"{"v": 42}"#).unwrap(),
 							})
 							.unwrap(),
 						);
@@ -270,12 +281,12 @@ mod test_flush {
 							"[[{}],[{}]]",
 							to_string(&ComponentString {
 								component_name: "B",
-								component_state: r#"{"v": 42}"#.to_owned(),
+								component_state: from_str(r#"{"v": 42}"#).unwrap(),
 							})
 							.unwrap(),
 							to_string(&ComponentString {
 								component_name: "A",
-								component_state: r#"{"value": 32}"#.to_owned(),
+								component_state: from_str(r#"{"value": 32}"#).unwrap(),
 							})
 							.unwrap(),
 						);
@@ -300,7 +311,7 @@ mod test_flush {
 				Entity::from_raw(32),
 				HashSet::from([ComponentString {
 					component_name: "A",
-					component_state: r#"{"value": 32}"#.to_owned(),
+					component_state: from_str(r#"{"value": 32}"#).unwrap(),
 				}]),
 			)]),
 			writer: Mock_Writer::new_mock(|mock| {
@@ -346,7 +357,7 @@ mod test_buffer {
 				Entity::from_raw(42),
 				HashSet::from([ComponentString {
 					component_name: "name",
-					component_state: "state".to_owned(),
+					component_state: from_str("[\"state\"]").unwrap(),
 				}]),
 			)])
 		}
@@ -464,7 +475,7 @@ mod test_handle {
 				entity.id(),
 				HashSet::from([ComponentString {
 					component_name: type_name::<_A>(),
-					component_state: to_string(&_A { value: 42 }).unwrap()
+					component_state: from_str(&to_string(&_A { value: 42 }).unwrap()).unwrap()
 				}])
 			)]),
 			buffer
@@ -487,11 +498,11 @@ mod test_handle {
 				HashSet::from([
 					ComponentString {
 						component_name: type_name::<_A>(),
-						component_state: to_string(&_A { value: 42 }).unwrap()
+						component_state: from_str(&to_string(&_A { value: 42 }).unwrap()).unwrap()
 					},
 					ComponentString {
 						component_name: type_name::<_B>(),
-						component_state: to_string(&_B { v: 11 }).unwrap()
+						component_state: from_str(&to_string(&_B { v: 11 }).unwrap()).unwrap()
 					}
 				])
 			)]),
