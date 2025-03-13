@@ -31,12 +31,14 @@ where
 		let start_menu = GameState::StartMenu;
 		let new_game = GameState::NewGame;
 		let loading = GameState::Loading;
+		let saving = GameState::Saving;
 		let play = GameState::Play;
 
 		TLoading::begin_loading_on(app, loading).when_done_set(play);
 
 		app.insert_state(start_menu)
 			.add_systems(OnEnter(new_game), transition_to_state(loading))
+			.add_systems(OnEnter(saving), transition_to_state(play))
 			.add_systems(OnEnter(play), pause_virtual_time::<false>)
 			.add_systems(OnExit(play), pause_virtual_time::<true>);
 	}

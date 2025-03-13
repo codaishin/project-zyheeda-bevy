@@ -9,6 +9,7 @@ impl ReactsToMenuHotkeys for GameState {
 			Self::Loading => false,
 			Self::NewGame => false,
 			Self::Play => true,
+			Self::Saving => false,
 			Self::IngameMenu(_) => true,
 		}
 	}

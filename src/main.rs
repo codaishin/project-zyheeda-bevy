@@ -19,6 +19,7 @@ use menu::MenuPlugin;
 use path_finding::PathFindingPlugin;
 use player::PlayerPlugin;
 use prefabs::PrefabsPlugin;
+use savegame::SavegamePlugin;
 use skills::SkillsPlugin;
 
 fn main() -> AppExit {
@@ -35,6 +36,7 @@ fn main() -> AppExit {
 }
 
 fn prepare_game(app: &mut App) {
+	let savegame_plugin = SavegamePlugin;
 	let life_cycles_plugin = LifeCyclesPlugin;
 	let animations_plugin = AnimationsPlugin;
 	let prefabs_plugin = PrefabsPlugin;
@@ -90,6 +92,8 @@ fn prepare_game(app: &mut App) {
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
+		.add_plugins(FrameLimiterPlugin { target_fps: 60 })
+		.add_plugins(savegame_plugin)
 		.add_plugins(life_cycles_plugin)
 		.add_plugins(prefabs_plugin)
 		.add_plugins(graphics_plugin)
@@ -108,7 +112,6 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(behaviors_plugin)
 		.add_plugins(game_state_plugin)
 		.add_plugins(camera_control_plugin)
-		.add_plugins(FrameLimiterPlugin { target_fps: 60 })
 		.insert_resource(ClearColor(Color::BLACK));
 }
 

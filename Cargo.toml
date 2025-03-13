@@ -39,6 +39,7 @@ path_finding = { path = "src/plugins/path_finding" }
 player = { path = "src/plugins/player" }
 prefabs = { path = "src/plugins/prefabs" }
 graphics = { path = "src/plugins/graphics" }
+savegame = { path = "src/plugins/savegame" }
 skills = { path = "src/plugins/skills" }
 
 [profile.test]
@@ -89,6 +90,7 @@ path_finding.workspace = true
 player.workspace = true
 prefabs.workspace = true
 graphics.workspace = true
+savegame.workspace = true
 skills.workspace = true
 
 [dev-dependencies]
