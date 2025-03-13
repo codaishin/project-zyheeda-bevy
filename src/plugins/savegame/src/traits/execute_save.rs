@@ -1,7 +1,8 @@
-use bevy::ecs::world::EntityRef;
+use bevy::ecs::{component::Component, world::EntityRef};
+use serde::Serialize;
 
 pub trait ExecuteSave {
-	fn execute_save<T>(&mut self, entity: EntityRef)
+	fn buffer<T>(&mut self, entity: EntityRef)
 	where
-		T: 'static;
+		T: 'static + Component + Serialize;
 }

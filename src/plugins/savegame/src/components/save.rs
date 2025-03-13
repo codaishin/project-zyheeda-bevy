@@ -1,10 +1,10 @@
-use crate::{context::SaveContext, traits::execute_save::ExecuteSave};
+use crate::{context::SaveContext, traits::execute_save::ExecuteSave, writer::FileWriter};
 use bevy::prelude::*;
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
 
 #[derive(Component, Debug, PartialEq)]
-pub struct Save<TSaveContext = SaveContext>
+pub struct Save<TSaveContext = SaveContext<FileWriter>>
 where
 	TSaveContext: 'static,
 {
@@ -20,7 +20,7 @@ where
 		TComponent: Component + Serialize + 'static,
 	{
 		Self {
-			handlers: vec![TSaveContext::execute_save::<TComponent>],
+			handlers: vec![TSaveContext::buffer::<TComponent>],
 		}
 	}
 
@@ -28,14 +28,14 @@ where
 	where
 		TComponent: Component + Serialize + 'static,
 	{
-		self.handlers.push(TSaveContext::execute_save::<TComponent>);
+		self.handlers.push(TSaveContext::buffer::<TComponent>);
 
 		self
 	}
 
 	pub fn save_system_via(context: Arc<Mutex<TSaveContext>>) -> impl Fn(&mut World) {
 		move |world| {
-			let Ok(mut context) = context.try_lock() else {
+			let Ok(mut context) = context.lock() else {
 				return;
 			};
 			let entities = world
@@ -63,11 +63,11 @@ mod test_adding_handlers {
 
 	#[test]
 	fn store_save_fn() {
-		let save = Save::component::<_A>();
+		let save: Save = Save::component::<_A>();
 
 		assert_eq!(
 			Save {
-				handlers: vec![SaveContext::execute_save::<_A>]
+				handlers: vec![SaveContext::buffer::<_A>]
 			},
 			save
 		);
@@ -75,14 +75,11 @@ mod test_adding_handlers {
 
 	#[test]
 	fn store_save_fns() {
-		let save = Save::component::<_A>().and_component::<_B>();
+		let save: Save = Save::component::<_A>().and_component::<_B>();
 
 		assert_eq!(
 			Save {
-				handlers: vec![
-					SaveContext::execute_save::<_A>,
-					SaveContext::execute_save::<_B>
-				]
+				handlers: vec![SaveContext::buffer::<_A>, SaveContext::buffer::<_B>]
 			},
 			save
 		);
@@ -97,15 +94,15 @@ mod test_save {
 
 	#[derive(Default)]
 	struct _SaveContext {
-		called_with: Vec<(Entity, TypeId)>,
+		buffered: Vec<(Entity, TypeId)>,
 	}
 
 	impl ExecuteSave for _SaveContext {
-		fn execute_save<T>(&mut self, entity: EntityRef)
+		fn buffer<T>(&mut self, entity: EntityRef)
 		where
 			T: 'static,
 		{
-			self.called_with.push((entity.id(), TypeId::of::<T>()));
+			self.buffered.push((entity.id(), TypeId::of::<T>()));
 		}
 	}
 
@@ -123,7 +120,7 @@ mod test_save {
 	}
 
 	#[test]
-	fn execute_save() {
+	fn buffer() {
 		let context = Arc::new(Mutex::new(_SaveContext::default()));
 		let mut app = setup(context.clone());
 		let entity = app
@@ -135,7 +132,7 @@ mod test_save {
 
 		assert_eq!(
 			vec![(entity, TypeId::of::<_A>()), (entity, TypeId::of::<_B>())],
-			context.lock().expect("COULD NOT LOCK CONTEXT").called_with
+			context.lock().expect("COULD NOT LOCK CONTEXT").buffered
 		);
 	}
 }
