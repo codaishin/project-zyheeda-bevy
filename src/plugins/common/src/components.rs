@@ -1,6 +1,7 @@
 pub mod essence;
 pub mod flip;
 pub mod insert_asset;
+pub mod object_id;
 pub mod spawn_children;
 
 use bevy::{prelude::*, render::view::RenderLayers};

@@ -16,6 +16,7 @@ use bevy::prelude::*;
 use components::{
 	flip::FlipHorizontally,
 	insert_asset::InsertAsset,
+	object_id::ObjectId,
 	spawn_children::SpawnChildren,
 };
 use labels::Labels;
@@ -38,6 +39,7 @@ impl Plugin for CommonPlugin {
 					InsertAsset::<StandardMaterial>::system,
 				),
 			)
-			.add_systems(on_instantiate(), SpawnChildren::system);
+			.add_systems(on_instantiate(), SpawnChildren::system)
+			.add_systems(on_instantiate(), ObjectId::update_entity);
 	}
 }
