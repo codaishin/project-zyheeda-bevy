@@ -23,6 +23,14 @@ pub struct ObjectId {
 	entity: Option<Entity>,
 }
 
+impl ObjectId {
+	pub(crate) fn update_entity(mut entities: Query<(Entity, &mut Self), Changed<Self>>) {
+		for (entity, mut id) in &mut entities {
+			id.entity = Some(entity);
+		}
+	}
+}
+
 impl From<Entity> for ObjectId {
 	fn from(entity: Entity) -> Self {
 		Self {
@@ -94,6 +102,8 @@ impl_get_object_id! { A, B, C, D, E, F, }
 
 #[cfg(test)]
 mod tests {
+	use crate::test_tools::utils::SingleThreadedApp;
+
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use std::sync::{Arc, Mutex};
@@ -111,16 +121,12 @@ mod tests {
 		assert_eq!(id, (&id, &3, &4, &5, &6, &7, &8).get());
 	}
 
-	fn setup() -> App {
-		App::new()
-	}
-
 	#[derive(Component, Debug, PartialEq, Clone, Copy)]
 	struct _Value(u8);
 
 	#[test]
 	fn get_entity_through_key_entity() -> Result<(), RunSystemError> {
-		let mut app = setup();
+		let mut app = App::new();
 		let entity = app
 			.world_mut()
 			.spawn((
@@ -148,7 +154,7 @@ mod tests {
 
 	#[test]
 	fn get_entity_when_key_id_matches_and_entity_is_none() -> Result<(), RunSystemError> {
-		let mut app = setup();
+		let mut app = App::new();
 		let id = Uuid::new_v4();
 		app.world_mut()
 			.spawn((_Value(42), ObjectId { id, entity: None }));
@@ -166,7 +172,7 @@ mod tests {
 
 	#[test]
 	fn return_none_when_object_id_missing() -> Result<(), RunSystemError> {
-		let mut app = setup();
+		let mut app = App::new();
 		app.world_mut().spawn(_Value(42));
 		let mut key = ObjectId {
 			id: Uuid::new_v4(),
@@ -185,7 +191,7 @@ mod tests {
 
 	#[test]
 	fn return_none_on_entity_mismatch() -> Result<(), RunSystemError> {
-		let mut app = setup();
+		let mut app = App::new();
 		let id = Uuid::new_v4();
 		app.world_mut().spawn((
 			_Value(42),
@@ -211,7 +217,7 @@ mod tests {
 
 	#[test]
 	fn update_given_key_entity() -> Result<(), RunSystemError> {
-		let mut app = setup();
+		let mut app = App::new();
 		let id = Uuid::new_v4();
 		let entity = app.world_mut().spawn(_Value(42)).id();
 		app.world_mut().entity_mut(entity).insert(ObjectId {
@@ -233,7 +239,7 @@ mod tests {
 
 	#[test]
 	fn update_given_key_id() -> Result<(), RunSystemError> {
-		let mut app = setup();
+		let mut app = App::new();
 		let id = Uuid::new_v4();
 		let entity = app
 			.world_mut()
@@ -259,5 +265,75 @@ mod tests {
 
 		assert_eq!(id, key.lock().unwrap().id);
 		Ok(())
+	}
+
+	fn setup() -> App {
+		let mut app = App::new().single_threaded(Update);
+		app.add_systems(Update, ObjectId::update_entity);
+
+		app
+	}
+
+	#[test]
+	fn update_entity() {
+		let mut app = setup();
+		let id = Uuid::new_v4();
+		let entity = app.world_mut().spawn(ObjectId { id, entity: None }).id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&ObjectId {
+				id,
+				entity: Some(entity)
+			}),
+			app.world().entity(entity).get::<ObjectId>()
+		);
+	}
+
+	#[test]
+	fn update_entity_only_once() {
+		#[derive(Resource, Debug, PartialEq, Default)]
+		struct _Changed(bool);
+
+		impl _Changed {
+			fn system(mut commands: Commands, changed: Query<(), Changed<ObjectId>>) {
+				commands.insert_resource(_Changed(changed.iter().count() > 0));
+			}
+		}
+
+		let mut app = setup();
+		let id = Uuid::new_v4();
+		app.world_mut().spawn(ObjectId { id, entity: None });
+		app.init_resource::<_Changed>();
+		app.add_systems(PostUpdate, _Changed::system);
+
+		app.update();
+		app.update();
+
+		assert_eq!(&_Changed(false), app.world().resource::<_Changed>());
+	}
+
+	#[test]
+	fn update_again_entity_on_change() {
+		let mut app = setup();
+		let id = Uuid::new_v4();
+		let entity = app.world_mut().spawn(ObjectId { id, entity: None }).id();
+
+		app.update();
+		app.world_mut()
+			.entity_mut(entity)
+			.get_mut::<ObjectId>()
+			.unwrap()
+			.entity = Some(Entity::from_raw(1111));
+		app.update();
+
+		assert_eq!(
+			Some(&ObjectId {
+				id,
+				entity: Some(entity)
+			}),
+			app.world().entity(entity).get::<ObjectId>()
+		);
 	}
 }
