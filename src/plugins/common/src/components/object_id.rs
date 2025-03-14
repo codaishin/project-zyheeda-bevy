@@ -31,11 +31,12 @@ impl ObjectId {
 	}
 }
 
-impl From<Entity> for ObjectId {
-	fn from(entity: Entity) -> Self {
+impl Default for ObjectId {
+	/// Created with a new random internal id
+	fn default() -> Self {
 		Self {
 			id: Uuid::new_v4(),
-			entity: Some(entity),
+			entity: None,
 		}
 	}
 }
@@ -102,15 +103,44 @@ impl_get_object_id! { A, B, C, D, E, F, }
 
 #[cfg(test)]
 mod tests {
-	use crate::test_tools::utils::SingleThreadedApp;
-
 	use super::*;
+	use crate::test_tools::utils::SingleThreadedApp;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use std::sync::{Arc, Mutex};
 
 	#[test]
+	fn default_id_is_not_nil() {
+		let ObjectId { id, .. } = ObjectId::default();
+
+		assert!(id != Uuid::nil());
+	}
+
+	#[test]
+	fn entity_is_none() {
+		let ObjectId { entity, .. } = ObjectId::default();
+
+		assert!(entity.is_none());
+	}
+
+	#[test]
+	fn uuids_are_different() {
+		let a = ObjectId::default();
+		let b = ObjectId::default();
+
+		assert!(
+			a != b,
+			"Expected left and right to be different, but they were equal\
+			 \n  left: {a:?}\
+			 \n right: {b:?}"
+		);
+	}
+
+	#[test]
 	fn test_get_object_id_from_query_item() {
-		let id = ObjectId::from(Entity::from_raw(33));
+		let id = ObjectId {
+			id: Uuid::new_v4(),
+			entity: Some(Entity::from_raw(33)),
+		};
 
 		assert_eq!(id, (&id,).get());
 		assert_eq!(id, (&id, &3).get());
