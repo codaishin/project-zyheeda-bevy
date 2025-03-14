@@ -3,23 +3,26 @@ use bevy::{
 	ecs::query::{QueryData, QueryFilter, ROQueryItem},
 	prelude::*,
 };
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// A lookup key for queries.
 ///
-/// It serves as a consistent way to store entity references throughout multiple game sessions.
+/// It serves as a consistent way to store entity references throughout multiple game sessions, as
+/// long as the target contains a matching [`ObjectId`].
 /// This is achieved via the following heuristics;
 ///
-/// - An internal [`Entity`] field is always treated as [`None`] for serialization/deserialization.
-/// - When using [`Query::get_via_id`]:
+/// - An internal [`Entity`] field is ignored for serialization/deserialization.
+/// - When using [`GetViaId::get_via_id`]:
 ///   - uses internal [`Entity`] for performant lookup
-///   - uses internal id, if internal [`Entity`] is [`None`]
+///   - uses internal fallback [`Uuid`], if internal [`Entity`] is [`None`]
 /// - Updates the internal [`Entity`] field when:
 ///   - added to an entity (requires [`crate::CommonPlugin`]).
-///   - [`Query::get_via_id`] found an item.
-#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+///   - [`GetViaId::get_via_id`] found a match.
+#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub struct ObjectId {
-	id: Uuid,
+	fallback: Uuid,
+	#[serde(skip)]
 	entity: Option<Entity>,
 }
 
@@ -35,19 +38,19 @@ impl Default for ObjectId {
 	/// Created with a new random internal id
 	fn default() -> Self {
 		Self {
-			id: Uuid::new_v4(),
+			fallback: Uuid::new_v4(),
 			entity: None,
 		}
 	}
 }
 
-pub trait GetThroughObjectId<D>
+pub trait GetViaId<D>
 where
 	D: QueryData,
 {
-	/// Get query item through a [`ObjectId`].
+	/// Query an item through an [`ObjectId`].
 	///
-	/// Updates the given key with the target [`ObjectId`].
+	/// Updates the key's entity, for faster lookups.
 	///
 	/// <div class="warning">
 	///   This is only implemented for a Query, if its first item is
@@ -56,7 +59,7 @@ where
 	fn get_via_id(&self, object_id: &mut ObjectId) -> Option<ROQueryItem<D>>;
 }
 
-impl<D, F> GetThroughObjectId<D> for Query<'_, '_, D, F>
+impl<D, F> GetViaId<D> for Query<'_, '_, D, F>
 where
 	D: QueryData,
 	F: QueryFilter,
@@ -67,10 +70,10 @@ where
 			Some(entity) => self.get(entity).ok()?,
 			None => self
 				.iter()
-				.find(|item| ObjectId::get_field(item).id == object_id.id)?,
+				.find(|item| ObjectId::get_field(item).fallback == object_id.fallback)?,
 		};
 
-		*object_id = ObjectId::get_field(&item);
+		object_id.entity = ObjectId::get_field(&item).entity;
 		Some(item)
 	}
 }
@@ -106,11 +109,12 @@ mod tests {
 	use super::*;
 	use crate::test_tools::utils::SingleThreadedApp;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use serde_json::{from_str, to_string};
 	use std::sync::{Arc, Mutex};
 
 	#[test]
 	fn default_id_is_not_nil() {
-		let ObjectId { id, .. } = ObjectId::default();
+		let ObjectId { fallback: id, .. } = ObjectId::default();
 
 		assert!(id != Uuid::nil());
 	}
@@ -135,10 +139,51 @@ mod tests {
 		);
 	}
 
+	#[derive(Serialize)]
+	struct _Stub {
+		fallback: Uuid,
+	}
+
 	#[test]
-	fn test_get_object_id_from_query_item() {
+	fn serialize_when_entity_none() {
+		let id = ObjectId::default();
+
+		assert_eq!(
+			to_string(&_Stub {
+				fallback: id.fallback
+			})
+			.unwrap(),
+			to_string(&id).unwrap()
+		)
+	}
+
+	#[test]
+	fn serialize_entity_as_none_when_entity_not_none() {
 		let id = ObjectId {
-			id: Uuid::new_v4(),
+			entity: Some(Entity::from_raw(69)),
+			..default()
+		};
+
+		assert_eq!(
+			to_string(&_Stub {
+				fallback: id.fallback
+			})
+			.unwrap(),
+			to_string(&id).unwrap()
+		)
+	}
+
+	#[test]
+	fn serialize_and_deserialize_ok() {
+		let id = ObjectId::default();
+
+		assert_eq!(id, from_str(&to_string(&id).unwrap()).unwrap())
+	}
+
+	#[test]
+	fn get_object_id_from_query_item() {
+		let id = ObjectId {
+			fallback: Uuid::new_v4(),
 			entity: Some(Entity::from_raw(33)),
 		};
 
@@ -162,13 +207,13 @@ mod tests {
 			.spawn((
 				_Value(42),
 				ObjectId {
-					id: Uuid::new_v4(),
+					fallback: Uuid::new_v4(),
 					entity: None, // setting this none, so we force implementation to use Query::get()
 				},
 			))
 			.id();
 		let mut key = ObjectId {
-			id: Uuid::new_v4(),
+			fallback: Uuid::new_v4(),
 			entity: Some(entity),
 		};
 
@@ -183,12 +228,20 @@ mod tests {
 	}
 
 	#[test]
-	fn get_entity_when_key_id_matches_and_entity_is_none() -> Result<(), RunSystemError> {
+	fn get_entity_when_key_fallback_matches_and_entity_is_none() -> Result<(), RunSystemError> {
 		let mut app = App::new();
-		let id = Uuid::new_v4();
-		app.world_mut()
-			.spawn((_Value(42), ObjectId { id, entity: None }));
-		let mut key = ObjectId { id, entity: None };
+		let fallback = Uuid::new_v4();
+		app.world_mut().spawn((
+			_Value(42),
+			ObjectId {
+				fallback,
+				entity: None,
+			},
+		));
+		let mut key = ObjectId {
+			fallback,
+			entity: None,
+		};
 
 		let value = app
 			.world_mut()
@@ -205,7 +258,7 @@ mod tests {
 		let mut app = App::new();
 		app.world_mut().spawn(_Value(42));
 		let mut key = ObjectId {
-			id: Uuid::new_v4(),
+			fallback: Uuid::new_v4(),
 			entity: None,
 		};
 
@@ -222,16 +275,16 @@ mod tests {
 	#[test]
 	fn return_none_on_entity_mismatch() -> Result<(), RunSystemError> {
 		let mut app = App::new();
-		let id = Uuid::new_v4();
+		let fallback = Uuid::new_v4();
 		app.world_mut().spawn((
 			_Value(42),
 			ObjectId {
-				id,
+				fallback,
 				entity: None, // setting this none, so we force implementation to use Query::get()
 			},
 		));
 		let mut key = ObjectId {
-			id,
+			fallback,
 			entity: Some(Entity::from_raw(69)),
 		};
 
@@ -248,42 +301,15 @@ mod tests {
 	#[test]
 	fn update_given_key_entity() -> Result<(), RunSystemError> {
 		let mut app = App::new();
-		let id = Uuid::new_v4();
+		let fallback = Uuid::new_v4();
 		let entity = app.world_mut().spawn(_Value(42)).id();
 		app.world_mut().entity_mut(entity).insert(ObjectId {
-			id,
+			fallback,
 			entity: Some(entity), // using target ObjectId's entity as source of truth
 		});
-		let key = Arc::new(Mutex::new(ObjectId { id, entity: None }));
-		let key_handle = key.clone();
-
-		app.world_mut()
-			.run_system_once(move |e: Query<(&ObjectId, &_Value)>| {
-				let mut key = key_handle.lock().unwrap();
-				e.get_via_id(&mut key);
-			})?;
-
-		assert_eq!(Some(entity), key.lock().unwrap().entity);
-		Ok(())
-	}
-
-	#[test]
-	fn update_given_key_id() -> Result<(), RunSystemError> {
-		let mut app = App::new();
-		let id = Uuid::new_v4();
-		let entity = app
-			.world_mut()
-			.spawn((
-				_Value(42),
-				ObjectId {
-					id,
-					entity: None, // setting this none, so we force implementation to use Query::get()
-				},
-			))
-			.id();
 		let key = Arc::new(Mutex::new(ObjectId {
-			id: Uuid::new_v4(),
-			entity: Some(entity),
+			fallback,
+			entity: None,
 		}));
 		let key_handle = key.clone();
 
@@ -293,7 +319,7 @@ mod tests {
 				e.get_via_id(&mut key);
 			})?;
 
-		assert_eq!(id, key.lock().unwrap().id);
+		assert_eq!(Some(entity), key.lock().unwrap().entity);
 		Ok(())
 	}
 
@@ -307,14 +333,20 @@ mod tests {
 	#[test]
 	fn update_entity() {
 		let mut app = setup();
-		let id = Uuid::new_v4();
-		let entity = app.world_mut().spawn(ObjectId { id, entity: None }).id();
+		let fallback = Uuid::new_v4();
+		let entity = app
+			.world_mut()
+			.spawn(ObjectId {
+				fallback,
+				entity: None,
+			})
+			.id();
 
 		app.update();
 
 		assert_eq!(
 			Some(&ObjectId {
-				id,
+				fallback,
 				entity: Some(entity)
 			}),
 			app.world().entity(entity).get::<ObjectId>()
@@ -334,7 +366,10 @@ mod tests {
 
 		let mut app = setup();
 		let id = Uuid::new_v4();
-		app.world_mut().spawn(ObjectId { id, entity: None });
+		app.world_mut().spawn(ObjectId {
+			fallback: id,
+			entity: None,
+		});
 		app.init_resource::<_Changed>();
 		app.add_systems(PostUpdate, _Changed::system);
 
@@ -347,8 +382,14 @@ mod tests {
 	#[test]
 	fn update_again_entity_on_change() {
 		let mut app = setup();
-		let id = Uuid::new_v4();
-		let entity = app.world_mut().spawn(ObjectId { id, entity: None }).id();
+		let fallback = Uuid::new_v4();
+		let entity = app
+			.world_mut()
+			.spawn(ObjectId {
+				fallback,
+				entity: None,
+			})
+			.id();
 
 		app.update();
 		app.world_mut()
@@ -360,7 +401,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&ObjectId {
-				id,
+				fallback,
 				entity: Some(entity)
 			}),
 			app.world().entity(entity).get::<ObjectId>()
