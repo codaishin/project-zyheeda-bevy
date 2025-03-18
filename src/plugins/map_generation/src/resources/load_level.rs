@@ -4,7 +4,7 @@ use crate::{
 		grid_context::{GridContext, GridDefinition},
 	},
 	map::Map,
-	traits::{GridCellDistanceDefinition, SourcePath, grid_start::GridStart},
+	traits::{GridCellDistanceDefinition, SourcePath, grid_min::GridMin},
 };
 use bevy::prelude::*;
 use common::traits::{load_asset::LoadAsset, thread_safe::ThreadSafe};

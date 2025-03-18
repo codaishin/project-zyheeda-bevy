@@ -1,5 +1,5 @@
 use bevy::prelude::*;
 
-pub(crate) trait GridStart {
+pub(crate) trait GridMin {
 	fn grid_min(&self) -> Vec3;
 }

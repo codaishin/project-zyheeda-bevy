@@ -12,6 +12,7 @@ mod traits;
 use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
+	systems::log::log,
 	traits::{
 		handles_lights::HandlesLights,
 		handles_map_generation::HandlesMapGeneration,
@@ -52,7 +53,14 @@ where
 				Update,
 				LoadLevel::<MapCell>::graph.pipe(Level::spawn::<MapCell>),
 			)
-			.add_systems(Update, CurrentLevel::<MapCell>::load)
+			.add_systems(
+				Update,
+				(
+					CurrentLevel::<MapCell>::load_asset,
+					CurrentLevel::<MapCell>::set_graph.pipe(log),
+				)
+					.chain(),
+			)
 			.add_systems(Update, Level::<1>::insert)
 			.add_systems(
 				Update,

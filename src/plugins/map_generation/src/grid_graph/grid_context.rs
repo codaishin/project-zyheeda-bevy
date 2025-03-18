@@ -1,4 +1,4 @@
-use crate::traits::{grid_start::GridStart, key_mapper::KeyMapper};
+use crate::traits::{grid_min::GridMin, key_mapper::KeyMapper};
 use bevy::prelude::*;
 use common::errors::{Error, Level};
 
@@ -33,7 +33,7 @@ impl TryFrom<GridDefinition> for GridContext {
 	}
 }
 
-impl GridStart for GridContext {
+impl GridMin for GridContext {
 	fn grid_min(&self) -> Vec3 {
 		let Self(d) = self;
 		let x = ((d.cell_count_x - 1) as f32 * d.cell_distance) / 2.;

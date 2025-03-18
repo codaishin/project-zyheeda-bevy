@@ -2,7 +2,7 @@ use super::{
 	GridGraph,
 	grid_context::{GridContext, GridDefinition},
 };
-use crate::traits::{grid_start::GridStart, to_subdivided::ToSubdivided};
+use crate::traits::{grid_min::GridMin, to_subdivided::ToSubdivided};
 use bevy::utils::default;
 
 impl ToSubdivided for GridGraph {
