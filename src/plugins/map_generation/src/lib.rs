@@ -12,7 +12,6 @@ mod traits;
 use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
-	systems::log::log,
 	traits::{
 		handles_lights::HandlesLights,
 		handles_map_generation::HandlesMapGeneration,
@@ -26,7 +25,10 @@ use map::cell::MapCell;
 use resources::{current_level::CurrentLevel, load_level::LoadLevel};
 use std::marker::PhantomData;
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
-use traits::{RegisterMapCell, light::wall::WallLight};
+use traits::{
+	light::wall::WallLight,
+	load_map::{LoadMap, LoadMapAsset},
+};
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -47,19 +49,13 @@ where
 {
 	fn build(&self, app: &mut App) {
 		let new_game = GameState::NewGame;
+		let loading = GameState::Loading;
 
-		app.register_map_cell::<MapCell>(OnEnter(new_game))
+		app.load_map_asset::<MapCell>(OnEnter(new_game))
+			.load_map::<MapCell>(OnEnter(loading))
 			.add_systems(
 				Update,
 				LoadLevel::<MapCell>::graph.pipe(Level::spawn::<MapCell>),
-			)
-			.add_systems(
-				Update,
-				(
-					CurrentLevel::<MapCell>::load_asset,
-					CurrentLevel::<MapCell>::set_graph.pipe(log),
-				)
-					.chain(),
 			)
 			.add_systems(Update, Level::<1>::insert)
 			.add_systems(

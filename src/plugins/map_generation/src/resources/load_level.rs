@@ -4,10 +4,10 @@ use crate::{
 		grid_context::{GridContext, GridDefinition},
 	},
 	map::Map,
-	traits::{GridCellDistanceDefinition, SourcePath, grid_min::GridMin},
+	traits::{GridCellDistanceDefinition, grid_min::GridMin},
 };
 use bevy::prelude::*;
-use common::traits::{load_asset::LoadAsset, thread_safe::ThreadSafe};
+use common::traits::thread_safe::ThreadSafe;
 use std::collections::HashMap;
 
 #[derive(Resource, Debug, PartialEq)]
@@ -19,13 +19,6 @@ impl<TCell> LoadLevel<TCell>
 where
 	TCell: TypePath + ThreadSafe,
 {
-	pub(crate) fn start(commands: Commands, map_loader: ResMut<AssetServer>)
-	where
-		TCell: SourcePath + TypePath + Sync + Send,
-	{
-		begin_level_load::<AssetServer, TCell>(commands, map_loader);
-	}
-
 	pub(crate) fn graph(
 		mut commands: Commands,
 		maps: Res<Assets<Map<TCell>>>,
@@ -71,17 +64,6 @@ where
 	}
 }
 
-pub(crate) fn begin_level_load<TLoadMap, TCell>(
-	mut commands: Commands,
-	mut map_loader: ResMut<TLoadMap>,
-) where
-	TLoadMap: LoadAsset + Resource,
-	TCell: SourcePath + TypePath + Sync + Send,
-{
-	let map: Handle<Map<TCell>> = map_loader.load_asset(TCell::source_path());
-	commands.insert_resource(LoadLevel(map));
-}
-
 fn get_map_cells<TCell>(
 	load_level_cmd: Option<Res<LoadLevel<TCell>>>,
 	maps: Res<Assets<Map<TCell>>>,
@@ -100,71 +82,6 @@ fn get_cell_counts<T>(cells: &[Vec<T>]) -> Option<(usize, usize)> {
 	let count_z = cells.len();
 
 	Some((count_x, count_z))
-}
-
-#[cfg(test)]
-mod test_begin_level_load {
-	use super::*;
-	use bevy::asset::AssetPath;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{load_asset::Path, nested_mock::NestedMocks},
-	};
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
-	use uuid::Uuid;
-
-	#[derive(TypePath, Asset, Debug, PartialEq)]
-	struct _Cell;
-
-	impl SourcePath for _Cell {
-		fn source_path() -> Path {
-			Path::from("aaa/bbb/ccc.file_format")
-		}
-	}
-
-	#[derive(Resource, NestedMocks)]
-	struct _LoadMap {
-		mock: Mock_LoadMap,
-	}
-
-	#[automock]
-	impl LoadAsset for _LoadMap {
-		fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
-		where
-			TAsset: Asset,
-			TPath: Into<AssetPath<'static>> + 'static,
-		{
-			self.mock.load_asset(path)
-		}
-	}
-
-	fn setup(load_map: _LoadMap) -> App {
-		let mut app = App::new().single_threaded(Update);
-		app.insert_resource(load_map);
-		app.add_systems(Update, begin_level_load::<_LoadMap, _Cell>);
-
-		app
-	}
-
-	#[test]
-	fn insert_level_command() {
-		let handle = Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
-		let mut app = setup(_LoadMap::new().with_mock(|mock| {
-			mock.expect_load_asset()
-				.times(1)
-				.with(eq(Path::from("aaa/bbb/ccc.file_format")))
-				.return_const(handle.clone());
-		}));
-
-		app.update();
-
-		let level_command = app.world().get_resource::<LoadLevel<_Cell>>();
-
-		assert_eq!(Some(&LoadLevel(handle)), level_command);
-	}
 }
 
 #[cfg(test)]
