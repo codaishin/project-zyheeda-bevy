@@ -1,5 +1,6 @@
 mod components;
 mod grid_graph;
+mod half_offset_grid;
 mod line_wide;
 mod map;
 mod map_loader;
@@ -21,7 +22,7 @@ use common::{
 use components::{Wall, WallBack, level::Level};
 use grid_graph::GridGraph;
 use map::cell::MapCell;
-use resources::load_level::LoadLevel;
+use resources::{current_level::CurrentLevel, load_level::LoadLevel};
 use std::marker::PhantomData;
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
 use traits::{RegisterMapCell, light::wall::WallLight};
@@ -51,6 +52,7 @@ where
 				Update,
 				LoadLevel::<MapCell>::graph.pipe(Level::spawn::<MapCell>),
 			)
+			.add_systems(Update, CurrentLevel::<MapCell>::load)
 			.add_systems(Update, Level::<1>::insert)
 			.add_systems(
 				Update,
