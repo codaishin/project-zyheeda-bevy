@@ -4,7 +4,6 @@ use crate::{
 		Obstacles,
 		grid_context::{GridContext, GridDefinition, GridDefinitionError},
 	},
-	half_offset_grid::HalfOffsetGrid,
 	map::Map,
 	traits::{GridCellDistanceDefinition, SourcePath, grid_min::GridMin, is_walkable::IsWalkable},
 };
@@ -22,7 +21,6 @@ where
 {
 	pub(crate) map: Handle<Map<TCell>>,
 	pub(crate) graph: Option<GridGraph>,
-	pub(crate) half_offset_grid: Option<HalfOffsetGrid>,
 }
 
 impl<TCell> CurrentLevel<TCell>
@@ -51,10 +49,10 @@ where
 		if level.graph.is_some() {
 			return Ok(());
 		}
-		let Some(cells) = level.get_map_cells(maps) else {
+		let Some(cells) = level.get_map_cells(&maps) else {
 			return Ok(());
 		};
-		let Some((cell_count_x, cell_count_z)) = Self::get_cell_counts(&cells) else {
+		let Some((cell_count_x, cell_count_z)) = Self::get_cell_counts(cells) else {
 			return Ok(());
 		};
 		let grid_definition = GridDefinition {
@@ -71,8 +69,8 @@ where
 		let min = graph.context.grid_min();
 		let mut position = min;
 
-		for (z, cell_line) in cells.into_iter().enumerate() {
-			for (x, cell) in cell_line.into_iter().enumerate() {
+		for (z, cell_line) in cells.iter().enumerate() {
+			for (x, cell) in cell_line.iter().enumerate() {
 				let x = x as i32;
 				let z = z as i32;
 				graph.nodes.insert((x, z), position);
@@ -108,14 +106,14 @@ where
 		});
 	}
 
-	fn get_map_cells(&self, maps: Res<Assets<Map<TCell>>>) -> Option<Vec<Vec<TCell>>>
+	fn get_map_cells<'a>(&self, maps: &'a Assets<Map<TCell>>) -> Option<&'a Vec<Vec<TCell>>>
 	where
 		TCell: GridCellDistanceDefinition + Clone,
 	{
 		let map_handle = &self.map;
-		let map = maps.get(map_handle)?;
+		let cells = maps.get(map_handle).map(|m| m.cells());
 
-		Some(map.0.clone())
+		cells
 	}
 
 	fn get_cell_counts(cells: &[Vec<TCell>]) -> Option<(usize, usize)> {
@@ -134,7 +132,6 @@ where
 		Self {
 			map: default(),
 			graph: default(),
-			half_offset_grid: default(),
 		}
 	}
 }
@@ -291,7 +288,7 @@ mod test_set_graph {
 		let mut app = App::new().single_threaded(Update);
 		let mut maps = Assets::default();
 
-		maps.insert(&map.clone(), Map(cells));
+		maps.insert(&map.clone(), Map::new(cells, vec![]));
 		app.insert_resource(maps);
 		app.insert_resource(CurrentLevel { map, ..default() });
 		app.add_systems(

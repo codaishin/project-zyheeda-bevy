@@ -1,7 +1,8 @@
 use bevy::asset::{Asset, AssetLoader, LoadContext, io::Reader};
+use common::traits::thread_safe::ThreadSafe;
 use std::{
 	error::Error,
-	fmt::{Display, Formatter, Result as FmtResult},
+	fmt::{Debug, Display, Formatter, Result as FmtResult},
 	io::Error as IOError,
 	marker::PhantomData,
 	str::{Utf8Error, from_utf8},
@@ -20,26 +21,41 @@ impl<T> Default for TextLoader<T> {
 }
 
 #[derive(Debug)]
-pub enum TextLoaderError {
+pub enum TextLoaderError<TError> {
 	IO(IOError),
 	Parse(Utf8Error),
+	Custom(TError),
 }
 
-impl Display for TextLoaderError {
+impl<TError> TextLoaderError<TError> {
+	fn custom(error: TError) -> Self {
+		Self::Custom(error)
+	}
+}
+
+impl<TError> Display for TextLoaderError<TError>
+where
+	TError: Display,
+{
 	fn fmt(&self, f: &mut Formatter) -> FmtResult {
 		match self {
 			TextLoaderError::IO(error) => write!(f, "IO: {}", error),
 			TextLoaderError::Parse(error) => write!(f, "Parse: {}", error),
+			TextLoaderError::Custom(error) => write!(f, "Map Size: {}", error),
 		}
 	}
 }
 
-impl Error for TextLoaderError {}
+impl<TError> Error for TextLoaderError<TError> where TError: Debug + Display {}
 
-impl<TAsset: From<String> + Asset> AssetLoader for TextLoader<TAsset> {
+impl<TAsset> AssetLoader for TextLoader<TAsset>
+where
+	TAsset: TryFrom<String> + Asset,
+	TAsset::Error: Debug + Display + ThreadSafe,
+{
 	type Asset = TAsset;
 	type Settings = ();
-	type Error = TextLoaderError;
+	type Error = TextLoaderError<TAsset::Error>;
 
 	async fn load(
 		&self,
@@ -56,7 +72,7 @@ impl<TAsset: From<String> + Asset> AssetLoader for TextLoader<TAsset> {
 		match result {
 			Err(error) => Err(TextLoaderError::IO(error)),
 			Ok(Err(error)) => Err(TextLoaderError::Parse(error)),
-			Ok(Ok(str)) => Ok(TAsset::from(str.to_string())),
+			Ok(Ok(str)) => TAsset::try_from(str.to_string()).map_err(TextLoaderError::custom),
 		}
 	}
 }
