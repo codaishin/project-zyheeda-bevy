@@ -71,8 +71,6 @@ where
 
 		for (z, cell_line) in cells.iter().enumerate() {
 			for (x, cell) in cell_line.iter().enumerate() {
-				let x = x as i32;
-				let z = z as i32;
 				graph.nodes.insert((x, z), position);
 				position.x += TCell::CELL_DISTANCE;
 

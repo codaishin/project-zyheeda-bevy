@@ -28,7 +28,7 @@ use std::{
 
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct GridGraph<TValue = Vec3, TExtra = Obstacles, TGridContext = GridContext> {
-	pub(crate) nodes: HashMap<(i32, i32), TValue>,
+	pub(crate) nodes: HashMap<(usize, usize), TValue>,
 	pub(crate) extra: TExtra,
 	pub(crate) context: TGridContext,
 }
@@ -58,7 +58,7 @@ where
 		}
 	}
 
-	fn path_step(origin_node: GridGraphNode, to: &GridGraphNode) -> (i32, i32) {
+	fn path_step(origin_node: GridGraphNode, to: &GridGraphNode) -> (isize, isize) {
 		match origin_node.x().cmp(&to.x()) {
 			Ordering::Equal if origin_node.z() < to.z() => (0, 1),
 			Ordering::Equal => (0, -1),
@@ -82,7 +82,7 @@ where
 	type TNNode = GridGraphNode;
 
 	fn node(&self, translation: Vec3) -> Option<Self::TNNode> {
-		let key = self.context.key_for(translation);
+		let key = self.context.key_for(translation)?;
 
 		if !self.nodes.contains_key(&key) {
 			return None;
@@ -100,7 +100,10 @@ where
 
 	fn successors(&self, node: &Self::TSNode) -> impl Iterator<Item = Self::TSNode> {
 		NEIGHBORS.iter().filter_map(|(i, j)| {
-			let key = (node.key.0 + i, node.key.1 + j);
+			let key = (
+				node.key.0.checked_add_signed(*i)?,
+				node.key.1.checked_add_signed(*j)?,
+			);
 
 			if !self.nodes.contains_key(&key) {
 				return None;
@@ -193,8 +196,16 @@ where
 		let mut furthest = origin_node;
 		while &furthest != to {
 			let mut next = furthest;
-			next.key.0 += key_step.0;
-			next.key.1 += key_step.1;
+
+			let Some(key) = next.key.0.checked_add_signed(key_step.0) else {
+				return NaivePath::PartialUntil(self.translation(&furthest));
+			};
+			next.key.0 = key;
+
+			let Some(key) = next.key.1.checked_add_signed(key_step.1) else {
+				return NaivePath::PartialUntil(self.translation(&furthest));
+			};
+			next.key.1 = key;
 
 			if self.is_obstacle(&next) {
 				return NaivePath::PartialUntil(self.translation(&furthest));
@@ -234,7 +245,7 @@ impl<TValue, TExtra> IntoIterator for GridGraph<TValue, TExtra> {
 }
 
 pub struct Iter<TValue> {
-	it: IntoIter<(i32, i32), TValue>,
+	it: IntoIter<(usize, usize), TValue>,
 }
 
 impl<TValue> Iterator for Iter<TValue> {
@@ -247,7 +258,7 @@ impl<TValue> Iterator for Iter<TValue> {
 	}
 }
 
-const NEIGHBORS: &[(i32, i32)] = &[
+const NEIGHBORS: &[(isize, isize)] = &[
 	(-1, -1),
 	(-1, 0),
 	(-1, 1),
@@ -260,15 +271,15 @@ const NEIGHBORS: &[(i32, i32)] = &[
 
 #[derive(Debug, Clone, Copy)]
 pub struct GridGraphNode {
-	key: (i32, i32),
+	key: (usize, usize),
 }
 
 impl GridGraphNode {
-	pub(crate) fn x(&self) -> i32 {
+	pub(crate) fn x(&self) -> usize {
 		self.key.0
 	}
 
-	pub(crate) fn z(&self) -> i32 {
+	pub(crate) fn z(&self) -> usize {
 		self.key.1
 	}
 }
@@ -289,7 +300,7 @@ impl Hash for GridGraphNode {
 
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct Obstacles {
-	pub(crate) obstacles: HashSet<(i32, i32)>,
+	pub(crate) obstacles: HashSet<(usize, usize)>,
 }
 
 #[cfg(test)]
@@ -304,7 +315,7 @@ mod tests {
 	mock! {
 		_Mapper {}
 		impl KeyMapper for _Mapper {
-			fn key_for(&self, translation: Vec3) -> (i32, i32);
+			fn key_for(&self, translation: Vec3) -> Option<(usize, usize)>;
 		}
 	}
 
@@ -430,7 +441,7 @@ mod tests {
 			},
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
-					.returning(|Vec3 { x, z, .. }| (x as i32, z as i32));
+					.returning(|Vec3 { x, z, .. }| Some((x as usize, z as usize)));
 			}),
 		};
 
@@ -456,7 +467,7 @@ mod tests {
 			},
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
-					.returning(|Vec3 { x, z, .. }| (x as i32, z as i32));
+					.returning(|Vec3 { x, z, .. }| Some((x as usize, z as usize)));
 			}),
 		};
 
@@ -481,7 +492,7 @@ mod tests {
 			},
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
-					.returning(|Vec3 { x, z, .. }| (x as i32, z as i32));
+					.returning(|Vec3 { x, z, .. }| Some((x as usize, z as usize)));
 			}),
 		};
 
@@ -507,7 +518,7 @@ mod tests {
 			},
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
-					.returning(|Vec3 { x, z, .. }| (x.round() as i32, z.round() as i32));
+					.returning(|Vec3 { x, z, .. }| Some((x.round() as usize, z.round() as usize)));
 			}),
 		};
 
@@ -532,7 +543,7 @@ mod tests {
 			},
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
-					.returning(|Vec3 { x, z, .. }| (x.round() as i32, z.round() as i32));
+					.returning(|Vec3 { x, z, .. }| Some((x.round() as usize, z.round() as usize)));
 			}),
 		};
 
@@ -554,7 +565,7 @@ mod tests {
 			},
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
-					.returning(|Vec3 { x, z, .. }| (x.round() as i32, z.round() as i32));
+					.returning(|Vec3 { x, z, .. }| Some((x.round() as usize, z.round() as usize)));
 			}),
 		};
 
@@ -580,7 +591,7 @@ mod tests {
 			},
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
-					.returning(|Vec3 { x, z, .. }| (x.round() as i32, z.round() as i32));
+					.returning(|Vec3 { x, z, .. }| Some((x.round() as usize, z.round() as usize)));
 			}),
 		};
 
@@ -606,7 +617,7 @@ mod tests {
 			},
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
-					.returning(|Vec3 { x, z, .. }| (x.round() as i32, z.round() as i32));
+					.returning(|Vec3 { x, z, .. }| Some((x.round() as usize, z.round() as usize)));
 			}),
 		};
 
@@ -633,7 +644,7 @@ mod tests {
 			},
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
-					.returning(|Vec3 { x, z, .. }| (x.round() as i32, z.round() as i32));
+					.returning(|Vec3 { x, z, .. }| Some((x.round() as usize, z.round() as usize)));
 			}),
 		};
 
@@ -659,7 +670,7 @@ mod tests {
 			},
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
-					.returning(|Vec3 { x, z, .. }| (x.round() as i32, z.round() as i32));
+					.returning(|Vec3 { x, z, .. }| Some((x.round() as usize, z.round() as usize)));
 			}),
 		};
 
@@ -686,7 +697,7 @@ mod tests {
 			},
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
-					.returning(|Vec3 { x, z, .. }| (x.round() as i32, z.round() as i32));
+					.returning(|Vec3 { x, z, .. }| Some((x.round() as usize, z.round() as usize)));
 			}),
 		};
 
@@ -712,7 +723,7 @@ mod tests {
 			},
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
-					.returning(|Vec3 { x, z, .. }| (x.round() as i32, z.round() as i32));
+					.returning(|Vec3 { x, z, .. }| Some((x.round() as usize, z.round() as usize)));
 			}),
 		};
 
@@ -738,7 +749,7 @@ mod tests {
 			},
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
-					.returning(|Vec3 { x, z, .. }| (x.round() as i32, z.round() as i32));
+					.returning(|Vec3 { x, z, .. }| Some((x.round() as usize, z.round() as usize)));
 			}),
 		};
 
@@ -761,7 +772,7 @@ mod tests {
 			},
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
-					.returning(|Vec3 { x, z, .. }| (x.round() as i32, z.round() as i32));
+					.returning(|Vec3 { x, z, .. }| Some((x.round() as usize, z.round() as usize)));
 			}),
 		};
 
