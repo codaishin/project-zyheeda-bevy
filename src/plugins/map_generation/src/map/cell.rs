@@ -85,20 +85,20 @@ impl InsertCellQuadrantComponents for MapCell {
 	fn insert_cell_quadrant_components(
 		&self,
 		entity: &mut EntityCommands,
-		pattern: HashSet<Quadrant>,
+		differences: HashSet<Quadrant>,
 	) {
 		match self {
 			MapCell::CorridorFloor => entity.insert(CorridorFloor),
-			MapCell::CorridorWall if pattern.matches(CORNER_INNER) => {
+			MapCell::CorridorWall if differences.matches(CORNER_INNER) => {
 				entity.insert(CorridorWallCornerInside)
 			}
-			MapCell::CorridorWall if pattern.matches(CORNER_OUTER) => {
+			MapCell::CorridorWall if differences.matches(CORNER_OUTER) => {
 				entity.insert(CorridorWallCornerOutside)
 			}
-			MapCell::CorridorWall if pattern.matches(WALL_FORWARD) => {
+			MapCell::CorridorWall if differences.contains(&Quadrant::Forward) => {
 				entity.insert(CorridorWallForward)
 			}
-			MapCell::CorridorWall if pattern.matches(WALL_ON_LEFT) => {
+			MapCell::CorridorWall if differences.contains(&Quadrant::Left) => {
 				entity.insert(CorridorWallLeft)
 			}
 			MapCell::CorridorWall => entity.insert(CorridorWall),
@@ -106,10 +106,8 @@ impl InsertCellQuadrantComponents for MapCell {
 	}
 }
 
-const CORNER_INNER: [Quadrant; 3] = [Quadrant::Left, Quadrant::Diagonal, Quadrant::Forward];
-const CORNER_OUTER: [Quadrant; 1] = [Quadrant::Diagonal];
-const WALL_FORWARD: [Quadrant; 2] = [Quadrant::Forward, Quadrant::Diagonal];
-const WALL_ON_LEFT: [Quadrant; 2] = [Quadrant::Left, Quadrant::Diagonal];
+const CORNER_INNER: [Quadrant; 1] = [Quadrant::Diagonal];
+const CORNER_OUTER: [Quadrant; 3] = [Quadrant::Left, Quadrant::Diagonal, Quadrant::Forward];
 
 #[cfg(test)]
 mod tests {

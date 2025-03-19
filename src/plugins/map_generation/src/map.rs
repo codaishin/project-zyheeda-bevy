@@ -313,9 +313,9 @@ mod tests {
 				],
 				half_offset_cells: vec![vec![HalfOffsetCell::from([
 					(Direction::Z, _Cell(Some('x'))),
-					(Direction::NegX, _Cell(Some('t'))),
+					(Direction::X, _Cell(Some('t'))),
 					(Direction::NegZ, _Cell(Some('y'))),
-					(Direction::X, _Cell(Some('c')))
+					(Direction::NegX, _Cell(Some('c'))),
 				])]],
 			},
 			map
@@ -340,9 +340,9 @@ mod tests {
 				],
 				half_offset_cells: vec![vec![HalfOffsetCell::from([
 					(Direction::Z, _Cell(Some('x'))),
-					(Direction::NegX, _Cell(Some('t'))),
+					(Direction::X, _Cell(Some('t'))),
 					(Direction::NegZ, _Cell(Some('y'))),
-					(Direction::X, _Cell(Some('c')))
+					(Direction::NegX, _Cell(Some('c'))),
 				])]],
 			},
 			map
@@ -368,15 +368,15 @@ mod tests {
 				half_offset_cells: vec![vec![
 					HalfOffsetCell::from([
 						(Direction::Z, _Cell(Some('x'))),
-						(Direction::NegX, _Cell(Some('e'))),
+						(Direction::X, _Cell(Some('e'))),
 						(Direction::NegZ, _Cell(Some('r'))),
-						(Direction::X, _Cell(Some('c')))
+						(Direction::NegX, _Cell(Some('c'))),
 					]),
 					HalfOffsetCell::from([
 						(Direction::Z, _Cell(Some('c'))),
-						(Direction::NegX, _Cell(Some('r'))),
+						(Direction::X, _Cell(Some('r'))),
 						(Direction::NegZ, _Cell(Some('c'))),
-						(Direction::X, _Cell(Some('t')))
+						(Direction::NegX, _Cell(Some('t'))),
 					])
 				]],
 			},
@@ -416,41 +416,41 @@ mod tests {
 					vec![
 						HalfOffsetCell::from([
 							(Direction::Z, _Cell(Some('x'))),
-							(Direction::NegX, _Cell(Some('f'))),
+							(Direction::X, _Cell(Some('f'))),
 							(Direction::NegZ, _Cell(Some('r'))),
-							(Direction::X, _Cell(Some('c')))
+							(Direction::NegX, _Cell(Some('c'))),
 						]),
 						HalfOffsetCell::from([
 							(Direction::Z, _Cell(Some('c'))),
-							(Direction::NegX, _Cell(Some('r'))),
+							(Direction::X, _Cell(Some('r'))),
 							(Direction::NegZ, _Cell(Some('o'))),
-							(Direction::X, _Cell(Some('t')))
+							(Direction::NegX, _Cell(Some('t'))),
 						]),
 						HalfOffsetCell::from([
 							(Direction::Z, _Cell(Some('t'))),
-							(Direction::NegX, _Cell(Some('o'))),
+							(Direction::X, _Cell(Some('o'))),
 							(Direction::NegZ, _Cell(Some('g'))),
-							(Direction::X, _Cell(None))
+							(Direction::NegX, _Cell(None)),
 						]),
 					],
 					vec![
 						HalfOffsetCell::from([
 							(Direction::Z, _Cell(Some('f'))),
-							(Direction::NegX, _Cell(Some('e'))),
+							(Direction::X, _Cell(Some('e'))),
 							(Direction::NegZ, _Cell(Some('r'))),
-							(Direction::X, _Cell(Some('r')))
+							(Direction::NegX, _Cell(Some('r'))),
 						]),
 						HalfOffsetCell::from([
 							(Direction::Z, _Cell(Some('r'))),
-							(Direction::NegX, _Cell(Some('r'))),
+							(Direction::X, _Cell(Some('r'))),
 							(Direction::NegZ, _Cell(None)),
-							(Direction::X, _Cell(Some('o')))
+							(Direction::NegX, _Cell(Some('o'))),
 						]),
 						HalfOffsetCell::from([
 							(Direction::Z, _Cell(Some('o'))),
-							(Direction::NegX, _Cell(None)),
+							(Direction::X, _Cell(None)),
 							(Direction::NegZ, _Cell(None)),
-							(Direction::X, _Cell(Some('g')))
+							(Direction::NegX, _Cell(Some('g'))),
 						]),
 					]
 				],

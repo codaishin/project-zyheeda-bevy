@@ -72,9 +72,9 @@ where
 	for (look_dir, cell) in quadrants {
 		let walk_ability = cell.is_walkable();
 		let neighbor_quadrants = [
-			(look_dir.rotated_right(1), Quadrant::Left),
+			(look_dir.rotated_right(1), Quadrant::Forward),
 			(look_dir.rotated_right(2), Quadrant::Diagonal),
-			(look_dir.rotated_right(3), Quadrant::Forward),
+			(look_dir.rotated_right(3), Quadrant::Left),
 		];
 
 		let different_quadrants = neighbor_quadrants
@@ -251,10 +251,10 @@ mod tests {
 		let cells: Result<Vec<(Vec3, HalfOffsetCell<_Cell>)>, _Error> = Ok(vec![(
 			Vec3::new(1., 2., 3.),
 			HalfOffsetCell::from([
-				(Direction::NegZ, _Cell::not_walkable("neg z")),
 				(Direction::X, _Cell::walkable("x")),
 				(Direction::Z, _Cell::walkable("z")),
 				(Direction::NegX, _Cell::walkable("neg x")),
+				(Direction::NegZ, _Cell::not_walkable("neg z")),
 			]),
 		)]);
 
@@ -278,11 +278,11 @@ mod tests {
 				}),
 				Some(&_Quadrant {
 					cell: "neg x",
-					differences: HashSet::from([Quadrant::Forward])
+					differences: HashSet::from([Quadrant::Left])
 				}),
 				Some(&_Quadrant {
 					cell: "x",
-					differences: HashSet::from([Quadrant::Left])
+					differences: HashSet::from([Quadrant::Forward])
 				})
 			],
 			children.map(|e| e.get::<_Quadrant>())
