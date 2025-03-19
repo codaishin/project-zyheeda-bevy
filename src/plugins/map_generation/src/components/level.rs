@@ -40,6 +40,12 @@ impl Default for Level {
 	}
 }
 
+impl From<GridGraph> for Level {
+	fn from(graph: GridGraph) -> Self {
+		Level { graph }
+	}
+}
+
 impl<const SUBDIVISIONS: u8> From<&Level<SUBDIVISIONS>> for GridGraph {
 	fn from(value: &Level<SUBDIVISIONS>) -> Self {
 		value.graph.clone()

@@ -1,5 +1,5 @@
 use super::SourcePath;
-use crate::{CurrentLevel, MapCell, map::Map, map_loader::TextLoader};
+use crate::{CurrentLevel, MapCell, components::level::Level, map::Map, map_loader::TextLoader};
 use bevy::{
 	app::App,
 	asset::AssetApp,
@@ -31,6 +31,6 @@ impl LoadMapAsset for App {
 
 impl LoadMap for App {
 	fn load_map<TCell>(&mut self, label: impl ScheduleLabel) -> &mut App {
-		self.add_systems(label, CurrentLevel::<MapCell>::set_graph.pipe(log))
+		self.add_systems(label, CurrentLevel::<MapCell>::spawn::<Level>.pipe(log))
 	}
 }

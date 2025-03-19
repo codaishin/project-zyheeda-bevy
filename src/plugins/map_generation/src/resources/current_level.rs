@@ -40,12 +40,14 @@ where
 		Self::load_asset_internal(commands, map_loader, level);
 	}
 
-	pub(crate) fn set_graph(
+	pub(crate) fn spawn<TLevel>(
 		mut level: ResMut<Self>,
+		mut commands: Commands,
 		maps: Res<Assets<Map<TCell>>>,
 	) -> Result<(), GridDefinitionError>
 	where
 		TCell: GridCellDistanceDefinition + IsWalkable + Clone,
+		TLevel: Component + From<GridGraph>,
 	{
 		if level.graph.is_some() {
 			return Ok(());
@@ -83,6 +85,7 @@ where
 			position.z += TCell::CELL_DISTANCE;
 		}
 
+		commands.spawn((TLevel::from(graph.clone()), Transform::default()));
 		level.graph = Some(graph);
 		Ok(())
 	}
@@ -294,7 +297,7 @@ mod test_load {
 }
 
 #[cfg(test)]
-mod test_set_graph {
+mod test_spawn_level {
 	use super::*;
 	use crate::{
 		grid_graph::{
@@ -303,7 +306,10 @@ mod test_set_graph {
 		},
 		traits::{GridCellDistanceDefinition, is_walkable::IsWalkable},
 	};
-	use common::test_tools::utils::{SingleThreadedApp, new_handle};
+	use common::{
+		assert_count,
+		test_tools::utils::{SingleThreadedApp, new_handle},
+	};
 	use std::collections::{HashMap, HashSet};
 
 	#[derive(Clone, Debug, PartialEq, TypePath)]
@@ -331,6 +337,17 @@ mod test_set_graph {
 		}
 	}
 
+	#[derive(Component, Debug, PartialEq)]
+	struct _Level {
+		graph: GridGraph,
+	}
+
+	impl From<GridGraph> for _Level {
+		fn from(graph: GridGraph) -> Self {
+			Self { graph }
+		}
+	}
+
 	#[derive(Resource, Debug, PartialEq)]
 	struct _Result(Result<(), GridDefinitionError>);
 
@@ -344,7 +361,7 @@ mod test_set_graph {
 		app.insert_resource(CurrentLevel { map, ..default() });
 		app.add_systems(
 			Update,
-			CurrentLevel::<_Cell>::set_graph.pipe(|In(result), mut commands: Commands| {
+			CurrentLevel::<_Cell>::spawn::<_Level>.pipe(|In(result), mut commands: Commands| {
 				commands.insert_resource(_Result(result));
 			}),
 		);
@@ -500,6 +517,51 @@ mod test_set_graph {
 				context: get_context::<_Cell>(10, 20),
 			}),
 			app.world().resource::<CurrentLevel<_Cell>>().graph
+		);
+	}
+
+	#[test]
+	fn spawn_level() {
+		let mut app = setup(vec![
+			vec![_Cell::walkable(), _Cell::not_walkable()],
+			vec![_Cell::not_walkable(), _Cell::not_walkable()],
+		]);
+
+		app.update();
+
+		let [entity] = assert_count!(1, app.world().iter_entities());
+		assert_eq!(
+			Some(&_Level {
+				graph: GridGraph {
+					nodes: HashMap::from([
+						((0, 0), Vec3::new(-2., 0., -2.)),
+						((0, 1), Vec3::new(-2., 0., 2.)),
+						((1, 0), Vec3::new(2., 0., -2.)),
+						((1, 1), Vec3::new(2., 0., 2.)),
+					]),
+					extra: Obstacles {
+						obstacles: HashSet::from([(0, 1), (1, 0), (1, 1)])
+					},
+					context: get_context::<_Cell>(2, 2),
+				}
+			}),
+			entity.get::<_Level>()
+		);
+	}
+
+	#[test]
+	fn spawn_level_at_translation_zero() {
+		let mut app = setup(vec![
+			vec![_Cell::walkable(), _Cell::not_walkable()],
+			vec![_Cell::not_walkable(), _Cell::not_walkable()],
+		]);
+
+		app.update();
+
+		let [entity] = assert_count!(1, app.world().iter_entities());
+		assert_eq!(
+			Some(&Transform::from_translation(Vec3::ZERO)),
+			entity.get::<Transform>()
 		);
 	}
 
