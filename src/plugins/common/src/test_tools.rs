@@ -119,31 +119,11 @@ pub mod utils {
 
 	pub use assert_count;
 
-	enum Iter<T> {
-		None,
-		Some(T),
-	}
-
-	impl<T> Iterator for Iter<T>
-	where
-		T: Iterator,
-	{
-		type Item = T::Item;
-
-		fn next(&mut self) -> Option<Self::Item> {
-			match self {
-				Iter::None => None,
-				Iter::Some(iter) => iter.next(),
-			}
-		}
-	}
-
 	pub trait EqualUnordered {
 		type TItem;
 
-		fn buffer_eq(&self, rhs: &Self) -> bool;
-		fn buffer_contains(&self, item: &Self::TItem) -> bool;
-		fn items(&self) -> impl Iterator<Item = &Self::TItem>;
+		fn item_count(&self, item: &Self::TItem) -> usize;
+		fn items(&self) -> Option<impl Iterator<Item = &Self::TItem>>;
 	}
 
 	impl<T> EqualUnordered for Vec<T>
@@ -152,16 +132,12 @@ pub mod utils {
 	{
 		type TItem = T;
 
-		fn buffer_eq(&self, rhs: &Self) -> bool {
-			self.len() == rhs.len()
+		fn item_count(&self, item: &Self::TItem) -> usize {
+			self.iter().filter(|i| i == &item).count()
 		}
 
-		fn buffer_contains(&self, item: &Self::TItem) -> bool {
-			self.contains(item)
-		}
-
-		fn items(&self) -> impl Iterator<Item = &Self::TItem> {
-			self.iter()
+		fn items(&self) -> Option<impl Iterator<Item = &Self::TItem>> {
+			Some(self.iter())
 		}
 	}
 
@@ -171,16 +147,12 @@ pub mod utils {
 	{
 		type TItem = T;
 
-		fn buffer_eq(&self, _: &Self) -> bool {
-			true
+		fn item_count(&self, item: &Self::TItem) -> usize {
+			self.iter().filter(|i| i == &item).count()
 		}
 
-		fn buffer_contains(&self, item: &Self::TItem) -> bool {
-			self.contains(item)
-		}
-
-		fn items(&self) -> impl Iterator<Item = &Self::TItem> {
-			self.iter()
+		fn items(&self) -> Option<impl Iterator<Item = &Self::TItem>> {
+			Some(self.iter())
 		}
 	}
 
@@ -190,25 +162,17 @@ pub mod utils {
 	{
 		type TItem = T::TItem;
 
-		fn buffer_eq(&self, rhs: &Self) -> bool {
-			match (self, rhs) {
-				(None, None) => true,
-				(Some(a), Some(b)) => a.buffer_eq(b),
-				_ => false,
+		fn item_count(&self, item: &Self::TItem) -> usize {
+			match self {
+				None => 0,
+				Some(collection) => collection.item_count(item),
 			}
 		}
 
-		fn buffer_contains(&self, item: &Self::TItem) -> bool {
+		fn items(&self) -> Option<impl Iterator<Item = &Self::TItem>> {
 			match self {
-				None => false,
-				Some(collection) => collection.buffer_contains(item),
-			}
-		}
-
-		fn items(&self) -> impl Iterator<Item = &Self::TItem> {
-			match self {
-				None => Iter::None,
-				Some(collection) => Iter::Some(collection.items()),
+				None => None,
+				Some(collection) => collection.items(),
 			}
 		}
 	}
@@ -220,35 +184,29 @@ pub mod utils {
 	{
 		type TItem = T::TItem;
 
-		fn buffer_eq(&self, rhs: &Self) -> bool {
-			match (self, rhs) {
-				(Err(a), Err(b)) => a == b,
-				(Ok(a), Ok(b)) => a.buffer_eq(b),
-				_ => false,
+		fn item_count(&self, item: &Self::TItem) -> usize {
+			match self {
+				Err(_) => 0,
+				Ok(collection) => collection.item_count(item),
 			}
 		}
 
-		fn buffer_contains(&self, item: &Self::TItem) -> bool {
+		fn items(&self) -> Option<impl Iterator<Item = &Self::TItem>> {
 			match self {
-				Err(_) => false,
-				Ok(collection) => collection.buffer_contains(item),
-			}
-		}
-
-		fn items(&self) -> impl Iterator<Item = &Self::TItem> {
-			match self {
-				Err(_) => Iter::None,
-				Ok(collection) => Iter::Some(collection.items()),
+				Err(_) => None,
+				Ok(collection) => collection.items(),
 			}
 		}
 	}
 
 	pub fn equal_unordered<TEq: EqualUnordered>(left: &TEq, right: &TEq) -> bool {
-		if !left.buffer_eq(right) {
-			return false;
+		match (left.items(), right.items()) {
+			(None, None) => true,
+			(Some(mut left_items), Some(_)) => {
+				left_items.all(|item| right.item_count(item) == left.item_count(item))
+			}
+			_ => false,
 		}
-
-		left.items().all(|item| right.buffer_contains(item))
 	}
 
 	#[macro_export]
