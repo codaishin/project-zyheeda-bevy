@@ -1,4 +1,4 @@
-use crate::traits::{grid_start::GridStart, key_mapper::KeyMapper};
+use crate::traits::{grid_min::GridMin, key_mapper::KeyMapper};
 use bevy::prelude::*;
 use common::errors::{Error, Level};
 
@@ -33,7 +33,7 @@ impl TryFrom<GridDefinition> for GridContext {
 	}
 }
 
-impl GridStart for GridContext {
+impl GridMin for GridContext {
 	fn grid_min(&self) -> Vec3 {
 		let Self(d) = self;
 		let x = ((d.cell_count_x - 1) as f32 * d.cell_distance) / 2.;
@@ -44,15 +44,18 @@ impl GridStart for GridContext {
 }
 
 impl KeyMapper for GridContext {
-	fn key_for(&self, translation: Vec3) -> (i32, i32) {
+	fn key_for(&self, translation: Vec3) -> Option<(usize, usize)> {
 		let Self(definition) = self;
 		let start = self.grid_min();
 		let Vec3 { x, z, .. } = translation - start;
+		let x = (x / definition.cell_distance).round();
+		let z = (z / definition.cell_distance).round();
 
-		(
-			(x / definition.cell_distance).round() as i32,
-			(z / definition.cell_distance).round() as i32,
-		)
+		if x < 0. || z < 0. {
+			return None;
+		}
+
+		Some((x as usize, z as usize))
 	}
 }
 
@@ -255,22 +258,24 @@ mod tests {
 
 		let key = context.key_for(Vec3::ZERO);
 
-		assert_eq!((0, 0), key);
+		assert_eq!(Some((0, 0)), key);
 		Ok(())
 	}
 
-	#[test_case(2, 2, 1., Vec3::new(0.5, 0., -1.5), (1, -1); "grid 2 by 2 with distance 1")]
-	#[test_case(3, 3, 1., Vec3::new(0., 0., 1.), (1, 2); "grid 3 by 3 with distance 1")]
-	#[test_case(2, 2, 2., Vec3::new(1., 0., -3.), (1, -1); "grid 2 by 2 with distance 2")]
-	#[test_case(3, 3, 2., Vec3::new(0., 0., 2.), (1, 2); "grid 3 by 3 with distance 2")]
-	#[test_case(2, 2, 1., Vec3::new(0.4, 0., -1.4), (1, -1); "grid 2 by 2 with distance 1 rounded")]
-	#[test_case(2, 2, 2., Vec3::new(0.8, 0., -2.8), (1, -1); "grid 2 by 2 with distance 2 rounded")]
+	#[test_case(2, 2, 1., Vec3::new(0.5, 0., -0.5), Some((1, 0)); "grid 2 by 2 with distance 1")]
+	#[test_case(3, 3, 1., Vec3::new(0., 0., 1.), Some((1, 2)); "grid 3 by 3 with distance 1")]
+	#[test_case(2, 2, 2., Vec3::new(1., 0., -1.5), Some((1, 0)); "grid 2 by 2 with distance 2")]
+	#[test_case(3, 3, 2., Vec3::new(0., 0., 2.), Some((1, 2)); "grid 3 by 3 with distance 2")]
+	#[test_case(2, 2, 1., Vec3::new(0.4, 0., -0.7), Some((1, 0)); "grid 2 by 2 with distance 1 rounded")]
+	#[test_case(2, 2, 2., Vec3::new(0.8, 0., -1.4), Some((1, 0)); "grid 2 by 2 with distance 2 rounded")]
+	#[test_case(2, 2, 1., Vec3::new(0.5, 0., -1.5), None; "grid 2 by 2 with distance 1 error")]
+	#[test_case(2, 2, 2., Vec3::new(0.5, 0., -3.), None; "grid 2 by 2 with distance 2 error")]
 	fn get_key(
 		cell_count_x: usize,
 		cell_count_z: usize,
 		cell_distance: f32,
 		target: Vec3,
-		result: (i32, i32),
+		result: Option<(usize, usize)>,
 	) -> Result<(), GridDefinitionError> {
 		let context = GridContext::try_from(GridDefinition {
 			cell_count_x,

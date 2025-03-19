@@ -1,18 +1,14 @@
-pub(crate) mod app;
-pub(crate) mod grid_start;
+pub(crate) mod grid_min;
+pub(crate) mod insert_cell_components;
+pub(crate) mod insert_cell_quadrant_components;
 pub(crate) mod is_walkable;
 pub(crate) mod key_mapper;
 pub(crate) mod light;
-pub(crate) mod map;
+pub(crate) mod load_map;
 pub(crate) mod to_subdivided;
 pub(crate) mod wall;
 
-use self::map::MapWindow;
-use bevy::{
-	app::App,
-	ecs::{schedule::ScheduleLabel, system::EntityCommands},
-	reflect::TypePath,
-};
+use bevy::prelude::*;
 use common::traits::{handles_lights::HandlesLights, load_asset::Path, thread_safe::ThreadSafe};
 
 pub(crate) trait ExtraComponentsDefinition {
@@ -28,11 +24,4 @@ pub(crate) trait GridCellDistanceDefinition {
 
 pub trait SourcePath {
 	fn source_path() -> Path;
-}
-
-pub trait RegisterMapCell {
-	fn register_map_cell<TCell: TypePath + Send + Sync + From<MapWindow> + SourcePath>(
-		&mut self,
-		label: impl ScheduleLabel,
-	) -> &mut App;
 }

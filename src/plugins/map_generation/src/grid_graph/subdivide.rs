@@ -2,7 +2,7 @@ use super::{
 	GridGraph,
 	grid_context::{GridContext, GridDefinition},
 };
-use crate::traits::{grid_start::GridStart, to_subdivided::ToSubdivided};
+use crate::traits::{grid_min::GridMin, to_subdivided::ToSubdivided};
 use bevy::utils::default;
 
 impl ToSubdivided for GridGraph {
@@ -32,10 +32,10 @@ fn subdivide(source: &GridGraph, subdivisions: u8) -> GridGraph {
 		for z in 0..subdivided.context.0.cell_count_z {
 			let source_key = source_key(x, z, factor);
 			if source.nodes.contains_key(&source_key) {
-				subdivided.nodes.insert((x as i32, z as i32), translation);
+				subdivided.nodes.insert((x, z), translation);
 			}
 			if source.extra.obstacles.contains(&source_key) {
-				subdivided.extra.obstacles.insert((x as i32, z as i32));
+				subdivided.extra.obstacles.insert((x, z));
 			}
 			translation.z += subdivided.context.0.cell_distance;
 		}
@@ -47,10 +47,10 @@ fn subdivide(source: &GridGraph, subdivisions: u8) -> GridGraph {
 	subdivided
 }
 
-fn source_key(x: usize, z: usize, factor: u8) -> (i32, i32) {
+fn source_key(x: usize, z: usize, factor: u8) -> (usize, usize) {
 	let factor = factor as f32;
 
-	((x as f32 / factor) as i32, (z as f32 / factor) as i32)
+	((x as f32 / factor) as usize, (z as f32 / factor) as usize)
 }
 
 #[cfg(test)]

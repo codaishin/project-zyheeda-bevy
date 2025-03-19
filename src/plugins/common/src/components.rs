@@ -64,7 +64,7 @@ impl<T> UiNodeFor<T> {
 	}
 }
 
-#[derive(Component, Debug, PartialEq, Clone)]
+#[derive(Component, Debug, PartialEq, Default, Clone)]
 pub struct NoTarget;
 
 #[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]

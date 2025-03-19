@@ -18,13 +18,15 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use components::{Wall, WallBack, level::Level};
+use components::{WallBack, grid::Grid};
 use grid_graph::GridGraph;
 use map::cell::MapCell;
-use resources::load_level::LoadLevel;
 use std::marker::PhantomData;
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
-use traits::{RegisterMapCell, light::wall::WallLight};
+use traits::{
+	light::wall::WallLight,
+	load_map::{LoadMap, LoadMapAsset},
+};
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -45,17 +47,14 @@ where
 {
 	fn build(&self, app: &mut App) {
 		let new_game = GameState::NewGame;
+		let loading = GameState::Loading;
 
-		app.register_map_cell::<MapCell>(OnEnter(new_game))
-			.add_systems(
-				Update,
-				LoadLevel::<MapCell>::graph.pipe(Level::spawn::<MapCell>),
-			)
-			.add_systems(Update, Level::<1>::insert)
+		app.load_map_asset::<MapCell>(OnEnter(new_game))
+			.load_map::<MapCell>(OnEnter(loading))
+			.add_systems(Update, Grid::<1>::insert)
 			.add_systems(
 				Update,
 				(
-					Wall::apply_extra_components::<TLights>,
 					WallBack::apply_extra_components::<TLights>,
 					WallLight::apply_extra_components::<TLights>,
 				),
@@ -65,6 +64,6 @@ where
 }
 
 impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> {
-	type TMap = Level<1>;
+	type TMap = Grid<1>;
 	type TGraph = GridGraph;
 }

@@ -13,25 +13,25 @@ use std::ops::RangeInclusive;
 pub struct LineWide {
 	orientation: Orientation,
 	new_node: NewNodeFn,
-	range: RangeInclusive<i32>,
+	range: RangeInclusive<usize>,
 }
 
 impl LineWide {
 	pub(crate) fn new(start: &GridGraphNode, end: &GridGraphNode) -> Self {
 		let (low, high, new_node) = Self::normalize_layout(start, end);
 		let (i_low, d_low) = match low.1 > low.0 {
-			true => (1, low.1 - low.0),
-			false => (-1, low.0 - low.1),
+			true => (1, (low.1 - low.0) as isize),
+			false => (-1, (low.0 - low.1) as isize),
 		};
 
 		let orientation = match d_low {
 			0 => Orientation::Straight { v_low: low.0 },
 			_ => {
-				let d_high = high.1 - high.0;
+				let d_high = (high.1 - high.0) as isize;
 				let step = Step {
 					d: (2 * d_low) - d_high,
 					v_lows: [low.0; 2],
-					d_up: 2 * d_low,
+					d_up: (2 * d_low) as usize,
 					d_down: 2 * (d_low - d_high),
 				};
 
@@ -53,8 +53,8 @@ impl LineWide {
 	}
 
 	fn normalize_layout(start: &GridGraphNode, end: &GridGraphNode) -> (Low, High, NewNodeFn) {
-		let dx = (end.x() - start.x()).abs();
-		let dz = (end.z() - start.z()).abs();
+		let dx = end.x().abs_diff(start.x());
+		let dz = end.z().abs_diff(start.z());
 		let is_low = dx > dz;
 
 		match is_low {
@@ -100,7 +100,8 @@ impl Iterator for LineWide {
 					let node = (self.new_node)(low_0, high);
 
 					if add_border && low_0 != line.low_start {
-						line.additional_nodes[0] = Some((self.new_node)(low_0 - line.i_low, high));
+						let low = low_0.checked_add_signed(-line.i_low)?;
+						line.additional_nodes[0] = Some((self.new_node)(low, high));
 					}
 
 					if is_doubled {
@@ -108,10 +109,11 @@ impl Iterator for LineWide {
 					}
 
 					if add_border && low_1 != line.low_end {
-						line.additional_nodes[2] = Some((self.new_node)(low_1 + line.i_low, high));
+						let low = low_1.checked_add_signed(line.i_low)?;
+						line.additional_nodes[2] = Some((self.new_node)(low, high));
 					}
 
-					line.step.step(line.i_low);
+					line.step.step(line.i_low)?;
 
 					Some(node)
 				}
@@ -121,69 +123,72 @@ impl Iterator for LineWide {
 }
 
 enum Orientation {
-	Straight { v_low: i32 },
+	Straight { v_low: usize },
 	Odd(Line),
 }
 
 struct Line {
-	i_low: i32,
-	low_start: i32,
-	low_end: i32,
+	i_low: isize,
+	low_start: usize,
+	low_end: usize,
 	step: Step,
 	additional_nodes: [Option<LineNode>; 3],
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct LineNode {
-	pub(crate) x: i32,
-	pub(crate) z: i32,
+	pub(crate) x: usize,
+	pub(crate) z: usize,
 }
 
-type NewNodeFn = fn(i32, i32) -> LineNode;
+type NewNodeFn = fn(usize, usize) -> LineNode;
 
-struct Low(i32, i32);
+struct Low(usize, usize);
 
 impl Low {
-	fn node(x: i32, z: i32) -> LineNode {
+	fn node(x: usize, z: usize) -> LineNode {
 		LineNode { x: z, z: x }
 	}
 }
 
-struct High(i32, i32);
+struct High(usize, usize);
 
 impl High {
-	fn node(x: i32, z: i32) -> LineNode {
+	fn node(x: usize, z: usize) -> LineNode {
 		LineNode { x, z }
 	}
 }
 
 #[derive(Debug, PartialEq)]
 struct Step {
-	d: i32,
-	v_lows: [i32; 2],
-	d_up: i32,
-	d_down: i32,
+	d: isize,
+	v_lows: [usize; 2],
+	d_up: usize,
+	d_down: isize,
 }
 
 impl Step {
-	fn step(&mut self, i_low: i32) {
+	#[must_use]
+	fn step(&mut self, i_low: isize) -> Option<()> {
 		if self.d < 0 {
-			self.d += self.d_up;
-			return;
+			self.d += self.d_up as isize;
+			return Some(());
 		}
 
 		if self.d == 0 {
-			self.d += self.d_up;
-			self.v_lows[1] += i_low;
-			return;
+			self.d += self.d_up as isize;
+			self.v_lows[1] = self.v_lows[1].checked_add_signed(i_low)?;
+			return Some(());
 		}
 
-		self.v_lows[0] += i_low;
+		self.v_lows[0] = self.v_lows[0].checked_add_signed(i_low)?;
 		self.v_lows[1] = self.v_lows[0];
 		self.d += self.d_down;
+
+		Some(())
 	}
 
 	fn steps_fast(&self) -> bool {
-		self.d_down.abs() < self.d_up
+		self.d_down.unsigned_abs() < self.d_up
 	}
 }

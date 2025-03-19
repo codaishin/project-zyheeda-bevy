@@ -119,6 +119,114 @@ pub mod utils {
 
 	pub use assert_count;
 
+	pub trait EqualUnordered {
+		type TItem;
+
+		fn item_count(&self, item: &Self::TItem) -> usize;
+		fn items(&self) -> Option<impl Iterator<Item = &Self::TItem>>;
+	}
+
+	impl<T> EqualUnordered for Vec<T>
+	where
+		T: PartialEq,
+	{
+		type TItem = T;
+
+		fn item_count(&self, item: &Self::TItem) -> usize {
+			self.iter().filter(|i| i == &item).count()
+		}
+
+		fn items(&self) -> Option<impl Iterator<Item = &Self::TItem>> {
+			Some(self.iter())
+		}
+	}
+
+	impl<T, const N: usize> EqualUnordered for [T; N]
+	where
+		T: PartialEq,
+	{
+		type TItem = T;
+
+		fn item_count(&self, item: &Self::TItem) -> usize {
+			self.iter().filter(|i| i == &item).count()
+		}
+
+		fn items(&self) -> Option<impl Iterator<Item = &Self::TItem>> {
+			Some(self.iter())
+		}
+	}
+
+	impl<T> EqualUnordered for Option<T>
+	where
+		T: EqualUnordered,
+	{
+		type TItem = T::TItem;
+
+		fn item_count(&self, item: &Self::TItem) -> usize {
+			match self {
+				None => 0,
+				Some(collection) => collection.item_count(item),
+			}
+		}
+
+		fn items(&self) -> Option<impl Iterator<Item = &Self::TItem>> {
+			match self {
+				None => None,
+				Some(collection) => collection.items(),
+			}
+		}
+	}
+
+	impl<T, TError> EqualUnordered for Result<T, TError>
+	where
+		T: EqualUnordered,
+		TError: PartialEq,
+	{
+		type TItem = T::TItem;
+
+		fn item_count(&self, item: &Self::TItem) -> usize {
+			match self {
+				Err(_) => 0,
+				Ok(collection) => collection.item_count(item),
+			}
+		}
+
+		fn items(&self) -> Option<impl Iterator<Item = &Self::TItem>> {
+			match self {
+				Err(_) => None,
+				Ok(collection) => collection.items(),
+			}
+		}
+	}
+
+	pub fn equal_unordered<TEq: EqualUnordered>(left: &TEq, right: &TEq) -> bool {
+		match (left.items(), right.items()) {
+			(None, None) => true,
+			(Some(mut left_items), Some(_)) => {
+				left_items.all(|item| right.item_count(item) == left.item_count(item))
+			}
+			_ => false,
+		}
+	}
+
+	#[macro_export]
+	macro_rules! assert_eq_unordered {
+		($left:expr, $right:expr) => {
+			match (&$left, &$right) {
+				(left_val, right_val) => {
+					assert!(
+						$crate::test_tools::utils::equal_unordered(left_val, right_val),
+						"unordered equal failed:\n  left: {}\n right: {}\n",
+						format!("\x1b[31m{:?}\x1b[0m", left_val),
+						format!("\x1b[31m{:?}\x1b[0m", right_val),
+					);
+				}
+			}
+		};
+	}
+
+	pub use assert_eq_unordered;
+
 	pub trait TickTime {
 		fn tick_time(&mut self, delta: Duration);
 	}
