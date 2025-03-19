@@ -14,14 +14,14 @@ use common::{
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Name(Self::name), Transform, Visibility)]
-pub struct Level<const SUBDIVISIONS: u8 = 0, TGraph = GridGraph>
+pub struct Grid<const SUBDIVISIONS: u8 = 0, TGraph = GridGraph>
 where
 	TGraph: ToSubdivided,
 {
 	graph: TGraph,
 }
 
-impl Level {
+impl Grid {
 	pub(crate) fn spawn_cells<TCell, TError>(
 		In(cells): In<Result<Vec<(Vec3, TCell)>, TError>>,
 		mut commands: Commands,
@@ -47,17 +47,17 @@ impl Level {
 	}
 }
 
-impl<const SUBDIVISIONS: u8, TGraph> Level<SUBDIVISIONS, TGraph>
+impl<const SUBDIVISIONS: u8, TGraph> Grid<SUBDIVISIONS, TGraph>
 where
 	TGraph: ToSubdivided,
 {
 	fn name() -> String {
-		format!("Level (subdivisions: {SUBDIVISIONS})")
+		format!("Grid (subdivisions: {SUBDIVISIONS})")
 	}
 
 	pub(crate) fn insert(
 		mut commands: Commands,
-		levels: Query<(Entity, &Level<0, TGraph>), Changed<Level<0, TGraph>>>,
+		levels: Query<(Entity, &Grid<0, TGraph>), Changed<Grid<0, TGraph>>>,
 	) where
 		TGraph: ThreadSafe,
 	{
@@ -68,7 +68,7 @@ where
 	}
 }
 
-impl Default for Level {
+impl Default for Grid {
 	fn default() -> Self {
 		Self {
 			graph: Default::default(),
@@ -76,14 +76,14 @@ impl Default for Level {
 	}
 }
 
-impl From<GridGraph> for Level {
+impl From<GridGraph> for Grid {
 	fn from(graph: GridGraph) -> Self {
-		Level { graph }
+		Grid { graph }
 	}
 }
 
-impl<const SUBDIVISIONS: u8> From<&Level<SUBDIVISIONS>> for GridGraph {
-	fn from(value: &Level<SUBDIVISIONS>) -> Self {
+impl<const SUBDIVISIONS: u8> From<&Grid<SUBDIVISIONS>> for GridGraph {
+	fn from(value: &Grid<SUBDIVISIONS>) -> Self {
 		value.graph.clone()
 	}
 }
@@ -152,7 +152,7 @@ mod test_insert_subdivided {
 
 	fn setup<const SUBDIVISIONS: u8>() -> App {
 		let mut app = App::new();
-		app.add_systems(Update, Level::<SUBDIVISIONS, _Graph>::insert);
+		app.add_systems(Update, Grid::<SUBDIVISIONS, _Graph>::insert);
 
 		app
 	}
@@ -162,7 +162,7 @@ mod test_insert_subdivided {
 		let mut app = setup::<5>();
 		let entity = app
 			.world_mut()
-			.spawn(Level::<0, _Graph> {
+			.spawn(Grid::<0, _Graph> {
 				graph: _Graph { subdivisions: 0 },
 			})
 			.id();
@@ -170,10 +170,10 @@ mod test_insert_subdivided {
 		app.update();
 
 		assert_eq!(
-			Some(&Level {
+			Some(&Grid {
 				graph: _Graph { subdivisions: 5 }
 			}),
-			app.world().entity(entity).get::<Level::<5, _Graph>>()
+			app.world().entity(entity).get::<Grid::<5, _Graph>>()
 		);
 	}
 
@@ -182,7 +182,7 @@ mod test_insert_subdivided {
 		let mut app = setup::<5>();
 		let entity = app
 			.world_mut()
-			.spawn(Level::<0, _Graph> {
+			.spawn(Grid::<0, _Graph> {
 				graph: _Graph { subdivisions: 0 },
 			})
 			.id();
@@ -190,10 +190,10 @@ mod test_insert_subdivided {
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.remove::<Level<5, _Graph>>();
+			.remove::<Grid<5, _Graph>>();
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<Level::<5, _Graph>>());
+		assert_eq!(None, app.world().entity(entity).get::<Grid::<5, _Graph>>());
 	}
 
 	#[test]
@@ -201,7 +201,7 @@ mod test_insert_subdivided {
 		let mut app = setup::<5>();
 		let entity = app
 			.world_mut()
-			.spawn(Level::<0, _Graph> {
+			.spawn(Grid::<0, _Graph> {
 				graph: _Graph { subdivisions: 0 },
 			})
 			.id();
@@ -209,25 +209,24 @@ mod test_insert_subdivided {
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.remove::<Level<5, _Graph>>()
-			.get_mut::<Level<0, _Graph>>()
+			.remove::<Grid<5, _Graph>>()
+			.get_mut::<Grid<0, _Graph>>()
 			.as_deref_mut();
 		app.update();
 
 		assert_eq!(
-			Some(&Level {
+			Some(&Grid {
 				graph: _Graph { subdivisions: 5 }
 			}),
-			app.world().entity(entity).get::<Level::<5, _Graph>>()
+			app.world().entity(entity).get::<Grid::<5, _Graph>>()
 		);
 	}
 }
 
 #[cfg(test)]
 mod tests {
-	use crate::traits::insert_cell_components::InsertCellComponents;
-
 	use super::*;
+	use crate::traits::insert_cell_components::InsertCellComponents;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{assert_count, get_children, test_tools::utils::SingleThreadedApp};
 
@@ -263,7 +262,7 @@ mod tests {
 	#[test]
 	fn spawn_transform_as_children_of_level() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let level = app.world_mut().spawn(Level::default()).id();
+		let grid = app.world_mut().spawn(Grid::default()).id();
 		let cells: Result<Vec<(Vec3, _Cell)>, _Error> = Ok(vec![
 			(
 				Vec3::new(1., 2., 3.),
@@ -287,9 +286,9 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, Level::spawn_cells)?;
+			.run_system_once_with(cells, Grid::spawn_cells)?;
 
-		let entities = assert_count!(3, get_children!(app, level));
+		let entities = assert_count!(3, get_children!(app, grid));
 		assert_eq!(
 			[
 				Some(&Transform::from_xyz(1., 2.25, 3.).with_scale(Vec3::splat(0.5))),
@@ -305,7 +304,7 @@ mod tests {
 	#[test]
 	fn spawn_cell_component() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let level = app.world_mut().spawn(Level::default()).id();
+		let grid = app.world_mut().spawn(Grid::default()).id();
 		let cells: Result<Vec<(Vec3, _Cell)>, _Error> = Ok(vec![
 			(Vec3::default(), _Cell::default()),
 			(Vec3::default(), _Cell::default()),
@@ -314,9 +313,9 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, Level::spawn_cells)?;
+			.run_system_once_with(cells, Grid::spawn_cells)?;
 
-		let entities = assert_count!(3, get_children!(app, level));
+		let entities = assert_count!(3, get_children!(app, grid));
 		assert_eq!(
 			[
 				Some(&_CellComponent),
@@ -332,12 +331,12 @@ mod tests {
 	#[test]
 	fn return_cells_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		app.world_mut().spawn(Level::default());
+		app.world_mut().spawn(Grid::default());
 		let cells: Result<Vec<(Vec3, _Cell)>, _Error> = Err(_Error);
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, Level::spawn_cells)?;
+			.run_system_once_with(cells, Grid::spawn_cells)?;
 
 		assert_eq!(Err(SpawnCellError::Error(_Error)), result);
 		Ok(())
@@ -354,7 +353,7 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, Level::spawn_cells)?;
+			.run_system_once_with(cells, Grid::spawn_cells)?;
 
 		assert_eq!(Err(SpawnCellError::NoLevel), result);
 		Ok(())
@@ -363,13 +362,13 @@ mod tests {
 	#[test]
 	fn return_multiple_levels_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		app.world_mut().spawn(Level::default());
-		app.world_mut().spawn(Level::default());
+		app.world_mut().spawn(Grid::default());
+		app.world_mut().spawn(Grid::default());
 		let cells: Result<Vec<(Vec3, _Cell)>, _Error> = Ok(vec![]);
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, Level::spawn_cells)?;
+			.run_system_once_with(cells, Grid::spawn_cells)?;
 
 		assert_eq!(Err(SpawnCellError::MultipleLevels), result);
 		Ok(())

@@ -18,10 +18,10 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use components::{WallBack, level::Level};
+use components::{WallBack, grid::Grid};
 use grid_graph::GridGraph;
 use map::cell::MapCell;
-use resources::current_level::CurrentLevel;
+use resources::level::Level;
 use std::marker::PhantomData;
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
 use traits::{
@@ -52,7 +52,7 @@ where
 
 		app.load_map_asset::<MapCell>(OnEnter(new_game))
 			.load_map::<MapCell>(OnEnter(loading))
-			.add_systems(Update, Level::<1>::insert)
+			.add_systems(Update, Grid::<1>::insert)
 			.add_systems(
 				Update,
 				(
@@ -65,6 +65,6 @@ where
 }
 
 impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> {
-	type TMap = Level<1>;
+	type TMap = Grid<1>;
 	type TGraph = GridGraph;
 }

@@ -9,14 +9,14 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	errors::{Error, Level},
+	errors::{Error, Level as ErrorLevel},
 	tools::handle::default_handle,
 	traits::{load_asset::LoadAsset, thread_safe::ThreadSafe},
 };
 use std::collections::HashMap;
 
 #[derive(Resource, Debug, PartialEq)]
-pub(crate) struct CurrentLevel<TCell>
+pub(crate) struct Level<TCell>
 where
 	TCell: TypePath + ThreadSafe,
 {
@@ -24,7 +24,7 @@ where
 	pub(crate) graph: Option<GridGraph>,
 }
 
-impl<TCell> CurrentLevel<TCell>
+impl<TCell> Level<TCell>
 where
 	TCell: TypePath + ThreadSafe,
 {
@@ -162,7 +162,7 @@ where
 	}
 }
 
-impl<TCell> Default for CurrentLevel<TCell>
+impl<TCell> Default for Level<TCell>
 where
 	TCell: TypePath + ThreadSafe,
 {
@@ -185,7 +185,7 @@ impl From<GridError> for Error {
 	fn from(error: GridError) -> Self {
 		Self {
 			msg: format!("Faulty grid encountered: {:?}", error),
-			lvl: Level::Error,
+			lvl: ErrorLevel::Error,
 		}
 	}
 }
@@ -232,10 +232,7 @@ mod test_load {
 	fn setup(load_map: _LoadMap) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(load_map);
-		app.add_systems(
-			Update,
-			CurrentLevel::<_Cell>::load_asset_internal::<_LoadMap>,
-		);
+		app.add_systems(Update, Level::<_Cell>::load_asset_internal::<_LoadMap>);
 
 		app
 	}
@@ -253,8 +250,8 @@ mod test_load {
 		app.update();
 
 		assert_eq!(
-			Some(&CurrentLevel { map, ..default() }),
-			app.world().get_resource::<CurrentLevel<_Cell>>()
+			Some(&Level { map, ..default() }),
+			app.world().get_resource::<Level<_Cell>>()
 		);
 	}
 
@@ -265,7 +262,7 @@ mod test_load {
 				.never()
 				.return_const(new_handle());
 		}));
-		app.insert_resource(CurrentLevel::<_Cell> {
+		app.insert_resource(Level::<_Cell> {
 			map: new_handle(),
 			..default()
 		});
@@ -282,7 +279,7 @@ mod test_load {
 				.with(eq(Path::from("aaa/bbb/ccc.file_format")))
 				.return_const(map.clone());
 		}));
-		app.insert_resource(CurrentLevel::<_Cell> {
+		app.insert_resource(Level::<_Cell> {
 			map: default(),
 			..default()
 		});
@@ -290,8 +287,8 @@ mod test_load {
 		app.update();
 
 		assert_eq!(
-			Some(&CurrentLevel { map, ..default() }),
-			app.world().get_resource::<CurrentLevel<_Cell>>()
+			Some(&Level { map, ..default() }),
+			app.world().get_resource::<Level<_Cell>>()
 		);
 	}
 }
@@ -358,10 +355,10 @@ mod test_spawn_level {
 
 		maps.insert(&map.clone(), Map::new(cells, vec![]));
 		app.insert_resource(maps);
-		app.insert_resource(CurrentLevel { map, ..default() });
+		app.insert_resource(Level { map, ..default() });
 		app.add_systems(
 			Update,
-			CurrentLevel::<_Cell>::spawn::<_Level>.pipe(|In(result), mut commands: Commands| {
+			Level::<_Cell>::spawn::<_Level>.pipe(|In(result), mut commands: Commands| {
 				commands.insert_resource(_Result(result));
 			}),
 		);
@@ -393,7 +390,7 @@ mod test_spawn_level {
 				extra: Obstacles::default(),
 				context: get_context::<_Cell>(1, 1),
 			}),
-			app.world().resource::<CurrentLevel<_Cell>>().graph
+			app.world().resource::<Level<_Cell>>().graph
 		);
 	}
 
@@ -412,7 +409,7 @@ mod test_spawn_level {
 				extra: Obstacles::default(),
 				context: get_context::<_Cell>(1, 2),
 			}),
-			app.world().resource::<CurrentLevel<_Cell>>().graph
+			app.world().resource::<Level<_Cell>>().graph
 		);
 	}
 
@@ -442,7 +439,7 @@ mod test_spawn_level {
 				extra: Obstacles::default(),
 				context: get_context::<_Cell>(3, 3),
 			}),
-			app.world().resource::<CurrentLevel<_Cell>>().graph
+			app.world().resource::<Level<_Cell>>().graph
 		);
 	}
 
@@ -469,7 +466,7 @@ mod test_spawn_level {
 				extra: Obstacles::default(),
 				context: get_context::<_Cell>(3, 3),
 			}),
-			app.world().resource::<CurrentLevel<_Cell>>().graph
+			app.world().resource::<Level<_Cell>>().graph
 		);
 	}
 
@@ -495,7 +492,7 @@ mod test_spawn_level {
 				},
 				context: get_context::<_Cell>(2, 2),
 			}),
-			app.world().resource::<CurrentLevel<_Cell>>().graph
+			app.world().resource::<Level<_Cell>>().graph
 		);
 	}
 
@@ -503,7 +500,7 @@ mod test_spawn_level {
 	fn do_nothing_if_graph_is_already_set() {
 		let mut app = setup(vec![vec![_Cell::walkable()]]);
 
-		app.world_mut().resource_mut::<CurrentLevel<_Cell>>().graph = Some(GridGraph {
+		app.world_mut().resource_mut::<Level<_Cell>>().graph = Some(GridGraph {
 			nodes: HashMap::default(),
 			extra: Obstacles::default(),
 			context: get_context::<_Cell>(10, 20),
@@ -516,7 +513,7 @@ mod test_spawn_level {
 				extra: Obstacles::default(),
 				context: get_context::<_Cell>(10, 20),
 			}),
-			app.world().resource::<CurrentLevel<_Cell>>().graph
+			app.world().resource::<Level<_Cell>>().graph
 		);
 	}
 
@@ -603,7 +600,7 @@ mod test_get_grid {
 		};
 
 		app.insert_resource(maps);
-		app.insert_resource(CurrentLevel { map, graph });
+		app.insert_resource(Level { map, graph });
 
 		app
 	}
@@ -633,7 +630,7 @@ mod test_get_grid {
 
 		let grid = app
 			.world_mut()
-			.run_system_once(CurrentLevel::<_Cell>::grid_cells)?;
+			.run_system_once(Level::<_Cell>::grid_cells)?;
 
 		assert_eq_unordered!(
 			Ok(vec![
@@ -653,7 +650,7 @@ mod test_get_grid {
 
 		let grid = app
 			.world_mut()
-			.run_system_once(CurrentLevel::<_Cell>::grid_cells)?;
+			.run_system_once(Level::<_Cell>::grid_cells)?;
 
 		assert_eq_unordered!(Err(GridError::NoValidMap), grid);
 		Ok(())
@@ -665,7 +662,7 @@ mod test_get_grid {
 
 		let grid = app
 			.world_mut()
-			.run_system_once(CurrentLevel::<_Cell>::grid_cells)?;
+			.run_system_once(Level::<_Cell>::grid_cells)?;
 
 		assert_eq_unordered!(Err(GridError::NoGridGraph), grid);
 		Ok(())
@@ -693,7 +690,7 @@ mod test_get_grid {
 
 		let grid = app
 			.world_mut()
-			.run_system_once(CurrentLevel::<_Cell>::grid_cells)?;
+			.run_system_once(Level::<_Cell>::grid_cells)?;
 
 		assert_eq_unordered!(Err(GridError::GridIndexHasNoCell { x: 1, z: 0 }), grid);
 		Ok(())

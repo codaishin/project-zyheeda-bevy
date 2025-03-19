@@ -1,5 +1,5 @@
 use super::SourcePath;
-use crate::{CurrentLevel, MapCell, components::level::Level, map::Map, map_loader::TextLoader};
+use crate::{Level, MapCell, components::grid::Grid, map::Map, map_loader::TextLoader};
 use bevy::{
 	app::App,
 	asset::AssetApp,
@@ -28,7 +28,7 @@ impl LoadMapAsset for App {
 	{
 		self.init_asset::<Map<TCell>>()
 			.register_asset_loader(TextLoader::<Map<TCell>>::default())
-			.add_systems(label, CurrentLevel::<TCell>::load_asset)
+			.add_systems(label, Level::<TCell>::load_asset)
 	}
 }
 
@@ -37,9 +37,9 @@ impl LoadMap for App {
 		self.add_systems(
 			label,
 			(
-				CurrentLevel::<MapCell>::spawn::<Level>.pipe(log),
-				CurrentLevel::<MapCell>::grid_cells
-					.pipe(Level::spawn_cells)
+				Level::<MapCell>::spawn::<Grid>.pipe(log),
+				Level::<MapCell>::grid_cells
+					.pipe(Grid::spawn_cells)
 					.pipe(log),
 			)
 				.chain(),

@@ -1,5 +1,5 @@
 pub(crate) mod floor_cell;
-pub(crate) mod level;
+pub(crate) mod grid;
 pub(crate) mod wall_cell;
 
 use bevy::prelude::*;
