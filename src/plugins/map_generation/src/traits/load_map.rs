@@ -43,11 +43,12 @@ impl LoadMap for App {
 		self.add_systems(
 			label,
 			(
-				Level::<MapCell>::spawn::<Grid>.pipe(log),
+				Level::<MapCell>::set_graph.pipe(log),
+				Level::<MapCell>::spawn_unique::<Grid>.pipe(log),
+				Level::<MapCell>::spawn_unique::<HalfOffsetGrid>.pipe(log),
 				Level::<MapCell>::grid_cells
 					.pipe(Grid::spawn_cells)
 					.pipe(log),
-				Level::<MapCell>::spawn::<HalfOffsetGrid>.pipe(log),
 				Level::<MapCell>::half_offset_grid_cells
 					.pipe(HalfOffsetGrid::spawn_cells)
 					.pipe(log),
