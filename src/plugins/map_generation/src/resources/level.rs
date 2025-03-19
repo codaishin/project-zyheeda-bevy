@@ -47,19 +47,17 @@ where
 	pub(crate) fn set_graph(
 		mut level: ResMut<Self>,
 		maps: Res<Assets<Map<TCell>>>,
-	) -> Result<(), GridDefinitionError>
+	) -> Result<(), SetGraphError>
 	where
 		TCell: GridCellDistanceDefinition + IsWalkable + Clone,
 	{
 		if level.graph.is_some() {
-			return Ok(());
+			return Err(SetGraphError::GraphAlreadySet);
 		}
 		let Some(cells) = level.get_map_cells(&maps) else {
-			return Ok(());
+			return Err(SetGraphError::MapAssetNotFound);
 		};
-		let Some((cell_count_x, cell_count_z)) = Self::get_cell_counts(cells) else {
-			return Ok(());
-		};
+		let (cell_count_x, cell_count_z) = Self::get_cell_counts(cells);
 		let grid_definition = GridDefinition {
 			cell_count_x,
 			cell_count_z,
@@ -68,7 +66,8 @@ where
 		let mut graph = GridGraph {
 			nodes: HashMap::default(),
 			extra: Obstacles::default(),
-			context: GridContext::try_from(grid_definition)?,
+			context: GridContext::try_from(grid_definition)
+				.map_err(SetGraphError::GridDefinitionError)?,
 		};
 
 		let min = graph.context.grid_min();
@@ -228,11 +227,15 @@ where
 		cells
 	}
 
-	fn get_cell_counts(cells: &[Vec<TCell>]) -> Option<(usize, usize)> {
-		let count_x = cells.iter().map(|line| line.len()).max()?;
+	fn get_cell_counts(cells: &[Vec<TCell>]) -> (usize, usize) {
+		let count_x = cells
+			.iter()
+			.map(|line| line.len())
+			.max()
+			.unwrap_or_default();
 		let count_z = cells.len();
 
-		Some((count_x, count_z))
+		(count_x, count_z)
 	}
 }
 
@@ -244,6 +247,29 @@ where
 		Self {
 			map: default(),
 			graph: default(),
+		}
+	}
+}
+
+#[derive(Debug, PartialEq)]
+pub(crate) enum SetGraphError {
+	GridDefinitionError(GridDefinitionError),
+	GraphAlreadySet,
+	MapAssetNotFound,
+}
+
+impl From<SetGraphError> for Error {
+	fn from(error: SetGraphError) -> Self {
+		match error {
+			SetGraphError::GridDefinitionError(error) => Error::from(error),
+			SetGraphError::GraphAlreadySet => Error {
+				msg: "Grid graph was already set".to_owned(),
+				lvl: ErrorLevel::Warning,
+			},
+			SetGraphError::MapAssetNotFound => Error {
+				msg: "Map asset not found".to_owned(),
+				lvl: ErrorLevel::Error,
+			},
 		}
 	}
 }
@@ -418,7 +444,7 @@ mod test_spawn {
 	}
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(Result<(), GridDefinitionError>);
+	struct _Result(Result<(), SetGraphError>);
 
 	fn setup(cells: Vec<Vec<_Cell>>) -> App {
 		let map = new_handle::<Map<_Cell>>();
@@ -596,7 +622,36 @@ mod test_spawn {
 		app.update();
 
 		assert_eq!(
-			&_Result(Err(GridDefinitionError::CellCountZero)),
+			&_Result(Err(SetGraphError::GridDefinitionError(
+				GridDefinitionError::CellCountZero
+			))),
+			app.world().resource::<_Result>()
+		);
+	}
+
+	#[test]
+	fn return_graph_already_set_error() {
+		let mut app = setup(vec![vec![]]);
+		app.world_mut().resource_mut::<Level<_Cell>>().graph = Some(GridGraph::default());
+
+		app.update();
+
+		assert_eq!(
+			&_Result(Err(SetGraphError::GraphAlreadySet)),
+			app.world().resource::<_Result>()
+		);
+	}
+
+	#[test]
+	fn return_asset_error() {
+		let mut app = setup(vec![vec![]]);
+		let mut assets = app.world_mut().resource_mut::<Assets<Map<_Cell>>>();
+		*assets = Assets::default();
+
+		app.update();
+
+		assert_eq!(
+			&_Result(Err(SetGraphError::MapAssetNotFound)),
 			app.world().resource::<_Result>()
 		);
 	}

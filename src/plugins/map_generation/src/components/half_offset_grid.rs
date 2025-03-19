@@ -28,7 +28,7 @@ impl HalfOffsetGrid {
 	where
 		TCell: InsertCellQuadrantComponents + IsWalkable,
 	{
-		let cells = cells.map_err(|error| SpawnCellError::Error(error))?;
+		let cells = cells.map_err(SpawnCellError::Error)?;
 		let level = grids.get_single().map_err(|error| match error {
 			QuerySingleError::NoEntities(_) => SpawnCellError::NoGrid,
 			QuerySingleError::MultipleEntities(_) => SpawnCellError::MultipleGrids,
