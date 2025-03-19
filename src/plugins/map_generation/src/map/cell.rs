@@ -1,4 +1,12 @@
-use crate::traits::{GridCellDistanceDefinition, SourcePath, is_walkable::IsWalkable};
+use crate::{
+	components::{floor_cell::FloorCell, wall_cell::WallCell},
+	traits::{
+		GridCellDistanceDefinition,
+		SourcePath,
+		insert_cell_components::InsertCellComponents,
+		is_walkable::IsWalkable,
+	},
+};
 use bevy::prelude::*;
 use common::traits::load_asset::Path;
 
@@ -41,6 +49,22 @@ impl From<Option<char>> for MapCell {
 			'c' => MapCell::Floor,
 			_ => MapCell::Wall,
 		}
+	}
+}
+
+impl InsertCellComponents for MapCell {
+	fn offset_height(&self) -> bool {
+		match self {
+			MapCell::Floor => false,
+			MapCell::Wall => true,
+		}
+	}
+
+	fn insert_cell_components(&self, entity: &mut EntityCommands) {
+		match self {
+			MapCell::Floor => entity.insert(FloorCell),
+			MapCell::Wall => entity.insert(WallCell),
+		};
 	}
 }
 

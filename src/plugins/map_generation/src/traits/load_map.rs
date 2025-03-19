@@ -3,7 +3,10 @@ use crate::{CurrentLevel, MapCell, components::level::Level, map::Map, map_loade
 use bevy::{
 	app::App,
 	asset::AssetApp,
-	ecs::{schedule::ScheduleLabel, system::IntoSystem},
+	ecs::{
+		schedule::{IntoSystemConfigs, ScheduleLabel},
+		system::IntoSystem,
+	},
 	reflect::TypePath,
 };
 use common::{systems::log::log, traits::thread_safe::ThreadSafe};
@@ -19,18 +22,27 @@ pub(crate) trait LoadMap {
 }
 
 impl LoadMapAsset for App {
-	fn load_map_asset<TCell>(&mut self, schedule_label: impl ScheduleLabel) -> &mut App
+	fn load_map_asset<TCell>(&mut self, label: impl ScheduleLabel) -> &mut App
 	where
 		TCell: TypePath + From<Option<char>> + SourcePath + Clone + ThreadSafe,
 	{
 		self.init_asset::<Map<TCell>>()
 			.register_asset_loader(TextLoader::<Map<TCell>>::default())
-			.add_systems(schedule_label, CurrentLevel::<TCell>::load_asset)
+			.add_systems(label, CurrentLevel::<TCell>::load_asset)
 	}
 }
 
 impl LoadMap for App {
 	fn load_map<TCell>(&mut self, label: impl ScheduleLabel) -> &mut App {
-		self.add_systems(label, CurrentLevel::<MapCell>::spawn::<Level>.pipe(log))
+		self.add_systems(
+			label,
+			(
+				CurrentLevel::<MapCell>::spawn::<Level>.pipe(log),
+				CurrentLevel::<MapCell>::grid_cells
+					.pipe(Level::spawn_cells)
+					.pipe(log),
+			)
+				.chain(),
+		)
 	}
 }
