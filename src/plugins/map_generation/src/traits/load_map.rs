@@ -1,10 +1,15 @@
-use super::SourcePath;
+use super::{
+	GridCellDistanceDefinition,
+	SourcePath,
+	insert_cell_components::InsertCellComponents,
+	insert_cell_quadrant_components::InsertCellQuadrantComponents,
+	is_walkable::IsWalkable,
+};
 use crate::{
-	Level,
-	MapCell,
 	components::{grid::Grid, half_offset_grid::HalfOffsetGrid},
 	map::Map,
 	map_loader::TextLoader,
+	resources::level::Level,
 };
 use bevy::{
 	app::App,
@@ -24,7 +29,15 @@ pub(crate) trait LoadMapAsset {
 }
 
 pub(crate) trait LoadMap {
-	fn load_map<TCell>(&mut self, label: impl ScheduleLabel) -> &mut App;
+	fn load_map<TCell>(&mut self, label: impl ScheduleLabel) -> &mut App
+	where
+		TCell: GridCellDistanceDefinition
+			+ IsWalkable
+			+ InsertCellComponents
+			+ InsertCellQuadrantComponents
+			+ TypePath
+			+ Clone
+			+ ThreadSafe;
 }
 
 impl LoadMapAsset for App {
@@ -39,17 +52,24 @@ impl LoadMapAsset for App {
 }
 
 impl LoadMap for App {
-	fn load_map<TCell>(&mut self, label: impl ScheduleLabel) -> &mut App {
+	fn load_map<TCell>(&mut self, label: impl ScheduleLabel) -> &mut App
+	where
+		TCell: GridCellDistanceDefinition
+			+ IsWalkable
+			+ InsertCellComponents
+			+ InsertCellQuadrantComponents
+			+ TypePath
+			+ Clone
+			+ ThreadSafe,
+	{
 		self.add_systems(
 			label,
 			(
-				Level::<MapCell>::set_graph.pipe(log),
-				Level::<MapCell>::spawn_unique::<Grid>.pipe(log),
-				Level::<MapCell>::spawn_unique::<HalfOffsetGrid>.pipe(log),
-				Level::<MapCell>::grid_cells
-					.pipe(Grid::spawn_cells)
-					.pipe(log),
-				Level::<MapCell>::half_offset_grid_cells
+				Level::<TCell>::set_graph.pipe(log),
+				Level::<TCell>::spawn_unique::<Grid>.pipe(log),
+				Level::<TCell>::spawn_unique::<HalfOffsetGrid>.pipe(log),
+				Level::<TCell>::grid_cells.pipe(Grid::spawn_cells).pipe(log),
+				Level::<TCell>::half_offset_grid_cells
 					.pipe(HalfOffsetGrid::spawn_cells)
 					.pipe(log),
 			)

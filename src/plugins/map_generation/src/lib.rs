@@ -21,7 +21,6 @@ use common::{
 use components::{WallBack, grid::Grid};
 use grid_graph::GridGraph;
 use map::cell::MapCell;
-use resources::level::Level;
 use std::marker::PhantomData;
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
 use traits::{
