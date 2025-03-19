@@ -9,6 +9,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
+	errors::{Error, Level},
 	tools::handle::default_handle,
 	traits::{load_asset::LoadAsset, thread_safe::ThreadSafe},
 };
@@ -86,6 +87,42 @@ where
 		Ok(())
 	}
 
+	pub(crate) fn grid_cells(
+		level: Res<Self>,
+		maps: Res<Assets<Map<TCell>>>,
+	) -> Result<Vec<(Vec3, TCell)>, GridError>
+	where
+		TCell: Clone,
+	{
+		let Some(graph) = level.graph.as_ref() else {
+			return Err(GridError::NoGridGraph);
+		};
+		let Some(map) = maps.get(&level.map) else {
+			return Err(GridError::NoValidMap);
+		};
+
+		let cells = map.cells();
+		let mut index_mismatch = None;
+		let cell_translation = |((x, z), translation): (&(usize, usize), &Vec3)| {
+			let x = *x;
+			let z = *z;
+			let Some(cell) = cells.get(z).and_then(|cells| cells.get(x)) else {
+				index_mismatch = Some((x, z));
+				return None;
+			};
+
+			Some((*translation, cell.clone()))
+		};
+
+		let grid = graph.nodes.iter().filter_map(cell_translation).collect();
+
+		if let Some((x, z)) = index_mismatch {
+			return Err(GridError::GridIndexHasNoCell { x, z });
+		}
+
+		Ok(grid)
+	}
+
 	fn load_asset_internal<TLoadMap>(
 		mut commands: Commands,
 		mut map_loader: ResMut<TLoadMap>,
@@ -130,6 +167,22 @@ where
 		Self {
 			map: default(),
 			graph: default(),
+		}
+	}
+}
+
+#[derive(Debug, PartialEq)]
+pub(crate) enum GridError {
+	NoValidMap,
+	NoGridGraph,
+	GridIndexHasNoCell { x: usize, z: usize },
+}
+
+impl From<GridError> for Error {
+	fn from(error: GridError) -> Self {
+		Self {
+			msg: format!("Faulty grid encountered: {:?}", error),
+			lvl: Level::Error,
 		}
 	}
 }
@@ -460,5 +513,127 @@ mod test_set_graph {
 			&_Result(Err(GridDefinitionError::CellCountZero)),
 			app.world().resource::<_Result>()
 		);
+	}
+}
+
+#[cfg(test)]
+mod test_get_grid {
+	use super::*;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use common::{
+		assert_eq_unordered,
+		test_tools::utils::{SingleThreadedApp, new_handle},
+	};
+
+	#[derive(Clone, Debug, PartialEq, TypePath)]
+	struct _Cell(&'static str);
+
+	fn setup(cells: Option<Vec<Vec<_Cell>>>, graph: Option<GridGraph>) -> App {
+		let mut app = App::new().single_threaded(Update);
+		let mut maps = Assets::default();
+
+		let map = if let Some(cells) = cells {
+			let map = new_handle::<Map<_Cell>>();
+			maps.insert(&map.clone(), Map::new(cells, vec![]));
+			map
+		} else {
+			Handle::default()
+		};
+
+		app.insert_resource(maps);
+		app.insert_resource(CurrentLevel { map, graph });
+
+		app
+	}
+
+	#[test]
+	fn return_grid_cells_with_translation() -> Result<(), RunSystemError> {
+		let graph = GridGraph {
+			nodes: HashMap::from([
+				((0, 0), Vec3::new(-1., -0., -1.)),
+				((0, 1), Vec3::new(-1., -0., 1.)),
+				((1, 0), Vec3::new(1., -0., -1.)),
+				((1, 1), Vec3::new(1., -0., 1.)),
+			]),
+			extra: Obstacles::default(),
+			context: GridContext::try_from(GridDefinition {
+				cell_count_x: 2,
+				cell_count_z: 2,
+				cell_distance: 2.,
+			})
+			.expect("INVALID GRID DEFINITION"),
+		};
+		let cells = vec![
+			vec![_Cell("00"), _Cell("10")],
+			vec![_Cell("01"), _Cell("11")],
+		];
+		let mut app = setup(Some(cells), Some(graph));
+
+		let grid = app
+			.world_mut()
+			.run_system_once(CurrentLevel::<_Cell>::grid_cells)?;
+
+		assert_eq_unordered!(
+			Ok(vec![
+				(Vec3::new(-1., 0., -1.), _Cell("00")),
+				(Vec3::new(-1., 0., 1.), _Cell("01")),
+				(Vec3::new(1., 0., -1.), _Cell("10")),
+				(Vec3::new(1., 0., 1.), _Cell("11")),
+			]),
+			grid
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn grid_error_no_valid_map() -> Result<(), RunSystemError> {
+		let mut app = setup(None, Some(GridGraph::default()));
+
+		let grid = app
+			.world_mut()
+			.run_system_once(CurrentLevel::<_Cell>::grid_cells)?;
+
+		assert_eq_unordered!(Err(GridError::NoValidMap), grid);
+		Ok(())
+	}
+
+	#[test]
+	fn grid_error_no_grid_graph() -> Result<(), RunSystemError> {
+		let mut app = setup(Some(vec![]), None);
+
+		let grid = app
+			.world_mut()
+			.run_system_once(CurrentLevel::<_Cell>::grid_cells)?;
+
+		assert_eq_unordered!(Err(GridError::NoGridGraph), grid);
+		Ok(())
+	}
+
+	#[test]
+	fn grid_error_graph_index_has_no_cell() -> Result<(), RunSystemError> {
+		let graph = GridGraph {
+			nodes: HashMap::from([
+				((0, 0), Vec3::new(-1., -0., -1.)),
+				((0, 1), Vec3::new(-1., -0., 1.)),
+				((1, 0), Vec3::new(1., -0., -1.)),
+				((1, 1), Vec3::new(1., -0., 1.)),
+			]),
+			extra: Obstacles::default(),
+			context: GridContext::try_from(GridDefinition {
+				cell_count_x: 2,
+				cell_count_z: 2,
+				cell_distance: 2.,
+			})
+			.expect("INVALID GRID DEFINITION"),
+		};
+		let cells = vec![vec![_Cell("00")], vec![_Cell("01"), _Cell("11")]];
+		let mut app = setup(Some(cells), Some(graph));
+
+		let grid = app
+			.world_mut()
+			.run_system_once(CurrentLevel::<_Cell>::grid_cells)?;
+
+		assert_eq_unordered!(Err(GridError::GridIndexHasNoCell { x: 1, z: 0 }), grid);
+		Ok(())
 	}
 }
