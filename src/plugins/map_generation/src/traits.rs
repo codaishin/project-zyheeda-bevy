@@ -1,5 +1,6 @@
 pub(crate) mod grid_min;
 pub(crate) mod insert_cell_components;
+pub(crate) mod insert_cell_quadrant_components;
 pub(crate) mod is_walkable;
 pub(crate) mod key_mapper;
 pub(crate) mod light;

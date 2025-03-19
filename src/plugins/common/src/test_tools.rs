@@ -165,6 +165,25 @@ pub mod utils {
 		}
 	}
 
+	impl<T, const N: usize> EqualUnordered for [T; N]
+	where
+		T: PartialEq,
+	{
+		type TItem = T;
+
+		fn buffer_eq(&self, _: &Self) -> bool {
+			true
+		}
+
+		fn buffer_contains(&self, item: &Self::TItem) -> bool {
+			self.contains(item)
+		}
+
+		fn items(&self) -> impl Iterator<Item = &Self::TItem> {
+			self.iter()
+		}
+	}
+
 	impl<T> EqualUnordered for Option<T>
 	where
 		T: EqualUnordered,

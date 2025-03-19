@@ -1,5 +1,11 @@
 use super::SourcePath;
-use crate::{Level, MapCell, components::grid::Grid, map::Map, map_loader::TextLoader};
+use crate::{
+	Level,
+	MapCell,
+	components::{grid::Grid, half_offset_grid::HalfOffsetGrid},
+	map::Map,
+	map_loader::TextLoader,
+};
 use bevy::{
 	app::App,
 	asset::AssetApp,
@@ -40,6 +46,10 @@ impl LoadMap for App {
 				Level::<MapCell>::spawn::<Grid>.pipe(log),
 				Level::<MapCell>::grid_cells
 					.pipe(Grid::spawn_cells)
+					.pipe(log),
+				Level::<MapCell>::spawn::<HalfOffsetGrid>.pipe(log),
+				Level::<MapCell>::half_offset_grid_cells
+					.pipe(HalfOffsetGrid::spawn_cells)
 					.pipe(log),
 			)
 				.chain(),

@@ -23,6 +23,10 @@ where
 		&self.cells
 	}
 
+	pub(crate) fn half_offset_cells(&self) -> &Vec<Vec<HalfOffsetCell<TCell>>> {
+		&self.half_offset_cells
+	}
+
 	#[cfg(test)]
 	pub(crate) fn new(cells: Vec<Vec<TCell>>, quadrants: Vec<Vec<HalfOffsetCell<TCell>>>) -> Self {
 		Self {
@@ -102,7 +106,7 @@ fn half_offset_quadrants<TCell>(z: usize, x: usize, grid: &[Vec<TCell>]) -> [(Di
 where
 	TCell: Clone,
 {
-	HalfOffsetCell::quadrants(x, z).map(|(x, z, dir)| (dir, grid[z][x].clone()))
+	HalfOffsetCell::with_quadrants(x, z).map(|(x, z, dir)| (dir, grid[z][x].clone()))
 }
 
 fn greater_than<T>(than: usize) -> impl FnMut(&(usize, &T)) -> bool {

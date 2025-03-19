@@ -1,3 +1,5 @@
+mod error_type_marker;
+
 use crate::{
 	grid_graph::GridGraph,
 	traits::{
@@ -11,6 +13,8 @@ use common::{
 	errors::{Error, Level as ErrorLevel},
 	traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn},
 };
+use error_type_marker::TypeMarker;
+use std::any::type_name;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Name(Self::name), Transform, Visibility)]
@@ -25,23 +29,23 @@ impl Grid {
 	pub(crate) fn spawn_cells<TCell, TError>(
 		In(cells): In<Result<Vec<(Vec3, TCell)>, TError>>,
 		mut commands: Commands,
-		levels: Query<Entity, With<Self>>,
-	) -> Result<(), SpawnCellError<TError>>
+		grids: Query<Entity, With<Self>>,
+	) -> Result<(), SpawnCellError<TError, Self>>
 	where
 		TCell: InsertCellComponents + GridCellDistanceDefinition,
 	{
 		let cells = cells.map_err(|error| SpawnCellError::Error(error))?;
-		let level = levels.get_single().map_err(|error| match error {
-			QuerySingleError::NoEntities(_) => SpawnCellError::NoLevel,
-			QuerySingleError::MultipleEntities(_) => SpawnCellError::MultipleLevels,
+		let level = grids.get_single().map_err(|error| match error {
+			QuerySingleError::NoEntities(_) => SpawnCellError::NoGrid,
+			QuerySingleError::MultipleEntities(_) => SpawnCellError::MultipleGrids,
 		})?;
 
-		let Some(mut level) = commands.get_entity(level) else {
+		let Some(mut grid) = commands.get_entity(level) else {
 			return Err(SpawnCellError::EntityCommandsError); // untested, don't know how to simulate
 		};
 
 		let scale = Vec3::splat(TCell::CELL_DISTANCE);
-		level.with_children(spawn_children(cells, scale));
+		grid.with_children(spawn_children(cells, scale));
 
 		Ok(())
 	}
@@ -89,32 +93,38 @@ impl<const SUBDIVISIONS: u8> From<&Grid<SUBDIVISIONS>> for GridGraph {
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) enum SpawnCellError<TError> {
+pub(crate) enum SpawnCellError<TError, TComponent> {
 	Error(TError),
-	NoLevel,
-	MultipleLevels,
+	NoGrid,
+	MultipleGrids,
 	EntityCommandsError,
+	#[allow(private_interfaces)]
+	_P(TypeMarker<TComponent>),
 }
 
-impl<TError> From<SpawnCellError<TError>> for Error
+impl<TError, TComponent> From<SpawnCellError<TError, TComponent>> for Error
 where
 	Error: From<TError>,
 {
-	fn from(value: SpawnCellError<TError>) -> Self {
+	fn from(value: SpawnCellError<TError, TComponent>) -> Self {
 		match value {
 			SpawnCellError::Error(error) => Error::from(error),
-			SpawnCellError::NoLevel => Error {
-				msg: "No `Level` component exists".to_owned(),
+			SpawnCellError::NoGrid => Error {
+				msg: format!("No `{}` component exists", type_name::<TComponent>()),
 				lvl: ErrorLevel::Error,
 			},
-			SpawnCellError::MultipleLevels => Error {
-				msg: "Multiple `Level` components exist".to_owned(),
+			SpawnCellError::MultipleGrids => Error {
+				msg: format!("Multiple `{}` components exist", type_name::<TComponent>()),
 				lvl: ErrorLevel::Error,
 			},
 			SpawnCellError::EntityCommandsError => Error {
-				msg: "Failed to retrieve `Level` entity commands".to_owned(),
+				msg: format!(
+					"Failed to retrieve `{}` entity commands",
+					type_name::<TComponent>()
+				),
 				lvl: ErrorLevel::Error,
 			},
+			SpawnCellError::_P(_) => unreachable!("Should not be possible to build"),
 		}
 	}
 }
@@ -355,7 +365,7 @@ mod tests {
 			.world_mut()
 			.run_system_once_with(cells, Grid::spawn_cells)?;
 
-		assert_eq!(Err(SpawnCellError::NoLevel), result);
+		assert_eq!(Err(SpawnCellError::NoGrid), result);
 		Ok(())
 	}
 
@@ -370,7 +380,7 @@ mod tests {
 			.world_mut()
 			.run_system_once_with(cells, Grid::spawn_cells)?;
 
-		assert_eq!(Err(SpawnCellError::MultipleLevels), result);
+		assert_eq!(Err(SpawnCellError::MultipleGrids), result);
 		Ok(())
 	}
 }
