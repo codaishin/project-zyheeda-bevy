@@ -119,6 +119,137 @@ pub mod utils {
 
 	pub use assert_count;
 
+	enum Iter<T> {
+		None,
+		Some(T),
+	}
+
+	impl<T> Iterator for Iter<T>
+	where
+		T: Iterator,
+	{
+		type Item = T::Item;
+
+		fn next(&mut self) -> Option<Self::Item> {
+			match self {
+				Iter::None => None,
+				Iter::Some(iter) => iter.next(),
+			}
+		}
+	}
+
+	pub trait EqualUnordered {
+		type TItem;
+
+		fn buffer_eq(&self, rhs: &Self) -> bool;
+		fn buffer_contains(&self, item: &Self::TItem) -> bool;
+		fn items(&self) -> impl Iterator<Item = &Self::TItem>;
+	}
+
+	impl<T> EqualUnordered for Vec<T>
+	where
+		T: PartialEq,
+	{
+		type TItem = T;
+
+		fn buffer_eq(&self, rhs: &Self) -> bool {
+			self.len() == rhs.len()
+		}
+
+		fn buffer_contains(&self, item: &Self::TItem) -> bool {
+			self.contains(item)
+		}
+
+		fn items(&self) -> impl Iterator<Item = &Self::TItem> {
+			self.iter()
+		}
+	}
+
+	impl<T> EqualUnordered for Option<T>
+	where
+		T: EqualUnordered,
+	{
+		type TItem = T::TItem;
+
+		fn buffer_eq(&self, rhs: &Self) -> bool {
+			match (self, rhs) {
+				(None, None) => true,
+				(Some(a), Some(b)) => a.buffer_eq(b),
+				_ => false,
+			}
+		}
+
+		fn buffer_contains(&self, item: &Self::TItem) -> bool {
+			match self {
+				None => false,
+				Some(collection) => collection.buffer_contains(item),
+			}
+		}
+
+		fn items(&self) -> impl Iterator<Item = &Self::TItem> {
+			match self {
+				None => Iter::None,
+				Some(collection) => Iter::Some(collection.items()),
+			}
+		}
+	}
+
+	impl<T, TError> EqualUnordered for Result<T, TError>
+	where
+		T: EqualUnordered,
+		TError: PartialEq,
+	{
+		type TItem = T::TItem;
+
+		fn buffer_eq(&self, rhs: &Self) -> bool {
+			match (self, rhs) {
+				(Err(a), Err(b)) => a == b,
+				(Ok(a), Ok(b)) => a.buffer_eq(b),
+				_ => false,
+			}
+		}
+
+		fn buffer_contains(&self, item: &Self::TItem) -> bool {
+			match self {
+				Err(_) => false,
+				Ok(collection) => collection.buffer_contains(item),
+			}
+		}
+
+		fn items(&self) -> impl Iterator<Item = &Self::TItem> {
+			match self {
+				Err(_) => Iter::None,
+				Ok(collection) => Iter::Some(collection.items()),
+			}
+		}
+	}
+
+	pub fn equal_unordered<TEq: EqualUnordered>(left: &TEq, right: &TEq) -> bool {
+		if !left.buffer_eq(right) {
+			return false;
+		}
+
+		left.items().all(|item| right.buffer_contains(item))
+	}
+
+	#[macro_export]
+	macro_rules! assert_eq_unordered {
+		($left:expr, $right:expr) => {
+			match (&$left, &$right) {
+				(left_val, right_val) => {
+					assert!(
+						$crate::test_tools::utils::equal_unordered(left_val, right_val),
+						"unordered equal failed:\n  left: {}\n right: {}\n",
+						format!("\x1b[31m{:?}\x1b[0m", left_val),
+						format!("\x1b[31m{:?}\x1b[0m", right_val),
+					);
+				}
+			}
+		};
+	}
+
+	pub use assert_eq_unordered;
+
 	pub trait TickTime {
 		fn tick_time(&mut self, delta: Duration);
 	}
