@@ -18,7 +18,7 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use components::{Wall, WallBack, level::Level};
+use components::{WallBack, level::Level};
 use grid_graph::GridGraph;
 use map::cell::MapCell;
 use resources::current_level::CurrentLevel;
@@ -56,7 +56,6 @@ where
 			.add_systems(
 				Update,
 				(
-					Wall::apply_extra_components::<TLights>,
 					WallBack::apply_extra_components::<TLights>,
 					WallLight::apply_extra_components::<TLights>,
 				),
