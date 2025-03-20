@@ -3,6 +3,10 @@ use crate::{
 		floor_cell::FloorCell,
 		quadrants::{
 			CorridorFloor,
+			CorridorFloorCornerInside,
+			CorridorFloorCornerOutside,
+			CorridorFloorForward,
+			CorridorFloorLeft,
 			CorridorWall,
 			CorridorWallCornerInside,
 			CorridorWallCornerOutside,
@@ -88,20 +92,36 @@ impl InsertCellQuadrantComponents for MapCell {
 		differences: HashSet<Quadrant>,
 	) {
 		match self {
-			MapCell::CorridorFloor => entity.insert(CorridorFloor),
+			MapCell::CorridorFloor if differences.matches(CORNER_INNER) => {
+				entity.insert(CorridorFloorCornerInside);
+			}
+			MapCell::CorridorFloor if differences.matches(CORNER_OUTER) => {
+				entity.insert(CorridorFloorCornerOutside);
+			}
+			MapCell::CorridorFloor if differences.contains(&Quadrant::Forward) => {
+				entity.insert(CorridorFloorForward);
+			}
+			MapCell::CorridorFloor if differences.contains(&Quadrant::Left) => {
+				entity.insert(CorridorFloorLeft);
+			}
+			MapCell::CorridorFloor => {
+				entity.insert(CorridorFloor);
+			}
 			MapCell::CorridorWall if differences.matches(CORNER_INNER) => {
-				entity.insert(CorridorWallCornerInside)
+				entity.insert(CorridorWallCornerInside);
 			}
 			MapCell::CorridorWall if differences.matches(CORNER_OUTER) => {
-				entity.insert(CorridorWallCornerOutside)
+				entity.insert(CorridorWallCornerOutside);
 			}
 			MapCell::CorridorWall if differences.contains(&Quadrant::Forward) => {
-				entity.insert(CorridorWallForward)
+				entity.insert(CorridorWallForward);
 			}
 			MapCell::CorridorWall if differences.contains(&Quadrant::Left) => {
-				entity.insert(CorridorWallLeft)
+				entity.insert(CorridorWallLeft);
 			}
-			MapCell::CorridorWall => entity.insert(CorridorWall),
+			MapCell::CorridorWall => {
+				entity.insert(CorridorWall);
+			}
 		};
 	}
 }
