@@ -20,11 +20,9 @@ impl ExtraComponentsDefinition for WallLight {
 	where
 		TLights: HandlesLights,
 	{
-		let model = entity.id();
 		entity.try_insert((
 			WallLight,
 			TLights::responsive_light_bundle::<WallLight>(Responsive {
-				model,
 				range: Units::new(3.5),
 				max: Intensity::new(8000.),
 				change: IntensityChangePerSecond::new(4000.),

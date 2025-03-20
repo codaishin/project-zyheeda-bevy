@@ -15,7 +15,6 @@ use common::{
 		prefab::Prefab,
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
-		try_remove_from::TryRemoveFrom,
 	},
 };
 use std::{any::TypeId, ops::Deref, time::Duration};
@@ -28,15 +27,14 @@ use std::{any::TypeId, ops::Deref, time::Duration};
 	CollidingEntities
 )]
 pub struct ResponsiveLight {
-	pub model: Entity,
 	pub light: Light,
 	pub range: Units,
+	pub max: Intensity,
+	pub change: IntensityChangePerSecond,
 	pub light_on_material: fn() -> StandardMaterial,
 	pub marker_on: TypeId,
 	pub light_off_material: fn() -> StandardMaterial,
 	pub marker_off: TypeId,
-	pub max: Intensity,
-	pub change: IntensityChangePerSecond,
 }
 
 impl ResponsiveLight {
@@ -65,8 +63,12 @@ impl ResponsiveLight {
 	{
 		let delta = time.delta();
 		for (entity, change, responsive, mut light) in &mut lights {
-			let state = apply_change(&mut commands, change, responsive, light.as_mut(), delta);
-			remove_change_component(&mut commands, state, entity);
+			let Some(mut entity) = commands.get_entity(entity) else {
+				continue;
+			};
+
+			let state = apply_change(&mut entity, change, responsive, light.as_mut(), delta);
+			remove_change_component(&mut entity, state);
 		}
 	}
 
@@ -75,7 +77,6 @@ impl ResponsiveLight {
 		TDriver: 'static,
 	{
 		ResponsiveLight {
-			model: data.model,
 			light: data.light,
 			range: data.range,
 			light_on_material: data.light_on_material,
@@ -120,7 +121,7 @@ enum State {
 }
 
 fn apply_change<TLight>(
-	commands: &mut Commands,
+	entity: &mut EntityCommands,
 	change: &ResponsiveLightChange,
 	responsive: &ResponsiveLight,
 	light: &mut TLight,
@@ -130,20 +131,20 @@ where
 	TLight: LightComponent,
 {
 	match change {
-		ResponsiveLightChange::Increase => increase(commands, responsive, light, delta),
-		ResponsiveLightChange::Decrease => decrease(commands, responsive, light, delta),
+		ResponsiveLightChange::Increase => increase(entity, responsive, light, delta),
+		ResponsiveLightChange::Decrease => decrease(entity, responsive, light, delta),
 	}
 }
 
-fn remove_change_component(commands: &mut Commands, state: State, id: Entity) {
+fn remove_change_component(entity: &mut EntityCommands, state: State) {
 	if state != State::Done {
 		return;
 	}
-	commands.try_remove_from::<ResponsiveLightChange>(id);
+	entity.remove::<ResponsiveLightChange>();
 }
 
 fn increase<TLight>(
-	commands: &mut Commands,
+	entity: &mut EntityCommands,
 	responsive: &ResponsiveLight,
 	light: &mut TLight,
 	delta: Duration,
@@ -154,14 +155,14 @@ where
 	let intensity = light.intensity_mut();
 
 	if intensity == &0. {
-		commands.try_insert_on(
-			responsive.model,
-			InsertAsset::shared_id(responsive.light_on_material, responsive.marker_on),
-		);
+		entity.try_insert(InsertAsset::shared_id(
+			responsive.light_on_material,
+			responsive.marker_on,
+		));
 	}
 
 	let change = *responsive.change * delta.as_secs_f32();
-	let max = *responsive.max.deref();
+	let max = *responsive.max;
 	if max - *intensity > change {
 		*intensity += change;
 		return State::Busy;
@@ -173,7 +174,7 @@ where
 }
 
 fn decrease<TLight>(
-	commands: &mut Commands,
+	entity: &mut EntityCommands,
 	responsive: &ResponsiveLight,
 	light: &mut TLight,
 	delta: Duration,
@@ -190,10 +191,10 @@ where
 	}
 
 	*intensity = 0.;
-	commands.try_insert_on(
-		responsive.model,
-		InsertAsset::shared_id(responsive.light_off_material, responsive.marker_off),
-	);
+	entity.try_insert(InsertAsset::shared_id(
+		responsive.light_off_material,
+		responsive.marker_off,
+	));
 
 	State::Done
 }
@@ -265,9 +266,7 @@ mod test_detect_change {
 	fn apply_on() {
 		let mut app = setup();
 		let trigger = app.world_mut().spawn(ResponsiveLightTrigger).id();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: Light::Point(PointLight::default),
 			range: Units::new(0.),
 			light_on_material,
@@ -294,9 +293,7 @@ mod test_detect_change {
 	#[test]
 	fn apply_off() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: Light::Point(PointLight::default),
 			range: Units::new(0.),
 			light_on_material,
@@ -375,9 +372,7 @@ mod test_apply_change {
 	#[test]
 	fn increase_light_intensity() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: arbitrary_light(),
 			range: Units::new(0.),
 			light_on_material,
@@ -408,9 +403,7 @@ mod test_apply_change {
 	#[test]
 	fn increase_light_intensity_scaled_by_delta() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: arbitrary_light(),
 			range: Units::new(0.),
 			light_on_material,
@@ -441,9 +434,7 @@ mod test_apply_change {
 	#[test]
 	fn increase_light_intensity_clamped_at_max() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: arbitrary_light(),
 			range: Units::new(0.),
 			light_on_material,
@@ -474,9 +465,7 @@ mod test_apply_change {
 	#[test]
 	fn set_light_on_material_when_increasing() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: arbitrary_light(),
 			range: Units::new(0.),
 			light_on_material,
@@ -486,11 +475,14 @@ mod test_apply_change {
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
-		app.world_mut().spawn((
-			ResponsiveLightChange::Increase,
-			responsive,
-			_Light { intensity: 0. },
-		));
+		let entity = app
+			.world_mut()
+			.spawn((
+				ResponsiveLightChange::Increase,
+				responsive,
+				_Light { intensity: 0. },
+			))
+			.id();
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -498,7 +490,7 @@ mod test_apply_change {
 		assert_eq!(
 			Some(&InsertAsset::shared::<_MarkerOn>(light_on_material)),
 			app.world()
-				.entity(model)
+				.entity(entity)
 				.get::<InsertAsset<StandardMaterial>>()
 		);
 	}
@@ -506,9 +498,7 @@ mod test_apply_change {
 	#[test]
 	fn do_not_set_light_on_material_when_intensity_not_zero() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: arbitrary_light(),
 			range: Units::new(0.),
 			light_on_material,
@@ -518,11 +508,14 @@ mod test_apply_change {
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
-		app.world_mut().spawn((
-			ResponsiveLightChange::Increase,
-			responsive,
-			_Light { intensity: 42. },
-		));
+		let entity = app
+			.world_mut()
+			.spawn((
+				ResponsiveLightChange::Increase,
+				responsive,
+				_Light { intensity: 42. },
+			))
+			.id();
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -530,7 +523,7 @@ mod test_apply_change {
 		assert_eq!(
 			None,
 			app.world()
-				.entity(model)
+				.entity(entity)
 				.get::<MeshMaterial3d<StandardMaterial>>()
 				.map(|m| &m.0)
 		);
@@ -539,9 +532,7 @@ mod test_apply_change {
 	#[test]
 	fn remove_change_light_when_reached_max() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: arbitrary_light(),
 			range: Units::new(0.),
 			light_on_material,
@@ -572,9 +563,7 @@ mod test_apply_change {
 	#[test]
 	fn do_not_remove_change_light_when_not_reached_max() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: arbitrary_light(),
 			range: Units::new(0.),
 			light_on_material,
@@ -605,9 +594,7 @@ mod test_apply_change {
 	#[test]
 	fn decrease_light_intensity() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: arbitrary_light(),
 			range: Units::new(0.),
 			light_on_material,
@@ -638,9 +625,7 @@ mod test_apply_change {
 	#[test]
 	fn decrease_light_intensity_by_delta() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: arbitrary_light(),
 			range: Units::new(0.),
 			light_on_material,
@@ -671,9 +656,7 @@ mod test_apply_change {
 	#[test]
 	fn set_light_off_material_when_decreasing_to_zero() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: arbitrary_light(),
 			range: Units::new(0.),
 			light_on_material,
@@ -683,11 +666,14 @@ mod test_apply_change {
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
-		app.world_mut().spawn((
-			ResponsiveLightChange::Decrease,
-			responsive,
-			_Light { intensity: 42. },
-		));
+		let entity = app
+			.world_mut()
+			.spawn((
+				ResponsiveLightChange::Decrease,
+				responsive,
+				_Light { intensity: 42. },
+			))
+			.id();
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -695,7 +681,7 @@ mod test_apply_change {
 		assert_eq!(
 			Some(&InsertAsset::shared::<_MarkerOff>(light_off_material)),
 			app.world()
-				.entity(model)
+				.entity(entity)
 				.get::<InsertAsset<StandardMaterial>>()
 		);
 	}
@@ -703,9 +689,7 @@ mod test_apply_change {
 	#[test]
 	fn do_not_set_light_off_material_when_decreasing_above_zero() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: arbitrary_light(),
 			range: Units::new(0.),
 			light_on_material,
@@ -715,11 +699,14 @@ mod test_apply_change {
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
-		app.world_mut().spawn((
-			ResponsiveLightChange::Decrease,
-			responsive,
-			_Light { intensity: 42. },
-		));
+		let entity = app
+			.world_mut()
+			.spawn((
+				ResponsiveLightChange::Decrease,
+				responsive,
+				_Light { intensity: 42. },
+			))
+			.id();
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -727,7 +714,7 @@ mod test_apply_change {
 		assert_eq!(
 			None,
 			app.world()
-				.entity(model)
+				.entity(entity)
 				.get::<MeshMaterial3d<StandardMaterial>>()
 				.map(|m| &m.0)
 		);
@@ -736,9 +723,7 @@ mod test_apply_change {
 	#[test]
 	fn set_light_off_material_when_decreasing_to_below_zero() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: arbitrary_light(),
 			range: Units::new(0.),
 			light_on_material,
@@ -748,11 +733,14 @@ mod test_apply_change {
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
-		app.world_mut().spawn((
-			ResponsiveLightChange::Decrease,
-			responsive,
-			_Light { intensity: 42. },
-		));
+		let entity = app
+			.world_mut()
+			.spawn((
+				ResponsiveLightChange::Decrease,
+				responsive,
+				_Light { intensity: 42. },
+			))
+			.id();
 
 		app.tick_time(Duration::from_secs(1));
 		app.update();
@@ -760,7 +748,7 @@ mod test_apply_change {
 		assert_eq!(
 			Some(&InsertAsset::shared::<_MarkerOff>(light_off_material)),
 			app.world()
-				.entity(model)
+				.entity(entity)
 				.get::<InsertAsset<StandardMaterial>>()
 		);
 	}
@@ -768,9 +756,7 @@ mod test_apply_change {
 	#[test]
 	fn decrease_light_intensity_clamped_at_zero() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: arbitrary_light(),
 			range: Units::new(0.),
 			light_on_material,
@@ -801,9 +787,7 @@ mod test_apply_change {
 	#[test]
 	fn remove_change_light_when_reached_zero() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: arbitrary_light(),
 			range: Units::new(0.),
 			light_on_material,
@@ -834,9 +818,7 @@ mod test_apply_change {
 	#[test]
 	fn do_not_remove_change_light_when_not_reached_zero() {
 		let mut app = setup();
-		let model = app.world_mut().spawn_empty().id();
 		let responsive = ResponsiveLight {
-			model,
 			light: arbitrary_light(),
 			range: Units::new(0.),
 			light_on_material,
@@ -876,7 +858,6 @@ mod test_light_insertion {
 
 	fn responsive(light: Light) -> ResponsiveLight {
 		ResponsiveLight {
-			model: Entity::from_raw(42),
 			light,
 			range: Units::new(0.),
 			light_on_material: StandardMaterial::default,
