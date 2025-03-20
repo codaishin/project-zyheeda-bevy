@@ -1,9 +1,11 @@
 pub mod components;
 
+mod traits;
+
 use bevy::{
 	app::{App, Plugin, Update},
 	ecs::schedule::IntoSystemConfigs,
-	pbr::AmbientLight,
+	pbr::{AmbientLight, DirectionalLight, PointLight, SpotLight},
 	time::Virtual,
 };
 use bevy_rapier3d::geometry::CollidingEntities;
@@ -39,8 +41,11 @@ where
 		app.insert_resource(AmbientLight::NONE).add_systems(
 			Update,
 			(
+				ResponsiveLight::insert_light,
 				ResponsiveLight::detect_change::<CollidingEntities>,
-				ResponsiveLight::apply_change::<Virtual>,
+				ResponsiveLight::apply_change::<Virtual, PointLight>,
+				ResponsiveLight::apply_change::<Virtual, SpotLight>,
+				ResponsiveLight::apply_change::<Virtual, DirectionalLight>,
 			)
 				.chain(),
 		);
