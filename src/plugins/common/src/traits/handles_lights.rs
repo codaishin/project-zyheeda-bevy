@@ -16,10 +16,17 @@ pub trait HandlesLights {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Responsive {
 	pub model: Entity,
-	pub light: Entity,
+	pub light: Light,
 	pub range: Units,
 	pub light_on_material: fn() -> StandardMaterial,
 	pub light_off_material: fn() -> StandardMaterial,
 	pub max: Intensity,
 	pub change: IntensityChangePerSecond,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Light {
+	Point(fn() -> PointLight),
+	Spot(fn() -> SpotLight),
+	Directional(fn() -> DirectionalLight),
 }
