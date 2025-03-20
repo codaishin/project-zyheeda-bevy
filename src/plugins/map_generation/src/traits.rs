@@ -3,7 +3,6 @@ pub(crate) mod insert_cell_components;
 pub(crate) mod insert_cell_quadrant_components;
 pub(crate) mod is_walkable;
 pub(crate) mod key_mapper;
-pub(crate) mod light;
 pub(crate) mod load_map;
 pub(crate) mod to_subdivided;
 pub(crate) mod wall;

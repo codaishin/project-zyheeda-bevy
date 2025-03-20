@@ -18,15 +18,12 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use components::{WallBack, grid::Grid};
+use components::{WallBack, floor_light::FloorLight, grid::Grid, wall_light::WallLight};
 use grid_graph::GridGraph;
 use map::cell::MapCell;
 use std::marker::PhantomData;
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
-use traits::{
-	light::wall::WallLight,
-	load_map::{LoadMap, LoadMapAsset},
-};
+use traits::load_map::{LoadMap, LoadMapAsset};
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -57,6 +54,7 @@ where
 				(
 					WallBack::apply_extra_components::<TLights>,
 					WallLight::apply_extra_components::<TLights>,
+					FloorLight::apply_extra_components::<TLights>,
 				),
 			)
 			.add_systems(Update, unlit_material);
