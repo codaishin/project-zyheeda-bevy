@@ -45,8 +45,9 @@ mod tests {
 
 	impl HandlesLights for _Lights {
 		type TResponsiveLightBundle = ();
-
 		type TResponsiveLightTrigger = ();
+
+		const DEFAULT_LIGHT: Srgba = Srgba::BLACK;
 
 		fn responsive_light_trigger() -> Self::TResponsiveLightTrigger {
 			panic!("SHOULD NOT BE CALLED")

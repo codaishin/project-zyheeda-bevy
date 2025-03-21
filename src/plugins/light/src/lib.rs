@@ -1,24 +1,24 @@
 pub mod components;
 
+mod systems;
 mod traits;
 
-use bevy::{
-	app::{App, Plugin, Update},
-	ecs::schedule::IntoSystemConfigs,
-	pbr::{AmbientLight, DirectionalLight, PointLight, SpotLight},
-	time::Virtual,
-};
+use bevy::{color::palettes::css::WHITE, prelude::*};
 use bevy_rapier3d::geometry::CollidingEntities;
-use common::traits::{
-	handles_lights::{HandlesLights, Responsive},
-	prefab::RegisterPrefab,
-	thread_safe::ThreadSafe,
+use common::{
+	states::game_state::GameState,
+	traits::{
+		handles_lights::{HandlesLights, Responsive},
+		prefab::RegisterPrefab,
+		thread_safe::ThreadSafe,
+	},
 };
 use components::{
 	responsive_light::ResponsiveLight,
 	responsive_light_trigger::ResponsiveLightTrigger,
 };
 use std::marker::PhantomData;
+use systems::setup_light::setup_light;
 
 pub struct LightPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -38,7 +38,11 @@ where
 	fn build(&self, app: &mut App) {
 		TPrefabs::register_prefab::<ResponsiveLight>(app);
 
-		app.insert_resource(AmbientLight::NONE).add_systems(
+		app.add_systems(
+			OnEnter(GameState::Loading),
+			setup_light(Self::DEFAULT_LIGHT),
+		)
+		.add_systems(
 			Update,
 			(
 				ResponsiveLight::insert_light,
@@ -55,6 +59,8 @@ where
 impl<TDependencies> HandlesLights for LightPlugin<TDependencies> {
 	type TResponsiveLightBundle = ResponsiveLight;
 	type TResponsiveLightTrigger = ResponsiveLightTrigger;
+
+	const DEFAULT_LIGHT: Srgba = WHITE;
 
 	fn responsive_light_bundle<TDriver>(responsive_data: Responsive) -> Self::TResponsiveLightBundle
 	where

@@ -5,6 +5,8 @@ pub trait HandlesLights {
 	type TResponsiveLightBundle: Bundle;
 	type TResponsiveLightTrigger: Bundle;
 
+	const DEFAULT_LIGHT: Srgba;
+
 	fn responsive_light_trigger() -> Self::TResponsiveLightTrigger;
 	fn responsive_light_bundle<TShareMaterials>(
 		responsive_light: Responsive,
