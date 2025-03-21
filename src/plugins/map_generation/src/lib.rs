@@ -18,7 +18,7 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use components::{WallBack, floor_light::FloorLight, grid::Grid, wall_light::WallLight};
+use components::{floor_light::FloorLight, grid::Grid, wall_back::WallBack, wall_light::WallLight};
 use grid_graph::GridGraph;
 use map::cell::MapCell;
 use std::marker::PhantomData;

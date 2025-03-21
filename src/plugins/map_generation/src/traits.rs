@@ -5,7 +5,6 @@ pub(crate) mod is_walkable;
 pub(crate) mod key_mapper;
 pub(crate) mod load_map;
 pub(crate) mod to_subdivided;
-pub(crate) mod wall;
 
 use bevy::prelude::*;
 use common::traits::{handles_lights::HandlesLights, load_asset::Path, thread_safe::ThreadSafe};

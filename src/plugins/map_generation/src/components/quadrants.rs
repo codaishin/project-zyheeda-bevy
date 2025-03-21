@@ -36,6 +36,10 @@ pub(crate) struct CorridorWallLeft;
 pub(crate) struct CorridorWallCornerOutside;
 
 #[derive(Component, Debug, PartialEq)]
+#[require(AssetModel(|| asset("wall_corner_outside_diagonal")))]
+pub(crate) struct CorridorWallCornerOutsideDiagonal;
+
+#[derive(Component, Debug, PartialEq)]
 #[require(AssetModel(|| asset("wall_corner_inside")))]
 pub(crate) struct CorridorWallCornerInside;
 

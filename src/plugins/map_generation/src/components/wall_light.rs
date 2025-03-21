@@ -7,7 +7,10 @@ pub(crate) struct WallLight;
 
 impl ExtraComponentsDefinition for WallLight {
 	fn target_names() -> Vec<String> {
-		vec!["WallLightData".to_owned()]
+		WALL_PARTS
+			.iter()
+			.map(|part| format!("Wall{part}LightData"))
+			.collect()
 	}
 
 	fn insert_bundle<TLights>(entity: &mut EntityCommands)
@@ -24,3 +27,11 @@ impl ExtraComponentsDefinition for WallLight {
 		));
 	}
 }
+
+const WALL_PARTS: &[&str] = &[
+	"Forward",
+	"Left",
+	"CornerOutside",
+	"CornerOutsideDiagonal",
+	"CornerInside",
+];

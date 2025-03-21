@@ -1,11 +1,11 @@
-use bevy::{pbr::light_consts::lux::HALLWAY, prelude::*};
+use bevy::prelude::*;
 
 pub(crate) fn setup_light(default_color: Srgba) -> impl Fn(Commands, ResMut<AmbientLight>) {
 	move |mut commands, mut ambient_light| {
 		*ambient_light = AmbientLight::NONE;
 		let light = DirectionalLight {
 			shadows_enabled: false,
-			illuminance: HALLWAY,
+			illuminance: 100.,
 			color: Color::from(default_color),
 			..default()
 		};

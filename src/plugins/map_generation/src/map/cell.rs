@@ -10,6 +10,7 @@ use crate::{
 			CorridorWall,
 			CorridorWallCornerInside,
 			CorridorWallCornerOutside,
+			CorridorWallCornerOutsideDiagonal,
 			CorridorWallForward,
 			CorridorWallLeft,
 		},
@@ -92,10 +93,14 @@ impl InsertCellQuadrantComponents for MapCell {
 		differences: HashSet<Quadrant>,
 	) {
 		match self {
+			// Corridor Floor
 			MapCell::CorridorFloor if differences.matches(CORNER_INNER) => {
 				entity.insert(CorridorFloorCornerInside);
 			}
 			MapCell::CorridorFloor if differences.matches(CORNER_OUTER) => {
+				entity.insert(CorridorFloorCornerOutside);
+			}
+			MapCell::CorridorFloor if differences.matches(CORNER_OUTER_DIAGONAL) => {
 				entity.insert(CorridorFloorCornerOutside);
 			}
 			MapCell::CorridorFloor if differences.contains(&Quadrant::Forward) => {
@@ -107,11 +112,15 @@ impl InsertCellQuadrantComponents for MapCell {
 			MapCell::CorridorFloor => {
 				entity.insert(CorridorFloor);
 			}
+			// Corridor Wall
 			MapCell::CorridorWall if differences.matches(CORNER_INNER) => {
 				entity.insert(CorridorWallCornerInside);
 			}
 			MapCell::CorridorWall if differences.matches(CORNER_OUTER) => {
 				entity.insert(CorridorWallCornerOutside);
+			}
+			MapCell::CorridorWall if differences.matches(CORNER_OUTER_DIAGONAL) => {
+				entity.insert(CorridorWallCornerOutsideDiagonal);
 			}
 			MapCell::CorridorWall if differences.contains(&Quadrant::Forward) => {
 				entity.insert(CorridorWallForward);
@@ -128,6 +137,7 @@ impl InsertCellQuadrantComponents for MapCell {
 
 const CORNER_INNER: [Quadrant; 1] = [Quadrant::Diagonal];
 const CORNER_OUTER: [Quadrant; 3] = [Quadrant::Left, Quadrant::Diagonal, Quadrant::Forward];
+const CORNER_OUTER_DIAGONAL: [Quadrant; 2] = [Quadrant::Left, Quadrant::Forward];
 
 #[cfg(test)]
 mod tests {
