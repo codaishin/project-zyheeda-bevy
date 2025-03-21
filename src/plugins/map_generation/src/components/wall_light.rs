@@ -29,8 +29,10 @@ impl ExtraComponentsDefinition for WallLight {
 }
 
 const WALL_PARTS: &[&str] = &[
+	"",
 	"Forward",
 	"Left",
+	"Corner",
 	"CornerOutside",
 	"CornerOutsideDiagonal",
 	"CornerInside",
