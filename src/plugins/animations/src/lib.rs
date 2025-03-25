@@ -50,7 +50,14 @@ impl RegisterAnimations for AnimationsPlugin {
 			Startup,
 			TAgent::init_animation_clips::<AnimationGraph, AssetServer>,
 		)
-		.add_systems(Labels::PREFAB_INSTANTIATION.label(), TailBone::discover)
+		.add_systems(
+			Update,
+			(
+				TailBone::discover,
+				TailBone::set_transforms,
+				TailBone::print_axis,
+			),
+		)
 		.add_systems(
 			Labels::PREFAB_INSTANTIATION.label(),
 			(
