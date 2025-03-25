@@ -11,12 +11,12 @@ use bevy::{ecs::query::QuerySingleError, prelude::*};
 use std::collections::HashMap;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Name(Self::name))]
+#[require(Name(Self::name), Transform, Visibility)]
 pub(crate) struct HalfOffsetGrid;
 
 impl HalfOffsetGrid {
-	fn name() -> String {
-		"HalfOffsetGrid".to_owned()
+	const fn name() -> &'static str {
+		"HalfOffsetGrid"
 	}
 
 	#[allow(clippy::type_complexity)]
