@@ -15,8 +15,8 @@ use std::collections::HashMap;
 pub(crate) struct HalfOffsetGrid;
 
 impl HalfOffsetGrid {
-	fn name() -> String {
-		"HalfOffsetGrid".to_owned()
+	const fn name() -> &'static str {
+		"HalfOffsetGrid"
 	}
 
 	#[allow(clippy::type_complexity)]
