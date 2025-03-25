@@ -12,6 +12,7 @@ use crate::systems::{
 use bevy::prelude::*;
 use common::{
 	labels::Labels,
+	states::game_state::GameState,
 	systems::{
 		insert_required::{InsertOn, InsertRequired},
 		track_components::TrackComponentInSelfAndChildren,
@@ -23,7 +24,10 @@ use common::{
 		RegisterAnimations,
 	},
 };
-use components::animation_dispatch::AnimationDispatch;
+use components::{
+	animation_dispatch::AnimationDispatch,
+	tail::{Tail, TailBone},
+};
 use resource::AnimationData;
 use systems::play_animation_clip::PlayAnimationClip;
 
@@ -39,11 +43,14 @@ impl RegisterAnimations for AnimationsPlugin {
 			TAgent::configure_animation_dispatch(agent, &mut dispatch);
 			dispatch
 		};
-
+		app.add_systems(OnEnter(GameState::Loading), |mut commands: Commands| {
+			commands.spawn(Tail);
+		});
 		app.add_systems(
 			Startup,
 			TAgent::init_animation_clips::<AnimationGraph, AssetServer>,
 		)
+		.add_systems(Labels::PREFAB_INSTANTIATION.label(), TailBone::discover)
 		.add_systems(
 			Labels::PREFAB_INSTANTIATION.label(),
 			(
