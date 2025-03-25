@@ -27,7 +27,8 @@ impl Plugin for SavegamePlugin {
 		let writer = FileWriter::to_destination("./quick_save.json");
 		let context = Arc::new(Mutex::new(SaveContext::new(writer)));
 
-		app.add_systems(Startup, Register::update_context(context.clone()).pipe(log))
+		app.init_resource::<Register>()
+			.add_systems(Startup, Register::update_context(context.clone()).pipe(log))
 			.add_systems(
 				OnEnter(GameState::Saving),
 				(
