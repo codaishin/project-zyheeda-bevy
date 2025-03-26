@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContext;
 use common::{
 	attributes::health::Health,
+	components::AssetModel,
 	effects::deal_damage::DealDamage,
 	states::mouse_context::MouseContext,
 	tools::slot_key::SlotKey,
@@ -76,6 +77,9 @@ where
 		TGameStates::on_starting_new_game(app, Player::spawn);
 		TAnimation::register_animations::<Player>(app);
 		TPrefabs::with_dependency::<(TInteractions, TLights)>().register_prefab::<Player>(app);
+
+		app.world_mut()
+			.spawn(AssetModel::path("models/player2.glb#Scene0"));
 
 		app.init_state::<MouseContext>()
 			.init_resource::<CamRay>()
