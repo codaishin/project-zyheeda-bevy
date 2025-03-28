@@ -137,10 +137,10 @@ pub(crate) struct SubMeshEssenceSlots;
 impl ChildName<SubMeshEssenceSlots> for SlotKey {
 	fn child_name(&self) -> &'static str {
 		match self {
-			SlotKey::TopHand(Side::Left) => "ArmTopLeftModel",
-			SlotKey::TopHand(Side::Right) => "ArmTopRightModel",
-			SlotKey::BottomHand(Side::Left) => "ArmBottomLeftModel",
-			SlotKey::BottomHand(Side::Right) => "ArmBottomRightModel",
+			SlotKey::TopHand(Side::Left) => "ArmTopLeftData",
+			SlotKey::TopHand(Side::Right) => "ArmTopRightData",
+			SlotKey::BottomHand(Side::Left) => "ArmBottomLeftData",
+			SlotKey::BottomHand(Side::Right) => "ArmBottomRightData",
 		}
 	}
 }
