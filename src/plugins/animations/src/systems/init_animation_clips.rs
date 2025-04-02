@@ -2,17 +2,25 @@ use crate::{resource::AnimationData, traits::LoadAnimationAssets};
 use bevy::prelude::*;
 use common::{
 	resources::Shared,
-	traits::{animation::GetAnimationDefinitions, load_asset::Path},
+	traits::{
+		animation::{AnimationMaskRoot, GetAnimationDefinitions},
+		load_asset::Path,
+	},
 };
 
-impl<TAgent> InitAnimationClips for TAgent where
-	TAgent: GetAnimationDefinitions + Sync + Send + 'static
+impl<TAgent> InitAnimationClips for TAgent
+where
+	TAgent: GetAnimationDefinitions + Sync + Send + 'static,
+	for<'a> AnimationMask: From<&'a Self::TAnimationMask>,
+	for<'a> AnimationMaskRoot: From<&'a Self::TAnimationMask>,
 {
 }
 
 pub(crate) trait InitAnimationClips
 where
 	Self: GetAnimationDefinitions + Sync + Send + Sized + 'static,
+	for<'a> AnimationMask: From<&'a Self::TAnimationMask>,
+	for<'a> AnimationMaskRoot: From<&'a Self::TAnimationMask>,
 {
 	fn init_animation_clips<
 		TAnimationGraph: Asset + Sync + Send + 'static,
@@ -38,12 +46,13 @@ fn to_animation_mask<TAnimationMask>(
 	(mask, path): (Option<TAnimationMask>, Path),
 ) -> (AnimationMask, Path)
 where
-	TAnimationMask: Into<AnimationMask>,
+	for<'a> AnimationMask: From<&'a TAnimationMask>,
 {
-	(
-		mask.map(TAnimationMask::into).unwrap_or(AnimationMask::MAX),
-		path,
-	)
+	let mask = mask
+		.map(|mask| AnimationMask::from(&mask))
+		.unwrap_or(AnimationMask::MAX);
+
+	(mask, path)
 }
 
 #[cfg(test)]
@@ -58,7 +67,12 @@ mod tests {
 	use common::{
 		resources::Shared,
 		test_tools::utils::SingleThreadedApp,
-		traits::{load_asset::Path, nested_mock::NestedMocks},
+		traits::{
+			animation::AnimationMaskRoot,
+			load_asset::Path,
+			nested_mock::NestedMocks,
+			thread_safe::ThreadSafe,
+		},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -72,6 +86,20 @@ mod tests {
 	#[derive(Debug, PartialEq, Clone, TypePath, Asset)]
 	struct _AnimationGraph;
 
+	struct _Mask(AnimationMask);
+
+	impl From<&_Mask> for AnimationMask {
+		fn from(_Mask(mask): &_Mask) -> Self {
+			*mask
+		}
+	}
+
+	impl From<&_Mask> for AnimationMaskRoot {
+		fn from(_: &_Mask) -> Self {
+			panic!("SHOULD NOT BE USED HERE")
+		}
+	}
+
 	#[automock]
 	impl LoadAnimationAssets<_AnimationGraph, AnimationNodeIndex> for _Server {
 		fn load_animation_assets(
@@ -82,7 +110,12 @@ mod tests {
 		}
 	}
 
-	fn setup<TAgent: GetAnimationDefinitions + Sync + Send + 'static>(server: _Server) -> App {
+	fn setup<TAgent>(server: _Server) -> App
+	where
+		TAgent: GetAnimationDefinitions + ThreadSafe,
+		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
+		for<'a> AnimationMaskRoot: From<&'a TAgent::TAnimationMask>,
+	{
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(server);
 		app.insert_resource(Assets::<_AnimationGraph>::default());
@@ -102,12 +135,12 @@ mod tests {
 		const MASK_2: AnimationMask = 0b0010;
 
 		impl GetAnimationDefinitions for _Agent {
-			type TAnimationMask = AnimationMask;
+			type TAnimationMask = _Mask;
 
-			fn animation_definitions() -> Vec<(Option<AnimationMask>, Path)> {
+			fn animation_definitions() -> Vec<(Option<_Mask>, Path)> {
 				vec![
-					(Some(MASK_1), Path::from("path/a")),
-					(Some(MASK_2), Path::from("path/b")),
+					(Some(_Mask(MASK_1)), Path::from("path/a")),
+					(Some(_Mask(MASK_2)), Path::from("path/b")),
 					(None, Path::from("path/c")),
 				]
 			}
@@ -150,9 +183,9 @@ mod tests {
 		struct _Agent;
 
 		impl GetAnimationDefinitions for _Agent {
-			type TAnimationMask = AnimationMask;
+			type TAnimationMask = _Mask;
 
-			fn animation_definitions() -> Vec<(Option<AnimationMask>, Path)> {
+			fn animation_definitions() -> Vec<(Option<_Mask>, Path)> {
 				vec![]
 			}
 		}

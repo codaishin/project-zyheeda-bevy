@@ -6,6 +6,7 @@ pub mod traits;
 mod resource;
 
 use crate::systems::{
+	discover_animation_mask_bones::DiscoverMaskChains,
 	init_animation_clips::InitAnimationClips,
 	init_animation_graph::InitAnimationGraph,
 };
@@ -17,6 +18,7 @@ use common::{
 		track_components::TrackComponentInSelfAndChildren,
 	},
 	traits::animation::{
+		AnimationMaskRoot,
 		ConfigureNewAnimationDispatch,
 		GetAnimationDefinitions,
 		HasAnimationsDispatch,
@@ -33,6 +35,8 @@ impl RegisterAnimations for AnimationsPlugin {
 	fn register_animations<TAgent>(app: &mut App)
 	where
 		TAgent: Component + GetAnimationDefinitions + ConfigureNewAnimationDispatch,
+		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
+		for<'a> AnimationMaskRoot: From<&'a TAgent::TAnimationMask>,
 	{
 		let dispatch = |agent: &TAgent| {
 			let mut dispatch = AnimationDispatch::default();
@@ -49,6 +53,7 @@ impl RegisterAnimations for AnimationsPlugin {
 			(
 				InsertOn::<TAgent>::required::<AnimationDispatch>(dispatch),
 				TAgent::init_animation_graph_and_transitions::<AnimationDispatch>,
+				TAgent::set_animation_mask_bones,
 			),
 		);
 	}

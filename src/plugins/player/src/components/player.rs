@@ -16,6 +16,7 @@ use common::{
 	traits::{
 		animation::{
 			Animation,
+			AnimationMaskRoot,
 			AnimationPriority,
 			ConfigureNewAnimationDispatch,
 			GetAnimationDefinitions,
@@ -128,13 +129,24 @@ impl Player {
 
 pub struct PlayerAnimationMask(SlotKey);
 
-impl From<PlayerAnimationMask> for AnimationMask {
-	fn from(PlayerAnimationMask(slot): PlayerAnimationMask) -> Self {
+impl From<&PlayerAnimationMask> for AnimationMask {
+	fn from(PlayerAnimationMask(slot): &PlayerAnimationMask) -> Self {
 		match slot {
 			SlotKey::TopHand(Side::Left) => 1 << 1,
 			SlotKey::TopHand(Side::Right) => 1 << 2,
 			SlotKey::BottomHand(Side::Left) => 1 << 3,
 			SlotKey::BottomHand(Side::Right) => 1 << 4,
+		}
+	}
+}
+
+impl From<&PlayerAnimationMask> for AnimationMaskRoot {
+	fn from(PlayerAnimationMask(slot): &PlayerAnimationMask) -> Self {
+		match slot {
+			SlotKey::TopHand(Side::Left) => AnimationMaskRoot(Name::from("top_shoulder.L")),
+			SlotKey::TopHand(Side::Right) => AnimationMaskRoot(Name::from("top_shoulder.R")),
+			SlotKey::BottomHand(Side::Left) => AnimationMaskRoot(Name::from("bottom_shoulder.L")),
+			SlotKey::BottomHand(Side::Right) => AnimationMaskRoot(Name::from("bottom_shoulder.R")),
 		}
 	}
 }

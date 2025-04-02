@@ -37,6 +37,18 @@ pub struct AnimationDispatch<TAnimation = Animation> {
 	stack: (Entry<TAnimation>, Entry<TAnimation>, Entry<TAnimation>),
 }
 
+#[cfg(test)]
+impl AnimationDispatch {
+	pub(crate) fn to<const N: usize>(entities: [Entity; N]) -> Self {
+		let mut dispatch = Self::default();
+		for entity in entities {
+			dispatch.animation_players.insert(entity);
+		}
+
+		dispatch
+	}
+}
+
 impl<TAnimation> AnimationDispatch<TAnimation> {
 	fn slot<TLayer>(&mut self, layer: TLayer) -> &mut Entry<TAnimation>
 	where
