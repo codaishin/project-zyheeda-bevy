@@ -18,7 +18,7 @@ use common::{
 			Animation,
 			AnimationPriority,
 			ConfigureNewAnimationDispatch,
-			GetAnimationPaths,
+			GetAnimationDefinitions,
 			PlayMode,
 			StartAnimation,
 			StopAnimation,
@@ -26,6 +26,7 @@ use common::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_effect::HandlesEffect,
 		handles_lights::HandlesLights,
+		iteration::IterFinite,
 		load_asset::Path,
 		prefab::Prefab,
 	},
@@ -91,19 +92,15 @@ impl Player {
 	}
 
 	pub fn skill_animation(slot: &SlotKey) -> Animation {
+		Animation::new(Player::skill_animation_path(slot), PlayMode::Repeat)
+	}
+
+	pub fn skill_animation_path(slot: &SlotKey) -> Path {
 		match slot {
-			SlotKey::TopHand(Side::Left) => {
-				Animation::new(Player::animation_path("Animation6"), PlayMode::Repeat)
-			}
-			SlotKey::TopHand(Side::Right) => {
-				Animation::new(Player::animation_path("Animation7"), PlayMode::Repeat)
-			}
-			SlotKey::BottomHand(Side::Left) => {
-				Animation::new(Player::animation_path("Animation4"), PlayMode::Repeat)
-			}
-			SlotKey::BottomHand(Side::Right) => {
-				Animation::new(Player::animation_path("Animation5"), PlayMode::Repeat)
-			}
+			SlotKey::TopHand(Side::Left) => Player::animation_path("Animation6"),
+			SlotKey::TopHand(Side::Right) => Player::animation_path("Animation7"),
+			SlotKey::BottomHand(Side::Left) => Player::animation_path("Animation4"),
+			SlotKey::BottomHand(Side::Right) => Player::animation_path("Animation5"),
 		}
 	}
 
@@ -129,18 +126,37 @@ impl Player {
 	}
 }
 
-impl GetAnimationPaths for Player {
-	fn animation_paths() -> Vec<Path> {
-		vec![
-			Player::animation_path("Animation0"),
-			Player::animation_path("Animation1"),
-			Player::animation_path("Animation2"),
-			Player::animation_path("Animation3"),
-			Player::animation_path("Animation4"),
-			Player::animation_path("Animation5"),
-			Player::animation_path("Animation6"),
-			Player::animation_path("Animation7"),
-		]
+pub struct PlayerAnimationMask(SlotKey);
+
+impl From<PlayerAnimationMask> for AnimationMask {
+	fn from(PlayerAnimationMask(slot): PlayerAnimationMask) -> Self {
+		match slot {
+			SlotKey::TopHand(Side::Left) => 1 << 1,
+			SlotKey::TopHand(Side::Right) => 1 << 2,
+			SlotKey::BottomHand(Side::Left) => 1 << 3,
+			SlotKey::BottomHand(Side::Right) => 1 << 4,
+		}
+	}
+}
+
+impl GetAnimationDefinitions for Player {
+	type TAnimationMask = PlayerAnimationMask;
+
+	fn animation_definitions() -> Vec<(Option<PlayerAnimationMask>, Path)> {
+		SlotKey::iterator()
+			.map(|slot_key| {
+				(
+					Some(PlayerAnimationMask(slot_key)),
+					Player::skill_animation_path(&slot_key),
+				)
+			})
+			.chain([
+				(None, Player::animation_path("Animation0")),
+				(None, Player::animation_path("Animation1")),
+				(None, Player::animation_path("Animation2")),
+				(None, Player::animation_path("Animation3")),
+			])
+			.collect()
 	}
 }
 

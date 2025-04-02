@@ -18,7 +18,7 @@ use common::{
 	},
 	traits::animation::{
 		ConfigureNewAnimationDispatch,
-		GetAnimationPaths,
+		GetAnimationDefinitions,
 		HasAnimationsDispatch,
 		RegisterAnimations,
 	},
@@ -32,7 +32,7 @@ pub struct AnimationsPlugin;
 impl RegisterAnimations for AnimationsPlugin {
 	fn register_animations<TAgent>(app: &mut App)
 	where
-		TAgent: Component + GetAnimationPaths + ConfigureNewAnimationDispatch,
+		TAgent: Component + GetAnimationDefinitions + ConfigureNewAnimationDispatch,
 	{
 		let dispatch = |agent: &TAgent| {
 			let mut dispatch = AnimationDispatch::default();

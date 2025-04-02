@@ -7,7 +7,10 @@ use common::traits::load_asset::Path;
 use std::collections::HashMap;
 
 pub(crate) trait LoadAnimationAssets<TGraph, TIndex> {
-	fn load_animation_assets(&self, paths: &[Path]) -> (TGraph, HashMap<Path, TIndex>);
+	fn load_animation_assets(
+		&self,
+		animations: &[(AnimationMask, Path)],
+	) -> (TGraph, HashMap<Path, TIndex>);
 }
 
 pub trait HighestPriorityAnimation<TAnimation> {

@@ -1,15 +1,18 @@
 use crate::{resource::AnimationData, traits::LoadAnimationAssets};
-use bevy::{
-	asset::{Asset, Assets},
-	prelude::{AnimationNodeIndex, Commands, Res, ResMut, Resource},
+use bevy::prelude::*;
+use common::{
+	resources::Shared,
+	traits::{animation::GetAnimationDefinitions, load_asset::Path},
 };
-use common::{resources::Shared, traits::animation::GetAnimationPaths};
 
-impl<TAgent> InitAnimationClips for TAgent where TAgent: GetAnimationPaths + Sync + Send + 'static {}
+impl<TAgent> InitAnimationClips for TAgent where
+	TAgent: GetAnimationDefinitions + Sync + Send + 'static
+{
+}
 
 pub(crate) trait InitAnimationClips
 where
-	Self: GetAnimationPaths + Sync + Send + Sized + 'static,
+	Self: GetAnimationDefinitions + Sync + Send + Sized + 'static,
 {
 	fn init_animation_clips<
 		TAnimationGraph: Asset + Sync + Send + 'static,
@@ -19,13 +22,28 @@ where
 		server: Res<TServer>,
 		mut graphs: ResMut<Assets<TAnimationGraph>>,
 	) {
-		let paths = Self::animation_paths();
+		let paths = Self::animation_definitions()
+			.into_iter()
+			.map(to_animation_mask)
+			.collect::<Vec<_>>();
 		let (graph, indices) = server.load_animation_assets(&paths);
 		let graph = graphs.add(graph);
 
 		commands.insert_resource(Shared::from(indices));
 		commands.insert_resource(AnimationData::<Self, TAnimationGraph>::new(graph));
 	}
+}
+
+fn to_animation_mask<TAnimationMask>(
+	(mask, path): (Option<TAnimationMask>, Path),
+) -> (AnimationMask, Path)
+where
+	TAnimationMask: Into<AnimationMask>,
+{
+	(
+		mask.map(TAnimationMask::into).unwrap_or(AnimationMask::MAX),
+		path,
+	)
 }
 
 #[cfg(test)]
@@ -58,13 +76,13 @@ mod tests {
 	impl LoadAnimationAssets<_AnimationGraph, AnimationNodeIndex> for _Server {
 		fn load_animation_assets(
 			&self,
-			paths: &[Path],
+			animations: &[(AnimationMask, Path)],
 		) -> (_AnimationGraph, HashMap<Path, AnimationNodeIndex>) {
-			self.mock.load_animation_assets(paths)
+			self.mock.load_animation_assets(animations)
 		}
 	}
 
-	fn setup<TAgent: GetAnimationPaths + Sync + Send + 'static>(server: _Server) -> App {
+	fn setup<TAgent: GetAnimationDefinitions + Sync + Send + 'static>(server: _Server) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(server);
 		app.insert_resource(Assets::<_AnimationGraph>::default());
@@ -80,14 +98,28 @@ mod tests {
 	fn store_animation_clips() {
 		struct _Agent;
 
-		impl GetAnimationPaths for _Agent {
-			fn animation_paths() -> Vec<Path> {
-				vec![Path::from("path/a"), Path::from("path/b")]
+		const MASK_1: AnimationMask = 0b0001;
+		const MASK_2: AnimationMask = 0b0010;
+
+		impl GetAnimationDefinitions for _Agent {
+			type TAnimationMask = AnimationMask;
+
+			fn animation_definitions() -> Vec<(Option<AnimationMask>, Path)> {
+				vec![
+					(Some(MASK_1), Path::from("path/a")),
+					(Some(MASK_2), Path::from("path/b")),
+					(None, Path::from("path/c")),
+				]
 			}
 		}
+
 		let mut app = setup::<_Agent>(_Server::new().with_mock(|mock| {
 			mock.expect_load_animation_assets()
-				.with(eq(vec![Path::from("path/a"), Path::from("path/b")]))
+				.with(eq(vec![
+					(MASK_1, Path::from("path/a")),
+					(MASK_2, Path::from("path/b")),
+					(AnimationMask::MAX, Path::from("path/c")),
+				]))
 				.return_const((
 					_AnimationGraph,
 					HashMap::from([
@@ -117,8 +149,10 @@ mod tests {
 		#[derive(Debug, PartialEq)]
 		struct _Agent;
 
-		impl GetAnimationPaths for _Agent {
-			fn animation_paths() -> Vec<Path> {
+		impl GetAnimationDefinitions for _Agent {
+			type TAnimationMask = AnimationMask;
+
+			fn animation_definitions() -> Vec<(Option<AnimationMask>, Path)> {
 				vec![]
 			}
 		}

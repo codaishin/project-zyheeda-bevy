@@ -20,8 +20,10 @@ pub trait StopAnimation {
 		TLayer: Into<AnimationPriority> + 'static;
 }
 
-pub trait GetAnimationPaths {
-	fn animation_paths() -> Vec<Path>;
+pub trait GetAnimationDefinitions {
+	type TAnimationMask: Into<AnimationMask>;
+
+	fn animation_definitions() -> Vec<(Option<Self::TAnimationMask>, Path)>;
 }
 
 pub trait HasAnimationsDispatch {
@@ -38,7 +40,7 @@ pub trait ConfigureNewAnimationDispatch {
 pub trait RegisterAnimations: HasAnimationsDispatch {
 	fn register_animations<TAgent>(app: &mut App)
 	where
-		TAgent: Component + GetAnimationPaths + ConfigureNewAnimationDispatch;
+		TAgent: Component + GetAnimationDefinitions + ConfigureNewAnimationDispatch;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
