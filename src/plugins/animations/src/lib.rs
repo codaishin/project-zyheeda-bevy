@@ -9,6 +9,7 @@ use crate::systems::{
 	discover_animation_mask_bones::DiscoverMaskChains,
 	init_animation_clips::InitAnimationClips,
 	init_animation_graph::InitAnimationGraph,
+	remove_unused_animation_targets::RemoveUnusedAnimationTargets,
 };
 use bevy::prelude::*;
 use common::{
@@ -54,7 +55,9 @@ impl RegisterAnimations for AnimationsPlugin {
 				InsertOn::<TAgent>::required::<AnimationDispatch>(dispatch),
 				TAgent::init_animation_graph_and_transitions::<AnimationDispatch>,
 				TAgent::set_animation_mask_bones,
-			),
+				TAgent::remove_unused_animation_targets,
+			)
+				.chain(),
 		);
 	}
 }
