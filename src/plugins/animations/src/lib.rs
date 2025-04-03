@@ -18,7 +18,7 @@ use common::{
 		track_components::TrackComponentInSelfAndChildren,
 	},
 	traits::animation::{
-		AnimationMaskRoot,
+		AnimationMaskDefinition,
 		ConfigureNewAnimationDispatch,
 		GetAnimationDefinitions,
 		HasAnimationsDispatch,
@@ -36,7 +36,7 @@ impl RegisterAnimations for AnimationsPlugin {
 	where
 		TAgent: Component + GetAnimationDefinitions + ConfigureNewAnimationDispatch,
 		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
-		for<'a> AnimationMaskRoot: From<&'a TAgent::TAnimationMask>,
+		for<'a> AnimationMaskDefinition: From<&'a TAgent::TAnimationMask>,
 	{
 		let dispatch = |agent: &TAgent| {
 			let mut dispatch = AnimationDispatch::default();

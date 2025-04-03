@@ -1,6 +1,7 @@
-use super::load_asset::Path;
+use super::{iteration::IterFinite, load_asset::Path};
 use crate::tools::{Last, This};
 use bevy::prelude::*;
+use std::collections::HashMap;
 
 pub enum AnimationPriority {
 	High,
@@ -23,15 +24,23 @@ pub trait StopAnimation {
 pub trait GetAnimationDefinitions
 where
 	for<'a> AnimationMask: From<&'a Self::TAnimationMask>,
-	for<'a> AnimationMaskRoot: From<&'a Self::TAnimationMask>,
+	for<'a> AnimationMaskDefinition: From<&'a Self::TAnimationMask>,
 {
-	type TAnimationMask;
+	type TAnimationMask: IterFinite;
 
-	fn animation_definitions() -> Vec<(Option<Self::TAnimationMask>, Path)>;
+	fn animations() -> HashMap<Path, AnimationMask>;
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct AnimationMaskRoot(pub Name);
+pub enum AnimationMaskDefinition {
+	Mask {
+		from_root: Name,
+		exclude_roots: Vec<Name>,
+	},
+	Leaf {
+		from_root: Name,
+	},
+}
 
 pub trait HasAnimationsDispatch {
 	type TAnimationDispatch: StartAnimation + StopAnimation + Component;
@@ -49,7 +58,7 @@ pub trait RegisterAnimations: HasAnimationsDispatch {
 	where
 		TAgent: Component + GetAnimationDefinitions + ConfigureNewAnimationDispatch,
 		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
-		for<'a> AnimationMaskRoot: From<&'a TAgent::TAnimationMask>;
+		for<'a> AnimationMaskDefinition: From<&'a TAgent::TAnimationMask>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
