@@ -26,10 +26,6 @@ pub trait RepeatAnimation<TIndex> {
 	fn repeat(&mut self, index: TIndex);
 }
 
-pub trait AnimationChainUpdate {
-	fn chain_update(&mut self, last: &Self);
-}
-
 pub trait AnimationPlayers<'a>
 where
 	Self::TIter: Iterator<Item = Entity>,

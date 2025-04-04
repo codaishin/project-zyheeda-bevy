@@ -1,5 +1,4 @@
 use super::{iteration::IterFinite, load_asset::Path};
-use crate::tools::{Last, This};
 use bevy::prelude::*;
 use std::collections::HashMap;
 
@@ -71,15 +70,10 @@ pub enum PlayMode {
 pub struct Animation {
 	pub path: Path,
 	pub play_mode: PlayMode,
-	pub update_fn: Option<fn(This<Animation>, Last<Animation>)>,
 }
 
 impl Animation {
 	pub fn new(path: Path, play_mode: PlayMode) -> Self {
-		Self {
-			path,
-			play_mode,
-			update_fn: None,
-		}
+		Self { path, play_mode }
 	}
 }
