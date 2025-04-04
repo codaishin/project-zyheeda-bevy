@@ -10,15 +10,17 @@ use common::{
 	tools::{
 		Units,
 		UnitsPerSecond,
+		animation_key::AnimationKey,
 		collider_radius::ColliderRadius,
 		slot_key::{Side, SlotKey},
 	},
 	traits::{
 		animation::{
 			Animation,
+			AnimationMaskDefinition,
 			AnimationPriority,
 			ConfigureNewAnimationDispatch,
-			GetAnimationPaths,
+			GetAnimationDefinitions,
 			PlayMode,
 			StartAnimation,
 			StopAnimation,
@@ -26,10 +28,12 @@ use common::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_effect::HandlesEffect,
 		handles_lights::HandlesLights,
+		iteration::{Iter, IterFinite},
 		load_asset::Path,
 		prefab::Prefab,
 	},
 };
+use std::collections::HashMap;
 
 #[derive(Component, Default, Debug, PartialEq)]
 #[require(
@@ -86,25 +90,43 @@ impl Player {
 		GravityScale(0.)
 	}
 
-	pub fn animation_path(animation_name: &str) -> Path {
+	fn anim(animation_name: &str) -> Path {
 		Path::from(Self::MODEL_PATH.to_owned() + "#" + animation_name)
 	}
 
-	pub fn skill_animation(slot: &SlotKey) -> Animation {
+	fn skill_animation_mask_roots(slot: SlotKey) -> Name {
 		match slot {
-			SlotKey::TopHand(Side::Left) => {
-				Animation::new(Player::animation_path("Animation6"), PlayMode::Repeat)
-			}
-			SlotKey::TopHand(Side::Right) => {
-				Animation::new(Player::animation_path("Animation7"), PlayMode::Repeat)
-			}
-			SlotKey::BottomHand(Side::Left) => {
-				Animation::new(Player::animation_path("Animation4"), PlayMode::Repeat)
-			}
-			SlotKey::BottomHand(Side::Right) => {
-				Animation::new(Player::animation_path("Animation5"), PlayMode::Repeat)
-			}
+			SlotKey::TopHand(Side::Left) => Name::from("top_shoulder.L"),
+			SlotKey::TopHand(Side::Right) => Name::from("top_shoulder.R"),
+			SlotKey::BottomHand(Side::Left) => Name::from("bottom_shoulder.L"),
+			SlotKey::BottomHand(Side::Right) => Name::from("bottom_shoulder.R"),
 		}
+	}
+
+	pub fn animation_paths(animation: AnimationKey<SlotKey>) -> Path {
+		match animation {
+			AnimationKey::T => Player::anim("Animation0"),
+			AnimationKey::Idle => Player::anim("Animation1"),
+			AnimationKey::Walk => Player::anim("Animation2"),
+			AnimationKey::Run => Player::anim("Animation3"),
+			AnimationKey::Other(SlotKey::TopHand(Side::Left)) => Player::anim("Animation6"),
+			AnimationKey::Other(SlotKey::TopHand(Side::Right)) => Player::anim("Animation7"),
+			AnimationKey::Other(SlotKey::BottomHand(Side::Left)) => Player::anim("Animation4"),
+			AnimationKey::Other(SlotKey::BottomHand(Side::Right)) => Player::anim("Animation5"),
+		}
+	}
+
+	fn play_animations(animation_key: AnimationKey<SlotKey>) -> (Path, AnimationMask) {
+		(
+			Player::animation_paths(animation_key),
+			match animation_key {
+				AnimationKey::T => PlayerAnimationMask::all_masks(),
+				AnimationKey::Idle => PlayerAnimationMask::all_masks(),
+				AnimationKey::Walk => PlayerAnimationMask::all_masks(),
+				AnimationKey::Run => PlayerAnimationMask::all_masks(),
+				AnimationKey::Other(slot) => AnimationMask::from(PlayerAnimationMask::Slot(slot)),
+			},
+		)
 	}
 
 	fn movement() -> PlayerMovement {
@@ -113,13 +135,11 @@ impl Player {
 			collider_radius: Self::collider_radius(),
 			fast: Config {
 				speed: UnitsPerSecond::new(1.5).into(),
-				animation: Animation::new(Self::animation_path("Animation3"), PlayMode::Repeat)
-					.into(),
+				animation: Animation::new(Self::anim("Animation3"), PlayMode::Repeat).into(),
 			},
 			slow: Config {
 				speed: UnitsPerSecond::new(0.75).into(),
-				animation: Animation::new(Self::animation_path("Animation2"), PlayMode::Repeat)
-					.into(),
+				animation: Animation::new(Self::anim("Animation2"), PlayMode::Repeat).into(),
 			},
 		}
 	}
@@ -129,18 +149,80 @@ impl Player {
 	}
 }
 
-impl GetAnimationPaths for Player {
-	fn animation_paths() -> Vec<Path> {
-		vec![
-			Player::animation_path("Animation0"),
-			Player::animation_path("Animation1"),
-			Player::animation_path("Animation2"),
-			Player::animation_path("Animation3"),
-			Player::animation_path("Animation4"),
-			Player::animation_path("Animation5"),
-			Player::animation_path("Animation6"),
-			Player::animation_path("Animation7"),
-		]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum PlayerAnimationMask {
+	Body,
+	Slot(SlotKey),
+}
+
+impl PlayerAnimationMask {
+	fn all_masks() -> AnimationMask {
+		PlayerAnimationMask::iterator()
+			.map(|mask| AnimationMask::from(&mask))
+			.fold(AnimationMask::default(), |a, b| a | b)
+	}
+}
+
+impl IterFinite for PlayerAnimationMask {
+	fn iterator() -> Iter<Self> {
+		Iter(Some(Self::Body))
+	}
+
+	fn next(current: &Iter<Self>) -> Option<Self> {
+		let Iter(current) = current;
+		match current.as_ref()? {
+			PlayerAnimationMask::Body => Some(Self::Slot(SlotKey::iterator().0?)),
+			PlayerAnimationMask::Slot(slot_key) => {
+				SlotKey::next(&Iter(Some(*slot_key))).map(Self::Slot)
+			}
+		}
+	}
+}
+impl From<&PlayerAnimationMask> for AnimationMask {
+	fn from(mask: &PlayerAnimationMask) -> Self {
+		match mask {
+			PlayerAnimationMask::Body => 1 << 0,
+			PlayerAnimationMask::Slot(SlotKey::TopHand(Side::Left)) => 1 << 1,
+			PlayerAnimationMask::Slot(SlotKey::TopHand(Side::Right)) => 1 << 2,
+			PlayerAnimationMask::Slot(SlotKey::BottomHand(Side::Left)) => 1 << 3,
+			PlayerAnimationMask::Slot(SlotKey::BottomHand(Side::Right)) => 1 << 4,
+		}
+	}
+}
+
+impl From<PlayerAnimationMask> for AnimationMask {
+	fn from(mask: PlayerAnimationMask) -> Self {
+		Self::from(&mask)
+	}
+}
+
+impl From<&PlayerAnimationMask> for AnimationMaskDefinition {
+	fn from(mask: &PlayerAnimationMask) -> Self {
+		match mask {
+			PlayerAnimationMask::Body => AnimationMaskDefinition::Mask {
+				from_root: Name::from("metarig"),
+				exclude_roots: SlotKey::iterator()
+					.map(Player::skill_animation_mask_roots)
+					.collect(),
+			},
+			PlayerAnimationMask::Slot(slot) => AnimationMaskDefinition::Leaf {
+				from_root: Player::skill_animation_mask_roots(*slot),
+			},
+		}
+	}
+}
+
+impl From<PlayerAnimationMask> for AnimationMaskDefinition {
+	fn from(mask: PlayerAnimationMask) -> Self {
+		Self::from(&mask)
+	}
+}
+
+impl GetAnimationDefinitions for Player {
+	type TAnimationMask = PlayerAnimationMask;
+
+	fn animations() -> HashMap<Path, AnimationMask> {
+		HashMap::from_iter(AnimationKey::<SlotKey>::iterator().map(Player::play_animations))
 	}
 }
 
@@ -159,7 +241,7 @@ impl ConfigureNewAnimationDispatch for Player {
 	) {
 		new_animation_dispatch.start_animation(
 			Idle,
-			Animation::new(Player::animation_path("Animation1"), PlayMode::Repeat),
+			Animation::new(Player::anim("Animation1"), PlayMode::Repeat),
 		);
 	}
 }
@@ -184,5 +266,23 @@ where
 			));
 
 		Ok(())
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn iterate_player_animation_mask() {
+		assert_eq!(
+			[PlayerAnimationMask::Body]
+				.into_iter()
+				.chain(SlotKey::iterator().map(PlayerAnimationMask::Slot))
+				.collect::<Vec<_>>(),
+			PlayerAnimationMask::iterator()
+				.take(10) // prevent infinite loop when broken
+				.collect::<Vec<_>>()
+		)
 	}
 }

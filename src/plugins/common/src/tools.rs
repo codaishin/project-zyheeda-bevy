@@ -1,4 +1,5 @@
 pub mod aggro_range;
+pub mod animation_key;
 pub mod attack_range;
 pub mod change;
 pub mod collider_info;

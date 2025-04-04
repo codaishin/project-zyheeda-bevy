@@ -1,9 +1,9 @@
 use super::player::Player;
 use bevy::prelude::*;
 use common::{
-	tools::slot_key::SlotKey,
+	tools::{animation_key::AnimationKey, slot_key::SlotKey},
 	traits::{
-		animation::{AnimationPriority, StartAnimation, StopAnimation},
+		animation::{Animation, AnimationPriority, PlayMode, StartAnimation, StopAnimation},
 		try_remove_from::TryRemoveFrom,
 	},
 };
@@ -26,9 +26,13 @@ impl SkillAnimation {
 	{
 		for (entity, apply, mut dispatch) in &mut players {
 			match apply {
-				SkillAnimation::Start(slot) => {
-					dispatch.start_animation(Skill, Player::skill_animation(slot))
-				}
+				SkillAnimation::Start(slot) => dispatch.start_animation(
+					Skill,
+					Animation::new(
+						Player::animation_paths(AnimationKey::Other(*slot)),
+						PlayMode::Repeat,
+					),
+				),
 				SkillAnimation::Stop => {
 					dispatch.stop_animation(Skill);
 				}
@@ -118,7 +122,13 @@ mod tests {
 			SkillAnimation::Start(slot),
 			_Dispatch::new().with_mock(|mock| {
 				mock.expect_start_animation()
-					.with(eq(Skill), eq(Player::skill_animation(&slot)))
+					.with(
+						eq(Skill),
+						eq(Animation::new(
+							Player::animation_paths(AnimationKey::Other(slot)),
+							PlayMode::Repeat,
+						)),
+					)
 					.times(1)
 					.return_const(());
 			}),

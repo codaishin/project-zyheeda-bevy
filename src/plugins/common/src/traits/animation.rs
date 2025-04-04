@@ -1,6 +1,6 @@
-use super::load_asset::Path;
-use crate::tools::{Last, This};
+use super::{iteration::IterFinite, load_asset::Path};
 use bevy::prelude::*;
+use std::collections::HashMap;
 
 pub enum AnimationPriority {
 	High,
@@ -20,8 +20,25 @@ pub trait StopAnimation {
 		TLayer: Into<AnimationPriority> + 'static;
 }
 
-pub trait GetAnimationPaths {
-	fn animation_paths() -> Vec<Path>;
+pub trait GetAnimationDefinitions
+where
+	for<'a> AnimationMask: From<&'a Self::TAnimationMask>,
+	for<'a> AnimationMaskDefinition: From<&'a Self::TAnimationMask>,
+{
+	type TAnimationMask: IterFinite;
+
+	fn animations() -> HashMap<Path, AnimationMask>;
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum AnimationMaskDefinition {
+	Mask {
+		from_root: Name,
+		exclude_roots: Vec<Name>,
+	},
+	Leaf {
+		from_root: Name,
+	},
 }
 
 pub trait HasAnimationsDispatch {
@@ -38,7 +55,9 @@ pub trait ConfigureNewAnimationDispatch {
 pub trait RegisterAnimations: HasAnimationsDispatch {
 	fn register_animations<TAgent>(app: &mut App)
 	where
-		TAgent: Component + GetAnimationPaths + ConfigureNewAnimationDispatch;
+		TAgent: Component + GetAnimationDefinitions + ConfigureNewAnimationDispatch,
+		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
+		for<'a> AnimationMaskDefinition: From<&'a TAgent::TAnimationMask>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -51,15 +70,10 @@ pub enum PlayMode {
 pub struct Animation {
 	pub path: Path,
 	pub play_mode: PlayMode,
-	pub update_fn: Option<fn(This<Animation>, Last<Animation>)>,
 }
 
 impl Animation {
 	pub fn new(path: Path, play_mode: PlayMode) -> Self {
-		Self {
-			path,
-			play_mode,
-			update_fn: None,
-		}
+		Self { path, play_mode }
 	}
 }

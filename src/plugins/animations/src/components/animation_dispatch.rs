@@ -1,5 +1,4 @@
 use crate::traits::{
-	AnimationChainUpdate,
 	AnimationPlayers,
 	AnimationPlayersWithoutTransitions,
 	HighestPriorityAnimation,
@@ -37,6 +36,18 @@ pub struct AnimationDispatch<TAnimation = Animation> {
 	stack: (Entry<TAnimation>, Entry<TAnimation>, Entry<TAnimation>),
 }
 
+#[cfg(test)]
+impl AnimationDispatch {
+	pub(crate) fn to<const N: usize>(entities: [Entity; N]) -> Self {
+		let mut dispatch = Self::default();
+		for entity in entities {
+			dispatch.animation_players.insert(entity);
+		}
+
+		dispatch
+	}
+}
+
 impl<TAnimation> AnimationDispatch<TAnimation> {
 	fn slot<TLayer>(&mut self, layer: TLayer) -> &mut Entry<TAnimation>
 	where
@@ -49,16 +60,11 @@ impl<TAnimation> AnimationDispatch<TAnimation> {
 		}
 	}
 
-	fn start_animation<TLayer>(&mut self, layer: TLayer, mut animation: TAnimation)
+	fn start_animation<TLayer>(&mut self, layer: TLayer, animation: TAnimation)
 	where
 		TLayer: Into<AnimationPriority>,
-		TAnimation: AnimationChainUpdate,
 	{
 		let slot = self.slot(layer);
-
-		if let Entry::Some(last) | Entry::Obsolete(last) = slot {
-			animation.chain_update(last);
-		}
 
 		*slot = Entry::Some(animation);
 	}
@@ -201,12 +207,6 @@ mod tests {
 		}
 	}
 
-	impl AnimationChainUpdate for _Animation {
-		fn chain_update(&mut self, last: &Self) {
-			self.chain_update_calls.push(last.clone())
-		}
-	}
-
 	struct _Low;
 
 	impl From<_Low> for AnimationPriority {
@@ -290,29 +290,6 @@ mod tests {
 		dispatch.stop_animation(_High);
 
 		assert_eq!(None, dispatch.highest_priority_animation());
-	}
-
-	#[test]
-	fn call_chain_update() {
-		let mut dispatch = AnimationDispatch::default();
-		dispatch.start_animation(_High, _Animation::new("last"));
-		dispatch.start_animation(_High, _Animation::new("mock"));
-
-		let mock = dispatch.highest_priority_animation().unwrap();
-
-		assert_eq!(vec![_Animation::new("last")], mock.chain_update_calls);
-	}
-
-	#[test]
-	fn call_chain_update_on_marked_obsolete() {
-		let mut dispatch = AnimationDispatch::default();
-		dispatch.start_animation(_High, _Animation::new("last"));
-		dispatch.stop_animation(_High);
-		dispatch.start_animation(_High, _Animation::new("mock"));
-
-		let mock = dispatch.highest_priority_animation().unwrap();
-
-		assert_eq!(vec![_Animation::new("last")], mock.chain_update_calls);
 	}
 
 	#[test]

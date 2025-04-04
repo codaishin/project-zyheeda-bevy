@@ -1,4 +1,3 @@
-pub mod animation;
 pub mod components;
 pub mod systems;
 pub mod traits;
@@ -6,8 +5,10 @@ pub mod traits;
 mod resource;
 
 use crate::systems::{
+	discover_animation_mask_bones::DiscoverMaskChains,
 	init_animation_clips::InitAnimationClips,
 	init_animation_graph::InitAnimationGraph,
+	remove_unused_animation_targets::RemoveUnusedAnimationTargets,
 };
 use bevy::prelude::*;
 use common::{
@@ -17,8 +18,9 @@ use common::{
 		track_components::TrackComponentInSelfAndChildren,
 	},
 	traits::animation::{
+		AnimationMaskDefinition,
 		ConfigureNewAnimationDispatch,
-		GetAnimationPaths,
+		GetAnimationDefinitions,
 		HasAnimationsDispatch,
 		RegisterAnimations,
 	},
@@ -32,7 +34,9 @@ pub struct AnimationsPlugin;
 impl RegisterAnimations for AnimationsPlugin {
 	fn register_animations<TAgent>(app: &mut App)
 	where
-		TAgent: Component + GetAnimationPaths + ConfigureNewAnimationDispatch,
+		TAgent: Component + GetAnimationDefinitions + ConfigureNewAnimationDispatch,
+		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
+		for<'a> AnimationMaskDefinition: From<&'a TAgent::TAnimationMask>,
 	{
 		let dispatch = |agent: &TAgent| {
 			let mut dispatch = AnimationDispatch::default();
@@ -49,7 +53,14 @@ impl RegisterAnimations for AnimationsPlugin {
 			(
 				InsertOn::<TAgent>::required::<AnimationDispatch>(dispatch),
 				TAgent::init_animation_graph_and_transitions::<AnimationDispatch>,
-			),
+				TAgent::set_animation_mask_bones,
+				TAgent::remove_unused_animation_targets,
+			)
+				.chain(),
+		)
+		.add_systems(
+			Update,
+			AnimationDispatch::play_animation_clip_via::<&mut AnimationPlayer, TAgent>,
 		);
 	}
 }
@@ -60,13 +71,7 @@ impl HasAnimationsDispatch for AnimationsPlugin {
 
 impl Plugin for AnimationsPlugin {
 	fn build(&self, app: &mut App) {
-		type AnimationQuery<'a> = (Mut<'a, AnimationPlayer>, Mut<'a, AnimationTransitions>);
-
 		app.add_systems(
-			Update,
-			AnimationDispatch::play_animation_clip_via::<AnimationQuery>,
-		)
-		.add_systems(
 			PostUpdate,
 			(
 				AnimationDispatch::track_in_self_and_children::<AnimationPlayer>().system(),

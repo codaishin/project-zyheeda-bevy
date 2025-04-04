@@ -1,3 +1,4 @@
+pub(crate) mod animation_player;
 pub(crate) mod asset_server;
 pub(crate) mod player_idle;
 pub(crate) mod tuple_animation_player_transitions;
@@ -7,7 +8,7 @@ use common::traits::load_asset::Path;
 use std::collections::HashMap;
 
 pub(crate) trait LoadAnimationAssets<TGraph, TIndex> {
-	fn load_animation_assets(&self, paths: &[Path]) -> (TGraph, HashMap<Path, TIndex>);
+	fn load_animation_assets(&self, animations: Vec<Path>) -> (TGraph, HashMap<Path, TIndex>);
 }
 
 pub trait HighestPriorityAnimation<TAnimation> {
@@ -24,10 +25,6 @@ pub trait ReplayAnimation<TIndex> {
 
 pub trait RepeatAnimation<TIndex> {
 	fn repeat(&mut self, index: TIndex);
-}
-
-pub trait AnimationChainUpdate {
-	fn chain_update(&mut self, last: &Self);
 }
 
 pub trait AnimationPlayers<'a>

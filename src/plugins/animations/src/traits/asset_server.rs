@@ -1,19 +1,17 @@
 use super::LoadAnimationAssets;
-use bevy::{
-	asset::AssetServer,
-	prelude::{AnimationGraph, AnimationNodeIndex},
-};
+use bevy::prelude::*;
 use common::traits::load_asset::Path;
 use std::collections::HashMap;
 
 impl LoadAnimationAssets<AnimationGraph, AnimationNodeIndex> for AssetServer {
 	fn load_animation_assets(
 		&self,
-		paths: &[Path],
+		animations: Vec<Path>,
 	) -> (AnimationGraph, HashMap<Path, AnimationNodeIndex>) {
 		let mut graph = AnimationGraph::default();
-		let load_clip = load_clip(self, &mut graph);
-		let animations = paths.iter().map(load_clip).collect();
+		let blend_node = graph.add_additive_blend(1., graph.root);
+		let load_clip = load_clip(self, &mut graph, blend_node);
+		let animations = animations.into_iter().map(load_clip).collect();
 
 		(graph, animations)
 	}
@@ -22,10 +20,11 @@ impl LoadAnimationAssets<AnimationGraph, AnimationNodeIndex> for AssetServer {
 fn load_clip<'a>(
 	server: &'a AssetServer,
 	graph: &'a mut AnimationGraph,
-) -> impl FnMut(&Path) -> (Path, AnimationNodeIndex) + 'a {
-	|path| {
+	blend_node: AnimationNodeIndex,
+) -> impl FnMut(Path) -> (Path, AnimationNodeIndex) + 'a {
+	move |path| {
 		let clip = server.load(path.clone());
-		let index = graph.add_clip(clip, 1., graph.root);
-		(path.clone(), index)
+		let index = graph.add_clip(clip, 1., blend_node);
+		(path, index)
 	}
 }
