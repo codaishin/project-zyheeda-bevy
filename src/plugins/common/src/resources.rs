@@ -2,7 +2,11 @@ pub mod key_map;
 pub mod language_server;
 
 use bevy::prelude::*;
-use std::{collections::HashMap, fmt::Debug, hash::Hash};
+use std::{
+	collections::{HashMap, hash_map::Values},
+	fmt::Debug,
+	hash::Hash,
+};
 
 #[derive(Resource)]
 pub struct Shared<TKey: Eq + Hash, T: Clone> {
@@ -40,6 +44,10 @@ impl<TKey: Eq + Hash, T: Clone> Default for Shared<TKey, T> {
 impl<TKey: Eq + Hash, T: Clone> Shared<TKey, T> {
 	pub fn get(&self, key: &TKey) -> Option<&T> {
 		self.map.get(key)
+	}
+
+	pub fn values(&self) -> Values<TKey, T> {
+		self.map.values()
 	}
 }
 

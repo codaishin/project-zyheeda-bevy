@@ -57,6 +57,10 @@ impl RegisterAnimations for AnimationsPlugin {
 				TAgent::remove_unused_animation_targets,
 			)
 				.chain(),
+		)
+		.add_systems(
+			Update,
+			AnimationDispatch::play_animation_clip_via::<&mut AnimationPlayer, TAgent>,
 		);
 	}
 }
@@ -67,13 +71,7 @@ impl HasAnimationsDispatch for AnimationsPlugin {
 
 impl Plugin for AnimationsPlugin {
 	fn build(&self, app: &mut App) {
-		type AnimationQuery<'a> = (Mut<'a, AnimationPlayer>, Mut<'a, AnimationTransitions>);
-
 		app.add_systems(
-			Update,
-			AnimationDispatch::play_animation_clip_via::<AnimationQuery>,
-		)
-		.add_systems(
 			PostUpdate,
 			(
 				AnimationDispatch::track_in_self_and_children::<AnimationPlayer>().system(),

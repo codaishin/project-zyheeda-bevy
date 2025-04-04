@@ -1,3 +1,4 @@
+pub(crate) mod animation_player;
 pub(crate) mod asset_server;
 pub(crate) mod player_idle;
 pub(crate) mod tuple_animation_player_transitions;
