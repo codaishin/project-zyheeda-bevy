@@ -33,11 +33,13 @@ where
 mod tests {
 	use super::*;
 	use bevy::prelude::{App, Update};
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
+	use common::{
+		test_tools::utils::{SingleThreadedApp, new_handle},
+		traits::nested_mock::NestedMocks,
+	};
 	use macros::NestedMocks;
 	use mockall::mock;
 	use std::{collections::VecDeque, ops::DerefMut};
-	use uuid::Uuid;
 
 	#[derive(Component)]
 	struct _Agent;
@@ -80,12 +82,6 @@ mod tests {
 		}
 	}
 
-	fn new_handle<T: Asset>() -> Handle<T> {
-		Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		})
-	}
-
 	fn setup(animation_data: AnimationData<_Agent>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
@@ -100,7 +96,10 @@ mod tests {
 	#[test]
 	fn add_animation_graph() {
 		let animation_graph_handle = new_handle();
-		let mut app = setup(AnimationData::new(animation_graph_handle.clone()));
+		let mut app = setup(AnimationData::new(
+			animation_graph_handle.clone(),
+			default(),
+		));
 		let animation_player = app.world_mut().spawn(AnimationPlayer::default()).id();
 		app.world_mut().spawn((
 			_Agent,
@@ -122,7 +121,7 @@ mod tests {
 
 	#[test]
 	fn add_animation_transitions() {
-		let mut app = setup(AnimationData::new(new_handle()));
+		let mut app = setup(AnimationData::new(new_handle(), default()));
 		let animation_player = app.world_mut().spawn(AnimationPlayer::default()).id();
 		app.world_mut().spawn((
 			_Agent,
@@ -141,7 +140,7 @@ mod tests {
 
 	#[test]
 	fn do_not_add_components_when_no_agent() {
-		let mut app = setup(AnimationData::new(new_handle()));
+		let mut app = setup(AnimationData::new(new_handle(), default()));
 		let animation_player = app.world_mut().spawn(AnimationPlayer::default()).id();
 		app.world_mut().spawn(_Dispatch::new().with_mock(|mock| {
 			mock.expect_animation_players_without_transition()
@@ -163,7 +162,7 @@ mod tests {
 
 	#[test]
 	fn add_components_only_once() {
-		let mut app = setup(AnimationData::new(new_handle()));
+		let mut app = setup(AnimationData::new(new_handle(), default()));
 		let animation_player = app.world_mut().spawn(AnimationPlayer::default()).id();
 		app.world_mut().spawn((
 			_Agent,
@@ -194,7 +193,7 @@ mod tests {
 
 	#[test]
 	fn add_components_again_when_dispatch_mutably_dereferenced() {
-		let mut app = setup(AnimationData::new(new_handle()));
+		let mut app = setup(AnimationData::new(new_handle(), default()));
 		let animation_player = app.world_mut().spawn(AnimationPlayer::default()).id();
 		let agent = app
 			.world_mut()
@@ -233,7 +232,7 @@ mod tests {
 
 	#[test]
 	fn add_none_when_agent_not_tracked_in_animation_dispatch() {
-		let mut app = setup(AnimationData::new(new_handle()));
+		let mut app = setup(AnimationData::new(new_handle(), default()));
 		let animation_player = app.world_mut().spawn(AnimationPlayer::default()).id();
 		app.world_mut().spawn((
 			_Agent,
