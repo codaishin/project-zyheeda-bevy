@@ -11,12 +11,15 @@ pub(crate) trait LoadAnimationAssets<TGraph, TIndex> {
 	fn load_animation_assets(&self, animations: Vec<Path>) -> (TGraph, HashMap<Path, TIndex>);
 }
 
-pub trait HighestPriorityAnimation<TAnimation> {
-	fn highest_priority_animation(&self) -> Option<TAnimation>;
-}
+pub trait GetActiveAnimations<TAnimation> {
+	type TIter<'a>: Iterator<Item = &'a TAnimation>
+	where
+		Self: 'a,
+		TAnimation: 'a;
 
-pub trait GetAnimations<TAnimation> {
-	fn get_animations(&self, priority: AnimationPriority) -> Vec<TAnimation>;
+	fn get_active_animations<TPriority>(&self, priority: TPriority) -> Self::TIter<'_>
+	where
+		TPriority: Into<AnimationPriority> + 'static;
 }
 
 pub trait IsPlaying<TIndex> {

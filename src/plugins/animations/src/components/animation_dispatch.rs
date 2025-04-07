@@ -1,9 +1,4 @@
-use crate::traits::{
-	AnimationPlayers,
-	AnimationPlayersWithoutTransitions,
-	GetAnimations,
-	HighestPriorityAnimation,
-};
+use crate::traits::{AnimationPlayers, AnimationPlayersWithoutTransitions, GetActiveAnimations};
 use bevy::prelude::*;
 use common::traits::{
 	animation::{Animation, AnimationPriority, StartAnimation, StopAnimation},
@@ -12,29 +7,22 @@ use common::traits::{
 use std::{
 	collections::{HashSet, hash_set::Iter},
 	fmt::Debug,
+	hash::Hash,
 	iter::Cloned,
-	mem,
 };
 
-#[derive(Default, Debug, PartialEq)]
-enum Entry<TAnimation> {
-	#[default]
-	None,
-	Some(TAnimation),
-	Obsolete(TAnimation),
-}
-
-impl<TAnimation> Entry<TAnimation> {
-	fn take(&mut self) -> Entry<TAnimation> {
-		mem::replace(self, Entry::None)
-	}
-}
-
 #[derive(Component, Debug, PartialEq)]
-pub struct AnimationDispatch<TAnimation = Animation> {
+pub struct AnimationDispatch<TAnimation = Animation>
+where
+	TAnimation: Eq + Hash,
+{
 	pub(crate) animation_players: HashSet<Entity>,
 	animation_transitions: HashSet<Entity>,
-	stack: (Entry<TAnimation>, Entry<TAnimation>, Entry<TAnimation>),
+	stack: (
+		HashSet<TAnimation>,
+		HashSet<TAnimation>,
+		HashSet<TAnimation>,
+	),
 }
 
 #[cfg(test)]
@@ -49,8 +37,11 @@ impl AnimationDispatch {
 	}
 }
 
-impl<TAnimation> AnimationDispatch<TAnimation> {
-	fn slot_mut<TLayer>(&mut self, layer: TLayer) -> &mut Entry<TAnimation>
+impl<TAnimation> AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
+	fn slot_mut<TLayer>(&mut self, layer: TLayer) -> &mut HashSet<TAnimation>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
@@ -61,7 +52,7 @@ impl<TAnimation> AnimationDispatch<TAnimation> {
 		}
 	}
 
-	fn slot<TLayer>(&self, layer: TLayer) -> &Entry<TAnimation>
+	fn slot<TLayer>(&self, layer: TLayer) -> &HashSet<TAnimation>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
@@ -76,13 +67,14 @@ impl<TAnimation> AnimationDispatch<TAnimation> {
 	where
 		TLayer: Into<AnimationPriority>,
 	{
-		let slot = self.slot_mut(layer);
-
-		*slot = Entry::Some(animation);
+		self.slot_mut(layer).insert(animation);
 	}
 }
 
-impl<TAnimation> Default for AnimationDispatch<TAnimation> {
+impl<TAnimation> Default for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	fn default() -> Self {
 		Self {
 			animation_players: default(),
@@ -162,29 +154,21 @@ impl Iterator for IterWithoutTransitions<'_> {
 	}
 }
 
-impl<TAnimation> HighestPriorityAnimation<TAnimation> for AnimationDispatch<TAnimation>
+impl<TAnimation> GetActiveAnimations<TAnimation> for AnimationDispatch<TAnimation>
 where
-	TAnimation: Clone,
+	TAnimation: Clone + Eq + Hash,
 {
-	fn highest_priority_animation(&self) -> Option<TAnimation> {
-		match &self.stack {
-			(Entry::Some(animation), ..) => Some(animation.clone()),
-			(_, Entry::Some(animation), _) => Some(animation.clone()),
-			(.., Entry::Some(animation)) => Some(animation.clone()),
-			_ => None,
-		}
-	}
-}
+	type TIter<'a>
+		= Iter<'a, TAnimation>
+	where
+		Self: 'a,
+		TAnimation: 'a;
 
-impl<TAnimation> GetAnimations<TAnimation> for AnimationDispatch<TAnimation>
-where
-	TAnimation: Clone,
-{
-	fn get_animations(&self, priority: AnimationPriority) -> Vec<TAnimation> {
-		match self.slot(priority) {
-			Entry::Some(animation) => vec![animation.clone()],
-			_ => vec![],
-		}
+	fn get_active_animations<TPriority>(&self, priority: TPriority) -> Self::TIter<'_>
+	where
+		TPriority: Into<AnimationPriority>,
+	{
+		self.slot(priority).iter()
 	}
 }
 
@@ -197,17 +181,15 @@ impl StartAnimation for AnimationDispatch {
 	}
 }
 
-impl<TAnimation> StopAnimation for AnimationDispatch<TAnimation> {
+impl<TAnimation> StopAnimation for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	fn stop_animation<TLayer>(&mut self, layer: TLayer)
 	where
 		TLayer: Into<AnimationPriority>,
 	{
-		let slot = self.slot_mut(layer);
-
-		*slot = match slot.take() {
-			Entry::Some(animation) => Entry::Obsolete(animation),
-			_ => Entry::None,
-		}
+		self.slot_mut(layer).clear();
 	}
 }
 
@@ -216,162 +198,127 @@ mod tests {
 	use super::*;
 	use bevy::prelude::default;
 
-	#[derive(Default, Debug, PartialEq, Clone)]
+	#[derive(Default, Debug, PartialEq, Eq, Hash, Clone)]
 	struct _Animation {
 		name: &'static str,
-		chain_update_calls: Vec<_Animation>,
 	}
 
 	impl _Animation {
 		fn new(name: &'static str) -> Self {
-			Self {
-				name,
-				chain_update_calls: default(),
-			}
+			Self { name }
 		}
 	}
 
-	struct _Low;
+	struct _Lo;
 
-	impl From<_Low> for AnimationPriority {
-		fn from(_: _Low) -> Self {
+	impl From<_Lo> for AnimationPriority {
+		fn from(_: _Lo) -> Self {
 			AnimationPriority::Low
 		}
 	}
-	struct _Med;
+	struct _Me;
 
-	impl From<_Med> for AnimationPriority {
-		fn from(_: _Med) -> Self {
+	impl From<_Me> for AnimationPriority {
+		fn from(_: _Me) -> Self {
 			AnimationPriority::Medium
 		}
 	}
 
-	struct _High;
+	struct _Hi;
 
-	impl From<_High> for AnimationPriority {
-		fn from(_: _High) -> Self {
+	impl From<_Hi> for AnimationPriority {
+		fn from(_: _Hi) -> Self {
 			AnimationPriority::High
 		}
 	}
 
 	#[test]
-	fn insert_low_priority() {
+	fn insert_priorities() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.start_animation(_Low, _Animation::new("low"));
-
-		assert_eq!(
-			Some(_Animation::new("low")),
-			dispatch.highest_priority_animation()
-		);
-	}
-
-	#[test]
-	fn insert_medium_priority() {
-		let mut dispatch = AnimationDispatch::default();
-		dispatch.start_animation(_Med, _Animation::new("middle"));
-		dispatch.start_animation(_Low, _Animation::new("low"));
-
-		assert_eq!(
-			Some(_Animation::new("middle")),
-			dispatch.highest_priority_animation()
-		);
-	}
-
-	#[test]
-	fn insert_high_priority() {
-		let mut dispatch = AnimationDispatch::default();
-		dispatch.start_animation(_High, _Animation::new("high"));
-		dispatch.start_animation(_Med, _Animation::new("middle"));
-
-		assert_eq!(
-			Some(_Animation::new("high")),
-			dispatch.highest_priority_animation()
-		);
-	}
-
-	#[test]
-	fn get_animations() {
-		let mut dispatch = AnimationDispatch::default();
-		dispatch.start_animation(_Low, _Animation::new("low"));
-		dispatch.start_animation(_Med, _Animation::new("middle"));
-		dispatch.start_animation(_High, _Animation::new("high"));
+		dispatch.start_animation(_Lo, _Animation::new("low/1"));
+		dispatch.start_animation(_Lo, _Animation::new("low/2"));
+		dispatch.start_animation(_Me, _Animation::new("medium/1"));
+		dispatch.start_animation(_Me, _Animation::new("medium/2"));
+		dispatch.start_animation(_Hi, _Animation::new("high/1"));
+		dispatch.start_animation(_Hi, _Animation::new("high/2"));
 
 		assert_eq!(
 			[
-				vec![_Animation::new("low")],
-				vec![_Animation::new("middle")],
-				vec![_Animation::new("high")],
+				HashSet::from([(&_Animation::new("low/1")), &_Animation::new("low/2")]),
+				HashSet::from([(&_Animation::new("medium/1")), &_Animation::new("medium/2")]),
+				HashSet::from([(&_Animation::new("high/1")), &_Animation::new("high/2")]),
 			],
 			[
-				AnimationPriority::Low,
-				AnimationPriority::Medium,
-				AnimationPriority::High,
+				dispatch.get_active_animations(_Lo).collect::<HashSet<_>>(),
+				dispatch.get_active_animations(_Me).collect::<HashSet<_>>(),
+				dispatch.get_active_animations(_Hi).collect::<HashSet<_>>(),
 			]
-			.map(|priority| dispatch.get_animations(priority))
-		)
+		);
 	}
 
 	#[test]
-	fn get_animations_empty() {
-		let dispatch = AnimationDispatch::<_Animation>::default();
+	fn stop_animations_low() {
+		let mut dispatch = AnimationDispatch::default();
+		dispatch.start_animation(_Lo, _Animation::new("low"));
+		dispatch.start_animation(_Me, _Animation::new("medium"));
+		dispatch.start_animation(_Hi, _Animation::new("high"));
+		dispatch.stop_animation(_Lo);
 
 		assert_eq!(
-			[vec![], vec![], vec![]] as [Vec<_Animation>; 3],
 			[
-				AnimationPriority::Low,
-				AnimationPriority::Medium,
-				AnimationPriority::High,
+				HashSet::from([]),
+				HashSet::from([&_Animation::new("medium")]),
+				HashSet::from([&_Animation::new("high")]),
+			],
+			[
+				dispatch.get_active_animations(_Lo).collect::<HashSet<_>>(),
+				dispatch.get_active_animations(_Me).collect::<HashSet<_>>(),
+				dispatch.get_active_animations(_Hi).collect::<HashSet<_>>(),
 			]
-			.map(|priority| dispatch.get_animations(priority))
-		)
+		);
 	}
 
 	#[test]
-	fn get_animations_empty_when_stopped() {
+	fn stop_animations_medium() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.start_animation(_Low, _Animation::new("low"));
-		dispatch.stop_animation(_Low);
-		dispatch.start_animation(_Med, _Animation::new("middle"));
-		dispatch.stop_animation(_Med);
-		dispatch.start_animation(_High, _Animation::new("high"));
-		dispatch.stop_animation(_High);
+		dispatch.start_animation(_Lo, _Animation::new("low"));
+		dispatch.start_animation(_Me, _Animation::new("medium"));
+		dispatch.start_animation(_Hi, _Animation::new("high"));
+		dispatch.stop_animation(_Me);
 
 		assert_eq!(
-			[vec![], vec![], vec![]] as [Vec<_Animation>; 3],
 			[
-				AnimationPriority::Low,
-				AnimationPriority::Medium,
-				AnimationPriority::High,
+				HashSet::from([&_Animation::new("low")]),
+				HashSet::from([]),
+				HashSet::from([&_Animation::new("high")]),
+			],
+			[
+				dispatch.get_active_animations(_Lo).collect::<HashSet<_>>(),
+				dispatch.get_active_animations(_Me).collect::<HashSet<_>>(),
+				dispatch.get_active_animations(_Hi).collect::<HashSet<_>>(),
 			]
-			.map(|priority| dispatch.get_animations(priority))
-		)
+		);
 	}
-
 	#[test]
-	fn mark_obsolete_low() {
+	fn stop_animations_high() {
 		let mut dispatch = AnimationDispatch::default();
-		dispatch.start_animation(_Low, _Animation::new("low"));
-		dispatch.stop_animation(_Low);
+		dispatch.start_animation(_Lo, _Animation::new("low"));
+		dispatch.start_animation(_Me, _Animation::new("medium"));
+		dispatch.start_animation(_Hi, _Animation::new("high"));
+		dispatch.stop_animation(_Hi);
 
-		assert_eq!(None, dispatch.highest_priority_animation());
-	}
-
-	#[test]
-	fn mark_obsolete_middle() {
-		let mut dispatch = AnimationDispatch::default();
-		dispatch.start_animation(_Med, _Animation::new("middle"));
-		dispatch.stop_animation(_Med);
-
-		assert_eq!(None, dispatch.highest_priority_animation());
-	}
-
-	#[test]
-	fn mark_obsolete_high() {
-		let mut dispatch = AnimationDispatch::default();
-		dispatch.start_animation(_High, _Animation::new("high"));
-		dispatch.stop_animation(_High);
-
-		assert_eq!(None, dispatch.highest_priority_animation());
+		assert_eq!(
+			[
+				HashSet::from([&_Animation::new("low")]),
+				HashSet::from([&_Animation::new("medium")]),
+				HashSet::from([]),
+			],
+			[
+				dispatch.get_active_animations(_Lo).collect::<HashSet<_>>(),
+				dispatch.get_active_animations(_Me).collect::<HashSet<_>>(),
+				dispatch.get_active_animations(_Hi).collect::<HashSet<_>>(),
+			]
+		);
 	}
 
 	fn as_track<TComponent>(

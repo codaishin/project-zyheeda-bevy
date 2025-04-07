@@ -1,10 +1,8 @@
-use std::collections::HashSet;
-
 use crate::{
 	AnimationData,
 	traits::{
 		AnimationPlayers,
-		GetAnimations,
+		GetActiveAnimations,
 		IsPlaying,
 		RepeatAnimation,
 		ReplayAnimation,
@@ -19,6 +17,7 @@ use common::{
 		load_asset::Path,
 	},
 };
+use std::collections::HashSet;
 
 const ANIMATION_PRIORITY_ORDER: [AnimationPriority; 3] = [
 	AnimationPriority::High,
@@ -45,7 +44,7 @@ where
 			+ ReplayAnimation<AnimationNodeIndex>
 			+ RepeatAnimation<AnimationNodeIndex>
 			+ StopAnimation<AnimationNodeIndex>,
-		for<'a> Self: Component + AnimationPlayers<'a> + GetAnimations<Animation>,
+		for<'a> Self: Component + AnimationPlayers<'a> + GetActiveAnimations<Animation>,
 	{
 		for dispatcher in &dispatchers {
 			for entity in dispatcher.animation_players() {
@@ -81,7 +80,7 @@ where
 	TPlayer: IsPlaying<AnimationNodeIndex>
 		+ ReplayAnimation<AnimationNodeIndex>
 		+ RepeatAnimation<AnimationNodeIndex>,
-	TDispatcher: GetAnimations<Animation>,
+	TDispatcher: GetActiveAnimations<Animation>,
 {
 	let mut higher_priority_mask = AnimationMask::default();
 	let mut active_animations = HashSet::default();
@@ -89,7 +88,7 @@ where
 	for priority in ANIMATION_PRIORITY_ORDER {
 		let blocked_by_higher_priority = higher_priority_mask;
 
-		for active_animation in dispatcher.get_animations(priority) {
+		for active_animation in dispatcher.get_active_animations(priority) {
 			let Some(animation_id) = animations.get(&active_animation.path) else {
 				continue;
 			};
@@ -149,6 +148,7 @@ mod tests {
 	use std::{
 		collections::{HashMap, VecDeque},
 		ops::DerefMut,
+		slice::Iter,
 	};
 
 	#[derive(Component)]
@@ -167,9 +167,18 @@ mod tests {
 		}
 	}
 
-	impl GetAnimations<Animation> for _AnimationDispatch {
-		fn get_animations(&self, priority: AnimationPriority) -> Vec<Animation> {
-			self.mock.get_animations(priority)
+	impl GetActiveAnimations<Animation> for _AnimationDispatch {
+		type TIter<'a>
+			= Iter<'a, Animation>
+		where
+			Self: 'a,
+			Animation: 'a;
+
+		fn get_active_animations<TPriority>(&self, priority: TPriority) -> Self::TIter<'_>
+		where
+			TPriority: Into<AnimationPriority> + 'static,
+		{
+			self.mock.get_active_animations(priority)
 		}
 	}
 
@@ -180,8 +189,16 @@ mod tests {
 
 			fn animation_players(&'a self) -> _Iter;
 		}
-		impl GetAnimations<Animation> for _AnimationDispatch {
-			fn get_animations(&self, priority: AnimationPriority) -> Vec<Animation>;
+		impl GetActiveAnimations<Animation> for _AnimationDispatch {
+			type TIter<'a>
+				= Iter<'a, Animation>
+			where
+				Self: 'a,
+				Animation: 'a;
+
+			fn get_active_animations<TPriority>(&self, priority: TPriority) -> Iter<'static, Animation>
+			where
+				TPriority: Into<AnimationPriority> + 'static;
 		}
 	}
 
@@ -269,6 +286,10 @@ mod tests {
 		}
 	}
 
+	fn leak_iterator(animations: Vec<Animation>) -> Iter<'static, Animation> {
+		Box::new(animations).leak().iter()
+	}
+
 	fn setup<const N: usize>(
 		animations: [(Path, AnimationMask); N],
 		graph_handle: &Handle<AnimationGraph>,
@@ -310,10 +331,14 @@ mod tests {
 			.spawn(_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_animations()
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
-					.return_const(vec![Animation::new(path.clone(), PlayMode::Repeat)]);
-				mock.expect_get_animations().return_const(vec![]);
+					.return_const(leak_iterator(vec![Animation::new(
+						Path::from("my/path".to_owned()),
+						PlayMode::Repeat,
+					)]));
+				mock.expect_get_active_animations::<AnimationPriority>()
+					.return_const(leak_iterator(vec![]));
 			}));
 
 		app.update();
@@ -345,15 +370,20 @@ mod tests {
 			.world_mut()
 			.spawn(_AnimationPlayer::new().with_mock(assert_replay(index)))
 			.id();
-		app.world_mut()
-			.spawn(_AnimationDispatch::new().with_mock(|mock| {
+		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
+			|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_animations()
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
-					.return_const(vec![Animation::new(path.clone(), PlayMode::Replay)]);
-				mock.expect_get_animations().return_const(vec![]);
-			}));
+					.return_const(leak_iterator(vec![Animation::new(
+						path.clone(),
+						PlayMode::Replay,
+					)]));
+				mock.expect_get_active_animations::<AnimationPriority>()
+					.return_const(leak_iterator(vec![]));
+			},
+		));
 
 		app.update();
 
@@ -395,29 +425,30 @@ mod tests {
 			.world_mut()
 			.spawn(_AnimationPlayer::new().with_mock(assert_repeat(indices)))
 			.id();
-		app.world_mut()
-			.spawn(_AnimationDispatch::new().with_mock(|mock| {
+		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
+			|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_animations()
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
-					.return_const(vec![
+					.return_const(leak_iterator(vec![
 						Animation::new(paths[0].clone(), PlayMode::Repeat),
 						Animation::new(paths[1].clone(), PlayMode::Repeat),
-					]);
-				mock.expect_get_animations()
+					]));
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Medium))
-					.return_const(vec![
+					.return_const(leak_iterator(vec![
 						Animation::new(paths[2].clone(), PlayMode::Repeat),
 						Animation::new(paths[3].clone(), PlayMode::Repeat),
-					]);
-				mock.expect_get_animations()
+					]));
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Low))
-					.return_const(vec![
+					.return_const(leak_iterator(vec![
 						Animation::new(paths[4].clone(), PlayMode::Repeat),
 						Animation::new(paths[5].clone(), PlayMode::Repeat),
-					]);
-			}));
+					]));
+			},
+		));
 
 		app.update();
 
@@ -450,15 +481,21 @@ mod tests {
 			.world_mut()
 			.spawn(_AnimationPlayer::new().with_mock(assert_not_playing(index)))
 			.id();
-		app.world_mut()
-			.spawn(_AnimationDispatch::new().with_mock(|mock| {
+		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
+			|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_animations()
+
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
-					.return_const(vec![Animation::new(path.clone(), PlayMode::Repeat)]);
-				mock.expect_get_animations().return_const(vec![]);
-			}));
+					.return_const(leak_iterator(vec![Animation::new(
+						path.clone(),
+						PlayMode::Repeat,
+					)]));
+				mock.expect_get_active_animations::<AnimationPriority>()
+					.return_const(leak_iterator(vec![]));
+			},
+		));
 
 		app.update();
 
@@ -489,12 +526,15 @@ mod tests {
 			.world_mut()
 			.spawn(_AnimationPlayer::new().with_mock(assert_repeat(index)))
 			.id();
-		app.world_mut()
-			.spawn(_AnimationDispatch::new().with_mock(|mock| {
+		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
+			|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_animations().return_const(vec![]);
-			}));
+
+				mock.expect_get_active_animations::<AnimationPriority>()
+					.return_const(leak_iterator(vec![]));
+			},
+		));
 
 		app.update();
 
@@ -519,15 +559,20 @@ mod tests {
 			.world_mut()
 			.spawn(_AnimationPlayer::new().with_mock(assert_repeat_once))
 			.id();
-		app.world_mut()
-			.spawn(_AnimationDispatch::new().with_mock(|mock| {
+		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
+			|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_animations()
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
-					.return_const(vec![Animation::new(path.clone(), PlayMode::Repeat)]);
-				mock.expect_get_animations().return_const(vec![]);
-			}));
+					.return_const(leak_iterator(vec![Animation::new(
+						path.clone(),
+						PlayMode::Repeat,
+					)]));
+				mock.expect_get_active_animations::<AnimationPriority>()
+					.return_const(leak_iterator(vec![]));
+			},
+		));
 
 		app.update();
 		app.update();
@@ -550,14 +595,20 @@ mod tests {
 			.id();
 		let dispatcher = app
 			.world_mut()
-			.spawn(_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_animation_players()
-					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_animations()
-					.with(eq(AnimationPriority::High))
-					.return_const(vec![Animation::new(path.clone(), PlayMode::Repeat)]);
-				mock.expect_get_animations().return_const(vec![]);
-			}))
+			.spawn(
+				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
+					mock.expect_animation_players()
+						.return_const(_Iter::from([animation_player]));
+					mock.expect_get_active_animations()
+						.with(eq(AnimationPriority::High))
+						.return_const(leak_iterator(vec![Animation::new(
+							path.clone(),
+							PlayMode::Repeat,
+						)]));
+					mock.expect_get_active_animations::<AnimationPriority>()
+						.return_const(leak_iterator(vec![]));
+				}),
+			)
 			.id();
 
 		app.update();
@@ -595,29 +646,30 @@ mod tests {
 				.unwrap()
 		});
 		let animation_player = app.world_mut().spawn(_AnimationPlayer::default()).id();
-		app.world_mut()
-			.spawn(_AnimationDispatch::new().with_mock(|mock| {
+		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
+			|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_animations()
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
-					.return_const(vec![
+					.return_const(leak_iterator(vec![
 						Animation::new(paths[0].0.clone(), PlayMode::Repeat),
 						Animation::new(paths[1].0.clone(), PlayMode::Repeat),
-					]);
-				mock.expect_get_animations()
+					]));
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Medium))
-					.return_const(vec![
+					.return_const(leak_iterator(vec![
 						Animation::new(paths[2].0.clone(), PlayMode::Repeat),
 						Animation::new(paths[3].0.clone(), PlayMode::Repeat),
-					]);
-				mock.expect_get_animations()
+					]));
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Low))
-					.return_const(vec![
+					.return_const(leak_iterator(vec![
 						Animation::new(paths[4].0.clone(), PlayMode::Repeat),
 						Animation::new(paths[5].0.clone(), PlayMode::Repeat),
-					]);
-			}));
+					]));
+			},
+		));
 
 		app.update();
 
@@ -661,29 +713,30 @@ mod tests {
 			index
 		});
 		let animation_player = app.world_mut().spawn(_AnimationPlayer::default()).id();
-		app.world_mut()
-			.spawn(_AnimationDispatch::new().with_mock(|mock| {
+		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
+			|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_animations()
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
-					.return_const(vec![
+					.return_const(leak_iterator(vec![
 						Animation::new(paths[0].0.clone(), PlayMode::Repeat),
 						Animation::new(paths[1].0.clone(), PlayMode::Repeat),
-					]);
-				mock.expect_get_animations()
+					]));
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Medium))
-					.return_const(vec![
+					.return_const(leak_iterator(vec![
 						Animation::new(paths[2].0.clone(), PlayMode::Repeat),
 						Animation::new(paths[3].0.clone(), PlayMode::Repeat),
-					]);
-				mock.expect_get_animations()
+					]));
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Low))
-					.return_const(vec![
+					.return_const(leak_iterator(vec![
 						Animation::new(paths[4].0.clone(), PlayMode::Repeat),
 						Animation::new(paths[5].0.clone(), PlayMode::Repeat),
-					]);
-			}));
+					]));
+			},
+		));
 
 		app.update();
 
@@ -734,20 +787,27 @@ mod tests {
 				mock.expect_stop_animation().return_const(());
 			}))
 			.id();
-		app.world_mut()
-			.spawn(_AnimationDispatch::new().with_mock(|mock| {
+		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
+			|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_animations()
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
-					.return_const(vec![Animation::new(paths[0].0.clone(), PlayMode::Repeat)]);
-				mock.expect_get_animations()
+					.return_const(leak_iterator(vec![Animation::new(
+						paths[0].0.clone(),
+						PlayMode::Repeat,
+					)]));
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Medium))
-					.return_const(vec![Animation::new(paths[1].0.clone(), PlayMode::Repeat)]);
-				mock.expect_get_animations()
+					.return_const(leak_iterator(vec![Animation::new(
+						paths[1].0.clone(),
+						PlayMode::Repeat,
+					)]));
+				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Low))
-					.return_const(vec![]);
-			}));
+					.return_const(leak_iterator(vec![]));
+			},
+		));
 
 		app.update();
 
