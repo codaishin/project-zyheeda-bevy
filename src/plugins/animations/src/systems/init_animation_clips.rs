@@ -1,9 +1,7 @@
 use crate::{resource::AnimationData, traits::LoadAnimationAssets};
 use bevy::prelude::*;
-use common::{
-	resources::Shared,
-	traits::animation::{AnimationMaskDefinition, GetAnimationDefinitions},
-};
+use common::traits::animation::{AnimationMaskDefinition, GetAnimationDefinitions};
+use std::collections::HashMap;
 
 impl<TAgent> InitAnimationClips for TAgent
 where
@@ -29,11 +27,18 @@ where
 	) {
 		let masks = Self::animations();
 		let animations = masks.keys().cloned().collect::<Vec<_>>();
-		let (graph, indices) = server.load_animation_assets(animations);
+		let (graph, new_clips) = server.load_animation_assets(animations);
 		let graph = graphs.add(graph);
 
-		commands.insert_resource(Shared::from(indices));
-		commands.insert_resource(AnimationData::<Self, TAnimationGraph>::new(graph, masks));
+		let new_clips = new_clips.into_iter().filter_map(|(path, clip)| {
+			let mask = masks.get(&path)?;
+			Some((path, (clip, *mask)))
+		});
+
+		commands.insert_resource(AnimationData::<Self, TAnimationGraph>::new(
+			graph,
+			HashMap::from_iter(new_clips),
+		));
 	}
 }
 
@@ -41,13 +46,7 @@ where
 mod tests {
 	use super::*;
 	use crate::resource::AnimationData;
-	use bevy::{
-		app::{App, Update},
-		prelude::Asset,
-		reflect::TypePath,
-	};
 	use common::{
-		resources::Shared,
 		test_tools::utils::SingleThreadedApp,
 		traits::{
 			animation::AnimationMaskDefinition,
@@ -122,7 +121,36 @@ mod tests {
 	}
 
 	#[test]
-	fn store_animation_clips() {
+	fn store_animation_graph() {
+		#[derive(Debug, PartialEq)]
+		struct _Agent;
+
+		impl GetAnimationDefinitions for _Agent {
+			type TAnimationMask = _Mask;
+
+			fn animations() -> HashMap<Path, AnimationMask> {
+				HashMap::default()
+			}
+		}
+
+		let mut app = setup::<_Agent>(_Server::new().with_mock(|mock| {
+			mock.expect_load_animation_assets()
+				.return_const((_AnimationGraph, HashMap::default()));
+		}));
+
+		app.update();
+
+		let graphs = app.world().resource::<Assets<_AnimationGraph>>();
+		let animation_data = app
+			.world()
+			.get_resource::<AnimationData<_Agent, _AnimationGraph>>()
+			.expect("no animation data");
+		assert!(graphs.get(&animation_data.graph).is_some());
+	}
+
+	#[test]
+	fn store_animations_and_masks() {
+		#[derive(Debug, PartialEq)]
 		struct _Agent;
 
 		impl GetAnimationDefinitions for _Agent {
@@ -130,9 +158,9 @@ mod tests {
 
 			fn animations() -> HashMap<Path, AnimationMask> {
 				HashMap::from([
-					(Path::from("path/a"), AnimationMask::default()),
-					(Path::from("path/b"), AnimationMask::default()),
-					(Path::from("path/c"), AnimationMask::default()),
+					(Path::from("path/a"), 1),
+					(Path::from("path/b"), 2),
+					(Path::from("path/c"), 4),
 				])
 			}
 		}
@@ -162,82 +190,17 @@ mod tests {
 
 		app.update();
 
-		let indices = app
-			.world()
-			.get_resource::<Shared<Path, AnimationNodeIndex>>();
-		assert_eq!(
-			Some(&Shared::new([
-				(Path::from("path/a"), AnimationNodeIndex::new(1)),
-				(Path::from("path/b"), AnimationNodeIndex::new(2)),
-				(Path::from("path/c"), AnimationNodeIndex::new(3)),
-			])),
-			indices
-		)
-	}
-
-	#[test]
-	fn store_animation_graph() {
-		#[derive(Debug, PartialEq)]
-		struct _Agent;
-
-		impl GetAnimationDefinitions for _Agent {
-			type TAnimationMask = _Mask;
-
-			fn animations() -> HashMap<Path, AnimationMask> {
-				HashMap::default()
-			}
-		}
-
-		let mut app = setup::<_Agent>(_Server::new().with_mock(|mock| {
-			mock.expect_load_animation_assets()
-				.return_const((_AnimationGraph, HashMap::default()));
-		}));
-
-		app.update();
-
-		let graphs = app.world().resource::<Assets<_AnimationGraph>>();
-		let animation_data = app
-			.world()
-			.get_resource::<AnimationData<_Agent, _AnimationGraph>>()
-			.expect("no animation data");
-		assert!(graphs.get(&animation_data.graph).is_some());
-	}
-
-	#[test]
-	fn store_animation_masks() {
-		#[derive(Debug, PartialEq)]
-		struct _Agent;
-
-		impl GetAnimationDefinitions for _Agent {
-			type TAnimationMask = _Mask;
-
-			fn animations() -> HashMap<Path, AnimationMask> {
-				HashMap::from([
-					(Path::from("path/a"), 1),
-					(Path::from("path/b"), 2),
-					(Path::from("path/c"), 4),
-				])
-			}
-		}
-
-		let mut app = setup::<_Agent>(_Server::new().with_mock(|mock| {
-			mock.expect_load_animation_assets()
-				.return_const((_AnimationGraph, HashMap::default()));
-		}));
-
-		app.update();
-
 		let animation_data = app
 			.world()
 			.get_resource::<AnimationData<_Agent, _AnimationGraph>>()
 			.expect("no animation data");
 		assert_eq!(
 			HashMap::from([
-				(Path::from("path/a"), 1),
-				(Path::from("path/b"), 2),
-				(Path::from("path/c"), 4),
+				(Path::from("path/a"), (AnimationNodeIndex::new(1), 1)),
+				(Path::from("path/b"), (AnimationNodeIndex::new(2), 2)),
+				(Path::from("path/c"), (AnimationNodeIndex::new(3), 4)),
 			]),
-			animation_data.masks
+			animation_data.animations
 		);
 	}
 }

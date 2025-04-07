@@ -10,13 +10,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::query::QueryData, prelude::*};
-use common::{
-	resources::Shared,
-	traits::{
-		animation::{Animation, AnimationPriority, PlayMode},
-		load_asset::Path,
-	},
-};
+use common::traits::animation::{Animation, AnimationPriority, PlayMode};
 use std::collections::HashSet;
 
 const ANIMATION_PRIORITY_ORDER: [AnimationPriority; 3] = [
@@ -35,8 +29,7 @@ where
 		mut players: Query<TAnimationPlayer>,
 		dispatchers: Query<&Self, Changed<Self>>,
 		mut graphs: ResMut<Assets<AnimationGraph>>,
-		animations: Res<Shared<Path, AnimationNodeIndex>>,
-		animation_data: Res<AnimationData<TAgent>>,
+		animations: Res<AnimationData<TAgent>>,
 	) where
 		TAnimationPlayer: QueryData,
 		TAgent: Component,
@@ -51,18 +44,19 @@ where
 				let Ok(mut player) = players.get_mut(entity) else {
 					continue;
 				};
-				let Some(graph) = graphs.get_mut(&animation_data.graph) else {
+				let Some(graph) = graphs.get_mut(&animations.graph) else {
 					continue;
 				};
-				let active_animations = play_and_mask_active_animations(
-					graph,
-					&mut player,
-					&animations,
-					&animation_data,
-					dispatcher,
-				);
-				let is_inactive = |index: &&AnimationNodeIndex| !active_animations.contains(index);
-				stop(player, graph, animations.values().filter(is_inactive));
+				let active_animations =
+					play_and_mask_active_animations(graph, &mut player, &animations, dispatcher);
+				let is_inactive = |(index, _): &(AnimationNodeIndex, AnimationMask)| {
+					if active_animations.contains(index) {
+						return None;
+					}
+					Some(*index)
+				};
+				let active_animations = animations.animations.values().filter_map(is_inactive);
+				stop(player, graph, active_animations);
 			}
 		}
 	}
@@ -71,8 +65,7 @@ where
 fn play_and_mask_active_animations<TPlayer, TDispatcher, TAgent>(
 	graph: &mut AnimationGraph,
 	player: &mut TPlayer,
-	animations: &Shared<Path, AnimationNodeIndex>,
-	animation_data: &AnimationData<TAgent>,
+	animations: &AnimationData<TAgent>,
 	dispatcher: &TDispatcher,
 ) -> HashSet<AnimationNodeIndex>
 where
@@ -89,23 +82,19 @@ where
 		let blocked_by_higher_priority = higher_priority_mask;
 
 		for active_animation in dispatcher.get_active_animations(priority) {
-			let Some(animation_id) = animations.get(&active_animation.path) else {
+			let Some((id, mask)) = animations.animations.get(&active_animation.path) else {
 				continue;
 			};
 
-			active_animations.insert(*animation_id);
+			active_animations.insert(*id);
 
-			match (player.is_playing(*animation_id), active_animation.play_mode) {
+			match (player.is_playing(*id), active_animation.play_mode) {
 				(true, _) => {}
-				(_, PlayMode::Repeat) => player.repeat(*animation_id),
-				(_, PlayMode::Replay) => player.replay(*animation_id),
+				(_, PlayMode::Repeat) => player.repeat(*id),
+				(_, PlayMode::Replay) => player.replay(*id),
 			}
 
-			let Some(mask) = animation_data.masks.get(&active_animation.path) else {
-				continue;
-			};
-
-			let Some(animation_node) = graph.get_mut(*animation_id) else {
+			let Some(animation_node) = graph.get_mut(*id) else {
 				continue;
 			};
 
@@ -118,18 +107,18 @@ where
 	active_animations
 }
 
-fn stop<'a, TPlayer>(
+fn stop<TPlayer>(
 	mut player: TPlayer,
 	graph: &mut AnimationGraph,
-	animations: impl Iterator<Item = &'a AnimationNodeIndex>,
+	animations: impl Iterator<Item = AnimationNodeIndex>,
 ) where
 	TPlayer: StopAnimation<AnimationNodeIndex>,
 {
 	for animation_id in animations {
-		if let Some(node) = graph.get_mut(*animation_id) {
+		if let Some(node) = graph.get_mut(animation_id) {
 			node.add_mask(AnimationMask::MAX);
 		}
-		player.stop_animation(*animation_id);
+		player.stop_animation(animation_id);
 	}
 }
 
@@ -141,7 +130,6 @@ fn add(dst: &mut AnimationMask, src: AnimationMask) {
 mod tests {
 	use super::*;
 	use common::{
-		resources::Shared,
 		test_tools::utils::{SingleThreadedApp, new_handle},
 		traits::{load_asset::Path, nested_mock::NestedMocks},
 	};
@@ -299,12 +287,13 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		let mut graphs = Assets::default();
 		let mut graph = AnimationGraph::new();
-		let mask_map = HashMap::from(animations.clone().map(|(path, mask)| (path, mask)));
-		let index_map =
-			animations.map(|(path, _)| (path, graph.add_clip(new_handle(), 1., graph.root)));
+		let mask_map = HashMap::from(
+			animations
+				.clone()
+				.map(|(path, mask)| (path, (graph.add_clip(new_handle(), 1., graph.root), mask))),
+		);
 
 		graphs.insert(graph_handle, graph);
-		app.insert_resource(Shared::new(index_map));
 		app.insert_resource(AnimationData::<_Agent>::new(graph_handle.clone(), mask_map));
 		app.insert_resource(graphs);
 		app.add_systems(
@@ -320,9 +309,10 @@ mod tests {
 		let handle = new_handle();
 		let path = Path::from("my/path");
 		let mut app = setup([(path.clone(), AnimationMask::default())], &handle);
-		let index = *app
+		let (index, _) = *app
 			.world()
-			.resource::<Shared<Path, AnimationNodeIndex>>()
+			.resource::<AnimationData<_Agent>>()
+			.animations
 			.get(&path)
 			.unwrap();
 		let animation_player = app
@@ -363,9 +353,10 @@ mod tests {
 		let handle = new_handle();
 		let path = Path::from("my/path");
 		let mut app = setup([(path.clone(), AnimationMask::default())], &handle);
-		let index = *app
+		let (index, _) = *app
 			.world()
-			.resource::<Shared<Path, AnimationNodeIndex>>()
+			.resource::<AnimationData<_Agent>>()
+			.animations
 			.get(&path)
 			.unwrap();
 		let animation_player = app
@@ -418,10 +409,13 @@ mod tests {
 			&handle,
 		);
 		let indices = paths.clone().map(|path| {
-			*app.world()
-				.resource::<Shared<Path, AnimationNodeIndex>>()
+			let (index, _) = *app
+				.world()
+				.resource::<AnimationData<_Agent>>()
+				.animations
 				.get(&path)
-				.unwrap()
+				.unwrap();
+			index
 		});
 		let animation_player = app
 			.world_mut()
@@ -474,9 +468,10 @@ mod tests {
 		let handle = new_handle();
 		let path = Path::from("my/path");
 		let mut app = setup([(path.clone(), AnimationMask::default())], &handle);
-		let index = *app
+		let (index, _) = *app
 			.world()
-			.resource::<Shared<Path, AnimationNodeIndex>>()
+			.resource::<AnimationData<_Agent>>()
+			.animations
 			.get(&path)
 			.unwrap();
 		let animation_player = app
@@ -519,9 +514,10 @@ mod tests {
 		let handle = new_handle();
 		let not_playing = Path::from("my/path/not/playing");
 		let mut app = setup([(not_playing.clone(), AnimationMask::default())], &handle);
-		let index = *app
+		let (index, _) = *app
 			.world()
-			.resource::<Shared<Path, AnimationNodeIndex>>()
+			.resource::<AnimationData<_Agent>>()
+			.animations
 			.get(&not_playing)
 			.unwrap();
 		let animation_player = app
@@ -642,10 +638,13 @@ mod tests {
 		];
 		let mut app = setup(paths.clone(), &handle);
 		let indices = paths.clone().map(|(path, ..)| {
-			*app.world()
-				.resource::<Shared<Path, AnimationNodeIndex>>()
+			let (index, _) = *app
+				.world()
+				.resource::<AnimationData<_Agent>>()
+				.animations
 				.get(&path)
-				.unwrap()
+				.unwrap();
+			index
 		});
 		let animation_player = app.world_mut().spawn(_AnimationPlayer::default()).id();
 		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
@@ -704,9 +703,10 @@ mod tests {
 		];
 		let mut app = setup(paths.clone(), &handle);
 		let indices = paths.clone().map(|(path, ..)| {
-			let index = *app
+			let (index, _) = *app
 				.world()
-				.resource::<Shared<Path, AnimationNodeIndex>>()
+				.resource::<AnimationData<_Agent>>()
+				.animations
 				.get(&path)
 				.unwrap();
 			let mut graphs = app.world_mut().resource_mut::<Assets<AnimationGraph>>();
@@ -767,9 +767,10 @@ mod tests {
 		];
 		let mut app = setup(paths.clone(), &handle);
 		let indices = paths.clone().map(|(path, ..)| {
-			let index = *app
+			let (index, _) = *app
 				.world()
-				.resource::<Shared<Path, AnimationNodeIndex>>()
+				.resource::<AnimationData<_Agent>>()
+				.animations
 				.get(&path)
 				.unwrap();
 			let mut graphs = app.world_mut().resource_mut::<Assets<AnimationGraph>>();
@@ -834,9 +835,10 @@ mod tests {
 		let handle = new_handle();
 		let not_playing = Path::from("my/path/not/playing");
 		let mut app = setup([(not_playing.clone(), AnimationMask::default())], &handle);
-		let index = *app
+		let (index, _) = *app
 			.world()
-			.resource::<Shared<Path, AnimationNodeIndex>>()
+			.resource::<AnimationData<_Agent>>()
+			.animations
 			.get(&not_playing)
 			.unwrap();
 		let animation_player = app.world_mut().spawn(_AnimationPlayer::default()).id();

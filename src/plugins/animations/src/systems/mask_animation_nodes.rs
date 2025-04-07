@@ -1,10 +1,6 @@
 use crate::AnimationData;
 use bevy::prelude::*;
-use common::{
-	errors::{Error, Level},
-	resources::Shared,
-	traits::load_asset::Path,
-};
+use common::errors::{Error, Level};
 use std::{any::type_name, marker::PhantomData};
 
 impl<T> MaskAnimationNodes for T where T: Component {}
@@ -13,13 +9,12 @@ pub(crate) trait MaskAnimationNodes: Component + Sized {
 	fn mask_animation_nodes(
 		mut graphs: ResMut<Assets<AnimationGraph>>,
 		animation_data: Res<AnimationData<Self>>,
-		indices: Res<Shared<Path, AnimationNodeIndex>>,
 	) -> Result<(), NoGraphForAgent<Self>> {
 		let Some(graph) = graphs.get_mut(&animation_data.graph) else {
 			return Err(NoGraphForAgent(PhantomData));
 		};
 
-		for index in indices.values() {
+		for (index, _) in animation_data.animations.values() {
 			let Some(animation) = graph.get_mut(*index) else {
 				continue;
 			};
@@ -52,7 +47,6 @@ mod tests {
 	use crate::AnimationData;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
-		resources::Shared,
 		test_tools::utils::{SingleThreadedApp, new_handle},
 		traits::load_asset::Path,
 	};
@@ -65,18 +59,18 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		let mut graphs = Assets::<AnimationGraph>::default();
 		let mut graph = AnimationGraph::new();
+		let clips = HashMap::from_iter(animations.iter().map(|path| {
+			(
+				path.clone(),
+				(
+					graph.add_clip(new_handle(), 1., graph.root),
+					AnimationMask::default(),
+				),
+			)
+		}));
 
-		let indices =
-			Shared::from(HashMap::from_iter(animations.iter().map(|path| {
-				(path.clone(), graph.add_clip(new_handle(), 1., graph.root))
-			})));
-
-		app.insert_resource(AnimationData::<TAgent>::new(
-			graphs.add(graph),
-			HashMap::default(),
-		));
+		app.insert_resource(AnimationData::<TAgent>::new(graphs.add(graph), clips));
 		app.insert_resource(graphs);
-		app.insert_resource(indices);
 
 		app
 	}
@@ -99,9 +93,8 @@ mod tests {
 			.resource::<Assets<AnimationGraph>>()
 			.get(&data.graph)
 			.unwrap();
-		let indices = app.world().resource::<Shared<Path, AnimationNodeIndex>>();
 		let masks = paths.map(|path| {
-			let index = indices.get(&path).unwrap();
+			let (index, _) = data.animations.get(&path).unwrap();
 			graph.get(*index).unwrap().mask
 		});
 		assert_eq!(
@@ -136,9 +129,8 @@ mod tests {
 			.resource::<Assets<AnimationGraph>>()
 			.get(&data.graph)
 			.unwrap();
-		let indices = app.world().resource::<Shared<Path, AnimationNodeIndex>>();
 		let masks = paths.map(|path| {
-			let index = indices.get(&path).unwrap();
+			let (index, _) = data.animations.get(&path).unwrap();
 			graph.get(*index).unwrap().mask
 		});
 		assert_eq!([AnimationMask::default(), AnimationMask::default()], masks);
