@@ -1,4 +1,4 @@
-use super::{IsPlaying, RepeatAnimation, ReplayAnimation};
+use super::{IsPlaying, RepeatAnimation, ReplayAnimation, StopAnimation};
 use bevy::prelude::*;
 
 impl IsPlaying<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
@@ -16,5 +16,11 @@ impl ReplayAnimation<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
 impl RepeatAnimation<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
 	fn repeat(&mut self, index: AnimationNodeIndex) {
 		self.play(index).repeat();
+	}
+}
+
+impl StopAnimation<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
+	fn stop_animation(&mut self, index: AnimationNodeIndex) {
+		self.stop(index);
 	}
 }

@@ -1,15 +1,30 @@
+use std::collections::HashSet;
+
 use crate::{
 	AnimationData,
-	traits::{AnimationPlayers, HighestPriorityAnimation, RepeatAnimation, ReplayAnimation},
+	traits::{
+		AnimationPlayers,
+		GetAnimations,
+		IsPlaying,
+		RepeatAnimation,
+		ReplayAnimation,
+		StopAnimation,
+	},
 };
 use bevy::{ecs::query::QueryData, prelude::*};
 use common::{
 	resources::Shared,
 	traits::{
-		animation::{Animation, PlayMode},
+		animation::{Animation, AnimationPriority, PlayMode},
 		load_asset::Path,
 	},
 };
+
+const ANIMATION_PRIORITY_ORDER: [AnimationPriority; 3] = [
+	AnimationPriority::High,
+	AnimationPriority::Medium,
+	AnimationPriority::Low,
+];
 
 impl<TDispatch> PlayAnimationClip for TDispatch {}
 
@@ -26,56 +41,99 @@ where
 	) where
 		TAnimationPlayer: QueryData,
 		TAgent: Component,
-		for<'a> TAnimationPlayer::Item<'a>:
-			ReplayAnimation<AnimationNodeIndex> + RepeatAnimation<AnimationNodeIndex>,
-		for<'a> Self: Component + AnimationPlayers<'a> + HighestPriorityAnimation<Animation>,
+		for<'a> TAnimationPlayer::Item<'a>: IsPlaying<AnimationNodeIndex>
+			+ ReplayAnimation<AnimationNodeIndex>
+			+ RepeatAnimation<AnimationNodeIndex>
+			+ StopAnimation<AnimationNodeIndex>,
+		for<'a> Self: Component + AnimationPlayers<'a> + GetAnimations<Animation>,
 	{
 		for dispatcher in &dispatchers {
 			for entity in dispatcher.animation_players() {
-				let Some(playing_animation) = dispatcher.highest_priority_animation() else {
-					continue;
-				};
-				let Some(playing_animation_id) = animations.get(&playing_animation.path) else {
-					continue;
-				};
 				let Ok(mut player) = players.get_mut(entity) else {
 					continue;
 				};
-
-				match playing_animation.play_mode {
-					PlayMode::Repeat => player.repeat(*playing_animation_id),
-					PlayMode::Replay => player.replay(*playing_animation_id),
-				}
-
 				let Some(graph) = graphs.get_mut(&animation_data.graph) else {
 					continue;
 				};
-
-				let Some(playing_mask) = animation_data.masks.get(&playing_animation.path) else {
-					continue;
-				};
-
-				for animation_id in animations.values() {
-					let Some(animation_node) = graph.get_mut(*animation_id) else {
-						continue;
-					};
-
-					match animation_id == playing_animation_id {
-						true => unmask(animation_node, *playing_mask),
-						false => mask(animation_node, *playing_mask),
-					}
-				}
+				let active_animations = play_and_mask_active_animations(
+					graph,
+					&mut player,
+					&animations,
+					&animation_data,
+					dispatcher,
+				);
+				let is_inactive = |index: &&AnimationNodeIndex| !active_animations.contains(index);
+				stop(player, animations.values().filter(is_inactive));
 			}
 		}
 	}
 }
 
-fn unmask(animation_node: &mut AnimationGraphNode, mask: AnimationMask) {
-	animation_node.mask &= !mask;
+fn play_and_mask_active_animations<TPlayer, TDispatcher, TAgent>(
+	graph: &mut AnimationGraph,
+	player: &mut TPlayer,
+	animations: &Shared<Path, AnimationNodeIndex>,
+	animation_data: &AnimationData<TAgent>,
+	dispatcher: &TDispatcher,
+) -> HashSet<AnimationNodeIndex>
+where
+	TAgent: Component,
+	TPlayer: IsPlaying<AnimationNodeIndex>
+		+ ReplayAnimation<AnimationNodeIndex>
+		+ RepeatAnimation<AnimationNodeIndex>,
+	TDispatcher: GetAnimations<Animation>,
+{
+	let mut higher_priority_mask = AnimationMask::default();
+	let mut active_animations = HashSet::default();
+
+	for priority in ANIMATION_PRIORITY_ORDER {
+		let blocked_by_higher_priority = higher_priority_mask;
+
+		for active_animation in dispatcher.get_animations(priority) {
+			let Some(animation_id) = animations.get(&active_animation.path) else {
+				continue;
+			};
+
+			active_animations.insert(*animation_id);
+
+			match (player.is_playing(*animation_id), active_animation.play_mode) {
+				(true, _) => {}
+				(_, PlayMode::Repeat) => player.repeat(*animation_id),
+				(_, PlayMode::Replay) => player.replay(*animation_id),
+			}
+
+			let Some(mask) = animation_data.masks.get(&active_animation.path) else {
+				continue;
+			};
+
+			let Some(animation_node) = graph.get_mut(*animation_id) else {
+				continue;
+			};
+
+			remove(&mut animation_node.mask, *mask);
+			add(&mut animation_node.mask, blocked_by_higher_priority);
+			add(&mut higher_priority_mask, *mask);
+		}
+	}
+
+	active_animations
 }
 
-fn mask(animation_node: &mut AnimationGraphNode, mask: AnimationMask) {
-	animation_node.mask |= mask;
+fn stop<'a, TPlayer>(mut player: TPlayer, animations: impl Iterator<Item = &'a AnimationNodeIndex>)
+where
+	TPlayer: StopAnimation<AnimationNodeIndex>,
+{
+	for index in animations {
+		player.stop_animation(*index);
+	}
+}
+
+fn remove(dst: &mut AnimationMask, src: AnimationMask) {
+	*dst &= !src;
+}
+
+fn add(dst: &mut AnimationMask, src: AnimationMask) {
+	*dst |= src;
 }
 
 #[cfg(test)]
@@ -109,9 +167,9 @@ mod tests {
 		}
 	}
 
-	impl HighestPriorityAnimation<Animation> for _AnimationDispatch {
-		fn highest_priority_animation(&self) -> Option<Animation> {
-			self.mock.highest_priority_animation()
+	impl GetAnimations<Animation> for _AnimationDispatch {
+		fn get_animations(&self, priority: AnimationPriority) -> Vec<Animation> {
+			self.mock.get_animations(priority)
 		}
 	}
 
@@ -122,9 +180,20 @@ mod tests {
 
 			fn animation_players(&'a self) -> _Iter;
 		}
-		impl HighestPriorityAnimation<Animation> for _AnimationDispatch {
-			fn highest_priority_animation(&self) -> Option<Animation>;
+		impl GetAnimations<Animation> for _AnimationDispatch {
+			fn get_animations(&self, priority: AnimationPriority) -> Vec<Animation>;
 		}
+	}
+
+	macro_rules! binary_str {
+		($a:expr) => {{
+			let values = $a
+				.into_iter()
+				.map(|v| format!("{v:b}"))
+				.collect::<Vec<_>>()
+				.join(", ");
+			format!("[{values}]")
+		}};
 	}
 
 	#[derive(Clone)]
@@ -154,19 +223,33 @@ mod tests {
 			let mut mock = Mock_AnimationPlayer::default();
 			mock.expect_replay().return_const(());
 			mock.expect_repeat().return_const(());
+			mock.expect_stop_animation().return_const(());
+			mock.expect_is_playing().return_const(false);
 			Self { mock }
+		}
+	}
+
+	impl IsPlaying<AnimationNodeIndex> for Mut<'_, _AnimationPlayer> {
+		fn is_playing(&self, index: AnimationNodeIndex) -> bool {
+			self.mock.is_playing(index)
 		}
 	}
 
 	impl ReplayAnimation<AnimationNodeIndex> for Mut<'_, _AnimationPlayer> {
 		fn replay(&mut self, index: AnimationNodeIndex) {
-			self.mock.replay(index);
+			self.mock.replay(index)
 		}
 	}
 
 	impl RepeatAnimation<AnimationNodeIndex> for Mut<'_, _AnimationPlayer> {
 		fn repeat(&mut self, index: AnimationNodeIndex) {
-			self.mock.repeat(index);
+			self.mock.repeat(index)
+		}
+	}
+
+	impl StopAnimation<AnimationNodeIndex> for Mut<'_, _AnimationPlayer> {
+		fn stop_animation(&mut self, index: AnimationNodeIndex) {
+			self.mock.stop_animation(index)
 		}
 	}
 
@@ -177,6 +260,12 @@ mod tests {
 		}
 		impl RepeatAnimation<AnimationNodeIndex> for _AnimationPlayer {
 			fn repeat(&mut self, index: AnimationNodeIndex);
+		}
+		impl StopAnimation<AnimationNodeIndex> for _AnimationPlayer{
+			fn stop_animation(&mut self, index: AnimationNodeIndex);
+		}
+		impl IsPlaying<AnimationNodeIndex> for _AnimationPlayer {
+			fn is_playing(&self, index: AnimationNodeIndex) -> bool;
 		}
 	}
 
@@ -221,19 +310,23 @@ mod tests {
 			.spawn(_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_highest_priority_animation()
-					.return_const(Animation::new(path.clone(), PlayMode::Repeat));
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::High))
+					.return_const(vec![Animation::new(path.clone(), PlayMode::Repeat)]);
+				mock.expect_get_animations().return_const(vec![]);
 			}));
 
 		app.update();
 
 		fn assert_repeat(index: AnimationNodeIndex) -> impl Fn(&mut Mock_AnimationPlayer) {
 			move |mock| {
+				mock.expect_is_playing().return_const(false);
 				mock.expect_replay().never().return_const(());
 				mock.expect_repeat()
 					.times(1)
 					.with(eq(index))
 					.return_const(());
+				mock.expect_stop_animation().never().return_const(());
 			}
 		}
 	}
@@ -256,16 +349,161 @@ mod tests {
 			.spawn(_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_highest_priority_animation()
-					.return_const(Animation::new(path.clone(), PlayMode::Replay));
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::High))
+					.return_const(vec![Animation::new(path.clone(), PlayMode::Replay)]);
+				mock.expect_get_animations().return_const(vec![]);
 			}));
 
 		app.update();
 
 		fn assert_replay(index: AnimationNodeIndex) -> impl Fn(&mut Mock_AnimationPlayer) {
 			move |mock| {
+				mock.expect_is_playing().return_const(false);
 				mock.expect_repeat().never().return_const(());
 				mock.expect_replay()
+					.times(1)
+					.with(eq(index))
+					.return_const(());
+				mock.expect_stop_animation().never().return_const(());
+			}
+		}
+	}
+
+	#[test]
+	fn play_all_animations() {
+		let handle = new_handle();
+		let paths = [
+			Path::from("my/path/high/1"),
+			Path::from("my/path/high/2"),
+			Path::from("my/path/medium/1"),
+			Path::from("my/path/medium/2"),
+			Path::from("my/path/low/1"),
+			Path::from("my/path/low/2"),
+		];
+		let mut app = setup(
+			paths.clone().map(|path| (path, AnimationMask::default())),
+			&handle,
+		);
+		let indices = paths.clone().map(|path| {
+			*app.world()
+				.resource::<Shared<Path, AnimationNodeIndex>>()
+				.get(&path)
+				.unwrap()
+		});
+		let animation_player = app
+			.world_mut()
+			.spawn(_AnimationPlayer::new().with_mock(assert_repeat(indices)))
+			.id();
+		app.world_mut()
+			.spawn(_AnimationDispatch::new().with_mock(|mock| {
+				mock.expect_animation_players()
+					.return_const(_Iter::from([animation_player]));
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::High))
+					.return_const(vec![
+						Animation::new(paths[0].clone(), PlayMode::Repeat),
+						Animation::new(paths[1].clone(), PlayMode::Repeat),
+					]);
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::Medium))
+					.return_const(vec![
+						Animation::new(paths[2].clone(), PlayMode::Repeat),
+						Animation::new(paths[3].clone(), PlayMode::Repeat),
+					]);
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::Low))
+					.return_const(vec![
+						Animation::new(paths[4].clone(), PlayMode::Repeat),
+						Animation::new(paths[5].clone(), PlayMode::Repeat),
+					]);
+			}));
+
+		app.update();
+
+		fn assert_repeat(indices: [AnimationNodeIndex; 6]) -> impl Fn(&mut Mock_AnimationPlayer) {
+			move |mock| {
+				mock.expect_is_playing().return_const(false);
+				mock.expect_replay().never().return_const(());
+				for index in indices {
+					mock.expect_repeat()
+						.times(1)
+						.with(eq(index))
+						.return_const(());
+				}
+				mock.expect_stop_animation().return_const(());
+			}
+		}
+	}
+
+	#[test]
+	fn do_not_play_animation_which_is_playing() {
+		let handle = new_handle();
+		let path = Path::from("my/path");
+		let mut app = setup([(path.clone(), AnimationMask::default())], &handle);
+		let index = *app
+			.world()
+			.resource::<Shared<Path, AnimationNodeIndex>>()
+			.get(&path)
+			.unwrap();
+		let animation_player = app
+			.world_mut()
+			.spawn(_AnimationPlayer::new().with_mock(assert_not_playing(index)))
+			.id();
+		app.world_mut()
+			.spawn(_AnimationDispatch::new().with_mock(|mock| {
+				mock.expect_animation_players()
+					.return_const(_Iter::from([animation_player]));
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::High))
+					.return_const(vec![Animation::new(path.clone(), PlayMode::Repeat)]);
+				mock.expect_get_animations().return_const(vec![]);
+			}));
+
+		app.update();
+
+		fn assert_not_playing(index: AnimationNodeIndex) -> impl Fn(&mut Mock_AnimationPlayer) {
+			move |mock| {
+				mock.expect_is_playing()
+					.times(1)
+					.with(eq(index))
+					.return_const(true);
+				mock.expect_replay().never().return_const(());
+				mock.expect_repeat().never().return_const(());
+				mock.expect_stop_animation().never().return_const(());
+			}
+		}
+	}
+
+	#[test]
+	fn stop_playing_animation_not_returned_in_dispatcher() {
+		let handle = new_handle();
+		let not_playing = Path::from("my/path/not/playing");
+		let mut app = setup([(not_playing.clone(), AnimationMask::default())], &handle);
+		let index = *app
+			.world()
+			.resource::<Shared<Path, AnimationNodeIndex>>()
+			.get(&not_playing)
+			.unwrap();
+		let animation_player = app
+			.world_mut()
+			.spawn(_AnimationPlayer::new().with_mock(assert_repeat(index)))
+			.id();
+		app.world_mut()
+			.spawn(_AnimationDispatch::new().with_mock(|mock| {
+				mock.expect_animation_players()
+					.return_const(_Iter::from([animation_player]));
+				mock.expect_get_animations().return_const(vec![]);
+			}));
+
+		app.update();
+
+		fn assert_repeat(index: AnimationNodeIndex) -> impl Fn(&mut Mock_AnimationPlayer) {
+			move |mock| {
+				mock.expect_is_playing().return_const(false);
+				mock.expect_replay().return_const(());
+				mock.expect_repeat().return_const(());
+				mock.expect_stop_animation()
 					.times(1)
 					.with(eq(index))
 					.return_const(());
@@ -285,16 +523,20 @@ mod tests {
 			.spawn(_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_highest_priority_animation()
-					.return_const(Animation::new(path.clone(), PlayMode::Repeat));
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::High))
+					.return_const(vec![Animation::new(path.clone(), PlayMode::Repeat)]);
+				mock.expect_get_animations().return_const(vec![]);
 			}));
 
 		app.update();
 		app.update();
 
 		fn assert_repeat_once(mock: &mut Mock_AnimationPlayer) {
+			mock.expect_is_playing().return_const(false);
 			mock.expect_replay().never().return_const(());
 			mock.expect_repeat().times(1).return_const(());
+			mock.expect_stop_animation().never().return_const(());
 		}
 	}
 
@@ -311,8 +553,10 @@ mod tests {
 			.spawn(_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_highest_priority_animation()
-					.return_const(Animation::new(path.clone(), PlayMode::Repeat));
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::High))
+					.return_const(vec![Animation::new(path.clone(), PlayMode::Repeat)]);
+				mock.expect_get_animations().return_const(vec![]);
 			}))
 			.id();
 
@@ -325,31 +569,54 @@ mod tests {
 		app.update();
 
 		fn assert_repeat_twice(mock: &mut Mock_AnimationPlayer) {
+			mock.expect_is_playing().return_const(false);
 			mock.expect_replay().never().return_const(());
 			mock.expect_repeat().times(2).return_const(());
+			mock.expect_stop_animation().never().return_const(());
 		}
 	}
 
 	#[test]
-	fn unmask_playing_animation() {
+	fn mask_depending_on_priority() {
 		let handle = new_handle();
-		let path = Path::from("my/path");
-		let mut app = setup([(path.clone(), 1 << 2)], &handle);
-		let index = *app
-			.world()
-			.resource::<Shared<Path, AnimationNodeIndex>>()
-			.get(&path)
-			.unwrap();
-		let mut graphs = app.world_mut().resource_mut::<Assets<AnimationGraph>>();
-		let graph = graphs.get_mut(&handle).unwrap();
-		graph.get_mut(index).unwrap().mask = 0b1111;
+		let paths = [
+			(Path::from("my/path/hig/1"), 0b000001),
+			(Path::from("my/path/hig/2"), 0b000010),
+			(Path::from("my/path/med/1"), 0b000100),
+			(Path::from("my/path/med/2"), 0b001000),
+			(Path::from("my/path/low/1"), 0b010000),
+			(Path::from("my/path/low/2"), 0b100000),
+		];
+		let mut app = setup(paths.clone(), &handle);
+		let indices = paths.clone().map(|(path, ..)| {
+			*app.world()
+				.resource::<Shared<Path, AnimationNodeIndex>>()
+				.get(&path)
+				.unwrap()
+		});
 		let animation_player = app.world_mut().spawn(_AnimationPlayer::default()).id();
 		app.world_mut()
 			.spawn(_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_highest_priority_animation()
-					.return_const(Animation::new(path.clone(), PlayMode::Repeat));
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::High))
+					.return_const(vec![
+						Animation::new(paths[0].0.clone(), PlayMode::Repeat),
+						Animation::new(paths[1].0.clone(), PlayMode::Repeat),
+					]);
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::Medium))
+					.return_const(vec![
+						Animation::new(paths[2].0.clone(), PlayMode::Repeat),
+						Animation::new(paths[3].0.clone(), PlayMode::Repeat),
+					]);
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::Low))
+					.return_const(vec![
+						Animation::new(paths[4].0.clone(), PlayMode::Repeat),
+						Animation::new(paths[5].0.clone(), PlayMode::Repeat),
+					]);
 			}));
 
 		app.update();
@@ -359,39 +626,63 @@ mod tests {
 			.resource::<Assets<AnimationGraph>>()
 			.get(&handle)
 			.unwrap();
-		let node = graph.get(index).unwrap();
-		let expected = 0b1011;
+		let masks = indices.map(|index| graph.get(index).unwrap().mask);
+		let expected = [0b000000, 0b000000, 0b000011, 0b000011, 0b001111, 0b001111];
 		assert_eq!(
-			expected, node.mask,
-			"\n  left bits: {:b}\n right bits: {:b}",
-			expected, node.mask
+			expected,
+			masks,
+			"\n  left bits: {}\n right bits: {}",
+			binary_str!(expected),
+			binary_str!(masks)
 		);
 	}
 
 	#[test]
-	fn mask_not_playing_animation() {
+	fn unmask_depending_on_priority() {
 		let handle = new_handle();
-		let playing = Path::from("my/path");
-		let not_playing = Path::from("not/plying");
-		let mut app = setup(
-			[
-				(playing.clone(), 1 << 2),
-				(not_playing.clone(), AnimationMask::default()),
-			],
-			&handle,
-		);
-		let not_playing_index = *app
-			.world()
-			.resource::<Shared<Path, AnimationNodeIndex>>()
-			.get(&not_playing)
-			.unwrap();
+		let paths = [
+			(Path::from("my/path/hig/1"), 0b000001),
+			(Path::from("my/path/hig/2"), 0b000010),
+			(Path::from("my/path/med/1"), 0b000111), // wants to play on high masks (..11)
+			(Path::from("my/path/med/2"), 0b001011), // wants to play on high masks (..11)
+			(Path::from("my/path/low/1"), 0b011111), // wants to play on mid and high masks (..1111)
+			(Path::from("my/path/low/2"), 0b101111), // wants to play on mid and high masks (..1111)
+		];
+		let mut app = setup(paths.clone(), &handle);
+		let indices = paths.clone().map(|(path, ..)| {
+			let index = *app
+				.world()
+				.resource::<Shared<Path, AnimationNodeIndex>>()
+				.get(&path)
+				.unwrap();
+			let mut graphs = app.world_mut().resource_mut::<Assets<AnimationGraph>>();
+			let graph = graphs.get_mut(&handle).unwrap();
+			graph.get_mut(index).unwrap().mask = 0b111111;
+			index
+		});
 		let animation_player = app.world_mut().spawn(_AnimationPlayer::default()).id();
 		app.world_mut()
 			.spawn(_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_highest_priority_animation()
-					.return_const(Animation::new(playing.clone(), PlayMode::Repeat));
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::High))
+					.return_const(vec![
+						Animation::new(paths[0].0.clone(), PlayMode::Repeat),
+						Animation::new(paths[1].0.clone(), PlayMode::Repeat),
+					]);
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::Medium))
+					.return_const(vec![
+						Animation::new(paths[2].0.clone(), PlayMode::Repeat),
+						Animation::new(paths[3].0.clone(), PlayMode::Repeat),
+					]);
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::Low))
+					.return_const(vec![
+						Animation::new(paths[4].0.clone(), PlayMode::Repeat),
+						Animation::new(paths[5].0.clone(), PlayMode::Repeat),
+					]);
 			}));
 
 		app.update();
@@ -401,12 +692,78 @@ mod tests {
 			.resource::<Assets<AnimationGraph>>()
 			.get(&handle)
 			.unwrap();
-		let node = graph.get(not_playing_index).unwrap();
-		let expected = 0b0100;
+		let masks = indices.map(|index| graph.get(index).unwrap().mask);
+		let expected = [0b111110, 0b111101, 0b111011, 0b110111, 0b101111, 0b011111];
 		assert_eq!(
-			expected, node.mask,
-			"\n  left bits: {:b}\n right bits: {:b}",
-			expected, node.mask
+			expected,
+			masks,
+			"\n  left bits: {}\n right bits: {}",
+			binary_str!(expected),
+			binary_str!(masks)
+		);
+	}
+
+	#[test]
+	fn set_mask_for_already_playing_animation() {
+		let handle = new_handle();
+		let paths = [
+			(Path::from("my/path/hig/1"), 0b000001),
+			(Path::from("my/path/med/1"), 0b000111), // wants to play on high masks (..11)
+		];
+		let mut app = setup(paths.clone(), &handle);
+		let indices = paths.clone().map(|(path, ..)| {
+			let index = *app
+				.world()
+				.resource::<Shared<Path, AnimationNodeIndex>>()
+				.get(&path)
+				.unwrap();
+			let mut graphs = app.world_mut().resource_mut::<Assets<AnimationGraph>>();
+			let graph = graphs.get_mut(&handle).unwrap();
+			graph.get_mut(index).unwrap().mask = 0b111111;
+			index
+		});
+		let animation_player = app
+			.world_mut()
+			.spawn(_AnimationPlayer::new().with_mock(|mock| {
+				mock.expect_is_playing()
+					.with(eq(indices[1]))
+					.return_const(true);
+				mock.expect_is_playing().return_const(false);
+				mock.expect_repeat().return_const(());
+				mock.expect_replay().return_const(());
+				mock.expect_stop_animation().return_const(());
+			}))
+			.id();
+		app.world_mut()
+			.spawn(_AnimationDispatch::new().with_mock(|mock| {
+				mock.expect_animation_players()
+					.return_const(_Iter::from([animation_player]));
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::High))
+					.return_const(vec![Animation::new(paths[0].0.clone(), PlayMode::Repeat)]);
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::Medium))
+					.return_const(vec![Animation::new(paths[1].0.clone(), PlayMode::Repeat)]);
+				mock.expect_get_animations()
+					.with(eq(AnimationPriority::Low))
+					.return_const(vec![]);
+			}));
+
+		app.update();
+
+		let graph = app
+			.world()
+			.resource::<Assets<AnimationGraph>>()
+			.get(&handle)
+			.unwrap();
+		let masks = indices.map(|index| graph.get(index).unwrap().mask);
+		let expected = [0b111110, 0b111001];
+		assert_eq!(
+			expected,
+			masks,
+			"\n  left bits: {}\n right bits: {}",
+			binary_str!(expected),
+			binary_str!(masks)
 		);
 	}
 }

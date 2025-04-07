@@ -2,6 +2,7 @@ use super::{iteration::IterFinite, load_asset::Path};
 use bevy::prelude::*;
 use std::collections::HashMap;
 
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum AnimationPriority {
 	High,
 	Medium,
@@ -60,13 +61,13 @@ pub trait RegisterAnimations: HasAnimationsDispatch {
 		for<'a> AnimationMaskDefinition: From<&'a TAgent::TAnimationMask>;
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum PlayMode {
 	Replay,
 	Repeat,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Animation {
 	pub path: Path,
 	pub play_mode: PlayMode,

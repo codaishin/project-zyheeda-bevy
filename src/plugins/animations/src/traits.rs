@@ -31,6 +31,10 @@ pub trait RepeatAnimation<TIndex> {
 	fn repeat(&mut self, index: TIndex);
 }
 
+pub trait StopAnimation<TIndex> {
+	fn stop_animation(&mut self, index: TIndex);
+}
+
 pub trait AnimationPlayers<'a>
 where
 	Self::TIter: Iterator<Item = Entity>,
