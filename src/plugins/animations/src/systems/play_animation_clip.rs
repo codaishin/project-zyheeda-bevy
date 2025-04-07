@@ -62,7 +62,7 @@ where
 					dispatcher,
 				);
 				let is_inactive = |index: &&AnimationNodeIndex| !active_animations.contains(index);
-				stop(player, animations.values().filter(is_inactive));
+				stop(player, graph, animations.values().filter(is_inactive));
 			}
 		}
 	}
@@ -109,8 +109,8 @@ where
 				continue;
 			};
 
-			remove(&mut animation_node.mask, *mask);
-			add(&mut animation_node.mask, blocked_by_higher_priority);
+			animation_node.remove_mask(*mask);
+			animation_node.add_mask(blocked_by_higher_priority);
 			add(&mut higher_priority_mask, *mask);
 		}
 	}
@@ -118,17 +118,19 @@ where
 	active_animations
 }
 
-fn stop<'a, TPlayer>(mut player: TPlayer, animations: impl Iterator<Item = &'a AnimationNodeIndex>)
-where
+fn stop<'a, TPlayer>(
+	mut player: TPlayer,
+	graph: &mut AnimationGraph,
+	animations: impl Iterator<Item = &'a AnimationNodeIndex>,
+) where
 	TPlayer: StopAnimation<AnimationNodeIndex>,
 {
-	for index in animations {
-		player.stop_animation(*index);
+	for animation_id in animations {
+		if let Some(node) = graph.get_mut(*animation_id) {
+			node.add_mask(AnimationMask::MAX);
+		}
+		player.stop_animation(*animation_id);
 	}
-}
-
-fn remove(dst: &mut AnimationMask, src: AnimationMask) {
-	*dst &= !src;
 }
 
 fn add(dst: &mut AnimationMask, src: AnimationMask) {
@@ -524,7 +526,7 @@ mod tests {
 			.unwrap();
 		let animation_player = app
 			.world_mut()
-			.spawn(_AnimationPlayer::new().with_mock(assert_repeat(index)))
+			.spawn(_AnimationPlayer::new().with_mock(assert_stop(index)))
 			.id();
 		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
 			|mock: &mut Mock_AnimationDispatch| {
@@ -538,7 +540,7 @@ mod tests {
 
 		app.update();
 
-		fn assert_repeat(index: AnimationNodeIndex) -> impl Fn(&mut Mock_AnimationPlayer) {
+		fn assert_stop(index: AnimationNodeIndex) -> impl Fn(&mut Mock_AnimationPlayer) {
 			move |mock| {
 				mock.expect_is_playing().return_const(false);
 				mock.expect_replay().return_const(());
@@ -824,6 +826,43 @@ mod tests {
 			"\n  left bits: {}\n right bits: {}",
 			binary_str!(expected),
 			binary_str!(masks)
+		);
+	}
+
+	#[test]
+	fn completely_mask_animations_not_returned_by_dispatcher() {
+		let handle = new_handle();
+		let not_playing = Path::from("my/path/not/playing");
+		let mut app = setup([(not_playing.clone(), AnimationMask::default())], &handle);
+		let index = *app
+			.world()
+			.resource::<Shared<Path, AnimationNodeIndex>>()
+			.get(&not_playing)
+			.unwrap();
+		let animation_player = app.world_mut().spawn(_AnimationPlayer::default()).id();
+		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
+			|mock: &mut Mock_AnimationDispatch| {
+				mock.expect_animation_players()
+					.return_const(_Iter::from([animation_player]));
+
+				mock.expect_get_active_animations::<AnimationPriority>()
+					.return_const(leak_iterator(vec![]));
+			},
+		));
+
+		app.update();
+
+		let graph = app
+			.world()
+			.resource::<Assets<AnimationGraph>>()
+			.get(&handle)
+			.unwrap();
+		let mask = graph.get(index).unwrap().mask;
+		let expected = AnimationMask::MAX;
+		assert_eq!(
+			expected, mask,
+			"\n  left bits: {:b}\n right bits: {:b}",
+			expected, mask
 		);
 	}
 }
