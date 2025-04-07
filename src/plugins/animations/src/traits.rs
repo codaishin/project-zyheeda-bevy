@@ -4,7 +4,7 @@ pub(crate) mod player_idle;
 pub(crate) mod tuple_animation_player_transitions;
 
 use bevy::prelude::*;
-use common::traits::load_asset::Path;
+use common::traits::{animation::AnimationPriority, load_asset::Path};
 use std::collections::HashMap;
 
 pub(crate) trait LoadAnimationAssets<TGraph, TIndex> {
@@ -13,6 +13,10 @@ pub(crate) trait LoadAnimationAssets<TGraph, TIndex> {
 
 pub trait HighestPriorityAnimation<TAnimation> {
 	fn highest_priority_animation(&self) -> Option<TAnimation>;
+}
+
+pub trait GetAnimations<TAnimation> {
+	fn get_animations(&self, priority: AnimationPriority) -> Vec<TAnimation>;
 }
 
 pub trait IsPlaying<TIndex> {

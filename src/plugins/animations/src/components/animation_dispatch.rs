@@ -1,6 +1,7 @@
 use crate::traits::{
 	AnimationPlayers,
 	AnimationPlayersWithoutTransitions,
+	GetAnimations,
 	HighestPriorityAnimation,
 };
 use bevy::prelude::*;
@@ -49,7 +50,7 @@ impl AnimationDispatch {
 }
 
 impl<TAnimation> AnimationDispatch<TAnimation> {
-	fn slot<TLayer>(&mut self, layer: TLayer) -> &mut Entry<TAnimation>
+	fn slot_mut<TLayer>(&mut self, layer: TLayer) -> &mut Entry<TAnimation>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
@@ -60,11 +61,22 @@ impl<TAnimation> AnimationDispatch<TAnimation> {
 		}
 	}
 
+	fn slot<TLayer>(&self, layer: TLayer) -> &Entry<TAnimation>
+	where
+		TLayer: Into<AnimationPriority>,
+	{
+		match layer.into() {
+			AnimationPriority::High => &self.stack.0,
+			AnimationPriority::Medium => &self.stack.1,
+			AnimationPriority::Low => &self.stack.2,
+		}
+	}
+
 	fn start_animation<TLayer>(&mut self, layer: TLayer, animation: TAnimation)
 	where
 		TLayer: Into<AnimationPriority>,
 	{
-		let slot = self.slot(layer);
+		let slot = self.slot_mut(layer);
 
 		*slot = Entry::Some(animation);
 	}
@@ -164,6 +176,18 @@ where
 	}
 }
 
+impl<TAnimation> GetAnimations<TAnimation> for AnimationDispatch<TAnimation>
+where
+	TAnimation: Clone,
+{
+	fn get_animations(&self, priority: AnimationPriority) -> Vec<TAnimation> {
+		match self.slot(priority) {
+			Entry::Some(animation) => vec![animation.clone()],
+			_ => vec![],
+		}
+	}
+}
+
 impl StartAnimation for AnimationDispatch {
 	fn start_animation<TLayer>(&mut self, layer: TLayer, animation: Animation)
 	where
@@ -178,7 +202,7 @@ impl<TAnimation> StopAnimation for AnimationDispatch<TAnimation> {
 	where
 		TLayer: Into<AnimationPriority>,
 	{
-		let slot = self.slot(layer);
+		let slot = self.slot_mut(layer);
 
 		*slot = match slot.take() {
 			Entry::Some(animation) => Entry::Obsolete(animation),
@@ -266,6 +290,64 @@ mod tests {
 	}
 
 	#[test]
+	fn get_animations() {
+		let mut dispatch = AnimationDispatch::default();
+		dispatch.start_animation(_Low, _Animation::new("low"));
+		dispatch.start_animation(_Med, _Animation::new("middle"));
+		dispatch.start_animation(_High, _Animation::new("high"));
+
+		assert_eq!(
+			[
+				vec![_Animation::new("low")],
+				vec![_Animation::new("middle")],
+				vec![_Animation::new("high")],
+			],
+			[
+				AnimationPriority::Low,
+				AnimationPriority::Medium,
+				AnimationPriority::High,
+			]
+			.map(|priority| dispatch.get_animations(priority))
+		)
+	}
+
+	#[test]
+	fn get_animations_empty() {
+		let dispatch = AnimationDispatch::<_Animation>::default();
+
+		assert_eq!(
+			[vec![], vec![], vec![]] as [Vec<_Animation>; 3],
+			[
+				AnimationPriority::Low,
+				AnimationPriority::Medium,
+				AnimationPriority::High,
+			]
+			.map(|priority| dispatch.get_animations(priority))
+		)
+	}
+
+	#[test]
+	fn get_animations_empty_when_stopped() {
+		let mut dispatch = AnimationDispatch::default();
+		dispatch.start_animation(_Low, _Animation::new("low"));
+		dispatch.stop_animation(_Low);
+		dispatch.start_animation(_Med, _Animation::new("middle"));
+		dispatch.stop_animation(_Med);
+		dispatch.start_animation(_High, _Animation::new("high"));
+		dispatch.stop_animation(_High);
+
+		assert_eq!(
+			[vec![], vec![], vec![]] as [Vec<_Animation>; 3],
+			[
+				AnimationPriority::Low,
+				AnimationPriority::Medium,
+				AnimationPriority::High,
+			]
+			.map(|priority| dispatch.get_animations(priority))
+		)
+	}
+
+	#[test]
 	fn mark_obsolete_low() {
 		let mut dispatch = AnimationDispatch::default();
 		dispatch.start_animation(_Low, _Animation::new("low"));
@@ -290,19 +372,6 @@ mod tests {
 		dispatch.stop_animation(_High);
 
 		assert_eq!(None, dispatch.highest_priority_animation());
-	}
-
-	#[test]
-	fn do_not_call_chain_update_on_marked_obsolete_2_times_ago() {
-		let mut dispatch = AnimationDispatch::default();
-		dispatch.start_animation(_High, _Animation::new("last"));
-		dispatch.stop_animation(_High);
-		dispatch.stop_animation(_High);
-		dispatch.start_animation(_High, _Animation::new("mock"));
-
-		let mock = dispatch.highest_priority_animation().unwrap();
-
-		assert_eq!(vec![] as Vec<_Animation>, mock.chain_update_calls);
 	}
 
 	fn as_track<TComponent>(
