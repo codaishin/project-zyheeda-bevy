@@ -1,8 +1,4 @@
-use bevy::{
-	animation::graph::AnimationMask,
-	asset::{Asset, Handle},
-	prelude::{AnimationGraph, Resource},
-};
+use bevy::prelude::*;
 use common::traits::load_asset::Path;
 use std::{collections::HashMap, marker::PhantomData};
 
@@ -10,15 +6,18 @@ use std::{collections::HashMap, marker::PhantomData};
 pub(crate) struct AnimationData<TAgent, TAnimationGraph: Asset = AnimationGraph> {
 	_a: PhantomData<TAgent>,
 	pub(crate) graph: Handle<TAnimationGraph>,
-	pub(crate) masks: HashMap<Path, AnimationMask>,
+	pub(crate) animations: HashMap<Path, (AnimationNodeIndex, AnimationMask)>,
 }
 
 impl<TAgent, TAnimationGraph: Asset> AnimationData<TAgent, TAnimationGraph> {
-	pub(crate) fn new(graph: Handle<TAnimationGraph>, masks: HashMap<Path, AnimationMask>) -> Self {
+	pub(crate) fn new(
+		graph: Handle<TAnimationGraph>,
+		animations: HashMap<Path, (AnimationNodeIndex, AnimationMask)>,
+	) -> Self {
 		Self {
 			_a: PhantomData,
 			graph,
-			masks,
+			animations,
 		}
 	}
 }

@@ -4,15 +4,22 @@ pub(crate) mod player_idle;
 pub(crate) mod tuple_animation_player_transitions;
 
 use bevy::prelude::*;
-use common::traits::load_asset::Path;
+use common::traits::{animation::AnimationPriority, load_asset::Path};
 use std::collections::HashMap;
 
 pub(crate) trait LoadAnimationAssets<TGraph, TIndex> {
 	fn load_animation_assets(&self, animations: Vec<Path>) -> (TGraph, HashMap<Path, TIndex>);
 }
 
-pub trait HighestPriorityAnimation<TAnimation> {
-	fn highest_priority_animation(&self) -> Option<TAnimation>;
+pub trait GetActiveAnimations<TAnimation> {
+	type TIter<'a>: Iterator<Item = &'a TAnimation>
+	where
+		Self: 'a,
+		TAnimation: 'a;
+
+	fn get_active_animations<TPriority>(&self, priority: TPriority) -> Self::TIter<'_>
+	where
+		TPriority: Into<AnimationPriority> + 'static;
 }
 
 pub trait IsPlaying<TIndex> {
@@ -25,6 +32,10 @@ pub trait ReplayAnimation<TIndex> {
 
 pub trait RepeatAnimation<TIndex> {
 	fn repeat(&mut self, index: TIndex);
+}
+
+pub trait StopAnimation<TIndex> {
+	fn stop_animation(&mut self, index: TIndex);
 }
 
 pub trait AnimationPlayers<'a>

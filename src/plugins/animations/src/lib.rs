@@ -8,6 +8,7 @@ use crate::systems::{
 	discover_animation_mask_bones::DiscoverMaskChains,
 	init_animation_clips::InitAnimationClips,
 	init_animation_graph::InitAnimationGraph,
+	mask_animation_nodes::MaskAnimationNodes,
 	remove_unused_animation_targets::RemoveUnusedAnimationTargets,
 };
 use bevy::prelude::*;
@@ -15,6 +16,7 @@ use common::{
 	labels::Labels,
 	systems::{
 		insert_required::{InsertOn, InsertRequired},
+		log::log,
 		track_components::TrackComponentInSelfAndChildren,
 	},
 	traits::animation::{
@@ -46,7 +48,11 @@ impl RegisterAnimations for AnimationsPlugin {
 
 		app.add_systems(
 			Startup,
-			TAgent::init_animation_clips::<AnimationGraph, AssetServer>,
+			(
+				TAgent::init_animation_clips::<AnimationGraph, AssetServer>,
+				TAgent::mask_animation_nodes.pipe(log),
+			)
+				.chain(),
 		)
 		.add_systems(
 			Labels::PREFAB_INSTANTIATION.label(),
