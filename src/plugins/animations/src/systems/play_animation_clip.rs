@@ -86,21 +86,23 @@ where
 				continue;
 			};
 
-			active_animations.insert(*id);
-
-			match (player.is_playing(*id), active_animation.play_mode) {
-				(true, _) => {}
-				(_, PlayMode::Repeat) => player.repeat(*id),
-				(_, PlayMode::Replay) => player.replay(*id),
-			}
-
 			let Some(animation_node) = graph.get_mut(*id) else {
 				continue;
 			};
 
+			active_animations.insert(*id);
 			animation_node.remove_mask(*mask);
 			animation_node.add_mask(blocked_by_higher_priority);
 			add(&mut higher_priority_mask, *mask);
+
+			if player.is_playing(*id) {
+				continue;
+			}
+
+			match active_animation.play_mode {
+				PlayMode::Repeat => player.repeat(*id),
+				PlayMode::Replay => player.replay(*id),
+			}
 		}
 	}
 
