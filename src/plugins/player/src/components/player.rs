@@ -109,10 +109,10 @@ impl Player {
 			AnimationKey::Idle => Player::anim("Animation1"),
 			AnimationKey::Walk => Player::anim("Animation2"),
 			AnimationKey::Run => Player::anim("Animation3"),
-			AnimationKey::Other(SlotKey::TopHand(Side::Left)) => Player::anim("Animation6"),
-			AnimationKey::Other(SlotKey::TopHand(Side::Right)) => Player::anim("Animation7"),
-			AnimationKey::Other(SlotKey::BottomHand(Side::Left)) => Player::anim("Animation4"),
-			AnimationKey::Other(SlotKey::BottomHand(Side::Right)) => Player::anim("Animation5"),
+			AnimationKey::Other(SlotKey::BottomHand(Side::Left)) => Player::anim("Animation7"),
+			AnimationKey::Other(SlotKey::BottomHand(Side::Right)) => Player::anim("Animation8"),
+			AnimationKey::Other(SlotKey::TopHand(Side::Left)) => Player::anim("Animation9"),
+			AnimationKey::Other(SlotKey::TopHand(Side::Right)) => Player::anim("Animation10"),
 		}
 	}
 
