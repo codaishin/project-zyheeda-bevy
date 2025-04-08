@@ -4,11 +4,14 @@ pub(crate) mod player_idle;
 pub(crate) mod tuple_animation_player_transitions;
 
 use bevy::prelude::*;
-use common::traits::{animation::AnimationPriority, load_asset::Path};
+use common::traits::animation::{AnimationAsset, AnimationPriority};
 use std::collections::HashMap;
 
 pub(crate) trait LoadAnimationAssets<TGraph, TIndex> {
-	fn load_animation_assets(&self, animations: Vec<Path>) -> (TGraph, HashMap<Path, TIndex>);
+	fn load_animation_assets(
+		&mut self,
+		animations: Vec<AnimationAsset>,
+	) -> (TGraph, HashMap<AnimationAsset, Vec<TIndex>>);
 }
 
 pub trait GetActiveAnimations<TAnimation> {

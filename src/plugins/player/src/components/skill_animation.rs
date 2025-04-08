@@ -29,7 +29,7 @@ impl SkillAnimation {
 				SkillAnimation::Start(slot) => dispatch.start_animation(
 					Skill,
 					Animation::new(
-						Player::animation_paths(AnimationKey::Other(*slot)),
+						Player::animation_asset(AnimationKey::Other(*slot)),
 						PlayMode::Repeat,
 					),
 				),
@@ -125,7 +125,7 @@ mod tests {
 					.with(
 						eq(Skill),
 						eq(Animation::new(
-							Player::animation_paths(AnimationKey::Other(slot)),
+							Player::animation_asset(AnimationKey::Other(slot)),
 							PlayMode::Repeat,
 						)),
 					)

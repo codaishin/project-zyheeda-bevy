@@ -274,9 +274,11 @@ pub mod utils {
 	}
 
 	pub fn new_handle<TAsset: Asset>() -> Handle<TAsset> {
-		Handle::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		})
+		new_handle_from(Uuid::new_v4())
+	}
+
+	pub fn new_handle_from<TAsset: Asset>(uuid: Uuid) -> Handle<TAsset> {
+		Handle::Weak(AssetId::Uuid { uuid })
 	}
 
 	#[derive(Component, Debug, PartialEq)]

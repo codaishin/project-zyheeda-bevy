@@ -77,7 +77,7 @@ mod tests {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		traits::{
-			animation::{Animation, PlayMode},
+			animation::{Animation, AnimationAsset, PlayMode},
 			load_asset::Path,
 			nested_mock::NestedMocks,
 		},
@@ -148,14 +148,17 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Agent(Some(
-				Animation::new(Path::from("fast"), PlayMode::Repeat).into(),
+				Animation::new(AnimationAsset::Single(Path::from("fast")), PlayMode::Repeat).into(),
 			)),
 			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation()
 					.times(1)
 					.with(
 						eq(Move),
-						eq(Animation::new(Path::from("fast"), PlayMode::Repeat)),
+						eq(Animation::new(
+							AnimationAsset::Single(Path::from("fast")),
+							PlayMode::Repeat,
+						)),
 					)
 					.return_const(());
 			}),
@@ -170,7 +173,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Agent(Some(
-				Animation::new(Path::from(""), PlayMode::Repeat).into(),
+				Animation::new(AnimationAsset::Single(Path::from("")), PlayMode::Repeat).into(),
 			)),
 			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation::<Move>()
@@ -189,7 +192,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Agent(Some(
-					Animation::new(Path::from(""), PlayMode::Repeat).into(),
+					Animation::new(AnimationAsset::Single(Path::from("")), PlayMode::Repeat).into(),
 				)),
 				_AnimationDispatch::new().with_mock(|mock| {
 					mock.expect_start_animation::<Move>().return_const(());
@@ -213,7 +216,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Agent(Some(
-				Animation::new(Path::from(""), PlayMode::Repeat).into(),
+				Animation::new(AnimationAsset::Single(Path::from("")), PlayMode::Repeat).into(),
 			)),
 			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation::<Move>()
@@ -234,7 +237,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Agent(Some(
-					Animation::new(Path::from(""), PlayMode::Repeat).into(),
+					Animation::new(AnimationAsset::Single(Path::from("")), PlayMode::Repeat).into(),
 				)),
 				_AnimationDispatch::new().with_mock(|mock| {
 					mock.expect_start_animation::<Move>()
@@ -263,7 +266,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Agent(Some(
-					Animation::new(Path::from(""), PlayMode::Repeat).into(),
+					Animation::new(AnimationAsset::Single(Path::from("")), PlayMode::Repeat).into(),
 				)),
 				_AnimationDispatch::new().with_mock(|mock| {
 					mock.expect_start_animation::<Move>()
@@ -289,7 +292,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Agent(Some(
-				Animation::new(Path::from(""), PlayMode::Repeat).into(),
+				Animation::new(AnimationAsset::Single(Path::from("")), PlayMode::Repeat).into(),
 			)),
 			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_start_animation::<Move>()

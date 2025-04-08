@@ -17,9 +17,12 @@ use common::{
 	traits::{
 		animation::{
 			Animation,
+			AnimationAsset,
 			AnimationMaskDefinition,
 			AnimationPriority,
 			ConfigureNewAnimationDispatch,
+			DirectionPaths,
+			Directions,
 			GetAnimationDefinitions,
 			PlayMode,
 			StartAnimation,
@@ -90,7 +93,7 @@ impl Player {
 		GravityScale(0.)
 	}
 
-	fn anim(animation_name: &str) -> Path {
+	fn animation_path(animation_name: &str) -> Path {
 		Path::from(Self::MODEL_PATH.to_owned() + "#" + animation_name)
 	}
 
@@ -103,22 +106,35 @@ impl Player {
 		}
 	}
 
-	pub fn animation_paths(animation: AnimationKey<SlotKey>) -> Path {
+	pub fn animation_asset(animation: AnimationKey<SlotKey>) -> AnimationAsset {
 		match animation {
-			AnimationKey::T => Player::anim("Animation0"),
-			AnimationKey::Idle => Player::anim("Animation1"),
-			AnimationKey::Walk => Player::anim("Animation2"),
-			AnimationKey::Run => Player::anim("Animation3"),
-			AnimationKey::Other(SlotKey::BottomHand(Side::Left)) => Player::anim("Animation7"),
-			AnimationKey::Other(SlotKey::BottomHand(Side::Right)) => Player::anim("Animation8"),
-			AnimationKey::Other(SlotKey::TopHand(Side::Left)) => Player::anim("Animation9"),
-			AnimationKey::Other(SlotKey::TopHand(Side::Right)) => Player::anim("Animation10"),
+			AnimationKey::T => AnimationAsset::Single(Player::animation_path("Animation0")),
+			AnimationKey::Idle => AnimationAsset::Single(Player::animation_path("Animation1")),
+			AnimationKey::Walk => AnimationAsset::Single(Player::animation_path("Animation2")),
+			AnimationKey::Run => AnimationAsset::Directional(DirectionPaths::from(Directions {
+				forward: Player::animation_path("Animation3"),
+				backward: Player::animation_path("Animation4"),
+				right: Player::animation_path("Animation5"),
+				left: Player::animation_path("Animation6"),
+			})),
+			AnimationKey::Other(SlotKey::BottomHand(Side::Left)) => {
+				AnimationAsset::Single(Player::animation_path("Animation7"))
+			}
+			AnimationKey::Other(SlotKey::BottomHand(Side::Right)) => {
+				AnimationAsset::Single(Player::animation_path("Animation8"))
+			}
+			AnimationKey::Other(SlotKey::TopHand(Side::Left)) => {
+				AnimationAsset::Single(Player::animation_path("Animation9"))
+			}
+			AnimationKey::Other(SlotKey::TopHand(Side::Right)) => {
+				AnimationAsset::Single(Player::animation_path("Animation10"))
+			}
 		}
 	}
 
-	fn play_animations(animation_key: AnimationKey<SlotKey>) -> (Path, AnimationMask) {
+	fn play_animations(animation_key: AnimationKey<SlotKey>) -> (AnimationAsset, AnimationMask) {
 		(
-			Player::animation_paths(animation_key),
+			Player::animation_asset(animation_key),
 			match animation_key {
 				AnimationKey::T => PlayerAnimationMask::all_masks(),
 				AnimationKey::Idle => PlayerAnimationMask::all_masks(),
@@ -135,11 +151,19 @@ impl Player {
 			collider_radius: Self::collider_radius(),
 			fast: Config {
 				speed: UnitsPerSecond::new(1.5).into(),
-				animation: Animation::new(Self::anim("Animation3"), PlayMode::Repeat).into(),
+				animation: Animation::new(
+					Self::animation_asset(AnimationKey::Run),
+					PlayMode::Repeat,
+				)
+				.into(),
 			},
 			slow: Config {
 				speed: UnitsPerSecond::new(0.75).into(),
-				animation: Animation::new(Self::anim("Animation2"), PlayMode::Repeat).into(),
+				animation: Animation::new(
+					Self::animation_asset(AnimationKey::Walk),
+					PlayMode::Repeat,
+				)
+				.into(),
 			},
 		}
 	}
@@ -221,7 +245,7 @@ impl From<PlayerAnimationMask> for AnimationMaskDefinition {
 impl GetAnimationDefinitions for Player {
 	type TAnimationMask = PlayerAnimationMask;
 
-	fn animations() -> HashMap<Path, AnimationMask> {
+	fn animations() -> HashMap<AnimationAsset, AnimationMask> {
 		HashMap::from_iter(AnimationKey::<SlotKey>::iterator().map(Player::play_animations))
 	}
 }
@@ -241,7 +265,10 @@ impl ConfigureNewAnimationDispatch for Player {
 	) {
 		new_animation_dispatch.start_animation(
 			Idle,
-			Animation::new(Player::anim("Animation1"), PlayMode::Repeat),
+			Animation::new(
+				Player::animation_asset(AnimationKey::Idle),
+				PlayMode::Repeat,
+			),
 		);
 	}
 }

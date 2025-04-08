@@ -22,7 +22,7 @@ where
 		TServer: Resource + LoadAnimationAssets<TAnimationGraph, AnimationNodeIndex>,
 	>(
 		mut commands: Commands,
-		server: Res<TServer>,
+		mut server: ResMut<TServer>,
 		mut graphs: ResMut<Assets<TAnimationGraph>>,
 	) {
 		let masks = Self::animations();
@@ -49,9 +49,8 @@ mod tests {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		traits::{
-			animation::AnimationMaskDefinition,
+			animation::{AnimationAsset, AnimationMaskDefinition},
 			iteration::{Iter, IterFinite},
-			load_asset::Path,
 			nested_mock::NestedMocks,
 			thread_safe::ThreadSafe,
 		},
@@ -96,9 +95,12 @@ mod tests {
 	#[automock]
 	impl LoadAnimationAssets<_AnimationGraph, AnimationNodeIndex> for _Server {
 		fn load_animation_assets(
-			&self,
-			animations: Vec<Path>,
-		) -> (_AnimationGraph, HashMap<Path, AnimationNodeIndex>) {
+			&mut self,
+			animations: Vec<AnimationAsset>,
+		) -> (
+			_AnimationGraph,
+			HashMap<AnimationAsset, Vec<AnimationNodeIndex>>,
+		) {
 			self.mock.load_animation_assets(animations)
 		}
 	}
@@ -128,7 +130,7 @@ mod tests {
 		impl GetAnimationDefinitions for _Agent {
 			type TAnimationMask = _Mask;
 
-			fn animations() -> HashMap<Path, AnimationMask> {
+			fn animations() -> HashMap<AnimationAsset, AnimationMask> {
 				HashMap::default()
 			}
 		}
@@ -156,11 +158,11 @@ mod tests {
 		impl GetAnimationDefinitions for _Agent {
 			type TAnimationMask = _Mask;
 
-			fn animations() -> HashMap<Path, AnimationMask> {
+			fn animations() -> HashMap<AnimationAsset, AnimationMask> {
 				HashMap::from([
-					(Path::from("path/a"), 1),
-					(Path::from("path/b"), 2),
-					(Path::from("path/c"), 4),
+					(AnimationAsset::from("path/a"), 1),
+					(AnimationAsset::from("path/b"), 2),
+					(AnimationAsset::from("path/c"), 4),
 				])
 			}
 		}
@@ -170,9 +172,9 @@ mod tests {
 				.withf(|paths| {
 					assert_eq!(
 						HashSet::from([
-							&Path::from("path/a"),
-							&Path::from("path/b"),
-							&Path::from("path/c"),
+							&AnimationAsset::from("path/a"),
+							&AnimationAsset::from("path/b"),
+							&AnimationAsset::from("path/c"),
 						]),
 						HashSet::from_iter(paths)
 					);
@@ -181,9 +183,18 @@ mod tests {
 				.return_const((
 					_AnimationGraph,
 					HashMap::from([
-						(Path::from("path/a"), AnimationNodeIndex::new(1)),
-						(Path::from("path/b"), AnimationNodeIndex::new(2)),
-						(Path::from("path/c"), AnimationNodeIndex::new(3)),
+						(
+							AnimationAsset::from("path/a"),
+							vec![AnimationNodeIndex::new(1)],
+						),
+						(
+							AnimationAsset::from("path/b"),
+							vec![AnimationNodeIndex::new(2)],
+						),
+						(
+							AnimationAsset::from("path/c"),
+							vec![AnimationNodeIndex::new(3)],
+						),
 					]),
 				));
 		}));
@@ -196,9 +207,18 @@ mod tests {
 			.expect("no animation data");
 		assert_eq!(
 			HashMap::from([
-				(Path::from("path/a"), (AnimationNodeIndex::new(1), 1)),
-				(Path::from("path/b"), (AnimationNodeIndex::new(2), 2)),
-				(Path::from("path/c"), (AnimationNodeIndex::new(3), 4)),
+				(
+					AnimationAsset::from("path/a"),
+					(vec![AnimationNodeIndex::new(1)], 1)
+				),
+				(
+					AnimationAsset::from("path/b"),
+					(vec![AnimationNodeIndex::new(2)], 2)
+				),
+				(
+					AnimationAsset::from("path/c"),
+					(vec![AnimationNodeIndex::new(3)], 4)
+				),
 			]),
 			animation_data.animations
 		);
