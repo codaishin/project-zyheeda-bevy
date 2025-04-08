@@ -157,9 +157,8 @@ mod tests {
 	use common::{
 		test_tools::utils::{SingleThreadedApp, new_handle},
 		traits::{
-			animation::AnimationMaskDefinition,
+			animation::{AnimationAsset, AnimationMaskDefinition},
 			iteration::{Iter, IterFinite},
-			load_asset::Path,
 		},
 	};
 
@@ -207,7 +206,7 @@ mod tests {
 			impl GetAnimationDefinitions for _Agent {
 				type TAnimationMask = _Mask;
 
-				fn animations() -> std::collections::HashMap<Path, AnimationMask> {
+				fn animations() -> std::collections::HashMap<AnimationAsset, AnimationMask> {
 					panic!("SHOULD NOT BE USED HERE")
 				}
 			}

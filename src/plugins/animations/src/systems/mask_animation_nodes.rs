@@ -14,12 +14,14 @@ pub(crate) trait MaskAnimationNodes: Component + Sized {
 			return Err(NoGraphForAgent(PhantomData));
 		};
 
-		for (index, _) in animation_data.animations.values() {
-			let Some(animation) = graph.get_mut(*index) else {
-				continue;
-			};
+		for (indices, _) in animation_data.animations.values() {
+			for index in indices {
+				let Some(animation) = graph.get_mut(*index) else {
+					continue;
+				};
 
-			animation.add_mask(AnimationMask::MAX);
+				animation.add_mask(AnimationMask::MAX);
+			}
 		}
 
 		Ok(())
@@ -48,25 +50,24 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::load_asset::Path,
+		traits::animation::AnimationAsset,
 	};
 	use std::collections::HashMap;
 
-	fn setup<TAgent>(animations: &[Path]) -> App
+	type AnimationCount = u8;
+
+	fn setup<TAgent>(animations: &[(AnimationAsset, AnimationCount)]) -> App
 	where
 		TAgent: Component,
 	{
 		let mut app = App::new().single_threaded(Update);
 		let mut graphs = Assets::<AnimationGraph>::default();
 		let mut graph = AnimationGraph::new();
-		let clips = HashMap::from_iter(animations.iter().map(|path| {
-			(
-				path.clone(),
-				(
-					graph.add_clip(new_handle(), 1., graph.root),
-					AnimationMask::default(),
-				),
-			)
+		let clips = HashMap::from_iter(animations.iter().map(|(asset, animation_count)| {
+			let indices = (0..*animation_count)
+				.map(|_| graph.add_clip(new_handle(), 1., graph.root))
+				.collect::<Vec<_>>();
+			(asset.clone(), (indices, AnimationMask::default()))
 		}));
 
 		app.insert_resource(AnimationData::<TAgent>::new(graphs.add(graph), clips));
@@ -80,8 +81,11 @@ mod tests {
 		#[derive(Component, Debug, PartialEq)]
 		struct _Agent;
 
-		let paths = [Path::from("a"), Path::from("b")];
-		let mut app = setup::<_Agent>(&paths);
+		let animations = [
+			(AnimationAsset::from("a"), 2),
+			(AnimationAsset::from("b"), 2),
+		];
+		let mut app = setup::<_Agent>(&animations);
 
 		let result = app
 			.world_mut()
@@ -93,12 +97,21 @@ mod tests {
 			.resource::<Assets<AnimationGraph>>()
 			.get(&data.graph)
 			.unwrap();
-		let masks = paths.map(|path| {
-			let (index, _) = data.animations.get(&path).unwrap();
-			graph.get(*index).unwrap().mask
+		let masks = animations.map(|(asset, _)| {
+			let (indices, _) = data.animations.get(&asset).unwrap();
+			indices
+				.iter()
+				.map(|index| graph.get(*index).unwrap().mask)
+				.collect::<Vec<_>>()
 		});
 		assert_eq!(
-			(Ok(()), [AnimationMask::MAX, AnimationMask::MAX]),
+			(
+				Ok(()),
+				[
+					vec![AnimationMask::MAX, AnimationMask::MAX],
+					vec![AnimationMask::MAX, AnimationMask::MAX],
+				]
+			),
 			(result, masks)
 		);
 		Ok(())
@@ -112,8 +125,11 @@ mod tests {
 		#[derive(Component)]
 		struct _OtherAgent;
 
-		let paths = [Path::from("a"), Path::from("b")];
-		let mut app = setup::<_OtherAgent>(&paths);
+		let animations = [
+			(AnimationAsset::from("a"), 2),
+			(AnimationAsset::from("b"), 2),
+		];
+		let mut app = setup::<_OtherAgent>(&animations);
 		app.insert_resource(AnimationData::<_Agent>::new(
 			new_handle(),
 			HashMap::default(),
@@ -129,11 +145,20 @@ mod tests {
 			.resource::<Assets<AnimationGraph>>()
 			.get(&data.graph)
 			.unwrap();
-		let masks = paths.map(|path| {
-			let (index, _) = data.animations.get(&path).unwrap();
-			graph.get(*index).unwrap().mask
+		let masks = animations.map(|(asset, _)| {
+			let (indices, _) = data.animations.get(&asset).unwrap();
+			indices
+				.iter()
+				.map(|index| graph.get(*index).unwrap().mask)
+				.collect::<Vec<_>>()
 		});
-		assert_eq!([AnimationMask::default(), AnimationMask::default()], masks);
+		assert_eq!(
+			[
+				vec![AnimationMask::default(), AnimationMask::default()],
+				vec![AnimationMask::default(), AnimationMask::default()],
+			],
+			masks
+		);
 		Ok(())
 	}
 

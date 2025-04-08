@@ -28,7 +28,7 @@ where
 {
 	type TAnimationMask: IterFinite;
 
-	fn animations() -> HashMap<Path, AnimationMask>;
+	fn animations() -> HashMap<AnimationAsset, AnimationMask>;
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -40,6 +40,26 @@ pub enum AnimationMaskDefinition {
 	Leaf {
 		from_root: Name,
 	},
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub enum AnimationAsset {
+	Path(Path),
+	Directional(Directional),
+}
+
+impl From<&'static str> for AnimationAsset {
+	fn from(path: &'static str) -> Self {
+		Self::Path(Path::from(path))
+	}
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub struct Directional {
+	pub forward: Path,
+	pub backward: Path,
+	pub left: Path,
+	pub right: Path,
 }
 
 pub trait HasAnimationsDispatch {
@@ -69,12 +89,12 @@ pub enum PlayMode {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Animation {
-	pub path: Path,
+	pub path: AnimationAsset,
 	pub play_mode: PlayMode,
 }
 
 impl Animation {
-	pub fn new(path: Path, play_mode: PlayMode) -> Self {
+	pub fn new(path: AnimationAsset, play_mode: PlayMode) -> Self {
 		Self { path, play_mode }
 	}
 }
