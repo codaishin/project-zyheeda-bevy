@@ -9,7 +9,6 @@ use common::{
 	traits::{
 		accessors::get::{Getter, GetterRefOptional},
 		animation::{Animation, AnimationAsset, PlayMode},
-		load_asset::Path,
 	},
 };
 
@@ -38,8 +37,7 @@ impl Default for Config {
 	fn default() -> Self {
 		Self {
 			speed: UnitsPerSecond::default().into(),
-			animation: Animation::new(AnimationAsset::Single(Path::from("")), PlayMode::Replay)
-				.into(),
+			animation: Animation::new(AnimationAsset::from(""), PlayMode::Replay).into(),
 		}
 	}
 }

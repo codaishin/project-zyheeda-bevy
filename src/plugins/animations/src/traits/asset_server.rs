@@ -3,9 +3,8 @@ mod animation_graph;
 use super::LoadAnimationAssets;
 use bevy::prelude::*;
 use common::traits::{
-	animation::{AnimationAsset, MovementDirection},
-	iteration::IterFinite,
-	load_asset::LoadAsset,
+	animation::{AnimationAsset, Directional},
+	load_asset::{LoadAsset, Path},
 };
 use std::collections::HashMap;
 
@@ -38,7 +37,7 @@ where
 {
 	move |animation| {
 		let index = match &animation {
-			AnimationAsset::Single(path) => {
+			AnimationAsset::Path(path) => {
 				let clip = server.load_asset(path.clone());
 				let index = graph.add_clip(clip, 1., blend_node);
 				vec![index]
@@ -47,8 +46,8 @@ where
 				let blend_node = graph.add_blend(1., blend_node);
 				let mut weight = 1.;
 				let mut indices = vec![];
-				for direction in MovementDirection::iterator() {
-					let clip = server.load_asset(direction_paths[direction].clone());
+				for path in iter(direction_paths) {
+					let clip = server.load_asset(path.clone());
 					let index = graph.add_clip(clip, weight, blend_node);
 					indices.push(index);
 					weight = 0.;
@@ -59,6 +58,15 @@ where
 		};
 		(animation, index)
 	}
+}
+
+fn iter(direction_paths: &Directional) -> [&Path; 4] {
+	[
+		&direction_paths.forward,
+		&direction_paths.backward,
+		&direction_paths.left,
+		&direction_paths.right,
+	]
 }
 
 trait AnimationGraphTrait {
@@ -193,7 +201,7 @@ mod tests {
 					.return_const(new_handle());
 			});
 
-			let _: _AnimAssets = server.load_animation_assets(vec![AnimationAsset::Single(path)]);
+			let _: _AnimAssets = server.load_animation_assets(vec![AnimationAsset::Path(path)]);
 		}
 
 		#[test]
@@ -245,7 +253,6 @@ mod tests {
 
 	mod directional_animation_asset {
 		use super::*;
-		use common::traits::animation::Directions;
 
 		#[test]
 		fn load_assets() {
@@ -274,7 +281,7 @@ mod tests {
 			});
 
 			let _: _AnimAssets =
-				server.load_animation_assets(vec![AnimationAsset::from(Directions {
+				server.load_animation_assets(vec![AnimationAsset::Directional(Directional {
 					forward,
 					backward,
 					left,
@@ -348,7 +355,7 @@ mod tests {
 			});
 
 			let _: _AnimAssets =
-				server.load_animation_assets(vec![AnimationAsset::from(Directions {
+				server.load_animation_assets(vec![AnimationAsset::Directional(Directional {
 					forward,
 					backward,
 					left,
@@ -410,7 +417,7 @@ mod tests {
 					.with(eq(right.clone()))
 					.return_const(new_handle_from(RIGHT_ID));
 			});
-			let asset = AnimationAsset::from(Directions {
+			let asset = AnimationAsset::Directional(Directional {
 				forward,
 				backward,
 				left,

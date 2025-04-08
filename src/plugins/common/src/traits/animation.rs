@@ -1,9 +1,6 @@
-use super::{
-	iteration::{Iter, IterFinite},
-	load_asset::Path,
-};
+use super::{iteration::IterFinite, load_asset::Path};
 use bevy::prelude::*;
-use std::{collections::HashMap, ops::Index};
+use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum AnimationPriority {
@@ -47,91 +44,18 @@ pub enum AnimationMaskDefinition {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum AnimationAsset {
-	Single(Path),
-	Directional(DirectionPaths),
+	Path(Path),
+	Directional(Directional),
 }
 
 impl From<&'static str> for AnimationAsset {
 	fn from(path: &'static str) -> Self {
-		Self::Single(Path::from(path))
-	}
-}
-
-impl From<Path> for AnimationAsset {
-	fn from(path: Path) -> Self {
-		Self::Single(path)
-	}
-}
-
-impl From<Directions> for AnimationAsset {
-	fn from(directions: Directions) -> Self {
-		Self::Directional(DirectionPaths { directions })
-	}
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum MovementDirection {
-	Forward,
-	Backward,
-	Left,
-	Right,
-}
-
-impl IterFinite for MovementDirection {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(Self::Forward))
-	}
-
-	fn next(current: &Iter<Self>) -> Option<Self> {
-		match &current.0? {
-			MovementDirection::Forward => Some(MovementDirection::Backward),
-			MovementDirection::Backward => Some(MovementDirection::Left),
-			MovementDirection::Left => Some(MovementDirection::Right),
-			MovementDirection::Right => None,
-		}
+		Self::Path(Path::from(path))
 	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub struct DirectionPaths {
-	directions: Directions,
-}
-
-impl DirectionPaths {
-	fn get(&self, direction: &MovementDirection) -> &Path {
-		match direction {
-			MovementDirection::Forward => &self.directions.forward,
-			MovementDirection::Backward => &self.directions.backward,
-			MovementDirection::Left => &self.directions.left,
-			MovementDirection::Right => &self.directions.right,
-		}
-	}
-}
-
-impl Index<&MovementDirection> for DirectionPaths {
-	type Output = Path;
-
-	fn index(&self, index: &MovementDirection) -> &Self::Output {
-		self.get(index)
-	}
-}
-
-impl Index<MovementDirection> for DirectionPaths {
-	type Output = Path;
-
-	fn index(&self, index: MovementDirection) -> &Self::Output {
-		self.get(&index)
-	}
-}
-
-impl From<Directions> for DirectionPaths {
-	fn from(directions: Directions) -> Self {
-		Self { directions }
-	}
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub struct Directions {
+pub struct Directional {
 	pub forward: Path,
 	pub backward: Path,
 	pub left: Path,
@@ -172,23 +96,5 @@ pub struct Animation {
 impl Animation {
 	pub fn new(path: AnimationAsset, play_mode: PlayMode) -> Self {
 		Self { path, play_mode }
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn iter_movement_directions() {
-		assert_eq!(
-			vec![
-				MovementDirection::Forward,
-				MovementDirection::Backward,
-				MovementDirection::Left,
-				MovementDirection::Right,
-			],
-			MovementDirection::iterator().collect::<Vec<_>>()
-		);
 	}
 }

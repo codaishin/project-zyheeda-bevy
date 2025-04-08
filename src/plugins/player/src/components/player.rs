@@ -21,8 +21,7 @@ use common::{
 			AnimationMaskDefinition,
 			AnimationPriority,
 			ConfigureNewAnimationDispatch,
-			DirectionPaths,
-			Directions,
+			Directional,
 			GetAnimationDefinitions,
 			PlayMode,
 			StartAnimation,
@@ -108,26 +107,26 @@ impl Player {
 
 	pub fn animation_asset(animation: AnimationKey<SlotKey>) -> AnimationAsset {
 		match animation {
-			AnimationKey::T => AnimationAsset::Single(Player::animation_path("Animation0")),
-			AnimationKey::Idle => AnimationAsset::Single(Player::animation_path("Animation1")),
-			AnimationKey::Walk => AnimationAsset::Single(Player::animation_path("Animation2")),
-			AnimationKey::Run => AnimationAsset::Directional(DirectionPaths::from(Directions {
+			AnimationKey::T => AnimationAsset::Path(Player::animation_path("Animation0")),
+			AnimationKey::Idle => AnimationAsset::Path(Player::animation_path("Animation1")),
+			AnimationKey::Walk => AnimationAsset::Path(Player::animation_path("Animation2")),
+			AnimationKey::Run => AnimationAsset::Directional(Directional {
 				forward: Player::animation_path("Animation3"),
 				backward: Player::animation_path("Animation4"),
 				right: Player::animation_path("Animation5"),
 				left: Player::animation_path("Animation6"),
-			})),
+			}),
 			AnimationKey::Other(SlotKey::BottomHand(Side::Left)) => {
-				AnimationAsset::Single(Player::animation_path("Animation7"))
+				AnimationAsset::Path(Player::animation_path("Animation7"))
 			}
 			AnimationKey::Other(SlotKey::BottomHand(Side::Right)) => {
-				AnimationAsset::Single(Player::animation_path("Animation8"))
+				AnimationAsset::Path(Player::animation_path("Animation8"))
 			}
 			AnimationKey::Other(SlotKey::TopHand(Side::Left)) => {
-				AnimationAsset::Single(Player::animation_path("Animation9"))
+				AnimationAsset::Path(Player::animation_path("Animation9"))
 			}
 			AnimationKey::Other(SlotKey::TopHand(Side::Right)) => {
-				AnimationAsset::Single(Player::animation_path("Animation10"))
+				AnimationAsset::Path(Player::animation_path("Animation10"))
 			}
 		}
 	}
