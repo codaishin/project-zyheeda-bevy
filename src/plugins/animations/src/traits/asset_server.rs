@@ -1,7 +1,7 @@
 pub(crate) mod animation_graph;
 
 use super::LoadAnimationAssets;
-use crate::resource::{Animations, DirectionalIndices};
+use crate::components::animation_lookup::{Animations, DirectionalIndices};
 use bevy::prelude::*;
 use common::traits::{
 	animation::{AnimationAsset, Directional},

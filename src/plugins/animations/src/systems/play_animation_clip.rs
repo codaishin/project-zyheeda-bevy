@@ -1,5 +1,5 @@
 use crate::{
-	AnimationData,
+	components::{animation_dispatch::AnimationDispatch, animation_lookup::AnimationLookup},
 	traits::{
 		AnimationPlayers,
 		GetActiveAnimations,
@@ -15,6 +15,7 @@ use common::traits::{
 	animation::{Animation, AnimationPriority, PlayMode},
 	iterate::Iterate,
 	thread_safe::ThreadSafe,
+	wrap_handle::{UnwrapHandle, WrapHandle},
 };
 use std::collections::HashSet;
 
@@ -30,74 +31,76 @@ pub(crate) trait PlayAnimationClip
 where
 	Self: Sized,
 {
-	fn play_animation_clip_via<TAnimationPlayer, TAgent>(
+	fn play_animation_clip_via<TAnimationPlayer>(
 		players: Query<TAnimationPlayer>,
-		dispatchers: Query<&Self, Changed<Self>>,
+		dispatchers: Query<
+			(&AnimationDispatch, &AnimationLookup, &AnimationGraphHandle),
+			Changed<AnimationDispatch>,
+		>,
 		graphs: ResMut<Assets<AnimationGraph>>,
-		animations: Res<AnimationData<TAgent>>,
 	) where
+		Self: Component + AnimationPlayers + GetActiveAnimations<Animation>,
 		TAnimationPlayer: QueryData,
-		TAgent: Component,
 		for<'a> TAnimationPlayer::Item<'a>: IsPlaying<AnimationNodeIndex>
 			+ ReplayAnimation<AnimationNodeIndex>
 			+ RepeatAnimation<AnimationNodeIndex>
 			+ StopAnimation<AnimationNodeIndex>,
-		for<'a> Self: Component + AnimationPlayers<'a> + GetActiveAnimations<Animation>,
 	{
-		play_animation_clip_via(players, dispatchers, graphs, animations)
+		play_animation_clip_via(players, dispatchers, graphs)
 	}
 }
 
-fn play_animation_clip_via<TAnimationPlayer, TAgent, TDispatch, TGraph, TAnimations>(
+#[allow(clippy::type_complexity)]
+fn play_animation_clip_via<TAnimationPlayer, TDispatch, TGraph, TAnimations>(
 	mut players: Query<TAnimationPlayer>,
-	dispatchers: Query<&TDispatch, Changed<TDispatch>>,
+	agents: Query<
+		(
+			&TDispatch,
+			&AnimationLookup<TAnimations>,
+			&TGraph::TComponent,
+		),
+		Changed<TDispatch>,
+	>,
 	mut graphs: ResMut<Assets<TGraph>>,
-	animations: Res<AnimationData<TAgent, TGraph, TAnimations>>,
 ) where
 	TAnimationPlayer: QueryData,
-	TAgent: Component,
-	TGraph: Asset + GetNodeMut,
+	TGraph: Asset + GetNodeMut + WrapHandle,
+	TDispatch: Component + AnimationPlayers + GetActiveAnimations<Animation>,
 	for<'a> TAnimations: ThreadSafe + Iterate<'a, TItem = &'a AnimationNodeIndex>,
 	for<'a> TAnimationPlayer::Item<'a>: IsPlaying<AnimationNodeIndex>
 		+ ReplayAnimation<AnimationNodeIndex>
 		+ RepeatAnimation<AnimationNodeIndex>
 		+ StopAnimation<AnimationNodeIndex>,
-	for<'a> TDispatch: Component + AnimationPlayers<'a> + GetActiveAnimations<Animation>,
 {
-	for dispatcher in &dispatchers {
+	for (dispatcher, lookup, graph_component) in &agents {
 		for entity in dispatcher.animation_players() {
+			let graph_handle = graph_component.unwrap();
 			let Ok(mut player) = players.get_mut(entity) else {
 				continue;
 			};
-			let Some(graph) = graphs.get_mut(&animations.graph) else {
+			let Some(graph) = graphs.get_mut(graph_handle) else {
 				continue;
 			};
-			let active_animations =
-				play_and_mask_active_animations(graph, &mut player, &animations, dispatcher);
+			let active_animations = play_active(graph, &mut player, lookup, dispatcher);
 			let is_inactive = |(indices, _): &(TAnimations, AnimationMask)| {
 				if indices.iterate().any(|i| active_animations.contains(i)) {
 					return None;
 				}
 				Some(indices.iterate().copied().collect::<Vec<_>>())
 			};
-			let active_animations = animations
-				.animations
-				.values()
-				.filter_map(is_inactive)
-				.flatten();
+			let active_animations = lookup.animations.values().filter_map(is_inactive).flatten();
 			stop(player, graph, active_animations);
 		}
 	}
 }
 
-fn play_and_mask_active_animations<TPlayer, TDispatcher, TAgent, TGraph, TAnimations>(
+fn play_active<TPlayer, TDispatcher, TGraph, TAnimations>(
 	graph: &mut TGraph,
 	player: &mut TPlayer,
-	animations: &AnimationData<TAgent, TGraph, TAnimations>,
+	lookup: &AnimationLookup<TAnimations>,
 	dispatcher: &TDispatcher,
 ) -> HashSet<AnimationNodeIndex>
 where
-	TAgent: Component,
 	TPlayer: IsPlaying<AnimationNodeIndex>
 		+ ReplayAnimation<AnimationNodeIndex>
 		+ RepeatAnimation<AnimationNodeIndex>,
@@ -112,7 +115,7 @@ where
 		let blocked_by_higher_priority = higher_priority_mask;
 
 		for active_animation in dispatcher.get_active_animations(priority) {
-			let Some((ids, mask)) = animations.animations.get(&active_animation.asset) else {
+			let Some((ids, mask)) = lookup.animations.get(&active_animation.asset) else {
 				continue;
 			};
 
@@ -184,10 +187,10 @@ mod tests {
 		mock: Mock_AnimationDispatch,
 	}
 
-	impl<'a> AnimationPlayers<'a> for _AnimationDispatch {
+	impl AnimationPlayers for _AnimationDispatch {
 		type TIter = _Iter;
 
-		fn animation_players(&'a self) -> Self::TIter {
+		fn animation_players(&self) -> Self::TIter {
 			self.mock.animation_players()
 		}
 	}
@@ -209,10 +212,10 @@ mod tests {
 
 	mock! {
 		_AnimationDispatch {}
-		impl<'a> AnimationPlayers<'a> for _AnimationDispatch {
+		impl AnimationPlayers for _AnimationDispatch {
 			type TIter = _Iter;
 
-			fn animation_players(&'a self) -> _Iter;
+			fn animation_players(&self) -> _Iter;
 		}
 		impl GetActiveAnimations<Animation> for _AnimationDispatch {
 			type TIter<'a>
@@ -259,6 +262,14 @@ mod tests {
 		nodes: HashMap<usize, AnimationGraphNode>,
 	}
 
+	impl WrapHandle for _Graph {
+		type TComponent = _GraphComponent;
+
+		fn wrap(handle: Handle<Self>) -> Self::TComponent {
+			_GraphComponent(handle)
+		}
+	}
+
 	impl GetNodeMut for _Graph {
 		fn get_node_mut(
 			&mut self,
@@ -273,6 +284,17 @@ mod tests {
 			Self {
 				nodes: HashMap::from(nodes),
 			}
+		}
+	}
+
+	#[derive(Component)]
+	struct _GraphComponent(Handle<_Graph>);
+
+	impl UnwrapHandle for _GraphComponent {
+		type TAsset = _Graph;
+
+		fn unwrap(&self) -> &Handle<Self::TAsset> {
+			&self.0
 		}
 	}
 
@@ -373,8 +395,8 @@ mod tests {
 		};
 	}
 
-	fn setup<const N: usize>(
-		animations: [(AnimationAsset, (_Animations, AnimationMask)); N],
+	fn setup(
+		lookup: &AnimationLookup<_Animations>,
 		graph_handle: &Handle<_Graph>,
 		initial_mask: AnimationMask,
 	) -> App {
@@ -382,7 +404,7 @@ mod tests {
 		let mut graphs = Assets::default();
 		let mut graph = _Graph::default();
 
-		for (_, (animations, _)) in &animations {
+		for (animations, _) in lookup.animations.values() {
 			for animation in animations.iterate() {
 				graph.nodes.insert(
 					animation.index(),
@@ -395,20 +417,10 @@ mod tests {
 		}
 
 		graphs.insert(graph_handle, graph);
-		app.insert_resource(AnimationData::<_Agent, _Graph, _Animations>::new(
-			graph_handle.clone(),
-			HashMap::from(animations),
-		));
 		app.insert_resource(graphs);
 		app.add_systems(
 			Update,
-			play_animation_clip_via::<
-				&mut _AnimationPlayer,
-				_Agent,
-				_AnimationDispatch,
-				_Graph,
-				_Animations,
-			>,
+			play_animation_clip_via::<&mut _AnimationPlayer, _AnimationDispatch, _Graph, _Animations>,
 		);
 
 		app
@@ -422,28 +434,33 @@ mod tests {
 			AnimationNodeIndex::new(2),
 			AnimationNodeIndex::new(3),
 		];
-		let animations = [(
-			AnimationAsset::from("my/path"),
-			(_Animations::from(&indices), 0),
-		)];
-		let mut app = setup!(animations.clone(), &handle);
+		let lookup = AnimationLookup {
+			animations: HashMap::from([(
+				AnimationAsset::from("my/path"),
+				(_Animations::from(&indices), 0),
+			)]),
+		};
+		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
 			.world_mut()
 			.spawn(_AnimationPlayer::new().with_mock(assert_repeat(indices)))
 			.id();
-		app.world_mut()
-			.spawn(_AnimationDispatch::new().with_mock(|mock| {
+		app.world_mut().spawn((
+			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![Animation::new(
-						animations[0].0.clone(),
+						AnimationAsset::from("my/path"),
 						PlayMode::Repeat,
 					)]));
 				mock.expect_get_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
-			}));
+			}),
+			lookup,
+			_GraphComponent(handle),
+		));
 
 		app.update();
 
@@ -470,28 +487,33 @@ mod tests {
 			AnimationNodeIndex::new(2),
 			AnimationNodeIndex::new(3),
 		];
-		let animations = [(
-			AnimationAsset::from("my/path"),
-			(_Animations::from(&indices), 0),
-		)];
-		let mut app = setup!(animations.clone(), &handle);
+		let lookup = AnimationLookup {
+			animations: HashMap::from([(
+				AnimationAsset::from("my/path"),
+				(_Animations::from(&indices), 0),
+			)]),
+		};
+		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
 			.world_mut()
 			.spawn(_AnimationPlayer::new().with_mock(assert_replay(indices)))
 			.id();
-		app.world_mut()
-			.spawn(_AnimationDispatch::new().with_mock(|mock| {
+		app.world_mut().spawn((
+			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![Animation::new(
-						animations[0].0.clone(),
+						AnimationAsset::from("my/path"),
 						PlayMode::Replay,
 					)]));
 				mock.expect_get_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
-			}));
+			}),
+			lookup,
+			_GraphComponent(handle),
+		));
 
 		app.update();
 
@@ -527,60 +549,64 @@ mod tests {
 			AnimationNodeIndex::new(11),
 			AnimationNodeIndex::new(12),
 		];
-		let animations = [
-			(
-				AnimationAsset::from("my/path/high/1"),
-				(_Animations::from(&indices[0..=1]), 0),
-			),
-			(
-				AnimationAsset::from("my/path/high/2"),
-				(_Animations::from(&indices[2..=3]), 0),
-			),
-			(
-				AnimationAsset::from("my/path/medium/1"),
-				(_Animations::from(&indices[4..=5]), 0),
-			),
-			(
-				AnimationAsset::from("my/path/medium/2"),
-				(_Animations::from(&indices[6..=7]), 0),
-			),
-			(
-				AnimationAsset::from("my/path/low/1"),
-				(_Animations::from(&indices[8..=9]), 0),
-			),
-			(
-				AnimationAsset::from("my/path/low/2"),
-				(_Animations::from(&indices[10..=11]), 0),
-			),
-		];
-		let mut app = setup!(animations.clone(), &handle);
+		let lookup = AnimationLookup {
+			animations: HashMap::from([
+				(
+					AnimationAsset::from("my/path/high/1"),
+					(_Animations::from(&indices[0..=1]), 0),
+				),
+				(
+					AnimationAsset::from("my/path/high/2"),
+					(_Animations::from(&indices[2..=3]), 0),
+				),
+				(
+					AnimationAsset::from("my/path/medium/1"),
+					(_Animations::from(&indices[4..=5]), 0),
+				),
+				(
+					AnimationAsset::from("my/path/medium/2"),
+					(_Animations::from(&indices[6..=7]), 0),
+				),
+				(
+					AnimationAsset::from("my/path/low/1"),
+					(_Animations::from(&indices[8..=9]), 0),
+				),
+				(
+					AnimationAsset::from("my/path/low/2"),
+					(_Animations::from(&indices[10..=11]), 0),
+				),
+			]),
+		};
+		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
 			.world_mut()
 			.spawn(_AnimationPlayer::new().with_mock(assert_repeat(indices)))
 			.id();
-		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
-			|mock: &mut Mock_AnimationDispatch| {
+		app.world_mut().spawn((
+			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![
-						Animation::new(animations[0].0.clone(), PlayMode::Repeat),
-						Animation::new(animations[1].0.clone(), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/high/1"), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/high/2"), PlayMode::Repeat),
 					]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![
-						Animation::new(animations[2].0.clone(), PlayMode::Repeat),
-						Animation::new(animations[3].0.clone(), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/medium/1"), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/medium/2"), PlayMode::Repeat),
 					]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Low))
 					.return_const(leak_iterator(vec![
-						Animation::new(animations[4].0.clone(), PlayMode::Repeat),
-						Animation::new(animations[5].0.clone(), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/low/1"), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/low/2"), PlayMode::Repeat),
 					]));
-			},
+			}),
+			lookup,
+			_GraphComponent(handle),
 		));
 
 		app.update();
@@ -608,29 +634,33 @@ mod tests {
 			AnimationNodeIndex::new(2),
 			AnimationNodeIndex::new(3),
 		];
-		let animations = [(
-			AnimationAsset::from("my/path"),
-			(_Animations::from(&indices), 0),
-		)];
-		let mut app = setup!(animations.clone(), &handle);
+		let lookup = AnimationLookup {
+			animations: HashMap::from([(
+				AnimationAsset::from("my/path"),
+				(_Animations::from(&indices), 0),
+			)]),
+		};
+		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
 			.world_mut()
 			.spawn(_AnimationPlayer::new().with_mock(assert_not_playing(indices)))
 			.id();
-		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
-			|mock: &mut Mock_AnimationDispatch| {
+		app.world_mut().spawn((
+			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![Animation::new(
-						animations[0].0.clone(),
+						AnimationAsset::from("my/path"),
 						PlayMode::Repeat,
 					)]));
 				mock.expect_get_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
-			},
+			}),
+			lookup,
+			_GraphComponent(handle),
 		));
 
 		app.update();
@@ -660,23 +690,27 @@ mod tests {
 			AnimationNodeIndex::new(2),
 			AnimationNodeIndex::new(3),
 		];
-		let animations = [(
-			AnimationAsset::from("my/path"),
-			(_Animations::from(&indices), 0),
-		)];
-		let mut app = setup!(animations, &handle);
+		let lookup = AnimationLookup {
+			animations: HashMap::from([(
+				AnimationAsset::from("my/path"),
+				(_Animations::from(&indices), 0),
+			)]),
+		};
+		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
 			.world_mut()
 			.spawn(_AnimationPlayer::new().with_mock(assert_stop(indices)))
 			.id();
-		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
-			|mock: &mut Mock_AnimationDispatch| {
+		app.world_mut().spawn((
+			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 
 				mock.expect_get_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
-			},
+			}),
+			lookup,
+			_GraphComponent(handle),
 		));
 
 		app.update();
@@ -698,28 +732,33 @@ mod tests {
 
 	#[test]
 	fn play_animation_only_once() {
-		let animations = [(
-			AnimationAsset::from("my/path"),
-			(_Animations(vec![AnimationNodeIndex::new(1)]), 0),
-		)];
-		let mut app = setup!(animations.clone(), &new_handle());
+		let handle = new_handle();
+		let lookup = AnimationLookup {
+			animations: HashMap::from([(
+				AnimationAsset::from("my/path"),
+				(_Animations::from(&vec![AnimationNodeIndex::new(1)]), 0),
+			)]),
+		};
+		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
 			.world_mut()
 			.spawn(_AnimationPlayer::new().with_mock(assert_repeat_once))
 			.id();
-		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
-			|mock: &mut Mock_AnimationDispatch| {
+		app.world_mut().spawn((
+			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![Animation::new(
-						animations[0].0.clone(),
+						AnimationAsset::from("my/path"),
 						PlayMode::Repeat,
 					)]));
 				mock.expect_get_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
-			},
+			}),
+			lookup,
+			_GraphComponent(handle),
 		));
 
 		app.update();
@@ -735,36 +774,41 @@ mod tests {
 
 	#[test]
 	fn play_animation_again_after_dispatcher_mutably_dereferenced() {
-		let animations = [(
-			AnimationAsset::from("my/path"),
-			(_Animations(vec![AnimationNodeIndex::new(1)]), 0),
-		)];
-		let mut app = setup!(animations.clone(), &new_handle());
+		let handle = new_handle();
+		let lookup = AnimationLookup {
+			animations: HashMap::from([(
+				AnimationAsset::from("my/path"),
+				(_Animations::from(&vec![AnimationNodeIndex::new(1)]), 0),
+			)]),
+		};
+		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
 			.world_mut()
 			.spawn(_AnimationPlayer::new().with_mock(assert_repeat_twice))
 			.id();
-		let dispatcher = app
+		let agent = app
 			.world_mut()
-			.spawn(
+			.spawn((
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_animation_players()
 						.return_const(_Iter::from([animation_player]));
 					mock.expect_get_active_animations()
 						.with(eq(AnimationPriority::High))
 						.return_const(leak_iterator(vec![Animation::new(
-							animations[0].0.clone(),
+							AnimationAsset::from("my/path"),
 							PlayMode::Repeat,
 						)]));
 					mock.expect_get_active_animations::<AnimationPriority>()
 						.return_const(leak_iterator(vec![]));
 				}),
-			)
+				lookup,
+				_GraphComponent(handle),
+			))
 			.id();
 
 		app.update();
 		app.world_mut()
-			.entity_mut(dispatcher)
+			.entity_mut(agent)
 			.get_mut::<_AnimationDispatch>()
 			.unwrap()
 			.deref_mut();
@@ -795,57 +839,61 @@ mod tests {
 			AnimationNodeIndex::new(11),
 			AnimationNodeIndex::new(12),
 		];
-		let animations = [
-			(
-				AnimationAsset::from("my/path/high/1"),
-				(_Animations::from(&indices[0..=1]), 0b000001),
-			),
-			(
-				AnimationAsset::from("my/path/high/2"),
-				(_Animations::from(&indices[2..=3]), 0b000010),
-			),
-			(
-				AnimationAsset::from("my/path/medium/1"),
-				(_Animations::from(&indices[4..=5]), 0b000100),
-			),
-			(
-				AnimationAsset::from("my/path/medium/2"),
-				(_Animations::from(&indices[6..=7]), 0b001000),
-			),
-			(
-				AnimationAsset::from("my/path/low/1"),
-				(_Animations::from(&indices[8..=9]), 0b010000),
-			),
-			(
-				AnimationAsset::from("my/path/low/2"),
-				(_Animations::from(&indices[10..=11]), 0b100000),
-			),
-		];
-		let mut app = setup!(animations.clone(), &handle);
+		let lookup = AnimationLookup {
+			animations: HashMap::from([
+				(
+					AnimationAsset::from("my/path/high/1"),
+					(_Animations::from(&indices[0..=1]), 0b000001),
+				),
+				(
+					AnimationAsset::from("my/path/high/2"),
+					(_Animations::from(&indices[2..=3]), 0b000010),
+				),
+				(
+					AnimationAsset::from("my/path/medium/1"),
+					(_Animations::from(&indices[4..=5]), 0b000100),
+				),
+				(
+					AnimationAsset::from("my/path/medium/2"),
+					(_Animations::from(&indices[6..=7]), 0b001000),
+				),
+				(
+					AnimationAsset::from("my/path/low/1"),
+					(_Animations::from(&indices[8..=9]), 0b010000),
+				),
+				(
+					AnimationAsset::from("my/path/low/2"),
+					(_Animations::from(&indices[10..=11]), 0b100000),
+				),
+			]),
+		};
+		let mut app = setup!(&lookup, &handle);
 		let animation_player = app.world_mut().spawn(_AnimationPlayer::default()).id();
-		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
-			|mock: &mut Mock_AnimationDispatch| {
+		app.world_mut().spawn((
+			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![
-						Animation::new(animations[0].0.clone(), PlayMode::Repeat),
-						Animation::new(animations[1].0.clone(), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/high/1"), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/high/2"), PlayMode::Repeat),
 					]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![
-						Animation::new(animations[2].0.clone(), PlayMode::Repeat),
-						Animation::new(animations[3].0.clone(), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/medium/1"), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/medium/2"), PlayMode::Repeat),
 					]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Low))
 					.return_const(leak_iterator(vec![
-						Animation::new(animations[4].0.clone(), PlayMode::Repeat),
-						Animation::new(animations[5].0.clone(), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/low/1"), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/low/2"), PlayMode::Repeat),
 					]));
-			},
+			}),
+			lookup,
+			_GraphComponent(handle.clone()),
 		));
 
 		app.update();
@@ -892,58 +940,62 @@ mod tests {
 			AnimationNodeIndex::new(11),
 			AnimationNodeIndex::new(12),
 		];
-		let animations = [
-			(
-				AnimationAsset::from("my/path/high/1"),
-				(_Animations::from(&indices[0..=1]), 0b000001),
-			),
-			(
-				AnimationAsset::from("my/path/high/2"),
-				(_Animations::from(&indices[2..=3]), 0b000010),
-			),
-			(
-				AnimationAsset::from("my/path/medium/1"),
-				(_Animations::from(&indices[4..=5]), 0b000111),
-			),
-			(
-				AnimationAsset::from("my/path/medium/2"),
-				(_Animations::from(&indices[6..=7]), 0b001011),
-			),
-			(
-				AnimationAsset::from("my/path/low/1"),
-				(_Animations::from(&indices[8..=9]), 0b011111),
-			),
-			(
-				AnimationAsset::from("my/path/low/2"),
-				(_Animations::from(&indices[10..=11]), 0b101111),
-			),
-		];
+		let lookup = AnimationLookup {
+			animations: HashMap::from([
+				(
+					AnimationAsset::from("my/path/high/1"),
+					(_Animations::from(&indices[0..=1]), 0b000001),
+				),
+				(
+					AnimationAsset::from("my/path/high/2"),
+					(_Animations::from(&indices[2..=3]), 0b000010),
+				),
+				(
+					AnimationAsset::from("my/path/medium/1"),
+					(_Animations::from(&indices[4..=5]), 0b000100),
+				),
+				(
+					AnimationAsset::from("my/path/medium/2"),
+					(_Animations::from(&indices[6..=7]), 0b001000),
+				),
+				(
+					AnimationAsset::from("my/path/low/1"),
+					(_Animations::from(&indices[8..=9]), 0b010000),
+				),
+				(
+					AnimationAsset::from("my/path/low/2"),
+					(_Animations::from(&indices[10..=11]), 0b100000),
+				),
+			]),
+		};
 		let initial_mask = 0b111111;
-		let mut app = setup!(animations.clone(), &handle, initial_mask);
+		let mut app = setup!(&lookup, &handle, initial_mask);
 		let animation_player = app.world_mut().spawn(_AnimationPlayer::default()).id();
-		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
-			|mock: &mut Mock_AnimationDispatch| {
+		app.world_mut().spawn((
+			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![
-						Animation::new(animations[0].0.clone(), PlayMode::Repeat),
-						Animation::new(animations[1].0.clone(), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/high/1"), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/high/2"), PlayMode::Repeat),
 					]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![
-						Animation::new(animations[2].0.clone(), PlayMode::Repeat),
-						Animation::new(animations[3].0.clone(), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/medium/1"), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/medium/2"), PlayMode::Repeat),
 					]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Low))
 					.return_const(leak_iterator(vec![
-						Animation::new(animations[4].0.clone(), PlayMode::Repeat),
-						Animation::new(animations[5].0.clone(), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/low/1"), PlayMode::Repeat),
+						Animation::new(AnimationAsset::from("my/path/low/2"), PlayMode::Repeat),
 					]));
-			},
+			}),
+			lookup,
+			_GraphComponent(handle.clone()),
 		));
 
 		app.update();
@@ -985,18 +1037,20 @@ mod tests {
 			AnimationNodeIndex::new(3),
 			AnimationNodeIndex::new(4),
 		];
-		let animations = [
-			(
-				AnimationAsset::from("my/path/hig"),
-				(_Animations::from(&indices[0..=1]), 0b000001),
-			),
-			(
-				AnimationAsset::from("my/path/med"),
-				(_Animations::from(&indices[2..=3]), 0b000111),
-			), // wants to play on high masks (..11)
-		];
+		let lookup = AnimationLookup {
+			animations: HashMap::from([
+				(
+					AnimationAsset::from("my/path/hig"),
+					(_Animations::from(&indices[0..=1]), 0b000001),
+				),
+				(
+					AnimationAsset::from("my/path/med"),
+					(_Animations::from(&indices[2..=3]), 0b000111),
+				), // wants to play on high masks (..11)
+			]),
+		};
 		let initial_mask = 0b111111;
-		let mut app = setup!(animations.clone(), &handle, initial_mask);
+		let mut app = setup!(&lookup, &handle, initial_mask);
 		let animation_player = app
 			.world_mut()
 			.spawn(_AnimationPlayer::new().with_mock(|mock| {
@@ -1012,26 +1066,28 @@ mod tests {
 				mock.expect_stop_animation().return_const(());
 			}))
 			.id();
-		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
-			|mock: &mut Mock_AnimationDispatch| {
+		app.world_mut().spawn((
+			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![Animation::new(
-						animations[0].0.clone(),
+						AnimationAsset::from("my/path/hig"),
 						PlayMode::Repeat,
 					)]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![Animation::new(
-						animations[1].0.clone(),
+						AnimationAsset::from("my/path/med"),
 						PlayMode::Repeat,
 					)]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Low))
 					.return_const(leak_iterator(vec![]));
-			},
+			}),
+			lookup,
+			_GraphComponent(handle.clone()),
 		));
 
 		app.update();
@@ -1064,20 +1120,24 @@ mod tests {
 	fn completely_mask_animations_not_returned_by_dispatcher() {
 		let handle = new_handle();
 		let indices = vec![AnimationNodeIndex::new(1), AnimationNodeIndex::new(2)];
-		let animations = [(
-			AnimationAsset::from("my/path"),
-			(_Animations::from(&indices), 0),
-		)];
-		let mut app = setup!(animations, &handle);
+		let lookup = AnimationLookup {
+			animations: HashMap::from([(
+				AnimationAsset::from("my/path"),
+				(_Animations::from(&indices), 0),
+			)]),
+		};
+		let mut app = setup!(&lookup, &handle);
 		let animation_player = app.world_mut().spawn(_AnimationPlayer::default()).id();
-		app.world_mut().spawn(_AnimationDispatch::new().with_mock(
-			|mock: &mut Mock_AnimationDispatch| {
+		app.world_mut().spawn((
+			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 
 				mock.expect_get_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
-			},
+			}),
+			lookup,
+			_GraphComponent(handle.clone()),
 		));
 
 		app.update();

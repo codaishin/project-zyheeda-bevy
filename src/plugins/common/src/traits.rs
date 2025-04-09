@@ -58,3 +58,4 @@ pub mod try_despawn_recursive;
 pub mod try_insert_on;
 pub mod try_remove_from;
 pub mod update_cumulative;
+pub mod wrap_handle;

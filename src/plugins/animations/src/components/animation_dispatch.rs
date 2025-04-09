@@ -1,14 +1,16 @@
-use crate::traits::{AnimationPlayers, AnimationPlayersWithoutTransitions, GetActiveAnimations};
+use crate::traits::{AnimationPlayers, AnimationPlayersWithoutGraph, GetActiveAnimations};
 use bevy::prelude::*;
 use common::traits::{
 	animation::{Animation, AnimationPriority, StartAnimation, StopAnimation},
 	track::{IsTracking, Track, Untrack},
 };
 use std::{
-	collections::{HashSet, hash_set::Iter},
+	collections::{
+		HashSet,
+		hash_set::{IntoIter, Iter},
+	},
 	fmt::Debug,
 	hash::Hash,
-	iter::Cloned,
 };
 
 #[derive(Component, Debug, PartialEq)]
@@ -17,7 +19,7 @@ where
 	TAnimation: Eq + Hash,
 {
 	pub(crate) animation_players: HashSet<Entity>,
-	animation_transitions: HashSet<Entity>,
+	animation_handles: HashSet<Entity>,
 	stack: (
 		HashSet<TAnimation>,
 		HashSet<TAnimation>,
@@ -78,7 +80,7 @@ where
 	fn default() -> Self {
 		Self {
 			animation_players: default(),
-			animation_transitions: default(),
+			animation_handles: default(),
 			stack: default(),
 		}
 	}
@@ -102,55 +104,43 @@ impl Untrack<AnimationPlayer> for AnimationDispatch {
 	}
 }
 
-impl Track<AnimationTransitions> for AnimationDispatch {
-	fn track(&mut self, entity: Entity, _: &AnimationTransitions) {
-		self.animation_transitions.insert(entity);
+impl Track<AnimationGraphHandle> for AnimationDispatch {
+	fn track(&mut self, entity: Entity, _: &AnimationGraphHandle) {
+		self.animation_handles.insert(entity);
 	}
 }
 
-impl IsTracking<AnimationTransitions> for AnimationDispatch {
+impl IsTracking<AnimationGraphHandle> for AnimationDispatch {
 	fn is_tracking(&self, entity: &Entity) -> bool {
-		self.animation_transitions.contains(entity)
+		self.animation_handles.contains(entity)
 	}
 }
 
-impl Untrack<AnimationTransitions> for AnimationDispatch {
+impl Untrack<AnimationGraphHandle> for AnimationDispatch {
 	fn untrack(&mut self, entity: &Entity) {
-		self.animation_transitions.remove(entity);
+		self.animation_handles.remove(entity);
 	}
 }
 
-impl<'a> AnimationPlayers<'a> for AnimationDispatch {
-	type TIter = Cloned<Iter<'a, Entity>>;
+impl AnimationPlayers for AnimationDispatch {
+	type TIter = IntoIter<Entity>;
 
-	fn animation_players(&'a self) -> Self::TIter {
-		self.animation_players.iter().cloned()
+	fn animation_players(&self) -> Self::TIter {
+		self.animation_players.clone().into_iter()
 	}
 }
 
-impl<'a> AnimationPlayersWithoutTransitions<'a> for AnimationDispatch {
-	type TIter = IterWithoutTransitions<'a>;
+impl AnimationPlayersWithoutGraph for AnimationDispatch {
+	type TIter = std::vec::IntoIter<Entity>;
 
-	fn animation_players_without_transition(&'a self) -> Self::TIter {
-		IterWithoutTransitions {
-			dispatch: self,
-			iter: self.animation_players.iter(),
-		}
-	}
-}
-
-pub struct IterWithoutTransitions<'a> {
-	dispatch: &'a AnimationDispatch,
-	iter: Iter<'a, Entity>,
-}
-
-impl Iterator for IterWithoutTransitions<'_> {
-	type Item = Entity;
-
-	fn next(&mut self) -> Option<Self::Item> {
-		self.iter
-			.find(|e| !self.dispatch.animation_transitions.contains(e))
-			.cloned()
+	fn animation_players_without_graph(&self) -> Self::TIter {
+		let entities = self
+			.animation_players
+			.iter()
+			.filter(|e| !self.animation_handles.contains(e))
+			.copied()
+			.collect::<Vec<_>>();
+		entities.into_iter()
 	}
 }
 
@@ -375,45 +365,45 @@ mod tests {
 	}
 
 	#[test]
-	fn track_animation_transition() {
+	fn track_animation_graph() {
 		let dispatch = &mut AnimationDispatch::default();
-		as_track::<AnimationTransitions>(dispatch)
-			.track(Entity::from_raw(1), &AnimationTransitions::default());
-		as_track::<AnimationTransitions>(dispatch)
-			.track(Entity::from_raw(2), &AnimationTransitions::default());
+		as_track::<AnimationGraphHandle>(dispatch)
+			.track(Entity::from_raw(1), &AnimationGraphHandle::default());
+		as_track::<AnimationGraphHandle>(dispatch)
+			.track(Entity::from_raw(2), &AnimationGraphHandle::default());
 
 		assert_eq!(
 			HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
-			dispatch.animation_transitions
+			dispatch.animation_handles
 		)
 	}
 
 	#[test]
-	fn untrack_animation_transition() {
+	fn untrack_animation_graph() {
 		let dispatch = &mut AnimationDispatch {
-			animation_transitions: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			animation_handles: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			..default()
 		};
-		as_track::<AnimationTransitions>(dispatch).untrack(&Entity::from_raw(1));
+		as_track::<AnimationGraphHandle>(dispatch).untrack(&Entity::from_raw(1));
 
 		assert_eq!(
 			HashSet::from([Entity::from_raw(2)]),
-			dispatch.animation_transitions
+			dispatch.animation_handles
 		)
 	}
 
 	#[test]
-	fn is_tracking_animation_transition() {
+	fn is_tracking_animation_graph() {
 		let dispatch = &mut AnimationDispatch {
-			animation_transitions: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			animation_handles: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			..default()
 		};
 
 		assert_eq!(
 			[true, false],
 			[
-				as_track::<AnimationTransitions>(dispatch).is_tracking(&Entity::from_raw(2)),
-				as_track::<AnimationTransitions>(dispatch).is_tracking(&Entity::from_raw(3)),
+				as_track::<AnimationGraphHandle>(dispatch).is_tracking(&Entity::from_raw(2)),
+				as_track::<AnimationGraphHandle>(dispatch).is_tracking(&Entity::from_raw(3)),
 			]
 		)
 	}
@@ -439,14 +429,14 @@ mod tests {
 				Entity::from_raw(2),
 				Entity::from_raw(3),
 			]),
-			animation_transitions: HashSet::from([Entity::from_raw(2)]),
+			animation_handles: HashSet::from([Entity::from_raw(2)]),
 			..default()
 		};
 
 		assert_eq!(
 			HashSet::from([Entity::from_raw(1), Entity::from_raw(3)]),
 			dispatch
-				.animation_players_without_transition()
+				.animation_players_without_graph()
 				.collect::<HashSet<_>>(),
 		)
 	}
