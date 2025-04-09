@@ -18,7 +18,7 @@ pub(crate) trait LoadoutDescriptor {
 	) -> Change<Cache<Self::TKey, LoadoutItem>>
 	where
 		for<'a> Self: LoadoutKey
-			+ Iterate<TItem<'a> = (Self::TKey, &'a Option<Handle<Item>>)>
+			+ Iterate<'a, TItem = (Self::TKey, &'a Option<Handle<Item>>)>
 			+ Component
 			+ Sized,
 		TAgent: Component,
@@ -55,7 +55,7 @@ pub(crate) trait LoadoutDescriptor {
 mod tests {
 	use super::*;
 	use common::test_tools::utils::{SingleThreadedApp, new_handle};
-	use std::collections::HashMap;
+	use std::{array::IntoIter, collections::HashMap};
 
 	#[derive(Component)]
 	struct _Agent;
@@ -70,13 +70,11 @@ mod tests {
 		type TKey = _Key;
 	}
 
-	impl Iterate for _Loadout {
-		type TItem<'a>
-			= (_Key, &'a Option<Handle<Item>>)
-		where
-			Self: 'a;
+	impl<'a> Iterate<'a> for _Loadout {
+		type TItem = (_Key, &'a Option<Handle<Item>>);
+		type TIter = IntoIter<(_Key, &'a Option<Handle<Item>>), 1>;
 
-		fn iterate(&self) -> impl Iterator<Item = Self::TItem<'_>> {
+		fn iterate(&'a self) -> Self::TIter {
 			let _Loadout(item) = self;
 			[(_Key, item)].into_iter()
 		}

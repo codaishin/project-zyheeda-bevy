@@ -15,7 +15,10 @@ use common::{
 	tools::slot_key::SlotKey,
 	traits::{iterate::Iterate, state_duration::StateDuration},
 };
-use std::{collections::VecDeque, time::Duration};
+use std::{
+	collections::{VecDeque, vec_deque::Iter},
+	time::Duration,
+};
 
 #[derive(PartialEq, Debug, Default, Clone)]
 enum State {
@@ -44,13 +47,11 @@ impl Queue {
 	}
 }
 
-impl Iterate for Queue {
-	type TItem<'a>
-		= &'a QueuedSkill
-	where
-		Self: 'a;
+impl<'a> Iterate<'a> for Queue {
+	type TItem = &'a QueuedSkill;
+	type TIter = Iter<'a, QueuedSkill>;
 
-	fn iterate(&self) -> impl Iterator<Item = Self::TItem<'_>> {
+	fn iterate(&'a self) -> Self::TIter {
 		self.queue.iter()
 	}
 }

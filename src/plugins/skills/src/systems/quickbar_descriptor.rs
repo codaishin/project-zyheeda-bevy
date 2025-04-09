@@ -25,8 +25,8 @@ pub(crate) fn get_quickbar_descriptors_for<TAgent, TSlots, TQueue, TCombos>(
 ) -> Change<Cache<SlotKey, QuickbarItem>>
 where
 	TAgent: Component,
-	for<'a> TSlots: Component + Iterate<TItem<'a> = (SlotKey, &'a Option<Handle<Item>>)>,
-	for<'a> TQueue: Component + Iterate<TItem<'a> = &'a QueuedSkill>,
+	for<'a> TSlots: Component + Iterate<'a, TItem = (SlotKey, &'a Option<Handle<Item>>)>,
+	for<'a> TQueue: Component + Iterate<'a, TItem = &'a QueuedSkill>,
 	for<'a> TCombos: Component + PeekNext<'a, TNext = Skill>,
 {
 	let Ok((slots, queue, combos)) = queues.get_single() else {
@@ -143,7 +143,7 @@ mod tests {
 		test_tools::utils::{SingleThreadedApp, new_handle},
 		tools::{item_type::ItemType, slot_key::Side},
 	};
-	use std::collections::HashMap;
+	use std::{array::IntoIter, collections::HashMap, slice::Iter};
 
 	#[derive(Component)]
 	struct _Agent;
@@ -174,13 +174,11 @@ mod tests {
 		}
 	}
 
-	impl Iterate for _Slots {
-		type TItem<'a>
-			= (SlotKey, &'a Option<Handle<Item>>)
-		where
-			Self: 'a;
+	impl<'a> Iterate<'a> for _Slots {
+		type TItem = (SlotKey, &'a Option<Handle<Item>>);
+		type TIter = IntoIter<(SlotKey, &'a Option<Handle<Item>>), 1>;
 
-		fn iterate(&self) -> impl Iterator<Item = Self::TItem<'_>> {
+		fn iterate(&'a self) -> Self::TIter {
 			let _Slots(key, slot) = self;
 			[(*key, slot)].into_iter()
 		}
@@ -189,13 +187,11 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Queue(Vec<QueuedSkill>);
 
-	impl Iterate for _Queue {
-		type TItem<'a>
-			= &'a QueuedSkill
-		where
-			Self: 'a;
+	impl<'a> Iterate<'a> for _Queue {
+		type TItem = &'a QueuedSkill;
+		type TIter = Iter<'a, QueuedSkill>;
 
-		fn iterate(&self) -> impl Iterator<Item = Self::TItem<'_>> {
+		fn iterate(&'a self) -> Self::TIter {
 			self.0.iter()
 		}
 	}

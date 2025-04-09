@@ -109,7 +109,7 @@ impl<TNode: GetCombosOrdered<Skill>> GetCombosOrdered<Skill> for Combos<TNode> {
 impl<TNode, TKey> WriteItem<TKey, Option<Skill>> for Combos<TNode>
 where
 	for<'a> TNode: GetNodeMut<TKey, TNode<'a>: Insert<Option<Skill>>>,
-	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
 {
 	fn write_item(&mut self, key_path: &TKey, skill: Option<Skill>) {
 		self.current = None;
@@ -125,7 +125,7 @@ where
 impl<TNode, TKey> WriteItem<TKey, SlotKey> for Combos<TNode>
 where
 	for<'a> TNode: GetNodeMut<TKey, TNode<'a>: ReKey<SlotKey>>,
-	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
 {
 	fn write_item(&mut self, key_path: &TKey, key: SlotKey) {
 		self.current = None;
@@ -141,7 +141,7 @@ where
 impl<TNode, TKey> GetNode<TKey> for Combos<TNode>
 where
 	TNode: GetNode<TKey>,
-	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
 {
 	type TNode<'a>
 		= TNode::TNode<'a>

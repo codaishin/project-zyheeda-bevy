@@ -39,14 +39,25 @@ impl LoadoutKey for Slots {
 	type TKey = SlotKey;
 }
 
-impl Iterate for Slots {
-	type TItem<'a>
-		= (SlotKey, &'a Option<Handle<Item>>)
-	where
-		Self: 'a;
+impl<'a> Iterate<'a> for Slots {
+	type TItem = (SlotKey, &'a Option<Handle<Item>>);
+	type TIter = Iter<'a>;
 
-	fn iterate(&self) -> impl Iterator<Item = Self::TItem<'_>> {
-		self.0.iter().map(|(key, item)| (*key, item))
+	fn iterate(&'a self) -> Self::TIter {
+		Iter { it: self.0.iter() }
+	}
+}
+
+pub struct Iter<'a> {
+	it: std::collections::hash_map::Iter<'a, SlotKey, Option<Handle<Item>>>,
+}
+
+impl<'a> Iterator for Iter<'a> {
+	type Item = (SlotKey, &'a Option<Handle<Item>>);
+
+	fn next(&mut self) -> Option<Self::Item> {
+		let (key, slot) = self.it.next()?;
+		Some((*key, slot))
 	}
 }
 
