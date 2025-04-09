@@ -86,7 +86,7 @@ where
 		let blocked_by_higher_priority = higher_priority_mask;
 
 		for active_animation in dispatcher.get_active_animations(priority) {
-			let Some((ids, mask)) = animations.animations.get(&active_animation.path) else {
+			let Some((ids, mask)) = animations.animations.get(&active_animation.asset) else {
 				continue;
 			};
 

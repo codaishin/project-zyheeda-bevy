@@ -89,12 +89,12 @@ pub enum PlayMode {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Animation {
-	pub path: AnimationAsset,
+	pub asset: AnimationAsset,
 	pub play_mode: PlayMode,
 }
 
 impl Animation {
-	pub fn new(path: AnimationAsset, play_mode: PlayMode) -> Self {
-		Self { path, play_mode }
+	pub fn new(asset: AnimationAsset, play_mode: PlayMode) -> Self {
+		Self { asset, play_mode }
 	}
 }
