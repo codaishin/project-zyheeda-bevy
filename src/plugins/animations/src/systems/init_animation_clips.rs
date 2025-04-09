@@ -1,4 +1,7 @@
-use crate::{resource::AnimationData, traits::LoadAnimationAssets};
+use crate::{
+	resource::{AnimationData, Animations},
+	traits::LoadAnimationAssets,
+};
 use bevy::prelude::*;
 use common::traits::animation::{AnimationMaskDefinition, GetAnimationDefinitions};
 use std::collections::HashMap;
@@ -19,7 +22,7 @@ where
 {
 	fn init_animation_clips<
 		TAnimationGraph: Asset + Sync + Send + 'static,
-		TServer: Resource + LoadAnimationAssets<TAnimationGraph, AnimationNodeIndex>,
+		TServer: Resource + LoadAnimationAssets<TAnimationGraph, Animations>,
 	>(
 		mut commands: Commands,
 		mut server: ResMut<TServer>,
@@ -93,14 +96,11 @@ mod tests {
 	}
 
 	#[automock]
-	impl LoadAnimationAssets<_AnimationGraph, AnimationNodeIndex> for _Server {
+	impl LoadAnimationAssets<_AnimationGraph, Animations> for _Server {
 		fn load_animation_assets(
 			&mut self,
 			animations: Vec<AnimationAsset>,
-		) -> (
-			_AnimationGraph,
-			HashMap<AnimationAsset, Vec<AnimationNodeIndex>>,
-		) {
+		) -> (_AnimationGraph, HashMap<AnimationAsset, Animations>) {
 			self.mock.load_animation_assets(animations)
 		}
 	}
@@ -185,15 +185,15 @@ mod tests {
 					HashMap::from([
 						(
 							AnimationAsset::from("path/a"),
-							vec![AnimationNodeIndex::new(1)],
+							Animations::Single(AnimationNodeIndex::new(1)),
 						),
 						(
 							AnimationAsset::from("path/b"),
-							vec![AnimationNodeIndex::new(2)],
+							Animations::Single(AnimationNodeIndex::new(2)),
 						),
 						(
 							AnimationAsset::from("path/c"),
-							vec![AnimationNodeIndex::new(3)],
+							Animations::Single(AnimationNodeIndex::new(3)),
 						),
 					]),
 				));
@@ -209,15 +209,15 @@ mod tests {
 			HashMap::from([
 				(
 					AnimationAsset::from("path/a"),
-					(vec![AnimationNodeIndex::new(1)], 1)
+					(Animations::Single(AnimationNodeIndex::new(1)), 1)
 				),
 				(
 					AnimationAsset::from("path/b"),
-					(vec![AnimationNodeIndex::new(2)], 2)
+					(Animations::Single(AnimationNodeIndex::new(2)), 2)
 				),
 				(
 					AnimationAsset::from("path/c"),
-					(vec![AnimationNodeIndex::new(3)], 4)
+					(Animations::Single(AnimationNodeIndex::new(3)), 4)
 				),
 			]),
 			animation_data.animations

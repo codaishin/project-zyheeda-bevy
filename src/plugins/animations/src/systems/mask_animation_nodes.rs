@@ -1,31 +1,47 @@
-use crate::AnimationData;
+use crate::{AnimationData, traits::asset_server::animation_graph::GetNodeMut};
 use bevy::prelude::*;
-use common::errors::{Error, Level};
+use common::{
+	errors::{Error, Level},
+	traits::{iterate::Iterate, thread_safe::ThreadSafe},
+};
 use std::{any::type_name, marker::PhantomData};
 
 impl<T> MaskAnimationNodes for T where T: Component {}
 
 pub(crate) trait MaskAnimationNodes: Component + Sized {
 	fn mask_animation_nodes(
-		mut graphs: ResMut<Assets<AnimationGraph>>,
+		graphs: ResMut<Assets<AnimationGraph>>,
 		animation_data: Res<AnimationData<Self>>,
 	) -> Result<(), NoGraphForAgent<Self>> {
-		let Some(graph) = graphs.get_mut(&animation_data.graph) else {
-			return Err(NoGraphForAgent(PhantomData));
-		};
-
-		for (indices, _) in animation_data.animations.values() {
-			for index in indices {
-				let Some(animation) = graph.get_mut(*index) else {
-					continue;
-				};
-
-				animation.add_mask(AnimationMask::MAX);
-			}
-		}
-
-		Ok(())
+		mask_animation_nodes(graphs, animation_data)
 	}
+}
+
+fn mask_animation_nodes<TAgent, TGraph, TAnimations>(
+	mut graphs: ResMut<Assets<TGraph>>,
+	animation_data: Res<AnimationData<TAgent, TGraph, TAnimations>>,
+) -> Result<(), NoGraphForAgent<TAgent>>
+where
+	TAgent: Component,
+	TGraph: Asset + GetNodeMut,
+	TAnimations: ThreadSafe,
+	for<'a> TAnimations: Iterate<'a, TItem = &'a AnimationNodeIndex>,
+{
+	let Some(graph) = graphs.get_mut(&animation_data.graph) else {
+		return Err(NoGraphForAgent(PhantomData));
+	};
+
+	for (animations, _) in animation_data.animations.values() {
+		for index in animations.iterate() {
+			let Some(animation) = graph.get_node_mut(*index) else {
+				continue;
+			};
+
+			animation.add_mask(AnimationMask::MAX);
+		}
+	}
+
+	Ok(())
 }
 
 #[derive(Debug, PartialEq)]
@@ -50,27 +66,73 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::animation::AnimationAsset,
+		traits::{animation::AnimationAsset, load_asset::Path},
 	};
-	use std::collections::HashMap;
+	use std::{collections::HashMap, slice::Iter};
+	use uuid::Uuid;
 
-	type AnimationCount = u8;
+	struct _Animations(Vec<AnimationNodeIndex>);
 
-	fn setup<TAgent>(animations: &[(AnimationAsset, AnimationCount)]) -> App
+	impl<'a> Iterate<'a> for _Animations {
+		type TItem = &'a AnimationNodeIndex;
+		type TIter = Iter<'a, AnimationNodeIndex>;
+
+		fn iterate(&'a self) -> Iter<'a, AnimationNodeIndex> {
+			self.0.iter()
+		}
+	}
+
+	#[derive(Asset, TypePath, Default)]
+	struct _Graph {
+		nodes: HashMap<usize, AnimationGraphNode>,
+	}
+
+	impl GetNodeMut for _Graph {
+		fn get_node_mut(
+			&mut self,
+			animation: AnimationNodeIndex,
+		) -> Option<&'_ mut AnimationGraphNode> {
+			self.nodes.get_mut(&animation.index())
+		}
+	}
+
+	impl<const N: usize> From<[(usize, AnimationGraphNode); N]> for _Graph {
+		fn from(nodes: [(usize, AnimationGraphNode); N]) -> Self {
+			Self {
+				nodes: HashMap::from(nodes),
+			}
+		}
+	}
+
+	fn unique_asset() -> AnimationAsset {
+		AnimationAsset::Path(Path::from(Uuid::new_v4().to_string()))
+	}
+
+	fn setup<TAgent>(animations: Vec<_Animations>, graph_handle: &Handle<_Graph>) -> App
 	where
 		TAgent: Component,
 	{
 		let mut app = App::new().single_threaded(Update);
-		let mut graphs = Assets::<AnimationGraph>::default();
-		let mut graph = AnimationGraph::new();
-		let clips = HashMap::from_iter(animations.iter().map(|(asset, animation_count)| {
-			let indices = (0..*animation_count)
-				.map(|_| graph.add_clip(new_handle(), 1., graph.root))
-				.collect::<Vec<_>>();
-			(asset.clone(), (indices, AnimationMask::default()))
-		}));
+		let mut graphs = Assets::default();
+		let mut graph = _Graph::default();
 
-		app.insert_resource(AnimationData::<TAgent>::new(graphs.add(graph), clips));
+		for animations in &animations {
+			for animation in animations.iterate() {
+				graph
+					.nodes
+					.insert(animation.index(), AnimationGraphNode::default());
+			}
+		}
+
+		graphs.insert(graph_handle, graph);
+		app.insert_resource(AnimationData::<TAgent, _Graph, _Animations>::new(
+			graph_handle.clone(),
+			HashMap::from_iter(
+				animations
+					.into_iter()
+					.map(|animation| (unique_asset(), (animation, AnimationMask::default()))),
+			),
+		));
 		app.insert_resource(graphs);
 
 		app
@@ -81,36 +143,32 @@ mod tests {
 		#[derive(Component, Debug, PartialEq)]
 		struct _Agent;
 
-		let animations = [
-			(AnimationAsset::from("a"), 2),
-			(AnimationAsset::from("b"), 2),
+		let animations = vec![
+			_Animations(vec![AnimationNodeIndex::new(1), AnimationNodeIndex::new(2)]),
+			_Animations(vec![AnimationNodeIndex::new(3), AnimationNodeIndex::new(4)]),
 		];
-		let mut app = setup::<_Agent>(&animations);
+		let graph = &new_handle();
+		let mut app = setup::<_Agent>(animations, graph);
 
 		let result = app
 			.world_mut()
-			.run_system_once(_Agent::mask_animation_nodes)?;
+			.run_system_once(mask_animation_nodes::<_Agent, _Graph, _Animations>)?;
 
-		let data = app.world().resource::<AnimationData<_Agent>>();
-		let graph = app
-			.world()
-			.resource::<Assets<AnimationGraph>>()
-			.get(&data.graph)
-			.unwrap();
-		let masks = animations.map(|(asset, _)| {
-			let (indices, _) = data.animations.get(&asset).unwrap();
-			indices
-				.iter()
-				.map(|index| graph.get(*index).unwrap().mask)
-				.collect::<Vec<_>>()
-		});
+		let graph = app.world().resource::<Assets<_Graph>>().get(graph).unwrap();
+		let masks = graph
+			.nodes
+			.values()
+			.map(|node| node.mask)
+			.collect::<Vec<_>>();
 		assert_eq!(
 			(
 				Ok(()),
-				[
-					vec![AnimationMask::MAX, AnimationMask::MAX],
-					vec![AnimationMask::MAX, AnimationMask::MAX],
-				]
+				vec![
+					AnimationMask::MAX,
+					AnimationMask::MAX,
+					AnimationMask::MAX,
+					AnimationMask::MAX,
+				],
 			),
 			(result, masks)
 		);
@@ -125,37 +183,33 @@ mod tests {
 		#[derive(Component)]
 		struct _OtherAgent;
 
-		let animations = [
-			(AnimationAsset::from("a"), 2),
-			(AnimationAsset::from("b"), 2),
+		let animations = vec![
+			_Animations(vec![AnimationNodeIndex::new(1), AnimationNodeIndex::new(2)]),
+			_Animations(vec![AnimationNodeIndex::new(3), AnimationNodeIndex::new(4)]),
 		];
-		let mut app = setup::<_OtherAgent>(&animations);
-		app.insert_resource(AnimationData::<_Agent>::new(
+		let graph = &new_handle();
+		let mut app = setup::<_OtherAgent>(animations, graph);
+		app.insert_resource(AnimationData::<_Agent, _Graph, _Animations>::new(
 			new_handle(),
 			HashMap::default(),
 		));
 
 		_ = app
 			.world_mut()
-			.run_system_once(_Agent::mask_animation_nodes)?;
+			.run_system_once(mask_animation_nodes::<_Agent, _Graph, _Animations>)?;
 
-		let data = app.world().resource::<AnimationData<_OtherAgent>>();
-		let graph = app
-			.world()
-			.resource::<Assets<AnimationGraph>>()
-			.get(&data.graph)
-			.unwrap();
-		let masks = animations.map(|(asset, _)| {
-			let (indices, _) = data.animations.get(&asset).unwrap();
-			indices
-				.iter()
-				.map(|index| graph.get(*index).unwrap().mask)
-				.collect::<Vec<_>>()
-		});
+		let graph = app.world().resource::<Assets<_Graph>>().get(graph).unwrap();
+		let masks = graph
+			.nodes
+			.values()
+			.map(|node| node.mask)
+			.collect::<Vec<_>>();
 		assert_eq!(
-			[
-				vec![AnimationMask::default(), AnimationMask::default()],
-				vec![AnimationMask::default(), AnimationMask::default()],
+			vec![
+				AnimationMask::default(),
+				AnimationMask::default(),
+				AnimationMask::default(),
+				AnimationMask::default(),
 			],
 			masks
 		);
@@ -167,14 +221,14 @@ mod tests {
 		#[derive(Component, Debug, PartialEq)]
 		struct _Agent;
 
-		let mut app = setup::<_Agent>(&[]);
+		let mut app = setup::<_Agent>(vec![], &new_handle());
 		app.world_mut()
-			.resource_mut::<AnimationData<_Agent>>()
+			.resource_mut::<AnimationData<_Agent, _Graph, _Animations>>()
 			.graph = new_handle();
 
 		let error = app
 			.world_mut()
-			.run_system_once(_Agent::mask_animation_nodes)?;
+			.run_system_once(mask_animation_nodes::<_Agent, _Graph, _Animations>)?;
 
 		assert_eq!(Err(NoGraphForAgent(PhantomData::<_Agent>)), error);
 		Ok(())

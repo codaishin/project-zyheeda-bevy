@@ -27,3 +27,13 @@ impl AnimationGraphTrait for AnimationGraph {
 		self.root
 	}
 }
+
+pub(crate) trait GetNodeMut {
+	fn get_node_mut(&mut self, animation: AnimationNodeIndex) -> Option<&mut AnimationGraphNode>;
+}
+
+impl GetNodeMut for AnimationGraph {
+	fn get_node_mut(&mut self, animation: AnimationNodeIndex) -> Option<&mut AnimationGraphNode> {
+		self.get_mut(animation)
+	}
+}

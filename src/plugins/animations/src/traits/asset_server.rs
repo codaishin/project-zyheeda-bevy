@@ -1,6 +1,7 @@
-mod animation_graph;
+pub(crate) mod animation_graph;
 
 use super::LoadAnimationAssets;
+use crate::resource::{Animations, DirectionalIndices};
 use bevy::prelude::*;
 use common::traits::{
 	animation::{AnimationAsset, Directional},
@@ -8,7 +9,7 @@ use common::traits::{
 };
 use std::collections::HashMap;
 
-impl<T, TGraph> LoadAnimationAssets<TGraph, AnimationNodeIndex> for T
+impl<T, TGraph> LoadAnimationAssets<TGraph, Animations> for T
 where
 	T: LoadAsset,
 	TGraph: AnimationGraphTrait + Default,
@@ -16,7 +17,7 @@ where
 	fn load_animation_assets(
 		&mut self,
 		animations: Vec<AnimationAsset>,
-	) -> (TGraph, HashMap<AnimationAsset, Vec<AnimationNodeIndex>>) {
+	) -> (TGraph, HashMap<AnimationAsset, Animations>) {
 		let mut graph = TGraph::default();
 		let blend_node = graph.add_additive_blend(1., graph.root());
 		let load_clip = load_clip(self, &mut graph, blend_node);
@@ -30,42 +31,45 @@ fn load_clip<'a, TServer, TGraph>(
 	server: &'a mut TServer,
 	graph: &'a mut TGraph,
 	blend_node: AnimationNodeIndex,
-) -> impl FnMut(AnimationAsset) -> (AnimationAsset, Vec<AnimationNodeIndex>) + 'a
+) -> impl FnMut(AnimationAsset) -> (AnimationAsset, Animations) + 'a
 where
 	TServer: LoadAsset,
 	TGraph: AnimationGraphTrait,
 {
 	move |animation| {
-		let index = match &animation {
+		let animations = match &animation {
 			AnimationAsset::Path(path) => {
 				let clip = server.load_asset(path.clone());
 				let index = graph.add_clip(clip, 1., blend_node);
-				vec![index]
+				Animations::Single(index)
 			}
 			AnimationAsset::Directional(direction_paths) => {
 				let blend_node = graph.add_blend(1., blend_node);
-				let mut weight = 1.;
-				let mut indices = vec![];
-				for path in iter(direction_paths) {
+				let mut animations = DirectionalIndices::default();
+
+				for (animation, path, weight) in iter_parallel(&mut animations, direction_paths) {
 					let clip = server.load_asset(path.clone());
-					let index = graph.add_clip(clip, weight, blend_node);
-					indices.push(index);
-					weight = 0.;
+					*animation = graph.add_clip(clip, weight, blend_node);
 				}
 
-				indices
+				Animations::Directional(animations)
 			}
 		};
-		(animation, index)
+		(animation, animations)
 	}
 }
 
-fn iter(direction_paths: &Directional) -> [&Path; 4] {
+type AnimationWeight = f32;
+
+fn iter_parallel<'a>(
+	dst: &'a mut DirectionalIndices,
+	src: &'a Directional,
+) -> [(&'a mut AnimationNodeIndex, &'a Path, AnimationWeight); 4] {
 	[
-		&direction_paths.forward,
-		&direction_paths.backward,
-		&direction_paths.left,
-		&direction_paths.right,
+		(&mut dst.forward, &src.forward, 1.),
+		(&mut dst.backward, &src.backward, 0.),
+		(&mut dst.left, &src.left, 0.),
+		(&mut dst.right, &src.right, 0.),
 	]
 }
 
@@ -108,7 +112,7 @@ mod tests {
 
 	macro_rules! setup_graph {
 		($setup:expr) => {
-			type _AnimAssets = (_Graph, HashMap<AnimationAsset, Vec<AnimationNodeIndex>>);
+			type _AnimAssets = (_Graph, HashMap<AnimationAsset, Animations>);
 
 			struct _Graph {
 				mock: Mock_Graph,
@@ -244,7 +248,7 @@ mod tests {
 			assert_eq!(
 				HashMap::from([(
 					AnimationAsset::from("a"),
-					vec![AnimationNodeIndex::new(111)]
+					Animations::Single(AnimationNodeIndex::new(111))
 				)]),
 				map
 			);
@@ -429,12 +433,12 @@ mod tests {
 			assert_eq!(
 				HashMap::from([(
 					asset,
-					vec![
-						AnimationNodeIndex::new(1),
-						AnimationNodeIndex::new(2),
-						AnimationNodeIndex::new(3),
-						AnimationNodeIndex::new(4)
-					]
+					Animations::Directional(DirectionalIndices {
+						forward: AnimationNodeIndex::new(1),
+						backward: AnimationNodeIndex::new(2),
+						left: AnimationNodeIndex::new(3),
+						right: AnimationNodeIndex::new(4)
+					})
 				)]),
 				map
 			);

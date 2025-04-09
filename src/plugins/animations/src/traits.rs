@@ -7,11 +7,11 @@ use bevy::prelude::*;
 use common::traits::animation::{AnimationAsset, AnimationPriority};
 use std::collections::HashMap;
 
-pub(crate) trait LoadAnimationAssets<TGraph, TIndex> {
+pub(crate) trait LoadAnimationAssets<TGraph, TIndices> {
 	fn load_animation_assets(
 		&mut self,
 		animations: Vec<AnimationAsset>,
-	) -> (TGraph, HashMap<AnimationAsset, Vec<TIndex>>);
+	) -> (TGraph, HashMap<AnimationAsset, TIndices>);
 }
 
 pub trait GetActiveAnimations<TAnimation> {
