@@ -2,7 +2,11 @@ use super::{Movement, OnMovementRemoved};
 use crate::traits::{IsDone, MovementUpdate};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use common::{components::Immobilized, tools::UnitsPerSecond};
+use common::{
+	components::Immobilized,
+	tools::UnitsPerSecond,
+	traits::animation::GetMovementDirection,
+};
 
 #[derive(PartialEq, Debug)]
 pub struct VelocityBased;
@@ -36,6 +40,12 @@ impl OnMovementRemoved for Movement<VelocityBased> {
 
 	fn on_movement_removed(entity: &mut EntityCommands) {
 		entity.try_insert(Velocity::zero());
+	}
+}
+
+impl GetMovementDirection for Movement<VelocityBased> {
+	fn movement_direction(&self, transform: &GlobalTransform) -> Option<Dir3> {
+		Dir3::try_from(self.target - transform.translation()).ok()
 	}
 }
 
@@ -253,5 +263,27 @@ mod tests {
 		app.update();
 
 		assert_eq!(None, app.world().entity(entity).get::<Velocity>());
+	}
+
+	#[test]
+	fn get_movement_direction() {
+		let target = Vec3::new(1., 2., 3.);
+		let position = Vec3::new(4., 7., -1.);
+		let movement = Movement::<VelocityBased>::to(target);
+
+		let direction = movement.movement_direction(&GlobalTransform::from_translation(position));
+
+		assert_eq!(Some(Dir3::try_from(target - position).unwrap()), direction);
+	}
+
+	#[test]
+	fn get_no_movement_direction_when_target_is_position() {
+		let target = Vec3::new(1., 2., 3.);
+		let position = target;
+		let movement = Movement::<VelocityBased>::to(target);
+
+		let direction = movement.movement_direction(&GlobalTransform::from_translation(position));
+
+		assert_eq!(None, direction);
 	}
 }

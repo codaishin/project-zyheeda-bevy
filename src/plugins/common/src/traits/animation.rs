@@ -73,12 +73,20 @@ pub trait ConfigureNewAnimationDispatch {
 	);
 }
 
+pub trait GetMovementDirection {
+	fn movement_direction(&self, transform: &GlobalTransform) -> Option<Dir3>;
+}
+
 pub trait RegisterAnimations: HasAnimationsDispatch {
 	fn register_animations<TAgent>(app: &mut App)
 	where
 		TAgent: Component + GetAnimationDefinitions + ConfigureNewAnimationDispatch,
 		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
 		for<'a> AnimationMaskDefinition: From<&'a TAgent::TAnimationMask>;
+
+	fn register_movement_direction<TMovementDirection>(app: &mut App)
+	where
+		TMovementDirection: Component + GetMovementDirection;
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]

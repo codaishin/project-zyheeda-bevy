@@ -23,6 +23,7 @@ use common::{
 		AnimationMaskDefinition,
 		ConfigureNewAnimationDispatch,
 		GetAnimationDefinitions,
+		GetMovementDirection,
 		HasAnimationsDispatch,
 		RegisterAnimations,
 	},
@@ -68,6 +69,12 @@ impl RegisterAnimations for AnimationsPlugin {
 			Update,
 			AnimationDispatch::play_animation_clip_via::<&mut AnimationPlayer, TAgent>,
 		);
+	}
+
+	fn register_movement_direction<TMovementDirection>(_: &mut App)
+	where
+		TMovementDirection: Component + GetMovementDirection,
+	{
 	}
 }
 
