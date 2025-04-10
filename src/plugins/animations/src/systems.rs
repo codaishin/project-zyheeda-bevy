@@ -4,3 +4,4 @@ pub(crate) mod init_player_components;
 pub(crate) mod mask_animation_nodes;
 pub(crate) mod play_animation_clip;
 pub(crate) mod remove_unused_animation_targets;
+pub(crate) mod set_directional_animation_weights;

@@ -1,4 +1,9 @@
-use crate::traits::{AnimationPlayers, AnimationPlayersWithoutGraph, GetActiveAnimations};
+use crate::traits::{
+	AnimationPlayers,
+	AnimationPlayersWithoutGraph,
+	GetActiveAnimations,
+	GetAllActiveAnimations,
+};
 use bevy::prelude::*;
 use common::traits::{
 	animation::{Animation, AnimationPriority, StartAnimation, StopAnimation},
@@ -159,6 +164,49 @@ where
 		TPriority: Into<AnimationPriority>,
 	{
 		self.slot(priority).iter()
+	}
+}
+
+impl<TAnimation> GetAllActiveAnimations<TAnimation> for AnimationDispatch<TAnimation>
+where
+	TAnimation: Clone + Eq + Hash,
+{
+	type TIter<'a>
+		= IterAll<'a, TAnimation>
+	where
+		Self: 'a,
+		TAnimation: 'a;
+
+	fn get_all_active_animations(&self) -> Self::TIter<'_> {
+		IterAll(
+			self.stack.0.iter(),
+			self.stack.1.iter(),
+			self.stack.2.iter(),
+		)
+	}
+}
+
+pub struct IterAll<'a, TAnimation>(
+	Iter<'a, TAnimation>,
+	Iter<'a, TAnimation>,
+	Iter<'a, TAnimation>,
+);
+
+impl<'a, TAnimation> Iterator for IterAll<'a, TAnimation> {
+	type Item = &'a TAnimation;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		if let Some(next) = self.0.next() {
+			return Some(next);
+		}
+		if let Some(next) = self.1.next() {
+			return Some(next);
+		}
+		if let Some(next) = self.2.next() {
+			return Some(next);
+		}
+
+		None
 	}
 }
 
@@ -438,6 +486,27 @@ mod tests {
 			dispatch
 				.animation_players_without_graph()
 				.collect::<HashSet<_>>(),
+		)
+	}
+
+	#[test]
+	fn iter_all() {
+		let dispatch = AnimationDispatch {
+			animation_players: default(),
+			animation_handles: default(),
+			stack: (
+				HashSet::from([1, 2, 3]),
+				HashSet::from([4, 5, 6]),
+				HashSet::from([7, 8, 9]),
+			),
+		};
+
+		assert_eq!(
+			HashSet::from([1, 2, 3, 4, 5, 6, 7, 8, 9]),
+			dispatch
+				.get_all_active_animations()
+				.copied()
+				.collect::<HashSet<_>>()
 		)
 	}
 }

@@ -25,6 +25,15 @@ pub trait GetActiveAnimations<TAnimation> {
 		TPriority: Into<AnimationPriority> + 'static;
 }
 
+pub trait GetAllActiveAnimations<TAnimation> {
+	type TIter<'a>: Iterator<Item = &'a TAnimation>
+	where
+		Self: 'a,
+		TAnimation: 'a;
+
+	fn get_all_active_animations(&self) -> Self::TIter<'_>;
+}
+
 pub trait IsPlaying<TIndex> {
 	fn is_playing(&self, index: TIndex) -> bool;
 }

@@ -47,9 +47,9 @@ where
 				let blend_node = graph.add_blend(1., blend_node);
 				let mut animations = DirectionalIndices::default();
 
-				for (animation, path, weight) in iter_parallel(&mut animations, direction_paths) {
+				for (animation, path) in iter_parallel(&mut animations, direction_paths) {
 					let clip = server.load_asset(path.clone());
-					*animation = graph.add_clip(clip, weight, blend_node);
+					*animation = graph.add_clip(clip, 0., blend_node);
 				}
 
 				Animations::Directional(animations)
@@ -59,17 +59,15 @@ where
 	}
 }
 
-type AnimationWeight = f32;
-
 fn iter_parallel<'a>(
 	dst: &'a mut DirectionalIndices,
 	src: &'a Directional,
-) -> [(&'a mut AnimationNodeIndex, &'a Path, AnimationWeight); 4] {
+) -> [(&'a mut AnimationNodeIndex, &'a Path); 4] {
 	[
-		(&mut dst.forward, &src.forward, 1.),
-		(&mut dst.backward, &src.backward, 0.),
-		(&mut dst.left, &src.left, 0.),
-		(&mut dst.right, &src.right, 0.),
+		(&mut dst.forward, &src.forward),
+		(&mut dst.backward, &src.backward),
+		(&mut dst.left, &src.left),
+		(&mut dst.right, &src.right),
 	]
 }
 
@@ -310,7 +308,7 @@ mod tests {
 					.times(1)
 					.with(
 						eq(new_handle_from(FORWARD_ID)),
-						eq(1.),
+						eq(0.),
 						eq(AnimationNodeIndex::new(4242)),
 					)
 					.return_const(AnimationNodeIndex::default());
@@ -377,7 +375,7 @@ mod tests {
 				mock.expect_add_clip()
 					.with(
 						eq(new_handle_from(FORWARD_ID)),
-						eq(1.),
+						eq(0.),
 						eq(AnimationNodeIndex::default()),
 					)
 					.return_const(AnimationNodeIndex::new(1));

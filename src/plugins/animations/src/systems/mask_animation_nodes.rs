@@ -50,16 +50,12 @@ fn mask_animation_nodes<TAgent, TGraph, TAnimations>(
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::test_tools::unique_animation_asset;
 	use common::{
 		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::{
-			animation::AnimationAsset,
-			load_asset::Path,
-			wrap_handle::{UnwrapHandle, WrapHandle},
-		},
+		traits::wrap_handle::{UnwrapHandle, WrapHandle},
 	};
 	use std::{collections::HashMap, slice::Iter};
-	use uuid::Uuid;
 
 	struct _Animations(Vec<AnimationNodeIndex>);
 
@@ -116,10 +112,6 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Agent;
 
-	fn unique_asset() -> AnimationAsset {
-		AnimationAsset::Path(Path::from(Uuid::new_v4().to_string()))
-	}
-
 	fn setup(lookup: &AnimationLookup<_Animations>, graph_handle: &Handle<_Graph>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		let mut graphs = Assets::default();
@@ -149,14 +141,14 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([
 				(
-					unique_asset(),
+					unique_animation_asset(),
 					(
 						_Animations(vec![AnimationNodeIndex::new(1), AnimationNodeIndex::new(2)]),
 						AnimationMask::default(),
 					),
 				),
 				(
-					unique_asset(),
+					unique_animation_asset(),
 					(
 						_Animations(vec![AnimationNodeIndex::new(3), AnimationNodeIndex::new(4)]),
 						AnimationMask::default(),
@@ -196,7 +188,7 @@ mod tests {
 	fn act_only_once() {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				unique_asset(),
+				unique_animation_asset(),
 				(
 					_Animations(vec![AnimationNodeIndex::new(1)]),
 					AnimationMask::default(),

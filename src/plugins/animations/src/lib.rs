@@ -2,11 +2,15 @@ pub mod components;
 pub mod systems;
 pub mod traits;
 
+#[cfg(test)]
+pub(crate) mod test_tools;
+
 use crate::systems::{
 	discover_animation_mask_bones::DiscoverMaskChains,
 	init_animation_components::InitAnimationComponents,
 	mask_animation_nodes::MaskAnimationNodes,
 	remove_unused_animation_targets::RemoveUnusedAnimationTargets,
+	set_directional_animation_weights::SetDirectionalAnimationWeights,
 };
 use bevy::prelude::*;
 use common::{
@@ -58,10 +62,14 @@ impl RegisterAnimations for AnimationsPlugin {
 		);
 	}
 
-	fn register_movement_direction<TMovementDirection>(_: &mut App)
+	fn register_movement_direction<TMovementDirection>(app: &mut App)
 	where
 		TMovementDirection: Component + GetMovementDirection,
 	{
+		app.add_systems(
+			Update,
+			AnimationDispatch::set_directional_animation_weights::<TMovementDirection>,
+		);
 	}
 }
 

@@ -166,6 +166,8 @@ fn add(dst: &mut AnimationMask, src: AnimationMask) {
 
 #[cfg(test)]
 mod tests {
+	use crate::test_tools::leak_iterator;
+
 	use super::*;
 	use common::{
 		test_tools::utils::{SingleThreadedApp, new_handle},
@@ -369,10 +371,6 @@ mod tests {
 		impl IsPlaying<AnimationNodeIndex> for _AnimationPlayer {
 			fn is_playing(&self, index: AnimationNodeIndex) -> bool;
 		}
-	}
-
-	fn leak_iterator(animations: Vec<Animation>) -> Iter<'static, Animation> {
-		Box::new(animations).leak().iter()
 	}
 
 	macro_rules! binary_str {
