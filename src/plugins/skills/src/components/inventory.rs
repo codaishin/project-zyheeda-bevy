@@ -7,6 +7,7 @@ use common::{
 		iterate::Iterate,
 	},
 };
+use std::iter::Enumerate;
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub struct Inventory(pub(crate) Vec<Option<Handle<Item>>>);
@@ -47,17 +48,27 @@ impl LoadoutKey for Inventory {
 	type TKey = InventoryKey;
 }
 
-impl Iterate for Inventory {
-	type TItem<'a>
-		= (InventoryKey, &'a Option<Handle<Item>>)
-	where
-		Self: 'a;
+impl<'a> Iterate<'a> for Inventory {
+	type TItem = (InventoryKey, &'a Option<Handle<Item>>);
+	type TIter = Iter<'a>;
 
-	fn iterate(&self) -> impl Iterator<Item = Self::TItem<'_>> {
-		self.0
-			.iter()
-			.enumerate()
-			.map(|(i, item)| (InventoryKey(i), item))
+	fn iterate(&'a self) -> Self::TIter {
+		Iter {
+			it: self.0.iter().enumerate(),
+		}
+	}
+}
+
+pub struct Iter<'a> {
+	it: Enumerate<std::slice::Iter<'a, Option<Handle<Item>>>>,
+}
+
+impl<'a> Iterator for Iter<'a> {
+	type Item = (InventoryKey, &'a Option<Handle<Item>>);
+
+	fn next(&mut self) -> Option<Self::Item> {
+		let (i, item) = self.it.next()?;
+		Some((InventoryKey(i), item))
 	}
 }
 

@@ -1,12 +1,14 @@
 use super::Iterate;
+use std::slice::Iter;
 
-impl<TItem, const N: usize> Iterate for [TItem; N] {
-	type TItem<'a>
-		= &'a TItem
-	where
-		Self: 'a;
+impl<'a, TItem, const N: usize> Iterate<'a> for [TItem; N]
+where
+	Self: 'a,
+{
+	type TItem = &'a TItem;
+	type TIter = Iter<'a, TItem>;
 
-	fn iterate(&self) -> impl Iterator<Item = Self::TItem<'_>> {
+	fn iterate(&'a self) -> Self::TIter {
 		self.iter()
 	}
 }

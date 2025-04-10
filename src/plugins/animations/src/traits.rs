@@ -7,11 +7,11 @@ use bevy::prelude::*;
 use common::traits::animation::{AnimationAsset, AnimationPriority};
 use std::collections::HashMap;
 
-pub(crate) trait LoadAnimationAssets<TGraph, TIndex> {
+pub(crate) trait LoadAnimationAssets<TGraph, TIndices> {
 	fn load_animation_assets(
 		&mut self,
 		animations: Vec<AnimationAsset>,
-	) -> (TGraph, HashMap<AnimationAsset, Vec<TIndex>>);
+	) -> (TGraph, HashMap<AnimationAsset, TIndices>);
 }
 
 pub trait GetActiveAnimations<TAnimation> {
@@ -23,6 +23,15 @@ pub trait GetActiveAnimations<TAnimation> {
 	fn get_active_animations<TPriority>(&self, priority: TPriority) -> Self::TIter<'_>
 	where
 		TPriority: Into<AnimationPriority> + 'static;
+}
+
+pub trait GetAllActiveAnimations<TAnimation> {
+	type TIter<'a>: Iterator<Item = &'a TAnimation>
+	where
+		Self: 'a,
+		TAnimation: 'a;
+
+	fn get_all_active_animations(&self) -> Self::TIter<'_>;
 }
 
 pub trait IsPlaying<TIndex> {
@@ -41,18 +50,18 @@ pub trait StopAnimation<TIndex> {
 	fn stop_animation(&mut self, index: TIndex);
 }
 
-pub trait AnimationPlayers<'a>
+pub trait AnimationPlayers
 where
 	Self::TIter: Iterator<Item = Entity>,
 {
 	type TIter;
-	fn animation_players(&'a self) -> Self::TIter;
+	fn animation_players(&self) -> Self::TIter;
 }
 
-pub trait AnimationPlayersWithoutTransitions<'a>
+pub trait AnimationPlayersWithoutGraph
 where
 	Self::TIter: Iterator<Item = Entity>,
 {
 	type TIter;
-	fn animation_players_without_transition(&'a self) -> Self::TIter;
+	fn animation_players_without_graph(&self) -> Self::TIter;
 }

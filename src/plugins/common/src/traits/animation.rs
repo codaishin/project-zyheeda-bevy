@@ -73,12 +73,20 @@ pub trait ConfigureNewAnimationDispatch {
 	);
 }
 
+pub trait GetMovementDirection {
+	fn movement_direction(&self, transform: &GlobalTransform) -> Option<Dir3>;
+}
+
 pub trait RegisterAnimations: HasAnimationsDispatch {
 	fn register_animations<TAgent>(app: &mut App)
 	where
 		TAgent: Component + GetAnimationDefinitions + ConfigureNewAnimationDispatch,
 		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
 		for<'a> AnimationMaskDefinition: From<&'a TAgent::TAnimationMask>;
+
+	fn register_movement_direction<TMovementDirection>(app: &mut App)
+	where
+		TMovementDirection: Component + GetMovementDirection;
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -89,12 +97,12 @@ pub enum PlayMode {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Animation {
-	pub path: AnimationAsset,
+	pub asset: AnimationAsset,
 	pub play_mode: PlayMode,
 }
 
 impl Animation {
-	pub fn new(path: AnimationAsset, play_mode: PlayMode) -> Self {
-		Self { path, play_mode }
+	pub fn new(asset: AnimationAsset, play_mode: PlayMode) -> Self {
+		Self { asset, play_mode }
 	}
 }

@@ -12,7 +12,7 @@ use common::{
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::log::log_many,
 	traits::{
-		animation::HasAnimationsDispatch,
+		animation::{HasAnimationsDispatch, RegisterAnimations},
 		handles_destruction::HandlesDestruction,
 		handles_effect::HandlesEffect,
 		handles_enemies::HandlesEnemies,
@@ -76,7 +76,7 @@ impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding, TEnemies, 
 		TPlayers,
 	)>
 where
-	TAnimations: ThreadSafe + HasAnimationsDispatch,
+	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations,
 	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLifeCycles: ThreadSafe + HandlesDestruction,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
@@ -112,7 +112,7 @@ impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding, TEnemies, 
 		TPlayers,
 	)>
 where
-	TAnimations: ThreadSafe + HasAnimationsDispatch,
+	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations,
 	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLifeCycles: ThreadSafe + HandlesDestruction,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
@@ -129,6 +129,7 @@ where
 			.register_prefab::<SkillContact>(app);
 		TPrefabs::with_dependency::<(TInteractions, TLifeCycles)>()
 			.register_prefab::<SkillProjection>(app);
+		TAnimations::register_movement_direction::<Movement<VelocityBased>>(app);
 
 		app.add_event::<MoveInputEvent>()
 			.add_systems(

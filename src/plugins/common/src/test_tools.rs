@@ -17,6 +17,12 @@ pub mod utils {
 		fn approx_equal(&self, other: &Self, tolerance: &TTolerance) -> bool;
 	}
 
+	impl ApproxEqual<f32> for f32 {
+		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+			(self - other).abs() <= *tolerance
+		}
+	}
+
 	impl ApproxEqual<f32> for Vec3 {
 		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
 			self.abs_diff_eq(*other, *tolerance)
@@ -60,6 +66,21 @@ pub mod utils {
 				(Some(value_s), Some(value_o)) => value_s.approx_equal(value_o, tolerance),
 				_ => false,
 			}
+		}
+	}
+
+	impl<T, const N: usize> ApproxEqual<f32> for [T; N]
+	where
+		T: ApproxEqual<f32>,
+	{
+		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+			for (a, b) in self.iter().zip(other) {
+				if !a.approx_equal(b, tolerance) {
+					return false;
+				}
+			}
+
+			true
 		}
 	}
 

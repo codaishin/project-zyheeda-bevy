@@ -1,44 +1,48 @@
-use crate::AnimationData;
+use crate::{
+	components::animation_lookup::AnimationLookup,
+	traits::asset_server::animation_graph::GetNodeMut,
+};
 use bevy::prelude::*;
-use common::errors::{Error, Level};
-use std::{any::type_name, marker::PhantomData};
+use common::traits::{
+	iterate::Iterate,
+	thread_safe::ThreadSafe,
+	wrap_handle::{UnwrapHandle, WrapHandle},
+};
 
 impl<T> MaskAnimationNodes for T where T: Component {}
 
 pub(crate) trait MaskAnimationNodes: Component + Sized {
 	fn mask_animation_nodes(
-		mut graphs: ResMut<Assets<AnimationGraph>>,
-		animation_data: Res<AnimationData<Self>>,
-	) -> Result<(), NoGraphForAgent<Self>> {
-		let Some(graph) = graphs.get_mut(&animation_data.graph) else {
-			return Err(NoGraphForAgent(PhantomData));
+		graphs: ResMut<Assets<AnimationGraph>>,
+		agents: Query<(&AnimationGraphHandle, &AnimationLookup), Added<Self>>,
+	) {
+		mask_animation_nodes(graphs, agents)
+	}
+}
+
+fn mask_animation_nodes<TAgent, TGraph, TAnimations>(
+	mut graphs: ResMut<Assets<TGraph>>,
+	agents: Query<(&TGraph::TComponent, &AnimationLookup<TAnimations>), Added<TAgent>>,
+) where
+	TAgent: Component,
+	TGraph: Asset + GetNodeMut + WrapHandle,
+	TAnimations: ThreadSafe,
+	for<'a> TAnimations: Iterate<'a, TItem = &'a AnimationNodeIndex>,
+{
+	for (graph_component, lookup) in &agents {
+		let handle = graph_component.unwrap();
+		let Some(graph) = graphs.get_mut(handle) else {
+			continue;
 		};
 
-		for (indices, _) in animation_data.animations.values() {
-			for index in indices {
-				let Some(animation) = graph.get_mut(*index) else {
+		for (animations, _) in lookup.animations.values() {
+			for index in animations.iterate() {
+				let Some(animation) = graph.get_node_mut(*index) else {
 					continue;
 				};
 
 				animation.add_mask(AnimationMask::MAX);
 			}
-		}
-
-		Ok(())
-	}
-}
-
-#[derive(Debug, PartialEq)]
-pub(crate) struct NoGraphForAgent<TAgent>(PhantomData<TAgent>);
-
-impl<TAgent> From<NoGraphForAgent<TAgent>> for Error {
-	fn from(_: NoGraphForAgent<TAgent>) -> Self {
-		Error {
-			msg: format!(
-				"{}: Does not have any `AnimationData`",
-				type_name::<TAgent>()
-			),
-			lvl: Level::Error,
 		}
 	}
 }
@@ -46,137 +50,172 @@ impl<TAgent> From<NoGraphForAgent<TAgent>> for Error {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::AnimationData;
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use crate::test_tools::unique_animation_asset;
 	use common::{
 		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::animation::AnimationAsset,
+		traits::wrap_handle::{UnwrapHandle, WrapHandle},
 	};
-	use std::collections::HashMap;
+	use std::{collections::HashMap, slice::Iter};
 
-	type AnimationCount = u8;
+	struct _Animations(Vec<AnimationNodeIndex>);
 
-	fn setup<TAgent>(animations: &[(AnimationAsset, AnimationCount)]) -> App
-	where
-		TAgent: Component,
-	{
+	impl<'a> Iterate<'a> for _Animations {
+		type TItem = &'a AnimationNodeIndex;
+		type TIter = Iter<'a, AnimationNodeIndex>;
+
+		fn iterate(&'a self) -> Iter<'a, AnimationNodeIndex> {
+			self.0.iter()
+		}
+	}
+
+	#[derive(Debug, Clone, TypePath, Asset, Default)]
+	struct _Graph {
+		nodes: HashMap<usize, AnimationGraphNode>,
+	}
+
+	impl WrapHandle for _Graph {
+		type TComponent = _GraphComponent;
+
+		fn wrap(handle: Handle<Self>) -> Self::TComponent {
+			_GraphComponent(handle)
+		}
+	}
+
+	impl GetNodeMut for _Graph {
+		fn get_node_mut(
+			&mut self,
+			animation: AnimationNodeIndex,
+		) -> Option<&'_ mut AnimationGraphNode> {
+			self.nodes.get_mut(&animation.index())
+		}
+	}
+
+	impl<const N: usize> From<[(usize, AnimationGraphNode); N]> for _Graph {
+		fn from(nodes: [(usize, AnimationGraphNode); N]) -> Self {
+			Self {
+				nodes: HashMap::from(nodes),
+			}
+		}
+	}
+
+	#[derive(Component)]
+	struct _GraphComponent(Handle<_Graph>);
+
+	impl UnwrapHandle for _GraphComponent {
+		type TAsset = _Graph;
+
+		fn unwrap(&self) -> &Handle<Self::TAsset> {
+			&self.0
+		}
+	}
+
+	#[derive(Component, Debug, PartialEq)]
+	struct _Agent;
+
+	fn setup(lookup: &AnimationLookup<_Animations>, graph_handle: &Handle<_Graph>) -> App {
 		let mut app = App::new().single_threaded(Update);
-		let mut graphs = Assets::<AnimationGraph>::default();
-		let mut graph = AnimationGraph::new();
-		let clips = HashMap::from_iter(animations.iter().map(|(asset, animation_count)| {
-			let indices = (0..*animation_count)
-				.map(|_| graph.add_clip(new_handle(), 1., graph.root))
-				.collect::<Vec<_>>();
-			(asset.clone(), (indices, AnimationMask::default()))
-		}));
+		let mut graphs = Assets::default();
+		let mut graph = _Graph::default();
 
-		app.insert_resource(AnimationData::<TAgent>::new(graphs.add(graph), clips));
+		for (animations, mask) in lookup.animations.values() {
+			for animation in animations.iterate() {
+				graph.nodes.insert(
+					animation.index(),
+					AnimationGraphNode {
+						mask: *mask,
+						..default()
+					},
+				);
+			}
+		}
+
+		graphs.insert(graph_handle, graph);
 		app.insert_resource(graphs);
+		app.add_systems(Update, mask_animation_nodes::<_Agent, _Graph, _Animations>);
 
 		app
 	}
 
 	#[test]
-	fn set_all_animations_to_being_fully_masked() -> Result<(), RunSystemError> {
-		#[derive(Component, Debug, PartialEq)]
-		struct _Agent;
+	fn set_all_animations_to_being_fully_masked() {
+		let lookup = AnimationLookup {
+			animations: HashMap::from([
+				(
+					unique_animation_asset(),
+					(
+						_Animations(vec![AnimationNodeIndex::new(1), AnimationNodeIndex::new(2)]),
+						AnimationMask::default(),
+					),
+				),
+				(
+					unique_animation_asset(),
+					(
+						_Animations(vec![AnimationNodeIndex::new(3), AnimationNodeIndex::new(4)]),
+						AnimationMask::default(),
+					),
+				),
+			]),
+		};
+		let handle = &new_handle();
+		let mut app = setup(&lookup, handle);
+		app.world_mut()
+			.spawn((_Agent, lookup, _GraphComponent(handle.clone())));
 
-		let animations = [
-			(AnimationAsset::from("a"), 2),
-			(AnimationAsset::from("b"), 2),
-		];
-		let mut app = setup::<_Agent>(&animations);
+		app.update();
 
-		let result = app
-			.world_mut()
-			.run_system_once(_Agent::mask_animation_nodes)?;
-
-		let data = app.world().resource::<AnimationData<_Agent>>();
 		let graph = app
 			.world()
-			.resource::<Assets<AnimationGraph>>()
-			.get(&data.graph)
+			.resource::<Assets<_Graph>>()
+			.get(handle)
 			.unwrap();
-		let masks = animations.map(|(asset, _)| {
-			let (indices, _) = data.animations.get(&asset).unwrap();
-			indices
-				.iter()
-				.map(|index| graph.get(*index).unwrap().mask)
-				.collect::<Vec<_>>()
-		});
+		let masks = graph
+			.nodes
+			.values()
+			.map(|node| node.mask)
+			.collect::<Vec<_>>();
 		assert_eq!(
-			(
-				Ok(()),
-				[
-					vec![AnimationMask::MAX, AnimationMask::MAX],
-					vec![AnimationMask::MAX, AnimationMask::MAX],
-				]
-			),
-			(result, masks)
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn do_not_set_animations_masks_of_other_agent() -> Result<(), RunSystemError> {
-		#[derive(Component)]
-		struct _Agent;
-
-		#[derive(Component)]
-		struct _OtherAgent;
-
-		let animations = [
-			(AnimationAsset::from("a"), 2),
-			(AnimationAsset::from("b"), 2),
-		];
-		let mut app = setup::<_OtherAgent>(&animations);
-		app.insert_resource(AnimationData::<_Agent>::new(
-			new_handle(),
-			HashMap::default(),
-		));
-
-		_ = app
-			.world_mut()
-			.run_system_once(_Agent::mask_animation_nodes)?;
-
-		let data = app.world().resource::<AnimationData<_OtherAgent>>();
-		let graph = app
-			.world()
-			.resource::<Assets<AnimationGraph>>()
-			.get(&data.graph)
-			.unwrap();
-		let masks = animations.map(|(asset, _)| {
-			let (indices, _) = data.animations.get(&asset).unwrap();
-			indices
-				.iter()
-				.map(|index| graph.get(*index).unwrap().mask)
-				.collect::<Vec<_>>()
-		});
-		assert_eq!(
-			[
-				vec![AnimationMask::default(), AnimationMask::default()],
-				vec![AnimationMask::default(), AnimationMask::default()],
+			vec![
+				AnimationMask::MAX,
+				AnimationMask::MAX,
+				AnimationMask::MAX,
+				AnimationMask::MAX,
 			],
 			masks
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn return_no_graph_error() -> Result<(), RunSystemError> {
-		#[derive(Component, Debug, PartialEq)]
-		struct _Agent;
-
-		let mut app = setup::<_Agent>(&[]);
+	fn act_only_once() {
+		let lookup = AnimationLookup {
+			animations: HashMap::from([(
+				unique_animation_asset(),
+				(
+					_Animations(vec![AnimationNodeIndex::new(1)]),
+					AnimationMask::default(),
+				),
+			)]),
+		};
+		let handle = &new_handle();
+		let mut app = setup(&lookup, handle);
 		app.world_mut()
-			.resource_mut::<AnimationData<_Agent>>()
-			.graph = new_handle();
+			.spawn((_Agent, lookup, _GraphComponent(handle.clone())));
 
-		let error = app
-			.world_mut()
-			.run_system_once(_Agent::mask_animation_nodes)?;
+		app.update();
+		let mut graphs = app.world_mut().resource_mut::<Assets<_Graph>>();
+		let graph = graphs.get_mut(handle).unwrap();
+		graph.nodes.get_mut(&1).unwrap().mask = AnimationMask::default();
+		app.update();
 
-		assert_eq!(Err(NoGraphForAgent(PhantomData::<_Agent>)), error);
-		Ok(())
+		let graph = app
+			.world()
+			.resource::<Assets<_Graph>>()
+			.get(handle)
+			.unwrap();
+		let masks = graph
+			.nodes
+			.values()
+			.map(|node| node.mask)
+			.collect::<Vec<_>>();
+		assert_eq!(vec![AnimationMask::default(),], masks);
 	}
 }

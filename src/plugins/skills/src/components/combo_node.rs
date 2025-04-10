@@ -42,7 +42,7 @@ impl<TSkill> Default for ComboNode<TSkill> {
 
 impl<TKey> GetRef<TKey, Skill> for ComboNode
 where
-	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
 {
 	fn get(&self, slot_key_path: &TKey) -> Option<&Skill> {
 		let mut value = None;
@@ -60,7 +60,7 @@ where
 
 impl<TKey> GetMut<TKey, Skill> for ComboNode
 where
-	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
 {
 	fn get_mut(&mut self, slot_key_path: &TKey) -> Option<&mut Skill> {
 		let mut value = None;
@@ -90,7 +90,7 @@ pub struct NodeEntry<'a, TSkill> {
 
 impl<TKey, TSkill> GetNodeMut<TKey> for ComboNode<TSkill>
 where
-	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
 {
 	type TNode<'a>
 		= NodeEntryMut<'a, TSkill>
@@ -114,7 +114,7 @@ where
 
 impl<TKey, TSkill> GetNode<TKey> for ComboNode<TSkill>
 where
-	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
 {
 	type TNode<'a>
 		= NodeEntry<'a, TSkill>
@@ -144,7 +144,7 @@ pub enum SlotKeyPathError {
 
 impl<TKey> TryInsert<TKey, Skill> for ComboNode
 where
-	for<'a> TKey: Iterate<TItem<'a> = &'a SlotKey> + 'a,
+	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
 {
 	type Error = SlotKeyPathError;
 

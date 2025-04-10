@@ -13,7 +13,7 @@ pub(crate) fn flush_skill_combos<TCombos, TComboTimeout, TTime, TQueue>(
 	TCombos: Flush + Component,
 	TComboTimeout: CumulativeUpdate<Duration> + IsTimedOut + Flush + Component,
 	TTime: Default + Sync + Send + 'static,
-	for<'a> TQueue: Iterate<TItem<'a> = &'a QueuedSkill> + Component + 'a,
+	for<'a> TQueue: Iterate<'a, TItem = &'a QueuedSkill> + Component + 'a,
 {
 	let delta = time.delta();
 
@@ -29,7 +29,7 @@ pub(crate) fn flush_skill_combos<TCombos, TComboTimeout, TTime, TQueue>(
 
 fn skills_queued<TQueue>(queue: &TQueue) -> bool
 where
-	for<'a> TQueue: Iterate<TItem<'a> = &'a QueuedSkill>,
+	for<'a> TQueue: Iterate<'a, TItem = &'a QueuedSkill>,
 {
 	queue.iterate().next().is_some()
 }
@@ -61,6 +61,7 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::{Sequence, mock, predicate::eq};
+	use std::slice::Iter;
 
 	#[derive(Component, NestedMocks)]
 	struct _Timeout {
@@ -121,13 +122,11 @@ mod tests {
 		skills: Vec<QueuedSkill>,
 	}
 
-	impl Iterate for _Queue {
-		type TItem<'a>
-			= &'a QueuedSkill
-		where
-			Self: 'a;
+	impl<'a> Iterate<'a> for _Queue {
+		type TItem = &'a QueuedSkill;
+		type TIter = Iter<'a, QueuedSkill>;
 
-		fn iterate(&self) -> impl Iterator<Item = Self::TItem<'_>> {
+		fn iterate(&'a self) -> Self::TIter {
 			self.skills.iter()
 		}
 	}
