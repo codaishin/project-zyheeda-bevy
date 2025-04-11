@@ -10,11 +10,11 @@ use bevy::{
 use common::{
 	states::mouse_context::MouseContext,
 	tools::slot_key::SlotKey,
-	traits::{accessors::get::GetterRef, map_value::MapForward},
+	traits::{accessors::get::GetterRef, key_mappings::GetKeyCode},
 };
 
 pub fn prime_mouse_context<
-	TMap: Resource + MapForward<SlotKey, KeyCode>,
+	TMap: Resource + GetKeyCode<SlotKey, KeyCode>,
 	TPanel: GetterRef<SlotKey> + Component,
 >(
 	mut mouse_context: ResMut<NextState<MouseContext>>,
@@ -31,10 +31,10 @@ pub fn prime_mouse_context<
 	mouse_context.set(MouseContext::Primed(key_code));
 }
 
-fn get_key_code_from<TMap: MapForward<SlotKey, KeyCode>, TPanel: GetterRef<SlotKey>>(
+fn get_key_code_from<TMap: GetKeyCode<SlotKey, KeyCode>, TPanel: GetterRef<SlotKey>>(
 	key_map: &'_ TMap,
 ) -> impl Fn((&TPanel, &Interaction)) -> KeyCode + '_ {
-	|(panel, _): (&TPanel, &Interaction)| key_map.map_forward(*panel.get())
+	|(panel, _): (&TPanel, &Interaction)| key_map.get_key_code(*panel.get())
 }
 
 fn is_pressed<TPanel>((_, interaction): &(&TPanel, &Interaction)) -> bool {
@@ -67,8 +67,8 @@ mod test {
 	#[derive(Resource)]
 	struct _Map(SlotKey, KeyCode);
 
-	impl MapForward<SlotKey, KeyCode> for _Map {
-		fn map_forward(&self, value: SlotKey) -> KeyCode {
+	impl GetKeyCode<SlotKey, KeyCode> for _Map {
+		fn get_key_code(&self, value: SlotKey) -> KeyCode {
 			if value == self.0 {
 				return self.1;
 			}

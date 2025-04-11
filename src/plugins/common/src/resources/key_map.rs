@@ -1,6 +1,6 @@
 use crate::traits::{
 	iteration::IterFinite,
-	map_value::{MapForward, TryMapBackwards},
+	key_mappings::{GetKeyCode, TryGetKey},
 };
 use bevy::ecs::system::Resource;
 use std::marker::PhantomData;
@@ -27,22 +27,22 @@ where
 	}
 }
 
-impl<TKey, TValue> MapForward<TKey, TValue> for KeyMap<TKey, TValue>
+impl<TKey, TValue> GetKeyCode<TKey, TValue> for KeyMap<TKey, TValue>
 where
 	TKey: IterFinite + Copy,
 	TValue: From<TKey> + PartialEq,
 {
-	fn map_forward(&self, value: TKey) -> TValue {
+	fn get_key_code(&self, value: TKey) -> TValue {
 		TValue::from(value)
 	}
 }
 
-impl<TKey, TValue> TryMapBackwards<TValue, TKey> for KeyMap<TKey, TValue>
+impl<TKey, TValue> TryGetKey<TValue, TKey> for KeyMap<TKey, TValue>
 where
 	TKey: IterFinite + Copy,
 	TValue: From<TKey> + PartialEq,
 {
-	fn try_map_backwards(&self, value: TValue) -> Option<TKey> {
+	fn try_get_key(&self, value: TValue) -> Option<TKey> {
 		TKey::iterator().find(|key| value == TValue::from(*key))
 	}
 }
@@ -86,7 +86,7 @@ mod tests {
 	#[test]
 	fn map_forwards() {
 		let mapper = KeyMap::<_From, _To>::default();
-		let mapped = mapper.map_forward(_From::Big);
+		let mapped = mapper.get_key_code(_From::Big);
 
 		assert_eq!(_To("big"), mapped,);
 	}
@@ -94,7 +94,7 @@ mod tests {
 	#[test]
 	fn map_backwards() {
 		let mapper = KeyMap::<_From, _To>::default();
-		let mapped = mapper.try_map_backwards(_To("small"));
+		let mapped = mapper.try_get_key(_To("small"));
 
 		assert_eq!(Some(_From::Small), mapped);
 	}

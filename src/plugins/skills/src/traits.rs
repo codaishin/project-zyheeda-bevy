@@ -19,7 +19,7 @@ use crate::{
 };
 use common::{
 	tools::{item_type::ItemType, slot_key::SlotKey},
-	traits::{map_value::TryMapBackwards, state_duration::StateUpdate},
+	traits::{key_mappings::TryGetKey, state_duration::StateUpdate},
 };
 use std::hash::Hash;
 
@@ -101,7 +101,7 @@ pub(crate) trait GetSkillBehavior {
 	fn behavior(&self) -> (SlotKey, RunSkillBehavior);
 }
 
-pub trait InputState<TMap: TryMapBackwards<TKey, SlotKey>, TKey: Eq + Hash> {
+pub trait InputState<TMap: TryGetKey<TKey, SlotKey>, TKey: Eq + Hash> {
 	fn just_pressed_slots(&self, map: &TMap) -> Vec<SlotKey>;
 	fn pressed_slots(&self, map: &TMap) -> Vec<SlotKey>;
 	fn just_released_slots(&self, map: &TMap) -> Vec<SlotKey>;

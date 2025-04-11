@@ -3,12 +3,10 @@ use bevy::{input::keyboard::KeyCode, state::state::State};
 use common::{
 	states::mouse_context::MouseContext,
 	tools::slot_key::SlotKey,
-	traits::map_value::TryMapBackwards,
+	traits::key_mappings::TryGetKey,
 };
 
-impl<TMap: TryMapBackwards<KeyCode, SlotKey>> InputState<TMap, KeyCode>
-	for State<MouseContext<KeyCode>>
-{
+impl<TMap: TryGetKey<KeyCode, SlotKey>> InputState<TMap, KeyCode> for State<MouseContext<KeyCode>> {
 	fn just_pressed_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		let MouseContext::JustTriggered(key) = self.get() else {
 			return vec![];
@@ -31,11 +29,8 @@ impl<TMap: TryMapBackwards<KeyCode, SlotKey>> InputState<TMap, KeyCode>
 	}
 }
 
-fn get_slot_key<TMap: TryMapBackwards<KeyCode, SlotKey>>(
-	map: &TMap,
-	key: &KeyCode,
-) -> Vec<SlotKey> {
-	let Some(slot_key) = map.try_map_backwards(*key) else {
+fn get_slot_key<TMap: TryGetKey<KeyCode, SlotKey>>(map: &TMap, key: &KeyCode) -> Vec<SlotKey> {
+	let Some(slot_key) = map.try_get_key(*key) else {
 		return vec![];
 	};
 	vec![slot_key]
@@ -50,8 +45,8 @@ mod tests {
 
 	struct _Map;
 
-	impl TryMapBackwards<KeyCode, SlotKey> for _Map {
-		fn try_map_backwards(&self, value: KeyCode) -> Option<SlotKey> {
+	impl TryGetKey<KeyCode, SlotKey> for _Map {
+		fn try_get_key(&self, value: KeyCode) -> Option<SlotKey> {
 			match value {
 				KeyCode::KeyC => Some(SlotKey::BottomHand(Side::Right)),
 				KeyCode::KeyD => Some(SlotKey::BottomHand(Side::Right)),

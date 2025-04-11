@@ -3,7 +3,7 @@ use bevy::{
 	ecs::system::{Res, Resource},
 	input::keyboard::KeyCode,
 };
-use common::{tools::slot_key::SlotKey, traits::map_value::TryMapBackwards};
+use common::{tools::slot_key::SlotKey, traits::key_mappings::TryGetKey};
 
 #[derive(Default, Debug, PartialEq, Clone)]
 pub(crate) struct Input {
@@ -13,7 +13,7 @@ pub(crate) struct Input {
 }
 
 pub(crate) fn get_inputs<
-	TMap: Resource + TryMapBackwards<KeyCode, SlotKey>,
+	TMap: Resource + TryGetKey<KeyCode, SlotKey>,
 	TSuperiorInput: Resource + InputState<TMap, KeyCode>,
 	TInferiorInput: Resource + InputState<TMap, KeyCode>,
 >(
@@ -66,8 +66,8 @@ mod tests {
 	#[derive(Resource, Clone, Debug, PartialEq)]
 	struct _Map;
 
-	impl TryMapBackwards<KeyCode, SlotKey> for _Map {
-		fn try_map_backwards(&self, _: KeyCode) -> Option<SlotKey> {
+	impl TryGetKey<KeyCode, SlotKey> for _Map {
+		fn try_get_key(&self, _: KeyCode) -> Option<SlotKey> {
 			None
 		}
 	}

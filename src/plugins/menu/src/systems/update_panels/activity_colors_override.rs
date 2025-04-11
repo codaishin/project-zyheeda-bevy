@@ -10,7 +10,7 @@ use common::{
 		accessors::get::{GetFieldRef, GetterRef},
 		handles_loadout_menu::GetItem,
 		inspect_able::{InspectAble, InspectField},
-		map_value::TryMapBackwards,
+		key_mappings::TryGetKey,
 	},
 };
 
@@ -21,13 +21,13 @@ pub fn panel_activity_colors_override<TMap, TPanel, TContainer>(
 	container: Res<TContainer>,
 	mouse_context: Res<State<MouseContext>>,
 ) where
-	TMap: Resource + TryMapBackwards<KeyCode, SlotKey>,
+	TMap: Resource + TryGetKey<KeyCode, SlotKey>,
 	TContainer: Resource + GetItem<SlotKey>,
 	TContainer::TItem: InspectAble<SkillExecution>,
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetterRef<SlotKey> + Component,
 {
 	let primed_slot = match mouse_context.get() {
-		MouseContext::Primed(key) => key_map.try_map_backwards(*key),
+		MouseContext::Primed(key) => key_map.try_get_key(*key),
 		_ => None,
 	};
 
@@ -132,8 +132,8 @@ mod tests {
 		Map(KeyCode, SlotKey),
 	}
 
-	impl TryMapBackwards<KeyCode, SlotKey> for _Map {
-		fn try_map_backwards(&self, value: KeyCode) -> Option<SlotKey> {
+	impl TryGetKey<KeyCode, SlotKey> for _Map {
+		fn try_get_key(&self, value: KeyCode) -> Option<SlotKey> {
 			match self {
 				_Map::Map(key, slot) if key == &value => Some(*slot),
 				_ => None,

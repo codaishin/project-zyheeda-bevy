@@ -4,14 +4,14 @@ use common::{
 	tools::slot_key::SlotKey,
 	traits::{
 		get_ui_text::{GetUiTextFor, UIText},
-		map_value::MapForward,
+		key_mappings::GetKeyCode,
 	},
 };
 
 type Labels<'a, T> = (&'a Label<T, SlotKey>, &'a mut Text);
 
 pub fn update_label_text<
-	TMap: Resource + MapForward<SlotKey, KeyCode>,
+	TMap: Resource + GetKeyCode<SlotKey, KeyCode>,
 	TLanguageServer: Resource + GetUiTextFor<KeyCode>,
 	T: Sync + Send + 'static,
 >(
@@ -27,13 +27,13 @@ pub fn update_label_text<
 	}
 }
 
-fn update_text<TMap: MapForward<SlotKey, KeyCode>, TLanguageServer: GetUiTextFor<KeyCode>, T>(
+fn update_text<TMap: GetKeyCode<SlotKey, KeyCode>, TLanguageServer: GetUiTextFor<KeyCode>, T>(
 	key_map: &TMap,
 	language_server: &TLanguageServer,
 	label: &Label<T, SlotKey>,
 	mut text: Mut<Text>,
 ) {
-	let key = key_map.map_forward(label.key);
+	let key = key_map.get_key_code(label.key);
 	let UIText::String(value) = language_server.ui_text_for(&key) else {
 		return;
 	};
@@ -57,9 +57,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl MapForward<SlotKey, KeyCode> for _Map {
-		fn map_forward(&self, value: SlotKey) -> KeyCode {
-			self.mock.map_forward(value)
+	impl GetKeyCode<SlotKey, KeyCode> for _Map {
+		fn get_key_code(&self, value: SlotKey) -> KeyCode {
+			self.mock.get_key_code(value)
 		}
 	}
 
@@ -79,7 +79,7 @@ mod tests {
 	fn add_section_to_text() {
 		let mut app = App::new();
 		app.insert_resource(_Map::new().with_mock(|mock| {
-			mock.expect_map_forward().return_const(KeyCode::ArrowUp);
+			mock.expect_get_key_code().return_const(KeyCode::ArrowUp);
 		}));
 		app.insert_resource(_LanguageServer(KeyCode::ArrowUp, "IIIIII"));
 		let id = app
@@ -106,7 +106,7 @@ mod tests {
 	fn override_first_section() {
 		let mut app = App::new();
 		app.insert_resource(_Map::new().with_mock(|mock| {
-			mock.expect_map_forward().return_const(KeyCode::ArrowUp);
+			mock.expect_get_key_code().return_const(KeyCode::ArrowUp);
 		}));
 		app.insert_resource(_LanguageServer(KeyCode::ArrowUp, "IIIIII"));
 		let id = app
@@ -133,7 +133,7 @@ mod tests {
 	fn map_slot_key_properly() {
 		let mut app = App::new();
 		app.insert_resource(_Map::new().with_mock(|mock| {
-			mock.expect_map_forward()
+			mock.expect_get_key_code()
 				.times(1)
 				.with(eq(SlotKey::BottomHand(Side::Left)))
 				.return_const(KeyCode::ArrowUp);

@@ -1,26 +1,26 @@
 use super::{InputState, ShouldEnqueue};
 use bevy::input::{ButtonInput, keyboard::KeyCode};
-use common::{tools::slot_key::SlotKey, traits::map_value::TryMapBackwards};
+use common::{tools::slot_key::SlotKey, traits::key_mappings::TryGetKey};
 use std::hash::Hash;
 
-impl<TMap: TryMapBackwards<TKey, SlotKey>, TKey: Eq + Hash + Copy + Send + Sync>
-	InputState<TMap, TKey> for ButtonInput<TKey>
+impl<TMap: TryGetKey<TKey, SlotKey>, TKey: Eq + Hash + Copy + Send + Sync> InputState<TMap, TKey>
+	for ButtonInput<TKey>
 {
 	fn just_pressed_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		self.get_just_pressed()
-			.filter_map(|k| map.try_map_backwards(*k))
+			.filter_map(|k| map.try_get_key(*k))
 			.collect()
 	}
 
 	fn pressed_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		self.get_pressed()
-			.filter_map(|k| map.try_map_backwards(*k))
+			.filter_map(|k| map.try_get_key(*k))
 			.collect()
 	}
 
 	fn just_released_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		self.get_just_released()
-			.filter_map(|k| map.try_map_backwards(*k))
+			.filter_map(|k| map.try_get_key(*k))
 			.collect()
 	}
 }
@@ -40,8 +40,8 @@ mod tests {
 
 	struct _Map;
 
-	impl TryMapBackwards<KeyCode, SlotKey> for _Map {
-		fn try_map_backwards(&self, value: KeyCode) -> Option<SlotKey> {
+	impl TryGetKey<KeyCode, SlotKey> for _Map {
+		fn try_get_key(&self, value: KeyCode) -> Option<SlotKey> {
 			match value {
 				KeyCode::KeyC => Some(SlotKey::BottomHand(Side::Right)),
 				KeyCode::KeyD => Some(SlotKey::BottomHand(Side::Left)),
