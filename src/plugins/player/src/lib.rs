@@ -9,7 +9,7 @@ use common::{
 	attributes::health::Health,
 	effects::deal_damage::DealDamage,
 	states::mouse_context::MouseContext,
-	tools::slot_key::SlotKey,
+	tools::keys::slot::SlotKey,
 	traits::{
 		animation::RegisterAnimations,
 		handles_effect::HandlesEffect,

@@ -43,8 +43,8 @@ impl From<SlotKey> for KeyCode {
 }
 
 impl GetUiText<SlotKey> for English {
-	fn ui_text(value: &SlotKey) -> UIText {
-		match value {
+	fn ui_text(key: &SlotKey) -> UIText {
+		match key {
 			SlotKey::TopHand(Side::Right) => UIText::from("Right Hand (Top)"),
 			SlotKey::TopHand(Side::Left) => UIText::from("Left Hand (Top)"),
 			SlotKey::BottomHand(Side::Right) => UIText::from("Right Hand (Bottom)"),
@@ -54,8 +54,8 @@ impl GetUiText<SlotKey> for English {
 }
 
 impl GetUiText<SlotKey> for Japanese {
-	fn ui_text(value: &SlotKey) -> UIText {
-		match value {
+	fn ui_text(key: &SlotKey) -> UIText {
+		match key {
 			SlotKey::TopHand(Side::Right) => UIText::from("右手「上」"),
 			SlotKey::TopHand(Side::Left) => UIText::from("左手「上」"),
 			SlotKey::BottomHand(Side::Right) => UIText::from("右手「下」"),

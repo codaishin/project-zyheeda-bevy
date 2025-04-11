@@ -17,7 +17,7 @@ use bevy::ecs::component::Component;
 use common::{
 	tools::{
 		item_type::ItemType,
-		slot_key::{Combo, SlotKey},
+		keys::slot::{Combo, SlotKey},
 	},
 	traits::{handles_combo_menu::GetCombosOrdered, iterate::Iterate},
 };
@@ -169,7 +169,7 @@ where
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::{tools::slot_key::Side, traits::nested_mock::NestedMocks};
+	use common::{tools::keys::slot::Side, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::{

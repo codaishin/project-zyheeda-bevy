@@ -15,7 +15,7 @@ use common::{
 	resources::key_map::KeyMap,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
-	tools::slot_key::{Side, SlotKey},
+	tools::keys::slot::{Side, SlotKey},
 	traits::{
 		handles_assets_for_children::HandlesAssetsForChildren,
 		handles_combo_menu::{ConfigureCombos, HandlesComboMenu},

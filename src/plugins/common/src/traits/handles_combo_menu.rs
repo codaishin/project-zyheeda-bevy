@@ -1,9 +1,9 @@
 use super::{inspect_able::InspectAble, thread_safe::ThreadSafe};
 use crate::tools::{
 	change::Change,
+	keys::slot::{Combo, SlotKey},
 	skill_description::SkillDescription,
 	skill_icon::SkillIcon,
-	slot_key::{Combo, SlotKey},
 };
 use bevy::prelude::*;
 use std::collections::HashSet;

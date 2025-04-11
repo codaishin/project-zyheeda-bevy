@@ -1,6 +1,6 @@
 use super::{InputState, ShouldEnqueue};
 use bevy::input::{ButtonInput, keyboard::KeyCode};
-use common::{tools::slot_key::SlotKey, traits::key_mappings::TryGetKey};
+use common::{tools::keys::slot::SlotKey, traits::key_mappings::TryGetKey};
 use std::hash::Hash;
 
 impl<TMap: TryGetKey<TKey, SlotKey>, TKey: Eq + Hash + Copy + Send + Sync> InputState<TMap, TKey>
@@ -35,7 +35,7 @@ impl ShouldEnqueue for ButtonInput<KeyCode> {
 mod tests {
 	use super::*;
 	use bevy::input::keyboard::KeyCode;
-	use common::tools::slot_key::Side;
+	use common::tools::keys::slot::Side;
 	use std::collections::HashSet;
 
 	struct _Map;

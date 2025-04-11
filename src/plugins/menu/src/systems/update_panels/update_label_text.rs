@@ -1,7 +1,7 @@
 use crate::components::Label;
 use bevy::prelude::*;
 use common::{
-	tools::slot_key::SlotKey,
+	tools::keys::slot::SlotKey,
 	traits::{
 		get_ui_text::{GetUiTextFor, UIText},
 		key_mappings::GetKeyCode,
@@ -45,7 +45,7 @@ fn update_text<TMap: GetKeyCode<SlotKey, KeyCode>, TLanguageServer: GetUiTextFor
 mod tests {
 	use super::*;
 	use bevy::app::{App, Update};
-	use common::{tools::slot_key::Side, traits::nested_mock::NestedMocks};
+	use common::{tools::keys::slot::Side, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 

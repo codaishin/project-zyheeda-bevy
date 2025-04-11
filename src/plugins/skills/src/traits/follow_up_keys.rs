@@ -1,4 +1,4 @@
-use common::tools::slot_key::SlotKey;
+use common::tools::keys::slot::SlotKey;
 use std::collections::VecDeque;
 
 pub trait FollowupKeys {

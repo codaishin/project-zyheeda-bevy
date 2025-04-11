@@ -8,7 +8,7 @@ use bevy::{
 	asset::{Assets, Handle},
 	ecs::prelude::*,
 };
-use common::{tools::slot_key::SlotKey, traits::accessors::get::GetRef};
+use common::{tools::keys::slot::SlotKey, traits::accessors::get::GetRef};
 
 pub(crate) fn enqueue<
 	TSlots: GetRef<SlotKey, Handle<Item>> + Component,
@@ -96,7 +96,7 @@ mod tests {
 	use common::{
 		simple_init,
 		test_tools::utils::{SingleThreadedApp, new_handle},
-		tools::slot_key::Side,
+		tools::keys::slot::Side,
 		traits::{mock::Mock, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;

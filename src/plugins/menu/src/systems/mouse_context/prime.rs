@@ -9,7 +9,7 @@ use bevy::{
 };
 use common::{
 	states::mouse_context::MouseContext,
-	tools::slot_key::SlotKey,
+	tools::keys::slot::SlotKey,
 	traits::{accessors::get::GetterRef, key_mappings::GetKeyCode},
 };
 
@@ -53,7 +53,7 @@ mod test {
 		},
 		ui::Interaction,
 	};
-	use common::tools::slot_key::Side;
+	use common::tools::keys::slot::Side;
 
 	#[derive(Component)]
 	struct _Panel(pub SlotKey);

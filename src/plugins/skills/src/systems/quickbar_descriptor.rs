@@ -11,8 +11,8 @@ use common::{
 	tools::{
 		change::Change,
 		item_type::ItemType,
+		keys::slot::SlotKey,
 		skill_execution::SkillExecution,
-		slot_key::SlotKey,
 	},
 	traits::iterate::Iterate,
 };
@@ -141,7 +141,7 @@ mod tests {
 	use super::*;
 	use common::{
 		test_tools::utils::{SingleThreadedApp, new_handle},
-		tools::{item_type::ItemType, slot_key::Side},
+		tools::{item_type::ItemType, keys::slot::Side},
 	};
 	use std::{array::IntoIter, collections::HashMap, slice::Iter};
 

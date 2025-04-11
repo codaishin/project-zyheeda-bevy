@@ -2,8 +2,8 @@ use super::{ComboNode, NodeEntryMut};
 use crate::traits::{Insert, ReKey};
 use bevy::prelude::default;
 use common::tools::{
+	keys::slot::SlotKey,
 	ordered_hash_map::{Entry, OrderedHashMap},
-	slot_key::SlotKey,
 };
 
 impl<TSkill> Insert<Option<TSkill>> for NodeEntryMut<'_, TSkill> {
@@ -83,7 +83,7 @@ mod tests {
 	use super::*;
 	use crate::{components::combo_node::ComboNode, skills::Skill};
 	use bevy::prelude::default;
-	use common::tools::slot_key::Side;
+	use common::tools::keys::slot::Side;
 
 	#[test]
 	fn insert_skill() {

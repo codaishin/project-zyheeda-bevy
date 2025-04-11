@@ -1,7 +1,7 @@
 use crate::behaviors::SkillSpawner;
 use bevy::prelude::*;
 use common::{
-	tools::slot_key::{Side, SlotKey},
+	tools::keys::slot::{Side, SlotKey},
 	traits::{
 		accessors::get::GetRef,
 		track::{IsTracking, Track, Untrack},

@@ -2,7 +2,7 @@ use crate::traits::InputState;
 use bevy::{input::keyboard::KeyCode, state::state::State};
 use common::{
 	states::mouse_context::MouseContext,
-	tools::slot_key::SlotKey,
+	tools::keys::slot::SlotKey,
 	traits::key_mappings::TryGetKey,
 };
 
@@ -40,7 +40,7 @@ fn get_slot_key<TMap: TryGetKey<KeyCode, SlotKey>>(map: &TMap, key: &KeyCode) ->
 mod tests {
 	use super::*;
 	use bevy::input::keyboard::KeyCode;
-	use common::tools::slot_key::Side;
+	use common::tools::keys::slot::Side;
 	use std::collections::HashSet;
 
 	struct _Map;

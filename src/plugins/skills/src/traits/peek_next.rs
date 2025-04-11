@@ -1,4 +1,4 @@
-use common::tools::{item_type::ItemType, slot_key::SlotKey};
+use common::tools::{item_type::ItemType, keys::slot::SlotKey};
 
 pub trait PeekNext<'a> {
 	type TNext;

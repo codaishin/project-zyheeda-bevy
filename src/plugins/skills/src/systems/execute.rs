@@ -96,7 +96,7 @@ mod tests {
 		test_tools::utils::SingleThreadedApp,
 		tools::{
 			collider_info::ColliderInfo,
-			slot_key::{Side, SlotKey},
+			keys::slot::{Side, SlotKey},
 		},
 		traits::{
 			handles_skill_behaviors::{Integrity, Motion, ProjectionOffset, Shape},

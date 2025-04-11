@@ -9,7 +9,7 @@ use crate::{
 	},
 };
 use bevy::{color::Color, ecs::component::Component};
-use common::{tools::slot_key::SlotKey, traits::accessors::get::GetterRef};
+use common::{tools::keys::slot::SlotKey, traits::accessors::get::GetterRef};
 
 #[derive(Component)]
 pub struct QuickbarPanel {
@@ -49,7 +49,7 @@ impl HasQueuedColor for QuickbarPanel {
 
 #[cfg(test)]
 mod tests {
-	use common::tools::slot_key::Side;
+	use common::tools::keys::slot::Side;
 
 	use super::*;
 

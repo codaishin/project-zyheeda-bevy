@@ -16,9 +16,9 @@ use bevy::prelude::*;
 use common::{
 	tools::{
 		item_type::CompatibleItems,
+		keys::slot::SlotKey,
 		skill_description::SkillDescription,
 		skill_icon::SkillIcon,
-		slot_key::SlotKey,
 	},
 	traits::{
 		accessors::get::{Getter, GetterRef},

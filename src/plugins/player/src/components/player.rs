@@ -12,7 +12,7 @@ use common::{
 		UnitsPerSecond,
 		animation_key::AnimationKey,
 		collider_radius::ColliderRadius,
-		slot_key::{Side, SlotKey},
+		keys::slot::{Side, SlotKey},
 	},
 	traits::{
 		animation::{

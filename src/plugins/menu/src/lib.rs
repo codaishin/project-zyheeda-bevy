@@ -23,10 +23,10 @@ use common::{
 		change::Change,
 		inventory_key::InventoryKey,
 		item_description::ItemDescription,
+		keys::slot::{Combo, SlotKey},
 		skill_description::SkillDescription,
 		skill_execution::SkillExecution,
 		skill_icon::SkillIcon,
-		slot_key::{Combo, SlotKey},
 	},
 	traits::{
 		handles_combo_menu::{

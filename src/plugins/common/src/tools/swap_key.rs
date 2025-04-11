@@ -1,4 +1,4 @@
-use super::{inventory_key::InventoryKey, slot_key::SlotKey};
+use super::{inventory_key::InventoryKey, keys::slot::SlotKey};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum SwapKey {

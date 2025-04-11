@@ -5,8 +5,8 @@ use super::{
 use crate::tools::{
 	collider_info::ColliderInfo,
 	collider_radius::ColliderRadius,
+	keys::slot::SlotKey,
 	movement_animation::MovementAnimation,
-	slot_key::SlotKey,
 	speed::Speed,
 };
 use bevy::{math::Ray3d, prelude::*};
