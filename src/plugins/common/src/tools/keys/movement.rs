@@ -1,7 +1,9 @@
+use super::{IsNot, Key};
 use crate::traits::{
 	get_ui_text::{English, GetUiText, Japanese, UIText},
 	iteration::{Iter, IterFinite},
 };
+use bevy::input::keyboard::KeyCode;
 
 #[derive(Default, Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum MovementKey {
@@ -23,6 +25,28 @@ impl IterFinite for MovementKey {
 			MovementKey::Backward => Some(MovementKey::Left),
 			MovementKey::Left => Some(MovementKey::Right),
 			MovementKey::Right => None,
+		}
+	}
+}
+
+impl From<MovementKey> for KeyCode {
+	fn from(value: MovementKey) -> Self {
+		match value {
+			MovementKey::Forward => KeyCode::KeyW,
+			MovementKey::Backward => KeyCode::KeyS,
+			MovementKey::Left => KeyCode::KeyA,
+			MovementKey::Right => KeyCode::KeyD,
+		}
+	}
+}
+
+impl TryFrom<Key> for MovementKey {
+	type Error = IsNot<MovementKey>;
+
+	fn try_from(key: Key) -> Result<Self, Self::Error> {
+		match key {
+			Key::Movement(key) => Ok(key),
+			_ => Err(IsNot::key()),
 		}
 	}
 }

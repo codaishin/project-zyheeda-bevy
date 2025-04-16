@@ -4,6 +4,8 @@ use crate::traits::{
 };
 use bevy::prelude::*;
 
+use super::{IsNot, Key};
+
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum SlotKey {
 	TopHand(Side),
@@ -38,6 +40,17 @@ impl From<SlotKey> for KeyCode {
 			SlotKey::BottomHand(Side::Left) => KeyCode::Digit2,
 			SlotKey::BottomHand(Side::Right) => KeyCode::Digit3,
 			SlotKey::TopHand(Side::Right) => KeyCode::Digit4,
+		}
+	}
+}
+
+impl TryFrom<Key> for SlotKey {
+	type Error = IsNot<SlotKey>;
+
+	fn try_from(key: Key) -> Result<Self, Self::Error> {
+		match key {
+			Key::Slot(key) => Ok(key),
+			_ => Err(IsNot::key()),
 		}
 	}
 }

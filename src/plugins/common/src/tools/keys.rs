@@ -5,9 +5,10 @@ use crate::traits::{
 	get_ui_text::{English, GetUiText, Japanese, UIText},
 	iteration::{Iter, IterFinite},
 };
-use bevy::utils::default;
+use bevy::{input::keyboard::KeyCode, utils::default};
 use movement::MovementKey;
 use slot::SlotKey;
+use std::marker::PhantomData;
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum Key {
@@ -34,6 +35,15 @@ impl IterFinite for Key {
 	}
 }
 
+impl From<Key> for KeyCode {
+	fn from(key: Key) -> Self {
+		match key {
+			Key::Movement(key) => KeyCode::from(key),
+			Key::Slot(key) => KeyCode::from(key),
+		}
+	}
+}
+
 impl GetUiText<Key> for English {
 	fn ui_text(key: &Key) -> UIText {
 		match key {
@@ -49,6 +59,15 @@ impl GetUiText<Key> for Japanese {
 			Key::Movement(key) => Japanese::ui_text(key),
 			Key::Slot(key) => Japanese::ui_text(key),
 		}
+	}
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct IsNot<TKey>(PhantomData<TKey>);
+
+impl<TKey> IsNot<TKey> {
+	fn key() -> Self {
+		Self(PhantomData)
 	}
 }
 
@@ -70,6 +89,8 @@ where
 mod tests {
 	use super::*;
 	use crate::traits::iteration::IterFinite;
+	use bevy::input::keyboard::KeyCode;
+	use std::collections::HashSet;
 
 	#[test]
 	fn iter_all_keys() {
@@ -79,6 +100,17 @@ mod tests {
 				.chain(SlotKey::iterator().map(Key::Slot))
 				.collect::<Vec<_>>(),
 			Key::iterator().take(100).collect::<Vec<_>>()
+		);
+	}
+
+	#[test]
+	fn map_keys() {
+		assert_eq!(
+			MovementKey::iterator()
+				.map(KeyCode::from)
+				.chain(SlotKey::iterator().map(KeyCode::from))
+				.collect::<HashSet<_>>(),
+			Key::iterator().map(KeyCode::from).collect::<HashSet<_>>(),
 		);
 	}
 }
