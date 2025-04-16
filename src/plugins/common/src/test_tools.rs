@@ -29,6 +29,12 @@ pub mod utils {
 		}
 	}
 
+	impl ApproxEqual<f32> for Dir3 {
+		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+			(*self).abs_diff_eq(**other, *tolerance)
+		}
+	}
+
 	impl ApproxEqual<f32> for Quat {
 		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
 			self.abs_diff_eq(*other, *tolerance)
@@ -81,6 +87,20 @@ pub mod utils {
 			}
 
 			true
+		}
+	}
+
+	impl<T, TError> ApproxEqual<f32> for Result<T, TError>
+	where
+		T: ApproxEqual<f32>,
+		TError: PartialEq,
+	{
+		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+			match (self, other) {
+				(Err(a), Err(b)) => a == b,
+				(Ok(a), Ok(b)) => a.approx_equal(b, tolerance),
+				_ => false,
+			}
 		}
 	}
 
