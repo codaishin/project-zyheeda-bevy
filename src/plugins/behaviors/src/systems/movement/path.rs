@@ -1,4 +1,4 @@
-use crate::{AlongPath, Movement};
+use crate::{Movement, PathOrWasd, components::movement::path_or_wasd::Mode};
 use bevy::prelude::*;
 use common::{
 	tools::collider_radius::ColliderRadius,
@@ -10,24 +10,27 @@ use common::{
 		try_remove_from::TryRemoveFrom,
 	},
 };
+use std::collections::VecDeque;
 
-impl<T> MovementPath for T {}
+impl<T> MovementPath for T where T: Component + Getter<ColliderRadius> + Sized {}
 
-type PathMovement<T> = Movement<AlongPath<T>>;
+type PathOrWasdMovement<TMoveMethod> = Movement<PathOrWasd<TMoveMethod>>;
 type Components<'a, TMoveMethod, TAgent> = (
 	Entity,
 	&'a GlobalTransform,
-	&'a PathMovement<TMoveMethod>,
+	&'a PathOrWasdMovement<TMoveMethod>,
 	&'a TAgent,
 );
 
-pub(crate) trait MovementPath {
-	fn path<TMoveMethod, TComputer>(
+pub(crate) trait MovementPath: Component + Getter<ColliderRadius> + Sized {
+	fn wasd_or_path<TMoveMethod, TComputer>(
 		mut commands: Commands,
-		mut movements: Query<Components<TMoveMethod, Self>, Changed<PathMovement<TMoveMethod>>>,
+		mut movements: Query<
+			Components<TMoveMethod, Self>,
+			Changed<PathOrWasdMovement<TMoveMethod>>,
+		>,
 		computers: Query<&TComputer>,
 	) where
-		Self: Component + Getter<ColliderRadius> + Sized,
 		TMoveMethod: ThreadSafe,
 		TComputer: Component + ComputePath,
 	{
@@ -40,21 +43,59 @@ pub(crate) trait MovementPath {
 		};
 
 		for (entity, transform, movement, agent) in &mut movements {
-			let start = transform.translation();
-			let end = movement.target;
-			let ColliderRadius(radius) = ColliderRadius::get_field(agent);
-			let Some(path) = computer.compute_path(start, end, radius) else {
-				continue;
-			};
-			let path = match path.as_slice() {
-				[first, rest @ ..] if first == &start => rest,
-				path => path,
-			};
-
-			commands.try_insert_on(entity, AlongPath::<TMoveMethod>::with_path(path));
+			let move_component = new_movement(computer, transform, movement, agent);
+			commands.try_insert_on(entity, move_component);
 			commands.try_remove_from::<Movement<TMoveMethod>>(entity);
 		}
 	}
+}
+
+fn new_movement<TAgent, TMoveMethod, TComputer>(
+	computer: &TComputer,
+	transform: &GlobalTransform,
+	movement: &Movement<PathOrWasd<TMoveMethod>>,
+	agent: &TAgent,
+) -> PathOrWasd<TMoveMethod>
+where
+	TAgent: Getter<ColliderRadius>,
+	TComputer: ComputePath,
+{
+	let mut new_movement = movement.new_movement();
+
+	match &mut new_movement.mode {
+		Mode::Wasd(target) => {
+			*target = Some(movement.target);
+		}
+		Mode::Path(move_path) => {
+			*move_path = compute_path(computer, transform, movement, agent);
+		}
+	}
+
+	new_movement
+}
+
+fn compute_path<TAgent, TMoveMethod, TComputer>(
+	computer: &TComputer,
+	transform: &GlobalTransform,
+	movement: &Movement<PathOrWasd<TMoveMethod>>,
+	agent: &TAgent,
+) -> VecDeque<Vec3>
+where
+	TAgent: Getter<ColliderRadius>,
+	TComputer: ComputePath,
+{
+	let start = transform.translation();
+	let end = movement.target;
+	let ColliderRadius(radius) = ColliderRadius::get_field(agent);
+	let Some(path) = computer.compute_path(start, end, radius) else {
+		return VecDeque::from([]);
+	};
+	let path = match path.as_slice() {
+		[first, rest @ ..] if first == &start => rest,
+		path => path,
+	};
+
+	VecDeque::from_iter(path.iter().copied())
 }
 
 #[cfg(test)]
@@ -108,7 +149,10 @@ mod test_new_path {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, _AgentMovement::path::<_MoveMethod, _ComputePath>);
+		app.add_systems(
+			Update,
+			_AgentMovement::wasd_or_path::<_MoveMethod, _ComputePath>,
+		);
 
 		app
 	}
@@ -120,10 +164,7 @@ mod test_new_path {
 			.world_mut()
 			.spawn((
 				_AgentMovement::default(),
-				Movement {
-					target: Vec3::default(),
-					cstr: AlongPath::<_MoveMethod>::new_path,
-				},
+				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::default(),
 			))
 			.id();
@@ -138,11 +179,41 @@ mod test_new_path {
 		app.update();
 
 		assert_eq!(
-			Some(&AlongPath::<_MoveMethod> {
-				path: VecDeque::from([Vec3::splat(1.), Vec3::splat(2.), Vec3::splat(3.)]),
+			Some(&PathOrWasd::<_MoveMethod> {
+				mode: Mode::Path(VecDeque::from([
+					Vec3::splat(1.),
+					Vec3::splat(2.),
+					Vec3::splat(3.)
+				])),
 				_m: PhantomData,
 			}),
-			app.world().entity(entity).get::<AlongPath<_MoveMethod>>()
+			app.world().entity(entity).get::<PathOrWasd<_MoveMethod>>()
+		);
+	}
+
+	#[test]
+	fn set_no_path_path_when_cannot_be_computed() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((
+				_AgentMovement::default(),
+				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
+				GlobalTransform::default(),
+			))
+			.id();
+		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
+			mock.expect_compute_path().return_const(None);
+		}));
+
+		app.update();
+
+		assert_eq!(
+			Some(&PathOrWasd::<_MoveMethod> {
+				mode: Mode::Path(VecDeque::from([])),
+				_m: PhantomData,
+			}),
+			app.world().entity(entity).get::<PathOrWasd<_MoveMethod>>()
 		);
 	}
 
@@ -153,10 +224,7 @@ mod test_new_path {
 			.world_mut()
 			.spawn((
 				_AgentMovement::default(),
-				Movement {
-					target: Vec3::default(),
-					cstr: AlongPath::<_MoveMethod>::new_path,
-				},
+				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::from_translation(Vec3::splat(1.)),
 			))
 			.id();
@@ -171,11 +239,11 @@ mod test_new_path {
 		app.update();
 
 		assert_eq!(
-			Some(&AlongPath::<_MoveMethod> {
-				path: VecDeque::from([Vec3::splat(2.), Vec3::splat(3.)]),
+			Some(&PathOrWasd::<_MoveMethod> {
+				mode: Mode::Path(VecDeque::from([Vec3::splat(2.), Vec3::splat(3.)])),
 				_m: PhantomData,
 			}),
-			app.world().entity(entity).get::<AlongPath<_MoveMethod>>()
+			app.world().entity(entity).get::<PathOrWasd<_MoveMethod>>()
 		);
 	}
 
@@ -184,10 +252,7 @@ mod test_new_path {
 		let mut app = setup();
 		app.world_mut().spawn((
 			_AgentMovement::default(),
-			Movement {
-				target: Vec3::default(),
-				cstr: AlongPath::<_MoveMethod>::new_path,
-			},
+			Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 			GlobalTransform::default(),
 		));
 		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
@@ -204,15 +269,9 @@ mod test_new_path {
 			.world_mut()
 			.spawn((
 				_AgentMovement::default(),
-				Movement {
-					target: Vec3::default(),
-					cstr: AlongPath::<_MoveMethod>::new_path,
-				},
+				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::default(),
-				Movement {
-					target: Vec3::default(),
-					cstr: || _MoveMethod,
-				},
+				Movement::new(Vec3::default(), || _MoveMethod),
 			))
 			.id();
 		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
@@ -239,10 +298,7 @@ mod test_new_path {
 				mock.expect_get()
 					.return_const(ColliderRadius(Units::new(42.)));
 			}),
-			Movement {
-				target: Vec3::new(4., 5., 6.),
-				cstr: AlongPath::<_MoveMethod>::new_path,
-			},
+			Movement::new(Vec3::new(4., 5., 6.), PathOrWasd::<_MoveMethod>::new_path),
 			GlobalTransform::from_xyz(1., 2., 3.),
 		));
 
@@ -261,14 +317,37 @@ mod test_new_path {
 	}
 
 	#[test]
+	fn set_target_when_wasd() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((
+				_AgentMovement::default(),
+				Movement::new(Vec3::new(1., 2., 3.), PathOrWasd::<_MoveMethod>::new_wasd),
+				GlobalTransform::default(),
+			))
+			.id();
+		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
+			mock.expect_compute_path().never().return_const(None);
+		}));
+
+		app.update();
+
+		assert_eq!(
+			Some(&PathOrWasd::<_MoveMethod> {
+				mode: Mode::Wasd(Some(Vec3::new(1., 2., 3.))),
+				_m: PhantomData,
+			}),
+			app.world().entity(entity).get::<PathOrWasd<_MoveMethod>>()
+		);
+	}
+
+	#[test]
 	fn do_nothing_if_not_changed() {
 		let mut app = setup();
 		app.world_mut().spawn((
 			_AgentMovement::default(),
-			Movement {
-				target: Vec3::new(4., 5., 6.),
-				cstr: AlongPath::<_MoveMethod>::new_path,
-			},
+			Movement::new(Vec3::new(4., 5., 6.), PathOrWasd::<_MoveMethod>::new_path),
 			GlobalTransform::from_xyz(1., 2., 3.),
 		));
 
@@ -287,10 +366,7 @@ mod test_new_path {
 			.world_mut()
 			.spawn((
 				_AgentMovement::default(),
-				Movement {
-					target: Vec3::new(4., 5., 6.),
-					cstr: AlongPath::<_MoveMethod>::new_path,
-				},
+				Movement::new(Vec3::new(4., 5., 6.), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::from_xyz(1., 2., 3.),
 			))
 			.id();
@@ -302,7 +378,7 @@ mod test_new_path {
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.get_mut::<Movement<AlongPath<_MoveMethod>>>()
+			.get_mut::<Movement<PathOrWasd<_MoveMethod>>>()
 			.as_deref_mut();
 		app.update();
 	}

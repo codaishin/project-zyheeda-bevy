@@ -28,10 +28,7 @@ pub(crate) trait ChaseSystem {
 			};
 			commands.try_insert_on(
 				entity,
-				Movement {
-					target: target.translation(),
-					cstr: TMovementMethod::default,
-				},
+				Movement::<TMovementMethod>::to(target.translation()),
 			);
 		}
 	}
@@ -70,10 +67,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Movement {
-				target: target_position,
-				cstr: _MovementMethod::default
-			}),
+			Some(&Movement::<_MovementMethod>::to(target_position)),
 			app.world()
 				.entity(chaser)
 				.get::<Movement<_MovementMethod>>()

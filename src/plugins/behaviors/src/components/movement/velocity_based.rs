@@ -116,10 +116,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Movement {
-					target,
-					cstr: VelocityBased::default,
-				},
+				Movement::<VelocityBased>::to(target),
 				_UpdateParams((transform, speed)),
 			))
 			.id();
@@ -143,10 +140,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Movement {
-					target,
-					cstr: VelocityBased::default,
-				},
+				Movement::<VelocityBased>::to(target),
 				_UpdateParams((transform, speed)),
 				Immobilized,
 			))
@@ -166,10 +160,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Movement {
-					target,
-					cstr: VelocityBased::default,
-				},
+				Movement::<VelocityBased>::to(target),
 				_UpdateParams((transform, speed)),
 			))
 			.id();
@@ -191,10 +182,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Movement {
-					target,
-					cstr: VelocityBased::default,
-				},
+				Movement::<VelocityBased>::to(target),
 				_UpdateParams((transform, speed)),
 				Velocity::default(),
 			))
@@ -217,10 +205,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Movement {
-					target,
-					cstr: VelocityBased::default,
-				},
+				Movement::<VelocityBased>::to(target),
 				_UpdateParams((transform, speed)),
 			))
 			.id();
@@ -242,10 +227,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Movement {
-					target,
-					cstr: VelocityBased::default,
-				},
+				Movement::<VelocityBased>::to(target),
 				_UpdateParams((transform, speed)),
 				Velocity::default(),
 			))
@@ -287,10 +269,7 @@ mod tests {
 	fn get_movement_direction() {
 		let target = Vec3::new(1., 2., 3.);
 		let position = Vec3::new(4., 7., -1.);
-		let movement = Movement {
-			target,
-			cstr: VelocityBased::default,
-		};
+		let movement = Movement::<VelocityBased>::to(target);
 
 		let direction = movement.movement_direction(&GlobalTransform::from_translation(position));
 
@@ -301,10 +280,7 @@ mod tests {
 	fn get_no_movement_direction_when_target_is_position() {
 		let target = Vec3::new(1., 2., 3.);
 		let position = target;
-		let movement = Movement {
-			target,
-			cstr: VelocityBased::default,
-		};
+		let movement = Movement::<VelocityBased>::to(target);
 
 		let direction = movement.movement_direction(&GlobalTransform::from_translation(position));
 

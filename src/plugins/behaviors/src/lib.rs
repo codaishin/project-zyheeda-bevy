@@ -44,7 +44,7 @@ use components::{
 	Once,
 	OverrideFace,
 	ground_target::GroundTarget,
-	movement::{Movement, along_path::AlongPath, velocity_based::VelocityBased},
+	movement::{Movement, path_or_wasd::PathOrWasd, velocity_based::VelocityBased},
 	set_position_and_rotation::SetPositionAndRotation,
 	set_to_move_forward::SetVelocityForward,
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
@@ -161,7 +161,7 @@ where
 				(
 					Movement::<VelocityBased>::set_faces,
 					Movement::<VelocityBased>::cleanup,
-					AlongPath::<VelocityBased>::cleanup,
+					PathOrWasd::<VelocityBased>::cleanup,
 				)
 					.chain(),
 			)
@@ -170,14 +170,19 @@ where
 				(
 					TPlayers::TPlayerMovement::set::<
 						MoveClickEvent,
-						Movement<AlongPath<VelocityBased>>,
+						Movement<PathOrWasd<VelocityBased>>,
 					>,
 					TPlayers::TPlayerMovement::set::<
 						MoveWasdEvent,
-						Movement<AlongPath<VelocityBased>>,
+						Movement<PathOrWasd<VelocityBased>>,
 					>,
-					TPlayers::TPlayerMovement::path::<VelocityBased, TPathFinding::TComputePath>,
-					TPlayers::TPlayerMovement::execute_movement::<Movement<AlongPath<VelocityBased>>>,
+					TPlayers::TPlayerMovement::wasd_or_path::<
+						VelocityBased,
+						TPathFinding::TComputePath,
+					>,
+					TPlayers::TPlayerMovement::execute_movement::<
+						Movement<PathOrWasd<VelocityBased>>,
+					>,
 					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
 					TPlayers::TPlayerMovement::animate_movement::<
 						Movement<VelocityBased>,
@@ -191,9 +196,9 @@ where
 				(
 					TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(log_many),
 					TEnemies::TEnemy::attack,
-					TEnemies::TEnemy::chase::<AlongPath<VelocityBased>>,
-					TEnemies::TEnemy::path::<VelocityBased, TPathFinding::TComputePath>,
-					TEnemies::TEnemy::execute_movement::<Movement<AlongPath<VelocityBased>>>,
+					TEnemies::TEnemy::chase::<PathOrWasd<VelocityBased>>,
+					TEnemies::TEnemy::wasd_or_path::<VelocityBased, TPathFinding::TComputePath>,
+					TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<VelocityBased>>>,
 					TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>,
 					TEnemies::TEnemy::animate_movement::<
 						Movement<VelocityBased>,

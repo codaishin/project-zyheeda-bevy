@@ -1,4 +1,4 @@
-pub(crate) mod along_path;
+pub(crate) mod path_or_wasd;
 pub(crate) mod velocity_based;
 
 use super::SetFace;
@@ -16,10 +16,32 @@ use common::{
 #[require(GlobalTransform)]
 pub(crate) struct Movement<TMovement> {
 	pub(crate) target: Vec3,
-	pub(crate) cstr: fn() -> TMovement,
+	method_cstr: fn() -> TMovement,
 }
 
 impl<TMovement> Movement<TMovement> {
+	#[cfg(test)]
+	pub(crate) fn new(target: Vec3, method_cstr: fn() -> TMovement) -> Self {
+		Self {
+			target,
+			method_cstr,
+		}
+	}
+
+	pub(crate) fn to(target: Vec3) -> Self
+	where
+		TMovement: Default,
+	{
+		Self {
+			target,
+			method_cstr: TMovement::default,
+		}
+	}
+
+	pub(crate) fn new_movement(&self) -> TMovement {
+		(self.method_cstr)()
+	}
+
 	pub(crate) fn set_faces(
 		mut commands: Commands,
 		mut removed: RemovedComponents<Self>,
@@ -55,6 +77,18 @@ impl<TMovement> Movement<TMovement> {
 	}
 }
 
+impl<TMovement> Default for Movement<TMovement>
+where
+	TMovement: Default,
+{
+	fn default() -> Self {
+		Self {
+			target: Vec3::default(),
+			method_cstr: TMovement::default,
+		}
+	}
+}
+
 impl<TMovement> ApproxEqual<f32> for Movement<TMovement> {
 	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
 		self.target.approx_equal(&other.target, tolerance)
@@ -72,6 +106,7 @@ mod tests {
 	use super::*;
 	use common::test_tools::utils::SingleThreadedApp;
 
+	#[derive(Default)]
 	struct _T;
 
 	fn setup<TMarker>(system: impl IntoSystemConfigs<TMarker>) -> App {
@@ -86,10 +121,7 @@ mod tests {
 		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn(Movement {
-				target: Vec3::new(1., 2., 3.),
-				cstr: || _T,
-			})
+			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
@@ -105,10 +137,7 @@ mod tests {
 		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn(Movement {
-				target: Vec3::new(1., 2., 3.),
-				cstr: || _T,
-			})
+			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
@@ -123,10 +152,7 @@ mod tests {
 		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn(Movement {
-				target: Vec3::new(1., 2., 3.),
-				cstr: || _T,
-			})
+			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
@@ -146,13 +172,7 @@ mod tests {
 		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn((
-				Movement {
-					target: default(),
-					cstr: || _T,
-				},
-				SetFace(Face::Cursor),
-			))
+			.spawn((Movement::<_T>::default(), SetFace(Face::Cursor)))
 			.id();
 
 		app.update();
@@ -167,23 +187,14 @@ mod tests {
 		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn((
-				Movement {
-					target: default(),
-					cstr: || _T,
-				},
-				SetFace(Face::Cursor),
-			))
+			.spawn((Movement::<_T>::default(), SetFace(Face::Cursor)))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
 			.remove::<Movement<_T>>()
-			.insert(Movement {
-				target: default(),
-				cstr: || _T,
-			});
+			.insert(Movement::<_T>::default());
 		app.update();
 
 		assert_eq!(
@@ -213,7 +224,7 @@ mod tests {
 			.world_mut()
 			.spawn(Movement {
 				target: default(),
-				cstr: || _T,
+				method_cstr: || _T,
 			})
 			.id();
 
@@ -232,13 +243,7 @@ mod tests {
 		let mut app = setup(Movement::<_T>::cleanup);
 		let entity = app
 			.world_mut()
-			.spawn((
-				Movement {
-					target: default(),
-					cstr: || _T,
-				},
-				_DoNotCallOnRemove,
-			))
+			.spawn((Movement::<_T>::default(), _DoNotCallOnRemove))
 			.id();
 
 		app.update();
