@@ -1,31 +1,34 @@
-use crate::events::MoveInputEvent;
 use bevy::{
 	ecs::{
-		event::EventWriter,
+		event::{Event, EventWriter},
 		system::{Res, Resource},
 	},
 	input::{ButtonInput, mouse::MouseButton},
+	math::Vec3,
 };
 use common::traits::intersect_at::IntersectAt;
 
-pub(crate) fn trigger_move_input_event<TRay: IntersectAt + Resource>(
-	mouse_input: Res<ButtonInput<MouseButton>>,
-	cam_ray: Res<TRay>,
-	mut move_input_events: EventWriter<MoveInputEvent>,
-) {
-	if !mouse_input.pressed(MouseButton::Left) {
-		return;
+impl<T> TriggerMouseClickMovement for T where T: From<Vec3> + Event {}
+
+pub(crate) trait TriggerMouseClickMovement: From<Vec3> + Event {
+	fn trigger_mouse_click_movement<TRay: IntersectAt + Resource>(
+		mouse_input: Res<ButtonInput<MouseButton>>,
+		cam_ray: Res<TRay>,
+		mut move_input_events: EventWriter<Self>,
+	) {
+		if !mouse_input.pressed(MouseButton::Left) {
+			return;
+		}
+		let Some(intersection) = cam_ray.intersect_at(0.) else {
+			return;
+		};
+		move_input_events.send(Self::from(intersection));
 	}
-	let Some(intersection) = cam_ray.intersect_at(0.) else {
-		return;
-	};
-	move_input_events.send(MoveInputEvent(intersection));
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::events::MoveInputEvent;
 	use bevy::{
 		app::{App, Update},
 		ecs::event::Events,
@@ -37,6 +40,15 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+
+	#[derive(Event, Debug, PartialEq, Clone, Copy)]
+	struct _Event(Vec3);
+
+	impl From<Vec3> for _Event {
+		fn from(translation: Vec3) -> Self {
+			Self(translation)
+		}
+	}
 
 	#[derive(Resource, NestedMocks)]
 	struct _Ray {
@@ -52,19 +64,19 @@ mod tests {
 
 	fn setup(ray: _Ray) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, trigger_move_input_event::<_Ray>);
-		app.add_event::<MoveInputEvent>();
+		app.add_systems(Update, _Event::trigger_mouse_click_movement::<_Ray>);
+		app.add_event::<_Event>();
 		app.init_resource::<ButtonInput<MouseButton>>();
 		app.insert_resource(ray);
 
 		app
 	}
 
-	fn move_input_events(app: &App) -> Vec<MoveInputEvent> {
-		let events = app.world().resource::<Events<MoveInputEvent>>();
+	fn move_input_events(app: &App) -> Vec<_Event> {
+		let events = app.world().resource::<Events<_Event>>();
 		let mut cursor = events.get_cursor();
 
-		cursor.read(events).cloned().collect()
+		cursor.read(events).copied().collect()
 	}
 
 	#[test]
@@ -79,10 +91,7 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(
-			vec![MoveInputEvent(Vec3::new(1., 2., 3.))],
-			move_input_events(&app)
-		);
+		assert_eq!(vec![_Event(Vec3::new(1., 2., 3.))], move_input_events(&app));
 	}
 
 	#[test]
@@ -96,7 +105,7 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(vec![] as Vec<MoveInputEvent>, move_input_events(&app));
+		assert_eq!(vec![] as Vec<_Event>, move_input_events(&app));
 	}
 
 	#[test]
@@ -110,7 +119,7 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(vec![] as Vec<MoveInputEvent>, move_input_events(&app));
+		assert_eq!(vec![] as Vec<_Event>, move_input_events(&app));
 	}
 
 	#[test]

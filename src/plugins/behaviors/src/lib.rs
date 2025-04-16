@@ -9,8 +9,10 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
 	effects::deal_damage::DealDamage,
+	resources::key_map::KeyMap,
 	states::{game_state::GameState, mouse_context::MouseContext},
-	systems::log::log_many,
+	systems::log::{log, log_many},
+	tools::keys::movement::MovementKey,
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
 		handles_destruction::HandlesDestruction,
@@ -24,6 +26,7 @@ use common::{
 			HandlesPlayer,
 			HandlesPlayerCameras,
 			HandlesPlayerMouse,
+			PlayerMainCamera,
 		},
 		handles_skill_behaviors::{
 			HandlesSkillBehaviors,
@@ -58,7 +61,8 @@ use systems::{
 		animate_movement::AnimateMovement,
 		execute_move_update::ExecuteMovement,
 		set_player_movement::SetPlayerMovement,
-		trigger_event::trigger_move_input_event,
+		trigger_mouse_click_movement::TriggerMouseClickMovement,
+		trigger_movement_key::TriggerDirectionKeyMovement,
 	},
 	update_cool_downs::update_cool_downs,
 };
@@ -120,6 +124,7 @@ where
 	TEnemies: ThreadSafe + HandlesEnemies,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
+		+ PlayerMainCamera
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerMovement,
@@ -135,8 +140,15 @@ where
 			.add_systems(
 				Update,
 				(
-					trigger_move_input_event::<TPlayers::TCamRay>
+					MoveInputEvent::trigger_mouse_click_movement::<TPlayers::TCamRay>
 						.run_if(in_state(MouseContext::<KeyCode>::Default)),
+					MoveInputEvent::trigger_movement::<
+						TPlayers::TPlayerMainCamera,
+						TPlayers::TPlayerMovement,
+						KeyMap,
+						MovementKey,
+					>
+						.pipe(log),
 					get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
 				)
 					.chain()
