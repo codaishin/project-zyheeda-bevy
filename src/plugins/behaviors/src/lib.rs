@@ -50,7 +50,7 @@ use components::{
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	when_traveled_insert::InsertAfterDistanceTraveled,
 };
-use events::MoveInputEvent;
+use events::{MoveClickEvent, MoveWasdEvent};
 use std::marker::PhantomData;
 use systems::{
 	attack::AttackSystem,
@@ -136,13 +136,14 @@ where
 			.register_prefab::<SkillProjection>(app);
 		TAnimations::register_movement_direction::<Movement<VelocityBased>>(app);
 
-		app.add_event::<MoveInputEvent>()
+		app.add_event::<MoveClickEvent>()
+			.add_event::<MoveWasdEvent>()
 			.add_systems(
 				Update,
 				(
-					MoveInputEvent::trigger_mouse_click_movement::<TPlayers::TCamRay>
+					MoveClickEvent::trigger_mouse_click_movement::<TPlayers::TCamRay>
 						.run_if(in_state(MouseContext::<KeyCode>::Default)),
-					MoveInputEvent::trigger_movement::<
+					MoveWasdEvent::trigger_movement::<
 						TPlayers::TPlayerMainCamera,
 						TPlayers::TPlayerMovement,
 						KeyMap,
@@ -167,7 +168,14 @@ where
 			.add_systems(
 				Update,
 				(
-					TPlayers::TPlayerMovement::set::<Movement<AlongPath<VelocityBased>>>,
+					TPlayers::TPlayerMovement::set::<
+						MoveClickEvent,
+						Movement<AlongPath<VelocityBased>>,
+					>,
+					TPlayers::TPlayerMovement::set::<
+						MoveWasdEvent,
+						Movement<AlongPath<VelocityBased>>,
+					>,
 					TPlayers::TPlayerMovement::path::<VelocityBased, TPathFinding::TComputePath>,
 					TPlayers::TPlayerMovement::execute_movement::<Movement<AlongPath<VelocityBased>>>,
 					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,

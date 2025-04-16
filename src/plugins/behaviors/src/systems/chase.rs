@@ -16,7 +16,7 @@ pub(crate) trait ChaseSystem {
 		transforms: Query<&GlobalTransform>,
 	) where
 		Self: Component + Sized,
-		TMovementMethod: ThreadSafe,
+		TMovementMethod: ThreadSafe + Default,
 	{
 		for entity in removed_chasers.read() {
 			commands.try_remove_from::<Movement<TMovementMethod>>(entity);
@@ -28,7 +28,10 @@ pub(crate) trait ChaseSystem {
 			};
 			commands.try_insert_on(
 				entity,
-				Movement::<TMovementMethod>::to(target.translation()),
+				Movement {
+					target: target.translation(),
+					cstr: TMovementMethod::default,
+				},
 			);
 		}
 	}
@@ -41,7 +44,7 @@ mod tests {
 	#[derive(Component)]
 	struct _Agent;
 
-	#[derive(Debug, PartialEq)]
+	#[derive(Debug, PartialEq, Default)]
 	struct _MovementMethod;
 
 	fn setup(target_position: Vec3) -> (App, Entity) {
@@ -67,7 +70,10 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Movement::<_MovementMethod>::to(target_position)),
+			Some(&Movement {
+				target: target_position,
+				cstr: _MovementMethod::default
+			}),
 			app.world()
 				.entity(chaser)
 				.get::<Movement<_MovementMethod>>()

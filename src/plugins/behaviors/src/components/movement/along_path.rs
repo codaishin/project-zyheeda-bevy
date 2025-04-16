@@ -1,5 +1,8 @@
 use super::Movement;
-use crate::traits::{IsDone, MovementUpdate};
+use crate::{
+	events::{MoveClickEvent, MoveWasdEvent},
+	traits::{IsDone, MovementUpdate},
+};
 use bevy::{ecs::query::QueryItem, prelude::*};
 use common::{
 	tools::UnitsPerSecond,
@@ -7,10 +10,47 @@ use common::{
 };
 use std::{collections::VecDeque, marker::PhantomData};
 
-#[derive(Component, Debug, PartialEq, Default)]
+#[derive(Component, Debug, PartialEq)]
 pub(crate) struct AlongPath<TMoveMethod> {
 	pub(crate) path: VecDeque<Vec3>,
 	pub(crate) _m: PhantomData<TMoveMethod>,
+}
+
+impl<TMoveMethod> AlongPath<TMoveMethod> {
+	pub(crate) fn new_path() -> Self {
+		Self::default()
+	}
+
+	pub(crate) fn new_wasd() -> Self {
+		Self::default()
+	}
+}
+
+impl<TMoveMethod> Default for AlongPath<TMoveMethod> {
+	fn default() -> Self {
+		Self {
+			path: Default::default(),
+			_m: Default::default(),
+		}
+	}
+}
+
+impl<TMoveMethod> From<&MoveClickEvent> for Movement<AlongPath<TMoveMethod>> {
+	fn from(MoveClickEvent(target): &MoveClickEvent) -> Self {
+		Self {
+			target: *target,
+			cstr: AlongPath::new_path,
+		}
+	}
+}
+
+impl<TMoveMethod> From<&MoveWasdEvent> for Movement<AlongPath<TMoveMethod>> {
+	fn from(MoveWasdEvent(target): &MoveWasdEvent) -> Self {
+		Self {
+			target: *target,
+			cstr: AlongPath::new_wasd,
+		}
+	}
 }
 
 impl<TMoveMethod> AlongPath<TMoveMethod>
@@ -36,7 +76,7 @@ where
 
 impl<TMoveMethod> MovementUpdate for Movement<AlongPath<TMoveMethod>>
 where
-	TMoveMethod: ThreadSafe,
+	TMoveMethod: ThreadSafe + Default,
 {
 	type TComponents<'a> = &'a mut AlongPath<TMoveMethod>;
 	type TConstraint = Without<Movement<TMoveMethod>>;
@@ -52,7 +92,10 @@ where
 			return IsDone(true);
 		};
 
-		agent.try_insert(Movement::<TMoveMethod>::to(target));
+		agent.try_insert(Movement {
+			target,
+			cstr: TMoveMethod::default,
+		});
 
 		IsDone(false)
 	}
@@ -68,7 +111,13 @@ mod test_with_path {
 	};
 
 	#[derive(Debug, PartialEq, Default)]
-	struct _MoveMethod;
+	struct _MoveMethod(Vec3);
+
+	impl From<Vec3> for _MoveMethod {
+		fn from(value: Vec3) -> Self {
+			_MoveMethod(value)
+		}
+	}
 
 	fn system(
 		func: impl Fn(&mut EntityCommands, QueryItem<&mut AlongPath<_MoveMethod>>) -> IsDone,
@@ -104,12 +153,18 @@ mod test_with_path {
 
 		app.world_mut()
 			.run_system_once(system(move |entity, components| {
-				let movement = Movement::<AlongPath<_MoveMethod>>::default();
+				let movement = Movement {
+					target: default(),
+					cstr: AlongPath::new_path,
+				};
 				movement.update(entity, components, UnitsPerSecond::new(42.))
 			}))?;
 
 		assert_eq!(
-			Some(&Movement::<_MoveMethod>::to(wp)),
+			Some(&Movement {
+				target: wp,
+				cstr: _MoveMethod::default
+			}),
 			app.world().entity(entity).get::<Movement<_MoveMethod>>()
 		);
 		Ok(())
@@ -129,7 +184,10 @@ mod test_with_path {
 
 		app.world_mut()
 			.run_system_once(system(move |entity, components| {
-				let movement = Movement::<AlongPath<_MoveMethod>>::default();
+				let movement = Movement {
+					target: default(),
+					cstr: AlongPath::new_path,
+				};
 				movement.update(entity, components, UnitsPerSecond::new(42.))
 			}))?;
 
@@ -155,7 +213,10 @@ mod test_with_path {
 		let is_done = app
 			.world_mut()
 			.run_system_once(system(|entity, components| {
-				let movement = Movement::<AlongPath<_MoveMethod>>::default();
+				let movement = Movement {
+					target: default(),
+					cstr: AlongPath::new_path,
+				};
 				movement.update(entity, components, UnitsPerSecond::new(42.))
 			}))?;
 
@@ -174,7 +235,10 @@ mod test_with_path {
 		let is_done = app
 			.world_mut()
 			.run_system_once(system(|entity, components| {
-				let movement = Movement::<AlongPath<_MoveMethod>>::default();
+				let movement = Movement {
+					target: default(),
+					cstr: AlongPath::new_path,
+				};
 				movement.update(entity, components, UnitsPerSecond::new(42.))
 			}))?;
 
@@ -195,7 +259,10 @@ mod test_with_path {
 
 		app.world_mut()
 			.run_system_once(system(|entity, components| {
-				let movement = Movement::<AlongPath<_MoveMethod>>::default();
+				let movement = Movement {
+					target: default(),
+					cstr: AlongPath::new_path,
+				};
 				movement.update(entity, components, UnitsPerSecond::new(42.))
 			}))?;
 
@@ -212,7 +279,7 @@ mod test_cleanup {
 	use super::*;
 	use common::test_tools::utils::SingleThreadedApp;
 
-	#[derive(Debug, PartialEq)]
+	#[derive(Debug, PartialEq, Default)]
 	struct _Movement;
 
 	fn setup() -> App {
@@ -228,8 +295,14 @@ mod test_cleanup {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Movement::<AlongPath<_Movement>>::to(Vec3::default()),
-				Movement::<_Movement>::to(Vec3::default()),
+				Movement {
+					target: Vec3::default(),
+					cstr: AlongPath::<_Movement>::new_path,
+				},
+				Movement {
+					target: Vec3::default(),
+					cstr: _Movement::default,
+				},
 			))
 			.id();
 
@@ -250,8 +323,14 @@ mod test_cleanup {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Movement::<AlongPath<_Movement>>::to(Vec3::default()),
-				Movement::<_Movement>::to(Vec3::default()),
+				Movement {
+					target: Vec3::default(),
+					cstr: AlongPath::<_Movement>::new_path,
+				},
+				Movement {
+					target: Vec3::default(),
+					cstr: _Movement::default,
+				},
 			))
 			.id();
 
@@ -259,7 +338,10 @@ mod test_cleanup {
 		app.update();
 
 		assert_eq!(
-			Some(&Movement::<_Movement>::to(Vec3::default())),
+			Some(&Movement {
+				target: Vec3::default(),
+				cstr: _Movement::default
+			}),
 			app.world().entity(entity).get::<Movement<_Movement>>()
 		);
 	}

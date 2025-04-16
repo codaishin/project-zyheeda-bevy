@@ -120,7 +120,10 @@ mod test_new_path {
 			.world_mut()
 			.spawn((
 				_AgentMovement::default(),
-				Movement::<AlongPath<_MoveMethod>>::to(Vec3::default()),
+				Movement {
+					target: Vec3::default(),
+					cstr: AlongPath::<_MoveMethod>::new_path,
+				},
 				GlobalTransform::default(),
 			))
 			.id();
@@ -150,7 +153,10 @@ mod test_new_path {
 			.world_mut()
 			.spawn((
 				_AgentMovement::default(),
-				Movement::<AlongPath<_MoveMethod>>::to(Vec3::default()),
+				Movement {
+					target: Vec3::default(),
+					cstr: AlongPath::<_MoveMethod>::new_path,
+				},
 				GlobalTransform::from_translation(Vec3::splat(1.)),
 			))
 			.id();
@@ -178,7 +184,10 @@ mod test_new_path {
 		let mut app = setup();
 		app.world_mut().spawn((
 			_AgentMovement::default(),
-			Movement::<AlongPath<_MoveMethod>>::to(Vec3::default()),
+			Movement {
+				target: Vec3::default(),
+				cstr: AlongPath::<_MoveMethod>::new_path,
+			},
 			GlobalTransform::default(),
 		));
 		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
@@ -195,9 +204,15 @@ mod test_new_path {
 			.world_mut()
 			.spawn((
 				_AgentMovement::default(),
-				Movement::<AlongPath<_MoveMethod>>::to(Vec3::default()),
+				Movement {
+					target: Vec3::default(),
+					cstr: AlongPath::<_MoveMethod>::new_path,
+				},
 				GlobalTransform::default(),
-				Movement::<_MoveMethod>::to(Vec3::default()),
+				Movement {
+					target: Vec3::default(),
+					cstr: || _MoveMethod,
+				},
 			))
 			.id();
 		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
@@ -224,7 +239,10 @@ mod test_new_path {
 				mock.expect_get()
 					.return_const(ColliderRadius(Units::new(42.)));
 			}),
-			Movement::<AlongPath<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
+			Movement {
+				target: Vec3::new(4., 5., 6.),
+				cstr: AlongPath::<_MoveMethod>::new_path,
+			},
 			GlobalTransform::from_xyz(1., 2., 3.),
 		));
 
@@ -247,7 +265,10 @@ mod test_new_path {
 		let mut app = setup();
 		app.world_mut().spawn((
 			_AgentMovement::default(),
-			Movement::<AlongPath<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
+			Movement {
+				target: Vec3::new(4., 5., 6.),
+				cstr: AlongPath::<_MoveMethod>::new_path,
+			},
 			GlobalTransform::from_xyz(1., 2., 3.),
 		));
 
@@ -266,7 +287,10 @@ mod test_new_path {
 			.world_mut()
 			.spawn((
 				_AgentMovement::default(),
-				Movement::<AlongPath<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
+				Movement {
+					target: Vec3::new(4., 5., 6.),
+					cstr: AlongPath::<_MoveMethod>::new_path,
+				},
 				GlobalTransform::from_xyz(1., 2., 3.),
 			))
 			.id();

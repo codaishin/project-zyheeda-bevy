@@ -11,23 +11,15 @@ use common::{
 		try_remove_from::TryRemoveFrom,
 	},
 };
-use std::marker::PhantomData;
 
-#[derive(Component, Clone, PartialEq, Debug, Default)]
+#[derive(Component, Clone, PartialEq, Debug)]
 #[require(GlobalTransform)]
 pub(crate) struct Movement<TMovement> {
 	pub(crate) target: Vec3,
-	phantom_data: PhantomData<TMovement>,
+	pub(crate) cstr: fn() -> TMovement,
 }
 
 impl<TMovement> Movement<TMovement> {
-	pub(crate) fn to(target: Vec3) -> Self {
-		Self {
-			target,
-			phantom_data: PhantomData,
-		}
-	}
-
 	pub(crate) fn set_faces(
 		mut commands: Commands,
 		mut removed: RemovedComponents<Self>,
@@ -69,12 +61,6 @@ impl<TMovement> ApproxEqual<f32> for Movement<TMovement> {
 	}
 }
 
-impl<TMovement> From<Vec3> for Movement<TMovement> {
-	fn from(target: Vec3) -> Self {
-		Self::to(target)
-	}
-}
-
 pub(crate) trait OnMovementRemoved {
 	type TConstraint: QueryFilter;
 
@@ -100,7 +86,10 @@ mod tests {
 		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
+			.spawn(Movement {
+				target: Vec3::new(1., 2., 3.),
+				cstr: || _T,
+			})
 			.id();
 
 		app.update();
@@ -116,7 +105,10 @@ mod tests {
 		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
+			.spawn(Movement {
+				target: Vec3::new(1., 2., 3.),
+				cstr: || _T,
+			})
 			.id();
 
 		app.update();
@@ -131,7 +123,10 @@ mod tests {
 		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
+			.spawn(Movement {
+				target: Vec3::new(1., 2., 3.),
+				cstr: || _T,
+			})
 			.id();
 
 		app.update();
@@ -151,7 +146,13 @@ mod tests {
 		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn((Movement::<_T>::to(default()), SetFace(Face::Cursor)))
+			.spawn((
+				Movement {
+					target: default(),
+					cstr: || _T,
+				},
+				SetFace(Face::Cursor),
+			))
 			.id();
 
 		app.update();
@@ -166,14 +167,23 @@ mod tests {
 		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn((Movement::<_T>::to(default()), SetFace(Face::Cursor)))
+			.spawn((
+				Movement {
+					target: default(),
+					cstr: || _T,
+				},
+				SetFace(Face::Cursor),
+			))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
 			.remove::<Movement<_T>>()
-			.insert(Movement::<_T>::to(default()));
+			.insert(Movement {
+				target: default(),
+				cstr: || _T,
+			});
 		app.update();
 
 		assert_eq!(
@@ -199,7 +209,13 @@ mod tests {
 	#[test]
 	fn cleanup_calls_on_remove() {
 		let mut app = setup(Movement::<_T>::cleanup);
-		let entity = app.world_mut().spawn(Movement::<_T>::to(default())).id();
+		let entity = app
+			.world_mut()
+			.spawn(Movement {
+				target: default(),
+				cstr: || _T,
+			})
+			.id();
 
 		app.update();
 		app.world_mut().entity_mut(entity).remove::<Movement<_T>>();
@@ -216,7 +232,13 @@ mod tests {
 		let mut app = setup(Movement::<_T>::cleanup);
 		let entity = app
 			.world_mut()
-			.spawn((Movement::<_T>::to(default()), _DoNotCallOnRemove))
+			.spawn((
+				Movement {
+					target: default(),
+					cstr: || _T,
+				},
+				_DoNotCallOnRemove,
+			))
 			.id();
 
 		app.update();
