@@ -5,10 +5,10 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::UnitsPerSecond,
+	tools::speed::Speed,
 	traits::{thread_safe::ThreadSafe, try_remove_from::TryRemoveFrom},
 };
-use std::{collections::VecDeque, marker::PhantomData};
+use std::{collections::VecDeque, marker::PhantomData, time::Duration};
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct PathOrWasd<TMoveMethod> {
@@ -50,8 +50,8 @@ impl<TMoveMethod> From<&MoveClickEvent> for Movement<PathOrWasd<TMoveMethod>> {
 	}
 }
 
-impl<TMoveMethod> From<&MoveWasdEvent> for Movement<PathOrWasd<TMoveMethod>> {
-	fn from(MoveWasdEvent(target): &MoveWasdEvent) -> Self {
+impl<TMoveMethod> From<&MoveWasdEvent<TMoveMethod>> for Movement<PathOrWasd<TMoveMethod>> {
+	fn from(MoveWasdEvent { target, .. }: &MoveWasdEvent<TMoveMethod>) -> Self {
 		Self {
 			target: *target,
 			method_cstr: PathOrWasd::new_wasd,
@@ -84,7 +84,8 @@ where
 		&self,
 		agent: &mut EntityCommands,
 		mut path_or_wasd: Mut<PathOrWasd<TMoveMethod>>,
-		_: UnitsPerSecond,
+		_: Speed,
+		_: Duration,
 	) -> IsDone {
 		let Some(wp) = next_waypoint(&mut path_or_wasd) else {
 			agent.remove::<PathOrWasd<TMoveMethod>>();
@@ -116,8 +117,10 @@ mod test_with_path {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
+		tools::UnitsPerSecond,
 		traits::clamp_zero_positive::ClampZeroPositive,
 	};
+	use std::sync::LazyLock;
 
 	#[derive(Debug, PartialEq, Default)]
 	struct _MoveMethod(Vec3);
@@ -148,6 +151,9 @@ mod test_with_path {
 		App::new().single_threaded(Update)
 	}
 
+	static SPEED: LazyLock<Speed> = LazyLock::new(|| Speed(UnitsPerSecond::new(42.)));
+	static DELTA: LazyLock<Duration> = LazyLock::new(Duration::default);
+
 	mod path {
 		use super::*;
 
@@ -166,7 +172,7 @@ mod test_with_path {
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
 					let movement = Movement::<PathOrWasd<_MoveMethod>>::default();
-					movement.update(entity, components, UnitsPerSecond::new(42.))
+					movement.update(entity, components, *SPEED, *DELTA)
 				}))?;
 
 			assert_eq!(
@@ -191,7 +197,7 @@ mod test_with_path {
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
 					let movement = Movement::<PathOrWasd<_MoveMethod>>::default();
-					movement.update(entity, components, UnitsPerSecond::new(42.))
+					movement.update(entity, components, *SPEED, *DELTA)
 				}))?;
 
 			assert_eq!(
@@ -217,7 +223,7 @@ mod test_with_path {
 				.world_mut()
 				.run_system_once(system(|entity, components| {
 					let movement = Movement::<PathOrWasd<_MoveMethod>>::default();
-					movement.update(entity, components, UnitsPerSecond::new(42.))
+					movement.update(entity, components, *SPEED, *DELTA)
 				}))?;
 
 			assert_eq!(IsDone(false), is_done);
@@ -236,7 +242,7 @@ mod test_with_path {
 				.world_mut()
 				.run_system_once(system(|entity, components| {
 					let movement = Movement::<PathOrWasd<_MoveMethod>>::default();
-					movement.update(entity, components, UnitsPerSecond::new(42.))
+					movement.update(entity, components, *SPEED, *DELTA)
 				}))?;
 
 			assert_eq!(IsDone(true), is_done);
@@ -257,7 +263,7 @@ mod test_with_path {
 			app.world_mut()
 				.run_system_once(system(|entity, components| {
 					let movement = Movement::<PathOrWasd<_MoveMethod>>::default();
-					movement.update(entity, components, UnitsPerSecond::new(42.))
+					movement.update(entity, components, *SPEED, *DELTA)
 				}))?;
 
 			assert_eq!(
@@ -286,7 +292,7 @@ mod test_with_path {
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
 					let movement = Movement::<PathOrWasd<_MoveMethod>>::default();
-					movement.update(entity, components, UnitsPerSecond::new(42.))
+					movement.update(entity, components, *SPEED, *DELTA)
 				}))?;
 
 			assert_eq!(
@@ -310,7 +316,7 @@ mod test_with_path {
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
 					let movement = Movement::<PathOrWasd<_MoveMethod>>::default();
-					movement.update(entity, components, UnitsPerSecond::new(42.))
+					movement.update(entity, components, *SPEED, *DELTA)
 				}))?;
 
 			assert_eq!(
@@ -336,7 +342,7 @@ mod test_with_path {
 				.world_mut()
 				.run_system_once(system(|entity, components| {
 					let movement = Movement::<PathOrWasd<_MoveMethod>>::default();
-					movement.update(entity, components, UnitsPerSecond::new(42.))
+					movement.update(entity, components, *SPEED, *DELTA)
 				}))?;
 
 			assert_eq!(IsDone(false), is_done);
@@ -355,7 +361,7 @@ mod test_with_path {
 				.world_mut()
 				.run_system_once(system(|entity, components| {
 					let movement = Movement::<PathOrWasd<_MoveMethod>>::default();
-					movement.update(entity, components, UnitsPerSecond::new(42.))
+					movement.update(entity, components, *SPEED, *DELTA)
 				}))?;
 
 			assert_eq!(IsDone(true), is_done);
@@ -376,7 +382,7 @@ mod test_with_path {
 			app.world_mut()
 				.run_system_once(system(|entity, components| {
 					let movement = Movement::<PathOrWasd<_MoveMethod>>::default();
-					movement.update(entity, components, UnitsPerSecond::new(42.))
+					movement.update(entity, components, *SPEED, *DELTA)
 				}))?;
 
 			assert_eq!(

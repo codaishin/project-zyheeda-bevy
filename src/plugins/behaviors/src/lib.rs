@@ -9,6 +9,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
 	effects::deal_damage::DealDamage,
+	labels::Labels,
 	resources::key_map::KeyMap,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::log::{log, log_many},
@@ -136,20 +137,22 @@ where
 			.register_prefab::<SkillProjection>(app);
 		TAnimations::register_movement_direction::<Movement<VelocityBased>>(app);
 
+		let update_delta = Labels::UPDATE.delta();
+		let move_on_mouse_click = MoveClickEvent::trigger_mouse_click_movement::<TPlayers::TCamRay>;
+		let move_on_wasd = MoveWasdEvent::<VelocityBased>::trigger_movement::<
+			TPlayers::TPlayerMainCamera,
+			TPlayers::TPlayerMovement,
+			KeyMap,
+			MovementKey,
+		>;
+
 		app.add_event::<MoveClickEvent>()
-			.add_event::<MoveWasdEvent>()
+			.add_event::<MoveWasdEvent<VelocityBased>>()
 			.add_systems(
 				Update,
 				(
-					MoveClickEvent::trigger_mouse_click_movement::<TPlayers::TCamRay>
-						.run_if(in_state(MouseContext::<KeyCode>::Default)),
-					MoveWasdEvent::trigger_movement::<
-						TPlayers::TPlayerMainCamera,
-						TPlayers::TPlayerMovement,
-						KeyMap,
-						MovementKey,
-					>
-						.pipe(log),
+					move_on_mouse_click.run_if(in_state(MouseContext::<KeyCode>::Default)),
+					update_delta.pipe(move_on_wasd).pipe(log),
 					get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
 				)
 					.chain()
@@ -173,17 +176,21 @@ where
 						Movement<PathOrWasd<VelocityBased>>,
 					>,
 					TPlayers::TPlayerMovement::set::<
-						MoveWasdEvent,
+						MoveWasdEvent<VelocityBased>,
 						Movement<PathOrWasd<VelocityBased>>,
 					>,
 					TPlayers::TPlayerMovement::wasd_or_path::<
 						VelocityBased,
 						TPathFinding::TComputePath,
 					>,
-					TPlayers::TPlayerMovement::execute_movement::<
-						Movement<PathOrWasd<VelocityBased>>,
-					>,
-					TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
+					update_delta.pipe(
+						TPlayers::TPlayerMovement::execute_movement::<
+							Movement<PathOrWasd<VelocityBased>>,
+						>,
+					),
+					update_delta.pipe(
+						TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
+					),
 					TPlayers::TPlayerMovement::animate_movement::<
 						Movement<VelocityBased>,
 						TAnimations::TAnimationDispatch,
@@ -198,8 +205,11 @@ where
 					TEnemies::TEnemy::attack,
 					TEnemies::TEnemy::chase::<PathOrWasd<VelocityBased>>,
 					TEnemies::TEnemy::wasd_or_path::<VelocityBased, TPathFinding::TComputePath>,
-					TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<VelocityBased>>>,
-					TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>,
+					update_delta.pipe(
+						TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<VelocityBased>>>,
+					),
+					update_delta
+						.pipe(TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>),
 					TEnemies::TEnemy::animate_movement::<
 						Movement<VelocityBased>,
 						TAnimations::TAnimationDispatch,

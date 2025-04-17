@@ -1,17 +1,26 @@
 use super::{Movement, OnMovementRemoved};
-use crate::traits::{IsDone, MovementUpdate};
+use crate::traits::{IsDone, MovementUpdate, change_per_frame::MinDistance};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
 	components::Immobilized,
-	tools::UnitsPerSecond,
+	tools::speed::Speed,
 	traits::animation::GetMovementDirection,
 };
+use std::time::Duration;
 
 #[derive(PartialEq, Debug, Default)]
 pub struct VelocityBased;
 
-const SENSITIVITY: f32 = 0.1;
+impl VelocityBased {
+	const SENSITIVITY: f32 = 2.;
+}
+
+impl MinDistance for VelocityBased {
+	fn min_distance(speed: Speed, delta: Duration) -> f32 {
+		delta.as_secs_f32() * *speed * Self::SENSITIVITY
+	}
+}
 
 impl MovementUpdate for Movement<VelocityBased> {
 	type TComponents<'a> = &'a GlobalTransform;
@@ -21,16 +30,16 @@ impl MovementUpdate for Movement<VelocityBased> {
 		&self,
 		agent: &mut EntityCommands,
 		transform: &GlobalTransform,
-		speed: UnitsPerSecond,
+		speed: Speed,
+		delta: Duration,
 	) -> IsDone {
-		let speed = *speed;
 		let direction = self.target - transform.translation();
 
-		if direction.length() < SENSITIVITY * speed {
+		if direction.length() < VelocityBased::min_distance(speed, delta) {
 			return IsDone::from(true);
 		}
 
-		agent.try_insert(Velocity::linear(direction.normalize() * speed));
+		agent.try_insert(Velocity::linear(direction.normalize() * *speed));
 		IsDone::from(false)
 	}
 }
@@ -63,6 +72,7 @@ mod tests {
 	use bevy_rapier3d::dynamics::Velocity;
 	use common::{
 		test_tools::utils::SingleThreadedApp,
+		tools::UnitsPerSecond,
 		traits::clamp_zero_positive::ClampZeroPositive,
 	};
 
@@ -70,21 +80,25 @@ mod tests {
 	struct _Result(IsDone);
 
 	#[derive(Component)]
-	struct _UpdateParams((GlobalTransform, UnitsPerSecond));
+	struct _UpdateParams((GlobalTransform, Speed));
 
 	#[allow(clippy::type_complexity)]
 	fn call_update(
-		mut commands: Commands,
-		agents: Query<
+		delta: Duration,
+	) -> impl Fn(
+		Commands,
+		Query<
 			(Entity, &Movement<VelocityBased>, &_UpdateParams),
 			<Movement<VelocityBased> as MovementUpdate>::TConstraint,
 		>,
 	) {
-		for (entity, movement, params) in &agents {
-			let entity = &mut commands.entity(entity);
-			let _UpdateParams((position, speed)) = *params;
-			let result = movement.update(entity, &position, speed);
-			entity.insert(_Result(result));
+		move |mut commands, agents| {
+			for (entity, movement, params) in &agents {
+				let entity = &mut commands.entity(entity);
+				let _UpdateParams((position, speed)) = *params;
+				let result = movement.update(entity, &position, speed, delta);
+				entity.insert(_Result(result));
+			}
 		}
 	}
 
@@ -109,10 +123,10 @@ mod tests {
 
 	#[test]
 	fn update_applies_velocity() {
-		let mut app = setup(call_update);
+		let mut app = setup(call_update(Duration::from_millis(100)));
 		let transform = GlobalTransform::from_xyz(3., 0., 2.);
 		let target = Vec3::new(10., 0., 7.);
-		let speed = UnitsPerSecond::new(11.);
+		let speed = Speed(UnitsPerSecond::new(11.));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -133,10 +147,10 @@ mod tests {
 
 	#[test]
 	fn movement_constraint_excludes_immobilized() {
-		let mut app = setup(call_update);
+		let mut app = setup(call_update(Duration::from_millis(100)));
 		let transform = GlobalTransform::from_xyz(3., 0., 2.);
 		let target = Vec3::new(10., 0., 7.);
-		let speed = UnitsPerSecond::new(11.);
+		let speed = Speed(UnitsPerSecond::new(11.));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -153,10 +167,10 @@ mod tests {
 
 	#[test]
 	fn update_returns_not_done() {
-		let mut app = setup(call_update);
+		let mut app = setup(call_update(Duration::from_millis(100)));
 		let transform = GlobalTransform::from_xyz(3., 0., 2.);
 		let target = Vec3::new(10., 0., 7.);
-		let speed = UnitsPerSecond::new(11.);
+		let speed = Speed(UnitsPerSecond::new(11.));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -168,17 +182,17 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Result(false.into())),
+			Some(&_Result(IsDone(false))),
 			app.world().entity(agent).get::<_Result>()
 		);
 	}
 
 	#[test]
 	fn update_removes_velocity_when_direction_length_zero() {
-		let mut app = setup(call_update);
+		let mut app = setup(call_update(Duration::from_millis(100)));
 		let transform = GlobalTransform::from_xyz(10., 0., 7.);
 		let target = Vec3::new(10., 0., 7.);
-		let speed = UnitsPerSecond::new(11.);
+		let speed = Speed(UnitsPerSecond::new(11.));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -198,10 +212,10 @@ mod tests {
 
 	#[test]
 	fn update_returns_done_when_direction_length_zero() {
-		let mut app = setup(call_update);
+		let mut app = setup(call_update(Duration::from_millis(100)));
 		let transform = GlobalTransform::from_xyz(10., 0., 7.);
 		let target = Vec3::new(10., 0., 7.);
-		let speed = UnitsPerSecond::new(11.);
+		let speed = Speed(UnitsPerSecond::new(11.));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -213,17 +227,20 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Result(true.into())),
+			Some(&_Result(IsDone(true))),
 			app.world().entity(agent).get::<_Result>()
 		);
 	}
 
 	#[test]
-	fn update_returns_remove_velocity_when_direction_within_sensitivity() {
-		let mut app = setup(call_update);
+	fn update_returns_remove_velocity_when_direction_lower_than_min_distance() {
+		let delta = 4.;
+		let speed = 11.;
+		let mut app = setup(call_update(Duration::from_secs(delta as u64)));
 		let transform = GlobalTransform::from_xyz(10., 0., 7.);
-		let target = transform.translation() + Vec3::X * SENSITIVITY * 10.;
-		let speed = UnitsPerSecond::new(11.);
+		let target =
+			transform.translation() + Vec3::X * (VelocityBased::SENSITIVITY * speed * delta - 1.);
+		let speed = Speed(UnitsPerSecond::new(speed));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -237,7 +254,7 @@ mod tests {
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
-			(Some(&Velocity::default()), Some(&_Result(true.into()))),
+			(Some(&Velocity::default()), Some(&_Result(IsDone(true)))),
 			(agent.get::<Velocity>(), agent.get::<_Result>())
 		);
 	}
