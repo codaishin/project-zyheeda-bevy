@@ -4,6 +4,8 @@ use crate::traits::{
 };
 use bevy::prelude::*;
 
+use super::{IsNot, Key};
+
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum SlotKey {
 	TopHand(Side),
@@ -42,9 +44,20 @@ impl From<SlotKey> for KeyCode {
 	}
 }
 
+impl TryFrom<Key> for SlotKey {
+	type Error = IsNot<SlotKey>;
+
+	fn try_from(key: Key) -> Result<Self, Self::Error> {
+		match key {
+			Key::Slot(key) => Ok(key),
+			_ => Err(IsNot::key()),
+		}
+	}
+}
+
 impl GetUiText<SlotKey> for English {
-	fn ui_text(value: &SlotKey) -> UIText {
-		match value {
+	fn ui_text(key: &SlotKey) -> UIText {
+		match key {
 			SlotKey::TopHand(Side::Right) => UIText::from("Right Hand (Top)"),
 			SlotKey::TopHand(Side::Left) => UIText::from("Left Hand (Top)"),
 			SlotKey::BottomHand(Side::Right) => UIText::from("Right Hand (Bottom)"),
@@ -54,8 +67,8 @@ impl GetUiText<SlotKey> for English {
 }
 
 impl GetUiText<SlotKey> for Japanese {
-	fn ui_text(value: &SlotKey) -> UIText {
-		match value {
+	fn ui_text(key: &SlotKey) -> UIText {
+		match key {
 			SlotKey::TopHand(Side::Right) => UIText::from("右手「上」"),
 			SlotKey::TopHand(Side::Left) => UIText::from("左手「上」"),
 			SlotKey::BottomHand(Side::Right) => UIText::from("右手「下」"),

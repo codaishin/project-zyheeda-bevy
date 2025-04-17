@@ -15,7 +15,7 @@ use common::{
 	resources::key_map::KeyMap,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
-	tools::slot_key::{Side, SlotKey},
+	tools::keys::slot::{Side, SlotKey},
 	traits::{
 		handles_assets_for_children::HandlesAssetsForChildren,
 		handles_combo_menu::{ConfigureCombos, HandlesComboMenu},
@@ -134,34 +134,29 @@ where
 			TPlayers,
 		>;
 
-		app.init_resource::<KeyMap<SlotKey, KeyCode>>()
-			.add_systems(
-				Update,
-				(
-					get_inputs::<
-						KeyMap<SlotKey, KeyCode>,
-						ButtonInput<KeyCode>,
-						State<MouseContext<KeyCode>>,
-					>
-						.pipe(enqueue::<Slots, Queue, QueuedSkill>),
-					Combos::update::<Queue>,
-					flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
-					advance_active_skill::<Queue, TPlayers, TBehaviors, SkillExecuter, Virtual>,
-					execute_skill.pipe(log_many),
-					flush::<Queue>,
-				)
-					.chain()
-					.run_if(in_state(GameState::Play)),
+		app.add_systems(
+			Update,
+			(
+				get_inputs::<KeyMap, ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
+					.pipe(enqueue::<Slots, Queue, QueuedSkill>),
+				Combos::update::<Queue>,
+				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
+				advance_active_skill::<Queue, TPlayers, TBehaviors, SkillExecuter, Virtual>,
+				execute_skill.pipe(log_many),
+				flush::<Queue>,
 			)
-			.add_systems(
-				Update,
-				(
-					trigger_primed_mouse_context,
-					advance_just_triggered_mouse_context,
-					release_triggered_mouse_context,
-					advance_just_released_mouse_context,
-				),
-			);
+				.chain()
+				.run_if(in_state(GameState::Play)),
+		)
+		.add_systems(
+			Update,
+			(
+				trigger_primed_mouse_context,
+				advance_just_triggered_mouse_context,
+				release_triggered_mouse_context,
+				advance_just_released_mouse_context,
+			),
+		);
 	}
 
 	fn set_player_items(

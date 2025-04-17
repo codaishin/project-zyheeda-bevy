@@ -1,4 +1,4 @@
-pub(crate) mod along_path;
+pub(crate) mod path_or_wasd;
 pub(crate) mod velocity_based;
 
 use super::SetFace;
@@ -11,21 +11,35 @@ use common::{
 		try_remove_from::TryRemoveFrom,
 	},
 };
-use std::marker::PhantomData;
 
-#[derive(Component, Clone, PartialEq, Debug, Default)]
+#[derive(Component, Clone, PartialEq, Debug)]
 #[require(GlobalTransform)]
 pub(crate) struct Movement<TMovement> {
 	pub(crate) target: Vec3,
-	phantom_data: PhantomData<TMovement>,
+	method_cstr: fn() -> TMovement,
 }
 
 impl<TMovement> Movement<TMovement> {
-	pub(crate) fn to(target: Vec3) -> Self {
+	#[cfg(test)]
+	pub(crate) fn new(target: Vec3, method_cstr: fn() -> TMovement) -> Self {
 		Self {
 			target,
-			phantom_data: PhantomData,
+			method_cstr,
 		}
+	}
+
+	pub(crate) fn to(target: Vec3) -> Self
+	where
+		TMovement: Default,
+	{
+		Self {
+			target,
+			method_cstr: TMovement::default,
+		}
+	}
+
+	pub(crate) fn new_movement(&self) -> TMovement {
+		(self.method_cstr)()
 	}
 
 	pub(crate) fn set_faces(
@@ -63,15 +77,21 @@ impl<TMovement> Movement<TMovement> {
 	}
 }
 
-impl<TMovement> ApproxEqual<f32> for Movement<TMovement> {
-	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
-		self.target.approx_equal(&other.target, tolerance)
+impl<TMovement> Default for Movement<TMovement>
+where
+	TMovement: Default,
+{
+	fn default() -> Self {
+		Self {
+			target: Vec3::default(),
+			method_cstr: TMovement::default,
+		}
 	}
 }
 
-impl<TMovement> From<Vec3> for Movement<TMovement> {
-	fn from(target: Vec3) -> Self {
-		Self::to(target)
+impl<TMovement> ApproxEqual<f32> for Movement<TMovement> {
+	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+		self.target.approx_equal(&other.target, tolerance)
 	}
 }
 
@@ -86,6 +106,7 @@ mod tests {
 	use super::*;
 	use common::test_tools::utils::SingleThreadedApp;
 
+	#[derive(Default)]
 	struct _T;
 
 	fn setup<TMarker>(system: impl IntoSystemConfigs<TMarker>) -> App {
@@ -151,7 +172,7 @@ mod tests {
 		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn((Movement::<_T>::to(default()), SetFace(Face::Cursor)))
+			.spawn((Movement::<_T>::default(), SetFace(Face::Cursor)))
 			.id();
 
 		app.update();
@@ -166,14 +187,14 @@ mod tests {
 		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn((Movement::<_T>::to(default()), SetFace(Face::Cursor)))
+			.spawn((Movement::<_T>::default(), SetFace(Face::Cursor)))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
 			.remove::<Movement<_T>>()
-			.insert(Movement::<_T>::to(default()));
+			.insert(Movement::<_T>::default());
 		app.update();
 
 		assert_eq!(
@@ -199,7 +220,13 @@ mod tests {
 	#[test]
 	fn cleanup_calls_on_remove() {
 		let mut app = setup(Movement::<_T>::cleanup);
-		let entity = app.world_mut().spawn(Movement::<_T>::to(default())).id();
+		let entity = app
+			.world_mut()
+			.spawn(Movement {
+				target: default(),
+				method_cstr: || _T,
+			})
+			.id();
 
 		app.update();
 		app.world_mut().entity_mut(entity).remove::<Movement<_T>>();
@@ -216,7 +243,7 @@ mod tests {
 		let mut app = setup(Movement::<_T>::cleanup);
 		let entity = app
 			.world_mut()
-			.spawn((Movement::<_T>::to(default()), _DoNotCallOnRemove))
+			.spawn((Movement::<_T>::default(), _DoNotCallOnRemove))
 			.id();
 
 		app.update();

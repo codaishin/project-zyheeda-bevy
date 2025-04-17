@@ -58,7 +58,7 @@ mod tests {
 		test_tools::utils::SingleThreadedApp,
 		tools::{
 			inventory_key::InventoryKey,
-			slot_key::{Side, SlotKey},
+			keys::slot::{Side, SlotKey},
 		},
 		traits::nested_mock::NestedMocks,
 	};

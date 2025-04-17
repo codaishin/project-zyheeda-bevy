@@ -1,16 +1,16 @@
-use crate::events::MoveInputEvent;
 use bevy::prelude::*;
 
 impl<T> SetPlayerMovement for T {}
 
 pub trait SetPlayerMovement {
-	fn set<TMovement>(
+	fn set<TEvent, TMovement>(
 		mut commands: Commands,
-		mut move_input_events: EventReader<MoveInputEvent>,
+		mut move_input_events: EventReader<TEvent>,
 		players: Query<Entity, With<Self>>,
 	) where
 		Self: Component + Sized,
-		TMovement: Component + From<Vec3>,
+		TEvent: Event,
+		for<'a> TMovement: Component + From<&'a TEvent>,
 	{
 		let Ok(player) = players.get_single() else {
 			return;
@@ -20,8 +20,7 @@ pub trait SetPlayerMovement {
 		};
 
 		for event in move_input_events.read() {
-			let target = event.0;
-			player.try_insert(TMovement::from(target));
+			player.try_insert(TMovement::from(event));
 		}
 	}
 }
@@ -31,12 +30,15 @@ mod tests {
 	use super::*;
 	use common::test_tools::utils::SingleThreadedApp;
 
+	#[derive(Event)]
+	struct _Event(Vec3);
+
 	#[derive(Component, Debug, PartialEq)]
 	struct _Movement(Vec3);
 
-	impl From<Vec3> for _Movement {
-		fn from(target: Vec3) -> Self {
-			Self(target)
+	impl From<&_Event> for _Movement {
+		fn from(_Event(target): &_Event) -> Self {
+			Self(*target)
 		}
 	}
 
@@ -45,8 +47,8 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, _Player::set::<_Movement>);
-		app.add_event::<MoveInputEvent>();
+		app.add_systems(Update, _Player::set::<_Event, _Movement>);
+		app.add_event::<_Event>();
 
 		app
 	}
@@ -55,8 +57,7 @@ mod tests {
 	fn trigger_movement() {
 		let mut app = setup();
 		let player = app.world_mut().spawn(_Player).id();
-		app.world_mut()
-			.send_event(MoveInputEvent(Vec3::new(1., 2., 3.)));
+		app.world_mut().send_event(_Event(Vec3::new(1., 2., 3.)));
 
 		app.update();
 

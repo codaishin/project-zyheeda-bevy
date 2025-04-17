@@ -13,8 +13,8 @@ use bevy::ecs::component::Component;
 use common::{
 	tools::{
 		item_type::{CompatibleItems, ItemType},
+		keys::slot::{Combo, SlotKey},
 		ordered_hash_map::{Entry, OrderedHashMap},
-		slot_key::{Combo, SlotKey},
 	},
 	traits::{
 		accessors::get::{GetMut, GetRef},
@@ -269,7 +269,7 @@ fn append_followups(
 mod tests {
 	use super::*;
 	use bevy::prelude::default;
-	use common::tools::slot_key::Side;
+	use common::tools::keys::slot::Side;
 	use std::collections::HashSet;
 
 	#[test]

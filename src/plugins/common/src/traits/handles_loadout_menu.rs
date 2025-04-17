@@ -3,10 +3,10 @@ use crate::tools::{
 	change::Change,
 	inventory_key::InventoryKey,
 	item_description::ItemDescription,
+	keys::slot::SlotKey,
 	skill_description::SkillDescription,
 	skill_execution::SkillExecution,
 	skill_icon::SkillIcon,
-	slot_key::SlotKey,
 	swap_key::SwapKey,
 };
 use bevy::prelude::*;

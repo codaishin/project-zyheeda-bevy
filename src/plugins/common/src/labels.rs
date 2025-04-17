@@ -1,9 +1,5 @@
-use bevy::{
-	app::{FixedPostUpdate, FixedPreUpdate, FixedUpdate, Last},
-	ecs::schedule::ScheduleLabel,
-	prelude::Res,
-	time::{Fixed, Time},
-};
+use crate::traits::thread_safe::ThreadSafe;
+use bevy::{ecs::schedule::ScheduleLabel, prelude::*};
 use std::time::Duration;
 
 macro_rules! label {
@@ -15,6 +11,7 @@ macro_rules! label {
 pub struct Labels;
 
 impl Labels {
+	label!(UPDATE, Update);
 	label!(PREFAB_INSTANTIATION, FixedPreUpdate);
 	label!(PROCESSING, FixedUpdate);
 	label!(PROPAGATION, FixedPostUpdate);
@@ -30,6 +27,12 @@ impl<T: ScheduleLabel + Clone> Label<T> {
 	}
 }
 
+impl Label<Update> {
+	pub fn delta(&self) -> fn(Res<Time<Virtual>>) -> Duration {
+		delta::<Virtual>
+	}
+}
+
 impl Label<FixedUpdate> {
 	pub fn delta(&self) -> fn(Res<Time<Fixed>>) -> Duration {
 		delta::<Fixed>
@@ -42,6 +45,6 @@ impl Label<FixedPostUpdate> {
 	}
 }
 
-fn delta<TTime: Default + Sync + Send + 'static>(time: Res<Time<TTime>>) -> Duration {
+fn delta<TTime: Default + ThreadSafe>(time: Res<Time<TTime>>) -> Duration {
 	time.delta()
 }

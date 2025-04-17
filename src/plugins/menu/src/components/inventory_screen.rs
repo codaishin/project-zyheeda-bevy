@@ -5,7 +5,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::{inventory_key::InventoryKey, slot_key::SlotKey},
+	tools::{inventory_key::InventoryKey, keys::slot::SlotKey},
 	traits::{
 		get_ui_text::{English, GetUiText, UIText},
 		iteration::{IterFinite, IterInfinite},

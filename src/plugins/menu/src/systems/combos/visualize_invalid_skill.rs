@@ -42,7 +42,7 @@ mod tests {
 	use super::*;
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		tools::slot_key::{Side, SlotKey},
+		tools::keys::slot::{Side, SlotKey},
 		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;

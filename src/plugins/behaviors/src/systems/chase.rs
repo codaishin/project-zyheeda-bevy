@@ -16,7 +16,7 @@ pub(crate) trait ChaseSystem {
 		transforms: Query<&GlobalTransform>,
 	) where
 		Self: Component + Sized,
-		TMovementMethod: ThreadSafe,
+		TMovementMethod: ThreadSafe + Default,
 	{
 		for entity in removed_chasers.read() {
 			commands.try_remove_from::<Movement<TMovementMethod>>(entity);
@@ -41,7 +41,7 @@ mod tests {
 	#[derive(Component)]
 	struct _Agent;
 
-	#[derive(Debug, PartialEq)]
+	#[derive(Debug, PartialEq, Default)]
 	struct _MovementMethod;
 
 	fn setup(target_position: Vec3) -> (App, Entity) {

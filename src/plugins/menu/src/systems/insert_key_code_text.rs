@@ -2,7 +2,7 @@ use crate::components::key_code_text_insert_command::KeyCodeTextInsertCommand;
 use bevy::prelude::*;
 use common::traits::{
 	get_ui_text::{GetUiTextFor, UIText},
-	map_value::MapForward,
+	key_mappings::GetKeyCode,
 	try_insert_on::TryInsertOn,
 	try_remove_from::TryRemoveFrom,
 };
@@ -14,11 +14,11 @@ pub(crate) fn insert_key_code_text<TKey, TKeyMap, TLanguageServer>(
 	language_server: Res<TLanguageServer>,
 ) where
 	TKey: Copy + Sync + Send + 'static,
-	TKeyMap: Resource + MapForward<TKey, KeyCode>,
+	TKeyMap: Resource + GetKeyCode<TKey, KeyCode>,
 	TLanguageServer: Resource + GetUiTextFor<KeyCode>,
 {
 	for (entity, insert_command) in &insert_commands {
-		let key = key_map.map_forward(insert_command.key);
+		let key = key_map.get_key_code(insert_command.key);
 		if let UIText::String(text) = language_server.ui_text_for(&key) {
 			commands.try_insert_on(
 				entity,
@@ -53,9 +53,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl MapForward<_Key, KeyCode> for _Map {
-		fn map_forward(&self, value: _Key) -> KeyCode {
-			self.mock.map_forward(value)
+	impl GetKeyCode<_Key, KeyCode> for _Map {
+		fn get_key_code(&self, value: _Key) -> KeyCode {
+			self.mock.get_key_code(value)
 		}
 	}
 
@@ -80,7 +80,7 @@ mod tests {
 		fn default() -> Self {
 			Self {
 				map: _Map::new().with_mock(|mock| {
-					mock.expect_map_forward().return_const(KeyCode::KeyA);
+					mock.expect_get_key_code().return_const(KeyCode::KeyA);
 				}),
 				language: _Language::new().with_mock(|mock| {
 					mock.expect_ui_text_for().return_const(UIText::Unmapped);
@@ -102,7 +102,7 @@ mod tests {
 	fn call_language_server_for_correct_key() {
 		let mut app = setup(Setup {
 			map: _Map::new().with_mock(|mock| {
-				mock.expect_map_forward().return_const(KeyCode::KeyB);
+				mock.expect_get_key_code().return_const(KeyCode::KeyB);
 			}),
 			language: _Language::new().with_mock(|mock| {
 				mock.expect_ui_text_for()
@@ -123,7 +123,7 @@ mod tests {
 	fn spawn_text_bundle() {
 		let mut app = setup(Setup {
 			map: _Map::new().with_mock(|mock| {
-				mock.expect_map_forward().return_const(KeyCode::KeyB);
+				mock.expect_get_key_code().return_const(KeyCode::KeyB);
 			}),
 			language: _Language::new().with_mock(|mock| {
 				mock.expect_ui_text_for()

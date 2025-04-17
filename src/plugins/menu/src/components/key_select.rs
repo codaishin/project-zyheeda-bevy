@@ -5,7 +5,7 @@ use super::{
 };
 use crate::traits::{GetComponent, GetKey, insert_ui_content::InsertUiContent};
 use bevy::prelude::*;
-use common::tools::slot_key::SlotKey;
+use common::tools::keys::slot::SlotKey;
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct AppendSkill<TKey = SlotKey> {

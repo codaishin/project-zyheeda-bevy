@@ -59,7 +59,7 @@ mod tests {
 		test_tools::utils::Changed,
 		tools::{
 			item_type::ItemType,
-			slot_key::{Side, SlotKey},
+			keys::slot::{Side, SlotKey},
 		},
 		traits::nested_mock::NestedMocks,
 	};

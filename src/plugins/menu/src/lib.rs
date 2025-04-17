@@ -23,10 +23,10 @@ use common::{
 		change::Change,
 		inventory_key::InventoryKey,
 		item_description::ItemDescription,
+		keys::slot::{Combo, SlotKey},
 		skill_description::SkillDescription,
 		skill_execution::SkillExecution,
 		skill_icon::SkillIcon,
-		slot_key::{Combo, SlotKey},
 	},
 	traits::{
 		handles_combo_menu::{
@@ -99,8 +99,6 @@ use systems::{
 };
 use traits::{GetLayout, GetRootNode, LoadUi, insert_ui_content::InsertUiContent};
 use visualization::unusable::Unusable;
-
-type SlotKeyMap = KeyMap<SlotKey, KeyCode>;
 
 trait AddUI<TState> {
 	fn add_ui<TComponent, TGraphics>(&mut self, on_state: TState) -> &mut Self
@@ -238,7 +236,7 @@ where
 			.add_systems(
 				Update,
 				(
-					update_label_text::<SlotKeyMap, LanguageServer, QuickbarPanel>,
+					update_label_text::<KeyMap, LanguageServer, QuickbarPanel>,
 					panel_colors::<QuickbarPanel>,
 				)
 					.run_if(in_state(play)),
@@ -247,7 +245,7 @@ where
 				Update,
 				(
 					set_ui_mouse_context,
-					prime_mouse_context::<SlotKeyMap, QuickbarPanel>,
+					prime_mouse_context::<KeyMap, QuickbarPanel>,
 				),
 			);
 	}
@@ -269,7 +267,7 @@ where
 			.add_systems(Update, adjust_global_z_index)
 			.add_systems(
 				Update,
-				insert_key_code_text::<SlotKey, SlotKeyMap, LanguageServer>,
+				insert_key_code_text::<SlotKey, KeyMap, LanguageServer>,
 			)
 			.add_systems(Last, ButtonInteraction::system);
 	}
@@ -322,11 +320,7 @@ impl<TDependencies> HandlesLoadoutMenu for MenuPlugin<TDependencies> {
 			(
 				get_changed_quickbar.pipe(EquipmentInfo::update),
 				set_quickbar_icons::<EquipmentInfo<TContainer>>,
-				panel_activity_colors_override::<
-					SlotKeyMap,
-					QuickbarPanel,
-					EquipmentInfo<TContainer>,
-				>,
+				panel_activity_colors_override::<KeyMap, QuickbarPanel, EquipmentInfo<TContainer>>,
 			)
 				.chain()
 				.run_if(in_state(play)),

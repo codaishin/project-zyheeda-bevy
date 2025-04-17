@@ -3,7 +3,7 @@ use std::{collections::HashSet, hash::Hash};
 use crate::{AppendSkill, Dropdown, KeySelect, traits::GetComponent};
 use bevy::prelude::*;
 use common::{
-	tools::slot_key::SlotKey,
+	tools::keys::slot::SlotKey,
 	traits::{iteration::IterFinite, thread_safe::ThreadSafe},
 };
 

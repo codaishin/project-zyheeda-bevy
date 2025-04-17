@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use common::{
 	tools::{
 		change::Change,
-		slot_key::{Combo, SlotKey},
+		keys::slot::{Combo, SlotKey},
 	},
 	traits::{
 		handles_combo_menu::{GetComboAbleSkills, GetCombosOrdered, NextKeys},

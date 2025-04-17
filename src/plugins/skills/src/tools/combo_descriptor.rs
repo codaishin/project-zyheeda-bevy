@@ -8,7 +8,7 @@ use common::{
 	tools::{
 		change::Change,
 		item_type::{CompatibleItems, ItemType},
-		slot_key::{Combo, SlotKey},
+		keys::slot::{Combo, SlotKey},
 	},
 	traits::{
 		handles_combo_menu::{GetComboAbleSkills, GetCombosOrdered, NextKeys},
@@ -136,7 +136,7 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		tools::{item_type::CompatibleItems, slot_key::Side},
+		tools::{item_type::CompatibleItems, keys::slot::Side},
 	};
 
 	#[derive(Component)]

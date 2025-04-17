@@ -5,7 +5,7 @@ use crate::components::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::slot_key::SlotKey,
+	tools::keys::slot::SlotKey,
 	traits::{
 		handles_combo_menu::GetComboAbleSkills,
 		thread_safe::ThreadSafe,
@@ -65,7 +65,7 @@ mod tests {
 	use crate::components::dropdown::Dropdown;
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		tools::slot_key::Side,
+		tools::keys::slot::Side,
 		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;
