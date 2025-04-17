@@ -33,14 +33,18 @@ impl MovementUpdate for Movement<VelocityBased> {
 		speed: Speed,
 		delta: Duration,
 	) -> IsDone {
+		if self.target == transform.translation() {
+			return IsDone(true);
+		}
+
 		let direction = self.target - transform.translation();
 
 		if direction.length() < VelocityBased::min_distance(speed, delta) {
-			return IsDone::from(true);
+			return IsDone(true);
 		}
 
 		agent.try_insert(Velocity::linear(direction.normalize() * *speed));
-		IsDone::from(false)
+		IsDone(false)
 	}
 }
 
@@ -212,7 +216,9 @@ mod tests {
 
 	#[test]
 	fn update_returns_done_when_direction_length_zero() {
-		let mut app = setup(call_update(Duration::from_millis(100)));
+		let mut app = setup(
+			call_update(Duration::from_millis(0)), // causes min_distance to become zero
+		);
 		let transform = GlobalTransform::from_xyz(10., 0., 7.);
 		let target = Vec3::new(10., 0., 7.);
 		let speed = Speed(UnitsPerSecond::new(11.));
@@ -233,7 +239,7 @@ mod tests {
 	}
 
 	#[test]
-	fn update_returns_remove_velocity_when_direction_lower_than_min_distance() {
+	fn update_returns_done_when_direction_lower_than_min_distance() {
 		let delta = 4.;
 		let speed = 11.;
 		let mut app = setup(call_update(Duration::from_secs(delta as u64)));
