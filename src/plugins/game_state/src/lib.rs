@@ -2,10 +2,13 @@ mod systems;
 
 use bevy::prelude::*;
 use common::{
-	states::{game_state::GameState, transition_to_state},
+	states::{
+		game_state::{GameState, LoadingEssentialAssets, LoadingGame},
+		transition_to_state,
+	},
 	traits::{
 		handles_game_states::HandlesGameStates,
-		handles_load_tracking::{HandlesLoadTracking, OnLoadingDone},
+		handles_load_tracking::{HandlesLoadTracking, LoadGroup},
 		thread_safe::ThreadSafe,
 	},
 };
@@ -28,15 +31,16 @@ where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 {
 	fn build(&self, app: &mut App) {
-		let start_menu = GameState::StartMenu;
+		let loading_essentials = LoadingEssentialAssets::LOAD_STATE;
 		let new_game = GameState::NewGame;
-		let loading = GameState::Loading;
+		let loading = LoadingGame::LOAD_STATE;
 		let saving = GameState::Saving;
 		let play = GameState::Play;
 
-		TLoading::begin_loading_on(app, loading).when_done_set(play);
+		TLoading::register_load_group::<LoadingEssentialAssets>(app);
+		TLoading::register_load_group::<LoadingGame>(app);
 
-		app.insert_state(start_menu)
+		app.insert_state(loading_essentials)
 			.add_systems(OnEnter(new_game), transition_to_state(loading))
 			.add_systems(OnEnter(saving), transition_to_state(play))
 			.add_systems(OnEnter(play), pause_virtual_time::<false>)

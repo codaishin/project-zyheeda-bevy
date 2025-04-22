@@ -13,7 +13,10 @@ use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
 	resources::key_map::KeyMap,
-	states::{game_state::GameState, mouse_context::MouseContext},
+	states::{
+		game_state::{GameState, LoadingGame},
+		mouse_context::MouseContext,
+	},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	tools::keys::slot::{Side, SlotKey},
 	traits::{
@@ -106,11 +109,11 @@ where
 	}
 
 	fn skill_load(&self, app: &mut App) {
-		TLoading::register_custom_folder_assets::<Skill, SkillDto>(app);
+		TLoading::register_custom_folder_assets::<Skill, SkillDto, LoadingGame>(app);
 	}
 
 	fn item_load(&self, app: &mut App) {
-		TLoading::register_custom_assets::<Item, ItemDto>(app);
+		TLoading::register_custom_assets::<Item, ItemDto, LoadingGame>(app);
 	}
 
 	fn loadout(&self, app: &mut App) {

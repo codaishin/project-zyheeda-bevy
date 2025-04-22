@@ -18,7 +18,10 @@ use crate::systems::{
 use bevy::prelude::*;
 use common::{
 	resources::{Shared, key_map::KeyMap, language_server::LanguageServer},
-	states::{game_state::GameState, menu_state::MenuState},
+	states::{
+		game_state::{GameState, LoadingGame},
+		menu_state::MenuState,
+	},
 	tools::{
 		change::Change,
 		inventory_key::InventoryKey,
@@ -222,8 +225,8 @@ where
 	}
 
 	fn loading_screen(&self, app: &mut App) {
-		let load_assets = TLoading::processing_state::<AssetsProgress>();
-		let load_dependencies = TLoading::processing_state::<DependenciesProgress>();
+		let load_assets = TLoading::processing_state::<LoadingGame, AssetsProgress>();
+		let load_dependencies = TLoading::processing_state::<LoadingGame, DependenciesProgress>();
 
 		app.add_ui::<LoadingScreen<AssetsProgress>, TGraphics::TUiCamera>(load_assets)
 			.add_ui::<LoadingScreen<DependenciesProgress>, TGraphics::TUiCamera>(load_dependencies);

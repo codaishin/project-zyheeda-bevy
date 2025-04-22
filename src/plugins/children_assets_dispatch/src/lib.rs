@@ -5,11 +5,17 @@ use crate::systems::dispatch_asset_components::DispatchAssetComponents;
 use bevy::prelude::*;
 use common::{
 	labels::Labels,
+	states::game_state::LoadingGame,
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	traits::{
 		get_asset::GetAsset,
 		handles_assets_for_children::{ChildAssetDefinition, HandlesAssetsForChildren},
-		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, InApp},
+		handles_load_tracking::{
+			DependenciesProgress,
+			HandlesLoadTracking,
+			LoadTrackingInApp,
+			RunAfterLoadedInApp,
+		},
 		thread_safe::ThreadSafe,
 	},
 };
@@ -53,9 +59,13 @@ where
 				.filter::<TParent::TChildFilter>()
 				.system();
 
-		TLoading::register_load_tracking::<TMarker, DependenciesProgress>()
+		TLoading::register_load_tracking::<TMarker, LoadingGame, DependenciesProgress>()
 			.in_app(app, all_children_present);
-		TLoading::register_after_load_system(app, Update, dispatch_asset_components);
+		TLoading::register_after_load_system::<LoadingGame>().in_app(
+			app,
+			Update,
+			dispatch_asset_components,
+		);
 
 		app.register_required_components::<TParent, ChildrenLookup<TParent, TMarker>>();
 		app.add_systems(

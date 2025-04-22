@@ -1,3 +1,4 @@
+use super::thread_safe::ThreadSafe;
 use bevy::{
 	app::AppLabel,
 	ecs::schedule::ScheduleLabel,
@@ -6,32 +7,50 @@ use bevy::{
 };
 
 pub trait HandlesLoadTracking {
-	fn processing_state<TProgress>() -> impl States + Copy
+	fn processing_state<TLoadGroup, TProgress>() -> impl States + Copy
 	where
-		TProgress: Progress + Send + Sync + 'static;
+		TLoadGroup: ThreadSafe,
+		TProgress: Progress + ThreadSafe;
 
-	fn register_after_load_system<TMarker>(
+	fn register_load_group<TLoadGroup>(app: &mut App)
+	where
+		TLoadGroup: LoadGroup + ThreadSafe;
+
+	#[must_use]
+	fn register_after_load_system<TLoadGroup>() -> impl RunAfterLoadedInApp
+	where
+		TLoadGroup: ThreadSafe;
+
+	#[must_use]
+	fn register_load_tracking<T, TLoadGroup, TProgress>()
+	-> impl LoadTrackingInApp + LoadTrackingInSubApp
+	where
+		T: ThreadSafe,
+		TLoadGroup: ThreadSafe,
+		TProgress: Progress + ThreadSafe;
+}
+
+pub trait LoadGroup {
+	type TState: FreelyMutableState + Copy;
+
+	const LOAD_STATE: Self::TState;
+	const LOAD_DONE_STATE: Self::TState;
+}
+
+pub trait RunAfterLoadedInApp {
+	fn in_app<TMarker>(
+		self,
 		app: &mut App,
 		schedule: impl ScheduleLabel,
 		system: impl IntoSystem<(), (), TMarker>,
 	);
-
-	#[must_use]
-	fn begin_loading_on<TState>(app: &mut App, state: TState) -> impl OnLoadingDone
-	where
-		TState: States + Copy;
-
-	fn register_load_tracking<T, TProgress>() -> impl InApp + InSubApp
-	where
-		T: 'static,
-		TProgress: Progress + Send + Sync + 'static;
 }
 
-pub trait InApp {
+pub trait LoadTrackingInApp {
 	fn in_app<TMarker>(self, app: &mut App, all_loaded: impl IntoSystem<(), Loaded, TMarker>);
 }
 
-pub trait InSubApp {
+pub trait LoadTrackingInSubApp {
 	fn in_sub_app<TMarker>(
 		self,
 		app: &mut App,
@@ -39,12 +58,6 @@ pub trait InSubApp {
 		schedule: impl ScheduleLabel,
 		all_loaded: impl IntoSystem<(), Loaded, TMarker>,
 	);
-}
-
-pub trait OnLoadingDone {
-	fn when_done_set<TState>(self, state: TState)
-	where
-		TState: FreelyMutableState + Copy;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]

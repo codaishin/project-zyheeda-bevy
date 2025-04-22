@@ -1,5 +1,6 @@
 use super::menu_state::MenuState;
 use crate::traits::{
+	handles_load_tracking::LoadGroup,
 	iteration::{Iter, IterFinite},
 	states::PlayState,
 };
@@ -16,6 +17,24 @@ pub enum GameState {
 	Play,
 	Saving,
 	IngameMenu(MenuState),
+}
+
+pub struct LoadingEssentialAssets;
+
+impl LoadGroup for LoadingEssentialAssets {
+	type TState = GameState;
+
+	const LOAD_STATE: GameState = GameState::LoadingEssentialAssets;
+	const LOAD_DONE_STATE: GameState = GameState::StartMenu;
+}
+
+pub struct LoadingGame;
+
+impl LoadGroup for LoadingGame {
+	type TState = GameState;
+
+	const LOAD_STATE: GameState = GameState::Loading;
+	const LOAD_DONE_STATE: GameState = GameState::Play;
 }
 
 #[derive(Debug, PartialEq)]

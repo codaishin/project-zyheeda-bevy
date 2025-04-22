@@ -1,15 +1,24 @@
 use bevy::{prelude::*, render::MainWorld, state::state::FreelyMutableState};
-use common::traits::handles_load_tracking::Loaded;
+use common::traits::{handles_load_tracking::Loaded, thread_safe::ThreadSafe};
 use std::{
 	any::{TypeId, type_name},
 	collections::HashMap,
 	marker::PhantomData,
 };
 
-#[derive(Resource, Default, Debug, PartialEq)]
-pub(crate) struct Track<T> {
+#[derive(Resource, Debug, PartialEq)]
+pub(crate) struct Track<TLoadGroup, TProgress> {
 	items: HashMap<TypeId, LoadData>,
-	phantom_data: PhantomData<T>,
+	_p: PhantomData<(TLoadGroup, TProgress)>,
+}
+
+impl<TLoadGroup, TProgress> Default for Track<TLoadGroup, TProgress> {
+	fn default() -> Self {
+		Self {
+			items: HashMap::default(),
+			_p: PhantomData,
+		}
+	}
 }
 
 #[derive(Debug, PartialEq)]
@@ -18,15 +27,16 @@ pub(crate) struct LoadData {
 	loaded: Loaded,
 }
 
-impl<TProgress> Track<TProgress>
+impl<TLoadGroup, TProgress> Track<TLoadGroup, TProgress>
 where
-	TProgress: Send + Sync + 'static,
+	TProgress: ThreadSafe,
+	TLoadGroup: ThreadSafe,
 {
 	#[cfg(test)]
 	fn new<const N: usize>(items: [(TypeId, LoadData); N]) -> Self {
 		Self {
 			items: HashMap::from(items),
-			phantom_data: PhantomData,
+			_p: PhantomData,
 		}
 	}
 
@@ -43,7 +53,7 @@ where
 		);
 	}
 
-	pub(crate) fn track<T>(In(loaded): In<Loaded>, mut tracker: ResMut<Track<TProgress>>)
+	pub(crate) fn track<T>(In(loaded): In<Loaded>, mut tracker: ResMut<Self>)
 	where
 		T: 'static,
 	{
@@ -54,7 +64,7 @@ where
 	where
 		T: 'static,
 	{
-		let Some(mut tracker) = main_world.get_resource_mut::<Track<TProgress>>() else {
+		let Some(mut tracker) = main_world.get_resource_mut::<Self>() else {
 			return;
 		};
 
@@ -62,7 +72,9 @@ where
 	}
 
 	pub(crate) fn main_world_is_processing(main_world: Res<MainWorld>) -> bool {
-		main_world.get_resource::<Track<TProgress>>().is_some()
+		main_world
+			.get_resource::<Track<TLoadGroup, TProgress>>()
+			.is_some()
 	}
 
 	pub fn when_all_done_set<TState>(
@@ -104,9 +116,12 @@ mod tests {
 	struct _State;
 
 	#[derive(Default, Debug, PartialEq)]
+	struct _LoadGroup;
+
+	#[derive(Default, Debug, PartialEq)]
 	struct _Progress;
 
-	fn setup(load_tracker: Option<Track<_Progress>>) -> App {
+	fn setup(load_tracker: Option<Track<_LoadGroup, _Progress>>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_plugins(StatesPlugin);
 		app.init_state::<_State>();
@@ -120,15 +135,15 @@ mod tests {
 
 	#[test]
 	fn track_load_status() -> Result<(), RunSystemError> {
-		let mut app = setup(Some(Track::<_Progress>::default()));
+		let mut app = setup(Some(Track::<_LoadGroup, _Progress>::default()));
 
 		app.world_mut()
-			.run_system_once_with(Loaded(true), Track::<_Progress>::track::<f32>)?;
+			.run_system_once_with(Loaded(true), Track::<_LoadGroup, _Progress>::track::<f32>)?;
 		app.world_mut()
-			.run_system_once_with(Loaded(false), Track::<_Progress>::track::<u32>)?;
+			.run_system_once_with(Loaded(false), Track::<_LoadGroup, _Progress>::track::<u32>)?;
 
 		assert_eq!(
-			&Track::<_Progress>::new([
+			&Track::<_LoadGroup, _Progress>::new([
 				(
 					TypeId::of::<f32>(),
 					LoadData {
@@ -144,7 +159,7 @@ mod tests {
 					}
 				),
 			]),
-			app.world().resource::<Track<_Progress>>(),
+			app.world().resource::<Track<_LoadGroup, _Progress>>(),
 		);
 		Ok(())
 	}
@@ -169,7 +184,7 @@ mod tests {
 		])));
 
 		app.world_mut()
-			.run_system_once(Track::<_Progress>::when_all_done_set(_State))?;
+			.run_system_once(Track::<_LoadGroup, _Progress>::when_all_done_set(_State))?;
 
 		let state = app.world().resource::<NextState<_State>>();
 		assert!(
@@ -183,7 +198,7 @@ mod tests {
 
 	#[test]
 	fn do_not_set_state_when_not_all_loaded() -> Result<(), RunSystemError> {
-		let mut app = setup(Some(Track::<_Progress>::new([
+		let mut app = setup(Some(Track::<_LoadGroup, _Progress>::new([
 			(
 				TypeId::of::<f32>(),
 				LoadData {
@@ -201,7 +216,7 @@ mod tests {
 		])));
 
 		app.world_mut()
-			.run_system_once(Track::<_Progress>::when_all_done_set(_State))?;
+			.run_system_once(Track::<_LoadGroup, _Progress>::when_all_done_set(_State))?;
 
 		let state = app.world().resource::<NextState<_State>>();
 		assert!(
@@ -218,6 +233,6 @@ mod tests {
 		let mut app = setup(None);
 
 		app.world_mut()
-			.run_system_once(Track::<_Progress>::when_all_done_set(_State))
+			.run_system_once(Track::<_LoadGroup, _Progress>::when_all_done_set(_State))
 	}
 }
