@@ -14,6 +14,7 @@ use interactions::InteractionsPlugin;
 use life_cycles::LifeCyclesPlugin;
 use light::LightPlugin;
 use loading::LoadingPlugin;
+use localization::LocalizationPlugin;
 use map_generation::MapGenerationPlugin;
 use menu::MenuPlugin;
 use path_finding::PathFindingPlugin;
@@ -36,6 +37,7 @@ fn main() -> AppExit {
 }
 
 fn prepare_game(app: &mut App) {
+	let localization_plugin = LocalizationPlugin;
 	let savegame_plugin = SavegamePlugin;
 	let life_cycles_plugin = LifeCyclesPlugin;
 	let animations_plugin = AnimationsPlugin;
@@ -93,6 +95,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
 		.add_plugins(FrameLimiterPlugin { target_fps: 60 })
+		.add_plugins(localization_plugin)
 		.add_plugins(savegame_plugin)
 		.add_plugins(life_cycles_plugin)
 		.add_plugins(prefabs_plugin)

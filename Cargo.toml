@@ -35,6 +35,7 @@ items = { path = "src/plugins/items" }
 life_cycles = { path = "src/plugins/life_cycles" }
 light = { path = "src/plugins/light" }
 loading = { path = "src/plugins/loading" }
+localization = { path = "src/plugins/localization" }
 macros = { path = "src/plugins/macros" }
 map_generation = { path = "src/plugins/map_generation" }
 menu = { path = "src/plugins/menu" }
@@ -89,6 +90,7 @@ children_assets_dispatch.workspace = true
 life_cycles.workspace = true
 light.workspace = true
 loading.workspace = true
+localization.workspace = true
 macros.workspace = true
 map_generation.workspace = true
 menu.workspace = true

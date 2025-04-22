@@ -3080,6 +3080,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "localization"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "common",
+ "macros",
+ "mockall",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4094,6 +4104,7 @@ dependencies = [
  "life_cycles",
  "light",
  "loading",
+ "localization",
  "macros",
  "map_generation",
  "menu",
