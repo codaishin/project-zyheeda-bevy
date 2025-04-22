@@ -6,14 +6,9 @@ mod asset_loader;
 mod folder_asset_loader;
 mod states;
 
-use crate::states::load_state::LoadState;
+use crate::states::load_state::Load;
 use asset_loader::CustomAssetLoader;
-use bevy::{
-	app::AppLabel,
-	ecs::schedule::ScheduleLabel,
-	prelude::*,
-	state::state::FreelyMutableState,
-};
+use bevy::{app::AppLabel, ecs::schedule::ScheduleLabel, prelude::*};
 use common::{
 	states::transition_to_state,
 	systems::log::log_many,
@@ -29,19 +24,22 @@ use common::{
 			AssetsProgress,
 			DependenciesProgress,
 			HandlesLoadTracking,
-			InApp,
-			InSubApp,
+			LoadGroup,
+			LoadTrackingInApp,
+			LoadTrackingInSubApp,
 			Loaded,
-			OnLoadingDone,
 			Progress,
+			RunAfterLoadedInApp,
 		},
 		init_resource::InitResource,
 		remove_resource::RemoveResource,
+		thread_safe::ThreadSafe,
 	},
 };
 use folder_asset_loader::{FolderAssetLoader, LoadError, LoadResult};
 use resources::{alive_assets::AliveAssets, track::Track};
 use serde::Deserialize;
+use states::load_state::State;
 use std::marker::PhantomData;
 use systems::{
 	begin_loading_folder_assets::begin_loading_folder_assets,
@@ -52,95 +50,120 @@ use systems::{
 pub struct LoadingPlugin;
 
 impl Plugin for LoadingPlugin {
-	fn build(&self, app: &mut App) {
-		let load_assets = LoadState::LoadAssets;
-		let load_deps = LoadState::ResolveDependencies;
-		let done = LoadState::Done;
-
-		app.init_state::<LoadState>()
-			.add_systems(OnEnter(load_assets), Track::<AssetsProgress>::init)
-			.add_systems(OnExit(load_assets), Track::<AssetsProgress>::remove)
-			.add_systems(OnEnter(load_deps), Track::<DependenciesProgress>::init)
-			.add_systems(OnExit(load_deps), Track::<DependenciesProgress>::remove)
-			.add_systems(
-				Last,
-				(
-					Track::<AssetsProgress>::when_all_done_set(load_deps),
-					Track::<DependenciesProgress>::when_all_done_set(done),
-				),
-			);
-	}
+	fn build(&self, _: &mut App) {}
 }
 
 impl HandlesLoadTracking for LoadingPlugin {
-	fn processing_state<TProgress>() -> impl States + Copy
+	fn processing_state<TLoadGroup, TProgress>() -> impl States + Copy
 	where
-		TProgress: Progress + Send + Sync + 'static,
+		TLoadGroup: ThreadSafe,
+		TProgress: Progress + ThreadSafe,
 	{
-		LoadState::processing::<TProgress>()
+		Load::<TLoadGroup>::processing::<TProgress>()
 	}
 
-	fn register_after_load_system<TMarker>(
+	fn register_load_group<TLoadGroup>(app: &mut App)
+	where
+		TLoadGroup: LoadGroup + ThreadSafe,
+	{
+		let load_assets = Load::<TLoadGroup>::new(State::LoadAssets);
+		let load_deps = Load::<TLoadGroup>::new(State::ResolveDependencies);
+		let done = Load::<TLoadGroup>::new(State::Done);
+
+		app.init_state::<Load<TLoadGroup>>()
+			.add_systems(
+				OnEnter(load_assets),
+				Track::<TLoadGroup, AssetsProgress>::init,
+			)
+			.add_systems(
+				OnExit(load_assets),
+				Track::<TLoadGroup, AssetsProgress>::remove,
+			)
+			.add_systems(
+				OnEnter(load_deps),
+				Track::<TLoadGroup, DependenciesProgress>::init,
+			)
+			.add_systems(
+				OnExit(load_deps),
+				Track::<TLoadGroup, DependenciesProgress>::remove,
+			)
+			.add_systems(
+				OnEnter(TLoadGroup::LOAD_STATE),
+				transition_to_state(load_assets),
+			)
+			.add_systems(
+				Last,
+				(
+					Track::<TLoadGroup, AssetsProgress>::when_all_done_set(load_deps),
+					Track::<TLoadGroup, DependenciesProgress>::when_all_done_set(done),
+					Track::<TLoadGroup, DependenciesProgress>::when_all_done_set(
+						TLoadGroup::LOAD_DONE_STATE,
+					),
+				),
+			);
+	}
+
+	#[must_use]
+	fn register_after_load_system<TLoadGroup>() -> impl RunAfterLoadedInApp
+	where
+		TLoadGroup: ThreadSafe,
+	{
+		RegisterAfterLoadSystem(PhantomData::<TLoadGroup>)
+	}
+
+	#[must_use]
+	fn register_load_tracking<T, TLoadGroup, TProgress>()
+	-> impl LoadTrackingInApp + LoadTrackingInSubApp
+	where
+		T: 'static,
+		TLoadGroup: ThreadSafe,
+		TProgress: Progress + ThreadSafe,
+	{
+		RegisterLoadTracking(PhantomData::<(T, TLoadGroup, TProgress)>)
+	}
+}
+
+struct RegisterAfterLoadSystem<TLoadGroup>(PhantomData<TLoadGroup>);
+
+impl<TLoadGroup> RunAfterLoadedInApp for RegisterAfterLoadSystem<TLoadGroup>
+where
+	TLoadGroup: ThreadSafe,
+{
+	fn in_app<TMarker>(
+		self,
 		app: &mut App,
 		schedule: impl ScheduleLabel,
 		system: impl IntoSystem<(), (), TMarker>,
 	) {
-		app.add_systems(schedule, system.run_if(in_state(LoadState::Done)));
-	}
-
-	fn begin_loading_on<TState>(app: &mut App, state: TState) -> impl OnLoadingDone
-	where
-		TState: States + Copy,
-	{
-		app.add_systems(OnEnter(state), transition_to_state(LoadState::LoadAssets));
-		SetStateWhenDone(app)
-	}
-
-	fn register_load_tracking<T, TProgress>() -> impl InApp + InSubApp
-	where
-		T: 'static,
-		TProgress: Progress + Send + Sync + 'static,
-	{
-		Register(PhantomData::<(T, TProgress)>)
+		let done = Load::<TLoadGroup>::new(State::Done);
+		app.add_systems(schedule, system.run_if(in_state(done)));
 	}
 }
 
-struct SetStateWhenDone<'a>(&'a mut App);
+struct RegisterLoadTracking<T, TLoadGroup, TProgress>(PhantomData<(T, TLoadGroup, TProgress)>);
 
-impl OnLoadingDone for SetStateWhenDone<'_> {
-	fn when_done_set<TState>(self, state: TState)
-	where
-		TState: FreelyMutableState + Copy,
-	{
-		let Self(app) = self;
-		app.add_systems(
-			Last,
-			Track::<DependenciesProgress>::when_all_done_set(state),
-		);
-	}
-}
-
-struct Register<T, TProgress>(PhantomData<(T, TProgress)>);
-
-impl<T, TProgress> InApp for Register<T, TProgress>
+impl<T, TLoadGroup, TProgress> LoadTrackingInApp for RegisterLoadTracking<T, TLoadGroup, TProgress>
 where
 	T: 'static,
-	TProgress: Progress + Send + Sync + 'static,
+	TLoadGroup: ThreadSafe,
+	TProgress: Progress + ThreadSafe,
 {
 	fn in_app<TMarker>(self, app: &mut App, all_loaded: impl IntoSystem<(), Loaded, TMarker>) {
 		app.add_systems(
 			Update,
 			all_loaded
-				.pipe(Track::<TProgress>::track::<T>)
-				.run_if(in_state(LoadState::processing::<TProgress>())),
+				.pipe(Track::<TLoadGroup, TProgress>::track::<T>)
+				.run_if(in_state(Load::<TLoadGroup>::processing::<TProgress>())),
 		);
 	}
 }
 
-impl<T, TProgress> InSubApp for Register<T, TProgress>
+impl<T, TLoadGroup, TProgress> LoadTrackingInSubApp
+	for RegisterLoadTracking<T, TLoadGroup, TProgress>
 where
 	T: 'static,
-	TProgress: Progress + Send + Sync + 'static,
+	TProgress: Progress + ThreadSafe,
+	TLoadGroup: ThreadSafe,
 {
 	fn in_sub_app<TMarker>(
 		self,
@@ -152,17 +175,18 @@ where
 		app.sub_app_mut(app_label).add_systems(
 			schedule,
 			all_loaded
-				.pipe(Track::<TProgress>::track_in_main_world::<T>)
-				.run_if(Track::<TProgress>::main_world_is_processing),
+				.pipe(Track::<TLoadGroup, TProgress>::track_in_main_world::<T>)
+				.run_if(Track::<TLoadGroup, TProgress>::main_world_is_processing),
 		);
 	}
 }
 
 impl HandlesCustomAssets for LoadingPlugin {
-	fn register_custom_assets<TAsset, TDto>(app: &mut App)
+	fn register_custom_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
 	where
 		TAsset: Asset + LoadFrom<TDto> + Clone + std::fmt::Debug,
-		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + Sync + Send + 'static,
+		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
+		TLoadGroup: ThreadSafe,
 	{
 		app.init_asset::<TAsset>()
 			.register_asset_loader(CustomAssetLoader::<TAsset, TDto>::default());
@@ -170,27 +194,30 @@ impl HandlesCustomAssets for LoadingPlugin {
 }
 
 impl HandlesCustomFolderAssets for LoadingPlugin {
-	fn register_custom_folder_assets<TAsset, TDto>(app: &mut App)
+	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
 	where
 		TAsset: Asset + AssetFolderPath + LoadFrom<TDto> + Clone + std::fmt::Debug,
-		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + Sync + Send + 'static,
+		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
+		TLoadGroup: ThreadSafe,
 	{
-		LoadingPlugin::register_custom_assets::<TAsset, TDto>(app);
-		LoadingPlugin::register_load_tracking::<AliveAssets<TAsset>, AssetsProgress>()
+		LoadingPlugin::register_custom_assets::<TAsset, TDto, TLoadGroup>(app);
+		LoadingPlugin::register_load_tracking::<AliveAssets<TAsset>, TLoadGroup, AssetsProgress>()
 			.in_app(app, is_loaded::<TAsset>);
+
+		let load_assets = Load::<TLoadGroup>::new(State::LoadAssets);
 
 		app.init_asset::<LoadResult<TAsset>>()
 			.init_resource::<AliveAssets<TAsset>>()
 			.register_asset_loader(FolderAssetLoader::<TAsset, TDto>::default())
 			.add_systems(
-				OnEnter(LoadState::LoadAssets),
+				OnEnter(load_assets),
 				begin_loading_folder_assets::<TAsset, AssetServer>,
 			)
 			.add_systems(
 				Update,
 				map_load_results::<TAsset, LoadError, AssetServer>
 					.pipe(log_many)
-					.run_if(in_state(LoadState::LoadAssets)),
+					.run_if(in_state(load_assets)),
 			);
 	}
 }

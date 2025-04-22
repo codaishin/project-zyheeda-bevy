@@ -18,7 +18,10 @@ use crate::systems::{
 use bevy::prelude::*;
 use common::{
 	resources::{Shared, key_map::KeyMap, language_server::LanguageServer},
-	states::{game_state::GameState, menu_state::MenuState},
+	states::{
+		game_state::{GameState, LoadingEssentialAssets, LoadingGame},
+		menu_state::MenuState,
+	},
 	tools::{
 		change::Change,
 		inventory_key::InventoryKey,
@@ -37,7 +40,12 @@ use common::{
 			NextKeys,
 		},
 		handles_graphics::{StaticRenderLayers, UiCamera},
-		handles_load_tracking::{AssetsProgress, DependenciesProgress, HandlesLoadTracking},
+		handles_load_tracking::{
+			AssetsProgress,
+			DependenciesProgress,
+			HandlesLoadTracking,
+			LoadGroup,
+		},
 		handles_loadout_menu::{ConfigureInventory, GetItem, HandlesLoadoutMenu, SwapValuesByKey},
 		inspect_able::InspectAble,
 		load_asset::Path,
@@ -221,9 +229,12 @@ where
 			.add_systems(Update, StartGame::on_release_set(new_game));
 	}
 
-	fn loading_screen(&self, app: &mut App) {
-		let load_assets = TLoading::processing_state::<AssetsProgress>();
-		let load_dependencies = TLoading::processing_state::<DependenciesProgress>();
+	fn loading_screen<TLoadGroup>(&self, app: &mut App)
+	where
+		TLoadGroup: LoadGroup + ThreadSafe,
+	{
+		let load_assets = TLoading::processing_state::<TLoadGroup, AssetsProgress>();
+		let load_dependencies = TLoading::processing_state::<TLoadGroup, DependenciesProgress>();
 
 		app.add_ui::<LoadingScreen<AssetsProgress>, TGraphics::TUiCamera>(load_assets)
 			.add_ui::<LoadingScreen<DependenciesProgress>, TGraphics::TUiCamera>(load_dependencies);
@@ -283,7 +294,8 @@ where
 		self.events(app);
 		self.state_control(app);
 		self.start_menu(app);
-		self.loading_screen(app);
+		self.loading_screen::<LoadingEssentialAssets>(app);
+		self.loading_screen::<LoadingGame>(app);
 		self.ui_overlay(app);
 		self.combo_overview(app);
 		self.inventory_screen(app);

@@ -1,5 +1,6 @@
 use super::menu_state::MenuState;
 use crate::traits::{
+	handles_load_tracking::LoadGroup,
 	iteration::{Iter, IterFinite},
 	states::PlayState,
 };
@@ -9,12 +10,31 @@ use bevy::prelude::*;
 pub enum GameState {
 	#[default]
 	None,
+	LoadingEssentialAssets,
 	StartMenu,
 	Loading,
 	NewGame,
 	Play,
 	Saving,
 	IngameMenu(MenuState),
+}
+
+pub struct LoadingEssentialAssets;
+
+impl LoadGroup for LoadingEssentialAssets {
+	type TState = GameState;
+
+	const LOAD_STATE: GameState = GameState::LoadingEssentialAssets;
+	const LOAD_DONE_STATE: GameState = GameState::StartMenu;
+}
+
+pub struct LoadingGame;
+
+impl LoadGroup for LoadingGame {
+	type TState = GameState;
+
+	const LOAD_STATE: GameState = GameState::Loading;
+	const LOAD_DONE_STATE: GameState = GameState::Play;
 }
 
 #[derive(Debug, PartialEq)]
@@ -40,7 +60,8 @@ impl IterFinite for GameState {
 
 	fn next(Iter(current): &Iter<Self>) -> Option<Self> {
 		match current.as_ref()? {
-			GameState::None => Some(GameState::StartMenu),
+			GameState::None => Some(GameState::LoadingEssentialAssets),
+			GameState::LoadingEssentialAssets => Some(GameState::StartMenu),
 			GameState::StartMenu => Some(GameState::NewGame),
 			GameState::NewGame => Some(GameState::Loading),
 			GameState::Loading => Some(GameState::Play),
@@ -69,6 +90,7 @@ mod tests {
 		assert_eq!(
 			vec![
 				GameState::None,
+				GameState::LoadingEssentialAssets,
 				GameState::StartMenu,
 				GameState::NewGame,
 				GameState::Loading,
@@ -77,7 +99,7 @@ mod tests {
 				GameState::IngameMenu(MenuState::Inventory),
 				GameState::IngameMenu(MenuState::ComboOverview)
 			],
-			GameState::iterator().collect::<Vec<_>>(),
+			GameState::iterator().take(100).collect::<Vec<_>>(),
 		)
 	}
 
@@ -90,11 +112,13 @@ mod tests {
 				Err(NoKeySet),
 				Err(NoKeySet),
 				Err(NoKeySet),
+				Err(NoKeySet),
 				Ok(KeyCode::F5),
 				Ok(KeyCode::KeyI),
 				Ok(KeyCode::KeyK),
 			],
 			GameState::iterator()
+				.take(100)
 				.map(KeyCode::try_from)
 				.collect::<Vec<_>>()
 		)

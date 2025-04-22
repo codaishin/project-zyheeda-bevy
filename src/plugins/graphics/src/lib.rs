@@ -15,6 +15,7 @@ use bevy::{
 use common::{
 	components::essence::Essence,
 	effects::{deal_damage::DealDamage, force_shield::ForceShield, gravity::Gravity},
+	states::game_state::LoadingGame,
 	systems::{
 		insert_required::{InsertOn, InsertRequired},
 		remove_components::Remove,
@@ -23,7 +24,7 @@ use common::{
 	traits::{
 		handles_effect::{HandlesAllEffects, HandlesEffect},
 		handles_graphics::{FirstPassCamera, UiCamera, WorldCameras},
-		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, InSubApp},
+		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInSubApp},
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		prefab::RegisterPrefab,
 		thread_safe::ThreadSafe,
@@ -67,12 +68,8 @@ where
 	}
 
 	fn track_render_pipeline_ready(app: &mut App) {
-		TLoading::register_load_tracking::<PipelineCache, AssetsProgress>().in_sub_app(
-			app,
-			RenderApp,
-			ExtractSchedule,
-			no_waiting_pipelines,
-		);
+		TLoading::register_load_tracking::<PipelineCache, LoadingGame, AssetsProgress>()
+			.in_sub_app(app, RenderApp, ExtractSchedule, no_waiting_pipelines);
 	}
 
 	fn effect_shaders(app: &mut App) {

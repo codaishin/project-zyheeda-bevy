@@ -5,6 +5,7 @@ impl ReactsToMenuHotkeys for GameState {
 	fn reacts_to_menu_hotkeys(&self) -> bool {
 		match self {
 			Self::None => false,
+			Self::LoadingEssentialAssets => false,
 			Self::StartMenu => false,
 			Self::Loading => false,
 			Self::NewGame => false,

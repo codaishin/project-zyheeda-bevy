@@ -1,20 +1,25 @@
-use super::load_asset::{LoadAsset, Path};
+use super::{
+	load_asset::{LoadAsset, Path},
+	thread_safe::ThreadSafe,
+};
 use bevy::prelude::*;
 use serde::Deserialize;
 use std::fmt::Debug;
 
 pub trait HandlesCustomAssets {
-	fn register_custom_assets<TAsset, TDto>(app: &mut App)
+	fn register_custom_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
 	where
 		TAsset: Asset + LoadFrom<TDto> + Clone + Debug,
-		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + Sync + Send + 'static;
+		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
+		TLoadGroup: ThreadSafe;
 }
 
 pub trait HandlesCustomFolderAssets {
-	fn register_custom_folder_assets<TAsset, TDto>(app: &mut App)
+	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
 	where
 		TAsset: Asset + AssetFolderPath + LoadFrom<TDto> + Clone + Debug,
-		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + Sync + Send + 'static;
+		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
+		TLoadGroup: ThreadSafe;
 }
 
 pub trait AssetFolderPath {
