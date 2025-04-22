@@ -37,12 +37,12 @@ fn main() -> AppExit {
 }
 
 fn prepare_game(app: &mut App) {
-	let localization_plugin = LocalizationPlugin;
 	let savegame_plugin = SavegamePlugin;
 	let life_cycles_plugin = LifeCyclesPlugin;
 	let animations_plugin = AnimationsPlugin;
 	let prefabs_plugin = PrefabsPlugin;
 	let loading_plugin = LoadingPlugin;
+	let localization_plugin = LocalizationPlugin::depends_on(&loading_plugin);
 	let game_state_plugin = GameStatePlugin::depends_on(&loading_plugin);
 	let light_plugin = LightPlugin::depends_on(&prefabs_plugin);
 	let children_assets_dispatch_plugin = ChildrenAssetsDispatchPlugin::depends_on(&loading_plugin);

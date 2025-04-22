@@ -1,6 +1,8 @@
 pub mod asset_server;
 pub mod load_context;
 
+use std::ops::Deref;
+
 use bevy::asset::{Asset, AssetPath, Handle};
 use serde::{Deserialize, Serialize};
 
@@ -9,6 +11,14 @@ pub struct Path(String);
 
 impl Path {
 	pub fn as_string(&self) -> &String {
+		&self.0
+	}
+}
+
+impl Deref for Path {
+	type Target = str;
+
+	fn deref(&self) -> &Self::Target {
 		&self.0
 	}
 }

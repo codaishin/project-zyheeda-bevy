@@ -3085,8 +3085,11 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "common",
+ "fluent",
+ "fluent-syntax",
  "macros",
  "mockall",
+ "unic-langid",
 ]
 
 [[package]]

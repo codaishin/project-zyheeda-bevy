@@ -6,6 +6,9 @@ edition.workspace = true
 [dependencies]
 # external
 bevy.workspace = true
+fluent.workspace = true
+fluent-syntax.workspace = true
+unic-langid.workspace = true
 
 # internal
 common.workspace = true
