@@ -38,6 +38,19 @@ This project uses the following third-party software:
    License: Licensed under MIT
    Source: https://github.com/frondeus/test-case
 
+10. Unic-Langid (0.9.5)
+   License: Licensed under MIT and Apache 2.0
+   Source: https://github.com/zbraniecki/unic-locale
+
+11. Fluent (0.16.1)
+   License: Licensed under MIT and Apache 2.0
+   Source: https://github.com/projectfluent/fluent-rs
+
+12. Fluent-Syntax (0.11.1)
+   License: Licensed under MIT and Apache 2.0
+   Source: https://github.com/projectfluent/fluent-rs
+
+
 This project also includes internal plugins located under `src/plugins/`, which are developed and maintained as part of this project.
 
 This project lists direct dependencies only. Transitive dependencies, their licenses, and their attributions are managed by the respective upstream projects. For a full list of dependencies and their licenses, you can use the `cargo-license` tool or run `cargo tree` in the source code repository.
