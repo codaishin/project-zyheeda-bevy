@@ -79,7 +79,13 @@ fn removed_handle_id(
 	let folder = locale.folder.as_ref()?;
 	let LoadedFolder { handles } = folders.get_mut(folder)?;
 	let i = handles.iter().position(|handle| handle.id() == id)?;
-	Some(handles.remove(i).id().typed())
+	let removed = handles.remove(i).id().typed();
+
+	if handles.is_empty() {
+		locale.folder = None;
+	}
+
+	Some(removed)
 }
 
 fn get_ftl_file<'a>(
@@ -325,7 +331,7 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_file_handle_for_added_bundle_in_folder() {
+	fn remove_file_handles_for_added_bundle_in_folder() {
 		let files = [new_handle(), new_handle()];
 		let folders = [(
 			new_handle(),
@@ -353,6 +359,39 @@ mod tests {
 			.get(&folders[0].0)
 			.unwrap();
 		assert_eq!(vec![files[0].clone()], folder.handles);
+	}
+
+	#[test]
+	fn remove_folder_handle_if_no_files_left() {
+		let files = [new_handle(), new_handle()];
+		let folders = [(
+			new_handle(),
+			files.iter().map(|f| f.clone().untyped()).collect(),
+		)];
+		let mut app = setup(
+			[
+				(
+					AssetEvent::Added { id: files[0].id() },
+					Some(Ftl(String::from("hello-world = Hello, World!"))),
+				),
+				(
+					AssetEvent::Added { id: files[1].id() },
+					Some(Ftl(String::from("bye-world = Bye, World!"))),
+				),
+			],
+			folders.clone(),
+		);
+		app.insert_resource(_FtlServer(Locale {
+			ln: langid!("en"),
+			file: None,
+			folder: Some(folders[0].0.clone()),
+			bundle: None,
+		}));
+
+		app.update();
+
+		let ftl_server = &app.world().resource::<_FtlServer>();
+		assert_eq!(None, ftl_server.0.folder);
 	}
 
 	#[test]

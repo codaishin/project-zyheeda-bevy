@@ -3,7 +3,7 @@ use crate::{
 	traits::{current_locale::CurrentLocaleMut, requested_language::UpdateCurrentLocaleMut},
 };
 use bevy::{asset::LoadedFolder, prelude::*};
-use common::traits::handles_localization::SetLocalization;
+use common::traits::{handles_load_tracking::Loaded, handles_localization::SetLocalization};
 use fluent::{FluentResource, concurrent::FluentBundle};
 use unic_langid::LanguageIdentifier;
 
@@ -12,6 +12,16 @@ pub struct FtlServer {
 	fallback: Locale,
 	current: Option<Locale>,
 	update: bool,
+}
+
+impl FtlServer {
+	pub(crate) fn all_fallback_files_loaded(ftl_server: Res<Self>) -> Loaded {
+		if ftl_server.fallback.bundle.is_none() {
+			return Loaded(false);
+		}
+
+		Loaded(ftl_server.fallback.file.is_none() || ftl_server.fallback.folder.is_none())
+	}
 }
 
 pub(crate) struct Locale {
@@ -67,6 +77,8 @@ impl UpdateCurrentLocaleMut for FtlServer {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use common::test_tools::utils::{SingleThreadedApp, new_handle};
 	use unic_langid::langid;
 
 	#[test]
@@ -161,5 +173,119 @@ mod tests {
 				&server.current_locale_mut().ln
 			)
 		);
+	}
+
+	fn setup(server: FtlServer) -> App {
+		let mut app = App::new().single_threaded(Update);
+
+		app.insert_resource(server);
+
+		app
+	}
+
+	#[test]
+	fn fallback_loaded_if_bundle_present() -> Result<(), RunSystemError> {
+		let mut app = setup(FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
+			},
+			current: None,
+			update: false,
+		});
+
+		let Loaded(loaded) = app
+			.world_mut()
+			.run_system_once(FtlServer::all_fallback_files_loaded)?;
+
+		assert!(loaded);
+		Ok(())
+	}
+
+	#[test]
+	fn fallback_not_loaded_if_no_bundle_present() -> Result<(), RunSystemError> {
+		let mut app = setup(FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: None,
+			},
+			current: None,
+			update: false,
+		});
+
+		let Loaded(loaded) = app
+			.world_mut()
+			.run_system_once(FtlServer::all_fallback_files_loaded)?;
+
+		assert!(!loaded);
+		Ok(())
+	}
+
+	#[test]
+	fn fallback_not_loaded_if_bundle_file_and_folder_handle_present() -> Result<(), RunSystemError>
+	{
+		let mut app = setup(FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: Some(new_handle()),
+				folder: Some(new_handle()),
+				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
+			},
+			current: None,
+			update: false,
+		});
+
+		let Loaded(loaded) = app
+			.world_mut()
+			.run_system_once(FtlServer::all_fallback_files_loaded)?;
+
+		assert!(!loaded);
+		Ok(())
+	}
+
+	#[test]
+	fn fallback_loaded_if_only_bundle_and_file_present() -> Result<(), RunSystemError> {
+		let mut app = setup(FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: Some(new_handle()),
+				folder: None,
+				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
+			},
+			current: None,
+			update: false,
+		});
+
+		let Loaded(loaded) = app
+			.world_mut()
+			.run_system_once(FtlServer::all_fallback_files_loaded)?;
+
+		assert!(loaded);
+		Ok(())
+	}
+
+	#[test]
+	fn fallback_loaded_if_only_bundle_and_folder_present() -> Result<(), RunSystemError> {
+		let mut app = setup(FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: Some(new_handle()),
+				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
+			},
+			current: None,
+			update: false,
+		});
+
+		let Loaded(loaded) = app
+			.world_mut()
+			.run_system_once(FtlServer::all_fallback_files_loaded)?;
+
+		assert!(loaded);
+		Ok(())
 	}
 }

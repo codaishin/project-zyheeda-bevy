@@ -7,9 +7,10 @@ mod traits;
 use assets::ftl::{Ftl, loader::FtlLoader};
 use bevy::prelude::*;
 use common::{
+	states::game_state::LoadingEssentialAssets,
 	systems::log::log_many,
 	traits::{
-		handles_load_tracking::HandlesLoadTracking,
+		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		load_asset::Path,
 		thread_safe::ThreadSafe,
 	},
@@ -36,6 +37,9 @@ where
 	TLoading: HandlesLoadTracking + ThreadSafe,
 {
 	fn build(&self, app: &mut App) {
+		TLoading::register_load_tracking::<FtlServer, LoadingEssentialAssets, AssetsProgress>()
+			.in_app(app, FtlServer::all_fallback_files_loaded);
+
 		app.init_asset::<Ftl>()
 			.register_asset_loader(FtlLoader)
 			.add_systems(Startup, FtlServer::init_with(langid!("en-US")))
