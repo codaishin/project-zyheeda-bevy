@@ -1,12 +1,20 @@
 use crate::assets::ftl::Ftl;
-use bevy::prelude::*;
-use common::traits::load_asset::{LoadAsset, Path};
+use bevy::{asset::LoadedFolder, prelude::*};
+use common::traits::{
+	load_asset::{LoadAsset, Path},
+	load_folder_assets::LoadFolderAssets,
+};
 use std::path::PathBuf;
 use unic_langid::LanguageIdentifier;
 
-impl<T> InitFtlServer for T where T: From<(LanguageIdentifier, Handle<Ftl>)> + Resource {}
+impl<T> InitFtlServer for T where
+	T: From<(LanguageIdentifier, Handle<Ftl>, Handle<LoadedFolder>)> + Resource
+{
+}
 
-pub(crate) trait InitFtlServer: From<(LanguageIdentifier, Handle<Ftl>)> + Resource {
+pub(crate) trait InitFtlServer:
+	From<(LanguageIdentifier, Handle<Ftl>, Handle<LoadedFolder>)> + Resource
+{
 	fn init_with(
 		ln: LanguageIdentifier,
 		root_path: Path,
@@ -20,14 +28,16 @@ fn init_with<TFtlServer, TAssetServer>(
 	root_path: Path,
 ) -> impl Fn(Commands, ResMut<TAssetServer>)
 where
-	TFtlServer: From<(LanguageIdentifier, Handle<Ftl>)> + Resource,
-	TAssetServer: LoadAsset + Resource,
+	TFtlServer: From<(LanguageIdentifier, Handle<Ftl>, Handle<LoadedFolder>)> + Resource,
+	TAssetServer: LoadAsset + LoadFolderAssets + Resource,
 {
 	move |mut commands, mut server| {
 		let ftl = ln.to_string().to_lowercase();
-		let path = PathBuf::from(&*root_path).join(format!("{ftl}.ftl"));
-		let handle = server.load_asset(path);
-		let server = TFtlServer::from((ln.clone(), handle));
+		let file = PathBuf::from(&*root_path).join(format!("{ftl}.ftl"));
+		let file = server.load_asset(file);
+		let folder = PathBuf::from(&*root_path).join(ftl);
+		let folder = server.load_folder_assets(folder);
+		let server = TFtlServer::from((ln.clone(), file, folder));
 		commands.insert_resource(server);
 	}
 }
@@ -41,7 +51,7 @@ mod test {
 		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
+	use mockall::{mock, predicate::eq};
 	use std::path::PathBuf;
 	use unic_langid::langid;
 
@@ -50,7 +60,6 @@ mod test {
 		mock: Mock_AssetServer,
 	}
 
-	#[automock]
 	impl LoadAsset for _AssetServer {
 		fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
 		where
@@ -61,15 +70,42 @@ mod test {
 		}
 	}
 
+	impl LoadFolderAssets for _AssetServer {
+		fn load_folder_assets<TPath>(&self, path: TPath) -> Handle<LoadedFolder>
+		where
+			TPath: Into<AssetPath<'static>> + 'static,
+		{
+			self.mock.load_folder_assets(path)
+		}
+	}
+
+	mock! {
+		_AssetServer {}
+		impl LoadAsset for _AssetServer {
+			fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
+			where
+				TAsset: Asset,
+				TPath: Into<AssetPath<'static>> + 'static;
+		}
+		impl LoadFolderAssets for _AssetServer {
+			fn load_folder_assets<TPath>(&self, path: TPath) -> Handle<LoadedFolder>
+				where
+					TPath: Into<AssetPath<'static>> + 'static;
+		}
+	}
+
 	#[derive(Resource, Debug, PartialEq)]
 	struct _FtlServer {
 		ln: LanguageIdentifier,
-		handle: Handle<Ftl>,
+		file: Handle<Ftl>,
+		folder: Handle<LoadedFolder>,
 	}
 
-	impl From<(LanguageIdentifier, Handle<Ftl>)> for _FtlServer {
-		fn from((ln, handle): (LanguageIdentifier, Handle<Ftl>)) -> Self {
-			Self { ln, handle }
+	impl From<(LanguageIdentifier, Handle<Ftl>, Handle<LoadedFolder>)> for _FtlServer {
+		fn from(
+			(ln, file, folder): (LanguageIdentifier, Handle<Ftl>, Handle<LoadedFolder>),
+		) -> Self {
+			Self { ln, file, folder }
 		}
 	}
 
@@ -83,13 +119,19 @@ mod test {
 
 	#[test]
 	fn init_with_language() {
-		let handle = new_handle::<Ftl>();
-		let handle_clone = handle.clone();
+		let file = new_handle::<Ftl>();
+		let file_clone = file.clone();
+		let folder = new_handle();
+		let folder_clone = folder.clone();
 		let server = _AssetServer::new().with_mock(move |mock| {
 			mock.expect_load_asset::<Ftl, PathBuf>()
 				.times(1)
 				.with(eq(PathBuf::from("my/path/jp.ftl")))
-				.return_const(handle_clone.clone());
+				.return_const(file_clone.clone());
+			mock.expect_load_folder_assets::<PathBuf>()
+				.times(1)
+				.with(eq(PathBuf::from("my/path/jp")))
+				.return_const(folder_clone.clone());
 		});
 		let mut app = setup(langid!("JP"), Path::from("my/path"), server);
 
@@ -98,7 +140,8 @@ mod test {
 		assert_eq!(
 			Some(&_FtlServer {
 				ln: langid!("JP"),
-				handle
+				file,
+				folder
 			}),
 			app.world().get_resource::<_FtlServer>()
 		);
@@ -106,13 +149,19 @@ mod test {
 
 	#[test]
 	fn init_with_language_region() {
-		let handle = new_handle::<Ftl>();
-		let handle_clone = handle.clone();
+		let file = new_handle::<Ftl>();
+		let file_clone = file.clone();
+		let folder = new_handle();
+		let folder_clone = folder.clone();
 		let server = _AssetServer::new().with_mock(move |mock| {
 			mock.expect_load_asset::<Ftl, PathBuf>()
 				.times(1)
 				.with(eq(PathBuf::from("my/path/en-us.ftl")))
-				.return_const(handle_clone.clone());
+				.return_const(file_clone.clone());
+			mock.expect_load_folder_assets::<PathBuf>()
+				.times(1)
+				.with(eq(PathBuf::from("my/path/en-us")))
+				.return_const(folder_clone.clone());
 		});
 		let mut app = setup(langid!("en-US"), Path::from("my/path"), server);
 
@@ -121,7 +170,8 @@ mod test {
 		assert_eq!(
 			Some(&_FtlServer {
 				ln: langid!("en-US"),
-				handle
+				file,
+				folder
 			}),
 			app.world().get_resource::<_FtlServer>()
 		);
@@ -129,13 +179,19 @@ mod test {
 
 	#[test]
 	fn init_with_language_script() {
-		let handle = new_handle::<Ftl>();
-		let handle_clone = handle.clone();
+		let file = new_handle::<Ftl>();
+		let file_clone = file.clone();
+		let folder = new_handle();
+		let folder_clone = folder.clone();
 		let server = _AssetServer::new().with_mock(move |mock| {
 			mock.expect_load_asset::<Ftl, PathBuf>()
 				.times(1)
 				.with(eq(PathBuf::from("my/path/zh-hant.ftl")))
-				.return_const(handle_clone.clone());
+				.return_const(file_clone.clone());
+			mock.expect_load_folder_assets::<PathBuf>()
+				.times(1)
+				.with(eq(PathBuf::from("my/path/zh-hant")))
+				.return_const(folder_clone.clone());
 		});
 		let mut app = setup(langid!("zh-Hant"), Path::from("my/path"), server);
 
@@ -144,7 +200,8 @@ mod test {
 		assert_eq!(
 			Some(&_FtlServer {
 				ln: langid!("zh-Hant"),
-				handle
+				file,
+				folder
 			}),
 			app.world().get_resource::<_FtlServer>()
 		);
@@ -152,13 +209,19 @@ mod test {
 
 	#[test]
 	fn init_with_language_complex() {
-		let handle = new_handle::<Ftl>();
-		let handle_clone = handle.clone();
+		let file = new_handle::<Ftl>();
+		let file_clone = file.clone();
+		let folder = new_handle();
+		let folder_clone = folder.clone();
 		let server = _AssetServer::new().with_mock(move |mock| {
 			mock.expect_load_asset::<Ftl, PathBuf>()
 				.times(1)
 				.with(eq(PathBuf::from("my/path/ja-jpan-jp.ftl")))
-				.return_const(handle_clone.clone());
+				.return_const(file_clone.clone());
+			mock.expect_load_folder_assets::<PathBuf>()
+				.times(1)
+				.with(eq(PathBuf::from("my/path/ja-jpan-jp")))
+				.return_const(folder_clone.clone());
 		});
 		let mut app = setup(langid!("ja-Jpan-JP"), Path::from("my/path"), server);
 
@@ -167,7 +230,8 @@ mod test {
 		assert_eq!(
 			Some(&_FtlServer {
 				ln: langid!("ja-Jpan-JP"),
-				handle
+				file,
+				folder
 			}),
 			app.world().get_resource::<_FtlServer>()
 		);

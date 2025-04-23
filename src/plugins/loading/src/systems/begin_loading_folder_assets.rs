@@ -21,7 +21,7 @@ mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		asset::{AssetId, Handle, LoadedFolder},
+		asset::{AssetId, AssetPath, Handle, LoadedFolder},
 		prelude::Resource,
 		reflect::TypePath,
 	};
@@ -49,7 +49,10 @@ mod tests {
 
 	#[automock]
 	impl LoadFolderAssets for _Server {
-		fn load_folder_assets(&self, path: Path) -> Handle<LoadedFolder> {
+		fn load_folder_assets<TPath>(&self, path: TPath) -> Handle<LoadedFolder>
+		where
+			TPath: Into<AssetPath<'static>> + 'static,
+		{
 			self.mock.load_folder_assets(path)
 		}
 	}
@@ -68,7 +71,7 @@ mod tests {
 			uuid: Uuid::new_v4(),
 		});
 		let mut app = setup(_Server::new().with_mock(|mock| {
-			mock.expect_load_folder_assets()
+			mock.expect_load_folder_assets::<Path>()
 				.return_const(handle.clone());
 		}));
 

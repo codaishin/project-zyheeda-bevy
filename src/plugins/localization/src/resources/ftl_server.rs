@@ -1,7 +1,6 @@
 use crate::{assets::ftl::Ftl, traits::current_locale::CurrentLocaleMut};
-use bevy::prelude::*;
+use bevy::{asset::LoadedFolder, prelude::*};
 use fluent::{FluentResource, concurrent::FluentBundle};
-use std::collections::HashSet;
 use unic_langid::LanguageIdentifier;
 
 #[derive(Resource)]
@@ -13,17 +12,21 @@ pub struct FtlServer {
 
 pub(crate) struct Locale {
 	pub(crate) ln: LanguageIdentifier,
-	pub(crate) handles: HashSet<Handle<Ftl>>,
+	pub(crate) file: Option<Handle<Ftl>>,
+	pub(crate) folder: Option<Handle<LoadedFolder>>,
 	pub(crate) bundle: Option<FluentBundle<FluentResource>>,
 }
 
-impl From<(LanguageIdentifier, Handle<Ftl>)> for FtlServer {
-	fn from((index, handle): (LanguageIdentifier, Handle<Ftl>)) -> Self {
+impl From<(LanguageIdentifier, Handle<Ftl>, Handle<LoadedFolder>)> for FtlServer {
+	fn from(
+		(index, file, folder): (LanguageIdentifier, Handle<Ftl>, Handle<LoadedFolder>),
+	) -> Self {
 		Self {
 			requested_current: None,
 			fallback: Locale {
 				ln: index,
-				handles: HashSet::from([handle]),
+				file: Some(file),
+				folder: Some(folder),
 				bundle: None,
 			},
 			current: None,
@@ -40,7 +43,6 @@ impl CurrentLocaleMut for FtlServer {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::test_tools::utils::new_handle;
 	use unic_langid::langid;
 
 	#[test]
@@ -48,7 +50,8 @@ mod tests {
 		let mut server = FtlServer {
 			fallback: Locale {
 				ln: langid!("en"),
-				handles: HashSet::from([new_handle()]),
+				file: None,
+				folder: None,
 				bundle: None,
 			},
 			current: None,
@@ -65,12 +68,14 @@ mod tests {
 		let mut server = FtlServer {
 			fallback: Locale {
 				ln: langid!("en"),
-				handles: HashSet::from([new_handle()]),
+				file: None,
+				folder: None,
 				bundle: None,
 			},
 			current: Some(Locale {
 				ln: langid!("fr"),
-				handles: HashSet::from([new_handle()]),
+				file: None,
+				folder: None,
 				bundle: None,
 			}),
 			requested_current: None,

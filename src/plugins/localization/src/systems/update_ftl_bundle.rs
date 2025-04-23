@@ -3,7 +3,7 @@ use crate::{
 	resources::ftl_server::Locale,
 	traits::current_locale::CurrentLocaleMut,
 };
-use bevy::prelude::*;
+use bevy::{asset::LoadedFolder, prelude::*};
 use common::errors::{Error, Level};
 use fluent::{FluentError, FluentResource, concurrent::FluentBundle};
 use fluent_syntax::parser::ParserError;
@@ -15,14 +15,15 @@ pub(crate) trait UpdateFtlBundle: Resource + CurrentLocaleMut {
 	fn update_ftl_bundle(
 		mut server: ResMut<Self>,
 		mut events: EventReader<AssetEvent<Ftl>>,
-		assets: Res<Assets<Ftl>>,
+		files: Res<Assets<Ftl>>,
+		mut folders: ResMut<Assets<LoadedFolder>>,
 	) -> Vec<Result<(), SetBundleError>> {
 		let locale = server.current_locale_mut();
 
 		events
 			.read()
 			.filter_map(added_id)
-			.map(update_bundle(locale, &assets))
+			.map(update_bundle(locale, &files, &mut folders))
 			.collect()
 	}
 }
@@ -37,13 +38,14 @@ fn added_id(event: &AssetEvent<Ftl>) -> Option<&AssetId<Ftl>> {
 fn update_bundle(
 	locale: &mut Locale,
 	assets: &Assets<Ftl>,
+	folders: &mut Assets<LoadedFolder>,
 ) -> impl FnMut(&AssetId<Ftl>) -> Result<(), SetBundleError> {
 	move |id| {
-		if !locale.handles.iter().any(|handle| &handle.id() == id) {
+		let Some(id) = removed_handle_id(id, locale, folders) else {
 			return Ok(());
-		}
+		};
 
-		let Ftl(file) = get_ftl_file(assets, *id, &locale.ln)?;
+		let Ftl(file) = get_ftl_file(assets, id, &locale.ln)?;
 		let (res, parse_errors) = new_resource(file);
 		let bundle = locale
 			.bundle
@@ -58,10 +60,26 @@ fn update_bundle(
 			));
 		}
 
-		locale.handles.retain(|handle| &handle.id() != id);
-
 		Ok(())
 	}
+}
+
+fn removed_handle_id(
+	id: &AssetId<Ftl>,
+	locale: &mut Locale,
+	folders: &mut Assets<LoadedFolder>,
+) -> Option<AssetId<Ftl>> {
+	let id = match locale.file.as_ref() {
+		Some(file) if &file.id() == id => {
+			return locale.file.take().map(|handle| handle.id());
+		}
+		_ => id.untyped(),
+	};
+
+	let folder = locale.folder.as_ref()?;
+	let LoadedFolder { handles } = folders.get_mut(folder)?;
+	let i = handles.iter().position(|handle| handle.id() == id)?;
+	Some(handles.remove(i).id().typed())
 }
 
 fn get_ftl_file<'a>(
@@ -139,7 +157,6 @@ mod tests {
 		test_tools::utils::{SingleThreadedApp, new_handle},
 	};
 	use fluent::FluentError;
-	use std::collections::HashSet;
 	use unic_langid::langid;
 
 	#[derive(Resource)]
@@ -154,9 +171,17 @@ mod tests {
 	#[derive(Resource, Debug, PartialEq)]
 	struct _Result(Vec<Result<(), SetBundleError>>);
 
-	fn setup<const N: usize>(added: [(AssetEvent<Ftl>, Option<Ftl>); N]) -> App {
+	fn setup<const N_FILES: usize, const N_FOLDERS: usize>(
+		added: [(AssetEvent<Ftl>, Option<Ftl>); N_FILES],
+		folders: [(Handle<LoadedFolder>, Vec<UntypedHandle>); N_FOLDERS],
+	) -> App {
 		let mut app = App::new().single_threaded(Update);
-		let mut assets = Assets::default();
+		let mut file_assets = Assets::default();
+		let mut folder_assets = Assets::default();
+
+		for (handle, handles) in folders {
+			folder_assets.insert(&handle, LoadedFolder { handles });
+		}
 
 		app.add_event::<AssetEvent<Ftl>>();
 		for (event, ftl) in added {
@@ -168,11 +193,12 @@ mod tests {
 				AssetEvent::LoadedWithDependencies { id } => id,
 			};
 			if let Some(ftl) = ftl {
-				assets.insert(id, ftl);
+				file_assets.insert(id, ftl);
 			}
 			app.world_mut().send_event(event);
 		}
-		app.insert_resource(assets);
+		app.insert_resource(file_assets);
+		app.insert_resource(folder_assets);
 		app.add_systems(
 			Update,
 			_FtlServer::update_ftl_bundle.pipe(|In(result), mut commands: Commands| {
@@ -212,14 +238,18 @@ mod tests {
 
 	#[test]
 	fn set_bundle() {
-		let handle = new_handle();
-		let mut app = setup([(
-			AssetEvent::Added { id: handle.id() },
-			Some(Ftl(String::from("hello-world = Hello, World!"))),
-		)]);
+		let file = new_handle();
+		let mut app = setup(
+			[(
+				AssetEvent::Added { id: file.id() },
+				Some(Ftl(String::from("hello-world = Hello, World!"))),
+			)],
+			[],
+		);
 		app.insert_resource(_FtlServer(Locale {
 			ln: langid!("en"),
-			handles: HashSet::from([handle]),
+			file: Some(file),
+			folder: None,
 			bundle: None,
 		}));
 
@@ -234,24 +264,25 @@ mod tests {
 
 	#[test]
 	fn set_multiple_bundles() {
-		let handles = [new_handle(), new_handle()];
-		let mut app = setup([
-			(
-				AssetEvent::Added {
-					id: handles[0].id(),
-				},
-				Some(Ftl(String::from("hello-world = Hello, World!"))),
-			),
-			(
-				AssetEvent::Added {
-					id: handles[1].id(),
-				},
-				Some(Ftl(String::from("bye-world = Bye, World!"))),
-			),
-		]);
+		let files = [new_handle(), new_handle()];
+		let folders = [(new_handle(), vec![files[1].clone().untyped()])];
+		let mut app = setup(
+			[
+				(
+					AssetEvent::Added { id: files[0].id() },
+					Some(Ftl(String::from("hello-world = Hello, World!"))),
+				),
+				(
+					AssetEvent::Added { id: files[1].id() },
+					Some(Ftl(String::from("bye-world = Bye, World!"))),
+				),
+			],
+			folders.clone(),
+		);
 		app.insert_resource(_FtlServer(Locale {
 			ln: langid!("en"),
-			handles: HashSet::from(handles),
+			file: Some(files[0].clone()),
+			folder: Some(folders[0].0.clone()),
 			bundle: None,
 		}));
 
@@ -271,50 +302,87 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_handle_for_added_bundle() {
-		let handles = [new_handle(), new_handle()];
-		let mut app = setup([(
-			AssetEvent::Added {
-				id: handles[0].id(),
-			},
-			Some(Ftl(String::from("hello-world = Hello, World!"))),
-		)]);
+	fn remove_file_handle_for_added_bundle() {
+		let file = new_handle();
+		let mut app = setup(
+			[(
+				AssetEvent::Added { id: file.id() },
+				Some(Ftl(String::from("hello-world = Hello, World!"))),
+			)],
+			[],
+		);
 		app.insert_resource(_FtlServer(Locale {
 			ln: langid!("en"),
-			handles: HashSet::from(handles.clone()),
+			file: Some(file),
+			folder: None,
 			bundle: None,
 		}));
 
 		app.update();
 
 		let locale = &app.world().resource::<_FtlServer>().0;
-		assert_eq!(HashSet::from([handles[1].clone()]), locale.handles);
+		assert!(locale.file.is_none());
+	}
+
+	#[test]
+	fn remove_file_handle_for_added_bundle_in_folder() {
+		let files = [new_handle(), new_handle()];
+		let folders = [(
+			new_handle(),
+			files.iter().map(|f| f.clone().untyped()).collect(),
+		)];
+		let mut app = setup(
+			[(
+				AssetEvent::Added { id: files[1].id() },
+				Some(Ftl(String::from("hello-world = Hello, World!"))),
+			)],
+			folders.clone(),
+		);
+		app.insert_resource(_FtlServer(Locale {
+			ln: langid!("en"),
+			file: None,
+			folder: Some(folders[0].0.clone()),
+			bundle: None,
+		}));
+
+		app.update();
+
+		let folder = &app
+			.world()
+			.resource::<Assets<LoadedFolder>>()
+			.get(&folders[0].0)
+			.unwrap();
+		assert_eq!(vec![files[0].clone()], folder.handles);
 	}
 
 	#[test]
 	fn do_nothing_if_not_added() {
-		let handle = new_handle();
-		let mut app = setup([
-			(
-				AssetEvent::LoadedWithDependencies { id: handle.id() },
-				Some(Ftl(String::from("hello-world = Hello, World!"))),
-			),
-			(
-				AssetEvent::Modified { id: handle.id() },
-				Some(Ftl(String::from("hello-world = Hello, World!"))),
-			),
-			(
-				AssetEvent::Removed { id: handle.id() },
-				Some(Ftl(String::from("hello-world = Hello, World!"))),
-			),
-			(
-				AssetEvent::Unused { id: handle.id() },
-				Some(Ftl(String::from("hello-world = Hello, World!"))),
-			),
-		]);
+		let file = new_handle();
+		let mut app = setup(
+			[
+				(
+					AssetEvent::LoadedWithDependencies { id: file.id() },
+					Some(Ftl(String::from("hello-world = Hello, World!"))),
+				),
+				(
+					AssetEvent::Modified { id: file.id() },
+					Some(Ftl(String::from("hello-world = Hello, World!"))),
+				),
+				(
+					AssetEvent::Removed { id: file.id() },
+					Some(Ftl(String::from("hello-world = Hello, World!"))),
+				),
+				(
+					AssetEvent::Unused { id: file.id() },
+					Some(Ftl(String::from("hello-world = Hello, World!"))),
+				),
+			],
+			[],
+		);
 		app.insert_resource(_FtlServer(Locale {
 			ln: langid!("en"),
-			handles: HashSet::from([handle]),
+			file: Some(file),
+			folder: None,
 			bundle: None,
 		}));
 
@@ -325,32 +393,67 @@ mod tests {
 	}
 
 	#[test]
-	fn do_nothing_if_id_does_not_match() {
-		let mut app = setup([(
-			AssetEvent::Added {
-				id: new_handle().id(),
-			},
-			Some(Ftl(String::from("hello-world = Hello, World!"))),
-		)]);
+	fn ignore_not_matching_handles() {
+		let files = [new_handle(), new_handle(), new_handle(), new_handle()];
+		let folders = [(
+			new_handle(),
+			files[1..=2].iter().map(|f| f.clone().untyped()).collect(),
+		)];
+		let mut app = setup(
+			[
+				(
+					AssetEvent::Added { id: files[0].id() },
+					Some(Ftl(String::from("a = A!"))),
+				),
+				(
+					AssetEvent::Added { id: files[1].id() },
+					Some(Ftl(String::from("b = B!"))),
+				),
+				(
+					AssetEvent::Added { id: files[2].id() },
+					Some(Ftl(String::from("c = C!"))),
+				),
+				(
+					AssetEvent::Added { id: files[3].id() },
+					Some(Ftl(String::from("d = D!"))),
+				),
+			],
+			folders.clone(),
+		);
 		app.insert_resource(_FtlServer(Locale {
 			ln: langid!("en"),
-			handles: HashSet::from([new_handle()]),
+			file: Some(new_handle()),
+			folder: Some(folders[0].0.clone()),
 			bundle: None,
 		}));
 
 		app.update();
 
 		let locale = &app.world().resource::<_FtlServer>().0;
-		assert!(locale.bundle.is_none());
+		assert_eq!(
+			(
+				Err(_Error::NoMsg),
+				Ok(String::from("B!")),
+				Ok(String::from("C!")),
+				Err(_Error::NoMsg),
+			),
+			(
+				get_localization(locale, "a"),
+				get_localization(locale, "b"),
+				get_localization(locale, "c"),
+				get_localization(locale, "d"),
+			)
+		);
 	}
 
 	#[test]
-	fn no_ftl_error() {
-		let handle = new_handle();
-		let mut app = setup([(AssetEvent::Added { id: handle.id() }, None)]);
+	fn no_ftl_asset_error() {
+		let file = new_handle();
+		let mut app = setup([(AssetEvent::Added { id: file.id() }, None)], []);
 		app.insert_resource(_FtlServer(Locale {
 			ln: langid!("en"),
-			handles: HashSet::from([handle]),
+			file: Some(file),
+			folder: None,
 			bundle: None,
 		}));
 
@@ -367,14 +470,18 @@ mod tests {
 
 	#[test]
 	fn parse_error() {
-		let handle = new_handle();
-		let mut app = setup([(
-			AssetEvent::Added { id: handle.id() },
-			Some(Ftl(String::from("hello-world ? Hello, World!"))),
-		)]);
+		let file = new_handle();
+		let mut app = setup(
+			[(
+				AssetEvent::Added { id: file.id() },
+				Some(Ftl(String::from("hello-world ? Hello, World!"))),
+			)],
+			[],
+		);
 		app.insert_resource(_FtlServer(Locale {
 			ln: langid!("en"),
-			handles: HashSet::from([handle]),
+			file: Some(file),
+			folder: None,
 			bundle: None,
 		}));
 
@@ -398,16 +505,20 @@ mod tests {
 
 	#[test]
 	fn still_add_bundle_when_parse_error() {
-		let handle = new_handle();
-		let mut app = setup([(
-			AssetEvent::Added { id: handle.id() },
-			Some(Ftl(String::from(
-				"other = Other!\nhello-world ? Hello, World!",
-			))),
-		)]);
+		let file = new_handle();
+		let mut app = setup(
+			[(
+				AssetEvent::Added { id: file.id() },
+				Some(Ftl(String::from(
+					"other = Other!\nhello-world ? Hello, World!",
+				))),
+			)],
+			[],
+		);
 		app.insert_resource(_FtlServer(Locale {
 			ln: langid!("en"),
-			handles: HashSet::from([handle]),
+			file: Some(file),
+			folder: None,
 			bundle: None,
 		}));
 
@@ -447,24 +558,25 @@ mod tests {
 
 	#[test]
 	fn fluent_error() {
-		let handles = [new_handle(), new_handle()];
-		let mut app = setup([
-			(
-				AssetEvent::Added {
-					id: handles[0].id(),
-				},
-				Some(Ftl(String::from("hello-world = Hello, World!"))),
-			),
-			(
-				AssetEvent::Added {
-					id: handles[1].id(),
-				},
-				Some(Ftl(String::from("hello-world = Hello, Override!"))),
-			),
-		]);
+		let files = [new_handle(), new_handle()];
+		let folders = [(new_handle(), vec![files[1].clone().untyped()])];
+		let mut app = setup(
+			[
+				(
+					AssetEvent::Added { id: files[0].id() },
+					Some(Ftl(String::from("hello-world = Hello, World!"))),
+				),
+				(
+					AssetEvent::Added { id: files[1].id() },
+					Some(Ftl(String::from("hello-world = Hello, Override!"))),
+				),
+			],
+			folders.clone(),
+		);
 		app.insert_resource(_FtlServer(Locale {
 			ln: langid!("en"),
-			handles: HashSet::from(handles),
+			file: Some(files[0].clone()),
+			folder: Some(folders[0].0.clone()),
 			bundle: None,
 		}));
 
@@ -477,28 +589,29 @@ mod tests {
 
 	#[test]
 	fn still_add_bundle_when_fluent_error() {
-		let handles = [new_handle(), new_handle()];
-		let mut app = setup([
-			(
-				AssetEvent::Added {
-					id: handles[0].id(),
-				},
-				Some(Ftl(String::from(
-					"hello-world = Hello, World!\nother-1 = Other1!",
-				))),
-			),
-			(
-				AssetEvent::Added {
-					id: handles[1].id(),
-				},
-				Some(Ftl(String::from(
-					"hello-world = Hello, Override!\nother-2 = Other2!",
-				))),
-			),
-		]);
+		let files = [new_handle(), new_handle()];
+		let folders = [(new_handle(), vec![files[1].clone().untyped()])];
+		let mut app = setup(
+			[
+				(
+					AssetEvent::Added { id: files[0].id() },
+					Some(Ftl(String::from(
+						"hello-world = Hello, World!\nother-1 = Other1!",
+					))),
+				),
+				(
+					AssetEvent::Added { id: files[1].id() },
+					Some(Ftl(String::from(
+						"hello-world = Hello, Override!\nother-2 = Other2!",
+					))),
+				),
+			],
+			folders.clone(),
+		);
 		app.insert_resource(_FtlServer(Locale {
 			ln: langid!("en"),
-			handles: HashSet::from(handles),
+			file: Some(files[0].clone()),
+			folder: Some(folders[0].0.clone()),
 			bundle: None,
 		}));
 
