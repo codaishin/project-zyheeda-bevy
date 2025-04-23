@@ -54,16 +54,17 @@ impl CurrentLocaleMut for FtlServer {
 
 impl SetLocalization for FtlServer {
 	fn set_localization(&mut self, language: LanguageIdentifier) {
-		self.update = true;
-
-		self.current = match language == self.fallback.ln {
-			true => None,
-			false => Some(Locale {
-				ln: language,
-				file: None,
-				folder: None,
-				bundle: None,
-			}),
+		(self.current, self.update) = match language == self.fallback.ln {
+			true => (None, false),
+			false => (
+				Some(Locale {
+					ln: language,
+					file: None,
+					folder: None,
+					bundle: None,
+				}),
+				true,
+			),
 		};
 	}
 }
@@ -167,7 +168,7 @@ mod tests {
 		server.set_localization(langid!("en"));
 
 		assert_eq!(
-			(true, &langid!("en")),
+			(false, &langid!("en")),
 			(
 				*server.update_current_locale(),
 				&server.current_locale_mut().ln
