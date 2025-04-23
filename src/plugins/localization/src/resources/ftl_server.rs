@@ -9,7 +9,16 @@ use crate::{
 use bevy::{asset::LoadedFolder, prelude::*};
 use common::{
 	errors::{Error, Level},
-	traits::{handles_load_tracking::Loaded, handles_localization::SetLocalization},
+	traits::{
+		handles_load_tracking::Loaded,
+		handles_localization::{
+			FailedToken,
+			LocalizationResult,
+			LocalizeToken,
+			SetLocalization,
+			Token,
+		},
+	},
 };
 use fluent::{FluentError, FluentResource, concurrent::FluentBundle};
 use std::fmt::Display;
@@ -20,7 +29,7 @@ pub struct FtlServer {
 	fallback: Locale,
 	current: Option<Locale>,
 	update: bool,
-	translate_errors: Vec<TranslateError>,
+	errors: Vec<FtlError>,
 }
 
 impl FtlServer {
@@ -43,7 +52,7 @@ impl From<LanguageIdentifier> for FtlServer {
 				bundle: None,
 			},
 			current: None,
-			translate_errors: vec![],
+			errors: vec![],
 			update: true,
 		}
 	}
@@ -72,6 +81,57 @@ impl SetLocalization for FtlServer {
 	}
 }
 
+impl LocalizeToken for FtlServer {
+	fn localize_token<'a>(&mut self, token: Token<'a>) -> LocalizationResult<'a> {
+		let (current, locales) = match self.current.as_ref() {
+			Some(current) => (current, vec![current, &self.fallback]),
+			None => (&self.fallback, vec![&self.fallback]),
+		};
+		let localize = |locale: &&Locale| {
+			let ftl_errors = &mut self.errors;
+
+			if locale.ln != current.ln {
+				ftl_errors.push(FtlError::FallbackAttempt {
+					token: current.ln_token(token),
+					fallback: locale.ln.clone(),
+				});
+			}
+
+			let Some(bundle) = locale.bundle.as_ref() else {
+				ftl_errors.push(FtlError::NoBundle(locale.ln.clone()));
+				return None;
+			};
+
+			let Some(msg) = bundle.get_message(token) else {
+				ftl_errors.push(FtlError::NoMessageFor(locale.ln_token(token)));
+				return None;
+			};
+
+			let Some(pattern) = msg.value() else {
+				ftl_errors.push(FtlError::NoPatternFor(locale.ln_token(token)));
+				return None;
+			};
+
+			let mut fluent_errors = vec![];
+			let localized = bundle.format_pattern(pattern, None, &mut fluent_errors);
+
+			if !fluent_errors.is_empty() {
+				ftl_errors.push(FtlError::FluentErrors {
+					token: locale.ln_token(token),
+					errors: fluent_errors,
+				});
+			}
+
+			Some(String::from(localized))
+		};
+
+		match locales.iter().filter_map(localize).next() {
+			Some(localized) => LocalizationResult::Value(localized),
+			None => LocalizationResult::Error(FailedToken(token)),
+		}
+	}
+}
+
 impl UpdateCurrentLocaleMut for FtlServer {
 	fn update_current_locale(&mut self) -> &mut bool {
 		&mut self.update
@@ -79,10 +139,10 @@ impl UpdateCurrentLocaleMut for FtlServer {
 }
 
 impl GetErrorsMut for FtlServer {
-	type TError = TranslateError;
+	type TError = FtlError;
 
 	fn errors_mut(&mut self) -> &mut Vec<Self::TError> {
-		&mut self.translate_errors
+		&mut self.errors
 	}
 }
 
@@ -93,62 +153,71 @@ pub(crate) struct Locale {
 	pub(crate) bundle: Option<FluentBundle<FluentResource>>,
 }
 
-#[derive(Debug)]
-pub enum TranslateError {
-	NoBundle(LanguageIdentifier),
-	NoMessageFor(Token),
-	NoPatternFor(Token),
-	FallbackAttempt {
-		token: Token,
-		fallback: LanguageIdentifier,
-	},
-	FluentErrors {
-		token: Token,
-		errors: Vec<FluentError>,
-	},
-}
-
-impl From<TranslateError> for Error {
-	fn from(error: TranslateError) -> Self {
-		match error {
-			TranslateError::NoBundle(ln) => Error {
-				msg: format!("no `FluentBundle` for {ln}"),
-				lvl: Level::Error,
-			},
-			TranslateError::NoMessageFor(token) => Error {
-				msg: format!("no message found for {token}"),
-				lvl: Level::Error,
-			},
-			TranslateError::NoPatternFor(token) => Error {
-				msg: format!("no pattern found for {token}"),
-				lvl: Level::Error,
-			},
-			TranslateError::FallbackAttempt { token, fallback } => Error {
-				msg: format!("fallback attempted for {token} -> {fallback}"),
-				lvl: Level::Warning,
-			},
-			TranslateError::FluentErrors { token, errors } => {
-				let errors = errors
-					.iter()
-					.map(FluentError::to_string)
-					.collect::<Vec<_>>()
-					.join(", ");
-				Error {
-					msg: format!("errors for {token}: {errors}"),
-					lvl: Level::Error,
-				}
-			}
+impl Locale {
+	fn ln_token(&self, value: &str) -> LnToken {
+		LnToken {
+			value: String::from(value),
+			language: self.ln.clone(),
 		}
 	}
 }
 
-#[derive(Debug)]
-pub struct Token {
+#[derive(Debug, PartialEq)]
+pub enum FtlError {
+	NoBundle(LanguageIdentifier),
+	NoMessageFor(LnToken),
+	NoPatternFor(LnToken),
+	FluentErrors {
+		token: LnToken,
+		errors: Vec<FluentError>,
+	},
+	FallbackAttempt {
+		token: LnToken,
+		fallback: LanguageIdentifier,
+	},
+}
+
+impl From<FtlError> for Error {
+	fn from(error: FtlError) -> Self {
+		match error {
+			FtlError::NoBundle(ln) => Error {
+				msg: format!("no `FluentBundle` for {ln}"),
+				lvl: Level::Error,
+			},
+			FtlError::NoMessageFor(token) => Error {
+				msg: format!("no message found for {token}"),
+				lvl: Level::Error,
+			},
+			FtlError::NoPatternFor(token) => Error {
+				msg: format!("no pattern found for {token}"),
+				lvl: Level::Error,
+			},
+			FtlError::FluentErrors { token, errors } => Error {
+				msg: format!(
+					"errors for {token}: {}",
+					errors
+						.iter()
+						.map(FluentError::to_string)
+						.collect::<Vec<_>>()
+						.join(", ")
+				),
+				lvl: Level::Error,
+			},
+			FtlError::FallbackAttempt { token, fallback } => Error {
+				msg: format!("fallback attempted for {token} -> {fallback}"),
+				lvl: Level::Warning,
+			},
+		}
+	}
+}
+
+#[derive(Debug, PartialEq)]
+pub struct LnToken {
 	value: String,
 	language: LanguageIdentifier,
 }
 
-impl Display for Token {
+impl Display for LnToken {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{} ({})", self.value, self.language)
 	}
@@ -158,7 +227,11 @@ impl Display for Token {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::test_tools::utils::{SingleThreadedApp, new_handle};
+	use common::{
+		test_tools::utils::{SingleThreadedApp, new_handle},
+		traits::handles_localization::FailedToken,
+	};
+	use fluent::resolver::{ResolverError, errors::ReferenceKind};
 	use unic_langid::langid;
 
 	#[test]
@@ -171,7 +244,7 @@ mod tests {
 				bundle: None,
 			},
 			current: None,
-			translate_errors: vec![],
+			errors: vec![],
 			update: false,
 		};
 
@@ -195,7 +268,7 @@ mod tests {
 				folder: None,
 				bundle: None,
 			}),
-			translate_errors: vec![],
+			errors: vec![],
 			update: false,
 		};
 
@@ -214,7 +287,7 @@ mod tests {
 				bundle: None,
 			},
 			current: None,
-			translate_errors: vec![],
+			errors: vec![],
 			update: false,
 		};
 
@@ -244,7 +317,7 @@ mod tests {
 				folder: None,
 				bundle: None,
 			}),
-			translate_errors: vec![],
+			errors: vec![],
 			update: false,
 		};
 
@@ -277,7 +350,7 @@ mod tests {
 				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
 			},
 			current: None,
-			translate_errors: vec![],
+			errors: vec![],
 			update: false,
 		});
 
@@ -299,7 +372,7 @@ mod tests {
 				bundle: None,
 			},
 			current: None,
-			translate_errors: vec![],
+			errors: vec![],
 			update: false,
 		});
 
@@ -322,7 +395,7 @@ mod tests {
 				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
 			},
 			current: None,
-			translate_errors: vec![],
+			errors: vec![],
 			update: false,
 		});
 
@@ -344,7 +417,7 @@ mod tests {
 				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
 			},
 			current: None,
-			translate_errors: vec![],
+			errors: vec![],
 			update: false,
 		});
 
@@ -366,7 +439,7 @@ mod tests {
 				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
 			},
 			current: None,
-			translate_errors: vec![],
+			errors: vec![],
 			update: false,
 		});
 
@@ -376,5 +449,395 @@ mod tests {
 
 		assert!(!loaded);
 		Ok(())
+	}
+
+	#[test]
+	fn localize_from_fallback() {
+		let mut bundle = FluentBundle::new_concurrent(vec![langid!("en")]);
+		let res = match FluentResource::try_new(String::from("a = A!")) {
+			Ok(res) => res,
+			Err((res, ..)) => res,
+		};
+		_ = bundle.add_resource(res);
+		let mut server = FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: Some(bundle),
+			},
+			current: None,
+			errors: vec![],
+			update: false,
+		};
+
+		let result = server.localize_token("a");
+		assert_eq!(
+			(LocalizationResult::Value(String::from("A!")), vec![]),
+			(result, server.errors)
+		);
+	}
+
+	#[test]
+	fn localize_from_current() {
+		let mut bundle = FluentBundle::new_concurrent(vec![langid!("en")]);
+		let res = match FluentResource::try_new(String::from("a = A!")) {
+			Ok(res) => res,
+			Err((res, ..)) => res,
+		};
+		_ = bundle.add_resource(res);
+		let mut server = FtlServer {
+			fallback: Locale {
+				ln: langid!("jp"),
+				file: None,
+				folder: None,
+				bundle: None,
+			},
+			current: Some(Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: Some(bundle),
+			}),
+			errors: vec![],
+			update: false,
+		};
+
+		let result = server.localize_token("a");
+		assert_eq!(
+			(LocalizationResult::Value(String::from("A!")), vec![]),
+			(result, server.errors)
+		);
+	}
+
+	#[test]
+	fn no_bundle_error() {
+		let mut server = FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: None,
+			},
+			current: None,
+			errors: vec![],
+			update: false,
+		};
+
+		let result = server.localize_token("a");
+		assert_eq!(
+			(
+				LocalizationResult::Error(FailedToken("a")),
+				vec![FtlError::NoBundle(langid!("en"))]
+			),
+			(result, server.errors)
+		);
+	}
+
+	#[test]
+	fn no_msg_error() {
+		let mut bundle = FluentBundle::new_concurrent(vec![langid!("en")]);
+		let res = match FluentResource::try_new(String::from("a = A!")) {
+			Ok(res) => res,
+			Err((res, ..)) => res,
+		};
+		_ = bundle.add_resource(res);
+		let mut server = FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: Some(bundle),
+			},
+			current: None,
+			errors: vec![],
+			update: false,
+		};
+
+		let result = server.localize_token("b");
+		assert_eq!(
+			(
+				LocalizationResult::Error(FailedToken("b")),
+				vec![FtlError::NoMessageFor(LnToken {
+					value: String::from("b"),
+					language: langid!("en")
+				})]
+			),
+			(result, server.errors)
+		);
+	}
+
+	#[test]
+	fn no_patter_error() {
+		let mut bundle = FluentBundle::new_concurrent(vec![langid!("en")]);
+		let res = match FluentResource::try_new(String::from("a = \n  .description = my item")) {
+			Ok(res) => res,
+			Err((res, ..)) => res,
+		};
+		_ = bundle.add_resource(res);
+		let mut server = FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: Some(bundle),
+			},
+			current: None,
+			errors: vec![],
+			update: false,
+		};
+
+		let result = server.localize_token("a");
+		assert_eq!(
+			(
+				LocalizationResult::Error(FailedToken("a")),
+				vec![FtlError::NoPatternFor(LnToken {
+					value: String::from("a"),
+					language: langid!("en")
+				})]
+			),
+			(result, server.errors)
+		);
+	}
+
+	#[test]
+	fn fluent_error() {
+		let mut bundle = FluentBundle::new_concurrent(vec![langid!("en")]);
+		let res = match FluentResource::try_new(String::from("a = { $a }")) {
+			Ok(res) => res,
+			Err((res, ..)) => res,
+		};
+		_ = bundle.add_resource(res);
+		let mut server = FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: Some(bundle),
+			},
+			current: None,
+			errors: vec![],
+			update: false,
+		};
+
+		let result = server.localize_token("a");
+		assert_eq!(
+			(
+				LocalizationResult::Value(String::from("{$a}")),
+				vec![FtlError::FluentErrors {
+					token: LnToken {
+						value: String::from("a"),
+						language: langid!("en")
+					},
+					errors: vec![FluentError::ResolverError(ResolverError::Reference(
+						ReferenceKind::Variable {
+							id: String::from("a")
+						}
+					))]
+				}]
+			),
+			(result, server.errors)
+		);
+	}
+
+	#[test]
+	fn fallback_attempt_on_bundle_error() {
+		let mut fallback = FluentBundle::new_concurrent(vec![langid!("en")]);
+		let res = match FluentResource::try_new(String::from("a = A!")) {
+			Ok(res) => res,
+			Err((res, ..)) => res,
+		};
+		_ = fallback.add_resource(res);
+		let mut server = FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: Some(fallback),
+			},
+			current: Some(Locale {
+				ln: langid!("jp"),
+				file: None,
+				folder: None,
+				bundle: None,
+			}),
+			errors: vec![],
+			update: false,
+		};
+
+		let result = server.localize_token("a");
+		assert_eq!(
+			(
+				LocalizationResult::Value(String::from("A!")),
+				vec![
+					FtlError::NoBundle(langid!("jp")),
+					FtlError::FallbackAttempt {
+						token: LnToken {
+							value: String::from("a"),
+							language: langid!("jp")
+						},
+						fallback: langid!("en")
+					}
+				]
+			),
+			(result, server.errors)
+		);
+	}
+
+	#[test]
+	fn fallback_attempt_on_msg_error() {
+		let mut fallback = FluentBundle::new_concurrent(vec![langid!("en")]);
+		let res = match FluentResource::try_new(String::from("a = A!")) {
+			Ok(res) => res,
+			Err((res, ..)) => res,
+		};
+		_ = fallback.add_resource(res);
+		let mut current = FluentBundle::new_concurrent(vec![langid!("en")]);
+		let res = match FluentResource::try_new(String::from("b = B!")) {
+			Ok(res) => res,
+			Err((res, ..)) => res,
+		};
+		_ = current.add_resource(res);
+		let mut server = FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: Some(fallback),
+			},
+			current: Some(Locale {
+				ln: langid!("jp"),
+				file: None,
+				folder: None,
+				bundle: Some(current),
+			}),
+			errors: vec![],
+			update: false,
+		};
+
+		let result = server.localize_token("a");
+		assert_eq!(
+			(
+				LocalizationResult::Value(String::from("A!")),
+				vec![
+					FtlError::NoMessageFor(LnToken {
+						value: String::from("a"),
+						language: langid!("jp")
+					}),
+					FtlError::FallbackAttempt {
+						token: LnToken {
+							value: String::from("a"),
+							language: langid!("jp")
+						},
+						fallback: langid!("en")
+					}
+				]
+			),
+			(result, server.errors)
+		);
+	}
+
+	#[test]
+	fn fallback_attempt_on_pattern_error() {
+		let mut fallback = FluentBundle::new_concurrent(vec![langid!("en")]);
+		let res = match FluentResource::try_new(String::from("a = A!")) {
+			Ok(res) => res,
+			Err((res, ..)) => res,
+		};
+		_ = fallback.add_resource(res);
+		let mut current = FluentBundle::new_concurrent(vec![langid!("en")]);
+		let res = match FluentResource::try_new(String::from("a = \n  .description = my item")) {
+			Ok(res) => res,
+			Err((res, ..)) => res,
+		};
+		_ = current.add_resource(res);
+		let mut server = FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: Some(fallback),
+			},
+			current: Some(Locale {
+				ln: langid!("jp"),
+				file: None,
+				folder: None,
+				bundle: Some(current),
+			}),
+			errors: vec![],
+			update: false,
+		};
+
+		let result = server.localize_token("a");
+		assert_eq!(
+			(
+				LocalizationResult::Value(String::from("A!")),
+				vec![
+					FtlError::NoPatternFor(LnToken {
+						value: String::from("a"),
+						language: langid!("jp")
+					}),
+					FtlError::FallbackAttempt {
+						token: LnToken {
+							value: String::from("a"),
+							language: langid!("jp")
+						},
+						fallback: langid!("en")
+					}
+				]
+			),
+			(result, server.errors)
+		);
+	}
+
+	#[test]
+	fn no_fallback_attempt_on_fluent_error() {
+		let mut fallback = FluentBundle::new_concurrent(vec![langid!("en")]);
+		let res = match FluentResource::try_new(String::from("a = A!")) {
+			Ok(res) => res,
+			Err((res, ..)) => res,
+		};
+		_ = fallback.add_resource(res);
+		let mut current = FluentBundle::new_concurrent(vec![langid!("jp")]);
+		let res = match FluentResource::try_new(String::from("a = { $a }")) {
+			Ok(res) => res,
+			Err((res, ..)) => res,
+		};
+		_ = current.add_resource(res);
+		let mut server = FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: Some(fallback),
+			},
+			current: Some(Locale {
+				ln: langid!("jp"),
+				file: None,
+				folder: None,
+				bundle: Some(current),
+			}),
+			errors: vec![],
+			update: false,
+		};
+
+		let result = server.localize_token("a");
+		assert_eq!(
+			(
+				LocalizationResult::Value(String::from("{$a}")),
+				vec![FtlError::FluentErrors {
+					token: LnToken {
+						value: String::from("a"),
+						language: langid!("jp")
+					},
+					errors: vec![FluentError::ResolverError(ResolverError::Reference(
+						ReferenceKind::Variable {
+							id: String::from("a")
+						}
+					))]
+				}]
+			),
+			(result, server.errors)
+		);
 	}
 }

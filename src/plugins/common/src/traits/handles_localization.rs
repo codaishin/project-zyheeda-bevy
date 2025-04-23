@@ -16,6 +16,7 @@ pub trait LocalizeToken {
 
 pub type Token<'a> = &'a str;
 
+#[derive(Debug, PartialEq)]
 pub struct FailedToken<'a>(pub Token<'a>);
 
 impl<'a> Deref for FailedToken<'a> {
@@ -26,6 +27,7 @@ impl<'a> Deref for FailedToken<'a> {
 	}
 }
 
+#[derive(Debug, PartialEq)]
 pub enum LocalizationResult<'a> {
 	Value(String),
 	Error(FailedToken<'a>),
