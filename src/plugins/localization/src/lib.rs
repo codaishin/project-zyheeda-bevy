@@ -11,6 +11,7 @@ use common::{
 	systems::log::log_many,
 	traits::{
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
+		handles_localization::HandlesLocalization,
 		load_asset::Path,
 		thread_safe::ThreadSafe,
 	},
@@ -55,4 +56,8 @@ where
 				),
 			);
 	}
+}
+
+impl<TDependencies> HandlesLocalization for LocalizationPlugin<TDependencies> {
+	type TLocalizationServer = FtlServer;
 }
