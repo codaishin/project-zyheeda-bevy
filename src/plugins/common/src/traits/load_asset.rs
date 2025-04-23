@@ -3,12 +3,21 @@ pub mod load_context;
 
 use bevy::asset::{Asset, AssetPath, Handle};
 use serde::{Deserialize, Serialize};
+use std::ops::Deref;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub struct Path(String);
 
 impl Path {
 	pub fn as_string(&self) -> &String {
+		&self.0
+	}
+}
+
+impl Deref for Path {
+	type Target = str;
+
+	fn deref(&self) -> &Self::Target {
 		&self.0
 	}
 }

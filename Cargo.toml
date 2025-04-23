@@ -10,10 +10,13 @@ edition = "2024"
 bevy = "0.15.0"
 bevy-inspector-egui = "0.28.0"
 bevy_rapier3d = "0.28.0"
+fluent = "0.16.1"
+fluent-syntax = "0.11.1"
 mockall = "=0.13.1"
 serde = "1.0.215"
 serde_json = "1.0.133"
 tracing = "0.1.41"
+unic-langid = { version = "0.9.5", features = ["macros"] }
 uuid = "1.11.0"
 test-case = "3.3.1"
 
@@ -32,6 +35,7 @@ items = { path = "src/plugins/items" }
 life_cycles = { path = "src/plugins/life_cycles" }
 light = { path = "src/plugins/light" }
 loading = { path = "src/plugins/loading" }
+localization = { path = "src/plugins/localization" }
 macros = { path = "src/plugins/macros" }
 map_generation = { path = "src/plugins/map_generation" }
 menu = { path = "src/plugins/menu" }
@@ -64,9 +68,12 @@ edition.workspace = true
 bevy.workspace = true
 bevy-inspector-egui.workspace = true
 bevy_rapier3d.workspace = true
+fluent.workspace = true
+fluent-syntax.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
+unic-langid.workspace = true
 uuid.workspace = true
 
 # internal
@@ -83,6 +90,7 @@ children_assets_dispatch.workspace = true
 life_cycles.workspace = true
 light.workspace = true
 loading.workspace = true
+localization.workspace = true
 macros.workspace = true
 map_generation.workspace = true
 menu.workspace = true

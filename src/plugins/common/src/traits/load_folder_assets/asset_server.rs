@@ -1,9 +1,11 @@
 use super::LoadFolderAssets;
-use crate::traits::load_asset::Path;
-use bevy::asset::{AssetServer, Handle, LoadedFolder};
+use bevy::asset::{AssetPath, AssetServer, Handle, LoadedFolder};
 
 impl LoadFolderAssets for AssetServer {
-	fn load_folder_assets(&self, path: Path) -> Handle<LoadedFolder> {
+	fn load_folder_assets<TPath>(&self, path: TPath) -> Handle<LoadedFolder>
+	where
+		TPath: Into<AssetPath<'static>>,
+	{
 		self.load_folder(path)
 	}
 }
