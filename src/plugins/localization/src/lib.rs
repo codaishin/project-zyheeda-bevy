@@ -18,6 +18,7 @@ use common::{
 use resources::ftl_server::FtlServer;
 use std::marker::PhantomData;
 use systems::{
+	drain_errors::DrainErrors,
 	init_ftl_server::InitFtlServer,
 	remove_failed_asset_handles::RemoveFailedAssetHandles,
 	set_requested_language::LoadRequestedAssets,
@@ -50,6 +51,7 @@ where
 					FtlServer::load_requested_assets(Path::from("locale")),
 					FtlServer::remove_failed_asset_handles,
 					FtlServer::update_ftl_bundle.pipe(log_many),
+					FtlServer::drain_errors.pipe(log_many),
 				),
 			);
 	}

@@ -1,10 +1,18 @@
 use crate::{
 	assets::ftl::Ftl,
-	traits::{current_locale::CurrentLocaleMut, requested_language::UpdateCurrentLocaleMut},
+	traits::{
+		current_locale::CurrentLocaleMut,
+		get_errors_mut::GetErrorsMut,
+		requested_language::UpdateCurrentLocaleMut,
+	},
 };
 use bevy::{asset::LoadedFolder, prelude::*};
-use common::traits::{handles_load_tracking::Loaded, handles_localization::SetLocalization};
-use fluent::{FluentResource, concurrent::FluentBundle};
+use common::{
+	errors::{Error, Level},
+	traits::{handles_load_tracking::Loaded, handles_localization::SetLocalization},
+};
+use fluent::{FluentError, FluentResource, concurrent::FluentBundle};
+use std::fmt::Display;
 use unic_langid::LanguageIdentifier;
 
 #[derive(Resource)]
@@ -12,6 +20,7 @@ pub struct FtlServer {
 	fallback: Locale,
 	current: Option<Locale>,
 	update: bool,
+	translate_errors: Vec<TranslateError>,
 }
 
 impl FtlServer {
@@ -24,13 +33,6 @@ impl FtlServer {
 	}
 }
 
-pub(crate) struct Locale {
-	pub(crate) ln: LanguageIdentifier,
-	pub(crate) file: Option<Handle<Ftl>>,
-	pub(crate) folder: Option<Handle<LoadedFolder>>,
-	pub(crate) bundle: Option<FluentBundle<FluentResource>>,
-}
-
 impl From<LanguageIdentifier> for FtlServer {
 	fn from(index: LanguageIdentifier) -> Self {
 		Self {
@@ -41,6 +43,7 @@ impl From<LanguageIdentifier> for FtlServer {
 				bundle: None,
 			},
 			current: None,
+			translate_errors: vec![],
 			update: true,
 		}
 	}
@@ -75,6 +78,82 @@ impl UpdateCurrentLocaleMut for FtlServer {
 	}
 }
 
+impl GetErrorsMut for FtlServer {
+	type TError = TranslateError;
+
+	fn errors_mut(&mut self) -> &mut Vec<Self::TError> {
+		&mut self.translate_errors
+	}
+}
+
+pub(crate) struct Locale {
+	pub(crate) ln: LanguageIdentifier,
+	pub(crate) file: Option<Handle<Ftl>>,
+	pub(crate) folder: Option<Handle<LoadedFolder>>,
+	pub(crate) bundle: Option<FluentBundle<FluentResource>>,
+}
+
+#[derive(Debug)]
+pub enum TranslateError {
+	NoBundle(LanguageIdentifier),
+	NoMessageFor(Token),
+	NoPatternFor(Token),
+	FallbackAttempt {
+		token: Token,
+		fallback: LanguageIdentifier,
+	},
+	FluentErrors {
+		token: Token,
+		errors: Vec<FluentError>,
+	},
+}
+
+impl From<TranslateError> for Error {
+	fn from(error: TranslateError) -> Self {
+		match error {
+			TranslateError::NoBundle(ln) => Error {
+				msg: format!("no `FluentBundle` for {ln}"),
+				lvl: Level::Error,
+			},
+			TranslateError::NoMessageFor(token) => Error {
+				msg: format!("no message found for {token}"),
+				lvl: Level::Error,
+			},
+			TranslateError::NoPatternFor(token) => Error {
+				msg: format!("no pattern found for {token}"),
+				lvl: Level::Error,
+			},
+			TranslateError::FallbackAttempt { token, fallback } => Error {
+				msg: format!("fallback attempted for {token} -> {fallback}"),
+				lvl: Level::Warning,
+			},
+			TranslateError::FluentErrors { token, errors } => {
+				let errors = errors
+					.iter()
+					.map(FluentError::to_string)
+					.collect::<Vec<_>>()
+					.join(", ");
+				Error {
+					msg: format!("errors for {token}: {errors}"),
+					lvl: Level::Error,
+				}
+			}
+		}
+	}
+}
+
+#[derive(Debug)]
+pub struct Token {
+	value: String,
+	language: LanguageIdentifier,
+}
+
+impl Display for Token {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{} ({})", self.value, self.language)
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -92,6 +171,7 @@ mod tests {
 				bundle: None,
 			},
 			current: None,
+			translate_errors: vec![],
 			update: false,
 		};
 
@@ -115,6 +195,7 @@ mod tests {
 				folder: None,
 				bundle: None,
 			}),
+			translate_errors: vec![],
 			update: false,
 		};
 
@@ -133,6 +214,7 @@ mod tests {
 				bundle: None,
 			},
 			current: None,
+			translate_errors: vec![],
 			update: false,
 		};
 
@@ -162,6 +244,7 @@ mod tests {
 				folder: None,
 				bundle: None,
 			}),
+			translate_errors: vec![],
 			update: false,
 		};
 
@@ -194,6 +277,7 @@ mod tests {
 				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
 			},
 			current: None,
+			translate_errors: vec![],
 			update: false,
 		});
 
@@ -215,6 +299,7 @@ mod tests {
 				bundle: None,
 			},
 			current: None,
+			translate_errors: vec![],
 			update: false,
 		});
 
@@ -237,6 +322,7 @@ mod tests {
 				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
 			},
 			current: None,
+			translate_errors: vec![],
 			update: false,
 		});
 
@@ -258,6 +344,7 @@ mod tests {
 				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
 			},
 			current: None,
+			translate_errors: vec![],
 			update: false,
 		});
 
@@ -279,6 +366,7 @@ mod tests {
 				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
 			},
 			current: None,
+			translate_errors: vec![],
 			update: false,
 		});
 
