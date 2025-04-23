@@ -2,17 +2,21 @@ pub mod resources;
 
 mod assets;
 mod systems;
+mod traits;
 
 use assets::ftl::{Ftl, loader::FtlLoader};
 use bevy::prelude::*;
-use common::traits::{
-	handles_load_tracking::HandlesLoadTracking,
-	load_asset::Path,
-	thread_safe::ThreadSafe,
+use common::{
+	systems::log::log_many,
+	traits::{
+		handles_load_tracking::HandlesLoadTracking,
+		load_asset::Path,
+		thread_safe::ThreadSafe,
+	},
 };
 use resources::ftl_server::FtlServer;
 use std::marker::PhantomData;
-use systems::init_ftl_server::InitFtlServer;
+use systems::{init_ftl_server::InitFtlServer, update_ftl_bundle::UpdateFtlBundle};
 use unic_langid::langid;
 
 pub struct LocalizationPlugin<TLoading>(PhantomData<TLoading>);
@@ -33,6 +37,7 @@ where
 			.add_systems(
 				Startup,
 				FtlServer::init_with(langid!("en-US"), Path::from("locale")),
-			);
+			)
+			.add_systems(Update, FtlServer::update_ftl_bundle.pipe(log_many));
 	}
 }

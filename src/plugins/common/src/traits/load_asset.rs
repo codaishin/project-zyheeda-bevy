@@ -1,10 +1,9 @@
 pub mod asset_server;
 pub mod load_context;
 
-use std::ops::Deref;
-
 use bevy::asset::{Asset, AssetPath, Handle};
 use serde::{Deserialize, Serialize};
+use std::ops::Deref;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub struct Path(String);
