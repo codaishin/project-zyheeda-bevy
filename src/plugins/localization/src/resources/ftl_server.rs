@@ -1,5 +1,9 @@
-use crate::{assets::ftl::Ftl, traits::current_locale::CurrentLocaleMut};
+use crate::{
+	assets::ftl::Ftl,
+	traits::{current_locale::CurrentLocaleMut, requested_language::UpdateCurrentLocaleMut},
+};
 use bevy::{asset::LoadedFolder, prelude::*};
+use common::traits::handles_localization::SetLocalization;
 use fluent::{FluentResource, concurrent::FluentBundle};
 use unic_langid::LanguageIdentifier;
 
@@ -7,7 +11,7 @@ use unic_langid::LanguageIdentifier;
 pub struct FtlServer {
 	fallback: Locale,
 	current: Option<Locale>,
-	requested_current: Option<LanguageIdentifier>,
+	update: bool,
 }
 
 pub(crate) struct Locale {
@@ -17,19 +21,17 @@ pub(crate) struct Locale {
 	pub(crate) bundle: Option<FluentBundle<FluentResource>>,
 }
 
-impl From<(LanguageIdentifier, Handle<Ftl>, Handle<LoadedFolder>)> for FtlServer {
-	fn from(
-		(index, file, folder): (LanguageIdentifier, Handle<Ftl>, Handle<LoadedFolder>),
-	) -> Self {
+impl From<LanguageIdentifier> for FtlServer {
+	fn from(index: LanguageIdentifier) -> Self {
 		Self {
-			requested_current: None,
 			fallback: Locale {
 				ln: index,
-				file: Some(file),
-				folder: Some(folder),
+				file: None,
+				folder: None,
 				bundle: None,
 			},
 			current: None,
+			update: true,
 		}
 	}
 }
@@ -37,6 +39,28 @@ impl From<(LanguageIdentifier, Handle<Ftl>, Handle<LoadedFolder>)> for FtlServer
 impl CurrentLocaleMut for FtlServer {
 	fn current_locale_mut(&mut self) -> &mut Locale {
 		self.current.as_mut().unwrap_or(&mut self.fallback)
+	}
+}
+
+impl SetLocalization for FtlServer {
+	fn set_localization(&mut self, language: LanguageIdentifier) {
+		self.update = true;
+
+		self.current = match language == self.fallback.ln {
+			true => None,
+			false => Some(Locale {
+				ln: language,
+				file: None,
+				folder: None,
+				bundle: None,
+			}),
+		};
+	}
+}
+
+impl UpdateCurrentLocaleMut for FtlServer {
+	fn update_current_locale(&mut self) -> &mut bool {
+		&mut self.update
 	}
 }
 
@@ -55,7 +79,7 @@ mod tests {
 				bundle: None,
 			},
 			current: None,
-			requested_current: None,
+			update: false,
 		};
 
 		let current = server.current_locale_mut();
@@ -78,11 +102,64 @@ mod tests {
 				folder: None,
 				bundle: None,
 			}),
-			requested_current: None,
+			update: false,
 		};
 
 		let current = server.current_locale_mut();
 
 		assert_eq!(langid!("fr"), current.ln);
+	}
+
+	#[test]
+	fn set_localization() {
+		let mut server = FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: None,
+			},
+			current: None,
+			update: false,
+		};
+
+		server.set_localization(langid!("jp"));
+
+		assert_eq!(
+			(true, &langid!("jp")),
+			(
+				*server.update_current_locale(),
+				&server.current_locale_mut().ln
+			)
+		);
+	}
+
+	#[test]
+	fn set_localization_to_fallback() {
+		let mut server = FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: None,
+			},
+			current: Some(Locale {
+				ln: langid!("jp"),
+				file: None,
+				folder: None,
+				bundle: None,
+			}),
+			update: false,
+		};
+
+		server.set_localization(langid!("en"));
+
+		assert_eq!(
+			(true, &langid!("en")),
+			(
+				*server.update_current_locale(),
+				&server.current_locale_mut().ln
+			)
+		);
 	}
 }

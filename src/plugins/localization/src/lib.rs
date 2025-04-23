@@ -16,7 +16,11 @@ use common::{
 };
 use resources::ftl_server::FtlServer;
 use std::marker::PhantomData;
-use systems::{init_ftl_server::InitFtlServer, update_ftl_bundle::UpdateFtlBundle};
+use systems::{
+	init_ftl_server::InitFtlServer,
+	set_requested_language::LoadRequestedAssets,
+	update_ftl_bundle::UpdateFtlBundle,
+};
 use unic_langid::langid;
 
 pub struct LocalizationPlugin<TLoading>(PhantomData<TLoading>);
@@ -34,10 +38,13 @@ where
 	fn build(&self, app: &mut App) {
 		app.init_asset::<Ftl>()
 			.register_asset_loader(FtlLoader)
+			.add_systems(Startup, FtlServer::init_with(langid!("en-US")))
 			.add_systems(
-				Startup,
-				FtlServer::init_with(langid!("en-US"), Path::from("locale")),
-			)
-			.add_systems(Update, FtlServer::update_ftl_bundle.pipe(log_many));
+				Update,
+				(
+					FtlServer::load_requested_assets(Path::from("locale")),
+					FtlServer::update_ftl_bundle.pipe(log_many),
+				),
+			);
 	}
 }
