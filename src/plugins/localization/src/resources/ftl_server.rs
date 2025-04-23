@@ -67,18 +67,23 @@ impl CurrentLocaleMut for FtlServer {
 
 impl SetLocalization for FtlServer {
 	fn set_localization(&mut self, language: LanguageIdentifier) {
-		(self.current, self.update) = match language == self.fallback.ln {
-			true => (None, false),
-			false => (
-				Some(Locale {
-					ln: language,
-					file: None,
-					folder: None,
-					bundle: None,
-				}),
-				true,
-			),
-		};
+		if language == self.fallback.ln {
+			self.current = None;
+			self.update = false;
+			return;
+		}
+
+		if matches!(self.current.as_ref(), Some(current) if current.ln == language) {
+			return;
+		}
+
+		self.current = Some(Locale {
+			ln: language,
+			file: None,
+			folder: None,
+			bundle: None,
+		});
+		self.update = true;
 	}
 }
 
@@ -326,6 +331,78 @@ mod tests {
 			(
 				*server.update_current_locale(),
 				&server.current_locale_mut().ln
+			)
+		);
+	}
+
+	#[test]
+	fn do_nothing_when_setting_to_current_localization() {
+		let file = new_handle();
+		let folder = new_handle();
+		let mut server = FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: None,
+			},
+			current: Some(Locale {
+				ln: langid!("jp"),
+				file: Some(file.clone()),
+				folder: Some(folder.clone()),
+				bundle: Some(FluentBundle::new_concurrent(vec![langid!("jp")])),
+			}),
+			errors: vec![],
+			update: false,
+		};
+
+		server.set_localization(langid!("jp"));
+
+		let update = *server.update_current_locale();
+		let locale = &server.current_locale_mut();
+		assert_eq!(
+			(false, &langid!("jp"), &Some(file), &Some(folder), true),
+			(
+				update,
+				&locale.ln,
+				&locale.file,
+				&locale.folder,
+				locale.bundle.is_some(),
+			)
+		);
+	}
+
+	#[test]
+	fn override_current_localization() {
+		let mut server = FtlServer {
+			fallback: Locale {
+				ln: langid!("en"),
+				file: None,
+				folder: None,
+				bundle: None,
+			},
+			current: Some(Locale {
+				ln: langid!("fr"),
+				file: Some(new_handle()),
+				folder: Some(new_handle()),
+				bundle: Some(FluentBundle::new_concurrent(vec![langid!("jp")])),
+			}),
+			errors: vec![],
+			update: false,
+		};
+
+		server.set_localization(langid!("jp"));
+
+		let update = *server.update_current_locale();
+		let locale = &server.current_locale_mut();
+		assert_eq!(
+			(true, &langid!("jp"), &None, &None, false),
+			(
+				update,
+				&locale.ln,
+				&locale.file,
+				&locale.folder,
+				locale.bundle.is_some(),
 			)
 		);
 	}
