@@ -20,7 +20,7 @@ impl FtlServer {
 			return Loaded(false);
 		}
 
-		Loaded(ftl_server.fallback.file.is_none() || ftl_server.fallback.folder.is_none())
+		Loaded(ftl_server.fallback.file.is_none() && ftl_server.fallback.folder.is_none())
 	}
 }
 
@@ -249,7 +249,7 @@ mod tests {
 	}
 
 	#[test]
-	fn fallback_loaded_if_only_bundle_and_file_present() -> Result<(), RunSystemError> {
+	fn fallback_not_loaded_if_only_bundle_and_file_present() -> Result<(), RunSystemError> {
 		let mut app = setup(FtlServer {
 			fallback: Locale {
 				ln: langid!("en"),
@@ -265,12 +265,12 @@ mod tests {
 			.world_mut()
 			.run_system_once(FtlServer::all_fallback_files_loaded)?;
 
-		assert!(loaded);
+		assert!(!loaded);
 		Ok(())
 	}
 
 	#[test]
-	fn fallback_loaded_if_only_bundle_and_folder_present() -> Result<(), RunSystemError> {
+	fn fallback_not_loaded_if_only_bundle_and_folder_present() -> Result<(), RunSystemError> {
 		let mut app = setup(FtlServer {
 			fallback: Locale {
 				ln: langid!("en"),
@@ -286,7 +286,7 @@ mod tests {
 			.world_mut()
 			.run_system_once(FtlServer::all_fallback_files_loaded)?;
 
-		assert!(loaded);
+		assert!(!loaded);
 		Ok(())
 	}
 }
