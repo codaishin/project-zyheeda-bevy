@@ -1,6 +1,7 @@
 use crate::{
 	assets::ftl::Ftl,
 	resources::ftl_server::Locale,
+	tools::list_string,
 	traits::current_locale::CurrentLocaleMut,
 };
 use bevy::{asset::LoadedFolder, prelude::*};
@@ -143,11 +144,27 @@ impl From<SetBundleError> for Error {
 	fn from(SetBundleError { ln, kind }: SetBundleError) -> Self {
 		match kind {
 			SetBundleErrorKind::NoFtlFile => Error {
-				msg: format!("no file found for {ln:?}"),
+				msg: format!("no file found for {ln}"),
 				lvl: Level::Error,
 			},
 			SetBundleErrorKind::FluentError(parse_errors, fluent_errors) => Error {
-				msg: format!("fluent errors for {ln:?}: {parse_errors:?}, {fluent_errors:?}"),
+				msg: format!(
+					"Fluent errors for language {ln}:\n\
+					 Parse errors:\n\
+					 {}\n\
+					 Fluent errors:\n\
+					 {}",
+					if parse_errors.is_empty() {
+						String::from("  - None")
+					} else {
+						list_string(&parse_errors)
+					},
+					if fluent_errors.is_empty() {
+						String::from("  - None")
+					} else {
+						list_string(&fluent_errors)
+					}
+				),
 				lvl: Level::Error,
 			},
 		}

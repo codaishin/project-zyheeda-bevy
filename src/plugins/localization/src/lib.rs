@@ -2,6 +2,7 @@ pub mod resources;
 
 mod assets;
 mod systems;
+mod tools;
 mod traits;
 
 use assets::ftl::{Ftl, loader::FtlLoader};

@@ -1,5 +1,6 @@
 use crate::{
 	assets::ftl::Ftl,
+	tools::list_string,
 	traits::{
 		current_locale::CurrentLocaleMut,
 		get_errors_mut::GetErrorsMut,
@@ -194,12 +195,9 @@ impl From<FtlError> for Error {
 			},
 			FtlError::FluentErrors { token, errors } => Error {
 				msg: format!(
-					"errors for {token}: {}",
-					errors
-						.iter()
-						.map(FluentError::to_string)
-						.collect::<Vec<_>>()
-						.join(", ")
+					"errors for {token}:\n\
+					 {}",
+					list_string(&errors)
 				),
 				lvl: Level::Error,
 			},
