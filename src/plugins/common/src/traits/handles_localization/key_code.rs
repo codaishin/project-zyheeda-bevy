@@ -17,7 +17,7 @@ fn camel_case_to_kebab(str: String) -> String {
 	}
 
 	for c in chars {
-		if c.is_uppercase() {
+		if c.is_uppercase() || c.is_ascii_digit() {
 			result.push('-');
 		}
 		result.extend(c.to_lowercase());
@@ -33,7 +33,8 @@ mod tests {
 
 	#[test_case(KeyCode::Abort, "key-code-abort"; "abort")]
 	#[test_case(KeyCode::KeyA, "key-code-key-a"; "key a")]
-	fn key_code_a(key: KeyCode, token: &str) {
+	#[test_case(KeyCode::Digit3, "key-code-digit-3"; "digit 3")]
+	fn tokenize(key: KeyCode, token: &str) {
 		assert_eq!(Token::from(key), Token::from(token));
 	}
 }
