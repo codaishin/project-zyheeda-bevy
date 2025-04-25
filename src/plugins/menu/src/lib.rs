@@ -127,15 +127,12 @@ where
 		TLocalizationServer: Resource + LocalizeToken,
 		TGraphics: StaticRenderLayers + 'static,
 	{
-		let spawn_component = (
+		self.add_systems(
+			OnEnter(on_state),
 			spawn::<TComponent, AssetServer, TGraphics>,
-			update_children::<TComponent, TLocalizationServer>,
 		)
-			.chain();
-
-		self.add_systems(OnEnter(on_state), spawn_component)
-			.add_systems(OnExit(on_state), despawn::<TComponent>)
-			.add_systems(Update, update_children::<TComponent, TLocalizationServer>)
+		.add_systems(OnExit(on_state), despawn::<TComponent>)
+		.add_systems(Update, update_children::<TComponent, TLocalizationServer>)
 	}
 }
 
