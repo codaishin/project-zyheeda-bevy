@@ -331,12 +331,16 @@ where
 	}
 }
 
-impl<TDependencies> HandlesLoadoutMenu for MenuPlugin<TDependencies> {
+impl<TLoading, TLocalization, TGraphics> HandlesLoadoutMenu
+	for MenuPlugin<(TLoading, TLocalization, TGraphics)>
+where
+	TLocalization: HandlesLocalization,
+{
 	fn loadout_with_swapper<TSwap>() -> impl ConfigureInventory<TSwap>
 	where
 		TSwap: Component + SwapValuesByKey,
 	{
-		InventoryConfiguration
+		InventoryConfiguration(PhantomData::<TLocalization::TLocalizationServer>)
 	}
 
 	fn configure_quickbar_menu<TContainer, TSystemMarker>(
@@ -362,11 +366,12 @@ impl<TDependencies> HandlesLoadoutMenu for MenuPlugin<TDependencies> {
 	}
 }
 
-struct InventoryConfiguration;
+struct InventoryConfiguration<TLocalization>(PhantomData<TLocalization>);
 
-impl<TSwap> ConfigureInventory<TSwap> for InventoryConfiguration
+impl<TSwap, TLocalization> ConfigureInventory<TSwap> for InventoryConfiguration<TLocalization>
 where
 	TSwap: Component + SwapValuesByKey,
+	TLocalization: LocalizeToken + Resource,
 {
 	fn configure<TInventory, TSlots, TSystemMarker1, TSystemMarker2>(
 		&self,
@@ -386,8 +391,12 @@ where
 			(
 				get_changed_inventory.pipe(EquipmentInfo::update),
 				get_changed_slots.pipe(EquipmentInfo::update),
-				InventoryPanel::set_container_panels::<InventoryKey, EquipmentInfo<TInventory>>,
-				InventoryPanel::set_container_panels::<SlotKey, EquipmentInfo<TSlots>>,
+				InventoryPanel::set_container_panels::<
+					TLocalization,
+					InventoryKey,
+					EquipmentInfo<TInventory>,
+				>,
+				InventoryPanel::set_container_panels::<TLocalization, SlotKey, EquipmentInfo<TSlots>>,
 				panel_colors::<InventoryPanel>,
 				drag::<TSwap, InventoryKey>,
 				drag::<TSwap, SlotKey>,

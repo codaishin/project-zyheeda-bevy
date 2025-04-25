@@ -40,7 +40,7 @@ impl LoadUi<AssetServer> for InventoryScreen {
 impl InsertUiContent for InventoryScreen {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		localization: &mut TLocalization,
+		localize: &mut TLocalization,
 		parent: &mut ChildBuilder,
 	) where
 		TLocalization: LocalizeToken,
@@ -51,17 +51,19 @@ impl InsertUiContent for InventoryScreen {
 				align_items: AlignItems::Start,
 				..default()
 			})
-			.with_children(add_equipment(localization))
-			.with_children(add_inventory(localization));
+			.with_children(add_equipment(localize))
+			.with_children(add_inventory(localize));
 	}
 }
 
-fn add_inventory<TLocalization>(_: &mut TLocalization) -> impl FnMut(&mut ChildBuilder)
+fn add_inventory<TLocalization>(localize: &mut TLocalization) -> impl FnMut(&mut ChildBuilder)
 where
 	TLocalization: LocalizeToken,
 {
 	move |parent| {
 		let mut keys = InventoryKey::iterator_infinite();
+		let inventory = localize.localize_token("inventory").or(|_| "Inventory");
+
 		parent
 			.spawn(Node {
 				flex_direction: FlexDirection::Column,
@@ -70,17 +72,26 @@ where
 				..default()
 			})
 			.with_children(|parent| {
-				add_title(parent, "Inventory");
-				add_grid(parent, Localized::from(""), 5, 5, || keys.next_infinite());
+				add_title(parent, inventory);
+				add_grid(
+					parent,
+					Localized::from(""),
+					5,
+					5,
+					|| keys.next_infinite(),
+					localize,
+				);
 			});
 	}
 }
 
-fn add_equipment<TLocalization>(localization: &mut TLocalization) -> impl FnMut(&mut ChildBuilder)
+fn add_equipment<TLocalization>(localize: &mut TLocalization) -> impl FnMut(&mut ChildBuilder)
 where
 	TLocalization: LocalizeToken,
 {
 	move |parent| {
+		let equipment = localize.localize_token("equipment").or(|_| "Equipment");
+
 		parent
 			.spawn(Node {
 				flex_direction: FlexDirection::Column,
@@ -89,21 +100,22 @@ where
 				..default()
 			})
 			.with_children(|parent| {
-				add_title(parent, "Equipment");
+				add_title(parent, equipment);
 				for key in SlotKey::iterator() {
 					add_grid(
 						parent,
-						localization.localize_token(key).or_token(),
+						localize.localize_token(key).or_token(),
 						1,
 						1,
 						|| key,
+						localize,
 					);
 				}
 			});
 	}
 }
 
-fn add_title(parent: &mut ChildBuilder, title: &str) {
+fn add_title(parent: &mut ChildBuilder, title: Localized) {
 	parent
 		.spawn(Node {
 			flex_direction: FlexDirection::Row,
@@ -122,16 +134,19 @@ fn add_title(parent: &mut ChildBuilder, title: &str) {
 		});
 }
 
-fn add_grid<TKey>(
+fn add_grid<TKey, TLocalization>(
 	parent: &mut ChildBuilder,
 	grid_label: Localized,
 	element_count_x: u32,
 	element_count_y: u32,
 	mut element_key: impl FnMut() -> TKey,
+	localize: &mut TLocalization,
 ) where
 	TKey: ThreadSafe,
+	TLocalization: LocalizeToken,
 {
 	let label = &grid_label;
+	let empty = &localize.localize_token("inventory-item-empty").or_token();
 
 	for _ in 0..element_count_y {
 		parent
@@ -149,7 +164,6 @@ fn add_grid<TKey>(
 					},
 					TextColor(InventoryPanel::PANEL_COLORS.text),
 				));
-
 				for _ in 0..element_count_x {
 					parent
 						.spawn((
@@ -167,7 +181,7 @@ fn add_grid<TKey>(
 						))
 						.with_children(|parent| {
 							parent.spawn((
-								Text::new("<Empty>"),
+								Text::new(empty.clone()),
 								TextFont {
 									font_size: 15.0,
 									..default()

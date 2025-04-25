@@ -20,7 +20,7 @@ use bevy::prelude::*;
 use common::{
 	tools::{keys::slot::SlotKey, skill_description::SkillDescription, skill_icon::SkillIcon},
 	traits::{
-		handles_localization::LocalizeToken,
+		handles_localization::{LocalizeToken, localized::Localized},
 		inspect_able::{InspectAble, InspectField},
 		load_asset::{LoadAsset, Path},
 		thread_safe::ThreadSafe,
@@ -334,7 +334,9 @@ where
 	) where
 		TLocalization: LocalizeToken + 'static,
 	{
-		add_title(parent, "Combos");
+		let title = localize.localize_token("combo-skill-menu").or_token();
+
+		add_title(parent, title);
 		if self.layout.is_empty() {
 			add_empty_combo(localize, parent, &self.new_skill_icon);
 		} else {
@@ -343,7 +345,7 @@ where
 	}
 }
 
-fn add_title(parent: &mut ChildBuilder, title: &str) {
+fn add_title(parent: &mut ChildBuilder, title: Localized) {
 	parent
 		.spawn(Node {
 			margin: UiRect::all(Val::Px(10.)),
