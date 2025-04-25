@@ -152,9 +152,3 @@ mod tests {
 		)
 	}
 }
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum LanguageFallback {
-	Default,
-	None,
-}
