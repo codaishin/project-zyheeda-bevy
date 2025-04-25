@@ -269,7 +269,7 @@ fn append_followups(
 mod tests {
 	use super::*;
 	use bevy::prelude::default;
-	use common::tools::keys::slot::Side;
+	use common::{tools::keys::slot::Side, traits::handles_localization::Token};
 	use std::collections::HashSet;
 
 	#[test]
@@ -278,7 +278,7 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "first".to_owned(),
+					token: Token::from("first"),
 					compatible_items: CompatibleItems(HashSet::from([ItemType::Pistol])),
 					..default()
 				},
@@ -286,7 +286,7 @@ mod tests {
 					SlotKey::BottomHand(Side::Right),
 					(
 						Skill {
-							name: "second".to_owned(),
+							token: Token::from("second"),
 							..default()
 						},
 						ComboNode(default()),
@@ -300,7 +300,7 @@ mod tests {
 		assert_eq!(
 			Some((
 				&Skill {
-					name: "first".to_owned(),
+					token: Token::from("first"),
 					compatible_items: CompatibleItems(HashSet::from([ItemType::Pistol])),
 					..default()
 				},
@@ -308,7 +308,7 @@ mod tests {
 					SlotKey::BottomHand(Side::Right),
 					(
 						Skill {
-							name: "second".to_owned(),
+							token: Token::from("second"),
 							..default()
 						},
 						ComboNode(default()),
@@ -325,7 +325,7 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "first".to_owned(),
+					token: Token::from("first"),
 					compatible_items: CompatibleItems(HashSet::from([ItemType::Bracer])),
 					..default()
 				},
@@ -333,7 +333,7 @@ mod tests {
 					SlotKey::BottomHand(Side::Right),
 					(
 						Skill {
-							name: "second".to_owned(),
+							token: Token::from("second"),
 							..default()
 						},
 						ComboNode(default()),
@@ -353,7 +353,7 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "some skill".to_owned(),
+					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::default(),
@@ -364,7 +364,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&Skill {
-				name: "some skill".to_owned(),
+				token: Token::from("some skill"),
 				..default()
 			}),
 			skill
@@ -377,14 +377,14 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "some skill".to_owned(),
+					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::new([(
 					SlotKey::BottomHand(Side::Left),
 					(
 						Skill {
-							name: "some child skill".to_owned(),
+							token: Token::from("some child skill"),
 							..default()
 						},
 						ComboNode::default(),
@@ -400,7 +400,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&Skill {
-				name: "some child skill".to_owned(),
+				token: Token::from("some child skill"),
 				..default()
 			}),
 			skill
@@ -413,7 +413,7 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "some skill".to_owned(),
+					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::default(),
@@ -422,7 +422,7 @@ mod tests {
 
 		let skill = combos.get_mut(&[SlotKey::BottomHand(Side::Right)]).unwrap();
 		*skill = Skill {
-			name: "new skill".to_owned(),
+			token: Token::from("new skill"),
 			..default()
 		};
 
@@ -431,7 +431,7 @@ mod tests {
 				SlotKey::BottomHand(Side::Right),
 				(
 					Skill {
-						name: "new skill".to_owned(),
+						token: Token::from("new skill"),
 						..default()
 					},
 					ComboNode::default(),
@@ -447,14 +447,14 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "some skill".to_owned(),
+					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::new([(
 					SlotKey::BottomHand(Side::Left),
 					(
 						Skill {
-							name: "some child skill".to_owned(),
+							token: Token::from("some child skill"),
 							..default()
 						},
 						ComboNode::default(),
@@ -470,7 +470,7 @@ mod tests {
 			])
 			.unwrap();
 		*skill = Skill {
-			name: "new skill".to_owned(),
+			token: Token::from("new skill"),
 			..default()
 		};
 
@@ -479,14 +479,14 @@ mod tests {
 				SlotKey::BottomHand(Side::Right),
 				(
 					Skill {
-						name: "some skill".to_owned(),
+						token: Token::from("some skill"),
 						..default()
 					},
 					ComboNode::new([(
 						SlotKey::BottomHand(Side::Left),
 						(
 							Skill {
-								name: "new skill".to_owned(),
+								token: Token::from("new skill"),
 								..default()
 							},
 							ComboNode::default(),
@@ -505,7 +505,7 @@ mod tests {
 		let success = combos.try_insert(
 			[SlotKey::BottomHand(Side::Right)],
 			Skill {
-				name: "new skill".to_owned(),
+				token: Token::from("new skill"),
 				..default()
 			},
 		);
@@ -516,7 +516,7 @@ mod tests {
 					SlotKey::BottomHand(Side::Right),
 					(
 						Skill {
-							name: "new skill".to_owned(),
+							token: Token::from("new skill"),
 							..default()
 						},
 						ComboNode::default(),
@@ -534,14 +534,14 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "some skill".to_owned(),
+					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::new([(
 					SlotKey::BottomHand(Side::Right),
 					(
 						Skill {
-							name: "child skill".to_owned(),
+							token: Token::from("child skill"),
 							..default()
 						},
 						ComboNode::default(),
@@ -553,7 +553,7 @@ mod tests {
 		let success = combos.try_insert(
 			[SlotKey::BottomHand(Side::Right)],
 			Skill {
-				name: "new skill".to_owned(),
+				token: Token::from("new skill"),
 				..default()
 			},
 		);
@@ -564,14 +564,14 @@ mod tests {
 					SlotKey::BottomHand(Side::Right),
 					(
 						Skill {
-							name: "new skill".to_owned(),
+							token: Token::from("new skill"),
 							..default()
 						},
 						ComboNode::new([(
 							SlotKey::BottomHand(Side::Right),
 							(
 								Skill {
-									name: "child skill".to_owned(),
+									token: Token::from("child skill"),
 									..default()
 								},
 								ComboNode::default(),
@@ -591,7 +591,7 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "some skill".to_owned(),
+					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::default(),
@@ -604,7 +604,7 @@ mod tests {
 				SlotKey::BottomHand(Side::Left),
 			],
 			Skill {
-				name: "new skill".to_owned(),
+				token: Token::from("new skill"),
 				..default()
 			},
 		);
@@ -615,14 +615,14 @@ mod tests {
 					SlotKey::BottomHand(Side::Right),
 					(
 						Skill {
-							name: "some skill".to_owned(),
+							token: Token::from("some skill"),
 							..default()
 						},
 						ComboNode::new([(
 							SlotKey::BottomHand(Side::Left),
 							(
 								Skill {
-									name: "new skill".to_owned(),
+									token: Token::from("new skill"),
 									..default()
 								},
 								ComboNode::default(),
@@ -642,7 +642,7 @@ mod tests {
 		let success = combos.try_insert(
 			[],
 			Skill {
-				name: "new skill".to_owned(),
+				token: Token::from("new skill"),
 				..default()
 			},
 		);
@@ -662,7 +662,7 @@ mod tests {
 				SlotKey::BottomHand(Side::Right),
 			],
 			Skill {
-				name: "new skill".to_owned(),
+				token: Token::from("new skill"),
 				..default()
 			},
 		);
@@ -693,7 +693,7 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "my skill".to_owned(),
+					token: Token::from("my skill"),
 					..default()
 				},
 				default(),
@@ -717,7 +717,7 @@ mod tests {
 			SlotKey::BottomHand(Side::Left),
 			(
 				Skill {
-					name: "my child skill".to_owned(),
+					token: Token::from("my child skill"),
 					..default()
 				},
 				default(),
@@ -727,7 +727,7 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "my skill".to_owned(),
+					token: Token::from("my skill"),
 					..default()
 				},
 				ComboNode::new(child_conf.clone()),
@@ -754,14 +754,14 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "my skill".to_owned(),
+					token: Token::from("my skill"),
 					..default()
 				},
 				ComboNode::new([(
 					SlotKey::BottomHand(Side::Left),
 					(
 						Skill {
-							name: "my child skill".to_owned(),
+							token: Token::from("my child skill"),
 							..default()
 						},
 						default(),
@@ -786,14 +786,14 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "my skill".to_owned(),
+					token: Token::from("my skill"),
 					..default()
 				},
 				ComboNode::new([(
 					SlotKey::BottomHand(Side::Left),
 					(
 						Skill {
-							name: "my child skill".to_owned(),
+							token: Token::from("my child skill"),
 							..default()
 						},
 						default(),
@@ -823,7 +823,7 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "my skill".to_owned(),
+					token: Token::from("my skill"),
 					..default()
 				},
 				default(),
@@ -847,7 +847,7 @@ mod tests {
 			SlotKey::BottomHand(Side::Left),
 			(
 				Skill {
-					name: "my child skill".to_owned(),
+					token: Token::from("my child skill"),
 					..default()
 				},
 				default(),
@@ -857,7 +857,7 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "my skill".to_owned(),
+					token: Token::from("my skill"),
 					..default()
 				},
 				ComboNode::new(child_conf.clone()),
@@ -884,14 +884,14 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "my skill".to_owned(),
+					token: Token::from("my skill"),
 					..default()
 				},
 				ComboNode::new([(
 					SlotKey::BottomHand(Side::Left),
 					(
 						Skill {
-							name: "my child skill".to_owned(),
+							token: Token::from("my child skill"),
 							..default()
 						},
 						default(),
@@ -916,14 +916,14 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "my skill".to_owned(),
+					token: Token::from("my skill"),
 					..default()
 				},
 				ComboNode::new([(
 					SlotKey::BottomHand(Side::Left),
 					(
 						Skill {
-							name: "my child skill".to_owned(),
+							token: Token::from("my child skill"),
 							..default()
 						},
 						default(),
@@ -953,7 +953,7 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "some skill".to_owned(),
+					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::default(),
@@ -964,7 +964,7 @@ mod tests {
 			vec![vec![(
 				vec![SlotKey::BottomHand(Side::Right)],
 				Skill {
-					name: "some skill".to_owned(),
+					token: Token::from("some skill"),
 					..default()
 				}
 			)]],
@@ -979,7 +979,7 @@ mod tests {
 				SlotKey::BottomHand(Side::Right),
 				(
 					Skill {
-						name: "some right skill".to_owned(),
+						token: Token::from("some right skill"),
 						..default()
 					},
 					ComboNode::default(),
@@ -989,7 +989,7 @@ mod tests {
 				SlotKey::BottomHand(Side::Left),
 				(
 					Skill {
-						name: "some left skill".to_owned(),
+						token: Token::from("some left skill"),
 						..default()
 					},
 					ComboNode::default(),
@@ -1002,14 +1002,14 @@ mod tests {
 				vec![(
 					vec![SlotKey::BottomHand(Side::Right)],
 					Skill {
-						name: "some right skill".to_owned(),
+						token: Token::from("some right skill"),
 						..default()
 					},
 				)],
 				vec![(
 					vec![SlotKey::BottomHand(Side::Left)],
 					Skill {
-						name: "some left skill".to_owned(),
+						token: Token::from("some left skill"),
 						..default()
 					},
 				)]
@@ -1024,14 +1024,14 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "some skill".to_owned(),
+					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::new([(
 					SlotKey::BottomHand(Side::Left),
 					(
 						Skill {
-							name: "some child skill".to_owned(),
+							token: Token::from("some child skill"),
 							..default()
 						},
 						ComboNode::default(),
@@ -1045,7 +1045,7 @@ mod tests {
 				(
 					vec![SlotKey::BottomHand(Side::Right)],
 					Skill {
-						name: "some skill".to_owned(),
+						token: Token::from("some skill"),
 						..default()
 					},
 				),
@@ -1055,7 +1055,7 @@ mod tests {
 						SlotKey::BottomHand(Side::Left)
 					],
 					Skill {
-						name: "some child skill".to_owned(),
+						token: Token::from("some child skill"),
 						..default()
 					},
 				)
@@ -1070,7 +1070,7 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "some skill".to_owned(),
+					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::new([
@@ -1078,7 +1078,7 @@ mod tests {
 						SlotKey::BottomHand(Side::Right),
 						(
 							Skill {
-								name: "some right child skill".to_owned(),
+								token: Token::from("some right child skill"),
 								..default()
 							},
 							ComboNode::default(),
@@ -1088,7 +1088,7 @@ mod tests {
 						SlotKey::BottomHand(Side::Left),
 						(
 							Skill {
-								name: "some left child skill".to_owned(),
+								token: Token::from("some left child skill"),
 								..default()
 							},
 							ComboNode::default(),
@@ -1104,7 +1104,7 @@ mod tests {
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
 						Skill {
-							name: "some skill".to_owned(),
+							token: Token::from("some skill"),
 							..default()
 						},
 					),
@@ -1114,7 +1114,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right)
 						],
 						Skill {
-							name: "some right child skill".to_owned(),
+							token: Token::from("some right child skill"),
 							..default()
 						},
 					)
@@ -1123,7 +1123,7 @@ mod tests {
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
 						Skill {
-							name: "some skill".to_owned(),
+							token: Token::from("some skill"),
 							..default()
 						},
 					),
@@ -1133,7 +1133,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Left)
 						],
 						Skill {
-							name: "some left child skill".to_owned(),
+							token: Token::from("some left child skill"),
 							..default()
 						},
 					)
@@ -1149,14 +1149,14 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "some skill".to_owned(),
+					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::new([(
 					SlotKey::BottomHand(Side::Right),
 					(
 						Skill {
-							name: "some child skill".to_owned(),
+							token: Token::from("some child skill"),
 							..default()
 						},
 						ComboNode::new([
@@ -1164,7 +1164,7 @@ mod tests {
 								SlotKey::BottomHand(Side::Right),
 								(
 									Skill {
-										name: "some right child skill".to_owned(),
+										token: Token::from("some right child skill"),
 										..default()
 									},
 									ComboNode::default(),
@@ -1174,7 +1174,7 @@ mod tests {
 								SlotKey::BottomHand(Side::Left),
 								(
 									Skill {
-										name: "some left child skill".to_owned(),
+										token: Token::from("some left child skill"),
 										..default()
 									},
 									ComboNode::default(),
@@ -1192,7 +1192,7 @@ mod tests {
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
 						Skill {
-							name: "some skill".to_owned(),
+							token: Token::from("some skill"),
 							..default()
 						},
 					),
@@ -1202,7 +1202,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right)
 						],
 						Skill {
-							name: "some child skill".to_owned(),
+							token: Token::from("some child skill"),
 							..default()
 						},
 					),
@@ -1213,7 +1213,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 						],
 						Skill {
-							name: "some right child skill".to_owned(),
+							token: Token::from("some right child skill"),
 							..default()
 						},
 					)
@@ -1222,7 +1222,7 @@ mod tests {
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
 						Skill {
-							name: "some skill".to_owned(),
+							token: Token::from("some skill"),
 							..default()
 						},
 					),
@@ -1232,7 +1232,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right)
 						],
 						Skill {
-							name: "some child skill".to_owned(),
+							token: Token::from("some child skill"),
 							..default()
 						},
 					),
@@ -1243,7 +1243,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Left),
 						],
 						Skill {
-							name: "some left child skill".to_owned(),
+							token: Token::from("some left child skill"),
 							..default()
 						},
 					)
@@ -1259,14 +1259,14 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "some skill".to_owned(),
+					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::new([(
 					SlotKey::BottomHand(Side::Right),
 					(
 						Skill {
-							name: "some child skill".to_owned(),
+							token: Token::from("some child skill"),
 							..default()
 						},
 						ComboNode::new([
@@ -1274,7 +1274,7 @@ mod tests {
 								SlotKey::BottomHand(Side::Left),
 								(
 									Skill {
-										name: "some left child skill".to_owned(),
+										token: Token::from("some left child skill"),
 										..default()
 									},
 									ComboNode::default(),
@@ -1284,7 +1284,7 @@ mod tests {
 								SlotKey::BottomHand(Side::Right),
 								(
 									Skill {
-										name: "some right child skill".to_owned(),
+										token: Token::from("some right child skill"),
 										..default()
 									},
 									ComboNode::default(),
@@ -1302,7 +1302,7 @@ mod tests {
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
 						Skill {
-							name: "some skill".to_owned(),
+							token: Token::from("some skill"),
 							..default()
 						},
 					),
@@ -1312,7 +1312,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right)
 						],
 						Skill {
-							name: "some child skill".to_owned(),
+							token: Token::from("some child skill"),
 							..default()
 						},
 					),
@@ -1323,7 +1323,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Left),
 						],
 						Skill {
-							name: "some left child skill".to_owned(),
+							token: Token::from("some left child skill"),
 							..default()
 						},
 					)
@@ -1332,7 +1332,7 @@ mod tests {
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
 						Skill {
-							name: "some skill".to_owned(),
+							token: Token::from("some skill"),
 							..default()
 						},
 					),
@@ -1342,7 +1342,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right)
 						],
 						Skill {
-							name: "some child skill".to_owned(),
+							token: Token::from("some child skill"),
 							..default()
 						},
 					),
@@ -1353,7 +1353,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 						],
 						Skill {
-							name: "some right child skill".to_owned(),
+							token: Token::from("some right child skill"),
 							..default()
 						},
 					)

@@ -25,7 +25,7 @@ where
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::{simple_init, tools::keys::slot::Side};
+	use common::{simple_init, tools::keys::slot::Side, traits::handles_localization::Token};
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
 
@@ -81,7 +81,7 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "some skill".to_owned(),
+					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::default(),
@@ -115,7 +115,7 @@ mod tests {
 			[(
 				(SlotKey::default(), ItemType::default()),
 				Skill {
-					name: "return this".to_owned(),
+					token: Token::from("return this"),
 					..default()
 				},
 			)],
@@ -128,7 +128,7 @@ mod tests {
 
 		assert_eq!(
 			Some(Skill {
-				name: "return this".to_owned(),
+				token: Token::from("return this"),
 				..default()
 			}),
 			skill

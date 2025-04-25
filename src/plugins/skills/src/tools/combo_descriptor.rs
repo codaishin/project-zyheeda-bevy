@@ -137,6 +137,7 @@ mod tests {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::{item_type::CompatibleItems, keys::slot::Side},
+		traits::handles_localization::Token,
 	};
 
 	#[derive(Component)]
@@ -178,22 +179,22 @@ mod tests {
 		let (mut app, ..) = setup(
 			[
 				Skill {
-					name: "compatible skill a".to_owned(),
+					token: Token::from("compatible skill a"),
 					compatible_items: CompatibleItems::from([ItemType::Pistol]),
 					..default()
 				},
 				Skill {
-					name: "compatible skill a".to_owned(),
+					token: Token::from("compatible skill a"),
 					compatible_items: CompatibleItems::from([ItemType::Pistol]),
 					..default()
 				},
 				Skill {
-					name: "compatible skill b".to_owned(),
+					token: Token::from("compatible skill b"),
 					compatible_items: CompatibleItems::from([ItemType::Pistol]),
 					..default()
 				},
 				Skill {
-					name: "incompatible skill".to_owned(),
+					token: Token::from("incompatible skill"),
 					compatible_items: CompatibleItems::from([ItemType::ForceEssence]),
 					..default()
 				},
@@ -210,12 +211,12 @@ mod tests {
 		assert_eq!(
 			vec![
 				Skill {
-					name: "compatible skill a".to_owned(),
+					token: Token::from("compatible skill a"),
 					compatible_items: CompatibleItems::from([ItemType::Pistol]),
 					..default()
 				},
 				Skill {
-					name: "compatible skill b".to_owned(),
+					token: Token::from("compatible skill b"),
 					compatible_items: CompatibleItems::from([ItemType::Pistol]),
 					..default()
 				},
@@ -281,7 +282,7 @@ mod tests {
 				SlotKey::BottomHand(Side::Right),
 				(
 					Skill {
-						name: "a".to_owned(),
+						token: Token::from("a"),
 						..default()
 					},
 					ComboNode::new([
@@ -289,7 +290,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Left),
 							(
 								Skill {
-									name: "b".to_owned(),
+									token: Token::from("b"),
 									..default()
 								},
 								ComboNode::default(),
@@ -299,7 +300,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							(
 								Skill {
-									name: "c".to_owned(),
+									token: Token::from("c"),
 									..default()
 								},
 								ComboNode::default(),
@@ -321,7 +322,7 @@ mod tests {
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
 						Skill {
-							name: "a".to_owned(),
+							token: Token::from("a"),
 							..default()
 						}
 					),
@@ -331,7 +332,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Left),
 						],
 						Skill {
-							name: "b".to_owned(),
+							token: Token::from("b"),
 							..default()
 						}
 					)
@@ -340,7 +341,7 @@ mod tests {
 					(
 						vec![SlotKey::BottomHand(Side::Right)],
 						Skill {
-							name: "a".to_owned(),
+							token: Token::from("a"),
 							..default()
 						}
 					),
@@ -350,7 +351,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 						],
 						Skill {
-							name: "c".to_owned(),
+							token: Token::from("c"),
 							..default()
 						}
 					)

@@ -18,7 +18,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::{keys::slot::SlotKey, skill_description::SkillDescription, skill_icon::SkillIcon},
+	tools::{keys::slot::SlotKey, skill_description::SkillToken, skill_icon::SkillIcon},
 	traits::{
 		handles_localization::{LocalizeToken, localized::Localized},
 		inspect_able::{InspectAble, InspectField},
@@ -325,7 +325,7 @@ where
 
 impl<TSkill> InsertUiContent for ComboOverview<TSkill>
 where
-	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
+	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
@@ -399,7 +399,7 @@ fn add_combo_list<TSkill, TLocalization>(
 	parent: &mut ChildBuilder,
 	combo_overview: &ComboOverview<TSkill>,
 ) where
-	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
+	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
 	TLocalization: LocalizeToken + 'static,
 {
 	parent
@@ -429,7 +429,7 @@ fn add_combo<TSkill, TLocalization>(
 	local_z: i32,
 	new_skill_icon: &Handle<Image>,
 ) where
-	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
+	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
 	TLocalization: LocalizeToken + 'static,
 {
 	parent
@@ -522,7 +522,7 @@ where
 
 impl<TSkill, TLocalization> AddPanel<'_, TSkill, TLocalization>
 where
-	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + ThreadSafe,
+	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + ThreadSafe,
 	TLocalization: LocalizeToken,
 {
 	fn spawn_as_child(
@@ -565,6 +565,14 @@ where
 		PanelOverlay(panel_overlay): PanelOverlay<TLocalization>,
 		PanelBackground(panel_background): PanelBackground,
 	) {
+		let token = SkillToken::inspect_field(skill).clone();
+		let skill_bundle = (
+			ComboSkillButton::<DropdownTrigger, TSkill>::new(skill.clone(), key_path.to_vec()),
+			Tooltip::new(localize.localize_token(token).or_token()),
+			ComboOverview::skill_button(SkillIcon::inspect_field(skill).clone()),
+			SkillSelectDropdownInsertCommand::<SlotKey, Vertical>::new(key_path.to_vec()),
+		);
+
 		parent
 			.spawn((
 				#[cfg(debug_assertions)]
@@ -572,28 +580,15 @@ where
 				ComboOverview::skill_node(),
 			))
 			.with_children(|parent| {
-				let button = ComboSkillButton::<DropdownTrigger, TSkill>::new(
-					skill.clone(),
-					key_path.to_vec(),
-				);
-
 				for add_background in panel_background {
 					add_background(parent);
 				}
-				parent
-					.spawn((
-						button,
-						Tooltip::new(SkillDescription::inspect_field(skill)),
-						ComboOverview::skill_button(SkillIcon::inspect_field(skill).clone()),
-						SkillSelectDropdownInsertCommand::<SlotKey, Vertical>::new(
-							key_path.to_vec(),
-						),
-					))
-					.with_children(|parent| {
-						for add_overlay in panel_overlay {
-							add_overlay(key_path, parent, localize);
-						}
-					});
+
+				parent.spawn(skill_bundle).with_children(|parent| {
+					for add_overlay in panel_overlay {
+						add_overlay(key_path, parent, localize);
+					}
+				});
 			});
 	}
 }

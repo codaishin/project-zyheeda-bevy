@@ -6,6 +6,7 @@ use common::{
 	tools::item_type::{CompatibleItems, ItemType},
 	traits::{
 		handles_custom_assets::{AssetFileExtensions, LoadFrom},
+		handles_localization::Token,
 		load_asset::{LoadAsset, Path},
 	},
 };
@@ -15,7 +16,7 @@ use std::{collections::HashSet, time::Duration};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct SkillDto {
-	name: String,
+	token: String,
 	cast_time: DurationDto,
 	animation: AnimationStrategy,
 	behavior: RunSkillBehaviorDto,
@@ -35,7 +36,7 @@ impl LoadFrom<SkillDto> for Skill {
 		asset_server: &mut TLoadAsset,
 	) -> Self {
 		Self {
-			name: skill_data.name,
+			token: Token(skill_data.token),
 			cast_time: Duration::from(skill_data.cast_time),
 			animation: skill_data.animation,
 			behavior: skill_data.behavior.into(),

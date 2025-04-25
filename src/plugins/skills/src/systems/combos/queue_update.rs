@@ -61,7 +61,7 @@ mod tests {
 			item_type::ItemType,
 			keys::slot::{Side, SlotKey},
 		},
-		traits::nested_mock::NestedMocks,
+		traits::{handles_localization::Token, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
@@ -187,14 +187,14 @@ mod tests {
 			.spawn((
 				_Combos::new().with_mock(|mock| {
 					mock.expect_advance_combo().return_const(Skill {
-						name: "replace a".to_owned(),
+						token: Token::from("replace a"),
 						..default()
 					});
 				}),
 				_Queue {
 					added: vec![QueuedSkill {
 						skill: Skill {
-							name: "skill a".to_owned(),
+							token: Token::from("skill a"),
 							..default()
 						},
 						..default()
@@ -212,7 +212,7 @@ mod tests {
 			Some(&_Queue {
 				added: vec![QueuedSkill {
 					skill: Skill {
-						name: "replace a".to_owned(),
+						token: Token::from("replace a"),
 						..default()
 					},
 					slot_key: SlotKey::BottomHand(Side::Right),

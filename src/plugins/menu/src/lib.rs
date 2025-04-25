@@ -27,7 +27,7 @@ use common::{
 		inventory_key::InventoryKey,
 		item_description::ItemDescription,
 		keys::slot::{Combo, SlotKey},
-		skill_description::SkillDescription,
+		skill_description::SkillToken,
 		skill_execution::SkillExecution,
 		skill_icon::SkillIcon,
 	},
@@ -349,7 +349,7 @@ where
 	) where
 		TContainer: GetItem<SlotKey> + ThreadSafe,
 		TContainer::TItem:
-			InspectAble<SkillDescription> + InspectAble<SkillIcon> + InspectAble<SkillExecution>,
+			InspectAble<SkillToken> + InspectAble<SkillIcon> + InspectAble<SkillExecution>,
 	{
 		let play = GameState::Play;
 
@@ -419,8 +419,7 @@ where
 {
 	fn combos_with_skill<TSkill>() -> impl ConfigureCombos<TSkill>
 	where
-		TSkill:
-			InspectAble<SkillDescription> + InspectAble<SkillIcon> + PartialEq + Clone + ThreadSafe,
+		TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + PartialEq + Clone + ThreadSafe,
 	{
 		ComboConfiguration::<TLocalization, TGraphics>(PhantomData)
 	}
@@ -433,7 +432,7 @@ impl<TGraphics, TLocalization, TSkill> ConfigureCombos<TSkill>
 where
 	TGraphics: ThreadSafe + UiCamera,
 	TLocalization: HandlesLocalization + ThreadSafe,
-	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
+	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
 {
 	fn configure<TUpdateCombos, TEquipment, M1, M2>(
 		&self,

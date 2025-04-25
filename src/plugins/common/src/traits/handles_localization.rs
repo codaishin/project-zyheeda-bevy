@@ -21,7 +21,7 @@ pub trait LocalizeToken {
 		TToken: Into<Token> + 'static;
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct Token(pub String);
 
 impl Token {

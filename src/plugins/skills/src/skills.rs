@@ -17,7 +17,7 @@ use common::{
 	tools::{
 		item_type::CompatibleItems,
 		keys::slot::SlotKey,
-		skill_description::SkillDescription,
+		skill_description::SkillToken,
 		skill_icon::SkillIcon,
 	},
 	traits::{
@@ -26,6 +26,7 @@ use common::{
 		handles_custom_assets::AssetFolderPath,
 		handles_effect::HandlesAllEffects,
 		handles_lifetime::HandlesLifetime,
+		handles_localization::Token,
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		inspect_able::InspectAble,
 		load_asset::Path,
@@ -55,7 +56,7 @@ pub enum AnimationStrategy {
 
 #[derive(PartialEq, Debug, Default, Clone, TypePath, Asset)]
 pub struct Skill {
-	pub name: String,
+	pub token: Token,
 	pub cast_time: Duration,
 	pub animation: AnimationStrategy,
 	pub behavior: RunSkillBehavior,
@@ -65,8 +66,9 @@ pub struct Skill {
 
 impl Display for Skill {
 	fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-		match self.name.as_str() {
-			"" => write!(f, "Skill(<no name>)"),
+		let Token(token) = &self.token;
+		match token.as_str() {
+			"" => write!(f, "Skill(<no token>)"),
 			name => write!(f, "Skill({})", name),
 		}
 	}
@@ -78,9 +80,9 @@ impl AssetFolderPath for Skill {
 	}
 }
 
-impl InspectAble<SkillDescription> for Skill {
-	fn get_inspect_able_field(&self) -> String {
-		self.name.clone()
+impl InspectAble<SkillToken> for Skill {
+	fn get_inspect_able_field(&self) -> &Token {
+		&self.token
 	}
 }
 
@@ -123,9 +125,9 @@ impl Getter<SlotKey> for QueuedSkill {
 	}
 }
 
-impl InspectAble<SkillDescription> for QueuedSkill {
-	fn get_inspect_able_field(&self) -> String {
-		self.skill.name.clone()
+impl InspectAble<SkillToken> for QueuedSkill {
+	fn get_inspect_able_field(&self) -> &Token {
+		&self.skill.token
 	}
 }
 

@@ -169,7 +169,10 @@ where
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::{tools::keys::slot::Side, traits::nested_mock::NestedMocks};
+	use common::{
+		tools::keys::slot::Side,
+		traits::{handles_localization::Token, nested_mock::NestedMocks},
+	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::{
@@ -208,7 +211,7 @@ mod tests {
 		let combos = Combos::new(_Next(HashMap::from([(
 			(trigger, item_type),
 			Skill {
-				name: "my skill".to_owned(),
+				token: Token::from("my skill"),
 				..default()
 			},
 		)])));
@@ -219,7 +222,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&Skill {
-				name: "my skill".to_owned(),
+				token: Token::from("my skill"),
 				..default()
 			}),
 			skill
@@ -234,7 +237,7 @@ mod tests {
 		let next = _Next(HashMap::from([(
 			(trigger, item_type),
 			Skill {
-				name: "my skill".to_owned(),
+				token: Token::from("my skill"),
 				..default()
 			},
 		)]));
@@ -247,7 +250,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&Skill {
-				name: "my skill".to_owned(),
+				token: Token::from("my skill"),
 				..default()
 			}),
 			skill
@@ -261,7 +264,7 @@ mod tests {
 		let first = _Next(HashMap::from([(
 			(trigger, item_type),
 			Skill {
-				name: "my skill".to_owned(),
+				token: Token::from("my skill"),
 				..default()
 			},
 		)]));
@@ -275,7 +278,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&Skill {
-				name: "my skill".to_owned(),
+				token: Token::from("my skill"),
 				..default()
 			}),
 			skill
@@ -293,7 +296,7 @@ mod tests {
 	#[test]
 	fn get_combos_from_config() {
 		let skill = Skill {
-			name: "my skill".to_owned(),
+			token: Token::from("my skill"),
 			..default()
 		};
 		let combos_vec = vec![vec![(
@@ -374,7 +377,7 @@ mod tests {
 				SlotKey::BottomHand(Side::Left),
 			],
 			Some(Skill {
-				name: "my skill".to_owned(),
+				token: Token::from("my skill"),
 				..default()
 			}),
 		);
@@ -395,7 +398,7 @@ mod tests {
 				mock.expect_insert()
 					.times(1)
 					.with(eq(Some(Skill {
-						name: "my skill".to_owned(),
+						token: Token::from("my skill"),
 						..default()
 					})))
 					.return_const(());
@@ -406,7 +409,7 @@ mod tests {
 		combos.write_item(
 			&vec![SlotKey::BottomHand(Side::Right)],
 			Some(Skill {
-				name: "my skill".to_owned(),
+				token: Token::from("my skill"),
 				..default()
 			}),
 		);
@@ -427,7 +430,7 @@ mod tests {
 		combos.write_item(
 			&vec![SlotKey::BottomHand(Side::Right)],
 			Some(Skill {
-				name: "my skill".to_owned(),
+				token: Token::from("my skill"),
 				..default()
 			}),
 		);
@@ -448,7 +451,7 @@ mod tests {
 		combos.write_item(
 			&vec![SlotKey::BottomHand(Side::Right)],
 			Some(Skill {
-				name: "my skill".to_owned(),
+				token: Token::from("my skill"),
 				..default()
 			}),
 		);

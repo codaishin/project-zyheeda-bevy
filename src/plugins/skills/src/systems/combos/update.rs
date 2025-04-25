@@ -29,7 +29,7 @@ mod tests {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::keys::slot::Side,
-		traits::nested_mock::NestedMocks,
+		traits::{handles_localization::Token, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -65,7 +65,7 @@ mod tests {
 					.with(
 						eq(vec![SlotKey::TopHand(Side::Left)]),
 						eq(Some(Skill {
-							name: "my skill".to_owned(),
+							token: Token::from("my skill"),
 							..default()
 						})),
 					)
@@ -82,7 +82,7 @@ mod tests {
 				(
 					vec![SlotKey::TopHand(Side::Left)],
 					Some(Skill {
-						name: "my skill".to_owned(),
+						token: Token::from("my skill"),
 						..default()
 					}),
 				),

@@ -2,7 +2,7 @@ use super::{inspect_able::InspectAble, thread_safe::ThreadSafe};
 use crate::tools::{
 	change::Change,
 	keys::slot::{Combo, SlotKey},
-	skill_description::SkillDescription,
+	skill_description::SkillToken,
 	skill_icon::SkillIcon,
 };
 use bevy::prelude::*;
@@ -12,13 +12,13 @@ pub trait HandlesComboMenu {
 	fn combos_with_skill<TSkill>() -> impl ConfigureCombos<TSkill>
 	where
 		for<'a> TSkill:
-			InspectAble<SkillDescription> + InspectAble<SkillIcon> + PartialEq + Clone + ThreadSafe;
+			InspectAble<SkillToken> + InspectAble<SkillIcon> + PartialEq + Clone + ThreadSafe;
 }
 
 pub trait ConfigureCombos<TSkill>
 where
 	for<'a> TSkill:
-		InspectAble<SkillDescription> + InspectAble<SkillIcon> + PartialEq + Clone + ThreadSafe,
+		InspectAble<SkillToken> + InspectAble<SkillIcon> + PartialEq + Clone + ThreadSafe,
 {
 	fn configure<TUpdateCombos, TCombos, M1, M2>(
 		&self,

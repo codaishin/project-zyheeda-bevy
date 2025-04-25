@@ -53,7 +53,7 @@ where
 			Some((
 				key,
 				QuickbarItem {
-					skill_name: skill.name.clone(),
+					skill_token: skill.token.clone(),
 					skill_icon: skill.icon.clone(),
 					execution,
 				},
@@ -142,6 +142,7 @@ mod tests {
 	use common::{
 		test_tools::utils::{SingleThreadedApp, new_handle},
 		tools::{item_type::ItemType, keys::slot::Side},
+		traits::handles_localization::Token,
 	};
 	use std::{array::IntoIter, collections::HashMap, slice::Iter};
 
@@ -156,11 +157,11 @@ mod tests {
 			app: &mut App,
 			slot_key: SlotKey,
 			item_type: ItemType,
-			skill_name: &'static str,
+			skill_token: &'static str,
 			skill_icon: Option<Handle<Image>>,
 		) -> Self {
 			let skill = app.world_mut().resource_mut::<Assets<Skill>>().add(Skill {
-				name: skill_name.to_owned(),
+				token: Token::from(skill_token),
 				icon: skill_icon,
 				..default()
 			});
@@ -250,7 +251,7 @@ mod tests {
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
 				SlotKey::TopHand(Side::Left),
 				QuickbarItem {
-					skill_name: "my skill".to_owned(),
+					skill_token: Token::from("my skill"),
 					skill_icon: icon,
 					execution: SkillExecution::None,
 				}
@@ -276,7 +277,7 @@ mod tests {
 			_Queue(vec![QueuedSkill {
 				slot_key: SlotKey::TopHand(Side::Left),
 				skill: Skill {
-					name: "my active skill".to_owned(),
+					token: Token::from("my active skill"),
 					icon: icon.clone(),
 					..default()
 				},
@@ -291,7 +292,7 @@ mod tests {
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
 				SlotKey::TopHand(Side::Left),
 				QuickbarItem {
-					skill_name: "my active skill".to_owned(),
+					skill_token: Token::from("my active skill"),
 					skill_icon: icon,
 					execution: SkillExecution::Active,
 				}
@@ -322,7 +323,7 @@ mod tests {
 				QueuedSkill {
 					slot_key: SlotKey::TopHand(Side::Left),
 					skill: Skill {
-						name: "my queued skill".to_owned(),
+						token: Token::from("my queued skill"),
 						icon: icon.clone(),
 						..default()
 					},
@@ -338,7 +339,7 @@ mod tests {
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
 				SlotKey::TopHand(Side::Left),
 				QuickbarItem {
-					skill_name: "my queued skill".to_owned(),
+					skill_token: Token::from("my queued skill"),
 					skill_icon: icon,
 					execution: SkillExecution::Queued,
 				}
@@ -368,7 +369,7 @@ mod tests {
 				QueuedSkill {
 					slot_key: SlotKey::TopHand(Side::Left),
 					skill: Skill {
-						name: "my queued skill".to_owned(),
+						token: Token::from("my queued skill"),
 						..default()
 					},
 					..default()
@@ -376,7 +377,7 @@ mod tests {
 				QueuedSkill {
 					slot_key: SlotKey::TopHand(Side::Left),
 					skill: Skill {
-						name: "my other queued skill".to_owned(),
+						token: Token::from("my other queued skill"),
 						..default()
 					},
 					..default()
@@ -391,7 +392,7 @@ mod tests {
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
 				SlotKey::TopHand(Side::Left),
 				QuickbarItem {
-					skill_name: "my queued skill".to_owned(),
+					skill_token: Token::from("my queued skill"),
 					execution: SkillExecution::Queued,
 					..default()
 				}
@@ -418,7 +419,7 @@ mod tests {
 			_NextComboSkills(HashMap::from([(
 				(SlotKey::TopHand(Side::Left), ItemType::Bracer),
 				Skill {
-					name: "my combo skill".to_owned(),
+					token: Token::from("my combo skill"),
 					icon: icon.clone(),
 					..default()
 				},
@@ -431,7 +432,7 @@ mod tests {
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
 				SlotKey::TopHand(Side::Left),
 				QuickbarItem {
-					skill_name: "my combo skill".to_owned(),
+					skill_token: Token::from("my combo skill"),
 					skill_icon: icon,
 					execution: SkillExecution::None,
 				}
@@ -456,7 +457,7 @@ mod tests {
 			_Queue(vec![QueuedSkill {
 				slot_key: SlotKey::TopHand(Side::Left),
 				skill: Skill {
-					name: "my active skill".to_owned(),
+					token: Token::from("my active skill"),
 					..default()
 				},
 				..default()
@@ -464,7 +465,7 @@ mod tests {
 			_NextComboSkills(HashMap::from([(
 				(SlotKey::TopHand(Side::Left), ItemType::Bracer),
 				Skill {
-					name: "my combo skill".to_owned(),
+					token: Token::from("my combo skill"),
 					..default()
 				},
 			)])),
@@ -476,7 +477,7 @@ mod tests {
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
 				SlotKey::TopHand(Side::Left),
 				QuickbarItem {
-					skill_name: "my active skill".to_owned(),
+					skill_token: Token::from("my active skill"),
 					execution: SkillExecution::Active,
 					..default()
 				}
@@ -502,7 +503,7 @@ mod tests {
 				QueuedSkill {
 					slot_key: SlotKey::TopHand(Side::Right),
 					skill: Skill {
-						name: "my active skill".to_owned(),
+						token: Token::from("my active skill"),
 						..default()
 					},
 					..default()
@@ -510,7 +511,7 @@ mod tests {
 				QueuedSkill {
 					slot_key: SlotKey::TopHand(Side::Left),
 					skill: Skill {
-						name: "my queued skill".to_owned(),
+						token: Token::from("my queued skill"),
 						..default()
 					},
 					..default()
@@ -519,7 +520,7 @@ mod tests {
 			_NextComboSkills(HashMap::from([(
 				(SlotKey::TopHand(Side::Left), ItemType::Bracer),
 				Skill {
-					name: "my combo skill".to_owned(),
+					token: Token::from("my combo skill"),
 					..default()
 				},
 			)])),
@@ -531,7 +532,7 @@ mod tests {
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
 				SlotKey::TopHand(Side::Left),
 				QuickbarItem {
-					skill_name: "my queued skill".to_owned(),
+					skill_token: Token::from("my queued skill"),
 					execution: SkillExecution::Queued,
 					..default()
 				}

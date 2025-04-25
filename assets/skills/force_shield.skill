@@ -1,5 +1,5 @@
 {
-	"name": "Force Shield",
+	"token": "skill-force-shield",
 	"cast_time": {
 		"seconds": 0.2
 	},

@@ -35,3 +35,9 @@ impl From<Localized> for Text {
 		Text(string)
 	}
 }
+
+impl From<Localized> for Name {
+	fn from(Localized(string): Localized) -> Self {
+		Name::from(string)
+	}
+}
