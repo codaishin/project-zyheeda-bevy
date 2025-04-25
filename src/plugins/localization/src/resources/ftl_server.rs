@@ -12,13 +12,7 @@ use common::{
 	errors::{Error, Level},
 	traits::{
 		handles_load_tracking::Loaded,
-		handles_localization::{
-			FailedToken,
-			LocalizationResult,
-			LocalizeToken,
-			SetLocalization,
-			Token,
-		},
+		handles_localization::{LocalizationResult, LocalizeToken, SetLocalization, Token},
 	},
 };
 use fluent::{FluentError, FluentResource, concurrent::FluentBundle};
@@ -88,17 +82,21 @@ impl SetLocalization for FtlServer {
 }
 
 impl LocalizeToken for FtlServer {
-	fn localize_token<'a>(&mut self, token: Token<'a>) -> LocalizationResult<'a> {
+	fn localize_token<'a, TToken>(&mut self, token: TToken) -> LocalizationResult<'a>
+	where
+		TToken: Into<Token<'a>>,
+	{
 		let (current, locales) = match self.current.as_ref() {
 			Some(current) => (current, vec![current, &self.fallback]),
 			None => (&self.fallback, vec![&self.fallback]),
 		};
+		let Token(str) = token.into();
 		let localize = |locale: &&Locale| {
 			let ftl_errors = &mut self.errors;
 
 			if locale.ln != current.ln {
 				ftl_errors.push(FtlError::FallbackAttempt {
-					token: current.ln_token(token),
+					token: current.ln_token(str),
 					fallback: locale.ln.clone(),
 				});
 			}
@@ -108,13 +106,13 @@ impl LocalizeToken for FtlServer {
 				return None;
 			};
 
-			let Some(msg) = bundle.get_message(token) else {
-				ftl_errors.push(FtlError::NoMessageFor(locale.ln_token(token)));
+			let Some(msg) = bundle.get_message(str) else {
+				ftl_errors.push(FtlError::NoMessageFor(locale.ln_token(str)));
 				return None;
 			};
 
 			let Some(pattern) = msg.value() else {
-				ftl_errors.push(FtlError::NoPatternFor(locale.ln_token(token)));
+				ftl_errors.push(FtlError::NoPatternFor(locale.ln_token(str)));
 				return None;
 			};
 
@@ -123,7 +121,7 @@ impl LocalizeToken for FtlServer {
 
 			if !fluent_errors.is_empty() {
 				ftl_errors.push(FtlError::FluentErrors {
-					token: locale.ln_token(token),
+					token: locale.ln_token(str),
 					errors: fluent_errors,
 				});
 			}
@@ -133,7 +131,7 @@ impl LocalizeToken for FtlServer {
 
 		match locales.iter().filter_map(localize).next() {
 			Some(localized) => LocalizationResult::Value(localized),
-			None => LocalizationResult::Error(FailedToken(token)),
+			None => LocalizationResult::Error(Token(str).failed()),
 		}
 	}
 }
@@ -230,10 +228,7 @@ impl Display for LnToken {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::handles_localization::FailedToken,
-	};
+	use common::test_tools::utils::{SingleThreadedApp, new_handle};
 	use fluent::resolver::{ResolverError, errors::ReferenceKind};
 	use unic_langid::langid;
 
@@ -602,7 +597,7 @@ mod tests {
 		let result = server.localize_token("a");
 		assert_eq!(
 			(
-				LocalizationResult::Error(FailedToken("a")),
+				LocalizationResult::Error(Token("a").failed()),
 				vec![FtlError::NoBundle(langid!("en"))]
 			),
 			(result, server.errors)
@@ -632,7 +627,7 @@ mod tests {
 		let result = server.localize_token("b");
 		assert_eq!(
 			(
-				LocalizationResult::Error(FailedToken("b")),
+				LocalizationResult::Error(Token("b").failed()),
 				vec![FtlError::NoMessageFor(LnToken {
 					value: String::from("b"),
 					language: langid!("en")
@@ -665,7 +660,7 @@ mod tests {
 		let result = server.localize_token("a");
 		assert_eq!(
 			(
-				LocalizationResult::Error(FailedToken("a")),
+				LocalizationResult::Error(Token("a").failed()),
 				vec![FtlError::NoPatternFor(LnToken {
 					value: String::from("a"),
 					language: langid!("en")
