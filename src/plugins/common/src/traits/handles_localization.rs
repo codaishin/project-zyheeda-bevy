@@ -1,4 +1,7 @@
+pub mod localized;
+
 use bevy::prelude::*;
+use localized::Localized;
 use std::{fmt::Display, ops::Deref};
 use unic_langid::LanguageIdentifier;
 
@@ -56,19 +59,37 @@ impl<'a> Deref for FailedToken<'a> {
 
 #[derive(Debug, PartialEq)]
 pub enum LocalizationResult<'a> {
-	Value(String),
+	Ok(Localized),
 	Error(FailedToken<'a>),
 }
 
 impl LocalizationResult<'_> {
-	pub fn or<F, T>(self, fallback: F) -> String
+	pub fn or<F, T>(self, fallback: F) -> Localized
 	where
 		F: Fn(FailedToken) -> T,
 		T: Into<String>,
 	{
 		match self {
-			Self::Value(string) => string,
-			Self::Error(failed_token) => fallback(failed_token).into(),
+			Self::Ok(string) => string,
+			Self::Error(failed_token) => Localized::from_string(fallback(failed_token)),
+		}
+	}
+
+	pub fn or_token(self) -> Localized {
+		match self {
+			Self::Ok(string) => string,
+			Self::Error(FailedToken(Token(t))) => Localized::from_string(t),
+		}
+	}
+
+	pub fn or_string<F, T>(self, string_fn: F) -> Localized
+	where
+		F: Fn() -> T,
+		T: Into<String>,
+	{
+		match self {
+			Self::Ok(string) => string,
+			Self::Error(_) => Localized::from_string(string_fn()),
 		}
 	}
 }
@@ -78,28 +99,56 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn localize_result_string() {
-		let result = LocalizationResult::Value(String::from("my string"));
+	fn localize_result_or_ok() {
+		let result = LocalizationResult::Ok(Localized::from("my string"));
 
 		assert_eq!(
-			String::from("my string"),
+			Localized::from("my string"),
 			result.or(|failed_token| format!("FAILED: {}", *failed_token))
 		)
 	}
 
 	#[test]
-	fn localize_result_token() {
-		let result = LocalizationResult::Error(FailedToken(Token("my string")));
+	fn localize_result_or_err() {
+		let result = LocalizationResult::Error(FailedToken(Token("my token")));
 
 		assert_eq!(
-			String::from("FAILED: my string"),
+			Localized::from("FAILED: my token"),
 			result.or(|failed_token| format!("FAILED: {}", *failed_token))
 		)
 	}
-}
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum LanguageFallback {
-	Default,
-	None,
+	#[test]
+	fn localize_result_or_token_ok() {
+		let result = LocalizationResult::Ok(Localized::from("my string"));
+
+		assert_eq!(Localized::from("my string"), result.or_token())
+	}
+
+	#[test]
+	fn localize_result_or_token_err() {
+		let result = LocalizationResult::Error(FailedToken(Token("my token")));
+
+		assert_eq!(Localized::from("my token"), result.or_token())
+	}
+
+	#[test]
+	fn localize_result_or_string_ok() {
+		let result = LocalizationResult::Ok(Localized::from("my string"));
+
+		assert_eq!(
+			Localized::from("my string"),
+			result.or_string(|| "my fallback")
+		)
+	}
+
+	#[test]
+	fn localize_result_or_string_err() {
+		let result = LocalizationResult::Error(FailedToken(Token("my token")));
+
+		assert_eq!(
+			Localized::from("my fallback"),
+			result.or_string(|| "my fallback")
+		)
+	}
 }

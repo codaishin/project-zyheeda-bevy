@@ -12,7 +12,13 @@ use common::{
 	errors::{Error, Level},
 	traits::{
 		handles_load_tracking::Loaded,
-		handles_localization::{LocalizationResult, LocalizeToken, SetLocalization, Token},
+		handles_localization::{
+			LocalizationResult,
+			LocalizeToken,
+			SetLocalization,
+			Token,
+			localized::Localized,
+		},
 	},
 };
 use fluent::{FluentError, FluentResource, concurrent::FluentBundle};
@@ -130,7 +136,7 @@ impl LocalizeToken for FtlServer {
 		};
 
 		match locales.iter().filter_map(localize).next() {
-			Some(localized) => LocalizationResult::Value(localized),
+			Some(localized) => LocalizationResult::Ok(Localized(localized)),
 			None => LocalizationResult::Error(Token(str).failed()),
 		}
 	}
@@ -543,7 +549,7 @@ mod tests {
 
 		let result = server.localize_token("a");
 		assert_eq!(
-			(LocalizationResult::Value(String::from("A!")), vec![]),
+			(LocalizationResult::Ok(Localized::from("A!")), vec![]),
 			(result, server.errors)
 		);
 	}
@@ -575,7 +581,7 @@ mod tests {
 
 		let result = server.localize_token("a");
 		assert_eq!(
-			(LocalizationResult::Value(String::from("A!")), vec![]),
+			(LocalizationResult::Ok(Localized::from("A!")), vec![]),
 			(result, server.errors)
 		);
 	}
@@ -693,7 +699,7 @@ mod tests {
 		let result = server.localize_token("a");
 		assert_eq!(
 			(
-				LocalizationResult::Value(String::from("{$a}")),
+				LocalizationResult::Ok(Localized::from("{$a}")),
 				vec![FtlError::FluentErrors {
 					token: LnToken {
 						value: String::from("a"),
@@ -738,7 +744,7 @@ mod tests {
 		let result = server.localize_token("a");
 		assert_eq!(
 			(
-				LocalizationResult::Value(String::from("A!")),
+				LocalizationResult::Ok(Localized::from("A!")),
 				vec![
 					FtlError::NoBundle(langid!("jp")),
 					FtlError::FallbackAttempt {
@@ -788,7 +794,7 @@ mod tests {
 		let result = server.localize_token("a");
 		assert_eq!(
 			(
-				LocalizationResult::Value(String::from("A!")),
+				LocalizationResult::Ok(Localized::from("A!")),
 				vec![
 					FtlError::NoMessageFor(LnToken {
 						value: String::from("a"),
@@ -841,7 +847,7 @@ mod tests {
 		let result = server.localize_token("a");
 		assert_eq!(
 			(
-				LocalizationResult::Value(String::from("A!")),
+				LocalizationResult::Ok(Localized::from("A!")),
 				vec![
 					FtlError::NoPatternFor(LnToken {
 						value: String::from("a"),
@@ -894,7 +900,7 @@ mod tests {
 		let result = server.localize_token("a");
 		assert_eq!(
 			(
-				LocalizationResult::Value(String::from("{$a}")),
+				LocalizationResult::Ok(Localized::from("{$a}")),
 				vec![FtlError::FluentErrors {
 					token: LnToken {
 						value: String::from("a"),
