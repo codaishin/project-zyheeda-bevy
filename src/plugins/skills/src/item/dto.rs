@@ -6,6 +6,7 @@ use common::{
 	tools::item_type::ItemType,
 	traits::{
 		handles_custom_assets::{AssetFileExtensions, LoadFrom},
+		handles_localization::Token,
 		load_asset::LoadAsset,
 	},
 };
@@ -15,7 +16,7 @@ type SkillPath = String;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, TypePath)]
 pub(crate) struct ItemDto {
-	name: String,
+	token: String,
 	model: ModelRender,
 	essence: Essence,
 	skill: Option<SkillPath>,
@@ -25,7 +26,7 @@ pub(crate) struct ItemDto {
 impl LoadFrom<ItemDto> for Item {
 	fn load_from<TLoadAsset: LoadAsset>(from: ItemDto, asset_server: &mut TLoadAsset) -> Self {
 		Self {
-			name: from.name,
+			token: Token::from(from.token),
 			model: from.model,
 			essence: from.essence,
 			skill: from.skill.map(|path| asset_server.load_asset(path)),

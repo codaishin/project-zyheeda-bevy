@@ -40,7 +40,7 @@ pub(crate) trait LoadoutDescriptor {
 				Some((
 					key,
 					LoadoutItem {
-						name: item.name.clone(),
+						token: item.token.clone(),
 						skill_icon,
 					},
 				))
@@ -54,7 +54,10 @@ pub(crate) trait LoadoutDescriptor {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::test_tools::utils::{SingleThreadedApp, new_handle};
+	use common::{
+		test_tools::utils::{SingleThreadedApp, new_handle},
+		traits::handles_localization::Token,
+	};
 	use std::{array::IntoIter, collections::HashMap};
 
 	#[derive(Component)]
@@ -83,7 +86,7 @@ mod tests {
 	#[derive(Resource, Debug, PartialEq)]
 	struct _Result(Change<Cache<_Key, LoadoutItem>>);
 
-	fn setup(item_name: &'static str, skill_icon: Option<Handle<Image>>) -> (App, Handle<Item>) {
+	fn setup(item_token: &'static str, skill_icon: Option<Handle<Image>>) -> (App, Handle<Item>) {
 		let mut app = App::new().single_threaded(Update);
 		let mut skills = Assets::default();
 		let mut items = Assets::default();
@@ -93,7 +96,7 @@ mod tests {
 			..default()
 		});
 		let item = items.add(Item {
-			name: item_name.to_owned(),
+			token: Token::from(item_token),
 			skill: Some(skill),
 			..default()
 		});
@@ -121,7 +124,7 @@ mod tests {
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
 				_Key,
 				LoadoutItem {
-					name: "my item".to_owned(),
+					token: Token::from("my item"),
 					skill_icon: icon,
 				}
 			)]))))),

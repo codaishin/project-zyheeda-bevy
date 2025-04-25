@@ -25,7 +25,7 @@ use common::{
 	tools::{
 		change::Change,
 		inventory_key::InventoryKey,
-		item_description::ItemDescription,
+		item_description::ItemToken,
 		keys::slot::{Combo, SlotKey},
 		skill_description::SkillToken,
 		skill_execution::SkillExecution,
@@ -380,9 +380,9 @@ where
 		get_changed_slots: impl IntoSystem<(), Change<TSlots>, TSystemMarker2>,
 	) where
 		TInventory: GetItem<InventoryKey> + ThreadSafe,
-		TInventory::TItem: InspectAble<ItemDescription>,
+		TInventory::TItem: InspectAble<ItemToken>,
 		TSlots: GetItem<SlotKey> + ThreadSafe,
-		TSlots::TItem: InspectAble<ItemDescription>,
+		TSlots::TItem: InspectAble<ItemToken>,
 	{
 		let inventory = GameState::IngameMenu(MenuState::Inventory);
 

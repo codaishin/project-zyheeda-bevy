@@ -1,5 +1,5 @@
 {
-	"name": "Plasma Pistol",
+	"token": "item-plasma-pistol",
 	"model": {
 		"Hand": "models/pistol.glb"
 	},

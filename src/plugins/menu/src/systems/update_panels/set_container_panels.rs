@@ -1,11 +1,11 @@
 use crate::{components::KeyedPanel, tools::PanelState};
 use bevy::{hierarchy::Parent, prelude::*};
 use common::{
-	tools::item_description::ItemDescription,
+	tools::item_description::ItemToken,
 	traits::{
 		accessors::set::Setter,
 		handles_loadout_menu::GetItem,
-		handles_localization::LocalizeToken,
+		handles_localization::{LocalizeToken, localized::Localized},
 		inspect_able::{InspectAble, InspectField},
 		thread_safe::ThreadSafe,
 	},
@@ -25,14 +25,19 @@ pub trait SetContainerPanels {
 		TLocalization: LocalizeToken + Resource,
 		TKey: Eq + Hash + Copy + ThreadSafe,
 		TEquipment: Resource + GetItem<TKey>,
-		TEquipment::TItem: InspectAble<ItemDescription>,
+		TEquipment::TItem: InspectAble<ItemToken>,
 	{
 		for (entity, KeyedPanel(key), mut panel) in &mut panels {
 			let (state, label) = match items.get_item(*key) {
-				Some(item) => (PanelState::Filled, ItemDescription::inspect_field(item)),
+				Some(item) => (
+					PanelState::Filled,
+					localize
+						.localize_token(ItemToken::inspect_field(item).clone())
+						.or_token(),
+				),
 				None => (
 					PanelState::Empty,
-					String::from(localize.localize_token("inventory-item-empty").or_token()),
+					localize.localize_token("inventory-item-empty").or_token(),
 				),
 			};
 			panel.set(state);
@@ -41,13 +46,11 @@ pub trait SetContainerPanels {
 	}
 }
 
-fn set_label(texts: &mut Query<(&Parent, &mut Text)>, entity: Entity, label: String) {
+fn set_label(texts: &mut Query<(&Parent, &mut Text)>, entity: Entity, label: Localized) {
 	let Some((.., mut text)) = texts.iter_mut().find(|(p, ..)| p.get() == entity) else {
 		return;
 	};
-	let Text(text) = text.as_mut();
-
-	*text = label;
+	*text = Text::from(label);
 }
 
 #[cfg(test)]
@@ -68,11 +71,17 @@ mod tests {
 	struct _Key(usize);
 
 	#[derive(Debug, PartialEq)]
-	struct _Item(&'static str);
+	struct _Item(Token);
 
-	impl InspectAble<ItemDescription> for _Item {
-		fn get_inspect_able_field(&self) -> String {
-			self.0.to_owned()
+	impl From<&str> for _Item {
+		fn from(value: &str) -> Self {
+			_Item(Token::from(value))
+		}
+	}
+
+	impl InspectAble<ItemToken> for _Item {
+		fn get_inspect_able_field(&self) -> &Token {
+			&self.0
 		}
 	}
 
@@ -129,6 +138,8 @@ mod tests {
 	#[test]
 	fn set_empty() {
 		let localize = _Localize::new().with_mock(|mock| {
+			mock.expect_localize_token::<Token>()
+				.return_const(LocalizationResult::Error(Token::from("??").failed()));
 			mock.expect_localize_token::<&str>()
 				.with(eq("inventory-item-empty"))
 				.return_const(LocalizationResult::Ok(Localized::from("EMPTY")));
@@ -162,10 +173,18 @@ mod tests {
 	#[test]
 	fn set_filled() {
 		let localize = _Localize::new().with_mock(|mock| {
+			mock.expect_localize_token::<Token>()
+				.with(eq(Token::from("my item")))
+				.return_const(LocalizationResult::Ok(Localized::from(
+					"Localized: my item",
+				)));
 			mock.expect_localize_token::<&str>()
 				.return_const(LocalizationResult::Error(Token::from("??").failed()));
 		});
-		let mut app = setup(HashMap::from([(_Key(42), _Item("my item"))]), localize);
+		let mut app = setup(
+			HashMap::from([(_Key(42), _Item::from("my item"))]),
+			localize,
+		);
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -183,7 +202,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some("my item"),
+			Some("Localized: my item"),
 			app.world()
 				.entity(text)
 				.get::<Text>()
@@ -194,6 +213,9 @@ mod tests {
 	#[test]
 	fn still_set_state_when_no_children() {
 		let localize = _Localize::new().with_mock(|mock| {
+			mock.expect_localize_token::<Token>()
+				.with(eq(Token::from("my item")))
+				.return_const(LocalizationResult::Error(Token::from("??").failed()));
 			mock.expect_localize_token::<&str>()
 				.return_const(LocalizationResult::Error(Token::from("??").failed()));
 		});
@@ -211,10 +233,18 @@ mod tests {
 	#[test]
 	fn set_when_text_not_first_child() {
 		let localize = _Localize::new().with_mock(|mock| {
+			mock.expect_localize_token::<Token>()
+				.with(eq(Token::from("my item")))
+				.return_const(LocalizationResult::Ok(Localized::from(
+					"Localized: my item",
+				)));
 			mock.expect_localize_token::<&str>()
 				.return_const(LocalizationResult::Error(Token::from("??").failed()));
 		});
-		let mut app = setup(HashMap::from([(_Key(42), _Item("my item"))]), localize);
+		let mut app = setup(
+			HashMap::from([(_Key(42), _Item::from("my item"))]),
+			localize,
+		);
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -233,7 +263,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some("my item"),
+			Some("Localized: my item"),
 			app.world()
 				.entity(text)
 				.get::<Text>()

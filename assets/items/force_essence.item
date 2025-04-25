@@ -1,5 +1,5 @@
 {
-	"name": "Force Essence",
+	"token": "item-force-essence",
 	"model": "None",
 	"essence": "Force",
 	"skill": "skills/force_shield.skill",
