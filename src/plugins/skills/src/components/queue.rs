@@ -120,14 +120,14 @@ fn unchanged_length(Queue { queue, state, .. }: &Queue) -> usize {
 mod test_queue_collection {
 	use super::*;
 	use bevy::utils::default;
-	use common::tools::keys::slot::Side;
+	use common::{tools::keys::slot::Side, traits::handles_localization::Token};
 
 	#[test]
 	fn enqueue_one_skill() {
 		let mut queue = Queue::new([]);
 		queue.enqueue((
 			Skill {
-				name: "my skill".to_owned(),
+				token: Token::from("my skill"),
 				..default()
 			},
 			SlotKey::BottomHand(Side::Right),
@@ -136,7 +136,7 @@ mod test_queue_collection {
 		assert_eq!(
 			VecDeque::from([QueuedSkill {
 				skill: Skill {
-					name: "my skill".to_owned(),
+					token: Token::from("my skill"),
 					..default()
 				},
 				slot_key: SlotKey::BottomHand(Side::Right),
@@ -151,14 +151,14 @@ mod test_queue_collection {
 		let mut queue = Queue::new([]);
 		queue.enqueue((
 			Skill {
-				name: "skill a".to_owned(),
+				token: Token::from("skill a"),
 				..default()
 			},
 			SlotKey::BottomHand(Side::Left),
 		));
 		queue.enqueue((
 			Skill {
-				name: "skill b".to_owned(),
+				token: Token::from("skill b"),
 				..default()
 			},
 			SlotKey::BottomHand(Side::Right),
@@ -169,7 +169,7 @@ mod test_queue_collection {
 				QueuedSkill {
 					slot_key: SlotKey::BottomHand(Side::Left),
 					skill: Skill {
-						name: "skill a".to_owned(),
+						token: Token::from("skill a"),
 						..default()
 					},
 					..default()
@@ -177,7 +177,7 @@ mod test_queue_collection {
 				QueuedSkill {
 					slot_key: SlotKey::BottomHand(Side::Right),
 					skill: Skill {
-						name: "skill b".to_owned(),
+						token: Token::from("skill b"),
 						..default()
 					},
 					..default()
@@ -192,7 +192,7 @@ mod test_queue_collection {
 		let mut queue = Queue::new([QueuedSkill {
 			slot_key: SlotKey::BottomHand(Side::Right),
 			skill: Skill {
-				name: "my skill".to_owned(),
+				token: Token::from("my skill"),
 				..default()
 			},
 			..default()
@@ -209,7 +209,7 @@ mod test_queue_collection {
 			QueuedSkill {
 				slot_key: SlotKey::BottomHand(Side::Left),
 				skill: Skill {
-					name: "skill a".to_owned(),
+					token: Token::from("skill a"),
 					..default()
 				},
 				..default()
@@ -217,7 +217,7 @@ mod test_queue_collection {
 			QueuedSkill {
 				slot_key: SlotKey::BottomHand(Side::Right),
 				skill: Skill {
-					name: "skill b".to_owned(),
+					token: Token::from("skill b"),
 					..default()
 				},
 				..default()
@@ -245,7 +245,7 @@ mod test_queue_collection {
 				Queue::new([QueuedSkill {
 					slot_key: SlotKey::BottomHand(Side::Right),
 					skill: Skill {
-						name: "skill b".to_owned(),
+						token: Token::from("skill b"),
 						..default()
 					},
 					..default()
@@ -262,7 +262,7 @@ mod test_queue_collection {
 			QueuedSkill {
 				slot_key: SlotKey::BottomHand(Side::Left),
 				skill: Skill {
-					name: "skill a".to_owned(),
+					token: Token::from("skill a"),
 					..default()
 				},
 				..default()
@@ -270,7 +270,7 @@ mod test_queue_collection {
 			QueuedSkill {
 				slot_key: SlotKey::BottomHand(Side::Right),
 				skill: Skill {
-					name: "skill b".to_owned(),
+					token: Token::from("skill b"),
 					..default()
 				},
 				..default()
@@ -282,7 +282,7 @@ mod test_queue_collection {
 				&QueuedSkill {
 					slot_key: SlotKey::BottomHand(Side::Left),
 					skill: Skill {
-						name: "skill a".to_owned(),
+						token: Token::from("skill a"),
 						..default()
 					},
 					..default()
@@ -290,7 +290,7 @@ mod test_queue_collection {
 				&QueuedSkill {
 					slot_key: SlotKey::BottomHand(Side::Right),
 					skill: Skill {
-						name: "skill b".to_owned(),
+						token: Token::from("skill b"),
 						..default()
 					},
 					..default()
@@ -305,14 +305,14 @@ mod test_queue_collection {
 		let mut queue = Queue::new([]);
 		queue.enqueue((
 			Skill {
-				name: "skill a".to_owned(),
+				token: Token::from("skill a"),
 				..default()
 			},
 			SlotKey::BottomHand(Side::Left),
 		));
 		queue.enqueue((
 			Skill {
-				name: "skill b".to_owned(),
+				token: Token::from("skill b"),
 				..default()
 			},
 			SlotKey::BottomHand(Side::Right),
@@ -323,7 +323,7 @@ mod test_queue_collection {
 				&mut QueuedSkill {
 					slot_key: SlotKey::BottomHand(Side::Left),
 					skill: Skill {
-						name: "skill a".to_owned(),
+						token: Token::from("skill a"),
 						..default()
 					},
 					..default()
@@ -331,7 +331,7 @@ mod test_queue_collection {
 				&mut QueuedSkill {
 					slot_key: SlotKey::BottomHand(Side::Right),
 					skill: Skill {
-						name: "skill b".to_owned(),
+						token: Token::from("skill b"),
 						..default()
 					},
 					..default()
@@ -346,7 +346,7 @@ mod test_queue_collection {
 		let mut queue = Queue::new([]);
 		queue.enqueue((
 			Skill {
-				name: "a".to_owned(),
+				token: Token::from("a"),
 
 				..default()
 			},
@@ -354,7 +354,7 @@ mod test_queue_collection {
 		));
 		queue.enqueue((
 			Skill {
-				name: "b".to_owned(),
+				token: Token::from("b"),
 				..default()
 			},
 			SlotKey::BottomHand(Side::Left),
@@ -367,7 +367,7 @@ mod test_queue_collection {
 					&mut QueuedSkill {
 						slot_key: SlotKey::BottomHand(Side::Right),
 						skill: Skill {
-							name: "a".to_owned(),
+							token: Token::from("a"),
 							..default()
 						},
 						..default()
@@ -375,7 +375,7 @@ mod test_queue_collection {
 					&mut QueuedSkill {
 						slot_key: SlotKey::BottomHand(Side::Left),
 						skill: Skill {
-							name: "b".to_owned(),
+							token: Token::from("b"),
 							..default()
 						},
 						..default()
@@ -394,14 +394,14 @@ mod test_queue_collection {
 		let mut queue = Queue::new([QueuedSkill {
 			slot_key: SlotKey::BottomHand(Side::Right),
 			skill: Skill {
-				name: "a".to_owned(),
+				token: Token::from("a"),
 				..default()
 			},
 			..default()
 		}]);
 		queue.enqueue((
 			Skill {
-				name: "b".to_owned(),
+				token: Token::from("b"),
 
 				..default()
 			},
@@ -409,7 +409,7 @@ mod test_queue_collection {
 		));
 		queue.enqueue((
 			Skill {
-				name: "c".to_owned(),
+				token: Token::from("c"),
 
 				..default()
 			},
@@ -423,7 +423,7 @@ mod test_queue_collection {
 					&mut QueuedSkill {
 						slot_key: SlotKey::BottomHand(Side::Right),
 						skill: Skill {
-							name: "b".to_owned(),
+							token: Token::from("b"),
 							..default()
 						},
 						..default()
@@ -431,7 +431,7 @@ mod test_queue_collection {
 					&mut QueuedSkill {
 						slot_key: SlotKey::BottomHand(Side::Left),
 						skill: Skill {
-							name: "c".to_owned(),
+							token: Token::from("c"),
 							..default()
 						},
 						..default()
@@ -450,14 +450,14 @@ mod test_queue_collection {
 		let mut queue = Queue::new([QueuedSkill {
 			slot_key: SlotKey::BottomHand(Side::Right),
 			skill: Skill {
-				name: "a".to_owned(),
+				token: Token::from("a"),
 				..default()
 			},
 			..default()
 		}]);
 		queue.enqueue((
 			Skill {
-				name: "b".to_owned(),
+				token: Token::from("b"),
 
 				..default()
 			},
@@ -465,7 +465,7 @@ mod test_queue_collection {
 		));
 		queue.enqueue((
 			Skill {
-				name: "c".to_owned(),
+				token: Token::from("c"),
 
 				..default()
 			},
@@ -488,14 +488,14 @@ mod test_queue_collection {
 		let mut queue = Queue::new([QueuedSkill {
 			slot_key: SlotKey::BottomHand(Side::Right),
 			skill: Skill {
-				name: "a".to_owned(),
+				token: Token::from("a"),
 				..default()
 			},
 			..default()
 		}]);
 		queue.enqueue((
 			Skill {
-				name: "b".to_owned(),
+				token: Token::from("b"),
 
 				..default()
 			},
@@ -503,7 +503,7 @@ mod test_queue_collection {
 		));
 		queue.enqueue((
 			Skill {
-				name: "c".to_owned(),
+				token: Token::from("c"),
 
 				..default()
 			},

@@ -83,7 +83,7 @@ mod tests {
 	use super::*;
 	use crate::{components::combo_node::ComboNode, skills::Skill};
 	use bevy::prelude::default;
-	use common::tools::keys::slot::Side;
+	use common::{tools::keys::slot::Side, traits::handles_localization::Token};
 
 	#[test]
 	fn insert_skill() {
@@ -94,7 +94,7 @@ mod tests {
 		};
 
 		entry.insert(Some(Skill {
-			name: "my skill".to_owned(),
+			token: Token::from("my skill"),
 			..default()
 		}));
 
@@ -103,7 +103,7 @@ mod tests {
 				SlotKey::BottomHand(Side::Right),
 				(
 					Skill {
-						name: "my skill".to_owned(),
+						token: Token::from("my skill"),
 						..default()
 					},
 					default()
@@ -123,7 +123,7 @@ mod tests {
 					SlotKey::BottomHand(Side::Right),
 					(
 						Skill {
-							name: "sub tree skill".to_owned(),
+							token: Token::from("sub tree skill"),
 							..default()
 						},
 						default(),
@@ -137,7 +137,7 @@ mod tests {
 		};
 
 		entry.insert(Some(Skill {
-			name: "my skill".to_owned(),
+			token: Token::from("my skill"),
 			..default()
 		}));
 
@@ -146,14 +146,14 @@ mod tests {
 				SlotKey::BottomHand(Side::Right),
 				(
 					Skill {
-						name: "my skill".to_owned(),
+						token: Token::from("my skill"),
 						..default()
 					},
 					ComboNode::new([(
 						SlotKey::BottomHand(Side::Right),
 						(
 							Skill {
-								name: "sub tree skill".to_owned(),
+								token: Token::from("sub tree skill"),
 								..default()
 							},
 							default(),
@@ -176,7 +176,7 @@ mod tests {
 						SlotKey::BottomHand(Side::Right),
 						(
 							Skill {
-								name: "sub tree skill".to_owned(),
+								token: Token::from("sub tree skill"),
 								..default()
 							},
 							default(),
@@ -224,7 +224,7 @@ mod tests {
 			SlotKey::BottomHand(Side::Right),
 			(
 				Skill {
-					name: "my skill".to_owned(),
+					token: Token::from("my skill"),
 					..default()
 				},
 				default(),
@@ -242,7 +242,7 @@ mod tests {
 				SlotKey::BottomHand(Side::Left),
 				(
 					Skill {
-						name: "my skill".to_owned(),
+						token: Token::from("my skill"),
 						..default()
 					},
 					default()
@@ -259,14 +259,14 @@ mod tests {
 				SlotKey::BottomHand(Side::Right),
 				(
 					Skill {
-						name: "my main -> off skill".to_owned(),
+						token: Token::from("my main -> off skill"),
 						..default()
 					},
 					ComboNode::new([(
 						SlotKey::BottomHand(Side::Left),
 						(
 							Skill {
-								name: "my child off skill".to_owned(),
+								token: Token::from("my child off skill"),
 								..default()
 							},
 							default(),
@@ -278,14 +278,14 @@ mod tests {
 				SlotKey::BottomHand(Side::Left),
 				(
 					Skill {
-						name: "my off skill".to_owned(),
+						token: Token::from("my off skill"),
 						..default()
 					},
 					ComboNode::new([(
 						SlotKey::BottomHand(Side::Right),
 						(
 							Skill {
-								name: "my child main skill".to_owned(),
+								token: Token::from("my child main skill"),
 								..default()
 							},
 							default(),
@@ -306,7 +306,7 @@ mod tests {
 				SlotKey::BottomHand(Side::Left),
 				(
 					Skill {
-						name: "my main -> off skill".to_owned(),
+						token: Token::from("my main -> off skill"),
 						..default()
 					},
 					ComboNode::new([
@@ -314,7 +314,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Left),
 							(
 								Skill {
-									name: "my child off skill".to_owned(),
+									token: Token::from("my child off skill"),
 									..default()
 								},
 								default(),
@@ -324,7 +324,7 @@ mod tests {
 							SlotKey::BottomHand(Side::Right),
 							(
 								Skill {
-									name: "my child main skill".to_owned(),
+									token: Token::from("my child main skill"),
 									..default()
 								},
 								default(),
@@ -344,21 +344,21 @@ mod tests {
 				SlotKey::BottomHand(Side::Right),
 				(
 					Skill {
-						name: "my main -> off skill".to_owned(),
+						token: Token::from("my main -> off skill"),
 						..default()
 					},
 					ComboNode::new([(
 						SlotKey::BottomHand(Side::Left),
 						(
 							Skill {
-								name: "my child off skill".to_owned(),
+								token: Token::from("my child off skill"),
 								..default()
 							},
 							ComboNode::new([(
 								SlotKey::BottomHand(Side::Left),
 								(
 									Skill {
-										name: "my child child off skill".to_owned(),
+										token: Token::from("my child child off skill"),
 										..default()
 									},
 									default(),
@@ -372,21 +372,21 @@ mod tests {
 				SlotKey::BottomHand(Side::Left),
 				(
 					Skill {
-						name: "my off skill".to_owned(),
+						token: Token::from("my off skill"),
 						..default()
 					},
 					ComboNode::new([(
 						SlotKey::BottomHand(Side::Left),
 						(
 							Skill {
-								name: "my child off skill".to_owned(),
+								token: Token::from("my child off skill"),
 								..default()
 							},
 							ComboNode::new([(
 								SlotKey::BottomHand(Side::Right),
 								(
 									Skill {
-										name: "my child child main skill".to_owned(),
+										token: Token::from("my child child main skill"),
 										..default()
 									},
 									default(),
@@ -409,14 +409,14 @@ mod tests {
 				SlotKey::BottomHand(Side::Left),
 				(
 					Skill {
-						name: "my main -> off skill".to_owned(),
+						token: Token::from("my main -> off skill"),
 						..default()
 					},
 					ComboNode::new([(
 						SlotKey::BottomHand(Side::Left),
 						(
 							Skill {
-								name: "my child off skill".to_owned(),
+								token: Token::from("my child off skill"),
 								..default()
 							},
 							ComboNode::new([
@@ -424,7 +424,7 @@ mod tests {
 									SlotKey::BottomHand(Side::Left),
 									(
 										Skill {
-											name: "my child child off skill".to_owned(),
+											token: Token::from("my child child off skill"),
 											..default()
 										},
 										default(),
@@ -434,7 +434,7 @@ mod tests {
 									SlotKey::BottomHand(Side::Right),
 									(
 										Skill {
-											name: "my child child main skill".to_owned(),
+											token: Token::from("my child child main skill"),
 											..default()
 										},
 										default(),

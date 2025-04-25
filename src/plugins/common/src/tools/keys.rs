@@ -2,7 +2,7 @@ pub mod movement;
 pub mod slot;
 
 use crate::traits::{
-	get_ui_text::{English, GetUiText, Japanese, UIText},
+	handles_localization::Token,
 	iteration::{Iter, IterFinite},
 };
 use bevy::{input::keyboard::KeyCode, utils::default};
@@ -44,20 +44,11 @@ impl From<Key> for KeyCode {
 	}
 }
 
-impl GetUiText<Key> for English {
-	fn ui_text(key: &Key) -> UIText {
-		match key {
-			Key::Movement(key) => English::ui_text(key),
-			Key::Slot(key) => English::ui_text(key),
-		}
-	}
-}
-
-impl GetUiText<Key> for Japanese {
-	fn ui_text(key: &Key) -> UIText {
-		match key {
-			Key::Movement(key) => Japanese::ui_text(key),
-			Key::Slot(key) => Japanese::ui_text(key),
+impl From<Key> for Token {
+	fn from(value: Key) -> Self {
+		match value {
+			Key::Movement(movement_key) => Token::from(movement_key),
+			Key::Slot(slot_key) => Token::from(slot_key),
 		}
 	}
 }

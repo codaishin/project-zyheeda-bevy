@@ -1,6 +1,6 @@
 use super::{IsNot, Key};
 use crate::traits::{
-	get_ui_text::{English, GetUiText, Japanese, UIText},
+	handles_localization::Token,
 	iteration::{Iter, IterFinite},
 };
 use bevy::input::keyboard::KeyCode;
@@ -51,24 +51,13 @@ impl TryFrom<Key> for MovementKey {
 	}
 }
 
-impl GetUiText<MovementKey> for English {
-	fn ui_text(key: &MovementKey) -> UIText {
-		match key {
-			MovementKey::Forward => UIText::from("move forward"),
-			MovementKey::Backward => UIText::from("move backward"),
-			MovementKey::Left => UIText::from("move left"),
-			MovementKey::Right => UIText::from("move right"),
-		}
-	}
-}
-
-impl GetUiText<MovementKey> for Japanese {
-	fn ui_text(key: &MovementKey) -> UIText {
-		match key {
-			MovementKey::Forward => UIText::from("前進"),
-			MovementKey::Backward => UIText::from("後退"),
-			MovementKey::Left => UIText::from("左に移動"),
-			MovementKey::Right => UIText::from("右に移動"),
+impl From<MovementKey> for Token {
+	fn from(value: MovementKey) -> Self {
+		match value {
+			MovementKey::Forward => Token::from("movement-key-forward"),
+			MovementKey::Backward => Token::from("movement-key-backward"),
+			MovementKey::Left => Token::from("movement-key-left"),
+			MovementKey::Right => Token::from("movement-key-right"),
 		}
 	}
 }

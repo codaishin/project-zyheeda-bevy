@@ -1,8 +1,8 @@
-use crate::traits::inspect_able::InspectMarker;
+use crate::traits::{handles_localization::Token, inspect_able::InspectMarker};
 
 #[derive(Debug, PartialEq)]
-pub struct SkillDescription;
+pub struct SkillToken;
 
-impl InspectMarker for SkillDescription {
-	type TFieldRef<'a> = String;
+impl InspectMarker for SkillToken {
+	type TFieldRef<'a> = &'a Token;
 }

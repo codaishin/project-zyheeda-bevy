@@ -1,6 +1,7 @@
 use super::{start_game::StartGame, start_menu_button::StartMenuButton};
 use crate::traits::{LoadUi, colors::DEFAULT_PANEL_COLORS, insert_ui_content::InsertUiContent};
 use bevy::prelude::*;
+use common::traits::handles_localization::LocalizeToken;
 
 #[derive(Component)]
 #[require(Node(full_screen))]
@@ -24,7 +25,20 @@ impl LoadUi<AssetServer> for StartMenu {
 }
 
 impl InsertUiContent for StartMenu {
-	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
+	fn insert_ui_content<TLocalization>(
+		&self,
+		localization: &mut TLocalization,
+		parent: &mut ChildBuilder,
+	) where
+		TLocalization: LocalizeToken,
+	{
+		let title = localization
+			.localize_token("project-zyheeda")
+			.or_string(|| "Project Zyheeda");
+		let new_game = localization
+			.localize_token("start-menu-new-game")
+			.or_token();
+
 		parent
 			.spawn(Node {
 				margin: UiRect::bottom(Val::Px(30.)),
@@ -32,7 +46,7 @@ impl InsertUiContent for StartMenu {
 			})
 			.with_children(|parent| {
 				parent.spawn((
-					Text::new("Project Zyheeda"),
+					Text::new(title),
 					TextFont {
 						font_size: 64.0,
 						..default()
@@ -56,7 +70,7 @@ impl InsertUiContent for StartMenu {
 			))
 			.with_children(|parent| {
 				parent.spawn((
-					Text::new("New Game"),
+					Text::new(new_game),
 					TextFont {
 						font_size: 32.0,
 						..default()

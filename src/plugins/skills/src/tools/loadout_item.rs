@@ -1,18 +1,18 @@
 use bevy::prelude::*;
 use common::{
-	tools::{item_description::ItemDescription, skill_icon::SkillIcon},
-	traits::inspect_able::InspectAble,
+	tools::{item_description::ItemToken, skill_icon::SkillIcon},
+	traits::{handles_localization::Token, inspect_able::InspectAble},
 };
 
 #[derive(Debug, PartialEq)]
 pub struct LoadoutItem {
-	pub name: String,
+	pub token: Token,
 	pub skill_icon: Option<Handle<Image>>,
 }
 
-impl InspectAble<ItemDescription> for LoadoutItem {
-	fn get_inspect_able_field(&self) -> String {
-		self.name.clone()
+impl InspectAble<ItemToken> for LoadoutItem {
+	fn get_inspect_able_field(&self) -> &Token {
+		&self.token
 	}
 }
 

@@ -4,16 +4,17 @@ use crate::{components::model_render::ModelRender, skills::Skill};
 use bevy::prelude::*;
 use common::{
 	components::essence::Essence,
-	tools::{item_description::ItemDescription, item_type::ItemType},
+	tools::{item_description::ItemToken, item_type::ItemType},
 	traits::{
 		accessors::get::{Getter, GetterRef},
+		handles_localization::Token,
 		inspect_able::InspectAble,
 	},
 };
 
 #[derive(Debug, PartialEq, Default, Clone, Asset, TypePath)]
 pub struct Item {
-	pub name: String,
+	pub token: Token,
 	pub model: ModelRender,
 	pub essence: Essence,
 	pub skill: Option<Handle<Skill>>,
@@ -21,17 +22,17 @@ pub struct Item {
 }
 
 impl Item {
-	pub fn named(name: &str) -> Self {
+	pub fn with_token(token: &str) -> Self {
 		Self {
-			name: name.to_owned(),
+			token: Token::from(token),
 			..default()
 		}
 	}
 }
 
-impl InspectAble<ItemDescription> for Item {
-	fn get_inspect_able_field(&self) -> String {
-		self.name.clone()
+impl InspectAble<ItemToken> for Item {
+	fn get_inspect_able_field(&self) -> &Token {
+		&self.token
 	}
 }
 

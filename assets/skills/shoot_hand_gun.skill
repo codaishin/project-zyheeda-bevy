@@ -1,5 +1,5 @@
 {
-	"name": "Shoot Hand Gun",
+	"token": "skill-shoot-hand-gun",
 	"cast_time": {
 		"seconds": 0.2
 	},

@@ -97,7 +97,7 @@ mod tests {
 		simple_init,
 		test_tools::utils::{SingleThreadedApp, new_handle},
 		tools::keys::slot::Side,
-		traits::{mock::Mock, nested_mock::NestedMocks},
+		traits::{handles_localization::Token, mock::Mock, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, mock, predicate::eq};
@@ -217,7 +217,7 @@ mod tests {
 			vec![(
 				skill.id(),
 				Skill {
-					name: "my skill".to_owned(),
+					token: Token::from("my skill"),
 					..default()
 				},
 			)],
@@ -234,7 +234,7 @@ mod tests {
 					.times(1)
 					.with(eq((
 						Skill {
-							name: "my skill".to_owned(),
+							token: Token::from("my skill"),
 							..default()
 						},
 						SlotKey::BottomHand(Side::Right),

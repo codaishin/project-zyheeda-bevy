@@ -1,5 +1,5 @@
 use common::{
-	tools::{keys::slot::SlotKey, skill_description::SkillDescription, skill_icon::SkillIcon},
+	tools::{keys::slot::SlotKey, skill_description::SkillToken, skill_icon::SkillIcon},
 	traits::{handles_combo_menu::GetCombosOrdered, inspect_able::InspectAble},
 };
 use std::collections::HashSet;
@@ -34,7 +34,7 @@ pub(crate) trait BuildComboTreeLayout<TSkill> {
 impl<T, TSkill> BuildComboTreeLayout<TSkill> for T
 where
 	T: GetCombosOrdered<TSkill>,
-	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + PartialEq,
+	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + PartialEq,
 {
 	fn build_combo_tree_layout(&self) -> ComboTreeLayout<TSkill> {
 		let mut get_first_symbol = get_first_symbol(HasRoot::False);
@@ -147,16 +147,23 @@ fn replace_symbols_at<TSkill>(
 
 #[cfg(test)]
 mod tests {
+	use std::sync::LazyLock;
+
 	use super::*;
 	use bevy::prelude::*;
-	use common::tools::keys::slot::{Combo, Side};
+	use common::{
+		tools::keys::slot::{Combo, Side},
+		traits::handles_localization::Token,
+	};
 
 	#[derive(Debug, PartialEq, Default, Clone)]
 	struct _Skill(Option<Handle<Image>>);
 
-	impl InspectAble<SkillDescription> for _Skill {
-		fn get_inspect_able_field(&self) -> String {
-			default()
+	static TOKEN: LazyLock<Token> = LazyLock::new(|| Token::from(""));
+
+	impl InspectAble<SkillToken> for _Skill {
+		fn get_inspect_able_field(&self) -> &Token {
+			&TOKEN
 		}
 	}
 

@@ -11,6 +11,7 @@ use crate::traits::{
 	},
 };
 use bevy::prelude::*;
+use common::traits::{handles_localization::LocalizeToken, thread_safe::ThreadSafe};
 use std::{marker::PhantomData, time::Duration};
 
 #[derive(Component, Debug, PartialEq, Clone)]
@@ -113,14 +114,16 @@ impl<T: Sync + Send + 'static> UpdateTooltipPosition<TooltipUI<T>> for TooltipUI
 	}
 }
 
-impl<T> SpawnTooltips<T> for TooltipUIControl
+impl<T, TLocalization> SpawnTooltips<T, TLocalization> for TooltipUIControl
 where
 	T: TooltipUiConfig + Clone + Send + Sync + 'static,
 	Tooltip<T>: InsertUiContent,
+	TLocalization: LocalizeToken + ThreadSafe,
 {
 	fn spawn(
 		&self,
 		commands: &mut Commands,
+		localize: &mut TLocalization,
 		tooltip_entity: Entity,
 		tooltip: &Tooltip<T>,
 		position: Vec2,
@@ -141,7 +144,7 @@ where
 				container_node
 					.spawn((tooltip.clone(), GlobalZIndexTop, Visibility::Inherited))
 					.with_children(|tooltip_node| {
-						tooltip.insert_ui_content(tooltip_node);
+						tooltip.insert_ui_content(localize, tooltip_node);
 					});
 			});
 	}
@@ -150,10 +153,32 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		traits::handles_localization::{LocalizationResult, Token, localized::Localized},
+	};
+
+	#[derive(Resource, Default)]
+	struct _Localize;
+
+	impl LocalizeToken for _Localize {
+		fn localize_token<TToken>(&mut self, token: TToken) -> LocalizationResult
+		where
+			TToken: Into<Token> + 'static,
+		{
+			let Token(token) = token.into();
+			LocalizationResult::Ok(Localized(format!("Token: {token}")))
+		}
+	}
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _Child(&'static str);
+	struct _Child(Localized);
+
+	impl From<&str> for _Child {
+		fn from(value: &str) -> Self {
+			Self(Localized::from(value))
+		}
+	}
 
 	fn new_app() -> App {
 		App::new().single_threaded(Update)
@@ -218,19 +243,33 @@ mod tests {
 	impl TooltipUiConfig for _T {}
 
 	impl InsertUiContent for Tooltip<_T> {
-		fn insert_ui_content(&self, parent: &mut ChildBuilder) {
-			parent.spawn(_Child(self.0.content));
+		fn insert_ui_content<TLocalization>(
+			&self,
+			localize: &mut TLocalization,
+			parent: &mut ChildBuilder,
+		) where
+			TLocalization: LocalizeToken,
+		{
+			let label = localize
+				.localize_token(self.0.content)
+				.or(|_| String::from("???"));
+			parent.spawn(_Child(label));
 		}
 	}
 
 	fn setup_spawn(position: Vec2, tooltip_delay: Duration) -> App {
 		let mut app = new_app();
+
+		app.init_resource::<_Localize>();
 		app.add_systems(
 			Update,
-			move |mut commands: Commands, tooltips: Query<(Entity, &Tooltip<_T>)>| {
+			move |mut commands: Commands,
+			      mut localize: ResMut<_Localize>,
+			      tooltips: Query<(Entity, &Tooltip<_T>)>| {
 				for (entity, tooltip) in &tooltips {
 					TooltipUIControl { tooltip_delay }.spawn(
 						&mut commands,
+						localize.as_mut(),
 						entity,
 						tooltip,
 						position,
@@ -275,7 +314,7 @@ mod tests {
 				Node::default(),
 			))
 			.with_children(|parent| {
-				parent.spawn(_Child(""));
+				parent.spawn(_Child::from(""));
 			});
 
 		app.update();
@@ -332,7 +371,7 @@ mod tests {
 					Node::default(),
 				))
 				.with_children(|parent| {
-					parent.spawn(_Child(""));
+					parent.spawn(_Child::from(""));
 				});
 		}
 
@@ -495,7 +534,10 @@ mod tests {
 			.iter_entities()
 			.find(|e| e.get::<Parent>().map(|p| p.get()) == Some(*tooltip_ui_child))
 			.expect("not matching child found");
-		assert_eq!(Some(&_Child("My Content")), content.get::<_Child>());
+		assert_eq!(
+			Some(&_Child::from("Token: My Content")),
+			content.get::<_Child>()
+		);
 	}
 
 	#[test]

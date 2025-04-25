@@ -20,7 +20,7 @@ use components::{
 	spawn_children::SpawnChildren,
 };
 use labels::Labels;
-use resources::{key_map::KeyMap, language_server::LanguageServer};
+use resources::key_map::KeyMap;
 use systems::load_asset_model::load_asset_model;
 
 pub struct CommonPlugin;
@@ -29,8 +29,7 @@ impl Plugin for CommonPlugin {
 	fn build(&self, app: &mut App) {
 		let on_instantiate = || Labels::PREFAB_INSTANTIATION.label();
 
-		app.init_resource::<LanguageServer>()
-			.init_resource::<KeyMap>()
+		app.init_resource::<KeyMap>()
 			.add_systems(First, load_asset_model::<AssetServer>)
 			.add_systems(Update, FlipHorizontally::system)
 			.add_systems(

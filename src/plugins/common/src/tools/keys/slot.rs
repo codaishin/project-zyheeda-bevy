@@ -1,10 +1,9 @@
+use super::{IsNot, Key};
 use crate::traits::{
-	get_ui_text::{English, GetUiText, Japanese, UIText},
+	handles_localization::Token,
 	iteration::{Iter, IterFinite},
 };
 use bevy::prelude::*;
-
-use super::{IsNot, Key};
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum SlotKey {
@@ -55,24 +54,13 @@ impl TryFrom<Key> for SlotKey {
 	}
 }
 
-impl GetUiText<SlotKey> for English {
-	fn ui_text(key: &SlotKey) -> UIText {
-		match key {
-			SlotKey::TopHand(Side::Right) => UIText::from("Right Hand (Top)"),
-			SlotKey::TopHand(Side::Left) => UIText::from("Left Hand (Top)"),
-			SlotKey::BottomHand(Side::Right) => UIText::from("Right Hand (Bottom)"),
-			SlotKey::BottomHand(Side::Left) => UIText::from("Left Hand (Bottom)"),
-		}
-	}
-}
-
-impl GetUiText<SlotKey> for Japanese {
-	fn ui_text(key: &SlotKey) -> UIText {
-		match key {
-			SlotKey::TopHand(Side::Right) => UIText::from("右手「上」"),
-			SlotKey::TopHand(Side::Left) => UIText::from("左手「上」"),
-			SlotKey::BottomHand(Side::Right) => UIText::from("右手「下」"),
-			SlotKey::BottomHand(Side::Left) => UIText::from("左手「下」"),
+impl From<SlotKey> for Token {
+	fn from(value: SlotKey) -> Self {
+		match value {
+			SlotKey::TopHand(Side::Left) => Token::from("slot-key-top-hand-left"),
+			SlotKey::TopHand(Side::Right) => Token::from("slot-key-top-hand-right"),
+			SlotKey::BottomHand(Side::Left) => Token::from("slot-key-btm-hand-left"),
+			SlotKey::BottomHand(Side::Right) => Token::from("slot-key-btm-hand-right"),
 		}
 	}
 }

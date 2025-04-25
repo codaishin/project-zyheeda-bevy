@@ -14,7 +14,12 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
 	tools::Index,
-	traits::{handles_graphics::StaticRenderLayers, iteration::IterFinite},
+	traits::{
+		handles_graphics::StaticRenderLayers,
+		handles_localization::LocalizeToken,
+		iteration::IterFinite,
+		thread_safe::ThreadSafe,
+	},
 };
 use std::{fmt::Debug, marker::PhantomData, time::Duration};
 
@@ -52,7 +57,7 @@ impl<TState> InsertUiContent for StateTime<TState>
 where
 	TState: Debug + Copy,
 {
-	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
+	fn insert_ui_content<TLocalization>(&self, _: &mut TLocalization, parent: &mut ChildBuilder) {
 		let state = self.1.map(|s| format!("{s:?}")).unwrap_or("???".into());
 		parent.spawn((
 			Text::new(format!(
@@ -82,12 +87,13 @@ fn update_state_time<TState>(
 	run_time.1 = Some(*state.get());
 }
 
-pub fn setup_run_time_display<TGraphics>(app: &mut App)
+pub fn setup_run_time_display<TLocalization, TGraphics>(app: &mut App)
 where
+	TLocalization: LocalizeToken + Resource,
 	TGraphics: StaticRenderLayers + 'static,
 {
 	for state in GameState::iterator() {
-		app.add_ui::<StateTime<GameState>, TGraphics>(state);
+		app.add_ui::<StateTime<GameState>, TLocalization, TGraphics>(state);
 	}
 	app.add_systems(Update, update_state_time::<GameState>);
 }
@@ -143,7 +149,7 @@ impl TooltipUiConfig for ButtonTooltip {
 }
 
 impl InsertUiContent for Tooltip<ButtonTooltip> {
-	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
+	fn insert_ui_content<TLocalization>(&self, _: &mut TLocalization, parent: &mut ChildBuilder) {
 		parent.spawn((Text::new(&self.value().0), DropdownButton::text_style()));
 	}
 }
@@ -161,13 +167,13 @@ impl<TLayout> Default for WithSubDropdown<TLayout> {
 
 #[derive(Component)]
 #[require(Node)]
-struct ButtonOption<TLayout: Sync + Send + 'static, TValue = &'static str> {
+struct ButtonOption<TLayout: ThreadSafe, TValue = &'static str> {
 	phantom_data: PhantomData<TLayout>,
 	value: TValue,
 	target: Entity,
 }
 
-impl<TLayout: Sync + Send + 'static, TValue: Clone> Clone for ButtonOption<TLayout, TValue> {
+impl<TLayout: ThreadSafe, TValue: Clone> Clone for ButtonOption<TLayout, TValue> {
 	fn clone(&self) -> Self {
 		Self {
 			phantom_data: self.phantom_data,
@@ -177,7 +183,7 @@ impl<TLayout: Sync + Send + 'static, TValue: Clone> Clone for ButtonOption<TLayo
 	}
 }
 
-impl<TLayout: Sync + Send + 'static, TValue> ButtonOption<TLayout, TValue> {
+impl<TLayout: ThreadSafe, TValue> ButtonOption<TLayout, TValue> {
 	fn new(value: TValue, target: Entity) -> Self {
 		Self {
 			phantom_data: PhantomData,
@@ -187,8 +193,11 @@ impl<TLayout: Sync + Send + 'static, TValue> ButtonOption<TLayout, TValue> {
 	}
 }
 
-impl<TLayout: Sync + Send + 'static> InsertUiContent for ButtonOption<TLayout> {
-	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
+impl<TLayout> InsertUiContent for ButtonOption<TLayout>
+where
+	TLayout: ThreadSafe,
+{
+	fn insert_ui_content<TLocalization>(&self, _: &mut TLocalization, parent: &mut ChildBuilder) {
 		let option = (
 			DropdownButton::bundle(),
 			self.clone(),
@@ -200,10 +209,10 @@ impl<TLayout: Sync + Send + 'static> InsertUiContent for ButtonOption<TLayout> {
 	}
 }
 
-impl<TLayout: Sync + Send + 'static, TSubLayout: Sync + Send + 'static> InsertUiContent
+impl<TLayout: ThreadSafe, TSubLayout: ThreadSafe> InsertUiContent
 	for ButtonOption<TLayout, WithSubDropdown<TSubLayout>>
 {
-	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
+	fn insert_ui_content<TLocalization>(&self, _: &mut TLocalization, parent: &mut ChildBuilder) {
 		let option = (
 			DropdownButton::bundle(),
 			Dropdown {
@@ -217,9 +226,7 @@ impl<TLayout: Sync + Send + 'static, TSubLayout: Sync + Send + 'static> InsertUi
 	}
 }
 
-impl<TLayout: Sync + Send + 'static, TValue> GetRootNode
-	for Dropdown<ButtonOption<TLayout, TValue>>
-{
+impl<TLayout: ThreadSafe, TValue> GetRootNode for Dropdown<ButtonOption<TLayout, TValue>> {
 	fn root_node(&self) -> Node {
 		Node {
 			position_type: PositionType::Absolute,
@@ -263,7 +270,7 @@ fn update_button_text(
 	}
 }
 
-fn replace_button_text<TLayout: Sync + Send + 'static>(
+fn replace_button_text<TLayout: ThreadSafe>(
 	mut buttons: Query<&mut DropdownButton>,
 	options: Query<(&ButtonOption<TLayout>, &Interaction), Changed<Interaction>>,
 ) {
@@ -279,9 +286,7 @@ fn replace_button_text<TLayout: Sync + Send + 'static>(
 	}
 }
 
-fn get_button_options_numbered<TLayout: Sync + Send + 'static>(
-	target: Entity,
-) -> Vec<ButtonOption<TLayout>> {
+fn get_button_options_numbered<TLayout: ThreadSafe>(target: Entity) -> Vec<ButtonOption<TLayout>> {
 	vec![
 		ButtonOption::new("1", target),
 		ButtonOption::new("2", target),
@@ -291,7 +296,7 @@ fn get_button_options_numbered<TLayout: Sync + Send + 'static>(
 	]
 }
 
-fn get_button_options<TLayout: Sync + Send + 'static, TExtra: Sync + Send + 'static + Default>(
+fn get_button_options<TLayout: ThreadSafe, TExtra: ThreadSafe + Default>(
 	target: Entity,
 ) -> Vec<ButtonOption<TLayout, TExtra>> {
 	vec![
@@ -303,12 +308,15 @@ fn get_button_options<TLayout: Sync + Send + 'static, TExtra: Sync + Send + 'sta
 	]
 }
 
-pub fn setup_dropdown_test(app: &mut App) {
-	app.add_tooltip::<ButtonTooltip>()
-		.add_dropdown::<ButtonOption<SingleRow>>()
-		.add_dropdown::<ButtonOption<SingleColumn>>()
-		.add_dropdown::<ButtonOption<TwoColumns>>()
-		.add_dropdown::<ButtonOption<SingleRow, WithSubDropdown<SingleColumn>>>()
+pub fn setup_dropdown_test<TLocalization>(app: &mut App)
+where
+	TLocalization: LocalizeToken + Resource,
+{
+	app.add_tooltip::<TLocalization, ButtonTooltip>()
+		.add_dropdown::<TLocalization, ButtonOption<SingleRow>>()
+		.add_dropdown::<TLocalization, ButtonOption<SingleColumn>>()
+		.add_dropdown::<TLocalization, ButtonOption<TwoColumns>>()
+		.add_dropdown::<TLocalization, ButtonOption<SingleRow, WithSubDropdown<SingleColumn>>>()
 		.add_systems(
 			Update,
 			(

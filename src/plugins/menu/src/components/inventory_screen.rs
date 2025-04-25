@@ -7,8 +7,9 @@ use bevy::prelude::*;
 use common::{
 	tools::{inventory_key::InventoryKey, keys::slot::SlotKey},
 	traits::{
-		get_ui_text::{English, GetUiText, UIText},
+		handles_localization::{LocalizeToken, localized::Localized},
 		iteration::{IterFinite, IterInfinite},
+		thread_safe::ThreadSafe,
 	},
 };
 
@@ -37,21 +38,32 @@ impl LoadUi<AssetServer> for InventoryScreen {
 }
 
 impl InsertUiContent for InventoryScreen {
-	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
+	fn insert_ui_content<TLocalization>(
+		&self,
+		localize: &mut TLocalization,
+		parent: &mut ChildBuilder,
+	) where
+		TLocalization: LocalizeToken,
+	{
 		parent
 			.spawn(Node {
 				flex_direction: FlexDirection::Row,
 				align_items: AlignItems::Start,
 				..default()
 			})
-			.with_children(add_equipment())
-			.with_children(add_inventory());
+			.with_children(add_equipment(localize))
+			.with_children(add_inventory(localize));
 	}
 }
 
-fn add_inventory() -> impl Fn(&mut ChildBuilder) {
+fn add_inventory<TLocalization>(localize: &mut TLocalization) -> impl FnMut(&mut ChildBuilder)
+where
+	TLocalization: LocalizeToken,
+{
 	move |parent| {
 		let mut keys = InventoryKey::iterator_infinite();
+		let inventory = localize.localize_token("inventory").or(|_| "Inventory");
+
 		parent
 			.spawn(Node {
 				flex_direction: FlexDirection::Column,
@@ -60,14 +72,26 @@ fn add_inventory() -> impl Fn(&mut ChildBuilder) {
 				..default()
 			})
 			.with_children(|parent| {
-				add_title(parent, "Inventory");
-				add_grid(parent, UIText::Unmapped, 5, 5, || keys.next_infinite());
+				add_title(parent, inventory);
+				add_grid(
+					parent,
+					Localized::from(""),
+					5,
+					5,
+					|| keys.next_infinite(),
+					localize,
+				);
 			});
 	}
 }
 
-fn add_equipment() -> impl Fn(&mut ChildBuilder) {
+fn add_equipment<TLocalization>(localize: &mut TLocalization) -> impl FnMut(&mut ChildBuilder)
+where
+	TLocalization: LocalizeToken,
+{
 	move |parent| {
+		let equipment = localize.localize_token("equipment").or(|_| "Equipment");
+
 		parent
 			.spawn(Node {
 				flex_direction: FlexDirection::Column,
@@ -76,15 +100,22 @@ fn add_equipment() -> impl Fn(&mut ChildBuilder) {
 				..default()
 			})
 			.with_children(|parent| {
-				add_title(parent, "Equipment");
+				add_title(parent, equipment);
 				for key in SlotKey::iterator() {
-					add_grid(parent, English::ui_text(&key), 1, 1, || key);
+					add_grid(
+						parent,
+						localize.localize_token(key).or_token(),
+						1,
+						1,
+						|| key,
+						localize,
+					);
 				}
 			});
 	}
 }
 
-fn add_title(parent: &mut ChildBuilder, title: &str) {
+fn add_title(parent: &mut ChildBuilder, title: Localized) {
 	parent
 		.spawn(Node {
 			flex_direction: FlexDirection::Row,
@@ -103,13 +134,20 @@ fn add_title(parent: &mut ChildBuilder, title: &str) {
 		});
 }
 
-fn add_grid<TKey: Sync + Send + 'static>(
+fn add_grid<TKey, TLocalization>(
 	parent: &mut ChildBuilder,
-	grid_label: UIText,
+	grid_label: Localized,
 	element_count_x: u32,
 	element_count_y: u32,
 	mut element_key: impl FnMut() -> TKey,
-) {
+	localize: &mut TLocalization,
+) where
+	TKey: ThreadSafe,
+	TLocalization: LocalizeToken,
+{
+	let label = &grid_label;
+	let empty = &localize.localize_token("inventory-item-empty").or_token();
+
 	for _ in 0..element_count_y {
 		parent
 			.spawn(Node {
@@ -118,16 +156,14 @@ fn add_grid<TKey: Sync + Send + 'static>(
 				..default()
 			})
 			.with_children(|parent| {
-				if let UIText::String(label) = grid_label.clone() {
-					parent.spawn((
-						Text::new(label),
-						TextFont {
-							font_size: 20.0,
-							..default()
-						},
-						TextColor(InventoryPanel::PANEL_COLORS.text),
-					));
-				}
+				parent.spawn((
+					Text::new(label.clone()),
+					TextFont {
+						font_size: 20.0,
+						..default()
+					},
+					TextColor(InventoryPanel::PANEL_COLORS.text),
+				));
 				for _ in 0..element_count_x {
 					parent
 						.spawn((
@@ -145,7 +181,7 @@ fn add_grid<TKey: Sync + Send + 'static>(
 						))
 						.with_children(|parent| {
 							parent.spawn((
-								Text::new("<Empty>"),
+								Text::new(empty.clone()),
 								TextFont {
 									font_size: 15.0,
 									..default()

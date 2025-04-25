@@ -2,9 +2,9 @@ use super::{inspect_able::InspectAble, thread_safe::ThreadSafe};
 use crate::tools::{
 	change::Change,
 	inventory_key::InventoryKey,
-	item_description::ItemDescription,
+	item_description::ItemToken,
 	keys::slot::SlotKey,
-	skill_description::SkillDescription,
+	skill_description::SkillToken,
 	skill_execution::SkillExecution,
 	skill_icon::SkillIcon,
 	swap_key::SwapKey,
@@ -22,7 +22,7 @@ pub trait HandlesLoadoutMenu {
 	) where
 		TQuickbar: GetItem<SlotKey> + ThreadSafe,
 		TQuickbar::TItem:
-			InspectAble<SkillDescription> + InspectAble<SkillIcon> + InspectAble<SkillExecution>;
+			InspectAble<SkillToken> + InspectAble<SkillIcon> + InspectAble<SkillExecution>;
 }
 
 pub trait ConfigureInventory<TSwap> {
@@ -33,9 +33,9 @@ pub trait ConfigureInventory<TSwap> {
 		get_changed_slots: impl IntoSystem<(), Change<TSlots>, TSystemMarker2>,
 	) where
 		TInventory: GetItem<InventoryKey> + ThreadSafe,
-		TInventory::TItem: InspectAble<ItemDescription>,
+		TInventory::TItem: InspectAble<ItemToken>,
 		TSlots: GetItem<SlotKey> + ThreadSafe,
-		TSlots::TItem: InspectAble<ItemDescription>;
+		TSlots::TItem: InspectAble<ItemToken>;
 }
 
 pub trait SwapValuesByKey {

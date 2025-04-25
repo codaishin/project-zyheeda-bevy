@@ -1,5 +1,5 @@
 {
-	"name": "Gravity Well",
+	"token": "skill-gravity-well",
 	"cast_time": {
 		"seconds": 0.2
 	},

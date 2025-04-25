@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Localized(pub String);
 
 impl Localized {
@@ -33,5 +33,11 @@ impl From<Localized> for String {
 impl From<Localized> for Text {
 	fn from(Localized(string): Localized) -> Self {
 		Text(string)
+	}
+}
+
+impl From<Localized> for Name {
+	fn from(Localized(string): Localized) -> Self {
+		Name::from(string)
 	}
 }

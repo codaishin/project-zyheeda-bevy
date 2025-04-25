@@ -88,9 +88,9 @@ impl SetLocalization for FtlServer {
 }
 
 impl LocalizeToken for FtlServer {
-	fn localize_token<'a, TToken>(&mut self, token: TToken) -> LocalizationResult<'a>
+	fn localize_token<TToken>(&mut self, token: TToken) -> LocalizationResult
 	where
-		TToken: Into<Token<'a>>,
+		TToken: Into<Token>,
 	{
 		let (current, locales) = match self.current.as_ref() {
 			Some(current) => (current, vec![current, &self.fallback]),
@@ -102,7 +102,7 @@ impl LocalizeToken for FtlServer {
 
 			if locale.ln != current.ln {
 				ftl_errors.push(FtlError::FallbackAttempt {
-					token: current.ln_token(str),
+					token: current.ln_token(&str),
 					fallback: locale.ln.clone(),
 				});
 			}
@@ -112,13 +112,13 @@ impl LocalizeToken for FtlServer {
 				return None;
 			};
 
-			let Some(msg) = bundle.get_message(str) else {
-				ftl_errors.push(FtlError::NoMessageFor(locale.ln_token(str)));
+			let Some(msg) = bundle.get_message(&str) else {
+				ftl_errors.push(FtlError::NoMessageFor(locale.ln_token(&str)));
 				return None;
 			};
 
 			let Some(pattern) = msg.value() else {
-				ftl_errors.push(FtlError::NoPatternFor(locale.ln_token(str)));
+				ftl_errors.push(FtlError::NoPatternFor(locale.ln_token(&str)));
 				return None;
 			};
 
@@ -127,7 +127,7 @@ impl LocalizeToken for FtlServer {
 
 			if !fluent_errors.is_empty() {
 				ftl_errors.push(FtlError::FluentErrors {
-					token: locale.ln_token(str),
+					token: locale.ln_token(&str),
 					errors: fluent_errors,
 				});
 			}
@@ -603,7 +603,7 @@ mod tests {
 		let result = server.localize_token("a");
 		assert_eq!(
 			(
-				LocalizationResult::Error(Token("a").failed()),
+				LocalizationResult::Error(Token::from("a").failed()),
 				vec![FtlError::NoBundle(langid!("en"))]
 			),
 			(result, server.errors)
@@ -633,7 +633,7 @@ mod tests {
 		let result = server.localize_token("b");
 		assert_eq!(
 			(
-				LocalizationResult::Error(Token("b").failed()),
+				LocalizationResult::Error(Token::from("b").failed()),
 				vec![FtlError::NoMessageFor(LnToken {
 					value: String::from("b"),
 					language: langid!("en")
@@ -666,7 +666,7 @@ mod tests {
 		let result = server.localize_token("a");
 		assert_eq!(
 			(
-				LocalizationResult::Error(Token("a").failed()),
+				LocalizationResult::Error(Token::from("a").failed()),
 				vec![FtlError::NoPatternFor(LnToken {
 					value: String::from("a"),
 					language: langid!("en")
