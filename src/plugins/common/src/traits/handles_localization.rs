@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use std::ops::Deref;
+use std::{fmt::Display, ops::Deref};
 use unic_langid::LanguageIdentifier;
 
 pub trait HandlesLocalization {
@@ -11,19 +11,46 @@ pub trait SetLocalization {
 }
 
 pub trait LocalizeToken {
-	fn localize_token<'a>(&mut self, token: Token<'a>) -> LocalizationResult<'a>;
+	fn localize_token<'a, TToken>(&mut self, token: TToken) -> LocalizationResult<'a>
+	where
+		TToken: Into<Token<'a>>;
 }
 
-pub type Token<'a> = &'a str;
+#[derive(Debug, PartialEq)]
+pub struct Token<'a>(pub &'a str);
+
+impl<'a> Token<'a> {
+	pub fn failed(self) -> FailedToken<'a> {
+		FailedToken(self)
+	}
+}
+
+impl Display for Token<'_> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "token: {}", self.0)
+	}
+}
+
+impl<'a> From<&'a str> for Token<'a> {
+	fn from(value: &'a str) -> Self {
+		Token(value)
+	}
+}
+
+impl<'a> From<&'a String> for Token<'a> {
+	fn from(value: &'a String) -> Self {
+		Token(value)
+	}
+}
 
 #[derive(Debug, PartialEq)]
 pub struct FailedToken<'a>(pub Token<'a>);
 
 impl<'a> Deref for FailedToken<'a> {
-	type Target = Token<'a>;
+	type Target = &'a str;
 
 	fn deref(&self) -> &Self::Target {
-		&self.0
+		&self.0.0
 	}
 }
 
@@ -56,17 +83,17 @@ mod tests {
 
 		assert_eq!(
 			String::from("my string"),
-			result.or(|FailedToken(token)| format!("FAILED: {token}"))
+			result.or(|failed_token| format!("FAILED: {}", *failed_token))
 		)
 	}
 
 	#[test]
 	fn localize_result_token() {
-		let result = LocalizationResult::Error(FailedToken("my string"));
+		let result = LocalizationResult::Error(FailedToken(Token("my string")));
 
 		assert_eq!(
 			String::from("FAILED: my string"),
-			result.or(|FailedToken(token)| format!("FAILED: {token}"))
+			result.or(|failed_token| format!("FAILED: {}", *failed_token))
 		)
 	}
 }
