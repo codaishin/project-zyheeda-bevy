@@ -1,4 +1,7 @@
+pub mod localized;
+
 use bevy::prelude::*;
+use localized::Localized;
 use std::{fmt::Display, ops::Deref};
 use unic_langid::LanguageIdentifier;
 
@@ -56,19 +59,19 @@ impl<'a> Deref for FailedToken<'a> {
 
 #[derive(Debug, PartialEq)]
 pub enum LocalizationResult<'a> {
-	Value(String),
+	Ok(Localized),
 	Error(FailedToken<'a>),
 }
 
 impl LocalizationResult<'_> {
-	pub fn or<F, T>(self, fallback: F) -> String
+	pub fn or<F, T>(self, fallback: F) -> Localized
 	where
 		F: Fn(FailedToken) -> T,
 		T: Into<String>,
 	{
 		match self {
-			Self::Value(string) => string,
-			Self::Error(failed_token) => fallback(failed_token).into(),
+			Self::Ok(string) => string,
+			Self::Error(failed_token) => Localized::from_string(fallback(failed_token)),
 		}
 	}
 }
@@ -79,10 +82,10 @@ mod tests {
 
 	#[test]
 	fn localize_result_string() {
-		let result = LocalizationResult::Value(String::from("my string"));
+		let result = LocalizationResult::Ok(Localized::from("my string"));
 
 		assert_eq!(
-			String::from("my string"),
+			Localized::from("my string"),
 			result.or(|failed_token| format!("FAILED: {}", *failed_token))
 		)
 	}
@@ -92,7 +95,7 @@ mod tests {
 		let result = LocalizationResult::Error(FailedToken(Token("my string")));
 
 		assert_eq!(
-			String::from("FAILED: my string"),
+			Localized::from("FAILED: my string"),
 			result.or(|failed_token| format!("FAILED: {}", *failed_token))
 		)
 	}
