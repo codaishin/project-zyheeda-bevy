@@ -7,13 +7,18 @@ use crate::{
 	traits::{GetLayout, GetRootNode, insert_ui_content::InsertUiContent},
 };
 use bevy::prelude::*;
-use common::tools::Focus;
+use common::{
+	tools::Focus,
+	traits::{handles_localization::LocalizeToken, thread_safe::ThreadSafe},
+};
 
-pub(crate) fn dropdown_spawn_focused<TItem>(
+pub(crate) fn dropdown_spawn_focused<TLocalization, TItem>(
 	focus: In<Focus>,
 	mut commands: Commands,
+	mut localization: ResMut<TLocalization>,
 	dropdowns: Query<(Entity, &Dropdown<TItem>)>,
 ) where
+	TLocalization: LocalizeToken + Resource,
 	TItem: InsertUiContent + Sync + Send + 'static,
 	Dropdown<TItem>: GetRootNode + GetLayout,
 {
@@ -39,7 +44,9 @@ pub(crate) fn dropdown_spawn_focused<TItem>(
 				.with_children(|container_node| {
 					container_node
 						.spawn(get_node(dropdown))
-						.with_children(|dropdown_node| spawn_items(dropdown_node, dropdown));
+						.with_children(|dropdown_node| {
+							spawn_items(localization.as_mut(), dropdown_node, dropdown)
+						});
 				});
 		});
 	}
@@ -78,27 +85,49 @@ fn repetitions(count: usize, max_index: u16) -> (u16, u16) {
 	(limit, count as u16 / limit)
 }
 
-fn spawn_items<TItem>(dropdown_node: &mut ChildBuilder, dropdown: &Dropdown<TItem>)
-where
+fn spawn_items<TLocalization, TItem>(
+	localization: &mut TLocalization,
+	dropdown_node: &mut ChildBuilder,
+	dropdown: &Dropdown<TItem>,
+) where
 	TItem: InsertUiContent,
+	TLocalization: LocalizeToken + ThreadSafe,
 {
 	for item in &dropdown.items {
 		dropdown_node
 			.spawn(Node::default())
-			.with_children(|item_node| item.insert_ui_content(item_node));
+			.with_children(|item_node| item.insert_ui_content(localization, item_node));
 	}
 }
 
 #[cfg(test)]
 mod tests {
+
 	use super::*;
 	use crate::{
 		components::GlobalZIndexTop,
 		tools::Layout,
 		traits::insert_ui_content::InsertUiContent,
 	};
-	use common::{test_tools::utils::SingleThreadedApp, tools::Index};
-	use mockall::mock;
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		tools::Index,
+		traits::handles_localization::{LocalizationResult, Token, localized::Localized},
+	};
+
+	#[derive(Resource, Default, Debug, PartialEq, Clone, Copy)]
+	struct _Localization;
+
+	impl LocalizeToken for _Localization {
+		fn localize_token<TToken>(&mut self, token: TToken) -> LocalizationResult
+		where
+			TToken: Into<Token> + 'static,
+		{
+			let Token(token) = token.into();
+
+			LocalizationResult::Ok(Localized(format!("Token: {token}")))
+		}
+	}
 
 	macro_rules! impl_item {
 		($item:ident) => {
@@ -106,7 +135,12 @@ mod tests {
 			struct $item;
 
 			impl InsertUiContent for $item {
-				fn insert_ui_content(&self, _: &mut ChildBuilder) {}
+				fn insert_ui_content<TLocalization>(
+					&self,
+					_: &mut TLocalization,
+					_: &mut ChildBuilder,
+				) {
+				}
 			}
 		};
 	}
@@ -165,20 +199,38 @@ mod tests {
 		};
 	}
 
-	mock! {
-		_Item {}
-		impl InsertUiContent for _Item {
-			fn insert_ui_content<'a>(&self, parent: &mut ChildBuilder<'a>);
+	#[derive(Component, Debug, PartialEq)]
+	struct _ItemContent(Localized);
+
+	impl From<&str> for _ItemContent {
+		fn from(value: &str) -> Self {
+			Self(Localized::from(value))
 		}
 	}
 
-	impl GetRootNode for Dropdown<Mock_Item> {
+	struct _Item;
+
+	impl InsertUiContent for _Item {
+		fn insert_ui_content<TLocalization>(
+			&self,
+			localization: &mut TLocalization,
+			parent: &mut ChildBuilder,
+		) where
+			TLocalization: LocalizeToken,
+		{
+			parent.spawn(_ItemContent(
+				localization.localize_token("Content").or_string(|| "???"),
+			));
+		}
+	}
+
+	impl GetRootNode for Dropdown<_Item> {
 		fn root_node(&self) -> Node {
 			Node::default()
 		}
 	}
 
-	impl GetLayout for Dropdown<Mock_Item> {
+	impl GetLayout for Dropdown<_Item> {
 		fn layout(&self) -> Layout {
 			Layout::SINGLE_COLUMN
 		}
@@ -194,9 +246,11 @@ mod tests {
 	{
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<_In>();
+		app.init_resource::<_Localization>();
 		app.add_systems(
 			Update,
-			(|focus: Res<_In>| focus.0.clone()).pipe(dropdown_spawn_focused::<TItem>),
+			(|focus: Res<_In>| focus.0.clone())
+				.pipe(dropdown_spawn_focused::<_Localization, TItem>),
 		);
 
 		app
@@ -326,9 +380,8 @@ mod tests {
 
 	#[test]
 	fn spawn_dropdown_item_container_node() {
-		let mut app = setup::<Mock_Item>();
-		let mut item = Mock_Item::default();
-		item.expect_insert_ui_content().return_const(());
+		let mut app = setup::<_Item>();
+		let item = _Item;
 
 		let dropdown = app.world_mut().spawn(Dropdown { items: vec![item] }).id();
 		app.world_mut()
@@ -345,14 +398,8 @@ mod tests {
 
 	#[test]
 	fn instantiate_dropdown_item_content() {
-		#[derive(Component, Debug, PartialEq)]
-		struct _Content(&'static str);
-
-		let mut app = setup::<Mock_Item>();
-		let mut item = Mock_Item::default();
-		item.expect_insert_ui_content().returning(|item_node| {
-			item_node.spawn(_Content("My Content"));
-		});
+		let mut app = setup::<_Item>();
+		let item = _Item;
 
 		let dropdown = app.world_mut().spawn(Dropdown { items: vec![item] }).id();
 		app.world_mut()
@@ -366,8 +413,8 @@ mod tests {
 		let item_content = last_child_of!(app, item_node);
 
 		assert_eq!(
-			Some(&_Content("My Content")),
-			item_content.get::<_Content>(),
+			Some(&_ItemContent::from("Token: Content")),
+			item_content.get::<_ItemContent>(),
 		);
 	}
 

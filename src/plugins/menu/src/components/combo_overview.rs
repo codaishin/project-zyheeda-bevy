@@ -20,6 +20,7 @@ use bevy::prelude::*;
 use common::{
 	tools::{keys::slot::SlotKey, skill_description::SkillDescription, skill_icon::SkillIcon},
 	traits::{
+		handles_localization::LocalizeToken,
 		inspect_able::{InspectAble, InspectField},
 		load_asset::{LoadAsset, Path},
 		thread_safe::ThreadSafe,
@@ -326,12 +327,18 @@ impl<TSkill> InsertUiContent for ComboOverview<TSkill>
 where
 	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
 {
-	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
+	fn insert_ui_content<TLocalization>(
+		&self,
+		localize: &mut TLocalization,
+		parent: &mut ChildBuilder,
+	) where
+		TLocalization: LocalizeToken + 'static,
+	{
 		add_title(parent, "Combos");
 		if self.layout.is_empty() {
-			add_empty_combo(parent, &self.new_skill_icon);
+			add_empty_combo(localize, parent, &self.new_skill_icon);
 		} else {
-			add_combo_list(parent, self);
+			add_combo_list(localize, parent, self);
 		}
 	}
 }
@@ -354,7 +361,13 @@ fn add_title(parent: &mut ChildBuilder, title: &str) {
 		});
 }
 
-fn add_empty_combo(parent: &mut ChildBuilder, icon: &Handle<Image>) {
+fn add_empty_combo<TLocalization>(
+	localize: &mut TLocalization,
+	parent: &mut ChildBuilder,
+	icon: &Handle<Image>,
+) where
+	TLocalization: LocalizeToken + 'static,
+{
 	parent
 		.spawn(Node {
 			flex_direction: FlexDirection::Column,
@@ -369,6 +382,7 @@ fn add_empty_combo(parent: &mut ChildBuilder, icon: &Handle<Image>) {
 				})
 				.with_children(|parent| {
 					AddPanel::start_combo(
+						localize,
 						parent,
 						icon,
 						PanelOverlay(&[add_append_button]),
@@ -378,9 +392,13 @@ fn add_empty_combo(parent: &mut ChildBuilder, icon: &Handle<Image>) {
 		});
 }
 
-fn add_combo_list<TSkill>(parent: &mut ChildBuilder, combo_overview: &ComboOverview<TSkill>)
-where
+fn add_combo_list<TSkill, TLocalization>(
+	localize: &mut TLocalization,
+	parent: &mut ChildBuilder,
+	combo_overview: &ComboOverview<TSkill>,
+) where
 	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
+	TLocalization: LocalizeToken + 'static,
 {
 	parent
 		.spawn(Node {
@@ -390,19 +408,27 @@ where
 		.with_children(|parent| {
 			let mut z_index = 0;
 			for combo in &combo_overview.layout {
-				add_combo(parent, combo, z_index, &combo_overview.new_skill_icon);
+				add_combo(
+					localize,
+					parent,
+					combo,
+					z_index,
+					&combo_overview.new_skill_icon,
+				);
 				z_index -= 1;
 			}
 		});
 }
 
-fn add_combo<TSkill>(
+fn add_combo<TSkill, TLocalization>(
+	localize: &mut TLocalization,
 	parent: &mut ChildBuilder,
 	combo: &[ComboTreeElement<TSkill>],
 	local_z: i32,
 	new_skill_icon: &Handle<Image>,
 ) where
 	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
+	TLocalization: LocalizeToken + 'static,
 {
 	parent
 		.spawn((
@@ -417,21 +443,24 @@ fn add_combo<TSkill>(
 		))
 		.with_children(|parent| {
 			for element in combo {
-				let panel = AddPanel::from(element);
-				panel.spawn_as_child(parent, new_skill_icon);
+				let panel = AddPanel::<TSkill, TLocalization>::from(element);
+				panel.spawn_as_child(localize, parent, new_skill_icon);
 			}
 		});
 }
 
-enum AddPanel<'a, TSkill> {
+enum AddPanel<'a, TSkill, TLocalization>
+where
+	TLocalization: LocalizeToken + 'static,
+{
 	StartCombo {
-		panel_overlay: PanelOverlay,
+		panel_overlay: PanelOverlay<TLocalization>,
 		panel_background: PanelBackground,
 	},
 	Skill {
 		key_path: &'a [SlotKey],
 		skill: &'a TSkill,
-		panel_overlay: PanelOverlay,
+		panel_overlay: PanelOverlay<TLocalization>,
 		panel_background: PanelBackground,
 	},
 	Empty {
@@ -439,11 +468,15 @@ enum AddPanel<'a, TSkill> {
 	},
 }
 
-impl AddPanel<'_, ()> {
+impl<TLocalization> AddPanel<'_, (), TLocalization>
+where
+	TLocalization: LocalizeToken + 'static,
+{
 	fn start_combo(
+		localize: &mut TLocalization,
 		parent: &mut ChildBuilder,
 		icon: &Handle<Image>,
-		PanelOverlay(panel_overlays): PanelOverlay,
+		PanelOverlay(panel_overlays): PanelOverlay<TLocalization>,
 		PanelBackground(panel_backgrounds): PanelBackground,
 	) {
 		parent
@@ -456,13 +489,17 @@ impl AddPanel<'_, ()> {
 					.spawn(ComboOverview::skill_button(icon.clone()))
 					.with_children(|parent| {
 						for add_overlay in panel_overlays {
-							add_overlay(&[], parent);
+							add_overlay(&[], parent, localize);
 						}
 					});
 			});
 	}
 
-	fn empty(parent: &mut ChildBuilder, PanelBackground(panel_background): PanelBackground) {
+	fn empty(
+		_: &mut TLocalization,
+		parent: &mut ChildBuilder,
+		PanelBackground(panel_background): PanelBackground,
+	) {
 		parent
 			.spawn((
 				#[cfg(debug_assertions)]
@@ -481,33 +518,49 @@ impl AddPanel<'_, ()> {
 	}
 }
 
-impl<TSkill> AddPanel<'_, TSkill>
+impl<TSkill, TLocalization> AddPanel<'_, TSkill, TLocalization>
 where
 	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + ThreadSafe,
+	TLocalization: LocalizeToken,
 {
-	fn spawn_as_child(self, parent: &mut ChildBuilder, icon: &Handle<Image>) {
+	fn spawn_as_child(
+		self,
+		localize: &mut TLocalization,
+		parent: &mut ChildBuilder,
+		icon: &Handle<Image>,
+	) {
 		match self {
-			AddPanel::Empty { panel_background } => AddPanel::empty(parent, panel_background),
+			AddPanel::Empty { panel_background } => {
+				AddPanel::empty(localize, parent, panel_background)
+			}
 			AddPanel::StartCombo {
 				panel_overlay,
 				panel_background,
 			} => {
-				AddPanel::start_combo(parent, icon, panel_overlay, panel_background);
+				AddPanel::start_combo(localize, parent, icon, panel_overlay, panel_background);
 			}
 			AddPanel::Skill {
 				key_path,
 				skill,
 				panel_overlay,
 				panel_background,
-			} => AddPanel::skill(parent, key_path, skill, panel_overlay, panel_background),
+			} => AddPanel::skill(
+				localize,
+				parent,
+				key_path,
+				skill,
+				panel_overlay,
+				panel_background,
+			),
 		}
 	}
 
 	fn skill(
+		localize: &mut TLocalization,
 		parent: &mut ChildBuilder,
 		key_path: &[SlotKey],
 		skill: &TSkill,
-		PanelOverlay(panel_overlay): PanelOverlay,
+		PanelOverlay(panel_overlay): PanelOverlay<TLocalization>,
 		PanelBackground(panel_background): PanelBackground,
 	) {
 		parent
@@ -536,14 +589,18 @@ where
 					))
 					.with_children(|parent| {
 						for add_overlay in panel_overlay {
-							add_overlay(key_path, parent);
+							add_overlay(key_path, parent, localize);
 						}
 					});
 			});
 	}
 }
 
-impl<'a, TSkill> From<&'a ComboTreeElement<TSkill>> for AddPanel<'a, TSkill> {
+impl<'a, TSkill, TLocalization> From<&'a ComboTreeElement<TSkill>>
+	for AddPanel<'a, TSkill, TLocalization>
+where
+	TLocalization: LocalizeToken + 'static,
+{
 	fn from(element: &'a ComboTreeElement<TSkill>) -> Self {
 		match element {
 			ComboTreeElement::Symbol(Symbol::Empty) => AddPanel::Empty {
@@ -575,7 +632,11 @@ impl<'a, TSkill> From<&'a ComboTreeElement<TSkill>> for AddPanel<'a, TSkill> {
 	}
 }
 
-struct PanelOverlay(&'static [fn(&[SlotKey], &mut ChildBuilder)]);
+struct PanelOverlay<TLocalization>(
+	&'static [fn(&[SlotKey], &mut ChildBuilder, &mut TLocalization)],
+)
+where
+	TLocalization: 'static;
 
 struct PanelBackground(&'static [fn(&mut ChildBuilder)]);
 
@@ -603,7 +664,10 @@ fn add_background_corner(parent: &mut ChildBuilder) {
 		});
 }
 
-fn add_key(key_path: &[SlotKey], parent: &mut ChildBuilder) {
+fn add_key<TLocalization>(key_path: &[SlotKey], parent: &mut ChildBuilder, _: &mut TLocalization)
+where
+	TLocalization: LocalizeToken,
+{
 	let Some(skill_key) = key_path.last() else {
 		return;
 	};
@@ -619,14 +683,22 @@ fn add_key(key_path: &[SlotKey], parent: &mut ChildBuilder) {
 		});
 }
 
-fn add_append_button(key_path: &[SlotKey], parent: &mut ChildBuilder) {
+fn add_append_button<TLocalization>(
+	key_path: &[SlotKey],
+	parent: &mut ChildBuilder,
+	localize: &mut TLocalization,
+) where
+	TLocalization: LocalizeToken,
+{
+	let label = localize.localize_token("combo-skill-add").or_token();
+
 	parent
 		.spawn(ComboOverview::append_button_offset_node())
-		.with_children(|parent| {
+		.with_children(move |parent| {
 			parent
 				.spawn((
 					ComboOverview::modify_button(),
-					Tooltip::new("Add Skill to combo"), // FIXME: Language support
+					Tooltip::new(label),
 					KeySelectDropdownCommand {
 						extra: AppendSkillCommand,
 						key_path: key_path.to_vec(),
@@ -638,14 +710,22 @@ fn add_append_button(key_path: &[SlotKey], parent: &mut ChildBuilder) {
 		});
 }
 
-fn add_delete_button(key_path: &[SlotKey], parent: &mut ChildBuilder) {
+fn add_delete_button<TLocalization>(
+	key_path: &[SlotKey],
+	parent: &mut ChildBuilder,
+	localize: &mut TLocalization,
+) where
+	TLocalization: LocalizeToken,
+{
+	let label = localize.localize_token("combo-skill-delete").or_token();
+
 	parent
 		.spawn(ComboOverview::delete_button_offset_node())
 		.with_children(|parent| {
 			parent
 				.spawn((
 					ComboOverview::modify_button(),
-					Tooltip::new("Delete skill from combo"), // FIXME: Language support
+					Tooltip::new(label),
 					DeleteSkill {
 						key_path: key_path.to_vec(),
 					},

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Localized(pub String);
 
 impl Localized {

@@ -26,7 +26,7 @@ impl LoadUi<AssetServer> for UIOverlay {
 }
 
 impl InsertUiContent for UIOverlay {
-	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
+	fn insert_ui_content<TLocalization>(&self, _: &mut TLocalization, parent: &mut ChildBuilder) {
 		add_quickbar(parent);
 	}
 }

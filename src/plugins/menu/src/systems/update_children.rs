@@ -1,41 +1,84 @@
 use crate::traits::insert_ui_content::InsertUiContent;
 use bevy::prelude::*;
+use common::traits::handles_localization::LocalizeToken;
 
-pub(crate) fn update_children<TComponent: InsertUiContent + Component>(
+pub(crate) fn update_children<TComponent, TLocalization>(
 	mut commands: Commands,
 	components: Query<(Entity, &TComponent), Changed<TComponent>>,
-) {
+	mut localization_server: ResMut<TLocalization>,
+) where
+	TComponent: InsertUiContent + Component,
+	TLocalization: LocalizeToken + Resource,
+{
 	for (entity, component) in &components {
 		let Some(mut entity) = commands.get_entity(entity) else {
 			continue;
 		};
 		entity.despawn_descendants();
-		entity.with_children(|parent| component.insert_ui_content(parent));
+		entity.with_children(|parent| {
+			component.insert_ui_content(localization_server.as_mut(), parent)
+		});
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		traits::{
+			handles_localization::{LocalizationResult, Token, localized::Localized},
+			thread_safe::ThreadSafe,
+		},
+	};
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _Child(&'static str);
+	struct _Child(Localized);
+
+	impl From<&str> for _Child {
+		fn from(value: &str) -> Self {
+			Self(Localized::from(value))
+		}
+	}
 
 	#[derive(Component)]
 	struct _Component(&'static str);
 
 	impl InsertUiContent for _Component {
-		fn insert_ui_content(&self, parent: &mut ChildBuilder) {
-			parent.spawn(_Child("A"));
-			parent.spawn(_Child("B"));
-			parent.spawn(_Child("C"));
+		fn insert_ui_content<TLocalization>(
+			&self,
+			localize: &mut TLocalization,
+			parent: &mut ChildBuilder,
+		) where
+			TLocalization: LocalizeToken + ThreadSafe,
+		{
+			parent.spawn(_Child(localize.localize_token("A").or_string(|| "??")));
+			parent.spawn(_Child(localize.localize_token("B").or_string(|| "??")));
+			parent.spawn(_Child(localize.localize_token("C").or_string(|| "??")));
+		}
+	}
+
+	#[derive(Resource, Debug, PartialEq, Default)]
+	struct _Localization;
+
+	impl LocalizeToken for _Localization {
+		fn localize_token<TToken>(&mut self, token: TToken) -> LocalizationResult
+		where
+			TToken: Into<Token> + 'static,
+		{
+			match token.into() {
+				t if t == Token::from("A") => LocalizationResult::Ok(Localized::from("Token A")),
+				t if t == Token::from("B") => LocalizationResult::Ok(Localized::from("Token B")),
+				t if t == Token::from("C") => LocalizationResult::Ok(Localized::from("Token C")),
+				t => LocalizationResult::Error(t.failed()),
+			}
 		}
 	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, update_children::<_Component>);
+		app.init_resource::<_Localization>();
+		app.add_systems(Update, update_children::<_Component, _Localization>);
 
 		app
 	}
@@ -54,9 +97,9 @@ mod tests {
 
 		assert_eq!(
 			vec![
-				(parent, &_Child("A")),
-				(parent, &_Child("B")),
-				(parent, &_Child("C")),
+				(parent, &_Child::from("Token A")),
+				(parent, &_Child::from("Token B")),
+				(parent, &_Child::from("Token C")),
 			],
 			children.collect::<Vec<_>>()
 		)
@@ -68,8 +111,8 @@ mod tests {
 		app.world_mut()
 			.spawn(_Component("My Component"))
 			.with_children(|parent| {
-				parent.spawn(_Child("Previous A"));
-				parent.spawn(_Child("Previous B"));
+				parent.spawn(_Child::from("Previous A"));
+				parent.spawn(_Child::from("Previous B"));
 			});
 
 		app.update();
@@ -80,7 +123,11 @@ mod tests {
 			.filter_map(|e| e.get::<_Child>());
 
 		assert_eq!(
-			vec![&_Child("A"), &_Child("B"), &_Child("C"),],
+			vec![
+				&_Child::from("Token A"),
+				&_Child::from("Token B"),
+				&_Child::from("Token C"),
+			],
 			children.collect::<Vec<_>>()
 		)
 	}
@@ -91,9 +138,11 @@ mod tests {
 		app.world_mut()
 			.spawn(_Component("My Component"))
 			.with_children(|parent| {
-				parent.spawn(_Child("Previous A")).with_children(|parent| {
-					parent.spawn(_Child("Previous A Child"));
-				});
+				parent
+					.spawn(_Child::from("Previous A"))
+					.with_children(|parent| {
+						parent.spawn(_Child::from("Previous A Child"));
+					});
 			});
 
 		app.update();
@@ -104,7 +153,11 @@ mod tests {
 			.filter_map(|e| e.get::<_Child>());
 
 		assert_eq!(
-			vec![&_Child("A"), &_Child("B"), &_Child("C"),],
+			vec![
+				&_Child::from("Token A"),
+				&_Child::from("Token B"),
+				&_Child::from("Token C"),
+			],
 			children.collect::<Vec<_>>()
 		)
 	}
@@ -117,7 +170,7 @@ mod tests {
 		app.update();
 
 		app.world_mut().entity_mut(parent).with_children(|parent| {
-			parent.spawn(_Child("Do not remove"));
+			parent.spawn(_Child::from("Do not remove"));
 		});
 
 		app.update();
@@ -129,10 +182,10 @@ mod tests {
 
 		assert_eq!(
 			vec![
-				&_Child("A"),
-				&_Child("B"),
-				&_Child("C"),
-				&_Child("Do not remove"),
+				&_Child::from("Token A"),
+				&_Child::from("Token B"),
+				&_Child::from("Token C"),
+				&_Child::from("Do not remove"),
 			],
 			children.collect::<Vec<_>>()
 		)
@@ -148,7 +201,7 @@ mod tests {
 		let mut parent = app.world_mut().entity_mut(parent);
 		parent.get_mut::<_Component>().unwrap().0 = "My changed Component";
 		parent.with_children(|parent| {
-			parent.spawn(_Child("Do remove"));
+			parent.spawn(_Child::from("Do remove"));
 		});
 
 		app.update();
@@ -159,7 +212,11 @@ mod tests {
 			.filter_map(|e| e.get::<_Child>());
 
 		assert_eq!(
-			vec![&_Child("A"), &_Child("B"), &_Child("C"),],
+			vec![
+				&_Child::from("Token A"),
+				&_Child::from("Token B"),
+				&_Child::from("Token C"),
+			],
 			children.collect::<Vec<_>>()
 		)
 	}

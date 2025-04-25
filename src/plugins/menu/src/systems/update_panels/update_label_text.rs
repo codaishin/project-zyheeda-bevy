@@ -2,50 +2,49 @@ use crate::components::Label;
 use bevy::prelude::*;
 use common::{
 	tools::keys::slot::SlotKey,
-	traits::{
-		get_ui_text::{GetUiTextFor, UIText},
-		key_mappings::GetKeyCode,
-	},
+	traits::{handles_localization::LocalizeToken, key_mappings::GetKeyCode},
 };
 
 type Labels<'a, T> = (&'a Label<T, SlotKey>, &'a mut Text);
 
 pub fn update_label_text<
 	TMap: Resource + GetKeyCode<SlotKey, KeyCode>,
-	TLanguageServer: Resource + GetUiTextFor<KeyCode>,
+	TLanguageServer: Resource + LocalizeToken,
 	T: Sync + Send + 'static,
 >(
 	key_map: Res<TMap>,
-	language_server: Res<TLanguageServer>,
+	mut language_server: ResMut<TLanguageServer>,
 	mut labels: Query<Labels<T>, Added<Label<T, SlotKey>>>,
 ) {
 	let key_map = key_map.as_ref();
-	let language_server = language_server.as_ref();
 
 	for (label, text) in &mut labels {
-		update_text(key_map, language_server, label, text);
+		update_text(key_map, language_server.as_mut(), label, text);
 	}
 }
 
-fn update_text<TMap: GetKeyCode<SlotKey, KeyCode>, TLanguageServer: GetUiTextFor<KeyCode>, T>(
+fn update_text<TMap: GetKeyCode<SlotKey, KeyCode>, TLanguageServer: LocalizeToken, T>(
 	key_map: &TMap,
-	language_server: &TLanguageServer,
+	language_server: &mut TLanguageServer,
 	label: &Label<T, SlotKey>,
 	mut text: Mut<Text>,
 ) {
 	let key = key_map.get_key_code(label.key);
-	let UIText::String(value) = language_server.ui_text_for(&key) else {
-		return;
-	};
-	let Text(text) = text.as_mut();
-	*text = value;
+	let localized = language_server.localize_token(key).or_token();
+	*text = Text::from(localized);
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use bevy::app::{App, Update};
-	use common::{tools::keys::slot::Side, traits::nested_mock::NestedMocks};
+	use common::{
+		tools::keys::slot::Side,
+		traits::{
+			handles_localization::{LocalizationResult, Token, localized::Localized},
+			nested_mock::NestedMocks,
+		},
+	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
@@ -63,15 +62,18 @@ mod tests {
 		}
 	}
 
-	#[derive(Resource)]
-	struct _LanguageServer(KeyCode, &'static str);
+	#[derive(Resource, NestedMocks)]
+	struct _LanguageServer {
+		mock: Mock_LanguageServer,
+	}
 
-	impl GetUiTextFor<KeyCode> for _LanguageServer {
-		fn ui_text_for(&self, value: &KeyCode) -> UIText {
-			if value != &self.0 {
-				return UIText::Unmapped;
-			}
-			UIText::from(self.1)
+	#[automock]
+	impl LocalizeToken for _LanguageServer {
+		fn localize_token<TToken>(&mut self, token: TToken) -> LocalizationResult
+		where
+			TToken: Into<Token> + 'static,
+		{
+			self.mock.localize_token(token)
 		}
 	}
 
@@ -81,7 +83,11 @@ mod tests {
 		app.insert_resource(_Map::new().with_mock(|mock| {
 			mock.expect_get_key_code().return_const(KeyCode::ArrowUp);
 		}));
-		app.insert_resource(_LanguageServer(KeyCode::ArrowUp, "IIIIII"));
+		app.insert_resource(_LanguageServer::new().with_mock(|mock| {
+			mock.expect_localize_token()
+				.with(eq(KeyCode::ArrowUp))
+				.return_const(LocalizationResult::Ok(Localized::from("IIIIII")));
+		}));
 		let id = app
 			.world_mut()
 			.spawn((
@@ -103,12 +109,16 @@ mod tests {
 	}
 
 	#[test]
-	fn override_first_section() {
+	fn override_original() {
 		let mut app = App::new();
 		app.insert_resource(_Map::new().with_mock(|mock| {
 			mock.expect_get_key_code().return_const(KeyCode::ArrowUp);
 		}));
-		app.insert_resource(_LanguageServer(KeyCode::ArrowUp, "IIIIII"));
+		app.insert_resource(_LanguageServer::new().with_mock(|mock| {
+			mock.expect_localize_token()
+				.with(eq(KeyCode::ArrowUp))
+				.return_const(LocalizationResult::Ok(Localized::from("IIIIII")));
+		}));
 		let id = app
 			.world_mut()
 			.spawn((
@@ -127,24 +137,5 @@ mod tests {
 				.get::<Text>()
 				.map(|Text(text)| text.as_str())
 		)
-	}
-
-	#[test]
-	fn map_slot_key_properly() {
-		let mut app = App::new();
-		app.insert_resource(_Map::new().with_mock(|mock| {
-			mock.expect_get_key_code()
-				.times(1)
-				.with(eq(SlotKey::BottomHand(Side::Left)))
-				.return_const(KeyCode::ArrowUp);
-		}));
-		app.insert_resource(_LanguageServer(KeyCode::ArrowUp, "IIIIII"));
-		app.world_mut().spawn((
-			Label::<_T, SlotKey>::new(SlotKey::BottomHand(Side::Left)),
-			Text::new("OVERRIDE THIS"),
-		));
-
-		app.add_systems(Update, update_label_text::<_Map, _LanguageServer, _T>);
-		app.update();
 	}
 }

@@ -17,7 +17,7 @@ use crate::systems::{
 };
 use bevy::prelude::*;
 use common::{
-	resources::{Shared, key_map::KeyMap, language_server::LanguageServer},
+	resources::{Shared, key_map::KeyMap},
 	states::{
 		game_state::{GameState, LoadingEssentialAssets, LoadingGame},
 		menu_state::MenuState,
@@ -47,6 +47,7 @@ use common::{
 			LoadGroup,
 		},
 		handles_loadout_menu::{ConfigureInventory, GetItem, HandlesLoadoutMenu, SwapValuesByKey},
+		handles_localization::{HandlesLocalization, LocalizeToken, localized::Localized},
 		inspect_able::InspectAble,
 		load_asset::Path,
 		thread_safe::ThreadSafe,
@@ -109,9 +110,10 @@ use traits::{GetLayout, GetRootNode, LoadUi, insert_ui_content::InsertUiContent}
 use visualization::unusable::Unusable;
 
 trait AddUI<TState> {
-	fn add_ui<TComponent, TGraphics>(&mut self, on_state: TState) -> &mut Self
+	fn add_ui<TComponent, TLocalizationServer, TGraphics>(&mut self, on_state: TState) -> &mut Self
 	where
 		TComponent: Component + LoadUi<AssetServer> + InsertUiContent,
+		TLocalizationServer: Resource + LocalizeToken,
 		TGraphics: StaticRenderLayers + 'static;
 }
 
@@ -119,40 +121,43 @@ impl<TState> AddUI<TState> for App
 where
 	TState: States + Copy,
 {
-	fn add_ui<TComponent, TGraphics>(&mut self, on_state: TState) -> &mut Self
+	fn add_ui<TComponent, TLocalizationServer, TGraphics>(&mut self, on_state: TState) -> &mut Self
 	where
 		TComponent: Component + LoadUi<AssetServer> + InsertUiContent,
+		TLocalizationServer: Resource + LocalizeToken,
 		TGraphics: StaticRenderLayers + 'static,
 	{
 		let spawn_component = (
 			spawn::<TComponent, AssetServer, TGraphics>,
-			update_children::<TComponent>,
+			update_children::<TComponent, TLocalizationServer>,
 		)
 			.chain();
 
 		self.add_systems(OnEnter(on_state), spawn_component)
 			.add_systems(OnExit(on_state), despawn::<TComponent>)
-			.add_systems(Update, update_children::<TComponent>)
+			.add_systems(Update, update_children::<TComponent, TLocalizationServer>)
 	}
 }
 
 trait AddTooltip {
-	fn add_tooltip<T>(&mut self) -> &mut Self
-	where
-		T: TooltipUiConfig + Clone + Sync + Send + 'static,
-		Tooltip<T>: InsertUiContent;
-}
-
-impl AddTooltip for App {
-	fn add_tooltip<T>(&mut self) -> &mut Self
+	fn add_tooltip<TLocalization, T>(&mut self) -> &mut Self
 	where
 		T: TooltipUiConfig + Clone + Sync + Send + 'static,
 		Tooltip<T>: InsertUiContent,
+		TLocalization: LocalizeToken + Resource;
+}
+
+impl AddTooltip for App {
+	fn add_tooltip<TLocalization, T>(&mut self) -> &mut Self
+	where
+		T: TooltipUiConfig + Clone + Sync + Send + 'static,
+		Tooltip<T>: InsertUiContent,
+		TLocalization: LocalizeToken + Resource,
 	{
 		self.add_systems(
 			Update,
 			(
-				tooltip::<T, TooltipUI<T>, TooltipUIControl, Window>,
+				tooltip::<T, TLocalization, TooltipUI<T>, TooltipUIControl, Window>,
 				tooltip_visibility::<Real, T>,
 			),
 		)
@@ -160,15 +165,17 @@ impl AddTooltip for App {
 }
 
 trait AddDropdown {
-	fn add_dropdown<TItem>(&mut self) -> &mut Self
+	fn add_dropdown<TLocalization, TItem>(&mut self) -> &mut Self
 	where
+		TLocalization: LocalizeToken + Resource,
 		TItem: InsertUiContent + Sync + Send + 'static,
 		Dropdown<TItem>: GetRootNode + GetLayout;
 }
 
 impl AddDropdown for App {
-	fn add_dropdown<TItem>(&mut self) -> &mut Self
+	fn add_dropdown<TLocalization, TItem>(&mut self) -> &mut Self
 	where
+		TLocalization: LocalizeToken + Resource,
 		TItem: InsertUiContent + Sync + Send + 'static,
 		Dropdown<TItem>: GetRootNode + GetLayout,
 	{
@@ -183,26 +190,28 @@ impl AddDropdown for App {
 			Last,
 			dropdown_detect_focus_change::<TItem>
 				.pipe(dropdown_despawn_when_no_children_pressed::<TItem>)
-				.pipe(dropdown_spawn_focused::<TItem>),
+				.pipe(dropdown_spawn_focused::<TLocalization, TItem>),
 		)
 	}
 }
 
 pub struct MenuPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TGraphics> MenuPlugin<(TLoading, TGraphics)>
+impl<TLoading, TLocalization, TGraphics> MenuPlugin<(TLoading, TLocalization, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 {
-	pub fn depends_on(_: &TLoading, _: &TGraphics) -> Self {
+	pub fn depends_on(_: &TLoading, _: &TLocalization, _: &TGraphics) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TGraphics> MenuPlugin<(TLoading, TGraphics)>
+impl<TLoading, TLocalization, TGraphics> MenuPlugin<(TLoading, TLocalization, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 {
 	fn resources(&self, app: &mut App) {
@@ -224,9 +233,11 @@ where
 		let start_menu = GameState::StartMenu;
 		let new_game = GameState::NewGame;
 
-		app.add_ui::<StartMenu, TGraphics::TUiCamera>(start_menu)
-			.add_systems(Update, panel_colors::<StartMenuButton>)
-			.add_systems(Update, StartGame::on_release_set(new_game));
+		app.add_ui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+			start_menu,
+		)
+		.add_systems(Update, panel_colors::<StartMenuButton>)
+		.add_systems(Update, StartGame::on_release_set(new_game));
 	}
 
 	fn loading_screen<TLoadGroup>(&self, app: &mut App)
@@ -236,18 +247,23 @@ where
 		let load_assets = TLoading::processing_state::<TLoadGroup, AssetsProgress>();
 		let load_dependencies = TLoading::processing_state::<TLoadGroup, DependenciesProgress>();
 
-		app.add_ui::<LoadingScreen<AssetsProgress>, TGraphics::TUiCamera>(load_assets)
-			.add_ui::<LoadingScreen<DependenciesProgress>, TGraphics::TUiCamera>(load_dependencies);
+		app
+			.add_ui::<LoadingScreen<AssetsProgress>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+				load_assets
+			)
+			.add_ui::<LoadingScreen<DependenciesProgress>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+				load_dependencies
+			);
 	}
 
 	fn ui_overlay(&self, app: &mut App) {
 		let play = GameState::Play;
 
-		app.add_ui::<UIOverlay, TGraphics::TUiCamera>(play)
+		app.add_ui::<UIOverlay, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(play)
 			.add_systems(
 				Update,
 				(
-					update_label_text::<KeyMap, LanguageServer, QuickbarPanel>,
+					update_label_text::<KeyMap, TLocalization::TLocalizationServer, QuickbarPanel>,
 					panel_colors::<QuickbarPanel>,
 				)
 					.run_if(in_state(play)),
@@ -262,31 +278,35 @@ where
 	}
 
 	fn combo_overview(&self, app: &mut App) {
-		app.add_dropdown::<KeySelect<AppendSkill>>();
+		app.add_dropdown::<TLocalization::TLocalizationServer, KeySelect<AppendSkill>>();
 	}
 
 	fn inventory_screen(&self, app: &mut App) {
 		let inventory = GameState::IngameMenu(MenuState::Inventory);
 
-		app.add_ui::<InventoryScreen, TGraphics::TUiCamera>(inventory);
+		app.add_ui::<InventoryScreen, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+			inventory,
+		);
 	}
 
 	fn general_systems(&self, app: &mut App) {
-		app.add_tooltip::<&'static str>()
-			.add_tooltip::<String>()
+		app.add_tooltip::<TLocalization::TLocalizationServer, &'static str>()
+			.add_tooltip::<TLocalization::TLocalizationServer, String>()
+			.add_tooltip::<TLocalization::TLocalizationServer, Localized>()
 			.add_systems(Update, image_color)
 			.add_systems(Update, adjust_global_z_index)
 			.add_systems(
 				Update,
-				insert_key_code_text::<SlotKey, KeyMap, LanguageServer>,
+				insert_key_code_text::<SlotKey, KeyMap, TLocalization::TLocalizationServer>,
 			)
 			.add_systems(Last, ButtonInteraction::system);
 	}
 }
 
-impl<TLoading, TGraphics> Plugin for MenuPlugin<(TLoading, TGraphics)>
+impl<TLoading, TLocalization, TGraphics> Plugin for MenuPlugin<(TLoading, TLocalization, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 {
 	fn build(&self, app: &mut App) {
@@ -303,8 +323,10 @@ where
 
 		#[cfg(debug_assertions)]
 		{
-			debug::setup_run_time_display::<TGraphics::TUiCamera>(app);
-			debug::setup_dropdown_test(app);
+			debug::setup_run_time_display::<TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+				app,
+			);
+			debug::setup_dropdown_test::<TLocalization::TLocalizationServer>(app);
 		}
 	}
 }
@@ -380,8 +402,10 @@ where
 	}
 }
 
-impl<TLoading, TGraphics> HandlesComboMenu for MenuPlugin<(TLoading, TGraphics)>
+impl<TLoading, TLocalization, TGraphics> HandlesComboMenu
+	for MenuPlugin<(TLoading, TLocalization, TGraphics)>
 where
+	TLocalization: HandlesLocalization + ThreadSafe,
 	TGraphics: ThreadSafe + UiCamera,
 {
 	fn combos_with_skill<TSkill>() -> impl ConfigureCombos<TSkill>
@@ -389,15 +413,17 @@ where
 		TSkill:
 			InspectAble<SkillDescription> + InspectAble<SkillIcon> + PartialEq + Clone + ThreadSafe,
 	{
-		ComboConfiguration::<TGraphics>(PhantomData)
+		ComboConfiguration::<TLocalization, TGraphics>(PhantomData)
 	}
 }
 
-struct ComboConfiguration<TGraphics>(PhantomData<TGraphics>);
+struct ComboConfiguration<TLocalization, TGraphics>(PhantomData<(TLocalization, TGraphics)>);
 
-impl<TGraphics, TSkill> ConfigureCombos<TSkill> for ComboConfiguration<TGraphics>
+impl<TGraphics, TLocalization, TSkill> ConfigureCombos<TSkill>
+	for ComboConfiguration<TLocalization, TGraphics>
 where
 	TGraphics: ThreadSafe + UiCamera,
+	TLocalization: HandlesLocalization + ThreadSafe,
 	TSkill: InspectAble<SkillDescription> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
 {
 	fn configure<TUpdateCombos, TEquipment, M1, M2>(
@@ -411,11 +437,11 @@ where
 	{
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
 
-		app.add_ui::<ComboOverview<TSkill>, TGraphics::TUiCamera>(GameState::IngameMenu(
+		app.add_ui::<ComboOverview<TSkill>,TLocalization::TLocalizationServer, TGraphics::TUiCamera>(GameState::IngameMenu(
 			MenuState::ComboOverview,
 		))
-		.add_dropdown::<ComboSkillButton<DropdownItem<Vertical>, TSkill>>()
-		.add_dropdown::<ComboSkillButton<DropdownItem<Horizontal>, TSkill>>()
+		.add_dropdown::<TLocalization::TLocalizationServer, ComboSkillButton<DropdownItem<Vertical>, TSkill>>()
+		.add_dropdown::<TLocalization::TLocalizationServer, ComboSkillButton<DropdownItem<Horizontal>, TSkill>>()
 		.add_systems(
 			Update,
 			(

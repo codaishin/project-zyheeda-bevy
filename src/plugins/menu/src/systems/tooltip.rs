@@ -11,10 +11,11 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use common::traits::mouse_position::MousePosition;
+use common::traits::{handles_localization::LocalizeToken, mouse_position::MousePosition};
 
-pub(crate) fn tooltip<T, TUI, TUIControl, TWindow>(
+pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 	mut commands: Commands,
+	mut localize: ResMut<TLocalization>,
 	ui_control: Res<TUIControl>,
 	windows: Query<&TWindow>,
 	changed_tooltip_interactions: Query<(Entity, &Tooltip<T>, &Interaction), Changed<Interaction>>,
@@ -22,13 +23,14 @@ pub(crate) fn tooltip<T, TUI, TUIControl, TWindow>(
 	removed_tooltips: RemovedComponents<Tooltip<T>>,
 ) where
 	T: TooltipUiConfig + Sync + Send + 'static,
+	TLocalization: LocalizeToken + Resource,
 	Tooltip<T>: InsertUiContent,
 	TUI: Component,
 	TUIControl: Resource
 		+ DespawnAllTooltips<TUI>
 		+ DespawnOutdatedTooltips<TUI, T>
 		+ UpdateTooltipPosition<TUI>
-		+ SpawnTooltips<T>,
+		+ SpawnTooltips<T, TLocalization>,
 	TWindow: Component + MousePosition,
 {
 	let Ok(window) = windows.get_single() else {
@@ -49,7 +51,7 @@ pub(crate) fn tooltip<T, TUI, TUIControl, TWindow>(
 	}
 
 	for (entity, tooltip, _) in changed_tooltip_interactions.iter().filter(is_hovering) {
-		ui_control.spawn(&mut commands, entity, tooltip, position);
+		ui_control.spawn(&mut commands, &mut localize, entity, tooltip, position);
 	}
 }
 
@@ -63,7 +65,13 @@ fn is_hovering<T: TooltipUiConfig + Sync + Send + 'static>(
 mod tests {
 	use super::*;
 	use crate::{components::tooltip::TooltipUiConfig, traits::insert_ui_content::InsertUiContent};
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		traits::{
+			handles_localization::{LocalizationResult, LocalizeToken, Token},
+			nested_mock::NestedMocks,
+		},
+	};
 	use macros::NestedMocks;
 	use mockall::mock;
 
@@ -87,7 +95,7 @@ mod tests {
 	impl TooltipUiConfig for _T {}
 
 	impl InsertUiContent for Tooltip<_T> {
-		fn insert_ui_content(&self, _: &mut ChildBuilder) {}
+		fn insert_ui_content<TLocalization>(&self, _: &mut TLocalization, _: &mut ChildBuilder) {}
 	}
 
 	#[derive(Component)]
@@ -129,17 +137,31 @@ mod tests {
 		}
 	}
 
-	impl SpawnTooltips<_T> for _UIControl {
+	impl SpawnTooltips<_T, _Localize> for _UIControl {
 		fn spawn(
 			&self,
 			commands: &mut Commands,
+			localize: &mut _Localize,
 			tooltip_entity: Entity,
 			tooltip: &Tooltip<_T>,
 			position: Vec2,
 		) where
 			Tooltip<_T>: InsertUiContent,
 		{
-			self.mock.spawn(commands, tooltip_entity, tooltip, position)
+			self.mock
+				.spawn(commands, localize, tooltip_entity, tooltip, position)
+		}
+	}
+
+	#[derive(Resource, Default, Debug, PartialEq, Clone, Copy)]
+	struct _Localize;
+
+	impl LocalizeToken for _Localize {
+		fn localize_token<TToken>(&mut self, _: TToken) -> LocalizationResult
+		where
+			TToken: Into<Token> + 'static,
+		{
+			panic!("NOT USED")
 		}
 	}
 
@@ -170,10 +192,11 @@ mod tests {
 			) where
 				Self: Component + Sized;
 		}
-		impl SpawnTooltips<_T> for _UIControl {
+		impl SpawnTooltips<_T, _Localize> for _UIControl {
 			fn spawn<'a, 'b>(
 				&self,
 				commands: &mut Commands<'a, 'b>,
+				localize: &mut _Localize,
 				entity: Entity,
 				tooltip: &Tooltip<_T>,
 				position: Vec2
@@ -184,8 +207,9 @@ mod tests {
 
 	fn setup(ui_control: _UIControl) -> App {
 		let mut app = App::new().single_threaded(Update);
+		app.init_resource::<_Localize>();
 		app.insert_resource(ui_control);
-		app.add_systems(Update, tooltip::<_T, _UI, _UIControl, _Window>);
+		app.add_systems(Update, tooltip::<_T, _Localize, _UI, _UIControl, _Window>);
 
 		app
 	}
@@ -197,6 +221,7 @@ mod tests {
 			entity: Entity,
 			tooltip: Tooltip<_T>,
 			position: Vec2,
+			localize: _Localize,
 		}
 
 		let mut app = setup(_UIControl::new().with_mock(|mock| {
@@ -204,11 +229,12 @@ mod tests {
 			mock.expect_despawn_outdated().return_const(());
 			mock.expect_update_position().return_const(());
 			mock.expect_spawn()
-				.returning(|commands, entity, tooltip, position| {
+				.returning(|commands, localize, entity, tooltip, position| {
 					commands.insert_resource(_Spawn {
 						entity,
 						tooltip: tooltip.clone(),
 						position,
+						localize: *localize,
 					});
 				});
 		}));
@@ -232,7 +258,8 @@ mod tests {
 				tooltip: Tooltip::new(_T {
 					content: "My Content",
 				}),
-				position: Vec2 { x: 33., y: 66. }
+				position: Vec2 { x: 33., y: 66. },
+				localize: _Localize,
 			}),
 			app.world().get_resource::<_Spawn>()
 		);

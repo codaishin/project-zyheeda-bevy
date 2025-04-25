@@ -30,7 +30,7 @@ where
 	TExtra: GetKey<SlotKey>,
 	KeySelect<TExtra>: GetComponent<TInput = ()>,
 {
-	fn insert_ui_content(&self, parent: &mut ChildBuilder) {
+	fn insert_ui_content<TLocalization>(&self, _: &mut TLocalization, parent: &mut ChildBuilder) {
 		let Some(component) = self.component(()) else {
 			return;
 		};

@@ -1,12 +1,14 @@
 pub mod localized;
 
+mod key_code;
+
 use bevy::prelude::*;
 use localized::Localized;
 use std::{fmt::Display, ops::Deref};
 use unic_langid::LanguageIdentifier;
 
 pub trait HandlesLocalization {
-	type TLocalizationServer: Resource + SetLocalization;
+	type TLocalizationServer: Resource + SetLocalization + LocalizeToken;
 }
 
 pub trait SetLocalization {
@@ -14,56 +16,56 @@ pub trait SetLocalization {
 }
 
 pub trait LocalizeToken {
-	fn localize_token<'a, TToken>(&mut self, token: TToken) -> LocalizationResult<'a>
+	fn localize_token<TToken>(&mut self, token: TToken) -> LocalizationResult
 	where
-		TToken: Into<Token<'a>>;
+		TToken: Into<Token> + 'static;
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Token<'a>(pub &'a str);
+#[derive(Debug, PartialEq, Clone)]
+pub struct Token(pub String);
 
-impl<'a> Token<'a> {
-	pub fn failed(self) -> FailedToken<'a> {
+impl Token {
+	pub fn failed(self) -> FailedToken {
 		FailedToken(self)
 	}
 }
 
-impl Display for Token<'_> {
+impl Display for Token {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "token: {}", self.0)
 	}
 }
 
-impl<'a> From<&'a str> for Token<'a> {
-	fn from(value: &'a str) -> Self {
+impl From<&str> for Token {
+	fn from(value: &str) -> Self {
+		Token(value.to_owned())
+	}
+}
+
+impl From<String> for Token {
+	fn from(value: String) -> Self {
 		Token(value)
 	}
 }
 
-impl<'a> From<&'a String> for Token<'a> {
-	fn from(value: &'a String) -> Self {
-		Token(value)
-	}
-}
+#[derive(Debug, PartialEq, Clone)]
+pub struct FailedToken(pub Token);
 
-#[derive(Debug, PartialEq)]
-pub struct FailedToken<'a>(pub Token<'a>);
-
-impl<'a> Deref for FailedToken<'a> {
-	type Target = &'a str;
+impl Deref for FailedToken {
+	type Target = String;
 
 	fn deref(&self) -> &Self::Target {
 		&self.0.0
 	}
 }
 
-#[derive(Debug, PartialEq)]
-pub enum LocalizationResult<'a> {
+#[derive(Debug, PartialEq, Clone)]
+pub enum LocalizationResult {
 	Ok(Localized),
-	Error(FailedToken<'a>),
+	Error(FailedToken),
 }
 
-impl LocalizationResult<'_> {
+impl LocalizationResult {
 	pub fn or<F, T>(self, fallback: F) -> Localized
 	where
 		F: Fn(FailedToken) -> T,
@@ -110,7 +112,7 @@ mod tests {
 
 	#[test]
 	fn localize_result_or_err() {
-		let result = LocalizationResult::Error(FailedToken(Token("my token")));
+		let result = LocalizationResult::Error(FailedToken(Token::from("my token")));
 
 		assert_eq!(
 			Localized::from("FAILED: my token"),
@@ -127,7 +129,7 @@ mod tests {
 
 	#[test]
 	fn localize_result_or_token_err() {
-		let result = LocalizationResult::Error(FailedToken(Token("my token")));
+		let result = LocalizationResult::Error(FailedToken(Token::from("my token")));
 
 		assert_eq!(Localized::from("my token"), result.or_token())
 	}
@@ -144,7 +146,7 @@ mod tests {
 
 	#[test]
 	fn localize_result_or_string_err() {
-		let result = LocalizationResult::Error(FailedToken(Token("my token")));
+		let result = LocalizationResult::Error(FailedToken(Token::from("my token")));
 
 		assert_eq!(
 			Localized::from("my fallback"),
