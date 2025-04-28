@@ -43,6 +43,12 @@ impl From<SlotKey> for KeyCode {
 	}
 }
 
+impl From<SlotKey> for Key {
+	fn from(key: SlotKey) -> Self {
+		Self::Slot(key)
+	}
+}
+
 impl TryFrom<Key> for SlotKey {
 	type Error = IsNot<SlotKey>;
 

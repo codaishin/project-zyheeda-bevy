@@ -40,6 +40,12 @@ impl From<MovementKey> for KeyCode {
 	}
 }
 
+impl From<MovementKey> for Key {
+	fn from(key: MovementKey) -> Self {
+		Self::Movement(key)
+	}
+}
+
 impl TryFrom<Key> for MovementKey {
 	type Error = IsNot<MovementKey>;
 

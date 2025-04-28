@@ -17,6 +17,7 @@ impl HandlesSettings for SettingsPlugin {
 	type TKeyMap<TKey>
 		= KeyMap
 	where
+		Key: From<TKey>,
 		TKey: TryFrom<Key> + Copy,
 		KeyCode: From<TKey> + PartialEq;
 }
