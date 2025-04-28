@@ -66,7 +66,7 @@ use components::{
 	loading_screen::LoadingScreen,
 	menu_background::MenuBackground,
 	quickbar_panel::QuickbarPanel,
-	setup_screen::SetupScreen,
+	settings_screen::SettingsScreen,
 	start_game::StartGame,
 	start_menu::StartMenu,
 	start_menu_button::StartMenuButton,
@@ -289,10 +289,12 @@ where
 		);
 	}
 
-	fn setup_screen(&self, app: &mut App) {
+	fn settings_screen(&self, app: &mut App) {
 		let setup = GameState::IngameMenu(MenuState::Setup);
 
-		app.add_ui::<SetupScreen, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(setup);
+		app.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+			setup,
+		);
 	}
 
 	fn general_systems(&self, app: &mut App) {
@@ -329,7 +331,7 @@ where
 		self.ui_overlay(app);
 		self.combo_overview(app);
 		self.inventory_screen(app);
-		self.setup_screen(app);
+		self.settings_screen(app);
 		self.general_systems(app);
 
 		#[cfg(debug_assertions)]
