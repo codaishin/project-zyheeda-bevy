@@ -4120,6 +4120,7 @@ dependencies = [
  "savegame",
  "serde",
  "serde_json",
+ "settings",
  "skills",
  "test-case",
  "tracing",
@@ -4552,6 +4553,19 @@ dependencies = [
  "memchr",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "settings"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "common",
+ "macros",
+ "mockall",
+ "serde",
+ "serde_json",
+ "test-case",
 ]
 
 [[package]]

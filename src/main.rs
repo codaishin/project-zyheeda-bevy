@@ -21,6 +21,7 @@ use path_finding::PathFindingPlugin;
 use player::PlayerPlugin;
 use prefabs::PrefabsPlugin;
 use savegame::SavegamePlugin;
+use settings::SettingsPlugin;
 use skills::SkillsPlugin;
 
 fn main() -> AppExit {
@@ -42,6 +43,7 @@ fn prepare_game(app: &mut App) {
 	let animations_plugin = AnimationsPlugin;
 	let prefabs_plugin = PrefabsPlugin;
 	let loading_plugin = LoadingPlugin;
+	let settings_plugin = SettingsPlugin;
 	let localization_plugin = LocalizationPlugin::depends_on(&loading_plugin);
 	let game_state_plugin = GameStatePlugin::depends_on(&loading_plugin);
 	let light_plugin = LightPlugin::depends_on(&prefabs_plugin);
@@ -99,6 +101,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(localization_plugin)
 		.add_plugins(savegame_plugin)
 		.add_plugins(life_cycles_plugin)
+		.add_plugins(settings_plugin)
 		.add_plugins(prefabs_plugin)
 		.add_plugins(graphics_plugin)
 		.add_plugins(interactions_plugin)
