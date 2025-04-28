@@ -12,7 +12,6 @@ mod tools;
 use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
-	resources::key_map::KeyMap,
 	states::{
 		game_state::{GameState, LoadingGame},
 		mouse_context::MouseContext,
@@ -33,6 +32,7 @@ use common::{
 			HandlesPlayerCameras,
 			HandlesPlayerMouse,
 		},
+		handles_settings::HandlesSettings,
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
@@ -73,12 +73,22 @@ use tools::combo_descriptor::ComboDescriptor;
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, TPlayers, TMenu>
+impl<
+	TLifeCycles,
+	TInteractions,
+	TDispatchChildrenAssets,
+	TLoading,
+	TSettings,
+	TBehaviors,
+	TPlayers,
+	TMenu,
+>
 	SkillsPlugin<(
 		TLifeCycles,
 		TInteractions,
 		TDispatchChildrenAssets,
 		TLoading,
+		TSettings,
 		TBehaviors,
 		TPlayers,
 		TMenu,
@@ -88,6 +98,7 @@ where
 	TInteractions: ThreadSafe + HandlesAllEffects,
 	TDispatchChildrenAssets: ThreadSafe + HandlesAssetsForChildren,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets,
+	TSettings: ThreadSafe + HandlesSettings,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
@@ -96,11 +107,13 @@ where
 		+ ConfiguresPlayerSkillAnimations,
 	TMenu: ThreadSafe + HandlesLoadoutMenu + HandlesComboMenu,
 {
+	#[allow(clippy::too_many_arguments)]
 	pub fn depends_on(
 		_: &TLifeCycles,
 		_: &TInteractions,
 		_: &TDispatchChildrenAssets,
 		_: &TLoading,
+		_: &TSettings,
 		_: &TBehaviors,
 		_: &TPlayers,
 		_: &TMenu,
@@ -140,7 +153,11 @@ where
 		app.add_systems(
 			Update,
 			(
-				get_inputs::<KeyMap, ButtonInput<KeyCode>, State<MouseContext<KeyCode>>>
+				get_inputs::<
+					TSettings::TKeyMap<SlotKey>,
+					ButtonInput<KeyCode>,
+					State<MouseContext<KeyCode>>,
+				>
 					.pipe(enqueue::<Slots, Queue, QueuedSkill>),
 				Combos::update::<Queue>,
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
@@ -236,13 +253,22 @@ where
 	}
 }
 
-impl<TLifeCycles, TInteractions, TDispatchChildrenAssets, TLoading, TBehaviors, TPlayers, TMenu>
-	Plugin
+impl<
+	TLifeCycles,
+	TInteractions,
+	TDispatchChildrenAssets,
+	TLoading,
+	TSettings,
+	TBehaviors,
+	TPlayers,
+	TMenu,
+> Plugin
 	for SkillsPlugin<(
 		TLifeCycles,
 		TInteractions,
 		TDispatchChildrenAssets,
 		TLoading,
+		TSettings,
 		TBehaviors,
 		TPlayers,
 		TMenu,
@@ -252,6 +278,7 @@ where
 	TInteractions: ThreadSafe + HandlesAllEffects,
 	TDispatchChildrenAssets: ThreadSafe + HandlesAssetsForChildren,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets,
+	TSettings: ThreadSafe + HandlesSettings,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer

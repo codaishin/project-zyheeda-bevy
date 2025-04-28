@@ -1,11 +1,11 @@
-use crate::{
+use bevy::{ecs::system::Resource, input::keyboard::KeyCode};
+use common::{
 	tools::keys::Key,
 	traits::{
 		iteration::IterFinite,
 		key_mappings::{GetKeyCode, TryGetKey},
 	},
 };
-use bevy::{ecs::system::Resource, input::keyboard::KeyCode};
 use std::marker::PhantomData;
 
 #[derive(Resource, Default, Debug, PartialEq)]
@@ -69,7 +69,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::iteration::{Iter, IterFinite};
+	use common::traits::iteration::{Iter, IterFinite};
 
 	#[derive(Debug, PartialEq, Clone, Copy)]
 	enum _AllKeys {

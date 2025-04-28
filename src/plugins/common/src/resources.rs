@@ -1,5 +1,3 @@
-pub mod key_map;
-
 use bevy::prelude::*;
 use std::{
 	collections::{HashMap, hash_map::Values},

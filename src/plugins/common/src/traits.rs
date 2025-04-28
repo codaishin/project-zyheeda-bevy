@@ -32,6 +32,7 @@ pub mod handles_orientation;
 pub mod handles_path_finding;
 pub mod handles_player;
 pub mod handles_saving;
+pub mod handles_settings;
 pub mod handles_skill_behaviors;
 pub mod has_collisions;
 pub mod init_resource;

@@ -61,6 +61,7 @@ fn prepare_game(app: &mut App) {
 		&light_plugin,
 	);
 	let behaviors_plugin = BehaviorsPlugin::depends_on(
+		&settings_plugin,
 		&animations_plugin,
 		&prefabs_plugin,
 		&life_cycles_plugin,
@@ -75,13 +76,18 @@ fn prepare_game(app: &mut App) {
 		&interactions_plugin,
 		&behaviors_plugin,
 	);
-	let menu_plugin =
-		MenuPlugin::depends_on(&loading_plugin, &localization_plugin, &graphics_plugin);
+	let menu_plugin = MenuPlugin::depends_on(
+		&loading_plugin,
+		&settings_plugin,
+		&localization_plugin,
+		&graphics_plugin,
+	);
 	let skills_plugin = SkillsPlugin::depends_on(
 		&life_cycles_plugin,
 		&interactions_plugin,
 		&children_assets_dispatch_plugin,
 		&loading_plugin,
+		&settings_plugin,
 		&behaviors_plugin,
 		&player_plugin,
 		&menu_plugin,
