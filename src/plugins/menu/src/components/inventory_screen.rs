@@ -1,4 +1,4 @@
-use super::{KeyedPanel, inventory_panel::InventoryPanel};
+use super::{KeyedPanel, inventory_panel::InventoryPanel, menu_background::MenuBackground};
 use crate::{
 	tools::PanelState,
 	traits::{LoadUi, colors::HasPanelColors, insert_ui_content::InsertUiContent},
@@ -14,22 +14,8 @@ use common::{
 };
 
 #[derive(Component)]
-#[require(Node(full_screen), BackgroundColor(gray))]
+#[require(MenuBackground)]
 pub struct InventoryScreen;
-
-fn full_screen() -> Node {
-	Node {
-		width: Val::Vw(100.0),
-		height: Val::Vh(100.0),
-		align_items: AlignItems::Center,
-		justify_content: JustifyContent::Center,
-		..default()
-	}
-}
-
-fn gray() -> BackgroundColor {
-	BackgroundColor(Color::srgba(0.5, 0.5, 0.5, 0.5))
-}
 
 impl LoadUi<AssetServer> for InventoryScreen {
 	fn load_ui(_: &mut AssetServer) -> Self {
