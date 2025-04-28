@@ -4,6 +4,7 @@ use super::{
 	combo_skill_button::{ComboSkillButton, DropdownTrigger, Vertical},
 	key_code_text_insert_command::KeyCodeTextInsertCommand,
 	key_select_dropdown_command::{AppendSkillCommand, KeySelectDropdownCommand},
+	menu_background::{MenuBackground, WithOverride},
 };
 use crate::{
 	Tooltip,
@@ -28,7 +29,7 @@ use common::{
 };
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Name(Self::name), Node(Self::style), BackgroundColor(Self::color))]
+#[require(MenuBackground(Self::menu_background), Name(Self::name))]
 pub(crate) struct ComboOverview<TSkill>
 where
 	TSkill: ThreadSafe,
@@ -41,17 +42,8 @@ impl<TSkill> ComboOverview<TSkill>
 where
 	TSkill: ThreadSafe,
 {
-	fn style() -> Node {
-		Node {
-			width: Val::Vw(100.),
-			height: Val::Vh(100.),
-			flex_direction: FlexDirection::Column,
-			..default()
-		}
-	}
-
-	fn color() -> Color {
-		Color::srgba(0.5, 0.5, 0.5, 0.5)
+	fn menu_background() -> MenuBackground {
+		MenuBackground::default().with(FlexDirection::Column)
 	}
 
 	fn name() -> &'static str {

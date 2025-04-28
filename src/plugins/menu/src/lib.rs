@@ -22,6 +22,7 @@ use common::{
 		game_state::{GameState, LoadingEssentialAssets, LoadingGame},
 		menu_state::MenuState,
 	},
+	systems::insert_required::{InsertOn, InsertRequired},
 	tools::{
 		change::Change,
 		inventory_key::InventoryKey,
@@ -63,6 +64,7 @@ use components::{
 	key_select::{AppendSkill, KeySelect},
 	key_select_dropdown_command::AppendSkillCommand,
 	loading_screen::LoadingScreen,
+	menu_background::MenuBackground,
 	quickbar_panel::QuickbarPanel,
 	setup_screen::SetupScreen,
 	start_game::StartGame,
@@ -297,6 +299,10 @@ where
 		app.add_tooltip::<TLocalization::TLocalizationServer, &'static str>()
 			.add_tooltip::<TLocalization::TLocalizationServer, String>()
 			.add_tooltip::<TLocalization::TLocalizationServer, Localized>()
+			.add_systems(
+				Update,
+				InsertOn::<MenuBackground>::required(MenuBackground::node),
+			)
 			.add_systems(Update, image_color)
 			.add_systems(Update, adjust_global_z_index)
 			.add_systems(
