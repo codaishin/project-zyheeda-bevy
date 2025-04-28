@@ -35,7 +35,9 @@ where
 
 impl<TKey> UpdateKey<TKey, KeyCode> for KeyMap
 where
-	Key: From<TKey>,
+	TKey: Copy,
+	Key: From<TKey> + Hash + Eq + Copy,
+	KeyCode: From<TKey> + Hash + Eq + Copy,
 {
 	fn update_key(&mut self, key: TKey, key_code: KeyCode) {
 		self.0.update_key(key, key_code);
@@ -46,20 +48,31 @@ where
 struct KeyMapInternal<TAllKeys = Key, TKeyCode = KeyCode>
 where
 	TAllKeys: Hash + Eq,
+	TKeyCode: Hash + Eq,
 {
 	phantom_data: PhantomData<(TAllKeys, TKeyCode)>,
-	key_overrides: HashMap<TAllKeys, TKeyCode>,
+	key_to_key_code: HashMap<TAllKeys, TKeyCode>,
+	key_code_to_key: HashMap<TKeyCode, TAllKeys>,
 }
 
-impl<TKey, TInput> Default for KeyMapInternal<TKey, TInput>
+impl<TAllKeys, TKeyCode> Default for KeyMapInternal<TAllKeys, TKeyCode>
 where
-	TKey: Hash + Eq,
+	TAllKeys: IterFinite + Copy + Hash + Eq,
+	TKeyCode: Copy + Hash + Eq,
+	TKeyCode: From<TAllKeys>,
 {
 	fn default() -> Self {
-		Self {
+		let mut map = Self {
 			phantom_data: PhantomData,
-			key_overrides: HashMap::default(),
+			key_to_key_code: HashMap::default(),
+			key_code_to_key: HashMap::default(),
+		};
+
+		for key in TAllKeys::iterator() {
+			map.update_key(key, TKeyCode::from(key));
 		}
+
+		map
 	}
 }
 
@@ -67,10 +80,10 @@ impl<TAllKeys, TKey, TKeyCode> GetKeyCode<TKey, TKeyCode> for KeyMapInternal<TAl
 where
 	TKey: Copy,
 	TAllKeys: From<TKey> + Hash + Eq,
-	TKeyCode: From<TKey> + Copy,
+	TKeyCode: From<TKey> + Copy + Hash + Eq,
 {
 	fn get_key_code(&self, value: TKey) -> TKeyCode {
-		let Some(key_code) = self.key_overrides.get(&TAllKeys::from(value)) else {
+		let Some(key_code) = self.key_to_key_code.get(&TAllKeys::from(value)) else {
 			return TKeyCode::from(value);
 		};
 
@@ -80,35 +93,38 @@ where
 
 impl<TAllKeys, TKey, TKeyCode> TryGetKey<TKeyCode, TKey> for KeyMapInternal<TAllKeys, TKeyCode>
 where
-	TAllKeys: IterFinite + Copy + Hash + Eq,
-	TKey: TryFrom<TAllKeys> + Copy,
-	TKeyCode: From<TKey> + PartialEq,
+	TAllKeys: Copy + Hash + Eq,
+	TKey: TryFrom<TAllKeys>,
+	TKeyCode: PartialEq + Hash + Eq,
 {
-	fn try_get_key(&self, value: TKeyCode) -> Option<TKey> {
-		let override_key = self
-			.key_overrides
-			.iter()
-			.find_map(|(key, key_code)| match key_code {
-				key_code if key_code == &value => TKey::try_from(*key).ok(),
-				_ => None,
-			});
-
-		let Some(override_key) = override_key else {
-			return TAllKeys::iterator()
-				.filter_map(|key| TKey::try_from(key).ok())
-				.find(|key| value == TKeyCode::from(*key));
-		};
-
-		Some(override_key)
+	fn try_get_key(&self, key_code: TKeyCode) -> Option<TKey> {
+		let key = self.key_code_to_key.get(&key_code)?;
+		TKey::try_from(*key).ok()
 	}
 }
 
 impl<TAllKeys, TKey, TKeyCode> UpdateKey<TKey, TKeyCode> for KeyMapInternal<TAllKeys, TKeyCode>
 where
-	TAllKeys: From<TKey> + Hash + Eq,
+	TKey: Copy,
+	TAllKeys: From<TKey> + Hash + Eq + Copy,
+	TKeyCode: From<TKey> + Hash + Eq + Copy,
 {
 	fn update_key(&mut self, key: TKey, key_code: TKeyCode) {
-		self.key_overrides.insert(TAllKeys::from(key), key_code);
+		let old_key_code = self.get_key_code(key);
+		let key = TAllKeys::from(key);
+
+		match self.key_code_to_key.get(&key_code).copied() {
+			Some(old_key) => {
+				self.key_to_key_code.insert(old_key, old_key_code);
+				self.key_code_to_key.insert(old_key_code, old_key);
+			}
+			None => {
+				self.key_code_to_key.remove(&old_key_code);
+			}
+		}
+
+		self.key_to_key_code.insert(key, key_code);
+		self.key_code_to_key.insert(key_code, key);
 	}
 }
 
@@ -132,6 +148,15 @@ mod tests {
 			match current.0? {
 				_AllKeys::A(_KeyA) => Some(_AllKeys::B(_KeyB)),
 				_AllKeys::B(_KeyB) => None,
+			}
+		}
+	}
+
+	impl From<_AllKeys> for _Input {
+		fn from(value: _AllKeys) -> Self {
+			match value {
+				_AllKeys::A(key) => _Input::from(key),
+				_AllKeys::B(key) => _Input::from(key),
 			}
 		}
 	}
@@ -188,10 +213,11 @@ mod tests {
 		}
 	}
 
-	#[derive(Debug, PartialEq, Clone, Copy)]
+	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	enum _Input {
 		A,
 		B,
+		C,
 	}
 
 	#[test]
@@ -219,7 +245,7 @@ mod tests {
 	}
 
 	#[test]
-	fn update_slot_key() {
+	fn update_key() {
 		let key = _KeyA;
 		let key_code = _Input::B;
 		let mut mapper = KeyMapInternal::<_AllKeys, _Input>::default();
@@ -228,6 +254,46 @@ mod tests {
 		assert_eq!(
 			(key_code, Some(key)),
 			(mapper.get_key_code(key), mapper.try_get_key(key_code))
+		);
+	}
+
+	#[test]
+	fn update_key_removing_old_key_code_pairing() {
+		let key = _KeyA;
+		let key_code_b = _Input::B;
+		let key_code_c = _Input::C;
+		let mut mapper = KeyMapInternal::<_AllKeys, _Input>::default();
+		mapper.update_key(key, key_code_b);
+		mapper.update_key(key, key_code_c);
+
+		assert_eq!(
+			(key_code_c, Some(key), None as Option<_Input>),
+			(
+				mapper.get_key_code(key),
+				mapper.try_get_key(key_code_c),
+				mapper.try_get_key(key_code_b)
+			)
+		);
+	}
+
+	#[test]
+	fn update_key_swapping_old_key() {
+		let key_a = _KeyA;
+		let key_b = _KeyB;
+		let key_code_a = _Input::A;
+		let key_code_b = _Input::B;
+		let mut mapper = KeyMapInternal::<_AllKeys, _Input>::default();
+		mapper.update_key(key_a, key_code_a);
+		mapper.update_key(key_b, key_code_a);
+
+		assert_eq!(
+			(key_code_b, Some(key_b), key_code_a, Some(key_a),),
+			(
+				mapper.get_key_code(key_a),
+				mapper.try_get_key(key_code_a),
+				mapper.get_key_code(key_b),
+				mapper.try_get_key(key_code_b),
+			)
 		);
 	}
 }
