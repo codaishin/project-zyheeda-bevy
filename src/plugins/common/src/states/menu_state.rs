@@ -3,4 +3,5 @@ pub enum MenuState {
 	#[default]
 	Inventory,
 	ComboOverview,
+	Setup,
 }

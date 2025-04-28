@@ -64,6 +64,7 @@ use components::{
 	key_select_dropdown_command::AppendSkillCommand,
 	loading_screen::LoadingScreen,
 	quickbar_panel::QuickbarPanel,
+	setup_screen::SetupScreen,
 	start_game::StartGame,
 	start_menu::StartMenu,
 	start_menu_button::StartMenuButton,
@@ -286,6 +287,12 @@ where
 		);
 	}
 
+	fn setup_screen(&self, app: &mut App) {
+		let setup = GameState::IngameMenu(MenuState::Setup);
+
+		app.add_ui::<SetupScreen, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(setup);
+	}
+
 	fn general_systems(&self, app: &mut App) {
 		app.add_tooltip::<TLocalization::TLocalizationServer, &'static str>()
 			.add_tooltip::<TLocalization::TLocalizationServer, String>()
@@ -316,6 +323,7 @@ where
 		self.ui_overlay(app);
 		self.combo_overview(app);
 		self.inventory_screen(app);
+		self.setup_screen(app);
 		self.general_systems(app);
 
 		#[cfg(debug_assertions)]
