@@ -10,7 +10,7 @@ pub(crate) mod key_select_dropdown_command;
 pub(crate) mod loading_screen;
 pub(crate) mod menu_background;
 pub(crate) mod quickbar_panel;
-pub(crate) mod setup_screen;
+pub(crate) mod settings_screen;
 pub(crate) mod start_game;
 pub(crate) mod start_menu;
 pub(crate) mod start_menu_button;
