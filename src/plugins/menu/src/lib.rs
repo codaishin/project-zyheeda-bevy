@@ -290,10 +290,10 @@ where
 	}
 
 	fn settings_screen(&self, app: &mut App) {
-		let setup = GameState::IngameMenu(MenuState::Setup);
+		let settings = GameState::IngameMenu(MenuState::Settings);
 
 		app.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
-			setup,
+			settings,
 		);
 	}
 

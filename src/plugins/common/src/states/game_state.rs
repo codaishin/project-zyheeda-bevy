@@ -48,7 +48,7 @@ impl TryFrom<GameState> for KeyCode {
 			GameState::Saving => Ok(KeyCode::F5),
 			GameState::IngameMenu(MenuState::Inventory) => Ok(KeyCode::KeyI),
 			GameState::IngameMenu(MenuState::ComboOverview) => Ok(KeyCode::KeyK),
-			GameState::IngameMenu(MenuState::Setup) => Ok(KeyCode::Escape),
+			GameState::IngameMenu(MenuState::Settings) => Ok(KeyCode::Escape),
 			_ => Err(NoKeySet),
 		}
 	}
@@ -72,9 +72,9 @@ impl IterFinite for GameState {
 				Some(GameState::IngameMenu(MenuState::ComboOverview))
 			}
 			GameState::IngameMenu(MenuState::ComboOverview) => {
-				Some(GameState::IngameMenu(MenuState::Setup))
+				Some(GameState::IngameMenu(MenuState::Settings))
 			}
-			GameState::IngameMenu(MenuState::Setup) => None,
+			GameState::IngameMenu(MenuState::Settings) => None,
 		}
 	}
 }
@@ -102,7 +102,7 @@ mod tests {
 				GameState::Saving,
 				GameState::IngameMenu(MenuState::Inventory),
 				GameState::IngameMenu(MenuState::ComboOverview),
-				GameState::IngameMenu(MenuState::Setup),
+				GameState::IngameMenu(MenuState::Settings),
 			],
 			GameState::iterator().take(100).collect::<Vec<_>>(),
 		)
