@@ -6,13 +6,20 @@ mod asset_loader;
 mod folder_asset_loader;
 mod states;
 
-use crate::states::load_state::Load;
+use crate::{
+	states::load_state::Load,
+	systems::{
+		begin_loading_resource::BeginLoadingResource,
+		instantiate_resource::InstantiateResource,
+	},
+};
 use asset_loader::CustomAssetLoader;
 use bevy::{app::AppLabel, ecs::schedule::ScheduleLabel, prelude::*};
 use common::{
 	states::transition_to_state,
 	systems::log::log_many,
 	traits::{
+		handles_asset_resource_loading::HandlesAssetResourceLoading,
 		handles_custom_assets::{
 			AssetFileExtensions,
 			AssetFolderPath,
@@ -32,6 +39,7 @@ use common::{
 			RunAfterLoadedInApp,
 		},
 		init_resource::InitResource,
+		load_asset::Path,
 		remove_resource::RemoveResource,
 		thread_safe::ThreadSafe,
 	},
@@ -224,5 +232,20 @@ impl HandlesCustomFolderAssets for LoadingPlugin {
 					.pipe(log_many)
 					.run_if(in_state(load_assets)),
 			);
+	}
+}
+
+impl HandlesAssetResourceLoading for LoadingPlugin {
+	fn load_resource_from_assets<TResource, TLoadGroup>(app: &mut App, path: Path)
+	where
+		TResource: Resource + Asset,
+		TLoadGroup: LoadGroup,
+	{
+		let loading = TLoadGroup::LOAD_STATE;
+		let on_begin_load = OnEnter(loading);
+		let loading_incomplete = in_state(loading).and(not(resource_exists::<TResource>));
+
+		app.add_systems(on_begin_load, TResource::begin_loading(path))
+			.add_systems(Update, TResource::instantiate.run_if(loading_incomplete));
 	}
 }

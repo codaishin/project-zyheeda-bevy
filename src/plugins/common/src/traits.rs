@@ -11,6 +11,7 @@ pub mod get_asset_load_state;
 pub mod get_asset_path;
 pub mod get_handle_from_path;
 pub mod get_ray;
+pub mod handles_asset_resource_loading;
 pub mod handles_assets_for_children;
 pub mod handles_combo_menu;
 pub mod handles_custom_assets;
