@@ -4,8 +4,9 @@ use crate::traits::{
 	iteration::{Iter, IterFinite},
 };
 use bevy::input::keyboard::KeyCode;
+use serde::{Deserialize, Serialize};
 
-#[derive(Default, Clone, Copy, Eq, Hash, PartialEq, Debug)]
+#[derive(Default, Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub enum MovementKey {
 	#[default]
 	Forward,

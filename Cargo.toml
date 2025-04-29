@@ -7,7 +7,7 @@ edition = "2024"
 
 [workspace.dependencies]
 # external
-bevy = "0.15.0"
+bevy = { version = "0.15.0", features = ["serialize"] }
 bevy-inspector-egui = "0.28.0"
 bevy_rapier3d = "0.28.0"
 fluent = "0.16.1"

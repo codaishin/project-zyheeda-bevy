@@ -1,12 +1,17 @@
-use bevy::{ecs::system::Resource, input::keyboard::KeyCode};
+pub(crate) mod dto;
+
+use bevy::prelude::*;
 use common::{
 	tools::keys::Key,
 	traits::{
+		handles_custom_assets::LoadFrom,
 		handles_settings::UpdateKey,
 		iteration::IterFinite,
 		key_mappings::{GetKeyCode, TryGetKey},
+		load_asset::LoadAsset,
 	},
 };
+use dto::KeyMapDto;
 use std::{collections::HashMap, hash::Hash, marker::PhantomData};
 
 #[derive(Resource, Default, Debug, PartialEq)]
@@ -41,6 +46,15 @@ where
 {
 	fn update_key(&mut self, key: TKey, key_code: KeyCode) {
 		self.0.update_key(key, key_code);
+	}
+}
+
+impl LoadFrom<KeyMapDto<Key, KeyCode>> for KeyMap {
+	fn load_from<TLoadAsset>(dto: KeyMapDto<Key, KeyCode>, asset_server: &mut TLoadAsset) -> Self
+	where
+		TLoadAsset: LoadAsset,
+	{
+		KeyMap(KeyMapInternal::load_from(dto, asset_server))
 	}
 }
 
@@ -125,6 +139,29 @@ where
 
 		self.key_to_key_code.insert(key, key_code);
 		self.key_code_to_key.insert(key_code, key);
+	}
+}
+
+impl<TAllKeys, TKeyCode> LoadFrom<KeyMapDto<TAllKeys, TKeyCode>>
+	for KeyMapInternal<TAllKeys, TKeyCode>
+where
+	TAllKeys: IterFinite + Copy + Hash + Eq,
+	TKeyCode: Copy + Hash + Eq,
+	TKeyCode: From<TAllKeys>,
+{
+	fn load_from<TLoadAsset>(
+		KeyMapDto(data): KeyMapDto<TAllKeys, TKeyCode>,
+		_: &mut TLoadAsset,
+	) -> Self
+	where
+		TLoadAsset: LoadAsset,
+	{
+		let mut mapper = Self::default();
+		for (key, key_code) in data {
+			mapper.update_key(key, key_code);
+		}
+
+		mapper
 	}
 }
 
@@ -293,6 +330,33 @@ mod tests {
 				mapper.try_get_key(key_code_a),
 				mapper.get_key_code(key_b),
 				mapper.try_get_key(key_code_b),
+			)
+		);
+	}
+
+	#[test]
+	fn load_from_dto() {
+		struct _Server;
+
+		impl LoadAsset for _Server {
+			fn load_asset<TAsset, TPath>(&mut self, _: TPath) -> Handle<TAsset>
+			where
+				TAsset: Asset,
+			{
+				panic!("NUT USED")
+			}
+		}
+
+		let dto = KeyMapDto::from([(_AllKeys::A(_KeyA), _Input::C)]);
+		let mapper = KeyMapInternal::load_from(dto, &mut _Server);
+
+		assert_eq!(
+			(_Input::C, Some(_KeyA), _Input::B, Some(_KeyB)),
+			(
+				mapper.get_key_code(_KeyA),
+				mapper.try_get_key(_Input::C),
+				mapper.get_key_code(_KeyB),
+				mapper.try_get_key(_Input::B),
 			)
 		);
 	}

@@ -7,10 +7,11 @@ use crate::traits::{
 };
 use bevy::{input::keyboard::KeyCode, utils::default};
 use movement::MovementKey;
+use serde::{Deserialize, Serialize};
 use slot::SlotKey;
 use std::marker::PhantomData;
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Key {
 	Movement(MovementKey),
 	Slot(SlotKey),
