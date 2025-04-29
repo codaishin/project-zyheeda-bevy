@@ -1,3 +1,5 @@
+use bevy::input::keyboard::KeyCode;
+use common::{tools::keys::Key, traits::handles_custom_assets::AssetFileExtensions};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, hash::Hash};
 
@@ -15,5 +17,11 @@ where
 {
 	fn from(data: [(TAllKeys, TKeyCode); N]) -> Self {
 		Self(HashMap::from(data))
+	}
+}
+
+impl AssetFileExtensions for KeyMapDto<Key, KeyCode> {
+	fn asset_file_extensions() -> &'static [&'static str] {
+		&[".keys"]
 	}
 }

@@ -241,8 +241,14 @@ where
 		app.add_ui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
 			start_menu,
 		)
-		.add_systems(Update, panel_colors::<StartMenuButton>)
-		.add_systems(Update, StartGame::on_release_set(new_game));
+		.add_systems(
+			Update,
+			(
+				panel_colors::<StartMenuButton>,
+				StartGame::on_release_set(new_game),
+			)
+				.run_if(in_state(start_menu)),
+		);
 	}
 
 	fn loading_screen<TLoadGroup>(&self, app: &mut App)
@@ -274,15 +280,10 @@ where
 						QuickbarPanel,
 					>,
 					panel_colors::<QuickbarPanel>,
-				)
-					.run_if(in_state(play)),
-			)
-			.add_systems(
-				Update,
-				(
 					set_ui_mouse_context,
 					prime_mouse_context::<TSettings::TKeyMap<SlotKey>, QuickbarPanel>,
-				),
+				)
+					.run_if(in_state(play)),
 			);
 	}
 
@@ -307,22 +308,26 @@ where
 	}
 
 	fn general_systems(&self, app: &mut App) {
+		let no_game_state = GameState::None;
+		let startup_loading = GameState::LoadingEssentialAssets;
+		let ui_ready = not(in_state(no_game_state).or(in_state(startup_loading)));
+
 		app.add_tooltip::<TLocalization::TLocalizationServer, &'static str>()
 			.add_tooltip::<TLocalization::TLocalizationServer, String>()
 			.add_tooltip::<TLocalization::TLocalizationServer, Localized>()
 			.add_systems(
 				Update,
-				InsertOn::<MenuBackground>::required(MenuBackground::node),
-			)
-			.add_systems(Update, image_color)
-			.add_systems(Update, adjust_global_z_index)
-			.add_systems(
-				Update,
-				insert_key_code_text::<
-					SlotKey,
-					TSettings::TKeyMap<SlotKey>,
-					TLocalization::TLocalizationServer,
-				>,
+				(
+					InsertOn::<MenuBackground>::required(MenuBackground::node),
+					image_color,
+					adjust_global_z_index,
+					insert_key_code_text::<
+						SlotKey,
+						TSettings::TKeyMap<SlotKey>,
+						TLocalization::TLocalizationServer,
+					>,
+				)
+					.run_if(ui_ready),
 			)
 			.add_systems(Last, ButtonInteraction::system);
 	}

@@ -14,7 +14,7 @@ use common::{
 use dto::KeyMapDto;
 use std::{collections::HashMap, hash::Hash, marker::PhantomData};
 
-#[derive(Resource, Default, Debug, PartialEq)]
+#[derive(Resource, Asset, TypePath, Default, Debug, PartialEq, Clone)]
 pub struct KeyMap(KeyMapInternal);
 
 impl<TKey> GetKeyCode<TKey, KeyCode> for KeyMap
@@ -58,7 +58,7 @@ impl LoadFrom<KeyMapDto<Key, KeyCode>> for KeyMap {
 	}
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 struct KeyMapInternal<TAllKeys = Key, TKeyCode = KeyCode>
 where
 	TAllKeys: Hash + Eq,
