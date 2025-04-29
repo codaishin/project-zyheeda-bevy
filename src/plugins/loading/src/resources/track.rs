@@ -53,11 +53,12 @@ where
 		);
 	}
 
-	pub(crate) fn track<T>(In(loaded): In<Loaded>, mut tracker: ResMut<Self>)
+	pub(crate) fn track<T, TLoaded>(In(loaded): In<TLoaded>, mut tracker: ResMut<Self>)
 	where
 		T: 'static,
+		TLoaded: Into<Loaded>,
 	{
-		tracker.insert::<T>(loaded);
+		tracker.insert::<T>(loaded.into());
 	}
 
 	pub(crate) fn track_in_main_world<T>(In(loaded): In<Loaded>, mut main_world: ResMut<MainWorld>)
@@ -137,10 +138,14 @@ mod tests {
 	fn track_load_status() -> Result<(), RunSystemError> {
 		let mut app = setup(Some(Track::<_LoadGroup, _Progress>::default()));
 
-		app.world_mut()
-			.run_system_once_with(Loaded(true), Track::<_LoadGroup, _Progress>::track::<f32>)?;
-		app.world_mut()
-			.run_system_once_with(Loaded(false), Track::<_LoadGroup, _Progress>::track::<u32>)?;
+		app.world_mut().run_system_once_with(
+			Loaded(true),
+			Track::<_LoadGroup, _Progress>::track::<f32, Loaded>,
+		)?;
+		app.world_mut().run_system_once_with(
+			Loaded(false),
+			Track::<_LoadGroup, _Progress>::track::<u32, Loaded>,
+		)?;
 
 		assert_eq!(
 			&Track::<_LoadGroup, _Progress>::new([
