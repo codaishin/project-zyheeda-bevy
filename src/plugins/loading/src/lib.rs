@@ -48,7 +48,7 @@ use folder_asset_loader::{FolderAssetLoader, LoadError, LoadResult};
 use resources::{alive_assets::AliveAssets, track::Track};
 use serde::Deserialize;
 use states::load_state::State;
-use std::marker::PhantomData;
+use std::{fmt::Debug, marker::PhantomData};
 use systems::{
 	begin_loading_folder_assets::begin_loading_folder_assets,
 	is_loaded::is_loaded,
@@ -236,14 +236,20 @@ impl HandlesCustomFolderAssets for LoadingPlugin {
 }
 
 impl HandlesAssetResourceLoading for LoadingPlugin {
-	fn load_resource_from_assets<TResource, TLoadGroup>(app: &mut App, path: Path)
+	fn register_custom_resource_loading<TResource, TDto, TLoadGroup>(app: &mut App, path: Path)
 	where
-		TResource: Resource + Asset,
-		TLoadGroup: LoadGroup,
+		TResource: Resource + Asset + Clone + LoadFrom<TDto> + Debug,
+		for<'a> TDto: Deserialize<'a> + ThreadSafe + AssetFileExtensions,
+		TLoadGroup: LoadGroup + ThreadSafe,
 	{
 		let loading = TLoadGroup::LOAD_STATE;
+		let loading_done = resource_exists::<TResource>;
 		let on_begin_load = OnEnter(loading);
-		let loading_incomplete = in_state(loading).and(not(resource_exists::<TResource>));
+		let loading_incomplete = in_state(loading).and(not(loading_done));
+
+		LoadingPlugin::register_custom_assets::<TResource, TDto>(app);
+		LoadingPlugin::register_load_tracking::<TResource, TLoadGroup, AssetsProgress>()
+			.in_app(app, loading_done);
 
 		app.add_systems(on_begin_load, TResource::begin_loading(path))
 			.add_systems(Update, TResource::instantiate.run_if(loading_incomplete));
