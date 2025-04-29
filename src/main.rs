@@ -21,6 +21,7 @@ use path_finding::PathFindingPlugin;
 use player::PlayerPlugin;
 use prefabs::PrefabsPlugin;
 use savegame::SavegamePlugin;
+use settings::SettingsPlugin;
 use skills::SkillsPlugin;
 
 fn main() -> AppExit {
@@ -42,6 +43,7 @@ fn prepare_game(app: &mut App) {
 	let animations_plugin = AnimationsPlugin;
 	let prefabs_plugin = PrefabsPlugin;
 	let loading_plugin = LoadingPlugin;
+	let settings_plugin = SettingsPlugin::depends_on(&loading_plugin);
 	let localization_plugin = LocalizationPlugin::depends_on(&loading_plugin);
 	let game_state_plugin = GameStatePlugin::depends_on(&loading_plugin);
 	let light_plugin = LightPlugin::depends_on(&prefabs_plugin);
@@ -59,6 +61,7 @@ fn prepare_game(app: &mut App) {
 		&light_plugin,
 	);
 	let behaviors_plugin = BehaviorsPlugin::depends_on(
+		&settings_plugin,
 		&animations_plugin,
 		&prefabs_plugin,
 		&life_cycles_plugin,
@@ -73,13 +76,18 @@ fn prepare_game(app: &mut App) {
 		&interactions_plugin,
 		&behaviors_plugin,
 	);
-	let menu_plugin =
-		MenuPlugin::depends_on(&loading_plugin, &localization_plugin, &graphics_plugin);
+	let menu_plugin = MenuPlugin::depends_on(
+		&loading_plugin,
+		&settings_plugin,
+		&localization_plugin,
+		&graphics_plugin,
+	);
 	let skills_plugin = SkillsPlugin::depends_on(
 		&life_cycles_plugin,
 		&interactions_plugin,
 		&children_assets_dispatch_plugin,
 		&loading_plugin,
+		&settings_plugin,
 		&behaviors_plugin,
 		&player_plugin,
 		&menu_plugin,
@@ -99,6 +107,7 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(localization_plugin)
 		.add_plugins(savegame_plugin)
 		.add_plugins(life_cycles_plugin)
+		.add_plugins(settings_plugin)
 		.add_plugins(prefabs_plugin)
 		.add_plugins(graphics_plugin)
 		.add_plugins(interactions_plugin)

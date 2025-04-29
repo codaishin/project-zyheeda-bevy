@@ -25,6 +25,7 @@
 	"files.associations": {
 		"*.skill": "json",
 		"*.item": "json",
+		"*.keys": "json",
 	},
 	"editor.semanticTokenColorCustomizations": {
 		"rules": {

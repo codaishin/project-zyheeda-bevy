@@ -4,8 +4,9 @@ use crate::traits::{
 	iteration::{Iter, IterFinite},
 };
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub enum SlotKey {
 	TopHand(Side),
 	BottomHand(Side),
@@ -43,6 +44,12 @@ impl From<SlotKey> for KeyCode {
 	}
 }
 
+impl From<SlotKey> for Key {
+	fn from(key: SlotKey) -> Self {
+		Self::Slot(key)
+	}
+}
+
 impl TryFrom<Key> for SlotKey {
 	type Error = IsNot<SlotKey>;
 
@@ -65,7 +72,7 @@ impl From<SlotKey> for Token {
 	}
 }
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Side {
 	Right,
 	Left,

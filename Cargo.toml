@@ -7,7 +7,7 @@ edition = "2024"
 
 [workspace.dependencies]
 # external
-bevy = "0.15.0"
+bevy = { version = "0.15.0", features = ["serialize"] }
 bevy-inspector-egui = "0.28.0"
 bevy_rapier3d = "0.28.0"
 fluent = "0.16.1"
@@ -44,6 +44,7 @@ player = { path = "src/plugins/player" }
 prefabs = { path = "src/plugins/prefabs" }
 graphics = { path = "src/plugins/graphics" }
 savegame = { path = "src/plugins/savegame" }
+settings = { path = "src/plugins/settings" }
 skills = { path = "src/plugins/skills" }
 
 [profile.test]
@@ -99,6 +100,7 @@ player.workspace = true
 prefabs.workspace = true
 graphics.workspace = true
 savegame.workspace = true
+settings.workspace = true
 skills.workspace = true
 
 [dev-dependencies]

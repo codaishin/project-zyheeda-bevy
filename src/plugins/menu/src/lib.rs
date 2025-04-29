@@ -17,7 +17,7 @@ use crate::systems::{
 };
 use bevy::prelude::*;
 use common::{
-	resources::{Shared, key_map::KeyMap},
+	resources::Shared,
 	states::{
 		game_state::{GameState, LoadingEssentialAssets, LoadingGame},
 		menu_state::MenuState,
@@ -49,6 +49,7 @@ use common::{
 		},
 		handles_loadout_menu::{ConfigureInventory, GetItem, HandlesLoadoutMenu, SwapValuesByKey},
 		handles_localization::{HandlesLocalization, LocalizeToken, localized::Localized},
+		handles_settings::HandlesSettings,
 		inspect_able::InspectAble,
 		load_asset::Path,
 		thread_safe::ThreadSafe,
@@ -197,20 +198,24 @@ impl AddDropdown for App {
 
 pub struct MenuPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TLocalization, TGraphics> MenuPlugin<(TLoading, TLocalization, TGraphics)>
+impl<TLoading, TSettings, TLocalization, TGraphics>
+	MenuPlugin<(TLoading, TSettings, TLocalization, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 {
-	pub fn depends_on(_: &TLoading, _: &TLocalization, _: &TGraphics) -> Self {
+	pub fn depends_on(_: &TLoading, _: &TSettings, _: &TLocalization, _: &TGraphics) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TLocalization, TGraphics> MenuPlugin<(TLoading, TLocalization, TGraphics)>
+impl<TLoading, TSettings, TLocalization, TGraphics>
+	MenuPlugin<(TLoading, TSettings, TLocalization, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 {
@@ -236,8 +241,14 @@ where
 		app.add_ui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
 			start_menu,
 		)
-		.add_systems(Update, panel_colors::<StartMenuButton>)
-		.add_systems(Update, StartGame::on_release_set(new_game));
+		.add_systems(
+			Update,
+			(
+				panel_colors::<StartMenuButton>,
+				StartGame::on_release_set(new_game),
+			)
+				.run_if(in_state(start_menu)),
+		);
 	}
 
 	fn loading_screen<TLoadGroup>(&self, app: &mut App)
@@ -263,17 +274,16 @@ where
 			.add_systems(
 				Update,
 				(
-					update_label_text::<KeyMap, TLocalization::TLocalizationServer, QuickbarPanel>,
+					update_label_text::<
+						TSettings::TKeyMap<SlotKey>,
+						TLocalization::TLocalizationServer,
+						QuickbarPanel,
+					>,
 					panel_colors::<QuickbarPanel>,
+					set_ui_mouse_context,
+					prime_mouse_context::<TSettings::TKeyMap<SlotKey>, QuickbarPanel>,
 				)
 					.run_if(in_state(play)),
-			)
-			.add_systems(
-				Update,
-				(
-					set_ui_mouse_context,
-					prime_mouse_context::<KeyMap, QuickbarPanel>,
-				),
 			);
 	}
 
@@ -298,26 +308,36 @@ where
 	}
 
 	fn general_systems(&self, app: &mut App) {
+		let no_game_state = GameState::None;
+		let startup_loading = GameState::LoadingEssentialAssets;
+		let ui_ready = not(in_state(no_game_state).or(in_state(startup_loading)));
+
 		app.add_tooltip::<TLocalization::TLocalizationServer, &'static str>()
 			.add_tooltip::<TLocalization::TLocalizationServer, String>()
 			.add_tooltip::<TLocalization::TLocalizationServer, Localized>()
 			.add_systems(
 				Update,
-				InsertOn::<MenuBackground>::required(MenuBackground::node),
-			)
-			.add_systems(Update, image_color)
-			.add_systems(Update, adjust_global_z_index)
-			.add_systems(
-				Update,
-				insert_key_code_text::<SlotKey, KeyMap, TLocalization::TLocalizationServer>,
+				(
+					InsertOn::<MenuBackground>::required(MenuBackground::node),
+					image_color,
+					adjust_global_z_index,
+					insert_key_code_text::<
+						SlotKey,
+						TSettings::TKeyMap<SlotKey>,
+						TLocalization::TLocalizationServer,
+					>,
+				)
+					.run_if(ui_ready),
 			)
 			.add_systems(Last, ButtonInteraction::system);
 	}
 }
 
-impl<TLoading, TLocalization, TGraphics> Plugin for MenuPlugin<(TLoading, TLocalization, TGraphics)>
+impl<TLoading, TSettings, TLocalization, TGraphics> Plugin
+	for MenuPlugin<(TLoading, TSettings, TLocalization, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 {
@@ -344,9 +364,10 @@ where
 	}
 }
 
-impl<TLoading, TLocalization, TGraphics> HandlesLoadoutMenu
-	for MenuPlugin<(TLoading, TLocalization, TGraphics)>
+impl<TLoading, TSettings, TLocalization, TGraphics> HandlesLoadoutMenu
+	for MenuPlugin<(TLoading, TSettings, TLocalization, TGraphics)>
 where
+	TSettings: HandlesSettings,
 	TLocalization: HandlesLocalization,
 {
 	fn loadout_with_swapper<TSwap>() -> impl ConfigureInventory<TSwap>
@@ -371,7 +392,11 @@ where
 			(
 				get_changed_quickbar.pipe(EquipmentInfo::update),
 				set_quickbar_icons::<EquipmentInfo<TContainer>>,
-				panel_activity_colors_override::<KeyMap, QuickbarPanel, EquipmentInfo<TContainer>>,
+				panel_activity_colors_override::<
+					TSettings::TKeyMap<SlotKey>,
+					QuickbarPanel,
+					EquipmentInfo<TContainer>,
+				>,
 			)
 				.chain()
 				.run_if(in_state(play)),
@@ -424,8 +449,8 @@ where
 	}
 }
 
-impl<TLoading, TLocalization, TGraphics> HandlesComboMenu
-	for MenuPlugin<(TLoading, TLocalization, TGraphics)>
+impl<TLoading, TSettings, TLocalization, TGraphics> HandlesComboMenu
+	for MenuPlugin<(TLoading, TSettings, TLocalization, TGraphics)>
 where
 	TLocalization: HandlesLocalization + ThreadSafe,
 	TGraphics: ThreadSafe + UiCamera,

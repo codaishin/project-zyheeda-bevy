@@ -10,7 +10,6 @@ use bevy_rapier3d::prelude::Velocity;
 use common::{
 	effects::deal_damage::DealDamage,
 	labels::Labels,
-	resources::key_map::KeyMap,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::log::{log, log_many},
 	tools::keys::movement::MovementKey,
@@ -29,6 +28,7 @@ use common::{
 			HandlesPlayerMouse,
 			PlayerMainCamera,
 		},
+		handles_settings::HandlesSettings,
 		handles_skill_behaviors::{
 			HandlesSkillBehaviors,
 			Integrity,
@@ -70,8 +70,9 @@ use systems::{
 
 pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers>
+impl<TSettings, TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers>
 	BehaviorsPlugin<(
+		TSettings,
 		TAnimations,
 		TPrefabs,
 		TLifeCycles,
@@ -81,6 +82,7 @@ impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding, TEnemies, 
 		TPlayers,
 	)>
 where
+	TSettings: ThreadSafe + HandlesSettings,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations,
 	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLifeCycles: ThreadSafe + HandlesDestruction,
@@ -93,7 +95,9 @@ where
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerMovement,
 {
+	#[allow(clippy::too_many_arguments)]
 	pub fn depends_on(
+		_: &TSettings,
 		_: &TAnimations,
 		_: &TPrefabs,
 		_: &TLifeCycles,
@@ -106,8 +110,10 @@ where
 	}
 }
 
-impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers> Plugin
+impl<TSettings, TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers>
+	Plugin
 	for BehaviorsPlugin<(
+		TSettings,
 		TAnimations,
 		TPrefabs,
 		TLifeCycles,
@@ -117,6 +123,7 @@ impl<TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding, TEnemies, 
 		TPlayers,
 	)>
 where
+	TSettings: ThreadSafe + HandlesSettings,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations,
 	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLifeCycles: ThreadSafe + HandlesDestruction,
@@ -142,7 +149,7 @@ where
 		let move_on_wasd = MoveWasdEvent::<VelocityBased>::trigger_movement::<
 			TPlayers::TPlayerMainCamera,
 			TPlayers::TPlayerMovement,
-			KeyMap,
+			TSettings::TKeyMap<MovementKey>,
 			MovementKey,
 		>;
 
