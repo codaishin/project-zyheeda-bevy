@@ -148,11 +148,17 @@ where
 	TLoadGroup: ThreadSafe,
 	TProgress: Progress + ThreadSafe,
 {
-	fn in_app<TMarker>(self, app: &mut App, all_loaded: impl IntoSystem<(), Loaded, TMarker>) {
+	fn in_app<TMarker, TLoaded>(
+		self,
+		app: &mut App,
+		all_loaded: impl IntoSystem<(), TLoaded, TMarker>,
+	) where
+		TLoaded: Into<Loaded> + 'static,
+	{
 		app.add_systems(
 			Update,
 			all_loaded
-				.pipe(Track::<TLoadGroup, TProgress>::track::<T>)
+				.pipe(Track::<TLoadGroup, TProgress>::track::<T, TLoaded>)
 				.run_if(in_state(Load::<TLoadGroup>::processing::<TProgress>())),
 		);
 	}

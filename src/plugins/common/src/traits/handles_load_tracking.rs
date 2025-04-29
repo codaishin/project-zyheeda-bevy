@@ -47,7 +47,12 @@ pub trait RunAfterLoadedInApp {
 }
 
 pub trait LoadTrackingInApp {
-	fn in_app<TMarker>(self, app: &mut App, all_loaded: impl IntoSystem<(), Loaded, TMarker>);
+	fn in_app<TMarker, TLoaded>(
+		self,
+		app: &mut App,
+		all_loaded: impl IntoSystem<(), TLoaded, TMarker>,
+	) where
+		TLoaded: Into<Loaded> + 'static;
 }
 
 pub trait LoadTrackingInSubApp {
@@ -62,6 +67,12 @@ pub trait LoadTrackingInSubApp {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Loaded(pub bool);
+
+impl From<bool> for Loaded {
+	fn from(loaded: bool) -> Self {
+		Loaded(loaded)
+	}
+}
 
 pub trait Progress: internal::Progress {
 	const IS_PROCESSING: IsProcessing;
