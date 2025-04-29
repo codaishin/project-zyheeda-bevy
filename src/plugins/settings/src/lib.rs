@@ -1,8 +1,11 @@
 pub mod resources;
 
+mod systems;
+
 use bevy::prelude::*;
 use common::{
 	states::game_state::LoadingEssentialAssets,
+	systems::log::log,
 	tools::keys::Key,
 	traits::{
 		handles_asset_resource_loading::HandlesAssetResourceLoading,
@@ -11,8 +14,12 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use resources::key_map::{KeyMap, dto::KeyMapDto as KeyMapDtoGeneric};
+use resources::{
+	asset_writer::AssetWriter,
+	key_map::{KeyMap, dto::KeyMapDto as KeyMapDtoGeneric},
+};
 use std::marker::PhantomData;
+use systems::save_changes::SaveChanges;
 
 type KeyMapDto = KeyMapDtoGeneric<Key, KeyCode>;
 
@@ -33,10 +40,14 @@ where
 	TLoading: ThreadSafe + HandlesAssetResourceLoading,
 {
 	fn build(&self, app: &mut App) {
+		let path = Path::from("settings/key_map.keys");
 		TLoading::register_custom_resource_loading::<KeyMap, KeyMapDto, LoadingEssentialAssets>(
 			app,
-			Path::from("settings/key_map.keys"),
+			path.clone(),
 		);
+
+		app.init_resource::<AssetWriter>()
+			.add_systems(Update, KeyMap::save_changes::<KeyMapDto>(path).pipe(log));
 	}
 }
 

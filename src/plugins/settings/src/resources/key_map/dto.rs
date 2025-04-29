@@ -1,3 +1,4 @@
+use super::{KeyMap, KeyMapInternal};
 use bevy::input::keyboard::KeyCode;
 use common::{tools::keys::Key, traits::handles_custom_assets::AssetFileExtensions};
 use serde::{Deserialize, Serialize};
@@ -23,5 +24,15 @@ where
 impl AssetFileExtensions for KeyMapDto<Key, KeyCode> {
 	fn asset_file_extensions() -> &'static [&'static str] {
 		&[".keys"]
+	}
+}
+
+impl From<KeyMap> for KeyMapDto<Key, KeyCode> {
+	fn from(
+		KeyMap(KeyMapInternal {
+			key_to_key_code, ..
+		}): KeyMap,
+	) -> Self {
+		Self(key_to_key_code)
 	}
 }
