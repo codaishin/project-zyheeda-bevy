@@ -46,8 +46,12 @@ where
 			path.clone(),
 		);
 
-		app.init_resource::<AssetWriter>()
-			.add_systems(Update, KeyMap::save_changes::<KeyMapDto>(path).pipe(log));
+		app.init_resource::<AssetWriter>().add_systems(
+			Update,
+			KeyMap::save_changes::<KeyMapDto>(path)
+				.pipe(log)
+				.run_if(resource_exists::<KeyMap>),
+		);
 	}
 }
 

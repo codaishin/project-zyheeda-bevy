@@ -16,6 +16,13 @@ pub(crate) struct AssetWriter {
 	asset_path: PathBuf,
 }
 
+impl AssetWriter {
+	fn open_for_override(&self, path: Path) -> Result<File, IoError> {
+		let path = self.asset_path.join(path.as_string());
+		File::create(path)
+	}
+}
+
 impl Default for AssetWriter {
 	fn default() -> Self {
 		Self {
@@ -43,8 +50,7 @@ impl WriteAsset for AssetWriter {
 			Ok(string) => string,
 			Err(err) => return Err(WriteError::Serde(err)),
 		};
-		let path = self.asset_path.join(path.as_string());
-		let mut file = match File::open(path) {
+		let mut file = match self.open_for_override(path) {
 			Ok(file) => file,
 			Err(err) => return Err(WriteError::Io(err)),
 		};

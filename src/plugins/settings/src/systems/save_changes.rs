@@ -25,6 +25,9 @@ where
 	TWriter: WriteAsset + Resource,
 {
 	move |resource, writer| {
+		if resource.is_added() {
+			return Ok(());
+		}
 		if !resource.is_changed() {
 			return Ok(());
 		}
@@ -70,6 +73,19 @@ mod tests {
 		}
 	}
 
+	fn update_with_change(app: &mut App) {
+		app.update();
+		app.world_mut()
+			.get_resource_mut::<_Resource>()
+			.as_deref_mut();
+		app.update();
+	}
+
+	fn update_without_change(app: &mut App) {
+		app.update();
+		app.update();
+	}
+
 	#[derive(Debug, PartialEq, Clone)]
 	pub struct _Error;
 
@@ -103,7 +119,7 @@ mod tests {
 		});
 		let mut app = setup(writer, _Resource, Path::from("my/path"));
 
-		app.update();
+		update_with_change(&mut app);
 	}
 
 	#[test]
@@ -114,37 +130,20 @@ mod tests {
 		});
 		let mut app = setup(writer, _Resource, Path::from("my/path"));
 
-		app.update();
+		update_with_change(&mut app);
 
 		assert_eq!(&_Result(Err(_Error)), app.world().resource::<_Result>());
 	}
 
 	#[test]
-	fn call_writer_only_once() {
+	fn do_not_call_writer_if_not_changed() {
 		let writer = _Writer::new().with_mock(|mock| {
 			mock.expect_write::<_ResourceDto>()
-				.times(1)
+				.never()
 				.return_const(Ok(()));
 		});
 		let mut app = setup(writer, _Resource, Path::from("my/path"));
 
-		app.update();
-		app.update();
-	}
-
-	#[test]
-	fn call_writer_again_when_resource_changed() {
-		let writer = _Writer::new().with_mock(|mock| {
-			mock.expect_write::<_ResourceDto>()
-				.times(2)
-				.return_const(Ok(()));
-		});
-		let mut app = setup(writer, _Resource, Path::from("my/path"));
-
-		app.update();
-		app.world_mut()
-			.get_resource_mut::<_Resource>()
-			.as_deref_mut();
-		app.update();
+		update_without_change(&mut app);
 	}
 }
