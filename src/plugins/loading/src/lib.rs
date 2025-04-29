@@ -188,11 +188,10 @@ where
 }
 
 impl HandlesCustomAssets for LoadingPlugin {
-	fn register_custom_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
+	fn register_custom_assets<TAsset, TDto>(app: &mut App)
 	where
 		TAsset: Asset + LoadFrom<TDto> + Clone + std::fmt::Debug,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
-		TLoadGroup: ThreadSafe,
 	{
 		app.init_asset::<TAsset>()
 			.register_asset_loader(CustomAssetLoader::<TAsset, TDto>::default());
@@ -206,7 +205,7 @@ impl HandlesCustomFolderAssets for LoadingPlugin {
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
 		TLoadGroup: ThreadSafe,
 	{
-		LoadingPlugin::register_custom_assets::<TAsset, TDto, TLoadGroup>(app);
+		LoadingPlugin::register_custom_assets::<TAsset, TDto>(app);
 		LoadingPlugin::register_load_tracking::<AliveAssets<TAsset>, TLoadGroup, AssetsProgress>()
 			.in_app(app, is_loaded::<TAsset>);
 

@@ -7,11 +7,10 @@ use serde::Deserialize;
 use std::fmt::Debug;
 
 pub trait HandlesCustomAssets {
-	fn register_custom_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
+	fn register_custom_assets<TAsset, TDto>(app: &mut App)
 	where
 		TAsset: Asset + LoadFrom<TDto> + Clone + Debug,
-		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
-		TLoadGroup: ThreadSafe;
+		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe;
 }
 
 pub trait HandlesCustomFolderAssets {
