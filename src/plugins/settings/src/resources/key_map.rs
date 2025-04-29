@@ -150,14 +150,14 @@ where
 	TKeyCode: From<TAllKeys>,
 {
 	fn load_from<TLoadAsset>(
-		KeyMapDto(data): KeyMapDto<TAllKeys, TKeyCode>,
+		KeyMapDto { keys }: KeyMapDto<TAllKeys, TKeyCode>,
 		_: &mut TLoadAsset,
 	) -> Self
 	where
 		TLoadAsset: LoadAsset,
 	{
 		let mut mapper = Self::default();
-		for (key, key_code) in data {
+		for (key, key_code) in keys {
 			mapper.update_key(key, key_code);
 		}
 

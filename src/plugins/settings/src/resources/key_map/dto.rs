@@ -1,14 +1,17 @@
-use super::{KeyMap, KeyMapInternal};
+use super::KeyMap;
 use bevy::input::keyboard::KeyCode;
 use common::{tools::keys::Key, traits::handles_custom_assets::AssetFileExtensions};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, hash::Hash};
+use std::hash::Hash;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub(crate) struct KeyMapDto<TAllKeys, TKeyCode>(pub(crate) HashMap<TAllKeys, TKeyCode>)
+pub(crate) struct KeyMapDto<TAllKeys, TKeyCode>
 where
 	TAllKeys: Eq + Hash,
-	TKeyCode: PartialEq;
+	TKeyCode: PartialEq,
+{
+	pub(crate) keys: Vec<(TAllKeys, TKeyCode)>,
+}
 
 impl<TAllKeys, TKeyCode, const N: usize> From<[(TAllKeys, TKeyCode); N]>
 	for KeyMapDto<TAllKeys, TKeyCode>
@@ -17,7 +20,9 @@ where
 	TKeyCode: PartialEq,
 {
 	fn from(data: [(TAllKeys, TKeyCode); N]) -> Self {
-		Self(HashMap::from(data))
+		Self {
+			keys: Vec::from(data),
+		}
 	}
 }
 
@@ -28,11 +33,9 @@ impl AssetFileExtensions for KeyMapDto<Key, KeyCode> {
 }
 
 impl From<KeyMap> for KeyMapDto<Key, KeyCode> {
-	fn from(
-		KeyMap(KeyMapInternal {
-			key_to_key_code, ..
-		}): KeyMap,
-	) -> Self {
-		Self(key_to_key_code)
+	fn from(KeyMap(map): KeyMap) -> Self {
+		Self {
+			keys: Vec::from_iter(map.key_to_key_code),
+		}
 	}
 }
