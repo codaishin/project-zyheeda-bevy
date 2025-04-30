@@ -21,6 +21,8 @@ combo-skill-menu = Combos
 combo-skill-add = Add new combo skill
 combo-skill-delete = Delete skill (and subsequent skills) from combo tree
 
+key-bindings = Key Bindings
+
 slot-key-top-hand-left = Top Hand Left
 slot-key-top-hand-right = Top Hand Right
 slot-key-btm-hand-left = Bottom Hand Left
