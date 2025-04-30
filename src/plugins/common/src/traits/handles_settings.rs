@@ -1,4 +1,7 @@
-use super::key_mappings::{GetKeyCode, TryGetKey};
+use super::{
+	iterate::Iterate,
+	key_mappings::{GetKeyCode, TryGetKey},
+};
 use crate::tools::keys::Key;
 use bevy::prelude::*;
 
@@ -7,6 +10,7 @@ pub trait HandlesSettings {
 		+ GetKeyCode<TKey, KeyCode>
 		+ TryGetKey<KeyCode, TKey>
 		+ UpdateKey<TKey, KeyCode>
+		+ for<'a> Iterate<'a, TItem = (&'a Key, &'a KeyCode)>
 	where
 		Key: From<TKey>,
 		TKey: TryFrom<Key> + Copy,

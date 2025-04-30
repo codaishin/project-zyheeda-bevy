@@ -7,6 +7,8 @@ pub(crate) mod image_color;
 pub(crate) mod insert_key_code_text;
 pub(crate) mod mouse_context;
 pub(crate) mod on_release_set;
+pub(crate) mod render_ui;
+pub(crate) mod set_key_bindings;
 pub(crate) mod set_state_from_input;
 pub(crate) mod spawn;
 pub(crate) mod tooltip;

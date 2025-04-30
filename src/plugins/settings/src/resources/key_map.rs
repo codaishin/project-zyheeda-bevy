@@ -6,13 +6,18 @@ use common::{
 	traits::{
 		handles_custom_assets::LoadFrom,
 		handles_settings::UpdateKey,
+		iterate::Iterate,
 		iteration::IterFinite,
 		key_mappings::{GetKeyCode, TryGetKey},
 		load_asset::LoadAsset,
 	},
 };
 use dto::KeyMapDto;
-use std::{collections::HashMap, hash::Hash, marker::PhantomData};
+use std::{
+	collections::{HashMap, hash_map::Iter},
+	hash::Hash,
+	marker::PhantomData,
+};
 
 #[derive(Resource, Asset, TypePath, Default, Debug, PartialEq, Clone)]
 pub struct KeyMap(KeyMapInternal);
@@ -55,6 +60,15 @@ impl LoadFrom<KeyMapDto<Key, KeyCode>> for KeyMap {
 		TLoadAsset: LoadAsset,
 	{
 		KeyMap(KeyMapInternal::load_from(dto, asset_server))
+	}
+}
+
+impl<'a> Iterate<'a> for KeyMap {
+	type TItem = (&'a Key, &'a KeyCode);
+	type TIter = Iter<'a, Key, KeyCode>;
+
+	fn iterate(&'a self) -> Self::TIter {
+		self.0.key_to_key_code.iter()
 	}
 }
 

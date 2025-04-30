@@ -27,7 +27,10 @@ use common::{
 		change::Change,
 		inventory_key::InventoryKey,
 		item_description::ItemToken,
-		keys::slot::{Combo, SlotKey},
+		keys::{
+			Key,
+			slot::{Combo, SlotKey},
+		},
 		skill_description::SkillToken,
 		skill_execution::SkillExecution,
 		skill_icon::SkillIcon,
@@ -67,7 +70,7 @@ use components::{
 	loading_screen::LoadingScreen,
 	menu_background::MenuBackground,
 	quickbar_panel::QuickbarPanel,
-	settings_screen::SettingsScreen,
+	settings_screen::{SettingsScreen, key_bind::KeyBind},
 	start_game::StartGame,
 	start_menu::StartMenu,
 	start_menu_button::StartMenuButton,
@@ -98,6 +101,8 @@ use systems::{
 	insert_key_code_text::insert_key_code_text,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	on_release_set::OnReleaseSet,
+	render_ui::RenderUi,
+	set_key_bindings::SetKeyBindings,
 	set_state_from_input::set_state_from_input,
 	spawn::spawn,
 	tooltip::tooltip,
@@ -304,6 +309,15 @@ where
 
 		app.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
 			settings,
+		)
+		.add_systems(
+			Update,
+			(
+				SettingsScreen::set_key_bindings_from::<TSettings::TKeyMap<Key>>,
+				KeyBind::<Key>::render_ui::<TLocalization::TLocalizationServer>,
+				KeyBind::<KeyCode>::render_ui::<TLocalization::TLocalizationServer>,
+			)
+				.run_if(in_state(settings)),
 		);
 	}
 
