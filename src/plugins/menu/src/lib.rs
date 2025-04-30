@@ -43,7 +43,7 @@ use common::{
 			HandlesComboMenu,
 			NextKeys,
 		},
-		handles_graphics::{StaticRenderLayers, UiCamera},
+		handles_graphics::UiCamera,
 		handles_load_tracking::{
 			AssetsProgress,
 			DependenciesProgress,
@@ -74,7 +74,7 @@ use components::{
 	start_game::StartGame,
 	start_menu::StartMenu,
 	start_menu_button::StartMenuButton,
-	tooltip::{Tooltip, TooltipUI, TooltipUIControl, TooltipUiConfig},
+	tooltip::{Tooltip, TooltipUIControl},
 	ui_overlay::UIOverlay,
 };
 use events::DropdownEvent;
@@ -88,15 +88,7 @@ use systems::{
 		update_combos_view_delete_skill::update_combos_view_delete_skill,
 	},
 	dad::{drag::drag, drop::drop},
-	despawn::despawn,
-	dropdown::{
-		despawn_when_no_children_pressed::dropdown_despawn_when_no_children_pressed,
-		detect_focus_change::dropdown_detect_focus_change,
-		events::dropdown_events,
-		select_successor_key::select_successor_key,
-		spawn_focused::dropdown_spawn_focused,
-		track_child_dropdowns::dropdown_track_child_dropdowns,
-	},
+	dropdown::select_successor_key::select_successor_key,
 	image_color::image_color,
 	insert_key_code_text::insert_key_code_text,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
@@ -104,10 +96,6 @@ use systems::{
 	render_ui::RenderUi,
 	set_key_bindings::SetKeyBindings,
 	set_state_from_input::set_state_from_input,
-	spawn::spawn,
-	tooltip::tooltip,
-	tooltip_visibility::tooltip_visibility,
-	update_children::update_children,
 	update_panels::{
 		activity_colors_override::panel_activity_colors_override,
 		colors::panel_colors,
@@ -115,91 +103,8 @@ use systems::{
 		update_label_text::update_label_text,
 	},
 };
-use traits::{GetLayout, GetRootNode, LoadUi, insert_ui_content::InsertUiContent};
+use traits::{LoadUi, add_dropdown::AddDropdown, add_tooltip::AddTooltip, add_ui::AddUI};
 use visualization::unusable::Unusable;
-
-trait AddUI<TState> {
-	fn add_ui<TComponent, TLocalizationServer, TGraphics>(&mut self, on_state: TState) -> &mut Self
-	where
-		TComponent: Component + LoadUi<AssetServer> + InsertUiContent,
-		TLocalizationServer: Resource + LocalizeToken,
-		TGraphics: StaticRenderLayers + 'static;
-}
-
-impl<TState> AddUI<TState> for App
-where
-	TState: States + Copy,
-{
-	fn add_ui<TComponent, TLocalizationServer, TGraphics>(&mut self, on_state: TState) -> &mut Self
-	where
-		TComponent: Component + LoadUi<AssetServer> + InsertUiContent,
-		TLocalizationServer: Resource + LocalizeToken,
-		TGraphics: StaticRenderLayers + 'static,
-	{
-		self.add_systems(
-			OnEnter(on_state),
-			spawn::<TComponent, AssetServer, TGraphics>,
-		)
-		.add_systems(OnExit(on_state), despawn::<TComponent>)
-		.add_systems(Update, update_children::<TComponent, TLocalizationServer>)
-	}
-}
-
-trait AddTooltip {
-	fn add_tooltip<TLocalization, T>(&mut self) -> &mut Self
-	where
-		T: TooltipUiConfig + Clone + Sync + Send + 'static,
-		Tooltip<T>: InsertUiContent,
-		TLocalization: LocalizeToken + Resource;
-}
-
-impl AddTooltip for App {
-	fn add_tooltip<TLocalization, T>(&mut self) -> &mut Self
-	where
-		T: TooltipUiConfig + Clone + Sync + Send + 'static,
-		Tooltip<T>: InsertUiContent,
-		TLocalization: LocalizeToken + Resource,
-	{
-		self.add_systems(
-			Update,
-			(
-				tooltip::<T, TLocalization, TooltipUI<T>, TooltipUIControl, Window>,
-				tooltip_visibility::<Real, T>,
-			),
-		)
-	}
-}
-
-trait AddDropdown {
-	fn add_dropdown<TLocalization, TItem>(&mut self) -> &mut Self
-	where
-		TLocalization: LocalizeToken + Resource,
-		TItem: InsertUiContent + Sync + Send + 'static,
-		Dropdown<TItem>: GetRootNode + GetLayout;
-}
-
-impl AddDropdown for App {
-	fn add_dropdown<TLocalization, TItem>(&mut self) -> &mut Self
-	where
-		TLocalization: LocalizeToken + Resource,
-		TItem: InsertUiContent + Sync + Send + 'static,
-		Dropdown<TItem>: GetRootNode + GetLayout,
-	{
-		self.add_systems(
-			Update,
-			(
-				dropdown_events::<TItem>,
-				dropdown_track_child_dropdowns::<TItem>,
-			),
-		)
-		.add_systems(
-			Last,
-			dropdown_detect_focus_change::<TItem>
-				.pipe(dropdown_despawn_when_no_children_pressed::<TItem>)
-				.pipe(dropdown_spawn_focused::<TLocalization, TItem>),
-		)
-	}
-}
 
 pub struct MenuPlugin<TDependencies>(PhantomData<TDependencies>);
 

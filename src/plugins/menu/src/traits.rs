@@ -1,3 +1,6 @@
+pub(crate) mod add_dropdown;
+pub(crate) mod add_tooltip;
+pub(crate) mod add_ui;
 pub(crate) mod build_combo_tree_layout;
 pub(crate) mod colors;
 pub(crate) mod insert_ui_content;
