@@ -27,7 +27,10 @@ use common::{
 		change::Change,
 		inventory_key::InventoryKey,
 		item_description::ItemToken,
-		keys::slot::{Combo, SlotKey},
+		keys::{
+			Key,
+			slot::{Combo, SlotKey},
+		},
 		skill_description::SkillToken,
 		skill_execution::SkillExecution,
 		skill_icon::SkillIcon,
@@ -98,6 +101,7 @@ use systems::{
 	insert_key_code_text::insert_key_code_text,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	on_release_set::OnReleaseSet,
+	set_key_bindings::SetKeyBindings,
 	set_state_from_input::set_state_from_input,
 	spawn::spawn,
 	tooltip::tooltip,
@@ -304,6 +308,11 @@ where
 
 		app.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
 			settings,
+		)
+		.add_systems(
+			Update,
+			SettingsScreen::set_key_bindings_from::<TSettings::TKeyMap<Key>>
+				.run_if(in_state(settings)),
 		);
 	}
 

@@ -3,6 +3,7 @@ pub(crate) mod colors;
 pub(crate) mod insert_ui_content;
 pub(crate) mod is_released;
 pub(crate) mod tooltip_ui_control;
+pub(crate) mod update_key_bindings;
 
 pub mod reacts_to_menu_hotkeys;
 
