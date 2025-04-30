@@ -1,3 +1,5 @@
+pub(crate) mod key_bind;
+
 use super::menu_background::MenuBackground;
 use crate::{
 	LoadUi,
@@ -20,6 +22,7 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
+use key_bind::KeyBind;
 use std::collections::HashMap;
 
 #[derive(Component, Debug, PartialEq, Default)]
@@ -43,8 +46,8 @@ const SLOT_KEYS: &[Key] = &[
 
 const MOVEMENT_KEYS: &[Key] = &[
 	Key::Movement(MovementKey::Forward),
-	Key::Movement(MovementKey::Backward),
 	Key::Movement(MovementKey::Left),
+	Key::Movement(MovementKey::Backward),
 	Key::Movement(MovementKey::Right),
 ];
 
@@ -68,13 +71,13 @@ impl InsertUiContent for SettingsScreen {
 					let Some(key_code) = self.key_bindings.get(key) else {
 						continue;
 					};
-					add_key_row(parent, localize, key, key_code);
+					add_key_row(parent, key, key_code);
 				}
 				for key in MOVEMENT_KEYS {
 					let Some(key_code) = self.key_bindings.get(key) else {
 						continue;
 					};
-					add_key_row(parent, localize, key, key_code);
+					add_key_row(parent, key, key_code);
 				}
 			});
 	}
@@ -91,22 +94,15 @@ fn add_title(parent: &mut ChildBuilder, title: Localized) {
 	));
 }
 
-fn add_key_row<TLocalization>(
-	parent: &mut ChildBuilder,
-	localize: &mut TLocalization,
-	key: &Key,
-	key_code: &KeyCode,
-) where
-	TLocalization: LocalizeToken + ThreadSafe,
-{
+fn add_key_row(parent: &mut ChildBuilder, key: &Key, key_code: &KeyCode) {
 	parent
 		.spawn(Node {
 			flex_direction: FlexDirection::Row,
 			..default()
 		})
 		.with_children(|parent| {
-			parent.spawn(Text::from(localize.localize_token(*key).or_token()));
-			parent.spawn(Text::from(localize.localize_token(*key_code).or_token()));
+			parent.spawn(KeyBind(*key));
+			parent.spawn(KeyBind(*key_code));
 		});
 }
 
