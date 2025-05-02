@@ -1,5 +1,6 @@
 pub mod movement;
 pub mod slot;
+pub mod user_input;
 
 use crate::traits::{
 	handles_localization::Token,
